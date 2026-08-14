@@ -1,0 +1,58 @@
+# aos — AI agent 專案備忘
+
+aos = **一個常駐的 Unix Domain Socket daemon（`aos-daemon`）加上一支很薄的命令列工具（`aos`）；CLI 只負責把 argv、工作目錄與 stdin 送過去，所有命令語意都在 daemon 那邊執行**。用 C++23 寫，CMake + vcpkg 建置。
+
+本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**。
+
+## 先讀哪裡
+
+- **使用者要你動手做某件事** → **[wf/WORKFLOWS.md](wf/WORKFLOWS.md)**：依使用者意圖派發到對應工作流，再讀該工作流入口。
+- **想看專案長怎樣** → **[wf/INDEX.md](wf/INDEX.md)**：repo 頂層結構地圖。
+- **要改程式、先找檔** → **[wf/workflows/common/code-map.md](wf/workflows/common/code-map.md)**：哪個檔負責什麼，改東西之前先看這張圖。
+
+> **本專案採「非侵入式」佈局**：頂層只留 `AGENTS.md` 與 `CLAUDE.md` 兩個入口，工作流的其餘檔案全部收在 [`wf/`](wf/) 裡，不去弄亂原本的 C++ 專案結構。唯一的例外是 `.claude/commands/`——slash 指令只有放在那裡才會被讀到，但它是隱藏資料夾，不影響觀感。
+
+## 分層思想（本專案的組織原則）
+
+整個 repo 是一棵**分層樹**，每一層**只指向下一層、不存下層的細節**：
+
+```
+AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流入口 → 工作流內容 → 子工作流…
+```
+
+- **README**＝初入一個資料夾**先讀的入口／導引**；**INDEX**＝**描述該資料夾頂層結構**的索引。小資料夾兩者合一，大了才分出獨立 INDEX。
+- **durable 知識歸到它所屬的那一層／那個工作流**，絕不往上堆——所以 AGENTS.md 才這麼薄。要某主題的細節，順著上面的樹往下走，不在本檔找。
+- **鐵律（always-on，任何工作流任何時候都遵守）**：
+  1. 重構／整理必須**不改變原意**：程式的行為不變、文件的原意不變。改完一定要跑驗證 `cmake --build --preset dev && ctest --preset dev`，**ctest 要全綠**（有哪些測試見 [wf/workflows/testing.md](wf/workflows/testing.md)）。
+  2. **未經確認不 push、不開新工作**（commit 到 `main` 是慣例，push 到 `origin` 先確認）。
+  3. **改了程式碼就要同步 [code map](wf/workflows/common/code-map.md)**：新增／刪除檔案、或某個檔的職責變了，commit 之前一定要把 code map 補上。
+  4. **這個 repo 同時有別的 agent 在動**（見下面「同時在動的區域」）。動手前先 `git status` 看一眼，不要去改不是自己負責的檔案。
+  5. 各工作流的**具體流程在它自己的入口檔**，不在頂層。
+- **[wf/DEV-GUIDE.md](wf/DEV-GUIDE.md) 是被動參考**（結構整理原則 + 四級成長軌跡）——**只在你要重構／整理結構時才取用**，不貫穿日常每個動作。只在**碰原始碼**時適用的**程式碼慣例 + code map 維護鏈**在 [wf/workflows/common/conventions.md](wf/workflows/common/conventions.md)。
+
+## 開發環境
+
+單機開發，沒有跨機或離線的特殊情況。需要的只有兩樣：
+
+- `VCPKG_ROOT` 必須指到 vcpkg（本機是 `/home/lorkhan/vcpkg`），否則 `cmake --preset dev` 會失敗。
+- 建置與測試指令、測試分類見 [wf/workflows/testing.md](wf/workflows/testing.md)。
+
+## 同時在動的區域（動手前先看）
+
+這個 repo 目前有**多個 agent 並行工作**，各自負責不同區域：
+
+| 區域 | 誰在動 | 你該怎麼做 |
+|------|--------|-----------|
+| `src/core/llm/`、`include/aos/llm/`、`aos llm` 命令組、`tests/llm_test.cpp`、`tests/tooljson_test.cpp` | **另一個 agent（LLM 功能）** | **不要碰。** 只在 code map 上知道有這塊在蓋就好，內部細節等它蓋完再補。 |
+| `docs/` | **另一個 agent（文件）** | **不要新增或修改 `docs/` 底下的檔案**，可以從索引連過去。 |
+| `AGENTS.md`、`CLAUDE.md`、`wf/`、`.claude/` | 工作流本身 | 這才是工作流 agent 的地盤。 |
+
+## 主工作流（活狀態：進度 / 待測 / 信件）
+
+事情告一段落、因應需求結束、或臨時中止時 → 把**還沒完成**的活狀態記到進度；需要**使用者親自做／驗證**的（實機環境、外部工具實跑、需權限／本機環境）→ 記到待使用者。兩者都**只列 open**，完成即移除、不留已完成清單。
+
+- **進度**（我自己的 open in-flight）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)
+- **待使用者**（等使用者親自做／驗證）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)
+- **信件**（agent 之間的訊息交換，像 email；放信處是 [`wf/inbox/`](wf/inbox/)）→ 使用方式見 [wf/workflows/inbox/](wf/workflows/inbox/README.md)
+
+> 三軸各管一種「還沒完的事」：進度＝我手上的、待使用者＝卡在人、信件＝agent 之間收發（寄失敗／不回都無妨）。使用者說「**看看信箱**」＝掃 [`wf/inbox/`](wf/inbox/) 的待辦。
