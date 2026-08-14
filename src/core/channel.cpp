@@ -5,18 +5,21 @@
 #include <asio/use_awaitable.hpp>
 #include <asio/write.hpp>
 
+#include <algorithm>
 #include <array>
-#include <stdexcept>
+#include <span>
 
 namespace aos {
 namespace {
 
-[[nodiscard]] std::array<char, 5>
-make_header(FrameKind kind, std::size_t payload_size) {
-    if (payload_size > maximum_frame_size - 1) {
-        throw std::runtime_error{"訊框超過 8 MiB 上限"};
+using HeaderBytes = std::array<char, frame_header_size>;
+
+[[nodiscard]] HeaderBytes encode_header(FrameKind kind,
+                                        std::size_t payload_size) {
+    if (payload_size > maximum_payload_size) {
+        throw ProtocolError{"訊框 payload 超過 8 MiB 上限"};
     }
-    const auto size = static_cast<std::uint32_t>(payload_size + 1);
+    const auto size = static_cast<std::uint32_t>(payload_size);
     return {
         static_cast<char>((size >> 24U) & 0xffU),
         static_cast<char>((size >> 16U) & 0xffU),
@@ -26,63 +29,61 @@ make_header(FrameKind kind, std::size_t payload_size) {
     };
 }
 
-[[nodiscard]] std::uint32_t decode_size(const std::array<char, 4>& header) {
-    std::uint32_t size{};
-    for (const char byte : header) {
+struct Header {
+    std::size_t payload_size;
+    FrameKind kind;
+};
+
+[[nodiscard]] Header decode_header(std::span<const char, frame_header_size> bytes) {
+    std::uint32_t size = 0;
+    for (const char byte : bytes.first<4>()) {
         size = (size << 8U) | static_cast<unsigned char>(byte);
     }
-    if (size == 0 || size > maximum_frame_size) {
-        throw std::runtime_error{"訊框長度無效"};
+    if (size > maximum_payload_size) {
+        throw ProtocolError{"訊框長度超過 8 MiB 上限"};
     }
-    return size;
-}
 
-[[nodiscard]] Frame decode_body(std::string body) {
-    const auto kind = static_cast<FrameKind>(
-        static_cast<unsigned char>(body.front()));
-    if (!is_valid(kind)) {
-        throw std::runtime_error{"無法辨識訊框種類"};
+    const auto kind = static_cast<FrameKind>(static_cast<unsigned char>(bytes[4]));
+    if (!is_known_frame_kind(kind)) {
+        throw ProtocolError{"無法辨識訊框種類"};
     }
-    return {.kind = kind, .payload = body.substr(1)};
-}
-
-[[nodiscard]] auto buffers(const std::array<char, 5>& header,
-                           std::string_view payload) {
-    return std::array<asio::const_buffer, 2>{
-        asio::buffer(header),
-        asio::buffer(payload.data(), payload.size()),
-    };
+    return {.payload_size = size, .kind = kind};
 }
 
 }  // namespace
 
-Frame read_frame(LocalSocket& socket) {
-    std::array<char, 4> header{};
-    asio::read(socket, asio::buffer(header));
-    std::string body(decode_size(header), '\0');
-    asio::read(socket, asio::buffer(body));
-    return decode_body(std::move(body));
-}
-
-void write_frame(LocalSocket& socket, FrameKind kind,
-                 std::string_view payload) {
-    const auto header = make_header(kind, payload.size());
-    asio::write(socket, buffers(header, payload));
-}
-
-asio::awaitable<Frame> async_read_frame(LocalSocket& socket) {
-    std::array<char, 4> header{};
+asio::awaitable<Frame> read_frame(LocalSocket& socket) {
+    HeaderBytes header{};
     co_await asio::async_read(socket, asio::buffer(header), asio::use_awaitable);
-    std::string body(decode_size(header), '\0');
-    co_await asio::async_read(socket, asio::buffer(body), asio::use_awaitable);
-    co_return decode_body(std::move(body));
+    const auto [payload_size, kind] = decode_header(header);
+
+    // payload 直接讀進最終的 string，不再多一次切頭複製。
+    std::string payload(payload_size, '\0');
+    if (payload_size > 0) {
+        co_await asio::async_read(socket, asio::buffer(payload),
+                                  asio::use_awaitable);
+    }
+    co_return Frame{.kind = kind, .payload = std::move(payload)};
 }
 
-asio::awaitable<void> async_write_frame(
-    LocalSocket& socket, FrameKind kind, std::string_view payload) {
-    const auto header = make_header(kind, payload.size());
-    co_await asio::async_write(socket, buffers(header, payload),
-                               asio::use_awaitable);
+asio::awaitable<void> write_frame(LocalSocket& socket, FrameKind kind,
+                                  std::string_view payload) {
+    // header 是這個 coroutine frame 的區域變數，撐得過下面的 co_await。
+    const auto header = encode_header(kind, payload.size());
+    const std::array<asio::const_buffer, 2> buffers{
+        asio::buffer(header),
+        asio::buffer(payload.data(), payload.size()),
+    };
+    co_await asio::async_write(socket, buffers, asio::use_awaitable);
+}
+
+asio::awaitable<void> write_stream(LocalSocket& socket, FrameKind kind,
+                                   std::string_view bytes) {
+    while (!bytes.empty()) {
+        const auto count = std::min(bytes.size(), stream_chunk_size);
+        co_await write_frame(socket, kind, bytes.substr(0, count));
+        bytes.remove_prefix(count);
+    }
 }
 
 }  // namespace aos

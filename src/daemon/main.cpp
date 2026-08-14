@@ -2,13 +2,13 @@
 #include "aos/socket_path.hpp"
 
 #include <exception>
-#include <iostream>
+#include <print>
 
 int main() {
     try {
         return aos::run_daemon(aos::socket_path_from_environment());
     } catch (const std::exception& failure) {
-        std::cerr << "aos-daemon：" << failure.what() << '\n';
+        std::println(stderr, "aos-daemon：{}", failure.what());
         return 1;
     }
 }

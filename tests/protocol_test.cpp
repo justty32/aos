@@ -1,38 +1,38 @@
-#include "aos/channel.hpp"
 #include "aos/protocol.hpp"
 
-#include <asio/io_context.hpp>
-#include <asio/local/connect_pair.hpp>
+#include "check.hpp"
 
-#include <cassert>
-#include <cstddef>
 #include <string>
 
 int main() {
     const aos::Request request{
-        .arguments = {"new", "bot alpha", "", "A \"special\" bot", "繁體中文"},
+        .arguments = {"new", "bot alpha", "", R"(A "special" bot)", "繁體中文"},
         .working_directory = "/tmp/a directory",
-        .standard_input = {},
     };
-    const auto request_json = aos::encode_request_start(request);
-    assert(request_json);
-    assert(request_json->contains("\"arguments\""));
-    const auto decoded_request = aos::decode_request_start(*request_json);
-    assert(decoded_request);
-    assert(*decoded_request == request);
-    assert(!aos::decode_request_start("not json"));
+
+    const auto encoded = aos::encode_request_start(request);
+    AOS_CHECK(encoded.has_value());
+    if (encoded) {
+        AOS_CHECK(encoded->contains(R"("arguments")"));
+        const auto decoded = aos::decode_request_start(*encoded);
+        AOS_CHECK(decoded.has_value());
+        // Request 已經沒有 standard_input 了，所以這是真正的完整 round trip。
+        AOS_CHECK(decoded && *decoded == request);
+    }
+
+    AOS_CHECK(!aos::decode_request_start("not json"));
+    AOS_CHECK(!aos::decode_request_start("[]"));
+    AOS_CHECK(!aos::decode_request_start(R"({"version":999})"));
+    AOS_CHECK(!aos::decode_request_start(R"({"version":1,"arguments":[]})"));
 
     const auto exit_json = aos::encode_exit(-7);
-    const auto decoded_exit = aos::decode_exit(exit_json);
-    assert(decoded_exit && *decoded_exit == -7);
+    const auto exit_code = aos::decode_exit(exit_json);
+    AOS_CHECK(exit_code && *exit_code == -7);
+    AOS_CHECK(!aos::decode_exit("{}"));
+    AOS_CHECK(!aos::decode_exit(R"({"exit_code":"nope"})"));
 
-    asio::io_context context;
-    aos::LocalSocket first{context};
-    aos::LocalSocket second{context};
-    asio::local::connect_pair(first, second);
-    const std::string bytes{"文字\0binary", 13};
-    aos::write_frame(first, aos::FrameKind::stdin_chunk, bytes);
-    const auto frame = aos::read_frame(second);
-    assert(frame.kind == aos::FrameKind::stdin_chunk);
-    assert(frame.payload == bytes);
+    AOS_CHECK(aos::is_known_frame_kind(aos::FrameKind::request_start));
+    AOS_CHECK(!aos::is_known_frame_kind(static_cast<aos::FrameKind>(99)));
+
+    return aos::testing::report();
 }

@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <exception>
+#include <format>
 
 namespace aos {
 namespace {
@@ -25,7 +26,7 @@ encode_request_start(const Request& request) {
             {"working_directory", request.working_directory.native()},
         }.dump();
     } catch (const std::exception& error) {
-        return invalid("request JSON 編碼失敗：" + std::string{error.what()});
+        return invalid(std::format("request JSON 編碼失敗：{}", error.what()));
     }
 }
 
@@ -39,20 +40,21 @@ decode_request_start(std::string_view payload) {
         if (document.value("version", 0) != protocol_version) {
             return invalid("不支援的 AOS 協定版本");
         }
-        if (!document.contains("arguments") ||
-            !document["arguments"].is_array() ||
-            !document.contains("working_directory") ||
-            !document["working_directory"].is_string()) {
+
+        const auto arguments = document.find("arguments");
+        const auto working_directory = document.find("working_directory");
+        if (arguments == document.end() || !arguments->is_array() ||
+            working_directory == document.end() ||
+            !working_directory->is_string()) {
             return invalid("request JSON 缺少必要欄位");
         }
 
-        Request request;
-        request.arguments = document["arguments"].get<std::vector<std::string>>();
-        request.working_directory =
-            document["working_directory"].get<std::string>();
-        return request;
+        return Request{
+            .arguments = arguments->get<std::vector<std::string>>(),
+            .working_directory = working_directory->get<std::string>(),
+        };
     } catch (const std::exception& error) {
-        return invalid("request JSON 內容錯誤：" + std::string{error.what()});
+        return invalid(std::format("request JSON 內容錯誤：{}", error.what()));
     }
 }
 
@@ -64,18 +66,20 @@ std::expected<std::int32_t, std::string>
 decode_exit(std::string_view payload) {
     try {
         const auto document = Json::parse(payload, nullptr, false);
-        if (document.is_discarded() || !document.is_object() ||
-            !document.contains("exit_code") ||
-            !document["exit_code"].is_number_integer()) {
+        if (document.is_discarded() || !document.is_object()) {
             return invalid("exit frame 不是有效的 JSON");
         }
-        return document["exit_code"].get<std::int32_t>();
+        const auto exit_code = document.find("exit_code");
+        if (exit_code == document.end() || !exit_code->is_number_integer()) {
+            return invalid("exit frame 缺少 exit_code");
+        }
+        return exit_code->get<std::int32_t>();
     } catch (const std::exception& error) {
-        return invalid("exit JSON 內容錯誤：" + std::string{error.what()});
+        return invalid(std::format("exit JSON 內容錯誤：{}", error.what()));
     }
 }
 
-bool is_valid(FrameKind kind) {
+bool is_known_frame_kind(FrameKind kind) {
     switch (kind) {
     case FrameKind::request_start:
     case FrameKind::stdin_chunk:
