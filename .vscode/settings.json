@@ -1,9 +1,0 @@
-{
-  // Microsoft C++ 擴充套件直接採用 CMake 的真實編譯參數。
-  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
-
-  // CMake Tools 在這個專案內使用固定的來源與建置目錄。
-  "cmake.sourceDirectory": "${workspaceFolder}",
-  "cmake.buildDirectory": "${workspaceFolder}/build",
-  "cmake.useCMakePresets": "always"
-}

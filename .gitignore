@@ -1,9 +1,4 @@
-bin/
-lib/
 build/
+vcpkg_installed/
+bin/
 .cache/
-CMakeUserPresets.json
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile

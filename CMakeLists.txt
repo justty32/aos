@@ -1,80 +1,72 @@
-cmake_minimum_required(VERSION 3.25)
-project(aos VERSION 0.1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.21)
 
-if(NOT UNIX)
-  message(FATAL_ERROR "aos 目前需要 Unix Domain Socket")
+project(aos-cpp LANGUAGES C CXX)
+
+if(WIN32)
+    message(FATAL_ERROR "aos-cpp supports POSIX platforms only")
 endif()
 
-# 供 VS Code、clangd 等工具取得實際的編譯器參數與 include 路徑。
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Threads REQUIRED)
-find_package(asio CONFIG REQUIRED)
+# -fvisibility=hidden 只管一般函式；inline 與樣板實體化是弱符號，要
+# -fvisibility-inlines-hidden 才蓋得住。少了它，nlohmann 的樣板實體會出現在
+# libaos.so 的動態符號表上，這個 .so 就變成「只給用同一版 nlohmann 的人用」。
+add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
+
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(CURL REQUIRED)  # LLM 呼叫走 HTTP
+find_package(Catch2 CONFIG REQUIRED)
 
-# 共用的警告設定。放成 INTERFACE target，函式庫跟兩個執行檔才會拿到同一套。
-add_library(aos_warnings INTERFACE)
-target_compile_options(aos_warnings INTERFACE
-  # -Wmissing-field-initializers 對 designated initializer 是誤報：沒寫的欄位
-  # 會拿到類別裡宣告的預設值，那正是我們要的寫法，不是漏了。
-  $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic;-Wshadow;-Wnon-virtual-dtor;-Wno-missing-field-initializers>)
-
-# src/core/ 專門放共用實作，新增的 .cpp（含子目錄）會自動加入。
-file(GLOB_RECURSE AOS_CORE_SOURCES CONFIGURE_DEPENDS
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp")
-
-add_library(aos_core STATIC ${AOS_CORE_SOURCES})
-
-target_include_directories(aos_core
-  PUBLIC include
-  # src/core/ 底下的內部標頭（commands.hpp、connection.hpp…）只給自己用。
-  PRIVATE src/core)
-target_compile_features(aos_core PUBLIC cxx_std_23)
-target_link_libraries(aos_core
-  PUBLIC asio::asio Threads::Threads
-  PRIVATE nlohmann_json::nlohmann_json CURL::libcurl aos_warnings)
-set_target_properties(aos_core PROPERTIES CXX_EXTENSIONS OFF)
-
-add_executable(aos_cli src/cli/main.cpp)
-target_link_libraries(aos_cli PRIVATE aos_core aos_warnings)
-set_target_properties(aos_cli PROPERTIES
-  OUTPUT_NAME aos
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
-
-add_executable(aos_daemon src/daemon/main.cpp)
-target_link_libraries(aos_daemon PRIVATE aos_core aos_warnings)
-set_target_properties(aos_daemon PROPERTIES
-  OUTPUT_NAME aos-daemon
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
-
-include(CTest)
-if(BUILD_TESTING)
-  # 純函式層：JSON 編解碼，不碰 socket。
-  add_executable(aos_protocol_test tests/protocol_test.cpp)
-  target_link_libraries(aos_protocol_test PRIVATE aos_core aos_warnings)
-  add_test(NAME protocol COMMAND aos_protocol_test)
-
-  # 訊框在真 socket 上的往返，以及命令的「邊讀邊寫」行為。
-  add_executable(aos_streaming_test tests/streaming_test.cpp)
-  target_link_libraries(aos_streaming_test PRIVATE aos_core aos_warnings)
-  add_test(NAME streaming COMMAND aos_streaming_test)
-
-  # LLM 這一層的純函式：payload 怎麼組、SSE 與回應怎麼拆。不連任何端點。
-  add_executable(aos_llm_test tests/llm_test.cpp)
-  # 這個測試要自己讀 JSON 來檢查組出來的 payload，所以它也需要 nlohmann。
-  target_link_libraries(aos_llm_test
-    PRIVATE aos_core aos_warnings nlohmann_json::nlohmann_json)
-  add_test(NAME llm COMMAND aos_llm_test)
-
-  # tooljson 的規範層：載入期驗證與 argv 展開，同樣不連網路。
-  add_executable(aos_tooljson_test tests/tooljson_test.cpp)
-  target_link_libraries(aos_tooljson_test PRIVATE aos_core aos_warnings)
-  add_test(NAME tooljson COMMAND aos_tooljson_test)
-
-  # 真的把 daemon 跑起來，用 CLI 打它。這是唯一能證明串流端到端可用的測試。
-  add_test(NAME end_to_end
-    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/tests/e2e.sh"
-            "$<TARGET_FILE:aos_daemon>" "$<TARGET_FILE:aos_cli>")
+set(AOS_OBJECT_SOURCES
+    src/inst.cpp
+    src/format.cpp
+    src/spawn_prep.cpp
+    src/wait.cpp
+    src/exec.cpp
+    src/capi.cpp
+    src/capi_instruction.cpp
+    src/capi_io.cpp
+)
+if(AOS_OBJECT_SOURCES)
+    add_library(aos_objects OBJECT ${AOS_OBJECT_SOURCES})
+    set_target_properties(aos_objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(aos_objects PUBLIC include)
+    target_link_libraries(aos_objects PRIVATE nlohmann_json::nlohmann_json)
 endif()
+
+add_library(aos SHARED)
+target_link_libraries(aos PRIVATE aos_objects)
+target_include_directories(aos PUBLIC include)
+set_target_properties(aos PROPERTIES VERSION 0.1.0 SOVERSION 0)
+
+add_executable(aos-cpp
+    src/main.cpp
+    src/run.cpp
+)
+target_link_libraries(aos-cpp PRIVATE aos_objects)
+
+enable_testing()
+
+add_executable(aos_tests
+    tests/test_format_read.cpp
+    tests/test_format_write.cpp
+    tests/test_format_malformed.cpp
+    tests/test_exec_streams.cpp
+    tests/test_exec_path.cpp
+    tests/test_exec_status.cpp
+    tests/test_timeout.cpp
+    tests/test_run.cpp
+    src/run.cpp
+)
+target_link_libraries(aos_tests PRIVATE aos_objects Catch2::Catch2WithMain)
+add_test(NAME aos_tests COMMAND aos_tests)
+
+add_executable(test_capi tests/test_capi.c)
+set_target_properties(test_capi PROPERTIES
+    C_STANDARD 99
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF
+)
+target_link_libraries(test_capi PRIVATE aos)
+add_test(NAME test_capi COMMAND test_capi)
