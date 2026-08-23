@@ -12,8 +12,10 @@
 
 ## 最新進度
 
-- **C ABI 尚未補齊**：目前只有 `inst` 有 `<aos/inst.h>`；使用者明確表示這塊之後再慢慢加，現階段不動它。
-- **相依管理的下一步**：通用私有相依目前集中在 `common/CMakeLists.txt` 的 `aos_common_private`，只收 header-only 且多數小專案都要的東西。等出現第一個重量級相依（curl 之類）就要改成「具名 bundle + 小專案明示取用」，並考慮 vcpkg feature 搭配 `AOS_BUILD_<NAME>`。判準已寫進 [`docs/subprojects.md`](../docs/subprojects.md)。
+- **llmkit 移植還沒完**：`reference/llmkit/` 是從 freepy 搬來的 python 原文，計畫與五個階段在 [`reference/PORTING.md`](../reference/PORTING.md)。S1／S3／S4 已落地（`core/tooljson` 外殼與 `core/llms` 全部），**S2 卡在待使用者的決策**（見 [WAIT_USER](WAIT_USER.md)），**S5 未開始**（兩個小專案的 `docs/`、外部消費測試、刪掉整個 `reference/`）。`reference/` 在移植驗完之前不要刪。
+- **`aos tooljson run` 還不能用**：S1 只做到「讀 spec、驗證、展開 argv」，`ExecBody::run()` 目前回一句「尚未實作」。要能真的跑起來得先做 S2。
+- **C ABI 尚未補齊**：目前只有 `inst` 有 `<aos/inst.h>`；`tooljson` 與 `llms` 都還沒有。使用者明確表示這塊之後再慢慢加，現階段不動它。
+- **相依管理**：`aos_common_private`（`common/CMakeLists.txt`）目前仍只有 nlohmann。curl 這顆重量級相依 2026-08-23 進來了，但**照判準直接走 `core/llms` 的 `PRIVATE_DEPS`**，沒有進 `aos_common_private`，所以還不需要「具名 bundle」那層。真正的觸發點是相依長到四五個以上，判準見 [`docs/subprojects.md`](../docs/subprojects.md)。
 
 ## 各工作流 session-log
 

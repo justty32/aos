@@ -10,4 +10,11 @@
 
 ## 待使用者項
 
-- （目前無）
+- **移植 S2 的決策 A：`core/tooljson` 的 exec 引擎自己寫，還是動 `core/inst`？**
+  `_type: "exec"` 看起來就是 `core/inst` 在做的事，但接不起來——EXEC.md 要求
+  `stderr.mode: "merge"` 是真的共用一條管子，而 `inst` 的重導向走檔案路徑，
+  `core/inst/src/exec.cpp` 對 stdout 與 stderr 各開一次 `O_TRUNC`，同一個路徑
+  給兩邊會互相蓋寫。選項與代價寫在
+  [`reference/PORTING.md`](../reference/PORTING.md) 的「三、兩個要使用者拍板的
+  決策」。**A2 會動到凍結的 `inst` 核心層，所以一定要使用者點頭**，不可以自己選。
+  這題沒解掉之前 S2 不要開工。
