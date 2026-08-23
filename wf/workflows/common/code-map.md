@@ -31,6 +31,12 @@ app/（唯一執行檔 aos，子命令分派）── `aos inst jobs.json` 掛�
        │  exec_type／args：只解析 exec 配方並展開 argv，不啟動行程
        ▼
 app/ ── `aos tooljson list|check spec.json` 掛的就是這條
+
+  aos::llms（core/llms/，核心小專案 → libaos_llms.so）
+       │  LLM：端點、模型、Params、能力三態與可抽換 HTTP transport
+       │  Bot／Reply：system、history、tools 與非串流 ask 的交易式收尾
+       ▼
+app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 ```
 
 三個一直會用到的概念：
@@ -165,6 +171,43 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 
 細節契約與 C++ registry 的 JSON 邊界見 `core/tooljson/docs/format.md`。
 
+## core/llms/ — OpenAI 相容端點 client（S3 非串流）
+
+公開介面不含 nlohmann 或 curl 型別；JSON 以字串進出。`Bot::ask()` 除
+`std::bad_alloc` 外永遠回 `Reply`，錯誤放在分類化的 `reply.err`。HTTP 由
+`Transport` 抽換，ctest 全部使用假端點。
+
+| 檔案 | 負責 |
+|------|------|
+| `include/aos/llms.hpp` | 全部公開 C++ API：`HttpRequest`／`Transport`、`Params`、`Caps`／`LLM`、`ToolSet`、`Reply`／`Bot`、presets 與 content 純函式；每個公開函式與 out-of-line 成員都標 `AOS_API` |
+| `src/llms_internal.hpp` | 唯一共用的內部 nlohmann 邊界與各 pimpl／測試不到的 access bridge；公開標頭不 include 它 |
+| `src/content.cpp` | base／completion／root URL 正規化、API key fallback、本機圖片 MIME＋base64 data URL、圖片／文字 content parts |
+| `src/params.cpp` | `Params` → request JSON；只送已設定欄位，再直接展開 `extra_json`；model／messages／stream 由 Bot 最後固定、不讓 extra 覆蓋 |
+| `src/toolcalls.cpp` | raw call → 呼叫端 entry／API history；非法 arguments 保留 raw；串流碎片按 index 增量累積 |
+| `src/toolset.cpp` | C++ 的 `(schemas_json, dispatch)` bundle 驗證與合併；名稱須完全配對且不可撞名，不做 Python callable 反射 |
+| `src/transport.cpp` | 預設 libcurl transport；curl 型別與 header 只停在本檔，支援 GET／POST、timeout、header 與回應 body |
+| `src/caps.cpp` | GET `<root>/model/info`，轉成七項 `optional<bool>`；失敗吞掉，以 `(root URL, key)` 快取且空表也快取 |
+| `src/llm.cpp` | `LLM` 值與能力檢查；只有明確 `false` 擋請求，tool choice 沒 tools 直接回明確錯誤 |
+| `src/reply.cpp` | 同一 `Reply` 的增量 buffer／reasoning／tool-call accumulator 與唯一 `finish()`；S3 整包吸收後立即收尾，形狀已預留 S4 |
+| `src/bot.cpp` | 組 system＋history＋tool results＋user message、最後覆寫 model／messages／stream、送出非串流 request；失敗退回 checkpoint，成功透過 `Reply::finish()` 寫回 assistant history |
+| `src/presets.cpp`／`src/presets_data.hpp.in`／`presets.json` | 嚴格驗證並載入內嵌 preset；每筆只准 endpoint／model／parameters／可省略 description，能力不放 preset |
+| `src/run.hpp`／`src/run.cpp` | `aos llms ask`／`models` CLI 與 `aos_llms_cli_main`；成功路徑會連端點，配置失敗由 CLI 例外邊界收住 |
+| `CMakeLists.txt` | 建 `aos::llms`、以 `PRIVATE_DEPS CURL::libcurl` 連 curl、內嵌 presets、登記 `llms` 子命令與離線測試 |
+| `README.md` | S3 API、Reply／S4 預留、能力／toolset／presets 與 CLI 使用說明 |
+| `proxy/` | 從 reference 原樣搬入的 LiteLLM yaml、Linux／PowerShell 啟動腳本與 README；不建置、不安裝 |
+
+### core/llms/tests/ — 測試
+
+| 檔案 | 涵蓋 |
+|------|------|
+| `test_support.hpp` | 假端點、HTTP 回應與暫存檔共用工具 |
+| `test_content_params.cpp` | URL／root／key、本機與遠端圖片、image-only content、Params 只送設定值 |
+| `test_toolcalls.cpp` | 交錯 index 碎片累積、非法 JSON arguments、tool-call history 與 null content |
+| `test_toolset_presets.cpp` | schemas／dispatch 完整配對與撞名、內建 preset、缺鍵／多鍵拒絕 |
+| `test_caps.cpp` | 能力 true／false／不知道、override、只擋明確 false、root＋key 快取、空表命中與清快取 |
+| `test_reply_bot.cpp` | ask 全錯誤契約、checkpoint rollback、extra 保護欄位、image-only、text＋calls、pending calls、system／reset、usage 缺值與 finish 落空退回 |
+| `test_run.cpp` | S3 CLI 語法與 `--stream` 尚未開放；不連網 |
+
 ## 文件在哪
 
 `docs/`（repo 根）放**整體**文件：[總覽](../../../docs/overview.md)、[建置](../../../docs/build.md)、[使用](../../../docs/usage.md)、[新增小專案](../../../docs/subprojects.md)。改了建置骨架、子命令機制或相依管理，那邊要跟著更新。
@@ -184,7 +227,7 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 
 | 路徑 | 負責 |
 |------|------|
-| 根 `CMakeLists.txt` | 頂層：`option()`、vcpkg toolchain 解析（在 `project()` 之前）、`find_package`、`add_subdirectory(common/core/modules/app)`、三個傘狀 target、合併版、`install`／`export` |
+| 根 `CMakeLists.txt` | 頂層：`option()`、vcpkg toolchain 解析（在 `project()` 之前）、`find_package(nlohmann_json/CURL/Catch2)`、`add_subdirectory(common/core/modules/app)`、三個傘狀 target、合併版、`install`／`export` |
 | `core/CMakeLists.txt`／`modules/CMakeLists.txt` | 兩份小專案清單。新增小專案就是往其中一份加一行 `add_subdirectory()`；它們各自 `set(AOS_SUBPROJECT_CATEGORY ...)` 來決定分類 |
 | `cmake/AosSubproject.cmake` | 三個共用函式：`aos_add_subproject()`（產出 OBJECT＋SHARED 兩個 target、把私有相依從匯出介面剝掉、檢查保留名稱與分類）、`aos_add_subcommand()`（登記子命令＋三道守衛）、`aos_add_test()` |
 | `cmake/aos-config.cmake.in` | 讓外部專案 `find_package(aos CONFIG)`。`@AOS_FIND_DEPENDENCIES@` 由根 CMakeLists 從各小專案登記的 `PUBLIC_PACKAGES` 產生 |

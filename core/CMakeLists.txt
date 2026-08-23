@@ -7,3 +7,4 @@ set(AOS_SUBPROJECT_CATEGORY core)
 
 add_subdirectory(inst)
 add_subdirectory(tooljson)
+add_subdirectory(llms)

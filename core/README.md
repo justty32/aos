@@ -7,6 +7,7 @@ aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命
 |--------|--------|--------|--------|
 | [inst/](inst/) | `aos::inst` | `aos inst` | 讀 JSON 指令檔，依序 `fork`/`exec` 執行 |
 | [tooljson/](tooljson/) | `aos::tooljson` | `aos tooljson` | 讀取、驗證 tool spec，並把模型參數展開成 argv |
+| [llms/](llms/) | `aos::llms` | `aos llms` | 呼叫 OpenAI 相容端點並查詢模型能力（S3 非串流） |
 
 `aos::core` 這個傘狀 target 一次連上本目錄的全部。
 

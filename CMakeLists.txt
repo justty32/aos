@@ -63,6 +63,7 @@ else()
 endif()
 
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(CURL REQUIRED)
 if(AOS_BUILD_TESTS)
     find_package(Catch2 3 CONFIG REQUIRED)
     enable_testing()

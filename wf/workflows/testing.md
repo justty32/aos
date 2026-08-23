@@ -24,5 +24,6 @@
 | `aos_inst_tests` | `core/inst/` | C++ 測試：format 層（JSON round trip／壞輸入）、exec 層（重導向／PATH／exit status／逾時）、CLI 層（`run()` 的整批剖析＋依序執行）——細節見 [code map](common/code-map.md) 的 `core/inst/tests/` 一節 |
 | `aos_inst_capi_tests` | `core/inst/` | C ABI 往返測試（`core/inst/tests/test_capi.c`），獨立的 C 執行檔 |
 | `aos_tooljson_tests` | `core/tooljson/` | tool spec 外殼／exec 配方的載入期驗證、開放 registry、args → argv/stdin、文字收尾與 `list`／`check` CLI；完全離線且不啟動工具行程 |
+| `aos_llms_tests` | `core/llms/` | URL／key／圖片、Params、tool-call 累積、toolset／presets、能力三態與快取、Reply／history／usage、非串流 ask 錯誤契約與 CLI 語法；HTTP 全部用假 transport，完全離線 |
 
 日後新增小專案（不分 `core/` 或 `modules/`）照同一個命名慣例掛自己的 `aos_<專案>_tests`，跑不了的環境依賴驗證才記 [WAIT_USER](../WAIT_USER.md)。
