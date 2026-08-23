@@ -106,6 +106,10 @@ if(AOS_BUILD_MERGED_LIB)
         PUBLIC aos::common ${aos_public_deps}
         PRIVATE ${aos_private_deps}
     )
+    # 與各小專案的共享庫同樣的理由：私有相依不要外流到匯出介面。
+    set_property(TARGET aos_merged PROPERTY
+        INTERFACE_LINK_LIBRARIES aos::common ${aos_public_deps}
+    )
     foreach(include_dir IN LISTS aos_include_dirs)
         target_include_directories(aos_merged PUBLIC
             $<BUILD_INTERFACE:${include_dir}>
@@ -139,6 +143,17 @@ if(AOS_INSTALL)
         NAMESPACE aos::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/aos
     )
+
+    # 只有公開相依需要讓使用者的 find_package(aos) 一併找出來；私有相依已經在
+    # aos_add_subproject() 裡從匯出介面剝掉了。
+    get_property(aos_public_packages GLOBAL PROPERTY AOS_PUBLIC_PACKAGES)
+    if(aos_public_packages)
+        list(REMOVE_DUPLICATES aos_public_packages)
+    endif()
+    set(AOS_FIND_DEPENDENCIES "")
+    foreach(package IN LISTS aos_public_packages)
+        string(APPEND AOS_FIND_DEPENDENCIES "find_dependency(${package} CONFIG)\n")
+    endforeach()
 
     configure_package_config_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/aos-config.cmake.in

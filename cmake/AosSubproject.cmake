@@ -6,9 +6,15 @@ include_guard(GLOBAL)
 # aos_add_subproject(<name>
 #     SOURCES      <實作檔…>
 #     HEADERS      <公開標頭…>            # 會被安裝，路徑相對於本目錄
-#     PUBLIC_DEPS  <公開標頭裡用到的相依…>
-#     PRIVATE_DEPS <只有實作檔用到的相依…>
+#     PUBLIC_DEPS      <公開標頭裡用到的相依…>
+#     PRIVATE_DEPS     <只有實作檔用到的相依…>
+#     PUBLIC_PACKAGES  <PUBLIC_DEPS 是哪些 find_package 提供的…>
 # )
+#
+# PUBLIC_DEPS 會出現在使用者的編譯行上，所以使用者的 find_package(aos) 也得先
+# 把那些套件找出來——把對應的套件名列進 PUBLIC_PACKAGES，根目錄會據此在
+# aos-config.cmake 產生 find_dependency()。PRIVATE_DEPS 則刻意不外流，理由見
+# 下面「把私有相依從匯出介面剝掉」那段。
 #
 # 產出兩個 target：
 #   aos_<name>_objects  OBJECT，給合併版 libaos.so 撿去用
@@ -20,7 +26,7 @@ function(aos_add_subproject name)
     cmake_parse_arguments(PARSE_ARGV 1 ARG
         ""
         ""
-        "SOURCES;HEADERS;PUBLIC_DEPS;PRIVATE_DEPS"
+        "SOURCES;HEADERS;PUBLIC_DEPS;PRIVATE_DEPS;PUBLIC_PACKAGES"
     )
     if(ARG_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "aos_add_subproject(${name}): 不認得的參數 ${ARG_UNPARSED_ARGUMENTS}")
@@ -50,6 +56,18 @@ function(aos_add_subproject name)
         PUBLIC aos::common ${ARG_PUBLIC_DEPS}
         PRIVATE ${ARG_PRIVATE_DEPS}
     )
+    # 把私有相依從匯出介面剝掉。
+    #
+    # target_link_libraries(... PRIVATE x) 會在 INTERFACE_LINK_LIBRARIES 留下
+    # $<LINK_ONLY:x>，匯出後使用者的 find_package(aos) 就得先找得到 x，否則
+    # configure 直接失敗——即使 x 是 header-only、即使符號全被 hidden 蓋掉、
+    # 即使使用者根本用不到它。對共享庫來說這層要求是多餘的：實際的連結需求
+    # 已經記在 .so 的 DT_NEEDED 裡了。所以這裡直接把介面重設成只剩公開的部分；
+    # LINK_LIBRARIES（真正連結 .so 時用的那份）不受影響。
+    set_property(TARGET ${library} PROPERTY
+        INTERFACE_LINK_LIBRARIES aos::common ${ARG_PUBLIC_DEPS}
+    )
+
     set_target_properties(${library} PROPERTIES
         OUTPUT_NAME aos_${name}
         # 沒有這行，匯出後外部看到的會是 aos::aos_inst 而不是 aos::inst。
@@ -69,6 +87,7 @@ function(aos_add_subproject name)
     set_property(GLOBAL APPEND PROPERTY AOS_SUBPROJECTS ${name})
     set_property(GLOBAL APPEND PROPERTY AOS_INCLUDE_DIRS ${include_dir})
     set_property(GLOBAL APPEND PROPERTY AOS_PUBLIC_DEPS ${ARG_PUBLIC_DEPS})
+    set_property(GLOBAL APPEND PROPERTY AOS_PUBLIC_PACKAGES ${ARG_PUBLIC_PACKAGES})
     set_property(GLOBAL APPEND PROPERTY AOS_PRIVATE_DEPS ${ARG_PRIVATE_DEPS})
 
     if(AOS_INSTALL)

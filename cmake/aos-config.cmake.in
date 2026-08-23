@@ -2,9 +2,10 @@
 
 include(CMakeFindDependencyMacro)
 
-# 各小專案的實作檔用得到，共享庫把它記在 $<LINK_ONLY:> 裡，find_package 時要能解析。
-find_dependency(nlohmann_json CONFIG)
-
+# 由根 CMakeLists 從各小專案登記的 PUBLIC_PACKAGES 產生。私有相依（例如
+# nlohmann_json）刻意不列在這裡：它們不出現在公開標頭上，共享庫該連的東西也
+# 已經記在自己的 DT_NEEDED 裡，使用者不必為了 find_package(aos) 先裝它們。
+@AOS_FIND_DEPENDENCIES@
 include("${CMAKE_CURRENT_LIST_DIR}/aos-targets.cmake")
 
 check_required_components(aos)
