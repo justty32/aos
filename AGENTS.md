@@ -1,6 +1,6 @@
 # aos — AI agent 專案備忘
 
-aos = **一個 monorepo：只有一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（例如 `aos inst jobs.json`）。第一個小專案 `subprojects/inst/` 是讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。用 C++23 寫，CMake + vcpkg 建置，**只能從 repo 根目錄 build**。
+aos = **一個 monorepo：只有一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（例如 `aos inst jobs.json`）。第一個小專案 `core/inst/` 是讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。用 C++23 寫，CMake + vcpkg 建置，**只能從 repo 根目錄 build**。
 
 本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**。
 

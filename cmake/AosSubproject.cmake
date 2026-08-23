@@ -1,5 +1,12 @@
-# 這個檔案定義「一個小專案長什麼樣」。新增小專案時照 subprojects/inst/CMakeLists.txt
-# 抄一份，再去 subprojects/CMakeLists.txt 加一行 add_subdirectory() 就好，其餘不用碰。
+# 這個檔案定義「一個小專案長什麼樣」。新增小專案時照 core/inst/CMakeLists.txt 抄
+# 一份，再去 core/CMakeLists.txt 或 modules/CMakeLists.txt 加一行 add_subdirectory()
+# 就好，其餘不用碰。
+#
+# 小專案分兩類，靠它放在哪個目錄決定（那兩個目錄各自 set 了
+# AOS_SUBPROJECT_CATEGORY，會沿著 add_subdirectory 繼承下來）：
+#   core/     aos 的基本組成部分，一定會建
+#   modules/  可選的擴充，-DAOS_BUILD_MODULES=OFF 可以整批不建
+# 兩類在建置上完全一樣，差別只在分類、以及 aos::core／aos::modules 兩個傘狀 target。
 
 include_guard(GLOBAL)
 
@@ -38,6 +45,19 @@ function(aos_add_subproject name)
     if(NOT ARG_SOURCES)
         message(FATAL_ERROR "aos_add_subproject(${name}): 需要 SOURCES")
     endif()
+
+    # 這些名字被傘狀 target 與合併版佔用了，讓它撞在這裡而不是撞在
+    # add_library(aos::x ALIAS) 的重複定義錯誤上。
+    if(name MATCHES "^(aos|core|modules|merged|common)$")
+        message(FATAL_ERROR "aos_add_subproject(${name}): '${name}' 是保留名稱")
+    endif()
+
+    # 分類由所在目錄決定。直接被根 CMakeLists 加進來的小專案沒有分類，擋掉。
+    if(NOT AOS_SUBPROJECT_CATEGORY)
+        message(FATAL_ERROR
+            "aos_add_subproject(${name}): 小專案必須放在 core/ 或 modules/ 底下")
+    endif()
+    string(TOUPPER "${AOS_SUBPROJECT_CATEGORY}" category)
 
     set(objects aos_${name}_objects)
     set(library aos_${name})
@@ -89,6 +109,7 @@ function(aos_add_subproject name)
 
     # 合併版與傘狀 target 在根目錄組裝，這裡只留下線索。
     set_property(GLOBAL APPEND PROPERTY AOS_SUBPROJECTS ${name})
+    set_property(GLOBAL APPEND PROPERTY AOS_${category}_SUBPROJECTS ${name})
     set_property(GLOBAL APPEND PROPERTY AOS_INCLUDE_DIRS ${include_dir})
     set_property(GLOBAL APPEND PROPERTY AOS_PUBLIC_DEPS ${ARG_PUBLIC_DEPS})
     set_property(GLOBAL APPEND PROPERTY AOS_PUBLIC_PACKAGES ${ARG_PUBLIC_PACKAGES})

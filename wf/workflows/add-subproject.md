@@ -13,17 +13,18 @@
 
 先讀 [code map](common/code-map.md) 的「一分鐘看懂這個專案」，確認你理解這三件事：
 
-1. 小專案都住在 `subprojects/`，`common/`／`app/`／`cmake/` 是基礎設施，不是小專案。
+1. 小專案住在 `core/`（核心）或 `modules/`（擴充）。`common/`／`app/`／`cmake/` 是基礎設施，不是小專案。
 2. 每個小專案同時是一顆共享函式庫（`aos::<name>`）與 `aos` 執行檔的一條子命令。
-3. **`subprojects/inst/` 是參考範本**，照抄就對了。
+3. **`core/inst/` 是參考範本**，照抄就對了。
 
-## Step 0：先跟使用者確認四件事
+## Step 0：先跟使用者確認五件事
 
-不要猜。這四項一旦定下來，改名成本很高：
+不要猜。這幾項一旦定下來，改名成本很高：
 
 | 要問 | 限制 | 例 |
 |------|------|-----|
-| 小專案名稱 | `^[a-z][a-z0-9-]*$`（會直接當子命令名與目錄名）| `llm` |
+| 小專案名稱 | `^[a-z][a-z0-9-]*$`（會直接當子命令名與目錄名）；不可用 `aos`／`core`／`modules`／`merged`／`common` | `llm` |
+| **核心還是擴充** | 拿掉它 aos 就不再是 aos → `core/`；仍然成立 → `modules/`。拿不定主意放 `modules/` | 擴充 |
 | 這個小專案做什麼 | 一行說明，會印在 `aos --help` | 「呼叫 LLM 並回傳結果」|
 | 要不要子命令 | 純函式庫的小專案可以不要 | 要 |
 | 有沒有新的外部相依 | 有的話問清楚是**公開標頭**要用還是只有 `.cpp` 要用 | 需要 libcurl，只有 .cpp 用 |
@@ -33,7 +34,7 @@
 ## Step 1：建目錄
 
 ```
-subprojects/<name>/
+core/<name>/  或  modules/<name>/       ← Step 0 決定的那個
   include/aos/<name>.hpp     公開標頭
   src/<name>.cpp             實作
   src/run.cpp                CLI 層（要子命令才需要）
@@ -78,9 +79,9 @@ extern "C" int aos_<name>_cli_main(int argc, char *argv[]) {
 **CLI 只能透過公開 API 呼叫自己的函式庫**，不要 include `src/` 底下的內部標頭。
 這條規則是刻意的：CLI 跑得起來就等於證明公開介面夠用。
 
-## Step 4：`subprojects/<name>/CMakeLists.txt`
+## Step 4：小專案自己的 `CMakeLists.txt`
 
-照抄 `subprojects/inst/CMakeLists.txt` 改名字：
+照抄 `core/inst/CMakeLists.txt` 改名字：
 
 ```cmake
 aos_add_subproject(<name>
@@ -116,11 +117,15 @@ nlohmann_json 屬第二類，**不要寫進 `PRIVATE_DEPS`**。
 
 ## Step 5：掛上去
 
-`subprojects/CMakeLists.txt` 加一行：
+在 **Step 0 決定的那個目錄**的 `CMakeLists.txt` 加一行——`core/CMakeLists.txt`
+或 `modules/CMakeLists.txt`：
 
 ```cmake
 add_subdirectory(<name>)
 ```
+
+分類就是靠這個決定的（那兩份各自 `set` 了 `AOS_SUBPROJECT_CATEGORY`，會沿著
+`add_subdirectory` 繼承下來）。
 
 **根 `CMakeLists.txt` 與 `app/` 都不要動。** 如果你覺得需要動它們，代表前面某一步
 做錯了，回去檢查。
@@ -133,6 +138,9 @@ cmake --build --preset default
 ctest --preset default                      # 要全綠
 ./build/bin/aos --help                      # 新子命令要出現、說明要正確
 ./build/bin/aos <name> ...                  # 真的叫得動
+
+# 加的是擴充小專案的話，再確認關掉之後整包還是建得起來
+cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod
 ```
 
 然後**一定要做外部消費測試**——這一步會抓到只有從 repo 外面看才看得出來的問題
@@ -160,8 +168,8 @@ cmake --build build && ./build/c
 照 [AGENTS.md](../../AGENTS.md) 的鐵律，這幾份都要同步，缺一不可：
 
 - [ ] [code map](common/code-map.md)：新增這個小專案的段落（哪個檔負責什麼）
-- [ ] [`subprojects/README.md`](../../subprojects/README.md)：表格加一列
-- [ ] `subprojects/<name>/docs/`：這個小專案自己的細節文件
+- [ ] [`core/README.md`](../../core/README.md) 或 [`modules/README.md`](../../modules/README.md)：表格加一列
+- [ ] `<core|modules>/<name>/docs/`：這個小專案自己的細節文件
 - [ ] [`docs/overview.md`](../../docs/overview.md)：如果小專案清單有寫在裡面
 - [ ] 有新相依的話，[`docs/subprojects.md`](../../docs/subprojects.md) 的相依那節要不要跟著調整
 
@@ -173,4 +181,6 @@ cmake --build build && ./build/c
 | 使用者 `find_package(aos)` 說找不到某個套件 | 私有相依被寫成 `PUBLIC_DEPS` |
 | configure 報「子命令已經由 … 登記過了」| 名稱撞到別的小專案，換一個 |
 | 連結期 multiple definition | 兩個小專案用了同一個 `ENTRY` 符號名 |
-| 新子命令沒出現在 `--help` | `subprojects/CMakeLists.txt` 忘了加 `add_subdirectory()` |
+| 新子命令沒出現在 `--help` | `core/` 或 `modules/` 的 `CMakeLists.txt` 忘了加 `add_subdirectory()`；或它是擴充但你用了 `-DAOS_BUILD_MODULES=OFF` |
+| configure 報「小專案必須放在 core/ 或 modules/ 底下」| `add_subdirectory()` 加錯地方了 |
+| configure 報「'xxx' 是保留名稱」| 名字撞到傘狀 target，換一個 |

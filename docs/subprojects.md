@@ -2,15 +2,29 @@
 
 ← [文件索引](README.md)｜[總覽](overview.md)｜[建置](build.md)
 
-小專案都住在 `subprojects/` 底下。`subprojects/inst/` 就是這件事的參考範本，
-整份抄過去改名字，大致就成立了。
+`core/inst/` 就是這件事的參考範本，整份抄過去改名字，大致就成立了。
+
+## 先決定：核心還是擴充
+
+小專案分兩類，只差在放哪個目錄，建置方式完全一樣：
+
+| | `core/` | `modules/` |
+|---|---|---|
+| 是什麼 | aos 的**基本組成部分**，很通用，子命令與函式庫成對出現 | **可選的擴充** |
+| 會不會被建 | 一定會 | `-DAOS_BUILD_MODULES=OFF` 可整批不建 |
+| 傘狀 target | `aos::core` | `aos::modules` |
+
+**判準一句話**：拿掉它 aos 就不再是 aos → `core/`；拿掉它 aos 仍然成立 →
+`modules/`。拿不定主意就放 `modules/`，之後往 `core/` 搬比反過來容易。
+
+兩者都算在 `aos::aos` 裡。
 
 ## 三個步驟
 
 **1. 建立目錄結構**
 
 ```
-subprojects/<name>/
+core/<name>/  或  modules/<name>/
   include/aos/<name>.hpp     公開標頭（會被安裝）
   include/aos/<name>.h       C ABI（可選，之後再補也行）
   src/                       實作 + CLI 層
@@ -58,16 +72,20 @@ extern "C" int aos_<name>_cli_main(int argc, char *argv[]) { ... }
 規則。`aos` 會把 `argv[0]` 設成 `"aos <name>"` 再呼叫進來，所以子命令印用法訊息
 時直接用 `argv[0]` 就對了。
 
-**3. 在 `subprojects/CMakeLists.txt` 加一行**
+**3. 在 `core/CMakeLists.txt` 或 `modules/CMakeLists.txt` 加一行**
 
 ```cmake
 add_subdirectory(<name>)
 ```
 
-**根 `CMakeLists.txt` 與 `app/` 都不用動。** 根目錄只寫了
-`add_subdirectory(subprojects)`；子命令表是從各小專案的登記結果產生的。
+加在哪一份就決定了它是哪一類——分類是靠所在目錄判斷的（那兩份各自 `set` 了
+`AOS_SUBPROJECT_CATEGORY`）。放錯地方（例如直接被根 CMakeLists 加進來）會在
+configure 期被擋下來。
 
-順手在 [`subprojects/README.md`](../subprojects/README.md) 的表格加一列。
+**根 `CMakeLists.txt` 與 `app/` 都不用動。** 子命令表是從各小專案的登記結果產生的。
+
+順手在 [`core/README.md`](../core/README.md) 或
+[`modules/README.md`](../modules/README.md) 的表格加一列。
 
 ---
 

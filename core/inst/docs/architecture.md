@@ -22,7 +22,7 @@ OBJECT library（`aos_inst_cli`）。`run` 只透過 `aos::inst` 的公開 API �
 
 唯一的執行檔 `aos`（`app/`）沒有任何業務邏輯：`main` 只依 `argv[1]` 查一張由
 各小專案登記出來的子命令表，把剩下的引數原樣轉發給對應的進入點——`inst` 這裡
-就是 `aos_inst_cli_main`。`subprojects/inst/src/main.cpp` 已經不存在，這個小專案不再有
+就是 `aos_inst_cli_main`。`core/inst/src/main.cpp` 已經不存在，這個小專案不再有
 自己的 `main`。
 
 ## 為什麼要先把整份輸入讀完

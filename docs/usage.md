@@ -46,9 +46,9 @@ printf '%s\n' '{"argv":["echo","hello"]}' | aos inst  # 從 stdin 讀
 
 常用欄位：`argv`（必要，不可為空）、`stdin` / `stdout` / `stderr`（重導向到
 檔案）、`exit`（把 exit code 寫進這個檔）、`cwd`、`env`、`timeout_ms`。
-**完整 schema 與每個欄位的語意見 [`subprojects/inst/docs/format.md`](../subprojects/inst/docs/format.md)；
+**完整 schema 與每個欄位的語意見 [`core/inst/docs/format.md`](../core/inst/docs/format.md)；
 執行語意（逾時怎麼算、訊號怎麼送、exit code 怎麼對應）見
-[`subprojects/inst/docs/exec.md`](../subprojects/inst/docs/exec.md)。**
+[`core/inst/docs/exec.md`](../core/inst/docs/exec.md)。**
 
 ### 退出碼：注意，它不反映子行程的成敗
 
@@ -104,7 +104,9 @@ target_link_libraries(myapp PRIVATE aos::inst)
 | target | 內容 | 什麼時候用 |
 |--------|------|-----------|
 | `aos::inst` | 只有 inst 這個小專案（`libaos_inst.so`）| 一般情況，只拿你要的 |
-| `aos::aos` | INTERFACE 傘狀 target，一次連上所有小專案 | 懶得挑 |
+| `aos::core` | 傘狀：所有**核心**小專案（`core/`）| 要 aos 的基本功能，不要擴充 |
+| `aos::modules` | 傘狀：所有**擴充**小專案（`modules/`）。沒有擴充時不存在 | 少見 |
+| `aos::aos` | 傘狀：全部小專案 | 懶得挑 |
 | `aos::merged` | 合併版 `libaos.so`，所有小專案在同一顆檔案裡 | 想單檔部署。需要建置時開 `AOS_BUILD_MERGED_LIB=ON` |
 
 `aos::merged` 是真的自成一體——即使小專案之間互相依賴，連了它就不會再被要求去連
@@ -153,7 +155,7 @@ int main() {
 `inst` 的公開介面分三層，相依單向 `inst ← format ← exec`：`inst_t` 與狀態列舉、
 `read_*`/`write_*`（唯一懂 JSON schema 的一層）、`execute()`（唯一碰
 `fork`/`exec` 的一層）。三組宣告併在同一個標頭裡**不代表它們可以互相引用**。
-逐項說明見 [`subprojects/inst/docs/cxxapi.md`](../subprojects/inst/docs/cxxapi.md)。
+逐項說明見 [`core/inst/docs/cxxapi.md`](../core/inst/docs/cxxapi.md)。
 
 ## 錯誤處理的契約
 
@@ -174,7 +176,7 @@ C++ API **會丟例外**：記憶體配置失敗時是 `std::bad_alloc` / `std::
 裡 `<aos/inst.h>` 與 `<aos/inst.hpp>` 可以並存。
 
 列舉值一經釋出就凍結——只能在尾端加新值，不能重排或刪除。完整說明與範例見
-[`subprojects/inst/docs/capi.md`](../subprojects/inst/docs/capi.md)。
+[`core/inst/docs/capi.md`](../core/inst/docs/capi.md)。
 
 目前只有 `inst` 提供 C ABI，其餘小專案會陸續補上。
 
@@ -190,6 +192,6 @@ c++ -std=c++23 example.cpp -I<prefix>/include -L<prefix>/lib -laos_inst
 目錄，安裝後才會合流），並補上 rpath：
 
 ```bash
-c++ -std=c++23 example.cpp -Isubprojects/inst/include -Icommon/include \
+c++ -std=c++23 example.cpp -Icore/inst/include -Icommon/include \
     -Lbuild/lib -Wl,-rpath,"$PWD/build/lib" -laos_inst
 ```

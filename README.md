@@ -3,7 +3,7 @@
 一組 POSIX 小工具的集合。每個小專案同時是兩件事：`aos` 執行檔的一條子命令，
 以及一個可以被其他專案 `#include` 與連結的 C++23 函式庫。
 
-目前只有一個小專案 [`subprojects/inst/`](subprojects/inst/) —— 讀 JSON 指令檔並依序執行。之後的
+目前只有一個小專案 [`core/inst/`](core/inst/) —— 讀 JSON 指令檔並依序執行。之後的
 `llm/`、`tooljson/` 等都會照同一個模子長出來。
 
 ## 建置
@@ -41,8 +41,9 @@ target_link_libraries(myapp PRIVATE aos::inst)
 #include <aos/inst.hpp>
 ```
 
-`aos::inst` 是單一小專案；`aos::aos` 是一次連全部的傘狀 target；`aos::merged`
-是合併成單一檔案的版本。完整說明見 [docs/usage.md](docs/usage.md)。
+`aos::inst` 是單一小專案。傘狀 target 有 `aos::core`（只有核心）、`aos::modules`
+（只有擴充）、`aos::aos`（全部）；`aos::merged` 是合併成單一檔案的版本。完整說明
+見 [docs/usage.md](docs/usage.md)。
 
 ## repo 佈局
 
@@ -51,7 +52,8 @@ CMakeLists.txt      頂層：選項、相依、add_subdirectory、install/export
 cmake/              AosSubproject.cmake（小專案樣板）、aos-config.cmake.in
 common/             跨小專案共用：aos::common（<aos/export.h>）與通用私有相依
 app/                唯一的執行檔 aos，只負責把 argv[1] 分派到某個子命令
-subprojects/        所有小專案。目前只有 inst/：aos::inst + `aos inst` 子命令
+core/               核心小專案。目前只有 inst/：aos::inst + `aos inst` 子命令
+modules/            擴充小專案（可選，-DAOS_BUILD_MODULES=OFF 整批不建）
 docs/               整體文件
 wf/                 分層工作流文件（開發流程用，與程式無關）
 ```
@@ -68,5 +70,5 @@ crash，不是錯誤狀態。**一份指令檔等同一段可執行程式碼，�
 | | |
 |---|---|
 | [docs/](docs/README.md) | 整體：[總覽](docs/overview.md)、[建置](docs/build.md)、[使用](docs/usage.md)、[新增小專案](docs/subprojects.md) |
-| [subprojects/inst/docs/](subprojects/inst/docs/) | inst 專屬：[記錄格式](subprojects/inst/docs/format.md)、[執行語意](subprojects/inst/docs/exec.md)、[C++ API](subprojects/inst/docs/cxxapi.md)、[C API](subprojects/inst/docs/capi.md)、[架構](subprojects/inst/docs/architecture.md) |
+| [core/inst/docs/](core/inst/docs/) | inst 專屬：[記錄格式](core/inst/docs/format.md)、[執行語意](core/inst/docs/exec.md)、[C++ API](core/inst/docs/cxxapi.md)、[C API](core/inst/docs/capi.md)、[架構](core/inst/docs/architecture.md) |
 | [AGENTS.md](AGENTS.md) → [wf/](wf/) | 開發流程（不是給使用者看的）|

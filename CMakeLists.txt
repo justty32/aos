@@ -32,6 +32,7 @@ include(CMakePackageConfigHelpers)
 
 option(AOS_BUILD_APP        "建置 aos 執行檔" ON)
 option(AOS_BUILD_TESTS      "建置測試" ${PROJECT_IS_TOP_LEVEL})
+option(AOS_BUILD_MODULES    "建置擴充小專案（modules/）" ON)
 option(AOS_BUILD_MERGED_LIB "額外產出一個把所有小專案合在一起的 libaos.so" OFF)
 option(AOS_INSTALL          "產生 install 與 find_package 規則" ${PROJECT_IS_TOP_LEVEL})
 
@@ -70,8 +71,13 @@ endif()
 # common 要最先，其餘小專案都相依它。
 add_subdirectory(common)
 
-# 所有小專案。要新增一個的話是改 subprojects/CMakeLists.txt，不是這裡。
-add_subdirectory(subprojects)
+# 小專案分兩類，各自有一份清單。要新增一個是去改那兩份，不是改這裡。
+#   core/     aos 的基本組成部分，一定會建
+#   modules/  可選的擴充，可以整批關掉
+add_subdirectory(core)
+if(AOS_BUILD_MODULES)
+    add_subdirectory(modules)
+endif()
 
 # app 必須排在所有小專案之後：它要讀取大家登記好的子命令表。
 if(AOS_BUILD_APP)
@@ -79,14 +85,28 @@ if(AOS_BUILD_APP)
 endif()
 
 get_property(aos_subprojects GLOBAL PROPERTY AOS_SUBPROJECTS)
+get_property(aos_core_subprojects GLOBAL PROPERTY AOS_CORE_SUBPROJECTS)
+get_property(aos_module_subprojects GLOBAL PROPERTY AOS_MODULE_SUBPROJECTS)
 
-# 傘狀 target：aos::aos 一次連上全部小專案。想挑著用就直接連 aos::inst。
-add_library(aos_umbrella INTERFACE)
-add_library(aos::aos ALIAS aos_umbrella)
-set_target_properties(aos_umbrella PROPERTIES EXPORT_NAME aos)
-foreach(subproject IN LISTS aos_subprojects)
-    target_link_libraries(aos_umbrella INTERFACE aos::${subproject})
-endforeach()
+# 傘狀 target。想挑著用就直接連 aos::inst，不必經過這些。
+#   aos::aos     全部小專案
+#   aos::core    只有核心（不含擴充）
+#   aos::modules 只有擴充（有擴充存在時才建）
+function(aos_add_umbrella target export_name)
+    add_library(${target} INTERFACE)
+    set_target_properties(${target} PROPERTIES EXPORT_NAME ${export_name})
+    add_library(aos::${export_name} ALIAS ${target})
+    foreach(subproject IN LISTS ARGN)
+        target_link_libraries(${target} INTERFACE aos::${subproject})
+    endforeach()
+    set_property(GLOBAL APPEND PROPERTY AOS_UMBRELLA_TARGETS ${target})
+endfunction()
+
+aos_add_umbrella(aos_umbrella aos ${aos_subprojects})
+aos_add_umbrella(aos_core_umbrella core ${aos_core_subprojects})
+if(aos_module_subprojects)
+    aos_add_umbrella(aos_modules_umbrella modules ${aos_module_subprojects})
+endif()
 
 # 合併版：想單檔部署的人用，預設不建。內容與各 aos_<name>.so 相同，只是併成一個。
 if(AOS_BUILD_MERGED_LIB)
@@ -148,7 +168,7 @@ if(AOS_BUILD_MERGED_LIB)
 endif()
 
 if(AOS_INSTALL)
-    set(aos_install_targets aos_umbrella)
+    get_property(aos_install_targets GLOBAL PROPERTY AOS_UMBRELLA_TARGETS)
     if(AOS_BUILD_MERGED_LIB)
         list(APPEND aos_install_targets aos_merged)
     endif()

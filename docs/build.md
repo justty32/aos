@@ -49,11 +49,12 @@ cmake --preset default && cmake --build --preset default && ctest --preset defau
 |------|------|------|
 | `AOS_BUILD_APP` | `ON` | 建置 `aos` 執行檔 |
 | `AOS_BUILD_TESTS` | 頂層專案時 `ON` | 建置測試 |
+| `AOS_BUILD_MODULES` | `ON` | 建置 `modules/` 底下的擴充小專案。關掉的話它們的子命令與函式庫都不會產出 |
 | `AOS_BUILD_MERGED_LIB` | `OFF` | 額外產出把所有小專案併在一起的 `libaos.so` |
 | `AOS_INSTALL` | 頂層專案時 `ON` | 產生 install 與 `find_package` 規則 |
 
-後兩個的預設值跟著 `PROJECT_IS_TOP_LEVEL` 走，所以把 aos 用
-`add_subdirectory()` 併進別的專案時，它不會擅自裝東西或建測試。
+`AOS_BUILD_TESTS` 與 `AOS_INSTALL` 的預設值跟著 `PROJECT_IS_TOP_LEVEL` 走，所以把
+aos 用 `add_subdirectory()` 併進別的專案時，它不會擅自裝東西或建測試。
 
 ## 測試
 

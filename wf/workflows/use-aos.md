@@ -42,7 +42,7 @@ printf '%s\n' '{"argv":["echo","hi"]}' | aos inst
 
 一份指令檔是一個 JSON 物件或一個物件陣列。欄位：`argv`（必要）、`stdin`／`stdout`／
 `stderr`、`exit`、`cwd`、`env`、`timeout_ms`。**完整 schema 見
-[`subprojects/inst/docs/format.md`](../../subprojects/inst/docs/format.md)，
+[`core/inst/docs/format.md`](../../core/inst/docs/format.md)，
 不要憑印象寫欄位名**——不認得的 key 會讓整份文件被拒絕。
 
 ### 三個一定要跟使用者講清楚的點
@@ -115,8 +115,8 @@ prefix 不在預設路徑的話，configure 時給 `-DCMAKE_PREFIX_PATH=<prefix>
 要在配置失敗時也不倒的呼叫者，用 C++ API 就得自己 catch，或者直接走 C ABI。
 
 各 API 的逐項說明：
-[`subprojects/inst/docs/cxxapi.md`](../../subprojects/inst/docs/cxxapi.md)、
-[`subprojects/inst/docs/capi.md`](../../subprojects/inst/docs/capi.md)。
+[`core/inst/docs/cxxapi.md`](../../core/inst/docs/cxxapi.md)、
+[`core/inst/docs/capi.md`](../../core/inst/docs/capi.md)。
 
 ### 不透過 CMake
 
