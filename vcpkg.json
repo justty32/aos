@@ -1,8 +1,17 @@
 {
-  "name": "aos-cpp",
-  "version-string": "0.0.0",
+  "name": "aos",
+  "version": "0.1.0",
+  "description": "POSIX 小工具的集合，每個小專案同時是執行檔的一條子命令與一個 C++23 函式庫",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
   "dependencies": [
-    "nlohmann-json",
-    "catch2"
-  ]
+    "nlohmann-json"
+  ],
+  "features": {
+    "tests": {
+      "description": "建置測試所需的相依",
+      "dependencies": [
+        "catch2"
+      ]
+    }
+  }
 }

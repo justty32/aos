@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# 各小專案的實作檔用得到，共享庫把它記在 $<LINK_ONLY:> 裡，find_package 時要能解析。
+find_dependency(nlohmann_json CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/aos-targets.cmake")
+
+check_required_components(aos)

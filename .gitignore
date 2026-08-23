@@ -1,4 +1,7 @@
 build/
+install/
 vcpkg_installed/
 bin/
 .cache/
+compile_commands.json
+CMakeUserPresets.json
