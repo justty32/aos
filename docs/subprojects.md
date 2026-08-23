@@ -2,14 +2,15 @@
 
 ← [文件索引](README.md)｜[總覽](overview.md)｜[建置](build.md)
 
-`inst/` 就是這件事的參考範本。整份抄過去改名字，大致就成立了。
+小專案都住在 `subprojects/` 底下。`subprojects/inst/` 就是這件事的參考範本，
+整份抄過去改名字，大致就成立了。
 
 ## 三個步驟
 
 **1. 建立目錄結構**
 
 ```
-<name>/
+subprojects/<name>/
   include/aos/<name>.hpp     公開標頭（會被安裝）
   include/aos/<name>.h       C ABI（可選，之後再補也行）
   src/                       實作 + CLI 層
@@ -57,13 +58,16 @@ extern "C" int aos_<name>_cli_main(int argc, char *argv[]) { ... }
 規則。`aos` 會把 `argv[0]` 設成 `"aos <name>"` 再呼叫進來，所以子命令印用法訊息
 時直接用 `argv[0]` 就對了。
 
-**3. 在根 `CMakeLists.txt` 加一行**
+**3. 在 `subprojects/CMakeLists.txt` 加一行**
 
 ```cmake
 add_subdirectory(<name>)
 ```
 
-**`app/` 不用動。** 子命令表是從各小專案的登記結果產生的。
+**根 `CMakeLists.txt` 與 `app/` 都不用動。** 根目錄只寫了
+`add_subdirectory(subprojects)`；子命令表是從各小專案的登記結果產生的。
+
+順手在 [`subprojects/README.md`](../subprojects/README.md) 的表格加一列。
 
 ---
 

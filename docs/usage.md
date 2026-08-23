@@ -46,9 +46,9 @@ printf '%s\n' '{"argv":["echo","hello"]}' | aos inst  # 從 stdin 讀
 
 常用欄位：`argv`（必要，不可為空）、`stdin` / `stdout` / `stderr`（重導向到
 檔案）、`exit`（把 exit code 寫進這個檔）、`cwd`、`env`、`timeout_ms`。
-**完整 schema 與每個欄位的語意見 [`inst/docs/format.md`](../inst/docs/format.md)；
+**完整 schema 與每個欄位的語意見 [`subprojects/inst/docs/format.md`](../subprojects/inst/docs/format.md)；
 執行語意（逾時怎麼算、訊號怎麼送、exit code 怎麼對應）見
-[`inst/docs/exec.md`](../inst/docs/exec.md)。**
+[`subprojects/inst/docs/exec.md`](../subprojects/inst/docs/exec.md)。**
 
 ### 退出碼：注意，它不反映子行程的成敗
 
@@ -153,7 +153,7 @@ int main() {
 `inst` 的公開介面分三層，相依單向 `inst ← format ← exec`：`inst_t` 與狀態列舉、
 `read_*`/`write_*`（唯一懂 JSON schema 的一層）、`execute()`（唯一碰
 `fork`/`exec` 的一層）。三組宣告併在同一個標頭裡**不代表它們可以互相引用**。
-逐項說明見 [`inst/docs/cxxapi.md`](../inst/docs/cxxapi.md)。
+逐項說明見 [`subprojects/inst/docs/cxxapi.md`](../subprojects/inst/docs/cxxapi.md)。
 
 ## 錯誤處理的契約
 
@@ -174,7 +174,7 @@ C++ API **會丟例外**：記憶體配置失敗時是 `std::bad_alloc` / `std::
 裡 `<aos/inst.h>` 與 `<aos/inst.hpp>` 可以並存。
 
 列舉值一經釋出就凍結——只能在尾端加新值，不能重排或刪除。完整說明與範例見
-[`inst/docs/capi.md`](../inst/docs/capi.md)。
+[`subprojects/inst/docs/capi.md`](../subprojects/inst/docs/capi.md)。
 
 目前只有 `inst` 提供 C ABI，其餘小專案會陸續補上。
 
@@ -190,6 +190,6 @@ c++ -std=c++23 example.cpp -I<prefix>/include -L<prefix>/lib -laos_inst
 目錄，安裝後才會合流），並補上 rpath：
 
 ```bash
-c++ -std=c++23 example.cpp -Iinst/include -Icommon/include \
+c++ -std=c++23 example.cpp -Isubprojects/inst/include -Icommon/include \
     -Lbuild/lib -Wl,-rpath,"$PWD/build/lib" -laos_inst
 ```

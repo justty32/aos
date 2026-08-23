@@ -9,13 +9,13 @@
 
 ## 一分鐘看懂這個專案
 
-`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos inst jobs.json`）。第一個小專案是 `inst/`——一支讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。
+`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos inst jobs.json`）。第一個小專案是 `subprojects/inst/`——一支讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。
 
 ```
 repo 根
   aos::common（common/，header-only，目前只有 <aos/export.h>）
        ▲ 每個小專案都連它
-  aos::inst（inst/，第一個小專案 → libaos_inst.so）
+  aos::inst（subprojects/inst/，第一個小專案 → libaos_inst.so）
        │  C++ 分層，相依單向：inst ← format ← exec
        │    inst    inst_t 資料結構、狀態列舉             （src/inst.cpp）
        │    format  唯一懂 JSON schema 的層                （src/format.cpp）
@@ -33,7 +33,7 @@ app/（唯一執行檔 aos，子命令分派）── `aos inst jobs.json` 掛�
 2. **一個執行檔、多個子命令**：不會有第二個 `main`。新的小專案（未來的 `llm/`、`tooljson/`……）靠自己的 CMakeLists 呼叫 `aos_add_subcommand()` 把子命令掛進 `app/` 的分派表，不用改 `app/` 本身。
 3. **每個小專案是一顆獨立的 shared lib**：`aos::inst` → `libaos_inst.so`。要一次連全部才用 `aos::aos`（INTERFACE 傘狀 target）；`AOS_BUILD_MERGED_LIB` 開了才會多產出一顆合併的 `libaos.so`（`aos::merged`）。
 
-> **`inst/src` 的核心分層與 C ABI 層視為凍結**——`inst.cpp`／`format.cpp`／`exec.cpp`／`spawn_prep.*`／`wait.*`／`capi*.cpp` 不要改。`run.cpp`（CLI 層）與建置設定不在此限。要改行為就從 CLI 層那側解決。
+> **`subprojects/inst/src` 的核心分層與 C ABI 層視為凍結**——`inst.cpp`／`format.cpp`／`exec.cpp`／`spawn_prep.*`／`wait.*`／`capi*.cpp` 不要改。`run.cpp`（CLI 層）與建置設定不在此限。要改行為就從 CLI 層那側解決。
 
 ---
 
@@ -63,18 +63,18 @@ app/（唯一執行檔 aos，子命令分派）── `aos inst jobs.json` 掛�
 
 登記時會在 configure 期擋三件事，都是「不擋的話症狀很難查」的：`NAME` 必須符合 `^[a-z][a-z0-9-]*$`；`NAME` 不可重複（重名的話 configure／編譯／`--help` 全都正常，但線性分派只叫得到先註冊的那個，**沒有任何訊息**）；`ENTRY` 不可重複（否則錯誤延到連結期，變成看不懂的 multiple definition）。
 
-## inst/ — 第一個小專案：POSIX 指令執行器
+## subprojects/inst/ — 第一個小專案：POSIX 指令執行器
 
 讀一筆或一批 JSON instruction，準備好環境／重導向後 `fork`＋`execve` 跑起來，等它結束、寫回 exit status。對外是 `aos::inst`（`libaos_inst.so`）＋ `aos inst` 子命令。
 
-### inst/include/aos/ — 對外公開標頭
+### subprojects/inst/include/aos/ — 對外公開標頭
 
 | 檔案 | 負責 | 關鍵型別／函式 |
 |------|------|----------------|
 | `inst.hpp` | C++ API。三個分層的宣告都在這（見上面「單向相依是鐵律」），標頭上半是 `inst`／`format`，下半是 `exec` | `inst_t`（`argv`／`stdin_path`／`stdout_path`／`stderr_path`／`exit_path`／`cwd`／`env`／`timeout_ms`、`clear()`）、`InstState`、`to_string(InstState)`、`read_one`／`read_all`／`write_one`／`write_all`、`ExecState`、`ExecResult`、`execute()`、`to_string(ExecState)` |
 | `inst.h` | C ABI（給非 C++ 呼叫者用），是 `inst.hpp` 的鏡像，型別靠 `static_assert` 對齊（見 `src/capi.cpp`） | `aos_instruction`（opaque）、`aos_exec_result`、`aos_inst_state`／`aos_inst_field`／`aos_exec_state`、`aos_instruction_new/free/clear`、`aos_instruction_argc/arg/push_arg`、`aos_instruction_field/set_field`、`aos_instruction_env_count/env_key/env_value/set_env`、`aos_instruction_timeout_ms/set_timeout_ms`、`aos_instruction_read_buffer/read_fd/read_file`、`aos_instruction_write_buffer/write_fd/write_file`、`aos_instruction_execute`、`aos_*_state_string`、`aos_version_string` |
 
-### inst/src/ — 三個核心分層
+### subprojects/inst/src/ — 三個核心分層
 
 | 檔案 | 負責 |
 |------|------|
@@ -84,11 +84,11 @@ app/（唯一執行檔 aos，子命令分派）── `aos inst jobs.json` 掛�
 | `spawn_prep.hpp`／`.cpp` | **內部標頭**（不對外）。`prepare_spawn()`：在 `fork` 之前把所有會配置記憶體的準備工作做完——合併繼承的環境變數與 `inst.env`（後者覆蓋前者）、組 `envp`、若 `argv[0]` 沒有 `/` 就沿 `PATH`（或 `confstr(_CS_PATH)` 的預設值）逐段找可執行檔。子行程只拿到已經算好的穩定指標 |
 | `wait.hpp`／`.cpp` | **內部標頭**。`wait_retry()`：EINTR-safe 的 `waitpid` 包裝。`wait_until()`：用 `CLOCK_MONOTONIC` 算經過時間，指數退避（上限 `kMaxPollMs`＝50ms）輪詢 `waitpid(WNOHANG)` 直到逾時 |
 
-**改 exec 的行為要小心兩件事**：① `fork` 之後、`execve` 之前只能呼叫 async-signal-safe 的操作（細節與理由見 `inst/docs/architecture.md`「`fork` 兩側各自要做的工作」）；② 逾時後的 `SIGKILL` 一定要打整個行程群組（`-pid`），不是單一 `pid`。
+**改 exec 的行為要小心兩件事**：① `fork` 之後、`execve` 之前只能呼叫 async-signal-safe 的操作（細節與理由見 `subprojects/inst/docs/architecture.md`「`fork` 兩側各自要做的工作」）；② 逾時後的 `SIGKILL` 一定要打整個行程群組（`-pid`），不是單一 `pid`。
 
 **這一層有幾處刻意的設計，不要「修」**：PATH 撞到同名目錄時回 exit 126 而不是 127；三處 `kill(-pid, ...)` 的回傳值刻意忽略；`wait_until()` 出錯時直接 return、不 kill 不 reap。外部審查工具會反覆把它們當成 bug 提出來。
 
-### inst/src/ — C ABI 包裝層（只往下看 inst/format/exec，不影響它們）
+### subprojects/inst/src/ — C ABI 包裝層（只往下看 inst/format/exec，不影響它們）
 
 | 檔案 | 負責 |
 |------|------|
@@ -101,15 +101,15 @@ app/（唯一執行檔 aos，子命令分派）── `aos inst jobs.json` 掛�
 
 **C ABI 的 ABI 規則**：`inst.h` 裡的列舉值一經釋出就凍結，只能在尾端加新值，不能重排或刪除既有值——這條規則寫在標頭裡的註解，改動前先看。
 
-### inst/src/ — CLI 層
+### subprojects/inst/src/ — CLI 層
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | `run(argc, argv)`：決定輸入來源（給了檔名就開檔，否則讀 stdin）→ 讀到 EOF 進單一緩衝區 → `read_all()` 一次剖析＋驗證整批 → 依序對每筆呼叫 `execute()`，失敗的印到 stderr、繼續跑下一筆，只要有一筆失敗整體回 1。讀檔、剖析、執行三個階段都接 `bad_alloc`／`length_error`——**這一層是原生 CLI 唯一的例外邊界**（C ABI 那側自己有接）。檔尾的 `extern "C" aos_inst_cli_main()` 是 `aos inst` 子命令的進入點，名字要與 `inst/CMakeLists.txt` 的 `aos_add_subcommand(ENTRY ...)` 一致。**為什麼要先把整份輸入讀完**、以及這個設計的代價，見 [`inst/docs/architecture.md`](../../../inst/docs/architecture.md) |
+| `run.hpp`／`run.cpp` | `run(argc, argv)`：決定輸入來源（給了檔名就開檔，否則讀 stdin）→ 讀到 EOF 進單一緩衝區 → `read_all()` 一次剖析＋驗證整批 → 依序對每筆呼叫 `execute()`，失敗的印到 stderr、繼續跑下一筆，只要有一筆失敗整體回 1。讀檔、剖析、執行三個階段都接 `bad_alloc`／`length_error`——**這一層是原生 CLI 唯一的例外邊界**（C ABI 那側自己有接）。檔尾的 `extern "C" aos_inst_cli_main()` 是 `aos inst` 子命令的進入點，名字要與 `subprojects/inst/CMakeLists.txt` 的 `aos_add_subcommand(ENTRY ...)` 一致。**為什麼要先把整份輸入讀完**、以及這個設計的代價，見 [`subprojects/inst/docs/architecture.md`](../../../subprojects/inst/docs/architecture.md) |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（但注意上面的凍結規則——這種改動要先跟使用者確認。）
 
-## inst/tests/ — 測試
+## subprojects/inst/tests/ — 測試
 
 跑法見 [testing 工作流](../testing.md)。
 
@@ -128,7 +128,7 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 
 `docs/`（repo 根）放**整體**文件：[總覽](../../../docs/overview.md)、[建置](../../../docs/build.md)、[使用](../../../docs/usage.md)、[新增小專案](../../../docs/subprojects.md)。改了建置骨架、子命令機制或相依管理，那邊要跟著更新。
 
-`inst/docs/` 放 inst 專屬的細節，不是 code map 的一部分，但改東西之前有時值得先看：
+`subprojects/inst/docs/` 放 inst 專屬的細節，不是 code map 的一部分，但改東西之前有時值得先看：
 
 | 檔案 | 內容 |
 |------|------|
@@ -149,7 +149,7 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 | 根 `vcpkg.json` | manifest，有 `builtin-baseline`；測試相依（Catch2）放在 `"tests"` feature |
 | `CMakePresets.json` | `default`／`release`／`merged`。vcpkg toolchain 由根 `CMakeLists.txt` 解析（`CMAKE_TOOLCHAIN_FILE` → `VCPKG_ROOT` → `~/dev/vcpkg`），本機不用設環境變數 |
 | `common/CMakeLists.txt` | `aos::common` 與 `aos_common_private`（見上面 common/ 那節）|
-| `inst/CMakeLists.txt` | 小專案的**參考範本**：`aos_add_subproject()`（目前不需要任何 DEPS 參數）＋ CLI 的 OBJECT library ＋ `aos_add_subcommand()` ＋兩個 `aos_add_test()` |
+| `subprojects/inst/CMakeLists.txt` | 小專案的**參考範本**：`aos_add_subproject()`（目前不需要任何 DEPS 參數）＋ CLI 的 OBJECT library ＋ `aos_add_subcommand()` ＋兩個 `aos_add_test()` |
 
 **鐵律**：C++23；**只能從 repo 根目錄 `cmake --preset default` 設定**，子專案不可單獨 configure；外部專案用 `find_package(aos CONFIG REQUIRED)` + `target_link_libraries(x PRIVATE aos::inst)` + `#include <aos/inst.hpp>`。vcpkg 在 `~/dev/vcpkg`。
 
@@ -159,13 +159,13 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 
 | 我想找… | 去哪 |
 |---------|------|
-| instruction 有哪些欄位、JSON 長什麼樣 | `inst/include/aos/inst.hpp` 的 `inst_t`；schema 細節在 `inst/src/format.cpp` 的 `known_key`／`encode`／`decode` |
-| exit code、逾時、行程群組怎麼處理 | `inst/src/exec.cpp` |
-| PATH 怎麼解析、環境變數怎麼合併 | `inst/src/spawn_prep.cpp` |
-| C ABI 怎麼對應到 C++ API | `inst/src/capi.cpp` 開頭的 `static_assert` 一串 |
-| CLI 怎麼讀輸入、怎麼跑一批 instruction | `inst/src/run.cpp` |
+| instruction 有哪些欄位、JSON 長什麼樣 | `subprojects/inst/include/aos/inst.hpp` 的 `inst_t`；schema 細節在 `subprojects/inst/src/format.cpp` 的 `known_key`／`encode`／`decode` |
+| exit code、逾時、行程群組怎麼處理 | `subprojects/inst/src/exec.cpp` |
+| PATH 怎麼解析、環境變數怎麼合併 | `subprojects/inst/src/spawn_prep.cpp` |
+| C ABI 怎麼對應到 C++ API | `subprojects/inst/src/capi.cpp` 開頭的 `static_assert` 一串 |
+| CLI 怎麼讀輸入、怎麼跑一批 instruction | `subprojects/inst/src/run.cpp` |
 | 子命令怎麼被登記、怎麼被分派 | `cmake/AosSubproject.cmake` 的 `aos_add_subcommand()` → `app/CMakeLists.txt` 產表 → `app/src/main.cpp` |
 | 某個相依該放在哪一層 | 上面 common/ 那節的判準；完整說明在 [`docs/subprojects.md`](../../../docs/subprojects.md) |
-| 為什麼要先把整份輸入讀完才開始執行 | `inst/docs/architecture.md`「為什麼要先把整份輸入讀完」|
-| `fork` 前後各自能做什麼 | `inst/docs/architecture.md`「`fork` 兩側各自要做的工作」；程式碼在 `inst/src/exec.cpp` 的 `run_child` |
+| 為什麼要先把整份輸入讀完才開始執行 | `subprojects/inst/docs/architecture.md`「為什麼要先把整份輸入讀完」|
+| `fork` 前後各自能做什麼 | `subprojects/inst/docs/architecture.md`「`fork` 兩側各自要做的工作」；程式碼在 `subprojects/inst/src/exec.cpp` 的 `run_child` |
 | 新增一個小專案（像 inst 那樣）要照什麼模子 | [`docs/subprojects.md`](../../../docs/subprojects.md)；函式定義在 `cmake/AosSubproject.cmake` |

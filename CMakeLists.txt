@@ -70,10 +70,8 @@ endif()
 # common 要最先，其餘小專案都相依它。
 add_subdirectory(common)
 
-# ── 小專案 ─────────────────────────────────────────────────────────────
-# 新增一個小專案：複製 inst/ 的結構，然後在這裡加一行。
-add_subdirectory(inst)
-# ───────────────────────────────────────────────────────────────────────
+# 所有小專案。要新增一個的話是改 subprojects/CMakeLists.txt，不是這裡。
+add_subdirectory(subprojects)
 
 # app 必須排在所有小專案之後：它要讀取大家登記好的子命令表。
 if(AOS_BUILD_APP)

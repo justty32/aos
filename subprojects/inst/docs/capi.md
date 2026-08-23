@@ -10,7 +10,7 @@ CMake 會產生供連結期使用的 `libaos_inst.so`、SONAME `libaos_inst.so.0
 從儲存庫根目錄、建置目錄為預設的 `build/` 時，用以下指令編譯用戶端程式：
 
 ```sh
-cc -std=c99 example.c -Iinst/include -Icommon/include \
+cc -std=c99 example.c -Isubprojects/inst/include -Icommon/include \
    -Lbuild/lib -Wl,-rpath,"$PWD/build/lib" -laos_inst
 ```
 

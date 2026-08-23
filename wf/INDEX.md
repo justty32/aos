@@ -1,6 +1,6 @@
 # INDEX — aos 專案地圖
 
-整個專案的頂層導航。aos = **一個 monorepo：一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（第一個小專案是 `inst/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
+整個專案的頂層導航。aos = **一個 monorepo：一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（第一個小專案是 `subprojects/inst/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
 
 ---
 
@@ -16,8 +16,8 @@
 | `cmake/` | 共用 CMake 函式（`aos_add_subproject()` 等）與 `find_package(aos CONFIG)` 的匯出設定 |
 | `common/` | `aos::common`，header-only，目前只有 `<aos/export.h>` |
 | `app/` | 唯一的執行檔 `aos`，靠子命令分派（`aos inst ...`）|
-| `inst/` | 第一個小專案：lib `aos::inst`（`libaos_inst.so`）＋ `inst` 子命令。內部分工 → [code map](workflows/common/code-map.md) |
-| `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案。個別小專案自己的細節在它們的 `docs/`，例如 `inst/docs/` |
+| `subprojects/` | **所有小專案都住這裡**。目前只有 `inst/`：lib `aos::inst`（`libaos_inst.so`）＋ `inst` 子命令。內部分工 → [code map](workflows/common/code-map.md)。新增一個 → [add-subproject](workflows/add-subproject.md) |
+| `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案。個別小專案自己的細節在它們的 `docs/`，例如 `subprojects/inst/docs/` |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](WORKFLOWS.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣（放信處，保持乾淨；使用方式見 [workflows/inbox/](workflows/inbox/README.md)）|
 | `.claude/commands/` | slash 指令（[`/wf-tick`](../.claude/commands/wf-tick.md) 驅動定期心跳）。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |
@@ -25,7 +25,7 @@
 
 > **非侵入式佈局**：頂層只有 `AGENTS.md`、`CLAUDE.md` 兩個 `.md` 入口（加上原本就有的 `README.md`），工作流的其他東西全在 `wf/` 底下，不弄亂原本的 C++ 專案結構。
 >
-> **之後會照同一個模子長出更多小專案**（例如 `llm/`、`tooljson/`……），各自跟 `inst/` 一樣有自己的 `include/`、`src/`、`tests/`、`docs/`，透過同一套 CMake 註冊函式把子命令掛上 `app/`。
+> **之後會照同一個模子長出更多小專案**（例如 `llm/`、`tooljson/`……），各自跟 `subprojects/inst/` 一樣有自己的 `include/`、`src/`、`tests/`、`docs/`，都放在 `subprojects/` 底下，透過同一套 CMake 註冊函式把子命令掛上 `app/`。
 >
 
 ## 程式碼在哪 → code map

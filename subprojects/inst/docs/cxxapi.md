@@ -91,7 +91,7 @@ int main() {
 對著共享函式庫建置，從儲存庫根目錄、建置目錄為預設的 `build/` 時例如：
 
 ```sh
-c++ -std=c++23 example.cpp -Iinst/include -Icommon/include \
+c++ -std=c++23 example.cpp -Isubprojects/inst/include -Icommon/include \
     -Lbuild/lib -Wl,-rpath,"$PWD/build/lib" -laos_inst
 ```
 

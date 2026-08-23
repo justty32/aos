@@ -19,7 +19,7 @@
 
 | ctest 目標 | 小專案 | 涵蓋 |
 |-----------|--------|------|
-| `aos_inst_tests` | `inst/` | C++ 測試：format 層（JSON round trip／壞輸入）、exec 層（重導向／PATH／exit status／逾時）、CLI 層（`run()` 的整批剖析＋依序執行）——細節見 [code map](common/code-map.md) 的 `inst/tests/` 一節 |
-| `aos_inst_capi_tests` | `inst/` | C ABI 往返測試（`inst/tests/test_capi.c`），獨立的 C 執行檔 |
+| `aos_inst_tests` | `subprojects/inst/` | C++ 測試：format 層（JSON round trip／壞輸入）、exec 層（重導向／PATH／exit status／逾時）、CLI 層（`run()` 的整批剖析＋依序執行）——細節見 [code map](common/code-map.md) 的 `subprojects/inst/tests/` 一節 |
+| `aos_inst_capi_tests` | `subprojects/inst/` | C ABI 往返測試（`subprojects/inst/tests/test_capi.c`），獨立的 C 執行檔 |
 
 日後新增小專案（`llm/`、`tooljson/`……）照同一個命名慣例掛自己的 `aos_<專案>_tests`，跑不了的環境依賴驗證才記 [WAIT_USER](../WAIT_USER.md)。

@@ -1,5 +1,5 @@
-# 這個檔案定義「一個小專案長什麼樣」。新增小專案時照 inst/CMakeLists.txt 抄一份，
-# 再去根目錄的 CMakeLists.txt 加一行 add_subdirectory() 就好，其餘不用碰。
+# 這個檔案定義「一個小專案長什麼樣」。新增小專案時照 subprojects/inst/CMakeLists.txt
+# 抄一份，再去 subprojects/CMakeLists.txt 加一行 add_subdirectory() 就好，其餘不用碰。
 
 include_guard(GLOBAL)
 

@@ -14,7 +14,7 @@ $ aos inst jobs.json                      # 當工具用
 #include <aos/inst.hpp>                   // 當函式庫用
 ```
 
-目前只有一個小專案 `inst/`（讀 JSON 指令檔、`fork`/`exec` 執行）。之後的
+目前只有一個小專案 `subprojects/inst/`（讀 JSON 指令檔、`fork`/`exec` 執行）。之後的
 `llm/`、`tooljson/` 等會照同一個模子長出來。
 
 ## 為什麼是這個形狀
@@ -43,7 +43,7 @@ cmake/
   aos-config.cmake.in   外部 find_package(aos CONFIG) 用的樣板
 common/             aos::common（公開共用）＋ aos_common_private（通用私有相依）
 app/                唯一的執行檔 aos，只負責把 argv[1] 分派出去
-inst/               第一個小專案
+subprojects/        所有小專案（目前只有 inst/）
 docs/               本目錄：整體文件
 wf/                 開發工作流（與產品無關）
 ```
@@ -59,8 +59,9 @@ wf/                 開發工作流（與產品無關）
 SHARED library 對外（`aos::<name>`，安裝並匯出）。合併版 `libaos.so` 撿的是
 同一批 `.o`，所以開了合併版也不會編兩次。
 
-新增小專案 = 抄一份 `inst/` 的結構 + 根目錄加一行 `add_subdirectory()`。詳見
-[subprojects.md](subprojects.md)。
+新增小專案 = 在 `subprojects/` 底下抄一份 `inst/` 的結構，再去
+`subprojects/CMakeLists.txt` 加一行 `add_subdirectory()`。根 `CMakeLists.txt`
+與 `app/` 都不用動。詳見 [subprojects.md](subprojects.md)。
 
 ### 2. 子命令表由建置系統產生
 
@@ -102,4 +103,4 @@ SHARED library 對外（`aos::<name>`，安裝並匯出）。合併版 `libaos.s
 
 **指令檔等同可執行程式碼。** `inst` 對輸入沒有任何大小限制，一份指令檔可以指名
 任意程式、引數與環境變數，並以呼叫者的身分執行。它的來源要照「可執行檔」的標準
-把關。細節見 [`inst/docs/exec.md`](../inst/docs/exec.md)。
+把關。細節見 [`subprojects/inst/docs/exec.md`](../subprojects/inst/docs/exec.md)。
