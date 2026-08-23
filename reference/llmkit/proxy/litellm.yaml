@@ -1,0 +1,144 @@
+# LiteLLM Proxy：DeepSeek 雲端、遠端 Ollama、本機 LM Studio。
+# 連不到的來源不擋啟動，只有真的呼叫時才失敗。
+# 啟動方式見 start_litellm.sh / start_litellm.ps1。
+
+model_list:
+  # DeepSeek 雲端 API
+  # 2026-08-05 /models 只有 v4-flash / v4-pro；chat / reasoner 是仍可用的舊名。
+  - model_name: deepseek-chat
+    litellm_params: &ds
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+    model_info: &ds_info
+      supports_function_calling: true
+      supports_vision: false
+      supports_reasoning: false
+      supports_tool_choice: true
+      supports_parallel_function_calling: true
+      # litellm 內建資料庫說 true，但 2026-08-08 實打回 400。
+      supports_response_schema: false
+      supports_prompt_caching: true
+
+  - model_name: deepseek-reasoner
+    litellm_params:
+      <<: *ds
+      model: deepseek/deepseek-reasoner
+    model_info: &ds_info_thinking
+      <<: *ds_info
+      supports_reasoning: true
+      # 2026-08-09 實打：thinking mode 工具可用，但 tool_choice="required" 會 400。
+      supports_tool_choice: false
+
+  - model_name: deepseek-v4-pro
+    litellm_params:
+      <<: *ds
+      model: deepseek/deepseek-v4-pro
+    model_info: *ds_info_thinking
+
+  # 遠端 Ollama（192.168.1.146:11434，不需要 api_key）
+  # 本機模型 litellm 不認得，能力旗標要手填；一定用 ollama_chat/ 才走 /api/chat。
+  # qwen3-32b / deepseek-r1-8b 才放行 reasoning_effort，避免誤傳給不支援思考的模型。
+  - model_name: ollama-qwen3-32b
+    litellm_params:
+      model: ollama_chat/qwen3:32b
+      api_base: &ol_base http://192.168.1.146:11434
+      allowed_openai_params: ["reasoning_effort"]
+    model_info: &ol_info
+      supports_function_calling: true
+      supports_vision: false
+      supports_reasoning: true
+      # 2026-08-10 實打：required 會被無聲忽略，但同一輪可以吐兩個 tool calls。
+      supports_tool_choice: false
+      supports_parallel_function_calling: true
+      supports_response_schema: true
+      supports_prompt_caching: false
+
+  - model_name: ollama-qwen2.5-14b
+    litellm_params:
+      model: ollama_chat/qwen2.5:14b-instruct-q4_K_M
+      api_base: *ol_base
+    model_info:
+      <<: *ol_info
+      supports_reasoning: false
+
+  - model_name: ollama-deepseek-r1-8b
+    litellm_params:
+      model: ollama_chat/deepseek-r1:8b
+      api_base: *ol_base
+      allowed_openai_params: ["reasoning_effort"]
+    model_info:
+      <<: *ol_info
+      supports_function_calling: false
+      supports_parallel_function_calling: false
+
+  - model_name: ollama-gemma3-1b
+    litellm_params:
+      model: ollama_chat/gemma3:1b
+      api_base: *ol_base
+    model_info:
+      <<: *ol_info
+      supports_function_calling: false
+      supports_parallel_function_calling: false
+      supports_reasoning: false
+
+  # 本機 LM Studio（http://localhost:1234/v1，OpenAI 相容，api_key 是佔位假值）
+  # 測大模型前先 lms unload 其他模型；12B JIT 失敗時用 8192 context 手動載入。
+  # -nothink 只是同模型焊死 reasoning_effort: none；allowlist 避免 drop_params 吞參數。
+  - model_name: lm-gemma-4-12b
+    litellm_params: &lm
+      model: lm_studio/google/gemma-4-12b-qat
+      api_base: http://localhost:1234/v1
+      api_key: lm-studio-dummy-key
+      allowed_openai_params: ["reasoning_effort", "top_k", "min_p", "repetition_penalty"]
+    model_info: &lm_info
+      supports_function_calling: true
+      supports_vision: true
+      supports_reasoning: true
+      supports_tool_choice: true
+      supports_parallel_function_calling: true
+      supports_response_schema: true
+      supports_prompt_caching: false     # usage.cached 一直是 None
+
+  - model_name: lm-gemma-4-12b-nothink
+    litellm_params:
+      <<: *lm
+      reasoning_effort: "none"
+    model_info: &lm_info_nothink
+      <<: *lm_info
+      supports_reasoning: false
+
+  - model_name: lm-gemma-4-e4b
+    litellm_params:
+      <<: *lm
+      model: lm_studio/google/gemma-4-e4b
+    model_info: *lm_info
+
+  - model_name: lm-gemma-4-e4b-nothink
+    litellm_params:
+      <<: *lm
+      model: lm_studio/google/gemma-4-e4b
+      reasoning_effort: "none"
+    model_info: *lm_info_nothink
+
+  - model_name: lm-qwen3.5-9b
+    litellm_params:
+      <<: *lm
+      model: lm_studio/qwen/qwen3.5-9b
+    model_info: *lm_info
+
+  - model_name: lm-qwen3.5-9b-nothink
+    litellm_params:
+      <<: *lm
+      model: lm_studio/qwen/qwen3.5-9b
+      reasoning_effort: "none"
+    model_info: *lm_info_nothink
+
+# 要 master key 就設 LITELLM_MASTER_KEY 再解開。
+# general_settings:
+#   master_key: os.environ/LITELLM_MASTER_KEY
+
+litellm_settings:
+  # 不支援參數直接丟棄；要硬塞就用 allowed_openai_params。
+  drop_params: true
+  num_retries: 2
+  request_timeout: 600
