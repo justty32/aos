@@ -1,7 +1,8 @@
 # inst：讀 JSON 指令檔，依序 fork/exec 執行。
 #
 # 這份檔案是「一個小專案長什麼樣」的範本 —— 新增小專案時整份抄過去改名字即可，
-# 根目錄的 CMakeLists.txt 只需要多一行 add_subdirectory()。
+# 再去 ../CMakeLists.txt（核心）或 ../../modules/CMakeLists.txt（擴充）加一行
+# add_subdirectory()。根目錄的 CMakeLists.txt 與 app/ 都不用動。
 
 aos_add_subproject(inst
     SOURCES

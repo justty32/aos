@@ -10,9 +10,11 @@
 - `exec` 接收一個已經建好的 `inst_t`。它負責環境變數與 PATH 的準備、
   `fork`/`execve`、重導向、行程群組、等待、逾時、狀態檔輸出，以及執行狀態；
   它從不剖析 JSON，也不讀取指令來源。
-- `run` 負責 POSIX 輸入、CLI 診斷、整批剖析，以及循序執行迴圈。它透過
-  `extern "C" int aos_inst_cli_main(int, char **)` 對外掛成 `aos` 執行檔
-  `inst` 子命令的進入點。
+- `run` 負責 POSIX 輸入、CLI 診斷、整批剖析，以及循序執行迴圈。它也是原生 CLI
+  這一側**唯一的例外邊界**：讀檔、剖析、執行三個階段都接住 `std::bad_alloc` 與
+  `std::length_error`，轉成一行訊息與非零退出碼（C ABI 那側則是每個 `extern "C"`
+  進入點各自接）。它透過 `extern "C" int aos_inst_cli_main(int, char **)` 對外掛成
+  `aos` 執行檔 `inst` 子命令的進入點。
 
 `format` 和 `exec` 是兄弟關係，彼此不相依；兩者都相依於 `inst`。公開函式庫
 `libaos_inst.so`（CMake target `aos::inst`）包含 `inst`、`format`、`exec`、
@@ -22,8 +24,7 @@ OBJECT library（`aos_inst_cli`）。`run` 只透過 `aos::inst` 的公開 API �
 
 唯一的執行檔 `aos`（`app/`）沒有任何業務邏輯：`main` 只依 `argv[1]` 查一張由
 各小專案登記出來的子命令表，把剩下的引數原樣轉發給對應的進入點——`inst` 這裡
-就是 `aos_inst_cli_main`。`core/inst/src/main.cpp` 已經不存在，這個小專案不再有
-自己的 `main`。
+就是 `aos_inst_cli_main`。這個小專案沒有自己的 `main`。
 
 ## 為什麼要先把整份輸入讀完
 
@@ -63,8 +64,10 @@ async-signal-safe 的 POSIX 操作；那裡不會發生任何 C++ 記憶體配�
 
 ## 外部專案怎麼用
 
-`aos` 是一個 monorepo，`inst` 只是掛在它底下的其中一個小專案。外部的 CMake
-專案想用 `inst` 的 C++ API，走 `find_package`：
+`aos` 是一個 monorepo，`inst` 只是掛在它底下的其中一個小專案——具體來說是一個
+**核心**小專案（住在 `core/`，一定會被建置；相對的 `modules/` 底下是可選的擴充，
+可以用 `-DAOS_BUILD_MODULES=OFF` 整批不建）。外部的 CMake 專案想用 `inst` 的
+C++ API，走 `find_package`：
 
 ```cmake
 find_package(aos CONFIG REQUIRED)
@@ -76,7 +79,8 @@ target_link_libraries(myapp PRIVATE aos::inst)
 （提供 `<aos/export.h>`）這個相依，不需要另外連。這一份 `libaos_inst.so`
 的建置與連結細節見[C API](capi.md)與[C++ API](cxxapi.md)。
 
-如果同時裝了多個小專案，也可以連一次性的傘狀 target `aos::aos`，它會轉連到
-所有已建置的小專案。另外有個關掉的選項 `AOS_BUILD_MERGED_LIB`，開了會多產出
+如果同時裝了多個小專案，也可以連傘狀 target：`aos::core`（所有核心小專案）、
+`aos::modules`（所有擴充，沒有擴充時不會被匯出）、`aos::aos`（全部）。它們都是
+INTERFACE target，只是轉連到已建置的那些小專案。另外有個關掉的選項 `AOS_BUILD_MERGED_LIB`，開了會多產出
 一份把所有小專案合在一起的單檔 `libaos.so`（target `aos::merged`）——這是給
 想單檔部署的場景用的，預設不建。

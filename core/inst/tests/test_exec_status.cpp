@@ -39,7 +39,7 @@ TEST_CASE("execute reports setup and exec failures as child statuses") {
     }
 
     SECTION("exec failure is 127") {
-        aos::inst_t inst = command({"aos-cpp-command-that-does-not-exist"});
+        aos::inst_t inst = command({"aos-inst-command-that-does-not-exist"});
         inst.exit_path = dir.path + "/exit";
         aos::ExecResult result;
 

@@ -115,7 +115,7 @@ TEST_CASE("execute treats an empty PATH field as the command cwd") {
 
     aos::inst_t inst = command({"aos-current-dir-command"});
     inst.cwd = dir.path;
-    inst.env["PATH"] = "/aos-cpp-path-entry-that-does-not-exist:";
+    inst.env["PATH"] = "/aos-inst-path-entry-that-does-not-exist:";
     inst.stdout_path = dir.path + "/stdout";
     aos::ExecResult result;
 
