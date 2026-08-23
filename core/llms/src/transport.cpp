@@ -23,6 +23,8 @@ struct HeaderDeleter {
 
 struct WriteTarget {
     std::string *body = nullptr;
+    const StreamByteSink *sink = nullptr;
+    CURL *curl = nullptr;
     std::exception_ptr error;
 };
 
@@ -31,7 +33,15 @@ std::size_t write_body(char *data, std::size_t width, std::size_t count,
     WriteTarget &target = *static_cast<WriteTarget *>(opaque);
     const std::size_t size = width * count;
     try {
-        target.body->append(data, size);
+        long status = 0;
+        if (target.curl != nullptr) {
+            curl_easy_getinfo(target.curl, CURLINFO_RESPONSE_CODE, &status);
+        }
+        if (target.sink != nullptr && status >= 200 && status < 300) {
+            (*target.sink)(std::string_view(data, size));
+        } else if (target.body != nullptr) {
+            target.body->append(data, size);
+        }
         return size;
     } catch (...) {
         target.error = std::current_exception();
@@ -44,9 +54,7 @@ CURLcode global_curl_state() {
     return state;
 }
 
-}  // namespace
-
-HttpResponse curl_transport(const HttpRequest &request) {
+HttpResponse perform(const HttpRequest &request, const StreamByteSink *sink) {
     HttpResponse response;
     if (global_curl_state() != CURLE_OK) {
         response.error = "libcurl 全域初始化失敗";
@@ -69,7 +77,8 @@ HttpResponse curl_transport(const HttpRequest &request) {
     }
     std::unique_ptr<curl_slist, HeaderDeleter> headers(header_list);
     std::array<char, CURL_ERROR_SIZE> error_buffer{};
-    WriteTarget target{.body = &response.body};
+    WriteTarget target{
+        .body = &response.body, .sink = sink, .curl = curl.get()};
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, request.url.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, headers.get());
@@ -99,6 +108,17 @@ HttpResponse curl_transport(const HttpRequest &request) {
     }
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &response.status);
     return response;
+}
+
+}  // namespace
+
+HttpResponse curl_transport(const HttpRequest &request) {
+    return perform(request, nullptr);
+}
+
+HttpResponse curl_stream_transport(const HttpRequest &request,
+                                   const StreamByteSink &sink) {
+    return perform(request, &sink);
 }
 
 }  // namespace aos::llms

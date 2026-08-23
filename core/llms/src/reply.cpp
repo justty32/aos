@@ -14,8 +14,7 @@ std::optional<std::int64_t> optional_count(const json &object,
     const auto found = object.find(name);
     if (found == object.end() || found->is_null()) return std::nullopt;
     if (!found->is_number_integer() && !found->is_number_unsigned()) {
-        throw std::invalid_argument(std::string("usage.") + name +
-                                    " 不是整數");
+        throw std::invalid_argument(std::string("usage.") + name + " 不是整數");
     }
     return found->get<std::int64_t>();
 }
@@ -39,8 +38,7 @@ std::optional<Usage> parse_usage(const json &response) {
         result.cached = optional_count(*prompt_details, "cached_tokens");
     }
     const auto completion_details = found->find("completion_tokens_details");
-    if (completion_details != found->end() &&
-        !completion_details->is_null()) {
+    if (completion_details != found->end() && !completion_details->is_null()) {
         if (!completion_details->is_object()) {
             throw std::invalid_argument(
                 "usage.completion_tokens_details 不是 object");
@@ -74,8 +72,8 @@ std::vector<RawToolCall> parse_calls(const json &message) {
         }
         const auto id = call.find("id");
         const auto function = call.find("function");
-        if (id == call.end() || !id->is_string() ||
-            function == call.end() || !function->is_object()) {
+        if (id == call.end() || !id->is_string() || function == call.end() ||
+            !function->is_object()) {
             throw std::invalid_argument("tool call 缺少 id 或 function");
         }
         const auto name = function->find("name");
@@ -92,27 +90,80 @@ std::vector<RawToolCall> parse_calls(const json &message) {
     return result;
 }
 
-}  // namespace
+void set_stream_error(Reply &reply, ErrorKind kind, std::string message) {
+    if (!reply.err) {
+        reply.err = ReplyError{.kind = kind, .message = std::move(message)};
+    }
+}
+
+} // namespace
+
+const char *to_string(ReplyPart part) noexcept {
+    switch (part) {
+    case ReplyPart::Think:
+        return "think";
+    case ReplyPart::Answer:
+        return "answer";
+    }
+    return "unknown";
+}
 
 Reply::Reply() : impl_(std::make_unique<Impl>()) {}
 Reply::Reply(Reply &&) noexcept = default;
-Reply &Reply::operator=(Reply &&) noexcept = default;
-Reply::~Reply() = default;
+Reply &Reply::operator=(Reply &&other) noexcept {
+    if (this == &other) return *this;
+    try {
+        finish();
+    } catch (...) {
+        /* move assignment 也不能讓舊串流漏掉收尾。 */
+    }
+    impl_ = std::move(other.impl_);
+    text = std::move(other.text);
+    calls = std::move(other.calls);
+    reasoning = std::move(other.reasoning);
+    finish_reason = std::move(other.finish_reason);
+    usage = std::move(other.usage);
+    err = std::move(other.err);
+    checkpoint = other.checkpoint;
+    return *this;
+}
+Reply::~Reply() {
+    if (!impl_) return;
+    try {
+        finish();
+    } catch (...) {
+        /* 解構不可丟例外；finish() 已盡力關閉並回復 history。 */
+    }
+}
 
 Reply::operator bool() const noexcept { return !err.has_value(); }
 
+void Reply::set_sink(ReplySink sink) {
+    if (impl_->started) {
+        throw std::logic_error("串流開始後不能更換 sink");
+    }
+    impl_->sink = std::move(sink);
+}
+
+void Reply::set_part_sink(ReplyPartSink sink) {
+    if (impl_->started) {
+        throw std::logic_error("串流開始後不能更換 parts sink");
+    }
+    impl_->part_sink = std::move(sink);
+}
+
 const std::string &Reply::all_text() {
     if (!impl_->done && impl_->drain_action) {
+        impl_->started = true;
         try {
-            impl_->drain_action();
+            impl_->drain_action(*this);
         } catch (const std::bad_alloc &) {
             throw;
         } catch (const std::exception &error) {
-            err = ReplyError{.kind = ErrorKind::Response,
-                             .message = error.what()};
+            set_stream_error(*this, ErrorKind::Response, error.what());
         } catch (...) {
-            err = ReplyError{.kind = ErrorKind::Response,
-                             .message = "讀取回應時發生未知錯誤"};
+            set_stream_error(*this, ErrorKind::Response,
+                             "讀取回應時發生未知錯誤");
         }
     }
     finish();
@@ -120,7 +171,7 @@ const std::string &Reply::all_text() {
 }
 
 void Reply::finish() {
-    if (impl_->done) return;
+    if (!impl_ || impl_->done) return;
     impl_->done = true;
     if (impl_->close_action) {
         try {
@@ -129,10 +180,13 @@ void Reply::finish() {
             /* 關閉連線失敗不覆蓋真正的回應。 */
         }
     }
+    if (!impl_->accumulator.empty()) {
+        impl_->raw_calls = impl_->accumulator.raw();
+    }
     text = impl_->buffer;
     reasoning = impl_->reasoning_buffer.empty()
-        ? std::nullopt
-        : std::optional<std::string>(impl_->reasoning_buffer);
+                    ? std::nullopt
+                    : std::optional<std::string>(impl_->reasoning_buffer);
     calls.clear();
     calls.reserve(impl_->raw_calls.size());
     for (const RawToolCall &raw : impl_->raw_calls) {
@@ -144,12 +198,12 @@ void Reply::finish() {
         } catch (const std::bad_alloc &) {
             throw;
         } catch (const std::exception &error) {
-            err = ReplyError{.kind = ErrorKind::Response,
-                             .message = "收尾失敗：" +
-                                 std::string(error.what())};
+            err =
+                ReplyError{.kind = ErrorKind::Response,
+                           .message = "收尾失敗：" + std::string(error.what())};
         } catch (...) {
-            err = ReplyError{.kind = ErrorKind::Response,
-                             .message = "收尾失敗"};
+            err =
+                ReplyError{.kind = ErrorKind::Response, .message = "收尾失敗"};
         }
     }
 }
@@ -170,8 +224,8 @@ Reply detail_ReplyAccess::absorb(
         throw std::invalid_argument("回應最外層不是 object");
     }
     const auto choices = response.find("choices");
-    if (choices == response.end() || !choices->is_array() ||
-        choices->empty() || !(*choices)[0].is_object()) {
+    if (choices == response.end() || !choices->is_array() || choices->empty() ||
+        !(*choices)[0].is_object()) {
         throw std::invalid_argument("回應缺少 choices[0]");
     }
     const json &choice = (*choices)[0];
@@ -202,4 +256,4 @@ Reply detail_ReplyAccess::absorb(
     return result;
 }
 
-}  // namespace aos::llms
+} // namespace aos::llms

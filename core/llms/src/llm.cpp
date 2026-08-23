@@ -48,7 +48,8 @@ std::optional<bool> Caps::get(Capability capability) const noexcept {
 
 LLM::LLM(std::string model, std::string url,
          std::optional<std::string> key, Params params, long timeout_ms,
-         Caps caps_override, Transport transport)
+         Caps caps_override, Transport transport,
+         StreamTransport stream_transport)
     : impl_(std::make_shared<Impl>()) {
     impl_->model = std::move(model);
     impl_->params = std::move(params);
@@ -57,7 +58,25 @@ LLM::LLM(std::string model, std::string url,
     impl_->root_url = endpoint_root_url(url);
     impl_->key = resolve_key(key);
     impl_->timeout_ms = timeout_ms;
-    impl_->transport = transport ? std::move(transport) : curl_transport;
+    const bool custom_transport = static_cast<bool>(transport);
+    impl_->transport = custom_transport ? std::move(transport) : curl_transport;
+    if (stream_transport) {
+        impl_->stream_transport = std::move(stream_transport);
+    } else if (custom_transport) {
+        const Transport buffered = impl_->transport;
+        impl_->stream_transport = [buffered](const HttpRequest &request,
+                                             const StreamByteSink &sink) {
+            HttpResponse response = buffered(request);
+            if (response.error.empty() && response.status >= 200 &&
+                response.status < 300 && !response.body.empty()) {
+                sink(response.body);
+                response.body.clear();
+            }
+            return response;
+        };
+    } else {
+        impl_->stream_transport = curl_stream_transport;
+    }
 }
 
 LLM::LLM(const LLM &) noexcept = default;

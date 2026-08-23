@@ -14,7 +14,7 @@ namespace {
 
 int usage(const char *program) {
     std::fprintf(stderr,
-                 "usage: %s ask [--model M | --preset P] [--system S] "
+                 "usage: %s ask [--model M | --preset P] [--stream] [--system S] "
                  "[--url U] [--key K] <prompt>\n"
                  "       %s models [--url U] [--key K]\n"
                  "\n"
@@ -87,13 +87,16 @@ int run_ask(const char *program, int argc, char *argv[]) {
     std::optional<std::string> url;
     std::optional<std::string> key;
     std::optional<std::string> prompt;
+    bool stream = false;
     bool options = true;
     for (int index = 2; index < argc; ++index) {
         const std::string argument = argv[index];
         if (options && argument == "--") {
             options = false;
-        } else if (options &&
-                   (argument == "--url" || argument == "--key")) {
+        } else if (options && argument == "--stream") {
+            if (stream) return usage(program);
+            stream = true;
+        } else if (options && (argument == "--url" || argument == "--key")) {
             if (!take_endpoint(argument, index, argc, argv, url, key)) {
                 return usage(program);
             }
@@ -129,15 +132,40 @@ int run_ask(const char *program, int argc, char *argv[]) {
         }
     }
     Bot bot(std::move(llm), std::move(system));
-    Reply reply = bot.ask(*prompt);
-    if (!reply) {
+    Ask request;
+    request.prompt = *prompt;
+    request.stream = stream;
+    Reply reply = bot.ask(request);
+    if (!reply && !stream) {
         std::fprintf(stderr, "%s: %s: %s\n", program,
                      to_string(reply.err->kind), reply.err->message.c_str());
         return 1;
     }
+
+    bool wrote = false;
+    char last = '\0';
+    if (stream) {
+        reply.set_sink([&](std::string_view part) {
+            if (part.empty()) return;
+            std::fwrite(part.data(), 1, part.size(), stdout);
+            std::fflush(stdout);
+            wrote = true;
+            last = part.back();
+        });
+    }
     const std::string &text = reply.all_text();
-    if (!text.empty()) std::fwrite(text.data(), 1, text.size(), stdout);
-    if (text.empty() || text.back() != '\n') std::fputc('\n', stdout);
+    if (!stream && !text.empty()) {
+        std::fwrite(text.data(), 1, text.size(), stdout);
+        wrote = true;
+        last = text.back();
+    }
+    if (!reply) {
+        if (wrote && last != '\n') std::fputc('\n', stdout);
+        std::fprintf(stderr, "%s: %s: %s\n", program,
+                     to_string(reply.err->kind), reply.err->message.c_str());
+        return 1;
+    }
+    if (!wrote || last != '\n') std::fputc('\n', stdout);
     return 0;
 }
 

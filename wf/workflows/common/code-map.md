@@ -171,29 +171,31 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 
 細節契約與 C++ registry 的 JSON 邊界見 `core/tooljson/docs/format.md`。
 
-## core/llms/ — OpenAI 相容端點 client（S3 非串流）
+## core/llms/ — OpenAI 相容端點 client（非串流 + SSE 串流）
 
 公開介面不含 nlohmann 或 curl 型別；JSON 以字串進出。`Bot::ask()` 除
 `std::bad_alloc` 外永遠回 `Reply`，錯誤放在分類化的 `reply.err`。HTTP 由
-`Transport` 抽換，ctest 全部使用假端點。
+完整回應的 `Transport` 與 callback 式 `StreamTransport` 都可抽換，ctest 全部使用假端點。
 
 | 檔案 | 負責 |
 |------|------|
-| `include/aos/llms.hpp` | 全部公開 C++ API：`HttpRequest`／`Transport`、`Params`、`Caps`／`LLM`、`ToolSet`、`Reply`／`Bot`、presets 與 content 純函式；每個公開函式與 out-of-line 成員都標 `AOS_API` |
+| `include/aos/llms.hpp` | 全部公開 C++ API：`HttpRequest`／`Transport`／`StreamTransport`、`Params`、`Caps`／`LLM`、`ToolSet`、串流 sink 與 `Reply`／`Bot`、presets 與 content 純函式；每個公開函式與 out-of-line 成員都標 `AOS_API` |
 | `src/llms_internal.hpp` | 唯一共用的內部 nlohmann 邊界與各 pimpl／測試不到的 access bridge；公開標頭不 include 它 |
 | `src/content.cpp` | base／completion／root URL 正規化、API key fallback、本機圖片 MIME＋base64 data URL、圖片／文字 content parts |
 | `src/params.cpp` | `Params` → request JSON；只送已設定欄位，再直接展開 `extra_json`；model／messages／stream 由 Bot 最後固定、不讓 extra 覆蓋 |
 | `src/toolcalls.cpp` | raw call → 呼叫端 entry／API history；非法 arguments 保留 raw；串流碎片按 index 增量累積 |
 | `src/toolset.cpp` | C++ 的 `(schemas_json, dispatch)` bundle 驗證與合併；名稱須完全配對且不可撞名，不做 Python callable 反射 |
-| `src/transport.cpp` | 預設 libcurl transport；curl 型別與 header 只停在本檔，支援 GET／POST、timeout、header 與回應 body |
+| `src/transport.cpp` | 預設 libcurl 完整／串流 transport；curl 型別與 header 只停在本檔，串流以 `CURLOPT_WRITEFUNCTION` 即時推 2xx body，非 2xx body 留給錯誤訊息 |
+| `src/sse.hpp`／`src/sse.cpp` | 內部增量 SSE parser；跨任意 transport callback 切割組 line／event，處理多個 `data:` 行與 `[DONE]` |
 | `src/caps.cpp` | GET `<root>/model/info`，轉成七項 `optional<bool>`；失敗吞掉，以 `(root URL, key)` 快取且空表也快取 |
 | `src/llm.cpp` | `LLM` 值與能力檢查；只有明確 `false` 擋請求，tool choice 沒 tools 直接回明確錯誤 |
-| `src/reply.cpp` | 同一 `Reply` 的增量 buffer／reasoning／tool-call accumulator 與唯一 `finish()`；S3 整包吸收後立即收尾，形狀已預留 S4 |
-| `src/bot.cpp` | 組 system＋history＋tool results＋user message、最後覆寫 model／messages／stream、送出非串流 request；失敗退回 checkpoint，成功透過 `Reply::finish()` 寫回 assistant history |
+| `src/reply.cpp` | 非串流整包吸收、同一 `Reply` 的結果投影與唯一 `finish()`；解構與 move assignment 都確定收尾，空且未完成的輪退回 checkpoint |
+| `src/stream_reply.cpp` | 延遲啟動 push transport、逐 SSE event 防禦性拆 chunk、答案／思考 sink 分流、usage-only 尾片、tool-call accumulator 餵入與串流期錯誤收斂 |
+| `src/bot.cpp` | 組 system＋history＋tool results＋user message、最後覆寫 model／messages／stream；非串流立即送出，串流建立延遲 Reply 並固定 include_usage，兩路都由 `Reply::finish()` 寫回或退回 history |
 | `src/presets.cpp`／`src/presets_data.hpp.in`／`presets.json` | 嚴格驗證並載入內嵌 preset；每筆只准 endpoint／model／parameters／可省略 description，能力不放 preset |
 | `src/run.hpp`／`src/run.cpp` | `aos llms ask`／`models` CLI 與 `aos_llms_cli_main`；成功路徑會連端點，配置失敗由 CLI 例外邊界收住 |
 | `CMakeLists.txt` | 建 `aos::llms`、以 `PRIVATE_DEPS CURL::libcurl` 連 curl、內嵌 presets、登記 `llms` 子命令與離線測試 |
-| `README.md` | S3 API、Reply／S4 預留、能力／toolset／presets 與 CLI 使用說明 |
+| `README.md` | 非串流／串流 API、push 資料流、Reply 收尾、與 Python 的解構差異、能力／toolset／presets 與 CLI 使用說明 |
 | `proxy/` | 從 reference 原樣搬入的 LiteLLM yaml、Linux／PowerShell 啟動腳本與 README；不建置、不安裝 |
 
 ### core/llms/tests/ — 測試
@@ -206,7 +208,8 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 | `test_toolset_presets.cpp` | schemas／dispatch 完整配對與撞名、內建 preset、缺鍵／多鍵拒絕 |
 | `test_caps.cpp` | 能力 true／false／不知道、override、只擋明確 false、root＋key 快取、空表命中與清快取 |
 | `test_reply_bot.cpp` | ask 全錯誤契約、checkpoint rollback、extra 保護欄位、image-only、text＋calls、pending calls、system／reset、usage 缺值與 finish 落空退回 |
-| `test_run.cpp` | S3 CLI 語法與 `--stream` 尚未開放；不連網 |
+| `test_stream.cpp` | 同份 SSE 的整包／不規則／逐 byte 切割等價、答案／思考分流、交錯 index tool-call 碎片、usage-only／防禦欄位、零位元組斷線、串流錯誤與解構／提前收尾；全用假 transport |
+| `test_run.cpp` | S4 CLI 接受 `--stream`，以未知 preset 驗到執行期而不連網 |
 
 ## 文件在哪
 

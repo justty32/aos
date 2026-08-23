@@ -173,10 +173,14 @@ Reply Bot::ask(const Ask &request) {
                 body["tool_choice"] = json::parse(*request.tool_choice_json);
             }
         }
+        if (request.stream) {
+            /* 不開 include_usage，串流最後一片不會帶 token 用量。 */
+            body["stream_options"] = {{"include_usage", true}};
+        }
         /* 這三個一定最後寫，Params.extra_json 無法蓋掉。 */
         body["model"] = engine.model;
         body["messages"] = messages;
-        body["stream"] = false;
+        body["stream"] = request.stream;
 
         HttpRequest http;
         http.url = engine.base_url + "/chat/completions";
@@ -184,6 +188,26 @@ Reply Bot::ask(const Ask &request) {
         http.headers = {"Authorization: Bearer " + engine.key,
                         "Content-Type: application/json"};
         http.timeout_ms = engine.timeout_ms;
+
+        const std::weak_ptr<Impl> weak = impl_;
+        auto finish_action = [weak, remember = request.remember,
+                              checkpoint](const Reply &reply) {
+            const std::shared_ptr<Impl> bot = weak.lock();
+            if (!bot || !remember) return;
+            if (reply.text.empty() && reply.calls.empty() &&
+                !reply.finish_reason.has_value()) {
+                rollback(bot, checkpoint);
+                return;
+            }
+            bot->history.push_back(
+                raw_calls_history(reply.text, raw_from_reply(reply)));
+        };
+
+        if (request.stream) {
+            return detail_ReplyAccess::stream(
+                std::move(http), engine.stream_transport, checkpoint,
+                std::move(finish_action));
+        }
 
         stage = ErrorKind::Transport;
         const HttpResponse response = engine.transport(http);
@@ -203,20 +227,8 @@ Reply Bot::ask(const Ask &request) {
         stage = ErrorKind::Json;
         const json parsed = json::parse(response.body);
         stage = ErrorKind::Response;
-        const std::weak_ptr<Impl> weak = impl_;
         return detail_ReplyAccess::absorb(
-            parsed, checkpoint,
-            [weak, remember = request.remember, checkpoint](const Reply &reply) {
-                const std::shared_ptr<Impl> bot = weak.lock();
-                if (!bot || !remember) return;
-                if (reply.text.empty() && reply.calls.empty() &&
-                    !reply.finish_reason.has_value()) {
-                    rollback(bot, checkpoint);
-                    return;
-                }
-                bot->history.push_back(
-                    raw_calls_history(reply.text, raw_from_reply(reply)));
-            });
+            parsed, checkpoint, std::move(finish_action));
     } catch (const std::bad_alloc &) {
         rollback(impl_, checkpoint);
         throw;

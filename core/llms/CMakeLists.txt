@@ -1,4 +1,4 @@
-# llms：OpenAI 相容端點 client；S3 只實作非串流。
+# llms：OpenAI 相容端點 client，含 SSE 串流。
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/presets.json AOS_LLMS_PRESETS_JSON)
 configure_file(
@@ -14,9 +14,11 @@ aos_add_subproject(llms
         src/toolcalls.cpp
         src/toolset.cpp
         src/transport.cpp
+        src/sse.cpp
         src/caps.cpp
         src/llm.cpp
         src/reply.cpp
+        src/stream_reply.cpp
         src/bot.cpp
         src/presets.cpp
     HEADERS
@@ -46,6 +48,7 @@ aos_add_test(aos_llms_tests
         tests/test_toolset_presets.cpp
         tests/test_caps.cpp
         tests/test_reply_bot.cpp
+        tests/test_stream.cpp
         tests/test_run.cpp
     LINK aos_llms_cli aos_common_private
 )

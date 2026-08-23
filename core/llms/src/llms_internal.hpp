@@ -37,6 +37,7 @@ struct LLM::Impl {
     std::string key;
     long timeout_ms = 60000;
     Transport transport;
+    StreamTransport stream_transport;
 };
 
 struct detail_LLMAccess {
@@ -49,10 +50,13 @@ struct Reply::Impl {
     std::string reasoning_buffer;
     std::vector<RawToolCall> raw_calls;
     ToolCallAccumulator accumulator;
-    std::function<void()> drain_action;
+    ReplySink sink;
+    ReplyPartSink part_sink;
+    std::function<void(Reply &)> drain_action;
     std::function<void()> close_action;
     std::function<void(const Reply &)> finish_action;
     bool done = false;
+    bool started = false;
 };
 
 struct detail_ReplyAccess {
@@ -60,9 +64,14 @@ struct detail_ReplyAccess {
                             std::size_t checkpoint = 0);
     static Reply absorb(const json &response, std::size_t checkpoint,
                         std::function<void(const Reply &)> finish_action);
+    static Reply stream(HttpRequest request, StreamTransport transport,
+                        std::size_t checkpoint,
+                        std::function<void(const Reply &)> finish_action);
 };
 
 HttpResponse curl_transport(const HttpRequest &request);
+HttpResponse curl_stream_transport(const HttpRequest &request,
+                                   const StreamByteSink &sink);
 json params_value(const Params &params);
 json content_value(const std::optional<std::string> &prompt,
                    const std::vector<std::string> &images);

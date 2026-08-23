@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace aos::llms {
@@ -46,6 +47,9 @@ struct HttpResponse {
 };
 
 using Transport = std::function<HttpResponse(const HttpRequest &)>;
+using StreamByteSink = std::function<void(std::string_view)>;
+using StreamTransport =
+    std::function<HttpResponse(const HttpRequest &, const StreamByteSink &)>;
 
 enum class Capability {
     Tools,
@@ -199,7 +203,8 @@ public:
                          std::string url = "http://localhost:4000",
                          std::optional<std::string> key = std::nullopt,
                          Params params = {}, long timeout_ms = 60000,
-                         Caps caps_override = {}, Transport transport = {});
+                         Caps caps_override = {}, Transport transport = {},
+                         StreamTransport stream_transport = {});
     AOS_API LLM(const LLM &) noexcept;
     AOS_API LLM(LLM &&) noexcept;
     AOS_API LLM &operator=(const LLM &) noexcept;
@@ -233,9 +238,19 @@ struct Ask {
     /* {call_id: "工具輸出"}；沒給就不新增 tool message。 */
     std::optional<std::string> tool_results_json;
     bool remember = true;
+    bool stream = false;
     /* JSON 字串，例如 \"required\" 或指定 function 的 object。 */
     std::optional<std::string> tool_choice_json;
 };
+
+enum class ReplyPart {
+    Think,
+    Answer,
+};
+
+AOS_API const char *to_string(ReplyPart part) noexcept;
+using ReplySink = std::function<void(std::string_view)>;
+using ReplyPartSink = std::function<void(ReplyPart, std::string_view)>;
 
 class Reply {
 public:
@@ -255,7 +270,11 @@ public:
     AOS_API ~Reply();
 
     AOS_API explicit operator bool() const noexcept;
-    /* S3 會一次拿完；S4 接上 drain 後，這個介面仍可原樣使用。 */
+    /* 串流開始前設定；一般 sink 只收到答案，不會混入思考。 */
+    AOS_API void set_sink(ReplySink sink);
+    /* 同時接收思考與答案；種類由 ReplyPart 區分。 */
+    AOS_API void set_part_sink(ReplyPartSink sink);
+    /* 串流會收到完為止再回；非串流維持原本行為。 */
     AOS_API const std::string &all_text();
     /* 寫回 history 與關閉 transport 的唯一收尾點；可重複呼叫。 */
     AOS_API void finish();
