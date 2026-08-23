@@ -12,8 +12,8 @@
 
 ## 最新進度
 
-- **monorepo 骨架已完成、尚未 commit**：C++23、`common/`＋`app/`＋`inst/`、`aos_add_subproject()` 樣板、install/export（外部 `find_package(aos CONFIG)` + `aos::inst` 已實測可用）。建置、測試、安裝、外部消費四項都驗過。整批改動還在 working tree，待使用者確認後才 commit。
 - **C ABI 尚未補齊**：目前只有 `inst` 有 `<aos/inst.h>`；使用者明確表示這塊之後再慢慢加，現階段不動它。
+- **相依管理的下一步**：通用私有相依目前集中在 `common/CMakeLists.txt` 的 `aos_common_private`，只收 header-only 且多數小專案都要的東西。等出現第一個重量級相依（curl 之類）就要改成「具名 bundle + 小專案明示取用」，並考慮 vcpkg feature 搭配 `AOS_BUILD_<NAME>`。判準已寫進 [`docs/subprojects.md`](../docs/subprojects.md)。
 
 ## 各工作流 session-log
 

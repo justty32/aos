@@ -1,0 +1,195 @@
+# 使用說明
+
+← [文件索引](README.md)｜[總覽](overview.md)｜[建置](build.md)
+
+aos 有兩種用法，背後是同一份實作。
+
+---
+
+# 一、當命令列工具用
+
+只有一支執行檔 `aos`，每個小專案是它的一條子命令。
+
+```bash
+$ aos --help
+usage: aos <command> [args...]
+
+commands:
+  inst         依序執行一份 JSON 指令檔裡的每一筆指令
+```
+
+不給子命令、或給了不認得的名字，都會印出這張表並回 exit code 2。
+
+## `aos inst` —— 執行 JSON 指令檔
+
+```bash
+aos inst jobs.json                                   # 從檔案讀
+printf '%s\n' '{"argv":["echo","hello"]}' | aos inst  # 從 stdin 讀
+```
+
+一份指令檔是**一個** JSON 物件，或**一個陣列**的物件。整份文件會先**全部驗證
+完**才開始執行任何一筆——所以第 5 筆有語法錯誤的話，前 4 筆不會被執行。
+
+```json
+[
+  {
+    "argv": ["/bin/sh", "-c", "printf 'hello\\n'"],
+    "stdout": "hello.txt",
+    "exit": "hello.status"
+  },
+  {
+    "argv": ["/bin/sh", "-c", "sleep 30"],
+    "timeout_ms": 500
+  }
+]
+```
+
+常用欄位：`argv`（必要，不可為空）、`stdin` / `stdout` / `stderr`（重導向到
+檔案）、`exit`（把 exit code 寫進這個檔）、`cwd`、`env`、`timeout_ms`。
+**完整 schema 與每個欄位的語意見 [`inst/docs/format.md`](../inst/docs/format.md)；
+執行語意（逾時怎麼算、訊號怎麼送、exit code 怎麼對應）見
+[`inst/docs/exec.md`](../inst/docs/exec.md)。**
+
+### 退出碼：注意，它不反映子行程的成敗
+
+這點很容易誤會。`aos inst` 的退出碼只回答「**aos 有沒有做好它的工作**」，不回答
+「你叫它跑的那些指令有沒有成功」。
+
+| 情況 | `aos inst` 的退出碼 |
+|------|-------------------|
+| 全部順利 | `0` |
+| 子行程回非零、指令不存在、逾時被砍、重導向的檔開不起來 | **`0`** |
+| 指令檔語法或 schema 有問題（一筆都沒執行）| `1` |
+| aos 自己失敗了：`fork` 失敗、`waitpid` 失敗、`exit` 檔寫不進去 | `1` |
+| 用法錯誤（沒給子命令、給了不認得的名字）| `2` |
+
+```bash
+$ printf '{"argv":["/bin/false"]}' | aos inst ; echo $?
+0
+```
+
+**要拿到子行程的結果，用 `exit` 欄位**——那正是它存在的理由：
+
+```json
+{"argv": ["/bin/false"], "exit": "job.status"}
+```
+
+跑完 `job.status` 裡會是 `1`。
+
+批次執行時，單筆的 `ExecState` 失敗會印到 stderr 但**不會中止**後面的，最後整體
+回 1。
+
+> **指令檔必須是可信來源。** 它沒有任何大小限制，可以指名任意程式與環境變數，
+> 並以你的身分執行。把它當成可執行檔看待。
+
+---
+
+# 二、當函式庫用
+
+先[安裝](build.md#安裝)，然後：
+
+```cmake
+find_package(aos CONFIG REQUIRED)
+target_link_libraries(myapp PRIVATE aos::inst)
+```
+
+```cpp
+#include <aos/inst.hpp>
+```
+
+如果 aos 沒裝在預設路徑，configure 時給 `-DCMAKE_PREFIX_PATH=<你的 prefix>`。
+
+## 可以連的 target
+
+| target | 內容 | 什麼時候用 |
+|--------|------|-----------|
+| `aos::inst` | 只有 inst 這個小專案（`libaos_inst.so`）| 一般情況，只拿你要的 |
+| `aos::aos` | INTERFACE 傘狀 target，一次連上所有小專案 | 懶得挑 |
+| `aos::merged` | 合併版 `libaos.so`，所有小專案在同一顆檔案裡 | 想單檔部署。需要建置時開 `AOS_BUILD_MERGED_LIB=ON` |
+
+`aos::merged` 是真的自成一體——即使小專案之間互相依賴，連了它就不會再被要求去連
+個別的 `libaos_<name>.so`。
+
+## 一個完整的例子
+
+```cpp
+#include <aos/inst.hpp>
+
+#include <cstdio>
+#include <string>
+#include <vector>
+
+int main() {
+    aos::inst_t job;
+    job.argv = {"/bin/sh", "-c", "printf 'hi\\n'"};
+    job.stdout_path = "out.txt";
+    job.timeout_ms = 1000;
+
+    // 寫成 JSON
+    std::string encoded;
+    if (aos::write_one(job, encoded) != aos::InstState::Ok) {
+        return 1;
+    }
+
+    // 讀回來
+    std::vector<aos::inst_t> jobs;
+    std::size_t bad = 0;
+    const aos::InstState state =
+        aos::read_all(encoded.data(), encoded.size(), jobs, &bad);
+    if (state != aos::InstState::Ok) {
+        std::fprintf(stderr, "record %zu: %s\n", bad, aos::to_string(state));
+        return 1;
+    }
+
+    // 執行
+    aos::ExecResult result;
+    const aos::ExecState exec_state = aos::execute(jobs.front(), result);
+    std::printf("%s status=%d timed_out=%d\n", aos::to_string(exec_state),
+                result.status, static_cast<int>(result.timed_out));
+    return 0;
+}
+```
+
+`inst` 的公開介面分三層，相依單向 `inst ← format ← exec`：`inst_t` 與狀態列舉、
+`read_*`/`write_*`（唯一懂 JSON schema 的一層）、`execute()`（唯一碰
+`fork`/`exec` 的一層）。三組宣告併在同一個標頭裡**不代表它們可以互相引用**。
+逐項說明見 [`inst/docs/cxxapi.md`](../inst/docs/cxxapi.md)。
+
+## 錯誤處理的契約
+
+C++ API **會丟例外**：記憶體配置失敗時是 `std::bad_alloc` / `std::length_error`，
+不是回傳值。狀態碼（`InstState` / `ExecState`）只表達「輸入有問題」或「執行沒
+成功」。要在配置失敗時也保持穩定的呼叫者，得自己 catch。
+
+## C ABI
+
+需要跨語言或跨編譯器邊界時，改用 C ABI：
+
+```c
+#include <aos/inst.h>
+```
+
+它相容 C99、不含任何 C++ 型別，而且**每個進入點都會把例外接成錯誤碼**
+（`AOS_INST_ALLOC_FAILED` 等），例外不會逸出 `extern "C"` 邊界。同一個編譯單元
+裡 `<aos/inst.h>` 與 `<aos/inst.hpp>` 可以並存。
+
+列舉值一經釋出就凍結——只能在尾端加新值，不能重排或刪除。完整說明與範例見
+[`inst/docs/capi.md`](../inst/docs/capi.md)。
+
+目前只有 `inst` 提供 C ABI，其餘小專案會陸續補上。
+
+## 不透過 CMake 的話
+
+```bash
+# 對著已安裝的 prefix
+cc -std=c99   example.c   -I<prefix>/include -L<prefix>/lib -laos_inst
+c++ -std=c++23 example.cpp -I<prefix>/include -L<prefix>/lib -laos_inst
+```
+
+對著**尚未安裝**的建置樹則要兩個 `-I`（公開標頭與 `<aos/export.h>` 分屬不同
+目錄，安裝後才會合流），並補上 rpath：
+
+```bash
+c++ -std=c++23 example.cpp -Iinst/include -Icommon/include \
+    -Lbuild/lib -Wl,-rpath,"$PWD/build/lib" -laos_inst
+```

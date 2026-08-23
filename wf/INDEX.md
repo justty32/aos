@@ -17,6 +17,7 @@
 | `common/` | `aos::common`，header-only，目前只有 `<aos/export.h>` |
 | `app/` | 唯一的執行檔 `aos`，靠子命令分派（`aos inst ...`）|
 | `inst/` | 第一個小專案：lib `aos::inst`（`libaos_inst.so`）＋ `inst` 子命令。內部分工 → [code map](workflows/common/code-map.md) |
+| `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案。個別小專案自己的細節在它們的 `docs/`，例如 `inst/docs/` |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](WORKFLOWS.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣（放信處，保持乾淨；使用方式見 [workflows/inbox/](workflows/inbox/README.md)）|
 | `.claude/commands/` | slash 指令（[`/wf-tick`](../.claude/commands/wf-tick.md) 驅動定期心跳）。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |
