@@ -94,8 +94,14 @@ prefix 不在預設路徑的話，configure 時給 `-DCMAKE_PREFIX_PATH=<prefix>
 | target | 什麼時候用 |
 |--------|-----------|
 | `aos::inst`（或其他單一小專案）| **預設選這個**，只拿需要的 |
-| `aos::aos` | 要用到多個小專案又懶得一一列 |
+| `aos::core` | 要 aos 的基本功能（`core/` 全部），不要擴充 |
+| `aos::modules` | 只要擴充（`modules/` 全部）。沒有擴充存在時這個 target 不會被匯出 |
+| `aos::aos` | 全部小專案，懶得挑 |
 | `aos::merged` | 想單檔部署。aos 那邊要以 `-DAOS_BUILD_MERGED_LIB=ON` 建 |
+
+如果使用者要的功能來自 `modules/` 底下的擴充小專案，確認 aos 建置時**沒有**帶
+`-DAOS_BUILD_MODULES=OFF`——關掉的話那顆函式庫根本不會產出，`find_package` 會說
+找不到 target。
 
 ### 程式碼那側
 

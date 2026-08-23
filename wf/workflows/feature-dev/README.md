@@ -18,6 +18,16 @@
 - **自動驗證是你（Claude）自己跑**的把關（鐵律：改完跑驗證）。
 - **Claude 跑不了的驗證一律由使用者做**——先靠自動驗證＋結構性檢查把握到極限再交付；需使用者驗證的記到 [WAIT_USER](../../WAIT_USER.md)。
 - 測試迭代期間，code map / 文檔可暫時落後；**commit 前必須對齊**。
+- **「補文檔」要補哪幾份**，依改動的性質而定，不要漏：
+
+  | 改了什麼 | 要跟著改 |
+  |---|---|
+  | 某個小專案的內部行為 | 該小專案的 `docs/`（如 `core/inst/docs/`）＋ [code map](../common/code-map.md) |
+  | 建置骨架、CMake 函式、相依管理 | [`docs/build.md`](../../../docs/build.md)、[`docs/subprojects.md`](../../../docs/subprojects.md)、[add-subproject 工作流](../add-subproject.md) |
+  | 公開 API、子命令、退出碼 | [`docs/usage.md`](../../../docs/usage.md)、[use-aos 工作流](../use-aos.md) |
+  | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
+
+  **文件裡寫的每一條指令與輸出都要真的跑過再寫上去**，不要照推論寫。
 - 跨 session 時在本工作流 `session-log.md` 補一行 `[功能名] 文檔/code map 待同步`，下個 session 不會誤判已同步。
 
 ## 內容
