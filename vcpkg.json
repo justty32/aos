@@ -4,7 +4,13 @@
   "description": "POSIX 小工具的集合，每個小專案同時是執行檔的一條子命令與一個 C++23 函式庫",
   "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
   "dependencies": [
-    "nlohmann-json"
+    "nlohmann-json",
+    {
+      "name": "curl",
+      "features": [
+        "ssl"
+      ]
+    }
   ],
   "features": {
     "tests": {
