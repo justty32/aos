@@ -6,6 +6,7 @@ aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命
 | 小專案 | target | 子命令 | 做什麼 |
 |--------|--------|--------|--------|
 | [inst/](inst/) | `aos::inst` | `aos inst` | 讀 JSON 指令檔，依序 `fork`/`exec` 執行 |
+| [tooljson/](tooljson/) | `aos::tooljson` | `aos tooljson` | 讀取、驗證 tool spec，並把模型參數展開成 argv |
 
 `aos::core` 這個傘狀 target 一次連上本目錄的全部。
 
