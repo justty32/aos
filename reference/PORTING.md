@@ -49,6 +49,11 @@
 
 ## 三、兩個要使用者拍板的決策
 
+> **2026-08-23 拍板結果**
+> - **決策 A：暫緩。** S1 完全不 fork，跟這題無關，先做完 S1 再回頭決定。
+>   **S2 開工前一定要先問使用者**，不要自己選一個就開始寫。
+> - **決策 B：libcurl。** `core/llms` 用 vcpkg 的 `curl`，列 `PRIVATE_DEPS`。
+
 ### 決策 A：`tooljson` 的 exec 引擎自己寫，還是接 `aos::inst`？
 
 看起來 `_type: "exec"` 跟 `core/inst` 是同一件事（argv、stdin/out/err、cwd、
@@ -141,10 +146,15 @@ core/tooljson/
   src/registry.cpp             _type → parser，開放登記
   src/args.cpp                 args JSON → argv + stdin（純函式，不碰 process）
   src/text.cpp                 decode（NUL → binary）、clip（head/tail）
+  src/run.cpp                  CLI 層：aos tooljson list / check
   tests/                       Catch2
   docs/format.md               ← 從 FORMAT.md 改寫，講 C++ 版
   CMakeLists.txt
 ```
+
+子命令**提前到 S1**（原本排在 S2）：`list` 與 `check` 都是純驗證、不 fork，
+放進來剛好在最早的階段就把 `aos_add_subcommand()` 與 X-macro 分派表這條整合路徑
+走通 —— 整合風險要先撞，不要留到最後。`run` 留給 S2。
 
 驗收（缺一不可）：
 - `_version` 不是 `"0.1.0"` → 拒絕，不往下相容。
