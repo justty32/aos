@@ -52,8 +52,14 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # 讓裝好的 aos 執行檔找得到同一次安裝的 libaos_*.so，不必靠 LD_LIBRARY_PATH。
+# 上面只擋 WIN32，所以 macOS 是放行的；但 $ORIGIN 是 ELF 的寫法，Mach-O 要用
+# @loader_path，寫錯的話裝好的執行檔會找不到自己的 .dylib。
 set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
-set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+if(APPLE)
+    set(CMAKE_INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR}")
+else()
+    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+endif()
 
 find_package(nlohmann_json CONFIG REQUIRED)
 if(AOS_BUILD_TESTS)
@@ -100,15 +106,32 @@ if(AOS_BUILD_MERGED_LIB)
         endif()
     endforeach()
 
+    # 小專案之間的相依要從清單上拿掉：那些物件已經在合併版裡面了。留著的話
+    # 「單檔部署」就破功——使用者連了 libaos.so 還會被要求去連
+    # libaos_<小專案>.so，同一份符號在兩顆 DSO 各有一份，interposition 的行為
+    # 就看載入順序了。外部相依（aos:: 以外的）要留著。
+    set(aos_merged_public_deps "")
+    foreach(dep IN LISTS aos_public_deps)
+        set(dep_is_subproject FALSE)
+        foreach(subproject IN LISTS aos_subprojects)
+            if(dep STREQUAL "aos::${subproject}")
+                set(dep_is_subproject TRUE)
+            endif()
+        endforeach()
+        if(NOT dep_is_subproject)
+            list(APPEND aos_merged_public_deps ${dep})
+        endif()
+    endforeach()
+
     add_library(aos_merged SHARED ${aos_merged_objects})
     add_library(aos::merged ALIAS aos_merged)
     target_link_libraries(aos_merged
-        PUBLIC aos::common ${aos_public_deps}
+        PUBLIC aos::common ${aos_merged_public_deps}
         PRIVATE aos_common_private ${aos_private_deps}
     )
     # 與各小專案的共享庫同樣的理由：私有相依不要外流到匯出介面。
     set_property(TARGET aos_merged PROPERTY
-        INTERFACE_LINK_LIBRARIES aos::common ${aos_public_deps}
+        INTERFACE_LINK_LIBRARIES aos::common ${aos_merged_public_deps}
     )
     foreach(include_dir IN LISTS aos_include_dirs)
         target_include_directories(aos_merged PUBLIC

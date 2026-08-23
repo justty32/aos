@@ -20,8 +20,10 @@ struct Subcommand {
     const char *summary;
 };
 
+/* 名稱由 CMake 直接產生成帶引號的字串常值，不在這裡用 # 做字串化——名稱允許
+ * 含連字號，那對前置處理器的字串化是能動但很微妙的用法。 */
 constexpr Subcommand kSubcommands[] = {
-#define AOS_SUBCOMMAND(name, entry, summary) {#name, entry, summary},
+#define AOS_SUBCOMMAND(name, entry, summary) {name, entry, summary},
 #include <aos_subcommands.inc>
 #undef AOS_SUBCOMMAND
 };

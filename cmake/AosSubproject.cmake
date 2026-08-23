@@ -114,6 +114,9 @@ endfunction()
 #
 # 只是把資訊登記到全域屬性；app/ 會在所有小專案都加完之後，把整張表產生成
 # 一個 X-macro 標頭。所以新增子命令不需要動 app/ 底下的任何檔案。
+#
+# NAME 與 ENTRY 都會被檢查字集與唯一性——這兩件事沒做的話，錯誤要嘛在編譯期
+# 以難懂的形式爆開，要嘛根本不會爆（見下面重名那段）。
 function(aos_add_subcommand)
     cmake_parse_arguments(PARSE_ARGV 0 ARG "" "NAME;ENTRY;LIBRARY;SUMMARY" "")
     foreach(required NAME ENTRY LIBRARY)
@@ -122,10 +125,43 @@ function(aos_add_subcommand)
         endif()
     endforeach()
 
-    # 用 tab 分隔欄位：CMake 的 list 以分號分隔，tab 不會撞到。
-    set_property(GLOBAL APPEND PROPERTY AOS_SUBCOMMANDS
-        "${ARG_NAME}\t${ARG_ENTRY}\t${ARG_SUMMARY}"
-    )
+    # 名稱會出現在使用者的命令列與產生出來的表格裡。限制成保守字集，順便擋掉
+    # `-h` 這種會跟旗標混淆的名字。
+    if(NOT ARG_NAME MATCHES "^[a-z][a-z0-9-]*$")
+        message(FATAL_ERROR
+            "aos_add_subcommand(): NAME 必須符合 ^[a-z][a-z0-9-]*$，收到 '${ARG_NAME}'")
+    endif()
+    if(NOT ARG_ENTRY MATCHES "^[A-Za-z_][A-Za-z0-9_]*$")
+        message(FATAL_ERROR
+            "aos_add_subcommand(): ENTRY 必須是合法的 C 識別字，收到 '${ARG_ENTRY}'")
+    endif()
+
+    # 重名一定要在這裡擋下來。兩個小專案登記同一個 NAME 的話，configure 過、
+    # 編譯過、`aos --help` 還會把兩筆都列出來，但分派是線性掃描取第一個相符，
+    # 所以後註冊的那個實作永遠叫不到——而且完全沒有任何訊息。
+    string(REPLACE "-" "_" key "${ARG_NAME}")
+    get_property(registered_names GLOBAL PROPERTY AOS_SUBCOMMAND_NAMES)
+    if(ARG_NAME IN_LIST registered_names)
+        get_property(owner GLOBAL PROPERTY AOS_SUBCOMMAND_OWNER_${key})
+        message(FATAL_ERROR
+            "aos_add_subcommand(): 子命令 '${ARG_NAME}' 已經由 ${owner} 登記過了")
+    endif()
+
+    # 同一個 ENTRY 被兩個小專案定義的話，錯誤會延到連結期才以 multiple
+    # definition 的形式出現，訊息跟「子命令」八竿子打不著。這裡先擋。
+    get_property(registered_entries GLOBAL PROPERTY AOS_SUBCOMMAND_ENTRIES)
+    if(ARG_ENTRY IN_LIST registered_entries)
+        message(FATAL_ERROR
+            "aos_add_subcommand(): 進入點 '${ARG_ENTRY}' 已經被別的子命令用掉了")
+    endif()
+
+    # SUMMARY 是自由文字，可能含分號——放進 CMake list 會被當成分隔符把記錄
+    # 拆散。所以名稱走 list，其餘欄位一項一個屬性，屬性值不吃 list 語意。
+    set_property(GLOBAL APPEND PROPERTY AOS_SUBCOMMAND_NAMES ${ARG_NAME})
+    set_property(GLOBAL APPEND PROPERTY AOS_SUBCOMMAND_ENTRIES ${ARG_ENTRY})
+    set_property(GLOBAL PROPERTY AOS_SUBCOMMAND_ENTRY_${key} "${ARG_ENTRY}")
+    set_property(GLOBAL PROPERTY AOS_SUBCOMMAND_SUMMARY_${key} "${ARG_SUMMARY}")
+    set_property(GLOBAL PROPERTY AOS_SUBCOMMAND_OWNER_${key} "${CMAKE_CURRENT_SOURCE_DIR}")
     set_property(GLOBAL APPEND PROPERTY AOS_SUBCOMMAND_LIBRARIES ${ARG_LIBRARY})
 endfunction()
 

@@ -105,8 +105,24 @@ int run(int argc, char *argv[]) {
     std::size_t error_record = 0;
     const char empty = '\0';
     const char *data = buffer.empty() ? &empty : buffer.data();
-    const InstState parse_state =
-        read_all(data, buffer.size(), instructions, &error_record);
+    /* format 與 exec 兩層都以「配置失敗就丟例外」為契約——C ABI 那側在每個
+     * extern "C" 進入點把它們接成錯誤碼，原生 CLI 這側就得自己接。少了這幾個
+     * catch，一份夠大的指令檔會讓整個行程 SIGABRT，而不是像讀檔階段那樣印一
+     * 行訊息後乾淨地回 1。 */
+    InstState parse_state = InstState::Ok;
+    bool parse_out_of_memory = false;
+    try {
+        parse_state = read_all(data, buffer.size(), instructions, &error_record);
+    } catch (const std::bad_alloc &) {
+        parse_out_of_memory = true;
+    } catch (const std::length_error &) {
+        parse_out_of_memory = true;
+    }
+    if (parse_out_of_memory) {
+        std::fprintf(stderr, "aos inst: cannot parse %s: out of memory\n",
+                     source);
+        return 1;
+    }
     if (parse_state != InstState::Ok) {
         if (error_record != 0) {
             std::fprintf(stderr, "aos inst: %s: record %zu: %s\n", source,
@@ -121,7 +137,19 @@ int run(int argc, char *argv[]) {
     bool failed = false;
     for (std::size_t index = 0; index < instructions.size(); ++index) {
         ExecResult result;
-        const ExecState state = execute(instructions[index], result);
+        /* execute() 在 fork 之前要合併環境變數、解析 PATH，一樣會配置記憶體。
+         * 這裡把配置失敗當成「這一筆失敗」而不是整批中止，跟其他 exec 錯誤
+         * 的處理方式一致。 */
+        ExecState state = ExecState::Ok;
+        try {
+            state = execute(instructions[index], result);
+        } catch (const std::bad_alloc &) {
+            state = ExecState::SpawnFailed;
+            result.error = ENOMEM;
+        } catch (const std::length_error &) {
+            state = ExecState::SpawnFailed;
+            result.error = ENOMEM;
+        }
         if (state != ExecState::Ok) {
             failed = true;
             if (result.error != 0) {

@@ -83,7 +83,8 @@ wf/                 分層工作流文件（開發流程用，與程式無關）
 
 1. 複製 `inst/` 的結構：`include/aos/<name>.hpp`、`src/`、`tests/`、`CMakeLists.txt`。
 2. 在它的 `CMakeLists.txt` 裡呼叫 `aos_add_subproject()`，需要子命令就再呼叫
-   `aos_add_subcommand()`。nlohmann_json 之類**多數小專案都會用到的相依不用寫**
+   `aos_add_subcommand()`（`NAME` 限 `^[a-z][a-z0-9-]*$`，重名與進入點撞名都會
+   在 configure 期擋下來）。nlohmann_json 之類**多數小專案都會用到的相依不用寫**
    —— 它們集中宣告在 `common/CMakeLists.txt` 的 `aos_common_private`，樣板會
    自動連上。
 3. 在根目錄 `CMakeLists.txt` 的小專案區塊加一行 `add_subdirectory(<name>)`。
