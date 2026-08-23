@@ -73,7 +73,7 @@ target_link_libraries(myapp PRIVATE aos::inst)
 ```
 CMakeLists.txt      頂層：選項、相依、add_subdirectory、install/export
 cmake/              AosSubproject.cmake（小專案樣板）、aos-config.cmake.in
-common/             aos::common —— 目前只有 <aos/export.h>
+common/             跨小專案共用：aos::common（<aos/export.h>）與通用私有相依
 app/                唯一的執行檔 aos，只負責把 argv[1] 分派到某個子命令
 inst/               第一個小專案：aos::inst + `aos inst` 子命令
 wf/                 分層工作流文件（開發流程用，與程式無關）
@@ -83,7 +83,9 @@ wf/                 分層工作流文件（開發流程用，與程式無關）
 
 1. 複製 `inst/` 的結構：`include/aos/<name>.hpp`、`src/`、`tests/`、`CMakeLists.txt`。
 2. 在它的 `CMakeLists.txt` 裡呼叫 `aos_add_subproject()`，需要子命令就再呼叫
-   `aos_add_subcommand()`。
+   `aos_add_subcommand()`。nlohmann_json 之類**多數小專案都會用到的相依不用寫**
+   —— 它們集中宣告在 `common/CMakeLists.txt` 的 `aos_common_private`，樣板會
+   自動連上。
 3. 在根目錄 `CMakeLists.txt` 的小專案區塊加一行 `add_subdirectory(<name>)`。
 
 `app/` 不用動 —— 子命令表是從各小專案的登記結果產生的。細節見

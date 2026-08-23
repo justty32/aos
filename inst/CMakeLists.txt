@@ -16,8 +16,6 @@ aos_add_subproject(inst
     HEADERS
         include/aos/inst.hpp
         include/aos/inst.h
-    PRIVATE_DEPS
-        nlohmann_json::nlohmann_json
 )
 
 # CLI 層另外放：它是 aos 執行檔的一部分，不屬於函式庫的公開介面，所以不進

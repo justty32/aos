@@ -104,7 +104,7 @@ if(AOS_BUILD_MERGED_LIB)
     add_library(aos::merged ALIAS aos_merged)
     target_link_libraries(aos_merged
         PUBLIC aos::common ${aos_public_deps}
-        PRIVATE ${aos_private_deps}
+        PRIVATE aos_common_private ${aos_private_deps}
     )
     # 與各小專案的共享庫同樣的理由：私有相依不要外流到匯出介面。
     set_property(TARGET aos_merged PROPERTY

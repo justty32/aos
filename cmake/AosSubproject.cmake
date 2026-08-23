@@ -7,7 +7,7 @@ include_guard(GLOBAL)
 #     SOURCES      <實作檔…>
 #     HEADERS      <公開標頭…>            # 會被安裝，路徑相對於本目錄
 #     PUBLIC_DEPS      <公開標頭裡用到的相依…>
-#     PRIVATE_DEPS     <只有實作檔用到的相依…>
+#     PRIVATE_DEPS     <這個小專案專屬、只有實作檔用到的相依…>
 #     PUBLIC_PACKAGES  <PUBLIC_DEPS 是哪些 find_package 提供的…>
 # )
 #
@@ -15,6 +15,10 @@ include_guard(GLOBAL)
 # 把那些套件找出來——把對應的套件名列進 PUBLIC_PACKAGES，根目錄會據此在
 # aos-config.cmake 產生 find_dependency()。PRIVATE_DEPS 則刻意不外流，理由見
 # 下面「把私有相依從匯出介面剝掉」那段。
+#
+# 通用的私有相依（nlohmann_json 之類，多數小專案都會用到）不必寫在這裡：它們
+# 集中宣告在 common/CMakeLists.txt 的 aos_common_private，本函式一律自動連上。
+# PRIVATE_DEPS 只放這個小專案獨有的。
 #
 # 產出兩個 target：
 #   aos_<name>_objects  OBJECT，給合併版 libaos.so 撿去用
@@ -44,7 +48,7 @@ function(aos_add_subproject name)
     target_include_directories(${objects} PUBLIC ${include_dir})
     target_link_libraries(${objects}
         PUBLIC aos::common ${ARG_PUBLIC_DEPS}
-        PRIVATE ${ARG_PRIVATE_DEPS}
+        PRIVATE aos_common_private ${ARG_PRIVATE_DEPS}
     )
 
     # 用 $<TARGET_OBJECTS:> 當來源而不是 link，這樣 aos_<name> 沒有指向
@@ -54,7 +58,7 @@ function(aos_add_subproject name)
     add_library(aos::${name} ALIAS ${library})
     target_link_libraries(${library}
         PUBLIC aos::common ${ARG_PUBLIC_DEPS}
-        PRIVATE ${ARG_PRIVATE_DEPS}
+        PRIVATE aos_common_private ${ARG_PRIVATE_DEPS}
     )
     # 把私有相依從匯出介面剝掉。
     #
