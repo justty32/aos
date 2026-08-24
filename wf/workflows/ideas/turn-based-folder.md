@@ -192,6 +192,11 @@ aos exec --keep-doing 監看 folder
         ↺
 ```
 
+> **第一版 agent loop 不需要 `core/llms`**：`inst` 跑的是 POSIX 指令，所以「呼叫一次
+> 模型」可以先用任何一支現成的 LLM CLI 頂著，整個 loop 就是一份 `.aos/inst.json` 加幾
+> 支腳本。自家的 LLM CPU 是之後把它換掉，不是前置條件。見
+> [roadmap 的 T5／T6](../../../docs/roadmap.md)。
+
 - `aos agent start` 是使用者在指定資料夾內啟動 agent 的入口；它準備所需內容，並讓
   `.aos/inst.json` 的下一回合包含 `aos agent init ...`。
 - `aos agent init ...` 會載入該資料夾的各類資訊，包括使用哪個 LLM 思考引擎、可用

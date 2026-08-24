@@ -20,6 +20,10 @@
 所以主線**不是**繼續把 llmkit 移植完，而是**先把回合原語做出來**。移植出來的那兩個
 小專案要等模型立起來之後，才知道它們該長什麼形狀。
 
+這條路線有個容易被忽略的紅利：**因為 `inst` 跑的是 POSIX 指令，agent loop 不需要等
+`core/llms`**——「呼叫一次模型」可以先用任何一支現成的 LLM CLI 頂著（[T5](#t5)）。自家
+的 LLM CPU 是之後把它換掉（[T6](#t6)），不是前置條件。
+
 這條路線會改寫 [overview.md](overview.md) 的「一句話」：aos 現在寫成「一組 POSIX
 小工具的集合」，T1 落地後它會變成「一個資料夾的回合制執行器，外加一組 POSIX 小
 工具」。**overview 要等 T1 真的能跑再改**，不要先改文件。
@@ -169,12 +173,47 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 **驗收**：`aos exec --keep-doing` 能連續推進多回合；crash 留下 `.runi` 之後它停住而不
 是繞過去。
 
-### T5 — 第一顆抽象 CPU：`aos llm exec <folder>`　【[D4](#d4) 已把它推到 agent loop 之後】
+### T5 — agent loop：**不需要 `core/llms`**<a id="t5"></a>
 
-> 使用者已決定 `core/llms`／`core/tooljson` **先不動**，這一階段要排在 agent loop 之
-> 後。以下是形狀的草稿，先不要開工。
+[D4](#d4) 把 `core/llms`／`core/tooljson` 排到 agent loop 之後。乍看奇怪——沒有 LLM 函
+式庫怎麼做 agent loop？答案就是這套模型最大的紅利：
 
-形狀已經定了：它是**被 `aos exec` 起來的一支普通程式**。
+> **`inst` 跑的是 POSIX 指令，所以「呼叫一次模型」可以是任何一支已經存在的 CLI。**
+
+```text
+.aos/inst.json 的一筆 instruction:
+    ["some-llm-cli", "-p", "@prompt.txt", ...]   ← 隨便哪支現成的 LLM CLI
+        ↓ 對 aos exec 而言就是普通指令
+    輸出寫到檔案（stdout 重導向）
+        ↓
+    一支小腳本把輸出翻成 instruction，投遞到 .aos/inst.tempd/<pid>.json
+        ↓
+    下一回合由 aos exec 執行工具、再排下一次模型呼叫
+```
+
+整個 loop **可以完全不含任何 aos 的新 C++**：T0–T4 做完之後，agent loop 是一份
+`.aos/inst.json` 加幾支腳本。這跟 [T4](#t4-的注意事項) 先用 shell loop 當 daemon 是同
+一個做法——**先用最便宜的方式證明模型會動，會痛的地方才是下一階段的規格書**。
+
+具體要證的東西：
+
+- 一次模型呼叫是**一回合**，狀態全在資料夾裡，沒有常駐 process。
+- 模型要求的 tool call 在**下一回合**真的被執行，結果回到資料夾。
+- 再下一回合模型看得到那個結果，並能決定繼續或停止。
+- 使用者可以在回合之間插手改資料夾，下一回合就看得到。
+
+**驗收**：一個資料夾裡跑完一次「模型 → 工具 → 模型看到結果」的完整來回，全程沒有常駐
+process，中途 `Ctrl-C` 之後再 `aos exec` 一次能從斷點繼續。
+
+**這一階段的產出不是程式，是規格**：腳本裡哪些地方重複、哪些地方難寫，就是 `aos agent`
+與 T6 要收掉的東西。
+
+### T6 — 把 LLM 內化：`aos llm exec <folder>`<a id="t6"></a>
+
+> 這一階段才碰 `core/llms`／`core/tooljson`（[D4](#d4)）。T5 沒跑出痛點之前不要開工。
+
+形狀已經定了：它是**被 `aos exec` 起來的一支普通程式**——和 T5 裡那支外部 CLI 站在完全
+相同的位置，只是換成自家的。
 
 ```text
 .aos/inst.json 的一筆 instruction: ["aos","llm","exec","."]
@@ -191,7 +230,8 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 ```
 
 這一步同時把兩個小專案矯正回來：`llms` 從「同步 ask」變成「turn producer」，
-`tooljson` 從「自己 run」變成「emitter」。
+`tooljson` 從「自己 run」變成「emitter」。**T5 已經證明過這個位置能動**，所以 T6 是
+「把外部 CLI 換成自家的」，不是「賭一個沒驗證過的形狀」。
 
 **驗收**：一個資料夾裡，模型要求呼叫一個工具 → 工具在**下一回合**由 inst 真的跑起來
 → 結果回到資料夾 → 再下一回合模型看得到它。全程沒有任何常駐 process。
@@ -259,8 +299,10 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 東西立起來再回頭處理」。在那之前不要投資這兩個小專案，也不要因為它們現在的形狀不對
 而急著重寫。
 
-連帶影響：**T5 往後挪**，它前面要先有 agent loop。我原本「原地改造、保留 transport
-與 argv 展開」的建議留著，等真的動它時再拿出來討論。
+連帶影響：原本的 T5 變成 **[T6](#t6)**，前面插進 **[T5 agent loop](#t5)**。這個順序
+是通的——**agent loop 不需要 `core/llms`**，因為 `inst` 跑的是 POSIX 指令，「呼叫一次
+模型」可以是任何一支現成的 LLM CLI。我原本「原地改造、保留 transport 與 argv 展開」的
+建議留著，等真的動它時再拿出來討論。
 
 ### D5 — `inst` 要不要長出「stderr 併進 stdout」？<a id="d5"></a>（跟著 D4 一起延後）
 
