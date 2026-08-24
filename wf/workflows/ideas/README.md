@@ -13,5 +13,9 @@
 | [llm-cpu](llm-cpu.md) | LLM CPU 疊在 `inst` 之上（`aos llm next` + `llm_inst`）、自跑推理或當全域 daemon client 的取捨、跨資料夾排程與 I/O 交換區 |
 | [inst-execution](inst-execution.md) | `inst` 的 env 繼承開關與非阻塞／背景執行策略 |
 
+> **現況落差**：使用者已判定 `core/llms` 與 `core/tooljson` 是失敗作——它們不符合這裡
+> 記的回合制／抽象 CPU 模型，之後要找時間改到符合。所以讀這些構想時別把現有程式碼
+> 當成它們的實作。open 狀態記在 [SESSION-LOG](../../SESSION-LOG.md)。
+
 新增內容優先歸入既有主題；出現獨立方向時才新增內容檔。構想被正式 spec／plan 取代後，
 在這裡改留指標，不讓 idea 文件與已拍板規格形成兩份真相。
