@@ -31,6 +31,7 @@ enum class InstState {
 
 enum class DirectiveKind {
     Environment,
+    Reference,
 };
 
 enum class DirectiveField {
@@ -96,6 +97,11 @@ enum class ResolveState {
     InvalidArgument,
     EnvironmentVariableMissing,
     ValidationFailed,
+    ReferenceReadFailed,
+    ReferenceJsonInvalid,
+    ReferencePointerInvalid,
+    ReferenceValueInvalid,
+    ReferenceCycle,
 };
 
 struct ResolveResult {
@@ -103,6 +109,10 @@ struct ResolveResult {
     std::size_t argv_index = 0;
     std::string env_key;
     std::string variable;
+    std::string reference_path;
+    std::string pointer;
+    std::vector<std::string> reference_chain;
+    int error = 0;
     InstState validation_state = InstState::Ok;
 };
 

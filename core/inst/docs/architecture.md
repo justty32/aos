@@ -12,8 +12,9 @@
   驗證的指令，也把指令轉回精簡的記錄；它完全不懂 `fork`、不懂路徑作為作業系統
   資源這件事，也不懂 CLI I/O。
 - `resolve` 接收 format 產生、可能仍帶有指示詞的 `inst_t`，以呼叫端明示的環境
-  快照與路徑基準把它變成可執行資料，最後重新驗證。它不讀 JSON、不執行行程，也
-  不依賴 handoff；完整契約見[解析指南](resolve.md)。
+  快照與路徑基準把它變成可執行資料，最後重新驗證。只有 `$ref` 會讓它讀額外 JSON
+  並套用 JSON Pointer；它不重新解讀 instruction schema、不執行行程，也不依賴
+  handoff；完整契約見[解析指南](resolve.md)。
 - `handoff` 負責 instruction 的檔案交接：依 base path 推導 `.temp`、`.runi` 與
   `.tempd` inbox，聚合投遞、原子發佈、取件與釋放。它使用 `format` 驗證／序列化，
   但不執行 instruction，也不印診斷或決定行程退出碼。

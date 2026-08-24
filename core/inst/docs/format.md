@@ -30,9 +30,10 @@
 | `parallel` | boolean | no | `false` | 為 `true` 時 CLI 以獨立 thread 執行這一筆，不等它完成就啟動下一筆；整批結束前仍會等待它。 |
 
 所有字串值位置，也就是 `argv` 元素、五個路徑欄位及 `env` 的值，都可用
-`{"$env":"NAME"}`。format 只保存這個未解析指示詞；在執行前由 resolve 層讀取
-呼叫端明示的環境。未解析時寫回仍是同一個物件，解析後才輸出實際字串。`env` 的 key
-與 `timeout_ms` 不接受指示詞。
+`{"$env":"NAME"}` 或 `{"$ref":"file.json#/pointer"}`。format 只保存未解析
+指示詞；在執行前由 resolve 層讀取呼叫端明示的環境或 `base_path` 下的檔案。未解析時
+寫回仍是同一個物件，解析後才輸出實際字串。`env` 的 key 與 `timeout_ms` 不接受
+指示詞。`$ref` 的路徑、巢狀解析及循環規則見[解析指南](resolve.md)。
 
 環境（變數）的 key 必須非空，且不得含有 `=`。JSON 物件的 key 在記憶體中的
 指令裡是唯一的；來源中重複的 key 由 JSON 解析器處理，而非提供一套有序的
@@ -66,7 +67,7 @@
 | `argv` 缺少/為空，或 `argv[0]` 為空 | `EmptyArgv` / `AOS_INST_EMPTY_ARGV` |
 | 環境（變數）key 為空，或 key 含有 `=` | `EnvKeyInvalid` / `AOS_INST_ENV_KEY_INVALID` |
 | 指示詞物件不是剛好一個 key | `DirectiveKeyCountInvalid` / `AOS_INST_DIRECTIVE_KEY_COUNT_INVALID` |
-| 指示詞的唯一 key 不是 `$opt` 或 `$env` | `UnknownDirective` / `AOS_INST_UNKNOWN_DIRECTIVE` |
+| 指示詞的唯一 key 不是 `$opt`、`$env` 或 `$ref` | `UnknownDirective` / `AOS_INST_UNKNOWN_DIRECTIVE` |
 | 指示詞的值不是字串 | `DirectiveValueTypeMismatch` / `AOS_INST_DIRECTIVE_VALUE_TYPE_MISMATCH` |
 | `$opt` 的值不是已知的 `merge` | `UnknownOption` / `AOS_INST_UNKNOWN_OPTION` |
 

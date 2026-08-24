@@ -34,6 +34,8 @@ nlohmann::ordered_json encode_directive(const PendingDirective &directive) {
     switch (directive.kind) {
     case DirectiveKind::Environment:
         return {{"$env", directive.argument}};
+    case DirectiveKind::Reference:
+        return {{"$ref", directive.argument}};
     }
     return nullptr;
 }
@@ -46,11 +48,15 @@ InstState decode_directive(const json &value, DirectiveField field,
     if (it.key().empty() || it.key().front() != '$') {
         return InstState::FieldTypeMismatch;
     }
-    if (it.key() != "$env") return InstState::UnknownDirective;
+    if (it.key() != "$env" && it.key() != "$ref") {
+        return InstState::UnknownDirective;
+    }
     if (!it.value().is_string()) {
         return InstState::DirectiveValueTypeMismatch;
     }
     PendingDirective directive;
+    directive.kind = it.key() == "$env" ? DirectiveKind::Environment
+                                         : DirectiveKind::Reference;
     directive.field = field;
     directive.argv_index = argv_index;
     directive.env_key = std::move(env_key);

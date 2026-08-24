@@ -19,7 +19,7 @@ repo 根
        │  C++ 分層，相依單向：inst ← format ← handoff；inst ← format ← resolve；inst ← exec
        │    inst    inst_t 資料結構、狀態列舉             （src/inst.cpp）
        │    format  唯一懂 JSON schema 的層                （src/format.cpp）
-       │    resolve 以明示 context 解析 `$env`               （src/resolve.cpp）
+       │    resolve 以明示 context 解析 `$env`／`$ref`        （src/resolve.cpp）
        │    handoff instruction 檔案聚合／取件／釋放        （src/handoff.cpp）
        │    exec    唯一碰 fork/exec/waitpid 的層          （src/exec.cpp + spawn_prep.cpp + wait.cpp）
        │  外加兩層，各自只往下看：
@@ -94,8 +94,8 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | 檔案 | 負責 |
 |------|------|
 | `inst.cpp` | **inst 層**：`inst_t::clear()`、`to_string(InstState)`。不碰位元組／JSON，也不碰行程 |
-| `format.cpp` | **format 層**：唯一懂 JSON schema 的檔。辨認字串位置的 `$env` 並記進 `pending_directives`，`stderr` 另接受 `{"$opt":"merge"}`；未解析指示詞可無損 write 回物件。`validate` 對仍是指示詞的位置延後值檢查；read/write 保持整批原子性。只 catch `json::parse_error`——配置失敗的例外會往上拋 |
-| `resolve.cpp` | **resolve 層**：把明示的 POSIX `envp` 捕捉成 `ResolveContext`，交易式替換 `$env`，失敗帶回欄位／索引／env key 與變數名稱；替換完清除 pending 並重新呼叫 format 驗證。不碰 JSON、handoff 或 exec |
+| `format.cpp` | **format 層**：唯一懂 instruction JSON schema 的檔。辨認字串位置的 `$env`／`$ref` 並記進 `pending_directives`，`stderr` 另接受 `{"$opt":"merge"}`；未解析指示詞可無損 write 回物件。`validate` 對仍是指示詞的位置延後值檢查；read/write 保持整批原子性 |
+| `resolve.cpp` | **resolve 層**：以明示的環境與 `base_path` 交易式解析 `$env`／`$ref`；讀取被引用 JSON、套用 RFC 6901 pointer，以正規化路徑＋pointer 追蹤無限深引用鏈及循環。錯誤帶回 instruction 位置、檔案、pointer、鏈與 errno；完成後重新呼叫 format 驗證。不依賴 handoff 或 exec |
 | `handoff.cpp` | **handoff 層**：從 instruction base path 推導 `.temp`／`.runi`／`.tempd`，負責投遞聚合、原子發佈、取件與釋放；只依賴 inst＋format，不印訊息、不執行 instruction |
 | `exec.cpp` | **exec 層**：唯一碰 `fork`／`execve`／`waitpid` 的檔。`execute()`：組 `argv`＋`envp`（透過 `spawn_prep`）→ `fork` → 子行程 `setpgid`＋重導向（stderr merge 時在 stdout 設好後 `dup2(1, 2)`）＋`chdir`＋`execve`（`run_child`，全程 async-signal-safe）→ 父行程視 `timeout_ms` 決定直接 `wait_retry` 或 `wait_until` 輪詢；逾時先對整個行程群組送 `SIGTERM`、給 `kTimeoutGraceMs`（2000ms）緩衝，仍不收就 `SIGKILL` 整個群組——打群組是因為忽略 `SIGTERM` 的孫行程才殺得掉。結束後若 `exit_path` 非空就把 exit code 寫進那個檔 |
 | `spawn_prep.hpp`／`.cpp` | **內部標頭**（不對外）。`prepare_spawn()`：在 `fork` 之前把所有會配置記憶體的準備工作做完——合併繼承的環境變數與 `inst.env`（後者覆蓋前者）、組 `envp`、若 `argv[0]` 沒有 `/` 就沿 `PATH`（或 `confstr(_CS_PATH)` 的預設值）逐段找可執行檔。子行程只拿到已經算好的穩定指標 |
@@ -138,7 +138,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | 檔案 | 涵蓋 |
 |------|------|
 | `test_format_read.cpp`／`test_format_write.cpp`／`test_format_malformed.cpp` | format 層：JSON round trip、各種壞輸入、已知/未知欄位 |
-| `test_resolve.cpp` | resolve 層：所有合法 `$env` 位置、缺少變數的位置資訊、解析後驗證、未解析 round trip、stderr 三態與明示 context |
+| `test_resolve.cpp` | resolve 層：所有合法 `$env`／`$ref` 位置、檔案與 pointer 錯誤、巢狀 env/ref、深鏈、循環與路徑正規化、RFC 6901、stderr opt、未解析 round trip 與明示 context |
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
 | `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release |
@@ -146,7 +146,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `test_run_init.cpp` | init、額外 argv 拒絕，以及 init／exec 的目前目錄預設 |
 | `test_run_loop.cpp` | loop argv、連續回合、失敗節流、信號收尾、遇 3 停止與目前目錄預設 |
 | `test_run_handoff.cpp` | CLI 的版本、空回合、彙整、隔離、取件、釋放與連續回合整合 |
-| `test_run_batch.cpp` | CLI 批次失敗、路徑基準、循序、parallel、批次尾端 join，以及 `$env` 實際執行整合 |
+| `test_run_batch.cpp` | CLI 批次失敗、路徑基準、循序、parallel、批次尾端 join，以及 `$env`／`$ref` 實際執行整合 |
 | `exec_test_support.hpp` | 測試共用的小工具 |
 | `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
 
@@ -236,7 +236,7 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 |------|------|
 | `architecture.md` | 分層為什麼這樣切、為什麼先把整份輸入讀完再執行、`fork` 兩側各自要做的工作（async-signal-safe 的界線在哪）|
 | `handoff.md` | 投遞、彙整、取件、釋放的原因、路徑、錯誤資料與完整公開 API 範例 |
-| `resolve.md` | resolve 分層的原因、未解析表示、`$env` context、驗證順序、錯誤位置與完整公開 API 範例 |
+| `resolve.md` | resolve 分層的原因、未解析表示、`$env` context、`$ref` 路徑／pointer／巢狀與循環、驗證順序、錯誤位置與完整公開 API 範例 |
 | `format.md` | JSON schema 細節 |
 | `exec.md` | 執行語意細節 |
 | `capi.md`／`cxxapi.md` | C ABI／C++ API 的使用說明 |
