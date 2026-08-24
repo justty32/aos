@@ -18,3 +18,6 @@
   [`reference/PORTING.md`](../reference/PORTING.md) 的「三、兩個要使用者拍板的
   決策」。**A2 會動到凍結的 `inst` 核心層，所以一定要使用者點頭**，不可以自己選。
   這題沒解掉之前 S2 不要開工。
+  **2026-08-24 補**：回合制模型把這題改寫了一半——tooljson 不再需要自己的 exec 引擎，
+  但 `stderr` merge 變成「`inst` 要不要加這個欄位」（仍會動凍結層）。建議連同整條
+  S2 一起延後，理由與替代路線見 [roadmap 的 D5](../docs/roadmap.md)。
