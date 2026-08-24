@@ -120,7 +120,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | CLI 世界／回合層：init 建 `.aos/`、版本與 inbox；exec 驗版本後依序呼叫 aggregate → claim → execute batch → release，把結構化結果轉成警告與退出碼；原生 CLI 唯一的例外邊界 |
+| `run.hpp`／`run.cpp` | CLI 世界／回合層：init 建 `.aos/`、版本與 inbox；exec 驗版本後依序呼叫 aggregate → claim → execute batch → release，把結構化結果轉成警告與退出碼；`--loop <毫秒>` 的 argv、空回合輪詢、0／1／3 政策，以及只在 loop 安裝的兩段式 SIGINT／SIGTERM 收尾；原生 CLI 唯一的例外邊界 |
 | `run_batch.hpp`／`run_batch.cpp` | CLI 內部批次迴圈：整批解析，同步執行一般記錄、複製 `parallel` 記錄進 thread，最後全數 join |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）
@@ -135,7 +135,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
 | `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release |
-| `test_run.cpp` | CLI 層：init／版本／聚合與警告／空回合／`.runi` 取件、正常返回清除與退出碼、連續回合、folder 路徑基準、整批剖析、函式庫失敗、循序執行、parallel 與批次尾端 join |
+| `test_run.cpp` | CLI 層：init／版本／聚合與警告／空回合／`.runi` 取件、正常返回清除與退出碼、loop argv／連續回合／信號收尾／遇 3 停止、folder 路徑基準、整批剖析、函式庫失敗、循序執行、parallel 與批次尾端 join |
 | `exec_test_support.hpp` | 測試共用的小工具 |
 | `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
 

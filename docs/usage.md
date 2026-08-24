@@ -45,6 +45,17 @@ crash、被 kill 或斷電才會留下它。沒有 `inst.json` 是正常的空�
 發佈。已有 `inst.json` 時會先執行它並保留 inbox，留待下一回合；有效批次發佈完成
 後才刪除其來源投遞，空 inbox 不會製造 `[]`。
 
+要持續推進同一個 world，使用毫秒為單位的 loop 模式：
+
+```bash
+aos exec --loop 1000 my-world
+```
+
+間隔只用於空回合：有工作時會立刻進下一輪；沒有 instruction 或可彙整投遞時才等待。
+`--loop 0` 合法，但會 busy poll。回合回 0 或 1 都會繼續（1 的診斷已印到 stderr）；
+遇到既有 `.runi` 則停止並回 3。第一次 `SIGINT`／`SIGTERM` 會喚醒等待，並讓正在跑的
+回合完成及釋放 `.runi` 後正常回 0；再送一次同樣的信號則採預設處置立即終止。
+
 ```json
 [
   {
@@ -80,6 +91,9 @@ crash、被 kill 或斷電才會留下它。沒有 `inst.json` 是正常的空�
 | aos 自己失敗了：`fork` 失敗、`waitpid` 失敗、`exit` 檔寫不進去 | `1` |
 | 用法錯誤（沒給子命令、給了不認得的名字）| `2` |
 | `.aos/inst.json.runi` 已存在 | `3` |
+
+loop 正常因信號收尾回 0；曾出現回合錯誤 1 不改變最後的 loop 退出碼，只有遇到 `.runi`
+才以 3 停止。
 
 ```bash
 $ printf '{"argv":["/bin/false"]}' > my-world/.aos/inst.json

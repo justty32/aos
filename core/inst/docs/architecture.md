@@ -21,6 +21,13 @@
   進入點各自接）。它透過 `aos_exec_cli_main` 與 `aos_init_cli_main` 兩個 C 連結
   進入點，掛成 `aos` 執行檔的 `exec` 與 `init` 子命令。
 
+`aos exec --loop <milliseconds> <folder>` 也只存在於 `run` 層。它反覆呼叫同一個
+aggregate → claim → execute → release 回合：有取到 instruction 就立刻跑下一輪，
+純空回合才用 `nanosleep` 輪詢等待；間隔 0 因而是 busy poll。回合回 0 或 1 都繼續，
+既有 `.runi` 的 3 則停止並回 3。loop 路徑才安裝 `SIGINT`／`SIGTERM` handler；第一次
+信號只寫 `sig_atomic_t` 旗標，讓目前回合釋放 `.runi` 後回 0，`SA_RESETHAND` 讓同一
+信號的第二次恢復預設處置。`nanosleep` 被信號中斷後不補睡，因此閒置時也會立刻收尾。
+
 核心相依方向是 `inst ← format ← handoff` 與 `inst ← exec`；`handoff` 和 `exec`
 彼此不相依。公開函式庫
 `libaos_inst.so`（CMake target `aos::inst`）包含 `inst`、`format`、`handoff`、`exec`、

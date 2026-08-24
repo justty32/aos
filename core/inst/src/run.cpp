@@ -5,7 +5,10 @@
 
 #include <aos/inst.hpp>
 
+#include <charconv>
 #include <cerrno>
+#include <csignal>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <new>
@@ -13,6 +16,7 @@
 #include <string>
 
 #include <fcntl.h>
+#include <time.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -22,6 +26,42 @@ namespace {
 constexpr const char *kAosDir = ".aos";
 constexpr const char *kVersionPath = ".aos/version";
 constexpr const char *kInstPath = ".aos/inst.json";
+volatile std::sig_atomic_t g_stop_requested = 0;
+
+void request_stop(int) { g_stop_requested = 1; }
+
+class LoopSignals {
+public:
+    bool install(int &error) {
+        g_stop_requested = 0;
+        struct sigaction action {};
+        action.sa_handler = request_stop;
+        sigemptyset(&action.sa_mask);
+        action.sa_flags = SA_RESETHAND;
+        if (sigaction(SIGINT, &action, &old_int_) != 0) {
+            error = errno;
+            return false;
+        }
+        int_installed_ = true;
+        if (sigaction(SIGTERM, &action, &old_term_) != 0) {
+            error = errno;
+            return false;
+        }
+        term_installed_ = true;
+        return true;
+    }
+    ~LoopSignals() {
+        if (term_installed_) sigaction(SIGTERM, &old_term_, nullptr);
+        if (int_installed_) sigaction(SIGINT, &old_int_, nullptr);
+        g_stop_requested = 0;
+    }
+
+private:
+    struct sigaction old_int_ {};
+    struct sigaction old_term_ {};
+    bool int_installed_ = false;
+    bool term_installed_ = false;
+};
 
 int open_retry(const char *path, int flags, mode_t mode = 0) {
     int fd;
@@ -108,7 +148,8 @@ void print_handoff_issues(const HandoffResult &result) {
     }
 }
 
-int run_exec_impl(const char *folder) {
+int run_exec_impl(const char *folder, bool &did_work) {
+    did_work = false;
     CwdGuard cwd;
     int error = 0;
     if (!cwd.enter(folder, error)) {
@@ -183,6 +224,7 @@ int run_exec_impl(const char *folder) {
         }
         return 1;
     }
+    did_work = true;
     const int result = detail::execute_batch(buffer, ".aos/inst.json.runi");
     handoff_state = release_instruction(kInstPath, handoff_result);
     if (handoff_state != HandoffState::Ok) {
@@ -192,6 +234,44 @@ int run_exec_impl(const char *folder) {
         return 1;
     }
     return result;
+}
+
+bool parse_interval(const char *text, std::uint64_t &interval) {
+    if (text == nullptr || *text == '\0') return false;
+    const char *end = text + std::strlen(text);
+    const auto parsed = std::from_chars(text, end, interval);
+    return parsed.ec == std::errc{} && parsed.ptr == end;
+}
+
+void sleep_milliseconds(std::uint64_t interval) {
+    constexpr std::uint64_t kMillisecondsPerSecond = 1000;
+    constexpr std::uint64_t kNanosecondsPerMillisecond = 1000000;
+    struct timespec delay {
+        static_cast<time_t>(interval / kMillisecondsPerSecond),
+        static_cast<long>((interval % kMillisecondsPerSecond) *
+                          kNanosecondsPerMillisecond)
+    };
+    nanosleep(&delay, nullptr);
+}
+
+int run_exec_loop(const char *folder, std::uint64_t interval) {
+    LoopSignals signals;
+    int error = 0;
+    if (!signals.install(error)) {
+        std::fprintf(stderr, "aos exec: cannot install signal handlers: %s\n",
+                     std::strerror(error));
+        return 1;
+    }
+    for (;;) {
+        bool did_work = false;
+        const int result = run_exec_impl(folder, did_work);
+        if (result == 3) return 3;
+        if (g_stop_requested != 0) return 0;
+        if (!did_work && interval != 0) {
+            sleep_milliseconds(interval);
+            if (g_stop_requested != 0) return 0;
+        }
+    }
 }
 
 int run_init_impl(const char *folder) {
@@ -252,15 +332,24 @@ int run_init_impl(const char *folder) {
 }  // namespace
 
 int run_exec(int argc, char *argv[]) {
-    if (argc != 2 || argv == nullptr || argv[1] == nullptr) {
+    const bool one_shot = argc == 2 && argv != nullptr && argv[1] != nullptr &&
+                          std::strcmp(argv[1], "--loop") != 0;
+    const bool loop = argc == 4 && argv != nullptr && argv[1] != nullptr &&
+                      std::strcmp(argv[1], "--loop") == 0 &&
+                      argv[2] != nullptr && argv[3] != nullptr;
+    std::uint64_t interval = 0;
+    if ((!one_shot && !loop) || (loop && !parse_interval(argv[2], interval))) {
         const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                                   ? argv[0]
                                   : "aos exec";
-        std::fprintf(stderr, "usage: %s <folder>\n", program);
+        std::fprintf(stderr,
+                     "usage: %s [--loop <milliseconds>] <folder>\n", program);
         return 2;
     }
     try {
-        return run_exec_impl(argv[1]);
+        if (loop) return run_exec_loop(argv[3], interval);
+        bool did_work = false;
+        return run_exec_impl(argv[1], did_work);
     } catch (const std::bad_alloc &) {
         std::fprintf(stderr, "aos exec: out of memory\n");
         return 1;
