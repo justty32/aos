@@ -34,7 +34,7 @@ env 與檔案系統上的 instruction 檔；下面 B 方案講的「I/O 交換�
 靠 I/O 交換區溝通）。**現在兩者合起來了**：
 
 - **`aos exec` 確實是唯一入口**（A 想要的），因為所有工作都經由核心 CPU 的
-  `.aos/inst.json`；連「持續跑」都只是同一條命令的旗標 `aos exec --keep-doing`。
+  `.aos/inst.json`；連「持續跑」都只是同一條命令的旗標 `aos exec --loop 0`。
 - **但它沒有吞下任何職責**（B 想要的），因為交接是 `exec`：`aos exec` 只是把
   `aos llm exec` 當成一個普通子行程啟動。
 

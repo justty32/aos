@@ -143,12 +143,13 @@ P3 ─▶ inst.tempd/<pid>.json.temp ─rename─▶ inst.tempd/<pid>.json ─�
 ### 一支命令，兩種節奏
 
 ```sh
-aos exec <folder>               # 跑一回合
-aos exec --keep-doing <folder>  # 持續讀、持續跑
+aos exec <folder>            # 跑一回合
+aos exec --loop 0 <folder>   # 持續讀、持續跑；數字是隔多久檢查一次
 ```
 
-`--keep-doing`（暫名）就是 daemon：**daemon 不是另一支程式，是同一條命令的一個旗標**。
-迴圈體就是 fetch–execute：彙整 → 取件 → 執行 → 再來一次。
+`--loop <間隔>` 就是 daemon：**daemon 不是另一支程式，是同一條命令的一個旗標**。
+迴圈體就是 fetch–execute：彙整 → 取件 → 執行 → 再來一次。間隔的單位與 `0` 的確切
+語意等實作時再定。
 
 ### 名詞與動詞
 
@@ -161,7 +162,7 @@ aos exec --keep-doing <folder>  # 持續讀、持續跑
 
 ## 最基礎的 aos 使用方式（方向已定）
 
-1. 給 aos 一個指定資料夾，跑 `aos exec --keep-doing <folder>`。
+1. 給 aos 一個指定資料夾，跑 `aos exec --loop 0 <folder>`。
 2. 它持續查詢 `.aos/inst.json` 有沒有待執行內容。
 3. instruction 出現後，先完整讀進記憶體，**立刻**把 `inst.json` `rename` 成
    `inst.json.runi`，然後才執行其中的指令。
@@ -176,7 +177,7 @@ aos exec --keep-doing <folder>  # 持續讀、持續跑
 ## agent loop 如何建立在回合模型上
 
 ```text
-aos exec --keep-doing 監看 folder
+aos exec --loop 0 監看 folder
         ↓
 使用者在 folder 執行 aos agent start
         ↓
@@ -213,7 +214,7 @@ aos exec --keep-doing 監看 folder
 - `core/llms` 與 `core/tooljson` 可提供 agent 回合中的思考與工具能力——但兩者目前的
   形狀不符合本模型，要改造（見 [SESSION-LOG](../../SESSION-LOG.md) 與
   [roadmap](../../../docs/roadmap.md)）。
-- **不再需要獨立的 `core/daemon`**：持續執行是 `aos exec --keep-doing` 這個旗標，
+- **不再需要獨立的 `core/daemon`**：持續執行是 `aos exec --loop 0` 這個旗標，
   不是另一個小專案。
 - agent 初始化與 LLM 回合邏輯仍是建立在 `exec`／`inst` 之上的後續能力，不混進回合
   原語的基礎職責。
@@ -251,13 +252,13 @@ aos exec --keep-doing 監看 folder
   但 **`aos exec` 仍會等所有 thread 跑完才算本回合結束**。遇到 non-blocking 那筆之後，
   **下一筆立刻啟動**（真並行，不排隊）。
 - 命名標準：`<名字>.<副檔名>.<狀況>`，第一個 `.xxx` 是副檔名、第二個是當前狀況。
-- 持續執行是 `aos exec --keep-doing`，不另做 `core/daemon`。
+- 持續執行是 `aos exec --loop 0`，不另做 `core/daemon`。
 
 ## 開放問題（尚未拍板）
 
 - non-blocking 欄位會動到**凍結的核心層**：新增 JSON 欄位要改 `format.cpp`
   （不認得的 key 會被拒），thread 化要改 `exec.cpp`／`run.cpp`。落地前必須明確解凍。
-- `aos exec --keep-doing` 只監看一個資料夾，還是能同時管理多個；其生命週期與啟停介面。
+- `aos exec --loop 0` 只監看一個資料夾，還是能同時管理多個；其生命週期與啟停介面。
 - `aos agent start`／`init` 是否必須冪等，重複執行時要保留、重建還是拒絕既有狀態。
 - 回合失敗的語意：停在原回合、進入失敗回合、重試，或交由使用者另投 instruction。
 - 指令以指定資料夾為 cwd 執行時的信任、安全與權限邊界。
@@ -268,7 +269,7 @@ aos exec --keep-doing 監看 folder
 - 彙整時 `inst.json` 位置上已經有一份沒被讀走的批次：附加、等下一輪，還是拒絕。
 - 彙整完的 `inst.tempd/<pid>.json` 何時刪除，以及刪除與發布 `inst.json` 的先後。
 - 某份投遞內容無效時：隔離該檔繼續、整批停住，還是拒絕發布。
-- `--keep-doing` 的細節：輪詢間隔或改用 inotify、收到信號怎麼收尾、沒有 `inst.json`
+- `--loop` 的細節：間隔單位、`0` 的語意、要不要改用 inotify、收到信號怎麼收尾、沒有 `inst.json`
   時是等待還是結束。另外它遇到 `.runi` 會**永遠拒絕啟動**（因為規則是拒絕），這是
   預期行為還是要另開一個「清掉現場」的命令。
 - 核心 CPU 在 `.aos/inst.json`、其餘在 `.aos/insts/` 是刻意的不對稱。代價是「列出所有
