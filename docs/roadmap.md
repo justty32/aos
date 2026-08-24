@@ -2,6 +2,10 @@
 
 ← [文件索引](README.md)｜[aos 是什麼](overview.md)｜模型來源 [`wf/workflows/ideas/`](../wf/workflows/ideas/README.md)
 
+> **`.aos` 的規格已經抽成獨立文件：[`.aos` 資料夾標準](aos-folder.md)。** 版面、命名、
+> 交接協定、路徑基準、退出碼、版本、git 邊界一律以那份為準；本檔只留「什麼時候做」與
+> 「為什麼這樣排」。
+
 這份只回答**順序**：既然回合制模型已經定了方向，接下來該先做哪一塊、哪些事要先問
 使用者、哪些明確不做。**模型本身不在這裡定義**——它在
 [回合制資料夾](../wf/workflows/ideas/turn-based-folder.md) 與
@@ -86,10 +90,19 @@ tool call 翻譯成一筆 instruction」**，是模型真正需要的東西。
 **驗收**：`stderr` 併流真的交錯（不是互相蓋寫）；non-blocking 那筆之後下一筆立刻啟動，
 而回合仍等到所有 thread 收完。
 
-### T1 — `aos exec <folder>`：回合原語　【建議先做】
+### T1 — `aos exec <folder>` 與 `aos init`：回合原語　【建議先做】
 
-新子命令 `aos exec`，參數是資料夾，讀 `<folder>/.aos/inst.json`，語意是
-「**消費一回合**」：
+規格見 [`.aos` 標準](aos-folder.md)。這一階段要做出來的是：
+
+- **`aos init <folder>`** — 建立 `.aos/`，寫下 `version`。
+- **`aos exec <folder>`** — 讀 `<folder>/.aos/inst.json`，消費一回合。沒有 `.aos/`
+  就報錯，不自動建（[標準第十一節](aos-folder.md)）。
+- **路徑基準統一成 `<folder>`** — 最省事的作法是一開始就 `chdir` 過去
+  （[標準第四節](aos-folder.md)）。這會改變 `inst` 現有的路徑語意，是刻意的。
+- **`version` 不認得就停**，不要盡力而為（[標準第九節](aos-folder.md)）。
+- 附一份 `.gitignore` 樣板：**整個 `.aos/` 都不進 git**（[標準第十節](aos-folder.md)）。
+
+語意是「**消費一回合**」：
 
 ```text
 完整讀入 → 立刻取走（見 T2）→ 以該資料夾為基準執行 → 結束
