@@ -1,5 +1,9 @@
 # 執行語意
 
+這份文件回答「一筆已驗證的 instruction 如何變成子行程，以及完成、失敗、逾時如何
+回報」。它不定義 JSON 欄位格式（見[記錄格式](format.md)），也不處理 instruction
+檔案的彙整與取件（見 [handoff](handoff.md)）。
+
 記錄依照輸入順序啟動。`parallel` 為 false 的記錄由 CLI 同步執行；為 true 時會
 複製到獨立 thread 執行，下一筆立即啟動。整批返回前會 join 全部 thread，因此批次
 邊界仍然會等待每一筆完成。函式庫的 `execute()` 本身始終維持同步語意。

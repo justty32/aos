@@ -1,5 +1,9 @@
 # 架構
 
+這份文件回答「inst 為什麼切成這些分層，以及各層的安全邊界在哪裡」。它不列 JSON
+欄位或逐項 API；前者看[記錄格式](format.md)，交接檔案的完整規則看
+[handoff](handoff.md)，函式簽章看 [C++ API](cxxapi.md) 或 [C API](capi.md)。
+
 這份實作刻意切成五個範圍狹窄的分層：
 
 - `inst` 擁有 `inst_t`、它的公開狀態，以及清除與狀態字串的輔助函式。
@@ -13,9 +17,9 @@
 - `exec` 接收一個已經建好的 `inst_t`。它負責環境變數與 PATH 的準備、
   `fork`/`execve`、重導向、行程群組、等待、逾時、狀態檔輸出，以及執行狀態；
   它從不剖析 JSON，也不讀取指令來源。
-- `run` 負責 `aos init` 建立世界，以及 `aos exec` 的版本檢查、呼叫 handoff、CLI
-  診斷與退出碼映射。既有的整批剖析與依 `parallel` 決定同步執行或開 thread、最後
-  join 全部 thread 的迴圈收在 CLI 內部的 `run_batch.cpp`。它也是原生 CLI
+- `run` 負責 CLI 政策：`run.cpp` 解析 argv，`run_init.cpp` 建立 world，
+  `run_exec.cpp` 驗版本並呼叫 handoff，`run_loop.cpp` 管輪詢與信號，`run_batch.cpp`
+  負責整批剖析與依 `parallel` 決定同步執行或開 thread、最後 join。它也是原生 CLI
   這一側**唯一的例外邊界**：讀檔、剖析、執行三個階段都接住 `std::bad_alloc` 與
   `std::length_error`，轉成一行訊息與非零退出碼（C ABI 那側則是每個 `extern "C"`
   進入點各自接）。它透過 `aos_exec_cli_main` 與 `aos_init_cli_main` 兩個 C 連結

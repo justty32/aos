@@ -2,6 +2,11 @@
 
 ← [文件索引](README.md)｜[總覽](overview.md)｜[建置](build.md)
 
+這份文件回答「第一次接觸 aos，要怎麼把一個資料夾跑起來，以及程式如何連它的
+函式庫」。它不逐項定義 instruction schema 或 POSIX 執行細節；需要時分別查
+[`format.md`](../core/inst/docs/format.md)、[`exec.md`](../core/inst/docs/exec.md) 與
+[`handoff.md`](../core/inst/docs/handoff.md)。
+
 aos 有兩種用法，背後是同一份實作。
 
 ---
@@ -22,6 +27,10 @@ commands:
 不給子命令、或給了不認得的名字，都會印出這張表並回 exit code 2。
 
 ## `aos init` 與 `aos exec` —— 初始化並推進一回合
+
+這裡的 **world** 是一個由普通資料夾和其中 `.aos/` 本機執行狀態組成的工作空間。
+一個**回合**是：取走當下的一批 instruction、全部執行完成，再清除「正在執行」標記。
+instruction 是描述一支 POSIX 命令的 JSON；它和 shell script 一樣具有執行程式的權限。
 
 ```bash
 aos init my-world
@@ -45,6 +54,20 @@ crash、被 kill 或斷電才會留下它。沒有 `inst.json` 是正常的空�
 不會被取走。語法或 schema 錯誤的投遞會改名為 `.bad`、印警告，其他有效投遞仍會
 發佈。已有 `inst.json` 時會先執行它並保留 inbox，留待下一回合；有效批次發佈完成
 後才刪除其來源投遞，空 inbox 不會製造 `[]`。
+
+**投遞**是生產者放進 `inst.tempd/` 的一份待辦 JSON；**彙整**是把多份有效投遞攤平
+成下一個 `inst.json` 批次；**取件**是把它 rename 成 `.runi`，防止另一個執行者重複
+取走。完整的檔案狀態與公開 API 見 [handoff 指南](../core/inst/docs/handoff.md)。
+
+上面的第一個例子完成後沒有 stdout；結果在檔案裡：
+
+```bash
+cat my-world/hello.txt
+```
+
+```text
+hello
+```
 
 要持續推進同一個 world，使用毫秒為單位的 loop 模式：
 

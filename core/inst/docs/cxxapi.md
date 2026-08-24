@@ -1,5 +1,9 @@
 # C++ API
 
+這份文件回答「C++23 程式如何直接解析、產生、交接與執行 instruction」。如果目標是
+操作 `aos` 命令列，請看[使用說明](../../../docs/usage.md)；跨語言或需要穩定 ABI 時看
+[C API](capi.md)；handoff 的檔案生命週期與完整例子另見 [handoff](handoff.md)。
+
 公開的 C++23 介面由 `<aos/inst.hpp>` 宣告，全部位於 `aos` 命名空間中。C ABI 的
 `<aos/inst.h>` 是同一份實作的另一道邊界，兩者可以並存於同一個編譯單元。
 
@@ -106,8 +110,17 @@ int main() {
 
 ```sh
 c++ -std=c++23 example.cpp -Icore/inst/include -Icommon/include \
-    -Lbuild/lib -Wl,-rpath,"$PWD/build/lib" -laos_inst
+    -Lbuild/lib -Wl,-rpath,"$PWD/build/lib" -laos_inst -o example
+./example
 ```
+
+會看到：
+
+```text
+hello
+```
+
+同時目前目錄會出現內容為 `0` 加換行的 `status.txt`。
 
 如果用戶端本身也是 CMake 專案，改用 `find_package(aos CONFIG REQUIRED)` 再連
 `aos::inst` 更省事（見[架構](architecture.md)）——上面這行手動旗標是給不透過

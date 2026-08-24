@@ -1,5 +1,9 @@
 # C API
 
+這份文件回答「C99 或其他 FFI 呼叫端如何用穩定的 C ABI 建立、解析與執行一筆
+instruction」。它不提供批次或 handoff API；需要容器式批次與檔案交接時用
+[C++ API](cxxapi.md)，只想操作命令列則看[使用說明](../../../docs/usage.md)。
+
 公開的 C ABI 由 `<aos/inst.h>` 宣告。這個標頭相容 C99，不含任何 C++ 型別，並
 對外提供一個不透明的 `aos_instruction` handle。
 
@@ -82,6 +86,16 @@ done:
 
 這段程式解析一筆指令、執行它、印出結果、把指令序列化，並釋放所有自己持有的
 配置。
+
+把它存成 `example.c`，依上面的編譯指令產生 `a.out` 後執行 `./a.out`，會看到：
+
+```text
+hello from C
+child status=0 signalled=0 timed_out=0
+{"argv":["printf","hello from C\n"],"exit":"status.txt"}
+```
+
+目前目錄也會產生內容為 `0` 加換行的 `status.txt`。
 
 ## 生命週期與欄位
 
