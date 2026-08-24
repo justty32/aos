@@ -153,10 +153,11 @@ crash 之後那份 `.runi` 還在，**要不要恢復是之後的決定，不是
 **驗收**：一個資料夾能自己接兩回合——第一回合的指令投遞到 `.aos/inst.tempd/`，
 第二次呼叫 `aos exec <folder>` 就跑到了下一回合的內容。
 
-### T4 — 迴圈：`aos exec --keep-doing`，不做 `core/daemon`
+### T4 — 迴圈：`aos exec --loop 0`，不做 `core/daemon`
 
-daemon **不是另一支程式，是同一條命令的一個旗標**（`--keep-doing` 是暫名）。迴圈體就
-是 fetch–execute：彙整 → 取件 → 執行 → 再來一次。
+daemon **不是另一支程式，是同一條命令的一個旗標**：`--loop <間隔>`，數字是隔多久檢查
+一次。迴圈體就是 fetch–execute：彙整 → 取件 → 執行 → 再來一次。間隔的單位與 `0` 的
+確切語意等實作時再定。
 
 在它之前可以先用 shell 驗一遍，成本是零：
 
@@ -164,13 +165,13 @@ daemon **不是另一支程式，是同一條命令的一個旗標**（`--keep-d
 while true; do aos exec ./myfolder; sleep 1; done
 ```
 
-shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢間隔或 inotify、信號怎麼
+shell loop 撐不住的地方，就是 `--loop` 要補的東西（間隔語意或改用 inotify、信號怎麼
 收尾、沒有 `inst.json` 時等待還是結束）。
 
-**注意**<a id="t4-的注意事項"></a>：`.runi` 存在就拒絕啟動這條規則在 `--keep-doing` 底下意味著 **crash 之後迴圈
+**注意**<a id="t4-的注意事項"></a>：`.runi` 存在就拒絕啟動這條規則在 `--loop` 底下意味著 **crash 之後迴圈
 會永遠拒絕啟動**。這是預期行為（要人來看），但可能需要一條「清掉現場」的命令配套。
 
-**驗收**：`aos exec --keep-doing` 能連續推進多回合；crash 留下 `.runi` 之後它停住而不
+**驗收**：`aos exec --loop 0` 能連續推進多回合；crash 留下 `.runi` 之後它停住而不
 是繞過去。
 
 ### T5 — agent loop：**不需要 `core/llms`**<a id="t5"></a>
@@ -211,6 +212,15 @@ process，中途 `Ctrl-C` 之後再 `aos exec` 一次能從斷點繼續。
 ### T6 — 把 LLM 內化：`aos llm exec <folder>`<a id="t6"></a>
 
 > 這一階段才碰 `core/llms`／`core/tooljson`（[D4](#d4)）。T5 沒跑出痛點之前不要開工。
+
+**`aos llm` 是 module，不是 core**（已定）。它會是一層**薄殼**——實作時甚至可能直接把
+工作轉交給 Python。這跟模型完全一致：交接本來就是 `exec`，所以「用什麼語言實作那顆
+CPU」根本不是 aos 要回答的問題。
+
+這也回頭改變了 `core/llms` 的處境：如果 `aos llm` 只是薄殼加外部程式，那顆 C++ 的 LLM
+client **可能根本不會被復活**，而是被繞過。所以 [D4](#d4) 的「先不動」不只是延後，也
+可能是「永遠不用動」。要不要把 `core/llms`／`core/tooljson` 從 `core/` 移到 `modules/`
+是同一批要問的事——但那要等真的動它的時候。
 
 形狀已經定了：它是**被 `aos exec` 起來的一支普通程式**——和 T5 裡那支外部 CLI 站在完全
 相同的位置，只是換成自家的。
@@ -401,13 +411,13 @@ crash 之後要人處理，這是刻意的。連帶影響見 [T4](#t4-的注意�
 | 2 | 用法錯誤 |
 | 3 | 拒絕啟動：`.runi` 已存在 |
 
-還沒定的是：`--keep-doing` 遇到回合回 1 要不要停。那屬於「回合失敗的語意」，仍開著。
+還沒定的是：`--loop` 遇到回合回 1 要不要停。那屬於「回合失敗的語意」，仍開著。
 
 ### D9 — `aos exec` 就是那個「唯一入口」<a id="d9"></a>　**已定**
 
 llm-cpu 舊文的「方案 A：單一巨型入口」和現在的 `aos exec` **合流了**，但方式和 A 原本
 設想的不同：`aos exec` 確實是唯一入口（所有工作都經由 `.aos/inst.json`，連持續跑都只
-是 `--keep-doing` 旗標），**但它沒有吞下任何職責**——因為交接是 `exec`，`aos exec` 這
+是 `--loop` 旗標），**但它沒有吞下任何職責**——因為交接是 `exec`，`aos exec` 這
 支程式裡永遠不會有 LLM 的程式碼、金鑰或連線。**process 邊界就是隔離邊界**，A 原本
 「單點故障域過大」的風險因此不成立。
 
@@ -432,7 +442,7 @@ llm-cpu 舊文的「方案 A：單一巨型入口」和現在的 `aos exec` **�
 
 - **不做中央 store、scheduler、Task tree、Receipt、crash recovery 的完整矩陣。**
   那是 `../agent-machine/full/` 的重量級設計；aos 目前的模型刻意輕。
-- **不做 `core/daemon` 這個小專案。** 持續執行是 `aos exec --keep-doing` 這個旗標。
+- **不做 `core/daemon` 這個小專案。** 持續執行是 `aos exec --loop 0` 這個旗標。
 - **不做全域 LLM daemon 與跨資料夾排程。** 那要等「一個資料夾跑得動」之後才有意義。
 - **不做 Git checkpoint、FUSE、VFS。**
 - **不繼續 llmkit 移植的 S2／S5**（見 [`reference/PORTING.md`](../reference/PORTING.md)）。
