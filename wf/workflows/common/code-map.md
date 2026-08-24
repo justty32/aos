@@ -46,7 +46,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 3. **每個小專案是一顆獨立的 shared lib**：`aos::inst` → `libaos_inst.so`。傘狀 target 有 `aos::core`（核心）、`aos::modules`（擴充，有擴充存在時才建）、`aos::aos`（全部）；`AOS_BUILD_MERGED_LIB` 開了才會多產出一顆合併的 `libaos.so`（`aos::merged`）。
 4. **小專案分兩類，靠所在目錄決定**：`core/` 是 aos 的基本組成（一定會建），`modules/` 是可選的擴充（`-DAOS_BUILD_MODULES=OFF` 整批不建）。建置方式完全一樣，`core/CMakeLists.txt` 與 `modules/CMakeLists.txt` 各自 `set` 了 `AOS_SUBPROJECT_CATEGORY`，`aos_add_subproject()` 讀它來分類。判準：拿掉它 aos 就不再是 aos → core。
 
-> **`core/inst/src` 的核心分層與 C ABI 層視為凍結**——`inst.cpp`／`format.cpp`／`exec.cpp`／`spawn_prep.*`／`wait.*`／`capi*.cpp` 不要改。`run.cpp`（CLI 層）與建置設定不在此限。要改行為就從 CLI 層那側解決。
+> **2026-08-24：`core/inst` 的凍結已由使用者解除。** `inst.cpp`／`format.cpp`／`exec.cpp`／`spawn_prep.*`／`wait.*`／`capi*.cpp` 現在可以改。解凍是為了兩件已拍板的事：每筆 instruction 的 non-blocking 欄位，以及 JSON 的 `$ref`／`$env`／`$opt` 指示詞（設計見 [`docs/inst-directives.md`](../../../docs/inst-directives.md)、順序見 [`docs/roadmap.md`](../../../docs/roadmap.md) 的 T0）。解凍**不等於可以隨手改**——單向相依 `inst ← format ← exec` 仍然是鐵律，`format` 與 `exec` 依舊互不相識。
 
 ---
 
@@ -120,7 +120,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 |------|------|
 | `run.hpp`／`run.cpp` | `run(argc, argv)`：決定輸入來源（給了檔名就開檔，否則讀 stdin）→ 讀到 EOF 進單一緩衝區 → `read_all()` 一次剖析＋驗證整批 → 依序對每筆呼叫 `execute()`，失敗的印到 stderr、繼續跑下一筆，只要有一筆失敗整體回 1。讀檔、剖析、執行三個階段都接 `bad_alloc`／`length_error`——**這一層是原生 CLI 唯一的例外邊界**（C ABI 那側自己有接）。檔尾的 `extern "C" aos_inst_cli_main()` 是 `aos inst` 子命令的進入點，名字要與 `core/inst/CMakeLists.txt` 的 `aos_add_subcommand(ENTRY ...)` 一致。**為什麼要先把整份輸入讀完**、以及這個設計的代價，見 [`core/inst/docs/architecture.md`](../../../core/inst/docs/architecture.md) |
 
-**新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（但注意上面的凍結規則——這種改動要先跟使用者確認。）
+**新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）
 
 ## core/inst/tests/ — 測試
 
