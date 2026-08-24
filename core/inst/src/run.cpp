@@ -40,7 +40,15 @@ int run_exec(int argc, char *argv[]) {
         return 2;
     }
     try {
-        if (loop) return detail::run_exec_loop(argc == 4 ? argv[3] : ".", interval);
+        if (loop) {
+            if (interval == 0) {
+                std::fprintf(stderr,
+                             "aos exec: warning: --loop 0 would busy-poll and "
+                             "consume one CPU core; using 1 ms instead\n");
+                interval = 1;
+            }
+            return detail::run_exec_loop(argc == 4 ? argv[3] : ".", interval);
+        }
         bool did_work = false;
         return detail::run_exec_once(one_shot ? argv[1] : ".", did_work);
     } catch (const std::bad_alloc &) {

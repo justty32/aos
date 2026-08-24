@@ -125,6 +125,16 @@ void isolate_delivery(const std::string &path, HandoffResult &result) {
     }
 }
 
+void remove_accepted_deliveries(const std::vector<std::string> &accepted,
+                                HandoffResult &result) {
+    for (const std::string &path : accepted) {
+        if (unlink(path.c_str()) != 0) {
+            add_issue(result, HandoffIssueKind::DeliveryRemoveFailed, path,
+                      InstState::Ok, errno);
+        }
+    }
+}
+
 }  // namespace
 
 HandoffState aggregate_instructions(const std::string &instruction_path,
@@ -196,7 +206,11 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
         }
         accepted.push_back(path);
     }
-    if (combined.empty()) return HandoffState::Ok;
+    if (combined.empty()) {
+        // Otherwise empty deliveries remain in the inbox and are reread forever.
+        remove_accepted_deliveries(accepted, result);
+        return HandoffState::Ok;
+    }
 
     std::string output;
     if (write_all(combined, output, nullptr) != InstState::Ok) {
@@ -218,12 +232,7 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
     }
     result.published = true;
 
-    for (const std::string &path : accepted) {
-        if (unlink(path.c_str()) != 0) {
-            add_issue(result, HandoffIssueKind::DeliveryRemoveFailed, path,
-                      InstState::Ok, errno);
-        }
-    }
+    remove_accepted_deliveries(accepted, result);
     return HandoffState::Ok;
 }
 

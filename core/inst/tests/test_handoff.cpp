@@ -131,3 +131,77 @@ TEST_CASE("handoff treats missing and empty inboxes as no work") {
     CHECK_FALSE(result.published);
     CHECK_FALSE(std::filesystem::exists(base));
 }
+
+TEST_CASE("handoff consumes empty deliveries with and without useful work") {
+    SECTION("alongside a normal delivery") {
+        TempDir dir;
+        const std::string base = dir.path + "/inst.json";
+        const std::string inbox = dir.path + "/inst.tempd";
+        REQUIRE(std::filesystem::create_directory(inbox));
+        write_file(inbox + "/10.json", "[]");
+        write_file(inbox + "/20.json", R"({"argv":["work"]})");
+
+        aos::HandoffResult result;
+        REQUIRE(aos::aggregate_instructions(base, result) ==
+                aos::HandoffState::Ok);
+        CHECK(result.published);
+        CHECK(result.issues.empty());
+        CHECK_FALSE(std::filesystem::exists(inbox + "/10.json"));
+        CHECK_FALSE(std::filesystem::exists(inbox + "/20.json"));
+
+        std::vector<aos::inst_t> instructions;
+        const std::string document = read_file(base);
+        REQUIRE(aos::read_all(document.data(), document.size(), instructions,
+                              nullptr) == aos::InstState::Ok);
+        REQUIRE(instructions.size() == 1);
+        CHECK(instructions[0].argv == std::vector<std::string>{"work"});
+    }
+
+    SECTION("as the only delivery") {
+        TempDir dir;
+        const std::string base = dir.path + "/inst.json";
+        const std::string inbox = dir.path + "/inst.tempd";
+        REQUIRE(std::filesystem::create_directory(inbox));
+        write_file(inbox + "/empty.json", "[]");
+
+        aos::HandoffResult result;
+        REQUIRE(aos::aggregate_instructions(base, result) ==
+                aos::HandoffState::Ok);
+        CHECK_FALSE(result.published);
+        CHECK(result.issues.empty());
+        CHECK_FALSE(std::filesystem::exists(base));
+        CHECK(std::filesystem::is_empty(inbox));
+    }
+}
+
+TEST_CASE("handoff preserves unresolved directives through aggregation") {
+    TempDir dir;
+    const std::string base = dir.path + "/inst.json";
+    const std::string inbox = dir.path + "/inst.tempd";
+    REQUIRE(std::filesystem::create_directory(inbox));
+    write_file(inbox + "/directives.json",
+               R"({"argv":["command",{"$env":"ARG"}],"stdout":{"$ref":"values.json#/output"},"stderr":{"$opt":"merge"}})");
+
+    aos::HandoffResult result;
+    REQUIRE(aos::aggregate_instructions(base, result) == aos::HandoffState::Ok);
+    const std::string document = read_file(base);
+    std::vector<aos::inst_t> instructions;
+    REQUIRE(aos::read_all(document.data(), document.size(), instructions,
+                          nullptr) == aos::InstState::Ok);
+    REQUIRE(instructions.size() == 1);
+    const aos::inst_t &instruction = instructions[0];
+    CHECK(instruction.stderr_merge);
+    REQUIRE(instruction.pending_directives.size() == 2);
+
+    const aos::PendingDirective &environment = instruction.pending_directives[0];
+    CHECK(environment.kind == aos::DirectiveKind::Environment);
+    CHECK(environment.field == aos::DirectiveField::Argv);
+    CHECK(environment.argv_index == 1);
+    CHECK(environment.argument == "ARG");
+
+    const aos::PendingDirective &reference = instruction.pending_directives[1];
+    CHECK(reference.kind == aos::DirectiveKind::Reference);
+    CHECK(reference.field == aos::DirectiveField::Stdout);
+    CHECK(reference.argv_index == 0);
+    CHECK(reference.argument == "values.json#/output");
+}

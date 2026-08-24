@@ -31,7 +31,8 @@
 
 `aos exec --loop <milliseconds> [folder]` 也只存在於 `run` 層；folder 省略時是 `.`。它反覆呼叫同一個
 aggregate → claim → execute → release 回合：有取到 instruction 就立刻跑下一輪，
-純空回合才用 `nanosleep` 輪詢等待；間隔 0 因而是 busy poll。回合回 0 或 1 都繼續，
+純空回合才用 `nanosleep` 輪詢等待。零間隔會讓空回合全速重跑、白白占滿一顆核心，
+所以命令列收到 `--loop 0` 時會在 stderr 警告一次，並實際採用 1 毫秒。回合回 0 或 1 都繼續，
 既有 `.runi` 的 3 則停止並回 3。loop 路徑才安裝 `SIGINT`／`SIGTERM` handler；第一次
 信號只寫 `sig_atomic_t` 旗標，讓目前回合釋放 `.runi` 後回 0，`SA_RESETHAND` 讓同一
 信號的第二次恢復預設處置。`nanosleep` 被信號中斷後不補睡，因此閒置時也會立刻收尾。

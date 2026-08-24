@@ -41,16 +41,20 @@ base 必須以 `.json` 結尾。inbox 是把最後的 `.json` 換成 `.tempd`；
 
 `aggregate_instructions(base, result)` 依檔名字典序讀 inbox。只接受第一個副檔名就是
 結尾的 `<name>.json`；`123.json.temp`、`123.json.bad`、`name.part.json` 都會跳過。
-每份內容都可是一個 instruction 物件或一個陣列，最後攤平成單一陣列。
+每份內容都可是一個 instruction 物件或一個陣列，最後攤平成單一陣列。彙整會經過
+format 層完整的讀取與重新寫出，因此尚未解析的 `$env`、`$ref`、`$opt` 指示詞必須
+能無損寫回；否則交接雖成功，執行時的語意卻會悄悄改變。
 
 一份投遞若不是合法 JSON 或不符合 instruction schema，API 會把它改名成
 `<name>.json.bad`、加入 `result.issues`，然後繼續處理其他投遞。有效投遞先寫進
-`<base>.temp`，再以 `rename` 發布；只有發布成功後才刪除來源投遞。
+`<base>.temp`，再以 `rename` 發布；只有發布成功後才刪除來源投遞。有效但展開後沒有
+任何 instruction 的空投遞是例外：沒有資料需要發布，因此不建立空的 base，卻仍會
+刪除來源；否則它會永遠留在 inbox、每個回合都被重新讀取。
 
 以下情況都是成功的 no-op（什麼都不做）：
 
 - inbox 不存在或是空的；
-- 沒有任何有效投遞；
+- 沒有任何有效投遞（無效投遞仍照前述規則隔離）；
 - base 已存在，代表前一批仍在等候取件。此時不覆蓋 base，也不碰 inbox。
 
 ## 取件與釋放

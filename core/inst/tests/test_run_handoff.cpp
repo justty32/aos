@@ -41,6 +41,19 @@ TEST_CASE("exec aggregates two deliveries and removes them after publishing") {
     CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
 }
 
+TEST_CASE("exec resolves an environment directive delivered through handoff") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    const std::string inbox = dir.path + "/.aos/inst.tempd";
+    write_file(inbox + "/env.json",
+               R"({"argv":["/bin/sh","-c","printf '%s' \"$1\" > resolved","sh",{"$env":"AOS_HANDOFF_VALUE"}]})");
+    REQUIRE(setenv("AOS_HANDOFF_VALUE", "through-handoff", 1) == 0);
+
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/resolved") == "through-handoff");
+    REQUIRE(unsetenv("AOS_HANDOFF_VALUE") == 0);
+}
+
 TEST_CASE("exec isolates invalid deliveries and ignores status suffixes") {
     TempDir dir;
     REQUIRE(init_world(dir.path) == 0);
