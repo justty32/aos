@@ -5,3 +5,4 @@ bin/
 .cache/
 compile_commands.json
 CMakeUserPresets.json
+.aos/

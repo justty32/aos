@@ -5,7 +5,7 @@ aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命
 
 | 小專案 | target | 子命令 | 做什麼 |
 |--------|--------|--------|--------|
-| [inst/](inst/) | `aos::inst` | `aos inst` | 讀 JSON 指令檔，依序 `fork`/`exec` 執行 |
+| [inst/](inst/) | `aos::inst` | `aos init`／`aos exec` | 初始化資料夾並消費一回合的 JSON instruction |
 | [tooljson/](tooljson/) | `aos::tooljson` | `aos tooljson` | 讀取、驗證 tool spec，並把模型參數展開成 argv |
 | [llms/](llms/) | `aos::llms` | `aos llms` | 呼叫 OpenAI 相容端點並查詢模型能力（S3 非串流） |
 

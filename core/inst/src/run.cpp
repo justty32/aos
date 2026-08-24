@@ -15,15 +15,21 @@
 #include <vector>
 
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 namespace aos {
 namespace {
 
-int open_input(const char *path) {
+constexpr const char *kAosDir = ".aos";
+constexpr const char *kVersionPath = ".aos/version";
+constexpr const char *kInstPath = ".aos/inst.json";
+constexpr const char *kRuniPath = ".aos/inst.json.runi";
+
+int open_retry(const char *path, int flags, mode_t mode = 0) {
     int fd;
     do {
-        fd = open(path, O_RDONLY | O_CLOEXEC);
+        fd = open(path, flags, mode);
     } while (fd < 0 && errno == EINTR);
     return fd;
 }
@@ -35,19 +41,59 @@ bool read_input(int fd, std::string &buffer, int &error) {
         do {
             count = read(fd, chunk, sizeof(chunk));
         } while (count < 0 && errno == EINTR);
-
         if (count < 0) {
             error = errno;
             return false;
         }
-        if (count == 0) {
-            return true;
-        }
-
-        const auto size = static_cast<std::size_t>(count);
-        buffer.append(chunk, size);
+        if (count == 0) return true;
+        buffer.append(chunk, static_cast<std::size_t>(count));
     }
 }
+
+bool write_fully(int fd, const char *data, std::size_t size, int &error) {
+    while (size != 0) {
+        ssize_t count;
+        do {
+            count = write(fd, data, size);
+        } while (count < 0 && errno == EINTR);
+        if (count <= 0) {
+            error = count < 0 ? errno : EIO;
+            return false;
+        }
+        data += count;
+        size -= static_cast<std::size_t>(count);
+    }
+    return true;
+}
+
+bool close_checked(int fd, int &error) {
+    if (close(fd) == 0) return true;
+    error = errno;
+    return false;
+}
+
+class CwdGuard {
+public:
+    CwdGuard() : saved_(open_retry(".", O_RDONLY | O_DIRECTORY | O_CLOEXEC)) {}
+    ~CwdGuard() {
+        if (saved_ >= 0) {
+            fchdir(saved_);
+            close(saved_);
+        }
+    }
+    bool enter(const char *path, int &error) {
+        if (saved_ < 0) {
+            error = errno;
+            return false;
+        }
+        if (chdir(path) == 0) return true;
+        error = errno;
+        return false;
+    }
+
+private:
+    int saved_;
+};
 
 struct ExecutionOutcome {
     ExecState state = ExecState::Ok;
@@ -68,88 +114,27 @@ ExecutionOutcome execute_one(inst_t &instruction) {
     return outcome;
 }
 
-}  // namespace
-
-int run(int argc, char *argv[]) {
-    if (argc < 1 || argc > 2) {
-        const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
-                                  ? argv[0]
-                                  : "aos inst";
-        std::fprintf(stderr, "usage: %s [file]\n", program);
-        return 2;
-    }
-
-    const bool from_file = argc == 2;
-    const char *source = from_file ? argv[1] : "standard input";
-    int fd = STDIN_FILENO;
-    if (from_file) {
-        fd = open_input(source);
-        if (fd < 0) {
-            std::fprintf(stderr, "aos inst: cannot open %s: %s\n", source,
-                         std::strerror(errno));
-            return 1;
-        }
-    }
-
-    std::string buffer;
-    int read_error = 0;
-    bool read_ok = false;
-    bool out_of_memory = false;
-    try {
-        read_ok = read_input(fd, buffer, read_error);
-    } catch (const std::bad_alloc &) {
-        out_of_memory = true;
-    } catch (const std::length_error &) {
-        out_of_memory = true;
-    }
-
-    int close_error = 0;
-    if (from_file && close(fd) != 0) {
-        close_error = errno;
-    }
-    if (out_of_memory) {
-        std::fprintf(stderr, "aos inst: cannot read %s: out of memory\n", source);
-        return 1;
-    }
-    if (!read_ok) {
-        std::fprintf(stderr, "aos inst: cannot read %s: %s\n", source,
-                     std::strerror(read_error));
-        return 1;
-    }
-    if (close_error != 0) {
-        std::fprintf(stderr, "aos inst: cannot close %s: %s\n", source,
-                     std::strerror(close_error));
-        return 1;
-    }
-
+int execute_batch(const std::string &buffer, const char *source) {
     std::vector<inst_t> instructions;
     std::size_t error_record = 0;
     const char empty = '\0';
     const char *data = buffer.empty() ? &empty : buffer.data();
-    /* format 與 exec 兩層都以「配置失敗就丟例外」為契約——C ABI 那側在每個
-     * extern "C" 進入點把它們接成錯誤碼，原生 CLI 這側就得自己接。少了這幾個
-     * catch，一份夠大的指令檔會讓整個行程 SIGABRT，而不是像讀檔階段那樣印一
-     * 行訊息後乾淨地回 1。 */
     InstState parse_state = InstState::Ok;
-    bool parse_out_of_memory = false;
     try {
         parse_state = read_all(data, buffer.size(), instructions, &error_record);
     } catch (const std::bad_alloc &) {
-        parse_out_of_memory = true;
+        std::fprintf(stderr, "aos exec: cannot parse %s: out of memory\n", source);
+        return 1;
     } catch (const std::length_error &) {
-        parse_out_of_memory = true;
-    }
-    if (parse_out_of_memory) {
-        std::fprintf(stderr, "aos inst: cannot parse %s: out of memory\n",
-                     source);
+        std::fprintf(stderr, "aos exec: cannot parse %s: out of memory\n", source);
         return 1;
     }
     if (parse_state != InstState::Ok) {
         if (error_record != 0) {
-            std::fprintf(stderr, "aos inst: %s: record %zu: %s\n", source,
+            std::fprintf(stderr, "aos exec: %s: record %zu: %s\n", source,
                          error_record, to_string(parse_state));
         } else {
-            std::fprintf(stderr, "aos inst: %s: %s\n", source,
+            std::fprintf(stderr, "aos exec: %s: %s\n", source,
                          to_string(parse_state));
         }
         return 1;
@@ -161,21 +146,17 @@ int run(int argc, char *argv[]) {
         outcomes.resize(instructions.size());
         threads.reserve(instructions.size());
     } catch (const std::bad_alloc &) {
-        std::fprintf(stderr, "aos inst: cannot execute %s: out of memory\n",
-                     source);
+        std::fprintf(stderr, "aos exec: cannot execute %s: out of memory\n", source);
         return 1;
     } catch (const std::length_error &) {
-        std::fprintf(stderr, "aos inst: cannot execute %s: out of memory\n",
-                     source);
+        std::fprintf(stderr, "aos exec: cannot execute %s: out of memory\n", source);
         return 1;
     }
-
     for (std::size_t index = 0; index < instructions.size(); ++index) {
         if (!instructions[index].parallel) {
             outcomes[index] = execute_one(instructions[index]);
             continue;
         }
-
         try {
             threads.emplace_back(
                 [instruction = instructions[index],
@@ -190,34 +171,189 @@ int run(int argc, char *argv[]) {
             outcomes[index].result.error = error.code().value();
         }
     }
-
-    for (std::thread &thread : threads) {
-        thread.join();
-    }
+    for (std::thread &thread : threads) thread.join();
 
     bool failed = false;
     for (std::size_t index = 0; index < outcomes.size(); ++index) {
         const ExecutionOutcome &outcome = outcomes[index];
-        if (outcome.state != ExecState::Ok) {
-            failed = true;
-            if (outcome.result.error != 0) {
-                std::fprintf(stderr, "aos inst: record %zu: %s: %s\n",
-                             index + 1, to_string(outcome.state),
-                             std::strerror(outcome.result.error));
-            } else {
-                std::fprintf(stderr, "aos inst: record %zu: %s\n", index + 1,
-                             to_string(outcome.state));
-            }
+        if (outcome.state == ExecState::Ok) continue;
+        failed = true;
+        if (outcome.result.error != 0) {
+            std::fprintf(stderr, "aos exec: record %zu: %s: %s\n", index + 1,
+                         to_string(outcome.state),
+                         std::strerror(outcome.result.error));
+        } else {
+            std::fprintf(stderr, "aos exec: record %zu: %s\n", index + 1,
+                         to_string(outcome.state));
         }
     }
     return failed ? 1 : 0;
 }
 
+int run_exec_impl(const char *folder) {
+    CwdGuard cwd;
+    int error = 0;
+    if (!cwd.enter(folder, error)) {
+        std::fprintf(stderr, "aos exec: cannot enter %s: %s\n", folder,
+                     std::strerror(error));
+        return 1;
+    }
+
+    struct stat status {};
+    if (stat(kAosDir, &status) != 0) {
+        error = errno;
+        std::fprintf(stderr, "aos exec: invalid %s/%s: %s\n", folder, kAosDir,
+                     std::strerror(error));
+        return 1;
+    }
+    if (!S_ISDIR(status.st_mode)) {
+        std::fprintf(stderr, "aos exec: invalid %s/%s: %s\n", folder, kAosDir,
+                     std::strerror(ENOTDIR));
+        return 1;
+    }
+
+    std::string version;
+    int fd = open_retry(kVersionPath, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        std::fprintf(stderr, "aos exec: cannot read %s/%s: %s\n", folder,
+                     kVersionPath, std::strerror(errno));
+        return 1;
+    }
+    bool read_ok = read_input(fd, version, error);
+    const bool close_ok = close_checked(fd, error);
+    if (!read_ok || !close_ok || version != "1\n") {
+        if (read_ok && close_ok) {
+            std::fprintf(stderr, "aos exec: unsupported version in %s/%s\n",
+                         folder, kVersionPath);
+        } else {
+            std::fprintf(stderr, "aos exec: cannot read %s/%s: %s\n", folder,
+                         kVersionPath, std::strerror(error));
+        }
+        return 1;
+    }
+
+    if (lstat(kRuniPath, &status) == 0) {
+        std::fprintf(stderr, "aos exec: refusing %s: %s already exists\n",
+                     folder, kRuniPath);
+        return 3;
+    }
+    if (errno != ENOENT) {
+        std::fprintf(stderr, "aos exec: cannot inspect %s/%s: %s\n", folder,
+                     kRuniPath, std::strerror(errno));
+        return 1;
+    }
+
+    std::string buffer;
+    fd = open_retry(kInstPath, O_RDONLY | O_CLOEXEC);
+    if (fd < 0 && errno == ENOENT) return 0;
+    if (fd < 0) {
+        std::fprintf(stderr, "aos exec: cannot read %s/%s: %s\n", folder,
+                     kInstPath, std::strerror(errno));
+        return 1;
+    }
+    read_ok = read_input(fd, buffer, error);
+    const bool inst_close_ok = close_checked(fd, error);
+    if (!read_ok || !inst_close_ok) {
+        std::fprintf(stderr, "aos exec: cannot read %s/%s: %s\n", folder,
+                     kInstPath, std::strerror(error));
+        return 1;
+    }
+    if (rename(kInstPath, kRuniPath) != 0) {
+        std::fprintf(stderr, "aos exec: cannot rename %s/%s: %s\n", folder,
+                     kInstPath, std::strerror(errno));
+        return 1;
+    }
+    return execute_batch(buffer, kRuniPath);
+}
+
+int run_init_impl(const char *folder) {
+    const int folder_fd = open_retry(folder, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (folder_fd < 0) {
+        std::fprintf(stderr, "aos init: cannot open %s: %s\n", folder,
+                     std::strerror(errno));
+        return 1;
+    }
+    if (mkdirat(folder_fd, kAosDir, 0777) != 0) {
+        const int error = errno;
+        close(folder_fd);
+        if (error == EEXIST) {
+            std::fprintf(stderr, "aos init: refusing %s: .aos already exists\n",
+                         folder);
+        } else {
+            std::fprintf(stderr, "aos init: cannot create %s/.aos: %s\n", folder,
+                         std::strerror(error));
+        }
+        return 1;
+    }
+
+    const int aos_fd = openat(folder_fd, kAosDir,
+                              O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    int error = 0;
+    int version_fd = -1;
+    bool ok = aos_fd >= 0;
+    if (ok) {
+        version_fd = openat(aos_fd, "version",
+                            O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0666);
+        ok = version_fd >= 0;
+    }
+    if (ok) ok = write_fully(version_fd, "1\n", 2, error);
+    if (version_fd >= 0 && !close_checked(version_fd, error)) ok = false;
+    if (!ok && error == 0) error = errno;
+    if (aos_fd >= 0) close(aos_fd);
+    close(folder_fd);
+
+    if (!ok) {
+        const int cleanup_fd = open_retry(folder, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+        if (cleanup_fd >= 0) {
+            unlinkat(cleanup_fd, ".aos/version", 0);
+            unlinkat(cleanup_fd, kAosDir, AT_REMOVEDIR);
+            close(cleanup_fd);
+        }
+        std::fprintf(stderr, "aos init: cannot write %s/.aos/version: %s\n",
+                     folder, std::strerror(error));
+        return 1;
+    }
+    return 0;
+}
+
+}  // namespace
+
+int run_exec(int argc, char *argv[]) {
+    if (argc != 2 || argv == nullptr || argv[1] == nullptr) {
+        const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
+                                  ? argv[0]
+                                  : "aos exec";
+        std::fprintf(stderr, "usage: %s <folder>\n", program);
+        return 2;
+    }
+    try {
+        return run_exec_impl(argv[1]);
+    } catch (const std::bad_alloc &) {
+        std::fprintf(stderr, "aos exec: out of memory\n");
+        return 1;
+    } catch (const std::length_error &) {
+        std::fprintf(stderr, "aos exec: out of memory\n");
+        return 1;
+    }
+}
+
+int run_init(int argc, char *argv[]) {
+    if (argc != 2 || argv == nullptr || argv[1] == nullptr) {
+        const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
+                                  ? argv[0]
+                                  : "aos init";
+        std::fprintf(stderr, "usage: %s <folder>\n", program);
+        return 2;
+    }
+    return run_init_impl(argv[1]);
+}
+
 }  // namespace aos
 
-/* aos 執行檔的 `inst` 子命令從這裡進來。名字要跟 inst/CMakeLists.txt 裡
- * aos_add_subcommand(ENTRY ...) 登記的一致；用 C 連結是為了讓 CMake 產生的
- * 那張表可以直接寫出宣告，不必知道 C++ 的名稱修飾規則。 */
-extern "C" int aos_inst_cli_main(int argc, char *argv[]) {
-    return aos::run(argc, argv);
+extern "C" int aos_exec_cli_main(int argc, char *argv[]) {
+    return aos::run_exec(argc, argv);
+}
+
+extern "C" int aos_init_cli_main(int argc, char *argv[]) {
+    return aos::run_init(argc, argv);
 }
