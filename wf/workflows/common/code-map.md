@@ -23,7 +23,7 @@ repo 根
        │    exec    唯一碰 fork/exec/waitpid 的層          （src/exec.cpp + spawn_prep.cpp + wait.cpp）
        │  外加兩層，各自只往下看：
        │    C ABI 包裝（src/capi*.cpp，對外標頭 <aos/inst.h>）
-       │    CLI 世界／回合層（src/run.cpp，進入點 aos_init_cli_main／aos_exec_cli_main）
+       │    CLI 世界／回合層（src/run*.cpp，進入點 aos_init_cli_main／aos_exec_cli_main）
        ▼
 app/（唯一執行檔 aos，子命令分派）── `aos init`／`aos exec` 掛的就是上面這條
 
@@ -120,7 +120,11 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | CLI 世界／回合層：init 建 `.aos/`、版本與 inbox；init／exec 的 folder 可省略為 `.`；exec 驗版本後依序呼叫 aggregate → claim → execute batch → release，把結構化結果轉成警告與退出碼；`--loop <毫秒> [folder]` 的 argv、空回合輪詢、0／1／3 政策，以及只在 loop 安裝的兩段式 SIGINT／SIGTERM 收尾；原生 CLI 唯一的例外邊界 |
+| `run.hpp`／`run.cpp` | CLI 對內介面、init／exec argv 解析、folder 預設 `.`、配置失敗例外邊界，以及兩個 C 入口 |
+| `run_internal.hpp` | CLI 各實作檔之間的內部宣告：單回合、loop、init world |
+| `run_init.cpp` | 建立 `.aos/`、版本 1 與 `inst.tempd/` inbox，失敗時回滾剛建立的狀態 |
+| `run_exec.cpp` | 單回合：進入 world、驗版本、aggregate → claim → execute batch → release，並把結果映成診斷與 0／1／3 |
+| `run_loop.cpp` | `--loop` 的空回合輪詢、0／1／3 政策，以及兩段式 SIGINT／SIGTERM 收尾 |
 | `run_batch.hpp`／`run_batch.cpp` | CLI 內部批次迴圈：整批解析，同步執行一般記錄、複製 `parallel` 記錄進 thread，最後全數 join |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）
@@ -135,7 +139,11 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
 | `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release |
-| `test_run.cpp` | CLI 層：init／版本／聚合與警告／空回合／`.runi` 取件、正常返回清除與退出碼、loop argv／連續回合／信號收尾／遇 3 停止、folder 路徑基準、整批剖析、函式庫失敗、循序執行、parallel 與批次尾端 join |
+| `test_run_support.hpp` | CLI 測試共用的暫存 world、檔案 I/O、cwd guard 與呼叫 helper |
+| `test_run_init.cpp` | init、額外 argv 拒絕，以及 init／exec 的目前目錄預設 |
+| `test_run_loop.cpp` | loop argv、連續回合、失敗節流、信號收尾、遇 3 停止與目前目錄預設 |
+| `test_run_handoff.cpp` | CLI 的版本、空回合、彙整、隔離、取件、釋放與連續回合整合 |
+| `test_run_batch.cpp` | CLI 批次失敗、路徑基準、循序、parallel 與批次尾端 join |
 | `exec_test_support.hpp` | 測試共用的小工具 |
 | `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
 
@@ -224,6 +232,7 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 | 檔案 | 內容 |
 |------|------|
 | `architecture.md` | 分層為什麼這樣切、為什麼先把整份輸入讀完再執行、`fork` 兩側各自要做的工作（async-signal-safe 的界線在哪）|
+| `handoff.md` | 投遞、彙整、取件、釋放的原因、路徑、錯誤資料與完整公開 API 範例 |
 | `format.md` | JSON schema 細節 |
 | `exec.md` | 執行語意細節 |
 | `capi.md`／`cxxapi.md` | C ABI／C++ API 的使用說明 |
@@ -256,7 +265,7 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 | PATH 怎麼解析、環境變數怎麼合併 | `core/inst/src/spawn_prep.cpp` |
 | C ABI 怎麼對應到 C++ API | `core/inst/src/capi.cpp` 開頭的 `static_assert` 一串 |
 | instruction inbox 怎麼聚合／取件／釋放 | `core/inst/src/handoff.cpp` |
-| CLI 怎麼映射交接結果、怎麼跑一批 instruction | `core/inst/src/run.cpp`／`run_batch.cpp` |
+| CLI 怎麼映射交接結果、怎麼跑一批 instruction | `core/inst/src/run_exec.cpp`／`run_batch.cpp`；argv 在 `run.cpp`，loop 在 `run_loop.cpp` |
 | 子命令怎麼被登記、怎麼被分派 | `cmake/AosSubproject.cmake` 的 `aos_add_subcommand()` → `app/CMakeLists.txt` 產表 → `app/src/main.cpp` |
 | 某個相依該放在哪一層 | 上面 common/ 那節的判準；完整說明在 [`docs/subprojects.md`](../../../docs/subprojects.md) |
 | 為什麼要先把整份輸入讀完才開始執行 | `core/inst/docs/architecture.md`「為什麼要先把整份輸入讀完」|

@@ -1,5 +1,9 @@
 # 記錄格式
 
+這份文件回答「一份 instruction JSON 可以寫哪些欄位、如何驗證」。instruction 是描述
+一個 POSIX 命令及其執行設定的 JSON 記錄。它不說投遞檔如何彙整（見
+[handoff](handoff.md)），也不說 fork、逾時與狀態如何運作（見[執行語意](exec.md)）。
+
 `aos exec [folder]` 會讀取 `<folder>/.aos/inst.json` 的完整 JSON 文件；folder 省略時
 使用目前目錄。頂層可以是：
 
