@@ -35,8 +35,9 @@ aos exec my-world
 
 `aos exec <folder>` 讀取 `.aos/inst.json`；它可以是**一個** JSON 物件，或**一個陣列**
 的物件。檔案會先完整讀入並立刻 rename 成 `inst.json.runi`，然後整批驗證；所以第 5
-筆有語法錯誤時前 4 筆不會執行，但被取走的 `.runi` 會保留現場。沒有
-`inst.json` 是正常的空回合，安靜回 0；若 `.runi` 已存在則拒絕啟動並回 3。
+筆有語法錯誤時前 4 筆不會執行。回合正常返回後（包含退出碼 1）會刪除 `.runi`；只有
+crash、被 kill 或斷電才會留下它。沒有 `inst.json` 是正常的空回合，安靜回 0；若啟動
+時 `.runi` 已存在則拒絕並回 3。
 
 ```json
 [

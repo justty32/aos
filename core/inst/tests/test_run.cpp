@@ -116,7 +116,7 @@ TEST_CASE("exec claims the complete input before validating or executing it") {
     CHECK(exec_world(invalid.path) == 1);
     CHECK_FALSE(std::filesystem::exists(marker));
     CHECK_FALSE(std::filesystem::exists(invalid.path + "/.aos/inst.json"));
-    CHECK(std::filesystem::exists(invalid.path + "/.aos/inst.json.runi"));
+    CHECK_FALSE(std::filesystem::exists(invalid.path + "/.aos/inst.json.runi"));
 
     TempDir valid;
     REQUIRE(init_world(valid.path) == 0);
@@ -124,6 +124,32 @@ TEST_CASE("exec claims the complete input before validating or executing it") {
                R"({"argv":["/bin/sh","-c","[ ! -e .aos/inst.json ] && [ -e .aos/inst.json.runi ] && printf claimed > claimed"]})");
     CHECK(exec_world(valid.path) == 0);
     CHECK(read_file(valid.path + "/claimed") == "claimed");
+    CHECK_FALSE(std::filesystem::exists(valid.path + "/.aos/inst.json.runi"));
+}
+
+TEST_CASE("exec can consume two consecutive rounds") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_inst(dir, R"({"argv":["/bin/sh","-c","printf first > first"]})");
+
+    REQUIRE(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/first") == "first");
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
+
+    write_inst(dir,
+               R"({"argv":["/bin/sh","-c","printf second > second"]})");
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/second") == "second");
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
+}
+
+TEST_CASE("exec removes runi after a library-level failure") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_inst(dir, R"({"argv":["/bin/true"],"exit":"."})");
+
+    CHECK(exec_world(dir.path) == 1);
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
 }
 
 TEST_CASE("exec preserves sequential batch behavior") {
@@ -166,8 +192,9 @@ TEST_CASE("exec joins parallel records before returning") {
     TempDir dir;
     REQUIRE(init_world(dir.path) == 0);
     write_inst(dir,
-               R"([{"argv":["/bin/sh","-c","sleep 1; printf joined > joined"],"parallel":true}])");
+               R"([{"argv":["/bin/sh","-c","sleep 1; [ -e .aos/inst.json.runi ] && printf joined > joined"],"parallel":true}])");
 
     CHECK(exec_world(dir.path) == 0);
     CHECK(read_file(dir.path + "/joined") == "joined");
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
 }
