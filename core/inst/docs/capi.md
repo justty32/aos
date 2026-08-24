@@ -95,6 +95,9 @@ argv 請使用 `aos_instruction_push_arg()` 搭配 `aos_instruction_argc()` 與
 使用 count/key/value 的 getter 與 `aos_instruction_set_env()`；設定一個已存在
 的 key 會取代它。key 依字典序排列，必須非空，且不能包含 `=`。逾時的
 getter/setter 值以毫秒為單位；零會停用截止時間。
+`aos_instruction_stderr_merge()`／`aos_instruction_set_stderr_merge()` 操作 stderr
+併流旗標；`aos_instruction_parallel()`／`aos_instruction_set_parallel()` 操作批次中的
+並行旗標。兩者皆以零表示 false、非零表示 true。
 
 所有 setter 都會複製它們的字串。getter 回傳的字串是借用(borrowed)的、以 NUL
 結尾，且只在該指令被變更、清除、讀入或釋放之前有效。無效的 handle、欄位與

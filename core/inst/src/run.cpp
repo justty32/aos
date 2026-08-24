@@ -10,6 +10,8 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <system_error>
+#include <thread>
 #include <vector>
 
 #include <fcntl.h>
@@ -45,6 +47,25 @@ bool read_input(int fd, std::string &buffer, int &error) {
         const auto size = static_cast<std::size_t>(count);
         buffer.append(chunk, size);
     }
+}
+
+struct ExecutionOutcome {
+    ExecState state = ExecState::Ok;
+    ExecResult result;
+};
+
+ExecutionOutcome execute_one(inst_t &instruction) {
+    ExecutionOutcome outcome;
+    try {
+        outcome.state = execute(instruction, outcome.result);
+    } catch (const std::bad_alloc &) {
+        outcome.state = ExecState::SpawnFailed;
+        outcome.result.error = ENOMEM;
+    } catch (const std::length_error &) {
+        outcome.state = ExecState::SpawnFailed;
+        outcome.result.error = ENOMEM;
+    }
+    return outcome;
 }
 
 }  // namespace
@@ -134,31 +155,58 @@ int run(int argc, char *argv[]) {
         return 1;
     }
 
-    bool failed = false;
+    std::vector<ExecutionOutcome> outcomes;
+    std::vector<std::thread> threads;
+    try {
+        outcomes.resize(instructions.size());
+        threads.reserve(instructions.size());
+    } catch (const std::bad_alloc &) {
+        std::fprintf(stderr, "aos inst: cannot execute %s: out of memory\n",
+                     source);
+        return 1;
+    } catch (const std::length_error &) {
+        std::fprintf(stderr, "aos inst: cannot execute %s: out of memory\n",
+                     source);
+        return 1;
+    }
+
     for (std::size_t index = 0; index < instructions.size(); ++index) {
-        ExecResult result;
-        /* execute() 在 fork 之前要合併環境變數、解析 PATH，一樣會配置記憶體。
-         * 這裡把配置失敗當成「這一筆失敗」而不是整批中止，跟其他 exec 錯誤
-         * 的處理方式一致。 */
-        ExecState state = ExecState::Ok;
-        try {
-            state = execute(instructions[index], result);
-        } catch (const std::bad_alloc &) {
-            state = ExecState::SpawnFailed;
-            result.error = ENOMEM;
-        } catch (const std::length_error &) {
-            state = ExecState::SpawnFailed;
-            result.error = ENOMEM;
+        if (!instructions[index].parallel) {
+            outcomes[index] = execute_one(instructions[index]);
+            continue;
         }
-        if (state != ExecState::Ok) {
+
+        try {
+            threads.emplace_back(
+                [instruction = instructions[index],
+                 &outcome = outcomes[index]]() mutable {
+                    outcome = execute_one(instruction);
+                });
+        } catch (const std::bad_alloc &) {
+            outcomes[index].state = ExecState::SpawnFailed;
+            outcomes[index].result.error = ENOMEM;
+        } catch (const std::system_error &error) {
+            outcomes[index].state = ExecState::SpawnFailed;
+            outcomes[index].result.error = error.code().value();
+        }
+    }
+
+    for (std::thread &thread : threads) {
+        thread.join();
+    }
+
+    bool failed = false;
+    for (std::size_t index = 0; index < outcomes.size(); ++index) {
+        const ExecutionOutcome &outcome = outcomes[index];
+        if (outcome.state != ExecState::Ok) {
             failed = true;
-            if (result.error != 0) {
+            if (outcome.result.error != 0) {
                 std::fprintf(stderr, "aos inst: record %zu: %s: %s\n",
-                             index + 1, to_string(state),
-                             std::strerror(result.error));
+                             index + 1, to_string(outcome.state),
+                             std::strerror(outcome.result.error));
             } else {
                 std::fprintf(stderr, "aos inst: record %zu: %s\n", index + 1,
-                             to_string(state));
+                             to_string(outcome.state));
             }
         }
     }

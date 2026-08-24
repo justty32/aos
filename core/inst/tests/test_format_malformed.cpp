@@ -42,6 +42,8 @@ TEST_CASE("field type mismatches are rejected") {
           aos::InstState::FieldTypeMismatch);
     CHECK(parse(R"({"argv":["x"],"timeout_ms":-1})") ==
           aos::InstState::FieldTypeMismatch);
+    CHECK(parse(R"({"argv":["x"],"parallel":1})") ==
+          aos::InstState::FieldTypeMismatch);
 }
 
 TEST_CASE("invalid stderr directives are rejected precisely") {

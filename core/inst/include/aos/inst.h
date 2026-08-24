@@ -93,6 +93,10 @@ AOS_API uint64_t aos_instruction_timeout_ms(
     const aos_instruction *instruction);
 AOS_API aos_inst_state aos_instruction_set_timeout_ms(
     aos_instruction *instruction, uint64_t value);
+AOS_API int aos_instruction_parallel(
+    const aos_instruction *instruction);
+AOS_API aos_inst_state aos_instruction_set_parallel(
+    aos_instruction *instruction, int value);
 
 AOS_API aos_inst_state aos_instruction_read_buffer(
     const char *data, size_t size, aos_instruction *instruction);

@@ -12,6 +12,7 @@ void inst_t::clear() noexcept {
     cwd.clear();
     env.clear();
     timeout_ms = 0;
+    parallel = false;
 }
 
 const char *to_string(InstState state) noexcept {

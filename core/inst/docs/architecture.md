@@ -10,7 +10,8 @@
 - `exec` 接收一個已經建好的 `inst_t`。它負責環境變數與 PATH 的準備、
   `fork`/`execve`、重導向、行程群組、等待、逾時、狀態檔輸出，以及執行狀態；
   它從不剖析 JSON，也不讀取指令來源。
-- `run` 負責 POSIX 輸入、CLI 診斷、整批剖析，以及循序執行迴圈。它也是原生 CLI
+- `run` 負責 POSIX 輸入、CLI 診斷、整批剖析，以及依 `parallel` 決定同步執行或開
+  thread、最後 join 全部 thread 的批次迴圈。它也是原生 CLI
   這一側**唯一的例外邊界**：讀檔、剖析、執行三個階段都接住 `std::bad_alloc` 與
   `std::length_error`，轉成一行訊息與非零退出碼（C ABI 那側則是每個 `extern "C"`
   進入點各自接）。它透過 `extern "C" int aos_inst_cli_main(int, char **)` 對外掛成
@@ -45,7 +46,8 @@ runner 不對輸入設任何上限，一個無界的生產端就能讓它一直�
 指令來源是可信的。
 
 有限的生產端仍然很適合當成批次來用：產生一個 JSON 陣列，關閉輸出之後，runner
-便會一次驗證並依序執行。
+便會一次驗證，再依輸入順序啟動；標成 `parallel` 的記錄可與後續記錄重疊執行，
+但整批返回前仍會全部 join。
 
 ## `fork` 兩側各自要做的工作
 

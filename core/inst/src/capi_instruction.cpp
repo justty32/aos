@@ -163,4 +163,20 @@ AOS_API aos_inst_state aos_instruction_set_timeout_ms(
     } catch (...) { return AOS_INST_ALLOC_FAILED; }
 }
 
+AOS_API int aos_instruction_parallel(
+    const aos_instruction *instruction) {
+    try {
+        return instruction != nullptr && instruction->value.parallel;
+    } catch (...) { return 0; }
+}
+
+AOS_API aos_inst_state aos_instruction_set_parallel(
+    aos_instruction *instruction, int value) {
+    try {
+        if (instruction == nullptr) return AOS_INST_INVALID_ARGUMENT;
+        instruction->value.parallel = value != 0;
+        return AOS_INST_OK;
+    } catch (...) { return AOS_INST_ALLOC_FAILED; }
+}
+
 }  // extern "C"

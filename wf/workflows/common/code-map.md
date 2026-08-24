@@ -84,15 +84,15 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 | 關鍵型別／函式 |
 |------|------|----------------|
-| `inst.hpp` | C++ API。三個分層的宣告都在這（見上面「單向相依是鐵律」），標頭上半是 `inst`／`format`，下半是 `exec` | `inst_t`（`argv`／`stdin_path`／`stdout_path`／`stderr_path`／`stderr_merge`／`exit_path`／`cwd`／`env`／`timeout_ms`、`clear()`）、`InstState`、`to_string(InstState)`、`read_one`／`read_all`／`write_one`／`write_all`、`ExecState`、`ExecResult`、`execute()`、`to_string(ExecState)` |
-| `inst.h` | C ABI（給非 C++ 呼叫者用），是 `inst.hpp` 的鏡像，型別靠 `static_assert` 對齊（見 `src/capi.cpp`） | `aos_instruction`（opaque）、`aos_exec_result`、`aos_inst_state`／`aos_inst_field`／`aos_exec_state`、`aos_instruction_new/free/clear`、`aos_instruction_argc/arg/push_arg`、`aos_instruction_field/set_field`、`aos_instruction_stderr_merge/set_stderr_merge`、`aos_instruction_env_count/env_key/env_value/set_env`、`aos_instruction_timeout_ms/set_timeout_ms`、`aos_instruction_read_buffer/read_fd/read_file`、`aos_instruction_write_buffer/write_fd/write_file`、`aos_instruction_execute`、`aos_*_state_string`、`aos_version_string` |
+| `inst.hpp` | C++ API。三個分層的宣告都在這（見上面「單向相依是鐵律」），標頭上半是 `inst`／`format`，下半是 `exec` | `inst_t`（`argv`／`stdin_path`／`stdout_path`／`stderr_path`／`stderr_merge`／`exit_path`／`cwd`／`env`／`timeout_ms`／`parallel`、`clear()`）、`InstState`、`to_string(InstState)`、`read_one`／`read_all`／`write_one`／`write_all`、`ExecState`、`ExecResult`、`execute()`、`to_string(ExecState)` |
+| `inst.h` | C ABI（給非 C++ 呼叫者用），是 `inst.hpp` 的鏡像，型別靠 `static_assert` 對齊（見 `src/capi.cpp`） | `aos_instruction`（opaque）、`aos_exec_result`、`aos_inst_state`／`aos_inst_field`／`aos_exec_state`、`aos_instruction_new/free/clear`、`aos_instruction_argc/arg/push_arg`、`aos_instruction_field/set_field`、`aos_instruction_stderr_merge/set_stderr_merge`、`aos_instruction_env_count/env_key/env_value/set_env`、`aos_instruction_timeout_ms/set_timeout_ms`、`aos_instruction_parallel/set_parallel`、`aos_instruction_read_buffer/read_fd/read_file`、`aos_instruction_write_buffer/write_fd/write_file`、`aos_instruction_execute`、`aos_*_state_string`、`aos_version_string` |
 
 ### core/inst/src/ — 三個核心分層
 
 | 檔案 | 負責 |
 |------|------|
 | `inst.cpp` | **inst 層**：`inst_t::clear()`、`to_string(InstState)`。不碰位元組／JSON，也不碰行程 |
-| `format.cpp` | **format 層**：唯一懂 JSON schema 的檔。已知欄位共 8 個（`argv`／`stdin`／`stdout`／`stderr`／`exit`／`cwd`／`env`／`timeout_ms`），其中 `stderr` 接受路徑字串或 `{"$opt":"merge"}`；碰到不認得的 key 就回 `UnknownKey`。`read_one`／`read_all` 剖析＋驗證（`argv` 不可空、`env` key 不可空或含 `=`）；`write_one`／`write_all` 編回精簡 JSON（每筆一行）。用 `nlohmann::json`／`nlohmann::ordered_json`。只 catch `json::parse_error`——配置失敗的例外會往上拋 |
+| `format.cpp` | **format 層**：唯一懂 JSON schema 的檔。已知欄位共 9 個（`argv`／`stdin`／`stdout`／`stderr`／`exit`／`cwd`／`env`／`timeout_ms`／`parallel`），其中 `stderr` 接受路徑字串或 `{"$opt":"merge"}`；碰到不認得的 key 就回 `UnknownKey`。`read_one`／`read_all` 剖析＋驗證（`argv` 不可空、`env` key 不可空或含 `=`）；`write_one`／`write_all` 編回精簡 JSON（每筆一行）。用 `nlohmann::json`／`nlohmann::ordered_json`。只 catch `json::parse_error`——配置失敗的例外會往上拋 |
 | `exec.cpp` | **exec 層**：唯一碰 `fork`／`execve`／`waitpid` 的檔。`execute()`：組 `argv`＋`envp`（透過 `spawn_prep`）→ `fork` → 子行程 `setpgid`＋重導向（stderr merge 時在 stdout 設好後 `dup2(1, 2)`）＋`chdir`＋`execve`（`run_child`，全程 async-signal-safe）→ 父行程視 `timeout_ms` 決定直接 `wait_retry` 或 `wait_until` 輪詢；逾時先對整個行程群組送 `SIGTERM`、給 `kTimeoutGraceMs`（2000ms）緩衝，仍不收就 `SIGKILL` 整個群組——打群組是因為忽略 `SIGTERM` 的孫行程才殺得掉。結束後若 `exit_path` 非空就把 exit code 寫進那個檔 |
 | `spawn_prep.hpp`／`.cpp` | **內部標頭**（不對外）。`prepare_spawn()`：在 `fork` 之前把所有會配置記憶體的準備工作做完——合併繼承的環境變數與 `inst.env`（後者覆蓋前者）、組 `envp`、若 `argv[0]` 沒有 `/` 就沿 `PATH`（或 `confstr(_CS_PATH)` 的預設值）逐段找可執行檔。子行程只拿到已經算好的穩定指標 |
 | `wait.hpp`／`.cpp` | **內部標頭**。`wait_retry()`：EINTR-safe 的 `waitpid` 包裝。`wait_until()`：用 `CLOCK_MONOTONIC` 算經過時間，指數退避（上限 `kMaxPollMs`＝50ms）輪詢 `waitpid(WNOHANG)` 直到逾時 |
@@ -107,7 +107,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 |------|------|
 | `capi_common.hpp` | **內部標頭**：`aos_instruction` 的實際定義（`struct aos_instruction { aos::inst_t value; }`），只有這幾個 `capi_*.cpp` 看得到 |
 | `capi.cpp` | 版本字串、狀態轉字串（`aos_inst_state_string`／`aos_exec_state_string`）。開頭一串 `static_assert` 讓 C 的列舉值與 C++ 的 `InstState`／`ExecState` 對齊——**新增或改一個列舉值，兩邊都要動，這裡的 static_assert 會在改漏時讓建置失敗** |
-| `capi_instruction.cpp` | 操作單個 `aos_instruction` 的存取子：建立／釋放／清空、`argv` 讀寫、四個路徑欄位＋`cwd`、`env` 的讀寫、`timeout_ms` |
+| `capi_instruction.cpp` | 操作單個 `aos_instruction` 的存取子：建立／釋放／清空、`argv` 讀寫、四個路徑欄位＋`cwd`、stderr merge、`env`、`timeout_ms`、`parallel` |
 | `capi_io.cpp` | 讀寫整份 instruction：`read_buffer/fd/file`、`write_buffer/fd/file`（呼叫 `format` 層），以及 `aos_instruction_execute`（呼叫 `exec` 層） |
 
 **每個 `extern "C"` 進入點都有 `catch (...)`**，把例外接成 `AOS_INST_ALLOC_FAILED` 之類的錯誤碼——例外絕對不能逸出 C 邊界。新增進入點時照抄這個形狀。
@@ -118,7 +118,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | `run(argc, argv)`：決定輸入來源（給了檔名就開檔，否則讀 stdin）→ 讀到 EOF 進單一緩衝區 → `read_all()` 一次剖析＋驗證整批 → 依序對每筆呼叫 `execute()`，失敗的印到 stderr、繼續跑下一筆，只要有一筆失敗整體回 1。讀檔、剖析、執行三個階段都接 `bad_alloc`／`length_error`——**這一層是原生 CLI 唯一的例外邊界**（C ABI 那側自己有接）。檔尾的 `extern "C" aos_inst_cli_main()` 是 `aos inst` 子命令的進入點，名字要與 `core/inst/CMakeLists.txt` 的 `aos_add_subcommand(ENTRY ...)` 一致。**為什麼要先把整份輸入讀完**、以及這個設計的代價，見 [`core/inst/docs/architecture.md`](../../../core/inst/docs/architecture.md) |
+| `run.hpp`／`run.cpp` | `run(argc, argv)`：決定輸入來源（給了檔名就開檔，否則讀 stdin）→ 讀到 EOF 進單一緩衝區 → `read_all()` 一次剖析＋驗證整批 → 同步執行一般記錄、把 `parallel` 記錄複製進獨立 thread，最後 join 全部 thread → 按 record 順序回報失敗，只要有一筆函式庫層失敗整體回 1。讀檔、剖析、執行三個階段都接配置失敗——**這一層是原生 CLI 唯一的例外邊界**（C ABI 那側自己有接）。檔尾的 `extern "C" aos_inst_cli_main()` 是 `aos inst` 子命令的進入點，名字要與 `core/inst/CMakeLists.txt` 的 `aos_add_subcommand(ENTRY ...)` 一致。**為什麼要先把整份輸入讀完**、以及這個設計的代價，見 [`core/inst/docs/architecture.md`](../../../core/inst/docs/architecture.md) |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）
 
@@ -131,7 +131,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `test_format_read.cpp`／`test_format_write.cpp`／`test_format_malformed.cpp` | format 層：JSON round trip、各種壞輸入、已知/未知欄位 |
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
-| `test_run.cpp` | CLI 層：整批剖析＋依序執行的迴圈行為 |
+| `test_run.cpp` | CLI 層：整批剖析、循序執行、parallel 記錄與批次尾端 join |
 | `exec_test_support.hpp` | 測試共用的小工具 |
 | `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
 

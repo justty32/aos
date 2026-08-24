@@ -28,9 +28,9 @@ InstState validate(const inst_t &inst) {
 }
 
 bool known_key(std::string_view key) {
-    constexpr std::array<std::string_view, 8> keys = {
+    constexpr std::array<std::string_view, 9> keys = {
         "argv", "stdin", "stdout", "stderr", "exit", "cwd", "env",
-        "timeout_ms",
+        "timeout_ms", "parallel",
     };
     for (const auto candidate : keys) {
         if (key == candidate) {
@@ -54,6 +54,7 @@ nlohmann::ordered_json encode(const inst_t &inst) {
     if (!inst.cwd.empty()) value["cwd"] = inst.cwd;
     if (!inst.env.empty()) value["env"] = inst.env;
     if (inst.timeout_ms != 0) value["timeout_ms"] = inst.timeout_ms;
+    if (inst.parallel) value["parallel"] = true;
     return value;
 }
 
@@ -142,6 +143,14 @@ InstState decode(const json &value, inst_t &inst) {
             return InstState::FieldTypeMismatch;
         }
         inst.timeout_ms = timeout_it->get<std::uint64_t>();
+    }
+
+    const auto parallel_it = value.find("parallel");
+    if (parallel_it != value.end()) {
+        if (!parallel_it->is_boolean()) {
+            return InstState::FieldTypeMismatch;
+        }
+        inst.parallel = parallel_it->get<bool>();
     }
     return validate(inst);
 }
