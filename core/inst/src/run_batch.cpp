@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 
+extern char **environ;
+
 namespace aos::detail {
 namespace {
 
@@ -58,6 +60,63 @@ int execute_batch(const std::string &buffer, const char *source) {
             std::fprintf(stderr, "aos exec: %s: %s\n", source,
                          to_string(parse_state));
         }
+        return 1;
+    }
+
+    ResolveContext resolve_context;
+    try {
+        if (capture_environment(environ, ".", resolve_context) !=
+            ResolveState::Ok) {
+            std::fprintf(stderr,
+                         "aos exec: cannot capture parent environment\n");
+            return 1;
+        }
+        for (std::size_t index = 0; index < instructions.size(); ++index) {
+            ResolveResult result;
+            const ResolveState state = resolve(
+                instructions[index], resolve_context, result);
+            if (state == ResolveState::Ok) continue;
+            if (state == ResolveState::EnvironmentVariableMissing) {
+                if (result.field == DirectiveField::Argv) {
+                    std::fprintf(
+                        stderr,
+                        "aos exec: %s: record %zu: argv[%zu]: environment "
+                        "variable %s does not exist\n",
+                        source, index + 1, result.argv_index,
+                        result.variable.c_str());
+                } else if (result.field == DirectiveField::EnvValue) {
+                    std::fprintf(
+                        stderr,
+                        "aos exec: %s: record %zu: env[%s]: environment "
+                        "variable %s does not exist\n",
+                        source, index + 1, result.env_key.c_str(),
+                        result.variable.c_str());
+                } else {
+                    std::fprintf(
+                        stderr,
+                        "aos exec: %s: record %zu: %s: environment variable "
+                        "%s does not exist\n",
+                        source, index + 1, to_string(result.field),
+                        result.variable.c_str());
+                }
+            } else if (state == ResolveState::ValidationFailed) {
+                std::fprintf(stderr,
+                             "aos exec: %s: record %zu: after resolve: %s\n",
+                             source, index + 1,
+                             to_string(result.validation_state));
+            } else {
+                std::fprintf(stderr, "aos exec: %s: record %zu: %s\n",
+                             source, index + 1, to_string(state));
+            }
+            return 1;
+        }
+    } catch (const std::bad_alloc &) {
+        std::fprintf(stderr, "aos exec: cannot resolve %s: out of memory\n",
+                     source);
+        return 1;
+    } catch (const std::length_error &) {
+        std::fprintf(stderr, "aos exec: cannot resolve %s: out of memory\n",
+                     source);
         return 1;
     }
 

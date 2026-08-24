@@ -4,13 +4,16 @@
 欄位或逐項 API；前者看[記錄格式](format.md)，交接檔案的完整規則看
 [handoff](handoff.md)，函式簽章看 [C++ API](cxxapi.md) 或 [C API](capi.md)。
 
-這份實作刻意切成五個範圍狹窄的分層：
+這份實作刻意切成六個範圍狹窄的分層：
 
 - `inst` 擁有 `inst_t`、它的公開狀態，以及清除與狀態字串的輔助函式。
   它既不懂位元組／JSON，也不懂行程。
 - `format` 是唯一懂得 JSON 文件 schema 的分層。它把位元組緩衝區轉換成經過
   驗證的指令，也把指令轉回精簡的記錄；它完全不懂 `fork`、不懂路徑作為作業系統
   資源這件事，也不懂 CLI I/O。
+- `resolve` 接收 format 產生、可能仍帶有指示詞的 `inst_t`，以呼叫端明示的環境
+  快照與路徑基準把它變成可執行資料，最後重新驗證。它不讀 JSON、不執行行程，也
+  不依賴 handoff；完整契約見[解析指南](resolve.md)。
 - `handoff` 負責 instruction 的檔案交接：依 base path 推導 `.temp`、`.runi` 與
   `.tempd` inbox，聚合投遞、原子發佈、取件與釋放。它使用 `format` 驗證／序列化，
   但不執行 instruction，也不印診斷或決定行程退出碼。
@@ -32,12 +35,12 @@ aggregate → claim → execute → release 回合：有取到 instruction 就�
 信號只寫 `sig_atomic_t` 旗標，讓目前回合釋放 `.runi` 後回 0，`SA_RESETHAND` 讓同一
 信號的第二次恢復預設處置。`nanosleep` 被信號中斷後不補睡，因此閒置時也會立刻收尾。
 
-核心相依方向是 `inst ← format ← handoff` 與 `inst ← exec`；`handoff` 和 `exec`
-彼此不相依。公開函式庫
-`libaos_inst.so`（CMake target `aos::inst`）包含 `inst`、`format`、`handoff`、`exec`、
+核心相依方向是 `inst ← format ← handoff`、`inst ← format ← resolve` 與
+`inst ← exec`；`resolve`、`handoff` 和 `exec` 彼此不相依。公開函式庫
+`libaos_inst.so`（CMake target `aos::inst`）包含 `inst`、`format`、`resolve`、`handoff`、`exec`、
 spawn 準備，以及 C ABI；`run` 則另外編成一個不安裝、不進 `aos::inst` 的
 OBJECT library（`aos_inst_cli`）。`run` 只透過 `aos::inst` 的公開 API 呼叫
-四個函式庫分層，這也順便驗證了公開介面本身就夠用，不必開後門。
+五個函式庫分層，這也順便驗證了公開介面本身就夠用，不必開後門。
 
 唯一的執行檔 `aos`（`app/`）沒有任何業務邏輯：`main` 只依 `argv[1]` 查一張由
 各小專案登記出來的子命令表，把剩下的引數原樣轉發給對應的進入點。`inst` 小專案

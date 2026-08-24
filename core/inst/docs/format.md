@@ -3,6 +3,7 @@
 這份文件回答「一份 instruction JSON 可以寫哪些欄位、如何驗證」。instruction 是描述
 一個 POSIX 命令及其執行設定的 JSON 記錄。它不說投遞檔如何彙整（見
 [handoff](handoff.md)），也不說 fork、逾時與狀態如何運作（見[執行語意](exec.md)）。
+指示詞如何取得外部值則見[解析指南](resolve.md)。
 
 `aos exec [folder]` 會讀取 `<folder>/.aos/inst.json` 的完整 JSON 文件；folder 省略時
 使用目前目錄。頂層可以是：
@@ -18,15 +19,20 @@
 
 | 鍵 | JSON 型別 | 必填 | 預設 | 意義 |
 | --- | --- | --- | --- | --- |
-| `argv` | array of strings | yes | none | 指令及其引數。此陣列與 `argv[0]` 都不得為空。 |
+| `argv` | array of strings/directives | yes | none | 指令及其引數。解析後此陣列與 `argv[0]` 都不得為空。 |
 | `stdin` | string | no | `""` | 以唯讀方式開啟、作為標準輸入的檔案；為空時繼承呼叫端的 stdin。 |
 | `stdout` | string | no | `""` | 作為標準輸出的檔案，必要時建立並截斷(清空)；為空時繼承 stdout。 |
-| `stderr` | string or `{"$opt":"merge"}` | no | `""` | 字串會作為標準錯誤的檔案，必要時建立並截斷(清空)；`merge` 會把 stderr 併入設定後的 stdout；省略或空字串時繼承 stderr。 |
+| `stderr` | string or directive | no | `""` | 字串會作為標準錯誤的檔案；`{"$opt":"merge"}` 併入 stdout，`{"$env":"X"}` 從環境取得路徑。 |
 | `exit` | string | no | `""` | 子行程結束後建立/截斷(清空)的檔案，寫入十進位狀態值加一個 LF；為空時捨棄。 |
 | `cwd` | string | no | `""` | 子行程的工作目錄；為空時使用 `<folder>`。相對路徑值從 `<folder>` 起算。 |
 | `env` | object, string values | no | `{}` | 在繼承的環境之上覆寫或新增變數；未提及的變數維持不變。 |
 | `timeout_ms` | unsigned integer | no | `0` | 執行時間上限（毫秒）；為零時無期限等待。 |
 | `parallel` | boolean | no | `false` | 為 `true` 時 CLI 以獨立 thread 執行這一筆，不等它完成就啟動下一筆；整批結束前仍會等待它。 |
+
+所有字串值位置，也就是 `argv` 元素、五個路徑欄位及 `env` 的值，都可用
+`{"$env":"NAME"}`。format 只保存這個未解析指示詞；在執行前由 resolve 層讀取
+呼叫端明示的環境。未解析時寫回仍是同一個物件，解析後才輸出實際字串。`env` 的 key
+與 `timeout_ms` 不接受指示詞。
 
 環境（變數）的 key 必須非空，且不得含有 `=`。JSON 物件的 key 在記憶體中的
 指令裡是唯一的；來源中重複的 key 由 JSON 解析器處理，而非提供一套有序的
@@ -60,7 +66,7 @@
 | `argv` 缺少/為空，或 `argv[0]` 為空 | `EmptyArgv` / `AOS_INST_EMPTY_ARGV` |
 | 環境（變數）key 為空，或 key 含有 `=` | `EnvKeyInvalid` / `AOS_INST_ENV_KEY_INVALID` |
 | 指示詞物件不是剛好一個 key | `DirectiveKeyCountInvalid` / `AOS_INST_DIRECTIVE_KEY_COUNT_INVALID` |
-| 指示詞的唯一 key 不是 `$opt` | `UnknownDirective` / `AOS_INST_UNKNOWN_DIRECTIVE` |
+| 指示詞的唯一 key 不是 `$opt` 或 `$env` | `UnknownDirective` / `AOS_INST_UNKNOWN_DIRECTIVE` |
 | 指示詞的值不是字串 | `DirectiveValueTypeMismatch` / `AOS_INST_DIRECTIVE_VALUE_TYPE_MISMATCH` |
 | `$opt` 的值不是已知的 `merge` | `UnknownOption` / `AOS_INST_UNKNOWN_OPTION` |
 

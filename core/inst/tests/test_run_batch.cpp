@@ -57,3 +57,15 @@ TEST_CASE("exec joins parallel records before returning") {
     CHECK(read_file(dir.path + "/joined") == "joined");
     CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
 }
+
+TEST_CASE("exec resolves environment directives before running") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    REQUIRE(setenv("AOS_TEST_RESOLVE_VALUE", "resolved-value", 1) == 0);
+    write_inst(dir,
+               R"({"argv":["/bin/sh","-c","printf %s \"$1\" > result","sh",{"$env":"AOS_TEST_RESOLVE_VALUE"}]})");
+
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/result") == "resolved-value");
+    CHECK(unsetenv("AOS_TEST_RESOLVE_VALUE") == 0);
+}

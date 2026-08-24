@@ -16,9 +16,10 @@ repo 根
   aos::common（common/，header-only，目前只有 <aos/export.h>）
        ▲ 每個小專案都連它
   aos::inst（core/inst/，核心小專案 → libaos_inst.so）
-       │  C++ 分層，相依單向：inst ← format ← handoff；inst ← exec
+       │  C++ 分層，相依單向：inst ← format ← handoff；inst ← format ← resolve；inst ← exec
        │    inst    inst_t 資料結構、狀態列舉             （src/inst.cpp）
        │    format  唯一懂 JSON schema 的層                （src/format.cpp）
+       │    resolve 以明示 context 解析 `$env`               （src/resolve.cpp）
        │    handoff instruction 檔案聚合／取件／釋放        （src/handoff.cpp）
        │    exec    唯一碰 fork/exec/waitpid 的層          （src/exec.cpp + spawn_prep.cpp + wait.cpp）
        │  外加兩層，各自只往下看：
@@ -42,7 +43,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 三個一直會用到的概念：
 
-1. **單向相依是鐵律**：`inst ← format ← handoff` 與 `inst ← exec`——handoff 使用 format，exec 只使用 inst，兩者互相不知道對方存在。四組宣告目前併在同一個標頭 `include/aos/inst.hpp` 裡，**併在一起不代表可以互相引用**，標頭開頭那段註解就是講這件事。
+1. **單向相依是鐵律**：`inst ← format ← handoff`、`inst ← format ← resolve` 與 `inst ← exec`——handoff 與 resolve 使用 format，exec 只使用 inst，三者互相不知道對方存在。五組宣告目前併在同一個標頭 `include/aos/inst.hpp` 裡，**併在一起不代表可以互相引用**，標頭開頭那段註解就是講這件事。
 2. **一個執行檔、多個子命令**：不會有第二個 `main`。新的小專案（未來的 `llm/`、`tooljson/`……）靠自己的 CMakeLists 呼叫 `aos_add_subcommand()` 把子命令掛進 `app/` 的分派表，不用改 `app/` 本身。
 3. **每個小專案是一顆獨立的 shared lib**：`aos::inst` → `libaos_inst.so`。傘狀 target 有 `aos::core`（核心）、`aos::modules`（擴充，有擴充存在時才建）、`aos::aos`（全部）；`AOS_BUILD_MERGED_LIB` 開了才會多產出一顆合併的 `libaos.so`（`aos::merged`）。
 4. **小專案分兩類，靠所在目錄決定**：`core/` 是 aos 的基本組成（一定會建），`modules/` 是可選的擴充（`-DAOS_BUILD_MODULES=OFF` 整批不建）。建置方式完全一樣，`core/CMakeLists.txt` 與 `modules/CMakeLists.txt` 各自 `set` 了 `AOS_SUBPROJECT_CATEGORY`，`aos_add_subproject()` 讀它來分類。判準：拿掉它 aos 就不再是 aos → core。
@@ -85,15 +86,16 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 | 關鍵型別／函式 |
 |------|------|----------------|
-| `inst.hpp` | C++ API。四個分層的宣告都在這（見上面「單向相依是鐵律」）：inst／format／handoff／exec | `inst_t`、`InstState`、`read_one`／`read_all`／`write_one`／`write_all`、`HandoffState`／`HandoffResult`／`HandoffIssue`、`aggregate_instructions`／`claim_instruction`／`release_instruction`、`ExecState`／`ExecResult`／`execute()` 與各 `to_string` |
+| `inst.hpp` | C++ API。五個分層的宣告都在這（見上面「單向相依是鐵律」）：inst／format／resolve／handoff／exec | `inst_t`、待解析指示詞位置、`InstState`、`read_*`／`write_*`／`validate`、`ResolveContext`／`ResolveResult`／`resolve`、handoff API、`ExecState`／`ExecResult`／`execute()` 與各 `to_string` |
 | `inst.h` | C ABI（給非 C++ 呼叫者用），是 `inst.hpp` 的鏡像，型別靠 `static_assert` 對齊（見 `src/capi.cpp`） | `aos_instruction`（opaque）、`aos_exec_result`、`aos_inst_state`／`aos_inst_field`／`aos_exec_state`、`aos_instruction_new/free/clear`、`aos_instruction_argc/arg/push_arg`、`aos_instruction_field/set_field`、`aos_instruction_stderr_merge/set_stderr_merge`、`aos_instruction_env_count/env_key/env_value/set_env`、`aos_instruction_timeout_ms/set_timeout_ms`、`aos_instruction_parallel/set_parallel`、`aos_instruction_read_buffer/read_fd/read_file`、`aos_instruction_write_buffer/write_fd/write_file`、`aos_instruction_execute`、`aos_*_state_string`、`aos_version_string` |
 
-### core/inst/src/ — 四個核心分層
+### core/inst/src/ — 五個核心分層
 
 | 檔案 | 負責 |
 |------|------|
 | `inst.cpp` | **inst 層**：`inst_t::clear()`、`to_string(InstState)`。不碰位元組／JSON，也不碰行程 |
-| `format.cpp` | **format 層**：唯一懂 JSON schema 的檔。已知欄位共 9 個（`argv`／`stdin`／`stdout`／`stderr`／`exit`／`cwd`／`env`／`timeout_ms`／`parallel`），其中 `stderr` 接受路徑字串或 `{"$opt":"merge"}`；碰到不認得的 key 就回 `UnknownKey`。`read_one`／`read_all` 剖析＋驗證（`argv` 不可空、`env` key 不可空或含 `=`）；`write_one`／`write_all` 編回精簡 JSON——`write_one` 是單一物件、`write_all` 是**單一陣列**，都只在結尾補一個 LF。**不是 JSON Lines**（那本來就不是合法輸入）。用 `nlohmann::json`／`nlohmann::ordered_json`。只 catch `json::parse_error`——配置失敗的例外會往上拋 |
+| `format.cpp` | **format 層**：唯一懂 JSON schema 的檔。辨認字串位置的 `$env` 並記進 `pending_directives`，`stderr` 另接受 `{"$opt":"merge"}`；未解析指示詞可無損 write 回物件。`validate` 對仍是指示詞的位置延後值檢查；read/write 保持整批原子性。只 catch `json::parse_error`——配置失敗的例外會往上拋 |
+| `resolve.cpp` | **resolve 層**：把明示的 POSIX `envp` 捕捉成 `ResolveContext`，交易式替換 `$env`，失敗帶回欄位／索引／env key 與變數名稱；替換完清除 pending 並重新呼叫 format 驗證。不碰 JSON、handoff 或 exec |
 | `handoff.cpp` | **handoff 層**：從 instruction base path 推導 `.temp`／`.runi`／`.tempd`，負責投遞聚合、原子發佈、取件與釋放；只依賴 inst＋format，不印訊息、不執行 instruction |
 | `exec.cpp` | **exec 層**：唯一碰 `fork`／`execve`／`waitpid` 的檔。`execute()`：組 `argv`＋`envp`（透過 `spawn_prep`）→ `fork` → 子行程 `setpgid`＋重導向（stderr merge 時在 stdout 設好後 `dup2(1, 2)`）＋`chdir`＋`execve`（`run_child`，全程 async-signal-safe）→ 父行程視 `timeout_ms` 決定直接 `wait_retry` 或 `wait_until` 輪詢；逾時先對整個行程群組送 `SIGTERM`、給 `kTimeoutGraceMs`（2000ms）緩衝，仍不收就 `SIGKILL` 整個群組——打群組是因為忽略 `SIGTERM` 的孫行程才殺得掉。結束後若 `exit_path` 非空就把 exit code 寫進那個檔 |
 | `spawn_prep.hpp`／`.cpp` | **內部標頭**（不對外）。`prepare_spawn()`：在 `fork` 之前把所有會配置記憶體的準備工作做完——合併繼承的環境變數與 `inst.env`（後者覆蓋前者）、組 `envp`、若 `argv[0]` 沒有 `/` 就沿 `PATH`（或 `confstr(_CS_PATH)` 的預設值）逐段找可執行檔。子行程只拿到已經算好的穩定指標 |
@@ -125,7 +127,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `run_init.cpp` | 建立 `.aos/`、版本 1 與 `inst.tempd/` inbox，失敗時回滾剛建立的狀態 |
 | `run_exec.cpp` | 單回合：進入 world、驗版本、aggregate → claim → execute batch → release，並把結果映成診斷與 0／1／3 |
 | `run_loop.cpp` | `--loop` 的空回合輪詢、0／1／3 政策，以及兩段式 SIGINT／SIGTERM 收尾 |
-| `run_batch.hpp`／`run_batch.cpp` | CLI 內部批次迴圈：整批解析，同步執行一般記錄、複製 `parallel` 記錄進 thread，最後全數 join |
+| `run_batch.hpp`／`run_batch.cpp` | CLI 內部批次迴圈：整批解析後以父行程環境 resolve 全部記錄，再同步執行一般記錄、複製 `parallel` 記錄進 thread，最後全數 join；resolve 錯誤會印出記錄、位置與變數 |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）
 
@@ -136,6 +138,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | 檔案 | 涵蓋 |
 |------|------|
 | `test_format_read.cpp`／`test_format_write.cpp`／`test_format_malformed.cpp` | format 層：JSON round trip、各種壞輸入、已知/未知欄位 |
+| `test_resolve.cpp` | resolve 層：所有合法 `$env` 位置、缺少變數的位置資訊、解析後驗證、未解析 round trip、stderr 三態與明示 context |
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
 | `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release |
@@ -143,7 +146,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `test_run_init.cpp` | init、額外 argv 拒絕，以及 init／exec 的目前目錄預設 |
 | `test_run_loop.cpp` | loop argv、連續回合、失敗節流、信號收尾、遇 3 停止與目前目錄預設 |
 | `test_run_handoff.cpp` | CLI 的版本、空回合、彙整、隔離、取件、釋放與連續回合整合 |
-| `test_run_batch.cpp` | CLI 批次失敗、路徑基準、循序、parallel 與批次尾端 join |
+| `test_run_batch.cpp` | CLI 批次失敗、路徑基準、循序、parallel、批次尾端 join，以及 `$env` 實際執行整合 |
 | `exec_test_support.hpp` | 測試共用的小工具 |
 | `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
 
@@ -233,6 +236,7 @@ C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_test
 |------|------|
 | `architecture.md` | 分層為什麼這樣切、為什麼先把整份輸入讀完再執行、`fork` 兩側各自要做的工作（async-signal-safe 的界線在哪）|
 | `handoff.md` | 投遞、彙整、取件、釋放的原因、路徑、錯誤資料與完整公開 API 範例 |
+| `resolve.md` | resolve 分層的原因、未解析表示、`$env` context、驗證順序、錯誤位置與完整公開 API 範例 |
 | `format.md` | JSON schema 細節 |
 | `exec.md` | 執行語意細節 |
 | `capi.md`／`cxxapi.md` | C ABI／C++ API 的使用說明 |
