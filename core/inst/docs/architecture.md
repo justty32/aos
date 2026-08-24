@@ -1,28 +1,32 @@
 # 架構
 
-這份實作刻意切成四個範圍狹窄的分層：
+這份實作刻意切成五個範圍狹窄的分層：
 
 - `inst` 擁有 `inst_t`、它的公開狀態，以及清除與狀態字串的輔助函式。
   它既不懂位元組／JSON，也不懂行程。
 - `format` 是唯一懂得 JSON 文件 schema 的分層。它把位元組緩衝區轉換成經過
   驗證的指令，也把指令轉回精簡的記錄；它完全不懂 `fork`、不懂路徑作為作業系統
   資源這件事，也不懂 CLI I/O。
+- `handoff` 負責 instruction 的檔案交接：依 base path 推導 `.temp`、`.runi` 與
+  `.tempd` inbox，聚合投遞、原子發佈、取件與釋放。它使用 `format` 驗證／序列化，
+  但不執行 instruction，也不印診斷或決定行程退出碼。
 - `exec` 接收一個已經建好的 `inst_t`。它負責環境變數與 PATH 的準備、
   `fork`/`execve`、重導向、行程群組、等待、逾時、狀態檔輸出，以及執行狀態；
   它從不剖析 JSON，也不讀取指令來源。
-- `run` 負責 `aos init` 建立世界，以及 `aos exec` 的版本檢查、完整讀取、取件
-  rename、CLI 診斷、整批剖析與依 `parallel` 決定同步執行或開 thread、最後 join
-  全部 thread 的批次迴圈。它也是原生 CLI
+- `run` 負責 `aos init` 建立世界，以及 `aos exec` 的版本檢查、呼叫 handoff、CLI
+  診斷與退出碼映射。既有的整批剖析與依 `parallel` 決定同步執行或開 thread、最後
+  join 全部 thread 的迴圈收在 CLI 內部的 `run_batch.cpp`。它也是原生 CLI
   這一側**唯一的例外邊界**：讀檔、剖析、執行三個階段都接住 `std::bad_alloc` 與
   `std::length_error`，轉成一行訊息與非零退出碼（C ABI 那側則是每個 `extern "C"`
   進入點各自接）。它透過 `aos_exec_cli_main` 與 `aos_init_cli_main` 兩個 C 連結
   進入點，掛成 `aos` 執行檔的 `exec` 與 `init` 子命令。
 
-`format` 和 `exec` 是兄弟關係，彼此不相依；兩者都相依於 `inst`。公開函式庫
-`libaos_inst.so`（CMake target `aos::inst`）包含 `inst`、`format`、`exec`、
+核心相依方向是 `inst ← format ← handoff` 與 `inst ← exec`；`handoff` 和 `exec`
+彼此不相依。公開函式庫
+`libaos_inst.so`（CMake target `aos::inst`）包含 `inst`、`format`、`handoff`、`exec`、
 spawn 準備，以及 C ABI；`run` 則另外編成一個不安裝、不進 `aos::inst` 的
 OBJECT library（`aos_inst_cli`）。`run` 只透過 `aos::inst` 的公開 API 呼叫
-前三層，這也順便驗證了公開介面本身就夠用，不必開後門。
+四個函式庫分層，這也順便驗證了公開介面本身就夠用，不必開後門。
 
 唯一的執行檔 `aos`（`app/`）沒有任何業務邏輯：`main` 只依 `argv[1]` 查一張由
 各小專案登記出來的子命令表，把剩下的引數原樣轉發給對應的進入點。`inst` 小專案
@@ -30,8 +34,11 @@ OBJECT library（`aos_inst_cli`）。`run` 只透過 `aos::inst` 的公開 API �
 
 ## 為什麼要先把整份輸入讀完
 
-runner 會把 `.aos/inst.json` 一路讀到 EOF，全部進到一個記憶體緩衝區裡，立刻
-rename 成 `.aos/inst.json.runi`，接著在啟動第一個命令之前剖析並驗證每一筆記錄。
+handoff 會先把 `.aos/inst.tempd/` 裡符合單一副檔名 `<name>.json` 的投遞依字典序
+聚合到 `.aos/inst.json`；物件與陣列都會攤平成一批，壞投遞改名為 `.bad` 並繼續。
+已有 `inst.json` 時不聚合，沒有有效記錄時也不發佈空批次。runner 接著把
+`.aos/inst.json` 一路讀到 EOF，全部進到一個記憶體緩衝區裡，立刻 rename 成
+`.aos/inst.json.runi`，並在啟動第一個命令之前剖析及驗證每一筆記錄。
 解析與執行正常返回後（不論結果為 0 或 1），會在所有 parallel thread join 完畢後
 unlink `.runi`；若 unlink 失敗，該回合回 1 並明確診斷。
 由此得到的保證是格式錯誤的批次原子性：只要第五筆記錄

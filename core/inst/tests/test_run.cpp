@@ -61,6 +61,7 @@ TEST_CASE("init creates version 1 and rejects an existing .aos directory") {
 
     CHECK(init_world(dir.path) == 0);
     CHECK(read_file(dir.path + "/.aos/version") == "1\n");
+    CHECK(std::filesystem::is_directory(dir.path + "/.aos/inst.tempd"));
     CHECK(init_world(dir.path) == 1);
     CHECK(read_file(dir.path + "/.aos/version") == "1\n");
 }
@@ -96,6 +97,65 @@ TEST_CASE("exec returns zero when no instruction is waiting") {
     TempDir dir;
     REQUIRE(init_world(dir.path) == 0);
     CHECK(exec_world(dir.path) == 0);
+    REQUIRE(std::filesystem::remove(dir.path + "/.aos/inst.tempd"));
+    CHECK(exec_world(dir.path) == 0);
+}
+
+TEST_CASE("exec aggregates two deliveries and removes them after publishing") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    const std::string inbox = dir.path + "/.aos/inst.tempd";
+    write_file(inbox + "/20.json",
+               R"({"argv":["/bin/sh","-c","printf second > second"]})");
+    write_file(inbox + "/10.json",
+               R"({"argv":["/bin/sh","-c","printf first > first"]})");
+
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/first") == "first");
+    CHECK(read_file(dir.path + "/second") == "second");
+    CHECK_FALSE(std::filesystem::exists(inbox + "/10.json"));
+    CHECK_FALSE(std::filesystem::exists(inbox + "/20.json"));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
+}
+
+TEST_CASE("exec isolates invalid deliveries and ignores status suffixes") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    const std::string inbox = dir.path + "/.aos/inst.tempd";
+    write_file(inbox + "/bad.json", "not json");
+    write_file(inbox + "/good.json",
+               R"({"argv":["/bin/sh","-c","printf good > good"]})");
+    write_file(inbox + "/later.json.temp",
+               R"({"argv":["/bin/sh","-c","printf temp > temp"]})");
+    write_file(inbox + "/old.json.bad",
+               R"({"argv":["/bin/sh","-c","printf bad > bad"]})");
+
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/good") == "good");
+    CHECK(std::filesystem::exists(inbox + "/bad.json.bad"));
+    CHECK(std::filesystem::exists(inbox + "/later.json.temp"));
+    CHECK(std::filesystem::exists(inbox + "/old.json.bad"));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/temp"));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/bad"));
+}
+
+TEST_CASE("exec leaves deliveries pending while inst.json already exists") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    const std::string inbox = dir.path + "/.aos/inst.tempd";
+    write_inst(dir,
+               R"({"argv":["/bin/sh","-c","printf current > current"]})");
+    write_file(inbox + "/next.json",
+               R"({"argv":["/bin/sh","-c","printf next > next"]})");
+
+    REQUIRE(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/current") == "current");
+    CHECK(std::filesystem::exists(inbox + "/next.json"));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/next"));
+
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/next") == "next");
+    CHECK_FALSE(std::filesystem::exists(inbox + "/next.json"));
 }
 
 TEST_CASE("exec refuses an existing runi with status three") {
