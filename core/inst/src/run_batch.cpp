@@ -35,6 +35,33 @@ ExecutionOutcome execute_one(inst_t &instruction) {
     return outcome;
 }
 
+void print_resolve_location(const ResolveResult &result) {
+    if (result.field == DirectiveField::Argv) {
+        std::fprintf(stderr, "argv[%zu]", result.argv_index);
+    } else if (result.field == DirectiveField::EnvValue) {
+        std::fprintf(stderr, "env[%s]", result.env_key.c_str());
+    } else {
+        std::fprintf(stderr, "%s", to_string(result.field));
+    }
+}
+
+void print_reference_error(const ResolveResult &result, ResolveState state) {
+    std::fprintf(stderr, "%s: %s#%s", to_string(state),
+                 result.reference_path.c_str(), result.pointer.c_str());
+    if (result.error != 0) {
+        std::fprintf(stderr, ": %s", std::strerror(result.error));
+    }
+    if (!result.reference_chain.empty()) {
+        std::fprintf(stderr, ": chain ");
+        for (std::size_t index = 0;
+             index < result.reference_chain.size(); ++index) {
+            if (index != 0) std::fprintf(stderr, " -> ");
+            std::fprintf(stderr, "%s", result.reference_chain[index].c_str());
+        }
+    }
+    std::fputc('\n', stderr);
+}
+
 }  // namespace
 
 int execute_batch(const std::string &buffer, const char *source) {
@@ -99,11 +126,26 @@ int execute_batch(const std::string &buffer, const char *source) {
                         source, index + 1, to_string(result.field),
                         result.variable.c_str());
                 }
+                if (!result.reference_path.empty()) {
+                    std::fprintf(stderr, "aos exec: referenced from %s#%s\n",
+                                 result.reference_path.c_str(),
+                                 result.pointer.c_str());
+                }
             } else if (state == ResolveState::ValidationFailed) {
                 std::fprintf(stderr,
                              "aos exec: %s: record %zu: after resolve: %s\n",
                              source, index + 1,
                              to_string(result.validation_state));
+            } else if (state == ResolveState::ReferenceReadFailed ||
+                       state == ResolveState::ReferenceJsonInvalid ||
+                       state == ResolveState::ReferencePointerInvalid ||
+                       state == ResolveState::ReferenceValueInvalid ||
+                       state == ResolveState::ReferenceCycle) {
+                std::fprintf(stderr, "aos exec: %s: record %zu: ", source,
+                             index + 1);
+                print_resolve_location(result);
+                std::fprintf(stderr, ": ");
+                print_reference_error(result, state);
             } else {
                 std::fprintf(stderr, "aos exec: %s: record %zu: %s\n",
                              source, index + 1, to_string(state));

@@ -69,3 +69,14 @@ TEST_CASE("exec resolves environment directives before running") {
     CHECK(read_file(dir.path + "/result") == "resolved-value");
     CHECK(unsetenv("AOS_TEST_RESOLVE_VALUE") == 0);
 }
+
+TEST_CASE("exec resolves file references from the world folder") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_file(dir.path + "/values.json", R"({"value":"from-reference"})");
+    write_inst(dir,
+               R"({"argv":["/bin/sh","-c","printf %s \"$1\" > result","sh",{"$ref":"values.json#/value"}]})");
+
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/result") == "from-reference");
+}

@@ -86,6 +86,25 @@ cat my-world/env.txt
 hello from environment
 ```
 
+另一種做法是用 `$ref` 從 world 裡的另一份 JSON 取一個值。`#` 後面是 JSON Pointer，
+用來指出檔案內的位置；相對檔名以 world 為基準：
+
+```bash
+printf '%s\n' '{"message":"hello from reference"}' > my-world/values.json
+printf '%s\n' '{"argv":["printf","%s\\n",{"$ref":"values.json#/message"}],"stdout":"ref.txt"}' \
+  > my-world/.aos/inst.json
+aos exec my-world
+cat my-world/ref.txt
+```
+
+```text
+hello from reference
+```
+
+引用取回另一個 `$ref` 或 `$env` 時會繼續解析，沒有固定深度限制；但同一條鏈再次
+遇到相同的「正規化檔案路徑＋pointer」會以循環錯誤停止。完整規則與可修正的錯誤資料
+見 [resolve 指南](../core/inst/docs/resolve.md)。
+
 要持續推進同一個 world，使用毫秒為單位的 loop 模式：
 
 ```bash

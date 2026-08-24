@@ -21,7 +21,7 @@
 `EnvKeyInvalid`、`DirectiveKeyCountInvalid`、`UnknownDirective`、
 `DirectiveValueTypeMismatch`，以及 `UnknownOption`。
 
-format 讀到 `$env` 時，會在 `inst_t::pending_directives` 記住種類、位置和變數名稱，
+format 讀到 `$env` 或 `$ref` 時，會在 `inst_t::pending_directives` 記住種類、位置和參數，
 既有字串欄位暫時維持空值。`ResolveContext` 明示環境快照與相對路徑基準；
 `ResolveResult` 在失敗時指出欄位、索引或 env key，以及變數名稱。
 
@@ -63,11 +63,13 @@ instruction，以及 inbox／讀取／寫入／rename／釋放失敗。`HandoffR
 第一個位元組**——任何一筆無效就完全不動 `out`，並透過選用的 `error_record` 回報
 以一為基底的記錄序號（成功時為零）。輸出可以直接餵回 `read_all`。
 
-`resolve(inst, context, result)` 以 `context.environment` 替換所有 `$env`，清除待解析
-項目後重新呼叫 `validate(inst)`。不存在的變數回
-`EnvironmentVariableMissing`；替換後值不合法回 `ValidationFailed`。失敗時採交易式
-語意，原本的 `inst` 不變。`capture_environment(envp, base_path, context)` 可把明示的
-POSIX `envp` 複製成 context；它不會套用 instruction 自己的 `env`。
+`resolve(inst, context, result)` 以 `context.environment` 替換 `$env`，並以
+`context.base_path` 解析 `$ref` 的相對檔名。引用可透過 RFC 6901 JSON Pointer 選值；
+巢狀指示詞會繼續解析，正規化檔案路徑加 pointer 用來偵測循環。完成後清除待解析項目
+並重新呼叫 `validate(inst)`。不存在的變數回 `EnvironmentVariableMissing`；引用另有
+讀檔、JSON、pointer、值型別與循環狀態；替換後值不合法回 `ValidationFailed`。失敗時
+採交易式語意，原本的 `inst` 不變。`capture_environment(envp, base_path, context)` 可把
+明示的 POSIX `envp` 複製成 context；它不會套用 instruction 自己的 `env`。
 
 `execute(inst, result)` 會重設 `result`、驗證 `argv` 非空、準備並執行一個子行程、
 等待、視情況寫出它的狀態檔，最後回傳一個 `ExecState`。子行程狀態非零時仍然回傳
