@@ -22,6 +22,11 @@
 `error`，在相關的 API 失敗時帶著 `errno`。子行程狀態與 API 錯誤兩者的差別，
 請參閱[執行語意](exec.md)。
 
+`HandoffState` 回報檔案交接的整體結果，包括成功、參數錯誤、已有 `.runi`、沒有
+instruction，以及 inbox／讀取／寫入／rename／釋放失敗。`HandoffResult` 帶出是否
+發佈、相關路徑、`errno`，以及可恢復的 `issues`；每個 `HandoffIssue` 會標示壞投遞、
+讀取失敗、隔離失敗或發佈後刪除失敗，並附路徑、`InstState` 或 `errno`。
+
 ## 函式
 
 `read_all(data, size, out, error_record)` 會解析一整份 JSON 文件。
@@ -54,7 +59,15 @@
 `ExecState::Ok`。這個非 const 的指令為 `argv` 提供穩定、可變的字元儲存空間；
 呼叫者在執行期間不得變動它。
 
-`to_string(InstState)` 與 `to_string(ExecState)` 會回傳指向靜態、以 NUL 結尾的診斷字串的指標，
+`aggregate_instructions(path, result)`、`claim_instruction(path, document, result)` 與
+`release_instruction(path, result)` 以一個結尾為 `.json` 的 instruction base path
+操作完整交接。它們分別推導 `path + ".temp"`、`path + ".runi"`，以及把結尾
+`.json` 換成 `.tempd` 的 inbox。聚合只收名字正好為 `<name>.json` 的檔案並按字典序
+攤平物件／陣列；壞投遞改名 `.bad` 後繼續，已有 base 時不碰 inbox，發佈成功後才
+刪除已接受投遞。缺少或沒有有效記錄的 inbox 是成功 no-op，不會發佈空批次。
+這三個 API 不印訊息、不執行 instruction，也不決定 CLI 退出碼。
+
+各狀態列舉（包含 `HandoffState`／`HandoffIssueKind`）的 `to_string` 會回傳指向靜態、以 NUL 結尾的診斷字串的指標，
 且為 `noexcept`。
 
 解析、序列化與執行準備都會用到會配置記憶體的 C++ 容器。配置失敗以及其他未預期的

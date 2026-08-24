@@ -10,8 +10,9 @@
 
 namespace aos {
 
-/* 三組宣告對應 src/ 裡三個分層，相依單向：inst ← format ← exec。
- * 併在同一個標頭裡不代表它們可以互相引用。 */
+/* 四組宣告對應 src/ 裡四個分層，相依單向：inst ← format ← handoff，
+ * inst ← exec。handoff 與 exec 互不相依；併在同一個標頭裡不代表它們
+ * 可以互相引用。 */
 
 enum class InstState {
     Ok,
@@ -58,6 +59,51 @@ AOS_API InstState write_one(const inst_t &inst, std::string &out);
 
 AOS_API InstState write_all(const std::vector<inst_t> &insts, std::string &out,
                             std::size_t *error_record);
+
+/* handoff：彙整、取件、釋放 instruction 檔，不執行 instruction。 */
+
+enum class HandoffState {
+    Ok,
+    InvalidArgument,
+    Busy,
+    NoInstruction,
+    InboxReadFailed,
+    InstructionReadFailed,
+    PublishWriteFailed,
+    RenameFailed,
+    ReleaseFailed,
+};
+
+enum class HandoffIssueKind {
+    InvalidDelivery,
+    DeliveryReadFailed,
+    IsolationFailed,
+    DeliveryRemoveFailed,
+};
+
+struct HandoffIssue {
+    HandoffIssueKind kind = HandoffIssueKind::InvalidDelivery;
+    std::string path;
+    InstState inst_state = InstState::Ok;
+    int error = 0;
+};
+
+struct HandoffResult {
+    bool published = false;
+    std::string path;
+    int error = 0;
+    std::vector<HandoffIssue> issues;
+};
+
+AOS_API HandoffState aggregate_instructions(
+    const std::string &instruction_path, HandoffResult &result);
+AOS_API HandoffState claim_instruction(
+    const std::string &instruction_path, std::string &document,
+    HandoffResult &result);
+AOS_API HandoffState release_instruction(
+    const std::string &instruction_path, HandoffResult &result);
+AOS_API const char *to_string(HandoffState state) noexcept;
+AOS_API const char *to_string(HandoffIssueKind kind) noexcept;
 
 /* exec：唯一碰 fork／exec／waitpid 的分層。 */
 

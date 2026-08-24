@@ -8,6 +8,7 @@ aos_add_subproject(inst
     SOURCES
         src/inst.cpp
         src/format.cpp
+        src/handoff.cpp
         src/spawn_prep.cpp
         src/wait.cpp
         src/exec.cpp
@@ -22,7 +23,7 @@ aos_add_subproject(inst
 # CLI 層另外放：它是 aos 執行檔的一部分，不屬於函式庫的公開介面，所以不進
 # aos::inst，也不被安裝。做成 OBJECT library 是為了讓執行檔與測試共用同一份
 # 編譯結果。它只透過公開 API 使用 aos::inst，等於順便驗證公開介面夠不夠用。
-add_library(aos_inst_cli OBJECT src/run.cpp)
+add_library(aos_inst_cli OBJECT src/run.cpp src/run_batch.cpp)
 target_link_libraries(aos_inst_cli PUBLIC aos::inst)
 
 aos_add_subcommand(
@@ -44,6 +45,7 @@ aos_add_test(aos_inst_tests
         tests/test_format_read.cpp
         tests/test_format_write.cpp
         tests/test_format_malformed.cpp
+        tests/test_handoff.cpp
         tests/test_exec_streams.cpp
         tests/test_exec_path.cpp
         tests/test_exec_status.cpp

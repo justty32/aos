@@ -30,14 +30,20 @@ printf '%s\n' '{"argv":["echo","hello"],"stdout":"hello.txt"}' \
 aos exec my-world
 ```
 
-`aos init <folder>` 要求 folder 已存在，建立 `.aos/` 並寫入版本 `1`。若 `.aos/`
+`aos init <folder>` 要求 folder 已存在，建立 `.aos/`、`inst.tempd/` inbox 並寫入版本 `1`。若 `.aos/`
 已存在會明確拒絕，不會覆寫。整個 `.aos/` 都是本機執行狀態，應加入 `.gitignore`。
 
-`aos exec <folder>` 讀取 `.aos/inst.json`；它可以是**一個** JSON 物件，或**一個陣列**
+`aos exec <folder>` 會先依檔名的字典序聚合 `.aos/inst.tempd/<name>.json`，再讀取
+`.aos/inst.json`；每份投遞可以是**一個** JSON 物件，或**一個陣列**
 的物件。檔案會先完整讀入並立刻 rename 成 `inst.json.runi`，然後整批驗證；所以第 5
 筆有語法錯誤時前 4 筆不會執行。回合正常返回後（包含退出碼 1）會刪除 `.runi`；只有
 crash、被 kill 或斷電才會留下它。沒有 `inst.json` 是正常的空回合，安靜回 0；若啟動
 時 `.runi` 已存在則拒絕並回 3。
+
+聚合只接受恰好一個副檔名的 `<name>.json`；`.temp`、`.bad` 與 `name.part.json` 都
+不會被取走。語法或 schema 錯誤的投遞會改名為 `.bad`、印警告，其他有效投遞仍會
+發佈。已有 `inst.json` 時會先執行它並保留 inbox，留待下一回合；有效批次發佈完成
+後才刪除其來源投遞，空 inbox 不會製造 `[]`。
 
 ```json
 [
@@ -165,9 +171,10 @@ int main() {
 }
 ```
 
-`inst` 的公開介面分三層，相依單向 `inst ← format ← exec`：`inst_t` 與狀態列舉、
-`read_*`/`write_*`（唯一懂 JSON schema 的一層）、`execute()`（唯一碰
-`fork`/`exec` 的一層）。三組宣告併在同一個標頭裡**不代表它們可以互相引用**。
+`inst` 的公開介面分四層，相依單向 `inst ← format ← handoff` 與 `inst ← exec`：
+`inst_t` 與狀態列舉、`read_*`/`write_*`（唯一懂 JSON schema 的一層）、檔案交接
+API，以及 `execute()`（唯一碰 `fork`/`exec` 的一層）。handoff 與 exec 互不相依；
+宣告併在同一個標頭裡**不代表它們可以互相引用**。
 逐項說明見 [`core/inst/docs/cxxapi.md`](../core/inst/docs/cxxapi.md)。
 
 ## 錯誤處理的契約

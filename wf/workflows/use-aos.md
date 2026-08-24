@@ -37,7 +37,7 @@ aos --help          # 裝好了的話會列出所有子命令
 
 ```bash
 aos init world
-printf '%s\n' '{"argv":["echo","hi"]}' > world/.aos/inst.json
+printf '%s\n' '{"argv":["echo","hi"]}' > world/.aos/inst.tempd/001.json
 aos exec world
 ```
 
@@ -63,7 +63,9 @@ $ aos exec world ; echo $?
 
 寫給使用者的腳本如果需要「指令失敗就中止」，你要自己讀 `exit` 檔判斷。
 
-**2. `inst.json` 會完整讀入並 rename 成 `.runi`，再整批驗證與執行。** 第 5 筆有錯
+**2. `inst.tempd/<name>.json` 會先按字典序聚合，再由 `inst.json` 完整讀入並 rename
+成 `.runi`，整批驗證與執行。** 只收恰好一個副檔名的檔案；壞投遞隔離為 `.bad`
+且不阻擋有效投遞。已有 `inst.json` 時 inbox 留給下一回合。第 5 筆有錯
 的話前 4 筆不會跑；正常返回（含回 1）會刪除 `.runi`，crash／被 kill 才會留下。
 它在啟動時已存在，下一次 `aos exec` 會回 3。
 
