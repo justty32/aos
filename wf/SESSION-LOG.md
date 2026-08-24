@@ -32,6 +32,19 @@
   inst ← format ← resolve、inst ← exec。
   **下一步照 roadmap 是 T5 agent loop**——用外部 LLM CLI，**不需要新的 C++**，
   產出是規格（哪裡痛就是 `aos agent` 該收掉的東西），不是程式。
+- **2026-08-24 回頭審查整套東西**，抓到兩個 bug（都已修，`b70a016`）：`--loop 0`
+  會空轉吃掉一顆核心（實測 3 秒 292 個 CPU tick，修正後 13）、以及合法但沒有任何
+  instruction 的空投遞永遠不會被消化。文件也回頭同步了（`9701f21`）——規格開頭還
+  寫著「尚未實作」。
+  **審查找到但還沒做的兩個缺口**，已記進
+  [`.aos` 標準第十二節](../docs/aos-folder.md)的「仍然開著的」：
+  1. **投遞那一步沒有實作**。三步協定裡彙整／取件／釋放都有函式，只有投遞
+     （先寫 `.temp` 再 `rename`）沒有。整套協定的安全性靠的就是這一步，現在它是
+     口頭約定。**這是 T5 最直接的前置條件**——agent loop 的第一個動作就是產生指令。
+  2. **「世界」本身沒有抽象**。handoff 三支以 instruction 檔路徑為參數（所以已經
+     能對 `insts/llm.json` 用），但「`.aos` 在不在」「`version` 認不認得」
+     「`chdir` 到哪」寫死在 `aos exec` 裡。等 `aos llm exec` 出現要嘛複製一份、
+     要嘛那時再抽。
 - **程式由 codex 寫、我審查**：codex 裝在 WSL（`~/.local/bin/codex`），任務書放
   `/tmp/aos-task*.md`。我出規格與驗收條件、審 diff、獨立重跑 ctest，再決定 commit。
 - **建置環境是 WSL**：vcpkg 在 WSL 的 `~/dev/vcpkg`（Windows 那側沒有）。
