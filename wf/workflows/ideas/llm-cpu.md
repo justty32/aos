@@ -9,23 +9,28 @@
 西**，包括 `aos` 自己。
 
 ```text
-.aos/inst 的一筆 instruction:  aos llm next
-        ↓ （對 inst 而言只是普通的 POSIX 指令）
-aos llm next 讀 .aos/llm_inst，做「類似的事情」：
+.aos/inst.json 的一筆 instruction:  aos llm exec
+        ↓ （對 exec 這顆 CPU 而言只是普通的 POSIX 指令）
+aos llm exec 讀 .aos/insts/llm.json，做「類似的事情」：
         取出這筆 LLM instruction → 執行 → 排下一回合
 ```
 
+> **命名警告**：本頁下面「方案 A：單一 `aos exec` 入口」寫於改名之前，那裡的
+> `aos exec` 指的是「一個吞下所有職責的巨型入口」。**現在的 `aos exec` 是 process CPU
+> 的子命令**（原 `aos inst`），兩者不是同一個東西，讀下面時要換算。版面與 `.temp`／
+> `.runi` 交接協定見 [回合制資料夾](turn-based-folder.md)。
+
 **「轉介到另一顆 CPU」的真正內容就是 `exec`**：不是某種跨處理器協定或訊息匯流排，
-而是用 POSIX 跑另一支程式（`aos llm inst` / `aos llm next`）。要交接的資訊走 argv、
+而是用 POSIX 跑另一支程式（`aos llm exec`）。要交接的資訊走 argv、
 env 與檔案系統上的 instruction 檔；下面 B 方案講的「I/O 交換區」只是這支程式**如果**
 選擇非同步時才需要的東西，不是機制的前提。
 
-所以 LLM CPU 的回合**是被 process CPU 的回合叫出來的**：`.aos/inst` 裡出現
-`aos llm next`，LLM 這顆 CPU 才走一步。它自己不需要另養一支從頭到尾的迴圈。基礎的
+所以 LLM CPU 的回合**是被 process CPU 的回合叫出來的**：`.aos/inst.json` 裡出現
+`aos llm exec`，LLM 這顆 CPU 才走一步。它自己不需要另養一支從頭到尾的迴圈。基礎的
 回合模型見 [指定資料夾的回合制演化模型](turn-based-folder.md)。
 
 這件事**縮小了下面「入口架構的兩個方向」的爭點**，但沒有整個消滅它：投遞路徑已經
-統一（都經由 `inst` 的一筆指令），剩下的是 `aos llm next` 這支程式**自己跑推理**，
+統一（都經由 `.aos/inst.json` 的一筆指令），剩下的是 `aos llm exec` 這支程式**自己跑推理**，
 還是只當**全域排程器的 client**。排程與資源有限性的問題原封不動仍在。
 
 ## 目前的工作模型（尚未最終拍板）
@@ -42,13 +47,13 @@ LLM 是另一種 CPU，但它是有限資源，不能假設每個資料夾都擁
 工作的唯一入口，LLM 導向與排程都藏在 `aos exec` 內部；使用者仍在考慮兩者取捨。
 
 ```text
-folder A/.aos/inst/llm.json ─┐
-folder B/.aos/inst/llm.json ─┼→ aos llm daemon → 全域排程 → LLM CPU
-folder C/.aos/inst/llm.json ─┘                         ↓
+folder A/.aos/insts/llm.json ─┐
+folder B/.aos/insts/llm.json ─┼→ aos llm daemon → 全域排程 → LLM CPU
+folder C/.aos/insts/llm.json ─┘                         ↓
                                       思考／使用工具／推進對應 folder
 ```
 
-- 每個資料夾仍以 `.aos/inst/llm.json` 提交自己的 LLM instruction。
+- 每個資料夾仍以 `.aos/insts/llm.json` 提交自己的 LLM instruction。
 - 全域 daemon 負責發現／管理這些資料夾，而不是每個資料夾各自啟動一支 LLM daemon。
 - daemon 從所有待處理 instruction 中選出下一筆，取得有限的 LLM 執行資源，並把結果
   作用回該 instruction 所屬的資料夾。
@@ -94,7 +99,7 @@ global LLM CPU daemon                        │
 process CPU 需要結果時 ← 回來查交換區 ──────┘
 ```
 
-這裡的 `.aos/inst/llm.json` 是「向 LLM CPU 發指令」的候選入口；實際交換區還需要能
+這裡的 `.aos/insts/llm.json` 是「向 LLM CPU 發指令」的候選入口；實際交換區還需要能
 表達 request identity、輸入快照、pending／running／done／error 狀態與結果。確切布局
 尚未決定。
 
@@ -102,8 +107,8 @@ process CPU 需要結果時 ← 回來查交換區 ──────┘
 狀態機、交換區清理與跨處理器同步都比單一入口複雜。
 
 > 目前不把 A 或 B 寫成定案，但上面的分層前提已經改寫了題目：使用者面對的單一入口
-> 就是 `inst`（`aos llm next` 只是其中一筆指令），A 那種「另造一個 `aos exec` 巨型
-> 入口」不再必要。真正還沒答的是 `aos llm next` 背後——同一行程內直接推理，還是把
+> 就是 `.aos/inst.json`（`aos llm exec` 只是其中一筆指令），A 那種「另造一個吞下所有
+> 職責的巨型入口」不再必要。真正還沒答的是 `aos llm exec` 背後——同一行程內直接推理，還是把
 > 工作交給獨立的全域 daemon 並透過交換區取回結果。
 
 ## 排程器的責任
@@ -129,15 +134,14 @@ process CPU 需要結果時 ← 回來查交換區 ──────┘
 - 多個 daemon instance 如何互斥，避免同一份 instruction 被重複取得。
 - LLM CPU 與一般 process CPU 同時修改同一資料夾時的鎖定、回合順序與因果關係。
 - LLM CPU 產生的下一回合寫入共用 `.aos/next/`，還是 processor 專屬 queue。
-- `.aos/inst.json` 與 `.aos/inst/llm.json` 最終是否統一成
-  `.aos/inst/<processor>.json` 布局。
-- 是否能同時保留 A 的簡單介面與 B 的隔離：`aos llm next` 只當 router／client，真正
+- 是否能同時保留 A 的簡單介面與 B 的隔離：`aos llm exec` 只當 router／client，真正
   執行交給獨立 daemon，而不是全部職責都留在單一行程內。
-- `aos llm next` 是否阻塞本回合：等模型回覆才返回（回合語意單純，但長回合會卡住該
+- `aos llm exec` 是否阻塞本回合：等模型回覆才返回（回合語意單純，但長回合會卡住該
   資料夾的 process CPU），或投遞後立即返回、由後續回合取結果。
-- LLM instruction 檔的位置與名稱：`.aos/llm_inst`、`.aos/inst/llm.json`，或其他布局；
-  要與 [回合制模型](turn-based-folder.md) 的路徑問題一起拍板。
-- 若之後還有第三種抽象 CPU，`aos <processor> next` + 專屬 instruction 檔是否成為通則，
+- LLM instruction 檔的位置目前的工作假設是 `.aos/insts/llm.json`（需要多份時可以是
+  `.aos/insts/llm/xxx.json`），見 [回合制模型](turn-based-folder.md) 的版面段。**尚未
+  定案**。
+- 若之後還有第三種抽象 CPU，`aos <processor> exec` + `.aos/insts/<processor>.json` 是否成為通則，
   以及這個形狀要不要抽成共用機制而非各自實作。
 - I/O 交換區的 request ID、狀態機、結果格式、持久化、取消、逾時與垃圾回收協定。
 - process CPU 何時、用 polling／通知或後續 instruction 回來取得 LLM 結果。

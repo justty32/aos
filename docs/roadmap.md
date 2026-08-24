@@ -53,7 +53,7 @@ tool call 翻譯成一筆 instruction」**，是模型真正需要的東西。
 
 錯的是 `Bot::ask()` 這個形狀：**同步問一句、回一個 `Reply`、對話狀態留在記憶體裡**。
 模型要的是反過來的東西——**一次 LLM 回合的產出是「下一回合的 instruction」，狀態留在
-資料夾裡**。一支 `aos llm inst <folder>` 跑完就結束，記憶體什麼都不留。
+資料夾裡**。一支 `aos llm exec <folder>` 跑完就結束，記憶體什麼都不留。
 
 ### 一句話的診斷
 
@@ -69,9 +69,10 @@ tool call 翻譯成一筆 instruction」**，是模型真正需要的東西。
 
 每階段獨立驗收，前一階段沒綠不進下一階段。
 
-### T1 — `aos inst <folder>`：回合原語　【建議先做】
+### T1 — `aos exec <folder>`：回合原語　【建議先做】
 
-`argv[1]` 是資料夾時，改讀該資料夾的 instruction 檔，語意是「**消費一回合**」：
+新子命令 `aos exec`，參數是資料夾，讀 `<folder>/.aos/inst.json`，語意是
+「**消費一回合**」：
 
 ```text
 完整讀入 → 立刻取走（見 T2）→ 以該資料夾為基準執行 → 結束
@@ -81,27 +82,37 @@ tool call 翻譯成一筆 instruction」**，是模型真正需要的東西。
 - 沒有迴圈、沒有 daemon、沒有 `.aos/next/`。跑一次就是一回合。
 - 沒有 instruction 檔時：安靜結束、退出碼 0（「停留在目前回合」不是錯誤）。
 
-**驗收**：同一個資料夾連跑兩次 `aos inst <folder>`，第一次執行、第二次無事可做。
-instruction 檔在執行**之前**就已經不在原位。
+**驗收**：同一個資料夾連跑兩次 `aos exec <folder>`，第一次執行、第二次無事可做。
+`.aos/inst.json` 在執行**之前**就已經不在原位。
 
-### T2 — 取件與投遞協定：`rename` 兩邊各一次　【建議】
+### T2 — 取件與投遞協定：`.temp` / `.runi`
 
-回合模型的「立刻刪除」用 `rename()` 實作，一次解決兩個開放問題：
+協定由使用者指定，兩邊各一次 `rename`：
 
-| 問題 | 做法 |
+```text
+生產者：  .aos/inst.json.temp  ──rename──▶  .aos/inst.json       （投遞）
+消費者：  .aos/inst.json       ──rename──▶  .aos/inst.json.runi  （取件，讀完立刻做）
+```
+
+| 問題 | 這樣就解掉 |
 |---|---|
-| 讀到寫了一半的 JSON | **生產者**寫暫存檔 → `rename` 進位置。`rename` 是原子的，讀到的一定是完整檔 |
-| 原子取件 + crash 後查得到 | **消費者**把 instruction 檔 `rename` 到 `<...>/running/<turn-id>`，再執行 |
+| 讀到寫了一半的 JSON | 生產者先寫 `.temp`，寫完才 `rename`。`rename` 原子，讀到的一定是完整檔 |
+| 原子取件 + crash 後查得到 | 消費者讀完立刻 `rename` 成 `.runi`，然後才執行 |
 
 對回合語意來說，`rename` 走了就等於刪了——「先刪再跑」不變。但它順手保留了現場：
-crash 之後那份 `running/` 還在，**要不要恢復是之後的決定，不是現在要做的功能**。
+crash 之後那份 `.runi` 還在，**要不要恢復是之後的決定，不是現在要做的功能**。
 第一版只要求「留著、不自動重跑」。
+
+其他 CPU（如 `aos llm exec`）**最好也遵循同一套 `.temp` / `.runi`，但不強迫**。
 
 **驗收**：在取件前、取件後執行前、執行中三個點殺掉 process，資料夾都只會呈現
 「完整的舊狀態」或「完整的新狀態」，不會出現半份 JSON，也不會自動重放已經發生的
 副作用。
 
-### T3 — `.aos/next/` 彙整與發布：接出下一回合　【建議】
+### T3 — 彙整與發布：接出下一回合　【使用者已表示彙整另案討論】
+
+> 使用者已說明：**彙整是另一個功能，之後另外討論**。以下是 T2 之前寫的草稿，等那次
+> 討論的結果覆蓋，先不要照著做。
 
 本回合結束後掃 `.aos/next/`，彙整成下一份 instruction 批次並發布。
 
@@ -111,14 +122,14 @@ crash 之後那份 `running/` 還在，**要不要恢復是之後的決定，不
 - 壞掉的 next 檔：**隔離到一旁並繼續**，不要整批停住（建議）。
 
 **驗收**：一個資料夾能自己接兩回合——第一回合的指令寫 `.aos/next/`，第二次呼叫
-`aos inst <folder>` 就跑到了下一回合的內容。
+`aos exec <folder>` 就跑到了下一回合的內容。
 
 ### T4 — 迴圈：先不要寫 daemon　【建議】
 
 模型說 daemon「只是反覆觸發同一個原語」。既然如此，**第一個 daemon 就用 shell**：
 
 ```bash
-while true; do aos inst ./myfolder; sleep 1; done
+while true; do aos exec ./myfolder; sleep 1; done
 ```
 
 這不是偷懶，是驗證：如果這樣就夠用，`core/daemon` 就還不該存在；如果不夠用，**不夠
@@ -127,14 +138,14 @@ while true; do aos inst ./myfolder; sleep 1; done
 
 **驗收**：寫下「shell loop 撐不住的具體場景」清單。清單是空的就不做 daemon。
 
-### T5 — 第一顆抽象 CPU：`aos llm inst <folder>`
+### T5 — 第一顆抽象 CPU：`aos llm exec <folder>`
 
 到這裡才碰 llms／tooljson。形狀已經定了：它是**被 inst `exec` 起來的一支普通程式**。
 
 ```text
-.aos 的一筆 instruction: ["aos","llm","inst","."]
-        ↓ （對 inst 而言只是普通 POSIX 指令）
-讀該資料夾的 LLM instruction 檔（對話、system、可用工具）
+.aos/inst.json 的一筆 instruction: ["aos","llm","exec","."]
+        ↓ （對 aos exec 而言只是普通 POSIX 指令）
+讀 .aos/insts/llm.json（對話、system、可用工具）
         ↓
 呼叫一次模型
         ↓
@@ -157,18 +168,20 @@ while true; do aos inst ./myfolder; sleep 1; done
 
 以下每一題都會擋住某個階段。**我不會自己選**；下面的「建議」只是我的主張。
 
-### D1 — `.aos` 的版面（擋 T1）
+### D1 — `.aos` 的版面（擋 T1）　**已有工作假設，尚未定案**
 
-**建議：`.aos/inst/<processor>.json` 目錄式。** 也就是 process CPU 讀
-`.aos/inst/proc.json`，LLM CPU 讀 `.aos/inst/llm.json`。
+使用者給的方向（我原本建議的目錄式沒被採用）：
 
-理由：① 使用者說的是「`.aos/inst`」（沒有副檔名），本來就讀得通「inst 是個目錄」；
-② [llm-cpu](../wf/workflows/ideas/llm-cpu.md) 更早也寫過 `.aos/inst/llm.json`；
-③ 加第二顆 CPU 時**不用改任何既有路徑**。今天選它的成本是零，之後才改的成本是所有
-已存在的資料夾都要搬。
+```text
+.aos/inst.json          ← process CPU。它是最核心的 CPU，所以直接放 .aos 底下
+.aos/insts/<name>.json  ← 其餘 CPU
+.aos/insts/<name>/xxx.json   ← 那顆 CPU 需要多份時再開一層
+```
 
-替代案是 `.aos/inst.json` + `.aos/llm_inst.json` 並列——更貼近「一個檔就是一個檔」，
-但每加一顆 CPU 就多一條頂層路徑。
+核心 CPU 被刻意放在特權位置，其餘一律收進 `insts/`。這比我建議的全目錄式**更直接
+表達「哪顆是核心」**，代價是「列出所有 CPU 的佇列」要對頂層特例化——那是小代價。
+
+還沒定案，剩下的細節見 [D6](#d6)／[D7](#d7)。
 
 ### D2 — 一回合＝一整批，還是一筆？<a id="d2"></a>（擋 T1／T3）
 
@@ -200,6 +213,39 @@ inst 的事），所以「誰擁有 exec」不用選了。但**沒有整個消�
 
 **建議：延後到 T5 真的踩到再問。** 在那之前 WAIT_USER 那條改記成「已被 T5 取代，等
 T5 再重問」，不要當成 S2 的前置條件卡著。
+
+### D6 — `.runi` 存在時代表什麼？<a id="d6"></a>（擋 T2）
+
+`.runi` 用固定名稱，所以它天生是一把鎖。`aos exec` 開跑時發現 `.aos/inst.json.runi`
+已經在，要怎麼辦？
+
+- **「上一回合 crash 了」→ 停下來、退非零、等人處理**（保守，建議）；
+- **「陳舊殘留」→ 直接蓋掉接手**（跑得順，但會靜靜吃掉上一回合的現場）。
+
+連帶問題：兩支 `aos exec` 同時對同一個資料夾跑起來時，後者會蓋掉前者的 `.runi`。
+**要不要就用 `.runi` 當互斥鎖**（存在即拒絕啟動），還是另外做鎖。
+
+### D7 — `.temp` 撞名怎麼辦？<a id="d7"></a>（擋 T2）
+
+`.temp` 的問題和 `.runi` 相反：**`rename` 是原子的，但「寫入 `.temp`」不是**。兩個生產
+者同時寫 `.aos/inst.json.temp` 會互相蓋寫，`rename` 之後就得到一份混合的垃圾。
+
+兩條路：① temp 名稱帶唯一後綴（`inst.json.temp.<pid>`），協定只要求「以 `.temp` 開頭」；
+② 明文規定同時只能有一個生產者。**建議 ①**——成本只有一個 pid，卻讓協定對多生產者
+天生安全。
+
+### D8 — `aos inst` 這條子命令留不留？<a id="d8"></a>（擋 T1）
+
+`aos exec <folder>` 出現之後，現有的 `aos inst jobs.json`（直接指定 JSON 檔）怎麼辦？
+
+- **留著**：`exec` 只收資料夾，`inst` 繼續收檔案／stdin。兩條各自單純，但使用者要記
+  兩個名字。
+- **合併**：`exec` 兩種都收（是目錄就走回合模式），`inst` 退場。介面少一個，但
+  「同一條命令有兩種語意」要靠參數型別分辨。
+
+**建議：先留著。** T1 只新增 `exec`，不動 `inst`；等 `exec` 真的好用了再決定要不要
+收掉 `inst`。順帶一提，**小專案本身不用改名**：`inst` 是名詞（資料格式、`core/inst`、
+`<aos/inst.hpp>`），`exec` 是動詞（子命令），改子命令不必動 `libaos_inst.so`。
 
 ---
 
