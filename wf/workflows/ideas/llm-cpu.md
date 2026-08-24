@@ -2,6 +2,32 @@
 
 ← [ideas](README.md)｜[回合制資料夾](turn-based-folder.md)｜[WORKFLOWS](../../WORKFLOWS.md)
 
+## 前提：LLM CPU 疊在 `inst` 之上（方向已定）
+
+在往下讀之前先固定一件事：**抽象 CPU（LLM…）是建立在 `inst` 這個基礎之上做的**，
+不是另一套與它平行的原語。理由是 `inst` 執行的是 POSIX 指令，**它可以承載任何東
+西**，包括 `aos` 自己。
+
+```text
+.aos/inst 的一筆 instruction:  aos llm next
+        ↓ （對 inst 而言只是普通的 POSIX 指令）
+aos llm next 讀 .aos/llm_inst，做「類似的事情」：
+        取出這筆 LLM instruction → 執行 → 排下一回合
+```
+
+**「轉介到另一顆 CPU」的真正內容就是 `exec`**：不是某種跨處理器協定或訊息匯流排，
+而是用 POSIX 跑另一支程式（`aos llm inst` / `aos llm next`）。要交接的資訊走 argv、
+env 與檔案系統上的 instruction 檔；下面 B 方案講的「I/O 交換區」只是這支程式**如果**
+選擇非同步時才需要的東西，不是機制的前提。
+
+所以 LLM CPU 的回合**是被 process CPU 的回合叫出來的**：`.aos/inst` 裡出現
+`aos llm next`，LLM 這顆 CPU 才走一步。它自己不需要另養一支從頭到尾的迴圈。基礎的
+回合模型見 [指定資料夾的回合制演化模型](turn-based-folder.md)。
+
+這件事**縮小了下面「入口架構的兩個方向」的爭點**，但沒有整個消滅它：投遞路徑已經
+統一（都經由 `inst` 的一筆指令），剩下的是 `aos llm next` 這支程式**自己跑推理**，
+還是只當**全域排程器的 client**。排程與資源有限性的問題原封不動仍在。
+
 ## 目前的工作模型（尚未最終拍板）
 
 基礎的 `aos daemon` 可以用 CPU 的 fetch–execute loop 理解：定期檢查指定資料夾的
@@ -75,8 +101,10 @@ process CPU 需要結果時 ← 回來查交換區 ──────┘
 優點是故障、權限與資源可以隔離，LLM 的有限容量也由專門調度器管理；代價則是協定、
 狀態機、交換區清理與跨處理器同步都比單一入口複雜。
 
-> 目前不把 A 或 B 寫成定案。後續思考可能選其中一個，也可能保留 `aos exec` 作為表面
-> 單一入口，但在內部用獨立行程／daemon 實作風險隔離。
+> 目前不把 A 或 B 寫成定案，但上面的分層前提已經改寫了題目：使用者面對的單一入口
+> 就是 `inst`（`aos llm next` 只是其中一筆指令），A 那種「另造一個 `aos exec` 巨型
+> 入口」不再必要。真正還沒答的是 `aos llm next` 背後——同一行程內直接推理，還是把
+> 工作交給獨立的全域 daemon 並透過交換區取回結果。
 
 ## 排程器的責任
 
@@ -103,8 +131,14 @@ process CPU 需要結果時 ← 回來查交換區 ──────┘
 - LLM CPU 產生的下一回合寫入共用 `.aos/next/`，還是 processor 專屬 queue。
 - `.aos/inst.json` 與 `.aos/inst/llm.json` 最終是否統一成
   `.aos/inst/<processor>.json` 布局。
-- 是否能同時保留 A 的簡單介面與 B 的隔離：`aos exec` 只當 router／client，真正執行
-  交給不同 daemon，而不是全部職責都留在 `aos exec` 行程內。
+- 是否能同時保留 A 的簡單介面與 B 的隔離：`aos llm next` 只當 router／client，真正
+  執行交給獨立 daemon，而不是全部職責都留在單一行程內。
+- `aos llm next` 是否阻塞本回合：等模型回覆才返回（回合語意單純，但長回合會卡住該
+  資料夾的 process CPU），或投遞後立即返回、由後續回合取結果。
+- LLM instruction 檔的位置與名稱：`.aos/llm_inst`、`.aos/inst/llm.json`，或其他布局；
+  要與 [回合制模型](turn-based-folder.md) 的路徑問題一起拍板。
+- 若之後還有第三種抽象 CPU，`aos <processor> next` + 專屬 instruction 檔是否成為通則，
+  以及這個形狀要不要抽成共用機制而非各自實作。
 - I/O 交換區的 request ID、狀態機、結果格式、持久化、取消、逾時與垃圾回收協定。
 - process CPU 何時、用 polling／通知或後續 instruction 回來取得 LLM 結果。
 - 提交 LLM 工作後，哪些後續 process instruction 可先執行，哪些必須宣告依賴並等待結果。
