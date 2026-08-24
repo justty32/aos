@@ -85,34 +85,34 @@ tool call 翻譯成一筆 instruction」**，是模型真正需要的東西。
 **驗收**：同一個資料夾連跑兩次 `aos exec <folder>`，第一次執行、第二次無事可做。
 `.aos/inst.json` 在執行**之前**就已經不在原位。
 
-### T2 — 取件與投遞協定：`.temp/` 與 `.runi`<a id="t2--取件與投遞協定temp--runi"></a>
+### T2 — 取件與投遞協定：`inst.d/`、`.temp`、`.runi`<a id="t2"></a>
 
 協定由使用者指定，兩邊各一次 `rename`：
 
+三步，每一步的交接都靠一次 `rename`：
+
 ```text
-生產者 ──▶ .aos/inst.json.temp/<pid>  ─彙整──▶ .aos/inst.json
-消費者     .aos/inst.json  ──rename──▶  .aos/inst.json.runi   （取件，讀完立刻做）
+投遞  inst.d/<pid>.writing ─rename─▶ inst.d/<pid>
+彙整  併成 inst.json.temp  ─rename─▶ inst.json
+取件  inst.json            ─rename─▶ inst.json.runi
 ```
 
 | 問題 | 這樣就解掉 |
 |---|---|
-| 兩個生產者互相蓋寫 | 投遞匣是目錄，一個生產者一個 `<pid>` 檔 |
-| 原子取件 + crash 後查得到 | 消費者讀完立刻 `rename` 成 `.runi`，然後才執行 |
+| 兩個生產者互相蓋寫 | 投遞匣是目錄 `inst.d/`，一個生產者一個 `<pid>` 檔 |
+| 彙整者讀到寫到一半的投遞 | 寫作中叫 `<pid>.writing`，彙整者略過；寫完才 `rename` |
+| 原子取件 + crash 後查得到 | 讀完立刻 `rename` 成 `.runi`，然後才執行 |
 | 兩支 `aos exec` 同時跑同一個資料夾 | `.runi` 已存在就**拒絕啟動**（[D6](#d6) 已定） |
 
-命名規則：**`<目標>.temp/` 是投遞匣，`<目標>.runi` 是執行中的現場**，都掛在它們服務
-的那份 instruction 檔旁邊。
+命名標準（[D1](#d1)）：`<名字>.<副檔名>.<狀況>`——第一個 `.xxx` 是副檔名（`.json`、
+`.d` 是資料夾），第二個是當前狀況（`.temp` 生成中、`.runi` 執行中、`.writing` 寫作中）。
 
 對回合語意來說，`rename` 走了就等於刪了——「先刪再跑」不變。但它順手保留了現場：
 crash 之後那份 `.runi` 還在，**要不要恢復是之後的決定，不是現在要做的功能**。
 第一版只要求「留著、不自動重跑」。
 
 其他 CPU（如 `aos llm exec`）**最好也遵循同一套慣例，但不強迫**：`.aos/insts/llm.json`
-配 `.aos/insts/llm.json.temp/<pid>` 與 `.aos/insts/llm.json.runi`。
-
-**還缺一筆**：「寫到一半」和「可以彙整了」目前是同一個檔名，彙整者可能讀到寫到一半的
-投遞。補法很便宜——先寫同目錄下彙整者會略過的名字（例如 `.<pid>.writing`），寫完
-`rename` 成 `<pid>`。
+配 `llm.json.temp`、`llm.json.runi` 與投遞匣 `llm.d/`。
 
 **驗收**：在取件前、取件後執行前、執行中三個點殺掉 process，資料夾都只會呈現
 「完整的舊狀態」或「完整的新狀態」，不會出現半份 JSON，也不會自動重放已經發生的
@@ -120,18 +120,20 @@ crash 之後那份 `.runi` 還在，**要不要恢復是之後的決定，不是
 
 ### T3 — 彙整與發布：接出下一回合
 
-彙整**就是把 `.aos/inst.json.temp/` 底下所有投遞併成一份 `.aos/inst.json`**。原本另設
-`.aos/next/` 匯流區的構想被它取代了——投遞匣和彙整來源是同一個地方，少一個概念。
+彙整**就是把 `.aos/inst.d/` 底下所有投遞併成 `.aos/inst.json.temp`，再 `rename` 蓋掉
+`.aos/inst.json`**。原本另設 `.aos/next/` 匯流區的構想被它取代了——投遞匣和彙整來源是
+同一個地方，少一個概念。
 
 還沒定的細節：
 
 - 合併**順序**（pid 排序確定性但無意義；mtime 有意義但會平手）。
 - 彙整**什麼時候跑**：`aos exec` 每回合自己跑一次，還是獨立一步。
-- `inst.json` 位置上已經有一份沒被讀走的批次時：附加、等下一輪，還是拒絕。
+- **`rename` 蓋掉 `inst.json` 會無聲吃掉還沒被讀走的批次**——位置上已經有一份時要
+  附加、等下一輪，還是拒絕。這是目前協定最尖的一個角。
 - 彙整完的投遞何時刪除，與發布 `inst.json` 的先後。
 - 某份投遞內容無效：隔離該檔繼續、整批停住，還是拒絕發布（建議隔離並繼續）。
 
-**驗收**：一個資料夾能自己接兩回合——第一回合的指令投遞到 `.aos/inst.json.temp/`，
+**驗收**：一個資料夾能自己接兩回合——第一回合的指令投遞到 `.aos/inst.d/`，
 第二次呼叫 `aos exec <folder>` 就跑到了下一回合的內容。
 
 ### T4 — 迴圈：`aos exec --keep-doing`，不做 `core/daemon`
@@ -193,12 +195,16 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 使用者給的方向（我原本建議的目錄式沒被採用）：
 
 ```text
-.aos/inst.json               ← process CPU。它是最核心的 CPU，所以直接放 .aos 底下
-.aos/inst.json.temp/<pid>    ← 投遞匣（目錄，一個生產者一個檔）
-.aos/inst.json.runi          ← 執行中的現場
-.aos/insts/<name>.json       ← 其餘 CPU（各自配同樣的 .temp/ 與 .runi）
-.aos/insts/<name>/xxx.json   ← 那顆 CPU 需要多份時再開一層
+.aos/inst.json          ← process CPU。它是最核心的 CPU，所以直接放 .aos 底下
+.aos/inst.json.temp     ← 彙整中的下一批
+.aos/inst.json.runi     ← 已取走、正在跑的那一批
+.aos/inst.d/<pid>       ← 投遞匣（`.d` ＝資料夾），寫作中是 <pid>.writing
+.aos/insts/<name>.json  ← 其餘 CPU（各自配同名的 .temp／.runi／.d）
 ```
+
+配套的**命名標準**：`<名字>.<副檔名>.<狀況>`。第一個 `.xxx` 是副檔名，第二個是這個
+檔案／資料夾當前的狀況。這條標準是為 `.aos` 提前訂的，但不限於 `.aos`——真的落地時
+應該升格進 [conventions](../wf/workflows/common/conventions.md)。
 
 核心 CPU 被刻意放在特權位置，其餘一律收進 `insts/`。這比我建議的全目錄式**更直接
 表達「哪顆是核心」**，代價是「列出所有 CPU 的佇列」要對頂層特例化——那是小代價。
@@ -242,16 +248,17 @@ T5 再重問」，不要當成 S2 的前置條件卡著。
 鎖：crash 現場不會被靜靜蓋掉，也不會有兩支 `aos exec` 同時跑同一個資料夾。代價是
 crash 之後要人處理，這是刻意的。連帶影響見 [T4](#t4-的注意事項)。
 
-### D7 — 投遞怎麼避免撞名？<a id="d7"></a>　**已定：投遞匣是目錄**
+### D7 — 投遞怎麼避免撞名？<a id="d7"></a>　**已定：投遞匣是目錄 `inst.d/`**
 
-`.aos/inst.json.temp/` 是一個**目錄**，一個生產者一個 `<pid>` 檔。攤在 `.aos/` 底下會
-愈積愈亂，收進目錄就乾淨了。
+一個生產者一個 `<pid>` 檔，寫作中叫 `<pid>.writing`。攤在 `.aos/` 底下會愈積愈亂，
+收進目錄就乾淨了。
 
-這一步同時把「彙整」定義掉了：**彙整就是把這個目錄底下所有投遞併成一份
-`inst.json`**，`.aos/next/` 那個另設匯流區的構想不需要了。
+這一步同時把「彙整」定義掉了：**彙整就是把 `inst.d/` 底下所有投遞併成
+`inst.json.temp`，再 `rename` 蓋掉 `inst.json`**——`.aos/next/` 那個另設匯流區的構想
+不需要了。
 
-還缺一筆：「寫到一半」與「可以彙整了」目前同名，見 [T2](#t2--取件與投遞協定temp--runi)
-的補法。
+**還沒解決**：`.d` 一詞多義。`inst.d/` 是投遞匣，但「某顆 CPU 需要多份指令」那層照標準
+也會叫 `<name>.d/`，意思不同。兩個要挑一個改名。
 
 ### D8 — `aos inst` 這條子命令留不留？<a id="d8"></a>　**已定：直接刪掉**
 
