@@ -10,22 +10,11 @@
 
 ## 待使用者項
 
-- **`$env`／`$ref` 的解析要擺在哪一層？**（擋
-  [`$` 指示詞](../docs/inst-directives.md) 的第 2、3 步）
-  `format` 現在只懂語法、`exec` 收到的是解析好的 `inst_t`；但 `$env` 要讀 `environ`、
-  `$ref` 要讀檔案，兩者都卡在中間。選項 A（format 直接做）／B（新增 resolve 層）／
-  C（留在 CLI）與代價見該文件第六節，**建議 B**。第 1 步（`$opt` + stderr merge）不受
-  這題影響，可以先做。
+- （目前無）
 
-- **移植 S2 的決策 A：`core/tooljson` 的 exec 引擎自己寫，還是動 `core/inst`？**
-  `_type: "exec"` 看起來就是 `core/inst` 在做的事，但接不起來——EXEC.md 要求
-  `stderr.mode: "merge"` 是真的共用一條管子，而 `inst` 的重導向走檔案路徑，
-  `core/inst/src/exec.cpp` 對 stdout 與 stderr 各開一次 `O_TRUNC`，同一個路徑
-  給兩邊會互相蓋寫。選項與代價寫在
-  [`reference/PORTING.md`](../reference/PORTING.md) 的「三、兩個要使用者拍板的
-  決策」。**A2 會動到凍結的 `inst` 核心層，所以一定要使用者點頭**，不可以自己選。
-  這題沒解掉之前 S2 不要開工。
-  **2026-08-24 補**：回合制模型把這題改寫了一半——tooljson 不再需要自己的 exec 引擎，
-  但 `stderr` merge 變成「`inst` 要不要加這個欄位」。使用者當天拍板 `core/tooljson`
-  與 `core/llms` **先不動**（排在 agent loop 之後），所以這題**跟著延後**，不再是任何
-  事情的前置條件。完整說明見 [roadmap 的 D5](../docs/roadmap.md)。
+> 2026-08-24：原本卡著的「移植 S2 的決策 A（`core/tooljson` 的 exec 引擎自己寫還是動
+> `core/inst`）」已經整條解掉——使用者批准解凍 `core/inst`，並拍板 `stderr` 併流用
+> `{"$opt": "merge"}` 由 `inst` 自己支援（見
+> [`docs/inst-directives.md`](../docs/inst-directives.md)）；`core/tooljson` 本身則
+> 先不動、排在 agent loop 之後。設計上還沒答完的細節不放這裡——它們不卡使用者，記在
+> [`docs/roadmap.md`](../docs/roadmap.md) 與各 idea 文件的開放問題。
