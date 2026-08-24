@@ -2,17 +2,20 @@
 
 ← [文件索引](README.md)｜[roadmap](roadmap.md)｜格式現況 [`core/inst/docs/format.md`](../core/inst/docs/format.md)
 
-**狀態**：方向由使用者定下——引入 `../freepy` 那套 `$ref`／`$env`，並用
-`{"$opt": "merge"}` 表達 stderr 併流。`core/inst` 核心層**已解凍**，可以改。下面標
-「待拍板」的細節還沒定，**不要自己補答案**。
+**狀態：三個指示詞都已經實作，這份文件保留下來是為了「為什麼」。** 本檔裡標「待拍板」
+的地方全部已經拍板，答案寫在各自的段落裡。
+
+- **現況**（schema 逐項）看 [`core/inst/docs/format.md`](../core/inst/docs/format.md)。
+- **解析分層與錯誤語意**看 [`core/inst/docs/resolve.md`](../core/inst/docs/resolve.md)。
+- **這份**回答的是：為什麼是物件形式而不是特殊字串、為什麼解析要獨立成一層、
+  為什麼 `$ref` 不限深度但禁止循環。
 
 > `$ref` 的形式取自 freepy 的
 > [`memory_tools`](../../docs/freepy/future/memory-tools/PLAN.md)；`$env` 在 freepy 裡
 > **沒有先例**（那邊的 `$env:` 是 PowerShell 語法），是把同一個家族推廣出來的。
 
-這份只講 schema 與分層設計。它落地之後才去改
-[`core/inst/docs/format.md`](../core/inst/docs/format.md)——那份描述的是**現況**，不是
-計畫。
+這份只講 schema 與分層設計背後的取捨。**兩者衝突時以
+[`core/inst/docs/format.md`](../core/inst/docs/format.md) 為準**——那份描述的是現況。
 
 ---
 
@@ -63,9 +66,9 @@ merge： stdout 照舊設好，然後 dup2(fd_1, 2)
   存取子，既有的 `stderr_path` getter／setter 不動——`inst.h` 那條「列舉值只能在尾端
   加、不能重排或刪」的規則也不會被踩到。
 
-**待拍板**：`$opt` 目前只定義 `merge` 這一個值。其他候選（`stdin` 的 `close`、
-`stdout` 的 `null`）先不開——**每個 opt 都要指定它在哪些欄位合法**，否則 `$opt` 會變成
-一個無法驗證的洞。
+**已定：只開 `merge` 這一個值。** 其他候選（`stdin` 的 `close`、`stdout` 的 `null`）
+不開——**每個 opt 都要指定它在哪些欄位合法**，否則 `$opt` 會變成一個無法驗證的洞。
+要加新的 opt，連同「它在哪些欄位合法」一起加。
 
 ## 三、`$env`
 
@@ -146,7 +149,7 @@ merge： stdout 照舊設好，然後 dup2(fd_1, 2)
 
 `$opt` 額外受限於「這個 opt 在這個欄位合法嗎」——目前只有 `stderr` 收 `merge`。
 
-## 六、擺在哪一層？（**最重要的待拍板**）
+## 六、擺在哪一層？（**已定：獨立的 resolve 層，下表的 B**）
 
 現在的分層是 `inst ← format ← exec`，鐵律是：**`format` 只懂語法**（不懂路徑是 OS
 資源、不懂行程），**`exec` 收到的是一個已經完全解析好的 `inst_t`**。
