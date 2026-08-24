@@ -15,7 +15,7 @@
 | `vcpkg.json` | root manifest，有 `builtin-baseline`；測試相依放 `"tests"` feature |
 | `cmake/` | 共用 CMake 函式（`aos_add_subproject()` 等）與 `find_package(aos CONFIG)` 的匯出設定 |
 | `common/` | `aos::common`，header-only，目前只有 `<aos/export.h>` |
-| `app/` | 唯一的執行檔 `aos`，靠子命令分派（`aos inst ...`）|
+| `app/` | 唯一的執行檔 `aos`，靠子命令分派（如 `aos init`／`aos exec`）|
 | `core/` | **核心小專案**（aos 的基本組成，一定會建）。目前只有 `inst/`：lib `aos::inst`（`libaos_inst.so`）＋ `inst` 子命令。內部分工 → [code map](workflows/common/code-map.md) |
 | `modules/` | **擴充小專案**（可選，`-DAOS_BUILD_MODULES=OFF` 整批不建）。目前是空的。新增小專案 → [add-subproject](workflows/add-subproject.md) |
 | `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案。個別小專案自己的細節在它們的 `docs/`，例如 `core/inst/docs/` |

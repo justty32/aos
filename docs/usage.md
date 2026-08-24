@@ -15,20 +15,28 @@ $ aos --help
 usage: aos <command> [args...]
 
 commands:
-  inst         依序執行一份 JSON 指令檔裡的每一筆指令
+  exec         推進一個 aos 資料夾的一回合
+  init         初始化一個 aos 資料夾
 ```
 
 不給子命令、或給了不認得的名字，都會印出這張表並回 exit code 2。
 
-## `aos inst` —— 執行 JSON 指令檔
+## `aos init` 與 `aos exec` —— 初始化並推進一回合
 
 ```bash
-aos inst jobs.json                                   # 從檔案讀
-printf '%s\n' '{"argv":["echo","hello"]}' | aos inst  # 從 stdin 讀
+aos init my-world
+printf '%s\n' '{"argv":["echo","hello"],"stdout":"hello.txt"}' \
+  > my-world/.aos/inst.json
+aos exec my-world
 ```
 
-一份指令檔是**一個** JSON 物件，或**一個陣列**的物件。整份文件會先**全部驗證
-完**才開始執行任何一筆——所以第 5 筆有語法錯誤的話，前 4 筆不會被執行。
+`aos init <folder>` 要求 folder 已存在，建立 `.aos/` 並寫入版本 `1`。若 `.aos/`
+已存在會明確拒絕，不會覆寫。整個 `.aos/` 都是本機執行狀態，應加入 `.gitignore`。
+
+`aos exec <folder>` 讀取 `.aos/inst.json`；它可以是**一個** JSON 物件，或**一個陣列**
+的物件。檔案會先完整讀入並立刻 rename 成 `inst.json.runi`，然後整批驗證；所以第 5
+筆有語法錯誤時前 4 筆不會執行，但被取走的 `.runi` 會保留現場。沒有
+`inst.json` 是正常的空回合，安靜回 0；若 `.runi` 已存在則拒絕啟動並回 3。
 
 ```json
 [
@@ -50,21 +58,25 @@ printf '%s\n' '{"argv":["echo","hello"]}' | aos inst  # 從 stdin 讀
 執行語意（逾時怎麼算、訊號怎麼送、exit code 怎麼對應）見
 [`core/inst/docs/exec.md`](../core/inst/docs/exec.md)。**
 
+所有相對路徑，以及未指定 `cwd` 時的子行程工作目錄，都以 `<folder>` 為基準。
+
 ### 退出碼：注意，它不反映子行程的成敗
 
-這點很容易誤會。`aos inst` 的退出碼只回答「**aos 有沒有做好它的工作**」，不回答
+這點很容易誤會。`aos exec` 的退出碼只回答「**這一回合有沒有正常跑完**」，不回答
 「你叫它跑的那些指令有沒有成功」。
 
-| 情況 | `aos inst` 的退出碼 |
+| 情況 | `aos exec` 的退出碼 |
 |------|-------------------|
 | 全部順利 | `0` |
 | 子行程回非零、指令不存在、逾時被砍、重導向的檔開不起來 | **`0`** |
 | 指令檔語法或 schema 有問題（一筆都沒執行）| `1` |
 | aos 自己失敗了：`fork` 失敗、`waitpid` 失敗、`exit` 檔寫不進去 | `1` |
 | 用法錯誤（沒給子命令、給了不認得的名字）| `2` |
+| `.aos/inst.json.runi` 已存在 | `3` |
 
 ```bash
-$ printf '{"argv":["/bin/false"]}' | aos inst ; echo $?
+$ printf '{"argv":["/bin/false"]}' > my-world/.aos/inst.json
+$ aos exec my-world ; echo $?
 0
 ```
 

@@ -55,8 +55,8 @@ int main(int argc, char *argv[]) {
         if (std::strcmp(command, subcommand.name) != 0) {
             continue;
         }
-        /* 子命令自己印用法訊息時會用 argv[0]，所以把「aos inst」整串傳下去，
-         * 而不是只傳 "inst" 或原本的 "aos"。 */
+        /* 子命令自己印用法訊息時會用 argv[0]，所以把「aos <command>」整串
+         * 傳下去，而不是只傳子命令名或原本的 "aos"。 */
         std::string invocation = std::string(program) + " " + command;
         std::vector<char *> forwarded;
         forwarded.reserve(static_cast<std::size_t>(argc));

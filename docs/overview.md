@@ -4,11 +4,12 @@
 
 ## 一句話
 
-aos 是一組 POSIX 小工具的集合。**每個小專案同時是兩件事**：`aos` 執行檔的一條
-子命令，以及一顆可以被別的專案 `#include` 與連結的 C++23 函式庫。
+aos 是一個資料夾的回合制執行器，外加一組 POSIX 小工具。**每個小專案同時是兩件
+事**：`aos` 執行檔的一條或多條子命令，以及一顆可以被別的專案 `#include` 與連結的
+C++23 函式庫。
 
 ```
-$ aos inst jobs.json                      # 當工具用
+$ aos init world && aos exec world        # 當工具用
 ```
 ```cpp
 #include <aos/inst.hpp>                   // 當函式庫用

@@ -1,6 +1,6 @@
 # 記錄格式
 
-`aos inst` 讀取一份完整的 JSON 文件。頂層可以是：
+`aos exec <folder>` 會讀取 `<folder>/.aos/inst.json` 的完整 JSON 文件。頂層可以是：
 
 - 一個指令物件，代表單筆執行。
 - 一個由指令物件組成的陣列，代表按輸入順序啟動的批次；空陣列是合法的空批次。
@@ -18,7 +18,7 @@
 | `stdout` | string | no | `""` | 作為標準輸出的檔案，必要時建立並截斷(清空)；為空時繼承 stdout。 |
 | `stderr` | string or `{"$opt":"merge"}` | no | `""` | 字串會作為標準錯誤的檔案，必要時建立並截斷(清空)；`merge` 會把 stderr 併入設定後的 stdout；省略或空字串時繼承 stderr。 |
 | `exit` | string | no | `""` | 子行程結束後建立/截斷(清空)的檔案，寫入十進位狀態值加一個 LF；為空時捨棄。 |
-| `cwd` | string | no | `""` | 子行程的工作目錄；為空時繼承呼叫端的目錄。相對路徑值從呼叫端的目錄起算。 |
+| `cwd` | string | no | `""` | 子行程的工作目錄；為空時使用 `<folder>`。相對路徑值從 `<folder>` 起算。 |
 | `env` | object, string values | no | `{}` | 在繼承的環境之上覆寫或新增變數；未提及的變數維持不變。 |
 | `timeout_ms` | unsigned integer | no | `0` | 執行時間上限（毫秒）；為零時無期限等待。 |
 | `parallel` | boolean | no | `false` | 為 `true` 時 CLI 以獨立 thread 執行這一筆，不等它完成就啟動下一筆；整批結束前仍會等待它。 |

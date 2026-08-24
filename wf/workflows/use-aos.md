@@ -33,15 +33,16 @@ aos --help          # 裝好了的話會列出所有子命令
 
 沒有的話先照 [testing 工作流](testing.md) 建起來，或 `cmake --install build --prefix ~/.local`。
 
-### `aos inst` — 執行 JSON 指令檔
+### `aos init`／`aos exec` — 初始化並推進一回合
 
 ```bash
-aos inst jobs.json
-printf '%s\n' '{"argv":["echo","hi"]}' | aos inst
+aos init world
+printf '%s\n' '{"argv":["echo","hi"]}' > world/.aos/inst.json
+aos exec world
 ```
 
 一份指令檔是一個 JSON 物件或一個物件陣列。欄位：`argv`（必要）、`stdin`／`stdout`／
-`stderr`、`exit`、`cwd`、`env`、`timeout_ms`。**完整 schema 見
+`stderr`、`exit`、`cwd`、`env`、`timeout_ms`、`parallel`。**完整 schema 見
 [`core/inst/docs/format.md`](../../core/inst/docs/format.md)，
 不要憑印象寫欄位名**——不認得的 key 會讓整份文件被拒絕。
 
@@ -50,23 +51,27 @@ printf '%s\n' '{"argv":["echo","hi"]}' | aos inst
 **1. 退出碼不反映子行程的成敗。**
 
 ```bash
-$ printf '{"argv":["/bin/false"]}' | aos inst ; echo $?
+$ printf '{"argv":["/bin/false"]}' > world/.aos/inst.json
+$ aos exec world ; echo $?
 0
 ```
 
-`aos inst` 回 0 的意思是「aos 做好了它的工作」，不是「你的指令成功了」。指令不
+`aos exec` 回 0 的意思是「這一回合正常跑完」，不是「你的指令成功了」。指令不
 存在、逾時被砍、重導向的檔開不起來，全都回 0。**要拿子行程的結果就用 `exit`
 欄位**，它會把 exit code 寫進你指定的檔案。完整對照表見
 [`docs/usage.md`](../../docs/usage.md)。
 
 寫給使用者的腳本如果需要「指令失敗就中止」，你要自己讀 `exit` 檔判斷。
 
-**2. 整份文件會先全部驗證完才開始執行。** 第 5 筆有錯的話，前 4 筆不會跑。這是
-刻意的設計，別把它當 bug。
+**2. `inst.json` 會完整讀入並 rename 成 `.runi`，再整批驗證與執行。** 第 5 筆有錯
+的話，前 4 筆不會跑，但 `.runi` 會保留；它存在時下一次 `aos exec` 會回 3。
 
 **3. 指令檔等同可執行程式碼。** 它可以指名任意程式與環境變數，並以呼叫者的身分
 執行，而且輸入沒有任何大小限制。**不要幫使用者去執行來源不明的指令檔**，也不要
 把使用者沒看過的內容寫進指令檔再跑起來。
+
+**4. 所有相對路徑都以 world folder 為基準。** 包含預設 cwd 與四個 I/O／狀態路徑。
+`.aos/` 是本機執行狀態，整個資料夾都不進 git。
 
 ---
 

@@ -9,7 +9,7 @@
 
 ## 一分鐘看懂這個專案
 
-`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos inst jobs.json`）。第一個小專案是 `core/inst/`——一支讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。
+`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos exec world`）。第一個小專案是 `core/inst/`——一支讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。
 
 ```
 repo 根
@@ -22,9 +22,9 @@ repo 根
        │    exec    唯一碰 fork/exec/waitpid 的層          （src/exec.cpp + spawn_prep.cpp + wait.cpp）
        │  外加兩層，各自只往下看：
        │    C ABI 包裝（src/capi*.cpp，對外標頭 <aos/inst.h>）
-       │    CLI 執行迴圈（src/run.cpp，進入點 aos_inst_cli_main）
+       │    CLI 世界／回合層（src/run.cpp，進入點 aos_init_cli_main／aos_exec_cli_main）
        ▼
-app/（唯一執行檔 aos，子命令分派）── `aos inst jobs.json` 掛的就是上面這條
+app/（唯一執行檔 aos，子命令分派）── `aos init`／`aos exec` 掛的就是上面這條
 
   aos::tooljson（core/tooljson/，核心小專案 → libaos_tooljson.so）
        │  spec／registry：驗證 tool spec 與開放的 _type 登記
@@ -78,7 +78,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 ## core/inst/ — 第一個小專案：POSIX 指令執行器
 
-讀一筆或一批 JSON instruction，準備好環境／重導向後 `fork`＋`execve` 跑起來，等它結束、寫回 exit status。對外是 `aos::inst`（`libaos_inst.so`）＋ `aos inst` 子命令。
+讀一筆或一批 JSON instruction，準備好環境／重導向後 `fork`＋`execve` 跑起來，等它結束、寫回 exit status。對外是 `aos::inst`（`libaos_inst.so`）＋ `aos init`／`aos exec` 子命令。
 
 ### core/inst/include/aos/ — 對外公開標頭
 
@@ -118,7 +118,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | `run(argc, argv)`：決定輸入來源（給了檔名就開檔，否則讀 stdin）→ 讀到 EOF 進單一緩衝區 → `read_all()` 一次剖析＋驗證整批 → 同步執行一般記錄、把 `parallel` 記錄複製進獨立 thread，最後 join 全部 thread → 按 record 順序回報失敗，只要有一筆函式庫層失敗整體回 1。讀檔、剖析、執行三個階段都接配置失敗——**這一層是原生 CLI 唯一的例外邊界**（C ABI 那側自己有接）。檔尾的 `extern "C" aos_inst_cli_main()` 是 `aos inst` 子命令的進入點，名字要與 `core/inst/CMakeLists.txt` 的 `aos_add_subcommand(ENTRY ...)` 一致。**為什麼要先把整份輸入讀完**、以及這個設計的代價，見 [`core/inst/docs/architecture.md`](../../../core/inst/docs/architecture.md) |
+| `run.hpp`／`run.cpp` | CLI 世界／回合層：`run_init()` 要求既有 folder、建立 `.aos/` 與版本 1（既有 `.aos` 明確拒絕）；`run_exec()` 進入 folder → 驗版本 → 擋既有 `.runi` → 完整讀 `inst.json` → rename 成 `.runi` → `read_all()` 驗整批 → 同步執行一般記錄、把 `parallel` 記錄複製進 thread，最後全數 join。退出碼為正常 0、函式庫／世界錯誤 1、用法 2、既有 `.runi` 3。檔尾的 `aos_init_cli_main`／`aos_exec_cli_main` 與 CMake 登記一致；這一層是原生 CLI 唯一的例外邊界 |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）
 
@@ -131,7 +131,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `test_format_read.cpp`／`test_format_write.cpp`／`test_format_malformed.cpp` | format 層：JSON round trip、各種壞輸入、已知/未知欄位 |
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
-| `test_run.cpp` | CLI 層：整批剖析、循序執行、parallel 記錄與批次尾端 join |
+| `test_run.cpp` | CLI 層：init／版本／空回合／`.runi` 取件與退出碼、folder 路徑基準、整批剖析、循序執行、parallel 與批次尾端 join |
 | `exec_test_support.hpp` | 測試共用的小工具 |
 | `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
 
