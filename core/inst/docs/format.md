@@ -16,7 +16,7 @@
 | `argv` | array of strings | yes | none | 指令及其引數。此陣列與 `argv[0]` 都不得為空。 |
 | `stdin` | string | no | `""` | 以唯讀方式開啟、作為標準輸入的檔案；為空時繼承呼叫端的 stdin。 |
 | `stdout` | string | no | `""` | 作為標準輸出的檔案，必要時建立並截斷(清空)；為空時繼承 stdout。 |
-| `stderr` | string | no | `""` | 作為標準錯誤的檔案，必要時建立並截斷(清空)；為空時繼承 stderr。 |
+| `stderr` | string or `{"$opt":"merge"}` | no | `""` | 字串會作為標準錯誤的檔案，必要時建立並截斷(清空)；`merge` 會把 stderr 併入設定後的 stdout；省略或空字串時繼承 stderr。 |
 | `exit` | string | no | `""` | 子行程結束後建立/截斷(清空)的檔案，寫入十進位狀態值加一個 LF；為空時捨棄。 |
 | `cwd` | string | no | `""` | 子行程的工作目錄；為空時繼承呼叫端的目錄。相對路徑值從呼叫端的目錄起算。 |
 | `env` | object, string values | no | `{}` | 在繼承的環境之上覆寫或新增變數；未提及的變數維持不變。 |
@@ -25,6 +25,9 @@
 環境（變數）的 key 必須非空，且不得含有 `=`。JSON 物件的 key 在記憶體中的
 指令裡是唯一的；來源中重複的 key 由 JSON 解析器處理，而非提供一套有序的
 覆寫機制。
+
+`stderr` 的物件形式是指示詞，必須剛好只有一個 `$opt` key，且值必須是字串
+`"merge"`。這等同 shell 的 `2>&1`；字面字串 `"merge"` 仍表示名為 `merge` 的檔案。
 
 以下這筆完整記錄會在 `/tmp` 底下執行 `sh`、提供一個環境變數、
 重導向全部三個標準串流、記錄狀態，並施加
@@ -48,6 +51,10 @@
 | 欄位型別錯誤、引數非字串，或環境（變數）值非字串 | `FieldTypeMismatch` / `AOS_INST_FIELD_TYPE_MISMATCH` |
 | `argv` 缺少/為空，或 `argv[0]` 為空 | `EmptyArgv` / `AOS_INST_EMPTY_ARGV` |
 | 環境（變數）key 為空，或 key 含有 `=` | `EnvKeyInvalid` / `AOS_INST_ENV_KEY_INVALID` |
+| 指示詞物件不是剛好一個 key | `DirectiveKeyCountInvalid` / `AOS_INST_DIRECTIVE_KEY_COUNT_INVALID` |
+| 指示詞的唯一 key 不是 `$opt` | `UnknownDirective` / `AOS_INST_UNKNOWN_DIRECTIVE` |
+| 指示詞的值不是字串 | `DirectiveValueTypeMismatch` / `AOS_INST_DIRECTIVE_VALUE_TYPE_MISMATCH` |
+| `$opt` 的值不是已知的 `merge` | `UnknownOption` / `AOS_INST_UNKNOWN_OPTION` |
 
 **沒有任何上限。** 位元組數（單筆與整份）、`argv` 元素數、`env` 條目數、JSON
 巢狀深度，全部不設上界。上表就是全部的拒絕條件；除此之外只要是合法 JSON 且

@@ -33,6 +33,17 @@ TEST_CASE("read_all accepts a single instruction object") {
     CHECK(error_record == 0);
 }
 
+TEST_CASE("read_one parses stderr merge option") {
+    const std::string input =
+        R"({"argv":["x"],"stderr":{"$opt":"merge"}})";
+    aos::inst_t inst;
+
+    REQUIRE(aos::read_one(input.data(), input.size(), inst) ==
+            aos::InstState::Ok);
+    CHECK(inst.stderr_merge);
+    CHECK(inst.stderr_path.empty());
+}
+
 TEST_CASE("read_all accepts a formatted array of instruction objects") {
     const std::string input =
         "[\n  {\"argv\":[\"first\"]},\n  {\"argv\":[\"second\"]}\n]\n";

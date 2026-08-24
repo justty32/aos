@@ -83,12 +83,34 @@ AOS_API aos_inst_state aos_instruction_set_field(
         switch (field) {
         case AOS_FIELD_STDIN: destination = &instruction->value.stdin_path; break;
         case AOS_FIELD_STDOUT: destination = &instruction->value.stdout_path; break;
-        case AOS_FIELD_STDERR: destination = &instruction->value.stderr_path; break;
+        case AOS_FIELD_STDERR:
+            destination = &instruction->value.stderr_path;
+            instruction->value.stderr_merge = false;
+            break;
         case AOS_FIELD_EXIT: destination = &instruction->value.exit_path; break;
         case AOS_FIELD_CWD: destination = &instruction->value.cwd; break;
         }
         if (destination == nullptr) return AOS_INST_INVALID_ARGUMENT;
         *destination = value;
+        return AOS_INST_OK;
+    } catch (...) { return AOS_INST_ALLOC_FAILED; }
+}
+
+AOS_API int aos_instruction_stderr_merge(
+    const aos_instruction *instruction) {
+    try {
+        return instruction != nullptr && instruction->value.stderr_merge;
+    } catch (...) { return 0; }
+}
+
+AOS_API aos_inst_state aos_instruction_set_stderr_merge(
+    aos_instruction *instruction, int value) {
+    try {
+        if (instruction == nullptr) return AOS_INST_INVALID_ARGUMENT;
+        instruction->value.stderr_merge = value != 0;
+        if (instruction->value.stderr_merge) {
+            instruction->value.stderr_path.clear();
+        }
         return AOS_INST_OK;
     } catch (...) { return AOS_INST_ALLOC_FAILED; }
 }

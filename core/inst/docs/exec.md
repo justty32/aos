@@ -4,7 +4,8 @@
 
 - `argv` 會成為以 null 結尾的引數向量，傳給 `execve`。
 - 非空的 `stdin` 會以唯讀開啟，並複製到 fd 0。
-- 非空的 `stdout` 與 `stderr` 會以 `0666` 模式建立（受呼叫者的 umask 影響）、截斷，並複製到 fd 1 或 2。
+- 非空的 `stdout` 與字串形式的 `stderr` 會以 `0666` 模式建立（受呼叫者的 umask 影響）、截斷，並複製到 fd 1 或 2。
+- `stderr` 的 `{"$opt":"merge"}` 會在 stdout 重導向完成後以 `dup2` 把 fd 1 複製到 fd 2，使兩條流共用同一個 open file description；stdout 留空時則併入繼承來的 fd 1。
 - 非空的 `cwd` 會在重導向之後、`execve` 之前，用 `chdir` 套用。
 - `env` 會疊加在繼承來的環境變數之上：具名的項目會取代或新增，其餘沒提到的項目則全部保留。得到的 `envp` 會交給 `execve`。
 - 非零的 `timeout_ms` 會啟用下面所述的期限。

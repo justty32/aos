@@ -85,6 +85,7 @@ struct ChildPlan {
     const char *stdin_path;
     const char *stdout_path;
     const char *stderr_path;
+    bool stderr_merge;
     const char *cwd;
     const char *executable;
     char *const *argv;
@@ -96,8 +97,10 @@ struct ChildPlan {
     if (!child_redirect(plan.stdin_path, STDIN_FILENO, O_RDONLY) ||
         !child_redirect(plan.stdout_path, STDOUT_FILENO,
                         O_WRONLY | O_CREAT | O_TRUNC) ||
-        !child_redirect(plan.stderr_path, STDERR_FILENO,
-                        O_WRONLY | O_CREAT | O_TRUNC)) {
+        (!plan.stderr_merge &&
+         !child_redirect(plan.stderr_path, STDERR_FILENO,
+                         O_WRONLY | O_CREAT | O_TRUNC)) ||
+        (plan.stderr_merge && dup2(STDOUT_FILENO, STDERR_FILENO) < 0)) {
         _exit(detail::kExitSetupFailed);
     }
     if (plan.cwd != nullptr && chdir(plan.cwd) != 0) {
@@ -134,7 +137,8 @@ ExecState execute(inst_t &inst, ExecResult &result) {
     };
     const ChildPlan child_plan{
         path_or_null(inst.stdin_path), path_or_null(inst.stdout_path),
-        path_or_null(inst.stderr_path), path_or_null(inst.cwd),
+        path_or_null(inst.stderr_path), inst.stderr_merge,
+        path_or_null(inst.cwd),
         prep.executable.c_str(), argv.data(), prep.envp.data(),
         prep.failure_status,
     };

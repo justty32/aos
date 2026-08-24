@@ -27,7 +27,11 @@ typedef enum aos_inst_state {
     AOS_INST_ALLOC_FAILED = 8,
     AOS_INST_READ_ERROR = 9,
     AOS_INST_BUFFER_TOO_SMALL = 10,
-    AOS_INST_WRITE_ERROR = 11
+    AOS_INST_WRITE_ERROR = 11,
+    AOS_INST_DIRECTIVE_KEY_COUNT_INVALID = 12,
+    AOS_INST_UNKNOWN_DIRECTIVE = 13,
+    AOS_INST_DIRECTIVE_VALUE_TYPE_MISMATCH = 14,
+    AOS_INST_UNKNOWN_OPTION = 15
 } aos_inst_state;
 
 /* ABI rule: existing enum values are frozen. New values may only be appended. */
@@ -72,6 +76,10 @@ AOS_API const char *aos_instruction_field(
     const aos_instruction *instruction, aos_inst_field field);
 AOS_API aos_inst_state aos_instruction_set_field(
     aos_instruction *instruction, aos_inst_field field, const char *value);
+AOS_API int aos_instruction_stderr_merge(
+    const aos_instruction *instruction);
+AOS_API aos_inst_state aos_instruction_set_stderr_merge(
+    aos_instruction *instruction, int value);
 
 AOS_API size_t aos_instruction_env_count(const aos_instruction *instruction);
 AOS_API const char *aos_instruction_env_key(

@@ -13,6 +13,14 @@ static_assert(static_cast<int>(aos::InstState::FieldTypeMismatch) ==
 static_assert(static_cast<int>(aos::InstState::EmptyArgv) == AOS_INST_EMPTY_ARGV);
 static_assert(static_cast<int>(aos::InstState::EnvKeyInvalid) ==
               AOS_INST_ENV_KEY_INVALID);
+static_assert(static_cast<int>(aos::InstState::DirectiveKeyCountInvalid) ==
+              AOS_INST_DIRECTIVE_KEY_COUNT_INVALID);
+static_assert(static_cast<int>(aos::InstState::UnknownDirective) ==
+              AOS_INST_UNKNOWN_DIRECTIVE);
+static_assert(static_cast<int>(aos::InstState::DirectiveValueTypeMismatch) ==
+              AOS_INST_DIRECTIVE_VALUE_TYPE_MISMATCH);
+static_assert(static_cast<int>(aos::InstState::UnknownOption) ==
+              AOS_INST_UNKNOWN_OPTION);
 
 static_assert(static_cast<int>(aos::ExecState::Ok) == AOS_EXEC_OK);
 static_assert(static_cast<int>(aos::ExecState::InvalidArgument) ==
@@ -36,6 +44,10 @@ AOS_API const char *aos_inst_state_string(aos_inst_state state) {
         case AOS_INST_FIELD_TYPE_MISMATCH:
         case AOS_INST_EMPTY_ARGV:
         case AOS_INST_ENV_KEY_INVALID:
+        case AOS_INST_DIRECTIVE_KEY_COUNT_INVALID:
+        case AOS_INST_UNKNOWN_DIRECTIVE:
+        case AOS_INST_DIRECTIVE_VALUE_TYPE_MISMATCH:
+        case AOS_INST_UNKNOWN_OPTION:
             return aos::to_string(static_cast<aos::InstState>(state));
         case AOS_INST_ALLOC_FAILED: return "AllocationFailed";
         case AOS_INST_READ_ERROR: return "ReadError";

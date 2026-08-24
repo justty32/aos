@@ -22,6 +22,10 @@ enum class InstState {
     FieldTypeMismatch,
     EmptyArgv,
     EnvKeyInvalid,
+    DirectiveKeyCountInvalid = 12,
+    UnknownDirective,
+    DirectiveValueTypeMismatch,
+    UnknownOption,
 };
 
 struct inst_t {
@@ -29,6 +33,7 @@ struct inst_t {
     std::string stdin_path;
     std::string stdout_path;
     std::string stderr_path;
+    bool stderr_merge = false;
     std::string exit_path;
     std::string cwd;
     std::map<std::string, std::string> env;
