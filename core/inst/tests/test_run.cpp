@@ -2,10 +2,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <signal.h>
 #include <sstream>
 #include <string>
+#include <sys/wait.h>
 #include <vector>
 
 #include <unistd.h>
@@ -50,6 +53,21 @@ int exec_world(std::string &path) {
     return aos::run_exec(2, argv);
 }
 
+int loop_world(std::string &path, char *interval) {
+    char program[] = "aos exec";
+    char option[] = "--loop";
+    char *argv[] = {program, option, interval, path.data()};
+    return aos::run_exec(4, argv);
+}
+
+bool wait_for_file(const std::string &path) {
+    for (int attempt = 0; attempt < 300; ++attempt) {
+        if (std::filesystem::exists(path)) return true;
+        usleep(10000);
+    }
+    return false;
+}
+
 void write_inst(const TempDir &dir, const std::string &content) {
     write_file(dir.path + "/.aos/inst.json", content);
 }
@@ -77,6 +95,103 @@ TEST_CASE("init rejects a nonexistent folder and both commands validate usage") 
     char *exec_argv[] = {exec_program};
     CHECK(aos::run_init(1, init_argv) == 2);
     CHECK(aos::run_exec(1, exec_argv) == 2);
+}
+
+TEST_CASE("exec loop validates its interval arguments") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+
+    char program[] = "aos exec";
+    char option[] = "--loop";
+    char text[] = "later";
+    char negative[] = "-1";
+    char *missing[] = {program, option};
+    char *nonnumeric[] = {program, option, text, dir.path.data()};
+    char *below_zero[] = {program, option, negative, dir.path.data()};
+    CHECK(aos::run_exec(2, missing) == 2);
+    CHECK(aos::run_exec(4, nonnumeric) == 2);
+    CHECK(aos::run_exec(4, below_zero) == 2);
+
+    write_file(dir.path + "/.aos/inst.json.runi", "busy\n");
+    char zero[] = "0";
+    CHECK(loop_world(dir.path, zero) == 3);
+}
+
+TEST_CASE("exec loop advances consecutive rounds and stops cleanly on signal") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_inst(
+        dir,
+        R"({"argv":["/bin/sh","-c","printf '%s' '{\"argv\":[\"/bin/sh\",\"-c\",\"printf second > second\"]}' > .aos/inst.tempd/next.json; printf first > first"],"exit":"."})");
+
+    const pid_t child = fork();
+    REQUIRE(child >= 0);
+    if (child == 0) {
+        char interval[] = "1000";
+        _exit(loop_world(dir.path, interval));
+    }
+
+    REQUIRE(wait_for_file(dir.path + "/second"));
+    REQUIRE(kill(child, SIGTERM) == 0);
+    int status = 0;
+    REQUIRE(waitpid(child, &status, 0) == child);
+    REQUIRE(WIFEXITED(status));
+    CHECK(WEXITSTATUS(status) == 0);
+    CHECK(read_file(dir.path + "/first") == "first");
+    CHECK(read_file(dir.path + "/second") == "second");
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
+}
+
+TEST_CASE("exec loop throttles failures that happen before a round starts") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_file(dir.path + "/.aos/version", "99\n");
+    const std::string errors = dir.path + "/errors";
+
+    const pid_t child = fork();
+    REQUIRE(child >= 0);
+    if (child == 0) {
+        std::freopen(errors.c_str(), "w", stderr);
+        char interval[] = "200";
+        const int result = loop_world(dir.path, interval);
+        std::fflush(stderr);
+        _exit(result);
+    }
+    usleep(550000);
+    REQUIRE(kill(child, SIGTERM) == 0);
+    int status = 0;
+    REQUIRE(waitpid(child, &status, 0) == child);
+    REQUIRE(WIFEXITED(status));
+    CHECK(WEXITSTATUS(status) == 0);
+
+    const std::string output = read_file(errors);
+    const std::size_t lines =
+        static_cast<std::size_t>(std::count(output.begin(), output.end(), '\n'));
+    CHECK(lines >= 1);
+    CHECK(lines <= 5);
+}
+
+TEST_CASE("exec loop does not run another round after a signal wakes idle sleep") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+
+    const pid_t child = fork();
+    REQUIRE(child >= 0);
+    if (child == 0) {
+        char interval[] = "1000";
+        _exit(loop_world(dir.path, interval));
+    }
+    usleep(200000);
+    const std::string delivery = dir.path + "/.aos/inst.tempd/next.json";
+    write_file(delivery,
+               R"({"argv":["/bin/sh","-c","printf ran > unexpected"]})");
+    REQUIRE(kill(child, SIGTERM) == 0);
+    int status = 0;
+    REQUIRE(waitpid(child, &status, 0) == child);
+    REQUIRE(WIFEXITED(status));
+    CHECK(WEXITSTATUS(status) == 0);
+    CHECK(std::filesystem::exists(delivery));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/unexpected"));
 }
 
 TEST_CASE("exec requires .aos and a recognized version") {
