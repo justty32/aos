@@ -45,7 +45,11 @@ nlohmann::ordered_json encode(const inst_t &inst) {
     value["argv"] = inst.argv;
     if (!inst.stdin_path.empty()) value["stdin"] = inst.stdin_path;
     if (!inst.stdout_path.empty()) value["stdout"] = inst.stdout_path;
-    if (!inst.stderr_path.empty()) value["stderr"] = inst.stderr_path;
+    if (inst.stderr_merge) {
+        value["stderr"] = {{"$opt", "merge"}};
+    } else if (!inst.stderr_path.empty()) {
+        value["stderr"] = inst.stderr_path;
+    }
     if (!inst.exit_path.empty()) value["exit"] = inst.exit_path;
     if (!inst.cwd.empty()) value["cwd"] = inst.cwd;
     if (!inst.env.empty()) value["env"] = inst.env;
@@ -79,7 +83,7 @@ InstState decode(const json &value, inst_t &inst) {
 
     const std::pair<const char *, std::string *> strings[] = {
         {"stdin", &inst.stdin_path}, {"stdout", &inst.stdout_path},
-        {"stderr", &inst.stderr_path}, {"exit", &inst.exit_path},
+        {"exit", &inst.exit_path},
         {"cwd", &inst.cwd},
     };
     for (const auto &field : strings) {
@@ -89,6 +93,30 @@ InstState decode(const json &value, inst_t &inst) {
                 return InstState::FieldTypeMismatch;
             }
             *field.second = it->get<std::string>();
+        }
+    }
+
+    const auto stderr_it = value.find("stderr");
+    if (stderr_it != value.end()) {
+        if (stderr_it->is_string()) {
+            inst.stderr_path = stderr_it->get<std::string>();
+        } else if (stderr_it->is_object()) {
+            if (stderr_it->size() != 1) {
+                return InstState::DirectiveKeyCountInvalid;
+            }
+            const auto option_it = stderr_it->find("$opt");
+            if (option_it == stderr_it->end()) {
+                return InstState::UnknownDirective;
+            }
+            if (!option_it->is_string()) {
+                return InstState::DirectiveValueTypeMismatch;
+            }
+            if (option_it->get_ref<const std::string &>() != "merge") {
+                return InstState::UnknownOption;
+            }
+            inst.stderr_merge = true;
+        } else {
+            return InstState::FieldTypeMismatch;
         }
     }
 

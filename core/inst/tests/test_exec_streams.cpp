@@ -8,6 +8,9 @@
 
 #include <cstdlib>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 TEST_CASE("execute redirects standard streams and truncates output") {
     TempDir dir;
     const std::string input = dir.path + "/input";
@@ -35,6 +38,45 @@ TEST_CASE("execute redirects stderr") {
 
     REQUIRE(aos::execute(inst, result) == aos::ExecState::Ok);
     CHECK(read_file(inst.stderr_path) == "error");
+}
+
+TEST_CASE("execute merges stderr into redirected stdout") {
+    TempDir dir;
+    aos::inst_t inst = command(
+        {"/bin/sh", "-c",
+         "printf out1; printf err1 >&2; printf out2; printf err2 >&2"});
+    inst.stdout_path = dir.path + "/merged";
+    inst.stderr_merge = true;
+    aos::ExecResult result;
+
+    REQUIRE(aos::execute(inst, result) == aos::ExecState::Ok);
+    CHECK(result.status == 0);
+    CHECK(read_file(inst.stdout_path) == "out1err1out2err2");
+}
+
+TEST_CASE("execute merges stderr into inherited stdout") {
+    TempDir dir;
+    const std::string output = dir.path + "/inherited";
+    const int output_fd = open(output.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
+                               0666);
+    REQUIRE(output_fd >= 0);
+    const int saved_stdout = dup(STDOUT_FILENO);
+    REQUIRE(saved_stdout >= 0);
+    REQUIRE(dup2(output_fd, STDOUT_FILENO) >= 0);
+    REQUIRE(close(output_fd) == 0);
+
+    aos::inst_t inst = command({"/bin/sh", "-c", "printf inherited >&2"});
+    inst.stderr_merge = true;
+    aos::ExecResult result;
+    const aos::ExecState state = aos::execute(inst, result);
+
+    const int restore_result = dup2(saved_stdout, STDOUT_FILENO);
+    const int close_result = close(saved_stdout);
+    REQUIRE(restore_result >= 0);
+    REQUIRE(close_result == 0);
+    REQUIRE(state == aos::ExecState::Ok);
+    CHECK(result.status == 0);
+    CHECK(read_file(output) == "inherited");
 }
 
 TEST_CASE("execute applies cwd and extends inherited environment") {

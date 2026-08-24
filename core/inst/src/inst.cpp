@@ -7,6 +7,7 @@ void inst_t::clear() noexcept {
     stdin_path.clear();
     stdout_path.clear();
     stderr_path.clear();
+    stderr_merge = false;
     exit_path.clear();
     cwd.clear();
     env.clear();
@@ -23,6 +24,12 @@ const char *to_string(InstState state) noexcept {
     case InstState::FieldTypeMismatch: return "FieldTypeMismatch";
     case InstState::EmptyArgv: return "EmptyArgv";
     case InstState::EnvKeyInvalid: return "EnvKeyInvalid";
+    case InstState::DirectiveKeyCountInvalid:
+        return "DirectiveKeyCountInvalid";
+    case InstState::UnknownDirective: return "UnknownDirective";
+    case InstState::DirectiveValueTypeMismatch:
+        return "DirectiveValueTypeMismatch";
+    case InstState::UnknownOption: return "UnknownOption";
     }
     return "Unknown";
 }

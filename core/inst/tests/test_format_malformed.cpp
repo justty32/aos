@@ -44,6 +44,19 @@ TEST_CASE("field type mismatches are rejected") {
           aos::InstState::FieldTypeMismatch);
 }
 
+TEST_CASE("invalid stderr directives are rejected precisely") {
+    CHECK(parse(R"({"argv":["x"],"stderr":{}})") ==
+          aos::InstState::DirectiveKeyCountInvalid);
+    CHECK(parse(R"({"argv":["x"],"stderr":{"$opt":"merge","x":1}})") ==
+          aos::InstState::DirectiveKeyCountInvalid);
+    CHECK(parse(R"({"argv":["x"],"stderr":{"$foo":"merge"}})") ==
+          aos::InstState::UnknownDirective);
+    CHECK(parse(R"({"argv":["x"],"stderr":{"$opt":true}})") ==
+          aos::InstState::DirectiveValueTypeMismatch);
+    CHECK(parse(R"({"argv":["x"],"stderr":{"$opt":"other"}})") ==
+          aos::InstState::UnknownOption);
+}
+
 TEST_CASE("missing or unusable argv is rejected") {
     CHECK(parse(R"({})") == aos::InstState::EmptyArgv);
     CHECK(parse(R"({"argv":[]})") == aos::InstState::EmptyArgv);

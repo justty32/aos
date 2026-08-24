@@ -45,6 +45,23 @@ TEST_CASE("write_one output round trips through read_one") {
     CHECK(decoded.timeout_ms == original.timeout_ms);
 }
 
+TEST_CASE("stderr merge encodes and round trips") {
+    aos::inst_t original;
+    original.argv = {"x"};
+    original.stderr_merge = true;
+    std::string encoded;
+
+    REQUIRE(aos::write_one(original, encoded) == aos::InstState::Ok);
+    CHECK(encoded ==
+          "{\"argv\":[\"x\"],\"stderr\":{\"$opt\":\"merge\"}}\n");
+
+    aos::inst_t decoded;
+    REQUIRE(aos::read_one(encoded.data(), encoded.size(), decoded) ==
+            aos::InstState::Ok);
+    CHECK(decoded.stderr_merge);
+    CHECK(decoded.stderr_path.empty());
+}
+
 TEST_CASE("write_one leaves output unchanged after validation failure") {
     aos::inst_t invalid;
     invalid.argv = {""};

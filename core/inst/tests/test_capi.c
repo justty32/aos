@@ -55,6 +55,12 @@ int main(void) {
     assert(aos_instruction_set_field(instruction, AOS_FIELD_STDIN, "in") == AOS_INST_OK);
     assert(aos_instruction_set_field(instruction, AOS_FIELD_STDOUT, "out") == AOS_INST_OK);
     assert(aos_instruction_set_field(instruction, AOS_FIELD_STDERR, "err") == AOS_INST_OK);
+    assert(aos_instruction_stderr_merge(instruction) == 0);
+    assert(aos_instruction_set_stderr_merge(instruction, 1) == AOS_INST_OK);
+    assert(aos_instruction_stderr_merge(instruction) == 1);
+    assert(strcmp(aos_instruction_field(instruction, AOS_FIELD_STDERR), "") == 0);
+    assert(aos_instruction_set_stderr_merge(instruction, 0) == AOS_INST_OK);
+    assert(aos_instruction_stderr_merge(instruction) == 0);
     assert(aos_instruction_set_field(instruction, AOS_FIELD_EXIT, "status") == AOS_INST_OK);
     assert(aos_instruction_set_field(instruction, AOS_FIELD_CWD, "/tmp") == AOS_INST_OK);
     assert(aos_instruction_set_env(instruction, "KEY", "value") == AOS_INST_OK);
