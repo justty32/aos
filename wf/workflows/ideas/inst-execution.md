@@ -41,6 +41,10 @@
 - instruction 層：每筆可以明確選擇 blocking／non-blocking。
 - runner 層：CLI argv 或 `run` options 可以設定整次執行的預設值。
 - instruction 明示值應覆蓋 runner 預設；欄位省略時才採 runner 預設。
+- **回合的邊界不因此鬆掉**：`aos exec` 仍會等**所有** thread 跑完才算本回合結束。
+  non-blocking 是「同一回合之內可以並行」，不是「跨回合非同步」。這一條把
+  [回合制模型](turn-based-folder.md) 那邊「何時算本回合執行完畢」直接定義掉了——
+  答案是**所有 thread 都收完**。
 
 這裡的「新 thread」是產品層的非阻塞語意。現有 `execute()` 本來就會 `fork` 子行程，
 但呼叫端同步 `waitpid`；實作時要決定是讓 worker thread 托管現有同步 `execute()`，還是
@@ -58,8 +62,10 @@
 - non-blocking 工作由誰持有與回收，避免 detached thread／child 變成失控工作或 zombie。
 - runner／CLI 已返回或 daemon 關閉時，背景工作要繼續、等待、取消，還是移交其他服務。
 - `timeout_ms`、`exit` 狀態檔、signal／錯誤結果在非阻塞模式下由誰追蹤與寫回。
-- 繼承 stdin／stdout／stderr 時，呼叫端先結束或 fd 關閉後的生命週期語意。
-- 同一批次後續 instruction 是否立刻啟動；是否需要最大並行數、順序或依賴控制。
-- daemon 何時算「本回合執行完畢」並彙整 `.aos/next/`：所有 blocking 指令完成即可，
-  還是也必須等待本回合啟動的 non-blocking 工作。
+- 繼承 stdin／stdout／stderr 時的交錯：多個子行程同時繼承同一個終端，輸出會互相插入。
+- 遇到 non-blocking 那筆之後，下一筆是**立刻**啟動（真並行），還是仍照批次順序；
+  是否需要最大並行數或依賴控制。
+- 回合的**結束狀態**怎麼算：某個 thread 裡的指令失敗時，整回合的退出碼是什麼。
 - 是否同步擴充 C++／C ABI；這同樣會改動目前標為凍結的 `core/inst` 核心層。
+  **這一項是硬阻塞**：新增 JSON 欄位一定要改 `format.cpp`（它對不認得的 key 直接回
+  `UnknownKey`），thread 化要改 `exec.cpp`／`run.cpp`。落地前必須明確解凍，不能繞過。
