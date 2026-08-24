@@ -12,6 +12,17 @@
 
 ## 最新進度
 
+- **兩場 workshop 開著沒收攏**（[workshop](workflows/workshop/README.md)，2026-08-24 開場）：
+  ① **[有限資源／CPU 怎麼指揮 GPU](workflows/workshop/records/finite-resource-queue.md)**
+  ——R1 五位都發言了，還沒 R2。**最該讓使用者知道的一件事**：五位獨立地都把 endpoint 佇列
+  放到**使用者層級**（`$XDG_STATE_HOME/aos/llm/<endpoint>/`），這**直接撞上 roadmap 第六節
+  「不做全域 daemon 與跨資料夾排程」**，而且不是為了挑戰它，是從「endpoint 是跨資料夾共享的」
+  推出來的。② **[lisp 在 .aos 裡長什麼樣](workflows/workshop/records/lisp-in-aos.md)**
+  ——只跑了 3 位（**缺維運與獨立開發者**，續場先補這兩位）。
+  兩場的**轉交提案都還沒拍板**，主持人不自己改 `docs/`。
+- **[辯論風格那場的轉交提案等使用者拍板](workflows/workshop/records/pre-agent-loop-core.md)**：
+  `deliver`／`aos enqueue` 插進 T5 之前、「回合中途死掉的洞」歸 roadmap 第六節、
+  `k/`／`c/` 兩層命名進 `.aos` 標準、有限資源獨立成 idea。**這四件都是改規格文件，要人拍板。**
 - **`core/llms` 與 `core/tooljson` 目前是失敗作，之後要重做**：使用者判定這兩個小專案
   不符合 aos 的回合制／抽象 CPU 模型（模型見
   [ideas/turn-based-folder](workflows/ideas/turn-based-folder.md) 與
