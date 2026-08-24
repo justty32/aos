@@ -19,17 +19,17 @@
 folder(state N) + inst(turn N → N+1) → folder(state N+1)
 ```
 
-## `aos inst` 就是這個模型的實作（方向已定）
+## `aos exec` 就是這個模型的實作（方向已定）
 
-上面的狀態轉移不是另外做一套機制：**`aos inst` 針對指定資料夾底下的 `.aos/inst` 跑
-東西，這就是「持續變換」模型的實作本體**。
+上面的狀態轉移不是另外做一套機制：**`aos exec` 針對指定資料夾底下的 `.aos/inst.json`
+跑東西，這就是「持續變換」模型的實作本體**。
 
 ```text
-aos inst <folder>   ==   folder(state N) + .aos/inst → folder(state N+1)
+aos exec <folder>   ==   folder(state N) + .aos/inst.json → folder(state N+1)
 ```
 
-- 指定資料夾＝世界；`.aos/inst`＝這個世界待執行的指令流。
-- 跑一次 `aos inst <folder>`＝推進一回合。
+- 指定資料夾＝世界；`.aos/inst.json`＝這個世界待執行的指令流。
+- 跑一次 `aos exec <folder>`＝推進一回合。
 - `core/daemon` 因此不是另一種轉移機制，只是**反覆觸發同一個原語**的外殼：等待、
   觸發、彙整 `.aos/next/`、再等待。回合語意完全由 `inst` 這一層決定。
 
@@ -40,29 +40,70 @@ aos inst <folder>   ==   folder(state N) + .aos/inst → folder(state N+1)
 ## 擴充模型：抽象 CPU 疊在 inst 之上（方向已定）
 
 LLM 這類「抽象 CPU」**建立在上述基礎之上**，不是與 `inst` 平起平坐的第二套原語。
-做法是讓它以一筆普通 instruction 的身分出現在 `.aos/inst` 裡，例如：
+做法是讓它以一筆普通 instruction 的身分出現在 `.aos/inst.json` 裡，例如：
 
 ```text
-.aos/inst          ── 一筆 instruction: `aos llm next`
-                          ↓ （POSIX exec，對 inst 來說就是普通指令）
-                    aos llm next 讀 .aos/llm_inst（另一份 instruction 檔）
+.aos/inst.json     ── 一筆 instruction: `aos llm exec`
+                          ↓ （POSIX exec，對 exec 這顆 CPU 來說就是普通指令）
+                    aos llm exec 讀 .aos/insts/llm.json（另一份 instruction 檔）
                           ↓
                     做「類似的事情」：取出、執行、推進該 CPU 的下一回合
 ```
 
 - 每種抽象 CPU＝**一個 aos 子命令 + 它自己的 instruction 檔**，共用同一套「取出一
   筆、執行、寫下一回合」的形狀。
-- 只有 process CPU 擁有原生的回合迴圈；其他 CPU 的回合是**被 `.aos/inst` 叫到時才
+- 只有 process CPU 擁有原生的回合迴圈；其他 CPU 的回合是**被 `.aos/inst.json` 叫到時才
   取得的**——回合由下層授予，不必各自再養一支獨立迴圈。
 - 新增處理器不需要新的核心機制，只需要新的子命令與新的 instruction 檔。
 - **「轉介到另一顆 CPU」不是協定，就是 `exec`**：所謂把工作交給 LLM CPU，實際動作
-  只是用 POSIX 跑另一支程式（`aos llm inst` / `aos llm next` 之類）。沒有訊息格式、
+  只是用 POSIX 跑另一支程式（`aos llm exec` 之類）。沒有訊息格式、
   沒有 IPC、沒有握手——**跨處理器的交接就是 fork/exec 本身**，要傳的東西走 argv、
   env、檔案系統（那份 instruction 檔）。
 - 因此排程、隔離、資源上限這些問題都被推遲到「那支程式自己怎麼做」，而不是回合模型
   必須先回答的事。
 
 完整的 LLM 排程、資源有限性與跨資料夾問題見 [全域 LLM CPU](llm-cpu.md)。
+
+## 版面與交接協定（工作假設，**尚未定案**）
+
+以下是目前傾向的樣子，還在討論中，**不要當成拍板**。
+
+### 檔案版面
+
+```text
+<folder>/.aos/
+    inst.json                  ← process CPU（aos exec）。最核心的 CPU，所以放最上層
+    insts/
+        llm.json               ← 其他 CPU 各一份
+        <name>.json
+        <name>/xxx.json        ← 某顆 CPU 需要多份時，可以再開一層目錄
+```
+
+核心 CPU 的 instruction 直接放 `.aos/inst.json`，其餘一律收在 `.aos/insts/` 底下。
+`insts/` 底下可以是單一 `<name>.json`，也可以是 `<name>/xxx.json`——**「反正 inst 就
+是這樣的佈局」**，需要幾層由那顆 CPU 自己決定。
+
+### 交接協定：兩次 `rename`
+
+```text
+生產者：  寫 inst.json.temp   ──rename──▶  inst.json     （投遞）
+消費者：  inst.json           ──rename──▶  inst.json.runi （取件，讀完立刻做）
+```
+
+- **投遞**：先產出 `.aos/inst.json.temp`，寫完才 `rename` 成 `inst.json`。`rename` 是
+  原子的，所以消費者永遠不會讀到寫了一半的 JSON。
+- **取件**：`aos exec` 讀進來之後**立刻**把 `.aos/inst.json` `rename` 成
+  `.aos/inst.json.runi`，然後才執行。這就是「先刪再跑」的實作——對 `inst.json` 那個
+  位置來說它已經消失了，但現場被保留下來。
+- **其他子模組（如 llm）最好也遵循同一套 `.temp` / `.runi` 慣例，但不強迫**。
+
+### 名詞與動詞
+
+`inst` 是**名詞**（instruction 這個資料格式、`.aos/inst.json`、`core/inst` 這顆函式
+庫）；`exec` 是**動詞**（`aos exec` 這條子命令）。子命令改名不代表小專案要跟著改名。
+
+> 注意：舊文裡「方案 A 的 `aos exec`」是指「一個吞下所有職責的巨型入口」，和這裡的
+> `aos exec` **不是同一個東西**。見 [llm-cpu](llm-cpu.md) 的說明。
 
 ## 最基礎的 aos 使用方式（方向已定）
 
@@ -154,17 +195,21 @@ aos daemon 監看 folder
 - `aos agent start`／`init` 是否必須冪等，重複執行時要保留、重建還是拒絕既有狀態。
 - 回合失敗的語意：停在原回合、進入失敗回合、重試，或交由使用者另投 instruction。
 - 指令以指定資料夾為 cwd 執行時的信任、安全與權限邊界。
-- instruction 檔的正式路徑尚未統一：本檔流程寫 `.aos/inst.json`，新的說法是
-  `.aos/inst`（可能是目錄，也可能是省略副檔名的簡稱），抽象 CPU 那側則出現
-  `.aos/llm_inst`。候選布局至少有「並列檔案（`.aos/inst` + `.aos/llm_inst`）」與
-  「目錄分處理器（`.aos/inst/<processor>.json`）」兩種，落地前要挑一個。
-- `aos inst <folder>` 與現有 `aos inst jobs.json`（直接指定 JSON 檔）的 argv 關係：
-  是同一子命令依參數型別分支，還是另開一個以資料夾為對象的模式。
-- 抽象 CPU 的回合由 `.aos/inst` 授予後，該 CPU 要在本回合內同步跑完（`aos llm next`
-  阻塞直到模型回覆），還是只做投遞、結果之後再取；這與
+- `.runi` 用固定名稱，所以它天生是一把鎖：**`inst.json.runi` 已經存在時代表什麼**？
+  「上一回合 crash 了，停下來等人」還是「陳舊殘留，直接接手」？兩顆 `aos exec` 同時
+  對同一個資料夾跑起來時，後者會把前者的 `.runi` 蓋掉——要不要用它做互斥。
+- `.temp` 同樣是固定名稱，但它的問題相反：**兩個生產者同時寫 `inst.json.temp` 會互相
+  蓋寫**（`rename` 原子，寫入不原子）。要不要規定 temp 名稱帶唯一後綴（pid／亂數），
+  還是明文限制「同時只能有一個生產者」。
+- `rename` 投遞會**無聲覆蓋**位置上還沒被讀走的 `inst.json`。這正是「彙整」那塊要處理
+  的問題，使用者已表示彙整另案討論。
+- 核心 CPU 在 `.aos/inst.json`、其餘在 `.aos/insts/` 是刻意的不對稱。代價是「列出所有
+  CPU 的佇列」這種操作要對頂層那個特例化；可接受與否還沒確認。
+- `aos exec <folder>` 與現有 `aos inst jobs.json`（直接指定 JSON 檔）的關係：`exec` 只
+  收資料夾、檔案模式留在 `inst`，還是 `exec` 兩種都收、`inst` 這條子命令整個退場。
+- 抽象 CPU 的回合由 `.aos/inst.json` 授予後，該 CPU 要在本回合內同步跑完
+  （`aos llm exec` 阻塞直到模型回覆），還是只做投遞、結果之後再取；這與
   [inst 執行策略](inst-execution.md) 的非阻塞欄位是同一個決定。
-- 子命令名稱只是形狀範例，目前出現過 `aos llm next` 與 `aos llm inst` 兩種寫法；動詞
-  （`next`／`inst`／`step`／`tick`）與是否所有處理器共用同一個動詞尚未拍板。
 
 > 本條目的「核心理想」與「最基礎使用方式」已由使用者定案；開放問題只是在落地前
 > 必須回答的設計點，不改變上述回合制模型。

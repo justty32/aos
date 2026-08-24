@@ -9,8 +9,8 @@
 
 | 檔案 | 內容 |
 |------|------|
-| [turn-based-folder](turn-based-folder.md) | 指定資料夾的回合制演化模型；`aos inst` 就是它的實作，抽象 CPU 疊在其上；`core/daemon`、`.aos/next/` 與 agent loop |
-| [llm-cpu](llm-cpu.md) | LLM CPU 疊在 `inst` 之上（`aos llm next` + `llm_inst`）、自跑推理或當全域 daemon client 的取捨、跨資料夾排程與 I/O 交換區 |
+| [turn-based-folder](turn-based-folder.md) | 指定資料夾的回合制演化模型；`aos exec` 就是它的實作，抽象 CPU 疊在其上；`.aos` 版面、`.temp`／`.runi` 交接協定、`core/daemon` 與 agent loop |
+| [llm-cpu](llm-cpu.md) | LLM CPU 疊在 `inst` 之上（`aos llm exec` + `.aos/insts/llm.json`）、自跑推理或當全域 daemon client 的取捨、跨資料夾排程與 I/O 交換區 |
 | [inst-execution](inst-execution.md) | `inst` 的 env 繼承開關與非阻塞／背景執行策略 |
 
 > **現況落差**：使用者已判定 `core/llms` 與 `core/tooljson` 是失敗作——它們不符合這裡
