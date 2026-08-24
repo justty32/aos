@@ -19,6 +19,51 @@
 folder(state N) + inst(turn N → N+1) → folder(state N+1)
 ```
 
+## `aos inst` 就是這個模型的實作（方向已定）
+
+上面的狀態轉移不是另外做一套機制：**`aos inst` 針對指定資料夾底下的 `.aos/inst` 跑
+東西，這就是「持續變換」模型的實作本體**。
+
+```text
+aos inst <folder>   ==   folder(state N) + .aos/inst → folder(state N+1)
+```
+
+- 指定資料夾＝世界；`.aos/inst`＝這個世界待執行的指令流。
+- 跑一次 `aos inst <folder>`＝推進一回合。
+- `core/daemon` 因此不是另一種轉移機制，只是**反覆觸發同一個原語**的外殼：等待、
+  觸發、彙整 `.aos/next/`、再等待。回合語意完全由 `inst` 這一層決定。
+
+**關鍵性質：`inst` 執行的是 POSIX 指令，所以它可以承載任何東西**——包括 `aos` 自己。
+上層要長出什麼能力，不必改回合模型，只要讓它成為某一筆 instruction 的 argv。這就是
+下一節「抽象 CPU」能站在這層之上的原因。
+
+## 擴充模型：抽象 CPU 疊在 inst 之上（方向已定）
+
+LLM 這類「抽象 CPU」**建立在上述基礎之上**，不是與 `inst` 平起平坐的第二套原語。
+做法是讓它以一筆普通 instruction 的身分出現在 `.aos/inst` 裡，例如：
+
+```text
+.aos/inst          ── 一筆 instruction: `aos llm next`
+                          ↓ （POSIX exec，對 inst 來說就是普通指令）
+                    aos llm next 讀 .aos/llm_inst（另一份 instruction 檔）
+                          ↓
+                    做「類似的事情」：取出、執行、推進該 CPU 的下一回合
+```
+
+- 每種抽象 CPU＝**一個 aos 子命令 + 它自己的 instruction 檔**，共用同一套「取出一
+  筆、執行、寫下一回合」的形狀。
+- 只有 process CPU 擁有原生的回合迴圈；其他 CPU 的回合是**被 `.aos/inst` 叫到時才
+  取得的**——回合由下層授予，不必各自再養一支獨立迴圈。
+- 新增處理器不需要新的核心機制，只需要新的子命令與新的 instruction 檔。
+- **「轉介到另一顆 CPU」不是協定，就是 `exec`**：所謂把工作交給 LLM CPU，實際動作
+  只是用 POSIX 跑另一支程式（`aos llm inst` / `aos llm next` 之類）。沒有訊息格式、
+  沒有 IPC、沒有握手——**跨處理器的交接就是 fork/exec 本身**，要傳的東西走 argv、
+  env、檔案系統（那份 instruction 檔）。
+- 因此排程、隔離、資源上限這些問題都被推遲到「那支程式自己怎麼做」，而不是回合模型
+  必須先回答的事。
+
+完整的 LLM 排程、資源有限性與跨資料夾問題見 [全域 LLM CPU](llm-cpu.md)。
+
 ## 最基礎的 aos 使用方式（方向已定）
 
 1. 給 aos 一個指定資料夾。
@@ -62,12 +107,6 @@ aos daemon 監看 folder
   `inst.json`，下一次消費它就形成下一回合。
 - 使用者介入也成為回合模型的一部分：可以在後續 instruction 被消費前改變世界狀態，
   或提供會影響下一回合的輸入。
-
-## 擴充模型：LLM 是另一種 CPU
-
-一般 daemon 是 process instruction 的 fetch–execute loop；LLM 則是另一種有限的
-CPU，由全域 daemon 在多個資料夾之間排程。完整構想與開放問題見
-[全域 LLM CPU](llm-cpu.md)。
 
 ## 與目前 aos 元件的關係
 
@@ -115,6 +154,17 @@ CPU，由全域 daemon 在多個資料夾之間排程。完整構想與開放問
 - `aos agent start`／`init` 是否必須冪等，重複執行時要保留、重建還是拒絕既有狀態。
 - 回合失敗的語意：停在原回合、進入失敗回合、重試，或交由使用者另投 instruction。
 - 指令以指定資料夾為 cwd 執行時的信任、安全與權限邊界。
+- instruction 檔的正式路徑尚未統一：本檔流程寫 `.aos/inst.json`，新的說法是
+  `.aos/inst`（可能是目錄，也可能是省略副檔名的簡稱），抽象 CPU 那側則出現
+  `.aos/llm_inst`。候選布局至少有「並列檔案（`.aos/inst` + `.aos/llm_inst`）」與
+  「目錄分處理器（`.aos/inst/<processor>.json`）」兩種，落地前要挑一個。
+- `aos inst <folder>` 與現有 `aos inst jobs.json`（直接指定 JSON 檔）的 argv 關係：
+  是同一子命令依參數型別分支，還是另開一個以資料夾為對象的模式。
+- 抽象 CPU 的回合由 `.aos/inst` 授予後，該 CPU 要在本回合內同步跑完（`aos llm next`
+  阻塞直到模型回覆），還是只做投遞、結果之後再取；這與
+  [inst 執行策略](inst-execution.md) 的非阻塞欄位是同一個決定。
+- 子命令名稱只是形狀範例，目前出現過 `aos llm next` 與 `aos llm inst` 兩種寫法；動詞
+  （`next`／`inst`／`step`／`tick`）與是否所有處理器共用同一個動詞尚未拍板。
 
 > 本條目的「核心理想」與「最基礎使用方式」已由使用者定案；開放問題只是在落地前
 > 必須回答的設計點，不改變上述回合制模型。
