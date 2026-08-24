@@ -80,9 +80,14 @@ LLM 這類「抽象 CPU」**建立在上述基礎之上**，不是與 `inst` 平
 ```
 
 - `inst.json` — 名叫 inst 的 JSON，沒有特別狀況（＝可以取用了）。
-- `inst.json.temp` — 同一份東西，狀況是「還在生成」。
+- `inst.json.temp` — 同一份東西，狀況是「還在生成，別碰」。
 - `inst.json.runi` — 狀況是「已被取走、正在跑」。
-- `inst.d` — 名叫 inst 的**資料夾**（`.d` 是副檔名，不是狀況）。
+- `inst.tempd` — 投遞匣**資料夾**（`.tempd` ＝ temp directory，是副檔名不是狀況）。
+- `inst.d` — 一般的「名叫 inst 的資料夾」，留給「某顆 CPU 需要多份指令」那種用途。
+
+> **狀況只用一個詞表示「還在生成」**：`.temp`。生產者寫到一半的投遞是
+> `<pid>.json.temp`，彙整到一半的下一批是 `inst.json.temp`——**兩者是同一種狀況，不必
+> 有兩個字**（原本寫的 `.writing` 因此不需要了）。**這是建議，等使用者確認。**
 
 這條標準是為了 `.aos` 提前訂的，但它不限於 `.aos`；真的落地時應該升格進
 [conventions](../common/conventions.md)。
@@ -94,11 +99,11 @@ LLM 這類「抽象 CPU」**建立在上述基礎之上**，不是與 `inst` 平
     inst.json          ← process CPU（aos exec）待執行的批次。最核心，所以放最上層
     inst.json.temp     ← 彙整中的下一批（彙整完 rename 蓋掉 inst.json）
     inst.json.runi     ← 已取走、正在跑的那一批
-    inst.d/            ← 投遞匣：一個生產者一個檔
-        <pid>          ← 投遞完成，等彙整
-        <pid>.writing  ← 還在寫，彙整者要略過
+    inst.tempd/        ← 投遞匣：一個生產者一個檔
+        <pid>.json     ← 投遞完成，等彙整
+        <pid>.json.temp ← 還在寫，彙整者要略過
     insts/
-        llm.json       ← 其他 CPU 各一份（各自配同名的 .temp／.runi／.d）
+        llm.json       ← 其他 CPU 各一份（各自配同名的 .temp／.runi／.tempd）
         <name>.json
 ```
 
@@ -108,18 +113,21 @@ LLM 這類「抽象 CPU」**建立在上述基礎之上**，不是與 `inst` 平
 ### 交接協定：投遞、彙整、取件
 
 ```text
-P1 ─▶ inst.d/<pid>.writing ─rename─▶ inst.d/<pid> ─┐
-P2 ─▶ inst.d/<pid>.writing ─rename─▶ inst.d/<pid> ─┼彙整▶ inst.json.temp ─rename▶ inst.json
-P3 ─▶ inst.d/<pid>.writing ─rename─▶ inst.d/<pid> ─┘                                  │
-                                                        取件 ─rename─▶ inst.json.runi ◀┘
+P1 ─▶ inst.tempd/<pid>.json.temp ─rename─▶ inst.tempd/<pid>.json ─┐
+P2 ─▶ inst.tempd/<pid>.json.temp ─rename─▶ inst.tempd/<pid>.json ─┤
+P3 ─▶ inst.tempd/<pid>.json.temp ─rename─▶ inst.tempd/<pid>.json ─┘
+                            │
+                            └彙整▶ inst.json.temp ─rename▶ inst.json ─rename▶ inst.json.runi
+                                                                       （取件）
 ```
 
 三步，每一步的交接都靠一次 `rename`：
 
-- **投遞**：生產者先寫 `.aos/inst.d/<pid>.writing`，寫完 `rename` 成 `.aos/inst.d/<pid>`。
-  **檔名帶 pid** 是必要的——`rename` 原子但「寫入」不是，共用檔名會互相蓋寫；
-  **`.writing` 這個狀況**則讓彙整者不會讀到寫到一半的投遞。同目錄內的 `rename` 是原子的。
-- **彙整**：彙整者把 `.aos/inst.d/` 底下所有**沒有 `.writing` 狀況**的投遞併成
+- **投遞**：生產者先寫 `.aos/inst.tempd/<pid>.json.temp`，寫完 `rename` 成
+  `<pid>.json`。**檔名帶 pid** 是必要的——`rename` 原子但「寫入」不是，共用檔名會互相
+  蓋寫；**`.temp` 這個狀況**則讓彙整者不會讀到寫到一半的投遞。同目錄內的 `rename` 是
+  原子的。
+- **彙整**：彙整者把 `.aos/inst.tempd/` 底下所有**沒有 `.temp` 狀況**的投遞併成
   `.aos/inst.json.temp`，完成後 `rename` 蓋掉 `.aos/inst.json`。**這就是彙整這個功能的
   全部**——`.aos/next/` 那個另設匯流區的構想被它取代了。
 - **取件**：`aos exec` 讀進來之後**立刻**把 `.aos/inst.json` `rename` 成
@@ -129,7 +137,7 @@ P3 ─▶ inst.d/<pid>.writing ─rename─▶ inst.d/<pid> ─┘              
   crash 留下的現場不會被靜靜蓋掉，也不會有兩支 `aos exec` 同時跑同一個資料夾。代價是
   crash 之後要人來處理，這是刻意的。
 - **其他子模組（如 llm）最好也遵循同一套慣例，但不強迫**：`.aos/insts/llm.json` 配
-  `llm.json.temp`、`llm.json.runi` 與 `llm.d/<pid>`。
+  `llm.json.temp`、`llm.json.runi` 與 `llm.tempd/<pid>.json`。
 
 ### 一支命令，兩種節奏
 
@@ -157,8 +165,8 @@ aos exec --keep-doing <folder>  # 持續讀、持續跑
 3. instruction 出現後，先完整讀進記憶體，**立刻**把 `inst.json` `rename` 成
    `inst.json.runi`，然後才執行其中的指令。
 4. 指令造成的資料夾變化構成下一回合的狀態；執行期間要排入下一回合的生產者，把
-   instruction 投遞到 `.aos/inst.d/<pid>`。
-5. 本回合執行完畢後，彙整 `.aos/inst.d/` 底下所有投遞，發布成新的 `.aos/inst.json`。
+   instruction 投遞到 `.aos/inst.tempd/<pid>.json`。
+5. 本回合執行完畢後，彙整 `.aos/inst.tempd/` 底下所有投遞，發布成新的 `.aos/inst.json`。
 6. 新的 `inst.json` 成為下一回合輸入，再次消費，形成循環。
 
 因此它不是靠時間連續更新資料夾，而是等待離散的 instruction 批次；沒有新的
@@ -179,7 +187,7 @@ aos exec --keep-doing 監看 folder
         ↓
 啟動一次 LLM，完成 agent 的本回合動作
         ↓
-需要繼續時，在結束前把下一步投遞到 inst.d/
+需要繼續時，在結束前把下一步投遞到 inst.tempd/
         ↺
 ```
 
@@ -188,7 +196,7 @@ aos exec --keep-doing 監看 folder
 - `aos agent init ...` 會載入該資料夾的各類資訊，包括使用哪個 LLM 思考引擎、可用
   工具、核心人格與記憶，然後觸發 agent 的第一次 LLM 動作。
 - agent loop 不必是一個永遠不返回的函式。需要跨多回合長期運作的工作，在本回合快
-  結束時把下一次動作投遞到 `.aos/inst.d/<pid>`；回合結束後彙整並發布下一份
+  結束時把下一次動作投遞到 `.aos/inst.tempd/<pid>.json`；回合結束後彙整並發布下一份
   `inst.json`，下一次消費它就形成下一回合。
 - 使用者介入也成為回合模型的一部分：可以在後續 instruction 被消費前改變世界狀態，
   或提供會影響下一回合的輸入。
@@ -215,7 +223,7 @@ aos exec --keep-doing 監看 folder
         ↓
 執行本回合 instruction（資料夾狀態轉移）
         ↓
-掃描 .aos/inst.d/ 下所有投遞（略過 .writing）
+掃描 .aos/inst.tempd/ 下所有投遞（略過 .temp）
         ↓
 彙整成 .aos/inst.json.temp，再 rename 蓋掉 .aos/inst.json
         ↓
@@ -223,38 +231,35 @@ aos exec --keep-doing 監看 folder
 ```
 
 先讓當前 `inst.json` 從那個位置消失再執行，是基礎協定的一部分，不等執行成功才做。
-`.aos/inst.d/` 則是本回合各個生產者提交後續動作的投遞匣；只在本回合執行結束後收集
+`.aos/inst.tempd/` 則是本回合各個生產者提交後續動作的投遞匣；只在本回合執行結束後收集
 它們。
 
 ## 已經定下來的（不必再問）
 
 - `aos inst` 這條子命令**直接刪掉**，只留 `aos exec`。
 - 取件用 `rename` 成 `.runi`；`.runi` 已存在時**拒絕啟動**。
-- 投遞寫進 `.aos/inst.d/<pid>`（寫作中叫 `<pid>.writing`）；彙整就是把它們併成
-  `.aos/inst.json.temp`，再 `rename` 蓋掉 `.aos/inst.json`。
+- 投遞寫進 `.aos/inst.tempd/<pid>.json`；彙整就是把它們併成 `.aos/inst.json.temp`，
+  再 `rename` 蓋掉 `.aos/inst.json`。
+- **一回合＝一整批**，不是一次一筆。
+- 每筆 instruction 自己帶一個欄位，決定要不要開 thread 用 non-blocking 的方式跑；
+  但 **`aos exec` 仍會等所有 thread 跑完才算本回合結束**。
 - 命名標準：`<名字>.<副檔名>.<狀況>`，第一個 `.xxx` 是副檔名、第二個是當前狀況。
 - 持續執行是 `aos exec --keep-doing`，不另做 `core/daemon`。
 
 ## 開放問題（尚未拍板）
 
-- 本回合有長命令時，是否刻意同步等待整回合結束，或執行與監看要分離；目前
-  `core/inst::execute()` 會同步等待。
+- non-blocking 欄位會動到**凍結的核心層**：新增 JSON 欄位要改 `format.cpp`
+  （不認得的 key 會被拒），thread 化要改 `exec.cpp`／`run.cpp`。落地前必須明確解凍。
 - `aos exec --keep-doing` 只監看一個資料夾，還是能同時管理多個；其生命週期與啟停介面。
 - `aos agent start`／`init` 是否必須冪等，重複執行時要保留、重建還是拒絕既有狀態。
 - 回合失敗的語意：停在原回合、進入失敗回合、重試，或交由使用者另投 instruction。
 - 指令以指定資料夾為 cwd 執行時的信任、安全與權限邊界。
-- **`.d` 會不會一詞多義**：`inst.d/` 現在是「投遞匣」。但更早說過某顆 CPU 需要多份
-  instruction 時可以再開一層目錄——那層照標準也會叫 `<name>.d/`，意思卻是「那顆 CPU
-  的多份指令」。兩個意思撞在同一個副檔名上，要挑一個改名。
-- **`<pid>.writing` 沒有副檔名槽**：照標準第一個 `.xxx` 是副檔名，但 `<pid>` 後面直接
-  接了狀況。要嚴格照標準的話應該是 `<pid>.json.writing` → `<pid>.json`，順便自我說明
-  投遞是 JSON。
 - **彙整用 `rename` 蓋掉 `inst.json` 會無聲吃掉沒被讀走的批次**（見下一條）。
 - 彙整的**順序**：多份投遞併成一批時誰先誰後。pid 排序是確定性的但無意義；
   mtime 有意義但會平手。
 - 彙整者**什麼時候跑**、由誰跑：`aos exec` 每回合自己跑一次，還是獨立的一步。
 - 彙整時 `inst.json` 位置上已經有一份沒被讀走的批次：附加、等下一輪，還是拒絕。
-- 彙整完的 `inst.d/<pid>` 何時刪除，以及刪除與發布 `inst.json` 的先後。
+- 彙整完的 `inst.tempd/<pid>.json` 何時刪除，以及刪除與發布 `inst.json` 的先後。
 - 某份投遞內容無效時：隔離該檔繼續、整批停住，還是拒絕發布。
 - `--keep-doing` 的細節：輪詢間隔或改用 inotify、收到信號怎麼收尾、沒有 `inst.json`
   時是等待還是結束。另外它遇到 `.runi` 會**永遠拒絕啟動**（因為規則是拒絕），這是

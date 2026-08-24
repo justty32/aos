@@ -85,34 +85,34 @@ tool call 翻譯成一筆 instruction」**，是模型真正需要的東西。
 **驗收**：同一個資料夾連跑兩次 `aos exec <folder>`，第一次執行、第二次無事可做。
 `.aos/inst.json` 在執行**之前**就已經不在原位。
 
-### T2 — 取件與投遞協定：`inst.d/`、`.temp`、`.runi`<a id="t2"></a>
+### T2 — 取件與投遞協定：`inst.tempd/`、`.temp`、`.runi`<a id="t2"></a>
 
 協定由使用者指定，兩邊各一次 `rename`：
 
 三步，每一步的交接都靠一次 `rename`：
 
 ```text
-投遞  inst.d/<pid>.writing ─rename─▶ inst.d/<pid>
-彙整  併成 inst.json.temp  ─rename─▶ inst.json
-取件  inst.json            ─rename─▶ inst.json.runi
+投遞  inst.tempd/<pid>.json.temp ─rename─▶ inst.tempd/<pid>.json
+彙整  併成 inst.json.temp        ─rename─▶ inst.json
+取件  inst.json                  ─rename─▶ inst.json.runi
 ```
 
 | 問題 | 這樣就解掉 |
 |---|---|
-| 兩個生產者互相蓋寫 | 投遞匣是目錄 `inst.d/`，一個生產者一個 `<pid>` 檔 |
-| 彙整者讀到寫到一半的投遞 | 寫作中叫 `<pid>.writing`，彙整者略過；寫完才 `rename` |
+| 兩個生產者互相蓋寫 | 投遞匣是目錄 `inst.tempd/`，一個生產者一個 `<pid>.json` |
+| 彙整者讀到寫到一半的投遞 | 寫作中帶 `.temp` 狀況，彙整者略過；寫完才 `rename` |
 | 原子取件 + crash 後查得到 | 讀完立刻 `rename` 成 `.runi`，然後才執行 |
 | 兩支 `aos exec` 同時跑同一個資料夾 | `.runi` 已存在就**拒絕啟動**（[D6](#d6) 已定） |
 
-命名標準（[D1](#d1)）：`<名字>.<副檔名>.<狀況>`——第一個 `.xxx` 是副檔名（`.json`、
-`.d` 是資料夾），第二個是當前狀況（`.temp` 生成中、`.runi` 執行中、`.writing` 寫作中）。
+命名標準（[D1](#d1)）：`<名字>.<副檔名>.<狀況>`——第一個 `.xxx` 是副檔名，第二個是當前
+狀況。狀況目前只有兩個字：`.temp`（還在生成，別碰）與 `.runi`（已取走、正在跑）。
 
 對回合語意來說，`rename` 走了就等於刪了——「先刪再跑」不變。但它順手保留了現場：
 crash 之後那份 `.runi` 還在，**要不要恢復是之後的決定，不是現在要做的功能**。
 第一版只要求「留著、不自動重跑」。
 
 其他 CPU（如 `aos llm exec`）**最好也遵循同一套慣例，但不強迫**：`.aos/insts/llm.json`
-配 `llm.json.temp`、`llm.json.runi` 與投遞匣 `llm.d/`。
+配 `llm.json.temp`、`llm.json.runi` 與投遞匣 `llm.tempd/`。
 
 **驗收**：在取件前、取件後執行前、執行中三個點殺掉 process，資料夾都只會呈現
 「完整的舊狀態」或「完整的新狀態」，不會出現半份 JSON，也不會自動重放已經發生的
@@ -120,7 +120,7 @@ crash 之後那份 `.runi` 還在，**要不要恢復是之後的決定，不是
 
 ### T3 — 彙整與發布：接出下一回合
 
-彙整**就是把 `.aos/inst.d/` 底下所有投遞併成 `.aos/inst.json.temp`，再 `rename` 蓋掉
+彙整**就是把 `.aos/inst.tempd/` 底下所有投遞併成 `.aos/inst.json.temp`，再 `rename` 蓋掉
 `.aos/inst.json`**。原本另設 `.aos/next/` 匯流區的構想被它取代了——投遞匣和彙整來源是
 同一個地方，少一個概念。
 
@@ -133,7 +133,7 @@ crash 之後那份 `.runi` 還在，**要不要恢復是之後的決定，不是
 - 彙整完的投遞何時刪除，與發布 `inst.json` 的先後。
 - 某份投遞內容無效：隔離該檔繼續、整批停住，還是拒絕發布（建議隔離並繼續）。
 
-**驗收**：一個資料夾能自己接兩回合——第一回合的指令投遞到 `.aos/inst.d/`，
+**驗收**：一個資料夾能自己接兩回合——第一回合的指令投遞到 `.aos/inst.tempd/`，
 第二次呼叫 `aos exec <folder>` 就跑到了下一回合的內容。
 
 ### T4 — 迴圈：`aos exec --keep-doing`，不做 `core/daemon`
@@ -184,22 +184,23 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 
 ## 四、決策紀錄
 
-**已定**：[D1](#d1) 版面（工作假設）、[D6](#d6) `.runi` 拒絕啟動、
-[D7](#d7) 投遞匣是目錄、[D8](#d8) 砍掉 `aos inst`、[D9](#d9) `aos exec` 是唯一入口。
+**已定**：[D1](#d1) 版面與命名標準（工作假設）、[D2](#d2) 一回合一整批、
+[D3](#d3) 回合內並行、[D6](#d6) `.runi` 拒絕啟動、[D7](#d7) 投遞匣 `inst.tempd/`、
+[D8](#d8) 砍掉 `aos inst`、[D9](#d9) `aos exec` 是唯一入口。
 
-**還等使用者**：[D2](#d2) 回合粒度、[D3](#d3) 阻塞與否、[D4](#d4) 改造或重長、
-[D5](#d5) `stderr` merge。這四題標「建議」的都只是我的主張，**我不會自己選**。
+**還等使用者**：[D4](#d4) 改造或重長、[D5](#d5) `stderr` merge。這兩題標「建議」的都
+只是我的主張，**我不會自己選**。
 
 ### D1 — `.aos` 的版面<a id="d1"></a>（擋 T1）　**已有工作假設，尚未定案**
 
 使用者給的方向（我原本建議的目錄式沒被採用）：
 
 ```text
-.aos/inst.json          ← process CPU。它是最核心的 CPU，所以直接放 .aos 底下
-.aos/inst.json.temp     ← 彙整中的下一批
-.aos/inst.json.runi     ← 已取走、正在跑的那一批
-.aos/inst.d/<pid>       ← 投遞匣（`.d` ＝資料夾），寫作中是 <pid>.writing
-.aos/insts/<name>.json  ← 其餘 CPU（各自配同名的 .temp／.runi／.d）
+.aos/inst.json               ← process CPU。它是最核心的 CPU，所以直接放 .aos 底下
+.aos/inst.json.temp          ← 彙整中的下一批
+.aos/inst.json.runi          ← 已取走、正在跑的那一批
+.aos/inst.tempd/<pid>.json   ← 投遞匣（寫作中是 <pid>.json.temp）
+.aos/insts/<name>.json       ← 其餘 CPU（各自配同名的 .temp／.runi／.tempd）
 ```
 
 配套的**命名標準**：`<名字>.<副檔名>.<狀況>`。第一個 `.xxx` 是副檔名，第二個是這個
@@ -211,18 +212,23 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 
 還沒定案，但配套的 [D6](#d6)／[D7](#d7)／[D8](#d8) 都已經有答案了。
 
-### D2 — 一回合＝一整批，還是一筆？<a id="d2"></a>（擋 T1／T3）
+### D2 — 一回合＝一整批，還是一筆？<a id="d2"></a>　**已定：一整批**
 
-**建議：一整批。** `inst` 現在就是批次語意，而且有「整批驗證過才開跑」這個保證；改成
-一次一筆等於丟掉它。附帶影響：T3 的「已有 instruction 檔時不覆蓋」在批次語意下最單純
-的答案是**延後發布到下一輪**，不是合併兩批。
+`inst` 現在就是批次語意，而且有「整批驗證過才開跑」這個保證，一回合一整批直接沿用它。
 
-### D3 — 阻塞還是非阻塞？<a id="d3"></a>（擋 T4／T5）
+### D3 — 阻塞還是非阻塞？<a id="d3"></a>　**已定：回合內並行，回合邊界不變**
 
-**建議：T1–T5 全部 blocking，不做非阻塞。** 理由是
-[inst-execution](../wf/workflows/ideas/inst-execution.md) 那條開放問題——「daemon 何時
-算本回合執行完畢」——只要引入非阻塞就沒有單純答案。長 LLM 呼叫會卡住該資料夾的回合，
-**這是可接受的**：那個資料夾本來就在等它。真的痛了再回來開這題。
+`inst.json` 的**每筆指令**自帶一個欄位，決定要不要開 thread 用 non-blocking 的方式跑；
+但 **`aos exec` 仍會等所有 thread 跑完**才算本回合結束。
+
+我原本建議「先全部 blocking」，理由是「本回合何時算執行完畢」沒有單純答案——這個方案
+直接把那題定義掉了：**答案是所有 thread 都收完**。回合邊界依然是硬的，並行只發生在
+回合**之內**。細節與剩下的開放問題見
+[inst-execution](../wf/workflows/ideas/inst-execution.md)。
+
+⚠ **這一項會撞到凍結層**：新增 JSON 欄位一定要改 `format.cpp`（它對不認得的 key 直接
+回 `UnknownKey`），thread 化要改 `exec.cpp`／`run.cpp`。**落地前需要明確解凍**，繞不
+過去。這也讓 D3 從「T4／T5 的事」變成「和 T1 同一批要處理的事」。
 
 ### D4 — llms／tooljson 是原地改造還是重長一次？<a id="d4"></a>（擋 T5）
 
@@ -248,17 +254,17 @@ T5 再重問」，不要當成 S2 的前置條件卡著。
 鎖：crash 現場不會被靜靜蓋掉，也不會有兩支 `aos exec` 同時跑同一個資料夾。代價是
 crash 之後要人處理，這是刻意的。連帶影響見 [T4](#t4-的注意事項)。
 
-### D7 — 投遞怎麼避免撞名？<a id="d7"></a>　**已定：投遞匣是目錄 `inst.d/`**
+### D7 — 投遞怎麼避免撞名？<a id="d7"></a>　**已定：投遞匣是目錄 `inst.tempd/`**
 
-一個生產者一個 `<pid>` 檔，寫作中叫 `<pid>.writing`。攤在 `.aos/` 底下會愈積愈亂，
+一個生產者一個 `<pid>.json` 檔，寫作中帶 `.temp` 狀況。攤在 `.aos/` 底下會愈積愈亂，
 收進目錄就乾淨了。
 
-這一步同時把「彙整」定義掉了：**彙整就是把 `inst.d/` 底下所有投遞併成
+這一步同時把「彙整」定義掉了：**彙整就是把 `inst.tempd/` 底下所有投遞併成
 `inst.json.temp`，再 `rename` 蓋掉 `inst.json`**——`.aos/next/` 那個另設匯流區的構想
 不需要了。
 
-**還沒解決**：`.d` 一詞多義。`inst.d/` 是投遞匣，但「某顆 CPU 需要多份指令」那層照標準
-也會叫 `<name>.d/`，意思不同。兩個要挑一個改名。
+投遞匣叫 `inst.tempd/`（temp directory），`.d` 因此空出來留給「某顆 CPU 需要多份指令」
+那種一般資料夾用途，不再一詞多義。
 
 ### D8 — `aos inst` 這條子命令留不留？<a id="d8"></a>　**已定：直接刪掉**
 
