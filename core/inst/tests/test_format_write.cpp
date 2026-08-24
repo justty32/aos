@@ -11,12 +11,14 @@ TEST_CASE("write_one emits one compact LF-terminated record") {
     inst.stdout_path = "/tmp/out";
     inst.env = {{"LANG", "C"}};
     inst.timeout_ms = 25;
+    inst.parallel = true;
     std::string out = "prefix:";
 
     REQUIRE(aos::write_one(inst, out) == aos::InstState::Ok);
     CHECK(out ==
           "prefix:{\"argv\":[\"echo\",\"hello\"],\"stdout\":\"/tmp/out\","
-          "\"env\":{\"LANG\":\"C\"},\"timeout_ms\":25}\n");
+          "\"env\":{\"LANG\":\"C\"},\"timeout_ms\":25,"
+          "\"parallel\":true}\n");
 }
 
 TEST_CASE("write_one output round trips through read_one") {
@@ -28,6 +30,7 @@ TEST_CASE("write_one output round trips through read_one") {
     original.cwd = "/var/tmp";
     original.env = {{"A", "line\nvalue"}, {"B", "="}};
     original.timeout_ms = 1234;
+    original.parallel = true;
     std::string encoded;
 
     REQUIRE(aos::write_one(original, encoded) == aos::InstState::Ok);
@@ -43,6 +46,7 @@ TEST_CASE("write_one output round trips through read_one") {
     CHECK(decoded.cwd == original.cwd);
     CHECK(decoded.env == original.env);
     CHECK(decoded.timeout_ms == original.timeout_ms);
+    CHECK(decoded.parallel == original.parallel);
 }
 
 TEST_CASE("stderr merge encodes and round trips") {
@@ -117,6 +121,7 @@ TEST_CASE("write_all output round trips through read_all") {
         CHECK(decoded[i].exit_path == originals[i].exit_path);
         CHECK(decoded[i].env == originals[i].env);
         CHECK(decoded[i].timeout_ms == originals[i].timeout_ms);
+        CHECK(decoded[i].parallel == originals[i].parallel);
     }
 }
 

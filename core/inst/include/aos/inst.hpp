@@ -38,6 +38,7 @@ struct inst_t {
     std::string cwd;
     std::map<std::string, std::string> env;
     std::uint64_t timeout_ms = 0;
+    bool parallel = false;
 
     AOS_API void clear() noexcept;
 };

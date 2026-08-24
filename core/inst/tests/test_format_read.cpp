@@ -7,7 +7,7 @@
 
 TEST_CASE("read_one parses every instruction field") {
     const std::string input =
-        R"({"argv":["sh","-c","echo hi"],"stdin":"in","stdout":"out","stderr":"err","exit":"rc","cwd":"/tmp","env":{"A":"1","B":"two"},"timeout_ms":5000})";
+        R"({"argv":["sh","-c","echo hi"],"stdin":"in","stdout":"out","stderr":"err","exit":"rc","cwd":"/tmp","env":{"A":"1","B":"two"},"timeout_ms":5000,"parallel":true})";
     aos::inst_t inst;
 
     REQUIRE(aos::read_one(input.data(), input.size(), inst) == aos::InstState::Ok);
@@ -19,6 +19,7 @@ TEST_CASE("read_one parses every instruction field") {
     CHECK(inst.cwd == "/tmp");
     CHECK(inst.env == std::map<std::string, std::string>{{"A", "1"}, {"B", "two"}});
     CHECK(inst.timeout_ms == 5000);
+    CHECK(inst.parallel);
 }
 
 TEST_CASE("read_all accepts a single instruction object") {
@@ -59,6 +60,7 @@ TEST_CASE("read_all accepts a formatted array of instruction objects") {
     CHECK(out[0].stdin_path.empty());
     CHECK(out[0].env.empty());
     CHECK(out[0].timeout_ms == 0);
+    CHECK_FALSE(out[0].parallel);
 }
 
 TEST_CASE("read_all accepts an empty array and rejects an empty document") {

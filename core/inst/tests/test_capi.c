@@ -33,6 +33,7 @@ int main(void) {
     assert(strcmp(aos_instruction_env_key(instruction, 0), "AOS_C_TEST") == 0);
     assert(strcmp(aos_instruction_env_value(instruction, 0), "yes") == 0);
     assert(aos_instruction_timeout_ms(instruction) == 1000);
+    assert(aos_instruction_parallel(instruction) == 0);
 
     assert(aos_instruction_write_buffer(instruction, NULL, 0, &size) ==
            AOS_INST_BUFFER_TOO_SMALL);
@@ -65,6 +66,10 @@ int main(void) {
     assert(aos_instruction_set_field(instruction, AOS_FIELD_CWD, "/tmp") == AOS_INST_OK);
     assert(aos_instruction_set_env(instruction, "KEY", "value") == AOS_INST_OK);
     assert(aos_instruction_set_timeout_ms(instruction, 42) == AOS_INST_OK);
+    assert(aos_instruction_set_parallel(instruction, 1) == AOS_INST_OK);
+    assert(aos_instruction_parallel(instruction) == 1);
+    aos_instruction_clear(instruction);
+    assert(aos_instruction_parallel(instruction) == 0);
 
     assert(pipe(fds) == 0);
     assert(write(fds[1], record, sizeof(record) - 1) == (ssize_t)(sizeof(record) - 1));

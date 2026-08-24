@@ -87,3 +87,35 @@ TEST_CASE("run executes multiple records sequentially") {
     CHECK(run_file(input) == 0);
     CHECK(read_file(output) == "firstsecond");
 }
+
+TEST_CASE("run starts the next record while a parallel record is running") {
+    TempDir dir;
+    const std::string started = dir.path + "/started";
+    const std::string slow = dir.path + "/slow";
+    const std::string fast = dir.path + "/fast";
+    std::string input = dir.path + "/input.json";
+    write_file(
+        input,
+        "[{\"argv\":[\"/bin/sh\",\"-c\",\"printf started > " + started +
+            "; sleep 1; printf slow > " + slow +
+            "\"],\"parallel\":true},{\"argv\":[\"/bin/sh\",\"-c\","
+            "\"while [ ! -e " + started +
+            " ]; do sleep 0.01; done; [ ! -e " + slow +
+            " ] && printf fast > " + fast + "\"]}]" );
+
+    CHECK(run_file(input) == 0);
+    CHECK(read_file(fast) == "fast");
+    CHECK(read_file(slow) == "slow");
+}
+
+TEST_CASE("run joins parallel records before returning") {
+    TempDir dir;
+    const std::string output = dir.path + "/joined";
+    std::string input = dir.path + "/input.json";
+    write_file(input,
+               "[{\"argv\":[\"/bin/sh\",\"-c\",\"sleep 1; printf joined > " +
+                   output + "\"],\"parallel\":true}]");
+
+    CHECK(run_file(input) == 0);
+    CHECK(read_file(output) == "joined");
+}

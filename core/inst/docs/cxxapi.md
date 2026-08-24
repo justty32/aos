@@ -7,13 +7,14 @@
 
 `inst_t` 代表一筆指令。它的公開成員有 `argv`（一個
 `std::vector<std::string>`）、`stdin_path`、`stdout_path`、`stderr_path`、
-`exit_path` 與 `cwd`（字串）、`env`（一個
+`exit_path` 與 `cwd`（字串）、`stderr_merge` 與 `parallel`（布林）、`env`（一個
 `std::map<std::string,std::string>`），以及 `timeout_ms`（`std::uint64_t`，
-預設為零）。`clear()` 會把所有成員還原成預設值。
+預設為零）。兩個布林預設為 false；`clear()` 會把所有成員還原成預設值。
 
 `InstState` 用來回報格式／驗證的結果：`Ok`、`InvalidArgument`、
 `JsonSyntax`、`NotAnObject`、`UnknownKey`、`FieldTypeMismatch`、`EmptyArgv`，
-以及 `EnvKeyInvalid`。
+`EnvKeyInvalid`、`DirectiveKeyCountInvalid`、`UnknownDirective`、
+`DirectiveValueTypeMismatch`，以及 `UnknownOption`。
 
 `ExecState` 包含 `Ok`、
 `InvalidArgument`、`SpawnFailed`、`WaitFailed`，以及 `ExitWriteFailed`。
