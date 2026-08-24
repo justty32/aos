@@ -11,6 +11,7 @@ void inst_t::clear() noexcept {
     exit_path.clear();
     cwd.clear();
     env.clear();
+    pending_directives.clear();
     timeout_ms = 0;
     parallel = false;
 }

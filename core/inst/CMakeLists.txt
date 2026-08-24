@@ -8,6 +8,7 @@ aos_add_subproject(inst
     SOURCES
         src/inst.cpp
         src/format.cpp
+        src/resolve.cpp
         src/handoff.cpp
         src/spawn_prep.cpp
         src/wait.cpp
@@ -51,6 +52,7 @@ aos_add_test(aos_inst_tests
         tests/test_format_read.cpp
         tests/test_format_write.cpp
         tests/test_format_malformed.cpp
+        tests/test_resolve.cpp
         tests/test_handoff.cpp
         tests/test_exec_streams.cpp
         tests/test_exec_path.cpp

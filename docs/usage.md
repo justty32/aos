@@ -5,7 +5,8 @@
 這份文件回答「第一次接觸 aos，要怎麼把一個資料夾跑起來，以及程式如何連它的
 函式庫」。它不逐項定義 instruction schema 或 POSIX 執行細節；需要時分別查
 [`format.md`](../core/inst/docs/format.md)、[`exec.md`](../core/inst/docs/exec.md) 與
-[`handoff.md`](../core/inst/docs/handoff.md)。
+[`handoff.md`](../core/inst/docs/handoff.md)。環境指示詞的函式庫契約見
+[`resolve.md`](../core/inst/docs/resolve.md)。
 
 aos 有兩種用法，背後是同一份實作。
 
@@ -67,6 +68,22 @@ cat my-world/hello.txt
 
 ```text
 hello
+```
+
+要讓呼叫 `aos exec` 的 shell 在執行前填入一個值，可用 `$env` 指示詞。它讀的是
+**解析當下的父行程環境**，不是同一筆 instruction 的 `env` 欄位；變數不存在會讓
+整批在任何命令啟動前失敗：
+
+```bash
+export AOS_GREETING='hello from environment'
+printf '%s\n' '{"argv":["printf","%s\\n",{"$env":"AOS_GREETING"}],"stdout":"env.txt"}' \
+  > my-world/.aos/inst.json
+aos exec my-world
+cat my-world/env.txt
+```
+
+```text
+hello from environment
 ```
 
 要持續推進同一個 world，使用毫秒為單位的 loop 模式：
@@ -210,9 +227,10 @@ int main() {
 }
 ```
 
-`inst` 的公開介面分四層，相依單向 `inst ← format ← handoff` 與 `inst ← exec`：
-`inst_t` 與狀態列舉、`read_*`/`write_*`（唯一懂 JSON schema 的一層）、檔案交接
-API，以及 `execute()`（唯一碰 `fork`/`exec` 的一層）。handoff 與 exec 互不相依；
+`inst` 的公開介面分五層，相依單向 `inst ← format ← handoff`、
+`inst ← format ← resolve` 與 `inst ← exec`：`inst_t` 與狀態列舉、
+`read_*`/`write_*`（唯一懂 JSON schema 的一層）、指示詞解析、檔案交接 API，以及
+`execute()`（唯一碰 `fork`/`exec` 的一層）。resolve、handoff 與 exec 互不相依；
 宣告併在同一個標頭裡**不代表它們可以互相引用**。
 逐項說明見 [`core/inst/docs/cxxapi.md`](../core/inst/docs/cxxapi.md)。
 

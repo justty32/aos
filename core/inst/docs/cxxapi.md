@@ -3,6 +3,7 @@
 這份文件回答「C++23 程式如何直接解析、產生、交接與執行 instruction」。如果目標是
 操作 `aos` 命令列，請看[使用說明](../../../docs/usage.md)；跨語言或需要穩定 ABI 時看
 [C API](capi.md)；handoff 的檔案生命週期與完整例子另見 [handoff](handoff.md)。
+外部值指示詞的解析契約與完整例子見 [resolve](resolve.md)。
 
 公開的 C++23 介面由 `<aos/inst.hpp>` 宣告，全部位於 `aos` 命名空間中。C ABI 的
 `<aos/inst.h>` 是同一份實作的另一道邊界，兩者可以並存於同一個編譯單元。
@@ -19,6 +20,10 @@
 `JsonSyntax`、`NotAnObject`、`UnknownKey`、`FieldTypeMismatch`、`EmptyArgv`，
 `EnvKeyInvalid`、`DirectiveKeyCountInvalid`、`UnknownDirective`、
 `DirectiveValueTypeMismatch`，以及 `UnknownOption`。
+
+format 讀到 `$env` 時，會在 `inst_t::pending_directives` 記住種類、位置和變數名稱，
+既有字串欄位暫時維持空值。`ResolveContext` 明示環境快照與相對路徑基準；
+`ResolveResult` 在失敗時指出欄位、索引或 env key，以及變數名稱。
 
 `ExecState` 包含 `Ok`、
 `InvalidArgument`、`SpawnFailed`、`WaitFailed`，以及 `ExitWriteFailed`。
@@ -58,10 +63,18 @@ instruction，以及 inbox／讀取／寫入／rename／釋放失敗。`HandoffR
 第一個位元組**——任何一筆無效就完全不動 `out`，並透過選用的 `error_record` 回報
 以一為基底的記錄序號（成功時為零）。輸出可以直接餵回 `read_all`。
 
+`resolve(inst, context, result)` 以 `context.environment` 替換所有 `$env`，清除待解析
+項目後重新呼叫 `validate(inst)`。不存在的變數回
+`EnvironmentVariableMissing`；替換後值不合法回 `ValidationFailed`。失敗時採交易式
+語意，原本的 `inst` 不變。`capture_environment(envp, base_path, context)` 可把明示的
+POSIX `envp` 複製成 context；它不會套用 instruction 自己的 `env`。
+
 `execute(inst, result)` 會重設 `result`、驗證 `argv` 非空、準備並執行一個子行程、
 等待、視情況寫出它的狀態檔，最後回傳一個 `ExecState`。子行程狀態非零時仍然回傳
 `ExecState::Ok`。這個非 const 的指令為 `argv` 提供穩定、可變的字元儲存空間；
 呼叫者在執行期間不得變動它。
+若 instruction 來自 JSON 且含指示詞，呼叫端必須先 resolve；exec 層刻意不知道
+指示詞，也不會代替呼叫端檢查。
 
 `aggregate_instructions(path, result)`、`claim_instruction(path, document, result)` 與
 `release_instruction(path, result)` 以一個結尾為 `.json` 的 instruction base path
