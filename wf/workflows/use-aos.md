@@ -44,6 +44,8 @@ aos exec world
 持續模式是 `aos exec --loop <毫秒> world`。間隔只在空回合使用；有工作立刻再跑，
 `--loop 0` 是 busy poll。第一次 `SIGINT`／`SIGTERM` 會等當前回合釋放 `.runi` 後回 0，
 同一信號第二次會立即終止；既有 `.runi` 會讓 loop 停止並回 3。
+`aos init`、`aos exec` 與 `aos exec --loop <毫秒>` 都可省略 world folder；省略就是
+目前目錄 `.`。裸 `aos exec --loop` 仍是缺少間隔的用法錯誤。
 
 一份指令檔是一個 JSON 物件或一個物件陣列。欄位：`argv`（必要）、`stdin`／`stdout`／
 `stderr`、`exit`、`cwd`、`env`、`timeout_ms`、`parallel`。**完整 schema 見
