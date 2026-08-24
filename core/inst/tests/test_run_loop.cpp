@@ -29,6 +29,71 @@ TEST_CASE("exec loop validates its interval arguments") {
     CHECK(loop_world(dir.path, zero) == 3);
 }
 
+TEST_CASE("exec loop zero interval warns once and uses one millisecond") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_file(dir.path + "/.aos/inst.json.runi", "busy\n");
+
+    const auto run_and_capture = [&](char *interval, const std::string &errors) {
+        const pid_t child = fork();
+        REQUIRE(child >= 0);
+        if (child == 0) {
+            std::freopen(errors.c_str(), "w", stderr);
+            const int result = loop_world(dir.path, interval);
+            std::fflush(stderr);
+            _exit(result);
+        }
+        int status = 0;
+        REQUIRE(waitpid(child, &status, 0) == child);
+        REQUIRE(WIFEXITED(status));
+        return WEXITSTATUS(status);
+    };
+
+    char zero[] = "0";
+    const std::string zero_errors = dir.path + "/zero-errors";
+    CHECK(run_and_capture(zero, zero_errors) == 3);
+    const std::string warning =
+        "aos exec: warning: --loop 0 would busy-poll and consume one CPU core; "
+        "using 1 ms instead\n";
+    CHECK(read_file(zero_errors).find(warning) != std::string::npos);
+
+    char normal[] = "250";
+    const std::string normal_errors = dir.path + "/normal-errors";
+    CHECK(run_and_capture(normal, normal_errors) == 3);
+    CHECK(read_file(normal_errors).find("would busy-poll") == std::string::npos);
+}
+
+TEST_CASE("exec loop zero interval no longer busy polls startup failures") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_file(dir.path + "/.aos/version", "99\n");
+    const std::string errors = dir.path + "/errors";
+
+    const pid_t child = fork();
+    REQUIRE(child >= 0);
+    if (child == 0) {
+        std::freopen(errors.c_str(), "w", stderr);
+        char interval[] = "0";
+        const int result = loop_world(dir.path, interval);
+        std::fflush(stderr);
+        _exit(result);
+    }
+    usleep(300000);
+    REQUIRE(kill(child, SIGTERM) == 0);
+    int status = 0;
+    REQUIRE(waitpid(child, &status, 0) == child);
+    REQUIRE(WIFEXITED(status));
+    CHECK(WEXITSTATUS(status) == 0);
+
+    const std::string output = read_file(errors);
+    const std::size_t lines =
+        static_cast<std::size_t>(std::count(output.begin(), output.end(), '\n'));
+    CHECK(lines >= 2);
+    // A local 300 ms run produced 104 lines after clamping; the old busy loop
+    // produced tens of thousands, so 2000 is deliberately generous but useful.
+    CHECK(lines <= 2000);
+}
+
 TEST_CASE("exec loop defaults its folder to the current directory") {
     TempDir dir;
     REQUIRE(init_world(dir.path) == 0);

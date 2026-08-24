@@ -96,7 +96,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `inst.cpp` | **inst 層**：`inst_t::clear()`、`to_string(InstState)`。不碰位元組／JSON，也不碰行程 |
 | `format.cpp` | **format 層**：唯一懂 instruction JSON schema 的檔。辨認字串位置的 `$env`／`$ref` 並記進 `pending_directives`，`stderr` 另接受 `{"$opt":"merge"}`；未解析指示詞可無損 write 回物件。`validate` 對仍是指示詞的位置延後值檢查；read/write 保持整批原子性 |
 | `resolve.cpp` | **resolve 層**：以明示的環境與 `base_path` 交易式解析 `$env`／`$ref`；讀取被引用 JSON、套用 RFC 6901 pointer，以正規化路徑＋pointer 追蹤無限深引用鏈及循環。錯誤帶回 instruction 位置、檔案、pointer、鏈與 errno；完成後重新呼叫 format 驗證。不依賴 handoff 或 exec |
-| `handoff.cpp` | **handoff 層**：從 instruction base path 推導 `.temp`／`.runi`／`.tempd`，負責投遞聚合、原子發佈、取件與釋放；只依賴 inst＋format，不印訊息、不執行 instruction |
+| `handoff.cpp` | **handoff 層**：從 instruction base path 推導 `.temp`／`.runi`／`.tempd`，負責投遞聚合、空投遞消化、原子發佈、取件與釋放；只依賴 inst＋format，不印訊息、不執行 instruction |
 | `exec.cpp` | **exec 層**：唯一碰 `fork`／`execve`／`waitpid` 的檔。`execute()`：組 `argv`＋`envp`（透過 `spawn_prep`）→ `fork` → 子行程 `setpgid`＋重導向（stderr merge 時在 stdout 設好後 `dup2(1, 2)`）＋`chdir`＋`execve`（`run_child`，全程 async-signal-safe）→ 父行程視 `timeout_ms` 決定直接 `wait_retry` 或 `wait_until` 輪詢；逾時先對整個行程群組送 `SIGTERM`、給 `kTimeoutGraceMs`（2000ms）緩衝，仍不收就 `SIGKILL` 整個群組——打群組是因為忽略 `SIGTERM` 的孫行程才殺得掉。結束後若 `exit_path` 非空就把 exit code 寫進那個檔 |
 | `spawn_prep.hpp`／`.cpp` | **內部標頭**（不對外）。`prepare_spawn()`：在 `fork` 之前把所有會配置記憶體的準備工作做完——合併繼承的環境變數與 `inst.env`（後者覆蓋前者）、組 `envp`、若 `argv[0]` 沒有 `/` 就沿 `PATH`（或 `confstr(_CS_PATH)` 的預設值）逐段找可執行檔。子行程只拿到已經算好的穩定指標 |
 | `wait.hpp`／`.cpp` | **內部標頭**。`wait_retry()`：EINTR-safe 的 `waitpid` 包裝。`wait_until()`：用 `CLOCK_MONOTONIC` 算經過時間，指數退避（上限 `kMaxPollMs`＝50ms）輪詢 `waitpid(WNOHANG)` 直到逾時 |
@@ -122,7 +122,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | CLI 對內介面、init／exec argv 解析、folder 預設 `.`、配置失敗例外邊界，以及兩個 C 入口 |
+| `run.hpp`／`run.cpp` | CLI 對內介面、init／exec argv 解析、folder 預設 `.`、將 `--loop 0` 警告並下限化為 1 ms、配置失敗例外邊界，以及兩個 C 入口 |
 | `run_internal.hpp` | CLI 各實作檔之間的內部宣告：單回合、loop、init world |
 | `run_init.cpp` | 建立 `.aos/`、版本 1 與 `inst.tempd/` inbox，失敗時回滾剛建立的狀態 |
 | `run_exec.cpp` | 單回合：進入 world、驗版本、aggregate → claim → execute batch → release，並把結果映成診斷與 0／1／3 |
