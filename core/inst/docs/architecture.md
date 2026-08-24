@@ -32,6 +32,8 @@ OBJECT library（`aos_inst_cli`）。`run` 只透過 `aos::inst` 的公開 API �
 
 runner 會把 `.aos/inst.json` 一路讀到 EOF，全部進到一個記憶體緩衝區裡，立刻
 rename 成 `.aos/inst.json.runi`，接著在啟動第一個命令之前剖析並驗證每一筆記錄。
+解析與執行正常返回後（不論結果為 0 或 1），會在所有 parallel thread join 完畢後
+unlink `.runi`；若 unlink 失敗，該回合回 1 並明確診斷。
 由此得到的保證是格式錯誤的批次原子性：只要第五筆記錄
 格式不正確，就代表第一到第四筆記錄都不會執行。串流式的讀取器無法提供這種保證，
 因為等到發現第五筆記錄有問題時，先前那些命令的副作用早已無法回復。

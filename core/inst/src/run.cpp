@@ -263,7 +263,13 @@ int run_exec_impl(const char *folder) {
                      kInstPath, std::strerror(errno));
         return 1;
     }
-    return execute_batch(buffer, kRuniPath);
+    const int result = execute_batch(buffer, kRuniPath);
+    if (unlink(kRuniPath) != 0) {
+        std::fprintf(stderr, "aos exec: cannot remove %s/%s: %s\n", folder,
+                     kRuniPath, std::strerror(errno));
+        return 1;
+    }
+    return result;
 }
 
 int run_init_impl(const char *folder) {

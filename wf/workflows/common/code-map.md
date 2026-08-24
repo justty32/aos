@@ -118,7 +118,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | CLI 世界／回合層：`run_init()` 要求既有 folder、建立 `.aos/` 與版本 1（既有 `.aos` 明確拒絕）；`run_exec()` 進入 folder → 驗版本 → 擋既有 `.runi` → 完整讀 `inst.json` → rename 成 `.runi` → `read_all()` 驗整批 → 同步執行一般記錄、把 `parallel` 記錄複製進 thread，最後全數 join。退出碼為正常 0、函式庫／世界錯誤 1、用法 2、既有 `.runi` 3。檔尾的 `aos_init_cli_main`／`aos_exec_cli_main` 與 CMake 登記一致；這一層是原生 CLI 唯一的例外邊界 |
+| `run.hpp`／`run.cpp` | CLI 世界／回合層：`run_init()` 要求既有 folder、建立 `.aos/` 與版本 1（既有 `.aos` 明確拒絕）；`run_exec()` 進入 folder → 驗版本 → 擋既有 `.runi` → 完整讀 `inst.json` → rename 成 `.runi` → `read_all()` 驗整批 → 同步執行一般記錄、把 `parallel` 記錄複製進 thread，最後全數 join → 正常返回（0 或 1）前 unlink `.runi`，刪除失敗也回 1。退出碼為正常 0、函式庫／世界錯誤 1、用法 2、既有 `.runi` 3。檔尾的 `aos_init_cli_main`／`aos_exec_cli_main` 與 CMake 登記一致；這一層是原生 CLI 唯一的例外邊界 |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）
 
@@ -131,7 +131,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | `test_format_read.cpp`／`test_format_write.cpp`／`test_format_malformed.cpp` | format 層：JSON round trip、各種壞輸入、已知/未知欄位 |
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
-| `test_run.cpp` | CLI 層：init／版本／空回合／`.runi` 取件與退出碼、folder 路徑基準、整批剖析、循序執行、parallel 與批次尾端 join |
+| `test_run.cpp` | CLI 層：init／版本／空回合／`.runi` 取件、正常返回清除與退出碼、連續回合、folder 路徑基準、整批剖析、函式庫失敗、循序執行、parallel 與批次尾端 join |
 | `exec_test_support.hpp` | 測試共用的小工具 |
 | `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
 
