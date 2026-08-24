@@ -1,6 +1,7 @@
 # 記錄格式
 
-`aos exec <folder>` 會讀取 `<folder>/.aos/inst.json` 的完整 JSON 文件。頂層可以是：
+`aos exec [folder]` 會讀取 `<folder>/.aos/inst.json` 的完整 JSON 文件；folder 省略時
+使用目前目錄。頂層可以是：
 
 - 一個指令物件，代表單筆執行。
 - 一個由指令物件組成的陣列，代表按輸入順序啟動的批次；空陣列是合法的空批次。

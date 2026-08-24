@@ -30,10 +30,11 @@ printf '%s\n' '{"argv":["echo","hello"],"stdout":"hello.txt"}' \
 aos exec my-world
 ```
 
-`aos init <folder>` 要求 folder 已存在，建立 `.aos/`、`inst.tempd/` inbox 並寫入版本 `1`。若 `.aos/`
+`aos init [folder]` 要求 folder 已存在，建立 `.aos/`、`inst.tempd/` inbox 並寫入版本 `1`。若 `.aos/`
 已存在會明確拒絕，不會覆寫。整個 `.aos/` 都是本機執行狀態，應加入 `.gitignore`。
+省略 folder 時使用目前目錄 `.`。
 
-`aos exec <folder>` 會先依檔名的字典序聚合 `.aos/inst.tempd/<name>.json`，再讀取
+`aos exec [folder]` 會先依檔名的字典序聚合 `.aos/inst.tempd/<name>.json`，再讀取
 `.aos/inst.json`；每份投遞可以是**一個** JSON 物件，或**一個陣列**
 的物件。檔案會先完整讀入並立刻 rename 成 `inst.json.runi`，然後整批驗證；所以第 5
 筆有語法錯誤時前 4 筆不會執行。回合正常返回後（包含退出碼 1）會刪除 `.runi`；只有
@@ -55,6 +56,7 @@ aos exec --loop 1000 my-world
 `--loop 0` 合法，但會 busy poll。回合回 0 或 1 都會繼續（1 的診斷已印到 stderr）；
 遇到既有 `.runi` 則停止並回 3。第一次 `SIGINT`／`SIGTERM` 會喚醒等待，並讓正在跑的
 回合完成及釋放 `.runi` 後正常回 0；再送一次同樣的信號則採預設處置立即終止。
+單回合與 loop 都可省略 folder，省略時使用目前目錄 `.`。
 
 ```json
 [

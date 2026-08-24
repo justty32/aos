@@ -120,7 +120,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 檔案 | 負責 |
 |------|------|
-| `run.hpp`／`run.cpp` | CLI 世界／回合層：init 建 `.aos/`、版本與 inbox；exec 驗版本後依序呼叫 aggregate → claim → execute batch → release，把結構化結果轉成警告與退出碼；`--loop <毫秒>` 的 argv、空回合輪詢、0／1／3 政策，以及只在 loop 安裝的兩段式 SIGINT／SIGTERM 收尾；原生 CLI 唯一的例外邊界 |
+| `run.hpp`／`run.cpp` | CLI 世界／回合層：init 建 `.aos/`、版本與 inbox；init／exec 的 folder 可省略為 `.`；exec 驗版本後依序呼叫 aggregate → claim → execute batch → release，把結構化結果轉成警告與退出碼；`--loop <毫秒> [folder]` 的 argv、空回合輪詢、0／1／3 政策，以及只在 loop 安裝的兩段式 SIGINT／SIGTERM 收尾；原生 CLI 唯一的例外邊界 |
 | `run_batch.hpp`／`run_batch.cpp` | CLI 內部批次迴圈：整批解析，同步執行一般記錄、複製 `parallel` 記錄進 thread，最後全數 join |
 
 **新增一個 instruction 欄位**：① `inst.hpp` 的 `inst_t` 加欄位；② `format.cpp` 的 `known_key`／`encode`／`decode` 三處都要加；③ 需要的話 `inst.h` 加對應 C ABI 存取子＋`capi_instruction.cpp` 實作；④ `exec.cpp`／`spawn_prep.cpp` 視欄位語意決定要不要用到。（凍結已於 2026-08-24 解除，但這種改動仍要先確認它屬於已拍板的範圍。）

@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <vector>
 
+#include <fcntl.h>
 #include <unistd.h>
 
 namespace {
@@ -39,6 +40,24 @@ struct TempDir {
     TempDir() : path(make_temp_dir()) {}
     ~TempDir() { std::filesystem::remove_all(path); }
     std::string path;
+};
+
+class ScopedCwd {
+public:
+    explicit ScopedCwd(const std::string &path)
+        : saved_(open(".", O_RDONLY | O_DIRECTORY | O_CLOEXEC)) {
+        REQUIRE(saved_ >= 0);
+        REQUIRE(chdir(path.c_str()) == 0);
+    }
+    ~ScopedCwd() {
+        if (saved_ >= 0) {
+            fchdir(saved_);
+            close(saved_);
+        }
+    }
+
+private:
+    int saved_;
 };
 
 int init_world(std::string &path) {
@@ -84,17 +103,38 @@ TEST_CASE("init creates version 1 and rejects an existing .aos directory") {
     CHECK(read_file(dir.path + "/.aos/version") == "1\n");
 }
 
-TEST_CASE("init rejects a nonexistent folder and both commands validate usage") {
+TEST_CASE("init rejects a nonexistent folder and commands reject extra arguments") {
     TempDir parent;
     std::string missing = parent.path + "/missing";
     CHECK(init_world(missing) == 1);
 
     char init_program[] = "aos init";
     char exec_program[] = "aos exec";
-    char *init_argv[] = {init_program};
-    char *exec_argv[] = {exec_program};
-    CHECK(aos::run_init(1, init_argv) == 2);
-    CHECK(aos::run_exec(1, exec_argv) == 2);
+    char extra[] = "extra";
+    char more[] = "more";
+    char *init_argv[] = {init_program, extra, more};
+    char *exec_argv[] = {exec_program, extra, more};
+    CHECK(aos::run_init(3, init_argv) == 2);
+    CHECK(aos::run_exec(3, exec_argv) == 2);
+}
+
+TEST_CASE("init and exec default their folder to the current directory") {
+    TempDir dir;
+    const std::filesystem::path original = std::filesystem::current_path();
+    {
+        ScopedCwd cwd(dir.path);
+        char init_program[] = "aos init";
+        char exec_program[] = "aos exec";
+        char *init_argv[] = {init_program};
+        char *exec_argv[] = {exec_program};
+        REQUIRE(aos::run_init(1, init_argv) == 0);
+        CHECK(read_file(".aos/version") == "1\n");
+        write_file(".aos/inst.json",
+                   R"({"argv":["/bin/sh","-c","printf current > current"]})");
+        CHECK(aos::run_exec(1, exec_argv) == 0);
+        CHECK(read_file("current") == "current");
+    }
+    CHECK(std::filesystem::current_path() == original);
 }
 
 TEST_CASE("exec loop validates its interval arguments") {
@@ -105,16 +145,35 @@ TEST_CASE("exec loop validates its interval arguments") {
     char option[] = "--loop";
     char text[] = "later";
     char negative[] = "-1";
+    char zero[] = "0";
+    char extra[] = "extra";
     char *missing[] = {program, option};
-    char *nonnumeric[] = {program, option, text, dir.path.data()};
-    char *below_zero[] = {program, option, negative, dir.path.data()};
+    char *nonnumeric[] = {program, option, text};
+    char *below_zero[] = {program, option, negative};
+    char *too_many[] = {program, option, zero, dir.path.data(), extra};
     CHECK(aos::run_exec(2, missing) == 2);
-    CHECK(aos::run_exec(4, nonnumeric) == 2);
-    CHECK(aos::run_exec(4, below_zero) == 2);
+    CHECK(aos::run_exec(3, nonnumeric) == 2);
+    CHECK(aos::run_exec(3, below_zero) == 2);
+    CHECK(aos::run_exec(5, too_many) == 2);
 
     write_file(dir.path + "/.aos/inst.json.runi", "busy\n");
-    char zero[] = "0";
     CHECK(loop_world(dir.path, zero) == 3);
+}
+
+TEST_CASE("exec loop defaults its folder to the current directory") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_file(dir.path + "/.aos/inst.json.runi", "busy\n");
+    const std::filesystem::path original = std::filesystem::current_path();
+    {
+        ScopedCwd cwd(dir.path);
+        char program[] = "aos exec";
+        char option[] = "--loop";
+        char interval[] = "250";
+        char *argv[] = {program, option, interval};
+        CHECK(aos::run_exec(3, argv) == 3);
+    }
+    CHECK(std::filesystem::current_path() == original);
 }
 
 TEST_CASE("exec loop advances consecutive rounds and stops cleanly on signal") {

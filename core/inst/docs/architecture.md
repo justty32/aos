@@ -21,7 +21,7 @@
   進入點各自接）。它透過 `aos_exec_cli_main` 與 `aos_init_cli_main` 兩個 C 連結
   進入點，掛成 `aos` 執行檔的 `exec` 與 `init` 子命令。
 
-`aos exec --loop <milliseconds> <folder>` 也只存在於 `run` 層。它反覆呼叫同一個
+`aos exec --loop <milliseconds> [folder]` 也只存在於 `run` 層；folder 省略時是 `.`。它反覆呼叫同一個
 aggregate → claim → execute → release 回合：有取到 instruction 就立刻跑下一輪，
 純空回合才用 `nanosleep` 輪詢等待；間隔 0 因而是 busy poll。回合回 0 或 1 都繼續，
 既有 `.runi` 的 3 則停止並回 3。loop 路徑才安裝 `SIGINT`／`SIGTERM` handler；第一次

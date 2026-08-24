@@ -332,24 +332,28 @@ int run_init_impl(const char *folder) {
 }  // namespace
 
 int run_exec(int argc, char *argv[]) {
+    const bool current = argc == 1 && argv != nullptr;
     const bool one_shot = argc == 2 && argv != nullptr && argv[1] != nullptr &&
                           std::strcmp(argv[1], "--loop") != 0;
-    const bool loop = argc == 4 && argv != nullptr && argv[1] != nullptr &&
+    const bool loop = (argc == 3 || argc == 4) && argv != nullptr &&
+                      argv[1] != nullptr &&
                       std::strcmp(argv[1], "--loop") == 0 &&
-                      argv[2] != nullptr && argv[3] != nullptr;
+                      argv[2] != nullptr &&
+                      (argc == 3 || argv[3] != nullptr);
     std::uint64_t interval = 0;
-    if ((!one_shot && !loop) || (loop && !parse_interval(argv[2], interval))) {
+    if ((!current && !one_shot && !loop) ||
+        (loop && !parse_interval(argv[2], interval))) {
         const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                                   ? argv[0]
                                   : "aos exec";
         std::fprintf(stderr,
-                     "usage: %s [--loop <milliseconds>] <folder>\n", program);
+                     "usage: %s [--loop <milliseconds>] [folder]\n", program);
         return 2;
     }
     try {
-        if (loop) return run_exec_loop(argv[3], interval);
+        if (loop) return run_exec_loop(argc == 4 ? argv[3] : ".", interval);
         bool did_work = false;
-        return run_exec_impl(argv[1], did_work);
+        return run_exec_impl(one_shot ? argv[1] : ".", did_work);
     } catch (const std::bad_alloc &) {
         std::fprintf(stderr, "aos exec: out of memory\n");
         return 1;
@@ -360,14 +364,16 @@ int run_exec(int argc, char *argv[]) {
 }
 
 int run_init(int argc, char *argv[]) {
-    if (argc != 2 || argv == nullptr || argv[1] == nullptr) {
+    const bool current = argc == 1 && argv != nullptr;
+    const bool explicit_folder = argc == 2 && argv != nullptr && argv[1] != nullptr;
+    if (!current && !explicit_folder) {
         const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                                   ? argv[0]
                                   : "aos init";
-        std::fprintf(stderr, "usage: %s <folder>\n", program);
+        std::fprintf(stderr, "usage: %s [folder]\n", program);
         return 2;
     }
-    return run_init_impl(argv[1]);
+    return run_init_impl(explicit_folder ? argv[1] : ".");
 }
 
 }  // namespace aos
