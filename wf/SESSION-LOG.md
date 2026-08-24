@@ -24,12 +24,14 @@
   [`docs/inst-directives.md`](../docs/inst-directives.md)，順序在
   [`docs/roadmap.md`](../docs/roadmap.md)，模型的理由在
   [`wf/workflows/ideas/`](workflows/ideas/README.md)。`core/inst` 已解凍。
-  **進度**：**T0–T4 全部落地**——`{"$opt":"merge"}`、`parallel` 欄位、`aos init`／
-  `aos exec <folder>`、handoff 分層（彙整／取件／釋放，公開 API，以 instruction 檔
-  路徑為參數所以其他 CPU 可重用）、`aos exec --loop <毫秒>`。`aos inst` 子命令已刪。
-  **還沒做**：指示詞的 `$env`／`$ref`（含 `resolve` 層，設計見
-  [`docs/inst-directives.md`](../docs/inst-directives.md)）——刻意延後，目前沒有東西
-  在等它們。下一步照 roadmap 是 **T5 agent loop**，用外部 LLM CLI，**不需要新的 C++**。
+  **進度**：**T0–T4 全部落地，`core/inst` 這一輪要做的都做完了**——三個指示詞
+  （`$opt`／`$env`／`$ref`）、`resolve` 分層、`parallel` 欄位、`aos init`／
+  `aos exec [folder]`／`aos exec --loop <毫秒>`、handoff 分層（彙整／取件／釋放，
+  公開 API 且以 instruction 檔路徑為參數，所以其他 CPU 可以直接重用同一套協定）。
+  `aos inst` 子命令已刪。`core/inst/src` 現在有五個分層：inst ← format ← handoff、
+  inst ← format ← resolve、inst ← exec。
+  **下一步照 roadmap 是 T5 agent loop**——用外部 LLM CLI，**不需要新的 C++**，
+  產出是規格（哪裡痛就是 `aos agent` 該收掉的東西），不是程式。
 - **程式由 codex 寫、我審查**：codex 裝在 WSL（`~/.local/bin/codex`），任務書放
   `/tmp/aos-task*.md`。我出規格與驗收條件、審 diff、獨立重跑 ctest，再決定 commit。
 - **建置環境是 WSL**：vcpkg 在 WSL 的 `~/dev/vcpkg`（Windows 那側沒有）。
