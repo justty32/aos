@@ -69,6 +69,19 @@ tool call 翻譯成一筆 instruction」**，是模型真正需要的東西。
 
 每階段獨立驗收，前一階段沒綠不進下一階段。
 
+### T0 — `inst` 的 schema 擴充　【和 T1 同一批】
+
+`core/inst` 核心層已解凍。這一批要動 `format.cpp` 與 `exec.cpp`，兩件事排在一起做：
+
+1. **[D3](#d3) 的 non-blocking 欄位** — 每筆指令自帶「要不要開 thread」，`aos exec` 等
+   所有 thread 收完才算回合結束。
+2. **`$` 指示詞** — `$opt`／`$env`／`$ref`，設計與實作順序見
+   [inst 的 `$` 指示詞](inst-directives.md)。第一步 `$opt` + `stderr` merge 最小，直接
+   解掉 [D5](#d5)。
+
+**驗收**：`stderr` 併流真的交錯（不是互相蓋寫）；non-blocking 那筆之後下一筆立刻啟動，
+而回合仍等到所有 thread 收完。
+
 ### T1 — `aos exec <folder>`：回合原語　【建議先做】
 
 新子命令 `aos exec`，參數是資料夾，讀 `<folder>/.aos/inst.json`，語意是
@@ -192,8 +205,12 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 [D7](#d7) 投遞匣 `inst.tempd/`、[D8](#d8) 砍掉 `aos inst`、
 [D9](#d9) `aos exec` 是唯一入口。
 
-**還等使用者**：[D5](#d5)（跟著 D4 延後）、[D10](#d10) 退出碼、以及最急的一項——
-**[D3](#d3) 要解凍 `core/inst` 核心層，需要你點頭**。
+**已定（續）**：[D5](#d5) 用 `{"$opt":"merge"}` 並引進 `$ref`／`$env`；
+**`core/inst` 核心層已解凍**。
+
+**還等使用者**：[D10](#d10) 退出碼，以及
+[`$` 指示詞設計](inst-directives.md)裡標「待拍板」的那幾項——最重要的是**解析要擺在哪
+一層**。
 
 ### D1 — `.aos` 的版面<a id="d1"></a>（擋 T1）　**已有工作假設，尚未定案**
 
@@ -275,12 +292,14 @@ inst 的做法：stdout 和 stderr 各是一個「檔案路徑」
 消滅了——tooljson 不再執行任何東西，它只產出 instruction，所以**一定**走 inst。剩下的
 就只是：inst 要不要支援 merge。
 
-**建議：跟著 [D4](#d4) 一起延後。** 但有個好消息——[D3](#d3) 已經決定要為 non-blocking
-欄位解凍 `format.cpp` 與 `exec.cpp` 了，**D5 最主要的成本（解凍）因此已經被付掉**。真
-要做的時候，它只是「順便再加一個欄位」。
+**已定：要做，而且做法不是哨兵字串。** 使用者拍板用
+`"stderr": {"$opt": "merge"}`，並順便把 `../freepy` 那套 `$ref`／`$env` 一起引進
+`inst` 的 JSON。完整設計見 **[inst 的 `$` 指示詞](inst-directives.md)**。
 
-[WAIT_USER](../wf/WAIT_USER.md) 那條可以標成「等 D4／D5」，不要繼續當成移植 S2 的前置
-條件卡著。
+物件形式而非 `"stderr": "merge"` 這個選擇是對的：哨兵字串會讓你永遠無法重導向到一個
+真的叫 `merge` 的檔案，物件形式讓字面字串永遠是字面。
+
+`core/inst` 核心層**已解凍**（使用者批准），所以這題不再有前置成本。
 
 ### D6 — `.runi` 存在時代表什麼？<a id="d6"></a>　**已定：拒絕啟動**
 

@@ -10,11 +10,12 @@
 
 ## 待使用者項
 
-- **要不要解凍 `core/inst` 核心層？**（擋 [roadmap 的 T1](../docs/roadmap.md)）
-  已拍板的「每筆 instruction 自帶 non-blocking 欄位」做不到不解凍：新增 JSON 欄位一定
-  要改 `format.cpp`（它對不認得的 key 直接回 `UnknownKey`，不是忽略），thread 化要改
-  `exec.cpp`／`run.cpp`。這三個檔都在 [code map](workflows/common/code-map.md) 的凍結
-  名單上。**繞不過去，需要使用者明確點頭**。
+- **`$env`／`$ref` 的解析要擺在哪一層？**（擋
+  [`$` 指示詞](../docs/inst-directives.md) 的第 2、3 步）
+  `format` 現在只懂語法、`exec` 收到的是解析好的 `inst_t`；但 `$env` 要讀 `environ`、
+  `$ref` 要讀檔案，兩者都卡在中間。選項 A（format 直接做）／B（新增 resolve 層）／
+  C（留在 CLI）與代價見該文件第六節，**建議 B**。第 1 步（`$opt` + stderr merge）不受
+  這題影響，可以先做。
 
 - **移植 S2 的決策 A：`core/tooljson` 的 exec 引擎自己寫，還是動 `core/inst`？**
   `_type: "exec"` 看起來就是 `core/inst` 在做的事，但接不起來——EXEC.md 要求
