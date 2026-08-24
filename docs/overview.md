@@ -16,8 +16,14 @@ $ aos init world && aos exec world        # 當工具用
 ```
 
 小專案分兩類：**核心**（`core/`，aos 的基本組成，一定會建）與**擴充**
-（`modules/`，可選）。目前只有一個核心小專案 `core/inst/`（讀 JSON 指令檔、
-`fork`/`exec` 執行）。之後的 `llm/`、`tooljson/` 等會照同一個模子長出來。
+（`modules/`，可選）。
+
+核心目前有三個，但只有一個站在主線上：
+
+| | |
+|---|---|
+| `core/inst/` | 回合原語本體——`.aos` 的交接協定、指示詞解析、`fork`/`exec` 執行。**`aos init` 與 `aos exec` 就是它。** |
+| `core/llms/`、`core/tooljson/` | 從 llmkit 移植過來的舊形狀，**介面是錯的**（把自己寫成「函式庫等別人呼叫」，模型要的是「一顆被 `exec` 起來的 CPU」）。仍然會建、會測，但**還沒被矯正到回合模型上**——見 [roadmap D4](roadmap.md#d4)。 |
 
 ## 為什麼是這個形狀
 
