@@ -83,47 +83,70 @@ LLM 這類「抽象 CPU」**建立在上述基礎之上**，不是與 `inst` 平
 `insts/` 底下可以是單一 `<name>.json`，也可以是 `<name>/xxx.json`——**「反正 inst 就
 是這樣的佈局」**，需要幾層由那顆 CPU 自己決定。
 
-### 交接協定：兩次 `rename`
+### 交接協定：投遞、彙整、取件
 
 ```text
-生產者：  寫 inst.json.temp   ──rename──▶  inst.json     （投遞）
-消費者：  inst.json           ──rename──▶  inst.json.runi （取件，讀完立刻做）
+生產者 P1 ──▶ inst.json.temp/<pid>  ─┐
+生產者 P2 ──▶ inst.json.temp/<pid>  ─┼─彙整──▶ inst.json ──rename──▶ inst.json.runi
+生產者 P3 ──▶ inst.json.temp/<pid>  ─┘                      （取件，讀完立刻做）
 ```
 
-- **投遞**：先產出 `.aos/inst.json.temp`，寫完才 `rename` 成 `inst.json`。`rename` 是
-  原子的，所以消費者永遠不會讀到寫了一半的 JSON。
+投遞匣是一個**目錄** `.aos/inst.json.temp/`，一個生產者一個檔案 `<pid>`。攤在 `.aos/`
+底下會愈積愈亂，收進目錄就乾淨了。
+
+- **投遞**：生產者寫 `.aos/inst.json.temp/<pid>`。**檔名帶 pid** 是必要的——`rename`
+  是原子的，但「寫入」不是，兩個生產者共用同一個檔名會互相蓋寫。
+- **彙整**：彙整者把 `.aos/inst.json.temp/` 底下所有檔案匯聚成一份 `inst.json`。
+  **這就是彙整這個功能的全部**——`.aos/next/` 那個另設匯流區的構想被它取代了。
 - **取件**：`aos exec` 讀進來之後**立刻**把 `.aos/inst.json` `rename` 成
   `.aos/inst.json.runi`，然後才執行。這就是「先刪再跑」的實作——對 `inst.json` 那個
   位置來說它已經消失了，但現場被保留下來。
-- **其他子模組（如 llm）最好也遵循同一套 `.temp` / `.runi` 慣例，但不強迫**。
+- **`.runi` 已存在時拒絕啟動**（已定）。它固定名稱，所以天生就是一把鎖：上一回合
+  crash 留下的現場不會被靜靜蓋掉，也不會有兩支 `aos exec` 同時跑同一個資料夾。代價是
+  crash 之後要人來處理，這是刻意的。
+- **其他子模組（如 llm）最好也遵循同一套慣例，但不強迫**：`.aos/insts/llm.json` 配
+  `.aos/insts/llm.json.temp/<pid>` 與 `.aos/insts/llm.json.runi`。
+- 命名規則因此很好記：**`<目標>.temp/` 是投遞匣，`<目標>.runi` 是執行中的現場**。
+  兩個名字都掛在它們所服務的那份 instruction 檔旁邊。
+
+### 一支命令，兩種節奏
+
+```sh
+aos exec <folder>               # 跑一回合
+aos exec --keep-doing <folder>  # 持續讀、持續跑
+```
+
+`--keep-doing`（暫名）就是 daemon：**daemon 不是另一支程式，是同一條命令的一個旗標**。
+迴圈體就是 fetch–execute：彙整 → 取件 → 執行 → 再來一次。
 
 ### 名詞與動詞
 
 `inst` 是**名詞**（instruction 這個資料格式、`.aos/inst.json`、`core/inst` 這顆函式
 庫）；`exec` 是**動詞**（`aos exec` 這條子命令）。子命令改名不代表小專案要跟著改名。
 
-> 注意：舊文裡「方案 A 的 `aos exec`」是指「一個吞下所有職責的巨型入口」，和這裡的
-> `aos exec` **不是同一個東西**。見 [llm-cpu](llm-cpu.md) 的說明。
+> 舊文裡「方案 A 的 `aos exec`」（一個吞下所有職責的巨型入口）**和這裡的 `aos exec`
+> 合起來了**：`aos exec` 確實是唯一入口，但它只跑核心 CPU 的 `inst.json`，其他處理器
+> 是它 `exec` 出去的子行程。理由見 [llm-cpu](llm-cpu.md)。
 
 ## 最基礎的 aos 使用方式（方向已定）
 
-1. 給 aos 一個指定資料夾。
-2. `core/daemon` 持續查詢該資料夾的 `.aos/inst.json` 是否有待執行內容。
-3. instruction 出現後，daemon 先把內容完整讀進記憶體，**立刻刪除** `inst.json`，
-   然後才執行其中的指令。
-4. 指令造成的資料夾變化構成下一回合的狀態；執行期間要排入下一回合的生產者，將
-   instruction 寫入 `.aos/next/` 底下的檔案。
-5. 本回合執行完畢後，daemon 讀取 `.aos/next/` 下的所有檔案，彙整成 instruction
-   batch，附加／發布到 `.aos/inst.json`。
-6. 新的 `inst.json` 成為下一回合輸入，daemon 再次消費，形成循環。
+1. 給 aos 一個指定資料夾，跑 `aos exec --keep-doing <folder>`。
+2. 它持續查詢 `.aos/inst.json` 有沒有待執行內容。
+3. instruction 出現後，先完整讀進記憶體，**立刻**把 `inst.json` `rename` 成
+   `inst.json.runi`，然後才執行其中的指令。
+4. 指令造成的資料夾變化構成下一回合的狀態；執行期間要排入下一回合的生產者，把
+   instruction 投遞到 `.aos/inst.json.temp/<pid>`。
+5. 本回合執行完畢後，彙整 `.aos/inst.json.temp/` 底下所有投遞，發布成新的
+   `.aos/inst.json`。
+6. 新的 `inst.json` 成為下一回合輸入，再次消費，形成循環。
 
-因此 daemon 不是靠時間連續更新資料夾，而是等待離散的 instruction 批次；沒有新的
+因此它不是靠時間連續更新資料夾，而是等待離散的 instruction 批次；沒有新的
 `inst.json` 就停留在目前回合。
 
 ## agent loop 如何建立在回合模型上
 
 ```text
-aos daemon 監看 folder
+aos exec --keep-doing 監看 folder
         ↓
 使用者在 folder 執行 aos agent start
         ↓
@@ -135,7 +158,7 @@ aos daemon 監看 folder
         ↓
 啟動一次 LLM，完成 agent 的本回合動作
         ↓
-需要繼續時，在結束前把下一步寫入 .aos/next/
+需要繼續時，在結束前把下一步投遞到 inst.json.temp/
         ↺
 ```
 
@@ -144,69 +167,75 @@ aos daemon 監看 folder
 - `aos agent init ...` 會載入該資料夾的各類資訊，包括使用哪個 LLM 思考引擎、可用
   工具、核心人格與記憶，然後觸發 agent 的第一次 LLM 動作。
 - agent loop 不必是一個永遠不返回的函式。需要跨多回合長期運作的工作，在本回合快
-  結束時把下一次動作寫進 `.aos/next/`；daemon 在回合結束後彙整並發布下一份
+  結束時把下一次動作投遞到 `.aos/inst.json.temp/<pid>`；回合結束後彙整並發布下一份
   `inst.json`，下一次消費它就形成下一回合。
 - 使用者介入也成為回合模型的一部分：可以在後續 instruction 被消費前改變世界狀態，
   或提供會影響下一回合的輸入。
 
 ## 與目前 aos 元件的關係
 
-- `core/inst` 提供「執行一次狀態轉移」的底層能力。
-- `core/llms` 與 `core/tooljson` 可提供 agent 回合中的思考與工具能力。
-- **`core/daemon` 是下一個要做的 core 功能**：負責資料夾監看、當前 instruction
-  的消費，以及 `.aos/next/` → `.aos/inst.json` 的下一回合發布。
-- agent 初始化與 LLM 回合邏輯仍是建立在 daemon／inst 之上的後續能力，不混進
-  daemon 的基礎職責。
+- `core/inst` 提供「執行一次狀態轉移」的底層能力，`aos exec` 是它的子命令。
+- `core/llms` 與 `core/tooljson` 可提供 agent 回合中的思考與工具能力——但兩者目前的
+  形狀不符合本模型，要改造（見 [SESSION-LOG](../../SESSION-LOG.md) 與
+  [roadmap](../../../docs/roadmap.md)）。
+- **不再需要獨立的 `core/daemon`**：持續執行是 `aos exec --keep-doing` 這個旗標，
+  不是另一個小專案。
+- agent 初始化與 LLM 回合邏輯仍是建立在 `exec`／`inst` 之上的後續能力，不混進回合
+  原語的基礎職責。
 
-## daemon 的單回合流程（已定）
+## 單回合流程（已定）
 
 ```text
 等待 .aos/inst.json
         ↓
 完整讀入記憶體
         ↓
-立刻刪除 .aos/inst.json
+立刻 rename 成 .aos/inst.json.runi   ← 對 inst.json 那個位置來說就是刪除了
         ↓
 執行本回合 instruction（資料夾狀態轉移）
         ↓
-掃描 .aos/next/ 下所有檔案
+掃描 .aos/inst.json.temp/ 下所有投遞
         ↓
-彙整並附加／發布成 .aos/inst.json
+彙整並發布成 .aos/inst.json
         ↓
 進入下一回合
 ```
 
-先刪除當前 `inst.json` 再執行，是基礎協定的一部分，不等執行成功才刪。`.aos/next/`
-則是本回合各個生產者提交後續動作的匯流區；daemon 只在本回合執行結束後收集它們。
+先讓當前 `inst.json` 從那個位置消失再執行，是基礎協定的一部分，不等執行成功才做。
+`.aos/inst.json.temp/` 則是本回合各個生產者提交後續動作的投遞匣；只在本回合執行結束
+後收集它們。
+
+## 已經定下來的（不必再問）
+
+- `aos inst` 這條子命令**直接刪掉**，只留 `aos exec`。
+- 取件用 `rename` 成 `.runi`；`.runi` 已存在時**拒絕啟動**。
+- 投遞寫進 `.aos/inst.json.temp/<pid>`；彙整就是把它們併成一份 `inst.json`。
+- 持續執行是 `aos exec --keep-doing`，不另做 `core/daemon`。
 
 ## 開放問題（尚未拍板）
 
-- daemon 如何原子地取得 instruction，避免讀到寫了一半的 JSON。
-- 讀入並刪除 `inst.json` 後，daemon 或主機在執行中 crash 時，是否接受本回合遺失，
-  或另設 in-flight／journal 供恢復；「先刪再跑」本身不變。
-- `.aos/next/` 下所有檔案的格式（每檔 object／array）、確定性排序與合併規則。
-- 彙整成功後何時刪除 `.aos/next/` 來源檔，以及發布 `inst.json` 的原子操作順序。
-- 彙整時若已有使用者或其他程式建立新的 `.aos/inst.json`，如何在不覆蓋的情況下附加。
-- 多個產生者同時寫入 `.aos/next/` 時，檔名、鎖定與「檔案已寫完」的交接協定。
-- 某個 next 檔案無效時，是整批保留並停止、隔離壞檔，還是處理其餘檔案。
-- 本回合有長命令時，daemon 是否刻意同步等待整回合結束，或執行與監看要分離；目前
+- 本回合有長命令時，是否刻意同步等待整回合結束，或執行與監看要分離；目前
   `core/inst::execute()` 會同步等待。
-- 一個 daemon 只監看一個資料夾，還是能同時管理多個資料夾；其生命週期與啟停介面。
+- `aos exec --keep-doing` 只監看一個資料夾，還是能同時管理多個；其生命週期與啟停介面。
 - `aos agent start`／`init` 是否必須冪等，重複執行時要保留、重建還是拒絕既有狀態。
 - 回合失敗的語意：停在原回合、進入失敗回合、重試，或交由使用者另投 instruction。
 - 指令以指定資料夾為 cwd 執行時的信任、安全與權限邊界。
-- `.runi` 用固定名稱，所以它天生是一把鎖：**`inst.json.runi` 已經存在時代表什麼**？
-  「上一回合 crash 了，停下來等人」還是「陳舊殘留，直接接手」？兩顆 `aos exec` 同時
-  對同一個資料夾跑起來時，後者會把前者的 `.runi` 蓋掉——要不要用它做互斥。
-- `.temp` 同樣是固定名稱，但它的問題相反：**兩個生產者同時寫 `inst.json.temp` 會互相
-  蓋寫**（`rename` 原子，寫入不原子）。要不要規定 temp 名稱帶唯一後綴（pid／亂數），
-  還是明文限制「同時只能有一個生產者」。
-- `rename` 投遞會**無聲覆蓋**位置上還沒被讀走的 `inst.json`。這正是「彙整」那塊要處理
-  的問題，使用者已表示彙整另案討論。
+- **「寫到一半」和「可以彙整了」用同一個名字**：彙整者可能讀到某個
+  `inst.json.temp/<pid>` 還在寫的中途狀態。pid 解決了生產者之間互相蓋寫，沒解決這一
+  項。改成目錄之後補法變得很自然：先寫一個彙整者會略過的名字（例如同目錄下的
+  `.<pid>.writing`），寫完 `rename` 成 `<pid>`——同目錄內的 `rename` 是原子的。
+  **協定還缺這一筆，但補起來很便宜。**
+- 彙整的**順序**：多份投遞併成一批時誰先誰後。pid 排序是確定性的但無意義；
+  mtime 有意義但會平手。
+- 彙整者**什麼時候跑**、由誰跑：`aos exec` 每回合自己跑一次，還是獨立的一步。
+- 彙整時 `inst.json` 位置上已經有一份沒被讀走的批次：附加、等下一輪，還是拒絕。
+- 彙整完的 `inst.json.temp/<pid>` 何時刪除，以及刪除與發布 `inst.json` 的先後。
+- 某份投遞內容無效時：隔離該檔繼續、整批停住，還是拒絕發布。
+- `--keep-doing` 的細節：輪詢間隔或改用 inotify、收到信號怎麼收尾、沒有 `inst.json`
+  時是等待還是結束。另外它遇到 `.runi` 會**永遠拒絕啟動**（因為規則是拒絕），這是
+  預期行為還是要另開一個「清掉現場」的命令。
 - 核心 CPU 在 `.aos/inst.json`、其餘在 `.aos/insts/` 是刻意的不對稱。代價是「列出所有
   CPU 的佇列」這種操作要對頂層那個特例化；可接受與否還沒確認。
-- `aos exec <folder>` 與現有 `aos inst jobs.json`（直接指定 JSON 檔）的關係：`exec` 只
-  收資料夾、檔案模式留在 `inst`，還是 `exec` 兩種都收、`inst` 這條子命令整個退場。
 - 抽象 CPU 的回合由 `.aos/inst.json` 授予後，該 CPU 要在本回合內同步跑完
   （`aos llm exec` 阻塞直到模型回覆），還是只做投遞、結果之後再取；這與
   [inst 執行策略](inst-execution.md) 的非阻塞欄位是同一個決定。
