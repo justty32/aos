@@ -151,9 +151,10 @@ process CPU 需要結果時 ← 回來查交換區 ──────┘
   執行交給獨立 daemon，而不是全部職責都留在單一行程內。
 - `aos llm exec` 是否阻塞本回合：等模型回覆才返回（回合語意單純，但長回合會卡住該
   資料夾的 process CPU），或投遞後立即返回、由後續回合取結果。
-- LLM instruction 檔的位置目前的工作假設是 `.aos/insts/llm.json`（需要多份時可以是
-  `.aos/insts/llm/xxx.json`），見 [回合制模型](turn-based-folder.md) 的版面段。**尚未
-  定案**。
+- LLM instruction 檔的位置目前的工作假設是 `.aos/insts/llm.json`，配套 `llm.json.temp`
+  、`llm.json.runi` 與投遞匣 `llm.d/`，見 [回合制模型](turn-based-folder.md) 的版面段。
+  **尚未定案**；「那顆 CPU 需要多份指令」的目錄要叫什麼還沒解決——`llm.d/` 已經被投遞
+  匣用掉了。
 - 若之後還有第三種抽象 CPU，`aos <processor> exec` + `.aos/insts/<processor>.json` 是否成為通則，
   以及這個形狀要不要抽成共用機制而非各自實作。
 - I/O 交換區的 request ID、狀態機、結果格式、持久化、取消、逾時與垃圾回收協定。
