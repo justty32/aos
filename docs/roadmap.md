@@ -156,9 +156,12 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 **驗收**：`aos exec --keep-doing` 能連續推進多回合；crash 留下 `.runi` 之後它停住而不
 是繞過去。
 
-### T5 — 第一顆抽象 CPU：`aos llm exec <folder>`
+### T5 — 第一顆抽象 CPU：`aos llm exec <folder>`　【[D4](#d4) 已把它推到 agent loop 之後】
 
-到這裡才碰 llms／tooljson。形狀已經定了：它是**被 inst `exec` 起來的一支普通程式**。
+> 使用者已決定 `core/llms`／`core/tooljson` **先不動**，這一階段要排在 agent loop 之
+> 後。以下是形狀的草稿，先不要開工。
+
+形狀已經定了：它是**被 `aos exec` 起來的一支普通程式**。
 
 ```text
 .aos/inst.json 的一筆 instruction: ["aos","llm","exec","."]
@@ -169,7 +172,7 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
         ↓
 把模型要的 tool call 用 tooljson 展開成 instruction
         ↓
-寫進 .aos/next/ → 下一回合由 inst 執行
+投遞到 .aos/inst.tempd/<pid>.json → 下一回合由 aos exec 執行
         ↓
 結束，記憶體不留任何東西
 ```
@@ -185,11 +188,12 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 ## 四、決策紀錄
 
 **已定**：[D1](#d1) 版面與命名標準（工作假設）、[D2](#d2) 一回合一整批、
-[D3](#d3) 回合內並行、[D6](#d6) `.runi` 拒絕啟動、[D7](#d7) 投遞匣 `inst.tempd/`、
-[D8](#d8) 砍掉 `aos inst`、[D9](#d9) `aos exec` 是唯一入口。
+[D3](#d3) 回合內並行、[D4](#d4) llms／tooljson 先不動、[D6](#d6) `.runi` 拒絕啟動、
+[D7](#d7) 投遞匣 `inst.tempd/`、[D8](#d8) 砍掉 `aos inst`、
+[D9](#d9) `aos exec` 是唯一入口。
 
-**還等使用者**：[D4](#d4) 改造或重長、[D5](#d5) `stderr` merge。這兩題標「建議」的都
-只是我的主張，**我不會自己選**。
+**還等使用者**：[D5](#d5)（跟著 D4 延後）、[D10](#d10) 退出碼、以及最急的一項——
+**[D3](#d3) 要解凍 `core/inst` 核心層，需要你點頭**。
 
 ### D1 — `.aos` 的版面<a id="d1"></a>（擋 T1）　**已有工作假設，尚未定案**
 
@@ -230,23 +234,53 @@ shell loop 撐不住的地方，就是 `--keep-doing` 要補的東西（輪詢�
 回 `UnknownKey`），thread 化要改 `exec.cpp`／`run.cpp`。**落地前需要明確解凍**，繞不
 過去。這也讓 D3 從「T4／T5 的事」變成「和 T1 同一批要處理的事」。
 
-### D4 — llms／tooljson 是原地改造還是重長一次？<a id="d4"></a>（擋 T5）
+### D4 — llms／tooljson 是原地改造還是重長一次？<a id="d4"></a>　**已定：先不動**
 
-**建議：原地改造，保留兩層、砍掉一層。** 保留 llms 的 transport／串流／preset 與
-tooljson 的 spec 驗證／argv 展開（都有實測價值），砍掉 `Bot::ask` 與 `Body::run` 這層
-介面，換成 turn producer／emitter。全部重長會把已經驗過的 curl 與 schema 一起丟掉。
+使用者的決定：**先不動、先不管，那要排在 agent loop 之後。**
 
-### D5 — `stderr` merge 這題還算不算數？<a id="d5"></a>（擋 T5，可延後）
+所以 `core/llms` 與 `core/tooljson` 現在的狀態是**擱置**——不是失敗待修，是「等前面的
+東西立起來再回頭處理」。在那之前不要投資這兩個小專案，也不要因為它們現在的形狀不對
+而急著重寫。
 
-[WAIT_USER](../wf/WAIT_USER.md) 上卡著「tooljson 的 exec 引擎自己寫還是動
-`core/inst`」。回合模型把這題**改寫了一半**：tooljson 不再需要自己的 exec 引擎（那是
-inst 的事），所以「誰擁有 exec」不用選了。但**沒有整個消滅**——tooljson 的 exec 配方
-要求 `stderr.mode: "merge"`（兩條流真的共用一條管子），而 `inst` 的重導向走檔案路徑、
-對 stdout 與 stderr 各開一次 `O_TRUNC`。這題現在變成「**`inst` 要不要長出 stderr merge
-欄位**」，而那會動到凍結的 `exec.cpp`。
+連帶影響：**T5 往後挪**，它前面要先有 agent loop。我原本「原地改造、保留 transport
+與 argv 展開」的建議留著，等真的動它時再拿出來討論。
 
-**建議：延後到 T5 真的踩到再問。** 在那之前 WAIT_USER 那條改記成「已被 T5 取代，等
-T5 再重問」，不要當成 S2 的前置條件卡著。
+### D5 — `inst` 要不要長出「stderr 併進 stdout」？<a id="d5"></a>（跟著 D4 一起延後）
+
+**這題在講什麼**（從頭解釋，因為脈絡散在好幾個檔）：
+
+freepy 的 `tooljson` 格式裡，一個工具可以用 `_type: "exec"` 描述成「跑一支程式」。它的
+規格有個欄位 `stderr.mode`，其中一個值是 `"merge"`——意思是**把子行程的 stderr 併進
+stdout 那條流**，兩邊的輸出交錯在同一份輸出裡，就是 shell 的 `2>&1`。
+
+`inst` 做不到這件事，原因在重導向的形狀：
+
+```text
+inst 的做法：stdout 和 stderr 各是一個「檔案路徑」
+             exec.cpp 對兩個路徑各 open() 一次，各帶 O_TRUNC
+             ↓ 給同一個路徑的話
+             兩次 open 各自截斷、各自有獨立的檔案偏移量
+             → 兩條流互相蓋寫，不是交錯
+
+真正的 2>&1：dup2(fd_out, 2)
+             兩條流共用同一個 open file description、同一個偏移量
+             → 才會是交錯
+```
+
+所以要支援 merge，`inst` 得長出一個哨兵值或布林欄位（例如 `stderr: "merge"`），讓
+`exec.cpp` 走 `dup2` 而不是第二次 `open`。**這是 `format.cpp` 加 `exec.cpp` 的改動，
+兩個都在凍結名單上。**
+
+原本的決策 A 問的是「tooljson 自己寫 exec 引擎，還是接 `core/inst`」。回合模型把前半
+消滅了——tooljson 不再執行任何東西，它只產出 instruction，所以**一定**走 inst。剩下的
+就只是：inst 要不要支援 merge。
+
+**建議：跟著 [D4](#d4) 一起延後。** 但有個好消息——[D3](#d3) 已經決定要為 non-blocking
+欄位解凍 `format.cpp` 與 `exec.cpp` 了，**D5 最主要的成本（解凍）因此已經被付掉**。真
+要做的時候，它只是「順便再加一個欄位」。
+
+[WAIT_USER](../wf/WAIT_USER.md) 那條可以標成「等 D4／D5」，不要繼續當成移植 S2 的前置
+條件卡著。
 
 ### D6 — `.runi` 存在時代表什麼？<a id="d6"></a>　**已定：拒絕啟動**
 
@@ -273,6 +307,40 @@ crash 之後要人處理，這是刻意的。連帶影響見 [T4](#t4-的注意�
 **小專案本身不用改名**：`inst` 是名詞（資料格式、`core/inst`、`<aos/inst.hpp>`、
 `libaos_inst.so`），`exec` 是動詞（子命令）。改名的波及面只有 CLI 那一層，函式庫、
 標頭、C ABI 都不動。
+
+### D10 — 回合的退出碼怎麼算？<a id="d10"></a>　**建議：沿用現有契約，什麼都不用改**
+
+「thread 裡的指令失敗了，整回合的退出碼算什麼」——這題**已經被 `inst` 現有的契約回答
+了**，thread 沒有改變任何東西。
+
+現有契約（見 [`core/inst/docs/exec.md`](../core/inst/docs/exec.md)）：**子行程的退出碼
+不是 aos 的退出碼**。非零狀態、被訊號殺掉、PATH 找不到、逾時——這些都算「一次**完成**
+的執行」，CLI 仍然回 0。只有**函式庫層的失敗**（fork 失敗、父行程 setpgid 失敗、wait
+失敗、寫 `exit` 狀態檔失敗）才讓 CLI 最後回 1。
+
+這個切法在回合模型裡剛好是對的：
+
+> `aos exec` 的退出碼只回答「**這個回合有沒有正常跑完**」，不回答「回合裡的指令做得好
+> 不好」。
+
+那「做得好不好」誰來讀？**不是退出碼，是檔案**。每筆 instruction 本來就能用 `exit`
+欄位把自己的狀態寫進一個檔；下一回合的生產者去讀那些檔，決定接下來要投遞什麼。
+**回合之間靠檔案傳結果，退出碼只給跑 `aos exec` 的那個人／那個 shell 看。**
+
+所以 thread 化不需要新語意：某個 thread 的子行程回 3 → 回合照樣 0，狀態進它的 `exit`
+檔；某個 thread `fork` 失敗 → 那是函式庫層失敗 → 回合回 1。
+
+**唯一建議新增的一個碼**：`.runi` 已存在而**拒絕啟動**（[D6](#d6)）應該有自己的退出碼，
+否則 shell loop 分不出「拒絕啟動」和「跑失敗」。整套會是：
+
+| 碼 | 意思 |
+|---|---|
+| 0 | 回合正常跑完（**包含**「沒有 `inst.json`，無事可做」） |
+| 1 | 有函式庫層失敗 |
+| 2 | 用法錯誤 |
+| 3 | 拒絕啟動：`.runi` 已存在 |
+
+還沒定的是：`--keep-doing` 遇到回合回 1 要不要停。那屬於「回合失敗的語意」，仍開著。
 
 ### D9 — `aos exec` 就是那個「唯一入口」<a id="d9"></a>　**已定**
 
@@ -304,13 +372,13 @@ llm-cpu 舊文的「方案 A：單一巨型入口」和現在的 `aos exec` **�
 - **不做中央 store、scheduler、Task tree、Receipt、crash recovery 的完整矩陣。**
   那是 `../agent-machine/full/` 的重量級設計；aos 目前的模型刻意輕。
 - **不做 `core/daemon` 這個小專案。** 持續執行是 `aos exec --keep-doing` 這個旗標。
-- **不做全域 LLM daemon 與跨資料夾排程。** 那要等「一個資料夾跑得動」之後才有意義，
-  而且它的前提（非阻塞）在 [D3](#d3) 被建議推遲了。
+- **不做全域 LLM daemon 與跨資料夾排程。** 那要等「一個資料夾跑得動」之後才有意義。
 - **不做 Git checkpoint、FUSE、VFS。**
 - **不繼續 llmkit 移植的 S2／S5**（見 [`reference/PORTING.md`](../reference/PORTING.md)）。
-  S2 的前置決策已被 [D5](#d5) 改寫，S5 的收尾
-  對象（`core/llms`／`core/tooljson` 的 docs）會在 T5 被改形狀——現在寫等於白寫。
-  **`reference/` 仍然不要刪**：T5 改造時還要拿 llmkit 原文對照。
+  [D4](#d4) 已定：`core/llms`／`core/tooljson` 先不動，要排在 agent loop 之後。
+  **`reference/` 仍然不要刪**：之後改造時還要拿 llmkit 原文對照。
+- **不碰 `core/llms`／`core/tooljson`。** 它們現在的形狀不符合模型，但那是**擱置**，
+  不是待修——別急著重寫，也別再往裡面投資。
 - **不先改 `docs/overview.md`。** 等 T1 能跑再改。
 
 ## 七、和既有紀錄的關係
@@ -319,7 +387,7 @@ llm-cpu 舊文的「方案 A：單一巨型入口」和現在的 `aos exec` **�
 |---|---|
 | [`wf/workflows/ideas/`](../wf/workflows/ideas/README.md) | **模型真源**。本檔只排順序，不定義模型 |
 | [`wf/SESSION-LOG.md`](../wf/SESSION-LOG.md) | open 活狀態。llms／tooljson 是失敗作那條，落地方式就是本檔的 T5 |
-| [`wf/WAIT_USER.md`](../wf/WAIT_USER.md) | S2 的決策已被 [D5](#d5) 改寫 |
+| [`wf/WAIT_USER.md`](../wf/WAIT_USER.md) | S2 的決策已被 [D5](#d5) 改寫，並跟著 [D4](#d4) 一起延後 |
 | [`reference/PORTING.md`](../reference/PORTING.md) | S1／S3／S4 已落地的部分仍然有效；S2／S5 停用，改由 T5 決定 |
 
 ## 八、參考來源借了什麼

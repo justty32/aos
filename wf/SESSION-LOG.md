@@ -16,9 +16,9 @@
   不符合 aos 的回合制／抽象 CPU 模型（模型見
   [ideas/turn-based-folder](workflows/ideas/turn-based-folder.md) 與
   [ideas/llm-cpu](workflows/ideas/llm-cpu.md)），要**找時間讓它們符合這套模型**。還沒
-  排期、也還沒決定是改寫既有程式碼還是重新長一次（[roadmap 的 D4](../docs/roadmap.md)
-  提了建議，等使用者拍板）。落地方式是 [roadmap 的 T5](../docs/roadmap.md)，前面還有
-  T1–T4 要先做。這件事會影響下面 llmkit 移植的 S2／S5——動工前先確認移植計畫還算不算數。
+  排期。**2026-08-24 使用者拍板：先不動、先不管，要排在 agent loop 之後**（[roadmap
+  的 D4](../docs/roadmap.md)）。所以這兩個小專案現在是**擱置**，不是待修——別急著重寫，
+  也別再往裡面投資。連帶：llmkit 移植的 S2／S5 一起停用。
 - **llmkit 移植還沒完**：`reference/llmkit/` 是從 freepy 搬來的 python 原文，計畫與五個階段在 [`reference/PORTING.md`](../reference/PORTING.md)。S1／S3／S4 已落地（`core/tooljson` 外殼與 `core/llms` 全部），**S2 卡在待使用者的決策**（見 [WAIT_USER](WAIT_USER.md)），**S5 未開始**（兩個小專案的 `docs/`、外部消費測試、刪掉整個 `reference/`）。`reference/` 在移植驗完之前不要刪。
 - **`aos tooljson run` 還不能用**：S1 只做到「讀 spec、驗證、展開 argv」，`ExecBody::run()` 目前回一句「尚未實作」。要能真的跑起來得先做 S2。
 - **C ABI 尚未補齊**：目前只有 `inst` 有 `<aos/inst.h>`；`tooljson` 與 `llms` 都還沒有。使用者明確表示這塊之後再慢慢加，現階段不動它。

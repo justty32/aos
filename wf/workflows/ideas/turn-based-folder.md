@@ -85,9 +85,10 @@ LLM 這類「抽象 CPU」**建立在上述基礎之上**，不是與 `inst` 平
 - `inst.tempd` — 投遞匣**資料夾**（`.tempd` ＝ temp directory，是副檔名不是狀況）。
 - `inst.d` — 一般的「名叫 inst 的資料夾」，留給「某顆 CPU 需要多份指令」那種用途。
 
-> **狀況只用一個詞表示「還在生成」**：`.temp`。生產者寫到一半的投遞是
-> `<pid>.json.temp`，彙整到一半的下一批是 `inst.json.temp`——**兩者是同一種狀況，不必
-> 有兩個字**（原本寫的 `.writing` 因此不需要了）。**這是建議，等使用者確認。**
+> **狀況只用一個詞表示「還在生成」**：`.temp`（已定）。生產者寫到一半的投遞是
+> `<pid>.json.temp`，彙整到一半的下一批是 `inst.json.temp`——兩者是同一種狀況，不必
+> 有兩個字。整套狀況字彙目前只有兩個：**`.temp`（還在生成，別碰）**與
+> **`.runi`（已取走、正在跑）**。
 
 這條標準是為了 `.aos` 提前訂的，但它不限於 `.aos`；真的落地時應該升格進
 [conventions](../common/conventions.md)。
@@ -242,7 +243,8 @@ aos exec --keep-doing 監看 folder
   再 `rename` 蓋掉 `.aos/inst.json`。
 - **一回合＝一整批**，不是一次一筆。
 - 每筆 instruction 自己帶一個欄位，決定要不要開 thread 用 non-blocking 的方式跑；
-  但 **`aos exec` 仍會等所有 thread 跑完才算本回合結束**。
+  但 **`aos exec` 仍會等所有 thread 跑完才算本回合結束**。遇到 non-blocking 那筆之後，
+  **下一筆立刻啟動**（真並行，不排隊）。
 - 命名標準：`<名字>.<副檔名>.<狀況>`，第一個 `.xxx` 是副檔名、第二個是當前狀況。
 - 持續執行是 `aos exec --keep-doing`，不另做 `core/daemon`。
 

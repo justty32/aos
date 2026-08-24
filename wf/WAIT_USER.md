@@ -10,6 +10,12 @@
 
 ## 待使用者項
 
+- **要不要解凍 `core/inst` 核心層？**（擋 [roadmap 的 T1](../docs/roadmap.md)）
+  已拍板的「每筆 instruction 自帶 non-blocking 欄位」做不到不解凍：新增 JSON 欄位一定
+  要改 `format.cpp`（它對不認得的 key 直接回 `UnknownKey`，不是忽略），thread 化要改
+  `exec.cpp`／`run.cpp`。這三個檔都在 [code map](workflows/common/code-map.md) 的凍結
+  名單上。**繞不過去，需要使用者明確點頭**。
+
 - **移植 S2 的決策 A：`core/tooljson` 的 exec 引擎自己寫，還是動 `core/inst`？**
   `_type: "exec"` 看起來就是 `core/inst` 在做的事，但接不起來——EXEC.md 要求
   `stderr.mode: "merge"` 是真的共用一條管子，而 `inst` 的重導向走檔案路徑，
@@ -19,5 +25,6 @@
   決策」。**A2 會動到凍結的 `inst` 核心層，所以一定要使用者點頭**，不可以自己選。
   這題沒解掉之前 S2 不要開工。
   **2026-08-24 補**：回合制模型把這題改寫了一半——tooljson 不再需要自己的 exec 引擎，
-  但 `stderr` merge 變成「`inst` 要不要加這個欄位」（仍會動凍結層）。建議連同整條
-  S2 一起延後，理由與替代路線見 [roadmap 的 D5](../docs/roadmap.md)。
+  但 `stderr` merge 變成「`inst` 要不要加這個欄位」。使用者當天拍板 `core/tooljson`
+  與 `core/llms` **先不動**（排在 agent loop 之後），所以這題**跟著延後**，不再是任何
+  事情的前置條件。完整說明見 [roadmap 的 D5](../docs/roadmap.md)。
