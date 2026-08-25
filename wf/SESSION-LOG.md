@@ -12,6 +12,17 @@
 
 ## 最新進度
 
+- **2026-08-25 新開一場 workshop：[核心行程、子行程，與外部處理器的契約](workflows/workshop/records/core-process-and-subprocess.md)**
+  （R1 跑完，四位：工程師／架構師／研究人員（OS）／外部開發者；`xhigh`；**普通用戶被使用者
+  拿掉**，所以缺「人看不看得懂」的視角）。**最該讓使用者知道的一件事**：使用者提的
+  「尾部指令把下個系統指令放回 `inst.json`」，**四位獨立地都反對，而且給出同一個替代版本**
+  ——用一份版本化的 `.aos/kernel.json` 宣告序言／尾聲，`aos exec` 在取件時合成
+  「序言＋批次＋尾聲」；系統指令仍是普通 instruction、仍在頭尾，只是**耐久性歸機器不歸指令**。
+  理由是尾指令失敗一次就永久斷鏈、crash 會遺失、重跑會增殖。第二件：**多核＝多個 lane，
+  不是多個 writer**——`.runi` 只鎖 queue、鎖不住世界，四位都點名。
+  **轉交提案兩條，未拍板**（World 抽象、`kernel.json` 要不要進 `.aos` 標準版面）。
+  R1 的四個 codex session 留著沒關，session id 記在紀錄檔裡，R2 用 `codex exec resume` 接續
+  （**只在公司那台 Windows 有效**）。
 - **兩場 workshop 開著沒收攏**（[workshop](workflows/workshop/README.md)，2026-08-24 開場）：
   ① **[有限資源／CPU 怎麼指揮 GPU](workflows/workshop/records/finite-resource-queue.md)**
   ——R1 五位都發言了，還沒 R2。**最該讓使用者知道的一件事**：五位獨立地都把 endpoint 佇列
@@ -20,6 +31,10 @@
   推出來的。② **[lisp 在 .aos 裡長什麼樣](workflows/workshop/records/lisp-in-aos.md)**
   ——只跑了 3 位（**缺維運與獨立開發者**，續場先補這兩位）。
   兩場的**轉交提案都還沒拍板**，主持人不自己改 `docs/`。
+  > **①這場的 R2 先擱著**：2026-08-25 使用者提出「外部處理器自己監控一個資料夾、
+  > 甚至不必引用 aos lib」，這把佇列的歸屬從 aos 挪到外部處理器身上——
+  > **roadmap 第六節「不做全域排程」與五位要的「使用者層級佇列」就不再打架**（排隊是外部
+  > 處理器的家務）。等核心行程那場談完，R2 會準得多。
 - **[辯論風格那場的轉交提案等使用者拍板](workflows/workshop/records/pre-agent-loop-core.md)**：
   `deliver`／`aos enqueue` 插進 T5 之前、「回合中途死掉的洞」歸 roadmap 第六節、
   `k/`／`c/` 兩層命名進 `.aos` 標準、有限資源獨立成 idea。**這四件都是改規格文件，要人拍板。**
