@@ -5,7 +5,7 @@
 |---|---|
 | **主題** | agent loop 真的要做出來的話，架構長什麼樣、需要哪些基礎 `aos core` 功能 |
 | **開場** | 2026-08-25 |
-| **已跑輪數** | R1（各自發想＋接住彼此） |
+| **已跑輪數** | R1（各自發想）、R2（收攏成方向） |
 | **狀態** | 進行中 |
 | **參與身份** | 資深工程師 / 資深架構師 / 資深研究人員（作業系統／體系結構） / 要接這個工具的開發者 |
 | **缺哪個角度** | 沒有「普通用戶」——使用者先前拿掉了那個身份。所以**沒有「這東西人看不看得懂」的視角** |
@@ -14,16 +14,17 @@
 
 ## 先讀這段（500 字懶人包）
 
-現在最缺兩個不懂 agent 的 `aos core` 原語：第一，`deliver` 驗證 instruction，再用 temp＋rename
-投進 queue；第二，`effect run` 先記外呼，再執行 LLM／工具，最後原子記下結果。四位獨立地都提了
-這兩項。
+**只能先做三樣時，四位選得完全相同：**
 
-agent loop 本身先用腳本：讀已提交紀錄、組 prompt、呼叫模型、投遞工具；工具完成後再投遞下一回合，
-沒有新投遞就停止。core 不必認得 agent。
+1. `publish`：原子發布檔案／目錄，是底座。
+2. `deliver`：驗證、去重後投進 queue，是現有缺口。
+3. `effect`（含 resolve）：記外呼的 done／unknown，避免盲目重付費。
 
-最重要的 crash 規則是：遠端可能已收費、結果卻未落盤時標成 `unknown`，不得自動重叫；只能靠
-provider idempotency／查詢，或讓人選 retry／adopt。`publish`、人工 recover 與斷電耐久是否也做成
-公開 core 功能，仍待拍板。
+三者可以疊起來：`deliver` 是「驗證＋key＋queue」的 publish；`effect` 也用 publish 記狀態，完成後
+可再 deliver 下一回合。prompt 組裝、回覆解析、final／budget 仍留給腳本與 adapter，不進 core。
+
+串行 loop 已夠用；還缺的是平行工具的 join，以及 crash 後對齊 event、cursor、receipt 與下一次
+投遞的通用 reconcile。這兩項能否不帶 agent 語意，尚未收成 core 功能。
 
 ---
 
@@ -207,6 +208,133 @@ agent 更底層、也更需要穩定的 core 契約。
 
 ---
 
+## R2 想法池（收攏成方向）
+
+這輪不再發散新介面，而是把 R1 的不同命名收成最少的功能組。使用者給的任務只有一句：
+
+> **把 `aos core` 那塊收攏成方向。**
+
+### 合併後的功能清單
+
+四份清單最後只剩 **Publish、Deliver、Effect** 三個功能家族。下表的簽名是四位輸出的共同形狀，
+仍是候選介面，不代表使用者已拍板名稱或參數。
+
+| 名字（子命令／函式） | 簽名（候選共同形狀） | 它解決什麼 | 不做的話腳本要自己幹什麼 | 誰提的 |
+|---|---|---|---|---|
+| **Publish**（也涵蓋 commit／bundle） | CLI：`aos core publish TARGET TEMP [--durable]`；lib：`publish_at(rootfd, target, source, opts) -> receipt` | 用一次提交發布完整檔案或目錄；選擇是否連檔案與目錄一起 fsync，不讓 cursor／event 露出半套 | 每支腳本都要自造同目錄 temp、write-all、fsync、rename，還要避免 cursor 先前進；檔案與目錄又會各寫一套 | 工程師、架構師**兩位獨立地明確提出**；研究人員與開發者在 R2 也把它列進合併清單，但標明另外兩人的 Deliver／Effect 原本已內含同一動作 |
+| **Deliver** | CLI：`aos core deliver --to BASE [--key K] [--durable] -`；lib：`deliver_at(rootfd, base, key, json, opts) -> receipt` | 驗 schema／大小，以 key 去重，再把完整 instruction 投入 queue；同一投遞可回 receipt | 腳本要自行配檔名、檢查 JSON、處理短寫、撞名、覆蓋與重送，仍可能把半份 payload 暴露給彙整者 | **四位獨立地都提了**；也是四位一致指出的現存投遞缺口 |
+| **Effect**（合併 capture／invoke／run；含 resolve） | CLI：`aos core effect run CALL --key K -- CMD...`；`aos core effect resolve CALL retry\|lost\|abandon\|adopt [FILE]`；lib：`effect_run(...)`／`effect_resolve(...)` | 先記 request／key，再執行外呼；原子提交輸出與 done，crash 留 unknown；resolve 讓人明示重試、放棄或採納外部結果 | shell 只能看到「本機沒有結果」，分不出命令未跑與遠端已收費但尚未落盤；重開後只好盲目重跑，或各自發明 recover 檔案 | **四位獨立地都提了**；capture／invoke／effect 是同一件事，retry／lost／import／reconcile／adopt 被收進同一個 resolve 家族 |
+
+Publish 的「檔案／目錄」仍有一個簽名差異：工程師、架構師、研究人員傳已寫好的 temp／source，
+開發者的候選函式可直接收 payload。R2 只把共同提交邊界收成一項，沒有替使用者決定 public API
+接收哪一種。
+
+### 其實是同一件事的／可以疊在一起的
+
+**四位各自都做出相同的合併**：
+
+- R1 的 capture、invoke、effect run 都是 **Effect run**：先留下 request／key，再執行 command，
+  最後把 stdout／stderr／exit 與狀態一起提交。
+- retry、lost、abandon、import、reconcile、adopt 都是在回答 unknown，收成 **Effect resolve**；
+  動詞仍可再減，但不再各長一個功能。
+- 檔案 commit、目錄 bundle、temp＋rename 都是 **Publish**；差別只在 payload 是檔還是整個目錄。
+
+三個功能也不是平行三座島，而是一條依賴鏈：
+
+```text
+Publish
+├─ Deliver = schema／上限／key／queue ＋ Publish
+└─ Effect  = request／done／unknown／resolve ＋ Publish
+                                      └─ 完成的 result／receipt 可再交給 Deliver
+```
+
+資深工程師說「Publish 是底座，receipt 可再 Deliver」；資深架構師與研究人員都寫成
+「deliver 管 queue、effect 管外呼」；要接工具的開發者則把三者縮成「publish 保完整、deliver 保
+交接、effect 保外呼恢復」。**四位獨立地都把 agent 語意留在這條鏈外面。**
+
+### 只能先做三樣的話
+
+四位沒有各選一套不同的三樣；**四位都選中同樣三項，而且依賴順序也相同**：
+
+| 順序 | 功能 | 入選情況 | 四位給的理由 |
+|---|---|---|---|
+| 1 | **Publish** | **4／4 都選** | 工程師、架構師、研究人員把它稱為 Deliver／Effect 的底座；開發者同樣按此依賴順序排列。先統一完整發布，後兩項才不必各自重寫 temp／fsync／rename |
+| 2 | **Deliver** | **4／4 都選** | 這不是為 agent 新想出的功能，而是三步交接早就缺的投遞原語；不補，T5 每支 driver／adapter 都得自行投 queue，繼續承擔半寫、撞名與重送 |
+| 3 | **Effect（含 resolve）** | **4／4 都選** | LLM 與其他外呼有付費／副作用，unknown 若沒有日誌與人工出口，crash 後只能盲目重做；resolve 被併進 Effect，沒有占第四個名額 |
+
+這是 R2 最強的訊號：**Publish 的原始明確提案來自兩位，但到了「只能留三樣」時，四位都把它
+選為第一層；Deliver 與 Effect 則從 R1 起就是四位獨立提出，R2 又被四位全數保留。**
+
+### 不該進 `aos core` 的
+
+四位收攏時也一起砍掉了 agent 專用政策：
+
+| 留在腳本／adapter／module 的事 | 誰這樣劃界 | 為什麼不進 core |
+|---|---|---|
+| prompt 組裝、system message、對話裁切 | 工程師、架構師、研究人員；開發者也把組 prompt 留給 driver | 它們隨模型、上下文策略與產品需求變，不是原子交接問題 |
+| response 解析、provider／tool schema、response→tool call | **四位獨立地都留在 adapter** | 每家 CLI 與 tool 格式不同；core 只需安全發布 bytes 與外呼狀態，不必理解內容 |
+| final 判斷、stop／budget 政策 | **四位都排除** | 「何時不再投遞」是 driver 的 agent 政策；core 只看有沒有下一批 instruction |
+| provider request ID 查詢與對帳 | 架構師、研究人員明確排除；工程師也不確定 capture 是否該含 provider adapter | 這是供應商能力；通用 Effect 只表示 unknown，adapter 才知道去哪裡查回結果 |
+
+所以三個 core 原語合起來仍然**不會成為 `aos agent`**。T5 的腳本仍要組 prompt、呼叫正確 adapter、
+解出 tool calls、判斷 final；這些不是漏收，而是四位刻意保留的可變部分。
+
+### 還缺的一塊
+
+只跑**串行**模型→工具→模型時，四位認為 Publish＋Deliver＋Effect 已足以支撐；剩下的 script
+工作正是 T5 要觀察的 agent 語意。真正還沒被三項功能吃掉的 core 候選有兩塊：
+
+1. **平行工具 join。**資深工程師提出 `effect_join(keys)`：沒有它，driver 必須掃多個 effect，
+   判斷是否全 done／是否有 unknown，並防止尚未收齊就提交下一回合。研究人員也不確定 kernel
+   尾聲是否要等 parallel tools；其餘兩位沒有把 join 選進前三項。
+2. **turn reconcile／barrier。**要接工具的開發者指出，crash 後仍要對齊 event、cursor、receipts
+   與 next delivery：哪一個已提交、哪一個只差同 key 補投。若沒有通用功能，driver 要逐一掃檔。
+   他自己也標記不確定：若 reconcile 必須理解 turn／final，它就不再是通用 core 原語。
+
+另有一個條件式缺口：研究人員指出，**若 Publish 不支援目錄**，event 與 cursor 仍可能分兩次
+可見，腳本就得自行補交易。這不是第四項功能，而是 Publish 是否真的涵蓋 directory bundle 的
+規格問題。
+
+provider 對帳仍然得靠 adapter；三個 core 原語最多把狀態誠實地停在 unknown，不能替不同 LLM
+CLI 查帳。這同樣是四位刻意留下的邊界，不是要求 core 補 provider-specific 功能。
+
+### 大家問出來的問題
+
+| 問題 | 誰問的 | 它卡住什麼 |
+|---|---|---|
+| key 由 caller 給還是 core 配？範圍是單 queue、單 world，還是跨 world？ | 工程師問是否跨 world；研究人員問誰配號；開發者問 key 範圍 | 決定去重邊界，也決定兩個世界用同一個 `K` 會不會誤認成同一次投遞／外呼 |
+| receipt 的共同格式是什麼？ | 開發者直接問；工程師把 Effect receipt 接到 Deliver | 沒有共同欄位，Effect done 就不能在 crash 後可靠地判斷下一次 Deliver 是否已做 |
+| Publish 是否公開？接受 temp/source 還是 payload？ | 開發者直接問；四位的 lib 簽名有兩種 | 決定它是穩定 API，還是 Deliver／Effect 的內部實作零件 |
+| 目錄 Publish 是否只限同 filesystem？跨平台 no-replace 與目錄 fsync 保證到哪裡？ | 工程師、架構師、研究人員；架構師另標記跨平台保證不確定 | 決定 `--durable` 與 directory bundle 能承諾什麼，而不是只在目前機器可用 |
+| Effect 是否包所有有副作用的命令？ | 架構師 | 若只包 LLM，其他付費 API／寫外部狀態仍有同一個 unknown 空窗 |
+| join／reconcile 能否通用化而不理解 agent turn？ | 開發者直接標記不確定；工程師提出 `effect_join(keys)` | 決定它們是下一個 core 原語，還是應先留給 T5 腳本暴露共同形狀 |
+
+### 明顯的坑
+
+- **把三項當成三份互不相干的 temp／rename 實作**。**四位都把 Publish 放底座**；Deliver 與
+  Effect 若各自複製一套，短寫、durable 與目錄發布語意很快就會分叉。
+
+- **因為 Publish 被 4／4 選中，就倒推成四位都在 R1 獨立發明它。**原始來源是工程師、架構師
+  兩位明確提出；研究人員、開發者在收攏輪把原先內含的動作升成共同底座。兩種訊號都重要，
+  不能混寫。
+
+- **把 Effect resolve 拆成第四套 recover 功能。**retry／lost／abandon／import／adopt 都是在處理
+  同一個 unknown；分開會讓狀態字、key 與稽核紀錄各走各的。
+
+- **Publish 只支援檔案，卻拿它承諾 event＋cursor 一起提交。**研究人員直接指出：沒有 directory
+  publish，兩者仍會裂開可見，cursor 仍可能超前。
+
+- **key 範圍未定就承諾冪等。**同 key 究竟在 BASE、world 還是全域內唯一，會直接改變 Already／
+  Conflict 與 effect replay 的含義。
+
+- **把 join／reconcile 急著收進 core，順手把 turn、tool、final 也帶進去。**工程師與開發者只
+  提出缺口，沒有證明它能脫離 agent 語意；四位反而都明確排除 prompt、解析與停止政策。
+
+- **三項做完就宣稱 agent loop 不再需要腳本。**四位都留下 driver／adapter；T5 原本就要用這些
+  腳本找出下一批重複點，不能把「core 不該收」誤當成「工作已消失」。
+
+---
+
 ## 續場資訊
 
 與[前一場](four-open-choices-tradeoffs.md)相同的四個 codex session 仍保留 context，後續用同一批
@@ -224,25 +352,32 @@ agent 更底層、也更需要穩定的 core 契約。
 
 ## 轉交提案（未拍板，不自行改規格／roadmap）
 
-1. **把 `deliver` 列為 agent loop 前置的基礎 core 原語。**需由使用者拍板 CLI namespace
-   （`aos core deliver` 或 `aos deliver`）、world／target 的傳法、key 是否必填、Already／Conflict
-   語意、payload 上限、receipt 內容，以及 `--durable` 是否包含檔案與目錄 fsync。四位都把它列為
-   最先遇到、且不屬 agent 專用的缺口。
+R2 把候選功能收成三項，但**還沒有替使用者把它們排進 roadmap，也沒有定下公開 API**。等拍板
+的是：
 
-2. **決定 effect 日誌是 T5 先用腳本驗證，還是現在就進 `aos core`。**若進 core，最小契約是
-   先提交 request／key、再執行 command、最後原子提交 stdout／stderr／exit；中斷留下 unknown，
-   done 可回放，unknown 預設不重跑。provider 查詢與 idempotency 仍留給 adapter。
+1. **是否按 Publish → Deliver → Effect 的順序成為前三項基礎 `aos core` 功能。**四位在「只能
+   做三樣」時全部選中這三項；Publish 統一完整發布，Deliver 補現存投遞缺口，Effect＋resolve
+   處理昂貴外呼的 done／unknown。要由使用者決定它們是在 T5 腳本之前先做，還是讓 T5 先用
+   腳本驗證簽名後再排進 roadmap。
 
-3. **決定 `publish` 是否是公開原語。**公開可讓 event directory、cursor、tool result 共用同一套
-   原子發布；不公開則只作為 deliver／effect 內部零件，T5 腳本對其他狀態仍要自己 temp＋rename。
+2. **Publish 是否公開，以及公開到哪一層。**需拍板只作 Deliver／Effect 的內部底座，還是提供
+   `aos core publish`／`publish_at` 給 cursor、event、tool result 共用；同時決定接收 temp/source
+   還是 payload、檔案與目錄是否都支援、是否限制同 filesystem，以及 `--durable` 對 fsync 與
+   斷電的承諾。
 
-4. **決定人工恢復是否有統一命令與狀態字。**候選動作是 retry、lost／abandon、import／adopt；
-   這不是自動修復，而是把「願不願意冒重複付費／副作用的風險」留成可稽核的人為決定。
+3. **Deliver 的 key 與 receipt 契約。**需拍板 key 是否必填、由 caller 還是 core 產生、唯一範圍
+   是 BASE／world／跨 world，以及 Already／Conflict 的判定；receipt 至少要讓 crash 後能辨認
+   同一次投遞是否已發布。CLI namespace、payload 上限與 target 傳法也仍待定。
 
-5. **拍板 T5 的最小磁碟契約，而不是先拍板最終 `aos agent`。**至少要定不可變 event／turn、
-   effect 的 request／done／unknown、cursor 只指 commit，以及「沒有下一次 deliver 就停止」。實際
-   資料夾叫 events、history 或 turns，可留給腳本實跑後再收。
+4. **Effect 的通用邊界與 resolve 動作。**需拍板它只包 LLM，還是包所有有副作用的 command；
+   unknown 是否一律停住；人工動作收成 retry、lost／abandon、adopt／import 哪幾個狀態。provider
+   查詢與 idempotency 仍由 adapter 處理，不放進 core。
 
-6. **明講本場不替前一場四題定案。**初版腳本只依賴一個可推一步的 world；World 是否成為
-   root-fd handle、kernel 是否分層、queue 採 A 或 B、身分是否用 UUID，都繼續留在
-   [前一場紀錄](four-open-choices-tradeoffs.md)。這讓 T5 可以先暴露重複與難寫處，不用等四題全拍板。
+5. **平行 join／turn reconcile 先留腳本，還是成為下一個 core 候選。**工程師只提出
+   `effect_join(keys)`，開發者只指出 event／cursor／receipt／next delivery 的 barrier；兩人都還
+   沒證明它們能完全脫離 agent 語意。可由使用者選擇現在排規格，或照 T5 原意先讓腳本硬做，等
+   重複形狀出現再收。
+
+6. **T5 的 agent 專用部分繼續留在腳本。**四位都排除 prompt、對話裁切、provider／tool parser、
+   final、stop／budget；這些不是待加入 core 的漏項。前一場的 World、kernel、A／B／C、路徑或
+   UUID 也仍未拍板，本場三項原語不替[前一場紀錄](four-open-choices-tradeoffs.md)作決定。
