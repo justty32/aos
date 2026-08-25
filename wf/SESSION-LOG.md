@@ -12,6 +12,13 @@
 
 ## 最新進度
 
+- **2026-08-25 第七場：[aos 怎麼跟現有工具協作](workflows/workshop/records/tool-interop.md)**
+  （主輪＋追問輪）。使用者給了方向：**coding agent 當入口、aos 當它們的 tool set**，
+  以及 **`aos` 的 stdout 導向 agent 的 stdin**。追問輪釐清了一件關鍵的事——
+  「agent 的自然語言輸出怎麼變成 inst json」是**假問題**，使用者原話「**直接給 tool 啊**」，
+  所以那支 tool 就是規格裡**唯一還沒實作的投遞**。紀錄第一節就是那支 tool 的合成 `--help`。
+  **注意 pi 明文不做 MCP**（「寫 CLI 工具配一份 README」）、**也沒有權限系統**（推給 container），
+  跟 aos 的立場高度重疊。
 - **2026-08-25 第六場：[如何用 aos 實現 workflows 那樣的功能](workflows/workshop/records/workflows-on-aos.md)**
   ——使用者揭露 **aos 的起源就是覺得 `C:/code/mine/workflows` 不好用**。這是第一次看到
   「目的」而不只是手段。**他還沒說哪裡不好用**，所以任務書要求四位只能從材料推、並標明是
