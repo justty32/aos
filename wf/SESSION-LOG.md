@@ -12,6 +12,10 @@
 
 ## 最新進度
 
+- **2026-08-25 第三場：[agent loop 的架構與需要的 aos core 功能](workflows/workshop/records/agent-loop-architecture.md)**
+  （R1 跑完；**與四選擇那場同一批人**，session 續下來的）。重點是「`aos core` 該收掉什麼」
+  ——roadmap T5 說這階段的產出是規格不是程式，腳本哪裡痛就是 `aos agent` 該收的東西。
+  紀錄由書記寫，主持人沒讀內容。**未拍板。**
 - **2026-08-25 再開一場：[四個懸而未決的設計選擇，各自的優缺點](workflows/workshop/records/four-open-choices-tradeoffs.md)**
   （R1 跑完；四位**全新的人**，同樣四種身份）。使用者原話「我還沒想好，我想多了解這四件事的
   優缺點」——四題是 World 抽象、`kernel.json` 要不要分層合成、拓樸 A／B／先固定磁碟 ABI、
