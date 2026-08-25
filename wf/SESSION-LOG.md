@@ -27,61 +27,26 @@
   產出五支子命令的規格：`aos deliver`／`aos recover`／`aos status --json`／
   `aos agent step`／`aos agent emit-context`。**真模型沒跑通**（codex 被沙盒擋、
   Claude OAuth 過期、WSL 沒裝 pi），下次要補。
-- **2026-08-25 第七場：[aos 怎麼跟現有工具協作](workflows/workshop/records/tool-interop.md)**
-  （主輪＋追問輪）。使用者給了方向：**coding agent 當入口、aos 當它們的 tool set**，
-  以及 **`aos` 的 stdout 導向 agent 的 stdin**。追問輪釐清了一件關鍵的事——
-  「agent 的自然語言輸出怎麼變成 inst json」是**假問題**，使用者原話「**直接給 tool 啊**」，
-  所以那支 tool 就是規格裡**唯一還沒實作的投遞**。紀錄第一節就是那支 tool 的合成 `--help`。
-  **注意 pi 明文不做 MCP**（「寫 CLI 工具配一份 README」）、**也沒有權限系統**（推給 container），
-  跟 aos 的立場高度重疊。
-- **2026-08-25 第六場：[如何用 aos 實現 workflows 那樣的功能](workflows/workshop/records/workflows-on-aos.md)**
-  ——使用者揭露 **aos 的起源就是覺得 `C:/code/mine/workflows` 不好用**。這是第一次看到
-  「目的」而不只是手段。**他還沒說哪裡不好用**，所以任務書要求四位只能從材料推、並標明是
-  推論，或把問題寫進「要拿去問使用者的」——紀錄裡有那份清單，**等他一條一條回答**。
-- **2026-08-25 第五場：[隨意發想（無題）](workflows/workshop/records/free-ideation.md)**
-  ——沒有議題書、沒有要交付的決定。上一輪很緊，這輪放開。紀錄是**靈感簿不是決議紀錄**，
-  刻意沒有「轉交提案」那一節，節名照內容取（郵局／停住世界複製看兩個未來／人也是一顆 CPU
-  ／等待也是 CPU／一千個 agent……）。書記寫的，主持人沒讀內容。
-- **2026-08-25 第四場：[回頭審視](workflows/workshop/records/step-back-review.md)**
-  ——審的是前三場的全部產出（含他們沒參加過的〈核心行程〉那場）。**這輪明文解除了
-  「禁止評判」**，因為使用者要的是準不是多。問的是：哪條「多位獨立提出」其實是共同
-  偏見、哪條假設沒人檢查過、對照「複用簡潔」與「CPU 非常簡單」現在是哪一步長歪的、
-  從第一原理重來會不會長出同一套、哪個問題其實還不存在。紀錄由書記寫，主持人沒讀內容。
-- **2026-08-25 第三場：[agent loop 的架構與需要的 aos core 功能](workflows/workshop/records/agent-loop-architecture.md)**
-  （R1 跑完；**與四選擇那場同一批人**，session 續下來的）。重點是「`aos core` 該收掉什麼」
-  ——roadmap T5 說這階段的產出是規格不是程式，腳本哪裡痛就是 `aos agent` 該收的東西。
-  紀錄由書記寫，主持人沒讀內容。**未拍板。**
-- **2026-08-25 再開一場：[四個懸而未決的設計選擇，各自的優缺點](workflows/workshop/records/four-open-choices-tradeoffs.md)**
-  （R1 跑完；四位**全新的人**，同樣四種身份）。使用者原話「我還沒想好，我想多了解這四件事的
-  優缺點」——四題是 World 抽象、`kernel.json` 要不要分層合成、拓樸 A／B／先固定磁碟 ABI、
-  親緣綁路徑還是 UUID。**紀錄由「書記」寫的**（見 [workshop README](workflows/workshop/README.md)
-  的〈書記〉），主持人沒有讀內容，只確認他沒動別的檔。**四題都還沒拍板。**
-- **2026-08-25 新開一場 workshop：[核心行程、子行程，與外部處理器的契約](workflows/workshop/records/core-process-and-subprocess.md)**
-  （R1 跑完，四位：工程師／架構師／研究人員（OS）／外部開發者；`xhigh`；**普通用戶被使用者
-  拿掉**，所以缺「人看不看得懂」的視角）。**最該讓使用者知道的一件事**：使用者提的
-  「尾部指令把下個系統指令放回 `inst.json`」，**四位獨立地都反對，而且給出同一個替代版本**
-  ——用一份版本化的 `.aos/kernel.json` 宣告序言／尾聲，`aos exec` 在取件時合成
-  「序言＋批次＋尾聲」；系統指令仍是普通 instruction、仍在頭尾，只是**耐久性歸機器不歸指令**。
-  理由是尾指令失敗一次就永久斷鏈、crash 會遺失、重跑會增殖。第二件：**多核＝多個 lane，
-  不是多個 writer**——`.runi` 只鎖 queue、鎖不住世界，四位都點名。
-  **轉交提案兩條，未拍板**（World 抽象、`kernel.json` 要不要進 `.aos` 標準版面）。
-  R1 的四個 codex session 留著沒關，session id 記在紀錄檔裡，R2 用 `codex exec resume` 接續
-  （**只在公司那台 Windows 有效**）。
-- **兩場 workshop 開著沒收攏**（[workshop](workflows/workshop/README.md)，2026-08-24 開場）：
-  ① **[有限資源／CPU 怎麼指揮 GPU](workflows/workshop/records/finite-resource-queue.md)**
-  ——R1 五位都發言了，還沒 R2。**最該讓使用者知道的一件事**：五位獨立地都把 endpoint 佇列
-  放到**使用者層級**（`$XDG_STATE_HOME/aos/llm/<endpoint>/`），這**直接撞上 roadmap 第六節
-  「不做全域 daemon 與跨資料夾排程」**，而且不是為了挑戰它，是從「endpoint 是跨資料夾共享的」
-  推出來的。② **[lisp 在 .aos 裡長什麼樣](workflows/workshop/records/lisp-in-aos.md)**
-  ——只跑了 3 位（**缺維運與獨立開發者**，續場先補這兩位）。
-  兩場的**轉交提案都還沒拍板**，主持人不自己改 `docs/`。
-  > **①這場的 R2 先擱著**：2026-08-25 使用者提出「外部處理器自己監控一個資料夾、
-  > 甚至不必引用 aos lib」，這把佇列的歸屬從 aos 挪到外部處理器身上——
-  > **roadmap 第六節「不做全域排程」與五位要的「使用者層級佇列」就不再打架**（排隊是外部
-  > 處理器的家務）。等核心行程那場談完，R2 會準得多。
-- **[辯論風格那場的轉交提案等使用者拍板](workflows/workshop/records/pre-agent-loop-core.md)**：
-  `deliver`／`aos enqueue` 插進 T5 之前、「回合中途死掉的洞」歸 roadmap 第六節、
-  `k/`／`c/` 兩層命名進 `.aos` 標準、有限資源獨立成 idea。**這四件都是改規格文件，要人拍板。**
+- **研討會的紀錄全部在 [workshop/records/](workflows/workshop/README.md)**——2026-08-25
+  這一天跑了七場（核心行程／四個懸而未決的選擇／agent loop 架構／回頭審視／隨意發想／
+  用 aos 實現 workflows／跟現有工具協作），已收場，**過程不再列在這裡**。
+  **仍然開著的只有下面三件：**
+  - **四個設計選擇仍未拍板**（World 抽象、`kernel.json` 要不要分層合成、子行程拓樸
+    A／B／先固定磁碟 ABI、親緣綁路徑還是 UUID）。使用者已表態的部分見
+    [四選擇那份紀錄](workflows/workshop/records/four-open-choices-tradeoffs.md)。
+    **他明講「窩不想看惹」**，所以方向是**用實測取代拍板**——見上面 T5 那條，
+    以及各題的「最小的驗證方式」（[BACKGROUND](workflows/workshop/BACKGROUND.md)）。
+  - **[辯論風格那場的四件轉交提案還沒拍板](workflows/workshop/records/pre-agent-loop-core.md)**：
+    `deliver`／`aos enqueue` 插進 T5 之前、「回合中途死掉的洞」歸 roadmap 第六節、
+    `k/`／`c/` 兩層命名進 `.aos` 標準、有限資源獨立成 idea。**都是改規格文件，要人拍板。**
+  - **兩場更早的 workshop 沒收攏**：
+    ① **[有限資源／CPU 怎麼指揮 GPU](workflows/workshop/records/finite-resource-queue.md)**
+    只跑了 R1，五位一致要「使用者層級的 endpoint 佇列」，撞上 roadmap 第六節。
+    **但 2026-08-25 使用者提出「外部處理器自己監控一個資料夾、甚至不必引用 aos lib」之後，
+    這個衝突可能已經自己解掉了**（排隊是外部處理器的家務，不是 aos 的）——續場先確認這件事。
+    ② **[lisp 在 .aos 裡長什麼樣](workflows/workshop/records/lisp-in-aos.md)**
+    只跑了 3 位，**缺維運與獨立開發者**。
+
 - **`core/llms` 與 `core/tooljson` 目前是失敗作，之後要重做**：使用者判定這兩個小專案
   不符合 aos 的回合制／抽象 CPU 模型（模型見
   [ideas/turn-based-folder](workflows/ideas/turn-based-folder.md) 與
