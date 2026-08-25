@@ -1,6 +1,9 @@
 # workshop — 研討會／腦力激盪（多 agent 提供靈感）
 
-← [WORKFLOWS](../../WORKFLOWS.md)｜[INDEX](../../INDEX.md)
+← [WORKFLOWS](../../WORKFLOWS.md)｜[專案 INDEX](../../INDEX.md)
+
+> **本檔＝流程**（研討會怎麼跑）。**這資料夾裡有什麼**（11 份紀錄、17 份背景資料、問題清單、
+> session id）看 **[INDEX.md](INDEX.md)**。
 
 **做什麼**：使用者出主題，**我當主持人**，讓多個 `codex exec` 實例各自扮演一種**身份**
 （資深工程師、架構師、產品經理、普通用戶……），從那個身份的視角**提供靈感**，跑幾輪之後由我

@@ -6,7 +6,7 @@
 
 ## Repo 佈局
 
-專案根目錄是 `/home/lorkhan/repo/simple_tools/aos`（自己一個 git repo，remote 是 `git@github.com:justty32/aos.git`）。
+本專案自己一個 git repo，remote 是 `git@github.com:justty32/aos.git`。**在兩台機器上開發**，checkout 路徑不同（家裡 Linux／WSL、公司 Windows），所以**文件裡一律用 repo 相對路徑，不要寫死絕對路徑**。「從 repo 根目錄」指的是有 `CMakeLists.txt` 的那一層。
 
 | 路徑 | 內容 |
 |------|------|
@@ -18,7 +18,7 @@
 | `app/` | 唯一的執行檔 `aos`，靠子命令分派（如 `aos init`／`aos exec`）|
 | `core/` | **核心小專案**（aos 的基本組成，一定會建）。目前只有 `inst/`：lib `aos::inst`（`libaos_inst.so`）＋ `inst` 子命令。內部分工 → [code map](workflows/common/code-map.md) |
 | `modules/` | **擴充小專案**（可選，`-DAOS_BUILD_MODULES=OFF` 整批不建）。目前是空的。新增小專案 → [add-subproject](workflows/add-subproject.md) |
-| `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案。個別小專案自己的細節在它們的 `docs/`，例如 `core/inst/docs/` |
+| `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案，以及兩份最重要的——[`aos-folder.md`](../docs/aos-folder.md)（`.aos` 資料夾與回合模型的**規格，唯一真源**）與 [`roadmap.md`](../docs/roadmap.md)（階段 T0–T6 與決策紀錄 D1–D10）。入口是 [docs/README.md](../docs/README.md)。個別小專案自己的細節在它們的 `docs/`，例如 `core/inst/docs/` |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](WORKFLOWS.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣（放信處，保持乾淨；使用方式見 [workflows/inbox/](workflows/inbox/README.md)）|
 | `.claude/commands/` | slash 指令（[`/wf-tick`](../.claude/commands/wf-tick.md) 驅動定期心跳）。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |

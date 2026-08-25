@@ -23,7 +23,7 @@
    `$XDG_STATE_HOME/aos/llm/<endpoint>/` 或 `~/.local/state/aos/llm/<endpoint>/`。
    理由很簡單：**endpoint 是跨資料夾共享的東西**，把佇列放在某一個 `.aos/` 裡，第二個資料夾
    就看不到它。
-   > ⚠ **這直接撞上 [`docs/roadmap.md`](../../../docs/roadmap.md) 第六節「不做全域 LLM daemon
+   > ⚠ **這直接撞上 [`docs/roadmap.md`](../../../../docs/roadmap.md) 第六節「不做全域 LLM daemon
    > 與跨資料夾排程」。** 五位沒有一個人是為了挑戰那條而挑戰——他們是從「endpoint 在哪」這個
    > 事實推出來的。這是本輪最該讓使用者知道的一件事。
 

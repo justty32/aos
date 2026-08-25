@@ -34,7 +34,7 @@
 ### 題目：首版只公開 Deliver，公開 Deliver＋Status＋Exec，還是再把 Init 放進同一組？
 
 **這題其實在問什麼**：第一版給 coding agent 的 aos 工具箱，是只准它排工作，還要讓它查現況、推一回，甚至自己建一個新 world。
-**為什麼會有這題**：[工具協作場](records/tool-interop.md) 四位對 runtime 最小三支都選 Deliver/Status/Exec，但[回頭審視](records/step-back-review.md) 的近期 core 又只保留 Deliver；Init 被三位提到，但是否屬 runtime 未定。
+**為什麼會有這題**：[工具協作場](../records/tool-interop.md) 四位對 runtime 最小三支都選 Deliver/Status/Exec，但[回頭審視](../records/step-back-review.md) 的近期 core 又只保留 Deliver；Init 被三位提到，但是否屬 runtime 未定。
 **選項差在哪**：
 
 | 選項 | 你會得到什麼 | 你會賠掉什麼 | 什麼時候會後悔 |
