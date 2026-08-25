@@ -12,6 +12,21 @@
 
 ## 最新進度
 
+- **2026-08-25 研討會收場**（[最後總結](workflows/workshop/records/final-summary.md)，
+  1500 字，第一節就是「他不必回答的問題」）。八場的問題收成
+  [OPEN-QUESTIONS](workflows/workshop/OPEN-QUESTIONS.md)，白話背景資料收成
+  [BACKGROUND](workflows/workshop/BACKGROUND.md)（拆成 17 檔）。四個 codex session 已結束。
+- **2026-08-25 第一次實測：[T5 agent loop](workflows/experiments/t5-agent-loop.md)**
+  ——使用者說「不想看了，你直接去試」。**T5 驗收沒全過。** 假模型的三回合閉環跑通、
+  回合之間人工插手下一回合看得到、沒有常駐 process；但**「Ctrl-C 之後從斷點繼續」
+  只在 `--loop` 的優雅收尾下成立**，單次 `aos exec` 真被 SIGINT 中止會留 `.runi`、
+  下一次固定退出 3，人工搬回去只能**重播整批**，而且外部作用可能已經做過。
+  **這是 roadmap 的驗收條件與 `.aos` 規格第六節互相矛盾**，要拍板哪一邊改。
+  另外抓到三處規格與實作對不上（退出碼表不完整、`<pid>.json` 無法表達同一 process
+  多次投遞、SIGINT ＋ process group 會產生沒有恢復契約的 unknown）。
+  產出五支子命令的規格：`aos deliver`／`aos recover`／`aos status --json`／
+  `aos agent step`／`aos agent emit-context`。**真模型沒跑通**（codex 被沙盒擋、
+  Claude OAuth 過期、WSL 沒裝 pi），下次要補。
 - **2026-08-25 第七場：[aos 怎麼跟現有工具協作](workflows/workshop/records/tool-interop.md)**
   （主輪＋追問輪）。使用者給了方向：**coding agent 當入口、aos 當它們的 tool set**，
   以及 **`aos` 的 stdout 導向 agent 的 stdin**。追問輪釐清了一件關鍵的事——
