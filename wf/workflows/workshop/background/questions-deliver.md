@@ -4,7 +4,7 @@
 ### 題目：`aos deliver` 第一版要採哪一組 WORLD、輸入檔／stdin、單筆／批次與旗標介面？
 
 **這題其實在問什麼**：這支命令怎麼指定要投給哪個 world，指令從檔案還是 pipe 進來，一次允許一筆還是一批，第一版是否就背 key/durable/廣義 target。
-**為什麼會有這題**：Deliver 已是回頭審視後唯一保留的近期 core 缺口，但[工具協作場](records/tool-interop.md) 四位給了四種 `--help`，後面的 skill/MCP 都必須同聲。
+**為什麼會有這題**：Deliver 已是回頭審視後唯一保留的近期 core 缺口，但[工具協作場](../records/tool-interop.md) 四位給了四種 `--help`，後面的 skill/MCP 都必須同聲。
 **選項差在哪**：
 
 | 選項 | 你會得到什麼 | 你會賠掉什麼 | 什麼時候會後悔 |
@@ -20,7 +20,7 @@
 ### 題目：沒有耐久 ledger 時，第一版 key 要拿掉、只作 correlation、只在 queue 內去重，還是連 ledger 一起做？
 
 **這題其實在問什麼**：Deliver 收到同一號碼的重送時，是否承諾記得它以前來過；若承諾，記憶要保留到什麼時候。
-**為什麼會有這題**：投遞檔在 aggregate 成功後會刪掉，所以以前提的 Already/Conflict 在下一回合沒有證據；這是[回頭審視](records/step-back-review.md)發現的真契約漏洞。
+**為什麼會有這題**：投遞檔在 aggregate 成功後會刪掉，所以以前提的 Already/Conflict 在下一回合沒有證據；這是[回頭審視](../records/step-back-review.md)發現的真契約漏洞。
 **選項差在哪**：
 
 | 選項 | 你會得到什麼 | 你會賠掉什麼 | 什麼時候會後悔 |
@@ -36,7 +36,7 @@
 ### 題目：Deliver 要採哪一組成功 JSON、錯誤 JSON、receipt 欄位與退出碼編號？
 
 **這題其實在問什麼**：呼叫者怎麼機械地判斷投了幾筆、得到哪個憑據、哪個參數錯了，以及 shell 光看數字要如何分類錯誤。
-**為什麼會有這題**：skill、MCP、shell 都要讀同一份 machine contract；[工具協作場](records/tool-interop.md) 四位只對 `0=成功`、錯誤要能定位形成共同形狀，其他號碼互相衝突。
+**為什麼會有這題**：skill、MCP、shell 都要讀同一份 machine contract；[工具協作場](../records/tool-interop.md) 四位只對 `0=成功`、錯誤要能定位形成共同形狀，其他號碼互相衝突。
 **選項差在哪**：
 
 | 選項 | 你會得到什麼 | 你會賠掉什麼 | 什麼時候會後悔 |

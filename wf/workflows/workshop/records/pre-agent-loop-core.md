@@ -33,7 +33,7 @@
    （條件是「到了某個時刻」），`func` 是**序列續體**（條件是「還有下一條 form」）。使用者
    注意到的「func 每輪投遞兩筆」與「wait 每輪重投自己」，是同一個機制。
 3. **「取下一條指令」不需要新機制。** 現有的投遞協定（`.aos/inst.tempd/`，見
-   [`docs/aos-folder.md`](../../../docs/aos-folder.md)）本身就是 continuation 的傳遞方式。
+   [`docs/aos-folder.md`](../../../../docs/aos-folder.md)）本身就是 continuation 的傳遞方式。
    使用者列的兩個候選（(a) 最後放一筆取件指令、(b) 通用 lib）在三位眼中都是**既有機制的
    用法**，不是新東西。
 4. **真正夠格當 T5 前置條件的只有一件事：原子投遞的 API。** 三位從三個方向指到同一處
@@ -61,7 +61,7 @@
 
 - **回合中途死掉的洞**（M2）：工具已經造成副作用、但續投遞之前 process 死了。重跑會重複
   副作用，不跑就停機。現有規則（`.runi` 留著、不自動重跑，見
-  [`docs/roadmap.md`](../../../docs/roadmap.md) T2）只保證「不自動重放」，**沒有回答
+  [`docs/roadmap.md`](../../../../docs/roadmap.md) T2）只保證「不自動重放」，**沒有回答
   「那接下來怎麼辦」**。M2 建議磁碟上的 phase／idempotency 檔＋恢復腳本。這是本輪唯一一個
   roadmap 沒有記到的缺口。
 - **`$ref`／`$env`／`$opt` 不是 quote／unquote**（M3）：它們是**晚綁定**。所以已有的指示詞
@@ -219,7 +219,7 @@ CLI 是 `aos enqueue <folder> [file|-]`，只保證「完整且可見」，驗�
 4. `.aos/inst.tempd/` 已經是 submission queue，但**缺順序、容量、fence、doorbell** 四樣。
 
 **轉交建議**（需使用者拍板，議會不自己改規格文件）：
-- `deliver`／`aos enqueue` → 進 [`docs/roadmap.md`](../../../docs/roadmap.md)，插在 T5 之前。
+- `deliver`／`aos enqueue` → 進 [`docs/roadmap.md`](../../../../docs/roadmap.md)，插在 T5 之前。
 - 「中途死掉的洞」4:0 明確不做 → 進 roadmap 第六節「明確不做的事」。
-- `k/`／`c/` 兩層與命名 → 進 [`docs/aos-folder.md`](../../../docs/aos-folder.md)。
+- `k/`／`c/` 兩層與命名 → 進 [`docs/aos-folder.md`](../../../../docs/aos-folder.md)。
 - 有限資源／`aos queue`／fence → 獨立成一份 idea（`wf/workflows/ideas/`），不要塞進本記錄。

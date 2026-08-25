@@ -4,7 +4,7 @@
 ### 題目：最近一次覺得 workflows 不好用時，主要卡在安裝升級、路由／遵守流程、活狀態維護，還是定時喚醒？
 
 **這題其實在問什麼**：你原本造 aos 想消掉的第一個摩擦究竟是哪一個；若只能先少做一步手工事，要少的是哪一步。
-**為什麼會有這題**：[workflows 場](records/workflows-on-aos.md) 只能從檔案推測 drift、升級、路由與 tick 可能痛，沒有一件是你已確認的真事故。
+**為什麼會有這題**：[workflows 場](../records/workflows-on-aos.md) 只能從檔案推測 drift、升級、路由與 tick 可能痛，沒有一件是你已確認的真事故。
 **選項差在哪**：
 
 | 選項 | 你會得到什麼 | 你會賠掉什麼 | 什麼時候會後悔 |
@@ -20,7 +20,7 @@
 ### 題目：近期 scope 要只留最小 Deliver，保留 Publish→Deliver→Effect 三項，還是繼續連行程控制平面一起設計？
 
 **這題其實在問什麼**：在第一條模型→工具→模型尚未跑過前，你要先補已知的投遞缺口，還是一次把外呼恢復與多工作管理都定成核心契約。
-**為什麼會有這題**：[agent loop 場](records/agent-loop-architecture.md) 曾經 4/4 收成三原語，但[回頭審視](records/step-back-review.md) 又 4/4 收回公開 Publish 與近期 Effect，形成互斥 roadmap。
+**為什麼會有這題**：[agent loop 場](../records/agent-loop-architecture.md) 曾經 4/4 收成三原語，但[回頭審視](../records/step-back-review.md) 又 4/4 收回公開 Publish 與近期 Effect，形成互斥 roadmap。
 **選項差在哪**：
 
 | 選項 | 你會得到什麼 | 你會賠掉什麼 | 什麼時候會後悔 |
@@ -35,7 +35,7 @@
 ### 題目：第一個做好的體驗，是人在 coding agent 裡呼叫 aos，還是 aos 無人值守地批次召喚 coding agent？
 
 **這題其實在問什麼**：第一位主角是人還是 driver；是 agent 幫人操作 aos，還是 aos 把 agent 當一支可能付費、可能斷掉的外部程式來跑。
-**為什麼會有這題**：[工具協作場](records/tool-interop.md) 發現兩者共用 CLI，但前者的難點是教 agent 用對工具與批准，後者的難點是 session、結果原子捕捉、exit 與 unknown。
+**為什麼會有這題**：[工具協作場](../records/tool-interop.md) 發現兩者共用 CLI，但前者的難點是教 agent 用對工具與批准，後者的難點是 session、結果原子捕捉、exit 與 unknown。
 **選項差在哪**：
 
 | 選項 | 你會得到什麼 | 你會賠掉什麼 | 什麼時候會後悔 |

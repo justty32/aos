@@ -218,8 +218,20 @@ shell loop 撐不住的地方，就是 `--loop` 要補的東西（間隔語意�
 **驗收**：一個資料夾裡跑完一次「模型 → 工具 → 模型看到結果」的完整來回，全程沒有常駐
 process，中途 `Ctrl-C` 之後再 `aos exec` 一次能從斷點繼續。
 
+> **⚠ 驗收最後那一句和 [D6](#d6) 互相矛盾，還沒拍板。**
+> D6 已定「`.runi` 存在 → 拒絕啟動、退出碼 3、把現場留給人」，那就**不可能**「再 `aos exec`
+> 一次就從斷點繼續」。2026-08-25 的實測（[wf/workflows/experiments/t5-agent-loop.md](../wf/workflows/experiments/t5-agent-loop.md)）
+> 證實了這點：`--loop` 只在**回合邊界**能優雅停下；單次 `aos exec` 真的被打斷會留下 `.runi`，
+> 只能整批重放，而外部效果可能已經發生。
+>
+> 兩條路擇一，**由使用者決定**：①改本節的措辭，承認「續跑」＝回合邊界，不是任意斷點；
+> ②在規格裡長出真正的復原路徑（`aos recover`／逐筆記錄已完成的 instruction）。
+> **在拍板之前，不要照這條驗收去實作。**
+
 **這一階段的產出不是程式，是規格**：腳本裡哪些地方重複、哪些地方難寫，就是 `aos agent`
-與 T6 要收掉的東西。
+與 T6 要收掉的東西。實測已經替這一階段列出五支想要的子命令
+（`aos deliver`／`recover`／`status --json`／`agent step`／`agent emit-context`），
+見上面那份實驗紀錄。
 
 ### T6 — 把 LLM 內化：`aos llm exec <folder>`<a id="t6"></a>
 
