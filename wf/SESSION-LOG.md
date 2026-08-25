@@ -12,6 +12,11 @@
 
 ## 最新進度
 
+- **2026-08-25 再開一場：[四個懸而未決的設計選擇，各自的優缺點](workflows/workshop/records/four-open-choices-tradeoffs.md)**
+  （R1 跑完；四位**全新的人**，同樣四種身份）。使用者原話「我還沒想好，我想多了解這四件事的
+  優缺點」——四題是 World 抽象、`kernel.json` 要不要分層合成、拓樸 A／B／先固定磁碟 ABI、
+  親緣綁路徑還是 UUID。**紀錄由「書記」寫的**（見 [workshop README](workflows/workshop/README.md)
+  的〈書記〉），主持人沒有讀內容，只確認他沒動別的檔。**四題都還沒拍板。**
 - **2026-08-25 新開一場 workshop：[核心行程、子行程，與外部處理器的契約](workflows/workshop/records/core-process-and-subprocess.md)**
   （R1 跑完，四位：工程師／架構師／研究人員（OS）／外部開發者；`xhigh`；**普通用戶被使用者
   拿掉**，所以缺「人看不看得懂」的視角）。**最該讓使用者知道的一件事**：使用者提的
