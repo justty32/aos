@@ -85,6 +85,28 @@
 - **四位平行 ＋ `timeout 1800`**：每位包一層 `timeout`，有人掛掉就在紀錄裡**明寫少了誰**，
   用剩下的繼續，不要靜默略過。
 
-- **收 session id 用 `--json`**，stdout 變 JSONL 落到本機檔，
-  `grep -o '"session_id":"[^"]*"' | head -1`。**第二輪起要靠它 resume**，
-  沒抓到就等於那一位的 context 掉了。
+- **session id 的 key 是 `thread_id`，不是 `session_id`。** codex 0.149.1 實測——
+  workshop README 那句「grep 第一筆 `session_id`」是舊版的寫法，**在這裡抓不到任何東西**，
+  而且失敗是無聲的（`grep` 沒中就是空字串，腳本照樣往下跑）。正確寫法：
+
+  ```bash
+  codex exec --json ... > out.jsonl
+  tid=$(grep -o '"thread_id":"[0-9a-f-]*"' out.jsonl | head -1 | sed 's/.*:"//;s/"//')
+  ```
+
+  **第二輪起要靠它 resume**，沒抓到就等於那一位的 context 掉了。
+  萬一真的漏抓，還可以從 `~/.codex/sessions/<年>/<月>/<日>/rollout-*.jsonl` 的**檔名**撈回來
+  （UUID 就在檔名裡），但四位平行時無法分辨誰是誰。
+
+- **`codex exec resume` 的旗標位置**：`--json` 與 `-o` 有支援，但**要放在 `resume` 前面**——
+  `codex exec --json -o out.md resume <thread-id> - < brief.md`。
+  `-s`／`-C`／`--add-dir` **不吃**（沙盒與工作目錄從原 session 繼承），
+  所以**場地必須還活著**，這也是場地不能放 `/tmp` 的第二個理由。
+
+## 檢查改動範圍
+
+- **不要用 WSL 的 `git status` 檢查收場四棒動了什麼——會全紅。** repo 在 `/mnt/c`，
+  Windows 端 `core.autocrlf=true`，從 WSL 跑 `git -C /mnt/c/... status` 會把**幾十個
+  完全沒被碰過的檔**全部報成 `M`（行尾差異）。實測 R1 收場時 WSL 報了滿螢幕 `M`，
+  Windows 側查證只有一個未追蹤的 `records/` 目錄。
+  **主辦人的「只動了那一個檔」這項檢查，一定要從 Windows 側做。**
