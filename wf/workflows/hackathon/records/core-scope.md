@@ -8,7 +8,7 @@
 | 開場日期 | 2026-08-26 |
 | 環境 | WSL Ubuntu；codex 0.149.1；`-s workspace-write`；無網路；四位平行；單輪逾時 1800 秒；R1 費時 9.5 分鐘。 |
 | Reasoning effort | `model_reasoning_effort=high` |
-| 狀態 | R1 已完成，預計三輪。 |
+| 狀態 | 第 2 輪已完成 |
 
 | 參賽者 | persona | 場地 | codex thread id（續輪 resume 用） |
 |---|---|---|---|
@@ -374,3 +374,355 @@ phase marker 把刀落在哪裡說清楚，錯檔名被三次 exit 0 安靜忽�
 - **只留最小 Deliver**：得到最小的 core；賠掉的是這輪已實際出現的多處通用安全寫檔仍要由各人自備，外部到底做了沒也繼續交給上層或人處理。
 - **先做 Publish、Deliver、Effect 三項**：得到一套共用的寫檔、投遞與外部結果記錄邊界；賠掉的是必須現在就定義命名、碰撞、收據、重開與耐久範圍，而無法查詢的外部服務仍只能留給人判斷。
 - **保留完整控制平面**：得到日後可同時管多件工作、等待與收拾子工作的容量；賠掉的是要先背負一整套本輪尚未出現實際需求的設計與驗證成本。
+
+## 第 2 輪紀錄
+
+### 1. 各人這輪改了什麼
+
+**Carmack persona。** 沿用上一輪方向，但把混在一起的第一個數字拆成固定四欄：1 份原始碼實作、9 個靜態呼叫點、每案 8 次實際 commit、0 次人工 rename，題目的第一個數字只取實作份數。上一輪散落的發布改由一支 publish.py 處理，另加薄的 deliver.sh、記錄 unknown 的 effect.sh，以及把每種事故收成一條具名 action 的 recover.sh。修正後跑完 baseline、SIGINT、provider accepted／dropped、Effect response rename 前五案；兩個 unknown 案在不看 oracle 的情況下都下同一條 recover.sh abandon-unknown，rename 前完整 temp 則用 recover.sh adopt-temp。原場地本輪不可寫，成果放在 /tmp/aos-core-scope-p1-r2/round2/。
+
+**Armstrong persona。** 把上一輪單一 temp + mv helper 加成 stable key、immutable intent／payload／receipt、stable temp、file fsync、directory fsync 與 Linux renameat2(RENAME_NOREPLACE)；Effect 改成 pending → done | unknown，恢復命令只接受 adopt | retry | abandon。這輪逐點砍在 Publish target／receipt 邊界與 Effect 的 pending／accepted／result／done 邊界，也重測 Ctrl-C；九個事故場都用一條高階恢復命令走到 final，shell mv 與手造半批 instruction 都是 0。另測同 target 雙 producer 競爭，第一次撞到自己的 mkdir race，修正後用 fresh world 重跑。上一輪場地不可寫，因此先以相同 SHA-256 複製到 /tmp/aos-p2-round2.kTrhIV/p2-agent-loop 再做本輪實驗。
+
+**Cantrill persona。** 修正上一輪拿不到獨立 aos exit 的 SIGINT harness，統一 crash matrix 欄位，補測合法／非法 delivery 名稱、same-target race 與雙 producer 各 1,000 份，並把原本有 TOCTOU 的 Publish v1 換成私有 renameat2(RENAME_NOREPLACE) Publish v2。Deliver v2 由自己產生合法 <key>.json，先拒絕壞 key、JSON、schema、world，再回 published／already／conflict。本輪固定把第一個數字數成成功三回合的 Publish transaction 數。指定場地不可寫，成果放在 /tmp/p3-core-scope-round2/，另留 tarball 與 SHA-256。
+
+**Thompson persona。** 撤回上一輪「三行 shell 已反證 Deliver」的結論，讓 no-aos 鏈承受同樣的 SIGINT、SIGKILL、rename 前中止，且事故後只能重跑同一條命令。effect 後重開在 SIGINT 與 SIGKILL 兩案都把 effect 從 1 次做成 2 次；舊 delivery helper 在 rename 前死亡後也無法以原參數重叫。另讓兩個 producer 各投 1,000 件：共用本地序號時遺失 1,000 件，改用全域唯一 ID 時遺失、重複、覆蓋、明確失敗皆為 0。最後以 hard link 寫窄 no-replace 原型，測過 crash 前 exact retry、Already 與 Conflict，但留下孤兒 temp。原場地被沙盒拒寫，成果放在 /tmp/p4-round2。
+
+### 2. 坑的總表
+
+**四位獨立地都再次撞到：無 query／idempotency 的 provider 在 effect 與本機 result 之間被砍，本機仍只能留下 unknown。** Carmack persona 的 accepted／dropped 兩案不用 oracle 作決策，兩案都執行：
+
+~~~text
+MANUAL_COMMAND[unknown-accepted-fixed]: recover.sh abandon-unknown
+MANUAL_COMMAND[unknown-dropped-fixed]: recover.sh abandon-unknown
+~~~
+
+兩案最後都寫 effect_outcome: unknown_abandoned；事後 oracle 才分別看到 accepted_lines=1 與 dropped_lines=0。Armstrong persona 分別實測 abandon 與明示 retry；accepted 後 retry 的原文是：
+
+~~~text
+provider_ledger_lines_before_resolve=1
+provider_ledger_lines_after_resolve=2
+request-42 attempt=1
+request-42 attempt=2
+~~~
+
+Cantrill persona 在 model 與 tool 兩個故障點重現同一類 committed result 缺失；Thompson persona 的 no-aos 同命令重開則在 SIGINT 與 SIGKILL 兩案都留下兩行 EFFECT。上一輪這個坑沒有被消除；本輪 p1、p2 把它改成可明示 abandon／retry／adopt 的狀態與命令，p3、p4 仍只記錄重現結果。
+
+**四位獨立地都撞到：target 的可見提交，不等於 aggregate 消費後仍有發布歷史。** Carmack persona 的 Deliver 只在 ready 檔還在時提供 Already／Conflict，aggregate 刪檔後同 key 可再次 enqueue。Armstrong persona 更精確砍在 target 已發布、receipt 尚未提交、consumer 又已取件的窗口；重開時 target、temp、receipt 都可能不在，只能留下操作員證言：
+
+~~~json
+"durability":"operator-attested-after-ambiguous-consumption",
+"state":"adopted-consumed"
+~~~
+
+Cantrill persona 的 deliver_v2_after_consume 同 key 再投回 "state":"published"；Thompson persona 的 no-replace 原型也只在 target 尚留 queue 時能回 Already。上一輪「沒有 durable key ledger／跨 producer 去重」的坑，本輪 queue 尚未被吃掉時已由 no-replace 與 stable key 解掉；aggregate 後的跨回合去重仍未解，p2 另把 target 與 receipt 不是同一原子提交的窗口實際打出來。
+
+**三位獨立地都實測了兩個 producer，但撞到的不是第二個 logical work。** Armstrong persona 的第一次 race 先敗在 transaction directory 的 mkdir TOCTOU：
+
+~~~text
+producer_a_exit=1 output={"error":"FileExistsError","message":"[Errno 17] File exists: '.../.r2/publish'","operation":"publish-put"}
+producer_b_exit=0 ...
+~~~
+
+修正後同 target／不同內容只准一方 commit，另一方以 conflict 失敗。Cantrill persona 用兩個 producer 各投 1,000 個不同 target，得到 ready_before=2000、unique_before=2000、執行後 ready_after=0。Thompson persona 故意讓兩邊共用本地序號時，32 件明確失敗、968 件 helper 回成功卻覆蓋既有 ready，共遺失 1,000 件；部分原始錯誤是：
+
+~~~text
+mv: cannot stat '/tmp/p4-round2/world-shared-slot/.aos/inst.tempd/0001.json.temp': No such file or directory
+mv: cannot stat '/tmp/p4-round2/world-shared-slot/.aos/inst.tempd/0002.json.temp': No such file or directory
+mv: cannot stat '/tmp/p4-round2/world-shared-slot/.aos/inst.tempd/0003.json.temp': No such file or directory
+~~~
+
+改用全域唯一 ID 後 2,000 件全數執行，遺失、重複與覆蓋都是 0。Carmack persona 本輪沒有跑 multi-producer。
+
+**三位獨立地都用 Linux no-replace 原語解掉 test 再 mv 的覆蓋競爭；第四位用 hard link 做窄對照。** Carmack、Armstrong、Cantrill persona 都使用 renameat2(RENAME_NOREPLACE)；Cantrill persona 的 Publish v1 強迫競爭時兩方都 exit 0、最後 B 無聲覆蓋 A，換 v2 後同內容是 published／already，異內容是 published／conflict、衝突方 exit 73。Thompson persona 沒用 mv -n，因它跳過時仍可能成功退出，改用 hard link 證明窄契約。上一輪缺 no-replace 的坑在這四份私有原型中已解；三份 renameat2 原型都明寫 Linux-specific，hard-link 原型則留下 crash temp，尚未形成可攜契約。
+
+**上一輪 rename 前要人搬 .temp 的坑，在三條私有恢復路徑中已解，另一條補出可重現的 no-replace 邊界。** Carmack persona 的五案 manual_temp_rename_commands=0，以 replay-delivery 或 adopt-temp 取代；Armstrong persona 的事故恢復 shell_mv_or_half_batch_rebuild_matches=0，rename 前只下 deliver-resume；Thompson persona 的窄原型能用完全相同參數重叫，不人工搬檔。Cantrill persona 證明 Publish v2 的 no-replace 與可重入結果，但本輪回報沒有另外列出 rename 前事故的一條恢復命令。Thompson persona 的舊 helper 對照仍失敗在：
+
+~~~text
+same_retry_exit=1 stderr=mv: cannot stat '/tmp/p4-round2/deliver-retry/source': No such file or directory
+~~~
+
+**上一輪 .runi 擋住重開且要重造半批 instruction 的坑，只在兩條具名恢復路徑中被處理。** Carmack persona 的 SIGINT 案改用一條 recover.sh replay-delivery，最後 actual_commits=8、external_ledger_lines=1；Armstrong persona 的 Ctrl-C 現場仍先出現：
+
+~~~text
+ctrl_c_exec_exit=130
+immediate_restart_exit=3 stderr=aos exec: refusing /tmp/aos-p2-round2.kTrhIV/p2-agent-loop/round2/worlds/ctrl-c: .aos/inst.json.runi already exists
+~~~
+
+但這次只下 recover-world，先驗 Effect done 與 continuation receipt，再保存 forensic .runi 並解鎖，沒有人工重造 schedule。兩份回報都明寫這不是一般 instruction program counter。Cantrill persona 修好 SIGINT harness 並取得獨立 130，但只留下 crash matrix，沒有回報通用 .runi recovery；Thompson persona 本輪 no-aos 對照沒有 .runi。
+
+**Cantrill persona 上一輪的錯名 silent stall，在私有 Deliver v2 已解，現有 aos 行為未改。** 本輪再次量到 name.part.json、.json、name.json.temp、無副檔名都 aos_exit=0、stderr 空白、source 留在 inbox；壞 JSON 才會被取走並印：
+
+~~~text
+delivery_stderr aos exec: warning: .aos/inst.tempd/bad.json: JsonSyntax
+~~~
+
+Deliver v2 改由自己產生合法檔名，並讓壞 key／JSON／schema／world 都 exit 65、回 rejected。這只解掉經 Deliver v2 投件的路徑，沒有改掉 aos 對錯名安靜忽略的既有行為。
+
+**失敗的量測與 harness 都有保留。** Carmack persona 第一個 baseline 因 Effect Publish receipt 混入 provider stdout，三次 aos exec 都回 0 但 final JSON 壞掉；修 receipt channel 後才重跑乾淨 baseline。其第一版 recovery 又卡在 dash 的：
+
+~~~text
+/tmp/aos-core-scope-p1-r2/round2/recover.sh: 15: kill: Illegal number: -
+~~~
+
+改用 /bin/kill 後才重跑。Armstrong persona 的第一次雙 producer 測試因上述 mkdir race 作廢。Cantrill persona 第一版背景 SIGINT 再次無效，matrix 卡在 .runi 與 paused worker，改用前景 timeout --preserve-status --signal=INT 才取得 130；收據統計也曾把 rg -h 當成 no-filename 而數出 135 行，改用 --no-filename 後才得到 9／3／6。Thompson persona 的舊 helper 與 shared-slot 壓力測試都保留失敗輸出，窄原型也明寫殘留：
+
+~~~text
+r2 prototype residual temps=4xs0X5DXNzZb.json.temp,
+~~~
+
+**四位本輪仍都沒有真實 power-cut 證據。** Carmack、Cantrill、Thompson persona 的原型只承諾 visibility atomicity；Armstrong persona 執行了 file fsync 與 directory fsync，但明寫沒有真實斷電、NFS、虛擬磁碟或裝置快取測試。四位也都沒有改 C++、build 或 ctest。四人的原場地本輪都因沙盒不可寫而改存 /tmp；Thompson persona 保留的拒絕原文是：
+
+~~~text
+patch rejected: writing outside of the project; rejected by user approval settings
+~~~
+
+### 3. 好處／壞處
+
+#### 好處
+
+四條路都把上一輪只能靠人搬檔或盲目重開的差異做得可觀察。Carmack persona 把 9 個靜態 Publish 呼叫點收進 1 份實作，五個乾淨案例都以 8 次 commit 收尾，人工 rename 為 0。Armstrong persona 的九個事故場各只用一條高階命令，rename 前 temp、target 後缺 receipt、Effect result-ready、done 後缺 continuation 與 Ctrl-C 現場都有各自的恢復輸出；明示 retry 也真的留下兩筆 provider ledger，沒有把命令名稱當成安全保證。
+
+Cantrill persona 修正 SIGINT harness 後，golden、SIGINT、SIGKILL、delivery rename 前四案有一致欄位；Publish v2 的 same-target 競爭實際跑出同內容 Already、異內容 Conflict，Deliver v2 也讓錯 key、JSON、schema、world 成為可見拒絕。Thompson persona 用同一命令重開 no-aos 對照，實際推翻上一輪只有 happy path 的三行論；雙 producer 的 shared-slot／global-ID 對照把遺失歸到命名與覆蓋競爭，而不是 2,000 件負載或 aos 執行。
+
+三份 multi-producer 回報把「同時有 writer」與「同時有第二個耐久工作」分開記錄：同 target 需要原子排他，不同全域 key 的 2,000 件路徑可全數處理；三份答案仍都把 concurrent logical agent jobs 記為 0。
+
+#### 壞處
+
+私有原型已明顯增厚。Carmack persona 的 Publish／Deliver／Effect／Recovery 共 327 行；Armstrong persona 的私有 CLI 618 行，成功基線留下 12 個 transaction 目錄與 12 張 receipt，清理與保留期未定。Effect 仍要 phase、stable key、attempt、decision、receipt 與 recovery transition，卻不能回答 provider 到底做沒做。
+
+Publish 的 no-replace 只處理 target commit，沒有一併解掉 transaction directory、receipt 與 consumer acknowledgment 的並行邊界。Armstrong persona 的 mkdir race 與 consumed-before-receipt 現場、其餘三份 aggregate 後同 key 可再次發布的結果，都留下額外帳本或 acknowledgment 尚不存在的狀態。三份 renameat2 實作是 Linux-specific；四份原型都沒有可外推的斷電結果。
+
+Deliver 的私有 validator 也不是現有 instruction schema 的唯一真源。Armstrong persona 只支援本輪的 string argv；Cantrill persona 的 Python validator 是窄原型；Thompson persona 的 hard-link 原型沒有 JSON／schema 驗證。現有 aos 仍會安靜忽略錯名，child exit 137 時仍可能讓 aos exec 回 0，也沒有通用 status 一次列出 .runi、temp、instruction exit 與 result 缺口。
+
+### 4. 三個數字
+
+**① 自己手寫了幾次 temp＋rename。** Carmack persona 回 **1**，並固定分列 1 份實作、9 個靜態呼叫點、每案 8 次 commit、0 次人工 rename，題目只取第一欄；這比上一輪的 9／6 雙口徑硬。Armstrong persona 回 **1** 個 rename_noreplace() 實作，另列 2 個靜態 commit call sites、基線 12 個 transaction／receipt、0 次 shell mv、0 次手造半批 instruction；口徑延續上一輪，但把各欄分開，證據更完整。Cantrill persona 回 **9** 筆成功三回合的 Publish transaction，其中 3 筆 Deliver、6 筆非 Deliver；它把 transaction 明定成唯一主口徑，並以更正後的 9／3／6 統計支持，但這個口徑不是實作份數。Thompson persona 回 **4** 個靜態 temp→commit 實作位置：delivery helper 1 個、no-aos model-call／tool result／final 3 個；hard-link no-replace 原型不計，較上一輪只報 1 份 helper 多列出三個呼叫者自行實作的位置。
+
+因此本輪收到的第一項原始答案是 **1／1／9／4**，但四位分別數原始碼實作份數、no-replace primitive、實際 transaction、靜態 temp→commit 位置，仍不是同一單位。p1 依評委要求已把四欄鎖死；p2 也完整分欄；p3、p4 各自選了唯一主口徑，但彼此仍不可直接橫比。
+
+**② 哪種「不知道做了沒」本機補不回來。** 四位都回 **1 類**：provider 可能已接受，但 committed response／result 不存在，且 provider 不能依 key 查詢。Carmack persona 有不看 oracle 的同命令處置與事後 accepted／dropped 對照；Armstrong persona 有 abandon 保持 ledger 1、retry 令 ledger 1→2、result-ready 可安全 adopt 的 transition 證據；Cantrill persona 在 model／tool 兩點重現；Thompson persona 的 no-aos blind restart 讓 effect 1→2。答案數字沒變，但本輪多了明示 resolve、transition 與 no-aos 同命令重開，證據比上一輪更硬。Armstrong persona 另報一個 Deliver consumed-before-receipt 的本機 ambiguous window，但將它與遠端 Effect unknown 分開，沒有把題目數字改成 2。
+
+**③ 有沒有第二個要同時管的工作。** 四位都回 **0**。Carmack persona 仍是一個 world、一條 loop、一筆 instruction。Armstrong、Cantrill、Thompson persona 雖都啟動兩個 producer 做競爭或壓力測試，但明列它們是短命 writer／contention，不是第二個長壽 agent、lane、join 或 scheduler。本輪比上一輪多了真實 multi-producer 證據，但 concurrent logical agent job 的數字仍是 0。
+
+### 5. 評委上一輪要他們做的事，做到了沒
+
+**Carmack persona。** 做到固定四欄計數，並以私有 Publish／Deliver／Effect 重跑原故障類型；每案都有恢復前狀態、單一具名命令與恢復後 ledger，accepted／dropped 的決策沒有偷看 oracle，人工 rename 為 0。第一版 baseline 與 recovery 各失敗一次，修正後另跑乾淨案例。
+
+**Armstrong persona。** 做到 stable key＋receipt 的可重入 Publish、pending → done | unknown 與 adopt | retry | abandon，逐 transition 注入；九案各最多一條高階恢復命令，搬檔與半批 instruction 重造都是 0，明示 retry 的 ledger 由 1 變 2。另打出評委未明列的 consumed-before-receipt 缺口。
+
+**Cantrill persona。** 做到修 harness 並留下獨立 aos exit、instruction exit、queue／temp／final 等一致欄位；合法／非法名稱、same-target 重投與雙 producer 都已測，Publish／Deliver 的拒絕、no-replace 與錯誤可見性也有輸出。第一版背景 SIGINT 與第一次 receipt 統計作廢後有更正重跑。
+
+**Thompson persona。** 做到讓 no-aos 鏈承受同樣三刀且只用同一命令重開，結果在 effect 後重做副作用；也完成兩個 producer 各 1,000 件，shared-slot 有 1,000 遺失，global-ID 五項結果全綠。依這些失敗點收出窄 Deliver 契約，並撤回上一輪「連 Deliver 都別加」的結論。
+
+### 6. 仍然不知道的
+
+第一個數字仍沒有跨四人的共同單位。p1 已按評委要求固定四欄，p2 也分列 primitive／call site／transaction／人工操作；p3 的唯一主口徑是 9 筆 transaction，p4 是 4 個靜態實作位置。因此本輪能看出每份回報內部的計數比上一輪穩定，仍不能把 **1／1／9／4** 當成同一尺度排序。
+
+仍不知道不靠操作員 adopt-consumed 時，Deliver 要如何跨越「target 已 commit、aggregate 已 claim／刪除、receipt 尚未 commit」的窗口。四份回報都顯示 queue target 消失後 key 歷史會失憶；本輪沒有 consumer acknowledgment 或共享 commit layout 的完成實驗，也沒有證明這份 ledger 應放在 Deliver 私有層或 aggregate／core。
+
+仍不知道真實 power cut、NFS、非 Linux filesystem、虛擬磁碟與裝置快取下的結果。p2 只證明 file fsync／directory fsync 的 syscall path 有跑；其餘原型只承諾 visibility atomicity。renameat2(RENAME_NOREPLACE) 的非 Linux 替代契約、跨 filesystem 行為與孤兒 temp 的容量／清理政策也沒有答案。
+
+仍不知道正式 Deliver 如何共用 core/inst 的 canonical parser，而不長出第二套 schema。兩份 Python validator 與一份 shell prototype 都是窄版；現有 aos 對錯 delivery 名稱的 silent ignore、child 失敗但回合 exit 0、通用 .runi recovery／status 仍未改變。
+
+仍不知道無 query provider 的 unknown 最後應由誰、依什麼權限選 abandon 或 retry。這輪證明命令與 ledger 可以保存決策，也證明 retry 會重複 effect；沒有任何一路補出 provider 真相或 exactly-once。四份回報依然沒有真模型、真 provider 或第二個長壽 logical work 的現場。
+
+## 第 2 輪評分與意見
+
+總分仍是五項直接相加，滿分 25；不拿來排名。這輪先看上輪指示有沒有做，再看輸出是否撐得住結論。
+
+### p1（Carmack persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 5/5 |
+| 路線價值 | 5/5 |
+| **總分** | **25/25** |
+
+**較上輪：24 → 25，進步。** 上輪扣的計數單位這次已拆成 1 份實作、9 個呼叫點、每案 8 次 commit、0 次人工 rename，而且題目答案明確取 1。
+
+上輪要的三支私有原語、故障前後狀態、單一恢復命令和禁止 oracle 作答，全部有做。accepted 與 dropped 用同一條 `abandon-unknown`，完成後才讀到 ledger 為 1 與 0，這才是「本機無解」的有效證明。兩次原型失敗都留了原文並用乾淨案重跑，沒有把修過的故事偽裝成一次成功。
+
+**下一輪：**只打兩個未測窗口：response 已 commit、done 未 commit，以及 decision 已 commit、done 未 commit。每案必須用同一條 resolve 命令連續跑兩次，輸出 provider ledger、commit 數與 final hash，證明可重入且沒有第二次 effect。
+
+### p2（Armstrong persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 5/5 |
+| 路線價值 | 5/5 |
+| **總分** | **25/25** |
+
+**較上輪：25 → 25，持平。** 不是沒進展，是上輪已滿分；這次把 key＋receipt、`pending → done | unknown`、`adopt | retry | abandon` 和零搬檔都真正跑出來，還多打出 consumed-before-receipt。
+
+上輪的驗收條件全數交付，尤其 retry 後 ledger 從 1 變 2，沒有拿「高階命令」四個字假裝安全。更有價值的是 target 被 consumer 吃掉、receipt 未落盤後，只能發出 `operator-attested-after-ambiguous-consumption`；這直接打穿「Deliver 永遠只是 Publish 的薄 wrapper」。第一次 race 死在 mkdir TOCTOU 也照留，誠實度沒有折價。
+
+**下一輪：**就做 consumer acknowledgment，分別砍在 target commit、aggregate claim、delivery deletion、ack commit 後。同一 key 重開必須只得到一個機械可證的結果，且 `adopt-consumed` 必須消失；做不到就用兩個相同磁碟現場、不同歷史的輸出宣告獨立 Deliver receipt 方案死亡。
+
+### p3（Cantrill persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 4/5 |
+| 路線價值 | 5/5 |
+| **總分** | **24/25** |
+
+**較上輪：24 → 24，持平。** harness、錯名、same-target race 與 2,000 件壓力測試全部補齊，但第一個數仍扣一分：題目問「手寫幾次 temp＋rename」，你回的 9 是 runtime transaction，不是手寫位置。
+
+上輪指示的一鍵 matrix 和可見錯誤已做到；Publish v1 兩方 exit 0、B 無聲覆蓋 A，v2 變成單一 published 與 conflict，路線邊界很硬。你也把無效 SIGINT harness 和 `rg -h` 的 135 行誤計數作廢，沒有偷刪失敗。但「自己宣告主口徑」不能改寫題目的單位；9 只能支持 Publish 使用面，不能當第一個數字。
+
+**下一輪：**不要先回填 tarball；先用同一份 source inventory 輸出四欄：實作份數、靜態呼叫點、runtime transaction、人工 rename，題目答案固定取實作份數。然後用現有 `libaos_inst` C ABI 驗證同一批合法／非法 instruction，輸出私有 validator 與 canonical parser 的逐案差異，不准複製第二套 schema。
+
+### p4（Thompson persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 5/5 |
+| 路線價值 | 5/5 |
+| **總分** | **25/25** |
+
+**較上輪：21 → 25，進步。** 上輪沒證據的「三行 shell 足夠」這次被自己的三刀推翻，而 2,000 件對照又把負責點精確縮到 key 與 no-replace 契約。
+
+上輪指示全部照做：no-aos 在 SIGINT／SIGKILL 後都把 effect 從 1 做成 2，shared-slot 實測遺失 1,000 件，global-ID 則 2,000 件全數到達。最值錢的不是改口號，是公開撤回上輪結論，而且用兩行 effect log 和精確集合差來撤。hard-link 原型留下孤兒 temp 也照報，這份回報可信。
+
+**下一輪：**只打 publish-success-before-receipt 與 consumer-delete-before-retry 兩個窗口。對每個磁碟現場用完全相同的 Deliver 重試命令，輸出是 `Already`、`Unknown` 還是 `Conflict`；若沒有 ledger 就無法唯一判定，不要用操作員證言補答案。
+
+### 路線判斷
+
+**最值得繼續走的是 p2 這條，但下一步只准攻 consumer acknowledgment。** 具體證據是 p2 的 consumed-before-receipt 輸出：consumer 後 ready 與 receipt 都不存在，最後只能產生 `"durability":"operator-attested-after-ambiguous-consumption"`。這比繼續加 Effect 狀態更值錢，因為它正在決定 Deliver 能否獨立於 aggregate，也決定 (b) 裡 Publish 與 Deliver 的真正分界。p3 的 v1 race 「兩方 exit 0、final target=B」和 p4 的 shared-slot「968 次無聲覆蓋、1,000 件遺失」則已經把 no-replace 的需求證完，不用第三輪再證一次。
+
+**這輪有推翻上輪的一部分判斷。** 「選 (b)」沒被推翻，但「Deliver 應薄薄疊在 Publish 上」已經站不住：p2 證明 queue target 可以在 receipt 前被 consumer 消費，p3 與 p4 又證明 aggregate 後同 key 會失憶。另一個被明確推翻的是上輪 p4 那個「三行 shell 已反證 Deliver」的結論；這輪同命令重開直接把 effect 做了兩次。
+
+**致命的坑仍只有一個：無 query／idempotency 的遠端 effect，在 acceptance 與 committed result 之間被砍後，本機不可能自動還原真相。** p1 的同命令對應 ledger 1／0、p2 的明示 retry 對應 ledger 1→2，p4 的 blind restart 對應 effect 1→2，三份證據已把自動 exactly-once 判死。consumed-before-receipt 則對「獨立 Deliver 自己發完成收據」是致命坑，對 Deliver 本身不是；把 acknowledgment 交給 consumer／aggregate 就能繼續驗。Linux-only `renameat2`、fsync 未做斷電測試、孤兒 temp、receipt 清理、schema 共用與 `.runi` 恢復都只是麻煩；必須解，但沒有一個為控制平面創造了需求。
+
+### 可信度判斷
+
+沒有一份整體回報需要作廢，四位都保留了失敗現場。**若必須指出一份不可相信的題目答案，是 p3 回報裡的第一個數字 `9`。** 它有可重現的 transaction 統計，但題目問的是手寫 temp＋rename 幾次；把計數單位改成 runtime transaction，再宣布這是「唯一主口徑」，那個數不能拿來拍 scope。這不是說 p3 造假；正因為他把單位寫得很清楚，才能確定是答錯問題，所以誠實度仍是 5。
+
+### 現在就得拍板
+
+我會建議使用者仍選 **(b) Publish → Deliver → Effect**，但這是三個分段驗收的窄原語，不是一次吞下 618 行原型；Effect 只能保存 `unknown` 與明示決策，不准宣稱 exactly-once。**第一步仍是 Publish**：只做同 filesystem 的唯一 temp、atomic no-replace、stable key、同 bytes `Already`、異 bytes `Conflict` 與 visibility receipt；緊接著在公開 Deliver completion receipt 前，必須用 p2 下一輪的 consumer acknowledgment 實驗決定 ledger 邊界。
+
+跟上輪比，**scope 選擇沒變，第一步也沒變；變的是 Deliver 不再被假定為獨立薄 wrapper**。第三個數四份仍是 0，而且三份 multi-producer 實驗只證明 writer contention，沒有第二個長壽工作；所以 (c) 仍然是為將來虛構需求，不做。這是評審建議，最後由使用者拍板。
+
+## 第 2 輪之後的資料包
+
+### 1. 這輪卡住的清單
+
+- **p1（Carmack persona）**卡在 Effect response 已 commit、done 未 commit，以及 decision 已 commit、done 未 commit 的兩個窗口尚未測重複 resolve；本輪未測範圍寫在 `/tmp/aos-core-scope-p1-r2/round2/report-r2.md`。
+- **p2（Armstrong persona）**卡在 target commit 後被 aggregate 取走，receipt 卻尚未 commit，只能人工 `adopt-consumed`；完整現場在 `/tmp/aos-p2-round2.kTrhIV/p2-agent-loop/round2/evidence/delivery-consumed-no-receipt.log`。
+- **p3（Cantrill persona）**卡在第一個數仍把 runtime transaction 當成手寫實作份數，且私有 validator 尚未與 canonical parser 做逐案差異對照；來源 inventory、validator 行為與未測項都整理在 `/tmp/p3-core-scope-round2/ROUND2.md`。
+- **p4（Thompson persona）**卡在 publish 成功但 receipt 未回傳、以及 consumer 刪除 target 後重試的兩個窗口，沒有 ledger 時尚不能唯一回答 `Already`、`Unknown` 或 `Conflict`；原型與未測項在 `/tmp/p4-round2/ROUND2.md`。
+
+### 2. 上一輪給過的料，有沒有人真的用
+
+- **有用。** p3 實測的錯名 silent stall、p1／p2 的 `.runi` 拒絕重開與多人對 visibility-only 的表述，都對上 `docs/aos-folder.md`〈六、交接協定〉與〈八、退出碼〉。
+- **有用。** p3 重測 `<name>.json` 與 `name.part.json` 的差別，正面使用了 `core/inst/docs/handoff.md`〈彙整規則〉與 `core/inst/src/handoff.cpp` 的 `is_delivery_name()` 契約。
+- **有用。** p1 的 `replay-delivery`、p2 的 `recover-world` 都是針對 `core/inst/docs/handoff.md`〈取件與釋放〉及 `core/inst/tests/test_run_handoff.cpp` 所呈現的整批 `.runi` 邊界，但兩者都明寫沒有變成 instruction program counter。
+- **有用。** p1 第一版 recovery 因 dash `kill` 失敗後改用 `/bin/kill` 管 process group，與 `core/inst/docs/exec.md`〈逾時與行程群組〉、`core/inst/src/exec.cpp` 的 group-signal 路徑直接相關。
+- **有用。** p3 的 crash matrix 分開 `aos_exit` 與 `fault_instruction_exit`，p1 也抓到三次 exit 0 但 final JSON 已壞，用到 `wf/workflows/common/gotchas.md`〈使用 aos〉與 `docs/roadmap.md`〈D10 — 回合的退出碼怎麼算？〉的區分。
+- **有用。** p3 以合法／非法名稱、same-target race 與錯誤可見性擴充了 `wf/workflows/experiments/t5-agent-loop.md`〈3. 投遞：原子 rename、壞 JSON 與檔名碰撞〉的基線。
+- **有用。** p3 改用前景 `timeout --preserve-status --signal=INT`、p4 讓 no-aos 鏈接受同樣三刀，明確沿用 `wf/workflows/experiments/t5-agent-loop.md`〈4. Ctrl-C、`.runi` 與「續跑」〉的 harness 經驗。
+- **有用。** 四人都再測 request／effect／result 窗口，p1／p2 更將 `adopt | retry | abandon` 做成命令，實際用上 `wf/workflows/experiments/t5-agent-loop.md`〈7. reliability 題的補充實驗〉與〈`aos recover [WORLD]`〉。
+- **有用。** p1／p2 將 Effect 的 `pending／done／unknown`、stable key、decision 與 ledger 分開，落實了 `wf/workflows/workshop/background/reliability.md`〈Effect〉〈idempotency key〉〈ledger〉與〈`unknown`〉。
+- **有用。** 四人都分開 Publish、Deliver、key 與 receipt，並用 Already／Conflict 實測其邊界，直接用到 `wf/workflows/workshop/background/delivery-contract.md`〈Publish〉〈Deliver〉〈correlation ID〉與〈receipt〉。
+- **有用。** p1／p3／p4 都實測 aggregate 後同 key 重投，p2 更打出 consumed-before-receipt，正是 `wf/workflows/workshop/background/questions-deliver.md`〈沒有耐久 ledger 時…〉的四個重叫時點。
+- **沒有。** `wf/workflows/workshop/background/questions-deliver.md`〈Deliver 要採哪一組成功 JSON、錯誤 JSON…〉沒有被做成共同輸出契約，四份私有原型各用一套欄位；猜是本輪主題是 crash window，這條**不相干**。
+- **有用。** p2 跑了 file fsync＋directory fsync 路徑，其餘三人則明寫 visibility-only，對應 `wf/workflows/workshop/background/questions-reliability.md`〈Deliver／Publish 只保證 rename…〉與 `wf/workflows/workshop/background/reliability.md`〈visibility atomicity 與 power-loss durability〉。
+- **有用。** p1 依 Publish → Deliver → Effect 分層，p2 反過來用 consumed-before-receipt 修正它，實際檢驗了 `wf/workflows/workshop/records/agent-loop-architecture.md`〈R2 想法池（收攏成方向）／合併後的功能清單〉與〈其實是同一件事的／可以疊在一起的〉。
+- **沒有。** p2／p3 仍寫了只支援窄版 string argv 的 Python validator，沒有使用 `docs/inst-directives.md`〈五、適用範圍〉指向的 canonical schema；猜是第二輪尚未要求 parser conformance，這條**不相干**。
+- **有用。** p2 的 stable temp、write-all、file／directory fsync 與 incomplete evidence 保持 unknown，明顯對上 `/mnt/c/code/mine/simple_tools/agent-machine/full/05-DURABLE-STATE.md`〈持久屏障〉與〈結果不明不是失敗，也不是重試許可〉。
+- **有用。** p2 的 Publish 與 `/mnt/c/code/mine/simple_tools/agent-machine/workbench/2026-08-14/p1a2-process-python/p1a2_store.py` `atomic_publish()`／`fsync_directory()` 具有同目錄 temp、write-all、fsync 與再入判讀的同一組元件。
+- **有用。** p1／p2 在 parent 中止後都不重做已有完整證據的 effect，命中 `/mnt/c/code/mine/simple_tools/agent-machine/workbench/2026-08-14/p1a2-process-python/test_process_after_spawn.py` 的 kill-parent 後不 respawn 邊界。
+- **有用。** p1 的 `adopt-temp`、p2 的 result-ready／unknown 分流，對上 `/mnt/c/code/mine/simple_tools/agent-machine/workbench/2026-08-14/p1a2-process-python/p1a2_process_binder.py` 的 `KnownEvidence`／`IncompleteUnknown`／`bind()` 三態判讀。
+- **有用。** p1／p2 都把「可唯一推導就 adopt、仍有兩種真相就 unknown」做成實際恢復分支，對應 `/mnt/c/code/mine/simple_tools/agent-machine/full/options/04-RETURN-UNKNOWN-AND-REPAIR.md`〈方案 D〉與〈小原型該回答什麼〉。
+- **沒有。** p4 改用 hard link 實作 no-replace，沒有取用 `/mnt/c/code/mine/simple_tools/arc_agi_tweets/arc_tweets/storage.py` `_atomic_write()` 的 `os.replace` 版；猜是後者可覆蓋 target，與本輪 no-replace 契約**不相干**。
+- **有用。** p4 把 no-aos 鏈的能力邊界實測到「中止不代表副作用 rollback」，與 `/mnt/c/code/mine/simple_tools/freepy/agentloop/RUNNER.md`〈operation 在中途被強行中止〉〈整個實例被強制終止〉及 `agentloop/CONTROLLER.md`〈明確不負責〉一致。
+
+### 3. repo 裡已經有答案的
+
+- `core/inst/src/handoff.cpp` `aggregate_instructions()` 中「`rename(paths.temp, paths.base)` 成功 → `result.published = true` → `remove_accepted_deliveries()`」是 p2／p4 下一輪四個 kill point 的現行精確順序；這裡沒有 acknowledgment，只有發布後刪來源 delivery。
+- `core/inst/docs/handoff.md`〈彙整規則〉與 `docs/roadmap.md`〈T3 — 彙整與發布：接出下一回合〉明寫「發布成功之後才刪投遞」，`core/inst/tests/test_handoff.cpp`〈handoff aggregates deliveries in filename order and flattens batches〉已有發布後 delivery 消失的可直接改造測例。
+- `core/inst/docs/capi.md`〈讀取、寫入與執行〉明寫 C ABI 的 `aos_instruction_read_buffer()` 只接受單筆 instruction object、不接受 batch array；`core/inst/docs/capi.md`檔頭又明寫 C ABI 沒有 batch／handoff API，所以 p3 若要驗 Deliver 的 object／array 全契約，不能只呼叫這一支 C API。
+- `core/inst/src/format.cpp` `read_all()` 才是 object／array 共用、失敗時整批不交付且回報 one-based `error_record` 的 canonical batch parser；`core/inst/tests/test_format_read.cpp`〈read_all accepts a single instruction object〉〈read_all accepts a formatted array〉〈read_all is atomic and reports a one-based record number〉已是 p3 可照抄的 conformance cases。
+- `docs/inst-directives.md`〈六、擺在哪一層？〉與 `core/inst/docs/architecture.md`〈架構〉已定 `format` 是唯一懂 instruction schema 的分層，`resolve`、`handoff`、`exec` 不得重新解讀 schema；這是 p3 對照私有 validator 時的現成分層答案。
+- `docs/aos-folder.md`〈十二、留給實作決定的〉子節〈仍然開著的〉已記殘存 `.bad`／`.runi` 清理的容量上限方向與「不能自動清掉 crash 現場」的衝突；可作 p2 的 12 個 transaction 目錄與 p4 孤兒 temp 保留政策的現成邊界資料。
+
+### 4. 兄弟專案裡可以抄的
+
+- `/mnt/c/code/mine/simple_tools/agent-machine/workbench/2026-08-14/p0-function-python/aos_p0.py` 的 `_save_result()`、`_terminal()` 與 `recover()` 已把 receipt JSON、receipt-ready 與 terminal 分成三步；receipt 完整時 recover 只補後續 marker，不再執行 effect。
+- `/mnt/c/code/mine/simple_tools/agent-machine/workbench/2026-08-14/p0-function-python/test_p0.py` `test_recover_receipt_without_terminal_only_projects_terminal()` 正好是 p1 的 response／receipt 已 commit、done／terminal 未 commit 窗口；`test_invocation_id_table_cannot_escape_root()` 後段還已呼叫同一 invocation 的 `recover()` 驗重複恢復仍 terminal。
+- `/mnt/c/code/mine/simple_tools/agent-machine/workbench/2026-08-14/p0-function-python/README.md`〈由小到大：一次呼叫〉已寫出「完整 receipt 缺 terminal 時只補 terminal projection」與「dispatch intent 後不自動重跑」，可直接當 p1 兩個 transition 的文字對照。
+
+### 5. 還是查不到的
+
+- 在 `core/inst/`、`docs/`、`wf/workflows/experiments/t5-agent-loop.md`、`wf/workflows/workshop/records/` 與 `wf/workflows/workshop/background/` 中都沒有 consumer acknowledgment 的實作或「target commit → aggregate claim → delivery deletion → ack commit」故障矩陣，**這條沒有現成資料**。
+- `core/inst/docs/capi.md`檔頭已明寫 C ABI 不提供 batch／handoff API，而 `core/inst/include/aos/inst.h` 也只有單筆 instruction handle；因此「不改 C++ 卻只用現有 C ABI 驗完 Deliver object／array 全契約」，**這條沒有現成資料**。
+- `/mnt/c/code/mine/simple_tools/agent-machine/`、`/mnt/c/code/mine/simple_tools/freepy/`、`/mnt/c/code/mine/simple_tools/dcap/` 與 `/mnt/c/code/mine/simple_tools/arc_agi_tweets/` 都沒有 aggregate 取件／刪件與 producer receipt 共享同一份耐久 acknowledgment 的實作，**這條沒有現成資料**。
+- `wf/workflows/hackathon/records/core-scope.md`〈第 2 輪紀錄〉〈第 2 輪評分與意見〉仍只能列出 1 份實作／9 個呼叫點／8 或 12 筆 transaction／4 個實作位置，repo 與四個兄弟專案都沒有一張既定的跨實驗統一計數表，**這條沒有現成資料**。
+- `docs/aos-folder.md`〈十二、留給實作決定的〉只有殘存檔清理方向，`wf/workflows/workshop/background/questions-reliability.md`〈Deliver／Publish 只保證 rename…〉也只有測試方法；真實 power-cut、NFS、非 Linux no-replace 與孤兒 temp 容量數據，**這條沒有現成資料**。
+
+## 第 2 輪白話導讀
+
+### 1. 這一輪到底發生了什麼
+
+四個人把上輪撞壞的地方做成「出事後重下同一條命令」的版本，再用兩個人同時投件、半路中止和重開去砍它。待辦還沒被取走時，多數撞名、覆蓋和人工搬檔問題已能擋住或救回；待辦一旦被取走卻還沒留下收件證明，現場又會失憶。外面的服務到底收到沒有，這台電腦仍然猜不回來。
+
+### 2. 跟上一輪比，變了什麼
+
+上輪只是知道「人得搬檔、盲目重跑可能做兩次」，這輪換到三件實物：人工搬檔降到零、同名投件不再互相蓋掉、盲目重跑確實被量到做了兩次。也推翻了兩個上輪說法：三行腳本並不足夠，Deliver 也不能只當 Publish 外面一層薄殼，因為檔案被取走後還缺一張由收件方留下的證明。沒有換到的是 scope 答案：仍沒有第二件長期工作需要 core 管，也仍無法替不可查詢的外部服務自動判真相。
+
+### 3. 新冒出來的詞
+
+- **no-replace／`renameat2(RENAME_NOREPLACE)`**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md)。<br>
+  在 aos 裡具體是什麼：現行 `aos` 沒有這支公開命令；本輪三份私有 Publish 原型用 Linux `renameat2(..., RENAME_NOREPLACE)`，另一份用 hard link，做到同名時明確回 Already 或 Conflict、不偷偷覆蓋。
+
+- **consumer acknowledgment**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md)。<br>
+  在 aos 裡具體是什麼：目前不存在，是下一輪提案；現行 `core/inst/src/handoff.cpp` 的 `aggregate_instructions()` 取走並刪除 delivery 後，沒有另留一張「已收走」的證明。
+
+- **TOCTOU**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md)。<br>
+  在 aos 裡具體是什麼：不是 aos 命令；本輪私有原型先看目錄／檔案在不在、稍後才建立或搬入，中間被另一個投件者插隊，分別撞出 `FileExistsError` 與無聲覆蓋。
+
+- **stable key、ledger、fsync、Publish、Deliver、Effect、receipt、`unknown`**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md)。<br>
+  在 aos 裡具體是什麼：本輪仍全是私有試作；公開命令尚未存在，現行投遞入口仍是 `aos exec <world>` 讀 `.aos/inst.tempd/*.json`。
+
+- **canonical parser／schema**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md) 的 ABI／schema。<br>
+  在 aos 裡具體是什麼：正式的整批讀取在 `core/inst/src/format.cpp` 的 `read_all()`；本輪兩份 Python validator 沒有共用它，若直接做成 Deliver 會多長一套規則。
+
+### 4. 這輪新看到的錯誤訊息各是什麼意思
+
+- `FileExistsError: [Errno 17] File exists`：兩個投件者同時建立同一個位置，其中一個慢半步撞到已存在的目錄；這次是原型自己的競爭漏洞。
+- `mv: cannot stat '...json.temp': No such file or directory`：兩個投件者共用同一份草稿名，其中一個先搬走後，另一個回頭已找不到自己的來源檔。
+- `conflict`／`exit 73`：同一個正式名稱已有不同內容，新版原型明確拒絕覆蓋；這是預期的保護，不是檔案莫名壞掉。
+- `same_retry_exit=1 ... mv: cannot stat '.../source'`：舊腳本第一次已把來源搬走，事故後用原參數重跑時沒有材料可搬，所以無法自救。
+- `aos exec: warning: .../bad.json: JsonSyntax`：檔名合格所以 aos 有取件，但內容不是合法 JSON；相對地，錯名檔仍是安靜略過、回 0。
+- `kill: Illegal number: -`：恢復腳本把負的行程群組編號交給不支援該寫法的 shell 內建 `kill`；改叫 `/bin/kill` 後才成功。
+- `final JSON` 壞掉但三次 `aos exec` 都回 0：測試把收據文字混進本來應是純 JSON 的輸出；0 只表示 aos 跑完那包，不能替產物內容背書。
+- `patch rejected: writing outside of the project; rejected by user approval settings`：參賽者想寫上一輪場地，但沙盒不准；所以四份本輪成果改放 `/tmp`，不是原型本身失敗。
+- `residual temps=...json.temp`：窄版 hard-link 做法成功保住正式檔不被蓋，但事故草稿沒有清掉，久了會堆垃圾。
+
+### 5. 所以呢
+
+這輪仍直接影響 [OPEN-QUESTIONS 第 2 題](../../workshop/OPEN-QUESTIONS.md#2-近期-core-要回撤到哪裡)，但沒有替使用者把三選一改成唯一答案：
+
+- **只留最小 Deliver**：core 最小；賠掉共用 Publish、外部結果的 `unknown`／resolve，以及本輪已證實需要的收件歷史，這些仍得由上層或人各自補。
+- **保留 Publish → Deliver → Effect 三項**：得到共用的安全發布、投遞與外部結果記錄；賠掉的是 Deliver 不能再假定只是薄殼，還要決定收件證明和 ledger 放在 Deliver、aggregate 還是 core，Effect 也只能誠實停在 `unknown`，不能保證只做一次。
+- **連完整控制平面一起保留**：得到日後同時管理多件長期工作、等待與收尾的空間；賠掉的是現在就背 lane、proc-table、join 等整套設計與驗證成本，而兩輪實驗仍只找到多個短命投件者，沒有找到第二件需要長期管理的工作。
+
+所以多跑這輪改變的是中間選項的內部代價與分界，不是三個選項本身：最小 Deliver 比上輪看起來少算了一張收件證明，三項 core 比上輪看起來不再是三層簡單相疊，完整控制平面則仍沒有新增的實測需求。
