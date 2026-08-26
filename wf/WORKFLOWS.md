@@ -14,7 +14,7 @@
 | 「**加一個新的小專案 / 新工具**」 | **add-subproject** | [workflows/add-subproject.md](workflows/add-subproject.md) |
 | 「**我有個 idea**」「把這個構想記下來」 | **ideas** | [workflows/ideas/README.md](workflows/ideas/README.md) |
 | 「**開個研討會討論 X**」「找幾個 agent 一起腦力激盪」「給我一些靈感」 | **workshop** | [workflows/workshop/README.md](workflows/workshop/README.md)（已累積的紀錄與待決問題見 [INDEX](workflows/workshop/INDEX.md)）|
-| 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon** | [workflows/hackathon/README.md](workflows/hackathon/README.md) |
+| 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon** | [workflows/hackathon/README.md](workflows/hackathon/README.md)（已辦場次見 [INDEX](workflows/hackathon/INDEX.md)）|
 | 「**幫我用 aos**」「把 aos 接進我的專案」「這個指令怎麼下」 | **use-aos** | [workflows/use-aos.md](workflows/use-aos.md) |
 | 「**直接去試試看**」「跑個實驗看會怎樣」「別再想了，做一次」 | **experiments** | [workflows/experiments/README.md](workflows/experiments/README.md) |
 | 「跑測試 / 驗證」 | **testing** | [workflows/testing.md](workflows/testing.md) |

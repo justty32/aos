@@ -34,18 +34,18 @@
 **白話**：兩個人同時把包裹放進同一格，只准先到的人成功；後到的人會明確收到「這格已有人」，不能悄悄把前一份換掉。
 **嚴格**：以單一步驟完成「target 不存在才 rename」，避免先檢查、後搬移之間被另一 writer 插入；Linux 可用 `renameat2(..., RENAME_NOREPLACE)`，其他平台需另定等價契約。
 **在 aos 裡具體是什麼**：現行公開命令沒有這項保證；第 2 輪 `core-scope` 黑客松的四份私有原型分別用 Linux `renameat2` 或 hard link 試作，尚未進 `core/inst/`。
-**為什麼會冒出這個詞**：[core scope 黑客松第 2 輪](../../hackathon/records/core-scope.md)實測兩個 producer 同 target 時，先 test 再 `mv` 會讓後寫者無聲覆蓋前寫者。
+**為什麼會冒出這個詞**：[core scope 黑客松第 2 輪](../../hackathon/records/core-scope/README.md)實測兩個 producer 同 target 時，先 test 再 `mv` 會讓後寫者無聲覆蓋前寫者。
 
 ### consumer acknowledgment（收件者確認）
 
 **白話**：包裹被櫃台拿走後，櫃台還要留一張「我確實收走了」的存根；不然寄件格空了，只看現場分不出是送達還是根本沒寄。
 **嚴格**：consumer／aggregate 在 claim 或刪除 delivery 後提交的耐久證據，讓同一 key 重開時仍能機械判定已消費，而不靠 producer target 或操作員證言。
 **在 aos 裡具體是什麼**：目前不存在，是第 2 輪 `core-scope` 黑客松提出、預留給下一輪驗證的方案；現行 `core/inst/src/handoff.cpp` 發布彙整結果後只刪 delivery，沒有 ack。
-**為什麼會冒出這個詞**：[core scope 黑客松第 2 輪](../../hackathon/records/core-scope.md)打出 target 已被 aggregate 取走、producer receipt 又尚未落盤的窗口，證明 Deliver 自己留收據可能來不及。
+**為什麼會冒出這個詞**：[core scope 黑客松第 2 輪](../../hackathon/records/core-scope/README.md)打出 target 已被 aggregate 取走、producer receipt 又尚未落盤的窗口，證明 Deliver 自己留收據可能來不及。
 
 ### TOCTOU（先檢查、後使用的競爭窗）
 
 **白話**：你看座位還空著，轉身去拿包包時別人已坐下；回來仍照剛才的判斷放東西，就會撞人或蓋掉他的東西。
 **嚴格**：time-of-check to time-of-use race；存在性檢查與建立／rename 分成兩步時，另一個 writer 可在兩步之間改變現場。
 **在 aos 裡具體是什麼**：不是 aos 的公開名詞或命令；第 2 輪私有原型在 transaction directory 的 `mkdir` 與 Publish v1 的 test＋`mv` 各撞到一次，現行正式契約尚未補上通用解法。
-**為什麼會冒出這個詞**：[core scope 黑客松第 2 輪](../../hackathon/records/core-scope.md)第一次雙 producer 測試直接重現 `FileExistsError`，另一份測試則重現後寫者無聲覆蓋。
+**為什麼會冒出這個詞**：[core scope 黑客松第 2 輪](../../hackathon/records/core-scope/README.md)第一次雙 producer 測試直接重現 `FileExistsError`，另一份測試則重現後寫者無聲覆蓋。
