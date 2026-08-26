@@ -127,13 +127,14 @@ resume 不吃 `-s`／`-C`／`--add-dir`，沙盒與工作目錄從原 session �
 ## 場地（整包複製，不碰 repo 工作區）
 
 **2026-08-26 使用者指定：整包複製。** 參賽者要真的寫檔，不能讓幾個人在 repo 工作區互相蓋。
-**場地開在 WSL 的 `/tmp/aos-hack-<題目-kebab>/p<N>/`**，一人一份，做完丟掉、不進 repo。
+**場地開在 WSL 的 `$HOME/aos-hack/<題目-kebab>/p<N>/`**，一人一份，做完丟掉、不進 repo。
+**不要用 `/tmp`**——實測會被清掉，賠掉過一整輪，理由見 [gotchas.md](gotchas.md)。
 
 ```bash
 # 整場在 WSL 內跑（codex 在 WSL 就有：~/.local/bin/codex）
 export PATH="$HOME/.local/bin:$PATH"          # bash foo.sh 不載 profile，沒這行 codex 會 127
 SRC=/mnt/c/code/mine/simple_tools/aos
-ARENA=/tmp/aos-hack-<題目-kebab>/p1
+ARENA=$HOME/aos-hack/<題目-kebab>/p1        # 不要用 /tmp，會被清掉
 mkdir -p "$ARENA/build/bin" "$ARENA/build/lib"
 rsync -a --exclude build/ --exclude .git/ "$SRC/" "$ARENA/"
 cp -a "$SRC/build/bin/aos" "$ARENA/build/bin/"
@@ -142,7 +143,7 @@ cp -a "$SRC"/build/lib/*.so*  "$ARENA/build/lib/"   # RUNPATH 是 $ORIGIN/../lib
 
 **建場地、放任務書、冒煙、開跑要合併成同一支腳本、同一次 `wsl.exe` 呼叫**——理由與其他六個坑見 [gotchas.md](gotchas.md)。
 
-**為什麼是 WSL 的 `/tmp` 而不是 Windows 側的 scratchpad**：`build/bin/aos` 是 **Linux ELF**
+**為什麼在 WSL 而不是 Windows 側的 scratchpad**：`build/bin/aos` 是 **Linux ELF**
 （實測 `file`：`for GNU/Linux 3.2.0`），**Windows 這側執行不了，要把 aos 跑起來就只能從
 WSL 跑**；而且 `/mnt/c` 是 9p 掛載，小檔 I/O 慢又會噴 clock skew。Windows 側的 session
 scratchpad 照 workshop 慣例放**任務書與原始回報**（不進 repo）。
@@ -154,7 +155,7 @@ vcpkg 拿不到 `~/dev/vcpkg/buildtrees/` 的 write lock，configure 一定失�
 
 **可以讀 `../` 的兄弟專案**（2026-08-26 使用者指定）：`agent-machine`、`freepy`、`dcap`、
 `arc_agi_tweets` 等，在 WSL 是 `/mnt/c/code/mine/simple_tools/`。沙盒只擋寫不擋讀，但
-**場地已被搬到 `/tmp`，所以要在任務書裡把這個絕對路徑明講**，否則他們的 `../` 是空的。
+**場地不在 repo 旁邊，所以要在任務書裡把這個絕對路徑明講**，否則他們的 `../` 是空的。
 
 ## 紀錄
 
