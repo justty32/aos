@@ -13,7 +13,8 @@
 需要拍板的時候是使用者拍，不是靠參與者互打產生。
 
 **這不是**開發工作流：workshop 不改程式、不跑 build。談出方向後轉交
-[ideas](../ideas/README.md) / `docs/` / [feature-dev](../feature-dev/README.md)。
+[ideas](../ideas/README.md) / `docs/` / [feature-dev](../feature-dev/README.md)；
+**想直接把某個方向做做看，開 [hackathon](../hackathon/README.md)**。
 
 > **沿革**：本工作流原名 `council`（圓桌議會），角色是對立的**立場**（最小機制派／反投機派／
 > 辯護人），跑出來必然是辯論。使用者要的是研討會，所以角色改成**身份**，工作流也跟著改名。
@@ -216,6 +217,7 @@ session id 記進該主題的紀錄檔，**只在開場那台機器上有效**�
 > **「最小的驗證方式」是祕書最有價值的一塊。** 專案現在是一個人、`core/inst` 剛落地、
 > agent loop 還沒跑過一次——**很多題不必用想的，花一小時做個小實驗就知道了。**
 > 能指出這種題，就等於把一個「要拍板的決定」降級成「跑一次就有答案的事」。
+> **這批「最小的驗證方式」現在是 [hackathon](../hackathon/README.md) 的現成題庫**（`background/` 共 20 條）。
 
 ### 主持人在這裡的位置
 
