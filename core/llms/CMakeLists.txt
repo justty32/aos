@@ -23,6 +23,13 @@ aos_add_subproject(llms
         src/presets.cpp
     HEADERS
         include/aos/llms.hpp
+        include/aos/llms/transport.hpp
+        include/aos/llms/caps.hpp
+        include/aos/llms/tools.hpp
+        include/aos/llms/llm.hpp
+        include/aos/llms/bot.hpp
+        include/aos/llms/presets.hpp
+        include/aos/llms/content.hpp
     PRIVATE_DEPS
         CURL::libcurl
 )
@@ -47,8 +54,10 @@ aos_add_test(aos_llms_tests
         tests/test_toolcalls.cpp
         tests/test_toolset_presets.cpp
         tests/test_caps.cpp
-        tests/test_reply_bot.cpp
-        tests/test_stream.cpp
+        tests/test_reply_errors.cpp
+        tests/test_bot_turn.cpp
+        tests/test_stream_split.cpp
+        tests/test_stream_reply.cpp
         tests/test_run.cpp
     LINK aos_llms_cli aos_common_private
 )
