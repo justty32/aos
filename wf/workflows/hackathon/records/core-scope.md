@@ -8,7 +8,7 @@
 | 開場日期 | 2026-08-26 |
 | 環境 | WSL Ubuntu；codex 0.149.1；`-s workspace-write`；無網路；四位平行；單輪逾時 1800 秒；R1 費時 9.5 分鐘。 |
 | Reasoning effort | `model_reasoning_effort=high` |
-| 狀態 | 第 2 輪已完成 |
+| 狀態 | 第 3 輪已完成 |
 
 | 參賽者 | persona | 場地 | codex thread id（續輪 resume 用） |
 |---|---|---|---|
@@ -726,3 +726,315 @@ Deliver 的私有 validator 也不是現有 instruction schema 的唯一真源�
 - **連完整控制平面一起保留**：得到日後同時管理多件長期工作、等待與收尾的空間；賠掉的是現在就背 lane、proc-table、join 等整套設計與驗證成本，而兩輪實驗仍只找到多個短命投件者，沒有找到第二件需要長期管理的工作。
 
 所以多跑這輪改變的是中間選項的內部代價與分界，不是三個選項本身：最小 Deliver 比上輪看起來少算了一張收件證明，三項 core 比上輪看起來不再是三層簡單相疊，完整控制平面則仍沒有新增的實測需求。
+
+## 第 3 輪紀錄
+
+### 1. 各人這輪改了什麼
+
+**Carmack persona。** 沒有再擴充整條 loop，只補評委指定的兩個 Effect 窗口：response 已 commit、done 未 commit，以及 decision 已 commit、done 未 commit。兩案都把同一條 resolve 連跑兩次，量第二次的 commit delta、provider ledger delta 與 final hash；另新增 `response_ready_done_missing`、`decision_ready_done_missing` 與 `adopt-ready-response`。上一輪只做到 unknown 的明示決策，這輪補的是已有完整 response 或已有 decision 後，重開只投影 done、不得再叫 provider。R2 的 `/tmp` 已消失，因此先以 R1 baseline 做 byte-for-byte continuity gate，再於 `/tmp/aos-core-scope-p1-r3/round3/` 重建最小 R3 原語。
+
+**Armstrong persona。** 沒有重跑前兩輪的整條假模型 loop，改攻上一輪尚未解的 consumer acknowledgment。producer receipt 降為 visibility evidence；completion ack 改由 aggregate consumer 在 `claim → aggregate publish → delete delivery → ack commit` 中留下，且 `aos exec` 前必須先通過 ack gate。四刀分別砍在 target、claim、delete、ack 之後，每案重開兩次、再把 `aos exec` 叫兩次；另加一個不合作 consumer 直接刪 ready、但不寫 claim／ack 的反例。上一輪的 `adopt-consumed`、人工 `mv` 與重造半批 instruction 在這份原型裡消失。R2 的 `/tmp` 已消失，R3 重建於 `/tmp/aos-p2-round3.KcFA3d/`。
+
+**Cantrill persona。** 沒有再改 Publish／Deliver 路線；這輪修正上一輪第一個數字的量詞，把同一份 source inventory 分成實作份數、靜態呼叫點、runtime transaction、人工 rename，題目答案固定取實作份數。另以 `ctypes` 直接呼叫現有 `libaos_inst` C ABI，逐案對照私有 validator 與 canonical parser，不再把私有 schema 當成等價。R2 的 `/tmp` 已消失；兩支 v2 腳本依上一輪內容復原後，SHA-256 與 manifest 相同，再於 `/tmp/p3-core-scope-round3/` 重跑三回合閉環。沒有 hash 的其他 R2 raw artifacts 沒有宣稱復原。
+
+**Thompson persona。** 只測評委指定的 publish 成功但 receipt 未回，以及 consumer 已取走 target 但 ack 未寫。新增只回 `Already`、`Unknown`、`Conflict` 的窄 Deliver 分類器，並製造「publish 前被殺」與「已消費、ack 前被殺」兩段 producer 可見現場，再用完全相同的 Deliver 命令重試。第一版 consumer 用 `mv`，因 hard-link 的 `st_nlink` 洩漏歷史而整案作廢；固定版改成 copy＋unlink，確認兩邊 `links=1` 後重跑於 `/tmp/p4-round3-fixed/`。R2 的 `/tmp` 同樣已消失。
+
+### 2. 坑的總表
+
+**四位獨立地都撞到上一輪 `/tmp` 現場已被清除，而且原指定場地仍不可寫。** Carmack persona 實測 `r2_present=no`；Armstrong persona 找不到 `/tmp/aos-p2-round2.kTrhIV`；Cantrill persona 找不到 `/tmp/p3-core-scope-round2`；Thompson persona 記下：
+
+~~~text
+round1=present round2=missing
+~~~
+
+四位因此都在新的 `/tmp` 重建。Carmack persona 用 R1 baseline 做 continuity gate：
+
+~~~text
+baseline_commits=8
+baseline_provider_ledger=1
+c1dd00e199be4cb62a8db6833ed1fe3b5e6d6352566590184aa2d33d31f6a6ac  .../round3/worlds/baseline/agent/final.json
+c1dd00e199be4cb62a8db6833ed1fe3b5e6d6352566590184aa2d33d31f6a6ac  .../core-scope-r1/worlds/baseline/agent/final.json
+continuity_cmp_exit=0
+~~~
+
+Cantrill persona 復原的兩支 v2 腳本 SHA-256 與上一輪 manifest 相同；Armstrong、Thompson persona 則明寫本輪是重建現場，沒有把 `/tmp` 當成永久保存。上一輪已發生「原場地不可寫、成果改放 `/tmp`」，這輪沒有解掉；四份 R2 暫存證據反而都已遺失。
+
+**三位獨立地實測 consumer acknowledgment，撞到同一條分界：target 被 consumer 取走後，producer 自己的 receipt 不能回答以前是否完成。** Armstrong persona 把 ack 放到 consumer／aggregate 一側；四個合作 consumer 案在第一個 recover 後都有 ack，後兩次只讀既有 ack，兩次 `aos exec` 後 ledger 仍各一筆：
+
+~~~text
+MATRIX_RESULTS
+fault_point=after-target victim_pid=13 victim_exit=137
+case=after-target first_recover_exit=0 second_recover_exit=0 post_exec_recover_exit=0 first_exec_exit=0 second_exec_exit=0 ledger_lines=1
+fault_point=after-claim victim_pid=30 victim_exit=137
+case=after-claim first_recover_exit=0 second_recover_exit=0 post_exec_recover_exit=0 first_exec_exit=0 second_exec_exit=0 ledger_lines=1
+fault_point=after-delete victim_pid=47 victim_exit=137
+case=after-delete first_recover_exit=0 second_recover_exit=0 post_exec_recover_exit=0 first_exec_exit=0 second_exec_exit=0 ledger_lines=1
+fault_point=after-ack victim_pid=64 victim_exit=137
+case=after-ack first_recover_exit=0 second_recover_exit=0 post_exec_recover_exit=0 first_exec_exit=0 second_exec_exit=0 ledger_lines=1
+~~~
+
+Thompson persona 做出兩段不同歷史、但 producer 可見 manifest 完全相同的現場；同一條 Deliver 重試都只能回 Unknown：
+
+~~~text
+diff_exit=0
+beeffff3aa93323b4c0df0666353a22f54de40afa7099a70405d11598aefa899  /tmp/p4-round3-fixed/never.manifest
+beeffff3aa93323b4c0df0666353a22f54de40afa7099a70405d11598aefa899  /tmp/p4-round3-fixed/consumed.manifest
+never_published_exit=5 output=Unknown key=K evidence=temp-without-target-or-ack
+consumed_no_ack_exit=5 output=Unknown key=K evidence=temp-without-target-or-ack
+~~~
+
+加入由 claimed payload 算出的 consumer ack 後，同一分類器才改回：
+
+~~~text
+Already key=K evidence=consumer-ack
+retry_with_ack_exit=0
+~~~
+
+Cantrill persona 沒另開 ack 原型，但重跑後仍記到 Publish receipt 在 aggregate 刪除 target 後失去發布歷史，並指出現有 `aggregate_instructions()` 沒有 ack commit。Carmack persona 本輪沒有測 consumer acknowledgment。上一輪的 consumed-before-receipt 坑，**對遵守 ack 協定的 consumer 已解**：completion 由 consumer 留下，重開可機械取得既有 ack，不再 `adopt-consumed`；**對不合作 consumer 仍未解**。Armstrong persona 的反例原文是：
+
+~~~text
+{"ack":false,"aggregate":false,"aggregate_receipt":false,"claim":false,"command":"status","key":"key-rogue-evidence","ledger_lines":0,"payload":true,"publish_receipt":true,"ready":false}
+{"command":"recover","error":"unknown-consumer-history: producer published, but ready, claim, and ack are absent","state":"stopped"}
+rogue_recover_exit=1
+~~~
+
+**Carmack persona 上一輪未測的兩個 Effect terminal 窗口已解。** response 已 commit 時，resolve 只補 done；第一次由 4 commits 變 5，第二次 commit delta 0、ledger delta 0，最後 hash 與 baseline 相同：
+
+~~~text
+RESOLVE_COMMAND=effect.sh resolve EFFECT adopt-ready-response
+{"request_id":"request-7","state":"done","outcome":"success"}
+{"request_id":"request-7","state":"done","outcome":"success"}
+
+resolve_first exit=0 commits=5 provider_ledger=1
+resolve_second exit=0 commits=5 commit_delta=0 provider_ledger=1 ledger_delta=0
+final_cmp_baseline_exit=0
+~~~
+
+decision 已 commit 時，兩次 `abandon` 同樣不增加 commit 或 provider ledger，final 保留 `unknown_abandoned`：
+
+~~~text
+RESOLVE_COMMAND=effect.sh resolve EFFECT abandon
+{"request_id":"request-7","state":"done","outcome":"unknown_abandoned"}
+{"request_id":"request-7","state":"done","outcome":"unknown_abandoned"}
+
+resolve_first exit=0 commits=5 provider_ledger=1
+resolve_second exit=0 commits=5 commit_delta=0 provider_ledger=1 ledger_delta=0
+~~~
+
+這只補上「response／decision 已有耐久證據，done 尚未 commit」的投影；provider acceptance 到 committed response 之間的 unknown 沒有被這兩案消除。
+
+**Cantrill persona 實測私有 validator 與 canonical object parser 已分叉，且現有 C ABI 沒有 batch parser。** 16 案統計為 3 個共同接受、4 個共同拒絕、4 個私有接受但 canonical 拒絕、2 個私有拒絕但 canonical 接受，另有 3 個 batch C ABI 缺口：
+
+~~~text
+      3 AGREE_ACCEPT
+      4 AGREE_REJECT
+      3 CAPI_BATCH_GAP
+      4 PRIVATE_ACCEPTS_CANONICAL_REJECTS
+      2 PRIVATE_REJECTS_CANONICAL_ACCEPTS
+~~~
+
+實際差異包含 unknown key 與錯型別欄位被私有 validator 放行，`argv` 的 `$env` directive 與 duplicate `argv` key 則被私有 validator 擋下、canonical 接受。array 三案得到 `3:NotAnObject`，只對應 C ABI 只收 single object，沒有完成 object／array 全契約。上一輪「私有 validator 可能長出第二套 schema」的坑，這輪已量出逐案差異；沒有公開 batch C ABI 的缺口未解。
+
+**本輪三個 harness／量測錯誤都保留了原文，修正後才重跑。** Carmack persona 第一個 response-window 案在 marker 已出現、PGID 檔尚未建立時就動手殺，卡在：
+
+~~~text
+cat: .../child.pgid: No such file or directory
+/bin/kill: failed to parse argument: '-'
+~~~
+
+該案作廢；改成先寫 PID／PGID、最後發布 marker，再用新 world 重跑。Armstrong persona 第一次 audit 把 instruction exit 找在 `.aos/`，四案都數成 0；檢查目錄樹後改查 world 根，重跑為每案恰好一個內容 `0` 的 exit 檔。Thompson persona 第一版用 `mv target claimed`，publish 的 hard link 使 temp `st_nlink=2`，兩段歷史其實可分；該案作廢，改成 copy＋unlink 後兩邊都得到：
+
+~~~text
+never_temp_meta=mode=81a4 size=11 links=1
+consumed_temp_meta=mode=81a4 size=11 links=1
+~~~
+
+**四份原型仍都沒有真實 power-cut 或跨平台證據。** Armstrong persona 的共用 `immutable_publish()` 做了 file fsync 與 directory fsync；Carmack、Cantrill、Thompson persona 都只把結果限定在 visibility。`renameat2(RENAME_NOREPLACE)` 仍是 Linux-only；NFS、磁碟滿、部分 fsync 失敗、非 Linux、receipt／ack 清理與 retention 都未測。四位都沒有改 C++、沒有 build、沒有 ctest。
+
+### 3. 好處／壞處
+
+#### 好處
+
+上一輪留下的兩個窄缺口這輪都有實際輸出。Effect 這邊，response-ready 與 decision-ready 的第二次 resolve 都是 commit delta 0、provider ledger delta 0；response-ready 的 final hash 與 baseline 相同，decision-ready 則保留 `unknown_abandoned`。Deliver 這邊，合作 consumer 的四個死亡窗都能由一個高階 recover 收斂到 ack，重跑 recover 與 `aos exec` 沒再增加 effect ledger；`adopt-consumed`、人工搬檔與重造半批 instruction 沒再出現。
+
+Thompson persona 的相同 manifest 對照把「沒有 target」保留成 Unknown，加入由 consumer claimed bytes 算出的 ack 後才成為 Already。Cantrill persona 把第一個數字拆成四欄，並直接量出私有 validator 與 C ABI object parser 的接受／拒絕差異。四份第三個數字仍是 0，producer、consumer、aggregate 被記為同一條 protocol 的階段，沒有新增 lane、join、scheduler 或 proc-table 現場。
+
+#### 壞處
+
+Deliver completion 現在包含 payload、visibility receipt、claim、aggregate receipt、delivery deletion 與 ack；ack 若要讓 producer 在 aggregate 後仍可查，就會留下需要 retention／GC 的紀錄。ack 清太早會重新失憶，不合作 consumer 則直接停在 `unknown-consumer-history`。Armstrong persona 的 gate 目前還要求 ack commit 後才讓 `aos exec` 取 aggregate；若有另一個 executor 在 receipt／ack 前搶走 `inst.json`，本輪沒有涵蓋該並行窗口。
+
+Effect 仍需 request、response、decision、done 四類 evidence，unknown 仍不能由本機檔案推成 success、failure 或 exactly-once。Publish 仍需唯一 temp、no-replace、內容比對與 receipt；canonical batch parser 沒有公開 C ABI，私有 validator 的差異已是實際輸出。四份 R2 `/tmp` 現場全部消失，R3 產物仍放在相同類型的暫存位置。
+
+### 4. 三個數字
+
+**① 自己手寫了幾次 temp＋rename。** Carmack persona 回 **1**：一份 `publish.py`，三案另列 8 commits；與上一輪同答案，這輪 continuity hash 與兩次 resolve delta 讓 recovery 共用同一實作的證據更硬。Armstrong persona 回 **1**：一份 `immutable_publish()`、8 個呼叫點、recovery 人工 `mv` 為 0；與上一輪同答案，這輪同一 primitive 實際用於 payload、ready、claim、aggregate receipt、ack，並附 `primitive_definitions=1`，證據更硬。Cantrill persona 回 **2**：R1 shell 與 R2 Python/no-replace 各一份，另列 7 個靜態呼叫點、9 筆 runtime transaction、1 次人工 rename；上一輪答 9 筆 transaction，這輪依題目改取實作份數，並有 source inventory，答案比上一輪硬。Thompson persona 回 **6** 個靜態 temp＋rename 實作位置：R1 delivery 1、R2 model-call／tool result／final 3、R3 producer receipt／consumer ack 2；R3 兩處有逐行輸出，R2 三處因 `/tmp` 消失只能沿用上一輪紀錄，因此總數的本輪證據沒有全部重新取得。四人的原始答案是 **1／1／2／6**；p1、p2、p3 取實作份數，p4 取靜態實作位置。
+
+**② 哪種「不知道做了沒」本機補不回來。** 四位都回 **1 類**：沒有 query、idempotency 或其他 durable witness 的邊界外 actor，可能已做完，但本機結果尚未 commit。p1 指向 provider acceptance 到 committed response；p2 把第一輪遠端 provider 與本輪 rogue consumer 記為同一根因；p3 指向非冪等外部 effect；p4 指向無 query／idempotency 的遠端 effect，並把可由 claimed evidence＋ack 修復的本機 consumer ambiguity 排除在外。數字與上一輪相同；本輪新增合作 consumer 已解、rogue consumer 仍停住的對照，以及 Effect 兩個 terminal window 的重複 resolve，邊界比上一輪更硬。
+
+**③ 有沒有第二個要同時管的工作。** 四位都回 **0**。p1 三輪均沒有第二個長壽工作；p2 把 producer／aggregate 列為協定階段，每個 crash world 仍只有一個 instruction exit；p3 的 model、adapter、tool、scheduler、model 是單線序列；p4 把 producer／consumer列為 queue protocol 兩端，而非兩個需排程、取消、join、恢復的 agent jobs。答案與上一輪相同；這輪沒有新增第二個 logical work 的現場，硬度持平。
+
+### 5. 評委上一輪要他們做的事，做到了沒
+
+**Carmack persona。** 做到只打 response-ready／done-missing 與 decision-ready／done-missing 兩窗；兩案都將同一 resolve 連跑兩次，並輸出 provider ledger、commit 數與 final hash，第二次 delta 都是 0。第一個 response-window harness race 作廢後，用新 world 重跑。
+
+**Armstrong persona。** 做到在 target、claim、delivery deletion、ack commit 後各砍一刀；合作 consumer 的同一 key 都能由 ack 機械恢復，`adopt-consumed` 消失。不合作 consumer 另以 `unknown-consumer-history` 停住，沒有用操作員證言補答案。
+
+**Cantrill persona。** 做到同一份 inventory 輸出 2／7／9／1 四欄，題目答案改取 2 份實作；也直接呼叫現有 `libaos_inst` C ABI，逐案列出私有 validator 與 canonical object parser 的差異，沒有再複製一套 schema。batch 因 C ABI 不提供 `read_all()`，只記為 API gap。
+
+**Thompson persona。** 做到只打 publish-success-before-receipt 與 consumer-delete-before-retry，對不可區分的兩份現場使用完全相同的 Deliver 重試命令，兩案都回 Unknown；consumer ack 存在後才回 Already。第一版 hard-link／`mv` 現場因 link count 可分而作廢，固定版另跑。
+
+### 6. 仍然不知道的
+
+仍不知道 consumer acknowledgment 正式放進現有 `aggregate_instructions()` 時，claim、aggregate target、刪 delivery、ack 與下一個 executor claim 之間的完整原子順序。Armstrong persona 用 gate 避免 ack 前執行 aggregate，但沒有測並行 executor 插入；現有 C++ 仍是發布 aggregate 後直接刪 deliveries，沒有 ack commit。
+
+仍不知道 ack／receipt ledger 的保留期、清理責任與容量上限。合作 consumer 的歷史能靠 ack 補回，但清太早會再變 Unknown；不合作 consumer 沒有 claim／ack 時，本輪只能停住。也沒有多 producer、並行 aggregate、receipt 清理、磁碟滿與部分 fsync 失敗的 consumer-ack matrix。
+
+仍不知道正式 Deliver 如何在不複製 schema 的前提下驗完整 object／array batch。現有 C ABI 只驗 single object；本輪已量到私有 validator 與 canonical object parser 互相有接受／拒絕差異，但 `read_all()` 沒有 C ABI，array 三案沒有 canonical conformance 結果。
+
+仍不知道 power loss、NFS、非 Linux filesystem 與裝置快取下的結果，也不知道 `renameat2(RENAME_NOREPLACE)` 的可攜替代與 orphan temp 清理契約。R2 四份 `/tmp` 現場全數消失後，R3 證據仍只暫存在 `/tmp`。
+
+仍不知道無 query／idempotency provider 的 unknown 最後由誰、依什麼權限選 retry、adopt 或 abandon。這輪只證實完整 response 或既有 decision 能重複投影 terminal state，不會重叫 provider；acceptance 到 response commit 之間的真相仍沒有本機答案。三輪也仍沒有真模型、真遠端 provider 或第二個長壽 logical work 的現場。
+
+## 第 3 輪評分與意見
+
+總分是五項直接相加，滿分 25；不拿來排名。這輪先查上輪指令，再查輸出能不能撐住結論。
+
+### p1（Carmack persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 5/5 |
+| 路線價值 | 5/5 |
+| **總分** | **25/25** |
+
+**較上輪：25 → 25，持平。** 上輪要的兩個 terminal 窗口、同一 resolve 連跑兩次、commit、provider ledger 與 final hash 全部交付；滿分後沒有更高的分可加。
+
+response-ready 案第二次 `commit_delta=0`、`ledger_delta=0`，而且 final hash 與 baseline 相同；decision-ready 案也是零 delta，且沒把 `unknown_abandoned` 偽裝成 success。第一個 harness race 有留原文、作廢、換新 world 重跑，這份回報可信。
+
+**下一輪：**不要再增加 Effect 狀態。換一個支援 query 或 idempotency key 的真實 provider stub，與一個兩者都不支援的 stub，各在 acceptance 後破壞本機 result commit；用同一張轉移表輸出前者可 resolve、後者必須停在 unknown。
+
+### p2（Armstrong persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 5/5 |
+| 路線價值 | 5/5 |
+| **總分** | **25/25** |
+
+**較上輪：25 → 25，持平。** 上輪指定的 target、claim、delete、ack 四刀全部真殺到 exit 137，合作 consumer 四案都收旂，不合作 consumer 則明確 exit 1 停在 unknown；這正是要測的邊界。
+
+最硬的不是 `matrix_assertions=PASS`，而是四份 `PRE_RECOVERY_STATES` 真的不同，而且每案兩次 recover、兩次 `aos exec` 後 `ledger_lines=1`。rogue consumer 的 `unknown-consumer-history` 反例也證明 ack 是協定，不是 producer 自己寫張紙就算完成。
+
+**下一輪：**只補並行 executor 窗口。在 aggregate target commit 後、ack commit 前強制另一個 executor 搶 `inst.json`，輸出 claim 是被 gate 擋住還是真的取走；若取走了，這份 CLI 原型就不能當成可落地的 Deliver 協定。
+
+### p3（Cantrill persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 5/5 |
+| 路線價值 | 5/5 |
+| **總分** | **25/25** |
+
+**較上輪：24 → 25，進步。** 上輪唯一的扣分點已修掉：這次用同一份 inventory 把 2 份實作、7 個 call site、9 筆 transaction、1 次人工 rename 分開，沒再用 runtime 次數回答原碼數量。
+
+直接打現有 C ABI 的結果是 4 案私有 validator 錯放、2 案錯擋，還有 3 案 batch API gap；這比說「schema 可能分叉」有價值。R2 原始現場丟了就只宣稱兩支有 hash 的腳本已復原，沒有為了閉環造假。
+
+**下一輪：**不准寫第三套 parser。做一個最小的 canonical `read_all()` conformance harness，對 single object、array 與錯在第二筆的 batch 各輸出結果；若現有公開邊界根本叫不到 `read_all()`，就把「需要公開 batch validation」當成唯一結論，不要再造 wrapper。
+
+### p4（Thompson persona）
+
+| 項目 | 分數 |
+|---|---:|
+| 證據強度 | 5/5 |
+| 誠實度 | 5/5 |
+| 走了多遠 | 5/5 |
+| 回答了三個數字 | 4/5 |
+| 路線價值 | 5/5 |
+| **總分** | **24/25** |
+
+**較上輪：25 → 24，退步。** 兩個指定窗口都做對，但第一個數字 `6` 裡有 3 個 R2 位置只靠上輪文字，本輪的原檔已消失，沒有像 p3 那樣用一次 inventory 把全數釘死。這扣的是答案硬度，不是誠實度。
+
+作廢 hard-link／`mv` 版本是對的；`st_nlink` 洩漏歷史就不是不可區分性證明。修正後 `diff_exit=0`，同一 Deliver 命令對兩種歷史都回 Unknown，加上由 claimed bytes 算出的 consumer ack 才回 Already；這段證據很強。
+
+**下一輪：**先把六個 temp＋rename 位置放進同一個可持久、可寫的現場，用一條 source inventory 印出全部六個；做不到就把第一個數字降為「本輪可驗 2，累計主張 6」。別再重測 Already／Unknown／Conflict，那條邊界已經證完。
+
+### 路線判斷
+
+**最值得繼續走的仍是 p2 的 consumer-acknowledged Deliver，下一刀是並行 executor，不是再加 ledger 欄位。** 具體證據是 p2 四刀的 `MATRIX_RESULTS`：target、claim、delete、ack 之後殺掉都能 `first_recover_exit=0`，且兩次 `aos exec` 後 `ledger_lines=1`。同一份回報的 rogue consumer 又給出 `unknown-consumer-history` 與 `rogue_recover_exit=1`，證明這條路只對遵守 ack 協定的 consumer 成立，沒有超賣。p4 的 `diff_exit=0` 加上兩歷史都回 Unknown，則從反面證明 producer-only receipt 已經死了。
+
+**這輪沒有推翻上輪的 scope 判斷。** 上輪說選 (b)、Publish 先做、Deliver 不能當薄 wrapper、(c) 沒有證據，這輪全部維持。改變的是證據等級：consumer ack 從「下輪該驗的解法」變成「協定內四個死亡窗口已跑通」，Effect 也從未測 terminal projection 變成重複 resolve 零 delta。這是確認，不是翻案。
+
+**致命的坑有兩個，但致命對象不同。** 無 query、idempotency 或 durable witness 的外部 effect，在 acceptance 與本機 result commit 之間死掉，對「本機自動 exactly-once」是整條路線致命；不支持 consumer ack 的 producer-only Deliver，在 target 被取走後對「獨立 completion receipt」致命。後者不會殺死 Deliver，只是強迫 ack 進 aggregate commit domain。Linux-only no-replace、receipt／ack retention、orphan temp、batch C ABI、parser 共用與 `.runi` replay 都是麻煩，不是推出控制平面的理由；power-cut 沒測則是證據缺口，在補測前不准把 visibility 叫 durability。
+
+### 可信度判斷
+
+**沒有一份整體回報不可信。** 四位都留下自己的 harness 錯誤、作廢原因與未測邊界，沒有人用「做完了」代替輸出。**但 p4 的第一個數字 `6` 不能當成本輪已獲得獨立證明：**其中 3 個只存在上輪文字紀錄，原檔已被 `/tmp` 清掉。說清楚這點使 p4 的誠實度仍是 5，但不會讓證據自動長回來。
+
+### 現在就得拍板
+
+我會建議使用者選 **(b) Publish → Deliver → Effect**，而且必須分段驗收；不是把四份 Python／shell 原型合併就算 core。Publish 只承諾同 filesystem 的唯一 temp、atomic no-replace、stable key、同 bytes `Already`、異 bytes `Conflict` 與明示的 visibility／fsync 邊界；Deliver 的 completion 必須由 consumer／aggregate ack；Effect 只保存 phase、evidence、unknown 與明示 reconcile，不承諾 exactly-once。
+
+**第一步仍是 Publish，答案跟上輪沒變。** 這不是因為架構圖好看，而是 p2 實測一份 primitive 已有 8 個 call site，p3 的 inventory 也是 7 個 call site，而 p4 本輪又為 producer receipt 與 consumer ack 多寫兩處 temp＋rename。第三個數則四份仍是 0，沒有任何 lane、join、cancel 或第二個長壽 job 的輸出；所以 (c) 仍是為將來臆測的抽象，不做。這是評審建議，最後由使用者拍板。
+
+## 第 3 輪白話導讀
+
+### 1. 這一輪到底發生了什麼
+
+四個人沒有再把整套東西重做一遍，而是專打上輪還沒釘死的幾個縫。收件方肯留下證明時，半路被砍後已能自己接回去；外面的服務若無法查詢，這台電腦仍然不可能猜出它到底做了沒。這輪也抓到自己另寫的資料檢查規則，已經跟 aos 真正接受的規則不一樣。
+
+### 2. 跟上一輪比，變了什麼
+
+上輪只是推定「收件方留證明」可能救回檔案被取走後的失憶，這輪把四個中止位置都跑通了，還證明重跑不會多做一次；但不留證明的收件方仍只能停住。外部服務那邊則只補實了「已有答案或已有人的處置決定時，重開只做收尾」，沒有換回未知那一段的真相。scope 沒翻案：中間選項的可行性變硬、代價也更清楚，完整控制平面仍沒有第二件長期工作替它提供理由。
+
+### 3. 新冒出來的詞
+
+- **consumer acknowledgment／completion ack／ack gate**<br>
+  白話：見前；就像收件人簽收後，門口才准把下一箱貨放行。<br>
+  在 aos 裡具體是什麼：仍是私有提案；本輪原型讓收件方在 `claim → aggregate publish → delete delivery → ack commit` 後留證明，並在 `aos exec` 前設 gate，現行 `core/inst/src/handoff.cpp` 的 `aggregate_instructions()` 還沒有這段。
+
+- **terminal projection**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md)。<br>
+  在 aos 裡具體是什麼：不是現行 aos 命令；本輪私有 `effect.sh resolve EFFECT adopt-ready-response`／`effect.sh resolve EFFECT abandon` 只補 `done`，Effect／resolve 本身仍是提案。
+
+- **C ABI／conformance／canonical parser／schema**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md)。<br>
+  在 aos 裡具體是什麼：單筆公開入口在 `core/inst/include/aos/inst.h`，正式整批讀取規則在 `core/inst/src/format.cpp` 的 `read_all()`；後者尚無公開 C ABI，本輪只做對照，沒有新增命令。
+
+- **retention／GC**<br>
+  白話：見 [BACKGROUND](../../workshop/BACKGROUND.md) 的 ledger。<br>
+  在 aos 裡具體是什麼：目前不存在，是 completion ack／receipt 若進 core 後仍待決的保存與清理提案。
+
+- **Publish、Deliver、Effect、receipt、ledger、`unknown`、no-replace、fsync、idempotency key**<br>
+  白話：見前／見 [BACKGROUND](../../workshop/BACKGROUND.md)。<br>
+  在 aos 裡具體是什麼：本輪仍是 `/tmp` 裡的 Python／shell 私有原型；公開入口仍只有 `aos exec <world>`，沒有 `aos publish`、`aos deliver`、`aos effect` 或 `resolve` 命令。
+
+### 4. 這輪新看到的錯誤訊息各是什麼意思
+
+- `r2_present=no`／`round2=missing`：上一輪放在 `/tmp` 的現場已被系統清掉，不是本輪原型跑壞。
+- `victim_exit=137`：見前；這是測試故意把行程強制砍掉，用來驗重開。
+- `unknown-consumer-history: producer published, but ready, claim, and ack are absent`／`rogue_recover_exit=1`：東西曾投出去，但現在待辦、取件痕跡和簽收證明全不在，程式拒絕猜它是否已被處理。
+- `Unknown key=K evidence=temp-without-target-or-ack`／`exit=5`：只剩草稿，既看不到正式件也看不到簽收單，所以同一條重試命令只能回答「不知道」。
+- `3:NotAnObject`：拿整批陣列去問只會檢查單筆資料的公開入口，它看到的不是單一物件；這也表示整批檢查尚無可用的公開入口。
+- `cat: .../child.pgid: No such file or directory`：測試太早動手，子行程編號檔還沒寫好；該次結果已作廢重跑。
+- `/bin/kill: failed to parse argument: '-'`：上一個缺檔讓殺行程命令拿到空值，因而只剩一個無法解析的減號；不是被測功能本身的錯。
+- 第一次 audit 顯示四案 exit 都是 `0` 筆：檢查腳本找錯資料夾，不是四案都沒執行；改看 world 根目錄後每案各找到一筆內容為 `0` 的退出紀錄。
+- `st_nlink=2`：第一版測法留下兩個檔名指向同一份內容，意外洩漏了先前發生過什麼，因此那次「兩種歷史看起來一樣」的證明不成立，已作廢重跑。
+
+### 5. 所以呢
+
+這輪仍影響 [OPEN-QUESTIONS 第 2 題](../../workshop/OPEN-QUESTIONS.md#2-近期-core-要回撤到哪裡)，三個選項仍都在，但各自要賠的東西更明確：
+
+- **只留最小 Deliver**：得到最小 core；賠掉共用的安全發布與外部結果記錄，而且若 Deliver 不含收件方的簽收證明，待辦被取走後仍會失憶。若把簽收也算進「最小 Deliver」，就得一併承擔簽收順序、保存多久與清理責任。
+- **保留 Publish → Deliver → Effect 三項**：得到本輪已跑通的共用發布、收件證明與有證據才收尾的邊界；賠掉的是三項不能只是薄薄相疊，還要處理整批資料共用同一套檢查規則、並行取件、簽收保存，以及外部服務無法查詢時永遠只能停在 `unknown`。
+- **連完整控制平面一起保留**：得到未來同時管理多件長期工作、等待、取消與收尾的空間；賠掉 lane、join、proc-table 等整套設計與驗證成本，而三輪的「第二件需要同時管理的工作」仍是 0，這輪沒有替那些成本換到新證據。
+
+因此，多跑這輪沒有替使用者選答案；它把中間選項從「看起來可試」推到「幾個窄故障點確實跑通」，同時把它必須包含的簽收、共用檢查與保存責任攤開。最小選項的界線也變得不能只用一層薄包裝帶過；最大選項則仍沒有新增實測需求。

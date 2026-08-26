@@ -43,3 +43,9 @@
 **在 aos 裡具體是什麼**：已實作的三步交接保可見性的完整切換，但目前不承諾斷電耐久，也沒有 `--durable`。
 **為什麼會冒出這個詞**：[核心行程場](../records/core-process-and-subprocess.md)、[agent loop 場](../records/agent-loop-architecture.md)、[工具協作場](../records/tool-interop.md) 都警告不能把 rename 說成斷電不丟。
 
+### terminal projection（終態投影）
+
+**白話**：答案早已寫好，只差把「這件事結束了」那格補上；重開時只補那一格，不把事情再做一次。
+**嚴格**：已有完整 response 或已提交 resolve decision 時，由既有耐久證據確定性地產生 terminal／done 狀態，不再次 dispatch 外部 effect。
+**在 aos 裡具體是什麼**：目前沒有公開命令；`core-scope` 黑客松第 3 輪以私有 `effect.sh resolve` 試作，Effect／resolve 仍是提案。
+**為什麼會冒出這個詞**：[core scope 黑客松第 3 輪](../../hackathon/records/core-scope.md)補測 response／decision 已提交、done 尚未提交的兩個中止窗口，重複 resolve 的 commit 與 provider ledger 增量都為零。
