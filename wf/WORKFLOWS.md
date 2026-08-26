@@ -20,6 +20,11 @@
 | 「跑測試 / 驗證」 | **testing** | [workflows/testing.md](workflows/testing.md) |
 | 「**記 / 查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 | 「這段程式在哪 / 哪個檔負責什麼」 | **code map** | [workflows/common/code-map.md](workflows/common/code-map.md) |
+| 「**把這些東西濃縮給我看**」「我只有半小時」「寫個我看得懂的版本」 | **digest** | [workflows/digest/README.md](workflows/digest/README.md) |
+
+> **digest 跟其他工作流的分界**：其他工作流**產生**東西，digest **只讀不產**——
+> 把已經寫完的紀錄濃縮成使用者本人讀得動的精簡版。它不做判斷、不下結論，
+> 只負責讓人在有限時間內掌握狀況。
 
 > **研討會／黑客松／實驗怎麼分**：同一件事的三種強度——**workshop** 唯讀、只發想；
 > **hackathon** 多個 agent 各自**動手做同一題**，只收坑／好處／壞處；

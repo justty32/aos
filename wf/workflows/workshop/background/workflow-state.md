@@ -29,6 +29,13 @@
 **在 aos 裡具體是什麼**：instruction schema 與 `.aos` 規格已存在；新 Deliver/MCP 要共用 parser 還未實作；外部處理器的 golden files/conformance CLI 目前不存在。
 **為什麼會冒出這個詞**：[核心行程場](../records/core-process-and-subprocess.md) 的開發者指出「不引用 aos lib 也接得上」若沒有一致性測試就只是宣稱。
 
+### JSON Pointer（JSON 內的位置）
+
+**白話**：像文件裡的門牌；`/1/argv/0` 就是「第二筆裡的 `argv`，再往裡數第一格」。
+**嚴格**：用斜線分段指出 JSON 值所在位置的字串；陣列位置從 0 起算，物件欄位以名稱表示。
+**在 aos 裡具體是什麼**：目前沒有公開契約；Deliver 黑客松第 1 輪提案用 `/1/argv/0` 指出第二筆指令的第一個參數錯誤，現有 `read_all()` 只回報第幾筆。
+**為什麼會冒出這個詞**：[Deliver 契約黑客松第 1 輪](../../hackathon/records/deliver-contract.md)要求機器能指出批次裡究竟是哪一格寫錯，而不只回一句「格式不對」。
+
 ### template、source version、base hash、three-way diff 與 doctor
 
 **白話**：template 是當初複製過來的骨架；source/base 記得「當初拿的是哪版」；三方比對把當初、上游新版、本地改動一起看；doctor 只找壞掉的地方。
@@ -36,3 +43,10 @@
 **在 aos 裡具體是什麼**：`wf/` 是已安裝且大量客製的 workflows 實例，但目前沒有上游版本記錄、upgrade 或 doctor 命令；都是 module 候選。
 **為什麼會冒出這個詞**：[workflows 場](../records/workflows-on-aos.md) 四位推測安裝／升級可能才是不好用的地方，但也明說這仍是推論，得先問使用者是否真想追上游。
 
+
+### plumbing 與 porcelain（兩個入口，哪一份是正本）
+
+**白話**：git 有一批給人打的漂亮指令（`git commit`）和一批給程式組合用的粗管子；關鍵是——漂亮指令的內部從來不去叫那些粗管子，它直接呼叫函式，所以粗管子壞掉不會連漂亮指令一起壞。
+**嚴格**：同一份實作同時暴露函式介面與命令列介面時，兩者形成兩份必須永遠同義的公開契約；穩定做法是明文指定其中一份為正本（argv 只是函式語意的投影，分歧時函式贏），命令列端只當薄殼，錯誤路徑的測試留在函式那一層。
+**在 aos 裡具體是什麼**：目前只有函式一份契約（`core/inst/include/aos/inst.h`），沒有 argv 入口，所以還沒有正本問題；「同一份實作、兩個入口」與「規格明寫哪一份是正本」都是**提案**。
+**為什麼會冒出這個詞**：[純 CPU 場](../records/exec-as-pure-cpu.md) 提到 git 自己走過這條路又走回來——`git-commit.sh` 當年真的去 fork `git-update-index`，後來一支支收回成 C builtin，理由之一是**錯誤穿不過退出碼**。

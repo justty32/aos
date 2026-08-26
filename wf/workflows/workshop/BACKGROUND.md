@@ -7,7 +7,7 @@
 
 | 檔案 | 裡面有什麼 |
 |---|---|
-| [回合、執行與喚醒](background/execution-and-turns.md) | world、`kernel.json`、`.runi`、tick 與 cursor 等回合執行詞彙。 |
+| [回合、執行與喚醒](background/execution-and-turns/README.md) | world、`kernel.json`、`.runi`、tick 與 cursor 等回合執行詞彙；已拆成三份（回合邊界／回合開頭的固定步驟與版本／喚醒、進度與短路），逐詞索引見該資料夾 README。 |
 | [工作、行程與 lane](background/work-and-lanes.md) | process、lane、job 與 promotion 的分界。 |
 | [控制平面與生命週期](background/process-control.md) | root、control plane、capability、proc-table、join 與 handle。 |
 | [投遞契約與追蹤](background/delivery-contract.md) | Publish、Deliver、correlation ID 與 receipt。 |
@@ -27,7 +27,7 @@
 
 ## 名詞索引
 
-- world／world folder → [回合、執行與喚醒](background/execution-and-turns.md)
+- world／world folder → [回合邊界與崩潰現場](background/execution-and-turns/turn-boundary.md)
 - process／核心行程／子行程 → [工作、行程與 lane](background/work-and-lanes.md)
 - lane → [工作、行程與 lane](background/work-and-lanes.md)
 - job／task／work item → [工作、行程與 lane](background/work-and-lanes.md)
@@ -36,8 +36,11 @@
 - control plane → [控制平面與生命週期](background/process-control.md)
 - capability → [控制平面與生命週期](background/process-control.md)
 - proc-table／manager manifest → [控制平面與生命週期](background/process-control.md)
-- `kernel.json` → [回合、執行與喚醒](background/execution-and-turns.md)
-- init(1)／reset vector → [回合、執行與喚醒](background/execution-and-turns.md)
+- `kernel.json` → [回合開頭的固定步驟與版本](background/execution-and-turns/boot-and-versioning.md)
+- 彙整（aggregate）／取件（claim）／釋放（release） → [回合邊界與崩潰現場](background/execution-and-turns/turn-boundary.md)
+- 角色表（role table）／`boot.json` → [回合開頭的固定步驟與版本](background/execution-and-turns/boot-and-versioning.md)
+- 單一執行檔多子命令（busybox applet）／`/proc/self/exe` → [回合開頭的固定步驟與版本](background/execution-and-turns/boot-and-versioning.md)
+- init(1)／reset vector → [回合開頭的固定步驟與版本](background/execution-and-turns/boot-and-versioning.md)
 - Publish／commit／bundle → [投遞契約與追蹤](background/delivery-contract.md)
 - Deliver／enqueue／handoff → [投遞契約與追蹤](background/delivery-contract.md)
 - Effect／capture／invoke → [可靠性、冪等與持久化](background/reliability.md)
@@ -50,7 +53,10 @@
 - ledger → [可靠性、冪等與持久化](background/reliability.md)
 - `unknown` → [可靠性、冪等與持久化](background/reliability.md)
 - two-phase commit → [可靠性、冪等與持久化](background/reliability.md)
-- `.runi` → [回合、執行與喚醒](background/execution-and-turns.md)
+- `.runi` → [回合邊界與崩潰現場](background/execution-and-turns/turn-boundary.md)
+- 孤兒行程（orphan）／process group／`setpgid` → [回合邊界與崩潰現場](background/execution-and-turns/turn-boundary.md)
+- running marker（起跑標記）／租約（lease） → [回合邊界與崩潰現場](background/execution-and-turns/turn-boundary.md)
+- 短路（short-circuit）／`"needs"` → [喚醒、進度與短路](background/execution-and-turns/wake-and-progress.md)
 - visibility atomicity／power-loss durability → [可靠性、冪等與持久化](background/reliability.md)
 - terminal projection → [可靠性、冪等與持久化](background/reliability.md)
 - golden slice → [Agent loop 與工具呼叫](background/agent-loop.md)
@@ -58,13 +64,14 @@
 - driver／adapter → [Agent loop 與工具呼叫](background/agent-loop.md)
 - tool allowlist → [Agent loop 與工具呼叫](background/agent-loop.md)
 - coding agent → [Agent loop 與工具呼叫](background/agent-loop.md)
+- 結構化輸出（`--output-schema`） → [Agent loop 與工具呼叫](background/agent-loop.md)
 - skill → [Agent 互通與上下文](background/agent-interop.md)
 - MCP → [Agent 互通與上下文](background/agent-interop.md)
 - façade → [Agent 互通與上下文](background/agent-interop.md)
 - session → [Agent 互通與上下文](background/agent-interop.md)
 - envelope → [Agent 互通與上下文](background/agent-interop.md)
-- tick／wake → [回合、執行與喚醒](background/execution-and-turns.md)
-- cursor → [回合、執行與喚醒](background/execution-and-turns.md)
+- tick／wake → [喚醒、進度與短路](background/execution-and-turns/wake-and-progress.md)
+- cursor → [喚醒、進度與短路](background/execution-and-turns/wake-and-progress.md)
 - front matter → [工作流狀態與版本演進](background/workflow-state.md)
 - single source of truth／generated view／drift → [工作流狀態與版本演進](background/workflow-state.md)
 - reconcile → [工作流狀態與版本演進](background/workflow-state.md)
@@ -75,4 +82,6 @@
 - join／barrier／completion event → [控制平面與生命週期](background/process-control.md)
 - handle／generation → [控制平面與生命週期](background/process-control.md)
 - ABI／schema／golden files／conformance → [工作流狀態與版本演進](background/workflow-state.md)
+- JSON Pointer → [工作流狀態與版本演進](background/workflow-state.md)
+- plumbing／porcelain → [工作流狀態與版本演進](background/workflow-state.md)
 - template／source version／base hash／three-way diff／doctor → [工作流狀態與版本演進](background/workflow-state.md)

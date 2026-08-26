@@ -47,6 +47,7 @@
 | [common/code-map](workflows/common/code-map.md) | **程式碼結構導航圖**（本 flavor 的導航中樞）|
 | [common/conventions](workflows/common/conventions.md) | 程式碼慣例 + code map 維護鏈 |
 | [common/gotchas](workflows/common/gotchas.md) | 跨工作流共通踩坑 |
+| [digest/](workflows/digest/README.md) | **精簡版**：把已寫完的紀錄濃縮成使用者本人讀得動的短文（只讀不產）|
 
 ## 活狀態（只列還沒完成的）
 

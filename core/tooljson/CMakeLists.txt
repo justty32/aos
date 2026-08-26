@@ -3,9 +3,15 @@
 aos_add_subproject(tooljson
     SOURCES
         src/spec.cpp
+        src/spec_parse.cpp
+        src/spec_load.cpp
         src/registry.cpp
         src/exec_type.cpp
+        src/exec_argv.cpp
+        src/exec_io.cpp
+        src/exec_limits.cpp
         src/args.cpp
+        src/args_value.cpp
         src/text.cpp
         src/fingerprint.cpp
     HEADERS

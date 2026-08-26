@@ -1,117 +1,26 @@
 #define _POSIX_C_SOURCE 200809L
 
+// handoff 層的三個公開動作：投遞聚合（含空投遞消化與原子發佈）、取件、釋放。
+// 路徑推導與低階檔案存取在 handoff_fs.hpp／.cpp。
+// 只依賴 inst＋format：不印訊息、不執行 instruction。
+
 #include <aos/inst.hpp>
+
+#include "handoff_fs.hpp"
 
 #include <algorithm>
 #include <cerrno>
+#include <cstdio>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <dirent.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 namespace aos {
 namespace {
-
-struct Paths {
-    std::string base;
-    std::string temp;
-    std::string runi;
-    std::string inbox;
-};
-
-bool derive_paths(const std::string &base, Paths &paths) {
-    constexpr std::string_view suffix = ".json";
-    if (base.size() <= suffix.size() ||
-        base.compare(base.size() - suffix.size(), suffix.size(), suffix) != 0) {
-        return false;
-    }
-    paths.base = base;
-    paths.temp = base + ".temp";
-    paths.runi = base + ".runi";
-    paths.inbox = base.substr(0, base.size() - suffix.size()) + ".tempd";
-    return true;
-}
-
-int open_retry(const char *path, int flags, mode_t mode = 0) {
-    int fd;
-    do {
-        fd = open(path, flags, mode);
-    } while (fd < 0 && errno == EINTR);
-    return fd;
-}
-
-bool close_checked(int fd, int &error) {
-    if (close(fd) == 0) return true;
-    error = errno;
-    return false;
-}
-
-bool read_file(const std::string &path, std::string &buffer, int &error) {
-    const int fd = open_retry(path.c_str(), O_RDONLY | O_CLOEXEC);
-    if (fd < 0) {
-        error = errno;
-        return false;
-    }
-    char chunk[64 * 1024];
-    bool ok = true;
-    for (;;) {
-        ssize_t count;
-        do {
-            count = read(fd, chunk, sizeof(chunk));
-        } while (count < 0 && errno == EINTR);
-        if (count < 0) {
-            error = errno;
-            ok = false;
-            break;
-        }
-        if (count == 0) break;
-        buffer.append(chunk, static_cast<std::size_t>(count));
-    }
-    if (!close_checked(fd, error)) ok = false;
-    return ok;
-}
-
-bool write_file(const std::string &path, const std::string &data, int &error) {
-    const int fd = open_retry(path.c_str(),
-                              O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
-    if (fd < 0) {
-        error = errno;
-        return false;
-    }
-    const char *cursor = data.data();
-    std::size_t remaining = data.size();
-    bool ok = true;
-    while (remaining != 0) {
-        ssize_t count;
-        do {
-            count = write(fd, cursor, remaining);
-        } while (count < 0 && errno == EINTR);
-        if (count <= 0) {
-            error = count < 0 ? errno : EIO;
-            ok = false;
-            break;
-        }
-        cursor += count;
-        remaining -= static_cast<std::size_t>(count);
-    }
-    if (!close_checked(fd, error)) ok = false;
-    return ok;
-}
-
-bool is_delivery_name(const std::string &name) {
-    const std::size_t extension = name.find('.');
-    return extension != std::string::npos && extension != 0 &&
-           name.substr(extension) == ".json";
-}
-
-std::string join_path(const std::string &directory, const std::string &name) {
-    return directory + "/" + name;
-}
 
 void add_issue(HandoffResult &result, HandoffIssueKind kind,
                const std::string &path, InstState state, int error) {
@@ -140,8 +49,8 @@ void remove_accepted_deliveries(const std::vector<std::string> &accepted,
 HandoffState aggregate_instructions(const std::string &instruction_path,
                                     HandoffResult &result) {
     result = HandoffResult{};
-    Paths paths;
-    if (!derive_paths(instruction_path, paths)) {
+    detail::HandoffPaths paths;
+    if (!detail::derive_paths(instruction_path, paths)) {
         return HandoffState::InvalidArgument;
     }
 
@@ -165,7 +74,7 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
     errno = 0;
     while (dirent *entry = readdir(directory)) {
         std::string name = entry->d_name;
-        if (is_delivery_name(name)) names.push_back(std::move(name));
+        if (detail::is_delivery_name(name)) names.push_back(std::move(name));
         errno = 0;
     }
     const int read_error = errno;
@@ -180,10 +89,10 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
     std::vector<inst_t> combined;
     std::vector<std::string> accepted;
     for (const std::string &name : names) {
-        const std::string path = join_path(paths.inbox, name);
+        const std::string path = detail::join_path(paths.inbox, name);
         std::string document;
         int error = 0;
-        if (!read_file(path, document, error)) {
+        if (!detail::read_file(path, document, error)) {
             add_issue(result, HandoffIssueKind::DeliveryReadFailed, path,
                       InstState::Ok, error);
             isolate_delivery(path, result);
@@ -219,7 +128,7 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
         return HandoffState::PublishWriteFailed;
     }
     int error = 0;
-    if (!write_file(paths.temp, output, error)) {
+    if (!detail::write_file(paths.temp, output, error)) {
         unlink(paths.temp.c_str());
         result.path = paths.temp;
         result.error = error;
@@ -241,8 +150,8 @@ HandoffState claim_instruction(const std::string &instruction_path,
                                HandoffResult &result) {
     result = HandoffResult{};
     document.clear();
-    Paths paths;
-    if (!derive_paths(instruction_path, paths)) {
+    detail::HandoffPaths paths;
+    if (!detail::derive_paths(instruction_path, paths)) {
         return HandoffState::InvalidArgument;
     }
 
@@ -258,7 +167,7 @@ HandoffState claim_instruction(const std::string &instruction_path,
     }
 
     int error = 0;
-    if (!read_file(paths.base, document, error)) {
+    if (!detail::read_file(paths.base, document, error)) {
         if (error == ENOENT) return HandoffState::NoInstruction;
         result.path = paths.base;
         result.error = error;
@@ -275,8 +184,8 @@ HandoffState claim_instruction(const std::string &instruction_path,
 HandoffState release_instruction(const std::string &instruction_path,
                                  HandoffResult &result) {
     result = HandoffResult{};
-    Paths paths;
-    if (!derive_paths(instruction_path, paths)) {
+    detail::HandoffPaths paths;
+    if (!detail::derive_paths(instruction_path, paths)) {
         return HandoffState::InvalidArgument;
     }
     if (unlink(paths.runi.c_str()) != 0) {

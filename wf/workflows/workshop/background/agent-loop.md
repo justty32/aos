@@ -36,3 +36,10 @@
 **在 aos 裡具體是什麼**：aos 目前不內建 coding agent；候選用法是上層 agent 呼叫 aos CLI，或 aos driver 啟動某支 agent CLI。
 **為什麼會冒出這個詞**：[工具協作場](../records/tool-interop.md) 專門問 aos 怎麼成為 pi/Codex/Claude 可用的工具組，並反過來如何無人值守地呼叫它們。
 
+
+### 結構化輸出（`--output-schema`／schema 強制的回覆）
+
+**白話**：與其請對方「回話請盡量整齊」然後自己拿剪刀修，不如先發一張表格給他填，他只能照格子填。
+**嚴格**：由呼叫端提供 JSON Schema、要求 provider 保證最後一則訊息符合該 schema 的輸出模式；用它之後 adapter 的解析責任降為取欄位，不需要 markdown code fence 剝殼、括號平衡掃描或重試。
+**在 aos 裡具體是什麼**：**不是 aos 的東西**，是 codex CLI 的 `--output-schema FILE` 旗標；aos 這一層沒有任何對應概念，也不需要（`stdin`／`stdout`／`stderr`／`exit`／`timeout_ms` 五個欄位就夠包一支 agent CLI）。claude 與 pi 有沒有等價旗標，本 repo 尚無實測。
+**為什麼會冒出這個詞**：[agent loop 黑客松第 1 輪](../../hackathon/records/agent-loop.md) 有人靠它把整個 parser 縮成一行 `jq`，並主張 golden slice 應該「鎖有結構化輸出的那支」。評委同意好用但標了但書：**它是單一廠商專屬的旗標**，拿它當「解析不是問題」的證據等於把 golden slice 綁在那一家身上，而且它只讓去程有型別，工具結果的回程仍然是手拼的純文字。
