@@ -2,7 +2,8 @@
 
 ← [WORKFLOWS](../../WORKFLOWS.md)｜[專案 INDEX](../../INDEX.md)
 
-> **本檔＝流程。** 題目書與參賽者任務書在 **[briefs.md](briefs.md)**；收場四棒（書記／評委／資料員／祕書）的任務書在 **[staff.md](staff.md)**；
+> **本檔＝流程**。這資料夾有什麼、已辦過哪幾場，看 **[INDEX.md](INDEX.md)**。
+> 題目書與參賽者任務書在 **[briefs.md](briefs.md)**；收場四棒（書記／評委／資料員／祕書）的任務書在 **[staff.md](staff.md)**；
 > **辦一場會撞到的坑在 [gotchas.md](gotchas.md)——第一次辦之前先讀那份。**
 
 **做什麼**：使用者出題（或從研討會的待答問題裡挑），**我當主辦人**備一份資料包，派幾個

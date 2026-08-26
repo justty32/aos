@@ -36,7 +36,9 @@
     [四選擇那份紀錄](workflows/workshop/records/four-open-choices-tradeoffs.md)。
     **他明講「窩不想看惹」**，所以方向是**用實測取代拍板**——見上面 T5 那條，
     以及各題的「最小的驗證方式」（[BACKGROUND](workflows/workshop/BACKGROUND.md)）。
-    **2026-08-26 為此開了 [hackathon 工作流](workflows/hackathon/README.md)**（多 agent 各自動手做、只收坑），那 20 條就是它的題庫。**第一場還沒辦。**
+    **2026-08-26 開了 [hackathon 工作流](workflows/hackathon/README.md)**（多 agent 各自動手做、只收坑），那 20 條就是它的題庫。
+    **第一場已跑完三輪**（題目＝OPEN-QUESTIONS 第 2 題「近期 core 要回撤到哪裡」，    Carmack／Armstrong／Cantrill／Thompson 四個 persona 實作、Torvalds persona 評分）：
+    紀錄在 [records/core-scope/](workflows/hackathon/records/core-scope/README.md)，    **從白話導讀讀起，等使用者拍板**。四位的場地留在 WSL `~/aos-hack/core-scope/`（thread id 在紀錄檔頭，還能續）。
   - **[辯論風格那場的四件轉交提案還沒拍板](workflows/workshop/records/pre-agent-loop-core.md)**：
     `deliver`／`aos enqueue` 插進 T5 之前、「回合中途死掉的洞」歸 roadmap 第六節、
     `k/`／`c/` 兩層命名進 `.aos` 標準、有限資源獨立成 idea。**都是改規格文件，要人拍板。**
