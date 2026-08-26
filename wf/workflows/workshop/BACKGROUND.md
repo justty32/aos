@@ -52,6 +52,7 @@
 - two-phase commit → [可靠性、冪等與持久化](background/reliability.md)
 - `.runi` → [回合、執行與喚醒](background/execution-and-turns.md)
 - visibility atomicity／power-loss durability → [可靠性、冪等與持久化](background/reliability.md)
+- terminal projection → [可靠性、冪等與持久化](background/reliability.md)
 - golden slice → [Agent loop 與工具呼叫](background/agent-loop.md)
 - agent loop → [Agent loop 與工具呼叫](background/agent-loop.md)
 - driver／adapter → [Agent loop 與工具呼叫](background/agent-loop.md)
