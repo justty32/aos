@@ -27,6 +27,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
   2. **未經確認不 push、不開新工作**（commit 到 `main` 是慣例，push 到 `origin` 先確認）。
   3. **改了程式碼就要同步 [code map](wf/workflows/common/code-map.md)**：新增／刪除檔案、或某個檔的職責變了，commit 之前一定要把 code map 補上。
   4. 各工作流的**具體流程在它自己的入口檔**，不在頂層。
+  5. **大方向是使用者的，我不代替他思考**：產品構想與路線由使用者自己打磨。我在他已定好的路上做兩件事——**挖邊緣狀況**（執行失敗、各種失敗、延遲…他沒想到的狀態）與**快速做原型讓他試**。發現攤給他、由他判斷，不拿另一套大方向去取代他的。
 - **[wf/DEV-GUIDE.md](wf/DEV-GUIDE.md) 是被動參考**（結構整理原則 + 四級成長軌跡）——**只在你要重構／整理結構時才取用**，不貫穿日常每個動作。只在**碰原始碼**時適用的**程式碼慣例 + code map 維護鏈**在 [wf/workflows/common/conventions.md](wf/workflows/common/conventions.md)。
 
 ## 開發環境
