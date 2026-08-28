@@ -216,6 +216,27 @@ void collect_deliveries(const std::vector<std::string> &names, Round &round,
     round.id = digest.id();
 }
 
+// 發布前的來源查核（§D-4）：本輪收下的投遞是不是都還在。
+//
+// 為什麼需要：批的**來源必須在提交點當下仍然成立**。併發時另一個彙整者可能已經把
+// 同一組投遞發布完、清掉、並把 header 標成 `swept`——那一刻 §D-6 的去重閘門就打開
+// 了，本輪於是拿著一份「來源已經不存在」的批重新發布一次，等於同一批執行兩次。
+//
+// 這個查核擋得住那條路徑的主要窗口，因為順序是固定的：**清投遞必定發生在標 swept
+// 之前**（§D-5 第 7、8 步），所以等到閘門開了、我們才可能走到這裡時，投遞早就不見
+// 了。修補之前擋住這條的其實是**永不失效的陳舊 header**——那正是 #1 的 bug 本體；
+// 把它修掉之後，這個查核就是接手的那道門。
+//
+// 這**不是**互斥：`.runi` 不是一把鎖那條（→ M2／M3）仍然開著，查核到 rename 之間
+// 還有一段窗口。它只是把窗口從「贏家整批跑完」縮到「幾個 syscall」。
+bool deliveries_still_present(const std::vector<std::string> &accepted) {
+    struct stat status {};
+    for (const std::string &path : accepted) {
+        if (lstat(path.c_str(), &status) != 0) return false;
+    }
+    return true;
+}
+
 // ④／⑤ 去重命中：這一組投遞上一輪已經跨過提交點，只是投遞沒被清掉。
 // 找得到錨就 roll forward（補完批的發布），找不到就只清投遞、不重發。
 HandoffState publish_dedup_hit(const Round &round, HandoffResult &result) {
@@ -226,10 +247,12 @@ HandoffState publish_dedup_hit(const Round &round, HandoffResult &result) {
         if (detail::publish_exclusive(anchor, round.paths.base, error)) {
             sync_directory(round.directory, result);
             result.published = true;
-        } else if (error == EEXIST) {
+        } else if (error == EEXIST || error == ENOENT) {
             // 別的彙整者先發布了：本輪放棄（§D-5 的排他發布）。不清投遞、
             // 不重寫 header。**也不 unlink 那個錨**——它不見得是我們的檔，
             // 可能是同儕正在飛的那一份。
+            // `ENOENT` 與 `EEXIST` 同義：錨在我們 rename 之前就被同儕搬走了
+            // （它本來就可能是別人的檔）。當成致命錯誤會噴出假的 rc=1。
             return HandoffState::Ok;
         } else {
             result.path = anchor;
@@ -258,6 +281,12 @@ HandoffState publish_new_batch(const Round &round, HandoffResult &result) {
         result.path = batch_temp;
         result.error = error;
         return HandoffState::PublishWriteFailed;
+    }
+    // ⑥a' 提交點之前的最後一道門：來源查核（見 deliveries_still_present）。
+    // 這裡放棄是**乾淨的**——header 還沒 rename，所以什麼副作用都還沒留下。
+    if (!deliveries_still_present(round.accepted)) {
+        unlink(batch_temp.c_str());  // 自己寫的檔，收乾淨
+        return HandoffState::Ok;     // published 維持 false
     }
     // ⑥b 寫 header、rename——那一次 rename 就是**去重承諾的提交點**（§D-5），
     // 之後才發布批。為什麼 header 要先：崩在提交點與批發布之間會留下「header 是新
