@@ -20,8 +20,11 @@ TEST_CASE("exec returns zero when no instruction is waiting") {
     TempDir dir;
     REQUIRE(init_world(dir.path) == 0);
     CHECK(exec_world(dir.path) == 0);
+    // 空轉（沒有 inst.json 可跑）不是一個回合，PC 不動（§B-3）。
+    CHECK(read_file(dir.path + "/.aos/turn") == "0\n");
     REQUIRE(std::filesystem::remove(dir.path + "/.aos/inst.tempd"));
     CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/.aos/turn") == "0\n");
 }
 
 TEST_CASE("exec aggregates two deliveries and removes them after publishing") {
@@ -133,10 +136,27 @@ TEST_CASE("exec can consume two consecutive rounds") {
     REQUIRE(exec_world(dir.path) == 0);
     CHECK(read_file(dir.path + "/first") == "first");
     CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
+    // release 成功後 PC 遞增（spec 驗收 4，§B-3）。
+    CHECK(read_file(dir.path + "/.aos/turn") == "1\n");
 
     write_inst(dir,
                R"({"argv":["/bin/sh","-c","printf second > second"]})");
     CHECK(exec_world(dir.path) == 0);
     CHECK(read_file(dir.path + "/second") == "second");
     CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
+    CHECK(read_file(dir.path + "/.aos/turn") == "2\n");
+}
+
+TEST_CASE("exec treats a missing turn file as zero in an old world") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    // 模擬 M1 之前建立的舊世界：沒有 turn 這個檔（裁-5／§B-3）。
+    REQUIRE(std::filesystem::remove(dir.path + "/.aos/turn"));
+    write_inst(dir, R"({"argv":["/bin/sh","-c","printf first > first"]})");
+
+    CHECK(exec_world(dir.path) == 0);
+    CHECK(read_file(dir.path + "/first") == "first");
+    CHECK(read_file(dir.path + "/.aos/turn") == "1\n");
+    // 純新增，不動版面版本。
+    CHECK(read_file(dir.path + "/.aos/version") == "1\n");
 }

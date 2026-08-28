@@ -7,9 +7,11 @@ TEST_CASE("init creates version 1 and rejects an existing .aos directory") {
 
     CHECK(init_world(dir.path) == 0);
     CHECK(read_file(dir.path + "/.aos/version") == "1\n");
+    CHECK(read_file(dir.path + "/.aos/turn") == "0\n");
     CHECK(std::filesystem::is_directory(dir.path + "/.aos/inst.tempd"));
     CHECK(init_world(dir.path) == 1);
     CHECK(read_file(dir.path + "/.aos/version") == "1\n");
+    CHECK(read_file(dir.path + "/.aos/turn") == "0\n");
 }
 
 TEST_CASE("init rejects a nonexistent folder and commands reject extra arguments") {
@@ -38,6 +40,7 @@ TEST_CASE("init and exec default their folder to the current directory") {
         char *exec_argv[] = {exec_program};
         REQUIRE(aos::run_init(1, init_argv) == 0);
         CHECK(read_file(".aos/version") == "1\n");
+        CHECK(read_file(".aos/turn") == "0\n");
         write_file(".aos/inst.json",
                    R"({"argv":["/bin/sh","-c","printf current > current"]})");
         CHECK(aos::run_exec(1, exec_argv) == 0);

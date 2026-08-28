@@ -45,6 +45,15 @@ bool close_checked(int fd, int &error) {
     return false;
 }
 
+// fsync 本身可能被訊號中斷（不像 close，重打 fsync 是安全的：fd 沒被回收）。
+bool fsync_retry(int fd) {
+    int rc;
+    do {
+        rc = fsync(fd);
+    } while (rc != 0 && errno == EINTR);
+    return rc == 0;
+}
+
 }  // namespace
 
 int run_init_world(const char *folder) {
@@ -83,6 +92,20 @@ int run_init_world(const char *folder) {
         error = errno;
         ok = false;
     }
+    // `.aos/turn`：回合計數器（PC），初值 `0`（§B-3）。含 fsync——這是全新落地的
+    // 檔案，不像 version 那樣仰賴 S7 掃尾補齊，直接一步到位。
+    int turn_fd = -1;
+    if (ok) {
+        turn_fd = openat(aos_fd, "turn",
+                         O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0666);
+        ok = turn_fd >= 0;
+    }
+    if (ok) ok = write_fully(turn_fd, "0\n", 2, error);
+    if (ok && !fsync_retry(turn_fd)) {
+        error = errno;
+        ok = false;
+    }
+    if (turn_fd >= 0 && !close_checked(turn_fd, error)) ok = false;
     if (!ok && error == 0) error = errno;
     if (aos_fd >= 0) close(aos_fd);
     close(folder_fd);
@@ -91,6 +114,7 @@ int run_init_world(const char *folder) {
         const int cleanup_fd = open_retry(folder, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
         if (cleanup_fd >= 0) {
             unlinkat(cleanup_fd, ".aos/version", 0);
+            unlinkat(cleanup_fd, ".aos/turn", 0);
             unlinkat(cleanup_fd, ".aos/inst.tempd", AT_REMOVEDIR);
             unlinkat(cleanup_fd, kAosDir, AT_REMOVEDIR);
             close(cleanup_fd);

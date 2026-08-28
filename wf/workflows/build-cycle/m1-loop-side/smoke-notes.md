@@ -175,7 +175,68 @@ version
 
 ---
 
+## S6 `.aos/turn`（2026-08-28，世界 `/tmp/aos-smoke-turn-PgebsG`）
+
+init 建立為 `0`；有工作的回合 release 成功後遞增；空轉不動；缺 turn 的舊世界（模擬：
+init 後手動刪掉）視為 `0`，跑一回合後變 `1`（裁-5）。
+
+```console
+$ aos init w
+[exit 0]
+
+$ cat w/.aos/turn
+0
+[exit 0]
+
+$ printf '{"argv":["touch","a"]}' | aos deliver w
+{"delivery":"699-0.json","count":1,"target":".aos/inst.tempd"}
+[exit 0]
+
+$ aos exec w
+[exit 0]
+
+$ cat w/.aos/turn
+1
+[exit 0]
+
+$ aos exec w   # 沒有新投遞，空轉
+[exit 0]
+
+$ cat w/.aos/turn   # 不動
+1
+[exit 0]
+
+$ rm w/.aos/turn   # 模擬 M1 之前的舊世界
+[exit 0]
+
+$ printf '{"argv":["touch","b"]}' | aos deliver w
+{"delivery":"707-0.json","count":1,"target":".aos/inst.tempd"}
+[exit 0]
+
+$ aos exec w
+[exit 0]
+
+$ cat w/.aos/turn   # 缺檔視為 0，一回合後為 1（裁-5）
+1
+[exit 0]
+
+$ ls -1 w
+a
+b
+[exit 0]
+```
+
+讀法：
+
+- `aos init w` 建出的 `turn` 初值是 `0`（LF 結尾，spec 驗收 4 前半）。
+- 第一次 `aos exec w` 真的跑了投遞（`a` 出現），release 成功後 `turn` 變 `1`
+  （spec 驗收 4 後半）。
+- 第二次 `aos exec w` 沒有新投遞可跑（沒有工作的回合不是一個回合），`turn` 停在
+  `1` 不動。
+- 手動刪掉 `turn` 檔模擬「M1 之前的舊世界」：不拒絕、不 bump `version`（仍是
+  `1`，此段未貼但另見 `test_run_handoff.cpp` 的斷言），一回合後 `turn` 出現且是
+  `1`（讀不到視為 `0`，裁-5／§B-3）。
+
 ## 待補（後續步驟寫進來）
 
-- S6：`aos init w && cat w/.aos/turn`（`0`）→ 投遞＋`aos exec w` → `cat w/.aos/turn`（`1`）。
 - S7：`strace -c -e fsync` 對空轉 `--loop` 的計數（風險 3 的實測）。
