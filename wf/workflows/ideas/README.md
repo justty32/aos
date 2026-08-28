@@ -5,10 +5,15 @@
 記錄尚未進入 spec／plan／feature-dev 的產品構想。這裡保存的是**方向、心智模型與待釐清
 問題**，不是已實作行為；構想準備落地時，再轉交對應工作流。
 
+> **要重新拷問 aos 的人：先讀 [verdicts](verdicts.md)。** 九輪拷問的裁決已經收成一張表
+> （已裁決／仍開著／欠帳／已驗證的實作缺陷），別重問已經拍板的東西。不該被改掉的優點在
+> [call-format/keep](call-format/keep.md)。
+
 ## 目前構想
 
 | 檔案 | 內容 |
 |------|------|
+| [verdicts](verdicts.md) | **九輪拷問的裁決總表**：已裁決（不必再問）／仍開著（值得打）／欠帳（裁決相乘產生的）／已驗證的實作缺陷。重新拷問的入口 |
 | [turn-based-folder](turn-based-folder.md) | 指定資料夾的回合制演化模型；`aos exec` 就是它的實作，抽象 CPU 疊在其上；`.aos` 版面、`.temp`／`.runi` 交接協定、`core/daemon` 與 agent loop |
 | [llm-cpu](llm-cpu.md) | LLM CPU 疊在 `inst` 之上（`aos llm exec` + `.aos/insts/llm.json`）、自跑推理或當全域 daemon client 的取捨、跨資料夾排程與 I/O 交換區 |
 | [inst-execution](inst-execution.md) | `inst` 的 env 繼承開關與非阻塞／背景執行策略 |

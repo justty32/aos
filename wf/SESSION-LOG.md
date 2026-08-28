@@ -12,6 +12,14 @@
 
 ## 最新進度
 
+- **2026-08-28 對 aos 核心模型做了九輪拷問**（格式／原語／CPU 類比／交接協定／前作對照／
+  機器形狀）。裁決總表在 [ideas/verdicts](workflows/ideas/verdicts.md)——**要重新拷問
+  的人先讀那份**。open 的部分：**「批」沒有名字與 header**（一次卡住 ISA 版本、指令來源、
+  loop 的旗標暫存器與去重）、**decode 卡在錯的一層**、外層契約還沒想好、跨資料夾排程歸屬
+  未定。另有三筆「裁決相乘」的欠帳（兩顆 CPU 沒有記憶體模型、沒有中斷線、git 撞
+  `.aos/` 暫態）記在 [machine-shape/debts](workflows/ideas/machine-shape/debts.md)。
+  新驗證出的實作缺陷已進 [gotchas](workflows/common/gotchas.md)（`.runi` 不是鎖、沒有
+  `fsync`、彙整崩潰窗口、`--loop 0` 是忙碌輪詢、失敗關掉節流閥）。
 - **2026-08-25 研討會收場**（[最後總結](workflows/workshop/records/final-summary.md)，
   1500 字，第一節就是「他不必回答的問題」）。八場的問題收成
   [OPEN-QUESTIONS](workflows/workshop/OPEN-QUESTIONS.md)，白話背景資料收成
