@@ -12,8 +12,9 @@
 
 ## 最新進度
 
-- **2026-08-28 對 aos 核心模型做了九輪拷問**（格式／原語／CPU 類比／交接協定／前作對照／
-  機器形狀）。裁決總表在 [ideas/verdicts](workflows/ideas/verdicts.md)——**要重新拷問
+- **2026-08-28 對 aos 核心模型做了十輪拷問**（格式／原語／CPU 類比／交接協定／前作對照／
+  機器形狀；第十輪由 Fable 重打「地位的承載物」，九條全未裁——使用者：邊實作邊想，
+  記在 [machine-shape](workflows/ideas/machine-shape/README.md) 三檔 §22–30）。裁決總表在 [ideas/verdicts](workflows/ideas/verdicts.md)——**要重新拷問
   的人先讀那份**。open 的部分：**「批」沒有名字與 header**（一次卡住 ISA 版本、指令來源、
   loop 的旗標暫存器與去重）、**decode 卡在錯的一層**、外層契約還沒想好、跨資料夾排程歸屬
   未定。另有三筆「裁決相乘」的欠帳（兩顆 CPU 沒有記憶體模型、沒有中斷線、git 撞
