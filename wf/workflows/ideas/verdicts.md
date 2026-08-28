@@ -53,6 +53,8 @@
 | **批 header（B1）** | 裁於 2026-08-28：**sidecar 檔**（建議 `<名字>-head.json`），欄位 v1＝`version`／`id`／`origin`／`result`，彙整層寫、loop 讀、exec 不認識（SPEC §C-8，planned M1）。manifest（§23）留 v2 |
 | **漂移三向標記** | 裁於 2026-08-28：已裁已實作＝直接寫；已裁未實作＝`(planned)`；未拍板矛盾＝不入條款、進 SPEC「已知未決」附錄 |
 | **M1 階段裁決** | 裁於 2026-08-28（SPEC B／D／E 區條款）：§27 三小（turn 由 loop 持有、release 成功遞增、進 git）；`.gitignore` 政策取代 aos-folder 十（暫態不進、version/turn 進、inst.json＝MAY）；`.bad` 歸人／recover 清；投遞名 `<pid>-<seq>`＋排他發布；deliver 輸出單行 JSON、發布 canonical 位元組；header 檔名 `inst-head.json`；批 id＝FNV-1a 摘要兼去重依據（隨機 id 需名冊＝manifest，與「manifest 留 v2」相撞）；舊世界缺 turn 視為 0 不拒絕；去重只保證整組殘留。細節見 [build-cycle/archive/m1-loop-side](../build-cycle/archive/m1-loop-side/plan.md) 第一節 |
+| **M1 審查修補三裁** | 裁於 2026-08-28（B 隊審查 28 條後，調度者拍板；SPEC §B-2／§C-8／§D-4／§D-5／§D-6）：① **header 加 `swept` 標記**——投遞清完並落盤後把 header 標 `swept:true`，**只有未 swept 的 header 才啟用去重**。內容導出的批 id 在原理上分不出「崩潰殘留」與「同名同內容的重投」，sweep 標記正好把去重的射程收斂到「sweep 沒完成」這個殘留的定義上，且不需要 manifest（不牴觸「manifest 留 v2」）。② **§D-5 耐久性射程延伸到取件與釋放**——claim 的 rename 後、release 的 unlink 後各補一次目錄 fsync，不再靠 `advance_turn` 順帶（turn 於 M2 搬到 loop 層之後那個巧合就沒了）。③ **彙整的批發布改排他**——批與 header 的 `.temp` 用每行程唯一名寫、批再 rename 進固定的 `.temp` 槽位（roll-forward 的錨），最後 `publish_exclusive()` 進 `inst.json`；`EEXIST` ＝別人先發布了，本輪放棄、不清投遞、不重寫 header。這一刀同時解掉固定名 `O_TRUNC` 共寫與併發雙重彙整（19% 重複執行的真正機制）。**去重擋投遞殘留、排他發布擋併發雙重彙整，是兩件事。** 詳見 [m1-loop-side/review/report.md](../build-cycle/archive/m1-loop-side/review/report.md) |
+| **`.gitignore` 的執行者** | 裁於 2026-08-28（M1 審查修補 #14）：§E-4 原本是一條**沒有執行者**的法。定為 **`aos init` MUST 建立 `.aos/.gitignore`**（內容照 §E-4：`*.temp`／`*.runi`／`*.bad`／`*.tempd/` 排除；`version`／`turn` 納入；`inst.json`／`inst-head.json` 是 MAY 所以不寫進 ignore）；**舊世界缺這個檔 MUST NOT 視為錯誤**。條款寫進 §B-2 版面樹 |
 
 ## B. 仍開著（值得打）
 

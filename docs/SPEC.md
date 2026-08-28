@@ -63,15 +63,21 @@
   .aos/
       version              ← 版面版本（§B-4）
       turn                 ← 回合計數器（§B-3）
+      turn.temp            ← turn 遞增用的中間檔（turn 沒有副檔名，狀況字直接接名字後）
+      .gitignore           ← 由 aos init 建立，內容照 §E-4
       inst.json            ← 核心 CPU 待執行的批次（特權位）
-      inst.json.temp / .runi
+      inst.json.runi       ← 已取走、正在跑
+      inst-<pid>-<seq>.json.temp       ← 彙整寫批用的每行程唯一暫存（§D-5）
       inst-head.json       ← 批 header sidecar（§C-8）
+      inst-head-<pid>-<seq>.json.temp  ← 彙整寫 header 用的每行程唯一暫存（§D-5）
       inst.tempd/          ← 投遞匣
       insts/               ← 其他 CPU，一顆一份（同名配 .temp/.runi/.tempd 與 -head.json）
   ```
 
-  其他 CPU **SHOULD** 遵循同一套協定，不強迫。
-  來源：aos-folder 三；header 檔名裁於 2026-08-28（M1 裁-3）。
+  其他 CPU **SHOULD** 遵循同一套協定，不強迫。`aos init` **MUST** 建立 `.gitignore`；
+  舊世界缺這個檔 **MUST NOT** 視為錯誤。
+  來源：aos-folder 三；header 檔名裁於 2026-08-28（M1 裁-3）；中間檔、每行程唯一暫存名
+  與 `.gitignore` 補列，裁於 2026-08-28（M1 審查修補 #14／#20／#23）。
 - **§B-3 `.aos/turn`**：回合計數器（這台機器的 PC）。`aos init`
   **MUST** 建立、初值 `0` 加 LF；由 CLI 回合層（loop）持有；release 成功後 **MUST**
   遞增。讀不到（舊世界）**MUST** 視為 `0` 並於首次遞增時建立——**MUST NOT** 拒絕、
@@ -149,10 +155,15 @@
   | `id` | 批 id（唯一；去重的依據） |
   | `origin` | 指令來源：`"aggregated"`（經彙整祝福）或 `"direct"`（直接寫入） |
   | `result` | 彙總狀態欄；由 loop 於 writeback 寫回（值域於 M2 定義） |
+  | `swept` | 這一批的來源投遞清乾淨了沒（布林）。發布時寫 `false`；投遞全數刪除且目錄落盤後改寫成 `true` |
 
+  **`swept` 是去重的閘門**：只有 `swept` 不成立的 header 才啟用 §D-6 的比對。已 swept
+  ＝上一批的清理已經走完，**MUST NOT** 再擋任何投遞——同名同內容的**全新**投遞
+  **MUST** 照常發布。缺 `swept` 欄（舊世界寫的 header）**MUST** 視為 `false`。
   **exec 層 MUST NOT 讀取或認識 header**（§A-6 的推論）；header 由彙整層寫、loop 讀。
   環境指紋／manifest（instruction §23）留 v2。
-  來源：verdicts B1／instruction §22・§23，裁於 2026-08-28。
+  來源：verdicts B1／instruction §22・§23，裁於 2026-08-28；`swept` 欄裁於 2026-08-28
+  （M1 審查修補 #1：內容導出的 id 分不出「殘留」與「重投」，靠 sweep 標記界定射程）。
 - **§C-9** `$ref` 的值域是**資料值**：`$ref` **MUST NOT** 引用一筆 inst 或一個批
   （連結器不進 decode）。「程式／副程式」若要存在，屬於外圈（彙整或 loop），不屬於
   指令格式。
@@ -163,7 +174,7 @@
 - **§D-1 三步協定**：投遞 → 彙整 → 取件，每步一次 `rename`。
   ```text
   投遞  inst.tempd/<名>.json.temp ─rename─▶ inst.tempd/<名>.json
-  彙整  併成 inst.json.temp        ─rename─▶ inst.json（§D-5 順序）
+  彙整  併成 inst-<pid>-<seq>.json.temp ─rename─▶ inst.json（排他，§D-5 順序）
   取件  inst.json                  ─rename─▶ inst.json.runi
   ```
   來源：aos-folder 六。
@@ -182,19 +193,39 @@
 - **§D-4 彙整規則**：只收**沒有狀況後綴**的投遞。順序不保證——投遞者 **MUST NOT**
   假設任何順序（實作 **MAY** 用字典序）；需要先後就排進同一份投遞。`inst.json` 已有
   一份沒被讀走時本輪 **MUST NOT** 發布（不覆蓋、不合併）。無效投遞：**MUST** 隔離
-  （就地改名加 `.bad`）、噴 warning、繼續處理其餘。投遞 **MUST** 在發布成功之後才刪。
-  來源：aos-folder 六。
-- **§D-5 彙整耐久性與提交點**：所有寫檔 **MUST** fsync。發布順序
+  （就地改名加 `.bad`）、噴 warning、繼續處理其餘。投遞 **MUST** 在**本輪處理完成之後**
+  才刪——**發布成功**、**整批為空**（沒有東西可發布）、**去重命中**（§D-6）三者都算完成，
+  除此之外 **MUST NOT** 刪。
+  來源：aos-folder 六；「本輪處理完成」的三個例外照實寫明，裁於 2026-08-28（M1 審查修補 #16）。
+- **§D-5 交接耐久性與提交點**：所有寫檔 **MUST** fsync。彙整的發布順序
   **MUST** 為：寫批 `.temp`（fsync）→ 寫 header `.temp`（fsync）→ rename header
   （**去重承諾的提交點**）→ fsync 目錄 → rename 批 → fsync 目錄 → 刪投遞 → fsync
-  目錄。header sidecar（§C-8 四欄）由彙整層寫。
-  來源：gotchas handoff 節＋M1 plan S3 順序論證，裁於 2026-08-28。
+  目錄 → 標記 header `swept`（§C-8）。header sidecar（§C-8 五欄）由彙整層寫。
+  批與 header 的 `.temp` **MUST** 用**每行程唯一**的名字寫（§B-2 版面樹），且發布
+  **MUST** 直接以那個唯一名為來源——彙整 **MUST NOT** 把批經過任何共用的固定暫存
+  檔名。理由：共用檔名可被同儕在兩步之間換掉，於是一個彙整者會把**別人的批**發布到
+  自己剛提交的 header 底下，投遞的清理與批的內容就對不起來（實測可導致一份投遞執行
+  兩次）。批發布（唯一 `.temp` → `inst.json`）**MUST** 排他（`RENAME_NOREPLACE`，或
+  `link`＋`unlink` 退階）：目的檔已存在＝別的彙整者先發布了，本輪 **MUST** 放棄——
+  **不清投遞、不重寫 header**，並 **MUST** 刪掉自己那份唯一 `.temp`。
+  **取件與釋放同受本條拘束**：取件的 rename（`inst.json` → `.runi`）之後 **MUST** fsync
+  目錄；釋放的 unlink（`.runi`）之後 **MUST** fsync 目錄。耐久性失敗只記警告，
+  **MUST NOT** 讓回合停擺。
+  來源：gotchas handoff 節＋M1 plan S3 順序論證，裁於 2026-08-28；射程延伸到取件／釋放、
+  唯一暫存名與排他發布，裁於 2026-08-28（M1 審查修補 #2／#5／#23）。
 - **§D-6 批 id 與去重**：批 `id` ＝ 對排序後（投遞檔名＋內容）的
   確定性摘要（64-bit FNV-1a，16 位 hex）。彙整 **MUST** 在發布前比對現任 header 的
-  `id`：同一組投遞（同名同內容、恰好整組）殘留於 inbox 時 **MUST NOT** 二次發布——
-  批 `.temp` 完整存在則 roll-forward（rename 後清投遞），否則只清投遞。**覆蓋範圍**：
-  只保證整組殘留；部分殘留混入新投遞後的重複不在保證內（條款照實寫，不誇大）。
-  來源：M1 裁-4／裁-6，裁於 2026-08-28。
+  `id`，且**只在該 header 的 `swept` 不成立時**啟用比對（§C-8）：同一組投遞（同名同內容、
+  恰好整組）殘留於 inbox 時 **MUST NOT** 二次發布——**存在一份唯一 `.temp` 兄弟檔、
+  且其位元組與本輪重算的 canonical 批位元組逐位元相同**才 roll-forward（排他 rename
+  後清投遞），否則只清投遞。roll-forward 的錨**靠內容認身分、不靠檔名**：能通過逐位元
+  比對的就是本輪這組投遞的批，不論它是自己上一輪崩掉留下的還是同儕正在飛的。清完投遞（且目錄落盤）之後 **MUST** 把 header 標成 `swept`。
+  **覆蓋範圍**：只保證整組殘留；部分殘留混入新投遞後的重複不在保證內（條款照實寫，
+  不誇大）。去重擋的是**投遞殘留**這一個方向；**併發雙重彙整**（兩個彙整者各自發布
+  一次）不在去重射程內——後發布者讀 header 時前者還沒寫出去，比對本來就不可能命中，
+  那個方向由 §D-5 的**排他發布**擋。
+  來源：M1 裁-4／裁-6，裁於 2026-08-28；`swept` 閘門、逐位元比對與覆蓋範圍補述，
+  裁於 2026-08-28（M1 審查修補 #1／#21／#23）。
 - **§D-7 `.runi` 語意**：`.runi` 存在 ⟺ 有一回合沒跑完。回合正常返回 **MUST** 刪
   `.runi`——不論退出碼、**包含**整批解析失敗（壞批消失、stderr 留診斷，刻意取捨）；
   行程死掉（crash／kill／斷電）就留著。`.runi` 已存在 **MUST** 拒絕啟動（退出碼 3）；
