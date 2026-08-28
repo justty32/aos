@@ -9,9 +9,12 @@
 namespace aos::detail {
 
 // 從 instruction 路徑（必須以 .json 結尾）推導出來的四個位置。
+// 彙整**不再**產生 `<base>.temp`：批寫進每行程唯一的暫存（unique_temp_path），
+// 然後直接排他 rename 成 base。共用的固定槽位會讓兩個彙整者互相覆蓋對方寫進去的
+// 批，於是 A 可能發布 B 的批、卻只清掉 A 自己看到的那幾份投遞——剩下的在下一輪
+// 被重新彙整＝重複執行。所以這個 struct 沒有 temp 欄。
 struct HandoffPaths {
     std::string base;   // 發佈好、等待取件的 instruction
-    std::string temp;   // 原子發佈用的固定暫存槽位（.temp）
     std::string runi;   // 取件後的執行中標記（.runi）
     std::string inbox;  // 投遞收件匣目錄（.tempd）
 };

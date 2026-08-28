@@ -119,7 +119,6 @@ bool derive_header_paths(const std::string &base, HeaderPaths &paths) {
         return false;
     }
     paths.base = base.substr(0, base.size() - suffix.size()) + "-head.json";
-    paths.temp = paths.base + ".temp";
     return true;
 }
 

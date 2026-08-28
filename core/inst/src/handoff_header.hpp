@@ -11,10 +11,10 @@
 
 namespace aos::detail {
 
-// header sidecar 的兩個位置：<名字>-head.json 與發布用的 <名字>-head.json.temp。
+// header sidecar 的位置：<名字>-head.json。發布用的暫存跟批一樣是每行程唯一的
+// 名字（unique_temp_path），不是固定的 `-head.json.temp`，所以這裡不推導它。
 struct HeaderPaths {
     std::string base;
-    std::string temp;
 };
 
 // base 不以 .json 結尾就回 false、paths 不動（與 derive_paths 同一套約定）。
