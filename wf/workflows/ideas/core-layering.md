@@ -52,8 +52,10 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
 - `core/` 目前是 `inst`、`llms`、`tooljson`；**沒有 `exec_loop`、沒有匯聚專案**，而
   `llms`／`tooljson` 已被使用者判定為失敗作（見 [ideas README](README.md)）。
 - **`inst_t` 現在有 `timeout_ms`**（`core/inst/include/aos/inst.hpp:65`，C ABI 是
-  `aos_instruction_timeout_ms`／`aos_instruction_set_timeout_ms`）。這個構想要把它從最
-  核心移到 loop 層，動到的是**已釋出的 C ABI**，不是單純搬程式碼。
+  `aos_instruction_timeout_ms`／`aos_instruction_set_timeout_ms`）。**使用者已拍板：
+  `timeout_ms` 確實要移出最核心**，改由 loop 層管。動到的是**已釋出的 C ABI**，不是
+  單純搬程式碼——落地時 C++ 型別、format 的 encode/decode、C ABI 鏡像宣告與
+  `static_assert` 要同一個 commit 一起改（見 [conventions](../common/conventions.md)）。
 
 ## 我挖到的邊緣狀況（待使用者判斷）
 
@@ -77,5 +79,8 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
 - **`core/inst` 要不要改名成 `core/exec`**：layout-handoff 訂過「`inst` 是名詞、`exec`
   是動詞，子命令改名不代表小專案跟著改名」。這個構想把最核心的專案直接叫 `exec`，
   跟那條相反，需要一句話拍板。
+- **呼叫格式本身的缺口會反過來限制這套分層**：沒有回傳值、`exit` 檔只有 8 bit、`$ref`
+  是坐在最內圈的求值語言、`UnknownKey` 與「loop 選項寫進同一份 json」相撞——整份清單
+  見 [call-format](call-format.md)。其中第 4、8 條直接落在本檔的分層上。
 - **「真的很核心」的判準**：決定什麼東西可以再包一圈、什麼只能當普通 inst。目前沒有
   判準，deliver 被歸到後者是個案判斷。
