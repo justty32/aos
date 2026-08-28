@@ -16,9 +16,17 @@
   團隊模式：主線 Fable 規劃與立法、plan 可開 Fable agent、實作開 Opus（指揮 sonnet）、
   審核另開 Opus。新開 [build-cycle](workflows/build-cycle/README.md) 工作流（spec →
   plan → do 兩道閘門）；使用者重排 roadmap：**inst 先、loop 是下一步**。
-  **M0 已完成**：`docs/SPEC.md` 立法（五條裁決：§30／§22 凍結的矽／header sidecar＋B1
-  v1／$ref 不取指令／三向標記，全記入 verdicts A 表）。**進行中：M1**（loop 側立法＋
-  deliver／PC／修 bug）。M4（第二顆 CPU）卡使用者未解禁的四項存貨，到那裡停下等他。
+  **M0 已完成**：`docs/SPEC.md` 立法（五條裁決入 verdicts A 表）。
+  **M1 斷點（2026-08-28 16:49，五點關機收攤）**：S0–S7 全落地（commit 對照：S0+S1
+  立法 `dfef513`、S2 `62bc8b6`、S3 彙整改造 `351b4e7`、S4 deliver `23ed92b`、S5 C ABI
+  `2fd5df7`、S6 turn `3fe0843`、S7 fsync `bf12ff4`），每步 ctest 全綠。**明天續**：
+  ① S8（docs／code map／gotchas 過帳——plan 的 S8 節，煙霧原文在
+  build-cycle/m1-loop-side/smoke-notes.md）；② 三鏡頭審查＋對抗驗證（原 workflow 已停，
+  新 session 重開 Review/Verify 兩段即可，script 在 session 工作流目錄）；③ 主線 S9
+  （SPEC 摘 planned 標記、退出碼表收編、roadmap／SESSION-LOG、封存項目夾）；
+  ④ M1 全收尾後 push roadmap-run 到 origin（使用者已同意）。M2 規劃 spec 草稿在
+  scratchpad（§25 接受／§26 投遞協定／timeout_ms 語意搬遷），落檔後開 Fable plan agent。
+  M4（第二顆 CPU）卡使用者未解禁的四項存貨，到那裡停下等他。
 
 - **2026-08-28 拷問停打，轉入實作。** 新開 [roadmap](workflows/roadmap.md) 工作流：
   M0 立法（normative SPEC）→ M1 批 header → M2 deliver/PC/修 bug → M3 exec_loop 落地
