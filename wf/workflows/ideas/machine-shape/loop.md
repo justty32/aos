@@ -36,3 +36,52 @@ loop 中途死掉 → `.runi` 留著 → 下次啟動一律拒絕（已定案）
 只有一個 `.runi`，沒有任何它為什麼死的資訊**。而且**誰監督 loop**——目前沒有 supervisor、
 沒有重啟、沒有健康檢查。
 
+---
+
+# 第八輪：讀 `run_loop.cpp` 的實測
+
+迴圈體只有這幾行（`core/inst/src/run_loop.cpp:72-81`）：
+
+```cpp
+for (;;) {
+    bool did_work = false;
+    const int result = run_exec_once(folder, did_work);
+    if (result == 3) return 3;
+    if (g_stop_requested != 0) return 0;
+    if (!did_work && interval != 0) {
+        sleep_milliseconds(interval);
+        ...
+    }
+}
+```
+
+## 13. 官方寫法 `aos exec --loop 0` 就是忙碌輪詢
+
+[decided-and-open](../turn-based-folder/decided-and-open.md) 定案「持續執行是
+`aos exec --loop 0`，不另做 `core/daemon`」。而 **`interval == 0` → 永遠不睡**。
+
+所以那個被寫進「已定案」的標準寫法，行為是**沒有工作時用整顆核心全速空轉，每一圈
+`readdir` 整個 inbox**。開放問題裡的「`0` 的語意待定」——**`0` 已經有語意了，只是它是
+最糟的那個**，而且是文件唯一示範的用法。
+
+## 14. 失敗算「有做事」，所以失敗會關掉唯一的節流閥
+
+`if (!did_work && ...)`：**只有沒做事才睡**。而「做事」不分成功失敗——exec 那層已定
+「非零狀態、訊號終止、找不到命令、逾時，都是一次**已完成的執行**」。
+
+於是一批每回合都失敗的指令會讓 `did_work` 恆為 true，**節流閥永遠不啟動**。
+[第五輪](../call-format/feedback-and-failure.md)推測的「全速無限失敗」在程式碼裡確認了：
+**唯一的煞車，剛好被失敗解除。**
+
+修法很便宜：節流的判準不該是「有沒有做事」，而是「有沒有**進展**」——而「進展」的定義
+又回到「批需要一個彙總狀態」。
+
+## 15. loop 忽略除了 3 以外的所有回傳值
+
+`run_exec_once` 回 **1** 是**函式庫層級的失敗**：fork 失敗、行程群組設定失敗、等待失敗、
+寫 `exit` 檔失敗——不是「子行程跑壞了」，是**這台機器本身出問題**。loop 把它們整個丟掉：
+沒有計數、沒有退避、沒有回報、沒有停機條件。`result` 只有 `== 3` 被用過。
+
+**這就是「loop 是控制流」目前的全部內容：一個 `if`。** 而它檢查的還是唯一一個不該由
+loop 決定的情況（`.runi` 存在＝有人在跑）。
+
