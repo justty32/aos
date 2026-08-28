@@ -6,6 +6,19 @@
 先裁的問題由主線依下列方向拍板，落檔時記入 [verdicts A 表](../../ideas/verdicts.md)
 ＋ `docs/SPEC.md`。
 
+> **調度者裁決（2026-08-28，實作層級；plan 第一節的提案未列者一律採建議案）**：
+> 裁-1 超時機制採 **A 案**（inst 出 spawn／poll／reap／signal 非阻塞入口，`execute()` 簽名不動，
+> 計時鏈搬 `core/loop`）；裁-4 **先純搬再重構**；裁-0 SPEC **新開 G 區**（§A-7／§A-8 進 A 區）；
+> 裁-5 header `result` 四值 `"ok"/"partial"/"failed"/"machine_failed"`；裁-9 停機 **N=10、退出碼 4**；
+> 裁-8b **不加** kFloor（照裁決 3 原文立法 1 ms）；裁-10/11/12 `.aos/control.tempd/`＋
+> `{"op":"stop"}`（恰好一個 key）＋消化用 **unlink**；裁-14 `core/loop` 對 `core/inst` 用 **`PUBLIC_DEPS`**；
+> 裁-9b 回傳值先分層（S5）。「調度者須知」八條全部採納（§25 寫成判準＋窮舉表、§26 改寫成
+> 「控制面 MUST 不依賴任何 inst 能跑」、format.md／usage.md 的 timeout 範例要改、逾時算有進展、
+> verdicts D 表 `did_work` 那列更正、§B-2 承認三個既有命名例外）。**已知未決 #1（SIGINT）不裁**，留給使用者。
+> 另兩件由 M3 規劃隊轉來、M2 實作順手收：① writeback 前用 `decode_header_id()` 比對 header `id`，
+> 不符只 warning（防第二支 exec 覆蓋批 N 的 header 後 `result` 寫錯檔）；② verdicts A 表
+> 「回合歷史加在 loop」那列依裁決 1 改歸系統 inst。**M1 審查修補須先於本階段動工**（同動 `core/inst/src`）。
+
 ## 一句話
 
 把**回合**這件事從 `core/inst` 整包搬出來，成為第二個核心小專案 **`core/loop`**：
