@@ -32,6 +32,11 @@
 
 ### 次外圈：`exec_loop`
 
+> **為什麼 loop 在 core 裡而不是外掛**：`aos core` 就是**整套 CPU 類比**（雖然不是完全
+> 類比）。`exec` 是指令，`exec_loop` 是**取指與控制流**——一批 inst 本身沒有 PC、沒有
+> 跳轉、沒有分支，控制流那一件事就落在 loop 上。兩個合起來才是那顆 CPU。詳見
+> [call-format/cpu-analogy](call-format/cpu-analogy.md)。
+
 另一個 `aos/core` 專案，**用於補 `aos exec` 沒考慮到的缺口**，功能稍微多一些：重複
 讀取 `inst.json` 並執行，還有 `timeout_ms`、thread 等。**這些選項都在 json 中**，它會
 在 exec 讀之前就納入並應用。
