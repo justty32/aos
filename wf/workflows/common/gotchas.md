@@ -32,6 +32,24 @@
   `aos::aos_inst` 而不是 `aos::inst`，而且 `find_package` 那一步不會報錯，錯誤延到
   `target_link_libraries` 才說「target not found」。
 
+## core/inst 的交接協定（handoff）
+
+> 以下三條是讀 `core/inst/src/handoff.cpp` 驗證過的**現況缺陷**，設計上已知要調整，
+> 詳見 [ideas/call-format/handoff-and-world](../ideas/call-format/handoff-and-world.md)。
+
+- **`.runi` 不是一把鎖，兩支 `aos exec` 可能把同一回合跑兩次**：`claim_instruction` 是
+  `lstat(runi)` → `read_file(base)` → `rename(base, runi)`。POSIX `rename()` **靜默覆蓋**
+  目的檔（原子但**不互斥**），互斥全靠前面那個 `lstat`，是 check-then-act；而且 read
+  在 rename **之前**，所以兩支同時進來會讀到同一份 `inst.json` 再各自 rename。要互斥得
+  用 `link()`／`renameat2(RENAME_NOREPLACE)`／`open(O_CREAT|O_EXCL)`。
+
+- **整個 `core/inst/src/` 沒有 `fsync`**：`rename` 只保證目錄項原子替換，不保證內容落地。
+  崩潰後可能留下一個已改名、內容零長度的 `.runi`——而「`.runi` 保留現場」正是崩潰後的
+  全部指望。正確順序是 寫檔 → `fsync(fd)` → `rename` → `fsync(dir_fd)`。
+
+- **投遞檔名用 pid 不保證唯一**：pid 會回收、會 wrap，跨 namespace／容器會撞。它要解決
+  的「共用檔名互相蓋寫」是結構性問題，pid 只給統計上的保證。
+
 ## 使用 aos
 
 - **`aos exec` 的退出碼不反映子行程成敗**：`/bin/false` 回 1，但正常完成該回合的 `aos exec` 回 **0**；`.runi` 已存在則回 3。
