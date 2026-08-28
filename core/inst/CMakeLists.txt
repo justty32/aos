@@ -13,6 +13,7 @@ aos_add_subproject(inst
         src/resolve.cpp
         src/handoff.cpp
         src/handoff_fs.cpp
+        src/handoff_header.cpp
         src/spawn_prep.cpp
         src/wait.cpp
         src/exec.cpp
@@ -58,6 +59,7 @@ aos_add_test(aos_inst_tests
         tests/test_resolve_env.cpp
         tests/test_resolve_ref.cpp
         tests/test_handoff.cpp
+        tests/test_handoff_header.cpp
         tests/test_exec_streams.cpp
         tests/test_exec_path.cpp
         tests/test_exec_status.cpp

@@ -138,11 +138,15 @@ enum class HandoffState {
     ReleaseFailed,
 };
 
+/* 新值一律加在尾端（C ABI 的鏡射列舉一經釋出就凍結，見 conventions）。 */
 enum class HandoffIssueKind {
     InvalidDelivery,
     DeliveryReadFailed,
     IsolationFailed,
     DeliveryRemoveFailed,
+    HeaderWriteFailed,   /* header sidecar 寫不成：批照發，這一輪沒有去重保證 */
+    HeaderInvalid,       /* 現任 header 讀不到或讀不懂：視同沒有 header */
+    DirectorySyncFailed, /* rename／unlink 之後的目錄 fsync 失敗：耐久性缺角 */
 };
 
 struct HandoffIssue {

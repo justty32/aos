@@ -39,6 +39,8 @@ TEST_CASE("exec aggregates two deliveries and removes them after publishing") {
     CHECK_FALSE(std::filesystem::exists(inbox + "/10.json"));
     CHECK_FALSE(std::filesystem::exists(inbox + "/20.json"));
     CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json.runi"));
+    // 彙整發布的批旁邊有 header sidecar（CLI 這條路徑也一樣）。
+    CHECK(std::filesystem::exists(dir.path + "/.aos/inst-head.json"));
 }
 
 TEST_CASE("exec resolves an environment directive delivered through handoff") {

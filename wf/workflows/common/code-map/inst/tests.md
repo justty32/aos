@@ -19,7 +19,9 @@
 | `resolve_test_support.hpp` | resolve 層測試共用的 parse、明示 context、暫存目錄與被引用檔案寫入 |
 | `test_exec_streams.cpp`／`test_exec_path.cpp`／`test_exec_status.cpp` | exec 層：重導向、PATH 解析、exit status／signal 對應 |
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
-| `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release |
+| `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release，以及「發布才有 header sidecar」的過帳 |
+| `test_handoff_header.cpp` | 彙整的耐久性面：header 四欄位照字面驗、批 id 的確定性、崩潰窗口重播（不得二次發布）、roll forward（崩在兩個 rename 之間）、殘缺 `.temp` 不 roll forward、header 讀不懂就照常重發。崩潰全部用「佈置崩潰後的檔案現場」重現，不殺行程、無 sleep |
+| `handoff_test_support.hpp` | handoff 測試共用的暫存世界目錄與整檔讀寫 |
 | `test_run_support.hpp` | CLI 測試共用的暫存 world、檔案 I/O、cwd guard 與呼叫 helper |
 | `test_run_init.cpp` | init、額外 argv 拒絕，以及 init／exec 的目前目錄預設 |
 | `test_run_loop.cpp` | loop argv、連續回合、失敗節流、信號收尾、遇 3 停止與目前目錄預設 |
