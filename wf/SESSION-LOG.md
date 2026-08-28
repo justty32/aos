@@ -24,22 +24,23 @@
   `bf12ff4`（S7 fsync）、`5e06d24`（S8 code map／gotchas／verdicts）、
   `a2ae08e`（S7 待補＋煙霧原文）、`9f53d9a`（S8 文件四份）、本次 S9 收尾。
   **2026-08-28 晚場（調度者模式：Fable 只派隊，Opus 隊長領軍）**：M1 收尾四步、M1 審查、
-  M2／M3 規劃三隊平行做完；使用者說「搞定這一步就先停」，故**停在修補隊與 M2 實作隊開工之前**。
+  M2／M3 規劃三隊平行做完。**M1 審查修補（E 隊）亦已收工**——28 條＋A 隊 4 條全部有處置
+  （24 已修／4 過帳／3 處刻意設計不修），SPEC 動了 §B-2／§C-8／§D-1／§D-4／§D-5／§D-6，
+  ctest 4/4 綠、165 個案例；過程與複測數字在
+  [review/report.md](workflows/build-cycle/archive/m1-loop-side/review/report.md) §6
+  （**§6.2.3 值得一讀**：修好 #1 之後併發重複執行率反而由 8.7% 升到 35%——那個 bug 在併發下
+  意外扮演了保護——補上 §D-4「發布前來源查核」才回到 0–1%）。**M2 可以開工了。**
   **open**：
-  ① **M1 審查修補未開始**——28 條發現（27 CONFIRMED，高 5／中 12／低 11，三條是 rc=0 零輸出
-     的無聲故障）在 [archive/m1-loop-side/review/report.md](workflows/build-cycle/archive/m1-loop-side/review/report.md)，
-     三件裁決（header sweep 標記、§D-5 射程延伸到取件／釋放、aggregate 排他發布）已記在該夾
-     README；攻擊腳本留在 `review/scripts/`（`t3/v11/v7/v8` 優先改成 ctest）。**修補完才能開 M2**
-     （同動 `core/inst/src`）。修補時 SPEC 若要動（§D-5／§D-6 覆蓋範圍補「併發雙重彙整」）照條款編號改。
-  ② **M2 實作待開工**：spec／plan 定稿在
+  ① **M2 實作待開工**：spec／plan 定稿在
      [m2-loop-project](workflows/build-cycle/m2-loop-project/spec.md)，調度者裁決已寫在 spec 開頭；
      照 plan S0–S11 跑，S0 先把裁決入 verdicts A 表。
-  ③ **M3 實作排在 M2 後**：spec／plan 在 [m3-roster](workflows/build-cycle/m3-roster/spec.md)
+  ② **M3 實作排在 M2 後**：spec／plan 在 [m3-roster](workflows/build-cycle/m3-roster/spec.md)
      （裁決在開頭；plan 第零節 16 條「對 M2 的假設」M2 落地後逐條核）。
-  ④ **等使用者表態**：SIGINT 已知未決 #1（M2 的 `stop` 與 M3 的 recover 都碰到它，兩隊都建議裁掉、
+  ③ **等使用者表態**：SIGINT 已知未決 #1（M2 的 `stop` 與 M3 的 recover 都碰到它，兩隊都建議裁掉、
      調度者未代裁）；`--loop 0` 照 1 ms 立法是刻意選較弱的法（C 隊提醒）。
-  ⑤ **push `roadmap-run` 到 origin**（使用者已同意，審查修補過了再推；本場六個 commit 未推）。
-  ⑥ M4（第二顆 CPU）卡使用者未解禁的四項存貨，到那裡停下等他。
+  ④ **push `roadmap-run` 到 origin**（使用者已同意，「審查修補過了再推」的前提**現在成立了**；
+     本場的 commit 全部未推，等使用者說推）。
+  ⑤ M4（第二顆 CPU）卡使用者未解禁的四項存貨，到那裡停下等他。
 
 - **2026-08-28 拷問停打，轉入實作。** 新開 [roadmap](workflows/roadmap.md) 工作流：
   M0 立法（normative SPEC）→ M1 批 header → M2 deliver/PC/修 bug → M3 exec_loop 落地

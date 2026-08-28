@@ -752,6 +752,7 @@ CLI 端到端案例在 `test_handoff_regression.cpp`／`test_run_handoff.cpp`／
 | #21 | 已修 | `#21 去重命中時不執行無關的暫存殘骸`（CLI，兩個名字都測：舊的共用固定槽位與新的兄弟唯一暫存；修補前紅）＋`handoff does not roll forward a sibling temp that is not this batch`（函式庫） | `1f13904`＋`3d487be`（merge `f13879c`） |
 | #22 | 已修 | `turn.temp 被目錄佔住時 exec 回 1 且不動 turn`＋`RLIMIT_FSIZE 觸頂時 exec 回 1 而不是被 SIGXFSZ 砍死` | `c11716a` |
 | #23 | 已修 | `aggregate writes the batch through a per-process unique temp name`（函式庫）＋**ext4 實跑**：`RenameFailed` 由 200/200 回合降到 **0**（§6.2）。共用固定 `.temp` 槽位已完全拿掉 | `1f13904`＋`3d487be` |
+| 併發雙重彙整（原報告 §1 末「已知、已排程」那節量到的 19%） | 已修（M1 射程內的部分） | **壓力實跑**：`conc.sh` 200 回合×K 支併發，DUP_PCT 由同機對照 9.8%／14.8%／13.2%（K=2／3／4）→ 補查核後 **0.0–1.0%**，`LOST` 九次全 0（§6.2.3）。**無確定性 ctest**：發布路徑的競態無法用公開 API 觸發 | `3e1ba0f` |
 | #24 | 已修 | **無自動化證明**：要「寫失敗**且** close 也失敗」同時成立。讀 commit diff 確認。（注意：這條是 `handoff_fs` 內部的 `close_checked`，與 A 隊那條「C API 解構子的 close 蓋掉 errno」是不同的兩處） | `1f13904` |
 | #25 | 已修 | `#25 inst.json 是斷掉的 symlink 時 exec 大聲回 1`（CLI，修補前紅：9 個斷言失敗）＋`#25 claim reports a base that exists but cannot be read`（函式庫） | `1f13904` |
 | #26 | 已修 | `#26 header 與 sweep 同時失敗時 exec 回 1`（CLI，修補前紅）＋`#26 handoff fails the round when the header and the sweep both fail`（函式庫） | `1f13904` |
