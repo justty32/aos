@@ -33,6 +33,7 @@ aos_add_subproject(inst
 add_library(aos_inst_cli OBJECT
     src/run.cpp
     src/run_exec.cpp
+    src/run_turn.cpp
     src/run_loop.cpp
     src/run_init.cpp
     src/run_deliver.cpp

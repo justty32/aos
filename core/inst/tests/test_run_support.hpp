@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <cstdio>
+
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -39,6 +41,30 @@ struct TempDir {
     TempDir() : path(make_temp_dir()) {}
     ~TempDir() { std::filesystem::remove_all(path); }
     std::string path;
+};
+
+// CLI 直接寫真的 fd（讀 stdin、印 stdout／stderr），而測試跟它在同一個 process 裡，
+// 所以只能把描述子暫時換成檔案、離開範圍再換回來。
+class ScopedFd {
+public:
+    ScopedFd(int target, const std::string &path, int flags)
+        : target_(target), saved_(dup(target)) {
+        REQUIRE(saved_ >= 0);
+        const int fd = open(path.c_str(), flags, 0666);
+        REQUIRE(fd >= 0);
+        std::fflush(nullptr);
+        REQUIRE(dup2(fd, target_) >= 0);
+        close(fd);
+    }
+    ~ScopedFd() {
+        std::fflush(nullptr);
+        dup2(saved_, target_);
+        close(saved_);
+    }
+
+private:
+    int target_;
+    int saved_;
 };
 
 class ScopedCwd {

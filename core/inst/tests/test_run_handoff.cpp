@@ -5,33 +5,6 @@
 
 using namespace aos::test;
 
-namespace {
-
-// CLI 直接寫真的 fd，測試跟它在同一個 process 裡，只能把描述子換成檔案再換回來。
-class ScopedFd {
-public:
-    ScopedFd(int target, const std::string &path, int flags)
-        : target_(target), saved_(dup(target)) {
-        REQUIRE(saved_ >= 0);
-        const int fd = open(path.c_str(), flags, 0666);
-        REQUIRE(fd >= 0);
-        std::fflush(nullptr);
-        REQUIRE(dup2(fd, target_) >= 0);
-        close(fd);
-    }
-    ~ScopedFd() {
-        std::fflush(nullptr);
-        dup2(saved_, target_);
-        close(saved_);
-    }
-
-private:
-    int target_;
-    int saved_;
-};
-
-}  // namespace
-
 TEST_CASE("exec requires .aos and a recognized version") {
     TempDir missing_aos;
     CHECK(exec_world(missing_aos.path) == 1);

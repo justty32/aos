@@ -13,30 +13,6 @@ using namespace aos::test;
 
 namespace {
 
-// CLI 讀 stdin、印 stdout，而測試跟它在同一個 process 裡，所以只能把描述子換成
-// 檔案再換回來。換之前先把所有 C 串流倒乾淨，免得 Catch2 的輸出流進投遞檔。
-class ScopedFd {
-public:
-    ScopedFd(int target, const std::string &path, int flags)
-        : target_(target), saved_(dup(target)) {
-        REQUIRE(saved_ >= 0);
-        const int fd = open(path.c_str(), flags, 0666);
-        REQUIRE(fd >= 0);
-        std::fflush(nullptr);
-        REQUIRE(dup2(fd, target_) >= 0);
-        close(fd);
-    }
-    ~ScopedFd() {
-        std::fflush(nullptr);
-        dup2(saved_, target_);
-        close(saved_);
-    }
-
-private:
-    int target_;
-    int saved_;
-};
-
 int call_deliver(std::vector<std::string> args) {
     std::vector<char *> argv;
     for (std::string &arg : args) argv.push_back(arg.data());

@@ -22,7 +22,7 @@
 | `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release，以及「發布才有 header sidecar」的過帳 |
 | `test_handoff_header.cpp` | 彙整的耐久性面：header 四欄位照字面驗、批 id 的確定性、崩潰窗口重播（不得二次發布）、roll forward（崩在兩個 rename 之間）、殘缺 `.temp` 不 roll forward、header 讀不懂就照常重發。崩潰全部用「佈置崩潰後的檔案現場」重現，不殺行程、無 sleep |
 | `handoff_test_support.hpp` | handoff 測試共用的暫存世界目錄與整檔讀寫 |
-| `test_run_support.hpp` | CLI 測試共用的暫存 world、檔案 I/O、cwd guard 與呼叫 helper |
+| `test_run_support.hpp` | CLI 測試共用的暫存 world、檔案 I/O、cwd guard、`ScopedFd`（把 stdin／stdout／stderr 暫時換成檔案再換回來——CLI 直接寫真的 fd，而測試跟它同一個 process）與呼叫 helper |
 | `test_run_init.cpp` | init、額外 argv 拒絕、`turn` 初值 `0`、`.aos/.gitignore` 內容一字不差（§E-4）與舊世界缺它不算錯，以及 init／exec 的目前目錄預設；`.aos` 是普通檔印 `Not a directory`、是目錄印 `already exists` 兩種訊息各驗一次 |
 | `test_run_loop.cpp` | loop argv、連續回合、失敗節流、信號收尾、遇 3 停止與目前目錄預設 |
 | `test_run_handoff.cpp` | CLI 的版本、空回合、彙整、隔離、取件、釋放與連續回合整合；`.aos/turn` 在有工作的回合遞增、空轉不動、缺檔的舊世界視為 `0`（裁-5）；`.runi` 已存在時回 3 且**完全不彙整**（投遞還在、沒有 `inst.json`／`inst-head.json`）；重導向開檔失敗會在 stderr 留一行 warning 而退出碼不變 |

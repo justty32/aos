@@ -11,30 +11,6 @@ using namespace aos::test;
 
 namespace {
 
-// CLI 直接寫真的 fd，而測試跟它在同一個 process 裡，所以只能把描述子換成檔案再換
-// 回來（與 test_run_deliver.cpp 同款；test_run_support.hpp 是別人的檔，不動它）。
-class ScopedFd {
-public:
-    ScopedFd(int target, const std::string &path, int flags)
-        : target_(target), saved_(dup(target)) {
-        REQUIRE(saved_ >= 0);
-        const int fd = open(path.c_str(), flags, 0666);
-        REQUIRE(fd >= 0);
-        std::fflush(nullptr);
-        REQUIRE(dup2(fd, target_) >= 0);
-        close(fd);
-    }
-    ~ScopedFd() {
-        std::fflush(nullptr);
-        dup2(saved_, target_);
-        close(saved_);
-    }
-
-private:
-    int target_;
-    int saved_;
-};
-
 // 空批次：claim → execute → release 全走完，但一個子行程都不生、一個位元組都不寫，
 // 於是整趟 exec 裡唯一會寫檔的地方就只剩 advance_turn。
 void put_empty_batch(const TempDir &dir) {
