@@ -72,6 +72,23 @@ bool fsync_retry(int fd) {
     return rc == 0;
 }
 
+// 只 fsync 檔案本身救不了「新建檔的目錄項沒落盤」——崩潰後檔案可能整個不存在，
+// 而我們已經回了 AOS_INST_OK。這是對外承諾，內容與目錄項都要落盤。
+// `path` 沒有 '/' 時父目錄就是 cwd；`"/x"` 這種的父目錄是根。
+bool fsync_parent_dir(const char *path) {
+    const char *slash = std::strrchr(path, '/');
+    std::string parent = ".";
+    if (slash == path) {
+        parent = "/";
+    } else if (slash != nullptr) {
+        parent.assign(path, static_cast<size_t>(slash - path));
+    }
+    const OwnedFd owned{open_retry(parent.c_str(),
+                                   O_RDONLY | O_DIRECTORY | O_CLOEXEC, 0)};
+    if (owned.fd < 0) return false;
+    return fsync_retry(owned.fd);
+}
+
 }  // namespace
 
 extern "C" {
@@ -151,12 +168,13 @@ AOS_API aos_inst_state aos_instruction_write_file(
         if (state != aos::InstState::Ok) return inst_state(state);
         const int fd = open_retry(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
         if (fd < 0) return AOS_INST_WRITE_ERROR;
-        // 內容落盤才算寫成功（S7 fsync 掃尾）；`aos_instruction_write_fd` 用的是
+        // 內容**與目錄項**都落盤才算寫成功；`aos_instruction_write_fd` 用的是
         // 呼叫者自己的 fd，此處不代管，維持原樣（見 capi.md 的說明）。
         const bool wrote = write_fully(fd, output.data(), output.size());
         const bool synced = wrote && fsync_retry(fd);
         const bool closed = close(fd) == 0;
-        return wrote && synced && closed ? AOS_INST_OK : AOS_INST_WRITE_ERROR;
+        if (!wrote || !synced || !closed) return AOS_INST_WRITE_ERROR;
+        return fsync_parent_dir(path) ? AOS_INST_OK : AOS_INST_WRITE_ERROR;
     } catch (...) { return AOS_INST_ALLOC_FAILED; }
 }
 

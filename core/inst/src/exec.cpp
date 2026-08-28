@@ -6,6 +6,7 @@
 #include "wait.hpp"
 
 #include <cerrno>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -54,6 +55,56 @@ bool fsync_retry(int fd) {
     return rc == 0;
 }
 
+// 只 fsync 檔案本身救不了「新建檔的目錄項沒落盤」——崩潰後檔案可能整個不存在。
+// `path` 沒有 '/' 時父目錄就是 cwd；`"/x"` 這種的父目錄是根。
+bool fsync_parent_dir(const std::string &path) {
+    const std::size_t slash = path.rfind('/');
+    std::string parent = ".";
+    if (slash == 0) {
+        parent = "/";
+    } else if (slash != std::string::npos) {
+        parent = path.substr(0, slash);
+    }
+    const int fd = open_retry(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (fd < 0) {
+        return false;
+    }
+    const bool synced = fsync_retry(fd);
+    const bool closed = close(fd) == 0;
+    return synced && closed;
+}
+
+// fork 之後、execve 之前只能用 async-signal-safe 的操作，所以是 write(2) 而不是
+// fprintf：不配置記憶體、不做字串串接、不碰 stdio 的鎖。
+void write_safe(int fd, const char *data, std::size_t size) {
+    while (size != 0) {
+        const ssize_t written = write(fd, data, size);
+        if (written <= 0) {
+            if (written < 0 && errno == EINTR) continue;
+            return;  // 寫不出去就算了：這裡沒有第二個管道可以求救
+        }
+        data += static_cast<std::size_t>(written);
+        size -= static_cast<std::size_t>(written);
+    }
+}
+
+// 重導向開檔失敗以前是全靜默的：子行程 _exit(126)、`aos exec` 零輸出，使用者看不
+// 出原因。這裡在子行程裡直接寫一行 warning 到 fd 2。
+//
+// 順序上寫得出去：stdin／stdout 的重導向失敗時 fd 2 根本還沒被動；stderr 自己開檔
+// 失敗時 dup2 也還沒發生——兩種情形 fd 2 都仍是父行程原本的 stderr。
+// `path` 是 fork 之前就在記憶體裡的 C 字串，這裡只讀不動它；長度自己數，因為
+// `strlen` 不在 POSIX 的 async-signal-safe 清單裡。
+void warn_redirect_failed(const char *path) {
+    static const char prefix[] =
+        "aos exec: warning: cannot open redirect target: ";
+    write_safe(STDERR_FILENO, prefix, sizeof(prefix) - 1);
+    std::size_t length = 0;
+    while (path[length] != '\0') ++length;
+    write_safe(STDERR_FILENO, path, length);
+    write_safe(STDERR_FILENO, "\n", 1);
+}
+
 bool write_exit_status(const std::string &path, int status) {
     char buffer[32];
     const int length = std::snprintf(buffer, sizeof(buffer), "%d\n", status);
@@ -61,16 +112,23 @@ bool write_exit_status(const std::string &path, int status) {
         return false;
     }
 
-    const int fd = open_retry(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    // O_CLOEXEC：這是整個 core/inst 裡唯一活在「會 fork 的多執行緒行程」
+    // （run_batch 的 parallel thread）裡的 open——別的 thread 正好 fork 的話，
+    // 這個**可寫**的 fd 就跟著漏進 execve 之後的外部程式。
+    const int fd =
+        open_retry(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
     if (fd < 0) {
         return false;
     }
 
-    // exit 檔是崩潰後對帳的證據：內容落盤才算數（S7 fsync 掃尾）。
+    // exit 檔是崩潰後對帳的證據：內容與目錄項都落盤才算數（S7 fsync 掃尾）。
     const bool wrote = write_fully(fd, buffer, static_cast<std::size_t>(length));
     const bool synced = wrote && fsync_retry(fd);
     const bool closed = close(fd) == 0;
-    return wrote && synced && closed;
+    if (!wrote || !synced || !closed) {
+        return false;
+    }
+    return fsync_parent_dir(path);
 }
 
 // stdin/stdout/stderr 重導向：這裡只開檔、`dup2` 給子行程，不寫入內容——子行程
@@ -81,17 +139,23 @@ bool child_redirect(const char *path, int target_fd, int flags) {
         return true;
     }
 
-    const int fd = open_retry(path, flags, 0666);
+    // O_CLOEXEC 加在這個「只當 dup2 來源」的 fd 上是安全的：dup2 產生的新描述子
+    // 不帶 CLOEXEC，所以重導向本身照活，只有多餘的原 fd 被 execve 關掉。
+    const int fd = open_retry(path, flags | O_CLOEXEC, 0666);
     if (fd < 0) {
+        warn_redirect_failed(path);
         return false;
+    }
+    if (fd == target_fd) {
+        // open 剛好拿到目標描述子（呼叫者事先把它關掉時會發生）。dup2(fd, fd) 是
+        // no-op，**不會**清掉 CLOEXEC，得自己清，否則 execve 之後重導向就沒了。
+        return fcntl(fd, F_SETFD, 0) == 0;
     }
     if (dup2(fd, target_fd) < 0) {
         close(fd);
         return false;
     }
-    if (fd != target_fd) {
-        close(fd);
-    }
+    close(fd);
     return true;
 }
 

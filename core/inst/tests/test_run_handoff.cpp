@@ -1,6 +1,36 @@
 #include "test_run_support.hpp"
 
+#include <cstdio>
+#include <string>
+
 using namespace aos::test;
+
+namespace {
+
+// CLI 直接寫真的 fd，測試跟它在同一個 process 裡，只能把描述子換成檔案再換回來。
+class ScopedFd {
+public:
+    ScopedFd(int target, const std::string &path, int flags)
+        : target_(target), saved_(dup(target)) {
+        REQUIRE(saved_ >= 0);
+        const int fd = open(path.c_str(), flags, 0666);
+        REQUIRE(fd >= 0);
+        std::fflush(nullptr);
+        REQUIRE(dup2(fd, target_) >= 0);
+        close(fd);
+    }
+    ~ScopedFd() {
+        std::fflush(nullptr);
+        dup2(saved_, target_);
+        close(saved_);
+    }
+
+private:
+    int target_;
+    int saved_;
+};
+
+}  // namespace
 
 TEST_CASE("exec requires .aos and a recognized version") {
     TempDir missing_aos;
@@ -159,4 +189,54 @@ TEST_CASE("exec treats a missing turn file as zero in an old world") {
     CHECK(read_file(dir.path + "/.aos/turn") == "1\n");
     // 純新增，不動版面版本。
     CHECK(read_file(dir.path + "/.aos/version") == "1\n");
+}
+
+// ── #6：拒絕啟動要擺在彙整之前，不留下不可逆的副作用 ─────────────────────────
+
+TEST_CASE("aos exec 在 .runi 已存在時不彙整", "[run][handoff]") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    const std::string inbox = dir.path + "/.aos/inst.tempd";
+    write_file(inbox + "/z.json",
+               R"({"argv":["/bin/sh","-c","printf ran > ran"]})");
+    write_file(dir.path + "/.aos/inst.json.runi", "[]");
+
+    const std::string captured = dir.path + "/stderr.txt";
+    int status = 0;
+    {
+        ScopedFd err(STDERR_FILENO, captured, O_WRONLY | O_CREAT | O_TRUNC);
+        status = exec_world(dir.path);
+    }
+    CHECK(status == 3);
+    // 三個不可逆動作一個都沒做：投遞還在、沒發布新批、沒寫 header。
+    CHECK(read_file(inbox + "/z.json") ==
+          R"({"argv":["/bin/sh","-c","printf ran > ran"]})");
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst.json"));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/.aos/inst-head.json"));
+    CHECK_FALSE(std::filesystem::exists(dir.path + "/ran"));
+    CHECK(read_file(dir.path + "/.aos/turn") == "0\n");
+    CHECK(read_file(captured).find(
+              "refusing " + dir.path + ": .aos/inst.json.runi already exists") !=
+          std::string::npos);
+}
+
+// ── 重導向開檔失敗不再是全靜默 ──────────────────────────────────────────────
+
+TEST_CASE("重導向開檔失敗會在 stderr 留下 warning", "[run][exec]") {
+    TempDir dir;
+    REQUIRE(init_world(dir.path) == 0);
+    write_file(dir.path + "/.aos/inst.json",
+               R"({"argv":["/bin/true"],"stdout":"missing/out"})");
+
+    const std::string captured = dir.path + "/stderr.txt";
+    int status = 0;
+    {
+        ScopedFd err(STDERR_FILENO, captured, O_WRONLY | O_CREAT | O_TRUNC);
+        status = exec_world(dir.path);
+    }
+    // 退出碼不變：重導向開檔失敗是子行程的事（§D-9 的 0）。
+    CHECK(status == 0);
+    CHECK(read_file(captured).find(
+              "aos exec: warning: cannot open redirect target: missing/out") !=
+          std::string::npos);
 }

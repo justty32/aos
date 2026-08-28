@@ -77,6 +77,7 @@ aos_add_test(aos_inst_tests
         tests/test_run_init.cpp
         tests/test_run_loop.cpp
         tests/test_run_handoff.cpp
+        tests/test_run_turn.cpp
         tests/test_run_deliver.cpp
         tests/test_run_batch.cpp
     LINK aos_inst_cli

@@ -72,6 +72,7 @@ aos exec <folder>   ＝ 推進一回合
     .aos/
         version                  ← 版面版本（見第九節）
         turn                     ← 回合計數器（這台機器的 PC，§B-3）
+        .gitignore               ← §E-4 的 gitignore 政策，`aos init` 建（見第十節）
         inst.json                ← 核心 CPU 待執行的批次
         inst.json.temp           ← 彙整中的下一批
         inst.json.runi           ← 已取走、正在跑的那一批
@@ -269,6 +270,24 @@ git。M1 之後 `.aos` 裡長出了可攜的東西（`turn` 是這個世界的�
 *.tempd/
 *.bad
 ```
+
+**這條政策的執行者是 `aos init`**：它會在新世界裡建一個 `.aos/.gitignore`，內容就是
+上面那四條加註解（pattern 住在 `.aos/` 裡，所以相對 `.aos/` 生效）。實跑：
+
+```console
+$ aos init w1
+$ cat w1/.aos/.gitignore
+# aos 版面暫態（SPEC §E-4）：機器暫態不進 git。
+# version 與 turn 是可攜的回合座標，MUST 納入，所以這裡不排除。
+# inst.json 與 inst-head.json 是 MAY——要不要讓回滾重演舊回合由你決定。
+*.temp
+*.runi
+*.bad
+*.tempd/
+```
+
+**舊世界缺這個檔不算錯**：`aos exec` 與 `aos deliver` 都不檢查它，也不補建。要補就自己
+複製一份過去。
 
 - **一定不進**：`*.temp`（還在生成）、`*.runi`（正在跑）、`*.tempd/`（投遞匣）、
   `*.bad`（隔離的壞投遞）。理由跟原本一樣：clone 一份帶著 `inst.json.runi` 的世界，

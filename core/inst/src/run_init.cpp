@@ -15,6 +15,20 @@ namespace {
 
 constexpr const char *kAosDir = ".aos";
 
+// §E-4 的 gitignore 政策原本沒有執行者，`aos init` 建出來的世界從出生起就不滿足
+// 條款。這個檔住在 `.aos/` 裡，所以 pattern 相對 `.aos/` 生效。
+// `version`／`turn` 是 MUST 納入的可攜回合座標，不排除；`inst.json` 與
+// `inst-head.json` 是 MAY，留給使用者自己決定，不寫進來。
+// **舊世界缺這個檔不算錯**——`aos exec`／`aos deliver` 都不檢查它。
+constexpr const char *kGitignoreBody =
+    "# aos 版面暫態（SPEC §E-4）：機器暫態不進 git。\n"
+    "# version 與 turn 是可攜的回合座標，MUST 納入，所以這裡不排除。\n"
+    "# inst.json 與 inst-head.json 是 MAY——要不要讓回滾重演舊回合由你決定。\n"
+    "*.temp\n"
+    "*.runi\n"
+    "*.bad\n"
+    "*.tempd/\n";
+
 int open_retry(const char *path, int flags) {
     int fd;
     do {
@@ -65,8 +79,21 @@ int run_init_world(const char *folder) {
     }
     if (mkdirat(folder_fd, kAosDir, 0777) != 0) {
         const int error = errno;
-        close(folder_fd);
+        // EEXIST 只說「這個名字被佔了」，沒說被什麼佔。`.aos` 是普通檔或 symlink
+        // 時「already exists」看不出病灶，改印與 run_exec.cpp 同款的 ENOTDIR 訊息。
+        bool not_a_directory = false;
         if (error == EEXIST) {
+            struct stat status {};
+            if (fstatat(folder_fd, kAosDir, &status, AT_SYMLINK_NOFOLLOW) == 0 &&
+                !S_ISDIR(status.st_mode)) {
+                not_a_directory = true;
+            }
+        }
+        close(folder_fd);
+        if (not_a_directory) {
+            std::fprintf(stderr, "aos init: invalid %s/.aos: %s\n", folder,
+                         std::strerror(ENOTDIR));
+        } else if (error == EEXIST) {
             std::fprintf(stderr, "aos init: refusing %s: .aos already exists\n",
                          folder);
         } else {
@@ -112,9 +139,31 @@ int run_init_world(const char *folder) {
         ok = false;
     }
     if (turn_fd >= 0 && !close_checked(turn_fd, error)) ok = false;
-    // 目錄項本身也要落盤：`version`／`inst.tempd`／`turn` 三個新項目全在 `.aos`
-    // 底下，一次 fsync 這個已經開著的目錄 fd 就夠（S7 fsync 掃尾）。
+    // `.aos/.gitignore`：§E-4 的 gitignore 政策（見上面 kGitignoreBody）。
+    int ignore_fd = -1;
+    if (ok) {
+        ignore_fd = openat(aos_fd, ".gitignore",
+                           O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0666);
+        ok = ignore_fd >= 0;
+    }
+    if (ok) {
+        ok = write_fully(ignore_fd, kGitignoreBody, std::strlen(kGitignoreBody),
+                         error);
+    }
+    if (ok && !fsync_retry(ignore_fd)) {
+        error = errno;
+        ok = false;
+    }
+    if (ignore_fd >= 0 && !close_checked(ignore_fd, error)) ok = false;
+    // 目錄項本身也要落盤：`version`／`inst.tempd`／`turn`／`.gitignore` 四個新項目
+    // 全在 `.aos` 底下，一次 fsync 這個已經開著的目錄 fd 就夠（S7 fsync 掃尾）。
     if (ok && aos_fd >= 0 && !fsync_retry(aos_fd)) {
+        error = errno;
+        ok = false;
+    }
+    // `.aos` 這個**目錄項**住在父資料夾裡：fsync 了 `.aos` 自己也救不了它。
+    // 少了這一步，斷電後可能得到「`aos init` 回 0，但世界整個不存在」。
+    if (ok && !fsync_retry(folder_fd)) {
         error = errno;
         ok = false;
     }
@@ -126,6 +175,7 @@ int run_init_world(const char *folder) {
         const int cleanup_fd = open_retry(folder, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
         if (cleanup_fd >= 0) {
             unlinkat(cleanup_fd, ".aos/version", 0);
+            unlinkat(cleanup_fd, ".aos/.gitignore", 0);
             unlinkat(cleanup_fd, ".aos/turn", 0);
             unlinkat(cleanup_fd, ".aos/inst.tempd", AT_REMOVEDIR);
             unlinkat(cleanup_fd, kAosDir, AT_REMOVEDIR);

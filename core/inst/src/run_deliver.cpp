@@ -15,6 +15,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -27,6 +28,19 @@ namespace {
 constexpr const char *kAosDir = ".aos";
 constexpr const char *kVersionPath = ".aos/version";
 constexpr const char *kInstPath = ".aos/inst.json";
+
+// §B-4 只立法「讀不到＝拒絕」與「不認得（比自己新）＝拒絕」，沒有立法
+// `.aos/version` 的位元組格式。比對前剝掉尾端空白，`1` 與 `1\n` 是同一個版面版本
+// （run_exec.cpp 有一份同義的；兩個檔在同一層，各自留一份小 helper 不跨層共用）。
+bool version_is_current(const std::string &content) {
+    std::size_t end = content.size();
+    while (end != 0) {
+        const char tail = content[end - 1];
+        if (tail != ' ' && tail != '\t' && tail != '\n' && tail != '\r') break;
+        --end;
+    }
+    return std::string_view(content.data(), end) == "1";
+}
 
 int open_retry(const char *path, int flags) {
     int fd;
@@ -116,7 +130,7 @@ int run_deliver_world(const char *folder, const std::string &document) {
     }
     const bool read_ok = read_input(fd, version, error);
     const bool close_ok = close_checked(fd, error);
-    if (!read_ok || !close_ok || version != "1\n") {
+    if (!read_ok || !close_ok || !version_is_current(version)) {
         if (read_ok && close_ok) {
             std::fprintf(stderr, "aos deliver: unsupported version in %s/%s\n",
                          folder, kVersionPath);

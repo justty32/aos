@@ -11,8 +11,10 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <string_view>
 
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -22,6 +24,7 @@ namespace {
 constexpr const char *kAosDir = ".aos";
 constexpr const char *kVersionPath = ".aos/version";
 constexpr const char *kInstPath = ".aos/inst.json";
+constexpr const char *kRuniPath = ".aos/inst.json.runi";
 constexpr const char *kTurnPath = ".aos/turn";
 constexpr const char *kTurnTempPath = ".aos/turn.temp";
 
@@ -95,6 +98,19 @@ bool fsync_dir(const char *path, int &error) {
     return ok;
 }
 
+// §B-4 只立法「讀不到＝拒絕」與「不認得（比自己新）＝拒絕」，沒有立法 `.aos/version`
+// 的位元組格式。所以比對前先剝掉尾端空白：`1`、`1\n`、`1\n\n` 是同一個版面版本，
+// 手寫或編輯器補上的換行不該讓一個好世界進不去。`0`／`2`／空檔／非數字照樣拒絕。
+bool version_is_current(const std::string &content) {
+    std::size_t end = content.size();
+    while (end != 0) {
+        const char tail = content[end - 1];
+        if (tail != ' ' && tail != '\t' && tail != '\n' && tail != '\r') break;
+        --end;
+    }
+    return std::string_view(content.data(), end) == "1";
+}
+
 // 內容一律是 "<十進位整數>\n"；不是這個形狀一律當成解析失敗，不猜、不當成 0
 // （§B-3 只保證「讀不到」視為 0，不保證「讀到壞內容」也視為 0）。
 bool parse_turn(const std::string &content, std::uint64_t &value) {
@@ -109,10 +125,38 @@ bool parse_turn(const std::string &content, std::uint64_t &value) {
     return result.ec == std::errc() && result.ptr == content.data() + digits;
 }
 
+// `ulimit -f` 觸頂時 `write` 會先送 SIGXFSZ，而它的預設處置是砍死行程（實測
+// rc=153）——錯誤路徑一行都跑不到，`turn.temp` 的殘骸就這樣留下。範圍內把它忽略
+// 掉，`write` 就會誠實回 EFBIG，走既有錯誤路徑並清掉 temp。
+//
+// 為什麼是 scoped 而不是在行程層級設一次 SIG_IGN：**被忽略的訊號處置會跨 `execve`
+// 繼承**給子行程，等於偷偷改掉使用者程式的行為，違反 exec 層「凍結的矽」的精神。
+// `advance_turn` 只在 `execute_batch` 把整批（含 parallel 的 thread）全部收屍之後
+// 才呼叫，此時沒有任何 fork 在飛，範圍內忽略是安全的。
+class XfszIgnored {
+public:
+    XfszIgnored() {
+        struct sigaction ignore {};
+        ignore.sa_handler = SIG_IGN;
+        sigemptyset(&ignore.sa_mask);
+        armed_ = sigaction(SIGXFSZ, &ignore, &saved_) == 0;
+    }
+    ~XfszIgnored() {
+        if (armed_) sigaction(SIGXFSZ, &saved_, nullptr);
+    }
+    XfszIgnored(const XfszIgnored &) = delete;
+    XfszIgnored &operator=(const XfszIgnored &) = delete;
+
+private:
+    struct sigaction saved_ {};
+    bool armed_ = false;
+};
+
 // `.aos/turn`：讀不到（舊世界）視為 0（§B-3／裁-5，MUST NOT 拒絕、MUST NOT 動
 // 版面版本），否則遞增後 temp→fsync→rename→fsync 目錄，與 handoff 的耐久性順序
 // 同款寫法。只在 release_instruction 成功後呼叫（見 run_exec_once）。
 bool advance_turn(int &error) {
+    const XfszIgnored xfsz;
     std::uint64_t value = 0;
     const int fd = open_retry(kTurnPath, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
@@ -130,6 +174,12 @@ bool advance_turn(int &error) {
             return false;
         }
     }
+    // `turn` 的其他每一種壞內容都是大聲拒絕，溢位也一樣：靜默回繞成 0 會讓
+    // §E-4 那個「可攜的回合座標」無聲倒退，沒人知道。
+    if (value == UINT64_MAX) {
+        error = ERANGE;
+        return false;
+    }
     ++value;
     const std::string next = std::to_string(value) + "\n";
 
@@ -145,12 +195,19 @@ bool advance_turn(int &error) {
         ok = false;
     }
     if (!close_checked(temp_fd, error)) ok = false;
-    if (!ok) return false;
+    if (!ok) {
+        // 殘骸不留給 M3 的 `aos recover`：這份 `turn.temp` 是本函式自己建的，
+        // 失敗就自己清掉。unlink 再失敗也無話可說，回報原本那個 error。
+        unlink(kTurnTempPath);
+        return false;
+    }
 
     if (rename(kTurnTempPath, kTurnPath) != 0) {
         error = errno;
+        unlink(kTurnTempPath);
         return false;
     }
+    // rename 之後 `turn.temp` 已經不存在，這一步（目錄項落盤）失敗沒有殘骸可清。
     return fsync_dir(kAosDir, error);
 }
 
@@ -227,7 +284,7 @@ int run_exec_once(const char *folder, bool &did_work) {
     }
     bool read_ok = read_input(fd, version, error);
     const bool close_ok = close_checked(fd, error);
-    if (!read_ok || !close_ok || version != "1\n") {
+    if (!read_ok || !close_ok || !version_is_current(version)) {
         if (read_ok && close_ok) {
             std::fprintf(stderr, "aos exec: unsupported version in %s/%s\n",
                          folder, kVersionPath);
@@ -236,6 +293,17 @@ int run_exec_once(const char *folder, bool &did_work) {
                          kVersionPath, std::strerror(error));
         }
         return 1;
+    }
+
+    // `.runi` 存在 ⟺ 有一回合沒跑完（§D-7）。這個守衛擺在彙整之前：一個「拒絕
+    // 啟動」的回合不該先做完發布新批＋寫 header＋刪投遞這三個不可逆動作，把世界
+    // 留成同時掛著兩批待處理的樣子。claim 那邊的 Busy 分支保留當兜底——這兩個
+    // 檢查之間仍有 race，只是不再是常態路徑。
+    struct stat runi_status {};
+    if (lstat(kRuniPath, &runi_status) == 0) {
+        std::fprintf(stderr, "aos exec: refusing %s: %s already exists\n", folder,
+                     kRuniPath);
+        return 3;
     }
 
     HandoffResult handoff_result;
@@ -261,7 +329,7 @@ int run_exec_once(const char *folder, bool &did_work) {
         if (handoff_state == HandoffState::RenameFailed) {
             std::fprintf(stderr, "aos exec: cannot rename %s/%s: %s\n", folder,
                          kInstPath, std::strerror(handoff_result.error));
-        } else if (handoff_result.path == ".aos/inst.json.runi") {
+        } else if (handoff_result.path == kRuniPath) {
             std::fprintf(stderr, "aos exec: cannot inspect %s/%s: %s\n", folder,
                          handoff_result.path.c_str(),
                          std::strerror(handoff_result.error));
@@ -272,7 +340,7 @@ int run_exec_once(const char *folder, bool &did_work) {
         return 1;
     }
     did_work = true;
-    const int result = execute_batch(buffer, ".aos/inst.json.runi");
+    const int result = execute_batch(buffer, kRuniPath);
     handoff_state = release_instruction(kInstPath, handoff_result);
     if (handoff_state != HandoffState::Ok) {
         std::fprintf(stderr, "aos exec: cannot remove %s/%s: %s\n", folder,

@@ -44,9 +44,42 @@ aos exec my-world
 ```
 
 `aos init [folder]` 要求 folder 已存在，建立 `.aos/`、`inst.tempd/` inbox、寫入版面版本
-`1`，並把回合計數器 `.aos/turn` 建成 `0`（[SPEC](SPEC.md) §B-3）。若 `.aos/`
-已存在會明確拒絕，不會覆寫。省略 folder 時使用目前目錄 `.`。
-`.aos/` 裡哪些檔該進世界的 git、哪些是機器暫態，見 [SPEC](SPEC.md) §E-4。
+`1`、把回合計數器 `.aos/turn` 建成 `0`（[SPEC](SPEC.md) §B-3），再寫一份
+`.aos/.gitignore` 落實 §E-4 的 gitignore 政策。實跑：
+
+```console
+$ aos init w1
+$ ls -1a w1/.aos
+.
+..
+.gitignore
+inst.tempd
+turn
+version
+$ cat w1/.aos/.gitignore
+# aos 版面暫態（SPEC §E-4）：機器暫態不進 git。
+# version 與 turn 是可攜的回合座標，MUST 納入，所以這裡不排除。
+# inst.json 與 inst-head.json 是 MAY——要不要讓回滾重演舊回合由你決定。
+*.temp
+*.runi
+*.bad
+*.tempd/
+```
+
+`aos init` 成功時安靜無輸出、回 0。失敗都回 1，訊息如下：
+
+```console
+$ aos init w1                 # `.aos/` 已存在：明確拒絕，不覆寫
+aos init: refusing w1: .aos already exists
+$ aos init w2                 # `w2/.aos` 是一個普通檔，不是目錄
+aos init: invalid w2/.aos: Not a directory
+$ aos init w3/nope            # folder 本身不存在：init 不會替你建
+aos init: cannot open w3/nope: No such file or directory
+```
+
+省略 folder 時使用目前目錄 `.`。**舊世界缺 `.aos/.gitignore` 不算錯**：`aos exec` 與
+`aos deliver` 都不檢查它，也不補建。`.aos/` 裡哪些檔該進世界的 git、哪些是機器暫態，
+見 [SPEC](SPEC.md) §E-4。
 
 `aos exec [folder]` 會先依檔名的字典序聚合 `.aos/inst.tempd/<name>.json`，再讀取
 `.aos/inst.json`；每份投遞可以是**一個** JSON 物件，或**一個陣列**

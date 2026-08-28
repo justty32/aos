@@ -84,9 +84,11 @@ runner 不對輸入設任何上限，一個無界的生產端就能讓它一直�
 所有的記憶體配置與複雜的準備工作，都在 `fork` 之前於父行程裡完成：實作會驗證
 環境變數的 key、把繼承來的環境合併進來、把字串與 `envp` 實體化、建好 `argv`、
 取得有效的工作目錄，並解析 PATH 候選項。子行程只收到穩定的指標，然後呼叫
-`setpgid`、`open`、`dup2`、`close`、`chdir`、`execve` 與 `_exit`。這些都是
-async-signal-safe 的 POSIX 操作；那裡不會發生任何 C++ 記憶體配置、`setenv`、
-字串操作或 `execvp`。父行程也會呼叫 `setpgid`，好在逾時訊號鎖定整個群組之前，
+`setpgid`、`open`、`dup2`、`fcntl`、`close`、`chdir`、`write`、`execve` 與
+`_exit`。這些都是 async-signal-safe 的 POSIX 操作；那裡不會發生任何 C++ 記憶體
+配置、`setenv`、字串操作或 `execvp`。重導向開檔失敗時往 fd 2 噴的那行 warning
+也守同一條線：用 `write(2)` 分段寫出已經在記憶體裡的 C 字串，不用 `fprintf`、
+不做字串串接，連 `strlen` 都自己數（它不在 POSIX 的 async-signal-safe 清單裡）。父行程也會呼叫 `setpgid`，好在逾時訊號鎖定整個群組之前，
 先關掉父／子行程之間的排程競速。
 
 ## 外部專案怎麼用
