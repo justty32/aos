@@ -12,6 +12,7 @@ aos_add_subproject(inst
         src/format_decode.cpp
         src/resolve.cpp
         src/handoff.cpp
+        src/handoff_aggregate.cpp
         src/handoff_deliver.cpp
         src/handoff_fs.cpp
         src/handoff_header.cpp

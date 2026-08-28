@@ -126,7 +126,12 @@ AOS_API const char *to_string(DirectiveField field) noexcept;
 
 /* handoff：彙整、取件、釋放 instruction 檔，不執行 instruction。 */
 
-/* 新值一律加在尾端（同下）。 */
+/* 新值一律加在尾端——而且**這個列舉已經加不動了**：鏡射它的 aos_handoff_state
+ * （inst.h）在第 10／11／12 三格放了 C ABI 專屬的 ALLOC_FAILED／READ_ERROR／
+ * BUFFER_TOO_SMALL，C++ 端再加第 10 個值就會跟 C 端錯開，capi_handoff.cpp 的
+ * static_cast 會把它翻成錯的 C 狀態。要表達新的失敗，就借語意最接近的既有值
+ * （例如 #26 那個「header 寫失敗 ＋ 投遞刪失敗」的致命組合借 PublishWriteFailed，
+ * 位置放在 HandoffResult::path／error），或等一次同時改兩邊的 ABI 修訂。 */
 enum class HandoffState {
     Ok,
     InvalidArgument,
@@ -140,15 +145,21 @@ enum class HandoffState {
     DeliveryInvalid, /* 投遞的文件過不了唯一 parser：原因在 DeliverResult */
 };
 
-/* 新值一律加在尾端（C ABI 的鏡射列舉一經釋出就凍結，見 conventions）。 */
+/* 新值一律加在尾端。這個列舉**沒有** C ABI 鏡射（inst.h 不宣告 issue），所以
+ * 尾端追加是安全的，不像上面的 HandoffState。 */
 enum class HandoffIssueKind {
     InvalidDelivery,
-    DeliveryReadFailed,
+    DeliveryReadFailed,  /* 投遞讀不到（權限／IO）：留在原地不隔離，下一輪再試 */
     IsolationFailed,
     DeliveryRemoveFailed,
     HeaderWriteFailed,   /* header sidecar 寫不成：批照發，這一輪沒有去重保證 */
     HeaderInvalid,       /* 現任 header 讀不到或讀不懂：視同沒有 header */
     DirectorySyncFailed, /* rename／unlink 之後的目錄 fsync 失敗：耐久性缺角 */
+    DeliveryNotRegular,  /* 收件匣裡不是普通檔（FIFO／目錄／socket）：跳過不讀、
+                          * 不隔離。沒有寫端的 FIFO 會讓 open 永久阻塞，而那發生
+                          * 在取件之前——整台機器會無聲停擺 */
+    DeliveryNameIgnored, /* 以 .json 結尾但檔名形狀不合（a.b.json／.hidden.json）：
+                          * 不收、不隔離，只出聲，不再靜默躺在收件匣裡 */
 };
 
 struct HandoffIssue {

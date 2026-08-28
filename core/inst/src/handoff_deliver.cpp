@@ -90,11 +90,12 @@ HandoffState deliver_instructions(const std::string &instruction_path,
             return HandoffState::PublishWriteFailed;
         }
         // ⑤ 排他發布（§D-2）：rename 前 `.temp` 已經 fsync 過，收件匣裡不會出現
-        // 「名字有了、內容還沒落盤」的投遞。撞名（EEXIST）換名重試；其他錯誤不重試
-        // ——退階路徑（link＋unlink）的 unlink 失敗也會走到這裡，那時 ready 可能
-        // 已經連好了，換個名字重投就真的多出一份。誠實回報、留 `.temp` 當現場證據，
-        // 讓人來處理（§D-8 的一貫哲學）。
-        if (!detail::publish_exclusive(temp, ready, error)) {
+        // 「名字有了、內容還沒落盤」的投遞。撞名（EEXIST）換名重試；其他錯誤不重試。
+        // 退階路徑（link＋unlink）的收尾 unlink 失敗**不算失敗**（#11）：那時 ready
+        // 已經連好、內容完整、彙整一定會收，回報失敗只會讓生產者重投＝真的多出
+        // 一份。errno 走 leftover 進 sync_error，與目錄 fsync 失敗同一條警告通道。
+        int leftover = 0;
+        if (!detail::publish_exclusive(temp, ready, error, &leftover)) {
             if (error == EEXIST) {
                 unlink(temp.c_str());
                 continue;
@@ -108,6 +109,7 @@ HandoffState deliver_instructions(const std::string &instruction_path,
         // 但把 errno 留在 sync_error 讓上層警告。謊報投遞失敗會讓生產者重投，
         // 那才真的多出一份。
         if (!detail::fsync_dir(paths.inbox, error)) result.sync_error = error;
+        if (leftover != 0 && result.sync_error == 0) result.sync_error = leftover;
         result.name = name;
         return HandoffState::Ok;
     }

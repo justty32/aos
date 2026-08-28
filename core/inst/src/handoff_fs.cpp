@@ -31,9 +31,12 @@ int open_retry(const char *path, int flags, mode_t mode = 0) {
     return fd;
 }
 
-bool close_checked(int fd, int &error) {
+// close 的 errno 只有在前面都還沒出錯時才有資格寫進 error（ok 為 true）。寫失敗
+// **且** close 也失敗時，先發生的那個才是真正的原因；讓 close 蓋掉它只會回報一個
+// 比較沒用的錯（#24）。無論如何 fd 都關掉，不洩漏。
+bool close_checked(int fd, bool ok, int &error) {
     if (close(fd) == 0) return true;
-    error = errno;
+    if (ok) error = errno;
     return false;
 }
 
@@ -82,7 +85,7 @@ bool read_file(const std::string &path, std::string &buffer, int &error) {
         if (count == 0) break;
         buffer.append(chunk, static_cast<std::size_t>(count));
     }
-    if (!close_checked(fd, error)) ok = false;
+    if (!close_checked(fd, ok, error)) ok = false;
     return ok;
 }
 
@@ -117,7 +120,7 @@ bool write_file_flags(const std::string &path, const std::string &data,
         error = errno;
         ok = false;
     }
-    if (!close_checked(fd, error)) ok = false;
+    if (!close_checked(fd, ok, error)) ok = false;
     return ok;
 }
 
@@ -143,11 +146,12 @@ bool fsync_dir(const std::string &path, int &error) {
         error = errno;
         ok = false;
     }
-    if (!close_checked(fd, error)) ok = false;
+    if (!close_checked(fd, ok, error)) ok = false;
     return ok;
 }
 
-bool publish_exclusive(const std::string &from, const std::string &to, int &error) {
+bool publish_exclusive(const std::string &from, const std::string &to, int &error,
+                       int *leftover_error) {
     if (renameat2(AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(),
                   RENAME_NOREPLACE) == 0) {
         return true;
@@ -165,18 +169,52 @@ bool publish_exclusive(const std::string &from, const std::string &to, int &erro
         return false;
     }
     if (unlink(from.c_str()) != 0) {
-        // 目的檔已經發布成功，但收尾沒做完；呼應 write_file 對 close 失敗的
-        // 處理方式——收尾步驟失敗，整體就回報失敗，讓呼叫者知道還有殘留要處理。
-        error = errno;
-        return false;
+        // 目的檔已經連好、內容完整，aggregate 一定會收——這一步失敗只是留下一份
+        // from 的殘骸。回報整體失敗會讓呼叫者重做（生產者重投＝真的多出一份，
+        // 那才是最貴的方向，#11），所以回 true，errno 走 leftover_error 當警告。
+        if (leftover_error != nullptr) *leftover_error = errno;
     }
     return true;
 }
 
-std::string next_delivery_name() {
+std::string next_unique_token() {
     static std::atomic<unsigned long long> counter{0};
     const unsigned long long seq = counter.fetch_add(1, std::memory_order_relaxed);
     return std::to_string(getpid()) + "-" + std::to_string(seq);
+}
+
+std::string next_delivery_name() { return next_unique_token(); }
+
+namespace {
+
+// 把行程內唯一的權杖插進最後一個 `.json` 之前，再接上狀況字。名字變成
+// `<原名>-<pid>-<seq>`，所以整體仍是 §B-1 的 `<名字>.<副檔名>.<狀況>`。
+// 路徑裡沒有 `.json` 時（不該發生，derive_paths／is_delivery_name 都擋掉了）
+// 退成把權杖接在最後面，仍然唯一。
+std::string unique_status_path(const std::string &path,
+                               const std::string &status) {
+    constexpr std::string_view suffix = ".json";
+    const std::string token = "-" + next_unique_token();
+    const std::size_t json = path.rfind(suffix);
+    if (json == std::string::npos) return path + token + status;
+    return path.substr(0, json) + token + path.substr(json) + status;
+}
+
+}  // namespace
+
+std::string unique_temp_path(const std::string &base) {
+    return unique_status_path(base, ".temp");
+}
+
+std::string unique_bad_path(const std::string &path) {
+    return unique_status_path(path, ".bad");
+}
+
+std::string parent_directory(const std::string &path) {
+    const std::size_t slash = path.find_last_of('/');
+    if (slash == std::string::npos) return ".";
+    if (slash == 0) return "/";
+    return path.substr(0, slash);
 }
 
 bool is_delivery_name(const std::string &name) {
