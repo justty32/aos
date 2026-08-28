@@ -74,3 +74,19 @@ LLM CPU 要決定下一步就得知道世界現在什麼樣。沒有 generation�
 
 但它回的 `Ok` 與「inbox 是空的」回的是**同一個狀態**（`Ok` ＋ `published=false`）。loop
 分不出「這輪沒人投遞」和「上一批還卡著沒被取走」——而這兩種情況該做的事不一樣。
+
+## 九、彙整有一個崩潰窗口，會讓同一批執行兩次（第九輪，實測）
+
+`aggregate_instructions` 的順序（`handoff.cpp:136-143`）是
+**write temp → rename 成 `inst.json`（發布）→ `published = true` → 才
+`remove_accepted_deliveries()`**。
+
+在**發布之後、刪除之前**掛掉（或 `unlink` 失敗——它只記一個 issue 就繼續），投遞仍留在
+inbox。接著：下一圈 aggregate 因 `inst.json` 存在而早退（正確）→ claim → 執行 → release
+刪掉 `.runi` → **再下一圈 aggregate 又看到那批投遞，再發布一次，同一批第二次執行**。
+
+不需要 race，只要一次崩潰或一次 `unlink` 失敗。**這正是 `.runi` 那把鎖要防的事**（同一
+回合跑兩次），只是它從另一扇門進來——鎖守的是「同時」，這裡是「先後」。
+
+修法方向：**發布前就把投遞標記成已消費**，或讓投遞帶 id、發布時把 id 記進批次 header，
+重複的就認得出來。又回到[批需要 header](../machine-shape/instruction.md)。

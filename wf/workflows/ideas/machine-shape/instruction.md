@@ -56,3 +56,37 @@ Neumann，但有 MMU、有 W^X；這裡沒有——**而且不該有**，因為�
 目前兩者不可分（見 [feedback-and-failure](../call-format/feedback-and-failure.md) 第三條）。
 要 ISA 有地位，這個區分大概是必要的——否則「指令從哪來」永遠答不出來。又回到第 1 條。
 
+---
+
+# 第九輪（實測）
+
+## 18. 整批在任何一筆執行之前就全部 resolve 完 → **一個回合內不可能有資料流**
+
+`run_batch.cpp:102` 的順序是死的：先跑完一整個迴圈把**每一筆**都 resolve（任一筆失敗就
+`return 1`，整批不執行），**然後**才建 thread 執行。所以 **`$ref` 不可能引用同一批裡前一
+筆產生的檔案**——那個檔案在 resolve 當下還不存在。
+
+三件事疊起來：一回合＝一整批（已定）＋批內依賴邊執行器看不見＋批內 `$ref` 在執行前就求
+值完畢。結論：**一個回合是純粹的並行構造，內部沒有任何資料流，所有鏈接都必須跨回合。**
+
+這不是缺陷，是個乾淨的語意——但它**沒有被寫在任何地方**，而它是這個 ISA 最重要的約束
+之一。
+
+## 19. 這台機器已經有一條四階段管線，只是沒說出來
+
+```text
+claim（rename → .runi）     = fetch      取指
+resolve（$env／$ref 求值）   = decode     解碼
+fork/exec                   = execute    執行
+exit 檔                     = writeback  寫回
+```
+
+這個框架直接切開了「loop 的職權」與「inst 的地位」：**loop 擁有 fetch 與 writeback，
+exec 擁有 execute，decode 目前卡在錯的一層**（[core-layering](../core-layering.md) 把
+resolve 留在最內圈；照這條線它屬於 decode，不屬於 execute）。
+
+也修正了[第一輪的一個判斷](../call-format/format-gaps.md)：`$ref` 讀檔不是「求值語言汙染
+最內圈」，而是**解碼階段本來就該做的事**——真正的問題只是它被放錯圈，不是它不該存在。
+
+**四階段裡三個有名字，只有 writeback 沒有**：`exit` 只寫單筆，沒有整批的。那正是 loop
+缺的旗標暫存器。

@@ -6,7 +6,7 @@ aos 的核心本質是三層：**一個簡單的通用呼叫格式＋它的標�
 標準**，然後在此之上才是「檔案系統作為 CPU process」（loop、`inst.json` 版面——那些
 在 [turn-based-folder](turn-based-folder.md) 與 [core-layering](core-layering.md)）。
 
-這個主題只問前兩層：**`inst` 這個 POSIX 呼叫格式，真的好嗎？** 內容按五輪拷問拆開。
+這個主題只問前兩層：**`inst` 這個 POSIX 呼叫格式，真的好嗎？** 內容按五輪拷問拆開。**九輪的裁決總表在 [verdicts](verdicts.md)。**
 
 > **使用者的總裁決**：這些都是**工程問題**，稍微調整設計就差不多能解決，不動搖
 > inst-POSIX 這個大方向。而 fork/exec **只是呼叫機制、不是呼叫約定**，它不能成為通用
