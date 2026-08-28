@@ -11,7 +11,7 @@
 |-------|--------|
 | 搞懂這個專案是什麼、為什麼長這樣 | [overview.md](overview.md) |
 | **查 normative 條款**（機器的法典，唯一真源） | [SPEC.md](SPEC.md) |
-| **`.aos` 資料夾長什麼樣、回合怎麼跑**（規格，核心已實作） | [aos-folder.md](aos-folder.md) |
+| **`.aos` 資料夾長什麼樣、回合怎麼跑**（說明與理由；normative 條款以 [SPEC.md](SPEC.md) 為準） | [aos-folder.md](aos-folder.md) |
 | **知道接下來要做什麼、哪些事在等我拍板** | [roadmap.md](roadmap.md) |
 | `$ref`／`$env`／`$opt` **為什麼**長這樣（設計理由，已實作） | [inst-directives.md](inst-directives.md) |
 | 把它建起來、跑測試、裝到某個地方 | [build.md](build.md) |

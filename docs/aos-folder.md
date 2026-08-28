@@ -1,22 +1,25 @@
-# `.aos` 資料夾標準
+# `.aos` 資料夾說明
 
-> **回合語意與 instruction 格式的 normative 已收進 [SPEC](SPEC.md)**（A／C／F 區），
-> 那部分本檔是說明、以 SPEC 為準。版面、交接協定、git 政策（B／D／E 區）的收編在
-> M1——收編前本檔仍是那幾節的現行規格。
+> **本檔全部是說明性文件，normative 一律以 [SPEC](SPEC.md) 為準。** 回合語意與
+> instruction 格式（A／C／F 區）早先已收編，命名與版面、交接協定、世界與 git
+> （B／D／E 區）也在 M1 收編完畢。**本檔與 SPEC 不一致時以 SPEC 為準**，該修的是本檔。
+> 留在這裡的是條文不寫的東西：為什麼長這樣、實作現況、還開著的問題。
 
 ← [文件索引](README.md)｜[roadmap](roadmap.md)｜指示詞 [inst-directives](inst-directives.md)
 
-**這份是規格。** `.aos` 長什麼樣、各個檔案什麼意思、交接怎麼做，以本檔為準。
+**這份不是規格，是說明。** `.aos` 長什麼樣、各個檔案什麼意思、交接怎麼做，條文在
+[SPEC](SPEC.md)；下面每一節都標出對應的條款編號，照著過去看。
 
-**核心實作已經落地。** `aos init`、`aos exec [<folder>]`、`aos exec --loop <毫秒>`
-讀得懂本檔描述的一切：命名標準、三步交接、彙整、回合語意、退出碼、版本檢查。實作
-細節見 [`core/inst/docs/`](../core/inst/docs/)。**還沒實作的只有 `insts/` 底下的其他
-CPU**——分層本身（`aggregate_instructions` 等三支以 instruction 檔路徑為參數）已經
+**核心實作已經落地。** `aos init`、`aos deliver [<folder>]`、`aos exec [<folder>]`、
+`aos exec --loop <毫秒>` 讀得懂本檔描述的一切：命名標準、三步交接（含投遞）、彙整、
+回合語意、回合計數器、批 header sidecar、退出碼、版本檢查。實作細節見
+[`core/inst/docs/`](../core/inst/docs/)。**還沒實作的只有 `insts/` 底下的其他
+CPU**——分層本身（`aggregate_instructions` 等以 instruction 檔路徑為參數的那幾支）已經
 能對 `insts/llm.json` 運作，缺的是叫得動它的子命令。
 
 模型的**為什麼**在 [`wf/workflows/ideas/turn-based-folder.md`](../wf/workflows/ideas/turn-based-folder.md)，
-做的**順序**在 [roadmap](roadmap.md)。三者衝突時：規格看本檔、理由看 idea、排程看
-roadmap。
+做的**順序**在 [roadmap](roadmap.md)。彼此衝突時：條文看 [SPEC](SPEC.md)、理由看 idea、
+排程看 roadmap、現況與說明看本檔。
 
 ---
 
@@ -31,6 +34,8 @@ aos exec <folder>   ＝ 推進一回合
 沒有常駐狀態。**世界在檔案系統上，不在任何行程的記憶體裡。**
 
 ## 二、命名標準
+
+> 條文：[SPEC](SPEC.md) **§B-1**（狀況是**封閉清單**，加新狀況字＝修憲）。
 
 ```text
 <名字>.<副檔名>.<狀況>
@@ -47,7 +52,7 @@ aos exec <folder>   ＝ 推進一回合
 | `.d` | 一般資料夾 |
 | `.tempd` | 投遞匣資料夾 |
 
-**狀況**（只有兩個，不要再加第三個字表達同一件事）
+**狀況**（就這三個，不要再加新的字表達同一件事）
 
 | | |
 |---|---|
@@ -59,20 +64,26 @@ aos exec <folder>   ＝ 推進一回合
 
 ## 三、版面
 
+> 條文：[SPEC](SPEC.md) **§B-2**（版面樹）、**§B-3**（`turn`）、**§C-8**（header
+> sidecar）、**§B-4**（`version`）。
+
 ```text
 <folder>/                        ← 世界。這裡的一切就是狀態
     .aos/
-        version                  ← 標準版本（見第九節）
+        version                  ← 版面版本（見第九節）
+        turn                     ← 回合計數器（這台機器的 PC，§B-3）
         inst.json                ← 核心 CPU 待執行的批次
         inst.json.temp           ← 彙整中的下一批
         inst.json.runi           ← 已取走、正在跑的那一批
+        inst-head.json           ← 那一批的 header sidecar（§C-8）
         inst.tempd/              ← 投遞匣
-            <pid>.json           ← 投遞完成，等彙整
-            <pid>.json.temp      ← 還在寫，彙整者略過
+            <pid>-<seq>.json     ← 投遞完成，等彙整（檔名見 §D-2）
+            <pid>-<seq>.json.temp ← 還在寫，彙整者略過
         insts/                   ← 其他 CPU，一顆一份
             llm.json
             llm.json.temp
             llm.json.runi
+            llm-head.json
             llm.tempd/
 ```
 
@@ -117,15 +128,20 @@ aos exec <folder>   ＝ 推進一回合
 
 ## 六、交接協定：三步，每步一次 `rename`
 
+> 條文：[SPEC](SPEC.md) **§D-1**（三步）、**§D-2**（投遞與檔名）、**§D-3**
+> （`deliver`）、**§D-4**（彙整規則）、**§D-5**（fsync 與發布順序）、**§D-6**
+> （批 id 與去重）、**§D-7**（`.runi` 語意）、**§D-8**（`.bad` 誰清）。庫層的實際
+> 行為見 [`core/inst/docs/handoff.md`](../core/inst/docs/handoff.md)。
+
 ```text
-投遞  inst.tempd/<pid>.json.temp ─rename─▶ inst.tempd/<pid>.json
-彙整  併成 inst.json.temp        ─rename─▶ inst.json
-取件  inst.json                  ─rename─▶ inst.json.runi
+投遞  inst.tempd/<名>.json.temp ─rename─▶ inst.tempd/<名>.json
+彙整  併成 inst.json.temp       ─rename─▶ inst.json
+取件  inst.json                 ─rename─▶ inst.json.runi
 ```
 
 | 步驟 | 誰做 | 規則 |
 |---|---|---|
-| **投遞** | 任何生產者 | 先寫 `<pid>.json.temp`，寫完才 `rename` 成 `<pid>.json`。檔名帶 pid，因為 `rename` 原子但**寫入不是**，共用檔名會互相蓋寫 |
+| **投遞** | 任何生產者（用 `aos deliver`） | 先寫 `<名>.json.temp`，寫完才 `rename` 成 `<名>.json`。檔名必須唯一，因為 `rename` 原子但**寫入不是**，共用檔名會互相蓋寫；`aos deliver` 用的是 `<pid>-<seq>`（§D-2），發布時排他、絕不覆蓋既有名 |
 | **彙整** | 彙整者 | 把 `inst.tempd/` 底下所有**沒有狀況後綴**的投遞併成 `inst.json.temp`，完成後 `rename` 成 `inst.json` |
 | **取件** | `aos exec` | 完整讀進記憶體後**立刻** `rename` 成 `inst.json.runi`，然後才執行；回合結束再刪掉 `.runi` |
 
@@ -154,16 +170,22 @@ crash 之後要人來處理——**這是刻意的**。
 
 ### 彙整的規則
 
-- **只收沒有狀況後綴的投遞**。`<pid>.json` 會被收，`<pid>.json.temp`（還在寫）與
-  `<pid>.json.bad`（已隔離）不會。這條規則自動涵蓋未來新增的任何狀況。
+- **只收沒有狀況後綴的投遞**。`<名>.json` 會被收，`<名>.json.temp`（還在寫）與
+  `<名>.json.bad`（已隔離）不會。這條規則自動涵蓋未來新增的任何狀況。
 - **順序不保證**。實作用檔名字典序即可——確定性有意義，但**投遞者不得假設任何順序**。
   需要先後關係就自己排進同一份投遞裡，不要靠彙整順序。
 - **`inst.json` 已經有一份沒被讀走的批次時，這一輪不發布**，等下一輪再試。不覆蓋、
   不合併——「一回合＝一整批」的直接推論。
 - **無效的投遞：噴 warning、把那一份隔離、繼續處理其餘的**。隔離就是就地改名加上
-  `.bad` 狀況（`<pid>.json` → `<pid>.json.bad`），這樣它自然不會再被收，也留在原地供人
+  `.bad` 狀況（`<名>.json` → `<名>.json.bad`），這樣它自然不會再被收，也留在原地供人
   檢查。一份壞投遞不會擋住整批。
 - 彙整完的投遞在發布成功之後才刪除。
+
+彙整還有兩件本節原本沒寫、M1 才收編進 SPEC 的事：**發布順序與 fsync**（§D-5——批
+`.temp` → header `.temp` → rename header〔提交點〕→ rename 批 → 刪投遞，每步都
+fsync），以及**批 id 去重**（§D-6——同一組投遞在崩潰後殘留時不會被發布第二次；只保證
+「整組殘留」這個情況）。同時彙整會在批旁邊寫一份 header sidecar（§C-8）。三件事的實作
+說明都在 [`handoff.md`](../core/inst/docs/handoff.md)。
 
 ### 彙整跑在哪裡
 
@@ -192,6 +214,9 @@ crash 之後要人來處理——**這是刻意的**。
 
 ## 八、退出碼
 
+> 條文：[SPEC](SPEC.md) **§D-9**（M1 逐失敗模式實測後收編，涵蓋 `aos exec`／`init`／
+> `deliver` 三支）。**下面這張表是舊版、只涵蓋 `aos exec` 的粗略分類，以 §D-9 為準。**
+
 `aos exec` 的退出碼只回答「**這個回合有沒有正常跑完**」，**不回答**「回合裡的指令做得
 好不好」。
 
@@ -202,11 +227,19 @@ crash 之後要人來處理——**這是刻意的**。
 | 2 | 用法錯誤 |
 | 3 | 拒絕啟動：`.runi` 已存在 |
 
+§D-9 把 `1` 的界線改寫成「**aos 自己跑不動，或收不了尾**」——本表的「函式庫層失敗」
+這個講法蓋不住實測到的兩種情況（世界不合法、`turn` 遞增失敗），後者甚至發生在回合
+已經推進之後。另外 `2` **只在碰檔案系統之前**判定，所以「世界路徑打錯」是 `1` 不是 `2`。
+
 子行程回非零、被訊號殺掉、逾時——那些都算「一次**完成**的執行」，回合照樣 0。要知道
 某筆指令的結果，用它自己的 `exit` 欄位把狀態寫進檔案；**回合之間靠檔案傳結果**，退出碼
 只給跑 `aos exec` 的那個人看。
 
 ## 九、版本
+
+> 條文：[SPEC](SPEC.md) **§B-4**（版面版本，現行＝1）與 **§F-2**（版面版本與**格式
+> 版本**是兩件事：格式版本住在批 header 的 `version` 欄，見 §F-1／§C-8）。`turn` 與
+> `inst-head.json` 都是純新增，不會因此 bump 版面版本。
 
 `.aos/version` 記錄這份標準的版本。
 
@@ -220,22 +253,36 @@ crash 之後要人來處理——**這是刻意的**。
 
 ## 十、`.aos` 與 git
 
+> 條文：[SPEC](SPEC.md) **§E-4**（`.gitignore` 政策）、**§E-3**（快照與回滾）。
+> **本節原本寫的「整個 `.aos/` 都不進 git」已經被 §E-4 取代**，下面是取代後的版本。
+
 > **可攜的語意，和「這台機器上正在跑什麼」，必須分開。**
 
-`.aos` 目前裝的全部都是**指令佇列與它們的執行狀況**——沒有一樣是可攜的。所以：
-
-**整個 `.aos/` 都不進 git。**
+原本 `.aos` 裝的全部都是**指令佇列與它們的執行狀況**——沒有一樣是可攜的，所以整包不進
+git。M1 之後 `.aos` 裡長出了可攜的東西（`turn` 是這個世界的回合座標），所以政策改成
+逐項切：
 
 ```gitignore
-.aos/
+# 機器暫態：MUST NOT 進 git
+*.temp
+*.runi
+*.tempd/
+*.bad
 ```
 
-理由：clone 一份帶著 `inst.json` 的 repo，等於在新機器上憑空多出一批待執行的工作；帶著
-`inst.json.runi` 更糟——新機器會以為有個回合正在跑。**clone 出來的資料夾應該是一個乾淨
-的世界**，要讓它動就自己 `aos init`。
+- **一定不進**：`*.temp`（還在生成）、`*.runi`（正在跑）、`*.tempd/`（投遞匣）、
+  `*.bad`（隔離的壞投遞）。理由跟原本一樣：clone 一份帶著 `inst.json.runi` 的世界，
+  新機器會以為有個回合正在跑——那是一個永久拒絕啟動的死鎖世界（§E-3）。
+- **一定要進**：`.aos/version` 與 `.aos/turn`。這兩個是可攜的座標：版面認不認得、
+  這個世界走到第幾回合。
+- **看你要不要**（MAY）：`inst.json` 與 `inst-head.json`。納入的話，回滾到某個 commit
+  會連那批待執行的工作一起復原、下一次 `aos exec` 會重演那個回合——**那要是你選的，
+  不是副作用**。
 
-可攜的東西放在 `<folder>` 本體（那才是世界，本來就會 commit）。之後如果 `.aos` 裡真的
-長出可攜的內容（人格、記憶），再回來拆分區——**但不是現在，現在沒有那種東西**。
+可攜的東西放在 `<folder>` 本體（那才是世界，本來就會 commit）。
+
+> 本原始碼 repo 不是世界：它根目錄的 `.gitignore` 整包排除 `.aos/`，那是測試殘留的
+> 處理，跟本節的世界政策無關（§E-4 末句）。
 
 ## 十一、怎麼變成一個 aos 世界
 
@@ -278,20 +325,22 @@ crash 之後要人來處理——**這是刻意的**。
 ### 仍然開著的
 
 - **`--loop` 要不要改用 inotify** 取代輪詢。
-- **殘存檔案的清理**（`.bad` 會一直累積、crash 留下的 `.runi` 要人手動清）。方向已有
-  雛形：**併進 `aos exec`、用跟彙整一樣的解耦方式實作**，設一個累積量上限（KB），
-  超過就清掉。**目前先不做。**
-  設計時要注意一件事：`.bad` 是會累積很多份的，但 `.runi` 永遠只有一份——對 `.runi`
-  用「大小上限」等於「批次夠大就自動清掉 crash 現場」，那會跟「`.runi` 已存在就拒絕
-  啟動、crash 之後要人來處理」這條刻意的規則打架。兩者要怎麼並存得想清楚。
+- **殘存檔案的清理**（`.bad` 會一直累積、crash 留下的 `.runi` 要人手動清）。
+  **原本「彙整順手自動清掉」的雛形已經被否決**：[SPEC](SPEC.md) §D-8 裁定彙整者
+  **MUST NOT** 自動刪 `.bad`，清理歸人、或歸之後的 `aos recover`（M3）。
+  當初就看得出來的那個理由現在成了條文：`.bad` 是會累積很多份的，但 `.runi` 永遠
+  只有一份——對 `.runi` 用「大小上限」等於「批次夠大就自動清掉 crash 現場」，那會跟
+  「`.runi` 已存在就拒絕啟動、crash 之後要人來處理」這條刻意的規則打架。
 - `.runi` 的檢查與 `rename` 之間有 TOCTOU。兩支 `aos exec` 撞在一起時第二支的 `rename`
   會因為 `inst.json` 已被搬走而失敗，所以**不會重複執行**，只是退出碼與訊息不精確。
   要真的原子化得用 `renameat2(RENAME_NOREPLACE)` 或 `link`＋`unlink`。
 - `insts/` 底下的名字誰配、撞名怎麼辦。
-- **投遞那一步沒有實作。** 第六節的三步協定裡，彙整／取件／釋放都有對應的函式，
-  **只有投遞（先寫 `<pid>.json.temp`、再 `rename`）沒有**。整套協定的安全性就靠這一步，
-  現在它是口頭約定：第一個直接寫進 `<pid>.json` 的生產者，就會讓彙整者讀到寫到一半
-  的檔案。要在有第二個生產者之前補上。
+- ~~**投遞那一步沒有實作。**~~ **M1 補上了**：投遞現在是 `aos deliver [folder]`
+  （子命令）＋ `aos::deliver_instructions`（庫層）＋ `aos_deliver_buffer`／
+  `aos_deliver_file`（C ABI），唯一檔名、先寫 `.temp` 再排他 `rename`、canonical
+  位元組全部內建，生產者不必也不該自己手刻（[SPEC](SPEC.md) §D-3）。用法見
+  [`docs/usage.md`](usage.md) 的 `aos deliver` 一節，庫層行為見
+  [`handoff.md`](../core/inst/docs/handoff.md)。
 - **「世界」本身沒有抽象。** 彙整那三支是以 instruction 檔路徑為參數的（所以已經能
   對 `insts/llm.json` 用），但「`.aos` 在不在」「`version` 認不認得」「`chdir` 到哪」
   三件事寫死在 `aos exec` 的實作裡。等 `aos llm exec` 出現時，要嘛複製一份，要嘛那時

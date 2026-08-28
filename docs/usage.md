@@ -16,13 +16,16 @@ aos 有兩種用法，背後是同一份實作。
 
 只有一支執行檔 `aos`，每個小專案是它的一條子命令。
 
-```bash
+```console
 $ aos --help
 usage: aos <command> [args...]
 
 commands:
   exec         推進一個 aos 資料夾的一回合
   init         初始化一個 aos 資料夾
+  deliver      投遞一批 instruction 到 aos 資料夾的收件匣
+  tooljson     讀取並檢查 tool JSON spec
+  llms         呼叫 OpenAI 相容端點並查詢模型能力
 ```
 
 不給子命令、或給了不認得的名字，都會印出這張表並回 exit code 2。
@@ -40,9 +43,10 @@ printf '%s\n' '{"argv":["echo","hello"],"stdout":"hello.txt"}' \
 aos exec my-world
 ```
 
-`aos init [folder]` 要求 folder 已存在，建立 `.aos/`、`inst.tempd/` inbox 並寫入版本 `1`。若 `.aos/`
-已存在會明確拒絕，不會覆寫。整個 `.aos/` 都是本機執行狀態，應加入 `.gitignore`。
-省略 folder 時使用目前目錄 `.`。
+`aos init [folder]` 要求 folder 已存在，建立 `.aos/`、`inst.tempd/` inbox、寫入版面版本
+`1`，並把回合計數器 `.aos/turn` 建成 `0`（[SPEC](SPEC.md) §B-3）。若 `.aos/`
+已存在會明確拒絕，不會覆寫。省略 folder 時使用目前目錄 `.`。
+`.aos/` 裡哪些檔該進世界的 git、哪些是機器暫態，見 [SPEC](SPEC.md) §E-4。
 
 `aos exec [folder]` 會先依檔名的字典序聚合 `.aos/inst.tempd/<name>.json`，再讀取
 `.aos/inst.json`；每份投遞可以是**一個** JSON 物件，或**一個陣列**
@@ -51,6 +55,10 @@ aos exec my-world
 crash、被 kill 或斷電才會留下它。沒有 `inst.json` 是正常的空回合，安靜回 0；若啟動
 時 `.runi` 已存在則拒絕並回 3。
 
+回合真的推進之後——批次執行完、`.runi` 也釋放掉了——`aos exec` 會把 `.aos/turn`
+遞增一格；沒有工作可做的空轉回合不動它。缺 `turn` 檔的舊世界視為 `0`，第一次遞增時
+補建，不會因此拒絕啟動，也不會動到版面版本（[SPEC](SPEC.md) §B-3）。
+
 聚合只接受恰好一個副檔名的 `<name>.json`；`.temp`、`.bad` 與 `name.part.json` 都
 不會被取走。語法或 schema 錯誤的投遞會改名為 `.bad`、印警告，其他有效投遞仍會
 發佈。已有 `inst.json` 時會先執行它並保留 inbox，留待下一回合；有效批次發佈完成
@@ -58,7 +66,8 @@ crash、被 kill 或斷電才會留下它。沒有 `inst.json` 是正常的空�
 
 **投遞**是生產者放進 `inst.tempd/` 的一份待辦 JSON；**彙整**是把多份有效投遞攤平
 成下一個 `inst.json` 批次；**取件**是把它 rename 成 `.runi`，防止另一個執行者重複
-取走。完整的檔案狀態與公開 API 見 [handoff 指南](../core/inst/docs/handoff.md)。
+取走。投遞這一步有專用子命令 `aos deliver`（見下面的 `aos deliver` 一節），不必自己
+手刻。完整的檔案狀態與公開 API 見 [handoff 指南](../core/inst/docs/handoff.md)。
 
 上面的第一個例子完成後沒有 stdout；結果在檔案裡：
 
@@ -175,6 +184,171 @@ $ aos exec my-world ; echo $?
 
 > **指令檔必須是可信來源。** 它沒有任何大小限制，可以指名任意程式與環境變數，
 > 並以你的身分執行。把它當成可執行檔看待。
+
+## `aos deliver` —— 投遞一批 instruction
+
+投遞是三步交接協定裡**唯一由外部生產者執行**的一步（[SPEC](SPEC.md) §D-1／§D-3）。
+`aos deliver` 把協定細節包起來：唯一檔名、先寫 `.temp` 再排他 rename、發布 canonical
+的位元組。生產者不必（也不該）自己寫進 `inst.tempd/`。
+
+```text
+aos deliver [folder] [-f FILE|-]
+```
+
+- `folder` 省略就是目前目錄 `.`。它**必須已經是世界**（有 `.aos/`、版面版本認得）；
+  deliver 不自動建世界，那是 `aos init` 的事。
+- 輸入：不給 `-f` 就讀 stdin；`-f FILE` 讀檔案；`-` 與 `-f -` 都是明確指定 stdin。
+  `-f` 的路徑相對**呼叫者的** cwd 解析——它是命令的輸入，不是世界的一部分。
+- 內容是一份完整 JSON：一個 instruction 物件，或物件組成的陣列，schema 與 `inst.json`
+  完全相同（[format.md](../core/inst/docs/format.md)）。整份先驗證，一筆不合格就整批
+  拒收、收件匣什麼都不留。
+- 成功時 stdout 印一行 JSON：`{"delivery":"<檔名>","count":N,"target":"<inbox 相對路徑>"}`。
+
+```console
+$ mkdir world && aos init world
+[exit 0]
+
+$ cat world/.aos/turn
+0
+[exit 0]
+
+$ printf '{"argv":["touch","a"]}' > one.json
+[exit 0]
+
+$ aos deliver world -f one.json
+{"delivery":"87362-0.json","count":1,"target":".aos/inst.tempd"}
+[exit 0]
+
+$ aos deliver world - < one.json
+{"delivery":"87363-0.json","count":1,"target":".aos/inst.tempd"}
+[exit 0]
+
+$ aos deliver world -f - < one.json
+{"delivery":"87364-0.json","count":1,"target":".aos/inst.tempd"}
+[exit 0]
+
+$ printf '[{"argv":["touch","b"]},{"argv":["touch","c"]}]' | aos deliver world
+{"delivery":"87366-0.json","count":2,"target":".aos/inst.tempd"}
+[exit 0]
+
+$ ls -1 world/.aos/inst.tempd/
+87362-0.json
+87363-0.json
+87364-0.json
+87366-0.json
+[exit 0]
+
+$ cat world/.aos/inst.tempd/*.json
+[{"argv":["touch","a"]}]
+[{"argv":["touch","a"]}]
+[{"argv":["touch","a"]}]
+[{"argv":["touch","b"]},{"argv":["touch","c"]}]
+[exit 0]
+```
+
+> 投遞檔名是 `<pid>-<seq>.json`（[SPEC](SPEC.md) §D-2），所以**上面那些數字每次跑都不
+> 一樣**——`87362` 之類的值是實跑當下的 pid，`-0` 是那個行程內的第幾份投遞。同一支
+> 程式連投 N 次會得到 `-0`、`-1`…N 個不同的檔名，不會互相蓋掉。
+
+投出去的位元組是 canonical 的：投的是單一物件，落地的是批陣列 `[{...}]` 加一個 LF
+——這是格式層 `read_all`→`write_all` 往返後的樣子，跟彙整讀到的位元組是同一套
+（[SPEC](SPEC.md) §D-3、§C-4）。
+
+### 與 `aos exec` 的合奏
+
+投遞只是把工作放進收件匣；真正跑起來是下一次 `aos exec` 的事——它先彙整（把上面四份
+投遞攤平成一批四筆）、再取件、再執行：
+
+```console
+$ aos exec world
+[exit 0]
+
+$ ls -1 world
+a
+b
+c
+[exit 0]
+
+$ cat world/.aos/inst-head.json
+{"version":1,"id":"9a2b5422e914c659","origin":"aggregated","result":null}
+[exit 0]
+
+$ cat world/.aos/turn
+1
+[exit 0]
+
+$ aos exec world
+[exit 0]
+
+$ cat world/.aos/turn
+1
+[exit 0]
+```
+
+`a b c` 都出現了，收件匣被清空，批旁邊留下 header sidecar `inst-head.json`
+（[SPEC](SPEC.md) §C-8 的四個欄位）。`id` 是那一組投遞的摘要，而摘要吃的是投遞**檔名**
+加內容——檔名帶 pid，所以這個值也每次不同。`turn` 從 `0` 變 `1`；第二次 `aos exec`
+沒有新投遞可跑，是空轉的回合，`turn` 不動（[SPEC](SPEC.md) §B-3）。
+
+### 被拒絕的時候
+
+驗證是在寫任何檔案之前做的，所以下面每一種拒絕之後收件匣都是空的——連 `.temp` 都不會
+留下：
+
+```console
+$ printf 'not json' | aos deliver world
+aos deliver: invalid input: JsonSyntax
+[exit 1]
+
+$ printf '{"argv":["touch","a"],"nope":1}' | aos deliver world
+aos deliver: invalid input: record 1: UnknownKey
+[exit 1]
+
+$ printf '[{"argv":["touch","a"]},{"argv":[]}]' | aos deliver world
+aos deliver: invalid input: record 2: EmptyArgv
+[exit 1]
+
+$ aos deliver world -f /dev/null
+aos deliver: invalid input: JsonSyntax
+[exit 1]
+
+$ aos deliver world -f no-such-file.json
+aos deliver: cannot read no-such-file.json: No such file or directory
+[exit 1]
+
+$ mkdir plain && aos deliver plain -f /dev/null
+aos deliver: invalid plain/.aos: No such file or directory
+[exit 1]
+
+$ printf '{"argv":["touch","a"]}' | aos deliver plain
+aos deliver: invalid plain/.aos: No such file or directory
+[exit 1]
+
+$ aos deliver no-such-folder
+aos deliver: cannot enter no-such-folder: No such file or directory
+[exit 1]
+
+$ aos deliver world world
+usage: aos deliver [folder] [-f FILE|-]
+[exit 2]
+
+$ ls -1a world/.aos/inst.tempd/
+.
+..
+[exit 0]
+```
+
+讀法：`record N` 是批裡第幾筆出問題（1 起算），狀態名就是 schema 的驗證狀態
+（[SPEC](SPEC.md) §C-6 的表）；空輸入（`/dev/null`）不是「空批次」而是無效 JSON，
+要投空批次請明確給 `[]`。**`plain/` 這種普通資料夾不是世界**，deliver 報錯、不幫忙
+建——注意它是先把輸入讀完才去檢查世界，所以世界不對時你看到的是世界的錯誤，不是內容
+的錯誤。（也因為這個順序，不給 `-f`、也不接管線時，它會**先停在那裡等 stdin 讀到
+EOF**，連 folder 打錯都要按 Ctrl-D 之後才看得到錯誤訊息。）用法錯誤（例如給了兩個
+folder）回 2，其餘失敗回 1；完整的退出碼對照見 [SPEC](SPEC.md) §D-9。
+
+函式庫層與 C ABI 也有對應的投遞進入點（`aos::deliver_instructions`、
+`aos_deliver_buffer`／`aos_deliver_file`），見 [handoff 指南](../core/inst/docs/handoff.md)
+與 [C API](../core/inst/docs/capi.md)。
 
 ---
 

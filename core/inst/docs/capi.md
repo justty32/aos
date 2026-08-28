@@ -1,8 +1,9 @@
 # C API
 
 這份文件回答「C99 或其他 FFI 呼叫端如何用穩定的 C ABI 建立、解析與執行一筆
-instruction」。它不提供批次或 handoff API；需要容器式批次與檔案交接時用
-[C++ API](cxxapi.md)，只想操作命令列則看[使用說明](../../../docs/usage.md)。
+instruction，以及如何投遞一批 instruction」。它不提供容器式的批次型別，交接協定也只
+開放**投遞**那一步（`aos_deliver_*`，見下面的〈投遞〉）；需要批次容器、彙整、取件與
+釋放時用 [C++ API](cxxapi.md)，只想操作命令列則看[使用說明](../../../docs/usage.md)。
 
 公開的 C ABI 由 `<aos/inst.h>` 宣告。這個標頭相容 C99，不含任何 C++ 型別，並
 對外提供一個不透明的 `aos_instruction` handle。
@@ -135,9 +136,10 @@ close-on-exec、對被中斷的讀取進行重試。
 不接受批次陣列，也都不使用 `FILE *`。
 
 `write_fd()` 序列化之後把全部位元組寫進呼叫端的 fd（處理部分寫入與 `EINTR`），
-不關閉它、也不動它的 flag。`write_file()` 用
-`O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC`（權限 0666）開檔、寫完、關檔，並且
-把關檔失敗也算成失敗——寫入路徑上的 `close()` 錯誤可能代表資料沒落地。
+不關閉它、也不動它的 flag，**也不替你 `fsync`**——那個 fd 是你的，要不要落盤、什麼時候
+落盤由你決定。`write_file()` 用
+`O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC`（權限 0666）開檔、寫完、`fsync`、關檔，
+`fsync` 或關檔失敗都算成失敗——寫入路徑上的 `close()` 錯誤可能代表資料沒落地。
 截斷而非附加，跟 `exit` 欄位同一個慣例。
 
 **`write_file()` 是先驗證、後開檔**：指令無效時它回傳對應的驗證狀態，而那個檔案
@@ -169,6 +171,127 @@ JSON 巢狀深度也都不設上界。記憶體用量由輸入大小決定，配
 版本。這套 API 不再揭露任何上限查詢函式，因為已經沒有上限可查。C++ 例外絕不會跨越 C
 邊界：回傳狀態的操作會把它們對應成配置失敗；其他回傳形式則使用 `NULL` 或零，
 而 void 的清理操作則會抑制它們。
+
+## 投遞（deliver）
+
+投遞是三步交接協定裡唯一由外部生產者執行的一步
+（[SPEC](../../../docs/SPEC.md) §D-3），所以 C ABI 也開放它。協定細節——唯一檔名
+`<pid>-<seq>.json`、先寫 `.temp` 再排他 `rename`、發布 canonical 位元組、目錄
+`fsync`——全部包在函式裡；行為與 C++ 的 `aos::deliver_instructions()` 完全相同，
+細節見 [handoff 指南](handoff.md)。
+
+```c
+typedef enum aos_handoff_state {
+    AOS_HANDOFF_OK = 0,
+    AOS_HANDOFF_INVALID_ARGUMENT = 1,
+    AOS_HANDOFF_BUSY = 2,
+    AOS_HANDOFF_NO_INSTRUCTION = 3,
+    AOS_HANDOFF_INBOX_READ_FAILED = 4,
+    AOS_HANDOFF_INSTRUCTION_READ_FAILED = 5,
+    AOS_HANDOFF_PUBLISH_WRITE_FAILED = 6,
+    AOS_HANDOFF_RENAME_FAILED = 7,
+    AOS_HANDOFF_RELEASE_FAILED = 8,
+    AOS_HANDOFF_DELIVERY_INVALID = 9,
+    AOS_HANDOFF_ALLOC_FAILED = 10,
+    AOS_HANDOFF_READ_ERROR = 11,
+    AOS_HANDOFF_BUFFER_TOO_SMALL = 12
+} aos_handoff_state;
+
+#define AOS_DELIVER_NAME_MAX 64
+
+typedef struct aos_deliver_result {
+    size_t count;
+    aos_inst_state inst_state;
+    size_t error_record;
+    int error;
+    int sync_error;
+} aos_deliver_result;
+
+aos_handoff_state aos_deliver_buffer(
+    const char *instruction_path, const char *data, size_t size,
+    char *name, size_t name_size, size_t *needed,
+    aos_deliver_result *result);
+aos_handoff_state aos_deliver_file(
+    const char *instruction_path, const char *path,
+    char *name, size_t name_size, size_t *needed,
+    aos_deliver_result *result);
+const char *aos_handoff_state_string(aos_handoff_state state);
+```
+
+`instruction_path` 是那個世界的 instruction base path（例如 `.aos/inst.json`）；收件匣
+是從它推導的（`.json` → `.tempd`），**必須已經存在**——不存在回
+`AOS_HANDOFF_INBOX_READ_FAILED`，不會替你建世界。`aos_deliver_buffer()` 投的是記憶體
+裡的位元組，`aos_deliver_file()` 先把檔案讀到 EOF 再投，開檔或讀取失敗回
+`AOS_HANDOFF_READ_ERROR`。
+
+值 0–9 鏡射 C++ 的 `aos::HandoffState`，10 起是 C ABI 專屬的延伸（配置失敗、讀取失敗、
+緩衝區太小），跟 `aos_inst_state` 是同一套做法。`aos_handoff_state_string()` 回傳靜態
+診斷字串（`"Ok"`、`"InboxReadFailed"`、`"BufferTooSmall"`…）。
+
+診斷都在 `aos_deliver_result` 裡，`result` 可以傳 `NULL`：`count` 是這批幾筆（空批次
+`[]` 合法，`count` 為 0）；驗證失敗（`AOS_HANDOFF_DELIVERY_INVALID`）時看 `inst_state`
+與 `error_record`（第幾筆出問題，1 起算，還沒進到逐筆解碼時為 0）；`error` 是依狀態而
+定的 `errno`；`sync_error` 非 0 代表**投遞已經完成**、只是收件匣目錄的 `fsync` 失敗
+（警告，不是失敗）。
+
+### `needed` 不是「先探大小」
+
+`aos_instruction_write_buffer()` 那種「先用 `NULL` 問長度、再配置、再呼叫一次」的兩段式
+協定，**在這裡不適用**：
+
+- **呼叫一次就投遞一次。** 副作用在函式回來之前就發生了；第二次呼叫是**另一份新的
+  投遞**，不是重試。
+- `name`／`name_size` 只影響「能不能把投遞後的檔名回報給你」。`name` 為 `NULL` 或緩衝區
+  裝不下（需要 `needed + 1` 個位元組，含結尾的 NUL）時，投遞**已經完成**，函式回
+  `AOS_HANDOFF_BUFFER_TOO_SMALL` 並把實際長度寫進 `needed`——**看到這個狀態不要重打**，
+  重打會多投一份。
+- 給 `AOS_DELIVER_NAME_MAX`（64 位元組）就永遠不會遇到它：`<pid>-<seq>.json` 在任何平台
+  上都塞得進去。
+- `needed` **不得為 `NULL`**（傳 `NULL` 回 `AOS_HANDOFF_INVALID_ARGUMENT`）。
+  `instruction_path` 為 `NULL`、`aos_deliver_file()` 的 `path` 為 `NULL`，或
+  `aos_deliver_buffer()` 的 `data` 為 `NULL` 而 `size` 非零，同樣回
+  `AOS_HANDOFF_INVALID_ARGUMENT`——這些是純參數錯誤，**不會**投遞。
+
+### 例子
+
+在一個已經有 `inst.tempd/` 的目錄裡投一批（base 用相對路徑，所以要在那個目錄裡跑）：
+
+```c
+#include <aos/inst.h>
+
+#include <stdio.h>
+
+int main(void) {
+    static const char batch[] = "[{\"argv\":[\"printf\",\"hi\\n\"]}]";
+    char name[AOS_DELIVER_NAME_MAX];
+    size_t needed = 0;
+    aos_deliver_result result;
+    aos_handoff_state state;
+
+    state = aos_deliver_buffer("inst.json", batch, sizeof batch - 1, name,
+                               sizeof name, &needed, &result);
+    if (state != AOS_HANDOFF_OK) {
+        fprintf(stderr, "deliver: %s (errno %d)\n",
+                aos_handoff_state_string(state), result.error);
+        return 1;
+    }
+    printf("delivered %s count=%zu\n", name, result.count);
+    return 0;
+}
+```
+
+存成 `deliver.c`，用本檔開頭那行編譯指令產生執行檔，在備好收件匣的目錄裡執行：
+
+```text
+delivered 91715-0.json count=1
+```
+
+（`91715` 是實跑當下的 pid，每次都不一樣。）換到一個沒有 `inst.tempd/` 的目錄再跑，
+就會看到：
+
+```text
+deliver: InboxReadFailed (errno 2)
+```
 
 ## 執行緒
 
