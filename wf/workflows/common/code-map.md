@@ -20,13 +20,13 @@ repo 根
        │    inst    inst_t 資料結構、狀態列舉             （src/inst.cpp）
        │    format  唯一懂 JSON schema 的層                （src/format.cpp）
        │    resolve 以明示 context 解析 `$env`／`$ref`        （src/resolve.cpp）
-       │    handoff instruction 檔案聚合／取件／釋放        （src/handoff.cpp）
+       │    handoff instruction 檔案投遞／聚合／取件／釋放  （src/handoff.cpp + handoff_deliver.cpp + handoff_header.cpp）
        │    exec    唯一碰 fork/exec/waitpid 的層          （src/exec.cpp + spawn_prep.cpp + wait.cpp）
        │  外加兩層，各自只往下看：
        │    C ABI 包裝（src/capi*.cpp，對外標頭 <aos/inst.h>）
-       │    CLI 世界／回合層（src/run*.cpp，進入點 aos_init_cli_main／aos_exec_cli_main）
+       │    CLI 世界／回合層（src/run*.cpp，進入點 aos_init_cli_main／aos_exec_cli_main／aos_deliver_cli_main）
        ▼
-app/（唯一執行檔 aos，子命令分派）── `aos init`／`aos exec` 掛的就是上面這條
+app/（唯一執行檔 aos，子命令分派）── `aos init`／`aos exec`／`aos deliver` 掛的就是上面這條
 
   aos::tooljson（core/tooljson/，核心小專案 → libaos_tooljson.so）
        │  spec／registry：驗證 tool spec 與開放的 _type 登記
@@ -58,7 +58,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 | 分冊 | 涵蓋 | 什麼時候會想看 |
 |------|------|---------------|
-| [code-map/inst.md](code-map/inst.md) | `core/inst/`：公開標頭、五個核心分層、C ABI 包裝層、CLI 層、測試，以及「新增一個 instruction 欄位」的維護鏈（逐檔表格再按層拆在 [`code-map/inst/`](code-map/inst/README.md) 底下的 library／capi／cli／tests 四份） | 要改 instruction 結構、format／resolve／handoff／exec、C ABI 或 `aos init`／`aos exec` |
+| [code-map/inst.md](code-map/inst.md) | `core/inst/`：公開標頭、五個核心分層、C ABI 包裝層、CLI 層、測試，以及「新增一個 instruction 欄位」的維護鏈（逐檔表格再按層拆在 [`code-map/inst/`](code-map/inst/README.md) 底下的 library／capi／cli／tests 四份） | 要改 instruction 結構、format／resolve／handoff／exec、C ABI 或 `aos init`／`aos exec`／`aos deliver` |
 | [code-map/tooljson.md](code-map/tooljson.md) | `core/tooljson/`：公開 API、內部邊界、spec／registry／exec_type／args／text／fingerprint、CLI、測試 | 要改 tool spec 驗證、`_type` registry、argv 展開或 `aos tooljson` |
 | [code-map/llms.md](code-map/llms.md) | `core/llms/`：公開 API、內部邊界、content／params／transport／SSE／caps／Reply／Bot／presets、CLI、測試 | 要改 LLM client、串流、toolset、presets 或 `aos llms` |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
@@ -78,7 +78,7 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | 檔案 | 內容 |
 |------|------|
 | `architecture.md` | 分層為什麼這樣切、為什麼先把整份輸入讀完再執行、`fork` 兩側各自要做的工作（async-signal-safe 的界線在哪）|
-| `handoff.md` | 投遞、彙整、取件、釋放的原因、路徑、錯誤資料與完整公開 API 範例 |
+| `handoff.md` | 投遞、彙整、取件、釋放的原因、路徑、錯誤資料與完整公開 API 範例（含 `deliver`、批 header sidecar、fsync 發布順序與去重）|
 | `resolve.md` | resolve 分層的原因、未解析表示、`$env` context、`$ref` 路徑／pointer／巢狀與循環、驗證順序、錯誤位置與完整公開 API 範例 |
 | `format.md` | JSON schema 細節 |
 | `exec.md` | 執行語意細節 |
@@ -94,8 +94,8 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | exit code、逾時、行程群組怎麼處理 | `core/inst/src/exec.cpp` |
 | PATH 怎麼解析、環境變數怎麼合併 | `core/inst/src/spawn_prep.cpp` |
 | C ABI 怎麼對應到 C++ API | `core/inst/src/capi.cpp` 開頭的 `static_assert` 一串 |
-| instruction inbox 怎麼聚合／取件／釋放 | `core/inst/src/handoff.cpp`；路徑推導與檔案存取在 `core/inst/src/handoff_fs.cpp` |
-| CLI 怎麼映射交接結果、怎麼跑一批 instruction | `core/inst/src/run_exec.cpp`／`run_batch.cpp`；argv 在 `run.cpp`，loop 在 `run_loop.cpp` |
+| instruction inbox 怎麼投遞／聚合／取件／釋放 | 投遞在 `core/inst/src/handoff_deliver.cpp`，其餘三個動作在 `core/inst/src/handoff.cpp`；批 header sidecar 與批 id 在 `handoff_header.cpp`，路徑推導與檔案存取（含 fsync／排他發布／投遞唯一名）在 `handoff_fs.cpp` |
+| CLI 怎麼映射交接結果、怎麼跑一批 instruction | `core/inst/src/run_exec.cpp`／`run_batch.cpp`；argv 在 `run.cpp`，loop 在 `run_loop.cpp`，`aos deliver` 的 argv 與進入點自帶於 `run_deliver.cpp` |
 | 子命令怎麼被登記、怎麼被分派 | `cmake/AosSubproject.cmake` 的 `aos_add_subcommand()` → `app/CMakeLists.txt` 產表 → `app/src/main.cpp` |
 | 某個相依該放在哪一層 | [common/ 那節](code-map/build.md)的判準；完整說明在 [`docs/subprojects.md`](../../../docs/subprojects.md) |
 | 為什麼要先把整份輸入讀完才開始執行 | `core/inst/docs/architecture.md`「為什麼要先把整份輸入讀完」|

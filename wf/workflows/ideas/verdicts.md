@@ -68,11 +68,11 @@
    夾」還是「跑這一組」。
 7. **`.aos` 版面需要第二個軸** — events／status 不是 `inst.json` 的「狀況」，塞不進
    `<名字>.<副檔名>.<狀況>`。
-8. **沒有 `deliver`** — handoff 只有消費端（`aggregate`／`claim`／`release`），且**都沒進
-   C ABI**；唯一由外部生產者執行的那一步沒有實作。
-   > **不是新發現**：[T5 實測](../experiments/t5-agent-loop/subcommand-specs.md)已經寫出
-   > `aos deliver`／`aos recover`／`aos status --json`／`aos agent step`／
-   > `aos agent emit-context` 五支的需求。**規格有了，還沒做。**
+8. ~~**沒有 `deliver`**~~ — **已做（M1，2026-08-28）**：`aos deliver` 子命令＋C ABI
+   （`aos_deliver_buffer`／`aos_deliver_file`）落地，SPEC §D-3。
+   > [T5 實測](../experiments/t5-agent-loop/subcommand-specs.md)開出的五支裡，
+   > `aos recover`／`aos status --json` 仍缺（M3）；`aos agent step`／
+   > `aos agent emit-context` 未排。
 9. **沒有控制介面** — 沒有 `aos status`、沒有 pid 檔、不能暫停。同上，`aos status --json`
    與 `aos recover` 的規格已在 T5 那份裡。
 10. ~~**格式沒有版本，版面也沒有**~~ — **已裁（2026-08-28）**：格式版本＝header 的
@@ -83,8 +83,9 @@
 12. **第十輪整組（§22–30）** — **§22 與 §30 已裁（2026-08-28，見 A 表）**。仍開：
     **§25 loop 只收無法成為 inst 的東西**（M2 前必裁，一次回答 B6 與中斷欠帳）；§26
     控制面走投遞協定 or ad-hoc（M2 前）；§29 名冊封閉判準（M3 前）。缺口類：opcode
-    懸空（§23，header v2 的 manifest 欄可補）、footprint 宣告（§24，M1 進 SPEC E 區）、
-    **PC 不存在**（`.aos/turn`，M1 做）、版面 ownership table（M1／M3 進 SPEC）。
+    懸空（§23，header v2 的 manifest 欄可補）仍在；~~footprint 宣告（§24）~~ **已入
+    SPEC §E-2（M1）**；~~**PC 不存在**（`.aos/turn`）~~ **已做（M1，SPEC §B-3）**；
+    版面 ownership table 仍缺（M3 進 SPEC）。
 13. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
     `fork` 之後、`execve` 之前建，只有 exec 層碰得到。與「安全交給別人」的裁決有出入。
 
@@ -94,7 +95,7 @@
 |---|---|
 | **兩顆 CPU 共寫一份記憶體，沒有記憶體模型**（沒有 barrier／happens-before／去重） | GPU 模型 |
 | **沒有中斷線** — 非同步結果只能靠每回合塞一筆輪詢指令 | GPU 模型 |
-| **git 撞上 `.aos/` 的暫態** — 回滾含 `.runi` 的 commit 會讓世界死鎖；`.gitignore` 政策是規範的一部分，還沒寫 | 用 git 做快照 |
+| **git 撞上 `.aos/` 的暫態** — 回滾含 `.runi` 的 commit 會讓世界死鎖。~~`.gitignore` 政策還沒寫~~ → **已寫（M1，SPEC §E-3／§E-4）**；欠帳本身（回滾語意）仍在 | 用 git 做快照 |
 
 → [machine-shape/debts](machine-shape/debts.md)
 
@@ -103,19 +104,31 @@
 可查版本在 [common/gotchas](../common/gotchas.md)：
 
 - `.runi` **不是鎖**（`lstat` 後 `rename`，且 read 在 rename 之前）→ 同回合可能跑兩次
-- **整個 `core/inst/src/` 沒有 `fsync`** → 崩潰後「保留的現場」可能是零長度檔
-- **投遞檔名用 pid 不唯一**
-- **彙整崩潰窗口**（發布後才刪投遞）→ 同一批可能執行兩次
-- **`--loop 0`（文件唯一示範的用法）＝ 忙碌輪詢**，`interval == 0` 永不睡
-- **失敗算「有做事」** → 關掉唯一的節流閥；`did_work` 甚至設在執行之前
-- **loop 忽略除 3 以外的所有回傳值**
-- **`.bad` 是命名標準不認識的第三種狀況**，而且沒人清
+  — **仍未修**（不在 M1 範圍：spec 只點名 fsync 與彙整崩潰窗口）
+- ~~**整個 `core/inst/src/` 沒有 `fsync`** → 崩潰後「保留的現場」可能是零長度檔~~
+  — **已修（M1）**：寫檔全 fsync＋每次 rename 後 `fsync_dir`；兩處已知豁免（子行程的
+  stream 檔、`aos_instruction_write_fd`）。SPEC §D-5
+- ~~**投遞檔名用 pid 不唯一**~~ — **已修（M1）**：`<pid>-<seq>`＋排他發布
+  （`RENAME_NOREPLACE`／`link`+`unlink` 退階），撞名換序號重試。SPEC §D-2
+- ~~**彙整崩潰窗口**（發布後才刪投遞）→ 同一批可能執行兩次~~ — **已修（M1）**：header
+  先 rename 當提交點＋批 id 去重＋roll forward。**只保證整組殘留**，部分殘留混入新投遞
+  仍可能重複（照實記，不誇大）。SPEC §D-5／§D-6
+- **`--loop 0`（文件唯一示範的用法）＝ 忙碌輪詢**，`interval == 0` 永不睡 — 留 M2
+- **失敗算「有做事」** → 關掉唯一的節流閥；`did_work` 甚至設在執行之前 — 留 M2
+- **loop 忽略除 3 以外的所有回傳值** — 留 M2
+- ~~**`.bad` 是命名標準不認識的第三種狀況**~~，而且沒人清 — 命名**已正名收編（M1，
+  SPEC §B-1 的封閉狀況清單）**；「誰清」也已裁（SPEC §D-8：彙整者 MUST NOT 自動刪，
+  歸人或 `aos recover`）——`aos recover` 本身留 M3
 
 ## 最高槓桿的三件事
 
 1. **給「批」名字與 header** — 一次解決 B1／B2／B4 與 C 的去重問題。
 2. **補 `deliver`**（B8）— 最便宜，擋掉最多真實故障。
 3. **把「一個回合內沒有資料流」寫進規範**（B3）— 零成本，而它是這個 ISA 最重要的約束。
+
+> **三件都已兌現**（2026-08-28）：1 → SPEC §C-8 的 header sidecar（M1 實作）；
+> 2 → `aos deliver`（M1，SPEC §D-3）；3 → SPEC §A-3（M0 立法）。下一批槓桿在
+> [roadmap](../roadmap.md) 的 M2 起。
 
 ## 拷問之外還開著的東西
 
