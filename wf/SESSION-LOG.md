@@ -12,6 +12,11 @@
 
 ## 最新進度
 
+- **2026-08-28 拷問停打，轉入實作。** 新開 [roadmap](workflows/roadmap.md) 工作流：
+  M0 立法（normative SPEC）→ M1 批 header → M2 deliver/PC/修 bug → M3 exec_loop 落地
+  分層（§25/§26 必裁）→ M4 status/recover/check → M5 第二顆 CPU（四項存貨閘門）。
+  動工前查 roadmap，裁決記回 ideas＋verdicts。
+
 - **2026-08-28 對 aos 核心模型做了十輪拷問**（格式／原語／CPU 類比／交接協定／前作對照／
   機器形狀；第十輪由 Fable 重打「地位的承載物」，九條全未裁——使用者：邊實作邊想，
   記在 [machine-shape](workflows/ideas/machine-shape/README.md) 三檔 §22–30）。裁決總表在 [ideas/verdicts](workflows/ideas/verdicts.md)——**要重新拷問

@@ -17,6 +17,7 @@
 | 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon** | [workflows/hackathon/README.md](workflows/hackathon/README.md)（已辦場次見 [INDEX](workflows/hackathon/INDEX.md)）|
 | 「**幫我用 aos**」「把 aos 接進我的專案」「這個指令怎麼下」 | **use-aos** | [workflows/use-aos.md](workflows/use-aos.md) |
 | 「**直接去試試看**」「跑個實驗看會怎樣」「別再想了，做一次」 | **experiments** | [workflows/experiments/README.md](workflows/experiments/README.md) |
+| 「**接下來做什麼**」「照進度表推進」「動工前該讀什麼」 | **roadmap** | [workflows/roadmap.md](workflows/roadmap.md) |
 | 「跑測試 / 驗證」 | **testing** | [workflows/testing.md](workflows/testing.md) |
 | 「**記 / 查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 | 「這段程式在哪 / 哪個檔負責什麼」 | **code map** | [workflows/common/code-map.md](workflows/common/code-map.md) |
@@ -32,7 +33,7 @@
 
 碰原始碼的工作流共用 [common/conventions](workflows/common/conventions.md)（程式碼慣例 + code map 維護鏈）。
 
-> 目前只開了上面這幾個。需要新的開發類工作流（**refactor**／**investigation**／**spec**／**plan**／**idea**／**roadmap**／**tooling**）時**才**加一列，入口檔從單檔開始長——見 [DEV-GUIDE](DEV-GUIDE.md) 的四級成長軌跡，不要預先建空檔。
+> 目前只開了上面這幾個。需要新的開發類工作流（**refactor**／**investigation**／**spec**／**plan**／**idea**／**tooling**）時**才**加一列，入口檔從單檔開始長——見 [DEV-GUIDE](DEV-GUIDE.md) 的四級成長軌跡，不要預先建空檔。
 
 **都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。
 
