@@ -58,3 +58,35 @@ loop 就是一個前景行程，`exec --loop` 起、Ctrl-C 停。沒有：
 
 這與第 11 條的 `deliver` 是同一類：**協定和模型都假設有這些操作，但沒有一支程式提供。**
 
+
+---
+
+# 第十輪（換 Fable 重打）：ownership、名冊封閉、normative 的家
+
+**全部未裁**——使用者：之後慢慢想，更可能邊實作邊想。
+
+## 28. 版面規格的內容是 ownership table，不是檔名列表
+
+datasheet 的 memory map 每格標 R/W/RO/W1C。`.aos/` 至少三類 writer：loop
+（claim/release）、外部生產者（tempd 投遞）、未來的 events/status writer——再加 LLM CPU
+寫回結果。**每條路徑該標唯一 writer 與方向；有兩個 writer 的路徑，就是未來損壞的準確
+位置。** 第 10 條的「第二個軸」解決分類，ownership 解決正確性——`docs/aos-folder.md`
+目前只記「有什麼」，沒記「誰能動」。
+
+## 29. 程式名冊有封閉判準，不必累積
+
+從協定推導：**外部方執行的每個協定步驟→一支程式**（`deliver`，第 11 條）；**機器留下
+的每種靜態狀態→inspector＋repairer**（`status`、`recover`＝這台機器的 fsck，T5 規格
+已有）；**每份規範→validator**（`aos check <folder>`：版面對不對、schema 過不過——
+這支連規格都沒有，而它是三份真相收斂的機械手段）。名冊＝ `exec`／`loop`／`deliver`／
+`status`／`recover`／`check`，**到此封閉**。T5 的 `agent step`／`emit-context` 按此
+判準是 OS 層→按 [loop 第 25 條](loop.md)該是 inst，不是子命令。
+
+## 30. 機器的憲法散在拷問記錄裡，沒有蓋章的地方
+
+「一回合內沒有資料流」——最重要的 ISA 約束——住在 ideas 檔的第 18 節；
+[verdicts](../verdicts.md) 是**判例索引**，不是法典。三份真相在漂（第 12 條）的根因：
+**沒有任何一份文件被指定為 normative**，每份都只是描述，描述之間當然漂。「地位」的
+操作型定義很無聊：一份編號條款、MUST/SHOULD、其他一切（parser／docs／prompt）從它
+派生的 SPEC，加上「裁決如何進入它」的流程。沒有它，第十九輪還會發現「最重要的約束
+沒寫在任何地方」。

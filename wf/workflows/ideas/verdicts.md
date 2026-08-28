@@ -2,11 +2,11 @@
 
 ← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
 
-**要重新拷問 aos 的人先讀這份。** 到目前為止已經打過九輪，涵蓋格式／原語／CPU 類比／
+**要重新拷問 aos 的人先讀這份。** 到目前為止已經打過十輪，涵蓋格式／原語／CPU 類比／
 交接協定／前作對照／機器形狀。這份把散在各檔的**裁決**收成一張表，目的只有一個：
 **不要重問已經拍板的東西，把火力放在仍開著的地方。**
 
-## 九輪打了哪些面向
+## 十輪打了哪些面向
 
 | 輪 | 面向 | 記在哪 |
 |---|---|---|
@@ -19,6 +19,7 @@
 | 7 | 指令的地位、loop 的職權、資料夾與規範 | [machine-shape/](machine-shape/README.md) |
 | 8 | 裁決的欠帳 ＋ `run_loop.cpp` 實測 | [machine-shape/debts](machine-shape/debts.md)、[loop](machine-shape/loop.md) |
 | 9 | 沒有回合內資料流、四階段管線、彙整崩潰窗口 | 同上 ＋ [feedback-and-failure](call-format/feedback-and-failure.md) |
+| 10 | （Fable）「地位」的承載物：類比可證偽性、loop 身份判準、ownership、名冊封閉、normative | [machine-shape/](machine-shape/README.md) 三檔的第十輪（§22–30） |
 
 不該被改掉的優點收在 [call-format/keep](call-format/keep.md)——**打之前先讀那份**，免得
 把對的東西打掉。
@@ -73,7 +74,14 @@
    與 `aos recover` 的規格已在 T5 那份裡。
 10. **格式沒有版本，版面也沒有** — 兩件不同的事，兩個都缺。
 11. **規範有三份真相且在漂**（規格／實作文件／手寫 parser），第四份是 LLM 的理解。
-12. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
+12. **第十輪整組（§22–30，未裁；使用者：邊實作邊想）** — 五條是**待裁判準**而非缺陷：
+    類比的可證偽版本（凍結的矽——與 `$ref` 取指令相撞）；**loop 只收無法成為 inst 的
+    東西**（其餘是 OS-as-inst，一次回答 B6 與中斷欠帳）；控制面走投遞協定 or ad-hoc；
+    程式名冊封閉判準（exec/loop/deliver/status/recover/check）；規範要一份 normative
+    SPEC。另四條是缺口：opcode 懸空（header 加 manifest 欄可補）、核心方程要宣告
+    footprint（**git 第三筆帳：拍的 ≠ 改的**）、**PC 不存在**（回合編號無表示，是歷史／
+    記憶體模型／status／去重的共同前提）、版面要 ownership table。
+13. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
     `fork` 之後、`execve` 之前建，只有 exec 層碰得到。與「安全交給別人」的裁決有出入。
 
 ## C. 欠帳（已下裁決相乘產生的，不是待辦）
