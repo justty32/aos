@@ -190,17 +190,20 @@ TEST_CASE("handoff rolls a committed batch forward after a crash between renames
 
     const FirstRound first = run_first_round(base, head);
 
-    // 崩在 header 的 rename（提交點）之後、批的 rename 之前的現場：
-    // header 是新 id 且未 swept、批還在固定的 `.temp` 槽位、投遞還在 inbox。
-    // #21 之後 roll-forward 要求「槽位位元組 == 本輪重算的 canonical 位元組」，
-    // 所以不能再用「內容刻意不同的 .temp」來分辨 roll forward 與二次發布。
-    // 改用 **inode 身分**分辨：先 link 一份硬連結指到槽位，彙整之後 base 與那個
-    // 硬連結同 inode ⟹ 它是被 rename 過去的（roll forward），不是重寫出來的。
+    // 崩在 header 的 rename（提交點）之後、批發布之前的現場：header 是新 id 且未
+    // swept、批還躺在那一輪自己的**唯一暫存**裡、投遞還在 inbox。
+    // 錨不是固定的 `<base>.temp`（那個共用槽位已經拿掉了），而是**兄弟唯一暫存**
+    // `inst-<pid>-<seq>.json.temp`，靠位元組認身分。
+    // #21 之後 roll-forward 要求「位元組 == 本輪重算的 canonical 位元組」，所以
+    // 不能用「內容刻意不同的暫存」來分辨 roll forward 與二次發布。改用 **inode
+    // 身分**分辨：先 link 一份硬連結指到那個兄弟檔，彙整之後 base 與硬連結同
+    // inode ⟹ 它是被 rename 過去的（roll forward），不是重寫出來的。
+    const std::string sibling = dir.path + "/inst-9999-0.json.temp";
     write_file(head, make_header(first.id, false));
     write_file(delivery, document);
-    write_file(base + ".temp", first.canonical);
+    write_file(sibling, first.canonical);
     const std::string witness = dir.path + "/witness.link";
-    REQUIRE(link((base + ".temp").c_str(), witness.c_str()) == 0);
+    REQUIRE(link(sibling.c_str(), witness.c_str()) == 0);
     const std::size_t committed_inode = inode_of(witness);
 
     aos::HandoffResult result;
@@ -209,23 +212,27 @@ TEST_CASE("handoff rolls a committed batch forward after a crash between renames
     CHECK(result.issues.empty());
     CHECK(read_file(base) == first.canonical);
     CHECK(inode_of(base) == committed_inode);  // rename 過去的那一份，不是重寫的
-    CHECK_FALSE(std::filesystem::exists(base + ".temp"));
+    CHECK_FALSE(std::filesystem::exists(sibling));
     CHECK_FALSE(std::filesystem::exists(delivery));
 }
 
-TEST_CASE("handoff does not roll forward a .temp that is not the committed batch") {
+// 這一條釘住的是「拿掉共用固定槽位」那個裁決：位元組對不上的兄弟暫存**絕不**
+// 被扶正。共用槽位時代 A 可能發布 B 寫進槽位的批（兩人看到的投遞集合不同時），
+// 只清掉 A 自己看到的那幾份投遞，剩下的下一輪重跑＝重複執行。現在身分完全由
+// 內容決定，名字只是索引。
+TEST_CASE("handoff does not roll forward a sibling temp that is not this batch") {
     const std::string document = R"({"argv":["work"]})";
 
     // 殘檔（解析不出批）與「解析得出、但位元組不是這一批」兩種都不得扶正。
     // 後者是 #21：修補之前只檢查「解析得出非空批次」，於是一份與這批毫無關係的
     // 殘骸會被當成「這一批」扶正並執行掉——等於執行了未經任何驗證來源的批次。
-    const std::vector<std::string> temp_contents = {
+    const std::vector<std::string> sibling_contents = {
         R"([{"argv":[)",                       // 殘檔：解析不出批
         R"([{"argv":["UNRELATED_GARBAGE"]}])"  // #21：合法的批，但不是這一批
     };
 
-    for (const std::string &temp_content : temp_contents) {
-        INFO("`.temp` content: " << temp_content);
+    for (const std::string &sibling_content : sibling_contents) {
+        INFO("sibling temp content: " << sibling_content);
         TempDir dir;
         const std::string base = make_world(dir);
         const std::string head = dir.path + "/inst-head.json";
@@ -233,11 +240,12 @@ TEST_CASE("handoff does not roll forward a .temp that is not the committed batch
         write_file(delivery, document);
 
         const FirstRound first = run_first_round(base, head);
-        REQUIRE(temp_content != first.canonical);
+        REQUIRE(sibling_content != first.canonical);
 
+        const std::string sibling = dir.path + "/inst-9999-0.json.temp";
         write_file(head, make_header(first.id, false));
         write_file(delivery, document);
-        write_file(base + ".temp", temp_content);
+        write_file(sibling, sibling_content);
 
         aos::HandoffResult result;
         REQUIRE(aos::aggregate_instructions(base, result) ==
@@ -245,8 +253,8 @@ TEST_CASE("handoff does not roll forward a .temp that is not the committed batch
         CHECK_FALSE(result.published);
         CHECK_FALSE(std::filesystem::exists(base));
         CHECK_FALSE(std::filesystem::exists(delivery));
-        // 槽位原封不動：沒有被扶正，也沒有被當成自己的殘骸刪掉。
-        CHECK(read_file(base + ".temp") == temp_content);
+        // 兄弟原封不動：沒有被扶正，也沒有被當成自己的殘骸刪掉（它可能是同儕的）。
+        CHECK(read_file(sibling) == sibling_content);
     }
 }
 
@@ -327,4 +335,33 @@ TEST_CASE("handoff only reads the top-level id out of the current header") {
         CHECK(result.published == layout.expect_published);
         CHECK(result.issues.empty());
     }
+}
+
+// 找錨時必須跳過 header 自己的唯一暫存：它也長得像 `inst-...json.temp`
+// （實際是 `inst-head-<pid>-<seq>.json.temp`），但那是 header 不是批。位元組比對
+// 本來就會擋掉，這一條把「明著跳過 <stem>-head- 前綴」的行為釘住。
+TEST_CASE("handoff never mistakes a header temp for a batch roll-forward anchor") {
+    TempDir dir;
+    const std::string base = make_world(dir);
+    const std::string head = dir.path + "/inst-head.json";
+    const std::string delivery = dir.path + "/inst.tempd/10.json";
+    const std::string document = R"({"argv":["work"]})";
+    write_file(delivery, document);
+
+    const FirstRound first = run_first_round(base, head);
+
+    // 佈置去重命中的現場，外加一份**內容剛好等於本輪 canonical 批**的 header
+    // 唯一暫存殘骸。跳過前綴之後它不該被當成錨，所以這一輪只清投遞、不發布。
+    write_file(head, make_header(first.id, false));
+    write_file(delivery, document);
+    const std::string header_temp = dir.path + "/inst-head-9999-0.json.temp";
+    write_file(header_temp, first.canonical);
+
+    aos::HandoffResult result;
+    REQUIRE(aos::aggregate_instructions(base, result) == aos::HandoffState::Ok);
+    CHECK_FALSE(result.published);
+    CHECK_FALSE(std::filesystem::exists(base));
+    CHECK_FALSE(std::filesystem::exists(delivery));
+    CHECK(std::filesystem::exists(header_temp));
+    CHECK(header_swept(read_file(head)));
 }

@@ -58,7 +58,6 @@ bool derive_paths(const std::string &base, HandoffPaths &paths) {
         return false;
     }
     paths.base = base;
-    paths.temp = base + ".temp";
     paths.runi = base + ".runi";
     paths.inbox = base.substr(0, base.size() - suffix.size()) + ".tempd";
     return true;

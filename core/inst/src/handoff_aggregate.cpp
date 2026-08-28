@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -151,14 +152,6 @@ void mark_header_swept(const detail::HeaderPaths &header, const std::string &id,
     sync_directory(directory, result);
 }
 
-const HandoffIssue *find_issue(const HandoffResult &result,
-                               HandoffIssueKind kind) {
-    for (const HandoffIssue &issue : result.issues) {
-        if (issue.kind == kind) return &issue;
-    }
-    return nullptr;
-}
-
 // 以 .json 結尾、但形狀不合 is_delivery_name 的名字（a.b.json／.hidden.json／
 // .json）：不收、不隔離，只出聲（#10）。x.json.temp／.bad／.runi 是狀況檔，
 // 不以 .json 結尾，不會命中這裡，也就不會吵。
@@ -168,41 +161,22 @@ bool looks_like_json(const std::string &name) {
            name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-}  // namespace
+enum class ListOutcome { Ok, Missing, Failed };
 
-HandoffState aggregate_instructions(const std::string &instruction_path,
-                                    HandoffResult &result) {
-    result = HandoffResult{};
-    detail::HandoffPaths paths;
-    detail::HeaderPaths header;
-    if (!detail::derive_paths(instruction_path, paths) ||
-        !detail::derive_header_paths(instruction_path, header)) {
-        return HandoffState::InvalidArgument;
-    }
-    const std::string base_directory = detail::parent_directory(paths.base);
-
-    // ⓪ base 已經有一份沒被取走：本輪 MUST NOT 發布（§D-4），不覆蓋也不碰 inbox。
-    // 這裡用 lstat（不跟隨 symlink）；claim_instruction 對「存在」的定義必須跟這裡
-    // 對齊，見那邊的 #25 註解。
-    struct stat status {};
-    if (lstat(paths.base.c_str(), &status) == 0) return HandoffState::Ok;
-    if (errno != ENOENT) {
-        result.path = paths.base;
-        result.error = errno;
-        return HandoffState::InstructionReadFailed;
-    }
-
-    // ① 掃收件匣。
+// 列出收件匣裡算數的投遞名（排序後），順便對「以 .json 結尾卻形狀不合」的名字記
+// DeliveryNameIgnored（#10）。收件匣不存在回 Missing——那是成功的 no-op，不是錯誤。
+ListOutcome list_deliveries(const std::string &inbox,
+                            std::vector<std::string> &names,
+                            HandoffResult &result) {
     DirGuard guard;
-    guard.handle = opendir(paths.inbox.c_str());
-    if (guard.handle == nullptr && errno == ENOENT) return HandoffState::Ok;
+    guard.handle = opendir(inbox.c_str());
+    if (guard.handle == nullptr && errno == ENOENT) return ListOutcome::Missing;
     if (guard.handle == nullptr) {
-        result.path = paths.inbox;
+        result.path = inbox;
         result.error = errno;
-        return HandoffState::InboxReadFailed;
+        return ListOutcome::Failed;
     }
 
-    std::vector<std::string> names;
     std::vector<std::string> ignored;
     errno = 0;
     while (dirent *entry = readdir(guard.handle)) {
@@ -217,16 +191,114 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
     const int read_error = errno;
     const int close_error = guard.close() == 0 ? 0 : errno;
     if (read_error != 0 || close_error != 0) {
-        result.path = paths.inbox;
+        result.path = inbox;
         result.error = read_error != 0 ? read_error : close_error;
-        return HandoffState::InboxReadFailed;
+        return ListOutcome::Failed;
     }
     // 目錄順序不保證（§D-4），排序讓批的內容與 issue 的順序都是確定的。
     std::sort(names.begin(), names.end());
     std::sort(ignored.begin(), ignored.end());
     for (const std::string &name : ignored) {
         add_issue(result, HandoffIssueKind::DeliveryNameIgnored,
-                  detail::join_path(paths.inbox, name), InstState::Ok, 0);
+                  detail::join_path(inbox, name), InstState::Ok, 0);
+    }
+    return ListOutcome::Ok;
+}
+
+// roll-forward 的錨：掃 base 所在目錄，找出**位元組跟本輪 output 完全相同**的兄弟
+// 唯一暫存。兄弟＝檔名以 `<stem>-` 開頭、以 `.json.temp` 結尾（base 是
+// `.aos/inst.json` 時 stem ＝ `inst`，所以找 `.aos/inst-*.json.temp`）；
+// `<stem>-head-` 開頭的跳過——那是 header 的唯一 temp，位元組比對本來也會擋掉，
+// 明著跳過比較便宜也比較好讀。名字排序後逐一讀，第一個對上的就是錨。
+//
+// **身分由內容決定，名字只是找得到它的索引**（跟 #21 的逐位元比對同一個原則）。
+// 能通過比對的檔，內容就一定是「本輪這組投遞的 canonical 批」——不管它是我們自己
+// 上一次崩掉留下的，還是併發同儕正在飛的：兩者是同一串位元組，誰把它 rename 到
+// base 都是同一個結果，輸的那一邊拿 EEXIST 乾淨放棄。
+//
+// 這是刻意不用「固定 `.temp` 槽位」的原因：共用可變狀態會讓兩個彙整者互相覆蓋
+// 對方寫進槽位的批，於是 A 可能發布 B 的批、卻只清掉 A 自己看到的那幾份投遞，
+// 剩下的在下一輪被重新彙整＝重複執行。詳見 docs/handoff.md。
+bool find_rollforward_anchor(const std::string &directory,
+                             const std::string &stem, const std::string &output,
+                             std::string &anchor) {
+    DirGuard guard;
+    guard.handle = opendir(directory.c_str());
+    if (guard.handle == nullptr) return false;
+
+    const std::string prefix = stem + "-";
+    const std::string header_prefix = stem + "-head-";
+    constexpr std::string_view suffix = ".json.temp";
+    std::vector<std::string> candidates;
+    while (dirent *entry = readdir(guard.handle)) {
+        std::string name = entry->d_name;
+        if (name.size() <= prefix.size() + suffix.size()) continue;
+        if (name.compare(0, prefix.size(), prefix) != 0) continue;
+        if (name.compare(0, header_prefix.size(), header_prefix) == 0) continue;
+        if (name.compare(name.size() - suffix.size(), suffix.size(), suffix) !=
+            0) {
+            continue;
+        }
+        candidates.push_back(std::move(name));
+    }
+    std::sort(candidates.begin(), candidates.end());
+
+    for (const std::string &name : candidates) {
+        const std::string path = detail::join_path(directory, name);
+        std::string committed;
+        int error = 0;
+        if (detail::read_file(path, committed, error) && committed == output) {
+            anchor = path;
+            return true;
+        }
+    }
+    return false;
+}
+
+const HandoffIssue *find_issue(const HandoffResult &result,
+                               HandoffIssueKind kind) {
+    for (const HandoffIssue &issue : result.issues) {
+        if (issue.kind == kind) return &issue;
+    }
+    return nullptr;
+}
+
+}  // namespace
+
+HandoffState aggregate_instructions(const std::string &instruction_path,
+                                    HandoffResult &result) {
+    result = HandoffResult{};
+    detail::HandoffPaths paths;
+    detail::HeaderPaths header;
+    if (!detail::derive_paths(instruction_path, paths) ||
+        !detail::derive_header_paths(instruction_path, header)) {
+        return HandoffState::InvalidArgument;
+    }
+    const std::string base_directory = detail::parent_directory(paths.base);
+    // 兄弟唯一暫存的名字前綴：base 是 `.aos/inst.json` 時 stem ＝ `inst`，
+    // 兄弟就是 `.aos/inst-*.json.temp`。derive_paths 已保證 base 以 .json 結尾。
+    const std::string base_name =
+        paths.base.substr(paths.base.find_last_of('/') + 1);
+    const std::string stem =
+        base_name.substr(0, base_name.size() - std::string_view(".json").size());
+
+    // ⓪ base 已經有一份沒被取走：本輪 MUST NOT 發布（§D-4），不覆蓋也不碰 inbox。
+    // 這裡用 lstat（不跟隨 symlink）；claim_instruction 對「存在」的定義必須跟這裡
+    // 對齊，見那邊的 #25 註解。
+    struct stat status {};
+    if (lstat(paths.base.c_str(), &status) == 0) return HandoffState::Ok;
+    if (errno != ENOENT) {
+        result.path = paths.base;
+        result.error = errno;
+        return HandoffState::InstructionReadFailed;
+    }
+
+    // ① 掃收件匣。
+    std::vector<std::string> names;
+    const ListOutcome listed = list_deliveries(paths.inbox, names, result);
+    if (listed != ListOutcome::Ok) {
+        return listed == ListOutcome::Missing ? HandoffState::Ok
+                                              : HandoffState::InboxReadFailed;
     }
 
     std::vector<inst_t> combined;
@@ -292,11 +364,11 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
         return HandoffState::Ok;
     }
 
-    // ③ canonical 位元組提前算出來：去重分支要拿它跟固定槽位逐位元比對（#21）。
+    // ③ canonical 位元組提前算出來：去重分支要拿它跟兄弟暫存逐位元比對（#21）。
     const std::string id = digest.id();
     std::string output;
     if (write_all(combined, output, nullptr) != InstState::Ok) {
-        result.path = paths.temp;
+        result.path = paths.base;
         result.error = EINVAL;
         return HandoffState::PublishWriteFailed;
     }
@@ -308,28 +380,28 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
     detail::HeaderFields current;
     if (current_header(header.base, current, result) && !current.swept &&
         current.id == id) {
-        std::string committed;
-        int error = 0;
-        // roll-forward 的前提不是「.temp 解析得出一批」，而是**位元組逐位元等於
-        // 本輪重算的結果**（#21）：canonical 位元組是確定性的（§D-3），所以這個
-        // 比對就足以證明「槽位裡那份正是這一組投遞的批」。只檢查「解析得出非空
+        // roll-forward 的前提不是「某個 .temp 解析得出一批」，而是**位元組逐位元
+        // 等於本輪重算的結果**（#21）：canonical 位元組是確定性的（§D-3），所以
+        // 這個比對就足以證明「那一份正是這一組投遞的批」。只檢查「解析得出非空
         // 批次」的話，一份與這批毫無關係的殘骸會被扶正並執行掉。
-        if (detail::read_file(paths.temp, committed, error) &&
-            committed == output) {
-            if (detail::publish_exclusive(paths.temp, paths.base, error)) {
+        std::string anchor;
+        if (find_rollforward_anchor(base_directory, stem, output, anchor)) {
+            int error = 0;
+            if (detail::publish_exclusive(anchor, paths.base, error)) {
                 sync_directory(base_directory, result);
                 result.published = true;
             } else if (error == EEXIST) {
                 // 別的彙整者先發布了：本輪放棄（§D-5 的排他發布）。不清投遞、
-                // 不重寫 header——那一批不是我們的。
+                // 不重寫 header。**也不 unlink 那個錨**——它不見得是我們的檔，
+                // 可能是同儕正在飛的那一份。
                 return HandoffState::Ok;
             } else {
-                result.path = paths.temp;
+                result.path = anchor;
                 result.error = error;
                 return HandoffState::RenameFailed;
             }
         }
-        // 位元組不同或讀不到：上一輪已經發布完，批也已經被取走（或正在跑）。
+        // 找不到錨：上一輪已經發布完，批也已經被取走（或正在跑）。
         // 只清投遞、不重發——這正是「同一批不會執行兩次」的兜底。
         if (remove_accepted_deliveries(accepted, paths.inbox, result)) {
             mark_header_swept(header, id, base_directory, result);
@@ -337,7 +409,8 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
         return HandoffState::Ok;
     }
 
-    // ⑥a 唯一名寫批（§D-5）：唯一名保證兩個彙整者不會共寫同一個檔。
+    // ⑥a 唯一名寫批（§D-5）：唯一名保證兩個彙整者不會共寫同一個檔。這一份就是
+    // 最後要被 rename 成 base 的那一個——**沒有中間的共用槽位**。
     const std::string batch_temp = detail::unique_temp_path(paths.base);
     int error = 0;
     if (!detail::write_file(batch_temp, output, error)) {
@@ -346,21 +419,12 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
         result.error = error;
         return HandoffState::PublishWriteFailed;
     }
-    // ⑥b 一次 rename 進固定的 `.temp` 槽位。固定槽位是 roll-forward 的錨（下一輪
-    // 認得出來的就是它）；rename 是原子的，所以槽位裡永遠是「某個行程寫完整的
-    // 一份批」，不會再有 O_TRUNC 共寫造成的交錯內容（#23）。
-    if (rename(batch_temp.c_str(), paths.temp.c_str()) != 0) {
-        const int rename_error = errno;
-        unlink(batch_temp.c_str());
-        result.path = paths.temp;
-        result.error = rename_error;
-        return HandoffState::RenameFailed;
-    }
-    // ⑥c 寫 header、rename——那一次 rename 就是**去重承諾的提交點**（§D-5），
-    // 之後才發布批。為什麼 header 要先：崩在兩個 rename 之間會留下「header 是新
-    // id ＋ 批還在固定槽位」——下一輪認得出來，可以 roll forward。反過來（批先、
-    // header 後）崩掉只剩「批已發布、header 還是舊 id」，下一輪的第 ⓪ 步 lstat
-    // 直接早退，等這批跑完就會拿舊 header 比對而重新發布＝雙重執行。
+    // ⑥b 寫 header、rename——那一次 rename 就是**去重承諾的提交點**（§D-5），
+    // 之後才發布批。為什麼 header 要先：崩在提交點與批發布之間會留下「header 是新
+    // id ＋ 批還躺在我們的唯一暫存裡」——下一輪靠**位元組比對**認得出來，可以
+    // roll forward。反過來（批先、header 後）崩掉只剩「批已發布、header 還是舊
+    // id」，下一輪的第 ⓪ 步 lstat 直接早退，等這批跑完就會拿舊 header 比對而
+    // 重新發布＝雙重執行。
     // header 寫不成不是致命傷：這一批照發，只是這一輪沒有去重保證，記 issue。
     const std::string header_temp = detail::unique_temp_path(header.base);
     if (!detail::write_file(header_temp, detail::encode_header(id, false),
@@ -375,29 +439,31 @@ HandoffState aggregate_instructions(const std::string &instruction_path,
     } else {
         sync_directory(base_directory, result);
     }
-    // ⑥d 批發布 MUST 排他（§D-5）：目的檔已存在＝別的彙整者先發布了。
-    if (!detail::publish_exclusive(paths.temp, paths.base, error)) {
+    // ⑥c 批發布 MUST 排他（§D-5），來源是**我們自己的唯一暫存**——沒有中間的
+    // 共用槽位，所以不可能發布到別人的批。目的檔已存在＝別的彙整者先發布了。
+    if (!detail::publish_exclusive(batch_temp, paths.base, error)) {
         if (error == EEXIST) {
-            // 本輪放棄：不清投遞、不標 swept、published 維持 false。固定槽位
-            // **留著不刪**——那可能是別人的；它會在下一輪被覆蓋，而且只有在
-            // 「header id 對得上 ＋ 位元組逐位元相同」時才會被 roll-forward，
-            // 不會誤扶正。
+            // 本輪放棄：不清投遞、不標 swept、published 維持 false。
+            // batch_temp 是我們自己寫的檔，刪它絕對安全（不像 roll-forward 的錨，
+            // 那個可能是同儕的）。
+            unlink(batch_temp.c_str());
             return HandoffState::Ok;
         }
-        result.path = paths.temp;
+        result.path = batch_temp;
         result.error = error;
-        // 刻意保留固定槽位當 roll-forward 素材：header 已經是新 id 了。
+        // 刻意**保留** batch_temp：header 已經是新 id 了，這一份就是下一輪的
+        // roll-forward 素材（靠位元組比對被認出來）。
         return HandoffState::RenameFailed;
     }
     sync_directory(base_directory, result);
     result.published = true;
 
-    // ⑥e 清投遞；全數成功且目錄落盤才標 swept（§C-8）。
+    // ⑥d 清投遞；全數成功且目錄落盤才標 swept（§C-8）。
     if (remove_accepted_deliveries(accepted, paths.inbox, result)) {
         mark_header_swept(header, id, base_directory, result);
     }
 
-    // ⑥f 兩個各自可容忍的降級疊在一起就不可容忍了（#26）：header 沒寫成代表下一輪
+    // ⑥e 兩個各自可容忍的降級疊在一起就不可容忍了（#26）：header 沒寫成代表下一輪
     // 沒有去重保證，投遞沒刪掉代表下一輪一定會再看到同一組——合起來就是無上限的
     // 副作用重播，每一輪重跑同一批，沒有任何機制會讓它停。升級為致命。
     // 借用既有的 PublishWriteFailed 而不是新增列舉值：aos_handoff_state 的 10／11／
