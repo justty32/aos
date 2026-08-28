@@ -8,6 +8,7 @@
 #include <aos/inst.hpp>
 
 #include "handoff_fs.hpp"
+#include "handoff_issue.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -19,23 +20,7 @@
 namespace aos {
 namespace {
 
-// 這兩個 helper 在 handoff_aggregate.cpp 也有一份同樣的複本——它們要同時碰
-// HandoffResult（公開型別）與 detail::fsync_dir（內部標頭），放不進 handoff_fs
-// （那個檔刻意不認識 HandoffResult），所以不為此多開一個內部標頭。
-void add_issue(HandoffResult &result, HandoffIssueKind kind,
-               const std::string &path, InstState state, int error) {
-    result.issues.push_back(HandoffIssue{kind, path, state, error});
-}
-
-// rename／unlink 之後把目錄項落盤（§D-5）。失敗只記 issue、不改變控制流：目錄項
-// 本身已經換好了，少的是耐久性保證；為此讓回合停擺只會把世界卡住，更糟。
-void sync_directory(const std::string &directory, HandoffResult &result) {
-    int error = 0;
-    if (!detail::fsync_dir(directory, error)) {
-        add_issue(result, HandoffIssueKind::DirectorySyncFailed, directory,
-                  InstState::Ok, error);
-    }
-}
+using detail::sync_directory;
 
 }  // namespace
 
