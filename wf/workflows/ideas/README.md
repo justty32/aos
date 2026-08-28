@@ -16,6 +16,7 @@
 | [core-layering](core-layering.md) | `aos/core` 該切成哪幾個小專案：最核心 `exec`（`inst_t` + 執行它的函數，連 `timeout_ms` 都不要）→ `exec_loop` → 匯聚（注入式 lib）→ 再外面就當普通 inst，不繼續往外包 |
 | [call-format](call-format.md) | 對 inst-POSIX 呼叫格式的兩輪拷問（已拆資料夾）：格式與序列化的九個缺口、fork/exec 是呼叫**機制**不是呼叫**約定**及界外六樣、以及不該動搖的部分。**使用者已逐條裁決** |
 | [prior-work](prior-work.md) | 跨 repo 前作對照：`simple_tools/docs` 的 agent-world 設計（2026-08-12，比 aos 早兩天）逐條對上 aos 模型——Step／Round／tick 三尺度塌成一個「回合」、git 買不到 replay、path 不是 capability、「資料夾是世界」把表示當本體 |
+| [machine-shape](machine-shape.md) | 這台機器的形狀（已拆資料夾）：真正的指令是**「批」而批沒有名字／header**、loop 沒有可分支的旗標、loop 現在住在 `core/inst` 裡與分層規劃相反、`.aos` 命名標準延伸不到 events／status、**唯一由外部生產者執行的投遞沒有實作**、規範已有三份真相 |
 
 > **現況落差**：使用者已判定 `core/llms` 與 `core/tooljson` 是失敗作——它們不符合這裡
 > 記的回合制／抽象 CPU 模型，之後要找時間改到符合。所以讀這些構想時別把現有程式碼
