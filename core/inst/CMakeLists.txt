@@ -21,6 +21,7 @@ aos_add_subproject(inst
         src/capi.cpp
         src/capi_instruction.cpp
         src/capi_io.cpp
+        src/capi_handoff.cpp
     HEADERS
         include/aos/inst.hpp
         include/aos/inst.h

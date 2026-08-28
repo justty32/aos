@@ -29,6 +29,6 @@
 | `test_run_deliver.cpp` | `aos deliver`：同一 process 連投 N 次得 N 份不同名、單行 JSON 三欄位照字面驗、stdin／`-`／`-f -`／`-f FILE` 四種輸入、投遞後 exec 真的執行、壞批次拒收且收件匣零殘檔、非世界與壞版面回 1、argv 錯回 2；庫層 `deliver_instructions` 的 canonical 位元組、空批次、缺收件匣、非 `.json` 路徑與驗證原因回報。stdin／stdout 用 `dup2` 換描述子在同一 process 內接管 |
 | `test_run_batch.cpp` | CLI 批次失敗、路徑基準、循序、parallel、批次尾端 join，以及 `$env`／`$ref` 實際執行整合 |
 | `exec_test_support.hpp` | 測試共用的小工具 |
-| `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架） |
+| `test_capi.c` | C ABI 往返測試（獨立的 C 執行檔，不連 C++ 測試框架）；含 `aos_deliver_buffer`／`aos_deliver_file`：正常投遞、buffer 太小（投遞仍發生，只是報不出名字）、壞投遞拒收、來源檔案讀不到、收件匣不存在 |
 
 C++ 測試建成一支 `aos_inst_tests`；C ABI 測試建成 `aos_inst_capi_tests`。

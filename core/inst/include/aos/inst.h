@@ -53,6 +53,26 @@ typedef enum aos_exec_state {
     AOS_EXEC_ALLOC_FAILED = 5
 } aos_exec_state;
 
+/* ABI rule: existing enum values are frozen. New values may only be appended.
+ * Mirrors aos::HandoffState (values 0-9); values from 10 are C-ABI-only
+ * extensions that have no C++ counterpart (same pattern as aos_inst_state's
+ * ALLOC_FAILED/READ_ERROR/WRITE_ERROR/BUFFER_TOO_SMALL). */
+typedef enum aos_handoff_state {
+    AOS_HANDOFF_OK = 0,
+    AOS_HANDOFF_INVALID_ARGUMENT = 1,
+    AOS_HANDOFF_BUSY = 2,
+    AOS_HANDOFF_NO_INSTRUCTION = 3,
+    AOS_HANDOFF_INBOX_READ_FAILED = 4,
+    AOS_HANDOFF_INSTRUCTION_READ_FAILED = 5,
+    AOS_HANDOFF_PUBLISH_WRITE_FAILED = 6,
+    AOS_HANDOFF_RENAME_FAILED = 7,
+    AOS_HANDOFF_RELEASE_FAILED = 8,
+    AOS_HANDOFF_DELIVERY_INVALID = 9,
+    AOS_HANDOFF_ALLOC_FAILED = 10,
+    AOS_HANDOFF_READ_ERROR = 11,
+    AOS_HANDOFF_BUFFER_TOO_SMALL = 12
+} aos_handoff_state;
+
 typedef struct aos_instruction aos_instruction;
 
 typedef struct aos_exec_result {
@@ -61,6 +81,21 @@ typedef struct aos_exec_result {
     int timed_out;
     int error;
 } aos_exec_result;
+
+/* 投遞後的檔名（"<pid>-<seq>.json"）在任何平台上都塞得進這個大小：
+ * pid_t 最多 10 位十進位、seq 是 size_t 最多 20 位，含分隔字元與副檔名還有餘裕。
+ * 給 aos_deliver_buffer／aos_deliver_file 的 name 緩衝區用這個常數就絕對夠用，
+ * 不必先探大小——探大小的兩段式呼叫在這裡不適用，見下方函式說明。 */
+#define AOS_DELIVER_NAME_MAX 64
+
+/* aos_deliver_buffer／aos_deliver_file 的診斷輸出。result 可傳 NULL（不需要診斷時）。 */
+typedef struct aos_deliver_result {
+    size_t count;            /* 這批有幾筆 instruction（空批次合法） */
+    aos_inst_state inst_state; /* AOS_HANDOFF_DELIVERY_INVALID 時的驗證失敗原因 */
+    size_t error_record;     /* 同上，記錄序號（1 起算，尚未進入逐筆解碼時為 0） */
+    int error;                /* 失敗時的 errno（依狀態而定） */
+    int sync_error;           /* 已發布、但收件匣目錄 fsync 失敗的 errno（警告，非失敗） */
+} aos_deliver_result;
 
 AOS_API aos_instruction *aos_instruction_new(void);
 AOS_API void aos_instruction_free(aos_instruction *instruction);
@@ -115,8 +150,30 @@ AOS_API aos_inst_state aos_instruction_write_file(
 AOS_API aos_exec_state aos_instruction_execute(
     aos_instruction *instruction, aos_exec_result *result);
 
+/* deliver（SPEC §D-3）：把 data／檔案內容當一批 instruction 投進
+ * instruction_path 推導出的收件匣。協定細節（唯一檔名、先 .temp 後排他 rename、
+ * canonical 位元組）全部內建，沒有「直接寫 ready」的捷徑；收件匣不存在時回
+ * AOS_HANDOFF_INBOX_READ_FAILED，不會自動建世界。
+ *
+ * 每次呼叫都會真的投遞一次——跟 aos_instruction_write_buffer 那種「先探大小、
+ * buffer 不夠再呼叫一次」的兩段式模式不同：這裡呼叫一次就落地一次，第二次呼叫
+ * 是另一筆新投遞，不是重試。name／name_size 只影響*能不能把投遞後的檔名回報
+ * 給你*，跟「有沒有投遞」無關——buffer 太小（或 name 為 NULL）時投遞已經完成，
+ * 回傳 AOS_HANDOFF_BUFFER_TOO_SMALL、needed 給實際長度，但**不要**因為看到這個
+ * 狀態就重打一次，重打會多投一份。給 name／name_size 至少 AOS_DELIVER_NAME_MAX
+ * 就不會遇到這個狀態。needed 不得為 NULL；result 可為 NULL。 */
+AOS_API aos_handoff_state aos_deliver_buffer(
+    const char *instruction_path, const char *data, size_t size,
+    char *name, size_t name_size, size_t *needed,
+    aos_deliver_result *result);
+AOS_API aos_handoff_state aos_deliver_file(
+    const char *instruction_path, const char *path,
+    char *name, size_t name_size, size_t *needed,
+    aos_deliver_result *result);
+
 AOS_API const char *aos_inst_state_string(aos_inst_state state);
 AOS_API const char *aos_exec_state_string(aos_exec_state state);
+AOS_API const char *aos_handoff_state_string(aos_handoff_state state);
 AOS_API const char *aos_version_string(void);
 
 #ifdef __cplusplus
