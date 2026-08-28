@@ -24,8 +24,9 @@
   build-cycle/m1-loop-side/smoke-notes.md）；② 三鏡頭審查＋對抗驗證（原 workflow 已停，
   新 session 重開 Review/Verify 兩段即可，script 在 session 工作流目錄）；③ 主線 S9
   （SPEC 摘 planned 標記、退出碼表收編、roadmap／SESSION-LOG、封存項目夾）；
-  ④ M1 全收尾後 push roadmap-run 到 origin（使用者已同意）。M2 規劃 spec 草稿在
-  scratchpad（§25 接受／§26 投遞協定／timeout_ms 語意搬遷），落檔後開 Fable plan agent。
+  ④ M1 全收尾後 push roadmap-run 到 origin（使用者已同意）。M2 規劃 spec 草稿已落
+  [build-cycle/m2-loop-project](workflows/build-cycle/m2-loop-project/spec.md)（§25 接受／§26 投遞
+  協定／timeout_ms 語意搬遷），定稿後開 Fable plan agent。
   M4（第二顆 CPU）卡使用者未解禁的四項存貨，到那裡停下等他。
 
 - **2026-08-28 拷問停打，轉入實作。** 新開 [roadmap](workflows/roadmap.md) 工作流：
