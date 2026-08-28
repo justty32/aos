@@ -11,7 +11,7 @@ namespace aos::detail {
 // 從 instruction 路徑（必須以 .json 結尾）推導出來的四個位置。
 struct HandoffPaths {
     std::string base;   // 發佈好、等待取件的 instruction
-    std::string temp;   // 原子發佈用的暫存檔（.temp）
+    std::string temp;   // 原子發佈用的固定暫存槽位（.temp）
     std::string runi;   // 取件後的執行中標記（.runi）
     std::string inbox;  // 投遞收件匣目錄（.tempd）
 };
@@ -21,6 +21,8 @@ bool derive_paths(const std::string &base, HandoffPaths &paths);
 
 // EINTR-safe 的整檔讀寫；失敗時把 errno 寫進 error。
 // write_file 在 close 前 fsync(fd)：內容落盤後才算寫成功，fsync 失敗視同寫入失敗。
+// error 保留**先發生**的那個 errno：close 只有在前面都還沒出錯時才有資格寫 error
+// （否則回報的會是收尾那個比較沒用的錯，把真正的原因蓋掉）。
 bool read_file(const std::string &path, std::string &buffer, int &error);
 bool write_file(const std::string &path, const std::string &data, int &error);
 
@@ -36,19 +38,49 @@ bool fsync_dir(const std::string &path, int &error);
 
 // 排他發布：把 from rename 成 to，to 已存在時失敗、不覆蓋（error 為 EEXIST）。
 // 優先走 renameat2(RENAME_NOREPLACE)；檔案系統不支援時（EINVAL/ENOSYS/ENOTSUP）
-// 退階為 link(from, to) + unlink(from)——link 沿用同一套「已存在就失敗」語意，
-// 退階路徑的 unlink 失敗一律視為整體失敗（呼應 write_file 對 close 失敗的處理：
-// 收尾步驟失敗，就不算數），供呼叫者判斷是否需要重試或改用新名字。
-// aggregate 既有的覆蓋語意 rename 不用這個 helper，維持原樣。
-bool publish_exclusive(const std::string &from, const std::string &to, int &error);
+// 退階為 link(from, to) + unlink(from)，link 沿用同一套「已存在就失敗」語意。
+//
+// 退階路徑的 unlink 失敗**不算失敗**：那時 to 已經連好、內容完整，回報失敗會讓
+// 呼叫者以為沒成功而重做（生產者重投＝真的多出一份，見 handoff_deliver.cpp 自己
+// 寫下的原則）。這種情況回 true，並把 unlink 的 errno 放進 *leftover_error——那是
+// 「已完成、但留下一份 from 的殘骸要人處理」的警告，nullptr 就丟掉。
+//
+// 彙整的批發布（`.temp` → base）與投遞的隔離（→ `.bad`）都走這個 helper：
+// §D-5 要求批發布 MUST 排他（目的檔已存在＝別的彙整者先發布了），§D-8 要求
+// 絕不覆蓋既有 `.bad`（覆寫等同刪除）。
+bool publish_exclusive(const std::string &from, const std::string &to, int &error,
+                       int *leftover_error = nullptr);
 
-// 投遞唯一名（裁-1 格式）："<pid>-<seq>"，不含副檔名、不含點；seq 是行程內單調遞增
-// 的計數（static atomic），只保證同一行程內不重複——pid 重用造成的跨行程撞名由
-// publish_exclusive 兜底（EEXIST 時呼叫者換名重試）。
+// 行程內唯一的權杖（裁-1 格式）："<pid>-<seq>"，不含副檔名、不含點；seq 是行程內
+// 單調遞增的計數（static atomic），只保證同一行程內不重複——pid 重用造成的跨行程
+// 撞名由 publish_exclusive 兜底（EEXIST 時呼叫者換名重試）。
+std::string next_unique_token();
+
+// 投遞唯一名（§D-2）。與 next_unique_token 同一個計數器、同一個形狀。
 std::string next_delivery_name();
 
-// 收件匣裡算數的投遞檔名：有副檔名、不以點開頭、且副檔名部分正好是 .json。
-// （所以 foo.json.bad 之類的隔離檔會被忽略。）
+// 每行程唯一的暫存路徑：把權杖插在最後一個 .json 之前，再接 .temp。
+//   .aos/inst.json      → .aos/inst-4711-0.json.temp
+//   .aos/inst-head.json → .aos/inst-head-4711-0.json.temp
+// 這個形狀**刻意**符合 §B-1 的 `<名字>.<副檔名>.<狀況>` 文法（名字變成
+// `inst-4711-0`），不是把權杖接在狀況字後面。§D-5：唯一名保證兩個彙整者不會共寫
+// 同一個檔，寫完再以一次 rename 進固定的 `.temp` 槽位（那個槽位是 roll-forward
+// 的錨）。
+std::string unique_temp_path(const std::string &base);
+
+// 同一套規則，狀況字換成 .bad：x.json → x-4711-3.json.bad。既有 `.bad` 撞名時
+// 給隔離用的第二個名字（§D-8：絕不覆蓋既有 `.bad`）。
+std::string unique_bad_path(const std::string &path);
+
+// path 的所在目錄；沒有斜線回 "."、只有開頭斜線回 "/"。rename／unlink 之後要
+// fsync 的就是這個目錄。
+std::string parent_directory(const std::string &path);
+
+// 收件匣裡算數的投遞檔名：不以點開頭，且**第一個**點之後的整段正好是 `.json`。
+// 也就是說 `a.b.json`、`a..json`、`.hidden.json` 都不收——收的集合刻意維持原樣
+// （改判定會改變收哪些檔），但彙整會對「以 .json 結尾卻不合這個形狀」的名字記一筆
+// DeliveryNameIgnored 出聲，不再靜默（#10）。`foo.json.bad`／`.temp`／`.runi`
+// 之類的狀況檔同樣不收，那是對的。
 bool is_delivery_name(const std::string &name);
 
 std::string join_path(const std::string &directory, const std::string &name);

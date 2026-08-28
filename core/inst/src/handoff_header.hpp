@@ -33,12 +33,24 @@ private:
     std::uint64_t state_ = 0xcbf29ce484222325ULL;  // FNV-1a 64-bit offset basis
 };
 
-// 四欄位 header 文件（§C-8）：version／id／origin／result，尾端一個 LF。
-std::string encode_header(const std::string &id);
+// 五欄位 header 文件（§C-8）：version／id／origin／result／swept，尾端一個 LF。
+// swept 是去重的閘門：發布時寫 false，投遞全數刪除且目錄落盤之後改寫成 true。
+std::string encode_header(const std::string &id, bool swept);
 
-// 只抽出 id 欄（去重要用的就這一欄；其餘三欄由 loop 於 M2 認領）。
-// 定點解析、不進 JSON 函式庫：認得的就是自己寫出去的那個版面。找不到或格式不認得
-// 就回 false，呼叫端一律視同「沒有 header」。
-bool decode_header_id(const std::string &document, std::string &id);
+// 從 header 讀出去重要用的兩個欄位。其餘三欄由 loop 於 M2 認領。
+struct HeaderFields {
+    std::string id;
+    bool swept = false;  // 缺欄（舊世界的 header）＝ false，見 §C-8
+};
+
+// 只採**頂層**的 id 與 swept：巢狀物件、陣列元素、字串值裡長得像 `"id"` 的位元組
+// 一律不算數（#4——§C-8 的 result 欄在 M2 會被填成物件，裡面很可能有自己的 id）。
+// 最小的頂層物件掃描器，不進 JSON 函式庫：期待 `{`，然後反覆「字串 key → `:` →
+// 值 → `,` 或 `}`」；字串值正確跳過跳脫序列，物件／陣列用深度計數跳過。
+//
+// 讀不懂就回 false ＝「視同沒有 header」：不是合法的頂層物件、沒有頂層 id、
+// id 不是字串、值裡有跳脫序列（我們自己寫出去的不含跳脫）都算讀不懂。這個失效
+// 方向是刻意的——往「多跑一次」倒，不往「吃掉投遞」倒。
+bool decode_header(const std::string &document, HeaderFields &fields);
 
 }  // namespace aos::detail
