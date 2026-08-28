@@ -65,6 +65,13 @@ bool write_fully(int fd, const char *data, size_t size) {
     return true;
 }
 
+// fsync 本身可能被訊號中斷（不像 close，重打 fsync 是安全的：fd 沒被回收）。
+bool fsync_retry(int fd) {
+    int rc;
+    do { rc = fsync(fd); } while (rc != 0 && errno == EINTR);
+    return rc == 0;
+}
+
 }  // namespace
 
 extern "C" {
@@ -144,9 +151,12 @@ AOS_API aos_inst_state aos_instruction_write_file(
         if (state != aos::InstState::Ok) return inst_state(state);
         const int fd = open_retry(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
         if (fd < 0) return AOS_INST_WRITE_ERROR;
+        // 內容落盤才算寫成功（S7 fsync 掃尾）；`aos_instruction_write_fd` 用的是
+        // 呼叫者自己的 fd，此處不代管，維持原樣（見 capi.md 的說明）。
         const bool wrote = write_fully(fd, output.data(), output.size());
+        const bool synced = wrote && fsync_retry(fd);
         const bool closed = close(fd) == 0;
-        return wrote && closed ? AOS_INST_OK : AOS_INST_WRITE_ERROR;
+        return wrote && synced && closed ? AOS_INST_OK : AOS_INST_WRITE_ERROR;
     } catch (...) { return AOS_INST_ALLOC_FAILED; }
 }
 

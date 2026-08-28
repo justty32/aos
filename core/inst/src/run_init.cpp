@@ -87,6 +87,12 @@ int run_init_world(const char *folder) {
         ok = version_fd >= 0;
     }
     if (ok) ok = write_fully(version_fd, "1\n", 2, error);
+    // 版面版本是崩潰後判斷這個世界能不能用的第一道關卡：內容落盤才算數
+    // （S7 fsync 掃尾；turn 已在 S6 補齊，這裡收齊 version）。
+    if (ok && !fsync_retry(version_fd)) {
+        error = errno;
+        ok = false;
+    }
     if (version_fd >= 0 && !close_checked(version_fd, error)) ok = false;
     if (ok && mkdirat(aos_fd, "inst.tempd", 0777) != 0) {
         error = errno;
@@ -106,6 +112,12 @@ int run_init_world(const char *folder) {
         ok = false;
     }
     if (turn_fd >= 0 && !close_checked(turn_fd, error)) ok = false;
+    // 目錄項本身也要落盤：`version`／`inst.tempd`／`turn` 三個新項目全在 `.aos`
+    // 底下，一次 fsync 這個已經開著的目錄 fd 就夠（S7 fsync 掃尾）。
+    if (ok && aos_fd >= 0 && !fsync_retry(aos_fd)) {
+        error = errno;
+        ok = false;
+    }
     if (!ok && error == 0) error = errno;
     if (aos_fd >= 0) close(aos_fd);
     close(folder_fd);

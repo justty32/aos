@@ -45,6 +45,15 @@ bool write_fully(int fd, const char *data, std::size_t size) {
     return true;
 }
 
+// fsync 本身可能被訊號中斷（不像 close，重打 fsync 是安全的：fd 沒被回收）。
+bool fsync_retry(int fd) {
+    int rc;
+    do {
+        rc = fsync(fd);
+    } while (rc != 0 && errno == EINTR);
+    return rc == 0;
+}
+
 bool write_exit_status(const std::string &path, int status) {
     char buffer[32];
     const int length = std::snprintf(buffer, sizeof(buffer), "%d\n", status);
@@ -57,11 +66,16 @@ bool write_exit_status(const std::string &path, int status) {
         return false;
     }
 
+    // exit 檔是崩潰後對帳的證據：內容落盤才算數（S7 fsync 掃尾）。
     const bool wrote = write_fully(fd, buffer, static_cast<std::size_t>(length));
+    const bool synced = wrote && fsync_retry(fd);
     const bool closed = close(fd) == 0;
-    return wrote && closed;
+    return wrote && synced && closed;
 }
 
+// stdin/stdout/stderr 重導向：這裡只開檔、`dup2` 給子行程，不寫入內容——子行程
+// 自己往這個 fd 寫什麼、寫多少，父行程管不到也不 fsync（S7 fsync 掃尾的已知豁免：
+// child stream 檔不算「本層寫檔」）。
 bool child_redirect(const char *path, int target_fd, int flags) {
     if (path == nullptr) {
         return true;
