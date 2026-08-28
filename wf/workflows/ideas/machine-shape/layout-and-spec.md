@@ -90,3 +90,6 @@ datasheet 的 memory map 每格標 R/W/RO/W1C。`.aos/` 至少三類 writer：lo
 操作型定義很無聊：一份編號條款、MUST/SHOULD、其他一切（parser／docs／prompt）從它
 派生的 SPEC，加上「裁決如何進入它」的流程。沒有它，第十九輪還會發現「最重要的約束
 沒寫在任何地方」。
+
+> **裁決（2026-08-28）**：**已立法**——[`docs/SPEC.md`](../../../../docs/SPEC.md) 建立，
+> 編號條款、MUST/SHOULD、每條附來源、開頭寫「裁決如何進入本檔」。§18 現在是 SPEC §A-3。

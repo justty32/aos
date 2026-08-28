@@ -1,5 +1,9 @@
 # `.aos` 資料夾標準
 
+> **回合語意與 instruction 格式的 normative 已收進 [SPEC](SPEC.md)**（A／C／F 區），
+> 那部分本檔是說明、以 SPEC 為準。版面、交接協定、git 政策（B／D／E 區）的收編在
+> M1——收編前本檔仍是那幾節的現行規格。
+
 ← [文件索引](README.md)｜[roadmap](roadmap.md)｜指示詞 [inst-directives](inst-directives.md)
 
 **這份是規格。** `.aos` 長什麼樣、各個檔案什麼意思、交接怎麼做，以本檔為準。

@@ -48,15 +48,17 @@
 | **第 4～6 輪的實作缺陷** | 實作時自然會遇到，要嘛放外圈、要嘛交給使用者自行 handle 風險 |
 | **前作那批（`simple_tools/docs`）** | 有些可以參考，但**很多機制可以在 loop 或更外層處理** |
 | **2000ms 那個常數** | 不是使用者設計的，是 AI 自己加的，別管 |
+| **normative SPEC（§30）** | 裁於 2026-08-28：[`docs/SPEC.md`](../../../docs/SPEC.md) 是**唯一 normative**，其他派生、衝突以 SPEC 為準；verdicts＝判例索引、SPEC＝法典。裁決進入 SPEC 的流程寫在 SPEC 開頭 |
+| **§22 凍結的矽** | 裁於 2026-08-28：exec 層永不長新機制，演化只在指令內容與外圈（SPEC §A-6）。推論：exec 永不認識 header、**`$ref` 不擴到取指令**（instruction §3 那條路封死，SPEC §C-9） |
+| **批 header（B1）** | 裁於 2026-08-28：**sidecar 檔**（建議 `<名字>-head.json`），欄位 v1＝`version`／`id`／`origin`／`result`，彙整層寫、loop 讀、exec 不認識（SPEC §C-8，planned M1）。manifest（§23）留 v2 |
+| **漂移三向標記** | 裁於 2026-08-28：已裁已實作＝直接寫；已裁未實作＝`(planned)`；未拍板矛盾＝不入條款、進 SPEC「已知未決」附錄 |
 
 ## B. 仍開著（值得打）
 
-1. **「批」沒有名字、沒有 header** — 真正的指令是批，但被命名的是 `inst_t`。ISA 版本、
-   指令來源、批次彙總狀態、去重 id 全都沒地方放。**第 1／2／6 條是同一個決定。**
-   → [machine-shape/instruction](machine-shape/instruction.md)
+1. ~~**「批」沒有名字、沒有 header**~~ — **已裁（2026-08-28）**：header sidecar＋欄位
+   v1，見 A 表「批 header」與 SPEC §C-8。實作在 M1。
 2. **loop 沒有可分支的狀態** — 「loop 是控制流」目前是志向；`result` 只有 `== 3` 被用過。
-3. **一個回合內沒有資料流**（實測）— 整批先 resolve 完才執行，`$ref` 引不到同批前一筆的
-   產物。乾淨的語意，但**沒寫在任何地方**。
+3. ~~**一個回合內沒有資料流**（實測）~~ — **已立法（2026-08-28）**：SPEC §A-3。
 4. **四階段管線沒被命名** — fetch(claim)／decode(resolve)／execute／writeback(exit)。
    照這條線 **decode 目前卡在錯的一層**，而 **writeback 只有單筆、沒有整批**。
 5. **外層契約會反噬基石** — 一旦外層有型別與回傳值，inst 可能退化成啟動器。使用者**還沒
@@ -72,15 +74,16 @@
    > `aos agent emit-context` 五支的需求。**規格有了，還沒做。**
 9. **沒有控制介面** — 沒有 `aos status`、沒有 pid 檔、不能暫停。同上，`aos status --json`
    與 `aos recover` 的規格已在 T5 那份裡。
-10. **格式沒有版本，版面也沒有** — 兩件不同的事，兩個都缺。
-11. **規範有三份真相且在漂**（規格／實作文件／手寫 parser），第四份是 LLM 的理解。
-12. **第十輪整組（§22–30，未裁；使用者：邊實作邊想）** — 五條是**待裁判準**而非缺陷：
-    類比的可證偽版本（凍結的矽——與 `$ref` 取指令相撞）；**loop 只收無法成為 inst 的
-    東西**（其餘是 OS-as-inst，一次回答 B6 與中斷欠帳）；控制面走投遞協定 or ad-hoc；
-    程式名冊封閉判準（exec/loop/deliver/status/recover/check）；規範要一份 normative
-    SPEC。另四條是缺口：opcode 懸空（header 加 manifest 欄可補）、核心方程要宣告
-    footprint（**git 第三筆帳：拍的 ≠ 改的**）、**PC 不存在**（回合編號無表示，是歷史／
-    記憶體模型／status／去重的共同前提）、版面要 ownership table。
+10. ~~**格式沒有版本，版面也沒有**~~ — **已裁（2026-08-28）**：格式版本＝header 的
+    `version`（SPEC §F-1，planned M1）；版面版本＝`.aos/version`（已存在，SPEC §F-2）。
+11. **規範有三份真相且在漂** — **主從已定（2026-08-28）**：SPEC 唯一 normative，inst
+    側（欄位表／驗證表）已搬入 SPEC 收斂；loop 側（版面／交接）的收編在 M1。機器可讀
+    schema 仍缺（`aos check` 那步）。
+12. **第十輪整組（§22–30）** — **§22 與 §30 已裁（2026-08-28，見 A 表）**。仍開：
+    **§25 loop 只收無法成為 inst 的東西**（M2 前必裁，一次回答 B6 與中斷欠帳）；§26
+    控制面走投遞協定 or ad-hoc（M2 前）；§29 名冊封閉判準（M3 前）。缺口類：opcode
+    懸空（§23，header v2 的 manifest 欄可補）、footprint 宣告（§24，M1 進 SPEC E 區）、
+    **PC 不存在**（`.aos/turn`，M1 做）、版面 ownership table（M1／M3 進 SPEC）。
 13. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
     `fork` 之後、`execve` 之前建，只有 exec 層碰得到。與「安全交給別人」的裁決有出入。
 

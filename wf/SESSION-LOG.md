@@ -12,6 +12,14 @@
 
 ## 最新進度
 
+- **2026-08-28 roadmap 衝刺開跑（分支 `roadmap-run`，做完整條使用者才驗成品）。**
+  團隊模式：主線 Fable 規劃與立法、plan 可開 Fable agent、實作開 Opus（指揮 sonnet）、
+  審核另開 Opus。新開 [build-cycle](workflows/build-cycle/README.md) 工作流（spec →
+  plan → do 兩道閘門）；使用者重排 roadmap：**inst 先、loop 是下一步**。
+  **M0 已完成**：`docs/SPEC.md` 立法（五條裁決：§30／§22 凍結的矽／header sidecar＋B1
+  v1／$ref 不取指令／三向標記，全記入 verdicts A 表）。**進行中：M1**（loop 側立法＋
+  deliver／PC／修 bug）。M4（第二顆 CPU）卡使用者未解禁的四項存貨，到那裡停下等他。
+
 - **2026-08-28 拷問停打，轉入實作。** 新開 [roadmap](workflows/roadmap.md) 工作流：
   M0 立法（normative SPEC）→ M1 批 header → M2 deliver/PC/修 bug → M3 exec_loop 落地
   分層（§25/§26 必裁）→ M4 status/recover/check → M5 第二顆 CPU（四項存貨閘門）。
@@ -72,7 +80,7 @@
   的 D4](../docs/roadmap.md)）。所以這兩個小專案現在是**擱置**，不是待修——別急著重寫，
   也別再往裡面投資。連帶：llmkit 移植的 S2／S5 一起停用。
 - **主線是回合制模型的 T0–T6**：`.aos` 規格在
-  [`docs/aos-folder.md`](../docs/aos-folder.md)（**唯一真源**），指示詞設計在
+  [`docs/aos-folder.md`](../docs/aos-folder.md)（normative 條款已移 [`docs/SPEC.md`](../docs/SPEC.md)），指示詞設計在
   [`docs/inst-directives.md`](../docs/inst-directives.md)，順序在
   [`docs/roadmap.md`](../docs/roadmap.md)，模型的理由在
   [`wf/workflows/ideas/`](workflows/ideas/README.md)。`core/inst` 已解凍。
