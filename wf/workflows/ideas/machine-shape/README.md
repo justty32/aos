@@ -14,5 +14,6 @@
 | 檔案 | 裡面有什麼 | 什麼時候會想看 |
 |---|---|---|
 | [instruction](instruction.md) | 真正的指令是「批」而批沒有名字、ISA 沒有版本、有指令沒有程式（`$ref` 若能引指令就是副程式）、沒有架構狀態只有檔案系統、von Neumann 但沒有 W^X | 要確立 inst 的 ISA 地位之前 |
-| [loop](loop.md) | loop 沒有可分支的狀態（旗標暫存器缺席）、loop 現在住在 `core/inst` 裡跟分層規劃相反、一世界一 loop 沒有排程器、沒有 reset line | 要動 `exec_loop` 之前 |
-| [layout-and-spec](layout-and-spec.md) | 命名標準延伸不到 events／status、**最該有的 `deliver` 正好沒有**、規範已有三份真相且在漂 | 要動 `.aos` 版面或規格之前 |
+| [debts](debts.md) | **已下裁決的欠帳**（不是待辦）：GPU 模型讓兩顆 CPU 共寫一份記憶體卻沒有記憶體模型；git 當快照撞上 `.aos/` 的暫態，回滾含 `.runi` 的 commit 會讓世界死鎖 | 想知道哪些問題是自己選出來的 |
+| [loop](loop.md) | loop 沒有可分支的狀態（旗標暫存器缺席）、**官方寫法 `--loop 0` 是忙碌輪詢**、**失敗算「有做事」所以關掉唯一的節流閥**、除了 3 以外的回傳值全被忽略、loop 現在住在 `core/inst` 裡跟分層規劃相反、一世界一 loop 沒有排程器、沒有 reset line | 要動 `exec_loop` 之前 |
+| [layout-and-spec](layout-and-spec.md) | 命名標準延伸不到 events／status、版面也沒有版本、沒有 `status`／暫停等控制介面、**最該有的 `deliver` 正好沒有**、規範已有三份真相且在漂 | 要動 `.aos` 版面或規格之前 |
