@@ -74,9 +74,10 @@ aos exec <folder>   ＝ 推進一回合
         turn                     ← 回合計數器（這台機器的 PC，§B-3）
         .gitignore               ← §E-4 的 gitignore 政策，`aos init` 建（見第十節）
         inst.json                ← 核心 CPU 待執行的批次
-        inst.json.temp           ← 彙整中的下一批
         inst.json.runi           ← 已取走、正在跑的那一批
-        inst-head.json           ← 那一批的 header sidecar（§C-8）
+        inst-<pid>-<seq>.json.temp      ← 彙整中的下一批（每行程唯一名，§D-5）
+        inst-head.json           ← 那一批的 header sidecar（§C-8 五欄，含 swept）
+        inst-head-<pid>-<seq>.json.temp ← 寫 header 用的唯一暫存
         inst.tempd/              ← 投遞匣
             <pid>-<seq>.json     ← 投遞完成，等彙整（檔名見 §D-2）
             <pid>-<seq>.json.temp ← 還在寫，彙整者略過
@@ -136,14 +137,14 @@ aos exec <folder>   ＝ 推進一回合
 
 ```text
 投遞  inst.tempd/<名>.json.temp ─rename─▶ inst.tempd/<名>.json
-彙整  併成 inst.json.temp       ─rename─▶ inst.json
+彙整  併成 inst-<pid>-<seq>.json.temp ─rename─▶ inst.json（排他）
 取件  inst.json                 ─rename─▶ inst.json.runi
 ```
 
 | 步驟 | 誰做 | 規則 |
 |---|---|---|
 | **投遞** | 任何生產者（用 `aos deliver`） | 先寫 `<名>.json.temp`，寫完才 `rename` 成 `<名>.json`。檔名必須唯一，因為 `rename` 原子但**寫入不是**，共用檔名會互相蓋寫；`aos deliver` 用的是 `<pid>-<seq>`（§D-2），發布時排他、絕不覆蓋既有名 |
-| **彙整** | 彙整者 | 把 `inst.tempd/` 底下所有**沒有狀況後綴**的投遞併成 `inst.json.temp`，完成後 `rename` 成 `inst.json` |
+| **彙整** | 彙整者 | 把 `inst.tempd/` 底下所有**沒有狀況後綴**的投遞併成一份**每行程唯一名**的 `.temp`，完成後**排他** `rename` 成 `inst.json`（目的檔已存在＝別的彙整者先發布了，本輪放棄；§D-5）。**沒有共用的固定 `inst.json.temp` 槽位**——共用檔名會讓一個彙整者把別人的批發布到自己剛提交的 header 底下 |
 | **取件** | `aos exec` | 完整讀進記憶體後**立刻** `rename` 成 `inst.json.runi`，然後才執行；回合結束再刪掉 `.runi` |
 
 **`.runi` 的意思是「正在跑」，不是「跑過」。**
