@@ -86,9 +86,13 @@ bool read_file(const std::string &path, std::string &buffer, int &error) {
     return ok;
 }
 
-bool write_file(const std::string &path, const std::string &data, int &error) {
+namespace {
+
+// write_file 與 write_file_exclusive 只差在建檔旗標（O_TRUNC vs O_EXCL）。
+bool write_file_flags(const std::string &path, const std::string &data,
+                      int create_flag, int &error) {
     const int fd = open_retry(path.c_str(),
-                              O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
+                              O_WRONLY | O_CREAT | create_flag | O_CLOEXEC, 0666);
     if (fd < 0) {
         error = errno;
         return false;
@@ -115,6 +119,17 @@ bool write_file(const std::string &path, const std::string &data, int &error) {
     }
     if (!close_checked(fd, error)) ok = false;
     return ok;
+}
+
+}  // namespace
+
+bool write_file(const std::string &path, const std::string &data, int &error) {
+    return write_file_flags(path, data, O_TRUNC, error);
+}
+
+bool write_file_exclusive(const std::string &path, const std::string &data,
+                          int &error) {
+    return write_file_flags(path, data, O_EXCL, error);
 }
 
 bool fsync_dir(const std::string &path, int &error) {

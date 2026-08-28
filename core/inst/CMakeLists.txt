@@ -12,6 +12,7 @@ aos_add_subproject(inst
         src/format_decode.cpp
         src/resolve.cpp
         src/handoff.cpp
+        src/handoff_deliver.cpp
         src/handoff_fs.cpp
         src/handoff_header.cpp
         src/spawn_prep.cpp
@@ -33,6 +34,7 @@ add_library(aos_inst_cli OBJECT
     src/run_exec.cpp
     src/run_loop.cpp
     src/run_init.cpp
+    src/run_deliver.cpp
     src/run_batch.cpp
 )
 target_link_libraries(aos_inst_cli PUBLIC aos::inst)
@@ -51,6 +53,13 @@ aos_add_subcommand(
     SUMMARY "初始化一個 aos 資料夾"
 )
 
+aos_add_subcommand(
+    NAME deliver
+    ENTRY aos_deliver_cli_main
+    LIBRARY aos_inst_cli
+    SUMMARY "投遞一批 instruction 到 aos 資料夾的收件匣"
+)
+
 aos_add_test(aos_inst_tests
     SOURCES
         tests/test_format_read.cpp
@@ -67,6 +76,7 @@ aos_add_test(aos_inst_tests
         tests/test_run_init.cpp
         tests/test_run_loop.cpp
         tests/test_run_handoff.cpp
+        tests/test_run_deliver.cpp
         tests/test_run_batch.cpp
     LINK aos_inst_cli
 )

@@ -9,7 +9,7 @@
 
 ## core/inst/ — 第一個小專案：POSIX 指令執行器
 
-讀一筆或一批 JSON instruction，準備好環境／重導向後 `fork`＋`execve` 跑起來，等它結束、寫回 exit status。對外是 `aos::inst`（`libaos_inst.so`）＋ `aos init`／`aos exec` 子命令。
+讀一筆或一批 JSON instruction，準備好環境／重導向後 `fork`＋`execve` 跑起來，等它結束、寫回 exit status。對外是 `aos::inst`（`libaos_inst.so`）＋ `aos init`／`aos exec`／`aos deliver` 子命令。
 
 ---
 

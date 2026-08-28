@@ -126,6 +126,7 @@ AOS_API const char *to_string(DirectiveField field) noexcept;
 
 /* handoff：彙整、取件、釋放 instruction 檔，不執行 instruction。 */
 
+/* 新值一律加在尾端（同下）。 */
 enum class HandoffState {
     Ok,
     InvalidArgument,
@@ -136,6 +137,7 @@ enum class HandoffState {
     PublishWriteFailed,
     RenameFailed,
     ReleaseFailed,
+    DeliveryInvalid, /* 投遞的文件過不了唯一 parser：原因在 DeliverResult */
 };
 
 /* 新值一律加在尾端（C ABI 的鏡射列舉一經釋出就凍結，見 conventions）。 */
@@ -163,6 +165,23 @@ struct HandoffResult {
     std::vector<HandoffIssue> issues;
 };
 
+/* deliver（SPEC §D-3）：三步協定裡唯一由外部生產者執行的那一步。協定細節
+ * （唯一檔名、先 .temp 後排他 rename、canonical 位元組）全部內建，所以沒有
+ * 「直接寫 ready」的捷徑可用。 */
+struct DeliverResult {
+    std::string name;      /* 發布後的投遞檔名，例如 4711-0.json */
+    std::string inbox;     /* 投遞落腳的收件匣路徑（由 instruction_path 推導） */
+    std::size_t count = 0; /* 這批有幾筆 instruction（空批次合法，見 §C-2） */
+    std::string path;      /* 失敗發生在哪個位置 */
+    int error = 0;         /* 失敗的 errno */
+    InstState inst_state = InstState::Ok; /* DeliveryInvalid 時的驗證結果 */
+    std::size_t error_record = 0;         /* DeliveryInvalid 時的記錄序號（1 起算） */
+    int sync_error = 0;    /* 已發布、但收件匣目錄 fsync 失敗的 errno（警告，非失敗） */
+};
+
+AOS_API HandoffState deliver_instructions(const std::string &instruction_path,
+                                          const std::string &document,
+                                          DeliverResult &result);
 AOS_API HandoffState aggregate_instructions(
     const std::string &instruction_path, HandoffResult &result);
 AOS_API HandoffState claim_instruction(

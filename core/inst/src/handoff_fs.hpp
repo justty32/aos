@@ -24,6 +24,12 @@ bool derive_paths(const std::string &base, HandoffPaths &paths);
 bool read_file(const std::string &path, std::string &buffer, int &error);
 bool write_file(const std::string &path, const std::string &data, int &error);
 
+// 與 write_file 相同（含 fsync），但用 O_EXCL 建檔：檔名已經被佔走就失敗
+// （error 為 EEXIST）、絕不覆蓋既有內容。deliver 建自己的 `.temp` 用它——投遞的
+// 檔名是自己挑的，撞到就該換一個，不是蓋掉別人寫到一半的投遞。
+bool write_file_exclusive(const std::string &path, const std::string &data,
+                          int &error);
+
 // EINTR-safe：open(path, O_DIRECTORY) → fsync → close。用來在 rename 之後把目錄項
 // 的變更落盤（rename 落盤與否，看的是目錄的 fsync，不是檔案本身的）。
 bool fsync_dir(const std::string &path, int &error);

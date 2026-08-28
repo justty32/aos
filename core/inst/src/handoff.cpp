@@ -312,6 +312,7 @@ const char *to_string(HandoffState state) noexcept {
     case HandoffState::PublishWriteFailed: return "PublishWriteFailed";
     case HandoffState::RenameFailed: return "RenameFailed";
     case HandoffState::ReleaseFailed: return "ReleaseFailed";
+    case HandoffState::DeliveryInvalid: return "DeliveryInvalid";
     }
     return "Unknown";
 }
