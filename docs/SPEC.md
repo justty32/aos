@@ -52,8 +52,35 @@
 
 ## B 命名與版面
 
-（本區待收編，`(planned, M1)`。現行敘述見 [aos-folder](aos-folder.md) 二／三；命名
-標準、`.aos/` 版面、`.bad` 正名、版面 ownership 屆時進本區。）
+- **§B-1 命名標準**：`<名字>.<副檔名>.<狀況>`。副檔名：`.json`（JSON 檔）、`.d`（一般
+  資料夾）、`.tempd`（投遞匣資料夾）。狀況（**封閉清單**）：`.temp`（還在生成，別碰）、
+  `.runi`（已被取走、正在跑）、`.bad`（內容無效，已被隔離）。**MUST NOT** 用新狀況字
+  表達同一件事；新增狀況字＝修憲。本標準為 `.aos` 訂，但不限於 `.aos`。
+  來源：aos-folder 二；`.bad` 正名收編（verdicts D 表漂移證據），裁於 2026-08-28。
+- **§B-2 `.aos/` 版面樹**：
+
+  ```text
+  .aos/
+      version              ← 版面版本（§B-4）
+      turn                 ← 回合計數器（§B-3）(planned, M1)
+      inst.json            ← 核心 CPU 待執行的批次（特權位）
+      inst.json.temp / .runi
+      inst-head.json       ← 批 header sidecar（§C-8）(planned, M1)
+      inst.tempd/          ← 投遞匣
+      insts/               ← 其他 CPU，一顆一份（同名配 .temp/.runi/.tempd 與 -head.json）
+  ```
+
+  其他 CPU **SHOULD** 遵循同一套協定，不強迫。
+  來源：aos-folder 三；header 檔名裁於 2026-08-28（M1 裁-3）。
+- **§B-3 `.aos/turn`** `(planned, M1)`：回合計數器（這台機器的 PC）。`aos init`
+  **MUST** 建立、初值 `0` 加 LF；由 CLI 回合層（loop）持有；release 成功後 **MUST**
+  遞增。讀不到（舊世界）**MUST** 視為 `0` 並於首次遞增時建立——**MUST NOT** 拒絕、
+  **MUST NOT** 變動版面版本。
+  來源：§27 三小裁決＋M1 裁-5，裁於 2026-08-28。
+- **§B-4 版面版本**：`.aos/version` 住版面版本。讀不到 ＝ 不是合法 `.aos`，**MUST**
+  拒絕；版本不認得（比自己新）＝ **MUST** 拒絕，不猜、不盡力而為。現行版面＝1；
+  `turn` 與 `inst-head.json` 是純新增，**MUST NOT** 因此 bump。
+  來源：aos-folder 九。
 
 ## C 指令格式（序列化）
 
@@ -134,13 +161,80 @@
 
 ## D 交接協定
 
-（本區待收編，`(planned, M1)`。現行敘述見 [aos-folder](aos-folder.md) 六；三步協定、
-彙整規則、`deliver` 屆時進本區。）
+- **§D-1 三步協定**：投遞 → 彙整 → 取件，每步一次 `rename`。
+  ```text
+  投遞  inst.tempd/<名>.json.temp ─rename─▶ inst.tempd/<名>.json
+  彙整  併成 inst.json.temp        ─rename─▶ inst.json（§D-5 順序）
+  取件  inst.json                  ─rename─▶ inst.json.runi
+  ```
+  來源：aos-folder 六。
+- **§D-2 投遞**：生產者 **MUST** 先寫 `<名>.json.temp`、寫完才 `rename`（寫入不原子，
+  共用檔名會互相蓋寫）。投遞檔名 **MUST** 唯一：`aos deliver` 用 `<pid>-<seq>`
+  （`seq` 為行程內單調計數）`(planned, M1)`；發布 **MUST** 排他（`RENAME_NOREPLACE`
+  或 `link`＋`unlink` 退階），**MUST NOT** 覆蓋既有名。
+  來源：aos-folder 六＋M1 裁-1，裁於 2026-08-28。
+- **§D-3 `deliver`** `(planned, M1)`：投遞是唯一由外部生產者執行的協定步驟，**MUST**
+  有程式提供：`aos deliver [folder]`（吃 stdin 或檔案）＋ C ABI。驗證 **MUST** 走唯一
+  parser（C 區）；發布的位元組 **MUST** 是 canonical（`read_all`→`write_all` 往返，
+  與 §C-4 round-trip 同一條約束）；stdout **MUST** 輸出單行 JSON
+  `{"delivery":"<檔名>","count":N,"target":"<inbox 相對路徑>"}`；inbox 不存在 **MUST**
+  報錯，**MUST NOT** 自動建世界。
+  來源：T5 subcommand-specs＋M1 裁-2／裁-7，裁於 2026-08-28。
+- **§D-4 彙整規則**：只收**沒有狀況後綴**的投遞。順序不保證——投遞者 **MUST NOT**
+  假設任何順序（實作 **MAY** 用字典序）；需要先後就排進同一份投遞。`inst.json` 已有
+  一份沒被讀走時本輪 **MUST NOT** 發布（不覆蓋、不合併）。無效投遞：**MUST** 隔離
+  （就地改名加 `.bad`）、噴 warning、繼續處理其餘。投遞 **MUST** 在發布成功之後才刪。
+  來源：aos-folder 六。
+- **§D-5 彙整耐久性與提交點** `(planned, M1)`：所有寫檔 **MUST** fsync。發布順序
+  **MUST** 為：寫批 `.temp`（fsync）→ 寫 header `.temp`（fsync）→ rename header
+  （**去重承諾的提交點**）→ fsync 目錄 → rename 批 → fsync 目錄 → 刪投遞 → fsync
+  目錄。header sidecar（§C-8 四欄）由彙整層寫。
+  來源：gotchas handoff 節＋M1 plan S3 順序論證，裁於 2026-08-28。
+- **§D-6 批 id 與去重** `(planned, M1)`：批 `id` ＝ 對排序後（投遞檔名＋內容）的
+  確定性摘要（64-bit FNV-1a，16 位 hex）。彙整 **MUST** 在發布前比對現任 header 的
+  `id`：同一組投遞（同名同內容、恰好整組）殘留於 inbox 時 **MUST NOT** 二次發布——
+  批 `.temp` 完整存在則 roll-forward（rename 後清投遞），否則只清投遞。**覆蓋範圍**：
+  只保證整組殘留；部分殘留混入新投遞後的重複不在保證內（條款照實寫，不誇大）。
+  來源：M1 裁-4／裁-6，裁於 2026-08-28。
+- **§D-7 `.runi` 語意**：`.runi` 存在 ⟺ 有一回合沒跑完。回合正常返回 **MUST** 刪
+  `.runi`——不論退出碼、**包含**整批解析失敗（壞批消失、stderr 留診斷，刻意取捨）；
+  行程死掉（crash／kill／斷電）就留著。`.runi` 已存在 **MUST** 拒絕啟動（退出碼 3）；
+  每顆 CPU 各鎖各的。回合內個別指令的成敗走各自 `exit` 欄位，**MUST NOT** 靠 `.runi`
+  表達。
+  來源：aos-folder 六。
+- **§D-8 `.bad` 的清理**：彙整者 **MUST NOT** 自動刪 `.bad`；清理歸人或 `aos recover`
+  （M3）。crash 之後要人來處理，一以貫之。
+  來源：M1 階段裁決 3，裁於 2026-08-28。
+- **§D-9 退出碼**：`aos exec` 的退出碼只回答「回合有沒有正常跑完」，**MUST NOT** 反映
+  子行程的成敗（那走 `exit` 欄位）。現行表：0 回合正常跑完（含無事可做）；1 函式庫層
+  失敗；2 用法錯誤；3 `.runi` 已存在拒絕啟動。完整對照 `(planned, M1)`——由實作端
+  實測各失敗模式後收編，屆時消掉已知未決 #2。
+  來源：aos-folder 八＋T5 實測。
 
 ## E 世界與 git
 
-（本區待收編，`(planned, M1)`。現行敘述見 [aos-folder](aos-folder.md) 四／十；路徑
-基準、footprint 宣告（instruction §24）、`.gitignore` 政策屆時進本區。）
+- **§E-1 世界與路徑基準**：`<folder>` ＝ 世界，`.aos/` ＝ 指令區，`aos exec <folder>`
+  ＝ 推進一回合；沒有常駐狀態，世界在檔案系統上。路徑基準**一律 `<folder>`**、沒有
+  例外：子行程預設 cwd、四個重導向路徑欄、`$ref` 的相對路徑；絕對路徑照字面。同一份
+  instruction 從哪裡呼叫 **MUST** 是同一個意思（資料夾整包可搬）。
+  來源：aos-folder 一／四（已實作：chdir 到 `<folder>`）。
+- **§E-2 footprint 宣告**：一筆 inst **SHOULD** 只修改 `<folder>` 之內。實際轉移函數有
+  自由變數（environ、PATH、絕對路徑、cwd 逃逸）——實作 **MUST NOT** enforce（權限與
+  安全歸上層，verdicts A 表），但**越界的寫入不在 git 快照涵蓋範圍內，回滾不還原**；
+  用絕對路徑逃逸者自擔後果。
+  來源：instruction §24（第十輪），裁於 2026-08-28。
+- **§E-3 快照與回滾**：快照、回滾、複製都用 git。回滾到含 `.runi` 的 commit ＝ 一個
+  永久拒絕啟動的死鎖世界——所以機器暫態 **MUST NOT** 進 git（§E-4）。回滾含
+  `inst.json` 的 commit 會重新執行舊回合（新的求值分支）——那 **MUST** 是選的，
+  不是副作用（由 §E-4 讓使用者可選）。
+  來源：verdicts A 表「世界沒有圍牆」＋debts §2。
+- **§E-4 `.gitignore` 政策**（取代 aos-folder 十的「整包不進」）：**世界**的 gitignore
+  **MUST** 排除機器暫態——`*.temp`、`*.runi`、`*.tempd/`、`*.bad`；**MUST** 納入
+  `.aos/version` 與 `.aos/turn`（可攜的回合座標）。`inst.json` 與 `inst-head.json`
+  （待執行批次）＝ **MAY**：納入則回滾會復原舊批次、重演回合——效果由使用者自選。
+  本原始碼 repo 不是世界，其根 `.gitignore` 整包排除 `.aos/` 屬測試殘留處理，不受
+  本條拘束。
+  來源：M1 階段裁決 2（使用者於 roadmap 拍板）＋debts §2，裁於 2026-08-28。
 
 ## F 版本
 

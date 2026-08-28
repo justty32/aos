@@ -52,6 +52,7 @@
 | **§22 凍結的矽** | 裁於 2026-08-28：exec 層永不長新機制，演化只在指令內容與外圈（SPEC §A-6）。推論：exec 永不認識 header、**`$ref` 不擴到取指令**（instruction §3 那條路封死，SPEC §C-9） |
 | **批 header（B1）** | 裁於 2026-08-28：**sidecar 檔**（建議 `<名字>-head.json`），欄位 v1＝`version`／`id`／`origin`／`result`，彙整層寫、loop 讀、exec 不認識（SPEC §C-8，planned M1）。manifest（§23）留 v2 |
 | **漂移三向標記** | 裁於 2026-08-28：已裁已實作＝直接寫；已裁未實作＝`(planned)`；未拍板矛盾＝不入條款、進 SPEC「已知未決」附錄 |
+| **M1 階段裁決** | 裁於 2026-08-28（SPEC B／D／E 區條款）：§27 三小（turn 由 loop 持有、release 成功遞增、進 git）；`.gitignore` 政策取代 aos-folder 十（暫態不進、version/turn 進、inst.json＝MAY）；`.bad` 歸人／recover 清；投遞名 `<pid>-<seq>`＋排他發布；deliver 輸出單行 JSON、發布 canonical 位元組；header 檔名 `inst-head.json`；批 id＝FNV-1a 摘要兼去重依據（隨機 id 需名冊＝manifest，與「manifest 留 v2」相撞）；舊世界缺 turn 視為 0 不拒絕；去重只保證整組殘留。細節見 [build-cycle/m1-loop-side](../build-cycle/m1-loop-side/plan.md) 第一節 |
 
 ## B. 仍開著（值得打）
 
