@@ -62,17 +62,17 @@
   ```text
   .aos/
       version              ← 版面版本（§B-4）
-      turn                 ← 回合計數器（§B-3）(planned, M1)
+      turn                 ← 回合計數器（§B-3）
       inst.json            ← 核心 CPU 待執行的批次（特權位）
       inst.json.temp / .runi
-      inst-head.json       ← 批 header sidecar（§C-8）(planned, M1)
+      inst-head.json       ← 批 header sidecar（§C-8）
       inst.tempd/          ← 投遞匣
       insts/               ← 其他 CPU，一顆一份（同名配 .temp/.runi/.tempd 與 -head.json）
   ```
 
   其他 CPU **SHOULD** 遵循同一套協定，不強迫。
   來源：aos-folder 三；header 檔名裁於 2026-08-28（M1 裁-3）。
-- **§B-3 `.aos/turn`** `(planned, M1)`：回合計數器（這台機器的 PC）。`aos init`
+- **§B-3 `.aos/turn`**：回合計數器（這台機器的 PC）。`aos init`
   **MUST** 建立、初值 `0` 加 LF；由 CLI 回合層（loop）持有；release 成功後 **MUST**
   遞增。讀不到（舊世界）**MUST** 視為 `0` 並於首次遞增時建立——**MUST NOT** 拒絕、
   **MUST NOT** 變動版面版本。
@@ -140,9 +140,8 @@
   `ARG_MAX`）。代價：深層巢狀會讓解析器遞迴爆堆疊——指令檔等同可執行程式碼，
   **MUST NOT** 拿本執行器直接讀不可信的輸入。
   來源：format.md／keep。
-- **§C-8 批 header** `(planned, M1)`：批的 metadata 住在**批檔旁的 sidecar 檔**
-  （建議名 `<名字>-head.json`，核心 CPU 即 `.aos/inst-head.json`；確切檔名隨 B 區收編
-  定案）。欄位 v1：
+- **§C-8 批 header**：批的 metadata 住在**批檔旁的 sidecar 檔** `<名字>-head.json`
+  （核心 CPU 即 `.aos/inst-head.json`，檔名定案於 §B-2）。欄位 v1：
 
   | 欄位 | 意義 |
   |---|---|
@@ -170,10 +169,10 @@
   來源：aos-folder 六。
 - **§D-2 投遞**：生產者 **MUST** 先寫 `<名>.json.temp`、寫完才 `rename`（寫入不原子，
   共用檔名會互相蓋寫）。投遞檔名 **MUST** 唯一：`aos deliver` 用 `<pid>-<seq>`
-  （`seq` 為行程內單調計數）`(planned, M1)`；發布 **MUST** 排他（`RENAME_NOREPLACE`
-  或 `link`＋`unlink` 退階），**MUST NOT** 覆蓋既有名。
+  （`seq` 為行程內單調計數）；發布 **MUST** 排他（`RENAME_NOREPLACE` 或 `link`＋`unlink`
+  退階），**MUST NOT** 覆蓋既有名——pid 會回收，唯一性最終由排他發布擔保。
   來源：aos-folder 六＋M1 裁-1，裁於 2026-08-28。
-- **§D-3 `deliver`** `(planned, M1)`：投遞是唯一由外部生產者執行的協定步驟，**MUST**
+- **§D-3 `deliver`**：投遞是唯一由外部生產者執行的協定步驟，**MUST**
   有程式提供：`aos deliver [folder]`（吃 stdin 或檔案）＋ C ABI。驗證 **MUST** 走唯一
   parser（C 區）；發布的位元組 **MUST** 是 canonical（`read_all`→`write_all` 往返，
   與 §C-4 round-trip 同一條約束）；stdout **MUST** 輸出單行 JSON
@@ -185,12 +184,12 @@
   一份沒被讀走時本輪 **MUST NOT** 發布（不覆蓋、不合併）。無效投遞：**MUST** 隔離
   （就地改名加 `.bad`）、噴 warning、繼續處理其餘。投遞 **MUST** 在發布成功之後才刪。
   來源：aos-folder 六。
-- **§D-5 彙整耐久性與提交點** `(planned, M1)`：所有寫檔 **MUST** fsync。發布順序
+- **§D-5 彙整耐久性與提交點**：所有寫檔 **MUST** fsync。發布順序
   **MUST** 為：寫批 `.temp`（fsync）→ 寫 header `.temp`（fsync）→ rename header
   （**去重承諾的提交點**）→ fsync 目錄 → rename 批 → fsync 目錄 → 刪投遞 → fsync
   目錄。header sidecar（§C-8 四欄）由彙整層寫。
   來源：gotchas handoff 節＋M1 plan S3 順序論證，裁於 2026-08-28。
-- **§D-6 批 id 與去重** `(planned, M1)`：批 `id` ＝ 對排序後（投遞檔名＋內容）的
+- **§D-6 批 id 與去重**：批 `id` ＝ 對排序後（投遞檔名＋內容）的
   確定性摘要（64-bit FNV-1a，16 位 hex）。彙整 **MUST** 在發布前比對現任 header 的
   `id`：同一組投遞（同名同內容、恰好整組）殘留於 inbox 時 **MUST NOT** 二次發布——
   批 `.temp` 完整存在則 roll-forward（rename 後清投遞），否則只清投遞。**覆蓋範圍**：
@@ -205,11 +204,24 @@
 - **§D-8 `.bad` 的清理**：彙整者 **MUST NOT** 自動刪 `.bad`；清理歸人或 `aos recover`
   （M3）。crash 之後要人來處理，一以貫之。
   來源：M1 階段裁決 3，裁於 2026-08-28。
-- **§D-9 退出碼**：`aos exec` 的退出碼只回答「回合有沒有正常跑完」，**MUST NOT** 反映
-  子行程的成敗（那走 `exit` 欄位）。現行表：0 回合正常跑完（含無事可做）；1 函式庫層
-  失敗；2 用法錯誤；3 `.runi` 已存在拒絕啟動。完整對照 `(planned, M1)`——由實作端
-  實測各失敗模式後收編，屆時消掉已知未決 #2。
-  來源：aos-folder 八＋T5 實測。
+- **§D-9 退出碼**：`aos` 全部子命令共用同一組碼，意義 **MUST** 照下表。分界是
+  **「aos 自己有沒有把這一步做完」**：`aos exec` **MUST NOT** 反映子行程的成敗
+  （那走 `exit` 欄位）。
+
+  | 碼 | 意義 | 涵蓋（逐失敗模式實測，見來源） |
+  |---|---|---|
+  | 0 | 這一步做完了 | `aos exec`：回合跑完——**含無事可做**（§A-4）、**含子行程失敗**（非零 exit、找不到執行檔、重導向開檔失敗、逾時被砍）、**含無效投遞被隔離為 `.bad` 後續行**（§D-4）。`aos init`：世界建好。`aos deliver`：投遞落地（**含空批次**，§C-2）。`aos --help` |
+  | 1 | aos 自己跑不動，或收不了尾 | 世界進不去／`.aos` 不存在或不是目錄／`.aos/version` 讀不到或不認得（§B-4）；彙整、取件、釋放失敗；整批解析或指示詞求值失敗；寫 `exit` 欄位的檔失敗；`.aos/turn` 遞增失敗（§B-3）；`aos init` 建不起來（目標不存在、`.aos` 已存在、權限不足）；`aos deliver` 的輸入讀不到、驗證不過（§C-6）或發布失敗 |
+  | 2 | 用法錯誤 | 多餘參數、認不得的選項、`--loop` 的值不是正整數、未知子命令、沒給子命令。**MUST** 在碰檔案系統之前判定——所以「世界路徑打錯」是 1、不是 2 |
+  | 3 | `.runi` 已存在，拒絕啟動 | 只有 `aos exec`（§D-7） |
+
+  退出碼 1 **MUST NOT** 被讀成「這一回合沒有發生」：收尾階段的失敗（release 成功之後
+  `turn` 遞增失敗）發生在回合已經推進之後。個別指令的結果一律讀 `exit` 欄位指到的檔。
+  （實作註記，非條款：`aos exec --loop` 目前只有遇 3 才提早收工，回 1 的錯誤會被下一圈
+  重試；loop 的錯誤政策屬 M2。）
+  來源：aos-folder 八＋M1 S9 逐失敗模式實測
+  （[m1-loop-side/smoke-notes](../wf/workflows/build-cycle/archive/m1-loop-side/smoke-notes.md)
+  的 S9 節），收編於 2026-08-28。
 
 ## E 世界與 git
 
@@ -238,12 +250,12 @@
 
 ## F 版本
 
-- **§F-1 格式版本** `(planned, M1)`：指令格式（批＋inst schema）的版本住在批 header
+- **§F-1 格式版本**：指令格式（批＋inst schema）的版本住在批 header
   的 `version` 欄（§C-8）。現行格式＝v1；本檔對格式的任何不相容修改 **MUST** 遞增它。
   來源：verdicts B10／instruction §2，裁於 2026-08-28。
 - **§F-2 版面版本**：`.aos/` 版面的版本住在 `.aos/version`（已存在）。**格式版本與
   版面版本是兩件不同的事**，MUST 分開存放與遞增。版面版本的完整條款（讀不到＝拒絕、
-  不認得＝拒絕）隨 B 區收編 `(planned, M1)`；現行行為見 aos-folder 九。
+  不認得＝拒絕、現行版面＝1）在 §B-4。
   來源：verdicts B10／layout-and-spec §16。
 
 ---
@@ -255,8 +267,11 @@
 1. **SIGINT 斷點續跑**：roadmap T5 的驗收條件（Ctrl-C 後從斷點繼續）與 aos-folder 六
    的 `.runi` 語意互相矛盾——單次 `aos exec` 被 SIGINT 中止會留 `.runi`、只能重播
    整批，外部作用可能已發生。哪邊改未拍板。（T5 實測，2026-08-25）
-2. **退出碼表不完整**：aos-folder 八的四碼表與實作對不上（T5 實測）。D 區收編時對齊。
-3. **`<pid>.json` 表達不了同一 process 的多次投遞**：投遞檔名 pid 不唯一。M1 修
-   `deliver` 時一併裁。
-4. **`timeout_ms` 已裁決移出最內圈**（由 loop 層管），實作未動；§C-3 保留現行欄位並
-   標 planned，M2 搬遷時更新。
+2. **`timeout_ms` 已裁決移出最內圈**（由 loop 層管），實作未動；§C-3 保留現行欄位並
+   標 `(planned, M2)`；**搬遷與新語意屬 M2**
+   （[m2-loop-project](../wf/workflows/build-cycle/m2-loop-project/spec.md)），屆時更新
+   §C-3 並移除本條。
+
+> **已消掉的兩條**（2026-08-28，M1 S9）：原 #2「退出碼表不完整」由 §D-9 逐失敗模式
+> 實測收編；原 #3「`<pid>.json` 表達不了同一 process 的多次投遞」由 §D-2 的
+> `<pid>-<seq>`＋排他發布消掉。「編號永不重用」只管條款（§），本節是附錄，消掉即重排。

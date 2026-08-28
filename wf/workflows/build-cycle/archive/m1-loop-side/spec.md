@@ -1,6 +1,6 @@
 # M1 loop 側立法＋便宜機械件 — 規劃 spec
 
-← [build-cycle](../README.md)｜[roadmap M1](../../roadmap.md)｜[SPEC](../../../../docs/SPEC.md)
+← [build-cycle](../../README.md)｜[roadmap M1](../../../roadmap.md)｜[SPEC](../../../../../docs/SPEC.md)
 
 **閘門 ①／② 由使用者概括授權**（2026-08-28 roadmap 衝刺模式：做完整條他驗成品）。
 先裁的問題照 roadmap 記載的建議方向由主線裁，記入 verdicts＋SPEC。
@@ -57,7 +57,7 @@ exec_loop 搬遷、loop 讀 header 分支、`timeout_ms` 搬遷、節流／退�
 
 ## 動工前讀
 
-[T5 subcommand-specs](../../experiments/t5-agent-loop/subcommand-specs.md)、
-[gotchas](../../common/gotchas.md)、[debts §2](../../ideas/machine-shape/debts.md)、
+[T5 subcommand-specs](../../../experiments/t5-agent-loop/subcommand-specs.md)、
+[gotchas](../../../common/gotchas.md)、[debts §2](../../../ideas/machine-shape/debts.md)、
 `docs/aos-folder.md` 二／三／六／九／十、`core/inst/src/handoff.cpp`、
-[code map](../../common/code-map.md)、SPEC 全文。
+[code map](../../../common/code-map.md)、SPEC 全文。

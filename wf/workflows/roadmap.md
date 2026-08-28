@@ -22,7 +22,7 @@
 | 階段 | 一句話 | 先裁的問題 | 動工前讀 |
 |---|---|---|---|
 | M0 ✅ | **inst 與序列化定案**：SPEC 殼＋inst 條款＋格式凍結（含 header 立法） | ~~§30、§22、B1~~ 已裁 | [SPEC](../../docs/SPEC.md) |
-| M1 | **loop 側立法＋便宜機械件**：命名/版面/交接/git 條款收編、deliver、PC、修 bug、header 產生 | §27 三小裁決 | T5 specs、gotchas |
+| M1 ✅ | **loop 側立法＋便宜機械件**：命名/版面/交接/git 條款收編、deliver、PC、修 bug、header 產生 | ~~§27 三小裁決~~ 已裁 | [SPEC](../../docs/SPEC.md) B／D／E 區 |
 | M2 | exec_loop 落地分層 | **§25、§26**、`--loop 0`、節流判準 | machine-shape/loop、core-layering |
 | M3 | 名冊補完：status/recover/check | §29 | layout-and-spec、T5 specs |
 | M4 | 第二顆 CPU | 四項存貨（見文末閘門） | cpu-analogy、debts、prior-work |
@@ -37,7 +37,7 @@
 **結果**：`docs/SPEC.md` 已立（A／C／F 區條款＋B／D／E 佔位＋「已知未決」附錄四條）；
 format.md 兩張表搬入 SPEC；五條裁決記入 [verdicts A 表](ideas/verdicts.md)。
 
-## M1 loop 側立法＋便宜機械件
+## M1 loop 側立法＋便宜機械件（**已完成 2026-08-28**，項目封存於 [build-cycle/archive/m1-loop-side](build-cycle/archive/m1-loop-side/spec.md)）
 
 **立法**（原 M0 剩餘）：命名標準（含 `.bad` 正名）、`.aos/` 版面、交接協定三步、
 footprint 宣告（§24）、`.gitignore` 政策（debts §2：`.runi`/`inst.tempd/`/`.bad` 不進
@@ -51,6 +51,14 @@ git；`.aos/turn` 進）收編進 SPEC B／D／E 區；`docs/aos-folder.md` 此�
 **完成定義**：外部生產者不再手刻投遞協定；崩潰後不再可能出現零長度檔；SPEC 六區全部
 有條款，三份真相收斂完成。
 **讀**：[T5 subcommand-specs](experiments/t5-agent-loop/subcommand-specs.md)、[gotchas handoff 節](common/gotchas.md)、[debts](ideas/machine-shape/debts.md)、`core/inst/src/handoff.cpp`。
+**結果**：SPEC 六區全部有條款（B／D／E 佔位消失，`grep "planned, M1"` 零筆），
+`docs/aos-folder.md` 整份降為說明並逐節導流——**三份真相收斂完成**。
+`aos deliver` 子命令＋庫層＋C ABI 落地（投遞名 `<pid>-<seq>`＋排他發布）、`.aos/turn`
+（PC 誕生）、彙整寫 header sidecar、`core/inst/src/` 寫檔全補 fsync、彙整崩潰窗口用
+批 id 去重＋roll-forward 兜底。[gotchas](common/gotchas.md) handoff 節四條有三條過帳
+「已修（M1）」（`.runi` 不是鎖那條**仍未修**，不在本階段範圍）。
+SPEC「已知未決」從四條減到兩條（退出碼表由 §D-9 逐失敗模式實測收編、pid 不唯一由
+§D-2 消掉；SIGINT 原樣保留、`timeout_ms` 改指 M2）。ctest 4/4 全綠。
 
 ## M2 exec_loop 落地分層（最大的一次搬遷）
 
@@ -92,7 +100,7 @@ doorbell（debts §3，依 §25 歸 loop）。
 
 ## 決策佇列（想事情的優先順序，跟動工分開）
 
-1. **§30 ＋ §22 ＋ B1 欄位**——全在 M0 的 [inst-spec](build-cycle/inst-spec/spec.md)
+1. **§30 ＋ §22 ＋ B1 欄位**——全在 M0 的 [inst-spec](build-cycle/archive/inst-spec/spec.md)
    閘門 ① 一起裁（五個「先裁」列在該檔）。
 2. **§27 三小裁決**——M1 動工時順手下。
 3. **§25**——M2 前必裁；它同時回答 B6（排程歸屬）與中斷欠帳的歸屬。

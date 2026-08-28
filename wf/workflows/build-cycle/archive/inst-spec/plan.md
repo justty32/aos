@@ -1,6 +1,6 @@
 # inst 與序列化定案 — 實作 plan
 
-← [spec.md](spec.md)｜[build-cycle](../README.md)
+← [spec.md](spec.md)｜[build-cycle](../../README.md)
 
 > **閘門 ② 由使用者放棄書面審**（2026-08-28「都OK，然後開分支去做」）。同日定下團隊
 > 模式：主線（Fable）規劃與立法、plan 可開 Fable agent、實作開 Opus（可指揮 sonnet）、

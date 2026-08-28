@@ -1,6 +1,6 @@
 # M1 煙霧測試留存（實跑原文）
 
-← [plan](plan.md)｜[spec](spec.md)｜[SPEC](../../../../docs/SPEC.md)
+← [plan](plan.md)｜[spec](spec.md)｜[SPEC](../../../../../docs/SPEC.md)
 
 **用途**：S8 寫 `docs/usage.md` 時直接照抄——feature-dev 鐵律要求「文件裡的每條指令與
 輸出都真的跑過」（spec 驗收 7）。**本檔的每一段都是實跑貼上的原文，不要手改**；命令

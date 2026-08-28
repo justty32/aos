@@ -1,6 +1,6 @@
 # inst 與序列化定案 — 規劃 spec
 
-← [build-cycle](../README.md)｜[roadmap M0](../../roadmap.md)｜[verdicts](../../ideas/verdicts.md)
+← [build-cycle](../../README.md)｜[roadmap M0](../../../roadmap.md)｜[verdicts](../../../ideas/verdicts.md)
 
 **閘門 ①**。只講**要做成什麼樣**與**怎樣算做完**；動哪些檔、分幾步是 `plan.md` 的事。
 
@@ -19,7 +19,7 @@
 ### 1. `docs/SPEC.md` 存在，開頭三段定地位
 
 - **地位**：SPEC 是唯一 normative；parser／docs／餵 LLM 的 prompt 從它派生；與實作衝突
-  時**以 SPEC 為準，實作視為 bug**（除非條款帶 planned 標記）。[verdicts](../../ideas/verdicts.md)
+  時**以 SPEC 為準，實作視為 bug**（除非條款帶 planned 標記）。[verdicts](../../../ideas/verdicts.md)
   是**判例索引**，SPEC 是**法典**（§30 原話）。
 - **裁決如何進入 SPEC**：新裁決 → 記回 ideas ＋ verdicts → **同一 commit** 補條款；
   條款新增／改位階**要經使用者點頭**；編號**永不重用**，廢止標 `(deprecated)` 留原文。
@@ -55,7 +55,7 @@ E 世界與 git／F 版本），B、D、E 只放一行「本區待收編（loop 
 
 ### 5. 入口指得到
 
-`docs/README.md` 的表加 SPEC 一列；[roadmap](../../roadmap.md) 標記本階段完成。
+`docs/README.md` 的表加 SPEC 一列；[roadmap](../../../roadmap.md) 標記本階段完成。
 
 ## 動工前必須拍板的（先裁）——這次的正菜
 
@@ -101,7 +101,7 @@ E 世界與 git／F 版本），B、D、E 只放一行「本區待收編（loop 
 
 ## 動工前讀
 
-[verdicts](../../ideas/verdicts.md) A 表＋[keep](../../ideas/call-format/keep.md)（argv 陣列、
-未知 key 拒絕**別動**）、[instruction](../../ideas/machine-shape/instruction.md) 全檔、
-[format-gaps](../../ideas/call-format/format-gaps.md)、`core/inst/docs/format.md` 全文、
-`docs/aos-folder.md` 五／七、[layout-and-spec](../../ideas/machine-shape/layout-and-spec.md) §12／§30。
+[verdicts](../../../ideas/verdicts.md) A 表＋[keep](../../../ideas/call-format/keep.md)（argv 陣列、
+未知 key 拒絕**別動**）、[instruction](../../../ideas/machine-shape/instruction.md) 全檔、
+[format-gaps](../../../ideas/call-format/format-gaps.md)、`core/inst/docs/format.md` 全文、
+`docs/aos-folder.md` 五／七、[layout-and-spec](../../../ideas/machine-shape/layout-and-spec.md) §12／§30。

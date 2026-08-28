@@ -1,6 +1,6 @@
 # M1 loop 側立法＋便宜機械件 — 實作 plan
 
-← [spec](spec.md)｜[build-cycle](../README.md)｜[SPEC](../../../../docs/SPEC.md)｜[code map](../../common/code-map.md)
+← [spec](spec.md)｜[build-cycle](../../README.md)｜[SPEC](../../../../../docs/SPEC.md)｜[code map](../../../common/code-map.md)
 
 **閘門 ①／② 由使用者概括授權**（2026-08-28 roadmap 衝刺模式，見 spec 開頭）。
 本 plan 只講「怎麼」；「什麼」以 [spec.md](spec.md) 為準。spec 的「明確不做」一律出範圍。
@@ -31,14 +31,14 @@ S0 裁決清點（主線）
   這樣任何一步中斷，SPEC 與現實的落差都有標記可查（SPEC「三向標記」規則）。
 - **可平行**：S3、S4、S6 互相獨立（不同檔），可並行；S5 等 S4；S7 收尾掃全域；S8/S9 串行。
 - **每步一個檢查點**：每步結束時 ctest 全綠＋該步驗證項通過，才進下一步；每步照
-  [feature-dev](../../feature-dev/README.md) 各自 commit（含 code map 同步）。
+  [feature-dev](../../../feature-dev/README.md) 各自 commit（含 code map 同步）。
 
 ### 本 plan 不碰的（硬性）
 
 - spec「明確不做」：exec_loop 搬遷、loop 讀 header、`timeout_ms` 搬遷、節流／退避
   （`run_loop.cpp` 的 `--loop 0` 與 `did_work` 兩條 gotchas **不修**，留 M2）、
   `status`／`recover`／`check`、§25／§26／§29、SIGINT 續跑（已知未決 #1 原樣保留）。
-- [keep.md](../../ideas/call-format/keep.md) 保護項：argv 陣列、未知 key 拒絕、無上限、
+- [keep.md](../../../ideas/call-format/keep.md) 保護項：argv 陣列、未知 key 拒絕、無上限、
   三 stream 檔案化——**格式層（`core/inst/src/format*.cpp`、`resolve.cpp`、`inst.cpp`）
   本階段零改動**，deliver 的驗證直接呼叫既有 `read_all`／`write_all`（唯一 parser）。
 - `.runi` 不是鎖（TOCTOU）那條 gotcha：不在 spec 的 bug 清單內（spec 只點名 fsync 與
