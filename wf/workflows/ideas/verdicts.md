@@ -119,3 +119,6 @@
 [SESSION-LOG](../../SESSION-LOG.md)（含 T5 實測沒全過的驗收、規格與實作三處對不上），
 等使用者親自做的看 [WAIT_USER](../../WAIT_USER.md)，研討會累積的問題看
 [workshop/OPEN-QUESTIONS](../workshop/OPEN-QUESTIONS.md)。
+
+**拷問已停打（十輪）。** 停打時剩的四項存貨（序列化、外層契約 B5、LLM CPU 形狀、
+匯聚 lib-vs-inst）與實作排程都在 **[roadmap](../roadmap.md)**——邊實作邊裁，裁了記回這裡。
