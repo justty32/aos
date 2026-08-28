@@ -72,6 +72,7 @@ aos_add_test(aos_inst_tests
         tests/test_resolve_ref.cpp
         tests/test_handoff.cpp
         tests/test_handoff_header.cpp
+        tests/test_handoff_regression.cpp
         tests/test_exec_streams.cpp
         tests/test_exec_path.cpp
         tests/test_exec_status.cpp

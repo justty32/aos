@@ -21,6 +21,7 @@
 | `test_timeout.cpp` | exec 層：逾時、行程群組 `SIGTERM`→`SIGKILL` |
 | `test_handoff.cpp` | handoff 公開 API：衍生路徑、字典序攤平、忽略狀態副檔名、壞投遞隔離、既有 base、空 inbox、claim／release，以及「發布才有 header sidecar」的過帳 |
 | `test_handoff_header.cpp` | 彙整的耐久性面：header 四欄位照字面驗、批 id 的確定性、崩潰窗口重播（不得二次發布）、roll forward（崩在兩個 rename 之間）、殘缺 `.temp` 不 roll forward、header 讀不懂就照常重發。崩潰全部用「佈置崩潰後的檔案現場」重現，不殺行程、無 sleep |
+| `test_handoff_regression.cpp` | **CLI 端到端**的審查回歸（M1 審查 B 隊四支攻擊腳本 `t3.sh`／`v7.sh`／`v8.sh`／`v11.sh` 改寫而成，手工佈置檔案系統狀態、不 shell out）：#1 固定檔名生產者連投三回合都要真的執行（含「header 未 swept 時殘留不重跑」的反向）、#3 收件匣裡的 FIFO 不讓一輪停擺（自帶 `alarm` 看門狗，退回阻塞就砍行程而不是掛住 CI）、#4 巢狀 `"id"` 不參與去重、#25 斷掉的 symlink `inst.json` 回 1 且投遞不遺失、#21 去重命中不執行無關殘骸（舊固定槽位與新兄弟唯一暫存兩個名字都測）、#26 header 與 sweep 同時失敗時退出碼 1；另有 §D-4「`inst.json` 已有一批就不覆蓋不合併」的確定性佈置。斷言的是退出碼、`.aos/turn`、stderr 與子行程真的留下的腳印 |
 | `handoff_test_support.hpp` | handoff 測試共用的暫存世界目錄與整檔讀寫 |
 | `test_run_support.hpp` | CLI 測試共用的暫存 world、檔案 I/O、cwd guard、`ScopedFd`（把 stdin／stdout／stderr 暫時換成檔案再換回來——CLI 直接寫真的 fd，而測試跟它同一個 process）與呼叫 helper |
 | `test_run_init.cpp` | init、額外 argv 拒絕、`turn` 初值 `0`、`.aos/.gitignore` 內容一字不差（§E-4）與舊世界缺它不算錯，以及 init／exec 的目前目錄預設；`.aos` 是普通檔印 `Not a directory`、是目錄印 `already exists` 兩種訊息各驗一次 |

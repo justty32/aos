@@ -706,3 +706,206 @@ if (result == 3) return 3;          // 只有這一條會停
 | `s0*.sh` `s1*.sh` `probe.cpp` | 鏡頭 2 的狀態機與探針 |
 
 **回歸測試建議**：`t3.sh`（#1）、`v11.sh`（#25／#26／#27／#21）、`v7.sh`（#3）、`v8.sh`（#4）最值得優先變成 ctest 案例——它們都是確定性的、不需要併發、跑得很快。
+
+---
+
+## 6. 修補後複測（2026-08-28）
+
+> 本節由 E 隊（M1 審查修補隊）隊員 3 於修補全數落地後追加，§0–§5 是 B 隊審查當下的
+> 原文，一個字都沒動。複測對象是 `roadmap-run` 上修補後的 `build/bin/aos`；
+> `cmake --build --preset default && ctest --preset default` = **4/4 全綠**。
+
+**一句話結論**：28 條裡 24 條已修、4 條過帳（各自綁到 M2／M3）、A 隊另列的 4 條維持
+不修（刻意設計）；四支攻擊腳本已成為 ctest 案例並逐一驗過「在修補前的 binary 上真的
+會紅」。**但併發重複執行率不降反升**——tmpfs 上從 9.8% 升到 37%（K=2），機制已定位並
+確定性重現，見 §6.2。
+
+### 6.1 逐條處置
+
+「證明」欄的 ctest 案例名可直接餵給 `build/bin/aos_inst_tests "<名字>"`。
+函式庫層案例在 `core/inst/tests/test_handoff.cpp`／`test_handoff_header.cpp`，
+CLI 端到端案例在 `test_handoff_regression.cpp`／`test_run_handoff.cpp`／
+`test_run_turn.cpp`／`test_run_init.cpp`。
+
+| # | 處置 | 證明 | commit |
+|---|---|---|---|
+| #1 | 已修 | `#1 固定檔名的生產者連投三回合，三回合都真的執行`（CLI，修補前紅：7 個斷言失敗）＋`#1 反向：header 未 swept 時同一組殘留投遞不重跑`＋`handoff republishes an identical delivery once the header is swept`（函式庫） | `1f13904`（merge `88be2e1`） |
+| #2 | 已修 | **無自動化證明**：claim 的 `fsync_dir` 從公開 API 觀察不到（tmpfs 上 fsync 還是 no-op）。讀 commit diff 確認 | `1f13904` |
+| #3 | 已修 | `#3 收件匣裡的 FIFO 不會讓 exec 卡死`（CLI，修補前**整個測試行程被看門狗 SIGALRM 砍掉**＝重現永久阻塞）＋`#3 handoff skips non-regular deliveries instead of blocking on them`（函式庫） | `1f13904` |
+| #4 | 已修 | `#4 巢狀的 id 不參與去重（CLI 端到端）`（修補前紅）＋`handoff only reads the top-level id out of the current header`（函式庫四種版面） | `1f13904` |
+| #5 | 已修 | **無自動化證明**（同 #2：release 的 `fsync_dir` 不可觀察）。讀 commit diff 確認 | `1f13904` |
+| #6 | 已修 | `aos exec 在 .runi 已存在時不彙整` | `c11716a` |
+| #7 | 已修 | `#7 handoff never overwrites an existing .bad when isolating` | `1f13904` |
+| #8 | 已修 | `#8 handoff leaves an unreadable delivery in place instead of isolating it` | `1f13904` |
+| #9 | **過帳** | → M3 `aos recover`；見 [`gotchas.md`](../../../common/gotchas.md) 的「M1 審查交棒」節第一條 | `0a0e62e` |
+| #10 | 已修 | `#10 handoff warns about .json names it does not accept` | `1f13904` |
+| #11 | 已修 | **無自動化證明**：`link`＋`unlink` 退階路徑要 `RENAME_NOREPLACE` 不可用才走得到，ctest 裡沒有注入點（原始證據靠 `scripts/fault.c`）。讀 commit diff 確認 `leftover_error` 出參 | `1f13904` |
+| #12 | 已修 | **無自動化證明**：父資料夾 fsync 不可觀察。讀 commit diff 確認 | `c11716a` |
+| #13 | 已修 | **無自動化證明**：`O_CLOEXEC` 的洩漏要「T1 持有 exit 檔 fd 時 T2 `fork`」的時間窗，確定性觸發不了。讀 commit diff 確認 | `c11716a` |
+| #14 | 已修 | `init 建立 .aos/.gitignore（§E-4）`＋`exec 與 deliver 都不要求舊世界有 .gitignore` | `c11716a` |
+| #15 | 已修 | **無自動化證明**（同 #12） | `c11716a` |
+| #16 | 已修（改條款） | §D-4 改成「本輪處理完成之後才刪」，三個例外寫明；行為面由`handoff consumes empty deliveries with and without useful work`＋`#1 反向…`（去重命中照清）覆蓋 | `0a0e62e` |
+| #17 | 已修 | **無自動化證明**（隔離後的收件匣 fsync 不可觀察）。讀 commit diff 確認 | `1f13904` |
+| #18 | 已修 | **無自動化證明**：`opendir`／`closedir` 之間的 `bad_alloc` 造不出來。讀 commit diff 確認改成 RAII guard | `1f13904` |
+| #19 | 已修 | `exec 接受尾端空白不同的版面版本 1`＋`exec 拒絕不是 1 的版面版本`＋`deliver 的版面版本比對與 exec 同一套` | `c11716a` |
+| #20 | 已修（改條款） | §B-2 版面樹補 `turn.temp`／`.gitignore`／兩個唯一暫存名；§B-1 的命名文法由`aggregate writes the batch through a per-process unique temp name` 從形狀面釘住 | `0a0e62e` |
+| #21 | 已修 | `#21 去重命中時不執行無關的暫存殘骸`（CLI，兩個名字都測：舊的共用固定槽位與新的兄弟唯一暫存；修補前紅）＋`handoff does not roll forward a sibling temp that is not this batch`（函式庫） | `1f13904`＋`3d487be`（merge `f13879c`） |
+| #22 | 已修 | `turn.temp 被目錄佔住時 exec 回 1 且不動 turn`＋`RLIMIT_FSIZE 觸頂時 exec 回 1 而不是被 SIGXFSZ 砍死` | `c11716a` |
+| #23 | 已修 | `aggregate writes the batch through a per-process unique temp name`（函式庫）＋**ext4 實跑**：`RenameFailed` 由 200/200 回合降到 **0**（§6.2）。共用固定 `.temp` 槽位已完全拿掉 | `1f13904`＋`3d487be` |
+| #24 | 已修 | **無自動化證明**：要「寫失敗**且** close 也失敗」同時成立。讀 commit diff 確認。（注意：這條是 `handoff_fs` 內部的 `close_checked`，與 A 隊那條「C API 解構子的 close 蓋掉 errno」是不同的兩處） | `1f13904` |
+| #25 | 已修 | `#25 inst.json 是斷掉的 symlink 時 exec 大聲回 1`（CLI，修補前紅：9 個斷言失敗）＋`#25 claim reports a base that exists but cannot be read`（函式庫） | `1f13904` |
+| #26 | 已修 | `#26 header 與 sweep 同時失敗時 exec 回 1`（CLI，修補前紅）＋`#26 handoff fails the round when the header and the sweep both fail`（函式庫） | `1f13904` |
+| #27 | 已修 | `exec 在 turn 已達 UINT64_MAX 時拒絕遞增` | `c11716a` |
+| #28 | **過帳** | → M2 loop 的退避／停機政策；見 `gotchas.md`「M1 審查交棒」節第二條 | `0a0e62e` |
+| 「rc=1 不代表這一回合沒發生」 | **過帳** | → M3 recover 語意一起看；`gotchas.md`「M1 審查交棒」節第三條 | `0a0e62e` |
+| `.runi` 不是鎖（剩下的半條） | **過帳** | 「兩個彙整者各自發布一次」那一半由排他發布關掉，**取件本身仍是 check-then-act** → M2／M3；`gotchas.md`「M1 審查交棒」節第四條 | `0a0e62e` |
+| A 隊-1 PATH 找不到執行檔回 126 | **不修（刻意設計）** | `execute reports a non-executable PATH candidate as 126` 正面釘住現行行為 | — |
+| A 隊-2 `exec.cpp` 三處 `kill(-pid,…)` 回傳值忽略 | **不修（刻意設計）** | 錯誤路徑刻意保持極簡 | — |
+| A 隊-3 C API 失敗後 errno 被解構子 `close()` 蓋掉 | **不修（刻意設計）** | 文件與程式碼的落差是已知的 | — |
+| A 隊-4 逾時 `wait_until()` 出錯直接 return（不 kill 不 reap） | **不修（刻意設計）** | 同上 | — |
+
+另外兩件也一併落地：`683abb0` 是行為不變的整理（`run_exec.cpp` 拆出 `run_turn.cpp`、
+測試的 `ScopedFd` 收攏進 `test_run_support.hpp`）；`review/scripts/env.sh` 的寫死路徑
+改成可覆寫、預設指向主 repo 的 build，別人重跑不必再改檔。
+
+### 6.2 併發複測數字
+
+同一支 `scripts/conc.sh`（第一階段寫的，這次搬進 `review/scripts/`，多加一個
+`RENAME_FAILED` 計數），**參數與第一階段一模一樣**：200 回合／每回合新世界／
+每回合 1 份投遞／`direct` 投遞／跑完 5 次 drain。修補後每組跑 **3 次**。
+
+因為第一階段的基準線是在 loadavg 7–13 的機器上量的、今天是 loadavg 1–2，
+**另外用 `b5cc35a`（修補前）的原始碼在今天同一台機器、同一個時段重建了一份對照組**
+（`git archive b5cc35a` → 獨立 build），才能把「修補的影響」與「機器負載的影響」分開。
+
+| 場地／參數 | 指標 | 修前・第一階段基準線 | 修前・今天同機對照 | **修後・今天** |
+|---|---|---|---|---|
+| tmpfs K=2 | DUP_PCT | 8.7%（7.0–10.0，5 次） | 9.8%（8.5–11.5，3 次） | **37.0%（36.0–38.5，3 次）** |
+| | RESIDUE_INST | 17.4 / 200 | 19.7 / 200 | **74.0 / 200** |
+| | LOST | 0 | 0 | **0** |
+| | RenameFailed | —（未量） | 30.7 次 | **0.3 次**（1／0／0） |
+| tmpfs K=3 | DUP_PCT | 13.5%（1 次） | 14.8%（12.5–16.5，3 次） | **49.5%（47.5–52.0，3 次）** |
+| | RESIDUE_INST | 27 / 200 | 29.7 / 200 | **99.0 / 200** |
+| | LOST | 0 | 0 | **0** |
+| | RenameFailed | —（未量） | 40.0 次 | **0** |
+| tmpfs K=4 | DUP_PCT | 21.5%（1 次） | 13.2%（12.0–15.0，3 次） | **51.3%（48.5–54.5，3 次）** |
+| | RESIDUE_INST | 43 / 200 | 26.3 / 200 | **102.3 / 200** |
+| | LOST | 0 | 0 | **0** |
+| | RenameFailed | —（未量） | 58.3 次 | **1.3 次**（2／0／2） |
+| ext4 K=2 | DUP_PCT | 0.0%（5 次全 0） | 0.0%（3 次全 0） | **0.0%（3 次全 0）** |
+| | RESIDUE_INST | 0 | 0 | **0** |
+| | LOST | 0 | 0 | **0** |
+| | RenameFailed | 200/200 回合（每回合都有） | **200／200／200** | **0／0／0** |
+
+三件事要分開說：
+
+1. **ext4 的 `RenameFailed` 徹底消失（200 → 0，三次都是）。** 這是裁決三最乾淨的
+   收穫：發布不再經過共用固定 `.temp` 槽位，輸家不會再撲空。#23 那條「每一回合都在
+   發生的固定名 `O_TRUNC` 共寫」在 ext4 上已經不存在了。
+2. **`LOST` 在所有 12 組（修前基準線／修前對照／修後 × 四組參數）全部是 0。**
+   修補沒有為了去重把批弄丟。
+3. **tmpfs 的重複執行率不降反升，約 3.8 倍（K=2：9.8% → 37.0%）。** 這不是機器負載的
+   假象——同機同時段的修前對照組是 9.8%。**這是 sweep 閘門（裁決一）與併發相撞的
+   直接後果**，機制見下。
+
+#### 6.2.1 為什麼不降反升：sweep 閘門把「陳舊 header 的意外保護」拆掉了
+
+`.aos/inst.json` 的排他發布（§D-5）只在**贏家那份批還沒被取走**的期間有效。贏家一旦
+`rename(inst.json → .runi)`，固定槽位就空出來了，**慢半拍的彙整者照樣能發布**——
+它手上那份批的位元組是它自己稍早讀到的投遞，發布出去就是第二次執行。
+
+修補前擋住這條的其實不是排他（當時也沒有排他），是**陳舊的 header**：B 讀到 A 剛寫下
+的 header，id 一樣 → 去重命中 → B 不發布。那正是 #1 的 bug 本體（同一個判準也會把
+同名同內容的**全新**投遞靜默丟掉），現在 `swept` 閘門把它關掉了，於是這條路一併開了。
+
+窗口從「B 在 A 寫出 header **之前**讀 header」擴大成「B 在 A 寫出 header 之前 **或**
+在 A 標完 `swept` 之後讀 header」——後者沒有時間上限，所以比例從一成跳到五成。
+
+**確定性重現**（兩個 binary 各跑一次，`aos exec` 各兩趟；第二趟等價於「B 慢半拍才把
+自己稍早讀到的那份批發布出去」）：
+
+```
+  [修補前] A 跑完後 log=1 行  header={"version":1,"id":"b6fc94b3d9c8e1af","origin":"aggregated","result":null}
+  [修補前] B 補發布後 log=1 行     ← 被陳舊 header 擋掉（同時也是 #1 的誤殺）
+  [修補後] A 跑完後 log=1 行  header={"version":1,"id":"b6fc94b3d9c8e1af",...,"swept":true}
+  [修補後] B 補發布後 log=2 行     ← swept 已成立，去重不啟用，同一批跑了第二次
+```
+
+步驟（可直接照抄）：
+
+```sh
+W=/tmp/w; rm -rf $W; mkdir -p $W; aos init $W
+D='[{"argv":["/bin/sh","-c","echo X >> '$W'/run.log"]}]'
+printf '%s\n' "$D" > $W/.aos/inst.tempd/1000-0.json   # B 在 t0 讀到這份投遞
+aos exec $W                                            # A 跑完一整輪（清投遞、標 swept）
+printf '%s\n' "$D" > $W/.aos/inst.tempd/1000-0.json   # B 這時才發布自己讀到的那份批
+aos exec $W ; wc -l $W/run.log                         # 修補後 = 2
+```
+
+**要說清楚的是：這不是實作寫錯，是裁決一的取捨在併發下的代價。** 內容導出的 id 分不出
+「殘留」與「重投」，`swept` 只能界定射程，界不出身分。§D-6 現在寫著「併發雙重彙整
+……那個方向由 §D-5 的**排他發布**擋」——**這句話只在「贏家還沒取件」的子窗口內成立**，
+量到的 37%／49%／51% 就是它擋不到的部分。條款與實測對不上，這一條要回主線。
+
+**一個便宜的補法（提案，未實作，留給隊長裁）**：彙整者在發布前把自己收下的那幾份
+投遞**再 `lstat` 一次**，任何一份已經不在了就放棄本輪（那代表有同儕已經清過它們）。
+慢半拍的那一邊必然失敗（贏家已經刪掉投遞），而「同名同內容的全新投遞」的檔案是真的
+還在的，#1 的修補不受影響。窗口不會歸零（那還是 check-then-act），但會從「無上限」
+縮成「兩個 syscall 之間」。
+
+#### 6.2.2 順帶挖到的一條新殘留：錨消失時報成 `RenameFailed`，rc=1
+
+修補後 tmpfs 上還剩下極少量（K=4 每 200 回合 0–2 次）的：
+
+```
+aos exec: cannot aggregate .aos/inst-<pid>-0.json.temp: RenameFailed: No such file or directory
+```
+
+是去重命中走 roll-forward 那條路：`find_rollforward_anchor` 找到了兄弟唯一暫存，
+`publish_exclusive(anchor, base)` 之前那個檔被同儕發布掉（rename 走了）→ 拿到
+**ENOENT**。程式只把 `EEXIST` 當成「別人先發布了、乾淨放棄」，ENOENT 走進致命分支，
+CLI 回 1。實際上這一輪什麼都沒壞（`LOST` 仍是 0），只是退出碼與訊息在說謊——
+配合 #28（loop 對 rc=1 不停手）不會卡死，但會製造假警報。
+**建議**：錨的 `publish_exclusive` 把 `ENOENT` 與 `EEXIST` 同等處理（錨不見了 ⟹
+同儕已經把它發布掉了 ⟹ 本輪放棄）。重現：`bash review/scripts/conc.sh 200 4`
+（tmpfs），grep stderr 的 `RenameFailed`。
+
+### 6.3 這次修補動到的 SPEC 條款（讀 `git show 0a0e62e -- docs/SPEC.md` 的真 diff）
+
+- **§B-2 版面樹**：補上 `turn.temp`、`aos init` 要建的 `.gitignore`、以及彙整用的兩個
+  每行程唯一暫存名（`inst-<pid>-<seq>.json.temp`／`inst-head-<pid>-<seq>.json.temp`）；
+  `inst.json.temp` 不再是彙整的產物，樹裡改列 `inst.json.runi`。
+- **§C-8**：header 加第五欄 `swept`，並立法它是**去重的閘門**——只有 `swept` 不成立的
+  header 才啟用 §D-6 的比對，缺欄（舊世界）視為 `false`。
+- **§D-1**：三步協定圖裡彙整那一步從 `inst.json.temp` 改成「唯一名 ＋ 排他」。
+- **§D-4**：「投遞 MUST 在發布成功之後才刪」放寬成「在**本輪處理完成之後**才刪」，
+  並把發布成功／整批為空／去重命中三個例外寫明（原意不變，是條文對齊實作）。
+- **§D-5**：標題從「彙整耐久性」改成「**交接**耐久性」，射程延伸到取件與釋放（各補一次
+  目錄 fsync，失敗只記警告）；批與 header 的 `.temp` MUST 用每行程唯一名，且發布 MUST
+  **直接以那個唯一名為來源**、MUST NOT 經過任何共用固定暫存名；批發布 MUST 排他，
+  `EEXIST` ＝別人先發布了，本輪放棄且不清投遞、不重寫 header。
+- **§D-6**：去重只在 header 未 `swept` 時啟用；roll-forward 要與本輪重算的 canonical
+  位元組**逐位元**相同才扶正，錨**靠內容認身分、不靠檔名**；覆蓋範圍補明「併發雙重彙整
+  不在去重射程內，由 §D-5 的排他發布擋」——**這最後半句已被 §6.2 的實測推翻，要回主線**。
+
+### 6.4 仍未覆蓋的角落（沿用 §4 的精神，只列這次複測**新增**或**仍然成立**的）
+
+1. **真正的斷電還是沒測**。#2／#5／#12／#15／#17 補的全是 fsync，而**驗證它們需要的
+   正是斷電**。ctest 只能證明「有沒有發這個呼叫」——連這個都證不了（見下一條），所以
+   這五條的證明欄一律誠實寫「無自動化證明，讀 commit diff」。
+2. **tmpfs 的 fsync 是 no-op**，而 ctest 的暫存世界建在 `/tmp`（tmpfs）。這次併發複測
+   有補 ext4，但 xfs／9p／drvfs 仍然沒碰。
+3. **`link`＋`unlink` 退階路徑（#11）仍然沒被自然走到**。tmpfs 與 ext4 都支援
+   `RENAME_NOREPLACE`。要驗得靠 `scripts/fault.c` 那種注入器，ctest 裡沒有注入點。
+4. **排他發布的 `EEXIST` 分支只有壓力腳本覆蓋**。ctest 那個確定性案例
+   （`inst.json 已有一批時彙整放棄且不動 header`）驗的是 §D-4 的「不覆蓋、不合併」
+   守衛——`inst.json` 已存在時彙整在第 ⓪ 步的 `lstat` 就早退，**根本走不到 rename**。
+   `EEXIST` 要「兩個彙整者在 `lstat` 與 rename **之間**交錯」，公開 API 沒有注入點可以
+   確定性觸發，只能靠 `review/scripts/conc.sh` 的併發壓力間接覆蓋。
+5. **`O_CLOEXEC`（#13）的時間窗沒重現**：要 `parallel` 的 T1 持有 exit 檔 fd 時 T2 剛好
+   `fork`。
+6. **pid 重用真的發生**仍然沒實測（`pid_max=4194304`）。#1 的自然觸發路徑照舊是估算，
+   ctest 用手寫同名檔重現機制本身。
+7. **修補後的 `--loop` 長跑沒做**。§6.2 的實驗全是一次性 `aos exec`。
+8. **`.aos/insts/` 底下的其他 CPU 仍然沒有 CLI 入口**，端到端協定只在函式庫層驗過。
+9. **§6.2.1 的補法（發布前重新 `lstat` 投遞）沒有實作也沒有量過**，那是提案不是結論。
