@@ -6,7 +6,29 @@
 
 #include <string>
 
+#include <dirent.h>
+
 namespace aos::detail {
+
+// opendir 與 closedir 之間有會配置記憶體的操作（std::string、push_back），而
+// 呼叫端不是 noexcept：例外穿出去時要保證 DIR* 與它的 fd 不洩漏。成功路徑仍然
+// 顯式 close() 並檢查回傳值，guard 只在還沒顯式關掉時才收尾。
+struct DirGuard {
+    DIR *handle = nullptr;
+
+    DirGuard() = default;
+    DirGuard(const DirGuard &) = delete;
+    DirGuard &operator=(const DirGuard &) = delete;
+    ~DirGuard() {
+        if (handle != nullptr) closedir(handle);
+    }
+
+    int close() {
+        DIR *const closing = handle;
+        handle = nullptr;
+        return closedir(closing);
+    }
+};
 
 // 從 instruction 路徑（必須以 .json 結尾）推導出來的四個位置。
 // 彙整**不再**產生 `<base>.temp`：批寫進每行程唯一的暫存（unique_temp_path），
