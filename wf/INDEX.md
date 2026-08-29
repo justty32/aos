@@ -21,6 +21,7 @@
 | `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案，以及兩份最重要的——[`aos-folder.md`](../docs/aos-folder.md)（`.aos` 資料夾與回合模型的**規格，唯一真源**）與 [`roadmap.md`](../docs/roadmap.md)（階段 T0–T6 與決策紀錄 D1–D10）。入口是 [docs/README.md](../docs/README.md)。個別小專案自己的細節在它們的 `docs/`，例如 `core/inst/docs/` |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](WORKFLOWS.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣（放信處，保持乾淨；使用方式見 [workflows/inbox/](workflows/inbox/README.md)）|
+| `wf/salvage/` | **`roadmap-run` 打撈包**（2026-08-29）：那條分支跑完 M0→M2 後被凍結、系統要重新架構，這裡是抽出來的教訓與已驗證結論——七篇，給「從零重寫這套系統的人」讀。入口見 [salvage/README](salvage/README.md) |
 | `.claude/commands/` | slash 指令（[`/wf-tick`](../.claude/commands/wf-tick.md) 驅動定期心跳）。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |
 | `README.md` | 給人讀的專案總覽 |
 
