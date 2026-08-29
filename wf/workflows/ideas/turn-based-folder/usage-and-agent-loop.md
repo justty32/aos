@@ -17,6 +17,10 @@
 
 ## agent loop 如何建立在回合模型上
 
+> **指令名字已經被更新的一篇取代**：`aos agent start` ＋ `aos agent init ...` 兩段式入口，
+> 在 [top-down-cli](../top-down-cli.md)（2026-08-30）被改成單一的 `aos agent init`，`aos exec`
+> 也歸進 `aos pu`。這裡保留的是**回合模型怎麼承載 agent loop** 的推導；**指令面以那篇為準**。
+
 ```text
 aos exec --loop 0 監看 folder
         ↓
