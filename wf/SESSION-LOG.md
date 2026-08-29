@@ -12,6 +12,16 @@
 
 ## 最新進度
 
+- **2026-08-29 `roadmap-run` 分支已凍結，系統要重新架構。** 那條分支跑完 M0–M2
+  （instruction 執行器 ＋ `core/loop` 回合機，202 檔／+18,326 行／46 commits），
+  使用者決定**不在既有結構上繼續改，全部打掉重來**——理由是一改再改的成本高過
+  拿著已驗證的結論重寫。**M3／M4 的規劃就此作廢**（原文仍在那條分支上可查）。
+  凍結點 `5b74b47`，tag `frozen/roadmap-run-2026-08`，**未 push**。
+  **有價值的東西已打撈成 [wf/salvage/](salvage/README.md) 七篇**——`.aos/` 版面與交接協定
+  裡哪些真的被攻擊腳本打過、踩過的坑（含併發重複執行那條）、哪些設計是刻意的、
+  還沒解的問題、程式碼哪些值得抄、以及這套多隊協作流程本身的成敗。
+  **要重寫這個系統的人，從那包開始讀，不要從 `roadmap-run` 開始讀。**
+
 - **2026-08-28 拷問停打，轉入實作。** 新開 [roadmap](workflows/roadmap.md) 工作流：
   M0 立法（normative SPEC）→ M1 批 header → M2 deliver/PC/修 bug → M3 exec_loop 落地
   分層（§25/§26 必裁）→ M4 status/recover/check → M5 第二顆 CPU（四項存貨閘門）。
