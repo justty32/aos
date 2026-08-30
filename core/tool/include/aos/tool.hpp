@@ -83,6 +83,7 @@ AOS_API Probe probe_metainfo(const std::vector<std::string> &argv,
                              std::string_view flag = "--metainfo");
 
 AOS_API std::vector<Contact> read_contacts(const std::filesystem::path &folder);
+AOS_API Contact user_contact();
 AOS_API void write_contacts(const std::filesystem::path &folder,
                             const std::vector<Contact> &contacts);
 /* 同名取代，否則追加；原子寫。 */

@@ -3,10 +3,12 @@
 
 #include "run.hpp"
 
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 namespace {
 
@@ -30,9 +32,14 @@ std::string joined_text(int argc, char *argv[], int first) {
 int say_dispatch(int argc, char *argv[], const char *program) {
     if (argc < 2) return usage(program, "[--to <名字>] <text...>");
     const std::filesystem::path folder = aos::agent::resolve_folder();
+    const std::string from = aos::agent::say_from().string();
     if (std::string_view(argv[1]) != "--to") {
-        aos::agent::say(folder, aos::agent::resolve_name(folder),
-                        joined_text(argc, argv, 1));
+        if (aos::agent::is_user_folder(folder)) {
+            aos::agent::say_to_user(joined_text(argc, argv, 1), from);
+        } else {
+            aos::agent::say(folder, aos::agent::resolve_name(folder),
+                            joined_text(argc, argv, 1), from);
+        }
         return 0;
     }
     if (argc < 4) return usage(program, "[--to <名字>] <text...>");
@@ -47,10 +54,19 @@ int say_dispatch(int argc, char *argv[], const char *program) {
     }
     const std::filesystem::path target_folder =
         (folder / contact->folder).lexically_normal();
+    if (aos::agent::is_user_folder(target_folder)) {
+        aos::agent::say_to_user(joined_text(argc, argv, 3), from);
+        const std::string destination =
+            (aos::agent::user_folder() / ".aos").string();
+        std::printf("已送給 %s（%s）\n", contact_name.c_str(),
+                    destination.c_str());
+        return 0;
+    }
     const std::string target_agent =
         contact->agent.empty() ? aos::agent::resolve_name(target_folder)
                                : contact->agent;
-    aos::agent::say(target_folder, target_agent, joined_text(argc, argv, 3));
+    aos::agent::say(target_folder, target_agent, joined_text(argc, argv, 3),
+                    from);
     const std::string destination =
         (target_folder / target_agent).lexically_normal().string();
     std::printf("已送給 %s（%s）\n", contact_name.c_str(), destination.c_str());
@@ -62,6 +78,26 @@ int listen_dispatch(int argc, char *argv[], const char *program) {
         return usage(program, "[--once]");
     }
     const std::filesystem::path folder = aos::agent::resolve_folder();
+    if (aos::agent::is_user_folder(folder)) {
+        aos::agent::drain_user_say();
+        std::string log = aos::agent::read_user_log();
+        if (!log.empty()) std::fwrite(log.data(), 1, log.size(), stdout);
+        std::fflush(stdout);
+        if (argc == 2) return 0;
+        std::size_t offset = log.size();
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            aos::agent::drain_user_say();
+            log = aos::agent::read_user_log();
+            if (log.size() < offset) offset = 0;
+            if (log.size() > offset) {
+                std::fwrite(log.data() + offset, 1, log.size() - offset,
+                            stdout);
+                std::fflush(stdout);
+                offset = log.size();
+            }
+        }
+    }
     return aos::agent::cli::run_listen(
         folder, aos::agent::resolve_name(folder), argc == 2);
 }

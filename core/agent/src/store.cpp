@@ -66,6 +66,15 @@ void atomic_write(const std::filesystem::path &path, std::string_view text) {
     std::filesystem::rename(temporary, path);
 }
 
+std::string message_body(std::string_view from, std::string_view text) {
+    if (from.empty()) return std::string(text);
+    std::string body = "from: ";
+    body.append(from);
+    body += "\n\n";
+    body.append(text);
+    return body;
+}
+
 void append_log(const Paths &paths, std::uint64_t turn,
                 std::string_view role, std::string_view content) {
     std::string log;

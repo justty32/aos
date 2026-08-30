@@ -30,6 +30,7 @@ void validate_name(std::string_view name);
 
 std::string read_text(const std::filesystem::path &path);
 void atomic_write(const std::filesystem::path &path, std::string_view text);
+std::string message_body(std::string_view from, std::string_view text);
 void append_log(const Paths &paths, std::uint64_t turn, std::string_view role,
                 std::string_view content);
 void append_note(const Paths &paths, std::string_view text);
