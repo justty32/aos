@@ -181,6 +181,8 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 | `core/agent/src/paths.cpp` | 最底層路徑規則：`resolve_folder()` 從 cwd／`AOS_FOLDER` 找世界，`resolve_name()` 找唯一 agent；並正規化 world folder、驗 agent 名稱，推導 `.aos/inbox`、`.aos/every` 與 `agents/<name>/` 全部檔位。 |
 | `core/agent/src/store.cpp` | 儲存層：文字讀取、tmp＋rename 原子寫入、正典 `log.jsonl` 追加與 `log.md` 重畫／竄改還原，以及 history／status／pending 的 JSON 讀寫與驗證；沒有 journal 的舊世界仍直接讀 `log.md`。 |
 | `core/agent/src/deliver.cpp` | 投遞層：把已按登記展開的工具 argv、cwd、timeout 包成 instruction，原子寫入 world inbox。 |
+| `core/agent/src/inbox.cpp` | 信箱儲存層：讀取並解析未讀訊息、按 id 排序，及把已讀訊息搬進 `read/`。 |
+| `core/agent/src/inbox_cli.cpp` | `aos inbox ls／read` CLI：列信箱、由 `read` 消費訊息、支援唯一前綴，並在前綴歧義時列出候選。 |
 | `core/agent/src/tools.cpp` | 工具層：讀世界 registry 並套用可選 agent 白名單、每工具一行的 system prompt、依 `list`／`string`／`none` 展開 argv，以及抽取、驗證 LLM 工具呼叫並回報未知工具／args 錯誤。 |
 | `core/agent/src/step.cpp` | 回合編排層：收 say 與工具結果、把執行結果或呼叫錯誤包成固定 JSON `tool` message、更新 history／log／status、lmstudio 呼叫前取 provider 槽且等不到回 75、用 `engine.model` 覆蓋環境模型；LLM 成功後才刪 say，失敗寫 `error` 與 log 指引；無新事件時不耗 LLM token，也不自我投遞。 |
 | `core/agent/src/init.cpp` | 初始化層：限制一個 world 只住一隻 agent，建立 agent 版面（含 `log.jsonl`）與必要的 world turn／state；世界 registry 為空才安裝 `sh`／`ls`／`cat`，不建立 agent 白名單；依 `AOS_BIN` → `/proc/self/exe` → PATH → `aos` 解析 every instruction 的 argv[0]。`say()` 也在這裡原子投遞訊息。 |
