@@ -2,7 +2,8 @@
 
 `aos agent` 把 agent 的對話、狀態與工具往返保存在 `<folder>/.aos/agents/<name>/`，
 而 `.aos/every/agent-<name>.json` 讓 loop 每回合複製一條 `step`。一個資料夾只住
-一隻 agent，cwd 就是世界；子命令會從 cwd 往上找最近的 `.aos/`。agent 直接連結
+一隻 agent，cwd 就是世界；`aos agent init` 省略 folder 時直接在 cwd 建世界，其他
+子命令才會從 cwd 往上找最近的 `.aos/`。agent 直接連結
 `aos::llm`，不會啟動另一個 `aos llm` 子行程。
 
 ## 快速使用
@@ -29,7 +30,18 @@ agent。`aos say --to <名字> <文字...>` 會查目前世界的 `.aos/contacts
 adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚回報它尚未內建。
 `aos agent init` 另接受 `--engine lmstudio|pi`、`--provider P`、`--model M` 與
 `--priority N`；priority 是可為負數的整數，0 不寫進 `engine.json`。lmstudio 可用
-`--provider P` 指定取槽用的 CPU 名；`--model M` 用於 pi。
+`--provider P` 指定取槽用的 CPU 名；兩種 engine 都會把 `--model M` 寫進
+`engine.json`，lmstudio step 會用它覆蓋 `AOS_LLM_MODEL`。初始化寫進
+`.aos/every/agent-<name>.json` 的 `argv[0]` 會盡量解析成這一支 `aos` 的絕對路徑
+（依序看 `AOS_BIN`、`/proc/self/exe`、PATH，最後才退回 `aos`）。
+
+`aos state`／`aos agent state` 除了既有狀態，也輸出 `unread`、`engine` 與 `model`；
+有未讀且目前不是 `error` 時，顯示狀態會是 `pending`。在 agent 世界中，`aos listen` 印完 log 後會再列
+`## 未讀 (N)`，只顯示、不刪除。`aos talk` 讀 stdin 前先以 `.aos/run.lock` 確認 runner
+存在，沒有就立即指示如何啟動並回 1。跨世界 `aos say --to` 成功時印真正的收件匣路徑，
+失敗時則以解析後的絕對路徑分辨資料夾不存在、不是 aos 世界或尚無 agent。
+`say`／`listen`／`state`／`talk`／`aos agent` 的 `-h`／`--help` 都印到 stdout 並回 0；
+頂層 say 只把第一個位置的 help 當選項，其餘位置仍是訊息內容。
 
 ## 使用者也是一格 agent
 
@@ -89,6 +101,18 @@ from: /home/alice/work/report-world
 
 公開 API 在 `<aos/agent.hpp>`。`aos::agent::step` 接受可選的 completion callback；
 未提供時呼叫 `aos::llm::complete()`，測試則可注入固定回覆，全程離線。
+
+## 訊息可靠性與 log 稽核
+
+lmstudio 與 pi 都會先成功取得 LLM 回覆，之後才把這回合讀到的 `say/*.md` 寫入 history
+並刪除；LLM 或 pi 失敗時訊息會留在原處供下一回合重試。失敗會把 `status.json` 寫成
+`error`，並在 log 留下 `> 第 N 回合失敗：…` 或 pi 的 exit；連線失敗會附端點位址指引，
+pi 的 `No API key` 會指出對應的 `<PROVIDER>_API_KEY`。pi 失敗回 1，只有等不到槽回 75。
+
+`agents/<name>/log.jsonl` 是 log 的正典稽核紀錄，每行一則
+`{"turn":N,"role":"user|assistant|tool|note","content":"…"}`。每次追加會先原子更新
+journal，再由它重畫整份 `log.md`；`read_log()` 發現兩者不符時會在 stderr 警告並還原
+`log.md`。沒有 `log.jsonl` 的舊世界則維持直接讀 `log.md` 的相容行為。
 
 ## 用 pi 當 LLM CPU
 

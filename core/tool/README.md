@@ -57,7 +57,8 @@ aos contact rm bob
 
 `tool add` 的 `--` 之後每個 token 都原樣存進 `argv`。可用 `--folder F` 指定世界；
 `contact` 對應的選項叫 `--folder-root F`。兩者未指定時都先看 `AOS_FOLDER`，再從 cwd
-往上找世界。
+往上找世界。`aos tool -h|--help` 與 `aos contact -h|--help` 都會在 stdout 列出完整
+子命令與選項並回 0。
 
 ## 探測降級
 
@@ -69,6 +70,8 @@ aos contact rm bob
 
 `aos tool add --probe metadata` 會在 `--metainfo` 沒探到時再試 `--metadata`；
 `--no-probe` 可完全停用探測。所有探測都關閉 stdin，並在 3000 ms 後逾時。
+探測前一定先驗 `argv[0]`：含 `/` 時直接檢查該檔案，否則搜尋 PATH；找不到或不可執行
+就回 1 且不登記，`--description` 與 `--no-probe` 也不會略過這道檢查。
 
 ## 函式庫
 
