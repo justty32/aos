@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -26,6 +27,7 @@ extern "C" int aos_listen_cli_main(int, char **);
 extern "C" int aos_talk_cli_main(int, char **);
 extern "C" int aos_state_cli_main(int, char **);
 extern "C" int aos_agent_cli_main(int, char **);
+extern "C" int aos_inbox_cli_main(int, char **);
 
 namespace {
 
@@ -202,6 +204,12 @@ struct CliResult {
     std::string text;
 };
 
+struct CliOutput {
+    int code = 0;
+    std::string out;
+    std::string err;
+};
+
 CliResult capture_stdout(CliMain main,
                          const std::vector<std::string> &arguments) {
     ScopedCapture capture(STDOUT_FILENO);
@@ -214,6 +222,31 @@ CliResult capture_stderr(CliMain main,
     ScopedCapture capture(STDERR_FILENO);
     const int code = run_cli(main, arguments);
     return {code, capture.finish()};
+}
+
+CliOutput capture_output(CliMain main,
+                         const std::vector<std::string> &arguments) {
+    ScopedCapture stdout_capture(STDOUT_FILENO);
+    ScopedCapture stderr_capture(STDERR_FILENO);
+    const int code = run_cli(main, arguments);
+    const std::string out = stdout_capture.finish();
+    const std::string err = stderr_capture.finish();
+    return {code, out, err};
+}
+
+std::filesystem::path write_inbox_message(
+    const std::filesystem::path &world, std::string_view name,
+    std::string_view id, std::string_view from, std::string_view text) {
+    const std::filesystem::path path =
+        world / ".aos" / "agents" / std::string(name) / "say" /
+        (std::string(id) + ".md");
+    std::filesystem::create_directories(path.parent_path());
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    if (!output) throw std::runtime_error("無法建立測試訊息");
+    if (!from.empty()) output << "from: " << from << "\n\n";
+    output << text;
+    if (!output) throw std::runtime_error("無法寫入測試訊息");
+    return path;
 }
 
 std::size_t message_count(const std::filesystem::path &world,
@@ -336,6 +369,66 @@ TEST_CASE("listen once prints unread message bodies without sender headers") {
     CHECK(result.text.find("- 第一行 第二行") != std::string::npos);
     CHECK(result.text.find("from:") == std::string::npos);
     CHECK(message_count(world.path, "worker") == 1);
+}
+
+TEST_CASE("inbox read accepts a unique message id prefix") {
+    TempWorld world;
+    aos::agent::initialize(world.path, "worker");
+    const std::string selected_id = "1756500000000000000-abcd";
+    const std::string remaining_id = "2756500000000000000-ef01";
+    const std::filesystem::path selected = write_inbox_message(
+        world.path, "worker", selected_id, "/sender/one", "第一封訊息");
+    const std::filesystem::path remaining = write_inbox_message(
+        world.path, "worker", remaining_id, "/sender/two", "第二封訊息");
+    ScopedFolder folder(world.path);
+
+    const CliOutput result =
+        capture_output(aos_inbox_cli_main, {"aos inbox", "read", "17565"});
+    CHECK(result.code == 0);
+    CHECK(result.out.find(selected_id) != std::string::npos);
+    CHECK(result.out.find("第一封訊息") != std::string::npos);
+    CHECK(result.out.find(remaining_id) == std::string::npos);
+    CHECK_FALSE(std::filesystem::exists(selected));
+    CHECK(std::filesystem::exists(selected.parent_path().parent_path() /
+                                  "read" / selected.filename()));
+    CHECK(std::filesystem::exists(remaining));
+    CHECK(message_count(world.path, "worker") == 1);
+}
+
+TEST_CASE("inbox read rejects an ambiguous message id prefix") {
+    TempWorld world;
+    aos::agent::initialize(world.path, "worker");
+    const std::string first_id = "1756500000000000000-abcd";
+    const std::string second_id = "1756500000000000000-abef";
+    const std::filesystem::path first = write_inbox_message(
+        world.path, "worker", first_id, "/sender/one", "第一封訊息");
+    const std::filesystem::path second = write_inbox_message(
+        world.path, "worker", second_id, "/sender/two", "第二封訊息");
+    ScopedFolder folder(world.path);
+
+    const CliOutput result = capture_output(
+        aos_inbox_cli_main,
+        {"aos inbox", "read", "1756500000000000000-ab"});
+    CHECK(result.code == 1);
+    CHECK(result.out.empty());
+    CHECK(result.err.find("請給更長的 id") != std::string::npos);
+    CHECK(result.err.find(first_id) != std::string::npos);
+    CHECK(result.err.find(second_id) != std::string::npos);
+    CHECK(std::filesystem::exists(first));
+    CHECK(std::filesystem::exists(second));
+    CHECK(message_count(world.path, "worker") == 2);
+}
+
+TEST_CASE("inbox read fails when the inbox is empty") {
+    TempWorld world;
+    aos::agent::initialize(world.path, "worker");
+    ScopedFolder folder(world.path);
+
+    const CliOutput result =
+        capture_output(aos_inbox_cli_main, {"aos inbox", "read"});
+    CHECK(result.code == 1);
+    CHECK(result.out.empty());
+    CHECK(result.err == "aos inbox: 信箱是空的\n");
 }
 
 TEST_CASE("talk detects runner lock before reading or queuing input") {

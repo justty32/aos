@@ -108,21 +108,28 @@ int list_inbox(int argc, char *argv[], const char *program) {
     return 0;
 }
 
-std::vector<aos::agent::InboxItem> select_items(
+struct Selection {
+    std::vector<aos::agent::InboxItem> items;
+    std::vector<aos::agent::InboxItem> candidates;
+};
+
+Selection select_items(
     const std::vector<aos::agent::InboxItem> &items,
     const std::optional<std::string> &id, bool all) {
-    if (all) return items;
-    if (!id) return items.empty() ? std::vector<aos::agent::InboxItem>{}
-                                  : std::vector{items.front()};
+    if (all) return {items, {}};
+    if (!id) {
+        return items.empty() ? Selection{} : Selection{{items.front()}, {}};
+    }
     for (const aos::agent::InboxItem &item : items) {
-        if (item.id == *id) return {item};
+        if (item.id == *id) return {{item}, {}};
     }
     std::vector<aos::agent::InboxItem> matches;
     for (const aos::agent::InboxItem &item : items) {
         if (item.id.starts_with(*id)) matches.push_back(item);
     }
-    return matches.size() == 1 ? matches
-                               : std::vector<aos::agent::InboxItem>{};
+    if (matches.size() == 1) return {std::move(matches), {}};
+    if (matches.empty()) return {};
+    return {{}, std::move(matches)};
 }
 
 void print_item(const aos::agent::InboxItem &item, bool first) {
@@ -153,27 +160,39 @@ int read_messages(int argc, char *argv[], const char *program) {
     const std::vector<aos::agent::InboxItem> inbox =
         aos::agent::read_inbox(folder, name);
     if (inbox.empty()) {
-        std::fputs("（沒有未讀訊息）\n", stdout);
-        return 0;
+        std::fputs("aos inbox: 信箱是空的\n", stderr);
+        return 1;
     }
-    const std::vector<aos::agent::InboxItem> selected =
-        select_items(inbox, id, all);
-    if (selected.empty()) {
+    const Selection selection = select_items(inbox, id, all);
+    if (!selection.candidates.empty()) {
+        std::fprintf(stderr,
+                     "aos inbox: %s 對到 %zu 封訊息，請給更長的 id：\n",
+                     id->c_str(), selection.candidates.size());
+        for (const aos::agent::InboxItem &item : selection.candidates) {
+            const std::string from = display_from(item.from);
+            const std::string preview =
+                truncate_utf8(first_line(item.text), 40);
+            std::fprintf(stderr, "  %s  %s  %s\n", item.id.c_str(),
+                         from.c_str(), preview.c_str());
+        }
+        return 1;
+    }
+    if (selection.items.empty()) {
         std::fprintf(stderr,
                      "aos inbox: 沒有這封訊息 %s（用 aos inbox ls 看有哪些）\n",
                      id ? id->c_str() : "");
         return 1;
     }
 
-    for (std::size_t index = 0; index < selected.size(); ++index) {
-        print_item(selected[index], index == 0);
+    for (std::size_t index = 0; index < selection.items.size(); ++index) {
+        print_item(selection.items[index], index == 0);
     }
     std::fflush(stdout);
     if (keep) return 0;
 
     std::size_t marked = 0;
     bool failed = false;
-    for (const aos::agent::InboxItem &item : selected) {
+    for (const aos::agent::InboxItem &item : selection.items) {
         std::string error;
         if (aos::agent::mark_inbox_read(item, error)) {
             ++marked;
