@@ -92,8 +92,14 @@ aos exec --loop 0 <folder>   # 持續讀、持續跑；數字是隔多久檢查�
 
 ## 名詞與動詞
 
-`inst` 是**名詞**（instruction 這個資料格式、`.aos/inst.json`、`core/inst` 這顆函式
-庫）；`exec` 是**動詞**（`aos exec` 這條子命令）。子命令改名不代表小專案要跟著改名。
+`inst` 是**名詞**（instruction 這個資料格式、`.aos/inst.json`）；`exec` 是**動詞**
+（`aos exec` 這條子命令）。子命令改名不代表小專案要跟著改名。
+
+> **2026-08-30 更新**：原文把 `core/inst` **這顆函式庫**也列在名詞側，**那個例子已被
+> 使用者拍板推翻**——小專案改名 **`core/exec`**（見
+> [core-layering](../core-layering.md)）。**原則沒有被推翻，是被講清楚了**：小專案照
+> **它做的事**（動詞）命名，資料格式照**它是什麼**（名詞）命名。所以 `core/exec` 這個
+> 專案裡裝著 `inst_t` 是自洽的，不是矛盾。
 
 > 舊文裡「方案 A 的 `aos exec`」（一個吞下所有職責的巨型入口）**和這裡的 `aos exec`
 > 合起來了**：`aos exec` 確實是唯一入口，但它只跑核心 CPU 的 `inst.json`，其他處理器

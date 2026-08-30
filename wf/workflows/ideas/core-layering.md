@@ -56,6 +56,18 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
 
 - `core/` 目前是 `inst`、`llms`、`tooljson`；**沒有 `exec_loop`、沒有匯聚專案**，而
   `llms`／`tooljson` 已被使用者判定為失敗作（見 [ideas README](README.md)）。
+- **`core/inst` 要改名成 `core/exec`**（**使用者已拍板，2026-08-30**；未實作）。
+  [layout-handoff](turn-based-folder/layout-handoff.md) 已同步——名詞／動詞的**原則沒被
+  推翻**，被推翻的是「`core/inst` 這顆函式庫算名詞側」那個**例子**：小專案照它做的事
+  命名，資料格式照它是什麼命名。**落地前要知道的規模**：
+  - **77 個檔提到 `core/inst`**（排除 `build/`／`.git/`／`.claude/`）。
+  - CMake 目標名 `aos_add_subproject(inst ...)` 要跟著改，`app/` 與根 `CMakeLists.txt`
+    不用動（子專案自己註冊）。
+  - **裁的是「專案名」，不是「型別名」**——`inst_t`、`.aos/inst.json`、C ABI 的
+    `aos_instruction_*` 前綴照名詞側留著。**唯一還沒答的是 include 路徑
+    `aos/inst.hpp`**：它是「專案的門面」（該跟著改成 `aos/exec.hpp`）還是「那個資料
+    格式的標頭」（該留）。這條要一句話才動得了工。
+
 - **`inst_t` 現在有 `timeout_ms`**（`core/inst/include/aos/inst.hpp:65`，C ABI 是
   `aos_instruction_timeout_ms`／`aos_instruction_set_timeout_ms`）。**使用者已拍板：
   `timeout_ms` 確實要移出最核心**，改由 loop 層管。動到的是**已釋出的 C ABI**，不是
@@ -81,9 +93,6 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
   多出它不認得的 key，而 `format.cpp` 目前對不認得的 key 直接回 `UnknownKey`。是 loop
   先把 loop 專屬的欄位剝掉再交給 exec，還是 exec 改成忽略未知 key——這決定兩層共不
   共用同一份 schema。
-- **`core/inst` 要不要改名成 `core/exec`**：layout-handoff 訂過「`inst` 是名詞、`exec`
-  是動詞，子命令改名不代表小專案跟著改名」。這個構想把最核心的專案直接叫 `exec`，
-  跟那條相反，需要一句話拍板。
 - **呼叫格式本身的缺口會反過來限制這套分層**：沒有回傳值、`exit` 檔只有 8 bit、`$ref`
   是坐在最內圈的求值語言、`UnknownKey` 與「loop 選項寫進同一份 json」相撞——整份清單
   見 [call-format](call-format.md)。其中第 4、8 條直接落在本檔的分層上。
@@ -94,7 +103,12 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
 
 **判準**取 [verdicts B12](verdicts.md) 那條未裁的：**「loop 只收無法成為 inst 的東西」**。
 **標的**取 [top-down-cli](top-down-cli.md) 的八條指令——那份定死了成品長相，所以「core 要
-承擔多少」第一次有了終點可以量。**以下全是我的分類，不是裁決。**
+承擔多少」第一次有了終點可以量。
+
+> **使用者裁決（2026-08-30）：判準先不裁，邊實作邊想。** 所以**本節不具約束力**，
+> 是一份參考資料——想知道「照這個判準會長成什麼樣」時看它，不要拿它當已定的邊界，
+> 也不要用它去否決個案判斷。同一天，**loop 分支的形式**與**版面知識放哪**也都
+> 「先不決定」。
 
 ### 一、判準在第一步就裂了：它只對「回合內」適用
 
