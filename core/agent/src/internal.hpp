@@ -23,6 +23,10 @@ struct Paths {
     std::filesystem::path log;
     std::filesystem::path tools;
     std::filesystem::path pending;
+
+    std::filesystem::path log_journal() const {
+        return agent / "log.jsonl";
+    }
 };
 
 Paths paths_for(const std::filesystem::path &folder, std::string_view name);
@@ -33,7 +37,8 @@ void atomic_write(const std::filesystem::path &path, std::string_view text);
 std::string message_body(std::string_view from, std::string_view text);
 void append_log(const Paths &paths, std::uint64_t turn, std::string_view role,
                 std::string_view content);
-void append_note(const Paths &paths, std::string_view text);
+void append_note(const Paths &paths, std::uint64_t turn,
+                 std::string_view text);
 
 void write_history(const Paths &paths, const std::vector<Message> &messages);
 void write_status(const Paths &paths, std::string_view status,

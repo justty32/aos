@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <chrono>
+#include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <iterator>
@@ -42,6 +43,77 @@ std::string now_iso8601() {
     return out.str();
 }
 
+std::string render_log_journal(std::string_view journal,
+                               const std::filesystem::path &path) {
+    std::istringstream input{std::string(journal)};
+    std::string rendered;
+    std::string line;
+    std::size_t line_number = 0;
+    while (std::getline(input, line)) {
+        ++line_number;
+        if (line.empty()) {
+            throw std::runtime_error(path.string() + " 第 " +
+                                     std::to_string(line_number) +
+                                     " 行不是 JSON 物件");
+        }
+
+        Json entry;
+        try {
+            entry = Json::parse(line);
+        } catch (const Json::exception &error) {
+            throw std::runtime_error(path.string() + " 第 " +
+                                     std::to_string(line_number) +
+                                     " 行 JSON 無法解析: " + error.what());
+        }
+        if (!entry.is_object() || !entry.contains("turn") ||
+            !entry["turn"].is_number_unsigned()) {
+            throw std::runtime_error(path.string() + " 第 " +
+                                     std::to_string(line_number) +
+                                     " 行缺少 turn");
+        }
+        const std::string role = require_string(entry, "role", path);
+        const std::string content = require_string(entry, "content", path);
+        if (role == "note") {
+            rendered += content;
+            if (rendered.empty() || rendered.back() != '\n') {
+                rendered.push_back('\n');
+            }
+            continue;
+        }
+        if (role != "user" && role != "assistant" && role != "tool") {
+            throw std::runtime_error(path.string() + " 第 " +
+                                     std::to_string(line_number) +
+                                     " 行的 role 無效");
+        }
+        rendered += "## turn " +
+                    std::to_string(entry["turn"].get<std::uint64_t>()) +
+                    " " + role + "\n";
+        rendered += content;
+        if (rendered.empty() || rendered.back() != '\n') {
+            rendered.push_back('\n');
+        }
+        rendered.push_back('\n');
+    }
+    return rendered;
+}
+
+void append_journal_entry(const aos::agent::detail::Paths &paths,
+                          std::uint64_t turn, std::string_view role,
+                          std::string_view content) {
+    const std::filesystem::path journal_path = paths.log_journal();
+    std::string journal;
+    if (std::filesystem::exists(journal_path)) {
+        journal = aos::agent::detail::read_text(journal_path);
+    }
+    const Json entry = {{"turn", turn},
+                        {"role", std::string(role)},
+                        {"content", std::string(content)}};
+    journal += entry.dump() + "\n";
+    aos::agent::detail::atomic_write(journal_path, journal);
+    aos::agent::detail::atomic_write(
+        paths.log, render_log_journal(journal, journal_path));
+}
+
 }  // namespace
 
 namespace detail {
@@ -77,21 +149,12 @@ std::string message_body(std::string_view from, std::string_view text) {
 
 void append_log(const Paths &paths, std::uint64_t turn,
                 std::string_view role, std::string_view content) {
-    std::string log;
-    if (std::filesystem::exists(paths.log)) log = read_text(paths.log);
-    log += "## turn " + std::to_string(turn) + " " + std::string(role) + "\n";
-    log.append(content);
-    if (log.empty() || log.back() != '\n') log.push_back('\n');
-    log.push_back('\n');
-    atomic_write(paths.log, log);
+    append_journal_entry(paths, turn, role, content);
 }
 
-void append_note(const Paths &paths, std::string_view text) {
-    std::string log;
-    if (std::filesystem::exists(paths.log)) log = read_text(paths.log);
-    log.append(text);
-    if (log.empty() || log.back() != '\n') log.push_back('\n');
-    atomic_write(paths.log, log);
+void append_note(const Paths &paths, std::uint64_t turn,
+                 std::string_view text) {
+    append_journal_entry(paths, turn, "note", text);
 }
 
 void write_history(const Paths &paths, const std::vector<Message> &messages) {
@@ -187,7 +250,25 @@ Pending read_pending(const std::filesystem::path &folder,
 
 std::string read_log(const std::filesystem::path &folder,
                      std::string_view name) {
-    return detail::read_text(detail::paths_for(folder, name).log);
+    const detail::Paths paths = detail::paths_for(folder, name);
+    if (!std::filesystem::exists(paths.log_journal())) {
+        return detail::read_text(paths.log);
+    }
+
+    const std::string rendered =
+        render_log_journal(detail::read_text(paths.log_journal()),
+                           paths.log_journal());
+    const bool log_exists = std::filesystem::exists(paths.log);
+    const std::string current =
+        log_exists ? detail::read_text(paths.log) : std::string{};
+    if (!log_exists || current != rendered) {
+        std::fprintf(stderr,
+                     "aos: %s 與稽核紀錄不符（有人手動改過），已從 "
+                     "log.jsonl 還原\n",
+                     paths.log.string().c_str());
+        detail::atomic_write(paths.log, rendered);
+    }
+    return rendered;
 }
 
 }  // namespace aos::agent

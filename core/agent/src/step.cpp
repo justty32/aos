@@ -206,13 +206,16 @@ std::string call_args_json(const ToolCall &call) {
     return "null";
 }
 
-std::string complete_locally(const std::vector<Message> &messages) {
+std::string complete_locally(const std::vector<Message> &messages,
+                             const Engine &engine) {
     std::vector<aos::llm::Message> request;
     request.reserve(messages.size());
     for (const Message &message : messages) {
         request.push_back({message.role, message.content});
     }
-    return aos::llm::complete(request, aos::llm::options_from_env());
+    aos::llm::Options options = aos::llm::options_from_env();
+    if (!engine.model.empty()) options.model = engine.model;
+    return aos::llm::complete(request, options);
 }
 
 std::string lmstudio_cpu_name(const Engine &engine) {
@@ -235,7 +238,16 @@ int step(const std::filesystem::path &folder, std::string_view name,
 
         const Engine engine = read_engine(paths->folder, name);
         if (engine.kind == "pi") {
-            return detail::step_pi(*paths, name, turn, engine);
+            const int result = detail::step_pi(*paths, name, turn, engine);
+            /* pi 的失敗原文寫在 status 與 log，順手也交給呼叫端，
+             * 這樣 batch out 的 stderr 才不會是空白的一行。 */
+            if (result != 0 && result != 75 && error != nullptr) {
+                try {
+                    *error = read_status(paths->folder, name).detail;
+                } catch (const std::exception &) {
+                }
+            }
+            return result;
         }
 
         std::vector<Message> history = read_history(paths->folder, name);
@@ -265,17 +277,17 @@ int step(const std::filesystem::path &folder, std::string_view name,
             received_tools = true;
         }
 
-        bool received_user = false;
-        std::vector<std::filesystem::path> messages;
+        std::vector<std::filesystem::path> message_paths;
         for (const auto &entry :
              std::filesystem::directory_iterator(paths->say)) {
             if (entry.is_regular_file() && entry.path().extension() == ".md") {
-                messages.push_back(entry.path());
+                message_paths.push_back(entry.path());
             }
         }
-        std::sort(messages.begin(), messages.end());
+        std::sort(message_paths.begin(), message_paths.end());
 
-        const bool will_call = received_tools || !messages.empty();
+        const bool received_user = !message_paths.empty();
+        const bool will_call = received_tools || received_user;
         std::optional<aos::llm::Slot> slot;
         if (will_call) {
             try {
@@ -288,15 +300,6 @@ int step(const std::filesystem::path &folder, std::string_view name,
             }
         }
 
-        for (const auto &message_path : messages) {
-            const std::string content = detail::read_text(message_path);
-            history.push_back({"user", content});
-            detail::write_history(*paths, history);
-            detail::append_log(*paths, turn, "user", content);
-            std::filesystem::remove(message_path);
-            received_user = true;
-        }
-
         std::string next_status = "idle";
         std::string detail_text = "等待訊息";
         if (received_user || received_tools) {
@@ -306,8 +309,23 @@ int step(const std::filesystem::path &folder, std::string_view name,
             request.push_back(
                 {"system", detail::system_prompt(*paths, name, turn, tools)});
             request.insert(request.end(), history.begin(), history.end());
+            std::vector<Message> new_messages;
+            new_messages.reserve(message_paths.size());
+            for (const auto &message_path : message_paths) {
+                new_messages.push_back(
+                    {"user", detail::read_text(message_path)});
+            }
+            request.insert(request.end(), new_messages.begin(),
+                           new_messages.end());
             const std::string reply =
-                completion ? completion(request) : complete_locally(request);
+                completion ? completion(request)
+                           : complete_locally(request, engine);
+            for (std::size_t index = 0; index < new_messages.size(); ++index) {
+                history.push_back(new_messages[index]);
+                detail::append_log(*paths, turn, "user",
+                                   new_messages[index].content);
+                std::filesystem::remove(message_paths[index]);
+            }
             history.push_back({"assistant", reply});
             detail::write_history(*paths, history);
             detail::append_log(*paths, turn, "assistant", reply);
@@ -333,9 +351,10 @@ int step(const std::filesystem::path &folder, std::string_view name,
                                       {turn,
                                        {{id, extracted.call->tool,
                                          call_args_json(*extracted.call)}}});
-                detail::append_note(*paths, "> 已投遞工具 " + id + ": " +
-                                                Json(argv).dump() +
-                                                "，等下下回合的結果");
+                detail::append_note(*paths, turn,
+                                    "> 已投遞工具 " + id + ": " +
+                                        Json(argv).dump() +
+                                        "，等下下回合的結果");
                 next_status = "tool";
                 detail_text = "等工具結果";
             } else if (extracted.error) {
@@ -344,8 +363,9 @@ int step(const std::filesystem::path &folder, std::string_view name,
                 history.push_back({"tool", content});
                 detail::write_history(*paths, history);
                 detail::append_log(*paths, turn, "tool", content);
-                detail::append_note(*paths, "> 工具呼叫錯誤：" +
-                                                extracted.error->message);
+                detail::append_note(*paths, turn,
+                                    "> 工具呼叫錯誤：" +
+                                        extracted.error->message);
             }
         }
 
@@ -354,9 +374,27 @@ int step(const std::filesystem::path &folder, std::string_view name,
     } catch (const std::exception &exception) {
         if (error != nullptr) *error = exception.what();
         if (paths) {
+            const std::string detail_text = one_line(exception.what());
             try {
-                detail::write_status(*paths, "idle", one_line(exception.what()),
-                                     turn);
+                detail::write_status(*paths, "error", detail_text, turn);
+            } catch (...) {
+            }
+            try {
+                std::string note = "> 第 " + std::to_string(turn) +
+                                   " 回合失敗：" + detail_text;
+                std::string lower = detail_text;
+                std::transform(lower.begin(), lower.end(), lower.begin(),
+                               [](unsigned char character) {
+                                   return static_cast<char>(
+                                       std::tolower(character));
+                               });
+                if (detail_text.find("連線失敗") != std::string::npos ||
+                    lower.find("connect") != std::string::npos) {
+                    note += "（請確認 LLM 端點 " +
+                            aos::llm::options_from_env().url +
+                            " 是不是活的，或用 AOS_LLM_URL 指到正確的位址）";
+                }
+                detail::append_note(*paths, turn, note);
             } catch (...) {
             }
         }

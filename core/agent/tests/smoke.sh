@@ -22,7 +22,10 @@ from pathlib import Path
 
 path = Path(sys.argv[1])
 inst = json.loads(path.read_text(encoding="utf-8"))
-assert inst == {"argv": ["aos", "agent", "step"]}, inst
+argv = inst["argv"]
+assert argv[1:] == ["agent", "step"], inst
+# L1-01 之後 init 會把「這一個」aos 的絕對路徑寫死進 every/，找不到才退回裸的 "aos"。
+assert argv[0] == "aos" or argv[0].endswith("/aos"), inst
 print("  every:", path.name)
 PY
 }
