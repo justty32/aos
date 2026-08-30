@@ -1,0 +1,114 @@
+## 現況
+
+`src/parse.cpp:5-8` 目前：
+
+- 以第一個 `=` 分隔。
+- 沒有 `=` 時回傳空字串。
+- `key=` 也會回傳空字串，因此無法區分「解析失敗」與「合法空值」。
+
+`src/parse.hpp:6-7` 的註解已明確指出此歧義。依 `README.md`，目標是改成 `std::optional<std::string>`。
+
+## 重構計畫
+
+### 1. 修改公開介面：`src/parse.hpp`
+
+- 加入 `#include <optional>`。
+- 將函式簽章改為：
+
+```cpp
+std::optional<std::string> parse(const std::string &line);
+```
+
+- 更新註解，明確定義：
+  - 找不到 `=`：回傳 `std::nullopt`。
+  - 找到 `=`：回傳 `=` 後方字串。
+  - `key=` 是成功解析，結果為「有值但內容為空」。
+  - 若有多個 `=`，仍以第一個為分隔點。
+
+保留 `const std::string &`，避免同時引入 `std::string_view` 等無關 API 變更。
+
+### 2. 修改實作：`src/parse.cpp`
+
+- 將回傳型別同步改為 `std::optional<std::string>`。
+- 找不到 `=` 時改回傳：
+
+```cpp
+return std::nullopt;
+```
+
+- 成功時維持既有切割邏輯：
+
+```cpp
+return line.substr(pos + 1);
+```
+
+這會讓空字串被包在有效的 `optional` 裡，正確區分兩種情況。
+
+### 3. 更新呼叫端：`src/main.cpp`
+
+`std::optional` 無法直接傳給 `operator<<`，因此必須顯式解包。
+
+若重構要求維持目前 CLI 行為：
+
+- 成功：輸出解析值和換行。
+- 失敗：仍只輸出空白行。
+
+建議寫成明確分支，避免使用 `value_or("")` 再次掩蓋語意：
+
+```cpp
+if (auto value = mini::parse(argv[i])) {
+    std::cout << *value;
+}
+std::cout << '\n';
+```
+
+若希望 CLI 對失敗輸出錯誤或回傳非零狀態，那屬於行為變更，應另行確認，不與本次型別重構混在一起。
+
+### 4. 強化測試：`tests/test_parse.cpp`
+
+調整既有斷言，直接測試 `optional` 狀態，而不是只比較字串：
+
+1. 一般成功：
+   - `parse("a=1").has_value()` 為真。
+   - 解包後等於 `"1"`。
+2. 缺少分隔符：
+   - `parse("noequal") == std::nullopt`。
+3. 合法空值：
+   - `parse("key=").has_value()` 為真。
+   - 解包後字串為空。
+4. 建議補齊邊界案例：
+   - `parse("")` → `nullopt`。
+   - `parse("=value")` → `"value"`。
+   - `parse("=")` → 有值的空字串。
+   - `parse("a=b=c")` → `"b=c"`，確認仍只切第一個 `=`。
+
+測試中先確認 `has_value()` 再解參考，讓失敗原因清楚且避免錯誤存取。
+
+### 5. 建置設定
+
+`Makefile` 已使用 `-std=c++17`，原生支援 `std::optional`，預期不需要調整編譯標準或連結設定。
+
+### 6. 驗證
+
+在此小專案目錄執行：
+
+```bash
+make clean
+make
+```
+
+驗收條件：
+
+- `mini` 與 `test_parse` 均成功編譯。
+- 所有測試通過並輸出 `ok`。
+- `a=1`、`key=`、`noequal` 的 CLI 可觀察行為符合既定要求。
+- 全域搜尋 `mini::parse`，確認所有呼叫端均已處理 `optional`，沒有殘留直接串流輸出或把失敗當空字串的用法。
+
+## 預計異動檔案
+
+- `src/parse.hpp`：API 與契約。
+- `src/parse.cpp`：以 `nullopt` 表示失敗。
+- `src/main.cpp`：解包回傳值。
+- `tests/test_parse.cpp`：更新既有測試並補上成功空值與邊界案例。
+
+核心驗收重點是：`parse("key=")` 與 `parse("noequal")` 必須能被呼叫端明確區分。

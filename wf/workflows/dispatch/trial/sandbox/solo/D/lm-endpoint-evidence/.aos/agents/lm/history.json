@@ -1,0 +1,8 @@
+{
+  "messages": [
+    {
+      "content": "測試",
+      "role": "user"
+    }
+  ]
+}

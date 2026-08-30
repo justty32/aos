@@ -1,0 +1,2 @@
+[AOS #5] $AOS listen --once
+elapsed=0.00s user=0.00s system=0.00s exit=%x

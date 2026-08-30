@@ -1,0 +1,9 @@
+EXPECT: Ctrl-C 後 timeout、aos run、aos agent step 都停止，未完成回合被標記為中斷。
+ACTUAL: signal_turn=3，agent_step_pid=3290718，alive_after_1s=yes，該回合 out_exists=no，status 如下：
+{
+  "detail": "處理本回合",
+  "status": "thinking",
+  "turn": 3,
+  "updated_at": "2026-08-30T11:56:26Z"
+}
+EVIDENCE_DIR: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/C/repro-tmp.C-03.AV827B

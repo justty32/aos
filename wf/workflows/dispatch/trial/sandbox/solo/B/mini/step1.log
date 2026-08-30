@@ -1,0 +1,9 @@
+$AOS agent init --engine pi
+init exit=0
+$ cat .aos/agents/*/engine.json
+{
+  "engine": "pi",
+  "model": "deepseek-v4-flash",
+  "provider": "deepseek",
+  "session_id": "a6e30364-ced1-4a72-97cd-e7b693937dfb"
+}

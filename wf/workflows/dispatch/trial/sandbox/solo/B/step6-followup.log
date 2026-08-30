@@ -1,0 +1,35 @@
+direct_session_file=/home/lorkhan/.pi/agent/sessions/--home-lorkhan-repo-simple_tools-aos-.claude-worktrees-agent-a4b6627dc8a8b1254-wf-workflows-dispatch-trial-sandbox-solo-B-mini-pi--/2026-08-30T11-38-44-196Z_01a05276-fa64-7a4d-9b34-0daac640a812.jsonl
+before_direct_followup size=104402 mtime=2026-08-30 19:39:43.130891042 +0800
+$ session metadata event types/provider/model
+session	01a05276-fa64-7a4d-9b34-0daac640a812	-	-
+model_change	a9766bfe	openai-codex	gpt-5.6-sol
+thinking_level_change	e94106cd	-	-
+message	063cc7bf	-	-
+message	b7ed1249	-	-
+message	1fd45500	-	-
+message	e6732116	-	-
+message	80dfd684	-	-
+message	4a1203c0	-	-
+message	86da0d00	-	-
+message	2e87fb9f	-	-
+message	8568f295	-	-
+$ timeout 900 pi -c -p "剛才那個改動，為什麼 main.cpp 也要動？" > pi-followup.log 2>&1
+direct_followup exit=0 elapsed_ms=10394
+$ tail -30 pi-followup.log
+因為 `parse()` 的回傳型別從 `std::string` 改成 `std::optional<std::string>`。
+
+原本 `main.cpp` 可直接輸出字串：
+
+```cpp
+std::cout << mini::parse(argv[i]) << "\n";
+```
+
+但 `std::optional<std::string>` 不能直接用 `operator<<` 輸出，否則編譯失敗。因此要先取出值：
+
+```cpp
+const auto value = mini::parse(argv[i]);
+std::cout << value.value_or("") << "\n";
+```
+
+這樣也保留了原本行為：找不到 `=` 時仍輸出空行；只是現在 `parse()` 本身能明確區分「解析失敗」與「合法的空值」。
+after_direct_followup size=105942 mtime=2026-08-30 19:40:18.570761854 +0800

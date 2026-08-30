@@ -1,0 +1,19 @@
+before=2026-08-30T19:46:04+08:00
+{
+  "engine": "pi",
+  "model": "deepseek-v4-flash",
+  "provider": "deepseek",
+  "session_id": "f5483b63-4bbe-46f1-a2bb-f5a3540e8ddb"
+}
+.aos/agents/ws-pi/engine.json 135 bytes
+.aos/agents/ws-pi/history.json 21 bytes
+.aos/agents/ws-pi/log.md 0 bytes
+.aos/agents/ws-pi/pending.json 31 bytes
+.aos/agents/ws-pi/persona.md 54 bytes
+.aos/agents/ws-pi/status.json 104 bytes
+.aos/every/agent-ws-pi.json 55 bytes
+.aos/state.json 208 bytes
+.aos/tools/cat.json 272 bytes
+.aos/tools/ls.json 287 bytes
+.aos/tools/sh.json 276 bytes
+.aos/turn 2 bytes

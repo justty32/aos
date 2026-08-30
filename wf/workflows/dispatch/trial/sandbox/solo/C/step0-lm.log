@@ -1,0 +1,15 @@
+started=2026-08-30T19:40:02+08:00
+
+ws-lm files:
+.aos/agents/ws-lm/engine.json 27 bytes
+.aos/agents/ws-lm/history.json 21 bytes
+.aos/agents/ws-lm/log.md 0 bytes
+.aos/agents/ws-lm/pending.json 31 bytes
+.aos/agents/ws-lm/persona.md 54 bytes
+.aos/agents/ws-lm/status.json 104 bytes
+.aos/every/agent-ws-lm.json 55 bytes
+.aos/state.json 208 bytes
+.aos/tools/cat.json 272 bytes
+.aos/tools/ls.json 287 bytes
+.aos/tools/sh.json 276 bytes
+.aos/turn 2 bytes

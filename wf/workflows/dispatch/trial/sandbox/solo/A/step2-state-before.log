@@ -1,0 +1,8 @@
+[AOS #2] $AOS state
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:32Z"
+}
+elapsed=0.00s user=0.00s system=0.00s exit=%x

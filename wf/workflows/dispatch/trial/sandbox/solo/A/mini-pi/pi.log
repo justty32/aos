@@ -1,0 +1,8 @@
+已完成：
+
+- `parse()` 改回傳 `std::optional<std::string>`
+- 找不到 `=` 時回傳 `std::nullopt`
+- 同步更新 `src/parse.hpp`、`src/main.cpp`、`tests/test_parse.cpp`
+- 新增空值 `empty=` 與失敗情況測試
+- `make` 測試通過，輸出 `ok`
+- 已執行 `make clean` 清除建置產物

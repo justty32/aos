@@ -1,0 +1,2 @@
+[AOS #6] timeout 1200 $AOS run . --step 15 > run1.log 2>&1
+run1 exit=0 elapsed_seconds=1.4234990000

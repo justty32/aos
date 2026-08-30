@@ -1,0 +1,16 @@
+$ timeout 900 pi -p "把 src/parse.cpp ..." > pi.log 2>&1 ; echo "exit=$?"
+exit=0
+direct_pi_initial elapsed_ms=62313
+$ tail -30 pi.log
+已完成：
+
+- `parse()` 改回傳 `std::optional<std::string>`
+- 找不到 `=` 時回傳 `std::nullopt`
+- 同步修改 `src/parse.hpp`、`src/main.cpp`、`tests/test_parse.cpp`
+- 新增測試區分「解析失敗」與「合法空字串」
+- `make` 測試通過：`ok`
+- 已用 `make clean` 清除建置產物
+$ make 2>&1 | tail -3
+g++ -std=c++17 -o mini src/main.cpp src/parse.cpp
+g++ -std=c++17 -o test_parse tests/test_parse.cpp src/parse.cpp && ./test_parse
+ok

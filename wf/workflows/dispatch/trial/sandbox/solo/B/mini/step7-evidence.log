@@ -1,0 +1,51 @@
+$ world registry versus repo-root registry
+B-world: ls.json cat.json sh.json 
+
+repo-root: ls.json git.json cat.json sh.json aos.json 
+
+$ aos mirror counts
+history path=.aos/agents/mini/history.json size=3602 mtime=2026-08-30 19:38:07.677664279 +0800
+messages=8
+assistant=4
+user=4
+$ pi backing session counts
+pi_session size=32743 mtime=2026-08-30 19:38:07.629236956 +0800
+     32 message
+      1 model_change
+      1 session
+      1 thinking_level_change
+$ pi message role/content-block kinds
+      4 assistant	text
+      1 assistant	text+toolCall
+      2 assistant	text+toolCall+toolCall+toolCall+toolCall
+      6 assistant	toolCall
+     15 toolResult	text
+      4 user	text
+$ final state file (read directly; no extra aos command)
+{
+  "turn": 5,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-mini-5",
+      "argv0": "aos",
+      "pid": 3247314,
+      "started_at": "2026-08-30T11:38:01.744Z",
+      "status": "done",
+      "exit": 0
+    }
+  ],
+  "agents": {
+    "mini": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 5,
+      "updated_at": "2026-08-30T11:38:07Z"
+    }
+  }
+}
+$ run1.log turn summaries
+turn 2: 1 insts (1 every), 17836 ms
+turn 3: 1 insts (1 every), 3117 ms
+turn 4: 1 insts (1 every), 2967 ms
+turn 5: 1 insts (1 every), 5971 ms
