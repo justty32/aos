@@ -72,6 +72,7 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
+| proto-T-tools（[交接書](proto/proto-T-tools.md)，worktree，純規劃） | `wf/workflows/ideas/tools/`、`ideas/ai-core-field/synthesis.md` | core/、其餘 wf/ | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫
 
