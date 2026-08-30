@@ -25,7 +25,7 @@
    - `aos agent init <folder> --name N [--persona TEXT]`：建 `.aos/`（若無）與上面版面，然後投遞第一條 `{"id":"agent-N-0","argv":["aos","agent","step","<folder>","N"]}`。
    - `aos agent step <folder> N`：status→thinking；收 `say/*.md` 併進 history；呼叫 `aos llm`（exec 子行程或直接連 `aos::llm` 都可）；回覆寫 history 與 log.md；status→idle；**再投遞一條 step 給自己**（id 帶回合號 `$AOS_TURN`）。若 `say/` 空且上一回合也空，可以不呼叫 LLM、只自我投遞（省 token）——**這是你的裁決點，選簡單的**。
    - `aos agent say <folder> N <text>`、`aos agent listen <folder> N`（tail -f 式跟 log.md）、`aos agent talk <folder> N`（stdin 一行→say，背景印新 log）、`aos agent state <folder> N`（印 status.json）。
-   - 加分（有餘裕才做）：回覆中的 ```sh 圍欄以 `aos deliver` 形式投進世界 inbox，讓 agent 真的用到 inst。
+   - **工具（使用者 2026-08-30 追加，必做）**：`agents/<name>/tools.json` 是工具登記表（每項 `name`／`description`／`argv` 模板；init 建預設幾項）。LLM 以固定格式回工具呼叫 → agent 依模板組成指令、`aos deliver` 投進 `.aos/inbox/`（id `agent-<name>-tool-<turn>-<n>`）→ 下一回合 step 從 `batch/<turn>/out/<id>.json` 讀結果餵回 LLM。**呼叫工具＝把要求投進 inst。**
 5. 每個小專案 `README.md`；`wf/workflows/common/code-map.md` **在檔尾另起「core/llm、core/agent」一節**（避免跟隊 A 的段落衝突）。
 6. **pi 介面層（使用者：「可以的話試著弄」）**：本機有 `pi` 0.84.2（`which pi`；先 `pi --help` 與它的文件搞清楚它是什麼、能不能掛自訂 provider／工具／stdin-stdout）。目標是 `aos agent talk <folder> N --interface pi`：把 pi 當「好用的終端機介面」，底下仍是 say/listen。做得到就做最小版；做不到就寫一頁 `core/agent/docs/pi-interface.md` 說明試了什麼、卡在哪、建議怎麼接。**上限：一位 Sonnet 的額度，不擴大。**
 7. Fable 寫 `wf/workflows/ideas/self-delivery-in-loop.md`（≤ 2 頁）：純投遞式自我複製做得到什麼、做不到什麼（靜默死亡、停不下來、狀態新舊、跟 `state.json` 的關係），提出 1–2 個「loop 原生支援」方案（例如 `inbox/` 之外加 `agents/*/next.json` 由 loop 每回合自動投遞；或 state.json 的 `agents` 段反向驅動），各附代價。**只規劃，等使用者拍板；不實作。**
@@ -51,7 +51,7 @@
 | code map | `wf/workflows/common/code-map.md` 檔尾新節 |
 | 回報 | `wf/workflows/dispatch/proto/reports/B.md` |
 
-## 驗收（就這 6 條）
+## 驗收（就這 7 條）
 
 1. worktree 根目錄 `cmake --build --preset default && ctest --preset default` 全綠。
 2. `echo '只回一個字：好' | aos llm` 印出含「好」的回覆（真的打到 LM Studio）。
@@ -59,6 +59,7 @@
 4. 用 `fake_loop.py W --step 3` 跑三回合：每回合 inbox 都再出現一條新的 step（自我投遞成立），`state.json.agents.bob` 有值。
 5. `aos agent say W bob "你叫什麼名字"` → 再跑一回合 → `aos agent listen`（或 log.md）出現 LLM 的回覆。
 6. `self-delivery-in-loop.md` 存在且含「做不到什麼」與至少一個 loop 原生方案＋代價。
+7. `aos agent say W bob "看看目前資料夾有哪些檔案"` → 跑兩回合 → log.md 出現投進 inbox 的工具指令，以及引用其結果的回覆。
 
 ## 回報
 
