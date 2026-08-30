@@ -39,11 +39,16 @@ prediction may decrease with concurrency, but each prediction will start faster 
 讀法：`n_slots = 4`＝llama.cpp server 可同時處理 4 條 prediction（continuous batching）；`n_ctx_slot`＝每槽 context；`kv_unified = true`＝
 四槽共用一池 KV。**所以 LM Studio 這顆的並行上限預設是 4，不是 1**；VRAM 只夠載一顆模型是另一回事（並行是同一顆模型的槽數）。
 
-## 三、過往請求的排隊行為：log 裡從沒出現過真正重疊
+## 三、過往請求的排隊行為：aos 打的從沒重疊；別的客戶端曾同時佔到 2 槽
 
 `2026-08-23.1.log` 14 次、`2026-08-30.1.log` 18 次 `POST /v1/chat/completions`，每一次都是 `launch_slot_` → `release` 之後下一條才 `launch_slot_`；
 連 16:05:28／33／35／38 十秒內四連發（`2026-08-30.1.log:543–713`）也是逐條完成（各 5.0 s、1.6 s、2.4 s、2.2 s）——因為呼叫端（`aos agent step`、`aos llm`）本來就是同步串行打的，
-不是端點排隊。**四個 slot 到底能不能同時跑，log 給不了證據**，只能靠 §四。
+不是端點排隊。
+
+codex（sol）把所有 server log 依 slot launch／release 掃過：`2026-07-14.1.log:2643–2789` 有真正重疊——task 15163（slot 0）與 15453（slot 3）同時跑 0.9 s，
+15533 與 15453 重疊 3.3 s；`2026-04-14`、`2026-07-28` 也各見過同時 2 條。**最大同時 active 數＝2，沒有任何一天壓滿 4 槽**，也找不到「slot 全忙、請求排隊」的紀錄。
+所以「4 槽真並行、第 5 條排多久」仍要靠 §四。官方文件（未經本機滿載驗證）：Max Concurrent Predictions 預設 4，超過者排隊；本機 app 版本 0.4.22
+（`.internal/historical-version-info.json:10`）、llama.cpp runtime 2.31.2。
 
 單次耗時的量級（qwen3.5-9b Q4_K_M，`2026-08-23.1.log:142–146`）：prompt eval 393 tok/s，生成 67.8 tok/s，440 token 總計 6.1 s；1177 token 的回覆 17.1 s（`:248`）。
 **一次 agent 思考 2–17 秒**是這顆 CPU 的常態，正是回合被拖長的來源。
@@ -76,6 +81,8 @@ echo "N=$N total=$(echo "$E - $S" | bc)s"
 
 ## 六、DeepSeek 那顆（依知識，未驗證）
 
-- OpenAI 相容端點 `https://api.deepseek.com/v1`；官方文件宣稱**不設硬性併發上限**，高負載時以拉長回應／429 處理，所以「同時 3 個」這種上限只能由我們自己的排程者保證，端點不會替我們擋。
+- OpenAI 相容端點 `https://api.deepseek.com/v1`。codex（sol）2026-08-30 查官方 rate-limit 頁：`deepseek-v4-flash` 帳號層級併發上限 2500、同帳號所有 key 共用、超限回 429、
+  10 分鐘內沒開始推論會被斷線；沒有通用 RPM／TPM 數字。價格量級（V4 Flash，每 1M token）：cache-hit input $0.0028、miss input $0.14、output $0.28。
+  所以使用者說的「同時 3 個」是 **aos 自己的 admission cap**，端點不會替我們擋，也遠低於官方上限。
 - `core/agent/docs/pi-cpu.md` 的實測：`deepseek-v4-flash` 一次 pi step 1～4 秒，pi 在一次 step 內會**連續**多次呼叫（工具迴圈），對排程者而言是「一個佔住 slot 的長呼叫」而不是多個短呼叫。
 - 價格量級與 RPM／TPM 要以官方頁面為準，本檔不抄數字。
