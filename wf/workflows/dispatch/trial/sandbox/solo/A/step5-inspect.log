@@ -1,0 +1,52 @@
+$ cat .aos/agents/mini/pending.json
+{
+  "calls": [],
+  "turn": 0
+}
+$ diff -ru --exclude=.aos --exclude=run1.log --exclude=listen1.txt "$TEMPLATE" . | head -100
+Only in .: mini
+diff -ru '--exclude=.aos' '--exclude=run1.log' '--exclude=listen1.txt' /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.cpp ./src/parse.cpp
+--- /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.cpp	2026-08-30 19:29:46.717315194 +0800
++++ ./src/parse.cpp	2026-08-30 19:38:21.215177974 +0800
+@@ -2,9 +2,9 @@
+ 
+ namespace mini {
+ 
+-std::string parse(const std::string &line) {
++std::optional<std::string> parse(const std::string &line) {
+     auto pos = line.find('=');
+-    if (pos == std::string::npos) return std::string();
++    if (pos == std::string::npos) return std::nullopt;
+     return line.substr(pos + 1);
+ }
+ 
+diff -ru '--exclude=.aos' '--exclude=run1.log' '--exclude=listen1.txt' /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.hpp ./src/parse.hpp
+--- /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.hpp	2026-08-30 19:29:43.838878114 +0800
++++ ./src/parse.hpp	2026-08-30 19:38:18.526197665 +0800
+@@ -1,9 +1,10 @@
+ #pragma once
+ #include <string>
++#include <optional>
+ 
+ namespace mini {
+ 
+-// 解析 "key=value"，失敗時回傳空字串（呼叫端分不出「失敗」與「值本來就是空的」）。
+-std::string parse(const std::string &line);
++// 解析 "key=value"，找不到 '=' 時回傳 std::nullopt。
++std::optional<std::string> parse(const std::string &line);
+ 
+ }  // namespace mini
+Only in .: test_parse
+$ make 2>&1 | tail -12
+            |     ^~~~~~~~
+      • template argument deduction/substitution failed:
+        • /usr/include/c++/16/bits/ostream.h: In substitution of ‘template<class _Ostream, class _Tp> _Ostream&& std::operator<<(_Ostream&&, const _Tp&) [with _Ostream = std::basic_ostream<char>&; _Tp = std::optional<std::__cxx11::basic_string<char> >]’:
+        • required from here
+          src/main.cpp:6:41:   
+              6 |         std::cout << mini::parse(argv[i]) << "\n";
+                |                                         ^
+        • error: no type named ‘type’ in ‘struct std::enable_if<false, void>’
+          /usr/include/c++/16/bits/ostream.h:836:5:
+            836 |     operator<<(_Ostream&& __os, const _Tp& __x)
+                |     ^~~~~~~~
+make: *** [Makefile:4: mini] Error 1

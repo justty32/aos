@@ -1,0 +1,22 @@
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos run [folder] [--step N] [--interval MS]
+run_missing_step_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos run [folder] [--step N] [--interval MS]
+run_bad_step_exit=2
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied
+run_bad_path_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/lm 已經住著 agent lm；一個資料夾只住一隻
+init_again_exit=1
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent init [folder] [--name N] [--persona TEXT] [--engine lmstudio|pi] [--provider P] [--model M] [--priority N]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent step [folder] [name]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent say <folder> <name> <text...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent listen <folder> <name> [--once]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent talk <folder> <name> [--interface pi]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent state <folder> <name>
+init_bad_engine_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent init [folder] [--name N] [--persona TEXT] [--engine lmstudio|pi] [--provider P] [--model M] [--priority N]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent step [folder] [name]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent say <folder> <name> <text...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent listen <folder> <name> [--once]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent talk <folder> <name> [--interface pi]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent state <folder> <name>
+init_missing_model_exit=2

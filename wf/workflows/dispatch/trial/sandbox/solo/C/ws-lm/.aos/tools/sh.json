@@ -1,0 +1,14 @@
+{
+  "args": "string",
+  "argv": [
+    "sh",
+    "-lc",
+    "{args}"
+  ],
+  "description": "用 sh -lc 執行一行 shell 指令。args 就是整行指令字串。",
+  "name": "sh",
+  "predictability": "medium",
+  "source": "manual",
+  "stdin": "none",
+  "timeout_ms": 30000
+}

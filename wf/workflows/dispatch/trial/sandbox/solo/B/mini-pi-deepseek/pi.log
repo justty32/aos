@@ -1,0 +1,15 @@
+改完了，`make` 全綠。修改摘要：
+
+**src/parse.hpp**
+- 回傳型別改為 `std::optional<std::string>`，`#include <optional>`，更新註解（呼叫端現在分得出「失敗」與「值本來就是空的」）。
+
+**src/parse.cpp**
+- 找不到 `'='` 時回傳 `std::nullopt`；找到時回傳 `substr(pos + 1)`（可為空字串，自動轉為 optional）。
+
+**src/main.cpp**
+- 改用 `value ? *value : std::string()` 解開 optional，行為與原本一致（nullopt 時印空行）。
+
+**tests/test_parse.cpp**
+- `a=1` 改為 `has_value()` 且解參考後等於 `"1"`；`noequal` 改為 `!has_value()`。
+
+驗證結果：`make` 編譯成功、`./test_parse` 印 `ok`；`./mini 'a=1' 'noequal' 'x='` 輸出 `1`、空行、空行，行為符合預期。

@@ -1,0 +1,6 @@
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos say: 這個資料夾還沒有 agent；請先跑 aos agent init
+say_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos state: 這個資料夾還沒有 agent；請先跑 aos agent init
+state_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos listen: 這個資料夾還沒有 agent；請先跑 aos agent init
+listen_exit=1

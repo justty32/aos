@@ -1,0 +1,2 @@
+[AOS #9] PATH=$ROOT/build/bin:$PATH timeout 1200 $AOS run . --step 15 >> run1.log 2>&1
+run2 exit=0 elapsed_seconds=9.0432650000

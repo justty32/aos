@@ -1,0 +1,4 @@
+$ make 2>&1 | tail -3
+g++ -std=c++17 -o mini src/main.cpp src/parse.cpp
+g++ -std=c++17 -o test_parse tests/test_parse.cpp src/parse.cpp && ./test_parse
+ok

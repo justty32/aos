@@ -1,0 +1,16 @@
+$AOS state
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:38Z"
+}
+$AOS say "把 src/parse.cpp ..."
+$AOS state
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:38Z"
+}
+$AOS listen --once

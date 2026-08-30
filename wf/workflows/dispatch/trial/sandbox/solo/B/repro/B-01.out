@@ -1,0 +1,2 @@
+EXPECT: absolute-path aos run either runs the agent or reports a nonzero failure
+ACTUAL: outer_exit=0 child_exit=127 child_stderr_bytes=0 log=turn 1: 1 insts (1 every), 0 ms 

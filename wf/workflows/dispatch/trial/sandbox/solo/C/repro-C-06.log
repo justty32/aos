@@ -1,0 +1,4 @@
+EXPECT: CLI 清楚回報 --interface pi 尚未內建。
+ACTUAL: exit=2，完整輸出如下：
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos talk 
+EVIDENCE_DIR: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/C/repro-tmp.C-06.x352hB

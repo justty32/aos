@@ -1,0 +1,3870 @@
+OpenAI Codex v0.150.1
+--------
+workdir: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: none
+session id: 01a05275-4609-7673-bdf1-e441df7c93a5
+--------
+user
+# 任務 D：劇本 4＋5——錯誤路徑指不指路、以及「多打了幾個指令」的總帳
+
+你的代號是 **D**。先完整讀下面的共同守則，再照劇本做。
+
+---
+
+# 共同守則（每份任務書都適用）
+
+你在扮演**一個坐在終端機前的使用者**，第一次用 `aos` 這個工具當 coding agent。
+你的工作是**照劇本做、記下所有不順手的地方**。你**不是**來修 aos 的。
+
+## 絕對禁止
+
+- **不可修改 aos 原始碼**：`core/`、`app/`、`include/`、`CMakeLists.txt`、`docs/` 一個字都不能改。
+- **不可重新編譯 aos**（`cmake` / `make` 在 repo 根都不要跑）。二進位已經編好了。
+- **不可 load／unload LM Studio 的模型**，不可開任何 GUI，不可改 `~/.aos/`（那是使用者層設定，現在故意不存在）。
+- **不可寫 `git commit` / `git push`**。
+- 除了你自己的世界資料夾與報告，不要動 repo 裡其他檔案。
+
+## 你可以寫的地方（只有這些）
+
+- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
+- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
+- `-o` 指定的報告檔
+
+## 執行環境（寫死，不要自己找）
+
+```sh
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template          # 3 檔 C++ 小專案＋測試＋Makefile
+```
+
+**一律用 `$AOS` 這個絕對路徑呼叫**，不要 `which aos`、不要改 PATH 以外的東西
+（要改 PATH 就 `export PATH="$ROOT/build/bin:$PATH"`，但指令仍寫 `$AOS`）。
+
+- LM Studio 已經在 `http://localhost:1234/v1` 跑著，載好的模型是 `qwen/qwen3.5-9b`。**不要動它。**
+- `pi` 在 PATH 裡；`DEEPSEEK_API_KEY` 已經在環境變數裡（不要印出來、不要寫進檔案）。
+- `~/.aos/cpus.json` 不存在＝沒有並行上限＝呼叫不取槽。**不要建它。**
+
+## aos 的基本形狀（給你省時間，但仍要親自驗）
+
+- 一個資料夾 ＋ 裡面的 `.aos/` ＝ 一個「世界」。一個世界住一隻 agent。
+- `$AOS agent init [--engine lmstudio|pi] [--name N] [--persona TEXT] [--provider P] [--model M] [--priority N]`
+- 世界要靠 `$AOS run <folder> --step N` 推進 N 個回合；**永遠帶 `--step N`，不要用 `--step 0`（無限）**。
+- `$AOS say "..."`、`$AOS listen [--once]`、`$AOS state`、`$AOS talk`
+- lmstudio 引擎的工具往返是三回合一次（第 N 回合模型提出、N+1 執行、N+2 才看到結果），
+  預設只裝 `cat` / `ls` / `sh` 三個工具。pi 引擎不走這條，pi 自帶 read/bash/edit/write。
+- **重要**：`$AOS agent init` 會從 cwd 往上找最近的 `.aos/`。repo 根本身就是一個世界，
+  所以你建世界前**必須先 `mkdir -p <world>/.aos`**，否則 agent 會被靜默建到 repo 根。
+  這件事本身就是一條發現，照樣記。
+
+## 逾時與耐心
+
+lmstudio 是本機 9B 模型，一個回合可能 20–120 秒。所有會呼叫 LLM 的指令請包 `timeout`：
+`timeout 900 $AOS run . --step 12 > run.log 2>&1`。
+不要無限等；卡住就記成一條發現（`kind=awkward` 或 `bug`），附上你等了多久。
+
+## 你要交出什麼
+
+**最終回覆本身就是成品**（完整貼出，不要只說「已寫入檔案」），**同時**寫進 `-o` 指定的檔案。
+格式如下，兩段：
+
+### 第一段：發現表（CSV 資料列，不含表頭）
+
+每行 9 欄，逗號分隔，**欄位內若有逗號請改用中文全形「，」**，不要用引號跳脫：
+
+```
+id,lane,kind,severity,step,expected,actual,compare,repro
+```
+
+- `id`：`<你的代號>-01`、`-02`…（例：`A-01`）
+- `lane`：固定 `L1`
+- `kind`：`bug`（會壞／行為與文件不符）｜`awkward`（能做到但多餘動作／看不見狀態）｜`spec-gap`（缺件，設計上就沒有）｜`cannot`（劇本走不完）
+- `severity`：`3`（擋路）｜`2`（很煩）｜`1`（小刺）
+- `step`：你在哪一步遇到的（短，例：`劇本1 改函式 第3個指令`）
+- `expected`：使用者本來預期什麼
+- `actual`：**實測到什麼，要有具體數字／訊息原文／檔案路徑**。沒有實測證據的一律不要寫。
+- `compare`：**同一件事直接用 `pi` 做要幾步**（必填，這是這次的重點欄位）
+- `repro`：`repro/<id>.sh`（`kind=bug` 必填且腳本要真的能重跑）｜其他類可填 `-`
+
+### 第二段：敘事報告
+
+300–800 字，講：劇本走到哪、哪裡最痛、**指令數對照的實際數字**
+（「aos 打了 N 個指令、等了 M 個回合、耗時 T；同一件事 pi 打了 1 個指令、耗時 T2」）。
+
+## 品質門檻
+
+- 每條發現都要有**實測證據**。臆測、讀 README 得出的推論一律不收。
+- 一個現象只記一條。不要把同一件事拆成五條灌水。
+- 你這一份**最多 15 條**。寧可少而準。
+
+---
+
+# 你的劇本
+
+你關心的是：**出事的時候，錯誤訊息有沒有告訴我下一步該做什麼。**
+判準很簡單——一個第一次用 aos 的人，看到那則訊息，**知不知道要打哪個指令去修**。
+每一條都要**把錯誤訊息原文抄進 `actual` 欄位**（超過一行就抄最關鍵那行），並記下 exit code。
+
+**注意**：你會 unset `DEEPSEEK_API_KEY`、指不存在的模型、指錯的 port——這些都只在**子 shell 或
+`env` 前綴**裡做，**不要動 LM Studio 本身，不要建 `~/.aos/`**。
+
+## 步驟 0：素材
+
+```sh
+mkdir -p "$SOLO/D"
+cp -r "$TEMPLATE/." "$SOLO/D/plain/" 2>/dev/null || { mkdir -p "$SOLO/D/plain" ; cp -r "$TEMPLATE/." "$SOLO/D/plain/" ; }
+```
+
+## 錯誤 1：在沒有 `.aos` 的資料夾裡 say / listen / state
+
+```sh
+mkdir -p "$SOLO/D/nowhere" ; cd "$SOLO/D/nowhere"
+$AOS say "hi" ; echo "exit=$?"
+$AOS listen --once ; echo "exit=$?"
+$AOS state ; echo "exit=$?"
+$AOS run . --step 1 ; echo "exit=$?"
+```
+
+**注意陷阱**：repo 根本身是一個世界，所以 `find_folder` 會往上找到它。
+**這件事對使用者的意義是什麼？**（他以為在跟這個資料夾的 agent 說話，其實話送到別的世界去了。）
+用 `AOS_FOLDER` 或在 repo 外的路徑再驗一次「真的沒有任何世界」的情況：
+
+```sh
+cd /tmp ; mkdir -p aos-d-empty ; cd aos-d-empty
+$AOS say "hi" ; echo "exit=$?"
+$AOS state ; echo "exit=$?"
+$AOS listen --once ; echo "exit=$?"
+```
+
+（`/tmp/aos-d-empty` 是唯一允許你在 repo 外碰的路徑，用完 `rm -rf` 掉。）
+
+## 錯誤 2：世界有了，但沒有 agent
+
+```sh
+mkdir -p "$SOLO/D/noagent/.aos" ; cd "$SOLO/D/noagent"
+$AOS say "hi" ; echo "exit=$?"
+$AOS state ; echo "exit=$?"
+$AOS listen --once ; echo "exit=$?"
+```
+
+**問**：訊息有沒有說「先跑 `aos agent init`」？
+
+## 錯誤 3：LM Studio 連不上 / 模型不存在
+
+**不要動 LM Studio**，用環境變數指到錯的地方：
+
+```sh
+mkdir -p "$SOLO/D/lm/.aos" ; cd "$SOLO/D/lm"
+cp -r "$TEMPLATE/." . ; $AOS agent init
+# 3a 端點不通
+echo hi | AOS_LLM_URL=http://localhost:19999/v1 timeout 60 $AOS llm ; echo "exit=$?"
+AOS_LLM_URL=http://localhost:19999/v1 timeout 120 $AOS run . --step 1 ; echo "exit=$?"
+$AOS say "測試" ; AOS_LLM_URL=http://localhost:19999/v1 timeout 300 $AOS run . --step 2 ; echo "exit=$?"
+$AOS state ; cat .aos/agents/*/status.json ; $AOS listen --once
+# 3b 模型不存在（隊長已實測過一次：`echo hi | AOS_LLM_MODEL=no/such-model aos llm`
+#    會**正常回一段答案、exit=0**——LM Studio 拿別的模型回答了，aos 沒有任何提示。
+#    **不要重跑這個**（會讓 LM Studio 動到模型狀態）。直接把這條當已知事實記成一條發現，
+#    `actual` 寫「隊長實測：exit=0，回了一段正常英文回覆，沒有任何『模型不存在』的提示」。）
+```
+
+**關鍵問題**：LLM 呼叫失敗的時候，**使用者從 `aos state` / `aos listen` 看得出來「失敗了」嗎，
+還是只看到一個永遠 idle 的世界？** 錯誤訊息跑到哪去了（`run` 的 stdout？stderr？還是被吞掉）？
+
+## 錯誤 4：pi 引擎沒有 `DEEPSEEK_API_KEY`
+
+```sh
+mkdir -p "$SOLO/D/pi/.aos" ; cd "$SOLO/D/pi"
+cp -r "$TEMPLATE/." . ; $AOS agent init --engine pi
+$AOS say "在這個資料夾建一個 hello.txt 內容是 hi"
+env -u DEEPSEEK_API_KEY timeout 300 $AOS run . --step 1 ; echo "exit=$?"
+$AOS state ; cat .aos/agents/*/status.json ; $AOS listen --once | tail -20
+```
+
+**問**：訊息有沒有講到 `DEEPSEEK_API_KEY` 這個字？有沒有講「去哪裡設」？
+`agent init --engine pi` 當初有沒有提醒過？
+
+## 錯誤 5：模型要一個不存在的工具 / 工具登記表出錯
+
+```sh
+cd "$SOLO/D/lm"
+$AOS tool list ; echo "exit=$?"
+$AOS tool add ; echo "exit=$?"                 # 少參數
+$AOS tool remove nosuchtool ; echo "exit=$?"
+$AOS tool add make make ; echo "exit=$?"       # 猜一下語法對不對；看它教不教你
+$AOS tool list
+```
+
+**問**：`aos tool add` 的用法錯誤時，訊息有沒有給正確用法？
+文件說模型要不存在的工具會得到 `unknown_tool` 的一行 JSON——**使用者從 `aos listen` 看得到嗎？**
+試著讓它發生（`$AOS say "請用 make 工具跑一次 make"` 然後 `timeout 600 $AOS run . --step 6`），
+把 listen 到的原文抄下來。**這是你唯一會大量用到 LM Studio 的一步，只做這一次。**
+
+## 錯誤 6：`aos run` 撞在一起 / 參數錯
+
+```sh
+cd "$SOLO/D/lm"
+$AOS run . --step ; echo "exit=$?"
+$AOS run . --step abc ; echo "exit=$?"
+$AOS run /nonexistent/path --step 1 ; echo "exit=$?"
+$AOS agent init ; echo "exit=$?"               # 在已經有 agent 的世界再 init 一次
+$AOS agent init --engine nosuchengine ; echo "exit=$?"
+$AOS agent init --name x --model ; echo "exit=$?"
+```
+
+## 步驟 7：**指令數總帳**（劇本 5，這一段很重要）
+
+回頭看你自己跑過的東西，填一張表（寫進報告的敘事段，也挑最痛的做成發現）：
+
+| 使用者心裡的一句話 | aos 實際要打幾個指令 | 等幾個回合 | pi 要打幾個指令 |
+|---|---|---|---|
+| 「幫我改 parse() 回傳 optional」 | ? | ? | 1 |
+| 「它現在在幹嘛」 | ? | — | ? |
+| 「跑一下測試」 | ? | ? | ? |
+| 「我剛才叫你做什麼」 | ? | ? | ? |
+| 「開一個新的 agent 開始工作」 | ? | — | ? |
+
+A / B / C 三位在跑主線劇本，你**不必**重跑改函式那條；用你自己 `$SOLO/D/lm` 世界跑一次
+「幫我在 README.md 最後加一行 `# tried`」這種最小任務來量：
+
+```sh
+cd "$SOLO/D/lm"
+# 從零開始計數：mkdir、init、say、開另一個視窗 run、listen、確認結果……
+```
+
+把「最小可用一輪」實際需要的指令序列**完整列出來**（一行一個指令），數出總數。
+和 `pi -p "在 README.md 最後加一行 # tried"`（1 個指令）對照。
+
+## 步驟 8：收尾
+
+```sh
+rm -rf /tmp/aos-d-empty
+```
+
+- `kind=bug` 的寫 `$SOLO/D/repro/D-NN.sh`（乾淨資料夾起跑、絕對路徑、`EXPECT:`／`ACTUAL:`）。
+- 報告寫進 `-o`，同時整份貼在最終回覆。
+
+2026-08-30T11:36:53.155963Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when AuthRequired(AuthRequiredError { www_authenticate_header: "Bearer error=\"invalid_request\", error_description=\"No access token was provided in this request\", resource_metadata=\"https://api.githubcopilot.com/.well-known/oauth-protected-resource/mcp/\"" })
+codex
+我會把實測輸出與暫存只放在 `sandbox/solo/D/`，不碰原始碼、不重編譯，也不改 LM Studio 或使用者設定。先依 repo 工作流入口確認試跑規範，再逐項執行；報告路徑未另外給定，我會用 `sandbox/solo/D/report.md` 作為 `-o` 成品。
+exec
+/usr/bin/zsh -lc "sed -n '1,240p' wf/WORKFLOWS.md && sed -n '1,260p' wf/workflows/dispatch/README.md 2>/dev/null || true && rg -n \"trial|試跑|dispatch\" wf/workflows/dispatch wf/WORKFLOWS.md -g '*.md'" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+# WORKFLOWS — 工作流派發器
+
+← [AGENTS.md](../AGENTS.md)｜專案地圖 [INDEX.md](INDEX.md)
+
+你（使用者）說要做某件事 → **從這張表選對應工作流 → 讀它的「入口檔」→ 就知道要做什麼**。每個工作流的細節都在它自己的入口檔，不在這裡。
+
+## 你想做什麼 → 用哪個工作流
+
+### 開發 flavor
+
+| 觸發（你說…）| 工作流 | 入口檔（先讀這個）|
+|--------------|--------|-------------------|
+| 「我想開發 / 修改某個功能」「**修 bug**」 | **feature-dev** | [workflows/feature-dev/README.md](workflows/feature-dev/README.md) |
+| 「**加一個新的小專案 / 新工具**」 | **add-subproject** | [workflows/add-subproject.md](workflows/add-subproject.md) |
+| 「**我有個 idea**」「把這個構想記下來」 | **ideas** | [workflows/ideas/README.md](workflows/ideas/README.md) |
+| 「**開個研討會討論 X**」「找幾個 agent 一起腦力激盪」「給我一些靈感」 | **workshop** | [workflows/workshop/README.md](workflows/workshop/README.md)（已累積的紀錄與待決問題見 [INDEX](workflows/workshop/INDEX.md)）|
+| 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon** | [workflows/hackathon/README.md](workflows/hackathon/README.md)（已辦場次見 [INDEX](workflows/hackathon/INDEX.md)）|
+| 「**幫我用 aos**」「把 aos 接進我的專案」「這個指令怎麼下」 | **use-aos** | [workflows/use-aos.md](workflows/use-aos.md) |
+| 「**直接去試試看**」「跑個實驗看會怎樣」「別再想了，做一次」 | **experiments** | [workflows/experiments/README.md](workflows/experiments/README.md) |
+| 「**接下來做什麼**」「照進度表推進」「動工前該讀什麼」 | **roadmap** | [workflows/roadmap.md](workflows/roadmap.md) |
+| 「跑測試 / 驗證」 | **testing** | [workflows/testing.md](workflows/testing.md) |
+| 「**記 / 查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
+| 「這段程式在哪 / 哪個檔負責什麼」 | **code map** | [workflows/common/code-map.md](workflows/common/code-map.md) |
+| 「**把這些東西濃縮給我看**」「我只有半小時」「寫個我看得懂的版本」 | **digest** | [workflows/digest/README.md](workflows/digest/README.md) |
+
+> **digest 跟其他工作流的分界**：其他工作流**產生**東西，digest **只讀不產**——
+> 把已經寫完的紀錄濃縮成使用者本人讀得動的精簡版。它不做判斷、不下結論，
+> 只負責讓人在有限時間內掌握狀況。
+
+> **研討會／黑客松／實驗怎麼分**：同一件事的三種強度——**workshop** 唯讀、只發想；
+> **hackathon** 多個 agent 各自**動手做同一題**，只收坑／好處／壞處；
+> **experiments** 我自己拿**一個明確假設**去驗，要的是是／否。
+
+碰原始碼的工作流共用 [common/conventions](workflows/common/conventions.md)（程式碼慣例 + code map 維護鏈）。
+
+> 目前只開了上面這幾個。需要新的開發類工作流（**refactor**／**investigation**／**spec**／**plan**／**idea**／**tooling**）時**才**加一列，入口檔從單檔開始長——見 [DEV-GUIDE](DEV-GUIDE.md) 的四級成長軌跡，不要預先建空檔。
+
+**都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。
+
+## 定期喚醒（kernel 內建，與上面 flavor 派發表分開）
+
+一套定期工作流，**不屬任一 flavor、kernel 一律有**。**兩種進入**：
+1. **循環執行**：[`/wf-tick`](../.claude/commands/wf-tick.md) 每隔週期喚醒 tick → tick 派發下面各工作流，判時間、**做**到期項。
+2. **使用者登記**：你直接請求 →「**幫我登記行程**」進 schedule、「**加個常規事務**」進 routines，只寫進清單、不當場做（等 tick 到點才做）。
+
+| 工作流 | 入口 | 做什麼 |
+|--------|------|--------|
+| **tick** | [workflows/tick.md](workflows/tick.md) | 定期心跳的**單次**執行——當**派發器**依序跑各定期工作流（routines → schedule）。由 `/wf-tick [週期]` 每隔週期喚醒。 |
+| **routines** | [workflows/routines.md](workflows/routines.md) | **固定例行**清單（不常變動）：判當地時間 → 對照時機分區 / 間隔登記表 → 到期的唯讀事務就做。 |
+| **schedule** | [workflows/schedule.md](workflows/schedule.md) | **一次性**定時請求（心血來潮，如「17:00 重啟 XXX」）：判時間 → 到點的就做、做完刪。 |
+
+**tick 只派發、不判斷**；「什麼時間該做什麼」的判斷與清單各歸 routines / schedule。本專案目前兩張清單都是空的，等有需要再登記。
+
+## 工作流的統一形式（規範）
+
+所有工作流照同一套形式（細則見 [DEV-GUIDE](DEV-GUIDE.md)）：
+
+**檔名規範**：
+- **README** = 初入一個資料夾**先讀的入口／導引**（這資料夾在幹嘛、怎麼用）。
+- **INDEX** = **描述該資料夾頂層結構**的索引（有哪些子項、各放什麼）。
+- 小資料夾兩者可合一（README 兼述結構）；大到結構複雜時才分出獨立 INDEX。
+
+形式：
+- **資料夾型工作流**：
+  - 一個**入口 README**（或主檔）——先讀它就知道這工作流在幹嘛、有哪些檔。
+  - **`archive/`**：過時 / 被取代的文檔封存於此（保留脈絡、不在維護鏈）。
+  - 視需要的 `gotchas.md`（踩坑）、`session-log.md`（本工作流 open 進度）。
+- **單檔工作流**（還沒長成資料夾的那些）：一個 `.md` 同時是入口與內容；撐大了就照「[結構整理原則](DEV-GUIDE.md)」升級成資料夾型。到底有哪些工作流、各自入口在哪，看上面的派發表即可，不在這裡逐一點名（正面清單每次升級都會過期）。
+- 入口檔本身膨脹 → 一樣照結構整理原則拆。
+
+## 跨工作流的活狀態
+
+三軸各管一種「還沒完成的事」，都**只列 open**、完成即移除：
+
+- **進度**（我自己還沒完成的 in-flight / open）→ [SESSION-LOG.md](SESSION-LOG.md)
+- **待使用者親自做 / 驗證的**（實機環境 / 外部工具 / env / 權限）→ [WAIT_USER.md](WAIT_USER.md)
+- **信件**（agent 之間的訊息交換，像 email——寄失敗/不回都無妨；放信處是 [`wf/inbox/`](inbox/)）→ 使用方式見 [workflows/inbox/](workflows/inbox/README.md)
+# dispatch — 派線、交接書、領地、收線（調度者用）
+
+← [WORKFLOWS](../../WORKFLOWS.md)｜[INDEX](../../INDEX.md)
+
+把一件大工作切成幾條線交給別的 agent 跑，並負責**仲裁與驗收**。調度者不深潛實作。
+
+**何時用**：一件工作大到要同時開幾條線，或要派給別資料夾／別機器的 agent 做；workshop／hackathon 開隊也照這裡。
+**何時不用**：一兩個檔的小改（開線的交接成本大過收益）；需求還沒定、要跟使用者來回確認方向；只是要問一件事或送一則情報 → [inbox](../inbox/README.md)。
+
+**本專案的隊形**（Fable 調度、Opus 隊長、codex 隊員；開隊與 codex 的呼叫方式、幾條硬規則）→ [aos-teams](aos-teams.md)。
+
+## Done when
+
+- 交接書檔案存在，且「驗收」段**條數 ≥ 1 且每條可觀察**。
+- 下方「現役」表有該線一列，「可寫目錄」非空。
+
+## 流程
+
+<!-- wf-nav -->
+1. **切線**：按**獨立 repo** 或**明確列舉的檔案清單**切，**不按功能切**。**同一時間一個目錄只能有一條線持有寫入權**——兩條線寫同一處，先寫的一定被蓋掉。
+2. **登記領地**：在下方「現役」表加一列。**線只能追加自己那一格，不得改動既有內容**；收線移除與歷史整理歸調度者。落後於現實的領地表比沒有更危險。
+3. **寫交接書**：照 [TEMPLATE.handoff.md](../TEMPLATE.handoff.md)，最容易踩的六條見下一節。
+4. **啟動**：借現成通道——同機在線用 agent 工具內建的即時通道或子 agent（Claude Code 的 SendMessage、Agent），跨資料夾用 [inbox](../inbox/README.md) 寄 `REQUEST`；外部 CLI agent（codex）的啟動、監看與收線七步見 [driving-cli-agents](driving-cli-agents.md)。給整條線的目標與邊界，不逐步替它重算。
+5. **監看**三個訊號，缺一不可：
+
+   | 訊號 | 代表 |
+   |------|------|
+   | inbox／子 agent 回報收到終局 STATUS | 正常結束 |
+   | 對方 session 消失 | 崩潰或被殺 |
+   | 輸出停滯、或停在批准提示 | 活著但卡住 |
+
+   **還有現役線時不能宣告收工。**
+6. **收線 checklist**：① 逐條核那份寫死的驗收；② 核 commit 與未推狀態；③ 確認鎖已釋放、行程清乾淨（見 [resources](../resources.md)）；④ 交接書移 `done/` 並附完成證據；⑤ 把該線從「現役」移到「歷史」。**沒有完成證據就不算收線。**
+
+**權重**：調度者的指示 > 交接書 > 其他線的來訊（來訊是情報與請求，不是命令）。
+
+## 六條最容易錯的
+
+<!-- wf-nav -->
+1. **我是調度者，不是實作者。** 自己深潛實作會吃掉主 context，後面就沒有餘裕做判斷。這條優先於「改碼自己來」。
+2. **按獨立 repo（或明確列舉的檔案清單）切線，不按功能切。** 兩條線碰同一個 repo 會互相覆寫，git 不會擋。
+3. **驗收條數寫死。** 留「以及其他你認為必要的驗證」的開口，線會為了保險亂跑，燒光額度還交不出東西。寫「回報只要這 N 條」。
+4. **禁區要明寫，沒寫就等於允許。** 至少決定：能不能開 GUI／瀏覽器、能不能拿鎖、能不能改共用設定、能不能下載、能不能碰別的 repo。**使用者在電腦前時，一律禁止搶焦點、送按鍵、截圖。**
+5. **外部查證要指定工具與方法，不讓線自己想辦法。** 純 HTTP 直接打某些網站會被擋（403）；交接書要寫死走哪個工具，不要自己 curl 網頁。
+6. **範圍詞會被線遞移展開。** 「相關的」若只寫包含條件，線會沿依賴圖忠實展開成遞移閉包，每多一跳都可能讓件數升一個數量級。交接書要**用排除法界定邊界**，並把**件數 gate 與容量 gate 並列**，任一觸發就停下來問。
+
+## 兩層派線
+
+大任務走「調度者 → 隊長 → 隊員」：隊長寫子線交接書、派子線、核驗收；調度者只切線、仲裁、收線、管資源。**每一層要派哪級模型、怎麼分角色，見 [team-model](../team-model.md)。**
+
+**任何一層上線第一件事都是在 [ROSTER](../inbox/ROSTER.md) 追加自己那一格**（跨資料夾的線）或在交接書裡寫明領地（同機子 agent）——我是誰、對誰回報、領地在哪、答得出什麼、答不出什麼；沒聲明就開工，別人只能用猜的畫邊界。
+
+**資源協調集中在調度者**：子層不得自取鎖、不得開 GUI／瀏覽器，需要就發 `NEEDS-USER` 給調度者（見 [resources](../resources.md)）。
+
+## 多信任它、但收線對證據
+
+給整條線的大任務，不要重算它的每一步——微管理會燒光額度，而且它的自查通常比逐步驗收更有效。
+
+**但「跑完了」不等於「通過了」**：曾有回報全 PASS，實際證據卻對不上（該有的產物數量差一個數量級、驗收關鍵字在 log 裡出現 0 次）。**逐條對證據，不對自我宣告。**
+
+## 管理者休眠前的自檢
+
+只要還有一條現役線，管理者就不能休息或宣告收工。
+
+1. 列出還活著的線（子 agent 清單、`git worktree list`）必須為空。
+2. 交棒要寫 state 檔（或 [SESSION-LOG](../../SESSION-LOG.md) 一行）：誰在跑、卡在哪、下一步、誰監看。
+3. **只有現役線為零時**才能回報「工作全部收完」。
+
+## 領地登記
+
+### 現役
+
+| 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
+|----|---------|------------|---------|
+| proto-W-gaps（[交接書](proto/proto-W-gaps.md)，main） | `core/agent/`、`core/tool/`、`core/llm/`、code-map | 其餘 core/、docs/、其餘 wf/ | 2026-08-30 |
+| proto-L1-solo（[交接書](proto/proto-L1-solo.md)，worktree，只找不修） | `wf/workflows/dispatch/trial/{findings-L1.csv,repro/,sandbox/}` | core/、其餘 | 2026-08-30 |
+
+### 保留給調度者，任何線都不得寫
+
+| 目錄 | 理由 |
+|------|------|
+| `AGENTS.md`、`wf/` 的 hub 檔（`INDEX`／`WORKFLOWS`／`SESSION-LOG`／`WAIT_USER`）| 多條線同時動會互相打架，收線時由調度者統一更新 |
+| 主工作樹的 commit 權 | 同一時間只有一隊在主工作樹 commit；其他隊用 worktree（見 [resources](../resources.md)）|
+| 本表既有內容、交接書目錄 | 線只能追加自己那一格 |
+
+### 歷史（收線後移來，附完成證據）
+
+| 線 | 完成證據 | 收線時間 |
+|----|---------|---------|
+
+> 上面三張表是**活狀態**，會隨每輪派線增減。膨脹到難讀就照 [STRUCTURE](../../STRUCTURE.md) 拆成 `CLAIMS.md`，本檔只留流程與連結。hackathon 各場的隊伍紀錄在 [hackathon/](../hackathon/README.md) 自己的紀錄裡，不重抄到這裡。
+
+## 內容
+
+| 檔案 | 內容 |
+|------|------|
+| [aos-teams.md](aos-teams.md) | 本專案的隊形：Fable 調度、Opus 隊長、codex 隊員；開隊指令、codex 呼叫、硬規則 |
+| [driving-cli-agents.md](driving-cli-agents.md) | 怎麼啟動、驅動、監看一條外部 CLI agent 線，以及收線七步 |
+| [lessons.md](lessons.md) | 派線踩過的坑：預掃範圍、線推翻交接書、交接書自相矛盾、整檔改寫 |
+
+## 交接
+
+- 交接書目錄分三層：本層＝現役、`done/`＝已完成附證據、`superseded/`＝被後續決定推翻（不刪，見 [STRUCTURE](../../STRUCTURE.md) 的 archive 規則）。
+- 線要用獨佔資源 → 在交接書指名可拿哪個鎖（[resources](../resources.md)）。
+- 線回報與催件 → [inbox](../inbox/README.md)；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
+- 為什麼這樣切線 → [decisions](../decisions.md)。
+wf/workflows/dispatch/README.md:1:# dispatch — 派線、交接書、領地、收線（調度者用）
+wf/workflows/dispatch/README.md:76:| proto-L1-solo（[交接書](proto/proto-L1-solo.md)，worktree，只找不修） | `wf/workflows/dispatch/trial/{findings-L1.csv,repro/,sandbox/}` | core/、其餘 | 2026-08-30 |
+wf/workflows/dispatch/trial/README.md:1:# trial — 大量試用：驗證＋找不順手（2026-08-30）
+wf/workflows/dispatch/trial/README.md:3:← [dispatch](../README.md)｜判準 [usability-target](../../ideas/usability-target.md)
+wf/workflows/dispatch/trial/README.md:14:`repro` 指向 `trial/repro/<id>.sh`（可重跑的最小重現，之後修 bug 隊直接當回歸）。
+wf/workflows/dispatch/trial/sandbox/team/opC/operator-C-report.md:3:環境照劇本設為 `W=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3827d89ce88223e5`、`PATH=$W/build/bin:$PATH`、`T=$W/wf/workflows/dispatch/trial/sandbox/team`；只建立及寫入 `$T/opC`，沒有重編、沒有碰 `core/`、沒有 git add／commit，也沒有操作 LM Studio。
+wf/workflows/dispatch/trial/sandbox/team/opC/operator-C-report.md:77:步驟 / 期待 / 實際 / 缺哪個原語 / 跟 Claude Code 開隊的對照：加入不存在路徑 x 再傳訊；期待 add 當場拒絕不存在路徑，或 say 清楚指出 contact 的目標路徑不存在；實際 add 原話是 `已登記聯絡人 x -> /不存在的路徑`，之後 say 原話卻是 `aos say: 這個資料夾還沒有 agent；請先跑 aos agent init`，會讓人誤以為只需在目前 main init，沒有指出實際解析的是 `/不存在的路徑`，看完不知道正確下一步；缺少 contact add 路徑驗證，以及 say 的目標路徑／contact 名稱上下文；Claude Code／Codex 的 spawn/dispatch 通常在目標不存在時直接綁定失敗的 agent id 或 workspace 回報。
+wf/workflows/dispatch/trial/sandbox/team/operator-a-report.md:27:> pi 用了工具：bash which aos && aos --help 2>&1 | head -40, bash aos say --help 2>&1 | head -40; echo "===contact help==="; aos contact --help 2>&1 | head -30, bash aos say --help 2>&1; echo "exit=$?", bash aos say w1 "把 README.md 翻成英文" 2>&1; echo "exit=$?", bash aos say 2>&1; echo "exit=$?"; echo "==="; aos 2>&1 | grep -A2 say || true, bash aos say --to w1 "把 README.md 翻成英文" 2>&1; echo "exit=$?", bash cd ../w1 && ls -la .aos/inbox/ 2>/dev/null && echo "===" && cat .aos/inbox/*.json 2>/dev/null; echo "===state==="; cat .aos/state.json 2>/dev/null, bash cd ../w1/.aos/agents && find . -type f 2>/dev/null; echo "==="; cat ../agents/w1/log.md 2>/dev/null; echo "===history==="; cat ../agents/w1/history.json 2>/dev/null; echo "===pending==="; cat ../agents/w1/pending.json 2>/dev/null, bash cat "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3827d89ce88223e5/wf/workflows/dispatch/trial/sandbox/team/w1/.aos/agents/w1/say/1788087676735085998-3151147-0.md", bash cd /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3827d89ce88223e5/wf/workflows/dispatch/trial/sandbox/team/boss && echo "## turn 2 boss
+wf/workflows/dispatch/trial/sandbox/solo/tasks/D.full.md:22:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
+wf/workflows/dispatch/trial/sandbox/solo/tasks/D.full.md:23:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
+wf/workflows/dispatch/trial/sandbox/solo/tasks/D.full.md:31:SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+wf/workflows/dispatch/trial/sandbox/solo/tasks/C.full.md:22:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
+wf/workflows/dispatch/trial/sandbox/solo/tasks/C.full.md:23:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
+wf/workflows/dispatch/trial/sandbox/solo/tasks/C.full.md:31:SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+wf/workflows/dispatch/trial/sandbox/solo/tasks/B.full.md:22:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
+wf/workflows/dispatch/trial/sandbox/solo/tasks/B.full.md:23:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
+wf/workflows/dispatch/trial/sandbox/solo/tasks/B.full.md:31:SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+wf/workflows/dispatch/trial/sandbox/solo/tasks/A.full.md:22:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
+wf/workflows/dispatch/trial/sandbox/solo/tasks/A.full.md:23:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
+wf/workflows/dispatch/trial/sandbox/solo/tasks/A.full.md:31:SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+wf/workflows/dispatch/trial/sandbox/solo/tasks/COMMON.md:16:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
+wf/workflows/dispatch/trial/sandbox/solo/tasks/COMMON.md:17:- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
+wf/workflows/dispatch/trial/sandbox/solo/tasks/COMMON.md:25:SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+wf/workflows/dispatch/lessons.md:3:[dispatch](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+wf/workflows/dispatch/lessons.md:40:- 派線流程 → [dispatch](README.md)；怎麼驅動外部 CLI 線 → [driving-cli-agents](driving-cli-agents.md)。
+wf/workflows/dispatch/proto/reports/D.md:3:← [交接書 proto-D-heartbeat](../proto-D-heartbeat.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+wf/workflows/dispatch/proto/reports/B.md:3:← [交接書](../proto-B-agent.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+wf/workflows/dispatch/proto/reports/U.md:3:← [交接書](../proto-U-tools-impl.md)｜[PROTOCOL](../PROTOCOL.md)｜規劃與裁決 [ideas/tools](../../../ideas/tools/README.md)｜[dispatch](../../README.md)
+wf/workflows/dispatch/proto/reports/E.md:3:← [交接書](../proto-E-pi-cpu.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+wf/workflows/dispatch/proto/reports/A.md:3:← [交接書 proto-A-machine](../proto-A-machine.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+wf/workflows/dispatch/proto/reports/C.md:3:← [交接書 proto-C-consolidate](../proto-C-consolidate.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+wf/workflows/dispatch/proto/proto-L1-solo.md:3:> 交接書是唯一契約。判準 [usability-target](../../ideas/usability-target.md) 第一級；發現格式見 [trial/README](../trial/README.md)。**只找不修、不改 core/。**
+wf/workflows/dispatch/proto/proto-L1-solo.md:16:素材：在 worktree 內建 `trial/sandbox/<name>/`，放一個小 C++ 或 Python 專案（3–5 檔＋測試）。
+wf/workflows/dispatch/proto/proto-L1-solo.md:25:- 只寫 `wf/workflows/dispatch/trial/{findings-L1.csv,repro/,sandbox/}`；commit 到你的 worktree 分支；不 push、不 merge、不改 core/。
+wf/workflows/dispatch/proto/proto-L1-solo.md:31:1. `findings-L1.csv` 存在、欄位齊、`kind` 四類都有分佈統計在 README 一段（你追加 `trial/README.md` 的 L1 摘要 ≤ 20 行，含「最痛的五條」）。
+wf/workflows/dispatch/proto/done/proto-C-consolidate.md:41:| 回報 | `wf/workflows/dispatch/proto/reports/C.md` |
+wf/workflows/dispatch/proto/done/proto-L2-team.md:3:> 交接書是唯一契約。判準 [usability-target](../../ideas/usability-target.md) 第二級；發現格式見 [trial/README](../trial/README.md)。**只找不修、不改 core/。**
+wf/workflows/dispatch/proto/done/proto-L2-team.md:8:從 `state.json` 看誰在忙。**對照組是現在用 Claude Code 開隊的體驗**（[team-model](../../team-model.md)、[dispatch](../README.md)）。
+wf/workflows/dispatch/proto/done/proto-L2-team.md:17:素材：`trial/sandbox/team/` 下建 `boss/`、`w1/`、`w2/` 三個世界（各 `aos agent init`，boss 用 pi 或 lmstudio、workers lmstudio）。
+wf/workflows/dispatch/proto/done/proto-L2-team.md:26:- 只寫 `wf/workflows/dispatch/trial/{findings-L2.csv,repro/,sandbox/team/}`；commit 到你的 worktree 分支；不 push、不 merge、不改 core/。
+wf/workflows/dispatch/proto/done/proto-L2-team.md:32:1. `findings-L2.csv` 存在、欄位齊；`trial/README.md` 追加 L2 摘要 ≤ 20 行（含「缺的原語」清單）。
+wf/workflows/dispatch/proto/done/proto-B-agent.md:3:> 交接書是唯一契約。協定見 [PROTOCOL](PROTOCOL.md)（**以它為準**）。派線規則 [dispatch](../README.md)、隊形 [aos-teams](../aos-teams.md)。
+wf/workflows/dispatch/proto/done/proto-B-agent.md:52:| 回報 | `wf/workflows/dispatch/proto/reports/B.md` |
+wf/workflows/dispatch/proto/done/proto-U-tools-impl.md:39:| 回報 | `wf/workflows/dispatch/proto/reports/U.md` |
+wf/workflows/dispatch/proto/done/proto-E-pi-cpu.md:40:| 回報 | `wf/workflows/dispatch/proto/reports/E.md` |
+wf/workflows/dispatch/proto/done/proto-D-heartbeat.md:55:| 回報 | `wf/workflows/dispatch/proto/reports/D.md` |
+wf/workflows/dispatch/proto/done/proto-A-machine.md:3:> 交接書是唯一契約。協定見 [PROTOCOL](PROTOCOL.md)（**以它為準**）。派線規則 [dispatch](../README.md)、隊形 [aos-teams](../aos-teams.md)。
+wf/workflows/dispatch/proto/done/proto-A-machine.md:44:| 回報 | `wf/workflows/dispatch/proto/reports/A.md`（做了什麼、驗收逐條證據、commit hash 列表、隊長裁決） |
+wf/workflows/dispatch/proto/PROTOCOL.md:3:← [dispatch](../README.md)｜隊 A [proto-A-machine](done/proto-A-machine.md)（已收線）｜隊 B [proto-B-agent](done/proto-B-agent.md)（已收線）
+wf/workflows/dispatch/aos-teams.md:3:← [dispatch](README.md)｜選人判準 [team-model](../team-model.md)
+wf/workflows/dispatch/aos-teams.md:5:本專案實際怎麼開隊。派線的通用規則在 [dispatch](README.md)，這裡只記 aos 專屬的隊形、指令與硬規則；改制時改這裡並標日期。
+wf/workflows/dispatch/aos-teams.md:17:- 派線流程、領地表、收線 → [dispatch](README.md)；外部 CLI 線的啟動與監看 → [driving-cli-agents](driving-cli-agents.md)。
+wf/workflows/dispatch/driving-cli-agents.md:3:[dispatch](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+wf/workflows/dispatch/driving-cli-agents.md:5:把整條工作線外包給同機的另一個 CLI agent，自己當調度者。派線規則見 [dispatch](README.md)，這裡只講**怎麼把它啟動、盯住、收乾淨**。
+wf/workflows/dispatch/driving-cli-agents.md:98:- 派線流程與領地表 → [dispatch](README.md)；踩過的坑 → [lessons](lessons.md)。
+
+exec
+/usr/bin/zsh -lc "sed -n '1,240p' wf/workflows/dispatch/trial/README.md && sed -n '1,220p' wf/workflows/dispatch/proto/proto-L1-solo.md && git status --short -- wf/workflows/dispatch/trial/sandbox/solo/D" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+# trial — 大量試用：驗證＋找不順手（2026-08-30）
+
+← [dispatch](../README.md)｜判準 [usability-target](../../ideas/usability-target.md)
+
+**目的**：照使用者定的兩級劇本，用「使用者的方式」大量操作 aos，記**多餘的動作／看不見的狀態／錯誤不指路**，
+每條附「用 pi／Claude Code 做同一件事的對照」。這階段**只找、不修**（修 bug 隊與改進隊之後另開）。
+
+| 隊 | 劇本 | 發現檔 | 交接書 |
+|---|---|---|---|
+| L1 單人 coding agent | 在一個真的程式碼資料夾裡全程只用 `aos …`，lmstudio 與 pi 各跑一遍 | [findings-L1.csv](findings-L1.csv) | [proto-L1](../proto/proto-L1-solo.md) |
+| L2 指揮 agent 團隊 | 主 agent 派生子 agent（各住一個資料夾）、通訊錄投遞、收回報 | [findings-L2.csv](findings-L2.csv) | [proto-L2](../proto/proto-L2-team.md) |
+
+**發現檔格式**（`wf-table/1`，一行一條）：`id,lane,kind(bug|awkward|spec-gap|cannot),severity(1-3),step,expected,actual,compare,repro`。
+`repro` 指向 `trial/repro/<id>.sh`（可重跑的最小重現，之後修 bug 隊直接當回歸）。
+
+## L2 摘要（2026-08-30）
+
+**結論：投遞的管子通了，團隊的語意還沒有。** `aos say --to`／`aos deliver`／`every/` 推子世界三條路都實測可用，
+但「一隻主 agent 指揮兩隻子 agent」整條劇本走不完——不是哪裡壞掉，是**缺件**。
+
+**缺的原語**（依痛感排序）：
+
+1. **訊息信封**——`say()` 只寫純文字，沒有 `from`／來源世界／message-id。boss 分不出 w1 的回報、w2 的回報與使用者的新指令（`L2-05`）。沒有寄件人＝沒有回信地址。
+2. **agent 看得到通訊錄**——只有頂層 CLI 讀 `contacts.json`；system prompt 只列工具、從不列聯絡人，agent 不知道隊上有誰（`L2-03`）。pi 引擎更徹底：完全不讀登記表，還明講「不要去動 `.aos/`」——通訊錄正好住在那裡（`L2-04`）。
+3. **未讀信要看得見**——狀態只反映上一次跑完的 step，堆了 3 封未讀仍報 `idle`；`listen` 讀的是 log，未讀信在任何 `aos` 指令下都是隱形的（`L2-07`、`L2-12`）。使用者要讀信得先燒一次 LLM。
+4. **隊層級的名冊與彙總**——沒有 `aos contact status`；`state.json.agents` 只涵蓋本世界。實測答「誰在忙」用掉 9 個指令，最少也要 3 個，而且答案還是錯的（`L2-25`、`L2-07`）。
+5. **開箱即用的投遞能力**——新世界預設只裝 `cat`／`ls`／`sh`，沒有 `aos`／`deliver`／`contact`，boss 要派工得先由人幫它 `aos tool add`（`L2-02`）。
+6. **雙向登記**——通訊錄單向，worker 要回報得有人先進 worker 世界補 `contact add boss`（`L2-06`）。
+7. **「只有信箱、沒有 CPU」的端點**——使用者當收件人（住 `~`）必須先被 `agent init` 成一隻完整 LLM agent；`--to` 又吃名字不吃路徑、shell 還會先展開 `~`（`L2-11`）。
+8. **建子世界這件事本身**——`agent init` 會往上找最近的 `.aos/`，在既有世界的子資料夾裡跑會把 agent 靜默建到祖先世界（`L2-01`）。
+
+**可用的**：`every/` 放 `{"argv":["aos","run","sub","--step","1"]}` 推子世界正常（每回合 3 insts、子世界 turn 跟著走、exit 0），
+`find_folder` 也正確選最近的 `.aos/`（`L2-16`）。三隻同時打一顆 lmstudio 不會壞，只是排隊完全不可見（`L2-17`）。
+
+**對照 Claude Code**：那邊 spawn／派任務／回報／全隊狀態由宿主承擔，操作者不碰地址；aos 目前把這四件事全留給使用者用資料夾和相對路徑手工維持。
+# 任務：試用 L1——在 shell 裡只用 `aos …` 當單人 coding agent，記所有不順手
+
+> 交接書是唯一契約。判準 [usability-target](../../ideas/usability-target.md) 第一級；發現格式見 [trial/README](../trial/README.md)。**只找不修、不改 core/。**
+
+## 唯一目標
+
+以「使用者坐在終端機前」的方式，在一個真的程式碼資料夾裡完成「修改某個程式碼區塊」這類任務，全程只用 `aos …`，
+**lmstudio 與 pi 各跑一遍**，每個摩擦點記一條發現＋對照（同一件事直接用 `pi` 做要幾步）。
+
+## 團隊（你是 Opus 隊長）
+
+codex ×4 當「使用者」（`codex exec -m gpt-5.6-sol -C <worktree> --dangerously-bypass-approvals-and-sandbox -o <out.md> - < <task.md>`；任務書寫死劇本、要求「最終回覆即成品，另寫到 -o」）。你出劇本、收斂、去重、排序。**codex 不可修 aos、不可改 core/**；它只操作與記錄。
+
+## 劇本（每條 codex 一組，可自行加變化）
+
+素材：在 worktree 內建 `trial/sandbox/<name>/`，放一個小 C++ 或 Python 專案（3–5 檔＋測試）。
+1. **改一個函式**：`aos agent init`（lmstudio）→ 視窗 B `aos run --step 0`（用 `--step N` 模擬）→ `aos say "把 parse() 改成回傳 optional"` → `aos listen` → 追問「跑測試」→ 看 diff。同一劇本 `--engine pi` 再一遍。
+2. **狀態可見性**：思考中／執行工具中／等 LLM 時，`aos state`／`state.json`／`listen` 能不能看出來；Ctrl-C 掉 `aos run` 再開、`.aos/` 殘留什麼。
+3. **記憶**：停掉、換 shell 回來、`aos say "剛才改了什麼"`；pi session 與 lmstudio history 各自行為。
+4. **錯誤路徑**：LM Studio 沒開／模型不存在／DEEPSEEK_API_KEY 沒設／工具不存在／`aos say` 在沒 `.aos` 的資料夾——錯誤訊息有沒有指路。
+5. **多打的指令**：每個任務數「理想上一句話 vs 實際打了幾個指令、等了幾回合」。
+
+## 硬性限制
+
+- 只寫 `wf/workflows/dispatch/trial/{findings-L1.csv,repro/,sandbox/}`；commit 到你的 worktree 分支；不 push、不 merge、不改 core/。
+- 不 load／unload LM Studio、不開 GUI、不取鎖、不用 wf-lint；DeepSeek key 只從環境變數。
+- **件數 gate**：發現 ≤ 60 條、去重後 ≤ 40；超過就停下來收斂。
+
+## 驗收（就這 3 條）
+
+1. `findings-L1.csv` 存在、欄位齊、`kind` 四類都有分佈統計在 README 一段（你追加 `trial/README.md` 的 L1 摘要 ≤ 20 行，含「最痛的五條」）。
+2. 每條 `bug` 類都有 `repro/<id>.sh` 可重跑。
+3. lmstudio 與 pi 兩遍都跑完（沒跑完的寫 `cannot` 並附原因）。
+
+## 回報
+
+最後一則訊息＝最痛的五條＋分佈統計＋STATUS＋worktree 路徑與分支名。
+
+codex
+已確認這是 trial／L1 的「只找不修」工作。接下來先驗證兩種「沒有世界」：repo 內子資料夾會向上誤命中祖先世界，以及 `/tmp` 下真正找不到世界；我會逐條保留原始訊息與 exit code。
+exec
+/usr/bin/zsh -lc 'set -u
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template
+mkdir -p "$SOLO/D"
+cp -r "$TEMPLATE/." "$SOLO/D/plain/" 2>/dev/null || { mkdir -p "$SOLO/D/plain"; cp -r "$TEMPLATE/." "$SOLO/D/plain/"; }
+mkdir -p "$SOLO/D/nowhere"
+cd "$SOLO/D/nowhere"
+{
+  "$AOS" say "hi"; rc=$?; print "say_exit=$rc"
+  "$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  timeout 900 "$AOS" run . --step 1; rc=$?; print "run_exit=$rc"
+} > "$SOLO/D/error1-inside.log" 2>&1
+mkdir -p /tmp/aos-d-empty
+cd /tmp/aos-d-empty
+{
+  "$AOS" say "hi"; rc=$?; print "say_exit=$rc"
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  "$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+} > "$SOLO/D/error1-outside.log" 2>&1
+sed -n '"'1,240p' \""'$SOLO/D/error1-inside.log"
+sed -n '"'1,240p' \""'$SOLO/D/error1-outside.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos say: 這個資料夾還沒有 agent；請先跑 aos agent init
+say_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos listen: 這個資料夾還沒有 agent；請先跑 aos agent init
+listen_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos state: 這個資料夾還沒有 agent；請先跑 aos agent init
+state_exit=1
+turn 1: idle
+run_exit=0
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos say: 這個資料夾還沒有 agent；請先跑 aos agent init
+say_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos state: 這個資料夾還沒有 agent；請先跑 aos agent init
+state_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos listen: 這個資料夾還沒有 agent；請先跑 aos agent init
+listen_exit=1
+
+exec
+/usr/bin/zsh -lc 'set -u
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+D=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D
+mkdir -p "$D/noagent/.aos"
+cd "$D/noagent"
+{
+  "$AOS" say "hi"; rc=$?; print "say_exit=$rc"
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  "$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+} > "$D/error2-noagent.log" 2>&1
+sed -n '"'1,200p' \""'$D/error2-noagent.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos say: 這個資料夾還沒有 agent；請先跑 aos agent init
+say_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos state: 這個資料夾還沒有 agent；請先跑 aos agent init
+state_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos listen: 這個資料夾還沒有 agent；請先跑 aos agent init
+listen_exit=1
+
+codex
+前兩組已測到：三個互動指令在「沒有 agent」時都明確提示 `請先跑 aos agent init` 並以 1 結束；但 `aos run . --step 1` 在同一情境只印 `turn 1: idle` 且 exit 0，這會列為獨立錯誤路徑問題。現在進入錯誤端點測試，並分別記錄 direct `llm`、空閒 run、收到訊息後 run 的耗時與錯誤落點。
+exec
+/usr/bin/zsh -lc 'set -u
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template
+D=$SOLO/D
+mkdir -p "$D/lm/.aos"
+cp -r "$TEMPLATE/." "$D/lm/"
+cd "$D/lm"
+{
+  "$AOS" agent init; rc=$?; print "init_exit=$rc"
+} > "$D/error3-init.log" 2>&1
+{
+  print hi | AOS_LLM_URL=http://localhost:19999/v1 /usr/bin/time -f '"'llm_elapsed=%e' timeout 60 \""'$AOS" llm
+  rc=$?; print "llm_exit=$rc"
+} > "$D/error3a-llm.log" 2>&1
+{
+  AOS_LLM_URL=http://localhost:19999/v1 /usr/bin/time -f '"'idle_run_elapsed=%e' timeout 120 \""'$AOS" run . --step 1
+  rc=$?; print "idle_run_exit=$rc"
+} > "$D/error3a-idle-run.log" 2>&1
+{
+  "$AOS" say "測試"; rc=$?; print "say_exit=$rc"
+  AOS_LLM_URL=http://localhost:19999/v1 /usr/bin/time -f '"'message_run_elapsed=%e' timeout 300 \""'$AOS" run . --step 2
+  rc=$?; print "message_run_exit=$rc"
+} > "$D/error3a-message-run.log" 2>&1
+{
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  find .aos/agents -name status.json -type f -print -exec sed -n '"'1,200p' {} \\;
+  \""'$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+} > "$D/error3a-after.log" 2>&1
+for f in "$D/error3-init.log" "$D/error3a-llm.log" "$D/error3a-idle-run.log" "$D/error3a-message-run.log" "$D/error3a-after.log"; do
+  print -r -- "LOG ${f:t}"
+  sed -n '"'1,260p' \""'$f"
+done' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+LOG error3-init.log
+init_exit=0
+LOG error3a-llm.log
+zsh:14: no such file or directory: /usr/bin/time
+llm_exit=127
+LOG error3a-idle-run.log
+zsh:18: no such file or directory: /usr/bin/time
+idle_run_exit=127
+LOG error3a-message-run.log
+say_exit=0
+zsh:23: no such file or directory: /usr/bin/time
+message_run_exit=127
+LOG error3a-after.log
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:38:03Z"
+}
+state_exit=0
+.aos/agents/lm/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:38:03Z"
+}
+listen_exit=0
+
+2026-08-30T11:38:28.260948Z ERROR codex_core::tools::router: error=exec_command failed for `/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template
+D=$SOLO/D
+rm -rf "$D/lm"
+mkdir -p "$D/lm/.aos"
+cp -r "$TEMPLATE/." "$D/lm/"
+cd "$D/lm"
+{
+  "$AOS" agent init; rc=$?; print "init_exit=$rc"
+} > "$D/error3-init.log" 2>&1
+{
+  started=$EPOCHREALTIME
+  print hi | AOS_LLM_URL=http://localhost:19999/v1 timeout 60 "$AOS" llm
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'llm_exit=%d\\nllm_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-llm.log" 2>&1
+{
+  started=$EPOCHREALTIME
+  AOS_LLM_URL=http://localhost:19999/v1 timeout 120 "$AOS" run . --step 1
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'idle_run_exit=%d\\nidle_run_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-idle-run.log" 2>&1
+{
+  "$AOS" say "測試"; rc=$?; print "say_exit=$rc"
+  started=$EPOCHREALTIME
+  AOS_LLM_URL=http://localhost:19999/v1 timeout 300 "$AOS" run . --step 2
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'message_run_exit=%d\\nmessage_run_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-message-run.log" 2>&1
+{
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  find .aos/agents -name status.json -type f -print -exec sed -n '"'1,200p' {} \\;
+  \""'$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+} > "$D/error3a-after.log" 2>&1
+for f in "$D/error3-init.log" "$D/error3a-llm.log" "$D/error3a-idle-run.log" "$D/error3a-message-run.log" "$D/error3a-after.log"; do
+  print -r -- "LOG ${f:t}"
+  sed -n '"'1,260p' \""'$f"
+done'`: CreateProcess { message: "Rejected(\"`/usr/bin/zsh -lc 'set -u\\nzmodload zsh/datetime\\nAOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos\\nROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254\\nSOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo\\nTEMPLATE=$SOLO/_template\\nD=$SOLO/D\\nrm -rf \\\"$D/lm\\\"\\nmkdir -p \\\"$D/lm/.aos\\\"\\ncp -r \\\"$TEMPLATE/.\\\" \\\"$D/lm/\\\"\\ncd \\\"$D/lm\\\"\\n{\\n  \\\"$AOS\\\" agent init; rc=$?; print \\\"init_exit=$rc\\\"\\n} > \\\"$D/error3-init.log\\\" 2>&1\\n{\\n  started=$EPOCHREALTIME\\n  print hi | AOS_LLM_URL=http://localhost:19999/v1 timeout 60 \\\"$AOS\\\" llm\\n  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '\\\"'llm_exit=%d\\\\\\\\nllm_elapsed=%.3f\\\\\\\\n' \\\\\\\"\\\"'$rc\\\" \\\"$elapsed\\\"\\n} > \\\"$D/error3a-llm.log\\\" 2>&1\\n{\\n  started=$EPOCHREALTIME\\n  AOS_LLM_URL=http://localhost:19999/v1 timeout 120 \\\"$AOS\\\" run . --step 1\\n  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '\\\"'idle_run_exit=%d\\\\\\\\nidle_run_elapsed=%.3f\\\\\\\\n' \\\\\\\"\\\"'$rc\\\" \\\"$elapsed\\\"\\n} > \\\"$D/error3a-idle-run.log\\\" 2>&1\\n{\\n  \\\"$AOS\\\" say \\\"測試\\\"; rc=$?; print \\\"say_exit=$rc\\\"\\n  started=$EPOCHREALTIME\\n  AOS_LLM_URL=http://localhost:19999/v1 timeout 300 \\\"$AOS\\\" run . --step 2\\n  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '\\\"'message_run_exit=%d\\\\\\\\nmessage_run_elapsed=%.3f\\\\\\\\n' \\\\\\\"\\\"'$rc\\\" \\\"$elapsed\\\"\\n} > \\\"$D/error3a-message-run.log\\\" 2>&1\\n{\\n  \\\"$AOS\\\" state; rc=$?; print \\\"state_exit=$rc\\\"\\n  find .aos/agents -name status.json -type f -print -exec sed -n '\\\"'1,200p' {} \\\\\\\\;\\n  \\\\\\\"\\\"'$AOS\\\" listen --once; rc=$?; print \\\"listen_exit=$rc\\\"\\n} > \\\"$D/error3a-after.log\\\" 2>&1\\nfor f in \\\"$D/error3-init.log\\\" \\\"$D/error3a-llm.log\\\" \\\"$D/error3a-idle-run.log\\\" \\\"$D/error3a-message-run.log\\\" \\\"$D/error3a-after.log\\\"; do\\n  print -r -- \\\"LOG ${f:t}\\\"\\n  sed -n '\\\"'1,260p' \\\\\\\"\\\"'$f\\\"\\ndone'` rejected: rm -f style commands are not permitted. Use a safer approach\")" }
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template
+D=$SOLO/D
+if [[ -d "$D/lm" ]]; then mv "$D/lm" "$D/lm-pre-timing"; fi
+mkdir -p "$D/lm/.aos"
+cp -r "$TEMPLATE/." "$D/lm/"
+cd "$D/lm"
+{
+  "$AOS" agent init; rc=$?; print "init_exit=$rc"
+} > "$D/error3-init.log" 2>&1
+{
+  started=$EPOCHREALTIME
+  print hi | AOS_LLM_URL=http://localhost:19999/v1 timeout 60 "$AOS" llm
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'llm_exit=%d\\nllm_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-llm.log" 2>&1
+{
+  started=$EPOCHREALTIME
+  AOS_LLM_URL=http://localhost:19999/v1 timeout 120 "$AOS" run . --step 1
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'idle_run_exit=%d\\nidle_run_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-idle-run.log" 2>&1
+{
+  "$AOS" say "測試"; rc=$?; print "say_exit=$rc"
+  started=$EPOCHREALTIME
+  AOS_LLM_URL=http://localhost:19999/v1 timeout 300 "$AOS" run . --step 2
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'message_run_exit=%d\\nmessage_run_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-message-run.log" 2>&1
+{
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  find .aos/agents -name status.json -type f -print -exec sed -n '"'1,200p' {} \\;
+  \""'$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+} > "$D/error3a-after.log" 2>&1
+for f in "$D/error3-init.log" "$D/error3a-llm.log" "$D/error3a-idle-run.log" "$D/error3a-message-run.log" "$D/error3a-after.log"; do
+  print -r -- "LOG ${f:t}"
+  sed -n '"'1,260p' \""'$f"
+done' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+LOG error3-init.log
+init_exit=0
+LOG error3a-llm.log
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos llm: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server
+llm_exit=1
+llm_elapsed=0.003
+LOG error3a-idle-run.log
+turn 1: 1 insts (1 every), 0 ms
+idle_run_exit=0
+idle_run_elapsed=0.002
+LOG error3a-message-run.log
+say_exit=0
+turn 2: 1 insts (1 every), 0 ms
+turn 3: 1 insts (1 every), 1 ms
+message_run_exit=0
+message_run_elapsed=0.104
+LOG error3a-after.log
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:38:45Z"
+}
+state_exit=0
+.aos/agents/lm/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:38:45Z"
+}
+listen_exit=0
+
+exec
+/usr/bin/zsh -lc "find wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos -maxdepth 4 -type f -print -exec sed -n '1,220p' {} \\;" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/turn
+4
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/2/out/agent-lm-2.json
+{
+  "id": "agent-lm-2",
+  "exit": 127,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:38:45.113Z",
+  "ended_at": "2026-08-30T11:38:45.113Z"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/2/insts/agent-lm-2.json
+{
+  "id": "agent-lm-2",
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ],
+  "timeout_ms": 0
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/3/out/agent-lm-3.json
+{
+  "id": "agent-lm-3",
+  "exit": 127,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:38:45.214Z",
+  "ended_at": "2026-08-30T11:38:45.214Z"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/3/insts/agent-lm-3.json
+{
+  "id": "agent-lm-3",
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ],
+  "timeout_ms": 0
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/1/out/agent-lm-1.json
+{
+  "id": "agent-lm-1",
+  "exit": 127,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:38:45.109Z",
+  "ended_at": "2026-08-30T11:38:45.110Z"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/1/insts/agent-lm-1.json
+{
+  "id": "agent-lm-1",
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ],
+  "timeout_ms": 0
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/state.json
+{
+  "turn": 3,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-lm-3",
+      "argv0": "aos",
+      "pid": 3248100,
+      "started_at": "2026-08-30T11:38:45.214Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:38:45Z"
+    }
+  }
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/say/1788089925111483146-3248080-0.md
+測試wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/persona.md
+你是一個可靠、好奇且言簡意賅的助手。wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/pending.json
+{
+  "calls": [],
+  "turn": 0
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/log.md
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/history.json
+{
+  "messages": []
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:38:45Z"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/engine.json
+{
+  "engine": "lmstudio"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/tools/ls.json
+{
+  "args": "list",
+  "argv": [
+    "ls"
+  ],
+  "description": "列出資料夾內容。args 是選項與路徑 token，例如 [\"-la\", \".\"]。",
+  "guarantee": "idempotent",
+  "name": "ls",
+  "predictability": "high",
+  "source": "manual",
+  "stdin": "none",
+  "timeout_ms": 30000
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/tools/cat.json
+{
+  "args": "list",
+  "argv": [
+    "cat"
+  ],
+  "description": "印出檔案內容。args 是一個或多個檔案路徑 token。",
+  "guarantee": "idempotent",
+  "name": "cat",
+  "predictability": "high",
+  "source": "manual",
+  "stdin": "none",
+  "timeout_ms": 30000
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/tools/sh.json
+{
+  "args": "string",
+  "argv": [
+    "sh",
+    "-lc",
+    "{args}"
+  ],
+  "description": "用 sh -lc 執行一行 shell 指令。args 就是整行指令字串。",
+  "name": "sh",
+  "predictability": "medium",
+  "source": "manual",
+  "stdin": "none",
+  "timeout_ms": 30000
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/every/agent-lm.json
+{
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ]
+}
+
+codex
+端點測試先揭露了一個額外、可重現的失敗：雖然外層一律用絕對路徑，`run` 內部仍呼叫裸的 `aos agent step`；PATH 沒含 build/bin 時，三個 batch 都是 exit 127，但外層連續回 exit 0，`state` 仍顯示 idle，訊息完全沒處理。這份證據已保留；為避免它污染端點案例，我現在依任務允許的方式只在子 shell 加上 build/bin 到 PATH，重新建立乾淨的 `lm` 世界再測。
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template
+D=$SOLO/D
+mv "$D/lm" "$D/lm-no-path-evidence"
+mkdir -p "$D/lm/.aos"
+cp -r "$TEMPLATE/." "$D/lm/"
+cd "$D/lm"
+{
+  "$AOS" agent init; rc=$?; print "init_exit=$rc"
+} > "$D/error3-init.log" 2>&1
+{
+  started=$EPOCHREALTIME
+  print hi | AOS_LLM_URL=http://localhost:19999/v1 timeout 60 "$AOS" llm
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'llm_exit=%d\\nllm_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-llm.log" 2>&1
+{
+  started=$EPOCHREALTIME
+  AOS_LLM_URL=http://localhost:19999/v1 timeout 120 "$AOS" run . --step 1
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'idle_run_exit=%d\\nidle_run_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-idle-run.log" 2>&1
+{
+  "$AOS" say "測試"; rc=$?; print "say_exit=$rc"
+  started=$EPOCHREALTIME
+  AOS_LLM_URL=http://localhost:19999/v1 timeout 300 "$AOS" run . --step 2
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'message_run_exit=%d\\nmessage_run_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error3a-message-run.log" 2>&1
+{
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  find .aos/agents -name status.json -type f -print -exec sed -n '"'1,200p' {} \\;
+  \""'$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+} > "$D/error3a-after.log" 2>&1
+for f in "$D/error3-init.log" "$D/error3a-llm.log" "$D/error3a-idle-run.log" "$D/error3a-message-run.log" "$D/error3a-after.log"; do
+  print -r -- "LOG ${f:t}"
+  sed -n '"'1,260p' \""'$f"
+done' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+LOG error3-init.log
+init_exit=0
+LOG error3a-llm.log
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos llm: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server
+llm_exit=1
+llm_elapsed=0.003
+LOG error3a-idle-run.log
+turn 1: 1 insts (1 every), 3 ms
+idle_run_exit=0
+idle_run_elapsed=0.005
+LOG error3a-message-run.log
+say_exit=0
+turn 2: 1 insts (1 every), 3 ms
+turn 3: 1 insts (1 every), 3 ms
+message_run_exit=0
+message_run_elapsed=0.109
+LOG error3a-after.log
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 3,
+  "updated_at": "2026-08-30T11:39:15Z"
+}
+state_exit=0
+.aos/agents/lm/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 3,
+  "updated_at": "2026-08-30T11:39:15Z"
+}
+## turn 2 user
+測試
+
+listen_exit=0
+
+exec
+/usr/bin/zsh -lc "find wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch -maxdepth 3 -type f -print -exec sed -n '1,220p' {} \\; && sed -n '1,260p' wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/agents/lm/history.json && sed -n '1,260p' wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/state.json" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/2/out/agent-lm-2.json
+{
+  "id": "agent-lm-2",
+  "exit": 1,
+  "signal": null,
+  "stdout": "",
+  "stderr": "aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server\n",
+  "started_at": "2026-08-30T11:39:15.200Z",
+  "ended_at": "2026-08-30T11:39:15.203Z"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/2/insts/agent-lm-2.json
+{
+  "id": "agent-lm-2",
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ],
+  "timeout_ms": 0
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/3/out/agent-lm-3.json
+{
+  "id": "agent-lm-3",
+  "exit": 0,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:39:15.304Z",
+  "ended_at": "2026-08-30T11:39:15.307Z"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/3/insts/agent-lm-3.json
+{
+  "id": "agent-lm-3",
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ],
+  "timeout_ms": 0
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/1/out/agent-lm-1.json
+{
+  "id": "agent-lm-1",
+  "exit": 0,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:39:15.193Z",
+  "ended_at": "2026-08-30T11:39:15.196Z"
+}
+wf/workflows/dispatch/trial/sandbox/solo/D/lm/.aos/batch/1/insts/agent-lm-1.json
+{
+  "id": "agent-lm-1",
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ],
+  "timeout_ms": 0
+}
+{
+  "messages": [
+    {
+      "content": "測試",
+      "role": "user"
+    }
+  ]
+}
+{
+  "turn": 3,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-lm-3",
+      "argv0": "aos",
+      "pid": 3248604,
+      "started_at": "2026-08-30T11:39:15.304Z",
+      "status": "done",
+      "exit": 0
+    }
+  ],
+  "agents": {
+    "lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 3,
+      "updated_at": "2026-08-30T11:39:15Z"
+    }
+  }
+}
+
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template
+D=$SOLO/D
+mkdir -p "$D/pi/.aos"
+cp -r "$TEMPLATE/." "$D/pi/"
+cd "$D/pi"
+{
+  "$AOS" agent init --engine pi; rc=$?; print "init_exit=$rc"
+  "$AOS" say "在這個資料夾建一個 hello.txt 內容是 hi"; rc=$?; print "say_exit=$rc"
+} > "$D/error4-init-say.log" 2>&1
+{
+  started=$EPOCHREALTIME
+  env -u DEEPSEEK_API_KEY timeout 300 "$AOS" run . --step 1
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'run_exit=%d\\nrun_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+} > "$D/error4-run.log" 2>&1
+{
+  "$AOS" state; rc=$?; print "state_exit=$rc"
+  find .aos/agents -name status.json -type f -print -exec sed -n '"'1,200p' {} \\;
+  \""'$AOS" listen --once | tail -20; rc=${pipestatus[1]}; print "listen_exit=$rc"
+} > "$D/error4-after.log" 2>&1
+for f in "$D/error4-init-say.log" "$D/error4-run.log" "$D/error4-after.log"; do
+  print -r -- "LOG ${f:t}"
+  sed -n '"'1,300p' \""'$f"
+done
+find .aos/batch -maxdepth 3 -type f -print -exec sed -n '"'1,220p' {} \\;" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 333ms:
+LOG error4-init-say.log
+init_exit=0
+say_exit=0
+LOG error4-run.log
+turn 1: 1 insts (1 every), 464 ms
+run_exit=0
+run_elapsed=0.467
+LOG error4-after.log
+{
+  "detail": "pi 失敗",
+  "status": "idle",
+  "turn": 1,
+  "updated_at": "2026-08-30T11:39:39Z"
+}
+state_exit=0
+.aos/agents/pi/status.json
+{
+  "detail": "pi 失敗",
+  "status": "idle",
+  "turn": 1,
+  "updated_at": "2026-08-30T11:39:39Z"
+}
+## turn 1 user
+在這個資料夾建一個 hello.txt 內容是 hi
+
+> pi 失敗（exit=1）：Warning: No project session found with id '056cb473-46f4-4ae9-aad8-4c0f9a26b1c0'; creating a new session with that id. No API key found for deepseek.  Use /login to log into a provider via OAuth or API key. See:   /home/lorkhan/.local/share/fnm/node-versions/v24.14.1/installation/lib/node_modules/@earendil-works/pi-coding-agent/docs/providers.md   /home/lorkhan/.local/share/fnm/node-versions/v24.14.1/installation/lib/node_modules/@earendil-works/pi-coding-agent/docs/models.md 
+listen_exit=0
+.aos/batch/1/out/agent-pi-1.json
+{
+  "id": "agent-pi-1",
+  "exit": 0,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:39:39.233Z",
+  "ended_at": "2026-08-30T11:39:39.697Z"
+}
+.aos/batch/1/insts/agent-pi-1.json
+{
+  "id": "agent-pi-1",
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ],
+  "timeout_ms": 0
+}
+
+codex
+錯誤端點案例已定位：direct `aos llm` 會清楚報連線失敗並 exit 1；但 agent 路徑的內層 step exit 1 被藏在 `.aos/batch/2/out/agent-lm-2.json`，外層 `run` exit 0，`state` 回 idle，`listen` 只看得到原指令。pi 缺 key 則 `listen` 看得到 `No API key found for deepseek` 和文件路徑，但沒有出現 `DEEPSEEK_API_KEY`，而 init 當下完全沒提醒。下一步測工具登記錯誤與模型實際請求工具的可見性。
+exec
+/usr/bin/zsh -lc 'set -u
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+TEMPLATE=$SOLO/_template
+D=$SOLO/D
+mv "$D/lm" "$D/lm-endpoint-evidence"
+mkdir -p "$D/lm/.aos"
+cp -r "$TEMPLATE/." "$D/lm/"
+cd "$D/lm"
+"$AOS" agent init > "$D/error5-init.log" 2>&1
+{
+  "$AOS" tool list; rc=$?; print "list1_exit=$rc"
+  "$AOS" tool add; rc=$?; print "add_missing_exit=$rc"
+  "$AOS" tool remove nosuchtool; rc=$?; print "remove_missing_exit=$rc"
+  "$AOS" tool add make make; rc=$?; print "add_make_exit=$rc"
+  "$AOS" tool list; rc=$?; print "list2_exit=$rc"
+} > "$D/error5-registry.log" 2>&1
+sed -n '"'1,300p' \""'$D/error5-registry.log"
+find .aos/tools -maxdepth 1 -type f -print' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+list1_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+add_missing_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+remove_missing_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+add_make_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+list2_exit=2
+.aos/tools/ls.json
+.aos/tools/cat.json
+.aos/tools/sh.json
+
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+D=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D
+cd "$D/lm"
+{
+  "$AOS" say "請用 make 工具跑一次 make"; rc=$?; print "say_exit=$rc"
+  started=$EPOCHREALTIME
+  timeout 600 "$AOS" run . --step 6
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'run_exit=%d\\nrun_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+  "$AOS" listen --once; rc=$?; print "listen_exit=$rc"
+} > "$D/error5-unknown-tool.log" 2>&1
+sed -n '"'1,360p' \""'$D/error5-unknown-tool.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 12007ms:
+say_exit=0
+turn 1: 1 insts (1 every), 4419 ms
+turn 2: 1 insts (1 every), 2116 ms
+turn 3: 1 insts (1 every), 3468 ms
+turn 4: 2 insts (1 every), 522 ms
+turn 5: 1 insts (1 every), 1115 ms
+turn 6: 1 insts (1 every), 3 ms
+run_exit=0
+run_elapsed=12.148
+## turn 1 user
+請用 make 工具跑一次 make
+
+## turn 1 assistant
+{"tool":"sh","args":["make"]}
+
+## turn 1 tool
+{"args":["make"],"call_id":"agent-lm-tool-1-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 2 assistant
+抱歉，我剛才誤用了不存在的工具名稱。正確的做法是使用 `sh` 工具來執行 shell 指令。現在我會用 `sh` 來跑一次 make：
+
+{"tool":"sh","args":["make"]}
+
+## turn 2 tool
+{"args":["make"],"call_id":"agent-lm-tool-2-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 3 assistant
+我明白了，`sh` 工具的 `args` 必須是字串而非陣列。現在我會用正確的方式來執行 make：
+
+{"tool":"sh","args":"make"}
+
+> 已投遞工具 agent-lm-tool-3-0: ["sh","-lc","make"]，等下下回合的結果
+## turn 5 tool
+{"args":"make","call_id":"agent-lm-tool-3-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"g++ -std=c++17 -o mini src/main.cpp src/parse.cpp\ng++ -std=c++17 -o test_parse tests/test_parse.cpp src/parse.cpp && ./test_parse\nok\n"},"tool":"sh"}
+
+## turn 5 assistant
+`make` 命令已成功執行。程式碼已被編譯並測試通過。一切運作正常！
+
+listen_exit=0
+
+exec
+/usr/bin/zsh -lc 'set -u
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+D=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D
+cd "$D/lm"
+{
+  "$AOS" run . --step; rc=$?; print "run_missing_step_exit=$rc"
+  "$AOS" run . --step abc; rc=$?; print "run_bad_step_exit=$rc"
+  "$AOS" run /nonexistent/path --step 1; rc=$?; print "run_bad_path_exit=$rc"
+  "$AOS" agent init; rc=$?; print "init_again_exit=$rc"
+  "$AOS" agent init --engine nosuchengine; rc=$?; print "init_bad_engine_exit=$rc"
+  "$AOS" agent init --name x --model; rc=$?; print "init_missing_model_exit=$rc"
+} > "$D/error6-params.log" 2>&1
+sed -n '"'1,360p' \""'$D/error6-params.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos run [folder] [--step N] [--interval MS]
+run_missing_step_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos run [folder] [--step N] [--interval MS]
+run_bad_step_exit=2
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied
+run_bad_path_exit=1
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/lm 已經住著 agent lm；一個資料夾只住一隻
+init_again_exit=1
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent init [folder] [--name N] [--persona TEXT] [--engine lmstudio|pi] [--provider P] [--model M] [--priority N]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent step [folder] [name]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent say <folder> <name> <text...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent listen <folder> <name> [--once]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent talk <folder> <name> [--interface pi]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent state <folder> <name>
+init_bad_engine_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent init [folder] [--name N] [--persona TEXT] [--engine lmstudio|pi] [--provider P] [--model M] [--priority N]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent step [folder] [name]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent say <folder> <name> <text...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent listen <folder> <name> [--once]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent talk <folder> <name> [--interface pi]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos agent state <folder> <name>
+init_missing_model_exit=2
+
+codex
+工具登記的錯誤訊息本身有列出正確語法，但劇本中的 `tool list`／`tool remove` 都不是實際子命令（正確是 `ls`／`rm`），因此五次都 exit 2；自然語言要求 `make` 時，模型沒有產生 `unknown_tool`，而是改用已登記的 `sh`，前兩回合還因把字串參數寫成陣列而失敗，第三次才執行成功。現在會用步驟 0 已準備好的 `plain` 素材，從建立 `.aos` 起完整計數最小工作迴圈。
+exec
+/usr/bin/zsh -lc 'test ! -e wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos && print '"'plain_ready=yes' || print 'plain_ready=no'
+sed -n '1,160p' wf/workflows/dispatch/trial/sandbox/solo/D/plain/README.md
+find wf/workflows/dispatch/trial/sandbox/solo/D/plain -maxdepth 2 -type f -printf '%P\\n' | sort" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+plain_ready=yes
+# mini — L1 試用素材
+
+`make` 編譯並跑測試。`src/parse.cpp` 的 `parse()` 目前用空字串表示失敗，
+劇本要求把它改成回傳 `std::optional<std::string>`。
+Makefile
+README.md
+src/main.cpp
+src/parse.cpp
+src/parse.hpp
+tests/test_parse.cpp
+
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+D=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D
+P=$D/plain
+{
+  mkdir -p "$P/.aos"; rc=$?; print "cmd1_mkdir_exit=$rc"
+  cd "$P"; rc=$?; print "cmd2_cd_exit=$rc"
+  "$AOS" agent init; rc=$?; print "cmd3_init_exit=$rc"
+  "$AOS" say '"'幫我在 README.md 最後加一行 # tried'; rc="'$?; print "cmd4_say_exit=$rc"
+  started=$EPOCHREALTIME
+  timeout 900 "$AOS" run . --step 12
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'cmd5_run_exit=%d\\nrun_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+  "$AOS" listen --once; rc=$?; print "cmd6_listen_exit=$rc"
+  tail -1 README.md; rc=$?; print "cmd7_verify_exit=$rc"
+} > "$D/minimal-aos.log" 2>&1
+sed -n '"'1,500p' \""'$D/minimal-aos.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 25182ms:
+cmd1_mkdir_exit=0
+cmd2_cd_exit=0
+cmd3_init_exit=0
+cmd4_say_exit=0
+turn 1: 1 insts (1 every), 6221 ms
+turn 2: 2 insts (1 every), 4 ms
+turn 3: 1 insts (1 every), 1215 ms
+turn 4: 2 insts (1 every), 4 ms
+turn 5: 1 insts (1 every), 2316 ms
+turn 6: 1 insts (1 every), 1716 ms
+turn 7: 1 insts (1 every), 4018 ms
+turn 8: 1 insts (1 every), 1215 ms
+turn 9: 1 insts (1 every), 4819 ms
+turn 10: 1 insts (1 every), 765 ms
+turn 11: 2 insts (1 every), 4 ms
+turn 12: 1 insts (1 every), 1916 ms
+cmd5_run_exit=0
+run_elapsed=25.320
+## turn 1 user
+幫我在 README.md 最後加一行 # tried
+
+## turn 1 assistant
+我將檢查當前目錄中是否存在 README.md 檔案並查看其內容：
+
+{"tool":"ls","args":["-la","."]}
+
+> 已投遞工具 agent-plain-tool-1-0: ["ls","-la","."]，等下下回合的結果
+## turn 3 tool
+{"args":["-la","."],"call_id":"agent-plain-tool-1-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"total 28\ndrwxr-xr-x  5 lorkhan lorkhan 4096 Aug 30 19:41 .\ndrwxr-xr-x 10 lorkhan lorkhan 4096 Aug 30 19:41 ..\ndrwxr-xr-x  7 lorkhan lorkhan 4096 Aug 30 19:41 .aos\n-rw-r--r--  1 lorkhan lorkhan  254 Aug 30 19:37 Makefile\n-rw-r--r--  1 lorkhan lorkhan  183 Aug 30 19:37 README.md\ndrwxr-xr-x  2 lorkhan lorkhan 4096 Aug 30 19:37 src\ndrwxr-xr-x  2 lorkhan lorkhan 4096 Aug 30 19:37 tests\n"},"tool":"ls"}
+
+## turn 3 assistant
+我找到了 README.md。讓我先讀取它的内容：
+
+{"tool":"cat","args":["README.md"]}
+
+> 已投遞工具 agent-plain-tool-3-0: ["cat","README.md"]，等下下回合的結果
+## turn 5 tool
+{"args":["README.md"],"call_id":"agent-plain-tool-3-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"# mini — L1 試用素材\n\n`make` 編譯並跑測試。`src/parse.cpp` 的 `parse()` 目前用空字串表示失敗，\n劇本要求把它改成回傳 `std::optional<std::string>`。\n"},"tool":"cat"}
+
+## turn 5 assistant
+我會在 README.md 的最後一列之後追加 "# tried"：
+
+{"tool":"sh","args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"]}
+
+## turn 5 tool
+{"args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"],"call_id":"agent-plain-tool-5-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 6 assistant
+{"tool":"sh","args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"]}
+
+## turn 6 tool
+{"args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"],"call_id":"agent-plain-tool-6-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 7 assistant
+我來使用 `sed` 指令直接修改檔案：
+
+{"tool":"sh","args":["sed -i '\\$a\\\\n# tried' README.md"]}
+
+## turn 7 tool
+{"args":["sed -i '\\$a\\\\n# tried' README.md"],"call_id":"agent-plain-tool-7-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 8 assistant
+讓我先用 `cat` 讀取內容，再手動組合檔案：
+
+{"tool":"sh","args":["(cat README.md; printf '\\n# tried') > README.new && mv README.new README.md"]}
+
+## turn 8 tool
+{"args":["(cat README.md; printf '\\n# tried') > README.new && mv README.new README.md"],"call_id":"agent-plain-tool-8-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 9 assistant
+我來改用 `echo` 追加到檔案尾端：
+
+{"tool":"sh","args":["echo '# tried' >> README.md"]}
+
+## turn 9 tool
+{"args":["echo '# tried' >> README.md"],"call_id":"agent-plain-tool-9-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 10 assistant
+{"tool":"cat","args":["README.md"]}
+
+> 已投遞工具 agent-plain-tool-10-0: ["cat","README.md"]，等下下回合的結果
+## turn 12 tool
+{"args":["README.md"],"call_id":"agent-plain-tool-10-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"# mini — L1 試用素材\n\n`make` 編譯並跑測試。`src/parse.cpp` 的 `parse()` 目前用空字串表示失敗，\n劇本要求把它改成回傳 `std::optional<std::string>`。\n"},"tool":"cat"}
+
+## turn 12 assistant
+我來直接讀取檔案內容並手動拼接。既然 `sh` 工具似乎有問題，讓我重新確認一下工具的正確使用方式。根據說明，`sh` 的 args 應該是整行指令字串，所以我應該傳遞一個完整的 shell 命令字串。
+
+讓我再試試看：
+
+{"tool":"sh","args":"echo '# tried' >> README.md"}
+
+> 已投遞工具 agent-plain-tool-12-0: ["sh","-lc","echo '# tried' >> README.md"]，等下下回合的結果
+cmd6_listen_exit=0
+劇本要求把它改成回傳 `std::optional<std::string>`。
+cmd7_verify_exit=0
+
+codex
+最小任務在第一個 `run --step 12`（25.320 秒）後仍未完成：模型連續 5 次把 `sh.args` 寫成陣列；第 12 回合才終於提出正確工具呼叫，但工具尚未執行，`listen` 後的 `tail` 證實 README 未變。因此不能把預設的一次 run 算成完成，我會再推進必要回合並把第二次 run、第二次 listen、第二次驗證都算進總帳。
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+D=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D
+cd "$D/plain"
+{
+  started=$EPOCHREALTIME
+  timeout 900 "$AOS" run . --step 3
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'cmd8_run_exit=%d\\nrun2_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+  "$AOS" listen --once; rc=$?; print "cmd9_listen_exit=$rc"
+  tail -1 README.md; rc=$?; print "cmd10_verify_exit=$rc"
+} > "$D/minimal-aos-cont.log" 2>&1
+sed -n '"'1,400p' \""'$D/minimal-aos-cont.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 1351ms:
+turn 13: 2 insts (1 every), 71 ms
+turn 14: 1 insts (1 every), 1215 ms
+turn 15: 2 insts (1 every), 4 ms
+cmd8_run_exit=0
+run2_elapsed=1.494
+## turn 1 user
+幫我在 README.md 最後加一行 # tried
+
+## turn 1 assistant
+我將檢查當前目錄中是否存在 README.md 檔案並查看其內容：
+
+{"tool":"ls","args":["-la","."]}
+
+> 已投遞工具 agent-plain-tool-1-0: ["ls","-la","."]，等下下回合的結果
+## turn 3 tool
+{"args":["-la","."],"call_id":"agent-plain-tool-1-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"total 28\ndrwxr-xr-x  5 lorkhan lorkhan 4096 Aug 30 19:41 .\ndrwxr-xr-x 10 lorkhan lorkhan 4096 Aug 30 19:41 ..\ndrwxr-xr-x  7 lorkhan lorkhan 4096 Aug 30 19:41 .aos\n-rw-r--r--  1 lorkhan lorkhan  254 Aug 30 19:37 Makefile\n-rw-r--r--  1 lorkhan lorkhan  183 Aug 30 19:37 README.md\ndrwxr-xr-x  2 lorkhan lorkhan 4096 Aug 30 19:37 src\ndrwxr-xr-x  2 lorkhan lorkhan 4096 Aug 30 19:37 tests\n"},"tool":"ls"}
+
+## turn 3 assistant
+我找到了 README.md。讓我先讀取它的内容：
+
+{"tool":"cat","args":["README.md"]}
+
+> 已投遞工具 agent-plain-tool-3-0: ["cat","README.md"]，等下下回合的結果
+## turn 5 tool
+{"args":["README.md"],"call_id":"agent-plain-tool-3-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"# mini — L1 試用素材\n\n`make` 編譯並跑測試。`src/parse.cpp` 的 `parse()` 目前用空字串表示失敗，\n劇本要求把它改成回傳 `std::optional<std::string>`。\n"},"tool":"cat"}
+
+## turn 5 assistant
+我會在 README.md 的最後一列之後追加 "# tried"：
+
+{"tool":"sh","args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"]}
+
+## turn 5 tool
+{"args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"],"call_id":"agent-plain-tool-5-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 6 assistant
+{"tool":"sh","args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"]}
+
+## turn 6 tool
+{"args":["cat README.md > README.tmp && printf '\\n# tried' >> README.tmp && mv README.tmp README.md"],"call_id":"agent-plain-tool-6-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 7 assistant
+我來使用 `sed` 指令直接修改檔案：
+
+{"tool":"sh","args":["sed -i '\\$a\\\\n# tried' README.md"]}
+
+## turn 7 tool
+{"args":["sed -i '\\$a\\\\n# tried' README.md"],"call_id":"agent-plain-tool-7-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 8 assistant
+讓我先用 `cat` 讀取內容，再手動組合檔案：
+
+{"tool":"sh","args":["(cat README.md; printf '\\n# tried') > README.new && mv README.new README.md"]}
+
+## turn 8 tool
+{"args":["(cat README.md; printf '\\n# tried') > README.new && mv README.new README.md"],"call_id":"agent-plain-tool-8-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 9 assistant
+我來改用 `echo` 追加到檔案尾端：
+
+{"tool":"sh","args":["echo '# tried' >> README.md"]}
+
+## turn 9 tool
+{"args":["echo '# tried' >> README.md"],"call_id":"agent-plain-tool-9-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 10 assistant
+{"tool":"cat","args":["README.md"]}
+
+> 已投遞工具 agent-plain-tool-10-0: ["cat","README.md"]，等下下回合的結果
+## turn 12 tool
+{"args":["README.md"],"call_id":"agent-plain-tool-10-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"# mini — L1 試用素材\n\n`make` 編譯並跑測試。`src/parse.cpp` 的 `parse()` 目前用空字串表示失敗，\n劇本要求把它改成回傳 `std::optional<std::string>`。\n"},"tool":"cat"}
+
+## turn 12 assistant
+我來直接讀取檔案內容並手動拼接。既然 `sh` 工具似乎有問題，讓我重新確認一下工具的正確使用方式。根據說明，`sh` 的 args 應該是整行指令字串，所以我應該傳遞一個完整的 shell 命令字串。
+
+讓我再試試看：
+
+{"tool":"sh","args":"echo '# tried' >> README.md"}
+
+> 已投遞工具 agent-plain-tool-12-0: ["sh","-lc","echo '# tried' >> README.md"]，等下下回合的結果
+## turn 14 tool
+{"args":"echo '# tried' >> README.md","call_id":"agent-plain-tool-12-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":""},"tool":"sh"}
+
+## turn 14 assistant
+成功了！讓我確認一下檔案內容是否已更新：
+
+{"tool":"cat","args":["README.md"]}
+
+> 已投遞工具 agent-plain-tool-14-0: ["cat","README.md"]，等下下回合的結果
+cmd9_listen_exit=0
+# tried
+cmd10_verify_exit=0
+
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+D=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D
+TEMPLATE=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/_template
+mkdir -p "$D/pi-direct"
+cp -r "$TEMPLATE/." "$D/pi-direct/"
+cd "$D/pi-direct"
+{
+  started=$EPOCHREALTIME
+  timeout 900 pi -p '"'在 README.md 最後加一行 # tried'
+  rc="'$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'pi_exit=%d\\npi_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+  tail -1 README.md; rc=$?; print "verify_exit=$rc"
+} > "$D/minimal-pi.log" 2>&1
+sed -n '"'1,500p' \""'$D/minimal-pi.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 21866ms:
+已在 `README.md` 最後加上：
+
+```md
+# tried
+```
+pi_exit=0
+pi_elapsed=22.008
+# tried
+verify_exit=0
+
+exec
+/usr/bin/zsh -lc "find wf/workflows/dispatch/trial/sandbox/solo/D/nowhere -maxdepth 3 -print
+find wf/workflows/dispatch/trial/sandbox/solo/D/noagent -maxdepth 3 -print
+find wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch -maxdepth 3 -type f -name '*.json' | sort | tail -12" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+wf/workflows/dispatch/trial/sandbox/solo/D/nowhere
+wf/workflows/dispatch/trial/sandbox/solo/D/nowhere/.aos
+wf/workflows/dispatch/trial/sandbox/solo/D/nowhere/.aos/turn
+wf/workflows/dispatch/trial/sandbox/solo/D/nowhere/.aos/inbox
+wf/workflows/dispatch/trial/sandbox/solo/D/nowhere/.aos/state.json
+wf/workflows/dispatch/trial/sandbox/solo/D/nowhere/.aos/agents
+wf/workflows/dispatch/trial/sandbox/solo/D/nowhere/.aos/every
+wf/workflows/dispatch/trial/sandbox/solo/D/noagent
+wf/workflows/dispatch/trial/sandbox/solo/D/noagent/.aos
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/4/out/agent-plain-4.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/4/out/agent-plain-tool-3-0.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/5/insts/agent-plain-5.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/5/out/agent-plain-5.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/6/insts/agent-plain-6.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/6/out/agent-plain-6.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/7/insts/agent-plain-7.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/7/out/agent-plain-7.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/8/insts/agent-plain-8.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/8/out/agent-plain-8.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/9/insts/agent-plain-9.json
+wf/workflows/dispatch/trial/sandbox/solo/D/plain/.aos/batch/9/out/agent-plain-9.json
+
+exec
+/usr/bin/zsh -lc 'set -u
+zmodload zsh/datetime
+AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
+ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+export PATH="$ROOT/build/bin:$PATH"
+D=$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D
+cd "$D/lm"
+{
+  "$AOS" say '"'我剛才叫你做什麼'; rc="'$?; print "memory_say_exit=$rc"
+  started=$EPOCHREALTIME
+  timeout 300 "$AOS" run . --step 1
+  rc=$?; elapsed=$(( EPOCHREALTIME - started )); printf '"'memory_run_exit=%d\\nmemory_run_elapsed=%.3f\\n' \""'$rc" "$elapsed"
+  "$AOS" listen --once; rc=$?; print "memory_listen_exit=$rc"
+} > "$D/memory-count.log" 2>&1
+sed -n '"'1,400p' \""'$D/memory-count.log"' in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 5131ms:
+memory_say_exit=0
+turn 7: 1 insts (1 every), 5270 ms
+memory_run_exit=0
+memory_run_elapsed=5.272
+## turn 1 user
+請用 make 工具跑一次 make
+
+## turn 1 assistant
+{"tool":"sh","args":["make"]}
+
+## turn 1 tool
+{"args":["make"],"call_id":"agent-lm-tool-1-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 2 assistant
+抱歉，我剛才誤用了不存在的工具名稱。正確的做法是使用 `sh` 工具來執行 shell 指令。現在我會用 `sh` 來跑一次 make：
+
+{"tool":"sh","args":["make"]}
+
+## turn 2 tool
+{"args":["make"],"call_id":"agent-lm-tool-2-0","error":{"message":"工具 sh 的 args 必須是字串","retryable":false,"type":"invalid_args"},"ok":false,"result":null,"tool":"sh"}
+
+> 工具呼叫錯誤：工具 sh 的 args 必須是字串
+## turn 3 assistant
+我明白了，`sh` 工具的 `args` 必須是字串而非陣列。現在我會用正確的方式來執行 make：
+
+{"tool":"sh","args":"make"}
+
+> 已投遞工具 agent-lm-tool-3-0: ["sh","-lc","make"]，等下下回合的結果
+## turn 5 tool
+{"args":"make","call_id":"agent-lm-tool-3-0","ok":true,"result":{"exit":0,"signal":null,"stderr":"","stdout":"g++ -std=c++17 -o mini src/main.cpp src/parse.cpp\ng++ -std=c++17 -o test_parse tests/test_parse.cpp src/parse.cpp && ./test_parse\nok\n"},"tool":"sh"}
+
+## turn 5 assistant
+`make` 命令已成功執行。程式碼已被編譯並測試通過。一切運作正常！
+
+## turn 7 user
+我剛才叫你做什麼
+
+## turn 7 assistant
+你剛才叫我用 `make` 工具跑一次 `make` 指令。我已經成功執行了：
+
+1. 編譯了 `src/main.cpp` 和 `src/parse.cpp`，生成可執行檔 `mini`
+2. 測試程式碼通過（test_parse 輸出 `ok`）
+
+一切運作正常！
+</think>
+
+你剛才叫我用 make 指令跑一次 make。我已經成功執行了：
+
+1. 編譯了 src/main.cpp 和 src/parse.cpp，生成可執行檔 mini
+2. 測試程式碼也通過了（test_parse 輸出 ok）
+
+一切運作正常！
+
+memory_listen_exit=0
+
+codex
+總帳的實測已完成：最小編輯最終用了 10 個終端指令、15 回合、兩次 run，LLM 等待合計 26.814 秒；直接 `pi -p` 是 1 個指令、22.008 秒。記憶追問另實測為 aos 3 指令、1 回合、5.272 秒。現在只剩把可重跑的 bug 腳本、CSV 與 300–800 字敘事整理進報告，並清除允許的 `/tmp/aos-d-empty`。
+apply patch
+patch: completed
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+exec
+/usr/bin/zsh -lc 'chmod +x wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-*.sh
+bash -n wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-*.sh
+for id in 01 02 07 08; do
+  script="wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-$id.sh"
+  print -r -- "REPRO D-$id"
+  timeout 60 "$script"
+done
+find /tmp/aos-d-empty -depth -delete 2>/dev/null || true
+test ! -e /tmp/aos-d-empty && print '"'tmp_cleanup=ok'" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 91ms:
+turn 2: 1 insts (1 every), 1 ms
+ACTUAL: outer run exit=0; generated batch records show argv aos agent step and exit 127
+{
+  "id": "agent-D-08.6l5r6J-2",
+  "exit": 127,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:44:53.878Z",
+  "ended_at": "2026-08-30T11:44:53.878Z"
+}
+{
+  "id": "agent-D-08.6l5r6J-1",
+  "exit": 127,
+  "signal": null,
+  "stdout": "",
+  "stderr": "",
+  "started_at": "2026-08-30T11:44:53.777Z",
+  "ended_at": "2026-08-30T11:44:53.778Z"
+}
+tmp_cleanup=ok
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+apply patch
+patch: completed
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3217250ce665480a3a10d70c7c69708515443983
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本 4 全部走完，`/tmp/aos-d-empty` 已清除。沒有 agent 時，say／state／listen 都會明講 `請先跑 aos agent init` 且 exit 1；缺參數、錯 engine、重複 init 也有可採取的 usage 或原因。最痛的是 agent 內層失敗不會傳到外層：錯 port 時 inner exit 1，沒有 PATH 時 inner exit 127，但 `aos run` 都 exit 0，`state` 又是 idle；錯誤只躺在 `.aos/batch/*/out/*.json`。pi 缺 key 雖可從 listen 看到錯誤，init 不提醒，訊息也沒說 `DEEPSEEK_API_KEY`。
++
++指令數總帳如下；第一列用 README 最小編輯代理 parse() 修改，測試列取自實跑 make，記憶列也另行實測。
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 幫我改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1（state） | — | 0 個額外指令 |
++| 跑一下測試 | 3（say／run／listen） | 6 | 1 |
++| 我剛才叫你做什麼 | 3（say／run／listen） | 1 | 1 |
++| 開一個新的 agent 開始工作 | 5（mkdir／cd／init／say／run） | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 個指令、15 回合，兩次 run 合計 26.814 秒；第一次驗證仍未改檔。直接 `pi -p '在 README.md 最後加一行 # tried'` 是 1 個指令、22.008 秒且一次完成。錯誤 5 的 unknown_tool 無法由這次自然語言劇本觸發：模型改用 sh，因此 listen 只看到 invalid_args，不是預期的 unknown_tool。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3217250ce665480a3a10d70c7c69708515443983
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本 4 全部走完，`/tmp/aos-d-empty` 已清除。沒有 agent 時，say／state／listen 都會明講 `請先跑 aos agent init` 且 exit 1；缺參數、錯 engine、重複 init 也有可採取的 usage 或原因。最痛的是 agent 內層失敗不會傳到外層：錯 port 時 inner exit 1，沒有 PATH 時 inner exit 127，但 `aos run` 都 exit 0，`state` 又是 idle；錯誤只躺在 `.aos/batch/*/out/*.json`。pi 缺 key 雖可從 listen 看到錯誤，init 不提醒，訊息也沒說 `DEEPSEEK_API_KEY`。
++
++指令數總帳如下；第一列用 README 最小編輯代理 parse() 修改，測試列取自實跑 make，記憶列也另行實測。
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 幫我改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1（state） | — | 0 個額外指令 |
++| 跑一下測試 | 3（say／run／listen） | 6 | 1 |
++| 我剛才叫你做什麼 | 3（say／run／listen） | 1 | 1 |
++| 開一個新的 agent 開始工作 | 5（mkdir／cd／init／say／run） | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 個指令、15 回合，兩次 run 合計 26.814 秒；第一次驗證仍未改檔。直接 `pi -p '在 README.md 最後加一行 # tried'` 是 1 個指令、22.008 秒且一次完成。錯誤 5 的 unknown_tool 無法由這次自然語言劇本觸發：模型改用 sh，因此 listen 只看到 invalid_args，不是預期的 unknown_tool。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+exec
+/usr/bin/zsh -lc "REPORT=wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+sed -n '1,260p' \""'$REPORT"
+awk -F, '"'NR <= 9 { print \"csv_line=\" NR \" fields=\" NF }' \""'$REPORT"
+printf '"'narrative_chars='
+tail -n +12 \""'$REPORT" | wc -m
+printf '"'repro_syntax='
+bash -n wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-*.sh && print ok
+git status --short" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
+D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
+D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
+D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
+D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
+D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
+D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
+D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
+D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
+
+敘事報告
+
+劇本 4 全部走完，`/tmp/aos-d-empty` 已清除。沒有 agent 時，say／state／listen 都會明講 `請先跑 aos agent init` 且 exit 1；缺參數、錯 engine、重複 init 也有可採取的 usage 或原因。最痛的是 agent 內層失敗不會傳到外層：錯 port 時 inner exit 1，沒有 PATH 時 inner exit 127，但 `aos run` 都 exit 0，`state` 又是 idle；錯誤只躺在 `.aos/batch/*/out/*.json`。pi 缺 key 雖可從 listen 看到錯誤，init 不提醒，訊息也沒說 `DEEPSEEK_API_KEY`。
+
+指令數總帳如下；第一列用 README 最小編輯代理 parse() 修改，測試列取自實跑 make，記憶列也另行實測。
+
+| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
+|---|---:|---:|---:|
+| 幫我改 parse() 回傳 optional | 10 | 15 | 1 |
+| 它現在在幹嘛 | 1（state） | — | 0 個額外指令 |
+| 跑一下測試 | 3（say／run／listen） | 6 | 1 |
+| 我剛才叫你做什麼 | 3（say／run／listen） | 1 | 1 |
+| 開一個新的 agent 開始工作 | 5（mkdir／cd／init／say／run） | — | 1 |
+
+最小可用一輪的完整序列為：
+
+```sh
+mkdir -p "$SOLO/D/plain/.aos"
+cd "$SOLO/D/plain"
+$AOS agent init
+$AOS say '幫我在 README.md 最後加一行 # tried'
+timeout 900 $AOS run . --step 12
+$AOS listen --once
+tail -1 README.md
+timeout 900 $AOS run . --step 3
+$AOS listen --once
+tail -1 README.md
+```
+
+aos 共 10 個指令、15 回合，兩次 run 合計 26.814 秒；第一次驗證仍未改檔。直接 `pi -p '在 README.md 最後加一行 # tried'` 是 1 個指令、22.008 秒且一次完成。錯誤 5 的 unknown_tool 無法由這次自然語言劇本觸發：模型改用 sh，因此 listen 只看到 invalid_args，不是預期的 unknown_tool。
+csv_line=1 fields=9
+csv_line=2 fields=9
+csv_line=3 fields=9
+csv_line=4 fields=9
+csv_line=5 fields=9
+csv_line=6 fields=9
+csv_line=7 fields=9
+csv_line=8 fields=9
+csv_line=9 fields=9
+narrative_chars=1134
+repro_syntax=ok
+?? wf/workflows/dispatch/trial/repro/L1-03.sh
+?? wf/workflows/dispatch/trial/sandbox/solo/
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3217250ce665480a3a10d70c7c69708515443983
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本 4 全部走完，`/tmp/aos-d-empty` 已清除。沒有 agent 時，say／state／listen 都會明講 `請先跑 aos agent init` 且 exit 1；缺參數、錯 engine、重複 init 也有可採取的 usage 或原因。最痛的是 agent 內層失敗不會傳到外層：錯 port 時 inner exit 1，沒有 PATH 時 inner exit 127，但 `aos run` 都 exit 0，`state` 又是 idle；錯誤只躺在 `.aos/batch/*/out/*.json`。pi 缺 key 雖可從 listen 看到錯誤，init 不提醒，訊息也沒說 `DEEPSEEK_API_KEY`。
++
++指令數總帳如下；第一列用 README 最小編輯代理 parse() 修改，測試列取自實跑 make，記憶列也另行實測。
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 幫我改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1（state） | — | 0 個額外指令 |
++| 跑一下測試 | 3（say／run／listen） | 6 | 1 |
++| 我剛才叫你做什麼 | 3（say／run／listen） | 1 | 1 |
++| 開一個新的 agent 開始工作 | 5（mkdir／cd／init／say／run） | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 個指令、15 回合，兩次 run 合計 26.814 秒；第一次驗證仍未改檔。直接 `pi -p '在 README.md 最後加一行 # tried'` 是 1 個指令、22.008 秒且一次完成。錯誤 5 的 unknown_tool 無法由這次自然語言劇本觸發：模型改用 sh，因此 listen 只看到 invalid_args，不是預期的 unknown_tool。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+apply patch
+patch: completed
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ed610c53501a3623b4ba7f8c76d2cfee4d99fab9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本全走完且已清 `/tmp/aos-d-empty`。say／state／listen 無 agent 時會提示 init；參數錯誤也有 usage。最痛的是 inner exit 1（錯 port）或 127（PATH 無 aos）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi 缺 key 則 init 不提醒，listen 也沒說 `DEEPSEEK_API_KEY`。
++
++總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1 | — | 0 |
++| 跑測試 | 3 | 6 | 1 |
++| 剛才叫你做什麼 | 3 | 1 | 1 |
++| 開新 agent 工作 | 5 | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。unknown_tool 未觸發：模型改用 sh，listen 只見 invalid_args。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ed610c53501a3623b4ba7f8c76d2cfee4d99fab9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本全走完且已清 `/tmp/aos-d-empty`。say／state／listen 無 agent 時會提示 init；參數錯誤也有 usage。最痛的是 inner exit 1（錯 port）或 127（PATH 無 aos）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi 缺 key 則 init 不提醒，listen 也沒說 `DEEPSEEK_API_KEY`。
++
++總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1 | — | 0 |
++| 跑測試 | 3 | 6 | 1 |
++| 剛才叫你做什麼 | 3 | 1 | 1 |
++| 開新 agent 工作 | 5 | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。unknown_tool 未觸發：模型改用 sh，listen 只見 invalid_args。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+exec
+/usr/bin/zsh -lc "REPORT=wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+printf 'narrative_chars='
+tail -n +12 \""'$REPORT" | wc -m
+awk -F, '"'NR <= 9 && NF "'!= 9 { print "bad csv line " NR ": " NF; bad=1 } END { if (!bad) print "csv_fields=ok" }'"' \""'$REPORT"
+find wf/workflows/dispatch/trial/sandbox/solo/D/repro -maxdepth 1 -type f -printf '"'%f\\n' | sort
+find /tmp -maxdepth 1 -name aos-d-empty -print" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+narrative_chars=871
+csv_fields=ok
+D-01.sh
+D-02.sh
+D-03.sh
+D-07.sh
+D-08.sh
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..ed610c53501a3623b4ba7f8c76d2cfee4d99fab9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本全走完且已清 `/tmp/aos-d-empty`。say／state／listen 無 agent 時會提示 init；參數錯誤也有 usage。最痛的是 inner exit 1（錯 port）或 127（PATH 無 aos）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi 缺 key 則 init 不提醒，listen 也沒說 `DEEPSEEK_API_KEY`。
++
++總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1 | — | 0 |
++| 跑測試 | 3 | 6 | 1 |
++| 剛才叫你做什麼 | 3 | 1 | 1 |
++| 開新 agent 工作 | 5 | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。unknown_tool 未觸發：模型改用 sh，listen 只見 invalid_args。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+apply patch
+patch: completed
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..5be0a6bf23872be15bab43f6da4e74228ed64f42
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本全走完，`/tmp/aos-d-empty` 已清。無 agent 與參數錯誤都有指路。最痛的是錯 port（inner 1）或 PATH（inner 127）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi init 也不提醒缺 key。
++
++總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1 | — | 0 |
++| 跑測試 | 3 | 6 | 1 |
++| 剛才叫你做什麼 | 3 | 1 | 1 |
++| 開新 agent 工作 | 5 | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..5be0a6bf23872be15bab43f6da4e74228ed64f42
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本全走完，`/tmp/aos-d-empty` 已清。無 agent 與參數錯誤都有指路。最痛的是錯 port（inner 1）或 PATH（inner 127）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi init 也不提醒缺 key。
++
++總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1 | — | 0 |
++| 跑測試 | 3 | 6 | 1 |
++| 剛才叫你做什麼 | 3 | 1 | 1 |
++| 開新 agent 工作 | 5 | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+exec
+/usr/bin/zsh -lc "REPORT=wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+printf 'narrative_chars='
+tail -n +12 \""'$REPORT" | wc -m
+awk -F, '"'NR <= 9 { if (NF "'!= 9) bad=1 } END { print bad ? "csv_fields=bad" : "csv_fields=ok" }'"' \""'$REPORT"
+bash -n wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-*.sh
+printf '"'report_path=%s\\n' \""'$PWD/$REPORT"
+git diff --no-index /dev/null "$REPORT" >/dev/null; rc=$?; [[ $rc -eq 0 || $rc -eq 1 ]] && print '"'report_readable=ok'" in /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+ succeeded in 0ms:
+narrative_chars=755
+csv_fields=ok
+report_path=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+report_readable=ok
+
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..5be0a6bf23872be15bab43f6da4e74228ed64f42
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本全走完，`/tmp/aos-d-empty` 已清。無 agent 與參數錯誤都有指路。最痛的是錯 port（inner 1）或 PATH（inner 127）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi init 也不提醒缺 key。
++
++總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1 | — | 0 |
++| 跑測試 | 3 | 6 | 1 |
++| 剛才叫你做什麼 | 3 | 1 | 1 |
++| 開新 agent 工作 | 5 | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+codex
+D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
+D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
+D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
+D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
+D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
+D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
+D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
+D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
+D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
+
+敘事報告
+
+劇本全走完，`/tmp/aos-d-empty` 已清。無 agent 與參數錯誤都有指路。最痛的是錯 port（inner 1）或 PATH（inner 127）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi init 也不提醒缺 key。
+
+總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
+
+| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
+|---|---:|---:|---:|
+| 改 parse() 回傳 optional | 10 | 15 | 1 |
+| 它現在在幹嘛 | 1 | — | 0 |
+| 跑測試 | 3 | 6 | 1 |
+| 剛才叫你做什麼 | 3 | 1 | 1 |
+| 開新 agent 工作 | 5 | — | 1 |
+
+最小可用一輪的完整序列為：
+
+```sh
+mkdir -p "$SOLO/D/plain/.aos"
+cd "$SOLO/D/plain"
+$AOS agent init
+$AOS say '幫我在 README.md 最後加一行 # tried'
+timeout 900 $AOS run . --step 12
+$AOS listen --once
+tail -1 README.md
+timeout 900 $AOS run . --step 3
+$AOS listen --once
+tail -1 README.md
+```
+
+aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/report.md b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..5be0a6bf23872be15bab43f6da4e74228ed64f42
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/report.md
+@@ -0,0 +1,40 @@
++D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
++D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
++D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
++D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
++D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
++D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
++D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
++D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
++D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
++
++敘事報告
++
++劇本全走完，`/tmp/aos-d-empty` 已清。無 agent 與參數錯誤都有指路。最痛的是錯 port（inner 1）或 PATH（inner 127）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi init 也不提醒缺 key。
++
++總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
++
++| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
++|---|---:|---:|---:|
++| 改 parse() 回傳 optional | 10 | 15 | 1 |
++| 它現在在幹嘛 | 1 | — | 0 |
++| 跑測試 | 3 | 6 | 1 |
++| 剛才叫你做什麼 | 3 | 1 | 1 |
++| 開新 agent 工作 | 5 | — | 1 |
++
++最小可用一輪的完整序列為：
++
++```sh
++mkdir -p "$SOLO/D/plain/.aos"
++cd "$SOLO/D/plain"
++$AOS agent init
++$AOS say '幫我在 README.md 最後加一行 # tried'
++timeout 900 $AOS run . --step 12
++$AOS listen --once
++tail -1 README.md
++timeout 900 $AOS run . --step 3
++$AOS listen --once
++tail -1 README.md
++```
++
++aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..75166fcf078abd3810374f5facabfcccda4b422e
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-01.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-01.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++cd "$WORK"
++printf '%s\n' 'EXPECT: no-agent run exits nonzero and says to run aos agent init'
++"$AOS" run . --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; the observed message above is "turn 1: idle"\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..b6d422a822e0fd26c60d037cb57df3a786cde4d7
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-02.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++export PATH="$ROOT/build/bin:$PATH"
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: run exits nonzero and state/listen expose the connection failure'
++AOS_LLM_URL=http://localhost:19999/v1 timeout 30 "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: run exit=%d; state and listen follow\n' "$rc"
++"$AOS" state
++"$AOS" listen --once
++printf '%s\n' 'ACTUAL: hidden batch record follows'
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..7daa4c4ea6e51958b7a9aade4cfaa1f12d083113
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-03.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: no/such-model is rejected and the command exits nonzero'
++printf '%s\n' 'ACTUAL: this intentionally contacts LM Studio; the original trial returned a normal English answer and exit=0'
++printf 'hi\n' | AOS_LLM_MODEL=no/such-model timeout 120 "$AOS" llm
++rc=$?
++printf 'ACTUAL: exit=%d\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d87221992c7ffb252c2110654264692826f9cda
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-07.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++
++printf '%s\n' 'EXPECT: the error says that /nonexistent/path does not exist'
++"$AOS" run /nonexistent/path --step 1
++rc=$?
++printf 'ACTUAL: exit=%d; observed error says it cannot create .aos/inbox: Permission denied\n' "$rc"
++
+diff --git a/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..275b6041ab70ae986b70531c9f392b226ed24ad9
+--- /dev/null
++++ b/wf/workflows/dispatch/trial/sandbox/solo/D/repro/D-08.sh
+@@ -0,0 +1,19 @@
++#!/usr/bin/env bash
++set -uo pipefail
++
++AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
++ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
++BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
++WORK=$(mktemp -d "$BASE/D-08.XXXXXX")
++trap 'rm -rf -- "$WORK"' EXIT
++
++mkdir -p "$WORK/.aos"
++cd "$WORK"
++"$AOS" agent init
++"$AOS" say test
++printf '%s\n' 'EXPECT: invoking the documented absolute AOS path is sufficient'
++env PATH=/usr/bin:/bin "$AOS" run . --step 2
++rc=$?
++printf 'ACTUAL: outer run exit=%d; generated batch records show argv aos agent step and exit 127\n' "$rc"
++find "$WORK/.aos/batch" -path '*/out/*.json' -type f -exec sed -n '1,160p' {} \;
++
+
+tokens used
+104,358
+D-01,L1,bug,2,錯誤1 無 agent 的 run,應非零結束並提示先跑 aos agent init,原文 `turn 1: idle`；exit=0；且在 nowhere 新建 `.aos/`,pi：`pi -p` 1 個指令且不用先建世界,repro/D-01.sh
+D-02,L1,bug,3,錯誤3a agent 端點不通,run 應非零且 state 或 listen 應顯示失敗與修正端點的方法,run 原文只有 `turn 2: 1 insts (1 every)，3 ms` 且 exit=0；state 原文 `status: idle`；listen 只有使用者訊息；真正錯誤 `aos agent: LLM 連線失敗: Failed to connect to localhost port 19999 after 0 ms: Could not connect to server` 藏在 batch 且 inner exit=1,pi：1 個指令且連線錯誤在該前景命令回報,repro/D-02.sh
+D-03,L1,bug,3,錯誤3b 模型不存在,指定 no/such-model 應被拒絕並指出可用模型,隊長實測：exit=0，回了一段正常英文回覆，沒有任何「模型不存在」的提示,pi：1 個指令；錯模型由同一前景命令回報,repro/D-03.sh
+D-04,L1,awkward,2,錯誤4 pi 缺 key,init 就應提示設定 DEEPSEEK_API_KEY 的具體位置或指令,init 無輸出且 exit=0；run exit=0；listen 原文 `No API key found for deepseek.  Use /login to log into a provider via OAuth or API key.`，沒有 `DEEPSEEK_API_KEY`,直接 pi：1 個指令就於同一命令顯示缺 key；aos 到看見錯誤共 5 個指令,-
+D-05,L1,awkward,1,錯誤5 工具子命令,直覺的 tool list 與 tool remove 應可用或免重試,原文 `aos tool ls [--folder F] [--json]` 與 `aos tool rm <name> [--folder F]`；tool list 與 tool remove nosuchtool 均 exit=2；tool add 少參數也 exit=2 且有正確用法,pi：不需工具登記；直接要求任務 1 個指令,-
+D-06,L1,cannot,1,錯誤5 不存在工具,自然語言指定未登記的 make 後應能在 listen 看到 unknown_tool JSON,run 6 回合 exit=0；listen 沒有 unknown_tool，模型改呼叫 sh 且兩次原文 `工具 sh 的 args 必須是字串` 後才成功,pi：1 個指令直接用內建 bash 跑 make,-
+D-07,L1,bug,2,錯誤6 不存在路徑,應明說 `/nonexistent/path` 不存在並提示改正路徑,原文 `aos run: 無法建立 /nonexistent/path/.aos/inbox: Permission denied`；exit=1,pi：在目標專案內 1 個指令；不需另傳世界路徑,repro/D-07.sh
+D-08,L1,bug,3,錯誤3 前景用絕對 AOS 但 PATH 無 aos,依任務要求用絕對路徑呼叫就應能推進 agent 或立即指出 PATH 需求,run 兩回合都印 `1 insts (1 every)` 且 outer exit=0；batch 實際 argv 是裸的 `aos agent step` 且兩次 inner exit=127；state 仍 idle,pi：PATH 中已有 pi；1 個指令即可工作,repro/D-08.sh
+D-09,L1,awkward,3,步驟7 最小編輯,一次指令應完成簡單追加且錯誤後能快速自我修正,前 12 回合 25.320 秒仍未改檔；原文 `工具 sh 的 args 必須是字串` 重複 5 次；補 3 回合 1.494 秒後才成功；總計 10 個終端指令與 15 回合,pi：`pi -p` 1 個指令，22.008 秒完成,-
+
+敘事報告
+
+劇本全走完，`/tmp/aos-d-empty` 已清。無 agent 與參數錯誤都有指路。最痛的是錯 port（inner 1）或 PATH（inner 127）時，run 仍 exit 0、state 仍 idle，真錯誤只在 batch JSON。pi init 也不提醒缺 key。
+
+總帳第一列以 README 最小編輯代測 parse()；make 與記憶列皆實跑：
+
+| 使用者心裡的一句話 | aos 指令 | 回合 | pi 指令 |
+|---|---:|---:|---:|
+| 改 parse() 回傳 optional | 10 | 15 | 1 |
+| 它現在在幹嘛 | 1 | — | 0 |
+| 跑測試 | 3 | 6 | 1 |
+| 剛才叫你做什麼 | 3 | 1 | 1 |
+| 開新 agent 工作 | 5 | — | 1 |
+
+最小可用一輪的完整序列為：
+
+```sh
+mkdir -p "$SOLO/D/plain/.aos"
+cd "$SOLO/D/plain"
+$AOS agent init
+$AOS say '幫我在 README.md 最後加一行 # tried'
+timeout 900 $AOS run . --step 12
+$AOS listen --once
+tail -1 README.md
+timeout 900 $AOS run . --step 3
+$AOS listen --once
+tail -1 README.md
+```
+
+aos 共 10 指令、15 回合，run 合計 26.814 秒；第一次驗證未改檔。`pi -p '在 README.md 最後加一行 # tried'` 共 1 指令、22.008 秒，一次成功。
