@@ -70,3 +70,64 @@ TEST_CASE("inbox and every instructions run in the same turn") {
     CHECK_FALSE(std::filesystem::exists(layout.inbox + "/once.json"));
     CHECK(std::filesystem::exists(layout.every + "/again.json"));
 }
+
+TEST_CASE("every due uses the last delivered timestamp") {
+    TempDir dir;
+    const Layout layout = layout_of(dir.path);
+    std::string error;
+
+    CHECK(every_due(layout, "slow", 500, 1000));
+    REQUIRE(mark_every_delivered(layout, "slow", 1000, error));
+    CHECK_FALSE(every_due(layout, "slow", 500, 1400));
+    CHECK(every_due(layout, "slow", 500, 1500));
+    CHECK(read_file(layout.every + "/.last/slow") == "1000\n");
+}
+
+TEST_CASE("every ms skips turns until its interval is due") {
+    TempDir dir;
+    const Layout layout = layout_of(dir.path);
+    std::string error;
+    REQUIRE(ensure_layout(layout, error));
+    write_file(layout.every + "/slow.json",
+               R"({"argv":["true"],"every_ms":600000})");
+
+    TurnSummary first;
+    REQUIRE(run_turn(layout, first, error));
+    CHECK(first.count == 1);
+    CHECK(first.every_count == 1);
+    CHECK(std::filesystem::exists(insts_dir(layout, 1) + "/slow-1.json"));
+    CHECK_FALSE(std::filesystem::exists(insts_dir(layout, 1) + "/.last"));
+
+    for (std::uint64_t turn = 2; turn <= 3; ++turn) {
+        TurnSummary summary;
+        REQUIRE(run_turn(layout, summary, error));
+        CHECK(summary.turn == turn);
+        CHECK(summary.count == 0);
+        CHECK(summary.every_count == 0);
+        CHECK_FALSE(std::filesystem::exists(
+            layout.aos + "/batch/" + std::to_string(turn)));
+    }
+    CHECK(std::filesystem::exists(layout.every + "/slow.json"));
+}
+
+TEST_CASE("every files keep independent delivery intervals") {
+    TempDir dir;
+    const Layout layout = layout_of(dir.path);
+    std::string error;
+    REQUIRE(ensure_layout(layout, error));
+    write_file(layout.every + "/slow.json",
+               R"({"argv":["true"],"every_ms":600000})");
+    write_file(layout.every + "/fast.json", R"({"argv":["true"]})");
+
+    TurnSummary first;
+    REQUIRE(run_turn(layout, first, error));
+    CHECK(first.count == 2);
+    CHECK(first.every_count == 2);
+
+    TurnSummary second;
+    REQUIRE(run_turn(layout, second, error));
+    CHECK(second.count == 1);
+    CHECK(second.every_count == 1);
+    CHECK(std::filesystem::exists(insts_dir(layout, 2) + "/fast-2.json"));
+    CHECK_FALSE(std::filesystem::exists(insts_dir(layout, 2) + "/slow-2.json"));
+}

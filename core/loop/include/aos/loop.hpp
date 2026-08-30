@@ -59,11 +59,21 @@ AOS_API std::string make_delivery_id();                                   // "d-
 
 /* ---- aggregate：inbox 搬入、every 複製入 batch/<turn>/insts/ ---- */
 
-/* inbox 先 rename，every 後複製且強制 id=<stem>-<turn>。回傳解析成功的
- * 那些；解析失敗的照樣留在 insts/（現場證據），但跳過不執行。 */
+/* inbox 先 rename，every 後複製且強制 id=<stem>-<turn>；every_ms 可限制個別
+ * every 指令的投遞間隔。回傳解析成功的那些；解析失敗的照樣留在 insts/
+ *（現場證據），但跳過不執行。 */
 AOS_API std::vector<wire::Inst> aggregate(const Layout &layout,
                                           std::uint64_t turn,
-                                          std::string &error);
+                                          std::string &error,
+                                          std::size_t *every_count = nullptr);
+
+/* every/<stem>.json 的可選欄位 every_ms：距上次投遞不足 every_ms 毫秒就跳過這一回合。
+ * 沒有這個欄位或值 ≤ 0＝每回合都投（原本的行為）。上次投遞時間記在 every/.last/<stem>。
+ * 回傳 false＝這回合不該投；true＝該投（並由呼叫端負責在投出後 mark_every_delivered）。 */
+AOS_API bool every_due(const Layout &layout, const std::string &stem,
+                       std::int64_t every_ms, std::int64_t now_ms);
+AOS_API bool mark_every_delivered(const Layout &layout, const std::string &stem,
+                                  std::int64_t now_ms, std::string &error);
 
 /* ---- state：組 state.json 並原子寫出 ---- */
 
@@ -78,6 +88,7 @@ AOS_API bool write_state(const Layout &layout, const wire::State &state,
 struct TurnSummary {
     std::uint64_t turn = 0;          // 剛跑完的那一回合編號
     std::size_t count = 0;           // 執行了幾條；0＝idle 回合
+    std::size_t every_count = 0;     // 其中有幾條來自 every/
     std::uint64_t elapsed_ms = 0;
 };
 

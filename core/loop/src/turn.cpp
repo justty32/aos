@@ -60,7 +60,7 @@ bool run_turn(const Layout &layout, TurnSummary &summary,
 
     const std::uint64_t turn = read_turn(layout);
     summary.turn = turn;
-    auto insts = aggregate(layout, turn, error);
+    auto insts = aggregate(layout, turn, error, &summary.every_count);
     if (!error.empty()) return false;
     summary.count = insts.size();
 
