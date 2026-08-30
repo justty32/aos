@@ -56,6 +56,10 @@
 
 最後一則訊息＝ `reports/A.md` 的內容摘要（≤ 30 行）＋終局 STATUS（`DONE`／`BLOCKED`／`FAILED`）。
 
+## 收線（調度者 2026-08-30）
+
+調度者獨立重跑：ctest 7/7 綠；3×`sleep 1` 並行 1022 ms；自我投遞第二回合執行到；`state.json` 有 pid／status。commit `fecbdac`、`2e2b49c`。證據見 [reports/A.md](../reports/A.md)。
+
 ## 隊長裁決
 
 **完成於 2026-08-30，STATUS `DONE`，commit `fecbdac`。逐條證據與完整裁決列表見 [reports/A.md](reports/A.md)。**
