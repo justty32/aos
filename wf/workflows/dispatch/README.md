@@ -72,6 +72,7 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
+| proto-C-consolidate（[交接書](proto/proto-C-consolidate.md)） | `core/`（刪三舊＋loop／agent）、docs/subprojects.md、docs/README.md、AGENTS.md 一句、code-map | reference/、app/、其餘 wf/ | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫
 
