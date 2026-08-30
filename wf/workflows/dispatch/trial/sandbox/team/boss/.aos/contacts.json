@@ -1,0 +1,20 @@
+[
+  {
+    "folder": "../w1",
+    "name": "w1",
+    "note": "翻譯"
+  },
+  {
+    "folder": "../w2",
+    "name": "w2",
+    "note": "測試"
+  },
+  {
+    "folder": "../probe/empty",
+    "name": "empty"
+  },
+  {
+    "folder": "../nope",
+    "name": "ghost"
+  }
+]
