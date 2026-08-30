@@ -41,8 +41,10 @@ void append_note(const Paths &paths, std::uint64_t turn,
                  std::string_view text);
 
 void write_history(const Paths &paths, const std::vector<Message> &messages);
+std::uint64_t count_unread(const Paths &paths);
 void write_status(const Paths &paths, std::string_view status,
-                  std::string_view detail, std::uint64_t turn);
+                  std::string_view detail, std::uint64_t turn,
+                  std::string_view last_error = {});
 void write_pending(const Paths &paths, const Pending &pending);
 void write_engine(const Paths &paths, const Engine &engine);
 /* engine.json 的 priority 非 0 就用它；否則讀 AOS_LLM_PRIORITY；再否則 0。 */

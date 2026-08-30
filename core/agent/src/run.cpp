@@ -346,6 +346,9 @@ std::string state_text(const std::filesystem::path &folder,
            "  \"engine\": " +
            json_string(engine) +
            ",\n"
+           "  \"last_error\": " +
+           json_string(saved.last_error) +
+           ",\n"
            "  \"model\": " +
            json_string(model) +
            ",\n"

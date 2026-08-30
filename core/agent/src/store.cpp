@@ -166,12 +166,27 @@ void write_history(const Paths &paths, const std::vector<Message> &messages) {
     atomic_write(paths.history, root.dump(2) + "\n");
 }
 
+std::uint64_t count_unread(const Paths &paths) {
+    if (!std::filesystem::is_directory(paths.say)) return 0;
+
+    std::uint64_t unread = 0;
+    for (const auto &entry : std::filesystem::directory_iterator(paths.say)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".md") {
+            ++unread;
+        }
+    }
+    return unread;
+}
+
 void write_status(const Paths &paths, std::string_view status,
-                  std::string_view detail, std::uint64_t turn) {
-    const Json root = {{"status", status},
-                       {"detail", detail},
-                       {"updated_at", now_iso8601()},
-                       {"turn", turn}};
+                  std::string_view detail, std::uint64_t turn,
+                  std::string_view last_error) {
+    Json root = {{"status", status},
+                 {"detail", detail},
+                 {"updated_at", now_iso8601()},
+                 {"turn", turn},
+                 {"unread", count_unread(paths)}};
+    if (!last_error.empty()) root["last_error"] = last_error;
     atomic_write(paths.status, root.dump(2) + "\n");
 }
 
@@ -215,10 +230,23 @@ Status read_status(const std::filesystem::path &folder,
     if (!root.contains("turn") || !root["turn"].is_number_unsigned()) {
         throw std::runtime_error(paths.status.string() + " 缺少 turn");
     }
-    return {require_string(root, "status", paths.status),
-            require_string(root, "detail", paths.status),
-            require_string(root, "updated_at", paths.status),
-            root["turn"].get<std::uint64_t>()};
+    Status status;
+    status.status = require_string(root, "status", paths.status);
+    status.detail = require_string(root, "detail", paths.status);
+    status.updated_at = require_string(root, "updated_at", paths.status);
+    status.turn = root["turn"].get<std::uint64_t>();
+    if (root.contains("unread") && root["unread"].is_number_unsigned()) {
+        status.unread = root["unread"].get<std::uint64_t>();
+    }
+    if (root.contains("last_error") && root["last_error"].is_string()) {
+        status.last_error = root["last_error"].get<std::string>();
+    }
+    return status;
+}
+
+std::uint64_t count_unread(const std::filesystem::path &folder,
+                           std::string_view name) {
+    return detail::count_unread(detail::paths_for(folder, name));
 }
 
 std::string read_status_file(const std::filesystem::path &folder,

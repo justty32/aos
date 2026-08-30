@@ -54,6 +54,8 @@ struct Status {
     std::string detail;
     std::string updated_at;
     std::uint64_t turn = 0;
+    std::uint64_t unread = 0;
+    std::string last_error;
 };
 
 struct Engine {
@@ -113,6 +115,9 @@ AOS_API std::string read_log(const std::filesystem::path &folder,
 
 AOS_API Status read_status(const std::filesystem::path &folder,
                            std::string_view name);
+
+AOS_API std::uint64_t count_unread(const std::filesystem::path &folder,
+                                   std::string_view name);
 
 AOS_API std::string read_status_file(const std::filesystem::path &folder,
                                      std::string_view name);
