@@ -12,6 +12,8 @@ aos_add_subproject(agent
         src/init.cpp
     HEADERS
         include/aos/agent.hpp
+    PUBLIC_DEPS
+        aos::tool
     PRIVATE_DEPS
         aos::exec aos::llm aos::loop
 )

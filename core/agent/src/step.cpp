@@ -4,16 +4,19 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
-#include <charconv>
 #include <cctype>
+#include <charconv>
 #include <cstdlib>
 #include <stdexcept>
 
 namespace aos::agent {
 namespace {
 
+using Json = nlohmann::json;
+
 std::uint64_t parse_turn(std::string_view text) {
-    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back()))) {
+    while (!text.empty() &&
+           std::isspace(static_cast<unsigned char>(text.back()))) {
         text.remove_suffix(1);
     }
     std::uint64_t turn = 0;
@@ -28,18 +31,27 @@ std::uint64_t parse_turn(std::string_view text) {
 std::uint64_t current_turn(const detail::Paths &paths) {
     if (const char *turn = std::getenv("AOS_TURN")) return parse_turn(turn);
     const auto path = paths.aos / "turn";
-    return std::filesystem::exists(path) ? parse_turn(detail::read_text(path)) : 0;
+    return std::filesystem::exists(path) ? parse_turn(detail::read_text(path))
+                                         : 0;
 }
 
-std::string clip_utf8(std::string text) {
+struct ClippedText {
+    std::string text;
+    bool truncated = false;
+};
+
+ClippedText clip_utf8(std::string text) {
     std::size_t bytes = 0;
     std::size_t characters = 0;
     while (bytes < text.size() && characters < 4000) {
         const unsigned char first = static_cast<unsigned char>(text[bytes]);
         std::size_t width = 1;
-        if ((first & 0xe0U) == 0xc0U) width = 2;
-        else if ((first & 0xf0U) == 0xe0U) width = 3;
-        else if ((first & 0xf8U) == 0xf0U) width = 4;
+        if ((first & 0xe0U) == 0xc0U)
+            width = 2;
+        else if ((first & 0xf0U) == 0xe0U)
+            width = 3;
+        else if ((first & 0xf8U) == 0xf0U)
+            width = 4;
         if (bytes + width > text.size()) width = 1;
         for (std::size_t index = 1; index < width; ++index) {
             if ((static_cast<unsigned char>(text[bytes + index]) & 0xc0U) !=
@@ -51,11 +63,12 @@ std::string clip_utf8(std::string text) {
         bytes += width;
         ++characters;
     }
+    const bool truncated = bytes < text.size();
     text.resize(bytes);
-    return text;
+    return {std::move(text), truncated};
 }
 
-std::string clipped(const nlohmann::json &result, const char *key) {
+ClippedText clipped(const Json &result, const char *key) {
     if (!result.contains(key) || !result[key].is_string()) {
         throw std::runtime_error(std::string("工具結果缺少 ") + key);
     }
@@ -68,12 +81,128 @@ std::string one_line(std::string text) {
     return text;
 }
 
-std::string tool_result(const PendingCall &call,
-                        const nlohmann::json &result) {
+Json pending_args(const PendingCall &call) {
+    try {
+        return Json::parse(call.args_json);
+    } catch (const Json::exception &) {
+        return nullptr;
+    }
+}
+
+std::string execution_tool_result(const PendingCall &call, const Json &result) {
     if (!result.contains("exit")) throw std::runtime_error("工具結果缺少 exit");
-    return "$ " + call.tool + " " + call.args + "\nexit=" +
-           result["exit"].dump() + "\nstdout:\n" + clipped(result, "stdout") +
-           "\nstderr:\n" + clipped(result, "stderr");
+    if (!result.contains("signal")) {
+        throw std::runtime_error("工具結果缺少 signal");
+    }
+    const ClippedText stdout_text = clipped(result, "stdout");
+    const ClippedText stderr_text = clipped(result, "stderr");
+    Json result_body = {{"exit", result["exit"]},
+                        {"signal", result["signal"]},
+                        {"stdout", stdout_text.text},
+                        {"stderr", stderr_text.text}};
+    if (stdout_text.truncated || stderr_text.truncated) {
+        result_body["truncated"] = true;
+    }
+
+    const bool signaled = !result["signal"].is_null();
+    if (signaled && !result["signal"].is_number_integer()) {
+        throw std::runtime_error("工具結果的 signal 必須是數字或 null");
+    }
+    if (!signaled && !result["exit"].is_number_integer()) {
+        throw std::runtime_error("工具結果的 exit 必須是數字");
+    }
+    const int signal = signaled ? result["signal"].get<int>() : 0;
+    const int exit_code = !signaled ? result["exit"].get<int>() : 0;
+    const bool ok = !signaled && exit_code == 0;
+    Json content = {{"call_id", call.id},
+                    {"tool", call.tool},
+                    {"args", pending_args(call)},
+                    {"ok", ok},
+                    {"result", std::move(result_body)}};
+    if (!ok) {
+        std::string type;
+        std::string message;
+        bool retryable = false;
+        if (signal == 9) {
+            type = "timeout";
+            message = "工具逾時被殺";
+            retryable = true;
+        } else if (signaled) {
+            type = "signal";
+            message = "工具收到 signal " + std::to_string(signal);
+        } else if (exit_code == 126) {
+            type = "not_executable";
+            message = "工具不可執行";
+        } else if (exit_code == 127) {
+            type = "not_found";
+            message = "找不到工具程式";
+        } else {
+            type = "exit_nonzero";
+            message = "工具以 exit " + std::to_string(exit_code) + " 結束";
+        }
+        content["error"] = {
+            {"type", type}, {"message", message}, {"retryable", retryable}};
+    }
+    return content.dump();
+}
+
+std::string_view trim(std::string_view text) {
+    while (!text.empty() &&
+           std::isspace(static_cast<unsigned char>(text.front()))) {
+        text.remove_prefix(1);
+    }
+    while (!text.empty() &&
+           std::isspace(static_cast<unsigned char>(text.back()))) {
+        text.remove_suffix(1);
+    }
+    return text;
+}
+
+Json original_call_args(std::string_view reply) {
+    std::vector<std::string_view> lines;
+    while (true) {
+        const std::size_t newline = reply.find('\n');
+        lines.push_back(reply.substr(0, newline));
+        if (newline == std::string_view::npos) break;
+        reply.remove_prefix(newline + 1);
+    }
+    for (auto line = lines.rbegin(); line != lines.rend(); ++line) {
+        const std::string_view candidate = trim(*line);
+        if (candidate.size() < 2 || candidate.front() != '{' ||
+            candidate.back() != '}') {
+            continue;
+        }
+        try {
+            const Json value = Json::parse(candidate);
+            if (!value.is_object() || !value.contains("tool") ||
+                !value["tool"].is_string()) {
+                continue;
+            }
+            return value.contains("args") ? value["args"] : Json(nullptr);
+        } catch (const Json::exception &) {
+        }
+    }
+    return nullptr;
+}
+
+std::string call_error_result(std::string_view id, const ToolCallError &error,
+                              const Json &args) {
+    const Json content = {{"call_id", id},
+                          {"tool", error.tool},
+                          {"args", args},
+                          {"ok", false},
+                          {"result", nullptr},
+                          {"error",
+                           {{"type", error.type},
+                            {"message", error.message},
+                            {"retryable", false}}}};
+    return content.dump();
+}
+
+std::string call_args_json(const ToolCall &call) {
+    if (call.shape == "list") return Json(call.args).dump();
+    if (call.shape == "string") return Json(call.args_text).dump();
+    return "null";
 }
 
 std::string complete_locally(const std::vector<Message> &messages) {
@@ -103,11 +232,11 @@ int step(const std::filesystem::path &folder, std::string_view name,
         }
 
         std::vector<Message> history = read_history(paths->folder, name);
+        bool received_tools = !history.empty() && history.back().role == "tool";
         Pending pending = read_pending(paths->folder, name);
-        bool received_tools = false;
         if (!pending.calls.empty()) {
-            const auto out = paths->aos / "batch" /
-                             std::to_string(pending.turn + 1) / "out";
+            const auto out =
+                paths->aos / "batch" / std::to_string(pending.turn + 1) / "out";
             const bool ready = std::all_of(
                 pending.calls.begin(), pending.calls.end(),
                 [&](const PendingCall &call) {
@@ -118,9 +247,9 @@ int step(const std::filesystem::path &folder, std::string_view name,
                 return 0;
             }
             for (const PendingCall &call : pending.calls) {
-                const auto result = nlohmann::json::parse(
-                    detail::read_text(out / (call.id + ".json")));
-                const std::string content = tool_result(call, result);
+                const Json result =
+                    Json::parse(detail::read_text(out / (call.id + ".json")));
+                const std::string content = execution_tool_result(call, result);
                 history.push_back({"tool", content});
                 detail::append_log(*paths, turn, "tool", content);
             }
@@ -131,7 +260,8 @@ int step(const std::filesystem::path &folder, std::string_view name,
 
         bool received_user = false;
         std::vector<std::filesystem::path> messages;
-        for (const auto &entry : std::filesystem::directory_iterator(paths->say)) {
+        for (const auto &entry :
+             std::filesystem::directory_iterator(paths->say)) {
             if (entry.is_regular_file() && entry.path().extension() == ".md") {
                 messages.push_back(entry.path());
             }
@@ -149,40 +279,52 @@ int step(const std::filesystem::path &folder, std::string_view name,
         std::string next_status = "idle";
         std::string detail_text = "等待訊息";
         if (received_user || received_tools) {
-            const std::vector<Tool> tools = read_tools(paths->folder, name);
+            const std::vector<aos::tool::Spec> tools =
+                read_tools(paths->folder, name);
             std::vector<Message> request;
             request.push_back(
                 {"system", detail::system_prompt(*paths, name, turn, tools)});
             request.insert(request.end(), history.begin(), history.end());
-            const std::string reply = completion ? completion(request)
-                                                 : complete_locally(request);
+            const std::string reply =
+                completion ? completion(request) : complete_locally(request);
             history.push_back({"assistant", reply});
             detail::write_history(*paths, history);
             detail::append_log(*paths, turn, "assistant", reply);
 
-            std::string unknown;
-            const auto call = extract_tool_call(reply, tools, &unknown);
-            if (call) {
-                const auto tool = std::find_if(
-                    tools.begin(), tools.end(), [&](const Tool &candidate) {
-                        return candidate.name == call->tool;
-                    });
-                const std::string id = "agent-" + std::string(name) +
-                                       "-tool-" + std::to_string(turn) + "-0";
+            const ToolCallResult extracted = extract_tool_call(reply, tools);
+            const std::string id = "agent-" + std::string(name) + "-tool-" +
+                                   std::to_string(turn) + "-0";
+            if (extracted.call) {
+                const auto spec =
+                    std::find_if(tools.begin(), tools.end(),
+                                 [&](const aos::tool::Spec &item) {
+                                     return item.name == extracted.call->tool;
+                                 });
+                if (spec == tools.end()) {
+                    throw std::runtime_error("已驗證的工具呼叫找不到登記");
+                }
                 const std::vector<std::string> argv =
-                    expand_argv(tool->argv, call->args);
-                detail::deliver(*paths, id, argv, true);
-                detail::write_pending(
-                    *paths, {turn, {{id, call->tool, call->args}}});
-                detail::append_note(
-                    *paths, "> 已投遞工具 " + id + ": " +
-                                nlohmann::json(argv).dump() +
-                                "，等下下回合的結果");
+                    expand_argv(*spec, *extracted.call);
+                detail::deliver(
+                    *paths, id, argv, spec->cwd.empty() ? "." : spec->cwd,
+                    spec->timeout_ms == 0 ? 30000 : spec->timeout_ms);
+                detail::write_pending(*paths,
+                                      {turn,
+                                       {{id, extracted.call->tool,
+                                         call_args_json(*extracted.call)}}});
+                detail::append_note(*paths, "> 已投遞工具 " + id + ": " +
+                                                Json(argv).dump() +
+                                                "，等下下回合的結果");
                 next_status = "tool";
                 detail_text = "等工具結果";
-            } else if (!unknown.empty()) {
-                detail::append_note(*paths,
-                                    "> 未知的工具 " + unknown + "，已忽略");
+            } else if (extracted.error) {
+                const std::string content = call_error_result(
+                    id, *extracted.error, original_call_args(reply));
+                history.push_back({"tool", content});
+                detail::write_history(*paths, history);
+                detail::append_log(*paths, turn, "tool", content);
+                detail::append_note(*paths, "> 工具呼叫錯誤：" +
+                                                extracted.error->message);
             }
         }
 

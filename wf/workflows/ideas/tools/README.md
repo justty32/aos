@@ -50,3 +50,14 @@
 | 術語 | `nondeterministic` → **可預期性 `predictability`**：結果是否符合人類預期 |
 
 實作交給 [dispatch/proto/proto-U-tools-impl](../../dispatch/proto/proto-U-tools-impl.md)。
+
+## 實作註記（2026-08-30，隊 U）
+
+12 條裁決已落地成程式碼，見 [dispatch/proto/reports/U](../../dispatch/proto/reports/U.md)。與規劃檔不同之處：
+
+| 規劃檔寫的 | 實際做的 | 為什麼 |
+|---|---|---|
+| `registry.md` 範例用 `exec`／`model`／`meta` 三層 | 登記項是**扁平** JSON（`name`／`argv`／`description`／`args`…同一層） | 裁決 3「欄位名照 ai_core 九軸原樣」壓過 F3 的分層 |
+| `contacts.md` 用 `{"contacts":[…]}` | `.aos/contacts.json` 頂層就是**陣列** | 交接書寫 `[{"name","folder"}]`，交接書是契約 |
+| `aos tool` 併進 `core/agent` | 獨立成核心小專案 `core/tool`（`aos tool`／`aos contact`） | 登記表是**世界層**的東西，不該住在 agent 裡；agent 公開相依它 |
+| `registry.md` 建議加 `probe` 子命令 | 只做 `add`／`ls`／`rm` | 最小原型；`add` 本來就會探測並印結果 |

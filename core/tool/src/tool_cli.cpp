@@ -1,0 +1,269 @@
+#include <aos/tool.hpp>
+
+#include "cli_common.hpp"
+
+#include <charconv>
+#include <cstdio>
+#include <exception>
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace {
+
+using aos::tool::Probe;
+using aos::tool::Spec;
+
+struct AddOptions {
+    std::filesystem::path folder;
+    std::optional<std::string> description;
+    std::optional<std::string> args;
+    std::optional<std::string> stdin_mode;
+    std::optional<std::string> cwd;
+    std::optional<std::uint64_t> timeout_ms;
+    std::optional<std::string> predictability;
+    std::optional<std::string> guarantee;
+    std::optional<std::string> lifecycle;
+    std::optional<std::string> state;
+    std::optional<std::string> stage;
+    std::optional<bool> network;
+    bool replace = false;
+    bool no_probe = false;
+    bool probe_metadata = false;
+};
+
+int usage(const char *program) {
+    std::fprintf(
+        stderr,
+        "usage: %s add <name> [選項...] -- <argv...>\n"
+        "       %s ls [--folder F] [--json]\n"
+        "       %s rm <name> [--folder F]\n",
+        program, program, program);
+    return 2;
+}
+
+bool parse_uint64(std::string_view text, std::uint64_t &value) {
+    if (text.empty()) return false;
+    const char *begin = text.data();
+    const char *end = begin + text.size();
+    const auto parsed = std::from_chars(begin, end, value);
+    return parsed.ec == std::errc{} && parsed.ptr == end;
+}
+
+bool parse_add_options(const std::vector<std::string> &words,
+                       std::size_t &index, AddOptions &options) {
+    while (index < words.size() && words[index] != "--") {
+        const std::string &option = words[index++];
+        if (option == "--replace") options.replace = true;
+        else if (option == "--no-probe") options.no_probe = true;
+        else if (option == "--network") options.network = true;
+        else if (option == "--no-network") options.network = false;
+        else {
+            if (index >= words.size()) return false;
+            const std::string value = words[index++];
+            if (option == "--folder") options.folder = value;
+            else if (option == "--description") options.description = value;
+            else if (option == "--args" &&
+                     (value == "list" || value == "string" || value == "none")) {
+                options.args = value;
+            } else if (option == "--stdin" &&
+                       (value == "none" || value == "text")) {
+                options.stdin_mode = value;
+            } else if (option == "--cwd") options.cwd = value;
+            else if (option == "--timeout-ms") {
+                std::uint64_t timeout = 0;
+                if (!parse_uint64(value, timeout)) return false;
+                options.timeout_ms = timeout;
+            } else if (option == "--predictability" &&
+                       (value == "high" || value == "medium" || value == "low")) {
+                options.predictability = value;
+            } else if (option == "--guarantee") options.guarantee = value;
+            else if (option == "--lifecycle") options.lifecycle = value;
+            else if (option == "--state") options.state = value;
+            else if (option == "--stage") options.stage = value;
+            else if (option == "--probe" && value == "metadata") {
+                options.probe_metadata = true;
+            } else {
+                return false;
+            }
+        }
+    }
+    if (index >= words.size() || words[index] != "--") return false;
+    ++index;
+    return true;
+}
+
+void merge_probe(Spec &spec, const Probe &probe) {
+    if (!probe.ok) return;
+    spec.description = probe.description;
+    spec.source = probe.source;
+    if (probe.source != "metainfo") return;
+    spec.args = probe.spec.args;
+    spec.stdin_mode = probe.spec.stdin_mode;
+    spec.cwd = probe.spec.cwd;
+    spec.timeout_ms = probe.spec.timeout_ms;
+    spec.lifecycle = probe.spec.lifecycle;
+    spec.state = probe.spec.state;
+    spec.guarantee = probe.spec.guarantee;
+    spec.interruptible = probe.spec.interruptible;
+    spec.predictability = probe.spec.predictability;
+    spec.stage = probe.spec.stage;
+    spec.network = probe.spec.network;
+    spec.network_declared = probe.spec.network_declared;
+    spec.env_allow = probe.spec.env_allow;
+}
+
+void merge_cli(Spec &spec, const AddOptions &options) {
+    if (options.description) spec.description = *options.description;
+    if (options.args) spec.args = *options.args;
+    if (options.stdin_mode) spec.stdin_mode = *options.stdin_mode;
+    if (options.cwd) spec.cwd = *options.cwd;
+    if (options.timeout_ms) spec.timeout_ms = *options.timeout_ms;
+    if (options.predictability) spec.predictability = *options.predictability;
+    if (options.guarantee) spec.guarantee = *options.guarantee;
+    if (options.lifecycle) spec.lifecycle = *options.lifecycle;
+    if (options.state) spec.state = *options.state;
+    if (options.stage) spec.stage = *options.stage;
+    if (options.network) {
+        spec.network = *options.network;
+        spec.network_declared = true;
+    }
+    if (options.description) spec.source = "manual";
+}
+
+int add(const char *program, const std::vector<std::string> &words) {
+    if (words.size() < 3) return usage(program);
+    const std::string name = words[1];
+    aos::tool::validate_tool_name(name);
+    std::size_t index = 2;
+    AddOptions options;
+    if (!parse_add_options(words, index, options) || index == words.size()) {
+        return usage(program);
+    }
+    std::vector<std::string> command(words.begin() +
+                                         static_cast<std::ptrdiff_t>(index),
+                                     words.end());
+    const std::filesystem::path folder =
+        aos::tool::resolve_folder(options.folder);
+    if (std::filesystem::exists(aos::tool::spec_path(folder, name)) &&
+        !options.replace) {
+        std::fprintf(stderr,
+                     "aos tool: %s 已經登記過了；要覆寫請加 --replace\n",
+                     name.c_str());
+        return 1;
+    }
+
+    Probe probe;
+    if (!options.no_probe) {
+        probe = aos::tool::probe_metainfo(command);
+        if (!probe.ok && options.probe_metadata) {
+            probe = aos::tool::probe_metainfo(command, "--metadata");
+        }
+    }
+
+    Spec spec;
+    spec.name = name;
+    spec.argv = std::move(command);
+    merge_probe(spec, probe);
+    merge_cli(spec, options);
+    if (spec.description.empty()) {
+        std::fprintf(stderr,
+                     "aos tool: 探測不到表述，請用 --description 手填%s%s\n",
+                     probe.detail.empty() ? "" : "；",
+                     probe.detail.c_str());
+        return 1;
+    }
+    aos::tool::write_spec(folder, spec);
+    std::printf("已登記 %s -> %s\n", name.c_str(),
+                aos::tool::spec_path(folder, name).string().c_str());
+    return 0;
+}
+
+int list(const char *program, const std::vector<std::string> &words) {
+    std::filesystem::path folder;
+    bool json = false;
+    for (std::size_t index = 1; index < words.size(); ++index) {
+        if (words[index] == "--json") json = true;
+        else if (words[index] == "--folder" && index + 1 < words.size()) {
+            folder = words[++index];
+        } else {
+            return usage(program);
+        }
+    }
+    const std::vector<Spec> registry = aos::tool::read_registry(folder);
+    if (json) {
+        std::fputs("[", stdout);
+        if (!registry.empty()) std::fputc('\n', stdout);
+        for (std::size_t index = 0; index < registry.size(); ++index) {
+            std::string item = aos::tool::spec_to_json(registry[index]);
+            if (!item.empty() && item.back() == '\n') item.pop_back();
+            item = aos::tool::cli::indent(item, 2);
+            std::fwrite(item.data(), 1, item.size(), stdout);
+            std::fputs(index + 1 == registry.size() ? "\n" : ",\n", stdout);
+        }
+        std::puts("]");
+        return 0;
+    }
+    if (registry.empty()) {
+        std::puts("（沒有登記任何工具）");
+        return 0;
+    }
+    std::vector<std::vector<std::string>> rows;
+    for (const Spec &spec : registry) {
+        rows.push_back({spec.name, spec.args, spec.stdin_mode,
+                        aos::tool::cli::join(spec.argv),
+                        aos::tool::cli::truncate_utf8(spec.description, 60)});
+    }
+    aos::tool::cli::print_table(
+        {"NAME", "ARGS", "STDIN", "ARGV", "DESCRIPTION"}, rows);
+    return 0;
+}
+
+int remove(const char *program, const std::vector<std::string> &words) {
+    if (words.size() < 2) return usage(program);
+    const std::string name = words[1];
+    std::filesystem::path folder;
+    std::size_t index = 2;
+    while (index < words.size()) {
+        if (words[index] != "--folder" || index + 1 >= words.size()) {
+            return usage(program);
+        }
+        folder = words[index + 1];
+        index += 2;
+    }
+    if (!aos::tool::remove_spec(folder, name)) {
+        std::fprintf(stderr, "aos tool: 沒有登記 %s\n", name.c_str());
+        return 1;
+    }
+    std::printf("已移除 %s\n", name.c_str());
+    return 0;
+}
+
+int dispatch(int argc, char *argv[]) {
+    const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
+                              ? argv[0]
+                              : "aos tool";
+    std::vector<std::string> words;
+    for (int index = 1; index < argc; ++index) words.emplace_back(argv[index]);
+    if (words.empty()) return usage(program);
+    if (words[0] == "add") return add(program, words);
+    if (words[0] == "ls") return list(program, words);
+    if (words[0] == "rm") return remove(program, words);
+    return usage(program);
+}
+
+}  // namespace
+
+extern "C" int aos_tool_cli_main(int argc, char *argv[]) {
+    try {
+        return dispatch(argc, argv);
+    } catch (const std::exception &error) {
+        const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
+                                  ? argv[0]
+                                  : "aos tool";
+        std::fprintf(stderr, "%s: %s\n", program, error.what());
+        return 1;
+    }
+}

@@ -1,0 +1,13 @@
+{
+  "args": "list",
+  "argv": [
+    "aos"
+  ],
+  "description": "執行 aos 子命令（run／deliver／say／tool／contact…）；args 第一個 token 是子命令。",
+  "name": "aos",
+  "predictability": "medium",
+  "source": "manual",
+  "state": "stateful_external",
+  "stdin": "none",
+  "timeout_ms": 60000
+}
