@@ -42,4 +42,15 @@
 
 ## 隊長裁決
 
-（隊長追加）
+完整理由見 [reports/V](reports/V.md)。
+
+| # | 裁決 |
+|---|---|
+| 1 | **不做 `aos agent init --priority N`**——需要動 `run.cpp`／`agent.hpp`／`engine.cpp`／`step.cpp` 四個檔，超出硬性限制允許的 `core/agent` 範圍，且 5 條驗收都不需要它。priority 全落在 `core/llm`（`--priority` 旗標＋`AOS_LLM_PRIORITY` 環境變數），pi 那條讀同一個環境變數 |
+| 2 | pi 的 CPU 名＝`engine.json` 的 `provider`，空的話 `deepseek` |
+| 3 | pi 取槽放在**吃掉 `say/*.md` 之前**——逾時退回時訊息才不會消失，下回合 `every` 自然重試 |
+| 4 | 世界層的 `wait_ms` 直接覆蓋（不套「只能往下」）——它不是資源上限 |
+| 5 | 沒設定＝不限（依 §3）；裁決 9 的 lmstudio 1／deepseek 3 寫進 README 當建議值 |
+| 6 | 等待迴圈「前 N 名都可搶槽」而非「只有隊首搶」——一樣是嚴格優先序，但 N 個槽能同一輪填滿 |
+| 7 | `core/llm` 自己實作 `resolve_world()`，不為了找 `.aos/` 引入 `aos::loop` 相依 |
+
