@@ -36,4 +36,4 @@
 >
 > 只想看某一輪的坑與現場原文，直接進 [`rounds/round-N/pits.md`](rounds/round-2/pits.md)——那是書記紀錄裡份量最重的一塊。
 
-> 原本是單檔 `core-scope.md`，三輪跑完膨脹到 115 KB，照 [DEV-GUIDE](../../../../DEV-GUIDE.md) 的「膨脹即拆」按用途拆成本資料夾；四個角色檔隨後又各自超標，再按輪次拆一層；書記與資料員的輪次檔仍超標，再按段落職責拆第三層。舊路徑 `plain.md`、`rounds.md`、`verdicts.md`、`packs.md`，以及 `rounds/round-N.md`、`packs/after-round-N.md` 都仍在，只留導航。
+> 原本是單檔 `core-scope.md`，三輪跑完膨脹到 115 KB，照 [DEV-GUIDE](../../../../STRUCTURE.md) 的「膨脹即拆」按用途拆成本資料夾；四個角色檔隨後又各自超標，再按輪次拆一層；書記與資料員的輪次檔仍超標，再按段落職責拆第三層。舊路徑 `plain.md`、`rounds.md`、`verdicts.md`、`packs.md`，以及 `rounds/round-N.md`、`packs/after-round-N.md` 都仍在，只留導航。

@@ -12,4 +12,4 @@
 | [兄弟專案裡可以抄的](from-siblings.md) | 〈4. 兄弟專案裡可以抄的〉：agent-machine 的 p0-function-python 那組 receipt／terminal 實作與測例。 | 要找可運行的程式樣本，而不是文字契約。 |
 | [還是查不到的](not-found.md) | 〈5. 還是查不到的〉：repo 與兄弟專案都翻過、確認沒有現成資料的那幾條。 | 想確認某條是真的沒人做過，不用再查。 |
 
-> 原本是單檔 `after-round-2.md`（11 KB），照 [DEV-GUIDE](../../../../../../DEV-GUIDE.md) 的「膨脹即拆」按資料員的分塊職責拆成本資料夾。舊路徑 `after-round-2.md` 仍在，只留導航。
+> 原本是單檔 `after-round-2.md`（11 KB），照 [DEV-GUIDE](../../../../../../STRUCTURE.md) 的「膨脹即拆」按資料員的分塊職責拆成本資料夾。舊路徑 `after-round-2.md` 仍在，只留導航。

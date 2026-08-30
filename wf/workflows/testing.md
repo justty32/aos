@@ -1,23 +1,38 @@
-# testing — 跑測試（單檔工作流）
+# testing — 跑測試／驗證（單檔工作流）
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-> 〔模板說明〕本檔是「單檔工作流」的範例：一個 `.md` 同時是入口與內容。膨脹了就照 [DEV-GUIDE](../DEV-GUIDE.md) 升級成資料夾型。
+改完怎麼確認沒壞：有哪些驗證、各自的指令、哪些我自己跑得了、哪些得交給使用者。**一律從 repo 根目錄跑**，子專案不可單獨 configure。
 
-**一律從 repo 根目錄跑**，子專案不可單獨 configure。
+**何時用**：改完程式要驗（鐵律 1）、使用者說「跑測試」、重構前要記基準。
+**何時不用**：環境還沒裝好、不知道指令哪來 → [dev-env](dev-env.md)；驗證紅了要查成因 → [investigation](investigation.md)。
 
-## 指令
+## Done when
 
-- **設定**（第一次或 `CMakeLists.txt`／`vcpkg.json` 變動後）：`cmake --preset default`
-- **快速驗證（Claude 自己跑、鐵律要求的那套）**：`cmake --build --preset default && ctest --preset default`
-- **只跑某個小專案的測試**：`ctest --preset default -R '^aos_inst'`（或該小專案登記的測試名稱前綴）
-- **完整驗證**：同上的 `ctest --preset default`——目前沒有額外分出「快速／完整」兩套，測試量還小
-- **動過 `modules/` 之後**：再確認關掉擴充仍然建得起來
-  `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod`
+- 下表標「改完必跑」的指令回傳 0，且 ctest **全綠**。
+- 「誰跑」是使用者的列，已在 [WAIT_USER](../WAIT_USER.md) 各留一行（寫明跑什麼、什麼算過）。
+
+## 驗證表
+
+| 驗證 | 指令 | 誰跑 |
+|------|------|------|
+| 設定（第一次、或 `CMakeLists.txt`／`vcpkg.json` 變動後）| `cmake --preset default` | agent |
+| **快速驗證（改完必跑）** | `cmake --build --preset default && ctest --preset default` | agent |
+| 只跑某個小專案的測試 | `ctest --preset default -R '^aos_inst'`（或該小專案登記的測試名稱前綴）| agent |
+| 完整驗證（commit 前）| 同快速驗證——目前沒有額外分出兩套，測試量還小 | agent |
+| 動過 `modules/` 之後 | `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod`（確認關掉擴充仍建得起來）| agent |
+| 要真模型、外部 CLI agent、跨機的（例：T5 agent loop 實測）| 照該實驗檔的步驟 | 使用者 → [WAIT_USER](../WAIT_USER.md)；本機 LM Studio 跑得動的部分我自己跑 |
+
+「誰跑」只有兩種值：**agent**（本機跑得動）、**使用者 → WAIT_USER**（要實機、外部服務、帳號、付費、目視）。判不準就當後者。
 
 ## 測試分類
 
-目前沒有需要特殊環境（本機資產、外部服務、實機）才能跑的測試，全部測試都是離線、單機可跑：
+四類對照本專案的實況：
+
+- `fast`：`aos_*_tests` 全部——離線、單機、不需特殊環境；每次小改都跑。
+- `contract`：跨 process 邊界的——exec 層真 `fork`/`exec` 的測試、C ABI 往返 `aos_inst_capi_tests`；已含在同一個 ctest 裡，改 producer／consumer／協定時特別盯。
+- `full`：`ctest --preset default` 整套；commit 前或大改後跑。
+- `external`：真 LLM、外部 CLI agent（codex／claude）、跨機（WSL）——agent 代跑不了的記到 [WAIT_USER](../WAIT_USER.md)。
 
 | ctest 目標 | 小專案 | 涵蓋 |
 |-----------|--------|------|
@@ -27,3 +42,16 @@
 | `aos_llms_tests` | `core/llms/` | URL／key／圖片、Params、toolset／presets、能力三態與快取、非串流與串流 Reply／history／usage、SSE 任意切割、交錯 tool-call 碎片、串流收尾／錯誤契約與 CLI 語法；HTTP 全部用假 transport，串流餵罐頭 SSE，完全離線 |
 
 日後新增小專案（不分 `core/` 或 `modules/`）照同一個命名慣例掛自己的 `aos_<專案>_tests`，跑不了的環境依賴驗證才記 [WAIT_USER](../WAIT_USER.md)。
+
+## 綠燈不等於有檢查
+
+**一道檢查通過，可能是因為它根本沒在檢查。** 本專案真撞過：`.runi` 看起來像鎖但不互斥（[gotchas](common/gotchas.md)）、外部消費測試沒 `env -u VCPKG_ROOT` 等於白測、測試連 OBJECT library 繞過了 `AOS_API` 可見度。
+
+**規則：新增或修改一道檢查時，要證明它能變紅。** 先餵一個**應該被擋**的輸入，確認 exit ≠ 0；再餵正確的輸入，確認 exit = 0。**沒做過這個雙向驗證的綠燈不算證據。**
+
+兩個推論：檢查器的**涵蓋範圍要跟著結構走**——搬走目錄、拆出小專案之後，回頭確認 ctest 與 `wf/tools/wf-lint.sh` 還看得到那些地方（見 [refactor/moving-things](refactor/moving-things.md)）；**靜態全過不等於實際跑起來是對的**，真模型、外部 CLI 的行為只有實跑看得出，這類記到 [WAIT_USER](../WAIT_USER.md)，不要自己宣稱通過。
+
+## 交接
+
+- 綠燈後回 [feature-dev](feature-dev/README.md) 接完剩下的步驟（code map → 文檔 → commit）。
+- 同一個紅燈第二次撞到 → [common/gotchas](common/gotchas.md)。
