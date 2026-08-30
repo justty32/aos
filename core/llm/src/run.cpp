@@ -9,15 +9,16 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
 
-int usage(const char *program) {
-    std::fprintf(stderr,
+int usage(const char *program, FILE *stream = stderr, int result = 2) {
+    std::fprintf(stream,
                  "usage: %s [--system TEXT] [--messages FILE] [--url U] "
                  "[--model M] [--timeout-ms N] [--engine CPU] "
-                 "[--priority N] [--slots]\n"
+                 "[--priority N] [--slots] [-h|--help]\n"
                  "\n"
                  "  stdin             整段作為 user prompt\n"
                  "  --messages FILE   直接送出檔案內的 OpenAI messages 陣列\n"
@@ -26,9 +27,10 @@ int usage(const char *program) {
                  "  --timeout-ms N    預設 120000\n"
                  "  --engine CPU      預設 $AOS_LLM_ENGINE 或 lmstudio\n"
                  "  --priority N      預設 $AOS_LLM_PRIORITY 或 0\n"
-                 "  --slots           顯示各 CPU 的槽狀態，不呼叫端點\n",
+                 "  --slots           顯示各 CPU 的槽狀態，不呼叫端點\n"
+                 "  -h, --help        顯示這份用法\n",
                  program);
-    return 2;
+    return result;
 }
 
 std::string read_stream(std::istream &input) {
@@ -88,6 +90,14 @@ extern "C" int aos_llm_cli_main(int argc, char *argv[]) {
         ? argv[0] : "aos llm";
     if (argc < 1 || argv == nullptr) return usage(program);
 
+    for (int index = 1; index < argc; ++index) {
+        if (argv[index] != nullptr &&
+            (std::string_view(argv[index]) == "--help" ||
+             std::string_view(argv[index]) == "-h")) {
+            return usage(program, stdout, 0);
+        }
+    }
+
     try {
         std::vector<std::string> arguments;
         arguments.reserve(static_cast<std::size_t>(argc - 1));
@@ -107,10 +117,20 @@ extern "C" int aos_llm_cli_main(int argc, char *argv[]) {
         aos::llm::Slot slot =
             aos::llm::acquire(command.engine, command.priority);
         (void)slot;
-        const std::string reply =
-            aos::llm::complete(messages, command.completion);
+        std::string served_model;
+        const std::string reply = aos::llm::complete(
+            messages, command.completion, &served_model);
         if (!reply.empty()) std::fwrite(reply.data(), 1, reply.size(), stdout);
         if (reply.empty() || reply.back() != '\n') std::fputc('\n', stdout);
+        if (!served_model.empty() &&
+            served_model != command.completion.model) {
+            std::fflush(stdout);
+            std::fprintf(
+                stderr,
+                "aos llm: 端點回答的是 %s，不是你要的 %s——這個端點沒有那顆模型（用 aos llm --slots 或端點的 /v1/models 確認）\n",
+                served_model.c_str(), command.completion.model.c_str());
+            return 1;
+        }
         return 0;
     } catch (const std::invalid_argument &) {
         return usage(program);

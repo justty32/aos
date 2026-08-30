@@ -7,21 +7,30 @@
 #include <exception>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
 
 using aos::tool::Contact;
 
-int usage(const char *program) {
+int usage(const char *program, FILE *stream = stderr, int result = 2) {
     std::fprintf(
-        stderr,
+        stream,
         "usage: %s add <name> <folder> [--agent A] [--note TEXT] "
         "[--folder-root F]\n"
         "       %s ls [--folder-root F] [--json]\n"
-        "       %s rm <name> [--folder-root F]\n",
+        "       %s rm <name> [--folder-root F]\n"
+        "\n"
+        "  add                    新增或更新聯絡人\n"
+        "    --agent A            指定對方 agent 名稱\n"
+        "    --note TEXT          加上備註\n"
+        "    --folder-root F      指定通訊錄所在世界\n"
+        "  ls                     列出聯絡人；可加 --folder-root F、--json\n"
+        "  rm                     移除聯絡人；可加 --folder-root F\n"
+        "  -h, --help             顯示這份用法\n",
         program, program, program);
-    return 2;
+    return result;
 }
 
 int add(const char *program, const std::vector<std::string> &words) {
@@ -130,8 +139,18 @@ int dispatch(int argc, char *argv[]) {
     const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                               ? argv[0]
                               : "aos contact";
+    for (int index = 1; argv != nullptr && index < argc; ++index) {
+        if (argv[index] != nullptr &&
+            (std::string_view(argv[index]) == "--help" ||
+             std::string_view(argv[index]) == "-h")) {
+            return usage(program, stdout, 0);
+        }
+    }
     std::vector<std::string> words;
-    for (int index = 1; index < argc; ++index) words.emplace_back(argv[index]);
+    for (int index = 1; index < argc; ++index) {
+        if (argv == nullptr || argv[index] == nullptr) return usage(program);
+        words.emplace_back(argv[index]);
+    }
     if (words.empty()) return usage(program);
     if (words[0] == "add") return add(program, words);
     if (words[0] == "ls") return list(program, words);
