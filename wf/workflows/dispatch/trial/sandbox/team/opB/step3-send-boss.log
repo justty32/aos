@@ -1,0 +1,3 @@
+send_started_ns=1788087806521516615 from=w1 to=boss
+已送給 boss（/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3827d89ce88223e5/wf/workflows/dispatch/trial/sandbox/team/boss/boss）
+send_finished_ns=1788087806523778537 exit=0

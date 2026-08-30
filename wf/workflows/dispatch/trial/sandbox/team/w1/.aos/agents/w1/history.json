@@ -1,0 +1,24 @@
+{
+  "messages": [
+    {
+      "content": "請把 README 翻成英文",
+      "role": "user"
+    },
+    {
+      "content": "from-deep",
+      "role": "user"
+    },
+    {
+      "content": "把 README.md 翻成英文",
+      "role": "user"
+    },
+    {
+      "content": "短問題：2+2 是多少？",
+      "role": "user"
+    },
+    {
+      "content": "2+2 = 4",
+      "role": "assistant"
+    }
+  ]
+}
