@@ -10,6 +10,7 @@ aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命
 | [loop/](loop/) | `aos::loop` | `aos run`／`aos deliver` | 匯聚並執行一個資料夾的一回合，落檔後更新 `state.json` |
 | [llm/](llm/) | `aos::llm` | `aos llm` | 從 stdin 或 messages JSON 呼叫 OpenAI 相容端點並回傳文字 |
 | [agent/](agent/) | `aos::agent` | `aos agent` | 建立並推進會自我投遞、能與 LLM 及工具往返的資料夾 agent |
+| [tick/](tick/) | `aos::tick` | `aos tick`／`aos heartbeat`／`aos routine`／`aos schedule` | 掃 heartbeat 兩張清單，把到期的投進 inbox 或交給 agent，更新清單並寫 log |
 
 `aos::core` 這個傘狀 target 一次連上本目錄的全部。
 
