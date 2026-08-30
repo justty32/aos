@@ -33,6 +33,16 @@ long parse_timeout(const std::string &text) {
     return value;
 }
 
+int parse_priority(const std::string &text) {
+    int value = 0;
+    const auto [end, error] =
+        std::from_chars(text.data(), text.data() + text.size(), value);
+    if (error != std::errc() || end != text.data() + text.size()) {
+        throw std::invalid_argument("--priority 必須是整數");
+    }
+    return value;
+}
+
 std::string completion_url(std::string base) {
     while (!base.empty() && base.back() == '/') base.pop_back();
     if (base.empty()) throw std::runtime_error("LLM endpoint 不可為空");
@@ -79,6 +89,15 @@ Options options_from_env() {
 CommandOptions parse_arguments(const std::vector<std::string> &arguments) {
     CommandOptions command;
     command.completion = options_from_env();
+    command.engine = env_or_default("AOS_LLM_ENGINE", command.engine);
+    if (const char *priority = std::getenv("AOS_LLM_PRIORITY");
+        priority != nullptr && priority[0] != '\0') {
+        try {
+            command.priority = parse_priority(priority);
+        } catch (const std::invalid_argument &) {
+            command.priority = 0;
+        }
+    }
 
     for (std::size_t index = 0; index < arguments.size(); ++index) {
         const std::string &argument = arguments[index];
@@ -104,11 +123,20 @@ CommandOptions parse_arguments(const std::vector<std::string> &arguments) {
         } else if (argument == "--timeout-ms") {
             command.completion.timeout_ms =
                 parse_timeout(take_value("--timeout-ms"));
+        } else if (argument == "--engine") {
+            command.engine = take_value("--engine");
+            if (command.engine.empty()) {
+                throw std::invalid_argument("--engine 不可為空");
+            }
+        } else if (argument == "--priority") {
+            command.priority = parse_priority(take_value("--priority"));
+        } else if (argument == "--slots") {
+            command.slots = true;
         } else {
             throw std::invalid_argument("未知參數: " + argument);
         }
     }
-    if (command.system && command.messages_file) {
+    if (!command.slots && command.system && command.messages_file) {
         throw std::invalid_argument("--system 不可與 --messages 同時使用");
     }
     return command;

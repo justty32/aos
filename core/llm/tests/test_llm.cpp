@@ -30,6 +30,26 @@ private:
     std::optional<std::string> old_;
 };
 
+class ScopedSetEnv {
+public:
+    ScopedSetEnv(const char *name, const char *value) : name_(name) {
+        if (const char *old = std::getenv(name)) old_ = old;
+        REQUIRE(setenv(name, value, 1) == 0);
+    }
+
+    ~ScopedSetEnv() {
+        if (old_) {
+            setenv(name_.c_str(), old_->c_str(), 1);
+        } else {
+            unsetenv(name_.c_str());
+        }
+    }
+
+private:
+    std::string name_;
+    std::optional<std::string> old_;
+};
+
 }  // namespace
 
 TEST_CASE("llm environment options have local defaults") {
@@ -93,6 +113,61 @@ TEST_CASE("llm arguments reject ambiguous or malformed options") {
                     std::invalid_argument);
     CHECK_THROWS_AS(aos::llm::parse_arguments({"prompt"}),
                     std::invalid_argument);
+}
+
+TEST_CASE("llm command options have local slot defaults") {
+    ScopedUnsetEnv engine("AOS_LLM_ENGINE");
+    ScopedUnsetEnv priority("AOS_LLM_PRIORITY");
+
+    const aos::llm::CommandOptions command =
+        aos::llm::parse_arguments({});
+    CHECK(command.engine == "lmstudio");
+    CHECK(command.priority == 0);
+    CHECK_FALSE(command.slots);
+}
+
+TEST_CASE("llm slot environment defaults can be overridden") {
+    ScopedSetEnv engine("AOS_LLM_ENGINE", "deepseek");
+    ScopedSetEnv priority("AOS_LLM_PRIORITY", "7");
+
+    const aos::llm::CommandOptions from_environment =
+        aos::llm::parse_arguments({});
+    CHECK(from_environment.engine == "deepseek");
+    CHECK(from_environment.priority == 7);
+
+    const aos::llm::CommandOptions from_arguments =
+        aos::llm::parse_arguments(
+            {"--engine", "x", "--priority", "-3"});
+    CHECK(from_arguments.engine == "x");
+    CHECK(from_arguments.priority == -3);
+}
+
+TEST_CASE("llm arguments enable slot status") {
+    const aos::llm::CommandOptions command =
+        aos::llm::parse_arguments({"--slots"});
+    CHECK(command.slots);
+
+    const aos::llm::CommandOptions with_messages =
+        aos::llm::parse_arguments(
+            {"--system", "s", "--messages", "m.json", "--slots"});
+    CHECK(with_messages.slots);
+}
+
+TEST_CASE("llm arguments reject malformed slot options") {
+    CHECK_THROWS_AS(aos::llm::parse_arguments({"--priority", "abc"}),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(aos::llm::parse_arguments({"--priority", ""}),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(aos::llm::parse_arguments({"--engine", ""}),
+                    std::invalid_argument);
+}
+
+TEST_CASE("llm ignores malformed priority environment value") {
+    ScopedSetEnv priority("AOS_LLM_PRIORITY", "zzz");
+
+    const aos::llm::CommandOptions command =
+        aos::llm::parse_arguments({});
+    CHECK(command.priority == 0);
 }
 
 TEST_CASE("llm parses and assembles OpenAI messages JSON") {
