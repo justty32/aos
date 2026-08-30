@@ -19,14 +19,17 @@
 |---|---|---|---|---|---|---|---|
 | `aos agent step`（lmstudio 引擎）首次思考 | LM Studio | `say/*.md` 有新訊息 | 0 或 1 | step 行程內同步 POST，**佔住該世界整回合** | 120 s | status 寫 idle＋錯誤一行，訊息已吃掉、**不重試** | `core/agent/src/step.cpp:79–85, 150–158` |
 | 同上，收到工具結果後再思考 | LM Studio | `batch/N+1/out/` 齊了 | 0 或 1（與上互斥，同回合最多一次） | 同上 | 120 s | 同上 | `step.cpp:106–128` |
-| `aos agent step`（pi 引擎） | DeepSeek | 有新訊息 | 0 或 1 條 step，**內含 1～k 次連續呼叫**（工具迴圈） | fork `pi`，同步等整個 step | 600 s | `log.md` 留 `> pi 失敗`，不重試 | `core/agent/src/engine_pi.cpp:47–68` |
+| `aos agent step`（pi 引擎） | DeepSeek | 有新訊息 | 0 或 1 條 step，**內含 1～k 次連續呼叫**（工具迴圈），aos 數不到 | fork `pi`，同步等整個 step | 600 s | `log.md` 留 `> pi 失敗`，**step 仍 exit 0**，不重試 | `core/agent/src/engine_pi.cpp:47–72, 175–192` |
 | heartbeat `ask` 型 routine／schedule | 間接 | `aos tick` 到期 → `agent::say()` | 0（tick 自己絕不叫 LLM）；下回合變成上面那條 | — | — | 投出就算做了，不追 | `core/tick/README.md` §一次心跳 |
 | `aos llm` 當登記工具（未來） | 任一 | 模型末行 JSON 叫它 | 每隻 agent 每回合 ≤ 1 條工具 inst | 工具 inst 在 loop 批內同步 | inst `timeout_ms` | `out/` 有 exit≠0，下下回合回給模型 | [call-loop](../tools/call-loop.md) |
 | 子 agent 團隊（未來，第二級） | 各自 engine | 主 agent 派工 | 主 1＋子 N，**同回合**最多 N+1 次 | 各自世界各自佔回合 | 各自 | 各自 | [usability-target](../usability-target.md) |
 | 多世界同機各自 `aos run` | 各自 | 各自回合 | 世界數 × 上面 | 互不知道對方存在 | — | — | `core/loop/README.md` 已知不管「沒有鎖」 |
 
 **共同點**：每條路徑都是「自己直接打端點、同步等、佔住回合」；沒有任何一處知道別人也在打；沒有優先序；沒有跨世界的計數。
-**量級**（[experiments §三](experiments.md)）：qwen3.5-9b 一次思考 2～17 秒；LM Studio 這顆預設 `n_slots = 4`（不是 1）；DeepSeek 端點不替我們擋併發。
+**量級**（[experiments §三](experiments.md)）：qwen3.5-9b 一次思考 2～17 秒；LM Studio 這顆預設 `n_slots = 4`（不是 1），log 裡最多只見過同時 2 條；
+DeepSeek 官方帳號併發上限 2500，端點不會替我們擋「同時 3 個」。
+**順手挖到的邊緣狀況**（sol）：`aos tick` 與 `agent step` 同批並行 fork，tick 寫 `say/` 與 step 掃 `say/` 之間沒有先後保證——heartbeat 的 ask 有時同回合就被讀到、有時下回合，
+文件說的「下回合」不是實作保證（`turn.cpp:86–98`、`tick.cpp:180–183`、`step.cpp:132–139`）。
 
 **最壞情況**（同步等、每次思考 T=10 s）：一顆 P=1 的 CPU，K 隻 agent 同回合都要想 → 回合長 K×T：K=1 → 10 s、K=3 → 30 s、K=10 → 100 s；
 同世界的 heartbeat tick 與其他 inst 全部陪等。加一顆 DeepSeek P=3、每次 3 s，理想分配下 K=10 → lmstudio 吃 1～2 條、deepseek 吃 8～9 條 ≈ 9 s。
@@ -97,4 +100,5 @@
 
 - **待使用者**：模型載好時跑 [experiments §四](experiments.md) 的並行度腳本，把四行數字填回 §五（今天不能跑：POST 會觸發 JIT 載入）。
 - 拍板 1／2／3 之後：D → 開一條 `core/llm` 的實作線；B → 先寫 spool contract（請求檔、結果檔、六個目錄）再開 worker 線；兩者都要回頭改 [pi-cpu](../../../../core/agent/docs/pi-cpu.md) 的「pi 繞過」段。
-- 隊員成品原文（terra：A/B＋CPU 表＋JSON 原型；luna：C/D＋回合邊界＋選 CPU）只留在隊長 scratchpad，本頁已合成；要看細節再開線重跑。
+- 隊員成品原文（sol：盤點表＋log 掃描＋CPU 表欄位草案；terra：A/B＋CPU 表＋JSON 原型；luna：C/D＋回合邊界＋選 CPU）只留在隊長 scratchpad，本頁已合成；要看細節再開線重跑。
+- sol 對 CPU 表的一個提醒值得留：**表的列 ≠ 配額邊界**——本機容量按「載入的 instance」、DeepSeek 容量按「帳號」（多把 key 共用）、價格按「model」；欄位要分 `cpu_id`／`capacity_scope`／`credential_scope`／`model`，別把三件事塞進一個名字。
