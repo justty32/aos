@@ -93,6 +93,7 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
     detail::atomic_write(paths.log, "");
     detail::atomic_write(paths.log_journal(), "");
     aos::tool::install_defaults(paths.folder);
+    aos::tool::install_say_tool(paths.folder);
     detail::write_pending(paths, {});
     if (!std::filesystem::exists(paths.aos / "turn")) {
         detail::atomic_write(paths.aos / "turn", "1\n");

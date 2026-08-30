@@ -3,28 +3,58 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
-#include <vector>
 #include <unistd.h>
+#include <vector>
 
 namespace {
 
 class TempWorld {
-public:
+  public:
     TempWorld() {
-        const auto stamp = std::chrono::steady_clock::now()
-                               .time_since_epoch()
-                               .count();
+        const auto stamp =
+            std::chrono::steady_clock::now().time_since_epoch().count();
         path = std::filesystem::temp_directory_path() /
                ("aos-agent-tools-" + std::to_string(getpid()) + "-" +
                 std::to_string(stamp));
         std::filesystem::create_directories(path);
     }
-    ~TempWorld() { std::filesystem::remove_all(path); }
+    ~TempWorld() {
+        std::filesystem::remove_all(path);
+    }
     std::filesystem::path path;
+};
+
+class ScopedUnsetHome {
+  public:
+    ScopedUnsetHome() {
+        if (const char *value = std::getenv("HOME")) original_ = value;
+        if (const char *value = std::getenv("AOS_HOME"))
+            original_aos_home_ = value;
+        REQUIRE(unsetenv("HOME") == 0);
+        REQUIRE(setenv("AOS_HOME",
+                       std::filesystem::temp_directory_path().c_str(), 1) == 0);
+    }
+    ~ScopedUnsetHome() {
+        if (original_)
+            setenv("HOME", original_->c_str(), 1);
+        else
+            unsetenv("HOME");
+        if (original_aos_home_)
+            setenv("AOS_HOME", original_aos_home_->c_str(), 1);
+        else
+            unsetenv("AOS_HOME");
+    }
+
+  private:
+    std::optional<std::string> original_;
+    std::optional<std::string> original_aos_home_;
 };
 
 aos::tool::Spec spec(std::string name, std::string shape,
@@ -128,10 +158,11 @@ TEST_CASE("agent intersects the world registry with its optional whitelist") {
 
     REQUIRE_FALSE(std::filesystem::exists(whitelist));
     auto tools = aos::agent::read_tools(world.path, "bob");
-    REQUIRE(tools.size() == 3);
+    REQUIRE(tools.size() == 4);
     CHECK(tools[0].name == "cat");
     CHECK(tools[1].name == "ls");
-    CHECK(tools[2].name == "sh");
+    CHECK(tools[2].name == "say");
+    CHECK(tools[3].name == "sh");
 
     write_json(whitelist, nlohmann::json::array({"ls"}));
     tools = aos::agent::read_tools(world.path, "bob");
@@ -146,4 +177,54 @@ TEST_CASE("agent intersects the world registry with its optional whitelist") {
     REQUIRE(tools.size() == 2);
     CHECK(tools[0].name == "cat");
     CHECK(tools[1].name == "sh");
+}
+
+TEST_CASE("agent system prompt lists contacts and explains available say") {
+    TempWorld world;
+    aos::agent::initialize(world.path, "bob", "負責協調。", {});
+    aos::tool::add_contact(world.path,
+                           {"w1", "../w1", "", "負責實機測試\n與驗收"});
+    aos::agent::say(world.path, "bob", "請列出聯絡人");
+    std::string with_say;
+    REQUIRE(
+        aos::agent::step(world.path, "bob",
+                         [&](const std::vector<aos::agent::Message> &messages) {
+                             with_say = messages.front().content;
+                             return "已看到。";
+                         }) == 0);
+    CHECK(with_say.find("你可以聯絡這些人") != std::string::npos);
+    CHECK(with_say.find("- w1 — 負責實機測試 與驗收（../w1）") !=
+          std::string::npos);
+    CHECK(with_say.find(
+              "{\"tool\":\"say\",\"args\":[\"收件人名字\",\"訊息內容\"]}") !=
+          std::string::npos);
+
+    write_json(world.path / ".aos" / "agents" / "bob" / "tools.json",
+               nlohmann::json::array({"ls"}));
+    aos::agent::say(world.path, "bob", "再看一次");
+    std::string no_say;
+    REQUIRE(
+        aos::agent::step(world.path, "bob",
+                         [&](const std::vector<aos::agent::Message> &messages) {
+                             no_say = messages.front().content;
+                             return "仍看得到。";
+                         }) == 0);
+    CHECK(no_say.find("- w1 — 負責實機測試 與驗收（../w1）") !=
+          std::string::npos);
+    CHECK(no_say.find("{\"tool\":\"say\"") == std::string::npos);
+}
+
+TEST_CASE("agent system prompt omits an empty contact section") {
+    ScopedUnsetHome no_home;
+    TempWorld world;
+    aos::agent::initialize(world.path, "bob", "保持簡潔。", {});
+    aos::agent::say(world.path, "bob", "有人嗎");
+    std::string prompt;
+    REQUIRE(
+        aos::agent::step(world.path, "bob",
+                         [&](const std::vector<aos::agent::Message> &messages) {
+                             prompt = messages.front().content;
+                             return "在。";
+                         }) == 0);
+    CHECK(prompt.find("你可以聯絡這些人") == std::string::npos);
 }

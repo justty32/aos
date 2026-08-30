@@ -142,4 +142,23 @@ bool install_defaults(const std::filesystem::path &folder) {
     return true;
 }
 
+bool install_say_tool(const std::filesystem::path &folder) {
+    if (std::filesystem::exists(spec_path(folder, "say"))) return false;
+
+    Spec say;
+    say.name = "say";
+    say.argv = {"aos", "say", "--to"};
+    say.args = "list";
+    say.stdin_mode = "none";
+    say.timeout_ms = 10000;
+    say.description =
+        "把一則訊息寄給通訊錄裡的聯絡人。args 是 [收件人, "
+        "訊息]，收件人是通訊錄上的名字或 ~（使用者）。對方的回信會進你的信箱。";
+    say.source = "manual";
+    say.guarantee = "at-least-once";
+    say.predictability = "high";
+    write_spec(folder, say);
+    return true;
+}
+
 }  // namespace aos::tool

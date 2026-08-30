@@ -45,6 +45,10 @@ adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚�
 `say`／`listen`／`state`／`talk`／`aos agent` 的 `-h`／`--help` 都印到 stdout 並回 0；
 頂層 say 只把第一個位置的 help 當選項，其餘位置仍是訊息內容。
 
+初始化會在原有的 `sh`／`ls`／`cat` 之外補一個 `say` 工具；即使舊世界已有自訂 registry，
+只要 `say.json` 尚不存在也會補上，既有檔案則不覆寫。lmstudio 的 system prompt 會在工具
+清單後列出通訊錄，pi 也會在人格後看到同一份名單與 `aos say --to` 的命令提示。
+
 `aos state` 預設印出 agent、目前狀態、現場計數的 `say/` 未讀封數，以及上一回合
 成功或失敗；`aos state --json` 才印 `status.json` 原文。`status.json` 每次寫入都包含
 `unread` 快照，最近一次 step 失敗時另含單行 `last_error`，成功回合會清掉該欄位。

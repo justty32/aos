@@ -1,5 +1,6 @@
 #include "internal.hpp"
 
+#include <aos/tool.hpp>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -78,6 +79,19 @@ std::string prompt_field(std::string text) {
     return text;
 }
 
+std::vector<aos::tool::Contact>
+prompt_contacts(const std::filesystem::path &folder) {
+    std::vector<aos::tool::Contact> contacts = aos::tool::read_contacts(folder);
+    const bool has_user = std::any_of(
+        contacts.begin(), contacts.end(),
+        [](const aos::tool::Contact &contact) { return contact.name == "~"; });
+    if (!has_user) {
+        aos::tool::Contact user = aos::tool::user_contact();
+        if (!user.folder.empty()) contacts.insert(contacts.begin(), user);
+    }
+    return contacts;
+}
+
 }  // namespace
 
 namespace detail {
@@ -90,26 +104,51 @@ std::string system_prompt(const Paths &paths, std::string_view name,
            << " 的 agent，活在一個以回合推進的資料夾世界裡。現在是第 " << turn
            << " 回合。\n\n人格：\n"
            << read_text(paths.persona);
-    if (tools.empty()) return prompt.str();
 
-    prompt
-        << "\n\n你可以使用工具。要用工具時，在回覆的最後獨立一行輸出這樣的 "
-           "JSON（只有一個，不要多寫）：\n"
-           "{\"tool\":\"工具名\",\"args\":[\"參數1\",\"參數2\"]}\n"
-           "args 的形狀由每個工具的登記決定：args: list 要給 JSON "
-           "字串陣列；args: string 要給一個字串；args: none 就不要寫 args "
-           "這個欄位。\n"
-           "工具的結果會在之後的回合以一則 tool 訊息回給你，內容是固定形狀的 "
-           "JSON。\n"
-           "不需要用工具時就正常回話，不要輸出那行 JSON。\n\n"
-           "可用工具：\n";
-    for (const aos::tool::Spec &tool : tools) {
-        prompt << "- " << tool.name << " — " << prompt_field(tool.description)
-               << " (args: " << tool.args << ", stdin: " << tool.stdin_mode;
-        if (!tool.predictability.empty()) {
-            prompt << ", 可預期性: " << prompt_field(tool.predictability);
+    if (!tools.empty()) {
+        prompt
+            << "\n\n你可以使用工具。要用工具時，在回覆的最後獨立一行輸出這樣的 "
+               "JSON（只有一個，不要多寫）：\n"
+               "{\"tool\":\"工具名\",\"args\":[\"參數1\",\"參數2\"]}\n"
+               "args 的形狀由每個工具的登記決定：args: list 要給 JSON "
+               "字串陣列；args: string 要給一個字串；args: none 就不要寫 args "
+               "這個欄位。\n"
+               "工具的結果會在之後的回合以一則 tool "
+               "訊息回給你，內容是固定形狀的 "
+               "JSON。\n"
+               "不需要用工具時就正常回話，不要輸出那行 JSON。\n\n"
+               "可用工具：\n";
+        for (const aos::tool::Spec &tool : tools) {
+            prompt << "- " << tool.name << " — "
+                   << prompt_field(tool.description) << " (args: " << tool.args
+                   << ", stdin: " << tool.stdin_mode;
+            if (!tool.predictability.empty()) {
+                prompt << ", 可預期性: " << prompt_field(tool.predictability);
+            }
+            prompt << ")\n";
         }
-        prompt << ")\n";
+    }
+
+    const std::vector<aos::tool::Contact> contacts =
+        prompt_contacts(paths.folder);
+    if (contacts.empty()) return prompt.str();
+    prompt << (tools.empty() ? "\n\n" : "\n")
+           << "你可以聯絡這些人（用 say 工具寄訊息給他們）：\n";
+    for (const aos::tool::Contact &contact : contacts) {
+        prompt << "- " << prompt_field(contact.name) << " —";
+        if (!contact.note.empty()) {
+            prompt << ' ' << prompt_field(contact.note);
+        }
+        prompt << "（" << prompt_field(contact.folder) << "）\n";
+    }
+    const bool has_say = std::any_of(
+        tools.begin(), tools.end(),
+        [](const aos::tool::Spec &tool) { return tool.name == "say"; });
+    if (has_say) {
+        prompt << "\n要寄訊息就在回覆最後獨立一行輸出：\n"
+                  "{\"tool\":\"say\",\"args\":[\"收件人名字\",\"訊息內容\"]}\n"
+                  "對方回信會進你的信箱，訊息開頭的 from: "
+                  "那行就是寄件人的世界路徑。";
     }
     return prompt.str();
 }

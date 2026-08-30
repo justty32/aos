@@ -55,6 +55,26 @@ TEST_CASE("tool default installation only fills an empty registry") {
           "使用者自己的說明");
 }
 
+TEST_CASE("say tool installation writes once without replacing local edits") {
+    aos::tool::test::TempWorld world("say-default");
+    CHECK(aos::tool::install_say_tool(world.path));
+
+    const auto installed = aos::tool::read_spec(world.path, "say");
+    REQUIRE(installed.has_value());
+    CHECK(installed->argv == std::vector<std::string>{"aos", "say", "--to"});
+    CHECK(installed->args == "list");
+    CHECK(installed->timeout_ms == 10000);
+    CHECK(installed->guarantee == "at-least-once");
+    CHECK(installed->predictability == "high");
+
+    aos::tool::Spec changed = *installed;
+    changed.description = "使用者自己的 say 說明";
+    aos::tool::write_spec(world.path, changed);
+    CHECK_FALSE(aos::tool::install_say_tool(world.path));
+    CHECK(aos::tool::read_spec(world.path, "say")->description ==
+          "使用者自己的 say 說明");
+}
+
 TEST_CASE("tool registry rejects a name that differs from its filename") {
     aos::tool::test::TempWorld world("filename");
     aos::tool::write_spec(world.path, make_spec("actual", "說明"));
