@@ -15,7 +15,9 @@ std::vector<wire::Inst> aggregate(const Layout &layout, std::uint64_t turn,
                                   std::string &error) {
     error.clear();
     const auto deliveries = fs::list_json_files(layout.inbox, error);
-    if (!error.empty() || deliveries.empty()) return {};
+    if (!error.empty()) return {};
+    const auto recurring = fs::list_json_files(layout.every, error);
+    if (!error.empty() || (deliveries.empty() && recurring.empty())) return {};
 
     const std::string destination_dir = insts_dir(layout, turn);
     if (!fs::mkdir_p(destination_dir, error)) return {};
@@ -40,6 +42,31 @@ std::vector<wire::Inst> aggregate(const Layout &layout, std::uint64_t turn,
             std::fprintf(stderr, "aos run: 跳過 %s: %s\n",
                          destination.c_str(), parse_error.c_str());
             continue;
+        }
+        insts.push_back(std::move(*inst));
+    }
+
+    for (const std::string &source : recurring) {
+        const std::string id = fs::basename_sans_json(source) + "-" +
+                               std::to_string(turn);
+        const std::string destination =
+            fs::join(destination_dir, id + ".json");
+        std::string text;
+        if (!fs::read_file(source, text, error) ||
+            !fs::write_atomic(destination, text, error)) {
+            return insts;
+        }
+
+        std::string parse_error;
+        auto inst = wire::parse_inst(text, id, parse_error);
+        if (!inst) {
+            std::fprintf(stderr, "aos run: 跳過 %s: %s\n",
+                         destination.c_str(), parse_error.c_str());
+            continue;
+        }
+        inst->id = id;
+        if (!fs::write_atomic(destination, wire::to_json_text(*inst), error)) {
+            return insts;
         }
         insts.push_back(std::move(*inst));
     }

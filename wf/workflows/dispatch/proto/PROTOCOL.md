@@ -10,6 +10,7 @@
 | 路徑 | 誰寫 | 內容 |
 |---|---|---|
 | `inbox/` | 任何生產者 | 投遞匣。一個檔＝一條指令。**先寫 `<name>.json.tmp` 再 `rename` 成 `<name>.json`** |
+| `every/` | 任何生產者 | 常駐投遞匣。每回合**複製**（不搬走）成一條指令，id＝`<stem>-<turn>`。檔案一直留著，直到有人刪掉 |
 | `turn` | loop | 純文字，下一回合的編號（從 1 起） |
 | `batch/<turn>/insts/<id>.json` | loop | 該回合匯聚到的指令（從 inbox **搬**過來） |
 | `batch/<turn>/out/<id>.json` | loop | 該指令的結果 |
@@ -62,16 +63,18 @@
 
 ## 5. 一回合
 
-匯聚（`inbox/*.json` 全部搬進 `batch/<turn>/insts/`）→ 整批**並行** fork/exec → 全部等完 → 寫 `out/` → 更新 `state.json` → `turn` +1。
+匯聚（`inbox/*.json` 搬進、`every/*.json` 複製進 `batch/<turn>/insts/`；兩者都空才是 idle 回合）→ 整批**並行** fork/exec → 全部等完 → 寫 `out/` → 更新 `state.json` → `turn` +1。
 
 ## 6. 指令面
 
 | 指令 | 誰做 | 行為 |
 |---|---|---|
-| `aos run <folder> [--step N] [--interval MS]` | 隊 A | 連跑 N 回合（預設 1；`--step 0`＝無限），回合間隔 MS 毫秒（預設 100）。stdout 每回合印一行摘要 |
-| `aos deliver <folder> <inst.json>` / `aos deliver <folder> -- <argv...>` | 隊 A | 把一條指令原子投遞進 `inbox/`（第二形式從 argv 現做一份） |
+| `aos run [folder] [--step N] [--interval MS]` | 隊 A | 連跑 N 回合（預設 1；`--step 0`＝無限），回合間隔 MS 毫秒（預設 100）。stdout 每回合印一行摘要 |
+| `aos deliver [folder] <inst.json>` / `aos deliver [folder] -- <argv...>` | 隊 A | 把一條指令原子投遞進 `inbox/`（第二形式從 argv 現做一份） |
 | `aos llm` | 隊 B | stdin 進 prompt（或 `--messages <json>`），stdout 出回覆文字。打 `$AOS_LLM_URL`（預設 `http://localhost:1234/v1`）、模型 `$AOS_LLM_MODEL`（預設 `qwen/qwen3.5-9b`） |
 | `aos agent <init\|step\|say\|listen\|talk\|state>` | 隊 B | 見隊 B 交接書 |
+
+`folder` 省略時＝`AOS_FOLDER`，否則從 cwd 往上找最近含 `.aos/` 的目錄，再否則 cwd。
 
 ## 7. 小專案與領地
 

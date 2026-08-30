@@ -20,7 +20,7 @@ bool parse_number(const char *text, std::uint64_t &value) {
 
 void usage(const char *program) {
     std::fprintf(stderr,
-                 "usage: %s <folder> [--step N] [--interval MS]\n",
+                 "usage: %s [folder] [--step N] [--interval MS]\n",
                  program);
 }
 
@@ -37,14 +37,22 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
     const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                               ? argv[0]
                               : "aos run";
-    if (argc < 2 || argv == nullptr || argv[1] == nullptr) {
+    if (argv == nullptr) {
         usage(program);
         return 2;
     }
 
+    std::string folder = aos::loop::current_folder();
+    int option_start = 1;
+    if (argc > 1 && argv[1] != nullptr &&
+        std::strncmp(argv[1], "--", 2) != 0) {
+        folder = argv[1];
+        option_start = 2;
+    }
+
     std::uint64_t steps = 1;
     std::uint64_t interval = 100;
-    for (int index = 2; index < argc; index += 2) {
+    for (int index = option_start; index < argc; index += 2) {
         if (index + 1 >= argc || argv[index] == nullptr ||
             argv[index + 1] == nullptr) {
             usage(program);
@@ -66,7 +74,7 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
         }
     }
 
-    const aos::loop::Layout layout = aos::loop::layout_of(argv[1]);
+    const aos::loop::Layout layout = aos::loop::layout_of(folder);
     for (std::uint64_t completed = 0; steps == 0 || completed < steps;
          ++completed) {
         aos::loop::TurnSummary summary;

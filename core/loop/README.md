@@ -4,9 +4,11 @@
 
 ## 這個小專案做什麼
 
-推進一個資料夾的世界：每回合把 `.aos/inbox/*.json` **搬**進 `batch/<turn>/insts/`，用 `aos::exec`
+推進一個資料夾的世界：每回合把 `.aos/inbox/*.json` **搬**進 `batch/<turn>/insts/`，再把
+`.aos/every/*.json` **複製**成 `<stem>-<turn>.json`，用 `aos::exec`
 一次 fork 全部（並行），fork 完先寫一次 `state.json`（`running[]` 帶 pid），等完再寫 `out/<id>.json`
-與第二次 `state.json`，然後 `turn` +1。`aos deliver` 是唯一的投遞入口：寫 `<id>.json.tmp` 再 `rename`。
+與第二次 `state.json`，然後 `turn` +1。`every/` 的原檔不搬走，所以每回合都會執行一次；
+`aos deliver` 寫 `<id>.json.tmp` 再 `rename` 發佈到 inbox。
 相依 `aos::exec`（fork/wait）與 `aos::wire`（JSON），本層自己只管路徑、檔案系統與回合順序。
 
 ## 公開標頭草稿：`include/aos/loop.hpp`
@@ -31,14 +33,17 @@ struct Layout {
     std::string folder;       // 絕對路徑（realpath 後）
     std::string aos;          // <folder>/.aos
     std::string inbox;        // .aos/inbox
+    std::string every;        // .aos/every
     std::string turn_file;    // .aos/turn
     std::string state_file;   // .aos/state.json
     std::string agents_dir;   // .aos/agents
 };
 AOS_API Layout layout_of(const std::string &folder);
+AOS_API std::string find_folder(const std::string &start);
+AOS_API std::string current_folder();
 AOS_API std::string insts_dir(const Layout &layout, std::uint64_t turn);   // .aos/batch/<turn>/insts
 AOS_API std::string out_dir(const Layout &layout, std::uint64_t turn);     // .aos/batch/<turn>/out
-/* mkdir -p .aos/inbox、.aos/agents；turn 檔不存在就寫 "1"。deliver 與 run 都會呼叫。 */
+/* mkdir -p .aos/inbox、.aos/every、.aos/agents；turn 檔不存在就寫 "1"。deliver 與 run 都會呼叫。 */
 AOS_API bool ensure_layout(const Layout &layout, std::string &error);
 AOS_API std::uint64_t read_turn(const Layout &layout);                     // 讀不到＝1
 AOS_API bool write_turn(const Layout &layout, std::uint64_t turn, std::string &error);
@@ -49,7 +54,7 @@ AOS_API bool deliver(const Layout &layout, const wire::Inst &inst, std::string &
 AOS_API wire::Inst inst_from_argv(const std::vector<std::string> &argv);
 AOS_API std::string make_delivery_id();        // "d-<epoch_ms>-<pid>-<seq>"
 
-/* ---- aggregate：inbox/*.json → batch/<turn>/insts/<id>.json，回傳解析成功的那些 ---- */
+/* ---- aggregate：inbox 搬入、every 複製入 batch/<turn>/insts/，回傳解析成功的那些 ---- */
 AOS_API std::vector<wire::Inst> aggregate(const Layout &layout, std::uint64_t turn,
                                           std::string &error);
 
@@ -64,7 +69,7 @@ struct TurnSummary {
     std::uint64_t elapsed_ms = 0;
 };
 /* 匯聚 → start_all → 寫 state(running) → wait_all → 寫 out/ → 寫 state(idle) → turn+1。
- * inbox 空：不建 batch/<turn>/，但 state.json 照寫、turn 照加。 */
+ * inbox 與 every 都空：不建 batch/<turn>/，但 state.json 照寫、turn 照加。 */
 AOS_API bool run_turn(const Layout &layout, TurnSummary &summary, std::string &error);
 
 }  // namespace aos::loop
@@ -77,13 +82,27 @@ AOS_API bool run_turn(const Layout &layout, TurnSummary &summary, std::string &e
 | 檔案 | 職責 | 預估行數 |
 |---|---|---|
 | `src/fs.hpp` / `src/fs.cpp` | 內部：`read_file`、`write_atomic(path, text)`（寫 `path + ".tmp"` 再 `rename`）、`mkdir_p`、`list_json_files(dir)`（排序過）、`realpath_of`、`join`、`basename_sans_json` | 25 / 130 |
-| `src/layout.cpp` | `layout_of`、`insts_dir`、`out_dir`、`ensure_layout`、`read_turn`、`write_turn`（turn 檔也走 `write_atomic`） | 90 |
+| `src/layout.cpp` | `layout_of`、`find_folder`、`current_folder`、`insts_dir`、`out_dir`、`ensure_layout`（建 inbox/every/agents）、`read_turn`、`write_turn`（turn 檔也走 `write_atomic`） | 110 |
 | `src/deliver.cpp` | `deliver`（呼叫 `ensure_layout` → `wire::to_json_text` → `write_atomic(inbox/<id>.json)`）、`inst_from_argv`、`make_delivery_id` | 70 |
-| `src/aggregate.cpp` | `aggregate`：`mkdir_p(insts_dir)`、逐檔 `rename(inbox/x.json → insts/x.json)`、讀檔 `wire::parse_inst(default_id＝檔名去 .json)`；解析失敗印 stderr 一行並跳過 | 90 |
+| `src/aggregate.cpp` | `aggregate`：先 `rename` inbox，再複製 every 並強制 id＝`<stem>-<turn>`；解析失敗印 stderr 一行並保留 insts 現場 | 90 |
 | `src/state.hpp` / `src/state.cpp` | `mirror_agents`（列 `agents_dir` 的每個子目錄，讀 `status.json` 原文）、`write_state`（`wire::to_json_text(State)` → `write_atomic`）；內部 helper `detail::running_entries(insts, runnings)` 與 `detail::mark_done(entries, results)` 宣告在 `state.hpp`，只給 `turn.cpp` 用 | 16 / 73 |
 | `src/turn.cpp` | `run_turn`：`ensure_layout` → `read_turn` → `aggregate` → 把每條 `Inst` 換成 `exec::Spawn`（`cwd` 相對 folder 轉絕對、空＝folder；注入 `AOS_FOLDER`、`AOS_TURN` 覆蓋同名 key）→ `start_all` → `write_state(phase=running)` → `wait_all` → 每條寫 `out/<id>.json`（`wire::Outcome`）→ `write_state(phase=idle, status=done)` → `write_turn(turn+1)`。idle 回合直接跳到最後兩步 | 170 |
-| `src/run.cpp` | `extern "C" int aos_run_cli_main`：解析 `<folder> [--step N] [--interval MS]`，迴圈 `run_turn`（`--step 0`＝無限），每回合 stdout 印 `turn <n>: <count> insts, <ms> ms` 或 `turn <n>: idle`，回合間 `nanosleep` | 120 |
-| `src/deliver_cli.cpp` | `extern "C" int aos_deliver_cli_main`：`<folder> -- <argv...>` 走 `inst_from_argv`；`<folder> <inst.json>` 讀檔 `parse_inst(default_id＝檔名去 .json)`；再 `deliver` | 90 |
+| `src/run.cpp` | `extern "C" int aos_run_cli_main`：解析 `[folder] [--step N] [--interval MS]`，迴圈 `run_turn`（`--step 0`＝無限），每回合 stdout 印 `turn <n>: <count> insts, <ms> ms` 或 `turn <n>: idle`，回合間 `nanosleep` | 120 |
+| `src/deliver_cli.cpp` | `extern "C" int aos_deliver_cli_main`：`[folder] -- <argv...>` 走 `inst_from_argv`；`[folder] <inst.json>` 讀檔 `parse_inst(default_id＝檔名去 .json)`；再 `deliver` | 110 |
+| `tests/test_idle.cpp` | inbox 與 every 都空時驗 idle state、不建 batch 與 turn +1 | 30 |
+| `tests/test_every.cpp` | every 三回合常駐執行、強制 id，以及與 inbox 同回合並存 | 90 |
+| `tests/test_folder.cpp` | `find_folder` 往上找最近世界與找不到的情形 | 30 |
+
+## CLI
+
+```text
+aos run [folder] [--step N] [--interval MS]
+aos deliver [folder] <inst.json>
+aos deliver [folder] -- <argv...>
+```
+
+`folder` 省略時先用 `AOS_FOLDER`；沒有的話從 cwd 往上找最近含 `.aos/` 的目錄，
+再找不到就用 cwd。`aos deliver` 不會寫 `every/`；常駐指令由生產者自行發佈到 `.aos/every/`。
 
 CMake（`PUBLIC_DEPS` 不是 `PRIVATE_DEPS`，理由見 `wf/salvage/05-程式碼哪些值得抄.md` §六）：
 
@@ -105,5 +124,5 @@ aos_add_subcommand(NAME deliver ENTRY aos_deliver_cli_main LIBRARY aos_loop_cli 
 - 沒有 `.runi`／崩潰恢復：`run` 在 `wait_all` 途中被殺，`insts/` 已搬走但 `out/` 沒寫、`turn` 沒加；下次啟動不會補跑。
 - 不 `fsync`：`rename` 是原子，但斷電後檔案內容可能是空的。
 - `agents/*/status.json` 只在寫 state 的那兩個時間點讀一次；agent 在回合中途更新不會即時反映。
-- inbox 裡解析失敗的檔案：搬進 `insts/` 後跳過，`out/` 不會有對應結果，只在 stderr 留一行。
+- inbox 或 every 裡解析失敗的檔案：進 `insts/` 後跳過，`out/` 不會有對應結果，只在 stderr 留一行。
 - `aos deliver` 給的 `id` 若撞到 inbox 既有檔案，直接覆蓋（`rename` 語意），不查重。

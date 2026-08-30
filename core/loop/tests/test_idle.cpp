@@ -12,6 +12,8 @@ TEST_CASE("idle turn advances without creating a batch directory") {
     REQUIRE(run_turn(layout, summary, error));
     CHECK(summary.turn == 1);
     CHECK(summary.count == 0);
+    CHECK(std::filesystem::is_empty(layout.inbox));
+    CHECK(std::filesystem::is_empty(layout.every));
     CHECK_FALSE(std::filesystem::exists(layout.aos + "/batch/1"));
     CHECK(read_turn(layout) == 2);
 

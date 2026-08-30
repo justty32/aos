@@ -38,5 +38,7 @@ aos_add_test(aos_loop_tests
         tests/test_parallel.cpp
         tests/test_running_state.cpp
         tests/test_agents.cpp
+        tests/test_every.cpp
+        tests/test_folder.cpp
     LINK aos::loop
 )
