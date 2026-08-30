@@ -17,13 +17,18 @@
 - 用 `every_ms` 可以讓子世界跑得比主世界慢；用一次性 `aos deliver` 可以只推一步。
 - `find_folder()` 往上找最近的 `.aos/`，所以在 `sub/` 裡下 `aos say` 找到的是子世界，不會誤指主世界。
 
-## 還沒想的（挖出來給使用者判斷，不代答）
+## 使用者裁決（2026-08-30）
 
-1. 子世界的 `state.json` 要不要鏡射進主世界的 `state.json`（像 agents 那樣一段），主世界才看得到「子世界在跑什麼」。
-2. 子世界要跟主世界講話的管道：投到主世界 `inbox/`（子世界知道父路徑嗎？`AOS_FOLDER` 只給自己的）。
-3. 子世界的 agent 用哪顆 CPU、tools.json 要不要繼承主世界的。
-4. 遞迴深度與同名 id 撞在 `batch/` 裡的問題（先不管）。
-5. 跟 [top-down-cli §三](top-down-cli.md)「把思考投遞到另一顆 llm pu 資料夾」是同一件事的兩種說法？——llm pu 也是一個子世界。
+> 「子世界與否不用管太多，inst 內沒推進的就不管它。但子 agent 與否，那確實是要登記的。」
+
+- **子世界不是一等公民**：沒有任何 inst 去推它，它就只是個資料夾——不鏡射、不追蹤、不設計管道。下面第 1、2、4 條**作廢**。
+- **子 agent 要登記**：一個 agent 派生出來的 agent（不論住在子世界還是同世界）必須在登記表上有一格——誰生的、住哪、用哪顆 CPU。這條交給 tool 規劃隊：登記表除了 tool，也要有 agent（或 agent 就是一種 tool）。
+
+## 還沒想的（給 tool 規劃隊）
+
+1. 子 agent 登記表的形狀：住哪（world 級 `.aos/agents.json`？還是每隻 agent 自己的 `children`）、欄位（parent、folder、engine、建立回合）。
+2. 子 agent 用哪顆 CPU、tools.json 要不要繼承父 agent 的。
+3. 跟 [top-down-cli §三](top-down-cli.md)「把思考投遞到另一顆 llm pu 資料夾」是同一件事的兩種說法？——llm pu 也是一個子世界。
 
 ## 交接
 
