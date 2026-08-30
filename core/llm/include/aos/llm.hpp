@@ -25,6 +25,9 @@ struct CommandOptions {
     Options completion;
     std::optional<std::string> system;
     std::optional<std::string> messages_file;
+    std::string engine = "lmstudio";
+    int priority = 0;
+    bool slots = false;
 };
 
 AOS_API Options options_from_env();

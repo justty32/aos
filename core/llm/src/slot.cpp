@@ -167,7 +167,7 @@ std::vector<std::string> live_tickets(
         }
 
         const std::filesystem::path path = wait_directory / name;
-        const int descriptor = ::open(path.c_str(), O_RDWR);
+        const int descriptor = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
         if (descriptor < 0) {
             if (errno == ENOENT) continue;
             throw std::runtime_error("無法開啟等待票: " + path.string());
@@ -197,7 +197,7 @@ int count_held(const std::filesystem::path &directory, int limit) {
     for (int index = 0; index < limit; ++index) {
         const std::filesystem::path path =
             directory / (std::to_string(index) + ".lock");
-        const int descriptor = ::open(path.c_str(), O_RDWR);
+        const int descriptor = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
         if (descriptor < 0) {
             if (errno == ENOENT) continue;
             throw std::runtime_error("無法開啟槽檔: " + path.string());
@@ -328,8 +328,8 @@ Slot acquire(std::string_view cpu, int priority,
 
     const std::string own_name = ticket_name(priority);
     const std::filesystem::path own_path = wait_directory / own_name;
-    const int ticket_descriptor = ::open(own_path.c_str(), O_CREAT | O_RDWR,
-                                         0666);
+    const int ticket_descriptor =
+        ::open(own_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0666);
     if (ticket_descriptor < 0) {
         throw std::runtime_error("無法建立等待票: " + own_path.string());
     }
@@ -351,8 +351,8 @@ Slot acquire(std::string_view cpu, int priority,
             for (int index = 0; index < *limit.max_inflight; ++index) {
                 const std::filesystem::path slot_path =
                     cpu_directory / (std::to_string(index) + ".lock");
-                const int descriptor =
-                    ::open(slot_path.c_str(), O_CREAT | O_RDWR, 0666);
+                const int descriptor = ::open(
+                    slot_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0666);
                 if (descriptor < 0) {
                     throw std::runtime_error("無法開啟槽檔: " +
                                              slot_path.string());
