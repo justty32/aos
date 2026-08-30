@@ -9,7 +9,7 @@
 
 **只列還沒做的**——做完即移除（不留已完成清單，歷史看 git log）。
 
-> **膨脹就拆**：待使用者項堆多了，就開 **`wait_todo/`** 資料夾按類別拆檔，本檔退回只留導航到各分類檔（照 [DEV-GUIDE「結構整理原則」](DEV-GUIDE.md)）。
+> **膨脹就拆**：待使用者項堆多了，就開 **`wait-user/`** 資料夾按類別拆檔，本檔退回只留一張 `| 類別 | open | 清單 |` 導航表（照 [STRUCTURE「結構整理原則」](STRUCTURE.md)）。
 
 ## 待使用者項
 
@@ -33,9 +33,14 @@
    甚至不必引用 aos lib」之後，排隊就變成外部處理器的家務——**確認這一句就能收掉那場**。
    → [finite-resource-queue](workflows/workshop/records/finite-resource-queue.md)
 
+6. **自我投遞要不要埋進 loop**：隊 B 提了方案 A（`.aos/every/` 目錄，loop 每回合自動投遞）與方案 B，
+   建議 A；文末另有五條待拍板。→ [self-delivery-in-loop](workflows/ideas/self-delivery-in-loop.md)
+7. **pi 當介面層要不要投資**：三種接法與代價已寫好，需一句話選一種或先不做。
+   → [pi-interface](../core/agent/docs/pi-interface.md)
+
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
-6. **真模型的 T5 實測還沒跑通**：當時三條路全斷——codex 被沙盒擋、Claude OAuth 過期、
+8. **真模型的 T5 實測還沒跑通**（**2026-08-30 補**：新原型已用 LM Studio 跑通，這條大概可以收掉，等你確認）：當時三條路全斷——codex 被沙盒擋、Claude OAuth 過期、
    WSL 沒裝 pi。→ [t5-agent-loop](workflows/experiments/t5-agent-loop.md)
    > **這條可能已經不必等你了，但要你確認兩件事**：(a) SESSION-LOG 記的建置環境是
    > WSL ＋ `/mnt/c`，而現在這台是 Manjaro、repo 在 `~/repo`，那些筆記可能已過期；
