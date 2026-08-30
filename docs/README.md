@@ -10,9 +10,6 @@
 | 我想… | 讀這份 |
 |-------|--------|
 | 搞懂這個專案是什麼、為什麼長這樣 | [overview.md](overview.md) |
-| **`.aos` 資料夾長什麼樣、回合怎麼跑**（規格，核心已實作） | [aos-folder.md](aos-folder.md) |
-| **知道接下來要做什麼、哪些事在等我拍板** | [roadmap.md](roadmap.md) |
-| `$ref`／`$env`／`$opt` **為什麼**長這樣（設計理由，已實作）（`core/inst` 已刪 2026-08-30，本文留作設計理由的歷史紀錄） | [inst-directives.md](inst-directives.md) |
 | 把它建起來、跑測試、裝到某個地方 | [build.md](build.md) |
 | **用**它——當成命令列工具，或當成函式庫連進我自己的專案 | [usage.md](usage.md) |
 | 在 aos 底下**開一個新的小專案** | [subprojects.md](subprojects.md) |
