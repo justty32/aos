@@ -104,6 +104,8 @@ void wait_interval(std::uint64_t milliseconds) {
 
 void handle_interrupt(int signal_number) {
     interrupted_signal = signal_number;
+    /* 正在等新投遞的話，讓它立刻回來，不要等滿 interval。 */
+    aos::loop::detail::stop_requested = 1;
     aos::exec::interrupt_running(SIGTERM);
 }
 
@@ -392,6 +394,7 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
     aos::loop::detail::notify_daemon(notify_fd, true);
 
     interrupted_signal = 0;
+    aos::loop::detail::stop_requested = 0;
     // 先解析 shared-library 符號，避免第一次呼叫落在 signal handler 裡。
     aos::exec::interrupt_running(0);
     SignalHandlers handlers;

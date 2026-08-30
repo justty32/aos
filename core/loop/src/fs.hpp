@@ -1,5 +1,8 @@
 #pragma once
 
+#include <aos/export.h>
+
+#include <csignal>
 #include <string>
 #include <vector>
 
@@ -27,6 +30,10 @@ struct DaemonProcess {
     int notify_fd = -1;
     bool child = false;
 };
+
+/* run 的訊號 handler 把它設成 1，wait_for_delivery 看到就立刻回來——
+ * 不然 aos stop 得等滿一個 interval 才收得到。只准在 handler 裡指派。 */
+AOS_API extern volatile sig_atomic_t stop_requested;
 
 DaemonProcess daemonize(const std::string &log_path, std::string &error);
 bool await_daemon(const DaemonProcess &process, std::string &error);
