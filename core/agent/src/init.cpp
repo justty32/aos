@@ -10,7 +10,7 @@
 namespace aos::agent {
 
 void initialize(const std::filesystem::path &folder, std::string_view name,
-                std::string_view persona) {
+                std::string_view persona, const Engine &requested_engine) {
     const detail::Paths paths = detail::paths_for(folder, name);
     if (!std::filesystem::is_directory(paths.folder)) {
         throw std::runtime_error("folder 不存在或不是資料夾: " +
@@ -30,6 +30,14 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
     std::filesystem::create_directories(paths.inbox);
     std::filesystem::create_directories(paths.every);
     std::filesystem::create_directories(paths.say);
+    Engine engine = requested_engine;
+    if (engine.kind.empty()) engine.kind = "lmstudio";
+    if (engine.kind == "pi") {
+        if (engine.provider.empty()) engine.provider = "deepseek";
+        if (engine.model.empty()) engine.model = "deepseek-v4-flash";
+        if (engine.session_id.empty()) engine.session_id = detail::new_uuid();
+    }
+    detail::write_engine(paths, engine);
     detail::atomic_write(paths.persona, persona);
     detail::write_history(paths, {});
     detail::write_status(paths, "idle", "等待訊息", 0);
