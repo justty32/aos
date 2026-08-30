@@ -138,3 +138,66 @@ code/tests > docs/aos-folder.md 這類 normative 規格 > schema/examples/fixtur
 - 上層與下層衝突時，**以上層為準並修正下層**；但規格與程式碼衝突時**先確認哪一邊是刻意的**（roadmap M0 之後 normative 在 SPEC，程式碼要跟規格走）——分不清就記 [WAIT_USER](../../WAIT_USER.md)。
 - generated（產生出來的檔、build 產物）永遠不是唯一真相。
 - code map 是**導航不是規格**；行為以 code/tests 為準，發現不對當場修 code map（維護鏈見 [conventions](conventions.md)）。
+
+---
+
+## core/llm 與 core/agent
+
+這兩個核心小專案合起來，讓 agent 活在 loop 推進的回合世界裡：`aos agent` 保存人格、對話、狀態與工具往返，每回合結束前再把自己的下一次 `step` 投遞回 inbox；`aos llm` 則是它直接連結的思考引擎，向 OpenAI 相容端點做一次非串流補全。工具往返的關鍵節奏是：**回合 N 投遞 → N+1 執行 → N+2 讀得到結果**。
+agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loop 負責匯聚、執行與落結果。
+因此 agent 與 loop 只靠 `.aos/` 版面協作，思考、執行與結果回收各自落在不同回合。
+`aos agent` 不另開 `aos llm` 子行程，而是直接呼叫它的公開函式庫 API。
+
+### `core/llm` 檔案表
+
+| 檔案 | 負責什麼 |
+|------|----------|
+| `core/llm/include/aos/llm.hpp` | 公開 API：message／options／CLI options，以及環境設定、參數解析、request／response JSON 與 `complete()` 的介面。 |
+| `core/llm/src/llm.cpp` | 函式庫實作：讀 `AOS_LLM_*`、組 OpenAI messages request、用 libcurl POST `<base>/chat/completions`，驗 HTTP 與抽出 `choices[0].message.content`。 |
+| `core/llm/src/run.cpp` | `aos llm` CLI 層：stdin prompt 或 `--messages` 檔案進站，處理 `--system`／endpoint／model／timeout，將回覆印到 stdout。 |
+| `core/llm/README.md` | 使用入口、預設 LM Studio endpoint／model、環境變數與錯誤語意。 |
+
+### `core/agent` 檔案表與分層
+
+相依只往下看：`paths ← store`；`paths + store ← deliver／tools`；`init／step` 再組合這些下層（`step` 另依賴公開的 `aos::llm`）；最上面的 `run` 只呼叫 `aos::agent` 公開 API。箭頭右邊知道左邊，**下層不知道上層存在**。
+
+| 檔案 | 負責什麼 |
+|------|----------|
+| `core/agent/include/aos/agent.hpp` | 公開資料型別與 API：初始化、say／log／status／history／pending／tools、argv 展開、工具呼叫抽取及單步 `step()`；completion callback 讓測試可離線注入。 |
+| `core/agent/src/internal.hpp` | 小專案內部契約：集中 `Paths`、儲存、prompt、投遞等下層宣告；不安裝、不是跨小專案 API。 |
+| `core/agent/src/paths.cpp` | 最底層路徑規則：正規化 world folder、驗 agent 名稱，推導 `.aos/inbox` 與 `agents/<name>/` 全部檔位。 |
+| `core/agent/src/store.cpp` | 儲存層：文字讀取、tmp＋rename 原子寫入、log 追加，以及 history／status／pending／tools 的 JSON 讀寫與驗證。 |
+| `core/agent/src/deliver.cpp` | 投遞層：把 argv 包成 instruction 原子寫入 inbox；`deliver_self()` 建立下一個 `aos agent step`。 |
+| `core/agent/src/tools.cpp` | 工具層：預設工具、system prompt、`tools.json` 登記表解析、`{args}` argv 模板展開，以及從 LLM 回覆抽工具呼叫。 |
+| `core/agent/src/step.cpp` | 回合編排層：收工具結果與 say、更新 history／log／status、呼叫 LLM、投遞工具、記 pending，最後自我投遞；無新事件時不耗 LLM token。 |
+| `core/agent/src/init.cpp` | 初始化層：建立 agent 版面與預設檔、必要的 world turn／state，寫入第一條自我投遞；`say()` 也在這裡原子放入訊息檔。 |
+| `core/agent/src/run.cpp` | `aos agent init／step／say／listen／talk／state` CLI 分派；listen／talk 輪詢 log，pi 介面目前只導向說明文件。 |
+| `core/agent/tests/fake_loop.py` | 測試用 loop 替身：依協定匯聚 inbox、並行跑 instruction、寫 out／state、鏡射 agent status 並推進 turn。 |
+| `core/agent/tests/smoke.sh` | 端到端 smoke：初始化 bob、用替身推三回合，驗每回合自我投遞與 `state.json` 的 status 鏡射。 |
+| `core/agent/README.md` | 回合 agent 的快速使用、工具往返節奏與函式庫入口。 |
+| `core/agent/docs/pi-interface.md` | pi 0.84.2 實測、三種接法與尚未內建的 extension adapter 規劃；不是目前已完成的 CLI transport。 |
+
+### `agents/<name>/` 版面
+
+| 路徑 | 存什麼、誰寫 |
+|------|--------------|
+| `persona.md` | agent 人格；`aos agent init` 寫初值，使用者可直接編輯。 |
+| `history.json` | 送給 LLM 的 user／assistant／tool messages；init 建空檔，`step` 讀寫。 |
+| `status.json` | `status`／`detail`／`updated_at`／`turn`；init／step 原子寫，loop 唯讀鏡射進 world `state.json`。 |
+| `say/*.md` | 等 agent 收取的使用者訊息；`say` 每則寫一個排序檔，`step` 讀入 history 後刪除。 |
+| `log.md` | 逐回合 user／assistant／tool 可讀紀錄與投遞註記；init 建空檔，step 寫，listen／talk 讀。 |
+| `tools.json` | 可用工具登記表；init 寫入 `sh`／`ls`／`cat` 預設值，使用者可改，step 每次要思考時讀。 |
+| `pending.json` | 已投遞但尚未回收的工具 call ID、工具名、args 與投遞回合；init／step 寫，step 依它找結果。 |
+
+### 常查的東西在哪
+
+| 我想找… | 去哪 |
+|---------|------|
+| 自我投遞在哪一行做的 | 正常 `step` 結尾在 `core/agent/src/step.cpp:192`；等工具時在 `:119`，例外重排在 `:91`／`:203`；實際 instruction argv 由 `core/agent/src/deliver.cpp:18-24` 組成。 |
+| 工具登記表格式、`{args}` 模板怎麼展開 | `core/agent/src/tools.cpp:58-105`：根物件是 `{"tools":[...]}`，每項有字串 `name`／`description` 與字串陣列 `argv`；每個 argv 元素裡所有 `{args}` 都原樣替換成 args，不另做 shell 拆詞。 |
+| 怎麼從 LLM 回覆裡抽出工具呼叫 | `core/agent/src/tools.cpp:107-147`：由回覆末行往上找完整 JSON 物件行，驗 `tool`／`args` 都是字串且工具已登記。 |
+| 工具結果從哪裡讀回來 | `core/agent/src/step.cpp:110-132`：依 `pending.turn + 1` 讀 `.aos/batch/<turn>/out/<id>.json`；全數到齊才轉成 tool messages。 |
+| LM Studio 端點與模型怎麼設 | `AOS_LLM_URL`（預設 `http://localhost:1234/v1`）與 `AOS_LLM_MODEL`（預設 `qwen/qwen3.5-9b`）；需要 bearer token 時另設 `AOS_LLM_KEY`，讀取處在 `core/llm/src/llm.cpp:71-76`。 |
+| loop 替身在哪、怎麼跑 | `core/agent/tests/fake_loop.py`；repo 根執行 `python3 core/agent/tests/fake_loop.py <folder> --step N --interval 100`。完整 smoke 是 `bash core/agent/tests/smoke.sh`（使用 `build/bin/aos`）。 |
+
+還沒拍板的自我投遞規劃見 [`wf/workflows/ideas/self-delivery-in-loop.md`](../ideas/self-delivery-in-loop.md)；pi 終端介面調查與建議接法見 [`core/agent/docs/pi-interface.md`](../../../core/agent/docs/pi-interface.md)。
