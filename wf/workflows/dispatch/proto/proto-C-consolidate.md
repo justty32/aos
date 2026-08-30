@@ -56,3 +56,14 @@
 ## 隊長裁決
 
 （隊長追加）
+
+1. **三條線循序跑，不並行**——共用同一個 working tree 與 `build/`，①刪 `core/inst` 會炸掉正在建置的 ②。
+2. **`find_folder`／`current_folder` 放 `core/loop` 公開 API**，`core/agent` 私有相依 `aos::loop`；`.aos/` 版面的知識只留一份。
+3. **`aos deliver` 靠「第一個參數是不是存在的目錄」判斷 folder**；`aos run` 靠「是不是 `--` 開頭」。
+4. **舊形式 `aos agent say|listen|talk|state <folder> <name>` 全部保留、參數不改可選**（`say` 的 `<text...>` 會歧義）；要省參數就用頂層 `aos say/listen/talk/state`。
+5. **`every/` 檔自帶的 `id` 一律覆蓋成 `<stem>-<turn>`**——不覆蓋每回合都撞名，工具往返讀不回結果。
+6. **`aos deliver --every` 沒做**（交接書列為可選）。
+7. **`fake_loop.py` 留著**（讓 agent 測試不依賴 PATH 上的 `aos`），跟著加了 every 支援。
+8. **`code-map/inst.md`／`tooljson.md`／`llms.md` 三冊不刪**，只在路由表註明「已刪 2026-08-30，本冊為歷史存檔」——別的歷史文件連著它們。
+9. **`docs/` 只改 `README.md` 與 `subprojects.md`**，參考範本從 `core/inst/` 換成 `core/llm/`。
+10. **禁區裡的 22 條死連結刻意不修**（`wf/` 5 條、`docs/` 17 條，全指向已刪的 `core/inst/docs/`），詳見 [reports/C.md](reports/C.md) 的「已知不管」。
