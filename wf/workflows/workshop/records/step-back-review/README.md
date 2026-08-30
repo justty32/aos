@@ -59,4 +59,4 @@ promotion、UUID／generation、活搬、平行 join、分層 kernel。保留單
 | 資深研究人員（OS／體系結構） | `01a03683-95cb-7331-8528-d1513a6c806f` |
 | 要接這個工具的開發者 | `01a03688-8b4c-70b0-87e3-ea28be9b7f9c` |
 
-> 原本是單檔 `step-back-review.md`，20 KB，照 [DEV-GUIDE](../../../../DEV-GUIDE.md) 的「膨脹即拆」按用途與題目群拆成本資料夾。
+> 原本是單檔 `step-back-review.md`，20 KB，照 [DEV-GUIDE](../../../../STRUCTURE.md) 的「膨脹即拆」按用途與題目群拆成本資料夾。

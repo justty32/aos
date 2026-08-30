@@ -11,4 +11,4 @@
 | [兄弟專案裡可以抄的](from-siblings.md) | 〈3. 兄弟專案裡可以抄的〉：agent-machine、freepy、arc_agi_tweets 等專案裡可直接抄的實作與測例。 | 要找可運行的程式樣本，而不是文字契約。 |
 | [還是查不到的](not-found.md) | 〈4. 還是查不到的〉：repo 與兄弟專案都翻過、確認沒有現成資料的那幾條。 | 想確認某條是真的沒人做過，不用再查。 |
 
-> 原本是單檔 `after-round-1.md`（12 KB），照 [DEV-GUIDE](../../../../../../DEV-GUIDE.md) 的「膨脹即拆」按資料員的四塊職責拆成本資料夾。舊路徑 `after-round-1.md` 仍在，只留導航。
+> 原本是單檔 `after-round-1.md`（12 KB），照 [DEV-GUIDE](../../../../../../STRUCTURE.md) 的「膨脹即拆」按資料員的四塊職責拆成本資料夾。舊路徑 `after-round-1.md` 仍在，只留導航。

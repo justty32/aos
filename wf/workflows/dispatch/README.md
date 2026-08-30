@@ -72,6 +72,7 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
+| L3 試用第二輪（worktree）| `trial/{findings-L3.csv,repro/L3-*.sh,sandbox/}`、`trial/README.md` 追加 | `core/`、L1／L2 檔 | 2026-08-30 22:45 |
 
 ### 保留給調度者，任何線都不得寫
 
@@ -85,6 +86,7 @@
 
 | 線 | 完成證據 | 收線時間 |
 |----|---------|---------|
+| M 維護 | `1301727`／`3652c18`／`1369987`；repro 28/28、ctest 8/8；[proto-M](proto/done/proto-M-maint.md) | 2026-08-30 23:02 |
 
 > 上面三張表是**活狀態**，會隨每輪派線增減。膨脹到難讀就照 [STRUCTURE](../../STRUCTURE.md) 拆成 `CLAIMS.md`，本檔只留流程與連結。hackathon 各場的隊伍紀錄在 [hackathon/](../hackathon/README.md) 自己的紀錄裡，不重抄到這裡。
 

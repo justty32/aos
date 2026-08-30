@@ -47,4 +47,4 @@
 | 資深研究人員（OS／體系結構） | `01a0364f-6a54-7713-844e-dfd70278cbe0` |
 | 要接這個工具的開發者 | `01a03651-d860-74d0-ae5e-22d83cc959d3` |
 
-> 原本是單檔 `core-process-and-subprocess.md`，20 KB，照 [DEV-GUIDE](../../../../DEV-GUIDE.md) 的「膨脹即拆」按輪次與用途拆成本資料夾。
+> 原本是單檔 `core-process-and-subprocess.md`，20 KB，照 [DEV-GUIDE](../../../../STRUCTURE.md) 的「膨脹即拆」按輪次與用途拆成本資料夾。
