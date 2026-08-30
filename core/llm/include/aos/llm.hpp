@@ -42,7 +42,11 @@ AOS_API std::string make_request_json(const std::vector<Message> &messages,
 
 AOS_API std::string parse_response_text(std::string_view text);
 
+/* 回應 JSON 的 model 欄；沒有這個欄位就回空字串。 */
+AOS_API std::string parse_response_model(std::string_view text);
+
 AOS_API std::string complete(const std::vector<Message> &messages,
-                             const Options &options);
+                             const Options &options,
+                             std::string *served_model = nullptr);
 
 }  // namespace aos::llm

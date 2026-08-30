@@ -203,8 +203,19 @@ std::string parse_response_text(std::string_view text) {
     }
 }
 
+std::string parse_response_model(std::string_view text) {
+    try {
+        const Json root = Json::parse(text);
+        if (!root.contains("model") || !root["model"].is_string()) return {};
+        return root["model"].get<std::string>();
+    } catch (const Json::exception &error) {
+        throw std::runtime_error(std::string("LLM 回應 JSON 無法解析: ") +
+                                 error.what());
+    }
+}
+
 std::string complete(const std::vector<Message> &messages,
-                     const Options &options) {
+                     const Options &options, std::string *served_model) {
     if (options.model.empty()) throw std::runtime_error("LLM model 不可為空");
     if (options.timeout_ms <= 0) throw std::runtime_error("timeout 必須大於零");
 
@@ -272,7 +283,11 @@ std::string complete(const std::vector<Message> &messages,
         throw std::runtime_error("LLM endpoint 回傳 HTTP " +
                                  std::to_string(status));
     }
-    return parse_response_text(response.text);
+    const std::string reply = parse_response_text(response.text);
+    if (served_model != nullptr) {
+        *served_model = parse_response_model(response.text);
+    }
+    return reply;
 }
 
 }  // namespace aos::llm

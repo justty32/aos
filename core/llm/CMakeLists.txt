@@ -25,5 +25,5 @@ aos_add_test(aos_llm_tests
     SOURCES
         tests/test_llm.cpp
         tests/test_slot.cpp
-    LINK aos::llm
+    LINK aos_llm_cli
 )

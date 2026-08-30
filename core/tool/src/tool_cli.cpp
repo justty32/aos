@@ -3,6 +3,7 @@
 #include "cli_common.hpp"
 
 #include <charconv>
+#include <cstdlib>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
@@ -10,6 +11,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <unistd.h>
 
 namespace {
 
@@ -34,14 +37,81 @@ struct AddOptions {
     bool probe_metadata = false;
 };
 
-int usage(const char *program) {
+int usage(const char *program, FILE *stream = stderr, int result = 2) {
     std::fprintf(
-        stderr,
+        stream,
         "usage: %s add <name> [選項...] -- <argv...>\n"
         "       %s ls [--folder F] [--json]\n"
-        "       %s rm <name> [--folder F]\n",
+        "       %s rm <name> [--folder F]\n"
+        "\n"
+        "  add                    登記工具；-- 後方是固定 argv\n"
+        "    --folder F           指定世界資料夾\n"
+        "    --description TEXT   手動指定工具表述\n"
+        "    --args MODE          參數模式：list、string 或 none\n"
+        "    --stdin MODE         stdin 模式：none 或 text\n"
+        "    --cwd DIR            工具執行目錄\n"
+        "    --timeout-ms N       工具逾時毫秒數\n"
+        "    --predictability P   high、medium 或 low\n"
+        "    --guarantee TEXT     保證說明\n"
+        "    --lifecycle TEXT     生命週期說明\n"
+        "    --state TEXT         狀態說明\n"
+        "    --stage TEXT         階段說明\n"
+        "    --network            宣告需要網路\n"
+        "    --no-network         宣告不需要網路\n"
+        "    --replace            覆寫同名登記\n"
+        "    --no-probe           不探測工具表述\n"
+        "    --probe metadata     探測失敗時再試 --metadata\n"
+        "  ls                     列出工具；可加 --folder F、--json\n"
+        "  rm                     移除工具；可加 --folder F\n"
+        "\n"
+        "  子命令真名是 ls 與 rm，不是 list 與 remove。\n"
+        "  -h, --help             顯示這份用法\n",
         program, program, program);
-    return 2;
+    return result;
+}
+
+enum class ExecutableStatus { ready, missing, not_executable };
+
+ExecutableStatus check_executable_path(const std::filesystem::path &path) {
+    std::error_code error;
+    if (!std::filesystem::is_regular_file(path, error) || error) {
+        return ExecutableStatus::missing;
+    }
+    return ::access(path.c_str(), X_OK) == 0
+               ? ExecutableStatus::ready
+               : ExecutableStatus::not_executable;
+}
+
+ExecutableStatus check_executable(std::string_view argv0) {
+    if (argv0.find('/') != std::string_view::npos) {
+        return check_executable_path(std::filesystem::path(argv0));
+    }
+
+    const char *path_value = std::getenv("PATH");
+    if (path_value == nullptr) return ExecutableStatus::missing;
+
+    bool found_non_executable = false;
+    const std::string_view paths(path_value);
+    std::size_t begin = 0;
+    while (begin <= paths.size()) {
+        const std::size_t separator = paths.find(':', begin);
+        const std::size_t end = separator == std::string_view::npos
+                                    ? paths.size()
+                                    : separator;
+        const std::string_view entry = paths.substr(begin, end - begin);
+        const std::filesystem::path candidate =
+            entry.empty() ? std::filesystem::path(argv0)
+                          : std::filesystem::path(entry) / argv0;
+        const ExecutableStatus status = check_executable_path(candidate);
+        if (status == ExecutableStatus::ready) return status;
+        if (status == ExecutableStatus::not_executable) {
+            found_non_executable = true;
+        }
+        if (separator == std::string_view::npos) break;
+        begin = separator + 1;
+    }
+    return found_non_executable ? ExecutableStatus::not_executable
+                                : ExecutableStatus::missing;
 }
 
 bool parse_uint64(std::string_view text, std::uint64_t &value) {
@@ -145,6 +215,19 @@ int add(const char *program, const std::vector<std::string> &words) {
     std::vector<std::string> command(words.begin() +
                                          static_cast<std::ptrdiff_t>(index),
                                      words.end());
+    const ExecutableStatus executable = check_executable(command.front());
+    if (executable == ExecutableStatus::missing) {
+        std::fprintf(
+            stderr,
+            "aos tool: 找不到執行檔 %s；它不在 PATH 上，也不是一個可執行的檔案路徑\n",
+            command.front().c_str());
+        return 1;
+    }
+    if (executable == ExecutableStatus::not_executable) {
+        std::fprintf(stderr, "aos tool: %s 不可執行（chmod +x ?）\n",
+                     command.front().c_str());
+        return 1;
+    }
     const std::filesystem::path folder =
         aos::tool::resolve_folder(options.folder);
     if (std::filesystem::exists(aos::tool::spec_path(folder, name)) &&
@@ -245,8 +328,18 @@ int dispatch(int argc, char *argv[]) {
     const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                               ? argv[0]
                               : "aos tool";
+    for (int index = 1; argv != nullptr && index < argc; ++index) {
+        if (argv[index] != nullptr &&
+            (std::string_view(argv[index]) == "--help" ||
+             std::string_view(argv[index]) == "-h")) {
+            return usage(program, stdout, 0);
+        }
+    }
     std::vector<std::string> words;
-    for (int index = 1; index < argc; ++index) words.emplace_back(argv[index]);
+    for (int index = 1; index < argc; ++index) {
+        if (argv == nullptr || argv[index] == nullptr) return usage(program);
+        words.emplace_back(argv[index]);
+    }
     if (words.empty()) return usage(program);
     if (words[0] == "add") return add(program, words);
     if (words[0] == "ls") return list(program, words);

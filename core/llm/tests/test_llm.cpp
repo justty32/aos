@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+extern "C" int aos_llm_cli_main(int, char **);
+
 namespace {
 
 class ScopedUnsetEnv {
@@ -49,6 +51,13 @@ private:
     std::string name_;
     std::optional<std::string> old_;
 };
+
+int run_cli(std::vector<std::string> arguments) {
+    std::vector<char *> argv;
+    argv.reserve(arguments.size());
+    for (std::string &argument : arguments) argv.push_back(argument.data());
+    return aos_llm_cli_main(static_cast<int>(argv.size()), argv.data());
+}
 
 }  // namespace
 
@@ -205,4 +214,16 @@ TEST_CASE("llm extracts response content without going online") {
                     std::runtime_error);
     CHECK_THROWS_AS(aos::llm::parse_response_text("not json"),
                     std::runtime_error);
+}
+
+TEST_CASE("llm extracts the served model when present") {
+    CHECK(aos::llm::parse_response_model(
+              R"({"model":"qwen/qwen3.5-9b","choices":[]})") ==
+          "qwen/qwen3.5-9b");
+    CHECK(aos::llm::parse_response_model(R"({"choices":[]})").empty());
+}
+
+TEST_CASE("llm CLI help succeeds without contacting an endpoint") {
+    CHECK(run_cli({"aos llm", "--url", "http://127.0.0.1:1/v1",
+                   "--help"}) == 0);
 }

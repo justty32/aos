@@ -61,6 +61,51 @@ TEST_CASE("tool CLI takes descriptions and fields from metainfo") {
     CHECK(fake->args == "none");
 }
 
+TEST_CASE("tool CLI rejects a missing executable before probing") {
+    aos::tool::test::TempWorld world("cli-missing");
+    const std::filesystem::path missing = world.path / "does-not-exist";
+    CHECK(aos::tool::test::run_cli(
+              aos_tool_cli_main,
+              {"aos tool", "add", "missing", "--folder",
+               world.path.string(), "--", missing.string()}) == 1);
+    CHECK_FALSE(std::filesystem::exists(
+        aos::tool::spec_path(world.path, "missing")));
+}
+
+TEST_CASE("tool CLI rejects a missing executable with a description") {
+    aos::tool::test::TempWorld world("cli-missing-description");
+    const std::filesystem::path missing = world.path / "does-not-exist";
+    CHECK(aos::tool::test::run_cli(
+              aos_tool_cli_main,
+              {"aos tool", "add", "missing", "--folder",
+               world.path.string(), "--description", "測試", "--",
+               missing.string()}) == 1);
+    CHECK_FALSE(std::filesystem::exists(
+        aos::tool::spec_path(world.path, "missing")));
+}
+
+TEST_CASE("tool CLI still registers an existing executable") {
+    aos::tool::test::TempWorld world("cli-existing");
+    CHECK(aos::tool::test::run_cli(
+              aos_tool_cli_main,
+              {"aos tool", "add", "shell", "--folder",
+               world.path.string(), "--description", "系統 shell",
+               "--no-probe", "--", "/bin/sh"}) == 0);
+    const auto shell = aos::tool::read_spec(world.path, "shell");
+    REQUIRE(shell.has_value());
+    CHECK(shell->argv == std::vector<std::string>{"/bin/sh"});
+    CHECK(shell->description == "系統 shell");
+}
+
+TEST_CASE("tool CLI help succeeds in any position") {
+    CHECK(aos::tool::test::run_cli(
+              aos_tool_cli_main, {"aos tool", "add", "name", "--help"}) ==
+          0);
+    CHECK(aos::tool::test::run_cli(
+              aos_contact_cli_main,
+              {"aos contact", "add", "name", "folder", "-h"}) == 0);
+}
+
 TEST_CASE("contact CLI stores the peer folder verbatim") {
     aos::tool::test::TempWorld world("cli-contact");
     CHECK(aos::tool::test::run_cli(
