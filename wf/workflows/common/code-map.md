@@ -9,7 +9,7 @@
 
 ## 一分鐘看懂這個專案
 
-`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos exec world`）。第一個小專案是 `core/inst/`——一支讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。
+`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos exec world`）。第一個小專案是 `core/inst/`——一支讀 JSON instruction、`fork`/`exec` 跑起來的 POSIX 指令執行器。現在共有六個核心小專案；新長出的 `core/exec`＋`core/wire`＋`core/loop` 把 POSIX 執行、協定轉換與回合順序拆開，合起來是一個資料夾的回合機。
 
 ```
 repo 根
@@ -39,6 +39,19 @@ app/ ── `aos tooljson list|check spec.json` 掛的就是這條
        │  Bot／Reply：system、history、tools 與非串流 ask 的交易式收尾
        ▼
 app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
+
+  aos::exec（core/exec/，核心小專案 → libaos_exec.so）       aos::wire（core/wire/，核心小專案 → libaos_wire.so）
+       │  start／wait_all：整批 fork 後統一等完                 │  Inst／Outcome／State：三種協定 struct
+       │  底層 spawn_prep／wait／tempfile／clock 互不相識        │  inst／outcome／state 各自只共用 json_io
+       │  （純函式庫，無子命令）                                │  （純函式庫，無子命令）
+       ▲                                                       ▲
+       │                                                       │
+       └──────────────────────────┬────────────────────────────┘
+                                  │  aos::loop（core/loop/ → libaos_loop.so；只透過公開 API 相依上面兩者）
+                                  │    fs 在最底層；layout／deliver／aggregate／state 分工檔案與版面
+                                  │    turn 串起匯聚、並行執行、落檔與 state；CLI 再包住 turn／deliver
+                                  ▼
+app/ ── `aos run`／`aos deliver` 掛的就是這條
 ```
 
 三個一直會用到的概念：
@@ -54,17 +67,21 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 
 ## 逐檔表格在哪：各小專案分冊
 
-每個檔負責什麼，按小專案拆成四冊放在 [`code-map/`](code-map/README.md)：
+每個檔負責什麼，既有小專案與建置骨架拆成四冊放在 [`code-map/`](code-map/README.md)；新三個小專案直接指向各自的 README：
 
 | 分冊 | 涵蓋 | 什麼時候會想看 |
 |------|------|---------------|
 | [code-map/inst.md](code-map/inst.md) | `core/inst/`：公開標頭、五個核心分層、C ABI 包裝層、CLI 層、測試，以及「新增一個 instruction 欄位」的維護鏈（逐檔表格再按層拆在 [`code-map/inst/`](code-map/inst/README.md) 底下的 library／capi／cli／tests 四份） | 要改 instruction 結構、format／resolve／handoff／exec、C ABI 或 `aos init`／`aos exec` |
 | [code-map/tooljson.md](code-map/tooljson.md) | `core/tooljson/`：公開 API、內部邊界、spec／registry／exec_type／args／text／fingerprint、CLI、測試 | 要改 tool spec 驗證、`_type` registry、argv 展開或 `aos tooljson` |
 | [code-map/llms.md](code-map/llms.md) | `core/llms/`：公開 API、內部邊界、content／params／transport／SSE／caps／Reply／Bot／presets、CLI、測試 | 要改 LLM client、串流、toolset、presets 或 `aos llms` |
+| [core/exec/README.md](../../../core/exec/README.md) | `core/exec/`：整批 POSIX 行程的啟動、等待、逾時、輸出與時間 | 要改 `start_all`／`wait_all`、行程群組、PATH／env 準備或暫存檔收拾 |
+| [core/wire/README.md](../../../core/wire/README.md) | `core/wire/`：指令、結果與 loop state 三種協定的 C++ struct／JSON 邊界 | 要改協定欄位的解析、序列化、預設值或錯誤回報 |
+| [core/loop/README.md](../../../core/loop/README.md) | `core/loop/`：`.aos/` 版面、投遞、匯聚、state 與一回合的推進順序 | 要改資料夾回合機、`aos run`／`aos deliver` 或它對 exec／wire 的接法 |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
 
 **新增或刪除一個原始碼／測試檔（或某個檔的職責變了）時，那一列去哪裡加**：
 檔案在 `core/inst/` 底下 → `code-map/inst.md`，再照它的表選 `code-map/inst/` 的 library（標頭與五個核心分層）／capi／cli／tests 一份；在 `core/tooljson/` 底下 → `code-map/tooljson.md`；在 `core/llms/` 底下 → `code-map/llms.md`；在 `common/`／`app/`／`cmake/` 底下或是建置設定檔（含新增小專案要加的那行 `add_subdirectory()`）→ `code-map/build.md`。
+`core/exec`、`core/wire`、`core/loop` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊。
 未來多一個小專案，就在 `code-map/` 多一冊，並在上面這張表加一列。**這一步跟程式碼改動同一個 commit**（AGENTS.md 的「改了程式碼就要同步 code map」）。
 
 ---
@@ -101,3 +118,23 @@ app/ ── `aos llms ask|models` 掛的就是這條（成功路徑會連網）
 | 為什麼要先把整份輸入讀完才開始執行 | `core/inst/docs/architecture.md`「為什麼要先把整份輸入讀完」|
 | `fork` 前後各自能做什麼 | `core/inst/docs/architecture.md`「`fork` 兩側各自要做的工作」；程式碼在 `core/inst/src/exec.cpp` 的 `run_child` |
 | 新增一個小專案（像 inst 那樣）要照什麼模子 | [`docs/subprojects.md`](../../../docs/subprojects.md)；函式定義在 `cmake/AosSubproject.cmake` |
+| 一批指令怎麼並行 fork、逾時怎麼殺整個 process group | `core/exec/src/start.cpp` 的 `start_all`／`run_child`；統一輪詢與 `kill(-pid, SIGKILL)` 在 `core/exec/src/wait_all.cpp` 的 `wait_all` |
+| 協定的三種 JSON 長什麼樣、欄位怎麼對應 | struct 與公開轉換 API 在 `core/wire/include/aos/wire.hpp`；實作分在 `core/wire/src/inst.cpp`／`outcome.cpp`／`state.cpp`，共用取值在 `json_io.hpp` |
+| `.aos/` 資料夾的版面（inbox／turn／batch／state.json） | 路徑推導在 `core/loop/src/layout.cpp`；協定版面在 [`PROTOCOL.md`](../dispatch/proto/PROTOCOL.md) §1 |
+| 一回合的順序：匯聚 → 並行執行 → 落檔 → 更新 state | `core/loop/src/turn.cpp` 的 `run_turn`；running／done state 的組裝在 `core/loop/src/state.cpp` |
+| `aos run`／`aos deliver` 的 CLI 怎麼解參數 | `core/loop/src/run.cpp` 的 `aos_run_cli_main`／`core/loop/src/deliver_cli.cpp` 的 `aos_deliver_cli_main` |
+| 投遞與 state／turn 落檔怎麼保持原子 | `core/loop/src/fs.cpp` 的 `write_atomic`：先寫 `path + ".tmp"`，再以 `rename` 發佈 |
+
+---
+
+## 真相層優先序
+
+三份真相（程式碼／規格文件／code map）衝突時的優先序，**必須明確**：
+
+```text
+code/tests > docs/aos-folder.md 這類 normative 規格 > schema/examples/fixtures > code map > 其他 docs > generated
+```
+
+- 上層與下層衝突時，**以上層為準並修正下層**；但規格與程式碼衝突時**先確認哪一邊是刻意的**（roadmap M0 之後 normative 在 SPEC，程式碼要跟規格走）——分不清就記 [WAIT_USER](../../WAIT_USER.md)。
+- generated（產生出來的檔、build 產物）永遠不是唯一真相。
+- code map 是**導航不是規格**；行為以 code/tests 為準，發現不對當場修 code map（維護鏈見 [conventions](conventions.md)）。
