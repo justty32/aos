@@ -72,7 +72,6 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
-| proto-Y-improve（[交接書](proto/proto-Y-improve.md)，worktree） | `core/agent`、`core/loop`（喚醒／daemon）、`core/tool`、PROTOCOL 加欄、code-map | core/exec、wire、llm、tick、app/、docs/、其餘 wf/ | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫
 

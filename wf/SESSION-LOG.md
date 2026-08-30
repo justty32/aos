@@ -12,6 +12,10 @@
 
 ## 最新進度
 
+- **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
+  → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
+  contacts 進 prompt＋`aos contact status`、`aos inbox ls/read`）。home daemon 只有 spec
+  （[home-daemon-spec](workflows/ideas/home-daemon-spec.md)，8 條已裁），實作未開；LLM PU 世界、systemd 先不做。
 - **2026-08-30 晚：原型第二輪落地**（main）——`core/tool`（`aos tool`／`aos contact`／`aos say --to`）、
   `core/tick`（heartbeat on aos）、pi 當第二顆 CPU、排程保底 D（flock 槽，`aos llm --priority`）。
   **已知缺口**：`aos agent step` 走 lmstudio 那條還沒取槽（只對 `aos llm` 子命令成立）；使用者＝agent 住 `~`
