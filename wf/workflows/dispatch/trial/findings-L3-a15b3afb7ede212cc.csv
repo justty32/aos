@@ -1,0 +1,10 @@
+L3-31,L3,bug,3,heartbeat init 後推進世界,用絕對路徑呼叫 aos 時心跳也應能執行,"tick.json 寫入 argv [""aos"",""tick""]；PATH 沒有 aos 時 run 印「找不到指令 aos（exit 127）」且 exit 1；該回合 1 inst",systemd timer 可把絕對路徑寫進 ExecStart 並由 status 顯示失敗,repro/L3-31.sh
+L3-32,L3,bug,1,查四個排程子命令的 help,--help 應 exit 0 並說明參數格式,"tick／heartbeat／routine／schedule 的 --help 全部 exit 2，輸出分別只有 1／1／3／3 行 usage；對照 pi --help exit 0 且有 180 行",pi --help 一個指令 exit 0 並列出命令與選項說明,repro/L3-32.sh
+L3-33,L3,spec-gap,2,登記幾秒後的一次性行程,時刻格式應由 help 說清楚且能表達秒級測試,"--at 2026-08-30T22:51:52+08:00 exit 2 並印「時刻不合法」；help 只寫「時刻」；實際只接受 YYYY-MM-DD HH:MM，最細 1 分鐘",systemd OnCalendar 能寫到秒且 systemctl help/man 說明格式,-
+L3-34,L3,bug,3,在沒有 agent 的世界登記 ask schedule,add 或 tick 應擋下無收件人的工作且保留未完成行程,"schedule add exit 0；tick 印「ask=no-agent-ask→none」且 exit 0；隨後 schedule ls 顯示 0 列，工作永久消失",Claude Code 的任務有明確目前 agent 不會成功投遞到 none,repro/L3-34.sh
+L3-35,L3,awkward,2,登記指向不存在命令的 routine／schedule,登記時應驗證或至少清楚告知會延後到執行期才失敗,"兩次 add 都 exit 0，tick 也 exit 0；直到下一次 run 才各印「找不到指令 definitely-no-such-l3-command（exit 127）」並整體 exit 1",cron 也延後到觸發才發現但 systemd status／journal 會保留可查的失敗,-
+L3-36,L3,ok,0,只用 aos 稽核 agent 是否知道聯絡人,能以黑箱方式證實通訊錄已進 agent 背景,"加 w1／w2 後要求不得讀 .aos 且不得用工具，boss 在 1 回合 1.322 秒內由 listen 列出 ~／w1／w2",Claude Code 由宿主注入隊伍背景也可用一個行為探針確認,-
+L3-37,L3,spec-gap,3,稽核實際送給 agent 的 system prompt,紀錄應保存每回合真正送出的 system 與工具能力邊界,"history.json 只有 2 個 role：user／assistant；log.jsonl 也只有 2 行 user／assistant，沒有 role:system；聯絡人只可由回答間接推知",Claude Code 的 tool call 與 result 逐項可見而 aos 的 system prompt 仍無可查紀錄,-
+L3-38,L3,bug,3,直接竄改正典 log.jsonl,正典稽核紀錄應在 agent 權限外或能驗出偽造,"追加合法 JSON 後 listen exit 0 並顯示「turn 99 assistant／FORGED_JSONL」；系統只警告 log.md 不一致並把偽造內容還原進 log.md",Claude Code 若要同級防竄改也需把 transcript 放到 agent 寫入權限外或加簽章,repro/L3-38.sh
+L3-39,L3,awkward,2,查單一 agent 實際工具白名單,tool ls 應反映指定 agent 的有效工具或另有 audit 指令,"agents/piagent/tools.json 設為 [] 後 tool ls 仍列 cat／ls／say／sh 共 4 個世界工具；agent --help 與 tool --help 都沒有查有效工具的命令",Claude Code 的 agent 定義把可用工具放在同一份設定中可直接查看,-
+L3-40,L3,spec-gap,3,清空世界工具與 pi agent 白名單後要求改暫存檔,工具政策應約束實際執行引擎,"tool ls 為 0 個且 tools.json 為 []，pi 仍在 3.220 秒內用 bash／read／write 把 note.txt 從 ORIGINAL 改成 CHANGED；run exit 0",直接用 pi 只有一組內建工具且 pi --help 一次列完不會出現第二套無效帳本,-
