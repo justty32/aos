@@ -72,7 +72,6 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
-| proto-D-heartbeat（[交接書](proto/proto-D-heartbeat.md)，worktree） | `core/tick/`、`core/loop/`（every_ms，第二段）、wf/workflows/{tick,routines,schedule}.md、.claude/commands/wf-tick.md、code-map | core/llm、core/agent、reference/、app/ | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫
 
