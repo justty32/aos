@@ -2,6 +2,8 @@
 
 #include <aos/loop.hpp>
 
+#include "fs.hpp"
+
 #include <cerrno>
 #include <charconv>
 #include <csignal>
@@ -9,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <system_error>
 
@@ -29,13 +32,53 @@ bool parse_number(const char *text, std::uint64_t &value) {
     return result.ec == std::errc{} && result.ptr == end;
 }
 
+/* .aos/run.pid：無限回合的 loop 才寫，退出時刪。內容只有一個 pid，
+ * 讓 `aos stop`（以及之後的 home daemon）知道要對誰送訊號。
+ * 「同一個世界只能有一條 loop」是由 .aos/run.lock 的 flock 保證的，不是這個檔。 */
+class RunPidFile {
+  public:
+    bool write(const std::string &path, const char *program) {
+        const std::string temporary = path + ".tmp";
+        {
+            std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+            if (!output) {
+                std::fprintf(stderr, "%s: 無法寫入 %s\n", program,
+                             temporary.c_str());
+                return false;
+            }
+            output << static_cast<long long>(::getpid()) << '\n';
+        }
+        std::error_code code;
+        std::filesystem::rename(temporary, path, code);
+        if (code) {
+            std::filesystem::remove(temporary, code);
+            std::fprintf(stderr, "%s: 無法發佈 %s\n", program, path.c_str());
+            return false;
+        }
+        path_ = path;
+        return true;
+    }
+    ~RunPidFile() {
+        if (path_.empty()) return;
+        std::error_code code;
+        std::filesystem::remove(path_, code);
+    }
+
+  private:
+    std::string path_;
+};
+
 void usage(FILE *stream, const char *program) {
     std::fprintf(stream,
-                 "用法：%s [folder] [--step N] [--interval MS]\n"
+                 "用法：%s [folder] [--step N] [--interval MS] [--daemon]\n"
                  "\n"
                  "  [folder]       要推進的世界資料夾；省略時從目前位置尋找\n"
                  "  --step N       推進 N 回合；0 代表持續執行直到中斷\n"
-                 "  --interval MS  回合之間等待的毫秒數；預設 100\n"
+                 "  --interval MS  沒有新投遞時，回合之間最長等待的毫秒數；\n"
+                 "                 前景預設 100、--daemon 預設 1000。有新的\n"
+                 "                 inbox 或 say 訊息時會立刻開下一回合\n"
+                 "  --daemon       脫離終端在背景跑（隱含 --step 0），輸出寫到\n"
+                 "                 .aos/run.log；用 aos stop 停掉\n"
                  "  -h, --help     顯示這份完整用法\n",
                  program);
 }
@@ -211,7 +254,14 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
     std::uint64_t interval = 100;
     bool saw_step = false;
     bool saw_interval = false;
+    bool daemon = false;
     for (int index = option_start; index < argc; index += 2) {
+        if (argv[index] != nullptr &&
+            std::strcmp(argv[index], "--daemon") == 0) {
+            daemon = true;
+            index -= 1;  /* --daemon 不吃值 */
+            continue;
+        }
         if (index + 1 >= argc || argv[index] == nullptr ||
             argv[index + 1] == nullptr) {
             usage(stderr, program);
@@ -257,6 +307,16 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
         }
     }
 
+    if (daemon) {
+        if (saw_step && steps != 0) {
+            std::fprintf(stderr, "%s: --daemon 只能跟 --step 0 併用\n",
+                         program);
+            return 2;
+        }
+        steps = 0;
+        if (!saw_interval) interval = 1000;
+    }
+
     if (explicit_folder) {
         std::error_code code;
         const auto absolute = std::filesystem::absolute(folder, code)
@@ -294,9 +354,42 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
         return 1;
     }
 
+    /* 先脫離終端，鎖與 pid 都要記在真正跑迴圈的那個行程上。 */
+    int notify_fd = -1;
+    if (daemon) {
+        const auto process =
+            aos::loop::detail::daemonize(layout.aos + "/run.log", error);
+        if (process.pid < 0) {
+            std::fprintf(stderr, "%s: %s\n", program, error.c_str());
+            return 1;
+        }
+        if (!process.child) {
+            if (!aos::loop::detail::await_daemon(process, error)) {
+                std::fprintf(stderr, "%s: %s\n", program, error.c_str());
+                return 1;
+            }
+            std::printf("aos run: 背景 loop 已啟動（pid %lld，log 在 "
+                        ".aos/run.log，停止用 aos stop）\n",
+                        static_cast<long long>(process.pid));
+            return 0;
+        }
+        notify_fd = process.notify_fd;
+    }
+
     RunLock lock;
     const std::string lock_path = layout.aos + "/run.lock";
-    if (!lock.acquire(lock_path, program)) return 1;
+    if (!lock.acquire(lock_path, program)) {
+        aos::loop::detail::notify_daemon(notify_fd, false);
+        return 1;
+    }
+
+    /* 無限回合才留 pid 檔：有限回合跑完就走，沒有人需要停它。 */
+    RunPidFile pid_file;
+    if (steps == 0 && !pid_file.write(layout.aos + "/run.pid", program)) {
+        aos::loop::detail::notify_daemon(notify_fd, false);
+        return 1;
+    }
+    aos::loop::detail::notify_daemon(notify_fd, true);
 
     interrupted_signal = 0;
     // 先解析 shared-library 符號，避免第一次呼叫落在 signal handler 裡。
@@ -349,7 +442,13 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
         saw_failure = saw_failure || !summary.failures.empty();
         std::fflush(stdout);
         if (steps == 0 || completed + 1 < steps) {
-            wait_interval(interval);
+            /* 空回合（只有 every 的常駐 step、inbox 沒東西）不必睡滿：
+             * 盯著 inbox 與每個 agent 的 say 資料夾，一有新投遞就立刻開下一回合。 */
+            if (summary.count == summary.every_count) {
+                aos::loop::wait_for_delivery(layout, interval);
+            } else {
+                wait_interval(interval);
+            }
             if (interrupted_signal != 0) {
                 return finish_interrupted(program, layout, summary.turn);
             }

@@ -1,5 +1,7 @@
 #include "test_support.hpp"
 
+#include <chrono>
+
 using namespace aos::loop;
 using namespace aos::loop::test;
 
@@ -130,4 +132,57 @@ TEST_CASE("every files keep independent delivery intervals") {
     CHECK(second.every_count == 1);
     CHECK(std::filesystem::exists(insts_dir(layout, 2) + "/fast-2.json"));
     CHECK_FALSE(std::filesystem::exists(insts_dir(layout, 2) + "/slow-2.json"));
+}
+
+TEST_CASE("delivery signature tracks inbox and agent say files") {
+    TempDir dir;
+    const Layout layout = layout_of(dir.path);
+    std::string error;
+    REQUIRE(ensure_layout(layout, error));
+
+    const std::string empty = delivery_signature(layout);
+    CHECK(delivery_signature(layout) == empty);
+    write_file(layout.inbox + "/one.json", "{}");
+    const std::string with_inbox = delivery_signature(layout);
+    CHECK(with_inbox != empty);
+    CHECK(delivery_signature(layout) == with_inbox);
+    const std::filesystem::path inbox_file = layout.inbox + "/one.json";
+    std::filesystem::last_write_time(
+        inbox_file,
+        std::filesystem::last_write_time(inbox_file) +
+            std::chrono::seconds(1));
+    const std::string touched_inbox = delivery_signature(layout);
+    CHECK(touched_inbox != with_inbox);
+    CHECK(delivery_signature(layout) == touched_inbox);
+
+    const std::filesystem::path say =
+        std::filesystem::path(layout.agents_dir) / "alice" / "say";
+    REQUIRE(std::filesystem::create_directories(say));
+    const std::string before_say = delivery_signature(layout);
+    write_file((say / "hello.md").string(), "哈囉");
+    const std::string with_say = delivery_signature(layout);
+    CHECK(with_say != before_say);
+    CHECK(delivery_signature(layout) == with_say);
+}
+
+TEST_CASE("wait for delivery times out and notices an existing delivery") {
+    TempDir empty_dir;
+    const Layout empty_layout = layout_of(empty_dir.path);
+    std::string error;
+    REQUIRE(ensure_layout(empty_layout, error));
+
+    const auto started = std::chrono::steady_clock::now();
+    CHECK_FALSE(wait_for_delivery(empty_layout, 200, 20));
+    const auto elapsed = std::chrono::steady_clock::now() - started;
+    CHECK(elapsed >= std::chrono::milliseconds(150));
+    CHECK(elapsed < std::chrono::seconds(1));
+
+    TempDir delivered_dir;
+    const Layout delivered_layout = layout_of(delivered_dir.path);
+    REQUIRE(ensure_layout(delivered_layout, error));
+    write_file(delivered_layout.inbox + "/ready.json", "{}");
+    const auto ready_started = std::chrono::steady_clock::now();
+    CHECK(wait_for_delivery(delivered_layout, 200, 20));
+    CHECK(std::chrono::steady_clock::now() - ready_started <
+          std::chrono::milliseconds(100));
 }
