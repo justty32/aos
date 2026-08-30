@@ -102,3 +102,19 @@ DeepSeek 官方帳號併發上限 2500，端點不會替我們擋「同時 3 個
 - 拍板 1／2／3 之後：D → 開一條 `core/llm` 的實作線；B → 先寫 spool contract（請求檔、結果檔、六個目錄）再開 worker 線；兩者都要回頭改 [pi-cpu](../../../../core/agent/docs/pi-cpu.md) 的「pi 繞過」段。
 - 隊員成品原文（sol：盤點表＋log 掃描＋CPU 表欄位草案；terra：A/B＋CPU 表＋JSON 原型；luna：C/D＋回合邊界＋選 CPU）只留在隊長 scratchpad，本頁已合成；要看細節再開線重跑。
 - sol 對 CPU 表的一個提醒值得留：**表的列 ≠ 配額邊界**——本機容量按「載入的 instance」、DeepSeek 容量按「帳號」（多把 key 共用）、價格按「model」；欄位要分 `cpu_id`／`capacity_scope`／`credential_scope`／`model`，別把三件事塞進一個名字。
+
+## 使用者裁決（2026-08-30）
+
+| # | 裁決 |
+|---|---|
+| 1 | **先 D（flock 槽）保底，正式走 B（spool＋worker）**；A 留作介面；C 不做 |
+| 2 | 上限設定**兩層**：使用者層總上限（權威），世界層只能再往下限 |
+| 3 | 超上限：**排隊但帶等待上限，超過才退回**（status `waiting-llm`，不算失敗） |
+| 4 | pi 引擎的 step **算一個呼叫、佔一槽** |
+| 5 | 回合邊界隨 1：D 同步等、B 投遞／取件兩回合 |
+| 6 | **優先序要做：數字優先度，登記時填**（使用者主動要求；D 保底就要做進去） |
+| 7 | 選 CPU：agent 固定綁 engine＋可選 tier |
+| 8 | CPU 掛了：同 tier 改派、只對未送出的；送出後斷線＝unknown 不重送 |
+| 9 | 並行上限預設：lmstudio 1、deepseek 3（實作層，可調） |
+| 10 | 原型只管並行；B 落地時加 token bucket |
+| 11 | A 的心智模型留作 B 的投遞介面 |
