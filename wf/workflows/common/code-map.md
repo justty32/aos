@@ -9,7 +9,7 @@
 
 ## 一分鐘看懂這個專案
 
-`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos run world`）。現在共有五個核心小專案：`exec`／`wire`／`loop`／`llm`／`agent`；`core/inst`／`core/llms`／`core/tooljson` 已於 2026-08-30 刪除。
+`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos run world`）。現在共有六個核心小專案：`exec`／`wire`／`loop`／`llm`／`agent`／`tick`；`core/inst`／`core/llms`／`core/tooljson` 已於 2026-08-30 刪除。
 
 ```
 repo 根
@@ -49,11 +49,12 @@ app/ ── `aos run`／`aos deliver` 掛的就是這條
 | [core/exec/README.md](../../../core/exec/README.md) | `core/exec/`：整批 POSIX 行程的啟動、等待、逾時、輸出與時間 | 要改 `start_all`／`wait_all`、行程群組、PATH／env 準備或暫存檔收拾 |
 | [core/wire/README.md](../../../core/wire/README.md) | `core/wire/`：指令、結果與 loop state 三種協定的 C++ struct／JSON 邊界 | 要改協定欄位的解析、序列化、預設值或錯誤回報 |
 | [core/loop/README.md](../../../core/loop/README.md) | `core/loop/`：`.aos/` 版面、投遞、匯聚、state 與一回合的推進順序 | 要改資料夾回合機、`aos run`／`aos deliver` 或它對 exec／wire 的接法 |
+| [core/tick/README.md](../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
 
 **新增或刪除一個原始碼／測試檔（或某個檔的職責變了）時，那一列去哪裡加**：
 檔案在 `common/`／`app/`／`cmake/` 底下或是建置設定檔（含新增小專案要加的那行 `add_subdirectory()`）→ `code-map/build.md`。
-`core/exec`、`core/wire`、`core/loop` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊。
+`core/exec`、`core/wire`、`core/loop`、`core/tick` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊。
 未來多一個小專案，就在 `code-map/` 多一冊，並在上面這張表加一列。**這一步跟程式碼改動同一個 commit**（AGENTS.md 的「改了程式碼就要同步 code map」）。
 
 ---
