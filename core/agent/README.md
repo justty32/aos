@@ -43,6 +43,12 @@ adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚�
 `say`／`listen`／`state`／`talk`／`aos agent` 的 `-h`／`--help` 都印到 stdout 並回 0；
 頂層 say 只把第一個位置的 help 當選項，其餘位置仍是訊息內容。
 
+`aos state` 預設印出 agent、目前狀態、現場計數的 `say/` 未讀封數，以及上一回合
+成功或失敗；`aos state --json` 才印 `status.json` 原文。`status.json` 每次寫入都包含
+`unread` 快照，最近一次 step 失敗時另含單行 `last_error`，成功回合會清掉該欄位。
+若 lmstudio completion 失敗，這回合的新 user 訊息仍留在 `say/`，不會先寫進 history
+或 log；端點恢復後可在下一回合安全重試。
+
 ## 使用者也是一格 agent
 
 通訊錄天然有一格 `~` 代表使用者，地址是 `$HOME` 的絕對路徑。使用者不是真的 agent，

@@ -376,7 +376,8 @@ int step(const std::filesystem::path &folder, std::string_view name,
         if (paths) {
             const std::string detail_text = one_line(exception.what());
             try {
-                detail::write_status(*paths, "error", detail_text, turn);
+                detail::write_status(*paths, "error", detail_text, turn,
+                                     detail_text);
             } catch (...) {
             }
             try {
