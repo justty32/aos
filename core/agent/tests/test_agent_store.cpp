@@ -135,11 +135,18 @@ TEST_CASE("agent init creates its complete layout and every instruction") {
     CHECK(std::filesystem::is_regular_file(aos / "state.json"));
 
     CHECK(std::filesystem::is_empty(aos / "inbox"));
+    /* L1-01 之後 argv[0] 是「這一個」aos 的絕對路徑（找不到才退回裸的 "aos"），
+     * 所以只能驗形狀：argv[0] 的檔名是 aos，後面接 agent step。寫死成
+     * {"aos","agent","step"} 會隨測試行程的 PATH 上有沒有 aos 而時好時壞。 */
     const nlohmann::json instruction =
         json_file(aos / "every" / "agent-bob.json");
-    const nlohmann::json expected = {
-        {"argv", {"aos", "agent", "step"}}};
-    CHECK(instruction == expected);
+    REQUIRE(instruction.contains("argv"));
+    REQUIRE(instruction["argv"].is_array());
+    REQUIRE(instruction["argv"].size() == 3);
+    CHECK(std::filesystem::path(instruction["argv"][0].get<std::string>())
+              .filename() == "aos");
+    CHECK(instruction["argv"][1] == "agent");
+    CHECK(instruction["argv"][2] == "step");
 
     CHECK(aos::agent::read_history(world.path, "bob").empty());
     CHECK(aos::agent::read_pending(world.path, "bob").calls.empty());
