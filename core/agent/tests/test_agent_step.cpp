@@ -10,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <unistd.h>
 
 namespace {
@@ -56,6 +57,24 @@ void write_json(const std::filesystem::path &path,
     std::filesystem::rename(temporary, path);
 }
 
+bool has_step_instruction(const std::filesystem::path &inbox) {
+    for (const auto &entry : std::filesystem::directory_iterator(inbox)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".json") {
+            continue;
+        }
+        std::ifstream input(entry.path());
+        nlohmann::json instruction;
+        input >> instruction;
+        const auto argv =
+            instruction.value("argv", std::vector<std::string>{});
+        if (argv.size() >= 3 && argv[0] == "aos" && argv[1] == "agent" &&
+            argv[2] == "step") {
+            return true;
+        }
+    }
+    return false;
+}
+
 }  // namespace
 
 TEST_CASE("agent step calls completion for say and records the reply") {
@@ -81,11 +100,10 @@ TEST_CASE("agent step calls completion for say and records the reply") {
     CHECK(history[1].role == "assistant");
     CHECK(aos::agent::read_log(world.path, "bob").find("我叫 bob。") !=
           std::string::npos);
-    CHECK(std::filesystem::exists(world.path / ".aos" / "inbox" /
-                                  "agent-bob-7.json"));
+    CHECK(std::filesystem::is_empty(world.path / ".aos" / "inbox"));
 }
 
-TEST_CASE("agent idle step skips completion but requeues itself") {
+TEST_CASE("agent idle step skips completion without self delivery") {
     TempWorld world;
     ScopedTurn turn("8");
     bool called = false;
@@ -96,8 +114,7 @@ TEST_CASE("agent idle step skips completion but requeues itself") {
                   return "不應出現";
               }) == 0);
     CHECK_FALSE(called);
-    CHECK(std::filesystem::exists(world.path / ".aos" / "inbox" /
-                                  "agent-bob-8.json"));
+    CHECK(std::filesystem::is_empty(world.path / ".aos" / "inbox"));
     CHECK(aos::agent::read_status(world.path, "bob").status == "idle");
 }
 
@@ -148,11 +165,10 @@ TEST_CASE("agent tool trip uses pending turn plus one and resumes later") {
     const auto history = aos::agent::read_history(world.path, "bob");
     CHECK(history[history.size() - 2].role == "tool");
     CHECK(history.back().content == "結果裡有 alpha 和 beta。");
-    CHECK(std::filesystem::exists(world.path / ".aos" / "inbox" /
-                                  "agent-bob-12.json"));
+    CHECK_FALSE(has_step_instruction(world.path / ".aos" / "inbox"));
 }
 
-TEST_CASE("agent completion failure still requeues itself") {
+TEST_CASE("agent completion failure does not self deliver") {
     TempWorld world;
     ScopedTurn turn("13");
     aos::agent::say(world.path, "bob", "觸發錯誤");
@@ -164,7 +180,6 @@ TEST_CASE("agent completion failure still requeues itself") {
               },
               &error) == 1);
     CHECK(error == "假的 completion 失敗");
-    CHECK(std::filesystem::exists(world.path / ".aos" / "inbox" /
-                                  "agent-bob-13.json"));
+    CHECK(std::filesystem::is_empty(world.path / ".aos" / "inbox"));
     CHECK(aos::agent::read_status(world.path, "bob").status == "idle");
 }

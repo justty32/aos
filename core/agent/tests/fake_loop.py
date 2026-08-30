@@ -63,6 +63,8 @@ def one_turn(folder):
     turn = int(turn_path.read_text(encoding="utf-8")) if turn_path.exists() else 1
     inbox = aos / "inbox"
     inbox.mkdir(parents=True, exist_ok=True)
+    every = aos / "every"
+    every.mkdir(parents=True, exist_ok=True)
     queued = []
     for source in sorted(inbox.glob("*.json")):
         inst = json.loads(source.read_text(encoding="utf-8"))
@@ -70,6 +72,13 @@ def one_turn(folder):
         target = aos / "batch" / str(turn) / "insts" / (ident + ".json")
         target.parent.mkdir(parents=True, exist_ok=True)
         os.replace(source, target)
+        queued.append((ident, inst))
+    for source in sorted(every.glob("*.json")):
+        inst = json.loads(source.read_text(encoding="utf-8"))
+        ident = f"{source.stem}-{turn}"
+        inst["id"] = ident
+        target = aos / "batch" / str(turn) / "insts" / (ident + ".json")
+        atomic_write(target, inst)
         queued.append((ident, inst))
 
     items = []

@@ -1,5 +1,7 @@
 # 自我投遞能不能埋進 loop
 
+> **已採用方案 A，2026-08-30**（使用者裁決）：loop 提供 `.aos/every/`，agent 不再自我投遞。
+
 ← [ideas](README.md)｜[top-down-cli](top-down-cli.md)｜[machine-shape/loop](machine-shape/loop.md)｜[PROTOCOL](../dispatch/proto/PROTOCOL.md)｜[隊 B 交接書](../dispatch/proto/proto-B-agent.md)
 
 **記錄日期**：2026-08-30，隊 B 原型（`aos agent`）做完後的規劃。**這份只是規劃，還沒實作，

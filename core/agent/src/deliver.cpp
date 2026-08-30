@@ -15,13 +15,4 @@ void deliver(const Paths &paths, std::string_view id,
                  instruction.dump(2) + "\n");
 }
 
-void deliver_self(const Paths &paths, std::string_view name,
-                  std::uint64_t turn) {
-    const std::string id =
-        "agent-" + std::string(name) + "-" + std::to_string(turn);
-    deliver(paths, id,
-            {"aos", "agent", "step", paths.folder.string(),
-             std::string(name)});
-}
-
 }  // namespace aos::agent::detail
