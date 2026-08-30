@@ -132,3 +132,5 @@ lmstudio 與 pi 的一次 step 都算一個 LLM 呼叫，呼叫前都會取槽�
 `aos agent step` 時 stderr 只印一行 `waiting-llm` 並以 75 結束。這不算失敗，下回合
 `every` 再投一次就會自然重試。沒設 `cpus.json` 時回傳空槽、不佔也不等，行為與以前
 一樣。
+
+端到端 smoke：`bash core/agent/tests/smoke_user.sh`（離線、`HOME`／`AOS_HOME` 指暫存目錄）。

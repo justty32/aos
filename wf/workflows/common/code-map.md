@@ -188,6 +188,7 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 | `core/agent/src/run_top.cpp` | 頂層 `aos say／listen／talk／state` 進入點：解析 cwd 世界與唯一 agent；`say --to <名字>` 查通訊錄並支援投到使用者 `~`，`listen` 在使用者世界改讀扁平信箱。 |
 | `core/agent/tests/fake_loop.py` | 測試用 loop 替身：依協定搬入 inbox、複製 every、並行跑 instruction、寫 out／state、鏡射 agent status 並推進 turn。 |
 | `core/agent/tests/smoke.sh` | 端到端 smoke：在 bob cwd 無參數初始化、用替身推三回合，驗 every 每回合執行與 `state.json` 的 status 鏡射。 |
+| `core/agent/tests/smoke_user.sh` | 手動端到端 smoke：離線驗 lmstudio step 搶槽、使用者 `~` 的 say／listen 與天然通訊錄列。 |
 | `core/agent/README.md` | 回合 agent 的快速使用、工具往返節奏與函式庫入口。 |
 | `core/agent/docs/pi-interface.md` | pi 0.84.2 實測、三種接法與尚未內建的 extension adapter 規劃；不是目前已完成的 CLI transport。 |
 
