@@ -3,6 +3,7 @@
 #include <aos/exec.hpp>
 
 #include "clock.hpp"
+#include "interrupt.hpp"
 #include "spawn_prep.hpp"
 #include "tempfile.hpp"
 #include "wait.hpp"
@@ -183,6 +184,7 @@ std::vector<Running> start_all(const std::vector<Spawn> &spawns) {
 
         item.pid = pid;
         item.deadline_mono_ms = deadline_after(spawn.timeout_ms);
+        detail::register_running(pid);
         running.push_back(std::move(item));
     }
     return running;

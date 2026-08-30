@@ -3,6 +3,7 @@
 #include <aos/exec.hpp>
 
 #include "clock.hpp"
+#include "interrupt.hpp"
 #include "tempfile.hpp"
 #include "wait.hpp"
 
@@ -87,13 +88,17 @@ std::vector<Result> wait_all(std::vector<Running> &running) {
             const pid_t pid = running[index].pid;
             const pid_t waited = detail::wait_retry(pid, &raw_status[index], WNOHANG);
             if (waited == pid) {
+                detail::unregister_running(pid);
+                results[index].ended_at = now_iso8601();
                 completed[index] = true;
                 --remaining;
                 made_progress = true;
                 continue;
             }
             if (waited < 0) {
+                detail::unregister_running(pid);
                 record_wait_error(results[index], errno);
+                results[index].ended_at = now_iso8601();
                 completed[index] = true;
                 --remaining;
                 made_progress = true;
@@ -104,9 +109,11 @@ std::vector<Result> wait_all(std::vector<Running> &running) {
             if (deadline != 0 && now >= deadline) {
                 kill(-pid, SIGKILL);
                 const pid_t killed = detail::wait_retry(pid, &raw_status[index], 0);
+                detail::unregister_running(pid);
                 if (killed < 0) {
                     record_wait_error(results[index], errno);
                 }
+                results[index].ended_at = now_iso8601();
                 completed[index] = true;
                 --remaining;
                 made_progress = true;
@@ -126,7 +133,9 @@ std::vector<Result> wait_all(std::vector<Running> &running) {
             decode_status(raw_status[index], results[index]);
         }
         collect_files(running[index], results[index]);
-        results[index].ended_at = now_iso8601();
+        if (results[index].ended_at.empty()) {
+            results[index].ended_at = now_iso8601();
+        }
     }
     return results;
 }
