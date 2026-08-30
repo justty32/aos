@@ -72,7 +72,6 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
-| proto-A-machine（[交接書](proto/proto-A-machine.md)） | `core/exec/` `core/wire/` `core/loop/` `core/CMakeLists.txt` code-map | 其餘 core/、app/、wf/ | 2026-08-30 |
 | proto-B-agent（[交接書](proto/proto-B-agent.md)，worktree） | `core/llm/` `core/agent/` `core/CMakeLists.txt` code-map 檔尾、ideas/self-delivery-in-loop.md | 其餘 core/、app/、wf/ | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫

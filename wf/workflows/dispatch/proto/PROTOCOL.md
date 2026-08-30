@@ -1,6 +1,6 @@
 # 原型共用協定（2026-08-30，調度者代裁）
 
-← [dispatch](../README.md)｜隊 A [proto-A-machine](proto-A-machine.md)｜隊 B [proto-B-agent](proto-B-agent.md)
+← [dispatch](../README.md)｜隊 A [proto-A-machine](done/proto-A-machine.md)（已收線）｜隊 B [proto-B-agent](proto-B-agent.md)
 
 兩隊唯一的共同契約。**改這份要經調度者**；隊內小裁決記在各自交接書尾的「隊長裁決」。
 原則：**最小原型、先讓使用者用得起來、先不管意外與錯誤的邊緣狀況**（使用者 2026-08-30 明示）。
