@@ -1,0 +1,33 @@
+$ ls .aos/tools/
+cat.json
+ls.json
+sh.json
+$AOS say "列出 .aos/tools/ 裡有哪些工具，然後告訴我你自己能用哪些工具"
+$ timeout 900 $AOS run . --step 1 >> run1.log 2>&1
+tools_turn exit=0 elapsed_ms=5973
+$AOS listen --once | tail -25
+簡單說：改回傳型別是 API 變更，所有呼叫端（包含 `main.cpp` 和測試）都必須跟著調整才能編譯。
+
+## turn 5 user
+列出 .aos/tools/ 裡有哪些工具，然後告訴我你自己能用哪些工具
+
+## turn 5 assistant
+`.aos/tools/` 裡有 5 個工具的定義檔（JSON schema）：
+- **aos** — 執行 aos 子命令（run/deliver/say/tool/contact…）
+- **cat** — 印出檔案內容
+- **git** — 執行 git 子命令
+- **ls** — 列出資料夾內容
+- **sh** — 用 `sh -lc` 執行 shell 指令
+
+---
+
+關於「我自己能用哪些工具」：這些是 `.aos/tools/` 定義的世界工具，而我 mini 這個 agent 實際能呼叫的工具不在那包，而是由環境注入給我的 tools，目前我有：
+
+- **read** — 讀檔案（文字／圖片）
+- **bash** — 執行 shell 指令
+- **edit** — 精準編輯檔案
+- **write** — 建立/覆寫檔案
+
+換句話說：`.aos/tools/` 裡那 5 個（aos/cat/git/ls/sh）是這個沙盒世界對 **aos 主程式** 描述的可用工具，不是直接給我的。我能直接用的是 read / bash / edit / write 這四個。在那些改動裡，我就是用 bash + edit + read + write 完成的。
+
+> pi 用了工具：bash cd /home/lorkhan/repo/simple_tools/aos && ls -la .aos/tools/ 2>/dev/null && echo "===詳細===" && ls -la .aos/tools/*/ 2>/dev/null, bash cd /home/lorkhan/repo/simple_tools/aos/.aos/tools/ && for f in *.json; do echo "=== $f ==="; python3 -c "import json,sys; d=json.load(open('$f')); print('name:', d.get('name')); print('description:', d.get('description'))" 2>/dev/null; done

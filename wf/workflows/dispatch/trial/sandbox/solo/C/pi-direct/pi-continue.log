@@ -1,0 +1,11 @@
+你要我讀完：
+
+- `README.md`
+- `src/main.cpp`
+- `src/parse.cpp`
+- `src/parse.hpp`
+- `tests/test_parse.cpp`
+
+並做逐行控制流程、所有邊界案例分析，撰寫非常詳細的重構風險報告，**只分析、不修改**。
+
+中斷前這五個檔案都已讀完；另外也讀了專案工作流文件 `wf/SESSION-LOG.md`、`wf/WAIT_USER.md`、`wf/WORKFLOWS.md`、`conventions.md` 與 `code-map.md`。

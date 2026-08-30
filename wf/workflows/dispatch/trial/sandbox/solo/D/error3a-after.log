@@ -1,0 +1,18 @@
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 3,
+  "updated_at": "2026-08-30T11:39:15Z"
+}
+state_exit=0
+.aos/agents/lm/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 3,
+  "updated_at": "2026-08-30T11:39:15Z"
+}
+## turn 2 user
+測試
+
+listen_exit=0

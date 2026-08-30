@@ -1,0 +1,28 @@
+$ cat .aos/every/agent-mini.json
+{
+  "argv": [
+    "aos",
+    "agent",
+    "step"
+  ]
+}
+$ cat .aos/turn
+16
+$ cat .aos/agents/mini/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:32Z"
+}
+$ wc -c .aos/agents/mini/log.md .aos/agents/mini/history.json
+ 0 .aos/agents/mini/log.md
+21 .aos/agents/mini/history.json
+21 total
+$ cat .aos/agents/mini/history.json
+{
+  "messages": []
+}
+$ env PATH (sanitized path only)
+/home/lorkhan/.local/share/fnm/node-versions/v24.14.1/installation/bin:/home/lorkhan/.local/bin:/run/user/1000/fnm_multishells/3240576_1788089696740/bin:/home/lorkhan/.local/share/fnm:/home/lorkhan/.codex/tmp/arg0/codex-arg0hdBxjh:/home/lorkhan/.local/share/fnm/node-versions/v24.14.1/installation/bin:/home/lorkhan/.local/bin:/run/user/1000/fnm_multishells/2895_1788051260950/bin:/home/lorkhan/.local/share/fnm:/home/lorkhan/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/opt/cuda/bin:/var/lib/flatpak/exports/bin:/usr/lib/jvm/default/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/home/lorkhan/.lmstudio/bin:/home/lorkhan/.dotnet/tools:/home/lorkhan/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/context7/ed404106fcd8/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/code-review/ed404106fcd8/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/code-simplifier/1.0.0/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/skill-creator/ed404106fcd8/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/claude-md-management/1.0.0/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/feature-dev/ed404106fcd8/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/commit-commands/ed404106fcd8/bin:/home/lorkhan/.claude/plugins/cache/claude-plugins-official/github/ed404106fcd8/bin:/home/lorkhan/.lmstudio/bin:/home/lorkhan/.dotnet/tools:/home/lorkhan/bin
+$ command -v aos

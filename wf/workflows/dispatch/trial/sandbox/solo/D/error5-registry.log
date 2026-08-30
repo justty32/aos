@@ -1,0 +1,20 @@
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+list1_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+add_missing_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+remove_missing_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+add_make_exit=2
+usage: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool add <name> [選項...] -- <argv...>
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool ls [--folder F] [--json]
+       /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos tool rm <name> [--folder F]
+list2_exit=2

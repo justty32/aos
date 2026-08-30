@@ -1,0 +1,24 @@
+$ grep driver timing logs
+run1.driver.log:run1 exit=0 elapsed_seconds=1.4234990000
+run2.driver.log:run2 exit=0 elapsed_seconds=9.0432650000
+run3.driver.log:run3 exit=0 elapsed_seconds=1.4612140000
+step4-followup-run.log:run exit=0 elapsed_seconds=13.3057770000
+step5-run.log:run exit=0 elapsed_seconds=5.1406520000
+step6-pi-driver.log:pi exit=0 elapsed_seconds=69.2681400000
+$ wc -l mini/run1.log mini/.aos/agents/mini/log.md
+  60 mini/run1.log
+  64 mini/.aos/agents/mini/log.md
+ 124 total
+$ rg counts
+world_turn_lines=60
+assistant_sections=8
+tool_sections=6
+user_sections=3
+$ source differences file count
+Files /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.cpp and mini/src/parse.cpp differ
+Files /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.hpp and mini/src/parse.hpp differ
+$ pi differences file count
+Files /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/main.cpp and mini-pi/src/main.cpp differ
+Files /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.cpp and mini-pi/src/parse.cpp differ
+Files /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.hpp and mini-pi/src/parse.hpp differ
+Files /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/tests/test_parse.cpp and mini-pi/tests/test_parse.cpp differ

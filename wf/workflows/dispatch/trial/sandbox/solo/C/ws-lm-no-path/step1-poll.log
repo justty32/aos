@@ -1,0 +1,458 @@
+runpid=3274657
+start_epoch=1788090017
+=== t=5s actual_elapsed=0s at=2026-08-30T19:40:17+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 1,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-1",
+      "argv0": "aos",
+      "pid": 3274663,
+      "started_at": "2026-08-30T11:40:17.820Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=10s actual_elapsed=5s at=2026-08-30T19:40:22+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=15s actual_elapsed=10s at=2026-08-30T19:40:27+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=20s actual_elapsed=15s at=2026-08-30T19:40:32+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=25s actual_elapsed=20s at=2026-08-30T19:40:37+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=30s actual_elapsed=25s at=2026-08-30T19:40:42+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=35s actual_elapsed=30s at=2026-08-30T19:40:47+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=40s actual_elapsed=35s at=2026-08-30T19:40:52+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=45s actual_elapsed=40s at=2026-08-30T19:40:57+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=50s actual_elapsed=45s at=2026-08-30T19:41:02+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=55s actual_elapsed=50s at=2026-08-30T19:41:07+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+=== t=60s actual_elapsed=55s at=2026-08-30T19:41:12+08:00 ===
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- status.json:
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:40:02Z"
+}
+-- state.json phase:
+{
+  "turn": 9,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-9",
+      "argv0": "aos",
+      "pid": 3274697,
+      "started_at": "2026-08-30T11:40:18.628Z",
+      "status": "done",
+      "exit": 127
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:40:02Z"
+    }
+  }
+}
+wait_rc=0 total_elapsed=60s
+-- run.log:
+turn 1: 1 insts (1 every), 0 ms
+turn 2: 1 insts (1 every), 0 ms
+turn 3: 1 insts (1 every), 0 ms
+turn 4: 1 insts (1 every), 1 ms
+turn 5: 1 insts (1 every), 0 ms
+turn 6: 1 insts (1 every), 1 ms
+turn 7: 1 insts (1 every), 0 ms
+turn 8: 1 insts (1 every), 1 ms
+turn 9: 1 insts (1 every), 0 ms
+run exit=0

@@ -1,0 +1,26 @@
+$ cat .aos/state.json
+{
+  "agents": {
+    "mini": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 0,
+      "updated_at": "2026-08-30T11:35:32Z"
+    }
+  },
+  "phase": "idle",
+  "running": [],
+  "turn": 0
+}
+$ cat .aos/agents/*/pending.json
+{
+  "calls": [],
+  "turn": 0
+}
+$ cat .aos/agents/*/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:32Z"
+}
