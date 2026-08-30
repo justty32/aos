@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # LLM 呼叫失敗的那一回合，使用者的訊息已經被吃掉了：端點修好之後也不會有人回答它
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 export PATH="$(dirname "$AOS"):$PATH"
 curl -s -m 5 http://localhost:1234/v1/models >/dev/null || { echo "SKIP: LM Studio 沒開"; exit 0; }
 W=$(mktemp -d); mkdir -p "$W/.aos"; cd "$W"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 打錯資料夾名字，aos run 靜默建出一個新世界；打到不可寫的路徑則報成 Permission denied
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 BASE=$(mktemp -d)
 TYPO="$BASE/my-projekt"     # 使用者其實想打 my-project
 echo "--- 目標路徑存在嗎： $([ -d "$TYPO" ] && echo yes || echo no)"

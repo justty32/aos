@@ -2,7 +2,7 @@
 # 世界的工具登記表對 pi 引擎完全無效：把工具全部移除、白名單設成 []，
 # pi agent 照樣改檔、照樣走出世界。aos tool ls 說的話對這隻 agent 不算數。
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 export PATH="$(dirname "$AOS"):$PATH"
 if [ -z "${DEEPSEEK_API_KEY:-}" ]; then echo "SKIP: 需要 DEEPSEEK_API_KEY"; exit 0; fi
 BASE=$(mktemp -d)

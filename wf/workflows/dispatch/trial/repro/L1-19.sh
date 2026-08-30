@@ -3,7 +3,7 @@
 # LM Studio 沒開（最常見的真實故障）時，aos run 照樣 exit 0、state 照樣 idle，
 # 真正的錯誤埋在 .aos/batch/<turn>/out/*.json 裡。
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 export PATH="$(dirname "$AOS"):$PATH"
 W=$(mktemp -d); mkdir -p "$W/.aos"; cd "$W"
 "$AOS" agent init --name w >/dev/null

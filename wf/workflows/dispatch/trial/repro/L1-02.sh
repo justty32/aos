@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 說了三句話，state/listen 完全看不出來有未讀
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 W=$(mktemp -d); mkdir -p "$W/.aos"; cd "$W"
 "$AOS" agent init --name w >/dev/null
 echo "--- init 之後的 state："; "$AOS" state
