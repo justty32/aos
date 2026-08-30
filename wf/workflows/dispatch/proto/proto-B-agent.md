@@ -67,4 +67,47 @@
 
 ## 隊長裁決
 
-（隊長追加）
+回報見 [reports/B.md](reports/B.md)。以下是隊長在原型過程中自己選的、沒有回頭問的設計小裁決。
+
+### 分層與相依
+
+1. **`core/llm` 用 libcurl 直接打，不相依 `aos::llms`**。`llms` 是禁區小專案，
+   不改也不連；`llm` 保持自給自足（250 行）。
+2. **`core/agent` 用 `PRIVATE_DEPS aos::llm`**，公開標頭不露出任何 llm 型別。
+3. **`step` 直接連函式庫呼叫 LLM，不 fork `aos llm` 子行程**。交接書說兩者皆可，選了少一層行程的。
+
+### 回合語意
+
+4. **工具往返固定三回合**（N 投遞 → N+1 執行 → N+2 讀結果），**不繞過**。
+   使用者追加要求寫「跑兩回合」，但 loop 是「先匯聚整批、並行跑完才寫 `out/`」，
+   同一回合投的東西下一回合才跑，結果再下一回合才讀得到。想壓成兩回合就得改協定 §5，
+   所以不改，照三回合實作並記進 [self-delivery-in-loop](../../ideas/self-delivery-in-loop.md)。
+5. **省 token**：沒有新 user 訊息、也沒有剛收到的工具結果 → **不叫 LLM**，只自我投遞。
+   （交接書把這一條標為隊長裁決點，選了省的那邊。）
+6. **`pending.json` 記「投遞當下的 turn」**，讀結果時去 `pending.turn + 1` 那個 batch 找。
+7. **任何例外都仍然自我投遞**（`safely_requeue`），不能靜默死亡。等工具結果的回合也一樣先投再 return。
+
+### 工具
+
+8. **不用 OpenAI 原生 function calling**。從 LLM 回覆最後一行往前掃
+   `{"tool":...,"args":...}`（也接受 ```json 圍欄），**每回合最多取一個**。
+9. **`{args}` 模板展開不做斷詞**：一個模板元素就是一個 argv 項。
+   所以 `sh` 是 `["sh","-lc","{args}"]`（正確），而 `["ls","{args}"]` 餵 `-la /tmp`
+   會變成單一個 argv 項——已知限制，邊緣狀況照規矩丟給規劃文件。
+10. **未知工具名不算錯誤**：當成沒有工具呼叫，只在 `log.md` 記一行。
+11. stdout／stderr 各截 **4000 個 UTF-8 字元**（不是位元組，避免切斷中文字）。
+
+### 交付形式
+
+12. **`talk --interface pi` 不做內建 adapter**。實測 pi 0.84.2 是完整的 coding-agent TUI，
+    最小可行接法是寫一支 pi extension，超出交接書給的「一位隊員額度」。
+    改交 [`core/agent/docs/pi-interface.md`](../../../../core/agent/docs/pi-interface.md)
+    （含三種接法、代價、建議與最小落地步驟）；CLI 會明確報錯並指向它。
+13. **`fake_loop.py` 用 python3 標準函式庫**（120 行），掛進 ctest 成為 `aos_agent_fake_loop`。
+14. **code map 只在檔尾追加**（`git diff` 零刪除行），避免跟隊 A 打架。
+
+### 人力
+
+15. 使用者中途要求把工作壓給 codex，於是開了 **5 條 codex 線**
+    （`core/llm`、`fake_loop`＋smoke、pi 調查、`core/agent`、code map）＋ **Fable ×1**（規劃文件）。
+    隊長先寫一份 SPEC 當全隊唯一實作依據，避免五條線各自解讀交接書。
