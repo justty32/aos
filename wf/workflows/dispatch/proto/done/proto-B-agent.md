@@ -65,6 +65,10 @@
 
 最後一則訊息＝ `reports/B.md` 摘要（≤ 30 行）＋終局 STATUS（`DONE`／`BLOCKED`／`FAILED`）＋你的 worktree 路徑與分支名。
 
+## 收線（調度者 2026-08-30）
+
+調度者在 main 上 ff-merge（`adcb5bc`）後獨立重跑：ctest 10/10 綠；真 loop 上 `agent init`→`say`→`run --step 4`，工具 `ls -la` 走 inst、結果餵回、每回合自我投遞、`state.json.agents.bob` 有值。證據見 [reports/B.md](../reports/B.md)。
+
 ## 隊長裁決
 
 回報見 [reports/B.md](reports/B.md)。以下是隊長在原型過程中自己選的、沒有回頭問的設計小裁決。

@@ -4,13 +4,20 @@
 
 **只放「還沒完成」的活狀態**（in-flight / open）。完成的不留這裡——過程細節交給 git log（若有「已落地功能目錄」則濃縮一句進去）。待**使用者**親自驗證／做的另見 [WAIT_USER.md](WAIT_USER.md)。
 
-> **膨脹就拆**：本檔若過大，就在 repo 頂層新立 **`session_logs/`** 資料夾，按工作流／類別**拆檔 + 一個 index 導航**（照 [DEV-GUIDE「結構整理原則」](DEV-GUIDE.md)）。
+> **膨脹就拆**：本檔若過大，就在 repo 頂層新立 **`session_logs/`** 資料夾，按工作流／類別**拆檔 + 一個 index 導航**（照 [STRUCTURE「結構整理原則」](STRUCTURE.md)）。
 
 本檔同時 ① 連到各工作流自己的 session-log（若該工作流已長出自己的），② 收**不屬任何工作流**的進度。
 
 > **條目格式**：每條只留**一行 open 狀態 + 指向細節的連結**（設計決策/修了什麼落到該工作流的文件、待使用者驗的進 [WAIT_USER](WAIT_USER.md)）。完成即整條刪除。
 
 ## 最新進度
+
+- **2026-08-30 最小原型已落地（main `adcb5bc`）**：五個新核心小專案 `core/exec`／`wire`／`loop`／`llm`／`agent`，
+  指令 `aos run`／`deliver`／`llm`／`agent`；協定在 [dispatch/proto/PROTOCOL](workflows/dispatch/proto/PROTOCOL.md)，
+  兩隊報告在 [proto/reports](workflows/dispatch/proto/reports/)。舊 `core/inst`／`llms`／`tooljson` 原地未動，
+  **要不要刪、何時刪未定**。刻意跳過的邊緣狀況（無鎖、無崩潰恢復、不 fsync、agent 靜默死亡、stop）
+  列在各小專案 README 與 [self-delivery-in-loop](workflows/ideas/self-delivery-in-loop.md)。pi 介面沒做 adapter，
+  只交 [pi-interface](../core/agent/docs/pi-interface.md)。
 
 > **等使用者一句話的項目已集中到 [WAIT_USER](WAIT_USER.md)**（2026-08-30）——下面各條保留
 > 脈絡，但「還在等誰、卡在哪一句」以那份為單一入口，別在這裡逐條翻。
@@ -123,7 +130,7 @@
 
 ## 各工作流 session-log
 
-> 〔模板說明〕某工作流長出自己的 `session-log.md` 後，在這裡加一列。一開始是空表很正常。
+> 某工作流長出自己的 `session-log.md` 後，在這裡加一列。一開始是空表很正常。
 
 | 工作流 | session-log | open 摘要 |
 |--------|-------------|----------|
