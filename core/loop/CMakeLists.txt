@@ -40,5 +40,6 @@ aos_add_test(aos_loop_tests
         tests/test_agents.cpp
         tests/test_every.cpp
         tests/test_folder.cpp
-    LINK aos::loop
+        tests/test_run_cli.cpp
+    LINK aos_loop_cli
 )

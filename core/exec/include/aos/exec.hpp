@@ -51,6 +51,11 @@ AOS_API std::vector<Running> start_all(const std::vector<Spawn> &spawns);
  * 順序與輸入一一對應；呼叫後 running[i] 的暫存檔路徑即失效。 */
 AOS_API std::vector<Result> wait_all(std::vector<Running> &running);
 
+/* 對目前這個行程「已經 fork、還沒收線」的每一條子行程群組送出 signal_number。
+ * 只呼叫 kill(2)，async-signal-safe，可以在 signal handler 裡呼叫。
+ * 回傳實際送出的條數。 */
+AOS_API int interrupt_running(int signal_number);
+
 /* 現在時刻的 ISO8601 字串（UTC，毫秒）。上層寫 state.json 也用同一種格式。 */
 AOS_API std::string now_iso8601();
 

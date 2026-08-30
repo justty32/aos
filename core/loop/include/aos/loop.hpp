@@ -85,11 +85,20 @@ AOS_API bool write_state(const Layout &layout, const wire::State &state,
 
 /* ---- turn：一回合 ---- */
 
+struct InstFailure {
+    std::string id;
+    int exit = 0;            // signal == 0 時才有意義
+    int signal = 0;
+    std::string argv0;
+    std::string stderr_line; // stderr 的第一行非空白內容，可能是空字串
+};
+
 struct TurnSummary {
     std::uint64_t turn = 0;          // 剛跑完的那一回合編號
     std::size_t count = 0;           // 執行了幾條；0＝idle 回合
     std::size_t every_count = 0;     // 其中有幾條來自 every/
     std::uint64_t elapsed_ms = 0;
+    std::vector<InstFailure> failures;
 };
 
 /* 匯聚 → start_all → 寫 state(phase=running) → wait_all → 寫 out/ →

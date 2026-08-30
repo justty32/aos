@@ -69,7 +69,11 @@ bool mkdir_p(const std::string &path, std::string &error) {
     std::error_code code;
     std::filesystem::create_directories(path, code);
     if (code) {
-        error = "無法建立 " + path + ": " + code.message();
+        const std::string reason =
+            code == std::errc::no_such_file_or_directory
+                ? "路徑不存在（" + code.message() + "）"
+                : code.message();
+        error = "無法建立 " + path + ": " + reason;
         return false;
     }
     return true;

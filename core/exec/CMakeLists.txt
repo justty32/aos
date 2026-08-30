@@ -5,6 +5,7 @@ aos_add_subproject(exec
         src/clock.cpp
         src/tempfile.cpp
         src/spawn_prep.cpp
+        src/interrupt.cpp
         src/wait.cpp
         src/start.cpp
         src/wait_all.cpp
@@ -17,5 +18,7 @@ aos_add_test(aos_exec_tests
         tests/test_parallel.cpp
         tests/test_timeout.cpp
         tests/test_env_cwd.cpp
+        tests/test_interrupt.cpp
+        tests/test_ended_at.cpp
     LINK aos::exec
 )

@@ -4,8 +4,10 @@
 #include "state.hpp"
 
 #include <chrono>
+#include <cctype>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace aos::loop {
@@ -47,6 +49,50 @@ std::uint64_t elapsed_since(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - started)
             .count());
+}
+
+std::string first_nonblank_line(const std::string &text) {
+    std::size_t line_start = 0;
+    while (line_start < text.size()) {
+        std::size_t line_end = text.find('\n', line_start);
+        if (line_end == std::string::npos) line_end = text.size();
+
+        std::size_t content_start = line_start;
+        while (content_start < line_end &&
+               std::isspace(static_cast<unsigned char>(text[content_start]))) {
+            ++content_start;
+        }
+        std::size_t content_end = line_end;
+        while (content_end > content_start &&
+               std::isspace(static_cast<unsigned char>(text[content_end - 1]))) {
+            --content_end;
+        }
+        if (content_start != content_end) {
+            return text.substr(content_start, content_end - content_start);
+        }
+        line_start = line_end + 1;
+    }
+    return {};
+}
+
+void collect_failures(const std::vector<wire::Inst> &insts,
+                      const std::vector<exec::Result> &results,
+                      TurnSummary &summary) {
+    for (std::size_t index = 0; index < insts.size(); ++index) {
+        const auto &result = results[index];
+        if (result.signal == 0 && (result.exit == 0 || result.exit == 75)) {
+            continue;
+        }
+        InstFailure failure;
+        failure.id = insts[index].id;
+        failure.exit = result.exit;
+        failure.signal = result.signal;
+        if (!insts[index].argv.empty()) {
+            failure.argv0 = insts[index].argv.front();
+        }
+        failure.stderr_line = first_nonblank_line(result.stderr_text);
+        summary.failures.push_back(std::move(failure));
+    }
 }
 
 }  // namespace
@@ -105,6 +151,7 @@ bool run_turn(const Layout &layout, TurnSummary &summary,
             return false;
         }
     }
+    collect_failures(insts, results, summary);
 
     state.phase = "idle";
     detail::mark_done(state.running, results);
