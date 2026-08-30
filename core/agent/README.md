@@ -46,14 +46,15 @@ adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚�
 本機 pi coding agent：
 
 ```sh
-aos agent init ./world --name bob --engine pi
-aos agent say ./world bob "在這個資料夾建一個 hello.txt 內容是 hi"
-aos run ./world --step 1
-aos agent listen ./world bob --once
+mkdir bob && cd bob
+aos agent init --engine pi
+aos say "在這個資料夾建一個 hello.txt 內容是 hi"
+aos run --step 1
+aos listen --once
 ```
 
 `--engine pi` 預設選 `deepseek`／`deepseek-v4-flash`；需要時可在 init 加上
-`--provider P --model M`。初始化後的 `<world>/.aos/agents/bob/engine.json` 會是：
+`--provider P --model M`。初始化後的 `.aos/agents/<name>/engine.json` 會是：
 
 ```json
 {"engine":"pi","provider":"deepseek","model":"deepseek-v4-flash",

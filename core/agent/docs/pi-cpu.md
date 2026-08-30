@@ -131,21 +131,21 @@ pi 格式是：
 初始化選項如下：
 
 ```text
-aos agent init <folder> --name bob --engine pi [--provider P] [--model M]
+aos agent init [folder] [--name N] --engine pi [--provider P] [--model M]
 ```
 
 不傳 `--engine` 時仍是 lmstudio。選 pi 時，provider 預設 `deepseek`，model 預設
 `deepseek-v4-flash`，並自動產生一個 v4 UUID 作為 `session_id`。
 
 engine=pi 時，`step` 走 `src/engine_pi.cpp` 的獨立 `step_pi` 分支：讀取 `say/*.md`；
-沒有新訊息就只做自我投遞以節省 token；有訊息才組 prompt 並執行 pi；把最終回覆寫進
-`log.md` 與 `history.json`；最後自我投遞並寫 `status.json`。pi 失敗時會在 `log.md` 留下：
+沒有新訊息就直接寫 `status.json` 收工以節省 token；有訊息才組 prompt 並執行 pi；把最終
+回覆寫進 `log.md` 與 `history.json`，最後寫 `status.json`。pi 失敗時會在 `log.md` 留下：
 
 ```text
 > pi 失敗（exit=N）：…
 ```
 
-失敗後仍會自我投遞，不會靜默死亡。這條分支不讀 `tools.json`，不呼叫 `aos llm`，也不做
+失敗後 agent 仍靠 `.aos/every/` 活著，不會靜默死亡。這條分支不讀 `tools.json`，不呼叫 `aos llm`，也不做
 pending 工具往返；read／bash／edit／write 等工具由 pi 在同一次呼叫內自行完成。
 
 aos 實際執行的 argv 是：
@@ -168,15 +168,18 @@ cwd 是世界資料夾，prompt 從 stdin 傳入，timeout 為 10 分鐘。`AOS_
 先確認執行 loop 的環境已有 `DEEPSEEK_API_KEY`，再從 repo 根目錄執行：
 
 ```sh
-mkdir /tmp/W && aos agent init /tmp/W --name bob --engine pi
-aos agent say /tmp/W bob "在這個資料夾建一個 hello.txt 內容是 hi"
-aos run /tmp/W --step 1
-# 測試時也可改用：python3 core/agent/tests/fake_loop.py /tmp/W --step 1
-aos agent listen /tmp/W bob --once
+mkdir /tmp/W && cd /tmp/W
+aos agent init --engine pi          # 一個資料夾一隻 agent，名字預設＝資料夾名
+aos say "在這個資料夾建一個 hello.txt 內容是 hi"
+aos run --step 1
+aos listen --once
 ```
 
 第一次建立 session 時看見「creating a new session」警告是正常的；應再檢查回覆、
 `/tmp/W/hello.txt`，以及 agent 的 `log.md` 與 `status.json`。
+
+agent 的存活靠 `.aos/every/agent-<name>.json`（loop 每回合複製一條 `step`），
+pi 分支跟 lmstudio 分支一樣**不自我投遞**。
 
 ## pi 當 CPU 跟 `aos llm` 當 CPU 的差異與不順手處
 
