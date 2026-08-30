@@ -92,3 +92,10 @@ pi 引擎不走世界工具登記表／agent 白名單、`aos llm` 或 pending �
 read／bash／edit／write 工具會在一次 step 內直接操作世界資料夾。對話記憶由 pi session
 保存，`history.json` 只是 aos 端的鏡射。實測、argv、隔離方式與這條路的取捨見
 [docs/pi-cpu.md](docs/pi-cpu.md)。
+
+pi 的一次 step 算一個 LLM 呼叫，整個 step 會佔住一個以 `engine.json`
+的 `provider`（預設 `deepseek`）命名的槽。上限設在 `<AOS_HOME>/cpus.json`，
+格式見 [`core/llm/README.md`](../llm/README.md)。取槽等超過 `wait_ms` 時，step
+會在吃掉 `say/` 訊息之前退回，status 寫 `waiting-llm`、不算失敗；下回合
+`every` 再投一次 step 就會自然重試。優先度可用 `AOS_LLM_PRIORITY`（預設 0）；
+沒設 `cpus.json` 就完全不取槽，行為與以前一樣。

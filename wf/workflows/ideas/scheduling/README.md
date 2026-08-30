@@ -118,3 +118,13 @@ DeepSeek 官方帳號併發上限 2500，端點不會替我們擋「同時 3 個
 | 9 | 並行上限預設：lmstudio 1、deepseek 3（實作層，可調） |
 | 10 | 原型只管並行；B 落地時加 token bucket |
 | 11 | A 的心智模型留作 B 的投遞介面 |
+
+## 實作註記（方案 D 保底，2026-08-30 隊 V）
+
+- 已落地：`core/llm` 槽層（flock 槽＋數字優先度等待票＋等待上限）、`aos llm --engine/--priority/--slots`、pi 的 step 佔一槽。
+- 磁碟版面：`<AOS_HOME>/slots/<cpu>/<k>.lock` 與 `wait/<pkey>-<ts>-<pid>`；`pkey = 2e9 - priority` 補零成 10 位，所以字典序＝優先度大者先、同優先度先到先得。
+- 等待票：自己也被 flock 住，掃描時能認出並清掉「原主已死」的陳屍票。
+- 兩層設定：使用者層權威；世界層 `max_inflight` 取小者，且無權替使用者層沒設的 CPU 開上限；世界層可覆蓋 `wait_ms`；沒設定＝不限。
+- 退回語意：exit 75／stderr `waiting-llm`／agent status `waiting-llm`；pi 在吃訊息之前就退，訊息不會消失。
+- 沒做、留給 B：`state.json` 不動、沒有 durable 隊伍、沒有跨 CPU 依可用性改派、沒有 token bucket、`unknown` 仍無處記。
+- 已知限制：`aos agent step` 走 **lmstudio** 那條還沒帶 priority（`core/agent/step.cpp` 是隊 U 的領地，這一輪沒動）；現在它走 `aos::llm::complete()` 但沒有取槽——lmstudio 的上限目前只對 `aos llm` 這個子命令成立，agent 內嵌呼叫那條要等後續補。

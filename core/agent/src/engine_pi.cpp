@@ -1,9 +1,11 @@
 #include "internal.hpp"
 
 #include <aos/exec.hpp>
+#include <aos/slot.hpp>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <charconv>
 #include <cstdlib>
 #include <sstream>
 
@@ -11,6 +13,22 @@ namespace aos::agent {
 namespace {
 
 using Json = nlohmann::json;
+
+std::string pi_cpu_name(const Engine &engine) {
+    return engine.provider.empty() ? "deepseek" : engine.provider;
+}
+
+int pi_priority() {
+    const char *configured = std::getenv("AOS_LLM_PRIORITY");
+    if (configured == nullptr) return 0;
+
+    const std::string_view text(configured);
+    int priority = 0;
+    const auto [end, error] =
+        std::from_chars(text.data(), text.data() + text.size(), priority);
+    if (error != std::errc{} || end != text.data() + text.size()) return 0;
+    return priority;
+}
 
 std::string argument_summary(const Json &args) {
     if (args.is_object() && args.contains("path")) {
@@ -155,6 +173,16 @@ void step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
     std::sort(messages.begin(), messages.end());
     if (messages.empty()) {
         write_status(paths, "idle", "等待訊息", turn);
+        return;
+    }
+
+    // 先取到槽才吃訊息，逾時退回時 say/ 內容才不會消失。
+    aos::llm::Slot slot;
+    try {
+        slot = aos::llm::acquire(pi_cpu_name(engine), pi_priority(),
+                                 paths.folder);
+    } catch (const aos::llm::WaitingLlm &) {
+        write_status(paths, "waiting-llm", "等 llm 槽", turn);
         return;
     }
 
