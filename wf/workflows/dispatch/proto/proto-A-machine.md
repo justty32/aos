@@ -58,4 +58,16 @@
 
 ## 隊長裁決
 
-（隊長追加）
+**完成於 2026-08-30，STATUS `DONE`，commit `fecbdac`。逐條證據與完整裁決列表見 [reports/A.md](reports/A.md)。**
+
+1. **`exec` 抓 stdout/stderr 用 `mkstemp` 暫存檔，不用 pipe**——一次 fork 一整批時 pipe 緩衝會互相卡死，避開它就不必寫 poll 迴圈。
+2. **`exec` 做成兩階段 `start_all()` / `wait_all()`**，`Running` 是欄位攤開的普通 struct——上層要在「已 fork、還沒等完」時拿到 pid 寫 `state.json`（驗收 5）。
+3. **逾時直接 `SIGKILL` 整個 process group**，不做舊碼的 SIGTERM → 2 秒寬限兩段式（協定 §3 只認 `signal: 9`）。
+4. **`wire` 公開 API 一律 string 進 string 出**，nlohmann 不進公開標頭——省掉 `PUBLIC_DEPS`／`PUBLIC_PACKAGES`。
+5. **JSON 鍵維持協定原名，C++ 欄位改名避開巨集**（`stdin`→`stdin_data` 等）。
+6. **`aos deliver` 也呼叫 `ensure_layout`**——驗收 3 是在空資料夾先 deliver 再 run。
+7. **argv 形式投遞的 id 自動產生 `d-<epoch_ms>-<pid>-<seq>`**。
+8. **`AOS_FOLDER`／`AOS_TURN` 覆蓋指令自帶的同名 env key。**
+9. **inbox 裡解析失敗的檔案照搬進 `insts/` 但跳過不執行**（留現場證據），只在 stderr 留一行。
+10. **code map 不另立三份分冊**——禁區只開放 `code-map.md` 一個檔，逐檔表格留在各小專案自己的 `README.md`，`code-map.md` 加路由並註明。**要改回慣例是很便宜的搬移。**
+11. **只開一個 commit**——`core/CMakeLists.txt` 的三行 `add_subdirectory` 綁在同一個 hunk，硬拆後中間狀態建不起來。
