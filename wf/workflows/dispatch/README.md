@@ -72,7 +72,6 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
-| proto-W-gaps（[交接書](proto/proto-W-gaps.md)，main） | `core/agent/`、`core/tool/`、`core/llm/`、code-map | 其餘 core/、docs/、其餘 wf/ | 2026-08-30 |
 | proto-L1-solo（[交接書](proto/proto-L1-solo.md)，worktree，只找不修） | `wf/workflows/dispatch/trial/{findings-L1.csv,repro/,sandbox/}` | core/、其餘 | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫
