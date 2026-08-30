@@ -20,8 +20,8 @@ P1=$!
 sleep 0.3
 (cd "$ROOT/w" && "$AOS" run --step 2 > "$ROOT/two.log" 2>&1) &
 P2=$!
-wait $P1; R1=$?
-wait $P2; R2=$?
+R1=0; wait "$P1" || R1=$?
+R2=0; wait "$P2" || R2=$?
 
 echo "=== loop 1 (exit $R1) ==="; cat "$ROOT/one.log"
 echo "=== loop 2 (exit $R2) ==="; cat "$ROOT/two.log"
@@ -33,3 +33,4 @@ if [ "$R1" -eq 0 ] && [ "$R2" -eq 0 ]; then
   echo "FAIL: 兩條 run 同時推同一個世界都成功，沒有鎖也沒有任何警告"
   exit 1
 fi
+echo "PASS: 只有一條 run 推得動（exit $R1／$R2），另一條被 .aos/run.lock 擋下"
