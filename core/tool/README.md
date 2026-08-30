@@ -52,6 +52,8 @@ aos tool rm formatter
 aos contact add bob ../bob-world --note "部署與實機測試"
 aos contact ls
 aos contact ls --json
+aos contact status
+aos contact status --json
 aos contact rm bob
 ```
 
@@ -59,6 +61,10 @@ aos contact rm bob
 `contact` 對應的選項叫 `--folder-root F`。兩者未指定時都先看 `AOS_FOLDER`，再從 cwd
 往上找世界。`aos tool -h|--help` 與 `aos contact -h|--help` 都會在 stdout 列出完整
 子命令與選項並回 0。
+
+`aos contact status` 會把自己的世界與通訊錄各格彙成一張表；agent 狀態讀各世界的
+`status.json`，未讀數則直接現場計算 `say/*.md`。單一聯絡人資料夾不存在、沒有 agent
+或狀態檔損壞時只在該列顯示原因，不會讓整次查詢失敗。
 
 ## 探測降級
 
@@ -76,4 +82,5 @@ aos contact rm bob
 ## 函式庫
 
 公開 API 入口是 `<aos/tool.hpp>`，包含 `Spec`／`Contact`／`Probe`、registry 與
-contacts 的原子讀寫、預設工具安裝，以及 `probe_metainfo()`。
+contacts 的原子讀寫、預設工具安裝，以及 `probe_metainfo()`。`install_say_tool()`
+只在 `say.json` 不存在時補上跨世界投遞工具，不會覆寫使用者已調整的登記。

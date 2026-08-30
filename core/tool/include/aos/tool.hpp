@@ -77,6 +77,8 @@ AOS_API std::vector<Spec> read_registry(const std::filesystem::path &folder);
 AOS_API std::vector<Spec> default_specs();
 /* read_registry(folder) 為空時才寫入 default_specs()；回傳是否真的寫了。 */
 AOS_API bool install_defaults(const std::filesystem::path &folder);
+/* .aos/tools/say.json 不存在時才寫；回傳是否真的寫了。 */
+AOS_API bool install_say_tool(const std::filesystem::path &folder);
 
 /* 跑 <argv> <flag>，stdin 關閉、逾時 3000 ms。行為見 §7。 */
 AOS_API Probe probe_metainfo(const std::vector<std::string> &argv,

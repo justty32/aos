@@ -1,6 +1,7 @@
 #include <aos/tool.hpp>
 
 #include "cli_common.hpp"
+#include "internal.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -21,6 +22,7 @@ int usage(const char *program, FILE *stream = stderr, int result = 2) {
         "[--folder-root F]\n"
         "       %s ls [--folder-root F] [--json]\n"
         "       %s rm <name> [--folder-root F]\n"
+        "       %s status [--folder-root F] [--json]\n"
         "\n"
         "  add                    新增或更新聯絡人\n"
         "    --agent A            指定對方 agent 名稱\n"
@@ -28,8 +30,9 @@ int usage(const char *program, FILE *stream = stderr, int result = 2) {
         "    --folder-root F      指定通訊錄所在世界\n"
         "  ls                     列出聯絡人；可加 --folder-root F、--json\n"
         "  rm                     移除聯絡人；可加 --folder-root F\n"
+        "  status                 列出自己與每個聯絡人的狀態、回合與未讀數\n"
         "  -h, --help             顯示這份用法\n",
-        program, program, program);
+        program, program, program, program);
     return result;
 }
 
@@ -155,6 +158,9 @@ int dispatch(int argc, char *argv[]) {
     if (words[0] == "add") return add(program, words);
     if (words[0] == "ls") return list(program, words);
     if (words[0] == "rm") return remove(program, words);
+    if (words[0] == "status") {
+        return aos::tool::detail::contact_status_command(program, words);
+    }
     return usage(program);
 }
 

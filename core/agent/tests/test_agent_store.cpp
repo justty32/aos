@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -142,7 +143,13 @@ TEST_CASE("agent init creates its complete layout and every instruction") {
 
     CHECK(aos::agent::read_history(world.path, "bob").empty());
     CHECK(aos::agent::read_pending(world.path, "bob").calls.empty());
-    CHECK(aos::agent::read_tools(world.path, "bob").size() == 3);
+    const std::vector<aos::tool::Spec> installed =
+        aos::agent::read_tools(world.path, "bob");
+    CHECK(installed.size() == 4);
+    CHECK(std::any_of(installed.begin(), installed.end(),
+                      [](const aos::tool::Spec &spec) {
+                          return spec.name == "say";
+                      }));
     CHECK(aos::agent::read_status(world.path, "bob").status == "idle");
 
     CHECK_THROWS_AS(aos::agent::initialize(world.path, "bob"),

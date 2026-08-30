@@ -2,6 +2,7 @@
 
 #include <aos/exec.hpp>
 #include <aos/slot.hpp>
+#include <aos/tool.hpp>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -33,16 +34,51 @@ std::string argument_summary(const Json &args) {
     return summary;
 }
 
+std::string pi_prompt_field(std::string text) {
+    std::replace(text.begin(), text.end(), '\n', ' ');
+    std::replace(text.begin(), text.end(), '\r', ' ');
+    return text;
+}
+
+std::vector<aos::tool::Contact>
+pi_prompt_contacts(const std::filesystem::path &folder) {
+    std::vector<aos::tool::Contact> contacts = aos::tool::read_contacts(folder);
+    const bool has_user = std::any_of(
+        contacts.begin(), contacts.end(),
+        [](const aos::tool::Contact &contact) { return contact.name == "~"; });
+    if (!has_user) {
+        aos::tool::Contact user = aos::tool::user_contact();
+        if (!user.folder.empty()) contacts.insert(contacts.begin(), user);
+    }
+    return contacts;
+}
+
 std::string pi_system_prompt(const detail::Paths &paths, std::string_view name,
                              std::uint64_t turn) {
-    return "你是一個名叫 " + std::string(name) +
-           " 的 agent，活在一個以回合推進的資料夾世界裡。現在是第 " +
-           std::to_string(turn) +
-           " 回合。\n"
-           "你的工作目錄就是這個世界資料夾，你可以直接用你自己的工具讀寫這裡的檔案。\n"
+    std::ostringstream prompt;
+    prompt
+        << "你是一個名叫 " << name
+        << " 的 agent，活在一個以回合推進的資料夾世界裡。現在是第 " << turn
+        << " 回合。\n"
+           "你的工作目錄就是這個世界資料夾，你可以直接用你自己的工具讀寫這裡的"
+           "檔案。\n"
            "不要去動 .aos/ 這個資料夾，那是系統用的。\n\n"
-           "人格：\n" +
-           detail::read_text(paths.persona);
+           "人格：\n"
+        << detail::read_text(paths.persona);
+    const std::vector<aos::tool::Contact> contacts =
+        pi_prompt_contacts(paths.folder);
+    if (contacts.empty()) return prompt.str();
+    prompt << "\n\n你可以聯絡這些人：\n";
+    for (const aos::tool::Contact &contact : contacts) {
+        prompt << "- " << pi_prompt_field(contact.name) << " —";
+        if (!contact.note.empty()) {
+            prompt << ' ' << pi_prompt_field(contact.note);
+        }
+        prompt << "（" << pi_prompt_field(contact.folder) << "）\n";
+    }
+    prompt
+        << "要寄訊息給他們，在世界資料夾裡執行：aos say --to <名字> \"<訊息>\"";
+    return prompt.str();
 }
 
 PiRun run_pi(const detail::Paths &paths, std::string_view name,
