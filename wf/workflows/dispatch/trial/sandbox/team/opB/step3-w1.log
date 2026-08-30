@@ -1,0 +1,8 @@
+name=w1
+started_ns=1788087806521355724
+turn 1: 1 insts (1 every), 8824 ms
+turn 2: 1 insts (1 every), 3 ms
+turn 3: 1 insts (1 every), 3 ms
+finished_ns=1788087815555555438
+elapsed_ms=9034
+exit=0
