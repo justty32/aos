@@ -5,4 +5,10 @@ bin/
 .cache/
 compile_commands.json
 CMakeUserPresets.json
-.aos/
+# .aos/：靜態清單進版控（heartbeat/*.json），動態狀態不進
+.aos/*
+!.aos/heartbeat/
+.aos/heartbeat/log.md
+.lock/
+wf/inbox/.inbox-send.*
+.claude/worktrees/

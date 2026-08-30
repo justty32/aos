@@ -1,0 +1,33 @@
+{
+  "contract": "wf-table/1",
+  "source": "",
+  "extracted": "2026-08-30",
+  "columns": [
+    "id",
+    "kind",
+    "every",
+    "slot",
+    "last_run",
+    "run",
+    "note"
+  ],
+  "link_columns": [],
+  "rows": [
+    {
+      "id": "r-tkkto4",
+      "kind": "interval",
+      "every": "7d",
+      "slot": "",
+      "last_run": "",
+      "run": {
+        "argv": [
+          "wf/tools/wf-lint.sh",
+          "--strict",
+          "wf",
+          ".claude/commands"
+        ]
+      },
+      "note": "有 BROKEN 就修連結；殘留表示導入還沒收尾"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "contract": "wf-table/1",
+  "source": "",
+  "extracted": "2026-08-30",
+  "columns": [
+    "id",
+    "at",
+    "run",
+    "note"
+  ],
+  "link_columns": [],
+  "rows": []
+}
