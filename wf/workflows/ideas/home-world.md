@@ -24,6 +24,12 @@
 | 5 | 子世界可以**跟主世界同步 tick**，也可以**有自己的 tick** | 同步＝`every/`；獨立＝各自 `aos run` | 兩種都要能在同一個 daemon 裡宣告 |
 | 6 | `aos daemon start`：一個行程管多個 `aos run` 目標，**互不影響**（一個世界慢不拖住別的） | 無 | 隊 Y 正在做單世界 `--daemon`／`aos stop`；設計要留多目標餘地 |
 
+## 使用者裁決（2026-08-30）
+
+- home daemon **先只規劃**（Fable＋一頁 spec），實作等隊 X／Y 落地後再說。
+- 第 3、4 件（LLM PU 世界、tier 選 PU）**先不做**，排程保底 D 夠用一陣。
+- **systemd 先不做**：「風險略大，初期我還是傾向於手動啟用 `aos daemon start`」。
+
 ## 交接
 
 - **隊 Y**（改進）：`aos run --daemon` 的 pid／設定形狀要能長成 `aos daemon start`（多目標清單），先不擴 scope。
