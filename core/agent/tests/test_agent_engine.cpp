@@ -145,6 +145,8 @@ TEST_CASE("agent parses pi JSONL reply and tool calls") {
 
 TEST_CASE("agent pi step runs the configured executable in the world") {
     TempWorld world;
+    ScopedEnvironment aos_home("AOS_HOME",
+                               (world.path / "aos-home").string());
     const auto script = write_script(
         world, "fake-pi.sh",
         R"(#!/bin/sh
@@ -178,6 +180,8 @@ exit 0
 
 TEST_CASE("agent pi failure records a note and stays alive") {
     TempWorld world;
+    ScopedEnvironment aos_home("AOS_HOME",
+                               (world.path / "aos-home").string());
     const auto script = write_script(
         world, "fake-pi-failure.sh",
         R"(#!/bin/sh
@@ -198,4 +202,22 @@ exit 3
     CHECK(std::filesystem::exists(world.path / ".aos" / "every" /
                                   "agent-bob.json"));
     CHECK(aos::agent::read_status(world.path, "bob").detail == "pi 失敗");
+}
+
+TEST_CASE("agent pi step reports unavailable slots as temporary") {
+    TempWorld world;
+    const auto aos_home_path = world.path / "aos-home";
+    ScopedEnvironment aos_home("AOS_HOME", aos_home_path.string());
+    std::filesystem::create_directories(aos_home_path);
+    write_text(aos_home_path / "cpus.json",
+               R"({"deepseek":{"max_inflight":0,"wait_ms":0}})");
+    ScopedEnvironment turn("AOS_TURN", "23");
+    aos::agent::initialize(world.path, "bob", "測試人格。",
+                           aos::agent::Engine{"pi"});
+    aos::agent::say(world.path, "bob", "稍後再做");
+
+    CHECK(aos::agent::step(world.path, "bob") == 75);
+    CHECK(aos::agent::read_status(world.path, "bob").status ==
+          "waiting-llm");
+    CHECK_FALSE(say_is_empty(world));
 }

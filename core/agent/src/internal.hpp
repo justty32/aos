@@ -39,6 +39,8 @@ void write_status(const Paths &paths, std::string_view status,
                   std::string_view detail, std::uint64_t turn);
 void write_pending(const Paths &paths, const Pending &pending);
 void write_engine(const Paths &paths, const Engine &engine);
+/* engine.json 的 priority 非 0 就用它；否則讀 AOS_LLM_PRIORITY；再否則 0。 */
+int llm_priority(const Engine &engine);
 std::string new_uuid();
 
 std::string system_prompt(const Paths &paths, std::string_view name,
@@ -48,7 +50,7 @@ std::string system_prompt(const Paths &paths, std::string_view name,
 void deliver(const Paths &paths, std::string_view id,
              const std::vector<std::string> &argv, std::string_view cwd,
              std::uint64_t timeout_ms);
-void step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
-             const Engine &engine);
+int step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
+            const Engine &engine);
 
 }  // namespace aos::agent::detail

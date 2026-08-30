@@ -9,7 +9,7 @@
 
 ```sh
 mkdir bob && cd bob
-aos agent init
+aos agent init --priority 7
 # 另一個視窗也在 bob/ 裡啟動世界：
 aos run --step 0
 # 回到第一個視窗：
@@ -27,6 +27,9 @@ agent。`aos say --to <名字> <文字...>` 會查目前世界的 `.aos/contacts
 不帶 `--once` 時每 200 ms 印出新增內容。舊的 `aos agent say|listen|talk|state
 <folder> <name>` 形式仍可使用。`aos agent talk --interface pi` 的整合限制與建議
 adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚回報它尚未內建。
+`aos agent init` 另接受 `--engine lmstudio|pi`、`--provider P`、`--model M` 與
+`--priority N`；priority 是可為負數的整數，0 不寫進 `engine.json`。lmstudio 可用
+`--provider P` 指定取槽用的 CPU 名；`--model M` 用於 pi。
 
 ## 工具往返
 
@@ -77,11 +80,12 @@ aos listen --once
 ```
 
 `--engine pi` 預設選 `deepseek`／`deepseek-v4-flash`；需要時可在 init 加上
-`--provider P --model M`。初始化後的 `.aos/agents/<name>/engine.json` 會是：
+`--provider P --model M --priority N`。初始化後的
+`.aos/agents/<name>/engine.json` 會是：
 
 ```json
 {"engine":"pi","provider":"deepseek","model":"deepseek-v4-flash",
- "session_id":"<自動產生的 v4 UUID>"}
+ "session_id":"<自動產生的 v4 UUID>","priority":7}
 ```
 
 執行 loop（也就是實際跑 `aos agent step`）的行程必須有 `DEEPSEEK_API_KEY`；pi 會
@@ -93,9 +97,14 @@ read／bash／edit／write 工具會在一次 step 內直接操作世界資料�
 保存，`history.json` 只是 aos 端的鏡射。實測、argv、隔離方式與這條路的取捨見
 [docs/pi-cpu.md](docs/pi-cpu.md)。
 
-pi 的一次 step 算一個 LLM 呼叫，整個 step 會佔住一個以 `engine.json`
-的 `provider`（預設 `deepseek`）命名的槽。上限設在 `<AOS_HOME>/cpus.json`，
-格式見 [`core/llm/README.md`](../llm/README.md)。取槽等超過 `wait_ms` 時，step
-會在吃掉 `say/` 訊息之前退回，status 寫 `waiting-llm`、不算失敗；下回合
-`every` 再投一次 step 就會自然重試。優先度可用 `AOS_LLM_PRIORITY`（預設 0）；
-沒設 `cpus.json` 就完全不取槽，行為與以前一樣。
+lmstudio 與 pi 的一次 step 都算一個 LLM 呼叫，呼叫前都會取槽。lmstudio 的 CPU 名
+優先使用 `engine.json` 的 `provider`，沒有就讀 `AOS_LLM_ENGINE`，再沒有就是
+`lmstudio`；pi 使用 `provider`，預設 `deepseek`。上限設在
+`<AOS_HOME>/cpus.json`，格式見 [`core/llm/README.md`](../llm/README.md)。
+
+兩條 engine 的優先度都先讀 `engine.json` 的非 0 `priority`；可用
+`aos agent init --priority N` 寫入。沒有或為 0 時改讀 `AOS_LLM_PRIORITY`，再沒有就是
+0。取不到槽時，step 會在吃掉 `say/` 訊息之前把 status 寫成 `waiting-llm`；直接執行
+`aos agent step` 時 stderr 只印一行 `waiting-llm` 並以 75 結束。這不算失敗，下回合
+`every` 再投一次就會自然重試。沒設 `cpus.json` 時回傳空槽、不佔也不等，行為與以前
+一樣。

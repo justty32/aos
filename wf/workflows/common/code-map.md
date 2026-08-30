@@ -180,7 +180,7 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 | `core/agent/src/store.cpp` | 儲存層：文字讀取、tmp＋rename 原子寫入、log 追加，以及 history／status／pending 的 JSON 讀寫與驗證；工具 registry／白名單已不在這層。 |
 | `core/agent/src/deliver.cpp` | 投遞層：把已按登記展開的工具 argv、cwd、timeout 包成 instruction，原子寫入 world inbox。 |
 | `core/agent/src/tools.cpp` | 工具層：讀世界 registry 並套用可選 agent 白名單、每工具一行的 system prompt、依 `list`／`string`／`none` 展開 argv，以及抽取、驗證 LLM 工具呼叫並回報未知工具／args 錯誤。 |
-| `core/agent/src/step.cpp` | 回合編排層：收 say 與工具結果、把執行結果或呼叫錯誤包成固定 JSON `tool` message、更新 history／log／status、呼叫 LLM、投遞工具並記 pending；無新事件時不耗 LLM token，也不自我投遞。 |
+| `core/agent/src/step.cpp` | 回合編排層：收 say 與工具結果、把執行結果或呼叫錯誤包成固定 JSON `tool` message、更新 history／log／status、lmstudio 呼叫前先取 provider 槽且等不到回 75、投遞工具並記 pending；無新事件時不耗 LLM token，也不自我投遞。 |
 | `core/agent/src/init.cpp` | 初始化層：限制一個 world 只住一隻 agent，建立 agent 版面與必要的 world turn／state；世界 registry 為空才安裝 `sh`／`ls`／`cat`，不建立 agent 白名單；最後寫 `.aos/every/agent-<name>.json`。`say()` 也在這裡原子放入訊息檔。 |
 | `core/agent/src/run.cpp` | `aos agent init／step／say／listen／talk／state` CLI 分派；init／step 可省略 folder／name，舊 say／listen／talk／state 參數維持，listen／talk 輪詢邏輯供頂層命令共用。 |
 | `core/agent/src/run.hpp` | agent CLI 內部介面：共用 listen／talk 的輪詢實作，不安裝。 |
@@ -214,7 +214,7 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 | `aos say --to` 怎麼找對方世界 | `core/agent/src/run_top.cpp:30-58`：查目前世界 `.aos/contacts.json`，以目前世界為基準組出 contact folder；contact 沒寫 agent 時解析目標世界唯一 agent，再呼叫 `say()`。 |
 | LM Studio 端點與模型怎麼設 | `AOS_LLM_URL`（預設 `http://localhost:1234/v1`）與 `AOS_LLM_MODEL`（預設 `qwen/qwen3.5-9b`）；需要 bearer token 時另設 `AOS_LLM_KEY`，讀取處在 `core/llm/src/llm.cpp:71-76`。 |
 | LLM 並行上限住哪、怎麼排隊 | `<AOS_HOME>/cpus.json`（權威）與 `<world>/.aos/llm.json`（只能往下限）；實作在 `core/llm/src/slot.cpp`；用 `aos llm --slots` 看現況。 |
-| 取槽等太久會怎樣 | stderr 一行 `waiting-llm`、exit 75（`EX_TEMPFAIL`）；agent 走 pi 時 status 寫 `waiting-llm`，訊息還沒被吃掉，下回合重試。 |
+| 取槽等太久會怎樣 | stderr 一行 `waiting-llm`、exit 75（`EX_TEMPFAIL`）；agent 走 lmstudio 或 pi 時 status 都寫 `waiting-llm`，訊息還沒被吃掉，下回合重試。 |
 | loop 替身在哪、怎麼跑 | `core/agent/tests/fake_loop.py`；repo 根執行 `python3 core/agent/tests/fake_loop.py <folder> --step N --interval 100`。完整 smoke 是 `bash core/agent/tests/smoke.sh`（使用 `build/bin/aos`）。 |
 
 已採用的 every 常駐投遞裁決見 [`wf/workflows/ideas/self-delivery-in-loop.md`](../ideas/self-delivery-in-loop.md)；pi 終端介面調查與建議接法見 [`core/agent/docs/pi-interface.md`](../../../core/agent/docs/pi-interface.md)。
@@ -226,7 +226,7 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 
 | 檔案 | 負責什麼 |
 |------|----------|
-| `core/agent/src/engine.cpp` | `engine.json` 的讀寫與驗證、lmstudio／pi 預設值，以及 pi session 使用的 v4 UUID 產生。 |
-| `core/agent/src/engine_pi.cpp` | pi 引擎的 step 分支：組 argv 與 stdin、執行 pi、解析 JSONL 最終回覆、記錄結果或失敗；step 期間佔一個 provider 名的槽。存活同樣靠 `.aos/every/`，不自我投遞。 |
+| `core/agent/src/engine.cpp` | `engine.json` 的讀寫與驗證、lmstudio／pi 預設值、共用 LLM priority 解析，以及 pi session 使用的 v4 UUID 產生。 |
+| `core/agent/src/engine_pi.cpp` | pi 引擎的 step 分支：組 argv 與 stdin、執行 pi、解析 JSONL 最終回覆、記錄結果或失敗；step 期間佔一個 provider 名的槽，等不到回 75。存活同樣靠 `.aos/every/`，不自我投遞。 |
 | `core/agent/tests/test_agent_engine.cpp` | engine 選擇、設定相容性、假 pi 插銷、JSONL 解析與 pi step 行為測試。 |
 | `core/agent/docs/pi-cpu.md` | pi 0.84.2 的 provider／JSONL／session 實測、aos 接法，以及相對於 `aos llm` 的取捨。 |

@@ -60,6 +60,7 @@ struct Engine {
     std::string provider;
     std::string model;
     std::string session_id;
+    int priority = 0;
 };
 
 struct PiRun {
