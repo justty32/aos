@@ -3,8 +3,10 @@
 aos_add_subproject(llm
     SOURCES
         src/llm.cpp
+        src/slot.cpp
     HEADERS
         include/aos/llm.hpp
+        include/aos/slot.hpp
     PRIVATE_DEPS
         CURL::libcurl
 )
@@ -20,6 +22,8 @@ aos_add_subcommand(
 )
 
 aos_add_test(aos_llm_tests
-    SOURCES tests/test_llm.cpp
+    SOURCES
+        tests/test_llm.cpp
+        tests/test_slot.cpp
     LINK aos::llm
 )
