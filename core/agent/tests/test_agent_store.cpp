@@ -94,6 +94,23 @@ nlohmann::json json_file(const std::filesystem::path &path) {
     return value;
 }
 
+std::size_t markdown_count(const std::filesystem::path &directory) {
+    if (!std::filesystem::is_directory(directory)) return 0;
+    std::size_t count = 0;
+    for (const auto &entry : std::filesystem::directory_iterator(directory)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".md") {
+            ++count;
+        }
+    }
+    return count;
+}
+
+bool is_iso8601_utc(std::string_view text) {
+    return text.size() == 20 && text[4] == '-' && text[7] == '-' &&
+           text[10] == 'T' && text[13] == ':' && text[16] == ':' &&
+           text[19] == 'Z';
+}
+
 }  // namespace
 
 TEST_CASE("agent init creates its complete layout and every instruction") {
@@ -169,6 +186,63 @@ TEST_CASE("agent say atomically queues one message file") {
         if (entry.path().extension() == ".md") ++markdown;
     }
     CHECK(markdown == 2);
+}
+
+TEST_CASE("agent inbox lists parsed messages in filename order and marks read") {
+    TempWorld world;
+    aos::agent::initialize(world.path, "bob");
+    aos::agent::say(world.path, "bob", "第一封");
+    aos::agent::say(world.path, "bob", "第二封\n還有一行", "/tmp/alice");
+    aos::agent::say(world.path, "bob", "第三封");
+
+    const auto say = world.path / ".aos" / "agents" / "bob" / "say";
+    const auto read = world.path / ".aos" / "agents" / "bob" / "read";
+    const std::vector<aos::agent::InboxItem> items =
+        aos::agent::read_inbox(world.path, "bob");
+    REQUIRE(items.size() == 3);
+    CHECK(items[0].id < items[1].id);
+    CHECK(items[1].id < items[2].id);
+    CHECK(items[0].from.empty());
+    CHECK(items[0].text == "第一封");
+    CHECK(items[1].from == "/tmp/alice");
+    CHECK(items[1].text == "第二封\n還有一行");
+    CHECK(items[2].text == "第三封");
+    for (const aos::agent::InboxItem &item : items) {
+        CHECK(is_iso8601_utc(item.when));
+    }
+
+    std::string error;
+    CHECK(aos::agent::mark_inbox_read(items.front(), error));
+    CHECK(error.empty());
+    CHECK(markdown_count(say) == 2);
+    CHECK(markdown_count(read) == 1);
+    CHECK(aos::agent::read_inbox(world.path, "bob").size() == 2);
+}
+
+TEST_CASE("agent inbox is empty even when say directory is absent") {
+    TempWorld world;
+    aos::agent::initialize(world.path, "bob");
+    const auto say = world.path / ".aos" / "agents" / "bob" / "say";
+
+    CHECK(aos::agent::read_inbox(world.path, "bob").empty());
+    std::filesystem::remove(say);
+    CHECK(aos::agent::read_inbox(world.path, "bob").empty());
+}
+
+TEST_CASE("agent inbox preserves a message without a from header") {
+    TempWorld world;
+    aos::agent::initialize(world.path, "bob");
+    const auto message = world.path / ".aos" / "agents" / "bob" / "say" /
+                         "1788091965698918343-42-0.md";
+    std::ofstream output(message, std::ios::binary);
+    output << "沒有標頭\n\n完整正文";
+    output.close();
+
+    const std::vector<aos::agent::InboxItem> items =
+        aos::agent::read_inbox(world.path, "bob");
+    REQUIRE(items.size() == 1);
+    CHECK(items.front().from.empty());
+    CHECK(items.front().text == "沒有標頭\n\n完整正文");
 }
 
 TEST_CASE("agent reads legacy string pending args as a JSON string value") {

@@ -98,11 +98,15 @@ contacts 由 `aos::tool::read_contacts(folder)` 取，`~` 用 `user_contact()` �
 
 ## 隊長裁決（核過本文件時追加，與上文衝突時以本節為準）
 
-1. **pid 檔叫 `.aos/daemon.pid`、log 叫 `.aos/daemon.log`**（不是 `run.pid`／`run.log`）。使用者之後要在 `~` 用
-   `aos daemon start` 一次管多個目標世界（`~/agents/*`、`~/pus/llms/*`），各目標可跟主世界同步 tick 或自己的 tick、
-   互不拖累，可能落成 systemd。所以：pid 檔**每個世界一份**、內容只有 pid，`aos run --daemon`／`aos stop` 的語意是
-   「這個世界的 daemon」，**不要**把「一個 daemon＝一個世界」寫死進 CLI（不要叫 `aos run --daemon` 去管別的世界，
-   也不要假設全機只有一個 daemon）。未來的目標清單 `~/.aos/daemon.json` 與 `aos daemon start` 本輪**不做**。
+1. **pid 檔維持 `.aos/run.pid`、log 是 `.aos/run.log`，但寫 pid 的責任放進 `aos run` 的迴圈本身**：
+   **任何** `aos run --step 0`（不論前景或 `--daemon`）都要寫 `.aos/run.pid`、退出時刪掉，
+   都能被 `aos stop` 停掉；`--daemon` 只多做兩件事——脫離終端（`fork`＋`setsid`）與把 stdout/stderr 導向
+   `.aos/run.log`。有限回合的 `--step N`（N > 0）不寫 pid 檔。
+   使用者之後要在 `~` 用一個 home daemon 一次管多個目標世界（spec 在 main 的
+   `wf/workflows/ideas/home-daemon-spec.md`），所以 pid 檔**每個世界一份**、內容只有 pid，
+   `aos run --daemon`／`aos stop` 的語意固定是「這個世界的 loop」。
+   **本輪不做**：`~/.aos/daemon.json` 目標清單、`aos daemon start` 子命令、CLI 合併。
+
 2. **失敗回合的 `status` 值改成 `"error"`**（不是維持 `idle`）。`idle` 在失敗時是騙人的，正是 L1-19 的痛點。
    值集合變成 `idle`／`thinking`／`tool`／`waiting-llm`／`error`／（`aos state` 呈現層另有 `pending`）。
    `core/agent/tests/test_agent_step.cpp` 有一條既有斷言預期失敗後是 `idle`，一併改掉。

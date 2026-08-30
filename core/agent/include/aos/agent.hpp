@@ -58,6 +58,14 @@ struct Status {
     std::string last_error;
 };
 
+struct InboxItem {
+    std::string id;
+    std::string from;
+    std::string when;
+    std::string text;
+    std::filesystem::path path;
+};
+
 struct Engine {
     std::string kind = "lmstudio";
     std::string provider;
@@ -118,6 +126,13 @@ AOS_API Status read_status(const std::filesystem::path &folder,
 
 AOS_API std::uint64_t count_unread(const std::filesystem::path &folder,
                                    std::string_view name);
+
+/* name 為空時使用 folder 底下的扁平使用者信箱。 */
+AOS_API std::filesystem::path inbox_dir(const std::filesystem::path &folder,
+                                        std::string_view name);
+AOS_API std::vector<InboxItem> read_inbox(
+    const std::filesystem::path &folder, std::string_view name);
+AOS_API bool mark_inbox_read(const InboxItem &item, std::string &error);
 
 AOS_API std::string read_status_file(const std::filesystem::path &folder,
                                      std::string_view name);

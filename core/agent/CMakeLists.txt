@@ -10,6 +10,7 @@ aos_add_subproject(agent
         src/engine_pi.cpp
         src/step.cpp
         src/init.cpp
+        src/inbox.cpp
         src/user.cpp
     HEADERS
         include/aos/agent.hpp
@@ -19,8 +20,9 @@ aos_add_subproject(agent
         aos::exec aos::llm aos::loop
 )
 
-add_library(aos_agent_cli OBJECT src/run.cpp src/run_top.cpp)
+add_library(aos_agent_cli OBJECT src/run.cpp src/run_top.cpp src/inbox_cli.cpp)
 target_link_libraries(aos_agent_cli PUBLIC aos::agent)
+target_link_libraries(aos_agent_cli PRIVATE nlohmann_json::nlohmann_json)
 
 aos_add_subcommand(
     NAME agent
@@ -41,6 +43,13 @@ aos_add_subcommand(
     ENTRY aos_listen_cli_main
     LIBRARY aos_agent_cli
     SUMMARY "跟讀這個資料夾 agent 的對話記錄"
+)
+
+aos_add_subcommand(
+    NAME inbox
+    ENTRY aos_inbox_cli_main
+    LIBRARY aos_agent_cli
+    SUMMARY "列出與讀取還沒被 agent 處理的訊息"
 )
 
 aos_add_subcommand(
