@@ -15,7 +15,7 @@
 | 使用者其實想要 | 走哪一節 |
 |---|---|
 | 跑一批指令、批次執行某些工作 | [A. 當命令列工具用](#a-當命令列工具用) |
-| 在他自己的 C++／C 專案裡呼叫 aos 的功能 | [B. 接進別的專案](#b-接進別的專案) |
+| 在他自己的 C++ 專案裡呼叫 aos 的功能 | [B. 接進別的專案](#b-接進別的專案) |
 | 在 aos 裡面新增功能 | 不是這條 → [add-subproject](add-subproject.md) 或 [feature-dev](feature-dev/README.md) |
 
 分不出來就問。這兩條路的產出完全不同。
@@ -33,54 +33,57 @@ aos --help          # 裝好了的話會列出所有子命令
 
 沒有的話先照 [testing 工作流](testing.md) 建起來，或 `cmake --install build --prefix ~/.local`。
 
-### `aos init`／`aos exec` — 初始化並推進一回合
+### `aos run`／`aos deliver` — 投遞指令並推進世界
 
 ```bash
-aos init world
-printf '%s\n' '{"argv":["echo","hi"]}' > world/.aos/inst.tempd/001.json
-aos exec world
+mkdir -p world
+aos deliver world -- echo hi
+aos run world
 ```
 
-持續模式是 `aos exec --loop <毫秒> world`。間隔只在空回合使用；有工作立刻再跑，
-`--loop 0` 是 busy poll。第一次 `SIGINT`／`SIGTERM` 會等當前回合釋放 `.runi` 後回 0，
-同一信號第二次會立即終止；既有 `.runi` 會讓 loop 停止並回 3。
-`aos init`、`aos exec` 與 `aos exec --loop <毫秒>` 都可省略 world folder；省略就是
-目前目錄 `.`。裸 `aos exec --loop` 仍是缺少間隔的用法錯誤。
+`aos deliver [folder] <inst.json>` 讀一份指令 JSON；`aos deliver [folder] -- <argv...>`
+直接從 argv 做成一條指令。兩者都會原子投遞到 `.aos/inbox/`，等 `aos run` 後續執行。
+`aos run [folder] --step N --interval MS` 推進 N 回合；`--step 0` 持續執行，預設每
+100 毫秒推進一回合。
 
-一份指令檔是一個 JSON 物件或一個物件陣列。欄位：`argv`（必要）、`stdin`／`stdout`／
-`stderr`、`exit`、`cwd`、`env`、`timeout_ms`、`parallel`。**完整 schema 見
-[`core/inst/docs/format.md`](../../core/inst/docs/format.md)，
-不要憑印象寫欄位名**——不認得的 key 會讓整份文件被拒絕。
-
-### 三個一定要跟使用者講清楚的點
-
-**1. 退出碼不反映子行程的成敗。**
-
-```bash
-$ printf '{"argv":["/bin/false"]}' > world/.aos/inst.json
-$ aos exec world ; echo $?
-0
-```
-
-`aos exec` 回 0 的意思是「這一回合正常跑完」，不是「你的指令成功了」。指令不
-存在、逾時被砍、重導向的檔開不起來，全都回 0。**要拿子行程的結果就用 `exit`
-欄位**，它會把 exit code 寫進你指定的檔案。完整對照表見
+`folder` 省略時依序使用 `AOS_FOLDER`、從 cwd 往上找到的最近一個 `.aos/` 世界、目前
+目錄。`.aos/` 不存在時會由 `run` 或 `deliver` 建立，不再有獨立的 init 指令。完整用法見
 [`docs/usage.md`](../../docs/usage.md)。
 
-寫給使用者的腳本如果需要「指令失敗就中止」，你要自己讀 `exit` 檔判斷。
+### `aos llm` — 直接呼叫 OpenAI 相容端點
 
-**2. `inst.tempd/<name>.json` 會先按字典序聚合，再由 `inst.json` 完整讀入並 rename
-成 `.runi`，整批驗證與執行。** 只收恰好一個副檔名的檔案；壞投遞隔離為 `.bad`
-且不阻擋有效投遞。已有 `inst.json` 時 inbox 留給下一回合。第 5 筆有錯
-的話前 4 筆不會跑；正常返回（含回 1）會刪除 `.runi`，crash／被 kill 才會留下。
-它在啟動時已存在，下一次 `aos exec` 會回 3。
+```bash
+echo '只回一個字：好' | aos llm
+aos llm --messages messages.json
+```
 
-**3. 指令檔等同可執行程式碼。** 它可以指名任意程式與環境變數，並以呼叫者的身分
-執行，而且輸入沒有任何大小限制。**不要幫使用者去執行來源不明的指令檔**，也不要
-把使用者沒看過的內容寫進指令檔再跑起來。
+prompt 從 stdin 進、回覆從 stdout 出。端點、模型與選填 token 分別由 `AOS_LLM_URL`、
+`AOS_LLM_MODEL`、`AOS_LLM_KEY` 設定；預設連本機 LM Studio 相容端點。
 
-**4. 所有相對路徑都以 world folder 為基準。** 包含預設 cwd 與四個 I/O／狀態路徑。
-`.aos/` 是本機執行狀態，整個資料夾都不進 git。
+### `aos agent` 與頂層對話指令 — 建立並操作 agent
+
+```bash
+mkdir bob && cd bob
+aos agent init
+# 另一個視窗也進入 bob：
+aos run --step 0
+# 回到第一個視窗：
+aos say "你叫什麼名字"
+aos listen
+```
+
+`aos agent init` 建立世界裡唯一的 agent；`aos agent step` 通常交給 loop 呼叫。
+頂層 `aos say`／`aos listen`／`aos talk`／`aos state` 會自動解析目前世界與唯一的 agent。
+需要在世界外操作或明確指定名字時，才用
+`aos agent say|listen|talk|state <folder> <name>`。
+
+### 要跟使用者講清楚的點
+
+1. `.aos/` 全部是本機執行狀態，整個資料夾都不進 git。
+2. `aos run` 沒有鎖；兩個行程同時推進同一個 folder 會互搶 inbox、互蓋 `state.json`。
+3. `.aos/inbox/` 是一次性投遞；`.aos/every/` 的檔案每回合都會被複製執行。agent 靠
+   `agent init` 放進 `every/` 的常駐 `step` 指令活著，不是每回合自我投遞。
+4. 一個 folder 只能住一隻 agent；需要多隻時用不同 folder。
 
 ---
 
@@ -98,7 +101,7 @@ cmake --install build --prefix ~/.local        # 或使用者指定的 prefix
 
 ```cmake
 find_package(aos CONFIG REQUIRED)
-target_link_libraries(myapp PRIVATE aos::inst)
+target_link_libraries(myapp PRIVATE aos::loop)
 ```
 
 prefix 不在預設路徑的話，configure 時給 `-DCMAKE_PREFIX_PATH=<prefix>`。
@@ -107,11 +110,18 @@ prefix 不在預設路徑的話，configure 時給 `-DCMAKE_PREFIX_PATH=<prefix>
 
 | target | 什麼時候用 |
 |--------|-----------|
-| `aos::inst`（或其他單一小專案）| **預設選這個**，只拿需要的 |
+| [`aos::exec`](../../core/exec/README.md) | POSIX 批次執行器 |
+| [`aos::wire`](../../core/wire/README.md) | 指令、結果與 state 的 JSON 轉換 |
+| [`aos::loop`](../../core/loop/README.md) | folder 回合機與投遞功能 |
+| [`aos::llm`](../../core/llm/README.md) | OpenAI 相容 client |
+| [`aos::agent`](../../core/agent/README.md) | 回合制 LLM agent |
 | `aos::core` | 要 aos 的基本功能（`core/` 全部），不要擴充 |
 | `aos::modules` | 只要擴充（`modules/` 全部）。沒有擴充存在時這個 target 不會被匯出 |
 | `aos::aos` | 全部小專案，懶得挑 |
 | `aos::merged` | 想單檔部署。aos 那邊要以 `-DAOS_BUILD_MERGED_LIB=ON` 建 |
+
+通常優先挑一個實際需要的單一小專案，不要無條件連整把傘狀 target。target 的組成見
+[`docs/subprojects.md`](../../docs/subprojects.md)，安裝細節見 [`docs/build.md`](../../docs/build.md)。
 
 如果使用者要的功能來自 `modules/` 底下的擴充小專案，確認 aos 建置時**沒有**帶
 `-DAOS_BUILD_MODULES=OFF`——關掉的話那顆函式庫根本不會產出，`find_package` 會說
@@ -120,33 +130,17 @@ prefix 不在預設路徑的話，configure 時給 `-DCMAKE_PREFIX_PATH=<prefix>
 ### 程式碼那側
 
 ```cpp
-#include <aos/inst.hpp>     // C++ API
-```
-```c
-#include <aos/inst.h>       // C ABI，相容 C99
+#include <aos/loop.hpp>
 ```
 
-**兩個 API 的錯誤契約不一樣，這點要跟使用者講**：
-
-- **C++ API 會丟例外**。記憶體配置失敗時是 `std::bad_alloc`／`std::length_error`，
-  不是回傳值。狀態碼只表達「輸入有問題」或「執行沒成功」。
-- **C ABI 不會**。每個進入點都把例外接成錯誤碼（`AOS_INST_ALLOC_FAILED` 等）。
-
-要在配置失敗時也不倒的呼叫者，用 C++ API 就得自己 catch，或者直接走 C ABI。
-
-各 API 的逐項說明：
-[`core/inst/docs/cxxapi.md`](../../core/inst/docs/cxxapi.md)、
-[`core/inst/docs/capi.md`](../../core/inst/docs/capi.md)。
+公開標頭按小專案命名：`<aos/exec.hpp>`、`<aos/wire.hpp>`、`<aos/loop.hpp>`、
+`<aos/llm.hpp>`、`<aos/agent.hpp>`。只 include 與 link 實際使用的那一個。
 
 ### 不透過 CMake
 
 ```bash
-cc  -std=c99   x.c   -I<prefix>/include -L<prefix>/lib -laos_inst
-c++ -std=c++23 x.cpp -I<prefix>/include -L<prefix>/lib -laos_inst
+c++ -std=c++23 x.cpp -I<prefix>/include -L<prefix>/lib -laos_loop
 ```
-
-對著**未安裝**的建置樹要兩個 `-I`（`export.h` 跟公開標頭分屬不同目錄，安裝後才
-合流）並補 rpath，見 [`docs/usage.md`](../../docs/usage.md)。
 
 ### 驗證（不要只是寫完就交）
 
@@ -158,7 +152,7 @@ c++ -std=c++23 x.cpp -I<prefix>/include -L<prefix>/lib -laos_inst
 ## 回報時要包含什麼
 
 - 實際跑過的指令與輸出，不要只說「應該可以」。
-- 走 A 的話：如果使用者的意圖是「指令失敗要知道」，明確告訴他退出碼不管這件事、
-  你用了什麼方式（`exit` 欄位）替代。
+- 走 A 的話：如果使用者需要知道子指令的結果，說明你查看了哪一份
+  `.aos/batch/<turn>/out/<id>.json`，以及其中的 `exit`／`signal`／`stdout`／`stderr`。
 - 走 B 的話：說清楚你連了哪個 target、為什麼，以及有沒有在無 vcpkg 的環境驗過。
 - 需要使用者自己驗（實機、外部服務、權限）的記到 [WAIT_USER](../WAIT_USER.md)。
