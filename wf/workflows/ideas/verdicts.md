@@ -78,7 +78,14 @@
     類比的可證偽版本（凍結的矽——與 `$ref` 取指令相撞）；**loop 只收無法成為 inst 的
     東西**（其餘是 OS-as-inst，一次回答 B6 與中斷欠帳）；控制面走投遞協定 or ad-hoc；
     程式名冊封閉判準（exec/loop/deliver/status/recover/check）；規範要一份 normative
-    SPEC。另四條是缺口：opcode 懸空（header 加 manifest 欄可補）、核心方程要宣告
+    SPEC。
+    > **其中第二條已試跑（2026-08-30，仍未裁）**：拿「loop 只收無法成為 inst 的東西」
+    > 去過 [top-down-cli](top-down-cli.md) 的八條指令，結果在
+    > [core-layering](core-layering.md) 末節——判準只對**回合內**適用
+    > （**core 名冊 ≠ 指令名冊**），過完之後 core 的新增需求**只剩上面第 2 條的
+    > 「分支」**，且「匯聚」被判進 core。
+
+    另四條是缺口：opcode 懸空（header 加 manifest 欄可補）、核心方程要宣告
     footprint（**git 第三筆帳：拍的 ≠ 改的**）、**PC 不存在**（回合編號無表示，是歷史／
     記憶體模型／status／去重的共同前提）、版面要 ownership table。
 13. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
