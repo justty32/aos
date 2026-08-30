@@ -5,9 +5,6 @@ aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命
 
 | 小專案 | target | 子命令 | 做什麼 |
 |--------|--------|--------|--------|
-| [inst/](inst/) | `aos::inst` | `aos init`／`aos exec` | 初始化資料夾並消費一回合的 JSON instruction |
-| [tooljson/](tooljson/) | `aos::tooljson` | `aos tooljson` | 讀取、驗證 tool spec，並把模型參數展開成 argv |
-| [llms/](llms/) | `aos::llms` | `aos llms` | 呼叫 OpenAI 相容端點並查詢模型能力（S3 非串流） |
 | [exec/](exec/) | `aos::exec` | （純函式庫） | 一次 fork 一整批 POSIX 指令、統一等完並回傳結果與起訖時間 |
 | [wire/](wire/) | `aos::wire` | （純函式庫） | 在指令／結果／loop state 的協定 JSON 與 C++ struct 之間轉換 |
 | [loop/](loop/) | `aos::loop` | `aos run`／`aos deliver` | 匯聚並執行一個資料夾的一回合，落檔後更新 `state.json` |
@@ -21,4 +18,4 @@ aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命
 
 `common/`、`app/`、`cmake/` 都不是小專案，它們是**基礎設施**。
 
-新增小專案照 [`docs/subprojects.md`](../docs/subprojects.md)；`inst/` 是參考範本。
+新增小專案照 [`docs/subprojects.md`](../docs/subprojects.md)；`llm/` 是參考範本。

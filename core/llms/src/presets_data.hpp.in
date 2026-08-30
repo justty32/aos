@@ -1,9 +1,0 @@
-#pragma once
-
-namespace aos::llms {
-
-inline constexpr char kEmbeddedPresets[] = R"aos_presets(
-@AOS_LLMS_PRESETS_JSON@
-)aos_presets";
-
-}  // namespace aos::llms

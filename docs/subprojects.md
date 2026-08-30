@@ -2,7 +2,7 @@
 
 ← [文件索引](README.md)｜[總覽](overview.md)｜[建置](build.md)
 
-`core/inst/` 就是這件事的參考範本，整份抄過去改名字，大致就成立了。
+`core/llm/` 就是這件事的參考範本，整份抄過去改名字，大致就成立了。
 
 ## 先決定：核心還是擴充
 
@@ -99,7 +99,7 @@ configure 期被擋下來。
 aos_add_subproject(llm
     SOURCES ...
     HEADERS include/aos/llm.hpp
-    PUBLIC_DEPS     aos::inst           # 標頭裡出現 aos::inst 的型別
+    PUBLIC_DEPS     aos::wire           # 標頭裡出現 aos::wire 的型別
     PUBLIC_PACKAGES SomePackage         # 外部套件才需要列，會產生 find_dependency
 )
 ```
