@@ -72,7 +72,6 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
-| proto-S-scheduling（[交接書](proto/proto-S-scheduling.md)，worktree，純規劃） | `wf/workflows/ideas/scheduling/` | core/、其餘 wf/ | 2026-08-30 |
 | proto-U-tools-impl（[交接書](proto/proto-U-tools-impl.md)，main） | `core/agent/`（或新 `core/tool/`）、`.aos/tools/`、`.gitignore`、code-map、ideas/tools 追加 | 其餘 core/、reference/、app/、其餘 wf/ | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫
