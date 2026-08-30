@@ -47,6 +47,7 @@
 | **停機** | 之後在 loop 內再說 |
 | **第 4～6 輪的實作缺陷** | 實作時自然會遇到，要嘛放外圈、要嘛交給使用者自行 handle 風險 |
 | **前作那批（`simple_tools/docs`）** | 有些可以參考，但**很多機制可以在 loop 或更外層處理** |
+| **`core/inst` 改名** | 改成 **`core/exec`**（2026-08-30）——小專案照**動詞**命名，`inst_t`／`.aos/inst.json`／C ABI 前綴照**名詞**留著。**已裁，未實作**（77 個檔提到它；`aos/inst.hpp` 這個 include 路徑跟不跟著改還沒答）→ [core-layering](core-layering.md) |
 | **2000ms 那個常數** | 不是使用者設計的，是 AI 自己加的，別管 |
 
 ## B. 仍開著（值得打）
@@ -79,7 +80,7 @@
     東西**（其餘是 OS-as-inst，一次回答 B6 與中斷欠帳）；控制面走投遞協定 or ad-hoc；
     程式名冊封閉判準（exec/loop/deliver/status/recover/check）；規範要一份 normative
     SPEC。
-    > **其中第二條已試跑（2026-08-30，仍未裁）**：拿「loop 只收無法成為 inst 的東西」
+    > **其中第二條已試跑（2026-08-30；使用者當日裁定「先不裁，邊實作邊想」，故結果不具約束力）**：拿「loop 只收無法成為 inst 的東西」
     > 去過 [top-down-cli](top-down-cli.md) 的八條指令，結果在
     > [core-layering](core-layering.md) 末節——判準只對**回合內**適用
     > （**core 名冊 ≠ 指令名冊**），過完之後 core 的新增需求**只剩上面第 2 條的
