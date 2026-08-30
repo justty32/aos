@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # aos say --help 把 "--help" 當成訊息送給 agent
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 W=$(mktemp -d); mkdir -p "$W/.aos"; cd "$W"
 "$AOS" agent init --name w >/dev/null
 before=$(ls .aos/agents/w/say 2>/dev/null | wc -l)

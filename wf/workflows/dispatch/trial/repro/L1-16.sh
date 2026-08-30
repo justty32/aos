@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 模型名打錯，aos 照樣回一段答案、exit 0，也不說實際回答的是誰
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 echo "--- 端點上有的模型："
 curl -s -m 5 http://localhost:1234/v1/models | grep -o '"id": *"[^"]*"' || { echo "SKIP: LM Studio 沒開"; exit 0; }
 echo "--- 用一個絕對不存在的模型名呼叫："

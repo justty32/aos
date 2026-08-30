@@ -63,6 +63,8 @@ aos_add_test(aos_agent_tests
         tests/test_agent_store.cpp
         tests/test_agent_step.cpp
         tests/test_agent_engine.cpp
+        tests/test_agent_cli.cpp
+        tests/test_agent_lifecycle.cpp
     LINK aos_agent_cli
 )
 

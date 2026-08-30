@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # aos 不在 PATH 上時，世界每回合靜默 no-op，run 仍印「1 insts」
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 W=$(mktemp -d)
 mkdir -p "$W/.aos"
 cd "$W"

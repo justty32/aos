@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 在既有世界的子資料夾裡 agent init，agent 被靜默建到祖先世界，名字也取自祖先資料夾
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 BASE=$(mktemp -d)/outer-world      # 模擬「我的 repo 根已經是一個 aos 世界」
 mkdir -p "$BASE/.aos" "$BASE/src/my-feature"
 cd "$BASE/src/my-feature"

@@ -2,7 +2,7 @@
 # 「idle／等待訊息」同時代表「做完了」「做到一半還有 pending 工具」「已經放棄在空轉」
 # 三種完全不同的處境，aos state 分不出來。
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 export PATH="$(dirname "$AOS"):$PATH"      # 不加這行會踩到 L1-01
 W=$(mktemp -d); mkdir -p "$W/.aos"; cd "$W"
 printf 'alpha\nbeta\n' > note.txt

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 路徑不存在，錯誤訊息卻指向權限
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 echo "--- /nonexistent 存在嗎： $([ -e /nonexistent ] && echo yes || echo no)"
 "$AOS" run /nonexistent/zzz --step 1; echo "exit=$?"
 "$AOS" deliver /nonexistent/zzz -- echo hi; echo "exit=$?"

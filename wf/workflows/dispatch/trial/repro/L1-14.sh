@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 每個子命令的 --help 行為都不一樣：四種 exit code、兩個根本不印用法
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 W=$(mktemp -d); mkdir -p "$W/.aos"; cd "$W"
 "$AOS" agent init --name w >/dev/null
 for c in run llm tool listen state talk deliver say; do

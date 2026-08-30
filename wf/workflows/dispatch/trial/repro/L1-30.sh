@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -u
 
-AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
-ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
+ROOT=${ROOT:-/home/lorkhan/repo/simple_tools/aos}
 SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
 TEMPLATE=$SOLO/_template
 CASE_DIR=$(mktemp -d "$SOLO/C/repro-tmp.C-03.XXXXXX")

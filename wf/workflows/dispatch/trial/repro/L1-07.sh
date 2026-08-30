@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lmstudio 世界記不住模型：--model 被靜默吃掉，實際用哪顆腦由跑 run 的那個 shell 的環境變數決定
 set -u
-AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos}
+AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 W=$(mktemp -d); mkdir -p "$W/a/.aos" "$W/b/.aos"
 
 cd "$W/a"
