@@ -72,8 +72,9 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
+| proto-L1-solo（[交接書](proto/proto-L1-solo.md)，worktree，只找不修） | `wf/workflows/dispatch/trial/{findings-L1.csv,repro/,sandbox/}` | core/、其餘 | 2026-08-30 |
+| proto-L2-team（[交接書](proto/proto-L2-team.md)，worktree，只找不修） | `wf/workflows/dispatch/trial/{findings-L2.csv,repro/,sandbox/team/}` | core/、其餘 | 2026-08-30 |
 | proto-V-sched-D（[交接書](proto/proto-V-sched-D.md)，worktree） | `core/llm/`、`core/agent/src/engine_pi.cpp`、`init.cpp` 一欄、code-map、ideas/scheduling 追加 | 其餘 core/、reference/、app/、其餘 wf/ | 2026-08-30 |
-| proto-U-tools-impl（[交接書](proto/proto-U-tools-impl.md)，main） | `core/agent/`（或新 `core/tool/`）、`.aos/tools/`、`.gitignore`、code-map、ideas/tools 追加 | 其餘 core/、reference/、app/、其餘 wf/ | 2026-08-30 |
 
 ### 保留給調度者，任何線都不得寫
 
