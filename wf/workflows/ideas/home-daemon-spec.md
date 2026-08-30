@@ -90,3 +90,18 @@ CLI 收斂：`aos run --daemon`／`aos stop [folder]` 留作單世界用；`aos 
 | 6 | 子 loop 死了 | ① 退避重啟到 60 s 不放棄 ② 十次後放棄標 `dead` | **①** | 壞掉的世界會一直重啟，只在 status 看得到 |
 | 7 | 改清單要不要重啟 | ① daemon 每秒重讀 ② `add` 印「請 restart」 | **①** | 多一段 diff 邏輯；`rm` 立刻殺 loop，沒有確認 |
 | 8 | 跟 Y 的邊界 | ① Y 只做單世界，pid 寫在 run 迴圈（§4 ①②）② Y 順手做 daemon.json | **①** | 之後 daemon 隊要等 Y 落地才能開 |
+
+## 裁決（2026-08-30）
+
+| # | 裁決 | 誰裁 |
+|---|---|---|
+| 1 | 子行程 supervisor | 調度者代裁（實作層） |
+| 2 | `sync`＝`every/` 一條 `aos run <sub> --step 1` | **使用者** |
+| 3 | `aos daemon add` 預設 `own` | **使用者** |
+| 4 | `~` 隱含第一個、頂層 `interval_ms` | **使用者** |
+| 5 | 重複 start → exit 1 印 status | 調度者代裁 |
+| 6 | 子 loop 死了退避重啟到 60 s、不放棄 | 調度者代裁 |
+| 7 | daemon 每秒重讀清單 | 調度者代裁 |
+| 8 | 隊 Y 只做單世界，pid／stop 進 `aos run` 迴圈本身（已通知） | 調度者代裁 |
+
+實作等隊 X／Y 落地後開（使用者：先只規劃）。systemd 不做，初期手動 `aos daemon start`。
