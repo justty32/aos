@@ -1,0 +1,74 @@
+$ tail -30 pi.log
+已完成：
+
+- `parse()` 改回傳 `std::optional<std::string>`
+- 找不到 `=` 時回傳 `std::nullopt`
+- 同步更新 `src/parse.hpp`、`src/main.cpp`、`tests/test_parse.cpp`
+- 新增空值 `empty=` 與失敗情況測試
+- `make` 測試通過，輸出 `ok`
+- 已執行 `make clean` 清除建置產物
+$ make 2>&1 | tail -3
+g++ -std=c++17 -o mini src/main.cpp src/parse.cpp
+g++ -std=c++17 -o test_parse tests/test_parse.cpp src/parse.cpp && ./test_parse
+ok
+$ diff -ru --exclude=pi.log "$SOLO/_template" . | head -140
+Only in .: mini
+diff -ru '--exclude=pi.log' /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/main.cpp ./src/main.cpp
+--- /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/main.cpp	2026-08-30 19:29:49.562860462 +0800
++++ ./src/main.cpp	2026-08-30 19:40:21.906749674 +0800
+@@ -3,7 +3,9 @@
+ 
+ int main(int argc, char **argv) {
+     for (int i = 1; i < argc; ++i) {
+-        std::cout << mini::parse(argv[i]) << "\n";
++        const auto value = mini::parse(argv[i]);
++        if (value) std::cout << *value;
++        std::cout << "\n";
+     }
+     return 0;
+ }
+diff -ru '--exclude=pi.log' /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.cpp ./src/parse.cpp
+--- /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.cpp	2026-08-30 19:29:46.717315194 +0800
++++ ./src/parse.cpp	2026-08-30 19:40:17.975793338 +0800
+@@ -2,9 +2,9 @@
+ 
+ namespace mini {
+ 
+-std::string parse(const std::string &line) {
++std::optional<std::string> parse(const std::string &line) {
+     auto pos = line.find('=');
+-    if (pos == std::string::npos) return std::string();
++    if (pos == std::string::npos) return std::nullopt;
+     return line.substr(pos + 1);
+ }
+ 
+diff -ru '--exclude=pi.log' /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.hpp ./src/parse.hpp
+--- /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/src/parse.hpp	2026-08-30 19:29:43.838878114 +0800
++++ ./src/parse.hpp	2026-08-30 19:40:09.132220806 +0800
+@@ -1,9 +1,10 @@
+ #pragma once
++#include <optional>
+ #include <string>
+ 
+ namespace mini {
+ 
+-// 解析 "key=value"，失敗時回傳空字串（呼叫端分不出「失敗」與「值本來就是空的」）。
+-std::string parse(const std::string &line);
++// 解析 "key=value"；找不到 '=' 時回傳 std::nullopt。
++std::optional<std::string> parse(const std::string &line);
+ 
+ }  // namespace mini
+Only in .: test_parse
+diff -ru '--exclude=pi.log' /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/tests/test_parse.cpp ./tests/test_parse.cpp
+--- /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/_template/tests/test_parse.cpp	2026-08-30 19:29:52.408837558 +0800
++++ ./tests/test_parse.cpp	2026-08-30 19:40:26.915040837 +0800
+@@ -4,7 +4,8 @@
+ 
+ int main() {
+     assert(mini::parse("a=1") == "1");
+-    assert(mini::parse("noequal").empty());
++    assert(mini::parse("empty=") == "");
++    assert(mini::parse("noequal") == std::nullopt);
+     std::cout << "ok\n";
+     return 0;
+ }

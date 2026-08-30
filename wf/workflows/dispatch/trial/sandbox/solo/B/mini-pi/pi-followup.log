@@ -1,0 +1,16 @@
+因為 `parse()` 的回傳型別從 `std::string` 改成 `std::optional<std::string>`。
+
+原本 `main.cpp` 可直接輸出字串：
+
+```cpp
+std::cout << mini::parse(argv[i]) << "\n";
+```
+
+但 `std::optional<std::string>` 不能直接用 `operator<<` 輸出，否則編譯失敗。因此要先取出值：
+
+```cpp
+const auto value = mini::parse(argv[i]);
+std::cout << value.value_or("") << "\n";
+```
+
+這樣也保留了原本行為：找不到 `=` 時仍輸出空行；只是現在 `parse()` 本身能明確區分「解析失敗」與「合法的空值」。

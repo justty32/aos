@@ -1,0 +1,20 @@
+因未提供實際 `-o` 路徑，報告已寫入 [report.txt](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/A/report.txt)。
+
+### 第一段：發現表
+
+A-01,L1,bug,3,劇本1 推進世界第1個run,用指定絕對路徑啟動aos後run應能驅動agent或明確報錯,agent init生成every/agent-mini.json的argv首項是相對路徑aos且PATH查無aos；run --step 15仍exit 0並於1.42秒走完15行0至1ms回合；世界turn為16但agent turn為0,pi用1個pi -p指令且69.27秒完成4檔並make通過,repro/A-01.sh
+A-02,L1,awkward,2,劇本1 開機第1個指令,init應確認agent名稱與世界位置並顯示engine模型CPU及下一步提示,agent init的stdout與stderr均為0 bytes；只能從.aos/agents/mini反推名稱且engine.json只有engine lmstudio；完全沒有另開視窗跑run的提示,pi不需init且用1個pi -p指令即可開始,-
+A-03,L1,awkward,2,劇本1 交代任務第2至4個指令,say後應有送達確認且state或listen能看見待處理訊息,say輸出0 bytes；前後兩次state逐字相同皆為idle與turn 0及updated_at 2026-08-30T11:35:32Z；listen --once輸出0行,pi的任務直接放在唯一1個pi -p指令中,-
+A-04,L1,awkward,2,劇本1 推進世界並行觀察,使用者應從aos狀態看出正在等LLM或跑工具或失敗,agent停止後state與status.json只顯示idle與等待訊息及turn 30；實際另打state、cat、listen、ps、wc加tail共5個診斷命令並翻status.json與run1.log才看出模型回空後空轉,pi在同一個前景指令結束時直接輸出完成摘要,-
+A-05,L1,cannot,3,劇本1 改函式推滿45回合,45回合內應完成4檔修改並以make驗證,三批共45世界回合與11.93秒後0個來源檔有差異；有效內容只有turn 16提出ls及turn 18取得結果後的空白assistant；後續追問才改2個檔且最終make仍因main.cpp無法輸出optional而失敗,pi用1個pi -p指令在69.27秒內改完4檔且make輸出ok,-
+A-06,L1,awkward,2,劇本1 追問測試結果,一句追問後應直接得到測試結論,實際需say、run、listen共3個aos指令並等9世界回合與13.31秒；只能從turn 49的原始工具JSON讀到exit 0與ok且沒有面向使用者的完成答覆；run結束時尚有寫parse.cpp的pending call,pi的單一指令結尾直接列出make測試通過與ok,-
+A-07,L1,awkward,1,劇本1 追問後第1個工具呼叫,模型提出的預設工具呼叫應直接可執行,turn 46先以sh args陣列呼叫make並收到原文「工具 sh 的 args 必須是字串」；到turn 47改成字串才投遞成功因此多耗1回合,pi用1個指令完成且pi.log沒有工具參數錯誤,-
+A-08,L1,awkward,1,劇本1 listen查看回覆,listen --once應只呈現這次尚未讀取的新回覆,第三次listen搭配tail -20仍混有turn 51與turn 53的舊工具內容才在turn 55看到本次三句解釋；最終agent log累積64行且沒有已讀游標可見,pi的單一指令只輸出6行最終摘要,-
+
+### 第二段：敘事報告
+
+劇本完整跑到 pi 對照與重現腳本，但 lmstudio 線沒有完成改函式。最先卡住的是開箱路徑：我照規定每次都用 `$AOS` 絕對路徑，`agent init` 卻把週期命令存成相對的 `aos agent step`；PATH 沒有 aos 時，首批 15 回合在 1.42 秒內靜默空轉且仍回 exit 0。補上允許的 PATH 後，模型只做了一次 `ls`，看到結果便回空；推滿 45 回合仍是 0 檔修改。追問測試才讓它重新動作，但又先撞一次 sh 參數型別錯誤，接著分回合讀檔、逐檔寫入；解釋要求到來時只完成 `parse.hpp` 與 `parse.cpp`，`main.cpp`、測試都沒改，實測 `make` 失敗。
+
+整條 aos 操作實際打了 19 個 aos 指令，`run` 共要求 60 個世界回合，五段 run 合計 30.37 秒；其中原任務的 45 回合是 11.93 秒，並非快完成，而是多數回合沒有 agent 工作。單一句「跑 make」也要 say、run、listen 三個指令、9 回合、13.31 秒，最後仍只有工具 JSON，沒有乾淨答覆。為判斷它究竟在忙或已死，我還得另打 5 個診斷命令並翻 `status.json`、`run1.log`；`state` 只說 idle／等待訊息。
+
+同一件事 pi 只打 1 個 `pi -p` 指令，69.27 秒 exit 0，四個檔一次改齊，自己跑過 make 並回報 ok；我再跑 make 也通過。pi 的牆鐘時間較長，但前景等待後就是完成品；aos 的痛點不是單回合慢，而是 19 次操作與60回合仍留下半套修改和壞掉的 build，且狀態介面無法明說失敗。

@@ -1,0 +1,4 @@
+EXPECT: 用絕對路徑啟動 aos run 時，內部 agent 也能啟動；否則 run 應非零退出並報錯。
+ACTUAL: run exit=0，state.json running[0].exit=127，run.log 如下：
+turn 1: 1 insts (1 every), 0 ms
+EVIDENCE_DIR: /home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/C/repro-tmp.C-01.84ywpu

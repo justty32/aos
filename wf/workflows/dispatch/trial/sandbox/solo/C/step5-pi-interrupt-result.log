@@ -1,0 +1,7 @@
+after interrupt=2026-08-30T19:53:06+08:00
+0 0 pi-interrupt2.log
+pi processes:
+project sessions newest:
+1788090765.9499765380 /home/lorkhan/.pi/agent/sessions/--home-lorkhan-repo-simple_tools-aos-.claude-worktrees-agent-a4b6627dc8a8b1254-wf-workflows-dispatch-trial-sandbox-solo-C-pi-direct--/2026-08-30T11-52-22-169Z_01a05283-7599-7737-94d4-09ea3ddc007b.jsonl 74560 bytes
+1788090693.2082508560 /home/lorkhan/.pi/agent/sessions/--home-lorkhan-repo-simple_tools-aos-.claude-worktrees-agent-a4b6627dc8a8b1254-wf-workflows-dispatch-trial-sandbox-solo-C-pi-direct--/2026-08-30T11-51-02-754Z_01a05282-3f62-73f0-b098-15c534db60b2.jsonl 78701 bytes
+1788090641.0564472830 /home/lorkhan/.pi/agent/sessions/--home-lorkhan-repo-simple_tools-aos-.claude-worktrees-agent-a4b6627dc8a8b1254-wf-workflows-dispatch-trial-sandbox-solo-C-pi-direct--/2026-08-30T11-49-42-449Z_01a05281-05b1-76ba-95d2-89148dd77a92.jsonl 67631 bytes

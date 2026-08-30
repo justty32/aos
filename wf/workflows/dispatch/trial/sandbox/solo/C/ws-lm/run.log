@@ -1,0 +1,10 @@
+turn 1: 1 insts (1 every), 1516 ms
+turn 2: 2 insts (1 every), 4 ms
+turn 3: 1 insts (1 every), 25443 ms
+turn 4: 2 insts (1 every), 4 ms
+turn 5: 1 insts (1 every), 15181 ms
+turn 6: 1 insts (1 every), 3 ms
+turn 7: 1 insts (1 every), 3 ms
+turn 8: 1 insts (1 every), 3 ms
+turn 9: 1 insts (1 every), 3 ms
+run exit=0

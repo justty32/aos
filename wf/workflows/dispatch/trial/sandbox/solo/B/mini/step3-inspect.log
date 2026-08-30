@@ -1,0 +1,18 @@
+$ find .aos -maxdepth 4 -type f -printf "%p %s bytes %TY-%Tm-%TdT%TH:%TM:%TS\n"
+.aos/agents/mini/engine.json 135 bytes 2026-08-30T19:35:38.3595616500
+.aos/agents/mini/history.json 21 bytes 2026-08-30T19:35:38.3596063930
+.aos/agents/mini/log.md 0 bytes 2026-08-30T19:35:38.3596547440
+.aos/agents/mini/pending.json 31 bytes 2026-08-30T19:35:38.3598571720
+.aos/agents/mini/persona.md 54 bytes 2026-08-30T19:35:38.3595913950
+.aos/agents/mini/say/1788089746509077102-3243314-0.md 259 bytes 2026-08-30T19:35:46.5091140410
+.aos/agents/mini/status.json 104 bytes 2026-08-30T19:35:38.3596483520
+.aos/batch/1/insts/agent-mini-1.json 98 bytes 2026-08-30T19:36:05.6561428260
+.aos/batch/1/out/agent-mini-1.json 178 bytes 2026-08-30T19:36:05.6566158600
+.aos/every/agent-mini.json 55 bytes 2026-08-30T19:35:38.3599379830
+.aos/state.json 384 bytes 2026-08-30T19:36:05.6566299460
+.aos/tools/cat.json 272 bytes 2026-08-30T19:35:38.3598352910
+.aos/tools/ls.json 287 bytes 2026-08-30T19:35:38.3598049240
+.aos/tools/sh.json 276 bytes 2026-08-30T19:35:38.3597700890
+.aos/turn 2 bytes 2026-08-30T19:36:05.6567095450
+$ for selected JSON/text files: content
+zsh:7: no matches found: .aos/inbox/*

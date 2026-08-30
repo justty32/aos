@@ -1,0 +1,72 @@
+== before restart at=2026-08-30T19:45:05+08:00 ==
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 27,
+  "updated_at": "2026-08-30T11:44:52Z"
+}
+turn=28
+{
+  "turn": 27,
+  "phase": "idle",
+  "running": [
+    {
+      "id": "agent-ws-lm-27",
+      "argv0": "aos",
+      "pid": 3279764,
+      "started_at": "2026-08-30T11:44:52.713Z",
+      "status": "done",
+      "exit": 0
+    }
+  ],
+  "agents": {
+    "ws-lm": {
+      "detail": "等待訊息",
+      "status": "idle",
+      "turn": 27,
+      "updated_at": "2026-08-30T11:44:52Z"
+    }
+  }
+}
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 27,
+  "updated_at": "2026-08-30T11:44:52Z"
+}
+batch19:
+.aos/batch/19 d 4096 bytes mtime=2026-08-30T19:44:51.8847541760
+.aos/batch/19/insts d 4096 bytes mtime=2026-08-30T19:44:20.4354804180
+.aos/batch/19/insts/agent-ws-lm-19.json f 100 bytes mtime=2026-08-30T19:44:20.4354436600
+.aos/batch/19/out d 4096 bytes mtime=2026-08-30T19:44:51.8860970030
+.aos/batch/19/out/agent-ws-lm-19.json f 178 bytes mtime=2026-08-30T19:44:51.8860787490
+processes:
+run3_rc=0 elapsed=0s
+turn 28: 1 insts (1 every), 3 ms
+turn 29: 1 insts (1 every), 3 ms
+turn 30: 1 insts (1 every), 3 ms
+== after restart at=2026-08-30T19:45:05+08:00 ==
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 30,
+  "updated_at": "2026-08-30T11:45:05Z"
+}
+turn=31
+batch19+:
+.aos/batch/19 d 4096 bytes mtime=2026-08-30T19:44:51.8847541760
+.aos/batch/19/insts d 4096 bytes mtime=2026-08-30T19:44:20.4354804180
+.aos/batch/19/insts/agent-ws-lm-19.json f 100 bytes mtime=2026-08-30T19:44:20.4354436600
+.aos/batch/19/out d 4096 bytes mtime=2026-08-30T19:44:51.8860970030
+.aos/batch/19/out/agent-ws-lm-19.json f 178 bytes mtime=2026-08-30T19:44:51.8860787490
+.aos/batch/20 d 4096 bytes mtime=2026-08-30T19:44:51.9896601340
+.aos/batch/20/insts d 4096 bytes mtime=2026-08-30T19:44:51.9865368310
+.aos/batch/20/insts/agent-ws-lm-20.json f 100 bytes mtime=2026-08-30T19:44:51.9865188970
+.aos/batch/20/out d 4096 bytes mtime=2026-08-30T19:44:51.9900057090
+.aos/batch/20/out/agent-ws-lm-20.json f 178 bytes mtime=2026-08-30T19:44:51.9899955000
+.aos/batch/21 d 4096 bytes mtime=2026-08-30T19:44:52.0934561500
+.aos/batch/21/insts d 4096 bytes mtime=2026-08-30T19:44:52.0904198690
+.aos/batch/21/insts/agent-ws-lm-21.json f 100 bytes mtime=2026-08-30T19:44:52.0903987600
+.aos/batch/21/out d 4096 bytes mtime=2026-08-30T19:44:52.0939892350
+.aos/batch/21/out/agent-ws-lm-21.json f 178 bytes mtime=2026-08-30T19:44:52.0939745280
+processes:

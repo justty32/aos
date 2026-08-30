@@ -1,0 +1,25 @@
+$ find .aos -maxdepth 4 -type f -printf ...
+agents/mini/engine.json
+agents/mini/history.json
+agents/mini/log.md
+agents/mini/pending.json
+agents/mini/persona.md
+agents/mini/status.json
+every/agent-mini.json
+state.json
+tools/cat.json
+tools/ls.json
+tools/sh.json
+turn
+$ cat .aos/agents/*/engine.json
+{
+  "engine": "lmstudio"
+}
+$ cat .aos/agents/*/persona.md
+你是一個可靠、好奇且言簡意賅的助手。$ ls -la .aos/tools/
+total 20
+drwxr-xr-x 2 lorkhan lorkhan 4096 Aug 30 19:35 .
+drwxr-xr-x 6 lorkhan lorkhan 4096 Aug 30 19:35 ..
+-rw-r--r-- 1 lorkhan lorkhan  272 Aug 30 19:35 cat.json
+-rw-r--r-- 1 lorkhan lorkhan  287 Aug 30 19:35 ls.json
+-rw-r--r-- 1 lorkhan lorkhan  276 Aug 30 19:35 sh.json

@@ -1,0 +1,13 @@
+{
+  "args": "list",
+  "argv": [
+    "ls"
+  ],
+  "description": "列出資料夾內容。args 是選項與路徑 token，例如 [\"-la\", \".\"]。",
+  "guarantee": "idempotent",
+  "name": "ls",
+  "predictability": "high",
+  "source": "manual",
+  "stdin": "none",
+  "timeout_ms": 30000
+}

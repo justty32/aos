@@ -1,0 +1,19 @@
+$ timeout 900 $AOS run . --step 1 > run1.log 2>&1 &
+$AOS state  # while run PID is live
+probe: run pid 3243718 already exited
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:38Z"
+}
+run1 exit=0
+run1 elapsed_seconds=1
+$ cat run1.log
+turn 1: 1 insts (1 every), 0 ms
+$AOS listen --once
+$ git diff --stat -- src tests
+$ git diff -- src tests | head -60
+$ make 2>&1 | tail -5
+g++ -std=c++17 -o test_parse tests/test_parse.cpp src/parse.cpp && ./test_parse
+ok

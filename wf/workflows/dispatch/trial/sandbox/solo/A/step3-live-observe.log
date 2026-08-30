@@ -1,0 +1,36 @@
+[AOS #7] $AOS state
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:32Z"
+}
+elapsed=0.00s user=0.00s system=0.00s
+$ cat .aos/agents/*/status.json
+{
+  "detail": "等待訊息",
+  "status": "idle",
+  "turn": 0,
+  "updated_at": "2026-08-30T11:35:32Z"
+}
+[AOS #8] $AOS listen --once
+elapsed=0.00s user=0.00s system=0.00s
+$ ps -o pid,etime,stat,cmd -C aos
+    PID     ELAPSED STAT CMD
+$ wc -l run1.log; tail -40 run1.log
+15 run1.log
+turn 1: 1 insts (1 every), 0 ms
+turn 2: 1 insts (1 every), 1 ms
+turn 3: 1 insts (1 every), 1 ms
+turn 4: 1 insts (1 every), 1 ms
+turn 5: 1 insts (1 every), 1 ms
+turn 6: 1 insts (1 every), 1 ms
+turn 7: 1 insts (1 every), 1 ms
+turn 8: 1 insts (1 every), 1 ms
+turn 9: 1 insts (1 every), 0 ms
+turn 10: 1 insts (1 every), 1 ms
+turn 11: 1 insts (1 every), 0 ms
+turn 12: 1 insts (1 every), 1 ms
+turn 13: 1 insts (1 every), 0 ms
+turn 14: 1 insts (1 every), 1 ms
+turn 15: 1 insts (1 every), 1 ms
