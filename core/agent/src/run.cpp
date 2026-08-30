@@ -269,6 +269,8 @@ void print_unread(const std::filesystem::path &folder, std::string_view name) {
         const std::string line = unread_line(path);
         std::printf("- %s\n", line.c_str());
     }
+    std::fputs("（aos inbox read 可以直接讀完並標為已讀，不會叫 LLM）\n",
+               stdout);
     std::fflush(stdout);
 }
 
@@ -372,6 +374,13 @@ int run_listen(const std::filesystem::path &folder, std::string_view name,
     std::string log = aos::agent::read_log(folder, name);
     print_text(log);
     print_unread(folder, name);
+    /* 兩邊都空的時候不要只給一個空白提示字元：說出下一步。 */
+    if (log.empty() && unread_files(folder, name).empty()) {
+        std::fputs("無新訊息（還沒有任何對話；用 aos say 說一句話，"
+                   "再用 aos run 推一回合，或直接 aos chat）\n",
+                   stdout);
+        std::fflush(stdout);
+    }
     if (once)
         return 0;
     std::size_t offset = log.size();

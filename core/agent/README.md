@@ -22,11 +22,13 @@ aos contact add alice ../alice-world
 aos say --to alice "可以幫我看一下嗎"
 ```
 
-頂層的 `aos say`、`aos listen`、`aos talk`、`aos state` 都自動解析世界與唯一的
-agent。`aos say --to <名字> <文字...>` 會查目前世界的 `.aos/contacts.json`，把訊息
-投到聯絡人的世界與 agent。`talk` 會逐行讀 stdin，等待外部 loop 推進後印出該次新增的 log；`listen`
-不帶 `--once` 時每 200 ms 印出新增內容。舊的 `aos agent say|listen|talk|state
-<folder> <name>` 形式仍可使用。`aos agent talk --interface pi` 的整合限制與建議
+頂層的 `aos say`、`aos listen`、`aos talk`、`aos state`、`aos inbox` 都自動解析
+世界與唯一的 agent。`aos say --to <名字> <文字...>` 會查目前世界的
+`.aos/contacts.json`，把訊息投到聯絡人的世界與 agent。`talk` 會逐行讀 stdin，等待外部
+loop 推進後印出該次新增的 log；`listen` 在 log 還是空的時會指向未讀信箱或下一步，
+不帶 `--once` 時每 200 ms 印出新增內容。舊的
+`aos agent say|listen|talk|state <folder> <name>` 形式仍可使用。
+`aos agent talk --interface pi` 的整合限制與建議
 adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚回報它尚未內建。
 `aos agent init` 另接受 `--engine lmstudio|pi`、`--provider P`、`--model M` 與
 `--priority N`；priority 是可為負數的整數，0 不寫進 `engine.json`。lmstudio 可用
@@ -48,6 +50,11 @@ adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚�
 `unread` 快照，最近一次 step 失敗時另含單行 `last_error`，成功回合會清掉該欄位。
 若 lmstudio completion 失敗，這回合的新 user 訊息仍留在 `say/`，不會先寫進 history
 或 log；端點恢復後可在下一回合安全重試。
+
+`aos inbox ls [--json]` 直接列出 `say/*.md`，不會呼叫 LLM；
+`aos inbox read [<id>] [--all] [--keep]` 省略 id 時讀最舊一封，也接受唯一的 id 前綴。
+預設讀完會把訊息搬到同層的 `read/`，因此 agent 不會再處理它；只想查看、仍要留給
+agent 回覆時加 `--keep`。
 
 ## 使用者也是一格 agent
 
