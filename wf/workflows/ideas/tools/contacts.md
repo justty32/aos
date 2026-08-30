@@ -66,3 +66,12 @@
 傳輸機制相同（名字→資料夾→投遞），語意不同（對方是 agent 還是一顆 CPU）。
 A 同一份清單加 `kind: agent|llm-pu`；**B 通訊錄只放 agent，llm pu 放 `engine.json`／endpoint 設定**；C 不加 kind 靠猜。
 建議 B；代價是兩份地址設定。等所有 endpoint 都統一成「可收 inst 的地址」那天再升 A。
+
+## 使用者裁決追加（2026-08-30）：使用者自己也是 agent，住 `~`
+
+> 「使用者自己也勉強算是 agent，所在資料夾就是 `~`，其他 agent 可以把信寄到這裡。使用者跟其他 agent say 的時候寄件人就是 `~`。」
+
+- 通訊錄天然有一格 `~`（使用者）：地址＝`~/.aos/`（inbox／say 投遞匣），任何 agent `aos say --to ~ …` 就是「跟使用者講話」；使用者讀信＝在 `~` 下 `aos listen`（或之後的 `aos inbox`）。
+- 使用者在任何世界打 `aos say …` 時，訊息的**寄件人是 `~`**（say 訊息要帶 `from` 欄；agent 之間互 say 也帶各自的資料夾當寄件人）。
+- 這跟 wf inbox 的「頂層那一格＝`new/`」是同一件事：使用者的信箱是頂層信箱。
+- **尚未實作**：say 的 `from`、`~/.aos/` 的初始化、`aos say --to ~`。交給下一棒（修 bug／改進隊）。
