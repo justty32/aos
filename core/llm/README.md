@@ -27,7 +27,12 @@ aos llm --url http://localhost:1234/v1 --model qwen/qwen3.5-9b
 ```
 
 連線、HTTP、JSON 或回應格式錯誤會在 stderr 印出原因並回傳 exit code 1。預設 timeout
-為 120000 ms，可用 `--timeout-ms` 覆蓋。
+為 120000 ms，可用 `--timeout-ms` 覆蓋。若端點回應 JSON 的 `model` 與要求的
+`--model`／`AOS_LLM_MODEL` 不同，回覆文字仍會照常印到 stdout，但 stderr 會列出要求與
+實際模型並回 1。`-h`／`--help` 會把完整用法印到 stdout、回 0，不讀 stdin 或呼叫端點。
+
+函式庫的 `parse_response_model()` 可抽出回應 JSON 的 `model`；`complete()` 最後一個
+可省略的 `served_model` 出參會回填端點實際模型，既有呼叫端不必修改。
 
 ## 並行上限與排隊
 

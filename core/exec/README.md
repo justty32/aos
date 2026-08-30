@@ -7,6 +7,8 @@
 把一批 `Spawn`（argv／env／cwd／stdin／timeout）**一次全部 fork/exec**（＝回合內並行），
 再**統一等完**，回傳每條的 exit 或 signal、stdout／stderr 文字、起訖時間。
 兩階段 API（`start_all` → `wait_all`）是為了讓上層在「已 fork、還沒等完」時拿到 pid 寫進 `state.json`。
+每條的 `ended_at` 在該子行程實際收線時各自記錄；行程級註冊表則讓上層可從 signal handler
+呼叫 `interrupt_running()`，只用 `kill(2)` 對所有尚未收線的子行程群組送 signal。
 stdout／stderr／stdin 一律走 `mkstemp` 暫存檔而非 pipe——多 child 並行時不需要 poll 迴圈、也不會塞爆緩衝互相卡死。
 只認 argv 與環境，**不帶** `$ref`／`$env`、不帶 C ABI、不寫 exit 檔。
 
@@ -66,6 +68,9 @@ AOS_API std::vector<Running> start_all(const std::vector<Spawn> &spawns);
  * 順序與輸入一一對應；呼叫後 running[i] 的暫存檔路徑即失效。 */
 AOS_API std::vector<Result> wait_all(std::vector<Running> &running);
 
+/* 對目前行程已 fork、尚未收線的所有子行程群組送 signal；可在 signal handler 呼叫。 */
+AOS_API int interrupt_running(int signal_number);
+
 /* 現在時刻的 ISO8601 字串（UTC，毫秒）。上層寫 state.json 也用同一種格式。 */
 AOS_API std::string now_iso8601();
 
@@ -82,8 +87,11 @@ AOS_API std::string now_iso8601();
 | `src/tempfile.hpp` / `src/tempfile.cpp` | `make_temp(prefix, path_out) -> fd`（`$TMPDIR` 或 `/tmp`，`mkstemp`）、`write_fully`（抄舊 `exec.cpp`）、`read_file_and_unlink(path) -> string` | 20 / 90 |
 | `src/spawn_prep.hpp` / `src/spawn_prep.cpp` | 抄舊 `core/inst/src/spawn_prep.*`：環境合併（只加不減、拒絕含 `=` 的 key）、PATH 解析成 `executable`、`envp` 實體化、`failure_status`（126/127）。輸入型別由 `inst_t` 改成 `Spawn` | 25 / 170 |
 | `src/wait.hpp` / `src/wait.cpp` | 抄舊 `core/inst/src/wait.*`：`wait_retry`（EINTR 重試）、`wait_until(pid, limit_ms)`（WNOHANG＋指數退避 ≤ 50 ms） | 12 / 90 |
-| `src/start.cpp` | `start_all`：每條先建三個暫存檔並寫入 stdin_data、`prepare_spawn`、`fork`；**child 側** `setpgid(0,0)` → dup2 三個 fd → `chdir` → `execve`（只做 async-signal-safe）；**parent 側** `setpgid(pid,pid)` 忽略 `EACCES`（雙保險，抄舊 `exec.cpp`）；填 `started_at` 與 `deadline_mono_ms` | 200 |
-| `src/wait_all.cpp` | `wait_all`：單一輪詢迴圈，對每條未完成者 `waitpid(WNOHANG)`；過了 `deadline_mono_ms` 就 `kill(-pid, SIGKILL)` 再阻塞等；全部收齊後 `WIFEXITED`/`WIFSIGNALED` 拆成 `exit`/`signal`、讀暫存檔進 `stdout_text`/`stderr_text`、`unlink`、填 `ended_at` | 180 |
+| `src/interrupt.hpp` / `src/interrupt.cpp` | 行程級、固定容量的尚未收線 pid 註冊表；`register_running`／`unregister_running` 供 exec 內部維護，公開 `interrupt_running(signal)` 只以 `kill(2)` 對各 process group 送 signal，可從 signal handler 呼叫 | 10 / 60 |
+| `src/start.cpp` | `start_all`：每條先建三個暫存檔並寫入 stdin_data、`prepare_spawn`、`fork`；**child 側** `setpgid(0,0)` → dup2 三個 fd → `chdir` → `execve`（只做 async-signal-safe）；**parent 側** `setpgid(pid,pid)` 忽略 `EACCES`（雙保險，抄舊 `exec.cpp`）；填 `started_at` 與 `deadline_mono_ms`，成功後登記 pid | 200 |
+| `src/wait_all.cpp` | `wait_all`：單一輪詢迴圈，對每條未完成者 `waitpid(WNOHANG)`；過了 `deadline_mono_ms` 就 `kill(-pid, SIGKILL)` 再阻塞等；每條收線時立即註銷 pid 並各自填 `ended_at`，最後拆 exit/signal、讀回暫存檔並 `unlink` | 180 |
+| `tests/test_interrupt.cpp` | 驗 `interrupt_running()` 會立即中止尚未收線的行程群組。 | 30 |
+| `tests/test_ended_at.cpp` | 驗快慢兩條子行程各自在收線當下記錄不同的 `ended_at`。 | 25 |
 
 CMake：`aos_add_subproject(exec SOURCES … HEADERS include/aos/exec.hpp)`，沒有 `PUBLIC_DEPS`／`PRIVATE_DEPS`、沒有 `aos_add_subcommand`。
 
