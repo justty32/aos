@@ -22,11 +22,11 @@
 > 「子世界與否不用管太多，inst 內沒推進的就不管它。但子 agent 與否，那確實是要登記的。」
 
 - **子世界不是一等公民**：沒有任何 inst 去推它，它就只是個資料夾——不鏡射、不追蹤、不設計管道。下面第 1、2、4 條**作廢**。
-- **子 agent 要登記**：一個 agent 派生出來的 agent（不論住在子世界還是同世界）必須在登記表上有一格——誰生的、住哪、用哪顆 CPU。這條交給 tool 規劃隊：登記表除了 tool，也要有 agent（或 agent 就是一種 tool）。
+- **子 agent 不用「登記」，就是一份通訊錄**（使用者補充 2026-08-30：「也不用登記，反正就是類似 wf 的 inbox contact list」）：像 wf inbox 的 ROSTER／CONTACTS——誰是誰、住哪個資料夾（＝往哪投遞）。不是 schema、不是白名單，就是名字→地址。交給 tool 規劃隊：agent 的通訊錄跟 tool 登記表是兩份東西，別揉在一起。
 
 ## 還沒想的（給 tool 規劃隊）
 
-1. 子 agent 登記表的形狀：住哪（world 級 `.aos/agents.json`？還是每隻 agent 自己的 `children`）、欄位（parent、folder、engine、建立回合）。
+1. 通訊錄住哪（world 級 `.aos/contacts.json`？）、欄位最少到什麼程度（name、folder 就夠？）、誰維護（`aos agent init` 自動加一行？）。
 2. 子 agent 用哪顆 CPU、tools.json 要不要繼承父 agent 的。
 3. 跟 [top-down-cli §三](top-down-cli.md)「把思考投遞到另一顆 llm pu 資料夾」是同一件事的兩種說法？——llm pu 也是一個子世界。
 
