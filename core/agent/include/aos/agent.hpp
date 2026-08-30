@@ -52,6 +52,14 @@ using Completion =
 AOS_API std::filesystem::path absolute_folder(
     const std::filesystem::path &folder);
 
+/* given 非空就用它；否則解析目前的資料夾世界。 */
+AOS_API std::filesystem::path resolve_folder(
+    const std::filesystem::path &given = {});
+
+/* given 非空就用它；否則回傳 folder 裡唯一的 agent 名稱。 */
+AOS_API std::string resolve_name(const std::filesystem::path &folder,
+                                 std::string_view given = {});
+
 AOS_API void initialize(const std::filesystem::path &folder,
                         std::string_view name,
                         std::string_view persona =

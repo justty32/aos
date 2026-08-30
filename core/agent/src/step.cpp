@@ -85,14 +85,6 @@ std::string complete_locally(const std::vector<Message> &messages) {
     return aos::llm::complete(request, aos::llm::options_from_env());
 }
 
-void safely_requeue(const detail::Paths &paths, std::string_view name,
-                    std::uint64_t turn) noexcept {
-    try {
-        detail::deliver_self(paths, name, turn);
-    } catch (...) {
-    }
-}
-
 }  // namespace
 
 int step(const std::filesystem::path &folder, std::string_view name,
@@ -116,7 +108,6 @@ int step(const std::filesystem::path &folder, std::string_view name,
                     return std::filesystem::exists(out / (call.id + ".json"));
                 });
             if (!ready) {
-                detail::deliver_self(*paths, name, turn);
                 detail::write_status(*paths, "tool", "等工具結果", turn);
                 return 0;
             }
@@ -189,7 +180,6 @@ int step(const std::filesystem::path &folder, std::string_view name,
             }
         }
 
-        detail::deliver_self(*paths, name, turn);
         detail::write_status(*paths, next_status, detail_text, turn);
         return 0;
     } catch (const std::exception &exception) {
@@ -200,7 +190,6 @@ int step(const std::filesystem::path &folder, std::string_view name,
                                      turn);
             } catch (...) {
             }
-            safely_requeue(*paths, name, turn);
         }
         return 1;
     }

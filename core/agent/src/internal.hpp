@@ -13,6 +13,7 @@ struct Paths {
     std::filesystem::path folder;
     std::filesystem::path aos;
     std::filesystem::path inbox;
+    std::filesystem::path every;
     std::filesystem::path agent;
     std::filesystem::path persona;
     std::filesystem::path history;
@@ -46,7 +47,5 @@ std::string system_prompt(const Paths &paths, std::string_view name,
 void deliver(const Paths &paths, std::string_view id,
              const std::vector<std::string> &argv,
              bool tool_instruction = false);
-void deliver_self(const Paths &paths, std::string_view name,
-                  std::uint64_t turn);
 
 }  // namespace aos::agent::detail

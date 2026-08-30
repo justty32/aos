@@ -1,4 +1,4 @@
-# agent：以資料夾回合驅動、會自我投遞的 LLM agent。
+# agent：以資料夾回合驅動、由 every 常駐投遞的 LLM agent。
 
 aos_add_subproject(agent
     SOURCES
@@ -11,10 +11,10 @@ aos_add_subproject(agent
     HEADERS
         include/aos/agent.hpp
     PRIVATE_DEPS
-        aos::llm
+        aos::llm aos::loop
 )
 
-add_library(aos_agent_cli OBJECT src/run.cpp)
+add_library(aos_agent_cli OBJECT src/run.cpp src/run_top.cpp)
 target_link_libraries(aos_agent_cli PUBLIC aos::agent)
 
 aos_add_subcommand(
@@ -22,6 +22,34 @@ aos_add_subcommand(
     ENTRY aos_agent_cli_main
     LIBRARY aos_agent_cli
     SUMMARY "建立並推進回合制資料夾 agent"
+)
+
+aos_add_subcommand(
+    NAME say
+    ENTRY aos_say_cli_main
+    LIBRARY aos_agent_cli
+    SUMMARY "對這個資料夾的 agent 說一句話"
+)
+
+aos_add_subcommand(
+    NAME listen
+    ENTRY aos_listen_cli_main
+    LIBRARY aos_agent_cli
+    SUMMARY "跟讀這個資料夾 agent 的對話記錄"
+)
+
+aos_add_subcommand(
+    NAME talk
+    ENTRY aos_talk_cli_main
+    LIBRARY aos_agent_cli
+    SUMMARY "跟這個資料夾的 agent 逐行對話"
+)
+
+aos_add_subcommand(
+    NAME state
+    ENTRY aos_state_cli_main
+    LIBRARY aos_agent_cli
+    SUMMARY "印出這個資料夾 agent 的 status.json"
 )
 
 aos_add_test(aos_agent_tests

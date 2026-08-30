@@ -16,7 +16,19 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
         throw std::runtime_error("folder 不存在或不是資料夾: " +
                                  paths.folder.string());
     }
+    const std::filesystem::path agents = paths.aos / "agents";
+    if (std::filesystem::is_directory(agents)) {
+        for (const auto &entry : std::filesystem::directory_iterator(agents)) {
+            if (entry.is_directory()) {
+                throw std::runtime_error(
+                    paths.folder.string() + " 已經住著 agent " +
+                    entry.path().filename().string() +
+                    "；一個資料夾只住一隻");
+            }
+        }
+    }
     std::filesystem::create_directories(paths.inbox);
+    std::filesystem::create_directories(paths.every);
     std::filesystem::create_directories(paths.say);
     detail::atomic_write(paths.persona, persona);
     detail::write_history(paths, {});
@@ -37,7 +49,10 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
             {"agents", {{std::string(name), status}}}};
         detail::atomic_write(paths.aos / "state.json", state.dump(2) + "\n");
     }
-    detail::deliver_self(paths, name, 0);
+    const nlohmann::json instruction = {
+        {"argv", {"aos", "agent", "step"}}};
+    detail::atomic_write(paths.every / ("agent-" + std::string(name) + ".json"),
+                         instruction.dump(2) + "\n");
 }
 
 void say(const std::filesystem::path &folder, std::string_view name,
