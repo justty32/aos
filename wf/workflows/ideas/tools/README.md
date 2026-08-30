@@ -30,3 +30,23 @@
 | 10 | 錯誤退回與危險工具 | 拼文字／固定 JSON `tool` 訊息；不管／`confirm: true` 問人／白名單即安全 | 固定 JSON；安全先不管，交非開發者用時再加 confirm | 多一個 schema；初期安全在啟動 loop 的人 |
 | 11 | pi 繞過 inst | A 事件回填 `batch/<turn>/out/`、標 `origin: pi`／B 收窄成 `aos_deliver` 走 inbox／C 接受洞 | A | 帳本是觀測紀錄不可重播 |
 | 12 | 通訊錄住哪、誰維護 | 住：世界層 `.aos/contacts.json`／每 agent／Markdown／不存檔掃目錄；維護：init 自動／人手／`aos contact add` | 世界層＋`aos contact add`，`agent init` 不碰 | 快取會過期 |
+
+## 使用者裁決（2026-08-30）
+
+| # | 裁決 |
+|---|---|
+| 1 | **一檔一 tool** `.aos/tools/<name>.json`；膨大後照 wf 的方式拆，**現在不考慮膨大** |
+| 2 | 必填 `name`＋`argv`＋`description` |
+| 3 | **欄位名照 ai_core 九軸原樣**（不用 exec/model/meta 分層） |
+| 4 | `args` 依登記 `list\|string\|none` |
+| 5 | 不做具名槽 |
+| 6 | 自述探 `--metainfo`；第三方 opt-in 才試 `--metadata` |
+| 7 | LLM 類工具**不強制**標記（`predictability` 欄存在但由登記者填） |
+| 8 | 給模型：精簡文字行＋client 驗證；實測後再升原生 tool calling |
+| 9 | 三回合往返不壓 |
+| 10 | 錯誤以固定 JSON tool 訊息退回；安全先不管 |
+| 11 | pi 繞過 inst：先接受（另記在 dispatch/proto/done/proto-E-pi-cpu.md） |
+| 12 | 通訊錄住世界層 `.aos/contacts.json`，`aos contact add` 手動維護，`agent init` 不碰 |
+| 術語 | `nondeterministic` → **可預期性 `predictability`**：結果是否符合人類預期 |
+
+實作交給 [dispatch/proto/proto-U-tools-impl](../../dispatch/proto/proto-U-tools-impl.md)。
