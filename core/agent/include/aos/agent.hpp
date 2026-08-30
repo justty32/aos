@@ -3,6 +3,7 @@
 #include <aos/export.h>
 #include <aos/tool.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <functional>
@@ -96,7 +97,16 @@ AOS_API Engine read_engine(const std::filesystem::path &folder,
 AOS_API PiRun parse_pi_stream(std::string_view jsonl);
 
 AOS_API void say(const std::filesystem::path &folder, std::string_view name,
-                 std::string_view text);
+                 std::string_view text, std::string_view from = {});
+
+/* 使用者的世界＝$HOME；只建扁平的 say/ 與 log.md。 */
+AOS_API std::filesystem::path user_folder();
+AOS_API bool is_user_folder(const std::filesystem::path &folder);
+AOS_API std::filesystem::path say_from();
+AOS_API void ensure_user_layout();
+AOS_API void say_to_user(std::string_view text, std::string_view from);
+AOS_API std::size_t drain_user_say();
+AOS_API std::string read_user_log();
 
 AOS_API std::string read_log(const std::filesystem::path &folder,
                              std::string_view name);

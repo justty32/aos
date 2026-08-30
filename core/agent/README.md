@@ -31,6 +31,30 @@ adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚�
 `--priority N`；priority 是可為負數的整數，0 不寫進 `engine.json`。lmstudio 可用
 `--provider P` 指定取槽用的 CPU 名；`--model M` 用於 pi。
 
+## 使用者也是一格 agent
+
+通訊錄天然有一格 `~` 代表使用者，地址是 `$HOME` 的絕對路徑。使用者不是真的 agent，
+只使用扁平的 `~/.aos/say/` 信箱與 `~/.aos/log.md`，沒有 persona、history、status、
+engine 等 agent 版面。其他世界可以直接寄信，使用者則在 `~` 底下收信：
+
+```sh
+aos say --to ~ "回報完成"
+cd ~
+aos listen
+```
+
+CLI 寄出的每則 say 訊息都包含寄件世界的絕對路徑；不在任何世界時寄件人就是 `~`
+所代表的使用者世界：
+
+```text
+from: /home/alice/work/report-world
+
+回報完成
+```
+
+這個 `from` 標頭是訊息正文的一部分。一般 agent 的 `step` 不另外解析它，訊息會連同
+標頭一起進入 agent 的 history，讓 agent 直接看見寄件者。
+
 ## 工具往返
 
 世界層工具登記表是一項一檔的 `.aos/tools/<name>.json`；agent 自己的

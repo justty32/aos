@@ -142,9 +142,9 @@ repo 根的 `.aos/tools/` 目前放了五個進版控的範例登記：`sh`／`l
 | `core/tool/src/spec.cpp` | 純工具 spec 邊界：驗名稱與必填／列舉型欄位、解析扁平 JSON、按固定格式序列化並省略未宣告的選填欄。 |
 | `core/tool/src/registry.cpp` | 世界解析與 `.aos/tools/` 路徑、單項／整張 registry 的原子讀寫刪除、依名稱排序，以及 `sh`／`ls`／`cat` 預設登記。 |
 | `core/tool/src/probe.cpp` | 用 `aos::exec` 執行 `--metainfo`／指定旗標，判斷退出、signal、逾時與輸出，再解析 JSON 或退回第一個非空行。 |
-| `core/tool/src/contacts.cpp` | 驗證、讀寫 `.aos/contacts.json`，並依聯絡人名稱新增／取代、查找與移除。 |
+| `core/tool/src/contacts.cpp` | 驗證、讀寫 `.aos/contacts.json`，合成 `$HOME` 的天然 `~` 聯絡人，並依名稱新增／取代、查找與移除。 |
 | `core/tool/src/tool_cli.cpp` | `aos tool add／ls／rm` 的參數解析、探測重試、旗標覆寫、人工 description 閘門與人類／JSON 列表輸出。 |
-| `core/tool/src/contact_cli.cpp` | `aos contact add／ls／rm` 的參數解析、`--folder-root`、可選 agent／note 與人類／JSON 列表輸出。 |
+| `core/tool/src/contact_cli.cpp` | `aos contact add／ls／rm` 的參數解析、`--folder-root`、可選 agent／note，以及天然 `~` 置頂的人類／JSON 列表輸出。 |
 | `core/tool/CMakeLists.txt` | 建 `aos::tool`／`libaos_tool.so`、連私有 `aos::exec`＋`aos::loop`，登記 `tool`／`contact` 子命令與測試。 |
 | `core/tool/README.md` | 工具與通訊錄格式、CLI、探測降級與公開函式庫入口。 |
 
@@ -181,10 +181,11 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 | `core/agent/src/deliver.cpp` | 投遞層：把已按登記展開的工具 argv、cwd、timeout 包成 instruction，原子寫入 world inbox。 |
 | `core/agent/src/tools.cpp` | 工具層：讀世界 registry 並套用可選 agent 白名單、每工具一行的 system prompt、依 `list`／`string`／`none` 展開 argv，以及抽取、驗證 LLM 工具呼叫並回報未知工具／args 錯誤。 |
 | `core/agent/src/step.cpp` | 回合編排層：收 say 與工具結果、把執行結果或呼叫錯誤包成固定 JSON `tool` message、更新 history／log／status、lmstudio 呼叫前先取 provider 槽且等不到回 75、投遞工具並記 pending；無新事件時不耗 LLM token，也不自我投遞。 |
-| `core/agent/src/init.cpp` | 初始化層：限制一個 world 只住一隻 agent，建立 agent 版面與必要的 world turn／state；世界 registry 為空才安裝 `sh`／`ls`／`cat`，不建立 agent 白名單；最後寫 `.aos/every/agent-<name>.json`。`say()` 也在這裡原子放入訊息檔。 |
+| `core/agent/src/init.cpp` | 初始化層：限制一個 world 只住一隻 agent，建立 agent 版面與必要的 world turn／state；世界 registry 為空才安裝 `sh`／`ls`／`cat`，不建立 agent 白名單；最後寫 `.aos/every/agent-<name>.json`。`say()` 也在這裡把含可選 `from` 標頭的訊息原子放入檔案。 |
+| `core/agent/src/user.cpp` | 使用者世界層：解析 `$HOME` 與 say 寄件世界，維護扁平的 `~/.aos/say/`／`log.md`，並投遞、彙整使用者信件。 |
 | `core/agent/src/run.cpp` | `aos agent init／step／say／listen／talk／state` CLI 分派；init／step 可省略 folder／name，舊 say／listen／talk／state 參數維持，listen／talk 輪詢邏輯供頂層命令共用。 |
 | `core/agent/src/run.hpp` | agent CLI 內部介面：共用 listen／talk 的輪詢實作，不安裝。 |
-| `core/agent/src/run_top.cpp` | 頂層 `aos say／listen／talk／state` 進入點：解析 cwd 世界與唯一 agent；`say --to <名字>` 另查目前世界通訊錄，把訊息投到聯絡人的 folder／agent。 |
+| `core/agent/src/run_top.cpp` | 頂層 `aos say／listen／talk／state` 進入點：解析 cwd 世界與唯一 agent；`say --to <名字>` 查通訊錄並支援投到使用者 `~`，`listen` 在使用者世界改讀扁平信箱。 |
 | `core/agent/tests/fake_loop.py` | 測試用 loop 替身：依協定搬入 inbox、複製 every、並行跑 instruction、寫 out／state、鏡射 agent status 並推進 turn。 |
 | `core/agent/tests/smoke.sh` | 端到端 smoke：在 bob cwd 無參數初始化、用替身推三回合，驗 every 每回合執行與 `state.json` 的 status 鏡射。 |
 | `core/agent/README.md` | 回合 agent 的快速使用、工具往返節奏與函式庫入口。 |

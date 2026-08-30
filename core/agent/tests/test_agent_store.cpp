@@ -72,6 +72,21 @@ private:
     std::optional<std::string> original_;
 };
 
+class ScopedHome {
+public:
+    explicit ScopedHome(const std::filesystem::path &path) {
+        if (const char *value = std::getenv("HOME")) original_ = value;
+        REQUIRE(setenv("HOME", path.c_str(), 1) == 0);
+    }
+    ~ScopedHome() {
+        if (original_) setenv("HOME", original_->c_str(), 1);
+        else unsetenv("HOME");
+    }
+
+private:
+    std::optional<std::string> original_;
+};
+
 nlohmann::json json_file(const std::filesystem::path &path) {
     std::ifstream input(path);
     nlohmann::json value;
@@ -174,6 +189,8 @@ TEST_CASE("agent reads legacy string pending args as a JSON string value") {
 TEST_CASE("top-level say can deliver through a world contact") {
     TempWorld source;
     TempWorld target;
+    TempWorld home;
+    ScopedHome scoped_home(home.path);
     aos::agent::initialize(source.path, "alice");
     aos::agent::initialize(target.path, "worker");
     aos::tool::add_contact(
@@ -199,5 +216,62 @@ TEST_CASE("top-level say can deliver through a world contact") {
     std::ifstream input(messages.front());
     const std::string text{std::istreambuf_iterator<char>(input),
                            std::istreambuf_iterator<char>()};
-    CHECK(text == "嗨");
+    const std::string prefix =
+        "from: " + aos::agent::absolute_folder(source.path).string() +
+        "\n\n";
+    CHECK(text.starts_with(prefix));
+    CHECK(text.ends_with("嗨"));
+}
+
+TEST_CASE("top-level say delivers to the synthetic user contact and drains") {
+    TempWorld source;
+    TempWorld home;
+    ScopedHome scoped_home(home.path);
+    aos::agent::initialize(source.path, "alice");
+    ScopedFolder current_world(source.path);
+
+    char program[] = "aos say";
+    char option[] = "--to";
+    char contact[] = "~";
+    char report[] = "回報完成";
+    char *argv[] = {program, option, contact, report};
+    CHECK(aos_say_cli_main(4, argv) == 0);
+
+    const auto say = home.path / ".aos" / "say";
+    std::vector<std::filesystem::path> messages;
+    for (const auto &entry : std::filesystem::directory_iterator(say)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".md") {
+            messages.push_back(entry.path());
+        }
+    }
+    REQUIRE(messages.size() == 1);
+    std::ifstream input(messages.front());
+    const std::string text{std::istreambuf_iterator<char>(input),
+                           std::istreambuf_iterator<char>()};
+    CHECK(text.find("from: " +
+                    aos::agent::absolute_folder(source.path).string()) !=
+          std::string::npos);
+    CHECK(text.find("回報完成") != std::string::npos);
+
+    CHECK(aos::agent::drain_user_say() == 1);
+    CHECK(aos::agent::read_user_log().find("回報完成") != std::string::npos);
+    CHECK(std::filesystem::is_empty(say));
+}
+
+TEST_CASE("user folder is HOME and say sender falls back to it") {
+    TempWorld sandbox;
+    const std::filesystem::path home = sandbox.path / "home";
+    const std::filesystem::path outside = sandbox.path / "outside";
+    std::filesystem::create_directories(home);
+    std::filesystem::create_directories(outside);
+    ScopedHome scoped_home(home);
+    ScopedUnsetFolder folder_environment;
+    ScopedCurrentPath current_path(outside);
+
+    const std::filesystem::path expected =
+        aos::agent::absolute_folder(home);
+    CHECK(aos::agent::user_folder() == expected);
+    CHECK(aos::agent::is_user_folder(home));
+    CHECK_FALSE(aos::agent::is_user_folder(outside));
+    CHECK(aos::agent::say_from() == expected);
 }

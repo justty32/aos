@@ -10,6 +10,7 @@ aos_add_subproject(agent
         src/engine_pi.cpp
         src/step.cpp
         src/init.cpp
+        src/user.cpp
     HEADERS
         include/aos/agent.hpp
     PUBLIC_DEPS

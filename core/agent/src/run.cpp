@@ -145,7 +145,8 @@ int run_talk(const std::filesystem::path &folder, std::string_view name) {
     std::string line;
     while (std::getline(std::cin, line)) {
         const std::size_t offset = aos::agent::read_log(folder, name).size();
-        aos::agent::say(folder, name, line);
+        aos::agent::say(folder, name, line,
+                        aos::agent::say_from().string());
         while (true) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
             const std::string log = aos::agent::read_log(folder, name);
@@ -188,7 +189,8 @@ int dispatch(int argc, char *argv[]) {
     }
     if (command == "say") {
         if (argc < 5) return usage(program);
-        aos::agent::say(argv[2], argv[3], joined_text(argc, argv, 4));
+        aos::agent::say(argv[2], argv[3], joined_text(argc, argv, 4),
+                        aos::agent::say_from().string());
         return 0;
     }
     if (command == "listen") return run_agent_listen(argc, argv, program);

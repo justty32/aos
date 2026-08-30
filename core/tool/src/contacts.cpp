@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cstdlib>
 #include <stdexcept>
 
 namespace aos::tool {
@@ -37,6 +38,16 @@ void validate_contact(const Contact &contact) {
 }
 
 }  // namespace
+
+Contact user_contact() {
+    const char *home = std::getenv("HOME");
+    if (home == nullptr || *home == '\0') {
+        return {"~", "", "", "使用者（頂層信箱）"};
+    }
+    const std::filesystem::path folder =
+        std::filesystem::absolute(home).lexically_normal();
+    return {"~", folder.string(), "", "使用者（頂層信箱）"};
+}
 
 std::vector<Contact> read_contacts(const std::filesystem::path &folder) {
     const std::filesystem::path path = contacts_path(folder);
@@ -109,7 +120,12 @@ std::optional<Contact> find_contact(const std::filesystem::path &folder,
         contacts.begin(), contacts.end(), [&](const Contact &item) {
             return item.name == name;
         });
-    if (found == contacts.end()) return std::nullopt;
+    if (found == contacts.end()) {
+        if (name != "~") return std::nullopt;
+        Contact contact = user_contact();
+        if (contact.folder.empty()) return std::nullopt;
+        return contact;
+    }
     return *found;
 }
 

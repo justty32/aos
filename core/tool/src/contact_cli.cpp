@@ -2,6 +2,7 @@
 
 #include "cli_common.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
@@ -80,7 +81,14 @@ int list(const char *program, const std::vector<std::string> &words) {
             return usage(program);
         }
     }
-    const std::vector<Contact> contacts = aos::tool::read_contacts(root);
+    std::vector<Contact> contacts = aos::tool::read_contacts(root);
+    const bool has_user = std::any_of(
+        contacts.begin(), contacts.end(),
+        [](const Contact &contact) { return contact.name == "~"; });
+    if (!has_user) {
+        Contact user = aos::tool::user_contact();
+        if (!user.folder.empty()) contacts.insert(contacts.begin(), user);
+    }
     if (json) {
         print_json(contacts);
         return 0;

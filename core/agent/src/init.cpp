@@ -65,7 +65,7 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
 }
 
 void say(const std::filesystem::path &folder, std::string_view name,
-         std::string_view text) {
+         std::string_view text, std::string_view from) {
     const detail::Paths paths = detail::paths_for(folder, name);
     if (!std::filesystem::is_directory(paths.say)) {
         throw std::runtime_error("agent 尚未初始化: " + std::string(name));
@@ -77,7 +77,8 @@ void say(const std::filesystem::path &folder, std::string_view name,
     const std::string filename = std::to_string(stamp) + "-" +
                                  std::to_string(getpid()) + "-" +
                                  std::to_string(sequence++) + ".md";
-    detail::atomic_write(paths.say / filename, text);
+    detail::atomic_write(paths.say / filename,
+                         detail::message_body(from, text));
 }
 
 }  // namespace aos::agent
