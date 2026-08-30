@@ -33,10 +33,6 @@
    甚至不必引用 aos lib」之後，排隊就變成外部處理器的家務——**確認這一句就能收掉那場**。
    → [finite-resource-queue](workflows/workshop/records/finite-resource-queue.md)
 
-6. **自我投遞要不要埋進 loop**：隊 B 提了方案 A（`.aos/every/` 目錄，loop 每回合自動投遞）與方案 B，
-   建議 A；文末另有五條待拍板。→ [self-delivery-in-loop](workflows/ideas/self-delivery-in-loop.md)
-7. **pi 當介面層要不要投資**：三種接法與代價已寫好，需一句話選一種或先不做。
-   → [pi-interface](../core/agent/docs/pi-interface.md)
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
@@ -50,6 +46,8 @@
 ### C. 你已明說先不決定的（不催，只記「什麼時候會被迫要答」）
 
 放這裡是為了**別再拿它們去煩你**，不是待辦：
+
+- **pi 當介面層**（2026-08-30「先擱置」）——接法與代價在 [pi-interface](../core/agent/docs/pi-interface.md)，要投資時從那裡起。
 
 - **B12 判準／loop 分支的形式／版面知識放哪**（2026-08-30 三題都「先不決定」）——
   會撞上的時機：要動 `exec_loop` 時（分支）、要寫第一支 CLI 小程式時（版面 lib）。
