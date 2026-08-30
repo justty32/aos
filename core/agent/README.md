@@ -10,6 +10,9 @@
 
 ```sh
 mkdir bob && cd bob
+aos chat "你叫什麼名字"
+
+# 或拆開控制：
 aos agent init --priority 7
 # 另一個視窗也在 bob/ 裡啟動世界：
 aos run --step 0
@@ -21,6 +24,12 @@ aos listen
 aos contact add alice ../alice-world
 aos say --to alice "可以幫我看一下嗎"
 ```
+
+`aos chat [--engine lmstudio|pi] [--provider P] [--model M] [--timeout MS]
+<text...>` 是從空資料夾開始的一步入口：沒有 agent 就以資料夾名初始化、投遞訊息，
+接著在前景自行推回合到出現 assistant 回覆。若這個世界已有活著的 `run.pid`，chat
+只等既有 loop，不會跟它同時搶 inbox；預設最多等五分鐘，stdout 只放初始化提示與回覆，
+等待進度及錯誤都寫 stderr。
 
 頂層的 `aos say`、`aos listen`、`aos talk`、`aos state`、`aos inbox` 都自動解析
 世界與唯一的 agent。`aos say --to <名字> <文字...>` 會查目前世界的

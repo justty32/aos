@@ -108,4 +108,11 @@ struct TurnSummary {
 AOS_API bool run_turn(const Layout &layout, TurnSummary &summary,
                       std::string &error);
 
+/* inbox/ 與 agents/<name>/say/ 的投遞檔數、最大 mtime 奈秒串成穩定簽章。 */
+AOS_API std::string delivery_signature(const Layout &layout);
+
+/* 呼叫時已有投遞，或等待期間簽章改變，就立刻回 true；否則 timeout 後回 false。 */
+AOS_API bool wait_for_delivery(const Layout &layout, std::uint64_t timeout_ms,
+                               std::uint64_t poll_ms = 50);
+
 }  // namespace aos::loop

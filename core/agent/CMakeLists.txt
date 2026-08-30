@@ -20,8 +20,13 @@ aos_add_subproject(agent
         aos::exec aos::llm aos::loop
 )
 
-add_library(aos_agent_cli OBJECT src/run.cpp src/run_top.cpp src/inbox_cli.cpp)
-target_link_libraries(aos_agent_cli PUBLIC aos::agent)
+add_library(aos_agent_cli OBJECT
+    src/run.cpp
+    src/run_top.cpp
+    src/inbox_cli.cpp
+    src/chat_cli.cpp
+)
+target_link_libraries(aos_agent_cli PUBLIC aos::agent aos::loop)
 target_link_libraries(aos_agent_cli PRIVATE nlohmann_json::nlohmann_json)
 
 aos_add_subcommand(
@@ -64,6 +69,13 @@ aos_add_subcommand(
     ENTRY aos_state_cli_main
     LIBRARY aos_agent_cli
     SUMMARY "印出這個資料夾 agent 的 status.json"
+)
+
+aos_add_subcommand(
+    NAME chat
+    ENTRY aos_chat_cli_main
+    LIBRARY aos_agent_cli
+    SUMMARY "一個指令：建世界、說一句話、等到回覆"
 )
 
 aos_add_test(aos_agent_tests

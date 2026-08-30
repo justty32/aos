@@ -1,4 +1,4 @@
-# core/loop — 匯聚、並行執行、loop state（子命令 `run`、`deliver`）
+# core/loop — 匯聚、並行執行、loop state（子命令 `run`、`deliver`、`stop`）
 
 ← [core/README](../README.md)｜協定 [PROTOCOL](../../wf/workflows/dispatch/proto/PROTOCOL.md) §1、§4–§6｜慣例 [conventions](../../wf/workflows/common/conventions.md)
 
@@ -11,6 +11,11 @@
 限制投遞間隔，未設定或值 ≤ 0 時仍是每回合投遞。上次投遞的 epoch 毫秒記在
 `.aos/every/.last/<stem>`；
 `aos deliver` 寫 `<id>.json.tmp` 再 `rename` 發佈到 inbox。
+無限回合（`--step 0`，含 `--daemon`）會寫 `.aos/run.pid` 讓 `aos stop` 找得到它，退出時刪掉；
+「同一個世界只有一條 loop」仍由 `.aos/run.lock` 的 `flock` 保證，pid 檔只是地址簿。
+`--daemon` 只多做兩件事：`fork`＋`setsid` 脫離終端，以及把 stdout／stderr 附加到 `.aos/run.log`。
+空回合（只有 `every/` 的常駐指令、`inbox/` 是空的）之後不睡滿 `--interval`，改盯 `inbox/` 與
+每個 `agents/<name>/say/` 的投遞簽章（檔數＋最大 mtime），一有新檔就立刻開下一回合。
 相依 `aos::exec`（fork/wait）與 `aos::wire`（JSON），本層自己只管路徑、檔案系統與回合順序。
 
 ## 公開標頭草稿：`include/aos/loop.hpp`
@@ -114,10 +119,16 @@ AOS_API bool run_turn(const Layout &layout, TurnSummary &summary, std::string &e
 ## CLI
 
 ```text
-aos run [folder] [--step N] [--interval MS]
+aos run [folder] [--step N] [--interval MS] [--daemon]
+aos stop [folder]
 aos deliver [folder] <inst.json>
 aos deliver [folder] -- <argv...>
 ```
+
+`--interval` 的語意是「**沒有新投遞時**回合之間最長等待多久」；前景預設 100，`--daemon` 預設 1000
+（有喚醒機制，不必忙轉）。`--daemon` 隱含 `--step 0`，兩者併用時 `--step` 只能是 0。
+`aos stop` 讀 `.aos/run.pid`、送 `SIGTERM`，等 5 秒仍在就 `SIGKILL`；沒有在跑（或 pid 已死）
+會清掉陳舊的 pid 檔並照樣 **exit 0**，是冪等的。
 
 `folder` 省略時先用 `AOS_FOLDER`；沒有的話從 cwd 往上找最近含 `.aos/` 的目錄，
 再找不到就用 cwd。`aos deliver` 不會寫 `every/`；常駐指令由生產者自行發佈到 `.aos/every/`。
@@ -142,6 +153,7 @@ aos_add_subproject(loop
 add_library(aos_loop_cli OBJECT src/run.cpp src/deliver_cli.cpp)
 target_link_libraries(aos_loop_cli PUBLIC aos::loop)
 aos_add_subcommand(NAME run     ENTRY aos_run_cli_main     LIBRARY aos_loop_cli SUMMARY "推進一個資料夾 N 回合")
+aos_add_subcommand(NAME stop    ENTRY aos_stop_cli_main    LIBRARY aos_loop_cli SUMMARY "停掉這個資料夾的背景 loop")
 aos_add_subcommand(NAME deliver ENTRY aos_deliver_cli_main LIBRARY aos_loop_cli SUMMARY "把一條指令原子投遞進 inbox")
 ```
 
