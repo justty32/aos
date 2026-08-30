@@ -12,6 +12,12 @@
 
 ## 最新進度
 
+- **2026-08-30 晚：原型第二輪落地**（main）——`core/tool`（`aos tool`／`aos contact`／`aos say --to`）、
+  `core/tick`（heartbeat on aos）、pi 當第二顆 CPU、排程保底 D（flock 槽，`aos llm --priority`）。
+  **已知缺口**：`aos agent step` 走 lmstudio 那條還沒取槽（只對 `aos llm` 子命令成立）；使用者＝agent 住 `~`
+  （say 的 `from`、`--to ~`）未做；pi 工具繞過 inst 先接受。試用 L1／L2 在跑，發現進
+  [dispatch/trial](workflows/dispatch/trial/README.md)，之後開修 bug 隊與改進隊。
+
 - **2026-08-30 最小原型已落地（main `adcb5bc`）**：五個新核心小專案 `core/exec`／`wire`／`loop`／`llm`／`agent`，
   指令 `aos run`／`deliver`／`llm`／`agent`；協定在 [dispatch/proto/PROTOCOL](workflows/dispatch/proto/PROTOCOL.md)，
   兩隊報告在 [proto/reports](workflows/dispatch/proto/reports/)。舊 `core/inst`／`llms`／`tooljson` 原地未動，
