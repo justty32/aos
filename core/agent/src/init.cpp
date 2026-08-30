@@ -1,5 +1,6 @@
 #include "internal.hpp"
 
+#include <aos/tool.hpp>
 #include <nlohmann/json.hpp>
 
 #include <atomic>
@@ -42,7 +43,7 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
     detail::write_history(paths, {});
     detail::write_status(paths, "idle", "等待訊息", 0);
     detail::atomic_write(paths.log, "");
-    detail::write_tools(paths, detail::default_tools());
+    aos::tool::install_defaults(paths.folder);
     detail::write_pending(paths, {});
     if (!std::filesystem::exists(paths.aos / "turn")) {
         detail::atomic_write(paths.aos / "turn", "1\n");

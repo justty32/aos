@@ -1,6 +1,7 @@
 #pragma once
 
 #include <aos/export.h>
+#include <aos/tool.hpp>
 
 #include <cstdint>
 #include <filesystem>
@@ -17,21 +18,29 @@ struct Message {
     std::string content;
 };
 
-struct Tool {
-    std::string name;
-    std::string description;
-    std::vector<std::string> argv;
-};
-
 struct ToolCall {
     std::string tool;
-    std::string args;
+    std::string shape;              // "list" | "string" | "none"
+    std::vector<std::string> args;  // shape=="list" 時有效
+    std::string args_text;          // shape=="string" 時有效
+};
+
+struct ToolCallError {
+    std::string type;
+    std::string message;
+    std::string tool;
+};
+
+struct ToolCallResult {
+    bool saw_json = false;
+    std::optional<ToolCall> call;
+    std::optional<ToolCallError> error;
 };
 
 struct PendingCall {
     std::string id;
     std::string tool;
-    std::string args;
+    std::string args_json;  // args 的 JSON 文字
 };
 
 struct Pending {
@@ -103,16 +112,15 @@ AOS_API std::vector<Message> read_history(
 AOS_API Pending read_pending(const std::filesystem::path &folder,
                              std::string_view name);
 
-AOS_API std::vector<Tool> read_tools(const std::filesystem::path &folder,
-                                     std::string_view name);
+/* 世界層登記表 ∩ agent 白名單。 */
+AOS_API std::vector<aos::tool::Spec> read_tools(
+    const std::filesystem::path &folder, std::string_view name);
 
-AOS_API std::vector<std::string> expand_argv(
-    const std::vector<std::string> &argument_template,
-    std::string_view args);
+AOS_API std::vector<std::string> expand_argv(const aos::tool::Spec &spec,
+                                             const ToolCall &call);
 
-AOS_API std::optional<ToolCall> extract_tool_call(
-    std::string_view reply, const std::vector<Tool> &tools,
-    std::string *unknown_tool = nullptr);
+AOS_API ToolCallResult extract_tool_call(
+    std::string_view reply, const std::vector<aos::tool::Spec> &tools);
 
 AOS_API int step(const std::filesystem::path &folder, std::string_view name,
                  Completion completion = {}, std::string *error = nullptr);

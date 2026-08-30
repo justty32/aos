@@ -1,0 +1,13 @@
+{
+  "args": "list",
+  "argv": [
+    "git"
+  ],
+  "description": "執行 git 子命令，可讀可改 repo；args 第一個 token 是 subcommand。",
+  "name": "git",
+  "predictability": "high",
+  "source": "manual",
+  "state": "stateful_external",
+  "stdin": "none",
+  "timeout_ms": 60000
+}

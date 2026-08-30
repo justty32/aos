@@ -106,20 +106,15 @@ void write_status(const Paths &paths, std::string_view status,
 void write_pending(const Paths &paths, const Pending &pending) {
     Json root = {{"turn", pending.turn}, {"calls", Json::array()}};
     for (const PendingCall &call : pending.calls) {
+        Json args = nullptr;
+        try {
+            args = Json::parse(call.args_json);
+        } catch (const Json::exception &) {
+        }
         root["calls"].push_back(
-            {{"id", call.id}, {"tool", call.tool}, {"args", call.args}});
+            {{"id", call.id}, {"tool", call.tool}, {"args", std::move(args)}});
     }
     atomic_write(paths.pending, root.dump(2) + "\n");
-}
-
-void write_tools(const Paths &paths, const std::vector<Tool> &tools) {
-    Json root = {{"tools", Json::array()}};
-    for (const Tool &tool : tools) {
-        root["tools"].push_back({{"name", tool.name},
-                                  {"description", tool.description},
-                                  {"argv", tool.argv}});
-    }
-    atomic_write(paths.tools, root.dump(2) + "\n");
 }
 
 }  // namespace detail
@@ -171,9 +166,12 @@ Pending read_pending(const std::filesystem::path &folder,
     pending.turn = root["turn"].get<std::uint64_t>();
     for (const Json &item : root["calls"]) {
         if (!item.is_object()) throw std::runtime_error("pending call 必須是物件");
+        if (!item.contains("args")) {
+            throw std::runtime_error(paths.pending.string() + " 缺少欄位 args");
+        }
         pending.calls.push_back({require_string(item, "id", paths.pending),
                                  require_string(item, "tool", paths.pending),
-                                 require_string(item, "args", paths.pending)});
+                                 item["args"].dump()});
     }
     return pending;
 }

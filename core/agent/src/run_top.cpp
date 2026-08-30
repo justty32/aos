@@ -1,4 +1,5 @@
 #include <aos/agent.hpp>
+#include <aos/tool.hpp>
 
 #include "run.hpp"
 
@@ -17,20 +18,42 @@ int usage(const char *program, std::string_view arguments) {
     return 2;
 }
 
-std::string joined_text(int argc, char *argv[]) {
+std::string joined_text(int argc, char *argv[], int first) {
     std::string text;
-    for (int index = 1; index < argc; ++index) {
-        if (index != 1) text.push_back(' ');
+    for (int index = first; index < argc; ++index) {
+        if (index != first) text.push_back(' ');
         text += argv[index];
     }
     return text;
 }
 
 int say_dispatch(int argc, char *argv[], const char *program) {
-    if (argc < 2) return usage(program, "<text...>");
+    if (argc < 2) return usage(program, "[--to <名字>] <text...>");
     const std::filesystem::path folder = aos::agent::resolve_folder();
-    aos::agent::say(folder, aos::agent::resolve_name(folder),
-                    joined_text(argc, argv));
+    if (std::string_view(argv[1]) != "--to") {
+        aos::agent::say(folder, aos::agent::resolve_name(folder),
+                        joined_text(argc, argv, 1));
+        return 0;
+    }
+    if (argc < 4) return usage(program, "[--to <名字>] <text...>");
+
+    const std::string contact_name = argv[2];
+    const std::optional<aos::tool::Contact> contact =
+        aos::tool::find_contact(folder, contact_name);
+    if (!contact) {
+        std::fprintf(stderr, "aos say: 通訊錄裡沒有 %s\n",
+                     contact_name.c_str());
+        return 1;
+    }
+    const std::filesystem::path target_folder =
+        (folder / contact->folder).lexically_normal();
+    const std::string target_agent =
+        contact->agent.empty() ? aos::agent::resolve_name(target_folder)
+                               : contact->agent;
+    aos::agent::say(target_folder, target_agent, joined_text(argc, argv, 3));
+    const std::string destination =
+        (target_folder / target_agent).lexically_normal().string();
+    std::printf("已送給 %s（%s）\n", contact_name.c_str(), destination.c_str());
     return 0;
 }
 

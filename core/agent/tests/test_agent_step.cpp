@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -75,6 +76,13 @@ bool has_step_instruction(const std::filesystem::path &inbox) {
     return false;
 }
 
+nlohmann::json json_file(const std::filesystem::path &path) {
+    std::ifstream input(path);
+    nlohmann::json value;
+    input >> value;
+    return value;
+}
+
 }  // namespace
 
 TEST_CASE("agent step calls completion for say and records the reply") {
@@ -87,6 +95,11 @@ TEST_CASE("agent step calls completion for say and records the reply") {
         [&](const std::vector<aos::agent::Message> &messages) {
             called = true;
             REQUIRE(messages.front().role == "system");
+            CHECK(messages.front().content.find("- ls — 列出資料夾內容。") !=
+                  std::string::npos);
+            CHECK(messages.front().content.find(
+                      "(args: list, stdin: none, 可預期性: high)") !=
+                  std::string::npos);
             CHECK(messages.back().role == "user");
             CHECK(messages.back().content == "你好");
             return "我叫 bob。";
@@ -107,12 +120,11 @@ TEST_CASE("agent idle step skips completion without self delivery") {
     TempWorld world;
     ScopedTurn turn("8");
     bool called = false;
-    CHECK(aos::agent::step(
-              world.path, "bob",
-              [&](const std::vector<aos::agent::Message> &) {
-                  called = true;
-                  return "不應出現";
-              }) == 0);
+    CHECK(aos::agent::step(world.path, "bob",
+                           [&](const std::vector<aos::agent::Message> &) {
+                               called = true;
+                               return "不應出現";
+                           }) == 0);
     CHECK_FALSE(called);
     CHECK(std::filesystem::is_empty(world.path / ".aos" / "inbox"));
     CHECK(aos::agent::read_status(world.path, "bob").status == "idle");
@@ -123,19 +135,28 @@ TEST_CASE("agent tool trip uses pending turn plus one and resumes later") {
     {
         ScopedTurn turn("10");
         aos::agent::say(world.path, "bob", "列出檔案");
-        REQUIRE(aos::agent::step(
-                    world.path, "bob",
-                    [](const std::vector<aos::agent::Message> &) {
-                        return "我先查看。\n{\"tool\":\"ls\",\"args\":\"-la\"}";
-                    }) == 0);
+        REQUIRE(
+            aos::agent::step(
+                world.path, "bob",
+                [](const std::vector<aos::agent::Message> &) {
+                    return "我先查看。\n{\"tool\":\"ls\",\"args\":[\"-la\"]}";
+                }) == 0);
     }
     const aos::agent::Pending pending =
         aos::agent::read_pending(world.path, "bob");
     REQUIRE(pending.turn == 10);
     REQUIRE(pending.calls.size() == 1);
-    const auto instruction = world.path / ".aos" / "inbox" /
-                             (pending.calls[0].id + ".json");
+    CHECK(pending.calls[0].args_json == "[\"-la\"]");
+    const auto instruction =
+        world.path / ".aos" / "inbox" / (pending.calls[0].id + ".json");
     REQUIRE(std::filesystem::exists(instruction));
+    const nlohmann::json queued = json_file(instruction);
+    CHECK(queued["argv"] == nlohmann::json::array({"ls", "-la"}));
+    CHECK(queued["cwd"] == ".");
+    CHECK(queued["timeout_ms"] == 30000);
+    CHECK(json_file(world.path / ".aos" / "agents" / "bob" /
+                    "pending.json")["calls"][0]["args"] ==
+          nlohmann::json::array({"-la"}));
 
     write_json(world.path / ".aos" / "batch" / "11" / "out" /
                    (pending.calls[0].id + ".json"),
@@ -153,7 +174,8 @@ TEST_CASE("agent tool trip uses pending turn plus one and resumes later") {
                     [&](const std::vector<aos::agent::Message> &messages) {
                         for (const auto &message : messages) {
                             if (message.role == "tool" &&
-                                message.content.find("alpha") != std::string::npos) {
+                                message.content.find("alpha") !=
+                                    std::string::npos) {
                                 saw_tool = true;
                             }
                         }
@@ -164,8 +186,163 @@ TEST_CASE("agent tool trip uses pending turn plus one and resumes later") {
     CHECK(aos::agent::read_pending(world.path, "bob").calls.empty());
     const auto history = aos::agent::read_history(world.path, "bob");
     CHECK(history[history.size() - 2].role == "tool");
+    const nlohmann::json tool_message =
+        nlohmann::json::parse(history[history.size() - 2].content);
+    CHECK(tool_message["ok"] == true);
+    CHECK(tool_message["tool"] == "ls");
+    CHECK(tool_message["args"] == nlohmann::json::array({"-la"}));
+    CHECK(tool_message["result"]["stdout"] == "alpha\nbeta\n");
+    CHECK_FALSE(tool_message.contains("error"));
     CHECK(history.back().content == "結果裡有 alpha 和 beta。");
     CHECK_FALSE(has_step_instruction(world.path / ".aos" / "inbox"));
+}
+
+TEST_CASE("agent delivery uses registered cwd and timeout") {
+    TempWorld world;
+    aos::tool::Spec custom;
+    custom.name = "custom";
+    custom.argv = {"custom", "fixed"};
+    custom.description = "自訂工具";
+    custom.args = "none";
+    custom.cwd = "subdir";
+    custom.timeout_ms = 4321;
+    aos::tool::write_spec(world.path, custom);
+
+    ScopedTurn turn("14");
+    aos::agent::say(world.path, "bob", "執行自訂工具");
+    REQUIRE(aos::agent::step(world.path, "bob",
+                             [](const std::vector<aos::agent::Message> &) {
+                                 return "{\"tool\":\"custom\"}";
+                             }) == 0);
+    const aos::agent::Pending pending =
+        aos::agent::read_pending(world.path, "bob");
+    REQUIRE(pending.calls.size() == 1);
+    CHECK(pending.calls[0].args_json == "null");
+    const nlohmann::json instruction = json_file(
+        world.path / ".aos" / "inbox" / (pending.calls[0].id + ".json"));
+    CHECK(instruction["argv"] == nlohmann::json::array({"custom", "fixed"}));
+    CHECK(instruction["cwd"] == "subdir");
+    CHECK(instruction["timeout_ms"] == 4321);
+}
+
+TEST_CASE("agent omits tool instructions when its whitelist is empty") {
+    TempWorld world;
+    write_json(world.path / ".aos" / "agents" / "bob" / "tools.json",
+               nlohmann::json::array());
+    ScopedTurn turn("15");
+    aos::agent::say(world.path, "bob", "正常回話");
+    REQUIRE(aos::agent::step(
+                world.path, "bob",
+                [](const std::vector<aos::agent::Message> &messages) {
+                    REQUIRE(messages.front().role == "system");
+                    CHECK(messages.front().content.find("你可以使用工具") ==
+                          std::string::npos);
+                    CHECK(messages.front().content.find("可用工具") ==
+                          std::string::npos);
+                    return "正常回答。";
+                }) == 0);
+}
+
+TEST_CASE("agent returns tool call errors and resumes thinking next step") {
+    TempWorld world;
+    {
+        ScopedTurn turn("7");
+        aos::agent::say(world.path, "bob", "用不存在的工具");
+        REQUIRE(aos::agent::step(world.path, "bob",
+                                 [](const std::vector<aos::agent::Message> &) {
+                                     return "{\"tool\":\"nope\",\"args\":[]}";
+                                 }) == 0);
+    }
+
+    auto history = aos::agent::read_history(world.path, "bob");
+    REQUIRE_FALSE(history.empty());
+    REQUIRE(history.back().role == "tool");
+    const nlohmann::json error_message =
+        nlohmann::json::parse(history.back().content);
+    CHECK(error_message["call_id"] == "agent-bob-tool-7-0");
+    CHECK(error_message["tool"] == "nope");
+    CHECK(error_message["args"] == nlohmann::json::array());
+    CHECK(error_message["ok"] == false);
+    CHECK(error_message["result"].is_null());
+    CHECK(error_message["error"]["type"] == "unknown_tool");
+    CHECK(error_message["error"]["retryable"] == false);
+
+    bool called = false;
+    {
+        ScopedTurn turn("8");
+        REQUIRE(aos::agent::step(
+                    world.path, "bob",
+                    [&](const std::vector<aos::agent::Message> &messages) {
+                        called = true;
+                        const auto found = std::find_if(
+                            messages.begin(), messages.end(),
+                            [&](const aos::agent::Message &message) {
+                                return message.role == "tool" &&
+                                       message.content ==
+                                           history.back().content;
+                            });
+                        CHECK(found != messages.end());
+                        return "我會改用已登記的工具。";
+                    }) == 0);
+    }
+    CHECK(called);
+}
+
+TEST_CASE("agent maps failed tool outcomes to fixed JSON errors") {
+    TempWorld world;
+    {
+        ScopedTurn turn("20");
+        aos::agent::say(world.path, "bob", "列出檔案");
+        REQUIRE(aos::agent::step(world.path, "bob",
+                                 [](const std::vector<aos::agent::Message> &) {
+                                     return "{\"tool\":\"ls\",\"args\":[]}";
+                                 }) == 0);
+    }
+    const aos::agent::Pending pending =
+        aos::agent::read_pending(world.path, "bob");
+    REQUIRE(pending.calls.size() == 1);
+
+    SECTION("nonzero exit") {
+        write_json(world.path / ".aos" / "batch" / "21" / "out" /
+                       (pending.calls[0].id + ".json"),
+                   {{"id", pending.calls[0].id},
+                    {"exit", 3},
+                    {"signal", nullptr},
+                    {"stdout", ""},
+                    {"stderr", "boom"}});
+        ScopedTurn turn("22");
+        REQUIRE(aos::agent::step(world.path, "bob",
+                                 [](const std::vector<aos::agent::Message> &) {
+                                     return "已看到失敗。";
+                                 }) == 0);
+        const auto history = aos::agent::read_history(world.path, "bob");
+        const nlohmann::json message =
+            nlohmann::json::parse(history[history.size() - 2].content);
+        CHECK(message["ok"] == false);
+        CHECK(message["error"]["type"] == "exit_nonzero");
+        CHECK(message["error"]["retryable"] == false);
+    }
+
+    SECTION("timeout signal") {
+        write_json(world.path / ".aos" / "batch" / "21" / "out" /
+                       (pending.calls[0].id + ".json"),
+                   {{"id", pending.calls[0].id},
+                    {"exit", nullptr},
+                    {"signal", 9},
+                    {"stdout", ""},
+                    {"stderr", ""}});
+        ScopedTurn turn("22");
+        REQUIRE(aos::agent::step(world.path, "bob",
+                                 [](const std::vector<aos::agent::Message> &) {
+                                     return "逾時了。";
+                                 }) == 0);
+        const auto history = aos::agent::read_history(world.path, "bob");
+        const nlohmann::json message =
+            nlohmann::json::parse(history[history.size() - 2].content);
+        CHECK(message["ok"] == false);
+        CHECK(message["error"]["type"] == "timeout");
+        CHECK(message["error"]["retryable"] == true);
+    }
 }
 
 TEST_CASE("agent completion failure does not self deliver") {

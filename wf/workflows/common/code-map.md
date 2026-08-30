@@ -9,24 +9,25 @@
 
 ## 一分鐘看懂這個專案
 
-`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos run world`）。現在共有六個核心小專案：`exec`／`wire`／`loop`／`llm`／`agent`／`tick`；`core/inst`／`core/llms`／`core/tooljson` 已於 2026-08-30 刪除。
+`aos` 是一個 **monorepo**：只有一個執行檔 `aos`，靠子命令把陸續長出來的各個「小專案」掛上去（例如 `aos run world`）。現在共有七個核心小專案：`exec`／`wire`／`loop`／`llm`／`tool`／`agent`／`tick`；`core/inst`／`core/llms`／`core/tooljson` 已於 2026-08-30 刪除。
 
 ```
 repo 根
   aos::common（common/，header-only，目前只有 <aos/export.h>）
        ▲ 每個小專案都連它
-  aos::exec（core/exec/，核心小專案 → libaos_exec.so）       aos::wire（core/wire/，核心小專案 → libaos_wire.so）
-       │  start／wait_all：整批 fork 後統一等完                 │  Inst／Outcome／State：三種協定 struct
-       │  底層 spawn_prep／wait／tempfile／clock 互不相識        │  inst／outcome／state 各自只共用 json_io
-       │  （純函式庫，無子命令）                                │  （純函式庫，無子命令）
-       ▲                                                       ▲
-       │                                                       │
-       └──────────────────────────┬────────────────────────────┘
-                                  │  aos::loop（core/loop/ → libaos_loop.so；只透過公開 API 相依上面兩者）
-                                  │    fs 在最底層；layout／deliver／aggregate／state 分工檔案與版面
-                                  │    turn 串起匯聚、並行執行、落檔與 state；CLI 再包住 turn／deliver
-                                  ▼
-app/ ── `aos run`／`aos deliver` 掛的就是這條
+  aos::exec（libaos_exec.so） ──┐                 aos::llm（libaos_llm.so）
+  aos::wire（libaos_wire.so） ──┴─ 公開相依 → aos::loop（libaos_loop.so）
+       │                                             │
+       │                exec ＋ loop ── 私有相依 → aos::tool（libaos_tool.so）
+       │                                             │
+       │                                             └─ agent 的公開相依 → aos::agent（libaos_agent.so）
+       │                                                                       ▲
+       └────────────── exec ＋ llm ＋ loop ─────────────── agent 的私有相依 ───┘
+
+  aos::loop ── tick 的公開相依 → aos::tick（libaos_tick.so）← tick 的私有相依 ── aos::agent
+
+app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`；
+        agent 掛 `agent／say／listen／talk／state`；tick 掛心跳與登記事務子命令
 ```
 
 三個一直會用到的概念：
@@ -39,7 +40,7 @@ app/ ── `aos run`／`aos deliver` 掛的就是這條
 
 ## 逐檔表格在哪：各小專案分冊
 
-每個檔負責什麼，既有小專案與建置骨架拆成四冊放在 [`code-map/`](code-map/README.md)；新三個小專案直接指向各自的 README：
+每個檔負責什麼，歷史小專案與建置骨架拆成四冊放在 [`code-map/`](code-map/README.md)；目前核心小專案直接指向各自的 README，`tool`／`llm`／`agent` 的細表另在本檔下半部：
 
 | 分冊 | 涵蓋 | 什麼時候會想看 |
 |------|------|---------------|
@@ -49,12 +50,15 @@ app/ ── `aos run`／`aos deliver` 掛的就是這條
 | [core/exec/README.md](../../../core/exec/README.md) | `core/exec/`：整批 POSIX 行程的啟動、等待、逾時、輸出與時間 | 要改 `start_all`／`wait_all`、行程群組、PATH／env 準備或暫存檔收拾 |
 | [core/wire/README.md](../../../core/wire/README.md) | `core/wire/`：指令、結果與 loop state 三種協定的 C++ struct／JSON 邊界 | 要改協定欄位的解析、序列化、預設值或錯誤回報 |
 | [core/loop/README.md](../../../core/loop/README.md) | `core/loop/`：`.aos/` 版面、投遞、匯聚、state 與一回合的推進順序 | 要改資料夾回合機、`aos run`／`aos deliver` 或它對 exec／wire 的接法 |
+| [core/tool/README.md](../../../core/tool/README.md) | `core/tool/`：世界層工具登記表、探測與 agent 通訊錄；逐檔表格見下方 `core/tool` 節 | 要改 `.aos/tools/`／`.aos/contacts.json`、`aos tool`／`aos contact` 或工具自述探測 |
+| [core/llm/README.md](../../../core/llm/README.md) | `core/llm/`：OpenAI 相容 chat completions client；逐檔表格見下方 `core/llm` 節 | 要改 endpoint／model／request／response、環境變數或 `aos llm` CLI |
+| [core/agent/README.md](../../../core/agent/README.md) | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見下方 `core/agent` 節 | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
 | [core/tick/README.md](../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
 
 **新增或刪除一個原始碼／測試檔（或某個檔的職責變了）時，那一列去哪裡加**：
 檔案在 `common/`／`app/`／`cmake/` 底下或是建置設定檔（含新增小專案要加的那行 `add_subdirectory()`）→ `code-map/build.md`。
-`core/exec`、`core/wire`、`core/loop`、`core/tick` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊。
+`core/exec`、`core/wire`、`core/loop`、`core/tick` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊；`core/tool` 的逐檔表格暫收在本檔。
 未來多一個小專案，就在 `code-map/` 多一冊，並在上面這張表加一列。**這一步跟程式碼改動同一個 commit**（AGENTS.md 的「改了程式碼就要同步 code map」）。
 
 ---
@@ -72,7 +76,8 @@ app/ ── `aos run`／`aos deliver` 掛的就是這條
 | 新增一個小專案（像 llm 那樣）要照什麼模子 | [`docs/subprojects.md`](../../../docs/subprojects.md)；函式定義在 `cmake/AosSubproject.cmake` |
 | 一批指令怎麼並行 fork、逾時怎麼殺整個 process group | `core/exec/src/start.cpp` 的 `start_all`／`run_child`；統一輪詢與 `kill(-pid, SIGKILL)` 在 `core/exec/src/wait_all.cpp` 的 `wait_all` |
 | 協定的三種 JSON 長什麼樣、欄位怎麼對應 | struct 與公開轉換 API 在 `core/wire/include/aos/wire.hpp`；實作分在 `core/wire/src/inst.cpp`／`outcome.cpp`／`state.cpp`，共用取值在 `json_io.hpp` |
-| `.aos/` 資料夾的版面（inbox／turn／batch／state.json） | 路徑推導在 `core/loop/src/layout.cpp`；協定版面在 [`PROTOCOL.md`](../dispatch/proto/PROTOCOL.md) §1 |
+| `.aos/` 動態版面（inbox／turn／batch／state.json） | 路徑推導在 `core/loop/src/layout.cpp`；協定版面在 [`PROTOCOL.md`](../dispatch/proto/PROTOCOL.md) §1 |
+| 世界層工具登記表與 agent 通訊錄放哪、是否進版控 | `.aos/tools/<name>.json` 與 `.aos/contacts.json` 由 `core/tool` 管；`.gitignore:8-13` 只放行這兩種靜態設定（另有 heartbeat 清單），其餘 `.aos/` 動態狀態不進版控 |
 | 一回合的順序：匯聚 → 並行執行 → 落檔 → 更新 state | `core/loop/src/turn.cpp` 的 `run_turn`；running／done state 的組裝在 `core/loop/src/state.cpp` |
 | `aos run`／`aos deliver` 的 CLI 怎麼解參數 | `core/loop/src/run.cpp` 的 `aos_run_cli_main`／`core/loop/src/deliver_cli.cpp` 的 `aos_deliver_cli_main` |
 | 投遞與 state／turn 落檔怎麼保持原子 | `core/loop/src/fs.cpp` 的 `write_atomic`：先寫 `path + ".tmp"`，再以 `rename` 發佈 |
@@ -93,11 +98,62 @@ code/tests > docs/aos-folder.md 這類 normative 規格 > schema/examples/fixtur
 
 ---
 
+## core/tool
+
+`core/tool` 是世界層的工具與聯絡方式登記庫（公開 target `aos::tool`，產物 `libaos_tool.so`），提供 `aos tool` 與 `aos contact` 兩條子命令。它以私有相依使用 `aos::exec` 做工具自述探測、使用 `aos::loop` 解析目前世界；`aos::agent` 的公開 API 直接暴露 `aos::tool::Spec`，因此把 `aos::tool` 列成公開相依。完整使用入口見 [core/tool/README.md](../../../core/tool/README.md)。
+
+### 世界層檔案格式
+
+每個工具是一個扁平 JSON object，放在 `<world>/.aos/tools/<name>.json`；檔內 `name` 必須等於檔名，讀 registry 時遇到壞檔會整次報錯，不會靜默略過。欄位名沿用目前實作所選的 ai_core 軸向詞彙；程式碼實際保存的完整欄位如下。
+
+| 欄位 | 型別與規則 |
+|------|------------|
+| `name` | 必填非空 string，只接受英數、`_`、`.`、`-`。 |
+| `argv` | 必填、非空的 string array；是執行工具時的固定 argv 前綴。 |
+| `description` | 必填非空 string；給模型的一句話表述。 |
+| `args` | 選填 `list`／`string`／`none`，預設 `list`。 |
+| `stdin` | 選填 `none`／`text`，預設 `none`。 |
+| `cwd` | 選填 string，預設空字串（agent 執行時視為世界根 `.`）。 |
+| `timeout_ms` | 選填非負整數，預設 `0`；tool registry 的 `0` 代表不限時，agent 投遞時目前會換成 30000 ms。 |
+| `source` | 選填 `manual`／`metainfo`／`header`，預設 `manual`。 |
+| `lifecycle`／`state`／`guarantee`／`interruptible`／`predictability`／`stage` | 選填 string；未填時留空且不寫回 JSON。 |
+| `network` | 選填 bool；程式另記錄是否曾明確宣告，未宣告就不寫回 JSON。 |
+| `env_allow` | 選填 string array；空陣列不寫回 JSON。 |
+
+repo 根的 `.aos/tools/` 目前放了五個進版控的範例登記：`sh`／`ls`／`cat`／`git`／`aos`。
+
+通訊錄 `<world>/.aos/contacts.json` 的頂層是 JSON array；每項必須有非空 string `name`／`folder`，可選 `agent`／`note` string。`folder` 原樣保存；`aos say --to` 使用時才以目前世界為基準組出目標路徑（絕對路徑仍保持絕對），若 `agent` 缺席則解析目標世界裡唯一的 agent。
+
+### `aos tool add` 探測與合併順序
+
+`aos tool add` 預設執行 `<argv> --metainfo`，關閉 stdin 並設 3000 ms 逾時。退出成功後依序降級：stdout 若是含非空 `description` 的 JSON object，就收下表述與合法的已知選填欄、記 `source=metainfo`；否則取同一份 stdout 的第一個非空行（最多 200 bytes）、記 `source=header`。若加 `--probe metadata`，只有前一次完全沒探到可用內容時才再以 `--metadata` 重試；`--no-probe` 則全部略過。
+
+合併優先序是**命令列旗標 > 探測結果 > `Spec` 預設值**。若最後仍沒有 description，CLI 不會自行再跑第三個探測，而是失敗並要求以 `--description` 手填；已手填 description 時會採用它並把 `source` 改成 `manual`。
+
+### 檔案表與分層
+
+相依只往下看：`spec` 是純 JSON 邊界；`registry` 在它上面加世界路徑、原子檔案 I/O 與預設工具；`probe` 只經公開 `aos::exec` API 跑探測；`contacts` 重用 registry 內部的文字／原子寫入 helper；兩支 CLI 最上層組合公開 API，`cli_common.hpp` 只放輸出 helper。
+
+| 檔案 | 負責什麼 |
+|------|----------|
+| `core/tool/include/aos/tool.hpp` | 公開 `Spec`／`Contact`／`Probe` 型別，以及世界解析、spec JSON、registry、預設工具、探測與 contacts API。 |
+| `core/tool/src/internal.hpp` | 小專案內部文字讀取與 tmp＋rename 原子寫入宣告；不安裝。 |
+| `core/tool/src/cli_common.hpp` | 兩支 CLI 共用的表格輸出、JSON escape、UTF-8 截短、join 與縮排 helper。 |
+| `core/tool/src/spec.cpp` | 純工具 spec 邊界：驗名稱與必填／列舉型欄位、解析扁平 JSON、按固定格式序列化並省略未宣告的選填欄。 |
+| `core/tool/src/registry.cpp` | 世界解析與 `.aos/tools/` 路徑、單項／整張 registry 的原子讀寫刪除、依名稱排序，以及 `sh`／`ls`／`cat` 預設登記。 |
+| `core/tool/src/probe.cpp` | 用 `aos::exec` 執行 `--metainfo`／指定旗標，判斷退出、signal、逾時與輸出，再解析 JSON 或退回第一個非空行。 |
+| `core/tool/src/contacts.cpp` | 驗證、讀寫 `.aos/contacts.json`，並依聯絡人名稱新增／取代、查找與移除。 |
+| `core/tool/src/tool_cli.cpp` | `aos tool add／ls／rm` 的參數解析、探測重試、旗標覆寫、人工 description 閘門與人類／JSON 列表輸出。 |
+| `core/tool/src/contact_cli.cpp` | `aos contact add／ls／rm` 的參數解析、`--folder-root`、可選 agent／note 與人類／JSON 列表輸出。 |
+| `core/tool/CMakeLists.txt` | 建 `aos::tool`／`libaos_tool.so`、連私有 `aos::exec`＋`aos::loop`，登記 `tool`／`contact` 子命令與測試。 |
+| `core/tool/README.md` | 工具與通訊錄格式、CLI、探測降級與公開函式庫入口。 |
+
 ## core/llm 與 core/agent
 
-這兩個核心小專案合起來，讓 agent 活在 loop 推進的回合世界裡：`aos agent` 保存人格、對話、狀態與工具往返，loop 每回合從 `.aos/every/agent-<name>.json` 複製一條 `step`；`aos llm` 則是它直接連結的思考引擎，向 OpenAI 相容端點做一次非串流補全。工具往返的關鍵節奏是：**回合 N 投遞 → N+1 執行 → N+2 讀得到結果**。
+這兩個核心小專案合起來，讓 agent 活在 loop 推進的回合世界裡：`aos agent` 保存人格、對話、狀態與工具往返，loop 每回合從 `.aos/every/agent-<name>.json` 複製一條 `step`；`aos llm` 則是它直接連結的思考引擎，向 OpenAI 相容端點做一次非串流補全。工具的真登記表由 `core/tool` 放在世界層 `.aos/tools/<name>.json`；agent 層 `agents/<name>/tools.json` 若存在只是一張白名單，不存在就使用世界裡全部工具。工具往返的關鍵節奏是：**回合 N 投遞 → N+1 執行 → N+2 讀得到結果**。
 agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loop 負責匯聚、執行與落結果。
 因此 agent 與 loop 透過公開 API 解析目前世界，再靠 `.aos/` 版面協作；思考、執行與結果回收各自落在不同回合。
+送給模型的工具清單每項固定一行；模型呼叫的 `args` 必須符合登記的 `list`（字串陣列）／`string`（單一字串）／`none`（省略或空值）。工具執行結果與未知工具／args 形狀錯誤都以同一個 JSON envelope 當 `tool` message 回給模型：共同欄位是 `call_id`／`tool`／`args`／`ok`／`result`，失敗再加 `error.type`／`message`／`retryable`。
 `aos agent` 不另開 `aos llm` 子行程，而是直接呼叫它的公開函式庫 API。
 
 ### `core/llm` 檔案表
@@ -111,21 +167,21 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 
 ### `core/agent` 檔案表與分層
 
-相依只往下看：`paths ← store`；`paths + store ← deliver／tools`；`init／step` 再組合這些下層（`step` 另依賴公開的 `aos::llm`）；最上面的 `run` 只呼叫 `aos::agent` 公開 API。`core/agent` 私有相依 `aos::loop`，只由函式庫層的世界解析使用。箭頭右邊知道左邊，**下層不知道上層存在**。
+相依只往下看：`paths ← store`；`paths + store ← deliver／tools`；`init／step` 再組合這些下層；最上面的 `run` 只呼叫 `aos::agent` 公開 API。跨小專案方面，`core/agent` 公開相依 `aos::tool`（公開標頭直接使用 `aos::tool::Spec`），私有相依 `aos::exec`／`aos::llm`／`aos::loop`。箭頭右邊知道左邊，**下層不知道上層存在**。
 
 | 檔案 | 負責什麼 |
 |------|----------|
 | `core/agent/include/aos/agent.hpp` | 公開資料型別與 API：世界／唯一 agent 解析、初始化、say／log／status／history／pending／tools、argv 展開、工具呼叫抽取及單步 `step()`；completion callback 讓測試可離線注入。 |
 | `core/agent/src/internal.hpp` | 小專案內部契約：集中 `Paths`、儲存、prompt、投遞等下層宣告；不安裝、不是跨小專案 API。 |
 | `core/agent/src/paths.cpp` | 最底層路徑規則：`resolve_folder()` 從 cwd／`AOS_FOLDER` 找世界，`resolve_name()` 找唯一 agent；並正規化 world folder、驗 agent 名稱，推導 `.aos/inbox`、`.aos/every` 與 `agents/<name>/` 全部檔位。 |
-| `core/agent/src/store.cpp` | 儲存層：文字讀取、tmp＋rename 原子寫入、log 追加，以及 history／status／pending／tools 的 JSON 讀寫與驗證。 |
-| `core/agent/src/deliver.cpp` | 投遞層：把工具 argv 包成 instruction 原子寫入 inbox。 |
-| `core/agent/src/tools.cpp` | 工具層：預設工具、system prompt、`tools.json` 登記表解析、`{args}` argv 模板展開，以及從 LLM 回覆抽工具呼叫。 |
-| `core/agent/src/step.cpp` | 回合編排層：收工具結果與 say、更新 history／log／status、呼叫 LLM、投遞工具、記 pending；無新事件時不耗 LLM token，也不自我投遞。 |
-| `core/agent/src/init.cpp` | 初始化層：限制一個 world 只住一隻 agent，建立 agent 版面與預設檔、必要的 world turn／state，寫入 `.aos/every/agent-<name>.json`；`say()` 也在這裡原子放入訊息檔。 |
+| `core/agent/src/store.cpp` | 儲存層：文字讀取、tmp＋rename 原子寫入、log 追加，以及 history／status／pending 的 JSON 讀寫與驗證；工具 registry／白名單已不在這層。 |
+| `core/agent/src/deliver.cpp` | 投遞層：把已按登記展開的工具 argv、cwd、timeout 包成 instruction，原子寫入 world inbox。 |
+| `core/agent/src/tools.cpp` | 工具層：讀世界 registry 並套用可選 agent 白名單、每工具一行的 system prompt、依 `list`／`string`／`none` 展開 argv，以及抽取、驗證 LLM 工具呼叫並回報未知工具／args 錯誤。 |
+| `core/agent/src/step.cpp` | 回合編排層：收 say 與工具結果、把執行結果或呼叫錯誤包成固定 JSON `tool` message、更新 history／log／status、呼叫 LLM、投遞工具並記 pending；無新事件時不耗 LLM token，也不自我投遞。 |
+| `core/agent/src/init.cpp` | 初始化層：限制一個 world 只住一隻 agent，建立 agent 版面與必要的 world turn／state；世界 registry 為空才安裝 `sh`／`ls`／`cat`，不建立 agent 白名單；最後寫 `.aos/every/agent-<name>.json`。`say()` 也在這裡原子放入訊息檔。 |
 | `core/agent/src/run.cpp` | `aos agent init／step／say／listen／talk／state` CLI 分派；init／step 可省略 folder／name，舊 say／listen／talk／state 參數維持，listen／talk 輪詢邏輯供頂層命令共用。 |
 | `core/agent/src/run.hpp` | agent CLI 內部介面：共用 listen／talk 的輪詢實作，不安裝。 |
-| `core/agent/src/run_top.cpp` | 頂層 `aos say／listen／talk／state` 進入點：解析 cwd 世界與唯一 agent，再複用既有操作。 |
+| `core/agent/src/run_top.cpp` | 頂層 `aos say／listen／talk／state` 進入點：解析 cwd 世界與唯一 agent；`say --to <名字>` 另查目前世界通訊錄，把訊息投到聯絡人的 folder／agent。 |
 | `core/agent/tests/fake_loop.py` | 測試用 loop 替身：依協定搬入 inbox、複製 every、並行跑 instruction、寫 out／state、鏡射 agent status 並推進 turn。 |
 | `core/agent/tests/smoke.sh` | 端到端 smoke：在 bob cwd 無參數初始化、用替身推三回合，驗 every 每回合執行與 `state.json` 的 status 鏡射。 |
 | `core/agent/README.md` | 回合 agent 的快速使用、工具往返節奏與函式庫入口。 |
@@ -140,17 +196,19 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 | `status.json` | `status`／`detail`／`updated_at`／`turn`；init／step 原子寫，loop 唯讀鏡射進 world `state.json`。 |
 | `say/*.md` | 等 agent 收取的使用者訊息；`say` 每則寫一個排序檔，`step` 讀入 history 後刪除。 |
 | `log.md` | 逐回合 user／assistant／tool 可讀紀錄與投遞註記；init 建空檔，step 寫，listen／talk 讀。 |
-| `tools.json` | 可用工具登記表；init 寫入 `sh`／`ls`／`cat` 預設值，使用者可改，step 每次要思考時讀。 |
+| `tools.json` | 工具**白名單**，可有可無；不存在＝世界 `.aos/tools/` 登記的工具全部可用，空陣列＝全部停用。接受字串陣列，並相容含 `tools` 陣列的物件及帶 `name` 的舊物件項；init 不建立它。 |
 | `pending.json` | 已投遞但尚未回收的工具 call ID、工具名、args 與投遞回合；init／step 寫，step 依它找結果。 |
 
 ### 常查的東西在哪
 
 | 我想找… | 去哪 |
 |---------|------|
-| agent 每回合怎麼被執行 | `core/agent/src/init.cpp` 寫 `.aos/every/agent-<name>.json`；loop 每回合複製成 `agent-<name>-<turn>.json`，`step` 本身不再投遞下一次執行。 |
-| 工具登記表格式、`{args}` 模板怎麼展開 | `core/agent/src/tools.cpp:58-105`：根物件是 `{"tools":[...]}`，每項有字串 `name`／`description` 與字串陣列 `argv`；每個 argv 元素裡所有 `{args}` 都原樣替換成 args，不另做 shell 拆詞。 |
-| 怎麼從 LLM 回覆裡抽出工具呼叫 | `core/agent/src/tools.cpp:107-147`：由回覆末行往上找完整 JSON 物件行，驗 `tool`／`args` 都是字串且工具已登記。 |
-| 工具結果從哪裡讀回來 | `core/agent/src/step.cpp:110-132`：依 `pending.turn + 1` 讀 `.aos/batch/<turn>/out/<id>.json`；全數到齊才轉成 tool messages。 |
+| agent 每回合怎麼被執行、預設工具何時安裝 | `core/agent/src/init.cpp:13-64`：建版面、世界 registry 為空時安裝預設工具，並寫 `.aos/every/agent-<name>.json`；loop 每回合複製它，`step` 不自我投遞。 |
+| 世界工具登記表與 agent 白名單怎麼合併 | spec JSON 在 `core/tool/src/spec.cpp:116-180`，registry 掃檔在 `core/tool/src/registry.cpp:85-108`；`core/agent/src/tools.cpp:119-142` 讀整張世界表，`tools.json` 存在時再取白名單交集。 |
+| 工具怎麼表述、`list`／`string`／`none` 怎麼展開 argv | `core/agent/src/tools.cpp:85-117` 每工具組一行 prompt；`core/agent/src/tools.cpp:144-168` 對 list 追加 token、對 string 替換所有 `{args}`（沒有占位符就追加一個 argv）、對 none 保留固定 argv。 |
+| 怎麼從 LLM 回覆裡抽出工具呼叫 | `core/agent/src/tools.cpp:170-241`：由回覆末行往上找完整 JSON object 行，先查工具是否在可用表，再依其 `args` 登記驗字串陣列／字串／省略或空值；未知工具與形狀錯誤都回傳具名錯誤，不再靜默忽略。 |
+| 工具結果與呼叫錯誤怎麼回給模型 | `core/agent/src/step.cpp:92-203` 組共同 JSON envelope；`core/agent/src/step.cpp:237-329` 等 `pending.turn + 1` 的 out 全到齊後加入 execution 結果，或在抽取當回合立即加入未知工具／args 錯誤。 |
+| `aos say --to` 怎麼找對方世界 | `core/agent/src/run_top.cpp:30-58`：查目前世界 `.aos/contacts.json`，以目前世界為基準組出 contact folder；contact 沒寫 agent 時解析目標世界唯一 agent，再呼叫 `say()`。 |
 | LM Studio 端點與模型怎麼設 | `AOS_LLM_URL`（預設 `http://localhost:1234/v1`）與 `AOS_LLM_MODEL`（預設 `qwen/qwen3.5-9b`）；需要 bearer token 時另設 `AOS_LLM_KEY`，讀取處在 `core/llm/src/llm.cpp:71-76`。 |
 | loop 替身在哪、怎麼跑 | `core/agent/tests/fake_loop.py`；repo 根執行 `python3 core/agent/tests/fake_loop.py <folder> --step N --interval 100`。完整 smoke 是 `bash core/agent/tests/smoke.sh`（使用 `build/bin/aos`）。 |
 
