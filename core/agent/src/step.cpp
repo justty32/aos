@@ -1,6 +1,7 @@
 #include "internal.hpp"
 
 #include <aos/llm.hpp>
+#include <aos/slot.hpp>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -214,6 +215,13 @@ std::string complete_locally(const std::vector<Message> &messages) {
     return aos::llm::complete(request, aos::llm::options_from_env());
 }
 
+std::string lmstudio_cpu_name(const Engine &engine) {
+    if (!engine.provider.empty()) return engine.provider;
+    const char *configured = std::getenv("AOS_LLM_ENGINE");
+    return configured != nullptr && configured[0] != '\0' ? configured
+                                                           : "lmstudio";
+}
+
 }  // namespace
 
 int step(const std::filesystem::path &folder, std::string_view name,
@@ -227,8 +235,7 @@ int step(const std::filesystem::path &folder, std::string_view name,
 
         const Engine engine = read_engine(paths->folder, name);
         if (engine.kind == "pi") {
-            detail::step_pi(*paths, name, turn, engine);
-            return 0;
+            return detail::step_pi(*paths, name, turn, engine);
         }
 
         std::vector<Message> history = read_history(paths->folder, name);
@@ -267,6 +274,20 @@ int step(const std::filesystem::path &folder, std::string_view name,
             }
         }
         std::sort(messages.begin(), messages.end());
+
+        const bool will_call = received_tools || !messages.empty();
+        std::optional<aos::llm::Slot> slot;
+        if (will_call) {
+            try {
+                slot = aos::llm::acquire(lmstudio_cpu_name(engine),
+                                         detail::llm_priority(engine),
+                                         paths->folder);
+            } catch (const aos::llm::WaitingLlm &) {
+                detail::write_status(*paths, "waiting-llm", "等 llm 槽", turn);
+                return 75;
+            }
+        }
+
         for (const auto &message_path : messages) {
             const std::string content = detail::read_text(message_path);
             history.push_back({"user", content});

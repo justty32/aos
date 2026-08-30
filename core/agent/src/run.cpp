@@ -2,6 +2,7 @@
 
 #include "run.hpp"
 
+#include <charconv>
 #include <chrono>
 #include <cstdio>
 #include <iostream>
@@ -14,7 +15,8 @@ namespace {
 int usage(const char *program) {
     std::fprintf(stderr,
                  "usage: %s init [folder] [--name N] [--persona TEXT] "
-                 "[--engine lmstudio|pi] [--provider P] [--model M]\n"
+                 "[--engine lmstudio|pi] [--provider P] [--model M] "
+                 "[--priority N]\n"
                  "       %s step [folder] [name]\n"
                  "       %s say <folder> <name> <text...>\n"
                  "       %s listen <folder> <name> [--once]\n"
@@ -54,14 +56,22 @@ int run_init(int argc, char *argv[], const char *program) {
         const std::string option = argv[index];
         if ((option == "--name" || option == "--persona" ||
              option == "--engine" || option == "--provider" ||
-             option == "--model") &&
+             option == "--model" || option == "--priority") &&
             index + 1 < argc && argv[index + 1] != nullptr) {
             const std::string value = argv[++index];
             if (option == "--name") name = value;
             else if (option == "--persona") persona = value;
             else if (option == "--engine") engine.kind = value;
             else if (option == "--provider") engine.provider = value;
-            else engine.model = value;
+            else if (option == "--model") engine.model = value;
+            else {
+                const auto [end, error] = std::from_chars(
+                    value.data(), value.data() + value.size(), engine.priority);
+                if (error != std::errc{} ||
+                    end != value.data() + value.size()) {
+                    return usage(program);
+                }
+            }
         } else {
             return usage(program);
         }
@@ -171,7 +181,9 @@ int dispatch(int argc, char *argv[]) {
             folder, argc == 4 ? std::string_view(argv[3]) : std::string_view{});
         std::string error;
         const int result = aos::agent::step(folder, name, {}, &error);
-        if (result != 0) std::fprintf(stderr, "%s: %s\n", program, error.c_str());
+        if (result == 75) std::fputs("waiting-llm\n", stderr);
+        else if (result != 0)
+            std::fprintf(stderr, "%s: %s\n", program, error.c_str());
         return result;
     }
     if (command == "say") {

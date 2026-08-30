@@ -8,13 +8,32 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <unistd.h>
 
+extern "C" int aos_agent_cli_main(int argc, char *argv[]);
+
 namespace {
+
+class ScopedEnvironment {
+public:
+    ScopedEnvironment(const char *name, const std::string &value) : name_(name) {
+        if (const char *old = std::getenv(name)) old_ = old;
+        REQUIRE(setenv(name, value.c_str(), 1) == 0);
+    }
+    ~ScopedEnvironment() {
+        if (old_) setenv(name_.c_str(), old_->c_str(), 1);
+        else unsetenv(name_.c_str());
+    }
+
+private:
+    std::string name_;
+    std::optional<std::string> old_;
+};
 
 class TempWorld {
 public:
@@ -26,12 +45,16 @@ public:
                ("aos-agent-step-" + std::to_string(getpid()) + "-" +
                 std::to_string(stamp));
         std::filesystem::create_directories(path);
+        aos_home_.emplace("AOS_HOME", (path / "aos-home").string());
         aos::agent::initialize(path, "bob");
         std::filesystem::remove_all(path / ".aos" / "inbox");
         std::filesystem::create_directories(path / ".aos" / "inbox");
     }
     ~TempWorld() { std::filesystem::remove_all(path); }
     std::filesystem::path path;
+
+private:
+    std::optional<ScopedEnvironment> aos_home_;
 };
 
 class ScopedTurn {
@@ -83,6 +106,19 @@ nlohmann::json json_file(const std::filesystem::path &path) {
     return value;
 }
 
+std::string text_file(const std::filesystem::path &path) {
+    std::ifstream input(path, std::ios::binary);
+    return {std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>()};
+}
+
+int run_agent_cli(std::vector<std::string> arguments) {
+    std::vector<char *> argv;
+    argv.reserve(arguments.size());
+    for (std::string &argument : arguments) argv.push_back(argument.data());
+    return aos_agent_cli_main(static_cast<int>(argv.size()), argv.data());
+}
+
 }  // namespace
 
 TEST_CASE("agent step calls completion for say and records the reply") {
@@ -114,6 +150,95 @@ TEST_CASE("agent step calls completion for say and records the reply") {
     CHECK(aos::agent::read_log(world.path, "bob").find("我叫 bob。") !=
           std::string::npos);
     CHECK(std::filesystem::is_empty(world.path / ".aos" / "inbox"));
+}
+
+TEST_CASE("agent step keeps say when the lmstudio slot is unavailable") {
+    TempWorld world;
+    write_json(world.path / "aos-home" / "cpus.json",
+               {{"lmstudio", {{"max_inflight", 0}, {"wait_ms", 0}}}});
+    ScopedTurn turn("31");
+    aos::agent::say(world.path, "bob", "稍後再處理");
+    const auto say = world.path / ".aos" / "agents" / "bob" / "say";
+    REQUIRE_FALSE(std::filesystem::is_empty(say));
+
+    bool called = false;
+    CHECK(aos::agent::step(world.path, "bob",
+                           [&](const std::vector<aos::agent::Message> &) {
+                               called = true;
+                               return "不應呼叫";
+                           }) == 75);
+    CHECK_FALSE(called);
+    CHECK(aos::agent::read_status(world.path, "bob").status ==
+          "waiting-llm");
+    CHECK_FALSE(std::filesystem::is_empty(say));
+}
+
+TEST_CASE("agent step completes while holding an available lmstudio slot") {
+    TempWorld world;
+    write_json(world.path / "aos-home" / "cpus.json",
+               {{"lmstudio", {{"max_inflight", 1}, {"wait_ms", 1000}}}});
+    ScopedTurn turn("32");
+    aos::agent::say(world.path, "bob", "現在處理");
+
+    bool called = false;
+    CHECK(aos::agent::step(world.path, "bob",
+                           [&](const std::vector<aos::agent::Message> &) {
+                               called = true;
+                               return "已處理";
+                           }) == 0);
+    CHECK(called);
+    const auto history = aos::agent::read_history(world.path, "bob");
+    REQUIRE_FALSE(history.empty());
+    CHECK(history.back().role == "assistant");
+}
+
+TEST_CASE("agent init stores nonzero priority and omits the default") {
+    TempWorld world;
+    const auto prioritized = world.path / "prioritized";
+    std::filesystem::create_directories(prioritized);
+    CHECK(run_agent_cli({"aos agent", "init", prioritized.string(), "--name",
+                         "alice", "--provider", "gpu", "--priority", "7"}) ==
+          0);
+
+    const auto prioritized_engine =
+        prioritized / ".aos" / "agents" / "alice" / "engine.json";
+    CHECK(aos::agent::read_engine(prioritized, "alice").priority == 7);
+    CHECK(aos::agent::read_engine(prioritized, "alice").provider == "gpu");
+    CHECK(text_file(prioritized_engine).find("\"priority\"") !=
+          std::string::npos);
+
+    const auto negative = world.path / "negative";
+    std::filesystem::create_directories(negative);
+    CHECK(run_agent_cli({"aos agent", "init", negative.string(), "--name",
+                         "erin", "--priority", "-3"}) == 0);
+    CHECK(aos::agent::read_engine(negative, "erin").priority == -3);
+
+    const auto defaults = world.path / "defaults";
+    std::filesystem::create_directories(defaults);
+    aos::agent::initialize(defaults, "carol");
+    const auto default_engine =
+        defaults / ".aos" / "agents" / "carol" / "engine.json";
+    CHECK(aos::agent::read_engine(defaults, "carol").priority == 0);
+    CHECK(text_file(default_engine).find("\"priority\"") ==
+          std::string::npos);
+
+    const auto pi = world.path / "pi";
+    std::filesystem::create_directories(pi);
+    aos::agent::initialize(
+        pi, "dave", "測試人格。",
+        aos::agent::Engine{.kind = "pi", .priority = -4});
+    const auto pi_engine = pi / ".aos" / "agents" / "dave" / "engine.json";
+    CHECK(aos::agent::read_engine(pi, "dave").priority == -4);
+    CHECK(json_file(pi_engine)["priority"] == -4);
+}
+
+TEST_CASE("agent rejects a noninteger engine priority") {
+    TempWorld world;
+    const auto engine =
+        world.path / ".aos" / "agents" / "bob" / "engine.json";
+    write_json(engine, {{"engine", "lmstudio"}, {"priority", "high"}});
+    CHECK_THROWS_AS(aos::agent::read_engine(world.path, "bob"),
+                    std::runtime_error);
 }
 
 TEST_CASE("agent idle step skips completion without self delivery") {
