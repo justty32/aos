@@ -7,7 +7,9 @@
 推進一個資料夾的世界：每回合把 `.aos/inbox/*.json` **搬**進 `batch/<turn>/insts/`，再把
 `.aos/every/*.json` **複製**成 `<stem>-<turn>.json`，用 `aos::exec`
 一次 fork 全部（並行），fork 完先寫一次 `state.json`（`running[]` 帶 pid），等完再寫 `out/<id>.json`
-與第二次 `state.json`，然後 `turn` +1。`every/` 的原檔不搬走，所以每回合都會執行一次；
+與第二次 `state.json`，然後 `turn` +1。`every/` 的原檔不搬走；檔案可用正整數 `every_ms`
+限制投遞間隔，未設定或值 ≤ 0 時仍是每回合投遞。上次投遞的 epoch 毫秒記在
+`.aos/every/.last/<stem>`；
 `aos deliver` 寫 `<id>.json.tmp` 再 `rename` 發佈到 inbox。
 相依 `aos::exec`（fork/wait）與 `aos::wire`（JSON），本層自己只管路徑、檔案系統與回合順序。
 
@@ -54,9 +56,14 @@ AOS_API bool deliver(const Layout &layout, const wire::Inst &inst, std::string &
 AOS_API wire::Inst inst_from_argv(const std::vector<std::string> &argv);
 AOS_API std::string make_delivery_id();        // "d-<epoch_ms>-<pid>-<seq>"
 
-/* ---- aggregate：inbox 搬入、every 複製入 batch/<turn>/insts/，回傳解析成功的那些 ---- */
+/* ---- aggregate：inbox 搬入、到期的 every 複製入 batch/<turn>/insts/ ---- */
 AOS_API std::vector<wire::Inst> aggregate(const Layout &layout, std::uint64_t turn,
-                                          std::string &error);
+                                          std::string &error,
+                                          std::size_t *every_count = nullptr);
+AOS_API bool every_due(const Layout &layout, const std::string &stem,
+                       std::int64_t every_ms, std::int64_t now_ms);
+AOS_API bool mark_every_delivered(const Layout &layout, const std::string &stem,
+                                  std::int64_t now_ms, std::string &error);
 
 /* ---- state：組 state.json 並原子寫出 ---- */
 AOS_API std::map<std::string, std::string> mirror_agents(const Layout &layout);  // agents/*/status.json 原文
@@ -66,6 +73,7 @@ AOS_API bool write_state(const Layout &layout, const wire::State &state, std::st
 struct TurnSummary {
     std::uint64_t turn = 0;          // 這回合的編號
     std::size_t count = 0;           // 執行了幾條；0＝idle 回合
+    std::size_t every_count = 0;     // 其中有幾條來自 every/
     std::uint64_t elapsed_ms = 0;
 };
 /* 匯聚 → start_all → 寫 state(running) → wait_all → 寫 out/ → 寫 state(idle) → turn+1。
@@ -84,13 +92,13 @@ AOS_API bool run_turn(const Layout &layout, TurnSummary &summary, std::string &e
 | `src/fs.hpp` / `src/fs.cpp` | 內部：`read_file`、`write_atomic(path, text)`（寫 `path + ".tmp"` 再 `rename`）、`mkdir_p`、`list_json_files(dir)`（排序過）、`realpath_of`、`join`、`basename_sans_json` | 25 / 130 |
 | `src/layout.cpp` | `layout_of`、`find_folder`、`current_folder`、`insts_dir`、`out_dir`、`ensure_layout`（建 inbox/every/agents）、`read_turn`、`write_turn`（turn 檔也走 `write_atomic`） | 110 |
 | `src/deliver.cpp` | `deliver`（呼叫 `ensure_layout` → `wire::to_json_text` → `write_atomic(inbox/<id>.json)`）、`inst_from_argv`、`make_delivery_id` | 70 |
-| `src/aggregate.cpp` | `aggregate`：先 `rename` inbox，再複製 every 並強制 id＝`<stem>-<turn>`；解析失敗印 stderr 一行並保留 insts 現場 | 90 |
+| `src/aggregate.cpp` | `aggregate`：先 `rename` inbox，再依 `every_ms` 與 `.last/<stem>` 判斷並複製到期的 every，強制 id＝`<stem>-<turn>`；`every_due`／`mark_every_delivered` 提供可注入時間的判斷與紀錄；解析失敗印 stderr 一行並保留 insts 現場 | 150 |
 | `src/state.hpp` / `src/state.cpp` | `mirror_agents`（列 `agents_dir` 的每個子目錄，讀 `status.json` 原文）、`write_state`（`wire::to_json_text(State)` → `write_atomic`）；內部 helper `detail::running_entries(insts, runnings)` 與 `detail::mark_done(entries, results)` 宣告在 `state.hpp`，只給 `turn.cpp` 用 | 16 / 73 |
-| `src/turn.cpp` | `run_turn`：`ensure_layout` → `read_turn` → `aggregate` → 把每條 `Inst` 換成 `exec::Spawn`（`cwd` 相對 folder 轉絕對、空＝folder；注入 `AOS_FOLDER`、`AOS_TURN` 覆蓋同名 key）→ `start_all` → `write_state(phase=running)` → `wait_all` → 每條寫 `out/<id>.json`（`wire::Outcome`）→ `write_state(phase=idle, status=done)` → `write_turn(turn+1)`。idle 回合直接跳到最後兩步 | 170 |
-| `src/run.cpp` | `extern "C" int aos_run_cli_main`：解析 `[folder] [--step N] [--interval MS]`，迴圈 `run_turn`（`--step 0`＝無限），每回合 stdout 印 `turn <n>: <count> insts, <ms> ms` 或 `turn <n>: idle`，回合間 `nanosleep` | 120 |
+| `src/turn.cpp` | `run_turn`：`ensure_layout` → `read_turn` → `aggregate`（同步填 `TurnSummary.every_count`）→ 把每條 `Inst` 換成 `exec::Spawn`（`cwd` 相對 folder 轉絕對、空＝folder；注入 `AOS_FOLDER`、`AOS_TURN` 覆蓋同名 key）→ `start_all` → `write_state(phase=running)` → `wait_all` → 每條寫 `out/<id>.json`（`wire::Outcome`）→ `write_state(phase=idle, status=done)` → `write_turn(turn+1)`。idle 回合直接跳到最後兩步 | 170 |
+| `src/run.cpp` | `extern "C" int aos_run_cli_main`：解析 `[folder] [--step N] [--interval MS]`，迴圈 `run_turn`（`--step 0`＝無限），每回合 stdout 印 `turn <n>: <count> insts (<every> every), <ms> ms`（every 為 0 時省略括號）或 `turn <n>: idle`，回合間 `nanosleep` | 120 |
 | `src/deliver_cli.cpp` | `extern "C" int aos_deliver_cli_main`：`[folder] -- <argv...>` 走 `inst_from_argv`；`[folder] <inst.json>` 讀檔 `parse_inst(default_id＝檔名去 .json)`；再 `deliver` | 110 |
 | `tests/test_idle.cpp` | inbox 與 every 都空時驗 idle state、不建 batch 與 turn +1 | 30 |
-| `tests/test_every.cpp` | every 三回合常駐執行、強制 id，以及與 inbox 同回合並存 | 90 |
+| `tests/test_every.cpp` | every 三回合常駐執行、強制 id、與 inbox 同回合並存，以及 `every_ms` 到期邊界、跳過回合與各檔獨立節奏 | 150 |
 | `tests/test_folder.cpp` | `find_folder` 往上找最近世界與找不到的情形 | 30 |
 
 ## CLI
@@ -103,6 +111,7 @@ aos deliver [folder] -- <argv...>
 
 `folder` 省略時先用 `AOS_FOLDER`；沒有的話從 cwd 往上找最近含 `.aos/` 的目錄，
 再找不到就用 cwd。`aos deliver` 不會寫 `every/`；常駐指令由生產者自行發佈到 `.aos/every/`。
+常駐 JSON 的正整數 `every_ms` 只限制該檔的投遞頻率；不存在、不是整數或值 ≤ 0 都維持每回合投遞。
 
 CMake（`PUBLIC_DEPS` 不是 `PRIVATE_DEPS`，理由見 `wf/salvage/05-程式碼哪些值得抄.md` §六）：
 

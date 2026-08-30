@@ -86,6 +86,11 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
         if (summary.count == 0) {
             std::printf("turn %llu: idle\n",
                         static_cast<unsigned long long>(summary.turn));
+        } else if (summary.every_count > 0) {
+            std::printf("turn %llu: %zu insts (%zu every), %llu ms\n",
+                        static_cast<unsigned long long>(summary.turn),
+                        summary.count, summary.every_count,
+                        static_cast<unsigned long long>(summary.elapsed_ms));
         } else {
             std::printf("turn %llu: %zu insts, %llu ms\n",
                         static_cast<unsigned long long>(summary.turn),
