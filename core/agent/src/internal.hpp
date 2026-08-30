@@ -15,6 +15,7 @@ struct Paths {
     std::filesystem::path inbox;
     std::filesystem::path every;
     std::filesystem::path agent;
+    std::filesystem::path engine;
     std::filesystem::path persona;
     std::filesystem::path history;
     std::filesystem::path status;
@@ -38,6 +39,8 @@ void write_status(const Paths &paths, std::string_view status,
                   std::string_view detail, std::uint64_t turn);
 void write_pending(const Paths &paths, const Pending &pending);
 void write_tools(const Paths &paths, const std::vector<Tool> &tools);
+void write_engine(const Paths &paths, const Engine &engine);
+std::string new_uuid();
 
 std::vector<Tool> default_tools();
 std::string system_prompt(const Paths &paths, std::string_view name,
@@ -47,5 +50,7 @@ std::string system_prompt(const Paths &paths, std::string_view name,
 void deliver(const Paths &paths, std::string_view id,
              const std::vector<std::string> &argv,
              bool tool_instruction = false);
+void step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
+             const Engine &engine);
 
 }  // namespace aos::agent::detail

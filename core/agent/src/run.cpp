@@ -13,7 +13,8 @@ namespace {
 
 int usage(const char *program) {
     std::fprintf(stderr,
-                 "usage: %s init [folder] [--name N] [--persona TEXT]\n"
+                 "usage: %s init [folder] [--name N] [--persona TEXT] "
+                 "[--engine lmstudio|pi] [--provider P] [--model M]\n"
                  "       %s step [folder] [name]\n"
                  "       %s say <folder> <name> <text...>\n"
                  "       %s listen <folder> <name> [--once]\n"
@@ -41,6 +42,7 @@ int run_init(int argc, char *argv[], const char *program) {
     std::filesystem::path folder;
     std::string name;
     std::string persona = "你是一個可靠、好奇且言簡意賅的助手。";
+    aos::agent::Engine engine;
     int option_start = 2;
     if (argc > 2 && argv[2] != nullptr &&
         !std::string_view(argv[2]).starts_with("--")) {
@@ -50,18 +52,26 @@ int run_init(int argc, char *argv[], const char *program) {
     for (int index = option_start; index < argc; ++index) {
         if (argv[index] == nullptr) return usage(program);
         const std::string option = argv[index];
-        if ((option == "--name" || option == "--persona") &&
+        if ((option == "--name" || option == "--persona" ||
+             option == "--engine" || option == "--provider" ||
+             option == "--model") &&
             index + 1 < argc && argv[index + 1] != nullptr) {
             const std::string value = argv[++index];
             if (option == "--name") name = value;
-            else persona = value;
+            else if (option == "--persona") persona = value;
+            else if (option == "--engine") engine.kind = value;
+            else if (option == "--provider") engine.provider = value;
+            else engine.model = value;
         } else {
             return usage(program);
         }
     }
+    if (engine.kind != "lmstudio" && engine.kind != "pi") {
+        return usage(program);
+    }
     folder = aos::agent::resolve_folder(folder);
     if (name.empty()) name = folder.filename().string();
-    aos::agent::initialize(folder, name, persona);
+    aos::agent::initialize(folder, name, persona, engine);
     return 0;
 }
 

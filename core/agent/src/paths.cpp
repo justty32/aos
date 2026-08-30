@@ -61,6 +61,7 @@ Paths paths_for(const std::filesystem::path &folder, std::string_view name) {
     paths.inbox = paths.aos / "inbox";
     paths.every = paths.aos / "every";
     paths.agent = paths.aos / "agents" / std::string(name);
+    paths.engine = paths.agent / "engine.json";
     paths.persona = paths.agent / "persona.md";
     paths.history = paths.agent / "history.json";
     paths.status = paths.agent / "status.json";

@@ -6,12 +6,14 @@ aos_add_subproject(agent
         src/store.cpp
         src/deliver.cpp
         src/tools.cpp
+        src/engine.cpp
+        src/engine_pi.cpp
         src/step.cpp
         src/init.cpp
     HEADERS
         include/aos/agent.hpp
     PRIVATE_DEPS
-        aos::llm aos::loop
+        aos::exec aos::llm aos::loop
 )
 
 add_library(aos_agent_cli OBJECT src/run.cpp src/run_top.cpp)
@@ -57,6 +59,7 @@ aos_add_test(aos_agent_tests
         tests/test_agent_tools.cpp
         tests/test_agent_store.cpp
         tests/test_agent_step.cpp
+        tests/test_agent_engine.cpp
     LINK aos_agent_cli
 )
 

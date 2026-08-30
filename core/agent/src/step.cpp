@@ -96,6 +96,12 @@ int step(const std::filesystem::path &folder, std::string_view name,
         turn = current_turn(*paths);
         detail::write_status(*paths, "thinking", "處理本回合", turn);
 
+        const Engine engine = read_engine(paths->folder, name);
+        if (engine.kind == "pi") {
+            detail::step_pi(*paths, name, turn, engine);
+            return 0;
+        }
+
         std::vector<Message> history = read_history(paths->folder, name);
         Pending pending = read_pending(paths->folder, name);
         bool received_tools = false;

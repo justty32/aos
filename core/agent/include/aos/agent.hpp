@@ -46,6 +46,20 @@ struct Status {
     std::uint64_t turn = 0;
 };
 
+struct Engine {
+    std::string kind = "lmstudio";
+    std::string provider;
+    std::string model;
+    std::string session_id;
+};
+
+struct PiRun {
+    int exit_code = 0;
+    std::string reply;
+    std::vector<std::string> tool_calls;
+    std::string stderr_text;
+};
+
 using Completion =
     std::function<std::string(const std::vector<Message> &messages)>;
 
@@ -63,7 +77,13 @@ AOS_API std::string resolve_name(const std::filesystem::path &folder,
 AOS_API void initialize(const std::filesystem::path &folder,
                         std::string_view name,
                         std::string_view persona =
-                            "你是一個可靠、好奇且言簡意賅的助手。");
+                            "你是一個可靠、好奇且言簡意賅的助手。",
+                        const Engine &engine = {});
+
+AOS_API Engine read_engine(const std::filesystem::path &folder,
+                           std::string_view name);
+
+AOS_API PiRun parse_pi_stream(std::string_view jsonl);
 
 AOS_API void say(const std::filesystem::path &folder, std::string_view name,
                  std::string_view text);
