@@ -483,5 +483,6 @@ TEST_CASE("agent completion failure does not self deliver") {
               &error) == 1);
     CHECK(error == "假的 completion 失敗");
     CHECK(std::filesystem::is_empty(world.path / ".aos" / "inbox"));
-    CHECK(aos::agent::read_status(world.path, "bob").status == "idle");
+    // L1-19：失敗的回合要留下 error，不能跟「沒事做」的 idle 長得一樣。
+    CHECK(aos::agent::read_status(world.path, "bob").status == "error");
 }

@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <sstream>
 
@@ -107,6 +108,22 @@ std::string failure_detail(std::string text) {
     return text;
 }
 
+std::string failure_first_line(std::string_view text) {
+    const std::size_t newline = text.find_first_of("\r\n");
+    std::string line(text.substr(0, newline));
+    if (line.size() > 500) line.resize(500);
+    return line;
+}
+
+std::string api_key_name(const Engine &engine) {
+    std::string provider = engine.provider.empty() ? "deepseek" : engine.provider;
+    std::transform(provider.begin(), provider.end(), provider.begin(),
+                   [](unsigned char character) {
+                       return static_cast<char>(std::toupper(character));
+                   });
+    return provider + "_API_KEY";
+}
+
 }  // namespace
 
 PiRun parse_pi_stream(std::string_view jsonl) {
@@ -175,37 +192,49 @@ int step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
 
     std::vector<Message> history = read_history(paths.folder, name);
     std::string prompt;
+    std::vector<Message> new_messages;
+    new_messages.reserve(messages.size());
     bool first_message = true;
     for (const auto &message_path : messages) {
         const std::string content = read_text(message_path);
-        append_log(paths, turn, "user", content);
-        history.push_back({"user", content});
-        write_history(paths, history);
-        std::filesystem::remove(message_path);
+        new_messages.push_back({"user", content});
         if (!first_message) prompt += "\n\n";
         prompt += content;
         first_message = false;
     }
 
     const PiRun run = run_pi(paths, name, turn, engine, prompt);
-    std::string next_status = "idle";
-    std::string detail_text = "等待訊息";
     if (run.exit_code == 0) {
+        for (std::size_t index = 0; index < new_messages.size(); ++index) {
+            append_log(paths, turn, "user", new_messages[index].content);
+            history.push_back(new_messages[index]);
+            std::filesystem::remove(messages[index]);
+        }
         append_log(paths, turn, "assistant", run.reply);
         history.push_back({"assistant", run.reply});
         write_history(paths, history);
         if (!run.tool_calls.empty()) {
-            append_note(paths, "> pi 用了工具：" + joined(run.tool_calls));
+            append_note(paths, turn,
+                        "> pi 用了工具：" + joined(run.tool_calls));
         }
-    } else {
-        append_note(paths, "> pi 失敗（exit=" +
-                               std::to_string(run.exit_code) + "）：" +
-                               failure_detail(run.stderr_text));
-        detail_text = "pi 失敗";
+        write_status(paths, "idle", "等待訊息", turn);
+        return 0;
     }
 
-    write_status(paths, next_status, detail_text, turn);
-    return 0;
+    std::string note = "> pi 失敗（exit=" +
+                       std::to_string(run.exit_code) + "）：" +
+                       failure_detail(run.stderr_text);
+    if (run.stderr_text.find("No API key") != std::string::npos) {
+        const std::string key = api_key_name(engine);
+        note += "（pi 叫你跑 /login，但 aos 這條路走環境變數：請設定 " + key +
+                "）";
+    }
+    append_note(paths, turn, note);
+    write_status(paths, "error",
+                 "pi 失敗（exit=" + std::to_string(run.exit_code) +
+                     "）：" + failure_first_line(run.stderr_text),
+                 turn);
+    return 1;
 }
 
 }  // namespace detail

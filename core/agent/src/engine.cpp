@@ -93,6 +93,7 @@ void write_engine(const Paths &paths, const Engine &engine) {
         root["session_id"] = engine.session_id;
     } else if (engine.kind == "lmstudio") {
         if (!engine.provider.empty()) root["provider"] = engine.provider;
+        if (!engine.model.empty()) root["model"] = engine.model;
     } else {
         throw std::runtime_error("未知的 agent engine: " + engine.kind);
     }

@@ -195,13 +195,16 @@ exit 3
                            aos::agent::Engine{"pi"});
     aos::agent::say(world.path, "bob", "觸發失敗");
 
-    CHECK(aos::agent::step(world.path, "bob") == 0);
+    // L1-17：pi 失敗就是這一回合失敗，step 要回非 0，loop 才看得見。
+    CHECK(aos::agent::step(world.path, "bob") == 1);
     const std::string log = aos::agent::read_log(world.path, "bob");
     CHECK(log.find("pi 失敗") != std::string::npos);
     CHECK(log.find("boom") != std::string::npos);
     CHECK(std::filesystem::exists(world.path / ".aos" / "every" /
                                   "agent-bob.json"));
-    CHECK(aos::agent::read_status(world.path, "bob").detail == "pi 失敗");
+    CHECK(aos::agent::read_status(world.path, "bob").status == "error");
+    CHECK(aos::agent::read_status(world.path, "bob").detail.starts_with(
+        "pi 失敗（exit=3）"));
 }
 
 TEST_CASE("agent pi step reports unavailable slots as temporary") {
