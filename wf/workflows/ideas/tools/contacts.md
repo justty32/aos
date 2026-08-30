@@ -74,4 +74,4 @@ A 同一份清單加 `kind: agent|llm-pu`；**B 通訊錄只放 agent，llm pu �
 - 通訊錄天然有一格 `~`（使用者）：地址＝`~/.aos/`（inbox／say 投遞匣），任何 agent `aos say --to ~ …` 就是「跟使用者講話」；使用者讀信＝在 `~` 下 `aos listen`（或之後的 `aos inbox`）。
 - 使用者在任何世界打 `aos say …` 時，訊息的**寄件人是 `~`**（say 訊息要帶 `from` 欄；agent 之間互 say 也帶各自的資料夾當寄件人）。
 - 這跟 wf inbox 的「頂層那一格＝`new/`」是同一件事：使用者的信箱是頂層信箱。
-- **尚未實作**：say 的 `from`、`~/.aos/` 的初始化、`aos say --to ~`。交給下一棒（修 bug／改進隊）。
+- ~~尚未實作~~ **2026-08-30 隊 W 已做**：say 帶 `from`、`~/.aos/` 最小版面、`aos say --to ~`、通訊錄合成一格 `~`（`core/agent/src/user.cpp`）。
