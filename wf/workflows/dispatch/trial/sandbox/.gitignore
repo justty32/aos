@@ -1,0 +1,8 @@
+# 試用沙箱：留下當證據的是對話紀錄（log.md／history.json）、通訊錄、工具登記與操作者報告；
+# 每回合的執行殘渣不進版控。
+**/.aos/batch/
+**/.aos/inbox/
+**/.aos/turn
+**/.aos/state.json
+**/.aos/agents/*/pending.json
+**/.aos/agents/*/status.json

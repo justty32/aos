@@ -1,0 +1,10 @@
+{
+  "args": "list",
+  "argv": [
+    "aos"
+  ],
+  "description": "執行 aos 子命令",
+  "name": "aos",
+  "source": "manual",
+  "stdin": "none"
+}

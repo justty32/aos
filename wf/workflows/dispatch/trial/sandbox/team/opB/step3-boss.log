@@ -1,0 +1,8 @@
+name=boss
+started_ns=1788087806521253804
+turn 3: 1 insts (1 every), 2166 ms
+turn 4: 1 insts (1 every), 3 ms
+turn 5: 1 insts (1 every), 3 ms
+finished_ns=1788087808898328728
+elapsed_ms=2377
+exit=0

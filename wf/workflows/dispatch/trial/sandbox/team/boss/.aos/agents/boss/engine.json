@@ -1,0 +1,6 @@
+{
+  "engine": "pi",
+  "model": "deepseek-v4-flash",
+  "provider": "deepseek",
+  "session_id": "5b1c8899-cbbd-4223-ae02-ea667d07482b"
+}

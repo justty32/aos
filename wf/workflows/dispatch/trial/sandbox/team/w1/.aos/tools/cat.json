@@ -1,0 +1,13 @@
+{
+  "args": "list",
+  "argv": [
+    "cat"
+  ],
+  "description": "印出檔案內容。args 是一個或多個檔案路徑 token。",
+  "guarantee": "idempotent",
+  "name": "cat",
+  "predictability": "high",
+  "source": "manual",
+  "stdin": "none",
+  "timeout_ms": 30000
+}
