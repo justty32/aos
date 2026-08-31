@@ -14,3 +14,7 @@ CMakeUserPresets.json
 .lock/
 wf/inbox/.inbox-send.*
 .claude/worktrees/
+
+# Python 的位元碼快取：不進版控
+__pycache__/
+*.pyc
