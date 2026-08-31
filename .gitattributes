@@ -1,0 +1,20 @@
+# 這個專案只在 POSIX 上建置（見 CMakeLists.txt 的 `if(WIN32) FATAL_ERROR`），
+# 在 Windows 上開發等於得進 WSL。而 core.autocrlf 會讓 checkout 出來的檔案帶
+# CRLF，WSL 的 bash 讀到就是 `syntax error near unexpected token $'do\r'`——
+# 所有 .sh 一律跑不動，.py 的 shebang 也會壞。
+#
+# 這裡把工作區一律釘成 LF。git 裡存的內容本來就是 LF（autocrlf 在 commit 時
+# 已經把 CR 剝掉），所以這份設定不改變任何已提交的內容，只讓 checkout 不再
+# 加上 CR。text=auto 讓 git 自己偵測，含 NUL 的檔案會被當二進位放過。
+* text=auto eol=lf
+
+# 真二進位：不做任何行尾轉換
+*.pyc binary
+
+
+# 以下兩個檔案在 git 裡本來就存著 CRLF（全 repo 僅此兩例，用
+# `git ls-files --eol` 查得）。標 -text 讓 git 原樣比對，不去動它們：
+#   - 試驗留存的終端輸出是證據，含控制字元，改了就不是原始記錄
+#   - PowerShell 腳本是 Windows 專用的參考資料
+wf/workflows/dispatch/trial/sandbox/solo/out/C.stdout.log -text
+reference/llmkit/proxy/start_litellm.ps1                  -text
