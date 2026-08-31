@@ -26,6 +26,7 @@ have_py=1
 command -v python3 >/dev/null 2>&1 || { have_py=0; echo "WARN python3 not found; BIGLIST/data-file checks skipped"; }
 
 total_broken=0 total_residue=0 total_oversize=0 total_biglist=0 total_querycmd=0
+checked_broken=0
 
 # 列出檔案裡的相對連結（去掉 fenced code block 與行內 code span 後取 ](…)）
 extract_links() {
@@ -51,19 +52,45 @@ check_links() {
       fi
     done < <(extract_links "$f")
   done
-  return $broken
+  checked_broken=$broken
 }
 
-list_md() { find "$1" -name '*.md' -not -path '*/node_modules/*' -not -path '*/.git/*' | sort; }
+# archive/reference/vendor 與 .gitmodules 宣告的 submodule 不下鑽。
+list_owned_files() {
+  local root=${1%/} _ rel
+  shift
+  local -a prunes=(
+    -path '*/.git' -o -path '*/node_modules' -o -path '*/__pycache__'
+    -o -path '*/archive' -o -path '*/reference' -o -path '*/references' -o -path '*/vendor'
+  )
+  while read -r _ rel; do
+    [[ -n $rel ]] && prunes+=( -o -path "$root/${rel%/}" )
+  done < <(git -C "$root" config --file .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null || true)
+  find "$root" \( -type d \( "${prunes[@]}" \) \) -prune \
+    -o -type f \( "$@" \) -print | sort
+}
+
+list_md() { list_owned_files "$1" -name '*.md'; }
+list_data() { list_owned_files "$1" -name '*.json' -o -name '*.csv'; }
+
+count_literal() {
+  local needle=$1
+  shift
+  [[ $# -eq 0 ]] && { echo 0; return; }
+  grep -hoF -- "$needle" "$@" 2>/dev/null | wc -l | tr -d ' '
+}
 
 # 檢查一個目錄
 lint_dir() {
   local root=${1%/} label=${2:-$1}
   local broken=0 oversize=0 ph=0 note=0 judge=0 inbox=0 biglist=0 bl_links=0 querycmd=0
   local out df n rel
+  local -a md_files=()
 
   [[ $quiet -eq 1 ]] || echo "== $label"
-  list_md "$root" | check_links "$root"; broken=$?
+  mapfile -t md_files < <(list_md "$root")
+  check_links "$root" < <(printf '%s\n' "${md_files[@]}")
+  broken=$checked_broken
 
   if [[ $have_py -eq 1 ]]; then
     out=$(python3 "$tools/check_anchors.py" "$root" 2>/dev/null)
@@ -73,24 +100,29 @@ lint_dir() {
     fi
   fi
 
-  while IFS= read -r f; do
-    echo "OVERSIZE ${f#$root/} ($(wc -c <"$f") bytes > 8192)"
+  for f in "${md_files[@]}"; do
+    case "$f" in */workflows/*) ;; *) continue ;; esac
+    n=$(wc -c <"$f")
+    [[ $n -le 8192 ]] && continue
+    echo "OVERSIZE ${f#$root/} ($n bytes > 8192)"
     oversize=$((oversize + 1))
-  done < <(find "$root" -path '*/workflows/*' -name '*.md' -not -path '*/archive/*' -size +8192c | sort)
+  done
 
   if [[ $have_py -eq 1 ]]; then
-    out=$(python3 "$tools/find_big_lists.py" --min 1024 \
-            --exempt-file AGENTS.md --exempt-file WORKFLOWS.md --exempt-file INDEX.md \
-            "$root" 2>/dev/null \
-          | awk -F'\t' -v p="$root/" '{
-              loc=$2; if (substr(loc,1,length(p))==p) loc=substr(loc,length(p)+1)
-              sub(/^links=/, "", $5)
-              printf "%s %s (%s bytes, %s, %s rows, %s links)\n",
-                     ($6=="linked=all" ? "BIGLIST-LINKS" : "BIGLIST"), loc, $1, $3, $4, $5 }')
-    if [[ -n $out ]]; then
-      echo "$out"
-      biglist=$(printf '%s\n' "$out" | grep -c '^BIGLIST ')
-      bl_links=$(printf '%s\n' "$out" | grep -c '^BIGLIST-LINKS ')
+    if [[ ${#md_files[@]} -gt 0 ]]; then
+      out=$(python3 "$tools/find_big_lists.py" --min 1024 \
+              --exempt-file AGENTS.md --exempt-file WORKFLOWS.md --exempt-file INDEX.md \
+              "${md_files[@]}" 2>/dev/null \
+            | awk -F'\t' -v p="$root/" '{
+                loc=$2; if (substr(loc,1,length(p))==p) loc=substr(loc,length(p)+1)
+                sub(/^links=/, "", $5)
+                printf "%s %s (%s bytes, %s, %s rows, %s links)\n",
+                       ($6=="linked=all" ? "BIGLIST-LINKS" : "BIGLIST"), loc, $1, $3, $4, $5 }')
+      if [[ -n $out ]]; then
+        echo "$out"
+        biglist=$(printf '%s\n' "$out" | grep -c '^BIGLIST ')
+        bl_links=$(printf '%s\n' "$out" | grep -c '^BIGLIST-LINKS ')
+      fi
     fi
 
     while IFS= read -r df; do
@@ -105,24 +137,22 @@ lint_dir() {
         /"column":/ { col=$4 }
         /"target":/ { print "BROKEN " f "[" idx "." col "] -> " $4 }'
       broken=$((broken + n))
-    done < <(find "$root" \( -name '*.json' -o -name '*.csv' \) \
-               -not -path '*/archive/*' -not -path '*/.git/*' \
-               -not -path '*/node_modules/*' -not -path '*/__pycache__/*' | sort)
+    done < <(list_data "$root")
   fi
 
   # ⑦ QUERYCMD：md 不該教查法；免掃 archive/、wf/、AGENTS.md、契約檔
-  while IFS= read -r f; do
+  for f in "${md_files[@]}"; do
     rel=${f#$root/}
     case "$f" in */archive/*|*/wf/*|*/workflows/tidy/*) continue ;; esac
     case "${f##*/}" in AGENTS.md|data-files.md|data-files-fmt.md|tidy.md) continue ;; esac
     while IFS= read -r ln; do
       echo "QUERYCMD $rel:$ln"; querycmd=$((querycmd + 1))
     done < <(grep -nE 'tabledb\.py' "$f" | grep -E 'python3 |tools/tabledb\.py' | cut -d: -f1)
-  done < <(list_md "$root")
+  done
 
-  ph=$(grep -ro '{{' --include='*.md' "$root" 2>/dev/null | wc -l | tr -d ' ')
-  note=$(grep -ro '〔模板說明〕' --include='*.md' "$root" 2>/dev/null | wc -l | tr -d ' ')
-  judge=$(grep -ro '〔導入判斷〕' --include='*.md' "$root" 2>/dev/null | wc -l | tr -d ' ')
+  ph=$(count_literal '{{' "${md_files[@]}")
+  note=$(count_literal '〔模板說明〕' "${md_files[@]}")
+  judge=$(count_literal '〔導入判斷〕' "${md_files[@]}")
   if [[ -d "$root/inbox" ]]; then
     inbox=$(find "$root/inbox" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
   fi
@@ -147,9 +177,9 @@ if [[ $self -eq 1 ]]; then
 
   # 根文件（只檢連結）
   echo "== repo root files"
-  printf '%s\n' README.md AGENTS.md CLAUDE.md IMPORT.md CHANGELOG.md docs/README.md docs/non-invasive-import.md \
-    | while read -r f; do [[ -f $f ]] && echo "$repo/$f"; done | check_links "$repo"
-  b=$?; total_broken=$((total_broken + b)); echo "SUMMARY root: broken=$b"
+  check_links "$repo" < <(printf '%s\n' README.md AGENTS.md CLAUDE.md IMPORT.md CHANGELOG.md docs/README.md docs/non-invasive-import.md \
+    | while read -r f; do [[ -f $f ]] && echo "$repo/$f"; done)
+  b=$checked_broken; total_broken=$((total_broken + b)); echo "SUMMARY root: broken=$b"
 
   # 本 repo 規矩：任何檔都不超過 8192 bytes
   while IFS= read -r f; do echo "OVERSIZE ${f#$repo/} ($(wc -c <"$f") bytes > 8192)"; total_broken=$((total_broken + 1)); done \
