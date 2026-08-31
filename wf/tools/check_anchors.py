@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
+import configparser
 import os
 from pathlib import Path
 import re
@@ -18,7 +19,15 @@ HEADING_RE = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*$")
 LINK_RE = re.compile(r"(?<!!)\[[^]\n]*\]\(([^)\n]+)\)")
 TAG_RE = re.compile(r"<[^>\n]+>")
 ANCHOR_ATTR_RE = re.compile(r"\b(?:id|name)\s*=\s*(['\"])(.*?)\1", re.I)
-SKIP_PARTS = {"archive", ".git", "node_modules", "__pycache__"}
+SKIP_PARTS = {
+    "archive",
+    ".git",
+    "node_modules",
+    "__pycache__",
+    "reference",
+    "references",
+    "vendor",
+}
 
 
 def without_code_spans(line: str) -> str:
@@ -112,12 +121,42 @@ def markdown_links(markdown: Path):
             yield line_number, path, unquote(fragment)
 
 
+def submodule_paths(root: Path) -> set[tuple[str, ...]]:
+    modules = root / ".gitmodules"
+    if not modules.is_file():
+        return set()
+    config = configparser.ConfigParser(interpolation=None)
+    try:
+        config.read(modules, encoding="utf-8")
+    except configparser.Error:
+        return set()
+    paths: set[tuple[str, ...]] = set()
+    for section in config.sections():
+        if not section.startswith("submodule ") or not config.has_option(section, "path"):
+            continue
+        path = Path(config.get(section, "path"))
+        if path.is_absolute() or ".." in path.parts:
+            continue
+        paths.add(path.parts)
+    return paths
+
+
 def markdown_files(root: Path) -> list[Path]:
-    return sorted(
-        path
-        for path in root.rglob("*.md")
-        if not SKIP_PARTS.intersection(path.relative_to(root).parts)
-    )
+    submodules = submodule_paths(root)
+    markdown: list[Path] = []
+    for current, dirs, files in os.walk(root):
+        current_path = Path(current)
+        relative_parts = current_path.relative_to(root).parts
+        dirs[:] = [
+            directory
+            for directory in dirs
+            if directory not in SKIP_PARTS
+            and relative_parts + (directory,) not in submodules
+        ]
+        markdown.extend(
+            current_path / filename for filename in files if filename.endswith(".md")
+        )
+    return sorted(markdown)
 
 
 def check_root(root: Path) -> list[tuple[str, int, str, str]]:
