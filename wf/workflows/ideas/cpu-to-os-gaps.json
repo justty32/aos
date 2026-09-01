@@ -70,7 +70,7 @@
    "modern": "process 是一等公民：有 id、狀態、親子關係、可列舉、可終止",
    "aos_now": "世界＝資料夾，但沒有 process table、沒有 pid 檔、列不出「現在有誰在跑」",
    "why_gap": "OS 管的東西叫行程。沒有這個名詞，後面的排程／控制／資源歸屬都沒有掛靠點",
-   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains](assembly-and-chains.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal）",
+   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains](assembly-and-chains.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）",
    "status": "未對應"
   },
   {
@@ -110,7 +110,7 @@
    "modern": "kernel 裡有一個明確的排程器，介面清楚",
    "aos_now": "跨資料夾排程屬 `exec_loop` 還是更外層，未定；四條方案（A 世界／B spool／C loop 閘／D flock）已盤點未選",
    "why_gap": "決定 `exec_loop` 的介面是「跑這個資料夾」還是「跑這一組」——這條不定，OS 的邊界就畫不出來",
-   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)",
+   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）",
    "status": "未對應"
   },
   {
@@ -150,7 +150,7 @@
    "modern": "程式有名字、能被引用、能被載入執行；副程式是一等概念",
    "aos_now": "真正的指令是「批」而批沒有名字、沒有 header；副程式要靠 `$ref` 引指令才勉強成立",
    "why_gap": "寫不出可被指名的程式，就沒有「載入並執行某程式」這回事，OS 最基本的動作缺席",
-   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)、[assembly-and-chains](assembly-and-chains.md)（建議形狀：plan 檔＋游標檔＝載入器，可全用 inst 做在使用者層）",
+   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)、[assembly-and-chains](assembly-and-chains.md)（建議形狀：plan 檔＋游標檔＝載入器。**「可全用 inst 做在使用者層」已被第三部分取代**：使用者把它上移進 loop，即 `series.json`）",
    "status": "未對應"
   },
   {
@@ -170,7 +170,7 @@
    "modern": "資源上限由 OS 保證，超過的排隊",
    "aos_now": "你的例子（DeepSeek 同時只准 3 個）目前無處設定也無人保證；四方案已列，未選",
    "why_gap": "你自己點名的那件事。誰排隊、隊伍住哪、誰消化、超上限是排隊還是退回，全開著",
-   "material": "[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains.md)（自供給＝CPS，未來不可見所以排不了優先序；stored program 當資料是解法方向）",
+   "material": "[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains.md)（自供給＝CPS，未來不可見所以排不了優先序；**第三部分**：`series.json` 就是排程輸入——serie 自報未來幾回合的資源消耗（cpu／llm…）與建議優先級，但**是自我申報**，排程器只能當參考）",
    "status": "未對應"
   },
   {
