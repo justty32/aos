@@ -5,7 +5,7 @@
 
 **白話**：不先做完整產品，只讓一條最短、但真的路從頭跑到尾，中間每一層都會經過。
 **嚴格**：用最小功能與最少假件貫穿所有架構邊界的 vertical slice；這裡特指單 world、單一具名工具、串行的「模型→工具→模型看到結果」。
-**在 aos 裡具體是什麼**：目前還沒跑過；[roadmap T5](../../../../docs/roadmap.md#t5) 就是要用真 agent CLI、driver 腳本、具名工具與 Deliver 候選跑這一條。
+**在 aos 裡具體是什麼**：目前還沒跑過；[roadmap T5](../../roadmap.md) 就是要用真 agent CLI、driver 腳本、具名工具與 Deliver 候選跑這一條。
 **為什麼會冒出這個詞**：[回頭審視](../records/step-back-review.md) 四位認為前面的抽象走得比實驗快，要先跑一條可殺死、可觀察的真 loop 才知道哪裡真痛。
 
 ### agent loop（模型─工具─模型的循環）
@@ -13,7 +13,7 @@
 **白話**：模型看現況、叫一個工具做事、再看結果；它還有事就排下一步，沒事就停。
 **嚴格**：由 driver 從已提交歷史組 context，調用 coding-agent/LLM adapter，將 typed tool call 轉為 instruction 並 Deliver，執行後再將 result 供下一次模型回合使用的耐久狀態機。
 **在 aos 裡具體是什麼**：目前不存在；roadmap T5 明定先用 `.aos/inst.json` 加腳本與外部 CLI 實驗，不先新增 C++ `aos agent`。
-**為什麼會冒出這個詞**：這是 [roadmap T5](../../../../docs/roadmap.md#t5) 的下一步；[agent loop 場](../records/agent-loop-architecture.md) 本來要找 core 原語，[回頭審視](../records/step-back-review.md) 又把它收回先實跑。
+**為什麼會冒出這個詞**：這是 [roadmap T5](../../roadmap.md) 的下一步；[agent loop 場](../records/agent-loop-architecture.md) 本來要找 core 原語，[回頭審視](../records/step-back-review.md) 又把它收回先實跑。
 
 ### driver 與 adapter
 

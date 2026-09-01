@@ -99,12 +99,12 @@
   [ideas/turn-based-folder](workflows/ideas/turn-based-folder.md) 與
   [ideas/llm-cpu](workflows/ideas/llm-cpu.md)），要**找時間讓它們符合這套模型**。還沒
   排期。**2026-08-24 使用者拍板：先不動、先不管，要排在 agent loop 之後**（[roadmap
-  的 D4](../docs/roadmap.md)）。所以這兩個小專案現在是**擱置**，不是待修——別急著重寫，
+  的 D4](workflows/roadmap.md)）。所以這兩個小專案現在是**擱置**，不是待修——別急著重寫，
   也別再往裡面投資。連帶：llmkit 移植的 S2／S5 一起停用。
 - **主線是回合制模型的 T0–T6**：`.aos` 規格在
   [`docs/aos-folder.md`](../docs/aos-folder.md)（**唯一真源**），指示詞設計在
   [`docs/inst-directives.md`](../docs/inst-directives.md)，順序在
-  [`docs/roadmap.md`](../docs/roadmap.md)，模型的理由在
+  [`roadmap`](workflows/roadmap.md)，模型的理由在
   [`wf/workflows/ideas/`](workflows/ideas/README.md)。`core/inst` 已解凍。
   **進度**：**T0–T4 全部落地，`core/inst` 這一輪要做的都做完了**——三個指示詞
   （`$opt`／`$env`／`$ref`）、`resolve` 分層、`parallel` 欄位、`aos init`／

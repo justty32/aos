@@ -20,7 +20,7 @@ CLI 是 `aos enqueue <folder> [file|-]`，只保證「完整且可見」，驗�
 4. `.aos/inst.tempd/` 已經是 submission queue，但**缺順序、容量、fence、doorbell** 四樣。
 
 **轉交建議**（需使用者拍板，議會不自己改規格文件）：
-- `deliver`／`aos enqueue` → 進 [`docs/roadmap.md`](../../../../../docs/roadmap.md)，插在 T5 之前。
+- `deliver`／`aos enqueue` → 進 [`roadmap`](../../../roadmap.md)，插在 T5 之前。
 - 「中途死掉的洞」4:0 明確不做 → 進 roadmap 第六節「明確不做的事」。
 - `k/`／`c/` 兩層與命名 → 進 [`docs/aos-folder.md`](../../../../../docs/aos-folder.md)。
 - 有限資源／`aos queue`／fence → 獨立成一份 idea（`wf/workflows/ideas/`），不要塞進本記錄。
