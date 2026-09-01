@@ -70,7 +70,7 @@
    "modern": "process 是一等公民：有 id、狀態、親子關係、可列舉、可終止",
    "aos_now": "世界＝資料夾，但沒有 process table、沒有 pid 檔、列不出「現在有誰在跑」",
    "why_gap": "OS 管的東西叫行程。沒有這個名詞，後面的排程／控制／資源歸屬都沒有掛靠點",
-   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains](assembly-and-chains.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）",
+   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains/series](assembly-and-chains/series.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）",
    "status": "未對應"
   },
   {
@@ -80,7 +80,7 @@
    "modern": "可執行檔與行程是兩種東西，即使同一份碼",
    "aos_now": "同像性讓兩者同型、同住檔案系統；`.runi` 是唯一的「正在跑」標記，沒有一般化",
    "why_gap": "第四節說檔案系統同時是程式與行程的載體——那就必須有辦法分辨哪一份是哪一種，否則管不動。**同像性讓這件事更難不是更容易**：eval 要分得出碼與活行程，但兩者同型",
-   "material": "[program-form](program-form.md)、[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)、[theses-review](theses-review.md)",
+   "material": "[program-form](program-form.md)、[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)、[theses-review](theses-review.md)、[assembly-and-chains/c-language](assembly-and-chains/c-language.md)（**分界在更高一層重現**：函數的模板＝程式、跑起來的串＝行程）、[assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md)（**2026-09-01 解開一半**：三段式生產線讓新 json＝程式的實體、`series.json`＝行程，分界自然長出來，不必另發明標記）",
    "status": "未對應"
   },
   {
@@ -110,7 +110,7 @@
    "modern": "kernel 裡有一個明確的排程器，介面清楚",
    "aos_now": "跨資料夾排程屬 `exec_loop` 還是更外層，未定；四條方案（A 世界／B spool／C loop 閘／D flock）已盤點未選",
    "why_gap": "決定 `exec_loop` 的介面是「跑這個資料夾」還是「跑這一組」——這條不定，OS 的邊界就畫不出來",
-   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）",
+   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）",
    "status": "未對應"
   },
   {
@@ -150,7 +150,7 @@
    "modern": "程式有名字、能被引用、能被載入執行；副程式是一等概念",
    "aos_now": "真正的指令是「批」而批沒有名字、沒有 header；副程式要靠 `$ref` 引指令才勉強成立",
    "why_gap": "寫不出可被指名的程式，就沒有「載入並執行某程式」這回事，OS 最基本的動作缺席",
-   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)、[assembly-and-chains](assembly-and-chains.md)（建議形狀：plan 檔＋游標檔＝載入器。**「可全用 inst 做在使用者層」已被第三部分取代**：使用者把它上移進 loop，即 `series.json`）",
+   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)、[assembly-and-chains/series](assembly-and-chains/series.md)（建議形狀：plan 檔＋游標檔＝載入器。**「可全用 inst 做在使用者層」已被第三部分取代**：使用者把它上移進 loop，即 `series.json`）、[assembly-and-chains/c-language](assembly-and-chains/c-language.md)（**可命名性有了形狀**：函數＝有名字可重用的串模板，呼叫＝開子串掛父串 id；串中可用**代號**指代、符號表是串的狀態）",
    "status": "未對應"
   },
   {
@@ -170,7 +170,7 @@
    "modern": "資源上限由 OS 保證，超過的排隊",
    "aos_now": "你的例子（DeepSeek 同時只准 3 個）目前無處設定也無人保證；四方案已列，未選",
    "why_gap": "你自己點名的那件事。誰排隊、隊伍住哪、誰消化、超上限是排隊還是退回，全開著",
-   "material": "[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains.md)（自供給＝CPS，未來不可見所以排不了優先序；**第三部分**：`series.json` 就是排程輸入——serie 自報未來幾回合的資源消耗（cpu／llm…）與建議優先級，但**是自我申報**，排程器只能當參考）",
+   "material": "[scheduling](scheduling/README.md)、[assembly-and-chains/series](assembly-and-chains/series.md)（自供給＝CPS，未來不可見所以排不了優先序；**第三部分**：`series.json` 就是排程輸入——serie 自報未來幾回合的資源消耗（cpu／llm…）與建議優先級，但**是自我申報**，排程器只能當參考）",
    "status": "未對應"
   },
   {
@@ -200,7 +200,7 @@
    "modern": "現代 CPU 假設可靠且確定：同輸入同輸出，不會逾時，不會回錯",
    "aos_now": "LLM 會逾時、會回錯、同輸入不同輸出；失敗算「有做事」，因此關掉了唯一的節流閥",
    "why_gap": "又一條橫向對比會漏的軸。整套 OS 的抽象都建立在「計算單元可靠」上，這裡不成立",
-   "material": "[scheduling](scheduling/README.md)、[machine-shape/debts](machine-shape/debts.md)",
+   "material": "[scheduling](scheduling/README.md)、[machine-shape/debts](machine-shape/debts.md)、[assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md)（**2026-09-01 不再整條線通吃**：三段式生產線把不確定性關在「寫」那一段，**編譯（確定性拆平）與執行兩段把確定性撿回來**，replay 因此變得可能）",
    "status": "未對應"
   },
   {
@@ -250,7 +250,7 @@
    "modern": "lisp 的同像性來自 macro 與 eval 讀同一種 form",
    "aos_now": "**問題已被改寫**：「JSON 陣列＝S-expression」被否定過，但新主張說 S-expression 是**資料夾樹本身**、JSON 只是檔案內容格式。所以要問的變成「macro 與 eval 是不是讀同一棵資料夾樹」——這題還沒問過",
    "why_gap": "同像性是「檔案系統即程式載體」的支柱。落點從 JSON 搬到檔案系統後，這條沒被解決，只是換了個地方要掙。**2026-09-01 又多一問**：使用者收回「只有 lisp 承載得了」、說 Python／Lua 也適合，但兩者都不同像——那同像性到底在撐什麼？可能不是表達力，而是 macro／自我改寫或「程式與行程同型」",
-   "material": "[program-form](program-form.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)、[theses-review](theses-review.md)",
+   "material": "[program-form](program-form.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)、[theses-review](theses-review.md)、[assembly-and-chains/source-and-ir](assembly-and-chains/source-and-ir.md)（**2026-09-01 答案候選，未裁**：撐的是**編譯管線的簡單**——每一站同一種樹，改寫器 agent 也會寫，與「自我改寫」是一件事兩面。承重的是**樹**不是括號，所以使用者收工前改判**全塔統一 json**（源碼→IR→series→inst 批、lisp 只留哲學）並不動搖它）",
    "status": "未對應"
   },
   {
