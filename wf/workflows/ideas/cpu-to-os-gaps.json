@@ -20,7 +20,7 @@
    "modern": "timer interrupt 讓 OS 隨時奪回控制權，這是搶佔式多工的物理基礎",
    "aos_now": "loop 沒有 reset line、沒有外部可觸發的中斷；一回合結束與否完全看 inst 自己",
    "why_gap": "沒有中斷，OS 只能是 cooperative 的——任何一條 inst 卡住就再也回不到 OS 手上",
-   "material": "[machine-shape/loop](machine-shape/loop.md)",
+   "material": "[machine-shape/loop](machine-shape/loop.md)、[game-process-model](game-process-model.md)",
    "status": "未對應"
   },
   {
@@ -50,7 +50,7 @@
    "modern": "暫存器組＋PC 就是「這個行程現在到哪了」，換手時整組存起來、之後回復",
    "aos_now": "沒有架構狀態，只有檔案系統；一回合的進度散在資料夾裡，沒有一份可整存整取的 context",
    "why_gap": "context switch 的前提是 context 可被指名與快照。沒有它，換手只能靠回合邊界",
-   "material": "[machine-shape/instruction](machine-shape/instruction.md)",
+   "material": "[machine-shape/instruction](machine-shape/instruction.md)、[game-process-model](game-process-model.md)",
    "status": "未對應"
   },
   {
@@ -60,7 +60,7 @@
    "modern": "旗標暫存器＋條件跳轉，分支是機器層原語",
    "aos_now": "`loop` 只認得 `result == 3`，其餘回傳值全被忽略；「loop 是控制流」目前還是志向",
    "why_gap": "三要件裡的「可條件分支」在機器層還沒兌現。理論說 tooling 擔任分支，但 loop 讀不到它的結果",
-   "material": "[verdicts](verdicts.md) B2、[machine-shape/loop](machine-shape/loop.md)",
+   "material": "[verdicts](verdicts.md) B2、[machine-shape/loop](machine-shape/loop.md)、[theses-review](theses-review.md)",
    "status": "未對應"
   },
   {
@@ -80,7 +80,7 @@
    "modern": "可執行檔與行程是兩種東西，即使同一份碼",
    "aos_now": "同像性讓兩者同型、同住檔案系統；`.runi` 是唯一的「正在跑」標記，沒有一般化",
    "why_gap": "第四節說檔案系統同時是程式與行程的載體——那就必須有辦法分辨哪一份是哪一種，否則管不動。**同像性讓這件事更難不是更容易**：eval 要分得出碼與活行程，但兩者同型",
-   "material": "[program-form](program-form.md)、[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)",
+   "material": "[program-form](program-form.md)、[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)、[theses-review](theses-review.md)",
    "status": "未對應"
   },
   {
@@ -100,7 +100,7 @@
    "modern": "跑到一半換手，之後接得回去",
    "aos_now": "同步 POST 佔住整回合（LM Studio 120 s、pi 600 s）；一世界一 loop，換不了手",
    "why_gap": "沒有換手，多工只能靠「等它做完」；一隻 agent 想很久，同世界所有事情陪等",
-   "material": "[scheduling](scheduling/README.md)",
+   "material": "[scheduling](scheduling/README.md)、[game-process-model](game-process-model.md)",
    "status": "未對應"
   },
   {
@@ -140,7 +140,7 @@
    "modern": "OS 自己管一套命名空間，可掛載、有權限位，決定誰看得到什麼",
    "aos_now": "直接借用 host 檔案系統，沒有自己的命名空間、沒有掛載概念、沒有權限",
    "why_gap": "「檔案系統即記憶體」是借來的——借來的東西 aos 管不到，OS 該有的隔離與授權沒有著力點",
-   "material": "無",
+   "material": "[game-process-model](game-process-model.md)、[verdicts](verdicts.md) B13、[theses-review](theses-review.md)",
    "status": "未對應"
   },
   {
@@ -150,7 +150,7 @@
    "modern": "程式有名字、能被引用、能被載入執行；副程式是一等概念",
    "aos_now": "真正的指令是「批」而批沒有名字、沒有 header；副程式要靠 `$ref` 引指令才勉強成立",
    "why_gap": "寫不出可被指名的程式，就沒有「載入並執行某程式」這回事，OS 最基本的動作缺席",
-   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)",
+   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)",
    "status": "未對應"
   },
   {
@@ -190,7 +190,7 @@
    "modern": "現代 OS 沒有這條軸——CPU 時間不用付錢",
    "aos_now": "token 計費完全在體系外，沒有帳、沒有預算、沒有上限",
    "why_gap": "橫向對比會整條漏掉。LLM CPU 跑一次要錢，這讓排程從「效率問題」變成「預算問題」",
-   "material": "無",
+   "material": "[theses-review](theses-review.md)",
    "status": "未對應"
   },
   {
@@ -250,7 +250,7 @@
    "modern": "lisp 的同像性來自 macro 與 eval 讀同一種 form",
    "aos_now": "**問題已被改寫**：「JSON 陣列＝S-expression」被否定過，但新主張說 S-expression 是**資料夾樹本身**、JSON 只是檔案內容格式。所以要問的變成「macro 與 eval 是不是讀同一棵資料夾樹」——這題還沒問過",
    "why_gap": "同像性是「檔案系統即程式載體」的支柱。落點從 JSON 搬到檔案系統後，這條沒被解決，只是換了個地方要掙。**2026-09-01 又多一問**：使用者收回「只有 lisp 承載得了」、說 Python／Lua 也適合，但兩者都不同像——那同像性到底在撐什麼？可能不是表達力，而是 macro／自我改寫或「程式與行程同型」",
-   "material": "[program-form](program-form.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
+   "material": "[program-form](program-form.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)、[theses-review](theses-review.md)",
    "status": "未對應"
   },
   {

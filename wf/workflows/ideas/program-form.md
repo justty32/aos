@@ -48,6 +48,9 @@ workshop 那場（[lisp-in-aos](../workshop/records/lisp-in-aos.md) 第 10 點�
 > 它們也「很適合」，那**同像性就不是「表達這個抽象」的必要條件**——那 `G24`
 > （同像性要在資料夾樹上成立）到底在撐什麼？它可能撐的是別的東西（例如 macro／自我改寫、
 > 或「程式與行程同型」那條線），而不是表達力。這條值得你哪天回答一次。
+>
+> **同日複審**（[theses-review §一](theses-review.md)，仍是觀察）：承重點是**自我改寫**；
+> 下面四條裂縫的**第 3 與第 4 是同一題**。
 
 ## 四條裂縫——使用者已裁決（2026-09-01）
 
@@ -119,3 +122,4 @@ lisp（檔案／資料夾），這條講的是**寫的方式**也是——不是
 - [usability-target](usability-target.md)——順手判準：在 shell 打 `aos xxx` 要有 pi coding agent 的效果（REPL 那節量的就是它）
 - [call-format](call-format.md)——CLI 呼叫＝Lisp 呼叫的序列化（argv 是 list、旗標是 keyword）
 - [workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的
+- [theses-review](theses-review.md)／[game-process-model](game-process-model.md)——同日的複審與第三個模型

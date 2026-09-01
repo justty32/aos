@@ -103,6 +103,14 @@
     另四條是缺口：opcode 懸空（header 加 manifest 欄可補）、核心方程要宣告
     footprint（**git 第三筆帳：拍的 ≠ 改的**）、**PC 不存在**（回合編號無表示，是歷史／
     記憶體模型／status／去重的共同前提）、版面要 ownership table。
+    > **2026-09-01 使用者口述的兩個模型各壓上其中兩條**（[game-process-model](game-process-model.md)）：
+    > **GOAP 把 footprint 從「值得做」升成「必要條件」**（規劃依賴每個 action 聲明
+    > precondition／effect，`inst` 什麼都不聲明）；**L1/L2 cache 類比給 ownership table
+    > 一條分類判準**（刪掉它世界語意變不變＝架構狀態 vs 微架構狀態），並指出**邊界會隨
+    > 設計落地移動**（`turn` 在 PC 落地那天會從 cache 升格），ownership table 得記這件事。
+    > 另：[theses-review §二](theses-review.md) 認為**給批名字與 header 的槓桿比本表原記的
+    > 更高**——它同時是 CPU 讀法（去重要回合編號）與 REPL 讀法（replay 要輸入歷程）的共同
+    > 地基（觀察，非裁決）。
 13. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
     `fork` 之後、`execve` 之前建，只有 exec 層碰得到。與「安全交給別人」的裁決有出入。
 
@@ -112,7 +120,7 @@
 |---|---|
 | **兩顆 CPU 共寫一份記憶體，沒有記憶體模型**（沒有 barrier／happens-before／去重） | GPU 模型 |
 | **沒有中斷線** — 非同步結果只能靠每回合塞一筆輪詢指令 | GPU 模型 |
-| **git 撞上 `.aos/` 的暫態** — `.runi` 沒了，但暫態變多了：`run.pid`／`run.lock`／`run.log`／`state.json`／`turn`／`batch/<turn>/` 全在 `.aos/` 裡，回滾含它們的 commit 一樣會讓世界對不上；`.gitignore` 政策是規範的一部分，還沒寫 | 用 git 做快照 |
+| **git 撞上 `.aos/` 的暫態** — `.runi` 沒了，但暫態變多了：`run.pid`／`run.lock`／`run.log`／`state.json`／`turn`／`batch/<turn>/` 全在 `.aos/` 裡，回滾含它們的 commit 一樣會讓世界對不上；`.gitignore` 政策是規範的一部分，還沒寫。**判準 2026-09-01 有了**（[game-process-model §十](game-process-model.md)）：cache 永不入 commit——「回滾含 `run.pid` 的 commit 死鎖」＝把微架構狀態當架構狀態存了檔 | 用 git 做快照 |
 
 → [machine-shape/debts](machine-shape/debts.md)
 
