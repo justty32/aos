@@ -38,7 +38,7 @@
 
 資料包通常是：對應那場的 `records/*.md` ＋ 該題的 `background/*.md` ＋
 [`docs/aos-folder.md`](../../../docs/aos-folder.md)（規格唯一真源）＋
-[`docs/roadmap.md`](../../../docs/roadmap.md)。
+[`roadmap`](../roadmap.md)。
 
 
 ## 細節在哪（從本檔拆出去的）

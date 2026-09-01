@@ -152,7 +152,7 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
 「`timeout_ms` 移出最內圈」一致——不是我倒推的。
 
 **順手結清一項存貨**：判準把**彙整**判進 core（時點在回合外，inst 摸不到），
-[roadmap](../../../docs/roadmap.md) 停打時剩的四項存貨之一「匯聚 lib-vs-inst」
+[roadmap](../roadmap.md) 停打時剩的四項存貨之一「匯聚 lib-vs-inst」
 因此有了答案的一半：**它在 core 裡**，剩下的只有「怎麼跟 loop 接」。
 
 ### 三、結論二：八條指令對 core 的新增需求只有一項

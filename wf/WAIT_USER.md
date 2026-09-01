@@ -61,4 +61,4 @@
 > `{"$opt": "merge"}` 由 `inst` 自己支援（見
 > [`docs/inst-directives.md`](../docs/inst-directives.md)）；`core/tooljson` 本身則
 > 先不動、排在 agent loop 之後。設計上還沒答完的細節不放這裡——它們不卡使用者，記在
-> [`docs/roadmap.md`](../docs/roadmap.md) 與各 idea 文件的開放問題。
+> [`roadmap`](workflows/roadmap.md) 與各 idea 文件的開放問題。
