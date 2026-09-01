@@ -79,8 +79,8 @@
    "name": "程式與行程的分界",
    "modern": "可執行檔與行程是兩種東西，即使同一份碼",
    "aos_now": "同像性讓兩者同型、同住檔案系統；`.runi` 是唯一的「正在跑」標記，沒有一般化",
-   "why_gap": "第四節說檔案系統同時是程式與行程的載體——那就必須有辦法分辨哪一份是哪一種，否則管不動",
-   "material": "[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)",
+   "why_gap": "第四節說檔案系統同時是程式與行程的載體——那就必須有辦法分辨哪一份是哪一種，否則管不動。**同像性讓這件事更難不是更容易**：eval 要分得出碼與活行程，但兩者同型",
+   "material": "[program-form](program-form.md)、[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)",
    "status": "未對應"
   },
   {
@@ -208,9 +208,9 @@
    "layer": "L3 方便人（使用者定義的三件事）",
    "name": "方便人寫程式",
    "modern": "語言、可組合、可重用、函式庫、工具鏈",
-   "aos_now": "有 `inst`／批／`$ref`，方向指向 lisp；但 G14（批沒有名字）直接擋在前面",
-   "why_gap": "你定義的第一件事。這條的成敗幾乎完全押在 G14 與 lisp 那條哲學線上",
-   "material": "[call-format](call-format.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
+   "aos_now": "形式已定調：**檔案是 atom、資料夾是 list**，程式的載體就是資料夾；但 G14（批沒有名字）仍擋在前面，寫不出可被指名的程式",
+   "why_gap": "你定義的第一件事。形式有了（lisp／檔案／資料夾），缺的是讓它可被命名與載入的機制——押在 G14 與 G24 上",
+   "material": "[program-form](program-form.md)、[call-format](call-format.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
    "status": "未對應"
   },
   {
@@ -246,11 +246,11 @@
   {
    "id": "G24",
    "layer": "L4 橫向對比失效處",
-   "name": "同像性在 JSON 上不是免費的",
+   "name": "同像性要在資料夾樹上成立（原：JSON 上不免費）",
    "modern": "lisp 的同像性來自 macro 與 eval 讀同一種 form",
-   "aos_now": "「JSON 陣列＝S-expression」已被否定過；長得像括號不等於同像",
-   "why_gap": "第四節把同像性當成既有前提。它其實要另外掙來——這條直接壓在你的哲學參照上",
-   "material": "[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
+   "aos_now": "**問題已被改寫**：「JSON 陣列＝S-expression」被否定過，但新主張說 S-expression 是**資料夾樹本身**、JSON 只是檔案內容格式。所以要問的變成「macro 與 eval 是不是讀同一棵資料夾樹」——這題還沒問過",
+   "why_gap": "同像性是「檔案系統即程式載體」的支柱。落點從 JSON 搬到檔案系統後，這條沒被解決，只是換了個地方要掙",
+   "material": "[program-form](program-form.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
    "status": "未對應"
   },
   {

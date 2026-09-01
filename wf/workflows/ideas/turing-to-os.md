@@ -63,6 +63,9 @@
 
 **lisp 會是很重要的哲學參照。** 不是語法上的參照，是「程式與資料同型」這個立場。
 
+> **往下一層**：這個立場具體長什麼樣——**檔案是 atom、資料夾是 list**，以及「只有 lisp
+> 承載得了」這個排他主張——見 [program-form](program-form.md)。
+
 ## 五、作業系統是什麼——使用者的定義
 
 使用者口述（2026-09-01），一個**逐步收緊**的定義：
@@ -127,4 +130,5 @@ verdicts 條目，**3 條是全新的空白**（`G13` 命名空間與權限、`G
 - [top-down-cli](top-down-cli.md)——agent loop 靠自我複製投遞安插進 pu 迴圈（「執行自身」的實作面）
 - [core-layering](core-layering.md)——core 只差一個「分支」就封閉（三要件裡的分支，在分層上的迴響）
 - [prior-work](prior-work.md)——跨 repo 前作對照
+- [program-form](program-form.md)——在 aos 上寫程式的形式（`G20` 的實質內容）
 - [workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的；那場的第 10 點直接壓在本篇第四節上
