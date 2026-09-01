@@ -194,7 +194,10 @@ def main():
             if f.endswith(".md"):
                 new_text = fix_md(f, bo, bn, edits)
                 if edits and apply:
-                    open(f, "w", encoding="utf-8").write(new_text)
+                    # newline="\n"：Windows 的文字模式預設把 \n 翻成 CRLF，會頂到
+                    # .gitattributes 的 eol=lf。scanned() 只收 .md/.json/.csv，那兩個
+                    # 標了 -text 的 CRLF 檔不在範圍內，所以這裡一律寫 LF 是安全的。
+                    open(f, "w", newline="\n", encoding="utf-8").write(new_text)
             else:
                 fix_table(f, bo, bn, edits, apply)
         except (UnicodeDecodeError, OSError, ValueError):
