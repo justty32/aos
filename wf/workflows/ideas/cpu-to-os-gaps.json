@@ -249,7 +249,7 @@
    "name": "同像性要在資料夾樹上成立（原：JSON 上不免費）",
    "modern": "lisp 的同像性來自 macro 與 eval 讀同一種 form",
    "aos_now": "**問題已被改寫**：「JSON 陣列＝S-expression」被否定過，但新主張說 S-expression 是**資料夾樹本身**、JSON 只是檔案內容格式。所以要問的變成「macro 與 eval 是不是讀同一棵資料夾樹」——這題還沒問過",
-   "why_gap": "同像性是「檔案系統即程式載體」的支柱。落點從 JSON 搬到檔案系統後，這條沒被解決，只是換了個地方要掙",
+   "why_gap": "同像性是「檔案系統即程式載體」的支柱。落點從 JSON 搬到檔案系統後，這條沒被解決，只是換了個地方要掙。**2026-09-01 又多一問**：使用者收回「只有 lisp 承載得了」、說 Python／Lua 也適合，但兩者都不同像——那同像性到底在撐什麼？可能不是表達力，而是 macro／自我改寫或「程式與行程同型」",
    "material": "[program-form](program-form.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
    "status": "未對應"
   },
