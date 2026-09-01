@@ -49,12 +49,17 @@
 | **前作那批（`simple_tools/docs`）** | 有些可以參考，但**很多機制可以在 loop 或更外層處理** |
 | **`core/inst` 改名** | 改成 **`core/exec`**（2026-08-30）——小專案照**動詞**命名。**已實作**（2026-09-01 複核）：`core/exec/` 在、`core/inst/` 沒了，序列化另拆成 `core/wire`。`aos/inst.hpp` 那個懸念**被實作繞過**——標頭裂成 `aos/exec.hpp`（執行，`exec::Spawn`）與 `aos/wire.hpp`（格式，`wire::Inst`／`Outcome`／`State`），而當初說要留的名詞側 `inst_t`／`.aos/inst.json`／`aos_instruction_*` C ABI **三樣都不存在了**。`README.md`／`docs/build.md` 還寫 `aos/inst.hpp`，是文件殘留 → [core-layering](core-layering.md) |
 | **2000ms 那個常數** | 不是使用者設計的，是 AI 自己加的，別管 |
+| **批 vs 單指令**（2026-09-01） | **留著批。** 不退回「`insts.json` 只放一個 inst 以完美模仿 CPU」；認了「一批 exec 算是一個指令但比較麻煩」。該模仿的不是單發射 CPU，是**遊戲引擎一 tick 掃所有 entity**——**批＝tick**。代價：多條「彙編鏈」同時存在，鏈需要 id（→ `B1`） → [assembly-and-chains](assembly-and-chains.md) |
 
 ## B. 仍開著（值得打）
 
 1. **「批」沒有名字、沒有 header** — 真正的指令是批，但被命名的是 `inst_t`。ISA 版本、
    指令來源、批次彙總狀態、去重 id 全都沒地方放。**第 1／2／6 條是同一個決定。**
    → [machine-shape/instruction](machine-shape/instruction.md)
+   > **彙編線是第三個需要它的**（2026-09-01，[assembly-and-chains](assembly-and-chains.md)）：
+   > 「留著批」使多條鏈同時活著，**鏈需要 id** 才能歸屬後繼、才能被中斷指名（signal），
+   > 而 id 寫哪＝批 header。CPU 線（去重）、REPL 線（輸入歷程）、彙編線（鏈歸屬）三頭同壓，
+   > **`B1` 是全局最超載的未決點**。
 2. **loop 沒有可分支的狀態** — 「loop 是控制流」目前是志向；`result` 只有 `== 3` 被用過。
 3. ~~**一個回合內沒有資料流**~~（實測）— 整批先 resolve 完才執行，`$ref` 引不到同批前一筆的
    產物。乾淨的語意，原本**沒寫在任何地方**。
@@ -113,13 +118,19 @@
     > 地基（觀察，非裁決）。
 13. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
     `fork` 之後、`execve` 之前建，只有 exec 層碰得到。與「安全交給別人」的裁決有出入。
+14. **`deliver` 的碰撞規則沒定**（2026-09-01 新開）— **這是中斷語意的前置**。撞名無聲覆蓋
+    本來只是實作缺陷（D2、[gotchas](../common/gotchas.md)），但在
+    [assembly-and-chains](assembly-and-chains.md) 這條線上升格為**語意問題**：鏈自投的後繼
+    與外部中斷**寫同一格**，現在是 last-writer-wins、無警告——「中斷蓋掉跳轉」與「跳轉蓋掉
+    中斷」都會無聲發生，而哪個該贏沒人定過。要回答：同 id 再投是覆蓋／拒絕／排隊？外部
+    中斷有沒有優先權？被蓋掉的要不要留痕跡？**做中斷語意之前必須先定。**
 
 ## C. 欠帳（已下裁決相乘產生的，不是待辦）
 
 | 欠帳 | 來自哪個裁決 |
 |---|---|
 | **兩顆 CPU 共寫一份記憶體，沒有記憶體模型**（沒有 barrier／happens-before／去重） | GPU 模型 |
-| **沒有中斷線** — 非同步結果只能靠每回合塞一筆輪詢指令 | GPU 模型 |
+| **沒有中斷線** — 非同步結果只能靠每回合塞一筆輪詢指令。**2026-09-01 可能有答案**（觀察，[assembly-and-chains §七](assembly-and-chains.md)）：整批 claim 才執行使投遞打不進 tick 中間——**中斷線就是 tick 之間的 inbox**。缺的是規範，且 B14 是前置 | GPU 模型 |
 | **git 撞上 `.aos/` 的暫態** — `.runi` 沒了，但暫態變多了：`run.pid`／`run.lock`／`run.log`／`state.json`／`turn`／`batch/<turn>/` 全在 `.aos/` 裡，回滾含它們的 commit 一樣會讓世界對不上；`.gitignore` 政策是規範的一部分，還沒寫。**判準 2026-09-01 有了**（[game-process-model §十](game-process-model.md)）：cache 永不入 commit——「回滾含 `run.pid` 的 commit 死鎖」＝把微架構狀態當架構狀態存了檔 | 用 git 做快照 |
 
 → [machine-shape/debts](machine-shape/debts.md)
