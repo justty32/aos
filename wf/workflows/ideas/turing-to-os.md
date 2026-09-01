@@ -99,9 +99,8 @@
 - `material`——已有的材料（構想檔／裁決條目），沒有就是 `無`
 - `status`——對應狀態，初始一律 `未對應`
 
-**統計**：26 列。分層 L0 5／L1 9／L2 5／L3 3／L4 4。材料狀態：23 條接得上既有構想檔或
-verdicts 條目，**3 條是全新的空白**（`G13` 命名空間與權限、`G18` 成本作為一等資源、
-`G25` 使用者是誰）。`status` 全部 `未對應`。
+**統計**：26 列。分層 L0 5／L1 9／L2 5／L3 3／L4 4。材料狀態：原有 **3 條全新的空白**
+（`G13`／`G18`／`G25`），2026-09-01 後只剩 `G25`（使用者是誰）。`status` 全部 `未對應`。
 
 **五層各是什麼意思。**
 
@@ -131,4 +130,6 @@ verdicts 條目，**3 條是全新的空白**（`G13` 命名空間與權限、`G
 - [core-layering](core-layering.md)——core 只差一個「分支」就封閉（三要件裡的分支，在分層上的迴響）
 - [prior-work](prior-work.md)——跨 repo 前作對照
 - [program-form](program-form.md)——在 aos 上寫程式的形式（`G20` 的實質內容）
-- [workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的；那場的第 10 點直接壓在本篇第四節上
+- [game-process-model](game-process-model.md)——一次 exec ＝ 一格 `_process(delta)`；含 cache 類比
+- [theses-review](theses-review.md)——同日三方複審：分支在 LLM
+- [workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的（第 10 點壓在第四節）

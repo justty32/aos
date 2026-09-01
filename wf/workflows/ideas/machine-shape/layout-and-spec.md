@@ -73,6 +73,13 @@ datasheet 的 memory map 每格標 R/W/RO/W1C。`.aos/` 至少三類 writer：lo
 位置。** 第 10 條的「第二個軸」解決分類，ownership 解決正確性——`docs/aos-folder.md`
 目前只記「有什麼」，沒記「誰能動」。
 
+> **2026-09-01 補上第三欄**：使用者的 L1/L2 cache 類比
+> （[game-process-model §九–十一](../game-process-model.md)）給了「這條路徑算不算世界的
+> 一部分」的判準——**刪掉它，世界語意變不變**（架構狀態 vs 微架構狀態）。`run.pid`／
+> `run.lock`／`every/.last/` 是 cache，`every/<stem>.json` 不是。而且**這條邊界會隨設計
+> 落地移動**（`turn` 在回合編號成為 PC 那天升格），所以 ownership table 除了 writer 與
+> 方向，還得記「現在算哪一類、什麼落地後會改」。
+
 ## 29. 程式名冊有封閉判準，不必累積
 
 從協定推導：**外部方執行的每個協定步驟→一支程式**（`deliver`，第 11 條）；**機器留下
