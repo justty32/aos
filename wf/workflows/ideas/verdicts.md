@@ -56,11 +56,12 @@
    指令來源、批次彙總狀態、去重 id 全都沒地方放。**第 1／2／6 條是同一個決定。**
    → [machine-shape/instruction](machine-shape/instruction.md)
 2. **loop 沒有可分支的狀態** — 「loop 是控制流」目前是志向；`result` 只有 `== 3` 被用過。
-3. **一個回合內沒有資料流**（實測）— 整批先 resolve 完才執行，`$ref` 引不到同批前一筆的
-   產物。乾淨的語意，但**沒寫在任何地方**。
+3. ~~**一個回合內沒有資料流**~~（實測）— 整批先 resolve 完才執行，`$ref` 引不到同批前一筆的
+   產物。乾淨的語意，原本**沒寫在任何地方**。
    > **2026-09-01 複核**：新的 `core/loop`／`core/wire` 裡**連 `$ref` 都不存在了**
    > （`wire::Inst` 只剩 `id`／`argv`／`env`／`cwd`／`stdin`／`timeout_ms`），所以這條約束
-   > 現在是無條件的——**還是沒寫在任何地方**。
+   > 是無條件的。**已寫進規範**（2026-09-01）：
+   > [dispatch/proto/PROTOCOL.md §5](../dispatch/proto/PROTOCOL.md#5-一回合)。
 4. **四階段管線沒被命名** — fetch(claim)／decode(resolve)／execute／writeback(exit)。
    照這條線 **decode 目前卡在錯的一層**，而 **writeback 只有單筆、沒有整批**。
 5. **外層契約會反噬基石** — 一旦外層有型別與回傳值，inst 可能退化成啟動器。使用者**還沒
@@ -155,7 +156,8 @@
 1. **給「批」名字與 header** — 一次解決 B1／B2／B4 與 C 的去重問題。
 2. ~~**補 `deliver`**（B8）~~ — **已完工**（2026-09-01 驗證；`aos deliver`／`aos stop` 都
    上了）。**接手的是 B9 剩的那半**：`aos status --json`／`aos recover`／暫停。
-3. **把「一個回合內沒有資料流」寫進規範**（B3）— 零成本，而它是這個 ISA 最重要的約束。
+3. ~~**把「一個回合內沒有資料流」寫進規範**（B3）~~ — **已完工**（2026-09-01）：寫進
+   [PROTOCOL §5](../dispatch/proto/PROTOCOL.md#5-一回合)。
 
 ## 拷問之外還開著的東西
 

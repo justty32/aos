@@ -15,13 +15,6 @@
 
 ### A. 等你一句話（其餘我都做得下去，卡的只有這幾條）
 
-1. **`aos/inst.hpp` 這個 include 路徑跟不跟著改？** `core/inst` → `core/exec` 已拍板
-   （2026-08-30），但公開標頭算「專案的門面」（改成 `aos/exec.hpp`）還是「那個資料格式
-   的標頭」（留著）沒答——**不答就動不了工**。
-   → [core-layering 落差區](workflows/ideas/core-layering.md)
-2. **T5 驗收條件與 `.aos` 規格第六節互相矛盾，要改哪一邊？** 單次 `aos exec` 真被 SIGINT
-   中止會留 `.runi`、下次固定退出 3，人工搬回去只能**重播整批**，而外部作用可能已經做過。
-   → [t5-agent-loop](workflows/experiments/t5-agent-loop.md)
 3. **辯論場的四件轉交提案**：`deliver`／`aos enqueue` 要不要插進 T5 之前、「回合中途死掉
    的洞」歸不歸 roadmap 第六節、`k/`／`c/` 兩層命名進不進 `.aos` 標準、有限資源要不要
    獨立成 idea。**四件都是改規格文件，要人拍板。**
