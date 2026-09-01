@@ -21,6 +21,17 @@ ORDER = ("git-self", "git-parent", "git-top", "file-dir")
 is_directive = tabledb_fmt.is_directive
 
 
+# 路徑一律以 / 分隔：os.path 在 Windows 回傳 \，而 (1) 寫進 md 連結與 $fmt 值的 \
+# 在別的機器上解析不了，(2) 程式裡的比對（例如 "/archive/"）都假設 /，拿 \ 的路徑
+# 去比永遠不成立。所有「會被寫出去或拿去比對」的路徑都過這兩支。
+def posix(path):
+    return path.replace(os.sep, "/")
+
+
+def relposix(path, start):
+    return posix(os.path.relpath(path, start))
+
+
 def pick_var(new_abs, cn, prefer, vmap, canon):
     """寫回要用哪個代號：先試 raw 原本那個名字，不行就按算法找包含目標的最內層。
 
@@ -31,11 +42,11 @@ def pick_var(new_abs, cn, prefer, vmap, canon):
         tries.append((prefer, vmap[prefer]))
     tries += [(canon[h], h) for h in ORDER if h in canon]
     for name, how in tries:
-        rel = os.path.relpath(new_abs, cn[how])
+        rel = relposix(new_abs, cn[how])
         if not rel.startswith(".."):
             return "${%s}/%s" % (name, rel)
     return "${%s}/%s" % (canon.get("file-dir", prefer),
-                         os.path.relpath(new_abs, cn["file-dir"]))
+                         relposix(new_abs, cn["file-dir"]))
 
 
 class Rewriter:
@@ -55,8 +66,8 @@ class Rewriter:
         new_abs = self.remap(old_abs) or old_abs
         if not os.path.exists(new_abs):
             return None
-        if "/archive/" in new_abs + os.sep:
-            self.archived.append((os.path.relpath(src, self.root), t))
+        if "/archive/" in posix(new_abs) + "/":
+            self.archived.append((relposix(src, self.root), t))
             return None
         nt = pick_var(new_abs, cn, m.group(1), vn, canon) + ("#" + frag if frag else "")
         return None if nt == t else nt

@@ -123,10 +123,10 @@ def retarget(target, bo, bn, src):
         new_abs = abs_t  # 本檔自己搬了：目標沒動但相對路徑要重算
     if not os.path.exists(new_abs):
         return None
-    if "/archive/" in new_abs + os.sep:
-        ARCHIVED.append((os.path.relpath(src, ROOT), target))
+    if "/archive/" in fmtx.posix(new_abs) + "/":
+        ARCHIVED.append((fmtx.relposix(src, ROOT), target))
         return None
-    new_rel = os.path.relpath(new_abs, bn) + ("#" + frag if frag else "")
+    new_rel = fmtx.relposix(new_abs, bn) + ("#" + frag if frag else "")
     return None if new_rel == target else new_rel
 
 
@@ -204,7 +204,7 @@ def main():
             continue
         if edits:
             changed += 1
-            print(f"{os.path.relpath(f, ROOT)}: {len(edits)}")
+            print(f"{fmtx.relposix(f, ROOT)}: {len(edits)}")
             for a, b in edits[:3]:
                 print(f"    {a} -> {b}")
     print(f"files changed: {changed} ({'applied' if apply else 'dry-run'})")
