@@ -14,7 +14,7 @@
 | 檔案 | 內容 |
 |------|------|
 | [verdicts](verdicts.md) | **九輪拷問的裁決總表**：已裁決（不必再問）／仍開著（值得打）／欠帳（裁決相乘產生的）／已驗證的實作缺陷。重新拷問的入口 |
-| [turing-to-os](turing-to-os.md) | **根基論證**：圖靈完備三要件（可計算／可條件分支＝對環境反應、可連續執行自身＝體積不能無限膨脹）分別由 LLM／tooling／agent loop 擔當 → agent loop ＝ CPU → aos ＝ 以 agent loop 為計算單元的作業系統；檔案系統同時是記憶體與程式（含行程）的載體，lisp 是哲學參照。**中間推導使用者自陳省略，缺口開著** |
+| [turing-to-os](turing-to-os.md) | **根基論證**：圖靈完備三要件（可計算／可條件分支＝對環境反應、可連續執行自身＝體積不能無限膨脹）分別由 LLM／tooling／agent loop 擔當 → agent loop ＝ CPU → aos ＝ 以 agent loop 為計算單元的作業系統；檔案系統同時是記憶體與程式（含行程）的載體，lisp 是哲學參照。**中間推導的缺口已展開成 26 條**（[cpu-to-os-gaps.json](cpu-to-os-gaps.json)，五層：CPU 前提／OS 核心機制／資源管理／方便人／橫向對比失效處），逐條待對應；另含使用者對「作業系統＝方便人使用」的四層定義 |
 | [turn-based-folder](turn-based-folder.md) | 指定資料夾的回合制演化模型；`aos exec` 就是它的實作，抽象 CPU 疊在其上；`.aos` 版面、`.temp`／`.runi` 交接協定、`core/daemon` 與 agent loop |
 | [llm-cpu](llm-cpu.md) | LLM CPU 疊在 `inst` 之上（`aos llm exec` + `.aos/insts/llm.json`）、自跑推理或當全域 daemon client 的取捨、跨資料夾排程與 I/O 交換區 |
 | [inst-execution](inst-execution.md) | `inst` 的 env 繼承開關與非阻塞／背景執行策略 |

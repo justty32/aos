@@ -1,0 +1,277 @@
+{
+ "contract": "wf-table/1",
+ "source": "turing-to-os.md",
+ "extracted": "2026-09-01",
+ "columns": [
+  "id",
+  "layer",
+  "name",
+  "modern",
+  "aos_now",
+  "why_gap",
+  "material",
+  "status"
+ ],
+ "rows": [
+  {
+   "id": "G01",
+   "layer": "L0 CPU 前提",
+   "name": "中斷與時鐘",
+   "modern": "timer interrupt 讓 OS 隨時奪回控制權，這是搶佔式多工的物理基礎",
+   "aos_now": "loop 沒有 reset line、沒有外部可觸發的中斷；一回合結束與否完全看 inst 自己",
+   "why_gap": "沒有中斷，OS 只能是 cooperative 的——任何一條 inst 卡住就再也回不到 OS 手上",
+   "material": "[machine-shape/loop](machine-shape/loop.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G02",
+   "layer": "L0 CPU 前提",
+   "name": "特權級／雙模式",
+   "modern": "ring0 與 ring3 讓「OS」與「使用者程式」在硬體上就是兩種東西",
+   "aos_now": "沒有 W^X，任何 inst 都能寫 `.aos/`；OS 與程式沒有本體差別，只有慣例上的差別",
+   "why_gap": "沒有特權級，「作業系統」就只是另一支程式，管不住別人也保護不了自己",
+   "material": "[machine-shape/instruction](machine-shape/instruction.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G03",
+   "layer": "L0 CPU 前提",
+   "name": "位址空間與隔離",
+   "modern": "MMU／虛擬記憶體讓每個行程有自己的一片記憶體，看不到別人的",
+   "aos_now": "檔案系統即記憶體、路徑即位址，全域共享；已裁定「path 不是 capability」",
+   "why_gap": "沒有隔離，行程抽象就撐不起來——誰都能改誰的記憶體，OS 保證不了任何事",
+   "material": "[prior-work](prior-work.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G04",
+   "layer": "L0 CPU 前提",
+   "name": "架構狀態與可存的 context",
+   "modern": "暫存器組＋PC 就是「這個行程現在到哪了」，換手時整組存起來、之後回復",
+   "aos_now": "沒有架構狀態，只有檔案系統；一回合的進度散在資料夾裡，沒有一份可整存整取的 context",
+   "why_gap": "context switch 的前提是 context 可被指名與快照。沒有它，換手只能靠回合邊界",
+   "material": "[machine-shape/instruction](machine-shape/instruction.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G05",
+   "layer": "L0 CPU 前提",
+   "name": "可分支的機器狀態（三要件的直接欠帳）",
+   "modern": "旗標暫存器＋條件跳轉，分支是機器層原語",
+   "aos_now": "`loop` 只認得 `result == 3`，其餘回傳值全被忽略；「loop 是控制流」目前還是志向",
+   "why_gap": "三要件裡的「可條件分支」在機器層還沒兌現。理論說 tooling 擔任分支，但 loop 讀不到它的結果",
+   "material": "[verdicts](verdicts.md) B2、[machine-shape/loop](machine-shape/loop.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G06",
+   "layer": "L1 OS 核心機制",
+   "name": "行程抽象本身",
+   "modern": "process 是一等公民：有 id、狀態、親子關係、可列舉、可終止",
+   "aos_now": "世界＝資料夾，但沒有 process table、沒有 pid 檔、列不出「現在有誰在跑」",
+   "why_gap": "OS 管的東西叫行程。沒有這個名詞，後面的排程／控制／資源歸屬都沒有掛靠點",
+   "material": "[verdicts](verdicts.md) B9",
+   "status": "未對應"
+  },
+  {
+   "id": "G07",
+   "layer": "L1 OS 核心機制",
+   "name": "程式與行程的分界",
+   "modern": "可執行檔與行程是兩種東西，即使同一份碼",
+   "aos_now": "同像性讓兩者同型、同住檔案系統；`.runi` 是唯一的「正在跑」標記，沒有一般化",
+   "why_gap": "第四節說檔案系統同時是程式與行程的載體——那就必須有辦法分辨哪一份是哪一種，否則管不動",
+   "material": "[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G08",
+   "layer": "L1 OS 核心機制",
+   "name": "控制介面（ps／kill／suspend）",
+   "modern": "看得見在跑什麼、殺得掉、暫停得了",
+   "aos_now": "沒有 `aos status`、沒有 pid 檔、不能暫停。規格已寫在 T5 那份，還沒做",
+   "why_gap": "你定義的第三件事（方便人管理正在跑著的程式）整條靠它",
+   "material": "[verdicts](verdicts.md) B9、[T5 subcommand-specs](../experiments/t5-agent-loop/subcommand-specs.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G09",
+   "layer": "L1 OS 核心機制",
+   "name": "context switch 與可搶佔",
+   "modern": "跑到一半換手，之後接得回去",
+   "aos_now": "同步 POST 佔住整回合（LM Studio 120 s、pi 600 s）；一世界一 loop，換不了手",
+   "why_gap": "沒有換手，多工只能靠「等它做完」；一隻 agent 想很久，同世界所有事情陪等",
+   "material": "[scheduling](scheduling/README.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G10",
+   "layer": "L1 OS 核心機制",
+   "name": "排程器住在哪一層",
+   "modern": "kernel 裡有一個明確的排程器，介面清楚",
+   "aos_now": "跨資料夾排程屬 `exec_loop` 還是更外層，未定；四條方案（A 世界／B spool／C loop 閘／D flock）已盤點未選",
+   "why_gap": "決定 `exec_loop` 的介面是「跑這個資料夾」還是「跑這一組」——這條不定，OS 的邊界就畫不出來",
+   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G11",
+   "layer": "L1 OS 核心機制",
+   "name": "syscall 介面（程式向 OS 要服務的窄門）",
+   "modern": "使用者程式只能透過一組窄而穩定的 syscall 取得服務，這是 OS 之所以能收權的地方",
+   "aos_now": "tooling 算不算 syscall 沒有定義；「loop 只收無法成為 inst 的東西 / 其餘是 OS-as-inst」已試跑但使用者裁定先不裁",
+   "why_gap": "沒有窄門，OS 提供的東西與一般程式提供的東西無從區分，特權級（G02）也就無處施加",
+   "material": "[verdicts](verdicts.md) B12、[tools/call-loop](tools/call-loop.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G12",
+   "layer": "L1 OS 核心機制",
+   "name": "IPC 的生產端",
+   "modern": "行程間通訊雙向齊備",
+   "aos_now": "投遞協定只有消費端（`aggregate`／`claim`／`release`）且都沒進 C ABI；唯一由外部生產者執行的那一步沒有實作",
+   "why_gap": "agent 之間要協作就得投遞。缺生產端＝OS 上的行程實際上還不能互相溝通",
+   "material": "[verdicts](verdicts.md) B8",
+   "status": "未對應"
+  },
+  {
+   "id": "G13",
+   "layer": "L1 OS 核心機制",
+   "name": "命名空間、掛載與權限位",
+   "modern": "OS 自己管一套命名空間，可掛載、有權限位，決定誰看得到什麼",
+   "aos_now": "直接借用 host 檔案系統，沒有自己的命名空間、沒有掛載概念、沒有權限",
+   "why_gap": "「檔案系統即記憶體」是借來的——借來的東西 aos 管不到，OS 該有的隔離與授權沒有著力點",
+   "material": "無",
+   "status": "未對應"
+  },
+  {
+   "id": "G14",
+   "layer": "L1 OS 核心機制",
+   "name": "載入器與程式的可命名性",
+   "modern": "程式有名字、能被引用、能被載入執行；副程式是一等概念",
+   "aos_now": "真正的指令是「批」而批沒有名字、沒有 header；副程式要靠 `$ref` 引指令才勉強成立",
+   "why_gap": "寫不出可被指名的程式，就沒有「載入並執行某程式」這回事，OS 最基本的動作缺席",
+   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G15",
+   "layer": "L2 資源管理",
+   "name": "資源的列舉與計量",
+   "modern": "OS 知道有幾顆 CPU、多少記憶體",
+   "aos_now": "已盤點出七條打 LLM 的路徑，但系統執行時沒有任何一處知道別人也在打",
+   "why_gap": "管理資源的第一步是知道有哪些、各自多大。你點名的排隊要先有這個",
+   "material": "[scheduling](scheduling/README.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G16",
+   "layer": "L2 資源管理",
+   "name": "配額、併發上限與排隊",
+   "modern": "資源上限由 OS 保證，超過的排隊",
+   "aos_now": "你的例子（DeepSeek 同時只准 3 個）目前無處設定也無人保證；四方案已列，未選",
+   "why_gap": "你自己點名的那件事。誰排隊、隊伍住哪、誰消化、超上限是排隊還是退回，全開著",
+   "material": "[scheduling](scheduling/README.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G17",
+   "layer": "L2 資源管理",
+   "name": "公平、優先序與餓死",
+   "modern": "排程要防止某個行程餓死，且有優先序",
+   "aos_now": "沒有優先序、沒有跨世界計數；高產 agent 會塞滿下一批",
+   "why_gap": "有隊伍就有公平問題。使用者的一句話該不該插隊在 heartbeat 前面，是個要拍板的決定",
+   "material": "[scheduling](scheduling/README.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G18",
+   "layer": "L2 資源管理",
+   "name": "成本作為一等資源",
+   "modern": "現代 OS 沒有這條軸——CPU 時間不用付錢",
+   "aos_now": "token 計費完全在體系外，沒有帳、沒有預算、沒有上限",
+   "why_gap": "橫向對比會整條漏掉。LLM CPU 跑一次要錢，這讓排程從「效率問題」變成「預算問題」",
+   "material": "無",
+   "status": "未對應"
+  },
+  {
+   "id": "G19",
+   "layer": "L2 資源管理",
+   "name": "資源的不可靠與不確定",
+   "modern": "現代 CPU 假設可靠且確定：同輸入同輸出，不會逾時，不會回錯",
+   "aos_now": "LLM 會逾時、會回錯、同輸入不同輸出；失敗算「有做事」，因此關掉了唯一的節流閥",
+   "why_gap": "又一條橫向對比會漏的軸。整套 OS 的抽象都建立在「計算單元可靠」上，這裡不成立",
+   "material": "[scheduling](scheduling/README.md)、[machine-shape/debts](machine-shape/debts.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G20",
+   "layer": "L3 方便人（使用者定義的三件事）",
+   "name": "方便人寫程式",
+   "modern": "語言、可組合、可重用、函式庫、工具鏈",
+   "aos_now": "有 `inst`／批／`$ref`，方向指向 lisp；但 G14（批沒有名字）直接擋在前面",
+   "why_gap": "你定義的第一件事。這條的成敗幾乎完全押在 G14 與 lisp 那條哲學線上",
+   "material": "[call-format](call-format.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G21",
+   "layer": "L3 方便人（使用者定義的三件事）",
+   "name": "方便人寫的程式跑",
+   "modern": "載入、傳參、回傳值、錯誤處理、環境繼承",
+   "aos_now": "有 `aos exec`；但「外層契約會反噬基石」（有了型別與回傳值，inst 可能退化成啟動器）使用者還沒想好",
+   "why_gap": "你定義的第二件事。它跟 G05（可分支）綁在一起——回傳值要能被讀，分支才成立",
+   "material": "[verdicts](verdicts.md) B5、[inst-execution](inst-execution.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G22",
+   "layer": "L3 方便人（使用者定義的三件事）",
+   "name": "方便人管理正在跑著的程式",
+   "modern": "ps／top／kill／日誌／可觀測性",
+   "aos_now": "順手判準已定（在 shell 打 `aos xxx` 要有 pi coding agent 的效果），但控制介面本身缺（G08）",
+   "why_gap": "你定義的第三件事。已經有量測方法（多餘的動作／看不見的狀態／錯誤不指路），缺的是被量測的東西",
+   "material": "[usability-target](usability-target.md)、[verdicts](verdicts.md) B9",
+   "status": "未對應"
+  },
+  {
+   "id": "G23",
+   "layer": "L4 橫向對比失效處",
+   "name": "訊息在傳遞中語意失真",
+   "modern": "OS 的 IPC 是無損的：送出去什麼，收到什麼",
+   "aos_now": "agent 間訊息的語意失真無法用數學糾正，錯誤會層層放大成錯誤風暴",
+   "why_gap": "這是整個類比最深的一條裂縫。現代 OS 的所有協作機制都預設通訊無損，這裡不成立",
+   "material": "[agent-messaging](agent-messaging.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G24",
+   "layer": "L4 橫向對比失效處",
+   "name": "同像性在 JSON 上不是免費的",
+   "modern": "lisp 的同像性來自 macro 與 eval 讀同一種 form",
+   "aos_now": "「JSON 陣列＝S-expression」已被否定過；長得像括號不等於同像",
+   "why_gap": "第四節把同像性當成既有前提。它其實要另外掙來——這條直接壓在你的哲學參照上",
+   "material": "[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)",
+   "status": "未對應"
+  },
+  {
+   "id": "G25",
+   "layer": "L4 橫向對比失效處",
+   "name": "使用者是誰（多使用者與授權）",
+   "modern": "OS 的 user／group／permission 模型，是「方便人使用」在多人情境的展開",
+   "aos_now": "未定。目前預設一台機器一個人",
+   "why_gap": "「方便人使用」裡的「人」有幾個，決定要不要整套授權模型。現在是省略掉的，不是決定不做的",
+   "material": "無",
+   "status": "未對應"
+  },
+  {
+   "id": "G26",
+   "layer": "L4 橫向對比失效處",
+   "name": "記憶與持久狀態",
+   "modern": "現代 OS 不管行程「記得什麼」，那是應用的事",
+   "aos_now": "agent 的記憶是核心需求（停掉、隔天再來，記憶還在不在）",
+   "why_gap": "這是 aos 多出來的軸，現代 OS 沒有對應物，抄不到。要自己決定它屬於 OS 還是應用",
+   "material": "[usability-target](usability-target.md)",
+   "status": "未對應"
+  }
+ ]
+}
