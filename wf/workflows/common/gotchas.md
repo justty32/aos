@@ -32,10 +32,32 @@
   `aos::aos_inst` 而不是 `aos::inst`，而且 `find_package` 那一步不會報錯，錯誤延到
   `target_link_libraries` 才說「target not found」。
 
-## core/inst 的交接協定（handoff）
+## core/loop 的投遞與回合
 
-> 以下三條是讀 `core/inst/src/handoff.cpp` 驗證過的**現況缺陷**，設計上已知要調整，
-> 詳見 [ideas/call-format/handoff-and-world](../ideas/call-format/handoff-and-world.md)。
+- **`aos deliver <file.json>` 撞名直接覆蓋，不查重**（2026-09-01 實測）：這條路的 id 取
+  **檔名 stem**（`core/loop/src/deliver_cli.cpp:49`），而 `deliver()` 只是 `write_atomic`
+  到 `inbox/<id>.json`（`core/loop/src/deliver.cpp:16`），不檢查檔案在不在。同一個檔名連
+  投兩次、或兩個目錄下同名的 `job.json`，**前一份還沒被跑掉就沒了**——`aos deliver` 回
+  exit 0，沒有任何警告。`aos deliver -- <argv...>` 那條不受影響，它的 id 是
+  `make_delivery_id()` 產的 `d-<epoch_ms>-<pid>-<seq>`。要保證不掉件就自己給獨一無二的
+  檔名，或改用 `--` 那條。
+
+- **`core/loop` 全程沒有 `fsync`**：唯一的寫檔入口 `fs::write_atomic()`
+  （`core/loop/src/fs.cpp:42`）是 `ofstream` → `close` → `std::rename`——`rename` 只保證
+  目錄項原子替換，不保證內容落地。斷電後可能留下已改名、內容零長度的 `state.json` 或
+  `turn`。正確順序是 寫檔 → `fsync(fd)` → `rename` → `fsync(dir_fd)`。`core/tick` 同一
+  個毛病。
+
+## core/inst 的交接協定（handoff）——**已作廢，留作歷史**
+
+> **2026-09-01：`core/inst/` 已不存在**（改名成 `core/exec`，回合機另立 `core/loop`），
+> 以下三條指的程式碼都沒了。`.runi` 沒了（取件改成 rename 進 `batch/<turn>/insts/`，
+> 互斥靠 `.aos/run.lock` 的 `flock`）、彙整窗口翻面成「漏跑」而非「跑兩次」、投遞 id 已
+> 改成 `d-<epoch_ms>-<pid>-<seq>`；**只有沒 `fsync` 這條搬家後仍然成立**（見上一節）。
+> 逐條的結案理由在 [ideas/verdicts D 區](../ideas/verdicts.md)。
+>
+> 原文（讀 `core/inst/src/handoff.cpp` 驗證過的當時現況）保留在下面，設計脈絡見
+> [ideas/call-format/handoff-and-world](../ideas/call-format/handoff-and-world.md)。
 
 - **`.runi` 不是一把鎖，兩支 `aos exec` 可能把同一回合跑兩次**：`claim_instruction` 是
   `lstat(runi)` → `read_file(base)` → `rename(base, runi)`。POSIX `rename()` **靜默覆蓋**
@@ -57,9 +79,10 @@
 
 ## 使用 aos
 
-- **`aos exec` 的退出碼不反映子行程成敗**：`/bin/false` 回 1，但正常完成該回合的 `aos exec` 回 **0**；`.runi` 已存在則回 3。
-  指令不存在、逾時被砍、重導向的檔開不起來也都回 0。要判斷子行程的結果得讀 `exit`
-  欄位寫出的那個檔。詳見 [`docs/usage.md`](../../../docs/usage.md)。
+- ~~**`aos exec` 的退出碼不反映子行程成敗**~~ — **2026-09-01 作廢：沒有 `aos exec` 這支
+  子命令了**（`core/exec` 只當函式庫用，`aos --help` 印不出 `exec`）。現在的對應規則是
+  **`aos run` 會反映**：任一條 inst 非零 exit／被 signal 中止就回 1（exit 75 當
+  `waiting-llm` 回壓、不算失敗），逐條細節照樣讀 `.aos/batch/<turn>/out/<id>.json`。
 
 ## 改文件
 

@@ -47,7 +47,7 @@
 | **停機** | 之後在 loop 內再說 |
 | **第 4～6 輪的實作缺陷** | 實作時自然會遇到，要嘛放外圈、要嘛交給使用者自行 handle 風險 |
 | **前作那批（`simple_tools/docs`）** | 有些可以參考，但**很多機制可以在 loop 或更外層處理** |
-| **`core/inst` 改名** | 改成 **`core/exec`**（2026-08-30）——小專案照**動詞**命名，`inst_t`／`.aos/inst.json`／C ABI 前綴照**名詞**留著。**已裁，未實作**（77 個檔提到它；`aos/inst.hpp` 這個 include 路徑跟不跟著改還沒答）→ [core-layering](core-layering.md) |
+| **`core/inst` 改名** | 改成 **`core/exec`**（2026-08-30）——小專案照**動詞**命名。**已實作**（2026-09-01 複核）：`core/exec/` 在、`core/inst/` 沒了，序列化另拆成 `core/wire`。`aos/inst.hpp` 那個懸念**被實作繞過**——標頭裂成 `aos/exec.hpp`（執行，`exec::Spawn`）與 `aos/wire.hpp`（格式，`wire::Inst`／`Outcome`／`State`），而當初說要留的名詞側 `inst_t`／`.aos/inst.json`／`aos_instruction_*` C ABI **三樣都不存在了**。`README.md`／`docs/build.md` 還寫 `aos/inst.hpp`，是文件殘留 → [core-layering](core-layering.md) |
 | **2000ms 那個常數** | 不是使用者設計的，是 AI 自己加的，別管 |
 
 ## B. 仍開著（值得打）
@@ -58,6 +58,9 @@
 2. **loop 沒有可分支的狀態** — 「loop 是控制流」目前是志向；`result` 只有 `== 3` 被用過。
 3. **一個回合內沒有資料流**（實測）— 整批先 resolve 完才執行，`$ref` 引不到同批前一筆的
    產物。乾淨的語意，但**沒寫在任何地方**。
+   > **2026-09-01 複核**：新的 `core/loop`／`core/wire` 裡**連 `$ref` 都不存在了**
+   > （`wire::Inst` 只剩 `id`／`argv`／`env`／`cwd`／`stdin`／`timeout_ms`），所以這條約束
+   > 現在是無條件的——**還是沒寫在任何地方**。
 4. **四階段管線沒被命名** — fetch(claim)／decode(resolve)／execute／writeback(exit)。
    照這條線 **decode 目前卡在錯的一層**，而 **writeback 只有單筆、沒有整批**。
 5. **外層契約會反噬基石** — 一旦外層有型別與回傳值，inst 可能退化成啟動器。使用者**還沒
@@ -66,13 +69,23 @@
    夾」還是「跑這一組」。
 7. **`.aos` 版面需要第二個軸** — events／status 不是 `inst.json` 的「狀況」，塞不進
    `<名字>.<副檔名>.<狀況>`。
-8. **沒有 `deliver`** — handoff 只有消費端（`aggregate`／`claim`／`release`），且**都沒進
-   C ABI**；唯一由外部生產者執行的那一步沒有實作。
-   > **不是新發現**：[T5 實測](../experiments/t5-agent-loop/subcommand-specs.md)已經寫出
-   > `aos deliver`／`aos recover`／`aos status --json`／`aos agent step`／
-   > `aos agent emit-context` 五支的需求。**規格有了，還沒做。**
-9. **沒有控制介面** — 沒有 `aos status`、沒有 pid 檔、不能暫停。同上，`aos status --json`
-   與 `aos recover` 的規格已在 T5 那份裡。
+8. ~~**沒有 `deliver`**~~ — **已閉合（2026-09-01 驗證）**：`core/loop/src/deliver.cpp` ＋
+   `deliver_cli.cpp`，`aos deliver` 註冊在子命令表（`core/loop/CMakeLists.txt:30`）、
+   `aos --help` 印得出來。兩種用法：`aos deliver [folder] <inst.json>`（id 取檔名 stem）
+   與 `aos deliver [folder] -- <argv...>`（id 由 `make_delivery_id()` 產）。
+   > 原條目那句「都沒進 C ABI」也一併過期——**C ABI 整個不存在了**，`aggregate` 現在是
+   > `core/loop` 的 C++ 函式。
+   > **仍缺**：[T5 那份規格](../experiments/t5-agent-loop/subcommand-specs.md)五支裡的
+   > `aos recover` 與 `aos status --json`（`aos agent step`／`emit-context` 由
+   > `core/agent` 另解）。`deliver` 撞名直接覆蓋這個新缺陷見 D 區。
+9. **沒有控制介面** — **部分閉合（2026-09-01 驗證）**。
+   **有了**：`.aos/run.pid`（只有 `--step 0` 的無限 loop 寫，退出即刪）、`aos stop`
+   （讀 pid → SIGTERM → 最多等 5 秒 → SIGKILL → 刪 pid 檔）、`.aos/run.lock` 的
+   `flock(LOCK_EX|LOCK_NB)`（同一個世界只准一條 loop）、`--daemon` ＋ `.aos/run.log`、
+   機器可讀的 `.aos/state.json`（`turn`／`phase`／`running[]`／`agents`）。
+   **還缺**：**沒有 `aos status`**（`aos state` 印的是 agent 的 `status.json`，不是 loop 的
+   `state.json`）、沒有 `aos recover`、**不能暫停**（只能停掉再開）。這兩支的規格仍在
+   T5 那份裡沒做。
 10. **格式沒有版本，版面也沒有** — 兩件不同的事，兩個都缺。
 11. **規範有三份真相且在漂**（規格／實作文件／手寫 parser），第四份是 LLM 的理解。
 12. **第十輪整組（§22–30，未裁；使用者：邊實作邊想）** — 五條是**待裁判準**而非缺陷：
@@ -98,27 +111,50 @@
 |---|---|
 | **兩顆 CPU 共寫一份記憶體，沒有記憶體模型**（沒有 barrier／happens-before／去重） | GPU 模型 |
 | **沒有中斷線** — 非同步結果只能靠每回合塞一筆輪詢指令 | GPU 模型 |
-| **git 撞上 `.aos/` 的暫態** — 回滾含 `.runi` 的 commit 會讓世界死鎖；`.gitignore` 政策是規範的一部分，還沒寫 | 用 git 做快照 |
+| **git 撞上 `.aos/` 的暫態** — `.runi` 沒了，但暫態變多了：`run.pid`／`run.lock`／`run.log`／`state.json`／`turn`／`batch/<turn>/` 全在 `.aos/` 裡，回滾含它們的 commit 一樣會讓世界對不上；`.gitignore` 政策是規範的一部分，還沒寫 | 用 git 做快照 |
 
 → [machine-shape/debts](machine-shape/debts.md)
 
 ## D. 已驗證的實作缺陷（跟設計問題分開）
 
-可查版本在 [common/gotchas](../common/gotchas.md)：
+可查版本在 [common/gotchas](../common/gotchas.md)。**2026-09-01 逐條用程式碼複核過**：
+下面這批原本都指向 `core/inst/src/`，那個目錄已經不存在，所以分成兩段——舊條目怎麼結，
+新現場（`core/loop/src/`）實際上長什麼樣。**缺陷不一定是消失，很多只是搬家。**
 
-- `.runi` **不是鎖**（`lstat` 後 `rename`，且 read 在 rename 之前）→ 同回合可能跑兩次
-- **整個 `core/inst/src/` 沒有 `fsync`** → 崩潰後「保留的現場」可能是零長度檔
-- **投遞檔名用 pid 不唯一**
-- **彙整崩潰窗口**（發布後才刪投遞）→ 同一批可能執行兩次
-- **`--loop 0`（文件唯一示範的用法）＝ 忙碌輪詢**，`interval == 0` 永不睡
-- **失敗算「有做事」** → 關掉唯一的節流閥；`did_work` 甚至設在執行之前
-- **loop 忽略除 3 以外的所有回傳值**
-- **`.bad` 是命名標準不認識的第三種狀況**，而且沒人清
+### D1. 舊現場（`core/inst/src/`）——條目作廢
+
+| 舊條目 | 結案 |
+|---|---|
+| `.runi` 不是鎖 → 同回合跑兩次 | **作廢**：沒有 `.runi` 了。取件改成 `aggregate()` 把 `inbox/<id>.json` **先 `rename` 進** `batch/<turn>/insts/` 再讀（`aggregate.cpp:93`），互斥由 `.aos/run.lock` 的 `flock` 保證（`run.cpp:150`）——**那才是真的鎖** |
+| 投遞檔名用 pid 不唯一 | **已修**：`make_delivery_id()` 產 `d-<epoch_ms>-<pid>-<seq>`（`deliver.cpp:27`）。但**只有 `aos deliver -- <argv>` 走它**，給檔案那條用檔名 stem，見 D2 |
+| 彙整崩潰窗口 → 同一批跑兩次 | **翻面**：claim 移到執行之前，重複執行沒了，換成**漏跑**（`insts/` 已搬走而 `out/` 沒寫、`turn` 沒加就崩，下次不補）。由「至多兩次」變「至多一次」 |
+| `--loop 0` ＝忙碌輪詢 | **旗標沒了**：現在是 `--step N`（0＝持續）＋ `--interval MS`（前景 100、`--daemon` 1000）。`--interval 0` 仍會忙碌輪詢，但不再是文件示範的用法 |
+| 失敗算「有做事」、`did_work` 設在執行之前 | **作廢**：`did_work` 不存在了。改成每回合固定睡 `interval`，只有「這回合沒有 inbox 投遞」才換 `wait_for_delivery()`、一有新投遞就提早醒（`run.cpp:447`）。**失敗不再影響節奏** |
+| `.bad` 是第三種狀況、沒人清 | **作廢**：`.bad` 不存在了。解析失敗的檔留在 `batch/<turn>/insts/` 原名、跳過、`out/` 無對應結果，只在 stderr 留一行。殘留物換了位置，見 D2 末條 |
+
+### D2. 新現場（`core/loop/src/`）——實況
+
+- **還是沒有 `fsync`——這條是搬家不是消失**：唯一的寫檔入口 `fs::write_atomic()`
+  （`fs.cpp:42`）是 `ofstream` → `close` → `std::rename`，**檔案沒 `fsync`、目錄也沒**。
+  `state.json`、`turn`、`out/<id>.json`、投遞、`every/.last/` 全走這條，`run.pid` 自己抄
+  了一份一樣的（`run.cpp:40`）。斷電後可能留下已改名、內容零長度的 `state.json` 或
+  `turn`。正確順序仍是 寫 → `fsync(fd)` → `rename` → `fsync(dir_fd)`。`core/tick` 同病。
+- **`aos deliver <file.json>` 撞名直接覆蓋、不查重**（2026-09-01 實測）：id 取檔名 stem
+  （`deliver_cli.cpp:49`），`deliver()` 只是 `write_atomic` 到 `inbox/<id>.json`
+  （`deliver.cpp:16`）。連投兩份同名的，第一份**還沒被跑掉就消失**，exit 0、無警告。
+  → [gotchas](../common/gotchas.md)
+- **loop 開始看回傳值了，但仍不分支**：`collect_failures()` 把 exit 0 與 exit 75
+  （`waiting-llm` 回壓）當成功、其餘記成 `InstFailure` 印到 stderr，`aos run` 有失敗就回
+  1（`turn.cpp:83`）。**觀測有了，控制流沒有**——不重試、不停、不改節奏，所以 B2 原封
+  不動還開著。原本「只用 `== 3`」那條隨 `aos exec` 一起作廢（**現在沒有 `aos exec` 子
+  命令**，`core/exec` 只是函式庫）。
+- **`.aos/batch/` 只長不清**：每回合一個 `batch/<turn>/`，程式碼裡沒有任何清理路徑。
 
 ## 最高槓桿的三件事
 
 1. **給「批」名字與 header** — 一次解決 B1／B2／B4 與 C 的去重問題。
-2. **補 `deliver`**（B8）— 最便宜，擋掉最多真實故障。
+2. ~~**補 `deliver`**（B8）~~ — **已完工**（2026-09-01 驗證；`aos deliver`／`aos stop` 都
+   上了）。**接手的是 B9 剩的那半**：`aos status --json`／`aos recover`／暫停。
 3. **把「一個回合內沒有資料流」寫進規範**（B3）— 零成本，而它是這個 ISA 最重要的約束。
 
 ## 拷問之外還開著的東西
