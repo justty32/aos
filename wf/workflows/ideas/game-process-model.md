@@ -153,7 +153,7 @@ commit 回寫文件」就是 **write-through**。
 - [turing-to-os](turing-to-os.md)——上游：三要件、agent loop ＝ CPU、檔案系統即記憶體
 - [turn-based-folder/model](turn-based-folder/model.md)——回合制模型本體（「不吃 delta time」那條裁決）
 - [program-form](program-form.md)——REPL 讀法、快／慢世界的節奏軸、「十幾分鐘一回合很正常」的裁決
-- [assembly-and-chains](assembly-and-chains.md)——同日同源的下一格：批＝tick 的裁決、指令自供給
+- [assembly-and-chains](assembly-and-chains/README.md)——同日同源的下一格：批＝tick 的裁決、指令自供給
 - [theses-review](theses-review.md)——同日三方複審：REPL 句＝回合＝批、同像性承重點
 - [cpu-to-os-gaps](cpu-to-os-gaps.json)——`G01`／`G04`／`G09`／`G13`
 - [verdicts](verdicts.md)——第十輪 footprint／ownership table／PC 不存在；C 區 git 撞暫態

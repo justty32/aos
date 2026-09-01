@@ -12,6 +12,12 @@
 
 ## 最新進度
 
+- **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
+  **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**
+  （[assembly-and-chains](workflows/ideas/assembly-and-chains/README.md)）。
+  使用者收工時說「**接著就是來開始寫作業系統了，明天再說**」——**下一步是開始實作 OS**，
+  還沒開工。
+
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
   contacts 進 prompt＋`aos contact status`、`aos inbox ls/read`）。home daemon 只有 spec

@@ -30,7 +30,7 @@
 |---|---|
 | **格式的定位** | fork/exec 只是呼叫**機制**、不是呼叫**約定**；它不能成為通用契約，只作為「fork/exec as CPU instruction」的**基石** |
 | **`timeout_ms`** | 移出最內圈，改由 loop 層管 |
-| **exit status** | 分不開傳輸失敗與應用失敗，**之後會改**。**2026-09-01 從欠帳升為擋路**：`series.json` 要推游標之前，必須先能判定這一步成敗 → [assembly-and-chains §十三](assembly-and-chains.md) |
+| **exit status** | 分不開傳輸失敗與應用失敗，**之後會改**。**2026-09-01 從欠帳升為擋路**：`series.json` 要推游標之前，必須先能判定這一步成敗 → [assembly-and-chains/series §十三](assembly-and-chains/series.md)。**同日多一個候選分法（觀察，未裁）**：POSIX 回程只有一個 int，而 aos 已用檔案系統繞過（`out/`）——**exit code 只管傳輸層（跑沒跑起來），應用層成敗寫檔案，兩個頻道各管各的** → [assembly-and-chains/source-and-ir §二十五](assembly-and-chains/source-and-ir.md) |
 | **daemon** | 這東西天生會變 daemon，就這樣；LLM CPU 之後是另一個 daemon |
 | **抽象 CPU 的回合** | **投遞式**，不在本回合同步跑完——工作投遞到外部資料夾，好了寫回來，「類似 CPU 與 GPU 的交流」。結果落在**未來某個回合** |
 | **呼叫粒度** | 本來就這樣設計：細粒度在程式內，這裡是更高層次的 CPU 指令 |
@@ -49,19 +49,23 @@
 | **前作那批（`simple_tools/docs`）** | 有些可以參考，但**很多機制可以在 loop 或更外層處理** |
 | **`core/inst` 改名** | 改成 **`core/exec`**（2026-08-30）——小專案照**動詞**命名。**已實作**（2026-09-01 複核）：`core/exec/` 在、`core/inst/` 沒了，序列化另拆成 `core/wire`。`aos/inst.hpp` 那個懸念**被實作繞過**——標頭裂成 `aos/exec.hpp`（執行，`exec::Spawn`）與 `aos/wire.hpp`（格式，`wire::Inst`／`Outcome`／`State`），而當初說要留的名詞側 `inst_t`／`.aos/inst.json`／`aos_instruction_*` C ABI **三樣都不存在了**。`README.md`／`docs/build.md` 還寫 `aos/inst.hpp`，是文件殘留 → [core-layering](core-layering.md) |
 | **2000ms 那個常數** | 不是使用者設計的，是 AI 自己加的，別管 |
-| **批 vs 單指令**（2026-09-01） | **留著批。** 不退回「`insts.json` 只放一個 inst 以完美模仿 CPU」；認了「一批 exec 算是一個指令但比較麻煩」。該模仿的不是單發射 CPU，是**遊戲引擎一 tick 掃所有 entity**——**批＝tick**。代價：多條「彙編鏈」同時存在，鏈需要 id（→ `B1`） → [assembly-and-chains](assembly-and-chains.md) |
+| **批 vs 單指令**（2026-09-01） | **留著批。** 不退回「`insts.json` 只放一個 inst 以完美模仿 CPU」；認了「一批 exec 算是一個指令但比較麻煩」。該模仿的不是單發射 CPU，是**遊戲引擎一 tick 掃所有 entity**——**批＝tick**。代價：多條「彙編鏈」同時存在，鏈需要 id（→ `B1`） → [assembly-and-chains/interrupts](assembly-and-chains/interrupts.md) |
+| **複雜式誰拆平**（2026-09-01） | **`f(g(x))` 這類複雜式另存成新的 json，由「我們的程式」確定性拆平之後才進 `series`；LLM 在這一段不出場。** 型別與回傳值同樣由程式拆平（細節使用者說等一下想）。（觀察）由此定出**寫（LLM／人，不確定）→ 編譯（確定）→ 執行（確定）**三段式生產線 → [assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md) |
+| **程式的記法與 lisp 的位置**（2026-09-01） | 同日兩拍，**以後拍的為準**。先裁：源碼與 IR 是**兩個檔案**、**lisp 從源碼／IR 層進場、不往 `inst` 以下滲**、**協定維持 `.json`**。收工前改判：「**lisp 就是太理想了，其實用啥都可以**」——**源碼與 IR 也用 json，全塔統一 json（源碼 → IR → `series` → `inst` 批）**；**lisp 只保留為哲學**（整套系統是可改寫的樹），語法層不進場，哪天想手寫再加 sexp 糖衣。**沒被改掉的**：兩個檔案、界線畫在 `inst` → [assembly-and-chains/source-and-ir](assembly-and-chains/source-and-ir.md) |
+| **暫存器與堆疊框兩種壽命**（2026-09-01） | **兩種都要，真 CPU 也兩個都有**：只在**單一 inst 執行中**存在、其他 inst 與其他回合都看不到的（＝暫存器壽命），與跟著**「串的一筆」**生滅、開串建返回丟的（＝堆疊框）。**格式尚未拍板。** 同列的另一句：串中可用**代號**指代、搭配串的狀態，大減重複 → [assembly-and-chains/c-language](assembly-and-chains/c-language.md) |
+| **硬碟**（2026-09-01 重申舊裁決） | **硬碟就是較慢較大的記憶體，無本質區別**；stack／heap 的差別只在**壽命**不在住處。**eeprom／flash 那個問題不是問題，跳過** → [assembly-and-chains/c-language §十五](assembly-and-chains/c-language.md) |
 
 ## B. 仍開著（值得打）
 
 1. **「批」沒有名字、沒有 header** — 真正的指令是批，但被命名的是 `inst_t`。ISA 版本、
    指令來源、批次彙總狀態、去重 id 全都沒地方放。**第 1／2／6 條是同一個決定。**
    → [machine-shape/instruction](machine-shape/instruction.md)
-   > **彙編線是第三個需要它的**（2026-09-01，[assembly-and-chains](assembly-and-chains.md)）：
+   > **彙編線是第三個需要它的**（2026-09-01，[assembly-and-chains/series §十](assembly-and-chains/series.md)）：
    > 「留著批」使多條鏈同時活著，**鏈需要 id** 才能歸屬後繼、才能被中斷指名（signal），
    > 而 id 寫哪＝批 header。CPU 線（去重）、REPL 線（輸入歷程）、彙編線（鏈歸屬）三頭同壓，
    > **`B1` 是全局最超載的未決點**。
 2. **loop 沒有可分支的狀態** — 「loop 是控制流」目前是志向；`result` 只有 `== 3` 被用過。
-   > **2026-09-01 有答案方向**（使用者口述，[assembly-and-chains §十一](assembly-and-chains.md)）：
+   > **2026-09-01 有答案方向**（使用者口述，[assembly-and-chains/series §十一](assembly-and-chains/series.md)）：
    > loop 另讀一份 `series.json`（哪些串在跑、跑到哪），**讀它決定抓哪一筆 inst**——
    > 那就是 loop 的第一個真控制流。條目仍開著（實作未動）。
 3. ~~**一個回合內沒有資料流**~~（實測）— 整批先 resolve 完才執行，`$ref` 引不到同批前一筆的
@@ -74,6 +78,11 @@
    照這條線 **decode 目前卡在錯的一層**，而 **writeback 只有單筆、沒有整批**。
 5. **外層契約會反噬基石** — 一旦外層有型別與回傳值，inst 可能退化成啟動器。使用者**還沒
    想好**。
+   > **2026-09-01 被 C 語言線正面壓上**（[assembly-and-chains/c-language §十七](assembly-and-chains/c-language.md)）：
+   > C 的**型別與回傳值就是函數簽名**，而使用者已裁定「源碼＋IR 兩個檔案」——**`.h`／`.c` 的
+   > 分法因此給這條留了車位**（`.h` ＝介面／簽名／型別，`.c` ＝身體，
+   > [source-and-ir §二十三](assembly-and-chains/source-and-ir.md)）。條目仍**未裁**：
+   > 使用者說型別的拆平細節「等一下想」。
 6. **跨資料夾排程屬於 `exec_loop` 還是更外層** — 決定 `exec_loop` 的介面是「跑這個資料
    夾」還是「跑這一組」。
 7. **`.aos` 版面需要第二個軸** — events／status 不是 `inst.json` 的「狀況」，塞不進
@@ -123,18 +132,18 @@
     `fork` 之後、`execve` 之前建，只有 exec 層碰得到。與「安全交給別人」的裁決有出入。
 14. **`deliver` 的碰撞規則沒定**（2026-09-01 新開）— **這是中斷語意的前置**。撞名無聲覆蓋
     本來只是實作缺陷（D2、[gotchas](../common/gotchas.md)），但在
-    [assembly-and-chains](assembly-and-chains.md) 這條線上升格為**語意問題**：鏈自投的後繼
+    [interrupts §八](assembly-and-chains/interrupts.md) 這條線上升格為**語意問題**：鏈自投的後繼
     與外部中斷**寫同一格**，現在是 last-writer-wins、無警告——「中斷蓋掉跳轉」與「跳轉蓋掉
     中斷」都會無聲發生，而哪個該贏沒人定過。要回答：同 id 再投是覆蓋／拒絕／排隊？外部
     中斷有沒有優先權？被蓋掉的要不要留痕跡？**做中斷語意之前必須先定。**
-    > **碰撞面擴大**：`series.json` 是新的多寫者熱點 → [§十三](assembly-and-chains.md)。
+    > **碰撞面擴大**：`series.json` 是新的多寫者熱點 → [§十三](assembly-and-chains/series.md)。
 
 ## C. 欠帳（已下裁決相乘產生的，不是待辦）
 
 | 欠帳 | 來自哪個裁決 |
 |---|---|
 | **兩顆 CPU 共寫一份記憶體，沒有記憶體模型**（沒有 barrier／happens-before／去重） | GPU 模型 |
-| **沒有中斷線** — 非同步結果只能靠每回合塞一筆輪詢指令。**2026-09-01 可能有答案**（觀察，[assembly-and-chains §七](assembly-and-chains.md)）：整批 claim 才執行使投遞打不進 tick 中間——**中斷線就是 tick 之間的 inbox**。缺的是規範，且 B14 是前置 | GPU 模型 |
+| **沒有中斷線** — 非同步結果只能靠每回合塞一筆輪詢指令。**2026-09-01 可能有答案**（觀察，[interrupts §七](assembly-and-chains/interrupts.md)）：整批 claim 才執行使投遞打不進 tick 中間——**中斷線就是 tick 之間的 inbox**。缺的是規範，且 B14 是前置 | GPU 模型 |
 | **git 撞上 `.aos/` 的暫態** — `.runi` 沒了，但暫態變多了：`run.pid`／`run.lock`／`run.log`／`state.json`／`turn`／`batch/<turn>/` 全在 `.aos/` 裡，回滾含它們的 commit 一樣會讓世界對不上；`.gitignore` 政策是規範的一部分，還沒寫。**判準 2026-09-01 有了**（[game-process-model §十](game-process-model.md)）：cache 永不入 commit——「回滾含 `run.pid` 的 commit 死鎖」＝把微架構狀態當架構狀態存了檔 | 用 git 做快照 |
 
 → [machine-shape/debts](machine-shape/debts.md)
