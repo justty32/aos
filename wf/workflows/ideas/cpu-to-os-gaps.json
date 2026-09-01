@@ -89,8 +89,8 @@
    "name": "控制介面（ps／kill／suspend）",
    "modern": "看得見在跑什麼、殺得掉、暫停得了",
    "aos_now": "沒有 `aos status`、沒有 pid 檔、不能暫停。規格已寫在 T5 那份，還沒做",
-   "why_gap": "你定義的第三件事（方便人管理正在跑著的程式）整條靠它",
-   "material": "[verdicts](verdicts.md) B9、[T5 subcommand-specs](../experiments/t5-agent-loop/subcommand-specs.md)",
+   "why_gap": "你定義的第三件事（方便人管理正在跑著的程式）整條靠它。**2026-09-01 裁決後優先序上升**：使用者會同時跟多個 REPL 交流、每個可能跑十幾分鐘，N 個慢 REPL 沒有 ps 就管不動——從便利變成必要",
+   "material": "[verdicts](verdicts.md) B9、[T5 subcommand-specs](../experiments/t5-agent-loop/subcommand-specs.md)、[program-form](program-form.md)",
    "status": "未對應"
   },
   {
@@ -229,8 +229,8 @@
    "name": "方便人管理正在跑著的程式",
    "modern": "ps／top／kill／日誌／可觀測性",
    "aos_now": "順手判準已定（在 shell 打 `aos xxx` 要有 pi coding agent 的效果），但控制介面本身缺（G08）",
-   "why_gap": "你定義的第三件事。已經有量測方法（多餘的動作／看不見的狀態／錯誤不指路），缺的是被量測的東西",
-   "material": "[usability-target](usability-target.md)、[verdicts](verdicts.md) B9",
+   "why_gap": "你定義的第三件事。已經有量測方法（多餘的動作／看不見的狀態／錯誤不指路），缺的是被量測的東西。**使用場景已確定是「同時多個慢 REPL」**（2026-09-01），所以這條不是錦上添花",
+   "material": "[usability-target](usability-target.md)、[program-form](program-form.md)、[verdicts](verdicts.md) B9",
    "status": "未對應"
   },
   {
