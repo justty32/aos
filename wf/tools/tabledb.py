@@ -74,8 +74,12 @@ class Table:
     def save(self, path=None):
         path = path or self.path
         if path.endswith(".csv"):
+            # newline="" 是 csv 模組的規矩（不讓 open 再翻譯一次）；lineterminator 得明寫，
+            # 因為 excel dialect 預設吐 CRLF——.gitattributes 把工作區釘成 LF，不指定的話
+            # 每寫一次都讓檔案無謂地變 dirty。
             with open(path, "w", newline="", encoding="utf-8") as f:
-                w = csv.DictWriter(f, fieldnames=self.columns, extrasaction="ignore")
+                w = csv.DictWriter(f, fieldnames=self.columns, extrasaction="ignore",
+                                   lineterminator="\n")
                 w.writeheader()
                 for r in self.rows:
                     w.writerow({c: r.get(c, "") for c in self.columns})
@@ -84,7 +88,8 @@ class Table:
         data["columns"] = self.columns
         data["rows"] = self.rows
         tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
+        # newline="\n"：Windows 的文字模式預設把 \n 翻成 CRLF，同樣頂到 eol=lf。
+        with open(tmp, "w", newline="\n", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=1)
             f.write("\n")
         os.replace(tmp, path)
