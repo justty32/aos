@@ -49,9 +49,42 @@ workshop 那場（[lisp-in-aos](../workshop/records/lisp-in-aos.md) 第 10 點�
    （[pre-agent-loop-core R1](../workshop/records/pre-agent-loop-core/r1.md)），要走 lisp
    就得另有機制。資料夾模型下，quote 是什麼形狀？
 
+## 寫的方式也是 lisp 的：REPL
+
+**使用者原話（2026-09-01）**：「最近我一直在想，用 coding agent 做事，其實很像是在使用
+repl 方式寫程式。」
+
+這條接得上前面，因為 **REPL 也是 lisp 那個傳統的東西**：前面講的是程式的**形式**是
+lisp（檔案／資料夾），這條講的是**寫的方式**也是——不是編譯、不是批次交件，是逐次求值、
+看結果、再下一句。
+
+**agent loop 本身就是一個 read-eval-print-loop**：讀（`say/`、inbox）→ 求值（模型思考
+＋工具）→ 印（`log.md`、`aos listen`）→ 回圈。所以「agent loop ＝ CPU」與「agent loop
+＝ REPL」是同一個東西的兩種讀法——**CPU 是「它是什麼計算單元」，REPL 是「人怎麼跟它
+互動」**。[turing-to-os](turing-to-os.md) 記的是前者；使用者定義的「作業系統＝方便人
+使用」要的其實是後者，而後者到現在才被講出來。
+
+**資料夾就是 image。** lisp／Smalltalk 的 image 是一份活的、可持續變異的狀態，開發方式
+是往裡面逐步加東西，不是重新編譯出一個新的。aos 把檔案系統當記憶體與程式載體，那個
+資料夾就是 image——[usability-target](usability-target.md) 裡「停掉、隔天再來，記憶還在
+不在」問的其實是 image 活不活得下來。
+
+### 邊緣狀況（我挖的，不是裁決，等使用者判）
+
+1. **節奏差一個數量級。** REPL 的體感是打完就有反應；aos 一回合是秒到分鐘（實測一次
+   思考 2～17 秒，pi 那條 timeout 開到 600 s）。**「像 REPL」在體感上可能不成立**——而
+   這正好是 usability-target 要量的三種東西（多餘的動作／看不見的狀態／錯誤不指路）。
+2. **REPL 的 P 印的是值，agent 印的是敘述。** 值可以直接餵回下一句，自然語言不行。要真
+   的像 REPL，print 出來的東西得能當下一次 eval 的輸入——接回 `G23`（語意失真）。
+3. **REPL 的 eval 是確定的，LLM 的不是。** 同一句在 REPL 重打會得到同一個值，在 agent
+   上不會。**REPL 最常用的除錯法「重打一次看看」在這裡失效**——接回 `G19`。
+4. **歷史住哪。** REPL 有輸入歷程，可以往回捲、可以重放。資料夾模型裡沒有對應物，而
+   「git 買不到 replay」已經裁決過（[prior-work](prior-work.md)）。
+
 ## 相關
 
 - [turing-to-os](turing-to-os.md)——上游：三要件、agent loop ＝ CPU、檔案系統即記憶體
 - [cpu-to-os-gaps.json](cpu-to-os-gaps.json)——`G20`（方便人寫程式）、`G24`（同像性）、`G07`（程式與行程的分界）、`G14`（程式的可命名性）
+- [usability-target](usability-target.md)——順手判準：在 shell 打 `aos xxx` 要有 pi coding agent 的效果（REPL 那節量的就是它）
 - [call-format](call-format.md)——CLI 呼叫＝Lisp 呼叫的序列化（argv 是 list、旗標是 keyword）
 - [workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的
