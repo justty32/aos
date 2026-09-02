@@ -1,6 +1,6 @@
 # 任務：把 tool 登記表與 agent 通訊錄做進 aos（`.aos/tools/*.json`、`aos tool`、`aos contact`）
 
-> 交接書是唯一契約。規劃與**使用者 12 條裁決**在 [ideas/tools/README](../../ideas/tools/README.md)（裁決段**壓過**規劃檔裡的建議），細節在同資料夾 `registry.md`／`description.md`／`call-loop.md`／`contacts.md`；協定 [PROTOCOL](PROTOCOL.md)；現況 `core/agent/src/tools.cpp`、`step.cpp`、`core/agent/README.md`。
+> 交接書是唯一契約。規劃與**使用者 12 條裁決**在 [ideas/tools/README](../../../ideas/tools/README.md)（裁決段**壓過**規劃檔裡的建議），細節在同資料夾 `registry.md`／`description.md`／`call-loop.md`／`contacts.md`；協定 [PROTOCOL](../PROTOCOL.md)；現況 `core/agent/src/tools.cpp`、`step.cpp`、`core/agent/README.md`。
 
 ## 背景與唯一目標
 

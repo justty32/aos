@@ -12,7 +12,7 @@
 
 **白話**：一件工作有自己的待辦堆、做到哪裡和故障現場，可以不跟父工作綁在同一回合內。
 **嚴格**：有獨立 queue、claim/鎖、cursor、私有狀態與恢復邊界的可排程實體；「長」本身不構成 lane，需要獨立等待、反覆收件或恢復才構成。
-**在 aos 裡具體是什麼**：目前不存在，是提案；`.aos/lanes/<id>/`、子 world 自帶 `.aos/` 等都是研討候選，未進 [aos-folder](../../../../docs/aos-folder.md)。
+**在 aos 裡具體是什麼**：目前不存在，是提案；`.aos/lanes/<id>/`、子 world 自帶 `.aos/` 等都是研討候選，未進 `aos-folder`。
 **為什麼會冒出這個詞**：[核心行程場](../records/core-process-and-subprocess.md) 的開發者用 world/lane/process 把原先混在一起的概念拆開；[回頭審視](../records/step-back-review.md) 認為目前沒有第二個實例，所以暫緩。
 
 ### job（一次性工作；別名 task／work item）

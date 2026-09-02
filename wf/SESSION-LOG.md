@@ -111,8 +111,8 @@
   的 D4](workflows/roadmap.md)）。所以這兩個小專案現在是**擱置**，不是待修——別急著重寫，
   也別再往裡面投資。連帶：llmkit 移植的 S2／S5 一起停用。
 - **主線是回合制模型的 T0–T6**：`.aos` 規格在
-  [`docs/aos-folder.md`](../docs/aos-folder.md)（**唯一真源**），指示詞設計在
-  [`docs/inst-directives.md`](../docs/inst-directives.md)，順序在
+  `docs/aos-folder.md`（**唯一真源**），指示詞設計在
+  `docs/inst-directives.md`，順序在
   [`roadmap`](workflows/roadmap.md)，模型的理由在
   [`wf/workflows/ideas/`](workflows/ideas/README.md)。`core/inst` 已解凍。
   **進度**：**T0–T4 全部落地，`core/inst` 這一輪要做的都做完了**——三個指示詞
@@ -128,7 +128,7 @@
   instruction 的空投遞永遠不會被消化。文件也回頭同步了（`9701f21`）——規格開頭還
   寫著「尚未實作」。
   **審查找到但還沒做的兩個缺口**，已記進
-  [`.aos` 標準第十二節](../docs/aos-folder.md)的「仍然開著的」：
+  `.aos` 標準第十二節的「仍然開著的」：
   1. **投遞那一步沒有實作**。三步協定裡彙整／取件／釋放都有函式，只有投遞
      （先寫 `.temp` 再 `rename`）沒有。整套協定的安全性靠的就是這一步，現在它是
      口頭約定。**這是 T5 最直接的前置條件**——agent loop 的第一個動作就是產生指令。

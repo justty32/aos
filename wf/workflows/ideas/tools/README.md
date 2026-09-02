@@ -1,6 +1,6 @@
 # tools — tool 登記表、表述、呼叫迴路、agent 通訊錄（規劃，2026-08-30）
 
-← [ideas](../README.md)｜交接書 [proto-T-tools](../../dispatch/proto/proto-T-tools.md)｜采風合成 [synthesis](../ai-core-field/synthesis.md)
+← [ideas](../README.md)｜交接書 [proto-T-tools](../../dispatch/proto/done/proto-T-tools.md)｜采風合成 [synthesis](../ai-core-field/synthesis.md)
 
 純規劃、未寫程式。使用者原話：「任何支持 POSIX 呼叫的程式都可以是 tool，要有一個檔案作為 tool 的登記列表，還有表述」；「子 agent 不登記、就是一份通訊錄」。
 
@@ -49,7 +49,7 @@
 | 12 | 通訊錄住世界層 `.aos/contacts.json`，`aos contact add` 手動維護，`agent init` 不碰 |
 | 術語 | `nondeterministic` → **可預期性 `predictability`**：結果是否符合人類預期 |
 
-實作交給 [dispatch/proto/proto-U-tools-impl](../../dispatch/proto/proto-U-tools-impl.md)。
+實作交給 [dispatch/proto/proto-U-tools-impl](../../dispatch/proto/done/proto-U-tools-impl.md)。
 
 ## 實作註記（2026-08-30，隊 U）
 

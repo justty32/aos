@@ -51,7 +51,6 @@
 
 > 2026-08-24：原本卡著的「移植 S2 的決策 A（`core/tooljson` 的 exec 引擎自己寫還是動
 > `core/inst`）」已經整條解掉——使用者批准解凍 `core/inst`，並拍板 `stderr` 併流用
-> `{"$opt": "merge"}` 由 `inst` 自己支援（見
-> [`docs/inst-directives.md`](../docs/inst-directives.md)）；`core/tooljson` 本身則
+> `{"$opt": "merge"}` 由 `inst` 自己支援；`core/tooljson` 本身則
 > 先不動、排在 agent loop 之後。設計上還沒答完的細節不放這裡——它們不卡使用者，記在
 > [`roadmap`](workflows/roadmap.md) 與各 idea 文件的開放問題。

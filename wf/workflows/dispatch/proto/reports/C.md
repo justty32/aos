@@ -1,6 +1,6 @@
 # 隊 C 回報：刪舊三個小專案、`.aos/every/` 進 loop、一個資料夾一隻 agent
 
-← [交接書 proto-C-consolidate](../proto-C-consolidate.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+← [交接書 proto-C-consolidate](../done/proto-C-consolidate.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
 
 **終局 STATUS：`DONE`**（6 條驗收全部有證據，`ctest` 6/6 全綠，含真的打 LM Studio 的那一條）
 

@@ -7,7 +7,7 @@
 
 **白話**：每批作業前後都必須跑的固定步驟，不靠上一批作業自己把它再塞回去。
 **嚴格**：版本化的 per-world kernel descriptor，由 executor 在 claim 一批後合成 prologue＋業務 batch＋epilogue；本地完整檔或分層合成仍未定案。
-**在 aos 裡具體是什麼**：目前還不存在 [aos-folder](../../../../../docs/aos-folder.md) 或程式中；使用者已表態「kernel.json 收」，但檔案內容、失敗邊界與升級機制尚未拍板。
+**在 aos 裡具體是什麼**：目前還不存在 `aos-folder` 或程式中；使用者已表態「kernel.json 收」，但檔案內容、失敗邊界與升級機制尚未拍板。
 **為什麼會冒出這個詞**：[核心行程場](../../records/core-process-and-subprocess.md) 四位都指出「尾指令自我複製」會因 crash 斷鏈或重跑增殖，所以提出類 init(1) 與 reset vector 的版本化開機流程。
 
 ### init(1) 與 reset vector

@@ -26,5 +26,5 @@
 
 ## 交接
 
-- 試用隊等 [proto-U-tools-impl](../dispatch/proto/proto-U-tools-impl.md) 落地後開；發現進 `wf/workflows/dispatch/trial/findings.csv`（`wf-table/1`）。
+- 試用隊等 [proto-U-tools-impl](../dispatch/proto/done/proto-U-tools-impl.md) 落地後開；發現進 `wf/workflows/dispatch/trial/findings.csv`（`wf-table/1`）。
 - 第二級要先有通訊錄（裁決 12）與子 agent 派生的最小路徑；沒有就先記「做不到」當第一條發現。

@@ -1,6 +1,6 @@
 # 任務：修 bug——試用 L1／L2 找到的 25 條 `bug`，repro 當回歸
 
-> 交接書是唯一契約。發現在 [trial/findings-L1.csv](../trial/findings-L1.csv)、[findings-L2.csv](../trial/findings-L2.csv)（`kind=bug`），每條有 `trial/repro/<id>.sh`（現在全部 FAIL）。摘要在 [trial/README](../trial/README.md)。
+> 交接書是唯一契約。發現在 [trial/findings-L1.csv](../../trial/findings-L1.csv)、[findings-L2.csv](../../trial/findings-L2.csv)（`kind=bug`），每條有 `trial/repro/<id>.sh`（現在全部 FAIL）。摘要在 [trial/README](../../trial/README.md)。
 
 ## 唯一目標
 

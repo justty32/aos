@@ -1,6 +1,6 @@
 # 任務：做出 aos 的最小「機器」——core/exec → core/wire → core/loop，讓 `aos run` 跑得起來
 
-> 交接書是唯一契約。協定見 [PROTOCOL](PROTOCOL.md)（**以它為準**）。派線規則 [dispatch](../README.md)、隊形 [aos-teams](../aos-teams.md)。
+> 交接書是唯一契約。協定見 [PROTOCOL](../PROTOCOL.md)（**以它為準**）。派線規則 [dispatch](../../README.md)、隊形 [aos-teams](../../aos-teams.md)。
 
 ## 背景與唯一目標
 
@@ -17,7 +17,7 @@
 
 ## 工作
 
-1. 讀 [PROTOCOL](PROTOCOL.md)、`core/inst/CMakeLists.txt`（小專案範本）、`wf/workflows/add-subproject.md`、`wf/workflows/common/conventions.md`、`wf/salvage/05-程式碼哪些值得抄.md` §三（setpgid 雙保險、fork 後只做 async-signal-safe）。
+1. 讀 [PROTOCOL](../PROTOCOL.md)、`core/inst/CMakeLists.txt`（小專案範本）、`wf/workflows/add-subproject.md`、`wf/workflows/common/conventions.md`、`wf/salvage/05-程式碼哪些值得抄.md` §三（setpgid 雙保險、fork 後只做 async-signal-safe）。
 2. Fable 出標頭草稿 → 你核一遍 → 派 codex。
 3. `core/exec`：`spawn(argv, env, cwd, stdin, timeout_ms) → {exit|signal, stdout, stderr, started/ended}`；回合內並行＝多個 child 同時 fork、統一 wait。抄舊 `exec.cpp`／`spawn_prep.cpp`／`wait.cpp` 可以，但**不帶** `$ref`／`$env`／resolve 那整層。
 4. `core/wire`：nlohmann::json ↔ 協定 §2–§4 的三個 struct。就這樣，不多。
@@ -62,7 +62,7 @@
 
 ## 隊長裁決
 
-**完成於 2026-08-30，STATUS `DONE`，commit `fecbdac`。逐條證據與完整裁決列表見 [reports/A.md](reports/A.md)。**
+**完成於 2026-08-30，STATUS `DONE`，commit `fecbdac`。逐條證據與完整裁決列表見 [reports/A.md](../reports/A.md)。**
 
 1. **`exec` 抓 stdout/stderr 用 `mkstemp` 暫存檔，不用 pipe**——一次 fork 一整批時 pipe 緩衝會互相卡死，避開它就不必寫 poll 迴圈。
 2. **`exec` 做成兩階段 `start_all()` / `wait_all()`**，`Running` 是欄位攤開的普通 struct——上層要在「已 fork、還沒等完」時拿到 pid 寫 `state.json`（驗收 5）。

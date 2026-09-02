@@ -1,4 +1,4 @@
-因未提供實際 `-o` 路徑，報告已寫入 [report.txt](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/A/report.txt)。
+因未提供實際 `-o` 路徑，報告已寫入 [report.txt](../A/report.txt)。
 
 ### 第一段：發現表
 

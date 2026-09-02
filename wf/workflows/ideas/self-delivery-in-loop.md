@@ -2,7 +2,7 @@
 
 > **已採用方案 A，2026-08-30**（使用者裁決）：loop 提供 `.aos/every/`，agent 不再自我投遞。
 
-← [ideas](README.md)｜[top-down-cli](top-down-cli.md)｜[machine-shape/loop](machine-shape/loop.md)｜[PROTOCOL](../dispatch/proto/PROTOCOL.md)｜[隊 B 交接書](../dispatch/proto/proto-B-agent.md)
+← [ideas](README.md)｜[top-down-cli](top-down-cli.md)｜[machine-shape/loop](machine-shape/loop.md)｜[PROTOCOL](../dispatch/proto/PROTOCOL.md)｜[隊 B 交接書](../dispatch/proto/done/proto-B-agent.md)
 
 **記錄日期**：2026-08-30，隊 B 原型（`aos agent`）做完後的規劃。**這份只是規劃，還沒實作，
 等使用者拍板。** 問題只有一個：agent 每回合把「下一回合的自己」投進 inbox 這件事，

@@ -1,6 +1,6 @@
 # 隊 W 回報——補兩個已裁決的缺口（step 取槽、使用者住 `~`）
 
-← [交接書 proto-W-gaps](../proto-W-gaps.md)｜[隊 V 回報](V.md)｜[ideas/tools/contacts](../../../ideas/tools/contacts.md)｜[PROTOCOL](../PROTOCOL.md)
+← [交接書 proto-W-gaps](../done/proto-W-gaps.md)｜[隊 V 回報](V.md)｜[ideas/tools/contacts](../../../ideas/tools/contacts.md)｜[PROTOCOL](../PROTOCOL.md)
 
 **分支**：`main`（直接在主 working tree 做，未 push）
 **隊形**：Opus 隊長＋codex gpt-5.6-sol ×3（**循序**，因為三條線都碰 `core/agent/`；

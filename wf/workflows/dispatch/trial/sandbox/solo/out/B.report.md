@@ -1,4 +1,4 @@
-報告已寫入 [report.txt](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/wf/workflows/dispatch/trial/sandbox/solo/B/report.txt)。
+報告已寫入 [report.txt](../B/report.txt)。
 
 ### 第一段：發現表
 

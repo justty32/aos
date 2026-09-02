@@ -1,10 +1,10 @@
 # 任務：刪舊三個小專案、`.aos/every/` 進 loop、一個資料夾一隻 agent（`aos say` 直接用）
 
-> 交接書是唯一契約。協定 [PROTOCOL](PROTOCOL.md)（本任務會**修改**它，改法寫在下面）。前兩隊的報告在 [reports](reports/)。
+> 交接書是唯一契約。協定 [PROTOCOL](../PROTOCOL.md)（本任務會**修改**它，改法寫在下面）。前兩隊的報告在 [reports](../reports/)。
 
 ## 背景與唯一目標
 
-使用者 2026-08-30 三個裁決：(1) 採用 [self-delivery-in-loop](../../ideas/self-delivery-in-loop.md) 方案 A；(3) 舊 `core/inst`／`core/llms`／`core/tooljson` **現在刪**；(4) **一個 agent 佔一個資料夾**，待在 bob 的資料夾裡直接 `aos say ...` 就好。
+使用者 2026-08-30 三個裁決：(1) 採用 [self-delivery-in-loop](../../../ideas/self-delivery-in-loop.md) 方案 A；(3) 舊 `core/inst`／`core/llms`／`core/tooljson` **現在刪**；(4) **一個 agent 佔一個資料夾**，待在 bob 的資料夾裡直接 `aos say ...` 就好。
 **唯一目標**：main 上 ctest 全綠，且在一個資料夾裡 `aos agent init` → 另一視窗 `aos run --step 0` → `aos say "..."`／`aos listen` 能對話，agent 不再自我投遞而是靠 `.aos/every/`。
 
 ## 團隊（你是 Opus 隊長）
@@ -66,4 +66,4 @@
 7. **`fake_loop.py` 留著**（讓 agent 測試不依賴 PATH 上的 `aos`），跟著加了 every 支援。
 8. **`code-map/inst.md`／`tooljson.md`／`llms.md` 三冊不刪**，只在路由表註明「已刪 2026-08-30，本冊為歷史存檔」——別的歷史文件連著它們。
 9. **`docs/` 只改 `README.md` 與 `subprojects.md`**，參考範本從 `core/inst/` 換成 `core/llm/`。
-10. **禁區裡的 22 條死連結刻意不修**（`wf/` 5 條、`docs/` 17 條，全指向已刪的 `core/inst/docs/`），詳見 [reports/C.md](reports/C.md) 的「已知不管」。
+10. **禁區裡的 22 條死連結刻意不修**（`wf/` 5 條、`docs/` 17 條，全指向已刪的 `core/inst/docs/`），詳見 [reports/C.md](../reports/C.md) 的「已知不管」。

@@ -1,7 +1,7 @@
 # 版面與交接協定（工作假設，**尚未定案**）
 ← [turn-based-folder](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
-> **規格已經抽到 [`docs/aos-folder.md`](../../../../docs/aos-folder.md)。** 版面、命名、
+> **規格已經抽走，現行正本是 [PROTOCOL](../../dispatch/proto/PROTOCOL.md)。** 版面、命名、
 > 交接協定、路徑基準、版本、git 邊界一律以那份為準。下面這幾節留著是**脈絡**——記錄
 > 這些形狀是怎麼想出來的、為什麼不是別的樣子。兩邊不一致時以規格為準。
 

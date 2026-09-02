@@ -1,6 +1,6 @@
 # 隊 V 回報——排程保底 D（flock 槽、兩層上限、數字優先度）
 
-← [交接書 proto-V-sched-D](../proto-V-sched-D.md)｜[ideas/scheduling](../../../ideas/scheduling/README.md)｜[PROTOCOL](../PROTOCOL.md)
+← [交接書 proto-V-sched-D](../done/proto-V-sched-D.md)｜[ideas/scheduling](../../../ideas/scheduling/README.md)｜[PROTOCOL](../PROTOCOL.md)
 
 **分支**：`worktree-agent-aa49bca5136311628`（已 rebase 到 main `0aea5fa`，含隊 U 的 `core/tool`）
 **隊形**：Opus 隊長＋codex gpt-5.6-sol ×3（隊長寫任務書、審 diff、跑建置與驗收、commit；不親自寫實作）

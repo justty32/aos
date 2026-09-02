@@ -8,7 +8,7 @@ kernel 的 planning 管線（idea → roadmap → 詳規 → 執行）在本專�
 |------|-----------|-------------|
 | **idea** | 要不要做？ | [ideas/](ideas/README.md)——構想、心智模型、十輪拷問的紀錄；裁決總表在 [verdicts](ideas/verdicts.md) |
 | **roadmap** | 會做，何時？ | [roadmap](roadmap.md)——M0–M5 階段表、每階段先裁什麼、動工前讀什麼 |
-| **詳規** | 怎麼做？ | 規格在 `docs/`（[`aos-folder.md`](../../docs/aos-folder.md) 是 `.aos` 的唯一真源）；子命令規格在 [experiments/t5-agent-loop/subcommand-specs](experiments/t5-agent-loop/subcommand-specs.md) |
+| **詳規** | 怎麼做？ | `.aos` 版面、指令 JSON 與回合語意的唯一真源是 [PROTOCOL](dispatch/proto/PROTOCOL.md)；子命令規格在 [experiments/t5-agent-loop/subcommand-specs](experiments/t5-agent-loop/subcommand-specs.md) |
 | **執行** | — | [feature-dev](feature-dev/README.md) |
 
 **何時用**：「記個想法」→ ideas；「接下來做什麼」→ roadmap；「討論方案／寫動工計畫」→ 先過 [verdicts A 表](ideas/verdicts.md) 別重想已裁決的，再進 roadmap 對應階段。
