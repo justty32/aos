@@ -30,6 +30,14 @@
 
 驗證與測試指令不列這裡——連同「誰跑」一起在 [testing](testing.md)。
 
+## git 佈局：aos 是 submodule，別用 worktree 隔離
+
+aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdir 在 `../.git/modules/aos`。
+**不要在這個 repo 開 Claude Code 的 worktree 隔離（`isolation: worktree`／EnterWorktree）**——
+2026-09-02 一個 worktree session 收尾清理時把那個 gitdir 清空，四個未 push 的 commit 物件遺失，
+只能從 GitHub 重 clone、拿工作樹重建（重建後是 `9bd31c0`、`e292b83`）。要平行做事就用普通子 agent
+或另開 clone；做完的 commit 盡早 push，本機 gitdir 不可靠。
+
 ## 跨機 / 離線差異
 
 目前**單機開發**（Manjaro Linux，repo 在 `~/repo/simple_tools/aos`），沒有離線或 CI 差異，全部驗證都由 agent 跑。[SESSION-LOG](../SESSION-LOG.md) 裡「建置環境是 WSL、repo 在 `/mnt/c`、codex 在 `~/.local/bin/codex`」那幾條是舊環境的筆記，可能已過期（[WAIT_USER](../WAIT_USER.md) B 區有請使用者確認）。
