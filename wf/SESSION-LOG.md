@@ -17,6 +17,9 @@
   （[assembly-and-chains](workflows/ideas/assembly-and-chains/README.md)）。
   使用者收工時說「**接著就是來開始寫作業系統了，明天再說**」——**下一步是開始實作 OS**，
   還沒開工。
+  **2026-09-02 先補了 CPU→OS 的推導**（[turing-to-os §三之一](workflows/ideas/turing-to-os.md)，
+  三題三裁：多程式／多次／多 CPU 要、多人不管；必然／理念／選擇三分；L0 拆歸 CPU 與 OS），
+  26 條缺口 14 條 `status` 已分。**「OS 的第一塊」還沒選**（候選 `B1` 批 header）。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
