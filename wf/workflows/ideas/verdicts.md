@@ -54,6 +54,9 @@
 | **程式的記法與 lisp 的位置**（2026-09-01） | 同日兩拍，**以後拍的為準**。先裁：源碼與 IR 是**兩個檔案**、**lisp 從源碼／IR 層進場、不往 `inst` 以下滲**、**協定維持 `.json`**。收工前改判：「**lisp 就是太理想了，其實用啥都可以**」——**源碼與 IR 也用 json，全塔統一 json（源碼 → IR → `series` → `inst` 批）**；**lisp 只保留為哲學**（整套系統是可改寫的樹），語法層不進場，哪天想手寫再加 sexp 糖衣。**沒被改掉的**：兩個檔案、界線畫在 `inst` → [assembly-and-chains/source-and-ir](assembly-and-chains/source-and-ir.md) |
 | **暫存器與堆疊框兩種壽命**（2026-09-01） | **兩種都要，真 CPU 也兩個都有**：只在**單一 inst 執行中**存在、其他 inst 與其他回合都看不到的（＝暫存器壽命），與跟著**「串的一筆」**生滅、開串建返回丟的（＝堆疊框）。**格式尚未拍板。** 同列的另一句：串中可用**代號**指代、搭配串的狀態，大減重複 → [assembly-and-chains/c-language](assembly-and-chains/c-language.md) |
 | **硬碟**（2026-09-01 重申舊裁決） | **硬碟就是較慢較大的記憶體，無本質區別**；stack／heap 的差別只在**壽命**不在住處。**eeprom／flash 那個問題不是問題，跳過** → [assembly-and-chains/c-language §十五](assembly-and-chains/c-language.md) |
+| **OS 是「多」逼出來的**（2026-09-02） | 一顆 loop、一支程式、一個人、跑一次不需要 OS。四種「多」裡**多程式、多次、多 CPU 要；多人先不管** → `G25` 塌成「恰一人＝一隻 agent 住 `~`」。（觀察）多 CPU ＋ 多程式同時承認，`G10` 得答「能不能跨 CPU 換手」，與 B 區「跨資料夾排程歸屬」同題 → [turing-to-os §三之一](turing-to-os.md) |
+| **省略步驟的三分類**（2026-09-02） | **必然**：檔案系統即記憶體（三要件第三件推出）。**理念**：同像性。**選擇**：回合制、`B3` 一回合內無資料流、全塔 json、外部處理器只監控資料夾不引 lib——選擇要用「方便人」那把尺守；回合制與 `B3` 有承重（遊戲模型、REPL 讀法） → [turing-to-os §三之一](turing-to-os.md) |
+| **L0 五條的歸屬**（2026-09-02） | 拆開：**`G04` context、`G05` 分支歸 CPU**（loop 自己的 spec）；**`G01` 中斷、`G02` 特權級、`G03` 隔離歸 OS**，跟 L1 一起還 → [turing-to-os §三之一](turing-to-os.md)、[cpu-to-os-gaps](cpu-to-os-gaps.json) |
 
 ## B. 仍開著（值得打）
 

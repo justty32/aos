@@ -21,7 +21,7 @@
    "aos_now": "loop 沒有 reset line、沒有外部可觸發的中斷；一回合結束與否完全看 inst 自己",
    "why_gap": "沒有中斷，OS 只能是 cooperative 的——任何一條 inst 卡住就再也回不到 OS 手上",
    "material": "[machine-shape/loop](machine-shape/loop.md)、[game-process-model](game-process-model.md)",
-   "status": "未對應"
+   "status": "OS 必要——Q3 歸 OS（2026-09-02）"
   },
   {
    "id": "G02",
@@ -31,7 +31,7 @@
    "aos_now": "沒有 W^X，任何 inst 都能寫 `.aos/`；OS 與程式沒有本體差別，只有慣例上的差別",
    "why_gap": "沒有特權級，「作業系統」就只是另一支程式，管不住別人也保護不了自己",
    "material": "[machine-shape/instruction](machine-shape/instruction.md)",
-   "status": "未對應"
+   "status": "OS 必要——Q3 歸 OS（2026-09-02）"
   },
   {
    "id": "G03",
@@ -41,7 +41,7 @@
    "aos_now": "檔案系統即記憶體、路徑即位址，全域共享；已裁定「path 不是 capability」",
    "why_gap": "沒有隔離，行程抽象就撐不起來——誰都能改誰的記憶體，OS 保證不了任何事",
    "material": "[prior-work](prior-work.md)",
-   "status": "未對應"
+   "status": "OS 必要——Q3 歸 OS；多 CPU 綁到（2026-09-02）"
   },
   {
    "id": "G04",
@@ -51,7 +51,7 @@
    "aos_now": "沒有架構狀態，只有檔案系統；一回合的進度散在資料夾裡，沒有一份可整存整取的 context",
    "why_gap": "context switch 的前提是 context 可被指名與快照。沒有它，換手只能靠回合邊界",
    "material": "[machine-shape/instruction](machine-shape/instruction.md)、[game-process-model](game-process-model.md)",
-   "status": "未對應"
+   "status": "歸 CPU——loop 自己的 spec，不在 OS 帳；多次綁到（2026-09-02）"
   },
   {
    "id": "G05",
@@ -61,7 +61,7 @@
    "aos_now": "`loop` 只認得 `result == 3`，其餘回傳值全被忽略；「loop 是控制流」目前還是志向",
    "why_gap": "三要件裡的「可條件分支」在機器層還沒兌現。理論說 tooling 擔任分支，但 loop 讀不到它的結果",
    "material": "[verdicts](verdicts.md) B2、[machine-shape/loop](machine-shape/loop.md)、[theses-review](theses-review.md)",
-   "status": "未對應"
+   "status": "歸 CPU——loop 自己的 spec，不在 OS 帳（2026-09-02）"
   },
   {
    "id": "G06",
@@ -71,7 +71,7 @@
    "aos_now": "世界＝資料夾，但沒有 process table、沒有 pid 檔、列不出「現在有誰在跑」",
    "why_gap": "OS 管的東西叫行程。沒有這個名詞，後面的排程／控制／資源歸屬都沒有掛靠點",
    "material": "[verdicts](verdicts.md) B9、[assembly-and-chains/series](assembly-and-chains/series.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）",
-   "status": "未對應"
+   "status": "必要——多程式（2026-09-02）"
   },
   {
    "id": "G07",
@@ -81,7 +81,7 @@
    "aos_now": "同像性讓兩者同型、同住檔案系統；`.runi` 是唯一的「正在跑」標記，沒有一般化",
    "why_gap": "第四節說檔案系統同時是程式與行程的載體——那就必須有辦法分辨哪一份是哪一種，否則管不動。**同像性讓這件事更難不是更容易**：eval 要分得出碼與活行程，但兩者同型",
    "material": "[program-form](program-form.md)、[turn-based-folder/layout-handoff](turn-based-folder/layout-handoff.md)、[machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)、[theses-review](theses-review.md)、[assembly-and-chains/c-language](assembly-and-chains/c-language.md)（**分界在更高一層重現**：函數的模板＝程式、跑起來的串＝行程）、[assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md)（**2026-09-01 解開一半**：三段式生產線讓新 json＝程式的實體、`series.json`＝行程，分界自然長出來，不必另發明標記）",
-   "status": "未對應"
+   "status": "必要——多程式（2026-09-02）"
   },
   {
    "id": "G08",
@@ -111,7 +111,7 @@
    "aos_now": "跨資料夾排程屬 `exec_loop` 還是更外層，未定；四條方案（A 世界／B spool／C loop 閘／D flock）已盤點未選",
    "why_gap": "決定 `exec_loop` 的介面是「跑這個資料夾」還是「跑這一組」——這條不定，OS 的邊界就畫不出來",
    "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）",
-   "status": "未對應"
+   "status": "必要——多程式；多 CPU 同時承認後要答「能不能跨 CPU 換手」，開著（2026-09-02）"
   },
   {
    "id": "G11",
@@ -131,7 +131,7 @@
    "aos_now": "投遞協定只有消費端（`aggregate`／`claim`／`release`）且都沒進 C ABI；唯一由外部生產者執行的那一步沒有實作",
    "why_gap": "agent 之間要協作就得投遞。缺生產端＝OS 上的行程實際上還不能互相溝通",
    "material": "[verdicts](verdicts.md) B8",
-   "status": "未對應"
+   "status": "必要——多 CPU（2026-09-02）"
   },
   {
    "id": "G13",
@@ -151,7 +151,7 @@
    "aos_now": "真正的指令是「批」而批沒有名字、沒有 header；副程式要靠 `$ref` 引指令才勉強成立",
    "why_gap": "寫不出可被指名的程式，就沒有「載入並執行某程式」這回事，OS 最基本的動作缺席",
    "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)、[assembly-and-chains/series](assembly-and-chains/series.md)（建議形狀：plan 檔＋游標檔＝載入器。**「可全用 inst 做在使用者層」已被第三部分取代**：使用者把它上移進 loop，即 `series.json`）、[assembly-and-chains/c-language](assembly-and-chains/c-language.md)（**可命名性有了形狀**：函數＝有名字可重用的串模板，呼叫＝開子串掛父串 id；串中可用**代號**指代、符號表是串的狀態）",
-   "status": "未對應"
+   "status": "必要——多程式（2026-09-02）"
   },
   {
    "id": "G15",
@@ -241,7 +241,7 @@
    "aos_now": "agent 間訊息的語意失真無法用數學糾正，錯誤會層層放大成錯誤風暴",
    "why_gap": "這是整個類比最深的一條裂縫。現代 OS 的所有協作機制都預設通訊無損，這裡不成立",
    "material": "[agent-messaging](agent-messaging.md)",
-   "status": "未對應"
+   "status": "必要——多 CPU（2026-09-02）"
   },
   {
    "id": "G24",
@@ -251,7 +251,7 @@
    "aos_now": "**問題已被改寫**：「JSON 陣列＝S-expression」被否定過，但新主張說 S-expression 是**資料夾樹本身**、JSON 只是檔案內容格式。所以要問的變成「macro 與 eval 是不是讀同一棵資料夾樹」——這題還沒問過",
    "why_gap": "同像性是「檔案系統即程式載體」的支柱。落點從 JSON 搬到檔案系統後，這條沒被解決，只是換了個地方要掙。**2026-09-01 又多一問**：使用者收回「只有 lisp 承載得了」、說 Python／Lua 也適合，但兩者都不同像——那同像性到底在撐什麼？可能不是表達力，而是 macro／自我改寫或「程式與行程同型」",
    "material": "[program-form](program-form.md)、[workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)、[theses-review](theses-review.md)、[assembly-and-chains/source-and-ir](assembly-and-chains/source-and-ir.md)（**2026-09-01 答案候選，未裁**：撐的是**編譯管線的簡單**——每一站同一種樹，改寫器 agent 也會寫，與「自我改寫」是一件事兩面。承重的是**樹**不是括號，所以使用者收工前改判**全塔統一 json**（源碼→IR→series→inst 批、lisp 只留哲學）並不動搖它）",
-   "status": "未對應"
+   "status": "理念——同像性（Q2，2026-09-02）"
   },
   {
    "id": "G25",
@@ -261,7 +261,7 @@
    "aos_now": "未定。目前預設一台機器一個人",
    "why_gap": "「方便人使用」裡的「人」有幾個，決定要不要整套授權模型。現在是省略掉的，不是決定不做的",
    "material": "無",
-   "status": "未對應"
+   "status": "先不做——多人先不管；塌成「恰一人＝一隻 agent 住 ~」，隊 W 已實作（2026-09-02）"
   },
   {
    "id": "G26",
@@ -271,7 +271,7 @@
    "aos_now": "agent 的記憶是核心需求（停掉、隔天再來，記憶還在不在）",
    "why_gap": "這是 aos 多出來的軸，現代 OS 沒有對應物，抄不到。要自己決定它屬於 OS 還是應用",
    "material": "[usability-target](usability-target.md)",
-   "status": "未對應"
+   "status": "必要——多次（2026-09-02）"
   }
  ]
 }
