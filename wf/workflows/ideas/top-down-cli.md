@@ -81,7 +81,7 @@ llm-folder/.aos/inst.tempd/      ← 把「想一次」投遞給 LLM PU
 | 既有 | 這篇改了什麼 |
 |---|---|
 | [turn-based-folder/usage-and-agent-loop](turn-based-folder/usage-and-agent-loop.md) 的 `aos agent start` → `aos agent init ...` | 名字與分工換掉了：入口是 **`aos agent init`**（一個指令，含互動問答與 pu init），不再是 start／init 兩段。**以本篇為準** |
-| [`docs/aos-folder.md`](../../../docs/aos-folder.md) 的 `aos init`／`aos exec [--loop]` | 規格沒變，**指令名字要搬到 `aos pu` 底下**。規格內容（版面、三步交接、回合語意）仍以那份為準 |
+| `docs/aos-folder.md` 的 `aos init`／`aos exec [--loop]` | 規格沒變，**指令名字要搬到 `aos pu` 底下**。規格內容（版面、三步交接、回合語意）仍以那份為準 |
 | [machine-shape/loop](machine-shape/loop.md)：「loop 沒有 status／暫停等控制介面」 | `aos agent state` 與 `--step N` 正是使用者自己給的部分答案——**有限步數**與**可觀測狀態** |
 | [llm-cpu](llm-cpu.md)：LLM CPU 疊在 inst 之上、跨資料夾排程與 I/O 交換區 | 第三節就是它的使用者視角版本：跨資料夾投遞 + 本地輪詢取件 |
 
@@ -95,7 +95,7 @@ llm-folder/.aos/inst.tempd/      ← 把「想一次」投遞給 LLM PU
 
 **PU**
 1. **`--step 5` 跑完之後 `.runi` 留在那裡怎麼辦**——現行規則是 `.runi` 存在就拒絕啟動
-   （[D6](../../../docs/roadmap/decisions.md#d6)），有限步數會讓「正常結束」和「上次
+   （舊 roadmap 的決策 D6，已封存），有限步數會讓「正常結束」和「上次
    崩了」長得一模一樣。
 2. **`--interval 50` 跟現行 `--loop <毫秒>` 是同一個東西還是兩個**（`--loop 0` 是忙碌
    輪詢，見 [machine-shape/loop](machine-shape/loop.md)）。
@@ -125,6 +125,6 @@ llm-folder/.aos/inst.tempd/      ← 把「想一次」投遞給 LLM PU
 **跨資料夾**
 12. **「指定 llm pu 資料夾」由誰指定、記在哪**（`.aos/` 裡的設定檔？）。
 13. **跨資料夾投遞破壞了「路徑基準一律是 `<folder>`」這條鐵律**
-    （[aos-folder 第四節](../../../docs/aos-folder.md)）——往別人的世界寫，用的是誰的基準？
+    （`aos-folder` 第四節）——往別人的世界寫，用的是誰的基準？
 14. **等 LLM 好了沒 vs 硬回合邊界**：一次思考是佔住一整個回合等它（回合要等所有 thread
     跑完），還是拆成「投遞回合」與「取件回合」兩回合？

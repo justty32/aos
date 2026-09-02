@@ -1,11 +1,11 @@
 # 任務：試用 L2——用 aos 指揮與管理一個 agent 團隊，記所有做不到與不順手
 
-> 交接書是唯一契約。判準 [usability-target](../../ideas/usability-target.md) 第二級；發現格式見 [trial/README](../trial/README.md)。**只找不修、不改 core/。**
+> 交接書是唯一契約。判準 [usability-target](../../../ideas/usability-target.md) 第二級；發現格式見 [trial/README](../../trial/README.md)。**只找不修、不改 core/。**
 
 ## 唯一目標
 
 使用者只跟一隻主 agent 說話，主 agent 派生子 agent（各住一個資料夾）、用通訊錄（`aos contact`／`aos say --to`）投任務、收回報、
-從 `state.json` 看誰在忙。**對照組是現在用 Claude Code 開隊的體驗**（[team-model](../../team-model.md)、[dispatch](../README.md)）。
+從 `state.json` 看誰在忙。**對照組是現在用 Claude Code 開隊的體驗**（[team-model](../../../team-model.md)、[dispatch](../../README.md)）。
 預期很多「做不到」——**做不到就是第一條發現**，寫清楚卡在哪一步、缺哪個原語。
 
 ## 團隊（你是 Opus 隊長）

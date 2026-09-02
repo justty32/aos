@@ -1,6 +1,6 @@
 # 任務：維護線 M——文件補齊、兩支壞掉的 repro、`inbox read` 前綴
 
-> 交接書是唯一契約。現況：[docs/usage.md](../../../../docs/usage.md)、[docs/overview.md](../../../../docs/overview.md) 只寫到五個小專案；`core/tick`／`core/tool` 與隊 Y 的新指令沒進文件。[reports/Y.md](reports/Y.md) 末段指出 `trial/repro/L2-02.sh` 的第二個斷言預設了錯的實作、`L2-14.sh` 的 `wait` 用法讓判斷走不到；`aos inbox read` 只吃完整 id。
+> 交接書是唯一契約。現況：[docs/usage.md](../../../../../docs/usage.md)、[docs/overview.md](../../../../../docs/overview.md) 只寫到五個小專案；`core/tick`／`core/tool` 與隊 Y 的新指令沒進文件。[reports/Y.md](../reports/Y.md) 末段指出 `trial/repro/L2-02.sh` 的第二個斷言預設了錯的實作、`L2-14.sh` 的 `wait` 用法讓判斷走不到；`aos inbox read` 只吃完整 id。
 
 ## 唯一目標
 

@@ -1,6 +1,6 @@
 # scheduling — 有限的 LLM CPU 給所有 agent 共用，排程該怎麼做
 
-← [ideas](../README.md)｜前身 [llm-cpu](../llm-cpu.md)｜[top-down-cli §三](../top-down-cli.md)｜workshop [finite-resource-queue](../../workshop/records/finite-resource-queue.md)｜實測 [experiments](experiments.md)｜交接書 [proto-S-scheduling](../../dispatch/proto/proto-S-scheduling.md)
+← [ideas](../README.md)｜前身 [llm-cpu](../llm-cpu.md)｜[top-down-cli §三](../top-down-cli.md)｜workshop [finite-resource-queue](../../workshop/records/finite-resource-queue.md)｜實測 [experiments](experiments.md)｜交接書 [proto-S-scheduling](../../dispatch/proto/done/proto-S-scheduling.md)
 
 **記錄日期**：2026-08-30，隊 S（Fable 隊長＋codex ×3）。**純規劃，沒動程式。方向留給使用者，本頁只列選項＋建議＋代價。**
 

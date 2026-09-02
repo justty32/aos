@@ -1,6 +1,6 @@
 # 隊 Y 回報：四項改進落地
 
-← [dispatch](../../README.md)｜交接書 [proto-Y-improve](../proto-Y-improve.md)｜設計 [ux-round-1](../../../../../core/agent/docs/ux-round-1.md)｜判準 [usability-target](../../../ideas/usability-target.md)
+← [dispatch](../../README.md)｜交接書 [proto-Y-improve](../done/proto-Y-improve.md)｜設計 [ux-round-1](../../../../../core/agent/docs/ux-round-1.md)｜判準 [usability-target](../../../ideas/usability-target.md)
 
 2026-08-30。Opus 隊長 ＋ Fable 規劃者一輪 ＋ codex（gpt-5.6-sol）四條線，循序執行、隊長逐條審 diff。
 分支 `worktree-agent-a1fa1602017a3657c`，已 rebase 到含隊 X 全部 25 條 bug 修正的 main。

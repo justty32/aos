@@ -1,6 +1,6 @@
 # 隊 D 回報：heartbeat on aos——`core/tick`、`every_ms`、登記 CLI、這個 repo 自己當第一個世界
 
-← [交接書 proto-D-heartbeat](../proto-D-heartbeat.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+← [交接書 proto-D-heartbeat](../done/proto-D-heartbeat.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
 
 **終局 STATUS：`DONE`**（7 條驗收全部有證據，`ctest` 7/7 全綠）
 **worktree**：`/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a157afb5ecd302bce`

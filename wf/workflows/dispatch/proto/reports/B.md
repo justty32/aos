@@ -1,6 +1,6 @@
 # 隊 B 回報：`aos agent` ＋ `aos llm`
 
-← [交接書](../proto-B-agent.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+← [交接書](../done/proto-B-agent.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
 
 **STATUS：DONE**
 **worktree**：`/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a082c5e93227878c0`

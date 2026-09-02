@@ -37,7 +37,7 @@
 （使用者不想用想的拍板的，改成用做的），再來是使用者臨時起意。
 
 資料包通常是：對應那場的 `records/*.md` ＋ 該題的 `background/*.md` ＋
-[`docs/aos-folder.md`](../../../docs/aos-folder.md)（規格唯一真源）＋
+[PROTOCOL](../dispatch/proto/PROTOCOL.md)（規格唯一真源）＋
 [`roadmap`](../roadmap.md)。
 
 

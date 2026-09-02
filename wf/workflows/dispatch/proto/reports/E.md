@@ -1,6 +1,6 @@
 # 隊 E 回報：pi 當 LLM CPU（`aos agent init --engine pi`）
 
-← [交接書](../proto-E-pi-cpu.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+← [交接書](../done/proto-E-pi-cpu.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
 
 **STATUS：DONE**
 **worktree**：`/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-aabf401d3cc5aa3f1`

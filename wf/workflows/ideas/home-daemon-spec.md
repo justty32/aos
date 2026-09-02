@@ -1,6 +1,6 @@
 # home daemon spec：`aos daemon` 一個行程管多個世界的 loop
 
-← [home-world](home-world.md)（場景與裁決）｜[nested-worlds](nested-worlds.md)｜隊 Y [proto-Y-improve](../dispatch/proto/proto-Y-improve.md)｜[PROTOCOL](../dispatch/proto/PROTOCOL.md)
+← [home-world](home-world.md)（場景與裁決）｜[nested-worlds](nested-worlds.md)｜隊 Y [proto-Y-improve](../dispatch/proto/done/proto-Y-improve.md)｜[PROTOCOL](../dispatch/proto/PROTOCOL.md)
 
 2026-08-30，Fable 規劃者。**純規劃。** 前提：LLM PU 世界不做、systemd 不做、初期手動 `aos daemon start`。
 事實（讀碼確認）：`aos run` 沒有鎖（`core/loop/README` 已知不管）；`AOS_HOME`＝`$AOS_HOME` 否則 `~/.aos`（`core/llm/src/slot.cpp:227`），

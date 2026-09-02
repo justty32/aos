@@ -1,6 +1,6 @@
 # UX 第一輪：少打指令、狀態可見、通訊錄進 prompt、不燒 LLM 的信箱
 
-← [core/agent/README](../README.md)｜交接書 [proto-Y-improve](../../../wf/workflows/dispatch/proto/proto-Y-improve.md)｜協定 [PROTOCOL](../../../wf/workflows/dispatch/proto/PROTOCOL.md) §1 §4 §6｜發現 [trial](../../../wf/workflows/dispatch/trial/README.md)
+← [core/agent/README](../README.md)｜交接書 [proto-Y-improve](../../../wf/workflows/dispatch/proto/done/proto-Y-improve.md)｜協定 [PROTOCOL](../../../wf/workflows/dispatch/proto/PROTOCOL.md) §1 §4 §6｜發現 [trial](../../../wf/workflows/dispatch/trial/README.md)
 
 四項改進的指令面與檔案層規格（2026-08-30）。方向性取捨已直接選最簡單的，理由一行寫在旁邊；跟修 bug 隊 X 共用的檔案在 §F 標出。
 

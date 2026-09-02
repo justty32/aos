@@ -12,11 +12,11 @@
 
 ## 先讀
 
-- [PROTOCOL](PROTOCOL.md)、`core/loop/README.md`、`core/agent/README.md`、`core/llm/README.md`、`core/agent/docs/pi-cpu.md`、`core/tick/README.md`
-- [top-down-cli §三](../../ideas/top-down-cli.md)：「LLM 不是被呼叫的函式，是另一台跑同一套協定的機器」——把「想一次」投遞到 llm pu 資料夾、本地回合輪詢結果。
-- [ideas/llm-cpu.md](../../ideas/llm-cpu.md)（若存在）、workshop [finite-resource-queue](../../workshop/records/finite-resource-queue.md)（五位一致要「使用者層級的 endpoint 佇列」）、使用者 2026-08-25 的話：「外部處理器自己監控一個資料夾、甚至不必引用 aos lib」（排隊是外部處理器的家務）。
-- [ideas/tools/call-loop.md](../../ideas/tools/call-loop.md)（三回合往返）、[nested-worlds](../../ideas/nested-worlds.md)、[usability-target](../../ideas/usability-target.md)（第二級：agent 團隊）。
-- 采風 [ai-core-field/synthesis.md](../../ideas/ai-core-field/synthesis.md)：ai_core 對 resources／lifecycle 軸的主張。
+- [PROTOCOL](../PROTOCOL.md)、`core/loop/README.md`、`core/agent/README.md`、`core/llm/README.md`、`core/agent/docs/pi-cpu.md`、`core/tick/README.md`
+- [top-down-cli §三](../../../ideas/top-down-cli.md)：「LLM 不是被呼叫的函式，是另一台跑同一套協定的機器」——把「想一次」投遞到 llm pu 資料夾、本地回合輪詢結果。
+- [ideas/llm-cpu.md](../../../ideas/llm-cpu.md)（若存在）、workshop [finite-resource-queue](../../../workshop/records/finite-resource-queue.md)（五位一致要「使用者層級的 endpoint 佇列」）、使用者 2026-08-25 的話：「外部處理器自己監控一個資料夾、甚至不必引用 aos lib」（排隊是外部處理器的家務）。
+- [ideas/tools/call-loop.md](../../../ideas/tools/call-loop.md)（三回合往返）、[nested-worlds](../../../ideas/nested-worlds.md)、[usability-target](../../../ideas/usability-target.md)（第二級：agent 團隊）。
+- 采風 [ai-core-field/synthesis.md](../../../ideas/ai-core-field/synthesis.md)：ai_core 對 resources／lifecycle 軸的主張。
 
 ## 工作（Fable 隊長＋codex ×3）
 

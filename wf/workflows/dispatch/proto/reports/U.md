@@ -1,6 +1,6 @@
 # 隊 U 回報：tool 登記表與 agent 通訊錄做進 aos
 
-← [交接書](../proto-U-tools-impl.md)｜[PROTOCOL](../PROTOCOL.md)｜規劃與裁決 [ideas/tools](../../../ideas/tools/README.md)｜[dispatch](../../README.md)
+← [交接書](../done/proto-U-tools-impl.md)｜[PROTOCOL](../PROTOCOL.md)｜規劃與裁決 [ideas/tools](../../../ideas/tools/README.md)｜[dispatch](../../README.md)
 
 **STATUS：DONE**
 

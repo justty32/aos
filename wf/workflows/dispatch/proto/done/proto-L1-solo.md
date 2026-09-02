@@ -1,6 +1,6 @@
 # 任務：試用 L1——在 shell 裡只用 `aos …` 當單人 coding agent，記所有不順手
 
-> 交接書是唯一契約。判準 [usability-target](../../ideas/usability-target.md) 第一級；發現格式見 [trial/README](../trial/README.md)。**只找不修、不改 core/。**
+> 交接書是唯一契約。判準 [usability-target](../../../ideas/usability-target.md) 第一級；發現格式見 [trial/README](../../trial/README.md)。**只找不修、不改 core/。**
 
 ## 唯一目標
 

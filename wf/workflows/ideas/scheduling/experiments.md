@@ -1,6 +1,6 @@
 # experiments — LM Studio 並行度：本機實測、證據與待跑腳本
 
-← [scheduling](README.md)｜交接書 [proto-S-scheduling](../../dispatch/proto/proto-S-scheduling.md)
+← [scheduling](README.md)｜交接書 [proto-S-scheduling](../../dispatch/proto/done/proto-S-scheduling.md)
 
 **日期**：2026-08-30（隊 S）。**硬限制**：不 load／unload 模型，只 GET；所以「真並行」數字**今天量不到**（見 §一），
 但 LM Studio 的並行槽數與過往請求的排隊行為可以從 server log 直接讀到（§二、§三）。

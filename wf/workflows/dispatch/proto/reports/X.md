@@ -1,6 +1,6 @@
 # 隊 X 回報——修掉 trial 的 25 條 bug，repro 全部翻面
 
-← [交接書 proto-X-bugfix](../proto-X-bugfix.md)｜[trial 摘要](../../trial/README.md)｜[findings-L1](../../trial/findings-L1.csv)／[findings-L2](../../trial/findings-L2.csv)
+← [交接書 proto-X-bugfix](../done/proto-X-bugfix.md)｜[trial 摘要](../../trial/README.md)｜[findings-L1](../../trial/findings-L1.csv)／[findings-L2](../../trial/findings-L2.csv)
 
 **分支**：`main`（直接在主 working tree 做，未 push）
 **隊形**：Opus 隊長＋codex gpt-5.6-sol ×4 **並行**（按小專案／檔案切線，同檔循序）＋1 條文件同步線；

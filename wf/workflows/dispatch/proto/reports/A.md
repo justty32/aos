@@ -1,6 +1,6 @@
 # 隊 A 回報：最小「機器」——core/exec → core/wire → core/loop
 
-← [交接書 proto-A-machine](../proto-A-machine.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
+← [交接書 proto-A-machine](../done/proto-A-machine.md)｜[PROTOCOL](../PROTOCOL.md)｜[dispatch](../../README.md)
 
 **終局 STATUS：`DONE`**（6 條驗收全部有證據，`ctest` 7/7 全綠）
 

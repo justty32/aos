@@ -1,6 +1,6 @@
 # 任務：heartbeat on aos——`core/tick`、`every_ms`、登記 CLI、這個 repo 自己當第一個世界
 
-> 交接書是唯一契約。協定 [PROTOCOL](PROTOCOL.md)；前三隊報告在 [reports](reports/)。前置：隊 C（[proto-C-consolidate](proto-C-consolidate.md) 或其 `done/` 版）已落地——`.aos/every/`、cwd 即世界、`aos say/listen/state` 頂層指令、舊小專案已刪。
+> 交接書是唯一契約。協定 [PROTOCOL](../PROTOCOL.md)；前三隊報告在 [reports](../reports/)。前置：隊 C（[proto-C-consolidate](proto-C-consolidate.md)）已落地——`.aos/every/`、cwd 即世界、`aos say/listen/state` 頂層指令、舊小專案已刪。
 
 ## 背景與唯一目標
 

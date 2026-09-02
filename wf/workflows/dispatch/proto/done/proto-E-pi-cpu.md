@@ -1,6 +1,6 @@
 # 任務：pi 當 LLM CPU 單元——`aos agent --engine pi`，思考者換成 pi coding agent
 
-> 交接書是唯一契約。協定 [PROTOCOL](PROTOCOL.md)；隊 B 對 pi 的調查在 `core/agent/docs/pi-interface.md`（**那份把 pi 當介面，方向已被使用者改掉**——本任務是把 pi 當 CPU，調查裡關於 pi 能力的部分仍可參考）。
+> 交接書是唯一契約。協定 [PROTOCOL](../PROTOCOL.md)；隊 B 對 pi 的調查在 `core/agent/docs/pi-interface.md`（**那份把 pi 當介面，方向已被使用者改掉**——本任務是把 pi 當 CPU，調查裡關於 pi 能力的部分仍可參考）。
 
 ## 背景與唯一目標
 
