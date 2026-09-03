@@ -45,6 +45,10 @@
   缺口全在兩層之間那座橋上（回傳 vs 傳訊、子資料夾看不看得到父層、失敗、資料夾壽命），另記
   agent 現況住錯位置；**使用者已裁先玩不裁**，觀察清單另存
   [play-watchlist](workflows/ideas/play-watchlist.md)。
+  **同日收尾：使用者要一份「從最上到最下的一整套」大白話總整理**——新開
+  [top-to-bottom/](workflows/ideas/top-to-bottom/README.md)（八檔，無新裁決、無新主張）：
+  Linux → 你或 daemon（REPL）→ 資料夾樹（operative）→ `.aos` 腳本（inst 鏈）→ 原子 inst，
+  外加為什麼這樣設計（三指標／RTOS／微核心）、還沒定的（指回 play-watchlist）、現有 aos 對照表。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
