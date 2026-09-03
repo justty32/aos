@@ -150,7 +150,7 @@
    "modern": "程式有名字、能被引用、能被載入執行；副程式是一等概念",
    "aos_now": "真正的指令是「批」而批沒有名字、沒有 header；副程式要靠 `$ref` 引指令才勉強成立",
    "why_gap": "寫不出可被指名的程式，就沒有「載入並執行某程式」這回事，OS 最基本的動作缺席",
-   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)、[assembly-and-chains/series](assembly-and-chains/series.md)（建議形狀：plan 檔＋游標檔＝載入器。**「可全用 inst 做在使用者層」已被第三部分取代**：使用者把它上移進 loop，即 `series.json`）、[assembly-and-chains/c-language](assembly-and-chains/c-language.md)（**可命名性有了形狀**：函數＝有名字可重用的串模板，呼叫＝開子串掛父串 id；串中可用**代號**指代、符號表是串的狀態）、[nested-eval](nested-eval.md)（**載入器＝unquote**：子資料夾預設 quote 住，父層的 car 點名「打開它」才開一條 serie＝`G06` 行程誕生；因此資料夾求值是 normal order）、[nested-eval-sugar](nested-eval-sugar.md)（**2026-09-03 已裁**：inst 鏈是為省成本而存在的語法糖，`.aos` 不能省的只有「原子 inst ＋ 開／讀／選」。**薄的 `.aos`（只做開／讀／選、邏輯全在子資料夾）今天不存在，只有厚的（一整串 inst）——這就是本格缺的東西**。同日續裁：**inst 層與資料夾層互不相關**，資料夾不會被壓進 inst；inst 層＝POSIX ＋ aos 子命令的搭配）",
+   "material": "[verdicts](verdicts.md) B1、[machine-shape/instruction](machine-shape/instruction.md)、[theses-review](theses-review.md)、[assembly-and-chains/series](assembly-and-chains/series.md)（建議形狀：plan 檔＋游標檔＝載入器。**「可全用 inst 做在使用者層」已被第三部分取代**：使用者把它上移進 loop，即 `series.json`）、[assembly-and-chains/c-language](assembly-and-chains/c-language.md)（**可命名性有了形狀**：函數＝有名字可重用的串模板，呼叫＝開子串掛父串 id；串中可用**代號**指代、符號表是串的狀態）、[nested-eval](nested-eval.md)（**載入器＝unquote**：子資料夾預設 quote 住，父層的 car 點名「打開它」才開一條 serie＝`G06` 行程誕生；因此資料夾求值是 normal order）、[nested-eval-sugar](nested-eval-sugar.md)（**2026-09-03 已裁**：inst 鏈是為省成本而存在的語法糖，`.aos` 不能省的只有「原子 inst ＋ 開／讀／選」。**薄的 `.aos`（只做開／讀／選、邏輯全在子資料夾）今天不存在，只有厚的（一整串 inst）——這就是本格缺的東西**。同日續裁：**inst 層與資料夾層互不相關**，資料夾不會被壓進 inst；inst 層＝POSIX ＋ aos 子命令的搭配）、[top-to-bottom/02](top-to-bottom/02-folders.md)（**2026-09-03 再裁：原稿在頂層、打開時讀進 `.aos/`**——人寫的東西放資料夾頂層＝原稿，資料夾被父層點名打開時，**本格這個 loader 把原稿讀進 `.aos/` 變成可走的腳本**；`.aos/` 仍是機器的、仍是 car。「載入器＝unquote」的具體動作就是這次讀入）、[top-to-bottom/03](top-to-bottom/03-inside-aos.md)（觀察：**「算到底＝不再變」今天對不上**——今天 `aos run` 是跑滿 `--step N` 或被 `aos stop` 叫停；有 series 時「游標到底」就是不再變，沒 series 時只能靠 LLM 自己說停、未實作。**是實作落後不是概念矛盾，缺的就是本格**）",
    "status": "必要——多程式（2026-09-02）"
   },
   {
@@ -190,7 +190,7 @@
    "modern": "現代 OS 沒有這條軸——CPU 時間不用付錢",
    "aos_now": "token 計費完全在體系外，沒有帳、沒有預算、沒有上限",
    "why_gap": "橫向對比會整條漏掉。LLM CPU 跑一次要錢，這讓排程從「效率問題」變成「預算問題」",
-   "material": "[theses-review](theses-review.md)、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 口述**：**目標優化指標三項之首就是消耗的金錢（token）**，時間空間只是粗淺優化；linux 量得到的委外、aos 只計量 linux 盲區）",
+   "material": "[theses-review](theses-review.md)、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 口述**：**目標優化指標三項之首就是消耗的金錢（token）**，時間空間只是粗淺優化；linux 量得到的委外、aos 只計量 linux 盲區）。**2026-09-03 補裁：三指標裡可預測性最優先**（使用者原話「最優先的是可預測性」），金錢與可理解性的相對順序未裁——上面「三項之首就是金錢」那句只是列舉順序，**不是優先序**；os-metrics §七 n 與 §八按「金錢優先」推的觀察與提案（含「帳本當 OS 第一塊」）**前提已變、須重看** → [verdicts A 區](verdicts.md)、[top-to-bottom/05](top-to-bottom/05-why.md)",
    "status": "未對應"
   },
   {
@@ -200,7 +200,7 @@
    "modern": "現代 CPU 假設可靠且確定：同輸入同輸出，不會逾時，不會回錯",
    "aos_now": "LLM 會逾時、會回錯、同輸入不同輸出；失敗算「有做事」，因此關掉了唯一的節流閥",
    "why_gap": "又一條橫向對比會漏的軸。整套 OS 的抽象都建立在「計算單元可靠」上，這裡不成立",
-   "material": "[scheduling](scheduling/README.md)、[machine-shape/debts](machine-shape/debts.md)、[assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md)（**2026-09-01 不再整條線通吃**：三段式生產線把不確定性關在「寫」那一段，**編譯（確定性拆平）與執行兩段把確定性撿回來**，replay 因此變得可能）",
+   "material": "[scheduling](scheduling/README.md)、[machine-shape/debts](machine-shape/debts.md)、[assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md)（**2026-09-01 不再整條線通吃**：三段式生產線把不確定性關在「寫」那一段，**編譯（確定性拆平）與執行兩段把確定性撿回來**，replay 因此變得可能）、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 補裁：可預測性是三指標裡最優先的那個**，所以本格從「橫向對比會漏的一條軸」升為**主軸** → [top-to-bottom/05](top-to-bottom/05-why.md)）",
    "status": "未對應"
   },
   {
