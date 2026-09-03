@@ -55,6 +55,9 @@
 
 他玩到一半想起兩樣，之後再想起再補。
 
+> RTOS 那條線多了一個成本來源：[nested-eval](nested-eval.md) 的**深度**邊界——資料夾每巢狀
+> 一層就是一個 continuation 停著等，回合制下直接變成「幾輪回不來」。
+
 ## 七、AI 觀察（非裁決，可否決）
 
 **a. OS benchmark 的前提是「正確性已定」，aos 沒有這個前提。** 現代 benchmark 只量成本，

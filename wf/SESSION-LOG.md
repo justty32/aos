@@ -24,6 +24,10 @@
   資源分配善用 linux、權限很後面），收尾裁決**先停下設計、去用現有的東西玩**——累積使用
   經驗與阻礙後再回來選「OS 的第一塊」（候選 `B1` 批 header 仍留著）——
   [os-metrics-and-resources](workflows/ideas/os-metrics-and-resources.md)。
+  **2026-09-03 使用者續問「list 的元素也可以是 list，那麼求值？」**——因 program-form 已超長，
+  另開 [nested-eval](workflows/ideas/nested-eval.md)（**無裁決**，全是 AI 觀察）：運算式巢狀由
+  flatten 在跑之前壓平成 ANF、資料夾巢狀＝作用域（car 點名才 unquote，normal order），
+  另記三個邊界（回傳 vs 傳訊、並行與 join、深度＝幾輪回不來）。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、

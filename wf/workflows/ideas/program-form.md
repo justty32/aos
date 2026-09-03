@@ -428,3 +428,4 @@ lisp（檔案／資料夾），這條講的是**寫的方式**也是——不是
 - [machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)——ownership table：哪條路徑歸機器、哪條歸世界
 - [theses-review](theses-review.md)／[game-process-model](game-process-model.md)——同日的複審與第三個模型
 - [os-metrics-and-resources](os-metrics-and-resources.md)——可預測性（不動點要幾回合）、預算與 RTOS 的 deadline
+- [nested-eval](nested-eval.md)——**本檔的續篇**（2026-09-03，因本檔已超長另開）：「list 的元素也可以是 list」拆成運算式巢狀（flatten 壓平）與資料夾巢狀（作用域，car 點名才開）
