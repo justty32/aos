@@ -32,7 +32,7 @@
 
 ## 相關
 
-- [nested-eval-sugar](../nested-eval-sugar.md)——**2026-09-03 給「編譯」一個新職責**：判斷哪些子資料夾可安全壓成 inst 鏈（攤平＝內聯），inst 鏈本身是為省成本的語法糖
+- [nested-eval-sugar](../nested-eval-sugar.md)——**2026-09-03 已裁：本條線全關在 `.aos` 內、不碰資料夾層**（inst 層與資料夾層互不相關；inst 層＝POSIX ＋ aos 子命令的語法糖）
 - [source-and-ir](source-and-ir.md)——下游：那份「新 json」到底是什麼檔（源碼／IR、全塔 json）
 - [c-language](c-language.md)——上游：C 與彙編的區別怎麼對應到串
 - [series](series.md)——執行段：`series.json` ＝行程
