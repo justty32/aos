@@ -73,6 +73,8 @@ AI 當時寫了三條——**攤平＝內聯**（把本來要開子資料夾才�
 
 ## 相關
 
+- [play-watchlist](play-watchlist.md)——本檔的續節（2026-09-03）：使用者問「概念齊了嗎、還缺
+  啥」，AI 回答主幹已齊、剩下四條缺口全在兩層之間那座橋上；使用者已裁先玩，本檔是觀察清單
 - [nested-eval-car](nested-eval-car.md)——本檔的上游：`.aos` 是 car、資料夾＝operative、
   子資料夾跑不跑由父 `.aos` 決定、頂層由使用者或 daemon 開
 - [nested-eval](nested-eval.md)、[program-form](program-form.md)——更上游的兩篇
