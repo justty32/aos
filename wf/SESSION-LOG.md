@@ -37,9 +37,10 @@
   daemon 代開，不是自宣告 `init`**（daemon 也是一個資料夾，再往上是 linux，故頂層不需特例）。
   **同日第三、四段**——使用者看出 inst 攤平／接力棒／`out/` 「變成一種語法糖」並拍板
   **「inst 語法糖就是為了省成本而做的」**，另存
-  [nested-eval-sugar](workflows/ideas/nested-eval-sugar.md)：本體只有原子 inst ＋開／讀／選、
-  **攤平＝內聯**、**編譯器只判斷哪些子資料夾可安全壓成 inst 鏈**、**薄的 `.aos`（未編譯）今天
-  不存在**（`G14` 已補 material）。
+  [nested-eval-sugar](workflows/ideas/nested-eval-sugar.md)：本體只有原子 inst ＋開／讀／選。
+  **AI 提的「編譯器把子資料夾壓成 inst 鏈」被當場否決**，改裁
+  **inst 層與資料夾層互不相關**——inst 層＝POSIX ＋ aos 子命令（`aos run`／`aos deliver`…）
+  的搭配，那些子命令就是語法糖、資料夾層使用它們（`G14` 已補 material）。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
