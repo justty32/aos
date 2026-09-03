@@ -28,6 +28,18 @@
   另開 [nested-eval](workflows/ideas/nested-eval.md)（**無裁決**，全是 AI 觀察）：運算式巢狀由
   flatten 在跑之前壓平成 ANF、資料夾巢狀＝作用域（car 點名才 unquote，normal order），
   另記三個邊界（回傳 vs 傳訊、並行與 join、深度＝幾輪回不來）。
+  **2026-09-03 使用者續答「`(.aos dir1 dir2 file1 file2)`、不會先跑子資料夾的 `.aos`」**——
+  另存 [nested-eval-car](workflows/ideas/nested-eval-car.md)：car 精確為 `.aos` 本身、運算模型
+  更貼 **fexpr／operative**（Kernel）而非 lazy。**使用者同日拍板**（已進
+  [verdicts A 區](workflows/ideas/verdicts.md)）：**資料夾＝operative、子資料夾跑不跑全由父
+  `.aos` 決定、`f(g(x))` 的攤平是 `.aos` 內部的事——兩層分開（內＝inst 鏈／機器層，
+  外＝資料夾樹／行程層）**；`G06` 已補 material。**同日再裁：頂層資料夾由使用者開或由他開的
+  daemon 代開，不是自宣告 `init`**（daemon 也是一個資料夾，再往上是 linux，故頂層不需特例）。
+  **同日第三、四段**——使用者看出 inst 攤平／接力棒／`out/` 「變成一種語法糖」並拍板
+  **「inst 語法糖就是為了省成本而做的」**，另存
+  [nested-eval-sugar](workflows/ideas/nested-eval-sugar.md)：本體只有原子 inst ＋開／讀／選、
+  **攤平＝內聯**、**編譯器只判斷哪些子資料夾可安全壓成 inst 鏈**、**薄的 `.aos`（未編譯）今天
+  不存在**（`G14` 已補 material）。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、

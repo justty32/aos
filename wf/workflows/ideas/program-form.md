@@ -362,9 +362,13 @@ car，所以那個約定檔天然就是**放 quote 標記的地方**：
 **lisp 走 (2)**（car 在 list 裡面），**現在的 aos 走 (1)**。兩者可並存：**(2) 是把 (1) 寫進
 header 的糖**，而「header」正是 `B1` 那個車位。
 
+**2026-09-03 已裁：走外部**——頂層資料夾由使用者開、或使用者開的 daemon 代開，不是自宣告 `init`，見 [nested-eval-car](nested-eval-car.md#裁決2026-09-03)。
+
 **n. car 可以是算出來的**（lisp 的 `((lambda …) args)`）。這裡對應
 [interrupts §一](assembly-and-chains/interrupts.md)「跳轉＝自己改下一格」，**已裁**——
 不新增問題。
+
+**2026-09-03：car 進一步精確為 `.aos` 本身**（`series.json` 只是 `.aos` 裡被先讀的那個檔），見 [nested-eval](nested-eval.md)／[nested-eval-car](nested-eval-car.md)。
 
 ## 寫的方式也是 lisp 的：REPL
 
