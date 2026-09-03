@@ -160,7 +160,7 @@
    "modern": "OS 知道有幾顆 CPU、多少記憶體",
    "aos_now": "已盤點出七條打 LLM 的路徑，但系統執行時沒有任何一處知道別人也在打",
    "why_gap": "管理資源的第一步是知道有哪些、各自多大。你點名的排隊要先有這個",
-   "material": "[scheduling](scheduling/README.md)",
+   "material": "[scheduling](scheduling/README.md)、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 口述**：評估＝量資源消耗；計量與排程共用同一組計數器，申報 vs 實際的差本身是指標）",
    "status": "未對應"
   },
   {
@@ -190,7 +190,7 @@
    "modern": "現代 OS 沒有這條軸——CPU 時間不用付錢",
    "aos_now": "token 計費完全在體系外，沒有帳、沒有預算、沒有上限",
    "why_gap": "橫向對比會整條漏掉。LLM CPU 跑一次要錢，這讓排程從「效率問題」變成「預算問題」",
-   "material": "[theses-review](theses-review.md)",
+   "material": "[theses-review](theses-review.md)、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 口述**：**目標優化指標三項之首就是消耗的金錢（token）**，時間空間只是粗淺優化；linux 量得到的委外、aos 只計量 linux 盲區）",
    "status": "未對應"
   },
   {
