@@ -56,6 +56,16 @@
   的相對順序未裁 → os-metrics §三已補、§七 n 與 §八加了「按金錢優先推、須重看」的前提註，
   `G18`／`G19` 已補）。其餘四條為 AI 觀察（接力棒只有一根、`aos exec` 一詞三用、
   「算到底＝不再變」是實作落後、子資料夾看不看得到 `../` 留在 play-watchlist）。
+  **同日使用者再提「daemon 可以是一個支援 FUSE 的行程，aos 整棵樹寄生在裡面」**——新開
+  [fuse-host](workflows/ideas/fuse-host.md)（**無裁決，不排進 OS 第一塊**，已裁先玩）：
+  daemon 從「盯著桌子」變「桌子本身」，`G14` 已補 material；三個提醒（時間粒度會打架、
+  宿主死了樹要還在、Lua 不進 `.aos`）。**使用者追問「不懂攔截紀錄、馬上回應是什麼意思」**
+  ——另開 [fuse-host-doorman](workflows/ideas/fuse-host-doorman.md)（**無裁決**）：用「門房
+  還是廚師」展開「攔截＋記錄」與「整個取代 loop」兩種當法的差別，使用者回應「daemon 可以
+  更漂亮」，方向認同、未選邊。**同日使用者說「都順便記下來吧」**，續問實作面兩題——另開
+  [fuse-host-impl](workflows/ideas/fuse-host-impl.md)（**無裁決**）：會不會麻煩有沒有開源庫
+  （門房走 passthrough 最簡單，`libfuse` 已做完難的部分，規模估計 C++ 幾百行一兩天）、跟
+  tmpfs 差在哪（tmpfs 決定放哪、FUSE 決定誰管著，兩者可疊但對 aos 不建議）。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
