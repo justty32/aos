@@ -18,7 +18,7 @@
 |------|------|------|
 | 設定（第一次、或 `CMakeLists.txt`／`vcpkg.json` 變動後）| `cmake --preset default` | agent |
 | **快速驗證（改完必跑）** | `cmake --build --preset default && ctest --preset default` | agent |
-| 只跑某個小專案的測試 | `ctest --preset default -R '^aos_inst'`（或該小專案登記的測試名稱前綴）| agent |
+| 只跑某個小專案的測試 | `ctest --preset default -R '^aos_exec'`（或該小專案登記的測試名稱前綴）| agent |
 | 完整驗證（commit 前）| 同快速驗證——目前沒有額外分出兩套，測試量還小 | agent |
 | 動過 `modules/` 之後 | `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod`（確認關掉擴充仍建得起來）| agent |
 | 要真模型、外部 CLI agent、跨機的（例：T5 agent loop 實測）| 照該實驗檔的步驟 | 使用者 → [WAIT_USER](../WAIT_USER.md)；本機 LM Studio 跑得動的部分我自己跑 |
@@ -30,16 +30,20 @@
 四類對照本專案的實況：
 
 - `fast`：`aos_*_tests` 全部——離線、單機、不需特殊環境；每次小改都跑。
-- `contract`：跨 process 邊界的——exec 層真 `fork`/`exec` 的測試、C ABI 往返 `aos_inst_capi_tests`；已含在同一個 ctest 裡，改 producer／consumer／協定時特別盯。
+- `contract`：跨 process 邊界的——exec 層真 `fork`/`exec` 的測試（`core/exec/tests/`）、`aos_agent_fake_loop` 這種靠 `.aos/` 版面與 python loop 替身協作的整合測試；已含在同一個 ctest 裡，改 producer／consumer／協定時特別盯。
 - `full`：`ctest --preset default` 整套；commit 前或大改後跑。
 - `external`：真 LLM、外部 CLI agent（codex／claude）、跨機（WSL）——agent 代跑不了的記到 [WAIT_USER](../WAIT_USER.md)。
 
 | ctest 目標 | 小專案 | 涵蓋 |
 |-----------|--------|------|
-| `aos_inst_tests` | `core/inst/` | C++ 測試：format 層（JSON round trip／壞輸入）、exec 層（重導向／PATH／exit status／逾時）、CLI 層（`run()` 的整批剖析＋依序執行）——細節見 [code map](common/code-map.md) 的 `core/inst/tests/` 一節 |
-| `aos_inst_capi_tests` | `core/inst/` | C ABI 往返測試（`core/inst/tests/test_capi.c`），獨立的 C 執行檔 |
-| `aos_tooljson_tests` | `core/tooljson/` | tool spec 外殼／exec 配方的載入期驗證、開放 registry、args → argv/stdin、文字收尾與 `list`／`check` CLI；完全離線且不啟動工具行程 |
-| `aos_llms_tests` | `core/llms/` | URL／key／圖片、Params、toolset／presets、能力三態與快取、非串流與串流 Reply／history／usage、SSE 任意切割、交錯 tool-call 碎片、串流收尾／錯誤契約與 CLI 語法；HTTP 全部用假 transport，串流餵罐頭 SSE，完全離線 |
+| `aos_exec_tests` | `core/exec/` | 整批 POSIX 行程的啟動／等待／中斷：重導向與 env／cwd、平行執行、逾時、中斷、結束時間戳 |
+| `aos_wire_tests` | `core/wire/` | 指令、結果與 loop state 三種協定的 JSON round trip 與壞輸入錯誤 |
+| `aos_loop_tests` | `core/loop/` | 資料夾回合機：folder 解析、agents／every 複製、deliver 投遞、idle／running state、平行執行與整回合 `run` CLI |
+| `aos_llm_tests` | `core/llm/` | OpenAI 相容 client：環境變數／CLI 參數／request-response JSON、`--engine`／`--priority`，以及 LLM 並行槽（`test_slot.cpp`）；離線假 transport |
+| `aos_tool_tests` | `core/tool/` | 世界層工具登記表與 agent 通訊錄：spec 驗證、registry 讀寫、探測降級、contacts 與 `tool`／`contact` CLI |
+| `aos_agent_tests` | `core/agent/` | 回合制 LLM agent：CLI（say／listen／talk／state）、engine 選擇、生命周期（journal／防竄改）、`step()`、儲存層與工具展開／抽取 |
+| `aos_agent_fake_loop` | `core/agent/` | python 版 loop 替身（`fake_loop.py`）自測，跨 process 驗證它能正確搬 inbox／執行 instruction／推進回合 |
+| `aos_tick_tests` | `core/tick/` | heartbeat 判定：clock、到期規則（due）、routines／schedule 表讀寫、`aos tick` CLI |
 
 日後新增小專案（不分 `core/` 或 `modules/`）照同一個命名慣例掛自己的 `aos_<專案>_tests`，跑不了的環境依賴驗證才記 [WAIT_USER](../WAIT_USER.md)。
 
