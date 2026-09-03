@@ -41,6 +41,10 @@
   **AI 提的「編譯器把子資料夾壓成 inst 鏈」被當場否決**，改裁
   **inst 層與資料夾層互不相關**——inst 層＝POSIX ＋ aos 子命令（`aos run`／`aos deliver`…）
   的搭配，那些子命令就是語法糖、資料夾層使用它們（`G14` 已補 material）。
+  **同日第五段：使用者問「概念都差不多有概論了嗎、還缺啥」**——AI 回答主幹已齊，剩下四條
+  缺口全在兩層之間那座橋上（回傳 vs 傳訊、子資料夾看不看得到父層、失敗、資料夾壽命），另記
+  agent 現況住錯位置；**使用者已裁先玩不裁**，觀察清單另存
+  [play-watchlist](workflows/ideas/play-watchlist.md)。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
