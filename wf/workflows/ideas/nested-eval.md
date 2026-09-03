@@ -4,7 +4,8 @@
 
 **本檔是 [program-form](program-form.md) 的續篇**——那份已經超過檔案大小上限，所以使用者
 2026-09-03 接著問的這一題另開一檔。**本檔無裁決**：除了「使用者提問」那節的原話之外，
-以下全部是 AI 觀察，使用者可以否決。
+以下全部是 AI 觀察，使用者可以否決。**同日的裁決在續節
+[nested-eval-car](nested-eval-car.md#裁決2026-09-03)**（資料夾＝operative）。
 
 ## 使用者提問（2026-09-03）
 
@@ -55,6 +56,11 @@ lisp 只有一種巢狀，資料夾這邊裂成兩種，而且它們的求值規
 （先把所有引數算完再進函數）。這對 `if` 這類 special form 剛好對味：**分支就是 car 決定
 接下來要開哪一個子資料夾**，不會兩邊都先算掉。
 
+> **2026-09-03 使用者回應接在這一節後面**，並把 car 與這個運算模型都講得更準（car ＝
+> `.aos` 本身、更貼的名字是 **fexpr／operative** 而非 normal order）——因本檔篇幅，
+> 該節另存 [nested-eval-car](nested-eval-car.md)，**同日已裁**：資料夾＝operative、
+> 子資料夾跑不跑由父 `.aos` 決定。
+
 ### e. 三個邊界
 
 **回傳 vs 傳訊。** lisp 只有 call——值沿著呼叫樹流回父層；actor 只有 send——沒有回傳值，
@@ -83,6 +89,9 @@ continuation 停在那裡等**。在回合制底下，深度直接翻譯成「**
 
 ## 相關
 
+- [nested-eval-car](nested-eval-car.md)——本檔的續節（2026-09-03）：使用者回應
+  「`.aos` 是 car、資料夾預設 operative」、AI 觀察，與同日的裁決
+- [nested-eval-sugar](nested-eval-sugar.md)——再續一節：**inst 鏈是為省成本而存在的語法糖**
 - [program-form](program-form.md)——本檔的上游：檔案＝atom、資料夾＝list、穩態暫態＝quote、
   三層（exec 一步歸約／run ＝ eval／daemon ＝ REPL）、資料夾的 car
 - [assembly-and-chains/lisp-reconciliation](assembly-and-chains/lisp-reconciliation.md)——身分
