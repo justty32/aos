@@ -15,15 +15,15 @@
 - **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
   **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**
   （[assembly-and-chains](workflows/ideas/assembly-and-chains/README.md)）。
-  使用者收工時說「**接著就是來開始寫作業系統了，明天再說**」——**下一步是開始實作 OS**，
-  還沒開工。
+  使用者收工時說「**接著就是來開始寫作業系統了，明天再說**」。
   **2026-09-02 先補了 CPU→OS 的推導**（[turing-to-os §三之一](workflows/ideas/turing-to-os.md)，
   三題三裁：多程式／多次／多 CPU 要、多人不管；必然／理念／選擇三分；L0 拆歸 CPU 與 OS），
-  26 條缺口 14 條 `status` 已分。**「OS 的第一塊」還沒選**（候選 `B1` 批 header）。
-  **2026-09-03 使用者開始口述 OS 的評估指標與資源觀**（一般 OS 丟計算任務量時間，aos 任務
-  抽象；**已定目標優化指標＝金錢（token）／可預測性／人類可理解性**，時間空間只是粗淺優化；
-  資源分配善用 linux、權限很後面）——
-  [os-metrics-and-resources](workflows/ideas/os-metrics-and-resources.md)，**口述進行中**。
+  26 條缺口 14 條 `status` 已分。
+  **2026-09-03 使用者口述 OS 的評估指標與資源觀**（一般 OS 丟計算任務量時間，aos 任務
+  抽象；已定目標優化指標＝金錢（token）／可預測性／人類可理解性，時間空間只是粗淺優化；
+  資源分配善用 linux、權限很後面），收尾裁決**先停下設計、去用現有的東西玩**——累積使用
+  經驗與阻礙後再回來選「OS 的第一塊」（候選 `B1` 批 header 仍留著）——
+  [os-metrics-and-resources](workflows/ideas/os-metrics-and-resources.md)。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
