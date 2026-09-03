@@ -22,7 +22,8 @@
   **2026-09-03 使用者口述 OS 的評估指標與資源觀**（一般 OS 丟計算任務量時間，aos 任務
   抽象；已定目標優化指標＝金錢（token）／可預測性／人類可理解性，時間空間只是粗淺優化；
   資源分配善用 linux、權限很後面），收尾裁決**先停下設計、去用現有的東西玩**——累積使用
-  經驗與阻礙後再回來選「OS 的第一塊」（候選 `B1` 批 header 仍留著）——
+  經驗與阻礙後再回來選「OS 的第一塊」（候選 `B1` 批 header 仍留著；
+  **2026-09-03 裁「可預測性最優先」之後，`B1`／帳本這條按「金錢優先」推的候選須重看**）——
   [os-metrics-and-resources](workflows/ideas/os-metrics-and-resources.md)。
   **2026-09-03 使用者續問「list 的元素也可以是 list，那麼求值？」**——因 program-form 已超長，
   另開 [nested-eval](workflows/ideas/nested-eval.md)（**無裁決**，全是 AI 觀察）：運算式巢狀由
@@ -49,6 +50,12 @@
   [top-to-bottom/](workflows/ideas/top-to-bottom/README.md)（八檔，無新裁決、無新主張）：
   Linux → 你或 daemon（REPL）→ 資料夾樹（operative）→ `.aos` 腳本（inst 鏈）→ 原子 inst，
   外加為什麼這樣設計（三指標／RTOS／微核心）、還沒定的（指回 play-watchlist）、現有 aos 對照表。
+  **同日整理 top-to-bottom 時發現六處來源打架，使用者裁了兩條**（已進
+  [verdicts A 區](workflows/ideas/verdicts.md)）：**①「原稿在頂層、打開時 loader 讀進 `.aos/`」
+  ——`.aos/` 仍是機器的**（`G14` 已補 material）；**② 三指標裡可預測性最優先**（金錢與可理解性
+  的相對順序未裁 → os-metrics §三已補、§七 n 與 §八加了「按金錢優先推、須重看」的前提註，
+  `G18`／`G19` 已補）。其餘四條為 AI 觀察（接力棒只有一根、`aos exec` 一詞三用、
+  「算到底＝不再變」是實作落後、子資料夾看不看得到 `../` 留在 play-watchlist）。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、

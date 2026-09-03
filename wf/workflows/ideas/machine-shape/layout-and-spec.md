@@ -80,6 +80,10 @@ datasheet 的 memory map 每格標 R/W/RO/W1C。`.aos/` 至少三類 writer：lo
 > 落地移動**（`turn` 在回合編號成為 PC 那天升格），所以 ownership table 除了 writer 與
 > 方向，還得記「現在算哪一類、什麼落地後會改」。
 
+> **2026-09-03 已裁「`.aos/` 給機器、頂層給人」**：人寫的原稿放資料夾頂層，父層點名打開時
+> loader 才把它讀進 `.aos/`——所以本節的 writer 清單要多一列 loader，而頂層是人的地盤 →
+> [verdicts A 區](../verdicts.md)、[top-to-bottom/02](../top-to-bottom/02-folders.md)。
+
 ## 29. 程式名冊有封閉判準，不必累積
 
 從協定推導：**外部方執行的每個協定步驟→一支程式**（`deliver`，第 11 條）；**機器留下
