@@ -31,8 +31,10 @@
   概念基礎到此打完。** 空間 01～07 之外補時間 08 與收束 09，下一步仍是先玩現有的東西 →
   [top-to-bottom/](workflows/ideas/top-to-bottom/README.md)。
   **同日開始 agent 規劃**：使用者確認逐 tick 走法——agent 借父鐘，LLM／慢工具另開 daemon
-  管的一次性脫節鐘；兩個有事 tick 中間夾空等 tick，並留下三個待決問題 →
-  [agent-loop-under-clock](workflows/ideas/agent-loop-under-clock.md)。
+  管的一次性脫節鐘；兩個有事 tick 中間夾空等 tick；**同日三題已答**：一個 agent＝一個
+  資料夾、LLM 不再叫工具就閒著等信、prompt 組法留給工程，並定義 run 在本次 exec 沒產出新
+  inst 時停止。使用者宣告概念層收尾、往後是工程實作；但 2026-09-03「先玩現有系統」仍有效，
+  不是直接開工 → [agent-loop-answers](workflows/ideas/agent-loop-answers.md)。
 
 - **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
   **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**
