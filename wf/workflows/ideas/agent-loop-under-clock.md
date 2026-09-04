@@ -57,7 +57,12 @@ inotify 門鈴（見 [fuse-host-extras](fuse-host-extras.md)）正是為此：�
 才處理，tick 仍是唯一單位。所以 `aos run` 除了「每隔多久」「直到什麼條件」，可能還有第三種：
 「有變動才動」。是否收進 run 的定義，使用者未決。
 
-## 待使用者決定（AI 提的三個問題，尚未回答）
+## 使用者已答
+
+三題的逐字回答、使用者定義與 AI 觀察已另記在
+[agent-loop-answers](agent-loop-answers.md)，避免本檔超過 8 KB。
+
+## 原先待使用者決定的三題
 
 - **agent 住哪**：現在程式碼放 `.aos/agents/`；照「資料夾＝地」應是一個資料夾、有自己 `.aos/`，
   父地用 `aos run <child>` 帶。
@@ -88,4 +93,3 @@ inotify 門鈴（見 [fuse-host-extras](fuse-host-extras.md)）正是為此：�
 - [top-to-bottom/08-time](top-to-bottom/08-time.md)、[09-cpu-socket](top-to-bottom/09-cpu-socket.md)、
   [07-existing-aos](top-to-bottom/07-existing-aos.md)——概念時間、已收束的工程腳位、現況對照。
 - [llm-cpu](llm-cpu.md)——LLM CPU；[agent-messaging](agent-messaging.md)——agent 間訊息失真與收斂。
-
