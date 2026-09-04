@@ -190,7 +190,7 @@
    "modern": "現代 OS 沒有這條軸——CPU 時間不用付錢",
    "aos_now": "token 計費完全在體系外，沒有帳、沒有預算、沒有上限",
    "why_gap": "橫向對比會整條漏掉。LLM CPU 跑一次要錢，這讓排程從「效率問題」變成「預算問題」",
-   "material": "[theses-review](theses-review.md)、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 口述**：**目標優化指標三項之首就是消耗的金錢（token）**，時間空間只是粗淺優化；linux 量得到的委外、aos 只計量 linux 盲區）。**2026-09-03 補裁：三指標裡可預測性最優先**（使用者原話「最優先的是可預測性」），金錢與可理解性的相對順序未裁——上面「三項之首就是金錢」那句只是列舉順序，**不是優先序**；os-metrics §七 n 與 §八按「金錢優先」推的觀察與提案（含「帳本當 OS 第一塊」）**前提已變、須重看** → [verdicts A 區](verdicts.md)、[top-to-bottom/05](top-to-bottom/05-why.md)、[fuse-host-why](fuse-host-why.md)（tmpfs 零程式碼先解記憶體需求，別先付 FUSE 實作成本）",
+   "material": "[theses-review](theses-review.md)、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 口述**：**目標優化指標三項之首就是消耗的金錢（token）**，時間空間只是粗淺優化；linux 量得到的委外、aos 只計量 linux 盲區）。**2026-09-03 補裁：三指標裡可預測性最優先**（使用者原話「最優先的是可預測性」），金錢與可理解性的相對順序未裁——上面「三項之首就是金錢」那句只是列舉順序，**不是優先序**；os-metrics §七 n 與 §八按「金錢優先」推的觀察與提案（含「帳本當 OS 第一塊」）**前提已變、須重看** → [verdicts A 區](verdicts.md)、[top-to-bottom/05](top-to-bottom/05-why.md)、[fuse-host-why](fuse-host-why.md)（tmpfs 零程式碼先解記憶體需求，別先付 FUSE 實作成本）、[fuse-host-extras](fuse-host-extras.md)（門房記帳與髒標記提供今天缺少的成本計量原料）",
    "status": "未對應"
   },
   {

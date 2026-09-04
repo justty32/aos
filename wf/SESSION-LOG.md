@@ -24,7 +24,9 @@
   搬家都算死；AI 建議 daemon 同查 pid＋路徑，**使用者決定 git mv 先不管** →
   [land-rules](workflows/ideas/land-rules.md)。**同日補回 FUSE 最初動機**：少碰磁碟先用 tmpfs，
   記帳再用 inotify，真要擋或演假檔案才用 FUSE；無裁決 →
-  [fuse-host-why](workflows/ideas/fuse-host-why.md)。
+  [fuse-host-why](workflows/ideas/fuse-host-why.md)。**同日再列門房額外處理的三級可能性**：只看、
+  真擋、變出假檔案；使用者傾向 FUSE 要做、時程未定，先玩仍有效 →
+  [fuse-host-extras](workflows/ideas/fuse-host-extras.md)。
 
 - **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
   **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**

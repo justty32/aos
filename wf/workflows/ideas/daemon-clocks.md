@@ -53,6 +53,8 @@ systemd 用 cgroup 把一整組行程收掉。模型自然走到與 Unix 相同�
 1. **一筆登記長什麼樣**：至少可能有資料夾路徑、pid、時鐘規格（間隔／步數／條件）。
 2. **daemon 自己掛了怎麼辦**：時鐘照走；daemon 重啟後再拿總表與各 `run.pid` 對帳。
 
+登記也可由門房偵測出生／死亡自動做——見 [fuse-host-extras 第一級](fuse-host-extras.md#第一級只看不擋inotify-就夠)。
+
 昨天留過一題：「gaps 表要不要加 daemon 專屬一格？」現在 daemon 的角色已經具體到「時鐘
 總管」，AI 認為可以加；**是否新增仍由使用者決定**。
 
