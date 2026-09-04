@@ -91,5 +91,7 @@ WSL2 與 Manjaro 都有 FUSE，Windows 原生沒有；Lua 的 FUSE 綁定偏老�
   loop 的具體展開
 - [fuse-host-impl](fuse-host-impl.md)——續篇：實作面備忘，會不會麻煩、有沒有開源庫、跟
   tmpfs 差在哪
+- [daemon-clocks](daemon-clocks.md)——daemon 再具體成時鐘總管：登記所有時鐘、替它們走、
+  關機時一次全停（使用者傾向，未明說裁決）
 - [cpu-to-os-gaps](cpu-to-os-gaps.json)——`G06`（行程抽象）／`G14`（載入器）：宿主把 daemon 從「盯著桌子」
   變成「桌子本身」，是這格的一種新形狀

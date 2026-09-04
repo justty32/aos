@@ -43,6 +43,9 @@ condition／handler，OS 靠 exit code／signal；[os-metrics-and-resources](os-
 [exec-run-async-time](exec-run-async-time.md) 又多一個壽命角度：父時鐘死了，脫節子世界若繼續走，
 就會變成**孤兒時鐘**；這既是 async 的好處，也是回收風險。
 
+[daemon-clocks](daemon-clocks.md) 接著記集中登記與關機一次全停；使用者傾向父死子續走，由
+daemon 重啟後對帳。
+
 ## 現況與模型對不上：今天的 agent 住錯位置
 
 今天跑起來的 agent 住在 `.aos/agents/` 內（inst 層），但照 2026-09-03 拍板的新模型，agent 應該
@@ -53,6 +56,8 @@ condition／handler，OS 靠 exit code／signal；[os-metrics-and-resources](os-
 
 父層 fork 一個 `aos run <child>`，還是把子世界交給 daemon 接手？兩種都能讓父 tick 不等，
 但壽命、重啟與誰負責收尾不同。來源見 [exec-run-async-time](exec-run-async-time.md)。
+
+[daemon-clocks](daemon-clocks.md)：**使用者傾向全由 daemon 管，fork 先不考慮**。
 
 ## 不是缺，是已裁先玩
 

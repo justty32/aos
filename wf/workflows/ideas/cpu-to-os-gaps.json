@@ -70,7 +70,7 @@
    "modern": "process 是一等公民：有 id、狀態、親子關係、可列舉、可終止",
    "aos_now": "世界＝資料夾，但沒有 process table、沒有 pid 檔、列不出「現在有誰在跑」",
    "why_gap": "OS 管的東西叫行程。沒有這個名詞，後面的排程／控制／資源歸屬都沒有掛靠點",
-   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains/series](assembly-and-chains/series.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）、[nested-eval-car](nested-eval-car.md#裁決2026-09-03)（**2026-09-03 已裁**：行程誕生＝**父資料夾的 `.aos` 開一個子資料夾**；子資料夾跑不跑全由父 `.aos` 決定；**頂層資料夾由使用者開或由使用者開的 daemon 代開，不是自宣告 `init`**——daemon 也可看成一個資料夾，再往上是 linux，故頂層不需特例）、[fuse-host](fuse-host.md)（FUSE 宿主形式的 daemon；**無裁決**）、[exec-run-async](exec-run-async.md)（**2026-09-04 AI 提議，無裁決**：`async:true` 自動開子資料夾並 fork `aos run <child>`，結果落固定路徑；行程留在磁碟上可看、可殺、可重跑）",
+   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains/series](assembly-and-chains/series.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）、[nested-eval-car](nested-eval-car.md#裁決2026-09-03)（**2026-09-03 已裁**：行程誕生＝**父資料夾的 `.aos` 開一個子資料夾**；子資料夾跑不跑全由父 `.aos` 決定；**頂層資料夾由使用者開或由使用者開的 daemon 代開，不是自宣告 `init`**——daemon 也可看成一個資料夾，再往上是 linux，故頂層不需特例）、[fuse-host](fuse-host.md)（FUSE 宿主形式的 daemon；**無裁決**）、[exec-run-async](exec-run-async.md)（**2026-09-04 AI 提議，無裁決**：`async:true` 自動開子資料夾並 fork `aos run <child>`，結果落固定路徑；行程留在磁碟上可看、可殺、可重跑）、[daemon-clocks](daemon-clocks.md)（**2026-09-04 使用者傾向，未明說裁決**：所有時鐘由 daemon 走、出生先集中登記、父死子續走、關機一次全停；今天只有各資料夾分散的 `.aos/run.pid` 與單個 `aos stop`，沒有跨資料夾總表）",
    "status": "必要——多程式（2026-09-02）"
   },
   {
@@ -110,7 +110,7 @@
    "modern": "kernel 裡有一個明確的排程器，介面清楚",
    "aos_now": "跨資料夾排程屬 `exec_loop` 還是更外層，未定；四條方案（A 世界／B spool／C loop 閘／D flock）已盤點未選",
    "why_gap": "決定 `exec_loop` 的介面是「跑這個資料夾」還是「跑這一組」——這條不定，OS 的邊界就畫不出來",
-   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）、[exec-run-async-time](exec-run-async-time.md)（**2026-09-04 使用者定義、未明說裁決**：async 是子世界時序與父世界脫節；誰讓子時鐘走仍未答）",
+   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）、[exec-run-async-time](exec-run-async-time.md)（**2026-09-04 使用者定義、未明說裁決**：async 是子世界時序與父世界脫節；誰讓子時鐘走仍未答）、[daemon-clocks](daemon-clocks.md)（**2026-09-04 使用者傾向，未明說裁決**：所有子時鐘交 daemon 走；daemon 資料夾的 list 作跨資料夾總表，並負責一次全停）",
    "status": "必要——多程式；多 CPU 同時承認後要答「能不能跨 CPU 換手」，開著（2026-09-02）"
   },
   {
