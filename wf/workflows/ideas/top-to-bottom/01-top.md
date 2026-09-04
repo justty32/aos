@@ -98,3 +98,6 @@
 [nested-eval-car](../nested-eval-car.md)（頂層誰開、daemon 也是資料夾）、
 [os-metrics-and-resources](../os-metrics-and-resources.md)（跑在 linux 上、粒度粗）、
 [verdicts](../verdicts.md) A 區 2026-09-03 兩列。
+
+**續篇**：[08-time](08-time.md) 把時間那條線補齊；[09-cpu-socket](09-cpu-socket.md) 收束「這塊
+主機板是否足以承載 LLM 作為虛假 CPU」。
