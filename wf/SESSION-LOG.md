@@ -27,6 +27,9 @@
   [fuse-host-why](workflows/ideas/fuse-host-why.md)。**同日再列門房額外處理的三級可能性**：只看、
   真擋、變出假檔案；使用者傾向 FUSE 要做、時程未定，先玩仍有效 →
   [fuse-host-extras](workflows/ideas/fuse-host-extras.md)。
+  **同日收束 LLM 虛假 CPU 的概念基礎**：**使用者：四腳位是工程問題，實作時自然有答案；
+  概念基礎到此打完。** 空間 01～07 之外補時間 08 與收束 09，下一步仍是先玩現有的東西 →
+  [top-to-bottom/](workflows/ideas/top-to-bottom/README.md)。
 
 - **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
   **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**

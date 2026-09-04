@@ -15,6 +15,7 @@
 - **想知道為什麼要這樣設計** → 05。
 - **想知道還有哪些沒定** → 06。
 - **想知道今天的 aos 程式碼跟這套模型差多少** → 07。
+- **想看時間怎麼走** → 08；**想知道能不能承載 LLM 這顆虛假 CPU** → 09。
 - **想看原始的一問一答、以及被否決的東西** → 每檔文末都有「這節從哪來」指回原檔。
 
 三種聲音在每一檔裡都分開標：**使用者原話**（引文，含日期）／**裁決**（明標，已拍板）／
@@ -29,6 +30,7 @@
 | ↓ | **資料夾樹**——一個資料夾就是一個 list，`.aos` 是第一個元素，其餘是引數 | operative／fexpr；多個資料夾互投遞＝actor | [02](02-folders.md) |
 | ↓ | **`.aos` 裡的那段腳本**——POSIX 指令 ＋ `aos` 子命令 | inst 鏈、機器層 | [03](03-inside-aos.md) |
 | ↓ | **原子 inst**——一次工具呼叫、一次 LLM 呼叫，再也託付不下去 | primitive、求值碰到底 | [04](04-atoms.md) |
+| 橫向的時間 | **一次 exec 是一格；一個 run 是一個時鐘**；同步子世界借父的鐘，async 自己走 | tick／clock | [08](08-time.md) |
 | **最底** | **CPU 週期**——真的那台機器 | — | [04](04-atoms.md) |
 
 **兩層之間唯一的橋**：`.aos` 腳本裡的 `aos run <子資料夾>` 那一行。**單向**——裡面可以開
@@ -66,6 +68,8 @@
 | [05-why](05-why.md) | **為什麼這樣設計**：三個指標、套幾層＝幾輪回不來、RTOS、上微核心下大核心 |
 | [06-open](06-open.md) | **還沒定的**：四條橋的缺口、agent 住錯位置、頂層 daemon 沒專屬格 |
 | [07-existing-aos](07-existing-aos.md) | **現有 aos 對照**：模型裡的名字 ↔ 今天程式裡的名字 ↔ 符合／對不上 |
+| [08-time](08-time.md) | **時間**：一格＝exec、一鐘＝run、同步借鐘、async 脫節、daemon 統管、時間有界 |
+| [09-cpu-socket](09-cpu-socket.md) | **LLM 當虛假 CPU**：主機板已夠；四個工程腳位留作實作對照，概念層到此收工 |
 
 ## 原始討論檔（想看完整脈絡與被否決的部分，去這些）
 
@@ -77,3 +81,6 @@
 - [assembly-and-chains/](../assembly-and-chains/README.md)——彙編線與 C 語言線，含[身分對照表](../assembly-and-chains/lisp-reconciliation.md)
 - [os-metrics-and-resources](../os-metrics-and-resources.md)——三個指標、RTOS、微核心、「先去玩」
 - [turing-to-os](../turing-to-os.md)——更上游的根基論證：agent loop ＝ CPU、檔案系統即記憶體
+- [exec-run-async](../exec-run-async.md)、[exec-run-async-time](../exec-run-async-time.md)、
+  [daemon-clocks](../daemon-clocks.md)、[land-rules](../land-rules.md)——2026-09-04 長出的時間、
+  時鐘總管與一塊地的規則
