@@ -29,6 +29,8 @@
 operative 拿到的環境（[nested-eval-car §d](nested-eval-car.md#d-operative-拿得到環境在-aos-就是資料夾本身)）
 是不是只到父層這一格為止。這也是隔離題，見 cpu-to-os-gaps.json 的 G03（隔離歸 OS）；看不看得到是作用域概念，要不要擋是隔離實作。
 
+[land-rules](land-rules.md)：**使用者定義預設封閉，掛載或 symlink 才開洞（未明說裁決）。**
+
 ### 3. 失敗
 
 子資料夾跑壞、`inst` 失敗、或等太久，父層怎麼知道、怎麼處置？**完全沒討論過**。lisp 靠
@@ -45,6 +47,8 @@ condition／handler，OS 靠 exit code／signal；[os-metrics-and-resources](os-
 
 [daemon-clocks](daemon-clocks.md) 接著記集中登記與關機一次全停；使用者傾向父死子續走，由
 daemon 重啟後對帳。
+
+[land-rules](land-rules.md)：**使用者定義死＝刪資料夾；daemon 同查 pid＋路徑（未明說裁決）。**
 
 ## 現況與模型對不上：今天的 agent 住錯位置
 

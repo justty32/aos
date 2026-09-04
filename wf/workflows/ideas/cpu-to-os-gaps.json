@@ -40,7 +40,7 @@
    "modern": "MMU／虛擬記憶體讓每個行程有自己的一片記憶體，看不到別人的",
    "aos_now": "檔案系統即記憶體、路徑即位址，全域共享；已裁定「path 不是 capability」",
    "why_gap": "沒有隔離，行程抽象就撐不起來——誰都能改誰的記憶體，OS 保證不了任何事",
-   "material": "[prior-work](prior-work.md)",
+   "material": "[prior-work](prior-work.md)、[land-rules](land-rules.md)（2026-09-04 使用者定義、未明說裁決：一塊地預設只看自己，掛載或 symlink 才開洞；AI 觀察：父開子時遞入哪些元素就是環境，G03 方向為預設封閉、開洞明講）",
    "status": "OS 必要——Q3 歸 OS；多 CPU 綁到（2026-09-02）"
   },
   {
@@ -70,7 +70,7 @@
    "modern": "process 是一等公民：有 id、狀態、親子關係、可列舉、可終止",
    "aos_now": "世界＝資料夾，但沒有 process table、沒有 pid 檔、列不出「現在有誰在跑」",
    "why_gap": "OS 管的東西叫行程。沒有這個名詞，後面的排程／控制／資源歸屬都沒有掛靠點",
-   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains/series](assembly-and-chains/series.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）、[nested-eval-car](nested-eval-car.md#裁決2026-09-03)（**2026-09-03 已裁**：行程誕生＝**父資料夾的 `.aos` 開一個子資料夾**；子資料夾跑不跑全由父 `.aos` 決定；**頂層資料夾由使用者開或由使用者開的 daemon 代開，不是自宣告 `init`**——daemon 也可看成一個資料夾，再往上是 linux，故頂層不需特例）、[fuse-host](fuse-host.md)（FUSE 宿主形式的 daemon；**無裁決**）、[exec-run-async](exec-run-async.md)（**2026-09-04 AI 提議，無裁決**：`async:true` 自動開子資料夾並 fork `aos run <child>`，結果落固定路徑；行程留在磁碟上可看、可殺、可重跑）、[daemon-clocks](daemon-clocks.md)（**2026-09-04 使用者傾向，未明說裁決**：所有時鐘由 daemon 走、出生先集中登記、父死子續走、關機一次全停；今天只有各資料夾分散的 `.aos/run.pid` 與單個 `aos stop`，沒有跨資料夾總表）",
+   "material": "[verdicts](verdicts.md) B9、[assembly-and-chains/series](assembly-and-chains/series.md)（自供給的鏈＝行程；鏈需要 id 才能被指名——signal。**第三部分**：`series.json` 就是使用者要的 process table——記「目前在執行哪些一串彙編」與「執行到哪裡」，由 loop 讀；生滅規則未定）、[nested-eval-car](nested-eval-car.md#裁決2026-09-03)（**2026-09-03 已裁**：行程誕生＝**父資料夾的 `.aos` 開一個子資料夾**；子資料夾跑不跑全由父 `.aos` 決定；**頂層資料夾由使用者開或由使用者開的 daemon 代開，不是自宣告 `init`**——daemon 也可看成一個資料夾，再往上是 linux，故頂層不需特例）、[fuse-host](fuse-host.md)（FUSE 宿主形式的 daemon；**無裁決**）、[exec-run-async](exec-run-async.md)（**2026-09-04 AI 提議，無裁決**：`async:true` 自動開子資料夾並 fork `aos run <child>`，結果落固定路徑；行程留在磁碟上可看、可殺、可重跑）、[daemon-clocks](daemon-clocks.md)（**2026-09-04 使用者傾向，未明說裁決**：所有時鐘由 daemon 走、出生先集中登記、父死子續走、關機一次全停；今天只有各資料夾分散的 `.aos/run.pid` 與單個 `aos stop`，沒有跨資料夾總表）、[land-rules](land-rules.md)（2026-09-04 使用者定義、未明說裁決：路徑是地的唯一標示符，刪除與搬家都算死；AI 建議 daemon 同查 pid＋路徑、孤魂補一刀，現在不做搬家通知）",
    "status": "必要——多程式（2026-09-02）"
   },
   {
