@@ -63,6 +63,9 @@ daemon 重啟後對帳。
 
 [daemon-clocks](daemon-clocks.md)：**使用者傾向全由 daemon 管，fork 先不考慮**。
 
+[agent-loop-under-clock 第 1 點](agent-loop-under-clock.md#ai-觀察非裁決可否決走完冒出的三件事)：
+agent 可借父鐘；只有需要父停後繼續時，才由 daemon 直接帶自己的鐘。
+
 ## 不是缺，是已裁先玩
 
 排程、資源計量、權限**不是漏掉沒想到**，是 2026-09-03 已經明白裁定「先停下設計、去用現有的

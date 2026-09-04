@@ -101,3 +101,6 @@ AI 原本建議「先講第 1 與第 4」，依這個決定**撤回**；留這�
 **這節從哪來**：[land-rules](../land-rules.md)、[daemon-clocks](../daemon-clocks.md)、
 [exec-run-async](../exec-run-async.md)、[exec-run-async-time](../exec-run-async-time.md)、
 [play-watchlist](../play-watchlist.md)、[07-existing-aos](07-existing-aos.md)。
+
+續篇／下一階段：[agent-loop-under-clock](../agent-loop-under-clock.md)——agent 規劃第一篇，記它在
+上述時鐘模型下逐 tick 怎麼走；不重開本篇四個工程腳位。

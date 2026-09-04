@@ -110,7 +110,7 @@
    "modern": "kernel 裡有一個明確的排程器，介面清楚",
    "aos_now": "跨資料夾排程屬 `exec_loop` 還是更外層，未定；四條方案（A 世界／B spool／C loop 閘／D flock）已盤點未選",
    "why_gap": "決定 `exec_loop` 的介面是「跑這個資料夾」還是「跑這一組」——這條不定，OS 的邊界就畫不出來",
-   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）、[exec-run-async-time](exec-run-async-time.md)（**2026-09-04 使用者定義、未明說裁決**：async 是子世界時序與父世界脫節；誰讓子時鐘走仍未答）、[daemon-clocks](daemon-clocks.md)（**2026-09-04 使用者傾向，未明說裁決**：所有子時鐘交 daemon 走；daemon 資料夾的 list 作跨資料夾總表，並負責一次全停）",
+   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）、[exec-run-async-time](exec-run-async-time.md)（**2026-09-04 使用者定義、未明說裁決**：async 是子世界時序與父世界脫節；誰讓子時鐘走仍未答）、[daemon-clocks](daemon-clocks.md)（**2026-09-04 使用者傾向，未明說裁決**：所有子時鐘交 daemon 走；daemon 資料夾的 list 作跨資料夾總表，並負責一次全停）、[agent-loop-under-clock](agent-loop-under-clock.md)（**2026-09-04 使用者確認、傾向非裁決**：agent 可借父鐘；LLM／慢工具由 daemon 推一次性脫節鐘，兩個有事 tick 中間夾空等 tick）",
    "status": "必要——多程式；多 CPU 同時承認後要答「能不能跨 CPU 換手」，開著（2026-09-02）"
   },
   {
