@@ -61,6 +61,7 @@
 
 > RTOS 那條線多了一個成本來源：[nested-eval](nested-eval.md) 的**深度**邊界——資料夾每巢狀
 > 一層就是一個 continuation 停著等，回合制下直接變成「幾輪回不來」。
+> 時間上限則以**事前保證（環境限制）為主、timeout 為保險絲**，見 [exec-run-async-time](exec-run-async-time.md)。
 
 ## 七、AI 觀察（非裁決，可否決）
 

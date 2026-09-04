@@ -49,6 +49,7 @@ AI 提議把這顆糖定成：
 時間**」；`async` 的意思是「**去別處跑，父不要在這裡等**」。兩者不是同一件事。
 
 時間預算對應 [os-metrics-and-resources](os-metrics-and-resources.md) 的 RTOS 主線：最壞時間要有界。
+續篇 [exec-run-async-time](exec-run-async-time.md) 據使用者的新傾向，把 timeout 降為保險絲，主線改成環境限制的事前保證。
 **不急，先記。**
 
 ## 現有 aos 對照

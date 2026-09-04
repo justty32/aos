@@ -110,7 +110,7 @@
    "modern": "kernel 裡有一個明確的排程器，介面清楚",
    "aos_now": "跨資料夾排程屬 `exec_loop` 還是更外層，未定；四條方案（A 世界／B spool／C loop 閘／D flock）已盤點未選",
    "why_gap": "決定 `exec_loop` 的介面是「跑這個資料夾」還是「跑這一組」——這條不定，OS 的邊界就畫不出來",
-   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）",
+   "material": "[verdicts](verdicts.md) B6、[scheduling](scheduling/README.md)、[assembly-and-chains](assembly-and-chains/README.md)（**訊號**：使用者把 `series.json` 放進 **loop** 讀，排程輸入因此落在 loop 層，不在更外層）、[exec-run-async-time](exec-run-async-time.md)（**2026-09-04 使用者定義、未明說裁決**：async 是子世界時序與父世界脫節；誰讓子時鐘走仍未答）",
    "status": "必要——多程式；多 CPU 同時承認後要答「能不能跨 CPU 換手」，開著（2026-09-02）"
   },
   {
@@ -200,7 +200,7 @@
    "modern": "現代 CPU 假設可靠且確定：同輸入同輸出，不會逾時，不會回錯",
    "aos_now": "LLM 會逾時、會回錯、同輸入不同輸出；失敗算「有做事」，因此關掉了唯一的節流閥",
    "why_gap": "又一條橫向對比會漏的軸。整套 OS 的抽象都建立在「計算單元可靠」上，這裡不成立",
-   "material": "[scheduling](scheduling/README.md)、[machine-shape/debts](machine-shape/debts.md)、[assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md)（**2026-09-01 不再整條線通吃**：三段式生產線把不確定性關在「寫」那一段，**編譯（確定性拆平）與執行兩段把確定性撿回來**，replay 因此變得可能）、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 補裁：可預測性是三指標裡最優先的那個**，所以本格從「橫向對比會漏的一條軸」升為**主軸** → [top-to-bottom/05](top-to-bottom/05-why.md)）",
+   "material": "[scheduling](scheduling/README.md)、[machine-shape/debts](machine-shape/debts.md)、[assembly-and-chains/compile-pipeline](assembly-and-chains/compile-pipeline.md)（**2026-09-01 不再整條線通吃**：三段式生產線把不確定性關在「寫」那一段，**編譯（確定性拆平）與執行兩段把確定性撿回來**，replay 因此變得可能）、[os-metrics-and-resources](os-metrics-and-resources.md)（**2026-09-03 補裁：可預測性是三指標裡最優先的那個**，所以本格從「橫向對比會漏的一條軸」升為**主軸** → [top-to-bottom/05](top-to-bottom/05-why.md)）、[exec-run-async-time](exec-run-async-time.md)（**2026-09-04 使用者傾向、未明說裁決**：同步世界只收時間有界的工作；LLM／網路等外部時間搬去脫節子世界）",
    "status": "未對應"
   },
   {
