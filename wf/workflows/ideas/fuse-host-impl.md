@@ -1,6 +1,6 @@
 # fuse-host-impl：實作面備忘——會不會麻煩、跟 tmpfs 差在哪
 
-← [fuse-host](fuse-host.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [top-to-bottom/01-top](top-to-bottom/01-top.md)｜[fuse-host](fuse-host.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
 
 **本檔是 [fuse-host](fuse-host.md) 的續篇**——使用者說「都順便記下來吧」，接著問的兩題另開
 一檔，免得 [fuse-host](fuse-host.md) 超過檔案大小上限。**本檔無裁決**，全部是 AI 觀察，
