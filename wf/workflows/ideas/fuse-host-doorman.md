@@ -1,6 +1,6 @@
 # fuse-host-doorman：門房還是廚師
 
-← [fuse-host](fuse-host.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [top-to-bottom/01-top](top-to-bottom/01-top.md)｜[fuse-host](fuse-host.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
 
 **本檔是 [fuse-host](fuse-host.md) 的續篇**——那份已經接近檔案大小上限，使用者接著追問
 的這一節另開一檔。**本檔無裁決**，全部是 AI 觀察，使用者可以否決。
@@ -12,7 +12,7 @@
 這一句接的是 [fuse-host §f](fuse-host.md#f-與現有程式的關係)「攔截＋記錄 vs 整個取代
 loop」那條——AI 用大白話展開兩種當法到底差在哪。
 
-## AI 觀察：門房還是廚師（非裁決，可否決）
+## AI 觀察（非裁決，可否決）：門房還是廚師
 
 ### g. FUSE 這件事本身：宿主一定會被敲門
 
