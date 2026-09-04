@@ -12,6 +12,11 @@
 
 ## 最新進度
 
+- **2026-09-04：續談 `exec`／`run` 與長任務的 async 糖（未裁）**——現況查明 `aos llm`／
+  `aos agent` 都同步等 HTTP；同回合 inst 全部先 fork，但 loop 會等最慢者才收尾。AI 提議
+  `async:true` 不開執行緒，而是自動開子資料夾、fork `aos run <child>`、以固定路徑檔案回傳；
+  timeout 是另一件事。等使用者裁決 → [exec-run-async](workflows/ideas/exec-run-async.md)。
+
 - **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
   **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**
   （[assembly-and-chains](workflows/ideas/assembly-and-chains/README.md)）。
