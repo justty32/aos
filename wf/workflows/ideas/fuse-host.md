@@ -2,6 +2,8 @@
 
 ← [top-to-bottom/01-top](top-to-bottom/01-top.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
 
+前情：最初動機見 [fuse-host-why](fuse-host-why.md)。
+
 2026-09-03 使用者提出「daemon 可以是一個支援 FUSE 的行程，整棵 aos 資料夾樹寄生在裡面」。
 **本檔無裁決**，全部是 AI 觀察，使用者可以否決；**不排進 OS 第一塊**——那件事已裁
 「先停下設計、去用現有的東西玩」（[os-metrics-and-resources §九](os-metrics-and-resources.md#九停下腳步先去用現有的東西玩使用者裁決2026-09-03)），本檔只是先記下這個念頭。

@@ -68,6 +68,8 @@ daemon 重啟後對帳。
 排程、資源計量、權限**不是漏掉沒想到**，是 2026-09-03 已經明白裁定「先停下設計、去用現有的
 東西玩」——見 [os-metrics-and-resources §九](os-metrics-and-resources.md#九停下腳步先去用現有的東西玩使用者裁決2026-09-03)。
 
+玩的第一步可以是把 `.aos/` 放 tmpfs；理由與現有程式對照見 [fuse-host-why](fuse-host-why.md)。
+
 ## 相關
 
 - [nested-eval-sugar](nested-eval-sugar.md)——本檔的上游：兩層互不相關的裁決、唯一的橋是

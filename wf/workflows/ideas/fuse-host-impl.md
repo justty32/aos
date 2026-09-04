@@ -44,6 +44,8 @@
 
 ## 節二：跟 tmpfs 的差別
 
+最初其實是為了少碰磁碟；拆開後第一個答案是 tmpfs，見 [fuse-host-why](fuse-host-why.md)。
+
 **使用者原話（2026-09-03）**：
 
 > 那這跟/tmpfs的差別？

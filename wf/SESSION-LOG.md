@@ -21,8 +21,10 @@
   全由 daemon 走、父死子續走、集中登記以便一次全停，並說 fork 先不考慮；仍無明說裁決 →
   [daemon-clocks](workflows/ideas/daemon-clocks.md)。
   **同日再談一塊地的邊界與生死**：使用者定義預設只看自己、掛載／symlink 才開洞，刪除與
-  搬家都算死；AI 建議 daemon 同查 pid＋路徑、現在不做 `git mv` 式通知，仍無明說裁決 →
-  [land-rules](workflows/ideas/land-rules.md)。
+  搬家都算死；AI 建議 daemon 同查 pid＋路徑，**使用者決定 git mv 先不管** →
+  [land-rules](workflows/ideas/land-rules.md)。**同日補回 FUSE 最初動機**：少碰磁碟先用 tmpfs，
+  記帳再用 inotify，真要擋或演假檔案才用 FUSE；無裁決 →
+  [fuse-host-why](workflows/ideas/fuse-host-why.md)。
 
 - **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
   **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**
