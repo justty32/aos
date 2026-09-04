@@ -17,7 +17,9 @@
   `async:true` 不開執行緒，而是自動開子資料夾、fork `aos run <child>`、以固定路徑檔案回傳；
   timeout 是另一件事。**同日續談時間模型**：使用者傾向用環境限制做事前保證、timeout 只當
   保險絲，並把 async 定義成子世界時序與父世界脫節；仍無明說裁決 →
-  [exec-run-async-time](workflows/ideas/exec-run-async-time.md)。
+  [exec-run-async-time](workflows/ideas/exec-run-async-time.md)。**同日再談子時鐘**：使用者傾向
+  全由 daemon 走、父死子續走、集中登記以便一次全停，並說 fork 先不考慮；仍無明說裁決 →
+  [daemon-clocks](workflows/ideas/daemon-clocks.md)。
 
 - **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
   **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**
