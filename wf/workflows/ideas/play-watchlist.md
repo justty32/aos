@@ -40,11 +40,19 @@ condition／handler，OS 靠 exit code／signal；[os-metrics-and-resources](os-
 暫態跑到穩態之後，留著還是刪？誰動手刪？lisp 靠 GC 回收沒人再指的 cons cell，OS 靠行程結束
 回收資源；**目前的模型只講了「生」（`G06` 行程誕生）沒講「死」**。
 
+[exec-run-async-time](exec-run-async-time.md) 又多一個壽命角度：父時鐘死了，脫節子世界若繼續走，
+就會變成**孤兒時鐘**；這既是 async 的好處，也是回收風險。
+
 ## 現況與模型對不上：今天的 agent 住錯位置
 
 今天跑起來的 agent 住在 `.aos/agents/` 內（inst 層），但照 2026-09-03 拍板的新模型，agent 應該
 是一個**獨立的資料夾**（operative），要呼叫 LLM 是在它自己的 `.aos` 內下 `aos llm`。這處落差
 玩的時候大概會直接撞到，先記著，不必現在改。
+
+## 6. 誰讓脫節子世界的時鐘走
+
+父層 fork 一個 `aos run <child>`，還是把子世界交給 daemon 接手？兩種都能讓父 tick 不等，
+但壽命、重啟與誰負責收尾不同。來源見 [exec-run-async-time](exec-run-async-time.md)。
 
 ## 不是缺，是已裁先玩
 

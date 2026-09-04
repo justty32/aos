@@ -48,6 +48,7 @@
 | **中間值**（`out/`） | `.aos/batch/<turn>/out/<id>.json` | **符合**——但是每回合一份，不是「一個有名字的中間值」 |
 | **原子 inst** | 一條 `Inst`（argv／env／cwd／stdin／timeout），由 `core/exec` fork 出去跑 | **符合** |
 | **一隻 agent＝一個獨立資料夾** | 今天住在 `.aos/agents/<name>/` **裡面** | **對不上**——見 [06](06-open.md) |
+| **同步世界只放時間有上限的原子** | agent 一步內會同步等 LLM 回來 | **對不上**——環境限制規則下不合法，LLM 應是脫節子世界；見 [exec-run-async-time](../exec-run-async-time.md) |
 | **人在桌邊按 enter** | `aos chat` 是今天唯一「讀一句→算→印回覆→等你下一句」四格都齊的入口 | **符合**（但它的「算」是推好幾回合，不是走一步） |
 
 ## 一個順帶的邊緣狀況：源碼與產物住同一個資料夾
