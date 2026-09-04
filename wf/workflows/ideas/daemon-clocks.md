@@ -74,4 +74,5 @@ systemd 用 cgroup 把一整組行程收掉。模型自然走到與 Unix 相同�
 - `G10`（排程器住在哪一層）：daemon 走總表，是跨資料夾排程的一個具體形狀。
 - `G19`（資源不可靠與不確定）：daemon 掛掉、PID 過期，都要靠重啟對帳收斂。
 - [play-watchlist](play-watchlist.md)——誰走子時鐘與資料夾壽命。
+- [land-rules](land-rules.md)——本篇續篇：一塊地的可見範圍、生死與搬家。
 - [fuse-host](fuse-host.md)——daemon＝桌子本身；本篇再把桌上的時鐘登記成 list。
