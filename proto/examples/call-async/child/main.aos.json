@@ -1,0 +1,17 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "steps": [
+    {
+      "name": "say",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "python3", "-c",
+          "import os, pathlib; p = pathlib.Path(os.environ['AOS_RESULT']); p.parent.mkdir(parents=True, exist_ok=True); p.write_text('child (async) says hi, caller=%s\\n' % os.environ.get('AOS_CALLER'))"
+        ]
+      },
+      "then": "end"
+    }
+  ]
+}

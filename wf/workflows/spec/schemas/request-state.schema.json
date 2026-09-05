@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/request-state.schema.json",
+  "title": "aos LLM 請求的狀態紀錄",
+  "description": "LLM 世界為每一筆請求維護的 <llm_world>/.aos/requests/<request id>.json。請求者用 aos status --request <id> 讀它。它只給人與 aos status 看；成敗一律以結果落點與狀態檔為準。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "id", "from", "state", "updated_at", "request"],
+  "properties": {
+    "format_version": {
+      "description": "這個檔的格式版本，第一版 1。",
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "description": "那筆請求的 id，跟檔名一樣。",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "from": {
+      "description": "請求者那塊地的真實路徑，抄自請求的 from。",
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "description": "queued＝還在排隊；sent＝已經送給處理單元、還沒回來；done＝結果落點有檔；failed＝寫了狀態檔。",
+      "type": "string",
+      "enum": ["queued", "sent", "done", "failed"]
+    },
+    "unit": {
+      "description": "配到哪一顆處理單元的 name。還在 queued 就填 null。",
+      "type": ["string", "null"],
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "prompt": {
+      "description": "取件時展開好的絕對路徑（相對路徑以 from 那塊地的根為基準）。",
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "description": "取件時展開好的絕對結果落點。",
+      "type": "string",
+      "minLength": 1
+    },
+    "updated_at": {
+      "description": "這一筆最後一次改動的時間，ISO 8601 UTC 含毫秒。保留期從它算起。",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "request": {
+      "description": "原始投遞物整份原文，取件時一字不動搬進來，處理完不刪。出事時這是唯一能回頭看「當初投了什麼」的地方。形狀見 llm-request.schema.json。",
+      "type": "object"
+    },
+    "ext": {
+      "description": "具名擴充區。配不到同 tier 的單元時，waiting_tier 記在等哪個 tier。",
+      "type": "object",
+      "properties": {
+        "waiting_tier": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

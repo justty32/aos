@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/series.schema.json",
+  "title": "aos 接力棒 .aos/series.json",
+  "description": "一塊地上這一批有哪幾條串、各跑到哪。檔頭放批 id 與格式版本，series 是陣列，一條串一個物件。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "batch_id",
+    "tick",
+    "recent_ids",
+    "series"
+  ],
+  "properties": {
+    "format_version": {
+      "description": "格式版本，這一版是 1。",
+      "type": "integer",
+      "const": 1
+    },
+    "batch_id": {
+      "description": "這一批的 id，載入那一刻產，32 個小寫 hex。",
+      "$ref": "#/$defs/machine_id"
+    },
+    "tick": {
+      "description": "最近一次寫回時剛跑完那一格的格號；載入那一刻是 0。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "recent_ids": {
+      "description": "最近從收件匣取件過的投遞 id，最多 1000 個，滿了先進先出。",
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "series": {
+      "description": "這一批的全部串，含已經跑完的。",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/series_entry"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "machine_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "series_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "template",
+        "cursor",
+        "status",
+        "regs",
+        "parent",
+        "fail_streak"
+      ],
+      "properties": {
+        "id": {
+          "description": "串 id，這塊地上唯一，機器產。",
+          "$ref": "#/$defs/machine_id"
+        },
+        "template": {
+          "description": "這條串在跑哪個模板，對應 .aos/program/<模板名>.json。",
+          "$ref": "#/$defs/id"
+        },
+        "cursor": {
+          "description": "游標：現在停在模板的哪一步，寫步名；跑完寫 \"end\"。",
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "description": "running 還在跑、done 跑完、failed 壞了、stopped 被叫停。",
+          "type": "string",
+          "enum": [
+            "running",
+            "done",
+            "failed",
+            "stopped"
+          ]
+        },
+        "regs": {
+          "description": "暫存器：這條串的符號表，名字對字串值，只在串內有效。",
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "parent": {
+          "description": "開出這條串的父串 id；沒有父串就是 null。",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/machine_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fail_streak": {
+          "description": "這條串停在同一步連續失敗幾次；成功或游標推到別的步就歸零。到 3 強制 stopped。",
+          "type": "integer",
+          "minimum": 0
+        },
+        "calls": {
+          "description": "步名對 call id：這條串停在那一步時開的那筆呼叫記錄。游標離開那一步就刪掉該鍵。",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/machine_id"
+          }
+        },
+        "await_ticks": {
+          "description": "步名對已經等了幾格：await 步每格加一，跟 max_ticks 比的就是它。游標離開那一步就刪掉該鍵。",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "resources": {
+          "description": "可選的自我申報，排程只當參考，不是保證。",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ticks": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "llm_calls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "priority": {
+              "type": "integer"
+            }
+          }
+        },
+        "fail_reason": {
+          "description": "短代碼，只在 status 是 failed 或 stopped 時出現。",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "ext": {
+          "description": "具名擴充區，裡面隨意。",
+          "type": "object"
+        }
+      }
+    }
+  }
+}

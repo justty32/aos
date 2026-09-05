@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/agent.schema.json",
+  "title": "aos agent 限制參數：agent 資料夾頂層的 agent.json",
+  "description": "只有 agent 那塊地才有這個檔。人寫、進 git，由 `aos agent init` 產出第一版。圈裡的指令讀它。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "system_prompt"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "max_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "這隻 agent 總共最多跑幾秒。0 或缺席＝不限。圈自己不看牆上的鐘：起 run 的人把它換算成格數，寫進 `aos run --budget N` 或登記表那筆的 `budget`。"
+    },
+    "max_llm_calls": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "最多投幾次 LLM 請求。0 或缺席＝不限。判的是這塊地自己的 .aos/usage.json（正本 usage-total.schema.json），不是家的帳簿；超過就往自己的 .aos/control/ 投一則 stop。"
+    },
+    "max_tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": ".aos/usage.json 上 tokens_in 加 tokens_out 的總上限。0 或缺席＝不限。數法與超過的處置同 max_llm_calls。"
+    },
+    "tier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "default": "smart",
+      "description": "投給 LLM 世界時預設用哪一級處理單元，例如 fast、smart。請求裡沒特別指定就用這個。"
+    },
+    "system_prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "一條路徑，指向人格那個檔。相對路徑以這塊地的根為基準，也可以是絕對路徑。禁止把整段字串塞在這裡。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區。唯一可以放 spec 不認得的欄位的地方。"
+    }
+  },
+  "examples": [
+    {
+      "format_version": 1,
+      "max_seconds": 3600,
+      "max_llm_calls": 50,
+      "max_tokens": 400000,
+      "tier": "smart",
+      "system_prompt": "system.md"
+    }
+  ]
+}

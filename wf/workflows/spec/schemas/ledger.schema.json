@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/ledger.schema.json",
+  "title": "aos 帳簿的一行",
+  "description": "$AOS_HOME/.aos/ledger.jsonl 的一行，不是整個檔。整個檔是 jsonl：一行一個這種物件，只追加、不回頭改。這裡刻意沒有 format_version：一行不是一份文件，格式要改就另開檔名。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["at", "request_id", "from", "unit", "tier", "tokens_in", "tokens_out", "tokens_source", "ms", "outcome"],
+  "properties": {
+    "at": {
+      "description": "記這一行的時間，ISO 8601 UTC 含毫秒。",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "request_id": {
+      "description": "那筆 LLM 請求的 id。串得回請求與結果落點。",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "from": {
+      "description": "叫的人：請求裡的 from，投遞者那塊地的真實路徑。",
+      "type": "string",
+      "minLength": 1
+    },
+    "unit": {
+      "description": "用了哪顆處理單元的 name。還沒送出就退回的（queue_timeout）填 null。",
+      "type": ["string", "null"],
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "tier": {
+      "description": "請求要的聰明度分級。",
+      "type": "string",
+      "minLength": 1
+    },
+    "tokens_in": {
+      "description": "送進去幾個 token。後端沒給就填 0。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "tokens_out": {
+      "description": "吐回來幾個 token。後端沒給就填 0，並把 tokens_source 標成 estimated。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "tokens_source": {
+      "description": "reported＝後端自己回的數字；estimated＝我們自己估的。事後算錢要分得出來，禁止把估的當真的。",
+      "type": "string",
+      "enum": ["reported", "estimated"]
+    },
+    "ms": {
+      "description": "花了幾毫秒。ok 與 error 算送出到回來；queue_timeout 算排隊等了多久。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "outcome": {
+      "description": "ok＝結果落點有檔；backend_error＝後端或傳輸失敗；queue_timeout＝排隊超過上限退回；rejected＝請求本身寫壞、沒收下；result_unknown＝送出後斷線或重啟，結果不明；killed＝被取消或被殺。跟狀態檔的 reason 代碼對得上。",
+      "type": "string",
+      "enum": ["ok", "backend_error", "queue_timeout", "rejected", "result_unknown", "killed"]
+    },
+    "ext": {
+      "description": "具名擴充區。唯一可以放 spec 不認得的欄位的地方。",
+      "type": "object"
+    }
+  }
+}

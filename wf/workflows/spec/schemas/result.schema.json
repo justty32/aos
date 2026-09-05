@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/result.schema.json",
+  "title": "aos 指令的執行結果",
+  "description": ".aos/ticks/<N>/results/<inst id>.json。只記傳輸層：跑沒跑起來。不是成敗判定。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "id",
+    "started_at",
+    "ended_at",
+    "exit_code",
+    "signal",
+    "timed_out",
+    "spawn_error",
+    "stdout",
+    "stderr"
+  ],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "跟那筆指令的 id 一樣。"
+    },
+    "started_at": { "$ref": "#/$defs/timestamp" },
+    "ended_at": { "$ref": "#/$defs/timestamp" },
+    "exit_code": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 255,
+      "description": "正常結束的結束碼；被訊號殺或沒跑起來＝null。"
+    },
+    "signal": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "殺掉它的訊號號碼；沒被殺＝null。"
+    },
+    "timed_out": {
+      "type": "boolean",
+      "description": "是不是因為超過 timeout_ms 被 run 那層殺掉。"
+    },
+    "spawn_error": {
+      "type": ["string", "null"],
+      "description": "根本沒跑起來的原因（找不到程式、開不了三條流的檔…）；跑起來了＝null。"
+    },
+    "stdout": {
+      "type": "string",
+      "description": "標準輸出落在哪個檔。不是內容。"
+    },
+    "stderr": {
+      "type": "string",
+      "description": "標準錯誤落在哪個檔。不是內容。"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    }
+  }
+}

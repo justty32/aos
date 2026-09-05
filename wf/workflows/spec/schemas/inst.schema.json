@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/inst.schema.json",
+  "title": "aos 指令（inst）",
+  "description": "一筆指令＝一次 POSIX 呼叫的序列化。步裡的 inst 物件與 .aos/ticks/<N>/insts/<id>.json 用同一份 schema。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "id", "argv"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "同一格內唯一。撞了整格解析拒絕。"
+    },
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/bytes" },
+      "description": "陣列，不是一整條命令列字串。第 0 個是要跑的程式。"
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/bytes" },
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+      "description": "要加的環境變數；蓋過繼承來的同名變數。"
+    },
+    "env_inherit": {
+      "type": "boolean",
+      "default": true,
+      "description": "繼不繼承父行程的環境變數。預設 true，建議明寫 false。"
+    },
+    "cwd": {
+      "$ref": "#/$defs/bytes",
+      "description": "工作目錄。省略＝這塊地的根。"
+    },
+    "stdin": {
+      "$ref": "#/$defs/bytes",
+      "description": "檔案路徑，不是管線。省略＝/dev/null。"
+    },
+    "stdout": {
+      "$ref": "#/$defs/bytes",
+      "description": "檔案路徑。省略＝.aos/ticks/<N>/results/<id>.stdout。"
+    },
+    "stderr": {
+      "$ref": "#/$defs/bytes",
+      "description": "檔案路徑。省略＝.aos/ticks/<N>/results/<id>.stderr。"
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "只能比 run 那層給的預設更短；更長是解析拒絕。"
+    },
+    "footprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reads": { "type": "array", "items": { "$ref": "#/$defs/bytes" } },
+        "writes": { "type": "array", "items": { "$ref": "#/$defs/bytes" } }
+      },
+      "description": "宣告會讀哪裡、會寫哪裡。第一版宣告不強制。"
+    },
+    "exclusive": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 128 },
+      "description": "互斥組名。同組的指令不在同一格跑，後到的延到下一格。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區。唯一可以放 spec 不認得的欄位的地方。"
+    }
+  },
+  "$defs": {
+    "bytes": {
+      "description": "字串，或 {\"b64\":\"…\"} 裝非 UTF-8 的原始位元組。",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["b64"],
+          "properties": {
+            "b64": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/tool-envelope.schema.json",
+  "title": "aos 工具封套（tool envelope）",
+  "description": "一次工具往返退回給模型的固定形狀。成功和失敗同一個形狀，error 缺席就是成功。這個物件不落在 .aos/ 裡，是塞進下一份 prompt 的一段文字，所以沒有 format_version。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "call_id",
+    "tool",
+    "ok"
+  ],
+  "properties": {
+    "call_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "把模型那次決定跟這份結果串起來的 id。模型決定叫工具時就配好，結果回來原樣帶回。"
+    },
+    "tool": {
+      "type": "string",
+      "description": "被叫的工具名。叫了不存在的工具時，這裡放模型講的那個名字。"
+    },
+    "ok": {
+      "type": "boolean",
+      "description": "成不成功。true 時 error 必須缺席，false 時 error 必須在。"
+    },
+    "result": {
+      "type": "string",
+      "description": "工具的輸出。ok 為 false 時可以缺席。output.kind 是 file 時這裡放檔案路徑。"
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]{1,64}$",
+          "description": "短代碼，給模型分辨。",
+          "examples": [
+            "unknown_tool",
+            "bad_args",
+            "no_such_land",
+            "spawn_error",
+            "timeout",
+            "killed",
+            "nonzero_exit"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4096,
+          "description": "一兩句人話，說明缺什麼、該怎麼重選。"
+        },
+        "retryable": {
+          "type": "boolean",
+          "description": "同樣的呼叫再試一次有沒有意義。"
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean",
+      "default": false,
+      "description": "result 有沒有被截掉。截了就必須標 true，不准安靜地截。"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "else": {
+        "required": [
+          "error"
+        ]
+      }
+    }
+  ]
+}

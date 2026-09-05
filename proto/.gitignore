@@ -1,0 +1,7 @@
+# 跑出來的東西，不進 git（WRITER-BRIEF 4.1 那張表的「進 git：否」那幾列）
+__pycache__/
+*.pyc
+.aos/
+.home/
+examples/*/out/
+examples/llm-echo/answer.txt

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/call.schema.json",
+  "title": "aos 呼叫記錄（call）",
+  "description": "父開一塊子地時寫的一筆：.aos/calls/<call id>.json。同步、脫節都要寫。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "id", "tick", "series", "step", "child", "mode", "result", "opened_at"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "呼叫 id，機器產：32 個小寫 hex。也是檔名。"
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "父在第幾格開的。"
+    },
+    "series": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "開它的那條父串的 id。"
+    },
+    "step": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "父模板裡那一步的步名。"
+    },
+    "child": {
+      "type": "string",
+      "minLength": 1,
+      "description": "子地的真實路徑（realpath），不寫 symlink。"
+    },
+    "mode": {
+      "enum": ["sync", "async"],
+      "description": "sync＝同步（借父的鐘）；async＝脫節（自己有鐘）。"
+    },
+    "result": {
+      "type": "string",
+      "minLength": 1,
+      "description": "父指定的結果落點，必須是 exec 展開過的絕對真實路徑。子地從 AOS_RESULT 拿到它。旁邊兩個保留位：<result>.status.json、<result>.usage.json。規矩見 07b。"
+    },
+    "args": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+      "description": "每一對變成子地的環境變數 AOS_ARG_<大寫名>。"
+    },
+    "opened_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "父寫這筆的時刻，ISO 8601 UTC 含毫秒。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區。"
+    }
+  }
+}

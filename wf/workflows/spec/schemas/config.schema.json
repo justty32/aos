@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/config.schema.json",
+  "title": "aos 設定檔 config.json",
+  "description": "使用者層 $AOS_HOME/.aos/config.json 與世界層 <地>/.aos/config.json 共用這一份。頂層放的是使用者層的完整欄位；世界層必須改用 $defs/world，只准出現 format_version、path、max_parallel、inst_timeout_ms、inbox_max。世界層的 max_parallel 只能比使用者層小。",
+  "type": "object",
+  "required": ["format_version"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {
+      "description": "這個檔的格式版本，第一版 1。",
+      "type": "integer",
+      "minimum": 1
+    },
+    "units": {
+      "description": "處理單元表：LLM 世界後面真的模型端點。只有使用者層有。",
+      "type": "array",
+      "items": { "$ref": "#/$defs/unit" }
+    },
+    "max_parallel": {
+      "description": "同一格最多幾筆指令一起跑。",
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_wait_ms": {
+      "description": "一筆 LLM 請求最多排隊多久。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "llm_world": {
+      "description": "LLM 世界那塊地的路徑，預設 $AOS_HOME/.aos/llm。",
+      "type": "string",
+      "minLength": 1
+    },
+    "reap_after_ms": {
+      "description": "daemon 清孤地的約定期限：脫節子地跑完、父超過這段時間沒來讀就清掉。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "path": {
+      "description": "跑指令時的 PATH 白名單。",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "inst_timeout_ms": {
+      "description": "每筆指令的預設逾時，單筆指令只能比它更短。",
+      "type": "integer",
+      "minimum": 1
+    },
+    "inbox_max": {
+      "description": "收件匣背壓上限，超過就拒收，預設 1000。",
+      "type": "integer",
+      "minimum": 1
+    },
+    "ext": {
+      "description": "具名擴充區，內容不受本 schema 管。",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "unit": {
+      "title": "一顆處理單元",
+      "type": "object",
+      "required": ["name", "endpoint", "model", "tier", "max_parallel"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "單元名，帳簿記的就是它。",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "endpoint": { "description": "模型端點位址。測試用的假後端 scheme echo:、fail:<原因>、slow:<毫秒> 也算合法，不另設 pattern。", "type": "string", "minLength": 1 },
+        "model": { "description": "模型名。", "type": "string", "minLength": 1 },
+        "tier": { "description": "聰明度分級，例如 fast、smart。", "type": "string", "minLength": 1 },
+        "max_parallel": { "description": "這顆單元的並行上限。", "type": "integer", "minimum": 1 },
+        "api_key_env": {
+          "description": "金鑰放在哪個環境變數；金鑰本身禁止寫進這個檔。",
+          "type": "string",
+          "minLength": 1
+        },
+        "timeout_ms": {
+          "description": "LLM 世界跑那筆 aos llm 指令的逾時，沒填當 300000。",
+          "type": "integer",
+          "minimum": 1
+        },
+        "ext": { "type": "object" }
+      }
+    },
+    "world": {
+      "title": "世界層 <地>/.aos/config.json",
+      "description": "世界層只准出現這五個欄；其餘一律拒絕。",
+      "type": "object",
+      "required": ["format_version"],
+      "additionalProperties": false,
+      "properties": {
+        "format_version": { "type": "integer", "minimum": 1 },
+        "path": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "max_parallel": { "type": "integer", "minimum": 1 },
+        "inst_timeout_ms": { "type": "integer", "minimum": 1 },
+        "inbox_max": { "type": "integer", "minimum": 1 },
+        "ext": { "type": "object" }
+      }
+    }
+  }
+}

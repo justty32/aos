@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/control.schema.json",
+  "title": "aos 控制收件匣的訊息",
+  "description": "<地>/.aos/control/<id>.json。走同一套投遞協定：寫 <id>.json.temp → 刷 → 改名成 <id>.json。run 在每格邊界看它。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "id", "op", "from", "at"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "這則訊息的 id，也是檔名。機器產的用 32 個小寫 hex。"
+    },
+    "op": {
+      "enum": ["stop"],
+      "description": "要它做什麼。第一版只有 stop＝這一格做完就停。立刻殺掉不走這裡。"
+    },
+    "from": {
+      "type": "string",
+      "description": "誰投的：投遞者那塊地的真實路徑；使用者或 daemon 直接投的寫家的路徑。"
+    },
+    "at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+      "description": "投的時間。"
+    },
+    "ext": { "type": "object", "description": "具名擴充區，內容不管。" }
+  }
+}

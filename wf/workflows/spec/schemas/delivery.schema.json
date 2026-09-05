@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/delivery.schema.json",
+  "title": "aos 投遞物（delivery）",
+  "description": "放進 .aos/inbox/ 的一個 json。生成中檔名 <id>.json.temp，改名成 <id>.json 才算投到。kind 決定其餘欄位。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "id", "kind", "from", "at"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "投遞 id，機器產：32 個小寫 hex。也是檔名。同 id 再投＝拒絕。"
+    },
+    "kind": {
+      "enum": ["inst", "mail", "llm"],
+      "description": "inst＝這一格要跑的指令；mail＝信，機器不執行；llm＝投給 LLM 世界的請求。"
+    },
+    "from": {
+      "type": "string",
+      "minLength": 1,
+      "description": "投遞者那塊地的真實路徑。被拒絕時錯誤信投回這裡。"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "投遞時刻，ISO 8601 UTC 含毫秒。"
+    },
+    "inst": {
+      "$ref": "inst.schema.json",
+      "description": "kind=inst 才有。"
+    },
+    "subject": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "kind=mail 才有。被隔離的回報信固定寫 rejected。"
+    },
+    "body": {
+      "type": "string",
+      "maxLength": 65536,
+      "description": "kind=mail 才有。給人或給 agent 看的內文。"
+    },
+    "prompt": { "type": "string", "description": "kind=llm 才有。正本在 llm-request.schema.json（09）。" },
+    "tier": { "type": "string", "description": "kind=llm 才有。正本在 llm-request.schema.json（09）。" },
+    "result": { "type": "string", "description": "kind=llm 才有：父指定的結果落點。正本在 09。" },
+    "priority": { "type": "integer", "description": "kind=llm 才有。小的先。正本在 09。" },
+    "max_wait_ms": { "type": "integer", "description": "kind=llm 才有。正本在 09。" },
+    "tools": { "type": "array", "description": "kind=llm 才有。給模型看的工具行。正本在 09。" },
+    "ext": { "type": "object", "description": "具名擴充區。" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "inst" } }, "required": ["kind"] },
+      "then": {
+        "required": ["inst"],
+        "properties": {
+          "subject": false, "body": false,
+          "prompt": false, "tier": false, "result": false,
+          "priority": false, "max_wait_ms": false, "tools": false
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "mail" } }, "required": ["kind"] },
+      "then": {
+        "required": ["subject", "body"],
+        "properties": {
+          "inst": false,
+          "prompt": false, "tier": false, "result": false,
+          "priority": false, "max_wait_ms": false, "tools": false
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "llm" } }, "required": ["kind"] },
+      "then": {
+        "$ref": "llm-request.schema.json",
+        "required": ["prompt", "result"],
+        "properties": { "inst": false, "subject": false, "body": false }
+      }
+    }
+  ]
+}

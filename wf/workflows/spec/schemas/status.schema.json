@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/status.schema.json",
+  "title": "aos 狀態檔（status）",
+  "description": "三態裡的第三態。路徑固定＝<結果落點>.status.json。這個檔在，就是壞了；不在不代表好了。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "state", "reason", "at"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "state": {
+      "const": "failed",
+      "description": "只有一個值。狀態檔存在本身就是壞了；沒有 running、沒有 ok。"
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{1,64}$",
+      "description": "短代碼，給機器分辨。常用的列在 examples，不限於這些。",
+      "examples": [
+        "spawn_error",
+        "timeout",
+        "killed",
+        "await_timeout",
+        "budget",
+        "no_daemon",
+        "rejected",
+        "backend_error",
+        "queue_timeout",
+        "bad_select",
+        "no_source",
+        "compile_error",
+        "reaped",
+        "result_unknown",
+        "repeat_fail",
+        "crashed",
+        "call_cycle",
+        "call_depth",
+        "land_gone",
+        "no_result"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 4096,
+      "description": "給人看的一兩句話。最長 4096 bytes，超過就截斷並在 ext 寫 truncated: true。不可信資料：禁止自動展開成任何指令的參數。"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "寫這個檔的時刻，ISO 8601 UTC 含毫秒。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區。LLM 世界在這裡寫 retryable（布林，可不可重試，見 09）；message 被截斷時寫 truncated: true。"
+    }
+  }
+}

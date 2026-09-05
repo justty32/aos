@@ -18,7 +18,7 @@
 | `app/` | 唯一的執行檔 `aos`，靠子命令分派（如 `aos init`／`aos exec`）|
 | `core/` | **核心小專案**（aos 的基本組成，一定會建）。目前只有 `inst/`：lib `aos::inst`（`libaos_inst.so`）＋ `inst` 子命令。內部分工 → [code map](workflows/common/code-map.md) |
 | `modules/` | **擴充小專案**（可選，`-DAOS_BUILD_MODULES=OFF` 整批不建）。目前是空的。新增小專案 → [add-subproject](workflows/add-subproject.md) |
-| `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案，以及最新的 [`aos-core-guide.md`](../docs/aos-core-guide.md)（目前的子命令與建置實況）。入口是 [docs/README.md](../docs/README.md)。**`.aos` 版面與回合模型的規格不在 `docs/`**，唯一真源是 [PROTOCOL](workflows/dispatch/proto/PROTOCOL.md)；階段表在 [`roadmap`](workflows/roadmap.md)。個別小專案自己的細節在它們的 `docs/`，例如 `core/inst/docs/` |
+| `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案，以及最新的 [`aos-core-guide.md`](../docs/aos-core-guide.md)（目前的子命令與建置實況）。入口是 [docs/README.md](../docs/README.md)。**`.aos` 版面與回合模型的規格不在 `docs/`**，現有程式的唯一真源是 [PROTOCOL](workflows/dispatch/proto/PROTOCOL.md)，**另起爐灶的新實作**照 [workflows/spec/](workflows/spec/README.md)；階段表在 [`roadmap`](workflows/roadmap.md)。個別小專案自己的細節在它們的 `docs/`，例如 `core/inst/docs/` |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](WORKFLOWS.md)；共享區 [workflows/common/](workflows/common/README.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣：頂層＝未處理、`done/`＝已處理（放信處，保持乾淨；使用方式見 [workflows/inbox/](workflows/inbox/README.md)）|
 | `wf/tools/` | kernel 工具：`wf-lint.sh`（檢查壞連結／錨點／超標檔／條列／殘留）、`tabledb.py`（資料檔 CRUD／連結）、`find_big_lists.py`、`fix_moved_links.py`、`check_anchors.py`；inbox 腳本：`inbox_send.sh`／`inbox_read.sh`（單一收件匣），`inbox_mail.sh`／`inbox_poll.sh`／`inbox_team.sh`／`notify_watch.sh`（五通道升級後才用）。資料檔契約見 [common/data-files](workflows/common/data-files.md) |

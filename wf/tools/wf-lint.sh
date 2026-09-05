@@ -60,7 +60,7 @@ list_owned_files() {
   local root=${1%/} _ rel
   shift
   local -a prunes=(
-    -path '*/.git' -o -path '*/node_modules' -o -path '*/__pycache__'
+    -path '*/.git' -o -path '*/.claude/worktrees' -o -path '*/node_modules' -o -path '*/__pycache__'
     -o -path '*/archive' -o -path '*/reference' -o -path '*/references' -o -path '*/vendor'
   )
   while read -r _ rel; do
@@ -183,7 +183,7 @@ if [[ $self -eq 1 ]]; then
 
   # 本 repo 規矩：任何檔都不超過 8192 bytes
   while IFS= read -r f; do echo "OVERSIZE ${f#$repo/} ($(wc -c <"$f") bytes > 8192)"; total_broken=$((total_broken + 1)); done \
-    < <(find "$repo" -type f -not -path '*/.git/*' -not -path '*/__pycache__/*' -size +8192c | sort)
+    < <(find "$repo" -type f -not -path '*/.git/*' -not -path '*/.claude/worktrees/*' -not -path '*/__pycache__/*' -size +8192c | sort)
 
   lint_dir "$repo/template" template
 
