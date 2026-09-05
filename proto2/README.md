@@ -40,6 +40,9 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 | `act` | `tool_calls` 非空就照 `command` 跑工具、結果收進 `new-prompts`；沒有就印出它說的話、順手落一份到 `replies/` | 有工具 `collect`，沒有 `idle` |
 | `collect` | 再收一次 `new-prompts/`，接在既有的 `new-prompts.json` 後面（沒新信也照走） | `llm` |
 
+`state.json` 的 `step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格（`idle` 沒信、`wait`
+還沒等到不算）——shared 鐘的子 agent 沒人跟它說話時，`step` 一直漲但 `busy` 不會動。
+
 記憶是在 `wait` 真的撿到回覆才更新的（`prompts.json` 接上 `new-prompts`、清空 `new-prompts.json`），
 不是丟請求那格——中途撿不回來的話，這輪講的話才不會憑空消失。
 

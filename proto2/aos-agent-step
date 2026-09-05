@@ -228,6 +228,7 @@ def main():
     saved = read_json(state_path, {})
     state = saved.get("state") or "idle"
     step = saved.get("step") or 0
+    busy = saved.get("busy") or 0
     request = saved.get("request") or ""
 
     if state == "idle":
@@ -236,32 +237,41 @@ def main():
         if msgs:
             write_json(os.path.join(home, "new-prompts.json"), msgs)
             nxt = "llm"
+            did_work = True
         else:
             nxt = "idle"
+            did_work = False
     elif state == "collect":
         pending = read_json(os.path.join(home, "new-prompts.json"), [])
         write_json(os.path.join(home, "new-prompts.json"), pending + collect_new_prompts(home))
         nxt = "llm"
+        did_work = True
     elif state == "llm":
         request = do_llm(home, workdir)
         nxt = "wait"
+        did_work = True
     elif state == "wait":
         nxt = do_wait(home, workdir, request)
-        if nxt != "wait":
+        did_work = nxt != "wait"
+        if did_work:
             request = ""
     elif state == "act":
         nxt = do_act(home, workdir, step + 1)
+        did_work = True
     else:
         print("aos-agent-step: 認不得的 state：%s，當 idle" % state, file=sys.stderr)
         state, nxt = "idle", "idle"
+        did_work = False
 
-    write_json(state_path, {"state": nxt, "step": step + 1, "request": request})
+    if did_work:
+        busy += 1
+    write_json(state_path, {"state": nxt, "step": step + 1, "busy": busy, "request": request})
     if not args.no_write_inst:
         inst = os.path.join(workdir, ".aos", "inst")
         os.makedirs(os.path.dirname(inst), exist_ok=True)
         with open(inst, "w", encoding="utf-8") as f:
             f.write("%s .\n" % os.path.abspath(sys.argv[0]))
-    print("aos-agent-step: step %d state %s -> %s" % (step, state, nxt), file=sys.stderr)
+    print("aos-agent-step: step %d busy %d state %s -> %s" % (step, busy, state, nxt), file=sys.stderr)
 
 
 main()
