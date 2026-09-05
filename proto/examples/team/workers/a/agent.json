@@ -1,0 +1,11 @@
+{
+  "format_version": 1,
+  "role": "worker",
+  "who": "A",
+  "max_rounds": 3,
+  "tier": "fast",
+  "system_prompt": "system.md",
+  "max_llm_calls": 3,
+  "max_seconds": 0,
+  "max_tokens": 0
+}

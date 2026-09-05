@@ -1,0 +1,13 @@
+{
+  "format_version": 1,
+  "role": "lead",
+  "team": [
+    {"who": "A", "land": "../workers/a", "file": "work/a.py", "result": "out/a.done.json"},
+    {"who": "B", "land": "../workers/b", "file": "work/b.py", "result": "out/b.done.json"}
+  ],
+  "tier": "fast",
+  "system_prompt": "system.md",
+  "max_llm_calls": 4,
+  "max_seconds": 0,
+  "max_tokens": 0
+}
