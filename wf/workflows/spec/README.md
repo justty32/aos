@@ -51,9 +51,7 @@
 | [12-cli.md](12-cli.md) | 子命令全表、退出碼、控制介面 |
 | [12b-roster-and-canon.md](12b-roster-and-canon.md) | 三層名字、`init`／`reset`／`migrate`、核心名冊、正本與版本欄、回寫鐵律 |
 | [13-doorman-l1.md](13-doorman-l1.md) | 門房第一級：只看不擋 |
-| [14-conformance.md](14-conformance.md) | 每條「必須」對一個可測的檢查：怎麼跑＋02～06 |
-| [14b-conformance.md](14b-conformance.md) | 同上（07～09） |
-| [14c-conformance.md](14c-conformance.md) | 同上（10～13）＋測不到的「必須」清單 |
+| [14-conformance.md](14-conformance.md) | 每條「必須」對一個可測的檢查：怎麼跑＋測不到的「必須」清單（表本身在 [data/conformance.json](data/conformance.json)） |
 | [schemas/](schemas/) | 每種 json 一份 JSON Schema，schema 是正本 |
 
 寫 spec 那天的材料（使用者拍板原文、83 條邊緣狀況與主編的取捨、舊資產盤點、計畫骨架）在 [notes/](notes/README.md)；能跑的 Python 原型在 repo 根目錄 `proto/`，它撞到的事在 `proto/FINDINGS.md`。
