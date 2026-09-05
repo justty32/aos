@@ -4,6 +4,8 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 AOS="$HERE/aos-exec"
 LOOP="$HERE/aos-loop"
 STEP="$HERE/aos-agent-step"
+LLMSTEP="$HERE/aos-llm-step"
+ASK="$HERE/aos-llm-ask"
 SAY="$HERE/aos-agent-say"
 LISTEN="$HERE/aos-agent-listen"
 TALK="$HERE/aos-agent-talk"
@@ -103,11 +105,12 @@ check "aos-loop 資料夾不存在回 2" 2 "$RC"
 # 10. 範例資料夾複本開箱即用：附帶的 .aos/inst 不用額外設定就能被 aos-loop 叫到 step
 #     （複本放在 examples/ 底下同一層，跟真正的 examples/agent 保持一樣的相對深度——
 #     .aos/inst 裡是 ../../aos-agent-step，複本要是搬到別的深度這條相對路徑就失效；
-#     LLM 打不通沒關係，第一格 idle 收信、第二格 llm 失敗 state 不動，一樣算走了兩格，
-#     只看 state.json 的 step 有沒有從 0 變 2。靜態檔用 git 索引裡的內容組，不直接
+#     沒人跑 LLM 資料夾沒關係，第一格 idle 收信、第二格 llm 把請求丟出去就換 wait，
+#     一樣算走了兩格，只看 state.json 的 step 有沒有從 0 變 2。靜態檔用 git 索引裡的內容組，不直接
 #     cp 真的範例——README 教使用者拿 aos-loop --keep-inst 長期盯著真的範例跑，
 #     state.json／hello.json 隨時可能正被用掉，cp 會撿到不確定的當下狀態）
 TMP=$(mktemp -d -p "$HERE/examples")
+TMPLLM=$(mktemp -d)
 mkdir -p "$TMP/.aos/agent/new-prompts"
 git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/new-prompts/hello.json \
   > "$TMP/.aos/agent/new-prompts/hello.json"
@@ -115,7 +118,7 @@ git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/state.json \
   > "$TMP/.aos/agent/state.json"
 git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/prompts.json \
   > "$TMP/.aos/agent/prompts.json"
-cp "$HERE/examples/agent/.aos/agent/engine.json" "$TMP/.aos/agent/engine.json"
+printf '{"dir": "%s"}\n' "$TMPLLM" > "$TMP/.aos/agent/llm.json"
 cp "$HERE/examples/agent/.aos/agent/system-prompt.json" "$TMP/.aos/agent/system-prompt.json"
 cp "$HERE/examples/agent/.aos/agent/tools.json" "$TMP/.aos/agent/tools.json"
 cp "$HERE/examples/agent/notes.txt" "$TMP/notes.txt"
@@ -128,7 +131,7 @@ if [ "$STEP_NOW" = "2" ]; then
 else
   echo "FAIL 範例複本沒跑到兩格：step=$STEP_NOW"; FAILED=1
 fi
-rm -rf "$TMP"
+rm -rf "$TMP" "$TMPLLM"
 
 # 11. 資料夾沒有 .aos/inst：aos-loop 要把這件事講清楚到 stderr
 TMP=$(mktemp -d)
@@ -139,7 +142,7 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# ── aos-agent-step ──────────────────────────────────────────────────────────
+# ── LLM 資料夾與 aos-agent-step ─────────────────────────────────────────────
 # 假的 OpenAI 伺服器：看到 messages 裡還沒有 tool 結果就回一個 tool_calls（say hi），
 # 已經有 tool 結果就回純文字 done。這樣同一台可以服務好幾條鏈。故意在每則回覆夾帶
 # reasoning_content（私有欄位）、done 那則再夾帶空的 tool_calls: []，測 aos-agent-step
@@ -193,11 +196,12 @@ sys.exit(1)
 PYEOF2
 echo "ok   假 LLM 伺服器起來了"
 
-# 組一份範例的乾淨複本、把 engine 指到假伺服器（範例本體不碰）。故意不直接
+# 組兩份範例的乾淨複本（agent 一份、LLM 一份，擺成兄弟目錄，agent 的 llm.json
+# 就是範例裡那個 {"dir": "../llm"}），LLM 那份的 engine 指到假伺服器。故意不直接
 # cp -r 真的範例資料夾：README「怎麼玩」教使用者拿 aos-loop --keep-inst 長期盯著
 # 真的範例跑，這樣 hello.json／state.json／prompts.json 會被真的用起來、內容一直在動；
 # 這裡改成用 git 索引裡的內容組出靜態檔，不受工作目錄當下狀態牽連，測試才穩定。
-prep_agent() {  # prep_agent <目標資料夾>
+prep_agent() {  # prep_agent <目標 agent 資料夾>；它的 llm.json 一律指向旁邊的 ../llm
   mkdir -p "$1/.aos/agent/new-prompts"
   git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/new-prompts/hello.json \
     > "$1/.aos/agent/new-prompts/hello.json"
@@ -205,11 +209,16 @@ prep_agent() {  # prep_agent <目標資料夾>
     > "$1/.aos/agent/state.json"
   git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/prompts.json \
     > "$1/.aos/agent/prompts.json"
-  cp "$HERE/examples/agent/.aos/agent/engine.json" "$1/.aos/agent/engine.json"
+  cp "$HERE/examples/agent/.aos/agent/llm.json" "$1/.aos/agent/llm.json"
   cp "$HERE/examples/agent/.aos/agent/system-prompt.json" "$1/.aos/agent/system-prompt.json"
   cp "$HERE/examples/agent/.aos/agent/tools.json" "$1/.aos/agent/tools.json"
   cp "$HERE/examples/agent/notes.txt" "$1/notes.txt"
-  python3 - "$1/.aos/agent/engine.json" "$PORT" <<'PYEOF2'
+}
+prep_llm() {  # prep_llm <目標 LLM 資料夾>；engine 指到假伺服器（範例本體不碰）
+  mkdir -p "$1/.aos/llm/requests"
+  cp "$HERE/examples/llm/.aos/llm/engine.json" "$1/.aos/llm/engine.json"
+  cp "$HERE/examples/llm/.aos/inst" "$1/.aos/inst"
+  python3 - "$1/.aos/llm/engine.json" "$PORT" <<'PYEOF2'
 import json, sys
 p = sys.argv[1]
 e = json.load(open(p, encoding="utf-8"))
@@ -221,16 +230,132 @@ now_state() {  # now_state <agent 資料夾>
   python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' "$1/.aos/agent/state.json"
 }
 
-# 12. 連跑六格：idle→llm→act→collect→llm→act→idle
-TMP=$(mktemp -d); prep_agent "$TMP/agent"
+# 12. LLM 資料夾走一格：拿最舊的請求去打、回覆落在 results/、請求搬去 requests/done/
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
+  > "$TMP/llm/.aos/llm/requests/0001.json"
+OUT=$("$LLMSTEP" "$TMP/llm" 2>&1); RC=$?
+check "aos-llm-step 處理一個請求回 0" 0 "$RC"
+case "$OUT" in
+  *"0001.json ok"*) echo "ok   aos-llm-step 印了處理掉哪個請求" ;;
+  *) echo "FAIL aos-llm-step 印的不對：$OUT"; FAILED=1 ;;
+esac
+if [ -f "$TMP/llm/.aos/llm/results/0001.json" ]; then
+  echo "ok   回覆落在 results/ 同檔名"
+else
+  echo "FAIL results/0001.json 沒出現"; FAILED=1
+fi
+REQ_TOP=$(find "$TMP/llm/.aos/llm/requests" -maxdepth 1 -type f)
+if [ -z "$REQ_TOP" ]; then echo "ok   requests/ 頂層清空了"; else echo "FAIL requests/ 頂層還有：$REQ_TOP"; FAILED=1; fi
+if [ -f "$TMP/llm/.aos/llm/requests/done/0001.json" ]; then
+  echo "ok   處理完的請求搬去 requests/done/"
+else
+  echo "FAIL requests/done/0001.json 不在"; FAILED=1
+fi
+CONTENT=$(python3 -c '
+import json,sys
+print(json.load(open(sys.argv[1]))["choices"][0]["message"]["content"] or "")' \
+  "$TMP/llm/.aos/llm/results/0001.json")
+if [ "$CONTENT" = "" ]; then
+  echo "ok   results/ 裡是整包原始回覆（這則是 tool_calls，content 空的）"
+else
+  echo "FAIL results/ 內容不對：$CONTENT"; FAILED=1
+fi
+
+# 13. 沒請求就什麼都不做，印 idle
+OUT=$("$LLMSTEP" "$TMP/llm" 2>&1); RC=$?
+check "aos-llm-step 沒請求也回 0" 0 "$RC"
+case "$OUT" in
+  *"idle"*) echo "ok   沒請求時印 idle" ;;
+  *) echo "FAIL 沒請求時印的不對：$OUT"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 14. 壞掉的請求也要有結果，不然丟請求的人會等到天荒地老
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+echo 'this is not json' > "$TMP/llm/.aos/llm/requests/0001.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1; RC=$?
+check "壞請求 aos-llm-step 還是回 0" 0 "$RC"
+ERR=$(python3 -c '
+import json,sys
+print(json.load(open(sys.argv[1])).get("error", ""))' "$TMP/llm/.aos/llm/results/0001.json" 2>/dev/null)
+if [ -n "$ERR" ]; then echo "ok   壞請求的結果檔有 error：$ERR"; else echo "FAIL 壞請求沒寫出 error 結果"; FAILED=1; fi
+if [ -f "$TMP/llm/.aos/llm/requests/done/0001.json" ]; then
+  echo "ok   壞請求一樣搬去 requests/done/，不會卡住下一個"
+else
+  echo "FAIL 壞請求沒搬走"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 15. 打不通就把請求留在原地、退出碼 1，下一格再試
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+python3 - "$TMP/llm/.aos/llm/engine.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]
+e = json.load(open(p, encoding="utf-8"))
+e["base_url"] = "http://127.0.0.1:1/v1"
+json.dump(e, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+PYEOF2
+echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
+  > "$TMP/llm/.aos/llm/requests/0001.json"
+OUT=$("$LLMSTEP" "$TMP/llm" 2>&1); RC=$?
+check "aos-llm-step 打不通回 1" 1 "$RC"
+case "$OUT" in
+  *"打不通"*) echo "ok   打不通有印白話" ;;
+  *) echo "FAIL 打不通印的不對：$OUT"; FAILED=1 ;;
+esac
+if [ -f "$TMP/llm/.aos/llm/requests/0001.json" ]; then
+  echo "ok   打不通時請求留在原地下一格再試"
+else
+  echo "FAIL 打不通時請求被搬走了"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 16. aos-llm-ask：丟一個請求、等 aos-loop 那頭跑出結果、印出來、把結果檔拿走
+#     （複本放在 examples/ 底下同一層，llm 範例的 .aos/inst 是 ../../aos-llm-step，
+#     跟 agent 範例一樣靠這條相對路徑找到執行檔）
+TMP=$(mktemp -d -p "$HERE/examples"); prep_llm "$TMP"
+"$LOOP" "$TMP" --keep-inst --interval 0 --steps 20 >/dev/null 2>&1 &
+ASK_LOOP=$!
+OUT=$(echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
+  | timeout 20 "$ASK" "$TMP" 2>/dev/null); RC=$?
+check "aos-llm-ask 等到回覆退出 0" 0 "$RC"
+case "$OUT" in
+  *"choices"*) echo "ok   aos-llm-ask 把整包回覆印出來了" ;;
+  *) echo "FAIL aos-llm-ask 印的不對：$OUT"; FAILED=1 ;;
+esac
+RES_LEFT=$(find "$TMP/.aos/llm/results" -maxdepth 1 -name '*.json' 2>/dev/null)
+if [ -z "$RES_LEFT" ]; then
+  echo "ok   結果被 aos-llm-ask 拿走了（拿走就沒了）"
+else
+  echo "FAIL 結果檔還留著：$RES_LEFT"; FAILED=1
+fi
+wait $ASK_LOOP 2>/dev/null
+rm -rf "$TMP"
+
+# 17. aos-llm-ask --no-wait：只丟不等，把檔名印到 stdout
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+OUT=$(echo '{"messages": []}' | "$ASK" "$TMP/llm" --no-wait 2>/dev/null); RC=$?
+check "aos-llm-ask --no-wait 退出 0" 0 "$RC"
+if [ -f "$TMP/llm/.aos/llm/requests/$OUT" ]; then
+  echo "ok   --no-wait 印的檔名就是丟出去那個請求"
+else
+  echo "FAIL --no-wait 印的檔名對不上：$OUT"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 18. agent 跟 LLM 兩個資料夾交錯走：每圈各推一格，五格輪兩輪
+#     idle→llm（丟請求）→wait（撿回覆）→act→collect→llm→wait→act→idle
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
 SEQ=""
-for i in 1 2 3 4 5 6; do
+for i in 1 2 3 4 5 6 7 8; do
   SEQ="$SEQ$(now_state "$TMP/agent") "
   "$STEP" "$TMP/agent" >/dev/null 2>&1
+  "$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
 done
 SEQ="$SEQ$(now_state "$TMP/agent")"
-if [ "$SEQ" = "idle llm act collect llm act idle" ]; then
-  echo "ok   六格的 state 依序走完"
+if [ "$SEQ" = "idle llm wait act collect llm wait act idle" ]; then
+  echo "ok   五格的 state 依序走完兩輪"
 else
   echo "FAIL state 順序不對：$SEQ"; FAILED=1
 fi
@@ -285,27 +410,37 @@ else
 fi
 rm -rf "$TMP"
 
-# 13. --no-write-inst 就真的不寫
-TMP=$(mktemp -d); prep_agent "$TMP/agent"
+# 19. --no-write-inst 就真的不寫
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
 "$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1
 if [ ! -e "$TMP/agent/.aos/inst" ]; then echo "ok   --no-write-inst 不寫 .aos/inst"; else echo "FAIL --no-write-inst 還是寫了"; FAILED=1; fi
 rm -rf "$TMP"
 
-# 14. aos-loop 接得起來：step 自己寫回 .aos/inst，跑滿六步同一條鏈
-TMP=$(mktemp -d); prep_agent "$TMP/agent"
+# 20. 兩個 aos-loop 各轉各的：agent 那圈 step 自己寫回 .aos/inst，LLM 那圈在背景一直撿請求
+#     （agent 只要 8 格就走得完，給 30 格是留給「這格 wait 還沒等到」的空轉，
+#     多出來的格數在 idle 空等，不影響結果）
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+echo "$LLMSTEP ." > "$TMP/llm/.aos/inst"   # 這份複本不在 examples/ 底下，範例的相對路徑解不到
+"$LOOP" "$TMP/llm" --keep-inst --steps 200 --interval 0 >/dev/null 2>&1 &
+LLM_LOOP=$!
 mkdir -p "$TMP/agent/.aos"; echo "$STEP ." > "$TMP/agent/.aos/inst"
-"$LOOP" "$TMP/agent" --steps 6 --interval 0 >/dev/null 2>&1
+"$LOOP" "$TMP/agent" --steps 30 --interval 0.05 >/dev/null 2>&1
+kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
 if [ "$(cat "$TMP/agent/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$TMP/agent")" = "idle" ]; then
-  echo "ok   aos-loop 六步跑完同一條鏈"
+  echo "ok   兩個 aos-loop 交錯跑完同一條鏈"
 else
   echo "FAIL aos-loop 沒跑完：said=$(cat "$TMP/agent/said.txt" 2>/dev/null) state=$(now_state "$TMP/agent")"; FAILED=1
 fi
 rm -rf "$TMP"
 
-# 15. 推薦用法：.aos/inst 寫一次，aos-loop --keep-inst 不清空，step 也不用寫回
-TMP=$(mktemp -d); prep_agent "$TMP/agent"
+# 21. 推薦用法：.aos/inst 寫一次，aos-loop --keep-inst 不清空，step 也不用寫回
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+echo "$LLMSTEP ." > "$TMP/llm/.aos/inst"   # 這份複本不在 examples/ 底下，範例的相對路徑解不到
+"$LOOP" "$TMP/llm" --keep-inst --steps 200 --interval 0 >/dev/null 2>&1 &
+LLM_LOOP=$!
 mkdir -p "$TMP/agent/.aos"; echo "$STEP . --no-write-inst" > "$TMP/agent/.aos/inst"
-"$LOOP" "$TMP/agent" --steps 6 --interval 0 --keep-inst >/dev/null 2>&1
+"$LOOP" "$TMP/agent" --steps 30 --interval 0.05 --keep-inst >/dev/null 2>&1
+kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
 if [ "$(cat "$TMP/agent/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$TMP/agent")" = "idle" ]; then
   echo "ok   --keep-inst + --no-write-inst 也跑得完"
 else
@@ -318,7 +453,7 @@ esac
 rm -rf "$TMP"
 
 # ── 一個檔可以多則、回話落地、say／listen／talk ──────────────────────────────
-# 16. new-prompts 裡一個檔放一串（兩則）訊息，跑一格 idle 就收成兩則
+# 22. new-prompts 裡一個檔放一串（兩則）訊息，跑一格 idle 就收成兩則
 TMP=$(mktemp -d); prep_agent "$TMP/agent"
 rm -f "$TMP/agent/.aos/agent/new-prompts/hello.json"
 echo '[{"role": "user", "content": "一"}, {"role": "user", "content": "二"}, 3]' \
@@ -333,7 +468,7 @@ else
 fi
 rm -rf "$TMP"
 
-# 17. aos-agent-say：一句話丟進 new-prompts/
+# 23. aos-agent-say：一句話丟進 new-prompts/
 TMP=$(mktemp -d)
 "$SAY" "$TMP" "嗨呀" 2>/dev/null
 NFILE=$(find "$TMP/.aos/agent/new-prompts" -maxdepth 1 -name '*.json' | wc -l)
@@ -345,9 +480,12 @@ print(m.get("role"), m.get("content"))' "$TMP/.aos/agent/new-prompts")
 if [ "$SAID" = "user 嗨呀" ]; then echo "ok   say 寫的內容是 user／嗨呀"; else echo "FAIL say 內容不對：$SAID"; FAILED=1; fi
 rm -rf "$TMP"
 
-# 18. 完整鏈跑完，agent 的回話落在 replies/
-TMP=$(mktemp -d); prep_agent "$TMP/agent"
-for i in 1 2 3 4 5 6; do "$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1; done
+# 24. 完整鏈跑完，agent 的回話落在 replies/
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+for i in 1 2 3 4 5 6 7 8; do
+  "$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1
+  "$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+done
 NREP=$(find "$TMP/agent/.aos/agent/replies" -maxdepth 1 -name '*.json' | wc -l)
 if [ "$NREP" = "1" ]; then echo "ok   replies/ 只有一個回話檔"; else echo "FAIL replies/ 有 $NREP 個檔"; FAILED=1; fi
 REP=$(python3 -c '
@@ -356,7 +494,7 @@ print(json.load(open(sorted(glob.glob(sys.argv[1]+"/*.json"))[0], encoding="utf-
   "$TMP/agent/.aos/agent/replies")
 if [ "$REP" = "done" ]; then echo "ok   回話檔的 content 是 done"; else echo "FAIL 回話檔 content 是 $REP"; FAILED=1; fi
 
-# 19. aos-agent-listen --once 把既有的印出來就走
+# 25. aos-agent-listen --once 把既有的印出來就走
 OUT=$(timeout 10 "$LISTEN" "$TMP/agent" --once); RC=$?
 check "listen --once 退出 0" 0 "$RC"
 case "$OUT" in
@@ -365,7 +503,7 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# 20. aos-agent-listen --new --once：跳過既有的，等到新的那則才印、才退出
+# 26. aos-agent-listen --new --once：跳過既有的，等到新的那則才印、才退出
 TMP=$(mktemp -d); mkdir -p "$TMP/.aos/agent/replies"
 echo '{"role": "assistant", "content": "舊的"}' > "$TMP/.aos/agent/replies/0001.json"
 ( sleep 1; echo '{"role": "assistant", "content": "新的"}' > "$TMP/.aos/agent/replies/0002.json" ) &
@@ -378,7 +516,7 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# 21. aos-agent-talk：打一句、等到回話印出來
+# 27. aos-agent-talk：打一句、等到回話印出來
 TMP=$(mktemp -d); mkdir -p "$TMP/.aos/agent/new-prompts" "$TMP/.aos/agent/replies"
 ( for i in $(seq 1 100); do
     if [ -n "$(find "$TMP/.aos/agent/new-prompts" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then

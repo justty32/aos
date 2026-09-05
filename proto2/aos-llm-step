@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""aos-llm-step [dir] — 一個「LLM 資料夾」走一格：拿最舊的請求去打，把回覆寫回來。
+
+LLM 不再是誰的私有功能，而是一個跟 agent 平起平坐的資料夾。東西全在
+<dir>/.aos/llm/ 底下：引擎 engine.json（{base_url, model, api_key_env}）、
+請求箱 requests/（一個檔一個請求，內容就是 chat/completions 的 body，至少有
+messages，可以有 tools 等等，但不含 model——model 由 engine.json 補）、
+處理完的請求 requests/done/、回覆 results/<跟請求同檔名>。
+
+一格只做一件事：列 requests/ 頂層的 .json 排序後拿最舊的那一個，補上 model
+打 {base_url}/chat/completions，整包原始回覆寫進 results/、請求搬去 requests/done/。
+沒請求就什麼都不做。打不通：印一行到 stderr、請求留在原地下一格再試、退出碼 1。
+請求檔讀不成 JSON：印一行、照樣搬走、結果檔寫 {"error": "..."}，免得叫的人等到天荒地老。
+"""
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+
+def read_json(path, default):
+    if not os.path.isfile(path):
+        return default
+    with open(path, encoding="utf-8") as f:
+        text = f.read().strip()
+    return json.loads(text) if text else default
+
+
+def write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+def oldest_request(box):
+    """requests/ 頂層排序後的第一個 .json（檔名是時間戳，排序就是先來後到）。"""
+    if not os.path.isdir(box):
+        return None
+    for name in sorted(os.listdir(box)):
+        if name.endswith(".json") and os.path.isfile(os.path.join(box, name)):
+            return name
+    return None
+
+
+def call(engine, body):
+    """補上 model 打一次 chat/completions，回整包回覆；打不通就丟例外給上面處理。"""
+    base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
+    url = base + "/chat/completions"
+    body = dict(body)
+    body["model"] = engine.get("model") or "local"
+    key = os.environ.get(engine.get("api_key_env") or "") or "none"
+    req = urllib.request.Request(
+        url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Authorization": "Bearer " + key},
+        method="POST")
+    with urllib.request.urlopen(req) as r:
+        return json.loads(r.read().decode("utf-8", "replace"))
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-llm-step")
+    ap.add_argument("dir", nargs="?", default=".")
+    args = ap.parse_args()
+    home = os.path.join(os.path.abspath(args.dir), ".aos", "llm")
+    box = os.path.join(home, "requests")
+    done = os.path.join(box, "done")
+    results = os.path.join(home, "results")
+
+    name = oldest_request(box)
+    if name is None:
+        print("aos-llm-step: idle", file=sys.stderr)
+        return 0
+
+    src = os.path.join(box, name)
+    with open(src, encoding="utf-8", errors="replace") as f:
+        text = f.read()
+    try:
+        body = json.loads(text)
+        if not isinstance(body, dict):
+            raise ValueError("請求要是一個 JSON 物件")
+    except ValueError as e:
+        # 壞掉的請求也要有結果，不然丟請求的人會一直等下去。
+        print("aos-llm-step: %s 不是合法的請求（%s），回一個 error 給它" % (name, e),
+              file=sys.stderr)
+        write_json(os.path.join(results, name), {"error": "請求讀不成 JSON：%s" % e})
+        os.makedirs(done, exist_ok=True)
+        os.replace(src, os.path.join(done, name))
+        print("aos-llm-step: %s ok" % name, file=sys.stderr)
+        return 0
+
+    engine = read_json(os.path.join(home, "engine.json"), {})
+    try:
+        answer = call(engine, body)
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        print("aos-llm-step: 打不通 %s（%s），%s 留在原地下一格再試"
+              % (engine.get("base_url") or "http://localhost:1234/v1", e, name),
+              file=sys.stderr)
+        return 1
+
+    write_json(os.path.join(results, name), answer)
+    os.makedirs(done, exist_ok=True)
+    os.replace(src, os.path.join(done, name))
+    print("aos-llm-step: %s ok" % name, file=sys.stderr)
+    return 0
+
+
+sys.exit(main())
