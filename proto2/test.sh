@@ -99,7 +99,9 @@ check "aos-loop 資料夾不存在回 2" 2 "$RC"
 
 # ── aos-agent-step ──────────────────────────────────────────────────────────
 # 假的 OpenAI 伺服器：看到 messages 裡還沒有 tool 結果就回一個 tool_calls（say hi），
-# 已經有 tool 結果就回純文字 done。這樣同一台可以服務好幾條鏈。
+# 已經有 tool 結果就回純文字 done。這樣同一台可以服務好幾條鏈。故意在每則回覆夾帶
+# reasoning_content（私有欄位）、done 那則再夾帶空的 tool_calls: []，測 aos-agent-step
+# 存進 prompts.json 時會不會把這些濾掉。
 PORT=18080
 FAKE=$(mktemp -d)
 cat > "$FAKE/fake-llm.py" <<'PYEOF2'
@@ -114,9 +116,11 @@ class H(http.server.BaseHTTPRequestHandler):
             data = {}
         msgs = data.get("messages") or []
         if any(m.get("role") == "tool" for m in msgs):
-            message = {"role": "assistant", "content": "done"}
+            message = {"role": "assistant", "content": "done", "tool_calls": [],
+                       "reasoning_content": "blah"}
         else:
-            message = {"role": "assistant", "content": None, "tool_calls": [
+            message = {"role": "assistant", "content": None, "reasoning_content": "blah",
+                       "tool_calls": [
                 {"id": "call_1", "type": "function",
                  "function": {"name": "say", "arguments": "{\"text\": \"hi\"}"}}]}
         body = json.dumps({"choices": [{"index": 0, "message": message,
@@ -162,7 +166,7 @@ now_state() {  # now_state <agent 資料夾>
   python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' "$1/.aos/agent/state.json"
 }
 
-# 10. 連跑六格：idle→llm→act→inbox→llm→act→idle
+# 10. 連跑六格：idle→llm→act→collect→llm→act→idle
 TMP=$(mktemp -d); prep_agent "$TMP/agent"
 SEQ=""
 for i in 1 2 3 4 5 6; do
@@ -170,7 +174,7 @@ for i in 1 2 3 4 5 6; do
   "$STEP" "$TMP/agent" >/dev/null 2>&1
 done
 SEQ="$SEQ$(now_state "$TMP/agent")"
-if [ "$SEQ" = "idle llm act inbox llm act idle" ]; then
+if [ "$SEQ" = "idle llm act collect llm act idle" ]; then
   echo "ok   六格的 state 依序走完"
 else
   echo "FAIL state 順序不對：$SEQ"; FAILED=1
@@ -187,12 +191,43 @@ if [ "$ROLES" = "user assistant+tool_calls tool assistant" ]; then
 else
   echo "FAIL prompts.json 內容不對：$ROLES"; FAILED=1
 fi
-if [ -z "$(ls -A "$TMP/agent/.aos/agent/inbox")" ]; then echo "ok   inbox 清空了"; else echo "FAIL inbox 還有東西"; FAILED=1; fi
-if [ -f "$TMP/agent/.aos/agent/inbox-done/hello.txt" ]; then echo "ok   收過的信搬去 inbox-done"; else echo "FAIL inbox-done 沒有 hello.txt"; FAILED=1; fi
+PRIVATE=$(python3 -c '
+import json,sys
+ms=json.load(open(sys.argv[1]))
+bad=[]
+for m in ms:
+    if m.get("role") == "assistant":
+        if "reasoning_content" in m:
+            bad.append("reasoning_content")
+        if "tool_calls" in m and not m["tool_calls"]:
+            bad.append("empty-tool_calls-key")
+print(",".join(bad))' "$TMP/agent/.aos/agent/prompts.json")
+if [ -z "$PRIVATE" ]; then
+  echo "ok   assistant 訊息沒有 reasoning_content、也沒有空的 tool_calls key"
+else
+  echo "FAIL assistant 訊息還帶著私有欄位：$PRIVATE"; FAILED=1
+fi
+NP_TOP=$(find "$TMP/agent/.aos/agent/new-prompts" -maxdepth 1 -type f)
+if [ -z "$NP_TOP" ]; then echo "ok   new-prompts/ 頂層收空了"; else echo "FAIL new-prompts/ 頂層還有檔：$NP_TOP"; FAILED=1; fi
+if [ -f "$TMP/agent/.aos/agent/new-prompts/archived/hello.json" ]; then
+  echo "ok   收過的信搬去 new-prompts/archived/"
+else
+  echo "FAIL archived/ 沒有 hello.json"; FAILED=1
+fi
 case "$(cat "$TMP/agent/.aos/inst")" in
   *aos-agent-step*) echo "ok   每格都把自己寫回 .aos/inst" ;;
   *) echo "FAIL .aos/inst 沒寫回"; FAILED=1 ;;
 esac
+
+# 下一次收信時 archived/ 會先被清掉：再丟一個新檔、跑一格 idle，archived 只剩新的那個
+echo '{"role": "user", "content": "second"}' > "$TMP/agent/.aos/agent/new-prompts/second.json"
+"$STEP" "$TMP/agent" >/dev/null 2>&1
+ARCHIVED_LIST=$(ls "$TMP/agent/.aos/agent/new-prompts/archived")
+if [ "$ARCHIVED_LIST" = "second.json" ]; then
+  echo "ok   下一輪收信前先清空 archived，只剩這輪收的、上一輪的 hello.json 不見了"
+else
+  echo "FAIL archived/ 內容不對：$ARCHIVED_LIST"; FAILED=1
+fi
 rm -rf "$TMP"
 
 # 11. --no-write-inst 就真的不寫

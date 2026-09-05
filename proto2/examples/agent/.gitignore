@@ -1,6 +1,6 @@
 # 跑過就會生出來的東西，不進 git
-.aos/agent/inbox-done/
+.aos/agent/new-prompts/archived/
+.aos/agent/new-prompts.json
 .aos/agent/llm-result.json
-.aos/agent/prompt-next.json
 .aos/inst
 said.txt
