@@ -255,6 +255,10 @@ def run(land, steps=None, every_ms=None, until=None, budget=None, timeout_ms=Non
             _register_self(land, out["clock"], budget, home)
             registered = True
 
+        # P-01 之後脫節子地那支 run 是 daemon（或人）起的，拿不到父當初 exec 的環境，
+        # 只好從登記表那筆把 AOS_RESULT／AOS_CALLER／AOS_ARG_* 重建出來。
+        call_env = _call_env(land, home)
+
         n = 0
         _pre = S.load(land) or {"series": []}
         known_failed = set(x["id"] for x in _pre.get("series", [])
@@ -271,7 +275,8 @@ def run(land, steps=None, every_ms=None, until=None, budget=None, timeout_ms=Non
                 reason, message = SIGNAL, "收到訊號 %s，在格尾停下來" % stopper.hit
                 break
             try:
-                rep = execute.exec_once(land, timeout_ms=timeout_ms, hold_lock=True)
+                rep = execute.exec_once(land, timeout_ms=timeout_ms, hold_lock=True,
+                                        extra_env=call_env)
             except loader.ParseError as e:
                 reason, message = PARSE_ERROR, str(e)
                 break
@@ -385,6 +390,25 @@ def _nap(land, stopper, every_ms, notes):
             return True
         time.sleep(min(_SLEEP_SLICE, max(0.0, deadline - time.time())))
     return False
+
+
+def _call_env(land, home=None):
+    """登記表那筆若記著 `result`／`parent`／`args`，就變成這塊地每筆指令的環境變數。
+
+    父地開脫節呼叫時只往登記表寫一筆，真正起 run 的是 daemon；子地的指令要拿
+    `AOS_RESULT`（結果落點，I-01）就只剩這條路。spec 沒講（見 FINDINGS）。
+    """
+    e = registry.find(registry.load(home), land.root)
+    if not e:
+        return None
+    env = {}
+    if e.get("result"):
+        env["AOS_RESULT"] = str(e["result"])
+    if e.get("parent"):
+        env["AOS_CALLER"] = str(e["parent"])
+    for k, v in (e.get("args") or {}).items():
+        env["AOS_ARG_%s" % str(k).upper()] = str(v)
+    return env or None
 
 
 def _register_self(land, clock, budget, home=None):

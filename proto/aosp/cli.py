@@ -246,10 +246,13 @@ def build_parser():
     q.set_defaults(func=cmd_stop)
 
     q = sub.add_parser("daemon", help="看管者")
-    q.add_argument("op", choices=["start", "stop", "ls", "exec", "status"])
+    q.add_argument("op", choices=["start", "stop", "ls", "exec", "status", "add"])
     q.add_argument("land", nargs="?", default=None)
     q.add_argument("--foreground", action="store_true")
     q.add_argument("--every", type=int, default=500, metavar="MS")
+    q.add_argument("--steps", type=int, default=None, help="只有 add 用：固定次數的鐘")
+    q.add_argument("--until", default=None, choices=["idle"], help="只有 add 用")
+    q.add_argument("--budget", type=int, default=None, help="只有 add 用")
     q.add_argument("--json", action="store_true")
     q.set_defaults(func=cmd_daemon)
 

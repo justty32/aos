@@ -1,0 +1,162 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "resources": {
+    "ticks": 10,
+    "insts": 10,
+    "llm_calls": 0,
+    "note": "十步 inst，一步一格、一步一筆指令，不打 LLM。"
+  },
+  "steps": [
+    {
+      "name": "s01",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 01\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s02"
+    },
+    {
+      "name": "s02",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 02\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s03"
+    },
+    {
+      "name": "s03",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 03\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s04"
+    },
+    {
+      "name": "s04",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 04\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s05"
+    },
+    {
+      "name": "s05",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 05\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s06"
+    },
+    {
+      "name": "s06",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 06\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s07"
+    },
+    {
+      "name": "s07",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 07\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s08"
+    },
+    {
+      "name": "s08",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 08\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s09"
+    },
+    {
+      "name": "s09",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 09\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "s10"
+    },
+    {
+      "name": "s10",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'step 10\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "end"
+    }
+  ]
+}

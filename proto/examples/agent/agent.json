@@ -1,0 +1,12 @@
+{
+  "max_rounds": 6,
+  "tools": [
+    "python3",
+    "cat",
+    "ls"
+  ],
+  "tier": "fast",
+  "tool_timeout_ms": 20000,
+  "work": "work",
+  "max_llm_calls": 30
+}

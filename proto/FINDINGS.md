@@ -58,6 +58,11 @@
 | daemon 迴圈設 `SIGCHLD=SIG_IGN` | 不然殭屍的 pid 還在，對帳永遠不會把它改成 stopped |
 | `aos llm` 退出碼多分一級（請求本身寫壞回 2） | 4.7 只給 0/2/75/130，沒有「請求寫壞」那一格 |
 | 原稿＝模板同格式，載入器不做拆平 | spec 沒定義原稿長什麼樣，先讓兩者一樣，記在下面 |
+| ~~沒 daemon 時 async 呼叫自己 detach 一支 `aos run`~~（WRITER-BRIEF 4.11 第 6 條） | **已照裁決 P-01（2026-09-05）改回**：現在 daemon 不在（或登記表的 `daemon_pid` 已死）時，`call` 那步**當場失敗**，父指定的結果落點旁寫 `<結果>.status.json`＝`{"state":"failed","reason":"no_daemon",…}`，那條串照 `on_fail` 走、沒寫就停在原地。`_detach_run` 整段刪掉了。 |
+| 登記表那筆多記 `args`；`aos run` 從登記表重建 `AOS_RESULT`／`AOS_CALLER`／`AOS_ARG_*` | P-01 的連帶：起脫節子地的那支 run 是 daemon 生的，拿不到父當初 exec 的環境，不補這條的話子地根本不知道結果要寫哪（見下面「P-01 之後」） |
+| 加了 `aos daemon add <地>` 子命令 | S-02 要「agent 自己登記時鐘、daemon 去起它」，可是指令面登不出 `pending` 那一態（`aos run --register` 會當場開跑）。這正是下面「一塊地要跑起來要敲兩次」那條說的洞 |
+| 內建暫存器多了 `${home}`、`${llm_world}` | 裁決 S-03。不然地上的程式沒辦法講出 LLM 世界在哪（每台機器不一樣的絕對路徑），agent 的 `aos deliver` 那步就寫不出來 |
+| 加了 `proto/bin/aos` 這支殼 | 原型是一堆 .py，地上的程式與 `path` 白名單需要一個叫得動的 `aos`。正式實作有真的執行檔就不需要 |
 
 ## 核心（版面、載入器、exec、投遞）
 
@@ -162,7 +167,7 @@
 - **情境**：`call` 步的 `child` 打錯字（子地路徑不存在／不是地）｜依據：WRITER-BRIEF 4.2（call 的三態）｜**卡在哪**：`execute._do_call` 印
   `失敗停在 \`ask\`（not_a_land：子地 <路徑> 不是一塊地（沒有 .aos/layout.json））`
   講出了絕對路徑跟原因，但沒講「下一步」是要去 `mkdir` 還是去 `aos init` 那個子地——跟頂層 `_die()` 那套「錯誤＋下一步」兩行格式不一致，這裡失敗訊息全塞在 `fail_reason` 裡，沒有單獨的「下一步」提示｜類別：錯誤不指路｜擋路程度：煩
-- **情境**：`call` 步 `mode:"async"` 沒有 daemon 在跑時要怎麼動｜依據：WRITER-BRIEF 4.11 第 6 條（主編補，沒把握）｜**卡在哪**：exec 會自己 `Popen` 一支 detach 的 `aos run <子> --register`，但父地的 `aos exec` 完全不等它、也不回報這支背景行程有沒有真的啟動成功（`subprocess.Popen` 沒檢查 spawn 有沒有成功、log 寫到子地的 `.aos/detached.log`，要自己去翻才知道發生了什麼）。第一次寫這個範例時，因為 `run.py`／`daemon.py` 那兩支還是空檔，detach 起來的行程直接 `AttributeError` 崩潰，但父地完全沒感覺、`await` 只會一直 HOLD 到 `max_ticks` 逾時——從父地這邊看不出「子地的背景行程根本沒起來」跟「子地還在正常跑只是比較慢」的差別，得去翻 `child/.aos/detached.log` 才知道｜**怎麼繞**：等別隊把 `run.py` 補完就自動好了（這次確認已經補完，範例現在會過）；但這個「detach 失敗時父地看不見」的洞還在，記下來｜類別：看不見的狀態｜擋路程度：擋路
+- **【已被裁決 P-01 蓋過】情境**：`call` 步 `mode:"async"` 沒有 daemon 在跑時要怎麼動｜依據：WRITER-BRIEF 4.11 第 6 條（主編補，沒把握）｜**現在的行為**：不 detach 了，直接失敗並寫 `no_daemon` 狀態檔，所以下面講的「detach 失敗時父地看不見」那個洞不存在了；留著這條是為了記得它怎麼被關掉的｜舊紀錄｜**卡在哪**：exec 會自己 `Popen` 一支 detach 的 `aos run <子> --register`，但父地的 `aos exec` 完全不等它、也不回報這支背景行程有沒有真的啟動成功（`subprocess.Popen` 沒檢查 spawn 有沒有成功、log 寫到子地的 `.aos/detached.log`，要自己去翻才知道發生了什麼）。第一次寫這個範例時，因為 `run.py`／`daemon.py` 那兩支還是空檔，detach 起來的行程直接 `AttributeError` 崩潰，但父地完全沒感覺、`await` 只會一直 HOLD 到 `max_ticks` 逾時——從父地這邊看不出「子地的背景行程根本沒起來」跟「子地還在正常跑只是比較慢」的差別，得去翻 `child/.aos/detached.log` 才知道｜**怎麼繞**：等別隊把 `run.py` 補完就自動好了（這次確認已經補完，範例現在會過）；但這個「detach 失敗時父地看不見」的洞還在，記下來｜類別：看不見的狀態｜擋路程度：擋路
 - **情境**：`llm-echo` 範例，`aos llm ls` 印出處理單元清單時欄位對齊用固定寬度格式化｜依據：WRITER-BRIEF 4.7｜**卡在哪**：非擋路項，只是備註——`_op_ls` 的人類可讀輸出把 `unit`/`tier`/`endpoint` 用 `%-12s` 之類固定寬度撐版面，這對 README 抄指令範例沒差，純粹路過看到記一筆｜類別：spec 沒講｜擋路程度：小
 - **情境**：`llm` 請求要跨兩塊地協調（父地 `await` ＋ LLM 世界 `tick`）｜依據：WRITER-BRIEF 4.7｜**卡在哪**：沒有一支指令能「父地 exec 順便把 LLM 世界的請求也處理掉」；寫 `run.sh` 得手動交替呼叫 `aos exec <父地>` 跟 `aos llm tick --land <LLM世界>`，兩邊各自的迴圈要對齊格數，稍微算錯順序（比如先 tick 再 exec）結果會差一格。四個範例裡這個的「一鍵重跑」腳本最長最囉唆｜類別：多餘的動作｜擋路程度：煩
 
@@ -175,3 +180,37 @@
 - **情境**：驗 llm.py 假後端（echo:/fail:）的行為與帳簿欄位｜依據：WRITER-BRIEF 4.7｜**卡在哪**：`proto-interface.md` 只釘死 `cli_llm(args)` 這個入口，`init_llm_world()`／`serve_once()` 這兩個任務簡報點名要測的函式沒有另外一份簽名文件（不像 `run`/`daemon` 有 `args.xxx` 欄位表可以照抄）。寫測試時只能猜測呼叫方式（先試零參數、再試傳 `home`），用 `hasattr`/`try except TypeError` 防呆，兜不起來就整支測試 skip，而不是整批炸掉｜**怎麼繞**：`_try_init_world`/`_try_serve_once` 兩層防呆＋按需 SkipTest｜類別：spec 沒講（llm.py 內部 API 沒有跨隊釘死的合約）｜擋路程度：煩
 - **情境**：驗 daemon start/stop 的真實 detach 行為｜依據：任務簡報第 8 條｜**卡在哪**：起一支真的背景 daemon、等它把登記表的地改成 running、再 stop 等它改回 stopped，這條路徑本質上跟時間賽跑，用輪詢＋10 秒逾時已經算穩了，但仍然是這套測試裡最脆弱的一支，跟 CI 環境的行程排程有關｜**怎麼繞**：照任務簡報建議，用 `AOS_TEST_DAEMON=1` 環境變數開關這條，預設 skip，跑起來時輪詢不用固定 sleep｜類別：多餘的動作（測試基礎設施層面的無奈，非 aosp 本身的問題）｜擋路程度：煩
 
+
+## 真模型第一輪（2026-09-05，兩顆模型各跑一輪）
+
+裁決 P-02：原型要接真的模型，玩到 agent 為止。劇本是 `proto/play-agent.sh`，
+agent 地是 `examples/agent-real`，任務是「`work/` 這個小 Python 專案少一個
+`triangle_area`，補上去、把測試跑綠」。同一份 `task.md`、同一支 `brain.py`、
+同一組工具白名單，只換 `tier`（帳簿的 `unit` 欄分得出是哪一顆）。
+
+| | 本機 qwen（tier=fast） | 雲端 deepseek（tier=smart） |
+|---|---|---|
+| 單元／模型 | `lmstudio` ／ `qwen/qwen3.5-9b`（LM Studio, localhost:1234） | `deepseek` ／ `deepseek-v4-flash`（api.deepseek.com） |
+| 圈數 | **7 圈** | **5 圈** |
+| LLM 請求 | **7 次**（0 次壞掉） | **5 次**（0 次壞掉） |
+| token（進／出／合計） | 4543 ／ 18705 ／ **23248** | 3253 ／ 1140 ／ **4393** |
+| 後端時間 | 292 秒（平均一次 **41.7 秒**） | 13.0 秒（平均一次 **2.6 秒**） |
+| 牆鐘 | 308 秒 | 25 秒 |
+| 走的路 | ls → cat 測試 → cat 原始碼 → write（**失敗**）→ write → 跑測試 → DONE | ls → cat 兩個檔 → write → 跑測試 → DONE |
+| 任務做成了嗎 | **成了**（`triangle_area(base, height)`，測試全綠） | **成了**（`triangle_area(b, h)`，測試全綠） |
+| 怎麼停的 | LLM 回 `DONE:`，不再叫工具（裁決 M-01） | 同左 |
+| 紀錄 | `play-logs/20260905-154621-fast/` | `play-logs/20260905-154800-smart/` |
+
+兩顆都做成了；差別在**話多寡**：本機那顆吐了 18705 個 out token（絕大多數是它自己的
+思考），雲端那顆 1140 個。同一件事，token 差 5 倍、時間差 12 倍。
+
+### 撞到的事（照使用者的三種量法）
+
+- **agent 的第一次工具呼叫被自己的程式安靜吃掉，畫面上完全看不出來**｜依據：`brain.py` 的回話解析、裁決 M-01（agent 停於 LLM 不再呼叫工具）｜**卡在哪**：第一次真模型跑（`play-logs/20260905-154401/`）模型好好地回了 `TOOL: ls work`，但 `brain.py` 為了對付假後端 `echo:`（它會把 prompt 原樣吐回來，裡面有示範用的那行）加了「跟 prompt 裡的行一樣就不算」的濾網，把這行真的呼叫濾掉了；agent 於是判定「LLM 不再叫工具」，第 1 圈就收工，`aos status` 顯示 `done`、停止原因 `idle`，**看起來一切正常**。要翻 `state/rounds/001/answer.txt` 才知道它其實叫了工具。｜**怎麼繞**：改成先判斷「整份 prompt 是不是原封不動出現在回話裡」（那才是回音），是回音才啟動濾網。｜類別：看不見的狀態｜擋路程度：擋路
+- **等 LLM 的那 60 秒，從外面看跟「卡死」一模一樣**｜依據：`aos status`、`aos llm serve`｜**卡在哪**：本機模型一次要 40～60 秒。這段期間 `aos status <agent 地>` 只印「游標 `wait` 狀態 running」，帳簿還沒有那一行（帳簿是**打完**才寫），`aos llm serve` 的 log 因為 python stdout 有緩衝所以是 0 位元組（實測收下來的 `llm-serve.log` 大小就是 0）。實測第 45 秒時畫面還在印「帳簿：還沒有任何一筆 LLM 請求」，其實 LM Studio 正在生成。要確認它沒死只能去 `lms ps` 看模型是不是 `GENERATING`——那是 aos 之外的工具。｜**怎麼繞**：沒繞。`aos llm ls` 能看到請求還在收件匣，但看不出「已經送出去了、在等回話」。spec 要給 LLM 世界一個「在飛的請求」狀態（收件匣裡＝排隊中，vs 已送出＝在等），不然人只能猜。｜類別：看不見的狀態｜擋路程度：擋路
+- **一圈跑掉的格號跟真的做了幾件事差 20 倍，`aos status` 印的格號對人沒有意義**｜依據：`.aos/series.json` 的 `tick`、`.aos/ticks/<N>/`｜**卡在哪**：qwen 那輪跑完 `tick` 是 **612**，但真的跑過指令的只有 **21 格**（`ticks/` 底下只有 0,1,126,127,128,170,…,610 這 21 個目錄）。中間 590 格全是 `await` 在等結果時的空轉（run 沒給 `--every` 時每 100 毫秒轉一格）。`aos status` 印「下一格 612」，人看了完全不知道那代表什麼；要對照「第幾圈」還得自己去讀 agent 的 `state/round.txt`。｜**怎麼繞**：沒繞。spec 要嘛把「等結果的空轉」不算格，要嘛 `status` 要同時印「做過事的格」跟「總格號」。｜類別：看不見的狀態｜擋路程度：煩
+- **帳簿的 `tokens_out` 把模型的「想」跟「說」算在一起，看帳簿會嚴重高估**｜依據：WRITER-BRIEF 4.7 帳簿欄位（`tokens_in`／`tokens_out`）｜**卡在哪**：本機那顆一輪 18705 個 out token，但真正寫進 `state/answer.txt`、agent 讀得到的內容只有幾百字——其餘全是它的思考。帳簿只有一個 `tokens_out` 欄，分不出來，於是「這一輪花了多少」這個數字沒法拿來比（跟雲端那顆的 1140 放在一起看更是誤導）。｜**怎麼繞**：沒繞，照 4.7 的欄位名寫。spec 該加一個「思考 token」欄，或至少明寫 `tokens_out` 含不含思考。｜類別：看不見的狀態｜擋路程度：煩
+- **工具白名單只擋 `argv[0]`，等於沒擋**｜依據：裁決 S-04（第一版只靠 `path` 白名單）、`.aos/config.json` 的 `path`｜**卡在哪**：白名單給了 `python3`，於是 `python3 -c "<任意程式>"` 一句話就能讀寫這塊地以外的任何檔案。實測兩顆模型都很自然地用 `python3 -m unittest …`——它們沒惡意，但這條路本來就是開的。`path` 白名單擋的是「能叫哪支程式」，擋不住「那支程式能幹嘛」。｜**怎麼繞**：`brain.py` 自己再擋一層（內建的 `write` 工具限制落點在這塊地裡、不准指進 `.aos/`），但 `python3` 那條路照樣開著。spec 要嘛承認第一版擋不住（明寫），要嘛把「限制在這塊地裡」交給環境（chroot／namespace／FUSE，就是 M-01 那條「時間有界主方法是環境限制」的空間版）。｜類別：spec 沒講｜擋路程度：擋路
+- **排隊逾時 `max_wait_ms` 用牆鐘，本機模型一慢就會誤殺後面排隊的請求**｜依據：裁決 S-08（逾期用牆鐘）、`llm.py` 的 `max_wait_ms`（預設 30000）｜**卡在哪**：本機模型一次 40～60 秒。只要有第二筆請求排在後面，它在收件匣等的牆鐘時間就超過預設的 30 秒，於是**還沒送出去就被判 `queue_timeout`**，狀態檔寫失敗、父地的 `await` 直接判死。這不是後端壞了，是「前面那筆比較慢」。｜**怎麼繞**：`play-agent.sh` 把 `max_wait_ms` 硬調到 600000。spec 該講清楚排隊逾時要不要跟單元的實測速度掛勾，或至少把預設值講成「跟你最慢的單元一次要多久有關」。｜類別：錯誤不指路｜擋路程度：擋路
+- **一圈失敗了，只有 agent 自己的 transcript 知道**｜依據：I-04（結束碼只管跑沒跑起來、做成沒做成寫進檔案）｜**卡在哪**：qwen 第 4 圈的 `write` 失敗了（模型的程式碼區塊沒有收尾的三個反引號，`brain.py` 找不到要寫什麼）。這件事：不影響串（`act` 那步結束碼還是 0，因為「工具失敗」是 agent 的語意、不是機器的傳輸層），不進 `.aos/stopped.json`，不進帳簿，`aos status` 一個字都不會提。要知道只能去讀 `state/transcript.md` 或 `state/rounds/004/tool.txt`。第 5 圈模型自己看到觀察、補了收尾符號才成功。｜**怎麼繞**：沒繞——這其實是 I-04 想要的分層（機器只管跑沒跑起來），但代價是「agent 卡在同一件事上鬼打牆」這種最常見的失敗模式，在機器這一層**完全沒有訊號**。spec 該給 agent 一個把「這圈做成沒做成」往上報的地方（例如每圈寫一份狀態檔），不然看管者永遠不知道該不該叫停。｜類別：看不見的狀態｜擋路程度：擋路
+- **「現在第幾圈」是 agent 自己記的，機器面沒有這個概念**｜依據：裁決 M-01（agent 本質是一個 aos run）｜**卡在哪**：`play-agent.sh` 要印進度，只能去讀 agent 地上的 `state/round.txt`——那是 `brain.py` 自己約定的檔名，換一支 agent 就換一個名字。機器面（`aos status`／`aos daemon ls`）只知道格號跟串狀態。｜**怎麼繞**：劇本裡寫死讀 `state/round.txt`。若「agent＝一個 aos run」要成立，spec 該講清楚「圈」要不要是機器認得的東西（例如接力棒繞回同一步算一圈）。｜類別：看不見的狀態｜擋路程度：煩

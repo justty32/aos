@@ -1,8 +1,8 @@
 #!/bin/sh
 # call-async：父地呼叫子地（脫節，子自己有鐘），父再 await 結果落點。
-# 子地的時鐘靠 aos run 撐起；沒有 daemon 在看管時，exec 自己會 detach 一支
-# `aos run <子> --register` 去跑（WRITER-BRIEF 4.11 第 6 條）。這裡不特別起
-# daemon，讓那個自動 detach 接手，一樣能看到子地真的把結果寫回來。
+# 裁決 P-01：沒有 daemon 在跑時，脫節呼叫**直接失敗**（狀態檔寫 no_daemon），
+# 不再由 exec 自己 detach 一支 run。所以這個範例一開始就先起一個暫存家的 daemon，
+# 由它去替子地起 `aos run <子> --register`，跑完再把 daemon 停掉。
 set -eu
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AOS_PY="$HERE/../../aos.py"
@@ -15,18 +15,27 @@ mkdir -p "$LAND/.home"
 export AOS_HOME="$LAND/.home"
 echo "AOS_HOME=$AOS_HOME（範例自己的暫存目錄，不碰使用者的 ~）"
 
+stop_daemon() {
+  python3 "$AOS_PY" daemon stop >/dev/null 2>&1 || true
+}
+trap stop_daemon EXIT INT TERM
+
 echo "== init 父地與子地 =="
 python3 "$AOS_PY" init "$LAND"
 python3 "$AOS_PY" init "$CHILD"
 
-echo "== 走格（沒起 daemon；exec 自己會 detach 一支 aos run 去撐子地的鐘） =="
+echo "== 起 daemon（P-01：沒有它，下面那個 async 呼叫會直接失敗） =="
+python3 "$AOS_PY" daemon start --every 200
+
+echo "== 走格 =="
 i=0
-while [ "$i" -lt 10 ]; do
+while [ "$i" -lt 15 ]; do
   OUT=$(python3 "$AOS_PY" exec "$LAND")
   echo "$OUT"
   if echo "$OUT" | grep -q "閒著了"; then
     break
   fi
+  sleep 0.2
   i=$((i + 1))
 done
 
@@ -37,8 +46,12 @@ echo "== 結果：父指定的結果落點 out/child-said.txt =="
 if [ -f "$LAND/out/child-said.txt" ]; then
   cat "$LAND/out/child-said.txt"
 else
-  echo "(沒有這個檔——看上面的格輸出跟登記表，可能是 detach 的 aos run 還沒跑完)"
+  echo "(沒有這個檔——看上面的格輸出跟登記表，可能是 daemon 起的 aos run 還沒跑完)"
+  exit 1
 fi
 
 echo "== 父地串狀態 =="
 python3 "$AOS_PY" status "$LAND"
+
+echo "== 停 daemon =="
+python3 "$AOS_PY" daemon stop

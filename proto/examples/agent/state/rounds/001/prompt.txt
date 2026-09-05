@@ -1,0 +1,19 @@
+你是一個 agent。你住在這塊地：/home/lorkhan/repo/simple_tools/aos/proto/examples/agent
+你能動的東西只有 /home/lorkhan/repo/simple_tools/aos/proto/examples/agent/work 底下的檔案。
+
+== 任務 ==
+work/ 裡有一支 `greet.py`。請看看它，然後說一句話講它是做什麼的。
+
+== 你能用的程式（白名單，其他一律拒絕）==
+python3、cat、ls
+
+== 怎麼回話 ==
+一次只做一件事，回話要短。
+要跑指令，就在回話裡放一行長這樣（一次只准一行）：
+    TOOL: ls work
+做完了、不必再跑指令，就放一行長這樣：
+    DONE: 我加了函式，測試過了
+兩種行都沒有＝你覺得做完了，我就收工。
+
+== 到目前為止（現在是第 1 圈，最多 6 圈）==
+（還沒做過任何事）

@@ -141,3 +141,40 @@ class TestDaemonStartStop(LandCase):
                 break
             time.sleep(0.2)
         self.assertTrue(stopped, msg="等了 10 秒，地還沒被 daemon stop 標成 stopped")
+
+
+@unittest.skipUnless(HAS_DAEMON, SKIP_MSG)
+class TestDaemonAdd(LandCase):
+    """`aos daemon add`：只登記時鐘、不當場開跑（S-02 要的 pending 那一態）。"""
+
+    def test_add_registers_pending_without_running(self):
+        rc, out, err = run_cli("daemon", "add", self.land.root, "--every", "250")
+        self.assertEqual(rc, exits.OK, msg="daemon add 該成功，stdout=%r stderr=%r" % (out, err))
+        e = registry.find(registry.load(layout.Home()), self.land.root)
+        self.assertIsNotNone(e, msg="登記表該有這塊地，實際 %r" % registry.load(layout.Home()))
+        self.assertEqual(e["state"], registry.PENDING,
+                          msg="add 只登記、不開跑，狀態該是 pending，實際 %r" % e)
+        self.assertEqual(e["clock"], {"kind": "every", "every_ms": 250},
+                          msg="鐘該照旗標寫，實際 %r" % e)
+        self.assertIsNone(e["pid"], msg="沒開跑就不該有 pid，實際 %r" % e)
+        self.assertFalse(os.path.exists(self.land.series),
+                         msg="add 不該讓那塊地開始跑（不該有 series.json）")
+
+    def test_add_until_idle_and_steps(self):
+        run_cli("daemon", "add", self.land.root, "--until", "idle")
+        e = registry.find(registry.load(layout.Home()), self.land.root)
+        self.assertEqual(e["clock"], {"kind": "until", "until": "idle"},
+                          msg="--until idle 該登成 until 鐘，實際 %r" % e)
+        run_cli("daemon", "add", self.land.root, "--steps", "3", "--budget", "9")
+        e = registry.find(registry.load(layout.Home()), self.land.root)
+        self.assertEqual(e["clock"], {"kind": "steps", "steps": 3},
+                          msg="--steps 3 該登成 steps 鐘，實際 %r" % e)
+        self.assertEqual(e["budget"], 9, msg="--budget 該記進去，實際 %r" % e)
+
+    def test_add_on_non_land_says_what_to_do(self):
+        bad = os.path.join(self.tmp, "not-a-land")
+        os.makedirs(bad, exist_ok=True)
+        rc, out, err = run_cli("daemon", "add", bad)
+        self.assertEqual(rc, exits.NOT_A_LAND,
+                          msg="不是一塊地該回 4，實際 %r（%r）" % (rc, err))
+        self.assertIn("init", err, msg="錯誤要指路（叫人先 init），實際 %r" % err)

@@ -1,7 +1,5 @@
 """aos exec：走一步（一格）。WRITER-BRIEF 4.2 / 4.4 / 4.5。"""
 import os
-import subprocess
-import sys
 
 from . import fsutil, inbox, instrun, layout, loader, regs, registry, series as S, status
 
@@ -144,35 +142,23 @@ def _do_call(land, sr, step, tick, timeout_ms):
         if state == status.FAILED:
             return FAIL, st.get("reason", "failed"), st.get("message", "子地說壞了")
         return FAIL, "no_result", "子地閒著了，但結果落點 %s 沒東西" % rec["result"]
-    # async：登記子的時鐘後這步立刻成功
+    # async：登記子的時鐘後這步立刻成功。
+    # 裁決 P-01（2026-09-05）：沒 daemon 就沒人替子地走鐘，這步**直接失敗**，
+    # 狀態檔寫 `no_daemon`（WRITER-BRIEF 4.11 第 6 條的「自己 detach 一支 run」作廢）。
+    # 先擋再登記：擋掉的呼叫不該在登記表留一筆沒人會去起的 pending。
+    if not registry.daemon_alive():
+        home = layout.Home()
+        msg = ("沒有 daemon 在看管（登記表 %s 的 `daemon_pid` 是空的、或那支已經死了），"
+               "脫節呼叫的子地 %s 沒人替它走鐘。"
+               "下一步：先 `aos daemon start`，再 `aos reset %s` 重跑這塊地。"
+               % (home.registry, child.root, land.root))
+        status.write_failed(rec["result"], status.NO_DAEMON, msg,
+                            ext={"land": land.root, "child": child.root, "call": cid})
+        return FAIL, status.NO_DAEMON, msg
     clock = step.get("clock") or {"kind": "until", "until": "idle"}
     registry.register(child.root, clock, budget=step.get("budget"), parent=land.root,
-                      result=rec["result"])
-    if not registry.daemon_alive():
-        # WRITER-BRIEF 4.11 第 6 條：daemon 不在就自己 detach 起一支
-        _detach_run(child.root, clock, _child_env(rec, land.root))
+                      result=rec["result"], args=rec.get("args") or {})
     return OK, None, None
-
-
-def _detach_run(child_root, clock, env_extra):
-    argv = [sys.executable, os.path.join(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__))), "aos.py"), "run", child_root, "--register"]
-    kind = clock.get("kind")
-    if kind == "steps":
-        argv += ["--steps", str(clock.get("steps", 1))]
-    elif kind == "every":
-        argv += ["--every", str(clock.get("every_ms", 200)), "--until", "idle"]
-    elif kind == "once":
-        argv += ["--steps", "1"]
-    else:
-        argv += ["--until", "idle"]
-    env = dict(os.environ)
-    env.update({k: str(v) for k, v in env_extra.items()})
-    logdir = layout.Land(child_root).aos
-    fsutil.ensure_dir(logdir)
-    log = open(os.path.join(logdir, "detached.log"), "ab")
-    subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                     start_new_session=True, close_fds=True)
 
 
 def _do_await(land, sr, step, tick):
