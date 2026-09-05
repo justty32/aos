@@ -11,5 +11,6 @@
 | [edge-decisions.md](edge-decisions.md) | 主編對那 83 條逐條的採／涵蓋／放 | spec 主編 |
 | [asset-inventory.md](asset-inventory.md) | 舊 core/ 37 個組件：可重用／改一改／廢 | 盤點隊（Sonnet） |
 | [plan-skeleton.md](plan-skeleton.md) | 正式實作計畫的骨架草稿，八個里程碑；spec 出來後還沒對齊 | 計畫隊（Opus） |
+| [janet-binding-findings.md](janet-binding-findings.md) | Janet 1.41.2 綁定實作時的協定裂縫、繞法與原型邊界 | Codex |
 
 原型在 repo 根目錄 `proto/`，它撞到的事在 `proto/FINDINGS.md`。
