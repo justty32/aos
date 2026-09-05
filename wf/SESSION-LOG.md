@@ -29,7 +29,8 @@
   ⑦（已解，21:05）Janet 綁定：janet-lab f52ef46（modules/aos 8 檔＋4 測試＋範例＋README，jpm test 全綠）；發現 11 條在 spec/notes/janet-binding-findings.md（9c5d79d），要 spec 隊裁的：外部語言沒有「父的那一格」、registry schema 跟原型的頂層 result／args／daemon_pid_start 打架；
   ⑧（已解，21:05）12 條「AI 建議改」使用者全點「改成再審建議」，codex 第 4 輪回寫完。裁決單 artifact 修了兩個 bug：正式實作九題改編號 IMP-01～09（原本跟 06 章 F-xx 撞號）；本機比共用新時會自動推上去。
   ⑨（新）給人玩的互動台 `bash proto/play-chat.sh`（2f89212，DeepSeek、插話寄信、/status /log /stop /new /quit；離線自測 proto/play/selftest.sh）。使用者 21:15 回來玩；玩出的阻礙記 proto/FINDINGS.md。
-  ⑩ codex 撞到要 spec 隊裁的（proto/FINDINGS.md「codex 第 1／2 輪」）：ledger 加 tokens_reasoning、busy_ticks 沒欄位、requests/ 原件 vs 狀態物件、停止原因不只三種、跨格落點預約。
+  ⑩（已解，21:25）第四批 5 條（Q-01～Q-05）使用者全點建議，codex 6a 回寫 spec＋六份 schema、6b 改原型（29fbc8d），兩邊都綠。
+  ⑪ 待使用者：玩互動台 `bash proto/play-chat.sh` 撞到的怪事；codex 第 6 輪新撞到兩件（proto/FINDINGS.md「codex 第 6 輪」：原件改名與狀態寫入不原子、queued 要投遞後立刻可見）還沒進裁決單。裁決單 artifact 現在 56/80 已答，全部都已回寫。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
