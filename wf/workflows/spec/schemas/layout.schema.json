@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/layout.schema.json",
+  "title": "aos 版面檔 .aos/layout.json",
+  "description": "一塊地的版面版本與地 id。aos init 建立：先把 .aos/ 裡的東西建好，最後才把這個檔原子改名就位；它出現那一刻就是這塊地的誕生。layout_version 跟本版不合就拒跑，只准人工 aos migrate。",
+  "type": "object",
+  "required": ["format_version", "layout_version", "land_id"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {
+      "description": "這個檔本身的格式版本，第一版 1。",
+      "type": "integer",
+      "minimum": 1
+    },
+    "layout_version": {
+      "description": "這塊地的 .aos/ 版面版本，第一版 1。",
+      "type": "integer",
+      "minimum": 1
+    },
+    "land_id": {
+      "description": "aos init 產的 32 個小寫 hex 隨機 id，之後不變。身分仍然是路徑，這個 id 只用來認出「路徑變了但還是同一塊地」。",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "ext": {
+      "description": "具名擴充區。已知的一欄：moved_from（字串，aos mv 搬過來時記的前身路徑）。",
+      "type": "object",
+      "properties": {
+        "moved_from": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

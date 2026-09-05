@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/usage.schema.json",
+  "title": "aos 一筆 LLM 請求的用量檔",
+  "description": "成功時寫在結果落點旁邊的 <結果落點>.usage.json。它是 agent 算自己 token 上限的唯一來源；agent 不讀家的帳簿。跟結果檔一樣原子發布，而且先於結果檔發布。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "request_id", "unit", "tokens_in", "tokens_out", "ms"],
+  "properties": {
+    "format_version": {
+      "description": "這個檔的格式版本，第一版 1。",
+      "type": "integer",
+      "const": 1
+    },
+    "request_id": {
+      "description": "那筆 LLM 請求的 id。",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "unit": {
+      "description": "用了哪一顆處理單元的 name。",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "tokens_in": {
+      "description": "送進去幾個 token。後端沒給就填 0。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "tokens_out": {
+      "description": "吐回來幾個 token。後端沒給就填 0。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "tokens_source": {
+      "description": "選填，從 aos llm --usage-out 那份帶過來：reported＝後端回的，estimated＝自己估的。",
+      "type": "string",
+      "enum": ["reported", "estimated"]
+    },
+    "ms": {
+      "description": "送出到回來花了幾毫秒。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "ext": {
+      "description": "具名擴充區。唯一可以放 spec 不認得的欄位的地方。",
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/llm-request.schema.json",
+  "title": "aos LLM 請求（投遞物 kind:\"llm\"）",
+  "description": "投進 LLM 世界 .aos/inbox/ 的一筆請求。它是投遞物的一種，kind 固定 \"llm\"。回覆寫到 result，錯誤寫 <result>.status.json。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "id", "kind", "from", "at", "prompt", "tier", "result", "priority"],
+  "properties": {
+    "format_version": {
+      "description": "這個檔的格式版本，第一版 1。",
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "description": "投遞物 id。機器產的用 32 個小寫 hex。同 id 再投＝拒收。",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "kind": {
+      "description": "投遞物種類，這份 schema 只管 \"llm\"。",
+      "type": "string",
+      "const": "llm"
+    },
+    "from": {
+      "description": "投遞者那塊地的真實路徑。錯誤與帳簿都用它認人。",
+      "type": "string",
+      "minLength": 1
+    },
+    "at": {
+      "description": "投遞當下的時間，ISO 8601 UTC 含毫秒。同 priority 時按它排先後。",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "prompt": {
+      "description": "指向 prompt 檔的路徑，不是 prompt 內文。相對路徑的基準是 from 那塊地的根；絕對路徑照用。禁止指進任何 .aos/。",
+      "type": "string",
+      "minLength": 1
+    },
+    "tier": {
+      "description": "要多聰明，例如 fast、smart。只挑分級，不指定哪一顆處理單元。",
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "description": "父指定的結果落點。模型回話的原文寫到這裡；壞了寫 <result>.status.json，成功時旁邊還有 <result>.usage.json。相對路徑的基準是 from 那塊地的根。禁止指進任何 .aos/。",
+      "type": "string",
+      "minLength": 1
+    },
+    "priority": {
+      "description": "優先序，整數，小的先做。投的時候就要填。",
+      "type": "integer"
+    },
+    "max_wait_ms": {
+      "description": "這筆請求最多排隊多久。省略＝用使用者層設定的 max_wait_ms。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "tools": {
+      "description": "給模型看的工具行，一個工具一行，接在 prompt 前面當純文字。不是後端那套工具呼叫（function calling），只是同名。省略＝這次不給工具。格式見 spec 11。",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "ext": {
+      "description": "具名擴充區。唯一可以放 spec 不認得的欄位的地方。",
+      "type": "object"
+    }
+  }
+}

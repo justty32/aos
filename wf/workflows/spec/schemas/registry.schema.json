@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/registry.schema.json",
+  "title": "aos 登記表",
+  "description": "$AOS_HOME/.aos/registry.json。所有正在走或停著的時鐘都記在這一份檔裡。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "daemon_pid", "entries"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "daemon_pid": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "現在這支 daemon 的行程編號；沒有 daemon＝null。"
+    },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" },
+      "description": "一塊登記的地一筆。同一個 path 禁止出現兩次。"
+    },
+    "ext": { "type": "object", "description": "具名擴充區，內容不管。" }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "pid",
+        "pid_start",
+        "land_id",
+        "state",
+        "clock",
+        "budget",
+        "parent",
+        "registered_at",
+        "updated_at"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "這塊地的真實路徑（realpath），不是 symlink 路徑。路徑就是身分。"
+        },
+        "pid": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "替它走時鐘那支 aos run 子行程的行程編號；還沒起＝null。"
+        },
+        "pid_start": {
+          "type": ["string", "null"],
+          "description": "那個 pid 的啟動時間（/proc/<pid>/stat 第 22 欄，字串存）。判活要 pid 與這欄都吻合，才不會被重用的編號騙。沒有 pid＝null。"
+        },
+        "runner": {
+          "enum": ["run", "llm-serve"],
+          "default": "run",
+          "description": "daemon 該起哪支程式：run＝aos run（預設）；llm-serve＝aos llm serve，LLM 世界那筆用。沒寫就當 run。"
+        },
+        "resume": {
+          "type": "boolean",
+          "description": "被 aos daemon stop 停掉時設 true，表示下次 aos daemon start 要把它接回去跑；起完由 daemon 清掉。"
+        },
+        "land_id": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Za-z0-9_-]{1,64}$",
+          "description": "那塊地 .aos/layout.json 的 land_id，開跑時讀進來。只用來認人，不是主鍵；主鍵仍是 path。讀不到＝null。"
+        },
+        "state": {
+          "enum": ["pending", "running", "stopped"],
+          "description": "pending＝登記了等 daemon 起；running＝子行程在跑；stopped＝停了但地還在。"
+        },
+        "clock": {
+          "anyOf": [{ "$ref": "#/$defs/clock" }, { "type": "null" }],
+          "description": "時鐘規格；沒有鐘（例如門房登記的那種）＝null。"
+        },
+        "budget": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "這支 run 最多走幾格；不設上限＝null。"
+        },
+        "parent": {
+          "type": ["string", "null"],
+          "description": "登記它的那塊地的真實路徑；使用者自己登記的＝null。"
+        },
+        "last_started_at": {
+          "$ref": "#/$defs/timestamp",
+          "description": "上一次替它起 run 的時間。every 的鐘到期＝這個時間加上 every_ms 已經過了；沒起過就沒有這欄。"
+        },
+        "registered_at": { "$ref": "#/$defs/timestamp" },
+        "updated_at": { "$ref": "#/$defs/timestamp" },
+        "ext": {
+          "type": "object",
+          "description": "具名擴充區。三個約定的鍵：result（起脫節子地時 exec 寫進去的父指定結果落點）、exec_id（aos daemon exec 那筆的 id）、清理紀錄。"
+        }
+      }
+    },
+    "clock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["steps", "every", "until", "once"],
+          "description": "steps＝走固定格數；every＝隔一段時間走一格；until＝走到條件成立；once＝走一次就結束。"
+        },
+        "steps": { "type": "integer", "minimum": 1, "description": "kind=steps 時走幾格。" },
+        "every_ms": { "type": "integer", "minimum": 1, "description": "kind=every 時隔幾毫秒走一格。" },
+        "until": {
+          "enum": ["idle", "never"],
+          "description": "kind=until 時的條件：idle＝閒著就停；never＝閒著也不停，只等投遞或控制信（伺服器型的地）。"
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "steps" } }, "required": ["kind"] },
+          "then": { "required": ["steps"] } },
+        { "if": { "properties": { "kind": { "const": "every" } }, "required": ["kind"] },
+          "then": { "required": ["every_ms"] } },
+        { "if": { "properties": { "kind": { "const": "until" } }, "required": ["kind"] },
+          "then": { "required": ["until"] } }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    }
+  }
+}

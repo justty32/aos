@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/usage-total.schema.json",
+  "title": "aos agent 的用量累計：.aos/usage.json",
+  "description": "agent 那塊地自己的用量帳。圈裡一筆指令每圈把 <結果落點>.usage.json 累加進來；agent.json 的 max_llm_calls 與 max_tokens 就是對這個檔判的。禁止拿家的帳簿 ledger.jsonl 代替：那是 LLM 世界那邊的帳，agent 地上看不到。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "llm_calls", "tokens_in", "tokens_out", "updated_at"],
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "llm_calls": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "這塊地到目前為止投出去、而且拿回結果的 LLM 請求筆數。壞掉重投的那次也算一筆。"
+    },
+    "tokens_in": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "累計輸入 token，來源是每筆 <結果落點>.usage.json 的 tokens_in。"
+    },
+    "tokens_out": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "累計輸出 token，來源是每筆 <結果落點>.usage.json 的 tokens_out。"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "最後一次累加的時間。ISO 8601 UTC 含毫秒。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區。唯一可以放 spec 不認得的欄位的地方。"
+    }
+  },
+  "examples": [
+    {
+      "format_version": 1,
+      "llm_calls": 7,
+      "tokens_in": 51230,
+      "tokens_out": 4180,
+      "updated_at": "2026-09-05T12:00:00.000Z"
+    }
+  ]
+}

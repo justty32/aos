@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/source.schema.json",
+  "title": "aos 原稿：一塊地頂層的 *.aos.json",
+  "type": "object",
+  "required": ["format_version", "templates"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": { "type": "integer", "const": 1 },
+    "_comment": true,
+    "templates": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/template" }
+    },
+    "ext": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "path": { "type": "string", "minLength": 1 },
+    "type": { "enum": ["string", "path", "int", "bool", "json", "none"] },
+    "template": {
+      "type": "object",
+      "required": ["steps"],
+      "additionalProperties": false,
+      "properties": {
+        "_comment": true,
+        "interface": { "$ref": "#/$defs/interface" },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/src_step" }
+        }
+      }
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_comment": true,
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "_comment": true,
+              "name": { "$ref": "#/$defs/id" },
+              "type": { "$ref": "#/$defs/type" }
+            }
+          }
+        },
+        "returns": {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "_comment": true,
+            "type": { "$ref": "#/$defs/type" },
+            "from": { "$ref": "#/$defs/id" }
+          }
+        }
+      }
+    },
+    "src_step": {
+      "type": "object",
+      "required": ["name", "do"],
+      "additionalProperties": false,
+      "properties": {
+        "_comment": true,
+        "name": { "$ref": "#/$defs/id" },
+        "do": { "$ref": "#/$defs/expr" },
+        "then": { "$ref": "#/$defs/id" },
+        "on_fail": { "$ref": "#/$defs/id" },
+        "select": {
+          "oneOf": [{ "$ref": "#/$defs/path" }, { "$ref": "#/$defs/from" }]
+        }
+      }
+    },
+    "from": {
+      "type": "object",
+      "required": ["from"],
+      "additionalProperties": false,
+      "properties": { "from": { "$ref": "#/$defs/id" } }
+    },
+    "arg": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "required": ["b64"],
+          "additionalProperties": false,
+          "properties": { "b64": { "type": "string" } }
+        },
+        { "$ref": "#/$defs/from" },
+        {
+          "type": "object",
+          "required": ["do"],
+          "additionalProperties": false,
+          "properties": { "do": { "$ref": "#/$defs/expr" } }
+        }
+      ]
+    },
+    "args": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/arg" }
+    },
+    "inst_src": {
+      "type": "object",
+      "required": ["argv"],
+      "properties": {
+        "_comment": true,
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/arg" }
+        }
+      }
+    },
+    "expr": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "_comment": true,
+        "kind": { "enum": ["inst", "call", "await", "use"] }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["kind"], "properties": { "kind": { "const": "inst" } } },
+          "then": {
+            "required": ["inst"],
+            "properties": {
+              "inst": { "$ref": "#/$defs/inst_src" },
+              "expect": { "$ref": "#/$defs/path" }
+            }
+          }
+        },
+        {
+          "if": { "required": ["kind"], "properties": { "kind": { "const": "call" } } },
+          "then": {
+            "required": ["child", "mode"],
+            "properties": {
+              "child": { "$ref": "#/$defs/path" },
+              "mode": { "enum": ["sync", "async"] },
+              "result": { "$ref": "#/$defs/path" },
+              "args": { "$ref": "#/$defs/args" },
+              "clock": { "$ref": "program.schema.json#/$defs/clock" }
+            }
+          }
+        },
+        {
+          "if": { "required": ["kind"], "properties": { "kind": { "const": "await" } } },
+          "then": {
+            "required": ["result"],
+            "properties": {
+              "result": {
+                "oneOf": [{ "$ref": "#/$defs/path" }, { "$ref": "#/$defs/from" }]
+              },
+              "max_ticks": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        {
+          "if": { "required": ["kind"], "properties": { "kind": { "const": "use" } } },
+          "then": {
+            "required": ["template"],
+            "properties": {
+              "template": { "$ref": "#/$defs/id" },
+              "args": { "$ref": "#/$defs/args" }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

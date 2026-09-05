@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "steps": [
+    {
+      "name": "wait",
+      "kind": "await",
+      "result": "answer.txt",
+      "max_ticks": 8,
+      "then": "print"
+    },
+    {
+      "name": "print",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "python3", "-c",
+          "import sys; sys.stdout.write(open(sys.argv[1]).read())",
+          "${land}/answer.txt"
+        ]
+      },
+      "then": "end"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/doorman-log.schema.json",
+  "title": "aos 門房本子的一行（doorman.log）",
+  "description": "$AOS_HOME/.aos/doorman.log 是 jsonl：一行一個 json，這份 schema 描述其中一行。門房只寫這個檔，不改任何一塊地的 .aos/。這個檔沒有 format_version，因為它不是一份文件而是一串附加上去的行。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["at", "event", "path"],
+  "properties": {
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+      "description": "門房記下這一筆的時刻，ISO 8601 UTC 含毫秒。不是檔案系統事件本身發生的時刻。"
+    },
+    "event": {
+      "type": "string",
+      "enum": ["born", "born_invalid", "gone", "write", "inbox", "fallback"],
+      "description": "born＝一塊地誕生（.aos/layout.json 以原子改名出現）；born_invalid＝layout.json 讀不到或不合 layout.schema.json，沒有登記；gone＝登記表某筆的 path 被刪或被搬走；write＝記帳，有人寫了某塊地的某個檔；inbox＝某塊地的 .aos/inbox/ 出現新檔；fallback＝監看數量碰到系統上限，退回定期巡邏。"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "真實路徑（realpath）。born、born_invalid、gone、inbox、fallback 記的是那塊地的根；write 記的是被寫的那個檔。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區，裡面隨意。實作可放 by_pid（寫的人的行程編號）、by_uid、land（那個檔屬於哪塊地的根）之類。讀的人不認得就略過。"
+    }
+  }
+}

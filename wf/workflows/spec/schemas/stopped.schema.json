@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/stopped.schema.json",
+  "title": "停止原因檔 .aos/stopped.json",
+  "description": "一支 aos run 停下來時寫的檔：為什麼停、停在第幾格、停在哪條串哪一步。run 開始時先刪舊的，停下時寫一份新的。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "reason", "tick", "series", "step", "message", "at"],
+  "properties": {
+    "format_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "格式版本，第一版是 1。"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "no_new_insts",
+        "budget",
+        "failed",
+        "steps_done",
+        "stop_requested",
+        "killed",
+        "timeout",
+        "repeat_fail",
+        "crashed",
+        "land_gone"
+      ],
+      "description": "為什麼停。no_new_insts＝這格沒產出新指令、也沒有串在等（通用停法）；budget＝走滿 --budget 的格數；failed＝有串變成 failed；steps_done＝--steps N 走完 N 格；stop_requested＝控制收件匣收到 stop；killed＝run 被訊號殺，來得及才寫得出這一份；timeout＝這一格超過允許時間被中止；repeat_fail＝同一條串卡在同一步連續失敗三次；crashed＝上一格崩在半路而且執行結果檔不齊；land_gone＝這塊地的 .aos/ 不見了。"
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "停下來時接力棒上的格號。"
+    },
+    "series": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "停在哪條串的 id；不指向某一條串（例如走滿步數）就是 null。"
+    },
+    "step": {
+      "type": ["string", "null"],
+      "description": "停在那條串的哪一個步名；不指向某一步就是 null。"
+    },
+    "detail": {
+      "type": "string",
+      "description": "細一點的原因代碼，選填。exec 判串失敗時寫在這裡（例如 spawn_error、timeout、await_timeout、bad_select）；run 停下來重寫這份檔時必須把它帶進去。"
+    },
+    "message": {
+      "type": "string",
+      "description": "給人看的一句話，不給機器判讀。"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+      "description": "寫這份檔的時刻，ISO 8601 UTC 含毫秒。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區，裡面隨意。建議放這支 run 走過的每一格花了多久（毫秒），讓人看得出一格有多長。"
+    }
+  }
+}

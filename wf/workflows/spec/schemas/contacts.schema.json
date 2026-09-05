@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/contacts.schema.json",
+  "title": "aos 通訊錄（contacts）",
+  "description": "整個檔 .aos/contacts.json 的頂層就是一個陣列，沒有外包一層物件、沒有 format_version。它只回答一句話：某某人住在哪個資料夾。使用者那格 ~ 不落檔，讀的時候合成。",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["name", "path"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{1,64}$",
+        "description": "對方的名字，這份檔裡唯一。"
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "對方那塊地的資料夾。相對路徑以這塊地的根為基準，也可以是絕對路徑。原樣保存。"
+      },
+      "note": {
+        "type": "string",
+        "maxLength": 500,
+        "description": "一句備註，選填。機器不解析。"
+      }
+    }
+  }
+}

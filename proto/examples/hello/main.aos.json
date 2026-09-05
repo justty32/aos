@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "steps": [
+    {
+      "name": "write",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "python3", "-c",
+          "import sys, pathlib; pathlib.Path(sys.argv[1]).write_text('hello from aos\\nland=%s\\ntick=%s\\n' % (sys.argv[2], sys.argv[3]))",
+          "${frame}/msg.txt", "${land}", "${tick}"
+        ]
+      },
+      "expect": "${frame}/msg.txt",
+      "then": "read"
+    },
+    {
+      "name": "read",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "python3", "-c",
+          "import sys, shutil; shutil.copyfile(sys.argv[1], sys.argv[2])",
+          "${frame}/msg.txt", "${frame}/copy.txt"
+        ]
+      },
+      "then": "print"
+    },
+    {
+      "name": "print",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "python3", "-c",
+          "import sys; sys.stdout.write(open(sys.argv[1]).read())",
+          "${frame}/copy.txt"
+        ]
+      },
+      "then": "end"
+    }
+  ]
+}

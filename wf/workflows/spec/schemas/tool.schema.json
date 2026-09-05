@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aos.local/schemas/tool.schema.json",
+  "title": "aos 工具登記項（tool）",
+  "description": "一工具一檔，路徑 .aos/tools/<名>.json。扁平物件，欄位不分組。這份是唯一真相；給模型看的一行、OpenAI 或 MCP 格式都是從它匯出的投影。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "name",
+    "command",
+    "description"
+  ],
+  "properties": {
+    "format_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+      "description": "工具名，必須等於檔名去掉 .json。同一塊地裡唯一。"
+    },
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "description": "固定的 argv 前綴陣列，不是一整條命令列字串。第 0 個是要跑的程式。引數依 args 接在後面。"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "一句話講它做什麼，並寫出代價（慢、要花錢、結果不確定）。這一句會進給模型看的那一行。"
+    },
+    "args": {
+      "enum": [
+        "list",
+        "string",
+        "none"
+      ],
+      "default": "list",
+      "description": "引數形狀三選一。list＝逐項接在 command 後面，空白與引號原樣保留、不經 shell；string＝整段當一個參數；none＝不收引數。禁止具名槽。"
+    },
+    "stdin": {
+      "type": "boolean",
+      "default": false,
+      "description": "收不收 stdin。"
+    },
+    "predictability": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "description": "結果符不符合人的預期，不是「同輸入同輸出」。缺席＝不知道，不准當成 high。"
+    },
+    "slow": {
+      "type": "boolean",
+      "default": false,
+      "description": "登記的人自己填。true＝由 agent 開一塊脫節子地去跑。沒填當快的。"
+    },
+    "cwd": {
+      "type": "string",
+      "pattern": "^(?!/)(?!\\.\\./)(?!.*/\\.\\./)(?!.*/\\.\\.$)[^\\0]{1,512}$",
+      "description": "工具跑起來的工作目錄。省略＝呼叫它的那塊地的根。只能是那塊地之內的相對路徑：禁止絕對路徑、禁止用 .. 跳出去。"
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "text",
+            "json",
+            "file"
+          ]
+        }
+      },
+      "description": "輸出形狀。第一版存著不用；等大輸出真的出現才拿來決定走內嵌還是走檔案路徑。"
+    },
+    "repeat_safe": {
+      "type": "boolean",
+      "description": "同樣的呼叫重跑一次安不安全。第一版存著不讀；要用時第一個拉起來的就是它。"
+    },
+    "leaves_trace": {
+      "type": "boolean",
+      "description": "會不會在地上留下痕跡。第一版存著不讀。"
+    },
+    "interruptible": {
+      "type": "boolean",
+      "description": "能不能中途砍掉。第一版存著不讀。"
+    },
+    "example": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "一個引數範例，會進給模型看的那一行。"
+    },
+    "help_file": {
+      "type": "string",
+      "description": "長說明的檔案路徑。不進提示；模型想看自己去 cat，內容當不可信資料。"
+    },
+    "filled_by": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "human",
+          "probe"
+        ]
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "description": "每一欄的來源：human＝人手填、probe＝程式自述探來的。同一欄有兩個來源時人填的贏。沒列到的欄視為預設值，不是探到的。"
+    },
+    "ext": {
+      "type": "object",
+      "description": "具名擴充區。"
+    }
+  }
+}
