@@ -72,10 +72,11 @@ argv 是陣列（S-04-04）、不認得就拒絕（S-04-16）、不設上限（S
 
 ## exec 給指令的環境變數
 
-- **S-04-35** exec 必須給每筆指令這七個：`AOS_LAND`（這塊地的根）、`AOS_TICK`（格號）、`AOS_SERIES`（哪條串）、`AOS_FRAME`（堆疊框路徑）、`AOS_TMP`、`AOS_HOME`（家的路徑）、`AOS_LLM_WORLD`（LLM 世界的路徑，取自家的 `config.json` 的 `llm_world`，省略時＝`$AOS_HOME/.aos/llm`）。`env_inherit` 是 `false` 時指令一樣得知道家在哪，投給 LLM 世界也才有位址。〔主編補〕
+- **S-04-35** exec 必須給每筆指令這七個：`AOS_LAND`（這塊地的根）、`AOS_TICK`（格號）、`AOS_SERIES`（哪條串）、`AOS_FRAME`（堆疊框路徑）、`AOS_TMP`、`AOS_HOME`（家的路徑）、`AOS_LLM_WORLD`（LLM 世界的路徑，取自家的 `config.json` 的 `llm_world`，省略時＝`$AOS_HOME/.aos/llm`）。`env_inherit` 是 `false` 時指令一樣得知道家在哪，投給 LLM 世界也才有位址。〔裁決 2026-09-05〕
 - **S-04-36** `AOS_TMP` 必須是 `.aos/ticks/<N>/tmp/<id>/`；指令跑完 exec 必須把它刪掉。〔主編補〕
 - **S-04-37** 被呼叫的子地必須另外拿到 `AOS_RESULT`（父指定的結果落點）、`AOS_CALLER`（父地路徑），以及呼叫那步 `args` 展開出來的 `AOS_ARG_*`。〔主編補〕
 - **S-04-38** 這幾個由 exec 最後套上；`env` 寫同名的鍵禁止蓋掉它們。〔主編補〕
+- **S-04-41** 測試要切一個假家時，必須靠跑 `aos exec`／`aos run` 那支行程自己的 `$AOS_HOME`；指令的 `env` 禁止用來換家（S-04-38 已禁止蓋 `AOS_HOME`）。〔裁決 2026-09-05〕
 - **S-04-40** 從收件匣直接跑、不屬於任何串的指令，`AOS_SERIES` 必須是空字串、`AOS_FRAME` 必須等於它的 `AOS_TMP`；這種指令禁止在 `.aos/frames/` 底下建任何東西。〔主編補〕
 
 ## 範例
@@ -142,7 +143,7 @@ argv 是陣列（S-04-04）、不認得就拒絕（S-04-16）、不設上限（S
 - S-04-31 沒跑起來也要寫一份結果檔。
 - S-04-32 `exit_code` 與 `signal` 最多一個非 `null`。
 - S-04-34 時間戳格式。
-- S-04-35～S-04-38 exec 給的環境變數有哪些、`AOS_TMP` 跑完刪、`env` 蓋不掉它們。
+- S-04-36～S-04-38 `AOS_TMP` 跑完刪、`env` 蓋不掉它們。
 - S-04-40 不屬於任何串的指令，`AOS_SERIES` 是空字串、`AOS_FRAME`＝`AOS_TMP`，不碰 `.aos/frames/`。
 
 矛盾：ideas 09 章說「刻意不設任何上限」，同一章的檢查表又說收件匣要有背壓、指令要能宣告足跡。選了兩邊都留——S-04-17 只管指令格式本身不寫死常數，背壓與足跡是別的層的事（背壓在 [07](07-call-and-delivery.md)），因為「不設上限」講的是不要猜一個魔術數字，不是不准有邊界。

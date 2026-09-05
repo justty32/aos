@@ -7,10 +7,10 @@ LLM 不是一筆指令，是另一塊地。它慢、貴、時間看外面決定�
 
 - **S-09-01** LLM 世界必須是一塊地：有自己的 `.aos/` 與時鐘，由 daemon 登記看管。〔裁決 2026-09-05〕
 - **S-09-02** 它必須預設在 `$AOS_HOME/.aos/llm/`；要換位置必須改 `$AOS_HOME/.aos/config.json` 的 `llm_world`。〔主編補〕
-- **S-09-03** `aos daemon start` 必須登記 LLM 世界並替它起一支 `aos llm serve <地>`，不是 `aos run`；登記表那筆的 `runner` 填 `"llm-serve"`（欄位在 [08](08-daemon.md)）。〔主編補〕
-- **S-09-72** `aos llm serve` 的旗標必須有 `--every <ms>`（預設 200）與 `--until idle|never`（預設 `never`：閒著也不停，繼續等投遞）。〔主編補〕
-- **S-09-73** `aos llm serve` 必須跟 `aos exec` 搶同一把 `.aos/lock`；同時只准一支在跑，不然同一筆請求會被打兩次。〔主編補〕
-- **S-09-74** LLM 世界禁止用接力棒與三種步：`aos llm serve` 不讀 `.aos/series.json` 與 `.aos/program/`，`main.aos.json` 可以不存在。〔主編補〕
+- **S-09-03** `aos daemon start` 必須登記 LLM 世界並替它起一支 `aos llm serve <地>`，不是 `aos run`；登記表那筆的 `runner` 填 `"llm-serve"`（欄位在 [08](08-daemon.md)）。〔裁決 2026-09-05〕
+- **S-09-72** `aos llm serve` 的旗標必須有 `--every <ms>`（預設 200）與 `--until idle|never`（預設 `never`：閒著也不停，繼續等投遞）。〔裁決 2026-09-05〕
+- **S-09-73** `aos llm serve` 必須跟 `aos exec` 搶同一把 `.aos/lock`；同時只准一支在跑，不然同一筆請求會被打兩次。〔裁決 2026-09-05〕
+- **S-09-74** LLM 世界禁止用接力棒與三種步：`aos llm serve` 不讀 `.aos/series.json` 與 `.aos/program/`，`main.aos.json` 可以不存在。〔裁決 2026-09-05〕
 - **S-09-04** 別的地要用 LLM，必須往它的 `.aos/inbox/` 投一筆 `kind` 是 `"llm"` 的請求。〔裁決 2026-09-05〕
 - **S-09-05** 禁止把 LLM 當成一筆指令直接叫；它不住在任何一塊地的行程裡。〔裁決 2026-09-05〕
 - **S-09-06** 同步子地整棵樹裡禁止出現 LLM 請求；那一步借父的鐘，等不起。〔裁決 2026-09-05〕
@@ -50,8 +50,8 @@ LLM 不是一筆指令，是另一塊地。它慢、貴、時間看外面決定�
 
 ## 帳簿
 
-- **S-09-38** 每一次打後端（成功失敗都算）必須在 `$AOS_HOME/.aos/ledger.jsonl` 追加一行；排隊逾時與寫壞退回的也各記一行。〔預設 2026-09-05，A-03〕
-- **S-09-39** 帳簿必須只記帳：禁止拿它做配額或排隊。〔預設 2026-09-05，A-03〕
+- **S-09-38** 每一次打後端（成功失敗都算）必須在 `$AOS_HOME/.aos/ledger.jsonl` 追加一行；排隊逾時與寫壞退回的也各記一行。〔裁決 2026-09-05〕
+- **S-09-39** 帳簿必須只記帳：禁止拿它做配額或排隊。〔裁決 2026-09-05〕
 - **S-09-40** 帳簿必須是 jsonl、只准追加；禁止回頭改寫下的行。〔主編補〕
 - **S-09-41** 一行必須有 `at`、`request_id`、`from`、`unit`、`tier`、`tokens_in`、`tokens_out`、`tokens_source`、`ms`、`outcome`。〔主編補〕
 - **S-09-79** `tokens_source` 必須是 `"reported"`（後端回的）或 `"estimated"`（自己估的）；禁止把估的當真的記，也禁止拿 0 當「不知道」。〔主編補〕
@@ -108,7 +108,7 @@ daemon 抄給 LLM 世界的單元表（`<llm_world>/.aos/units.json`）：
 
 沒標〔預設〕的一律〔主編補〕。括號裡是原始的邊緣狀況編號。
 
-- S-09-02、S-09-03、S-09-72～S-09-74 位置預設 `$AOS_HOME/.aos/llm/`；daemon 起的是 `aos llm serve`（`--every 200 --until never`），搶 `.aos/lock`、不用接力棒與三種步（P4）。
+- S-09-02 位置預設 `$AOS_HOME/.aos/llm/`。
 - S-09-07 不為每筆請求開一塊地（主編裁的矛盾 #4）。
 - S-09-08、S-09-75 相對路徑基準是 `from` 那塊地、禁止指進 `.aos/`、取件時展開（X3、P2）。
 - S-09-09～S-09-12、S-09-18 請求的版本、id、來源、時間、prompt 走路徑，不認得的欄位就拒收。
@@ -118,7 +118,7 @@ daemon 抄給 LLM 世界的單元表（`<llm_world>/.aos/units.json`）：
 - S-09-77、S-09-78 保留 `echo:`／`fail:`／`slow:` 三個假後端；測試禁打真網路（P18）。
 - S-09-53～S-09-55 daemon 抄一份 `.aos/units.json`、它禁止讀家的設定檔（S06）、agent 的 token 上限讀 `.usage.json`（X5）。
 - S-09-35、S-09-37 只記金鑰的環境變數名；一般世界不准有 `units`。
-- S-09-38～S-09-42 成本帳關口：每次打後端記一行、只記帳、只追加、行裡沒版本欄。〔預設 2026-09-05，A-03〕
+- S-09-40～S-09-42 帳簿只准追加、一行有哪些欄、行裡沒版本欄。
 - S-09-79、S-09-80 `tokens_source` 分清估的與報的；`outcome` 六個值定死（P17）。
 - S-09-43～S-09-47、S-09-56、S-09-57、S-09-81 `aos llm` 是過濾器、三旗標、退出碼只管跑沒跑起來（serve 也是）、可否重試寫狀態檔 `ext.retryable`（S18、P19、K-04）。
 - S-09-58、S-09-82 `aos llm` 只准 LLM 世界用（B38）；`aos llm ask` 這顆糖（P22）。

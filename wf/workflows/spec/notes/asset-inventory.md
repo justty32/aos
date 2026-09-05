@@ -62,4 +62,6 @@
 ## 不確定、要使用者看的
 
 - `core/tick` 的 heartbeat/routine/schedule CLI 整組：G-01 說「所有時鐘由 daemon 走並登記在一處」，不確定這是指 daemon 接手 tick 現有的兩張表機制，還是 tick 繼續當 daemon 底下的一個獨立小專案運作。這個邊界會決定 `table.cpp`／四支 CLI 是整批搬進 daemon 還是原樣保留。
+  → 答：`core/tick` 那組留著當 daemon 底下的小專案，daemon 只管起停，tick 自己判到期（R-01）。
 - `core/agent/src/user.cpp`（`~` 使用者世界 say/listen）：ideas 13 章的待決定總表裡沒有任何一條點名它，看不出新構想要不要保留「使用者世界」這個獨立概念，還是併進一般的呼叫協定(09章)。
+  → 答：`~` 使用者世界的 say/listen 保留，使用者就是住 `~` 的一個 agent（R-02）。
