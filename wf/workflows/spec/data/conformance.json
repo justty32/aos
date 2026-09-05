@@ -1237,6 +1237,15 @@
       "manual_detail": ""
     },
     {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-41",
+      "check_method": "換掉行程自己的 $AOS_HOME 之後，指令拿到的 AOS_HOME 跟著換；指令 env 寫 AOS_HOME 蓋不掉",
+      "kind": "回傳",
+      "what_to_use": "比對指令印出的 AOS_HOME",
+      "manual_detail": ""
+    },
+    {
       "section": "05",
       "section_title": "接力棒",
       "clause_id": "S-05-01",
@@ -2329,7 +2338,7 @@
       "section": "06",
       "section_title": "走一格與時鐘",
       "clause_id": "S-06-62",
-      "check_method": "借父鐘的子地收得到控制信",
+      "check_method": "父用 sync 帶的子地收得到控制信",
       "kind": "回傳",
       "what_to_use": "那格不跑指令、串 stopped、信進 `done/`",
       "manual_detail": ""
@@ -3910,6 +3919,15 @@
       "manual_detail": ""
     },
     {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-31",
+      "check_method": "agent 那塊地起來之後登記表上有它那筆",
+      "kind": "回傳",
+      "what_to_use": "讀登記表 `state`／`pid`",
+      "manual_detail": ""
+    },
+    {
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-01",
@@ -4903,7 +4921,7 @@
       "section": "10",
       "section_title": "agent",
       "clause_id": "S-10-12",
-      "check_method": "超過上限時出現停；借父鐘的由父讀到",
+      "check_method": "超過上限時出現停；停由 agent 自己那支 run 讀到",
       "kind": "回傳",
       "what_to_use": "讀停止原因檔",
       "manual_detail": ""
@@ -5074,18 +5092,18 @@
       "section": "10",
       "section_title": "agent",
       "clause_id": "S-10-30",
-      "check_method": "init 產的父原稿用 `mode:\"sync\"`",
+      "check_method": "agent init 產的地帶 `--register` 自己登記一顆鐘",
       "kind": "回傳",
-      "what_to_use": "讀原稿",
+      "what_to_use": "讀登記表",
       "manual_detail": ""
     },
     {
       "section": "10",
       "section_title": "agent",
       "clause_id": "S-10-31",
-      "check_method": "帶 `--register` 起得來",
+      "check_method": "借父鐘（父原稿 `mode:\"sync\"`）也合法",
       "kind": "回傳",
-      "what_to_use": "讀登記表",
+      "what_to_use": "讀原稿",
       "manual_detail": ""
     },
     {
