@@ -187,6 +187,42 @@ def op_start(args, home=None):
     return exits.OK
 
 
+def op_add(args, home=None):
+    """`aos daemon add <地>`：只登記時鐘，不當場開跑，交給 daemon 去起那支 `aos run`。
+
+    原型自己加的子命令（FINDINGS「一塊地要跑起來要敲兩次」那條）。裁決 S-02 之後
+    agent 要自己登記時鐘、由 daemon 起它，指令面本來沒有一條路能登出 `pending`
+    那一態（`aos run --register` 會當場開跑），所以補這個。
+    """
+    if not getattr(args, "land", None):
+        return _die("`aos daemon add` 少了地", exits.USAGE,
+                    "aos daemon add <地> [--every 毫秒｜--steps N｜--until idle] [--budget N]")
+    land = layout.Land(args.land)
+    if not land.is_land():
+        return _die("%s 不是一塊地（沒有 %s）" % (land.root, land.layout), exits.NOT_A_LAND,
+                    "python3 proto/aos.py init %s" % land.root)
+    h = home or layout.Home()
+    if getattr(args, "steps", None) is not None:
+        clock = {"kind": "steps", "steps": int(args.steps)}
+    elif getattr(args, "until", None) == "idle":
+        clock = {"kind": "until", "until": "idle"}
+    else:
+        clock = {"kind": "every", "every_ms": int(getattr(args, "every", None)
+                                                  or DEFAULT_EVERY_MS)}
+    e = registry.register(land.root, clock, budget=getattr(args, "budget", None),
+                          state=registry.PENDING, home=h)
+    if getattr(args, "json", False):
+        print(json.dumps(e, ensure_ascii=False, indent=2))
+        return exits.OK
+    print("登記了 %s，鐘 %s，狀態 %s"
+          % (e["path"], json.dumps(e["clock"], ensure_ascii=False), e["state"]))
+    if registry.daemon_alive(h):
+        print("  daemon 在跑，下一輪掃登記表就會替它起 `aos run %s --register`。" % land.root)
+    else:
+        print("  daemon 不在，這筆會一直卡在 pending。下一步：`aos daemon start`。")
+    return exits.OK
+
+
 def op_stop(args, home=None):
     """G-01 的代價：daemon 不在時也要能全停 —— 先對帳再全停。"""
     h = home or layout.Home()
@@ -296,7 +332,8 @@ def op_status(args, home=None):
     return exits.OK
 
 
-_OPS = {"start": op_start, "stop": op_stop, "ls": op_ls, "exec": op_exec, "status": op_status}
+_OPS = {"start": op_start, "stop": op_stop, "ls": op_ls, "exec": op_exec,
+        "status": op_status, "add": op_add}
 
 
 def cli_daemon(args):

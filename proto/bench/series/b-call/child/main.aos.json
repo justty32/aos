@@ -1,0 +1,85 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "resources": {
+    "ticks": 5,
+    "insts": 5,
+    "llm_calls": 0,
+    "note": "子地五步；最後一步把結果寫到父指定的 $AOS_RESULT。"
+  },
+  "steps": [
+    {
+      "name": "c01",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'child step 01\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "c02"
+    },
+    {
+      "name": "c02",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'child step 02\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "c03"
+    },
+    {
+      "name": "c03",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'child step 03\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "c04"
+    },
+    {
+      "name": "c04",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "printf 'child step 04\\n' >> \"$1\"",
+          "sh",
+          "${frame}/log.txt"
+        ]
+      },
+      "expect": "${frame}/log.txt",
+      "then": "c05"
+    },
+    {
+      "name": "c05",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "mkdir -p \"$(dirname \"$AOS_RESULT\")\" && printf 'child done, caller=%s\\n' \"$AOS_CALLER\" > \"$AOS_RESULT\"",
+          "sh"
+        ]
+      },
+      "then": "end"
+    }
+  ]
+}

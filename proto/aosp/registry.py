@@ -36,7 +36,7 @@ def find(reg, path):
 
 
 def register(path, clock, budget=None, parent=None, state=PENDING, home=None,
-             result=None):
+             result=None, args=None):
     """登記一塊地的時鐘。已在的就更新。回傳那筆。"""
     h = home or layout.Home()
     fsutil.ensure_dir(h.aos)
@@ -53,6 +53,9 @@ def register(path, clock, budget=None, parent=None, state=PENDING, home=None,
                 "clock": clock,
                 "budget": budget,
                 "result": result,
+                # 脫節子地的環境變數（AOS_RESULT／AOS_CALLER／AOS_ARG_*）要從這裡重建：
+                # P-01 之後起子地那支 run 是 daemon 生的，拿不到父當初 exec 的環境。
+                "args": dict(args or {}),
                 "parent": os.path.abspath(parent) if parent else None,
                 "registered_at": now,
                 "updated_at": now,
@@ -63,6 +66,8 @@ def register(path, clock, budget=None, parent=None, state=PENDING, home=None,
             e["budget"] = budget
             if result is not None:
                 e["result"] = result
+            if args is not None:
+                e["args"] = dict(args)
             e["parent"] = os.path.abspath(parent) if parent else e.get("parent")
             if e["state"] == STOPPED:
                 e["state"] = state

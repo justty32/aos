@@ -1,0 +1,108 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "resources": {
+    "ticks": 8,
+    "insts": 5,
+    "llm_calls": 3,
+    "note": "prep＋三筆 deliver＋收尾共 5 筆指令，三個 await 各至少一格，所以最少 8 格；LLM 請求三筆。"
+  },
+  "steps": [
+    {
+      "name": "prep",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "set -e; d=\"$1\"; mkdir -p \"$d/out\"; i=1;\nfor tier in fast smart fast; do\n  printf \"bench c-llm 第 %s 筆請求：請照樣回一段話。\\n\" \"$i\" > \"$d/out/p$i.txt\";\n  printf '{\"kind\":\"llm\",\"prompt\":\"out/p%s.txt\",\"result\":\"out/a%s.txt\",\"tier\":\"%s\"}\\n' \"$i\" \"$i\" \"$tier\" > \"$d/out/req$i.json\";\n  i=$((i+1));\ndone\n",
+          "sh",
+          "${land}"
+        ]
+      },
+      "expect": "${land}/out/req3.json",
+      "then": "ask1"
+    },
+    {
+      "name": "ask1",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "aos",
+          "deliver",
+          "${llm_world}",
+          "${land}/out/req1.json",
+          "--sender",
+          "${land}"
+        ]
+      },
+      "then": "ask2"
+    },
+    {
+      "name": "ask2",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "aos",
+          "deliver",
+          "${llm_world}",
+          "${land}/out/req2.json",
+          "--sender",
+          "${land}"
+        ]
+      },
+      "then": "ask3"
+    },
+    {
+      "name": "ask3",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "aos",
+          "deliver",
+          "${llm_world}",
+          "${land}/out/req3.json",
+          "--sender",
+          "${land}"
+        ]
+      },
+      "then": "wait1"
+    },
+    {
+      "name": "wait1",
+      "kind": "await",
+      "result": "out/a1.txt",
+      "max_ticks": 200,
+      "then": "wait2"
+    },
+    {
+      "name": "wait2",
+      "kind": "await",
+      "result": "out/a2.txt",
+      "max_ticks": 200,
+      "then": "wait3"
+    },
+    {
+      "name": "wait3",
+      "kind": "await",
+      "result": "out/a3.txt",
+      "max_ticks": 200,
+      "then": "sum"
+    },
+    {
+      "name": "sum",
+      "kind": "inst",
+      "inst": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "cat \"$1/out/a1.txt\" \"$1/out/a2.txt\" \"$1/out/a3.txt\" > \"$1/out/all.txt\"",
+          "sh",
+          "${land}"
+        ]
+      },
+      "expect": "${land}/out/all.txt",
+      "then": "end"
+    }
+  ]
+}

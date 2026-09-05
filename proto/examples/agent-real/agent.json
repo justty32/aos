@@ -1,0 +1,14 @@
+{
+  "max_rounds": 10,
+  "tools": [
+    "python3",
+    "cat",
+    "ls",
+    "write",
+    "aos"
+  ],
+  "tier": "smart",
+  "tool_timeout_ms": 30000,
+  "work": "work",
+  "max_llm_calls": 30
+}

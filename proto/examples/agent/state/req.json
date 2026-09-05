@@ -1,0 +1,6 @@
+{
+  "kind": "llm",
+  "prompt": "state/prompt.txt",
+  "result": "state/answer.txt",
+  "tier": "fast"
+}
