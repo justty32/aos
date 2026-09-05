@@ -129,6 +129,35 @@ bash proto/play-agent.sh
 AOS_PLAY_BACKEND=echo: bash proto/play-agent.sh
 ```
 
+## 給人玩的互動台
+
+先把 DeepSeek 金鑰放進環境變數 `DEEPSEEK_API_KEY`，再從 repo 根目錄跑：
+
+```sh
+bash proto/play-chat.sh
+```
+
+它會問「你要它做什麼？」；打一行任務後，畫面每兩秒補上新完成的一圈。直接打一行中文就是
+寄信插話，agent 下一圈組 prompt 時會看到。
+
+| 指令 | 會做什麼 |
+|---|---|
+| `/status` | 看現在走到哪裡，以及登記表裡這塊地的那一筆 |
+| `/log` | 印最後一圈完整的 prompt 和模型回話 |
+| `/stop` | 請目前的 agent 在這一格結尾停下來 |
+| `/new 任務` | 收掉目前的 agent，在同一個家開一塊新地做新任務 |
+| `/quit` | 停 daemon 和 LLM 世界，印整輪結算後離開 |
+
+每次的家都留在 `proto/play/home-<時間戳>/`，agent 的產出在家底下
+`lands/agent-<編號>/work/`。這些家不進 git，可以事後直接翻 prompt、回話、帳簿和產出。
+
+畫面的花費採腳本頂端寫明的 DeepSeek `deepseek-v4-flash` 估價常數計算，只是估的；實際帳單會受
+時段、快取命中與後端計量方式影響。離線檢查整套互動流程可跑：
+
+```sh
+bash proto/play/selftest.sh
+```
+
 真模型第一輪撞到什麼，記在 [FINDINGS.md](FINDINGS.md) 的「真模型第一輪」那節。
 
 ## 跟正式實作的關係

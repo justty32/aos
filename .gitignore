@@ -21,3 +21,4 @@ __pycache__/
 
 # proto 劇本跑出來的紀錄（每次 1 MB 級，不進版本）
 proto/play-logs/
+proto/play/home-*
