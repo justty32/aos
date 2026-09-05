@@ -46,6 +46,44 @@ def bad_result_path(land, raw):
     return None
 
 
+def _call_is_open(land, sr, step):
+    cid = ((sr.get("ext") or {}).get("calls") or {}).get(step["name"])
+    return bool(cid and os.path.exists(land.call(cid)))
+
+
+def _preflight_result_paths(land, baton, tick):
+    """在整格動作前驗 S-07-60～63；任一筆不合就整格解析拒絕。"""
+    targets = {}
+    for sr in S.running(baton):
+        prog = loader.load_program(land, sr["template"])
+        step = loader.step_by_name(prog, sr.get("cursor"))
+        if not step or step.get("kind") not in ("call", "await"):
+            continue
+        try:
+            step = regs.sub(step, regs.table(land, sr, tick))
+        except regs.MissingReg:
+            # 缺暫存器沿用既有語意：由 exec_one_series 把該串標成 failed。
+            continue
+        result = os.path.abspath(land.resolve(step["result"]))
+        owner = "串 %s 的步 %s" % (sr["id"], step["name"])
+        reserved = (result, status.status_path(result), result + ".usage.json")
+        for path in reserved:
+            if path in targets:
+                raise loader.ParseError(
+                    "同一格的結果落點互相碰撞：%s；%s 與 %s 都占到這裡，整格拒跑"
+                    % (path, targets[path], owner))
+        for path in reserved:
+            targets[path] = owner
+
+        if step["kind"] == "call" and not _call_is_open(land, sr, step):
+            occupied = [p for p in reserved if os.path.exists(p)]
+            if occupied:
+                raise loader.ParseError(
+                    "開呼叫前結果落點必須是空的；已存在：%s；"
+                    "請先清掉舊檔，或替這次呼叫換一個 result"
+                    % "、".join(occupied))
+
+
 def _fail_series(land, sr, reason, message):
     """I-03 最保守預設：沒寫 on_fail 就停在原地、狀態 failed、寫停止原因檔。"""
     sr["status"] = S.FAILED
@@ -268,11 +306,14 @@ def exec_once(land, timeout_ms=None, extra_env=None, hold_lock=False, template="
     if not hold_lock:
         lock = fsutil.Lock(land.lock).acquire()
     try:
-        baton, fresh = S.load_or_start(land, template, cursor=None)
-        if fresh:
+        baton = S.load(land)
+        if baton is None:
+            baton = S.empty()
+            baton["series"].append(S.new_series(template, cursor=None))
             prog = loader.load_program(land, template)
             baton["series"][0]["cursor"] = prog["steps"][0]["name"]
         tick = baton["tick"]
+        _preflight_result_paths(land, baton, tick)
         notes = []
         advanced = False
         exclusive_used = set()

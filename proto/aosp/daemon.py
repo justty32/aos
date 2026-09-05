@@ -31,6 +31,24 @@ def _child_env():
     return env
 
 
+def _reset_sigchld():
+    """daemon 生的 run 不得繼承忽略 SIGCHLD，否則它等不到自己的指令子行程。"""
+    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+
+
+def _reap_children():
+    """非阻塞收掉 daemon 已結束的直系子行程；領養的鐘仍由 reconcile 輪詢。"""
+    while True:
+        try:
+            pid, _status = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return
+        except InterruptedError:
+            continue
+        if pid == 0:
+            return
+
+
 def _die(msg, code, hint=None):
     sys.stderr.write("錯誤：%s\n" % msg)
     if hint:
@@ -66,7 +84,8 @@ def _spawn_run(entry, home=None):
     log = open(logpath, "ab")
     try:
         p = subprocess.Popen(argv, env=_child_env(), stdin=subprocess.DEVNULL,
-                             stdout=log, stderr=log, start_new_session=True, close_fds=True)
+                             stdout=log, stderr=log, start_new_session=True, close_fds=True,
+                             preexec_fn=_reset_sigchld)
     except OSError as e:
         log.close()
         return None, "起不了 aos run：%s（看 %s）" % (e, logpath)
@@ -95,8 +114,7 @@ def _loop(every_ms, home=None, printer=None):
         except (ValueError, OSError):
             pass
     try:
-        # 子行程我們不 wait，交給系統自動收屍，免得留一地殭屍
-        signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     except (ValueError, OSError, AttributeError):
         pass
 
@@ -109,6 +127,7 @@ def _loop(every_ms, home=None, printer=None):
 
     try:
         while not stop["hit"]:
+            _reap_children()
             registry.reconcile(h)
             reg = registry.load(h)
             for e in reg["entries"]:
@@ -118,8 +137,10 @@ def _loop(every_ms, home=None, printer=None):
                 say("  " + note)
             deadline = time.time() + float(every_ms) / 1000.0
             while not stop["hit"] and time.time() < deadline:
+                _reap_children()
                 time.sleep(min(_SLEEP_SLICE, max(0.0, deadline - time.time())))
     finally:
+        _reap_children()
         say("daemon 收工（訊號 %s）" % stop["hit"])
         _clear_daemon_pid(h)
     return exits.OK

@@ -10,7 +10,7 @@ import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import doorman  # noqa: E402
+from aosp import doorman  # noqa: E402
 
 
 LAND_ID = "0123456789abcdef0123456789abcdef"
@@ -268,6 +268,8 @@ class TestOrphanReap(Base):
         reg["entries"][0]["pid"] = p.pid
         reg["entries"][0]["pid_start"] = doorman.proc_start(p.pid)
         reg["entries"][0]["state"] = "running"
+        result = os.path.join(self.root, "parent-result", "child.done")
+        reg["entries"][0]["result"] = result
         doorman.write_json(self.registry, reg)
 
         shutil.rmtree(land)
@@ -285,6 +287,14 @@ class TestOrphanReap(Base):
         self.assertEqual([ln["kind"] for ln in lines], ["born", "gone", "gone"])
         self.assertEqual(lines[1]["ext"]["orphan_pid"], p.pid)
         self.assertEqual(lines[2]["ext"]["killed_pid"], p.pid)
+        self.assertEqual(lines[2]["ext"]["needs_status"], result)
+        self.assertFalse(os.path.exists(result + ".status.json"),
+                         "門房只記事件，不得自己寫父地的狀態檔")
+
+        from aosp import layout, registry
+        registry.reconcile(layout.Home(self.home))
+        st = doorman.read_json(result + ".status.json")
+        self.assertEqual(st.get("reason"), "killed", msg="daemon 對帳的交接結果 %r" % st)
 
     def test_stale_pid_start_means_no_kill(self):
         """S-08-68：pid 被系統重用時不准把刀砍到無辜的第三方。"""

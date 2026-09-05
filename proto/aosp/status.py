@@ -15,12 +15,15 @@ FAILED = "failed"     # 狀態檔說壞了＝壞了
 SPAWN_ERROR = "spawn_error"
 TIMEOUT = "timeout"
 KILLED = "killed"
+NO_RESULT = "no_result"
+CHILD_FAILED = "child_failed"
 AWAIT_TIMEOUT = "await_timeout"
 BUDGET = "budget"
 NO_DAEMON = "no_daemon"
 REJECTED = "rejected"
 BACKEND_ERROR = "backend_error"
 QUEUE_TIMEOUT = "queue_timeout"
+UNKNOWN_AFTER_RESTART = "unknown_after_restart"
 
 
 def status_path(result_path):

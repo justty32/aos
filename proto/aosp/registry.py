@@ -127,7 +127,7 @@ def entry_alive(e):
 
 
 def reconcile(home=None):
-    """對帳：pid 不在→ stopped。回傳被改掉的路徑。"""
+    """對帳：pid 不在→ stopped；已停的子若漏結果，替父補狀態檔。"""
     h = home or layout.Home()
     changed = []
     with _lock(h):
@@ -138,8 +138,9 @@ def reconcile(home=None):
                 e["pid"] = None
                 e["pid_start"] = None
                 e["updated_at"] = fsutil.now_iso()
-                _mark_killed(e)
                 changed.append(e["path"])
+            if e["state"] == STOPPED:
+                _mark_missing_result(e)
         if reg.get("daemon_pid") is not None and not alive(
                 reg["daemon_pid"], reg.get("daemon_pid_start")):
             reg["daemon_pid"] = None
@@ -163,15 +164,25 @@ def set_daemon_pid(pid, home=None):
         save(reg, h)
 
 
-def _mark_killed(e):
-    """子被 SIGKILL，結果檔與狀態檔都沒出現：對帳時替它寫一份狀態檔，
-    不然父會永遠停在 await（『壞了看得見』，I-02／I-03）。"""
+def _mark_missing_result(e):
+    """已停的脫節子地漏結果時，依停止原因替父補上可分辨的壞消息。"""
     result = e.get("result")
     if not result:
         return
     if os.path.exists(result) or os.path.exists(status.status_path(result)):
         return
-    status.write_failed(result, status.KILLED,
-                        "%s 那支 run 沒了（pid %s），結果落點什麼都沒留下"
-                        % (e["path"], e.get("pid")),
-                        ext={"land": e["path"]})
+    stopped = fsutil.read_json(layout.Land(e["path"]).stopped) or {}
+    stopped_reason = stopped.get("reason")
+    if stopped_reason == "idle":
+        reason = status.NO_RESULT
+        message = "%s 已經做完，但結果落點 %s 什麼都沒留下" % (e["path"], result)
+    elif stopped_reason == "failed":
+        reason = status.CHILD_FAILED
+        message = "%s 的串失敗了，沒有產出結果：%s" % (
+            e["path"], stopped.get("message") or "子地沒有留下說明")
+    else:
+        reason = status.KILLED
+        message = "%s 的 run 被停掉或消失了，結果落點 %s 什麼都沒留下" % (
+            e["path"], result)
+    status.write_failed(result, reason, message,
+                        ext={"land": e["path"], "stopped_reason": stopped_reason})

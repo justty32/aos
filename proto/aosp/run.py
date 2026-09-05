@@ -139,7 +139,7 @@ def clock_from(steps=None, every_ms=None, until=None):
 
 
 # ---------- 停止原因檔 ----------
-def write_stopped(land, reason, message, series=None, step=None):
+def write_stopped(land, reason, message, series=None, step=None, busy_ticks=0):
     """格式跟 execute._fail_series 寫的一致。"""
     rec = {
         "format_version": 1,
@@ -147,6 +147,7 @@ def write_stopped(land, reason, message, series=None, step=None):
         "message": message,
         "series": series,
         "step": step,
+        "busy_ticks": busy_ticks,
         "at": fsutil.now_iso(),
     }
     fsutil.write_json(land.stopped, rec)
@@ -192,6 +193,32 @@ def _tick_line(rep):
     return "第 %d 格：%s" % (rep["tick"], "；".join(bits))
 
 
+def _series_positions(baton_or_series):
+    series = (baton_or_series or {}).get("series", []) \
+        if isinstance(baton_or_series, dict) else (baton_or_series or [])
+    return {s.get("id"): (s.get("cursor"), s.get("status")) for s in series}
+
+
+def _tick_had_instruction(land, tick):
+    results = os.path.join(land.tick_dir(tick), "results")
+    return os.path.isdir(results) and any(os.path.isfile(os.path.join(results, name))
+                                          for name in os.listdir(results))
+
+
+def _record_busy_tick(land, before, rep):
+    """做事格＝至少跑過一筆指令，或任一條串的游標／狀態真的前進。"""
+    baton = S.load(land) or {"series": rep.get("series") or []}
+    busy = (_tick_had_instruction(land, rep["tick"]) or
+            _series_positions(before) != _series_positions(rep.get("series") or []))
+    count = baton.get("busy_ticks", 0)
+    count = count if isinstance(count, int) and count >= 0 else 0
+    if busy:
+        count += 1
+    baton["busy_ticks"] = count
+    S.save(land, baton)
+    return busy, count
+
+
 # ---------- 主體 ----------
 _WAIT_NAP_MS = 100
 
@@ -221,6 +248,7 @@ def run(land, steps=None, every_ms=None, until=None, budget=None, timeout_ms=Non
         "started_at": fsutil.now_iso(),
         "stopped_at": None,
         "ticks": 0,
+        "busy_ticks": 0,
         "first_tick": None,
         "last_tick": None,
         "idle": False,
@@ -275,13 +303,16 @@ def run(land, steps=None, every_ms=None, until=None, budget=None, timeout_ms=Non
                 reason, message = SIGNAL, "收到訊號 %s，在格尾停下來" % stopper.hit
                 break
             try:
+                before = S.load(land)
                 rep = execute.exec_once(land, timeout_ms=timeout_ms, hold_lock=True,
                                         extra_env=call_env)
             except loader.ParseError as e:
                 reason, message = PARSE_ERROR, str(e)
                 break
             n += 1
+            busy, busy_ticks = _record_busy_tick(land, before, rep)
             out["ticks"] = n
+            out["busy_ticks"] = busy_ticks
             if out["first_tick"] is None:
                 out["first_tick"] = rep["tick"]
             out["last_tick"] = rep["tick"]
@@ -289,6 +320,7 @@ def run(land, steps=None, every_ms=None, until=None, budget=None, timeout_ms=Non
             out["series"] = rep["series"]
             out["ticks_detail"].append({
                 "tick": rep["tick"], "advanced": rep["advanced"], "idle": rep["idle"],
+                "busy": busy,
                 "notes": rep["notes"],
                 "waiting": rep.get("waiting") or [],
                 "inbox": {k: len(v) for k, v in (rep.get("inbox") or {}).items()},
@@ -365,7 +397,8 @@ def run(land, steps=None, every_ms=None, until=None, budget=None, timeout_ms=Non
         out["message"] = message
         out["exit"] = _EXIT.get(out["reason"], exits.OK)
         out["stopped_at"] = fsutil.now_iso()
-        write_stopped(land, out["reason"], out["message"], series=fail_series, step=fail_step)
+        write_stopped(land, out["reason"], out["message"], series=fail_series,
+                      step=fail_step, busy_ticks=out["busy_ticks"])
         if out["reason"] == PARSE_ERROR:
             raise loader.ParseError(out["message"])
         return out
@@ -431,8 +464,8 @@ def _unregister_self(land, home=None):
 # ---------- CLI ----------
 def _print_human(out, quiet):
     print("停了：%s — %s" % (out["reason"], out["message"]))
-    print("  跑了 %d 格（第 %s ~ %s 格），停止原因檔：%s/.aos/stopped.json"
-          % (out["ticks"], out["first_tick"], out["last_tick"], out["land"]))
+    print("  跑了 %d 格（做事 %d；第 %s ~ %s 格），停止原因檔：%s/.aos/stopped.json"
+          % (out["ticks"], out["busy_ticks"], out["first_tick"], out["last_tick"], out["land"]))
 
 
 def cli_run(args):

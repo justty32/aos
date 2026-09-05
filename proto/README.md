@@ -24,8 +24,21 @@ python3 proto/aos.py <子命令> …
 | `deliver <地> <json>` | 投遞一個 json 到這塊地的收件匣；`<json>` 可以是一段字串、一個檔名、或 `-`（從 stdin 讀） | `--sender <地>`（投遞者是誰，預設目前目錄） |
 | `reset <地>` | 清掉狀態是 `failed`／`stopped` 的串，也清掉停止原因檔 | 無 |
 | `stop <地>` | 請一塊地在這一格跑完就停 | `--kill`（不走控制收件匣，直接對登記表上的 pid 送 SIGKILL） |
-| `daemon <op> [地]` | 看管者：`start`／`stop`／`ls`／`exec`／`status`／`add` | `--foreground`、`--every <ms>`（預設 500）、`--json`；`add` 另有 `--steps N`、`--until idle`、`--budget N` |
+| `daemon <op> [地]` | 看管者：`start`／`stop`／`ls`／`exec`／`status` | `--foreground`、`--every <ms>`（預設 500）、`--json` |
+| `daemon add <地>` | 只把一塊地的鐘登成 `pending`，讓 daemon 下一輪去起 | `--every <ms>`、`--steps N`、`--until idle`、`--budget N`、`--json` |
+| `doorman <根目錄>` | 門房第一級：看地出生／死亡，只記事件與更新登記表 | `--home`、`--depth N`、`--poll`、`--poll-ms N`、`--once`、`--for-ms N`、`--strict-birth`、`--strict-layout`、`--tmpfs-note`、`--quiet` |
 | `llm <op> [其餘…]` | LLM 世界：`init`／`serve`／`tick`／`ls`／`ask` | `--land <地>`（預設 `$AOS_HOME/.aos/llm`）、`--until idle`、`--steps N`、`--every <ms>`（預設 200）、`--json` |
+
+`status` 的格數會同時顯示總格與做事格，例如「格 612（做事 21）」；做事格是至少真的
+跑過一筆指令，或有一條串往前推的格。`llm ls` 則分開顯示排隊中、在飛、已完成三段。
+
+LLM 請求的 `max_wait_ms` 只算送到後端之前的排隊時間，預設 600000 毫秒；一旦搬進
+`.aos/llm-inflight/` 就不再受它限制。後端等待另看處理單元的 `timeout_ms`，沒填就不限時。
+
+帳簿的 `tokens_out` 是扣掉模型思考後、真正回給呼叫者的輸出；若 OpenAI 相容回應有
+`usage.completion_tokens_details.reasoning_tokens`，思考量另記 `tokens_reasoning`。後端沒給
+這項細節時 `tokens_reasoning` 是 `null`；有些本機模型分不出思考與輸出，這時
+`tokens_out` 只能保留後端回報的 completion 總數。
 
 ## 一塊地長什麼樣
 
@@ -42,6 +55,10 @@ python3 proto/aos.py <子命令> …
 - `.aos/stopped.json`：`run` 停下來時寫的停止原因檔
 - `.aos/lock`：獨佔鎖，一塊地同時只准一支 `exec`／`run`
 
+LLM 世界另有 `.aos/llm-inflight/`（已送出、等後端回話）與 `.aos/requests/`
+（已完成的請求原件）。serve 重啟時留在 inflight 的請求一律視為結果不明、搬到 requests，
+不會自動重送。
+
 ## 每個範例怎麼跑
 
 `proto/examples/` 底下每個資料夾一個範例，各自的 `README.md` 有一句話講「跑了會看到什麼」跟怎麼跑：
@@ -52,6 +69,7 @@ python3 proto/aos.py <子命令> …
 - [`examples/llm-echo`](examples/llm-echo/README.md)：投一筆請求給 LLM 世界，假後端把 prompt 原樣回話
 - [`examples/agent`](examples/agent/README.md)：一個 agent＝一塊地上的一支 `aos run`；它自己登記時鐘（裁決 S-02），`aos daemon ls` 看得到、`aos stop` 停得掉
 - `examples/agent-real`：跟 `examples/agent` 同一套腦，任務換成「在 `work/` 這個小 Python 專案裡補一個函式、把測試跑綠」。這塊地是給 [`proto/play-agent.sh`](play-agent.sh) 拿去跟真模型玩的，沒有 `run.sh`，所以 `run-all.sh` 不會跑它（它要真的模型）
+- [`examples/team`](examples/team/README.md)：一個主 agent 派兩個各有自己時鐘的子 agent，等兩個落點都回來再合併；`run.sh` 用假後端且有 25 秒上限
 
 每個範例資料夾都有 `run.sh`，可以一鍵重跑（先清乾淨、`init`、走格、印結果）。`proto/run-all.sh` 會把全部範例跟測試一起跑一遍。
 

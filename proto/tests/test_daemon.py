@@ -14,7 +14,10 @@ if PROTO not in sys.path:
     sys.path.insert(0, PROTO)
 
 from aosp import exits, fsutil, layout, registry  # noqa: E402
-from .helpers import LandCase, write_source, run_cli  # noqa: E402
+try:
+    from .helpers import LandCase, write_source, run_cli  # noqa: E402
+except ImportError:
+    from helpers import LandCase, write_source, run_cli  # noqa: E402
 
 PY = sys.executable
 
@@ -56,6 +59,46 @@ class TestRegistryReconcile(LandCase):
         e = registry.find(reg, self.land.root)
         self.assertEqual(e["state"], registry.RUNNING,
                           msg="pid 還活著就不該被 reconcile 改掉，實際 %r" % e)
+
+    def test_stopped_child_without_result_gets_reason_specific_status(self):
+        home = layout.Home()
+        result = self.land.resolve("parent-out/child.done")
+        registry.register(self.land.root, {"kind": "until", "until": "idle"},
+                          state=registry.STOPPED, result=result, home=home)
+        cases = (("idle", "no_result"), ("failed", "child_failed"),
+                 ("signal", "killed"))
+        for stopped_reason, expected in cases:
+            with self.subTest(stopped_reason=stopped_reason):
+                fsutil.write_json(self.land.stopped, {
+                    "format_version": 1, "reason": stopped_reason,
+                    "message": "子地停在 %s" % stopped_reason,
+                })
+                try:
+                    os.unlink(result + ".status.json")
+                except FileNotFoundError:
+                    pass
+                registry.reconcile(home)
+                st = fsutil.read_json(result + ".status.json")
+                self.assertEqual(st.get("reason"), expected, msg="實際狀態檔 %r" % st)
+
+    def test_dead_running_child_is_reconciled_and_gets_child_failed_status(self):
+        home = layout.Home()
+        result = self.land.resolve("parent-out/dead-child.done")
+        dead = subprocess.Popen([PY, "-c", "pass"])
+        dead.wait()
+        fsutil.write_json(self.land.stopped, {
+            "format_version": 1, "reason": "failed", "message": "一步 exit 3",
+        })
+        registry.register(self.land.root, {"kind": "until", "until": "idle"},
+                          result=result, home=home)
+        registry.update(self.land.root, home=home, state=registry.RUNNING, pid=dead.pid)
+
+        registry.reconcile(home)
+
+        entry = registry.find(registry.load(home), self.land.root)
+        self.assertEqual(entry["state"], registry.STOPPED)
+        st = fsutil.read_json(result + ".status.json")
+        self.assertEqual(st.get("reason"), "child_failed", msg="實際狀態檔 %r" % st)
 
 
 @unittest.skipUnless(HAS_DAEMON, SKIP_MSG)
@@ -141,6 +184,37 @@ class TestDaemonStartStop(LandCase):
                 break
             time.sleep(0.2)
         self.assertTrue(stopped, msg="等了 10 秒，地還沒被 daemon stop 標成 stopped")
+
+    def test_daemon_run_preserves_nonzero_instruction_exit_code(self):
+        write_source(self.land, [
+            {"name": "fail-three", "kind": "inst",
+             "inst": {"argv": [PY, "-c", "import sys; sys.exit(3)"]},
+             "then": "end"},
+        ])
+        rc, _out, err = run_cli("daemon", "start", "--every", "20")
+        self.assertEqual(rc, exits.OK, msg=err)
+        self._started = True
+        rc, _out, err = run_cli("daemon", "add", self.land.root, "--steps", "3")
+        self.assertEqual(rc, exits.OK, msg=err)
+
+        deadline = time.time() + 10
+        result = None
+        while time.time() < deadline:
+            result_dir = os.path.join(self.land.tick_dir(0), "results")
+            if os.path.isdir(result_dir):
+                names = [n for n in os.listdir(result_dir) if n.endswith(".json")]
+                if names:
+                    result = fsutil.read_json(os.path.join(result_dir, names[0]))
+            baton = fsutil.read_json(self.land.series)
+            stopped = fsutil.read_json(self.land.stopped)
+            if result and baton and stopped:
+                break
+            time.sleep(0.05)
+
+        self.assertIsNotNone(result, msg="daemon 起的 run 沒留下第 0 格執行結果")
+        self.assertEqual(result.get("exit_code"), 3, msg="實際結果 %r" % result)
+        self.assertEqual(baton["series"][0]["status"], "failed", msg="實際接力棒 %r" % baton)
+        self.assertEqual(stopped.get("reason"), "failed", msg="實際停止原因 %r" % stopped)
 
 
 @unittest.skipUnless(HAS_DAEMON, SKIP_MSG)
