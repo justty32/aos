@@ -10,7 +10,7 @@
 CPU**——分層本身（`aggregate_instructions` 等三支以 instruction 檔路徑為參數）已經
 能對 `insts/llm.json` 運作，缺的是叫得動它的子命令。
 
-模型的**為什麼**在 [`wf/workflows/ideas/turn-based-folder.md`](../wf/workflows/ideas/turn-based-folder.md)，
+模型的**為什麼**在 `wf/workflows/ideas/turn-based-folder.md`，
 做的**順序**在 [roadmap](roadmap.md)。三者衝突時：規格看本檔、理由看 idea、排程看
 roadmap。
 

@@ -1,6 +1,6 @@
 # 隊 V 回報——排程保底 D（flock 槽、兩層上限、數字優先度）
 
-← [交接書 proto-V-sched-D](../done/proto-V-sched-D.md)｜[ideas/scheduling](../../../ideas/scheduling/README.md)｜[PROTOCOL](../PROTOCOL.md)
+← [交接書 proto-V-sched-D](../done/proto-V-sched-D.md)｜ideas/scheduling｜[PROTOCOL](../PROTOCOL.md)
 
 **分支**：`worktree-agent-aa49bca5136311628`（已 rebase 到 main `0aea5fa`，含隊 U 的 `core/tool`）
 **隊形**：Opus 隊長＋codex gpt-5.6-sol ×3（隊長寫任務書、審 diff、跑建置與驗收、commit；不親自寫實作）
@@ -61,7 +61,7 @@ flock 的鎖掛在 open file description 上、`fork` 後父子共用，所以 `
 
 - **`aos agent step` 走 lmstudio 那條還沒取槽**：它直接呼叫 `aos::llm::complete()`
   （函式庫層），槽只加在 `aos llm` 的 CLI 層。所以 lmstudio 的上限目前**只對
-  `aos llm` 子命令成立**，agent 內嵌呼叫那條要動 `step.cpp`（本輪禁區）。**這是這一輪真實的缺口**，已記進 [ideas/scheduling](../../../ideas/scheduling/README.md) 的實作註記。
+  `aos llm` 子命令成立**，agent 內嵌呼叫那條要動 `step.cpp`（本輪禁區）。**這是這一輪真實的缺口**，已記進 ideas/scheduling 的實作註記。
 - `state.json` 不動（裁決：B 再做）；沒有 durable 隊伍、沒有依可用性跨 CPU 改派、
   沒有 token bucket、`unknown` 仍無處記——這些都是正式方案 B 的範圍。
 - 邊緣狀況照原則跳過：等待票 unlink 與他人 open 之間的競態、

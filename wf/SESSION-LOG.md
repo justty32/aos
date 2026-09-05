@@ -12,89 +12,16 @@
 
 ## 最新進度
 
-- **2026-09-04：續談 `exec`／`run` 與長任務的 async 糖（未裁）**——現況查明 `aos llm`／
-  `aos agent` 都同步等 HTTP；同回合 inst 全部先 fork，但 loop 會等最慢者才收尾。AI 提議
-  `async:true` 不開執行緒，而是自動開子資料夾、fork `aos run <child>`、以固定路徑檔案回傳；
-  timeout 是另一件事。**同日續談時間模型**：使用者傾向用環境限制做事前保證、timeout 只當
-  保險絲，並把 async 定義成子世界時序與父世界脫節；仍無明說裁決 →
-  [exec-run-async-time](workflows/ideas/exec-run-async-time.md)。**同日再談子時鐘**：使用者傾向
-  全由 daemon 走、父死子續走、集中登記以便一次全停，並說 fork 先不考慮；仍無明說裁決 →
-  [daemon-clocks](workflows/ideas/daemon-clocks.md)。
-  **同日再談一塊地的邊界與生死**：使用者定義預設只看自己、掛載／symlink 才開洞，刪除與
-  搬家都算死；AI 建議 daemon 同查 pid＋路徑，**使用者決定 git mv 先不管** →
-  [land-rules](workflows/ideas/land-rules.md)。**同日補回 FUSE 最初動機**：少碰磁碟先用 tmpfs，
-  記帳再用 inotify，真要擋或演假檔案才用 FUSE；無裁決 →
-  [fuse-host-why](workflows/ideas/fuse-host-why.md)。**同日再列門房額外處理的三級可能性**：只看、
-  真擋、變出假檔案；使用者傾向 FUSE 要做、時程未定，先玩仍有效 →
-  [fuse-host-extras](workflows/ideas/fuse-host-extras.md)。
-  **同日收束 LLM 虛假 CPU 的概念基礎**：**使用者：四腳位是工程問題，實作時自然有答案；
-  概念基礎到此打完。** 空間 01～07 之外補時間 08 與收束 09，下一步仍是先玩現有的東西 →
-  [top-to-bottom/](workflows/ideas/top-to-bottom/README.md)。
-  **同日開始 agent 規劃**：使用者確認逐 tick 走法——agent 借父鐘，LLM／慢工具另開 daemon
-  管的一次性脫節鐘；兩個有事 tick 中間夾空等 tick；**同日三題已答**：一個 agent＝一個
-  資料夾、LLM 不再叫工具就閒著等信、prompt 組法留給工程，並定義 run 在本次 exec 沒產出新
-  inst 時停止。使用者宣告概念層收尾、往後是工程實作；但 2026-09-03「先玩現有系統」仍有效，
-  不是直接開工 → [agent-loop-answers](workflows/ideas/agent-loop-answers.md)。
-
-- **2026-09-01：idea 線走到「開始寫作業系統」的門口**——彙編／C 語言線已收束到
-  **源碼 → IR → `series` → `inst` 批全用 json、界線畫在 `inst`**
-  （[assembly-and-chains](workflows/ideas/assembly-and-chains/README.md)）。
-  使用者收工時說「**接著就是來開始寫作業系統了，明天再說**」。
-  **2026-09-02 先補了 CPU→OS 的推導**（[turing-to-os §三之一](workflows/ideas/turing-to-os.md)，
-  三題三裁：多程式／多次／多 CPU 要、多人不管；必然／理念／選擇三分；L0 拆歸 CPU 與 OS），
-  26 條缺口 14 條 `status` 已分。
-  **2026-09-03 使用者口述 OS 的評估指標與資源觀**（一般 OS 丟計算任務量時間，aos 任務
-  抽象；已定目標優化指標＝金錢（token）／可預測性／人類可理解性，時間空間只是粗淺優化；
-  資源分配善用 linux、權限很後面），收尾裁決**先停下設計、去用現有的東西玩**——累積使用
-  經驗與阻礙後再回來選「OS 的第一塊」（候選 `B1` 批 header 仍留著；
-  **2026-09-03 裁「可預測性最優先」之後，`B1`／帳本這條按「金錢優先」推的候選須重看**）——
-  [os-metrics-and-resources](workflows/ideas/os-metrics-and-resources.md)。
-  **2026-09-03 使用者續問「list 的元素也可以是 list，那麼求值？」**——因 program-form 已超長，
-  另開 [nested-eval](workflows/ideas/nested-eval.md)（**無裁決**，全是 AI 觀察）：運算式巢狀由
-  flatten 在跑之前壓平成 ANF、資料夾巢狀＝作用域（car 點名才 unquote，normal order），
-  另記三個邊界（回傳 vs 傳訊、並行與 join、深度＝幾輪回不來）。
-  **2026-09-03 使用者續答「`(.aos dir1 dir2 file1 file2)`、不會先跑子資料夾的 `.aos`」**——
-  另存 [nested-eval-car](workflows/ideas/nested-eval-car.md)：car 精確為 `.aos` 本身、運算模型
-  更貼 **fexpr／operative**（Kernel）而非 lazy。**使用者同日拍板**（已進
-  [verdicts A 區](workflows/ideas/verdicts.md)）：**資料夾＝operative、子資料夾跑不跑全由父
-  `.aos` 決定、`f(g(x))` 的攤平是 `.aos` 內部的事——兩層分開（內＝inst 鏈／機器層，
-  外＝資料夾樹／行程層）**；`G06` 已補 material。**同日再裁：頂層資料夾由使用者開或由他開的
-  daemon 代開，不是自宣告 `init`**（daemon 也是一個資料夾，再往上是 linux，故頂層不需特例）。
-  **同日第三、四段**——使用者看出 inst 攤平／接力棒／`out/` 「變成一種語法糖」並拍板
-  **「inst 語法糖就是為了省成本而做的」**，另存
-  [nested-eval-sugar](workflows/ideas/nested-eval-sugar.md)：本體只有原子 inst ＋開／讀／選。
-  **AI 提的「編譯器把子資料夾壓成 inst 鏈」被當場否決**，改裁
-  **inst 層與資料夾層互不相關**——inst 層＝POSIX ＋ aos 子命令（`aos run`／`aos deliver`…）
-  的搭配，那些子命令就是語法糖、資料夾層使用它們（`G14` 已補 material）。
-  **同日第五段：使用者問「概念都差不多有概論了嗎、還缺啥」**——AI 回答主幹已齊，剩下四條
-  缺口全在兩層之間那座橋上（回傳 vs 傳訊、子資料夾看不看得到父層、失敗、資料夾壽命），另記
-  agent 現況住錯位置；**使用者已裁先玩不裁**，觀察清單另存
-  [play-watchlist](workflows/ideas/play-watchlist.md)。
-  **同日收尾：使用者要一份「從最上到最下的一整套」大白話總整理**——新開
-  [top-to-bottom/](workflows/ideas/top-to-bottom/README.md)（八檔，無新裁決、無新主張）：
-  Linux → 你或 daemon（REPL）→ 資料夾樹（operative）→ `.aos` 腳本（inst 鏈）→ 原子 inst，
-  外加為什麼這樣設計（三指標／RTOS／微核心）、還沒定的（指回 play-watchlist）、現有 aos 對照表。
-  **同日整理 top-to-bottom 時發現六處來源打架，使用者裁了兩條**（已進
-  [verdicts A 區](workflows/ideas/verdicts.md)）：**①「原稿在頂層、打開時 loader 讀進 `.aos/`」
-  ——`.aos/` 仍是機器的**（`G14` 已補 material）；**② 三指標裡可預測性最優先**（金錢與可理解性
-  的相對順序未裁 → os-metrics §三已補、§七 n 與 §八加了「按金錢優先推、須重看」的前提註，
-  `G18`／`G19` 已補）。其餘四條為 AI 觀察（接力棒只有一根、`aos exec` 一詞三用、
-  「算到底＝不再變」是實作落後、子資料夾看不看得到 `../` 留在 play-watchlist）。
-  **同日使用者再提「daemon 可以是一個支援 FUSE 的行程，aos 整棵樹寄生在裡面」**——新開
-  [fuse-host](workflows/ideas/fuse-host.md)（**無裁決，不排進 OS 第一塊**，已裁先玩）：
-  daemon 從「盯著桌子」變「桌子本身」，`G14` 已補 material；三個提醒（時間粒度會打架、
-  宿主死了樹要還在、Lua 不進 `.aos`）。**使用者追問「不懂攔截紀錄、馬上回應是什麼意思」**
-  ——另開 [fuse-host-doorman](workflows/ideas/fuse-host-doorman.md)（**無裁決**）：用「門房
-  還是廚師」展開「攔截＋記錄」與「整個取代 loop」兩種當法的差別，使用者回應「daemon 可以
-  更漂亮」，方向認同、未選邊。**同日使用者說「都順便記下來吧」**，續問實作面兩題——另開
-  [fuse-host-impl](workflows/ideas/fuse-host-impl.md)（**無裁決**）：會不會麻煩有沒有開源庫
-  （門房走 passthrough 最簡單，`libfuse` 已做完難的部分，規模估計 C++ 幾百行一兩天）、跟
-  tmpfs 差在哪（tmpfs 決定放哪、FUSE 決定誰管著，兩者可疊但對 aos 不建議）。
+- **2026-09-05：構想全部重整成新的一套**——舊 ideas（八月到 9 月 4 日的全部討論）整包封存進
+  `ideas/archive/`，換成 13 章大白話的新構想集（[ideas/README.md](workflows/ideas/README.md)），
+  附 71 條待決定與各章 AI 意見。目的是**另起爐灶**：下一步是照新構想集寫 spec，再寫實作計畫，
+  現有程式碼不當憑據。使用者要先答的：09-04 那批傾向要不要整批升格（M-01）、接力棒格式（E-01）、
+  結果落哪與失敗三態（I-01～I-04）、daemon 怎麼走時鐘（G-01）。辯論場／hackathon／有限資源三場仍放著。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
   contacts 進 prompt＋`aos contact status`、`aos inbox ls/read`）。home daemon 只有 spec
-  （[home-daemon-spec](workflows/ideas/home-daemon-spec.md)，8 條已裁），實作未開；LLM PU 世界、systemd 先不做。
+  （home-daemon-spec，8 條已裁），實作未開；LLM PU 世界、systemd 先不做。
 - **2026-08-30 晚：原型第二輪落地**（main）——`core/tool`（`aos tool`／`aos contact`／`aos say --to`）、
   `core/tick`（heartbeat on aos）、pi 當第二顆 CPU、排程保底 D（flock 槽，`aos llm --priority`）。
   **已知缺口**：`aos agent step` 走 lmstudio 那條還沒取槽（只對 `aos llm` 子命令成立）；使用者＝agent 住 `~`
@@ -105,7 +32,7 @@
   指令 `aos run`／`deliver`／`llm`／`agent`；協定在 [dispatch/proto/PROTOCOL](workflows/dispatch/proto/PROTOCOL.md)，
   兩隊報告在 [proto/reports](workflows/dispatch/proto/reports/)。舊 `core/inst`／`llms`／`tooljson` 原地未動，
   **要不要刪、何時刪未定**。刻意跳過的邊緣狀況（無鎖、無崩潰恢復、不 fsync、agent 靜默死亡、stop）
-  列在各小專案 README 與 [self-delivery-in-loop](workflows/ideas/self-delivery-in-loop.md)。pi 介面沒做 adapter，
+  列在各小專案 README 與 self-delivery-in-loop。pi 介面沒做 adapter，
   只交 [pi-interface](../core/agent/docs/pi-interface.md)。
 
 > **等使用者一句話的項目已集中到 [WAIT_USER](WAIT_USER.md)**（2026-08-30）——下面各條保留
@@ -128,11 +55,11 @@
 
 - **2026-08-28 對 aos 核心模型做了十輪拷問**（格式／原語／CPU 類比／交接協定／前作對照／
   機器形狀；第十輪由 Fable 重打「地位的承載物」，九條全未裁——使用者：邊實作邊想，
-  記在 [machine-shape](workflows/ideas/machine-shape/README.md) 三檔 §22–30）。裁決總表在 [ideas/verdicts](workflows/ideas/verdicts.md)——**要重新拷問
+  記在 machine-shape 三檔 §22–30）。裁決總表在 ideas/verdicts——**要重新拷問
   的人先讀那份**。open 的部分：**「批」沒有名字與 header**（一次卡住 ISA 版本、指令來源、
   loop 的旗標暫存器與去重）、**decode 卡在錯的一層**、外層契約還沒想好、跨資料夾排程歸屬
   未定。另有三筆「裁決相乘」的欠帳（兩顆 CPU 沒有記憶體模型、沒有中斷線、git 撞
-  `.aos/` 暫態）記在 [machine-shape/debts](workflows/ideas/machine-shape/debts.md)。
+  `.aos/` 暫態）記在 machine-shape/debts。
   新驗證出的實作缺陷已進 [gotchas](workflows/common/gotchas.md)（`.runi` 不是鎖、沒有
   `fsync`、彙整崩潰窗口、`--loop 0` 是忙碌輪詢、失敗關掉節流閥）。
 - **2026-08-25 研討會收場**（[最後總結](workflows/workshop/records/final-summary.md)，
@@ -175,8 +102,8 @@
 
 - **`core/llms` 與 `core/tooljson` 目前是失敗作，之後要重做**：使用者判定這兩個小專案
   不符合 aos 的回合制／抽象 CPU 模型（模型見
-  [ideas/turn-based-folder](workflows/ideas/turn-based-folder.md) 與
-  [ideas/llm-cpu](workflows/ideas/llm-cpu.md)），要**找時間讓它們符合這套模型**。還沒
+  ideas/turn-based-folder 與
+  ideas/llm-cpu），要**找時間讓它們符合這套模型**。還沒
   排期。**2026-08-24 使用者拍板：先不動、先不管，要排在 agent loop 之後**（[roadmap
   的 D4](workflows/roadmap.md)）。所以這兩個小專案現在是**擱置**，不是待修——別急著重寫，
   也別再往裡面投資。連帶：llmkit 移植的 S2／S5 一起停用。

@@ -52,7 +52,7 @@
 我原本建議「先全部 blocking」，理由是「本回合何時算執行完畢」沒有單純答案——這個方案
 直接把那題定義掉了：**答案是所有 thread 都收完**。回合邊界依然是硬的，並行只發生在
 回合**之內**。細節與剩下的開放問題見
-[inst-execution](../../wf/workflows/ideas/inst-execution.md)。
+inst-execution。
 
 ⚠ **這一項會撞到凍結層**：新增 JSON 欄位一定要改 `format.cpp`（它對不認得的 key 直接
 回 `UnknownKey`），thread 化要改 `exec.cpp`／`run.cpp`。**落地前需要明確解凍**，繞不

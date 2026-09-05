@@ -1,6 +1,6 @@
 # 任務：排程保底 D——flock 槽、兩層並行上限、數字優先度、等待上限（`core/llm`）
 
-> 交接書是唯一契約。研究與**使用者 11 條裁決**在 [ideas/scheduling/README](../../../ideas/scheduling/README.md)（§方案 D 的設計與改動量估算、末段裁決表**壓過**建議）；實測 [experiments](../../../ideas/scheduling/experiments.md)；協定 [PROTOCOL](../PROTOCOL.md)。
+> 交接書是唯一契約。研究與**使用者 11 條裁決**在 ideas/scheduling/README（§方案 D 的設計與改動量估算、末段裁決表**壓過**建議）；實測 experiments；協定 [PROTOCOL](../PROTOCOL.md)。
 
 ## 背景與唯一目標
 

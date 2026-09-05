@@ -1,0 +1,9 @@
+> 第 1 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 2 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 3 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 4 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 5 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 6 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 7 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 8 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）
+> 第 9 回合失敗：LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server（請確認 LLM 端點 http://localhost:1234/v1 是不是活的，或用 AOS_LLM_URL 指到正確的位址）

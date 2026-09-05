@@ -1,6 +1,6 @@
 # 任務：改進四項不順手——少打指令、狀態可見、agent 看得到通訊錄、不燒 LLM 的信箱
 
-> 交接書是唯一契約。發現在 [trial/findings-L1.csv](../../trial/findings-L1.csv)／[L2](../../trial/findings-L2.csv)（`awkward`／`spec-gap`／`cannot`），摘要與「缺的原語」在 [trial/README](../../trial/README.md)；判準 [usability-target](../../../ideas/usability-target.md)。使用者 2026-08-30 選了四項（下方）。修 bug 隊 X 同時在 main 上修 25 條 `bug`。
+> 交接書是唯一契約。發現在 [trial/findings-L1.csv](../../trial/findings-L1.csv)／[L2](../../trial/findings-L2.csv)（`awkward`／`spec-gap`／`cannot`），摘要與「缺的原語」在 [trial/README](../../trial/README.md)；判準 usability-target。使用者 2026-08-30 選了四項（下方）。修 bug 隊 X 同時在 main 上修 25 條 `bug`。
 
 ## 唯一目標
 

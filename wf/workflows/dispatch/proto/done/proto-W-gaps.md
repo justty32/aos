@@ -1,6 +1,6 @@
 # 任務：補兩個已裁決的缺口——step 走 lmstudio 也取槽；使用者是 agent、住 `~`
 
-> 交接書是唯一契約。兩件都是使用者已裁決、前隊留下的缺口：排程 [reports/V.md](../reports/V.md)「真實缺口」段；通訊錄 [ideas/tools/contacts.md](../../../ideas/tools/contacts.md) 末段「使用者也是 agent」。
+> 交接書是唯一契約。兩件都是使用者已裁決、前隊留下的缺口：排程 [reports/V.md](../reports/V.md)「真實缺口」段；通訊錄 ideas/tools/contacts.md 末段「使用者也是 agent」。
 
 ## 唯一目標
 

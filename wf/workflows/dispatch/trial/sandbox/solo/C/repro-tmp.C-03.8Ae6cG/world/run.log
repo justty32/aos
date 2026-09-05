@@ -1,0 +1,18 @@
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 1 的 agent-world-1 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 1: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 2 的 agent-world-2 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 2: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 3 的 agent-world-3 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 3: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 4 的 agent-world-4 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 4: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 5 的 agent-world-5 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 5: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 6 的 agent-world-6 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 6: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 7 的 agent-world-7 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 7: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 8 的 agent-world-8 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 8: 1 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/build/bin/aos run: turn 9 的 agent-world-9 以 exit 1 結束；/home/lorkhan/repo/simple_tools/aos/build/bin/aos agent: LLM 連線失敗: Failed to connect to localhost port 1234 after 0 ms: Could not connect to server
+turn 9: 1 insts (1 every), 3 ms
