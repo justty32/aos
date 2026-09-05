@@ -1,0 +1,3 @@
+echo 第一句：我是 .aos-inst
+echo 第二句：整段都丟給 os.system
+pwd
