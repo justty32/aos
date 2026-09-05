@@ -2,5 +2,6 @@
 .aos/agent/new-prompts/archived/
 .aos/agent/new-prompts.json
 .aos/agent/llm-result.json
+.aos/agent/replies/
 .aos/inst
 said.txt

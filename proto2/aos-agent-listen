@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""aos-agent-listen [dir] [--new] [--once] — 盯著 agent 的 replies/，有回話就印出來。
+
+預設先把既有的回話照檔名順序印完，然後每 0.5 秒看一次有沒有新檔。
+--new 跳過既有的、只印之後新出現的；--once 印完一次（或等到第一則新的）就退出。
+Ctrl-C 安靜退出 0。
+"""
+import argparse
+import json
+import os
+import sys
+import time
+
+
+def names(box):
+    if not os.path.isdir(box):
+        return []
+    return sorted(n for n in os.listdir(box) if n.endswith(".json"))
+
+
+def show(box, name):
+    try:
+        with open(os.path.join(box, name), encoding="utf-8") as f:
+            msg = json.load(f)
+    except (ValueError, OSError):
+        msg = {}
+    print("--- reply %s ---" % os.path.splitext(name)[0])
+    print(msg.get("content") or "")
+    print()
+    sys.stdout.flush()
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-agent-listen")
+    ap.add_argument("dir", nargs="?", default=".")
+    ap.add_argument("--new", action="store_true")
+    ap.add_argument("--once", action="store_true")
+    args = ap.parse_args()
+    box = os.path.join(args.dir, ".aos", "agent", "replies")
+
+    seen = set(names(box))
+    if not args.new:
+        for name in sorted(seen):
+            show(box, name)
+        if args.once:
+            return
+    try:
+        while True:
+            fresh = [n for n in names(box) if n not in seen]
+            for name in fresh:
+                show(box, name)
+                seen.add(name)
+            if fresh and args.once:
+                return
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+
+
+main()

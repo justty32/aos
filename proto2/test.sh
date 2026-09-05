@@ -4,6 +4,9 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 AOS="$HERE/aos-exec"
 LOOP="$HERE/aos-loop"
 STEP="$HERE/aos-agent-step"
+SAY="$HERE/aos-agent-say"
+LISTEN="$HERE/aos-agent-listen"
+TALK="$HERE/aos-agent-talk"
 FAILED=0
 
 check() {  # check <名字> <期待退出碼> <實際退出碼>
@@ -259,6 +262,84 @@ fi
 case "$(cat "$TMP/agent/.aos/inst")" in
   *aos-agent-step*) echo "ok   --keep-inst 跑完 .aos/inst 原樣還在" ;;
   *) echo "FAIL --keep-inst 把 .aos/inst 弄掉了"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# ── 一個檔可以多則、回話落地、say／listen／talk ──────────────────────────────
+# 14. new-prompts 裡一個檔放一串（兩則）訊息，跑一格 idle 就收成兩則
+TMP=$(mktemp -d); prep_agent "$TMP/agent"
+rm -f "$TMP/agent/.aos/agent/new-prompts/hello.json"
+echo '[{"role": "user", "content": "一"}, {"role": "user", "content": "二"}, 3]' \
+  > "$TMP/agent/.aos/agent/new-prompts/pair.json"
+"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1
+N=$(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))))' \
+  "$TMP/agent/.aos/agent/new-prompts.json")
+if [ "$N" = "2" ]; then
+  echo "ok   一個檔放一串就收成兩則（陣列裡不是物件的那項跳過）"
+else
+  echo "FAIL 一串收成 $N 則"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 15. aos-agent-say：一句話丟進 new-prompts/
+TMP=$(mktemp -d)
+"$SAY" "$TMP" "嗨呀" 2>/dev/null
+NFILE=$(find "$TMP/.aos/agent/new-prompts" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$NFILE" = "1" ]; then echo "ok   aos-agent-say 寫出一個檔"; else echo "FAIL say 寫了 $NFILE 個檔"; FAILED=1; fi
+SAID=$(python3 -c '
+import glob,json,sys
+m=json.load(open(sorted(glob.glob(sys.argv[1]+"/*.json"))[0], encoding="utf-8"))
+print(m.get("role"), m.get("content"))' "$TMP/.aos/agent/new-prompts")
+if [ "$SAID" = "user 嗨呀" ]; then echo "ok   say 寫的內容是 user／嗨呀"; else echo "FAIL say 內容不對：$SAID"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 16. 完整鏈跑完，agent 的回話落在 replies/
+TMP=$(mktemp -d); prep_agent "$TMP/agent"
+for i in 1 2 3 4 5 6; do "$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1; done
+NREP=$(find "$TMP/agent/.aos/agent/replies" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$NREP" = "1" ]; then echo "ok   replies/ 只有一個回話檔"; else echo "FAIL replies/ 有 $NREP 個檔"; FAILED=1; fi
+REP=$(python3 -c '
+import glob,json,sys
+print(json.load(open(sorted(glob.glob(sys.argv[1]+"/*.json"))[0], encoding="utf-8"))["content"])' \
+  "$TMP/agent/.aos/agent/replies")
+if [ "$REP" = "done" ]; then echo "ok   回話檔的 content 是 done"; else echo "FAIL 回話檔 content 是 $REP"; FAILED=1; fi
+
+# 17. aos-agent-listen --once 把既有的印出來就走
+OUT=$(timeout 10 "$LISTEN" "$TMP/agent" --once); RC=$?
+check "listen --once 退出 0" 0 "$RC"
+case "$OUT" in
+  *"--- reply "*"done"*) echo "ok   listen --once 印得出 done" ;;
+  *) echo "FAIL listen --once 印的不對：$OUT"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 18. aos-agent-listen --new --once：跳過既有的，等到新的那則才印、才退出
+TMP=$(mktemp -d); mkdir -p "$TMP/.aos/agent/replies"
+echo '{"role": "assistant", "content": "舊的"}' > "$TMP/.aos/agent/replies/0001.json"
+( sleep 1; echo '{"role": "assistant", "content": "新的"}' > "$TMP/.aos/agent/replies/0002.json" ) &
+OUT=$(timeout 10 "$LISTEN" "$TMP" --new --once); RC=$?
+check "listen --new --once 等到新的就退出 0" 0 "$RC"
+case "$OUT" in
+  *"舊的"*) echo "FAIL --new 不該印既有的：$OUT"; FAILED=1 ;;
+  *"--- reply 0002 ---"*"新的"*) echo "ok   listen --new --once 只印新出現的那則" ;;
+  *) echo "FAIL listen --new --once 印的不對：$OUT"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 19. aos-agent-talk：打一句、等到回話印出來
+TMP=$(mktemp -d); mkdir -p "$TMP/.aos/agent/new-prompts" "$TMP/.aos/agent/replies"
+( for i in $(seq 1 100); do
+    if [ -n "$(find "$TMP/.aos/agent/new-prompts" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
+      echo '{"role": "assistant", "content": "我在"}' > "$TMP/.aos/agent/replies/9999.json"
+      break
+    fi
+    sleep 0.1
+  done ) &
+OUT=$(printf '哈囉\n/quit\n' | timeout 10 "$TALK" "$TMP"); RC=$?
+check "talk 打完 /quit 退出 0" 0 "$RC"
+case "$OUT" in
+  *"agent> 我在"*) echo "ok   talk 印出了 agent 的回話" ;;
+  *) echo "FAIL talk 沒印出回話：$OUT"; FAILED=1 ;;
 esac
 rm -rf "$TMP"
 

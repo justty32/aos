@@ -50,9 +50,10 @@ def clear_archived(home):
 
 def collect_new_prompts(home):
     """把 new-prompts/ 裡的檔（頂層、排序、不含子目錄）變成訊息，原檔搬去
-    new-prompts/archived/。每個檔就是一則訊息（固定格式 {"role", "content"}），
-    原樣當一則 message 用；讀不成 JSON 或不是物件的檔印一行白話到 stderr 跳過，
-    但一樣搬走。
+    new-prompts/archived/。每個檔可以是**一則**訊息（JSON 物件 {"role", "content"}），
+    也可以是**一串**訊息（JSON 陣列，裡面每個物件各算一則、照原順序）；陣列裡不是
+    物件的項印一行白話到 stderr 跳過。整個檔讀不成 JSON、或不是物件也不是陣列，
+    也印一行跳過。不管收不收得成，檔一律搬走。
     """
     box = os.path.join(home, "new-prompts")
     archived = os.path.join(box, "archived")
@@ -66,14 +67,21 @@ def collect_new_prompts(home):
         with open(src, encoding="utf-8", errors="replace") as f:
             text = f.read()
         try:
-            msg = json.loads(text)
+            data = json.loads(text)
         except ValueError:
-            msg = None
-        if isinstance(msg, dict):
-            msgs.append(msg)
+            data = None
+        if isinstance(data, dict):
+            msgs.append(data)
+        elif isinstance(data, list):
+            for i, item in enumerate(data):
+                if isinstance(item, dict):
+                    msgs.append(item)
+                else:
+                    print("aos-agent-step: new-prompts/%s 第 %d 項不是 JSON 物件，跳過"
+                          % (name, i), file=sys.stderr)
         else:
-            print("aos-agent-step: new-prompts/%s 不是合法的訊息（讀不成 JSON 物件），跳過" % name,
-                  file=sys.stderr)
+            print("aos-agent-step: new-prompts/%s 不是合法的訊息（要 JSON 物件或陣列），跳過"
+                  % name, file=sys.stderr)
         os.makedirs(archived, exist_ok=True)
         os.replace(src, os.path.join(archived, name))
     return msgs
@@ -127,8 +135,8 @@ def do_llm(home):
     return True
 
 
-def do_act(home, workdir):
-    """跑上一輪要的工具；沒工具就把它說的話印出來。回下一個 state。"""
+def do_act(home, workdir, step):
+    """跑上一輪要的工具；沒工具就把它說的話印出來、同時落一個檔。回下一個 state。"""
     answer = read_json(os.path.join(home, "llm-result.json"), {})
     choices = answer.get("choices") or [{}]
     message = choices[0].get("message") or {}
@@ -136,7 +144,11 @@ def do_act(home, workdir):
     # 明確判斷「有沒有工具要跑」：tool_calls 要存在而且是非空陣列。
     has_calls = isinstance(calls, list) and len(calls) > 0
     if not has_calls:
-        print(message.get("content") or "")
+        content = message.get("content") or ""
+        print(content)
+        # 回話也落地一份，讓 aos-agent-listen／talk 這種旁邊看的人撿得到。
+        write_json(os.path.join(home, "replies", "%04d.json" % step),
+                   {"role": "assistant", "content": content})
         return "idle"
 
     tools = {t.get("name"): t for t in read_json(os.path.join(home, "tools.json"), [])}
@@ -192,7 +204,7 @@ def main():
         else:
             nxt, failed = "llm", True
     elif state == "act":
-        nxt = do_act(home, workdir)
+        nxt = do_act(home, workdir, step + 1)
     else:
         print("aos-agent-step: 認不得的 state：%s，當 idle" % state, file=sys.stderr)
         state, nxt = "idle", "idle"
