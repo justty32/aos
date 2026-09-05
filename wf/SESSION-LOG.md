@@ -22,7 +22,14 @@
   **Python 原型已能跑**（`proto/`，77 測試綠、4 範例通，`proto/FINDINGS.md` 73 條阻礙）。
   **open**：① 使用者要批的都在裁決單 artifact（76 題＋主編補 8 條，https://claude.ai/code/artifact/265bc36e-8ed9-45b6-9f36-afe06267fbec ），
   他說「看裁決單」就去 read_db 讀 `decisions/main`；② 驗收表與邊緣狀況表已抽成資料檔（spec/data/conformance.json 753 列、notes/edge-cases.json 83 列，md 只留導航）；③ 主編改寫了一條升格裁決（停法加「沒有串在等」），三隊都撞到，等使用者點頭；
-  ④ 沒 daemon 時脫節呼叫：主編裁「直接失敗」、原型做「exec 自己起 run」，兩邊不一致，等裁決單 P-01。
+  ④（已解）P-01 使用者裁直接失敗，原型已改。
+  **傍晚（Claude 額度快用完，改走 codex gpt-5.6-sol）**：使用者答了 40 條（spec/ideas 已回寫，見 spec/notes/rulings 第二批）；原型真模型兩輪成功（qwen 7 圈／deepseek-flash 5 圈，proto/play-logs/）；
+  量尺 proto/bench/、門房 proto/doorman.py、第二級劇本 proto/examples/team/ 都已提交。**open**：
+  ⑤ codex 第 1 輪在跑（任務書 spec/notes/codex-task-1.md；回報落在 scratchpad codex/out-1.md，若 session 換了就看 `git status`／`git diff proto/` 直接審），做完要 `bash proto/run-all.sh` 綠再 commit；
+  ⑥ codex 第 2 輪任務書已備好（spec/notes/codex-task-2.md：SIGCHLD 結束碼全 0、落點碰撞、daemon 代寫 killed、門房接子命令），第 1 輪 commit 後用
+  `codex exec -m gpt-5.6-sol -C /home/lorkhan/repo/simple_tools/aos --dangerously-bypass-approvals-and-sandbox -o /tmp/codex-out-2.md - < wf/workflows/spec/notes/codex-task-2.md` 派；
+  ⑦ Janet 綁定隊（Opus）在 ~/repo/langs/janet-lab 做 modules/aos/，可能已自行 commit 到那邊，回報若沒收到就看那邊 `git log`；它另寫 scratchpad side/janet-binding-findings.md（可能沒來得及）；
+  ⑧ 裁決單還有 E～M 章 12 條「AI 建議改」等使用者答（讀法：Artifact read_db decisions/main）；答了之後照 rulings 檔第二批的做法回寫 spec。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
