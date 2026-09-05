@@ -3,8 +3,7 @@
 一個資料夾的回合制執行器，外加一組 POSIX 小工具。每個小專案同時是兩件事：`aos` 執行檔的一條或多條子命令，
 以及一個可以被其他專案 `#include` 與連結的 C++23 函式庫。
 
-核心的 [`core/inst/`](core/inst/) 會從資料夾的 `.aos/inst.json` 消費一回合。之後的
-`llm/`、`tooljson/` 等都會照同一個模子長出來。
+核心小專案現況見 [core/README.md](core/README.md)。
 
 ## 建置
 
@@ -70,5 +69,5 @@ crash，不是錯誤狀態。**一份指令檔等同一段可執行程式碼，�
 | | |
 |---|---|
 | [docs/](docs/README.md) | 整體：[總覽](docs/overview.md)、[建置](docs/build.md)、[使用](docs/usage.md)、[新增小專案](docs/subprojects.md) |
-| [core/inst/docs/](core/inst/docs/) | inst 專屬：[記錄格式](core/inst/docs/format.md)、[執行語意](core/inst/docs/exec.md)、[C++ API](core/inst/docs/cxxapi.md)、[C API](core/inst/docs/capi.md)、[架構](core/inst/docs/architecture.md) |
+| core/inst/docs/ | inst 專屬：[記錄格式](wf/workflows/dispatch/proto/PROTOCOL.md)、[執行語意](core/exec/README.md)、C++ API、C API、[架構](wf/workflows/common/code-map.md) |
 | [AGENTS.md](AGENTS.md) → [wf/](wf/) | 開發流程（不是給使用者看的）|
