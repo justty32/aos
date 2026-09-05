@@ -25,10 +25,8 @@
   ④（已解）P-01 使用者裁直接失敗，原型已改。
   **傍晚（Claude 額度快用完，改走 codex gpt-5.6-sol）**：使用者答了 40 條（spec/ideas 已回寫，見 spec/notes/rulings 第二批）；原型真模型兩輪成功（qwen 7 圈／deepseek-flash 5 圈，proto/play-logs/）；
   量尺 proto/bench/、門房 proto/doorman.py、第二級劇本 proto/examples/team/ 都已提交。**open**：
-  ⑤ codex 第 1 輪在跑（任務書 spec/notes/codex-task-1.md；回報落在 scratchpad codex/out-1.md，若 session 換了就看 `git status`／`git diff proto/` 直接審），做完要 `bash proto/run-all.sh` 綠再 commit；
-  ⑥ codex 第 2 輪任務書已備好（spec/notes/codex-task-2.md：SIGCHLD 結束碼全 0、落點碰撞、daemon 代寫 killed、門房接子命令），第 1 輪 commit 後用
-  `codex exec -m gpt-5.6-sol -C /home/lorkhan/repo/simple_tools/aos --dangerously-bypass-approvals-and-sandbox -o /tmp/codex-out-2.md - < wf/workflows/spec/notes/codex-task-2.md` 派；
-  ⑦ Janet 綁定隊（Opus）在 ~/repo/langs/janet-lab 做 modules/aos/，可能已自行 commit 到那邊，回報若沒收到就看那邊 `git log`；它另寫 scratchpad side/janet-binding-findings.md（可能沒來得及）；
+  ⑤⑥（已解，20:30）codex 第 1、2 輪都做完並提交（f064d0b）：LLM 世界進行中可見、busy_ticks、思考 token 拆帳；SIGCHLD 結束碼修正、落點碰撞預檢、daemon 對帳代寫 no_result／child_failed／killed、`aos doorman` 子命令、team/run.sh 進回歸。100＋40 測試綠。codex 撞到 9 條（proto/FINDINGS.md「codex 第 1／2 輪」），其中要 spec 隊裁的：ledger 要加 `tokens_reasoning`、`busy_ticks` 沒欄位放、`requests/` 原件 vs 狀態物件打架、停止原因不只三種、跨格落點預約沒契約；
+  ⑦ Janet 綁定：Opus 隊在 ~/repo/langs/janet-lab 寫好 modules/aos/（8 檔）＋4 支測試＋範例，都能跑，**未 commit**；文件沒寫就被額度打斷 → codex 第 3 輪在補（任務書 spec/notes/codex-task-3.md：modules/aos/README.md、對照 spec 查一遍、發現寫到 spec/notes/janet-binding-findings.md），回報在 scratchpad codex/out-3.md；做完要在 janet-lab 那邊 commit，aos 這邊 commit notes 兩檔；
   ⑧ 裁決單還有 E～M 章 12 條「AI 建議改」等使用者答（讀法：Artifact read_db decisions/main）；答了之後照 rulings 檔第二批的做法回寫 spec。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
