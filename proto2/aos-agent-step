@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""aos-agent-step [dir] — 一個 agent 資料夾走「一格」。
+
+agent 本體就是 <dir>/.aos/agent/ 底下那幾個檔：人格（system-prompt.json）、
+記憶（prompts.json）、這輪要加的話（prompt-next.json）、工具（tools.json）、
+引擎（engine.json）、收件匣（inbox/、inbox-done/）、上次回覆（llm-result.json）、
+現在走到哪（state.json）。
+
+四格輪流走：idle 收信 → llm 思考 → act 行動 → inbox 再收信 → llm …
+沒工具可跑就回 idle。每格結束都把「自己 .」寫進 <dir>/.aos/inst，
+所以 aos-loop 會一直回來看（給 --no-write-inst 就不寫，讓 aos-loop --keep-inst 去管）。
+"""
+import argparse
+import json
+import os
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+
+
+def read_json(path, default):
+    if not os.path.isfile(path):
+        return default
+    with open(path, encoding="utf-8") as f:
+        text = f.read().strip()
+    return json.loads(text) if text else default
+
+
+def write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+def collect_inbox(home):
+    """把 inbox/ 裡的檔（排序、不含子目錄）變成 user 訊息，原檔搬去 inbox-done/。"""
+    box = os.path.join(home, "inbox")
+    done = os.path.join(home, "inbox-done")
+    msgs = []
+    if not os.path.isdir(box):
+        return msgs
+    for name in sorted(os.listdir(box)):
+        src = os.path.join(box, name)
+        if not os.path.isfile(src):
+            continue
+        with open(src, encoding="utf-8", errors="replace") as f:
+            body = f.read()
+        msgs.append({"role": "user", "content": "[%s]\n%s" % (name, body)})
+        os.makedirs(done, exist_ok=True)
+        os.replace(src, os.path.join(done, name))
+    return msgs
+
+
+def do_llm(home):
+    """打一次 chat/completions。成功回 True，失敗印一行到 stderr 回 False。"""
+    engine = read_json(os.path.join(home, "engine.json"), {})
+    base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
+    url = base + "/chat/completions"
+
+    messages = []
+    persona = read_json(os.path.join(home, "system-prompt.json"), {})
+    if persona.get("content"):
+        messages.append({"role": "system", "content": persona["content"]})
+    history = read_json(os.path.join(home, "prompts.json"), [])
+    pending = read_json(os.path.join(home, "prompt-next.json"), [])
+    messages += history + pending
+
+    body = {"model": engine.get("model") or "local", "messages": messages}
+    tools = read_json(os.path.join(home, "tools.json"), [])
+    if tools:
+        body["tools"] = [{"type": "function", "function": {
+            "name": t.get("name"),
+            "description": t.get("description", ""),
+            "parameters": t.get("parameters", {}),
+        }} for t in tools]
+
+    key = os.environ.get(engine.get("api_key_env") or "") or "none"
+    req = urllib.request.Request(
+        url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Authorization": "Bearer " + key},
+        method="POST")
+    try:
+        with urllib.request.urlopen(req) as r:
+            answer = json.loads(r.read().decode("utf-8", "replace"))
+        assistant = answer["choices"][0]["message"]
+    except (urllib.error.URLError, OSError, ValueError, KeyError, IndexError, TypeError) as e:
+        print("aos-agent-step: 打不通 %s（%s），這格不算，下次再試" % (url, e), file=sys.stderr)
+        return False
+
+    write_json(os.path.join(home, "llm-result.json"), answer)
+    write_json(os.path.join(home, "prompts.json"), history + pending + [assistant])
+    write_json(os.path.join(home, "prompt-next.json"), [])
+    return True
+
+
+def do_act(home, workdir):
+    """跑上一輪要的工具；沒工具就把它說的話印出來。回下一個 state。"""
+    answer = read_json(os.path.join(home, "llm-result.json"), {})
+    choices = answer.get("choices") or [{}]
+    message = choices[0].get("message") or {}
+    calls = message.get("tool_calls") or []
+    if not calls:
+        print(message.get("content") or "")
+        return "idle"
+
+    tools = {t.get("name"): t for t in read_json(os.path.join(home, "tools.json"), [])}
+    results = read_json(os.path.join(home, "prompt-next.json"), [])
+    for call in calls:
+        fn = call.get("function") or {}
+        name = fn.get("name")
+        args = fn.get("arguments")
+        if not isinstance(args, str):
+            args = json.dumps(args or {}, ensure_ascii=False)
+        tool = tools.get(name)
+        if tool is None:
+            out = "沒有這個工具：%s" % name
+        else:
+            done = subprocess.run(tool.get("command", ""), shell=True, input=args,
+                                  capture_output=True, text=True, cwd=workdir)
+            out = done.stdout
+            if done.stderr.strip():
+                out += done.stderr
+        results.append({"role": "tool", "tool_call_id": call.get("id"), "content": out})
+    write_json(os.path.join(home, "prompt-next.json"), results)
+    return "inbox"
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-agent-step")
+    ap.add_argument("dir", nargs="?", default=".")
+    ap.add_argument("--no-write-inst", action="store_true")
+    args = ap.parse_args()
+    workdir = os.path.abspath(args.dir)
+    home = os.path.join(workdir, ".aos", "agent")
+    state_path = os.path.join(home, "state.json")
+    saved = read_json(state_path, {})
+    state = saved.get("state") or "idle"
+    step = saved.get("step") or 0
+    failed = False
+
+    if state == "idle":
+        msgs = collect_inbox(home)
+        if msgs:
+            write_json(os.path.join(home, "prompt-next.json"), msgs)
+            nxt = "llm"
+        else:
+            nxt = "idle"
+    elif state == "inbox":
+        pending = read_json(os.path.join(home, "prompt-next.json"), [])
+        write_json(os.path.join(home, "prompt-next.json"), pending + collect_inbox(home))
+        nxt = "llm"
+    elif state == "llm":
+        if do_llm(home):
+            nxt = "act"
+        else:
+            nxt, failed = "llm", True
+    elif state == "act":
+        nxt = do_act(home, workdir)
+    else:
+        print("aos-agent-step: 認不得的 state：%s，當 idle" % state, file=sys.stderr)
+        state, nxt = "idle", "idle"
+
+    write_json(state_path, {"state": nxt, "step": step + 1})
+    if not args.no_write_inst:
+        inst = os.path.join(workdir, ".aos", "inst")
+        os.makedirs(os.path.dirname(inst), exist_ok=True)
+        with open(inst, "w", encoding="utf-8") as f:
+            f.write("%s .\n" % os.path.abspath(sys.argv[0]))
+    print("aos-agent-step: step %d state %s -> %s" % (step, state, nxt), file=sys.stderr)
+    sys.exit(1 if failed else 0)
+
+
+main()

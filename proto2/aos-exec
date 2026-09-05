@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""aos-exec <path> — 檔案就執行它，資料夾就把 .aos-inst 整段丟給 system()。
+"""aos-exec <path> — 檔案就執行它，資料夾就把 .aos/inst 整段丟給 system()。
 
-.aos-inst 是純文字檔，內容就是一行或幾行 shell 命令，不解析、不拆行，
+.aos/inst 是純文字檔，內容就是一行或幾行 shell 命令，不解析、不拆行，
 原樣交給 os.system() 跑。退出碼：0 成功，2 用法／找不到／讀不懂，
 其他情況原樣傳回命令自己的退出碼。
 """
@@ -24,9 +24,9 @@ def main():
         sys.exit(subprocess.run([path], cwd=os.path.dirname(path)).returncode)
 
     if os.path.isdir(path):
-        inst = os.path.join(path, ".aos-inst")
+        inst = os.path.join(path, ".aos", "inst")
         if not os.path.isfile(inst):
-            die("資料夾裡沒有 .aos-inst：" + path)
+            die("資料夾裡沒有 .aos/inst：" + path)
         with open(inst, encoding="utf-8") as f:
             script = f.read()
         os.chdir(path)
