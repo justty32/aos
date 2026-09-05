@@ -61,27 +61,22 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 
 ## 怎麼玩
 
+範例 agent 已經附好 `.aos/inst`，兩步就能跑：
+
+```sh
+# 終端機 1（LM Studio 要先載一顆模型，哪顆都行，engine.json 的 "local" 會自動用載入的那顆）
+proto2/aos-loop proto2/examples/agent --keep-inst
+# 終端機 2
+proto2/aos-agent-talk proto2/examples/agent
+```
+
+agent 沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）或 `沒有 .aos/inst`（資料夾沒附心跳指令）。
+
+其他跑法：
 ```sh
 proto2/aos-exec proto2/examples/hello.sh
 proto2/aos-loop proto2/examples/loop --stop-when-empty --interval 0
 bash proto2/test.sh
-```
-
-範例 agent（`engine.json` 預設指 LM Studio，`model` 改成你載的那顆）：
-```sh
-mkdir -p proto2/examples/agent/.aos
-echo "$PWD/proto2/aos-agent-step . --no-write-inst" > proto2/examples/agent/.aos/inst
-proto2/aos-loop proto2/examples/agent --keep-inst --interval 1
-```
-
-寫一次 `.aos/inst`、`--keep-inst` 不清空，agent 就一直轉；往 `new-prompts/` 丟 `{"role":"user","content":"..."}` 這種檔，下一圈就撿走。
-
-聊天要開兩個終端機——一個負責轉，一個負責講：
-```sh
-# 終端機 A：讓 agent 一直轉
-proto2/aos-loop proto2/examples/agent --keep-inst --interval 1
-# 終端機 B：打字聊天
-proto2/aos-agent-talk proto2/examples/agent
 ```
 
 ## 目前刻意不做

@@ -27,6 +27,7 @@ def main():
     os.chdir(args.dir)
 
     step = 0
+    warned_missing = False
     try:
         while args.steps is None or step < args.steps:
             step += 1
@@ -37,6 +38,12 @@ def main():
                     content = f.read()
                 if not args.keep_inst:
                     open(inst, "w").close()
+            elif not warned_missing:
+                warned_missing = True
+                print(
+                    f"aos-loop: {args.dir} 裡沒有 .aos/inst，這個資料夾沒有心跳指令，每圈都會是空的",
+                    file=sys.stderr,
+                )
 
             if content.strip():
                 rc = os.waitstatus_to_exitcode(os.system(content))
