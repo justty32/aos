@@ -16,6 +16,9 @@ def die(msg):
 
 
 def main():
+    os.environ["PATH"] = (
+        os.path.dirname(os.path.abspath(sys.argv[0])) + os.pathsep + os.environ.get("PATH", "")
+    )
     if len(sys.argv) != 2:
         die("用法：aos-exec <path>")
     path = os.path.abspath(sys.argv[1])

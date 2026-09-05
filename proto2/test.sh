@@ -103,13 +103,13 @@ rm -rf "$TMP"
 check "aos-loop 資料夾不存在回 2" 2 "$RC"
 
 # 10. 範例資料夾複本開箱即用：附帶的 .aos/inst 不用額外設定就能被 aos-loop 叫到 step
-#     （複本放在 examples/ 底下同一層，跟真正的 examples/agent 保持一樣的相對深度——
-#     .aos/inst 裡是 ../../aos-agent-step，複本要是搬到別的深度這條相對路徑就失效；
+#     （.aos/inst 現在只寫 aos-agent-step . --no-write-inst，aos-loop 執行前會把自己所在
+#     目錄加進 PATH，複本放到任意 mktemp -d 都找得到指令，不用再跟 examples/ 保持同一層深度；
 #     沒人跑 LLM 資料夾沒關係，第一格 idle 收信、第二格 llm 把請求丟出去就換 wait，
 #     一樣算走了兩格，只看 state.json 的 step 有沒有從 0 變 2。靜態檔用 git 索引裡的內容組，不直接
 #     cp 真的範例——README 教使用者拿 aos-loop --keep-inst 長期盯著真的範例跑，
 #     state.json／hello.json 隨時可能正被用掉，cp 會撿到不確定的當下狀態）
-TMP=$(mktemp -d -p "$HERE/examples")
+TMP=$(mktemp -d)
 TMPLLM=$(mktemp -d)
 mkdir -p "$TMP/.aos/agent/new-prompts"
 git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/new-prompts/hello.json \
@@ -312,9 +312,7 @@ fi
 rm -rf "$TMP"
 
 # 16. aos-llm-ask：丟一個請求、等 aos-loop 那頭跑出結果、印出來、把結果檔拿走
-#     （複本放在 examples/ 底下同一層，llm 範例的 .aos/inst 是 ../../aos-llm-step，
-#     跟 agent 範例一樣靠這條相對路徑找到執行檔）
-TMP=$(mktemp -d -p "$HERE/examples"); prep_llm "$TMP"
+TMP=$(mktemp -d); prep_llm "$TMP"
 "$LOOP" "$TMP" --keep-inst --interval 0 --steps 20 >/dev/null 2>&1 &
 ASK_LOOP=$!
 OUT=$(echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
@@ -420,10 +418,9 @@ rm -rf "$TMP"
 #     （agent 只要 8 格就走得完，給 30 格是留給「這格 wait 還沒等到」的空轉，
 #     多出來的格數在 idle 空等，不影響結果）
 TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-echo "$LLMSTEP ." > "$TMP/llm/.aos/inst"   # 這份複本不在 examples/ 底下，範例的相對路徑解不到
 "$LOOP" "$TMP/llm" --keep-inst --steps 200 --interval 0 >/dev/null 2>&1 &
 LLM_LOOP=$!
-mkdir -p "$TMP/agent/.aos"; echo "$STEP ." > "$TMP/agent/.aos/inst"
+echo "$STEP ." > "$TMP/agent/.aos/inst"
 "$LOOP" "$TMP/agent" --steps 30 --interval 0.05 >/dev/null 2>&1
 kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
 if [ "$(cat "$TMP/agent/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$TMP/agent")" = "idle" ]; then
@@ -435,10 +432,9 @@ rm -rf "$TMP"
 
 # 21. 推薦用法：.aos/inst 寫一次，aos-loop --keep-inst 不清空，step 也不用寫回
 TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-echo "$LLMSTEP ." > "$TMP/llm/.aos/inst"   # 這份複本不在 examples/ 底下，範例的相對路徑解不到
 "$LOOP" "$TMP/llm" --keep-inst --steps 200 --interval 0 >/dev/null 2>&1 &
 LLM_LOOP=$!
-mkdir -p "$TMP/agent/.aos"; echo "$STEP . --no-write-inst" > "$TMP/agent/.aos/inst"
+cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
 "$LOOP" "$TMP/agent" --steps 30 --interval 0.05 --keep-inst >/dev/null 2>&1
 kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
 if [ "$(cat "$TMP/agent/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$TMP/agent")" = "idle" ]; then

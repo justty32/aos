@@ -79,6 +79,10 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
 
 見 [reflections.md](../wf/workflows/ideas/reflections.md)：邊緣狀況想太早了，先做最小的那句話。
 
+## 放進 PATH
+
+`aos-exec`／`aos-loop` 會自動把自己所在的資料夾加進 PATH，`.aos/inst` 裡直接寫工具名就找得到；終端機直接打的 `talk`／`say`／`ask` 要自己設一次：`export PATH="$PWD/proto2:$PATH"`。`llm.json` 的 `../llm` 相對於 agent 資料夾，agent 跟 llm 要當兄弟目錄一起搬。
+
 ## 怎麼玩
 
 兩個範例資料夾都附好 `.aos/inst` 了，開三個終端機：
@@ -89,11 +93,10 @@ proto2/aos-loop proto2/examples/agent --keep-inst    # 2：agent
 proto2/aos-agent-talk proto2/examples/agent          # 3：聊天
 ```
 
-`examples/agent/.aos/agent/llm.json` 是 `{"dir": "../llm"}`，指的就是終端機 1 那個資料夾。
-agent 沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）、終端機 2 是不是一直印
-`等 LLM`（終端機 1 沒在轉），或 `沒有 .aos/inst`（資料夾沒附心跳指令）。
-不想開 agent、只想問一句話：`echo '{"messages":[{"role":"user","content":"1+1=?"}]}' |
-proto2/aos-llm-ask proto2/examples/llm`。
+`examples/agent/.aos/agent/llm.json` 是 `{"dir": "../llm"}`，指的就是終端機 1 那個資料夾。agent
+沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）、終端機 2 是不是一直印 `等 LLM`
+（終端機 1 沒在轉），或 `沒有 .aos/inst`（資料夾沒附心跳指令）。不想開 agent、只想問一句話：
+`echo '{"messages":[{"role":"user","content":"1+1=?"}]}' | proto2/aos-llm-ask proto2/examples/llm`。
 
 其他跑法：
 ```sh

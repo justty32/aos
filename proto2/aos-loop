@@ -13,6 +13,9 @@ import time
 
 
 def main():
+    os.environ["PATH"] = (
+        os.path.dirname(os.path.abspath(sys.argv[0])) + os.pathsep + os.environ.get("PATH", "")
+    )
     ap = argparse.ArgumentParser(prog="aos-loop")
     ap.add_argument("dir", nargs="?", default=".")
     ap.add_argument("--steps", type=int, default=None)
@@ -47,7 +50,8 @@ def main():
 
             if content.strip():
                 rc = os.waitstatus_to_exitcode(os.system(content))
-                print(f"aos-loop: step {step} exit {rc}", file=sys.stderr)
+                hint = "（127 通常是找不到指令）" if rc == 127 else ""
+                print(f"aos-loop: step {step} exit {rc}{hint}", file=sys.stderr)
             else:
                 print(f"aos-loop: step {step} empty", file=sys.stderr)
                 if args.stop_when_empty:
