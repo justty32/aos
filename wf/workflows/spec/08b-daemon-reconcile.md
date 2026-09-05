@@ -34,6 +34,7 @@ daemon 起來第一件事是拿登記表跟磁碟對帳：哪些鐘還在走、�
 - **S-08-90** daemon 必須替自己起的子行程收屍（忽略 `SIGCHLD` 或 `waitpid(WNOHANG)`）；殭屍禁止算成活著，不然那個 pid 還在、對帳永遠不會把它改成 `stopped`。〔主編補〕
 - **S-08-73** `every` 的 run 因為沒新指令而正常退出時，那筆登記必須保留成 `stopped`；下次到期由 daemon 重起一支新的 run。〔主編補〕
 - **S-08-74** `once` 的 run 跑完必須刪掉那筆登記；`steps` 與 `until` 跑完標成 `stopped`，禁止重起。〔主編補〕
+- **S-08-99** daemon 對帳看到脫節子地已停，結果與狀態檔都沒有時，必須依停止原因代寫：`idle`／`budget`／`steps_done` → `no_result`；`failed`／`parse_error`／`stalled` → `child_failed`；`signal`／`control_stop` → `killed`。`ext.stopped_reason` 必須原樣保留停止原因，寫完才能刪登記或重起。〔裁決 2026-09-05〕
 - **S-08-91** `--until never` 的登記（伺服器型的地，例如 LLM 世界）必須照 `every` 那條辦：run 退出後保留登記，到期由 daemon 重起。〔主編補〕
 - **S-08-95** 每筆必須收一個可選欄 `last_started_at`：daemon 起那支 run 時寫，run 自己 `--register` 時也寫；沒起過就沒有這欄。〔主編補〕
 - **S-08-96** 「到期」必須這樣算：`last_started_at` 加上 `clock.every_ms` 已經過了就算到期。沒有 `last_started_at` 的 `every` 筆一律當成到期，立刻起一支。〔主編補〕
@@ -42,7 +43,7 @@ daemon 起來第一件事是拿登記表跟磁碟對帳：哪些鐘還在走、�
 
 - **S-08-75** daemon 禁止刪父地上的任何東西：結果檔、狀態檔、用量檔都不准碰。它只看得到自己管的那塊地。〔主編補〕
 - **S-08-41** 一塊脫節子地閒著、`stopped` 超過使用者層的 `reap_after_ms`（牆鐘），daemon 必須刪掉那塊地本身與它那筆登記。〔裁決 2026-09-05，數字之後可改〕
-- **S-08-76** 刪之前必須看那筆的 `ext.result`：落點沒有結果檔就代寫 `<結果落點>.status.json`、`reason` 填 `reaped`，讓父看到的是「壞了」而不是「還沒好」。〔主編補〕
+- **S-08-76** 刪之前必須看那筆的 `result`：落點沒有結果檔就代寫 `<結果落點>.status.json`、`reason` 填 `reaped`，讓父看到的是「壞了」而不是「還沒好」。〔主編補〕
 - **S-08-42** 暫態的地建議由開它的父讀完結果就刪；巡邏只當保底。〔裁決 2026-09-05〕
 
 ## `aos daemon stop`：一次全停
@@ -52,7 +53,7 @@ daemon 起來第一件事是拿登記表跟磁碟對帳：哪些鐘還在走、�
 - **S-08-46** 等超過 10 秒還沒停的，必須對那個行程群組送 SIGKILL，再改成 `stopped`。〔主編補〕
 - **S-08-92** `aos daemon stop` 停掉的每一筆，除了改成 `stopped`，必須把 `resume` 設成 `true`；不設的話全停之後再 start，那些地就再也不會被接回去跑。〔主編補〕
 - **S-08-47** daemon 不在時 `aos daemon stop` 必須先做一次完整對帳，再照上兩條全停。〔主編補〕
-- **S-08-48** 全停時被 SIGKILL 殺掉的脫節子地寫不出結果，daemon 必須在那筆的 `ext.result` 指的落點旁補一份 `<結果落點>.status.json`，`reason` 寫 `killed`。〔主編補〕
+- **S-08-48** 全停時被 SIGKILL 殺掉的脫節子地寫不出結果，daemon 必須在那筆的 `result` 指的落點旁補一份 `<結果落點>.status.json`，`reason` 寫 `killed`。〔主編補〕
 - **S-08-49** 理由必須寫進文件：不補狀態檔，父的 `await` 會一直等一個永遠不會來的結果。〔主編補〕
 - **S-08-78** `aos stop --kill <地>` 之後 daemon 必須做同樣的代寫；殺掉不是只送一個訊號就算完。〔主編補〕
 - **S-08-93** `aos stop --kill <地>` 找 pid 必須有兩個來源：登記表那筆，以及那塊地 `.aos/lock` 裡的 `pid`；沒登記的 run 只有鎖檔查得到。〔主編補〕
@@ -93,6 +94,7 @@ daemon 起來第一件事是拿登記表跟磁碟對帳：哪些鐘還在走、�
 - S-08-95 `last_started_at` 欄。〔主編補〕
 - S-08-96 到期怎麼算。〔主編補〕
 - S-08-74 `once` 刪登記，`steps`／`until` 標停。〔主編補〕
+- S-08-99 子地停下卻漏結果時，八種原始停止原因逐種映成三種狀態，原因留在 `ext.stopped_reason`。〔裁決 2026-09-05〕
 - S-08-91 `--until never` 照 `every` 辦。〔主編補〕
 - S-08-75 daemon 不刪父地上的檔。〔主編補〕
 - S-08-76 刪前代寫 `reaped` 狀態檔。〔主編補〕

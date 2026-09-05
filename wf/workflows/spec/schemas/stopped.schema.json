@@ -5,7 +5,7 @@
   "description": "一支 aos run 停下來時寫的檔：為什麼停、停在第幾格、停在哪條串哪一步。run 開始時先刪舊的，停下時寫一份新的。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format_version", "reason", "tick", "series", "step", "message", "at"],
+  "required": ["format_version", "reason", "tick", "busy_ticks", "series", "step", "message", "at"],
   "properties": {
     "format_version": {
       "type": "integer",
@@ -32,6 +32,11 @@
       "type": "integer",
       "minimum": 0,
       "description": "停下來時接力棒上的格號。"
+    },
+    "busy_ticks": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "這一批至少有一步真的做事的格數，抄自接力棒；沒有接力棒就填 0。"
     },
     "series": {
       "type": ["string", "null"],

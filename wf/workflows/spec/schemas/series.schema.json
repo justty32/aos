@@ -9,6 +9,7 @@
     "format_version",
     "batch_id",
     "tick",
+    "busy_ticks",
     "recent_ids",
     "series"
   ],
@@ -24,6 +25,11 @@
     },
     "tick": {
       "description": "最近一次寫回時剛跑完那一格的格號；載入那一刻是 0。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "busy_ticks": {
+      "description": "這一批至少有一步真的做事的格數；一格最多加一。只檢查、睡覺或仍在等不算。",
       "type": "integer",
       "minimum": 0
     },

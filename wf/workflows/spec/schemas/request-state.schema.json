@@ -5,7 +5,7 @@
   "description": "LLM 世界為每一筆請求維護的 <llm_world>/.aos/requests/<request id>.json。請求者用 aos status --request <id> 讀它。它只給人與 aos status 看；成敗一律以結果落點與狀態檔為準。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format_version", "id", "from", "state", "updated_at", "request"],
+  "required": ["format_version", "id", "from", "state", "unit", "prompt", "result", "updated_at", "request", "ext"],
   "properties": {
     "format_version": {
       "description": "這個檔的格式版本，第一版 1。",
@@ -49,8 +49,9 @@
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
     },
     "request": {
-      "description": "原始投遞物整份原文，取件時一字不動搬進來，處理完不刪。出事時這是唯一能回頭看「當初投了什麼」的地方。形狀見 llm-request.schema.json。",
-      "type": "object"
+      "description": "相對於 LLM 世界 .aos/ 的原件路徑。未收場指向 llm-inflight/<id>.json，收場後指向 llm-done/<id>.json；原件內容一字不動。",
+      "type": "string",
+      "pattern": "^llm-(inflight|done)/[A-Za-z0-9_-]{1,64}\\.json$"
     },
     "ext": {
       "description": "具名擴充區。配不到同 tier 的單元時，waiting_tier 記在等哪個 tier。",

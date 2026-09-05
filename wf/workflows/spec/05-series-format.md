@@ -1,7 +1,7 @@
 # 05 接力棒 series.json
 ← [入口](README.md)
 
-接力棒是 `.aos/series.json`。一塊地上「這一批有哪幾條串、各跑到哪」全記在這一個檔裡。兩格之間程式不存在，下一格全靠讀它接上。欄位正本是 [schemas/series.schema.json](schemas/series.schema.json)；暫存器怎麼替換、兩種壽命、這個檔誰能寫，在 [05b](05b-series-lifetimes.md)。
+接力棒是 `.aos/series.json`，記這批有哪些串、各跑到哪。兩格之間程式不存在，下一格全靠它接上。欄位正本是 [series.schema.json](schemas/series.schema.json)；暫存器與寫者見 [05b](05b-series-lifetimes.md)。
 
 ## 一、為什麼是一個檔
 
@@ -22,6 +22,7 @@
 - **S-05-47** exec 取件時，投遞 id 已經在 `recent_ids` 裡的必須拒收；控制收件匣的去重另外記，禁止共用這一欄。〔主編補〕
 - **S-05-48** 跨重啟還認得舊 id，必須以 `.aos/` 是持久的為前提；`.aos/` 放在 tmpfs 上時，去重禁止被當成保證。〔主編補〕
 - **S-05-58** 收件匣的投遞 id 去重必須只靠 `recent_ids`，禁止另外開一個去重檔或去重目錄。〔主編補〕
+- **S-05-62** 檔頭必須有整數 `busy_ticks`，載入時是 `0`。一格至少有一步做事才加 `1`，一格最多加一次：`inst` 有執行、`call` 有開出或推進子地、`await` 取得結果或狀態並往下判，都算；只檢查、睡覺或仍在等不算，成敗不影響。〔裁決 2026-09-05〕
 
 ## 三、一條串記什麼
 
@@ -77,20 +78,17 @@
 
 ## 八、範例
 
-兩條串：一條停在 `await` 步在等（已經等了 3 格），一條已經跑完。
+一條在等 3 格，一條已跑完：
 
 ```json
 {
-  "format_version": 1,
-  "batch_id": "9f2c1a4b7e0d43a6b8c5f1e2d3a49b70",
-  "tick": 12,
+  "format_version": 1, "batch_id": "9f2c1a4b7e0d43a6b8c5f1e2d3a49b70",
+  "tick": 12, "busy_ticks": 8,
   "recent_ids": ["a3f0091c2b7d4e5f8091a2b3c4d5e6f7"],
   "series": [
     {
-      "id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
-      "template": "main",
-      "cursor": "wait_report",
-      "status": "running",
+      "id": "0a1b2c3d4e5f60718293a4b5c6d7e8f9", "template": "main",
+      "cursor": "wait_report", "status": "running",
       "regs": { "who": "alice" },
       "parent": null,
       "fail_streak": 0,
@@ -99,13 +97,8 @@
       "resources": { "ticks": 4, "llm_calls": 1, "priority": 5 }
     },
     {
-      "id": "112233445566778899aabbccddeeff00",
-      "template": "fetch_prices",
-      "cursor": "end",
-      "status": "done",
-      "regs": {},
-      "parent": null,
-      "fail_streak": 0,
+      "id": "112233445566778899aabbccddeeff00", "template": "fetch_prices",
+      "cursor": "end", "status": "done", "regs": {}, "parent": null, "fail_streak": 0,
       "ext": {}
     }
   ]
@@ -118,11 +111,10 @@
 
 〔主編補〕：
 
-- S-05-04 一格讀一次、寫一次整份。
-- S-05-06 `format_version` 是整數 `1`。
-- S-05-07／08 `batch_id` 載入時產，重新載入換新。
-- S-05-09／10 `tick` 記剛跑完那格，這格是 `tick + 1`。
-- S-05-11～13 串 id 是 32 hex；`template` 對應 `.aos/program/`；`cursor` 寫步名不寫數字。
+- S-05-04 一格讀寫一次整份；S-05-06 版本是整數 `1`。
+- S-05-07～10 `batch_id` 載入時產、重載換新；`tick` 記剛跑完那格。
+- S-05-62 `busy_ticks` 只數至少有一步真的做事的格。〔裁決 2026-09-05〕
+- S-05-11～13 串 id 是 32 hex；`template` 對應程式；`cursor` 寫步名。
 - S-05-16 `parent` 語意；遞迴＝同模板多筆。
 - S-05-18 `fail_reason` 與狀態檔共用短代碼。
 - S-05-21／24 誕生是 `running`；非 `running` 跳過。

@@ -54,7 +54,9 @@
 | `<結果落點>.status.json` | 狀態檔，壞了才有 | 子地的 run；子被殺時 daemon 補寫（唯一的雙 writer 例外，見 [07](07-call-and-delivery.md)） | 父的 `await` | 失敗那一刻 | 否 | 否 |
 | `<結果落點>.usage.json` | 那筆 LLM 請求用掉多少 | LLM 世界 | 父、agent | 回覆寫完 | 否 | 否 |
 | `.aos/units.json` | 處理單元表，只有 LLM 世界有，含 `api_key_env` 名稱 | daemon | LLM 世界的圈 | daemon 起它時 | 絕不 | 否 |
-| `.aos/requests/<request id>.json` | 一筆 LLM 請求的處理紀錄，只有 LLM 世界有 | LLM 世界 | LLM 世界、`aos status` | 收到請求時 | 否 | 否 |
+| `.aos/llm-inflight/<request id>.json` | 尚未做完的 LLM 投遞物原件 | LLM 世界 | LLM 世界 | 收到合法請求時 | 否 | 否 |
+| `.aos/llm-done/<request id>.json` | 已做完的 LLM 投遞物原件 | LLM 世界 | 人 | 請求收場時 | 否 | 否 |
+| `.aos/requests/<request id>.json` | 一筆 LLM 請求的進度，不是投遞物原件 | LLM 世界 | LLM 世界、`aos status` | 收到合法請求時 | 否 | 否 |
 | `.aos/usage.json` | agent 累計用量，只有 agent 有 | agent 的圈 | agent 的圈 | 第一圈跑完 | 否 | 是 |
 | `.aos/stopped.json` | 停止原因檔 | exec（串失敗）／run（開跑先刪、停時必寫）／daemon（`--kill` 後代寫） | 人 | run 停下時 | 否 | 否 |
 | `.aos/errors.log` | jsonl，寄件人解析不出的投遞這類雜錯 | exec | 人 | 第一次出錯 | 否 | 否 |
@@ -79,6 +81,7 @@
 - **S-02-18** `.gitignore` 政策必須是一份全域規範，`aos init` 產出片段；一塊地禁止自己決定 `.aos/` 裡哪些進 git。〔裁決 2026-09-05〕
 - **S-02-19** 工具登記表與通訊錄必須留在 `.aos/`，人只透過 `aos tool`／`aos contact` 寫；是靜態設定，進 git。〔主編補〕
 - **S-02-20** 存檔、回滾、複製重跑必須用 git 做，禁止 aos 自己發明一套版本邊界。〔裁決 2026-08-28〕
+- **S-02-48** LLM 世界必須把投遞物原件與進度分開：原件只在 `.aos/llm-inflight/`、`.aos/llm-done/` 之間改名搬動，進度只放 `.aos/requests/`。〔裁決 2026-09-05〕
 
 ## 兩個版本欄
 
@@ -111,6 +114,7 @@
 - S-02-16 機器暫存不進 git。〔主編補〕
 - S-02-17 「記憶」與「進 git」是兩欄；帳簿是記憶但不進 git。〔主編補〕
 - S-02-19 工具登記表與通訊錄留在 `.aos/`，人只透過子命令寫。〔主編補〕
+- S-02-48 LLM 投遞物原件與請求進度分三個目錄放。〔裁決 2026-09-05〕
 - S-02-21 版面版本放 `.aos/layout.json`。〔預設，L-04〕
 - S-02-22 各 json 各有 `format_version`。〔預設，L-04〕
 - 矛盾：登記表裡的時鐘規格像世界記憶（刪了那塊地就永遠不會自己走），但同一份檔裝著行程編號這種暫存。我選「整份 `registry.json` 算暫存、不進 git」，因為回滾一份含行程編號的檔會讓 daemon 認錯活人；代價是重開機後時鐘要由父或使用者重新登記。

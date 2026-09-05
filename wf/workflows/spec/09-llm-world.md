@@ -1,7 +1,7 @@
 # 09 LLM 世界
 ← [入口](README.md)
 
-LLM 不是一筆指令，是另一塊地。它慢、貴、時間看外面決定，誰都不許在自己的行程裡等它。要用就往它的收件匣投一筆請求，回話落在你指定的結果落點。這份檔規定：地在哪、誰起它、請求長什麼樣、單元表放哪、帳簿記什麼、`aos llm` 的形狀。**走一輪、排隊、重啟、請求狀態在 [09b](09b-llm-queue.md)。**
+LLM 不是指令，是另一塊地；要用就投請求，回話落在指定落點。本章規定請求、單元表、帳簿與 `aos llm`；排隊、重啟、進度見 [09b](09b-llm-queue.md)。
 
 ## 這塊地在哪、誰看管
 
@@ -53,7 +53,7 @@ LLM 不是一筆指令，是另一塊地。它慢、貴、時間看外面決定�
 - **S-09-38** 每一次打後端（成功失敗都算）必須在 `$AOS_HOME/.aos/ledger.jsonl` 追加一行；排隊逾時與寫壞退回的也各記一行。〔裁決 2026-09-05〕
 - **S-09-39** 帳簿必須只記帳：禁止拿它做配額或排隊。〔裁決 2026-09-05〕
 - **S-09-40** 帳簿必須是 jsonl、只准追加；禁止回頭改寫下的行。〔主編補〕
-- **S-09-41** 一行必須有 `at`、`request_id`、`from`、`unit`、`tier`、`tokens_in`、`tokens_out`、`tokens_source`、`ms`、`outcome`。〔主編補〕
+- **S-09-41** 一行必須有 `at`、`request_id`、`from`、`unit`、`tier`、`tokens_in`、`tokens_out`、`tokens_reasoning`、`tokens_source`、`ms`、`outcome`。`tokens_reasoning` 是思考 token，後端沒分開回就填 `null`；`tokens_out` 只算回話。〔裁決 2026-09-05〕
 - **S-09-79** `tokens_source` 必須是 `"reported"`（後端回的）或 `"estimated"`（自己估的）；禁止把估的當真的記，也禁止拿 0 當「不知道」。〔主編補〕
 - **S-09-80** `outcome` 必須是 `ok`、`backend_error`、`queue_timeout`、`rejected`、`result_unknown`、`killed` 六個之一，且必須跟狀態檔的 `reason` 對得上。〔主編補〕
 - **S-09-42** 帳簿的行禁止有 `format_version`：一行不是一份文件，要改格式必須另開檔名。〔主編補〕
@@ -74,7 +74,7 @@ LLM 不是一筆指令，是另一塊地。它慢、貴、時間看外面決定�
 
 ## 範例
 
-一筆請求（`<llm_world>/.aos/inbox/<id>.json`）：
+一筆請求：
 
 ```json
 {
@@ -86,13 +86,13 @@ LLM 不是一筆指令，是另一塊地。它慢、貴、時間看外面決定�
 }
 ```
 
-帳簿的一行（`$AOS_HOME/.aos/ledger.jsonl`）：
+帳簿一行：
 
 ```json
-{"at":"2026-09-05T12:00:04.120Z","request_id":"7f3a1c2b9d4e5061728394a5b6c7d8e9","from":"/home/u/proj/writer","unit":"local-smart","tier":"smart","tokens_in":812,"tokens_out":233,"tokens_source":"reported","ms":4103,"outcome":"ok"}
+{"at":"2026-09-05T12:00:04.120Z","request_id":"7f3a1c2b9d4e5061728394a5b6c7d8e9","from":"/home/u/proj/writer","unit":"local-smart","tier":"smart","tokens_in":812,"tokens_out":233,"tokens_reasoning":4100,"tokens_source":"reported","ms":4103,"outcome":"ok"}
 ```
 
-daemon 抄給 LLM 世界的單元表（`<llm_world>/.aos/units.json`）：
+daemon 抄給 LLM 世界的單元表：
 
 ```json
 {
@@ -108,8 +108,7 @@ daemon 抄給 LLM 世界的單元表（`<llm_world>/.aos/units.json`）：
 
 沒標〔預設〕的一律〔主編補〕。括號裡是原始的邊緣狀況編號。
 
-- S-09-02 位置預設 `$AOS_HOME/.aos/llm/`。
-- S-09-07 不為每筆請求開一塊地（主編裁的矛盾 #4）。
+- S-09-02 位置預設 `$AOS_HOME/.aos/llm/`；S-09-07 不為每筆請求開地。
 - S-09-08、S-09-75 相對路徑基準是 `from` 那塊地、禁止指進 `.aos/`、取件時展開（X3、P2）。
 - S-09-09～S-09-12、S-09-18 請求的版本、id、來源、時間、prompt 走路徑，不認得的欄位就拒收。
 - S-09-76 `tools` 是塞進 prompt 的文字行，不是後端的工具呼叫（P20）。
@@ -118,7 +117,7 @@ daemon 抄給 LLM 世界的單元表（`<llm_world>/.aos/units.json`）：
 - S-09-77、S-09-78 保留 `echo:`／`fail:`／`slow:` 三個假後端；測試禁打真網路（P18）。
 - S-09-53～S-09-55 daemon 抄一份 `.aos/units.json`、它禁止讀家的設定檔（S06）、agent 的 token 上限讀 `.usage.json`（X5）。
 - S-09-35、S-09-37 只記金鑰的環境變數名；一般世界不准有 `units`。
-- S-09-40～S-09-42 帳簿只准追加、一行有哪些欄、行裡沒版本欄。
+- S-09-40、S-09-42 帳簿只准追加、行裡沒版本欄。〔主編補〕｜S-09-41 正式拆出 `tokens_reasoning`，`tokens_out` 不含思考。〔裁決 2026-09-05〕
 - S-09-79、S-09-80 `tokens_source` 分清估的與報的；`outcome` 六個值定死（P17）。
 - S-09-45～S-09-57 退出碼只管跑沒跑起來，可否重試寫封套／狀態檔。〔裁決 2026-09-05〕｜S-09-43、44、46、47、81 過濾器、旗標、錯誤內容與 serve 退出碼。〔主編補〕
 - S-09-58、S-09-82 `aos llm` 只准 LLM 世界用（B38）；`aos llm ask` 這顆糖（P22）。
