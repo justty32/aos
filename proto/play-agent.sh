@@ -103,7 +103,6 @@ cat > "$AOS_HOME/.aos/config.json" <<JSON
   "format_version": 1,
   "llm_world": "$LLMWORLD",
   "max_parallel": 2,
-  "max_wait_ms": 600000,
   "units": [
     {"name": "lmstudio", "endpoint": "$BACKEND", "model": "$MODEL",
      "tier": "fast", "max_parallel": 1, "api_key_env": null, "timeout_ms": 600000},

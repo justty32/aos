@@ -11,7 +11,10 @@ if PROTO not in sys.path:
     sys.path.insert(0, PROTO)
 
 from aosp import exits, fsutil  # noqa: E402
-from .helpers import LandCase, write_source, run_cli  # noqa: E402
+try:
+    from .helpers import LandCase, write_source, run_cli  # noqa: E402
+except ImportError:
+    from helpers import LandCase, write_source, run_cli  # noqa: E402
 
 PY = sys.executable
 
@@ -90,3 +93,35 @@ class TestRunLockBusy(LandCase):
                               msg="鎖被佔時跑 run 該退出碼 75，實際 %r，stderr=%r" % (rc, err))
         finally:
             lock.release()
+
+
+class TestBusyTicks(LandCase):
+    def test_status_separates_total_ticks_from_busy_ticks(self):
+        write_source(self.land, [
+            {"name": "work", "kind": "inst", "inst": {"argv": [PY, "-c", "pass"]},
+             "then": "wait"},
+            {"name": "wait", "kind": "await", "result": "never.out", "then": "end"},
+        ])
+        rc, _out, _err = run_cli("run", self.land.root, "--budget", "4")
+        self.assertEqual(rc, exits.STOPPED)
+        baton = fsutil.read_json(self.land.series)
+        stopped = fsutil.read_json(self.land.stopped)
+        self.assertEqual(baton.get("tick"), 4)
+        self.assertEqual(baton.get("busy_ticks"), 1)
+        self.assertEqual(stopped.get("busy_ticks"), 1)
+
+        rc, out, err = run_cli("status", self.land.root)
+        self.assertEqual(rc, exits.OK, msg=err)
+        self.assertIn("格 4（做事 1）", out)
+
+    def test_separate_exec_commands_also_accumulate_busy_ticks(self):
+        write_source(self.land, [
+            {"name": "one", "kind": "inst", "inst": {"argv": [PY, "-c", "pass"]},
+             "then": "two"},
+            {"name": "two", "kind": "await", "result": "never.out", "then": "end"},
+        ])
+        self.assertEqual(run_cli("exec", self.land.root)[0], exits.OK)
+        self.assertEqual(run_cli("exec", self.land.root)[0], exits.OK)
+        rc, out, err = run_cli("status", self.land.root)
+        self.assertEqual(rc, exits.OK, msg=err)
+        self.assertIn("格 2（做事 1）", out)

@@ -7,7 +7,10 @@ if PROTO not in sys.path:
     sys.path.insert(0, PROTO)
 
 from aosp import fsutil, inbox, layout  # noqa: E402
-from .helpers import LandCase  # noqa: E402
+try:
+    from .helpers import LandCase  # noqa: E402
+except ImportError:
+    from helpers import LandCase  # noqa: E402
 
 
 def _scan_kind(land, kind):

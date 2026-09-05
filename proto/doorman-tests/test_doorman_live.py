@@ -11,11 +11,12 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROTO = os.path.dirname(HERE)
 sys.path.insert(0, PROTO)
-import doorman  # noqa: E402
+from aosp import doorman  # noqa: E402
 
 from test_doorman import LAND_ID, make_land  # noqa: E402
 
 SCRIPT = os.path.join(PROTO, "doorman.py")
+AOS_PY = os.path.join(PROTO, "aos.py")
 TIMEOUT_S = 10.0
 
 
@@ -211,6 +212,20 @@ class TestCli(unittest.TestCase):
         os.makedirs(home)
         land = make_land(root, "a")
         r = self.run_it(root, "--home", home, "--once")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        reg = doorman.read_json(os.path.join(home, ".aos", "registry.json"))
+        self.assertEqual([e["path"] for e in reg["entries"]], [land])
+
+    def test_aos_doorman_subcommand_runs_the_same_core(self):
+        tmp = tempfile.mkdtemp(prefix="aos-doorman-once.")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        root = os.path.join(tmp, "root")
+        home = os.path.join(tmp, "home")
+        os.makedirs(root)
+        os.makedirs(home)
+        land = make_land(root, "a")
+        r = subprocess.run([sys.executable, AOS_PY, "doorman", root, "--home", home,
+                            "--once", "--quiet"], capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         reg = doorman.read_json(os.path.join(home, ".aos", "registry.json"))
         self.assertEqual([e["path"] for e in reg["entries"]], [land])

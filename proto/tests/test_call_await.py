@@ -7,8 +7,11 @@ PROTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROTO not in sys.path:
     sys.path.insert(0, PROTO)
 
-from aosp import execute, fsutil, layout, registry, series as S, status  # noqa: E402
-from .helpers import LandCase, write_source  # noqa: E402
+from aosp import execute, fsutil, layout, loader, registry, series as S, status  # noqa: E402
+try:  # `discover proto/tests` 會把測試當頂層模組載入；`-t .` 則走 package。
+    from .helpers import LandCase, write_source, run_cli  # noqa: E402
+except ImportError:
+    from helpers import LandCase, write_source, run_cli  # noqa: E402
 
 PY = sys.executable
 
@@ -92,6 +95,57 @@ class TestChildEnvVars(LandCase):
                           msg="子指令的 AOS_CALLER 應該是父地路徑，實際 %r" % dumped)
         self.assertEqual(dumped["arg_foo"], "bar",
                           msg="args.foo 應該變成 AOS_ARG_FOO 環境變數，實際 %r" % dumped)
+
+
+class TestResultPathPreflight(LandCase):
+    def setUp(self):
+        super().setUp()
+        for child_name in ("child-a", "child-b"):
+            child = layout.Land(os.path.join(self.land.root, child_name))
+            layout.init(child.root)
+            write_source(child, [
+                {"name": "done", "kind": "inst", "inst": {"argv": [PY, "-c", "pass"]},
+                 "then": "end"},
+            ])
+
+    def test_two_calls_to_same_result_reject_the_whole_tick(self):
+        write_source(self.land, [
+            {"name": "call-child", "kind": "call", "child": "child-a", "mode": "sync",
+             "result": "out/shared.done", "then": "end"},
+        ], name="call-a")
+        write_source(self.land, [
+            {"name": "call-child", "kind": "call", "child": "child-b", "mode": "sync",
+             "result": "out/shared.done", "then": "end"},
+        ], name="call-b")
+        baton = S.empty()
+        baton["series"] = [S.new_series("call-a", "call-child"),
+                           S.new_series("call-b", "call-child")]
+        S.save(self.land, baton)
+
+        with self.assertRaises(loader.ParseError) as caught:
+            execute.exec_once(self.land)
+        self.assertIn(self.land.resolve("out/shared.done"), str(caught.exception))
+        self.assertEqual(os.listdir(self.land.calls_dir), [],
+                         msg="整格拒跑時不得先開其中一筆呼叫")
+        after = S.load(self.land)
+        self.assertEqual(after["tick"], 0, msg="整格拒跑時格號不得前進")
+
+    def test_uncleared_result_status_or_usage_rejects_with_exit_three(self):
+        write_source(self.land, [
+            {"name": "call-child", "kind": "call", "child": "child-a", "mode": "sync",
+             "result": "out/reused.done", "then": "end"},
+        ])
+        result = self.land.resolve("out/reused.done")
+        fsutil.ensure_dir(os.path.dirname(result))
+        for occupied in (result, status.status_path(result), result + ".usage.json"):
+            with self.subTest(occupied=occupied):
+                fsutil.atomic_write_text(occupied, "上一輪留下的")
+                rc, _out, err = run_cli("exec", self.land.root)
+                self.assertEqual(rc, 3, msg="stderr=%r" % err)
+                self.assertIn(occupied, err, msg="錯誤訊息要指出是哪個檔已存在")
+                self.assertEqual(os.listdir(self.land.calls_dir), [],
+                                 msg="解析拒絕時不得留下呼叫記錄")
+                os.unlink(occupied)
 
 
 class TestAwaitThreeStates(LandCase):

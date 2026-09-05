@@ -8,26 +8,28 @@
 import datetime
 import json
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
 
 from . import exits, fsutil, inbox, layout, status
 
-# 處理完的請求搬到這裡（不要人間蒸發）
-DONE_DIR = "llm-done"
+# 請求的三段生命週期：收件匣排隊 → 已送出等回話 → 已完成留存。
+INFLIGHT_DIR = "llm-inflight"
+REQUESTS_DIR = "requests"
 # aos llm ask 的暫存 prompt／結果
 ASK_DIR = "llm-ask"
 
 DEFAULT_MAX_PARALLEL = 4
-DEFAULT_MAX_WAIT_MS = 30000
-DEFAULT_HTTP_TIMEOUT_MS = 60000
+DEFAULT_MAX_WAIT_MS = 600000
 
 # outcome 的字彙（spec 只說有 `outcome` 欄，沒說有哪些值——見 FINDINGS）
 OUT_OK = "ok"
 OUT_BACKEND_ERROR = "backend_error"
 OUT_QUEUE_TIMEOUT = "queue_timeout"
 OUT_REJECTED = "rejected"
+OUT_RESULT_UNKNOWN = "result_unknown"
 
 # 預設處理單元表：一律假後端，不打網路
 DEFAULT_UNITS = [
@@ -117,7 +119,8 @@ def init_llm_world(home=None):
     """
     h = _home(home)
     land, _created = layout.init(h.llm_world)
-    fsutil.ensure_dir(land.rel(DONE_DIR))
+    fsutil.ensure_dir(land.rel(INFLIGHT_DIR))
+    fsutil.ensure_dir(land.rel(REQUESTS_DIR))
     fsutil.ensure_dir(land.rel(ASK_DIR))
 
     fsutil.ensure_dir(h.aos)
@@ -198,12 +201,16 @@ def call_unit(unit, prompt_text, tools=None):
     body_text = _compose(prompt_text, tools)
     t0 = time.time()
 
-    def done(ok, text="", error=None, retryable=False, tin=None, tout=None):
+    def done(ok, text="", error=None, retryable=False, tin=None, tout=None,
+             reasoning=None, tokens_source=None):
+        reported = isinstance(tin, int) and isinstance(tout, int)
         return {
             "ok": ok,
             "text": text,
             "tokens_in": _est_tokens(body_text) if tin is None else tin,
             "tokens_out": _est_tokens(text) if tout is None else tout,
+            "tokens_reasoning": reasoning if isinstance(reasoning, int) else None,
+            "tokens_source": tokens_source or ("reported" if reported else "estimated"),
             "ms": int((time.time() - t0) * 1000),
             "error": error,
             "retryable": retryable,
@@ -224,6 +231,11 @@ def call_unit(unit, prompt_text, tools=None):
         except ValueError:
             return done(False, "", error="單元 %s 的 endpoint 寫成 %s，slow: 後面要接毫秒整數"
                         % (name, endpoint), retryable=False)
+        timeout_ms = unit.get("timeout_ms")
+        if isinstance(timeout_ms, int) and timeout_ms > 0 and ms > timeout_ms:
+            time.sleep(timeout_ms / 1000.0)
+            return done(False, "", error="單元 %s 等後端超過 timeout_ms=%d" %
+                        (name, timeout_ms), retryable=True)
         time.sleep(max(0, ms) / 1000.0)
         return done(True, "echo:%s（慢了 %d ms）\n%s" % (name, ms, body_text))
 
@@ -248,13 +260,13 @@ def _call_http(unit, body_text, t0, done):
         if key:
             headers["Authorization"] = "Bearer " + key
     timeout_ms = unit.get("timeout_ms")
-    timeout_ms = int(timeout_ms) if isinstance(timeout_ms, int) and timeout_ms > 0 \
-        else DEFAULT_HTTP_TIMEOUT_MS
+    timeout_s = (int(timeout_ms) / 1000.0
+                 if isinstance(timeout_ms, int) and timeout_ms > 0 else None)
     req = urllib.request.Request(
         url, data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=timeout_ms / 1000.0) as r:
+        with urllib.request.urlopen(req, timeout=timeout_s) as r:
             raw = r.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
         detail = ""
@@ -280,15 +292,24 @@ def _call_http(unit, body_text, t0, done):
                     % (url, raw[:200]), retryable=False)
     usage = obj.get("usage") or {}
     tin = usage.get("prompt_tokens")
-    tout = usage.get("completion_tokens")
+    completion = usage.get("completion_tokens")
+    details = usage.get("completion_tokens_details") or {}
+    reasoning = details.get("reasoning_tokens")
+    if not isinstance(reasoning, int):
+        reasoning = None
+    if isinstance(completion, int) and reasoning is not None:
+        tout = max(0, completion - reasoning)
+    else:
+        tout = completion
     return done(True, text,
                 tin=tin if isinstance(tin, int) else None,
-                tout=tout if isinstance(tout, int) else None)
+                tout=tout if isinstance(tout, int) else None,
+                reasoning=reasoning)
 
 
 # ---------------------------------------------------------------- 帳簿
 
-def _ledger(home, obj, unit_name, tier, tin, tout, ms, outcome):
+def _ledger(home, obj, unit_name, tier, tin, tout, reasoning, tokens_source, ms, outcome):
     h = _home(home)
     line = {
         "at": fsutil.now_iso(),
@@ -298,6 +319,8 @@ def _ledger(home, obj, unit_name, tier, tin, tout, ms, outcome):
         "tier": tier,
         "tokens_in": tin,
         "tokens_out": tout,
+        "tokens_reasoning": reasoning,
+        "tokens_source": tokens_source,
         "ms": ms,
         "outcome": outcome,
     }
@@ -307,17 +330,72 @@ def _ledger(home, obj, unit_name, tier, tin, tout, ms, outcome):
 
 # ---------------------------------------------------------------- 一筆請求
 
-def _archive(land, obj):
-    """處理完把收件匣那個檔挪到 .aos/llm-done/（不刪，要看得見）。"""
+def _request_path(land, dirname, obj_id):
+    return os.path.join(land.rel(dirname), "%s.json" % obj_id)
+
+
+def _move_request(land, obj, src_dir, dst_dir):
+    """用同檔案系統的原子 rename 推進一筆請求。"""
     obj_id = obj.get("id") or ""
-    src = os.path.join(land.inbox, "%s.json" % obj_id)
-    dst = os.path.join(land.rel(DONE_DIR), "%s.json" % obj_id)
-    fsutil.ensure_dir(land.rel(DONE_DIR))
+    src = os.path.join(land.inbox, "%s.json" % obj_id) if src_dir is None \
+        else _request_path(land, src_dir, obj_id)
+    dst = _request_path(land, dst_dir, obj_id)
+    fsutil.ensure_dir(land.rel(dst_dir))
     try:
         os.replace(src, dst)
         return dst
     except OSError:
         return None
+
+
+def _mark_inflight(land, obj):
+    return _move_request(land, obj, None, INFLIGHT_DIR)
+
+
+def _archive(land, obj):
+    """完成後搬進 requests；送出過的優先從 inflight 搬。"""
+    obj_id = obj.get("id") or ""
+    if os.path.exists(_request_path(land, INFLIGHT_DIR, obj_id)):
+        return _move_request(land, obj, INFLIGHT_DIR, REQUESTS_DIR)
+    return _move_request(land, obj, None, REQUESTS_DIR)
+
+
+def _json_files(path):
+    if not os.path.isdir(path):
+        return []
+    return [os.path.join(path, name) for name in sorted(os.listdir(path))
+            if name.endswith(".json") and os.path.isfile(os.path.join(path, name))]
+
+
+def _recover_inflight(land, home, rep):
+    """serve 重啟後，已送出的請求結果不明：留錯誤且絕不重送。"""
+    recovered = []
+    for path in _json_files(land.rel(INFLIGHT_DIR)):
+        obj = fsutil.read_json(path)
+        if not isinstance(obj, dict):
+            continue
+        requester = _requester_land(obj)
+        result_raw = obj.get("result")
+        result_path = requester.resolve(result_raw) if result_raw else None
+        message = "請求已送出，但 aos llm serve 在等回話時中斷；重啟後結果不明，禁止自動重送"
+        if result_path:
+            status.write_failed(result_path, status.UNKNOWN_AFTER_RESTART, message,
+                                ext={"retryable": False})
+        _ledger(home, obj, None, obj.get("tier"), 0, 0, None, "estimated", 0,
+                OUT_RESULT_UNKNOWN)
+        dst = _move_request(land, obj, INFLIGHT_DIR, REQUESTS_DIR)
+        item = {
+            "id": obj.get("id"), "ok": False, "outcome": OUT_RESULT_UNKNOWN,
+            "reason": status.UNKNOWN_AFTER_RESTART, "message": message,
+            "result": result_path,
+            "status": status.status_path(result_path) if result_path else None,
+            "unit": None, "tier": obj.get("tier"), "ms": 0,
+        }
+        recovered.append(item)
+        rep["notes"].append("重啟收尾 %s：結果不明，不重送，請求搬到 %s"
+                            % (obj.get("id"), dst or land.rel(REQUESTS_DIR)))
+    rep["handled"].extend(recovered)
+    return recovered
 
 
 def _fail(land, obj, result_path, reason, message, home, unit_name, tier, ms=0):
@@ -328,7 +406,7 @@ def _fail(land, obj, result_path, reason, message, home, unit_name, tier, ms=0):
         status.BACKEND_ERROR: OUT_BACKEND_ERROR,
         status.REJECTED: OUT_REJECTED,
     }.get(reason, reason)
-    _ledger(home, obj, unit_name, tier, 0, 0, ms, outcome)
+    _ledger(home, obj, unit_name, tier, 0, 0, None, "estimated", ms, outcome)
     _archive(land, obj)
     return {
         "id": obj.get("id"), "ok": False, "outcome": outcome, "reason": reason,
@@ -338,7 +416,7 @@ def _fail(land, obj, result_path, reason, message, home, unit_name, tier, ms=0):
     }
 
 
-def handle_request(land, obj, home=None):
+def handle_request(land, obj, home=None, progress=False):
     """處理一筆 `kind:"llm"` 請求。回一個講得出「做了什麼」的 dict。"""
     h = _home(home)
     cfg = h.load_config()
@@ -382,8 +460,18 @@ def handle_request(land, obj, home=None):
         return _fail(land, obj, result_path, status.REJECTED, note, h, None, tier)
     unit_name = unit.get("name")
 
+    if not _mark_inflight(land, obj):
+        return _fail(land, obj, result_path, status.REJECTED,
+                     "送出前無法把請求原子搬進 %s" % land.rel(INFLIGHT_DIR),
+                     h, unit_name, tier)
+
     tools = obj.get("tools") if isinstance(obj.get("tools"), list) else None
+    if progress:
+        print("%s 送出 %s，等待中" % (obj.get("id"), unit_name), flush=True)
     res = call_unit(unit, prompt_text, tools=tools)
+    if progress:
+        print("%s 回來 %d ms %s/%s tokens"
+              % (obj.get("id"), res["ms"], res["tokens_in"], res["tokens_out"]), flush=True)
 
     if not res["ok"]:
         out = _fail(land, obj, result_path, status.BACKEND_ERROR, res["error"], h,
@@ -399,12 +487,15 @@ def handle_request(land, obj, home=None):
     except FileNotFoundError:
         pass
     fsutil.atomic_write_text(result_path, res["text"])
-    _ledger(h, obj, unit_name, tier, res["tokens_in"], res["tokens_out"], res["ms"], OUT_OK)
+    _ledger(h, obj, unit_name, tier, res["tokens_in"], res["tokens_out"],
+            res["tokens_reasoning"], res["tokens_source"], res["ms"], OUT_OK)
     _archive(land, obj)
     out = {
         "id": obj.get("id"), "ok": True, "outcome": OUT_OK, "result": result_path,
         "unit": unit_name, "tier": tier, "ms": res["ms"],
         "tokens_in": res["tokens_in"], "tokens_out": res["tokens_out"],
+        "tokens_reasoning": res["tokens_reasoning"],
+        "tokens_source": res["tokens_source"],
         "waited_ms": waited,
     }
     if note:
@@ -421,7 +512,7 @@ def _sort_key(item):
     return (pr, obj.get("at") or "", obj.get("id") or "")
 
 
-def serve_once(land=None, home=None):
+def serve_once(land=None, home=None, progress=False):
     """走一格：取信 → 排序 → 依並行上限處理 → 回報做了什麼。"""
     h = _home(home)
     land = land or llm_land(h)
@@ -442,12 +533,13 @@ def serve_once(land=None, home=None):
         rep["error"] = "lock_busy"
         return rep
     try:
-        return _serve_locked(land, h, rep)
+        return _serve_locked(land, h, rep, progress=progress)
     finally:
         lock.release()
 
 
-def _serve_locked(land, h, rep):
+def _serve_locked(land, h, rep, progress=False):
+    _recover_inflight(land, h, rep)
     items = inbox.scan(land, kinds=("llm",))
     # 無效的先隔離（inbox.process 不碰 kind:llm，所以驗證是我們的事）
     good = []
@@ -471,6 +563,7 @@ def _serve_locked(land, h, rep):
     rep["pending"] = len(good)
     if not good:
         rep["notes"].append("收件匣沒有 kind:llm 的請求")
+        rep["idle"] = not bool(rep["handled"])
         return rep
 
     # 並行上限：全域 max_parallel 與單元自己的 max_parallel 取小。
@@ -492,7 +585,7 @@ def _serve_locked(land, h, rep):
             rep["notes"].append("單元 %s 這一格已經吃滿 %d 筆，請求 %s 留到下一格"
                                 % (uname, cap, obj.get("id")))
             continue
-        out = handle_request(land, obj, h)
+        out = handle_request(land, obj, h, progress=progress)
         used[uname] = used.get(uname, 0) + 1
         n += 1
         rep["handled"].append(out)
@@ -564,7 +657,8 @@ def _op_init(args):
     print("  設定：%s" % h.config)
     print("  帳簿：%s" % h.ledger)
     print("  收件匣：%s" % land.inbox)
-    print("  處理完的請求：%s" % land.rel(DONE_DIR))
+    print("  在飛的請求：%s" % land.rel(INFLIGHT_DIR))
+    print("  已完成的請求：%s" % land.rel(REQUESTS_DIR))
     for u in _units(h):
         print("  單元 %-12s tier=%-6s endpoint=%-24s model=%s max_parallel=%s"
               % (u.get("name"), u.get("tier"), u.get("endpoint"), u.get("model"),
@@ -588,6 +682,10 @@ def _op_serve(args):
     if not land.is_land():
         _err("%s 不是一塊地" % land.root, "python3 proto/aos.py llm init")
         return exits.NOT_A_LAND
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, OSError):
+        pass
     steps = args.steps
     until = args.until
     if steps is None and until is None:
@@ -599,7 +697,7 @@ def _op_serve(args):
     i = 0
     try:
         while True:
-            rep = serve_once(land)
+            rep = serve_once(land, progress=True)
             _print_report(rep, args.json)
             c = _rep_exit(rep)
             if c != exits.OK:
@@ -634,16 +732,35 @@ def _op_ls(args):
             "max_wait_ms": obj.get("max_wait_ms"),
             "result": obj.get("result"),
         })
+    def rows_in(dirname):
+        out = []
+        for path in _json_files(land.rel(dirname)):
+            obj = fsutil.read_json(path)
+            if not isinstance(obj, dict):
+                continue
+            out.append({
+                "id": obj.get("id") or os.path.basename(path)[:-5],
+                "from": obj.get("from"), "tier": obj.get("tier"),
+                "priority": obj.get("priority") if isinstance(obj.get("priority"), int) else 0,
+                "waited_ms": _waited_ms(obj), "max_wait_ms": obj.get("max_wait_ms"),
+                "result": obj.get("result"),
+            })
+        return out
+
+    inflight = rows_in(INFLIGHT_DIR)
+    completed = rows_in(REQUESTS_DIR)
     units = _units(h)
+    stages = {"queued": rows, "inflight": inflight, "completed": completed}
     if args.json:
-        print(json.dumps({"land": land.root, "pending": rows, "units": units},
+        print(json.dumps({"land": land.root, **stages, "units": units},
                          ensure_ascii=False, indent=2))
         return exits.OK
     print("LLM 世界 %s" % land.root)
-    print("待處理請求：%d 筆" % len(rows))
-    for r in rows:
-        print("  %s  priority=%s tier=%s  等了 %d ms  from %s  → %s"
-              % (r["id"][:12], r["priority"], r["tier"], r["waited_ms"], r["from"], r["result"]))
+    def summary(label, stage_rows):
+        oldest = max((r["waited_ms"] for r in stage_rows), default=0)
+        return "%s %d 筆（最舊等了 %d ms）" % (label, len(stage_rows), oldest)
+    print("請求：%-32s | %-32s | %s" % (
+        summary("排隊中", rows), summary("在飛", inflight), summary("已完成", completed)))
     print("處理單元（%s 的 `units`）：%d 筆" % (h.config, len(units)))
     for u in units:
         print("  %-12s tier=%-6s endpoint=%-24s model=%-12s max_parallel=%s api_key_env=%s"

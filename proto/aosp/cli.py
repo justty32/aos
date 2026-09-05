@@ -57,6 +57,7 @@ def cmd_compile(args):
 # ---------- exec ----------
 def cmd_exec(args):
     land = _land(args.land)
+    before = S.load(land)
     try:
         rep = execute.exec_once(land, timeout_ms=args.timeout)
     except execute.NotALand as e:
@@ -65,6 +66,10 @@ def cmd_exec(args):
         return _die(str(e), exits.PARSE, "改原稿或模板")
     except fsutil.LockBusy as e:
         return _die(str(e), exits.LOCK_BUSY, "等別人跑完，或確認沒有孤兒 %s" % land.lock)
+    from . import run as runmod
+    busy, busy_ticks = runmod._record_busy_tick(land, before, rep)
+    rep["busy"] = busy
+    rep["busy_ticks"] = busy_ticks
     _print_tick(rep, args.json)
     return exits.OK
 
@@ -90,16 +95,20 @@ def cmd_status(args):
         return _die("%s 不是一塊地" % land.root, exits.NOT_A_LAND,
                     "python3 proto/aos.py init %s" % land.root)
     baton = S.load(land)
+    stopped = fsutil.read_json(land.stopped)
     if args.json:
         print(json.dumps({
-            "land": land.root, "series": baton, "stopped": fsutil.read_json(land.stopped),
+            "land": land.root, "series": baton, "stopped": stopped,
+            "ticks": (baton or {}).get("tick", 0),
+            "busy_ticks": (baton or {}).get("busy_ticks", (stopped or {}).get("busy_ticks", 0)),
         }, ensure_ascii=False, indent=2))
         return exits.OK
     print("地：%s" % land.root)
     if baton is None:
         print("  還沒開跑（沒有 .aos/series.json）")
         return exits.OK
-    print("  批 %s，下一格 %d" % (baton["batch_id"][:8], baton["tick"]))
+    busy_ticks = baton.get("busy_ticks", (stopped or {}).get("busy_ticks", 0))
+    print("  批 %s，格 %d（做事 %d）" % (baton["batch_id"][:8], baton["tick"], busy_ticks))
     for sr in baton["series"]:
         line = "  串 %s  模板 %s  游標 %s  狀態 %s" % (
             sr["id"][:8], sr["template"], sr["cursor"], sr["status"])
@@ -109,7 +118,7 @@ def cmd_status(args):
             print("      壞在：%s — %s" % (fr.get("reason"), fr.get("message")))
         if sr.get("regs"):
             print("      暫存器：%s" % ", ".join("%s=%s" % kv for kv in sr["regs"].items()))
-    st = fsutil.read_json(land.stopped)
+    st = stopped
     if st:
         print("  停止原因檔：%s — %s" % (st.get("reason"), st.get("message")))
     pend = inbox.scan(land)
@@ -193,6 +202,11 @@ def cmd_llm(args):
     return lmod.cli_llm(args)
 
 
+def cmd_doorman(args):
+    from . import doorman as dmod
+    return dmod.run_args(args)
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="aos", description="aos 原型（不是正式實作）")
     sub = p.add_subparsers(dest="cmd")
@@ -265,6 +279,20 @@ def build_parser():
     q.add_argument("--every", type=int, default=200, metavar="MS")
     q.add_argument("--json", action="store_true")
     q.set_defaults(func=cmd_llm)
+
+    q = sub.add_parser("doorman", help="門房第一級：看地的出生與死亡")
+    q.add_argument("root", nargs="?", help="要監看的根目錄")
+    q.add_argument("--home", default=None, help="AOS_HOME")
+    q.add_argument("--depth", type=int, default=2, help="往下監看幾層（預設 2）")
+    q.add_argument("--poll", action="store_true", help="不用 inotify，直接輪詢")
+    q.add_argument("--poll-ms", type=int, default=1000, metavar="MS")
+    q.add_argument("--once", action="store_true", help="掃一遍就退出")
+    q.add_argument("--for-ms", type=int, default=None, metavar="MS")
+    q.add_argument("--strict-birth", action="store_true")
+    q.add_argument("--strict-layout", action="store_true")
+    q.add_argument("--tmpfs-note", action="store_true")
+    q.add_argument("--quiet", action="store_true")
+    q.set_defaults(func=cmd_doorman)
 
     return p
 

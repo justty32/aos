@@ -82,6 +82,24 @@ def finish(why, message, n):
     return 0
 
 
+def report_round(n, tool, ok, reason):
+    """把這圈的語意結果交給機器面，並維護連續失敗次數。"""
+    summary = {"round": n, "tool": tool or "", "ok": bool(ok), "reason": reason}
+    write(os.path.join(ROUNDS, "%03d" % n, "round.json"),
+          json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
+    progress_path = os.path.join(LAND, ".aos", "agent-progress.json")
+    previous = json.loads(read(progress_path, "{}") or "{}")
+    old_streak = previous.get("fail_streak", 0)
+    old_streak = old_streak if isinstance(old_streak, int) and old_streak >= 0 else 0
+    streak = 0 if ok else old_streak + 1
+    write(progress_path, json.dumps({
+        "format_version": 1,
+        "latest": summary,
+        "fail_streak": streak,
+    }, ensure_ascii=False, indent=2) + "\n")
+    return streak
+
+
 # ---------------------------------------------------------------- prep
 def build_prompt(c, n):
     work = os.path.join(LAND, c["work"])
@@ -232,6 +250,7 @@ def op_act():
     write(os.path.join(ROUNDS, "%03d" % n, "answer.txt"), answer)
     if not answer.strip():
         append_transcript("第 %d 圈：LLM 回了空的。" % n)
+        report_round(n, "", False, "empty_answer")
         return finish("empty_answer", "第 %d 圈 LLM 回話是空的" % n, n)
 
     prompt = read(os.path.join(STATE, "prompt.txt"), "")
@@ -246,6 +265,7 @@ def op_act():
         first = next((x.strip() for x in answer.splitlines() if x.strip()), "")
         msg = done if done is not None else first[:200]
         append_transcript("第 %d 圈：LLM 沒有再叫工具。它說：%s" % (n, msg))
+        report_round(n, "", True, why)
         return finish(why, msg or "LLM 這圈沒有叫工具", n)
 
     ok, obs = run_tool(c, cmd, answer)
@@ -256,6 +276,10 @@ def op_act():
         % (n, cmd, "成功" if ok else "失敗",
            "\n".join("  " + x for x in obs.splitlines())))
     print("第 %d 圈：跑了 `%s`（%s）" % (n, cmd, "成功" if ok else "失敗"))
+
+    fail_streak = report_round(n, cmd, ok, "ok" if ok else "tool_failed")
+    if fail_streak >= 3:
+        return finish("fail_streak", "工具連續失敗 %d 圈，停下來等人檢查" % fail_streak, n)
 
     cap = min(c["max_rounds"], c["max_llm_calls"])
     if n >= cap:

@@ -19,8 +19,8 @@ WA="$TEAM/workers/a"
 WB="$TEAM/workers/b"
 AOS="python3 $AOS_PY"
 
-MAX_SECONDS=300          # 五分鐘上限
-EVERY=3                  # 每 3 秒印一次現況
+MAX_SECONDS="${AOS_TEAM_MAX_SECONDS:-300}"  # 互動玩預設五分鐘；run-all 會壓到 25 秒
+EVERY="${AOS_TEAM_EVERY:-3}"                # 每幾秒印一次現況
 STAMP="$(date +%Y%m%d-%H%M%S)"
 LOGDIR="$HERE/play-logs/team-$STAMP"
 

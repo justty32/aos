@@ -5,8 +5,12 @@ interface.md 只保證 cli_llm(args) 存在；init_llm_world()/serve_once() 是�
 單一測試而不是整支炸掉。
 """
 import json
+import contextlib
+import io
 import os
 import sys
+import threading
+import time
 import unittest
 
 PROTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,7 +18,10 @@ if PROTO not in sys.path:
     sys.path.insert(0, PROTO)
 
 from aosp import fsutil, layout  # noqa: E402
-from .helpers import LandCase  # noqa: E402
+try:
+    from .helpers import LandCase, run_cli  # noqa: E402
+except ImportError:
+    from helpers import LandCase, run_cli  # noqa: E402
 
 try:
     from aosp import llm as llmmod  # noqa: E402
@@ -129,8 +136,9 @@ class TestEchoBackend(LandCase):
         self.assertTrue(lines, msg="帳簿至少要有一行")
         last = json.loads(lines[-1])
         for key in ("at", "request_id", "from", "unit", "tier", "tokens_in",
-                    "tokens_out", "ms", "outcome"):
+                    "tokens_out", "tokens_reasoning", "tokens_source", "ms", "outcome"):
             self.assertIn(key, last, msg="帳簿這一行少了欄位 `%s`，實際 %r" % (key, last))
+        self.assertIsNone(last["tokens_reasoning"], msg="echo: 分不出 reasoning，應記 null")
 
 
 @unittest.skipUnless(HAS_LLM, SKIP_MSG)
@@ -157,3 +165,161 @@ class TestFailBackend(LandCase):
         self.assertIsNotNone(st, msg="假後端 fail: 該讓 <result>.status.json 出現")
         self.assertEqual(st.get("reason"), "backend_error",
                           msg="假後端失敗的 reason 該是 backend_error，實際 %r" % st)
+
+
+@unittest.skipUnless(HAS_LLM, SKIP_MSG)
+class TestServeProgress(LandCase):
+    def test_serve_prints_sent_and_returned_lines(self):
+        home = layout.Home()
+        _set_fake_unit(home, "slow:5", name="slow-one")
+        world = _try_init_world(home)
+        prompt_path = os.path.join(self.tmp, "progress-prompt.txt")
+        with open(prompt_path, "w", encoding="utf-8") as f:
+            f.write("看得見的進度")
+        result_path = os.path.join(self.tmp, "progress-result.txt")
+        from aosp import inbox
+        obj = inbox.make("llm", self.land.root, prompt=prompt_path, result=result_path,
+                         tier="fast", priority=1, max_wait_ms=5000)
+        ok, _info = inbox.deliver(world, obj)
+        self.assertTrue(ok)
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            llmmod.serve_once(world, progress=True)
+        lines = output.getvalue().splitlines()
+        self.assertTrue(any("%s 送出 slow-one，等待中" % obj["id"] == x for x in lines),
+                        msg="送後端前要立刻印一行，實際 %r" % lines)
+        self.assertTrue(any(x.startswith("%s 回來 " % obj["id"]) and x.endswith(" tokens")
+                            for x in lines),
+                        msg="後端回來後要印毫秒與 token，實際 %r" % lines)
+
+
+@unittest.skipUnless(HAS_LLM, SKIP_MSG)
+class TestRequestVisibility(LandCase):
+    def _request(self, world, suffix=""):
+        from aosp import inbox
+        prompt_path = os.path.join(self.tmp, "visible%s.prompt" % suffix)
+        with open(prompt_path, "w", encoding="utf-8") as f:
+            f.write("請求可見度")
+        result_path = os.path.join(self.tmp, "visible%s.out" % suffix)
+        obj = inbox.make("llm", self.land.root, prompt=prompt_path, result=result_path,
+                         tier="fast", priority=1, max_wait_ms=5000)
+        ok, _info = inbox.deliver(world, obj)
+        self.assertTrue(ok)
+        return obj, result_path
+
+    def test_request_moves_inbox_to_inflight_then_requests(self):
+        home = layout.Home()
+        _set_fake_unit(home, "slow:150", name="slow-visible")
+        world = _try_init_world(home)
+        obj, _result = self._request(world)
+        worker = threading.Thread(target=llmmod.serve_once, args=(world,))
+        worker.start()
+        inflight = world.rel("llm-inflight", "%s.json" % obj["id"])
+        deadline = time.time() + 1
+        while time.time() < deadline and not os.path.exists(inflight):
+            time.sleep(0.005)
+        self.assertTrue(os.path.exists(inflight), msg="送出後、回來前請求要在 llm-inflight")
+        self.assertFalse(os.path.exists(os.path.join(world.inbox, "%s.json" % obj["id"])),
+                         msg="已送出的請求不能還留在收件匣冒充排隊中")
+        worker.join(2)
+        self.assertFalse(worker.is_alive())
+        self.assertFalse(os.path.exists(inflight))
+        self.assertTrue(os.path.exists(world.rel("requests", "%s.json" % obj["id"])),
+                        msg="後端回來後請求要搬進 requests")
+
+    def test_restart_marks_inflight_unknown_and_does_not_resend(self):
+        home = layout.Home()
+        _set_fake_unit(home, "fail:不該重送", name="never-resend")
+        world = _try_init_world(home)
+        obj, result_path = self._request(world, "-restart")
+        os.replace(os.path.join(world.inbox, "%s.json" % obj["id"]),
+                   world.rel("llm-inflight", "%s.json" % obj["id"]))
+
+        rep = llmmod.serve_once(world)
+        from aosp import status
+        st = status.read_status(result_path)
+        self.assertEqual(st.get("reason"), "unknown_after_restart", msg="實際 %r" % st)
+        self.assertFalse(st.get("ext", {}).get("retryable", True))
+        self.assertEqual(rep["handled"][0]["outcome"], "result_unknown")
+        self.assertTrue(os.path.exists(world.rel("requests", "%s.json" % obj["id"])))
+
+    def test_llm_ls_has_queued_inflight_completed_columns(self):
+        home = layout.Home()
+        _set_fake_unit(home, "echo:")
+        world = _try_init_world(home)
+        rc, out, err = run_cli("llm", "ls", "--land", world.root)
+        self.assertEqual(rc, 0, msg=err)
+        for label in ("排隊中", "在飛", "已完成"):
+            self.assertIn(label, out)
+
+
+@unittest.skipUnless(HAS_LLM, SKIP_MSG)
+class TestQueueWaitBoundary(LandCase):
+    def test_default_wait_is_ten_minutes_and_backend_time_does_not_count(self):
+        home = layout.Home()
+        world = _try_init_world(home)
+        self.assertEqual(home.load_config().get("max_wait_ms"), 600000)
+        _set_fake_unit(home, "slow:80", name="slow-after-send")
+        from aosp import inbox
+        prompt_path = os.path.join(self.tmp, "wait-boundary.prompt")
+        with open(prompt_path, "w", encoding="utf-8") as f:
+            f.write("後端慢，不是排隊慢")
+        result_path = os.path.join(self.tmp, "wait-boundary.out")
+        obj = inbox.make("llm", self.land.root, prompt=prompt_path, result=result_path,
+                         tier="fast", priority=1, max_wait_ms=40)
+        ok, _info = inbox.deliver(world, obj)
+        self.assertTrue(ok)
+
+        llmmod.serve_once(world)
+        self.assertTrue(os.path.isfile(result_path),
+                        msg="送出後花 80ms 不該被 40ms 的排隊上限殺掉")
+
+
+@unittest.skipUnless(HAS_LLM, SKIP_MSG)
+class TestReasoningTokens(LandCase):
+    def test_reported_reasoning_is_removed_from_tokens_out_and_logged_separately(self):
+        import urllib.request
+
+        home = layout.Home()
+        _set_fake_unit(home, "http://model.invalid/v1", name="reasoning-model")
+        world = _try_init_world(home)
+        prompt_path = os.path.join(self.tmp, "reasoning.prompt")
+        with open(prompt_path, "w", encoding="utf-8") as f:
+            f.write("請想完再回答")
+        result_path = os.path.join(self.tmp, "reasoning.out")
+        from aosp import inbox
+        obj = inbox.make("llm", self.land.root, prompt=prompt_path, result=result_path,
+                         tier="fast", priority=1, max_wait_ms=5000)
+        ok, _info = inbox.deliver(world, obj)
+        self.assertTrue(ok)
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return json.dumps({
+                    "choices": [{"message": {"content": "短答"}}],
+                    "usage": {
+                        "prompt_tokens": 12,
+                        "completion_tokens": 100,
+                        "completion_tokens_details": {"reasoning_tokens": 73},
+                    },
+                }).encode("utf-8")
+
+        original = urllib.request.urlopen
+        urllib.request.urlopen = lambda *_args, **_kwargs: Response()
+        try:
+            llmmod.serve_once(world)
+        finally:
+            urllib.request.urlopen = original
+
+        with open(home.ledger, "r", encoding="utf-8") as f:
+            entry = json.loads(f.read().splitlines()[-1])
+        self.assertEqual(entry["tokens_out"], 27)
+        self.assertEqual(entry["tokens_reasoning"], 73)
+        self.assertEqual(entry["tokens_source"], "reported")

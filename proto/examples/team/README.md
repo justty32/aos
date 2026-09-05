@@ -11,7 +11,8 @@
 ## 怎麼跑
 
 ```sh
-proto/play-team.sh
+proto/examples/team/run.sh   # 假後端回歸，25 秒上限
+proto/play-team.sh           # 互動觀察版，預設五分鐘上限
 ```
 
 它會：起一個暫存家（`examples/team/.home`，不碰你的 `~`）→ init 三塊地 → 起 LLM 世界
@@ -67,7 +68,7 @@ proto/play-team.sh
 - **子壞掉**：把 `lead/main.aos.json` 裡 `dispatch_a` 的 `args.file` 改成 `work/missing.py`，
   再把 `wait_a` 的 `max_ticks` 改小（例如 8）。你會看到主等到 `await_timeout` 才知道出事，
   而且登記表上子 A 那筆跟「做完了」長得一模一樣（FINDINGS-team T-02）。
-- **兩個子撞同一個落點**：把兩個 `call` 步的 `result` 都改成 `out/shared.done.json`。
-  沒有任何一層擋，後寫的蓋掉先寫的（T-03）。
+- **兩個子撞同一個落點**：同一格的兩條串若都指到 `out/shared.done.json`，exec 現在會整格
+  解析拒絕、退出碼 3；原始撞坑紀錄仍見 T-03。
 - **落點沒清就重跑**：只刪三塊地的 `.aos/` 與 `state/`、留著 `lead/out/`，主第 1 格就會撿到
-  上一輪的舊結果。
+  上一輪舊檔；exec 現在會在開新呼叫前以退出碼 3 拒絕，要求先清檔或換落點。

@@ -10,7 +10,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROTO = os.path.dirname(HERE)
 sys.path.insert(0, PROTO)
-import doorman  # noqa: E402
+from aosp import doorman  # noqa: E402
 
 from test_doorman import Base, make_land  # noqa: E402
 

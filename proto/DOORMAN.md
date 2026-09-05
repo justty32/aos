@@ -1,17 +1,18 @@
 # DOORMAN — 門房第一級的原型
 
-一支獨立腳本 `proto/doorman.py`，照 [spec 13](../wf/workflows/spec/13-doorman-l1.md) 做「門房第一級」：
+核心在 `proto/aosp/doorman.py`，並接成 `aos doorman` 子命令；`proto/doorman.py` 只留一行
+相容薄殼。它照 [spec 13](../wf/workflows/spec/13-doorman-l1.md) 做「門房第一級」：
 站在資料夾樹前面看檔案動靜，**只看不擋**。它盯著一個根目錄底下的地
 （＝裡面有 `.aos/layout.json` 的資料夾）出生跟死亡，出事就在本子記一筆、順手把
 `$AOS_HOME/.aos/registry.json` 那一筆改對，然後**什麼都不做**。
 
-跟 `proto/aosp/` 沒有任何 import 關係，是一支自己能跑的腳本；但登記表、鎖、原子寫
-三樣都跟 `proto/aosp/` 一模一樣，不是第二套。
+登記表、鎖、原子寫三樣都跟其他 `proto/aosp/` 模組共用同一份磁碟契約，不是第二套。
 
 ## 怎麼跑
 
 ```sh
-python3 proto/doorman.py <根目錄> [--home <AOS_HOME>]
+python3 proto/aos.py doorman <根目錄> [--home <AOS_HOME>]
+# 舊入口仍可用：python3 proto/doorman.py <根目錄> [--home <AOS_HOME>]
 ```
 
 沒給 `--home` 就吃 `$AOS_HOME`，再沒有就是 `~`。**測試跟玩的時候一律把家指到暫存目錄**，
@@ -136,7 +137,7 @@ IN_MOVED_TO 收到；同一份測試在 /home/lorkhan（ext4，磁碟）收到�
 python3 -m unittest discover proto/doorman-tests
 ```
 
-38 個，全綠，大約 9 秒。分三份：
+40 個，全綠，大約 9 秒。分三份：
 
 - `test_doorman.py`：在同一支行程裡直接呼叫 `Doorman`，快而穩。出生／死亡／本子格式／
   不重複登記／孤魂補刀／不砍無辜 pid／鎖與原子寫／不碰地的 `.aos/`。
