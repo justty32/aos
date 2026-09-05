@@ -26,8 +26,10 @@
   **傍晚（Claude 額度快用完，改走 codex gpt-5.6-sol）**：使用者答了 40 條（spec/ideas 已回寫，見 spec/notes/rulings 第二批）；原型真模型兩輪成功（qwen 7 圈／deepseek-flash 5 圈，proto/play-logs/）；
   量尺 proto/bench/、門房 proto/doorman.py、第二級劇本 proto/examples/team/ 都已提交。**open**：
   ⑤⑥（已解，20:30）codex 第 1、2 輪都做完並提交（f064d0b）：LLM 世界進行中可見、busy_ticks、思考 token 拆帳；SIGCHLD 結束碼修正、落點碰撞預檢、daemon 對帳代寫 no_result／child_failed／killed、`aos doorman` 子命令、team/run.sh 進回歸。100＋40 測試綠。codex 撞到 9 條（proto/FINDINGS.md「codex 第 1／2 輪」），其中要 spec 隊裁的：ledger 要加 `tokens_reasoning`、`busy_ticks` 沒欄位放、`requests/` 原件 vs 狀態物件打架、停止原因不只三種、跨格落點預約沒契約；
-  ⑦ Janet 綁定：Opus 隊在 ~/repo/langs/janet-lab 寫好 modules/aos/（8 檔）＋4 支測試＋範例，都能跑，**未 commit**；文件沒寫就被額度打斷 → codex 第 3 輪在補（任務書 spec/notes/codex-task-3.md：modules/aos/README.md、對照 spec 查一遍、發現寫到 spec/notes/janet-binding-findings.md），回報在 scratchpad codex/out-3.md；做完要在 janet-lab 那邊 commit，aos 這邊 commit notes 兩檔；
-  ⑧ 裁決單還有 E～M 章 12 條「AI 建議改」等使用者答（讀法：Artifact read_db decisions/main）；答了之後照 rulings 檔第二批的做法回寫 spec。
+  ⑦（已解，21:05）Janet 綁定：janet-lab f52ef46（modules/aos 8 檔＋4 測試＋範例＋README，jpm test 全綠）；發現 11 條在 spec/notes/janet-binding-findings.md（9c5d79d），要 spec 隊裁的：外部語言沒有「父的那一格」、registry schema 跟原型的頂層 result／args／daemon_pid_start 打架；
+  ⑧（已解，21:05）12 條「AI 建議改」使用者全點「改成再審建議」，codex 第 4 輪回寫完。裁決單 artifact 修了兩個 bug：正式實作九題改編號 IMP-01～09（原本跟 06 章 F-xx 撞號）；本機比共用新時會自動推上去。
+  ⑨（新）給人玩的互動台 `bash proto/play-chat.sh`（2f89212，DeepSeek、插話寄信、/status /log /stop /new /quit；離線自測 proto/play/selftest.sh）。使用者 21:15 回來玩；玩出的阻礙記 proto/FINDINGS.md。
+  ⑩ codex 撞到要 spec 隊裁的（proto/FINDINGS.md「codex 第 1／2 輪」）：ledger 加 tokens_reasoning、busy_ticks 沒欄位、requests/ 原件 vs 狀態物件、停止原因不只三種、跨格落點預約。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
   → 隊 Y 四項改進（`aos chat`、`--daemon`／`aos stop`、投遞即喚醒、`aos state` unread／last_error、
