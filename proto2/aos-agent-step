@@ -2,11 +2,12 @@
 """aos-agent-step [dir] — 一個 agent 資料夾走「一格」。
 
 agent 本體就是 <dir>/.aos/agent/ 底下那幾個檔：人格（system-prompt.json）、
-記憶（prompts.json）、這輪要加的話（prompt-next.json）、工具（tools.json）、
-引擎（engine.json）、收件匣（inbox/、inbox-done/）、上次回覆（llm-result.json）、
-現在走到哪（state.json）。
+記憶（prompts.json）、這輪要加的話（new-prompts.json）、工具（tools.json）、
+引擎（engine.json）、收新訊息的地方（new-prompts/、new-prompts/archived/）、
+上次回覆（llm-result.json）、現在走到哪（state.json）。
 
-四格輪流走：idle 收信 → llm 思考 → act 行動 → inbox 再收信 → llm …
+四格輪流走：idle 收信（收信前先清 archived/，開新一輪）→ llm 思考 → act 行動
+→ collect 再收信（不清 archived/，接在這一輪後面）→ llm …
 沒工具可跑就回 idle。每格結束都把「自己 .」寫進 <dir>/.aos/inst，
 所以 aos-loop 會一直回來看（給 --no-write-inst 就不寫，讓 aos-loop --keep-inst 去管）。
 """
@@ -34,10 +35,27 @@ def write_json(path, obj):
         f.write("\n")
 
 
-def collect_inbox(home):
-    """把 inbox/ 裡的檔（排序、不含子目錄）變成 user 訊息，原檔搬去 inbox-done/。"""
-    box = os.path.join(home, "inbox")
-    done = os.path.join(home, "inbox-done")
+def clear_archived(home):
+    """清掉 new-prompts/archived/ 裡上一輪留下的檔——每輪從 idle 開始新一輪
+    收信前都要清一次（也就是上一輪的在這一輪被清掉）；同一輪內 act→collect
+    的補收不會再清，好讓這一輪收到的東西留在 archived 裡到輪完。
+    """
+    archived = os.path.join(home, "new-prompts", "archived")
+    if os.path.isdir(archived):
+        for name in os.listdir(archived):
+            path = os.path.join(archived, name)
+            if os.path.isfile(path):
+                os.remove(path)
+
+
+def collect_new_prompts(home):
+    """把 new-prompts/ 裡的檔（頂層、排序、不含子目錄）變成訊息，原檔搬去
+    new-prompts/archived/。每個檔就是一則訊息（固定格式 {"role", "content"}），
+    原樣當一則 message 用；讀不成 JSON 或不是物件的檔印一行白話到 stderr 跳過，
+    但一樣搬走。
+    """
+    box = os.path.join(home, "new-prompts")
+    archived = os.path.join(box, "archived")
     msgs = []
     if not os.path.isdir(box):
         return msgs
@@ -46,10 +64,18 @@ def collect_inbox(home):
         if not os.path.isfile(src):
             continue
         with open(src, encoding="utf-8", errors="replace") as f:
-            body = f.read()
-        msgs.append({"role": "user", "content": "[%s]\n%s" % (name, body)})
-        os.makedirs(done, exist_ok=True)
-        os.replace(src, os.path.join(done, name))
+            text = f.read()
+        try:
+            msg = json.loads(text)
+        except ValueError:
+            msg = None
+        if isinstance(msg, dict):
+            msgs.append(msg)
+        else:
+            print("aos-agent-step: new-prompts/%s 不是合法的訊息（讀不成 JSON 物件），跳過" % name,
+                  file=sys.stderr)
+        os.makedirs(archived, exist_ok=True)
+        os.replace(src, os.path.join(archived, name))
     return msgs
 
 
@@ -64,7 +90,7 @@ def do_llm(home):
     if persona.get("content"):
         messages.append({"role": "system", "content": persona["content"]})
     history = read_json(os.path.join(home, "prompts.json"), [])
-    pending = read_json(os.path.join(home, "prompt-next.json"), [])
+    pending = read_json(os.path.join(home, "new-prompts.json"), [])
     messages += history + pending
 
     body = {"model": engine.get("model") or "local", "messages": messages}
@@ -90,8 +116,14 @@ def do_llm(home):
         return False
 
     write_json(os.path.join(home, "llm-result.json"), answer)
-    write_json(os.path.join(home, "prompts.json"), history + pending + [assistant])
-    write_json(os.path.join(home, "prompt-next.json"), [])
+    # 存進歷史的 assistant 訊息只留 role、content、tool_calls 三個公開欄位，
+    # 過濾掉伺服器可能夾帶的私有欄位（例如 reasoning_content）。
+    stored = {"role": assistant.get("role") or "assistant", "content": assistant.get("content") or ""}
+    tool_calls = assistant.get("tool_calls") or []
+    if tool_calls:
+        stored["tool_calls"] = tool_calls
+    write_json(os.path.join(home, "prompts.json"), history + pending + [stored])
+    write_json(os.path.join(home, "new-prompts.json"), [])
     return True
 
 
@@ -100,13 +132,15 @@ def do_act(home, workdir):
     answer = read_json(os.path.join(home, "llm-result.json"), {})
     choices = answer.get("choices") or [{}]
     message = choices[0].get("message") or {}
-    calls = message.get("tool_calls") or []
-    if not calls:
+    calls = message.get("tool_calls")
+    # 明確判斷「有沒有工具要跑」：tool_calls 要存在而且是非空陣列。
+    has_calls = isinstance(calls, list) and len(calls) > 0
+    if not has_calls:
         print(message.get("content") or "")
         return "idle"
 
     tools = {t.get("name"): t for t in read_json(os.path.join(home, "tools.json"), [])}
-    results = read_json(os.path.join(home, "prompt-next.json"), [])
+    results = read_json(os.path.join(home, "new-prompts.json"), [])
     for call in calls:
         fn = call.get("function") or {}
         name = fn.get("name")
@@ -123,8 +157,8 @@ def do_act(home, workdir):
             if done.stderr.strip():
                 out += done.stderr
         results.append({"role": "tool", "tool_call_id": call.get("id"), "content": out})
-    write_json(os.path.join(home, "prompt-next.json"), results)
-    return "inbox"
+    write_json(os.path.join(home, "new-prompts.json"), results)
+    return "collect"
 
 
 def main():
@@ -141,15 +175,16 @@ def main():
     failed = False
 
     if state == "idle":
-        msgs = collect_inbox(home)
+        clear_archived(home)
+        msgs = collect_new_prompts(home)
         if msgs:
-            write_json(os.path.join(home, "prompt-next.json"), msgs)
+            write_json(os.path.join(home, "new-prompts.json"), msgs)
             nxt = "llm"
         else:
             nxt = "idle"
-    elif state == "inbox":
-        pending = read_json(os.path.join(home, "prompt-next.json"), [])
-        write_json(os.path.join(home, "prompt-next.json"), pending + collect_inbox(home))
+    elif state == "collect":
+        pending = read_json(os.path.join(home, "new-prompts.json"), [])
+        write_json(os.path.join(home, "new-prompts.json"), pending + collect_new_prompts(home))
         nxt = "llm"
     elif state == "llm":
         if do_llm(home):
