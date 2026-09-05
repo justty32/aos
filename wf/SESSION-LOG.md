@@ -12,6 +12,9 @@
 
 ## 最新進度
 
+- **2026-09-06：另起爐灶 `proto2/`**——使用者照自己的反思（[ideas/reflections.md](workflows/ideas/reflections.md)「agent 就是一個迴圈、檔案系統是膠水、邊緣狀況想太早」）從零重建，**舊 `proto/`、舊 spec 都不當憑據**，邊緣狀況一律不做。做法是使用者說一步、我派一隊做一步（普通給 Opus、簡單給 Sonnet）。已落地（commit 64af843→a66e0df）：`aos-exec`（檔案就跑、資料夾就把 `.aos/inst` 整段丟 system()）、`aos-loop`（讀→清→跑，`--steps/--interval/--stop-when-empty/--keep-inst`）、`aos-agent-step`（四格 idle→llm→act→collect，本體在 `.aos/agent/`：system-prompt／prompts／tools／engine／state；收信 `new-prompts/*.json`、回話 `replies/`）、`aos-agent-say／listen／talk`。範例 `proto2/examples/agent` 兩個終端機就能跟 LM Studio 上的模型聊，使用者 09-06 00:30 實玩成功。測試 `bash proto2/test.sh` 45 項。
+  **open**：① 使用者說細節（檔名、邊緣狀況、具體步驟）晚點再談，目前累積的判斷都在各 commit 訊息與 `proto2/README.md`；② 已看到但沒處理：qwen 把 `</think>` 漏進 content、範例 `.aos/inst` 用相對路徑搬走就斷、步數把空轉 idle 也算進去；③ 舊 `proto/` 要不要刪未定。
+
 - **2026-09-05：構想全部重整成新的一套**——舊 ideas（八月到 9 月 4 日的全部討論）整包封存進
   `ideas/archive/`，換成 13 章大白話的新構想集（[ideas/README.md](workflows/ideas/README.md)），
   附 71 條待決定與各章 AI 意見。目的是**另起爐灶**：下一步是照新構想集寫 spec，再寫實作計畫，
