@@ -86,13 +86,33 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
 
 - **shared（時間沒脫節）**——在父的 `.aos/inst` 尾端加一行 `aos-exec <子名>`，父走一格它就跟著
   走一格，父不動它也不動，子自己沒有 loop。
-- **own（時間脫節）**——只建資料夾，父不推它；要另外開 `aos-loop <子路徑> --keep-inst` 才會走。
+- **own（時間脫節）**——只建資料夾，父不推它。父有 `.aos/agent/daemon.json` 就自動登記給那個
+  daemon（名字 `<父名>-<子名>`，子也抄一份），生出來就有人推；沒有就要自己開 `aos-loop
+  <子路徑> --keep-inst` 才會走。
 
 `aos-agent-spawn <父資料夾> <子名> <人格文字> [--clock shared|own]`（預設 `shared`）。子名只准英
 數字／底線／減號，名字被佔走、或父沒有 `llm.json`，就印一句退 2。
 
 範例 agent 的 `tools.json` 附了一個 `spawn` 工具，所以**agent 可以自己生小孩**：跟它說「生一個叫
 helper 的子 agent」，它就會挑好 clock 去呼叫 `aos-agent-spawn`，子資料夾直接長在它旁邊。
+
+## daemon：一個 loop 推所有資料夾
+
+每個資料夾各開一個 `aos-loop` 很快就開不完，所以有 **daemon**：它自己也只是一個資料夾（`.aos/inst`
+寫 `aos-daemon-step .`，靠 `aos-loop` 轉），照登記表把別人各推一格。東西在 `<dir>/.aos/daemon/`：
+登記表 `registry/<名字>.json`（`{"dir": "路徑", "every": 1}`，`dir` 可絕對可相對——相對是相對於
+daemon 資料夾；`every` 是幾格推一次，缺就 1）、走到哪 `state.json`（`{"tick": N}`）。
+
+一格：`tick` 加一，登記表照檔名排序，輪到的就 `aos-exec <那個資料夾>`，每個印一行
+`aos-daemon-step: tick 3 llm exit 0`（沒輪到印 `skip`，讀不了或不見印一行跳過）。daemon 永遠回 0。
+
+```sh
+proto2/aos-daemon-register proto2/examples/daemon 某個資料夾 [--name 名字] [--every N]
+proto2/aos-daemon-unregister proto2/examples/daemon 名字
+```
+
+名字省略就用目標資料夾的 basename，`dir` 一律寫絕對路徑（daemon 從哪被叫都不會錯），同名已經
+登記過退 2。agent 生 own 的子 agent 時會自己來登記，不用人工補。
 
 ## 為什麼另起爐灶
 
@@ -104,17 +124,18 @@ helper 的子 agent」，它就會挑好 clock 去呼叫 `aos-agent-spawn`，子
 
 ## 怎麼玩
 
-兩個範例資料夾都附好 `.aos/inst` 了，開三個終端機：
+`examples/daemon` 的登記表已經登記好 `../llm` 跟 `../agent`，所以**只要兩個終端機**：
 
 ```sh
-proto2/aos-loop proto2/examples/llm --keep-inst      # 1：LLM 資料夾（LM Studio 要先載一顆模型）
-proto2/aos-loop proto2/examples/agent --keep-inst    # 2：agent
-proto2/aos-agent-talk proto2/examples/agent          # 3：聊天
+proto2/aos-loop proto2/examples/daemon --keep-inst   # 1：daemon 輪流推 llm 跟 agent（LM Studio 要先載一顆模型）
+proto2/aos-agent-talk proto2/examples/agent          # 2：聊天
 ```
 
-`examples/agent/.aos/agent/llm.json` 是 `{"dir": "../llm"}`，指的就是終端機 1 那個資料夾。agent
-沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）、終端機 2 是不是一直印 `等 LLM`
-（終端機 1 沒在轉），或 `沒有 .aos/inst`（資料夾沒附心跳指令）。不想開 agent、只想問一句話：
+也可以各開各的 loop（llm 一個、agent 一個），daemon 只是幫你省終端機。
+
+`examples/agent/.aos/agent/llm.json` 是 `{"dir": "../llm"}`、`daemon.json` 是 `{"dir": "../daemon"}`，
+三個資料夾要當兄弟目錄一起搬。agent 沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）、
+是不是一直印 `等 LLM`，或 `沒有 .aos/inst`（資料夾沒附心跳指令）。不想開 agent、只想問一句話：
 `echo '{"messages":[{"role":"user","content":"1+1=?"}]}' | proto2/aos-llm-ask proto2/examples/llm`。
 
 其他跑法：
@@ -126,4 +147,4 @@ bash proto2/test.sh
 
 ## 目前刻意不做
 
-鎖、崩潰恢復、fsync、並發、逾時、重試、daemon、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
+鎖、崩潰恢復、fsync、並發、逾時、重試、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。

@@ -10,6 +10,9 @@ SAY="$HERE/aos-agent-say"
 SPAWN="$HERE/aos-agent-spawn"
 LISTEN="$HERE/aos-agent-listen"
 TALK="$HERE/aos-agent-talk"
+DSTEP="$HERE/aos-daemon-step"
+DREG="$HERE/aos-daemon-register"
+DUNREG="$HERE/aos-daemon-unregister"
 FAILED=0
 
 check() {  # check <名字> <期待退出碼> <實際退出碼>
@@ -229,6 +232,16 @@ PYEOF2
 }
 now_state() {  # now_state <agent 資料夾>
   python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' "$1/.aos/agent/state.json"
+}
+
+# daemon 範例的複本。登記表也走 git 索引：own 的子 agent 會往真範例的 registry/ 塞新檔
+# （使用者玩過就會多幾個），cp -r 會把那些也撿進來，測試就飄了。組完把兩條登記改成指向
+# 這次的複本（用 aos-daemon-register 重寫，順便測到它寫的是絕對路徑）。
+prep_daemon() {  # prep_daemon <目標 daemon 資料夾> [<要登記的資料夾>...]
+  d="$1"; shift
+  mkdir -p "$d/.aos/daemon/registry"
+  git -C "$HERE/.." show :proto2/examples/daemon/.aos/inst > "$d/.aos/inst"
+  for t in "$@"; do "$DREG" "$d" "$t" >/dev/null 2>&1; done
 }
 
 # 12. LLM 資料夾走一格：拿最舊的請求去打、回覆落在 results/、請求搬去 requests/done/
@@ -652,6 +665,139 @@ if [ "$KID_STEP" = "3" ] && [ "$KID_BUSY" = "0" ]; then
 else
   echo "FAIL 子空轉的 step/busy 不對：step=$KID_STEP busy=$KID_BUSY"; FAILED=1
 fi
+rm -rf "$TMP"
+
+# ── daemon 資料夾 ───────────────────────────────────────────────────────────
+# 35. daemon 走一格：登記表上的 agent 跟 llm 各被推一格
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
+prep_daemon "$TMP/daemon" "$TMP/agent" "$TMP/llm"
+echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
+  > "$TMP/llm/.aos/llm/requests/0001.json"
+OUT=$("$DSTEP" "$TMP/daemon" 2>&1); RC=$?
+check "aos-daemon-step 走一格回 0" 0 "$RC"
+AG_STEP=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' \
+  "$TMP/agent/.aos/agent/state.json")
+if [ "$AG_STEP" = "1" ]; then echo "ok   登記表上的 agent 被推了一格"; else echo "FAIL agent 走了 $AG_STEP 格：$OUT"; FAILED=1; fi
+if [ -f "$TMP/llm/.aos/llm/results/0001.json" ]; then
+  echo "ok   登記表上的 LLM 資料夾也被推了一格（請求變成結果了）"
+else
+  echo "FAIL LLM 資料夾沒被推到：$OUT"; FAILED=1
+fi
+NEXIT=$(echo "$OUT" | grep -c "tick 1 .* exit 0")
+if [ "$NEXIT" = "2" ]; then echo "ok   stderr 兩個登記各印一行 exit 0"; else echo "FAIL exit 0 的行數不對（$NEXIT）：$OUT"; FAILED=1; fi
+TICK=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["tick"])' \
+  "$TMP/daemon/.aos/daemon/state.json")
+if [ "$TICK" = "1" ]; then echo "ok   daemon 自己的 state.json tick 是 1"; else echo "FAIL tick 是 $TICK"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 36. every：登記寫 2 就兩格推一次，daemon 走四格它只走兩格
+TMP=$(mktemp -d)
+mkdir -p "$TMP/daemon/.aos/daemon/registry" "$TMP/fast/.aos" "$TMP/slow/.aos"
+printf 'echo x >> count.txt\n' > "$TMP/fast/.aos/inst"
+printf 'echo x >> count.txt\n' > "$TMP/slow/.aos/inst"
+"$DREG" "$TMP/daemon" "$TMP/fast" >/dev/null 2>&1
+"$DREG" "$TMP/daemon" "$TMP/slow" --every 2 >/dev/null 2>&1
+OUT=$(for i in 1 2 3 4; do "$DSTEP" "$TMP/daemon"; done 2>&1)
+NFAST=$(wc -l < "$TMP/fast/count.txt")
+NSLOW=$(wc -l < "$TMP/slow/count.txt")
+if [ "$NFAST" = "4" ] && [ "$NSLOW" = "2" ]; then
+  echo "ok   every 1 的走四格、every 2 的只走兩格"
+else
+  echo "FAIL every 不對：fast=$NFAST slow=$NSLOW"; FAILED=1
+fi
+NSKIP=$(echo "$OUT" | grep -c "slow skip")
+if [ "$NSKIP" = "2" ]; then echo "ok   沒輪到的那兩格印了 skip"; else echo "FAIL skip 行數不對（$NSKIP）：$OUT"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 37. register／unregister：檔案出現、消失，同名跟不存在都退 2
+TMP=$(mktemp -d)
+mkdir -p "$TMP/daemon" "$TMP/target/.aos"
+printf 'true\n' > "$TMP/target/.aos/inst"
+"$DREG" "$TMP/daemon" "$TMP/target" >/dev/null 2>&1; RC=$?
+check "aos-daemon-register 回 0" 0 "$RC"
+REGFILE="$TMP/daemon/.aos/daemon/registry/target.json"
+if [ -f "$REGFILE" ]; then echo "ok   名字沒給就用目標資料夾的 basename"; else echo "FAIL $REGFILE 沒出現"; FAILED=1; fi
+REGDIR=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dir"])' "$REGFILE")
+case "$REGDIR" in
+  /*) echo "ok   登記表裡的 dir 是絕對路徑" ;;
+  *) echo "FAIL 登記表的 dir 不是絕對路徑：$REGDIR"; FAILED=1 ;;
+esac
+"$DREG" "$TMP/daemon" "$TMP/target" >/dev/null 2>&1; RC=$?
+check "同名再登記一次退 2" 2 "$RC"
+"$DREG" "$TMP/daemon" "$TMP/target" --name second --every 3 >/dev/null 2>&1
+EVERY=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["every"])' \
+  "$TMP/daemon/.aos/daemon/registry/second.json")
+if [ "$EVERY" = "3" ]; then echo "ok   --name 換名字、--every 有寫進去"; else echo "FAIL every=$EVERY"; FAILED=1; fi
+"$DUNREG" "$TMP/daemon" target >/dev/null 2>&1; RC=$?
+check "aos-daemon-unregister 回 0" 0 "$RC"
+if [ ! -f "$REGFILE" ]; then echo "ok   取消登記後檔案不見了"; else echo "FAIL $REGFILE 還在"; FAILED=1; fi
+"$DUNREG" "$TMP/daemon" target >/dev/null 2>&1; RC=$?
+check "取消不存在的登記退 2" 2 "$RC"
+rm -rf "$TMP"
+
+# 38. 登記的資料夾不見了：印一行、其他登記照推、整格還是回 0
+TMP=$(mktemp -d)
+mkdir -p "$TMP/daemon/.aos/daemon/registry" "$TMP/good/.aos"
+printf 'echo x >> count.txt\n' > "$TMP/good/.aos/inst"
+"$DREG" "$TMP/daemon" "$TMP/good" >/dev/null 2>&1
+printf '{"dir": "%s/沒有這個資料夾", "every": 1}\n' "$TMP" \
+  > "$TMP/daemon/.aos/daemon/registry/aaa-missing.json"
+OUT=$("$DSTEP" "$TMP/daemon" 2>&1); RC=$?
+check "有壞登記時 aos-daemon-step 還是回 0" 0 "$RC"
+case "$OUT" in
+  *"找不到資料夾"*) echo "ok   找不到的登記有印一行" ;;
+  *) echo "FAIL 沒印找不到資料夾：$OUT"; FAILED=1 ;;
+esac
+if [ -f "$TMP/good/count.txt" ]; then echo "ok   壞登記不影響後面的登記照推"; else echo "FAIL good 沒被推到：$OUT"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 39. 一個 loop 推完整條鏈：只轉 daemon，agent 跟 LLM 都靠它推，replies/ 要冒出回話
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
+prep_daemon "$TMP/daemon" "$TMP/agent" "$TMP/llm"
+"$SAY" "$TMP/agent" "在嗎" >/dev/null 2>&1
+"$LOOP" "$TMP/daemon" --keep-inst --steps 15 --interval 0 >/dev/null 2>&1
+NREP=$(find "$TMP/agent/.aos/agent/replies" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+if [ "$NREP" -ge 1 ]; then
+  echo "ok   一個 aos-loop 只推 daemon，整條鏈就跑完了（agent 有回話）"
+else
+  echo "FAIL 整條鏈沒跑完：state=$(now_state "$TMP/agent")"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 40. own 的子 agent 自動登記給父的 daemon，生出來就有人推
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
+prep_daemon "$TMP/daemon"
+git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/daemon.json \
+  > "$TMP/agent/.aos/agent/daemon.json"
+OUT=$("$SPAWN" "$TMP/agent" kid --clock own "你是 own 的小孩" 2>&1); RC=$?
+check "有 daemon.json 時 own spawn 回 0" 0 "$RC"
+KIDREG="$TMP/daemon/.aos/daemon/registry/agent-kid.json"
+if [ -f "$KIDREG" ]; then echo "ok   own 的子自動登記成 <父名>-<子名>（agent-kid）"; else echo "FAIL $KIDREG 沒出現：$OUT"; FAILED=1; fi
+KIDDIR=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dir"])' "$KIDREG" 2>/dev/null)
+if [ "$KIDDIR" = "$TMP/agent/kid" ]; then echo "ok   登記指到子的絕對路徑"; else echo "FAIL 登記的路徑是 $KIDDIR"; FAILED=1; fi
+KIDD=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dir"])' \
+  "$TMP/agent/kid/.aos/agent/daemon.json" 2>/dev/null)
+if [ "$KIDD" = "../../daemon" ]; then echo "ok   子也抄到一份換算過的 daemon.json"; else echo "FAIL 子的 daemon.json 是 $KIDD"; FAILED=1; fi
+"$LOOP" "$TMP/daemon" --keep-inst --steps 3 --interval 0 >/dev/null 2>&1
+KID_STEP=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' \
+  "$TMP/agent/kid/.aos/agent/state.json")
+if [ "$KID_STEP" -ge 1 ]; then echo "ok   daemon 轉起來，own 的子自己走了 $KID_STEP 格"; else echo "FAIL own 的子沒走：step=$KID_STEP"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 41. 父沒有 daemon.json：own 的子照舊不登記，只叫人自己開 loop
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+prep_daemon "$TMP/daemon"
+OUT=$("$SPAWN" "$TMP/agent" kid --clock own "你是 own 的小孩" 2>&1)
+NREG=$(find "$TMP/daemon/.aos/daemon/registry" -name '*.json' | wc -l)
+if [ "$NREG" = "0" ]; then echo "ok   父沒有 daemon.json 就不登記"; else echo "FAIL 竟然登記了 $NREG 個"; FAILED=1; fi
+case "$OUT" in
+  *"自己開 aos-loop"*) echo "ok   沒 daemon 時還是叫人自己開 loop" ;;
+  *) echo "FAIL 沒印自己開 loop：$OUT"; FAILED=1 ;;
+esac
+if [ ! -f "$TMP/agent/kid/.aos/agent/daemon.json" ]; then echo "ok   父沒 daemon.json 子也不會憑空多一份"; else echo "FAIL 子多了 daemon.json"; FAILED=1; fi
 rm -rf "$TMP"
 
 kill $FAKE_PID 2>/dev/null

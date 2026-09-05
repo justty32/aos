@@ -1,0 +1,2 @@
+# 跑起來才會生出來的東西，不進 git
+.aos/daemon/state.json
