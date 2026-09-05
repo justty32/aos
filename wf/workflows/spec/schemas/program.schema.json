@@ -7,6 +7,7 @@
   "additionalProperties": false,
   "properties": {
     "format_version": { "type": "integer", "const": 1 },
+    "_comment": { "description": "從原稿原樣抄來，只給人看，不參與執行。" },
     "name": { "$ref": "#/$defs/id" },
     "source_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "steps": {
@@ -38,6 +39,7 @@
       "type": "object",
       "required": ["name", "kind"],
       "properties": {
+        "_comment": { "description": "從原稿對應節點原樣抄來；落成指令批時不帶。" },
         "name": { "$ref": "#/$defs/id" },
         "kind": { "enum": ["inst", "call", "await"] },
         "then": { "$ref": "#/$defs/id" },

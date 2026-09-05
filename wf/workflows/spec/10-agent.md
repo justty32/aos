@@ -15,17 +15,17 @@ agent 不是核心裡的零件。它就是一塊地，加上寫在原稿裡的�
 
 - **S-10-06** agent 資料夾必須有四樣：`main.aos.json`（它的圈）、`agent.json`（限制參數）、`system_prompt` 指到的檔、`.aos/`。〔主編補〕
 - **S-10-07** `aos agent init` 必須一次產出這四樣，產出的 `main.aos.json` 必須能直接跑。〔主編補〕
-- **S-10-08** `agent.json` 必須住頂層、進 git、由人寫；欄位 `format_version`、`max_seconds`、`max_llm_calls`、`max_tokens`、`tier`、`system_prompt`、`ext`，正本 [`agent.schema.json`](schemas/agent.schema.json)。〔預設 2026-09-05，H-03〕
+- **S-10-08** `agent.json` 必須住頂層、進 git、由人寫；欄位 `format_version`、`max_ticks`、`max_llm_calls`、`max_tokens`、`tier`、`system_prompt`、`ext`，正本 [`agent.schema.json`](schemas/agent.schema.json)。〔裁決 2026-09-05〕
 - **S-10-09** `system_prompt` 必須是一條路徑，禁止把整段人格字串塞進 `agent.json`。〔主編補〕
 
 ## 限制參數：保底的強制停
 
 自然停是通用停法（沒新事就停）。限制參數是保底的強制停，兩個都要有。
 
-- **S-10-10** `max_llm_calls` 與 `max_tokens` 必須對這塊地自己的 `.aos/usage.json` 判；禁止讀家的帳簿，那是 LLM 世界那邊的帳。〔主編補〕
+- **S-10-10** `max_llm_calls` 與 `max_tokens` 必須對這塊地自己的 `.aos/usage.json` 判；禁止讀家的帳簿，那是 LLM 世界那邊的帳。〔裁決 2026-09-05〕
 - **S-10-11** LLM 世界回結果時必須在落點旁多寫 `<結果落點>.usage.json`（`tokens_in`、`tokens_out`）；圈必須每圈把它累加進 `.aos/usage.json`，正本 [`usage-total.schema.json`](schemas/usage-total.schema.json)。〔主編補〕
 - **S-10-12** 超過上限時必須往自己的 `.aos/control/` 投一則 `stop`，串記 `stopped`；那則 `stop` 由它自己那支 run 在格邊界讀到（例外：借父鐘的 agent 由父的 exec 讀，見 [06b](06b-run-rules.md) 的 S-06-62）。禁止直接殺行程。〔主編補〕
-- **S-10-13** `max_seconds` 必須由外面兜：起 run 的人換算成格數，寫進 `aos run --budget N` 或登記表那筆的 `budget`。圈不看牆上的鐘。〔主編補〕
+- **S-10-13** `max_ticks` 必須直接用格數表示，起 run 時寫進 `aos run --budget N` 或登記表那筆的 `budget`；禁止先寫牆鐘秒數再換算。〔裁決 2026-09-05〕
 - **S-10-14** 三個上限缺席或填 0 必須當「不限」。〔主編補〕
 - **S-10-43** 累加必須是 `await` 拿到結果檔之後的下一步，一筆自己的指令（骨架裡叫 `tally_usage`）：讀 `<結果落點>.usage.json` 累加進 `.aos/usage.json`。不准跟 `await` 擠同一格，一格裡的指令看不到彼此的結果。沒有用量檔（例如失敗）就只把 `llm_calls` 加一。〔主編補〕
 
@@ -75,14 +75,14 @@ agent 不是核心裡的零件。它就是一塊地，加上寫在原稿裡的�
 - **S-10-39** 使用者必須也算一隻 agent，住 `~`；別的 agent 可以寄信到那裡。〔裁決 2026-08-30〕
 - **S-10-40** 每封信必須帶 `from`，值是投遞者那塊地的路徑。〔裁決 2026-08-30〕
 - **S-10-41** `aos say` 必須是往某個 agent 的收件匣投一封 `mail`，`aos listen` 是讀 agent 投到 `~` 的信，`aos state` 是看游標在哪一步。旗標在 [12](12-cli.md)。〔主編補〕
-- **S-10-42** `aos state` 必須把游標翻成三態給人看：停在等回話那步＝等 LLM，停在跑工具那幾步＝等工具，其餘＝組 prompt。〔預設 2026-09-05，H-03〕
+- **S-10-42** `aos state` 必須把游標翻成三態給人看：停在等回話那步＝等 LLM，停在跑工具那幾步＝等工具，其餘＝組 prompt。〔主編補〕
 
 ## 待使用者拍板
 
 - S-10-05～07 圈的狀態一律落檔；資料夾必有四樣檔；`aos agent init` 一次產出。〔主編補〕
-- S-10-08 `agent.json` 就是那七欄。〔預設，H-03〕｜S-10-09 `system_prompt` 只放路徑。〔主編補〕
-- S-10-10、S-10-11、S-10-43 上限對 `.aos/usage.json` 判、不讀家的帳簿；用量由 `await` 之後的下一步累加，沒有用量檔就只加 `llm_calls`。〔主編補〕
-- S-10-12～14 超過上限＝投 `stop` 記 `stopped`；`max_seconds` 換成格數；缺席或 0＝不限。〔主編補〕
+- S-10-08 `agent.json` 用 `max_ticks`、LLM 次數與 token 三個上限。〔裁決 2026-09-05〕｜S-10-09 `system_prompt` 只放路徑。〔主編補〕
+- S-10-10 上限對自己的 `.aos/usage.json` 判。〔裁決 2026-09-05〕｜S-10-11、S-10-43 用量由 `await` 後下一步累加。〔主編補〕
+- S-10-13 直接用格數，不看牆鐘。〔裁決 2026-09-05〕｜S-10-12、S-10-14 超過上限就投 `stop`；缺席或 0＝不限。〔主編補〕
 - S-10-16 每圈 prompt 的三個輸入來源。〔預設，H-04〕｜S-10-24 慢工具開脫節子地跑。〔預設，K-06〕
 - S-10-17 進 prompt 的信同格搬到 `.aos/mail/read/`，搬不成不進 prompt。〔主編補〕
 - S-10-19 每圈開頭先清掉堆疊框上一圈的結果檔、狀態檔與用量檔。〔主編補〕

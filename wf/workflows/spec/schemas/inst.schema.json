@@ -27,8 +27,8 @@
     },
     "env_inherit": {
       "type": "boolean",
-      "default": true,
-      "description": "繼不繼承父行程的環境變數。預設 true，建議明寫 false。"
+      "default": false,
+      "description": "繼不繼承 exec 的環境變數。省略時是 false；若 config 的 path 也空，PATH 保底 /usr/bin:/bin。"
     },
     "cwd": {
       "$ref": "#/$defs/bytes",
@@ -58,7 +58,7 @@
         "reads": { "type": "array", "items": { "$ref": "#/$defs/bytes" } },
         "writes": { "type": "array", "items": { "$ref": "#/$defs/bytes" } }
       },
-      "description": "宣告會讀哪裡、會寫哪裡。第一版宣告不強制。"
+      "description": "宣告會讀哪裡、會寫哪裡。不查實際足跡；同格兩筆宣告的 writes 相交時，整格拒跑並退出 3。"
     },
     "exclusive": {
       "type": "array",
