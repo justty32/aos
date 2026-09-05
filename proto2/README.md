@@ -27,24 +27,44 @@
 人格 `system-prompt.json`、記憶 `prompts.json`（OpenAI messages 陣列，assistant 訊息只留
 `role`／`content`／`tool_calls`）、這輪要加的話 `new-prompts.json`、工具 `tools.json`（`{name,
 description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shell、參數 JSON 從 stdin
-進去）、引擎 `engine.json`（`{base_url, model, api_key_env}`）、收新訊息的地方 `new-prompts/`
-（收走搬進 `new-prompts/archived/`）、上次回覆 `llm-result.json`、走到哪 `state.json`。每次執行
-只做一格：
+進去）、LLM 在哪 `llm.json`（`{"dir": "../llm"}`，相對於 agent 資料夾本身）、收新訊息的地方
+`new-prompts/`（收走搬進 `new-prompts/archived/`）、上次回覆 `llm-result.json`、走到哪
+`state.json`。**agent 自己不打 HTTP**：要問 LLM 就寫一個請求檔丟進隔壁 LLM 資料夾，下一格再去撿。
+每次執行只做一格：
 
 | state | 做什麼 | 做完變成 |
 |---|---|---|
 | `idle` | 收 `new-prompts/` 頂層的檔，每個變一則訊息，寫進 `new-prompts.json` | 有信 `llm`，沒信留 `idle` |
-| `llm` | `[人格]＋記憶＋new-prompts` 打 `{base_url}/chat/completions`，回覆併進記憶 | `act` |
+| `llm` | `[人格]＋記憶＋new-prompts`（＋工具）組成 body，丟進 LLM 資料夾的 `requests/`，檔名記進 `state.json` 的 `request` | `wait` |
+| `wait` | LLM 資料夾的 `results/<request>` 出現了就讀進 `llm-result.json`、把結果檔拿走、回覆併進記憶 | 撿到 `act`，沒撿到留 `wait`，結果是 `error` 就回 `idle` |
 | `act` | `tool_calls` 非空就照 `command` 跑工具、結果收進 `new-prompts`；沒有就印出它說的話、順手落一份到 `replies/` | 有工具 `collect`，沒有 `idle` |
 | `collect` | 再收一次 `new-prompts/`，接在既有的 `new-prompts.json` 後面（沒新信也照走） | `llm` |
+
+記憶是在 `wait` 真的撿到回覆才更新的（`prompts.json` 接上 `new-prompts`、清空 `new-prompts.json`），
+不是丟請求那格——中途撿不回來的話，這輪講的話才不會憑空消失。
 
 `new-prompts/` 裡每個檔可以是 `{"role": "user", "content": "..."}` 這種 JSON 物件（算一則），
 也可以是一串這種物件的 JSON 陣列（照順序各算一則）；陣列裡不是物件的項、或整個讀不成 JSON
 的檔，印一行到 stderr 跳過但一樣搬走。沒工具可跑那格說的話會寫成 `.aos/agent/replies/<step
 四位數>.json`（`{"role":"assistant","content":...}`），旁邊的人撿得到。**`idle` 開新一輪前先清空
 `archived/`**（`collect` 中途補收不清，這一輪收的留到輪完）。每格結束都把 `<aos-agent-step
-絕對路徑> .` 寫回 `<dir>/.aos/inst`，讓 `aos-loop` 回來看有沒有新信；`--no-write-inst` 就不
-寫。打不通 LLM：印一行 stderr、state 不動、退出碼 1，下一圈再試。
+絕對路徑> .` 寫回 `<dir>/.aos/inst`，讓 `aos-loop` 回來看有沒有新信；`--no-write-inst` 就不寫。
+
+## LLM 資料夾：aos-llm-step／aos-llm-ask
+
+LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾**，也靠 `aos-loop` 一格一格轉。
+東西全在 `<dir>/.aos/llm/`：引擎 `engine.json`（`{base_url, model, api_key_env}`）、請求箱
+`requests/`（一個檔一個請求，內容就是 chat/completions 的 body，至少有 `messages`，可以有
+`tools`，但**不含 `model`**——那是 engine.json 的事）、處理完的 `requests/done/`、回覆
+`results/<跟請求同檔名>`。誰想用 LLM，就往 `requests/` 丟一個檔，下一格自然會有結果。
+
+- `aos-llm-step [dir]`——走一格：拿 `requests/` 頂層排序後**最舊的那一個**，補上 model 打
+  `{base_url}/chat/completions`，整包原始回覆寫進 `results/`、請求搬去 `requests/done/`；沒請求就
+  印 `idle` 什麼都不做。打不通：印一行 stderr、請求留在原地下一格再試、退出碼 1。請求讀不成
+  JSON：照樣搬走，結果檔寫 `{"error": "..."}`，免得丟請求的人等到天荒地老。
+- `aos-llm-ask [dir] [--no-wait]`——從 stdin 讀整包 body 丟進 `requests/<時間戳>.json`，然後每
+  0.5 秒看 `results/` 有沒有同名檔，有就把整包印到 stdout、**把結果檔刪掉**（拿走就沒了）；
+  Ctrl-C 退出 130。`--no-wait` 只丟不等，把檔名印出來就走。
 
 ## 跟 agent 說話：say／listen／talk
 
@@ -61,16 +81,19 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 
 ## 怎麼玩
 
-範例 agent 已經附好 `.aos/inst`，兩步就能跑：
+兩個範例資料夾都附好 `.aos/inst` 了，開三個終端機：
 
 ```sh
-# 終端機 1（LM Studio 要先載一顆模型，哪顆都行，engine.json 的 "local" 會自動用載入的那顆）
-proto2/aos-loop proto2/examples/agent --keep-inst
-# 終端機 2
-proto2/aos-agent-talk proto2/examples/agent
+proto2/aos-loop proto2/examples/llm --keep-inst      # 1：LLM 資料夾（LM Studio 要先載一顆模型）
+proto2/aos-loop proto2/examples/agent --keep-inst    # 2：agent
+proto2/aos-agent-talk proto2/examples/agent          # 3：聊天
 ```
 
-agent 沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）或 `沒有 .aos/inst`（資料夾沒附心跳指令）。
+`examples/agent/.aos/agent/llm.json` 是 `{"dir": "../llm"}`，指的就是終端機 1 那個資料夾。
+agent 沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）、終端機 2 是不是一直印
+`等 LLM`（終端機 1 沒在轉），或 `沒有 .aos/inst`（資料夾沒附心跳指令）。
+不想開 agent、只想問一句話：`echo '{"messages":[{"role":"user","content":"1+1=?"}]}' |
+proto2/aos-llm-ask proto2/examples/llm`。
 
 其他跑法：
 ```sh

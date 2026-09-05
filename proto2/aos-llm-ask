@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""aos-llm-ask [dir] [--no-wait] — 往一個 LLM 資料夾丟一個請求，然後等回覆。
+
+從 stdin 讀整包 chat/completions 的 body（JSON，至少有 messages，不用寫 model），
+原樣寫進 <dir>/.aos/llm/requests/<時間戳>.json（時間戳到微秒，跟 aos-agent-say
+同一種檔名，同一秒丟好幾個也排得出先後）。然後每 0.5 秒看一次
+<dir>/.aos/llm/results/<同檔名> 出現了沒，出現就把整包印到 stdout、**把結果檔刪掉**
+（拿走就沒了，不留給下一個人），退出 0。等的時候 Ctrl-C 退出 130。
+--no-wait 只丟不等，把檔名印到 stdout 就走。
+"""
+import argparse
+import datetime
+import json
+import os
+import sys
+import time
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-llm-ask")
+    ap.add_argument("dir", nargs="?", default=".")
+    ap.add_argument("--no-wait", action="store_true")
+    args = ap.parse_args()
+
+    home = os.path.join(os.path.abspath(args.dir), ".aos", "llm")
+    now = datetime.datetime.now()
+    name = now.strftime("%Y%m%d-%H%M%S") + "-%06d.json" % now.microsecond
+    box = os.path.join(home, "requests")
+    os.makedirs(box, exist_ok=True)
+    with open(os.path.join(box, name), "w", encoding="utf-8") as f:
+        f.write(sys.stdin.read())
+    print("aos-llm-ask: 丟了 " + os.path.join(box, name), file=sys.stderr)
+
+    if args.no_wait:
+        print(name)
+        return 0
+
+    result = os.path.join(home, "results", name)
+    try:
+        while not os.path.isfile(result):
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\naos-llm-ask: 不等了，請求還留在 %s" % name, file=sys.stderr)
+        return 130
+    with open(result, encoding="utf-8", errors="replace") as f:
+        sys.stdout.write(f.read())
+    os.remove(result)
+    return 0
+
+
+sys.exit(main())

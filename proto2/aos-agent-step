@@ -3,21 +3,24 @@
 
 agent 本體就是 <dir>/.aos/agent/ 底下那幾個檔：人格（system-prompt.json）、
 記憶（prompts.json）、這輪要加的話（new-prompts.json）、工具（tools.json）、
-引擎（engine.json）、收新訊息的地方（new-prompts/、new-prompts/archived/）、
+LLM 在哪（llm.json，{"dir": "../llm"}，相對於 agent 資料夾本身）、
+收新訊息的地方（new-prompts/、new-prompts/archived/）、
 上次回覆（llm-result.json）、現在走到哪（state.json）。
 
-四格輪流走：idle 收信（收信前先清 archived/，開新一輪）→ llm 思考 → act 行動
-→ collect 再收信（不清 archived/，接在這一輪後面）→ llm …
+agent 自己不打 HTTP：要問 LLM 就把整包 body 寫成一個請求檔丟進那個 LLM 資料夾的
+requests/，下一格再去 results/ 撿回覆——LLM 只是隔壁另一個一直在跑的資料夾。
+
+五格輪流走：idle 收信（收信前先清 archived/，開新一輪）→ llm 丟請求 → wait 撿回覆
+→ act 行動 → collect 再收信（不清 archived/，接在這一輪後面）→ llm …
 沒工具可跑就回 idle。每格結束都把「自己 .」寫進 <dir>/.aos/inst，
 所以 aos-loop 會一直回來看（給 --no-write-inst 就不寫，讓 aos-loop --keep-inst 去管）。
 """
 import argparse
+import datetime
 import json
 import os
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 
 
 def read_json(path, default):
@@ -87,21 +90,29 @@ def collect_new_prompts(home):
     return msgs
 
 
-def do_llm(home):
-    """打一次 chat/completions。成功回 True，失敗印一行到 stderr 回 False。"""
-    engine = read_json(os.path.join(home, "engine.json"), {})
-    base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
-    url = base + "/chat/completions"
+def llm_home(home, workdir):
+    """LLM 資料夾的 .aos/llm/ 在哪。llm.json 的 dir 相對於 agent 資料夾本身
+    （也就是 <dir>，不是 .aos/agent/），給絕對路徑也可以。"""
+    where = read_json(os.path.join(home, "llm.json"), {}).get("dir") or "../llm"
+    return os.path.join(os.path.abspath(os.path.join(workdir, where)), ".aos", "llm")
 
+
+def do_llm(home, workdir):
+    """把「要問 LLM 的整包 body」寫成一個請求檔丟進 LLM 資料夾的 requests/。
+
+    body 不含 model——model 是那個 LLM 資料夾的 engine.json 說了算，這裡不管。
+    這格**不動歷史**：prompts.json 要等 wait 真的撿到回覆才接上 new-prompts，
+    不然中途撿不回來（或撿到 error），這輪的話就憑空消失了。
+    回請求檔名，讓 state.json 記著下一格去撿哪一個。
+    """
     messages = []
     persona = read_json(os.path.join(home, "system-prompt.json"), {})
     if persona.get("content"):
         messages.append({"role": "system", "content": persona["content"]})
-    history = read_json(os.path.join(home, "prompts.json"), [])
-    pending = read_json(os.path.join(home, "new-prompts.json"), [])
-    messages += history + pending
+    messages += read_json(os.path.join(home, "prompts.json"), [])
+    messages += read_json(os.path.join(home, "new-prompts.json"), [])
 
-    body = {"model": engine.get("model") or "local", "messages": messages}
+    body = {"messages": messages}
     tools = read_json(os.path.join(home, "tools.json"), [])
     if tools:
         body["tools"] = [{"type": "function", "function": {
@@ -110,20 +121,53 @@ def do_llm(home):
             "parameters": t.get("parameters", {}),
         }} for t in tools]
 
-    key = os.environ.get(engine.get("api_key_env") or "") or "none"
-    req = urllib.request.Request(
-        url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + key},
-        method="POST")
-    try:
-        with urllib.request.urlopen(req) as r:
-            answer = json.loads(r.read().decode("utf-8", "replace"))
-        assistant = answer["choices"][0]["message"]
-    except (urllib.error.URLError, OSError, ValueError, KeyError, IndexError, TypeError) as e:
-        print("aos-agent-step: 打不通 %s（%s），這格不算，下次再試" % (url, e), file=sys.stderr)
-        return False
+    now = datetime.datetime.now()
+    name = "%s-%s-%06d.json" % (os.path.basename(workdir.rstrip("/")) or "agent",
+                                now.strftime("%Y%m%d-%H%M%S"), now.microsecond)
+    write_json(os.path.join(llm_home(home, workdir), "requests", name), body)
+    print("aos-agent-step: 問 LLM，請求丟成 %s" % name, file=sys.stderr)
+    return name
 
+
+def do_wait(home, workdir, request):
+    """去 LLM 資料夾的 results/ 撿回覆。回下一個 state（撿不到就還是 wait）。
+
+    撿到就把整包寫成 llm-result.json、把結果檔拿走（拿走就沒了），然後才更新歷史：
+    prompts.json 接上這輪的 new-prompts 再接 assistant，new-prompts.json 清空。
+    結果是個 error（LLM 資料夾說這個請求它處理不了）：歷史照樣接上 new-prompts、
+    但不加 assistant，直接回 idle，免得卡在 wait 一輩子。
+    """
+    result = os.path.join(llm_home(home, workdir), "results", request or "")
+    if not request or not os.path.isfile(result):
+        print("aos-agent-step: 等 LLM（%s）" % (request or "沒有請求"), file=sys.stderr)
+        return "wait"
+    with open(result, encoding="utf-8", errors="replace") as f:
+        text = f.read()
+    try:
+        answer = json.loads(text)
+    except ValueError:
+        answer = {"error": "結果檔讀不成 JSON"}
+    os.remove(result)
     write_json(os.path.join(home, "llm-result.json"), answer)
+
+    history = read_json(os.path.join(home, "prompts.json"), [])
+    pending = read_json(os.path.join(home, "new-prompts.json"), [])
+    if isinstance(answer, dict) and answer.get("error"):
+        print("aos-agent-step: LLM 回了 error（%s），這輪不算，回 idle"
+              % answer.get("error"), file=sys.stderr)
+        write_json(os.path.join(home, "prompts.json"), history + pending)
+        write_json(os.path.join(home, "new-prompts.json"), [])
+        return "idle"
+
+    try:
+        assistant = answer["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError):
+        print("aos-agent-step: 回覆裡找不到 choices[0].message，這輪不算，回 idle",
+              file=sys.stderr)
+        write_json(os.path.join(home, "prompts.json"), history + pending)
+        write_json(os.path.join(home, "new-prompts.json"), [])
+        return "idle"
+
     # 存進歷史的 assistant 訊息只留 role、content、tool_calls 三個公開欄位，
     # 過濾掉伺服器可能夾帶的私有欄位（例如 reasoning_content）。
     stored = {"role": assistant.get("role") or "assistant", "content": assistant.get("content") or ""}
@@ -132,7 +176,7 @@ def do_llm(home):
         stored["tool_calls"] = tool_calls
     write_json(os.path.join(home, "prompts.json"), history + pending + [stored])
     write_json(os.path.join(home, "new-prompts.json"), [])
-    return True
+    return "act"
 
 
 def do_act(home, workdir, step):
@@ -184,7 +228,7 @@ def main():
     saved = read_json(state_path, {})
     state = saved.get("state") or "idle"
     step = saved.get("step") or 0
-    failed = False
+    request = saved.get("request") or ""
 
     if state == "idle":
         clear_archived(home)
@@ -199,24 +243,25 @@ def main():
         write_json(os.path.join(home, "new-prompts.json"), pending + collect_new_prompts(home))
         nxt = "llm"
     elif state == "llm":
-        if do_llm(home):
-            nxt = "act"
-        else:
-            nxt, failed = "llm", True
+        request = do_llm(home, workdir)
+        nxt = "wait"
+    elif state == "wait":
+        nxt = do_wait(home, workdir, request)
+        if nxt != "wait":
+            request = ""
     elif state == "act":
         nxt = do_act(home, workdir, step + 1)
     else:
         print("aos-agent-step: 認不得的 state：%s，當 idle" % state, file=sys.stderr)
         state, nxt = "idle", "idle"
 
-    write_json(state_path, {"state": nxt, "step": step + 1})
+    write_json(state_path, {"state": nxt, "step": step + 1, "request": request})
     if not args.no_write_inst:
         inst = os.path.join(workdir, ".aos", "inst")
         os.makedirs(os.path.dirname(inst), exist_ok=True)
         with open(inst, "w", encoding="utf-8") as f:
             f.write("%s .\n" % os.path.abspath(sys.argv[0]))
     print("aos-agent-step: step %d state %s -> %s" % (step, state, nxt), file=sys.stderr)
-    sys.exit(1 if failed else 0)
 
 
 main()
