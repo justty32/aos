@@ -1,0 +1,66 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "steps": [
+    {
+      "name": "dispatch_a",
+      "kind": "call",
+      "child": "../workers/a",
+      "mode": "async",
+      "clock": {"kind": "every", "every_ms": 300},
+      "args": {"file": "work/a.py", "who": "A"},
+      "result": "out/a.done.json",
+      "then": "dispatch_b"
+    },
+    {
+      "name": "dispatch_b",
+      "kind": "call",
+      "child": "../workers/b",
+      "mode": "async",
+      "clock": {"kind": "every", "every_ms": 300},
+      "args": {"file": "work/b.py", "who": "B"},
+      "result": "out/b.done.json",
+      "then": "wait_a"
+    },
+    {
+      "name": "wait_a",
+      "kind": "await",
+      "result": "out/a.done.json",
+      "max_ticks": 400,
+      "then": "wait_b"
+    },
+    {
+      "name": "wait_b",
+      "kind": "await",
+      "result": "out/b.done.json",
+      "max_ticks": 400,
+      "then": "prep_report"
+    },
+    {
+      "name": "prep_report",
+      "kind": "inst",
+      "inst": {"argv": ["python3", "lead.py", "prep"]},
+      "then": "ask"
+    },
+    {
+      "name": "ask",
+      "kind": "inst",
+      "inst": {"argv": ["aos", "deliver", "${llm_world}", "state/req.json",
+                        "--sender", "${land}"]},
+      "then": "wait_sum"
+    },
+    {
+      "name": "wait_sum",
+      "kind": "await",
+      "result": "state/answer.txt",
+      "max_ticks": 200,
+      "then": "report"
+    },
+    {
+      "name": "report",
+      "kind": "inst",
+      "inst": {"argv": ["python3", "lead.py", "report"]},
+      "then": "end"
+    }
+  ]
+}

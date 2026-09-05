@@ -1,0 +1,7 @@
+# 跑 proto/play-team.sh 生出來的東西，不進 git
+.home/
+.pristine/
+lead/out/
+lead/state/
+lead/report.md
+workers/*/state/

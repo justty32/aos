@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "name": "main",
+  "steps": [
+    {
+      "name": "prep",
+      "kind": "inst",
+      "inst": {"argv": ["python3", "worker.py", "prep"]},
+      "then": "ask"
+    },
+    {
+      "name": "ask",
+      "kind": "inst",
+      "inst": {"argv": ["aos", "deliver", "${llm_world}", "state/req.json",
+                        "--sender", "${land}"]},
+      "then": "wait"
+    },
+    {
+      "name": "wait",
+      "kind": "await",
+      "result": "state/answer.txt",
+      "max_ticks": 100,
+      "then": "apply"
+    },
+    {
+      "name": "apply",
+      "kind": "inst",
+      "inst": {"argv": ["python3", "worker.py", "apply"]},
+      "select": "state/next.txt",
+      "then": "end"
+    }
+  ]
+}
