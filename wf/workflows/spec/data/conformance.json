@@ -1,0 +1,6793 @@
+{
+  "contract": "wf-table/1",
+  "source": "../14-conformance.md",
+  "extracted": "2026-09-05",
+  "columns": [
+    "section",
+    "section_title",
+    "clause_id",
+    "check_method",
+    "kind",
+    "what_to_use",
+    "manual_detail"
+  ],
+  "rows": [
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-01",
+      "check_method": "對沒有 `.aos/` 的資料夾跑 exec",
+      "kind": "回傳",
+      "what_to_use": "`aos exec` 退 4",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-02",
+      "check_method": "跑完一格，頂層檔名清單沒多出東西",
+      "kind": "存在",
+      "what_to_use": "前後各 `ls` 一次",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-03",
+      "check_method": "同 S-02-02",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-03",
+      "check_method": "「人不手改」沒有東西擋",
+      "kind": "人工",
+      "what_to_use": "只是規範，沒有防護機制",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-04",
+      "check_method": "檔案＝名字，是說法",
+      "kind": "人工",
+      "what_to_use": "沒有可觀察的差別",
+      "manual_detail": "檔案＝名字：缺一個看得出來的後果。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-05",
+      "check_method": "家也有 `.aos/layout.json`",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-06",
+      "check_method": "一塊地看不到外面",
+      "kind": "人工",
+      "what_to_use": "沒有掛載或沙箱可打",
+      "manual_detail": "一塊地看不到外面：缺掛載或沙箱，現在沒有東西擋跨地讀寫。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-07",
+      "check_method": "可見性不是權限",
+      "kind": "人工",
+      "what_to_use": "沒有對應介面",
+      "manual_detail": "可見性不是權限：缺一個「照可見性擋」的介面來證明它不存在。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-08",
+      "check_method": "登記表那筆沒有另發的 id 欄",
+      "kind": "schema",
+      "what_to_use": "registry.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-09",
+      "check_method": "刪掉地，對帳後那筆消失",
+      "kind": "回傳",
+      "what_to_use": "`aos daemon ls`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-10",
+      "check_method": "`aos mv` 後舊路徑不在、新的在",
+      "kind": "回傳",
+      "what_to_use": "`aos daemon ls`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-11",
+      "check_method": "直接 `mv`，對帳清掉舊筆",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-12",
+      "check_method": "用 symlink 登記，表裡是真實路徑",
+      "kind": "回傳",
+      "what_to_use": "`aos daemon ls`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-13",
+      "check_method": "一條路徑一個 writer",
+      "kind": "人工",
+      "what_to_use": "要靜態分析程式碼",
+      "manual_detail": "一路徑一 writer：缺一支掃程式碼的工具。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-14",
+      "check_method": "`.aos/` 下的路徑都在 02 那張表裡",
+      "kind": "存在",
+      "what_to_use": "`find .aos` 比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-15",
+      "check_method": "記憶的判準",
+      "kind": "人工",
+      "what_to_use": "沒有機器判得出的界線",
+      "manual_detail": "記憶的判準：缺一條機器判得出的界線。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-16",
+      "check_method": "`.aos/series.json` 被 git 忽略",
+      "kind": "回傳",
+      "what_to_use": "`git check-ignore` 回 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-17",
+      "check_method": "帳簿也被忽略",
+      "kind": "回傳",
+      "what_to_use": "`git check-ignore` 回 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-18",
+      "check_method": "init 產的 `.gitignore` 片段跟正本一樣",
+      "kind": "回傳",
+      "what_to_use": "`diff`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-19",
+      "check_method": "`.aos/tools/` 沒被忽略",
+      "kind": "回傳",
+      "what_to_use": "`git check-ignore` 回非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-20",
+      "check_method": "`.aos/` 下沒有自製的版本目錄",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-21",
+      "check_method": "`layout_version` 在",
+      "kind": "schema",
+      "what_to_use": "layout.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-22",
+      "check_method": "每份 schema 的必填都含 `format_version`",
+      "kind": "回傳",
+      "what_to_use": "掃 `schemas/*.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-23",
+      "check_method": "每份 schema 頂層 `additionalProperties` 是 false",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-23",
+      "check_method": "`layout.json` 塞怪欄位",
+      "kind": "回傳",
+      "what_to_use": "`aos exec` 退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-24",
+      "check_method": "使用者層設定的欄位表",
+      "kind": "schema",
+      "what_to_use": "config.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-25",
+      "check_method": "世界層多一欄就不過",
+      "kind": "schema",
+      "what_to_use": "config.schema.json 的 `#/$defs/world`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-26",
+      "check_method": "世界層 `max_parallel` 比使用者層大",
+      "kind": "回傳",
+      "what_to_use": "`aos check` 退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-27",
+      "check_method": "沒設時 `llm_world` 是家的 `.aos/llm`",
+      "kind": "回傳",
+      "what_to_use": "`aos config get llm_world`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-28",
+      "check_method": "`reap_after_ms` 設小，巡邏後子地被清",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-29",
+      "check_method": "`inbox_max` 預設 1000",
+      "kind": "回傳",
+      "what_to_use": "`aos config get inbox_max`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-30",
+      "check_method": "地裡有子地但沒 `call` 步，子地不動",
+      "kind": "存在",
+      "what_to_use": "子地沒有 `.aos/series.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-31",
+      "check_method": "同 S-02-30",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-32",
+      "check_method": "一份接力棒放得下兩條串",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-33",
+      "check_method": "只有一份進度檔",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-34",
+      "check_method": "跑一半改原稿，模板檔位元組不變",
+      "kind": "回傳",
+      "what_to_use": "前後 `sha256sum`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-35",
+      "check_method": "exec 一格、離開、再 exec，游標接著走",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-36",
+      "check_method": "OS 只保證三件事",
+      "kind": "人工",
+      "what_to_use": "是範圍宣示",
+      "manual_detail": "OS 只保證三件事：缺對應的介面。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-37",
+      "check_method": "摘要與砍舊交給應用",
+      "kind": "人工",
+      "what_to_use": "同上",
+      "manual_detail": "摘要交給應用：同上。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-38",
+      "check_method": "把 `layout_version` 改成不認得的",
+      "kind": "回傳",
+      "what_to_use": "退 3，且有停止原因檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-39",
+      "check_method": "`aos migrate` 只印訊息",
+      "kind": "回傳",
+      "what_to_use": "前後 `sha256sum` 一樣",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-40",
+      "check_method": "`land_id` 是 32 hex，init 後不再變",
+      "kind": "schema",
+      "what_to_use": "layout.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-41",
+      "check_method": "搬地後對帳是刪那筆，不是改 `path`",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-42",
+      "check_method": "init 時 `layout.json` 最後才改名就位",
+      "kind": "回傳",
+      "what_to_use": "`strace -e rename` 的順序",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-43",
+      "check_method": "`aos mv` 後游標還在、`ext.moved_from` 是舊路徑",
+      "kind": "回傳",
+      "what_to_use": "讀兩個檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-44",
+      "check_method": "LLM 世界有 `.aos/units.json`，agent 有 `.aos/usage.json`",
+      "kind": "存在",
+      "what_to_use": "看兩個檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-45",
+      "check_method": "tmpfs 重建當從頭跑",
+      "kind": "人工",
+      "what_to_use": "要真的斷電或重開機",
+      "manual_detail": "tmpfs 重建當從頭跑：要真的斷電或重開機。"
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-46",
+      "check_method": "那四樣不在 tmpfs 上",
+      "kind": "回傳",
+      "what_to_use": "`stat -f` 看檔案系統",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-47",
+      "check_method": "`units` 沒填 `timeout_ms` 時當 300000",
+      "kind": "回傳",
+      "what_to_use": "讀落檔的 `aos llm` 指令",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-01",
+      "check_method": "同 S-03-04",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-02",
+      "check_method": "原稿不是 json",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-03",
+      "check_method": "原稿放進 `.aos/` 不被讀",
+      "kind": "存在",
+      "what_to_use": "`.aos/program/` 是空的",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-04",
+      "check_method": "同一份原稿編兩次",
+      "kind": "回傳",
+      "what_to_use": "兩次 `sha256sum` 相同",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-05",
+      "check_method": "步裡沒有夾子地的欄位",
+      "kind": "schema",
+      "what_to_use": "program.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-06",
+      "check_method": "兩個模板同名",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-07",
+      "check_method": "加 `_comment` 後編出來的檔不變",
+      "kind": "回傳",
+      "what_to_use": "`sha256sum`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-08",
+      "check_method": "模板裡沒有 `interface` 或型別欄",
+      "kind": "schema",
+      "what_to_use": "program.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-09",
+      "check_method": "拿 `frame` 當參數名",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-10",
+      "check_method": "原稿的 `kind` 四選一",
+      "kind": "schema",
+      "what_to_use": "source.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-11",
+      "check_method": "四種引數寫法都收",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-12",
+      "check_method": "內嵌動作被提成自己一步",
+      "kind": "回傳",
+      "what_to_use": "數 `steps` 長度",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-13",
+      "check_method": "`{\"from\":\"x\"}` 編成 `${frame}/x`",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-14",
+      "check_method": "提上來的步名是 `<外層>__<序號>`",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-14",
+      "check_method": "原稿步名含 `__`",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-15",
+      "check_method": "步名叫 `end`",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-16",
+      "check_method": "前後相依的兩步不併成一步",
+      "kind": "回傳",
+      "what_to_use": "同 S-03-12",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-17",
+      "check_method": "`use` 成環",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-18",
+      "check_method": "巢狀深度 9",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-19",
+      "check_method": "`mode` 只收 sync 與 async",
+      "kind": "schema",
+      "what_to_use": "source.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-20",
+      "check_method": "`result` 省略時編成 `${frame}/<步名>`",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-21",
+      "check_method": "`select` 指的檔第一行變成下一步",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-22",
+      "check_method": "第一行寫不存在的步名",
+      "kind": "回傳",
+      "what_to_use": "`fail_reason` 是 `bad_select`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-23",
+      "check_method": "`select` 與 `then` 都寫，走 `select`",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-24",
+      "check_method": "每個模板一個檔",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/program/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-25",
+      "check_method": "模板的 `kind` 三選一",
+      "kind": "schema",
+      "what_to_use": "program.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-26",
+      "check_method": "模板裡的 `inst` 壞掉",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-27",
+      "check_method": "模板裡 `inst.id` 等於步名",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-27",
+      "check_method": "落檔的檔名是 32 個小寫 hex",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/ticks/1/insts/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-28",
+      "check_method": "被當引數的步有 `stdout`、沒有 `expect`",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-29",
+      "check_method": "原稿多一個怪欄位",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-30",
+      "check_method": "必填缺、步名重複",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-31",
+      "check_method": "`then` 指到不存在的步",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-32",
+      "check_method": "`use` 的引數對不上",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-33",
+      "check_method": "拒絕時 stderr 提到原稿檔與步名",
+      "kind": "回傳",
+      "what_to_use": "`grep` stderr",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-34",
+      "check_method": "拒絕後 `.aos/program/` 一個檔都沒有",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-35",
+      "check_method": "閒著被 exec，模板與接力棒都出現",
+      "kind": "存在",
+      "what_to_use": "看兩個檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-36",
+      "check_method": "同 S-02-34",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-37",
+      "check_method": "沒有 `main` 模板",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-38",
+      "check_method": "檔頭 `source_hash` 等於原稿的 sha256",
+      "kind": "回傳",
+      "what_to_use": "比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-39",
+      "check_method": "只動 mtime、內容沒變，還是重編一次",
+      "kind": "回傳",
+      "what_to_use": "模板檔的 mtime 變新",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-40",
+      "check_method": "父開一個沒有 `main.aos.json` 的資料夾",
+      "kind": "存在",
+      "what_to_use": "落點旁狀態檔 `no_source`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-41",
+      "check_method": "編譯失敗時沒有半份 program",
+      "kind": "存在",
+      "what_to_use": "父那邊狀態檔 `compile_error`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-42",
+      "check_method": "run 期間沒開過頂層原稿",
+      "kind": "回傳",
+      "what_to_use": "`strace -e openat`",
+      "manual_detail": ""
+    },
+    {
+      "section": "03",
+      "section_title": "原稿與編譯",
+      "clause_id": "S-03-43",
+      "check_method": "`select` 指的檔不在、或第一行空白",
+      "kind": "回傳",
+      "what_to_use": "那步失敗，`bad_select`，游標沒走 `then`",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-01",
+      "check_method": "底下不再有更小的一格",
+      "kind": "人工",
+      "what_to_use": "是定義，沒有可觀察的差別",
+      "manual_detail": "不再有更小的一格：缺一個違反它的樣子。"
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-02",
+      "check_method": "模板裡的與落檔的過同一份 schema",
+      "kind": "schema",
+      "what_to_use": "inst.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-03",
+      "check_method": "同 S-04-02",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-04",
+      "check_method": "`argv` 寫成一整條命令列字串",
+      "kind": "schema",
+      "what_to_use": "同上，不過",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-05",
+      "check_method": "`id` 缺",
+      "kind": "schema",
+      "what_to_use": "同上，不過",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-05",
+      "check_method": "同一格兩筆撞 `id`",
+      "kind": "回傳",
+      "what_to_use": "整格退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-06",
+      "check_method": "`env` 蓋過繼承來的同名變數",
+      "kind": "回傳",
+      "what_to_use": "指令印出來比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-07",
+      "check_method": "`env_inherit` 是布林",
+      "kind": "schema",
+      "what_to_use": "inst.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-07",
+      "check_method": "設 false 時看不到父的變數",
+      "kind": "回傳",
+      "what_to_use": "指令印 `env`",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-08",
+      "check_method": "省略 `cwd` 時 `pwd` 是地的根",
+      "kind": "回傳",
+      "what_to_use": "看 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-09",
+      "check_method": "三條流是路徑字串",
+      "kind": "schema",
+      "what_to_use": "inst.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-10",
+      "check_method": "省略時三條流落在預設路徑",
+      "kind": "存在",
+      "what_to_use": "看 results 目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-11",
+      "check_method": "`stdout` 指到開不了的地方",
+      "kind": "回傳",
+      "what_to_use": "結果檔的 `spawn_error` 非 null",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-12",
+      "check_method": "`timeout_ms` 比 run 給的長",
+      "kind": "回傳",
+      "what_to_use": "整格退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-13",
+      "check_method": "逾時做在 run 那層",
+      "kind": "人工",
+      "what_to_use": "要讀程式碼分層",
+      "manual_detail": "逾時做在 run 那層：缺程式碼分層的檢查。"
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-14",
+      "check_method": "帶 `footprint` 照跑，欄位原樣落檔",
+      "kind": "回傳",
+      "what_to_use": "讀落檔的指令",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-15",
+      "check_method": "同 `exclusive` 名的兩筆分兩格",
+      "kind": "存在",
+      "what_to_use": "兩個格號目錄各一筆",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-16",
+      "check_method": "`ext` 以外多一欄",
+      "kind": "schema",
+      "what_to_use": "inst.schema.json，不過",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-17",
+      "check_method": "超長 `argv` 照收",
+      "kind": "schema",
+      "what_to_use": "同上，過",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-18",
+      "check_method": "六個欄位都收 `{\"b64\":…}`",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-19",
+      "check_method": "`b64` 物件多一個鍵",
+      "kind": "schema",
+      "what_to_use": "同上，不過",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-20",
+      "check_method": "沒有第二套綁定層",
+      "kind": "人工",
+      "what_to_use": "是「不做什麼」",
+      "manual_detail": "不另做綁定層：缺一個「多了一層」的可觀察後果。"
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-21",
+      "check_method": "一筆崩掉，同格別筆照樣有結果檔",
+      "kind": "存在",
+      "what_to_use": "看 results 目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-22",
+      "check_method": "指令是一支真行程",
+      "kind": "回傳",
+      "what_to_use": "指令自己讀 `/proc/self`",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-23",
+      "check_method": "同格 A 寫的檔 B 讀不到",
+      "kind": "回傳",
+      "what_to_use": "讀 B 的 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-24",
+      "check_method": "一筆壞的整格不跑，訊息指出哪筆哪欄",
+      "kind": "回傳",
+      "what_to_use": "退 3、`grep` stderr",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-25",
+      "check_method": "一筆非零，其他筆照樣跑完",
+      "kind": "存在",
+      "what_to_use": "同 S-04-21",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-26",
+      "check_method": "三樣不可能寫成指令",
+      "kind": "人工",
+      "what_to_use": "是說明，沒有可打的介面",
+      "manual_detail": "三樣不能寫成指令：缺可以打的介面。"
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-27",
+      "check_method": "LLM 不准當指令",
+      "kind": "人工",
+      "what_to_use": "沒說誰檢查；`sh -c` 就繞過了",
+      "manual_detail": "LLM 不准當指令：缺一條規定說誰檢查、什麼時候檢查。"
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-28",
+      "check_method": "結果檔只有那四件事",
+      "kind": "schema",
+      "what_to_use": "result.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-29",
+      "check_method": "結果檔沒有「做成沒做成」的欄",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-30",
+      "check_method": "每筆指令都有一份結果檔",
+      "kind": "存在",
+      "what_to_use": "看 results 目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-31",
+      "check_method": "跑不起來那筆也有結果檔",
+      "kind": "回傳",
+      "what_to_use": "`spawn_error` 非 null",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-32",
+      "check_method": "`exit_code` 與 `signal` 不同時非 null",
+      "kind": "回傳",
+      "what_to_use": "讀結果檔，schema 沒卡",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-33",
+      "check_method": "`stdout` 欄是路徑不是內容",
+      "kind": "schema",
+      "what_to_use": "result.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-34",
+      "check_method": "時間戳格式",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-35",
+      "check_method": "指令印得出那七個變數",
+      "kind": "回傳",
+      "what_to_use": "看 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-36",
+      "check_method": "`AOS_TMP` 目錄跑完不見了",
+      "kind": "存在",
+      "what_to_use": "看 `tmp/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-37",
+      "check_method": "子地印得出另外三種變數",
+      "kind": "回傳",
+      "what_to_use": "看 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-38",
+      "check_method": "`env` 寫 `AOS_LAND` 也蓋不掉",
+      "kind": "回傳",
+      "what_to_use": "看 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-39",
+      "check_method": "兩筆宣告的 `footprint.writes` 相交",
+      "kind": "回傳",
+      "what_to_use": "整格退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "04",
+      "section_title": "指令",
+      "clause_id": "S-04-40",
+      "check_method": "從收件匣直接跑的指令",
+      "kind": "回傳",
+      "what_to_use": "`AOS_SERIES` 空、`AOS_FRAME` 等於 `AOS_TMP`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-01",
+      "check_method": "接力棒過 schema",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-02",
+      "check_method": "沒有批狀態欄、沒有第二個檔",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-03",
+      "check_method": "exec 結束後進度在檔裡",
+      "kind": "存在",
+      "what_to_use": "看 `series.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-04",
+      "check_method": "同 S-05-01",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-05",
+      "check_method": "拔掉收件匣，串照樣往前",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-06",
+      "check_method": "`format_version` 是 1",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-07",
+      "check_method": "`batch_id` 是 32 hex，整批不換",
+      "kind": "回傳",
+      "what_to_use": "跑幾格比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-08",
+      "check_method": "`aos reset --all` 後換了新的",
+      "kind": "回傳",
+      "what_to_use": "前後比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-09",
+      "check_method": "載入那一刻 `tick` 是 0",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-10",
+      "check_method": "跑一格 `tick` 加一、那個格號目錄在",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/ticks/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-11",
+      "check_method": "串 id 是 32 hex",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-12",
+      "check_method": "`template` 對得上 program 裡的檔",
+      "kind": "回傳",
+      "what_to_use": "比對檔名",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-13",
+      "check_method": "`cursor` 是步名不是數字",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-14",
+      "check_method": "`regs` 是名字對字串",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-14",
+      "check_method": "別條串引用不到這條的名字",
+      "kind": "回傳",
+      "what_to_use": "那一步失敗",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-15",
+      "check_method": "五個內建名換成真值，查不到的算失敗",
+      "kind": "回傳",
+      "what_to_use": "看 stdout 與 `status`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-16",
+      "check_method": "`parent` 必有",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-17",
+      "check_method": "`resources` 只當參考",
+      "kind": "人工",
+      "what_to_use": "排程沒有可觀察的差別",
+      "manual_detail": "resources 只當參考：缺一個排程行為的差別。"
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-18",
+      "check_method": "不是 failed／stopped 卻有 `fail_reason`",
+      "kind": "回傳",
+      "what_to_use": "讀檔，schema 沒卡這條",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-19",
+      "check_method": "接力棒多一個怪欄位",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-20",
+      "check_method": "`status` 四選一",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-21",
+      "check_method": "誕生是 running，走到 end 變 done",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-22",
+      "check_method": "沒地方跳變 failed，收到停變 stopped",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-23",
+      "check_method": "failed 的串再 exec 還是 failed",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-24",
+      "check_method": "不是 running 的串不推游標、不產指令",
+      "kind": "回傳",
+      "what_to_use": "讀檔加看 insts 目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-25",
+      "check_method": "結束碼非 0 但 `expect` 檔在，算成功",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-26",
+      "check_method": "四種情形各跑一次",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor` 與 `status`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-27",
+      "check_method": "呼叫記錄先寫；sync 停在原地、async 立刻成功",
+      "kind": "回傳",
+      "what_to_use": "看 `.aos/calls/` 與 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-28",
+      "check_method": "三態各跑一次，超過 `max_ticks`",
+      "kind": "回傳",
+      "what_to_use": "`fail_reason` 是 `await_timeout`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-29",
+      "check_method": "`then` 三種寫法各走一次",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-30",
+      "check_method": "同 S-03-23",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-31",
+      "check_method": "有 `on_fail` 就跳過去，還是 running",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-32",
+      "check_method": "沒 `on_fail` 就停在原地、寫停止原因檔",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/stopped.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-33",
+      "check_method": "載入後只有一條串，跑 main",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-34",
+      "check_method": "跑完 `call` 步，串數沒變",
+      "kind": "回傳",
+      "what_to_use": "數 `series` 長度",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-35",
+      "check_method": "所有串的 `parent` 都是 null",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-36",
+      "check_method": "done 的串還留在陣列裡",
+      "kind": "回傳",
+      "what_to_use": "數長度",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-37",
+      "check_method": "指令跑完 `tmp/<id>/` 不見了",
+      "kind": "存在",
+      "what_to_use": "同 S-04-36",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-38",
+      "check_method": "開串時堆疊框在，串 done 那格不見了",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/frames/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-39",
+      "check_method": "failed 的串的堆疊框還在",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-40",
+      "check_method": "寫接力棒有 rename、沒有就地改",
+      "kind": "回傳",
+      "what_to_use": "`strace -e trace=rename,renameat`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-41",
+      "check_method": "沒拿到鎖的第二支 exec",
+      "kind": "回傳",
+      "what_to_use": "退 75",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-42",
+      "check_method": "外面直接改 `series.json`",
+      "kind": "人工",
+      "what_to_use": "沒有東西擋外部寫",
+      "manual_detail": "外面不准直接改接力棒：缺擋外部寫的機制。"
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-43",
+      "check_method": "接力棒不合 schema",
+      "kind": "回傳",
+      "what_to_use": "退 3，insts 目錄沒開",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-44",
+      "check_method": "空陣列或全 done 時 run 的收場",
+      "kind": "回傳",
+      "what_to_use": "`reason` 是 `no_new_insts`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-45",
+      "check_method": "有 failed 時 run 的收場",
+      "kind": "回傳",
+      "what_to_use": "退 5、`reason` 是 `failed`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-46",
+      "check_method": "`recent_ids` 在，最多 1000 個",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-47",
+      "check_method": "同一個投遞 id 投兩次只跑一次",
+      "kind": "回傳",
+      "what_to_use": "數 insts 目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-47",
+      "check_method": "控制那邊的去重不共用這一欄",
+      "kind": "回傳",
+      "what_to_use": "同 id 的 stop 照收",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-48",
+      "check_method": "tmpfs 上去重不算保證",
+      "kind": "人工",
+      "what_to_use": "要真的斷電或重開機",
+      "manual_detail": "tmpfs 上去重不算保證：同 S-02-45。"
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-49",
+      "check_method": "那一步成功後 `fail_streak` 歸零",
+      "kind": "回傳",
+      "what_to_use": "讀接力棒",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-50",
+      "check_method": "停在 `await` 或同步 `call` 的串算在等",
+      "kind": "回傳",
+      "what_to_use": "run 不停",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-51",
+      "check_method": "同一步連三次失敗",
+      "kind": "回傳",
+      "what_to_use": "stopped，`repeat_fail`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-52",
+      "check_method": "`on_fail` 那步又壞",
+      "kind": "回傳",
+      "what_to_use": "failed，`fail_reason` 兩層",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-53",
+      "check_method": "`calls` 是步名對 call id",
+      "kind": "schema",
+      "what_to_use": "series.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-54",
+      "check_method": "`await_ticks` 是步名對整數",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-55",
+      "check_method": "sync 停在原地五格，呼叫記錄只有一筆",
+      "kind": "存在",
+      "what_to_use": "數 `.aos/calls/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-56",
+      "check_method": "每格 `await_ticks` 加一，跟 `max_ticks` 比的是它",
+      "kind": "回傳",
+      "what_to_use": "讀接力棒",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-57",
+      "check_method": "游標離開那一步，兩個鍵都不見了",
+      "kind": "回傳",
+      "what_to_use": "讀接力棒",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-58",
+      "check_method": "`.aos/` 下沒有第二個去重檔",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-59",
+      "check_method": "暫存器的值裡放 `${land}`",
+      "kind": "回傳",
+      "what_to_use": "落檔裡原樣留著，沒有再換一次",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-60",
+      "check_method": "`${llm_world}` 由 exec 填，地沒開家的設定檔",
+      "kind": "回傳",
+      "what_to_use": "stdout 與 `strace -e openat`",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-61",
+      "check_method": "同步子閒著了、落點卻沒檔也沒狀態檔",
+      "kind": "回傳",
+      "what_to_use": "那步失敗 `no_result`，子沒被再點名",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-01",
+      "check_method": "一次 exec 只推一格",
+      "kind": "回傳",
+      "what_to_use": "`tick` 只加一",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-02",
+      "check_method": "兩條串同一格都動",
+      "kind": "回傳",
+      "what_to_use": "兩個 `cursor` 都變",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-03",
+      "check_method": "同 S-04-23",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-04",
+      "check_method": "預算走滿時最後一格的結果檔是完整的",
+      "kind": "存在",
+      "what_to_use": "看 results 目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-05",
+      "check_method": "十五步的順序",
+      "kind": "人工",
+      "what_to_use": "要讀程式碼或加追蹤點",
+      "manual_detail": "十四步的順序：缺程式碼裡的追蹤點。"
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-06",
+      "check_method": "第二支 exec 退 75；出錯後鎖不留",
+      "kind": "回傳",
+      "what_to_use": "退出碼與 `.aos/lock`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-07",
+      "check_method": "有 running 串時不重編",
+      "kind": "回傳",
+      "what_to_use": "模板檔位元組不變",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-08",
+      "check_method": "別的地收到 `kind:\"llm\"`",
+      "kind": "存在",
+      "what_to_use": "進 `.aos/inbox/rejected/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-09",
+      "check_method": "同 S-04-15",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-10",
+      "check_method": "同 S-04-24",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-11",
+      "check_method": "落檔裡沒有 `${`",
+      "kind": "回傳",
+      "what_to_use": "`grep` 落檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-12",
+      "check_method": "同 S-05-25",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-13",
+      "check_method": "有 `expect`、結束碼 0 但檔不在",
+      "kind": "回傳",
+      "what_to_use": "那一步失敗",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-14",
+      "check_method": "同 S-05-38 與 S-05-39",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-15",
+      "check_method": "兩件都沒有的那一格",
+      "kind": "回傳",
+      "what_to_use": "run 停，`no_new_insts`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-16",
+      "check_method": "run 走幾格等於 exec 被叫幾次",
+      "kind": "回傳",
+      "what_to_use": "比對 `tick`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-17",
+      "check_method": "三個旗標各跑一次",
+      "kind": "回傳",
+      "what_to_use": "讀 `stopped.json` 的 `reason`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-18",
+      "check_method": "沒新指令、但還有串在等",
+      "kind": "回傳",
+      "what_to_use": "run 不停，`tick` 照加",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-19",
+      "check_method": "沒有第三種走法的旗標",
+      "kind": "回傳",
+      "what_to_use": "`aos run --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-20",
+      "check_method": "`--budget 3` 走三格",
+      "kind": "回傳",
+      "what_to_use": "`reason` 是 `budget`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-21",
+      "check_method": "跑到一半投停，停在格邊界",
+      "kind": "回傳",
+      "what_to_use": "讀 `stopped.json` 與結果檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-22",
+      "check_method": "run 開始先刪舊的，停時寫新的",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/stopped.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-23",
+      "check_method": "同 S-05-45",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-24",
+      "check_method": "十種收場的退出碼各對一次",
+      "kind": "回傳",
+      "what_to_use": "`aos run` 退出碼",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-26",
+      "check_method": "`path` 沒放的程式叫不動",
+      "kind": "回傳",
+      "what_to_use": "結果檔的 `spawn_error`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-27",
+      "check_method": "同 S-06-26，且沒有被跳過",
+      "kind": "存在",
+      "what_to_use": "那筆有結果檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-28",
+      "check_method": "三層 timeout 各設一次，最短的贏",
+      "kind": "回傳",
+      "what_to_use": "結果檔的 `timed_out`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-29",
+      "check_method": "逾時殺整個行程群組",
+      "kind": "回傳",
+      "what_to_use": "子孫行程也不在",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-30",
+      "check_method": "沒有給程式讀時間的介面",
+      "kind": "回傳",
+      "what_to_use": "那五個變數裡沒有時間",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-31",
+      "check_method": "同 S-05-27",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-32",
+      "check_method": "同步子樹裡不准有 LLM",
+      "kind": "人工",
+      "what_to_use": "同 S-04-27，沒說誰檢查",
+      "manual_detail": "同步子樹不准有 LLM：同 S-04-27。"
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-33",
+      "check_method": "脫節那格父不等它",
+      "kind": "回傳",
+      "what_to_use": "父的 `tick` 照加",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-34",
+      "check_method": "同 S-02-34",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-35",
+      "check_method": "`aos reset` 後模板換成新的",
+      "kind": "回傳",
+      "what_to_use": "`sha256sum` 比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-36",
+      "check_method": "只剩在等的串時，兩格之間睡那麼久",
+      "kind": "回傳",
+      "what_to_use": "量兩格的時間差",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-37",
+      "check_method": "決定要停之前再掃一次收件匣",
+      "kind": "回傳",
+      "what_to_use": "剛好投進去就再走一格",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-38",
+      "check_method": "指令跑到一半投停，停得下來",
+      "kind": "回傳",
+      "what_to_use": "讀 `stopped.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-39",
+      "check_method": "run 自成一個行程群組",
+      "kind": "回傳",
+      "what_to_use": "`ps -o pgid`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-40",
+      "check_method": "同 S-05-51",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-41",
+      "check_method": "同 S-04-39",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-42",
+      "check_method": "格跑到一半才到的結果留到下一格",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-43",
+      "check_method": "跑指令前有一個空的 `started`",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/ticks/<N>/started`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-44",
+      "check_method": "造一個崩在半路的現場",
+      "kind": "回傳",
+      "what_to_use": "兩種各一次，讀 `cursor` 與 `fail_reason`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-45",
+      "check_method": "`--timeout 0`",
+      "kind": "回傳",
+      "what_to_use": "退 2",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-46",
+      "check_method": "同 S-03-42",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-48",
+      "check_method": "鎖檔內容有 `pid` 與 `pid_start`；持有者死了鎖被收回",
+      "kind": "回傳",
+      "what_to_use": "第二支退 0 不是 75",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-49",
+      "check_method": "exec 判串 failed 那一刻就有停止原因檔",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/stopped.json` 的 `detail`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-50",
+      "check_method": "同 S-04-40",
+      "kind": "回傳",
+      "what_to_use": "同上，且 `.aos/frames/` 沒新目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-51",
+      "check_method": "`env_inherit` false 加空 `path`",
+      "kind": "回傳",
+      "what_to_use": "PATH 是 `/usr/bin:/bin`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-52",
+      "check_method": "互斥誰先跑照接力棒的串順序",
+      "kind": "回傳",
+      "what_to_use": "比對兩格的落檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-53",
+      "check_method": "那三個寫者各造一次；`SIGTERM` 也寫得出來",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/stopped.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-54",
+      "check_method": "`--until never` 閒著也不停",
+      "kind": "回傳",
+      "what_to_use": "`tick` 照加",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-55",
+      "check_method": "陳年控制信被搬到 `done/`，`op` 不認得的也是",
+      "kind": "存在",
+      "what_to_use": "看兩個目錄與 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-57",
+      "check_method": "五種條件同時成立時挑哪一個",
+      "kind": "回傳",
+      "what_to_use": "讀 `stopped.json` 的 `reason`",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-58",
+      "check_method": "最後一格把串推到 done",
+      "kind": "回傳",
+      "what_to_use": "run 停，`no_new_insts`，`tick` 沒再加",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-59",
+      "check_method": "一支 run 跑到一半變閒著",
+      "kind": "回傳",
+      "what_to_use": "`batch_id` 沒換、模板檔位元組不變",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-60",
+      "check_method": "呼叫記錄只寫一筆；async 沒 daemon 就失敗",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-55 與 S-07-28",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-61",
+      "check_method": "同格落點重複、或三個檔已存在",
+      "kind": "回傳",
+      "what_to_use": "整格退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-62",
+      "check_method": "借父鐘的子地收得到控制信",
+      "kind": "回傳",
+      "what_to_use": "那格不跑指令、串 stopped、信進 `done/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-01",
+      "check_method": "`mode` 兩選一",
+      "kind": "schema",
+      "what_to_use": "program.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-02",
+      "check_method": "sync 時父每格對子做一次 exec",
+      "kind": "回傳",
+      "what_to_use": "子的 `tick` 跟著加",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-03",
+      "check_method": "子沒閒著時父的游標不動",
+      "kind": "回傳",
+      "what_to_use": "讀父的接力棒",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-04",
+      "check_method": "子閒著後父照三態推游標",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-05",
+      "check_method": "同步子樹裡不准有 LLM",
+      "kind": "人工",
+      "what_to_use": "同 S-04-27",
+      "manual_detail": "同上：同 S-04-27。"
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-06",
+      "check_method": "async 那步登記完就成功",
+      "kind": "回傳",
+      "what_to_use": "讀 `cursor` 與登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-07",
+      "check_method": "`call` 步不等結果",
+      "kind": "回傳",
+      "what_to_use": "同 S-06-33",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-08",
+      "check_method": "子地只看得到父放的東西",
+      "kind": "人工",
+      "what_to_use": "同 S-02-06，沒有隔離機制",
+      "manual_detail": "子地只看得到父放的：同 S-02-06。"
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-09",
+      "check_method": "兩種 mode 都寫一筆呼叫記錄",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/calls/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-09",
+      "check_method": "呼叫記錄過 schema",
+      "kind": "schema",
+      "what_to_use": "call.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-10",
+      "check_method": "用 symlink 開子地，記錄裡是真實路徑",
+      "kind": "回傳",
+      "what_to_use": "讀記錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-11",
+      "check_method": "`result` 由父寫，子改不了",
+      "kind": "回傳",
+      "what_to_use": "讀記錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-12",
+      "check_method": "子印得出 `AOS_RESULT` 與 `AOS_CALLER`",
+      "kind": "回傳",
+      "what_to_use": "同 S-04-37",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-13",
+      "check_method": "`args` 變成 `AOS_ARG_*`",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-14",
+      "check_method": "三態各跑一次",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-28",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-15",
+      "check_method": "狀態檔就在結果落點旁邊",
+      "kind": "存在",
+      "what_to_use": "看檔名",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-16",
+      "check_method": "狀態檔的欄位",
+      "kind": "schema",
+      "what_to_use": "status.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-17",
+      "check_method": "`reason` 是小寫短代碼",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-18",
+      "check_method": "三種寫者各造一次",
+      "kind": "存在",
+      "what_to_use": "狀態檔都出現",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-19",
+      "check_method": "同 S-07-66",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-20",
+      "check_method": "兩個檔都在時算壞了",
+      "kind": "回傳",
+      "what_to_use": "讀 `status`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-21",
+      "check_method": "同 S-05-25",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-22",
+      "check_method": "同 S-05-28",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-23",
+      "check_method": "同 S-05-31",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-24",
+      "check_method": "失敗後沒有第二次執行",
+      "kind": "回傳",
+      "what_to_use": "數那筆指令的結果檔數",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-25",
+      "check_method": "同 S-05-32",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-26",
+      "check_method": "一條串 failed，另一條照跑",
+      "kind": "回傳",
+      "what_to_use": "讀兩個 `cursor`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-27",
+      "check_method": "五個動作的先後",
+      "kind": "回傳",
+      "what_to_use": "`opened_at` 早於子的第一格",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-28",
+      "check_method": "清掉 `daemon_pid` 再做脫節呼叫",
+      "kind": "存在",
+      "what_to_use": "落點旁狀態檔 `no_daemon`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-29",
+      "check_method": "沒有第二個查鐘的辦法",
+      "kind": "回傳",
+      "what_to_use": "`aos status` 讀的是登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-30",
+      "check_method": "帶 `cleanup: true`，`await` 之後子地不見了",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-31",
+      "check_method": "沒帶時子地還在",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-32",
+      "check_method": "巡邏只刪子地，父地的檔都還在",
+      "kind": "存在",
+      "what_to_use": "看兩處",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-33",
+      "check_method": "投遞是寫暫存再改名",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-40",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-34",
+      "check_method": "檔還在收件匣時指令不跑",
+      "kind": "存在",
+      "what_to_use": "insts 目錄是空的",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-35",
+      "check_method": "`aos deliver` 產的 id 是 32 hex",
+      "kind": "回傳",
+      "what_to_use": "看檔名，schema 沒卡",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-36",
+      "check_method": "互斥靠 `.aos/lock` 不靠狀況檔",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-41",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-37",
+      "check_method": "留下 `.json.temp` 再跑，它還在",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-38",
+      "check_method": "投遞物必填五欄",
+      "kind": "schema",
+      "what_to_use": "delivery.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-39",
+      "check_method": "同 id 再投",
+      "kind": "回傳",
+      "what_to_use": "`aos deliver` 退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-40",
+      "check_method": "一格跑到一半投進去的，那格不動它",
+      "kind": "存在",
+      "what_to_use": "看 insts 目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-41",
+      "check_method": "壞的投遞物進隔離區，別的照跑",
+      "kind": "存在",
+      "what_to_use": "看 `rejected/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-42",
+      "check_method": "投遞者收到 `subject` 是 `rejected` 的信",
+      "kind": "存在",
+      "what_to_use": "看 `from` 的收件匣",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-43",
+      "check_method": "`from` 讀不出來時 `.aos/errors.log` 多一行",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-44",
+      "check_method": "塞滿收件匣再投",
+      "kind": "回傳",
+      "what_to_use": "`aos deliver` 退 75",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-45",
+      "check_method": "信搬到 `.aos/mail/`，沒有指令被跑",
+      "kind": "存在",
+      "what_to_use": "看兩個目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-46",
+      "check_method": "同 S-10-17",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-47",
+      "check_method": "子印得出 `AOS_CALL_CHAIN`",
+      "kind": "回傳",
+      "what_to_use": "看 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-48",
+      "check_method": "讓地呼叫自己",
+      "kind": "存在",
+      "what_to_use": "狀態檔 `call_cycle`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-49",
+      "check_method": "疊到第 9 層",
+      "kind": "存在",
+      "what_to_use": "狀態檔 `call_depth`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-50",
+      "check_method": "同 S-03-40",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-52",
+      "check_method": "同 S-05-47",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-53",
+      "check_method": "投到不是一塊地的資料夾",
+      "kind": "回傳",
+      "what_to_use": "退 4，且沒有新目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-54",
+      "check_method": "相對落點以父的根為原點",
+      "kind": "回傳",
+      "what_to_use": "讀呼叫記錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-55",
+      "check_method": "記錄裡存的是絕對真實路徑",
+      "kind": "回傳",
+      "what_to_use": "讀呼叫記錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-56",
+      "check_method": "子照 `AOS_RESULT` 原樣寫",
+      "kind": "回傳",
+      "what_to_use": "看檔落在哪",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-57",
+      "check_method": "落點寫在父地外面",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-58",
+      "check_method": "落點寫進某個 `.aos/`",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-59",
+      "check_method": "落點以那兩個後綴結尾",
+      "kind": "回傳",
+      "what_to_use": "退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-60",
+      "check_method": "三個檔都不在才開得成",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-61",
+      "check_method": "先放一個同名檔再開",
+      "kind": "回傳",
+      "what_to_use": "退 3，舊檔沒被動",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-62",
+      "check_method": "清掉舊檔或換落點就跑得起來",
+      "kind": "回傳",
+      "what_to_use": "退 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-63",
+      "check_method": "同一格兩個落點重複",
+      "kind": "回傳",
+      "what_to_use": "整格退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-64",
+      "check_method": "交出落點就是授權",
+      "kind": "人工",
+      "what_to_use": "沒有另一種授權可以比",
+      "manual_detail": "交出落點就是授權：沒有第二種授權可以比對。"
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-65",
+      "check_method": "子往父地別處寫",
+      "kind": "人工",
+      "what_to_use": "這一版沒有東西擋",
+      "manual_detail": "子只准寫那三個檔：缺擋寫的機制，這一版寫得進去。"
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-66",
+      "check_method": "暫存開在落點同一層，再改名",
+      "kind": "回傳",
+      "what_to_use": "`strace -e openat,rename`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-67",
+      "check_method": "沒有跨目錄暫存、沒有用複製",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-68",
+      "check_method": "半成品不用正式名",
+      "kind": "存在",
+      "what_to_use": "殺掉指令後只看得到暫存名",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-69",
+      "check_method": "落點放一份壞 json",
+      "kind": "回傳",
+      "what_to_use": "那步失敗，只讀一次",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-70",
+      "check_method": "先刪掉父的 `.aos/`，子放棄寫",
+      "kind": "存在",
+      "what_to_use": "沒有新目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-71",
+      "check_method": "那筆的 `ext` 有 `result_orphaned`",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-72",
+      "check_method": "成功時落點旁有 `.usage.json`",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-73",
+      "check_method": "超長 `message`",
+      "kind": "回傳",
+      "what_to_use": "被截斷，`ext.truncated` 是 true",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-74",
+      "check_method": "`message` 當不可信資料",
+      "kind": "人工",
+      "what_to_use": "是讀法，不是行為",
+      "manual_detail": "message 是不可信資料：是讀法，不是行為。"
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-75",
+      "check_method": "`message` 放 `$(id)`",
+      "kind": "回傳",
+      "what_to_use": "落檔的指令裡沒有被展開",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-76",
+      "check_method": "同 S-09-57",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-77",
+      "check_method": "同 S-05-61",
+      "kind": "回傳",
+      "what_to_use": "同上，父那邊代寫 `no_result`",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫、落點與投遞",
+      "clause_id": "S-07-78",
+      "check_method": "`call` 步由 exec 查、`--llm` 由 deliver 查",
+      "kind": "回傳",
+      "what_to_use": "兩支都退 3，那筆不投",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-01",
+      "check_method": "家的 `.aos/` 有登記表、設定、帳簿",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-02",
+      "check_method": "起得來，而且裝出來沒有 systemd 檔",
+      "kind": "存在",
+      "what_to_use": "看安裝清單",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-03",
+      "check_method": "沒人叫的地不會動",
+      "kind": "存在",
+      "what_to_use": "同 S-02-30",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-04",
+      "check_method": "起第二支 daemon",
+      "kind": "回傳",
+      "what_to_use": "退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-05",
+      "check_method": "`daemon.pid` 與 `daemon_pid` 同號，停後是 null",
+      "kind": "回傳",
+      "what_to_use": "讀兩個檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-06",
+      "check_method": "每塊登記的地各一支 run 子行程",
+      "kind": "回傳",
+      "what_to_use": "`ps --ppid`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-07",
+      "check_method": "四種時鐘各換出對的旗標",
+      "kind": "回傳",
+      "what_to_use": "`ps` 看命令列",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-08",
+      "check_method": "殺掉 daemon，子行程還在",
+      "kind": "回傳",
+      "what_to_use": "`ps`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-09",
+      "check_method": "代價寫進文件",
+      "kind": "人工",
+      "what_to_use": "是文字，不是行為",
+      "manual_detail": "代價明寫：缺一個檢查文件寫了沒的辦法。"
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-10",
+      "check_method": "殺掉父的 run，子的還在",
+      "kind": "回傳",
+      "what_to_use": "`ps`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-11",
+      "check_method": "同一個 `path` 只出現一次",
+      "kind": "回傳",
+      "what_to_use": "數 `entries`，schema 沒卡",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-12",
+      "check_method": "只有一份登記表",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-13",
+      "check_method": "登記表過 schema",
+      "kind": "schema",
+      "what_to_use": "registry.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-14",
+      "check_method": "同 S-02-12",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-15",
+      "check_method": "起鐘前 `pid` 是 null，起了填那支 run",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-16",
+      "check_method": "`state` 三選一",
+      "kind": "schema",
+      "what_to_use": "registry.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-17",
+      "check_method": "`clock` 四選一，沒鐘的是 null",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-18",
+      "check_method": "`budget` 是整數或 null",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-19",
+      "check_method": "`parent` 是真實路徑或 null",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-20",
+      "check_method": "兩個時間戳格式，改狀態後 `updated_at` 變新",
+      "kind": "回傳",
+      "what_to_use": "前後比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-21",
+      "check_method": "兩支同時改，兩筆都在",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-22",
+      "check_method": "寫登記表走原子改名",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-40",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-23",
+      "check_method": "登記表被 git 忽略",
+      "kind": "回傳",
+      "what_to_use": "`git check-ignore` 回 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-24",
+      "check_method": "run 起來後填那三個欄",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-24",
+      "check_method": "登記表沒那筆時 run 自己補一筆",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-25",
+      "check_method": "run 結束後 stopped，兩個 pid 欄都 null",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-26",
+      "check_method": "`pending` 只有那兩個來源",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-27",
+      "check_method": "門房登記出來的是 stopped、`clock` null",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-28",
+      "check_method": "同 S-07-28",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-29",
+      "check_method": "`aos stop` 之後那筆還在、地也還在",
+      "kind": "存在",
+      "what_to_use": "看目錄與登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-30",
+      "check_method": "同 S-07-29",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-32",
+      "check_method": "手塞一筆死 pid，起 daemon 後已處理",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-33",
+      "check_method": "行程與路徑兩樣都看",
+      "kind": "回傳",
+      "what_to_use": "下面四條各造一次",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-34",
+      "check_method": "行程活、路徑在：留 running，不重起",
+      "kind": "回傳",
+      "what_to_use": "`ps` 數行程",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-35",
+      "check_method": "行程死、路徑在：兩種重起、兩種標 stopped",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-36",
+      "check_method": "路徑不在、行程活：先停行程再刪那筆",
+      "kind": "回傳",
+      "what_to_use": "`ps` 與登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-37",
+      "check_method": "兩個都不在：直接刪那筆",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-38",
+      "check_method": "對帳完 pending 都變 running",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-39",
+      "check_method": "子行程結束後那筆變 stopped",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-40",
+      "check_method": "沒有任何通知也清得掉",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-37",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-41",
+      "check_method": "閒著超過期限，那塊地與那筆都不見了",
+      "kind": "存在",
+      "what_to_use": "看目錄與登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-43",
+      "check_method": "`max_parallel` 設 1，第二塊地留 pending",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-44",
+      "check_method": "daemon 不數 LLM 併發",
+      "kind": "人工",
+      "what_to_use": "只能讀程式碼",
+      "manual_detail": "daemon 不數 LLM 併發：缺程式碼檢查。"
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-45",
+      "check_method": "`aos daemon stop` 走控制收件匣",
+      "kind": "回傳",
+      "what_to_use": "`reason` 是 `stop_requested`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-46",
+      "check_method": "裝一支不理停的假 run，10 秒後整組被殺",
+      "kind": "回傳",
+      "what_to_use": "`ps` 看子孫也沒了",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-47",
+      "check_method": "daemon 不在時 stop 也清得乾淨",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-48",
+      "check_method": "補的狀態檔落在 `ext.result` 指的地方",
+      "kind": "存在",
+      "what_to_use": "`reason` 是 `killed`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-49",
+      "check_method": "理由寫進文件",
+      "kind": "人工",
+      "what_to_use": "是文字，不是行為",
+      "manual_detail": "理由寫進文件：同 S-08-09。"
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-50",
+      "check_method": "`aos daemon exec` 投出一筆 once 的 pending",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-51",
+      "check_method": "`aos daemon ls` 的行數等於 `entries` 長度",
+      "kind": "回傳",
+      "what_to_use": "比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-52",
+      "check_method": "同 S-02-10",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-53",
+      "check_method": "文件寫成唯一正確的搬法",
+      "kind": "人工",
+      "what_to_use": "是文字，不是行為",
+      "manual_detail": "文件寫成唯一搬法：同上。"
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-54",
+      "check_method": "直接 `mv` 不報錯，對帳清舊筆",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-11",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-55",
+      "check_method": "沒有搬家通知，symlink 不是第二身分",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-12",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-56",
+      "check_method": "控制訊息寫暫存再改名",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-40",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-57",
+      "check_method": "控制訊息過 schema",
+      "kind": "schema",
+      "what_to_use": "control.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-58",
+      "check_method": "同 S-06-21",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-59",
+      "check_method": "停完訊息不見、停止原因檔在、那筆 stopped",
+      "kind": "存在",
+      "what_to_use": "看檔與登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-60",
+      "check_method": "`aos stop --kill` 時控制收件匣一直是空的",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-61",
+      "check_method": "daemon 不在時新的脫節工作起不來",
+      "kind": "存在",
+      "what_to_use": "同 S-07-28",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-62",
+      "check_method": "門鈴投給 daemon，那塊地沒被直接推",
+      "kind": "回傳",
+      "what_to_use": "地的 `tick` 沒動",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-63",
+      "check_method": "沒 running 登記時起 `--until idle`",
+      "kind": "回傳",
+      "what_to_use": "`ps` 看命令列",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-64",
+      "check_method": "`pid_start` 跟 `/proc` 對得上",
+      "kind": "回傳",
+      "what_to_use": "比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-65",
+      "check_method": "`land_id` 跟那塊地的一樣",
+      "kind": "回傳",
+      "what_to_use": "比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-66",
+      "check_method": "三個約定的鍵都在 `ext` 裡",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-67",
+      "check_method": "`aos daemon exec` 同 id 再投",
+      "kind": "回傳",
+      "what_to_use": "退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-68",
+      "check_method": "只改 `pid_start` 就被判成死的",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-69",
+      "check_method": "領養過的登記也判得出死",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-70",
+      "check_method": "pending 沒 pid 的重啟後重起",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-71",
+      "check_method": "daemon 不改 `path`",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-41",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-72",
+      "check_method": "start 印出接管幾個、清掉幾筆",
+      "kind": "回傳",
+      "what_to_use": "`grep` 輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-73",
+      "check_method": "`every` 的 run 正常退出後留 stopped 並會重起",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-74",
+      "check_method": "`once` 跑完刪那筆，其餘標 stopped",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-75",
+      "check_method": "巡邏後父地那三種檔都還在",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-76",
+      "check_method": "刪之前落點沒結果就代寫",
+      "kind": "存在",
+      "what_to_use": "狀態檔 `reaped`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-77",
+      "check_method": "同 S-06-39",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-78",
+      "check_method": "`--kill` 之後也有代寫",
+      "kind": "存在",
+      "what_to_use": "同 S-08-48",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-79",
+      "check_method": "被殺那格的目錄原封還在",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-80",
+      "check_method": "`aos mv` 後接力棒與游標還在",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-43",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-81",
+      "check_method": "`ext.moved_from` 是舊路徑",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-82",
+      "check_method": "只有 `aos mv` 改得了 `path`",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-71",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-83",
+      "check_method": "`runner` 是 run 或 llm-serve，沒寫當 run",
+      "kind": "schema",
+      "what_to_use": "registry.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-84",
+      "check_method": "`llm-serve` 那筆起的是 `aos llm serve`",
+      "kind": "回傳",
+      "what_to_use": "`ps` 看命令列",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-85",
+      "check_method": "`resume` 是可選布林",
+      "kind": "schema",
+      "what_to_use": "registry.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-86",
+      "check_method": "`aos daemon add` 只登記成 pending，沒有 run 被起",
+      "kind": "回傳",
+      "what_to_use": "讀登記表與 `ps`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-87",
+      "check_method": "`--register` 只改得動那四欄",
+      "kind": "回傳",
+      "what_to_use": "前後比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-88",
+      "check_method": "登記表沒有 LLM 世界那筆時 start 自動補",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-89",
+      "check_method": "對帳完 pending 與 resume 都被起，`resume` 清掉",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-90",
+      "check_method": "子行程結束後沒有殭屍",
+      "kind": "回傳",
+      "what_to_use": "`ps` 看不到 defunct",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-91",
+      "check_method": "`--until never` 那筆退出後保留並重起",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-73",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-92",
+      "check_method": "`aos daemon stop` 把 `resume` 設成 true",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-93",
+      "check_method": "沒登記的 run 也殺得掉",
+      "kind": "回傳",
+      "what_to_use": "讀 `.aos/lock` 的 pid",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-94",
+      "check_method": "兩處都查不到活人",
+      "kind": "回傳",
+      "what_to_use": "不投控制信，輸出列出查過哪兩處",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-95",
+      "check_method": "`last_started_at` 是可選時間戳",
+      "kind": "schema",
+      "what_to_use": "registry.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-96",
+      "check_method": "沒有 `last_started_at` 的 every 筆立刻起",
+      "kind": "回傳",
+      "what_to_use": "讀登記表與 `ps`",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-97",
+      "check_method": "`llm_world` 那個資料夾沒有 `.aos/`",
+      "kind": "存在",
+      "what_to_use": "start 之後它有了",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-98",
+      "check_method": "四方各寫一次登記表都成功",
+      "kind": "回傳",
+      "what_to_use": "四筆都在，都經過 `registry.lock`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-01",
+      "check_method": "它有 `.aos/`，登記表裡有它一筆",
+      "kind": "存在",
+      "what_to_use": "看檔與登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-02",
+      "check_method": "預設在家的 `.aos/llm/`，改設定換得掉",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-27",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-03",
+      "check_method": "daemon 起的是 `aos llm serve`，`runner` 是 llm-serve",
+      "kind": "回傳",
+      "what_to_use": "`ps` 與登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-04",
+      "check_method": "投一筆請求，結果落點出現檔",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-05",
+      "check_method": "沒有把 LLM 當指令的路",
+      "kind": "人工",
+      "what_to_use": "同 S-04-27",
+      "manual_detail": "不准把 LLM 當指令：同 S-04-27。"
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-06",
+      "check_method": "同步子樹裡不准有請求",
+      "kind": "人工",
+      "what_to_use": "同上",
+      "manual_detail": "同步子樹不准有請求：同上。"
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-07",
+      "check_method": "跑完一輪沒有新的地被建出來",
+      "kind": "存在",
+      "what_to_use": "比對目錄清單",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-08",
+      "check_method": "相對路徑以 `from` 那塊地為基準；指進 `.aos/` 就拒",
+      "kind": "回傳",
+      "what_to_use": "退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-09",
+      "check_method": "`format_version` 與 `kind`",
+      "kind": "schema",
+      "what_to_use": "llm-request.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-10",
+      "check_method": "同 id 再投",
+      "kind": "回傳",
+      "what_to_use": "同 S-07-39",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-11",
+      "check_method": "`from` 與 `at`",
+      "kind": "schema",
+      "what_to_use": "llm-request.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-12",
+      "check_method": "`prompt` 是路徑不是內文",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-13",
+      "check_method": "請求裡沒有指定單元的欄",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-14",
+      "check_method": "假後端的輸出原封落在結果落點",
+      "kind": "回傳",
+      "what_to_use": "比對內容",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-15",
+      "check_method": "`priority` 必填整數",
+      "kind": "schema",
+      "what_to_use": "llm-request.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-16",
+      "check_method": "省略時用 `.aos/units.json` 的 `max_wait_ms`",
+      "kind": "回傳",
+      "what_to_use": "看退回的時間點",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-17",
+      "check_method": "`tools` 是字串陣列",
+      "kind": "schema",
+      "what_to_use": "llm-request.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-18",
+      "check_method": "多一個怪欄位",
+      "kind": "schema",
+      "what_to_use": "同上，不過",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-19",
+      "check_method": "一輪取件完收件匣空了",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-20",
+      "check_method": "三筆不同 priority 與 at，順序照排",
+      "kind": "回傳",
+      "what_to_use": "比對落點的時間",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-21",
+      "check_method": "一輪派給一顆單元的筆數上限",
+      "kind": "回傳",
+      "what_to_use": "數這一輪的 `aos llm` 次數",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-22",
+      "check_method": "一輪全部加起來的上限，兩個取小",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-23",
+      "check_method": "它自己設得比 `.aos/units.json` 大",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-26",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-24",
+      "check_method": "沒有對得上 tier 的單元",
+      "kind": "存在",
+      "what_to_use": "結果落點沒檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-25",
+      "check_method": "每筆派出去的跑一次 `aos llm`，成敗看落點",
+      "kind": "回傳",
+      "what_to_use": "結束碼非 0 但落點有檔＝成功",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-26",
+      "check_method": "後端回 500",
+      "kind": "回傳",
+      "what_to_use": "狀態檔 `backend_error`、有 `ext.retryable`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-27",
+      "check_method": "超過上限的還在隊裡，沒被退回",
+      "kind": "存在",
+      "what_to_use": "沒有狀態檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-28",
+      "check_method": "`max_wait_ms` 設小",
+      "kind": "回傳",
+      "what_to_use": "狀態檔 `queue_timeout`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-29",
+      "check_method": "退回後換 id 再投跑得起來",
+      "kind": "回傳",
+      "what_to_use": "看結果落點",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-30",
+      "check_method": "關掉一顆，還沒送出的改派同 tier",
+      "kind": "回傳",
+      "what_to_use": "讀帳簿的 `unit`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-31",
+      "check_method": "送出後斷線",
+      "kind": "回傳",
+      "what_to_use": "假後端只被叫一次",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-32",
+      "check_method": "`.aos/` 下沒有槽與工人那套檔",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-33",
+      "check_method": "`units` 正本在使用者層",
+      "kind": "schema",
+      "what_to_use": "config.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-34",
+      "check_method": "五個必填欄",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-35",
+      "check_method": "`api_key_env` 只寫變數名",
+      "kind": "人工",
+      "what_to_use": "機器分不出字串是名字還是金鑰",
+      "manual_detail": "只寫變數名：機器分不出字串是變數名還是金鑰，缺「必須對得上一個存在的變數」這條規定。"
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-36",
+      "check_method": "通訊錄沒有端點欄",
+      "kind": "schema",
+      "what_to_use": "contacts.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-37",
+      "check_method": "一般世界寫 `units`",
+      "kind": "schema",
+      "what_to_use": "`#/$defs/world`，不過",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-38",
+      "check_method": "三種收場各記一行",
+      "kind": "回傳",
+      "what_to_use": "數帳簿行數",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-39",
+      "check_method": "刪掉帳簿照樣跑得動",
+      "kind": "回傳",
+      "what_to_use": "刪掉再跑",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-40",
+      "check_method": "已寫的行不再變",
+      "kind": "回傳",
+      "what_to_use": "前綴 `sha256sum` 比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-41",
+      "check_method": "每行十個欄",
+      "kind": "schema",
+      "what_to_use": "ledger.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-42",
+      "check_method": "行裡沒有 `format_version`",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-43",
+      "check_method": "`aos llm` 當過濾器直接跑",
+      "kind": "回傳",
+      "what_to_use": "退 0 且有輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-44",
+      "check_method": "五個旗標都在",
+      "kind": "回傳",
+      "what_to_use": "`aos llm --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-45",
+      "check_method": "四種退出碼各造一次",
+      "kind": "回傳",
+      "what_to_use": "退出碼",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-46",
+      "check_method": "後端錯誤時 stderr 有狀態碼",
+      "kind": "回傳",
+      "what_to_use": "`grep` stderr",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-47",
+      "check_method": "同時起兩支都跑得完，沒有限流",
+      "kind": "回傳",
+      "what_to_use": "都退 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-48",
+      "check_method": "殺掉 daemon 再起，沒處理完的還在",
+      "kind": "存在",
+      "what_to_use": "看收件匣",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-49",
+      "check_method": "重啟靠 `.aos/requests/` 認人",
+      "kind": "回傳",
+      "what_to_use": "收件匣清空也認得出來",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-50",
+      "check_method": "收下之後才失敗的不回信",
+      "kind": "存在",
+      "what_to_use": "請求者的收件匣是空的",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-51",
+      "check_method": "沒填 `timeout_ms` 時當 300000",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-47",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-52",
+      "check_method": "落檔那筆用的是單元的 `timeout_ms`",
+      "kind": "回傳",
+      "what_to_use": "讀落檔的指令",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-53",
+      "check_method": "daemon 起它之前抄好 `.aos/units.json`",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-54",
+      "check_method": "跑的時候沒開過家的設定檔",
+      "kind": "回傳",
+      "what_to_use": "`strace -e openat`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-55",
+      "check_method": "agent 算上限讀的是 `.usage.json`",
+      "kind": "回傳",
+      "what_to_use": "改帳簿不影響、改用量檔會影響",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-56",
+      "check_method": "四種退出碼都不決定要不要重試",
+      "kind": "回傳",
+      "what_to_use": "同 S-09-57",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-57",
+      "check_method": "狀態檔有 `ext.retryable`",
+      "kind": "回傳",
+      "what_to_use": "讀狀態檔，schema 沒卡",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-58",
+      "check_method": "別的地登記 `aos llm` 當工具",
+      "kind": "回傳",
+      "what_to_use": "`aos tool add` 與 `aos check` 都退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-59",
+      "check_method": "併發只在 LLM 世界那邊數",
+      "kind": "回傳",
+      "what_to_use": "daemon 的 `max_parallel` 調大不影響",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-60",
+      "check_method": "成功時 `.usage.json` 六個欄",
+      "kind": "schema",
+      "what_to_use": "usage.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-61",
+      "check_method": "`.usage.json` 先於結果檔出現",
+      "kind": "回傳",
+      "what_to_use": "比對 mtime",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-62",
+      "check_method": "失敗時沒有 `.usage.json`",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-63",
+      "check_method": "每筆請求有一份 `.aos/requests/<id>.json`",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-64",
+      "check_method": "那個檔的欄位與四種 `state`",
+      "kind": "schema",
+      "what_to_use": "request-state.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-65",
+      "check_method": "`aos status --request` 印得出來",
+      "kind": "回傳",
+      "what_to_use": "退 0 且輸出有 `state`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-66",
+      "check_method": "`state` 是 done 但落點沒檔",
+      "kind": "回傳",
+      "what_to_use": "父還是判成沒好",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-67",
+      "check_method": "重啟時 sent 的那些",
+      "kind": "回傳",
+      "what_to_use": "狀態檔 `result_unknown`、`retryable` 是 false",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-68",
+      "check_method": "失敗後沒有第二次送出",
+      "kind": "回傳",
+      "what_to_use": "假後端只被叫一次",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-69",
+      "check_method": "done 的紀錄保留到期限才被刪",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-70",
+      "check_method": "queued 與 sent 的紀錄沒被清",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-71",
+      "check_method": "請求者地上的三種檔都還在",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-72",
+      "check_method": "兩個旗標都在，預設 200 與 never",
+      "kind": "回傳",
+      "what_to_use": "`aos llm serve --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-73",
+      "check_method": "serve 在跑時再起一支",
+      "kind": "回傳",
+      "what_to_use": "退 75",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-74",
+      "check_method": "那塊地沒有 `main.aos.json` 也跑得動",
+      "kind": "回傳",
+      "what_to_use": "退 0，沒有 `.aos/series.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-75",
+      "check_method": "requests 裡兩條路徑是絕對的",
+      "kind": "回傳",
+      "what_to_use": "讀檔；錯誤訊息提到基準",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-76",
+      "check_method": "`tools` 只接在 prompt 前面",
+      "kind": "回傳",
+      "what_to_use": "假後端收到的本體沒有那個欄位",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-77",
+      "check_method": "三個假後端各跑一次",
+      "kind": "回傳",
+      "what_to_use": "`echo:` 退 0、`fail:` 有狀態檔、`slow:` 慢",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-78",
+      "check_method": "整批檢查在沒有網路的環境跑得完",
+      "kind": "回傳",
+      "what_to_use": "斷網跑一遍全過",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-79",
+      "check_method": "`tokens_source` 兩選一",
+      "kind": "schema",
+      "what_to_use": "ledger.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-80",
+      "check_method": "`outcome` 六選一，且跟狀態檔的 `reason` 對得上",
+      "kind": "schema",
+      "what_to_use": "同上，加比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-81",
+      "check_method": "一輪裡壞了幾筆不影響 serve 的退出碼",
+      "kind": "回傳",
+      "what_to_use": "退 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-82",
+      "check_method": "`aos llm ask` 產的請求過同一份 schema",
+      "kind": "schema",
+      "what_to_use": "llm-request.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-83",
+      "check_method": "請求寫壞的進隔離區並回信",
+      "kind": "存在",
+      "what_to_use": "看 `rejected/` 與 `from` 的收件匣",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-84",
+      "check_method": "一輪派出去的筆數",
+      "kind": "回傳",
+      "what_to_use": "同 S-09-21",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-85",
+      "check_method": "配不到單元的那筆",
+      "kind": "回傳",
+      "what_to_use": "`state` 是 queued，`ext.waiting_tier` 有值",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-86",
+      "check_method": "只有 smart 的請求、只有 fast 的單元",
+      "kind": "存在",
+      "what_to_use": "一直排隊，落點沒檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-87",
+      "check_method": "排隊時間從投遞物的 `at` 算",
+      "kind": "回傳",
+      "what_to_use": "改 `at` 就改退回時機",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-88",
+      "check_method": "`queue_timeout` 的 `message` 有兩個數字",
+      "kind": "回傳",
+      "what_to_use": "正規式對它",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-89",
+      "check_method": "`request` 是原始投遞物的原文，處理完還在",
+      "kind": "回傳",
+      "what_to_use": "比對兩份 json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-90",
+      "check_method": "同 id 再投靠 `.aos/requests/` 擋",
+      "kind": "存在",
+      "what_to_use": "`.aos/` 下沒有第二個去重檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-91",
+      "check_method": "一輪真的並行起最多那麼多支",
+      "kind": "回傳",
+      "what_to_use": "`ps` 數同時在跑的 `aos llm`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-92",
+      "check_method": "一輪開頭讀一次，等的時候 100 毫秒內再讀",
+      "kind": "回傳",
+      "what_to_use": "量投停到停下來的時間差",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-93",
+      "check_method": "收到停時已送出的那幾支跑完",
+      "kind": "存在",
+      "what_to_use": "它們的落點都有檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-94",
+      "check_method": "serve 停下來寫停止原因檔",
+      "kind": "schema",
+      "what_to_use": "stopped.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-95",
+      "check_method": "`--usage-out` 成功失敗都寫得出那五個欄",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-96",
+      "check_method": "`--request-id` 只進帳簿與用量檔",
+      "kind": "回傳",
+      "what_to_use": "換 id 不影響回話內容",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-97",
+      "check_method": "serve 派的每筆都帶那兩個旗標",
+      "kind": "回傳",
+      "what_to_use": "讀落檔的指令",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-98",
+      "check_method": "兩份用量檔不是同一份",
+      "kind": "回傳",
+      "what_to_use": "前者沒有 `format_version`",
+      "manual_detail": ""
+    },
+    {
+      "section": "09",
+      "section_title": "LLM 世界",
+      "clause_id": "S-09-99",
+      "check_method": "`aos llm init` 建 `.aos/` 並寫 `units`",
+      "kind": "存在",
+      "what_to_use": "看兩個檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-01",
+      "check_method": "agent 資料夾有 `.aos/`，刪掉就沒了",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-02",
+      "check_method": "用的是同一支 exec",
+      "kind": "回傳",
+      "what_to_use": "`aos exec <agent>` 跑得動",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-03",
+      "check_method": "核心沒有 agent 迴圈的子命令",
+      "kind": "回傳",
+      "what_to_use": "`aos --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-04",
+      "check_method": "同 S-10-02",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-05",
+      "check_method": "停掉再起，接著上一步走",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-35",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-06",
+      "check_method": "四樣都在",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-07",
+      "check_method": "init 產出的圈直接 run 跑得完",
+      "kind": "回傳",
+      "what_to_use": "退 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-08",
+      "check_method": "`agent.json` 過 schema、在頂層、沒被忽略",
+      "kind": "schema",
+      "what_to_use": "agent.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-09",
+      "check_method": "`system_prompt` 是路徑",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-10",
+      "check_method": "改帳簿不影響、改 `.aos/usage.json` 才影響",
+      "kind": "回傳",
+      "what_to_use": "兩邊各改一次",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-11",
+      "check_method": "每圈把落點旁的 `.usage.json` 累加進去",
+      "kind": "schema",
+      "what_to_use": "usage-total.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-12",
+      "check_method": "超過上限時出現停；借父鐘的由父讀到",
+      "kind": "回傳",
+      "what_to_use": "讀停止原因檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-13",
+      "check_method": "圈自己不看牆上的鐘",
+      "kind": "人工",
+      "what_to_use": "要讀程式碼才看得出來",
+      "manual_detail": "圈自己不看牆上的鐘：缺程式碼檢查。"
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-14",
+      "check_method": "缺席或 0 時跑得比上限久",
+      "kind": "回傳",
+      "what_to_use": "跑一趟",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-15",
+      "check_method": "模板裡六步的順序",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-16",
+      "check_method": "組 prompt 那步的輸入只有三個路徑",
+      "kind": "回傳",
+      "what_to_use": "讀落檔的指令",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-17",
+      "check_method": "進了 prompt 的信搬到 `.aos/mail/read/`",
+      "kind": "存在",
+      "what_to_use": "看兩個目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-17",
+      "check_method": "搬不成功的沒進 prompt",
+      "kind": "回傳",
+      "what_to_use": "`grep` prompt 檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-18",
+      "check_method": "字串模板留給實作",
+      "kind": "人工",
+      "what_to_use": "是「不規定」",
+      "manual_detail": "字串模板留給實作：是「不規定」，沒有東西可測。"
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-19",
+      "check_method": "每圈第一筆先清舊的結果、狀態、用量三個檔",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-20",
+      "check_method": "投 LLM 那步跑的是 `aos deliver`",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-21",
+      "check_method": "落點在堆疊框、tier 來自 `agent.json`、工具行來自 `.aos/tools/`",
+      "kind": "回傳",
+      "what_to_use": "讀請求",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-22",
+      "check_method": "下一步是 `await`，等的就是那個落點",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-23",
+      "check_method": "回話格式不合算失敗，空清單不算",
+      "kind": "回傳",
+      "what_to_use": "讀 `status`",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-24",
+      "check_method": "沒標 slow 的走 `inst`，slow 的走脫節加等",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-25",
+      "check_method": "工具結果過封套 schema",
+      "kind": "schema",
+      "what_to_use": "tool-envelope.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-26",
+      "check_method": "同 S-06-18",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-27",
+      "check_method": "停在 `await` 上的串不會讓 run 停",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-50",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-28",
+      "check_method": "空清單那圈串變 done、run 停",
+      "kind": "回傳",
+      "what_to_use": "讀接力棒",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-29",
+      "check_method": "停完投一封信再 run，又開一圈",
+      "kind": "回傳",
+      "what_to_use": "讀 `tick`",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-30",
+      "check_method": "init 產的父原稿用 `mode:\"sync\"`",
+      "kind": "回傳",
+      "what_to_use": "讀原稿",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-31",
+      "check_method": "帶 `--register` 起得來",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-32",
+      "check_method": "agent 地上不准有等外面的指令",
+      "kind": "人工",
+      "what_to_use": "機器判不出哪支程式會等外面",
+      "manual_detail": "不准跑等外面的指令：缺一份「哪些程式會等外面」的名單。"
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-33",
+      "check_method": "同 S-10-05",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-34",
+      "check_method": "兩種壞法各造一次",
+      "kind": "存在",
+      "what_to_use": "狀態檔 `killed` 與 `result_unknown`",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-35",
+      "check_method": "沒寫 `on_fail` 時串停在原地，沒有重投",
+      "kind": "回傳",
+      "what_to_use": "數落檔的請求筆數",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-36",
+      "check_method": "等待期間世界變了不算錯",
+      "kind": "人工",
+      "what_to_use": "沒有可觀察的失敗",
+      "manual_detail": "等待期間世界會變：缺一個違反它的樣子。"
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-37",
+      "check_method": "等待期間進來的信進下一份 prompt",
+      "kind": "回傳",
+      "what_to_use": "`grep` prompt 檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-38",
+      "check_method": "agent 地上沒有第二份工具清單",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-39",
+      "check_method": "家有收件匣，寄得進去",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-40",
+      "check_method": "信有 `from`",
+      "kind": "schema",
+      "what_to_use": "delivery.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-41",
+      "check_method": "三支子命令各跑一次",
+      "kind": "回傳",
+      "what_to_use": "退 0 且輸出對",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-42",
+      "check_method": "游標停在不同步時輸出不同",
+      "kind": "回傳",
+      "what_to_use": "比對 `aos state` 的輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-43",
+      "check_method": "累加是 `await` 之後自己一步，不跟它同格",
+      "kind": "回傳",
+      "what_to_use": "讀模板檔與 `.aos/usage.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-44",
+      "check_method": "agent 沒開過家的設定檔",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-60",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-45",
+      "check_method": "骨架的六種步與順序沒被改",
+      "kind": "回傳",
+      "what_to_use": "同 S-10-15",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-46",
+      "check_method": "骨架裡沒有 `~` 或寫死的家路徑",
+      "kind": "回傳",
+      "what_to_use": "`grep` 骨架原稿",
+      "manual_detail": ""
+    },
+    {
+      "section": "10",
+      "section_title": "agent",
+      "clause_id": "S-10-47",
+      "check_method": "三態靠那幾個步名認",
+      "kind": "回傳",
+      "what_to_use": "同 S-10-42",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-01",
+      "check_method": "一支普通程式登記得起來",
+      "kind": "回傳",
+      "what_to_use": "`aos tool add` 退 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-02",
+      "check_method": "一個可執行檔一個檔",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/tools/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-03",
+      "check_method": "叫沒登記的工具",
+      "kind": "回傳",
+      "what_to_use": "封套帶 `error`",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-04",
+      "check_method": "`aos tool add` 之前那個目錄是空的",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-05",
+      "check_method": "拿 agent 資料夾當工具登記",
+      "kind": "回傳",
+      "what_to_use": "退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-06",
+      "check_method": "檔名跟 `name` 一致",
+      "kind": "回傳",
+      "what_to_use": "比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-07",
+      "check_method": "agent 底下沒有第二份登記表",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-08",
+      "check_method": "只有三欄必填",
+      "kind": "schema",
+      "what_to_use": "tool.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-09",
+      "check_method": "沒有巢狀分組；怪欄位不過",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-10",
+      "check_method": "`list` 時空白與引號原樣傳到 argv",
+      "kind": "回傳",
+      "what_to_use": "看工具收到什麼",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-11",
+      "check_method": "沒有具名槽的欄位",
+      "kind": "schema",
+      "what_to_use": "tool.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-12",
+      "check_method": "同 S-10-38",
+      "kind": "存在",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-13",
+      "check_method": "沒開就不試第二種自述旗標",
+      "kind": "回傳",
+      "what_to_use": "假工具數被叫幾次",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-14",
+      "check_method": "手填蓋掉探到的，`filled_by` 記對",
+      "kind": "回傳",
+      "what_to_use": "讀工具檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-15",
+      "check_method": "沒自述時可預期性缺席",
+      "kind": "回傳",
+      "what_to_use": "讀工具檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-16",
+      "check_method": "工具的狀態沒寫進 `.aos/`",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-17",
+      "check_method": "這兩樣沒被 git 忽略",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-19",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-18",
+      "check_method": "可預期性怎麼讀",
+      "kind": "人工",
+      "what_to_use": "兩種讀法產出同一個檔",
+      "manual_detail": "可預期性怎麼讀：兩種讀法產出同一個檔。"
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-19",
+      "check_method": "三選一，缺席不補成 high",
+      "kind": "schema",
+      "what_to_use": "tool.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-20",
+      "check_method": "登記一個 LLM 類工具不填可預期性",
+      "kind": "回傳",
+      "what_to_use": "退 0，欄位缺席",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-21",
+      "check_method": "沒有發證那一層的檔",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-22",
+      "check_method": "除了 `slow`，改那四欄行為都不變",
+      "kind": "回傳",
+      "what_to_use": "改值前後跑出來一樣",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-23",
+      "check_method": "之後先讀哪一個",
+      "kind": "人工",
+      "what_to_use": "這一版沒有行為可測",
+      "manual_detail": "之後先讀哪一個：這一版沒有行為。"
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-24",
+      "check_method": "同 S-11-22",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-25",
+      "check_method": "沒填 `slow` 時當快的",
+      "kind": "回傳",
+      "what_to_use": "走 `inst` 步",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-26",
+      "check_method": "同 S-10-24",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-27",
+      "check_method": "那一行有六樣",
+      "kind": "回傳",
+      "what_to_use": "看 `aos tool ls`",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-28",
+      "check_method": "那一行照格式，缺可預期性寫 unknown",
+      "kind": "回傳",
+      "what_to_use": "正規式對輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-29",
+      "check_method": "描述要寫出代價",
+      "kind": "人工",
+      "what_to_use": "機器讀不出一句話有沒有寫到",
+      "manual_detail": "描述要寫代價：缺一份判斷「有沒有寫到代價」的規則。"
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-30",
+      "check_method": "那一行裡沒有說明檔的內容",
+      "kind": "回傳",
+      "what_to_use": "比長度",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-31",
+      "check_method": "匯出的物件裡沒有非標準欄",
+      "kind": "人工",
+      "what_to_use": "這一版沒有匯出指令可打",
+      "manual_detail": "匯出是投影：這一版沒有匯出指令。"
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-32",
+      "check_method": "同 S-10-23",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-33",
+      "check_method": "成功與失敗同一形狀",
+      "kind": "schema",
+      "what_to_use": "tool-envelope.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-34",
+      "check_method": "六個欄",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-35",
+      "check_method": "工具不存在或型別錯，用封套退回",
+      "kind": "回傳",
+      "what_to_use": "讀封套",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-36",
+      "check_method": "截斷時 `truncated` 是 true",
+      "kind": "回傳",
+      "what_to_use": "讀封套",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-37",
+      "check_method": "`call_id` 串得回去，封套沒被清",
+      "kind": "存在",
+      "what_to_use": "看檔還在",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-38",
+      "check_method": "一次快工具往返剛好三格",
+      "kind": "回傳",
+      "what_to_use": "比對 `tick`",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-39",
+      "check_method": "slow 的不算進那三格",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-40",
+      "check_method": "把 `sh` 登記起來，模型叫得動",
+      "kind": "回傳",
+      "what_to_use": "封套 `ok` 是 true",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-41",
+      "check_method": "白名單不宣稱安全",
+      "kind": "人工",
+      "what_to_use": "是文字，不是行為",
+      "manual_detail": "白名單不宣稱安全：是文字。"
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-42",
+      "check_method": "通訊錄過 schema",
+      "kind": "schema",
+      "what_to_use": "contacts.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-43",
+      "check_method": "init 與開子地都不動它",
+      "kind": "存在",
+      "what_to_use": "前後 `sha256sum`",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-44",
+      "check_method": "檔裡沒有 `~` 那列，列出來卻有",
+      "kind": "回傳",
+      "what_to_use": "比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-45",
+      "check_method": "路徑不在時照樣列得出來",
+      "kind": "回傳",
+      "what_to_use": "退 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-46",
+      "check_method": "寄信是一支登記過的工具",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/tools/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-47",
+      "check_method": "同 S-09-36",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-48",
+      "check_method": "子 agent 的設定不從父帶",
+      "kind": "回傳",
+      "what_to_use": "讀子的 `agent.json`",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-49",
+      "check_method": "第 0 個引數叫不動就不登記",
+      "kind": "回傳",
+      "what_to_use": "退非 0、沒有新檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-50",
+      "check_method": "列表、刪除、遇到壞檔整次報錯",
+      "kind": "回傳",
+      "what_to_use": "退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-51",
+      "check_method": "三支各跑一次，同名取代，`~` 排最前",
+      "kind": "回傳",
+      "what_to_use": "比對輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-52",
+      "check_method": "寫檔走暫存再改名",
+      "kind": "回傳",
+      "what_to_use": "同 S-05-40",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-53",
+      "check_method": "登記 `aos llm` 當工具",
+      "kind": "回傳",
+      "what_to_use": "同 S-09-58",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-54",
+      "check_method": "寄到一個沒有 `.aos/` 的資料夾",
+      "kind": "回傳",
+      "what_to_use": "封套 `no_such_land`，沒有新目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-55",
+      "check_method": "那則 `error.message` 提到是哪一列哪個路徑",
+      "kind": "回傳",
+      "what_to_use": "`grep` 封套",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-56",
+      "check_method": "工具跑起來的 `pwd` 是呼叫它那塊地的根",
+      "kind": "回傳",
+      "what_to_use": "看 stdout",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-57",
+      "check_method": "`cwd` 寫絕對路徑或 `..`",
+      "kind": "回傳",
+      "what_to_use": "`aos tool add` 與 `aos check` 都退非 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-58",
+      "check_method": "`error.kind` 是短代碼",
+      "kind": "schema",
+      "what_to_use": "tool-envelope.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "11",
+      "section_title": "工具與通訊錄",
+      "clause_id": "S-11-59",
+      "check_method": "`error.message` 放 `$(id)`",
+      "kind": "回傳",
+      "what_to_use": "下一筆指令裡沒有被展開",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-01",
+      "check_method": "裝出來只有一支執行檔",
+      "kind": "存在",
+      "what_to_use": "看安裝清單",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-02",
+      "check_method": "七個退出碼各造一次",
+      "kind": "回傳",
+      "what_to_use": "同 S-06-24",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-03",
+      "check_method": "`--interface` 把兩條流轉接出去",
+      "kind": "回傳",
+      "what_to_use": "假程式收得到",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-04",
+      "check_method": "`run --steps` 與 `status` 都在",
+      "kind": "回傳",
+      "what_to_use": "`--help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-05",
+      "check_method": "每支子命令 `--help` 退 0",
+      "kind": "回傳",
+      "what_to_use": "逐支跑",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-06",
+      "check_method": "同 S-06-01",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-07",
+      "check_method": "同 S-06-16",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-08",
+      "check_method": "同 S-08-06",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-09",
+      "check_method": "跑一格時那支行程沒有對外連線",
+      "kind": "回傳",
+      "what_to_use": "看 `/proc/<pid>/net`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-10",
+      "check_method": "其他子命令不准碰 LLM",
+      "kind": "人工",
+      "what_to_use": "同 S-04-27",
+      "manual_detail": "其他子命令不准碰 LLM：同 S-04-27。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-11",
+      "check_method": "init 後三樣都在",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-12",
+      "check_method": "init 後沒有接力棒",
+      "kind": "存在",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-13",
+      "check_method": "`aos pu` 不存在",
+      "kind": "回傳",
+      "what_to_use": "退 2",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-14",
+      "check_method": "同 S-02-18",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-15",
+      "check_method": "reset 清 failed 與 stopped，`--all` 整份刪",
+      "kind": "存在",
+      "what_to_use": "讀接力棒",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-16",
+      "check_method": "reset 前後頂層檔沒變",
+      "kind": "存在",
+      "what_to_use": "比對清單",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-17",
+      "check_method": "有 run 在跑時 reset",
+      "kind": "回傳",
+      "what_to_use": "退 75",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-18",
+      "check_method": "輸出同時有登記表與游標",
+      "kind": "回傳",
+      "what_to_use": "`grep` 輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-19",
+      "check_method": "`aos stop` 之後控制收件匣有一則",
+      "kind": "存在",
+      "what_to_use": "看目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-20",
+      "check_method": "`--kill` 不經過控制收件匣",
+      "kind": "存在",
+      "what_to_use": "同 S-08-60",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-22",
+      "check_method": "同 S-02-10",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-23",
+      "check_method": "同 S-08-50",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-24",
+      "check_method": "六支都在",
+      "kind": "回傳",
+      "what_to_use": "`aos --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-25",
+      "check_method": "加第七支的判準",
+      "kind": "人工",
+      "what_to_use": "判準是給人用的",
+      "manual_detail": "加第七支的判準：判準是給人用的。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-26",
+      "check_method": "那五支在 `aos agent` 底下",
+      "kind": "回傳",
+      "what_to_use": "`aos --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-27",
+      "check_method": "兩支單獨跑得動",
+      "kind": "回傳",
+      "what_to_use": "同 S-10-41",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-28",
+      "check_method": "核心切四圈",
+      "kind": "人工",
+      "what_to_use": "只能讀程式碼",
+      "manual_detail": "核心切四圈：缺程式碼檢查。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-29",
+      "check_method": "同 S-04-13",
+      "kind": "人工",
+      "what_to_use": "同上",
+      "manual_detail": "逾時在迴圈那圈剝掉：同 S-04-13。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-30",
+      "check_method": "六支與四圈是兩份表",
+      "kind": "人工",
+      "what_to_use": "是文件的說法",
+      "manual_detail": "六支與四圈兩份表：是文件的說法。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-31",
+      "check_method": "每種 json 都有一份 schema",
+      "kind": "存在",
+      "what_to_use": "比對 `schemas/` 與 02 的表",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-32",
+      "check_method": "三樣各造一個壞檔",
+      "kind": "回傳",
+      "what_to_use": "`aos check` 都報得出來",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-33",
+      "check_method": "`aos check` 跑完檔案沒變",
+      "kind": "回傳",
+      "what_to_use": "前後 `sha256sum`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-34",
+      "check_method": "同 S-02-21",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-35",
+      "check_method": "同 S-02-22",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-36",
+      "check_method": "兩個版本欄都是整數",
+      "kind": "schema",
+      "what_to_use": "layout.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-37",
+      "check_method": "同 S-02-38",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-38",
+      "check_method": "同 S-02-13",
+      "kind": "人工",
+      "what_to_use": "同上",
+      "manual_detail": "一路徑一 writer：同 S-02-13。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-39",
+      "check_method": "改裁決卻沒改 spec 的 commit",
+      "kind": "人工",
+      "what_to_use": "沒有綁 commit 與條款的東西",
+      "manual_detail": "同 commit 回寫規範：缺把 commit 跟條款綁起來的東西。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-40",
+      "check_method": "同 S-12-39",
+      "kind": "人工",
+      "what_to_use": "同上",
+      "manual_detail": "新裁決要回寫：同上。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-41",
+      "check_method": "方向性的裁決屬於使用者",
+      "kind": "人工",
+      "what_to_use": "是流程規定",
+      "manual_detail": "方向性裁決屬於使用者：是流程規定。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-42",
+      "check_method": "每條句尾有三種來源標記之一",
+      "kind": "回傳",
+      "what_to_use": "正規式掃 `spec/*.md`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-43",
+      "check_method": "判例記錄寫了為什麼",
+      "kind": "人工",
+      "what_to_use": "機器判不出理由夠不夠",
+      "manual_detail": "理由寫進判例記錄：缺判斷理由夠不夠的規則。"
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-44",
+      "check_method": "同 S-06-38",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-45",
+      "check_method": "指令跑一半投停，最壞等那筆跑完",
+      "kind": "回傳",
+      "what_to_use": "量時間差",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-46",
+      "check_method": "`--kill` 之後有狀態檔、現場還在",
+      "kind": "存在",
+      "what_to_use": "同 S-08-78",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-47",
+      "check_method": "`aos fix` 把現場改名、串標 stopped",
+      "kind": "存在",
+      "what_to_use": "看 `.aos/ticks/<N>.crashed/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-48",
+      "check_method": "`aos fix --requeue` 把投遞物退回收件匣",
+      "kind": "存在",
+      "what_to_use": "看收件匣",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-49",
+      "check_method": "`aos migrate` 只印一行",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-39",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-50",
+      "check_method": "除了兩支，其他子命令都拒跑",
+      "kind": "回傳",
+      "what_to_use": "逐支跑，都退 3",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-51",
+      "check_method": "同 S-09-65",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-53",
+      "check_method": "同 S-06-34 與 S-06-35",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-54",
+      "check_method": "同 S-05-47",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-55",
+      "check_method": "同 S-08-67",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-56",
+      "check_method": "`aos llm serve` 的預設與鎖",
+      "kind": "回傳",
+      "what_to_use": "同 S-09-72、S-09-73",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-57",
+      "check_method": "`--until` 收 idle 與 never",
+      "kind": "回傳",
+      "what_to_use": "`aos run --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-58",
+      "check_method": "同 S-08-86",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-59",
+      "check_method": "`aos llm ask` 兩個檔都留著",
+      "kind": "存在",
+      "what_to_use": "看 `$AOS_HOME/.aos/ask/`",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-60",
+      "check_method": "`aos publish` 兩種寫法",
+      "kind": "回傳",
+      "what_to_use": "同 S-07-66",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-61",
+      "check_method": "沒人在跑時 `aos stop`",
+      "kind": "回傳",
+      "what_to_use": "退 0，控制收件匣是空的",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-62",
+      "check_method": "處理過的控制信搬到 `done/`",
+      "kind": "存在",
+      "what_to_use": "同 S-06-55",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-63",
+      "check_method": "登記表沒 pid 時改讀鎖檔",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-93",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-64",
+      "check_method": "`aos status` 三樣都印",
+      "kind": "回傳",
+      "what_to_use": "`grep` 輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-65",
+      "check_method": "`aos status --triple` 三態各跑一次",
+      "kind": "回傳",
+      "what_to_use": "比對輸出",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-66",
+      "check_method": "`aos deliver` 拒收時說是哪個欄位",
+      "kind": "回傳",
+      "what_to_use": "`grep` stderr",
+      "manual_detail": ""
+    },
+    {
+      "section": "12",
+      "section_title": "指令面",
+      "clause_id": "S-12-67",
+      "check_method": "`migrate`／`publish`／`daemon add`／`llm serve`／`llm ask` 歸指令面、不算第七支",
+      "kind": "人工",
+      "what_to_use": "文件說法；12b 名冊表不含它們即可",
+      "manual_detail": "那五支歸指令面、不算第七支：是文件的說法，只能看 12b 名冊表列了哪幾支。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-01",
+      "check_method": "`aos doorman` 是子命令",
+      "kind": "回傳",
+      "what_to_use": "`aos --help`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-02",
+      "check_method": "沒有第二種腳本，地裡沒有門房設定",
+      "kind": "存在",
+      "what_to_use": "同 S-02-14",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-03",
+      "check_method": "門房底下是真目錄",
+      "kind": "回傳",
+      "what_to_use": "`stat -f` 不是接管出來的",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-04",
+      "check_method": "殺掉門房，exec 照跑",
+      "kind": "回傳",
+      "what_to_use": "退 0",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-05",
+      "check_method": "用的是 inotify",
+      "kind": "回傳",
+      "what_to_use": "`ls /proc/<pid>/fd`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-06",
+      "check_method": "往下走的順序",
+      "kind": "人工",
+      "what_to_use": "是排程，不是行為",
+      "manual_detail": "tmpfs → inotify → FUSE：是排程。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-08",
+      "check_method": "收到事件後只有本子與登記表變",
+      "kind": "回傳",
+      "what_to_use": "別的檔 `sha256sum` 不變",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-09",
+      "check_method": "門房跑著時地的 `tick` 不動",
+      "kind": "回傳",
+      "what_to_use": "讀接力棒",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-10",
+      "check_method": "同 S-13-09",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-11",
+      "check_method": "本子在，每行都是 json",
+      "kind": "回傳",
+      "what_to_use": "逐行丟 `jq`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-12",
+      "check_method": "每行過 schema",
+      "kind": "schema",
+      "what_to_use": "doorman-log.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-13",
+      "check_method": "`event` 六選一",
+      "kind": "schema",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-14",
+      "check_method": "生死先做、記帳後做",
+      "kind": "人工",
+      "what_to_use": "是做事順序，不是成品行為",
+      "manual_detail": "生死先做記帳後做：是做事順序。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-16",
+      "check_method": "刪掉登記過的地",
+      "kind": "存在",
+      "what_to_use": "本子多一行 `gone`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-17",
+      "check_method": "路徑沒了但 pid 活著",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-36",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-18",
+      "check_method": "那筆變 stopped 或被刪",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-19",
+      "check_method": "關掉門房，對帳照樣清",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-37",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-20",
+      "check_method": "搬走一塊地",
+      "kind": "存在",
+      "what_to_use": "本子有 `gone` 加 `born`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-21",
+      "check_method": "新出現一塊地",
+      "kind": "存在",
+      "what_to_use": "本子多一行 `born`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-22",
+      "check_method": "那筆是 stopped，三個欄都 null",
+      "kind": "回傳",
+      "what_to_use": "讀登記表",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-23",
+      "check_method": "出生之後沒有 run 被起",
+      "kind": "回傳",
+      "what_to_use": "`ps`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-24",
+      "check_method": "寫檔事件記進本子",
+      "kind": "存在",
+      "what_to_use": "`grep` 本子",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-25",
+      "check_method": "記帳前後地的行為一樣",
+      "kind": "回傳",
+      "what_to_use": "同 S-13-09",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-28",
+      "check_method": "一格內十個事件只換來一次處理",
+      "kind": "回傳",
+      "what_to_use": "數登記表的變動次數",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-30",
+      "check_method": "監看的是登記表的路徑加家底下一層",
+      "kind": "回傳",
+      "what_to_use": "深處的新地不進本子",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-31",
+      "check_method": "同 S-13-30",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-32",
+      "check_method": "把監看上限調到 1",
+      "kind": "存在",
+      "what_to_use": "本子多一行 `fallback`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-33",
+      "check_method": "退回巡邏後生死照樣進本子",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-34",
+      "check_method": "門房是獨立行程",
+      "kind": "回傳",
+      "what_to_use": "`ps` 看兩個 pid",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-35",
+      "check_method": "`aos daemon start --doorman`",
+      "kind": "回傳",
+      "what_to_use": "`ps`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-36",
+      "check_method": "同 S-13-19",
+      "kind": "回傳",
+      "what_to_use": "同上",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-37",
+      "check_method": "兩邊都經過 `registry.lock`",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-21",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-38",
+      "check_method": "預設不放 tmpfs",
+      "kind": "回傳",
+      "what_to_use": "`stat -f` 看檔案系統",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-39",
+      "check_method": "`aos init --tmpfs` 記在版面檔的 `ext`",
+      "kind": "回傳",
+      "what_to_use": "讀檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-40",
+      "check_method": "刪掉 `.aos/program/` 再 exec，重建得回來",
+      "kind": "回傳",
+      "what_to_use": "看檔",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-41",
+      "check_method": "機器掛了那塊地從頭跑",
+      "kind": "人工",
+      "what_to_use": "要真的斷電或重開機",
+      "manual_detail": "機器掛了從頭跑：要真的斷電或重開機。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-42",
+      "check_method": "頂層原稿不在 tmpfs",
+      "kind": "回傳",
+      "what_to_use": "同 S-13-38",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-43",
+      "check_method": "第一級不擋寫入",
+      "kind": "回傳",
+      "what_to_use": "寫入的時間差在誤差內",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-44",
+      "check_method": "將來凍結時結果落點算自己人",
+      "kind": "人工",
+      "what_to_use": "這一版沒有凍結可測",
+      "manual_detail": "凍結時結果落點算自己人：這一版沒有凍結。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-45",
+      "check_method": "其餘寫入等那格結束",
+      "kind": "人工",
+      "what_to_use": "同上",
+      "manual_detail": "其餘寫入等那格結束：同上。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-46",
+      "check_method": "新實作的第一塊做什麼",
+      "kind": "人工",
+      "what_to_use": "是排程，不是行為",
+      "manual_detail": "第一塊先做什麼：是排程。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-47",
+      "check_method": "只有 `layout.json` 改名就位才算出生",
+      "kind": "回傳",
+      "what_to_use": "直接複製過去不算，本子沒有 `born`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-48",
+      "check_method": "只 `mkdir .aos`",
+      "kind": "存在",
+      "what_to_use": "本子沒有 `born`",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-49",
+      "check_method": "`layout.json` 壞掉",
+      "kind": "存在",
+      "what_to_use": "本子一行 `born_invalid`、登記表沒新筆",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-50",
+      "check_method": "門鈴投給 daemon",
+      "kind": "回傳",
+      "what_to_use": "同 S-08-62",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-51",
+      "check_method": "daemon 自己輪詢本子",
+      "kind": "回傳",
+      "what_to_use": "門房不去戳 daemon",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-52",
+      "check_method": "本子有 `inbox` 而那筆不是 running",
+      "kind": "回傳",
+      "what_to_use": "daemon 起一支 run",
+      "manual_detail": ""
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-53",
+      "check_method": "重開機後從原稿重建",
+      "kind": "人工",
+      "what_to_use": "要真的斷電或重開機",
+      "manual_detail": "重開機後當從頭跑：同 S-13-41。"
+    },
+    {
+      "section": "13",
+      "section_title": "門房第一級",
+      "clause_id": "S-13-54",
+      "check_method": "那四樣不在 tmpfs 上",
+      "kind": "回傳",
+      "what_to_use": "同 S-02-46",
+      "manual_detail": ""
+    }
+  ]
+}

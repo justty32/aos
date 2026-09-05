@@ -21,8 +21,7 @@
   **spec 已寫出**（[spec/README.md](workflows/spec/README.md)，27 份正文＋23 份 schema，756 條，每條標裁決／預設／主編補）；
   **Python 原型已能跑**（`proto/`，77 測試綠、4 範例通，`proto/FINDINGS.md` 73 條阻礙）。
   **open**：① 使用者要批的都在裁決單 artifact（76 題＋主編補 8 條，https://claude.ai/code/artifact/265bc36e-8ed9-45b6-9f36-afe06267fbec ），
-  他說「看裁決單」就去 read_db 讀 `decisions/main`；② spec 14-conformance 三檔各 20 KB 以上、notes/edge-cases.md 48 KB 是同質表，
-  該照鐵律 6 抽成資料檔；③ 主編改寫了一條升格裁決（停法加「沒有串在等」），三隊都撞到，等使用者點頭；
+  他說「看裁決單」就去 read_db 讀 `decisions/main`；② 驗收表與邊緣狀況表已抽成資料檔（spec/data/conformance.json 753 列、notes/edge-cases.json 83 列，md 只留導航）；③ 主編改寫了一條升格裁決（停法加「沒有串在等」），三隊都撞到，等使用者點頭；
   ④ 沒 daemon 時脫節呼叫：主編裁「直接失敗」、原型做「exec 自己起 run」，兩邊不一致，等裁決單 P-01。
 
 - **2026-08-30 深夜：第三輪落地**——試用 L1／L2（60 條發現、26 支 repro 當回歸）→ 隊 X 修 25 條 bug
