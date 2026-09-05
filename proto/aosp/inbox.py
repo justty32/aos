@@ -52,7 +52,9 @@ def deliver(land, obj):
         return False, "投遞物少了 `id`"
     fsutil.ensure_dir(land.inbox)
     final = os.path.join(land.inbox, "%s.json" % obj_id)
-    if os.path.exists(final) or obj_id in _seen(land):
+    request_state = land.rel("requests", "%s.json" % obj_id)
+    if os.path.exists(final) or obj_id in _seen(land) or (
+            obj.get("kind") == "llm" and os.path.exists(request_state)):
         # I-05 同 id 再投＝拒絕並回報投遞者
         _report(land, obj, "duplicate", "同一個 id 已經投過了：%s" % obj_id)
         return False, "重複投遞：id %s 已經在 %s 收過" % (obj_id, land.root)
@@ -63,7 +65,28 @@ def deliver(land, obj):
     temp = final + ".temp"
     fsutil.atomic_write_text(temp, json.dumps(obj, ensure_ascii=False, indent=2))
     os.rename(temp, final)
+    # LLM 請求一落進收件匣就另建狀態物件；原件仍留在 inbox，之後只靠 rename 搬。
+    # 只替形狀完整的請求建，測試用的手造壞信仍交給消費端隔離。
+    if obj.get("kind") == "llm" and all(k in obj for k in ("from", "prompt", "result")):
+        write_request_state(land, obj, "queued", None, final)
     return True, final
+
+
+def write_request_state(land, obj, state_name, unit_name, request):
+    """寫 `.aos/requests/<id>.json`；request 放原件路徑或摘要。"""
+    path = land.rel("requests", "%s.json" % (obj.get("id") or ""))
+    rec = {
+        "format_version": 1,
+        "id": obj.get("id"),
+        "from": obj.get("from"),
+        "state": state_name,
+        "unit": unit_name,
+        "updated_at": fsutil.now_iso(),
+        "request": os.path.abspath(request) if isinstance(request, str) else request,
+        "ext": {},
+    }
+    fsutil.write_json(path, rec)
+    return rec
 
 
 def _report(land, obj, reason, message):

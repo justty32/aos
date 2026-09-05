@@ -429,7 +429,22 @@ class Doorman:
     def _load_reg(self):
         reg = read_json(self.registry, None)
         if not isinstance(reg, dict) or not isinstance(reg.get("entries"), list):
-            reg = {"format_version": 1, "daemon_pid": None, "entries": []}
+            reg = {"format_version": 1, "daemon_pid": None,
+                   "daemon_pid_start": None, "entries": []}
+        reg.setdefault("daemon_pid_start", None)
+        for e in reg["entries"]:
+            ext = e.get("ext")
+            if isinstance(ext, dict):
+                if "result" not in e and "result" in ext:
+                    e["result"] = ext["result"]
+                if "args" not in e and "args" in ext:
+                    e["args"] = ext["args"]
+                ext.pop("result", None)
+                ext.pop("args", None)
+            result = e.get("result")
+            e["result"] = os.path.abspath(result) if isinstance(result, str) else None
+            args = e.get("args")
+            e["args"] = dict(args) if isinstance(args, dict) else None
         return reg
 
     @staticmethod
@@ -458,6 +473,8 @@ class Doorman:
                     "state": STOPPED,
                     "clock": None,
                     "budget": None,
+                    "result": None,
+                    "args": None,
                     "parent": None,
                     "registered_at": now,
                     "updated_at": now,

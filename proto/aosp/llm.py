@@ -15,8 +15,10 @@ import urllib.request
 
 from . import exits, fsutil, inbox, layout, status
 
-# 請求的三段生命週期：收件匣排隊 → 已送出等回話 → 已完成留存。
+# 原件的三段生命週期：收件匣排隊 → 已送出等回話 → 已完成留存。
+# requests/ 只放狀態物件，不放原件。
 INFLIGHT_DIR = "llm-inflight"
+DONE_DIR = "llm-done"
 REQUESTS_DIR = "requests"
 # aos llm ask 的暫存 prompt／結果
 ASK_DIR = "llm-ask"
@@ -120,6 +122,7 @@ def init_llm_world(home=None):
     h = _home(home)
     land, _created = layout.init(h.llm_world)
     fsutil.ensure_dir(land.rel(INFLIGHT_DIR))
+    fsutil.ensure_dir(land.rel(DONE_DIR))
     fsutil.ensure_dir(land.rel(REQUESTS_DIR))
     fsutil.ensure_dir(land.rel(ASK_DIR))
 
@@ -352,12 +355,24 @@ def _mark_inflight(land, obj):
     return _move_request(land, obj, None, INFLIGHT_DIR)
 
 
-def _archive(land, obj):
-    """完成後搬進 requests；送出過的優先從 inflight 搬。"""
+def _request_state_path(land, obj_id):
+    return _request_path(land, REQUESTS_DIR, obj_id)
+
+
+def _write_request_state(land, obj, state_name, unit_name, request):
+    """另寫狀態物件；request 是原件目前的絕對路徑，原件內容不包進來。"""
+    return inbox.write_request_state(land, obj, state_name, unit_name, request)
+
+
+def _archive(land, obj, state_name, unit_name):
+    """做完後只把原件搬進 llm-done，再另寫 requests 狀態物件。"""
     obj_id = obj.get("id") or ""
     if os.path.exists(_request_path(land, INFLIGHT_DIR, obj_id)):
-        return _move_request(land, obj, INFLIGHT_DIR, REQUESTS_DIR)
-    return _move_request(land, obj, None, REQUESTS_DIR)
+        dst = _move_request(land, obj, INFLIGHT_DIR, DONE_DIR)
+    else:
+        dst = _move_request(land, obj, None, DONE_DIR)
+    _write_request_state(land, obj, state_name, unit_name, dst or dict(obj))
+    return dst
 
 
 def _json_files(path):
@@ -379,21 +394,21 @@ def _recover_inflight(land, home, rep):
         result_path = requester.resolve(result_raw) if result_raw else None
         message = "請求已送出，但 aos llm serve 在等回話時中斷；重啟後結果不明，禁止自動重送"
         if result_path:
-            status.write_failed(result_path, status.UNKNOWN_AFTER_RESTART, message,
+            status.write_failed(result_path, status.RESULT_UNKNOWN, message,
                                 ext={"retryable": False})
         _ledger(home, obj, None, obj.get("tier"), 0, 0, None, "estimated", 0,
                 OUT_RESULT_UNKNOWN)
-        dst = _move_request(land, obj, INFLIGHT_DIR, REQUESTS_DIR)
+        dst = _archive(land, obj, "failed", None)
         item = {
             "id": obj.get("id"), "ok": False, "outcome": OUT_RESULT_UNKNOWN,
-            "reason": status.UNKNOWN_AFTER_RESTART, "message": message,
+            "reason": status.RESULT_UNKNOWN, "message": message,
             "result": result_path,
             "status": status.status_path(result_path) if result_path else None,
             "unit": None, "tier": obj.get("tier"), "ms": 0,
         }
         recovered.append(item)
-        rep["notes"].append("重啟收尾 %s：結果不明，不重送，請求搬到 %s"
-                            % (obj.get("id"), dst or land.rel(REQUESTS_DIR)))
+        rep["notes"].append("重啟收尾 %s：結果不明，不重送，原件搬到 %s"
+                            % (obj.get("id"), dst or land.rel(DONE_DIR)))
     rep["handled"].extend(recovered)
     return recovered
 
@@ -407,7 +422,7 @@ def _fail(land, obj, result_path, reason, message, home, unit_name, tier, ms=0):
         status.REJECTED: OUT_REJECTED,
     }.get(reason, reason)
     _ledger(home, obj, unit_name, tier, 0, 0, None, "estimated", ms, outcome)
-    _archive(land, obj)
+    _archive(land, obj, "failed", unit_name)
     return {
         "id": obj.get("id"), "ok": False, "outcome": outcome, "reason": reason,
         "message": message, "result": result_path, "status": (
@@ -464,6 +479,8 @@ def handle_request(land, obj, home=None, progress=False):
         return _fail(land, obj, result_path, status.REJECTED,
                      "送出前無法把請求原子搬進 %s" % land.rel(INFLIGHT_DIR),
                      h, unit_name, tier)
+    _write_request_state(land, obj, "sent", unit_name,
+                         _request_path(land, INFLIGHT_DIR, obj.get("id") or ""))
 
     tools = obj.get("tools") if isinstance(obj.get("tools"), list) else None
     if progress:
@@ -489,7 +506,7 @@ def handle_request(land, obj, home=None, progress=False):
     fsutil.atomic_write_text(result_path, res["text"])
     _ledger(h, obj, unit_name, tier, res["tokens_in"], res["tokens_out"],
             res["tokens_reasoning"], res["tokens_source"], res["ms"], OUT_OK)
-    _archive(land, obj)
+    _archive(land, obj, "done", unit_name)
     out = {
         "id": obj.get("id"), "ok": True, "outcome": OUT_OK, "result": result_path,
         "unit": unit_name, "tier": tier, "ms": res["ms"],
@@ -557,6 +574,7 @@ def _serve_locked(land, h, rep, progress=False):
             rep["notes"].append("隔離無效請求 %s（%s）：%s → %s"
                                 % (obj_id, e.reason, e.message, land.inbox_rejected))
             continue
+        _write_request_state(land, obj, "queued", None, path)
         good.append((path, obj))
 
     good.sort(key=_sort_key)
@@ -658,7 +676,8 @@ def _op_init(args):
     print("  帳簿：%s" % h.ledger)
     print("  收件匣：%s" % land.inbox)
     print("  在飛的請求：%s" % land.rel(INFLIGHT_DIR))
-    print("  已完成的請求：%s" % land.rel(REQUESTS_DIR))
+    print("  已完成的原件：%s" % land.rel(DONE_DIR))
+    print("  請求狀態：%s" % land.rel(REQUESTS_DIR))
     for u in _units(h):
         print("  單元 %-12s tier=%-6s endpoint=%-24s model=%s max_parallel=%s"
               % (u.get("name"), u.get("tier"), u.get("endpoint"), u.get("model"),
@@ -732,25 +751,46 @@ def _op_ls(args):
             "max_wait_ms": obj.get("max_wait_ms"),
             "result": obj.get("result"),
         })
-    def rows_in(dirname):
+    def raw_row(path, obj, state_name=None, unit_name=None):
+        return {
+            "id": obj.get("id") or os.path.basename(path)[:-5],
+            "from": obj.get("from"), "tier": obj.get("tier"),
+            "priority": obj.get("priority") if isinstance(obj.get("priority"), int) else 0,
+            "waited_ms": _waited_ms(obj), "max_wait_ms": obj.get("max_wait_ms"),
+            "result": obj.get("result"), "state": state_name, "unit": unit_name,
+            "request": os.path.abspath(path),
+        }
+
+    def state_rows():
         out = []
-        for path in _json_files(land.rel(dirname)):
-            obj = fsutil.read_json(path)
-            if not isinstance(obj, dict):
+        for path in _json_files(land.rel(REQUESTS_DIR)):
+            state_obj = fsutil.read_json(path)
+            if not isinstance(state_obj, dict):
                 continue
-            out.append({
-                "id": obj.get("id") or os.path.basename(path)[:-5],
-                "from": obj.get("from"), "tier": obj.get("tier"),
-                "priority": obj.get("priority") if isinstance(obj.get("priority"), int) else 0,
-                "waited_ms": _waited_ms(obj), "max_wait_ms": obj.get("max_wait_ms"),
-                "result": obj.get("result"),
-            })
+            request = state_obj.get("request")
+            obj = fsutil.read_json(request) if isinstance(request, str) else request
+            if not isinstance(obj, dict):
+                obj = {}
+            row = raw_row(request if isinstance(request, str) else path, obj,
+                          state_obj.get("state"), state_obj.get("unit"))
+            row["id"] = state_obj.get("id") or os.path.basename(path)[:-5]
+            row["from"] = state_obj.get("from") or row["from"]
+            row["request"] = request
+            out.append(row)
         return out
 
-    inflight = rows_in(INFLIGHT_DIR)
-    completed = rows_in(REQUESTS_DIR)
+    states = state_rows()
+    known = {r["id"] for r in states}
+    queued = [r for r in states if r.get("state") == "queued"]
+    queued.extend(r for r in rows if r["id"] not in known)
+    inflight = [r for r in states if r.get("state") == "sent"]
+    for path in _json_files(land.rel(INFLIGHT_DIR)):
+        obj = fsutil.read_json(path)
+        if isinstance(obj, dict) and (obj.get("id") or os.path.basename(path)[:-5]) not in known:
+            inflight.append(raw_row(path, obj, "sent", None))
+    completed = [r for r in states if r.get("state") in ("done", "failed")]
     units = _units(h)
-    stages = {"queued": rows, "inflight": inflight, "completed": completed}
+    stages = {"queued": queued, "inflight": inflight, "completed": completed}
     if args.json:
         print(json.dumps({"land": land.root, **stages, "units": units},
                          ensure_ascii=False, indent=2))
@@ -760,7 +800,7 @@ def _op_ls(args):
         oldest = max((r["waited_ms"] for r in stage_rows), default=0)
         return "%s %d 筆（最舊等了 %d ms）" % (label, len(stage_rows), oldest)
     print("請求：%-32s | %-32s | %s" % (
-        summary("排隊中", rows), summary("在飛", inflight), summary("已完成", completed)))
+        summary("排隊中", queued), summary("在飛", inflight), summary("已完成", completed)))
     print("處理單元（%s 的 `units`）：%d 筆" % (h.config, len(units)))
     for u in units:
         print("  %-12s tier=%-6s endpoint=%-24s model=%-12s max_parallel=%s api_key_env=%s"

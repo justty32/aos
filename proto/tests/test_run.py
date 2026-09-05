@@ -96,6 +96,12 @@ class TestRunLockBusy(LandCase):
 
 
 class TestBusyTicks(LandCase):
+    def test_new_series_file_has_zero_busy_ticks(self):
+        from aosp import series
+        baton = series.empty()
+        series.save(self.land, baton)
+        self.assertEqual(fsutil.read_json(self.land.series).get("busy_ticks"), 0)
+
     def test_status_separates_total_ticks_from_busy_ticks(self):
         write_source(self.land, [
             {"name": "work", "kind": "inst", "inst": {"argv": [PY, "-c", "pass"]},
@@ -125,3 +131,14 @@ class TestBusyTicks(LandCase):
         rc, out, err = run_cli("status", self.land.root)
         self.assertEqual(rc, exits.OK, msg=err)
         self.assertIn("格 2（做事 1）", out)
+
+    def test_single_exec_updates_stopped_busy_ticks_after_failed_step(self):
+        write_source(self.land, [
+            {"name": "broken", "kind": "inst", "inst": {"argv": ["/no/such/aos-busy-test"]},
+             "then": "end"},
+        ])
+        self.assertEqual(run_cli("exec", self.land.root)[0], exits.OK)
+        baton = fsutil.read_json(self.land.series)
+        stopped = fsutil.read_json(self.land.stopped)
+        self.assertEqual(baton.get("busy_ticks"), 1)
+        self.assertEqual(stopped.get("busy_ticks"), 1)

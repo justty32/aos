@@ -34,6 +34,33 @@ SKIP_MSG = "aosp/daemon.py 還沒寫好（cli_daemon/cli_stop 還沒有），先
 class TestRegistryReconcile(LandCase):
     """只靠 registry.py（已完工），跟 daemon.py 進度無關。"""
 
+    def test_registry_uses_top_level_result_args_and_daemon_pid_start(self):
+        home = layout.Home()
+        registry.register(self.land.root, {"kind": "once"}, home=home)
+        reg = registry.load(home)
+        e = registry.find(reg, self.land.root)
+        self.assertIn("daemon_pid_start", reg)
+        self.assertIsNone(reg["daemon_pid_start"])
+        self.assertIn("result", e)
+        self.assertIsNone(e["result"])
+        self.assertIn("args", e)
+        self.assertIsNone(e["args"])
+
+    def test_registry_load_promotes_legacy_ext_result_and_args(self):
+        home = layout.Home()
+        result = self.land.resolve("legacy/result.txt")
+        legacy = registry.empty()
+        legacy["entries"].append({
+            "path": self.land.root,
+            "ext": {"result": result, "args": {"name": "old"}, "keep": True},
+        })
+        fsutil.write_json(home.registry, legacy)
+
+        e = registry.find(registry.load(home), self.land.root)
+        self.assertEqual(e["result"], result)
+        self.assertEqual(e["args"], {"name": "old"})
+        self.assertEqual(e["ext"], {"keep": True})
+
     def test_reconcile_marks_dead_pid_running_as_stopped(self):
         home = layout.Home()
         p = subprocess.Popen([sys.executable, "-c", "pass"])
@@ -60,26 +87,44 @@ class TestRegistryReconcile(LandCase):
         self.assertEqual(e["state"], registry.RUNNING,
                           msg="pid 還活著就不該被 reconcile 改掉，實際 %r" % e)
 
-    def test_stopped_child_without_result_gets_reason_specific_status(self):
+    def _assert_missing_result_mapping(self, stopped_reason, expected):
         home = layout.Home()
         result = self.land.resolve("parent-out/child.done")
         registry.register(self.land.root, {"kind": "until", "until": "idle"},
                           state=registry.STOPPED, result=result, home=home)
-        cases = (("idle", "no_result"), ("failed", "child_failed"),
-                 ("signal", "killed"))
-        for stopped_reason, expected in cases:
-            with self.subTest(stopped_reason=stopped_reason):
-                fsutil.write_json(self.land.stopped, {
-                    "format_version": 1, "reason": stopped_reason,
-                    "message": "子地停在 %s" % stopped_reason,
-                })
-                try:
-                    os.unlink(result + ".status.json")
-                except FileNotFoundError:
-                    pass
-                registry.reconcile(home)
-                st = fsutil.read_json(result + ".status.json")
-                self.assertEqual(st.get("reason"), expected, msg="實際狀態檔 %r" % st)
+        fsutil.write_json(self.land.stopped, {
+            "format_version": 1, "reason": stopped_reason,
+            "message": "子地停在 %s" % stopped_reason,
+        })
+        registry.reconcile(home)
+        st = fsutil.read_json(result + ".status.json")
+        self.assertEqual(st.get("reason"), expected, msg="實際狀態檔 %r" % st)
+        self.assertEqual(st.get("ext", {}).get("stopped_reason"), stopped_reason,
+                         msg="狀態檔要保留原始停止原因，實際 %r" % st)
+
+    def test_idle_without_result_maps_to_no_result(self):
+        self._assert_missing_result_mapping("idle", "no_result")
+
+    def test_budget_without_result_maps_to_no_result(self):
+        self._assert_missing_result_mapping("budget", "no_result")
+
+    def test_steps_done_without_result_maps_to_no_result(self):
+        self._assert_missing_result_mapping("steps_done", "no_result")
+
+    def test_failed_without_result_maps_to_child_failed(self):
+        self._assert_missing_result_mapping("failed", "child_failed")
+
+    def test_parse_error_without_result_maps_to_child_failed(self):
+        self._assert_missing_result_mapping("parse_error", "child_failed")
+
+    def test_stalled_without_result_maps_to_child_failed(self):
+        self._assert_missing_result_mapping("stalled", "child_failed")
+
+    def test_signal_without_result_maps_to_killed(self):
+        self._assert_missing_result_mapping("signal", "killed")
+
+    def test_control_stop_without_result_maps_to_killed(self):
+        self._assert_missing_result_mapping("control_stop", "killed")
 
     def test_dead_running_child_is_reconciled_and_gets_child_failed_status(self):
         home = layout.Home()

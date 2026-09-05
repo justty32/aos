@@ -266,3 +266,8 @@ agent 地是 `examples/agent-real`，任務是「`work/` 這個小 Python 專案
 - **`needs_status` 沒有正式事件形狀**｜依據：本輪任務第 4 項、S-13-12 的 `ext`｜**卡在哪**：任務只說本子要記 `needs_status`，沒說它是布林、結果路徑或完整工作物件，也沒說 daemon 要不要靠它當唯一觸發。｜**怎麼繞**：原型在補刀那筆 `gone.ext.needs_status` 寫結果落點絕對路徑；daemon 仍以登記表的 `state/result` 對帳，事件本子保留交接證據。｜類別：spec 沒講｜擋路程度：煩
 - **停止原因不只 idle／failed／signal 三種**｜依據：本輪任務第 3 項、`run.py` 的 `steps_done`／`budget`／`control_stop`／`stalled`／`parse_error`｜**卡在哪**：任務只定三種映射，其他停止原因漏結果時該算 `no_result`、`child_failed` 或 `killed` 沒定。｜**怎麼繞**：原型只把 `idle` 映成 `no_result`、`failed` 映成 `child_failed`，其餘保守映成 `killed` 並在狀態檔 ext 留原始 `stopped_reason`。｜類別：spec 沒講｜擋路程度：擋路
 - **跨格尚未產出檔案的兩筆呼叫仍可預約同一落點**｜依據：S-07-60～S-07-63｜**卡在哪**：S-07-63 只禁止同一格重複，S-07-60 又只看三個正式檔；若第一筆脫節呼叫尚未落檔，下一格第二筆仍看不出路徑已被占用。｜**怎麼繞**：本輪照條款只做同格去重與正式檔存在檢查；正式規格若要封死跨格碰撞，需要把未完成呼叫記錄也算落點保留。｜類別：spec 沒講｜擋路程度：擋路
+
+## codex 第 6 輪
+
+- **原件 rename 與狀態物件更新不可能一起原子完成**｜依據：第四批 Q-03｜**卡在哪**：做完時要先把原件從 `llm-inflight/` rename 到 `llm-done/`，又要把 `requests/<id>.json` 從 `sent` 改成 `done`／`failed`；兩個檔沒有一個共同的原子動作。若正好死在中間，狀態物件會短暫指向已不存在的 inflight 原件；若反過來先寫狀態，也會有 `done` 已出現但原件還沒搬的窗口。｜**怎麼繞**：原型選「先保住原件、再改狀態」，重啟後不會重送，但 `aos llm ls` 在極窄的崩潰窗口可能顯示過時狀態；正式實作需要在啟動時對帳 `requests/` 與兩個原件目錄。｜類別：看不見的狀態｜擋路程度：煩
+- **排隊狀態逼得通用投遞層認得 LLM 的 requests 目錄**｜依據：第四批 Q-03（`aos llm ls` 讀狀態物件）｜**卡在哪**：若 `queued` 狀態要在投遞完成當下就看得到，只有通用的 `inbox.deliver()` 知道原件何時 rename 完；LLM serve 還沒起來時，LLM 模組沒有機會補 `requests/<id>.json`。｜**怎麼繞**：原型在 `inbox.deliver()` 對 `kind:llm` 加一個很小的特例，原件落地後立刻另寫 `queued` 狀態；正式實作要決定這個特例留在通用投遞層，還是提供一條 LLM 專用投遞入口。｜類別：分層邊界沒講｜擋路程度：小

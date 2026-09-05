@@ -216,6 +216,10 @@ def _record_busy_tick(land, before, rep):
         count += 1
     baton["busy_ticks"] = count
     S.save(land, baton)
+    stopped = fsutil.read_json(land.stopped)
+    if isinstance(stopped, dict):
+        stopped["busy_ticks"] = count
+        fsutil.write_json(land.stopped, stopped)
     return busy, count
 
 

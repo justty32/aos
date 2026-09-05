@@ -23,7 +23,7 @@ NO_DAEMON = "no_daemon"
 REJECTED = "rejected"
 BACKEND_ERROR = "backend_error"
 QUEUE_TIMEOUT = "queue_timeout"
-UNKNOWN_AFTER_RESTART = "unknown_after_restart"
+RESULT_UNKNOWN = "result_unknown"
 
 
 def status_path(result_path):

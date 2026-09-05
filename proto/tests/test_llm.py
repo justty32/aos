@@ -206,13 +206,20 @@ class TestRequestVisibility(LandCase):
                          tier="fast", priority=1, max_wait_ms=5000)
         ok, _info = inbox.deliver(world, obj)
         self.assertTrue(ok)
+        state_obj = fsutil.read_json(world.rel("requests", "%s.json" % obj["id"]))
+        self.assertEqual(state_obj["state"], "queued")
+        self.assertIsNone(state_obj["unit"])
+        self.assertEqual(state_obj["request"], os.path.join(world.inbox, "%s.json" % obj["id"]))
         return obj, result_path
 
-    def test_request_moves_inbox_to_inflight_then_requests(self):
+    def test_original_moves_inflight_to_done_unchanged_and_state_is_separate(self):
         home = layout.Home()
         _set_fake_unit(home, "slow:150", name="slow-visible")
         world = _try_init_world(home)
         obj, _result = self._request(world)
+        queued = os.path.join(world.inbox, "%s.json" % obj["id"])
+        with open(queued, "rb") as f:
+            original = f.read()
         worker = threading.Thread(target=llmmod.serve_once, args=(world,))
         worker.start()
         inflight = world.rel("llm-inflight", "%s.json" % obj["id"])
@@ -220,13 +227,21 @@ class TestRequestVisibility(LandCase):
         while time.time() < deadline and not os.path.exists(inflight):
             time.sleep(0.005)
         self.assertTrue(os.path.exists(inflight), msg="送出後、回來前請求要在 llm-inflight")
+        with open(inflight, "rb") as f:
+            self.assertEqual(f.read(), original, msg="原件搬進 inflight 必須一字不動")
         self.assertFalse(os.path.exists(os.path.join(world.inbox, "%s.json" % obj["id"])),
                          msg="已送出的請求不能還留在收件匣冒充排隊中")
         worker.join(2)
         self.assertFalse(worker.is_alive())
         self.assertFalse(os.path.exists(inflight))
-        self.assertTrue(os.path.exists(world.rel("requests", "%s.json" % obj["id"])),
-                        msg="後端回來後請求要搬進 requests")
+        done = world.rel("llm-done", "%s.json" % obj["id"])
+        self.assertTrue(os.path.exists(done), msg="後端回來後原件要搬進 llm-done")
+        with open(done, "rb") as f:
+            self.assertEqual(f.read(), original, msg="完成原件也必須一字不動")
+        state_obj = fsutil.read_json(world.rel("requests", "%s.json" % obj["id"]))
+        self.assertEqual(state_obj["state"], "done")
+        self.assertEqual(state_obj["unit"], "slow-visible")
+        self.assertEqual(state_obj["request"], done)
 
     def test_restart_marks_inflight_unknown_and_does_not_resend(self):
         home = layout.Home()
@@ -239,10 +254,14 @@ class TestRequestVisibility(LandCase):
         rep = llmmod.serve_once(world)
         from aosp import status
         st = status.read_status(result_path)
-        self.assertEqual(st.get("reason"), "unknown_after_restart", msg="實際 %r" % st)
+        self.assertEqual(st.get("reason"), "result_unknown", msg="實際 %r" % st)
         self.assertFalse(st.get("ext", {}).get("retryable", True))
         self.assertEqual(rep["handled"][0]["outcome"], "result_unknown")
-        self.assertTrue(os.path.exists(world.rel("requests", "%s.json" % obj["id"])))
+        done = world.rel("llm-done", "%s.json" % obj["id"])
+        self.assertTrue(os.path.exists(done))
+        state_obj = fsutil.read_json(world.rel("requests", "%s.json" % obj["id"]))
+        self.assertEqual(state_obj["state"], "failed")
+        self.assertEqual(state_obj["request"], done)
 
     def test_llm_ls_has_queued_inflight_completed_columns(self):
         home = layout.Home()
@@ -252,6 +271,20 @@ class TestRequestVisibility(LandCase):
         self.assertEqual(rc, 0, msg=err)
         for label in ("排隊中", "在飛", "已完成"):
             self.assertIn(label, out)
+
+    def test_llm_ls_reads_completed_rows_from_request_state_objects(self):
+        home = layout.Home()
+        _set_fake_unit(home, "echo:", name="state-reader")
+        world = _try_init_world(home)
+        obj, _result = self._request(world, "-ls-state")
+        llmmod.serve_once(world)
+
+        rc, out, err = run_cli("llm", "ls", "--land", world.root, "--json")
+        self.assertEqual(rc, 0, msg=err)
+        report = json.loads(out)
+        hit = next(r for r in report["completed"] if r["id"] == obj["id"])
+        self.assertEqual(hit["state"], "done")
+        self.assertEqual(hit["unit"], "state-reader")
 
 
 @unittest.skipUnless(HAS_LLM, SKIP_MSG)
@@ -278,6 +311,20 @@ class TestQueueWaitBoundary(LandCase):
 
 @unittest.skipUnless(HAS_LLM, SKIP_MSG)
 class TestReasoningTokens(LandCase):
+    def test_every_ledger_outcome_has_tokens_reasoning_field(self):
+        home = layout.Home()
+        obj = {"id": "ledger-fields", "from": self.land.root}
+        for outcome in ("ok", "backend_error", "result_unknown"):
+            llmmod._ledger(home, obj, None, None, 0, 0, None,
+                           "estimated", 0, outcome)
+
+        with open(home.ledger, "r", encoding="utf-8") as f:
+            entries = [json.loads(line) for line in f if line.strip()]
+        self.assertEqual(len(entries), 3)
+        for entry in entries:
+            self.assertIn("tokens_reasoning", entry)
+            self.assertIsNone(entry["tokens_reasoning"])
+
     def test_reported_reasoning_is_removed_from_tokens_out_and_logged_separately(self):
         import urllib.request
 
