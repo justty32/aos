@@ -3085,9 +3085,9 @@
       "section": "08",
       "section_title": "daemon 與登記表",
       "clause_id": "S-08-05",
-      "check_method": "`daemon.pid` 與 `daemon_pid` 同號，停後是 null",
+      "check_method": "daemon_pid 與 daemon_pid_start 同時填入或同時為 null",
       "kind": "回傳",
-      "what_to_use": "讀兩個檔",
+      "what_to_use": "讀 daemon.pid 與登記表",
       "manual_detail": ""
     },
     {
@@ -3157,7 +3157,7 @@
       "section": "08",
       "section_title": "daemon 與登記表",
       "clause_id": "S-08-13",
-      "check_method": "登記表過 schema",
+      "check_method": "登記表含 daemon_pid_start，且每筆有 result、args",
       "kind": "schema",
       "what_to_use": "registry.schema.json",
       "manual_detail": ""
@@ -3463,9 +3463,9 @@
       "section": "08",
       "section_title": "daemon 與登記表",
       "clause_id": "S-08-48",
-      "check_method": "補的狀態檔落在 `ext.result` 指的地方",
+      "check_method": "補的狀態檔落在 result 指的地方",
       "kind": "存在",
-      "what_to_use": "`reason` 是 `killed`",
+      "what_to_use": "reason 是 killed",
       "manual_detail": ""
     },
     {
@@ -3625,9 +3625,9 @@
       "section": "08",
       "section_title": "daemon 與登記表",
       "clause_id": "S-08-66",
-      "check_method": "三個約定的鍵都在 `ext` 裡",
-      "kind": "回傳",
-      "what_to_use": "讀登記表",
+      "check_method": "result、args 在正式欄位；ext 同名鍵過不了 schema",
+      "kind": "schema",
+      "what_to_use": "registry.schema.json",
       "manual_detail": ""
     },
     {
@@ -4093,9 +4093,9 @@
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-19",
-      "check_method": "一輪取件完收件匣空了",
+      "check_method": "原件一字不動改名進 llm-inflight，requests 另有進度檔",
       "kind": "存在",
-      "what_to_use": "看目錄",
+      "what_to_use": "比對收件匣原件與兩個目錄",
       "manual_detail": ""
     },
     {
@@ -4291,7 +4291,7 @@
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-41",
-      "check_method": "每行十個欄",
+      "check_method": "每行十一欄，tokens_reasoning 可為整數或 null",
       "kind": "schema",
       "what_to_use": "ledger.schema.json",
       "manual_detail": ""
@@ -4363,7 +4363,7 @@
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-49",
-      "check_method": "重啟靠 `.aos/requests/` 認人",
+      "check_method": "重啟靠 requests 狀態與 request 指到的原件認人",
       "kind": "回傳",
       "what_to_use": "收件匣清空也認得出來",
       "manual_detail": ""
@@ -4498,7 +4498,7 @@
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-64",
-      "check_method": "那個檔的欄位與四種 `state`",
+      "check_method": "進度檔欄位、四種 state、request 原件路徑",
       "kind": "schema",
       "what_to_use": "request-state.schema.json",
       "manual_detail": ""
@@ -4543,18 +4543,18 @@
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-69",
-      "check_method": "done 的紀錄保留到期限才被刪",
+      "check_method": "done 的進度與 llm-done 原件一起保留到期限",
       "kind": "存在",
-      "what_to_use": "看目錄",
+      "what_to_use": "看兩個目錄",
       "manual_detail": ""
     },
     {
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-70",
-      "check_method": "queued 與 sent 的紀錄沒被清",
+      "check_method": "queued、sent 的進度與 llm-inflight 原件都不清",
       "kind": "存在",
-      "what_to_use": "同上",
+      "what_to_use": "看兩個目錄",
       "manual_detail": ""
     },
     {
@@ -4723,9 +4723,9 @@
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-89",
-      "check_method": "`request` 是原始投遞物的原文，處理完還在",
+      "check_method": "原件收場前後內容不變，只從 llm-inflight 改名到 llm-done",
       "kind": "回傳",
-      "what_to_use": "比對兩份 json",
+      "what_to_use": "比對兩份檔案位元組與 request 路徑",
       "manual_detail": ""
     },
     {
@@ -4777,9 +4777,9 @@
       "section": "09",
       "section_title": "LLM 世界",
       "clause_id": "S-09-95",
-      "check_method": "`--usage-out` 成功失敗都寫得出那五個欄",
-      "kind": "存在",
-      "what_to_use": "看檔",
+      "check_method": "--usage-out 有 tokens_reasoning，tokens_out 不含思考",
+      "kind": "回傳",
+      "what_to_use": "讀用量檔並與假後端回報比對",
       "manual_detail": ""
     },
     {
@@ -6805,6 +6805,51 @@
       "check_method": "那四樣不在 tmpfs 上",
       "kind": "回傳",
       "what_to_use": "同 S-02-46",
+      "manual_detail": ""
+    },
+    {
+      "section": "02",
+      "section_title": "版面",
+      "clause_id": "S-02-48",
+      "check_method": "原件只在 llm-inflight、llm-done，進度只在 requests",
+      "kind": "存在",
+      "what_to_use": "看三個目錄",
+      "manual_detail": ""
+    },
+    {
+      "section": "05",
+      "section_title": "接力棒",
+      "clause_id": "S-05-62",
+      "check_method": "跑一格做事與一格純等待，只前者讓 busy_ticks 加一",
+      "kind": "回傳",
+      "what_to_use": "讀 series.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "06",
+      "section_title": "走一格與時鐘",
+      "clause_id": "S-06-63",
+      "check_method": "停止原因檔的 busy_ticks 等於接力棒最後值",
+      "kind": "schema",
+      "what_to_use": "stopped.schema.json 加前後比對",
+      "manual_detail": ""
+    },
+    {
+      "section": "07",
+      "section_title": "呼叫與投遞",
+      "clause_id": "S-07-79",
+      "check_method": "三類代寫 reason 都合規且保留 stopped_reason",
+      "kind": "schema",
+      "what_to_use": "status.schema.json",
+      "manual_detail": ""
+    },
+    {
+      "section": "08",
+      "section_title": "daemon 與登記表",
+      "clause_id": "S-08-99",
+      "check_method": "八種停止原因逐一代寫成指定三種 reason",
+      "kind": "回傳",
+      "what_to_use": "讀狀態檔 reason 與 ext.stopped_reason",
       "manual_detail": ""
     }
   ]

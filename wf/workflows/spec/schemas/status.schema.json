@@ -36,7 +36,8 @@
         "call_cycle",
         "call_depth",
         "land_gone",
-        "no_result"
+        "no_result",
+        "child_failed"
       ]
     },
     "message": {
@@ -52,7 +53,13 @@
     },
     "ext": {
       "type": "object",
-      "description": "具名擴充區。LLM 世界在這裡寫 retryable（布林，可不可重試，見 09）；message 被截斷時寫 truncated: true。"
+      "description": "具名擴充區。retryable 是可不可重試；truncated 表示 message 被截；daemon 代寫子地狀態時用 stopped_reason 保留原始停止原因。",
+      "properties": {
+        "stopped_reason": {
+          "type": "string",
+          "enum": ["idle", "budget", "steps_done", "failed", "parse_error", "stalled", "signal", "control_stop"]
+        }
+      }
     }
   }
 }

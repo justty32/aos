@@ -5,7 +5,7 @@
   "description": "$AOS_HOME/.aos/ledger.jsonl 的一行，不是整個檔。整個檔是 jsonl：一行一個這種物件，只追加、不回頭改。這裡刻意沒有 format_version：一行不是一份文件，格式要改就另開檔名。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["at", "request_id", "from", "unit", "tier", "tokens_in", "tokens_out", "tokens_source", "ms", "outcome"],
+  "required": ["at", "request_id", "from", "unit", "tier", "tokens_in", "tokens_out", "tokens_reasoning", "tokens_source", "ms", "outcome"],
   "properties": {
     "at": {
       "description": "記這一行的時間，ISO 8601 UTC 含毫秒。",
@@ -39,8 +39,13 @@
       "minimum": 0
     },
     "tokens_out": {
-      "description": "吐回來幾個 token。後端沒給就填 0，並把 tokens_source 標成 estimated。",
+      "description": "實際回話有幾個 token，不含思考。後端沒給就填 0，並把 tokens_source 標成 estimated。",
       "type": "integer",
+      "minimum": 0
+    },
+    "tokens_reasoning": {
+      "description": "模型思考用了幾個 token；後端沒有分開回就填 null。",
+      "type": ["integer", "null"],
       "minimum": 0
     },
     "tokens_source": {

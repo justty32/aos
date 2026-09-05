@@ -5,13 +5,18 @@
   "description": "$AOS_HOME/.aos/registry.json。所有正在走或停著的時鐘都記在這一份檔裡。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format_version", "daemon_pid", "entries"],
+  "required": ["format_version", "daemon_pid", "daemon_pid_start", "entries"],
   "properties": {
     "format_version": { "type": "integer", "const": 1 },
     "daemon_pid": {
       "type": ["integer", "null"],
       "minimum": 1,
       "description": "現在這支 daemon 的行程編號；沒有 daemon＝null。"
+    },
+    "daemon_pid_start": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "daemon 行程的啟動時間（/proc/<pid>/stat 第 22 欄）；沒有 daemon＝null。"
     },
     "entries": {
       "type": "array",
@@ -33,6 +38,8 @@
         "clock",
         "budget",
         "parent",
+        "result",
+        "args",
         "registered_at",
         "updated_at"
       ],
@@ -81,6 +88,15 @@
           "type": ["string", "null"],
           "description": "登記它的那塊地的真實路徑；使用者自己登記的＝null。"
         },
+        "result": {
+          "type": ["string", "null"],
+          "pattern": "^/",
+          "description": "脫節子地的父指定結果落點，必須是展開過的絕對路徑；不是脫節呼叫就填 null。"
+        },
+        "args": {
+          "type": ["object", "null"],
+          "description": "起脫節子地時要重建 AOS_ARG_* 的呼叫引數；沒有就填 null。"
+        },
         "last_started_at": {
           "$ref": "#/$defs/timestamp",
           "description": "上一次替它起 run 的時間。every 的鐘到期＝這個時間加上 every_ms 已經過了；沒起過就沒有這欄。"
@@ -89,7 +105,8 @@
         "updated_at": { "$ref": "#/$defs/timestamp" },
         "ext": {
           "type": "object",
-          "description": "具名擴充區。三個約定的鍵：result（起脫節子地時 exec 寫進去的父指定結果落點）、exec_id（aos daemon exec 那筆的 id）、清理紀錄。"
+          "propertyNames": { "not": { "enum": ["result", "args"] } },
+          "description": "具名擴充區，可放 exec_id 與清理紀錄。result、args 已是正式欄位，禁止再放進來。"
         }
       }
     },

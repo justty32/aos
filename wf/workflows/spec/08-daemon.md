@@ -1,7 +1,7 @@
 # 08 daemon 與登記表
 ← [入口](README.md)
 
-daemon 是一支常駐程式，住在家（`$AOS_HOME`，預設 `~`）。它只做兩件事：替每塊登記的地起一支 `aos run` 子行程，然後看管它們。所有時鐘記在同一份登記表 `$AOS_HOME/.aos/registry.json`。對帳、巡邏、清理、一次全停、`aos mv` 在 [08b](08b-daemon-reconcile.md)。
+daemon 住在家（`$AOS_HOME`，預設 `~`）：替登記的地起 `aos run` 子行程並看管。時鐘全記在 `$AOS_HOME/.aos/registry.json`；對帳、清理、全停、搬家見 [08b](08b-daemon-reconcile.md)。
 
 ## daemon 是什麼
 
@@ -9,7 +9,7 @@ daemon 是一支常駐程式，住在家（`$AOS_HOME`，預設 `~`）。它只�
 - **S-08-02** daemon 必須由 shell 手動 `aos daemon start` 起，第一版禁止做 systemd。〔裁決 2026-08-30〕
 - **S-08-03** 頂層地必須由使用者開或由 daemon 代開，禁止任何地自己醒過來。〔裁決 2026-09-03〕
 - **S-08-04** daemon 起來必須用 O_EXCL 建 `$AOS_HOME/.aos/daemon.pid`；建不出來就是已有一支，直接退出。〔主編補〕
-- **S-08-05** daemon 必須把行程編號同時寫進 `daemon.pid` 與登記表的 `daemon_pid`，收工改回 `null`。〔主編補〕
+- **S-08-05** daemon 必須把行程編號寫進 `daemon.pid` 與登記表的 `daemon_pid`；同時把 `/proc/<pid>/stat` 第 22 欄寫成整數 `daemon_pid_start`。沒有 daemon 時後兩欄都必須是 `null`。〔裁決 2026-09-05〕
 
 ## 走時鐘＝起一支子行程
 
@@ -25,7 +25,7 @@ daemon 是一支常駐程式，住在家（`$AOS_HOME`，預設 `~`）。它只�
 ## 登記表
 
 - **S-08-12** 所有時鐘必須登記在同一份 `$AOS_HOME/.aos/registry.json`；禁止另發明第二個登記處。〔裁決 2026-09-04〕
-- **S-08-13** 登記表必須長成 `{"format_version":1,"daemon_pid":N|null,"entries":[…]}`；正本是 `schemas/registry.schema.json`。〔主編補〕
+- **S-08-13** 登記表必須長成 `{"format_version":1,"daemon_pid":N|null,"daemon_pid_start":N|null,"entries":[…]}`；正本是 `schemas/registry.schema.json`。〔裁決 2026-09-05〕
 - **S-08-14** 每筆的 `path` 必須是真實路徑（realpath），禁止記 symlink 路徑。〔主編補〕
 - **S-08-15** 每筆的 `pid` 必須是替它走鐘那支 run 的行程編號；還沒起寫 `null`。〔預設 2026-09-05，G-03〕
 - **S-08-16** 每筆的 `state` 必須是 `pending`、`running`、`stopped` 之一。〔預設 2026-09-05，G-03〕
@@ -37,7 +37,7 @@ daemon 是一支常駐程式，住在家（`$AOS_HOME`，預設 `~`）。它只�
 - **S-08-65** 每筆必須多一欄 `land_id`：開跑時讀那塊地 `.aos/layout.json` 的 `land_id`，讀不到寫 `null`。〔主編補〕
 - **S-08-83** 每筆必須多一欄 `runner`：`run`（預設，起 `aos run`）或 `llm-serve`（起 `aos llm serve`）。〔主編補〕
 - **S-08-85** 每筆必須收一個可選的布林欄 `resume`：被 `aos daemon stop` 停掉時設 `true`，意思是「下次 start 要接回去」。〔主編補〕
-- **S-08-66** 每筆的 `ext` 必須收三個約定鍵：`result`（起脫節子地時 exec 寫的父指定落點）、`exec_id`（`aos daemon exec` 那筆的 id）、清理紀錄。〔主編補〕
+- **S-08-66** 每筆必須有正式欄位 `result`（絕對結果落點或 `null`）與 `args`（呼叫引數物件或 `null`）；`ext.result`、`ext.args` 作廢，禁止再寫。〔裁決 2026-09-05〕 `ext` 仍可放 `exec_id` 與清理紀錄。〔主編補〕
 - **S-08-21** 登記表的寫者有四方（exec 登 `pending`、`aos run --register`、門房、daemon），四方都必須先用 O_EXCL 建 `$AOS_HOME/.aos/registry.lock` 拿鎖、改完刪鎖；拿不到就等，禁止硬寫，例外見 [08b](08b-daemon-reconcile.md)。〔主編補〕
 - **S-08-22** 寫登記表必須原子改名：寫 `registry.json.tmp` → fsync → rename → fsync 目錄。〔主編補〕
 - **S-08-23** 登記表禁止進 git，回滾一份含行程編號的檔會讓 daemon 認錯活人。〔主編補〕
@@ -80,46 +80,40 @@ daemon 是一支常駐程式，住在家（`$AOS_HOME`，預設 `~`）。它只�
 {
   "format_version": 1,
   "daemon_pid": 40412,
+  "daemon_pid_start": 918100,
   "entries": [
     { "path": "/home/me/proj", "pid": 40530, "pid_start": "918233",
       "land_id": "3f2a91c0", "state": "running",
       "clock": { "kind": "every", "every_ms": 5000 }, "budget": 1000, "parent": null,
-      "registered_at": "2026-09-05T09:00:00.000Z", "updated_at": "2026-09-05T09:00:00.480Z" },
+      "result": null, "args": null,
+      "registered_at": "2026-09-05T09:00:00.000Z", "updated_at": "2026-09-05T09:00:00.480Z"},
     { "path": "/home/me/proj/fetch", "pid": null, "pid_start": null,
       "land_id": "77b0de41", "state": "pending",
       "clock": { "kind": "once" }, "budget": 20, "parent": "/home/me/proj",
-      "registered_at": "2026-09-05T09:02:11.000Z", "updated_at": "2026-09-05T09:02:11.000Z",
-      "ext": { "result": "/home/me/proj/data/fetch.json" } },
+      "result": "/home/me/proj/data/fetch.json", "args": {},
+      "registered_at": "2026-09-05T09:02:11.000Z", "updated_at": "2026-09-05T09:02:11.000Z"},
     { "path": "/home/me/proj/old", "pid": null, "pid_start": null,
       "land_id": "0c5e8ab2", "state": "stopped",
       "clock": null, "budget": null, "parent": null,
-      "registered_at": "2026-09-04T21:40:00.000Z", "updated_at": "2026-09-04T21:41:07.250Z" }
+      "result": null, "args": null,
+      "registered_at": "2026-09-04T21:40:00.000Z", "updated_at": "2026-09-04T21:41:07.250Z"}
   ]
 }
 ```
 
 ## 待使用者拍板
 
-- S-08-01 常駐、家在 `$AOS_HOME`。〔主編補〕
-- S-08-04 只准一支 daemon。〔主編補〕
-- S-08-05 `daemon_pid` 兩處寫。〔主編補〕
+- S-08-01 常駐、家在 `$AOS_HOME`；S-08-04 只准一支 daemon。〔主編補〕
+- S-08-05 `daemon_pid_start` 與 pid 一起記，沒 daemon 就都填 null。〔裁決 2026-09-05〕
 - S-08-07 時鐘規格換算旗標。〔主編補〕
 - S-08-11 一個 `path` 只准一筆。〔主編補〕
 - S-08-61 沒 daemon 就起不了新脫節工作。〔主編補〕
-- S-08-13 表的形狀。〔主編補〕
-- S-08-14 記 realpath。〔主編補〕
-- S-08-15 `pid` 欄。〔預設，G-03〕
-- S-08-16 `state` 三值。〔預設，G-03〕
-- S-08-17 `clock` 欄。〔預設，G-03〕
-- S-08-18 `budget` 欄。〔主編補〕
-- S-08-19 `parent` 欄。〔主編補〕
-- S-08-20 兩個時間戳。〔主編補〕
-- S-08-64 `pid_start` 欄。〔主編補〕
-- S-08-65 `land_id` 欄。〔主編補〕
-- S-08-66 `ext` 的三個約定鍵。〔主編補〕
-- S-08-21 鎖檔。〔主編補〕
-- S-08-22 原子改名。〔主編補〕
-- S-08-23 不進 git。〔主編補〕
+- S-08-13 表頭收 `daemon_pid_start`。〔裁決 2026-09-05〕
+- S-08-14 記 realpath；S-08-18／19／20 有 `budget`、`parent`、時間戳。〔主編補〕
+- S-08-15～17 有 `pid`、三值 `state`、`clock`。〔預設，G-03〕
+- S-08-64／65 有 `pid_start`、`land_id`。〔主編補〕
+- S-08-66 `result`、`args` 升頂層正式欄，`ext.result`／`ext.args` 作廢。〔裁決 2026-09-05〕
+- S-08-21～23 鎖檔、原子改名、不進 git。〔主編補〕
 - S-08-26 `pending` 只有兩個來源。〔主編補〕
 - S-08-27 門房登記成 `stopped`、沒有鐘。〔主編補〕
 - S-08-28 沒 daemon 時 `call async` 直接失敗。〔主編補〕
