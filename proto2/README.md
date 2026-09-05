@@ -35,14 +35,25 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 |---|---|---|
 | `idle` | 收 `new-prompts/` 頂層的檔，每個變一則訊息，寫進 `new-prompts.json` | 有信 `llm`，沒信留 `idle` |
 | `llm` | `[人格]＋記憶＋new-prompts` 打 `{base_url}/chat/completions`，回覆併進記憶 | `act` |
-| `act` | `tool_calls` 非空就照 `command` 跑工具、結果收進 `new-prompts`；沒有就印出它說的話 | 有工具 `collect`，沒有 `idle` |
+| `act` | `tool_calls` 非空就照 `command` 跑工具、結果收進 `new-prompts`；沒有就印出它說的話、順手落一份到 `replies/` | 有工具 `collect`，沒有 `idle` |
 | `collect` | 再收一次 `new-prompts/`，接在既有的 `new-prompts.json` 後面（沒新信也照走） | `llm` |
 
-`new-prompts/` 裡每個檔要是 `{"role": "user", "content": "..."}` 這種 JSON 物件，原樣當一則
-訊息用；讀不成 JSON 或不是物件的檔印一行到 stderr 跳過但一樣搬走。**`idle` 開新一輪前先清空
+`new-prompts/` 裡每個檔可以是 `{"role": "user", "content": "..."}` 這種 JSON 物件（算一則），
+也可以是一串這種物件的 JSON 陣列（照順序各算一則）；陣列裡不是物件的項、或整個讀不成 JSON
+的檔，印一行到 stderr 跳過但一樣搬走。沒工具可跑那格說的話會寫成 `.aos/agent/replies/<step
+四位數>.json`（`{"role":"assistant","content":...}`），旁邊的人撿得到。**`idle` 開新一輪前先清空
 `archived/`**（`collect` 中途補收不清，這一輪收的留到輪完）。每格結束都把 `<aos-agent-step
 絕對路徑> .` 寫回 `<dir>/.aos/inst`，讓 `aos-loop` 回來看有沒有新信；`--no-write-inst` 就不
 寫。打不通 LLM：印一行 stderr、state 不動、退出碼 1，下一圈再試。
+
+## 跟 agent 說話：say／listen／talk
+
+- `aos-agent-say [dir] [text]`——把 `text`（省略就整段讀 stdin）寫成一則 `user` 訊息丟進
+  `<dir>/.aos/agent/new-prompts/`，檔名是時間戳到微秒，寫到哪印在 stderr。
+- `aos-agent-listen [dir] [--new] [--once]`——盯著 `replies/`，每則印 `--- reply 0006 ---` 再印
+  content；預設先補印既有的再每 0.5 秒等新的，`--new` 只等新的，`--once` 印完一次就走。
+- `aos-agent-talk [dir]`——互動聊天：`你> ` 打一句（`/quit` 或 Ctrl-D 離開），等 `replies/` 冒出
+  新檔就印 `agent> `。自己不推格，要另一個終端機的 `aos-loop` 幫忙轉。
 
 ## 為什麼另起爐灶
 
@@ -64,6 +75,14 @@ proto2/aos-loop proto2/examples/agent --keep-inst --interval 1
 ```
 
 寫一次 `.aos/inst`、`--keep-inst` 不清空，agent 就一直轉；往 `new-prompts/` 丟 `{"role":"user","content":"..."}` 這種檔，下一圈就撿走。
+
+聊天要開兩個終端機——一個負責轉，一個負責講：
+```sh
+# 終端機 A：讓 agent 一直轉
+proto2/aos-loop proto2/examples/agent --keep-inst --interval 1
+# 終端機 B：打字聊天
+proto2/aos-agent-talk proto2/examples/agent
+```
 
 ## 目前刻意不做
 
