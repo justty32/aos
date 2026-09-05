@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""aos-loop [dir] — 無限（或指定步數）跑 aos-exec：讀 .aos-inst，清空，再執行。
+"""aos-loop [dir] — 無限（或指定步數）跑 aos-exec：讀 .aos/inst，清空，再執行。
 
-每一步：讀 <dir>/.aos-inst（不存在＝空字串），立刻清空該檔（原本不存在就不建），
+每一步：讀 <dir>/.aos/inst（不存在＝空字串），立刻清空該檔（原本不存在就不建），
 去頭尾空白後非空才 os.system() 執行；退出碼不影響迴圈，但每步印一行到 stderr。
 --steps 限步數（預設無限），--interval 每步間隔秒數，--stop-when-empty 遇空即以
-0 退出（不給的話空的那步什麼都不跑、照樣繼續）。
+0 退出（不給的話空的那步什麼都不跑、照樣繼續），--keep-inst 不清空、每圈原樣重跑同一段。
 """
 import argparse
 import os
@@ -18,6 +18,7 @@ def main():
     ap.add_argument("--steps", type=int, default=None)
     ap.add_argument("--interval", type=float, default=1)
     ap.add_argument("--stop-when-empty", action="store_true")
+    ap.add_argument("--keep-inst", action="store_true")
     args = ap.parse_args()
 
     if not os.path.isdir(args.dir):
@@ -29,12 +30,13 @@ def main():
     try:
         while args.steps is None or step < args.steps:
             step += 1
-            inst = ".aos-inst"
+            inst = ".aos/inst"
             content = ""
             if os.path.isfile(inst):
                 with open(inst, encoding="utf-8") as f:
                     content = f.read()
-                open(inst, "w").close()
+                if not args.keep_inst:
+                    open(inst, "w").close()
 
             if content.strip():
                 rc = os.waitstatus_to_exitcode(os.system(content))

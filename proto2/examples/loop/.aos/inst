@@ -1,0 +1,2 @@
+echo 第一步
+printf 'echo 第二步\n' > .aos/inst
