@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""aos-daemon-register <daemon 資料夾> <目標資料夾> [--name 名字] [--every N] — 登記一個要被推的資料夾。
+
+寫出 <daemon>/.aos/daemon/registry/<名字>.json：{"dir": "<目標的絕對路徑>", "every": N}。
+名字省略就用目標資料夾的 basename；同名已經有人登記了就不覆蓋，印一句退 2
+（要改就先 aos-daemon-unregister）。dir 一律寫絕對路徑——daemon 可能從任何地方被叫，
+絕對路徑最不會出錯。every 是幾格推一次，預設 1。
+"""
+import argparse
+import json
+import os
+import re
+import sys
+
+NAME_OK = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def die(msg):
+    print("aos-daemon-register: " + msg, file=sys.stderr)
+    sys.exit(2)
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-daemon-register")
+    ap.add_argument("daemon")
+    ap.add_argument("target")
+    ap.add_argument("--name", default=None)
+    ap.add_argument("--every", type=int, default=1)
+    args = ap.parse_args()
+
+    daemon = os.path.abspath(args.daemon)
+    if not os.path.isdir(daemon):
+        die("找不到 daemon 資料夾：" + daemon)
+    target = os.path.abspath(args.target)
+    if not os.path.isdir(target):
+        die("找不到要登記的資料夾：" + target)
+    if args.every < 1:
+        die("every 要是 1 以上的整數：%d" % args.every)
+
+    name = args.name or os.path.basename(target)
+    if not NAME_OK.match(name):
+        die("名字只能用英數字、底線、減號：" + name)
+
+    registry = os.path.join(daemon, ".aos", "daemon", "registry")
+    path = os.path.join(registry, name + ".json")
+    if os.path.exists(path):
+        die("這個名字已經登記過了：" + path)
+
+    os.makedirs(registry, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"dir": target, "every": args.every}, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print("aos-daemon-register: 登記了 %s → %s" % (name, target), file=sys.stderr)
+    sys.exit(0)
+
+
+main()
