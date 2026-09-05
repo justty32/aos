@@ -228,7 +228,7 @@ agent 本身不 fork／exec 工具，只把 instruction 交給 world inbox；loo
 | 取槽等太久會怎樣 | stderr 一行 `waiting-llm`、exit 75（`EX_TEMPFAIL`）；agent 走 lmstudio 或 pi 時 status 都寫 `waiting-llm`，訊息還沒被吃掉，下回合重試。 |
 | loop 替身在哪、怎麼跑 | `core/agent/tests/fake_loop.py`；repo 根執行 `python3 core/agent/tests/fake_loop.py <folder> --step N --interval 100`。完整 smoke 是 `bash core/agent/tests/smoke.sh`（使用 `build/bin/aos`）。 |
 
-已採用的 every 常駐投遞裁決見 [`wf/workflows/ideas/self-delivery-in-loop.md`](../ideas/self-delivery-in-loop.md)；pi 終端介面調查與建議接法見 [`core/agent/docs/pi-interface.md`](../../../core/agent/docs/pi-interface.md)。
+every 常駐投遞的裁決已封存（ideas/archive/self-delivery-in-loop.md），新構想見 ideas/07-daemon.md；pi 終端介面調查與建議接法見 [`core/agent/docs/pi-interface.md`](../../../core/agent/docs/pi-interface.md)。
 
 ## `core/agent` 的可選 LLM CPU
 

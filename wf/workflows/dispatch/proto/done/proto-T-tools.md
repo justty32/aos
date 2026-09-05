@@ -1,6 +1,6 @@
 # 任務：tool 的規劃——先合成三份采風，再定 tool 登記表與表述、呼叫迴路、agent 通訊錄
 
-> 交接書是唯一契約。**純規劃，不寫程式。** 采風原文在 [ideas/ai-core-field](../../../ideas/ai-core-field/README.md)（F1／F2／F3 三份）；現況 [PROTOCOL](../PROTOCOL.md)、`core/agent/src/tools.cpp`、`core/agent/docs/pi-cpu.md`；使用者裁決 [nested-worlds](../../../ideas/nested-worlds.md)。
+> 交接書是唯一契約。**純規劃，不寫程式。** 采風原文在 ideas/ai-core-field（F1／F2／F3 三份）；現況 [PROTOCOL](../PROTOCOL.md)、`core/agent/src/tools.cpp`、`core/agent/docs/pi-cpu.md`；使用者裁決 nested-worlds。
 
 ## 背景與唯一目標
 

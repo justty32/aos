@@ -1,6 +1,6 @@
 # 任務：試用 L3——X／Y 落地後重跑兩級劇本，記還剩什麼不順手
 
-> 交接書是唯一契約。判準 [usability-target](../../ideas/usability-target.md)；發現格式見 [trial/README](../trial/README.md)；上一輪發現 [findings-L1.csv](../trial/findings-L1.csv)／[findings-L2.csv](../trial/findings-L2.csv)、隊 X／Y 的修法在 [reports/X.md](reports/X.md)、[reports/Y.md](reports/Y.md)。**只找不修、不改 core/。**
+> 交接書是唯一契約。判準 usability-target；發現格式見 [trial/README](../trial/README.md)；上一輪發現 [findings-L1.csv](../trial/findings-L1.csv)／[findings-L2.csv](../trial/findings-L2.csv)、隊 X／Y 的修法在 [reports/X.md](reports/X.md)、[reports/Y.md](reports/Y.md)。**只找不修、不改 core/。**
 
 ## 唯一目標
 

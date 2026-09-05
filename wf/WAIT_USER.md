@@ -44,10 +44,10 @@
 
 - **B12 判準／loop 分支的形式／版面知識放哪**（2026-08-30 三題都「先不決定」）——
   會撞上的時機：要動 `exec_loop` 時（分支）、要寫第一支 CLI 小程式時（版面 lib）。
-  → [verdicts B12](workflows/ideas/verdicts.md)、[core-layering](workflows/ideas/core-layering.md)
+  → verdicts B12、core-layering
 - **workshop 那四個設計選擇**（World 抽象、`kernel.json` 分層合成、子行程拓樸、親緣綁
   路徑還是 UUID）——你明講「窩不想看惹」，方向是**用實測取代拍板**，所以不列 A 區。
-- **[top-down-cli](workflows/ideas/top-down-cli.md) 的 14 條**——已裁「實作時順便解決」。
+- **top-down-cli 的 14 條**——已裁「實作時順便解決」。
 
 > 2026-08-24：原本卡著的「移植 S2 的決策 A（`core/tooljson` 的 exec 引擎自己寫還是動
 > `core/inst`）」已經整條解掉——使用者批准解凍 `core/inst`，並拍板 `stderr` 併流用

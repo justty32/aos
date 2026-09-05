@@ -33,11 +33,11 @@
   | 某個小專案的內部行為 | 該小專案的 `docs/`（如 `core/inst/docs/`）＋ [code map](../common/code-map.md) |
   | 建置骨架、CMake 函式、相依管理 | [`docs/build.md`](../../../docs/build.md)、[`docs/subprojects.md`](../../../docs/subprojects.md)、[add-subproject 工作流](../add-subproject.md) |
   | 公開 API、子命令、退出碼 | [`docs/usage.md`](../../../docs/usage.md)、[use-aos 工作流](../use-aos.md) |
-  | `.aos` 版面、回合模型、交接協定 | [PROTOCOL](../dispatch/proto/PROTOCOL.md)（唯一真源）＋ 對應的 ideas 檔與 [verdicts](../ideas/verdicts.md) |
+  | `.aos` 版面、回合模型、交接協定 | [PROTOCOL](../dispatch/proto/PROTOCOL.md)（唯一真源）＋ 對應的 ideas 檔與 verdicts |
   | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
 
   **文件裡寫的每一條指令與輸出都要真的跑過再寫上去**，不要照推論寫。
-- 實作中被迫下的新裁決＝正式裁決：記回 ideas 對應檔 ＋ [verdicts](../ideas/verdicts.md)（[roadmap](../roadmap.md) 常備規則 2）。
+- 實作中被迫下的新裁決＝正式裁決：記回 ideas 對應檔 ＋ verdicts（[roadmap](../roadmap.md) 常備規則 2）。
 - 跨 session 時在本工作流 `session-log.md` 補一行 `[功能名] 文檔/code map 待同步`，下個 session 不會誤判已同步。
 
 ## 內容

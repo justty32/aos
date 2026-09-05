@@ -1,0 +1,3 @@
+turn 1: 1 insts (1 every), 2216 ms
+turn 2: 2 insts (1 every), 3 ms
+/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a1fa1602017a3657c/build/bin/aos run: 收到中斷訊號，已終止 turn 3 的所有指令

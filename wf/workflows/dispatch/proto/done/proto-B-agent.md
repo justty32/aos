@@ -4,7 +4,7 @@
 
 ## 背景與唯一目標
 
-使用者的成品想像（[top-down-cli](../../../ideas/top-down-cli.md) §一～§三）：視窗 A `aos run` 持續推進世界；視窗 B `aos agent init` 往投遞匣塞一份**會把自己再投遞一次**的 agent 指令，然後 `aos agent talk` 跟它交流。
+使用者的成品想像（top-down-cli §一～§三）：視窗 A `aos run` 持續推進世界；視窗 B `aos agent init` 往投遞匣塞一份**會把自己再投遞一次**的 agent 指令，然後 `aos agent talk` 跟它交流。
 **LLM CPU 仍以 inst 為核心，只是多一支可被指令呼叫的 llm 程式**（使用者 2026-08-30 原話）——所以「思考」＝一條 `aos agent step` 指令在回合裡跑，它內部呼叫 `aos llm`。
 **唯一目標**：使用者能 `aos agent init W --name bob`，開著 `aos run W --step 0` 後，用 `aos agent say`／`listen`／`talk` 跟 bob 對話，bob 每回合自我投遞、狀態可從 `aos agent state` 與 `state.json` 看到；另交一份規劃文件回答「自我投遞能不能埋進 loop」。
 
@@ -17,7 +17,7 @@
 
 ## 工作
 
-1. 讀 [PROTOCOL](../PROTOCOL.md)、`core/inst/CMakeLists.txt`（小專案範本）、`core/llms/CMakeLists.txt`（libcurl 走 `PRIVATE_DEPS` 的既有寫法）、`wf/workflows/add-subproject.md`、`wf/workflows/common/conventions.md`、[top-down-cli](../../../ideas/top-down-cli.md)。
+1. 讀 [PROTOCOL](../PROTOCOL.md)、`core/inst/CMakeLists.txt`（小專案範本）、`core/llms/CMakeLists.txt`（libcurl 走 `PRIVATE_DEPS` 的既有寫法）、`wf/workflows/add-subproject.md`、`wf/workflows/common/conventions.md`、top-down-cli。
 2. **你拿不到隊 A 的 loop**（它同時在 main 上做）。先寫一支 `core/agent/tests/fake_loop.py`（python3，≤ 80 行）照 PROTOCOL §1／§5 忠實模擬：搬 inbox → 並行執行 argv → 寫 out → 寫 state.json → turn+1。所有測試與 smoke 靠它；隊 A 落地後直接換成 `aos run`，不改協定。
 3. `core/llm`：`aos llm`（協定 §6）。libcurl 打 `/v1/chat/completions`，非串流，只取第一個 choice 的文字。**模型固定 `qwen/qwen3.5-9b`；禁止呼叫 LM Studio 的 load／unload API**（使用者要求換模型要手動 unload，這件事歸他）。先 `curl localhost:1234/v1/models` 確認伺服器在。
 4. `core/agent`：
@@ -85,7 +85,7 @@
 4. **工具往返固定三回合**（N 投遞 → N+1 執行 → N+2 讀結果），**不繞過**。
    使用者追加要求寫「跑兩回合」，但 loop 是「先匯聚整批、並行跑完才寫 `out/`」，
    同一回合投的東西下一回合才跑，結果再下一回合才讀得到。想壓成兩回合就得改協定 §5，
-   所以不改，照三回合實作並記進 [self-delivery-in-loop](../../../ideas/self-delivery-in-loop.md)。
+   所以不改，照三回合實作並記進 self-delivery-in-loop。
 5. **省 token**：沒有新 user 訊息、也沒有剛收到的工具結果 → **不叫 LLM**，只自我投遞。
    （交接書把這一條標為隊長裁決點，選了省的那邊。）
 6. **`pending.json` 記「投遞當下的 turn」**，讀結果時去 `pending.turn + 1` 那個 batch 找。

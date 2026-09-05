@@ -54,10 +54,10 @@
 > 以下三條指的程式碼都沒了。`.runi` 沒了（取件改成 rename 進 `batch/<turn>/insts/`，
 > 互斥靠 `.aos/run.lock` 的 `flock`）、彙整窗口翻面成「漏跑」而非「跑兩次」、投遞 id 已
 > 改成 `d-<epoch_ms>-<pid>-<seq>`；**只有沒 `fsync` 這條搬家後仍然成立**（見上一節）。
-> 逐條的結案理由在 [ideas/verdicts D 區](../ideas/verdicts.md)。
+> 逐條的結案理由在 ideas/verdicts D 區。
 >
 > 原文（讀 `core/inst/src/handoff.cpp` 驗證過的當時現況）保留在下面，設計脈絡見
-> [ideas/call-format/handoff-and-world](../ideas/call-format/handoff-and-world.md)。
+> ideas/call-format/handoff-and-world。
 
 - **`.runi` 不是一把鎖，兩支 `aos exec` 可能把同一回合跑兩次**：`claim_instruction` 是
   `lstat(runi)` → `read_file(base)` → `rename(base, runi)`。POSIX `rename()` **靜默覆蓋**

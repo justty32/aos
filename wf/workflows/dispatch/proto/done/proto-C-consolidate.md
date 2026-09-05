@@ -4,7 +4,7 @@
 
 ## 背景與唯一目標
 
-使用者 2026-08-30 三個裁決：(1) 採用 [self-delivery-in-loop](../../../ideas/self-delivery-in-loop.md) 方案 A；(3) 舊 `core/inst`／`core/llms`／`core/tooljson` **現在刪**；(4) **一個 agent 佔一個資料夾**，待在 bob 的資料夾裡直接 `aos say ...` 就好。
+使用者 2026-08-30 三個裁決：(1) 採用 self-delivery-in-loop 方案 A；(3) 舊 `core/inst`／`core/llms`／`core/tooljson` **現在刪**；(4) **一個 agent 佔一個資料夾**，待在 bob 的資料夾裡直接 `aos say ...` 就好。
 **唯一目標**：main 上 ctest 全綠，且在一個資料夾裡 `aos agent init` → 另一視窗 `aos run --step 0` → `aos say "..."`／`aos listen` 能對話，agent 不再自我投遞而是靠 `.aos/every/`。
 
 ## 團隊（你是 Opus 隊長）

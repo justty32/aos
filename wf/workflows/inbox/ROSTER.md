@@ -36,7 +36,7 @@
 - **團隊**：無（同機的隊伍用 agent 工具的子 agent 開、走交接書，不經 inbox；有跨資料夾的線時才在這裡登記團隊）
 - **上游**：使用者本人
 - **領地**：`~/repo/simple_tools/aos/` 全部（子 agent 隊的領地由交接書指定，見 [dispatch](../dispatch/README.md) 的領地表）
-- **答得出什麼**：`.aos` 版面與交接協定、`core/inst` 的分層與 C ABI、roadmap 進度、十輪拷問的裁決（[verdicts](../ideas/verdicts.md)）
+- **答得出什麼**：`.aos` 版面與交接協定、`core/inst` 的分層與 C ABI、roadmap 進度、十輪拷問的裁決（verdicts）
 - **答不出什麼**：使用者尚未裁的方向性問題（見 [WAIT_USER](../../WAIT_USER.md)）、`core/llms`／`core/tooljson` 的內部（擱置中，先不動）
 - **怎麼找我**：`~/repo/simple_tools/aos/wf/inbox/`
 - **訂閱主題**：無

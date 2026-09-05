@@ -1,6 +1,6 @@
 # 任務：試用 L2——用 aos 指揮與管理一個 agent 團隊，記所有做不到與不順手
 
-> 交接書是唯一契約。判準 [usability-target](../../../ideas/usability-target.md) 第二級；發現格式見 [trial/README](../../trial/README.md)。**只找不修、不改 core/。**
+> 交接書是唯一契約。判準 usability-target 第二級；發現格式見 [trial/README](../../trial/README.md)。**只找不修、不改 core/。**
 
 ## 唯一目標
 

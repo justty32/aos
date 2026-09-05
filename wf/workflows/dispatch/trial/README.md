@@ -1,6 +1,6 @@
 # trial — 大量試用：驗證＋找不順手（2026-08-30）
 
-← [dispatch](../README.md)｜判準 [usability-target](../../ideas/usability-target.md)
+← [dispatch](../README.md)｜判準 usability-target
 
 **目的**：照使用者定的兩級劇本，用「使用者的方式」大量操作 aos，記**多餘的動作／看不見的狀態／錯誤不指路**，
 每條附「用 pi／Claude Code 做同一件事的對照」。這階段**只找、不修**（修 bug 隊與改進隊之後另開）。

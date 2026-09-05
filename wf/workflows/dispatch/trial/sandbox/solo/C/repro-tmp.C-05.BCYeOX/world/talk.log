@@ -1,0 +1,2 @@
+aos talk: 這個世界沒有 aos run 在推進，說出去的話不會有人處理。
+請另開一個終端機跑：aos run /home/lorkhan/repo/simple_tools/aos/wf/workflows/dispatch/trial/sandbox/solo/C/repro-tmp.C-05.BCYeOX/world --step 0

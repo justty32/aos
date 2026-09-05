@@ -1,0 +1,15 @@
+{
+  "args": "list",
+  "argv": [
+    "aos",
+    "say",
+    "--to"
+  ],
+  "description": "把一則訊息寄給通訊錄裡的聯絡人。args 是 [收件人, 訊息]，收件人是通訊錄上的名字或 ~（使用者）。對方的回信會進你的信箱。",
+  "guarantee": "at-least-once",
+  "name": "say",
+  "predictability": "high",
+  "source": "manual",
+  "stdin": "none",
+  "timeout_ms": 10000
+}

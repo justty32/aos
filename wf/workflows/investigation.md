@@ -15,7 +15,7 @@
 ## 流程
 
 1. **收集事實**：只讀不改，一條一則，附出處。
-2. **對照現有能力**：這件事現在能不能做、靠什麼做（先查 [code map](common/code-map.md) 與 [verdicts](ideas/verdicts.md)，別重查已裁決的）。
+2. **對照現有能力**：這件事現在能不能做、靠什麼做（先查 [code map](common/code-map.md) 與 verdicts，別重查已裁決的）。
 3. **分類**：可直接做／有缺口／不值得做／需使用者驗證。
 4. **產出 finding**：照下方筆記模板寫成一份可歸檔的筆記；缺口進 [planning](planning.md)（ideas／roadmap），踩到的坑進 [common/gotchas](common/gotchas.md)，需使用者驗證的進 [WAIT_USER](../WAIT_USER.md)。
 
