@@ -347,9 +347,12 @@ rm -rf "$TMP"
 #     idle→llm（丟請求）→wait（撿回覆）→act→collect→llm→wait→act→idle
 TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
 SEQ=""
+STEP_ERR=""
 for i in 1 2 3 4 5 6 7 8; do
   SEQ="$SEQ$(now_state "$TMP/agent") "
-  "$STEP" "$TMP/agent" >/dev/null 2>&1
+  ERR=$("$STEP" "$TMP/agent" 2>&1 >/dev/null)
+  STEP_ERR="$STEP_ERR
+$ERR"
   "$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
 done
 SEQ="$SEQ$(now_state "$TMP/agent")"
@@ -357,6 +360,18 @@ if [ "$SEQ" = "idle llm wait act collect llm wait act idle" ]; then
   echo "ok   五格的 state 依序走完兩輪"
 else
   echo "FAIL state 順序不對：$SEQ"; FAILED=1
+fi
+# busy 只算真做事的格：8 格裡扣掉「idle -> idle」（沒信）跟「wait -> wait」（還沒等到）
+# 這兩種空轉，剩下的才算 busy；假伺服器多快會影響 wait 空轉幾次，所以不寫死數字。
+BUSY_NOW=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("busy"))' \
+  "$TMP/agent/.aos/agent/state.json")
+IDLE_SPIN=$(printf '%s' "$STEP_ERR" | grep -c 'state idle -> idle')
+WAIT_SPIN=$(printf '%s' "$STEP_ERR" | grep -c 'state wait -> wait')
+WANT_BUSY=$((8 - IDLE_SPIN - WAIT_SPIN))
+if [ "$BUSY_NOW" = "$WANT_BUSY" ] && [ "$BUSY_NOW" -le 8 ]; then
+  echo "ok   busy=$BUSY_NOW 等於 stderr 裡真做事的格數（8 格扣掉空轉的 idle/wait）"
+else
+  echo "FAIL busy 不對：busy=$BUSY_NOW 算出來該是 $WANT_BUSY"; FAILED=1
 fi
 SAID=$(cat "$TMP/agent/said.txt" 2>/dev/null)
 if [ "$SAID" = "hi" ]; then echo "ok   say 工具真的寫了 said.txt"; else echo "FAIL said.txt 是 $SAID"; FAILED=1; fi
@@ -621,6 +636,22 @@ case "$OUT" in
   *"建好了"*) echo "ok   spawn 工具把結果講回給模型聽" ;;
   *) echo "FAIL spawn 工具沒把話講回來：$OUT"; FAILED=1 ;;
 esac
+rm -rf "$TMP"
+
+# 34. shared 鐘子空轉：沒人跟它說話，父推它走幾格它就跟著走幾格，但都是 idle -> idle，busy 不漲
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
+"$SPAWN" "$TMP/agent" kid1 "你是小幫手 kid1" 2>/dev/null
+"$LOOP" "$TMP/agent" --keep-inst --steps 3 --interval 0 >/dev/null 2>&1
+KID_STEP=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' \
+  "$TMP/agent/kid1/.aos/agent/state.json")
+KID_BUSY=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("busy"))' \
+  "$TMP/agent/kid1/.aos/agent/state.json")
+if [ "$KID_STEP" = "3" ] && [ "$KID_BUSY" = "0" ]; then
+  echo "ok   shared 子空轉三格：沒信可收，step=3 busy=0"
+else
+  echo "FAIL 子空轉的 step/busy 不對：step=$KID_STEP busy=$KID_BUSY"; FAILED=1
+fi
 rm -rf "$TMP"
 
 kill $FAKE_PID 2>/dev/null
