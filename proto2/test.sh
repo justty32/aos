@@ -7,6 +7,7 @@ STEP="$HERE/aos-agent-step"
 LLMSTEP="$HERE/aos-llm-step"
 ASK="$HERE/aos-llm-ask"
 SAY="$HERE/aos-agent-say"
+SPAWN="$HERE/aos-agent-spawn"
 LISTEN="$HERE/aos-agent-listen"
 TALK="$HERE/aos-agent-talk"
 FAILED=0
@@ -526,6 +527,99 @@ check "talk 打完 /quit 退出 0" 0 "$RC"
 case "$OUT" in
   *"agent> 我在"*) echo "ok   talk 印出了 agent 的回話" ;;
   *) echo "FAIL talk 沒印出回話：$OUT"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# ── 子世界：aos-agent-spawn ──────────────────────────────────────────────────
+# 28. shared 鐘：子的檔都在、llm.json 解得到真的 LLM 資料夾、工具抄父的、父的 inst 尾巴掛上子
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
+"$SPAWN" "$TMP/agent" kid1 "你是小幫手 kid1" 2>/dev/null; RC=$?
+check "spawn shared 回 0" 0 "$RC"
+MISSING=""
+for f in system-prompt.json prompts.json tools.json state.json llm.json; do
+  [ -f "$TMP/agent/kid1/.aos/agent/$f" ] || MISSING="$MISSING $f"
+done
+[ -f "$TMP/agent/kid1/.aos/inst" ] || MISSING="$MISSING .aos/inst"
+if [ -z "$MISSING" ]; then echo "ok   子 agent 五個檔加 .aos/inst 都在"; else echo "FAIL 子少了：$MISSING"; FAILED=1; fi
+LLMDIR=$(python3 -c '
+import json,os,sys
+d=json.load(open(sys.argv[1]+"/.aos/agent/llm.json", encoding="utf-8"))["dir"]
+print(d if os.path.isdir(os.path.join(sys.argv[1], d)) else "")' "$TMP/agent/kid1")
+if [ -n "$LLMDIR" ]; then
+  echo "ok   子的 llm.json（$LLMDIR）解出來真的是那個 LLM 資料夾"
+else
+  echo "FAIL 子的 llm.json 指到不存在的地方"; FAILED=1
+fi
+if cmp -s "$TMP/agent/kid1/.aos/agent/tools.json" "$TMP/agent/.aos/agent/tools.json"; then
+  echo "ok   子的 tools.json 跟父一模一樣"
+else
+  echo "FAIL 子的 tools.json 跟父不一樣"; FAILED=1
+fi
+LAST=$(tail -1 "$TMP/agent/.aos/inst")
+if [ "$LAST" = "aos-exec kid1" ]; then
+  echo "ok   shared 鐘掛在父的 .aos/inst 最後一行"
+else
+  echo "FAIL 父的 inst 最後一行是「$LAST」"; FAILED=1
+fi
+
+# 29. own 鐘：只建資料夾，父的 inst 不動它
+"$SPAWN" "$TMP/agent" kid2 "你是 kid2" --clock own 2>/dev/null; RC=$?
+check "spawn own 回 0" 0 "$RC"
+if [ -f "$TMP/agent/kid2/.aos/inst" ] && ! grep -q "aos-exec kid2" "$TMP/agent/.aos/inst"; then
+  echo "ok   own 鐘的子建好了但沒掛進父的 inst"
+else
+  echo "FAIL own 鐘的子不該進父的 inst：$(cat "$TMP/agent/.aos/inst")"; FAILED=1
+fi
+
+# 30. 同名再生一次退 2；子名有奇怪字元退 2
+"$SPAWN" "$TMP/agent" kid1 "重複的" 2>/dev/null; RC=$?
+check "同名再 spawn 一次回 2" 2 "$RC"
+"$SPAWN" "$TMP/agent" "bad/name" "壞名字" 2>/dev/null; RC=$?
+check "子名有斜線回 2" 2 "$RC"
+
+# 31. 父走三格：shared 的 kid1 跟著走三格，own 的 kid2 一格都沒走
+"$SAY" "$TMP/agent/kid1" "kid1 你好" 2>/dev/null
+"$SAY" "$TMP/agent/kid2" "kid2 你好" 2>/dev/null
+"$LOOP" "$TMP/agent" --keep-inst --steps 3 --interval 0 >/dev/null 2>&1
+STEP_P=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' "$TMP/agent/.aos/agent/state.json")
+STEP_1=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' "$TMP/agent/kid1/.aos/agent/state.json")
+STEP_2=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' "$TMP/agent/kid2/.aos/agent/state.json")
+if [ "$STEP_P" = "3" ]; then echo "ok   父自己走了三格"; else echo "FAIL 父走了 $STEP_P 格"; FAILED=1; fi
+if [ "$STEP_1" = "3" ]; then echo "ok   shared 的 kid1 跟著父走了三格"; else echo "FAIL kid1 走了 $STEP_1 格"; FAILED=1; fi
+if [ "$STEP_2" = "0" ]; then echo "ok   own 的 kid2 一格都沒走（時間跟父脫節）"; else echo "FAIL kid2 走了 $STEP_2 格"; FAILED=1; fi
+
+# 32. 子真的能透過同一個 LLM 資料夾工作：父帶著跑，kid1 的 replies/ 要冒出回話
+"$LOOP" "$TMP/llm" --keep-inst --steps 400 --interval 0 >/dev/null 2>&1 &
+LLM_LOOP=$!
+"$LOOP" "$TMP/agent" --keep-inst --steps 30 --interval 0.05 >/dev/null 2>&1
+kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
+NREP=$(find "$TMP/agent/kid1/.aos/agent/replies" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+if [ "$NREP" -ge 1 ]; then
+  echo "ok   kid1 靠父的鐘跑完一輪，replies/ 有回話（共用同一個 LLM 資料夾）"
+else
+  echo "FAIL kid1 沒有回話：state=$(now_state "$TMP/agent/kid1")"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 33. tools.json 裡的 spawn 工具，command 直接餵 JSON 就能生出子 agent
+TMP=$(mktemp -d); prep_agent "$TMP/agent"
+CMD=$(python3 -c '
+import json,sys
+print([t for t in json.load(open(sys.argv[1], encoding="utf-8")) if t["name"]=="spawn"][0]["command"])' \
+  "$TMP/agent/.aos/agent/tools.json")
+OUT=$(cd "$TMP/agent" && PATH="$HERE:$PATH" sh -c "$CMD" <<'JSONEOF'
+{"name": "kid3", "persona": "你是小幫手"}
+JSONEOF
+)
+if [ -f "$TMP/agent/kid3/.aos/agent/system-prompt.json" ]; then
+  echo "ok   spawn 工具的 command 直接跑就生得出 kid3"
+else
+  echo "FAIL spawn 工具沒生出 kid3：$OUT"; FAILED=1
+fi
+case "$OUT" in
+  *"建好了"*) echo "ok   spawn 工具把結果講回給模型聽" ;;
+  *) echo "FAIL spawn 工具沒把話講回來：$OUT"; FAILED=1 ;;
 esac
 rm -rf "$TMP"
 

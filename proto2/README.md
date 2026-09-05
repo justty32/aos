@@ -75,6 +75,22 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
 - `aos-agent-talk [dir]`——互動聊天：`你> ` 打一句（`/quit` 或 Ctrl-D 離開），等 `replies/` 冒出
   新檔就印 `agent> `。自己不推格，要另一個終端機的 `aos-loop` 幫忙轉。
 
+## 子世界：aos-agent-spawn
+
+**子 agent 就是父資料夾底下的一個子資料夾**，裡面有它自己的 `.aos/agent/`（人格、記憶、工具、
+`state.json`），工具抄父的一份，`llm.json` 換算成指向父用的那個 LLM 資料夾——父是 `../llm`，
+子就是 `../../llm`，兩邊共用同一個 LLM。分兩種鐘：
+
+- **shared（時間沒脫節）**——在父的 `.aos/inst` 尾端加一行 `aos-exec <子名>`，父走一格它就跟著
+  走一格，父不動它也不動，子自己沒有 loop。
+- **own（時間脫節）**——只建資料夾，父不推它；要另外開 `aos-loop <子路徑> --keep-inst` 才會走。
+
+`aos-agent-spawn <父資料夾> <子名> <人格文字> [--clock shared|own]`（預設 `shared`）。子名只准英
+數字／底線／減號，名字被佔走、或父沒有 `llm.json`，就印一句退 2。
+
+範例 agent 的 `tools.json` 附了一個 `spawn` 工具，所以**agent 可以自己生小孩**：跟它說「生一個叫
+helper 的子 agent」，它就會挑好 clock 去呼叫 `aos-agent-spawn`，子資料夾直接長在它旁邊。
+
 ## 為什麼另起爐灶
 
 見 [reflections.md](../wf/workflows/ideas/reflections.md)：邊緣狀況想太早了，先做最小的那句話。
@@ -107,4 +123,4 @@ bash proto2/test.sh
 
 ## 目前刻意不做
 
-鎖、崩潰恢復、fsync、並發、逾時、重試、daemon、其他子命令、串流、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
+鎖、崩潰恢復、fsync、並發、逾時、重試、daemon、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
