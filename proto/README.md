@@ -55,9 +55,10 @@ LLM 請求的 `max_wait_ms` 只算送到後端之前的排隊時間，預設 600
 - `.aos/stopped.json`：`run` 停下來時寫的停止原因檔
 - `.aos/lock`：獨佔鎖，一塊地同時只准一支 `exec`／`run`
 
-LLM 世界另有 `.aos/llm-inflight/`（已送出、等後端回話）與 `.aos/requests/`
-（已完成的請求原件）。serve 重啟時留在 inflight 的請求一律視為結果不明、搬到 requests，
-不會自動重送。
+LLM 世界另有 `.aos/llm-inflight/`（已送出、等後端回話的原件）、`.aos/llm-done/`
+（已完成的原件）與 `.aos/requests/`（另外寫的請求狀態物件）。原件只靠 rename 在前兩個
+原件目錄間搬動，內容不重寫；`aos llm ls` 讀 requests 的狀態物件。serve 重啟時留在
+inflight 的請求一律記成 `result_unknown`、搬到 llm-done，不會自動重送。
 
 ## 每個範例怎麼跑
 

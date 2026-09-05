@@ -191,6 +191,7 @@ done
 [ -f "$AGENT/.aos/stopped.json" ] && cp "$AGENT/.aos/stopped.json" "$LOGDIR/agent-stopped.json"
 [ -f "$AGENT/.aos/daemon-run.log" ] && cp "$AGENT/.aos/daemon-run.log" "$LOGDIR/agent-run.log"
 [ -d "$LLMWORLD/.aos/llm-done" ] && cp -r "$LLMWORLD/.aos/llm-done" "$LOGDIR/llm-done"
+[ -d "$LLMWORLD/.aos/requests" ] && cp -r "$LLMWORLD/.aos/requests" "$LOGDIR/requests"
 cp "$AGENT/task.md" "$LOGDIR/task.md" 2>/dev/null
 printf '%s\n' "tier=$TIER" "unit=$THIS_UNIT" "backend=$BACKEND" "model=$MODEL" \
   "cloud=$CLOUD" "cloud_model=$CLOUD_MODEL" "minutes=$MINUTES" \

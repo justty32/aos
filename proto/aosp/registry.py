@@ -9,17 +9,37 @@ STOPPED = "stopped"
 
 
 def empty():
-    return {"format_version": 1, "daemon_pid": None, "entries": []}
+    return {"format_version": 1, "daemon_pid": None,
+            "daemon_pid_start": None, "entries": []}
+
+
+def _canonicalize(reg):
+    """補齊正式欄位，並把舊版 ext.result／ext.args 搬到那筆的頂層。"""
+    reg.setdefault("daemon_pid_start", None)
+    for e in reg.get("entries", []):
+        ext = e.get("ext")
+        if isinstance(ext, dict):
+            if "result" not in e and "result" in ext:
+                e["result"] = ext["result"]
+            if "args" not in e and "args" in ext:
+                e["args"] = ext["args"]
+            ext.pop("result", None)
+            ext.pop("args", None)
+        result = e.get("result")
+        e["result"] = os.path.abspath(result) if isinstance(result, str) else None
+        args = e.get("args")
+        e["args"] = dict(args) if isinstance(args, dict) else None
+    return reg
 
 
 def load(home=None):
     h = home or layout.Home()
-    return fsutil.read_json(h.registry, empty()) or empty()
+    return _canonicalize(fsutil.read_json(h.registry, empty()) or empty())
 
 
 def save(reg, home=None):
     h = home or layout.Home()
-    fsutil.write_json(h.registry, reg)
+    fsutil.write_json(h.registry, _canonicalize(reg))
 
 
 def _lock(home=None):
@@ -52,10 +72,10 @@ def register(path, clock, budget=None, parent=None, state=PENDING, home=None,
                 "state": state,
                 "clock": clock,
                 "budget": budget,
-                "result": result,
+                "result": os.path.abspath(result) if result is not None else None,
                 # 脫節子地的環境變數（AOS_RESULT／AOS_CALLER／AOS_ARG_*）要從這裡重建：
                 # P-01 之後起子地那支 run 是 daemon 生的，拿不到父當初 exec 的環境。
-                "args": dict(args or {}),
+                "args": dict(args) if args is not None else None,
                 "parent": os.path.abspath(parent) if parent else None,
                 "registered_at": now,
                 "updated_at": now,
@@ -65,7 +85,7 @@ def register(path, clock, budget=None, parent=None, state=PENDING, home=None,
             e["clock"] = clock
             e["budget"] = budget
             if result is not None:
-                e["result"] = result
+                e["result"] = os.path.abspath(result)
             if args is not None:
                 e["args"] = dict(args)
             e["parent"] = os.path.abspath(parent) if parent else e.get("parent")
@@ -173,10 +193,10 @@ def _mark_missing_result(e):
         return
     stopped = fsutil.read_json(layout.Land(e["path"]).stopped) or {}
     stopped_reason = stopped.get("reason")
-    if stopped_reason == "idle":
+    if stopped_reason in ("idle", "budget", "steps_done"):
         reason = status.NO_RESULT
         message = "%s 已經做完，但結果落點 %s 什麼都沒留下" % (e["path"], result)
-    elif stopped_reason == "failed":
+    elif stopped_reason in ("failed", "parse_error", "stalled"):
         reason = status.CHILD_FAILED
         message = "%s 的串失敗了，沒有產出結果：%s" % (
             e["path"], stopped.get("message") or "子地沒有留下說明")

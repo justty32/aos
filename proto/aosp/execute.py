@@ -95,6 +95,7 @@ def _fail_series(land, sr, reason, message):
         "message": message,
         "series": sr["id"],
         "step": sr["cursor"],
+        "busy_ticks": (S.load(land) or {}).get("busy_ticks", 0),
         "at": fsutil.now_iso(),
     })
 

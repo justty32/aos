@@ -87,6 +87,8 @@ class TestBirth(Base):
         self.assertIsNone(e["pid"])
         self.assertIsNone(e["pid_start"])
         self.assertIsNone(e["clock"])                    # S-13-23 門房不起時鐘
+        self.assertIsNone(e["result"])
+        self.assertIsNone(e["args"])
         self.assertIsNone(e["parent"])
         self.assertEqual(e["land_id"], LAND_ID)
         self.assertEqual(e["ext"]["by"], "doorman")
@@ -366,8 +368,11 @@ class TestWriteDiscipline(Base):
         self.doorman().run(once=True)
         e = self.entry(land)
         for k in ("path", "pid", "pid_start", "land_id", "state", "clock",
-                  "budget", "parent", "registered_at", "updated_at"):
+                  "budget", "result", "args", "parent", "registered_at", "updated_at"):
             self.assertIn(k, e)
+        reg = doorman.read_json(self.registry)
+        self.assertIn("daemon_pid_start", reg)
+        self.assertIsNone(reg["daemon_pid_start"])
         for k in ("registered_at", "updated_at"):
             self.assertRegex(e[k], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
 

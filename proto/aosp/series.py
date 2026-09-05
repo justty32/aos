@@ -12,16 +12,23 @@ def empty(batch_id=None):
         "format_version": 1,
         "batch_id": batch_id or fsutil.new_id(),
         "tick": 0,
+        "busy_ticks": 0,
         "series": [],
     }
 
 
 def load(land):
-    return fsutil.read_json(land.series)
+    baton = fsutil.read_json(land.series)
+    if isinstance(baton, dict):
+        count = baton.get("busy_ticks")
+        baton["busy_ticks"] = count if isinstance(count, int) and count >= 0 else 0
+    return baton
 
 
 def save(land, baton):
     """多寫者一律：寫 tmp -> fsync -> rename -> fsync 目錄。"""
+    count = baton.get("busy_ticks")
+    baton["busy_ticks"] = count if isinstance(count, int) and count >= 0 else 0
     fsutil.write_json(land.series, baton)
 
 
