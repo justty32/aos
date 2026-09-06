@@ -1,6 +1,6 @@
 # 工具包發想（2026-09-06）
 
-這是七隊 AI 各想一塊的草稿，不是規格，要使用者拍板才會做。
+這是八隊 AI 各想一塊的草稿（第八份 code-editing 是 codex 後補的），不是規格，要使用者拍板才會做。
 
 | 檔名 | 一句話講這包是什麼 | 提議的工具名 |
 |---|---|---|
@@ -11,6 +11,7 @@
 | [long-running.md](long-running.md) | 把長工作搬到新的鐘，做完再寄信回來。 | `run_long`, `jobs_list`, `job_peek`, `job_cancel` |
 | [identity-and-env.md](identity-and-env.md) | 管時鐘用誰的身份跑、能看到什麼，也保護重要檔案。 | 無，主要是調整時鐘和生小孩的做法 |
 | [cost-metering.md](cost-metering.md) | 記下每次叫工具花的時間、字數、用量和錢。 | `cost_summary`, `cost_recent` |
+| [code-editing.md](code-editing.md) | 改程式碼特有的動作：看骨架、找、檢查語法、反悔；讀寫改沿用 fs。 | `code_outline`, `code_search`, `code_check`, `code_checkpoint`, `code_undo`, `code_diff` |
 
 ## 七份互相牽扯的地方
 
@@ -76,6 +77,14 @@
 - T-32 工具帳放 agent 家裡，模型總帳留在 LLM 資料夾，可以嗎？ → 建議：可以，兩邊各管一種帳。
 - T-33 每日用量要改成按模型、按使用者兩層嗎？ → 建議：改，趁現在舊檔還少。
 - T-34 要不要每輪都自動把成本摘要塞進對話？ → 建議：不要，需要時再叫 `cost_summary`。
+
+### code-editing.md
+
+- T-35 世界就直接是專案資料夾，home 用 `.aos-agent/`？ → 建議：是，路徑最單純。
+- T-36 精準修改和整檔寫入沿用 `fs`，`code` 不重做？ → 建議：是，工具越少越好。
+- T-37 第一版不提供套 patch，只用多次 `edit`？ → 建議：是，小模型比較不會卡在格式。
+- T-38 checkpoint 用 `.aos-undo/` 複製檔案，不碰專案 Git？ → 建議：是，不污染原本歷史。
+- T-39 Python 語法由模型每次小改後主動檢查，不在寫檔時自動跑？ → 建議：是，回合比較清楚。
 
 ## 建議的實作順序
 
