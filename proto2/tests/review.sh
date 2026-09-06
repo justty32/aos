@@ -146,9 +146,9 @@ test_improve_prompt() {
 import os, sys
 sys.path.insert(0,sys.argv[1])
 from aos_agent import Ctx, load_pack, resolve_home
-world=sys.argv[2]; home=resolve_home(world,None); review=load_pack(home,"review"); shell=load_pack(home,"shell")
-ctx=Ctx(world,home,{},[("review",review),("shell",shell)])
-r=review.run("improve_prompt",{"pack":"shell","text":"一次只跑一條。"},ctx)
+world=sys.argv[2]; home=resolve_home(world,None); review=load_pack(home,"review"); fs=load_pack(home,"fs")
+ctx=Ctx(world,home,{},[("review",review),("fs",fs)])
+r=review.run("improve_prompt",{"pack":"fs","text":"一次只跑一條。"},ctx)
 bad=review.run("improve_prompt",{"pack":"kids","text":"不生小孩。"},ctx)
 print(r["chars"]==7, r["old_chars"]==0, r["notice"]=="下次走格才會生效",
       open(r["path"],encoding="utf-8").read()=="一次只跑一條。", "error" in bad)
@@ -253,12 +253,12 @@ from aos_agent import Ctx, load_pack, resolve_home, system_text
 world=sys.argv[2]; home=resolve_home(world,None); os.makedirs(os.path.join(home,"memory"),exist_ok=True)
 lesson="查檔：原本平均 0.2 元／6 格 → 先讀索引 → 之後平均 0.1 元／3 格"
 open(os.path.join(home,"memory","lessons.md"),"w",encoding="utf-8").write(lesson+"\n")
-review=load_pack(home,"review"); shell=load_pack(home,"shell"); loaded=[("review",review),("shell",shell)]
+review=load_pack(home,"review"); fs=load_pack(home,"fs"); loaded=[("review",review),("fs",fs)]
 ctx=Ctx(world,home,{},loaded); old=system_text(ctx,loaded)
-review.run("improve_prompt",{"pack":"shell","text":"SHELL_OVERRIDE_MARKER"},ctx)
+review.run("improve_prompt",{"pack":"fs","text":"FS_OVERRIDE_MARKER"},ctx)
 new=system_text(ctx,loaded)
-print("shell：sh 這個工具" in old, "SHELL_OVERRIDE_MARKER" in new,
-      "shell：sh 這個工具" not in new, lesson in new)
+print("檔案與短指令" in old, "FS_OVERRIDE_MARKER" in new,
+      "檔案與短指令" not in new, lesson in new)
 PYEOF2
 )
   if [ "$got" = "True True True True" ]; then

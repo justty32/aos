@@ -31,6 +31,14 @@ checks["spawn"] = (first.get("ok") is True and first.get("clock") == "shared"
                    and tools.get("packs") == ["mailbox", "kids"] and len(task_mail) == 1
                    and ctx.read_json(task_mail[0], {}).get("content") == "先算 17*23")
 
+templated = kids.run("spawn", {
+    "name": "coder", "persona": "寫程式", "template": "coder",
+}, ctx)
+template_tools = ctx.read_json(os.path.join(templated.get("path") or "", "tools.json"), {})
+checks["template"] = (templated.get("ok") is True
+                      and template_tools.get("packs")
+                      == ["mailbox", "fs", "code", "self", "jobs", "toolsmith"])
+
 one_ctx = Ctx(one, one)
 second = kids.run("spawn", {"name": "two", "persona": "第二層"}, one_ctx)
 two = second.get("path")
@@ -95,13 +103,13 @@ told_mail = ctx.read_json(told.get("path"), {}) if told.get("path") else {}
 checks["tell"] = (told.get("ok") and told_mail.get("content") == "再查一次"
                   and os.path.basename(os.path.dirname(told["path"])) == "parent")
 
-kids.on_reply(one_ctx, {"role": "assistant", "content": "算好是 391"})
+one_ctx.reply("算好是 391")
 forwarded = glob.glob(os.path.join(home, "inbox", "kid-one", "*.json"))
 forward_mail = ctx.read_json(forwarded[-1], {}) if forwarded else {}
 checks["forward"] = (len(forwarded) == 1 and forward_mail.get("content") == "算好是 391"
                      and forward_mail.get("from") == "one"
-                     and "直接正常回答" in kids.on_system_prompt(one_ctx)
-                     and kids.on_system_prompt(ctx) == "")
+                     and "直接正常回答" in __import__("aos_agent").system_text(one_ctx, [])
+                     and "直接正常回答" not in __import__("aos_agent").system_text(ctx, []))
 
 top_registry = ctx.kids()
 child_registry = one_ctx.kids()
@@ -118,6 +126,7 @@ with open(output, "w", encoding="utf-8") as f:
 PYEOF2
 
   kids_assert "$checks" spawn "kids：spawn 接 packs／task／template"
+  kids_assert "$checks" template "kids：template 沒明給 packs 時保留模板工具包"
   kids_assert "$checks" depth "kids：第三層會被拒絕"
   kids_assert "$checks" list "kids：list 欄位、未讀與最後回話正確"
   kids_assert "$checks" shared_clock "kids：shared 小孩可暫停再續跑"

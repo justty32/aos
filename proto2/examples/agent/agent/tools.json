@@ -1,5 +1,5 @@
 {
-  "packs": ["mailbox", "shell", "self", "kids"],
+  "packs": ["mailbox", "communication", "fs", "self", "memory", "kids", "cost"],
   "tools": [
     {
       "name": "say",

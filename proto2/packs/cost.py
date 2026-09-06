@@ -314,6 +314,12 @@ def on_reply(ctx, msg):
 
 
 def on_result(ctx, kind, name, result):
+    if kind != "main":
+        return
+    on_main_result(ctx, name, result)
+
+
+def on_main_result(ctx, name, result):
     aos = result.get("aos") if isinstance(result, dict) else None
     usage = aos.get("usage") if isinstance(aos, dict) else None
     _close_pending(ctx, usage=usage, result=result)

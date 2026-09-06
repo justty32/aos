@@ -126,7 +126,7 @@ def _run_long(args, ctx):
     with open(os.path.join(job, ".aos", "inst"), "w", encoding="utf-8") as f:
         f.write(inst)
 
-    ok, message = ctx.register_clock(job)
+    ok, message = ctx.register_clock(job, no_wait=True)
     if not ok:
         return {"ok": False, "error": "job 建好了，但另開鐘失敗：%s" % message,
                 "name": name, "path": os.path.relpath(job, ctx.home)}

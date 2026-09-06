@@ -1,5 +1,4 @@
 """kids 工具包：生小孩、看進度、寄活、暫停與收掉。"""
-import datetime
 import os
 import shutil
 
@@ -7,6 +6,7 @@ import shutil
 MAX_DEPTH = 2
 PROMPT = (
     "子 agent：spawn 生一個有自己人格與記憶的小孩。clock 不確定就用 shared；"
+    "使用者說 coder、manager 或 chat 時，把同名值放進 template；模板會帶自己的工具包。"
     "shared 跟你一起走，own 有自己的鐘。kids_tell 派活，kids_list 看進度，"
     "kids_pause／kids_resume 暫停或續跑，kids_kill 收掉。不要卡在這一格等小孩；"
     "先告訴使用者你已派工，下一格再看信箱或 kids_list。小孩回話會自動進你的信箱。"
@@ -180,31 +180,16 @@ def _spawn(args, ctx):
     if depth >= MAX_DEPTH:
         return {"ok": False, "name": name, "path": None, "clock": clock,
                 "message": "你已經在第 %d 層，不能再生了" % depth}
-    ok, message = ctx.spawn(name, args.get("persona") or "", clock, args.get("template"))
+    task = args.get("task")
+    ok, message = ctx.spawn(
+        name, args.get("persona") or "", clock, args.get("template"),
+        packs=args.get("packs") if "packs" in args else None,
+        task=task, depth=depth + 1)
     child = os.path.abspath(os.path.join(ctx.kids_dir(), name)) if ok else None
     if not ok:
         return {"ok": False, "name": name, "path": None, "clock": clock,
                 "message": message}
 
-    if "packs" in args:
-        tools_path = os.path.join(child, "tools.json")
-        tools = ctx.read_json(tools_path, {})
-        tools = tools if isinstance(tools, dict) else {}
-        tools["packs"] = [pack for pack in (args.get("packs") or []) if isinstance(pack, str)]
-        tools.setdefault("tools", [])
-        ctx.write_json(tools_path, tools)
-
-    task = args.get("task")
-    registry = _registry(ctx)
-    registry[name] = {
-        "name": name, "dir": child, "clock": clock,
-        "created": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
-        "depth": depth + 1, "parent": ctx.world, "alive": True,
-        "task": str(task) if task is not None else None,
-    }
-    _save_registry(ctx, registry)
-    if task is not None:
-        ctx.put_mail(child, "parent", task)
     return {"ok": True, "name": name, "path": child, "clock": clock,
             "message": message}
 
@@ -294,15 +279,3 @@ def run(name, args, ctx):
     if name == "kids_tell":
         return _tell(args, ctx)
     return {"error": "kids 沒有這個工具：%s" % name}
-
-
-def on_reply(ctx, msg):
-    parent = ctx.parent()
-    if isinstance(parent, dict) and parent.get("dir"):
-        ctx.put_mail(parent["dir"], "kid-" + ctx.name, msg.get("content") or "")
-
-
-def on_system_prompt(ctx):
-    if ctx.parent():
-        return "你是子 agent。做完要回報父時，直接正常回答；系統會自動把這句轉寄給父，不用找路徑。"
-    return ""

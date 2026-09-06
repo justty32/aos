@@ -1,4 +1,4 @@
 {
-  "packs": ["fs", "code", "self", "mailbox"],
+  "packs": ["mailbox", "fs", "code", "self", "jobs", "toolsmith"],
   "tools": []
 }

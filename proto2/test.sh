@@ -131,15 +131,14 @@ check "aos-loop 資料夾不存在回 2" 2 "$RC"
 #     就能被 aos-loop --keep-inst 叫到；aos-loop 執行前會把自己所在目錄加進 PATH，複本放到
 #     任意 mktemp -d 都找得到 aos-agent。先 say 一句話，第一格 idle 收信、第二格 llm 把請求
 #     丟進 LLM 資料夾就換 wait——沒人在跑那個 LLM 資料夾也沒關係，只看 step 有沒有從 0 變 2、
-#     請求檔有沒有真的落地。靜態檔用 git 索引裡的內容組，不直接 cp 真的範例（README 教使用者
-#     拿 aos-loop --keep-inst 長期盯著真的範例跑，state.json／prompts.json 隨時在動）。
+#     請求檔有沒有真的落地。只複製範例的靜態檔，不碰執行時檔案。
 TMP=$(mktemp -d)
 TMPLLM=$(mktemp -d)
 mkdir -p "$TMP/agent" "$TMP/.aos"
 for f in system-prompt.json prompts.json tools.json; do
-  git -C "$HERE/.." show ":proto2/examples/agent/agent/$f" > "$TMP/agent/$f"
+  cp "$HERE/examples/agent/agent/$f" "$TMP/agent/$f"
 done
-git -C "$HERE/.." show :proto2/examples/agent/.aos/inst > "$TMP/.aos/inst"
+cp "$HERE/examples/agent/.aos/inst" "$TMP/.aos/inst"
 printf '{"dir": "%s"}\n' "$TMPLLM" > "$TMP/agent/llm.json"
 "$AUSER" say "$TMP" "哈囉" >/dev/null 2>&1
 "$LOOP" "$TMP" --keep-inst --steps 2 --interval 0 >/dev/null 2>&1
@@ -290,27 +289,27 @@ start_fake_server
 # 就是範例裡那個 {"dir": "../llm"}），LLM 那份的 engine 指到假伺服器。故意不直接
 # cp -r 真的範例資料夾：README「怎麼玩」教使用者拿 aos-loop --keep-inst 長期盯著
 # 真的範例跑，這樣 hello.json／state.json／prompts.json 會被真的用起來、內容一直在動；
-# 這裡改成用 git 索引裡的內容組出靜態檔，不受工作目錄當下狀態牽連，測試才穩定。
+# 這裡只複製幾個靜態設定，不讀也不碰執行時檔案。
 prep_agent() {  # prep_agent <目標世界資料夾>；本體在 <世界>/agent/（--home agent），llm.json 指旁邊的 ../llm
   mkdir -p "$1/agent" "$1/.aos"
   for f in system-prompt.json prompts.json tools.json llm.json; do
-    git -C "$HERE/.." show ":proto2/examples/agent/agent/$f" > "$1/agent/$f"
+    cp "$HERE/examples/agent/agent/$f" "$1/agent/$f"
   done
-  git -C "$HERE/.." show :proto2/examples/agent/.aos/inst > "$1/.aos/inst"
-  git -C "$HERE/.." show :proto2/examples/agent/notes.txt > "$1/notes.txt"
+  cp "$HERE/examples/agent/.aos/inst" "$1/.aos/inst"
+  cp "$HERE/examples/agent/notes.txt" "$1/notes.txt"
 }
 prep_flat() {  # prep_flat <目標世界資料夾>；home 用預設的 `.`，東西全攤在世界資料夾底下
   mkdir -p "$1/.aos"
   for f in system-prompt.json prompts.json tools.json llm.json; do
-    git -C "$HERE/.." show ":proto2/examples/agent-flat/$f" > "$1/$f"
+    cp "$HERE/examples/agent-flat/$f" "$1/$f"
   done
-  git -C "$HERE/.." show :proto2/examples/agent-flat/.aos/inst > "$1/.aos/inst"
+  cp "$HERE/examples/agent-flat/.aos/inst" "$1/.aos/inst"
 }
 prep_llm() {  # prep_llm <目標 LLM 資料夾>；引擎全指到假伺服器（範例本體不碰）
   mkdir -p "$1/requests" "$1/.aos"
-  git -C "$HERE/.." show :proto2/examples/llm/engines.json > "$1/engines.json"
-  git -C "$HERE/.." show :proto2/examples/llm/defaults.json > "$1/defaults.json"
-  git -C "$HERE/.." show :proto2/examples/llm/.aos/inst > "$1/.aos/inst"
+  cp "$HERE/examples/llm/engines.json" "$1/engines.json"
+  cp "$HERE/examples/llm/defaults.json" "$1/defaults.json"
+  cp "$HERE/examples/llm/.aos/inst" "$1/.aos/inst"
   python3 - "$1/engines.json" "$PORT" <<'PYEOF2'
 import json, sys
 p = sys.argv[1]
@@ -533,7 +532,7 @@ else
   fail "打不通的請求沒搬走"
 fi
 ERRN=$(llm_field "$TMP/llm/usage/$(date +%Y-%m-%d).json" \
-  'd["http://127.0.0.1:1/v1|m"]["errors"]')
+  'd["by-model"]["http://127.0.0.1:1/v1|m"]["errors"]')
 if [ "$ERRN" = "1" ]; then ok "打不通也記進當天的用量（errors=1）"; else fail "用量沒記到打不通：$ERRN"; fi
 ST=$(llm_field "$TMP/llm/state.json" '"%s %s" % (d["served"], d["errors"])')
 if [ "$ST" = "0 1" ]; then ok "state.json 的 errors 是收回結果那格算的"; else fail "state 的 served/errors 不對：$ST"; fi
@@ -712,15 +711,16 @@ if [ "$NREP" = "1" ] && [ "$REP" = "done" ]; then
 else
   fail "outbox 不對：$NREP 個檔，content=$REP"
 fi
-# 送出去的 body：system 訊息帶著工具包的預設 prompt，工具清單四包都在、外加 tools[] 的 say
+# 送出去的 body：system 訊息帶著預設包的 prompt，工具清單外加 tools[] 的 say
 REQ=$(ls "$TMP/llm/requests/done"/*.json 2>/dev/null | head -1)
 SYS=$(python3 -c '
 import json,sys
 d=json.load(open(sys.argv[1]))
 m=d["messages"][0]
-print("%s|%s" % (m["role"], "".join(k for k in ("信箱","shell","self_status","spawn") if k in m["content"])))' "$REQ")
-if [ "$SYS" = "system|信箱shellself_statusspawn" ]; then
-  ok "system 訊息 ＝ 人格 ＋ 四個工具包各自的預設 prompt"
+markers=("信箱", "交流：", "檔案與短指令", "自我檢查", "記憶就是", "子 agent", "成本：")
+print("%s|%s" % (m["role"], "".join(k for k in markers if k in m["content"])))' "$REQ")
+if [ "$SYS" = "system|信箱交流：檔案與短指令自我檢查記憶就是子 agent成本：" ]; then
+  ok "system 訊息有預設七個工具包的 prompt"
 else
   fail "system 訊息不對：$SYS"
 fi
@@ -728,8 +728,9 @@ NAMES=$(python3 -c '
 import json,sys
 d=json.load(open(sys.argv[1]))
 print(" ".join(sorted(t["function"]["name"] for t in d.get("tools") or [])))' "$REQ")
-if [ "$NAMES" = "inbox_list inbox_read inbox_read_all inbox_sources kids_list say self_status sh spawn" ]; then
-  ok "工具清單＝四個工具包的內建工具＋tools[] 的 say"
+WANT_NAMES="cost_recent cost_summary edit inbox_list inbox_read inbox_read_all inbox_sources kids_kill kids_list kids_pause kids_resume kids_tell ls mail_broadcast mail_reply mail_send mail_wait mail_who memory_forget memory_list memory_replace_old memory_summarize_old note_find note_read note_save read say self_cost self_note self_status self_time self_who sh spawn write"
+if [ "$NAMES" = "$WANT_NAMES" ]; then
+  ok "工具清單＝預設七包的工具＋tools[] 的 say"
 else
   fail "工具清單不對：$NAMES"
 fi
@@ -945,8 +946,8 @@ print(m.get("from"), m.get("content"), bool(m.get("time")))' "$TMP/w/agent/inbox
 if [ "$SAID" = "user 嗨呀 True" ]; then ok "信的格式是 from／time／content"; else fail "信的內容不對：$SAID"; fi
 rm -rf "$TMP"
 
-# ── 工具包：shell／self ─────────────────────────────────────────────────────
-# 26. shell 包的 sh：在世界資料夾裡跑一句指令，回 exit／stdout／stderr
+# ── 工具包：fs／self ────────────────────────────────────────────────────────
+# 26. fs 包的 sh：在世界資料夾裡跑一句指令，回 exit／stdout／stderr
 TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
 "$AUSER" say "$W" 'CALL sh {"command": "cat notes.txt"}' >/dev/null 2>&1
 agent_pump "$W" "$TMP/llm" 10
@@ -974,8 +975,8 @@ for m in json.load(open(sys.argv[1])):
     if m.get("role") == "tool":
         print(",".join(sorted(json.loads(m["content"]))))
         break' "$H/prompts.json")
-WANT="busy,folder_bytes,history_chars,history_messages,last_usage,started,step,today_usage_all,uptime_s"
-if [ "$KEYS" = "$WANT" ]; then ok "self_status 九個鍵都在"; else fail "self_status 的鍵不對：$KEYS"; fi
+WANT="busy,folder_bytes,history_chars,history_messages,history_pct,history_tokens,last_usage,started,step,today_usage_all,uptime_s"
+if [ "$KEYS" = "$WANT" ]; then ok "self_status 十一個鍵都在"; else fail "self_status 的鍵不對：$KEYS"; fi
 # 同一份東西 aos-agent status 也印得出來
 OUT=$("$AUSER" status "$W"); RC=$?
 check "aos-user status 退 0" 0 "$RC"
@@ -986,8 +987,10 @@ esac
 mkdir -p "$TMP/llm/usage"
 python3 - "$TMP/llm/usage/$(date +%Y-%m-%d).json" <<'PYEOF2'
 import json, sys
-json.dump({"http://one/v1|m1": {"requests": 2, "errors": 0, "total_tokens": 11},
-           "http://two/v1|m2": {"requests": 3, "errors": 1, "total_tokens": 29}},
+json.dump({"by-model": {
+             "http://one/v1|m1": {"requests": 2, "errors": 0, "total_tokens": 11},
+             "http://two/v1|m2": {"requests": 3, "errors": 1, "total_tokens": 29}},
+           "by-requester": {"team/a": {"requests": 5, "total_tokens": 40}}},
           open(sys.argv[1], "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 PYEOF2
 OUT=$("$AUSER" status "$W")
@@ -1071,7 +1074,7 @@ else
 fi
 PACKS=$(python3 -c '
 import json,sys;print(",".join(json.load(open(sys.argv[1]))["packs"]))' "$KID/tools.json")
-if [ "$PACKS" = "mailbox,shell,self,kids" ]; then ok "子抄到父的工具包"; else fail "子的 packs 不對：$PACKS"; fi
+if [ "$PACKS" = "mailbox,communication,fs,self,memory,kids,cost" ]; then ok "子抄到父的工具包"; else fail "子的 packs 不對：$PACKS"; fi
 LAST=$(tail -1 "$W/.aos/inst")
 if [ "$LAST" = "aos-exec agent/kids/kid1" ]; then
   ok "shared 鐘掛在父的 .aos/inst 最後一行（路徑相對於世界資料夾）"
@@ -1145,10 +1148,10 @@ for f in aos-agent-step aos-agent-say aos-agent-listen aos-agent-talk aos-agent-
 done
 if [ -z "$GONE" ]; then ok "舊的 aos-agent-* 五支腳本都不在了"; else fail "舊腳本還在：$GONE"; fi
 MISSP=""
-for f in aos-agent aos-user aos_agent.py packs/mailbox.py packs/shell.py packs/self.py packs/kids.py; do
+for f in aos-agent aos-user aos_agent.py packs/mailbox.py packs/fs.py packs/self.py packs/kids.py; do
   [ -e "$HERE/$f" ] || MISSP="$MISSP $f"
 done
-if [ -z "$MISSP" ]; then ok "新版面在：aos-agent／aos-user／aos_agent.py／四個工具包各一檔"; else fail "少了：$MISSP"; fi
+if [ -z "$MISSP" ] && [ ! -e "$HERE/packs/shell.py" ]; then ok "新版面在，shell.py 已收進 fs.py"; else fail "新版面不對，少了：$MISSP"; fi
 OUT=$("$AGENT" say x 2>&1); RC=$?
 if [ "$RC" != "0" ]; then ok "aos-agent 不吃人用的子命令（say 在 aos-user）"; else fail "aos-agent 還吃 say"; fi
 
@@ -1745,29 +1748,29 @@ llm_pump "$TMP/llm" >/dev/null
 echo '{"messages": []}' > "$TMP/llm/requests/0002.json"
 llm_pump "$TMP/llm" >/dev/null
 USAGE="$TMP/llm/usage/$(date +%Y-%m-%d).json"
-U=$(llm_field "$USAGE" '"%s %s %s %s %s" % tuple(d["http://127.0.0.1:'"$PORT"'/v1|local"][k] for k in ("requests","errors","prompt_tokens","completion_tokens","total_tokens"))')
+U=$(llm_field "$USAGE" '"%s %s %s %s %s" % tuple(d["by-model"]["http://127.0.0.1:'"$PORT"'/v1|local"][k] for k in ("requests","errors","prompt_tokens","completion_tokens","total_tokens"))')
 if [ "$U" = "2 0 14 6 20" ]; then
   ok "用量兩次累加起來，key 是 endpoint|model（$U）"
 else
   fail "用量累加不對：$U"
 fi
 # 帳本是算錢用的：模型回的 usage 裡每個數字都要累加，巢狀的攤成點號鍵
-R=$(llm_field "$USAGE" 'd["http://127.0.0.1:'"$PORT"'/v1|local"]["completion_tokens_details.reasoning_tokens"]')
+R=$(llm_field "$USAGE" 'd["by-model"]["http://127.0.0.1:'"$PORT"'/v1|local"]["completion_tokens_details.reasoning_tokens"]')
 if [ "$R" = "10" ]; then
   ok "巢狀的思考 token 攤成 completion_tokens_details.reasoning_tokens 也累加（$R）"
 else
   fail "思考 token 沒累加：$R"
 fi
-C=$(llm_field "$USAGE" 'd["http://127.0.0.1:'"$PORT"'/v1|local"]["prompt_cache_hit_tokens"]')
+C=$(llm_field "$USAGE" 'd["by-model"]["http://127.0.0.1:'"$PORT"'/v1|local"]["prompt_cache_hit_tokens"]')
 if [ "$C" = "8" ]; then
   ok "供應商自己多回的 prompt_cache_hit_tokens 也累加（$C）"
 else
   fail "快取命中沒累加：$C"
 fi
-TK=$(llm_field "$USAGE" 'd["http://127.0.0.1:'"$PORT"'/v1|local"]["took_ms"] >= 0')
+TK=$(llm_field "$USAGE" 'd["by-model"]["http://127.0.0.1:'"$PORT"'/v1|local"]["took_ms"] >= 0')
 if [ "$TK" = "True" ]; then ok "took_ms 也記在同一列"; else fail "took_ms 不在：$TK"; fi
-KEYS=$(llm_field "$USAGE" 'len(d)')
-if [ "$KEYS" = "1" ]; then ok "同一個 endpoint+model 只佔一列"; else fail "用量鍵數不對：$KEYS"; fi
+KEYS=$(llm_field "$USAGE" '"%s %s" % (len(d["by-model"]), len(d["by-requester"]))')
+if [ "$KEYS" = "1 2" ]; then ok "同一個 endpoint+model 佔一列，兩個 requester 各自分帳"; else fail "用量鍵數不對：$KEYS"; fi
 
 # 49. aos-llm usage：印得出那張表
 OUT=$("$LLM" usage --dir "$TMP/llm" 2>&1); RC=$?
@@ -1839,7 +1842,7 @@ case "$OUT" in
   *) fail "ls 的排隊中不對：$OUT" ;;
 esac
 case "$OUT" in
-  *"engine local: running 1/1"*"engine deepseek-flash: running 1/2"*)
+  *"engine local: running 1/1"*"engine deepseek-flash: running 1/10"*)
     ok "ls 每台引擎一行 running r/max" ;;
   *) fail "ls 的引擎那幾行不對：$OUT" ;;
 esac
@@ -2018,7 +2021,7 @@ else
   fail "同時跑的結果沒都回來"
 fi
 N=$(llm_field "$TMP/llm/usage/$(date +%Y-%m-%d).json" \
-  'd["http://127.0.0.1:'"$PORT"'/v1|m"]["requests"]')
+  'd["by-model"]["http://127.0.0.1:'"$PORT"'/v1|m"]["requests"]')
 if [ "$N" = "2" ]; then ok "兩個 worker 的用量紙條都折進當天帳本了（requests=2）"; else fail "用量沒折進去：$N"; fi
 kill_workers "$TMP/llm"
 rm -rf "$TMP"
@@ -2084,7 +2087,7 @@ else
   fail "死掉的請求沒搬走"
 fi
 E=$(llm_field "$TMP/llm/usage/$(date +%Y-%m-%d).json" \
-  'd["http://127.0.0.1:'"$PORT"'/v1|m"]["errors"]')
+  'd["by-model"]["http://127.0.0.1:'"$PORT"'/v1|m"]["errors"]')
 if [ "$E" = "1" ]; then ok "死掉也記進當天用量（errors=1）"; else fail "用量沒記到死掉：$E"; fi
 ST=$(llm_field "$TMP/llm/state.json" '"%s %s" % (d["served"], d["errors"])')
 if [ "$ST" = "0 1" ]; then ok "state.json 的 errors 也算到了"; else fail "state 不對：$ST"; fi
@@ -2114,7 +2117,7 @@ done
 OUT=$(llm_tick "$TMP/llm")
 RACE_STATE=$(llm_field "$TMP/llm/state.json" '"%s %s" % (d["served"], d["errors"])')
 RACE_BOOK=$(llm_field "$TMP/llm/usage/$(date +%Y-%m-%d).json" \
-  '"%s %s" % (d["http://127.0.0.1:'"$PORT"'/v1|m"]["requests"], d["http://127.0.0.1:'"$PORT"'/v1|m"]["errors"])')
+  '"%s %s" % (d["by-model"]["http://127.0.0.1:'"$PORT"'/v1|m"]["requests"], d["by-model"]["http://127.0.0.1:'"$PORT"'/v1|m"]["errors"])')
 if [ "$TAKEN" = "True" ] && [ "$RACE_STATE" = "1 0" ] && [ "$RACE_BOOK" = "1 0" ] \
    && [ -f "$TMP/llm/requests/done/race.json" ] && [ ! -f "$TMP/llm/results/race.json" ]; then
   ok "result 先被拿走仍靠完成標記正常收尾，帳本只算一次"

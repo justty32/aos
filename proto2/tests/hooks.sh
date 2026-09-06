@@ -39,6 +39,11 @@ def on_result(ctx, kind, name, result):
                             "has_choices": bool(result.get("choices"))})
 
 
+def on_main_result(ctx, name, result):
+    record(ctx, "main_result", {"name": name,
+                                 "has_choices": bool(result.get("choices"))})
+
+
 def on_system_prompt(ctx):
     record(ctx, "system")
     return "HOOK_SYSTEM_MARKER"
@@ -99,7 +104,7 @@ parent = json.load(open(os.path.join(kid, "parent.json"), encoding="utf-8"))
 pc = json.load(open(os.path.join(home, "contacts.json"), encoding="utf-8"))
 kc = json.load(open(os.path.join(kid, "contacts.json"), encoding="utf-8"))
 kids = json.load(open(os.path.join(home, "kids.json"), encoding="utf-8"))
-print(parent == {"name": "agent", "dir": world}, pc.get("kid") == kid,
+print(parent == {"name": "agent", "dir": world, "clock": "shared"}, pc.get("kid") == kid,
       kc.get("agent") == world, kids.get("kid", {}).get("dir") == kid)
 PYEOF2
 )
@@ -175,7 +180,7 @@ import json, sys
 e=json.load(open(sys.argv[1], encoding="utf-8")); q=json.load(open(sys.argv[2], encoding="utf-8"))
 s=json.load(open(sys.argv[3], encoding="utf-8"))
 system=q["messages"][0]["content"]
-print(all(k in e for k in ("idle","act","reply","system")), e.get("act",{}).get("tool") == "hook_ping",
+print(all(k in e for k in ("idle","act","reply","system","main_result")), e.get("act",{}).get("tool") == "hook_ping",
       "OVERRIDE_MARKER" in system, "原本的 hooktest prompt" not in system,
       "HOOK_SYSTEM_MARKER" in system, s.get("hook_state") == "saved")
 PYEOF2
@@ -184,6 +189,47 @@ PYEOF2
     ok "hooks：on_idle／on_act／on_reply／on_system_prompt 與 prompt override 都生效"
   else
     fail "hooks：一般掛勾或 prompt override 不對（reply=$reply，$got）"
+  fi
+  rm -rf "$root"
+}
+
+test_hook_order_and_duplicate() {
+  local root world home warning got
+  root=$(make_world hooks_order); world="$root/agent"; home="$world/agent"
+  mkdir -p "$home/packs"
+  for name in first second; do
+    cat > "$home/packs/$name.py" <<PYEOF2
+PROMPT = ""
+TOOLS = [{"name":"same", "description":"同名", "parameters":{"type":"object","properties":{}}}]
+def run(name, args, ctx):
+    return {"seen":["run-$name"]}
+def on_act(ctx, tool, args, result, took_ms):
+    return {"seen": list(result.get("seen") or []) + ["hook-$name"]}
+PYEOF2
+  done
+  python3 - "$home/tools.json" <<'PYEOF2'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p,encoding="utf-8")); d["packs"]=["first","second"]; d["tools"]=[]
+json.dump(d,open(p,"w",encoding="utf-8"),ensure_ascii=False,indent=2)
+PYEOF2
+  "$AUSER" say "$world" 'CALL same' >/dev/null 2>&1
+  agent_tick "$world"
+  warning=$("$AGENT" exec "$world" 2>&1 >/dev/null)
+  llm_pump "$root/llm" >/dev/null
+  agent_tick "$world"
+  agent_tick "$world"
+  got=$(python3 - "$home/prompts.json" <<'PYEOF2'
+import json,sys
+rows=json.load(open(sys.argv[1],encoding="utf-8"))
+tool=next(json.loads(row["content"]) for row in rows if row.get("role")=="tool")
+print(" ".join(tool["seen"]))
+PYEOF2
+)
+  if [ "$got" = "run-first hook-first hook-second" ] \
+     && printf '%s' "$warning" | grep -q '同名工具 same：前面的 first 優先'; then
+    ok "hooks：同名工具前包優先，on_act 依序改寫後交給模型"
+  else
+    fail "hooks：同名工具或 on_act 串接不對（$got；$warning）"
   fi
   rm -rf "$root"
 }
@@ -226,5 +272,6 @@ test_ctx_mail
 test_parent_contacts
 test_side_results
 test_all_hooks_and_override
+test_hook_order_and_duplicate
 test_clock_without_daemon
 test_missing_template

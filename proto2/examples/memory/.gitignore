@@ -1,6 +1,7 @@
 requests/
 results/
 state.json
+store.sqlite
 store.sqlite-journal
 store.sqlite-shm
 store.sqlite-wal

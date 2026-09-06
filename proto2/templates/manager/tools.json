@@ -1,4 +1,4 @@
 {
-  "packs": ["kids", "communication", "mailbox", "self"],
+  "packs": ["mailbox", "communication", "self", "kids", "cost", "review", "think", "branch"],
   "tools": []
 }

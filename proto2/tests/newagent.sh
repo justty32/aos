@@ -27,10 +27,10 @@ test_newagent_template() {
 test_newagent_packs() {
   local root got
   root=$(mktemp -d "$TEST_RUN_DIR/newagent-packs.XXXXXX")
-  "$AUSER" new "$root/world" --template chat --packs kids,shell >/dev/null 2>&1
+  "$AUSER" new "$root/world" --template chat --packs kids,fs >/dev/null 2>&1
   got=$(python3 -c 'import json,sys; print(",".join(json.load(open(sys.argv[1]))["packs"]))' \
         "$root/world/agent/tools.json")
-  if [ "$got" = "kids,shell" ]; then
+  if [ "$got" = "kids,fs" ]; then
     ok "newagent：--packs 覆蓋模板"
   else
     fail "newagent：--packs 沒有覆蓋模板（$got）"
@@ -122,7 +122,8 @@ test_newagent_packs_list() {
   if printf '%s' "$out" | grep -q '^kids ' \
      && printf '%s' "$out" | grep -q '^mailbox ' \
      && printf '%s' "$out" | grep -q '^self ' \
-     && printf '%s' "$out" | grep -q '^shell '; then
+     && printf '%s' "$out" | grep -q '^fs ' \
+     && ! printf '%s' "$out" | grep -q '^shell '; then
     ok "newagent：packs 列出現有工具包與一句說明"
   else
     fail "newagent：packs 列表不全（$out）"

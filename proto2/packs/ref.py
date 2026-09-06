@@ -1,6 +1,5 @@
 """ref 工具包 — 把太大的 JSON 工具結果收進本地 refs/。"""
 import datetime
-import hashlib
 import json
 import os
 import uuid
@@ -69,48 +68,8 @@ def on_act(ctx, tool, args, result, took_ms):
     value, original = ready
     if len(original) <= LIMIT:
         return
-    ref_id, pointer = _save(ctx, value, "工具 " + str(tool), len(original))
-    pending = ctx.state.get("ref_pending")
-    if not isinstance(pending, list):
-        pending = []
-        ctx.state["ref_pending"] = pending
-    pending.append({"digest": hashlib.sha256(original.encode("utf-8")).hexdigest(),
-                    "id": ref_id, "pointer": pointer})
-
-
-def on_system_prompt(ctx):
-    """act 掛勾先存原文；下一次送模型前，把剛接進 prompts 的原文換成指標。"""
-    pending = ctx.state.get("ref_pending")
-    if not isinstance(pending, list) or not pending:
-        return ""
-    path = os.path.join(ctx.home, "prompts.json")
-    history = ctx.read_json(path, [])
-    if not isinstance(history, list):
-        return ""
-    left = []
-    changed = False
-    used = set()
-    for item in pending:
-        found = None
-        for index in range(len(history) - 1, -1, -1):
-            if index in used:
-                continue
-            msg = history[index]
-            content = msg.get("content") if isinstance(msg, dict) else None
-            if (isinstance(msg, dict) and msg.get("role") == "tool" and isinstance(content, str)
-                    and hashlib.sha256(content.encode("utf-8")).hexdigest() == item.get("digest")):
-                found = index
-                break
-        if found is None:
-            left.append(item)
-            continue
-        history[found]["content"] = _text(item["pointer"])
-        used.add(found)
-        changed = True
-    ctx.state["ref_pending"] = left
-    if changed:
-        ctx.write_json(path, history)
-    return ""
+    _ref_id, pointer = _save(ctx, value, "工具 " + str(tool), len(original))
+    return pointer
 
 
 def _parse_ref(value):

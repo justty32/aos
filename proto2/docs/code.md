@@ -25,7 +25,7 @@ agent 的 home 建議放在專案裡的 `.aos-agent/`。
 {"packs": ["code", "fs"], "tools": []}
 ```
 
-如果 `fs` 還沒裝好，可暫時開 `shell` 包跑指令。
+跑指令也用 `fs` 包裡的 `sh`。
 
 ## 坑
 
