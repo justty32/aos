@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""aos-daemon <register|unregister|pause|continue> <資料夾> — 對 kernel 提一個請求。
+
+自己什麼都不做，只是把一個請求檔丟進 `<daemon 目錄>/requests/`，等 kernel 撿走：
+
+  register    幫這個資料夾開一個時鐘（就是一個 aos-loop 進程一直推它）
+  unregister  關掉它的時鐘
+  pause       暫停（對時鐘的 process group 送 SIGSTOP）
+  continue    續跑（SIGCONT）
+
+daemon 目錄＝`--daemon`，沒給就用環境變數 AOS_DAEMON_DIR，都沒有就退 2。
+`--config x.json` 讀一個 JSON 檔當設定（只有 register 用得到）：`interval` 幾秒一格
+（預設 1）、`user` 用誰的身份跑（預設不寫＝跟 kernel 同一個身份、繼承呼叫者的權限；
+要換身份 kernel 得是 root 跑的）。不給 --config 就是默認方式。
+
+丟完會等 `requests/done/` 冒出同名檔（預設最多 10 秒，`--timeout` 可調），把 kernel
+的結果印出來，成功退 0、失敗退 1。`--no-wait` 只丟不等。kernel 沒在跑就不等，
+印一句「kernel 沒在跑，請求先放著」——等它起來就會處理。
+"""
+import argparse
+import json
+import os
+import sys
+import time
+from datetime import datetime
+
+
+def die(msg, code=2):
+    print("aos-daemon: " + msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def read_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read().strip()
+    except OSError:
+        return default
+    if not text:
+        return default
+    try:
+        return json.loads(text)
+    except ValueError:
+        return default
+
+
+def alive(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+    except OSError:
+        return False
+    return True
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-daemon")
+    ap.add_argument("op", choices=["register", "unregister", "pause", "continue"])
+    ap.add_argument("dir")
+    ap.add_argument("--config", default=None)
+    ap.add_argument("--daemon", default=None)
+    ap.add_argument("--no-wait", action="store_true")
+    ap.add_argument("--timeout", type=float, default=10)
+    args = ap.parse_args()
+
+    d = args.daemon or os.environ.get("AOS_DAEMON_DIR")
+    if not d:
+        die("沒給 daemon 目錄，也沒設 AOS_DAEMON_DIR")
+    home = os.path.abspath(os.path.expanduser(d))
+
+    config = {}
+    if args.config:
+        if not os.path.isfile(args.config):
+            die("找不到設定檔：" + args.config)
+        config = read_json(args.config, None)
+        if not isinstance(config, dict):
+            die("設定檔要是一個 JSON 物件：" + args.config)
+
+    world = os.path.realpath(os.path.expanduser(args.dir))
+    requests = os.path.join(home, "requests")
+    os.makedirs(requests, exist_ok=True)
+    name = datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json"
+    while os.path.exists(os.path.join(requests, name)):
+        time.sleep(0.001)
+        name = datetime.now().strftime("%Y%m%d-%H%M%S-%f") + ".json"
+    path = os.path.join(requests, name)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"op": args.op, "dir": world, "config": config},
+                  f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print("aos-daemon: 請求丟出去了 → " + path, file=sys.stderr)
+
+    if not alive(read_json(os.path.join(home, "kernel.json"), {}).get("pid")):
+        print("aos-daemon: kernel 沒在跑，請求先放著", file=sys.stderr)
+        return 0
+    if args.no_wait:
+        return 0
+
+    done = os.path.join(home, "requests", "done", name)
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        if os.path.isfile(done):
+            result = (read_json(done, {}) or {}).get("result") or {}
+            msg = result.get("message") or ""
+            ok = bool(result.get("ok"))
+            print("aos-daemon: " + ("ok " if ok else "失敗：") + msg, file=sys.stderr)
+            return 0 if ok else 1
+        time.sleep(0.2)
+    print("aos-daemon: 等了 %g 秒 kernel 還沒處理（請求還在 requests/）" % args.timeout,
+          file=sys.stderr)
+    return 1
+
+
+sys.exit(main())

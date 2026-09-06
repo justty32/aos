@@ -86,9 +86,8 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
 
 - **shared（時間沒脫節）**——在父的 `.aos/inst` 尾端加一行 `aos-exec <子名>`，父走一格它就跟著
   走一格，父不動它也不動，子自己沒有 loop。
-- **own（時間脫節）**——只建資料夾，父不推它。父有 `.aos/agent/daemon.json` 就自動登記給那個
-  daemon（名字 `<父名>-<子名>`，子也抄一份），生出來就有人推；沒有就要自己開 `aos-loop
-  <子路徑> --keep-inst` 才會走。
+- **own（時間脫節）**——資料夾建好就自動 `aos-daemon register <子路徑> --no-wait` 跟 daemon 要一個自己
+  的時鐘；沒設 `AOS_DAEMON_DIR` 就只建資料夾，印一句要自己開 `aos-loop <子路徑> --keep-inst`。
 
 `aos-agent-spawn <父資料夾> <子名> <人格文字> [--clock shared|own]`（預設 `shared`）。子名只准英
 數字／底線／減號，名字被佔走、或父沒有 `llm.json`，就印一句退 2。
@@ -96,23 +95,29 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
 範例 agent 的 `tools.json` 附了一個 `spawn` 工具，所以**agent 可以自己生小孩**：跟它說「生一個叫
 helper 的子 agent」，它就會挑好 clock 去呼叫 `aos-agent-spawn`，子資料夾直接長在它旁邊。
 
-## daemon：一個 loop 推所有資料夾
+## daemon：一個常駐 kernel，一個世界一個時鐘
 
-每個資料夾各開一個 `aos-loop` 很快就開不完，所以有 **daemon**：它自己也只是一個資料夾（`.aos/inst`
-寫 `aos-daemon-step .`，靠 `aos-loop` 轉），照登記表把別人各推一格。東西在 `<dir>/.aos/daemon/`：
-登記表 `registry/<名字>.json`（`{"dir": "路徑", "every": 1}`，`dir` 可絕對可相對——相對是相對於
-daemon 資料夾；`every` 是幾格推一次，缺就 1）、走到哪 `state.json`（`{"tick": N}`）。
-
-一格：`tick` 加一，登記表照檔名排序，輪到的就 `aos-exec <那個資料夾>`，每個印一行
-`aos-daemon-step: tick 3 llm exit 0`（沒輪到印 `skip`，讀不了或不見印一行跳過）。daemon 永遠回 0。
+每個資料夾各開一個 `aos-loop` 很快就開不完，所以有 **daemon**：一個一直跑著的進程（kernel），每隔一
+小段時間看有沒有人丟請求進來，照請求開／關／暫停時鐘。**一個時鐘就是一個獨立的 `aos-loop <世界>
+--keep-inst` 進程**，自己一個 process group——暫停送 SIGSTOP、續跑 SIGCONT、關掉 SIGTERM，排程直接用
+Linux 那套輪子。家在 `AOS_DAEMON_DIR`（例如 `~/.aosd`，**不在 repo 裡**，第一次 start 自己建）：
+`kernel.json`（pid／tick）、`kernel.log`、`requests/`（請求檔，處理完搬去 `requests/done/` 多一個
+`result`）、`clocks/<id>.json`（一個時鐘一個檔）、`logs/<id>.log`。`id` 是世界絕對路徑去掉開頭的 `/`、
+`/` 換成 `__`（`/tmp/a/b` → `tmp__a__b`），真路徑存在檔裡的 `dir`。**一個路徑只能有一個時鐘。**
 
 ```sh
-proto2/aos-daemon-register proto2/examples/daemon 某個資料夾 [--name 名字] [--every N]
-proto2/aos-daemon-unregister proto2/examples/daemon 名字
+aos-daemon-kernel start|restart|stop|ls [daemon 目錄]    # 不給就用 AOS_DAEMON_DIR，都沒有退 2
+aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-wait]
 ```
 
-名字省略就用目標資料夾的 basename，`dir` 一律寫絕對路徑（daemon 從哪被叫都不會錯），同名已經
-登記過退 2。agent 生 own 的子 agent 時會自己來登記，不用人工補。
+- `aos-daemon` 只把請求檔丟進 `requests/`，等 `done/` 冒出同名檔印結果；kernel 沒在跑就不等、請求先放
+  著。`--config` 例如 `{"interval": 2, "user": "bob"}`：幾秒一格（預設 1）、用誰的身份跑（不給＝繼承呼
+  叫者；要換身份 kernel 得是 root 跑的，內部靠 `runuser`）。`ls` 一行一個時鐘（state／pid／interval／
+  user／dir），第一行是 kernel 自己，沒 kernel 也看得到。
+- **stop 把所有時鐘一起收掉**，但時鐘檔留著，下次 `start` 自己接回來：pid 還活著就認領、死了就照原設
+  定重開（暫停中的會以 running 回來），資料夾不見了標 dead——世界走到哪存在世界自己的資料夾裡，接回
+  來就等於接上進度。時鐘自己死掉 kernel **不會**幫它重開，只把 state 標成 `dead` 留在 ls 上。
+- 幾千個時鐘就是幾千個小 json 檔，現在夠用；管理介面、合併檔案是以後的事，不歸 kernel 管。
 
 ## 為什麼另起爐灶
 
@@ -124,27 +129,23 @@ proto2/aos-daemon-unregister proto2/examples/daemon 名字
 
 ## 怎麼玩
 
-`examples/daemon` 的登記表已經登記好 `../llm` 跟 `../agent`，所以**只要兩個終端機**：
-
 ```sh
-proto2/aos-loop proto2/examples/daemon --keep-inst   # 1：daemon 輪流推 llm 跟 agent（LM Studio 要先載一顆模型）
-proto2/aos-agent-talk proto2/examples/agent          # 2：聊天
+export PATH="$PWD/proto2:$PATH"
+export AOS_DAEMON_DIR=~/.aosd
+aos-daemon-kernel start                     # kernel 常駐起來（LM Studio 要先載一顆模型）
+aos-daemon register proto2/examples/llm     # LLM 資料夾一個時鐘
+aos-daemon register proto2/examples/agent   # agent 一個時鐘
+aos-agent-talk proto2/examples/agent        # 聊天（另一個終端機 aos-daemon-kernel ls 看誰在跑）
+aos-daemon pause proto2/examples/agent      # 凍住它（真的送 SIGSTOP），continue 再放它走
+aos-daemon-kernel stop                      # 玩完，時鐘一起收掉
 ```
 
-也可以各開各的 loop（llm 一個、agent 一個），daemon 只是幫你省終端機。
-
-`examples/agent/.aos/agent/llm.json` 是 `{"dir": "../llm"}`、`daemon.json` 是 `{"dir": "../daemon"}`，
-三個資料夾要當兄弟目錄一起搬。agent 沒反應時，先看終端機 1 有沒有印 `打不通`（模型沒載或連不上）、
-是不是一直印 `等 LLM`，或 `沒有 .aos/inst`（資料夾沒附心跳指令）。不想開 agent、只想問一句話：
-`echo '{"messages":[{"role":"user","content":"1+1=?"}]}' | proto2/aos-llm-ask proto2/examples/llm`。
-
-其他跑法：
-```sh
-proto2/aos-exec proto2/examples/hello.sh
-proto2/aos-loop proto2/examples/loop --stop-when-empty --interval 0
-bash proto2/test.sh
-```
+時鐘的輸出在 `$AOS_DAEMON_DIR/logs/`：agent 沒反應就去那裡看有沒有「打不通」（模型沒載或連不上）、是
+不是一直「等 LLM」、或「沒有 .aos/inst」。不想開 daemon 也行，一個終端機開一個 `aos-loop <資料夾>
+--keep-inst` 效果一樣。其他跑法：`aos-exec examples/hello.sh`、`aos-loop examples/loop
+--stop-when-empty --interval 0`、`bash proto2/test.sh`；只想問一句話不開 agent：`echo
+'{"messages":[{"role":"user","content":"1+1=?"}]}' | proto2/aos-llm-ask proto2/examples/llm`。
 
 ## 目前刻意不做
 
-鎖、崩潰恢復、fsync、並發、逾時、重試、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
+鎖、時鐘掛了自動重開、fsync、並發、逾時、重試、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
