@@ -29,3 +29,19 @@
 ## agent 的常規 tool 與預設 prompt
 
 然後是agent的一些常規tool，包括使用shell指令，查看自身狀況的指令（context/運行時長/資料夾大小...)，產生與管理子agent的指令（父子的聯繫與時鐘脫節與否無關，這是管理權/從屬的問題），這些工具套件通常還會搭配一些預設prompt，這會是後續最有趣的部份，也就是規劃一個bot。
+
+## 續：介面與底層要分開、daemon 的用法
+
+以下是同一天稍後的補充原文，
+
+我們現在做的這些工具都是cli型式，這主要是方便使用者使用。後續會把使用界面（也就是目前現有的cli功能規劃），還有底層運行機制分開，但目前的粗糙原型可以暫時先這樣就好。然後我重新審視整個底層架構，也就是daemon-世界-時鐘這個...
+
+我之後預期的使用方式，是我會有一個環境變數：AOS_DAEMON_DIR，指向~/.aosd，然後我會把他註冊進systemd（這個以後再說，目前還是需要使用者手動輸入指令aos-daemon-kernel start/restart/stop ~/，其中~/可以省略，默認~/），然後他就會啟用一個持續性進程，內部實作怎樣都可以，怎麼方便怎麼來。指令aos-daemon是一個可以在PATH內被吃到的東西。然後我可以用aos-daemon register/unregister --config config.json xxx，來對xxx這個資料夾啟用時鐘，不指定config，那就是用默認方式啟用（繼承該指令的呼叫者的身份權限，使用默認設定）。也有aos-daemon-kernel ls，可以用來看現在有哪些時鐘在跑。想要暫時停止某個時鐘，也可以用aos-daemon pause/continue xxx，對，一個資料夾路徑只能有一個時鐘，所以這個路徑就是這個時鐘的id。內部實作這塊看是要丟檔案還是啥都可以，怎麼方便怎麼來。
+
+那個aos-daemon-kernel start/restart/stop xxx，xxx如果不給，那就是AOS_DAEMON_DIR，如果沒有AOS_DAEMON_DIR就報錯。換成這樣吧。
+
+現有的，已經register的時鐘，他的訊息也可以用檔案的方式儲存
+
+還需要考慮aos-daemon在重啟後，能否接續先前的進度。然後我也在擔心，以後如果有成千上百個時鐘，那麼會不會很難管理，但這個是以後的事了，內部核心就是這樣就好，頂多相關.json檔案可以做合併減少體積，管理這塊就是後續另外做介面，核心機制就先這樣
+
+（這段用法已在 proto2 落地，見 [README](../README.md) 的 daemon 一節。）
