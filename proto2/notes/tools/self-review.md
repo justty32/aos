@@ -91,6 +91,29 @@ agent 不能改 `system-prompt.json`、`llm.json`、`.aos/inst`、出廠的 `pac
 - `aos_agent.py` 在帳本補記成功與錯誤種類，並在 `idle` 檢查提醒規則。
 - `.gitignore` 忽略 `ledger/`、`thoughts/`、`branches/`、`prompt-overrides/`、`memory/lessons.md` 與 `memory/lessons-archive/`。
 
+## 跟成本綁在一起
+
+回顧的主軸就是錢跟時間。每個任務都算 token、錢、格數和秒數，再跟上次同類任務比，看是變貴還是變便宜。
+
+「同類任務」第一版可以拿第一封任務信的前 N 字做粗略 key。也可以讓模型在 lesson 裡自己標 tag；有 tag 就優先用 tag。
+
+除了原本的提醒規則，下面任何一條成立，也往 `<home>/inbox/self/` 丟一封「該回顧了」的信：
+
+- 一天花費超過門檻。
+- 單一任務花費超過同類任務平均的兩倍。
+- 某個工具連續三次都超過它的成本門檻。
+
+`review_patterns()` 改成按錢排：先列最貴的工具，再列最貴的任務，最後列最常重複叫卻沒有進展的工具。打轉就是燒錢，每項都附次數、錢、格數和秒數。
+
+lesson 要帶數字，格式改成「同類任務／tag：原本平均 X 元／Y 格 → 改法 → 之後平均 Z 元／W 格」。下次回顧自動拿新紀錄比對這條教訓有沒有真的省到；錢和格數都沒下降，就標記「無效」。
+
+token 依 `engines.json` 的 `price` 換成錢；沒寫單價就留 `null`，不猜。
+
+LLM 世界從 `usage/<day>.json` 的 `by-requester` 分帳取每個 agent 的花費，再跟自己 ledger 裡的任務和工具對上。
+
+- T-60a：回顧的成本門檻寫死，還是放 `llm.json`？建議放 `llm.json`，不同世界可以用不同預算。
+- T-60b：無效教訓自動刪掉，還是留著標記？建議留著標「無效」，免得下次又試同一個沒用的改法。
+
 ## 現在故意不做的邊緣狀況
 
 - 不判斷教訓彼此矛盾，也不自動合併相似教訓。
