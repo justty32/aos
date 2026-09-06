@@ -67,3 +67,21 @@ OK，dead 先這樣。然後daemon會定期檢查，若發現有鐘dead了，他
 priority和engine沒填的話，那就是用aos llm自己設定中的默認值
 
 （已落地：commit d6ec2b6，預設值放 .aos/llm/defaults.json；用法在 [README](../README.md)。）
+
+## 續四：aos-llm exec 與併發、產請求 helper、資料夾版面、回到 aos-agent
+
+以下是同一天下午稍晚的補充原文，
+
+aos-llm send這個還是刪掉吧，這只是一個薄包裝，現在先不要用，就先單純的自己產請求.json，自己找資料夾，自己寫入檔案。aos-llm exec才是每次tick的時候要執行的，也就是蒐集檔案，判斷優先順序，跑...。對了，因為endpoint有多個，所以aos-llm exec也可以自己管理哪些endpoint一次最多可以同時跑多少請求，比如一次最多同時跑兩個deepseek，一個lm studio。
+
+產請求這件事，可以弄一個helper，之後讓agent用
+
+然後回來搞aos-agent，一樣，狀態機
+
+喔對了，aos-llm那邊，他的所在資料夾xxx，那個xxx/.aos/下，可以只有一個inst，和一些必要的東西，各種相關engine, endpoint設定，helper code等，都可以直接放在xxx下
+
+（agent 資料夾是否也照「.aos/ 只留 inst」的原則——）要
+
+agent那邊，我希望能夠用設置的，比如放在xxx/agent，或是xxx/.aos/agent。
+
+（1、2、4 已落地：commit c6d3288；3、5、6 是 aos-agent 下一輪的依據。）
