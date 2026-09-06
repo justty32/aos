@@ -60,6 +60,7 @@ DIRECT_SOURCE = "user"      # 這個來源的信直接進 prompt，不用叫模�
 CHILD_INST = "aos-agent exec .\n"
 SH_TIMEOUT = 60
 CUT = 4000
+TEAM_BUDGET_KEYS = ("tokens", "hours", "ticks", "disk_mb", "mem_mb", "money_usd")
 
 
 def warn(msg):
@@ -433,6 +434,312 @@ def status_of(world, home):
             "today_usage_all": today_usage_all(home, world)}
 
 
+# ── 整隊共用家務 ──────────────────────────────────────────────────────────
+def team_root_of(world):
+    """從任一成員世界往上找。找到 team/team.json 就是工作室根。"""
+    current = os.path.abspath(world)
+    seen = set()
+    for _ in range(4):
+        if current in seen:
+            break
+        seen.add(current)
+        team_file = os.path.join(current, "team", "team.json")
+        if os.path.isfile(team_file):
+            roster = read_json(team_file, {})
+            declared = roster.get("root") if isinstance(roster, dict) else None
+            if isinstance(declared, str) and os.path.isfile(
+                    os.path.join(os.path.abspath(declared), "team", "team.json")):
+                return os.path.abspath(declared)
+            return current
+        home = resolve_home(current, None)
+        parent = read_json(os.path.join(home, "parent.json"), None)
+        if not isinstance(parent, dict) or not parent.get("dir"):
+            break
+        current = os.path.abspath(parent["dir"])
+    return None
+
+
+def team_member_name(world):
+    """工作室根資料夾可以叫 studio，但住在裡面的人仍叫 owner。"""
+    root = team_root_of(world)
+    if not root:
+        return None
+    roster = read_json(os.path.join(root, "team", "team.json"), {})
+    target = os.path.realpath(world)
+    for member in roster.get("members", []) if isinstance(roster, dict) else []:
+        if not isinstance(member, dict):
+            continue
+        path = os.path.realpath(os.path.join(root, member.get("path") or "."))
+        if path == target:
+            return member.get("name")
+    return None
+
+
+def team_requester(world):
+    root = team_root_of(world)
+    member = team_member_name(world)
+    if not root or not member:
+        return None
+    roster = read_json(os.path.join(root, "team", "team.json"), {})
+    team_name = roster.get("name") if isinstance(roster, dict) else None
+    return "%s/%s" % (team_name or os.path.basename(root), member)
+
+
+def _team_number(value):
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
+
+
+def normalize_team_budget(base, override=None):
+    """预算版面只用少數固定欄位；memory_mb 舊寫法也收。"""
+    data = dict(base) if isinstance(base, dict) else {}
+    override = dict(override) if isinstance(override, dict) else {}
+    if "memory_mb" in data and "mem_mb" not in data:
+        data["mem_mb"] = data.pop("memory_mb")
+    if "memory_mb" in override and "mem_mb" not in override:
+        override["mem_mb"] = override.pop("memory_mb")
+    for key, value in override.items():
+        if key in TEAM_BUDGET_KEYS or key == "reserve_pct":
+            data[key] = value
+    for key in TEAM_BUDGET_KEYS:
+        value = data.get(key, 0)
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+            raise ValueError("預算 %s 要是不小於 0 的數字" % key)
+        data[key] = value
+    reserve = data.get("reserve_pct", 10)
+    if not isinstance(reserve, (int, float)) or isinstance(reserve, bool) or not 0 <= reserve <= 100:
+        raise ValueError("reserve_pct 要在 0 到 100 之間")
+    data["reserve_pct"] = reserve
+    return data
+
+
+def _budget_part(total, pct):
+    return {key: round(_team_number(total.get(key)) * pct / 100.0, 6)
+            for key in TEAM_BUDGET_KEYS}
+
+
+def _team_member_world(root, member):
+    return os.path.abspath(os.path.join(root, member.get("path") or "."))
+
+
+def _team_unread(home):
+    return sum(len(unread_names(home, source)) for source in sources(home))
+
+
+def _team_ledger_money(home, day):
+    path = os.path.join(home, "ledger", day + ".jsonl")
+    total = 0.0
+    if not os.path.isfile(path):
+        return total
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                round_info = row.get("llm_round") if isinstance(row, dict) else None
+                cost = round_info.get("cost") if isinstance(round_info, dict) else None
+                if isinstance(cost, (int, float)) and not isinstance(cost, bool):
+                    total += cost
+    except OSError:
+        return 0.0
+    return round(total, 12)
+
+
+def _team_usage(root, roster, day):
+    usage = {}
+    owner = next((m for m in roster.get("members", [])
+                  if isinstance(m, dict) and m.get("name") == roster.get("leader", "owner")), None)
+    if not owner:
+        return usage
+    owner_world = _team_member_world(root, owner)
+    owner_home = resolve_home(owner_world, None)
+    llm = find_llm(owner_home, owner_world)
+    book = read_json(os.path.join(llm, "usage", day + ".json"), {}) if llm else {}
+    rows = book.get("by-requester") if isinstance(book, dict) else {}
+    return rows if isinstance(rows, dict) else {}
+
+
+def team_status_of(world):
+    """CLI 與 team 包共用的整隊快照。"""
+    root = team_root_of(world)
+    if not root:
+        raise ValueError("找不到 team/team.json：" + os.path.abspath(world))
+    roster = read_json(os.path.join(root, "team", "team.json"), {})
+    if not isinstance(roster, dict) or not isinstance(roster.get("members"), list):
+        raise ValueError("team/team.json 的名冊壞了")
+    budget_book = read_json(os.path.join(root, "team", "budget.json"), {})
+    budget_book = budget_book if isinstance(budget_book, dict) else {}
+    total_budget = normalize_team_budget(budget_book.get("total") or roster.get("budget") or {})
+    allocations = budget_book.get("allocations")
+    allocations = allocations if isinstance(allocations, dict) else {}
+    day = datetime.date.today().isoformat()
+    usage = _team_usage(root, roster, day)
+    rows = []
+    total_spent = {key: 0 for key in TEAM_BUDGET_KEYS}
+    for member in roster["members"]:
+        if not isinstance(member, dict) or not member.get("name"):
+            continue
+        name = member["name"]
+        member_world = _team_member_world(root, member)
+        home = resolve_home(member_world, None)
+        state = read_json(os.path.join(home, "state.json"), {})
+        state = state if isinstance(state, dict) else {}
+        requester = os.path.basename(member_world.rstrip(os.sep)) if name != "owner" else name
+        used = usage.get("%s/%s" % (roster.get("name") or os.path.basename(root), name))
+        if not isinstance(used, dict):
+            used = usage.get(requester)
+        used = used if isinstance(used, dict) else {}
+        tokens = _team_number(used.get("total_tokens"))
+        if not tokens:
+            tokens = _team_number(used.get("prompt_tokens")) + _team_number(used.get("completion_tokens"))
+        spent = {"tokens": tokens, "hours": 0, "ticks": _team_number(state.get("step")),
+                 "disk_mb": round(folder_bytes(member_world) / (1024.0 * 1024.0), 6),
+                 "mem_mb": None, "money_usd": _team_ledger_money(home, day)}
+        limit = allocations.get(name)
+        limit = limit if isinstance(limit, dict) else {key: 0 for key in TEAM_BUDGET_KEYS}
+        remaining = {}
+        for key in TEAM_BUDGET_KEYS:
+            remaining[key] = None if spent[key] is None else round(
+                _team_number(limit.get(key)) - _team_number(spent[key]), 6)
+        for key in ("tokens", "ticks", "money_usd"):
+            total_spent[key] += _team_number(spent[key])
+        rows.append({"name": name, "role": member.get("role") or name,
+                     "path": member.get("path") or ".", "clock": member.get("clock") or "shared:owner",
+                     "active": member.get("active", True),
+                     "state": (state.get("state") or "idle") if member.get("active", True) else "stopped",
+                     "busy": _team_number(state.get("busy")), "unread": _team_unread(home),
+                     "today_spent": spent, "budget": limit, "remaining": remaining})
+    total_spent["disk_mb"] = round(folder_bytes(root) / (1024.0 * 1024.0), 6)
+    total_spent["mem_mb"] = None
+    created = roster.get("created")
+    if created:
+        try:
+            total_spent["hours"] = round(max(0, time.time() - datetime.datetime.fromisoformat(
+                created).timestamp()) / 3600.0, 6)
+        except (TypeError, ValueError):
+            total_spent["hours"] = 0
+    remaining = {key: (None if total_spent[key] is None else round(
+        _team_number(total_budget.get(key)) - _team_number(total_spent[key]), 6))
+                 for key in TEAM_BUDGET_KEYS}
+    return {"name": roster.get("name") or os.path.basename(root), "root": root,
+            "preset": roster.get("preset"), "day": day, "budget": total_budget,
+            "spent": total_spent, "remaining": remaining, "members": rows}
+
+
+def create_team_world(world, preset_dir, engine=None, budget=None):
+    """用 preset 一次寫好根世界、成員、名冊、通訊錄與共用區。"""
+    world = os.path.abspath(world)
+    if os.path.exists(world):
+        raise ValueError("資料夾已經存在，不會蓋掉：" + world)
+    preset = read_json(os.path.join(preset_dir, "team.json"), None)
+    if not isinstance(preset, dict) or not isinstance(preset.get("members"), list):
+        raise ValueError("preset 的 team.json 形狀不對")
+    members = [dict(m) for m in preset["members"] if isinstance(m, dict)]
+    names = [m.get("name") for m in members]
+    if len(names) != len(set(names)) or any(not NAME_OK.match(str(n or "")) for n in names):
+        raise ValueError("preset 的成員名單有重複或壞名字")
+    total = normalize_team_budget(preset.get("budget") or {}, budget)
+    llm_path = os.environ.get("AOS_LLM_DIR") or preset.get("llm_dir") or "../llm"
+    if not os.path.isabs(llm_path):
+        llm_path = os.path.abspath(os.path.join(world, llm_path))
+    os.makedirs(world)
+    created = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+
+    worlds = {}
+    for member in members:
+        name = member["name"]
+        member_world = os.path.abspath(os.path.join(world, member.get("path") or "."))
+        worlds[name] = member_world
+        os.makedirs(os.path.join(member_world, ".aos"), exist_ok=True)
+        os.makedirs(os.path.join(member_world, "inbox"), exist_ok=True)
+        os.makedirs(os.path.join(member_world, "outbox"), exist_ok=True)
+        with open(os.path.join(member_world, ".aos", "inst"), "w", encoding="utf-8") as f:
+            f.write(CHILD_INST)
+        persona_file = member.get("persona") or "%s/system-prompt.json" % name
+        prompts_file = member.get("prompts") or "%s/prompts.json" % name
+        persona = read_json(os.path.join(preset_dir, persona_file), None)
+        prompts = read_json(os.path.join(preset_dir, prompts_file), None)
+        if not isinstance(persona, dict) or not isinstance(prompts, list):
+            raise ValueError("preset 的 %s 人格或起手信壞了" % name)
+        write_json_atomic(os.path.join(member_world, "system-prompt.json"), persona)
+        write_json_atomic(os.path.join(member_world, "prompts.json"), prompts)
+        write_json_atomic(os.path.join(member_world, "tools.json"),
+                          {"packs": list(member.get("packs") or []), "tools": []})
+        member_engine = engine or member.get("engine")
+        llm_conf = {"dir": os.path.relpath(llm_path, member_world), "priority": 1}
+        if member_engine and member_engine not in ("cheap", "thinking"):
+            llm_conf["engine"] = member_engine
+        elif engine:
+            llm_conf["engine"] = engine
+        write_json_atomic(os.path.join(member_world, "llm.json"), llm_conf)
+        write_json_atomic(os.path.join(member_world, "state.json"),
+                          {"state": "idle", "step": 0, "busy": 0, "request": "",
+                           "last_usage": None, "started": now_iso(), "pending": [],
+                           "empty_replies": 0})
+        member["active"] = True
+        if name != preset.get("leader", "owner"):
+            write_json_atomic(os.path.join(member_world, "parent.json"),
+                              {"name": preset.get("leader", "owner"), "dir": world,
+                               "clock": "own" if member.get("clock") == "own" else "shared"})
+
+    contacts = {name: path for name, path in worlds.items()}
+    user_dir = os.environ.get("AOS_USER_DIR")
+    for name, member_world in worlds.items():
+        own_contacts = {other: path for other, path in contacts.items() if other != name}
+        if name == "sales" and user_dir:
+            own_contacts["user"] = os.path.abspath(user_dir)
+        write_json_atomic(os.path.join(member_world, "contacts.json"), own_contacts)
+    team_dir = os.path.join(world, "team")
+    os.makedirs(os.path.join(team_dir, "projects"), exist_ok=True)
+    os.makedirs(os.path.join(team_dir, "notes"), exist_ok=True)
+    os.makedirs(os.path.join(team_dir, "files", "final"), exist_ok=True)
+    for member in members:
+        if member["name"] == preset.get("leader", "owner"):
+            continue
+        member_world = worlds[member["name"]]
+        os.symlink(os.path.relpath(team_dir, member_world), os.path.join(member_world, "team"))
+    for name in names:
+        os.makedirs(os.path.join(team_dir, "files", name), exist_ok=True)
+        with open(os.path.join(team_dir, "notes", name + ".md"), "w", encoding="utf-8") as f:
+            f.write("")
+    with open(os.path.join(team_dir, "notes", "shared.md"), "w", encoding="utf-8") as f:
+        f.write("# 共用筆記\n")
+    runtime = dict(preset)
+    runtime.update({"root": world, "llm_dir": llm_path, "budget": total,
+                    "created": created, "members": members})
+    write_json_atomic(os.path.join(team_dir, "team.json"), runtime)
+    team_contacts = dict(contacts)
+    if user_dir:
+        team_contacts["user"] = os.path.abspath(user_dir)
+    write_json_atomic(os.path.join(team_dir, "contacts.json"), team_contacts)
+    allocations = {member["name"]: _budget_part(total, _team_number(member.get("budget_pct")))
+                   for member in members}
+    write_json_atomic(os.path.join(team_dir, "budget.json"),
+                      {"schema": "aos-team-budget/1", "total": total,
+                       "allocations": allocations, "grants": [], "updated": created})
+    with open(os.path.join(team_dir, "progress.md"), "w", encoding="utf-8") as f:
+        f.write("# 進度\n")
+    registry = {}
+    for member in members:
+        if member["name"] == preset.get("leader", "owner"):
+            continue
+        registry[member["name"]] = {
+            "name": member["name"], "dir": worlds[member["name"]],
+            "clock": "own" if member.get("clock") == "own" else "shared",
+            "created": created, "depth": 1, "parent": world, "alive": True,
+            "task": None, "reports_to": member.get("reports_to"),
+        }
+    write_json_atomic(os.path.join(world, "kids.json"), registry)
+    inst = os.path.join(world, ".aos", "inst")
+    for member in members:
+        if member["name"] != preset.get("leader", "owner") and member.get("clock") != "own":
+            append_line(inst, "aos-exec " + os.path.relpath(worlds[member["name"]], world))
+    with open(os.path.join(world, ".gitignore"), "w", encoding="utf-8") as f:
+        f.write("state.json\nllm-result.json\ninbox/\noutbox/\n")
+    return runtime
+
+
 # ── 工具包拿得到的把手 ────────────────────────────────────────────────────
 class Ctx:
     """交給工具包 `run(name, args, ctx)` 的小把手：世界在哪、本體在哪，
@@ -446,7 +753,7 @@ class Ctx:
     def __init__(self, world, home, state=None, loaded=None, pack=None):
         self.world = os.path.abspath(world)
         self.home = os.path.abspath(home)
-        self.name = os.path.basename(self.world.rstrip(os.sep)) or "agent"
+        self.name = team_member_name(self.world) or os.path.basename(self.world.rstrip(os.sep)) or "agent"
         self.state = state if isinstance(state, dict) else read_json(
             os.path.join(self.home, "state.json"), {})
         if not isinstance(self.state, dict):
@@ -553,7 +860,8 @@ class Ctx:
         kind = str(kind or "side")
         name = aos_llm.write_request(
             self.llm_dir(), body, priority=priority, engine=engine,
-            name="%s-%s" % (self.name, kind), requester=requester or self.name,
+            name="%s-%s" % (self.name, kind),
+            requester=requester or team_requester(self.world) or self.name,
             kind=schedule_kind, deadline=deadline)
         pending = self.state.get("pending")
         if not isinstance(pending, list):

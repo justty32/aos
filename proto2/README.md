@@ -89,6 +89,7 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 | `ref` | 把太大的 JSON 結果收成可重開的指標。 | [docs/ref.md](docs/ref.md) |
 | `review` | 回顧成本、失敗、思考與可重用教訓。 | [docs/review.md](docs/review.md) |
 | `self` | 看自己的狀態、身分、時間與花費。 | [docs/self.md](docs/self.md) |
+| `team` | 看整隊、分預算與追加共用進度。 | [docs/studio.md](docs/studio.md) |
 | `think` | 把難題交給旁線深思，再拿短結論。 | [docs/think.md](docs/think.md) |
 | `toolsmith` | 把常用指令做成自己的工具或包。 | [docs/toolsmith.md](docs/toolsmith.md) |
 
@@ -117,6 +118,9 @@ spawn 也會寫小孩的 `parent.json`、父子雙方的 `contacts.json`、父�
 `proto2/templates/<名字>/` 找；目錄還不存在就直接略過。
 
 ## 給人用的殼：aos-user
+
+`aos-user team new <世界> --preset studio` 一次開七人工作室，`team status` 看全隊，`team stop` 收鐘留檔。
+`aos-user order <世界> "任務" --budget '{"tokens":200000,"hours":1}' --accept "驗收條件"` 只把訂單交給 sales。
 
 `aos-user say|listen|talk|status|spawn <世界> [--home DIR]`。**這支是暫時的殼**：使用者之後
 會被當成一個 agent，這些動作會變成 agent 之間的交流，特殊地位到時再談。
