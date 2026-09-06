@@ -81,7 +81,8 @@ def _cost(row, price):
 
 def _self_status(ctx):
     status = ctx.status()
-    chars = int(status.get("history_chars") or 0)
+    chars = int((status.get("memory") or {}).get("chars") or 0)
+    status["history_chars"] = chars
     status["history_tokens"] = chars // 3
     status["history_pct"] = round(chars * 100 / MEMORY_LIMIT, 1)
     return status
@@ -109,30 +110,6 @@ def _self_cost(args, ctx):
     }
 
 
-def _clock_of(ctx, parent):
-    if not parent:
-        return "own"
-    if parent.get("clock") in ("shared", "own"):
-        return parent["clock"]
-    parent_world = parent.get("dir") or parent.get("parent")
-    if not isinstance(parent_world, str):
-        return "own"
-    inst = os.path.join(parent_world, ".aos", "inst")
-    try:
-        with open(inst, encoding="utf-8", errors="replace") as f:
-            lines = f.read().splitlines()
-    except OSError:
-        return "own"
-    child = os.path.abspath(ctx.world)
-    for line in lines:
-        if not line.startswith("aos-exec "):
-            continue
-        path = line[len("aos-exec "):].strip()
-        if os.path.abspath(os.path.join(parent_world, path)) == child:
-            return "shared"
-    return "own"
-
-
 def _self_who(ctx):
     parent = ctx.parent()
     kids = ctx.kids()
@@ -144,7 +121,7 @@ def _self_who(ctx):
         "name": ctx.name,
         "world": ctx.world,
         "parent": parent_path,
-        "clock": _clock_of(ctx, parent),
+        "clock": ctx.clock_of(ctx.world),
         "kids": {"count": len(names), "names": names},
         "llm_dir": ctx.find_llm(),
     }
@@ -152,10 +129,11 @@ def _self_who(ctx):
 
 def _self_time(ctx):
     status = ctx.status()
+    memory = status.get("memory") or {}
     return {
         "now": datetime.datetime.now().isoformat(timespec="seconds"),
-        "started": status.get("started"),
-        "uptime_s": status.get("uptime_s"),
+        "started": memory.get("started"),
+        "uptime_s": memory.get("uptime_s"),
     }
 
 

@@ -68,8 +68,9 @@ parent = pack.run("self_who", {}, Ctx(world, home))
 kid_world = os.path.join(home, "kids", "kid")
 kid = pack.run("self_who", {}, Ctx(kid_world, kid_world))
 print(parent["name"] == "agent" and parent["parent"] is None
-      and parent["clock"] == "own" and parent["kids"] == {"count": 1, "names": ["kid"]}
-      and kid["parent"] == world and kid["clock"] == "shared" and kid["llm_dir"] is not None)
+      and parent["clock"] == {"kind":"none","state":"missing"}
+      and parent["kids"] == {"count": 1, "names": ["kid"]}
+      and kid["parent"] == world and kid["clock"]["kind"] == "shared" and kid["llm_dir"] is not None)
 PYEOF2
 )
   if [ "$got" = "True" ]; then ok "selfmem：self_who 用 parent／kids 說清楚父子與 shared 鐘"; else fail "self_who 不對：$got"; fi
@@ -189,7 +190,7 @@ PYEOF2
 import glob, json, os, sys
 h=sys.argv[1]; s=json.load(open(os.path.join(h,"state.json"), encoding="utf-8"))
 print(len(glob.glob(os.path.join(h,"inbox","self","*.json"))) == 1,
-      s.get("nudged_at_step") == 0, s.get("state") == "llm")
+      s.get("nudged_at_step") == 0, s.get("state") == "idle")
 PYEOF2
 )
   if [ "$got" = "True True True" ]; then ok "selfmem：記憶超過 40000 字就往 inbox/self 提醒一次"; else fail "40000 字提醒不對：$got"; fi

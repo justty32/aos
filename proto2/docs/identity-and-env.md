@@ -22,24 +22,18 @@
 金鑰只用 `env_from`。只有 LLM 世界的鐘可以指向金鑰檔。
 agent 世界的鐘不要指。
 
-## 關掉舊相容模式
+## 舊相容模式
 
 在 daemon 目錄寫 `config.json`：
 
 ```json
 {
-  "legacy_env": false
+  "legacy_env": true
 }
 ```
 
-目前沒寫時，預設是 `true`。
-這是為了不弄壞已經在跑的共用環境。
-
-`true` 會把 kernel 的整包環境交給每顆鐘。
-kernel 的 shell 若有金鑰，agent 也看得到。
-
-下一步要把預設改成 `false`。
-在那之前，要隔開金鑰的 daemon 必須明寫 `false`。
+沒寫時預設 `false`，時鐘只拿乾淨基本環境。只有舊環境需要整包繼承時才設
+`true`；kernel shell 裡的金鑰也會一起暴露給 agent。
 
 ## 時鐘設定
 
@@ -128,7 +122,6 @@ shared 小孩與暫停功能還會改它。
 
 ## 坑
 
-- 安全模式目前不是預設。要自己寫 `legacy_env: false`。
 - `env_from` 請寫絕對路徑。設定檔裡的相對路徑由 kernel 的工作目錄解讀。
 - 改了 `llm.env`，已經在跑的鐘不會立刻換環境。要重開那顆鐘。
 - `env_from` 只檢查檔案模式是 600。沒有處理 ACL、符號連結或檔案被同時換掉。

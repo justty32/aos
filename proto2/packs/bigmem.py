@@ -1,13 +1,10 @@
 """bigmem 工具包 — 非阻塞地跟獨立記憶世界交換 requests/results。"""
-import datetime
 import json
 import os
-import uuid
 
 
 PROMPT = ("長期記憶：mem_put 存、mem_find 找、mem_get 讀全文、mem_forget 忘記。"
-          "工具先回 queued；排完就直接回話，不要在同一輪輪詢。回到 idle 後結果才會進 mem 信箱。"
-          "看到新信通知再讀結果。長對話可用 mem_archive_history 歸檔。")
+          "送出後系統會睡著，結果回來會直接接回對話。長對話可用 mem_archive_history 歸檔。")
 
 TOOLS = [
     {"name": "mem_put", "description": "把一件日後還會用到的事放進長期記憶。",
@@ -40,25 +37,20 @@ def _mem_dir(ctx):
     where = conf.get("mem_dir") or os.environ.get("AOS_MEM_DIR") or ""
     if not where:
         return None
-    return os.path.abspath(os.path.join(ctx.world, where)) if not os.path.isabs(where) else os.path.abspath(where)
+    return ctx.world_of(where)
 
 
 def _queue(ctx, op, args, archive=None):
     mem = _mem_dir(ctx)
     if not mem:
         return {"error": "沒設定記憶世界；請在 llm.json 加 mem_dir，或設定 AOS_MEM_DIR"}
-    name = "%s-mem-%s-%s.json" % (
-        ctx.name, datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f"), uuid.uuid4().hex[:8])
-    request = {"request": name, "op": op, "agent": ctx.name, "args": args}
-    ctx.write_json(os.path.join(mem, "requests", name), request)
-    pending = ctx.state.get("bigmem_pending")
-    if not isinstance(pending, list):
-        pending = []
-        ctx.state["bigmem_pending"] = pending
-    item = {"name": name, "op": op}
+    name = ctx.send("mem", {"op": op, "agent": ctx.name, "args": args},
+                    target=mem, timeout_steps=120)
+    item = {"op": op}
     if archive:
         item["archive"] = archive
-    pending.append(item)
+    ctx.write_json(os.path.join(ctx.home, "side", "mem-meta", name), item)
+    ctx.sleep_until("mem", name)
     return {"queued": True, "request": name}
 
 
@@ -126,28 +118,10 @@ def _finish_archive(ctx, item, result):
     return True
 
 
-def on_idle(ctx):
-    pending = ctx.state.get("bigmem_pending")
-    if not isinstance(pending, list) or not pending:
-        return
-    mem = _mem_dir(ctx)
-    if not mem:
-        ctx.log("有記憶請求在等，但現在找不到記憶世界")
-        return
-    left = []
-    for item in pending:
-        name = item.get("name") if isinstance(item, dict) else ""
-        path = os.path.join(mem, "results", name)
-        if not name or not os.path.isfile(path):
-            left.append(item)
-            continue
-        result = ctx.read_json(path, {"request": name, "ok": False, "error": "結果 JSON 讀不出來"})
-        try:
-            os.remove(path)
-        except OSError:
-            pass
-        archived = _finish_archive(ctx, item, result) if isinstance(result, dict) else False
-        content = json.dumps(result, ensure_ascii=False)
-        ctx.put_mail(ctx.world, "mem", content, request=name,
-                     op=item.get("op"), archived=archived)
-    ctx.state["bigmem_pending"] = left
+def on_result(ctx, kind, name, result):
+    item = ctx.read_json(os.path.join(ctx.home, "side", "mem-meta", name), {})
+    archived = _finish_archive(ctx, item, result) if isinstance(result, dict) else False
+    if result.get("error"):
+        return None
+    return "記憶請求完成%s：%s" % (
+        "，原對話已歸檔" if archived else "", ctx.truncate(json.dumps(result, ensure_ascii=False)))

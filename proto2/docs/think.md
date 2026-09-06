@@ -21,7 +21,7 @@ think 把難題交給較會想的模型。
 
 參數只有 `question`，另有可選的 `budget`。
 當格回 `開始想了 id=...`。
-完成後會在 `inbox/think/` 收到 `想完了 id=...`。
+送出後 agent 會睡；完成時結果會直接接回對話。
 
 ### `think_steps`
 
@@ -35,12 +35,6 @@ think 把難題交給較會想的模型。
 參數是 `draft`，另有可選的 `budget`。
 它最多找三個重要漏洞。
 每條有原因和最小修法。
-
-### `conclude`
-
-參數是 `thought_id`。
-它只回最後結論、建議動作、主要風險和總用量。
-逐步內容不會被它帶進日常對話。
 
 ### `thoughts_list`
 
@@ -96,8 +90,7 @@ pack 會把 `thoughts/` 加進 `<home>/.gitignore`。
 
 ## 坑
 
-- 旁線請求不會改主線的 `wait`、`request` 或 `busy`。
-- 現在沒有每格都會叫的 pack 掛勾。逾時會在下一個 idle、工具、回話或組 prompt 的格才標出來。
+- 旁線結果由共用層收進 `<home>/side/think/`；包不碰 LLM 的 `results/`。
+- 逾時、失敗、取消與缺鐘都直接回一則聊天錯誤。
 - 模型可能把 token 全用在隱藏 reasoning，正文卻是空的。這時會標 `budget_exceeded`。多步思考會保留上一個可用結論。
-- 已送出的請求不能取消。逾時後晚到的結果會忽略。
 - 不做重試、換引擎、清舊資料和同時多份思考。

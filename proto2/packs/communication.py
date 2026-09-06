@@ -1,5 +1,4 @@
 """communication 工具包 — 用通訊錄跟別的 agent 寄信。"""
-import datetime
 import os
 
 
@@ -7,8 +6,7 @@ PROMPT = (
     "交流：寄信前如果不確定名字，先用 mail_who。mail_send 寄一封新信；"
     "讀完別人的信後用 mail_reply 回覆，source 跟 id 照 inbox_read 的結果填。"
     "mail_broadcast 把同一句話寄給指定的人；不給 to 時只寄給父與直接小孩。"
-    "寄出後若要等回覆，用 mail_wait 登記剛才拿到的 id；它不會卡住這一格，"
-    "回信到了會有一封 self 提醒。self 只是提醒，不是另一封回信；讀真正的回信後只回報一次。"
+    "寄出後若要等回覆，用 mail_wait 登記剛才拿到的 id；系統會睡到回信或新信來。"
 )
 
 TOOLS = [
@@ -40,10 +38,6 @@ TOOLS = [
 ]
 
 
-def _now():
-    return datetime.datetime.now().isoformat(timespec="seconds")
-
-
 def _contacts(ctx):
     contacts = dict(ctx.contacts())
     user_dir = os.environ.get("AOS_USER_DIR")
@@ -56,9 +50,10 @@ def _entry_dir(ctx, entry):
     path = entry.get("dir") if isinstance(entry, dict) else entry
     if not isinstance(path, str):
         return ""
-    if not os.path.isabs(path):
-        path = os.path.join(ctx.world, path)
-    return os.path.abspath(path)
+    try:
+        return ctx.world_of(path)
+    except ValueError:
+        return ""
 
 
 def _send(ctx, to, content, reply_to=None, thread=None):
@@ -66,7 +61,7 @@ def _send(ctx, to, content, reply_to=None, thread=None):
     if to not in contacts:
         return {"ok": False, "error": "通訊錄裡沒有這個人：%s" % to}
 
-    target = to if to in ctx.contacts() else _entry_dir(ctx, contacts[to])
+    target = to if to in ctx.contacts() else ctx.world_of(_entry_dir(ctx, contacts[to]))
     extra = {}
     if reply_to:
         extra["reply_to"] = reply_to
@@ -150,37 +145,26 @@ def run(name, args, ctx):
     if name == "mail_who":
         return _who(ctx, bool(args.get("alive_only")))
     if name == "mail_wait":
-        path = os.path.join(ctx.home, "waiting.json")
-        waiting = ctx.read_json(path, [])
-        waiting = waiting if isinstance(waiting, list) else []
-        waiting.append({"id": args.get("id") or "", "note": args.get("note") or "", "time": _now()})
-        ctx.write_json(path, waiting)
-        return {"ok": True, "waiting": len(waiting)}
+        reply_to = args.get("id") or ""
+        request = ctx.send("mail", {"reply_to": reply_to, "note": args.get("note") or ""},
+                           mail_reply_to=reply_to, timeout_steps=120)
+        ctx.write_json(os.path.join(ctx.home, "side", "mail-meta", request),
+                       {"reply_to": reply_to, "note": args.get("note") or ""})
+        ctx.sleep_until("mail", request)
+        return {"ok": True, "id": request}
     return {"error": "communication 沒有這個工具：%s" % name}
 
 
-def on_idle(ctx):
-    path = os.path.join(ctx.home, "waiting.json")
-    waiting = ctx.read_json(path, [])
-    if not isinstance(waiting, list) or not waiting:
-        return
-    replies = set()
-    for source in ctx.sources():
-        for mail_id in ctx.unread(source) + ctx.read_done(source):
-            letter = _read_letter(ctx, source, mail_id)
-            if letter and letter.get("reply_to"):
-                replies.add(letter["reply_to"])
-    left = []
-    for item in waiting:
-        if not isinstance(item, dict) or item.get("id") not in replies:
-            left.append(item)
-            continue
-        text = "你等的那封回來了：%s" % item.get("id")
-        if item.get("note"):
-            text += "（%s）" % item["note"]
-        ctx.put_mail(ctx.world, "self", text)
-    if len(left) != len(waiting):
-        ctx.write_json(path, left)
+def on_result(ctx, kind, name, result):
+    meta = ctx.read_json(os.path.join(ctx.home, "side", "mail-meta", name), {})
+    if result.get("error"):
+        return None
+    text = "你等的那封回來了：%s" % meta.get("reply_to")
+    if meta.get("note"):
+        text += "（%s）" % meta["note"]
+    if result.get("content"):
+        text += "：" + str(result["content"])
+    return text
 
 
 def on_reply(ctx, msg):

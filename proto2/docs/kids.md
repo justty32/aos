@@ -40,9 +40,7 @@
 - `last`：小孩 outbox 最後一句。太長會切短。
 - `paused`：有沒有暫停。
 
-派完活後用它看進度。
-不用 sleep。
-下一格再看。
+派完活後可用它看進度。
 
 ### `kids_pause`、`kids_resume`
 

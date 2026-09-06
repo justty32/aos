@@ -8,11 +8,10 @@ MAX_TOKENS = 6000
 MAX_STEPS = 3
 MAX_WAIT_STEPS = 120
 MAX_USD = 0.10
-STATE_KEY = "think_requests"
 
 PROMPT = ("1. 要同時權衡三件以上的事、錯了很難回頭，或一般作法試了兩次仍卡住，才深度思考。\n"
           "2. 能查到、能算出、能用一次小實驗驗證的事，先直接做，不要深度思考。\n"
-          "3. 一個問題最多開一份思考；開始後等它完成，不要重複送同一題。")
+          "3. 一個問題最多開一份；送出後系統會睡著，結果回來會直接接回對話。")
 
 _BUDGET = {"type": "object", "description": "可選。只能把預設上限往下調。", "properties": {
     "max_tokens": {"type": "integer", "description": "最多輸出 token，預設 6000"},
@@ -34,9 +33,6 @@ TOOLS = [
      "parameters": {"type": "object", "properties": {
          "draft": {"type": "string", "description": "要檢查的答案或計畫"}, "budget": _BUDGET},
          "required": ["draft"]}},
-    {"name": "conclude", "description": "取回一份思考的結論。只把結論、動作、風險和用量帶回對話。",
-     "parameters": {"type": "object", "properties": {
-         "thought_id": {"type": "string", "description": "思考編號"}}, "required": ["thought_id"]}},
     {"name": "thoughts_list", "description": "列出最近的思考編號、題目、狀態、步數與用量。",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "thought_read", "description": "重讀一份思考的題目、各步短結論、最後結論與用量。",
@@ -214,17 +210,14 @@ def _send(ctx, thought_id, mode, question, budget, step, previous=""):
     request_tokens = left if mode != "think_steps" else max(1, left // (budget["max_steps"] - step + 1))
     body = {"messages": _messages(mode, question, previous, step),
             "params": {"max_tokens": request_tokens}}
-    name = ctx.llm_request(body, kind="think", priority=_priority(ctx), engine=engine_name)
-    jobs = ctx.state.get(STATE_KEY)
-    if not isinstance(jobs, dict):
-        jobs = {}
-        ctx.state[STATE_KEY] = jobs
-    jobs[name] = {"thought_id": thought_id, "mode": mode, "question": question,
-                  "budget": budget, "step": step, "engine": engine_name,
-                  "engine_data": engine, "started_step": int(ctx.state.get("step") or 0)}
+    name = ctx.send("think", body, priority=_priority(ctx), engine=engine_name,
+                    timeout_steps=budget["wait_steps"])
     meta.update({"request": name, "engine": engine_name, "status": "waiting",
-                 "request_step": step})
+                 "request_step": step,
+                 "current": {"mode": mode, "question": question, "budget": budget,
+                             "step": step, "engine": engine_name, "engine_data": engine}})
     ctx.write_json(os.path.join(_dir(ctx, thought_id), "meta.json"), meta)
+    ctx.sleep_until("think", name)
     return name
 
 
@@ -260,9 +253,9 @@ def _start(ctx, mode, text, budget_value):
 def _finish(ctx, meta, final, status="done"):
     folder = _dir(ctx, meta["id"])
     meta.update({"status": status, "finished_at": _now(), "final": final})
+    meta.pop("current", None)
     ctx.write_json(os.path.join(folder, "meta.json"), meta)
     _write_text(os.path.join(folder, "conclusion.md"), final.get("conclusion") or "（沒有結論）")
-    ctx.put_mail(ctx.world, "think", "想完了 id=%s" % meta["id"])
 
 
 def run(name, args, ctx):
@@ -272,18 +265,6 @@ def run(name, args, ctx):
         return _start(ctx, "think_steps", str(args.get("question") or ""), args.get("budget"))
     if name == "critique":
         return _start(ctx, "critique", str(args.get("draft") or ""), args.get("budget"))
-    if name == "conclude":
-        thought_id = str(args.get("thought_id") or "")
-        folder = _dir(ctx, thought_id)
-        meta = ctx.read_json(os.path.join(folder or "", "meta.json"), {})
-        if not meta:
-            return {"error": "找不到這份思考：%s" % thought_id}
-        if meta.get("status") not in ("done", "budget_exceeded"):
-            return {"error": "這份思考還沒完成：%s（%s）" % (thought_id, meta.get("status") or "不明")}
-        final = meta.get("final") if isinstance(meta.get("final"), dict) else {}
-        return {"thought_id": thought_id, "conclusion": final.get("conclusion") or "",
-                "action": final.get("action") or "", "risk": final.get("risk") or "",
-                "usage": meta.get("usage") or {}}
     if name == "thoughts_list":
         box = os.path.join(ctx.home, "thoughts")
         rows = []
@@ -313,13 +294,18 @@ def run(name, args, ctx):
 
 
 def on_result(ctx, kind, name, result):
-    jobs = ctx.state.get(STATE_KEY)
-    job = jobs.pop(name, None) if isinstance(jobs, dict) else None
+    meta = None
+    box = os.path.join(ctx.home, "thoughts")
+    for thought_id in os.listdir(box) if os.path.isdir(box) else []:
+        candidate = ctx.read_json(os.path.join(box, thought_id, "meta.json"), {})
+        if isinstance(candidate, dict) and candidate.get("request") == name:
+            meta = candidate
+            break
+    job = meta.get("current") if isinstance(meta, dict) else None
     if not isinstance(job, dict):
         ctx.log("收到找不到對照的深思結果：%s" % name)
         return
-    folder = _dir(ctx, job["thought_id"])
-    meta = ctx.read_json(os.path.join(folder, "meta.json"), {})
+    folder = _dir(ctx, meta["id"])
     usage = _usage(result, job.get("engine_data") or {})
     meta["usage"] = _add_usage(meta.get("usage") or {}, usage)
     text = _content(result)
@@ -344,7 +330,7 @@ def on_result(ctx, kind, name, result):
     if (job["mode"] == "think_steps" and not result.get("error") and not over and
             job["step"] < job["budget"]["max_steps"]):
         ctx.write_json(os.path.join(folder, "meta.json"), meta)
-        _send(ctx, job["thought_id"], job["mode"], job["question"], job["budget"],
+        _send(ctx, meta["id"], job["mode"], job["question"], job["budget"],
               job["step"] + 1, final.get("conclusion") or "")
         return
     if job["mode"] == "critique" and final.get("items"):
@@ -357,37 +343,9 @@ def on_result(ctx, kind, name, result):
         final["conclusion"] = "\n".join(lines) or final.get("conclusion") or ""
     status = "error" if result.get("error") else ("budget_exceeded" if over else "done")
     _finish(ctx, meta, final, status)
-
-
-def _check_timeouts(ctx):
-    jobs = ctx.state.get(STATE_KEY)
-    if not isinstance(jobs, dict):
-        return
-    now_step = int(ctx.state.get("step") or 0)
-    for request, job in list(jobs.items()):
-        if now_step - int(job.get("started_step") or 0) < int(job.get("budget", {}).get("wait_steps") or MAX_WAIT_STEPS):
-            continue
-        jobs.pop(request, None)
-        folder = _dir(ctx, job.get("thought_id"))
-        meta = ctx.read_json(os.path.join(folder or "", "meta.json"), {})
-        if meta:
-            meta.update({"status": "timeout", "finished_at": _now()})
-            ctx.write_json(os.path.join(folder, "meta.json"), meta)
-            ctx.put_mail(ctx.world, "think", "想逾時了 id=%s" % meta["id"])
-
-
-def on_idle(ctx):
-    _check_timeouts(ctx)
-
-
-def on_act(ctx, tool, args, result, took_ms):
-    _check_timeouts(ctx)
-
-
-def on_reply(ctx, msg):
-    _check_timeouts(ctx)
-
-
-def on_system_prompt(ctx):
-    _check_timeouts(ctx)
-    return ""
+    if result.get("error"):
+        return None
+    return "深思完成：%s%s%s" % (
+        final.get("conclusion") or "（沒有結論）",
+        "；動作：" + final["action"] if final.get("action") else "",
+        "；風險：" + final["risk"] if final.get("risk") else "")

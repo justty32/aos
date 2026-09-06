@@ -120,7 +120,7 @@ import os, sys
 sys.path.insert(0, sys.argv[1])
 from aos_agent import Ctx, write_json
 from packs import bigmem
-world=sys.argv[2]; state={}; ctx=Ctx(world, world, state)
+world=sys.argv[2]; state={}; ctx=Ctx(world, world, state, pack="bigmem")
 answer=bigmem.run("mem_archive_history", {"from":0,"to":1}, ctx)
 assert answer.get("queued") and answer.get("messages") == 2
 write_json(os.path.join(world,"state.json"), state)
@@ -132,20 +132,20 @@ sys.path.insert(0, sys.argv[1])
 from aos_agent import Ctx
 from packs import bigmem
 world=sys.argv[2]; state=Ctx.read_json(os.path.join(world,"state.json"),{})
-bigmem.on_idle(Ctx(world, world, state))
+Ctx(world, world, state, [("bigmem",bigmem)], "bigmem").collect_results()
 PYEOF2
   got=$(python3 - "$root" <<'PYEOF2'
 import glob, json, os, sqlite3, sys
 r=sys.argv[1]; h=os.path.join(r,"agent")
 p=json.load(open(os.path.join(h,"prompts.json"),encoding="utf-8"))
-m=glob.glob(os.path.join(h,"inbox","mem","*.json"))
+side=glob.glob(os.path.join(h,"side","mem","*.json"))
 kind=sqlite3.connect(os.path.join(r,"memory","store.sqlite")).execute("select kind from memories").fetchone()[0]
 print(len(p) == 2, p[0]["content"].startswith("已歸檔 id="), p[1]["content"] == "保留",
-      bool(m), json.load(open(m[0],encoding="utf-8"))["archived"], kind == "history")
+      bool(side), kind == "history")
 PYEOF2
 )
-  if [ "$got" = "True True True True True True" ]; then
-    ok "bigmem：歷史先入庫，成功後才縮成一句並寄進 mem 信箱"
+  if [ "$got" = "True True True True True" ]; then
+    ok "bigmem：歷史先入庫，共用層收回後才縮成一句"
   else
     fail "bigmem：歷史歸檔不對（$got）"
   fi

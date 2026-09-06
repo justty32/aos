@@ -759,12 +759,12 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# 18c. 沒有 LLM 鐘：等滿 60 格就說卡在哪、回 idle，原請求留在 LLM requests/
+# 18c. 沒有 LLM 鐘：下一格立刻說卡在哪、回 idle，原請求留在 LLM requests/
 TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
 "$AUSER" say "$W" "這句沒有人推 LLM" >/dev/null 2>&1
 "$AGENT" exec "$W" >/dev/null 2>&1
 "$AGENT" exec "$W" >/dev/null 2>&1
-for _ in $(seq 1 60); do "$AGENT" exec "$W" >/dev/null 2>&1; done
+"$AGENT" exec "$W" >/dev/null 2>&1
 TIMEOUT_MSG=$(python3 -c '
 import glob,json,sys
 files=glob.glob(sys.argv[1]+"/*.json")
@@ -772,12 +772,12 @@ d=json.load(open(files[0], encoding="utf-8")) if files else {}
 print("%s|%s" % (d.get("error") is True, d.get("content") or ""))' "$H/outbox")
 NREQ=$(find "$TMP/llm/requests" -maxdepth 1 -name '*.json' | wc -l)
 if [ "$(now_state "$H")" = "idle" ] && [ "$NREQ" = "1" ]; then
-  ok "LLM 沒鐘等滿 60 格會回 idle，原請求仍留在原地"
+  ok "LLM 缺鐘下一格就回 idle，原請求仍留在原地"
 else
   fail "LLM 沒鐘超時狀態不對：state=$(now_state "$H") requests=$NREQ"
 fi
 case "$TIMEOUT_MSG" in
-  True\|*"等 LLM 超過 60 格沒回應"*) ok "LLM 沒鐘時 outbox 直接講卡在哪" ;;
+  True\|*"LLM 的鐘沒有在跑"*) ok "LLM 沒鐘時 outbox 直接講卡在哪" ;;
   *) fail "LLM 沒鐘沒有 outbox 提示：$TIMEOUT_MSG" ;;
 esac
 rm -rf "$TMP"
@@ -965,7 +965,7 @@ else
 fi
 rm -rf "$TMP"
 
-# 27. self 包的 self_status：該有的鍵都在
+# 27. status：人看的頂層不超過十欄；self 包另補記憶估算
 TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
 "$AUSER" say "$W" 'CALL self_status' >/dev/null 2>&1
 agent_pump "$W" "$TMP/llm" 10
@@ -975,13 +975,14 @@ for m in json.load(open(sys.argv[1])):
     if m.get("role") == "tool":
         print(",".join(sorted(json.loads(m["content"]))))
         break' "$H/prompts.json")
-WANT="busy,folder_bytes,history_chars,history_messages,history_pct,history_tokens,last_usage,started,step,today_usage_all,uptime_s"
-if [ "$KEYS" = "$WANT" ]; then ok "self_status 十一個鍵都在"; else fail "self_status 的鍵不對：$KEYS"; fi
-# 同一份東西 aos-agent status 也印得出來
+WANT="clock,history_chars,history_pct,history_tokens,last_error,memory,question_steps,recent_question_steps,status,steps,today,waiting"
+if [ "$KEYS" = "$WANT" ]; then ok "self_status 有新狀態與記憶估算"; else fail "self_status 的鍵不對：$KEYS"; fi
 OUT=$("$AUSER" status "$W"); RC=$?
 check "aos-user status 退 0" 0 "$RC"
-case "$OUT" in
-  *'"folder_bytes"'*'"today_usage_all"'*) ok "aos-user status 印的就是 self_status 那包" ;;
+STATUS_KEYS=$(python3 -c 'import json,sys; d=json.loads(sys.stdin.read()); print(len(d),",".join(d))' <<< "$OUT")
+case "$STATUS_KEYS" in
+  9\ status,waiting,clock,last_error,steps,question_steps,today,recent_question_steps,memory)
+    ok "aos-user status 九欄一眼列出狀態、等待、鐘、錯誤、格數與今日用量" ;;
   *) fail "status 印的不對：$OUT" ;;
 esac
 mkdir -p "$TMP/llm/usage"
@@ -996,12 +997,12 @@ PYEOF2
 OUT=$("$AUSER" status "$W")
 TU=$(python3 -c '
 import json,sys
-d=(json.loads(sys.stdin.read()).get("today_usage_all") or {})
-print("%s %s %s" % (d.get("total_tokens"), d.get("requests"), len(d.get("by_engine") or {})))' <<< "$OUT")
-if [ "$TU" = "40 5 2" ]; then
-  ok "today_usage_all 加總整個 LLM 世界，by_engine 留著兩台拆帳（$TU）"
+d=(json.loads(sys.stdin.read()).get("today") or {})
+print("%s %s" % (d.get("tokens"), d.get("token_limit")))' <<< "$OUT")
+if [ "$TU" = "40 None" ]; then
+  ok "status 顯示今日 token 與硬上限（$TU）"
 else
-  fail "today_usage_all 加總不對：$TU"
+  fail "今日用量不對：$TU"
 fi
 rm -rf "$TMP"
 

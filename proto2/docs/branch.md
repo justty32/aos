@@ -5,7 +5,7 @@
 ## 工具
 
 - `fork(directions, budget?)`：開兩到三條。`directions` 每條只寫一個角度，不要重疊。回 `branch_id`。
-- `join(branch_id)`：收結果。沒齊會說還差幾條；齊了會回每條的方向、總結、用量與花費。
+- `join(branch_id)`：被喚醒後一次收回全部方向、總結、用量與花費。
 - `adopt(branch_id, n)`：把第 `n` 條的整段記憶變成主線。`n` 從 1 開始。
 
 ## 什麼時候用
@@ -35,12 +35,12 @@
 `<home>/branches/<id>/base.json` 是分岔當下的主線快照。
 每條有自己的 `prompts.json` 和 `summary.md`。
 `meta.json` 記方向、請求檔名、預算、用量和花費。
-進度同時記在 `state.json` 的 `branches`。
+送出後 agent 會睡。共用層收齊才喚醒一次；`state.json` 不重複存分支進度。
 
 ## 坑
 
 第一版只能直接問 LLM。不會生小孩，分支也不能叫工具。
-最多三條。每條 `join` 最多帶回 800 字。
+最多三條。每條最多帶回 800 字。
 沒有自動評審、投票、重試或清理舊分支。
 `adopt` 沒有復原鈕。接手後第一版不允許再 `fork`。
 沒有單價時，花費只能顯示 `null`。

@@ -31,7 +31,7 @@ studio/                         owner 世界，也是 owner home
 
 ## 預算
 
-總額先留 10% 給 owner 救急，90% 給 PM。owner 與 PM 可用 `team_grant` 從自己的未用額度分給成員。超額不寫帳。個人到 80% 要停背景工作並報主管；整隊到 100% 由 PM 停新工作，owner 決定縮案或請 sales 向甲方申請追加。
+總額先留 10% 給 owner 救急，90% 給 PM。owner 與 PM 可用 `team_grant` 從自己的未用額度分給成員。超額不寫帳。個人額度用完就不再叫 LLM，改報主管；整隊額度用完就全隊停，sales 向甲方問要不要追加。`llm.json` 的 agent 硬上限與 team 額度同時存在時，先撞到哪個就先停。
 
 `team status` 的 token 來自 LLM 每日 requester 帳，ticks 是 agent 的 step，磁碟是資料夾大小，hours 是開隊後的牆上時間。記憶體目前量不到，固定顯示未知，只有軟上限。
 
