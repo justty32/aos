@@ -1,29 +1,72 @@
 #!/usr/bin/env python3
-"""aos-llm <send|usage|ls> — 從終端機使喚一個 LLM 資料夾。
+"""aos-llm <exec|usage|ls> — 一個「LLM 資料夾」的派工員。
 
-LLM 資料夾在哪：`--dir <dir>`，沒給就看環境變數 AOS_LLM_DIR，都沒有就退 2。
+LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也靠 `aos-loop` 一格一格轉。
+資料夾是**平鋪**的，東西直接放在 `<dir>` 底下（`.aos/` 裡只有一句 `inst`）：
 
-  aos-llm send <檔> [--priority N] [--engine NAME] [--no-wait] [--timeout SEC]
-      把一個 JSON 請求檔（`-` 就是 stdin）丟進 requests/，然後等 results/ 冒出同名檔，
-      把整包印到 stdout、**把結果檔刪掉**（拿走就沒了）。結果裡有 error 就退 1。
-      --priority/--engine 會蓋掉檔裡原本寫的；兩邊都沒寫就不寫進去，讓那個 LLM
-      資料夾自己用它的預設（defaults.json ← engines.json 第一台／priority 0）。
-      --no-wait 只丟不等，印檔名就走。
-      --timeout 預設 120 秒，給 0 就等到天荒地老。等的時候 Ctrl-C 退 130。
+    .aos/inst           `aos-llm exec .`
+    engines.json        引擎清單（陣列，第一個是預設）
+    defaults.json       這個資料夾自己的預設 {"engine": ..., "priority": ...}，可有可無
+    requests/           排隊中的請求 <名字>.json
+    requests/running/   正在打的（多一個 "aos" 欄位記 pid／engine／priority／started）
+    requests/done/      做完的（成功、失敗、壞掉的都在這）
+    results/            回覆 <跟請求同檔名>
+    usage/pending/      每個 worker 做完丟一張用量小紙條
+    usage/<YYYY-MM-DD>.json  當天的帳本
+    logs/<名字>.log     那個 worker 的輸出
+    state.json          {"tick", "served", "errors"}
+
+**有沒有 engines.json 就是「這是不是一個 LLM 資料夾」**。
+
+請求檔是一個 JSON 物件。aos 自己吃三個鍵：`priority`（整數，大的先做）、`engine`
+（引擎名字）、`params`（一包蓋在引擎 params 上的參數）。**沒寫 priority／engine 就用
+這個資料夾自己的預設**：defaults.json 說了算，它沒說就是 engines.json 第一台＋priority 0。
+**其他所有頂層鍵都原樣當成 chat/completions 的 body 欄位**（messages、tools、temperature…）。
+實際送出去的 body ＝ 引擎 params ← 請求 params ← 請求其他頂層鍵，model 一律引擎說了算。
+
+引擎可以寫 `"max_concurrent": N`（不寫＝1）：**那台一次最多同時跑幾個請求**。
+例如 deepseek 開 2、本機 LM Studio 開 1，四個請求進來就是三個開跑、一個排著。
+
+  aos-llm exec [dir]
+      **每一格做的事**，不給 dir 就是目前目錄。一格很短，**絕對不等網路**：
+      1. tick 加一。
+      2. 把 usage/pending/ 的小紙條折進當天帳本，紙條刪掉。
+      3. 巡 requests/running/：結果出現了就把請求搬去 done/（served／errors 在這裡算）；
+         pid 死了又沒有結果，就補一個 "worker died" 的錯誤結果、一樣搬去 done/、
+         也補一張 errors=1 的用量紙條。剩下的算進「那台引擎正在跑幾個」。
+      4. 讀 requests/ 頂層排序（-priority, mtime, 檔名），由上而下派工：那台引擎
+         `running < max_concurrent` 就開一個背景 worker、請求搬進 running/；滿了的
+         留在隊伍裡等下一格。一格能開幾個就開幾個。
+      5. 印一行摘要到 stderr，外加每個 launch／done／died 各一行。
+      **所以結果是「丟了之後過幾格才回來」**，不是同一格。
+  aos-llm worker <dir> <請求檔名>
+      內部用：真正去打那一發 HTTP 的背景進程。人不用自己叫。
   aos-llm usage [YYYY-MM-DD]
       印那天的用量表（預設今天）：一行一個 endpoint+model 配對。帳本是拿來算錢的，
-      模型回了哪些數字就有哪些欄（思考 token、快取命中都在內），欄位寬一點無所謂。
+      模型回了哪些數字就有哪些欄（思考 token、快取命中都在內）。
   aos-llm ls
-      印排隊中的請求，順序就是 aos-llm-step 會拿的順序（優先級高的先，同級先來先做）。
-      請求沒寫 priority／engine 的，印的是資料夾預設幫它補的值，後面加一個 `*`。
+      印**執行中**（running/，帶 engine／pid／已經跑多久）跟**排隊中**（下一格會被派的
+      順序），最後一行一台引擎印 `engine X: running r/max`。請求沒寫 priority／engine 的，
+      印的是資料夾預設幫它補的值，後面加一個 `*`。
+
+usage／ls 的資料夾：`--dir <dir>`，沒給就看環境變數 AOS_LLM_DIR，都沒有就退 2。
 """
 import argparse
 import datetime
 import json
 import os
+import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import aos_llm as lib   # noqa: E402  （同一個資料夾裡的小幫手，共用路徑與原子寫）
+
+HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
+AOS_KEYS = ("priority", "engine", "params", "aos")
+TIMEOUT = 300
 FIRST_COLS = ("requests", "errors", "took_ms")
 COL_LABEL = {"requests": "請求", "errors": "錯誤", "took_ms": "毫秒"}
 
@@ -34,39 +77,29 @@ def die(msg, code=2):
 
 
 def home_of(args):
-    where = args.dir or os.environ.get("AOS_LLM_DIR") or ""
+    """usage／ls 用：--dir → AOS_LLM_DIR → 退 2。"""
+    where = getattr(args, "dir", "") or os.environ.get("AOS_LLM_DIR") or ""
     if not where:
         die("沒給 LLM 目錄，也沒設 AOS_LLM_DIR")
-    return os.path.join(os.path.abspath(where), ".aos", "llm")
+    return lib.home_of(where)
 
 
-def read_json(path, default):
-    if not os.path.isfile(path):
-        return default
-    with open(path, encoding="utf-8", errors="replace") as f:
-        text = f.read().strip()
-    if not text:
-        return default
-    try:
-        return json.loads(text)
-    except ValueError:
-        return default
+# ── 引擎與預設 ──────────────────────────────────────────────────────────────
 
-
-def defaults_of(home):
-    """這個 LLM 資料夾自己的預設：defaults.json ← engines.json 第一台／priority 0。
-    跟 aos-llm-step 同一套規矩，只是這裡是為了印給人看。"""
-    engines = read_json(os.path.join(home, "engines.json"), None)
-    if engines is None:
-        old = read_json(os.path.join(home, "engine.json"), None)
-        engines = [dict(old, name=old.get("name") or "default")] if isinstance(old, dict) else []
+def load_engines(home):
+    """引擎清單：engines.json，一個陣列，第一個是預設。"""
+    engines = lib.read_json(os.path.join(home, "engines.json"), None)
     if not isinstance(engines, list):
-        engines = []
-    engines = [e for e in engines if isinstance(e, dict)]
-    conf = read_json(os.path.join(home, "defaults.json"), {})
+        return []
+    return [e for e in engines if isinstance(e, dict)]
+
+
+def load_defaults(home, engines):
+    """這個資料夾自己的預設：defaults.json ← engines.json 第一台／priority 0。"""
+    conf = lib.read_json(os.path.join(home, "defaults.json"), {})
     if not isinstance(conf, dict):
         conf = {}
-    engine = conf.get("engine") or (engines[0].get("name") if engines else "") or "-"
+    engine = conf.get("engine") or (engines[0].get("name") if engines else "") or ""
     try:
         priority = int(conf.get("priority") or 0)
     except (TypeError, ValueError):
@@ -74,96 +107,389 @@ def defaults_of(home):
     return engine, priority
 
 
-def queued(box, defaults):
-    """排隊中的請求，照 aos-llm-step 會拿的順序：(-priority, mtime, 檔名)。
-    沒寫 priority／engine 的用資料夾預設補，補過的那格標一個 True。"""
+def resolve(req, defaults):
+    """請求沒寫 priority／engine 就補上資料夾的預設，回 (engine, priority)。"""
     d_engine, d_priority = defaults
-    rows = []
+    if "priority" in req:
+        try:
+            priority = int(req.get("priority") or 0)
+        except (TypeError, ValueError):
+            priority = d_priority
+    else:
+        priority = d_priority
+    return (req.get("engine") or d_engine), priority
+
+
+def pick_engine(engines, name):
+    for e in engines:
+        if e.get("name") == name:
+            return e
+    return None
+
+
+def max_concurrent(engine):
+    """那台引擎一次最多同時跑幾個；沒寫＝1，寫壞了也當 1。"""
+    try:
+        n = int(engine.get("max_concurrent") or 1)
+    except (TypeError, ValueError):
+        n = 1
+    return max(1, n)
+
+
+# ── 用量 ────────────────────────────────────────────────────────────────────
+
+def flatten_numbers(obj, prefix=""):
+    """把一包 usage 攤成 {點號鍵: 數字}——巢狀字典往下走，非數字（含 bool）丟掉。"""
+    out = {}
+    if not isinstance(obj, dict):
+        return out
+    for key, value in obj.items():
+        name = prefix + str(key)
+        if isinstance(value, dict):
+            out.update(flatten_numbers(value, name + "."))
+        elif isinstance(value, bool):
+            continue
+        elif isinstance(value, (int, float)):
+            out[name] = value
+    return out
+
+
+def add(row, field, more):
+    old = row.get(field)
+    old = old if isinstance(old, (int, float)) and not isinstance(old, bool) else 0
+    total = old + more
+    return int(total) if float(total).is_integer() else total
+
+
+def fold_pending(home):
+    """把 usage/pending/ 的小紙條折進當天帳本，紙條刪掉，回折了幾張。
+
+    帳本是拿來算錢的，所以模型回的 usage 裡**每個數字都累加**（巢狀攤成點號鍵，例如
+    completion_tokens_details.reasoning_tokens），外加我們自己數的 requests／errors／took_ms。
+    紙條上寫著那個 worker **做完那天**的日期，所以跨午夜也記在對的那一天。
+    """
+    box = os.path.join(home, "usage", "pending")
     if not os.path.isdir(box):
-        return rows
+        return 0
+    names = sorted(n for n in os.listdir(box)
+                   if n.endswith(".json") and os.path.isfile(os.path.join(box, n)))
+    if not names:
+        return 0
+    books, used = {}, []
+    for name in names:
+        path = os.path.join(box, name)
+        rec = lib.read_json(path, None)
+        used.append(path)
+        if not isinstance(rec, dict):
+            continue
+        day = str(rec.get("day") or datetime.date.today().isoformat())
+        if day not in books:
+            book = lib.read_json(os.path.join(home, "usage", day + ".json"), {})
+            books[day] = book if isinstance(book, dict) else {}
+        book = books[day]
+        key = str(rec.get("key") or "|")
+        row = book.get(key)
+        row = dict(row) if isinstance(row, dict) else {}
+        for field, more in flatten_numbers(rec.get("usage")).items():
+            row[field] = add(row, field, more)
+        row["requests"] = add(row, "requests", 1)
+        row["errors"] = add(row, "errors", 1 if rec.get("error") else 0)
+        try:
+            took = int(rec.get("took_ms") or 0)
+        except (TypeError, ValueError):
+            took = 0
+        row["took_ms"] = add(row, "took_ms", took)
+        book[key] = row
+    for day, book in books.items():
+        lib.write_json(os.path.join(home, "usage", day + ".json"), book)
+    for path in used:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    return len(used)
+
+
+def write_pending(home, name, key, usage, error, took_ms, day=None):
+    """一張用量小紙條——worker 做完寫一張，下一格被 exec 折進帳本。"""
+    lib.write_json_atomic(os.path.join(home, "usage", "pending", name), {
+        "day": day or datetime.date.today().isoformat(),
+        "key": key, "usage": usage if isinstance(usage, dict) else {},
+        "error": bool(error), "took_ms": int(took_ms),
+    })
+
+
+# ── 隊伍 ────────────────────────────────────────────────────────────────────
+
+def queue(box):
+    """requests/ 頂層的 .json，回 [(檔名, mtime)]（子資料夾 running/、done/ 不算）。"""
+    out = []
+    if not os.path.isdir(box):
+        return out
     for name in sorted(os.listdir(box)):
         path = os.path.join(box, name)
-        if not (name.endswith(".json") and os.path.isfile(path)):
-            continue
-        req = read_json(path, None)
-        req = req if isinstance(req, dict) else {}
-        if "priority" in req:
-            try:
-                priority, p_default = int(req.get("priority") or 0), False
-            except (TypeError, ValueError):
-                priority, p_default = d_priority, True
-        else:
-            priority, p_default = d_priority, True
-        engine = req.get("engine") or ""
-        e_default = not engine
-        rows.append((-priority, os.path.getmtime(path), name,
-                     engine or d_engine, p_default, e_default))
-    rows.sort()
-    return rows
+        if name.endswith(".json") and os.path.isfile(path):
+            out.append((name, os.path.getmtime(path)))
+    return out
 
 
-def do_send(args):
-    home = home_of(args)
-    if args.file == "-":
-        text, stem = sys.stdin.read(), "stdin"
-    else:
-        if not os.path.isfile(args.file):
-            die("找不到這個請求檔：%s" % args.file)
-        with open(args.file, encoding="utf-8", errors="replace") as f:
-            text = f.read()
-        stem = os.path.basename(args.file)
-        stem = stem[:-5] if stem.endswith(".json") else stem
+def alive(pid):
+    if not pid:
+        return False
     try:
-        req = json.loads(text)
-        if not isinstance(req, dict):
-            raise ValueError("請求要是一個 JSON 物件")
-    except ValueError as e:
-        die("請求讀不成 JSON：%s" % e)
+        os.kill(int(pid), 0)
+    except OSError:
+        return False
+    return True
 
-    # 旗標蓋掉檔裡原本寫的；兩邊都沒寫就不補，讓那個 LLM 資料夾用自己的預設。
-    if args.priority is not None:
-        req["priority"] = args.priority
-    if args.engine:
-        req["engine"] = args.engine
 
-    now = datetime.datetime.now()
-    name = "%s-%06d-%s.json" % (now.strftime("%Y%m%d-%H%M%S"), now.microsecond, stem)
+def reap(pid):
+    """是自己的小孩就順手收屍；不是（跨 tick 的 worker 早就被 init 收了）就算了。"""
+    try:
+        os.waitpid(int(pid), os.WNOHANG)
+    except (OSError, ValueError):
+        pass
+
+
+def finish_now(home, name, result):
+    """當場了結一個還在 requests/ 頂層的請求：寫結果、把請求搬去 done/。"""
+    lib.write_json_atomic(os.path.join(home, "results", name), result)
     box = os.path.join(home, "requests")
-    os.makedirs(box, exist_ok=True)
-    with open(os.path.join(box, name), "w", encoding="utf-8") as f:
-        json.dump(req, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    print("aos-llm: 丟了 " + os.path.join(box, name), file=sys.stderr)
+    done = os.path.join(box, "done")
+    os.makedirs(done, exist_ok=True)
+    os.replace(os.path.join(box, name), os.path.join(done, name))
 
-    if args.no_wait:
-        print(name)
+
+# ── exec：每一格 ────────────────────────────────────────────────────────────
+
+def spawn_worker(home, world, name):
+    """開一個背景 worker 去打那一發；回 (True, pid) 或 (False, 訊息)。"""
+    logs = os.path.join(home, "logs")
+    os.makedirs(logs, exist_ok=True)
+    env = dict(os.environ)
+    env["PATH"] = HERE + os.pathsep + env.get("PATH", "")
+    cmd = [sys.executable, os.path.abspath(sys.argv[0]), "worker", world, name]
+    try:
+        out = open(os.path.join(logs, name + ".log"), "ab")
+        with open(os.devnull, "rb") as devnull:
+            p = subprocess.Popen(cmd, cwd=world, env=env, stdin=devnull,
+                                 stdout=out, stderr=out, start_new_session=True)
+        out.close()
+    except OSError as e:
+        return False, "開不起 worker：%s" % e
+    return True, p.pid
+
+
+def do_exec(args):
+    home = lib.home_of(args.dir)
+    if not os.path.isfile(os.path.join(home, "engines.json")):
+        print("aos-llm exec: %s 不是一個 LLM 資料夾（沒有 engines.json）" % args.dir,
+              file=sys.stderr)
+        return 1
+    box = os.path.join(home, "requests")
+    running_box = os.path.join(box, "running")
+    done_box = os.path.join(box, "done")
+
+    state = lib.read_json(os.path.join(home, "state.json"), {})
+    if not isinstance(state, dict):
+        state = {}
+    tick = int(state.get("tick") or 0) + 1
+    served = int(state.get("served") or 0)
+    errors = int(state.get("errors") or 0)
+
+    def say(line):
+        print("aos-llm exec: " + line, file=sys.stderr)
+
+    # 2. 先把上幾格 worker 留下的用量紙條折進帳本
+    fold_pending(home)
+
+    # 3. 巡一遍正在跑的：有結果的收回來，pid 死了又沒結果的當它死在半路
+    engines = load_engines(home)
+    defaults = load_defaults(home, engines)
+    running = {}          # engine 名字 → 現在跑幾個
+    died = 0
+    if os.path.isdir(running_box):
+        for name in sorted(os.listdir(running_box)):
+            src = os.path.join(running_box, name)
+            if not (name.endswith(".json") and os.path.isfile(src)):
+                continue
+            rec = lib.read_json(src, {})
+            rec = rec if isinstance(rec, dict) else {}
+            aos = rec.get("aos") if isinstance(rec.get("aos"), dict) else {}
+            pid = aos.get("pid") or 0
+            result_path = os.path.join(home, "results", name)
+            if os.path.isfile(result_path):
+                reap(pid)
+                answer = lib.read_json(result_path, {})
+                answer = answer if isinstance(answer, dict) else {}
+                ok = not answer.get("error")
+                ans_aos = answer.get("aos") if isinstance(answer.get("aos"), dict) else {}
+                use = ans_aos.get("usage") if isinstance(ans_aos.get("usage"), dict) else {}
+                os.makedirs(done_box, exist_ok=True)
+                os.replace(src, os.path.join(done_box, name))
+                if ok:
+                    served += 1
+                else:
+                    errors += 1
+                say("done %s %s tokens=%s took=%sms"
+                    % (name, "ok" if ok else "error",
+                       use.get("total_tokens") or 0, ans_aos.get("took_ms") or 0))
+                continue
+            reap(pid)
+            if alive(pid):
+                who = aos.get("engine") or ""
+                running[who] = running.get(who, 0) + 1
+                continue
+            # 進程不見了又沒留下結果：補一個錯誤結果，免得有人等到天荒地老
+            lib.write_json_atomic(result_path, {"error": "worker died", "aos": aos})
+            os.makedirs(done_box, exist_ok=True)
+            os.replace(src, os.path.join(done_box, name))
+            engine = pick_engine(engines, aos.get("engine") or "") or {}
+            write_pending(home, name, "%s|%s" % (engine.get("base_url") or "",
+                                                 engine.get("model") or ""),
+                          {}, True, 0)
+            errors += 1
+            died += 1
+            say("died %s" % name)
+    if died:
+        fold_pending(home)   # 剛補的錯誤也當格入帳，不用再等一格
+
+    # 4. 排隊的照（-priority, mtime, 檔名）走一遍，還有空位的引擎就派工
+    todo = []
+    for name, mtime in queue(box):
+        with open(os.path.join(box, name), encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        try:
+            req = json.loads(text)
+            if not isinstance(req, dict):
+                raise ValueError("請求要是一個 JSON 物件")
+        except ValueError as e:
+            finish_now(home, name, {"error": "請求讀不成 JSON：%s" % e})
+            errors += 1
+            say("bad-json %s" % name)
+            continue
+        todo.append((name, mtime, req))
+
+    launched, queued_left = 0, 0
+    for name, mtime, req in sorted(
+            todo, key=lambda it: (-resolve(it[2], defaults)[1], it[1], it[0])):
+        want, priority = resolve(req, defaults)
+        engine = pick_engine(engines, want) if want else None
+        if engine is None:
+            why = "沒有引擎設定（engines.json 是空的）" if not want \
+                else "不認得這個引擎：%s" % want
+            finish_now(home, name, {"error": why,
+                                    "aos": {"engine": want, "priority": priority}})
+            errors += 1
+            say("error %s engine=%s priority=%d（%s）" % (name, want or "-", priority, why))
+            continue
+        if running.get(want, 0) >= max_concurrent(engine):
+            queued_left += 1        # 那台滿了，留在隊伍裡等下一格
+            continue
+        # 先搬進 running/（多一個 aos 欄位），再開 worker，最後把 pid 補回去
+        aos = {"pid": 0, "engine": want, "priority": priority,
+               "started": datetime.datetime.now().isoformat(timespec="seconds")}
+        os.makedirs(running_box, exist_ok=True)
+        lib.write_json_atomic(os.path.join(running_box, name), dict(req, aos=aos))
+        os.remove(os.path.join(box, name))
+        ok, r = spawn_worker(home, os.path.abspath(args.dir), name)
+        if not ok:
+            lib.write_json_atomic(os.path.join(home, "results", name),
+                                  {"error": str(r), "aos": aos})
+            os.makedirs(done_box, exist_ok=True)
+            os.replace(os.path.join(running_box, name), os.path.join(done_box, name))
+            errors += 1
+            say("error %s engine=%s priority=%d（%s）" % (name, want, priority, r))
+            continue
+        aos["pid"] = r
+        lib.write_json_atomic(os.path.join(running_box, name), dict(req, aos=aos))
+        running[want] = running.get(want, 0) + 1
+        launched += 1
+        say("launch %s engine=%s priority=%d pid=%d" % (name, want, priority, r))
+
+    lib.write_json(os.path.join(home, "state.json"),
+                   {"tick": tick, "served": served, "errors": errors})
+    say("tick %d launched %d running %d queued %d"
+        % (tick, launched, sum(running.values()), queued_left))
+    return 0
+
+
+# ── worker：真的去打那一發 ──────────────────────────────────────────────────
+
+def build_body(engine, req):
+    """引擎 params ← 請求 params ← 請求其他頂層鍵；model 一律引擎說了算。"""
+    body = dict(engine.get("params") or {})
+    body.update(req.get("params") or {})
+    for key, value in req.items():
+        if key not in AOS_KEYS:
+            body[key] = value
+    body["model"] = engine.get("model") or "local"
+    return body
+
+
+def call(engine, body):
+    base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
+    headers = {"Content-Type": "application/json"}
+    key = os.environ.get(engine.get("api_key_env") or "")
+    if key:
+        headers["Authorization"] = "Bearer " + key
+    req = urllib.request.Request(
+        base + "/chat/completions",
+        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        return json.loads(r.read().decode("utf-8", "replace"))
+
+
+def do_worker(args):
+    """背景進程：讀 requests/running/<name>.json 去打，結果原子落在 results/，
+    再寫一張用量小紙條給下一格的 exec 折帳。退出碼永遠 0——死活看結果檔。"""
+    home = lib.home_of(args.dir)
+    name = args.name
+    rec = lib.read_json(os.path.join(home, "requests", "running", name), None)
+    if not isinstance(rec, dict):
+        lib.write_json_atomic(os.path.join(home, "results", name),
+                              {"error": "worker 找不到請求：%s" % name})
         return 0
+    aos = rec.get("aos") if isinstance(rec.get("aos"), dict) else {}
+    engines = load_engines(home)
+    engine = pick_engine(engines, aos.get("engine") or "") or {}
+    body = build_body(engine, rec)
+    out = {"engine": engine.get("name") or aos.get("engine") or "",
+           "base_url": engine.get("base_url") or "",
+           "model": body.get("model"), "priority": aos.get("priority")}
 
-    result = os.path.join(home, "results", name)
-    deadline = None if args.timeout <= 0 else time.time() + args.timeout
+    started = time.time()
     try:
-        while not os.path.isfile(result):
-            if deadline is not None and time.time() > deadline:
-                print("aos-llm: 等了 %g 秒沒等到結果，請求還叫 %s" % (args.timeout, name),
-                      file=sys.stderr)
-                return 1
-            time.sleep(0.2)
-    except KeyboardInterrupt:
-        print("\naos-llm: 不等了，請求還叫 %s" % name, file=sys.stderr)
-        return 130
+        answer = call(engine, body)
+        ok = True
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", "replace")[:500]
+        except OSError:
+            pass
+        answer = {"error": ("HTTP %s %s %s" % (e.code, e.reason, detail)).strip()}
+        ok = False
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        answer = {"error": "打不通 %s（%s）" % (out["base_url"], e)}
+        ok = False
+    took_ms = int((time.time() - started) * 1000)
+    out["took_ms"] = took_ms
+    if ok and not isinstance(answer, dict):
+        answer, ok = {"error": "回覆不是一個 JSON 物件"}, False
+    usage = answer.get("usage") if ok else None
+    if ok:
+        out["usage"] = usage if isinstance(usage, dict) else None
+    answer["aos"] = out
 
-    with open(result, encoding="utf-8", errors="replace") as f:
-        text = f.read()
-    sys.stdout.write(text)
-    if not text.endswith("\n"):
-        sys.stdout.write("\n")
-    os.remove(result)
-    try:
-        answer = json.loads(text)
-    except ValueError:
-        answer = {}
-    return 1 if isinstance(answer, dict) and answer.get("error") else 0
+    lib.write_json_atomic(os.path.join(home, "results", name), answer)
+    write_pending(home, name, "%s|%s" % (out["base_url"], out["model"] or ""),
+                  usage, not ok, took_ms)
+    return 0
 
+
+# ── usage／ls ───────────────────────────────────────────────────────────────
 
 def width(text):
     """印出來大概佔幾格：中日韓字算兩格，其他算一格。"""
@@ -179,7 +505,7 @@ def do_usage(args):
     """帳本是拿來算錢的：供應商回了哪些數字就印哪些欄，不寫死幾欄。"""
     home = home_of(args)
     day = args.day or datetime.date.today().isoformat()
-    book = read_json(os.path.join(home, "usage", day + ".json"), None)
+    book = lib.read_json(os.path.join(home, "usage", day + ".json"), None)
     if not isinstance(book, dict) or not book:
         print("%s 沒有用量紀錄" % day)
         return 0
@@ -201,18 +527,73 @@ def do_usage(args):
     return 0
 
 
+def queued_rows(home, defaults):
+    """排隊中的請求，照 exec 會派工的順序：(-priority, mtime, 檔名)。
+    沒寫 priority／engine 的用資料夾預設補，補過的那格標一個 True。"""
+    d_engine, d_priority = defaults
+    box = os.path.join(home, "requests")
+    rows = []
+    for name, mtime in queue(box):
+        req = lib.read_json(os.path.join(box, name), None)
+        req = req if isinstance(req, dict) else {}
+        if "priority" in req:
+            try:
+                priority, p_default = int(req.get("priority") or 0), False
+            except (TypeError, ValueError):
+                priority, p_default = d_priority, True
+        else:
+            priority, p_default = d_priority, True
+        engine = req.get("engine") or ""
+        rows.append((-priority, mtime, name, engine or d_engine, p_default, not engine))
+    rows.sort()
+    return rows
+
+
+def running_rows(home):
+    """執行中的請求：(檔名, engine, pid, 開跑到現在幾秒)。"""
+    running_box = os.path.join(home, "requests", "running")
+    rows = []
+    if not os.path.isdir(running_box):
+        return rows
+    now = time.time()
+    for name in sorted(os.listdir(running_box)):
+        path = os.path.join(running_box, name)
+        if not (name.endswith(".json") and os.path.isfile(path)):
+            continue
+        rec = lib.read_json(path, {})
+        aos = rec.get("aos") if isinstance(rec, dict) and isinstance(rec.get("aos"), dict) else {}
+        rows.append((name, aos.get("engine") or "-", aos.get("pid") or 0,
+                     int(now - os.path.getmtime(path))))
+    return rows
+
+
 def do_ls(args):
     home = home_of(args)
-    rows = queued(os.path.join(home, "requests"), defaults_of(home))
+    engines = load_engines(home)
+    defaults = load_defaults(home, engines)
+
+    live = running_rows(home)
+    print("執行中：%d 個" % len(live))
+    for name, engine, pid, age in live:
+        print("  %-42s engine=%-15s pid=%-8s age=%ds" % (name, engine, pid, age))
+
+    rows = queued_rows(home, defaults)
     if not rows:
         print("排隊中：0 個")
-        return 0
-    print("排隊中：%d 個（由上而下就是會被做掉的順序；`*` ＝ 用資料夾預設補的）" % len(rows))
-    now = time.time()
-    for negp, mtime, name, engine, p_default, e_default in rows:
-        print("  %-42s priority=%-5s engine=%-15s age=%ds"
-              % (name, "%d%s" % (-negp, "*" if p_default else ""),
-                 engine + ("*" if e_default else ""), int(now - mtime)))
+    else:
+        print("排隊中：%d 個（由上而下就是會被派工的順序；`*` ＝ 用資料夾預設補的）" % len(rows))
+        now = time.time()
+        for negp, mtime, name, engine, p_default, e_default in rows:
+            print("  %-42s priority=%-5s engine=%-15s age=%ds"
+                  % (name, "%d%s" % (-negp, "*" if p_default else ""),
+                     engine + ("*" if e_default else ""), int(now - mtime)))
+
+    busy = {}
+    for _, engine, _, _ in live:
+        busy[engine] = busy.get(engine, 0) + 1
+    for e in engines:
+        name = e.get("name") or "-"
+        print("engine %s: running %d/%d" % (name, busy.get(name, 0), max_concurrent(e)))
     return 0
 
 
@@ -220,16 +601,16 @@ def main():
     ap = argparse.ArgumentParser(prog="aos-llm")
     sub = ap.add_subparsers(dest="cmd")
 
+    p = sub.add_parser("exec")
+    p.add_argument("dir", nargs="?", default=".")
+
+    p = sub.add_parser("worker")
+    p.add_argument("dir")
+    p.add_argument("name")
+
     def add_dir(p):
         p.add_argument("--dir", default="")
         return p
-
-    p = add_dir(sub.add_parser("send"))
-    p.add_argument("file")
-    p.add_argument("--priority", type=int, default=None)
-    p.add_argument("--engine", default="")
-    p.add_argument("--no-wait", action="store_true")
-    p.add_argument("--timeout", type=float, default=120)
 
     p = add_dir(sub.add_parser("usage"))
     p.add_argument("day", nargs="?", default="")
@@ -237,8 +618,10 @@ def main():
     add_dir(sub.add_parser("ls"))
 
     args = ap.parse_args()
-    if args.cmd == "send":
-        return do_send(args)
+    if args.cmd == "exec":
+        return do_exec(args)
+    if args.cmd == "worker":
+        return do_worker(args)
     if args.cmd == "usage":
         return do_usage(args)
     if args.cmd == "ls":

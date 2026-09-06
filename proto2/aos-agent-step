@@ -9,7 +9,8 @@ LLM 在哪（llm.json，{"dir": "../llm"}，相對於 agent 資料夾本身；�
 上次回覆（llm-result.json）、現在走到哪（state.json，順手記一份上次的用量 last_usage）。
 
 agent 自己不打 HTTP：要問 LLM 就把整包 body 寫成一個請求檔丟進那個 LLM 資料夾的
-requests/，下一格再去 results/ 撿回覆——LLM 只是隔壁另一個一直在跑的資料夾。
+requests/，**過幾格**再去 results/ 撿回覆——LLM 只是隔壁另一個一直在跑的資料夾，
+請求是它派給背景 worker 打的，所以回來得等幾格。寫請求／撿結果都走旁邊的 aos_llm 小幫手。
 
 五格輪流走：idle 收信（收信前先清 archived/，開新一輪）→ llm 丟請求 → wait 撿回覆
 → act 行動 → collect 再收信（不清 archived/，接在這一輪後面）→ llm …
@@ -17,11 +18,13 @@ requests/，下一格再去 results/ 撿回覆——LLM 只是隔壁另一個一
 所以 aos-loop 會一直回來看（給 --no-write-inst 就不寫，讓 aos-loop --keep-inst 去管）。
 """
 import argparse
-import datetime
 import json
 import os
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import aos_llm   # noqa: E402  （寫請求／撿結果的小幫手，就在旁邊）
 
 
 def read_json(path, default):
@@ -96,10 +99,10 @@ def llm_conf(home):
     return conf if isinstance(conf, dict) else {}
 
 
-def llm_home(home, workdir):
-    """LLM 資料夾的 .aos/llm/ 在哪：llm.json 的 dir（相對於 agent 資料夾本身，
-    也就是 <dir>，不是 .aos/agent/；絕對路徑也可以）→ 環境變數 AOS_LLM_DIR →
-    老規矩的兄弟目錄 ../llm。三個都落空（連 ../llm 都沒有）就印一句退 2。"""
+def llm_dir(home, workdir):
+    """LLM 資料夾在哪：llm.json 的 dir（相對於 agent 資料夾本身，也就是 <dir>，
+    不是 .aos/agent/；絕對路徑也可以）→ 環境變數 AOS_LLM_DIR → 老規矩的兄弟目錄
+    ../llm。三個都落空（連 ../llm 都沒有）就印一句退 2。"""
     where = llm_conf(home).get("dir") or os.environ.get("AOS_LLM_DIR") or ""
     if not where:
         where = "../llm"
@@ -107,7 +110,7 @@ def llm_home(home, workdir):
             print("aos-agent-step: 找不到 LLM 資料夾——llm.json 沒有 dir、也沒設 AOS_LLM_DIR、"
                   "旁邊也沒有 ../llm", file=sys.stderr)
             sys.exit(2)
-    return os.path.join(os.path.abspath(os.path.join(workdir, where)), ".aos", "llm")
+    return os.path.abspath(os.path.join(workdir, where))
 
 
 def do_llm(home, workdir):
@@ -126,12 +129,7 @@ def do_llm(home, workdir):
     messages += read_json(os.path.join(home, "new-prompts.json"), [])
 
     body = {"messages": messages}
-    # llm.json 可以寫 priority／engine，會抄進每一個請求，讓 LLM 資料夾自己去排。
     conf = llm_conf(home)
-    if conf.get("priority") is not None:
-        body["priority"] = conf["priority"]
-    if conf.get("engine"):
-        body["engine"] = conf["engine"]
     tools = read_json(os.path.join(home, "tools.json"), [])
     if tools:
         body["tools"] = [{"type": "function", "function": {
@@ -140,10 +138,11 @@ def do_llm(home, workdir):
             "parameters": t.get("parameters", {}),
         }} for t in tools]
 
-    now = datetime.datetime.now()
-    name = "%s-%s-%06d.json" % (os.path.basename(workdir.rstrip("/")) or "agent",
-                                now.strftime("%Y%m%d-%H%M%S"), now.microsecond)
-    write_json(os.path.join(llm_home(home, workdir), "requests", name), body)
+    # llm.json 可以寫 priority／engine，會抄進每一個請求，讓 LLM 資料夾自己去排。
+    name = aos_llm.write_request(
+        llm_dir(home, workdir), body,
+        priority=conf.get("priority"), engine=conf.get("engine"),
+        name=os.path.basename(workdir.rstrip("/")) or "agent")
     print("aos-agent-step: 問 LLM，請求丟成 %s" % name, file=sys.stderr)
     return name
 
@@ -159,17 +158,10 @@ def do_wait(home, workdir, request):
     回 (下一個 state, 這次的用量)。用量是結果檔裡 LLM 資料夾多掛的 aos.usage，
     沒撿到東西就回 False 表示「這格沒消息，state.json 裡的 last_usage 別動」。
     """
-    result = os.path.join(llm_home(home, workdir), "results", request or "")
-    if not request or not os.path.isfile(result):
+    answer = aos_llm.read_result(llm_dir(home, workdir), request)
+    if answer is None:
         print("aos-agent-step: 等 LLM（%s）" % (request or "沒有請求"), file=sys.stderr)
         return "wait", False
-    with open(result, encoding="utf-8", errors="replace") as f:
-        text = f.read()
-    try:
-        answer = json.loads(text)
-    except ValueError:
-        answer = {"error": "結果檔讀不成 JSON"}
-    os.remove(result)
     write_json(os.path.join(home, "llm-result.json"), answer)
     aos = answer.get("aos") if isinstance(answer, dict) else None
     usage = aos.get("usage") if isinstance(aos, dict) else False

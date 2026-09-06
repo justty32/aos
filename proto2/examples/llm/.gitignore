@@ -1,5 +1,6 @@
 # 跑起來才會生出來的東西，不進 git
-.aos/llm/requests/
-.aos/llm/results/
-.aos/llm/usage/
-.aos/llm/state.json
+requests/
+results/
+usage/
+logs/
+state.json
