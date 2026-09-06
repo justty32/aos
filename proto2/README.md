@@ -116,7 +116,7 @@ proto2/aos-daemon-unregister proto2/examples/daemon 名字
 
 ## 為什麼另起爐灶
 
-見 [reflections.md](../wf/workflows/ideas/reflections.md)：邊緣狀況想太早了，先做最小的那句話。
+見 [reflections.md](../wf/workflows/ideas/reflections.md)：邊緣狀況想太早了，先做最小的那句話。另有一篇抒發原文：[2026-09-06 抒發：世界／時鐘／信箱](notes/2026-09-06-world-clock-agent.md)。
 
 ## 放進 PATH
 
