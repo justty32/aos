@@ -27,7 +27,9 @@
    → [finite-resource-queue](workflows/workshop/records/finite-resource-queue.md)
 6. **proto2：子 agent 會自動繼承 `spawn` 工具**，子孫一路都能生小孩（驗過三層）。要不要擋、要不要限深度？（使用者 09-06 說「之後再說」）→ [proto2/README](../proto2/README.md)
 8. **proto2：agent 之間的交流（tell／hear，或子回話自動變父的信）**先不做，什麼時候做、走哪種？→ [proto2/README](../proto2/README.md)
-9. **proto2：工具包發想的 34 條拍板題（T-01～T-34）**——七隊各想一塊（交流、自身狀態與記憶、檔案／shell 與造工具、子 agent、長時間工具、身份與環境、成本測算），每題附建議；A-6 與 A-8 的答案也包在裡面。→ [proto2/notes/tools/README.md](../proto2/notes/tools/README.md)
+9. **proto2：拍板題 T-01～T-77 全照建議做了（使用者 09-06 說「都 OK」）**；要翻案就回編號。→ [notes/tools/README.md](../proto2/notes/tools/README.md)
+10. **proto2：玩出來的 25 條效能與邊緣狀況、各包想要但沒有的接點**，要你看過說哪些現在要做。→ [notes/play/README.md](../proto2/notes/play/README.md)、[docs/packs-api.md](../proto2/docs/packs-api.md) 最後一節
+11. **proto2：工作室實玩燒 120 萬 token 沒交付**——預算硬閘門簡化輪在修；修完要你再下一次單試。→ [notes/play/2026-09-06-studio.md](../proto2/notes/play/2026-09-06-studio.md)
 
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
