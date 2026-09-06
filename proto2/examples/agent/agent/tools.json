@@ -1,0 +1,22 @@
+{
+  "packs": ["mailbox", "shell", "self", "kids"],
+  "tools": [
+    {
+      "name": "say",
+      "description": "把一句話寫進 said.txt。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "要說的話"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "command": "python3 -c 'import json,sys; t=json.load(sys.stdin).get(\"text\",\"\"); open(\"said.txt\",\"w\").write(t); print(\"已寫進 said.txt：\"+t)'"
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""aos-user <say|listen|talk|status|spawn> <世界> [--home DIR] — 人用的殼。
+
+指令切成兩種：**agent 自己跑的時候需要的**（狀態機、它的工具）在 `aos-agent`；
+**給人方便用的**在這裡。`aos-user` 自己不推格，只是把「一個人想對某個 agent 做的事」
+翻成檔案動作——投一封信、盯著它的 outbox、看它的狀態、幫它生一個小孩。
+
+> **這支是暫時的殼。** 使用者自己之後也會被當成一個 agent，這些動作到時候會變成
+> agent 之間的交流（寄信給對方的 inbox、看對方的 outbox），使用者的特殊地位到時再談。
+
+    aos-user say <世界> [文字]        寫一封信進 <home>/inbox/user/（不給文字就整段讀 stdin）
+    aos-user listen <世界> [--new] [--once]   盯著 <home>/outbox/，有回話就印
+    aos-user talk <世界>              互動聊天（say ＋ listen，/quit 離開）
+    aos-user status <世界>            印它的自我狀態（就是 self_status 那一包）
+    aos-user spawn <世界> <名字> <人格> [--clock shared|own]   幫它生一個小孩
+
+`--home` 不給就去世界的 `.aos/inst` 把 `--home X` 撈出來用，撈不到就是 `.`——所以
+平常打 `aos-user talk examples/agent` 就好，不用每次重複 `--home agent`。
+版面與信箱規則見旁邊的 `aos_agent.py`。
+"""
+import argparse
+import json
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from aos_agent import (   # noqa: E402
+    DIRECT_SOURCE, outbox_content, outbox_names, put_mail, resolve_home,
+    spawn, status_of, warn)
+
+
+def show(box, name):
+    print("--- reply %s ---" % os.path.splitext(name)[0])
+    print(outbox_content(box, name))
+    print()
+    sys.stdout.flush()
+
+
+def do_say(args):
+    world = os.path.abspath(args.dir)
+    home = resolve_home(world, args.home)
+    text = args.text if args.text is not None else sys.stdin.read()
+    warn("寫了 " + put_mail(home, DIRECT_SOURCE, text, DIRECT_SOURCE))
+    return 0
+
+
+def do_listen(args):
+    world = os.path.abspath(args.dir)
+    box = os.path.join(resolve_home(world, args.home), "outbox")
+    seen = set(outbox_names(box))
+    if not args.new:
+        for name in sorted(seen):
+            show(box, name)
+        if args.once:
+            return 0
+    try:
+        while True:
+            fresh = [n for n in outbox_names(box) if n not in seen]
+            for name in fresh:
+                show(box, name)
+                seen.add(name)
+            if fresh and args.once:
+                return 0
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        return 0
+
+
+def do_talk(args):
+    world = os.path.abspath(args.dir)
+    home = resolve_home(world, args.home)
+    box = os.path.join(home, "outbox")
+    print("（另一個終端機要跑 aos-loop 這個資料夾，不然沒人會回話）")
+    while True:
+        try:
+            line = input("你> ")
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if line.strip() == "/quit":
+            return 0
+        if not line.strip():
+            continue
+        before = set(outbox_names(box))
+        put_mail(home, DIRECT_SOURCE, line, DIRECT_SOURCE)
+        try:
+            while True:
+                fresh = [n for n in outbox_names(box) if n not in before]
+                if fresh:
+                    for name in fresh:
+                        print("agent> " + outbox_content(box, name))
+                        sys.stdout.flush()
+                    break
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("\n（不等了，可以繼續打）")
+
+
+def do_status(args):
+    world = os.path.abspath(args.dir)
+    home = resolve_home(world, args.home)
+    print(json.dumps(status_of(world, home), ensure_ascii=False, indent=2))
+    return 0
+
+
+def do_spawn(args):
+    world = os.path.abspath(args.dir)
+    home = resolve_home(world, args.home)
+    ok, msg = spawn(world, home, args.name, args.persona, args.clock)
+    warn(msg)
+    return 0 if ok else 2
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-user")
+    sub = ap.add_subparsers(dest="cmd")
+
+    def world_args(p):
+        p.add_argument("dir", nargs="?", default=".")
+        p.add_argument("--home", default=None)
+        return p
+
+    p = world_args(sub.add_parser("say"))
+    p.add_argument("text", nargs="?", default=None)
+    p.set_defaults(fn=do_say)
+    p = world_args(sub.add_parser("listen"))
+    p.add_argument("--new", action="store_true")
+    p.add_argument("--once", action="store_true")
+    p.set_defaults(fn=do_listen)
+    world_args(sub.add_parser("talk")).set_defaults(fn=do_talk)
+    world_args(sub.add_parser("status")).set_defaults(fn=do_status)
+    # spawn 的世界是必填的（三個位置參數都必填，argparse 才允許 --clock 跟它們交錯）
+    p = sub.add_parser("spawn")
+    p.add_argument("dir")
+    p.add_argument("--home", default=None)
+    p.add_argument("name")
+    p.add_argument("persona")
+    p.add_argument("--clock", choices=["shared", "own"], default="shared")
+    p.set_defaults(fn=do_spawn)
+
+    args = ap.parse_args()
+    if not getattr(args, "fn", None):
+        ap.print_help(sys.stderr)
+        return 2
+    return args.fn(args)
+
+
+sys.exit(main())

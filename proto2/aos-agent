@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+"""aos-agent exec <世界> [--home DIR] — 一個 agent 走「一格」。
+
+**這支只放 agent 自己跑的時候需要的東西**：五格狀態機，加上把工具包接起來。
+給人方便用的那些動作（say／listen／talk／status／spawn）在另一支 `aos-user`——
+使用者自己以後也會是一個 agent，那些動作到時候會變成 agent 之間的交流。
+
+**工具包一包一檔**，放在 `packs/<名字>.py`（先找 agent 自己的 `<home>/packs/`，
+再找 aos 內建的 `packs/`），一包自帶 `TOOLS`／`PROMPT`／`run(name, args, ctx)`：
+`tools.json` 的 `packs` 列到誰就載誰，工具定義與預設 prompt 併進請求，工具呼叫照名字
+派回那一包。認不得的包名印一行到 stderr 就跳過，agent 照樣跑。`tools.json` 的 `tools[]`
+（一句 shell 指令的工具）不走工具包，由 `aos_agent.run_custom` 直接跑。
+
+版面、信箱規則、`ctx` 有什麼看 `aos_agent.py` 的說明。五格：
+
+    idle    掃一遍 inbox/*/，有沒讀過的信就接進記憶（user 直接進、其他只給一句摘要）
+    llm     人格＋工具包預設 prompt＋記憶（＋工具清單）寫成請求丟進 LLM 資料夾
+    wait    LLM 資料夾的 results/ 出現同名檔就撿回來，assistant 接進記憶
+    act     有 tool_calls 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 outbox/
+    collect 再掃一次信箱（沒新信也照走），回 llm
+
+`step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格。跟 LLM 之間走 `aos_llm`
+的**私有通道**（不是工具），`</think>` 這種漏出來的思考由 LLM 資料夾那側清乾淨
+（engines.json 的 `strip_think`），agent 拿到什麼就用什麼。
+
+**這支不寫 `.aos/inst`**——世界的 `.aos/inst` 是人（或 spawn）寫一次就固定的一段，
+`aos-loop --keep-inst`／daemon 每格原樣重跑；agent 自己去覆蓋它會把 spawn 掛上去的
+`aos-exec <home>/kids/<名字>` 那行洗掉。
+"""
+import argparse
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import aos_llm            # noqa: E402
+from aos_agent import (   # noqa: E402
+    Ctx, append_history, llm_dir, load_packs, now_iso, pack_owners, read_json,
+    resolve_home, run_custom, scan_inbox, system_text, tool_specs, warn, write_json)
+
+def do_llm(home, world):
+    """把整包 body 寫成請求檔丟進 LLM 資料夾的 requests/，回請求檔名。"""
+    loaded, extra = load_packs(home)
+    messages = []
+    text = system_text(home, loaded)
+    if text:
+        messages.append({"role": "system", "content": text})
+    history = read_json(os.path.join(home, "prompts.json"), [])
+    messages += history if isinstance(history, list) else []
+
+    body = {"messages": messages}
+    specs = tool_specs(loaded, extra)
+    if specs:
+        body["tools"] = [{"type": "function", "function": t} for t in specs]
+    conf = read_json(os.path.join(home, "llm.json"), {})
+    conf = conf if isinstance(conf, dict) else {}
+    name = aos_llm.write_request(
+        llm_dir(home, world), body,
+        priority=conf.get("priority"), engine=conf.get("engine"),
+        name=os.path.basename(world.rstrip("/")) or "agent")
+    warn("問 LLM，請求丟成 %s" % name)
+    return name
+
+
+def do_wait(home, world, request):
+    """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False)。"""
+    answer = aos_llm.read_result(llm_dir(home, world), request)
+    if answer is None:
+        warn("等 LLM（%s）" % (request or "沒有請求"))
+        return "wait", False
+    write_json(os.path.join(home, "llm-result.json"), answer)
+    aos = answer.get("aos") if isinstance(answer, dict) else None
+    usage = aos.get("usage") if isinstance(aos, dict) else False
+
+    if answer.get("error"):
+        warn("LLM 回了 error（%s），這輪不算，回 idle" % answer.get("error"))
+        return "idle", usage
+    try:
+        assistant = answer["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError):
+        warn("回覆裡找不到 choices[0].message，這輪不算，回 idle")
+        return "idle", usage
+
+    # 只留 role／content／tool_calls，把伺服器夾帶的私有欄位（reasoning_content…）濾掉。
+    # content 裡漏出來的 <think> 不歸這裡管——那是 LLM 資料夾那側的家務（engines.json 的 strip_think）。
+    stored = {"role": assistant.get("role") or "assistant",
+              "content": assistant.get("content") or ""}
+    calls = assistant.get("tool_calls") or []
+    if calls:
+        stored["tool_calls"] = calls
+    append_history(home, [stored])
+    return "act", usage
+
+
+def run_tool(ctx, owners, extra, name, args_text):
+    """跑一個工具：名字屬於哪個工具包就交給那包的 run()，其餘的走 tools.json 的
+    `tools[]`（一句 shell 指令，參數 JSON 從 stdin 進去）。認不得的名字回一句話，不當機。"""
+    module = owners.get(name)
+    if module is None:
+        return run_custom(ctx, extra, name, args_text)
+    try:
+        args = json.loads(args_text) if args_text.strip() else {}
+    except ValueError:
+        args = {}
+    if not isinstance(args, dict):
+        args = {}
+    try:
+        return json.dumps(module.run(name, args, ctx), ensure_ascii=False)
+    except Exception as e:      # 一個工具壞掉不該弄死整格
+        return json.dumps({"error": "%s 出錯：%s" % (name, e)}, ensure_ascii=False)
+
+
+def do_act(home, world, step):
+    """有工具就跑工具、結果接進記憶；沒工具就把它說的話印出來、落一份到 outbox/。"""
+    answer = read_json(os.path.join(home, "llm-result.json"), {})
+    message = ((answer.get("choices") or [{}])[0] or {}).get("message") or {}
+    calls = message.get("tool_calls")
+    if not (isinstance(calls, list) and calls):
+        content = message.get("content") or ""
+        print(content)
+        write_json(os.path.join(home, "outbox", "%04d.json" % step),
+                   {"role": "assistant", "content": content})
+        return "idle"
+
+    loaded, extra = load_packs(home)
+    owners = pack_owners(loaded)
+    ctx = Ctx(world, home)
+    results = []
+    for call in calls:
+        fn = call.get("function") or {}
+        args = fn.get("arguments")
+        if not isinstance(args, str):
+            args = json.dumps(args or {}, ensure_ascii=False)
+        out = run_tool(ctx, owners, extra, fn.get("name"), args)
+        warn("跑工具 %s" % fn.get("name"))
+        results.append({"role": "tool", "tool_call_id": call.get("id"), "content": out})
+    append_history(home, results)
+    return "collect"
+
+
+def do_exec(args):
+    world = os.path.abspath(args.dir)
+    home = resolve_home(world, args.home)
+    st_path = os.path.join(home, "state.json")
+    saved = read_json(st_path, {})
+    saved = saved if isinstance(saved, dict) else {}
+    state = saved.get("state") or "idle"
+    step = saved.get("step") or 0
+    busy = saved.get("busy") or 0
+    request = saved.get("request") or ""
+    last_usage = saved.get("last_usage")
+    started = saved.get("started") or now_iso()
+    announced = saved.get("announced") or []
+
+    if state == "idle":
+        msgs, announced = scan_inbox(home, announced)
+        append_history(home, msgs)
+        nxt, did = ("llm", True) if msgs else ("idle", False)
+    elif state == "collect":
+        msgs, announced = scan_inbox(home, announced)
+        append_history(home, msgs)
+        nxt, did = "llm", True
+    elif state == "llm":
+        request = do_llm(home, world)
+        nxt, did = "wait", True
+    elif state == "wait":
+        nxt, usage = do_wait(home, world, request)
+        if usage is not False:
+            last_usage = usage
+        did = nxt != "wait"
+        if did:
+            request = ""
+    elif state == "act":
+        nxt = do_act(home, world, step + 1)
+        did = True
+    else:
+        warn("認不得的 state：%s，當 idle" % state)
+        state, nxt, did = "idle", "idle", False
+
+    if did:
+        busy += 1
+    write_json(st_path, {"state": nxt, "step": step + 1, "busy": busy,
+                         "request": request, "last_usage": last_usage,
+                         "started": started, "announced": announced})
+    warn("step %d busy %d state %s -> %s" % (step, busy, state, nxt))
+    return 0
+
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-agent")
+    sub = ap.add_subparsers(dest="cmd")
+    p = sub.add_parser("exec")
+    p.add_argument("dir", nargs="?", default=".")
+    p.add_argument("--home", default=None)
+    p.set_defaults(fn=do_exec)
+    args = ap.parse_args()
+    if not getattr(args, "fn", None):
+        ap.print_help(sys.stderr)
+        return 2
+    return args.fn(args)
+
+
+sys.exit(main())
