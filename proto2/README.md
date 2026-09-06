@@ -4,30 +4,19 @@
 
 ## aos-exec：跑一個路徑
 
-`aos-exec <path>`——**檔案**→直接執行，工作目錄＝檔案所在資料夾，退出碼原樣傳回；**資料夾**→
-讀 `<path>/.aos/inst`（純文字），整段原樣丟給 `os.system()` 跑，工作目錄＝那個資料夾，不解析、
-不拆行、沒有批次指令。找不到路徑，或資料夾沒有 `.aos/inst`：印一句錯誤到 stderr，退出碼 2。
+`aos-exec <path>`——**檔案**→直接執行，工作目錄＝檔案所在資料夾，退出碼原樣傳回；**資料夾**→讀 `<path>/.aos/inst`（純文字），整段原樣丟給 `os.system()` 跑，工作目錄＝那個資料夾，不解析、不拆行、沒有批次指令。找不到路徑，或資料夾沒有 `.aos/inst`：印一句錯誤到 stderr，退出碼 2。
 
 ## aos-loop：反覆跑 aos-exec
 
-`aos-loop [dir] [--steps N] [--interval SEC] [--stop-when-empty] [--keep-inst]`。`dir` 省略就
-用目前目錄。每一步：讀 `.aos/inst`（不存在＝空字串）、**立刻清空**、再把內容丟給 `os.system()`
-跑（去頭尾空白後是空的就不跑）。命令想留下一步，就在自己跑的時候把新內容寫回 `.aos/inst`，下一圈會撿到。
+`aos-loop [dir] [--steps N] [--interval SEC] [--stop-when-empty] [--keep-inst]`。`dir` 省略就用目前目錄。每一步：讀 `.aos/inst`（不存在＝空字串）、**立刻清空**、再把內容丟給 `os.system()` 跑（去頭尾空白後是空的就不跑）。命令想留下一步，就在自己跑的時候把新內容寫回 `.aos/inst`，下一圈會撿到。
 
-`--steps N` 跑幾步就停（不給＝無限）、`--interval SEC` 每步睡幾秒（預設 1）、
-`--stop-when-empty` 讀到空的就以 0 退出（不給的話空的那步不跑、照樣算一步繼續）、
-`--keep-inst` 不清空 `.aos/inst`、每圈原樣重跑同一段（寫一次、跑到飽）。命令退出碼不影響
-迴圈，但每步印一行到 stderr，例如 `aos-loop: step 2 exit 5`。
+`--steps N` 跑幾步就停（不給＝無限）、`--interval SEC` 每步睡幾秒（預設 1）、`--stop-when-empty` 讀到空的就以 0 退出、`--keep-inst` 不清空 `.aos/inst`。命令退出碼不影響迴圈，但每步印一行到 stderr。
 
 ## aos-agent：一個 agent 走一格
 
-**指令分兩種**：`aos-agent` 是 **agent 自己跑的時候需要的**（狀態機、工具包）；
-`aos-user` 是 **給人方便用的殼**（說話、聽、看狀態、生小孩）。使用者以後也會是一個
-agent，那些動作到時候會變成 agent 之間的交流，特殊地位到時再談。
+**指令分兩種**：`aos-agent` 是 agent 自己跑的狀態機；`aos-user` 是給人說話、聽、看狀態、生小孩的殼。
 
-**一個 agent 就是一個世界資料夾。** 世界資料夾的 `.aos/` 裡**只有一句 `inst`**，agent
-自己的東西全放在**本體資料夾**（home）底下——home 放哪自己設，`--home` 相對於世界資料夾，
-不給就是 `.`（東西直接攤在世界資料夾底下）：
+**一個 agent 就是一個世界資料夾。** `.aos/` 裡只有一句 `inst`，其他都放在本體資料夾（home）。`--home` 相對於世界，不給就是 `.`：
 
 ```
 xxx/.aos/inst              aos-agent exec . --home agent
@@ -46,10 +35,7 @@ xxx/<home>/llm-result.json      上次 LLM 的整包原始結果
 xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界資料夾）
 ```
 
-`llm.json` 的 `dir` 相對於**世界資料夾**（不是 home），所以 `../llm` 一直都是隔壁那個 LLM
-資料夾；沒寫就看 `AOS_LLM_DIR`，再沒有就找 `../llm`。範例有兩個：`examples/agent`（home 設成
-`agent`）跟 `examples/agent-flat`（home 用預設的 `.`）。**`aos-user` 的子命令不用每次打
-`--home`**——沒給就去世界的 `.aos/inst` 把 `--home X` 撈出來用，撈不到就當 `.`。
+`llm.json` 的 `dir` 相對於世界資料夾；沒寫就看 `AOS_LLM_DIR`，再沒有就找 `../llm`。`examples/agent` 的 home 是 `agent`，`examples/agent-flat` 是 `.`。`aos-user` 沒給 `--home` 時會從 `.aos/inst` 撈。
 
 `aos-agent exec <世界> [--home DIR]` 一次走一格，五格輪流走：
 
@@ -61,17 +47,11 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 | `act` | 有 `tool_calls` 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 `outbox/` | 有工具 `collect`，有文字 `idle`；只回空白就不寫 outbox、記一次後回 `idle` |
 | `collect` | 再掃一次信箱（沒新信也照走） | `llm` |
 
-`step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格；`last_usage` 是上次撿回覆時
-LLM 附的那包用量，`empty_replies` 是模型只回空白的次數。`self_status` 的 `today_usage_all` 是
-整個 LLM 世界今天的加總，裡面的 `by_engine` 留著各個 endpoint＋model 的拆帳。**這支不寫 `.aos/inst`**——`.aos/inst` 是人（或 spawn）寫一次就固定的
-一段，`aos-loop --keep-inst`／daemon 每格原樣重跑；agent 自己去覆蓋它會把 spawn 掛上去的
-那行洗掉。
+`step` 是被推了幾格，`busy` 是真做事幾格；`last_usage` 是上次用量，`empty_replies` 是空白回覆次數。`today_usage_all` 是整個 LLM 世界今天的加總。agent 不寫 `.aos/inst`，避免洗掉 shared 小孩。
 
 ### 信箱：一個來源一個資料夾
 
-一封信就是一個 JSON 檔：`{"from": "bob", "time": "...", "content": "..."}`（多帶別的鍵也行），
-一個檔要放一串信也可以（JSON 陣列）。**來源就是 `inbox/` 底下的資料夾名**——`user`、`team`、
-`kernel`、別的 agent 的名字都行，第一次收到信才建。
+一封信就是一個 JSON 檔：`{"from": "bob", "time": "...", "content": "..."}`，也可放一個信件陣列。來源就是 `inbox/` 底下的資料夾名。
 
 - `idle` 掃到未讀就去問 LLM，但**不會把信整包塞進 prompt**，只加一句「你有新信：team 1 封。
   用信箱工具去讀。」，剩下讓模型自己用信箱工具去讀。
@@ -86,7 +66,7 @@ LLM 附的那包用量，`empty_replies` 是模型只回空白的次數。`self_
 `tools.json` 長這樣：
 
 ```json
-{"packs": ["mailbox", "shell", "self", "kids"],
+{"packs": ["mailbox", "communication", "fs", "self", "memory", "kids", "cost"],
  "tools": [{"name": "say", "description": "...", "parameters": {...}, "command": "..."}]}
 ```
 
@@ -96,10 +76,23 @@ LLM 附的那包用量，`empty_replies` 是模型只回空白的次數。`self_
 
 | 包名 | 一句話 | 文件 |
 |---|---|---|
+| `bigmem` | 把舊對話送進 SQLite 記憶世界。 | [docs/bigmem.md](docs/bigmem.md) |
+| `branch` | 同時跑幾條思路，再挑一條接手。 | [docs/branch.md](docs/branch.md) |
+| `code` | 搜尋、留 checkpoint、看 diff、復原檔案。 | [docs/code.md](docs/code.md) |
+| `communication` | 寄信、回信、廣播與等信。 | [docs/communication.md](docs/communication.md) |
+| `cost` | 記每次工具的時間、字數、token 與價錢。 | [docs/cost.md](docs/cost.md) |
+| `fs` | 讀寫檔案、改一段文字、列目錄與跑短指令。 | [docs/fs.md](docs/fs.md) |
+| `jobs` | 把長指令搬到另一個有自己時鐘的世界。 | [docs/jobs.md](docs/jobs.md) |
+| `kids` | 生小孩、派活、看進度、暫停與收掉。 | [docs/kids.md](docs/kids.md) |
 | `mailbox` | 讀自己的信箱，讀過就搬進 `read/`。 | [docs/mailbox.md](docs/mailbox.md) |
-| `shell` | 在世界資料夾跑一句 shell。 | [docs/shell.md](docs/shell.md) |
-| `self` | 看自己的格數、記憶、資料夾與用量。 | [docs/self.md](docs/self.md) |
-| `kids` | 生小孩，並看小孩的名冊與狀態。 | [docs/kids.md](docs/kids.md) |
+| `memory` | 整理本體內的短期筆記與舊對話。 | [docs/memory.md](docs/memory.md) |
+| `ref` | 把太大的 JSON 結果收成可重開的指標。 | [docs/ref.md](docs/ref.md) |
+| `review` | 回顧成本、失敗、思考與可重用教訓。 | [docs/review.md](docs/review.md) |
+| `self` | 看自己的狀態、身分、時間與花費。 | [docs/self.md](docs/self.md) |
+| `think` | 把難題交給旁線深思，再拿短結論。 | [docs/think.md](docs/think.md) |
+| `toolsmith` | 把常用指令做成自己的工具或包。 | [docs/toolsmith.md](docs/toolsmith.md) |
+
+舊包名 `shell` 會自動改載 `fs` 並提醒；說明留在 [docs/shell.md](docs/shell.md)。
 
 **加一包 = 加 `packs/<包>.py` + `tests/<包>.sh` + `docs/<包>.md`。README 只加表裡一行。**
 共用接口與掛勾看 [docs/packs-api.md](docs/packs-api.md)。
@@ -110,7 +103,7 @@ LLM 附的那包用量，`empty_replies` 是模型只回空白的次數。`self_
 ### 子世界：生一個小孩
 
 子 agent 長在 `<home>/kids/<名字>/`，**它自己就是一個完整的世界資料夾**（`.aos/inst` 是
-`aos-agent exec .`，本體平鋪在自己底下）。人格是你給的，工具包抄父的一份，`llm.json` 換算成
+`aos-agent exec .`，本體平鋪在自己底下）。人格是你給的；有模板就用模板工具包，沒模板才抄父的一份。`llm.json` 換算成
 指向父用的那個 LLM 資料夾，兩邊共用同一個 LLM。分兩種鐘：**shared**（時間沒脫節）在父的
 `.aos/inst` 尾端加一行 `aos-exec <home>/kids/<名字>`，父走一格它就走一格、父不動它也不動；
 **own**（時間脫節）建好就自動 `aos-daemon register <子路徑> --no-wait` 要一個自己的時鐘，
@@ -148,20 +141,13 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
 `requests/` 丟一個檔，**過幾格**結果會出現在 `results/`。**有沒有 `engines.json` 就是「這是不是一
 個 LLM 資料夾」。**
 
-`engines.json` 是一個**清單**，第一個是預設，一個引擎就是一個 endpoint＋model 配幾個參數：
-`{"name": "local", "base_url": ".../v1", "model": "local", "max_concurrent": 1, "params":
-{"temperature": 0.7}}`。`api_key_env` 是環境變數的**名字**，那個變數有值才送 `Authorization:
-Bearer`；`params` 原樣帶進 body、不檢查。**`max_concurrent`（不寫＝1）是那台一次最多同時跑幾個
-請求**——範例裡 deepseek 開 2、本機 LM Studio 開 1，四個請求進來就三個開跑、一個排著。
-**`strip_think`（不寫＝true）**：qwen 那種漏進 `content` 的 `<think>…</think>` 在寫結果檔之前就
-切掉（只留最後一個 `</think>` 之後的東西），這是 LLM 這一側的家務、撿結果的人不用自己處理；
-`reasoning_content` 這種供應商私有欄位原樣不動。
+`engines.json` 是清單，第一個是預設；一台就是 endpoint、model、`params`、`max_concurrent`。`api_key_env` 有值才送 Authorization。範例裡 deepseek 可同時跑 10 發，本機 LM Studio 跑 1 發。
 
-請求檔是一個 JSON 物件，aos 只吃三個鍵：`priority`（整數，**大的先做**）、`engine`（引擎名字）、
-`params`（蓋在引擎 `params` 上）；**沒寫 `priority`／`engine` 就用 `defaults.json`**（`{"engine":
-"local", "priority": 0}`，沒這個檔就是 `engines.json` 第一台＋0；認不得的引擎名字還是錯）。
-**其他頂層鍵全部原樣當成 chat/completions 的 body 欄位**，所以 agent 丟的請求不用改：body ＝
-引擎 `params` ← 請求 `params` ← 請求其他頂層鍵，**`model` 一律引擎說了算**。
+`strip_think` 不寫就是 true：寫結果前切掉 content 裡最後一個 `</think>` 以前的內容；`reasoning_content` 原樣保留。
+
+請求檔是 JSON 物件。aos 吃 `priority`、`requester`、`engine`、`params`；沒寫前兩項設定就用 `defaults.json`。其他頂層鍵原樣送 chat/completions，`model` 一律由引擎決定。
+
+`priority` 也可寫成物件，放 `level`、`kind`、`deadline`、`requester`；排程規則見 [docs/llm-scheduling.md](docs/llm-scheduling.md)。usage 帳本分成 `by-model` 與 `by-requester` 兩層。
 
 - `aos-llm exec [dir]`——**每一格做的事**，一格很短、**絕對不等網路**：①tick 加一 ②把
   `usage/pending/` 的紙條折進當天帳本 ③巡 `requests/running/`：完成標記（或舊 worker 的結果）出現了就把請求搬去 `done/`
@@ -214,6 +200,7 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
   跑，否則 kernel 的 start／stop 不會影響到他——`start` 不重開它、巡邏也不標 dead；`continue` 進程還
   在就 SIGCONT，不在就重開一個；register 到 running／paused 的路徑會被擋（叫你用 continue 或先
   unregister）。
+- `register` 可重複給 `--env K=V`，也可用 `--env-from` 讀 600 權限的檔；daemon `config.json` 的 `legacy_env` 決定是否先繼承整包環境，細節見 [docs/identity-and-env.md](docs/identity-and-env.md)。
 - kernel 停掉後 `ls` 的 `stopped` 那列若還有 pid，那只是上一次的 pid 紀錄，不代表它還活著。
 - 幾千個時鐘就是幾千個小 json 檔，現在夠用；管理介面、合併檔案是以後的事，不歸 kernel 管。
 
@@ -234,6 +221,7 @@ export AOS_LLM_DIR=$PWD/proto2/examples/llm    # aos-llm usage/ls 就不用打 -
 lms load qwen/qwen3.5-9b                    # 用 LM Studio：先載模型
 lms server start --port 1234                # 再開 OpenAI 相容 API server
 export DEEPSEEK_API_KEY=你的金鑰             # 沒本機模型、要改用範例的 deepseek-flash 才設
+aos-user new /tmp/my-agent --template coder --engine deepseek-flash  # 從模板開 agent
 aos-daemon-kernel start                     # kernel 常駐起來
 aos-daemon register proto2/examples/llm     # LLM 資料夾一個時鐘
 aos-daemon register proto2/examples/agent   # agent 一個時鐘
@@ -241,6 +229,8 @@ aos-user talk proto2/examples/agent         # 聊天（另一個終端機 aos-da
 aos-daemon pause proto2/examples/agent      # 凍住它（真的送 SIGSTOP），continue 再放它走
 aos-daemon-kernel stop                      # 玩完，時鐘一起收掉
 ```
+
+`aos-user new` 會列出 home、工具包、引擎與下一步。`aos-mcp` 把 agent、LLM、daemon 變成 MCP stdio 工具。記憶世界用 `aos-exec proto2/examples/memory` 推一格，沒有 `store.sqlite` 時會自己建立。
 
 時鐘的輸出在 `$AOS_DAEMON_DIR/logs/`：agent 沒反應就去那裡看是不是一直「等 LLM」、或「沒有
 .aos/inst」；shared 小孩由父的同一個時鐘推，所以父子 stderr 會混在同一份 clock log，而且行上不帶名字。
@@ -262,5 +252,4 @@ echo '{"priority": 5, "messages": [{"role": "user", "content": "1+1=?"}]}' \
 ## 目前刻意不做
 
 鎖、fsync、重試、串流、其他子命令、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。
-並發只做到「一台引擎一次幾個」（`max_concurrent`）；worker 的 HTTP timeout 是 300 秒，agent 另外會在
-等不到結果 60 格後把「請確認 LLM 的鐘」送進 outbox 並回 idle；更細的（退避、配額、跨資料夾排程）撞到再說。
+並發只做到每台引擎的 `max_concurrent`；HTTP timeout 是 300 秒，agent 等 60 格會提示。退避與配額等撞到再說。

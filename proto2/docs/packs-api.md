@@ -21,13 +21,15 @@ def run(name, args, ctx):
 
 ## 2. 怎麼載入
 
-`tools.json` 的 `packs` 列到包名才會載入。先找 `<home>/packs/<包>.py`，再找內建的 `proto2/packs/<包>.py`。
+`tools.json` 的 `packs` 列到包名才會載入。先找 `<home>/packs/<包>.py`，再找內建的 `proto2/packs/<包>.py`。舊名字 `shell` 會改載 `fs` 並提醒。
 
 ```json
 {"packs": ["mailbox", "my_pack"], "tools": []}
 ```
 
 加一包時，只加自己的四個檔。README 只加工具包表的一行。
+
+包與掛勾都照 `tools.json` 的 `packs` 順序。工具同名時，前面的包贏，後面的跳過並印一句提醒。`tools[]` 排在所有包後面。
 
 ## 3. 共用接點
 
@@ -126,13 +128,16 @@ for name, kid in ctx.kids().items():
 box = ctx.kids_dir()
 ```
 
-`ctx.spawn(name: str, persona: str, clock: str = "shared", template: str | None = None) -> tuple[bool, str]`：建立子 agent，並寫父子名冊與通訊錄。
+`ctx.spawn(name: str, persona: str, clock="shared", template=None, packs=None, task=None, depth=None) -> tuple[bool, str]`：建立子 agent，並一次寫好工具包、第一封工作信、深度、父子名冊與通訊錄。`packs` 明講時優先；沒明講時保留模板工具包；沒有有效模板才抄父的工具包。
 
 ```python
-ok, msg = ctx.spawn("reader", "你負責讀文件", template="small")
+ok, msg = ctx.spawn("reader", "你負責讀文件", template="coder",
+                    packs=["mailbox", "fs"], task="先讀 README")
 ```
 
 模板找 `proto2/templates/<名字>/`。目錄不存在時直接略過。
+
+`ctx.self_depth() -> int`：沿 `parent.json` 往上數自己在第幾層；頂層是 0。
 
 ### LLM
 
@@ -148,21 +153,21 @@ where = ctx.find_llm()
 where = ctx.llm_dir()
 ```
 
-`ctx.llm_request(body: dict, kind: str = "side", priority=None, engine=None) -> str`：丟非阻塞請求，登記到 `state["pending"]`，回請求檔名。
+`ctx.llm_request(body: dict, kind="side", priority=None, engine=None, requester=None, schedule_kind=None, deadline=None) -> str`：丟非阻塞請求，登記到 `state["pending"]`，回請求檔名。`kind` 是收件分流；`schedule_kind` 才是排程的 `chat/tool/think/background`。
 
 ```python
 name = ctx.llm_request({"messages": [{"role": "user", "content": "檢查這段"}]},
-                       kind="review")
+                       kind="review", schedule_kind="background")
 ```
 
 檔名前綴是 `<agent>-<kind>-`。pending 每筆有 `name`、`kind`、`since_step`、`pack`。`kind="main"` 留給 agent 主線。
 
 ### 時鐘
 
-`ctx.register_clock(dir: str, interval=None) -> tuple[bool, str]`：請 daemon 替世界開鐘。
+`ctx.register_clock(dir: str, interval=None, no_wait=False) -> tuple[bool, str]`：請 daemon 替世界開鐘。`no_wait=True` 只投遞，不等 kernel 回話。
 
 ```python
-ok, msg = ctx.register_clock("jobs/one", interval=2)
+ok, msg = ctx.register_clock("jobs/one", interval=2, no_wait=True)
 ```
 
 `ctx.unregister_clock(dir: str) -> tuple[bool, str]`：請 daemon 收掉一個鐘。
@@ -194,6 +199,7 @@ ctx.reply("做完了", task="t1")
 ```
 
 一般工具不必自己叫它。agent 的主線回答會統一走這裡。
+子 agent 的回答也會在這裡自動轉寄到父的 `inbox/kid-<名字>/`，不依賴任何工具包。
 
 ### 信箱舊把手
 
@@ -224,11 +230,12 @@ def on_idle(ctx):
     ctx.state["idle_seen"] = True
 ```
 
-`on_act(ctx: Ctx, tool: str, args: dict, result: object, took_ms: int) -> None`：每次工具跑完後叫一次。
+`on_act(ctx: Ctx, tool: str, args: dict, result: object, took_ms: int) -> object | None`：每次工具跑完後照包順序串接。回 `None` 表示不改；回其他值會取代工具結果，後面的包與模型都看到新值。
 
 ```python
 def on_act(ctx, tool, args, result, took_ms):
     ctx.state["last_tool_ms"] = took_ms
+    return result
 ```
 
 `on_reply(ctx: Ctx, msg: dict) -> None`：每次 outbox 寫好後叫一次。
@@ -246,6 +253,10 @@ def on_result(ctx, kind, name, result):
 ```
 
 包沒有 `on_result` 時，結果會變成一封自己的信，落進 `inbox/<kind>/`。旁線結果不推動主線狀態。
+
+旁線只叫當初送出請求的那一包，所以 `think`、`branch` 同時開也不會互搶結果。
+
+`on_main_result(ctx: Ctx, name: str, result: dict) -> None`：主線 LLM 結果收回時，照包順序每包都能看。`cost` 用它補上工具後一輪的 token。
 
 `on_system_prompt(ctx: Ctx) -> str`：每次組主線 system prompt 時，回一段動態文字。
 
@@ -270,3 +281,23 @@ printf '回答再短一點。\n' > prompt-overrides/my_pack.md
 ```sh
 bash proto2/test.sh
 ```
+
+## 7. 各包想要但還沒有的接點
+
+已補上同名工具優先權、可替換的 `on_act`、主線結果掛勾、`register_clock(no_wait)`、完整 `Ctx.spawn`、`self_depth`，以及排程參數版 `llm_request`。下面仍是欠帳。
+
+- `bigmem`：記憶世界專用的 `mem_send`／`mem_take`。
+- `bigmem`：安全的 `history_read`／`history_replace`。
+- `bigmem`：送主線 LLM 前可以擋下請求的掛勾。
+- `branch`：當格取回指定旁線結果的共用接口。
+- `branch`：讓 `adopt` 明講「這次不要追加舊工具結果」的接口。
+- `code`：安全解析世界內路徑的 `project_path`，以及統一的 `undo_dir`。
+- `communication`：`put_mail` 自動把首封檔名當 thread。
+- `communication`：用世界路徑反查通訊錄名字。
+- `cost`：`on_act` 還拿不到模型送來的原始參數字串與統一錯誤種類。
+- `kids`／`self`：只讀的 daemon 時鐘狀態接口；現在仍要讀 clocks 檔或父的 inst。
+- `mcp`：指定來源投信進 agent inbox 的共用 CLI。
+- `newagent`：`aos_agent.py` 裡可供 `new` 與 `spawn` 共用的頂層世界建立函式。
+- `review`：目前任務編號、粗略 task key 與上次任務起始格。
+- `think`：每格都會叫的 `on_tick`。
+- `think`：旁線完成前暫停主線 LLM 的接口。

@@ -10,8 +10,7 @@
 - `ref_collapse(message_index)`：手動收起一則 JSON。序號從 0 開始。
 - `ref_list()`：列最近 20 個指標。
 
-工具結果轉成 JSON 後超過 6000 字，`on_act` 會先存進 `<home>/refs/<id>.json`。
-下一次問模型前，原文會換成 `ref://<id>`、200 字預覽和原字數。
+工具結果轉成 JSON 後超過 6000 字，`on_act` 會存進 `<home>/refs/<id>.json`，當格就把模型看到的結果換成 `ref://<id>`、200 字預覽和原字數。
 截短的展開結果會明說它只是文字片段。
 
 只在真的需要原文時展開。一般工具不用懂 ref。
@@ -72,8 +71,7 @@ aos-mem exec .
 
 ## 坑
 
-現有 `on_act` 不能改工具回傳值。
-所以 ref 在 `on_act` 存檔，再由 `on_system_prompt` 在下一次送模型前換指標。
+`on_act` 可直接回替代值。若同時開成本包，包的先後會決定 cost 看原文還是短指標。
 
 記憶結果只在 agent 的 idle 格收。
 剛排隊時看不到結果是正常的。

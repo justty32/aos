@@ -13,12 +13,7 @@ from packs import ref
 world=sys.argv[2]; home=os.path.join(world,"agent"); state={}
 ctx=Ctx(world, home, state)
 value={"blob":"記"*6100}
-ref.on_act(ctx, "huge_json", {}, value, 1)
-json.dump([{"role":"tool","content":json.dumps(value, ensure_ascii=False)}],
-          open(os.path.join(home,"prompts.json"),"w",encoding="utf-8"), ensure_ascii=False)
-ref.on_system_prompt(ctx)
-msg=json.load(open(os.path.join(home,"prompts.json"),encoding="utf-8"))[0]
-pointer=json.loads(msg["content"])
+pointer=ref.on_act(ctx, "huge_json", {}, value, 1)
 print(pointer["$ref"].startswith("ref://"), pointer["chars"] > 6000,
       len(pointer["preview"]) == 200,
       os.path.isfile(os.path.join(home,"refs",pointer["$ref"][6:]+".json")))

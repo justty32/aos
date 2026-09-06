@@ -164,28 +164,48 @@ def load_packs(home):
     """
     names, extra = tools_conf(home)
     loaded = []
-    for name in names:
+    seen = set()
+    for configured_name in names:
+        name = "fs" if configured_name == "shell" else configured_name
+        if configured_name == "shell":
+            warn("工具包 shell 已併入 fs，這次改載 fs；請把 tools.json 改成 fs")
+        if name in seen:
+            warn("工具包 %s 重複列了，後面的跳過" % name)
+            continue
         module = load_pack(home, name)
         if module is None:
             warn("認不得的工具包：%s（packs/%s.py 不在），跳過" % (name, name))
             continue
+        seen.add(name)
         loaded.append((name, module))
     return loaded, extra
 
 
 def tool_specs(loaded, extra):
-    """送給模型看的工具清單（OpenAI functions）。工具包的排前面，同名工具包贏。"""
-    specs, seen = [], set()
-    for _name, module in loaded:
+    """送給模型看的工具清單。包照 tools.json 順序，前面的同名工具贏。"""
+    specs, owners = [], {}
+    for pack_name, module in loaded:
         for t in getattr(module, "TOOLS", []):
-            if t.get("name") and t["name"] not in seen:
-                seen.add(t["name"])
-                specs.append(t)
+            name = t.get("name")
+            if not name:
+                continue
+            if name in owners:
+                warn("同名工具 %s：前面的 %s 優先，後面的 %s 跳過" %
+                     (name, owners[name], pack_name))
+                continue
+            owners[name] = pack_name
+            specs.append(t)
     for t in extra:
-        if t.get("name") and t["name"] not in seen:
-            seen.add(t["name"])
-            specs.append({"name": t["name"], "description": t.get("description", ""),
-                          "parameters": t.get("parameters", {})})
+        name = t.get("name")
+        if not name:
+            continue
+        if name in owners:
+            warn("同名工具 %s：前面的 %s 優先，後面的 tools[] 跳過" %
+                 (name, owners[name]))
+            continue
+        owners[name] = "tools[]"
+        specs.append({"name": name, "description": t.get("description", ""),
+                      "parameters": t.get("parameters", {})})
     return specs
 
 
@@ -195,6 +215,9 @@ def system_text(ctx, loaded):
     persona = read_json(os.path.join(home, "system-prompt.json"), {})
     text = (persona.get("content") or "") if isinstance(persona, dict) else ""
     paras = []
+    if ctx.parent():
+        paras.append(
+            "你是子 agent。做完要回報父時，直接正常回答；系統會自動把這句轉寄給父，不用找路徑。")
     for name, module in loaded:
         override = os.path.join(home, "prompt-overrides", name + ".md")
         if os.path.isfile(override):
@@ -374,7 +397,12 @@ def today_usage_all(home, world):
     book = read_json(os.path.join(d, "usage", "%s.json" % datetime.date.today().isoformat()), {})
     if not isinstance(book, dict):
         return None
-    rows = {str(key): value for key, value in book.items() if isinstance(value, dict)}
+    if "by-model" in book or "by-requester" in book:
+        section = book.get("by-model")
+        section = section if isinstance(section, dict) else {}
+    else:
+        section = book
+    rows = {str(key): value for key, value in section.items() if isinstance(value, dict)}
     total = {}
     for row in rows.values():
         for key, value in row.items():
@@ -445,8 +473,24 @@ class Ctx:
     def kids_dir(self):
         return os.path.join(self.home, "kids")
 
-    def spawn(self, name, persona, clock="shared", template=None):
-        return spawn(self.world, self.home, name, persona, clock, template)
+    def spawn(self, name, persona, clock="shared", template=None, packs=None,
+              task=None, depth=None):
+        return spawn(self.world, self.home, name, persona, clock, template,
+                     packs=packs, task=task, depth=depth)
+
+    def self_depth(self):
+        depth = 0
+        parent = self.parent()
+        seen = set()
+        while isinstance(parent, dict) and parent.get("dir"):
+            path = os.path.abspath(parent["dir"])
+            if path in seen:
+                break
+            seen.add(path)
+            depth += 1
+            parent_home = resolve_home(path, None)
+            parent = read_json(os.path.join(parent_home, "parent.json"), None)
+        return depth
 
     def put_mail(self, target, source, content, **extra):
         contacts = self.contacts()
@@ -498,7 +542,8 @@ class Ctx:
         data = read_json(os.path.join(self.home, "kids.json"), {})
         return data if isinstance(data, dict) else {}
 
-    def llm_request(self, body, kind="side", priority=None, engine=None):
+    def llm_request(self, body, kind="side", priority=None, engine=None,
+                    requester=None, schedule_kind=None, deadline=None):
         conf = read_json(os.path.join(self.home, "llm.json"), {})
         conf = conf if isinstance(conf, dict) else {}
         if priority is None:
@@ -508,7 +553,8 @@ class Ctx:
         kind = str(kind or "side")
         name = aos_llm.write_request(
             self.llm_dir(), body, priority=priority, engine=engine,
-            name="%s-%s" % (self.name, kind))
+            name="%s-%s" % (self.name, kind), requester=requester or self.name,
+            kind=schedule_kind, deadline=deadline)
         pending = self.state.get("pending")
         if not isinstance(pending, list):
             pending = []
@@ -518,7 +564,7 @@ class Ctx:
                         "pack": self.pack})
         return name
 
-    def _clock(self, op, where, interval=None):
+    def _clock(self, op, where, interval=None, no_wait=False):
         if not os.environ.get("AOS_DAEMON_DIR"):
             return False, "沒設 AOS_DAEMON_DIR"
         target = os.path.abspath(os.path.join(self.world, where)) if not os.path.isabs(where) else os.path.abspath(where)
@@ -530,6 +576,8 @@ class Ctx:
                 os.close(fd)
                 write_json_atomic(config_path, {"interval": interval})
                 cmd += ["--config", config_path]
+            if no_wait:
+                cmd.append("--no-wait")
             done = subprocess.run(cmd, capture_output=True, text=True)
         finally:
             if config_path:
@@ -541,8 +589,8 @@ class Ctx:
         msg = lines[-1].replace("aos-daemon: ", "", 1) if lines else ("完成" if done.returncode == 0 else "失敗")
         return done.returncode == 0, msg
 
-    def register_clock(self, where, interval=None):
-        return self._clock("register", where, interval)
+    def register_clock(self, where, interval=None, no_wait=False):
+        return self._clock("register", where, interval, no_wait)
 
     def unregister_clock(self, where):
         return self._clock("unregister", where)
@@ -567,6 +615,9 @@ class Ctx:
                 hook(self.for_pack(name), msg)
             except Exception as e:
                 self.log("工具包 %s 的 on_reply 出錯：%s" % (name, e))
+        parent = self.parent()
+        if isinstance(parent, dict) and parent.get("dir"):
+            self.put_mail(parent["dir"], "kid-" + self.name, str(text))
         return path
 
     # 信箱
@@ -606,7 +657,8 @@ def append_line(path, line):
     return True
 
 
-def spawn(world, home, name, persona, clock="shared", template=None):
+def spawn(world, home, name, persona, clock="shared", template=None, packs=None,
+          task=None, depth=None):
     """生一個子 agent 在 <home>/kids/<name>/。回 (成功嗎, 一句話)。
 
     子自己就是一個完整的世界資料夾，本體平鋪在它底下（home＝`.`），
@@ -634,10 +686,13 @@ def spawn(world, home, name, persona, clock="shared", template=None):
                       {"role": "system", "content": persona})
     if not os.path.isfile(os.path.join(child, "prompts.json")):
         write_json_atomic(os.path.join(child, "prompts.json"), [])
-    packs, extra = tools_conf(home)
+    parent_packs, extra = tools_conf(home)
     child_tools = read_json(os.path.join(child, "tools.json"), {}) if has_template else {}
     child_tools = child_tools if isinstance(child_tools, dict) else {}
-    child_tools["packs"] = packs
+    if isinstance(packs, list):
+        child_tools["packs"] = [p for p in packs if isinstance(p, str)]
+    elif not has_template or not isinstance(child_tools.get("packs"), list):
+        child_tools["packs"] = parent_packs
     if "tools" not in child_tools:
         child_tools["tools"] = extra
     write_json_atomic(os.path.join(child, "tools.json"), child_tools)
@@ -660,14 +715,24 @@ def spawn(world, home, name, persona, clock="shared", template=None):
 
     parent_name = os.path.basename(os.path.abspath(world).rstrip(os.sep)) or "parent"
     write_json_atomic(os.path.join(child, "parent.json"),
-                      {"name": parent_name, "dir": os.path.abspath(world)})
+                      {"name": parent_name, "dir": os.path.abspath(world),
+                       "clock": clock})
     parent_ctx = Ctx(world, home)
     child_ctx = Ctx(child, child)
     parent_ctx.add_contact(name, child)
     child_ctx.add_contact(parent_name, world)
     registry = parent_ctx.kids()
-    registry[name] = {"name": name, "dir": os.path.abspath(child), "clock": clock}
+    child_depth = int(depth) if isinstance(depth, int) and not isinstance(depth, bool) \
+        else parent_ctx.self_depth() + 1
+    registry[name] = {
+        "name": name, "dir": os.path.abspath(child), "clock": clock,
+        "created": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "depth": child_depth, "parent": os.path.abspath(world), "alive": True,
+        "task": str(task) if task is not None else None,
+    }
     write_json_atomic(os.path.join(home, "kids.json"), registry)
+    if task is not None:
+        parent_ctx.put_mail(child, "parent", task)
 
     rel = os.path.relpath(child, world)
     if clock == "shared":

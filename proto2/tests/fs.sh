@@ -93,18 +93,19 @@ smax = fs.run("sh", {"command": "true", "timeout": 121}, ctx)
 result("sh_timeout", s["exit"] is None and "run_long" in s["error"] and s["seconds"] < 1
        and "最長 120" in smax["error"])
 
-# 同時開 fs、shell 時，把 fs 排前面就由 fs 接 sh。
+# 舊 shell 名字會改載 fs。
 sys.path.insert(0, here)
 from aos_agent import load_packs, pack_owners, write_json_atomic
 home = os.path.join(world, "agent")
 os.makedirs(home)
-write_json_atomic(os.path.join(home, "tools.json"), {"packs": ["fs", "shell"], "tools": []})
+write_json_atomic(os.path.join(home, "tools.json"), {"packs": ["shell"], "tools": []})
 loaded, _ = load_packs(home)
-result("coexist", pack_owners(loaded)["sh"][0] == "fs")
+result("legacy_alias", [name for name, _module in loaded] == ["fs"]
+       and pack_owners(loaded)["sh"][0] == "fs")
 PYEOF2
 )
   local key
-  for key in write read read_boundary ls ls_boundary edit edit_boundary sh sh_tail sh_timeout coexist; do
+  for key in write read read_boundary ls ls_boundary edit edit_boundary sh sh_tail sh_timeout legacy_alias; do
     if printf '%s\n' "$got" | grep -qx "$key=ok"; then
       ok "fs：$key"
     else
