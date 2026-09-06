@@ -9,6 +9,7 @@ LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也
     defaults.json       這個資料夾自己的預設 {"engine": ..., "priority": ...}，可有可無
     requests/           排隊中的請求 <名字>.json
     requests/running/   正在打的（多一個 "aos" 欄位記 pid／engine／priority／started）
+                        worker 做完另留 <名字>.json.done，免得結果先被拿走時誤判死亡
     requests/done/      做完的（成功、失敗、壞掉的都在這）
     results/            回覆 <跟請求同檔名>
     usage/pending/      每個 worker 做完丟一張用量小紙條
@@ -34,8 +35,8 @@ LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也
       **每一格做的事**，不給 dir 就是目前目錄。一格很短，**絕對不等網路**：
       1. tick 加一。
       2. 把 usage/pending/ 的小紙條折進當天帳本，紙條刪掉。
-      3. 巡 requests/running/：結果出現了就把請求搬去 done/（served／errors 在這裡算）；
-         pid 死了又沒有結果，就補一個 "worker died" 的錯誤結果、一樣搬去 done/、
+      3. 巡 requests/running/：完成標記或結果出現了就把請求搬去 done/（served／errors
+         在這裡算）；pid 死了、又沒有完成標記和結果，才補一個 "worker died" 的錯誤結果、
          也補一張 errors=1 的用量紙條。剩下的算進「那台引擎正在跑幾個」。
       4. 讀 requests/ 頂層排序（-priority, mtime, 檔名），由上而下派工：那台引擎
          `running < max_concurrent` 就開一個背景 worker、請求搬進 running/；滿了的
@@ -306,7 +307,8 @@ def do_exec(args):
     # 2. 先把上幾格 worker 留下的用量紙條折進帳本
     fold_pending(home)
 
-    # 3. 巡一遍正在跑的：有結果的收回來，pid 死了又沒結果的當它死在半路
+    # 3. 巡一遍正在跑的：worker 的完成標記才是正規交棒；相容舊 worker 的結果檔。
+    #    只有 pid、標記、結果三個都不在，才算死在半路。
     engines = load_engines(home)
     defaults = load_defaults(home, engines)
     running = {}          # engine 名字 → 現在跑幾個
@@ -321,29 +323,44 @@ def do_exec(args):
             aos = rec.get("aos") if isinstance(rec.get("aos"), dict) else {}
             pid = aos.get("pid") or 0
             result_path = os.path.join(home, "results", name)
-            if os.path.isfile(result_path):
+            marker_path = src + ".done"
+            marker = lib.read_json(marker_path, None)
+            has_marker = os.path.isfile(marker_path)
+            has_result = os.path.isfile(result_path)
+            reap(pid)
+            # 正常 worker 先寫結果、用量紙條，最後才寫完成標記。看到結果但 worker 還活著時
+            # 先不搶著收，避免 worker 隨後留下孤零零的標記。
+            if not has_marker and alive(pid):
+                who = aos.get("engine") or ""
+                running[who] = running.get(who, 0) + 1
+                continue
+            if has_marker or has_result:
                 reap(pid)
-                answer = lib.read_json(result_path, {})
+                answer = lib.read_json(result_path, {}) if has_result else {}
                 answer = answer if isinstance(answer, dict) else {}
-                ok = not answer.get("error")
+                marker = marker if isinstance(marker, dict) else {}
+                ok = not (answer.get("error") if has_result else marker.get("error"))
                 ans_aos = answer.get("aos") if isinstance(answer.get("aos"), dict) else {}
                 use = ans_aos.get("usage") if isinstance(ans_aos.get("usage"), dict) else {}
+                if not use and isinstance(marker.get("usage"), dict):
+                    use = marker["usage"]
+                took_ms = ans_aos.get("took_ms") if ans_aos else marker.get("took_ms")
                 os.makedirs(done_box, exist_ok=True)
                 os.replace(src, os.path.join(done_box, name))
+                if has_marker:
+                    try:
+                        os.remove(marker_path)
+                    except OSError:
+                        pass
                 if ok:
                     served += 1
                 else:
                     errors += 1
                 say("done %s %s tokens=%s took=%sms"
                     % (name, "ok" if ok else "error",
-                       use.get("total_tokens") or 0, ans_aos.get("took_ms") or 0))
+                       use.get("total_tokens") or 0, took_ms or 0))
                 continue
-            reap(pid)
-            if alive(pid):
-                who = aos.get("engine") or ""
-                running[who] = running.get(who, 0) + 1
-                continue
-            # 進程不見了又沒留下結果：補一個錯誤結果，免得有人等到天荒地老
+            # 進程不見了、又沒標記也沒結果：補一個錯誤結果，免得有人等到天荒地老
             lib.write_json_atomic(result_path, {"error": "worker died", "aos": aos})
             os.makedirs(done_box, exist_ok=True)
             os.replace(src, os.path.join(done_box, name))
@@ -463,7 +480,7 @@ def call(engine, body):
 
 def do_worker(args):
     """背景進程：讀 requests/running/<name>.json 去打，結果原子落在 results/，
-    再寫一張用量小紙條給下一格的 exec 折帳。退出碼永遠 0——死活看結果檔。"""
+    再寫一張用量小紙條，最後在 running 檔旁留完成標記。退出碼永遠 0——死活看結果檔。"""
     home = lib.home_of(args.dir)
     name = args.name
     rec = lib.read_json(os.path.join(home, "requests", "running", name), None)
@@ -508,6 +525,12 @@ def do_worker(args):
     lib.write_json_atomic(os.path.join(home, "results", name), answer)
     write_pending(home, name, "%s|%s" % (out["base_url"], out["model"] or ""),
                   usage, not ok, took_ms)
+    # 這是 worker 最後一個動作：consumer 就算已經把 result 拿走，exec 仍知道這發做完了。
+    lib.write_json_atomic(os.path.join(home, "requests", "running", name + ".done"), {
+        "error": not ok,
+        "usage": usage if isinstance(usage, dict) else {},
+        "took_ms": took_ms,
+    })
     return 0
 
 

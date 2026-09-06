@@ -54,12 +54,13 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 |---|---|---|
 | `idle` | 掃一遍 `inbox/*/`（不含 `read/`），有沒讀過的信就接進記憶 | 有信 `llm`，沒信留 `idle` |
 | `llm` | 人格＋工具包預設 prompt＋記憶（＋工具清單）寫成請求丟進 LLM 資料夾的 `requests/` | `wait` |
-| `wait` | LLM 資料夾的 `results/<請求名>` 出現了就撿回來，assistant 接進記憶 | 撿到 `act`，沒撿到留 `wait`（**結果是幾格後才回來的**），是 `error` 就回 `idle` |
-| `act` | 有 `tool_calls` 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 `outbox/` | 有工具 `collect`，沒有 `idle` |
+| `wait` | LLM 資料夾的 `results/<請求名>` 出現了就撿回來，assistant 接進記憶 | 撿到 `act`；是 `error` 就把原因送進 outbox 後回 `idle`；沒撿到先留 `wait`，滿 60 格也送提示後回 `idle` |
+| `act` | 有 `tool_calls` 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 `outbox/` | 有工具 `collect`，有文字 `idle`；只回空白就不寫 outbox、記一次後回 `idle` |
 | `collect` | 再掃一次信箱（沒新信也照走） | `llm` |
 
 `step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格；`last_usage` 是上次撿回覆時
-LLM 附的那包用量。**這支不寫 `.aos/inst`**——`.aos/inst` 是人（或 spawn）寫一次就固定的
+LLM 附的那包用量，`empty_replies` 是模型只回空白的次數。`self_status` 的 `today_usage_all` 是
+整個 LLM 世界今天的加總，裡面的 `by_engine` 留著各個 endpoint＋model 的拆帳。**這支不寫 `.aos/inst`**——`.aos/inst` 是人（或 spawn）寫一次就固定的
 一段，`aos-loop --keep-inst`／daemon 每格原樣重跑；agent 自己去覆蓋它會把 spawn 掛上去的
 那行洗掉。
 
@@ -122,10 +123,12 @@ LLM 附的那包用量。**這支不寫 `.aos/inst`**——`.aos/inst` 是人（
 
 - `say [世界] [文字]`——寫一封信丟進 `<home>/inbox/user/`（省略文字就整段讀 stdin），檔名是時間戳到微秒。
 - `listen [世界] [--new] [--once]`——盯著 `outbox/`，每則印 `--- reply 0006 ---` 再印 content；
-  預設先補印既有的再每 0.5 秒等新的，`--new` 只等新的，`--once` 印完一次就走。
+  預設先補印既有的再每 0.5 秒等新的，`--new` 只等新的，`--once` 印完一次就走；LLM 錯誤與
+  等超過 60 格的提示會用 `agent!> ` 印，免得看起來像普通回答。
 - `talk [世界]`——互動聊天：`你> ` 打一句（`/quit` 或 Ctrl-D 離開），`outbox/` 冒出新檔就印
   `agent> `。**自己不推格**，要另一個終端機的 `aos-loop`（或 daemon）幫忙轉。
-- `status [世界]` 印它的自我狀態（就是 `self_status` 那一包）；
+- `status [世界]` 印它的自我統計（就是 `self_status` 那一包）；要看此刻走到哪、在等哪個 request，
+  直接看 `<home>/state.json` 的 `state`／`request`。
   `spawn <世界> <子名> <人格> [--clock shared|own]` 生一個小孩。
 
 ## LLM 資料夾：aos-llm
@@ -133,7 +136,7 @@ LLM 附的那包用量。**這支不寫 `.aos/inst`**——`.aos/inst` 是人（
 LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾**，也靠 `aos-loop` 一格一格轉。
 資料夾是**平鋪**的，`.aos/` 裡只有一句 `inst`（就是 `aos-llm exec .`），其他全在 `<dir>` 底下：
 `engines.json`、`defaults.json`、請求箱 `requests/`、**正在打的** `requests/running/`、做完的
-`requests/done/`、回覆 `results/<跟請求同檔名>`、用量 `usage/<YYYY-MM-DD>.json`（外加 worker 丟的
+`requests/done/`、完成標記 `requests/running/<名字>.json.done`、回覆 `results/<跟請求同檔名>`、用量 `usage/<YYYY-MM-DD>.json`（外加 worker 丟的
 小紙條 `usage/pending/`）、worker 的輸出 `logs/<名字>.log`、走到哪 `state.json`。誰想用 LLM 就往
 `requests/` 丟一個檔，**過幾格**結果會出現在 `results/`。**有沒有 `engines.json` 就是「這是不是一
 個 LLM 資料夾」。**
@@ -154,8 +157,8 @@ Bearer`；`params` 原樣帶進 body、不檢查。**`max_concurrent`（不寫�
 引擎 `params` ← 請求 `params` ← 請求其他頂層鍵，**`model` 一律引擎說了算**。
 
 - `aos-llm exec [dir]`——**每一格做的事**，一格很短、**絕對不等網路**：①tick 加一 ②把
-  `usage/pending/` 的紙條折進當天帳本 ③巡 `requests/running/`：結果出現了就把請求搬去 `done/`
-  （`state.json` 的 `served`／`errors` 在這裡算），pid 死了又沒結果就補一個 `{"error": "worker
+  `usage/pending/` 的紙條折進當天帳本 ③巡 `requests/running/`：完成標記（或舊 worker 的結果）出現了就把請求搬去 `done/`
+  （`state.json` 的 `served`／`errors` 在這裡算），pid 死了、又沒完成標記和結果才補一個 `{"error": "worker
   died"}` 的結果一樣搬走、也補一張 `errors=1` 的紙條——**所以沒有人會卡在 running/ 一輩子** ④剩下
   的照（優先級、先來後到）排序由上而下派工，那台引擎還沒跑滿就開一個背景 worker、請求搬進
   `running/`，滿了的等下一格 ⑤印一行摘要 `tick 7 launched 2 running 3 queued 1` 到 stderr，外加每個
@@ -163,7 +166,8 @@ Bearer`；`params` 原樣帶進 body、不檢查。**`max_concurrent`（不寫�
   退出碼永遠 0，除非那個資料夾沒有 `engines.json`（退 1）。
 - 真正打 HTTP 的是背景的 `aos-llm worker <dir> <請求檔名>`（人不用自己叫）：打完把整包原始回覆多
   掛一個 `aos`（`engine`／`base_url`／`model`／`priority`／`took_ms`／`usage`）**原子寫**進 `results/`，
-  再丟一張用量紙條給下一格折帳；打不通、HTTP 錯一樣是一個帶 `error` 的結果檔。帳本是拿來算錢的，
+  再丟一張用量紙條、最後留完成標記給下一格收尾；打不通、HTTP 錯一樣是一個帶 `error` 的結果檔。
+  `logs/<請求名>.log` 只收 worker 自己印的字，HTTP／連線失敗的原因以結果檔為準，所以 log 可能是空的。帳本是拿來算錢的，
   一個 `"<base_url>|<model>"` 一列累加：**模型回的 `usage` 裡每個數字都會累加**，思考 token、快取
   命中也在內（巢狀的攤成 `completion_tokens_details.reasoning_tokens` 這種點號鍵，外加自己數的
   `requests`／`errors`／`took_ms`）。
@@ -190,6 +194,7 @@ aos-daemon-kernel start|restart|stop|ls [daemon 目錄]    # 不給就用 AOS_DA
 aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-wait]
 ```
 
+- `start` 會等到 `kernel.json` 裡的 pid 真的活著、第一格也跑完才回「起來了」（最多等 5 秒），所以回來後可立刻 register。
 - `aos-daemon` 只把請求檔丟進 `requests/`，等 `done/` 冒出同名檔印結果；kernel 沒在跑就不等、請求先放
   著。`--config` 例如 `{"interval": 2, "user": "bob"}`：幾秒一格（預設 1）、用誰的身份跑（不給＝繼承呼
   叫者；要換身份 kernel 得是 root 跑的，內部靠 `runuser`）。`ls` 一行一個時鐘（state／pid／interval／
@@ -202,6 +207,7 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
   跑，否則 kernel 的 start／stop 不會影響到他——`start` 不重開它、巡邏也不標 dead；`continue` 進程還
   在就 SIGCONT，不在就重開一個；register 到 running／paused 的路徑會被擋（叫你用 continue 或先
   unregister）。
+- kernel 停掉後 `ls` 的 `stopped` 那列若還有 pid，那只是上一次的 pid 紀錄，不代表它還活著。
 - 幾千個時鐘就是幾千個小 json 檔，現在夠用；管理介面、合併檔案是以後的事，不歸 kernel 管。
 
 ## 為什麼另起爐灶
@@ -218,7 +224,10 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
 export PATH="$PWD/proto2:$PATH"
 export AOS_DAEMON_DIR=~/.aosd
 export AOS_LLM_DIR=$PWD/proto2/examples/llm    # aos-llm usage/ls 就不用打 --dir
-aos-daemon-kernel start                     # kernel 常駐起來（LM Studio 要先載一顆模型）
+lms load qwen/qwen3.5-9b                    # 用 LM Studio：先載模型
+lms server start --port 1234                # 再開 OpenAI 相容 API server
+export DEEPSEEK_API_KEY=你的金鑰             # 沒本機模型、要改用範例的 deepseek-flash 才設
+aos-daemon-kernel start                     # kernel 常駐起來
 aos-daemon register proto2/examples/llm     # LLM 資料夾一個時鐘
 aos-daemon register proto2/examples/agent   # agent 一個時鐘
 aos-user talk proto2/examples/agent         # 聊天（另一個終端機 aos-daemon-kernel ls 看誰在跑）
@@ -227,7 +236,9 @@ aos-daemon-kernel stop                      # 玩完，時鐘一起收掉
 ```
 
 時鐘的輸出在 `$AOS_DAEMON_DIR/logs/`：agent 沒反應就去那裡看是不是一直「等 LLM」、或「沒有
-.aos/inst」；某一發打不通的細節在 LLM 資料夾自己的 `logs/<請求名>.log` 跟那份結果檔裡。不想開
+.aos/inst」；shared 小孩由父的同一個時鐘推，所以父子 stderr 會混在同一份 clock log，而且行上不帶名字。
+某一發打不通的原因看 LLM 的結果檔（worker 沒另印字時 `logs/<請求名>.log` 會是空的）。`sh` 工具的
+工作目錄是世界根目錄；本體若是 `--home agent`，小孩在 `agent/kids/`，不是根目錄的 `kids/`。不想開
 daemon 也行，一個終端機開一個 `aos-loop <資料夾> --keep-inst` 效果一樣。其他跑法：`aos-exec
 examples/hello.sh`、`aos-loop examples/loop --stop-when-empty --interval 0`、`bash proto2/test.sh`。
 範例的 `prompts.json` 有進 git（空陣列），**玩過就會被寫髒**——`git checkout -- proto2/examples`
@@ -244,5 +255,5 @@ echo '{"priority": 5, "messages": [{"role": "user", "content": "1+1=?"}]}' \
 ## 目前刻意不做
 
 鎖、fsync、重試、串流、其他子命令、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。
-並發只做到「一台引擎一次幾個」（`max_concurrent`），逾時只有 worker 那發 300 秒的 HTTP timeout；
-更細的（退避、配額、跨資料夾排程）撞到再說。
+並發只做到「一台引擎一次幾個」（`max_concurrent`）；worker 的 HTTP timeout 是 300 秒，agent 另外會在
+等不到結果 60 格後把「請確認 LLM 的鐘」送進 outbox 並回 idle；更細的（退避、配額、跨資料夾排程）撞到再說。

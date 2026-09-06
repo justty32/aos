@@ -182,6 +182,14 @@ class H(http.server.BaseHTTPRequestHandler):
         users = [m for m in msgs if m.get("role") == "user"]
         last_user = (users[-1].get("content") or "") if users else ""
         tools = [m for m in msgs if m.get("role") == "tool"]
+        if "HTTP500" in last_user:
+            body = "假伺服器故意回 500".encode("utf-8")
+            self.send_response(500)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         # 劇本：user 訊息裡寫 `CALL <工具> {參數}` 就照順序一次呼叫一個，
         # 呼叫完了再回一句「看完了：<最後一個工具結果>」。沒寫劇本就走老樣子。
         triggers = []
@@ -189,7 +197,9 @@ class H(http.server.BaseHTTPRequestHandler):
             for line in (m.get("content") or "").splitlines():
                 for hit in re.finditer(r"CALL\s+(\w+)\s*(\{[^}]*\})?", line):
                     triggers.append((hit.group(1), hit.group(2) or "{}"))
-        if data.get("echo"):
+        if "EMPTY" in last_user:
+            message = {"role": "assistant", "content": "", "tool_calls": []}
+        elif data.get("echo"):
             message = {"role": "assistant", "reasoning_content": "blah",
                        "content": "model=%s temperature=%s auth=%s" % (
                            data.get("model"), data.get("temperature"),
@@ -669,6 +679,73 @@ else
 fi
 rm -rf "$TMP"
 
+# 18b. LLM 回 500：agent 當格把原因送進 outbox，listen 用 agent!> 印出來
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" "HTTP500" >/dev/null 2>&1
+"$AGENT" exec "$W" >/dev/null 2>&1
+"$AGENT" exec "$W" >/dev/null 2>&1
+llm_pump "$TMP/llm" >/dev/null
+"$AGENT" exec "$W" >/dev/null 2>&1
+ERRMSG=$(python3 -c '
+import glob,json,sys
+files=glob.glob(sys.argv[1]+"/*.json")
+d=json.load(open(files[0], encoding="utf-8")) if files else {}
+print("%s|%s" % (d.get("error") is True, d.get("content") or ""))' "$H/outbox")
+case "$ERRMSG" in
+  True\|*"LLM 出錯：HTTP 500"*) echo "ok   LLM 回 500 時，agent 把原因寫進 error outbox" ;;
+  *) echo "FAIL LLM 500 沒送進 outbox：$ERRMSG"; FAILED=1 ;;
+esac
+OUT=$("$AUSER" listen "$W" --once)
+case "$OUT" in
+  *"agent!> （LLM 出錯：HTTP 500"*) echo "ok   listen 用 agent!> 印 LLM 錯誤" ;;
+  *) echo "FAIL listen 的錯誤前綴不對：$OUT"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 18c. 沒有 LLM 鐘：等滿 60 格就說卡在哪、回 idle，原請求留在 LLM requests/
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" "這句沒有人推 LLM" >/dev/null 2>&1
+"$AGENT" exec "$W" >/dev/null 2>&1
+"$AGENT" exec "$W" >/dev/null 2>&1
+for _ in $(seq 1 60); do "$AGENT" exec "$W" >/dev/null 2>&1; done
+TIMEOUT_MSG=$(python3 -c '
+import glob,json,sys
+files=glob.glob(sys.argv[1]+"/*.json")
+d=json.load(open(files[0], encoding="utf-8")) if files else {}
+print("%s|%s" % (d.get("error") is True, d.get("content") or ""))' "$H/outbox")
+NREQ=$(find "$TMP/llm/requests" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$(now_state "$H")" = "idle" ] && [ "$NREQ" = "1" ]; then
+  echo "ok   LLM 沒鐘等滿 60 格會回 idle，原請求仍留在原地"
+else
+  echo "FAIL LLM 沒鐘超時狀態不對：state=$(now_state "$H") requests=$NREQ"; FAILED=1
+fi
+case "$TIMEOUT_MSG" in
+  True\|*"等 LLM 超過 60 格沒回應"*) echo "ok   LLM 沒鐘時 outbox 直接講卡在哪" ;;
+  *) echo "FAIL LLM 沒鐘沒有 outbox 提示：$TIMEOUT_MSG"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 18d. 模型回空 content 且沒工具：不產生空 outbox，empty_replies 加一
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" "EMPTY" >/dev/null 2>&1
+"$AGENT" exec "$W" >/dev/null 2>&1
+"$AGENT" exec "$W" >/dev/null 2>&1
+llm_pump "$TMP/llm" >/dev/null
+"$AGENT" exec "$W" >/dev/null 2>&1
+OUT=$("$AGENT" exec "$W" 2>&1 >/dev/null)
+NREP=$(find "$H/outbox" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+EMPTY_N=$(field "$H/state.json" empty_replies)
+if [ "$NREP" = "0" ] && [ "$EMPTY_N" = "1" ]; then
+  echo "ok   模型回空白不寫 outbox，state.json 的 empty_replies 加一"
+else
+  echo "FAIL 空白回覆處理不對：outbox=$NREP empty_replies=$EMPTY_N"; FAILED=1
+fi
+case "$OUT" in
+  *"模型回空白"*) echo "ok   模型回空白時 stderr 有講一句" ;;
+  *) echo "FAIL 模型回空白時 stderr 沒提示：$OUT"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
 # 19. 預設 home（`.`，東西平鋪在世界資料夾底下）也走得動
 TMP=$(mktemp -d); W="$TMP/w"; prep_flat "$W"; prep_llm "$TMP/llm"
 "$AUSER" say "$W" "嗨" >/dev/null 2>&1
@@ -841,23 +918,31 @@ for m in json.load(open(sys.argv[1])):
     if m.get("role") == "tool":
         print(",".join(sorted(json.loads(m["content"]))))
         break' "$H/prompts.json")
-WANT="busy,folder_bytes,history_chars,history_messages,last_usage,started,step,today_usage,uptime_s"
+WANT="busy,folder_bytes,history_chars,history_messages,last_usage,started,step,today_usage_all,uptime_s"
 if [ "$KEYS" = "$WANT" ]; then echo "ok   self_status 九個鍵都在"; else echo "FAIL self_status 的鍵不對：$KEYS"; FAILED=1; fi
 # 同一份東西 aos-agent status 也印得出來
 OUT=$("$AUSER" status "$W"); RC=$?
 check "aos-user status 退 0" 0 "$RC"
 case "$OUT" in
-  *'"folder_bytes"'*'"today_usage"'*) echo "ok   aos-user status 印的就是 self_status 那包" ;;
+  *'"folder_bytes"'*'"today_usage_all"'*) echo "ok   aos-user status 印的就是 self_status 那包" ;;
   *) echo "FAIL status 印的不對：$OUT"; FAILED=1 ;;
 esac
+mkdir -p "$TMP/llm/usage"
+python3 - "$TMP/llm/usage/$(date +%Y-%m-%d).json" <<'PYEOF2'
+import json, sys
+json.dump({"http://one/v1|m1": {"requests": 2, "errors": 0, "total_tokens": 11},
+           "http://two/v1|m2": {"requests": 3, "errors": 1, "total_tokens": 29}},
+          open(sys.argv[1], "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+PYEOF2
+OUT=$("$AUSER" status "$W")
 TU=$(python3 -c '
 import json,sys
-d=json.loads(sys.stdin.read())
-print((d.get("today_usage") or {}).get("total_tokens"))' <<< "$OUT")
-if [ "$TU" -ge 10 ] 2>/dev/null; then
-  echo "ok   today_usage 讀得到 LLM 資料夾當天的帳（total_tokens=$TU）"
+d=(json.loads(sys.stdin.read()).get("today_usage_all") or {})
+print("%s %s %s" % (d.get("total_tokens"), d.get("requests"), len(d.get("by_engine") or {})))' <<< "$OUT")
+if [ "$TU" = "40 5 2" ]; then
+  echo "ok   today_usage_all 加總整個 LLM 世界，by_engine 留著兩台拆帳（$TU）"
 else
-  echo "FAIL today_usage 沒讀到：$TU"; FAILED=1
+  echo "FAIL today_usage_all 加總不對：$TU"; FAILED=1
 fi
 rm -rf "$TMP"
 
@@ -1335,10 +1420,21 @@ printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
 LIVE_AOSD="$AOSD"
 "$DKERNEL" start "$AOSD" --interval 0.2 >/dev/null 2>&1; RC=$?
 check "kernel start 回 0" 0 "$RC"
+KREADY=$(python3 -c '
+import json,os,sys
+d=json.load(open(sys.argv[1], encoding="utf-8")); pid=int(d.get("pid") or 0)
+try: os.kill(pid, 0); alive=True
+except OSError: alive=False
+print("%s %s" % (alive, int(d.get("tick") or 0) >= 1))' "$AOSD/kernel.json")
+if [ "$KREADY" = "True True" ]; then
+  echo "ok   start 回來時 kernel pid 活著而且第一格已跑完"
+else
+  echo "FAIL start 太早回來：$KREADY"; FAILED=1
+fi
+AOS_DAEMON_DIR="$AOSD" "$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --timeout 5 >/dev/null 2>&1; RC=$?
+check "start 後立刻 register 一定成功" 0 "$RC"
 "$DKERNEL" start "$AOSD" >/dev/null 2>&1; RC=$?
 check "已經在跑時再 start 一次退 1" 1 "$RC"
-AOS_DAEMON_DIR="$AOSD" "$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --timeout 5 >/dev/null 2>&1; RC=$?
-check "kernel 跑著時 register 等得到 ok 回 0" 0 "$RC"
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   [ "$(nlines "$TMP/w")" -ge 2 ] && break
   sleep 0.2
@@ -1937,6 +2033,42 @@ if [ "$E" = "1" ]; then echo "ok   死掉也記進當天用量（errors=1）"; e
 ST=$(llm_field "$TMP/llm/state.json" '"%s %s" % (d["served"], d["errors"])')
 if [ "$ST" = "0 1" ]; then echo "ok   state.json 的 errors 也算到了"; else echo "FAIL state 不對：$ST"; FAILED=1; fi
 kill_workers "$TMP/llm"
+rm -rf "$TMP"
+
+# 62b. result 被 consumer 先拿走：完成標記仍讓下一格正常收尾，不補 worker died、不灌水
+TMP=$(mktemp -d)
+mk_engines "$TMP/llm" "[{\"name\": \"one\", \"base_url\": \"http://127.0.0.1:$PORT/v1\", \"model\": \"m\", \"max_concurrent\": 1}]"
+echo '{"echo": true, "messages": []}' > "$TMP/llm/requests/race.json"
+llm_tick "$TMP/llm" >/dev/null
+for _ in $(seq 1 100); do
+  [ -f "$TMP/llm/results/race.json" ] && break
+  sleep 0.02
+done
+TAKEN=$(python3 - "$HERE" "$TMP/llm" <<'PYEOF2'
+import sys
+sys.path.insert(0, sys.argv[1])
+import aos_llm
+print(aos_llm.read_result(sys.argv[2], "race.json") is not None)
+PYEOF2
+)
+for _ in $(seq 1 100); do
+  [ -f "$TMP/llm/requests/running/race.json.done" ] && break
+  sleep 0.02
+done
+OUT=$(llm_tick "$TMP/llm")
+RACE_STATE=$(llm_field "$TMP/llm/state.json" '"%s %s" % (d["served"], d["errors"])')
+RACE_BOOK=$(llm_field "$TMP/llm/usage/$(date +%Y-%m-%d).json" \
+  '"%s %s" % (d["http://127.0.0.1:'"$PORT"'/v1|m"]["requests"], d["http://127.0.0.1:'"$PORT"'/v1|m"]["errors"])')
+if [ "$TAKEN" = "True" ] && [ "$RACE_STATE" = "1 0" ] && [ "$RACE_BOOK" = "1 0" ] \
+   && [ -f "$TMP/llm/requests/done/race.json" ] && [ ! -f "$TMP/llm/results/race.json" ]; then
+  echo "ok   result 先被拿走仍靠完成標記正常收尾，帳本只算一次"
+else
+  echo "FAIL result 所有權競速沒修好：taken=$TAKEN state=$RACE_STATE book=$RACE_BOOK out=$OUT"; FAILED=1
+fi
+case "$OUT" in
+  *"worker died"*|*"died race.json"*) echo "FAIL result 被拿走後誤判 worker died：$OUT"; FAILED=1 ;;
+  *) echo "ok   result 被拿走後下一格沒有補 worker died" ;;
+esac
 rm -rf "$TMP"
 
 # 63. 跑完不留背景進程：worker／loop／kernel 都收乾淨了

@@ -15,11 +15,12 @@
 
     idle    掃一遍 inbox/*/，有沒讀過的信就接進記憶（user 直接進、其他只給一句摘要）
     llm     人格＋工具包預設 prompt＋記憶（＋工具清單）寫成請求丟進 LLM 資料夾
-    wait    LLM 資料夾的 results/ 出現同名檔就撿回來，assistant 接進記憶
-    act     有 tool_calls 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 outbox/
+    wait    LLM 資料夾的 results/ 出現同名檔就撿回來；錯誤或等滿 60 格會把原因送進 outbox
+    act     有 tool_calls 就跑工具、結果接進記憶；有文字才落 outbox，空白只計數
     collect 再掃一次信箱（沒新信也照走），回 llm
 
-`step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格。跟 LLM 之間走 `aos_llm`
+`step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格，`empty_replies` 記模型回空白
+幾次。跟 LLM 之間走 `aos_llm`
 的**私有通道**（不是工具），`</think>` 這種漏出來的思考由 LLM 資料夾那側清乾淨
 （engines.json 的 `strip_think`），agent 拿到什麼就用什麼。
 
@@ -37,6 +38,14 @@ import aos_llm            # noqa: E402
 from aos_agent import (   # noqa: E402
     Ctx, append_history, llm_dir, load_packs, now_iso, pack_owners, read_json,
     resolve_home, run_custom, scan_inbox, system_text, tool_specs, warn, write_json)
+
+LLM_WAIT_TICKS = 60
+
+
+def write_error(home, step, content):
+    """把人看得懂的錯誤也送進聊天 outbox。"""
+    write_json(os.path.join(home, "outbox", "%04d.json" % step),
+               {"role": "assistant", "content": content, "error": True})
 
 def do_llm(home, world):
     """把整包 body 寫成請求檔丟進 LLM 資料夾的 requests/，回請求檔名。"""
@@ -62,24 +71,32 @@ def do_llm(home, world):
     return name
 
 
-def do_wait(home, world, request):
-    """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False)。"""
+def do_wait(home, world, request, waited, step):
+    """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False, 已等幾格)。"""
     answer = aos_llm.read_result(llm_dir(home, world), request)
     if answer is None:
+        waited += 1
+        if waited >= LLM_WAIT_TICKS:
+            text = "（等 LLM 超過 %d 格沒回應，請確認 LLM 的鐘有沒有在跑）" % LLM_WAIT_TICKS
+            write_error(home, step, text)
+            warn(text)
+            return "idle", False, 0
         warn("等 LLM（%s）" % (request or "沒有請求"))
-        return "wait", False
+        return "wait", False, waited
     write_json(os.path.join(home, "llm-result.json"), answer)
     aos = answer.get("aos") if isinstance(answer, dict) else None
     usage = aos.get("usage") if isinstance(aos, dict) else False
 
     if answer.get("error"):
-        warn("LLM 回了 error（%s），這輪不算，回 idle" % answer.get("error"))
-        return "idle", usage
+        reason = str(answer.get("error"))[:200]
+        write_error(home, step, "（LLM 出錯：%s）" % reason)
+        warn("LLM 回了 error（%s），這輪不算，回 idle" % reason)
+        return "idle", usage, 0
     try:
         assistant = answer["choices"][0]["message"]
     except (KeyError, IndexError, TypeError):
         warn("回覆裡找不到 choices[0].message，這輪不算，回 idle")
-        return "idle", usage
+        return "idle", usage, 0
 
     # 只留 role／content／tool_calls，把伺服器夾帶的私有欄位（reasoning_content…）濾掉。
     # content 裡漏出來的 <think> 不歸這裡管——那是 LLM 資料夾那側的家務（engines.json 的 strip_think）。
@@ -89,7 +106,7 @@ def do_wait(home, world, request):
     if calls:
         stored["tool_calls"] = calls
     append_history(home, [stored])
-    return "act", usage
+    return "act", usage, 0
 
 
 def run_tool(ctx, owners, extra, name, args_text):
@@ -111,16 +128,21 @@ def run_tool(ctx, owners, extra, name, args_text):
 
 
 def do_act(home, world, step):
-    """有工具就跑工具、結果接進記憶；沒工具就把它說的話印出來、落一份到 outbox/。"""
+    """有工具就跑工具；沒工具就回話。回 (下一格 state, 是否收到空白回覆)。"""
     answer = read_json(os.path.join(home, "llm-result.json"), {})
     message = ((answer.get("choices") or [{}])[0] or {}).get("message") or {}
     calls = message.get("tool_calls")
     if not (isinstance(calls, list) and calls):
         content = message.get("content") or ""
+        if not isinstance(content, str):
+            content = str(content)
+        if not content.strip():
+            warn("模型回空白")
+            return "idle", True
         print(content)
         write_json(os.path.join(home, "outbox", "%04d.json" % step),
                    {"role": "assistant", "content": content})
-        return "idle"
+        return "idle", False
 
     loaded, extra = load_packs(home)
     owners = pack_owners(loaded)
@@ -135,7 +157,7 @@ def do_act(home, world, step):
         warn("跑工具 %s" % fn.get("name"))
         results.append({"role": "tool", "tool_call_id": call.get("id"), "content": out})
     append_history(home, results)
-    return "collect"
+    return "collect", False
 
 
 def do_exec(args):
@@ -151,6 +173,8 @@ def do_exec(args):
     last_usage = saved.get("last_usage")
     started = saved.get("started") or now_iso()
     announced = saved.get("announced") or []
+    wait_ticks = int(saved.get("wait_ticks") or 0)
+    empty_replies = int(saved.get("empty_replies") or 0)
 
     if state == "idle":
         msgs, announced = scan_inbox(home, announced)
@@ -162,16 +186,19 @@ def do_exec(args):
         nxt, did = "llm", True
     elif state == "llm":
         request = do_llm(home, world)
+        wait_ticks = 0
         nxt, did = "wait", True
     elif state == "wait":
-        nxt, usage = do_wait(home, world, request)
+        nxt, usage, wait_ticks = do_wait(home, world, request, wait_ticks, step + 1)
         if usage is not False:
             last_usage = usage
         did = nxt != "wait"
         if did:
             request = ""
     elif state == "act":
-        nxt = do_act(home, world, step + 1)
+        nxt, empty = do_act(home, world, step + 1)
+        if empty:
+            empty_replies += 1
         did = True
     else:
         warn("認不得的 state：%s，當 idle" % state)
@@ -181,7 +208,8 @@ def do_exec(args):
         busy += 1
     write_json(st_path, {"state": nxt, "step": step + 1, "busy": busy,
                          "request": request, "last_usage": last_usage,
-                         "started": started, "announced": announced})
+                         "started": started, "announced": announced,
+                         "wait_ticks": wait_ticks, "empty_replies": empty_replies})
     warn("step %d busy %d state %s -> %s" % (step, busy, state, nxt))
     return 0
 
