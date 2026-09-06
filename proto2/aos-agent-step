@@ -3,9 +3,10 @@
 
 agent 本體就是 <dir>/.aos/agent/ 底下那幾個檔：人格（system-prompt.json）、
 記憶（prompts.json）、這輪要加的話（new-prompts.json）、工具（tools.json）、
-LLM 在哪（llm.json，{"dir": "../llm"}，相對於 agent 資料夾本身）、
+LLM 在哪（llm.json，{"dir": "../llm"}，相對於 agent 資料夾本身；沒有 dir 就看
+環境變數 AOS_LLM_DIR。還可以寫 priority／engine，會抄進每個請求）、
 收新訊息的地方（new-prompts/、new-prompts/archived/）、
-上次回覆（llm-result.json）、現在走到哪（state.json）。
+上次回覆（llm-result.json）、現在走到哪（state.json，順手記一份上次的用量 last_usage）。
 
 agent 自己不打 HTTP：要問 LLM 就把整包 body 寫成一個請求檔丟進那個 LLM 資料夾的
 requests/，下一格再去 results/ 撿回覆——LLM 只是隔壁另一個一直在跑的資料夾。
@@ -90,10 +91,22 @@ def collect_new_prompts(home):
     return msgs
 
 
+def llm_conf(home):
+    conf = read_json(os.path.join(home, "llm.json"), {})
+    return conf if isinstance(conf, dict) else {}
+
+
 def llm_home(home, workdir):
-    """LLM 資料夾的 .aos/llm/ 在哪。llm.json 的 dir 相對於 agent 資料夾本身
-    （也就是 <dir>，不是 .aos/agent/），給絕對路徑也可以。"""
-    where = read_json(os.path.join(home, "llm.json"), {}).get("dir") or "../llm"
+    """LLM 資料夾的 .aos/llm/ 在哪：llm.json 的 dir（相對於 agent 資料夾本身，
+    也就是 <dir>，不是 .aos/agent/；絕對路徑也可以）→ 環境變數 AOS_LLM_DIR →
+    老規矩的兄弟目錄 ../llm。三個都落空（連 ../llm 都沒有）就印一句退 2。"""
+    where = llm_conf(home).get("dir") or os.environ.get("AOS_LLM_DIR") or ""
+    if not where:
+        where = "../llm"
+        if not os.path.isdir(os.path.join(workdir, where)):
+            print("aos-agent-step: 找不到 LLM 資料夾——llm.json 沒有 dir、也沒設 AOS_LLM_DIR、"
+                  "旁邊也沒有 ../llm", file=sys.stderr)
+            sys.exit(2)
     return os.path.join(os.path.abspath(os.path.join(workdir, where)), ".aos", "llm")
 
 
@@ -113,6 +126,12 @@ def do_llm(home, workdir):
     messages += read_json(os.path.join(home, "new-prompts.json"), [])
 
     body = {"messages": messages}
+    # llm.json 可以寫 priority／engine，會抄進每一個請求，讓 LLM 資料夾自己去排。
+    conf = llm_conf(home)
+    if conf.get("priority") is not None:
+        body["priority"] = conf["priority"]
+    if conf.get("engine"):
+        body["engine"] = conf["engine"]
     tools = read_json(os.path.join(home, "tools.json"), [])
     if tools:
         body["tools"] = [{"type": "function", "function": {
@@ -136,11 +155,14 @@ def do_wait(home, workdir, request):
     prompts.json 接上這輪的 new-prompts 再接 assistant，new-prompts.json 清空。
     結果是個 error（LLM 資料夾說這個請求它處理不了）：歷史照樣接上 new-prompts、
     但不加 assistant，直接回 idle，免得卡在 wait 一輩子。
+
+    回 (下一個 state, 這次的用量)。用量是結果檔裡 LLM 資料夾多掛的 aos.usage，
+    沒撿到東西就回 False 表示「這格沒消息，state.json 裡的 last_usage 別動」。
     """
     result = os.path.join(llm_home(home, workdir), "results", request or "")
     if not request or not os.path.isfile(result):
         print("aos-agent-step: 等 LLM（%s）" % (request or "沒有請求"), file=sys.stderr)
-        return "wait"
+        return "wait", False
     with open(result, encoding="utf-8", errors="replace") as f:
         text = f.read()
     try:
@@ -149,6 +171,8 @@ def do_wait(home, workdir, request):
         answer = {"error": "結果檔讀不成 JSON"}
     os.remove(result)
     write_json(os.path.join(home, "llm-result.json"), answer)
+    aos = answer.get("aos") if isinstance(answer, dict) else None
+    usage = aos.get("usage") if isinstance(aos, dict) else False
 
     history = read_json(os.path.join(home, "prompts.json"), [])
     pending = read_json(os.path.join(home, "new-prompts.json"), [])
@@ -157,7 +181,7 @@ def do_wait(home, workdir, request):
               % answer.get("error"), file=sys.stderr)
         write_json(os.path.join(home, "prompts.json"), history + pending)
         write_json(os.path.join(home, "new-prompts.json"), [])
-        return "idle"
+        return "idle", usage
 
     try:
         assistant = answer["choices"][0]["message"]
@@ -166,7 +190,7 @@ def do_wait(home, workdir, request):
               file=sys.stderr)
         write_json(os.path.join(home, "prompts.json"), history + pending)
         write_json(os.path.join(home, "new-prompts.json"), [])
-        return "idle"
+        return "idle", usage
 
     # 存進歷史的 assistant 訊息只留 role、content、tool_calls 三個公開欄位，
     # 過濾掉伺服器可能夾帶的私有欄位（例如 reasoning_content）。
@@ -176,7 +200,7 @@ def do_wait(home, workdir, request):
         stored["tool_calls"] = tool_calls
     write_json(os.path.join(home, "prompts.json"), history + pending + [stored])
     write_json(os.path.join(home, "new-prompts.json"), [])
-    return "act"
+    return "act", usage
 
 
 def do_act(home, workdir, step):
@@ -230,6 +254,7 @@ def main():
     step = saved.get("step") or 0
     busy = saved.get("busy") or 0
     request = saved.get("request") or ""
+    last_usage = saved.get("last_usage")
 
     if state == "idle":
         clear_archived(home)
@@ -251,7 +276,9 @@ def main():
         nxt = "wait"
         did_work = True
     elif state == "wait":
-        nxt = do_wait(home, workdir, request)
+        nxt, usage = do_wait(home, workdir, request)
+        if usage is not False:
+            last_usage = usage
         did_work = nxt != "wait"
         if did_work:
             request = ""
@@ -265,7 +292,8 @@ def main():
 
     if did_work:
         busy += 1
-    write_json(state_path, {"state": nxt, "step": step + 1, "busy": busy, "request": request})
+    write_json(state_path, {"state": nxt, "step": step + 1, "busy": busy,
+                            "request": request, "last_usage": last_usage})
     if not args.no_write_inst:
         inst = os.path.join(workdir, ".aos", "inst")
         os.makedirs(os.path.dirname(inst), exist_ok=True)

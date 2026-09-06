@@ -1,31 +1,48 @@
 #!/usr/bin/env python3
-"""aos-llm-step [dir] — 一個「LLM 資料夾」走一格：拿最舊的請求去打，把回覆寫回來。
+"""aos-llm-step [dir] — 一個「LLM 資料夾」走一格：挑優先級最高的那個請求去打。
 
-LLM 不再是誰的私有功能，而是一個跟 agent 平起平坐的資料夾。東西全在
-<dir>/.aos/llm/ 底下：引擎 engine.json（{base_url, model, api_key_env}）、
-請求箱 requests/（一個檔一個請求，內容就是 chat/completions 的 body，至少有
-messages，可以有 tools 等等，但不含 model——model 由 engine.json 補）、
-處理完的請求 requests/done/、回覆 results/<跟請求同檔名>。
+LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾。東西全在 <dir>/.aos/llm/ 底下：
+引擎清單 engines.json（一個陣列，第一個是預設；每個引擎是 {name, base_url, model,
+api_key_env, params}）、請求箱 requests/、處理完的 requests/done/、回覆
+results/<跟請求同檔名>、用量 usage/<YYYY-MM-DD>.json、走到哪 state.json。
+只有舊的 engine.json 也認：當成一個叫 default 的單元素清單。
 
-一格只做一件事：列 requests/ 頂層的 .json 排序後拿最舊的那一個，補上 model
-打 {base_url}/chat/completions，整包原始回覆寫進 results/、請求搬去 requests/done/。
-沒請求就什麼都不做。打不通：印一行到 stderr、請求留在原地下一格再試、退出碼 1。
-請求檔讀不成 JSON：印一行、照樣搬走、結果檔寫 {"error": "..."}，免得叫的人等到天荒地老。
+請求檔是一個 JSON 物件。aos 自己吃三個鍵：priority（整數，預設 0，大的先做）、
+engine（引擎名字，預設第一個）、params（一包蓋在引擎 params 上的參數）。
+**其他所有頂層鍵都原樣當成 chat/completions 的 body 欄位**（messages、tools、
+temperature…），所以 agent 丟的舊請求不用改就還是合法的。實際送出去的 body ＝
+引擎 params ← 請求 params ← 請求其他頂層鍵（後面蓋前面），model 一律由引擎說了算。
+
+一格只做**一件**：把 requests/ 頂層讀壞的先回 error 清掉，剩下的照
+（-priority, mtime, 檔名）排序拿第一個去打。整包原始回覆多掛一個 "aos" 欄位寫進
+results/、請求搬去 requests/done/。打不通也一樣回一個帶 error 的結果檔、一樣搬走
+（以前是留在原地下一格再試，會讓叫的人等到天荒地老）。用量記進 usage/<今天>.json，
+key 是 "<base_url>|<model>"。退出碼永遠 0，除非那個資料夾根本沒有 .aos/llm/。
 """
 import argparse
+import datetime
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
+
+AOS_KEYS = ("priority", "engine", "params")
+TIMEOUT = 300
 
 
 def read_json(path, default):
     if not os.path.isfile(path):
         return default
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8", errors="replace") as f:
         text = f.read().strip()
-    return json.loads(text) if text else default
+    if not text:
+        return default
+    try:
+        return json.loads(text)
+    except ValueError:
+        return default
 
 
 def write_json(path, obj):
@@ -35,29 +52,99 @@ def write_json(path, obj):
         f.write("\n")
 
 
-def oldest_request(box):
-    """requests/ 頂層排序後的第一個 .json（檔名是時間戳，排序就是先來後到）。"""
-    if not os.path.isdir(box):
+def load_engines(home):
+    """引擎清單。engines.json 沒有就退回舊的 engine.json（當成一個 default）。"""
+    engines = read_json(os.path.join(home, "engines.json"), None)
+    if engines is None:
+        old = read_json(os.path.join(home, "engine.json"), None)
+        engines = [dict(old, name=old.get("name") or "default")] if isinstance(old, dict) else []
+    if not isinstance(engines, list):
+        return []
+    return [e for e in engines if isinstance(e, dict)]
+
+
+def pick_engine(engines, name):
+    if not engines:
         return None
-    for name in sorted(os.listdir(box)):
-        if name.endswith(".json") and os.path.isfile(os.path.join(box, name)):
-            return name
+    if not name:
+        return engines[0]
+    for e in engines:
+        if e.get("name") == name:
+            return e
     return None
 
 
-def call(engine, body):
-    """補上 model 打一次 chat/completions，回整包回覆；打不通就丟例外給上面處理。"""
-    base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
-    url = base + "/chat/completions"
-    body = dict(body)
+def build_body(engine, req):
+    """引擎 params ← 請求 params ← 請求其他頂層鍵；model 一律引擎說了算。"""
+    body = dict(engine.get("params") or {})
+    body.update(req.get("params") or {})
+    for key, value in req.items():
+        if key not in AOS_KEYS:
+            body[key] = value
     body["model"] = engine.get("model") or "local"
-    key = os.environ.get(engine.get("api_key_env") or "") or "none"
+    return body
+
+
+def call(engine, body):
+    base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
+    headers = {"Content-Type": "application/json"}
+    key = os.environ.get(engine.get("api_key_env") or "")
+    if key:
+        headers["Authorization"] = "Bearer " + key
     req = urllib.request.Request(
-        url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + key},
-        method="POST")
-    with urllib.request.urlopen(req) as r:
+        base + "/chat/completions",
+        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
+
+
+def queue(box):
+    """requests/ 頂層的 .json，回 [(檔名, mtime)]，順序還沒排。"""
+    out = []
+    if not os.path.isdir(box):
+        return out
+    for name in sorted(os.listdir(box)):
+        path = os.path.join(box, name)
+        if name.endswith(".json") and os.path.isfile(path):
+            out.append((name, os.path.getmtime(path)))
+    return out
+
+
+def finish(box, results, name, result):
+    """結果落地、請求搬去 done/。"""
+    write_json(os.path.join(results, name), result)
+    done = os.path.join(box, "done")
+    os.makedirs(done, exist_ok=True)
+    os.replace(os.path.join(box, name), os.path.join(done, name))
+
+
+def bump_usage(home, engine, ok, usage, took_ms):
+    """用量按天記，一天一個檔，key 是 endpoint+model 的配對。"""
+    path = os.path.join(home, "usage", datetime.date.today().isoformat() + ".json")
+    book = read_json(path, {})
+    if not isinstance(book, dict):
+        book = {}
+    key = "%s|%s" % (engine.get("base_url") or "", engine.get("model") or "")
+    row = book.get(key) or {}
+    use = usage if isinstance(usage, dict) else {}
+
+    def add(field, more):
+        try:
+            return int(row.get(field) or 0) + int(more or 0)
+        except (TypeError, ValueError):
+            return int(row.get(field) or 0)
+
+    book[key] = {
+        "requests": add("requests", 1),
+        "errors": add("errors", 0 if ok else 1),
+        "prompt_tokens": add("prompt_tokens", use.get("prompt_tokens")),
+        "completion_tokens": add("completion_tokens", use.get("completion_tokens")),
+        "total_tokens": add("total_tokens", use.get("total_tokens")),
+        "took_ms": add("took_ms", took_ms),
+    }
+    write_json(path, book)
+    return use.get("total_tokens") or 0
 
 
 def main():
@@ -65,45 +152,111 @@ def main():
     ap.add_argument("dir", nargs="?", default=".")
     args = ap.parse_args()
     home = os.path.join(os.path.abspath(args.dir), ".aos", "llm")
-    box = os.path.join(home, "requests")
-    done = os.path.join(box, "done")
-    results = os.path.join(home, "results")
-
-    name = oldest_request(box)
-    if name is None:
-        print("aos-llm-step: idle", file=sys.stderr)
-        return 0
-
-    src = os.path.join(box, name)
-    with open(src, encoding="utf-8", errors="replace") as f:
-        text = f.read()
-    try:
-        body = json.loads(text)
-        if not isinstance(body, dict):
-            raise ValueError("請求要是一個 JSON 物件")
-    except ValueError as e:
-        # 壞掉的請求也要有結果，不然丟請求的人會一直等下去。
-        print("aos-llm-step: %s 不是合法的請求（%s），回一個 error 給它" % (name, e),
-              file=sys.stderr)
-        write_json(os.path.join(results, name), {"error": "請求讀不成 JSON：%s" % e})
-        os.makedirs(done, exist_ok=True)
-        os.replace(src, os.path.join(done, name))
-        print("aos-llm-step: %s ok" % name, file=sys.stderr)
-        return 0
-
-    engine = read_json(os.path.join(home, "engine.json"), {})
-    try:
-        answer = call(engine, body)
-    except (urllib.error.URLError, OSError, ValueError) as e:
-        print("aos-llm-step: 打不通 %s（%s），%s 留在原地下一格再試"
-              % (engine.get("base_url") or "http://localhost:1234/v1", e, name),
+    if not os.path.isdir(home):
+        print("aos-llm-step: %s 不是一個 LLM 資料夾（沒有 .aos/llm/）" % args.dir,
               file=sys.stderr)
         return 1
+    box = os.path.join(home, "requests")
+    results = os.path.join(home, "results")
 
-    write_json(os.path.join(results, name), answer)
-    os.makedirs(done, exist_ok=True)
-    os.replace(src, os.path.join(done, name))
-    print("aos-llm-step: %s ok" % name, file=sys.stderr)
+    state = read_json(os.path.join(home, "state.json"), {})
+    if not isinstance(state, dict):
+        state = {}
+    tick = int(state.get("tick") or 0) + 1
+    served = int(state.get("served") or 0)
+    errors = int(state.get("errors") or 0)
+
+    def save():
+        write_json(os.path.join(home, "state.json"),
+                   {"tick": tick, "served": served, "errors": errors})
+
+    # 先把讀壞的請求清掉：一律回一個 error 結果，免得丟請求的人等到天荒地老。
+    todo = []
+    for name, mtime in queue(box):
+        with open(os.path.join(box, name), encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        try:
+            req = json.loads(text)
+            if not isinstance(req, dict):
+                raise ValueError("請求要是一個 JSON 物件")
+        except ValueError as e:
+            finish(box, results, name, {"error": "請求讀不成 JSON：%s" % e})
+            errors += 1
+            print("aos-llm-step: tick %d %s bad-json" % (tick, name), file=sys.stderr)
+            continue
+        todo.append((name, mtime, req))
+
+    if not todo:
+        save()
+        print("aos-llm-step: tick %d empty" % tick, file=sys.stderr)
+        return 0
+
+    # 優先級高的先做；同級照先來後到（mtime，再撞就比檔名）。一格只做一件。
+    def order(item):
+        name, mtime, req = item
+        try:
+            priority = int(req.get("priority") or 0)
+        except (TypeError, ValueError):
+            priority = 0
+        return (-priority, mtime, name)
+
+    name, _, req = sorted(todo, key=order)[0]
+    try:
+        priority = int(req.get("priority") or 0)
+    except (TypeError, ValueError):
+        priority = 0
+    want = req.get("engine") or ""
+    engine = pick_engine(load_engines(home), want)
+    if engine is None:
+        why = "沒有引擎設定（engines.json 不在或是空的）" if not want \
+            else "不認得這個引擎：%s" % want
+        finish(box, results, name, {"error": why,
+                                    "aos": {"engine": want, "priority": priority}})
+        errors += 1
+        save()
+        print("aos-llm-step: tick %d %s engine=%s priority=%d error（%s）"
+              % (tick, name, want or "-", priority, why), file=sys.stderr)
+        return 0
+
+    body = build_body(engine, req)
+    aos = {"engine": engine.get("name") or "default",
+           "base_url": engine.get("base_url") or "",
+           "model": body.get("model"), "priority": priority}
+    started = time.time()
+    try:
+        answer = call(engine, body)
+        ok = True
+    except urllib.error.HTTPError as e:
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", "replace")[:500]
+        except OSError:
+            pass
+        answer = {"error": ("HTTP %s %s %s" % (e.code, e.reason, detail)).strip()}
+        ok = False
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        answer = {"error": "打不通 %s（%s）" % (aos["base_url"], e)}
+        ok = False
+    took_ms = int((time.time() - started) * 1000)
+    aos["took_ms"] = took_ms
+
+    if ok and not isinstance(answer, dict):
+        answer, ok = {"error": "回覆不是一個 JSON 物件"}, False
+    usage = answer.get("usage") if ok else None
+    if ok:
+        aos["usage"] = usage if isinstance(usage, dict) else None
+    answer["aos"] = aos
+
+    tokens = bump_usage(home, engine, ok, usage, took_ms)
+    finish(box, results, name, answer)
+    if ok:
+        served += 1
+    else:
+        errors += 1
+    save()
+    print("aos-llm-step: tick %d %s engine=%s priority=%d %s tokens=%s took=%dms"
+          % (tick, name, aos["engine"], priority, "ok" if ok else "error",
+             tokens, took_ms), file=sys.stderr)
     return 0
 
 

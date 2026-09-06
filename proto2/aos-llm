@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""aos-llm <send|usage|ls> — 從終端機使喚一個 LLM 資料夾。
+
+LLM 資料夾在哪：`--llm <dir>`，沒給就看環境變數 AOS_LLM_DIR，都沒有就退 2。
+
+  aos-llm send <檔> [--priority N] [--engine NAME] [--no-wait] [--timeout SEC]
+      把一個 JSON 請求檔（`-` 就是 stdin）丟進 requests/，然後等 results/ 冒出同名檔，
+      把整包印到 stdout、**把結果檔刪掉**（拿走就沒了）。結果裡有 error 就退 1。
+      --priority/--engine 會蓋掉檔裡原本寫的。--no-wait 只丟不等，印檔名就走。
+      --timeout 預設 120 秒，給 0 就等到天荒地老。等的時候 Ctrl-C 退 130。
+  aos-llm usage [YYYY-MM-DD]
+      印那天的用量表（預設今天）：一行一個 endpoint+model 配對。
+  aos-llm ls
+      印排隊中的請求，順序就是 aos-llm-step 會拿的順序（優先級高的先，同級先來先做）。
+"""
+import argparse
+import datetime
+import json
+import os
+import sys
+import time
+
+
+def die(msg, code=2):
+    print("aos-llm: " + msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def home_of(args):
+    where = args.llm or os.environ.get("AOS_LLM_DIR") or ""
+    if not where:
+        die("沒給 LLM 目錄，也沒設 AOS_LLM_DIR")
+    return os.path.join(os.path.abspath(where), ".aos", "llm")
+
+
+def read_json(path, default):
+    if not os.path.isfile(path):
+        return default
+    with open(path, encoding="utf-8", errors="replace") as f:
+        text = f.read().strip()
+    if not text:
+        return default
+    try:
+        return json.loads(text)
+    except ValueError:
+        return default
+
+
+def queued(box):
+    """排隊中的請求，照 aos-llm-step 會拿的順序：(-priority, mtime, 檔名)。"""
+    rows = []
+    if not os.path.isdir(box):
+        return rows
+    for name in sorted(os.listdir(box)):
+        path = os.path.join(box, name)
+        if not (name.endswith(".json") and os.path.isfile(path)):
+            continue
+        req = read_json(path, None)
+        req = req if isinstance(req, dict) else {}
+        try:
+            priority = int(req.get("priority") or 0)
+        except (TypeError, ValueError):
+            priority = 0
+        rows.append((-priority, os.path.getmtime(path), name, req.get("engine") or "-"))
+    rows.sort()
+    return rows
+
+
+def do_send(args):
+    home = home_of(args)
+    if args.file == "-":
+        text, stem = sys.stdin.read(), "stdin"
+    else:
+        if not os.path.isfile(args.file):
+            die("找不到這個請求檔：%s" % args.file)
+        with open(args.file, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        stem = os.path.basename(args.file)
+        stem = stem[:-5] if stem.endswith(".json") else stem
+    try:
+        req = json.loads(text)
+        if not isinstance(req, dict):
+            raise ValueError("請求要是一個 JSON 物件")
+    except ValueError as e:
+        die("請求讀不成 JSON：%s" % e)
+
+    if args.priority is not None:
+        req["priority"] = args.priority
+    if args.engine:
+        req["engine"] = args.engine
+
+    now = datetime.datetime.now()
+    name = "%s-%06d-%s.json" % (now.strftime("%Y%m%d-%H%M%S"), now.microsecond, stem)
+    box = os.path.join(home, "requests")
+    os.makedirs(box, exist_ok=True)
+    with open(os.path.join(box, name), "w", encoding="utf-8") as f:
+        json.dump(req, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print("aos-llm: 丟了 " + os.path.join(box, name), file=sys.stderr)
+
+    if args.no_wait:
+        print(name)
+        return 0
+
+    result = os.path.join(home, "results", name)
+    deadline = None if args.timeout <= 0 else time.time() + args.timeout
+    try:
+        while not os.path.isfile(result):
+            if deadline is not None and time.time() > deadline:
+                print("aos-llm: 等了 %g 秒沒等到結果，請求還叫 %s" % (args.timeout, name),
+                      file=sys.stderr)
+                return 1
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        print("\naos-llm: 不等了，請求還叫 %s" % name, file=sys.stderr)
+        return 130
+
+    with open(result, encoding="utf-8", errors="replace") as f:
+        text = f.read()
+    sys.stdout.write(text)
+    if not text.endswith("\n"):
+        sys.stdout.write("\n")
+    os.remove(result)
+    try:
+        answer = json.loads(text)
+    except ValueError:
+        answer = {}
+    return 1 if isinstance(answer, dict) and answer.get("error") else 0
+
+
+def do_usage(args):
+    home = home_of(args)
+    day = args.day or datetime.date.today().isoformat()
+    book = read_json(os.path.join(home, "usage", day + ".json"), None)
+    if not isinstance(book, dict) or not book:
+        print("%s 沒有用量紀錄" % day)
+        return 0
+    print("%s（endpoint|model）" % day)
+    head = "%-46s %6s %6s %9s %11s %8s %9s" % (
+        "引擎", "請求", "錯誤", "prompt", "completion", "total", "毫秒")
+    print(head)
+    for key in sorted(book):
+        row = book[key] if isinstance(book[key], dict) else {}
+        print("%-46s %6s %6s %9s %11s %8s %9s" % (
+            key, row.get("requests", 0), row.get("errors", 0),
+            row.get("prompt_tokens", 0), row.get("completion_tokens", 0),
+            row.get("total_tokens", 0), row.get("took_ms", 0)))
+    return 0
+
+
+def do_ls(args):
+    home = home_of(args)
+    rows = queued(os.path.join(home, "requests"))
+    if not rows:
+        print("排隊中：0 個")
+        return 0
+    print("排隊中：%d 個（由上而下就是會被做掉的順序）" % len(rows))
+    now = time.time()
+    for negp, mtime, name, engine in rows:
+        print("  %-42s priority=%-4d engine=%-14s age=%ds"
+              % (name, -negp, engine, int(now - mtime)))
+    return 0
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-llm")
+    sub = ap.add_subparsers(dest="cmd")
+
+    def add_llm(p):
+        p.add_argument("--llm", default="")
+        return p
+
+    p = add_llm(sub.add_parser("send"))
+    p.add_argument("file")
+    p.add_argument("--priority", type=int, default=None)
+    p.add_argument("--engine", default="")
+    p.add_argument("--no-wait", action="store_true")
+    p.add_argument("--timeout", type=float, default=120)
+
+    p = add_llm(sub.add_parser("usage"))
+    p.add_argument("day", nargs="?", default="")
+
+    add_llm(sub.add_parser("ls"))
+
+    args = ap.parse_args()
+    if args.cmd == "send":
+        return do_send(args)
+    if args.cmd == "usage":
+        return do_usage(args)
+    if args.cmd == "ls":
+        return do_ls(args)
+    ap.print_help(sys.stderr)
+    return 2
+
+
+sys.exit(main())

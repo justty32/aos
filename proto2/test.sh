@@ -5,6 +5,7 @@ AOS="$HERE/aos-exec"
 LOOP="$HERE/aos-loop"
 STEP="$HERE/aos-agent-step"
 LLMSTEP="$HERE/aos-llm-step"
+LLM="$HERE/aos-llm"
 ASK="$HERE/aos-llm-ask"
 SAY="$HERE/aos-agent-say"
 SPAWN="$HERE/aos-agent-spawn"
@@ -13,6 +14,7 @@ TALK="$HERE/aos-agent-talk"
 DKERNEL="$HERE/aos-daemon-kernel"
 DAEMON="$HERE/aos-daemon"
 unset AOS_DAEMON_DIR   # 別讓外面的環境把測試的請求丟進使用者真的 daemon 目錄
+unset AOS_LLM_DIR      # 同理：aos-llm 沒給 --llm 時不該撿到使用者真的 LLM 資料夾
 FAILED=0
 
 check() {  # check <名字> <期待退出碼> <實際退出碼>
@@ -150,7 +152,9 @@ rm -rf "$TMP"
 # 假的 OpenAI 伺服器：看到 messages 裡還沒有 tool 結果就回一個 tool_calls（say hi），
 # 已經有 tool 結果就回純文字 done。這樣同一台可以服務好幾條鏈。故意在每則回覆夾帶
 # reasoning_content（私有欄位）、done 那則再夾帶空的 tool_calls: []，測 aos-agent-step
-# 存進 prompts.json 時會不會把這些濾掉。
+# 存進 prompts.json 時會不會把這些濾掉。每則回覆都附一個固定的 usage（7/3/10），
+# 讓用量那些測試好算。body 裡有 "echo": true 就改回一句話，把收到的 model／
+# temperature／Authorization 原樣講回去，這樣測得到引擎選擇、參數覆蓋、api_key_env。
 PORT=18080
 FAKE=$(mktemp -d)
 cat > "$FAKE/fake-llm.py" <<'PYEOF2'
@@ -164,7 +168,12 @@ class H(http.server.BaseHTTPRequestHandler):
         except ValueError:
             data = {}
         msgs = data.get("messages") or []
-        if any(m.get("role") == "tool" for m in msgs):
+        if data.get("echo"):
+            message = {"role": "assistant", "reasoning_content": "blah",
+                       "content": "model=%s temperature=%s auth=%s" % (
+                           data.get("model"), data.get("temperature"),
+                           self.headers.get("Authorization") or "-")}
+        elif any(m.get("role") == "tool" for m in msgs):
             message = {"role": "assistant", "content": "done", "tool_calls": [],
                        "reasoning_content": "blah"}
         else:
@@ -173,7 +182,9 @@ class H(http.server.BaseHTTPRequestHandler):
                 {"id": "call_1", "type": "function",
                  "function": {"name": "say", "arguments": "{\"text\": \"hi\"}"}}]}
         body = json.dumps({"choices": [{"index": 0, "message": message,
-                                        "finish_reason": "stop"}]}).encode("utf-8")
+                                        "finish_reason": "stop"}],
+                           "usage": {"prompt_tokens": 7, "completion_tokens": 3,
+                                     "total_tokens": 10}}).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -226,17 +237,35 @@ prep_agent() {  # prep_agent <目標 agent 資料夾>；它的 llm.json 一律�
   cp "$HERE/examples/agent/.aos/agent/tools.json" "$1/.aos/agent/tools.json"
   cp "$HERE/examples/agent/notes.txt" "$1/notes.txt"
 }
-prep_llm() {  # prep_llm <目標 LLM 資料夾>；engine 指到假伺服器（範例本體不碰）
+prep_llm() {  # prep_llm <目標 LLM 資料夾>；引擎全指到假伺服器（範例本體不碰）
   mkdir -p "$1/.aos/llm/requests"
-  cp "$HERE/examples/llm/.aos/llm/engine.json" "$1/.aos/llm/engine.json"
+  cp "$HERE/examples/llm/.aos/llm/engines.json" "$1/.aos/llm/engines.json"
   cp "$HERE/examples/llm/.aos/inst" "$1/.aos/inst"
-  python3 - "$1/.aos/llm/engine.json" "$PORT" <<'PYEOF2'
+  python3 - "$1/.aos/llm/engines.json" "$PORT" <<'PYEOF2'
 import json, sys
 p = sys.argv[1]
-e = json.load(open(p, encoding="utf-8"))
-e["base_url"] = "http://127.0.0.1:%s/v1" % sys.argv[2]
-json.dump(e, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+engines = json.load(open(p, encoding="utf-8"))
+for e in engines:
+    e["base_url"] = "http://127.0.0.1:%s/v1" % sys.argv[2]
+    e.pop("api_key_env", None)
+json.dump(engines, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 PYEOF2
+}
+mk_engines() {  # mk_engines <LLM 資料夾> <json 字串>；直接放一份自己寫的引擎清單
+  mkdir -p "$1/.aos/llm/requests"
+  cp "$HERE/examples/llm/.aos/inst" "$1/.aos/inst"
+  printf '%s\n' "$2" > "$1/.aos/llm/engines.json"
+}
+llm_content() {  # llm_content <結果檔>；印出 choices[0].message.content
+  python3 -c '
+import json,sys
+print(json.load(open(sys.argv[1]))["choices"][0]["message"]["content"] or "")' "$1"
+}
+llm_field() {  # llm_field <json 檔> <python 取值運算式，d 是整包>
+  python3 -c '
+import json,sys
+d = json.load(open(sys.argv[1]))
+print(eval(sys.argv[2]))' "$1" "$2"
 }
 now_state() {  # now_state <agent 資料夾>
   python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' "$1/.aos/agent/state.json"
@@ -249,7 +278,7 @@ echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
 OUT=$("$LLMSTEP" "$TMP/llm" 2>&1); RC=$?
 check "aos-llm-step 處理一個請求回 0" 0 "$RC"
 case "$OUT" in
-  *"0001.json ok"*) echo "ok   aos-llm-step 印了處理掉哪個請求" ;;
+  *"tick 1 0001.json engine=local"*" ok "*) echo "ok   aos-llm-step 印了 tick／請求／引擎／ok" ;;
   *) echo "FAIL aos-llm-step 印的不對：$OUT"; FAILED=1 ;;
 esac
 if [ -f "$TMP/llm/.aos/llm/results/0001.json" ]; then
@@ -264,23 +293,33 @@ if [ -f "$TMP/llm/.aos/llm/requests/done/0001.json" ]; then
 else
   echo "FAIL requests/done/0001.json 不在"; FAILED=1
 fi
-CONTENT=$(python3 -c '
-import json,sys
-print(json.load(open(sys.argv[1]))["choices"][0]["message"]["content"] or "")' \
-  "$TMP/llm/.aos/llm/results/0001.json")
+CONTENT=$(llm_content "$TMP/llm/.aos/llm/results/0001.json")
 if [ "$CONTENT" = "" ]; then
   echo "ok   results/ 裡是整包原始回覆（這則是 tool_calls，content 空的）"
 else
   echo "FAIL results/ 內容不對：$CONTENT"; FAILED=1
 fi
+AOS_BLOCK=$(llm_field "$TMP/llm/.aos/llm/results/0001.json" \
+  '"%s %s %s" % (d["aos"]["engine"], d["aos"]["model"], d["aos"]["usage"]["total_tokens"])')
+if [ "$AOS_BLOCK" = "local local 10" ]; then
+  echo "ok   結果多掛了 aos 區塊（引擎／model／用量）"
+else
+  echo "FAIL 結果的 aos 區塊不對：$AOS_BLOCK"; FAILED=1
+fi
 
-# 13. 沒請求就什麼都不做，印 idle
+# 13. 沒請求就什麼都不做，印 empty
 OUT=$("$LLMSTEP" "$TMP/llm" 2>&1); RC=$?
 check "aos-llm-step 沒請求也回 0" 0 "$RC"
 case "$OUT" in
-  *"idle"*) echo "ok   沒請求時印 idle" ;;
+  *"tick 2 empty"*) echo "ok   沒請求時印 empty，tick 照樣往前走" ;;
   *) echo "FAIL 沒請求時印的不對：$OUT"; FAILED=1 ;;
 esac
+STATE=$(llm_field "$TMP/llm/.aos/llm/state.json" '"%s %s %s" % (d["tick"], d["served"], d["errors"])')
+if [ "$STATE" = "2 1 0" ]; then
+  echo "ok   state.json 記著 tick／served／errors"
+else
+  echo "FAIL state.json 不對：$STATE"; FAILED=1
+fi
 rm -rf "$TMP"
 
 # 14. 壞掉的請求也要有結果，不然丟請求的人會等到天荒地老
@@ -299,28 +338,30 @@ else
 fi
 rm -rf "$TMP"
 
-# 15. 打不通就把請求留在原地、退出碼 1，下一格再試
-TMP=$(mktemp -d); prep_llm "$TMP/llm"
-python3 - "$TMP/llm/.aos/llm/engine.json" <<'PYEOF2'
-import json, sys
-p = sys.argv[1]
-e = json.load(open(p, encoding="utf-8"))
-e["base_url"] = "http://127.0.0.1:1/v1"
-json.dump(e, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-PYEOF2
+# 15. 打不通也要回一個帶 error 的結果、請求照樣搬走（以前是留在原地，害叫的人等到天荒地老）
+TMP=$(mktemp -d)
+mk_engines "$TMP/llm" '[{"name": "nope", "base_url": "http://127.0.0.1:1/v1", "model": "m"}]'
 echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
   > "$TMP/llm/.aos/llm/requests/0001.json"
 OUT=$("$LLMSTEP" "$TMP/llm" 2>&1); RC=$?
-check "aos-llm-step 打不通回 1" 1 "$RC"
+check "aos-llm-step 打不通還是回 0" 0 "$RC"
 case "$OUT" in
-  *"打不通"*) echo "ok   打不通有印白話" ;;
+  *"0001.json engine=nope"*"error"*) echo "ok   打不通那行印了 error" ;;
   *) echo "FAIL 打不通印的不對：$OUT"; FAILED=1 ;;
 esac
-if [ -f "$TMP/llm/.aos/llm/requests/0001.json" ]; then
-  echo "ok   打不通時請求留在原地下一格再試"
+ERR=$(llm_field "$TMP/llm/.aos/llm/results/0001.json" 'd["error"]' 2>/dev/null)
+case "$ERR" in
+  *"打不通"*) echo "ok   打不通的結果檔有 error：$ERR" ;;
+  *) echo "FAIL 打不通沒寫出 error 結果：$ERR"; FAILED=1 ;;
+esac
+if [ -f "$TMP/llm/.aos/llm/requests/done/0001.json" ]; then
+  echo "ok   打不通的請求一樣搬去 done/，不會卡住後面的人"
 else
-  echo "FAIL 打不通時請求被搬走了"; FAILED=1
+  echo "FAIL 打不通的請求沒搬走"; FAILED=1
 fi
+ERRN=$(llm_field "$TMP/llm/.aos/llm/usage/$(date +%Y-%m-%d).json" \
+  'd["http://127.0.0.1:1/v1|m"]["errors"]')
+if [ "$ERRN" = "1" ]; then echo "ok   打不通也記進當天的用量（errors=1）"; else echo "FAIL 用量沒記到打不通：$ERRN"; FAILED=1; fi
 rm -rf "$TMP"
 
 # 16. aos-llm-ask：丟一個請求、等 aos-loop 那頭跑出結果、印出來、把結果檔拿走
@@ -1097,6 +1138,245 @@ else
   echo "FAIL continue 沒把它救回來：state=$(state_of "$AOSD" "$TMP/w") pid=$NPID 行數 $A → $(nlines "$TMP/w")"; FAILED=1
 fi
 kill_clocks "$AOSD"; unset -f tick; rm -rf "$TMP"
+
+# ── aos-llm v0：多引擎、優先級、用量、send/usage/ls ─────────────────────────
+# 44. 優先級：三個請求 p=0/5/1，一格做一件，順序要是 5 → 1 → 0
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+Q="$TMP/llm/.aos/llm/requests"
+echo '{"priority": 0, "messages": [{"role": "user", "content": "低"}]}' > "$Q/a-p0.json"
+echo '{"priority": 5, "messages": [{"role": "user", "content": "高"}]}' > "$Q/b-p5.json"
+echo '{"priority": 1, "messages": [{"role": "user", "content": "中"}]}' > "$Q/c-p1.json"
+SEQ=""
+for i in 1 2 3; do
+  L=$("$LLMSTEP" "$TMP/llm" 2>&1 >/dev/null)
+  SEQ="$SEQ $(echo "$L" | sed -n 's/.*tick [0-9]* \([a-z]-p[0-9]\)\.json .*/\1/p')"
+done
+if [ "$SEQ" = " b-p5 c-p1 a-p0" ]; then
+  echo "ok   優先級高的先做，同級照先來後到（$SEQ）"
+else
+  echo "FAIL 優先級順序不對：$SEQ"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 45. 指定 engine：按名字挑，model 一律由引擎說了算（請求寫 model 也沒用）
+TMP=$(mktemp -d)
+mk_engines "$TMP/llm" "[{\"name\": \"one\", \"base_url\": \"http://127.0.0.1:$PORT/v1\", \"model\": \"model-a\"},
+ {\"name\": \"two\", \"base_url\": \"http://127.0.0.1:$PORT/v1\", \"model\": \"model-b\", \"api_key_env\": \"AOS_TEST_KEY\"}]"
+echo '{"echo": true, "model": "使用者亂寫的", "messages": []}' > "$TMP/llm/.aos/llm/requests/0001.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+C=$(llm_content "$TMP/llm/.aos/llm/results/0001.json")
+case "$C" in
+  "model=model-a "*) echo "ok   不指定就用第一個引擎，model 由引擎決定（$C）" ;;
+  *) echo "FAIL 預設引擎不對：$C"; FAILED=1 ;;
+esac
+echo '{"engine": "two", "echo": true, "messages": []}' > "$TMP/llm/.aos/llm/requests/0002.json"
+AOS_TEST_KEY=sekret "$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+C=$(llm_content "$TMP/llm/.aos/llm/results/0002.json")
+case "$C" in
+  "model=model-b "*"auth=Bearer sekret") echo "ok   指名 engine 就換一台，api_key_env 有變成 Authorization" ;;
+  *) echo "FAIL 指名引擎不對：$C"; FAILED=1 ;;
+esac
+E=$(llm_field "$TMP/llm/.aos/llm/results/0002.json" 'd["aos"]["engine"]')
+if [ "$E" = "two" ]; then echo "ok   結果的 aos.engine 記著用了哪台"; else echo "FAIL aos.engine 不對：$E"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 46. 參數覆蓋：引擎 params ← 請求 params ← 請求頂層鍵，後面蓋前面
+TMP=$(mktemp -d)
+mk_engines "$TMP/llm" "[{\"name\": \"e\", \"base_url\": \"http://127.0.0.1:$PORT/v1\", \"model\": \"m\", \"params\": {\"temperature\": 0.1}}]"
+echo '{"echo": true, "messages": []}' > "$TMP/llm/.aos/llm/requests/0001.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+case "$(llm_content "$TMP/llm/.aos/llm/results/0001.json")" in
+  *"temperature=0.1"*) echo "ok   沒指定就吃引擎的 params" ;;
+  *) echo "FAIL 引擎 params 沒生效：$(llm_content "$TMP/llm/.aos/llm/results/0001.json")"; FAILED=1 ;;
+esac
+echo '{"echo": true, "params": {"temperature": 0.5}, "messages": []}' > "$TMP/llm/.aos/llm/requests/0002.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+case "$(llm_content "$TMP/llm/.aos/llm/results/0002.json")" in
+  *"temperature=0.5"*) echo "ok   請求的 params 蓋掉引擎的" ;;
+  *) echo "FAIL 請求 params 沒蓋過去"; FAILED=1 ;;
+esac
+echo '{"echo": true, "params": {"temperature": 0.5}, "temperature": 0.9, "messages": []}' \
+  > "$TMP/llm/.aos/llm/requests/0003.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+case "$(llm_content "$TMP/llm/.aos/llm/results/0003.json")" in
+  *"temperature=0.9"*) echo "ok   請求頂層的 temperature 又蓋掉 params 裡的" ;;
+  *) echo "FAIL 頂層鍵沒蓋過 params"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 47. 不認得的引擎：回一個 error 結果、請求搬走，不會卡住
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+echo '{"engine": "沒這台", "messages": []}' > "$TMP/llm/.aos/llm/requests/0001.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1; RC=$?
+check "不認得的引擎還是回 0" 0 "$RC"
+ERR=$(llm_field "$TMP/llm/.aos/llm/results/0001.json" 'd["error"]' 2>/dev/null)
+case "$ERR" in
+  *"不認得這個引擎"*) echo "ok   不認得的引擎有回 error：$ERR" ;;
+  *) echo "FAIL 不認得的引擎沒回 error：$ERR"; FAILED=1 ;;
+esac
+if [ -f "$TMP/llm/.aos/llm/requests/done/0001.json" ]; then
+  echo "ok   不認得引擎的請求一樣搬去 done/"
+else
+  echo "FAIL 不認得引擎的請求沒搬走"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 48. 用量按天累加，key 是 endpoint|model
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+echo '{"messages": []}' > "$TMP/llm/.aos/llm/requests/0001.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+echo '{"messages": []}' > "$TMP/llm/.aos/llm/requests/0002.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+USAGE="$TMP/llm/.aos/llm/usage/$(date +%Y-%m-%d).json"
+U=$(llm_field "$USAGE" '"%s %s %s %s %s" % tuple(d["http://127.0.0.1:'"$PORT"'/v1|local"][k] for k in ("requests","errors","prompt_tokens","completion_tokens","total_tokens"))')
+if [ "$U" = "2 0 14 6 20" ]; then
+  echo "ok   用量兩次累加起來，key 是 endpoint|model（$U）"
+else
+  echo "FAIL 用量累加不對：$U"; FAILED=1
+fi
+KEYS=$(llm_field "$USAGE" 'len(d)')
+if [ "$KEYS" = "1" ]; then echo "ok   同一個 endpoint+model 只佔一列"; else echo "FAIL 用量鍵數不對：$KEYS"; FAILED=1; fi
+
+# 49. aos-llm usage：印得出那張表
+OUT=$("$LLM" usage --llm "$TMP/llm" 2>&1); RC=$?
+check "aos-llm usage 退 0" 0 "$RC"
+case "$OUT" in
+  *"http://127.0.0.1:$PORT/v1|local"*) echo "ok   usage 表印出了 endpoint|model 那一列" ;;
+  *) echo "FAIL usage 印的不對：$OUT"; FAILED=1 ;;
+esac
+OUT=$("$LLM" usage 1999-01-01 --llm "$TMP/llm" 2>&1)
+case "$OUT" in
+  *"沒有用量紀錄"*) echo "ok   沒紀錄那天講一句就好" ;;
+  *) echo "FAIL 沒紀錄那天印的不對：$OUT"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 50. aos-llm 沒給 --llm 也沒設 AOS_LLM_DIR：退 2
+TMP=$(mktemp -d)
+echo '{"messages": []}' > "$TMP/req.json"
+OUT=$("$LLM" send "$TMP/req.json" 2>&1); RC=$?
+check "aos-llm send 沒有 LLM 目錄退 2" 2 "$RC"
+case "$OUT" in
+  *"AOS_LLM_DIR"*) echo "ok   沒目錄時有講 AOS_LLM_DIR" ;;
+  *) echo "FAIL 沒目錄時印的不對：$OUT"; FAILED=1 ;;
+esac
+
+# 51. aos-llm send --no-wait：只丟不等，印檔名；aos-llm ls 照 step 會拿的順序排
+prep_llm "$TMP/llm"
+export AOS_LLM_DIR="$TMP/llm"
+N1=$("$LLM" send "$TMP/req.json" --priority 0 --no-wait 2>/dev/null); RC=$?
+check "aos-llm send --no-wait 退 0" 0 "$RC"
+if [ -f "$TMP/llm/.aos/llm/requests/$N1" ]; then
+  echo "ok   --no-wait 印的檔名就是丟出去那個請求（走 AOS_LLM_DIR）"
+else
+  echo "FAIL --no-wait 印的檔名對不上：$N1"; FAILED=1
+fi
+N2=$("$LLM" send - --priority 7 --engine deepseek-flash --no-wait <<< '{"messages": []}' 2>/dev/null)
+OUT=$("$LLM" ls 2>&1)
+case "$OUT" in
+  *"排隊中：2 個"*) echo "ok   ls 數得出排隊幾個" ;;
+  *) echo "FAIL ls 數不對：$OUT"; FAILED=1 ;;
+esac
+FIRST=$(echo "$OUT" | sed -n '2p')
+case "$FIRST" in
+  *"$N2"*"priority=7"*"engine=deepseek-flash"*) echo "ok   ls 第一行就是下一個會被做掉的（priority 7）" ;;
+  *) echo "FAIL ls 排序不對：$FIRST"; FAILED=1 ;;
+esac
+PRI=$(llm_field "$TMP/llm/.aos/llm/requests/$N1" 'd["priority"]')
+if [ "$PRI" = "0" ]; then echo "ok   --priority 寫進請求檔了"; else echo "FAIL --priority 沒寫進去：$PRI"; FAILED=1; fi
+
+# 52. aos-llm send 來回一趟：背景推格，send 等到結果、印出來、把結果檔拿走
+( for i in 1 2 3 4 5 6 7 8 9 10; do "$LLMSTEP" "$TMP/llm" >/dev/null 2>&1; sleep 0.2; done ) &
+SEND_LOOP=$!
+OUT=$(timeout 20 "$LLM" send "$TMP/req.json" --priority 9 2>/dev/null); RC=$?
+check "aos-llm send 等到回覆退 0" 0 "$RC"
+case "$OUT" in
+  *'"aos"'*"choices"*|*"choices"*'"aos"'*) echo "ok   send 印出整包回覆（含 aos 區塊）" ;;
+  *) echo "FAIL send 印的不對：$OUT"; FAILED=1 ;;
+esac
+wait $SEND_LOOP 2>/dev/null
+RES_LEFT=$(find "$TMP/llm/.aos/llm/results" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+if [ "$RES_LEFT" = "2" ]; then
+  echo "ok   send 只拿走自己那份結果（另兩個 --no-wait 的還留著）"
+else
+  echo "FAIL 結果檔數不對：$RES_LEFT"; FAILED=1
+fi
+unset AOS_LLM_DIR
+rm -rf "$TMP"
+
+# 53. 只有舊 engine.json 的世界照樣能跑（當成一個叫 default 的單元素清單）
+TMP=$(mktemp -d)
+mkdir -p "$TMP/llm/.aos/llm/requests"
+cp "$HERE/examples/llm/.aos/inst" "$TMP/llm/.aos/inst"
+printf '{"base_url": "http://127.0.0.1:%s/v1", "model": "old"}\n' "$PORT" \
+  > "$TMP/llm/.aos/llm/engine.json"
+echo '{"echo": true, "messages": []}' > "$TMP/llm/.aos/llm/requests/0001.json"
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1; RC=$?
+check "舊 engine.json 世界走一格回 0" 0 "$RC"
+E=$(llm_field "$TMP/llm/.aos/llm/results/0001.json" '"%s %s" % (d["aos"]["engine"], d["aos"]["model"])')
+if [ "$E" = "default old" ]; then
+  echo "ok   舊 engine.json 被當成一個叫 default 的引擎"
+else
+  echo "FAIL 舊 engine.json 沒接上：$E"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 54. 不是 LLM 資料夾就退 1（唯一會退非 0 的情況）
+TMP=$(mktemp -d)
+"$LLMSTEP" "$TMP" >/dev/null 2>&1; RC=$?
+check "沒有 .aos/llm/ 的資料夾退 1" 1 "$RC"
+rm -rf "$TMP"
+
+# 55. agent 那頭：llm.json 的 priority/engine 抄進請求，撿回結果後 state.json 記 last_usage
+TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+python3 - "$TMP/agent/.aos/agent/llm.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]
+c = json.load(open(p, encoding="utf-8"))
+c["priority"] = 3
+c["engine"] = "local"
+json.dump(c, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+PYEOF2
+"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1   # idle 收信
+"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1   # llm 丟請求
+REQ=$(find "$TMP/llm/.aos/llm/requests" -maxdepth 1 -name '*.json' | head -1)
+P=$(llm_field "$REQ" '"%s %s" % (d["priority"], d["engine"])')
+if [ "$P" = "3 local" ]; then
+  echo "ok   llm.json 的 priority／engine 抄進 agent 丟的請求了"
+else
+  echo "FAIL agent 請求沒帶上 priority／engine：$P"; FAILED=1
+fi
+"$LLMSTEP" "$TMP/llm" >/dev/null 2>&1
+"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1   # wait 撿回覆
+LU=$(llm_field "$TMP/agent/.aos/agent/state.json" 'd["last_usage"]["total_tokens"]')
+if [ "$LU" = "10" ]; then
+  echo "ok   agent 的 state.json 記下了上一次的用量 last_usage"
+else
+  echo "FAIL state.json 沒記 last_usage：$LU"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 56. agent 沒有 llm.json、也沒 AOS_LLM_DIR、旁邊也沒 ../llm：講清楚退 2
+TMP=$(mktemp -d); prep_agent "$TMP/deep/agent"
+rm "$TMP/deep/agent/.aos/agent/llm.json"
+python3 -c '
+import json,sys
+json.dump({"state": "llm", "step": 1, "busy": 1, "request": ""},
+          open(sys.argv[1], "w"))' "$TMP/deep/agent/.aos/agent/state.json"
+OUT=$("$STEP" "$TMP/deep/agent" --no-write-inst 2>&1 >/dev/null); RC=$?
+check "找不到 LLM 資料夾退 2" 2 "$RC"
+case "$OUT" in
+  *"AOS_LLM_DIR"*) echo "ok   找不到 LLM 資料夾時有講 AOS_LLM_DIR" ;;
+  *) echo "FAIL 找不到 LLM 資料夾印的不對：$OUT"; FAILED=1 ;;
+esac
+AOS_LLM_DIR="$TMP/llmx" "$STEP" "$TMP/deep/agent" --no-write-inst >/dev/null 2>&1; RC=$?
+check "設了 AOS_LLM_DIR 就走得動" 0 "$RC"
+if [ -n "$(find "$TMP/llmx/.aos/llm/requests" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
+  echo "ok   請求丟進 AOS_LLM_DIR 指的那個世界"
+else
+  echo "FAIL 請求沒丟進 AOS_LLM_DIR"; FAILED=1
+fi
+rm -rf "$TMP"
 
 cleanup
 trap - EXIT
