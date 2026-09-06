@@ -16,7 +16,8 @@ TOOLS = [
          "name": {"type": "string", "description": "子 agent 的名字，只能英數字／底線／減號，也是資料夾名"},
          "persona": {"type": "string", "description": "子 agent 的人格，就是它的 system prompt"},
          "clock": {"type": "string", "enum": ["shared", "own"],
-                   "description": "shared＝跟你同一個時鐘（預設），own＝它自己一個時鐘"}},
+                   "description": "shared＝跟你同一個時鐘（預設），own＝它自己一個時鐘"},
+         "template": {"type": "string", "description": "可選的出廠模板名字；找不到就照常建立"}},
          "required": ["name", "persona"]}},
     {"name": "kids_list",
      "description": "列出你生過的子 agent，以及它們各走到哪一格。",
@@ -27,18 +28,25 @@ TOOLS = [
 def run(name, args, ctx):
     if name == "spawn":
         ok, msg = ctx.spawn(args.get("name") or "", args.get("persona") or "",
-                            args.get("clock") or "shared")
+                            args.get("clock") or "shared", args.get("template"))
         return {"ok": ok, "message": msg}
     if name == "kids_list":
-        box = ctx.kids_dir()
         rows = []
+        registry = ctx.kids()
+        box = ctx.kids_dir()
         if os.path.isdir(box):
-            for kid in sorted(os.listdir(box)):
-                path = os.path.join(box, kid)
-                if not os.path.isdir(path):
-                    continue
+            for kid in os.listdir(box):
+                if os.path.isdir(os.path.join(box, kid)) and kid not in registry:
+                    registry[kid] = {"name": kid, "dir": os.path.join(box, kid)}
+        for kid, info in sorted(registry.items()):
+            if isinstance(info, dict):
+                path = info.get("dir") or os.path.join(ctx.kids_dir(), kid)
+            else:
+                path = os.path.join(ctx.kids_dir(), kid)
+            if os.path.isdir(path):
                 st = ctx.read_json(os.path.join(path, "state.json"), {}) or {}
                 rows.append({"name": kid, "state": st.get("state") or "idle",
-                             "step": st.get("step") or 0, "busy": st.get("busy") or 0})
+                             "step": st.get("step") or 0, "busy": st.get("busy") or 0,
+                             "clock": info.get("clock") if isinstance(info, dict) else None})
         return rows
     return {"error": "kids 沒有這個工具：%s" % name}

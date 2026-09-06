@@ -10,7 +10,10 @@
     xxx/<home>/tools.json           {"packs": [...], "tools": [...]}
     xxx/<home>/llm.json             {"dir": "../llm", "priority": 1, "engine": "..."}（可有可無）
     xxx/<home>/state.json           {"state","step","busy","request","last_usage","started","announced",
-                                     "wait_ticks","empty_replies"}
+                                     "wait_ticks","empty_replies","pending"}
+    xxx/<home>/contacts.json        通訊錄（名字 → 世界資料夾路徑）
+    xxx/<home>/parent.json          父是誰（小孩才有）
+    xxx/<home>/kids.json            小孩名冊
     xxx/<home>/inbox/<來源>/*.json       沒讀的信
     xxx/<home>/inbox/<來源>/read/*.json  讀過的信
     xxx/<home>/outbox/<四位數>.json      它自己說的話
@@ -40,8 +43,10 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -76,6 +81,10 @@ def read_json(path, default):
 
 def write_json(path, obj):
     aos_llm.write_json(path, obj)
+
+
+def write_json_atomic(path, obj):
+    aos_llm.write_json_atomic(path, obj)
 
 
 def resolve_home(world, home_opt):
@@ -180,11 +189,33 @@ def tool_specs(loaded, extra):
     return specs
 
 
-def system_text(home, loaded):
+def system_text(ctx, loaded):
     """system 訊息 ＝ 人格 ＋ 每個開著的工具包各一段預設 prompt。"""
+    home = ctx.home
     persona = read_json(os.path.join(home, "system-prompt.json"), {})
     text = (persona.get("content") or "") if isinstance(persona, dict) else ""
-    paras = [getattr(m, "PROMPT", "") for _n, m in loaded if getattr(m, "PROMPT", "")]
+    paras = []
+    for name, module in loaded:
+        override = os.path.join(home, "prompt-overrides", name + ".md")
+        if os.path.isfile(override):
+            try:
+                with open(override, encoding="utf-8", errors="replace") as f:
+                    prompt = f.read()
+            except OSError as e:
+                ctx.log("讀不到 prompt 覆蓋 %s：%s" % (name, e))
+                prompt = getattr(module, "PROMPT", "")
+        else:
+            prompt = getattr(module, "PROMPT", "")
+        if prompt:
+            paras.append(prompt)
+        hook = getattr(module, "on_system_prompt", None)
+        if hook:
+            try:
+                extra = hook(ctx.for_pack(name))
+                if extra:
+                    paras.append(str(extra))
+            except Exception as e:
+                ctx.log("工具包 %s 的 on_system_prompt 出錯：%s" % (name, e))
     if paras:
         text = (text + "\n\n" if text else "") + "\n\n".join(paras)
     return text
@@ -193,10 +224,10 @@ def system_text(home, loaded):
 def pack_owners(loaded):
     """工具名字 → 哪個工具包負責跑它。"""
     owners = {}
-    for _name, module in loaded:
+    for pack_name, module in loaded:
         for t in getattr(module, "TOOLS", []):
             if t.get("name") and t["name"] not in owners:
-                owners[t["name"]] = module
+                owners[t["name"]] = (pack_name, module)
     return owners
 
 
@@ -380,17 +411,27 @@ class Ctx:
     外加幾個現成的家務函式（讀寫 json、掃信箱、看自己、生小孩、找 LLM 資料夾）。"""
 
     read_json = staticmethod(read_json)
-    write_json = staticmethod(write_json)
+    write_json = staticmethod(write_json_atomic)
     warn = staticmethod(warn)
     truncate = staticmethod(truncate)
 
-    def __init__(self, world, home):
-        self.world = world
-        self.home = home
+    def __init__(self, world, home, state=None, loaded=None, pack=None):
+        self.world = os.path.abspath(world)
+        self.home = os.path.abspath(home)
+        self.name = os.path.basename(self.world.rstrip(os.sep)) or "agent"
+        self.state = state if isinstance(state, dict) else read_json(
+            os.path.join(self.home, "state.json"), {})
+        if not isinstance(self.state, dict):
+            self.state = {}
+        self.loaded = loaded or []
+        self.pack = pack
 
-    def state(self):
-        st = read_json(os.path.join(self.home, "state.json"), {})
-        return st if isinstance(st, dict) else {}
+    def for_pack(self, name):
+        return Ctx(self.world, self.home, self.state, self.loaded, name)
+
+    def log(self, text):
+        prefix = "%s/%s" % (self.name, self.pack) if self.pack else self.name
+        print("aos-agent[%s]: %s" % (prefix, text), file=sys.stderr)
 
     def status(self):
         return status_of(self.world, self.home)
@@ -404,8 +445,129 @@ class Ctx:
     def kids_dir(self):
         return os.path.join(self.home, "kids")
 
-    def spawn(self, name, persona, clock="shared"):
-        return spawn(self.world, self.home, name, persona, clock)
+    def spawn(self, name, persona, clock="shared", template=None):
+        return spawn(self.world, self.home, name, persona, clock, template)
+
+    def put_mail(self, target, source, content, **extra):
+        contacts = self.contacts()
+        target_name = target
+        target_world = contacts.get(target) if isinstance(target, str) else None
+        if isinstance(target_world, dict):
+            target_world = target_world.get("dir")
+        if not target_world:
+            target_world = target
+            target_name = os.path.basename(str(target).rstrip(os.sep)) or str(target)
+        if not isinstance(target_world, str):
+            self.log("找不到收件人：%s" % target)
+            return None
+        if not os.path.isabs(target_world):
+            target_world = os.path.abspath(os.path.join(self.world, target_world))
+        if not os.path.isdir(target_world):
+            self.log("找不到收件人：%s" % target)
+            return None
+        if not isinstance(source, str) or source in ("", ".", "..") or os.path.basename(source) != source:
+            self.log("信件來源名字不對：%s" % source)
+            return None
+        target_home = resolve_home(target_world, None)
+        box = os.path.join(target_home, "inbox", source)
+        path = os.path.join(box, aos_llm.stamp() + ".json")
+        msg = dict(extra)
+        msg.update({"from": self.name, "to": str(target_name), "time": now_iso(),
+                    "content": str(content)})
+        write_json_atomic(path, msg)
+        return path
+
+    def contacts(self):
+        data = read_json(os.path.join(self.home, "contacts.json"), {})
+        return data if isinstance(data, dict) else {}
+
+    def add_contact(self, name, path):
+        if not isinstance(name, str) or not name or not isinstance(path, str):
+            return False
+        target = os.path.abspath(os.path.join(self.world, path)) if not os.path.isabs(path) else os.path.abspath(path)
+        data = self.contacts()
+        data[name] = target
+        write_json_atomic(os.path.join(self.home, "contacts.json"), data)
+        return True
+
+    def parent(self):
+        data = read_json(os.path.join(self.home, "parent.json"), None)
+        return data if isinstance(data, dict) else None
+
+    def kids(self):
+        data = read_json(os.path.join(self.home, "kids.json"), {})
+        return data if isinstance(data, dict) else {}
+
+    def llm_request(self, body, kind="side", priority=None, engine=None):
+        conf = read_json(os.path.join(self.home, "llm.json"), {})
+        conf = conf if isinstance(conf, dict) else {}
+        if priority is None:
+            priority = conf.get("priority")
+        if engine is None:
+            engine = conf.get("engine")
+        kind = str(kind or "side")
+        name = aos_llm.write_request(
+            self.llm_dir(), body, priority=priority, engine=engine,
+            name="%s-%s" % (self.name, kind))
+        pending = self.state.get("pending")
+        if not isinstance(pending, list):
+            pending = []
+            self.state["pending"] = pending
+        pending.append({"name": name, "kind": kind,
+                        "since_step": int(self.state.get("step") or 0),
+                        "pack": self.pack})
+        return name
+
+    def _clock(self, op, where, interval=None):
+        if not os.environ.get("AOS_DAEMON_DIR"):
+            return False, "沒設 AOS_DAEMON_DIR"
+        target = os.path.abspath(os.path.join(self.world, where)) if not os.path.isabs(where) else os.path.abspath(where)
+        cmd = [os.path.join(HERE, "aos-daemon"), op, target]
+        config_path = None
+        try:
+            if op == "register" and interval is not None:
+                fd, config_path = tempfile.mkstemp(prefix="aos-clock-", suffix=".json")
+                os.close(fd)
+                write_json_atomic(config_path, {"interval": interval})
+                cmd += ["--config", config_path]
+            done = subprocess.run(cmd, capture_output=True, text=True)
+        finally:
+            if config_path:
+                try:
+                    os.remove(config_path)
+                except OSError:
+                    pass
+        lines = (done.stderr or done.stdout or "").strip().splitlines()
+        msg = lines[-1].replace("aos-daemon: ", "", 1) if lines else ("完成" if done.returncode == 0 else "失敗")
+        return done.returncode == 0, msg
+
+    def register_clock(self, where, interval=None):
+        return self._clock("register", where, interval)
+
+    def unregister_clock(self, where):
+        return self._clock("unregister", where)
+
+    def pause_clock(self, where):
+        return self._clock("pause", where)
+
+    def continue_clock(self, where):
+        return self._clock("continue", where)
+
+    def reply(self, text, **extra):
+        msg = dict(extra)
+        msg.update({"role": "assistant", "content": str(text)})
+        step = int(self.state.get("step") or 0) + 1
+        path = os.path.join(self.home, "outbox", "%04d.json" % step)
+        write_json_atomic(path, msg)
+        for name, module in self.loaded:
+            hook = getattr(module, "on_reply", None)
+            if not hook:
+                continue
+            try:
+                hook(self.for_pack(name), msg)
+            except Exception as e:
+                self.log("工具包 %s 的 on_reply 出錯：%s" % (name, e))
+        return path
 
     # 信箱
     def sources(self):
@@ -444,7 +606,7 @@ def append_line(path, line):
     return True
 
 
-def spawn(world, home, name, persona, clock="shared"):
+def spawn(world, home, name, persona, clock="shared", template=None):
     """生一個子 agent 在 <home>/kids/<name>/。回 (成功嗎, 一句話)。
 
     子自己就是一個完整的世界資料夾，本體平鋪在它底下（home＝`.`），
@@ -460,23 +622,52 @@ def spawn(world, home, name, persona, clock="shared"):
         return False, "這個名字已經被佔走了：" + child
     os.makedirs(child)
 
-    write_json(os.path.join(child, "system-prompt.json"), {"role": "system", "content": persona})
-    write_json(os.path.join(child, "prompts.json"), [])
+    template_dir = os.path.join(HERE, "templates", str(template or ""))
+    has_template = bool(template and os.path.isdir(template_dir))
+    if has_template:
+        for filename in ("tools.json", "system-prompt.json", "prompts.json", "llm.json"):
+            src = os.path.join(template_dir, filename)
+            if os.path.isfile(src):
+                shutil.copyfile(src, os.path.join(child, filename))
+
+    write_json_atomic(os.path.join(child, "system-prompt.json"),
+                      {"role": "system", "content": persona})
+    if not os.path.isfile(os.path.join(child, "prompts.json")):
+        write_json_atomic(os.path.join(child, "prompts.json"), [])
     packs, extra = tools_conf(home)
-    write_json(os.path.join(child, "tools.json"), {"packs": packs, "tools": extra})
-    write_json(os.path.join(child, "state.json"),
-               {"state": "idle", "step": 0, "busy": 0, "request": "",
-                "last_usage": None, "started": now_iso()})
+    child_tools = read_json(os.path.join(child, "tools.json"), {}) if has_template else {}
+    child_tools = child_tools if isinstance(child_tools, dict) else {}
+    child_tools["packs"] = packs
+    if "tools" not in child_tools:
+        child_tools["tools"] = extra
+    write_json_atomic(os.path.join(child, "tools.json"), child_tools)
+    write_json_atomic(os.path.join(child, "state.json"),
+                      {"state": "idle", "step": 0, "busy": 0, "request": "",
+                       "last_usage": None, "started": now_iso(), "pending": [],
+                       "empty_replies": 0})
     conf = read_json(os.path.join(home, "llm.json"), {})
     conf = conf if isinstance(conf, dict) else {}
-    child_conf = {"dir": os.path.relpath(llm_abs, child)}
+    child_conf = read_json(os.path.join(child, "llm.json"), {}) if has_template else {}
+    child_conf = child_conf if isinstance(child_conf, dict) else {}
+    child_conf["dir"] = os.path.relpath(llm_abs, child)
     for key in ("priority", "engine"):
         if conf.get(key) is not None:
             child_conf[key] = conf[key]
-    write_json(os.path.join(child, "llm.json"), child_conf)
+    write_json_atomic(os.path.join(child, "llm.json"), child_conf)
     os.makedirs(os.path.join(child, ".aos"), exist_ok=True)
     with open(os.path.join(child, ".aos", "inst"), "w", encoding="utf-8") as f:
         f.write(CHILD_INST)
+
+    parent_name = os.path.basename(os.path.abspath(world).rstrip(os.sep)) or "parent"
+    write_json_atomic(os.path.join(child, "parent.json"),
+                      {"name": parent_name, "dir": os.path.abspath(world)})
+    parent_ctx = Ctx(world, home)
+    child_ctx = Ctx(child, child)
+    parent_ctx.add_contact(name, child)
+    child_ctx.add_contact(parent_name, world)
+    registry = parent_ctx.kids()
+    registry[name] = {"name": name, "dir": os.path.abspath(child), "clock": clock}
+    write_json_atomic(os.path.join(home, "kids.json"), registry)
 
     rel = os.path.relpath(child, world)
     if clock == "shared":
@@ -506,7 +697,7 @@ def put_mail(home, source, text, sender=None):
     box = os.path.join(inbox_dir(home), source)
     os.makedirs(box, exist_ok=True)
     path = os.path.join(box, aos_llm.stamp() + ".json")
-    write_json(path, {"from": sender or source, "time": now_iso(), "content": text})
+    write_json_atomic(path, {"from": sender or source, "time": now_iso(), "content": text})
     return path
 
 
@@ -519,4 +710,3 @@ def outbox_names(box):
 def outbox_content(box, name):
     msg = read_json(os.path.join(box, name), {})
     return (msg.get("content") or "") if isinstance(msg, dict) else ""
-
