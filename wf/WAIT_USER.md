@@ -26,7 +26,6 @@
    甚至不必引用 aos lib」之後，排隊就變成外部處理器的家務——**確認這一句就能收掉那場**。
    → [finite-resource-queue](workflows/workshop/records/finite-resource-queue.md)
 6. **proto2：子 agent 會自動繼承 `spawn` 工具**，子孫一路都能生小孩（驗過三層）。要不要擋、要不要限深度？（使用者 09-06 說「之後再說」）→ [proto2/README](../proto2/README.md)
-7. **proto2：agent 玩的時候生出來的子資料夾與 daemon 登記檔，`.gitignore` 擋不住**，會出現在 `git status`。要嘛統一放 `kids/` 之類固定名字好擋、要嘛玩完自己刪。（使用者 09-06 說「再說」）→ [proto2/README](../proto2/README.md)
 8. **proto2：agent 之間的交流（tell／hear，或子回話自動變父的信）**先不做，什麼時候做、走哪種？→ [proto2/README](../proto2/README.md)
 
 
