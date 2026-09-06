@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-user <say|listen|talk|status|spawn> <世界> [--home DIR] — 人用的殼。
+"""aos-user <new|templates|packs|say|listen|talk|status|spawn> — 人用的殼。
 
 指令切成兩種：**agent 自己跑的時候需要的**（狀態機、它的工具）在 `aos-agent`；
 **給人方便用的**在這裡。`aos-user` 自己不推格，只是把「一個人想對某個 agent 做的事」
@@ -13,6 +13,9 @@
     aos-user talk <世界>              互動聊天（say ＋ listen，/quit 離開）
     aos-user status <世界>            印它的自我狀態（就是 self_status 那一包）
     aos-user spawn <世界> <名字> <人格> [--clock shared|own] [--template 名字]   幫它生一個小孩
+    aos-user new <世界> [設定]        用模板開一個新 agent
+    aos-user templates               列出可用模板
+    aos-user packs                   列出可用工具包
 
 `--home` 不給就去世界的 `.aos/inst` 把 `--home X` 撈出來用，撈不到就是 `.`——所以
 平常打 `aos-user talk examples/agent` 就好，不用每次重複 `--home agent`。
@@ -21,13 +24,249 @@
 import argparse
 import json
 import os
+import shlex
+import subprocess
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aos_agent import (   # noqa: E402
-    DIRECT_SOURCE, outbox_content, outbox_names, put_mail, read_json, resolve_home,
-    spawn, status_of, warn)
+    DIRECT_SOURCE, load_pack, outbox_content, outbox_names, put_mail, read_json,
+    resolve_home, spawn, status_of, warn, write_json_atomic)
+
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(HERE, "templates")
+
+
+def available_packs():
+    try:
+        names = os.listdir(os.path.join(HERE, "packs"))
+    except OSError:
+        return []
+    return sorted(n[:-3] for n in names
+                  if n.endswith(".py") and not n.startswith("_")
+                  and os.path.isfile(os.path.join(HERE, "packs", n)))
+
+
+def available_templates():
+    try:
+        names = os.listdir(TEMPLATES_DIR)
+    except OSError:
+        return []
+    return sorted(n for n in names if os.path.isdir(os.path.join(TEMPLATES_DIR, n)))
+
+
+def first_plain_line(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    return line
+    except OSError:
+        pass
+    return "（沒有說明）"
+
+
+def first_sentence(text):
+    text = " ".join(str(text or "").split())
+    if "。" in text:
+        return text.split("。", 1)[0] + "。"
+    return text or "（沒有說明）"
+
+
+def do_templates(_args):
+    names = available_templates()
+    if not names:
+        print("目前沒有模板。")
+        return 0
+    for name in names:
+        desc = first_plain_line(os.path.join(TEMPLATES_DIR, name, "README.md"))
+        print("%-10s %s" % (name, desc))
+    return 0
+
+
+def do_packs(_args):
+    names = available_packs()
+    if not names:
+        print("目前沒有工具包。")
+        return 0
+    no_home = os.path.join(HERE, "__沒有這個本體__")
+    for name in names:
+        module = load_pack(no_home, name)
+        desc = first_sentence(getattr(module, "PROMPT", "")) if module else "（載入失敗）"
+        print("%-14s %s" % (name, desc))
+    return 0
+
+
+def strict_json(path, label):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except OSError as e:
+        raise ValueError("讀不到%s：%s" % (label, e))
+    except ValueError as e:
+        raise ValueError("%s不是合法 JSON：%s" % (label, e))
+
+
+def template_settings(name):
+    if name not in available_templates():
+        raise ValueError("不認得的模板：%s\n可用的模板：%s" %
+                         (name, "、".join(available_templates()) or "（沒有）"))
+    base = os.path.join(TEMPLATES_DIR, name)
+    tools = strict_json(os.path.join(base, "tools.json"), "模板 tools.json")
+    persona = strict_json(os.path.join(base, "system-prompt.json"), "模板 system-prompt.json")
+    prompts = strict_json(os.path.join(base, "prompts.json"), "模板 prompts.json")
+    llm = strict_json(os.path.join(base, "llm.json"), "模板 llm.json")
+    if not isinstance(tools, dict) or not isinstance(persona, dict) \
+            or not isinstance(prompts, list) or not isinstance(llm, dict):
+        raise ValueError("模板的 JSON 形狀不對：" + name)
+    return {"tools": tools, "persona": persona, "prompts": prompts, "llm": llm}
+
+
+def parse_packs(text):
+    names = [n.strip() for n in str(text).split(",") if n.strip()]
+    unknown = [n for n in names if n not in available_packs()]
+    if unknown:
+        raise ValueError("認不得的工具包：%s\n可用的工具包：%s" %
+                         ("、".join(unknown), "、".join(available_packs()) or "（沒有）"))
+    return names
+
+
+def ask(label, default):
+    shown = default if str(default).strip() else "無"
+    answer = input("%s [%s]：" % (label, shown)).strip()
+    return answer if answer else default
+
+
+def interactive_settings(args):
+    print("來開一個新 agent。直接按 Enter 就用中括號裡的預設。")
+    template = ask("模板", "chat")
+    settings = template_settings(template)
+    default_packs = ",".join(settings["tools"].get("packs") or [])
+    packs = parse_packs(ask("工具包（逗號分隔）", default_packs))
+    default_persona = settings["persona"].get("content") or ""
+    persona = ask("人格一句話", default_persona)
+    old_prompts = settings["prompts"]
+    first_prompt = ""
+    if old_prompts and isinstance(old_prompts[0], dict):
+        first_prompt = old_prompts[0].get("content") or ""
+    prompt = ask("起手指示", first_prompt)
+    prompts = [{"role": "user", "content": prompt}] if prompt else []
+    engine = ask("engine", settings["llm"].get("engine") or "")
+    clock = "own" if ask("現在開鐘？y/n", "n").lower() in ("y", "yes") else "none"
+    settings["tools"]["packs"] = packs
+    settings["persona"] = {"role": "system", "content": persona}
+    settings["prompts"] = prompts
+    if engine:
+        settings["llm"]["engine"] = engine
+    else:
+        settings["llm"].pop("engine", None)
+    args.template, args.home, args.clock = template, "agent", clock
+    print("\n將要建這些：")
+    print("  世界：%s" % os.path.abspath(args.dir))
+    print("  模板：%s" % template)
+    print("  home：agent")
+    print("  packs：%s" % ("、".join(packs) or "無"))
+    print("  engine：%s" % (engine or "照 LLM 預設"))
+    print("  鐘：%s" % ("現在開" if clock == "own" else "先不開"))
+    if ask("確定建立？y/n", "y").lower() not in ("y", "yes"):
+        print("取消了，沒有建立。")
+        return None
+    return settings
+
+
+def configured_settings(args):
+    settings = template_settings(args.template or "chat")
+    if args.packs is not None:
+        settings["tools"]["packs"] = parse_packs(args.packs)
+    if args.persona is not None:
+        settings["persona"] = {"role": "system", "content": args.persona}
+    elif args.persona_file is not None:
+        try:
+            with open(args.persona_file, encoding="utf-8") as f:
+                text = f.read().strip()
+        except OSError as e:
+            raise ValueError("讀不到人格檔：%s" % e)
+        settings["persona"] = {"role": "system", "content": text}
+    if args.prompts is not None:
+        prompts = strict_json(args.prompts, "prompts 檔")
+        if not isinstance(prompts, list):
+            raise ValueError("prompts 檔最外層要是 JSON 陣列")
+        settings["prompts"] = prompts
+    if args.engine is not None:
+        settings["llm"]["engine"] = args.engine
+    if args.priority is not None:
+        settings["llm"]["priority"] = args.priority
+    return settings
+
+
+def write_new_world(world, home_arg, settings):
+    home = os.path.abspath(os.path.join(world, home_arg))
+    os.makedirs(os.path.join(world, ".aos"))
+    os.makedirs(home, exist_ok=True)
+    os.makedirs(os.path.join(home, "inbox"))
+    os.makedirs(os.path.join(home, "outbox"))
+    inst = "aos-agent exec ."
+    if home_arg != ".":
+        inst += " --home " + shlex.quote(home_arg)
+    with open(os.path.join(world, ".aos", "inst"), "w", encoding="utf-8") as f:
+        f.write(inst + "\n")
+    write_json_atomic(os.path.join(home, "tools.json"), settings["tools"])
+    write_json_atomic(os.path.join(home, "system-prompt.json"), settings["persona"])
+    write_json_atomic(os.path.join(home, "prompts.json"), settings["prompts"])
+    write_json_atomic(os.path.join(home, "llm.json"), settings["llm"])
+    rel = os.path.relpath(home, world)
+    prefix = "" if rel == "." else rel.rstrip(os.sep) + "/"
+    with open(os.path.join(world, ".gitignore"), "w", encoding="utf-8") as f:
+        for name in ("state.json", "llm-result.json", "inbox/", "outbox/", "kids/"):
+            f.write(prefix + name + "\n")
+    return home
+
+
+def do_new(args):
+    world = os.path.abspath(args.dir)
+    if os.path.exists(world):
+        warn("資料夾已經存在，不會蓋掉：" + world)
+        return 2
+    interactive = all(getattr(args, key) is None for key in
+                      ("template", "packs", "persona", "persona_file", "prompts",
+                       "engine", "priority", "home", "clock"))
+    try:
+        settings = interactive_settings(args) if interactive else configured_settings(args)
+    except (ValueError, EOFError) as e:
+        warn(str(e) if str(e) else "問答中斷了，沒有建立")
+        return 2
+    if settings is None:
+        return 0
+    home_arg = args.home or "agent"
+    clock = args.clock or "none"
+    home = write_new_world(world, home_arg, settings)
+    clock_text = "沒開"
+    if clock == "own":
+        if not os.environ.get("AOS_DAEMON_DIR"):
+            warn("世界建好了，但沒設 AOS_DAEMON_DIR，所以沒有開鐘")
+            clock_text = "沒開（沒設 AOS_DAEMON_DIR）"
+        else:
+            done = subprocess.run([os.path.join(HERE, "aos-daemon"), "register", world],
+                                  capture_output=True, text=True)
+            if done.returncode == 0:
+                clock_text = "已開"
+            else:
+                warn("世界建好了，但開鐘失敗：" + (done.stderr or done.stdout).strip())
+                clock_text = "沒開（register 失敗）"
+    packs = settings["tools"].get("packs") or []
+    engine = settings["llm"].get("engine") or "照 LLM 預設"
+    print("建好了：" + world)
+    print("home：" + home)
+    print("packs：" + ("、".join(packs) or "無"))
+    print("engine：" + str(engine))
+    print("鐘：" + clock_text)
+    if clock_text != "已開":
+        print("下一步：aos-daemon register %s" % shlex.quote(world))
+    print("聊天：aos-user talk %s" % shlex.quote(world))
+    return 0
 
 
 def show(box, name):
@@ -123,6 +362,22 @@ def do_spawn(args):
 def main():
     ap = argparse.ArgumentParser(prog="aos-user")
     sub = ap.add_subparsers(dest="cmd")
+
+    p = sub.add_parser("new", help="用模板開一個新 agent")
+    p.add_argument("dir")
+    p.add_argument("--template", default=None)
+    p.add_argument("--packs", default=None, metavar="包1,包2")
+    who = p.add_mutually_exclusive_group()
+    who.add_argument("--persona", default=None)
+    who.add_argument("--persona-file", default=None, metavar="路徑")
+    p.add_argument("--prompts", default=None, metavar="路徑.json")
+    p.add_argument("--engine", default=None)
+    p.add_argument("--priority", type=int, default=None)
+    p.add_argument("--home", default=None, metavar="子路徑")
+    p.add_argument("--clock", choices=["own", "none"], default=None)
+    p.set_defaults(fn=do_new)
+    sub.add_parser("templates", help="列出可用模板").set_defaults(fn=do_templates)
+    sub.add_parser("packs", help="列出可用工具包").set_defaults(fn=do_packs)
 
     def world_args(p):
         p.add_argument("dir", nargs="?", default=".")

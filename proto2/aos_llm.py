@@ -7,7 +7,9 @@
 兩個函式，省得每個人重寫一次。只用標準函式庫。
 
     import aos_llm
-    name = aos_llm.write_request("../llm", {"messages": [...]}, priority=3)
+    name = aos_llm.write_request("../llm", {"messages": [...]},
+                                 priority={"level": 3, "kind": "chat"},
+                                 requester="group-a/agent-1")
     ...
     answer = aos_llm.read_result("../llm", name)      # 還沒好就回 None
 
@@ -71,15 +73,32 @@ def stamp():
     return "%s-%06d" % (now.strftime("%Y%m%d-%H%M%S"), now.microsecond)
 
 
-def write_request(world_dir, body, priority=None, engine=None, name=None):
+def write_request(world_dir, body, priority=None, engine=None, name=None,
+                  requester=None, kind=None, deadline=None):
     """把一包 body 寫成請求檔丟進 `<dir>/requests/`，回請求檔名。
 
     `body` 的頂層鍵原樣就是 chat/completions 的欄位（messages、tools、temperature…）。
-    `priority`／`engine` **有給才寫進去**，沒給就留白讓那個 LLM 資料夾用自己的預設。
+    `priority` 可給舊數字，也可給 priority 物件。`kind`／`deadline` 是少打幾個字的方便
+    參數，會放進 priority 物件。`requester` 會放在請求頂層，讓用量帳本按人分帳；priority
+    是物件時也放一份在裡面，讓人直接看 priority 就看得懂。
+    `priority`／`engine`／`requester` **有給才寫進去**，沒給就留白讓 LLM 資料夾補預設。
     `name` 不給＝純時間戳；給了而且不是 `.json` 結尾就當**前綴**（`<前綴>-<時間戳>.json`）；
     給了完整的 `xxx.json` 就原樣用。
     """
     req = dict(body or {})
+    if isinstance(priority, dict):
+        priority = dict(priority)
+    if kind is not None or deadline is not None:
+        if not isinstance(priority, dict):
+            priority = {} if priority is None else {"level": priority}
+        if kind is not None:
+            priority["kind"] = kind
+        if deadline is not None:
+            priority["deadline"] = deadline
+    if requester is not None:
+        req["requester"] = requester
+        if isinstance(priority, dict) and "requester" not in priority:
+            priority["requester"] = requester
     if priority is not None:
         req["priority"] = priority
     if engine:

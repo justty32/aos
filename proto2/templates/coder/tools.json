@@ -1,0 +1,4 @@
+{
+  "packs": ["fs", "code", "self", "mailbox"],
+  "tools": []
+}

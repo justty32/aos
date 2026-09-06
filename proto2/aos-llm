@@ -19,8 +19,9 @@ LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也
 
 **有沒有 engines.json 就是「這是不是一個 LLM 資料夾」**。
 
-請求檔是一個 JSON 物件。aos 自己吃三個鍵：`priority`（整數，大的先做）、`engine`
-（引擎名字）、`params`（一包蓋在引擎 params 上的參數）。**沒寫 priority／engine 就用
+請求檔是一個 JSON 物件。aos 自己吃四個鍵：`priority`（舊數字或排程物件）、`requester`
+（誰丟的）、`engine`（引擎名字）、`params`（一包蓋在引擎 params 上的參數）。
+**沒寫 priority／engine 就用
 這個資料夾自己的預設**：defaults.json 說了算，它沒說就是 engines.json 第一台＋priority 0。
 **其他所有頂層鍵都原樣當成 chat/completions 的 body 欄位**（messages、tools、temperature…）。
 實際送出去的 body ＝ 引擎 params ← 請求 params ← 請求其他頂層鍵，model 一律引擎說了算。
@@ -38,15 +39,15 @@ LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也
       3. 巡 requests/running/：完成標記或結果出現了就把請求搬去 done/（served／errors
          在這裡算）；pid 死了、又沒有完成標記和結果，才補一個 "worker died" 的錯誤結果、
          也補一張 errors=1 的用量紙條。剩下的算進「那台引擎正在跑幾個」。
-      4. 讀 requests/ 頂層排序（-priority, mtime, 檔名），由上而下派工：那台引擎
+      4. 讀 requests/ 頂層，照期限、分數、mtime、檔名排。每開一筆就重算：那台引擎
          `running < max_concurrent` 就開一個背景 worker、請求搬進 running/；滿了的
          留在隊伍裡等下一格。一格能開幾個就開幾個。
       5. 印一行摘要到 stderr，外加每個 launch／done／died 各一行。
       **所以結果是「丟了之後過幾格才回來」**，不是同一格。
   aos-llm worker <dir> <請求檔名>
       內部用：真正去打那一發 HTTP 的背景進程。人不用自己叫。
-  aos-llm usage [YYYY-MM-DD]
-      印那天的用量表（預設今天）：一行一個 endpoint+model 配對。帳本是拿來算錢的，
+  aos-llm usage [YYYY-MM-DD] [--by model|requester]
+      印那天的模型與 requester 用量表（預設今天、兩張都印）。帳本是拿來算錢的，
       模型回了哪些數字就有哪些欄（思考 token、快取命中都在內）。
   aos-llm ls
       印**執行中**（running/，帶 engine／pid／已經跑多久）跟**排隊中**（下一格會被派的
@@ -69,10 +70,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aos_llm as lib   # noqa: E402  （同一個資料夾裡的小幫手，共用路徑與原子寫）
 
 HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
-AOS_KEYS = ("priority", "engine", "params", "aos")
+AOS_KEYS = ("priority", "requester", "engine", "params", "aos")
 TIMEOUT = 300
 FIRST_COLS = ("requests", "errors", "took_ms")
 COL_LABEL = {"requests": "請求", "errors": "錯誤", "took_ms": "毫秒"}
+KIND_SCORE = {"chat": 40, "tool": 20, "think": 0, "background": -40}
+COST_SCORE = {"cheap": 0, "normal": 10, "expensive": 30}
 
 
 def die(msg, code=2):
@@ -104,24 +107,100 @@ def load_defaults(home, engines):
     if not isinstance(conf, dict):
         conf = {}
     engine = conf.get("engine") or (engines[0].get("name") if engines else "") or ""
-    try:
-        priority = int(conf.get("priority") or 0)
-    except (TypeError, ValueError):
+    priority = conf.get("priority", 0)
+    if not isinstance(priority, (int, float, dict)) or isinstance(priority, bool):
         priority = 0
     return engine, priority
 
 
 def resolve(req, defaults):
-    """請求沒寫 priority／engine 就補上資料夾的預設，回 (engine, priority)。"""
+    """請求沒寫 priority／engine 就補上資料夾的預設，回 (engine, 原始 priority)。"""
     d_engine, d_priority = defaults
-    if "priority" in req:
-        try:
-            priority = int(req.get("priority") or 0)
-        except (TypeError, ValueError):
-            priority = d_priority
-    else:
+    priority = req.get("priority", d_priority)
+    if not isinstance(priority, (int, float, dict)) or isinstance(priority, bool):
         priority = d_priority
     return (req.get("engine") or d_engine), priority
+
+
+def number(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def requester_from_name(name):
+    """請求沒 requester 時的最後備援：拿檔名前綴。"""
+    stem = name[:-5] if name.endswith(".json") else name
+    bits = stem.rsplit("-", 3)
+    if len(bits) == 4 and bits[-3].isdigit() and bits[-2].isdigit() and bits[-1].isdigit():
+        return bits[0] or "unknown"
+    return stem or "unknown"
+
+
+def requester_group(requester):
+    return str(requester or "unknown").split("/", 1)[0] or "unknown"
+
+
+def deadline_is_late(value, now):
+    if not isinstance(value, str) or not value:
+        return False
+    try:
+        text = value[:-1] + "+00:00" if value.endswith("Z") else value
+        deadline = datetime.datetime.fromisoformat(text)
+        if deadline.tzinfo is None:
+            return False
+        return deadline.timestamp() <= now
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def priority_info(req, defaults, engine, name, mtime, recent, now=None):
+    """把舊數字／新物件算成這一格的分數、排序鍵與短理由。"""
+    now = time.time() if now is None else now
+    _, raw = resolve(req, defaults)
+    d_raw = defaults[1]
+    base = dict(d_raw) if isinstance(d_raw, dict) else {}
+    data = dict(base)
+    if isinstance(raw, dict):
+        for key in ("level", "deadline", "kind", "requester"):
+            if key in raw:
+                data[key] = raw[key]
+    else:
+        data["level"] = raw
+
+    level = number(data.get("level"), 0)
+    kind = str(data.get("kind") or "chat")
+    kind_points = KIND_SCORE.get(kind, 0)
+    requester = str(data.get("requester") or req.get("requester")
+                    or requester_from_name(name) or "unknown")
+
+    default_boost = max(0, number(base.get("age_boost"), 1))
+    asked_boost = number(raw.get("age_boost"), default_boost) if isinstance(raw, dict) else default_boost
+    age_boost = min(default_boost, max(0, asked_boost))
+    wait_minutes = max(0, int((now - mtime) // 60))
+    wait_points = min(300, wait_minutes * age_boost)
+
+    cost_class = str((engine or {}).get("cost_class") or base.get("cost_class") or "normal")
+    if cost_class not in COST_SCORE:
+        cost_class = "normal"
+    cost_points = COST_SCORE[cost_class]
+    recent_points = sum(1 for group in recent if group == requester_group(requester)) * 25
+    score = level * 100 + kind_points + wait_points - cost_points - recent_points
+    late = deadline_is_late(data.get("deadline"), now)
+    reason = "score=%d level=%d %s %+d wait=%d %s=-%d recent=-%d requester=%s" % (
+        score, level, kind, kind_points, wait_points, cost_class, cost_points,
+        recent_points, requester)
+    if late:
+        reason += " deadline=late"
+    return {"raw": raw, "level": level, "kind": kind, "requester": requester,
+            "group": requester_group(requester), "score": score, "late": late,
+            "reason": reason}
+
+
+def rank_key(item):
+    """過期先行；再照分數高、mtime 早、檔名小。"""
+    return (0 if item[3]["late"] else 1, -item[3]["score"], item[1], item[0])
 
 
 def pick_engine(engines, name):
@@ -188,22 +267,31 @@ def fold_pending(home):
             continue
         day = str(rec.get("day") or datetime.date.today().isoformat())
         if day not in books:
-            book = lib.read_json(os.path.join(home, "usage", day + ".json"), {})
-            books[day] = book if isinstance(book, dict) else {}
+            old = lib.read_json(os.path.join(home, "usage", day + ".json"), {})
+            old = old if isinstance(old, dict) else {}
+            if "by-model" in old or "by-requester" in old:
+                by_model = old.get("by-model") if isinstance(old.get("by-model"), dict) else {}
+                by_requester = old.get("by-requester") if isinstance(old.get("by-requester"), dict) else {}
+            else:
+                by_model, by_requester = old, {}
+            books[day] = {"by-model": dict(by_model), "by-requester": dict(by_requester)}
         book = books[day]
         key = str(rec.get("key") or "|")
-        row = book.get(key)
-        row = dict(row) if isinstance(row, dict) else {}
-        for field, more in flatten_numbers(rec.get("usage")).items():
-            row[field] = add(row, field, more)
-        row["requests"] = add(row, "requests", 1)
-        row["errors"] = add(row, "errors", 1 if rec.get("error") else 0)
+        requester = str(rec.get("requester") or "unknown")
         try:
             took = int(rec.get("took_ms") or 0)
         except (TypeError, ValueError):
             took = 0
-        row["took_ms"] = add(row, "took_ms", took)
-        book[key] = row
+        for section, row_key in (("by-model", key), ("by-requester", requester)):
+            rows = book[section]
+            row = rows.get(row_key)
+            row = dict(row) if isinstance(row, dict) else {}
+            for field, more in flatten_numbers(rec.get("usage")).items():
+                row[field] = add(row, field, more)
+            row["requests"] = add(row, "requests", 1)
+            row["errors"] = add(row, "errors", 1 if rec.get("error") else 0)
+            row["took_ms"] = add(row, "took_ms", took)
+            rows[row_key] = row
     for day, book in books.items():
         lib.write_json(os.path.join(home, "usage", day + ".json"), book)
     for path in used:
@@ -214,11 +302,12 @@ def fold_pending(home):
     return len(used)
 
 
-def write_pending(home, name, key, usage, error, took_ms, day=None):
+def write_pending(home, name, key, usage, error, took_ms, requester="unknown", day=None):
     """一張用量小紙條——worker 做完寫一張，下一格被 exec 折進帳本。"""
     lib.write_json_atomic(os.path.join(home, "usage", "pending", name), {
         "day": day or datetime.date.today().isoformat(),
-        "key": key, "usage": usage if isinstance(usage, dict) else {},
+        "key": key, "requester": requester or "unknown",
+        "usage": usage if isinstance(usage, dict) else {},
         "error": bool(error), "took_ms": int(took_ms),
     })
 
@@ -367,14 +456,14 @@ def do_exec(args):
             engine = pick_engine(engines, aos.get("engine") or "") or {}
             write_pending(home, name, "%s|%s" % (engine.get("base_url") or "",
                                                  engine.get("model") or ""),
-                          {}, True, 0)
+                          {}, True, 0, aos.get("requester") or requester_from_name(name))
             errors += 1
             died += 1
             say("died %s" % name)
     if died:
         fold_pending(home)   # 剛補的錯誤也當格入帳，不用再等一格
 
-    # 4. 排隊的照（-priority, mtime, 檔名）走一遍，還有空位的引擎就派工
+    # 4. 每開一筆就更新近期開工並重算；滿載的引擎跳過，不擋別台
     todo = []
     for name, mtime in queue(box):
         with open(os.path.join(box, name), encoding="utf-8", errors="replace") as f:
@@ -390,24 +479,45 @@ def do_exec(args):
             continue
         todo.append((name, mtime, req))
 
-    launched, queued_left = 0, 0
-    for name, mtime, req in sorted(
-            todo, key=lambda it: (-resolve(it[2], defaults)[1], it[1], it[0])):
-        want, priority = resolve(req, defaults)
-        engine = pick_engine(engines, want) if want else None
+    recent = state.get("recent") if isinstance(state.get("recent"), list) else []
+    recent = [str(x) for x in recent[-10:]]
+    launched = 0
+    while todo:
+        ranked = []
+        now = time.time()
+        for name, mtime, req in todo:
+            want, priority = resolve(req, defaults)
+            engine = pick_engine(engines, want) if want else None
+            ranked.append((name, mtime, req,
+                           priority_info(req, defaults, engine, name, mtime, recent, now),
+                           want, engine))
+        ranked.sort(key=rank_key)
+
+        chosen = None
+        for item in ranked:
+            want, engine = item[4], item[5]
+            if engine is None or running.get(want, 0) < max_concurrent(engine):
+                chosen = item
+                break
+        if chosen is None:
+            break
+        name, mtime, req, info, want, engine = chosen
+        todo.remove((name, mtime, req))
         if engine is None:
             why = "沒有引擎設定（engines.json 是空的）" if not want \
                 else "不認得這個引擎：%s" % want
             finish_now(home, name, {"error": why,
-                                    "aos": {"engine": want, "priority": priority}})
+                                    "aos": {"engine": want, "priority": info["raw"],
+                                            "score": info["score"], "reason": info["reason"],
+                                            "requester": info["requester"]}})
             errors += 1
-            say("error %s engine=%s priority=%d（%s）" % (name, want or "-", priority, why))
-            continue
-        if running.get(want, 0) >= max_concurrent(engine):
-            queued_left += 1        # 那台滿了，留在隊伍裡等下一格
+            say("error %s engine=%s priority=%d（%s）" %
+                (name, want or "-", info["level"], why))
             continue
         # 先搬進 running/（多一個 aos 欄位），再開 worker，最後把 pid 補回去
-        aos = {"pid": 0, "engine": want, "priority": priority,
+        aos = {"pid": 0, "engine": want, "priority": info["raw"],
+               "score": info["score"], "reason": info["reason"],
+               "requester": info["requester"],
                "started": datetime.datetime.now().isoformat(timespec="seconds")}
         os.makedirs(running_box, exist_ok=True)
         lib.write_json_atomic(os.path.join(running_box, name), dict(req, aos=aos))
@@ -419,16 +529,20 @@ def do_exec(args):
             os.makedirs(done_box, exist_ok=True)
             os.replace(os.path.join(running_box, name), os.path.join(done_box, name))
             errors += 1
-            say("error %s engine=%s priority=%d（%s）" % (name, want, priority, r))
+            say("error %s engine=%s priority=%d（%s）" % (name, want, info["level"], r))
             continue
         aos["pid"] = r
         lib.write_json_atomic(os.path.join(running_box, name), dict(req, aos=aos))
         running[want] = running.get(want, 0) + 1
+        recent.append(info["group"])
+        recent = recent[-10:]
         launched += 1
-        say("launch %s engine=%s priority=%d pid=%d" % (name, want, priority, r))
+        say("launch %s engine=%s priority=%d pid=%d score=%d requester=%s" %
+            (name, want, info["level"], r, info["score"], info["requester"]))
 
     lib.write_json(os.path.join(home, "state.json"),
-                   {"tick": tick, "served": served, "errors": errors})
+                   {"tick": tick, "served": served, "errors": errors, "recent": recent})
+    queued_left = len(todo)
     say("tick %d launched %d running %d queued %d"
         % (tick, launched, sum(running.values()), queued_left))
     return 0
@@ -494,7 +608,9 @@ def do_worker(args):
     body = build_body(engine, rec)
     out = {"engine": engine.get("name") or aos.get("engine") or "",
            "base_url": engine.get("base_url") or "",
-           "model": body.get("model"), "priority": aos.get("priority")}
+           "model": body.get("model"), "priority": aos.get("priority"),
+           "score": aos.get("score"), "reason": aos.get("reason"),
+           "requester": aos.get("requester") or requester_from_name(name)}
 
     started = time.time()
     try:
@@ -524,7 +640,7 @@ def do_worker(args):
 
     lib.write_json_atomic(os.path.join(home, "results", name), answer)
     write_pending(home, name, "%s|%s" % (out["base_url"], out["model"] or ""),
-                  usage, not ok, took_ms)
+                  usage, not ok, took_ms, out["requester"])
     # 這是 worker 最後一個動作：consumer 就算已經把 result 拿走，exec 仍知道這發做完了。
     lib.write_json_atomic(os.path.join(home, "requests", "running", name + ".done"), {
         "error": not ok,
@@ -546,51 +662,74 @@ def pad(text, size, right=True):
     return (fill + str(text)) if right else (str(text) + fill)
 
 
+def print_usage_table(day, title, key_title, rows):
+    """印一張用量表；供應商多回的數字欄也會自動出現。"""
+    rows = {k: (v if isinstance(v, dict) else {}) for k, v in rows.items()}
+    if not rows:
+        print("%s：沒有紀錄" % title)
+        return
+    fields = set()
+    for row in rows.values():
+        fields.update(row)
+    cols = [c for c in FIRST_COLS if c in fields] + sorted(fields - set(FIRST_COLS))
+    heads = [COL_LABEL.get(c, c) for c in cols]
+    keyw = max([width(key_title)] + [width(k) for k in rows])
+    colw = [max(width(h), *[width(rows[k].get(c, 0)) for k in rows])
+            for h, c in zip(heads, cols)]
+    print("%s %s" % (day, title))
+    print(" ".join([pad(key_title, keyw, right=False)]
+                   + [pad(h, w) for h, w in zip(heads, colw)]))
+    for key in sorted(rows):
+        print(" ".join([pad(key, keyw, right=False)]
+                       + [pad(rows[key].get(c, 0), w) for c, w in zip(cols, colw)]))
+
+
+def usage_sections(book):
+    """新帳本回兩層；舊的平鋪帳本整包當 by-model。"""
+    if not isinstance(book, dict):
+        return {}, {}
+    if "by-model" in book or "by-requester" in book:
+        by_model = book.get("by-model") if isinstance(book.get("by-model"), dict) else {}
+        by_requester = book.get("by-requester") if isinstance(book.get("by-requester"), dict) else {}
+        return by_model, by_requester
+    return book, {}
+
+
 def do_usage(args):
-    """帳本是拿來算錢的：供應商回了哪些數字就印哪些欄，不寫死幾欄。"""
+    """預設印模型與 requester 兩張表；--by 可只看一張。"""
     home = home_of(args)
     day = args.day or datetime.date.today().isoformat()
     book = lib.read_json(os.path.join(home, "usage", day + ".json"), None)
     if not isinstance(book, dict) or not book:
         print("%s 沒有用量紀錄" % day)
         return 0
-    rows = {k: (v if isinstance(v, dict) else {}) for k, v in book.items()}
-    fields = set()
-    for row in rows.values():
-        fields.update(row)
-    cols = [c for c in FIRST_COLS if c in fields] + sorted(fields - set(FIRST_COLS))
-    heads = [COL_LABEL.get(c, c) for c in cols]
-    keyw = max([width("引擎")] + [width(k) for k in rows])
-    colw = [max(width(h), *[width(rows[k].get(c, 0)) for k in rows])
-            for h, c in zip(heads, cols)]
-    print("%s（endpoint|model）" % day)
-    print(" ".join([pad("引擎", keyw, right=False)]
-                   + [pad(h, w) for h, w in zip(heads, colw)]))
-    for key in sorted(rows):
-        print(" ".join([pad(key, keyw, right=False)]
-                       + [pad(rows[key].get(c, 0), w) for c, w in zip(cols, colw)]))
+    by_model, by_requester = usage_sections(book)
+    if args.by in ("", "model"):
+        print_usage_table(day, "按模型（endpoint|model）", "引擎", by_model)
+    if args.by == "":
+        print()
+    if args.by in ("", "requester"):
+        print_usage_table(day, "按 requester", "requester", by_requester)
     return 0
 
 
-def queued_rows(home, defaults):
-    """排隊中的請求，照 exec 會派工的順序：(-priority, mtime, 檔名)。
-    沒寫 priority／engine 的用資料夾預設補，補過的那格標一個 True。"""
-    d_engine, d_priority = defaults
+def queued_rows(home, engines, defaults, recent):
+    """排隊中的請求，照這一刻的期限與分數排列。"""
+    d_engine, _ = defaults
     box = os.path.join(home, "requests")
     rows = []
+    now = time.time()
     for name, mtime in queue(box):
         req = lib.read_json(os.path.join(box, name), None)
         req = req if isinstance(req, dict) else {}
-        if "priority" in req:
-            try:
-                priority, p_default = int(req.get("priority") or 0), False
-            except (TypeError, ValueError):
-                priority, p_default = d_priority, True
-        else:
-            priority, p_default = d_priority, True
+        p_default = "priority" not in req
         engine = req.get("engine") or ""
-        rows.append((-priority, mtime, name, engine or d_engine, p_default, not engine))
-    rows.sort()
+        want = engine or d_engine
+        picked = pick_engine(engines, want) or {}
+        info = priority_info(req, defaults, picked, name, mtime, recent, now)
+        rows.append((name, mtime, want, p_default, not engine, info))
+    rows.sort(key=lambda row: (0 if row[5]["late"] else 1,
+                               -row[5]["score"], row[1], row[0]))
     return rows
 
 
@@ -622,16 +761,18 @@ def do_ls(args):
     for name, engine, pid, age in live:
         print("  %-42s engine=%-15s pid=%-8s age=%ds" % (name, engine, pid, age))
 
-    rows = queued_rows(home, defaults)
+    state = lib.read_json(os.path.join(home, "state.json"), {})
+    recent = state.get("recent") if isinstance(state, dict) and isinstance(state.get("recent"), list) else []
+    rows = queued_rows(home, engines, defaults, [str(x) for x in recent[-10:]])
     if not rows:
         print("排隊中：0 個")
     else:
         print("排隊中：%d 個（由上而下就是會被派工的順序；`*` ＝ 用資料夾預設補的）" % len(rows))
         now = time.time()
-        for negp, mtime, name, engine, p_default, e_default in rows:
-            print("  %-42s priority=%-5s engine=%-15s age=%ds"
-                  % (name, "%d%s" % (-negp, "*" if p_default else ""),
-                     engine + ("*" if e_default else ""), int(now - mtime)))
+        for name, mtime, engine, p_default, e_default, info in rows:
+            print("  %-42s priority=%-5s engine=%-15s age=%ds %s"
+                  % (name, "%d%s" % (info["level"], "*" if p_default else ""),
+                     engine + ("*" if e_default else ""), int(now - mtime), info["reason"]))
 
     busy = {}
     for _, engine, _, _ in live:
@@ -659,6 +800,7 @@ def main():
 
     p = add_dir(sub.add_parser("usage"))
     p.add_argument("day", nargs="?", default="")
+    p.add_argument("--by", choices=("model", "requester"), default="")
 
     add_dir(sub.add_parser("ls"))
 
