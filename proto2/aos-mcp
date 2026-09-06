@@ -1,0 +1,304 @@
+#!/usr/bin/env python3
+"""把 proto2 現成 CLI 包成一個很小的 stdio MCP server。"""
+import datetime
+import io
+import json
+import os
+import re
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
+PROTOCOL = "2024-11-05"
+MAX_OUTPUT = 4000
+HOME_RE = re.compile(r"--home[=\s]+(\S+)")
+
+
+def obj(properties=None, required=None):
+    out = {"type": "object", "properties": properties or {}}
+    if required:
+        out["required"] = required
+    return out
+
+
+WORLD = {"world": {"type": "string", "description": "agent 世界資料夾"}}
+TOOLS = [
+    {"name": "kernel_status", "description": "看 kernel 和所有時鐘的狀態。",
+     "inputSchema": obj()},
+    {"name": "kernel_start", "description": "啟動 kernel。",
+     "inputSchema": obj()},
+    {"name": "kernel_stop", "description": "停止 kernel，時鐘也會停。",
+     "inputSchema": obj()},
+    {"name": "clock_register", "description": "替一個世界開時鐘。",
+     "inputSchema": obj({**WORLD,
+         "interval": {"type": "number", "description": "幾秒走一格；不給就是 1"}}, ["world"])},
+    {"name": "clock_unregister", "description": "關掉一個世界的時鐘。",
+     "inputSchema": obj(WORLD, ["world"])},
+    {"name": "clock_pause", "description": "暫停一個世界的時鐘。",
+     "inputSchema": obj(WORLD, ["world"])},
+    {"name": "clock_continue", "description": "讓暫停的時鐘繼續。",
+     "inputSchema": obj(WORLD, ["world"])},
+    {"name": "agent_say", "description": "對 agent 說一句話。",
+     "inputSchema": obj({**WORLD,
+         "text": {"type": "string", "description": "要說的話"}}, ["world", "text"])},
+    {"name": "agent_listen", "description": "等 agent 的下一個回覆；最多等指定秒數。",
+     "inputSchema": obj({**WORLD,
+         "timeout_s": {"type": "number", "description": "最多等幾秒；預設 60"}}, ["world"])},
+    {"name": "agent_status", "description": "看 agent 的格數、用量和資料夾大小。",
+     "inputSchema": obj(WORLD, ["world"])},
+    {"name": "agent_spawn", "description": "替 agent 建一個子 agent。",
+     "inputSchema": obj({**WORLD,
+         "name": {"type": "string", "description": "子 agent 名字"},
+         "persona": {"type": "string", "description": "子 agent 的人格與任務"},
+         "clock": {"type": "string", "enum": ["shared", "own"],
+                   "description": "shared 跟父一起走；own 自己開鐘；預設 shared"},
+         "template": {"type": "string", "description": "可選的出廠模板名字"}},
+        ["world", "name", "persona"])},
+    {"name": "agent_inbox_drop", "description": "直接把一封 JSON 信放進 agent 信箱。",
+     "inputSchema": obj({**WORLD,
+         "source": {"type": "string", "description": "來源名字，例如 team"},
+         "content": {"type": "string", "description": "信的文字"}},
+        ["world", "source", "content"])},
+    {"name": "llm_usage", "description": "看 LLM 今天或指定日期的用量。",
+     "inputSchema": obj({"day": {"type": "string", "description": "YYYY-MM-DD；不給就是今天"}})},
+    {"name": "llm_queue", "description": "看 LLM 正在跑和排隊中的請求。",
+     "inputSchema": obj()},
+    {"name": "world_setup", "description": "從目前 git 版本複製 examples，回傳可玩的 agent 與 LLM 路徑。",
+     "inputSchema": obj({
+         "dest": {"type": "string", "description": "要放範例的資料夾"},
+         "engine": {"type": "string", "description": "可選的預設引擎名字，例如 deepseek-flash"}},
+        ["dest"])},
+]
+
+
+class ToolFailure(Exception):
+    pass
+
+
+def cut(text):
+    text = str(text or "").strip()
+    if len(text) <= MAX_OUTPUT:
+        return text
+    return text[:3988] + "…（已截斷）"
+
+
+def absolute(path):
+    return os.path.realpath(os.path.expanduser(str(path)))
+
+
+def need(args, key):
+    value = args.get(key)
+    if value is None or value == "":
+        raise ToolFailure("缺少參數：" + key)
+    return value
+
+
+def cli(name, *args, timeout=20):
+    cmd = [sys.executable, os.path.join(HERE, name)] + [str(x) for x in args]
+    try:
+        done = subprocess.run(cmd, cwd=REPO, env=os.environ.copy(), text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise ToolFailure("等了 %g 秒，指令還沒做完" % timeout)
+    output = "\n".join(x.strip() for x in (done.stdout, done.stderr) if x.strip())
+    if done.returncode:
+        raise ToolFailure(output or "%s 失敗，退出碼 %d" % (name, done.returncode))
+    return cut(output or "完成")
+
+
+def daemon_op(op, args):
+    world = absolute(need(args, "world"))
+    cmd = [op, world]
+    config_path = None
+    if op == "register" and args.get("interval") is not None:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json",
+                                         delete=False) as f:
+            json.dump({"interval": args["interval"]}, f, ensure_ascii=False)
+            config_path = f.name
+        cmd += ["--config", config_path]
+    try:
+        return cli("aos-daemon", *cmd)
+    finally:
+        if config_path:
+            try:
+                os.remove(config_path)
+            except OSError:
+                pass
+
+
+def listen(args):
+    world = absolute(need(args, "world"))
+    try:
+        timeout_s = float(args.get("timeout_s", 60))
+    except (TypeError, ValueError):
+        raise ToolFailure("timeout_s 要是秒數")
+    cmd = [sys.executable, os.path.join(HERE, "aos-user"),
+           "listen", world, "--new", "--once"]
+    try:
+        done = subprocess.run(cmd, cwd=REPO, env=os.environ.copy(), text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=max(0, timeout_s))
+    except subprocess.TimeoutExpired:
+        return "等了 %g 秒，還沒有新回覆。" % timeout_s
+    output = "\n".join(x.strip() for x in (done.stdout, done.stderr) if x.strip())
+    if done.returncode:
+        raise ToolFailure(output or "listen 失敗，退出碼 %d" % done.returncode)
+    return cut(output or "沒有新回覆。")
+
+
+def resolve_home(world):
+    where = "."
+    inst = os.path.join(world, ".aos", "inst")
+    try:
+        with open(inst, encoding="utf-8", errors="replace") as f:
+            match = HOME_RE.search(f.read())
+    except OSError:
+        match = None
+    if match:
+        where = match.group(1)
+    return os.path.abspath(os.path.join(world, where))
+
+
+def inbox_drop(args):
+    world = absolute(need(args, "world"))
+    source = str(need(args, "source"))
+    if source in (".", "..") or os.path.basename(source) != source:
+        raise ToolFailure("source 只能是一個簡單名字")
+    home = resolve_home(world)
+    box = os.path.join(home, "inbox", source)
+    os.makedirs(box, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    path = os.path.abspath(os.path.join(box, stamp + ".json"))
+    temp = path + ".tmp"
+    with open(temp, "w", encoding="utf-8") as f:
+        json.dump({"from": source, "time": datetime.datetime.now().isoformat(timespec="seconds"),
+                   "content": str(args.get("content"))}, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(temp, path)
+    return "信放好了：" + path
+
+
+def world_setup(args):
+    dest = absolute(need(args, "dest"))
+    os.makedirs(dest, exist_ok=True)
+    cmd = ["git", "-C", REPO, "archive", "HEAD", "proto2/examples"]
+    done = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if done.returncode:
+        raise ToolFailure(done.stderr.decode("utf-8", "replace") or "git archive 失敗")
+    try:
+        with tarfile.open(fileobj=io.BytesIO(done.stdout), mode="r:") as archive:
+            archive.extractall(dest)
+    except (tarfile.TarError, OSError) as e:
+        raise ToolFailure("範例解不開：%s" % e)
+    root = os.path.join(dest, "proto2", "examples")
+    agent = os.path.abspath(os.path.join(root, "agent"))
+    llm = os.path.abspath(os.path.join(root, "llm"))
+    engine = args.get("engine")
+    if engine:
+        defaults = os.path.join(llm, "defaults.json")
+        with open(defaults, "w", encoding="utf-8") as f:
+            json.dump({"engine": str(engine), "priority": 0}, f,
+                      ensure_ascii=False, indent=2)
+            f.write("\n")
+    return cut(json.dumps({"dest": dest, "agent": agent, "llm": llm,
+                           "engine": engine or "local"}, ensure_ascii=False, indent=2))
+
+
+def call_tool(name, args):
+    args = args if isinstance(args, dict) else {}
+    if name == "kernel_status":
+        return cli("aos-daemon-kernel", "ls", "--json")
+    if name == "kernel_start":
+        return cli("aos-daemon-kernel", "start", timeout=10)
+    if name == "kernel_stop":
+        return cli("aos-daemon-kernel", "stop", timeout=10)
+    if name == "clock_register":
+        return daemon_op("register", args)
+    if name == "clock_unregister":
+        return daemon_op("unregister", args)
+    if name == "clock_pause":
+        return daemon_op("pause", args)
+    if name == "clock_continue":
+        return daemon_op("continue", args)
+    if name == "agent_say":
+        return cli("aos-user", "say", absolute(need(args, "world")), need(args, "text"))
+    if name == "agent_listen":
+        return listen(args)
+    if name == "agent_status":
+        return cli("aos-user", "status", absolute(need(args, "world")))
+    if name == "agent_spawn":
+        cmd = ["spawn", absolute(need(args, "world")), need(args, "name"), need(args, "persona")]
+        if args.get("clock"):
+            cmd += ["--clock", args["clock"]]
+        if args.get("template"):
+            cmd += ["--template", args["template"]]
+        return cli("aos-user", *cmd)
+    if name == "agent_inbox_drop":
+        return inbox_drop(args)
+    if name == "llm_usage":
+        cmd = ["usage"] + ([args["day"]] if args.get("day") else [])
+        return cli("aos-llm", *cmd)
+    if name == "llm_queue":
+        return cli("aos-llm", "ls")
+    if name == "world_setup":
+        return world_setup(args)
+    raise ToolFailure("不認得這個工具：" + str(name))
+
+
+def result(req_id, value):
+    return {"jsonrpc": "2.0", "id": req_id, "result": value}
+
+
+def error(req_id, code, message):
+    return {"jsonrpc": "2.0", "id": req_id,
+            "error": {"code": code, "message": message}}
+
+
+def handle(req):
+    if not isinstance(req, dict) or req.get("jsonrpc") != "2.0" or "method" not in req:
+        return error(req.get("id") if isinstance(req, dict) else None, -32600, "Invalid Request")
+    req_id = req.get("id")
+    method = req["method"]
+    if method == "initialize":
+        return result(req_id, {"protocolVersion": PROTOCOL, "capabilities": {"tools": {}},
+                               "serverInfo": {"name": "aos-mcp", "version": "0.1"}})
+    if method == "notifications/initialized":
+        return None
+    if method == "ping":
+        return result(req_id, {})
+    if method == "tools/list":
+        return result(req_id, {"tools": TOOLS})
+    if method == "tools/call":
+        params = req.get("params") if isinstance(req.get("params"), dict) else {}
+        name = params.get("name") or ""
+        try:
+            text = call_tool(name, params.get("arguments"))
+            value = {"content": [{"type": "text", "text": text}]}
+        except (ToolFailure, OSError, ValueError) as e:
+            print("aos-mcp: %s" % e, file=sys.stderr)
+            value = {"content": [{"type": "text", "text": cut(str(e))}], "isError": True}
+        return result(req_id, value)
+    if "id" not in req:
+        return None
+    return error(req_id, -32601, "Method not found")
+
+
+def main():
+    for line in sys.stdin:
+        try:
+            request = json.loads(line)
+        except ValueError:
+            response = error(None, -32700, "Parse error")
+        else:
+            response = handle(request)
+        if response is not None:
+            print(json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
+    return 0
+
+
+sys.exit(main())

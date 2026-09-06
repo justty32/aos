@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""aos-mem exec [dir] — SQLite 記憶世界，一格吃完 requests/ 並寫 results/。"""
+import argparse
+import datetime
+import json
+import os
+import sqlite3
+import sys
+import uuid
+
+
+def read_json(path, default):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    temp = path + ".tmp"
+    with open(temp, "w", encoding="utf-8") as f:
+        json.dump(value, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(temp, path)
+
+
+def prepare(db):
+    db.execute("""CREATE TABLE IF NOT EXISTS memories (
+        id TEXT PRIMARY KEY,
+        agent TEXT NOT NULL,
+        time TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        text TEXT NOT NULL,
+        tags TEXT NOT NULL,
+        source TEXT NOT NULL
+    )""")
+    db.execute("CREATE INDEX IF NOT EXISTS memories_agent ON memories(agent)")
+    db.execute("CREATE INDEX IF NOT EXISTS memories_time ON memories(time)")
+    db.commit()
+
+
+def row_value(row):
+    return {"id": row[0], "agent": row[1], "time": row[2], "kind": row[3],
+            "text": row[4], "tags": json.loads(row[5]), "source": row[6]}
+
+
+def handle(db, request):
+    op = request.get("op")
+    args = request.get("args") if isinstance(request.get("args"), dict) else {}
+    if op == "put":
+        text = args.get("text")
+        if not isinstance(text, str) or not text:
+            raise ValueError("put 的 text 不能空白")
+        tags = args.get("tags") if isinstance(args.get("tags"), list) else []
+        tags = [str(x) for x in tags]
+        memory_id = uuid.uuid4().hex
+        now = datetime.datetime.now().isoformat(timespec="seconds")
+        kind = str(args.get("kind") or "note")
+        source = str(args.get("source") or "")
+        db.execute("INSERT INTO memories VALUES (?, ?, ?, ?, ?, ?, ?)",
+                   (memory_id, str(request.get("agent") or ""), now, kind,
+                    text, json.dumps(tags, ensure_ascii=False), source))
+        db.commit()
+        return {"id": memory_id, "time": now, "kind": kind, "tags": tags}
+    if op == "find":
+        query = str(args.get("query") or "")
+        try:
+            limit = max(1, min(int(args.get("limit") or 10), 50))
+        except (TypeError, ValueError):
+            limit = 10
+        like = "%" + query + "%"
+        rows = db.execute(
+            "SELECT id, agent, time, kind, text, tags, source FROM memories "
+            "WHERE text LIKE ? OR tags LIKE ? ORDER BY time DESC LIMIT ?",
+            (like, like, limit)).fetchall()
+        return [{"id": row[0], "agent": row[1], "time": row[2], "kind": row[3],
+                 "tags": json.loads(row[5]), "preview": row[4][:200]} for row in rows]
+    memory_id = str(args.get("id") or "")
+    row = db.execute(
+        "SELECT id, agent, time, kind, text, tags, source FROM memories WHERE id = ?",
+        (memory_id,)).fetchone()
+    if op == "get":
+        return row_value(row) if row else None
+    if op == "forget":
+        if not row:
+            return {"deleted": False}
+        db.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        db.commit()
+        return {"deleted": True, "id": memory_id, "preview": row[4][:200]}
+    raise ValueError("不認得的 op：%s" % op)
+
+
+def do_exec(where):
+    home = os.path.abspath(where)
+    os.makedirs(home, exist_ok=True)
+    box = os.path.join(home, "requests")
+    done = os.path.join(box, "done")
+    results = os.path.join(home, "results")
+    os.makedirs(done, exist_ok=True)
+    os.makedirs(results, exist_ok=True)
+    db = sqlite3.connect(os.path.join(home, "store.sqlite"))
+    prepare(db)
+    state_path = os.path.join(home, "state.json")
+    state = read_json(state_path, {})
+    state = state if isinstance(state, dict) else {}
+    state["tick"] = int(state.get("tick") or 0) + 1
+    served = int(state.get("served") or 0)
+    errors = int(state.get("errors") or 0)
+    names = sorted(n for n in os.listdir(box)
+                   if n.endswith(".json") and os.path.isfile(os.path.join(box, n)))
+    for name in names:
+        source = os.path.join(box, name)
+        request = read_json(source, None)
+        request_id = request.get("request") if isinstance(request, dict) else name
+        if not isinstance(request, dict):
+            answer = {"request": request_id, "ok": False, "error": "請求讀不成 JSON 物件"}
+            errors += 1
+        else:
+            try:
+                answer = {"request": request_id, "ok": True, "data": handle(db, request)}
+                served += 1
+            except (ValueError, sqlite3.Error) as e:
+                db.rollback()
+                answer = {"request": request_id, "ok": False, "error": str(e)}
+                errors += 1
+        write_json(os.path.join(results, name), answer)
+        os.replace(source, os.path.join(done, name))
+    db.close()
+    state.update({"served": served, "errors": errors})
+    write_json(state_path, state)
+    print("aos-mem exec: tick %d served %d errors %d" %
+          (state["tick"], served, errors), file=sys.stderr)
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="aos-mem")
+    sub = parser.add_subparsers(dest="command")
+    command = sub.add_parser("exec")
+    command.add_argument("dir", nargs="?", default=".")
+    args = parser.parse_args()
+    if args.command != "exec":
+        parser.print_help(sys.stderr)
+        return 2
+    return do_exec(args.dir)
+
+
+sys.exit(main())

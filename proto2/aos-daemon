@@ -9,9 +9,10 @@
   continue    續跑（SIGCONT）
 
 daemon 目錄＝`--daemon`，沒給就用環境變數 AOS_DAEMON_DIR，都沒有就退 2。
-`--config x.json` 讀一個 JSON 檔當設定（只有 register 用得到）：`interval` 幾秒一格
-（預設 1）、`user` 用誰的身份跑（預設不寫＝跟 kernel 同一個身份、繼承呼叫者的權限；
-要換身份 kernel 得是 root 跑的）。不給 --config 就是默認方式。
+`--config x.json` 讀一個 JSON 檔當設定（只有 register 用得到）：`interval` 幾秒一格、
+`user` 用誰的身份跑、`env` 直接給環境變數、`env_keep` 從 kernel 環境抄指定名字、
+`env_from` 讀一份 600 權限的 KEY=VALUE 檔。`--env K=V` 可以重複給，`--env-from 檔`
+會蓋過 config 裡同名的設定。不給 --config 就是默認方式。
 
 丟完會等 `requests/done/` 冒出同名檔（預設最多 10 秒，`--timeout` 可調），把 kernel
 的結果印出來，成功退 0、失敗退 1。`--no-wait` 只丟不等。kernel 沒在跑就不等，
@@ -59,6 +60,8 @@ def main():
     ap.add_argument("op", choices=["register", "unregister", "pause", "continue"])
     ap.add_argument("dir")
     ap.add_argument("--config", default=None)
+    ap.add_argument("--env", action="append", default=[], metavar="K=V")
+    ap.add_argument("--env-from", default=None, metavar="檔")
     ap.add_argument("--daemon", default=None)
     ap.add_argument("--no-wait", action="store_true")
     ap.add_argument("--timeout", type=float, default=10)
@@ -76,6 +79,20 @@ def main():
         config = read_json(args.config, None)
         if not isinstance(config, dict):
             die("設定檔要是一個 JSON 物件：" + args.config)
+
+    if args.env:
+        direct = config.get("env", {})
+        if not isinstance(direct, dict):
+            die("設定檔的 env 要是 JSON 物件")
+        direct = dict(direct)
+        for item in args.env:
+            if "=" not in item or not item.split("=", 1)[0]:
+                die("--env 要寫成 K=V：" + item)
+            key, value = item.split("=", 1)
+            direct[key] = value
+        config["env"] = direct
+    if args.env_from is not None:
+        config["env_from"] = os.path.abspath(os.path.expanduser(args.env_from))
 
     world = os.path.realpath(os.path.expanduser(args.dir))
     requests = os.path.join(home, "requests")
