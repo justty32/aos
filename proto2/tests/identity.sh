@@ -28,10 +28,9 @@ identity_finish() {
   rm -rf "$2"
 }
 
-# 1. 關掉相容模式後，kernel 的普通變數與金鑰都不會漏進時鐘；基本環境仍在。
+# 1. 不寫設定時就是乾淨環境；kernel 的普通變數與金鑰不會漏進時鐘。
 IDENTITY_TMP=$(mktemp -d); IDENTITY_AOSD="$IDENTITY_TMP/aosd"
 identity_make_world "$IDENTITY_TMP/w"; mkdir -p "$IDENTITY_AOSD"
-printf '{"legacy_env": false}\n' > "$IDENTITY_AOSD/config.json"
 printf '{"interval": 0.1}\n' > "$IDENTITY_TMP/clock.json"
 DEEPSEEK_API_KEY=不該看到 IDENTITY_UNKEPT=不該看到 AOS_LLM_DIR="$IDENTITY_TMP/llm" \
   "$DAEMON" register "$IDENTITY_TMP/w" --config "$IDENTITY_TMP/clock.json" \
@@ -47,7 +46,7 @@ if ! identity_has "$IDENTITY_TMP/w" DEEPSEEK_API_KEY \
    && [ -n "$(identity_value "$IDENTITY_TMP/w" HOME)" ] \
    && [ -n "$(identity_value "$IDENTITY_TMP/w" LANG)" ] \
    && case ":$IDENTITY_PATH:" in *":$HERE:"*) true;; *) false;; esac; then
-  ok "identity：legacy_env=false 是乾淨環境，金鑰不會漏進時鐘"
+  ok "identity：legacy_env 預設 false，金鑰不會漏進時鐘"
 else
   fail "identity：乾淨環境不對（env=$(cat "$IDENTITY_TMP/w/env.txt" 2>/dev/null)）"
 fi

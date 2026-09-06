@@ -26,6 +26,4 @@
 
 ## 坑
 
-`folder_bytes` 會走完整個世界。資料夾大時會慢。
-
-父子檔目前沒有直接寫 clock。`self_who` 會看父世界的 `.aos/inst` 判斷 shared 或 own。
+資料夾大小會走完整個世界，可能較慢。`self_who` 的鐘由 `Ctx.clock_of` 讀 daemon 與父鐘；找不到就明說 `none`，不猜。

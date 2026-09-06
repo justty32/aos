@@ -12,7 +12,7 @@ SUMMARY_CHARS = 800
 PROMPT = """branch 用法：
 只有同一題真的有兩到三條不同走法，先各自想完再比較會更清楚時，才用 fork。
 方向不要重疊；可以用「做法」「最可能失敗的地方」「完全不同的假設」切開。
-每個方向只寫一件事。開完可以先做別的事；需要答案時叫 join，不要重複開同一題。
+每個方向只寫一件事。送出後系統會睡著；全到齊才叫一次 join。
 join 後由你自己選一條，或合併各條的好處。某條已經做完整件事時，才用 adopt 接手它的整段記憶。
 第一版不做巢狀分支。"""
 
@@ -47,7 +47,7 @@ TOOLS = [
     },
     {
         "name": "join",
-        "description": "收回一組分支；沒齊會說還差幾條，齊了就回全部短結論。",
+        "description": "全到齊後，一次收回這組分支的全部短結論。",
         "parameters": {
             "type": "object",
             "properties": {"branch_id": {"type": "string", "description": "fork 回傳的 id。"}},
@@ -78,14 +78,6 @@ def _error(text):
 def _new_id():
     now = datetime.datetime.now()
     return "%s-%06d" % (now.strftime("%Y%m%d-%H%M%S"), now.microsecond)
-
-
-def _branches(ctx):
-    branches = ctx.state.get("branches")
-    if not isinstance(branches, dict):
-        branches = {}
-        ctx.state["branches"] = branches
-    return branches
 
 
 def _root(ctx, branch_id):
@@ -242,20 +234,21 @@ def _do_fork(args, ctx):
             "content": "你負責這條：%s。只想這條。想完只回一段總結，不要叫工具。" % direction.strip(),
         }]
         ctx.write_json(os.path.join(root, label, "prompts.json"), prompts)
-        request = ctx.llm_request(
+        request = ctx.send(
+            "branch",
             {"messages": prompts, "params": {"max_tokens": budget["per_branch_tokens"]}},
-            kind="branch")
+            timeout_steps=120)
         pending.append(request)
         lines.append({"n": number, "direction": direction.strip(), "request": request,
                       "status": "pending", "usage": {}, "cost_usd": None})
 
     meta = {"id": branch_id, "mode": "llm", "directions": [d.strip() for d in directions],
-            "pending": list(pending), "done": [], "budget": budget,
+            "budget": budget,
             "estimated_max_tokens": len(directions) * budget["per_branch_tokens"],
             "estimated_max_cost_usd": estimated, "actual_cost_usd": actual,
             "lines": lines}
     ctx.write_json(os.path.join(root, "meta.json"), meta)
-    _branches(ctx)[branch_id] = {"pending": list(pending), "done": []}
+    ctx.sleep_until("branch", pending[0])
     return {"text": "開了 %d 條，id=%s" % (len(directions), branch_id),
             "branch_id": branch_id, "count": len(directions),
             "estimated_max_tokens": meta["estimated_max_tokens"],
@@ -263,10 +256,6 @@ def _do_fork(args, ctx):
 
 
 def _receive(ctx, branch_id, request, result):
-    branches = _branches(ctx)
-    state = branches.get(branch_id)
-    if not isinstance(state, dict) or request not in (state.get("pending") or []):
-        return False
     meta = _meta(ctx, branch_id)
     lines = meta.get("lines") if isinstance(meta.get("lines"), list) else []
     line = next((item for item in lines
@@ -286,10 +275,6 @@ def _receive(ctx, branch_id, request, result):
     usage = _usage(result)
     cost = _cost(ctx, usage, _engine_name(ctx, result))
     line.update({"status": "done", "summary": text, "usage": usage, "cost_usd": cost})
-    state["pending"] = [name for name in (state.get("pending") or []) if name != request]
-    state.setdefault("done", []).append(request)
-    meta["pending"] = list(state["pending"])
-    meta["done"] = list(state["done"])
     completed = [item for item in lines
                  if isinstance(item, dict) and item.get("status") == "done"]
     known_costs = [item.get("cost_usd") for item in completed
@@ -300,31 +285,13 @@ def _receive(ctx, branch_id, request, result):
     return True
 
 
-def _collect_ready(ctx, branch_id):
-    """join 當場撿自己的結果；平常則是共用 on_result 先撿。"""
-    state = _branches(ctx).get(branch_id)
-    if not isinstance(state, dict):
-        return
-    for request in list(state.get("pending") or []):
-        path = os.path.join(ctx.llm_dir(), "results", request)
-        if not os.path.isfile(path):
-            continue
-        result = ctx.read_json(path, {"error": "結果檔讀不成 JSON"})
-        try:
-            os.remove(path)
-        except OSError:
-            pass
-        general = ctx.state.get("pending")
-        if isinstance(general, list):
-            ctx.state["pending"] = [item for item in general
-                                    if not (isinstance(item, dict) and item.get("name") == request)]
-        _receive(ctx, branch_id, request, result if isinstance(result, dict) else {})
-
-
 def _find_branch_for_request(ctx, request):
-    for branch_id, state in _branches(ctx).items():
-        if isinstance(state, dict) and request in (state.get("pending") or []):
-            return branch_id
+    box = os.path.join(ctx.home, "branches")
+    for branch_id in os.listdir(box) if os.path.isdir(box) else []:
+        meta = _meta(ctx, branch_id)
+        for line in meta.get("lines") or []:
+            if isinstance(line, dict) and line.get("request") == request:
+                return branch_id
     return None
 
 
@@ -336,23 +303,27 @@ def on_result(ctx, kind, name, result):
         ctx.log("找不到分支請求屬於哪個 id：%s" % name)
         return
     _receive(ctx, branch_id, name, result)
+    meta = _meta(ctx, branch_id)
+    pending = [line["request"] for line in meta.get("lines") or []
+               if isinstance(line, dict) and line.get("status") == "pending"]
+    if pending:
+        ctx.sleep_until("branch", pending[0])
+        return None
+    if result.get("error"):
+        return None
+    return "%d 條分支都到齊了。現在只叫一次 join。" % len(meta.get("lines") or [])
 
 
 def _do_join(args, ctx):
     branch_id = args.get("branch_id")
-    state = _branches(ctx).get(branch_id)
-    if not isinstance(state, dict):
-        return _error("找不到這個分支：%s" % branch_id)
-    _collect_ready(ctx, branch_id)
-    pending = state.get("pending") or []
-    if pending:
-        meta = _meta(ctx, branch_id)
-        waiting = [item.get("n") for item in (meta.get("lines") or [])
-                   if isinstance(item, dict) and item.get("request") in pending]
-        return {"text": "還差 %d 條" % len(pending), "branch_id": branch_id,
-                "waiting": waiting}
-
     meta = _meta(ctx, branch_id)
+    if not meta:
+        return _error("找不到這個分支：%s" % branch_id)
+    pending = [line for line in meta.get("lines") or []
+               if isinstance(line, dict) and line.get("status") == "pending"]
+    if pending:
+        return _error("分支還沒到齊；系統會等齊再叫醒你")
+
     rows = []
     total_usage = {}
     for line in meta.get("lines") or []:
@@ -372,11 +343,9 @@ def _do_join(args, ctx):
 def _do_adopt(args, ctx):
     branch_id = args.get("branch_id")
     n = args.get("n")
-    state = _branches(ctx).get(branch_id)
-    if not isinstance(state, dict):
-        return _error("找不到這個分支：%s" % branch_id)
-    _collect_ready(ctx, branch_id)
     meta = _meta(ctx, branch_id)
+    if not meta:
+        return _error("找不到這個分支：%s" % branch_id)
     line = next((item for item in (meta.get("lines") or [])
                  if isinstance(item, dict) and item.get("n") == n), None)
     if line is None:

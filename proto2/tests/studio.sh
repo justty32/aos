@@ -44,7 +44,7 @@ test_studio() {
   export AOS_LLM_DIR="$root/llm"
   export AOS_USER_DIR="$root/user"
   "$AUSER" team new "$studio" --preset studio --engine local \
-    --budget '{"tokens":1000,"hours":2,"ticks":100,"disk_mb":20,"mem_mb":64,"money_usd":1}' \
+    --budget '{"tokens":1000,"hours":2,"ticks":1000,"disk_mb":20,"mem_mb":64,"money_usd":1}' \
     >/dev/null 2>&1
 
   checks="$root/checks.json"
@@ -106,10 +106,11 @@ from aos_agent import Ctx
 from packs import team
 root=sys.argv[2]
 ctx=Ctx(os.path.join(root,"kids","pm"), os.path.join(root,"kids","pm"))
-r=team.run("team_grant", {"role":"dev-a", "amount":{"tokens":120,"ticks":7}}, ctx)
+r=team.run("team_grant", {"role":"dev-a", "amount":{"tokens":120,"ticks":70}}, ctx)
 b=json.load(open(os.path.join(root,"team","budget.json"), encoding="utf-8"))
 print(r.get("ok") is True and b["allocations"]["dev-a"]["tokens"] == 120
-      and b["allocations"]["pm"]["tokens"] == 780 and len(b["grants"]) == 1)
+      and b["allocations"]["pm"]["tokens"] == 780
+      and b["allocations"]["dev-a"]["ticks"] == 70 and len(b["grants"]) == 1)
 PYEOF2
 )
   studio_assert "$got" "studio：team_grant 從 PM 分額度並寫帳"
@@ -153,6 +154,36 @@ else:
 PYEOF2
 )
   studio_assert "$got" "studio：假 server 走完 sales→pm→dev→pm 四段信（$got）"
+
+  # team_grant 是硬閘門：dev-a 用滿 120 token 後，不再叫 LLM，改報 chief。
+  llm_pump "$root/llm" >/dev/null
+  python3 - "$root/llm/usage/$(date +%Y-%m-%d).json" <<'PYEOF2'
+import json,os,sys
+p=sys.argv[1];d=json.load(open(p,encoding="utf-8")) if os.path.isfile(p) else {}
+d.setdefault("by-requester",{})["studio/dev-a"]={"total_tokens":120}
+json.dump(d,open(p,"w",encoding="utf-8"),ensure_ascii=False)
+root=os.path.dirname(os.path.dirname(os.path.dirname(p)))
+state=os.path.join(root,"studio","kids","dev-a","state.json")
+s=json.load(open(state,encoding="utf-8"));s.pop("budget_block",None)
+json.dump(s,open(state,"w",encoding="utf-8"),ensure_ascii=False)
+PYEOF2
+  studio_direct "$studio/kids/dev-a" "這題會被額度擋住"
+  for _ in 1 2 3 4 5; do
+    "$AGENT" exec "$studio/kids/dev-a" >/dev/null 2>&1
+    if python3 -c 'import json,sys;print(bool(json.load(open(sys.argv[1])).get("budget_block")))' \
+      "$studio/kids/dev-a/state.json" | grep -q True; then break; fi
+    llm_pump "$root/llm" >/dev/null
+  done
+  got=$(python3 - "$studio" <<'PYEOF2'
+import glob,json,os,sys
+r=sys.argv[1];h=os.path.join(r,"kids","dev-a")
+s=json.load(open(os.path.join(h,"state.json"),encoding="utf-8"))
+mail=glob.glob(os.path.join(r,"kids","chief","inbox","budget","*.json"))
+print(str(s.get("budget_block","")).startswith("own:tokens") and bool(mail)
+      and "額度用完" in json.load(open(mail[-1],encoding="utf-8")).get("content",""))
+PYEOF2
+)
+  studio_assert "$got" "studio：角色用滿 team_grant 後硬停並報主管"
 
   python3 - "$studio/kids/sales/outbox/9999.json" <<'PYEOF2'
 import json, os, sys

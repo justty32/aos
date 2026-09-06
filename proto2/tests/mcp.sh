@@ -115,7 +115,7 @@ try:
     check("reply" in heard or "agent>" in heard, "mcp：say 後能從假 server 等到 listen")
 
     ast = json.loads(tool("agent_status", {"world": agent}))
-    check(ast.get("step", 0) > 0 and ast.get("busy", 0) > 0,
+    check(ast.get("steps", {}).get("total", 0) > 0 and ast.get("steps", {}).get("busy", 0) > 0,
           "mcp：agent_status 看得到已走過的格數")
 
     started = time.monotonic()

@@ -25,11 +25,8 @@
 - `mem_forget(id)`：刪一筆。
 - `mem_archive_history(from, to)`：歸檔一段對話。頭尾都算。序號從 0 開始。
 
-這些工具不等資料庫。
-它們先回 `queued` 和請求編號。
-排完就先回話，不要在同一輪輪詢。
-agent 回到 idle 後才會收結果。
-記憶世界處理完後，結果會進 `inbox/mem/`。
+這些工具先回 `queued` 和請求編號，agent 隨即睡著。
+共用層收回結果後直接喚醒，不用輪詢；副本在 `<home>/side/mem/`。
 歸檔只有在資料庫回成功後，才把原對話換成 `已歸檔 id=…`。
 
 ## 設定
@@ -73,17 +70,13 @@ aos-mem exec .
 
 `on_act` 可直接回替代值。若同時開成本包，包的先後會決定 cost 看原文還是短指標。
 
-記憶結果只在 agent 的 idle 格收。
-剛排隊時看不到結果是正常的。
-如果模型在同一輪不停查信箱，它會等不到。工具包提示已叫它先回話。
-
 SQLite 搜尋目前只是 `LIKE`。
 資料很多後會慢。
 同一請求重送、備份、權限與徹底刪除都還沒做。
 
 ## 之後換 MongoDB
 
-保留 requests/results 格式與 bigmem 包。
+保留 requests/results 生產格式與 bigmem 包；只有共用層搬結果。
 只換 `aos-mem` 裡的儲存層。
 用一個共用 `memories` collection，以 `agent` 欄位區分。
 主程式用獨立 venv 裡的 `pymongo`。

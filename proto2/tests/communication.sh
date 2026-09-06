@@ -138,21 +138,19 @@ test_communication_wait() {
 import glob, importlib.util, json, os, sys
 sys.path.insert(0, sys.argv[1])
 from aos_agent import Ctx, resolve_home
-root=sys.argv[2]; world=os.path.join(root,"A"); home=resolve_home(world,None); ctx=Ctx(world,home)
+root=sys.argv[2]; world=os.path.join(root,"A"); home=resolve_home(world,None)
 spec=importlib.util.spec_from_file_location("communication",os.path.join(sys.argv[1],"packs","communication.py"))
 comm=importlib.util.module_from_spec(spec); spec.loader.exec_module(comm)
+ctx=Ctx(world,home,loaded=[("communication",comm)],pack="communication")
 registered=comm.run("mail_wait",{"id":"sent-1.json","note":"等日期"},ctx)
 b=Ctx(os.path.join(root,"B"),resolve_home(os.path.join(root,"B"),None))
 b.put_mail("A","B","今天是九月六日",reply_to="sent-1.json",thread="sent-1")
-comm.on_idle(ctx)
-waiting=json.load(open(os.path.join(home,"waiting.json"),encoding="utf-8"))
-paths=glob.glob(os.path.join(home,"inbox","self","*.json"))
-mail=json.load(open(paths[0],encoding="utf-8")) if paths else {}
-print(registered=={"ok":True,"waiting":1} and waiting==[] and "你等的那封回來了" in mail.get("content","")
-      and "等日期" in mail.get("content",""))
+wake=ctx.collect_results(); side=glob.glob(os.path.join(home,"side","mail","*.json"))
+print(registered.get("ok") is True and bool(registered.get("id")) and not ctx.pending()
+      and bool(side) and "你等的那封回來了" in wake[0]["content"] and "等日期" in wake[0]["content"])
 PYEOF2
 )
-  if [ "$got" = "True" ]; then ok "communication：mail_wait 不阻塞，on_idle 收到回信後投 self 提醒";
+  if [ "$got" = "True" ]; then ok "communication：mail_wait 讓共用層收回信並喚醒";
   else fail "communication：mail_wait 提醒不對（$got）"; fi
   rm -rf "$root"
 }

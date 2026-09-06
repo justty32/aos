@@ -135,12 +135,18 @@ state={"state":"wait", "step":5, "busy":2, "request":"main-never.json",
        "wait_ticks":0, "pending":[], "started":"2026-09-06T00:00:00"}
 loaded, _ = load_packs(home)
 ctx=Ctx(world, home, state, loaded)
-ctx.for_pack("hooktest").llm_request({"echo":True, "messages":[]}, kind="handled")
-ctx.for_pack("plain").llm_request({"echo":True, "messages":[]}, kind="plain")
+ctx.for_pack("hooktest").send("handled", {"echo":True, "messages":[]})
+ctx.for_pack("plain").send("plain", {"echo":True, "messages":[]})
 write_json(os.path.join(home, "state.json"), state)
 PYEOF2
   llm_pump "$root/llm" >/dev/null
-  agent_tick "$world"
+  python3 - "$HERE" "$world" <<'PYEOF2'
+import os,sys
+sys.path.insert(0,sys.argv[1])
+from aos_agent import Ctx,load_packs,read_json,resolve_home,write_json
+w=sys.argv[2]; h=resolve_home(w,None); s=read_json(os.path.join(h,"state.json"),{})
+loaded,_=load_packs(h); Ctx(w,h,s,loaded).collect_results(); write_json(os.path.join(h,"state.json"),s)
+PYEOF2
   got=$(python3 - "$home" <<'PYEOF2'
 import glob, json, os, sys
 h=sys.argv[1]

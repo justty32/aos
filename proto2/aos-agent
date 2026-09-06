@@ -1,35 +1,7 @@
 #!/usr/bin/env python3
-"""aos-agent exec <世界> [--home DIR] — 一個 agent 走「一格」。
-
-**這支只放 agent 自己跑的時候需要的東西**：五格狀態機，加上把工具包接起來。
-給人方便用的那些動作（say／listen／talk／status／spawn）在另一支 `aos-user`——
-使用者自己以後也會是一個 agent，那些動作到時候會變成 agent 之間的交流。
-
-**工具包一包一檔**，放在 `packs/<名字>.py`（先找 agent 自己的 `<home>/packs/`，
-再找 aos 內建的 `packs/`），一包自帶 `TOOLS`／`PROMPT`／`run(name, args, ctx)`：
-`tools.json` 的 `packs` 列到誰就載誰，工具定義與預設 prompt 併進請求，工具呼叫照名字
-派回那一包。認不得的包名印一行到 stderr 就跳過，agent 照樣跑。`tools.json` 的 `tools[]`
-（一句 shell 指令的工具）不走工具包，由 `aos_agent.run_custom` 直接跑。
-
-版面、信箱規則、`ctx` 有什麼看 `aos_agent.py` 的說明。五格：
-
-    idle    掃一遍 inbox/*/，有沒讀過的信就接進記憶（user 直接進、其他只給一句摘要）
-    llm     人格＋工具包預設 prompt＋記憶（＋工具清單）寫成請求丟進 LLM 資料夾
-    wait    LLM 資料夾的 results/ 出現同名檔就撿回來；錯誤或等滿 60 格會把原因送進 outbox
-    act     有 tool_calls 就跑工具、結果接進記憶；有文字才落 outbox，空白只計數
-    collect 再掃一次信箱（沒新信也照走），回 llm
-
-`step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格，`empty_replies` 記模型回空白
-幾次。工具包可用 on_idle／on_act／on_reply／on_result／on_system_prompt 掛進各格；旁線 LLM
-請求記在 `pending`，結果只回原本登記的包，不推動主線。跟 LLM 之間走 `aos_llm`
-的**私有通道**（不是工具），`</think>` 這種漏出來的思考由 LLM 資料夾那側清乾淨
-（engines.json 的 `strip_think`），agent 拿到什麼就用什麼。
-
-**這支不寫 `.aos/inst`**——世界的 `.aos/inst` 是人（或 spawn）寫一次就固定的一段，
-`aos-loop --keep-inst`／daemon 每格原樣重跑；agent 自己去覆蓋它會把 spawn 掛上去的
-`aos-exec <home>/kids/<名字>` 那行洗掉。
-"""
+"""aos-agent exec：執行 agent 狀態機的一格。"""
 import argparse
+import datetime
 import json
 import os
 import sys
@@ -38,58 +10,11 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aos_llm            # noqa: E402
 from aos_agent import (   # noqa: E402
-    Ctx, append_history, llm_dir, load_packs, now_iso, pack_owners, read_json,
-    resolve_home, run_custom, scan_inbox, system_text, tool_specs, warn, write_json)
+    Ctx, agent_limits, append_history, load_packs, now_iso, pack_owners, read_json,
+    resolve_home, run_custom, scan_inbox, system_text, team_requester, team_status_of,
+    today_usage_for, tool_specs, warn, write_json)
 
 LLM_WAIT_TICKS = 60
-
-
-def write_error(ctx, content):
-    """把人看得懂的錯誤也送進聊天 outbox。"""
-    ctx.reply(content, error=True)
-
-
-def forget_pending(ctx, request):
-    pending = ctx.state.get("pending")
-    if not isinstance(pending, list):
-        ctx.state["pending"] = []
-        return
-    ctx.state["pending"] = [p for p in pending
-                            if not (isinstance(p, dict) and p.get("name") == request)]
-
-
-def default_result(ctx, kind, name, result):
-    """工具包沒接 on_result 時，把結果當成自己的信，下一格照普通信箱處理。"""
-    ctx.put_mail(ctx.world, kind, json.dumps(result, ensure_ascii=False), request=name)
-
-
-def poll_side_results(ctx):
-    """收非主線結果；只叫原本登記的包，不碰五格狀態機。"""
-    pending = ctx.state.get("pending")
-    if not isinstance(pending, list):
-        ctx.state["pending"] = []
-        return
-    modules = dict(ctx.loaded)
-    left = []
-    ctx.state["pending"] = left
-    for item in list(pending):
-        if not isinstance(item, dict) or item.get("kind") == "main":
-            left.append(item)
-            continue
-        result = aos_llm.read_result(ctx.llm_dir(), item.get("name"))
-        if result is None:
-            left.append(item)
-            continue
-        pack_name = item.get("pack")
-        module = modules.get(pack_name)
-        hook = getattr(module, "on_result", None) if module else None
-        if hook:
-            try:
-                hook(ctx.for_pack(pack_name), item.get("kind"), item.get("name"), result)
-                continue
-            except Exception as e:
-                ctx.log("工具包 %s 的 on_result 出錯：%s" % (pack_name, e))
-        default_result(ctx, item.get("kind") or "side", item.get("name"), result)
 
 
 def call_idle_hooks(ctx):
@@ -128,7 +53,12 @@ def do_llm(ctx, loaded, extra):
     specs = tool_specs(loaded, extra)
     if specs:
         body["tools"] = [{"type": "function", "function": t} for t in specs]
-    name = ctx.llm_request(body, kind="main")
+    conf = read_json(os.path.join(ctx.home, "llm.json"), {})
+    conf = conf if isinstance(conf, dict) else {}
+    name = aos_llm.write_request(
+        ctx.llm_dir(), body, priority=conf.get("priority"), engine=conf.get("engine"),
+        name="%s-main" % ctx.name,
+        requester=team_requester(ctx.world) or ctx.name)
     warn("問 LLM，請求丟成 %s" % name)
     return name
 
@@ -137,16 +67,20 @@ def do_wait(ctx, request, waited):
     """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False, 已等幾格)。"""
     answer = aos_llm.read_result(ctx.llm_dir(), request)
     if answer is None:
+        clock = ctx.clock_of(ctx.llm_dir())
+        if clock["kind"] == "none" or clock["state"] != "running":
+            text = "LLM 的鐘沒有在跑，這題先停下來。"
+            ctx.reply(text, error=True)
+            warn(text)
+            return "idle", False, 0
         waited += 1
         if waited >= LLM_WAIT_TICKS:
             text = "（等 LLM 超過 %d 格沒回應，請確認 LLM 的鐘有沒有在跑）" % LLM_WAIT_TICKS
-            write_error(ctx, text)
-            forget_pending(ctx, request)
+            ctx.reply(text, error=True)
             warn(text)
             return "idle", False, 0
         warn("等 LLM（%s）" % (request or "沒有請求"))
         return "wait", False, waited
-    forget_pending(ctx, request)
     write_json(os.path.join(ctx.home, "llm-result.json"), answer)
     call_main_result_hooks(ctx, request, answer)
     aos = answer.get("aos") if isinstance(answer, dict) else None
@@ -154,7 +88,7 @@ def do_wait(ctx, request, waited):
 
     if answer.get("error"):
         reason = str(answer.get("error"))[:200]
-        write_error(ctx, "（LLM 出錯：%s）" % reason)
+        ctx.reply("（LLM 出錯：%s）" % reason, error=True)
         warn("LLM 回了 error（%s），這輪不算，回 idle" % reason)
         return "idle", usage, 0
     try:
@@ -210,6 +144,7 @@ def do_act(ctx, loaded, extra):
             return "idle", True
         print(content)
         ctx.reply(content)
+        ctx.state["question_active"] = False
         return "idle", False
 
     owners = pack_owners(loaded)
@@ -242,7 +177,59 @@ def do_act(ctx, loaded, extra):
             out = final_result
         results.append({"role": "tool", "tool_call_id": call.get("id"), "content": out})
     append_history(ctx.home, results)
-    return "collect", False
+    return ("idle" if ctx.state.get("sleeping") else "collect"), False
+
+
+def budget_block(ctx):
+    """工作室額度是硬閘門。回 True 表示這格不能再叫 LLM。"""
+    try:
+        data = team_status_of(ctx.world)
+    except (OSError, ValueError):
+        ctx.state.pop("budget_block", None)
+        return False
+    mine = next((row for row in data["members"] if row["name"] == ctx.name), None)
+    total_over = [key for key in ("tokens", "hours", "ticks", "money_usd")
+                  if data["budget"].get(key) and data["remaining"].get(key) is not None
+                  and data["remaining"][key] <= 0]
+    own_over = []
+    if mine:
+        for key in ("tokens", "ticks", "money_usd"):
+            limit = mine["budget"].get(key) or 0
+            spent = mine["today_spent"].get(key) or 0
+            if data["budget"].get(key) and limit > 0 and spent >= limit:
+                own_over.append(key)
+    mark = "team:" + ",".join(total_over) if total_over else \
+        "own:" + ",".join(own_over) if own_over else ""
+    if not mark:
+        ctx.state.pop("budget_block", None)
+        return False
+    if ctx.state.get("budget_block") == mark:
+        return True
+    ctx.state["budget_block"] = mark
+    if total_over:
+        if ctx.name == "sales":
+            ctx.reply("整隊額度用完了，要不要追加？", error=True)
+        else:
+            ctx.put_mail("sales", "budget", "整隊額度用完，請向使用者申請追加。")
+    else:
+        supervisor = mine.get("reports_to") if mine else None
+        if supervisor:
+            ctx.put_mail(supervisor, "budget", "額度用完，等主管加。")
+    return True
+
+
+def hard_limit(ctx):
+    limits = agent_limits(ctx.home)
+    steps = int(ctx.state.get("question_steps") or 0)
+    if ctx.state.get("question_active") and steps >= limits["max_steps_per_question"]:
+        return "steps", "這題我已經跑了 %d 格，要不要繼續？" % steps
+    token_limit = limits["max_tokens_per_day"]
+    used = today_usage_for(ctx.home, ctx.world).get("total_tokens") or 0
+    today = datetime.date.today().isoformat()
+    if (token_limit is not None and used >= token_limit
+            and ctx.state.get("token_limit_ack_day") != today):
+        return "tokens", "今天用量到頂了，要不要繼續？"
+    return None, None
 
 
 def do_exec(args):
@@ -265,21 +252,43 @@ def do_exec(args):
     loaded, extra = load_packs(home)
     ctx = Ctx(world, home, saved, loaded)
 
-    poll_side_results(ctx)
+    side_msgs = ctx.collect_results()
+    inbox_msgs, direct = [], False
+    if state in ("idle", "collect") or saved.get("limit_pause") or saved.get("sleeping"):
+        direct = bool(ctx.unread("user"))
+        inbox_msgs, announced = scan_inbox(home, announced)
+        if direct:
+            if saved.get("limit_kind") == "tokens" and saved.get("limit_pause"):
+                saved["token_limit_ack_day"] = datetime.date.today().isoformat()
+            saved.update({"question_active": True, "question_steps": -1,
+                          "limit_pause": False})
+        if (direct or side_msgs or inbox_msgs) and saved.get("sleeping"):
+            saved.pop("sleeping", None)
+    append_history(home, side_msgs + inbox_msgs)
 
-    if state == "idle":
+    limit_kind, limit_text = (None, None) if direct else hard_limit(ctx)
+    if saved.get("limit_pause") and not direct:
+        nxt, did = "idle", False
+    elif limit_text:
+        if not saved.get("limit_pause"):
+            ctx.reply(limit_text, error=True)
+        saved["limit_pause"] = True
+        saved["limit_kind"] = limit_kind
+        request, wait_ticks = "", 0
+        nxt, did = "idle", True
+    elif state == "idle":
         call_idle_hooks(ctx)
-        msgs, announced = scan_inbox(home, announced)
-        append_history(home, msgs)
-        nxt, did = ("llm", True) if msgs else ("idle", False)
+        msgs = side_msgs + inbox_msgs
+        nxt, did = (("llm", True) if msgs else ("idle", False))
     elif state == "collect":
-        msgs, announced = scan_inbox(home, announced)
-        append_history(home, msgs)
         nxt, did = "llm", True
     elif state == "llm":
-        request = do_llm(ctx, loaded, extra)
-        wait_ticks = 0
-        nxt, did = "wait", True
+        if budget_block(ctx):
+            nxt, did = "idle", False
+        else:
+            request = do_llm(ctx, loaded, extra)
+            wait_ticks = 0
+            nxt, did = "wait", True
     elif state == "wait":
         nxt, usage, wait_ticks = do_wait(ctx, request, wait_ticks)
         if usage is not False:
@@ -298,6 +307,8 @@ def do_exec(args):
 
     if did:
         busy += 1
+    if saved.get("question_active") and not saved.get("limit_pause"):
+        saved["question_steps"] = int(saved.get("question_steps") or 0) + 1
     saved.update({"state": nxt, "step": step + 1, "busy": busy,
                   "request": request, "last_usage": last_usage,
                   "started": started, "announced": announced,

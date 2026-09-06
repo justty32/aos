@@ -1,49 +1,10 @@
-"""aos_agent — 標準 agent 的共用零件（給 `aos-agent` 跟 `aos-user` import）。
-
-**一個 agent 就是一個世界資料夾**。世界資料夾的 `.aos/` 裡只有一句 `inst`，agent 自己的
-東西全放在**本體資料夾**（home）底下，home 放哪由 `--home` 說了算（相對於世界資料夾，
-預設 `.`，也就是世界資料夾本身）：
-
-    xxx/.aos/inst            aos-agent exec . --home agent
-    xxx/<home>/system-prompt.json   人格 {"role":"system","content":"..."}
-    xxx/<home>/prompts.json         記憶（OpenAI messages 陣列）
-    xxx/<home>/tools.json           {"packs": [...], "tools": [...]}
-    xxx/<home>/llm.json             {"dir": "../llm", "priority": 1, "engine": "..."}（可有可無）
-    xxx/<home>/state.json           {"state","step","busy","request","last_usage","started","announced",
-                                     "wait_ticks","empty_replies","pending"}
-    xxx/<home>/contacts.json        通訊錄（名字 → 世界資料夾路徑）
-    xxx/<home>/parent.json          父是誰（小孩才有）
-    xxx/<home>/kids.json            小孩名冊
-    xxx/<home>/inbox/<來源>/*.json       沒讀的信
-    xxx/<home>/inbox/<來源>/read/*.json  讀過的信
-    xxx/<home>/outbox/<四位數>.json      它自己說的話
-    xxx/<home>/llm-result.json      上次 LLM 的整包原始結果
-    xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界資料夾）
-
-`llm.json` 的 `dir` 相對於**世界資料夾**（不是 home），所以 `../llm` 一直都是隔壁那個
-LLM 資料夾。沒寫就看 `AOS_LLM_DIR`，再沒有就找 `../llm`。
-
-這裡放的是**兩支指令都要用的東西**：home 怎麼解、信箱怎麼掃、工具包怎麼載、LLM 資料夾
-怎麼找、自我狀態怎麼算、怎麼生小孩、怎麼投一封信。狀態機本身在 `aos-agent`，給人用的殼
-在 `aos-user`。**工具包一包一檔**放在 `packs/<名字>.py`，每一包自帶 `TOOLS`（工具定義）、
-`PROMPT`（預設 prompt 段落）、`run(name, args, ctx)`（怎麼跑）——先找 agent 自己的
-`<home>/packs/`，再找 aos 內建的 `packs/`；`ctx` 就是下面那個 `Ctx`。
-
-信箱（IPC v0.1）：一封信是一個 JSON 物件 `{"from","time","content"}`（多帶別的鍵也行），
-或是一串這種物件的 JSON 陣列。來源就是 `inbox/` 底下的資料夾名（user／team／kernel／
-別的 agent 都行，第一次收到信才建）。**`idle` 那格掃一遍 `inbox/*/`，只要有未讀就去問
-LLM**——但不會把信整包塞進 prompt，只加一句「你有新信：team 1 封。用信箱工具去讀」，
-剩下讓模型自己用信箱工具讀。**同一封信只通知一次**（通知過的記在 state.json 的
-`announced`），模型不去讀也不會被一直重新叫醒。**唯一的例外是來源 `user`**：它的內容
-直接當成一則 user 訊息接進記憶（前面加 `[user] `），檔案當場搬進 `read/`——這樣跟 agent
-講話才是一個來回。
-"""
+"""aos-agent 與 aos-user 共用：世界、信箱、工具包、旁線請求、狀態與建世界。"""
 import datetime
 import importlib.util
 import json
 import os
 import re
-import shutil
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -61,6 +22,7 @@ CHILD_INST = "aos-agent exec .\n"
 SH_TIMEOUT = 60
 CUT = 4000
 TEAM_BUDGET_KEYS = ("tokens", "hours", "ticks", "disk_mb", "mem_mb", "money_usd")
+SIDE_TIMEOUT_STEPS = 120
 
 
 def warn(msg):
@@ -89,7 +51,6 @@ def write_json_atomic(path, obj):
 
 
 def resolve_home(world, home_opt):
-    """本體資料夾在哪：--home 有給就用它；沒給就去 .aos/inst 撈 `--home X`；都沒有就是 `.`。"""
     where = home_opt
     if not where:
         where = "."
@@ -111,7 +72,6 @@ def truncate(text, n=CUT):
 
 
 def tools_conf(home):
-    """讀 tools.json → (工具包名字, 額外的 shell 工具)。舊格式（一個純陣列）當成沒有工具包。"""
     data = read_json(os.path.join(home, "tools.json"), {})
     if isinstance(data, list):
         return [], [t for t in data if isinstance(t, dict)]
@@ -126,7 +86,6 @@ _PACK_CACHE = {}
 
 
 def find_pack_file(home, name):
-    """工具包一包一檔：先找 agent 自己的 `<home>/packs/<名字>.py`，再找 aos 內建的 `packs/`。"""
     if not PACK_OK.match(name or ""):
         return None
     for base in (os.path.join(home, "packs"), os.path.join(HERE, "packs")):
@@ -137,7 +96,6 @@ def find_pack_file(home, name):
 
 
 def load_pack(home, name):
-    """把一個工具包的 .py 載進來。載不到就回 None（呼叫的人自己印一句、繼續跑）。"""
     path = find_pack_file(home, name)
     if not path:
         return None
@@ -158,11 +116,6 @@ def load_pack(home, name):
 
 
 def load_packs(home):
-    """讀 tools.json，把每個工具包載進來 → ([(名字, 模組)], 額外的 shell 工具)。
-
-    認不得的包名（`packs/<名字>.py` 不在）印一行到 stderr 就跳過，agent 照樣跑；
-    模型如果去叫那包裡的工具，會拿到一個「沒有這個工具」的結果。
-    """
     names, extra = tools_conf(home)
     loaded = []
     seen = set()
@@ -183,7 +136,6 @@ def load_packs(home):
 
 
 def tool_specs(loaded, extra):
-    """送給模型看的工具清單。包照 tools.json 順序，前面的同名工具贏。"""
     specs, owners = [], {}
     for pack_name, module in loaded:
         for t in getattr(module, "TOOLS", []):
@@ -211,7 +163,6 @@ def tool_specs(loaded, extra):
 
 
 def system_text(ctx, loaded):
-    """system 訊息 ＝ 人格 ＋ 每個開著的工具包各一段預設 prompt。"""
     home = ctx.home
     persona = read_json(os.path.join(home, "system-prompt.json"), {})
     text = (persona.get("content") or "") if isinstance(persona, dict) else ""
@@ -246,7 +197,6 @@ def system_text(ctx, loaded):
 
 
 def pack_owners(loaded):
-    """工具名字 → 哪個工具包負責跑它。"""
     owners = {}
     for pack_name, module in loaded:
         for t in getattr(module, "TOOLS", []):
@@ -256,7 +206,6 @@ def pack_owners(loaded):
 
 
 def run_custom(ctx, extra, name, args_text):
-    """tools.json 的 `tools[]`：一個工具就是一句 shell 指令，參數 JSON 從 stdin 進去。"""
     tool = None
     for t in extra:
         if t.get("name") == name:
@@ -301,7 +250,6 @@ def read_names(home, source):
 
 
 def mail_of(home, source, name):
-    """一封信 → 一串信件物件（一個檔可以放一封，也可以放一個陣列裝好幾封）。"""
     data = read_json(os.path.join(inbox_dir(home), source, name), None)
     if isinstance(data, dict):
         return [data]
@@ -322,15 +270,6 @@ def mark_read(home, source, name):
 
 
 def scan_inbox(home, announced):
-    """掃一遍信箱 → (這格要接進記憶的訊息, 新的「已通知過」清單)。
-
-    來源 `user` 短路：內容直接變一則 user 訊息（前面加 `[user] `），檔案當場搬去 read/。
-    其他來源不進 prompt，只在最後加一句摘要（哪個來源幾封未讀），讓模型自己用工具去讀。
-
-    **通知過的信不會再通知一次**：`announced`（記在 state.json）記著「已經跟模型講過的
-    未讀信」，只有出現沒講過的信才會拿摘要去吵它。不然模型看到摘要卻懶得讀信，
-    idle 就會一直重新叫 LLM，錢燒不完。信被讀掉（搬進 read/）就自動從清單掉出去。
-    """
     msgs, counts, still, fresh = [], [], [], False
     for src in sources(home):
         names = unread_names(home, src)
@@ -373,7 +312,6 @@ def folder_bytes(path):
 
 
 def find_llm(home, world):
-    """LLM 資料夾在哪：llm.json 的 dir（相對於**世界資料夾**）→ AOS_LLM_DIR → ../llm。找不到回 None。"""
     conf = read_json(os.path.join(home, "llm.json"), {})
     conf = conf if isinstance(conf, dict) else {}
     where = conf.get("dir") or os.environ.get("AOS_LLM_DIR") or ""
@@ -391,7 +329,6 @@ def llm_dir(home, world):
 
 
 def today_usage_all(home, world):
-    """今天整個 LLM 世界的加總，並把每台引擎原本那列放在 by_engine。"""
     d = find_llm(home, world)
     if not d or not os.path.isdir(d):
         return None
@@ -425,18 +362,83 @@ def status_of(world, home):
             uptime = int(time.time() - datetime.datetime.fromisoformat(started).timestamp())
         except ValueError:
             uptime = None
-    return {"step": st.get("step") or 0, "busy": st.get("busy") or 0,
-            "started": started, "uptime_s": uptime,
-            "history_messages": len(history),
-            "history_chars": len(json.dumps(history, ensure_ascii=False)),
-            "folder_bytes": folder_bytes(world),
-            "last_usage": st.get("last_usage"),
-            "today_usage_all": today_usage_all(home, world)}
+    usage = today_usage_for(home, world)
+    limits = agent_limits(home)
+    replies = []
+    last_error = None
+    box = os.path.join(home, "outbox")
+    for name in outbox_names(box):
+        msg = read_json(os.path.join(box, name), {})
+        if isinstance(msg, dict) and msg.get("error"):
+            last_error = msg.get("content") or "不明錯誤"
+        try:
+            reply_step = int(os.path.splitext(name)[0])
+        except ValueError:
+            continue
+        replies.append(reply_step)
+    recent = [step - (replies[i - 1] if i else 0)
+              for i, step in enumerate(replies)][-5:]
+    ctx = Ctx(world, home, st)
+    sleeping = st.get("sleeping") if isinstance(st.get("sleeping"), dict) else None
+    clocks = []
+    for label, path in (("agent", world), ("LLM", find_llm(home, world))):
+        if path:
+            clock = ctx.clock_of(path)
+            if clock["kind"] == "none" or clock["state"] != "running":
+                clocks.append("%s 鐘沒跑" % label)
+    return {
+        "status": st.get("state") or "idle",
+        "waiting": ("在等 %s %s" % (sleeping.get("kind"), sleeping.get("id"))
+                    if sleeping else "沒有等待"),
+        "clock": "；".join(clocks) if clocks else "正常",
+        "last_error": last_error,
+        "steps": {"total": st.get("step") or 0, "busy": st.get("busy") or 0},
+        "question_steps": {"used": st.get("question_steps") or 0,
+                           "limit": limits["max_steps_per_question"]},
+        "today": {"tokens": usage.get("total_tokens") or 0,
+                  "token_limit": limits["max_tokens_per_day"],
+                  "cost_usd": _team_ledger_money(home, datetime.date.today().isoformat())},
+        "recent_question_steps": recent,
+        "memory": {"messages": len(history),
+                   "chars": len(json.dumps(history, ensure_ascii=False)),
+                   "folder_bytes": folder_bytes(world), "started": started,
+                   "uptime_s": uptime},
+    }
+
+
+def agent_limits(home):
+    conf = read_json(os.path.join(home, "llm.json"), {})
+    conf = conf if isinstance(conf, dict) else {}
+    try:
+        steps = int(conf.get("max_steps_per_question", 60))
+    except (TypeError, ValueError):
+        steps = 60
+    steps = max(1, steps)
+    tokens = conf.get("max_tokens_per_day")
+    if not isinstance(tokens, (int, float)) or isinstance(tokens, bool) or tokens <= 0:
+        tokens = None
+    return {"max_steps_per_question": steps, "max_tokens_per_day": tokens}
+
+
+def today_usage_for(home, world):
+    llm = find_llm(home, world)
+    if not llm:
+        return {}
+    book = read_json(os.path.join(llm, "usage", datetime.date.today().isoformat() + ".json"), {})
+    if not isinstance(book, dict):
+        return {}
+    rows = book.get("by-requester") if isinstance(book.get("by-requester"), dict) else {}
+    requester = team_requester(world) or team_member_name(world) or \
+        os.path.basename(os.path.abspath(world).rstrip(os.sep))
+    row = rows.get(requester)
+    if isinstance(row, dict):
+        return row
+    # 舊帳沒有 requester 時，只能退回整個 LLM 世界的總數。
+    return today_usage_all(home, world) or {}
 
 
 # ── 整隊共用家務 ──────────────────────────────────────────────────────────
 def team_root_of(world):
-    """從任一成員世界往上找。找到 team/team.json 就是工作室根。"""
     current = os.path.abspath(world)
     seen = set()
     for _ in range(4):
@@ -460,7 +462,6 @@ def team_root_of(world):
 
 
 def team_member_name(world):
-    """工作室根資料夾可以叫 studio，但住在裡面的人仍叫 owner。"""
     root = team_root_of(world)
     if not root:
         return None
@@ -490,7 +491,6 @@ def _team_number(value):
 
 
 def normalize_team_budget(base, override=None):
-    """预算版面只用少數固定欄位；memory_mb 舊寫法也收。"""
     data = dict(base) if isinstance(base, dict) else {}
     override = dict(override) if isinstance(override, dict) else {}
     if "memory_mb" in data and "mem_mb" not in data:
@@ -561,7 +561,6 @@ def _team_usage(root, roster, day):
 
 
 def team_status_of(world):
-    """CLI 與 team 包共用的整隊快照。"""
     root = team_root_of(world)
     if not root:
         raise ValueError("找不到 team/team.json：" + os.path.abspath(world))
@@ -605,6 +604,7 @@ def team_status_of(world):
         for key in ("tokens", "ticks", "money_usd"):
             total_spent[key] += _team_number(spent[key])
         rows.append({"name": name, "role": member.get("role") or name,
+                     "reports_to": member.get("reports_to"),
                      "path": member.get("path") or ".", "clock": member.get("clock") or "shared:owner",
                      "active": member.get("active", True),
                      "state": (state.get("state") or "idle") if member.get("active", True) else "stopped",
@@ -627,8 +627,55 @@ def team_status_of(world):
             "spent": total_spent, "remaining": remaining, "members": rows}
 
 
+def create_world(world, home=".", template=None, tools=None, persona=None,
+                 prompts=None, llm=None, parent=None):
+    world = os.path.abspath(world)
+    if os.path.exists(world):
+        raise ValueError("資料夾已經存在，不會蓋掉：" + world)
+    home_arg = str(home or ".")
+    target_home = os.path.abspath(os.path.join(world, home_arg))
+    base = os.path.join(HERE, "templates", str(template or ""))
+
+    def templated(filename, default):
+        value = read_json(os.path.join(base, filename), default) if template else default
+        return value
+
+    tools = tools if isinstance(tools, dict) else templated("tools.json", {"packs": [], "tools": []})
+    persona = persona if isinstance(persona, dict) else templated(
+        "system-prompt.json", {"role": "system", "content": ""})
+    prompts = prompts if isinstance(prompts, list) else templated("prompts.json", [])
+    llm = llm if isinstance(llm, dict) else templated("llm.json", {})
+    if not isinstance(tools, dict) or not isinstance(persona, dict) \
+            or not isinstance(prompts, list) or not isinstance(llm, dict):
+        raise ValueError("模板的 JSON 形狀不對：" + str(template))
+
+    os.makedirs(os.path.join(world, ".aos"))
+    os.makedirs(os.path.join(target_home, "inbox"), exist_ok=True)
+    os.makedirs(os.path.join(target_home, "outbox"), exist_ok=True)
+    inst = "aos-agent exec ."
+    if home_arg != ".":
+        inst += " --home " + shlex.quote(home_arg)
+    with open(os.path.join(world, ".aos", "inst"), "w", encoding="utf-8") as f:
+        f.write(inst + "\n")
+    write_json_atomic(os.path.join(target_home, "tools.json"), tools)
+    write_json_atomic(os.path.join(target_home, "system-prompt.json"), persona)
+    write_json_atomic(os.path.join(target_home, "prompts.json"), prompts)
+    write_json_atomic(os.path.join(target_home, "llm.json"), llm)
+    write_json_atomic(os.path.join(target_home, "state.json"),
+                      {"state": "idle", "step": 0, "busy": 0, "request": "",
+                       "last_usage": None, "started": now_iso(), "pending": [],
+                       "empty_replies": 0, "question_steps": 0})
+    if isinstance(parent, dict):
+        write_json_atomic(os.path.join(target_home, "parent.json"), parent)
+    rel = os.path.relpath(target_home, world)
+    prefix = "" if rel == "." else rel.rstrip(os.sep) + "/"
+    with open(os.path.join(world, ".gitignore"), "w", encoding="utf-8") as f:
+        for name in ("state.json", "llm-result.json", "side/", "inbox/", "outbox/", "kids/"):
+            f.write(prefix + name + "\n")
+    return target_home
+
+
 def create_team_world(world, preset_dir, engine=None, budget=None):
-    """用 preset 一次寫好根世界、成員、名冊、通訊錄與共用區。"""
     world = os.path.abspath(world)
     if os.path.exists(world):
         raise ValueError("資料夾已經存在，不會蓋掉：" + world)
@@ -643,7 +690,6 @@ def create_team_world(world, preset_dir, engine=None, budget=None):
     llm_path = os.environ.get("AOS_LLM_DIR") or preset.get("llm_dir") or "../llm"
     if not os.path.isabs(llm_path):
         llm_path = os.path.abspath(os.path.join(world, llm_path))
-    os.makedirs(world)
     created = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
 
     worlds = {}
@@ -651,37 +697,24 @@ def create_team_world(world, preset_dir, engine=None, budget=None):
         name = member["name"]
         member_world = os.path.abspath(os.path.join(world, member.get("path") or "."))
         worlds[name] = member_world
-        os.makedirs(os.path.join(member_world, ".aos"), exist_ok=True)
-        os.makedirs(os.path.join(member_world, "inbox"), exist_ok=True)
-        os.makedirs(os.path.join(member_world, "outbox"), exist_ok=True)
-        with open(os.path.join(member_world, ".aos", "inst"), "w", encoding="utf-8") as f:
-            f.write(CHILD_INST)
         persona_file = member.get("persona") or "%s/system-prompt.json" % name
         prompts_file = member.get("prompts") or "%s/prompts.json" % name
         persona = read_json(os.path.join(preset_dir, persona_file), None)
         prompts = read_json(os.path.join(preset_dir, prompts_file), None)
         if not isinstance(persona, dict) or not isinstance(prompts, list):
             raise ValueError("preset 的 %s 人格或起手信壞了" % name)
-        write_json_atomic(os.path.join(member_world, "system-prompt.json"), persona)
-        write_json_atomic(os.path.join(member_world, "prompts.json"), prompts)
-        write_json_atomic(os.path.join(member_world, "tools.json"),
-                          {"packs": list(member.get("packs") or []), "tools": []})
         member_engine = engine or member.get("engine")
         llm_conf = {"dir": os.path.relpath(llm_path, member_world), "priority": 1}
         if member_engine and member_engine not in ("cheap", "thinking"):
             llm_conf["engine"] = member_engine
         elif engine:
             llm_conf["engine"] = engine
-        write_json_atomic(os.path.join(member_world, "llm.json"), llm_conf)
-        write_json_atomic(os.path.join(member_world, "state.json"),
-                          {"state": "idle", "step": 0, "busy": 0, "request": "",
-                           "last_usage": None, "started": now_iso(), "pending": [],
-                           "empty_replies": 0})
         member["active"] = True
-        if name != preset.get("leader", "owner"):
-            write_json_atomic(os.path.join(member_world, "parent.json"),
-                              {"name": preset.get("leader", "owner"), "dir": world,
-                               "clock": "own" if member.get("clock") == "own" else "shared"})
+        parent = None if name == preset.get("leader", "owner") else {
+            "name": preset.get("leader", "owner"), "dir": world,
+            "clock": "own" if member.get("clock") == "own" else "shared"}
+        create_world(member_world, tools={"packs": list(member.get("packs") or []), "tools": []},
+                     persona=persona, prompts=prompts, llm=llm_conf, parent=parent)
 
     contacts = {name: path for name, path in worlds.items()}
     user_dir = os.environ.get("AOS_USER_DIR")
@@ -735,16 +768,31 @@ def create_team_world(world, preset_dir, engine=None, budget=None):
     for member in members:
         if member["name"] != preset.get("leader", "owner") and member.get("clock") != "own":
             append_line(inst, "aos-exec " + os.path.relpath(worlds[member["name"]], world))
-    with open(os.path.join(world, ".gitignore"), "w", encoding="utf-8") as f:
-        f.write("state.json\nllm-result.json\ninbox/\noutbox/\n")
     return runtime
+
+
+def _pid_alive(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except OSError:
+        return False
+
+
+def _side_error_text(kind, result):
+    why = str(result.get("error") or "不明錯誤")
+    error_kind = result.get("kind_of_error")
+    if error_kind == "timeout":
+        return "%s 沒等到結果：%s" % (kind, why)
+    if error_kind == "cancelled":
+        return "%s 已取消。" % kind
+    return "%s 失敗：%s" % (kind, why)
 
 
 # ── 工具包拿得到的把手 ────────────────────────────────────────────────────
 class Ctx:
-    """交給工具包 `run(name, args, ctx)` 的小把手：世界在哪、本體在哪，
-    外加幾個現成的家務函式（讀寫 json、掃信箱、看自己、生小孩、找 LLM 資料夾）。"""
-
     read_json = staticmethod(read_json)
     write_json = staticmethod(write_json_atomic)
     warn = staticmethod(warn)
@@ -771,6 +819,113 @@ class Ctx:
     def status(self):
         return status_of(self.world, self.home)
 
+    def world_of(self, name_or_path):
+        value = self.contacts().get(name_or_path) if isinstance(name_or_path, str) else None
+        if isinstance(value, dict):
+            value = value.get("dir")
+        value = value if isinstance(value, str) else name_or_path
+        if not isinstance(value, str) or not value:
+            raise ValueError("世界名字或路徑不能空白")
+        return os.path.abspath(value if os.path.isabs(value) else os.path.join(self.world, value))
+
+    def home_of(self, world):
+        return resolve_home(self.world_of(world), None)
+
+    def clock_of(self, world):
+        target = self.world_of(world)
+        daemon = os.environ.get("AOS_DAEMON_DIR")
+        clocks = os.path.join(daemon, "clocks") if daemon else ""
+        if os.path.isdir(clocks):
+            for filename in os.listdir(clocks):
+                if not filename.endswith(".json"):
+                    continue
+                row = read_json(os.path.join(clocks, filename), None)
+                if (isinstance(row, dict) and row.get("dir") and
+                        os.path.realpath(row["dir"]) == os.path.realpath(target)):
+                    state = row.get("state") or "unknown"
+                    if state == "running" and not _pid_alive(row.get("pid")):
+                        state = "stopped"
+                    return {"kind": "own", "state": state}
+        parent = read_json(os.path.join(resolve_home(target, None), "parent.json"), None)
+        parent_world = parent.get("dir") if isinstance(parent, dict) else None
+        if isinstance(parent_world, str):
+            try:
+                with open(os.path.join(parent_world, ".aos", "inst"),
+                          encoding="utf-8", errors="replace") as f:
+                    lines = f.read().splitlines()
+            except OSError:
+                lines = []
+            for line in lines:
+                raw = line.strip()
+                paused = raw.startswith("# ")
+                command = raw[2:].strip() if paused else raw
+                if not command.startswith("aos-exec "):
+                    continue
+                try:
+                    words = shlex.split(command)
+                except ValueError:
+                    words = []
+                child = words[1] if len(words) == 2 else ""
+                if child and os.path.realpath(os.path.join(parent_world, child)) == os.path.realpath(target):
+                    return {"kind": "shared", "state": "paused" if paused else "running"}
+        return {"kind": "none", "state": "missing"}
+
+    def depth(self):
+        depth, parent, seen = 0, self.parent(), set()
+        while isinstance(parent, dict) and parent.get("dir"):
+            path = os.path.abspath(parent["dir"])
+            if path in seen:
+                break
+            seen.add(path)
+            depth += 1
+            parent = read_json(os.path.join(resolve_home(path, None), "parent.json"), None)
+        return depth
+
+    def shared_clock(self, world, action):
+        target = self.world_of(world)
+        parent = read_json(os.path.join(resolve_home(target, None), "parent.json"), None)
+        parent_world = parent.get("dir") if isinstance(parent, dict) else None
+        if not isinstance(parent_world, str):
+            return False, "找不到 shared 父世界"
+        path = os.path.join(parent_world, ".aos", "inst")
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                lines = f.read().splitlines()
+        except OSError as e:
+            return False, "讀不到父鐘：%s" % e
+        found, out = False, []
+        for line in lines:
+            raw = line.strip()
+            paused = raw.startswith("# ")
+            command = raw[2:].strip() if paused else raw
+            match = False
+            if command.startswith("aos-exec "):
+                try:
+                    words = shlex.split(command)
+                except ValueError:
+                    words = []
+                child = words[1] if len(words) == 2 else ""
+                match = bool(child) and os.path.realpath(
+                    os.path.join(parent_world, child)) == os.path.realpath(target)
+            if not match:
+                out.append(line)
+                continue
+            found = True
+            if action == "pause":
+                out.append("# " + command)
+            elif action == "resume":
+                out.append(command)
+            elif action != "kill":
+                return False, "不懂的 shared 鐘動作：%s" % action
+        if not found:
+            return False, "父鐘找不到這個世界"
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(out) + ("\n" if out else ""))
+        except OSError as e:
+            return False, "改不了父鐘：%s" % e
+        return True, {"pause": "暫停了", "resume": "續跑了", "kill": "收掉了"}[action]
+
     def find_llm(self):
         return find_llm(self.home, self.world)
 
@@ -785,41 +940,22 @@ class Ctx:
         return spawn(self.world, self.home, name, persona, clock, template,
                      packs=packs, task=task, depth=depth)
 
-    def self_depth(self):
-        depth = 0
-        parent = self.parent()
-        seen = set()
-        while isinstance(parent, dict) and parent.get("dir"):
-            path = os.path.abspath(parent["dir"])
-            if path in seen:
-                break
-            seen.add(path)
-            depth += 1
-            parent_home = resolve_home(path, None)
-            parent = read_json(os.path.join(parent_home, "parent.json"), None)
-        return depth
-
     def put_mail(self, target, source, content, **extra):
-        contacts = self.contacts()
         target_name = target
-        target_world = contacts.get(target) if isinstance(target, str) else None
-        if isinstance(target_world, dict):
-            target_world = target_world.get("dir")
-        if not target_world:
-            target_world = target
+        if isinstance(target, str) and target not in self.contacts():
             target_name = os.path.basename(str(target).rstrip(os.sep)) or str(target)
-        if not isinstance(target_world, str):
+        try:
+            target_world = self.world_of(target)
+        except ValueError:
             self.log("找不到收件人：%s" % target)
             return None
-        if not os.path.isabs(target_world):
-            target_world = os.path.abspath(os.path.join(self.world, target_world))
         if not os.path.isdir(target_world):
             self.log("找不到收件人：%s" % target)
             return None
         if not isinstance(source, str) or source in ("", ".", "..") or os.path.basename(source) != source:
             self.log("信件來源名字不對：%s" % source)
             return None
-        target_home = resolve_home(target_world, None)
+        target_home = self.home_of(target_world)
         box = os.path.join(target_home, "inbox", source)
         path = os.path.join(box, aos_llm.stamp() + ".json")
         msg = dict(extra)
@@ -849,28 +985,149 @@ class Ctx:
         data = read_json(os.path.join(self.home, "kids.json"), {})
         return data if isinstance(data, dict) else {}
 
-    def llm_request(self, body, kind="side", priority=None, engine=None,
-                    requester=None, schedule_kind=None, deadline=None):
-        conf = read_json(os.path.join(self.home, "llm.json"), {})
-        conf = conf if isinstance(conf, dict) else {}
-        if priority is None:
-            priority = conf.get("priority")
-        if engine is None:
-            engine = conf.get("engine")
+    def send(self, kind, body, **opts):
         kind = str(kind or "side")
-        name = aos_llm.write_request(
-            self.llm_dir(), body, priority=priority, engine=engine,
-            name="%s-%s" % (self.name, kind),
-            requester=requester or team_requester(self.world) or self.name,
-            kind=schedule_kind, deadline=deadline)
+        if not PACK_OK.match(kind):
+            raise ValueError("旁線 kind 只能用英數字與底線：" + kind)
+        try:
+            timeout = max(1, int(opts.pop("timeout_steps", SIDE_TIMEOUT_STEPS)))
+        except (TypeError, ValueError):
+            timeout = SIDE_TIMEOUT_STEPS
+        target = opts.pop("target", None)
+        mail_reply_to = opts.pop("mail_reply_to", None)
+        if target is None and mail_reply_to is None:
+            target = self.llm_dir()
+            conf = read_json(os.path.join(self.home, "llm.json"), {})
+            conf = conf if isinstance(conf, dict) else {}
+            priority = opts.pop("priority", None)
+            engine = opts.pop("engine", None)
+            filename = aos_llm.write_request(
+                target, body, priority=conf.get("priority") if priority is None else priority,
+                engine=conf.get("engine") if engine is None else engine,
+                name="%s-%s" % (self.name, kind),
+                requester=opts.pop("requester", None) or team_requester(self.world) or self.name,
+                kind=opts.pop("schedule_kind", None), deadline=opts.pop("deadline", None))
+            request_path = os.path.join(target, "requests", filename)
+        else:
+            filename = "%s-%s-%s.json" % (self.name, kind, aos_llm.stamp())
+            request_path = None
+            if target is not None:
+                target = self.world_of(target)
+                request = dict(body) if isinstance(body, dict) else {"body": body}
+                request.setdefault("request", filename)
+                request_path = os.path.join(target, "requests", filename)
+                write_json_atomic(request_path, request)
+        name = os.path.splitext(filename)[0]
         pending = self.state.get("pending")
         if not isinstance(pending, list):
             pending = []
             self.state["pending"] = pending
-        pending.append({"name": name, "kind": kind,
-                        "since_step": int(self.state.get("step") or 0),
-                        "pack": self.pack})
+        item = {"id": name, "kind": kind, "pack": self.pack,
+                "since_step": int(self.state.get("step") or 0),
+                "timeout_steps": timeout}
+        if target is not None:
+            item.update({"result_dir": os.path.join(target, "results"),
+                         "result_name": filename, "request_path": request_path,
+                         "clock_world": target})
+        if mail_reply_to is not None:
+            item["mail_reply_to"] = str(mail_reply_to)
+        pending.append(item)
         return name
+
+    def pending(self):
+        rows = self.state.get("pending")
+        return [dict(row) for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+    def sleep_until(self, kind, request_id):
+        self.state["sleeping"] = {"kind": str(kind), "id": str(request_id)}
+
+    def _mail_result(self, reply_to):
+        for source in self.sources():
+            for name in self.unread(source):
+                for letter in self.mail_of(source, name):
+                    if letter.get("reply_to") == reply_to:
+                        self.mark_read(source, name)
+                        return letter
+        return None
+
+    def _finish_side(self, item, result):
+        result = dict(result) if isinstance(result, dict) else {"result": result}
+        if result.get("error") and not result.get("kind_of_error"):
+            result["kind_of_error"] = "llm"
+        write_json_atomic(os.path.join(self.home, "side", item["kind"], item["id"] + ".json"), result)
+        module = dict(self.loaded).get(item.get("pack"))
+        hook = getattr(module, "on_result", None) if module else None
+        wake = None
+        if hook:
+            try:
+                wake = hook(self.for_pack(item.get("pack")), item["kind"], item["id"], result)
+            except Exception as e:
+                self.log("工具包 %s 的 on_result 出錯：%s" % (item.get("pack"), e))
+        else:
+            self.put_mail(self.world, item["kind"], json.dumps(result, ensure_ascii=False),
+                          request=item["id"])
+        sleeping = self.state.get("sleeping")
+        if isinstance(sleeping, dict) and sleeping.get("id") == item["id"]:
+            self.state.pop("sleeping", None)
+        if result.get("error"):
+            text = _side_error_text(item["kind"], result)
+            self.state["last_error"] = text
+            self.reply(text, error=True)
+        return str(wake) if wake else None
+
+    def collect_results(self):
+        items, wake = self.pending(), []
+        self.state["pending"] = []
+        step = int(self.state.get("step") or 0)
+        for item in items:
+            result = None
+            if item.get("mail_reply_to"):
+                result = self._mail_result(item["mail_reply_to"])
+            elif item.get("result_dir"):
+                path = os.path.join(item["result_dir"], item.get("result_name") or
+                                    ((item.get("id") or "") + ".json"))
+                if os.path.isfile(path):
+                    result = read_json(path, {"error": "結果檔讀不成 JSON"})
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
+            elapsed = step - int(item.get("since_step") or 0)
+            if result is None and elapsed >= int(item.get("timeout_steps") or SIDE_TIMEOUT_STEPS):
+                result = {"error": "等了 %d 格仍沒有結果" % elapsed,
+                          "kind_of_error": "timeout"}
+            if result is None and item.get("clock_world") and elapsed > 0:
+                clock = self.clock_of(item["clock_world"])
+                if clock["kind"] == "none" or clock["state"] != "running":
+                    result = {"error": "處理這筆請求的鐘沒有在跑",
+                              "kind_of_error": "timeout"}
+            if result is None:
+                self.state["pending"].append(item)
+                continue
+            text = self._finish_side(item, result)
+            if text:
+                wake.append({"role": "user", "content": "[%s %s] %s" % (
+                    item["kind"], item["id"], text)})
+        return wake
+
+    def cancel(self, request_id):
+        found, left = None, []
+        for item in self.pending():
+            if found is None and item.get("id") == request_id:
+                found = item
+            else:
+                left.append(item)
+        if found is None:
+            return False
+        path = found.get("request_path")
+        if path and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        self.state["pending"] = left
+        self._finish_side(found, {"error": "請求已取消", "kind_of_error": "cancelled"})
+        return True
 
     def _clock(self, op, where, interval=None, no_wait=False):
         if not os.environ.get("AOS_DAEMON_DIR"):
@@ -914,6 +1171,10 @@ class Ctx:
         msg.update({"role": "assistant", "content": str(text)})
         step = int(self.state.get("step") or 0) + 1
         path = os.path.join(self.home, "outbox", "%04d.json" % step)
+        suffix = 1
+        while os.path.exists(path):
+            path = os.path.join(self.home, "outbox", "%04d-%02d.json" % (step, suffix))
+            suffix += 1
         write_json_atomic(path, msg)
         for name, module in self.loaded:
             hook = getattr(module, "on_reply", None)
@@ -950,7 +1211,6 @@ class Ctx:
 
 # ── 生小孩 ──────────────────────────────────────────────────────────────────
 def append_line(path, line):
-    """在檔尾加一行；已經有這一行就不加。"""
     old = ""
     if os.path.isfile(path):
         with open(path, encoding="utf-8", errors="replace") as f:
@@ -967,11 +1227,6 @@ def append_line(path, line):
 
 def spawn(world, home, name, persona, clock="shared", template=None, packs=None,
           task=None, depth=None):
-    """生一個子 agent 在 <home>/kids/<name>/。回 (成功嗎, 一句話)。
-
-    子自己就是一個完整的世界資料夾，本體平鋪在它底下（home＝`.`），
-    `.aos/inst` 是 `aos-agent exec .`。工具抄父的一份，llm.json 指到同一個 LLM 資料夾。
-    """
     if not NAME_OK.match(name or ""):
         return False, "子名只能用英數字、底線、減號：" + str(name)
     llm_abs = find_llm(home, world)
@@ -980,22 +1235,10 @@ def spawn(world, home, name, persona, clock="shared", template=None, packs=None,
     child = os.path.join(home, "kids", name)
     if os.path.exists(child):
         return False, "這個名字已經被佔走了：" + child
-    os.makedirs(child)
-
     template_dir = os.path.join(HERE, "templates", str(template or ""))
     has_template = bool(template and os.path.isdir(template_dir))
-    if has_template:
-        for filename in ("tools.json", "system-prompt.json", "prompts.json", "llm.json"):
-            src = os.path.join(template_dir, filename)
-            if os.path.isfile(src):
-                shutil.copyfile(src, os.path.join(child, filename))
-
-    write_json_atomic(os.path.join(child, "system-prompt.json"),
-                      {"role": "system", "content": persona})
-    if not os.path.isfile(os.path.join(child, "prompts.json")):
-        write_json_atomic(os.path.join(child, "prompts.json"), [])
     parent_packs, extra = tools_conf(home)
-    child_tools = read_json(os.path.join(child, "tools.json"), {}) if has_template else {}
+    child_tools = read_json(os.path.join(template_dir, "tools.json"), {}) if has_template else {}
     child_tools = child_tools if isinstance(child_tools, dict) else {}
     if isinstance(packs, list):
         child_tools["packs"] = [p for p in packs if isinstance(p, str)]
@@ -1003,35 +1246,27 @@ def spawn(world, home, name, persona, clock="shared", template=None, packs=None,
         child_tools["packs"] = parent_packs
     if "tools" not in child_tools:
         child_tools["tools"] = extra
-    write_json_atomic(os.path.join(child, "tools.json"), child_tools)
-    write_json_atomic(os.path.join(child, "state.json"),
-                      {"state": "idle", "step": 0, "busy": 0, "request": "",
-                       "last_usage": None, "started": now_iso(), "pending": [],
-                       "empty_replies": 0})
     conf = read_json(os.path.join(home, "llm.json"), {})
     conf = conf if isinstance(conf, dict) else {}
-    child_conf = read_json(os.path.join(child, "llm.json"), {}) if has_template else {}
+    child_conf = read_json(os.path.join(template_dir, "llm.json"), {}) if has_template else {}
     child_conf = child_conf if isinstance(child_conf, dict) else {}
     child_conf["dir"] = os.path.relpath(llm_abs, child)
     for key in ("priority", "engine"):
         if conf.get(key) is not None:
             child_conf[key] = conf[key]
-    write_json_atomic(os.path.join(child, "llm.json"), child_conf)
-    os.makedirs(os.path.join(child, ".aos"), exist_ok=True)
-    with open(os.path.join(child, ".aos", "inst"), "w", encoding="utf-8") as f:
-        f.write(CHILD_INST)
-
     parent_name = os.path.basename(os.path.abspath(world).rstrip(os.sep)) or "parent"
-    write_json_atomic(os.path.join(child, "parent.json"),
-                      {"name": parent_name, "dir": os.path.abspath(world),
-                       "clock": clock})
+    prompts = read_json(os.path.join(template_dir, "prompts.json"), []) if has_template else []
+    create_world(child, tools=child_tools,
+                 persona={"role": "system", "content": persona}, prompts=prompts,
+                 llm=child_conf, parent={"name": parent_name, "dir": os.path.abspath(world),
+                                         "clock": clock})
     parent_ctx = Ctx(world, home)
     child_ctx = Ctx(child, child)
     parent_ctx.add_contact(name, child)
     child_ctx.add_contact(parent_name, world)
     registry = parent_ctx.kids()
     child_depth = int(depth) if isinstance(depth, int) and not isinstance(depth, bool) \
-        else parent_ctx.self_depth() + 1
+        else parent_ctx.depth() + 1
     registry[name] = {
         "name": name, "dir": os.path.abspath(child), "clock": clock,
         "created": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -1066,7 +1301,6 @@ def append_history(home, msgs):
 
 
 def put_mail(home, source, text, sender=None):
-    """往 inbox/<source>/ 丟一封信，回寫到哪個檔。"""
     box = os.path.join(inbox_dir(home), source)
     os.makedirs(box, exist_ok=True)
     path = os.path.join(box, aos_llm.stamp() + ".json")

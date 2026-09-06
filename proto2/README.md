@@ -43,22 +43,21 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 |---|---|---|
 | `idle` | 掃一遍 `inbox/*/`（不含 `read/`），有沒讀過的信就接進記憶 | 有信 `llm`，沒信留 `idle` |
 | `llm` | 人格＋工具包預設 prompt＋記憶（＋工具清單）寫成請求丟進 LLM 資料夾的 `requests/` | `wait` |
-| `wait` | LLM 資料夾的 `results/<請求名>` 出現了就撿回來，assistant 接進記憶 | 撿到 `act`；是 `error` 就把原因送進 outbox 後回 `idle`；沒撿到先留 `wait`，滿 60 格也送提示後回 `idle` |
+| `wait` | 撿主線 LLM 結果；缺鐘立刻報錯 | 撿到 `act`；錯誤回 `idle`；有鐘但 60 格沒回也報錯 |
 | `act` | 有 `tool_calls` 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 `outbox/` | 有工具 `collect`，有文字 `idle`；只回空白就不寫 outbox、記一次後回 `idle` |
 | `collect` | 再掃一次信箱（沒新信也照走） | `llm` |
 
-`step` 是被推了幾格，`busy` 是真做事幾格；`last_usage` 是上次用量，`empty_replies` 是空白回覆次數。`today_usage_all` 是整個 LLM 世界今天的加總。agent 不寫 `.aos/inst`，避免洗掉 shared 小孩。
+`llm.json` 可設每題格數硬上限 `max_steps_per_question`（預設 60）與每日 `max_tokens_per_day`。超過會回一句話等使用者；新 user 信會重置題目格數。`status` 九欄列狀態、等待、缺鐘、最後錯誤、格數、今日用量與最近五題格數。agent 不寫 `.aos/inst`，避免洗掉 shared 小孩。
+
+旁線包只用 `Ctx.send/pending/cancel/sleep_until`。agent 睡著時不叫主線 LLM；共用層獨占 `results/`，保存到 `<home>/side/<kind>/<id>.json` 再叫該包 `on_result`。逾時、失敗、取消、缺鐘都走同一路並回一則聊天錯誤。
 
 ### 信箱：一個來源一個資料夾
 
 一封信就是一個 JSON 檔：`{"from": "bob", "time": "...", "content": "..."}`，也可放一個信件陣列。來源就是 `inbox/` 底下的資料夾名。
 
-- `idle` 掃到未讀就去問 LLM，但**不會把信整包塞進 prompt**，只加一句「你有新信：team 1 封。
-  用信箱工具去讀。」，剩下讓模型自己用信箱工具去讀。
-- **同一封信只通知一次**（通知過的記在 `state.json` 的 `announced`）。模型看到摘要卻懶得讀，
-  也不會被一直重新叫醒——不然 `idle` 會一輪一輪叫 LLM，錢燒不完。信被讀掉就自動掉出清單。
-- **唯一的例外是來源 `user`**：內容直接當成一則 user 訊息接進記憶（前面加 `[user] `），檔案
-  當場搬進 `read/`。這樣跟 agent 講話才是一個來回。
+- `idle` 掃到未讀就去問 LLM，但**不會把信整包塞進 prompt**，只加一句來源摘要，剩下讓模型用信箱工具讀。
+- **同一封信只通知一次**（記在 `state.json` 的 `announced`）；信被讀掉就自動掉出清單。
+- **來源 `user` 例外**：內容直接當 user 訊息接進記憶（前面加 `[user] `），檔案當場搬進 `read/`。
 - 讀過的信搬進該來源的 `read/`，不會再算未讀。
 
 ### 工具包：一包一檔
@@ -76,13 +75,13 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 
 | 包名 | 一句話 | 文件 |
 |---|---|---|
-| `bigmem` | 把舊對話送進 SQLite 記憶世界。 | [docs/bigmem.md](docs/bigmem.md) |
-| `branch` | 同時跑幾條思路，再挑一條接手。 | [docs/branch.md](docs/branch.md) |
+| `bigmem` | 送 SQLite 記憶世界，睡到結果回來。 | [docs/bigmem.md](docs/bigmem.md) |
+| `branch` | 同時跑幾條思路，齊了只叫一次 join。 | [docs/branch.md](docs/branch.md) |
 | `code` | 搜尋、留 checkpoint、看 diff、復原檔案。 | [docs/code.md](docs/code.md) |
-| `communication` | 寄信、回信、廣播與等信。 | [docs/communication.md](docs/communication.md) |
+| `communication` | 寄信、回信、廣播，並睡到等的信回來。 | [docs/communication.md](docs/communication.md) |
 | `cost` | 記每次工具的時間、字數、token 與價錢。 | [docs/cost.md](docs/cost.md) |
 | `fs` | 讀寫檔案、改一段文字、列目錄與跑短指令。 | [docs/fs.md](docs/fs.md) |
-| `jobs` | 把長指令搬到另一個有自己時鐘的世界。 | [docs/jobs.md](docs/jobs.md) |
+| `jobs` | 把長指令搬到另一顆鐘，睡到做完。 | [docs/jobs.md](docs/jobs.md) |
 | `kids` | 生小孩、派活、看進度、暫停與收掉。 | [docs/kids.md](docs/kids.md) |
 | `mailbox` | 讀自己的信箱，讀過就搬進 `read/`。 | [docs/mailbox.md](docs/mailbox.md) |
 | `memory` | 整理本體內的短期筆記與舊對話。 | [docs/memory.md](docs/memory.md) |
@@ -95,11 +94,9 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 
 舊包名 `shell` 會自動改載 `fs` 並提醒；說明留在 [docs/shell.md](docs/shell.md)。
 
-**加一包 = 加 `packs/<包>.py` + `tests/<包>.sh` + `docs/<包>.md`。README 只加表裡一行。**
-共用接口與掛勾看 [docs/packs-api.md](docs/packs-api.md)。
+**加一包 = 加 `packs/<包>.py` + `tests/<包>.sh` + `docs/<包>.md`。README 只加表裡一行。** 共用接口與掛勾看 [docs/packs-api.md](docs/packs-api.md)。
 
-`tools[]` 是另一條路：**一個工具就是一句 shell 指令**，`command` 不送 LLM，跑的時候丟 shell、
-參數 JSON 從 stdin 進去。同名時工具包贏。
+`tools[]` 是另一條路：**一個工具就是一句 shell 指令**，`command` 不送 LLM，參數 JSON 從 stdin 進去。工具優先規則只寫在 [docs/packs-api.md](docs/packs-api.md)。
 
 ### 子世界：生一個小孩
 
@@ -204,7 +201,8 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
   跑，否則 kernel 的 start／stop 不會影響到他——`start` 不重開它、巡邏也不標 dead；`continue` 進程還
   在就 SIGCONT，不在就重開一個；register 到 running／paused 的路徑會被擋（叫你用 continue 或先
   unregister）。
-- `register` 可重複給 `--env K=V`，也可用 `--env-from` 讀 600 權限的檔；daemon `config.json` 的 `legacy_env` 決定是否先繼承整包環境，細節見 [docs/identity-and-env.md](docs/identity-and-env.md)。
+- `register` 可重複給 `--env K=V`，也可用 `--env-from` 讀 600 權限的檔；時鐘預設不繼承
+  kernel 環境，只有 `legacy_env: true` 才整包繼承。細節見 [docs/identity-and-env.md](docs/identity-and-env.md)。
 - kernel 停掉後 `ls` 的 `stopped` 那列若還有 pid，那只是上一次的 pid 紀錄，不代表它還活著。
 - 幾千個時鐘就是幾千個小 json 檔，現在夠用；管理介面、合併檔案是以後的事，不歸 kernel 管。
 
@@ -256,4 +254,4 @@ echo '{"priority": 5, "messages": [{"role": "user", "content": "1+1=?"}]}' \
 ## 目前刻意不做
 
 鎖、fsync、重試、串流、其他子命令、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。
-並發只做到每台引擎的 `max_concurrent`；HTTP timeout 是 300 秒，agent 等 60 格會提示。退避與配額等撞到再說。
+並發只做到每台引擎的 `max_concurrent`；HTTP timeout 是 300 秒。退避仍不做。

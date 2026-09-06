@@ -10,7 +10,7 @@ daemon 資料夾＝argv[2]，沒給就用環境變數 AOS_DAEMON_DIR（例如 ~/
 裡面長這樣（第一次 start 會自己建）：
 
     kernel.json      {"pid": N, "started": "...", "tick": N}   跑著的 kernel 自己寫
-    config.json      {"legacy_env": true}                         kernel 的設定；沒寫也是 true
+    config.json      {"legacy_env": false}                        kernel 的設定；沒寫也是 false
     kernel.log       kernel 自己的輸出
     requests/        待處理的請求檔 <時間戳>.json
     requests/done/   處理過的，同檔名，多一個 "result"
@@ -42,8 +42,8 @@ stop 只殺進程、不刪時鐘檔也不改狀態，所以 stop → start 跑�
 paused；start 的 resume 不會幫它重開（log 記 `tick 0 keep-paused`）；tick 巡邏看到 paused 的
 進程不在也不標 dead。要它再跑：`continue`（進程還在就 SIGCONT，不在就重開一個）。
 
-**環境相容開關**：daemon 目錄的 `config.json` 沒寫 `legacy_env` 時預設 true，時鐘照舊拿到
-kernel 的整包環境。改成 false 後只給 PATH／HOME／USER／LANG／AOS_DAEMON_DIR／AOS_LLM_DIR，
+**環境相容開關**：daemon 目錄的 `config.json` 沒寫 `legacy_env` 時預設 false，只給時鐘
+PATH／HOME／USER／LANG／AOS_DAEMON_DIR／AOS_LLM_DIR。設成 true 才繼承 kernel 的整包環境，
 再套該時鐘的 env_keep → env → env_from；env_from 檔不是 600 就不開鐘，原因寫進請求結果。
 """
 import argparse
@@ -202,9 +202,9 @@ def read_env_file(path):
 
 
 def build_env(home, cfg, user):
-    """組時鐘環境；legacy_env 預設 true，false 才從乾淨底開始。"""
+    """組時鐘環境；預設乾淨，legacy_env=true 才整包繼承。"""
     daemon_cfg = read_json(os.path.join(home.dir, "config.json"), {})
-    legacy = not isinstance(daemon_cfg, dict) or daemon_cfg.get("legacy_env", True) is not False
+    legacy = isinstance(daemon_cfg, dict) and daemon_cfg.get("legacy_env") is True
     home_dir, user_name, error = target_identity(user)
     if error:
         return None, error

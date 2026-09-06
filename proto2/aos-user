@@ -31,7 +31,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aos_agent import (   # noqa: E402
-    DIRECT_SOURCE, create_team_world, load_pack, normalize_team_budget, now_iso,
+    DIRECT_SOURCE, create_team_world, create_world, load_pack, normalize_team_budget, now_iso,
     outbox_content, outbox_names, put_mail, read_json, resolve_home, spawn,
     status_of, team_root_of, team_status_of, warn, write_json_atomic)
 
@@ -214,29 +214,6 @@ def configured_settings(args):
     return settings
 
 
-def write_new_world(world, home_arg, settings):
-    home = os.path.abspath(os.path.join(world, home_arg))
-    os.makedirs(os.path.join(world, ".aos"))
-    os.makedirs(home, exist_ok=True)
-    os.makedirs(os.path.join(home, "inbox"))
-    os.makedirs(os.path.join(home, "outbox"))
-    inst = "aos-agent exec ."
-    if home_arg != ".":
-        inst += " --home " + shlex.quote(home_arg)
-    with open(os.path.join(world, ".aos", "inst"), "w", encoding="utf-8") as f:
-        f.write(inst + "\n")
-    write_json_atomic(os.path.join(home, "tools.json"), settings["tools"])
-    write_json_atomic(os.path.join(home, "system-prompt.json"), settings["persona"])
-    write_json_atomic(os.path.join(home, "prompts.json"), settings["prompts"])
-    write_json_atomic(os.path.join(home, "llm.json"), settings["llm"])
-    rel = os.path.relpath(home, world)
-    prefix = "" if rel == "." else rel.rstrip(os.sep) + "/"
-    with open(os.path.join(world, ".gitignore"), "w", encoding="utf-8") as f:
-        for name in ("state.json", "llm-result.json", "inbox/", "outbox/", "kids/"):
-            f.write(prefix + name + "\n")
-    return home
-
-
 def do_new(args):
     world = os.path.abspath(args.dir)
     if os.path.exists(world):
@@ -254,7 +231,13 @@ def do_new(args):
         return 0
     home_arg = args.home or "agent"
     clock = args.clock or "none"
-    home = write_new_world(world, home_arg, settings)
+    try:
+        home = create_world(world, home=home_arg, tools=settings["tools"],
+                            persona=settings["persona"], prompts=settings["prompts"],
+                            llm=settings["llm"])
+    except (OSError, ValueError) as e:
+        warn(str(e))
+        return 2
     clock_text = "沒開"
     if clock == "own":
         if not os.environ.get("AOS_DAEMON_DIR"):

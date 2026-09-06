@@ -8,8 +8,7 @@ PROMPT = (
     "子 agent：spawn 生一個有自己人格與記憶的小孩。clock 不確定就用 shared；"
     "使用者說 coder、manager 或 chat 時，把同名值放進 template；模板會帶自己的工具包。"
     "shared 跟你一起走，own 有自己的鐘。kids_tell 派活，kids_list 看進度，"
-    "kids_pause／kids_resume 暫停或續跑，kids_kill 收掉。不要卡在這一格等小孩；"
-    "先告訴使用者你已派工，下一格再看信箱或 kids_list。小孩回話會自動進你的信箱。"
+    "kids_pause／kids_resume 暫停或續跑，kids_kill 收掉。小孩回話會自動進你的信箱。"
 )
 
 
@@ -72,80 +71,6 @@ def _kid(ctx, name):
     return info, os.path.abspath(path), None
 
 
-def _depth(ctx):
-    """沿 parent.json 往上數。spawn 生的子世界都是平鋪 home，最多只走兩次。"""
-    depth = 0
-    parent = ctx.parent()
-    while isinstance(parent, dict) and parent.get("dir"):
-        depth += 1
-        parent = ctx.read_json(os.path.join(parent["dir"], "parent.json"), None)
-    return depth
-
-
-def _inst_lines(ctx):
-    path = os.path.join(ctx.world, ".aos", "inst")
-    try:
-        with open(path, encoding="utf-8", errors="replace") as f:
-            return path, f.read().splitlines()
-    except OSError:
-        return path, []
-
-
-def _shared_command(ctx, child):
-    return "aos-exec " + os.path.relpath(child, ctx.world)
-
-
-def _set_shared(ctx, child, action):
-    path, lines = _inst_lines(ctx)
-    command = _shared_command(ctx, child)
-    paused = "# " + command
-    found = False
-    out = []
-    for line in lines:
-        if line.strip() == command:
-            found = True
-            if action == "pause":
-                out.append(paused)
-            elif action == "resume":
-                out.append(line)
-        elif line.strip() == paused:
-            found = True
-            if action == "resume":
-                out.append(command)
-            elif action == "pause":
-                out.append(line)
-        else:
-            out.append(line)
-    if not found:
-        return False, "父的 .aos/inst 找不到這個小孩"
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(out) + ("\n" if out else ""))
-    except OSError as e:
-        return False, "改不了父的 .aos/inst：%s" % e
-    words = {"pause": "暫停了", "resume": "續跑了", "kill": "收掉了"}
-    return True, words[action]
-
-
-def _shared_paused(ctx, child):
-    _path, lines = _inst_lines(ctx)
-    return ("# " + _shared_command(ctx, child)) in [line.strip() for line in lines]
-
-
-def _own_paused(ctx, child, fallback=False):
-    daemon = os.environ.get("AOS_DAEMON_DIR")
-    clocks = os.path.join(daemon, "clocks") if daemon else ""
-    if os.path.isdir(clocks):
-        for filename in os.listdir(clocks):
-            if not filename.endswith(".json"):
-                continue
-            row = ctx.read_json(os.path.join(clocks, filename), None)
-            if (isinstance(row, dict) and row.get("dir")
-                    and os.path.realpath(row["dir"]) == os.path.realpath(child)):
-                return row.get("state") == "paused"
-    return bool(fallback)
-
-
 def _unread(child):
     box = os.path.join(child, "inbox")
     if not os.path.isdir(box):
@@ -176,7 +101,7 @@ def _spawn(args, ctx):
     if clock not in ("shared", "own"):
         return {"ok": False, "name": name, "path": None, "clock": clock,
                 "message": "clock 只能是 shared 或 own"}
-    depth = _depth(ctx)
+    depth = ctx.depth()
     if depth >= MAX_DEPTH:
         return {"ok": False, "name": name, "path": None, "clock": clock,
                 "message": "你已經在第 %d 層，不能再生了" % depth}
@@ -202,13 +127,14 @@ def _list(ctx):
         child = os.path.abspath(info.get("dir") or os.path.join(ctx.kids_dir(), name))
         state = ctx.read_json(os.path.join(child, "state.json"), {})
         state = state if isinstance(state, dict) else {}
-        clock = info.get("clock") or "shared"
+        clock_info = ctx.clock_of(child)
+        clock = clock_info["kind"]
         if not info.get("alive", True):
             paused = False
-        elif clock == "own":
-            paused = _own_paused(ctx, child, info.get("paused", False))
+        elif clock_info["kind"] == "none":
+            paused = bool(info.get("paused", False))
         else:
-            paused = _shared_paused(ctx, child)
+            paused = clock_info["state"] == "paused"
         rows.append({
             "name": name, "clock": clock, "state": state.get("state") or "idle",
             "busy": state.get("busy") or 0, "step": state.get("step") or 0,
@@ -224,7 +150,7 @@ def _pause_or_resume(name, ctx, resume=False):
     if info.get("clock") == "own":
         ok, message = (ctx.continue_clock(child) if resume else ctx.pause_clock(child))
     else:
-        ok, message = _set_shared(ctx, child, "resume" if resume else "pause")
+        ok, message = ctx.shared_clock(child, "resume" if resume else "pause")
     if ok:
         registry = _registry(ctx)
         registry[name]["paused"] = not resume
@@ -241,7 +167,7 @@ def _kill(args, ctx):
     if info.get("clock") == "own":
         ok, message = ctx.unregister_clock(child)
     else:
-        ok, message = _set_shared(ctx, child, "kill")
+        ok, message = ctx.shared_clock(child, "kill")
     if not ok:
         return {"ok": False, "name": name, "kept": keep, "message": message}
     registry = _registry(ctx)
