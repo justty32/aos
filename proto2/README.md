@@ -27,7 +27,8 @@
 人格 `system-prompt.json`、記憶 `prompts.json`（OpenAI messages 陣列，assistant 訊息只留
 `role`／`content`／`tool_calls`）、這輪要加的話 `new-prompts.json`、工具 `tools.json`（`{name,
 description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shell、參數 JSON 從 stdin
-進去）、LLM 在哪 `llm.json`（`{"dir": "../llm"}`，相對於 agent 資料夾本身）、收新訊息的地方
+進去）、LLM 在哪 `llm.json`（`{"dir": "../llm"}`，相對於 agent 資料夾本身；沒寫就看
+`AOS_LLM_DIR`，還可以寫 `priority`／`engine` 抄進每個請求）、收新訊息的地方
 `new-prompts/`（收走搬進 `new-prompts/archived/`）、上次回覆 `llm-result.json`、走到哪
 `state.json`。**agent 自己不打 HTTP**：要問 LLM 就寫一個請求檔丟進隔壁 LLM 資料夾，下一格再去撿。
 每次執行只做一格：
@@ -41,7 +42,8 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 | `collect` | 再收一次 `new-prompts/`，接在既有的 `new-prompts.json` 後面（沒新信也照走） | `llm` |
 
 `state.json` 的 `step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格（`idle` 沒信、`wait`
-還沒等到不算）——shared 鐘的子 agent 沒人跟它說話時，`step` 一直漲但 `busy` 不會動。
+還沒等到不算）——shared 鐘的子 agent 沒人跟它說話時，`step` 一直漲但 `busy` 不會動；`last_usage`
+是上次撿回覆時 LLM 附的那包用量。
 
 記憶是在 `wait` 真的撿到回覆才更新的（`prompts.json` 接上 `new-prompts`、清空 `new-prompts.json`），
 不是丟請求那格——中途撿不回來的話，這輪講的話才不會憑空消失。
@@ -53,21 +55,33 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 `archived/`**（`collect` 中途補收不清，這一輪收的留到輪完）。每格結束都把 `<aos-agent-step
 絕對路徑> .` 寫回 `<dir>/.aos/inst`，讓 `aos-loop` 回來看有沒有新信；`--no-write-inst` 就不寫。
 
-## LLM 資料夾：aos-llm-step／aos-llm-ask
+## LLM 資料夾：aos-llm-step／aos-llm
 
 LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾**，也靠 `aos-loop` 一格一格轉。
-東西全在 `<dir>/.aos/llm/`：引擎 `engine.json`（`{base_url, model, api_key_env}`）、請求箱
-`requests/`（一個檔一個請求，內容就是 chat/completions 的 body，至少有 `messages`，可以有
-`tools`，但**不含 `model`**——那是 engine.json 的事）、處理完的 `requests/done/`、回覆
-`results/<跟請求同檔名>`。誰想用 LLM，就往 `requests/` 丟一個檔，下一格自然會有結果。
+東西全在 `<dir>/.aos/llm/`：引擎清單 `engines.json`、請求箱 `requests/`、做完的 `requests/done/`、
+回覆 `results/<跟請求同檔名>`、用量 `usage/<YYYY-MM-DD>.json`、走到哪 `state.json`。誰想用 LLM，
+就往 `requests/` 丟一個檔，下一格自然會有結果。
 
-- `aos-llm-step [dir]`——走一格：拿 `requests/` 頂層排序後**最舊的那一個**，補上 model 打
-  `{base_url}/chat/completions`，整包原始回覆寫進 `results/`、請求搬去 `requests/done/`；沒請求就
-  印 `idle` 什麼都不做。打不通：印一行 stderr、請求留在原地下一格再試、退出碼 1。請求讀不成
-  JSON：照樣搬走，結果檔寫 `{"error": "..."}`，免得丟請求的人等到天荒地老。
-- `aos-llm-ask [dir] [--no-wait]`——從 stdin 讀整包 body 丟進 `requests/<時間戳>.json`，然後每
-  0.5 秒看 `results/` 有沒有同名檔，有就把整包印到 stdout、**把結果檔刪掉**（拿走就沒了）；
-  Ctrl-C 退出 130。`--no-wait` 只丟不等，把檔名印出來就走。
+`engines.json` 是一個**清單**，第一個是預設，一個引擎就是一個 endpoint＋model 配幾個參數：
+`{"name": "local", "base_url": ".../v1", "model": "local", "params": {"temperature": 0.7}}`。
+`api_key_env` 是環境變數的**名字**，那個變數有值才送 `Authorization: Bearer`；`params` 原樣帶
+進 body、不檢查。只有舊的 `engine.json` 也認，當成一個叫 `default` 的單元素清單。
+
+請求檔是一個 JSON 物件，aos 只吃三個鍵：`priority`（整數，預設 0，**大的先做**）、`engine`（預
+設第一個）、`params`（蓋在引擎 `params` 上）；**其他頂層鍵全部原樣當成 chat/completions 的 body
+欄位**，所以 agent 丟的請求不用改。body ＝ 引擎 `params` ← 請求 `params` ← 請求其他頂層鍵，
+**`model` 一律引擎說了算**。
+
+- `aos-llm-step [dir]`——走一格：讀不成 JSON 的請求先各回一個 error 清掉，剩下的照（優先級、先
+  來後到）排序**只做第一個**。整包原始回覆多掛一個 `aos`（`engine`／`base_url`／`model`／
+  `priority`／`took_ms`／`usage`）寫進 `results/`、請求搬去 `requests/done/`。**打不通、HTTP 錯、
+  不認得的引擎，一樣回一個帶 `error` 的結果、一樣搬走**，不會再有人等到天荒地老。用量記進
+  `usage/<今天>.json`，一個 `"<base_url>|<model>"` 一列累加。退出碼永遠 0，除非那個資料夾根本
+  沒有 `.aos/llm/`（退 1）。
+- `aos-llm send <檔> [--priority N] [--engine NAME] [--no-wait] [--timeout SEC]`——丟一個請求再等
+  結果，整包印到 stdout、**把結果檔刪掉**（拿走就沒了），裡面有 `error` 就退 1；`<檔>` 給 `-` 就
+  讀 stdin。`aos-llm usage [日期]` 印當天用量表，`aos-llm ls` 印排隊順序。LLM 資料夾在哪：`--llm`，
+  沒給就看 **`AOS_LLM_DIR`**，都沒有印一句退 2。`aos-llm-ask [dir]` 還在，是它的一層薄殼。
 
 ## 跟 agent 說話：say／listen／talk
 
@@ -138,6 +152,7 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
 ```sh
 export PATH="$PWD/proto2:$PATH"
 export AOS_DAEMON_DIR=~/.aosd
+export AOS_LLM_DIR=$PWD/proto2/examples/llm    # aos-llm send/usage/ls 就不用打 --llm
 aos-daemon-kernel start                     # kernel 常駐起來（LM Studio 要先載一顆模型）
 aos-daemon register proto2/examples/llm     # LLM 資料夾一個時鐘
 aos-daemon register proto2/examples/agent   # agent 一個時鐘
@@ -150,7 +165,7 @@ aos-daemon-kernel stop                      # 玩完，時鐘一起收掉
 不是一直「等 LLM」、或「沒有 .aos/inst」。不想開 daemon 也行，一個終端機開一個 `aos-loop <資料夾>
 --keep-inst` 效果一樣。其他跑法：`aos-exec examples/hello.sh`、`aos-loop examples/loop
 --stop-when-empty --interval 0`、`bash proto2/test.sh`；只想問一句話不開 agent：`echo
-'{"messages":[{"role":"user","content":"1+1=?"}]}' | proto2/aos-llm-ask proto2/examples/llm`。
+'{"messages":[{"role":"user","content":"1+1=?"}]}' | proto2/aos-llm send -`（吃 `AOS_LLM_DIR`）。
 
 ## 目前刻意不做
 
