@@ -26,6 +26,9 @@ LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也
 
 引擎可以寫 `"max_concurrent": N`（不寫＝1）：**那台一次最多同時跑幾個請求**。
 例如 deepseek 開 2、本機 LM Studio 開 1，四個請求進來就是三個開跑、一個排著。
+引擎也可以寫 `"strip_think": false`（不寫＝true）：預設會把 qwen 那種漏進 `content` 的
+`<think>…</think>` 切掉（只留最後一個 `</think>` 之後的東西），這是 LLM 這一側的家務，
+撿結果的人不用自己處理；`reasoning_content` 這種供應商私有欄位原樣不動。
 
   aos-llm exec [dir]
       **每一格做的事**，不給 dir 就是目前目錄。一格很短，**絕對不等網路**：
@@ -427,6 +430,23 @@ def build_body(engine, req):
     return body
 
 
+def strip_think(answer):
+    """把 qwen 這種「思考漏進 content」的東西清掉——**這是 LLM 這一側的家務**，
+    不該讓每個 agent 自己去處理。每個 `choices[*].message.content`：有 `</think>` 就只留
+    最後一個之後的東西，再去頭尾空白。`reasoning_content` 那種供應商自己的私有欄位原樣不動。
+    引擎寫 `"strip_think": false` 就不清（預設清）。"""
+    for choice in (answer.get("choices") or []):
+        if not isinstance(choice, dict):
+            continue
+        message = choice.get("message")
+        if not isinstance(message, dict):
+            continue
+        text = message.get("content")
+        if isinstance(text, str) and "</think>" in text:
+            message["content"] = text.rsplit("</think>", 1)[1].strip()
+    return answer
+
+
 def call(engine, body):
     base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
     headers = {"Content-Type": "application/json"}
@@ -481,6 +501,8 @@ def do_worker(args):
     usage = answer.get("usage") if ok else None
     if ok:
         out["usage"] = usage if isinstance(usage, dict) else None
+        if engine.get("strip_think", True):
+            answer = strip_think(answer)
     answer["aos"] = out
 
     lib.write_json_atomic(os.path.join(home, "results", name), answer)
