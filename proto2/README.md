@@ -58,30 +58,36 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 ## LLM 資料夾：aos-llm-step／aos-llm
 
 LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾**，也靠 `aos-loop` 一格一格轉。
-東西全在 `<dir>/.aos/llm/`：引擎清單 `engines.json`、請求箱 `requests/`、做完的 `requests/done/`、
-回覆 `results/<跟請求同檔名>`、用量 `usage/<YYYY-MM-DD>.json`、走到哪 `state.json`。誰想用 LLM，
-就往 `requests/` 丟一個檔，下一格自然會有結果。
+東西全在 `<dir>/.aos/llm/`：引擎清單 `engines.json`、預設值 `defaults.json`、請求箱 `requests/`、
+做完的 `requests/done/`、回覆 `results/<跟請求同檔名>`、用量 `usage/<YYYY-MM-DD>.json`、走到哪
+`state.json`。誰想用 LLM，就往 `requests/` 丟一個檔，下一格自然會有結果。
 
 `engines.json` 是一個**清單**，第一個是預設，一個引擎就是一個 endpoint＋model 配幾個參數：
 `{"name": "local", "base_url": ".../v1", "model": "local", "params": {"temperature": 0.7}}`。
 `api_key_env` 是環境變數的**名字**，那個變數有值才送 `Authorization: Bearer`；`params` 原樣帶
 進 body、不檢查。只有舊的 `engine.json` 也認，當成一個叫 `default` 的單元素清單。
 
-請求檔是一個 JSON 物件，aos 只吃三個鍵：`priority`（整數，預設 0，**大的先做**）、`engine`（預
-設第一個）、`params`（蓋在引擎 `params` 上）；**其他頂層鍵全部原樣當成 chat/completions 的 body
-欄位**，所以 agent 丟的請求不用改。body ＝ 引擎 `params` ← 請求 `params` ← 請求其他頂層鍵，
-**`model` 一律引擎說了算**。
+`defaults.json`（可有可無）是**這個資料夾自己的預設**：`{"engine": "local", "priority": 0}`——請求
+沒寫的鍵由它補，它也沒寫（或根本沒這個檔）就是 `engines.json` 第一台＋`priority` 0。
+
+請求檔是一個 JSON 物件，aos 只吃三個鍵：`priority`（整數，**大的先做**）、`engine`（引擎名字）、
+`params`（蓋在引擎 `params` 上）；**沒寫 `priority`／`engine` 就走上面那組預設**（認不得的引擎名字
+還是錯）。**其他頂層鍵全部原樣當成 chat/completions 的 body 欄位**，所以 agent 丟的請求不用改。
+body ＝ 引擎 `params` ← 請求 `params` ← 請求其他頂層鍵，**`model` 一律引擎說了算**。
 
 - `aos-llm-step [dir]`——走一格：讀不成 JSON 的請求先各回一個 error 清掉，剩下的照（優先級、先
   來後到）排序**只做第一個**。整包原始回覆多掛一個 `aos`（`engine`／`base_url`／`model`／
   `priority`／`took_ms`／`usage`）寫進 `results/`、請求搬去 `requests/done/`。**打不通、HTTP 錯、
   不認得的引擎，一樣回一個帶 `error` 的結果、一樣搬走**，不會再有人等到天荒地老。用量記進
-  `usage/<今天>.json`，一個 `"<base_url>|<model>"` 一列累加。退出碼永遠 0，除非那個資料夾根本
-  沒有 `.aos/llm/`（退 1）。
+  `usage/<今天>.json`，一個 `"<base_url>|<model>"` 一列累加：**帳本是拿來算錢的，模型回的 `usage`
+  裡每個數字都會累加，思考 token、快取命中也在內**（巢狀的攤成 `completion_tokens_details.
+  reasoning_tokens` 這種點號鍵，外加我們自己數的 `requests`／`errors`／`took_ms`）。退出碼永遠 0，
+  除非那個資料夾根本沒有 `.aos/llm/`（退 1）。
 - `aos-llm send <檔> [--priority N] [--engine NAME] [--no-wait] [--timeout SEC]`——丟一個請求再等
   結果，整包印到 stdout、**把結果檔刪掉**（拿走就沒了），裡面有 `error` 就退 1；`<檔>` 給 `-` 就
-  讀 stdin。`aos-llm usage [日期]` 印當天用量表，`aos-llm ls` 印排隊順序。LLM 資料夾在哪：`--llm`，
-  沒給就看 **`AOS_LLM_DIR`**，都沒有印一句退 2。`aos-llm-ask [dir]` 還在，是它的一層薄殼。
+  讀 stdin。旗標會蓋掉檔裡寫的，兩邊都沒寫就不補、讓 LLM 資料夾用自己的預設。`aos-llm usage
+  [日期]` 印當天用量表（有哪些欄看供應商回了什麼），`aos-llm ls` 印排隊順序（預設補出來的值印成
+  `local*`）。LLM 資料夾在哪：`--dir`，沒給就看 **`AOS_LLM_DIR`**，都沒有印一句退 2。
 
 ## 跟 agent 說話：say／listen／talk
 
@@ -145,14 +151,14 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
 
 ## 放進 PATH
 
-`aos-exec`／`aos-loop` 會自動把自己所在的資料夾加進 PATH，`.aos/inst` 裡直接寫工具名就找得到；終端機直接打的 `talk`／`say`／`ask` 要自己設一次：`export PATH="$PWD/proto2:$PATH"`。`llm.json` 的 `../llm` 相對於 agent 資料夾，agent 跟 llm 要當兄弟目錄一起搬。
+`aos-exec`／`aos-loop` 會自動把自己所在的資料夾加進 PATH，`.aos/inst` 裡直接寫工具名就找得到；終端機直接打的 `talk`／`say`／`llm` 要自己設一次：`export PATH="$PWD/proto2:$PATH"`。`llm.json` 的 `../llm` 相對於 agent 資料夾，agent 跟 llm 要當兄弟目錄一起搬。
 
 ## 怎麼玩
 
 ```sh
 export PATH="$PWD/proto2:$PATH"
 export AOS_DAEMON_DIR=~/.aosd
-export AOS_LLM_DIR=$PWD/proto2/examples/llm    # aos-llm send/usage/ls 就不用打 --llm
+export AOS_LLM_DIR=$PWD/proto2/examples/llm    # aos-llm send/usage/ls 就不用打 --dir
 aos-daemon-kernel start                     # kernel 常駐起來（LM Studio 要先載一顆模型）
 aos-daemon register proto2/examples/llm     # LLM 資料夾一個時鐘
 aos-daemon register proto2/examples/agent   # agent 一個時鐘

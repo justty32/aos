@@ -3,12 +3,15 @@
 
 LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾。東西全在 <dir>/.aos/llm/ 底下：
 引擎清單 engines.json（一個陣列，第一個是預設；每個引擎是 {name, base_url, model,
-api_key_env, params}）、請求箱 requests/、處理完的 requests/done/、回覆
-results/<跟請求同檔名>、用量 usage/<YYYY-MM-DD>.json、走到哪 state.json。
+api_key_env, params}）、預設值 defaults.json（{"engine": "local", "priority": 0}，可有可無）、
+請求箱 requests/、處理完的 requests/done/、回覆 results/<跟請求同檔名>、
+用量 usage/<YYYY-MM-DD>.json、走到哪 state.json。
 只有舊的 engine.json 也認：當成一個叫 default 的單元素清單。
 
-請求檔是一個 JSON 物件。aos 自己吃三個鍵：priority（整數，預設 0，大的先做）、
-engine（引擎名字，預設第一個）、params（一包蓋在引擎 params 上的參數）。
+請求檔是一個 JSON 物件。aos 自己吃三個鍵：priority（整數，大的先做）、
+engine（引擎名字）、params（一包蓋在引擎 params 上的參數）。**沒寫 priority／engine
+就用這個資料夾自己的預設**：defaults.json 說了算，它沒說（或沒這個檔）就是
+engines.json 的第一台＋priority 0。認不得的引擎名字還是錯。
 **其他所有頂層鍵都原樣當成 chat/completions 的 body 欄位**（messages、tools、
 temperature…），所以 agent 丟的舊請求不用改就還是合法的。實際送出去的 body ＝
 引擎 params ← 請求 params ← 請求其他頂層鍵（後面蓋前面），model 一律由引擎說了算。
@@ -17,7 +20,9 @@ temperature…），所以 agent 丟的舊請求不用改就還是合法的。�
 （-priority, mtime, 檔名）排序拿第一個去打。整包原始回覆多掛一個 "aos" 欄位寫進
 results/、請求搬去 requests/done/。打不通也一樣回一個帶 error 的結果檔、一樣搬走
 （以前是留在原地下一格再試，會讓叫的人等到天荒地老）。用量記進 usage/<今天>.json，
-key 是 "<base_url>|<model>"。退出碼永遠 0，除非那個資料夾根本沒有 .aos/llm/。
+key 是 "<base_url>|<model>"：帳本是拿來算錢的，所以模型回的 usage 裡**每一個數字都累加**
+（巢狀的用點號攤平，例如 completion_tokens_details.reasoning_tokens），再加上我們自己
+數的 requests／errors／took_ms。退出碼永遠 0，除非那個資料夾根本沒有 .aos/llm/。
 """
 import argparse
 import datetime
@@ -63,11 +68,33 @@ def load_engines(home):
     return [e for e in engines if isinstance(e, dict)]
 
 
+def load_defaults(home, engines):
+    """這個 LLM 資料夾自己的預設值：defaults.json ← engines.json 第一台／priority 0。"""
+    conf = read_json(os.path.join(home, "defaults.json"), {})
+    if not isinstance(conf, dict):
+        conf = {}
+    engine = conf.get("engine") or (engines[0].get("name") if engines else "") or ""
+    try:
+        priority = int(conf.get("priority") or 0)
+    except (TypeError, ValueError):
+        priority = 0
+    return engine, priority
+
+
+def resolve(req, defaults):
+    """請求沒寫 priority／engine 就補上資料夾的預設，回 (engine, priority)。"""
+    d_engine, d_priority = defaults
+    if "priority" in req:
+        try:
+            priority = int(req.get("priority") or 0)
+        except (TypeError, ValueError):
+            priority = d_priority
+    else:
+        priority = d_priority
+    return (req.get("engine") or d_engine), priority
+
+
 def pick_engine(engines, name):
-    if not engines:
-        return None
-    if not name:
-        return engines[0]
     for e in engines:
         if e.get("name") == name:
             return e
@@ -119,31 +146,51 @@ def finish(box, results, name, result):
     os.replace(os.path.join(box, name), os.path.join(done, name))
 
 
+def flatten_numbers(obj, prefix=""):
+    """把一包 usage 攤成 {點號鍵: 數字}——巢狀字典往下走，非數字（含 bool）丟掉。"""
+    out = {}
+    if not isinstance(obj, dict):
+        return out
+    for key, value in obj.items():
+        name = prefix + str(key)
+        if isinstance(value, dict):
+            out.update(flatten_numbers(value, name + "."))
+        elif isinstance(value, bool):
+            continue
+        elif isinstance(value, (int, float)):
+            out[name] = value
+    return out
+
+
 def bump_usage(home, engine, ok, usage, took_ms):
-    """用量按天記，一天一個檔，key 是 endpoint+model 的配對。"""
+    """用量按天記，一天一個檔，key 是 endpoint+model 的配對。
+
+    帳本是拿來算錢的，所以模型回的 usage 裡**每個數字都累加**（巢狀攤成點號鍵，
+    例如 completion_tokens_details.reasoning_tokens、prompt_cache_hit_tokens），
+    外加我們自己數的 requests／errors／took_ms。欄位有哪些由供應商決定，不寫死。
+    """
     path = os.path.join(home, "usage", datetime.date.today().isoformat() + ".json")
     book = read_json(path, {})
     if not isinstance(book, dict):
         book = {}
     key = "%s|%s" % (engine.get("base_url") or "", engine.get("model") or "")
-    row = book.get(key) or {}
-    use = usage if isinstance(usage, dict) else {}
+    row = book.get(key)
+    row = dict(row) if isinstance(row, dict) else {}
 
     def add(field, more):
-        try:
-            return int(row.get(field) or 0) + int(more or 0)
-        except (TypeError, ValueError):
-            return int(row.get(field) or 0)
+        old = row.get(field)
+        old = old if isinstance(old, (int, float)) and not isinstance(old, bool) else 0
+        total = old + more
+        return int(total) if float(total).is_integer() else total
 
-    book[key] = {
-        "requests": add("requests", 1),
-        "errors": add("errors", 0 if ok else 1),
-        "prompt_tokens": add("prompt_tokens", use.get("prompt_tokens")),
-        "completion_tokens": add("completion_tokens", use.get("completion_tokens")),
-        "total_tokens": add("total_tokens", use.get("total_tokens")),
-        "took_ms": add("took_ms", took_ms),
-    }
+    for field, more in flatten_numbers(usage).items():
+        row[field] = add(field, more)
+    row["requests"] = add("requests", 1)
+    row["errors"] = add("errors", 0 if ok else 1)
+    row["took_ms"] = add("took_ms", took_ms)
+    book[key] = row
     write_json(path, book)
+    use = usage if isinstance(usage, dict) else {}
     return use.get("total_tokens") or 0
 
 
@@ -191,22 +238,18 @@ def main():
         print("aos-llm-step: tick %d empty" % tick, file=sys.stderr)
         return 0
 
+    # 沒寫 priority／engine 的請求，用這個資料夾自己的預設（defaults.json ← 第一台／0）。
+    engines = load_engines(home)
+    defaults = load_defaults(home, engines)
+
     # 優先級高的先做；同級照先來後到（mtime，再撞就比檔名）。一格只做一件。
     def order(item):
         name, mtime, req = item
-        try:
-            priority = int(req.get("priority") or 0)
-        except (TypeError, ValueError):
-            priority = 0
-        return (-priority, mtime, name)
+        return (-resolve(req, defaults)[1], mtime, name)
 
     name, _, req = sorted(todo, key=order)[0]
-    try:
-        priority = int(req.get("priority") or 0)
-    except (TypeError, ValueError):
-        priority = 0
-    want = req.get("engine") or ""
-    engine = pick_engine(load_engines(home), want)
+    want, priority = resolve(req, defaults)
+    engine = pick_engine(engines, want) if want else None
     if engine is None:
         why = "沒有引擎設定（engines.json 不在或是空的）" if not want \
             else "不認得這個引擎：%s" % want

@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """aos-llm <send|usage|ls> — 從終端機使喚一個 LLM 資料夾。
 
-LLM 資料夾在哪：`--llm <dir>`，沒給就看環境變數 AOS_LLM_DIR，都沒有就退 2。
+LLM 資料夾在哪：`--dir <dir>`，沒給就看環境變數 AOS_LLM_DIR，都沒有就退 2。
 
   aos-llm send <檔> [--priority N] [--engine NAME] [--no-wait] [--timeout SEC]
       把一個 JSON 請求檔（`-` 就是 stdin）丟進 requests/，然後等 results/ 冒出同名檔，
       把整包印到 stdout、**把結果檔刪掉**（拿走就沒了）。結果裡有 error 就退 1。
-      --priority/--engine 會蓋掉檔裡原本寫的。--no-wait 只丟不等，印檔名就走。
+      --priority/--engine 會蓋掉檔裡原本寫的；兩邊都沒寫就不寫進去，讓那個 LLM
+      資料夾自己用它的預設（defaults.json ← engines.json 第一台／priority 0）。
+      --no-wait 只丟不等，印檔名就走。
       --timeout 預設 120 秒，給 0 就等到天荒地老。等的時候 Ctrl-C 退 130。
   aos-llm usage [YYYY-MM-DD]
-      印那天的用量表（預設今天）：一行一個 endpoint+model 配對。
+      印那天的用量表（預設今天）：一行一個 endpoint+model 配對。帳本是拿來算錢的，
+      模型回了哪些數字就有哪些欄（思考 token、快取命中都在內），欄位寬一點無所謂。
   aos-llm ls
       印排隊中的請求，順序就是 aos-llm-step 會拿的順序（優先級高的先，同級先來先做）。
+      請求沒寫 priority／engine 的，印的是資料夾預設幫它補的值，後面加一個 `*`。
 """
 import argparse
 import datetime
@@ -20,6 +24,9 @@ import os
 import sys
 import time
 
+FIRST_COLS = ("requests", "errors", "took_ms")
+COL_LABEL = {"requests": "請求", "errors": "錯誤", "took_ms": "毫秒"}
+
 
 def die(msg, code=2):
     print("aos-llm: " + msg, file=sys.stderr)
@@ -27,7 +34,7 @@ def die(msg, code=2):
 
 
 def home_of(args):
-    where = args.llm or os.environ.get("AOS_LLM_DIR") or ""
+    where = args.dir or os.environ.get("AOS_LLM_DIR") or ""
     if not where:
         die("沒給 LLM 目錄，也沒設 AOS_LLM_DIR")
     return os.path.join(os.path.abspath(where), ".aos", "llm")
@@ -46,8 +53,31 @@ def read_json(path, default):
         return default
 
 
-def queued(box):
-    """排隊中的請求，照 aos-llm-step 會拿的順序：(-priority, mtime, 檔名)。"""
+def defaults_of(home):
+    """這個 LLM 資料夾自己的預設：defaults.json ← engines.json 第一台／priority 0。
+    跟 aos-llm-step 同一套規矩，只是這裡是為了印給人看。"""
+    engines = read_json(os.path.join(home, "engines.json"), None)
+    if engines is None:
+        old = read_json(os.path.join(home, "engine.json"), None)
+        engines = [dict(old, name=old.get("name") or "default")] if isinstance(old, dict) else []
+    if not isinstance(engines, list):
+        engines = []
+    engines = [e for e in engines if isinstance(e, dict)]
+    conf = read_json(os.path.join(home, "defaults.json"), {})
+    if not isinstance(conf, dict):
+        conf = {}
+    engine = conf.get("engine") or (engines[0].get("name") if engines else "") or "-"
+    try:
+        priority = int(conf.get("priority") or 0)
+    except (TypeError, ValueError):
+        priority = 0
+    return engine, priority
+
+
+def queued(box, defaults):
+    """排隊中的請求，照 aos-llm-step 會拿的順序：(-priority, mtime, 檔名)。
+    沒寫 priority／engine 的用資料夾預設補，補過的那格標一個 True。"""
+    d_engine, d_priority = defaults
     rows = []
     if not os.path.isdir(box):
         return rows
@@ -57,11 +87,17 @@ def queued(box):
             continue
         req = read_json(path, None)
         req = req if isinstance(req, dict) else {}
-        try:
-            priority = int(req.get("priority") or 0)
-        except (TypeError, ValueError):
-            priority = 0
-        rows.append((-priority, os.path.getmtime(path), name, req.get("engine") or "-"))
+        if "priority" in req:
+            try:
+                priority, p_default = int(req.get("priority") or 0), False
+            except (TypeError, ValueError):
+                priority, p_default = d_priority, True
+        else:
+            priority, p_default = d_priority, True
+        engine = req.get("engine") or ""
+        e_default = not engine
+        rows.append((-priority, os.path.getmtime(path), name,
+                     engine or d_engine, p_default, e_default))
     rows.sort()
     return rows
 
@@ -84,6 +120,7 @@ def do_send(args):
     except ValueError as e:
         die("請求讀不成 JSON：%s" % e)
 
+    # 旗標蓋掉檔裡原本寫的；兩邊都沒寫就不補，讓那個 LLM 資料夾用自己的預設。
     if args.priority is not None:
         req["priority"] = args.priority
     if args.engine:
@@ -128,37 +165,54 @@ def do_send(args):
     return 1 if isinstance(answer, dict) and answer.get("error") else 0
 
 
+def width(text):
+    """印出來大概佔幾格：中日韓字算兩格，其他算一格。"""
+    return sum(2 if ord(c) > 0x2E80 else 1 for c in str(text))
+
+
+def pad(text, size, right=True):
+    fill = " " * max(0, size - width(text))
+    return (fill + str(text)) if right else (str(text) + fill)
+
+
 def do_usage(args):
+    """帳本是拿來算錢的：供應商回了哪些數字就印哪些欄，不寫死幾欄。"""
     home = home_of(args)
     day = args.day or datetime.date.today().isoformat()
     book = read_json(os.path.join(home, "usage", day + ".json"), None)
     if not isinstance(book, dict) or not book:
         print("%s 沒有用量紀錄" % day)
         return 0
+    rows = {k: (v if isinstance(v, dict) else {}) for k, v in book.items()}
+    fields = set()
+    for row in rows.values():
+        fields.update(row)
+    cols = [c for c in FIRST_COLS if c in fields] + sorted(fields - set(FIRST_COLS))
+    heads = [COL_LABEL.get(c, c) for c in cols]
+    keyw = max([width("引擎")] + [width(k) for k in rows])
+    colw = [max(width(h), *[width(rows[k].get(c, 0)) for k in rows])
+            for h, c in zip(heads, cols)]
     print("%s（endpoint|model）" % day)
-    head = "%-46s %6s %6s %9s %11s %8s %9s" % (
-        "引擎", "請求", "錯誤", "prompt", "completion", "total", "毫秒")
-    print(head)
-    for key in sorted(book):
-        row = book[key] if isinstance(book[key], dict) else {}
-        print("%-46s %6s %6s %9s %11s %8s %9s" % (
-            key, row.get("requests", 0), row.get("errors", 0),
-            row.get("prompt_tokens", 0), row.get("completion_tokens", 0),
-            row.get("total_tokens", 0), row.get("took_ms", 0)))
+    print(" ".join([pad("引擎", keyw, right=False)]
+                   + [pad(h, w) for h, w in zip(heads, colw)]))
+    for key in sorted(rows):
+        print(" ".join([pad(key, keyw, right=False)]
+                       + [pad(rows[key].get(c, 0), w) for c, w in zip(cols, colw)]))
     return 0
 
 
 def do_ls(args):
     home = home_of(args)
-    rows = queued(os.path.join(home, "requests"))
+    rows = queued(os.path.join(home, "requests"), defaults_of(home))
     if not rows:
         print("排隊中：0 個")
         return 0
-    print("排隊中：%d 個（由上而下就是會被做掉的順序）" % len(rows))
+    print("排隊中：%d 個（由上而下就是會被做掉的順序；`*` ＝ 用資料夾預設補的）" % len(rows))
     now = time.time()
-    for negp, mtime, name, engine in rows:
-        print("  %-42s priority=%-4d engine=%-14s age=%ds"
-              % (name, -negp, engine, int(now - mtime)))
+    for negp, mtime, name, engine, p_default, e_default in rows:
+        print("  %-42s priority=%-5s engine=%-15s age=%ds"
+              % (name, "%d%s" % (-negp, "*" if p_default else ""),
+                 engine + ("*" if e_default else ""), int(now - mtime)))
     return 0
 
 
@@ -166,21 +220,21 @@ def main():
     ap = argparse.ArgumentParser(prog="aos-llm")
     sub = ap.add_subparsers(dest="cmd")
 
-    def add_llm(p):
-        p.add_argument("--llm", default="")
+    def add_dir(p):
+        p.add_argument("--dir", default="")
         return p
 
-    p = add_llm(sub.add_parser("send"))
+    p = add_dir(sub.add_parser("send"))
     p.add_argument("file")
     p.add_argument("--priority", type=int, default=None)
     p.add_argument("--engine", default="")
     p.add_argument("--no-wait", action="store_true")
     p.add_argument("--timeout", type=float, default=120)
 
-    p = add_llm(sub.add_parser("usage"))
+    p = add_dir(sub.add_parser("usage"))
     p.add_argument("day", nargs="?", default="")
 
-    add_llm(sub.add_parser("ls"))
+    add_dir(sub.add_parser("ls"))
 
     args = ap.parse_args()
     if args.cmd == "send":
