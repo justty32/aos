@@ -1,0 +1,103 @@
+{
+  "name": "studio",
+  "preset": "studio",
+  "leader": "owner",
+  "llm_dir": "../llm",
+  "project_root": "team/projects",
+  "max_depth": 2,
+  "budget": {
+    "hours": 8,
+    "ticks": 500,
+    "mem_mb": 1024,
+    "disk_mb": 2048,
+    "tokens": 200000,
+    "money_usd": 8,
+    "reserve_pct": 10
+  },
+  "members": [
+    {
+      "name": "owner",
+      "role": "owner",
+      "path": ".",
+      "reports_to": null,
+      "persona": "owner/system-prompt.json",
+      "prompts": "owner/prompts.json",
+      "packs": ["mailbox", "communication", "self", "memory", "kids", "cost", "team", "think", "review", "ref"],
+      "clock": "own",
+      "engine": "cheap",
+      "budget_pct": 10
+    },
+    {
+      "name": "sales",
+      "role": "sales",
+      "path": "kids/sales",
+      "reports_to": "owner",
+      "persona": "sales/system-prompt.json",
+      "prompts": "sales/prompts.json",
+      "packs": ["mailbox", "communication", "self", "memory", "cost", "review", "ref"],
+      "clock": "shared:owner",
+      "engine": "cheap",
+      "budget_pct": 0
+    },
+    {
+      "name": "pm",
+      "role": "pm",
+      "path": "kids/pm",
+      "reports_to": "owner",
+      "persona": "pm/system-prompt.json",
+      "prompts": "pm/prompts.json",
+      "packs": ["mailbox", "communication", "fs", "jobs", "self", "memory", "cost", "team", "think", "review", "ref"],
+      "clock": "shared:owner",
+      "engine": "cheap",
+      "budget_pct": 90
+    },
+    {
+      "name": "chief",
+      "role": "chief",
+      "path": "kids/chief",
+      "reports_to": "pm",
+      "persona": "chief/system-prompt.json",
+      "prompts": "chief/prompts.json",
+      "packs": ["mailbox", "communication", "fs", "code", "jobs", "toolsmith", "self", "memory", "cost", "think", "branch", "review", "ref", "bigmem"],
+      "clock": "own",
+      "engine": "thinking",
+      "budget_pct": 0
+    },
+    {
+      "name": "dev-a",
+      "role": "engineer",
+      "path": "kids/dev-a",
+      "reports_to": "chief",
+      "persona": "dev-a/system-prompt.json",
+      "prompts": "dev-a/prompts.json",
+      "packs": ["mailbox", "communication", "fs", "code", "jobs", "self", "memory", "cost", "think", "review", "ref"],
+      "clock": "shared:owner",
+      "engine": "cheap",
+      "budget_pct": 0
+    },
+    {
+      "name": "dev-b",
+      "role": "engineer",
+      "path": "kids/dev-b",
+      "reports_to": "chief",
+      "persona": "dev-b/system-prompt.json",
+      "prompts": "dev-b/prompts.json",
+      "packs": ["mailbox", "communication", "fs", "code", "jobs", "self", "memory", "cost", "think", "review", "ref"],
+      "clock": "shared:owner",
+      "engine": "cheap",
+      "budget_pct": 0
+    },
+    {
+      "name": "qa",
+      "role": "qa",
+      "path": "kids/qa",
+      "reports_to": "pm",
+      "persona": "qa/system-prompt.json",
+      "prompts": "qa/prompts.json",
+      "packs": ["mailbox", "communication", "fs", "code", "jobs", "self", "memory", "cost", "review", "ref"],
+      "clock": "shared:owner",
+      "engine": "cheap",
+      "budget_pct": 0
+    }
+  ]
+}

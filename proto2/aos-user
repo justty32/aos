@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-user <new|templates|packs|say|listen|talk|status|spawn> — 人用的殼。
+"""aos-user <new|team|order|templates|packs|say|listen|talk|status|spawn> — 人用的殼。
 
 指令切成兩種：**agent 自己跑的時候需要的**（狀態機、它的工具）在 `aos-agent`；
 **給人方便用的**在這裡。`aos-user` 自己不推格，只是把「一個人想對某個 agent 做的事」
@@ -31,12 +31,14 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aos_agent import (   # noqa: E402
-    DIRECT_SOURCE, load_pack, outbox_content, outbox_names, put_mail, read_json,
-    resolve_home, spawn, status_of, warn, write_json_atomic)
+    DIRECT_SOURCE, create_team_world, load_pack, normalize_team_budget, now_iso,
+    outbox_content, outbox_names, put_mail, read_json, resolve_home, spawn,
+    status_of, team_root_of, team_status_of, warn, write_json_atomic)
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(HERE, "templates")
+PRESETS_DIR = os.path.join(HERE, "presets")
 
 
 def available_packs():
@@ -108,6 +110,16 @@ def strict_json(path, label):
         raise ValueError("讀不到%s：%s" % (label, e))
     except ValueError as e:
         raise ValueError("%s不是合法 JSON：%s" % (label, e))
+
+
+def json_object(text, label):
+    try:
+        data = json.loads(text) if text else {}
+    except ValueError as e:
+        raise ValueError("%s不是合法 JSON：%s" % (label, e))
+    if not isinstance(data, dict):
+        raise ValueError("%s最外層要是 JSON 物件" % label)
+    return data
 
 
 def template_settings(name):
@@ -269,6 +281,141 @@ def do_new(args):
     return 0
 
 
+def _team_member(root, name):
+    roster = read_json(os.path.join(root, "team", "team.json"), {})
+    for member in roster.get("members", []) if isinstance(roster, dict) else []:
+        if isinstance(member, dict) and member.get("name") == name:
+            return os.path.abspath(os.path.join(root, member.get("path") or "."))
+    return None
+
+
+def _client_home(world, home_opt):
+    """對工作室根說話或收聽時，甲方的窗口固定是 sales。"""
+    if home_opt is None and team_root_of(world) == os.path.abspath(world):
+        sales = _team_member(world, "sales")
+        if sales:
+            return resolve_home(sales, None)
+    return resolve_home(world, home_opt)
+
+
+def do_team_new(args):
+    world = os.path.abspath(args.dir)
+    preset_dir = os.path.join(PRESETS_DIR, args.preset)
+    if not os.path.isdir(preset_dir):
+        warn("不認得的整隊 preset：%s" % args.preset)
+        return 2
+    try:
+        budget = json_object(args.budget, "--budget") if args.budget else None
+        roster = create_team_world(world, preset_dir, args.engine, budget)
+    except (OSError, ValueError) as e:
+        warn(str(e))
+        return 2
+    opened, failed = [], []
+    if os.environ.get("AOS_DAEMON_DIR"):
+        for member in roster["members"]:
+            if member.get("clock") != "own":
+                continue
+            target = os.path.abspath(os.path.join(world, member.get("path") or "."))
+            done = subprocess.run([os.path.join(HERE, "aos-daemon"), "register", target],
+                                  capture_output=True, text=True)
+            (opened if done.returncode == 0 else failed).append(member["name"])
+            if done.returncode != 0:
+                warn("%s 的鐘沒開成：%s" %
+                     (member["name"], (done.stderr or done.stdout).strip()))
+    print("工作室建好了：" + world)
+    print("成員：" + "、".join(m["name"] for m in roster["members"]))
+    print("鐘：" + (("已開 " + "、".join(opened)) if opened else "沒開"))
+    if failed:
+        print("開鐘失敗：" + "、".join(failed))
+    print("下單：aos-user order %s \"任務\"" % shlex.quote(world))
+    return 0 if not failed else 1
+
+
+def _short_budget(data):
+    return "tokens=%s hours=%s ticks=%s money=%s" % (
+        data.get("tokens"), data.get("hours"), data.get("ticks"), data.get("money_usd"))
+
+
+def do_team_status(args):
+    try:
+        data = team_status_of(os.path.abspath(args.dir))
+    except ValueError as e:
+        warn(str(e))
+        return 2
+    print("工作室 %s（%s）" % (data["name"], data["day"]))
+    print("NAME     ROLE      STATE    BUSY  UNREAD  TODAY TOKENS  TOKEN LEFT")
+    for row in data["members"]:
+        print("%-8s %-9s %-8s %5s %7s %13s %11s" % (
+            row["name"], row["role"], row["state"], row["busy"], row["unread"],
+            row["today_spent"]["tokens"], row["remaining"]["tokens"]))
+    print("今天花費：" + _short_budget(data["spent"]))
+    print("整隊剩餘：" + _short_budget(data["remaining"]))
+    if data["spent"].get("mem_mb") is None:
+        print("記憶體：未知（軟上限）")
+    return 0
+
+
+def do_team_stop(args):
+    root = team_root_of(os.path.abspath(args.dir))
+    if not root:
+        warn("找不到 team/team.json：" + os.path.abspath(args.dir))
+        return 2
+    path = os.path.join(root, "team", "team.json")
+    roster = read_json(path, {})
+    failed = []
+    if os.environ.get("AOS_DAEMON_DIR"):
+        for member in reversed(roster.get("members", [])):
+            if not isinstance(member, dict) or member.get("clock") != "own":
+                continue
+            target = os.path.abspath(os.path.join(root, member.get("path") or "."))
+            done = subprocess.run([os.path.join(HERE, "aos-daemon"), "unregister", target],
+                                  capture_output=True, text=True)
+            if done.returncode != 0 and "找不到這個時鐘" not in (done.stderr or done.stdout):
+                failed.append(member.get("name") or target)
+    for member in roster.get("members", []):
+        if isinstance(member, dict):
+            member["active"] = False
+    write_json_atomic(path, roster)
+    if failed:
+        warn("這些鐘沒收乾淨：" + "、".join(failed))
+        return 1
+    print("整隊已停；檔案、記憶和帳都留著：" + root)
+    return 0
+
+
+def do_order(args):
+    root = team_root_of(os.path.abspath(args.dir))
+    if not root:
+        warn("這不是工作室：" + os.path.abspath(args.dir))
+        return 2
+    sales = _team_member(root, "sales")
+    if not sales:
+        warn("名冊裡沒有 sales")
+        return 2
+    try:
+        budget = json_object(args.budget, "--budget") if args.budget else {}
+        # order 可只給這張單在意的欄位，不替甲方偷偷補一串數字。
+        normalize_team_budget({}, budget)
+    except ValueError as e:
+        warn(str(e))
+        return 2
+    order_id = "order-" + time.strftime("%Y%m%d-%H%M%S") + ("-%06d" % (time.time_ns() % 1000000))
+    body = {"order": args.task, "budget": budget,
+            "acceptance": list(args.accept or []), "out_of_scope": []}
+    content = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+    home = resolve_home(sales, None)
+    box = os.path.join(home, "inbox", DIRECT_SOURCE)
+    letter = {"from": "user", "to": "sales", "time": now_iso(), "order_id": order_id,
+              "content": content, **body}
+    path = os.path.join(box, order_id + ".json")
+    write_json_atomic(path, letter)
+    user_dir = os.environ.get("AOS_USER_DIR")
+    if user_dir:
+        write_json_atomic(os.path.join(os.path.abspath(user_dir), "outbox", order_id + ".json"), letter)
+    print("訂單已送 sales：%s" % order_id)
+    return 0
+
+
 def show(box, name):
     msg = read_json(os.path.join(box, name), {})
     if isinstance(msg, dict) and msg.get("error"):
@@ -284,7 +431,7 @@ def show(box, name):
 
 def do_say(args):
     world = os.path.abspath(args.dir)
-    home = resolve_home(world, args.home)
+    home = _client_home(world, args.home)
     text = args.text if args.text is not None else sys.stdin.read()
     warn("寫了 " + put_mail(home, DIRECT_SOURCE, text, DIRECT_SOURCE))
     return 0
@@ -292,7 +439,7 @@ def do_say(args):
 
 def do_listen(args):
     world = os.path.abspath(args.dir)
-    box = os.path.join(resolve_home(world, args.home), "outbox")
+    box = os.path.join(_client_home(world, args.home), "outbox")
     seen = set(outbox_names(box))
     if not args.new:
         for name in sorted(seen):
@@ -314,7 +461,7 @@ def do_listen(args):
 
 def do_talk(args):
     world = os.path.abspath(args.dir)
-    home = resolve_home(world, args.home)
+    home = _client_home(world, args.home)
     box = os.path.join(home, "outbox")
     print("（另一個終端機要跑 aos-loop 這個資料夾，不然沒人會回話）")
     while True:
@@ -378,6 +525,27 @@ def main():
     p.set_defaults(fn=do_new)
     sub.add_parser("templates", help="列出可用模板").set_defaults(fn=do_templates)
     sub.add_parser("packs", help="列出可用工具包").set_defaults(fn=do_packs)
+
+    team = sub.add_parser("team", help="一次建立、查看或停止整隊").add_subparsers(dest="team_cmd")
+    p = team.add_parser("new")
+    p.add_argument("dir")
+    p.add_argument("--preset", default="studio")
+    p.add_argument("--engine", default=None)
+    p.add_argument("--budget", default=None)
+    p.set_defaults(fn=do_team_new)
+    p = team.add_parser("status")
+    p.add_argument("dir")
+    p.set_defaults(fn=do_team_status)
+    p = team.add_parser("stop")
+    p.add_argument("dir")
+    p.set_defaults(fn=do_team_stop)
+
+    p = sub.add_parser("order", help="把訂單交給工作室 sales")
+    p.add_argument("dir")
+    p.add_argument("task")
+    p.add_argument("--budget", default=None)
+    p.add_argument("--accept", action="append", default=[])
+    p.set_defaults(fn=do_order)
 
     def world_args(p):
         p.add_argument("dir", nargs="?", default=".")
