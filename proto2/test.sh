@@ -693,15 +693,22 @@ print(("ok" if r.get("ok") else "fail") + "|" + (r.get("message") or "沒有結�
 PYEOF2
 }
 nlines() { if [ -f "$1/count.txt" ]; then wc -l < "$1/count.txt"; else echo 0; fi; }
-clock_id() { echo "$1" | sed 's|^/||; s|/|__|g'; }
-pid_of() {  # pid_of <daemon 目錄> <世界>
-  python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["pid"])' \
-    "$1/clocks/$(clock_id "$2").json" 2>/dev/null
+clock_id() {  # 路徑 → 時鐘檔名：percent-encoding，超過 200 bytes 退 sha256
+  python3 - "$1" <<'PYEOF2'
+import hashlib, sys, urllib.parse
+p = sys.argv[1]
+e = urllib.parse.quote(p, safe="")
+print(e if len(e.encode("utf-8")) <= 200 else hashlib.sha256(p.encode("utf-8")).hexdigest())
+PYEOF2
 }
-state_of() {  # state_of <daemon 目錄> <世界>
-  python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' \
-    "$1/clocks/$(clock_id "$2").json" 2>/dev/null
+field_of() {  # field_of <daemon 目錄> <世界> <欄位> [預設]
+  python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get(sys.argv[2], sys.argv[3]))' \
+    "$1/clocks/$(clock_id "$2").json" "$3" "${4:-}" 2>/dev/null
 }
+pid_of()      { field_of "$1" "$2" pid; }
+state_of()    { field_of "$1" "$2" state; }
+dir_of()      { field_of "$1" "$2" dir; }
+restarts_of() { field_of "$1" "$2" restarts 0; }
 
 # 35. 沒給 daemon 目錄也沒設 AOS_DAEMON_DIR：兩支都退 2
 "$DKERNEL" ls >/dev/null 2>&1; RC=$?
@@ -817,25 +824,73 @@ if [ "$(id -u)" != "0" ]; then
 fi
 kill_clocks "$AOSD"; unset -f tick; rm -rf "$TMP"
 
-# 38. 時鐘自己死掉：下一格標成 dead，ls 看得到，不會自動重開
-TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"
+# 38. 時鐘掛了 kernel 每格巡邏時自動重開；重開不了才標 dead，而且下一格還會再試
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"; make_world "$TMP/gone2"
 printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
 "$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1
 AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
 CPID=$(pid_of "$AOSD" "$TMP/w")
 kill -KILL "-$CPID" 2>/dev/null
 sleep 0.3
-AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
-if [ "$(state_of "$AOSD" "$TMP/w")" = "dead" ]; then
-  echo "ok   時鐘死了下一格就標成 dead"
+A=$(nlines "$TMP/w")
+OUT=$(AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick 2>&1)
+NPID=$(pid_of "$AOSD" "$TMP/w")
+if [ "$(state_of "$AOSD" "$TMP/w")" = "running" ] && [ -n "$NPID" ] \
+   && [ "$NPID" != "$CPID" ] && kill -0 "$NPID" 2>/dev/null; then
+  echo "ok   時鐘掛了下一格就自動重開（$CPID → $NPID），state 還是 running"
 else
-  echo "FAIL 死掉的時鐘 state 是 $(state_of "$AOSD" "$TMP/w")"; FAILED=1
+  echo "FAIL 沒自動重開：state=$(state_of "$AOSD" "$TMP/w") 舊 $CPID 新 $NPID"; FAILED=1
+fi
+if [ "$(restarts_of "$AOSD" "$TMP/w")" = "1" ]; then
+  echo "ok   時鐘檔的 restarts 加到 1"
+else
+  echo "FAIL restarts 是 $(restarts_of "$AOSD" "$TMP/w")"; FAILED=1
+fi
+case "$OUT" in
+  *"restart $TMP/w"*"(restarts 1)"*) echo "ok   log 記了 restart 跟第幾次" ;;
+  *) echo "FAIL restart 的 log 不對：$OUT"; FAILED=1 ;;
+esac
+sleep 0.8
+if [ "$(nlines "$TMP/w")" -gt "$A" ]; then
+  echo "ok   重開的時鐘接著原本的進度繼續推（$A → $(nlines "$TMP/w") 行）"
+else
+  echo "FAIL 重開了卻沒在推：$A → $(nlines "$TMP/w")"; FAILED=1
 fi
 OUT=$(AOS_DAEMON_DIR="$AOSD" "$DKERNEL" ls 2>&1)
 case "$OUT" in
-  *"kernel: 沒在跑"*dead*"$TMP/w"*) echo "ok   ls 印得出 kernel 沒在跑＋dead 的時鐘" ;;
-  *) echo "FAIL ls 印的不對：$OUT"; FAILED=1 ;;
+  *RESTARTS*) echo "ok   ls 有 RESTARTS 這欄" ;;
+  *) echo "FAIL ls 沒有 RESTARTS 欄：$OUT"; FAILED=1 ;;
 esac
+# 重開不了（資料夾沒了）才標 dead，但每格都還在試，資料夾回來就自己 running
+"$DAEMON" register "$TMP/gone2" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1
+AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
+GPID=$(pid_of "$AOSD" "$TMP/gone2")
+GWORLD="$TMP/gone2"
+kill -KILL "-$GPID" 2>/dev/null; rm -rf "$GWORLD"; sleep 0.3
+OUT=$(AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick 2>&1)
+GERR=$(field_of "$AOSD" "$GWORLD" error)
+if [ "$(state_of "$AOSD" "$GWORLD")" = "dead" ] && [ "$GERR" = "資料夾不見了" ]; then
+  echo "ok   重開不了才標 dead，error 寫著為什麼"
+else
+  echo "FAIL 該 dead 卻是 $(state_of "$AOSD" "$GWORLD")（error=$GERR）"; FAILED=1
+fi
+case "$OUT" in
+  *"重開不了"*) echo "ok   第一次標 dead 有記一行 log" ;;
+  *) echo "FAIL 標 dead 沒記 log：$OUT"; FAILED=1 ;;
+esac
+OUT=$(AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick 2>&1)
+case "$OUT" in
+  *"重開不了"*) echo "FAIL dead 每格都刷一行 log：$OUT"; FAILED=1 ;;
+  *) echo "ok   dead 之後每格再試但不再刷 log" ;;
+esac
+make_world "$GWORLD"
+AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
+GPID2=$(pid_of "$AOSD" "$GWORLD")
+if [ "$(state_of "$AOSD" "$GWORLD")" = "running" ] && kill -0 "$GPID2" 2>/dev/null; then
+  echo "ok   資料夾回來了，下一格就自己從 dead 變回 running（pid $GPID2）"
+else
+  echo "FAIL 資料夾回來卻是 $(state_of "$AOSD" "$GWORLD")（pid $GPID2）"; FAILED=1
+fi
 kill_clocks "$AOSD"; rm -rf "$TMP"
 
 # 39. own 的子 agent 會自己跟 daemon 要時鐘；沒設 AOS_DAEMON_DIR 就只警告一句
@@ -955,7 +1010,93 @@ if [ -f "$AOSD/clocks/$(clock_id "$TMP/w").json" ]; then
 else
   echo "FAIL stop 把時鐘檔刪了"; FAILED=1
 fi
+if [ "$(state_of "$AOSD" "$TMP/w")" = "running" ]; then
+  echo "ok   stop 不改時鐘檔的狀態（還是 running）"
+else
+  echo "FAIL stop 把狀態改成 $(state_of "$AOSD" "$TMP/w")"; FAILED=1
+fi
+OUT=$("$DKERNEL" ls "$AOSD" 2>&1)
+case "$OUT" in
+  *"kernel: 沒在跑"*stopped*"$TMP/w"*) echo "ok   kernel 不在時 ls 把它顯示成 stopped" ;;
+  *) echo "FAIL ls 沒顯示 stopped：$OUT"; FAILED=1 ;;
+esac
+case "$OUT" in
+  *dead*"$TMP/gone"*) echo "ok   ls 也印得出重開不了的 dead 時鐘" ;;
+  *) echo "FAIL ls 沒印出 dead 的：$OUT"; FAILED=1 ;;
+esac
 kill_clocks "$AOSD"; LIVE_AOSD=""; rm -rf "$TMP"
+
+# 42. 鐘的 id 是 percent-encoding：不同路徑不會撞名，怪字元也存得回來
+TMP=$(mktemp -d); AOSD="$TMP/aosd"
+printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
+W1="$TMP/a/b__c"; W2="$TMP/a__b/c"; W3="$TMP/pct % and space"
+make_world "$W1"; make_world "$W2"; make_world "$W3"
+for W in "$W1" "$W2" "$W3"; do
+  "$DAEMON" register "$W" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1
+done
+AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
+NCLK=$(find "$AOSD/clocks" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$NCLK" = "3" ] && [ "$(dir_of "$AOSD" "$W1")" = "$W1" ] \
+   && [ "$(dir_of "$AOSD" "$W2")" = "$W2" ]; then
+  echo "ok   a/b__c 跟 a__b/c 各自一個時鐘檔，不會撞名（$NCLK 個）"
+else
+  echo "FAIL 撞名了：$NCLK 個檔，dir1=$(dir_of "$AOSD" "$W1") dir2=$(dir_of "$AOSD" "$W2")"; FAILED=1
+fi
+ID3=$(clock_id "$W3")
+BACK=$(python3 -c 'import sys,urllib.parse;print(urllib.parse.unquote(sys.argv[1]))' "$ID3")
+if [ -f "$AOSD/clocks/$ID3.json" ] && [ "$BACK" = "$W3" ] \
+   && [ "$(dir_of "$AOSD" "$W3")" = "$W3" ] && [ -f "$AOSD/logs/$ID3.log" ]; then
+  echo "ok   有 % 跟空白的路徑：id 解得回來（$ID3），log 檔名也是同一個 id"
+else
+  echo "FAIL % 空白的路徑沒 round-trip：id=$ID3 解回=$BACK dir=$(dir_of "$AOSD" "$W3")"; FAILED=1
+fi
+kill_clocks "$AOSD"; rm -rf "$TMP"
+
+# 43. 暫停的鐘不受 kernel 開關影響：要 continue 或重新 register 才會再跑
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"
+printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
+tick() { AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1; }
+"$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1; tick
+"$DAEMON" pause "$TMP/w" --daemon "$AOSD" >/dev/null 2>&1; tick
+CPID=$(pid_of "$AOSD" "$TMP/w")
+kill -KILL "-$CPID" 2>/dev/null   # stop 收掉暫停中的鐘就長這樣
+sleep 0.3
+tick
+if [ "$(state_of "$AOSD" "$TMP/w")" = "paused" ]; then
+  echo "ok   暫停的鐘進程沒了也不會被標 dead，還是 paused"
+else
+  echo "FAIL 暫停的鐘變成 $(state_of "$AOSD" "$TMP/w")"; FAILED=1
+fi
+"$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1; tick
+case "$(last_result "$AOSD")" in
+  fail\|*"已經有時鐘了（paused）"*) echo "ok   對暫停的鐘 register：ok=false，叫你用 continue" ;;
+  *) echo "FAIL register 暫停的鐘結果不對：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+OUT=$("$DKERNEL" resume "$AOSD" 2>&1)
+if [ "$(state_of "$AOSD" "$TMP/w")" = "paused" ] && [ "$(pid_of "$AOSD" "$TMP/w")" = "$CPID" ]; then
+  echo "ok   kernel 起來時的 resume 不會幫暫停的鐘重開（pid 還是舊的 $CPID）"
+else
+  echo "FAIL resume 動了暫停的鐘：state=$(state_of "$AOSD" "$TMP/w") pid=$(pid_of "$AOSD" "$TMP/w")"; FAILED=1
+fi
+case "$OUT" in
+  *"tick 0 keep-paused"*) echo "ok   resume 記了 tick 0 keep-paused" ;;
+  *) echo "FAIL resume 的 log 不對：$OUT"; FAILED=1 ;;
+esac
+A=$(nlines "$TMP/w")
+"$DAEMON" continue "$TMP/w" --daemon "$AOSD" >/dev/null 2>&1; tick
+case "$(last_result "$AOSD")" in
+  ok\|*"重新開了一個"*) echo "ok   continue 對進程已經沒了的暫停鐘：重開一個" ;;
+  *) echo "FAIL continue 的結果不對：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+NPID=$(pid_of "$AOSD" "$TMP/w")
+sleep 0.8
+if [ "$(state_of "$AOSD" "$TMP/w")" = "running" ] && [ "$NPID" != "$CPID" ] \
+   && kill -0 "$NPID" 2>/dev/null && [ "$(nlines "$TMP/w")" -gt "$A" ]; then
+  echo "ok   continue 之後世界又在長了（$A → $(nlines "$TMP/w") 行，pid $CPID → $NPID）"
+else
+  echo "FAIL continue 沒把它救回來：state=$(state_of "$AOSD" "$TMP/w") pid=$NPID 行數 $A → $(nlines "$TMP/w")"; FAILED=1
+fi
+kill_clocks "$AOSD"; unset -f tick; rm -rf "$TMP"
 
 cleanup
 trap - EXIT

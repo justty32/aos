@@ -13,11 +13,13 @@ daemon 資料夾＝argv[2]，沒給就用環境變數 AOS_DAEMON_DIR（例如 ~/
     kernel.log       kernel 自己的輸出
     requests/        待處理的請求檔 <時間戳>.json
     requests/done/   處理過的，同檔名，多一個 "result"
-    clocks/<id>.json 一個時鐘一個檔（dir／pid／state／interval／user／started／error）
+    clocks/<id>.json 一個時鐘一個檔（dir／pid／state／interval／user／started／restarts／error）
     logs/<id>.log    那個時鐘的 aos-loop 輸出
 
-`id` 是世界資料夾絕對真實路徑去掉開頭的 `/`、再把 `/` 換成 `__`（`/tmp/a/b` → `tmp__a__b`），
-真正的路徑存在檔案裡的 `dir`。**一個路徑只能有一個時鐘**，路徑就是時鐘的 id。
+`id` 是世界資料夾絕對真實路徑做 percent-encoding（`urllib.parse.quote(path, safe='')`，
+`/tmp/a/b` → `%2Ftmp%2Fa%2Fb`）：可逆、不會兩個不同路徑撞到同一個 id；編出來超過 200 bytes
+就退回 `sha256(路徑)` 的十六進位值。真正的路徑一律以檔案裡的 `dir` 為準（`ls` 印的也是 `dir`）。
+**一個路徑只能有一個時鐘**，路徑就是時鐘的 id。
 
   start    背景開一個 kernel（已經有活著的就印一句退 1），印出 pid
   stop     對 kernel 送 SIGTERM，它會先把所有時鐘收掉再走；沒在跑退 1
@@ -26,12 +28,21 @@ daemon 資料夾＝argv[2]，沒給就用環境變數 AOS_DAEMON_DIR（例如 ~/
   tick     前景只推一格就走（測試用，不必開背景進程）；背景的 run 就是一直 tick
   resume   把上一輪的時鐘接回來（kernel 起來時自己會先做一次，這裡是給人／測試單獨叫的）
 
-**重啟接得上**：start（restart 也是）會先掃一遍 clocks/：pid 還活著就直接認領，
-pid 死了而狀態是 running／paused 就照原本的設定重開一個（暫停中的會以 running 回來），
-狀態已經是 dead 的不碰，資料夾不見了就標 dead。stop 只殺進程、不刪時鐘檔，
-所以 stop → start 全部會自己回來。世界自己走到哪存在世界資料夾裡，時鐘接回來就接上了。
+**重啟接得上**：start（restart 也是）會先掃一遍 clocks/：pid 還活著就直接認領（狀態原封不動），
+pid 死了而狀態是 running 就照原本的設定重開一個，狀態已經是 dead 的不碰，資料夾不見了就標 dead。
+stop 只殺進程、不刪時鐘檔也不改狀態，所以 stop → start 跑著的會自己回來。
+
+**掛了自動重開**：kernel 每格都會巡一遍時鐘，running 的進程不見了就馬上照原設定再開一個，
+`restarts` 加一（`ls` 有這欄）。`dead` 現在只代表「想重開卻開不起來」（資料夾不見了、開不起
+進程），下一格還是會再試，成功就回 running；log 只在換邊時才記，不會每格刷一行。
+
+**暫停的鐘不受 kernel 開關影響**：一個被 pause 掉的鐘，要麼被重新 register 或 continue 後才會
+繼續跑，否則 kernel 的 start／stop 不會影響到他。所以 stop 一樣把它的進程收掉，但狀態留在
+paused；start 的 resume 不會幫它重開（log 記 `tick 0 keep-paused`）；tick 巡邏看到 paused 的
+進程不在也不標 dead。要它再跑：`continue`（進程還在就 SIGCONT，不在就重開一個）。
 """
 import argparse
+import hashlib
 import json
 import os
 import pwd
@@ -39,6 +50,7 @@ import signal
 import subprocess
 import sys
 import time
+import urllib.parse
 from datetime import datetime
 
 HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -74,8 +86,20 @@ def write_json(path, obj):
         f.write("\n")
 
 
+MAX_ID = 200   # 檔名長度上限（bytes），超過就退回 sha256
+
+
 def dir_id(path):
-    return path.lstrip("/").replace("/", "__") or "__root__"
+    """路徑 → 時鐘檔名。percent-encoding，可逆又不會撞名；太長就退回 sha256。"""
+    enc = urllib.parse.quote(path, safe="")
+    if len(enc.encode("utf-8")) > MAX_ID:
+        return hashlib.sha256(path.encode("utf-8")).hexdigest()
+    return enc or "%2F"
+
+
+def id_dir(cid):
+    """時鐘檔名 → 路徑（sha256 那種救不回來，所以只當 dir 缺了才拿來墊）。"""
+    return urllib.parse.unquote(cid)
 
 
 def alive(pid):
@@ -124,14 +148,17 @@ class Home:
         for n in self.clock_files():
             c = read_json(os.path.join(self.clocks, n), None)
             if isinstance(c, dict):
-                c.setdefault("id", n[: -len(".json")])
+                cid = n[: -len(".json")]
+                c.setdefault("id", cid)
+                if not c.get("dir"):
+                    c["dir"] = id_dir(cid)   # 檔裡沒 dir 才從 id 解回來墊一個
                 out.append(c)
         return out
 
 
 # ── 一格 ────────────────────────────────────────────────────────────────────
 
-def start_loop(home, world, interval, user):
+def start_loop(home, world, interval, user, restarts=0):
     """真的把 aos-loop 開起來，成功回 (True, pid)，失敗回 (False, 訊息)。"""
     cid = dir_id(world)
     cmd = [os.path.join(HERE, "aos-loop"), world, "--keep-inst", "--interval", str(interval)]
@@ -154,7 +181,8 @@ def start_loop(home, world, interval, user):
         return False, "開不起時鐘：%s" % e
     write_json(home.clock_path(cid), {
         "dir": world, "id": cid, "pid": p.pid, "state": "running",
-        "interval": interval, "user": user, "started": now(), "error": None,
+        "interval": interval, "user": user, "started": now(),
+        "restarts": restarts, "error": None,
     })
     return True, p.pid
 
@@ -162,8 +190,9 @@ def start_loop(home, world, interval, user):
 def spawn_clock(home, world, cfg):
     """register 用：先檢查沒人佔著這個路徑，再開時鐘。"""
     old = read_json(home.clock_path(dir_id(world)), None)
-    if isinstance(old, dict) and old.get("state") != "dead":
-        return False, "這個資料夾已經有時鐘了：" + world
+    if isinstance(old, dict) and old.get("state") in ("running", "paused"):
+        return False, "已經有時鐘了（%s）；要續跑用 continue，要重做先 unregister：%s" % (
+            old.get("state"), world)
     try:
         interval = float(cfg.get("interval", 1))
     except (TypeError, ValueError):
@@ -177,10 +206,10 @@ def spawn_clock(home, world, cfg):
 def resume(home):
     """kernel 起來時先把上一輪的時鐘接回來（log 記成 tick 0）。
 
-    pid 還活著（kernel 被 SIGKILL 掉但時鐘沒死）就直接認領、狀態原封不動；
-    pid 死了而狀態是 running／paused 就照原本的 dir／interval／user 重開一個
-    ——暫停中的會以 running 的樣子回來；狀態已經是 dead 的不管；資料夾不見了就標 dead。
-    世界自己的進度存在世界資料夾裡，所以接回來就等於接上了。
+    pid 還活著（kernel 被 SIGKILL 掉但時鐘沒死）就直接認領、狀態原封不動（暫停的還是暫停）；
+    暫停的鐘 pid 死了也**不重開**，維持 paused——要它跑得自己 continue 或重新 register；
+    running 而 pid 死了就照原本的 dir／interval／user 重開一個；狀態已經是 dead 的交給
+    tick 去重試；資料夾不見了就標 dead。世界的進度存在世界資料夾裡，接回來就等於接上了。
     """
     for clock in home.read_clocks():
         world = clock.get("dir") or ""
@@ -189,6 +218,9 @@ def resume(home):
             continue
         if alive(pid):
             log("tick 0 adopt %s pid %d" % (world, pid))
+            continue
+        if clock.get("state") == "paused":
+            log("tick 0 keep-paused %s" % world)
             continue
         if not os.path.isdir(world):
             clock["state"] = "dead"
@@ -200,7 +232,8 @@ def resume(home):
             interval = float(clock.get("interval") or 1)
         except (TypeError, ValueError):
             interval = 1
-        ok, r = start_loop(home, world, interval, clock.get("user") or None)
+        ok, r = start_loop(home, world, interval, clock.get("user") or None,
+                           int(clock.get("restarts") or 0))
         if ok:
             log("tick 0 resume %s pid %d" % (world, r))
         else:
@@ -275,11 +308,48 @@ def do_op(home, req, tick):
         return True, "暫停了：" + world
     if clock.get("state") != "paused":
         return False, "本來就在跑：" + world
-    if not signal_clock(pid, signal.SIGCONT):
-        return False, "送不出 SIGCONT（pid %d 不在了？）" % pid
-    clock["state"] = "running"
-    write_json(path, clock)
-    return True, "續跑了：" + world
+    if alive(pid):
+        if not signal_clock(pid, signal.SIGCONT):
+            return False, "送不出 SIGCONT（pid %d 不在了？）" % pid
+        clock["state"] = "running"
+        write_json(path, clock)
+        return True, "續跑了：" + world
+    # 進程被 stop／別人收掉了：照原設定重開一個，這才是暫停的鐘回來跑的唯一途徑
+    try:
+        interval = float(clock.get("interval") or 1)
+    except (TypeError, ValueError):
+        interval = 1
+    ok, r = start_loop(home, world, interval, clock.get("user") or None,
+                       int(clock.get("restarts") or 0))
+    if not ok:
+        return False, r
+    return True, "續跑了（重新開了一個，pid %d）：%s" % (r, world)
+
+
+def supervise(home, clock, tick):
+    """時鐘掛了就馬上重開（restarts +1）；重開不了才標 dead，之後每格再試。
+
+    log 只在狀態換邊時才寫（running→dead、dead→running），不然每格都會刷一行。
+    """
+    world = clock.get("dir") or ""
+    was = clock.get("state")
+    restarts = int(clock.get("restarts") or 0)
+    try:
+        interval = float(clock.get("interval") or 1)
+    except (TypeError, ValueError):
+        interval = 1
+    if os.path.isdir(world):
+        ok, r = start_loop(home, world, interval, clock.get("user") or None, restarts + 1)
+    else:
+        ok, r = False, "資料夾不見了"
+    if ok:
+        log("tick %d restart %s pid %d (restarts %d)" % (tick, world, r, restarts + 1))
+        return
+    clock["state"] = "dead"
+    clock["error"] = str(r)
+    write_json(home.clock_path(clock["id"]), clock)
+    if was != "dead":
+        log("tick %d %s 重開不了（%s），標成 dead，下一格再試" % (tick, world, r))
 
 
 def tick_once(home):
@@ -312,16 +382,16 @@ def tick_once(home):
                                       "ok" if ok else "fail", msg))
 
     for clock in home.read_clocks():
-        if clock.get("state") not in ("running", "paused"):
+        state = clock.get("state")
+        if state not in ("running", "paused", "dead"):
             continue
         pid = int(clock.get("pid") or 0)
         reap(pid)
-        if alive(pid):
+        if state == "paused":
+            continue        # 暫停的鐘進程不在是正常的（被 stop 收掉），不動它
+        if state == "running" and alive(pid):
             continue
-        clock["state"] = "dead"
-        clock["error"] = "進程不見了"
-        write_json(home.clock_path(clock["id"]), clock)
-        log("tick %d %s died" % (tick, clock.get("dir")))
+        supervise(home, clock, tick)
     return tick
 
 
@@ -349,7 +419,10 @@ def run(home, interval):
             reap(pid)
             if alive(pid):
                 signal_clock(pid, signal.SIGKILL)
-            clock["error"] = "kernel 收工時一起收掉了，下次 start 會接回來"
+            # 狀態不動：running 的下次 start 會接回來，paused 的要 continue 才會再跑
+            clock["error"] = ("kernel 收工時一起收掉了，" +
+                              ("要 continue 才會再跑" if clock.get("state") == "paused"
+                               else "下次 start 會接回來"))
             write_json(home.clock_path(clock["id"]), clock)
         cur = read_json(home.kernel, {})
         cur["pid"] = None
@@ -406,17 +479,24 @@ def cmd_ls(home, as_json):
         print(json.dumps({"dir": home.dir, "kernel": k, "clocks": clocks},
                          ensure_ascii=False, indent=2))
         return 0
-    if alive(k.get("pid")):
+    up = alive(k.get("pid"))
+    if up:
         print("kernel: 跑著 pid %s tick %s（%s）" % (k.get("pid"), k.get("tick"), home.dir))
     else:
         print("kernel: 沒在跑（%s）" % home.dir)
     if not clocks:
         print("（沒有時鐘）")
         return 0
-    print("%-8s %-8s %-8s %-10s %s" % ("STATE", "PID", "INTERVAL", "USER", "DIR"))
+    print("%-8s %-8s %-8s %-8s %-10s %s"
+          % ("STATE", "PID", "INTERVAL", "RESTARTS", "USER", "DIR"))
     for c in clocks:
-        print("%-8s %-8s %-8s %-10s %s" % (
-            c.get("state"), c.get("pid"), c.get("interval"),
+        state = c.get("state")
+        # kernel 不在的時候，running 但進程已經沒了＝被 stop 收掉了，印 stopped
+        # （檔裡還是 running，這只是顯示）；paused 就照樣印 paused
+        if state == "running" and not up and not alive(c.get("pid")):
+            state = "stopped"
+        print("%-8s %-8s %-8s %-8s %-10s %s" % (
+            state, c.get("pid"), c.get("interval"), int(c.get("restarts") or 0),
             c.get("user") or "-", c.get("dir")))
     return 0
 
