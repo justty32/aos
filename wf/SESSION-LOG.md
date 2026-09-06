@@ -12,9 +12,9 @@
 
 ## 最新進度
 
-- **2026-09-06：另起爐灶 `proto2/`**——使用者照自己的反思（[ideas/reflections.md](workflows/ideas/reflections.md)）從零重建，舊 `proto/`、舊 spec 都不當憑據，邊緣狀況一律不做。做法是使用者說一步、我派一隊做一步（普通給 Opus、簡單給 Sonnet），每步都 commit、都有 `bash proto2/test.sh`（現在 108 項）。
-  **已落地**（64af843→b6f3456）：`aos-exec`（檔案就跑、資料夾就把 `.aos/inst` 丟 system()）、`aos-loop`（讀→清→跑，`--steps/--interval/--stop-when-empty/--keep-inst`）、`aos-agent-step`（五格 idle→llm→wait→act→collect，本體在 `.aos/agent/`；`step`＝被推幾次、`busy`＝真做事幾次）、`aos-agent-say/listen/talk`、LLM 獨立資料夾（`aos-llm-step` 吃 `requests/` 寫 `results/`、`aos-llm-ask`）、子世界（`aos-agent-spawn`，shared 掛父的 inst、own 自動登記到 daemon）、daemon 資料夾（`aos-daemon-step` 照 `registry/` 推格、`every`、`register/unregister`）。工具目錄由 `aos-exec/aos-loop` 自動加進 PATH。範例三個（`examples/llm|agent|daemon`），一個 `aos-loop examples/daemon --keep-inst` 推全部，真模型（LM Studio qwen3.5-9b）從聊天到生子到自動登記整條實測通。細節全在 `proto2/README.md` 與各 commit 訊息。
-  **open**：① 使用者說細節（檔名、邊緣狀況、具體步驟）晚點再談；② 等使用者拍板的三件在 [WAIT_USER](WAIT_USER.md) A-6～A-8；③ 已看到沒處理：qwen 把 `</think>` 漏進 content、登記表照檔名排序會讓 `agent-kid` 排在 `agent` 前面、LLM 資料夾一格一請求同步等（多 agent 時是第一個瓶頸）；④ 舊 `proto/` 要不要刪未定。
+- **2026-09-06：另起爐灶 `proto2/`**——使用者照自己的反思（[ideas/reflections.md](workflows/ideas/reflections.md)）從零重建，舊 `proto/`、舊 spec 都不當憑據，邊緣狀況一律不做。做法是使用者說一步、我派一隊做一步（普通給 Opus、簡單給 Sonnet），每步都 commit、都有 `bash proto2/test.sh`（現在 128 項）。
+  **已落地**（64af843→b6f3456）：`aos-exec`（檔案就跑、資料夾就把 `.aos/inst` 丟 system()）、`aos-loop`（讀→清→跑，`--steps/--interval/--stop-when-empty/--keep-inst`）、`aos-agent-step`（五格 idle→llm→wait→act→collect，本體在 `.aos/agent/`；`step`＝被推幾次、`busy`＝真做事幾次）、`aos-agent-say/listen/talk`、LLM 獨立資料夾（`aos-llm-step` 吃 `requests/` 寫 `results/`、`aos-llm-ask`）、子世界（`aos-agent-spawn`，shared 掛父的 inst、own 自動跟 daemon 要時鐘）、daemon 常駐 kernel（`aos-daemon-kernel start/stop/ls` 一個進程盯 `$AOS_DAEMON_DIR/requests/`，`aos-daemon register/unregister/pause/continue` 丟請求，一個世界一個獨立 `aos-loop` 進程、暫停＝SIGSTOP，stop→start 會自己把時鐘接回來）。工具目錄由 `aos-exec/aos-loop` 自動加進 PATH。範例兩個（`examples/llm|agent`），`aos-daemon register` 各給一個時鐘，真模型（LM Studio qwen3.5-9b；09-06 傍晚 LM Studio 沒載模型，改用雲端 deepseek-v4-flash）從聊天、生子到 stop→start 接回時鐘整條實測通。細節全在 `proto2/README.md` 與各 commit 訊息。
+  **open**：① 使用者說細節（檔名、邊緣狀況、具體步驟）晚點再談；② 等使用者拍板的三件在 [WAIT_USER](WAIT_USER.md) A-6～A-8；③ 已看到沒處理：qwen 把 `</think>` 漏進 content、LLM 資料夾一格一請求同步等（多 agent 時是第一個瓶頸）、kernel 被 SIGKILL 時鐘會變孤兒（下次 start 會認領回來）；④ 舊 `proto/` 要不要刪未定。
 
 - **2026-09-05：構想全部重整成新的一套**——舊 ideas（八月到 9 月 4 日的全部討論）整包封存進
   `ideas/archive/`，換成 13 章大白話的新構想集（[ideas/README.md](workflows/ideas/README.md)），
