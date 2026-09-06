@@ -12,7 +12,7 @@
     aos-user listen <世界> [--new] [--once]   盯著 <home>/outbox/，錯誤用 agent!> 印
     aos-user talk <世界>              互動聊天（say ＋ listen，/quit 離開）
     aos-user status <世界>            印它的自我狀態（就是 self_status 那一包）
-    aos-user spawn <世界> <名字> <人格> [--clock shared|own]   幫它生一個小孩
+    aos-user spawn <世界> <名字> <人格> [--clock shared|own] [--template 名字]   幫它生一個小孩
 
 `--home` 不給就去世界的 `.aos/inst` 把 `--home X` 撈出來用，撈不到就是 `.`——所以
 平常打 `aos-user talk examples/agent` 就好，不用每次重複 `--home agent`。
@@ -115,7 +115,7 @@ def do_status(args):
 def do_spawn(args):
     world = os.path.abspath(args.dir)
     home = resolve_home(world, args.home)
-    ok, msg = spawn(world, home, args.name, args.persona, args.clock)
+    ok, msg = spawn(world, home, args.name, args.persona, args.clock, args.template)
     warn(msg)
     return 0 if ok else 2
 
@@ -145,6 +145,7 @@ def main():
     p.add_argument("name")
     p.add_argument("persona")
     p.add_argument("--clock", choices=["shared", "own"], default="shared")
+    p.add_argument("--template", default=None)
     p.set_defaults(fn=do_spawn)
 
     args = ap.parse_args()

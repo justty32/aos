@@ -20,7 +20,8 @@
     collect 再掃一次信箱（沒新信也照走），回 llm
 
 `step` 是被推了幾格（空轉也算），`busy` 是這裡面真做事幾格，`empty_replies` 記模型回空白
-幾次。跟 LLM 之間走 `aos_llm`
+幾次。工具包可用 on_idle／on_act／on_reply／on_result／on_system_prompt 掛進各格；旁線 LLM
+請求記在 `pending`，結果只回原本登記的包，不推動主線。跟 LLM 之間走 `aos_llm`
 的**私有通道**（不是工具），`</think>` 這種漏出來的思考由 LLM 資料夾那側清乾淨
 （engines.json 的 `strip_think`），agent 拿到什麼就用什麼。
 
@@ -32,6 +33,7 @@ import argparse
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aos_llm            # noqa: E402
@@ -42,54 +44,104 @@ from aos_agent import (   # noqa: E402
 LLM_WAIT_TICKS = 60
 
 
-def write_error(home, step, content):
+def write_error(ctx, content):
     """把人看得懂的錯誤也送進聊天 outbox。"""
-    write_json(os.path.join(home, "outbox", "%04d.json" % step),
-               {"role": "assistant", "content": content, "error": True})
+    ctx.reply(content, error=True)
 
-def do_llm(home, world):
+
+def forget_pending(ctx, request):
+    pending = ctx.state.get("pending")
+    if not isinstance(pending, list):
+        ctx.state["pending"] = []
+        return
+    ctx.state["pending"] = [p for p in pending
+                            if not (isinstance(p, dict) and p.get("name") == request)]
+
+
+def default_result(ctx, kind, name, result):
+    """工具包沒接 on_result 時，把結果當成自己的信，下一格照普通信箱處理。"""
+    ctx.put_mail(ctx.world, kind, json.dumps(result, ensure_ascii=False), request=name)
+
+
+def poll_side_results(ctx):
+    """收非主線結果；只叫原本登記的包，不碰五格狀態機。"""
+    pending = ctx.state.get("pending")
+    if not isinstance(pending, list):
+        ctx.state["pending"] = []
+        return
+    modules = dict(ctx.loaded)
+    left = []
+    ctx.state["pending"] = left
+    for item in list(pending):
+        if not isinstance(item, dict) or item.get("kind") == "main":
+            left.append(item)
+            continue
+        result = aos_llm.read_result(ctx.llm_dir(), item.get("name"))
+        if result is None:
+            left.append(item)
+            continue
+        pack_name = item.get("pack")
+        module = modules.get(pack_name)
+        hook = getattr(module, "on_result", None) if module else None
+        if hook:
+            try:
+                hook(ctx.for_pack(pack_name), item.get("kind"), item.get("name"), result)
+                continue
+            except Exception as e:
+                ctx.log("工具包 %s 的 on_result 出錯：%s" % (pack_name, e))
+        default_result(ctx, item.get("kind") or "side", item.get("name"), result)
+
+
+def call_idle_hooks(ctx):
+    for name, module in ctx.loaded:
+        hook = getattr(module, "on_idle", None)
+        if not hook:
+            continue
+        try:
+            hook(ctx.for_pack(name))
+        except Exception as e:
+            ctx.log("工具包 %s 的 on_idle 出錯：%s" % (name, e))
+
+
+def do_llm(ctx, loaded, extra):
     """把整包 body 寫成請求檔丟進 LLM 資料夾的 requests/，回請求檔名。"""
-    loaded, extra = load_packs(home)
     messages = []
-    text = system_text(home, loaded)
+    text = system_text(ctx, loaded)
     if text:
         messages.append({"role": "system", "content": text})
-    history = read_json(os.path.join(home, "prompts.json"), [])
+    history = read_json(os.path.join(ctx.home, "prompts.json"), [])
     messages += history if isinstance(history, list) else []
 
     body = {"messages": messages}
     specs = tool_specs(loaded, extra)
     if specs:
         body["tools"] = [{"type": "function", "function": t} for t in specs]
-    conf = read_json(os.path.join(home, "llm.json"), {})
-    conf = conf if isinstance(conf, dict) else {}
-    name = aos_llm.write_request(
-        llm_dir(home, world), body,
-        priority=conf.get("priority"), engine=conf.get("engine"),
-        name=os.path.basename(world.rstrip("/")) or "agent")
+    name = ctx.llm_request(body, kind="main")
     warn("問 LLM，請求丟成 %s" % name)
     return name
 
 
-def do_wait(home, world, request, waited, step):
+def do_wait(ctx, request, waited):
     """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False, 已等幾格)。"""
-    answer = aos_llm.read_result(llm_dir(home, world), request)
+    answer = aos_llm.read_result(ctx.llm_dir(), request)
     if answer is None:
         waited += 1
         if waited >= LLM_WAIT_TICKS:
             text = "（等 LLM 超過 %d 格沒回應，請確認 LLM 的鐘有沒有在跑）" % LLM_WAIT_TICKS
-            write_error(home, step, text)
+            write_error(ctx, text)
+            forget_pending(ctx, request)
             warn(text)
             return "idle", False, 0
         warn("等 LLM（%s）" % (request or "沒有請求"))
         return "wait", False, waited
-    write_json(os.path.join(home, "llm-result.json"), answer)
+    forget_pending(ctx, request)
+    write_json(os.path.join(ctx.home, "llm-result.json"), answer)
     aos = answer.get("aos") if isinstance(answer, dict) else None
     usage = aos.get("usage") if isinstance(aos, dict) else False
 
     if answer.get("error"):
         reason = str(answer.get("error"))[:200]
-        write_error(home, step, "（LLM 出錯：%s）" % reason)
+        write_error(ctx, "（LLM 出錯：%s）" % reason)
         warn("LLM 回了 error（%s），這輪不算，回 idle" % reason)
         return "idle", usage, 0
     try:
@@ -105,31 +157,35 @@ def do_wait(home, world, request, waited, step):
     calls = assistant.get("tool_calls") or []
     if calls:
         stored["tool_calls"] = calls
-    append_history(home, [stored])
+    append_history(ctx.home, [stored])
     return "act", usage, 0
 
 
 def run_tool(ctx, owners, extra, name, args_text):
     """跑一個工具：名字屬於哪個工具包就交給那包的 run()，其餘的走 tools.json 的
     `tools[]`（一句 shell 指令，參數 JSON 從 stdin 進去）。認不得的名字回一句話，不當機。"""
-    module = owners.get(name)
-    if module is None:
-        return run_custom(ctx, extra, name, args_text)
     try:
         args = json.loads(args_text) if args_text.strip() else {}
     except ValueError:
         args = {}
     if not isinstance(args, dict):
         args = {}
+    owner = owners.get(name)
+    if owner is None:
+        result = run_custom(ctx, extra, name, args_text)
+        return result, result, args
+    pack_name, module = owner
     try:
-        return json.dumps(module.run(name, args, ctx), ensure_ascii=False)
+        result = module.run(name, args, ctx.for_pack(pack_name))
+        return json.dumps(result, ensure_ascii=False), result, args
     except Exception as e:      # 一個工具壞掉不該弄死整格
-        return json.dumps({"error": "%s 出錯：%s" % (name, e)}, ensure_ascii=False)
+        result = {"error": "%s 出錯：%s" % (name, e)}
+        return json.dumps(result, ensure_ascii=False), result, args
 
 
-def do_act(home, world, step):
+def do_act(ctx, loaded, extra):
     """有工具就跑工具；沒工具就回話。回 (下一格 state, 是否收到空白回覆)。"""
-    answer = read_json(os.path.join(home, "llm-result.json"), {})
+    answer = read_json(os.path.join(ctx.home, "llm-result.json"), {})
     message = ((answer.get("choices") or [{}])[0] or {}).get("message") or {}
     calls = message.get("tool_calls")
     if not (isinstance(calls, list) and calls):
@@ -140,23 +196,31 @@ def do_act(home, world, step):
             warn("模型回空白")
             return "idle", True
         print(content)
-        write_json(os.path.join(home, "outbox", "%04d.json" % step),
-                   {"role": "assistant", "content": content})
+        ctx.reply(content)
         return "idle", False
 
-    loaded, extra = load_packs(home)
     owners = pack_owners(loaded)
-    ctx = Ctx(world, home)
     results = []
     for call in calls:
         fn = call.get("function") or {}
         args = fn.get("arguments")
         if not isinstance(args, str):
             args = json.dumps(args or {}, ensure_ascii=False)
-        out = run_tool(ctx, owners, extra, fn.get("name"), args)
+        started = time.monotonic()
+        out, raw_result, parsed_args = run_tool(ctx, owners, extra, fn.get("name"), args)
+        took_ms = int((time.monotonic() - started) * 1000)
         warn("跑工具 %s" % fn.get("name"))
+        for pack_name, module in loaded:
+            hook = getattr(module, "on_act", None)
+            if not hook:
+                continue
+            try:
+                hook(ctx.for_pack(pack_name), fn.get("name"), parsed_args,
+                     raw_result, took_ms)
+            except Exception as e:
+                ctx.log("工具包 %s 的 on_act 出錯：%s" % (pack_name, e))
         results.append({"role": "tool", "tool_call_id": call.get("id"), "content": out})
-    append_history(home, results)
+    append_history(ctx.home, results)
     return "collect", False
 
 
@@ -175,8 +239,15 @@ def do_exec(args):
     announced = saved.get("announced") or []
     wait_ticks = int(saved.get("wait_ticks") or 0)
     empty_replies = int(saved.get("empty_replies") or 0)
+    pending = saved.get("pending")
+    saved["pending"] = pending if isinstance(pending, list) else []
+    loaded, extra = load_packs(home)
+    ctx = Ctx(world, home, saved, loaded)
+
+    poll_side_results(ctx)
 
     if state == "idle":
+        call_idle_hooks(ctx)
         msgs, announced = scan_inbox(home, announced)
         append_history(home, msgs)
         nxt, did = ("llm", True) if msgs else ("idle", False)
@@ -185,18 +256,18 @@ def do_exec(args):
         append_history(home, msgs)
         nxt, did = "llm", True
     elif state == "llm":
-        request = do_llm(home, world)
+        request = do_llm(ctx, loaded, extra)
         wait_ticks = 0
         nxt, did = "wait", True
     elif state == "wait":
-        nxt, usage, wait_ticks = do_wait(home, world, request, wait_ticks, step + 1)
+        nxt, usage, wait_ticks = do_wait(ctx, request, wait_ticks)
         if usage is not False:
             last_usage = usage
         did = nxt != "wait"
         if did:
             request = ""
     elif state == "act":
-        nxt, empty = do_act(home, world, step + 1)
+        nxt, empty = do_act(ctx, loaded, extra)
         if empty:
             empty_replies += 1
         did = True
@@ -206,10 +277,11 @@ def do_exec(args):
 
     if did:
         busy += 1
-    write_json(st_path, {"state": nxt, "step": step + 1, "busy": busy,
-                         "request": request, "last_usage": last_usage,
-                         "started": started, "announced": announced,
-                         "wait_ticks": wait_ticks, "empty_replies": empty_replies})
+    saved.update({"state": nxt, "step": step + 1, "busy": busy,
+                  "request": request, "last_usage": last_usage,
+                  "started": started, "announced": announced,
+                  "wait_ticks": wait_ticks, "empty_replies": empty_replies})
+    write_json(st_path, saved)
     warn("step %d busy %d state %s -> %s" % (step, busy, state, nxt))
     return 0
 

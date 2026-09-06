@@ -35,7 +35,10 @@ xxx/<home>/system-prompt.json   人格 {"role":"system","content":"..."}
 xxx/<home>/prompts.json         記憶（OpenAI messages 陣列）
 xxx/<home>/tools.json           {"packs": [...], "tools": [...]}
 xxx/<home>/llm.json             {"dir": "../llm", "priority": 1, "engine": "..."}（可有可無）
-xxx/<home>/state.json           走到哪
+xxx/<home>/state.json           走到哪、旁線 pending、空白回覆數
+xxx/<home>/contacts.json        通訊錄（名字 → 世界路徑）
+xxx/<home>/parent.json          父是誰（小孩才有）
+xxx/<home>/kids.json            小孩名冊
 xxx/<home>/inbox/<來源>/*.json       沒讀的信
 xxx/<home>/inbox/<來源>/read/*.json  讀過的信
 xxx/<home>/outbox/<四位數>.json      它自己說的話
@@ -88,17 +91,18 @@ LLM 附的那包用量，`empty_replies` 是模型只回空白的次數。`self_
 ```
 
 `packs` 列到誰就載誰。**一個工具包就是一個 `.py` 檔**，放在 `packs/<名字>.py`——先找 agent
-自己的 `<home>/packs/`，再找 aos 內建的 `proto2/packs/`。一包自帶三樣東西：`TOOLS`（工具定義）、
-`PROMPT`（一段預設 prompt，會併進 system 訊息）、`run(name, args, ctx)`（怎麼跑）。**要加新
-工具包就加一個檔、在 `tools.json` 列進去**，不用動 `aos-agent`。認不得的包名印一句到 stderr
-就跳過，agent 照樣跑。內建四包：
+自己的 `<home>/packs/`，再找 aos 內建的 `proto2/packs/`。一包自帶 `TOOLS`、`PROMPT`、
+`run(name, args, ctx)`，也可以帶掛勾。認不得的包名印一句就跳過。
 
-| 包 | 工具 | 幹嘛的 |
+| 包名 | 一句話 | 文件 |
 |---|---|---|
-| `mailbox` | `inbox_sources`／`inbox_list`／`inbox_read`／`inbox_read_all` | 讀自己的信 |
-| `shell` | `sh(command)` | 在世界資料夾裡跑一句 shell（60 秒、輸出截斷） |
-| `self` | `self_status()` | 走了幾格、開機多久、記憶多大、資料夾多大、今天用掉多少 token |
-| `kids` | `spawn(name, persona, clock)`／`kids_list()` | 生小孩、看小孩 |
+| `mailbox` | 讀自己的信箱，讀過就搬進 `read/`。 | [docs/mailbox.md](docs/mailbox.md) |
+| `shell` | 在世界資料夾跑一句 shell。 | [docs/shell.md](docs/shell.md) |
+| `self` | 看自己的格數、記憶、資料夾與用量。 | [docs/self.md](docs/self.md) |
+| `kids` | 生小孩，並看小孩的名冊與狀態。 | [docs/kids.md](docs/kids.md) |
+
+**加一包 = 加 `packs/<包>.py` + `tests/<包>.sh` + `docs/<包>.md`。README 只加表裡一行。**
+共用接口與掛勾看 [docs/packs-api.md](docs/packs-api.md)。
 
 `tools[]` 是另一條路：**一個工具就是一句 shell 指令**，`command` 不送 LLM，跑的時候丟 shell、
 參數 JSON 從 stdin 進去。同名時工具包贏。
@@ -112,9 +116,12 @@ LLM 附的那包用量，`empty_replies` 是模型只回空白的次數。`self_
 **own**（時間脫節）建好就自動 `aos-daemon register <子路徑> --no-wait` 要一個自己的時鐘，
 沒設 `AOS_DAEMON_DIR` 就只建資料夾、印一句要自己開 `aos-loop <子路徑> --keep-inst`。
 
-人要生就 `aos-user spawn <世界> <子名> <人格> [--clock shared|own]`（預設 `shared`）；模型自己
+人要生就 `aos-user spawn <世界> <子名> <人格> [--clock shared|own] [--template 名字]`（預設 `shared`）；模型自己
 生就叫 `kids` 包的 `spawn` 工具——**agent 可以自己生小孩**。子名只准英數字／底線／減號，
 名字被佔走、或找不到 LLM 資料夾就回一句話不生。
+
+spawn 也會寫小孩的 `parent.json`、父子雙方的 `contacts.json`、父的 `kids.json`。模板從
+`proto2/templates/<名字>/` 找；目錄還不存在就直接略過。
 
 ## 給人用的殼：aos-user
 
