@@ -45,3 +45,15 @@
 還需要考慮aos-daemon在重啟後，能否接續先前的進度。然後我也在擔心，以後如果有成千上百個時鐘，那麼會不會很難管理，但這個是以後的事了，內部核心就是這樣就好，頂多相關.json檔案可以做合併減少體積，管理這塊就是後續另外做介面，核心機制就先這樣
 
 （這段用法已在 proto2 落地，見 [README](../README.md) 的 daemon 一節。）
+
+## 續二：鐘的 id、暫停、dead、以及 aos-llm 的第一版
+
+以下是同一天中午的補充原文，
+
+/和__，這個撞名的狀況可不好，你想辦法解決。然後一個鐘的暫停，我想你說的是被pause掉的鐘，那他要麼被重新register或continue後才會繼續跑，否則kernel的start/stop不會影響到他
+
+OK，dead 先這樣。然後daemon會定期檢查，若發現有鐘dead了，他會自動把他重啟
+
+然後是aos-llm，這個可以有很多版本，我們先做最粗淺的，一樣需要register到daemon，每格時鐘都去資料夾內抓請求，然後內部排序，先做優先級最高的。然後會返回用量，自己本身也會紀錄用量，單位是每天。設定檔決定有幾個可用的engine，每個engine都是一個endpoint+model，配上一些參數如思考/溫度等，後續別人發來的請求可以覆蓋這些參數。用量的紀錄，是紀錄每個endpoint+model的配對的用量。然後提供指令:aos-llm send xxx，那個xxx就是檔案，這個指令會去找環境變數：AOS_LLM_DIR
+
+（三段都已在 proto2 落地：daemon 見 commit 36fbf70，aos-llm 見 e7d444b；用法在 [README](../README.md)。）
