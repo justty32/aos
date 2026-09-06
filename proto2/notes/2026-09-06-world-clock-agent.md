@@ -105,3 +105,25 @@ agent那邊，我希望能夠用設置的，比如放在xxx/agent，或是xxx/.a
 等差不多差不多之後，我接下來要開使用這個proto 2原形，配合我的lm studio/ deepseek api，來去嘗試開發一個python程式。
 
 （發想結果在 [tools/README.md](tools/README.md)。）
+
+## 續六：發想全部做出來、讓 codex 自己玩、MCP、快速開新 agent
+
+以下是同一天傍晚使用者出門前後的原文。
+
+我醒了。幫我去發想程式碼編輯相關的tool
+
+然後可以開始讓codex去把發想出來的東西全部弄出來，順便讓他自己玩玩看（lm studio和deepseek都可）。
+
+對，讓codex自己玩玩看我們今天做的這一整套。
+
+啊，看要不要弄個mcp，讓我現在用的claude agent，可以扮演我（使用者）的角色，去下這些cli指令，來代替我測試這些東西。
+
+都可以，我等一下要出門。你先commit, push，這樣我在路上可以看
+
+對，你可以問我問題，我會用claude code app來回答你
+
+（問 34 條拍板題要不要照建議——）都OK。然後我在路上的時候，有時候也會突然冒出一些建議...好，總之麻煩你了
+
+啊，要弄個好的使用者介面，和tool，方便我們在設定新agent的時候，能快速指定他的tool，還有初始prompts
+
+（照這些話排的工作：發想第八份 code-editing 已寫；接著 codex 一輪一包做 communication、fs、self/memory、kids、jobs、cost、identity、code，再做 aos-mcp 與 aos-user new；34 條拍板題全照建議。）
