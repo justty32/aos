@@ -99,11 +99,12 @@ helper 的子 agent」，它就會挑好 clock 去呼叫 `aos-agent-spawn`，子
 
 每個資料夾各開一個 `aos-loop` 很快就開不完，所以有 **daemon**：一個一直跑著的進程（kernel），每隔一
 小段時間看有沒有人丟請求進來，照請求開／關／暫停時鐘。**一個時鐘就是一個獨立的 `aos-loop <世界>
---keep-inst` 進程**，自己一個 process group——暫停送 SIGSTOP、續跑 SIGCONT、關掉 SIGTERM，排程直接用
-Linux 那套輪子。家在 `AOS_DAEMON_DIR`（例如 `~/.aosd`，**不在 repo 裡**，第一次 start 自己建）：
+--keep-inst` 進程**，自己一個 process group——暫停 SIGSTOP、續跑 SIGCONT、關掉 SIGTERM，排程直接用
+Linux 的輪子。家在 `AOS_DAEMON_DIR`（例如 `~/.aosd`，**不在 repo 裡**，第一次 start 自己建）：
 `kernel.json`（pid／tick）、`kernel.log`、`requests/`（請求檔，處理完搬去 `requests/done/` 多一個
-`result`）、`clocks/<id>.json`（一個時鐘一個檔）、`logs/<id>.log`。`id` 是世界絕對路徑去掉開頭的 `/`、
-`/` 換成 `__`（`/tmp/a/b` → `tmp__a__b`），真路徑存在檔裡的 `dir`。**一個路徑只能有一個時鐘。**
+`result`）、`clocks/<id>.json`、`logs/<id>.log`。`id` 是世界絕對路徑的 percent-encoding（`/tmp/a/b` →
+`%2Ftmp%2Fa%2Fb`：可逆、不撞名；超過 200 bytes 退成 `sha256(路徑)`），真路徑一律看檔裡的 `dir`——`ls`
+印的也是 `dir`。**一個路徑只能有一個時鐘。**
 
 ```sh
 aos-daemon-kernel start|restart|stop|ls [daemon 目錄]    # 不給就用 AOS_DAEMON_DIR，都沒有退 2
@@ -113,10 +114,15 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
 - `aos-daemon` 只把請求檔丟進 `requests/`，等 `done/` 冒出同名檔印結果；kernel 沒在跑就不等、請求先放
   著。`--config` 例如 `{"interval": 2, "user": "bob"}`：幾秒一格（預設 1）、用誰的身份跑（不給＝繼承呼
   叫者；要換身份 kernel 得是 root 跑的，內部靠 `runuser`）。`ls` 一行一個時鐘（state／pid／interval／
-  user／dir），第一行是 kernel 自己，沒 kernel 也看得到。
-- **stop 把所有時鐘一起收掉**，但時鐘檔留著，下次 `start` 自己接回來：pid 還活著就認領、死了就照原設
-  定重開（暫停中的會以 running 回來），資料夾不見了標 dead——世界走到哪存在世界自己的資料夾裡，接回
-  來就等於接上進度。時鐘自己死掉 kernel **不會**幫它重開，只把 state 標成 `dead` 留在 ls 上。
+  restarts／user／dir），第一行是 kernel 自己，沒 kernel 也看得到。
+- **stop 只收進程、不改時鐘檔**（kernel 不在時 `ls` 把這種鐘顯示成 `stopped`），下次 `start` 接回
+  來：pid 活著就認領、running 而 pid 死了照原設定重開，進度在世界自己的資料夾裡。**掛了也自動重
+  開**：kernel 每格巡一遍，running 的進程不見了就再開一個、`restarts` 加一；`dead` 只代表「重開不起
+  來」（資料夾不見了之類），下一格還會再試，資料夾回來就自己變回 running。
+- **暫停的鐘不受 kernel 開關影響**：一個被 pause 掉的鐘，要麼被重新 register 或 continue 後才會繼續
+  跑，否則 kernel 的 start／stop 不會影響到他——`start` 不重開它、巡邏也不標 dead；`continue` 進程還
+  在就 SIGCONT，不在就重開一個；register 到 running／paused 的路徑會被擋（叫你用 continue 或先
+  unregister）。
 - 幾千個時鐘就是幾千個小 json 檔，現在夠用；管理介面、合併檔案是以後的事，不歸 kernel 管。
 
 ## 為什麼另起爐灶
@@ -148,4 +154,4 @@ aos-daemon-kernel stop                      # 玩完，時鐘一起收掉
 
 ## 目前刻意不做
 
-鎖、時鐘掛了自動重開、fsync、並發、逾時、重試、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
+鎖、fsync、並發、逾時、重試、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
