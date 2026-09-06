@@ -4,6 +4,7 @@
     "base_url": "http://localhost:1234/v1",
     "model": "local",
     "max_concurrent": 1,
+    "strip_think": true,
     "params": {
       "temperature": 0.7
     }
