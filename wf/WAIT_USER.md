@@ -27,6 +27,7 @@
    → [finite-resource-queue](workflows/workshop/records/finite-resource-queue.md)
 6. **proto2：子 agent 會自動繼承 `spawn` 工具**，子孫一路都能生小孩（驗過三層）。要不要擋、要不要限深度？（使用者 09-06 說「之後再說」）→ [proto2/README](../proto2/README.md)
 8. **proto2：agent 之間的交流（tell／hear，或子回話自動變父的信）**先不做，什麼時候做、走哪種？→ [proto2/README](../proto2/README.md)
+9. **proto2：工具包發想的 34 條拍板題（T-01～T-34）**——七隊各想一塊（交流、自身狀態與記憶、檔案／shell 與造工具、子 agent、長時間工具、身份與環境、成本測算），每題附建議；A-6 與 A-8 的答案也包在裡面。→ [proto2/notes/tools/README.md](../proto2/notes/tools/README.md)
 
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
