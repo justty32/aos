@@ -9,7 +9,8 @@
     xxx/<home>/prompts.json         記憶（OpenAI messages 陣列）
     xxx/<home>/tools.json           {"packs": [...], "tools": [...]}
     xxx/<home>/llm.json             {"dir": "../llm", "priority": 1, "engine": "..."}（可有可無）
-    xxx/<home>/state.json           {"state","step","busy","request","last_usage","started","announced"}
+    xxx/<home>/state.json           {"state","step","busy","request","last_usage","started","announced",
+                                     "wait_ticks","empty_replies"}
     xxx/<home>/inbox/<來源>/*.json       沒讀的信
     xxx/<home>/inbox/<來源>/read/*.json  讀過的信
     xxx/<home>/outbox/<四位數>.json      它自己說的話
@@ -334,28 +335,22 @@ def llm_dir(home, world):
     return where
 
 
-def today_usage(home, world):
-    """今天這個 agent 用的那台引擎，在 LLM 資料夾帳本裡的那一列（撈不到就 None）。"""
+def today_usage_all(home, world):
+    """今天整個 LLM 世界的加總，並把每台引擎原本那列放在 by_engine。"""
     d = find_llm(home, world)
     if not d or not os.path.isdir(d):
         return None
-    engines = read_json(os.path.join(d, "engines.json"), [])
-    if not isinstance(engines, list) or not engines:
-        return None
-    conf = read_json(os.path.join(home, "llm.json"), {})
-    conf = conf if isinstance(conf, dict) else {}
-    want = conf.get("engine") or (read_json(os.path.join(d, "defaults.json"), {}) or {}).get("engine")
-    engine = None
-    for e in engines:
-        if isinstance(e, dict) and want and e.get("name") == want:
-            engine = e
-            break
-    if engine is None:
-        engine = engines[0] if isinstance(engines[0], dict) else {}
     book = read_json(os.path.join(d, "usage", "%s.json" % datetime.date.today().isoformat()), {})
     if not isinstance(book, dict):
         return None
-    return book.get("%s|%s" % (engine.get("base_url"), engine.get("model")))
+    rows = {str(key): value for key, value in book.items() if isinstance(value, dict)}
+    total = {}
+    for row in rows.values():
+        for key, value in row.items():
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                total[key] = total.get(key, 0) + value
+    total["by_engine"] = rows
+    return total
 
 
 def status_of(world, home):
@@ -376,7 +371,7 @@ def status_of(world, home):
             "history_chars": len(json.dumps(history, ensure_ascii=False)),
             "folder_bytes": folder_bytes(world),
             "last_usage": st.get("last_usage"),
-            "today_usage": today_usage(home, world)}
+            "today_usage_all": today_usage_all(home, world)}
 
 
 # ── 工具包拿得到的把手 ────────────────────────────────────────────────────
@@ -524,5 +519,4 @@ def outbox_names(box):
 def outbox_content(box, name):
     msg = read_json(os.path.join(box, name), {})
     return (msg.get("content") or "") if isinstance(msg, dict) else ""
-
 

@@ -112,3 +112,9 @@ content 是「直接請求成功」。總共 1,177 tokens，其中 reasoning 是
 1. 先修 result 被 agent 拿走後又被判 `worker died` 的競速。它會蓋錯誤、灌水用量。
 2. LLM 失敗或沒鐘時，聊天端要直接顯示「卡在哪」。不要讓人只看到一直沒回。
 3. 把首次啟動收乾淨。README 補 API server，kernel start 也要等到真的可 register 再回成功。
+
+## 修完之後（codex 第二輪）
+
+- 在指定的 `play-fix/` 複本用 LM Studio 的 `qwen/qwen3.5-9b` 實跑。kernel start 回來後立刻 register LLM 和 agent 都成功；第一句回「第一輪收到」。
+- unregister LLM 的鐘後再講一句，agent 等滿 60 格就在 outbox 寫出「等 LLM 超過 60 格沒回應，請確認 LLM 的鐘有沒有在跑」，而且原請求還留在 queue。
+- 把 LLM 的鐘 register 回來後，舊 queue 會繼續跑；再講一句回「恢復成功」。最後 `aos-daemon-kernel stop` 成功，指定的 `aosd-fix` 沒留進程。

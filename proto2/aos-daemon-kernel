@@ -21,7 +21,7 @@ daemon 資料夾＝argv[2]，沒給就用環境變數 AOS_DAEMON_DIR（例如 ~/
 就退回 `sha256(路徑)` 的十六進位值。真正的路徑一律以檔案裡的 `dir` 為準（`ls` 印的也是 `dir`）。
 **一個路徑只能有一個時鐘**，路徑就是時鐘的 id。
 
-  start    背景開一個 kernel（已經有活著的就印一句退 1），印出 pid
+  start    背景開一個 kernel，等 pid 活著且第一格跑完才回（最多 5 秒）；已經有活著的退 1
   stop     對 kernel 送 SIGTERM，它會先把所有時鐘收掉再走；沒在跑退 1
   restart  跑著就先 stop，再 start
   ls       印現在有哪些時鐘（第一行是 kernel 自己），沒有 kernel 也看得到；--json 出 JSON
@@ -442,6 +442,7 @@ def cmd_start(home, interval):
     if alive(k.get("pid")):
         print("aos-daemon-kernel: kernel 已經在跑了，pid %s" % k["pid"], file=sys.stderr)
         sys.exit(1)
+    before_tick = int(k.get("tick") or 0)
     out = open(home.log, "ab")
     with open(os.devnull, "rb") as devnull:
         p = subprocess.Popen(
@@ -449,6 +450,25 @@ def cmd_start(home, interval):
              "--interval", str(interval)],
             stdin=devnull, stdout=out, stderr=out, start_new_session=True)
     out.close()
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        current = read_json(home.kernel, {})
+        if (current.get("pid") == p.pid and alive(p.pid)
+                and int(current.get("tick") or 0) >= max(1, before_tick + 1)):
+            break
+        if p.poll() is not None:
+            print("aos-daemon-kernel: kernel 還沒跑完第一格就停了，請看 %s" % home.log,
+                  file=sys.stderr)
+            return 1
+        time.sleep(0.05)
+    else:
+        print("aos-daemon-kernel: 等了 5 秒，kernel 還沒跑完第一格，請看 %s" % home.log,
+              file=sys.stderr)
+        try:
+            os.kill(p.pid, signal.SIGTERM)
+        except OSError:
+            pass
+        return 1
     print(p.pid)
     print("aos-daemon-kernel: kernel 起來了，pid %d，輸出在 %s" % (p.pid, home.log),
           file=sys.stderr)

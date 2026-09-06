@@ -9,7 +9,7 @@
 > agent 之間的交流（寄信給對方的 inbox、看對方的 outbox），使用者的特殊地位到時再談。
 
     aos-user say <世界> [文字]        寫一封信進 <home>/inbox/user/（不給文字就整段讀 stdin）
-    aos-user listen <世界> [--new] [--once]   盯著 <home>/outbox/，有回話就印
+    aos-user listen <世界> [--new] [--once]   盯著 <home>/outbox/，錯誤用 agent!> 印
     aos-user talk <世界>              互動聊天（say ＋ listen，/quit 離開）
     aos-user status <世界>            印它的自我狀態（就是 self_status 那一包）
     aos-user spawn <世界> <名字> <人格> [--clock shared|own]   幫它生一個小孩
@@ -26,11 +26,17 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aos_agent import (   # noqa: E402
-    DIRECT_SOURCE, outbox_content, outbox_names, put_mail, resolve_home,
+    DIRECT_SOURCE, outbox_content, outbox_names, put_mail, read_json, resolve_home,
     spawn, status_of, warn)
 
 
 def show(box, name):
+    msg = read_json(os.path.join(box, name), {})
+    if isinstance(msg, dict) and msg.get("error"):
+        print("agent!> " + (msg.get("content") or ""))
+        print()
+        sys.stdout.flush()
+        return
     print("--- reply %s ---" % os.path.splitext(name)[0])
     print(outbox_content(box, name))
     print()
@@ -89,7 +95,9 @@ def do_talk(args):
                 fresh = [n for n in outbox_names(box) if n not in before]
                 if fresh:
                     for name in fresh:
-                        print("agent> " + outbox_content(box, name))
+                        msg = read_json(os.path.join(box, name), {})
+                        prefix = "agent!> " if isinstance(msg, dict) and msg.get("error") else "agent> "
+                        print(prefix + outbox_content(box, name))
                         sys.stdout.flush()
                     break
                 time.sleep(0.5)
