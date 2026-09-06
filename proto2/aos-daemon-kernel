@@ -1,0 +1,459 @@
+#!/usr/bin/env python3
+"""aos-daemon-kernel <start|restart|stop|ls|tick> [daemon 資料夾] — 常駐的時鐘總管。
+
+daemon 不再是一個世界資料夾，而是一個**一直跑著的進程**：每隔一小段時間去
+`<daemon 資料夾>/requests/` 看有沒有人丟請求進來，照請求開／關／暫停時鐘。
+一個時鐘就是一個獨立的 `aos-loop <世界> --keep-inst` 進程，自己一個 process group，
+所以暫停就是 SIGSTOP、續跑就是 SIGCONT、關掉就是 SIGTERM——排程直接用 Linux 那套輪子。
+
+daemon 資料夾＝argv[2]，沒給就用環境變數 AOS_DAEMON_DIR（例如 ~/.aosd），都沒有就退 2。
+裡面長這樣（第一次 start 會自己建）：
+
+    kernel.json      {"pid": N, "started": "...", "tick": N}   跑著的 kernel 自己寫
+    kernel.log       kernel 自己的輸出
+    requests/        待處理的請求檔 <時間戳>.json
+    requests/done/   處理過的，同檔名，多一個 "result"
+    clocks/<id>.json 一個時鐘一個檔（dir／pid／state／interval／user／started／error）
+    logs/<id>.log    那個時鐘的 aos-loop 輸出
+
+`id` 是世界資料夾絕對真實路徑去掉開頭的 `/`、再把 `/` 換成 `__`（`/tmp/a/b` → `tmp__a__b`），
+真正的路徑存在檔案裡的 `dir`。**一個路徑只能有一個時鐘**，路徑就是時鐘的 id。
+
+  start    背景開一個 kernel（已經有活著的就印一句退 1），印出 pid
+  stop     對 kernel 送 SIGTERM，它會先把所有時鐘收掉再走；沒在跑退 1
+  restart  跑著就先 stop，再 start
+  ls       印現在有哪些時鐘（第一行是 kernel 自己），沒有 kernel 也看得到；--json 出 JSON
+  tick     前景只推一格就走（測試用，不必開背景進程）；背景的 run 就是一直 tick
+  resume   把上一輪的時鐘接回來（kernel 起來時自己會先做一次，這裡是給人／測試單獨叫的）
+
+**重啟接得上**：start（restart 也是）會先掃一遍 clocks/：pid 還活著就直接認領，
+pid 死了而狀態是 running／paused 就照原本的設定重開一個（暫停中的會以 running 回來），
+狀態已經是 dead 的不碰，資料夾不見了就標 dead。stop 只殺進程、不刪時鐘檔，
+所以 stop → start 全部會自己回來。世界自己走到哪存在世界資料夾裡，時鐘接回來就接上了。
+"""
+import argparse
+import json
+import os
+import pwd
+import signal
+import subprocess
+import sys
+import time
+from datetime import datetime
+
+HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+
+def log(msg):
+    print("aos-daemon-kernel: " + msg, flush=True)
+
+
+def die(msg, code=2):
+    print("aos-daemon-kernel: " + msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def read_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read().strip()
+    except OSError:
+        return default
+    if not text:
+        return default
+    try:
+        return json.loads(text)
+    except ValueError:
+        return default
+
+
+def write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+def dir_id(path):
+    return path.lstrip("/").replace("/", "__") or "__root__"
+
+
+def alive(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+    except OSError:
+        return False
+    return True
+
+
+def now():
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def me():
+    return pwd.getpwuid(os.getuid()).pw_name
+
+
+class Home:
+    def __init__(self, d):
+        self.dir = os.path.abspath(d)
+        self.kernel = os.path.join(self.dir, "kernel.json")
+        self.log = os.path.join(self.dir, "kernel.log")
+        self.requests = os.path.join(self.dir, "requests")
+        self.done = os.path.join(self.requests, "done")
+        self.clocks = os.path.join(self.dir, "clocks")
+        self.logs = os.path.join(self.dir, "logs")
+
+    def make(self):
+        for p in (self.dir, self.requests, self.done, self.clocks, self.logs):
+            os.makedirs(p, exist_ok=True)
+
+    def clock_path(self, cid):
+        return os.path.join(self.clocks, cid + ".json")
+
+    def clock_files(self):
+        if not os.path.isdir(self.clocks):
+            return []
+        return sorted(n for n in os.listdir(self.clocks)
+                      if n.endswith(".json") and os.path.isfile(os.path.join(self.clocks, n)))
+
+    def read_clocks(self):
+        out = []
+        for n in self.clock_files():
+            c = read_json(os.path.join(self.clocks, n), None)
+            if isinstance(c, dict):
+                c.setdefault("id", n[: -len(".json")])
+                out.append(c)
+        return out
+
+
+# ── 一格 ────────────────────────────────────────────────────────────────────
+
+def start_loop(home, world, interval, user):
+    """真的把 aos-loop 開起來，成功回 (True, pid)，失敗回 (False, 訊息)。"""
+    cid = dir_id(world)
+    cmd = [os.path.join(HERE, "aos-loop"), world, "--keep-inst", "--interval", str(interval)]
+    if user and user != me():
+        if os.geteuid() != 0:
+            return False, "要切換身份得用 root 跑 kernel"
+        cmd = ["runuser", "-u", user, "--"] + cmd
+
+    env = dict(os.environ)
+    env["PATH"] = HERE + os.pathsep + env.get("PATH", "")
+    logfile = os.path.join(home.logs, cid + ".log")
+    os.makedirs(home.logs, exist_ok=True)
+    try:
+        out = open(logfile, "ab")
+        with open(os.devnull, "rb") as devnull:
+            p = subprocess.Popen(cmd, cwd=world, env=env, stdin=devnull,
+                                 stdout=out, stderr=out, start_new_session=True)
+        out.close()
+    except OSError as e:
+        return False, "開不起時鐘：%s" % e
+    write_json(home.clock_path(cid), {
+        "dir": world, "id": cid, "pid": p.pid, "state": "running",
+        "interval": interval, "user": user, "started": now(), "error": None,
+    })
+    return True, p.pid
+
+
+def spawn_clock(home, world, cfg):
+    """register 用：先檢查沒人佔著這個路徑，再開時鐘。"""
+    old = read_json(home.clock_path(dir_id(world)), None)
+    if isinstance(old, dict) and old.get("state") != "dead":
+        return False, "這個資料夾已經有時鐘了：" + world
+    try:
+        interval = float(cfg.get("interval", 1))
+    except (TypeError, ValueError):
+        return False, "interval 要是數字：%r" % cfg.get("interval")
+    ok, r = start_loop(home, world, interval, cfg.get("user") or None)
+    if not ok:
+        return False, r
+    return True, "時鐘開好了，pid %d，每 %g 秒一格" % (r, interval)
+
+
+def resume(home):
+    """kernel 起來時先把上一輪的時鐘接回來（log 記成 tick 0）。
+
+    pid 還活著（kernel 被 SIGKILL 掉但時鐘沒死）就直接認領、狀態原封不動；
+    pid 死了而狀態是 running／paused 就照原本的 dir／interval／user 重開一個
+    ——暫停中的會以 running 的樣子回來；狀態已經是 dead 的不管；資料夾不見了就標 dead。
+    世界自己的進度存在世界資料夾裡，所以接回來就等於接上了。
+    """
+    for clock in home.read_clocks():
+        world = clock.get("dir") or ""
+        pid = int(clock.get("pid") or 0)
+        if clock.get("state") == "dead":
+            continue
+        if alive(pid):
+            log("tick 0 adopt %s pid %d" % (world, pid))
+            continue
+        if not os.path.isdir(world):
+            clock["state"] = "dead"
+            clock["error"] = "資料夾不見了"
+            write_json(home.clock_path(clock["id"]), clock)
+            log("tick 0 %s 資料夾不見了，標成 dead" % world)
+            continue
+        try:
+            interval = float(clock.get("interval") or 1)
+        except (TypeError, ValueError):
+            interval = 1
+        ok, r = start_loop(home, world, interval, clock.get("user") or None)
+        if ok:
+            log("tick 0 resume %s pid %d" % (world, r))
+        else:
+            clock["state"] = "dead"
+            clock["error"] = str(r)
+            write_json(home.clock_path(clock["id"]), clock)
+            log("tick 0 %s 接不回來（%s），標成 dead" % (world, r))
+
+
+def signal_clock(pid, sig):
+    try:
+        os.killpg(pid, sig)
+        return True
+    except OSError:
+        try:
+            os.kill(pid, sig)
+            return True
+        except OSError:
+            return False
+
+
+def reap(pid):
+    try:
+        os.waitpid(pid, os.WNOHANG)
+    except OSError:
+        pass
+
+
+def do_op(home, req, tick):
+    op = req.get("op")
+    if op not in ("register", "unregister", "pause", "continue"):
+        return False, "不認識的 op：%r" % op
+    world = req.get("dir")
+    if not world:
+        return False, "請求裡沒有 dir"
+    world = os.path.realpath(os.path.expanduser(str(world)))
+    cid = dir_id(world)
+    cfg = req.get("config") or {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+
+    if op == "register":
+        if not os.path.isdir(world):
+            return False, "找不到這個資料夾：" + world
+        return spawn_clock(home, world, cfg)
+
+    path = home.clock_path(cid)
+    clock = read_json(path, None)
+    if not isinstance(clock, dict):
+        return False, "這個資料夾沒有時鐘：" + world
+    pid = int(clock.get("pid") or 0)
+
+    if op == "unregister":
+        signal_clock(pid, signal.SIGTERM)
+        signal_clock(pid, signal.SIGCONT)   # 被 STOP 住的收不到 TERM，先讓它醒
+        reap(pid)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        return True, "時鐘關掉了（log 留著）：" + world
+
+    if clock.get("state") == "dead":
+        return False, "這個時鐘已經死了：" + world
+    if op == "pause":
+        if clock.get("state") == "paused":
+            return False, "本來就暫停著：" + world
+        if not signal_clock(pid, signal.SIGSTOP):
+            return False, "送不出 SIGSTOP（pid %d 不在了？）" % pid
+        clock["state"] = "paused"
+        write_json(path, clock)
+        return True, "暫停了：" + world
+    if clock.get("state") != "paused":
+        return False, "本來就在跑：" + world
+    if not signal_clock(pid, signal.SIGCONT):
+        return False, "送不出 SIGCONT（pid %d 不在了？）" % pid
+    clock["state"] = "running"
+    write_json(path, clock)
+    return True, "續跑了：" + world
+
+
+def tick_once(home):
+    home.make()
+    k = read_json(home.kernel, {})
+    tick = int(k.get("tick") or 0) + 1
+    k["tick"] = tick
+    write_json(home.kernel, k)
+
+    names = sorted(n for n in os.listdir(home.requests)
+                   if n.endswith(".json") and os.path.isfile(os.path.join(home.requests, n)))
+    for name in names:
+        src = os.path.join(home.requests, name)
+        req = read_json(src, None)
+        if not isinstance(req, dict):
+            req = {"result": None}
+            ok, msg = False, "請求檔讀不成 JSON 物件"
+        else:
+            try:
+                ok, msg = do_op(home, req, tick)
+            except Exception as e:          # 一個壞請求不該弄死 kernel
+                ok, msg = False, "處理請求時出錯：%s" % e
+        req["result"] = {"ok": ok, "message": msg}
+        write_json(os.path.join(home.done, name), req)
+        try:
+            os.remove(src)
+        except OSError:
+            pass
+        log("tick %d %s %s %s：%s" % (tick, req.get("op"), req.get("dir"),
+                                      "ok" if ok else "fail", msg))
+
+    for clock in home.read_clocks():
+        if clock.get("state") not in ("running", "paused"):
+            continue
+        pid = int(clock.get("pid") or 0)
+        reap(pid)
+        if alive(pid):
+            continue
+        clock["state"] = "dead"
+        clock["error"] = "進程不見了"
+        write_json(home.clock_path(clock["id"]), clock)
+        log("tick %d %s died" % (tick, clock.get("dir")))
+    return tick
+
+
+# ── 背景常駐 ────────────────────────────────────────────────────────────────
+
+def run(home, interval):
+    home.make()
+    k = read_json(home.kernel, {})
+    k["pid"] = os.getpid()
+    k["started"] = now()
+    k.setdefault("tick", 0)
+    write_json(home.kernel, k)
+    log("kernel 起來了，pid %d，每 %g 秒一格" % (os.getpid(), interval))
+    resume(home)
+
+    def bye(signum, frame):
+        log("收到訊號 %d，收工" % signum)
+        for clock in home.read_clocks():
+            pid = int(clock.get("pid") or 0)
+            signal_clock(pid, signal.SIGTERM)
+            signal_clock(pid, signal.SIGCONT)
+        time.sleep(0.3)
+        for clock in home.read_clocks():
+            pid = int(clock.get("pid") or 0)
+            reap(pid)
+            if alive(pid):
+                signal_clock(pid, signal.SIGKILL)
+            clock["error"] = "kernel 收工時一起收掉了，下次 start 會接回來"
+            write_json(home.clock_path(clock["id"]), clock)
+        cur = read_json(home.kernel, {})
+        cur["pid"] = None
+        write_json(home.kernel, cur)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, bye)
+    signal.signal(signal.SIGINT, bye)
+    while True:
+        tick_once(home)
+        time.sleep(interval)
+
+
+def cmd_start(home, interval):
+    home.make()
+    k = read_json(home.kernel, {})
+    if alive(k.get("pid")):
+        print("aos-daemon-kernel: kernel 已經在跑了，pid %s" % k["pid"], file=sys.stderr)
+        sys.exit(1)
+    out = open(home.log, "ab")
+    with open(os.devnull, "rb") as devnull:
+        p = subprocess.Popen(
+            [sys.executable, os.path.abspath(sys.argv[0]), "run", home.dir,
+             "--interval", str(interval)],
+            stdin=devnull, stdout=out, stderr=out, start_new_session=True)
+    out.close()
+    print(p.pid)
+    print("aos-daemon-kernel: kernel 起來了，pid %d，輸出在 %s" % (p.pid, home.log),
+          file=sys.stderr)
+    return 0
+
+
+def cmd_stop(home):
+    k = read_json(home.kernel, {})
+    pid = k.get("pid")
+    if not alive(pid):
+        print("aos-daemon-kernel: kernel 沒在跑", file=sys.stderr)
+        sys.exit(1)
+    os.kill(int(pid), signal.SIGTERM)
+    for _ in range(50):
+        if not alive(pid):
+            print("aos-daemon-kernel: kernel（pid %s）停了，時鐘一起收掉" % pid,
+                  file=sys.stderr)
+            return 0
+        time.sleep(0.1)
+    print("aos-daemon-kernel: 送了 SIGTERM 但 pid %s 還在" % pid, file=sys.stderr)
+    sys.exit(1)
+
+
+def cmd_ls(home, as_json):
+    k = read_json(home.kernel, {})
+    clocks = home.read_clocks()
+    if as_json:
+        print(json.dumps({"dir": home.dir, "kernel": k, "clocks": clocks},
+                         ensure_ascii=False, indent=2))
+        return 0
+    if alive(k.get("pid")):
+        print("kernel: 跑著 pid %s tick %s（%s）" % (k.get("pid"), k.get("tick"), home.dir))
+    else:
+        print("kernel: 沒在跑（%s）" % home.dir)
+    if not clocks:
+        print("（沒有時鐘）")
+        return 0
+    print("%-8s %-8s %-8s %-10s %s" % ("STATE", "PID", "INTERVAL", "USER", "DIR"))
+    for c in clocks:
+        print("%-8s %-8s %-8s %-10s %s" % (
+            c.get("state"), c.get("pid"), c.get("interval"),
+            c.get("user") or "-", c.get("dir")))
+    return 0
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="aos-daemon-kernel")
+    ap.add_argument("cmd", choices=["start", "restart", "stop", "ls", "tick", "run", "resume"])
+    ap.add_argument("dir", nargs="?", default=None)
+    ap.add_argument("--interval", type=float, default=1)
+    ap.add_argument("--json", action="store_true")
+    args = ap.parse_args()
+
+    d = args.dir or os.environ.get("AOS_DAEMON_DIR")
+    if not d:
+        die("沒給 daemon 目錄，也沒設 AOS_DAEMON_DIR")
+    home = Home(os.path.expanduser(d))
+
+    if args.cmd == "run":
+        run(home, args.interval)
+    if args.cmd == "resume":
+        home.make()
+        resume(home)
+        return 0
+    if args.cmd == "start":
+        return cmd_start(home, args.interval)
+    if args.cmd == "restart":
+        if alive(read_json(home.kernel, {}).get("pid")):
+            cmd_stop(home)
+        return cmd_start(home, args.interval)
+    if args.cmd == "stop":
+        return cmd_stop(home)
+    if args.cmd == "ls":
+        if not os.path.isdir(home.dir):
+            die("找不到 daemon 目錄：" + home.dir)
+        return cmd_ls(home, args.json)
+    tick_once(home)
+    return 0
+
+
+sys.exit(main())

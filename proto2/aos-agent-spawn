@@ -5,17 +5,17 @@
 兩種鐘：
   shared（預設，時間沒脫節）——在父的 .aos/inst 尾端加一行 `aos-exec <子名>`，
     父走一格就順手推子走一格，子自己沒有 loop。
-  own（時間脫節）——只把資料夾建起來，父不推它；要另外開一個
-    `aos-loop <子路徑> --keep-inst` 它才會走。
+  own（時間脫節）——資料夾建起來以後，順手 `aos-daemon register <子路徑> --no-wait`，
+    請 daemon 幫它開一個自己的時鐘。
 
 子的 llm.json 指到跟父同一個 LLM 資料夾：把父 llm.json 的 dir 解成絕對路徑，
 再換算成相對於子資料夾的相對路徑（父是 ../llm，子就會是 ../../llm）。
 父沒有 llm.json 就不生，退 2——沒有 LLM 的 agent 走不動。
 
-父有 .aos/agent/daemon.json（{"dir": "../daemon"}，相對於父資料夾）的話，daemon.json
-也照同樣方式抄一份給子；own 的子生完還會順手 `aos-daemon-register <daemon> <子> --name
-<父名>-<子名>`，這樣它一生出來就有人推，不用人工去開第二個 loop。沒有 daemon.json
-就跟以前一樣，只印一句「要自己開 aos-loop」。shared 不登記——父走一格它就走一格了。
+own 的子生完會呼叫隔壁的 `aos-daemon register <子路徑> --no-wait`（daemon 目錄看
+環境變數 AOS_DAEMON_DIR），一生出來就有人推。沒設 AOS_DAEMON_DIR 就印一句
+「子建好了，但沒跟 daemon 要時鐘」，退出碼還是 0——資料夾是真的生出來了。
+shared 不用要時鐘——父走一格它就走一格了。
 """
 import argparse
 import json
@@ -98,16 +98,6 @@ def main():
     write_json(os.path.join(home, "state.json"), {"state": "idle", "step": 0, "busy": 0, "request": ""})
     write_json(os.path.join(home, "llm.json"), {"dir": os.path.relpath(llm_abs, child)})
 
-    # daemon.json 跟 llm.json 一樣的做法：解成絕對路徑再換算成相對於子資料夾。
-    # shared 的子也抄，這樣它以後自己生 own 孫的時候，找得到同一個 daemon。
-    parent_daemon = os.path.join(parent_home, "daemon.json")
-    daemon_abs = None
-    if os.path.isfile(parent_daemon):
-        where_d = read_json(parent_daemon, {}).get("dir") or "../daemon"
-        daemon_abs = os.path.abspath(os.path.join(parent, where_d))
-        write_json(os.path.join(home, "daemon.json"),
-                   {"dir": os.path.relpath(daemon_abs, child)})
-
     with open(os.path.join(child, ".aos", "inst"), "w", encoding="utf-8") as f:
         f.write(INST_LINE + "\n")
 
@@ -121,20 +111,19 @@ def main():
     if args.clock == "shared":
         append_line(os.path.join(parent, ".aos", "inst"), "aos-exec " + args.name)
         print("aos-agent-spawn: %s 建好了（shared，父走一格它走一格）" % child, file=sys.stderr)
-    elif daemon_abs and os.path.isdir(daemon_abs):
-        reg_name = os.path.basename(parent) + "-" + args.name
-        reg = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "aos-daemon-register")
-        rc = subprocess.run([reg, daemon_abs, child, "--name", reg_name]).returncode
+    elif os.environ.get("AOS_DAEMON_DIR"):
+        daemon = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "aos-daemon")
+        rc = subprocess.run([daemon, "register", child, "--no-wait"]).returncode
         if rc == 0:
-            print("aos-agent-spawn: %s 建好了（own，已經登記給 %s 推，名字 %s）"
-                  % (child, daemon_abs, reg_name), file=sys.stderr)
+            print("aos-agent-spawn: %s 建好了（own，已經跟 daemon 要了一個時鐘）" % child,
+                  file=sys.stderr)
         else:
-            print("aos-agent-spawn: %s 建好了（own），但登記給 daemon 失敗（退出碼 %d），"
+            print("aos-agent-spawn: %s 建好了（own），但跟 daemon 要時鐘失敗（退出碼 %d），"
                   "要自己開 aos-loop %s --keep-inst 它才會走" % (child, rc, child),
                   file=sys.stderr)
     else:
-        print("aos-agent-spawn: %s 建好了（own，要自己開 aos-loop %s --keep-inst 它才會走）"
-              % (child, child), file=sys.stderr)
+        print("aos-agent-spawn: %s 建好了（own），但沒設 AOS_DAEMON_DIR，沒跟 daemon 要時鐘，"
+              "要自己開 aos-loop %s --keep-inst 它才會走" % (child, child), file=sys.stderr)
     sys.exit(0)
 
 

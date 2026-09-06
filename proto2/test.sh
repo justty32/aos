@@ -10,9 +10,9 @@ SAY="$HERE/aos-agent-say"
 SPAWN="$HERE/aos-agent-spawn"
 LISTEN="$HERE/aos-agent-listen"
 TALK="$HERE/aos-agent-talk"
-DSTEP="$HERE/aos-daemon-step"
-DREG="$HERE/aos-daemon-register"
-DUNREG="$HERE/aos-daemon-unregister"
+DKERNEL="$HERE/aos-daemon-kernel"
+DAEMON="$HERE/aos-daemon"
+unset AOS_DAEMON_DIR   # 別讓外面的環境把測試的請求丟進使用者真的 daemon 目錄
 FAILED=0
 
 check() {  # check <名字> <期待退出碼> <實際退出碼>
@@ -187,7 +187,15 @@ http.server.HTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_forever()
 PYEOF2
 python3 "$FAKE/fake-llm.py" "$PORT" &
 FAKE_PID=$!
-trap 'kill $FAKE_PID 2>/dev/null' EXIT
+LIVE_AOSD=""   # 有背景 kernel 在跑的時候記著它的 daemon 目錄，離場一定收掉
+cleanup() {
+  kill $FAKE_PID 2>/dev/null
+  if [ -n "$LIVE_AOSD" ]; then
+    "$DKERNEL" stop "$LIVE_AOSD" >/dev/null 2>&1
+    kill_clocks "$LIVE_AOSD"
+  fi
+}
+trap cleanup EXIT
 python3 - "$PORT" <<'PYEOF2' || { echo "FAIL 假 LLM 伺服器起不來"; exit 1; }
 import socket, sys, time
 for _ in range(60):
@@ -232,16 +240,6 @@ PYEOF2
 }
 now_state() {  # now_state <agent 資料夾>
   python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' "$1/.aos/agent/state.json"
-}
-
-# daemon 範例的複本。登記表也走 git 索引：own 的子 agent 會往真範例的 registry/ 塞新檔
-# （使用者玩過就會多幾個），cp -r 會把那些也撿進來，測試就飄了。組完把兩條登記改成指向
-# 這次的複本（用 aos-daemon-register 重寫，順便測到它寫的是絕對路徑）。
-prep_daemon() {  # prep_daemon <目標 daemon 資料夾> [<要登記的資料夾>...]
-  d="$1"; shift
-  mkdir -p "$d/.aos/daemon/registry"
-  git -C "$HERE/.." show :proto2/examples/daemon/.aos/inst > "$d/.aos/inst"
-  for t in "$@"; do "$DREG" "$d" "$t" >/dev/null 2>&1; done
 }
 
 # 12. LLM 資料夾走一格：拿最舊的請求去打、回覆落在 results/、請求搬去 requests/done/
@@ -667,140 +665,299 @@ else
 fi
 rm -rf "$TMP"
 
-# ── daemon 資料夾 ───────────────────────────────────────────────────────────
-# 35. daemon 走一格：登記表上的 agent 跟 llm 各被推一格
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
-prep_daemon "$TMP/daemon" "$TMP/agent" "$TMP/llm"
-echo '{"messages": [{"role": "user", "content": "哈囉"}]}' \
-  > "$TMP/llm/.aos/llm/requests/0001.json"
-OUT=$("$DSTEP" "$TMP/daemon" 2>&1); RC=$?
-check "aos-daemon-step 走一格回 0" 0 "$RC"
-AG_STEP=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' \
-  "$TMP/agent/.aos/agent/state.json")
-if [ "$AG_STEP" = "1" ]; then echo "ok   登記表上的 agent 被推了一格"; else echo "FAIL agent 走了 $AG_STEP 格：$OUT"; FAILED=1; fi
-if [ -f "$TMP/llm/.aos/llm/results/0001.json" ]; then
-  echo "ok   登記表上的 LLM 資料夾也被推了一格（請求變成結果了）"
-else
-  echo "FAIL LLM 資料夾沒被推到：$OUT"; FAILED=1
-fi
-NEXIT=$(echo "$OUT" | grep -c "tick 1 .* exit 0")
-if [ "$NEXIT" = "2" ]; then echo "ok   stderr 兩個登記各印一行 exit 0"; else echo "FAIL exit 0 的行數不對（$NEXIT）：$OUT"; FAILED=1; fi
-TICK=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["tick"])' \
-  "$TMP/daemon/.aos/daemon/state.json")
-if [ "$TICK" = "1" ]; then echo "ok   daemon 自己的 state.json tick 是 1"; else echo "FAIL tick 是 $TICK"; FAILED=1; fi
-rm -rf "$TMP"
+# ── daemon：常駐 kernel＋一個世界一個時鐘 ───────────────────────────────────
+# 幫手：做一個每格往 count.txt 加一行的世界、把某個 daemon 目錄裡的時鐘全砍掉
+# （測試絕不能留背景進程）、讀最新一筆處理完的請求結果、算 count.txt 幾行。
+make_world() {  # make_world <資料夾>
+  mkdir -p "$1/.aos"
+  printf 'echo x >> count.txt\n' > "$1/.aos/inst"
+}
+kill_clocks() {  # kill_clocks <daemon 目錄>
+  python3 - "$1" <<'PYEOF2'
+import glob, json, os, signal, sys
+for p in glob.glob(os.path.join(sys.argv[1], "clocks", "*.json")):
+    try:
+        os.killpg(int(json.load(open(p, encoding="utf-8"))["pid"]), signal.SIGKILL)
+    except Exception:
+        pass
+PYEOF2
+}
+last_result() {  # last_result <daemon 目錄>：印最後處理完的那筆 ok|訊息（照改動時間挑，
+                 # 因為測試會故意塞檔名很怪的壞請求）
+  python3 - "$1" <<'PYEOF2'
+import glob, json, os, sys
+files = sorted(glob.glob(os.path.join(sys.argv[1], "requests", "done", "*.json")),
+               key=os.path.getmtime)
+r = (json.load(open(files[-1], encoding="utf-8")).get("result") or {}) if files else {}
+print(("ok" if r.get("ok") else "fail") + "|" + (r.get("message") or "沒有結果"))
+PYEOF2
+}
+nlines() { if [ -f "$1/count.txt" ]; then wc -l < "$1/count.txt"; else echo 0; fi; }
+clock_id() { echo "$1" | sed 's|^/||; s|/|__|g'; }
+pid_of() {  # pid_of <daemon 目錄> <世界>
+  python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["pid"])' \
+    "$1/clocks/$(clock_id "$2").json" 2>/dev/null
+}
+state_of() {  # state_of <daemon 目錄> <世界>
+  python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' \
+    "$1/clocks/$(clock_id "$2").json" 2>/dev/null
+}
 
-# 36. every：登記寫 2 就兩格推一次，daemon 走四格它只走兩格
-TMP=$(mktemp -d)
-mkdir -p "$TMP/daemon/.aos/daemon/registry" "$TMP/fast/.aos" "$TMP/slow/.aos"
-printf 'echo x >> count.txt\n' > "$TMP/fast/.aos/inst"
-printf 'echo x >> count.txt\n' > "$TMP/slow/.aos/inst"
-"$DREG" "$TMP/daemon" "$TMP/fast" >/dev/null 2>&1
-"$DREG" "$TMP/daemon" "$TMP/slow" --every 2 >/dev/null 2>&1
-OUT=$(for i in 1 2 3 4; do "$DSTEP" "$TMP/daemon"; done 2>&1)
-NFAST=$(wc -l < "$TMP/fast/count.txt")
-NSLOW=$(wc -l < "$TMP/slow/count.txt")
-if [ "$NFAST" = "4" ] && [ "$NSLOW" = "2" ]; then
-  echo "ok   every 1 的走四格、every 2 的只走兩格"
-else
-  echo "FAIL every 不對：fast=$NFAST slow=$NSLOW"; FAILED=1
-fi
-NSKIP=$(echo "$OUT" | grep -c "slow skip")
-if [ "$NSKIP" = "2" ]; then echo "ok   沒輪到的那兩格印了 skip"; else echo "FAIL skip 行數不對（$NSKIP）：$OUT"; FAILED=1; fi
-rm -rf "$TMP"
+# 35. 沒給 daemon 目錄也沒設 AOS_DAEMON_DIR：兩支都退 2
+"$DKERNEL" ls >/dev/null 2>&1; RC=$?
+check "kernel 沒 daemon 目錄退 2" 2 "$RC"
+"$DAEMON" register /tmp >/dev/null 2>&1; RC=$?
+check "aos-daemon 沒 daemon 目錄退 2" 2 "$RC"
 
-# 37. register／unregister：檔案出現、消失，同名跟不存在都退 2
-TMP=$(mktemp -d)
-mkdir -p "$TMP/daemon" "$TMP/target/.aos"
-printf 'true\n' > "$TMP/target/.aos/inst"
-"$DREG" "$TMP/daemon" "$TMP/target" >/dev/null 2>&1; RC=$?
-check "aos-daemon-register 回 0" 0 "$RC"
-REGFILE="$TMP/daemon/.aos/daemon/registry/target.json"
-if [ -f "$REGFILE" ]; then echo "ok   名字沒給就用目標資料夾的 basename"; else echo "FAIL $REGFILE 沒出現"; FAILED=1; fi
-REGDIR=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dir"])' "$REGFILE")
-case "$REGDIR" in
-  /*) echo "ok   登記表裡的 dir 是絕對路徑" ;;
-  *) echo "FAIL 登記表的 dir 不是絕對路徑：$REGDIR"; FAILED=1 ;;
-esac
-"$DREG" "$TMP/daemon" "$TMP/target" >/dev/null 2>&1; RC=$?
-check "同名再登記一次退 2" 2 "$RC"
-"$DREG" "$TMP/daemon" "$TMP/target" --name second --every 3 >/dev/null 2>&1
-EVERY=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["every"])' \
-  "$TMP/daemon/.aos/daemon/registry/second.json")
-if [ "$EVERY" = "3" ]; then echo "ok   --name 換名字、--every 有寫進去"; else echo "FAIL every=$EVERY"; FAILED=1; fi
-"$DUNREG" "$TMP/daemon" target >/dev/null 2>&1; RC=$?
-check "aos-daemon-unregister 回 0" 0 "$RC"
-if [ ! -f "$REGFILE" ]; then echo "ok   取消登記後檔案不見了"; else echo "FAIL $REGFILE 還在"; FAILED=1; fi
-"$DUNREG" "$TMP/daemon" target >/dev/null 2>&1; RC=$?
-check "取消不存在的登記退 2" 2 "$RC"
-rm -rf "$TMP"
-
-# 38. 登記的資料夾不見了：印一行、其他登記照推、整格還是回 0
-TMP=$(mktemp -d)
-mkdir -p "$TMP/daemon/.aos/daemon/registry" "$TMP/good/.aos"
-printf 'echo x >> count.txt\n' > "$TMP/good/.aos/inst"
-"$DREG" "$TMP/daemon" "$TMP/good" >/dev/null 2>&1
-printf '{"dir": "%s/沒有這個資料夾", "every": 1}\n' "$TMP" \
-  > "$TMP/daemon/.aos/daemon/registry/aaa-missing.json"
-OUT=$("$DSTEP" "$TMP/daemon" 2>&1); RC=$?
-check "有壞登記時 aos-daemon-step 還是回 0" 0 "$RC"
+# 36. register 一格就開出一個真的時鐘：請求檔進去、clocks/ 出來、世界真的被推
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"
+printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
+"$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1; RC=$?
+check "kernel 沒在跑時 aos-daemon 只丟請求、回 0" 0 "$RC"
+NREQ=$(find "$AOSD/requests" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$NREQ" = "1" ]; then echo "ok   請求檔丟進 requests/"; else echo "FAIL requests/ 裡有 $NREQ 個檔"; FAILED=1; fi
+OUT=$(AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick 2>&1); RC=$?
+check "kernel tick 回 0" 0 "$RC"
 case "$OUT" in
-  *"找不到資料夾"*) echo "ok   找不到的登記有印一行" ;;
-  *) echo "FAIL 沒印找不到資料夾：$OUT"; FAILED=1 ;;
+  *"register"*"ok"*) echo "ok   tick 印了處理掉哪個請求" ;;
+  *) echo "FAIL tick 印的不對：$OUT"; FAILED=1 ;;
 esac
-if [ -f "$TMP/good/count.txt" ]; then echo "ok   壞登記不影響後面的登記照推"; else echo "FAIL good 沒被推到：$OUT"; FAILED=1; fi
-rm -rf "$TMP"
-
-# 39. 一個 loop 推完整條鏈：只轉 daemon，agent 跟 LLM 都靠它推，replies/ 要冒出回話
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
-prep_daemon "$TMP/daemon" "$TMP/agent" "$TMP/llm"
-"$SAY" "$TMP/agent" "在嗎" >/dev/null 2>&1
-"$LOOP" "$TMP/daemon" --keep-inst --steps 15 --interval 0 >/dev/null 2>&1
-NREP=$(find "$TMP/agent/.aos/agent/replies" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
-if [ "$NREP" -ge 1 ]; then
-  echo "ok   一個 aos-loop 只推 daemon，整條鏈就跑完了（agent 有回話）"
+CID=$(clock_id "$TMP/w")
+if [ -f "$AOSD/clocks/$CID.json" ]; then
+  echo "ok   時鐘檔名就是路徑換算來的 id（$CID）"
 else
-  echo "FAIL 整條鏈沒跑完：state=$(now_state "$TMP/agent")"; FAILED=1
+  echo "FAIL $AOSD/clocks/$CID.json 沒出現"; FAILED=1
 fi
-rm -rf "$TMP"
-
-# 40. own 的子 agent 自動登記給父的 daemon，生出來就有人推
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
-prep_daemon "$TMP/daemon"
-git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/daemon.json \
-  > "$TMP/agent/.aos/agent/daemon.json"
-OUT=$("$SPAWN" "$TMP/agent" kid --clock own "你是 own 的小孩" 2>&1); RC=$?
-check "有 daemon.json 時 own spawn 回 0" 0 "$RC"
-KIDREG="$TMP/daemon/.aos/daemon/registry/agent-kid.json"
-if [ -f "$KIDREG" ]; then echo "ok   own 的子自動登記成 <父名>-<子名>（agent-kid）"; else echo "FAIL $KIDREG 沒出現：$OUT"; FAILED=1; fi
-KIDDIR=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dir"])' "$KIDREG" 2>/dev/null)
-if [ "$KIDDIR" = "$TMP/agent/kid" ]; then echo "ok   登記指到子的絕對路徑"; else echo "FAIL 登記的路徑是 $KIDDIR"; FAILED=1; fi
-KIDD=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dir"])' \
-  "$TMP/agent/kid/.aos/agent/daemon.json" 2>/dev/null)
-if [ "$KIDD" = "../../daemon" ]; then echo "ok   子也抄到一份換算過的 daemon.json"; else echo "FAIL 子的 daemon.json 是 $KIDD"; FAILED=1; fi
-"$LOOP" "$TMP/daemon" --keep-inst --steps 3 --interval 0 >/dev/null 2>&1
-KID_STEP=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' \
-  "$TMP/agent/kid/.aos/agent/state.json")
-if [ "$KID_STEP" -ge 1 ]; then echo "ok   daemon 轉起來，own 的子自己走了 $KID_STEP 格"; else echo "FAIL own 的子沒走：step=$KID_STEP"; FAILED=1; fi
-rm -rf "$TMP"
-
-# 41. 父沒有 daemon.json：own 的子照舊不登記，只叫人自己開 loop
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-prep_daemon "$TMP/daemon"
-OUT=$("$SPAWN" "$TMP/agent" kid --clock own "你是 own 的小孩" 2>&1)
-NREG=$(find "$TMP/daemon/.aos/daemon/registry" -name '*.json' | wc -l)
-if [ "$NREG" = "0" ]; then echo "ok   父沒有 daemon.json 就不登記"; else echo "FAIL 竟然登記了 $NREG 個"; FAILED=1; fi
-case "$OUT" in
-  *"自己開 aos-loop"*) echo "ok   沒 daemon 時還是叫人自己開 loop" ;;
-  *) echo "FAIL 沒印自己開 loop：$OUT"; FAILED=1 ;;
+CDIR=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dir"])' "$AOSD/clocks/$CID.json" 2>/dev/null)
+CIV=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["interval"])' "$AOSD/clocks/$CID.json" 2>/dev/null)
+if [ "$CDIR" = "$TMP/w" ] && [ "$(state_of "$AOSD" "$TMP/w")" = "running" ] && [ "$CIV" = "0.2" ]; then
+  echo "ok   時鐘檔記著 dir／state running／--config 的 interval"
+else
+  echo "FAIL 時鐘檔內容不對：dir=$CDIR state=$(state_of "$AOSD" "$TMP/w") interval=$CIV"; FAILED=1
+fi
+if [ -f "$AOSD/logs/$CID.log" ]; then echo "ok   時鐘的輸出落在 logs/$CID.log"; else echo "FAIL logs/$CID.log 沒出現"; FAILED=1; fi
+REQ_TOP=$(find "$AOSD/requests" -maxdepth 1 -name '*.json' | wc -l)
+DONE_N=$(find "$AOSD/requests/done" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$REQ_TOP" = "0" ] && [ "$DONE_N" = "1" ]; then
+  echo "ok   處理完的請求從 requests/ 搬去 requests/done/"
+else
+  echo "FAIL requests 頂層 $REQ_TOP 個、done $DONE_N 個"; FAILED=1
+fi
+case "$(last_result "$AOSD")" in
+  ok\|*) echo "ok   done 裡的 result 是 ok" ;;
+  *) echo "FAIL result 不是 ok：$(last_result "$AOSD")"; FAILED=1 ;;
 esac
-if [ ! -f "$TMP/agent/kid/.aos/agent/daemon.json" ]; then echo "ok   父沒 daemon.json 子也不會憑空多一份"; else echo "FAIL 子多了 daemon.json"; FAILED=1; fi
+sleep 0.8
+if [ "$(nlines "$TMP/w")" -ge 2 ]; then
+  echo "ok   時鐘是個真的 aos-loop 進程，世界一直被推（count.txt $(nlines "$TMP/w") 行）"
+else
+  echo "FAIL 世界沒被推：count.txt $(nlines "$TMP/w") 行"; FAILED=1
+fi
+CPID=$(pid_of "$AOSD" "$TMP/w")
+"$DAEMON" unregister "$TMP/w" --daemon "$AOSD" >/dev/null 2>&1
+AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
+sleep 0.3
+if [ ! -f "$AOSD/clocks/$CID.json" ] && ! kill -0 "$CPID" 2>/dev/null; then
+  echo "ok   unregister 把時鐘檔刪掉、進程也收掉了"
+else
+  echo "FAIL unregister 後檔或進程還在（pid $CPID）"; FAILED=1
+fi
+kill_clocks "$AOSD"; rm -rf "$TMP"
+
+# 37. 各種錯：資料夾不存在、重複登記、對不存在的時鐘動手、暫停兩次、壞請求檔、不認識的 op
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"
+printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
+tick() { AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1; }
+"$DAEMON" register "$TMP/沒這個資料夾" --daemon "$AOSD" >/dev/null 2>&1; tick
+case "$(last_result "$AOSD")" in
+  fail\|*找不到*) echo "ok   register 不存在的資料夾：ok=false" ;;
+  *) echo "FAIL 應該要 fail：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+"$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1; tick
+"$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1; tick
+case "$(last_result "$AOSD")" in
+  fail\|*已經有時鐘*) echo "ok   同一個路徑只能有一個時鐘，重複登記 ok=false" ;;
+  *) echo "FAIL 重複登記應該要 fail：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+"$DAEMON" unregister "$TMP/沒登記過" --daemon "$AOSD" >/dev/null 2>&1; tick
+case "$(last_result "$AOSD")" in
+  fail\|*沒有時鐘*) echo "ok   unregister 沒登記過的：ok=false" ;;
+  *) echo "FAIL 應該要 fail：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+"$DAEMON" pause "$TMP/w" --daemon "$AOSD" >/dev/null 2>&1; tick
+"$DAEMON" pause "$TMP/w" --daemon "$AOSD" >/dev/null 2>&1; tick
+case "$(last_result "$AOSD")" in
+  fail\|*本來就暫停*) echo "ok   暫停兩次：第二次 ok=false" ;;
+  *) echo "FAIL 應該要 fail：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+"$DAEMON" continue "$TMP/w" --daemon "$AOSD" >/dev/null 2>&1; tick
+"$DAEMON" continue "$TMP/w" --daemon "$AOSD" >/dev/null 2>&1; tick
+case "$(last_result "$AOSD")" in
+  fail\|*本來就在跑*) echo "ok   續跑兩次：第二次 ok=false" ;;
+  *) echo "FAIL 應該要 fail：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+printf 'this is not json\n' > "$AOSD/requests/99999999-000000-000000.json"; tick
+case "$(last_result "$AOSD")" in
+  fail\|*讀不成*) echo "ok   壞掉的請求檔：ok=false，一樣搬去 done/" ;;
+  *) echo "FAIL 壞請求應該要 fail：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+printf '{"op": "亂搞", "dir": "%s"}\n' "$TMP/w" > "$AOSD/requests/99999999-000001-000000.json"; tick
+case "$(last_result "$AOSD")" in
+  fail\|*不認識*) echo "ok   不認識的 op：ok=false" ;;
+  *) echo "FAIL 怪 op 應該要 fail：$(last_result "$AOSD")"; FAILED=1 ;;
+esac
+if [ "$(id -u)" != "0" ]; then
+  printf '{"user": "nobody"}\n' > "$TMP/asuser.json"
+  make_world "$TMP/w2"
+  "$DAEMON" register "$TMP/w2" --config "$TMP/asuser.json" --daemon "$AOSD" >/dev/null 2>&1; tick
+  case "$(last_result "$AOSD")" in
+    fail\|*root*) echo "ok   不是 root 又要換身份：ok=false，講清楚要 root" ;;
+    *) echo "FAIL 換身份的錯誤訊息不對：$(last_result "$AOSD")"; FAILED=1 ;;
+  esac
+fi
+kill_clocks "$AOSD"; unset -f tick; rm -rf "$TMP"
+
+# 38. 時鐘自己死掉：下一格標成 dead，ls 看得到，不會自動重開
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"
+printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
+"$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1
+AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
+CPID=$(pid_of "$AOSD" "$TMP/w")
+kill -KILL "-$CPID" 2>/dev/null
+sleep 0.3
+AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
+if [ "$(state_of "$AOSD" "$TMP/w")" = "dead" ]; then
+  echo "ok   時鐘死了下一格就標成 dead"
+else
+  echo "FAIL 死掉的時鐘 state 是 $(state_of "$AOSD" "$TMP/w")"; FAILED=1
+fi
+OUT=$(AOS_DAEMON_DIR="$AOSD" "$DKERNEL" ls 2>&1)
+case "$OUT" in
+  *"kernel: 沒在跑"*dead*"$TMP/w"*) echo "ok   ls 印得出 kernel 沒在跑＋dead 的時鐘" ;;
+  *) echo "FAIL ls 印的不對：$OUT"; FAILED=1 ;;
+esac
+kill_clocks "$AOSD"; rm -rf "$TMP"
+
+# 39. own 的子 agent 會自己跟 daemon 要時鐘；沒設 AOS_DAEMON_DIR 就只警告一句
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+OUT=$(AOS_DAEMON_DIR="$AOSD" "$SPAWN" "$TMP/agent" kid --clock own "你是 own 的小孩" 2>&1); RC=$?
+check "有 AOS_DAEMON_DIR 時 own spawn 回 0" 0 "$RC"
+REQOP=$(python3 - "$AOSD" <<'PYEOF2'
+import glob, json, os, sys
+files = sorted(glob.glob(os.path.join(sys.argv[1], "requests", "*.json")))
+d = json.load(open(files[-1], encoding="utf-8")) if files else {}
+print("%s %s" % (d.get("op"), d.get("dir")))
+PYEOF2
+)
+if [ "$REQOP" = "register $TMP/agent/kid" ]; then
+  echo "ok   own 的子丟了一個 register 請求給 daemon"
+else
+  echo "FAIL 請求內容不對：$REQOP（$OUT）"; FAILED=1
+fi
+OUT=$("$SPAWN" "$TMP/agent" kid2 --clock own "你是 own 的小孩" 2>&1); RC=$?
+check "沒 AOS_DAEMON_DIR 時 own spawn 還是回 0" 0 "$RC"
+case "$OUT" in
+  *"沒設 AOS_DAEMON_DIR"*) echo "ok   沒設 AOS_DAEMON_DIR 就警告一句、資料夾照樣建好" ;;
+  *) echo "FAIL 沒警告：$OUT"; FAILED=1 ;;
+esac
+if [ -f "$TMP/agent/kid2/.aos/agent/state.json" ]; then echo "ok   kid2 的資料夾還是完整的"; else echo "FAIL kid2 沒建起來"; FAILED=1; fi
 rm -rf "$TMP"
 
-kill $FAKE_PID 2>/dev/null
+# 40. 真的把 kernel 開起來跑一輪：start → register → 世界動 → pause 停住 → continue 又動
+#     → stop 一起收掉。整段大約 6 秒，trap 保證不留背景進程。
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"
+printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
+LIVE_AOSD="$AOSD"
+"$DKERNEL" start "$AOSD" --interval 0.2 >/dev/null 2>&1; RC=$?
+check "kernel start 回 0" 0 "$RC"
+"$DKERNEL" start "$AOSD" >/dev/null 2>&1; RC=$?
+check "已經在跑時再 start 一次退 1" 1 "$RC"
+AOS_DAEMON_DIR="$AOSD" "$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --timeout 5 >/dev/null 2>&1; RC=$?
+check "kernel 跑著時 register 等得到 ok 回 0" 0 "$RC"
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  [ "$(nlines "$TMP/w")" -ge 2 ] && break
+  sleep 0.2
+done
+if [ "$(nlines "$TMP/w")" -ge 2 ]; then echo "ok   常駐 kernel 開的時鐘真的在推世界"; else echo "FAIL 世界沒動"; FAILED=1; fi
+AOS_DAEMON_DIR="$AOSD" "$DAEMON" pause "$TMP/w" --timeout 5 >/dev/null 2>&1; RC=$?
+check "pause 回 0" 0 "$RC"
+A=$(nlines "$TMP/w"); sleep 1; B=$(nlines "$TMP/w")
+if [ "$A" = "$B" ]; then echo "ok   暫停以後世界不動了（SIGSTOP，$A 行沒變）"; else echo "FAIL 暫停了還在長：$A → $B"; FAILED=1; fi
+AOS_DAEMON_DIR="$AOSD" "$DAEMON" continue "$TMP/w" --timeout 5 >/dev/null 2>&1; RC=$?
+check "continue 回 0" 0 "$RC"
+sleep 1; C=$(nlines "$TMP/w")
+if [ "$C" -gt "$B" ]; then echo "ok   續跑以後世界又動了（$B → $C）"; else echo "FAIL 續跑後沒動：$B → $C"; FAILED=1; fi
+OUT=$("$DKERNEL" ls "$AOSD" 2>&1)
+case "$OUT" in
+  *"kernel: 跑著"*running*"$TMP/w"*) echo "ok   ls 印得出 kernel pid 跟跑著的時鐘" ;;
+  *) echo "FAIL ls 印的不對：$OUT"; FAILED=1 ;;
+esac
+CPID=$(pid_of "$AOSD" "$TMP/w")
+"$DKERNEL" stop "$AOSD" >/dev/null 2>&1; RC=$?
+check "kernel stop 回 0" 0 "$RC"
+sleep 0.3
+if ! kill -0 "$CPID" 2>/dev/null; then echo "ok   kernel 收工時把時鐘一起收掉"; else echo "FAIL 時鐘 pid $CPID 還活著"; FAILED=1; fi
+KPID=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("pid"))' "$AOSD/kernel.json")
+if [ "$KPID" = "None" ]; then echo "ok   kernel.json 的 pid 收工時清掉了"; else echo "FAIL kernel.json 還寫著 pid=$KPID"; FAILED=1; fi
+"$DKERNEL" stop "$AOSD" >/dev/null 2>&1; RC=$?
+check "沒在跑時 stop 退 1" 1 "$RC"
+kill_clocks "$AOSD"; LIVE_AOSD=""; rm -rf "$TMP"
+
+# 41. 重啟接得上：kernel 不在的時候時鐘死光，start 起來要把它們接回來繼續推
+TMP=$(mktemp -d); AOSD="$TMP/aosd"; make_world "$TMP/w"; make_world "$TMP/gone"
+printf '{"interval": 0.2}\n' > "$TMP/cfg.json"
+"$DAEMON" register "$TMP/w" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1
+"$DAEMON" register "$TMP/gone" --config "$TMP/cfg.json" --daemon "$AOSD" >/dev/null 2>&1
+AOS_DAEMON_DIR="$AOSD" "$DKERNEL" tick >/dev/null 2>&1
+OLDPID=$(pid_of "$AOSD" "$TMP/w")
+kill -KILL "-$OLDPID" 2>/dev/null
+kill -KILL "-$(pid_of "$AOSD" "$TMP/gone")" 2>/dev/null
+rm -rf "$TMP/gone"
+sleep 0.3
+A=$(nlines "$TMP/w")
+LIVE_AOSD="$AOSD"
+"$DKERNEL" start "$AOSD" --interval 0.2 >/dev/null 2>&1
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  NEWPID=$(pid_of "$AOSD" "$TMP/w")
+  [ -n "$NEWPID" ] && [ "$NEWPID" != "$OLDPID" ] && break
+  sleep 0.2
+done
+if [ -n "$NEWPID" ] && [ "$NEWPID" != "$OLDPID" ] && kill -0 "$NEWPID" 2>/dev/null; then
+  echo "ok   start 把死掉的時鐘接回來了（$OLDPID → $NEWPID）"
+else
+  echo "FAIL 時鐘沒被接回來：舊 $OLDPID 新 $NEWPID"; FAILED=1
+fi
+sleep 0.8
+if [ "$(nlines "$TMP/w")" -gt "$A" ]; then
+  echo "ok   接回來的時鐘接著原本的進度繼續推（$A → $(nlines "$TMP/w") 行）"
+else
+  echo "FAIL 接回來卻沒在推：$A → $(nlines "$TMP/w")"; FAILED=1
+fi
+if [ "$(state_of "$AOSD" "$TMP/gone")" = "dead" ]; then
+  echo "ok   資料夾不見了的時鐘接不回來，標成 dead"
+else
+  echo "FAIL 資料夾不見了卻是 $(state_of "$AOSD" "$TMP/gone")"; FAILED=1
+fi
+"$DKERNEL" resume "$AOSD" >/dev/null 2>&1
+if [ "$(pid_of "$AOSD" "$TMP/w")" = "$NEWPID" ]; then
+  echo "ok   再 resume 一次只會認領活著的時鐘，不會重複開"
+else
+  echo "FAIL resume 又開了一個：$(pid_of "$AOSD" "$TMP/w")"; FAILED=1
+fi
+case "$(cat "$AOSD/kernel.log")" in
+  *"tick 0 resume"*) echo "ok   kernel.log 記了 tick 0 resume" ;;
+  *) echo "FAIL kernel.log 沒有 resume 那行：$(cat "$AOSD/kernel.log")"; FAILED=1 ;;
+esac
+"$DKERNEL" stop "$AOSD" >/dev/null 2>&1
+sleep 0.3
+if [ -f "$AOSD/clocks/$(clock_id "$TMP/w").json" ]; then
+  echo "ok   stop 只殺進程、時鐘檔留著（下次 start 才接得回來）"
+else
+  echo "FAIL stop 把時鐘檔刪了"; FAILED=1
+fi
+kill_clocks "$AOSD"; LIVE_AOSD=""; rm -rf "$TMP"
+
+cleanup
 trap - EXIT
 rm -rf "$FAKE"
 
