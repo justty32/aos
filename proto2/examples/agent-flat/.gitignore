@@ -1,0 +1,6 @@
+# 跑過就會生出來的東西，不進 git（prompts.json 有進 git，但玩過就會被寫髒）
+state.json
+llm-result.json
+inbox/
+outbox/
+kids/

@@ -3,12 +3,9 @@
 HERE=$(cd "$(dirname "$0")" && pwd)
 AOS="$HERE/aos-exec"
 LOOP="$HERE/aos-loop"
-STEP="$HERE/aos-agent-step"
+AGENT="$HERE/aos-agent"
+AUSER="$HERE/aos-user"
 LLM="$HERE/aos-llm"
-SAY="$HERE/aos-agent-say"
-SPAWN="$HERE/aos-agent-spawn"
-LISTEN="$HERE/aos-agent-listen"
-TALK="$HERE/aos-agent-talk"
 DKERNEL="$HERE/aos-daemon-kernel"
 DAEMON="$HERE/aos-daemon"
 unset AOS_DAEMON_DIR   # 別讓外面的環境把測試的請求丟進使用者真的 daemon 目錄
@@ -20,7 +17,7 @@ check() {  # check <名字> <期待退出碼> <實際退出碼>
 }
 
 # LLM 的請求現在是丟給背景 worker 打的，測試絕不能留下背景進程：開跑前後都掃一遍。
-strays() { pgrep -f 'aos-llm|aos-loop|aos-daemon-kernel' 2>/dev/null | tr '\n' ' '; }
+strays() { pgrep -f 'aos-llm|aos-loop|aos-daemon-kernel|aos-agent' 2>/dev/null | tr '\n' ' '; }
 BEFORE=$(strays)
 if [ -z "$BEFORE" ]; then
   echo "ok   開跑前沒有殘留的 aos 背景進程"
@@ -115,34 +112,32 @@ rm -rf "$TMP"
 "$LOOP" "$HERE/沒有這個資料夾" 2>/dev/null; RC=$?
 check "aos-loop 資料夾不存在回 2" 2 "$RC"
 
-# 10. 範例資料夾複本開箱即用：附帶的 .aos/inst 不用額外設定就能被 aos-loop 叫到 step
-#     （.aos/inst 現在只寫 aos-agent-step . --no-write-inst，aos-loop 執行前會把自己所在
-#     目錄加進 PATH，複本放到任意 mktemp -d 都找得到指令，不用再跟 examples/ 保持同一層深度；
-#     沒人跑 LLM 資料夾沒關係，第一格 idle 收信、第二格 llm 把請求丟出去就換 wait，
-#     一樣算走了兩格，只看 state.json 的 step 有沒有從 0 變 2。靜態檔用 git 索引裡的內容組，不直接
-#     cp 真的範例——README 教使用者拿 aos-loop --keep-inst 長期盯著真的範例跑，
-#     state.json／hello.json 隨時可能正被用掉，cp 會撿到不確定的當下狀態）
+# 10. 範例資料夾複本開箱即用：附帶的 .aos/inst（`aos-agent exec . --home agent`）不用額外設定
+#     就能被 aos-loop --keep-inst 叫到；aos-loop 執行前會把自己所在目錄加進 PATH，複本放到
+#     任意 mktemp -d 都找得到 aos-agent。先 say 一句話，第一格 idle 收信、第二格 llm 把請求
+#     丟進 LLM 資料夾就換 wait——沒人在跑那個 LLM 資料夾也沒關係，只看 step 有沒有從 0 變 2、
+#     請求檔有沒有真的落地。靜態檔用 git 索引裡的內容組，不直接 cp 真的範例（README 教使用者
+#     拿 aos-loop --keep-inst 長期盯著真的範例跑，state.json／prompts.json 隨時在動）。
 TMP=$(mktemp -d)
 TMPLLM=$(mktemp -d)
-mkdir -p "$TMP/.aos/agent/new-prompts"
-git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/new-prompts/hello.json \
-  > "$TMP/.aos/agent/new-prompts/hello.json"
-git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/state.json \
-  > "$TMP/.aos/agent/state.json"
-git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/prompts.json \
-  > "$TMP/.aos/agent/prompts.json"
-printf '{"dir": "%s"}\n' "$TMPLLM" > "$TMP/.aos/agent/llm.json"
-cp "$HERE/examples/agent/.aos/agent/system-prompt.json" "$TMP/.aos/agent/system-prompt.json"
-cp "$HERE/examples/agent/.aos/agent/tools.json" "$TMP/.aos/agent/tools.json"
-cp "$HERE/examples/agent/notes.txt" "$TMP/notes.txt"
-cp "$HERE/examples/agent/.aos/inst" "$TMP/.aos/inst"
+mkdir -p "$TMP/agent" "$TMP/.aos"
+for f in system-prompt.json prompts.json tools.json; do
+  git -C "$HERE/.." show ":proto2/examples/agent/agent/$f" > "$TMP/agent/$f"
+done
+git -C "$HERE/.." show :proto2/examples/agent/.aos/inst > "$TMP/.aos/inst"
+printf '{"dir": "%s"}\n' "$TMPLLM" > "$TMP/agent/llm.json"
+"$AUSER" say "$TMP" "哈囉" >/dev/null 2>&1
 "$LOOP" "$TMP" --keep-inst --steps 2 --interval 0 >/dev/null 2>&1
-STEP_NOW=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' \
-  "$TMP/.aos/agent/state.json")
+STEP_NOW=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' "$TMP/agent/state.json")
 if [ "$STEP_NOW" = "2" ]; then
   echo "ok   範例資料夾複本開箱即用，aos-loop 靠附帶的 .aos/inst 跑了兩格"
 else
   echo "FAIL 範例複本沒跑到兩格：step=$STEP_NOW"; FAILED=1
+fi
+if [ -n "$(find "$TMPLLM/requests" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
+  echo "ok   第二格真的把請求丟進 llm.json 指的那個 LLM 資料夾"
+else
+  echo "FAIL 請求沒落地"; FAILED=1
 fi
 rm -rf "$TMP" "$TMPLLM"
 
@@ -155,10 +150,10 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# ── LLM 資料夾與 aos-agent-step ─────────────────────────────────────────────
+# ── LLM 資料夾與 aos-agent ─────────────────────────────────────────────────
 # 假的 OpenAI 伺服器：看到 messages 裡還沒有 tool 結果就回一個 tool_calls（say hi），
 # 已經有 tool 結果就回純文字 done。這樣同一台可以服務好幾條鏈。故意在每則回覆夾帶
-# reasoning_content（私有欄位）、done 那則再夾帶空的 tool_calls: []，測 aos-agent-step
+# reasoning_content（私有欄位）、done 那則再夾帶空的 tool_calls: []，測 aos-agent
 # 存進 prompts.json 時會不會把這些濾掉。每則回覆都附一個固定的 usage（7/3/10，外加巢狀的
 # completion_tokens_details.reasoning_tokens=5 跟頂層 prompt_cache_hit_tokens=4），
 # 讓用量那些測試好算——帳本要把這些數字全部累加起來。body 裡有 "echo": true 就改回一句話，把收到的 model／
@@ -168,7 +163,7 @@ rm -rf "$TMP"
 PORT=18080
 FAKE=$(mktemp -d)
 cat > "$FAKE/fake-llm.py" <<'PYEOF2'
-import http.server, json, sys, time
+import http.server, json, re, sys, time
 
 class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
@@ -184,12 +179,33 @@ class H(http.server.BaseHTTPRequestHandler):
             nap = 0
         if nap > 0:
             time.sleep(nap)
+        users = [m for m in msgs if m.get("role") == "user"]
+        last_user = (users[-1].get("content") or "") if users else ""
+        tools = [m for m in msgs if m.get("role") == "tool"]
+        # 劇本：user 訊息裡寫 `CALL <工具> {參數}` 就照順序一次呼叫一個，
+        # 呼叫完了再回一句「看完了：<最後一個工具結果>」。沒寫劇本就走老樣子。
+        triggers = []
+        for m in users:
+            for line in (m.get("content") or "").splitlines():
+                for hit in re.finditer(r"CALL\s+(\w+)\s*(\{[^}]*\})?", line):
+                    triggers.append((hit.group(1), hit.group(2) or "{}"))
         if data.get("echo"):
             message = {"role": "assistant", "reasoning_content": "blah",
                        "content": "model=%s temperature=%s auth=%s" % (
                            data.get("model"), data.get("temperature"),
                            self.headers.get("Authorization") or "-")}
-        elif any(m.get("role") == "tool" for m in msgs):
+        elif "THINK" in last_user:
+            message = {"role": "assistant", "reasoning_content": "blah",
+                       "content": "<think>偷偷想一下</think>\n真正的回答"}
+        elif triggers and len(tools) < len(triggers):
+            name, rest = triggers[len(tools)]
+            message = {"role": "assistant", "content": None, "reasoning_content": "blah",
+                       "tool_calls": [{"id": "call_%d" % (len(tools) + 1), "type": "function",
+                                       "function": {"name": name, "arguments": rest}}]}
+        elif triggers:
+            message = {"role": "assistant", "reasoning_content": "blah", "tool_calls": [],
+                       "content": "看完了：" + (tools[-1].get("content") or "")[:800]}
+        elif tools:
             message = {"role": "assistant", "content": "done", "tool_calls": [],
                        "reasoning_content": "blah"}
         else:
@@ -243,18 +259,20 @@ echo "ok   假 LLM 伺服器起來了"
 # cp -r 真的範例資料夾：README「怎麼玩」教使用者拿 aos-loop --keep-inst 長期盯著
 # 真的範例跑，這樣 hello.json／state.json／prompts.json 會被真的用起來、內容一直在動；
 # 這裡改成用 git 索引裡的內容組出靜態檔，不受工作目錄當下狀態牽連，測試才穩定。
-prep_agent() {  # prep_agent <目標 agent 資料夾>；它的 llm.json 一律指向旁邊的 ../llm
-  mkdir -p "$1/.aos/agent/new-prompts"
-  git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/new-prompts/hello.json \
-    > "$1/.aos/agent/new-prompts/hello.json"
-  git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/state.json \
-    > "$1/.aos/agent/state.json"
-  git -C "$HERE/.." show :proto2/examples/agent/.aos/agent/prompts.json \
-    > "$1/.aos/agent/prompts.json"
-  cp "$HERE/examples/agent/.aos/agent/llm.json" "$1/.aos/agent/llm.json"
-  cp "$HERE/examples/agent/.aos/agent/system-prompt.json" "$1/.aos/agent/system-prompt.json"
-  cp "$HERE/examples/agent/.aos/agent/tools.json" "$1/.aos/agent/tools.json"
-  cp "$HERE/examples/agent/notes.txt" "$1/notes.txt"
+prep_agent() {  # prep_agent <目標世界資料夾>；本體在 <世界>/agent/（--home agent），llm.json 指旁邊的 ../llm
+  mkdir -p "$1/agent" "$1/.aos"
+  for f in system-prompt.json prompts.json tools.json llm.json; do
+    git -C "$HERE/.." show ":proto2/examples/agent/agent/$f" > "$1/agent/$f"
+  done
+  git -C "$HERE/.." show :proto2/examples/agent/.aos/inst > "$1/.aos/inst"
+  git -C "$HERE/.." show :proto2/examples/agent/notes.txt > "$1/notes.txt"
+}
+prep_flat() {  # prep_flat <目標世界資料夾>；home 用預設的 `.`，東西全攤在世界資料夾底下
+  mkdir -p "$1/.aos"
+  for f in system-prompt.json prompts.json tools.json llm.json; do
+    git -C "$HERE/.." show ":proto2/examples/agent-flat/$f" > "$1/$f"
+  done
+  git -C "$HERE/.." show :proto2/examples/agent-flat/.aos/inst > "$1/.aos/inst"
 }
 prep_llm() {  # prep_llm <目標 LLM 資料夾>；引擎全指到假伺服器（範例本體不碰）
   mkdir -p "$1/requests" "$1/.aos"
@@ -309,8 +327,22 @@ import json,sys
 d = json.load(open(sys.argv[1]))
 print(eval(sys.argv[2]))' "$1" "$2"
 }
-now_state() {  # now_state <agent 資料夾>
-  python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["state"])' "$1/.aos/agent/state.json"
+now_state() {  # now_state <本體資料夾>；還沒走過就是 idle
+  python3 -c '
+import json,os,sys
+p = sys.argv[1]
+print(json.load(open(p))["state"] if os.path.isfile(p) else "idle")' "$1/state.json"
+}
+field() {  # field <json 檔> <鍵>
+  python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get(sys.argv[2]))' "$1" "$2"
+}
+agent_pump() {  # agent_pump <世界> <LLM 資料夾> [幾格]；agent 一格、LLM 收乾淨，來回幾次
+  local n=${3:-12} i=0
+  while [ "$i" -lt "$n" ]; do
+    "$AGENT" exec "$1" >/dev/null 2>&1
+    llm_pump "$2" >/dev/null
+    i=$((i + 1))
+  done
 }
 
 # 12. LLM 資料夾走一格：exec 把請求派給背景 worker，結果過幾格才回來、請求搬去 requests/done/
@@ -501,28 +533,60 @@ else
 fi
 rm -rf "$TMP"
 
+# 17b. strip_think：`<think>…</think>` 漏進 content 是 LLM 這一側的家務，預設就清掉
+TMP=$(mktemp -d); prep_llm "$TMP/llm"
+echo '{"messages": [{"role": "user", "content": "THINK 給我答案"}]}' \
+  > "$TMP/llm/requests/0001.json"
+llm_pump "$TMP/llm" >/dev/null
+C=$(llm_content "$TMP/llm/results/0001.json")
+if [ "$C" = "真正的回答" ]; then
+  echo "ok   引擎預設 strip_think：</think> 前面那段思考在結果檔裡就被切掉了"
+else
+  echo "FAIL strip_think 沒清乾淨：$C"; FAILED=1
+fi
+RC_KEEP=$(llm_field "$TMP/llm/results/0001.json" 'd["choices"][0]["message"].get("reasoning_content")')
+if [ "$RC_KEEP" = "blah" ]; then
+  echo "ok   供應商自己的 reasoning_content 原樣留著，沒被動到"
+else
+  echo "FAIL reasoning_content 被動到了：$RC_KEEP"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# 17c. 引擎寫 strip_think: false 就原樣不動
+TMP=$(mktemp -d)
+mk_engines "$TMP/llm" "[{\"name\": \"raw\", \"base_url\": \"http://127.0.0.1:$PORT/v1\", \"model\": \"m\", \"strip_think\": false}]"
+echo '{"messages": [{"role": "user", "content": "THINK 給我答案"}]}' \
+  > "$TMP/llm/requests/0001.json"
+llm_pump "$TMP/llm" >/dev/null
+C=$(llm_content "$TMP/llm/results/0001.json")
+case "$C" in
+  *"<think>"*"真正的回答"*) echo "ok   strip_think: false 就原樣把 <think> 留著" ;;
+  *) echo "FAIL strip_think: false 不該清：$C"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# ── aos-agent：五格狀態機、信箱、工具包、子世界 ────────────────────────────
 # 18. agent 跟 LLM 兩個資料夾交錯走：每圈各推一格，五格輪兩輪
-#     idle→llm（丟請求）→wait（撿回覆）→act→collect→llm→wait→act→idle
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+#     idle（收信）→llm（丟請求）→wait（撿回覆）→act（跑工具）→collect（再掃信箱）→llm→wait→act→idle
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" "哈囉呀" >/dev/null 2>&1
 SEQ=""
 STEP_ERR=""
 for i in 1 2 3 4 5 6 7 8; do
-  SEQ="$SEQ$(now_state "$TMP/agent") "
-  ERR=$("$STEP" "$TMP/agent" 2>&1 >/dev/null)
+  SEQ="$SEQ$(now_state "$H") "
+  ERR=$("$AGENT" exec "$W" 2>&1 >/dev/null)
   STEP_ERR="$STEP_ERR
 $ERR"
   llm_pump "$TMP/llm" >/dev/null
 done
-SEQ="$SEQ$(now_state "$TMP/agent")"
+SEQ="$SEQ$(now_state "$H")"
 if [ "$SEQ" = "idle llm wait act collect llm wait act idle" ]; then
   echo "ok   五格的 state 依序走完兩輪"
 else
   echo "FAIL state 順序不對：$SEQ"; FAILED=1
 fi
 # busy 只算真做事的格：8 格裡扣掉「idle -> idle」（沒信）跟「wait -> wait」（還沒等到）
-# 這兩種空轉，剩下的才算 busy；假伺服器多快會影響 wait 空轉幾次，所以不寫死數字。
-BUSY_NOW=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("busy"))' \
-  "$TMP/agent/.aos/agent/state.json")
+BUSY_NOW=$(field "$H/state.json" busy)
 IDLE_SPIN=$(printf '%s' "$STEP_ERR" | grep -c 'state idle -> idle')
 WAIT_SPIN=$(printf '%s' "$STEP_ERR" | grep -c 'state wait -> wait')
 WANT_BUSY=$((8 - IDLE_SPIN - WAIT_SPIN))
@@ -531,17 +595,31 @@ if [ "$BUSY_NOW" = "$WANT_BUSY" ] && [ "$BUSY_NOW" -le 8 ]; then
 else
   echo "FAIL busy 不對：busy=$BUSY_NOW 算出來該是 $WANT_BUSY"; FAILED=1
 fi
-SAID=$(cat "$TMP/agent/said.txt" 2>/dev/null)
-if [ "$SAID" = "hi" ]; then echo "ok   say 工具真的寫了 said.txt"; else echo "FAIL said.txt 是 $SAID"; FAILED=1; fi
+SAID=$(cat "$W/said.txt" 2>/dev/null)
+if [ "$SAID" = "hi" ]; then echo "ok   tools[] 裡的 say 工具（shell 指令）真的寫了 said.txt"; else echo "FAIL said.txt 是 $SAID"; FAILED=1; fi
 ROLES=$(python3 -c '
 import json,sys
 ms=json.load(open(sys.argv[1]))
 print(" ".join((m.get("role") or "?") + ("+tool_calls" if m.get("tool_calls") else "") for m in ms))' \
-  "$TMP/agent/.aos/agent/prompts.json")
+  "$H/prompts.json")
 if [ "$ROLES" = "user assistant+tool_calls tool assistant" ]; then
-  echo "ok   prompts.json 四則訊息都在（含 tool_calls）"
+  echo "ok   prompts.json 四則訊息都在（含 tool_calls），new-prompts.json 已經不需要了"
 else
   echo "FAIL prompts.json 內容不對：$ROLES"; FAILED=1
+fi
+FIRST=$(python3 -c '
+import json,sys
+print(json.load(open(sys.argv[1]))[0]["content"])' "$H/prompts.json")
+if [ "$FIRST" = "[user] 哈囉呀" ]; then
+  echo "ok   來源 user 的信短路：內容直接接進記憶（前面加 [user]）"
+else
+  echo "FAIL user 短路的訊息不對：$FIRST"; FAILED=1
+fi
+if [ -z "$(find "$H/inbox/user" -maxdepth 1 -name '*.json' 2>/dev/null)" ] \
+   && [ -n "$(find "$H/inbox/user/read" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
+  echo "ok   user 的信當場搬進 inbox/user/read/"
+else
+  echo "FAIL user 的信沒搬進 read/"; FAILED=1
 fi
 PRIVATE=$(python3 -c '
 import json,sys
@@ -553,131 +631,253 @@ for m in ms:
             bad.append("reasoning_content")
         if "tool_calls" in m and not m["tool_calls"]:
             bad.append("empty-tool_calls-key")
-print(",".join(bad))' "$TMP/agent/.aos/agent/prompts.json")
+print(",".join(bad))' "$H/prompts.json")
 if [ -z "$PRIVATE" ]; then
   echo "ok   assistant 訊息沒有 reasoning_content、也沒有空的 tool_calls key"
 else
   echo "FAIL assistant 訊息還帶著私有欄位：$PRIVATE"; FAILED=1
 fi
-NP_TOP=$(find "$TMP/agent/.aos/agent/new-prompts" -maxdepth 1 -type f)
-if [ -z "$NP_TOP" ]; then echo "ok   new-prompts/ 頂層收空了"; else echo "FAIL new-prompts/ 頂層還有檔：$NP_TOP"; FAILED=1; fi
-if [ -f "$TMP/agent/.aos/agent/new-prompts/archived/hello.json" ]; then
-  echo "ok   收過的信搬去 new-prompts/archived/"
+NREP=$(find "$H/outbox" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+REP=$(python3 -c '
+import glob,json,sys
+print(json.load(open(sorted(glob.glob(sys.argv[1]+"/*.json"))[0], encoding="utf-8"))["content"])' "$H/outbox")
+if [ "$NREP" = "1" ] && [ "$REP" = "done" ]; then
+  echo "ok   沒工具可跑那格把話落進 outbox/（一個檔，content 是 done）"
 else
-  echo "FAIL archived/ 沒有 hello.json"; FAILED=1
+  echo "FAIL outbox 不對：$NREP 個檔，content=$REP"; FAILED=1
 fi
-case "$(cat "$TMP/agent/.aos/inst")" in
-  *aos-agent-step*) echo "ok   每格都把自己寫回 .aos/inst" ;;
-  *) echo "FAIL .aos/inst 沒寫回"; FAILED=1 ;;
-esac
-
-# 下一次收信時 archived/ 會先被清掉：再丟一個新檔、跑一格 idle，archived 只剩新的那個
-echo '{"role": "user", "content": "second"}' > "$TMP/agent/.aos/agent/new-prompts/second.json"
-"$STEP" "$TMP/agent" >/dev/null 2>&1
-ARCHIVED_LIST=$(ls "$TMP/agent/.aos/agent/new-prompts/archived")
-if [ "$ARCHIVED_LIST" = "second.json" ]; then
-  echo "ok   下一輪收信前先清空 archived，只剩這輪收的、上一輪的 hello.json 不見了"
+# 送出去的 body：system 訊息帶著工具包的預設 prompt，工具清單四包都在、外加 tools[] 的 say
+REQ=$(ls "$TMP/llm/requests/done"/*.json 2>/dev/null | head -1)
+SYS=$(python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+m=d["messages"][0]
+print("%s|%s" % (m["role"], "".join(k for k in ("信箱","shell","self_status","spawn") if k in m["content"])))' "$REQ")
+if [ "$SYS" = "system|信箱shellself_statusspawn" ]; then
+  echo "ok   system 訊息 ＝ 人格 ＋ 四個工具包各自的預設 prompt"
 else
-  echo "FAIL archived/ 內容不對：$ARCHIVED_LIST"; FAILED=1
+  echo "FAIL system 訊息不對：$SYS"; FAILED=1
+fi
+NAMES=$(python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1]))
+print(" ".join(sorted(t["function"]["name"] for t in d.get("tools") or [])))' "$REQ")
+if [ "$NAMES" = "inbox_list inbox_read inbox_read_all inbox_sources kids_list say self_status sh spawn" ]; then
+  echo "ok   工具清單＝四個工具包的內建工具＋tools[] 的 say"
+else
+  echo "FAIL 工具清單不對：$NAMES"; FAILED=1
 fi
 rm -rf "$TMP"
 
-# 19. --no-write-inst 就真的不寫
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1
-if [ ! -e "$TMP/agent/.aos/inst" ]; then echo "ok   --no-write-inst 不寫 .aos/inst"; else echo "FAIL --no-write-inst 還是寫了"; FAILED=1; fi
+# 19. 預設 home（`.`，東西平鋪在世界資料夾底下）也走得動
+TMP=$(mktemp -d); W="$TMP/w"; prep_flat "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" "嗨" >/dev/null 2>&1
+agent_pump "$W" "$TMP/llm" 8
+if [ -f "$W/state.json" ] && [ -f "$W/prompts.json" ] && [ -d "$W/inbox/user/read" ]; then
+  echo "ok   home 預設是 . 時，state.json／prompts.json／inbox 都在世界資料夾底下"
+else
+  echo "FAIL 平鋪的 home 檔案位置不對：$(ls -A "$W")"; FAILED=1
+fi
+NFLAT=$(find "$W/outbox" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+if [ "$NFLAT" -ge 1 ]; then echo "ok   平鋪的 agent 也回得了話"; else echo "FAIL 平鋪的 agent 沒回話：state=$(now_state "$W")"; FAILED=1; fi
 rm -rf "$TMP"
 
-# 20. 兩個 aos-loop 各轉各的：agent 那圈 step 自己寫回 .aos/inst，LLM 那圈在背景一直撿請求
-#     （agent 只要 8 格就走得完，給 30 格是留給「這格 wait 還沒等到」的空轉，
-#     多出來的格數在 idle 空等，不影響結果）
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
+# 20. --home 撈得到：say 沒給 --home 時，去世界的 .aos/inst 把 `--home agent` 撈出來
+TMP=$(mktemp -d); prep_agent "$TMP/w"; prep_flat "$TMP/f"
+"$AUSER" say "$TMP/w" "有 home" >/dev/null 2>&1
+"$AUSER" say "$TMP/f" "沒 home" >/dev/null 2>&1
+if [ -n "$(find "$TMP/w/agent/inbox/user" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
+  echo "ok   say 從 .aos/inst 撈到 --home agent，信丟進 agent/inbox/user/"
+else
+  echo "FAIL say 沒撈到 --home：$(find "$TMP/w" -name '*.json')"; FAILED=1
+fi
+if [ -n "$(find "$TMP/f/inbox/user" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
+  echo "ok   inst 沒寫 --home 就用預設的 ."
+else
+  echo "FAIL 預設 home 不對：$(find "$TMP/f" -name '*.json')"; FAILED=1
+fi
+"$AUSER" say "$TMP/w" --home agent "明講 home" >/dev/null 2>&1
+NW=$(find "$TMP/w/agent/inbox/user" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$NW" = "2" ]; then echo "ok   明講 --home 也走同一個地方"; else echo "FAIL 明講 --home 丟錯地方（$NW）"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 21. 推薦用法：.aos/inst 寫一次，兩個 aos-loop --keep-inst 各轉各的，整條鏈自己跑完
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" "跑一輪" >/dev/null 2>&1
 "$LOOP" "$TMP/llm" --keep-inst --steps 2000 --interval 0 >/dev/null 2>&1 &
 LLM_LOOP=$!
-echo "$STEP ." > "$TMP/agent/.aos/inst"
-"$LOOP" "$TMP/agent" --steps 30 --interval 0.05 >/dev/null 2>&1
+"$LOOP" "$W" --keep-inst --steps 30 --interval 0.05 >/dev/null 2>&1
 kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
-if [ "$(cat "$TMP/agent/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$TMP/agent")" = "idle" ]; then
-  echo "ok   兩個 aos-loop 交錯跑完同一條鏈"
+if [ "$(cat "$W/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$H")" = "idle" ]; then
+  echo "ok   兩個 aos-loop --keep-inst 交錯跑完同一條鏈"
 else
-  echo "FAIL aos-loop 沒跑完：said=$(cat "$TMP/agent/said.txt" 2>/dev/null) state=$(now_state "$TMP/agent")"; FAILED=1
+  echo "FAIL aos-loop 沒跑完：said=$(cat "$W/said.txt" 2>/dev/null) state=$(now_state "$H")"; FAILED=1
 fi
-rm -rf "$TMP"
-
-# 21. 推薦用法：.aos/inst 寫一次，aos-loop --keep-inst 不清空，step 也不用寫回
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-"$LOOP" "$TMP/llm" --keep-inst --steps 2000 --interval 0 >/dev/null 2>&1 &
-LLM_LOOP=$!
-cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
-"$LOOP" "$TMP/agent" --steps 30 --interval 0.05 --keep-inst >/dev/null 2>&1
-kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
-if [ "$(cat "$TMP/agent/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$TMP/agent")" = "idle" ]; then
-  echo "ok   --keep-inst + --no-write-inst 也跑得完"
-else
-  echo "FAIL --keep-inst 那條鏈沒跑完：state=$(now_state "$TMP/agent")"; FAILED=1
-fi
-case "$(cat "$TMP/agent/.aos/inst")" in
-  *aos-agent-step*) echo "ok   --keep-inst 跑完 .aos/inst 原樣還在" ;;
-  *) echo "FAIL --keep-inst 把 .aos/inst 弄掉了"; FAILED=1 ;;
+case "$(cat "$W/.aos/inst")" in
+  *"aos-agent exec . --home agent"*) echo "ok   --keep-inst 跑完 .aos/inst 原樣還在" ;;
+  *) echo "FAIL .aos/inst 被動到了：$(cat "$W/.aos/inst")"; FAILED=1 ;;
 esac
 rm -rf "$TMP"
 
-# ── 一個檔可以多則、回話落地、say／listen／talk ──────────────────────────────
-# 22. new-prompts 裡一個檔放一串（兩則）訊息，跑一格 idle 就收成兩則
-TMP=$(mktemp -d); prep_agent "$TMP/agent"
-rm -f "$TMP/agent/.aos/agent/new-prompts/hello.json"
-echo '[{"role": "user", "content": "一"}, {"role": "user", "content": "二"}, 3]' \
-  > "$TMP/agent/.aos/agent/new-prompts/pair.json"
-"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1
-N=$(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))))' \
-  "$TMP/agent/.aos/agent/new-prompts.json")
-if [ "$N" = "2" ]; then
-  echo "ok   一個檔放一串就收成兩則（陣列裡不是物件的那項跳過）"
+# ── 信箱 ────────────────────────────────────────────────────────────────────
+# 22. 非 user 的來源不進 prompt：只給一句摘要，模型自己用信箱工具去讀，讀完搬進 read/
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+mkdir -p "$H/inbox/team"
+echo '{"from": "bob", "time": "2026-09-06T10:00:00", "content": "專案要延一週"}' \
+  > "$H/inbox/team/m1.json"
+"$AUSER" say "$W" 'CALL inbox_list {"source": "team"} 然後 CALL inbox_read_all {"source": "team"}' >/dev/null 2>&1
+agent_pump "$W" "$TMP/llm" 14
+SUMMARY=$(python3 -c '
+import json,sys
+ms=json.load(open(sys.argv[1]))
+print([m["content"] for m in ms if m["role"] == "user" and m["content"].startswith("你有新信")][0])' \
+  "$H/prompts.json" 2>/dev/null)
+if [ "$SUMMARY" = "你有新信：team 1 封。用信箱工具去讀。" ]; then
+  echo "ok   team 的信只變成一句摘要，信的內容沒被塞進 prompt"
 else
-  echo "FAIL 一串收成 $N 則"; FAILED=1
+  echo "FAIL 摘要訊息不對：$SUMMARY"; FAILED=1
+fi
+if grep -q "專案要延一週" "$H/prompts.json"; then
+  echo "ok   信的內容是模型用信箱工具讀回來的（出現在 tool 結果裡）"
+else
+  echo "FAIL 模型沒把 team 的信讀回來"; FAILED=1
+fi
+if [ -f "$H/inbox/team/read/m1.json" ] && [ ! -f "$H/inbox/team/m1.json" ]; then
+  echo "ok   讀過的信搬進 inbox/team/read/"
+else
+  echo "FAIL team 的信沒搬進 read/"; FAILED=1
+fi
+LASTREP=$(python3 -c '
+import glob,json,sys
+print(json.load(open(sorted(glob.glob(sys.argv[1]+"/*.json"))[-1], encoding="utf-8"))["content"])' "$H/outbox")
+case "$LASTREP" in
+  *"專案要延一週"*) echo "ok   模型最後把信的內容講了出來" ;;
+  *) echo "FAIL 最後那句沒提到信：$LASTREP"; FAILED=1 ;;
+esac
+rm -rf "$TMP"
+
+# 23. 同一封未讀信只通知一次：模型不去讀，idle 也不會一直把它重新叫醒（不然錢燒不完）
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+mkdir -p "$H/inbox/team"
+echo '{"from": "bob", "time": "2026-09-06T10:00:00", "content": "沒人要理我"}' \
+  > "$H/inbox/team/m1.json"
+agent_pump "$W" "$TMP/llm" 10
+BUSY_A=$(field "$H/state.json" busy)
+agent_pump "$W" "$TMP/llm" 5
+BUSY_B=$(field "$H/state.json" busy)
+if [ "$(now_state "$H")" = "idle" ] && [ "$BUSY_A" = "$BUSY_B" ]; then
+  echo "ok   通知過的未讀信不會再叫一次 LLM（busy 停在 $BUSY_A）"
+else
+  echo "FAIL 未讀信一直重新叫 LLM：state=$(now_state "$H") busy $BUSY_A -> $BUSY_B"; FAILED=1
+fi
+if [ -f "$H/inbox/team/m1.json" ]; then
+  echo "ok   沒讀的信還留在未讀裡（模型隨時可以用工具去讀）"
+else
+  echo "FAIL 沒讀的信不見了"; FAILED=1
+fi
+ANN=$(python3 -c '
+import json,sys;print(",".join(json.load(open(sys.argv[1])).get("announced") or []))' "$H/state.json")
+if [ "$ANN" = "team/m1.json" ]; then echo "ok   state.json 的 announced 記著通知過哪封"; else echo "FAIL announced 不對：$ANN"; FAILED=1; fi
+# 再來一封新的就會再叫一次
+echo '{"from": "bob", "content": "這封是新的"}' > "$H/inbox/team/m2.json"
+"$AGENT" exec "$W" >/dev/null 2>&1
+if [ "$(now_state "$H")" = "llm" ]; then echo "ok   來了新的一封就會再叫一次 LLM"; else echo "FAIL 新信沒叫醒：$(now_state "$H")"; FAILED=1; fi
+rm -rf "$TMP"
+
+# 24. 一個信件檔可以放一串（陣列），user 短路時每則各算一句
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"
+mkdir -p "$H/inbox/user"
+echo '[{"from": "u", "content": "一"}, {"from": "u", "content": "二"}, 3]' \
+  > "$H/inbox/user/pair.json"
+"$AGENT" exec "$W" >/dev/null 2>&1
+CONTENTS=$(python3 -c '
+import json,sys
+print(" ".join(m["content"] for m in json.load(open(sys.argv[1]))))' "$H/prompts.json")
+if [ "$CONTENTS" = "[user] 一 [user] 二" ]; then
+  echo "ok   一個信件檔放一串就收成兩則（陣列裡不是物件的那項跳過）"
+else
+  echo "FAIL 一串收成：$CONTENTS"; FAILED=1
 fi
 rm -rf "$TMP"
 
-# 23. aos-agent-say：一句話丟進 new-prompts/
-TMP=$(mktemp -d)
-"$SAY" "$TMP" "嗨呀" 2>/dev/null
-NFILE=$(find "$TMP/.aos/agent/new-prompts" -maxdepth 1 -name '*.json' | wc -l)
-if [ "$NFILE" = "1" ]; then echo "ok   aos-agent-say 寫出一個檔"; else echo "FAIL say 寫了 $NFILE 個檔"; FAILED=1; fi
+# 25. aos-user say：一句話寫成 inbox/user/ 的一封信
+TMP=$(mktemp -d); prep_agent "$TMP/w"
+"$AUSER" say "$TMP/w" "嗨呀" 2>/dev/null
+NFILE=$(find "$TMP/w/agent/inbox/user" -maxdepth 1 -name '*.json' | wc -l)
+if [ "$NFILE" = "1" ]; then echo "ok   aos-user say 寫出一封信"; else echo "FAIL say 寫了 $NFILE 個檔"; FAILED=1; fi
 SAID=$(python3 -c '
 import glob,json,sys
 m=json.load(open(sorted(glob.glob(sys.argv[1]+"/*.json"))[0], encoding="utf-8"))
-print(m.get("role"), m.get("content"))' "$TMP/.aos/agent/new-prompts")
-if [ "$SAID" = "user 嗨呀" ]; then echo "ok   say 寫的內容是 user／嗨呀"; else echo "FAIL say 內容不對：$SAID"; FAILED=1; fi
+print(m.get("from"), m.get("content"), bool(m.get("time")))' "$TMP/w/agent/inbox/user")
+if [ "$SAID" = "user 嗨呀 True" ]; then echo "ok   信的格式是 from／time／content"; else echo "FAIL 信的內容不對：$SAID"; FAILED=1; fi
 rm -rf "$TMP"
 
-# 24. 完整鏈跑完，agent 的回話落在 replies/
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-for i in 1 2 3 4 5 6 7 8; do
-  "$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1
-  llm_pump "$TMP/llm" >/dev/null
-done
-NREP=$(find "$TMP/agent/.aos/agent/replies" -maxdepth 1 -name '*.json' | wc -l)
-if [ "$NREP" = "1" ]; then echo "ok   replies/ 只有一個回話檔"; else echo "FAIL replies/ 有 $NREP 個檔"; FAILED=1; fi
-REP=$(python3 -c '
-import glob,json,sys
-print(json.load(open(sorted(glob.glob(sys.argv[1]+"/*.json"))[0], encoding="utf-8"))["content"])' \
-  "$TMP/agent/.aos/agent/replies")
-if [ "$REP" = "done" ]; then echo "ok   回話檔的 content 是 done"; else echo "FAIL 回話檔 content 是 $REP"; FAILED=1; fi
+# ── 工具包：shell／self ─────────────────────────────────────────────────────
+# 26. shell 包的 sh：在世界資料夾裡跑一句指令，回 exit／stdout／stderr
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" 'CALL sh {"command": "cat notes.txt"}' >/dev/null 2>&1
+agent_pump "$W" "$TMP/llm" 10
+SH=$(python3 -c '
+import json,sys
+for m in json.load(open(sys.argv[1])):
+    if m.get("role") == "tool":
+        d = json.loads(m["content"])
+        print(d["exit"], "notes" if "普通檔案" in d["stdout"] else d["stdout"][:40])
+        break' "$H/prompts.json")
+if [ "$SH" = "0 notes" ]; then
+  echo "ok   sh 在世界資料夾裡跑指令，回退出碼跟 stdout"
+else
+  echo "FAIL sh 的結果不對：$SH"; FAILED=1
+fi
+rm -rf "$TMP"
 
-# 25. aos-agent-listen --once 把既有的印出來就走
-OUT=$(timeout 10 "$LISTEN" "$TMP/agent" --once); RC=$?
+# 27. self 包的 self_status：該有的鍵都在
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" 'CALL self_status' >/dev/null 2>&1
+agent_pump "$W" "$TMP/llm" 10
+KEYS=$(python3 -c '
+import json,sys
+for m in json.load(open(sys.argv[1])):
+    if m.get("role") == "tool":
+        print(",".join(sorted(json.loads(m["content"]))))
+        break' "$H/prompts.json")
+WANT="busy,folder_bytes,history_chars,history_messages,last_usage,started,step,today_usage,uptime_s"
+if [ "$KEYS" = "$WANT" ]; then echo "ok   self_status 九個鍵都在"; else echo "FAIL self_status 的鍵不對：$KEYS"; FAILED=1; fi
+# 同一份東西 aos-agent status 也印得出來
+OUT=$("$AUSER" status "$W"); RC=$?
+check "aos-user status 退 0" 0 "$RC"
+case "$OUT" in
+  *'"folder_bytes"'*'"today_usage"'*) echo "ok   aos-user status 印的就是 self_status 那包" ;;
+  *) echo "FAIL status 印的不對：$OUT"; FAILED=1 ;;
+esac
+TU=$(python3 -c '
+import json,sys
+d=json.loads(sys.stdin.read())
+print((d.get("today_usage") or {}).get("total_tokens"))' <<< "$OUT")
+if [ "$TU" -ge 10 ] 2>/dev/null; then
+  echo "ok   today_usage 讀得到 LLM 資料夾當天的帳（total_tokens=$TU）"
+else
+  echo "FAIL today_usage 沒讀到：$TU"; FAILED=1
+fi
+rm -rf "$TMP"
+
+# ── say／listen／talk ───────────────────────────────────────────────────────
+# 29. aos-user listen --once 把既有的印出來就走
+TMP=$(mktemp -d); prep_agent "$TMP/w"; mkdir -p "$TMP/w/agent/outbox"
+echo '{"role": "assistant", "content": "done"}' > "$TMP/w/agent/outbox/0008.json"
+OUT=$(timeout 10 "$AUSER" listen "$TMP/w" --once); RC=$?
 check "listen --once 退出 0" 0 "$RC"
 case "$OUT" in
-  *"--- reply "*"done"*) echo "ok   listen --once 印得出 done" ;;
+  *"--- reply 0008 ---"*"done"*) echo "ok   listen --once 印得出 outbox 裡的回話" ;;
   *) echo "FAIL listen --once 印的不對：$OUT"; FAILED=1 ;;
 esac
 rm -rf "$TMP"
 
-# 26. aos-agent-listen --new --once：跳過既有的，等到新的那則才印、才退出
-TMP=$(mktemp -d); mkdir -p "$TMP/.aos/agent/replies"
-echo '{"role": "assistant", "content": "舊的"}' > "$TMP/.aos/agent/replies/0001.json"
-( sleep 1; echo '{"role": "assistant", "content": "新的"}' > "$TMP/.aos/agent/replies/0002.json" ) &
-OUT=$(timeout 10 "$LISTEN" "$TMP" --new --once); RC=$?
+# 30. aos-user listen --new --once：跳過既有的，等到新的那則才印、才退出
+TMP=$(mktemp -d); mkdir -p "$TMP/outbox"
+echo '{"role": "assistant", "content": "舊的"}' > "$TMP/outbox/0001.json"
+( sleep 1; echo '{"role": "assistant", "content": "新的"}' > "$TMP/outbox/0002.json" ) &
+OUT=$(timeout 10 "$AUSER" listen "$TMP" --new --once); RC=$?
 check "listen --new --once 等到新的就退出 0" 0 "$RC"
 case "$OUT" in
   *"舊的"*) echo "FAIL --new 不該印既有的：$OUT"; FAILED=1 ;;
@@ -686,16 +886,16 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# 27. aos-agent-talk：打一句、等到回話印出來
-TMP=$(mktemp -d); mkdir -p "$TMP/.aos/agent/new-prompts" "$TMP/.aos/agent/replies"
+# 31. aos-user talk：打一句、等到回話印出來
+TMP=$(mktemp -d); mkdir -p "$TMP/inbox/user" "$TMP/outbox"
 ( for i in $(seq 1 100); do
-    if [ -n "$(find "$TMP/.aos/agent/new-prompts" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
-      echo '{"role": "assistant", "content": "我在"}' > "$TMP/.aos/agent/replies/9999.json"
+    if [ -n "$(find "$TMP/inbox/user" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
+      echo '{"role": "assistant", "content": "我在"}' > "$TMP/outbox/9999.json"
       break
     fi
     sleep 0.1
   done ) &
-OUT=$(printf '哈囉\n/quit\n' | timeout 10 "$TALK" "$TMP"); RC=$?
+OUT=$(printf '哈囉\n/quit\n' | timeout 10 "$AUSER" talk "$TMP"); RC=$?
 check "talk 打完 /quit 退出 0" 0 "$RC"
 case "$OUT" in
   *"agent> 我在"*) echo "ok   talk 印出了 agent 的回話" ;;
@@ -703,113 +903,176 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# ── 子世界：aos-agent-spawn ──────────────────────────────────────────────────
-# 28. shared 鐘：子的檔都在、llm.json 解得到真的 LLM 資料夾、工具抄父的、父的 inst 尾巴掛上子
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
-"$SPAWN" "$TMP/agent" kid1 "你是小幫手 kid1" 2>/dev/null; RC=$?
+# ── 子世界：aos-user spawn ─────────────────────────────────────────────────
+# 32. shared 鐘：子長在 <home>/kids/<名字>/、自己是一個合法世界、父的 inst 尾巴掛上它
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" spawn "$W" kid1 "你是小幫手 kid1" 2>/dev/null; RC=$?
 check "spawn shared 回 0" 0 "$RC"
+KID="$H/kids/kid1"
 MISSING=""
-for f in system-prompt.json prompts.json tools.json state.json llm.json; do
-  [ -f "$TMP/agent/kid1/.aos/agent/$f" ] || MISSING="$MISSING $f"
+for f in system-prompt.json prompts.json tools.json state.json llm.json .aos/inst; do
+  [ -f "$KID/$f" ] || MISSING="$MISSING $f"
 done
-[ -f "$TMP/agent/kid1/.aos/inst" ] || MISSING="$MISSING .aos/inst"
-if [ -z "$MISSING" ]; then echo "ok   子 agent 五個檔加 .aos/inst 都在"; else echo "FAIL 子少了：$MISSING"; FAILED=1; fi
+if [ -z "$MISSING" ]; then echo "ok   子 agent 五個檔加 .aos/inst 都在（子的 home 是預設的 .）"; else echo "FAIL 子少了：$MISSING"; FAILED=1; fi
+if [ "$(cat "$KID/.aos/inst")" = "aos-agent exec ." ]; then
+  echo "ok   子的 .aos/inst 是 aos-agent exec ."
+else
+  echo "FAIL 子的 inst 不對：$(cat "$KID/.aos/inst")"; FAILED=1
+fi
 LLMDIR=$(python3 -c '
 import json,os,sys
-d=json.load(open(sys.argv[1]+"/.aos/agent/llm.json", encoding="utf-8"))["dir"]
-print(d if os.path.isdir(os.path.join(sys.argv[1], d)) else "")' "$TMP/agent/kid1")
+d=json.load(open(sys.argv[1]+"/llm.json", encoding="utf-8"))["dir"]
+print(d if os.path.isdir(os.path.join(sys.argv[1], d)) else "")' "$KID")
 if [ -n "$LLMDIR" ]; then
   echo "ok   子的 llm.json（$LLMDIR）解出來真的是那個 LLM 資料夾"
 else
   echo "FAIL 子的 llm.json 指到不存在的地方"; FAILED=1
 fi
-if cmp -s "$TMP/agent/kid1/.aos/agent/tools.json" "$TMP/agent/.aos/agent/tools.json"; then
-  echo "ok   子的 tools.json 跟父一模一樣"
-else
-  echo "FAIL 子的 tools.json 跟父不一樣"; FAILED=1
-fi
-LAST=$(tail -1 "$TMP/agent/.aos/inst")
-if [ "$LAST" = "aos-exec kid1" ]; then
-  echo "ok   shared 鐘掛在父的 .aos/inst 最後一行"
+PACKS=$(python3 -c '
+import json,sys;print(",".join(json.load(open(sys.argv[1]))["packs"]))' "$KID/tools.json")
+if [ "$PACKS" = "mailbox,shell,self,kids" ]; then echo "ok   子抄到父的工具包"; else echo "FAIL 子的 packs 不對：$PACKS"; FAILED=1; fi
+LAST=$(tail -1 "$W/.aos/inst")
+if [ "$LAST" = "aos-exec agent/kids/kid1" ]; then
+  echo "ok   shared 鐘掛在父的 .aos/inst 最後一行（路徑相對於世界資料夾）"
 else
   echo "FAIL 父的 inst 最後一行是「$LAST」"; FAILED=1
 fi
+"$AOS" "$KID" >/dev/null 2>&1; RC=$?
+check "子資料夾本身就是合法世界，aos-exec 跑得動" 0 "$RC"
+if [ "$(field "$KID/state.json" step)" = "1" ]; then echo "ok   aos-exec 推了子一格"; else echo "FAIL 子沒被推動"; FAILED=1; fi
 
-# 29. own 鐘：只建資料夾，父的 inst 不動它
-"$SPAWN" "$TMP/agent" kid2 "你是 kid2" --clock own 2>/dev/null; RC=$?
+# 33. own 鐘：只建資料夾，父的 inst 不動它
+"$AUSER" spawn "$W" kid2 "你是 kid2" --clock own 2>/dev/null; RC=$?
 check "spawn own 回 0" 0 "$RC"
-if [ -f "$TMP/agent/kid2/.aos/inst" ] && ! grep -q "aos-exec kid2" "$TMP/agent/.aos/inst"; then
+if [ -f "$H/kids/kid2/.aos/inst" ] && ! grep -q "kids/kid2" "$W/.aos/inst"; then
   echo "ok   own 鐘的子建好了但沒掛進父的 inst"
 else
-  echo "FAIL own 鐘的子不該進父的 inst：$(cat "$TMP/agent/.aos/inst")"; FAILED=1
+  echo "FAIL own 鐘的子不該進父的 inst：$(cat "$W/.aos/inst")"; FAILED=1
 fi
 
-# 30. 同名再生一次退 2；子名有奇怪字元退 2
-"$SPAWN" "$TMP/agent" kid1 "重複的" 2>/dev/null; RC=$?
+# 34. 同名再生一次退 2；子名有奇怪字元退 2
+"$AUSER" spawn "$W" kid1 "重複的" 2>/dev/null; RC=$?
 check "同名再 spawn 一次回 2" 2 "$RC"
-"$SPAWN" "$TMP/agent" "bad/name" "壞名字" 2>/dev/null; RC=$?
+"$AUSER" spawn "$W" "bad/name" "壞名字" 2>/dev/null; RC=$?
 check "子名有斜線回 2" 2 "$RC"
 
-# 31. 父走三格：shared 的 kid1 跟著走三格，own 的 kid2 一格都沒走
-"$SAY" "$TMP/agent/kid1" "kid1 你好" 2>/dev/null
-"$SAY" "$TMP/agent/kid2" "kid2 你好" 2>/dev/null
-"$LOOP" "$TMP/agent" --keep-inst --steps 3 --interval 0 >/dev/null 2>&1
-STEP_P=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' "$TMP/agent/.aos/agent/state.json")
-STEP_1=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' "$TMP/agent/kid1/.aos/agent/state.json")
-STEP_2=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' "$TMP/agent/kid2/.aos/agent/state.json")
+# 35. 父走三格：shared 的 kid1 跟著走三格，own 的 kid2 一格都沒走
+"$AUSER" say "$H/kids/kid1" "kid1 你好" 2>/dev/null
+"$AUSER" say "$H/kids/kid2" "kid2 你好" 2>/dev/null
+STEP_K1_BEFORE=$(field "$H/kids/kid1/state.json" step)
+"$LOOP" "$W" --keep-inst --steps 3 --interval 0 >/dev/null 2>&1
+STEP_P=$(field "$H/state.json" step)
+STEP_1=$(field "$H/kids/kid1/state.json" step)
+STEP_2=$(field "$H/kids/kid2/state.json" step)
 if [ "$STEP_P" = "3" ]; then echo "ok   父自己走了三格"; else echo "FAIL 父走了 $STEP_P 格"; FAILED=1; fi
-if [ "$STEP_1" = "3" ]; then echo "ok   shared 的 kid1 跟著父走了三格"; else echo "FAIL kid1 走了 $STEP_1 格"; FAILED=1; fi
+if [ "$STEP_1" = "$((STEP_K1_BEFORE + 3))" ]; then echo "ok   shared 的 kid1 跟著父走了三格"; else echo "FAIL kid1 走到 $STEP_1 格"; FAILED=1; fi
 if [ "$STEP_2" = "0" ]; then echo "ok   own 的 kid2 一格都沒走（時間跟父脫節）"; else echo "FAIL kid2 走了 $STEP_2 格"; FAILED=1; fi
 
-# 32. 子真的能透過同一個 LLM 資料夾工作：父帶著跑，kid1 的 replies/ 要冒出回話
+# 36. 子真的能透過同一個 LLM 資料夾工作：父帶著跑，kid1 的 outbox/ 要冒出回話
 "$LOOP" "$TMP/llm" --keep-inst --steps 2000 --interval 0 >/dev/null 2>&1 &
 LLM_LOOP=$!
-"$LOOP" "$TMP/agent" --keep-inst --steps 30 --interval 0.05 >/dev/null 2>&1
+"$LOOP" "$W" --keep-inst --steps 30 --interval 0.05 >/dev/null 2>&1
 kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
-NREP=$(find "$TMP/agent/kid1/.aos/agent/replies" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+NREP=$(find "$H/kids/kid1/outbox" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
 if [ "$NREP" -ge 1 ]; then
-  echo "ok   kid1 靠父的鐘跑完一輪，replies/ 有回話（共用同一個 LLM 資料夾）"
+  echo "ok   kid1 靠父的鐘跑完一輪，outbox/ 有回話（共用同一個 LLM 資料夾）"
 else
-  echo "FAIL kid1 沒有回話：state=$(now_state "$TMP/agent/kid1")"; FAILED=1
+  echo "FAIL kid1 沒有回話：state=$(now_state "$H/kids/kid1")"; FAILED=1
 fi
 rm -rf "$TMP"
 
-# 33. tools.json 裡的 spawn 工具，command 直接餵 JSON 就能生出子 agent
-TMP=$(mktemp -d); prep_agent "$TMP/agent"
-CMD=$(python3 -c '
+# 37. kids 包的兩個工具：模型自己叫 spawn 生小孩、kids_list 看得到
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+"$AUSER" say "$W" 'CALL spawn {"name": "kid9", "persona": "你是 kid9", "clock": "shared"} 然後 CALL kids_list' >/dev/null 2>&1
+agent_pump "$W" "$TMP/llm" 14
+if [ -f "$H/kids/kid9/system-prompt.json" ]; then
+  echo "ok   模型自己叫 spawn 就生得出 kid9"
+else
+  echo "FAIL spawn 工具沒生出 kid9"; FAILED=1
+fi
+KL=$(python3 -c '
 import json,sys
-print([t for t in json.load(open(sys.argv[1], encoding="utf-8")) if t["name"]=="spawn"][0]["command"])' \
-  "$TMP/agent/.aos/agent/tools.json")
-OUT=$(cd "$TMP/agent" && PATH="$HERE:$PATH" sh -c "$CMD" <<'JSONEOF'
-{"name": "kid3", "persona": "你是小幫手"}
-JSONEOF
-)
-if [ -f "$TMP/agent/kid3/.aos/agent/system-prompt.json" ]; then
-  echo "ok   spawn 工具的 command 直接跑就生得出 kid3"
-else
-  echo "FAIL spawn 工具沒生出 kid3：$OUT"; FAILED=1
-fi
-case "$OUT" in
-  *"建好了"*) echo "ok   spawn 工具把結果講回給模型聽" ;;
-  *) echo "FAIL spawn 工具沒把話講回來：$OUT"; FAILED=1 ;;
-esac
+ts=[m for m in json.load(open(sys.argv[1])) if m.get("role") == "tool"]
+print(json.loads(ts[-1]["content"])[0]["name"])' "$H/prompts.json" 2>/dev/null)
+if [ "$KL" = "kid9" ]; then echo "ok   kids_list 列得出 kid9"; else echo "FAIL kids_list 不對：$KL"; FAILED=1; fi
 rm -rf "$TMP"
 
-# 34. shared 鐘子空轉：沒人跟它說話，父推它走幾格它就跟著走幾格，但都是 idle -> idle，busy 不漲
-TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-cp "$HERE/examples/agent/.aos/inst" "$TMP/agent/.aos/inst"
-"$SPAWN" "$TMP/agent" kid1 "你是小幫手 kid1" 2>/dev/null
-"$LOOP" "$TMP/agent" --keep-inst --steps 3 --interval 0 >/dev/null 2>&1
-KID_STEP=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["step"])' \
-  "$TMP/agent/kid1/.aos/agent/state.json")
-KID_BUSY=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("busy"))' \
-  "$TMP/agent/kid1/.aos/agent/state.json")
-if [ "$KID_STEP" = "3" ] && [ "$KID_BUSY" = "0" ]; then
-  echo "ok   shared 子空轉三格：沒信可收，step=3 busy=0"
+# 38. 舊的五支腳本已經拆成 aos-agent（自己跑）＋ aos-user（人用）＋ packs/（工具包）
+GONE=""
+for f in aos-agent-step aos-agent-say aos-agent-listen aos-agent-talk aos-agent-spawn; do
+  [ -e "$HERE/$f" ] && GONE="$GONE $f"
+done
+if [ -z "$GONE" ]; then echo "ok   舊的 aos-agent-* 五支腳本都不在了"; else echo "FAIL 舊腳本還在：$GONE"; FAILED=1; fi
+MISSP=""
+for f in aos-agent aos-user aos_agent.py packs/mailbox.py packs/shell.py packs/self.py packs/kids.py; do
+  [ -e "$HERE/$f" ] || MISSP="$MISSP $f"
+done
+if [ -z "$MISSP" ]; then echo "ok   新版面在：aos-agent／aos-user／aos_agent.py／四個工具包各一檔"; else echo "FAIL 少了：$MISSP"; FAILED=1; fi
+OUT=$("$AGENT" say x 2>&1); RC=$?
+if [ "$RC" != "0" ]; then echo "ok   aos-agent 不吃人用的子命令（say 在 aos-user）"; else echo "FAIL aos-agent 還吃 say"; FAILED=1; fi
+
+# 39. 自己加一個工具包：<home>/packs/hello.py 放進去、tools.json 列上，模型就叫得動
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+mkdir -p "$H/packs"
+cat > "$H/packs/hello.py" <<'PACKEOF'
+PROMPT = "打招呼：hello 這個工具會跟一個人打招呼。"
+TOOLS = [{"name": "hello",
+          "description": "跟某個人打招呼。",
+          "parameters": {"type": "object",
+                         "properties": {"who": {"type": "string"}},
+                         "required": ["who"]}}]
+
+
+def run(name, args, ctx):
+    if name != "hello":
+        return {"error": "hello 包沒有這個工具：%s" % name}
+    return {"greeting": "哈囉 %s，我住在 %s" % (args.get("who") or "", ctx.home)}
+PACKEOF
+python3 - "$H/tools.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p, encoding="utf-8"))
+d["packs"].append("hello")
+json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+PYEOF2
+"$AUSER" say "$W" 'CALL hello {"who": "阿明"}' >/dev/null 2>&1
+agent_pump "$W" "$TMP/llm" 10
+GREET=$(python3 -c '
+import json,sys
+for m in json.load(open(sys.argv[1])):
+    if m.get("role") == "tool":
+        print(json.loads(m["content"])["greeting"])
+        break' "$H/prompts.json")
+case "$GREET" in
+  "哈囉 阿明，我住在 "*) echo "ok   自己加的工具包 <home>/packs/hello.py 叫得動（$GREET）" ;;
+  *) echo "FAIL 自己加的工具包沒跑起來：$GREET"; FAILED=1 ;;
+esac
+REQ=$(ls "$TMP/llm/requests/done"/*.json 2>/dev/null | head -1)
+if grep -q "打招呼：hello" "$REQ"; then
+  echo "ok   自己加的工具包的預設 prompt 也併進 system 訊息"
 else
-  echo "FAIL 子空轉的 step/busy 不對：step=$KID_STEP busy=$KID_BUSY"; FAILED=1
+  echo "FAIL 自己加的工具包 PROMPT 沒併進去"; FAILED=1
 fi
+rm -rf "$TMP"
+
+# 40. tools.json 列了一個不存在的工具包：印一句就跳過，agent 照樣跑
+TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
+python3 - "$H/tools.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p, encoding="utf-8"))
+d["packs"].append("nosuchpack")
+json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+PYEOF2
+"$AUSER" say "$W" "哈囉" >/dev/null 2>&1
+"$AGENT" exec "$W" >/dev/null 2>&1
+OUT=$("$AGENT" exec "$W" 2>&1 >/dev/null); RC=$?
+check "有認不得的工具包時 exec 還是回 0" 0 "$RC"
+case "$OUT" in
+  *"認不得的工具包：nosuchpack"*) echo "ok   認不得的工具包印一句到 stderr 就跳過" ;;
+  *) echo "FAIL 沒講認不得的工具包：$OUT"; FAILED=1 ;;
+esac
+if [ "$(now_state "$H")" = "wait" ]; then echo "ok   agent 照樣走到 wait"; else echo "FAIL agent 卡住了：$(now_state "$H")"; FAILED=1; fi
 rm -rf "$TMP"
 
 # ── daemon：常駐 kernel＋一個世界一個時鐘 ───────────────────────────────────
@@ -1042,7 +1305,7 @@ kill_clocks "$AOSD"; rm -rf "$TMP"
 
 # 39. own 的子 agent 會自己跟 daemon 要時鐘；沒設 AOS_DAEMON_DIR 就只警告一句
 TMP=$(mktemp -d); AOSD="$TMP/aosd"; prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-OUT=$(AOS_DAEMON_DIR="$AOSD" "$SPAWN" "$TMP/agent" kid --clock own "你是 own 的小孩" 2>&1); RC=$?
+OUT=$(AOS_DAEMON_DIR="$AOSD" "$AUSER" spawn "$TMP/agent" kid "你是 own 的小孩" --clock own 2>&1); RC=$?
 check "有 AOS_DAEMON_DIR 時 own spawn 回 0" 0 "$RC"
 REQOP=$(python3 - "$AOSD" <<'PYEOF2'
 import glob, json, os, sys
@@ -1051,18 +1314,18 @@ d = json.load(open(files[-1], encoding="utf-8")) if files else {}
 print("%s %s" % (d.get("op"), d.get("dir")))
 PYEOF2
 )
-if [ "$REQOP" = "register $TMP/agent/kid" ]; then
+if [ "$REQOP" = "register $TMP/agent/agent/kids/kid" ]; then
   echo "ok   own 的子丟了一個 register 請求給 daemon"
 else
   echo "FAIL 請求內容不對：$REQOP（$OUT）"; FAILED=1
 fi
-OUT=$("$SPAWN" "$TMP/agent" kid2 --clock own "你是 own 的小孩" 2>&1); RC=$?
+OUT=$("$AUSER" spawn "$TMP/agent" kid2 "你是 own 的小孩" --clock own 2>&1); RC=$?
 check "沒 AOS_DAEMON_DIR 時 own spawn 還是回 0" 0 "$RC"
 case "$OUT" in
   *"沒設 AOS_DAEMON_DIR"*) echo "ok   沒設 AOS_DAEMON_DIR 就警告一句、資料夾照樣建好" ;;
   *) echo "FAIL 沒警告：$OUT"; FAILED=1 ;;
 esac
-if [ -f "$TMP/agent/kid2/.aos/agent/state.json" ]; then echo "ok   kid2 的資料夾還是完整的"; else echo "FAIL kid2 沒建起來"; FAILED=1; fi
+if [ -f "$TMP/agent/agent/kids/kid2/state.json" ]; then echo "ok   kid2 的資料夾還是完整的"; else echo "FAIL kid2 沒建起來"; FAILED=1; fi
 rm -rf "$TMP"
 
 # 40. 真的把 kernel 開起來跑一輪：start → register → 世界動 → pause 停住 → continue 又動
@@ -1445,7 +1708,7 @@ rm -rf "$TMP"
 
 # 53. agent 那頭：llm.json 的 priority/engine 抄進請求，撿回結果後 state.json 記 last_usage
 TMP=$(mktemp -d); prep_agent "$TMP/agent"; prep_llm "$TMP/llm"
-python3 - "$TMP/agent/.aos/agent/llm.json" <<'PYEOF2'
+python3 - "$TMP/agent/agent/llm.json" <<'PYEOF2'
 import json, sys
 p = sys.argv[1]
 c = json.load(open(p, encoding="utf-8"))
@@ -1453,8 +1716,9 @@ c["priority"] = 3
 c["engine"] = "local"
 json.dump(c, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 PYEOF2
-"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1   # idle 收信
-"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1   # llm 丟請求
+"$AUSER" say "$TMP/agent" "哈囉" >/dev/null 2>&1
+"$AGENT" exec "$TMP/agent" >/dev/null 2>&1   # idle 收信
+"$AGENT" exec "$TMP/agent" >/dev/null 2>&1   # llm 丟請求
 REQ=$(find "$TMP/llm/requests" -maxdepth 1 -name '*.json' | head -1)
 P=$(llm_field "$REQ" '"%s %s" % (d["priority"], d["engine"])')
 if [ "$P" = "3 local" ]; then
@@ -1463,8 +1727,8 @@ else
   echo "FAIL agent 請求沒帶上 priority／engine：$P"; FAILED=1
 fi
 llm_pump "$TMP/llm" >/dev/null
-"$STEP" "$TMP/agent" --no-write-inst >/dev/null 2>&1   # wait 撿回覆
-LU=$(llm_field "$TMP/agent/.aos/agent/state.json" 'd["last_usage"]["total_tokens"]')
+"$AGENT" exec "$TMP/agent" >/dev/null 2>&1   # wait 撿回覆
+LU=$(llm_field "$TMP/agent/agent/state.json" 'd["last_usage"]["total_tokens"]')
 if [ "$LU" = "10" ]; then
   echo "ok   agent 的 state.json 記下了上一次的用量 last_usage"
 else
@@ -1474,18 +1738,18 @@ rm -rf "$TMP"
 
 # 54. agent 沒有 llm.json、也沒 AOS_LLM_DIR、旁邊也沒 ../llm：講清楚退 2
 TMP=$(mktemp -d); prep_agent "$TMP/deep/agent"
-rm "$TMP/deep/agent/.aos/agent/llm.json"
+rm "$TMP/deep/agent/agent/llm.json"
 python3 -c '
 import json,sys
 json.dump({"state": "llm", "step": 1, "busy": 1, "request": ""},
-          open(sys.argv[1], "w"))' "$TMP/deep/agent/.aos/agent/state.json"
-OUT=$("$STEP" "$TMP/deep/agent" --no-write-inst 2>&1 >/dev/null); RC=$?
+          open(sys.argv[1], "w"))' "$TMP/deep/agent/agent/state.json"
+OUT=$("$AGENT" exec "$TMP/deep/agent" 2>&1 >/dev/null); RC=$?
 check "找不到 LLM 資料夾退 2" 2 "$RC"
 case "$OUT" in
   *"AOS_LLM_DIR"*) echo "ok   找不到 LLM 資料夾時有講 AOS_LLM_DIR" ;;
   *) echo "FAIL 找不到 LLM 資料夾印的不對：$OUT"; FAILED=1 ;;
 esac
-AOS_LLM_DIR="$TMP/llmx" "$STEP" "$TMP/deep/agent" --no-write-inst >/dev/null 2>&1; RC=$?
+AOS_LLM_DIR="$TMP/llmx" "$AGENT" exec "$TMP/deep/agent" >/dev/null 2>&1; RC=$?
 check "設了 AOS_LLM_DIR 就走得動" 0 "$RC"
 if [ -n "$(find "$TMP/llmx/requests" -maxdepth 1 -name '*.json' 2>/dev/null)" ]; then
   echo "ok   請求丟進 AOS_LLM_DIR 指的那個世界"
