@@ -37,7 +37,7 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 |---|---|---|
 | `idle` | 收 `new-prompts/` 頂層的檔，每個變一則訊息，寫進 `new-prompts.json` | 有信 `llm`，沒信留 `idle` |
 | `llm` | `[人格]＋記憶＋new-prompts`（＋工具）組成 body，丟進 LLM 資料夾的 `requests/`，檔名記進 `state.json` 的 `request` | `wait` |
-| `wait` | LLM 資料夾的 `results/<request>` 出現了就讀進 `llm-result.json`、把結果檔拿走、回覆併進記憶 | 撿到 `act`，沒撿到留 `wait`，結果是 `error` 就回 `idle` |
+| `wait` | LLM 資料夾的 `results/<request>` 出現了就讀進 `llm-result.json`、把結果檔拿走、回覆併進記憶 | 撿到 `act`，沒撿到留 `wait`（**結果是幾格後才回來的**），結果是 `error` 就回 `idle` |
 | `act` | `tool_calls` 非空就照 `command` 跑工具、結果收進 `new-prompts`；沒有就印出它說的話、順手落一份到 `replies/` | 有工具 `collect`，沒有 `idle` |
 | `collect` | 再收一次 `new-prompts/`，接在既有的 `new-prompts.json` 後面（沒新信也照走） | `llm` |
 
@@ -55,39 +55,50 @@ description, parameters, command}`；`command` 不送 LLM，跑的時候丟 shel
 `archived/`**（`collect` 中途補收不清，這一輪收的留到輪完）。每格結束都把 `<aos-agent-step
 絕對路徑> .` 寫回 `<dir>/.aos/inst`，讓 `aos-loop` 回來看有沒有新信；`--no-write-inst` 就不寫。
 
-## LLM 資料夾：aos-llm-step／aos-llm
+## LLM 資料夾：aos-llm
 
 LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾**，也靠 `aos-loop` 一格一格轉。
-東西全在 `<dir>/.aos/llm/`：引擎清單 `engines.json`、預設值 `defaults.json`、請求箱 `requests/`、
-做完的 `requests/done/`、回覆 `results/<跟請求同檔名>`、用量 `usage/<YYYY-MM-DD>.json`、走到哪
-`state.json`。誰想用 LLM，就往 `requests/` 丟一個檔，下一格自然會有結果。
+資料夾是**平鋪**的，`.aos/` 裡只有一句 `inst`（就是 `aos-llm exec .`），其他全在 `<dir>` 底下：
+`engines.json`、`defaults.json`、請求箱 `requests/`、**正在打的** `requests/running/`、做完的
+`requests/done/`、回覆 `results/<跟請求同檔名>`、用量 `usage/<YYYY-MM-DD>.json`（外加 worker 丟的
+小紙條 `usage/pending/`）、worker 的輸出 `logs/<名字>.log`、走到哪 `state.json`。誰想用 LLM 就往
+`requests/` 丟一個檔，**過幾格**結果會出現在 `results/`。**有沒有 `engines.json` 就是「這是不是一
+個 LLM 資料夾」。**
 
 `engines.json` 是一個**清單**，第一個是預設，一個引擎就是一個 endpoint＋model 配幾個參數：
-`{"name": "local", "base_url": ".../v1", "model": "local", "params": {"temperature": 0.7}}`。
-`api_key_env` 是環境變數的**名字**，那個變數有值才送 `Authorization: Bearer`；`params` 原樣帶
-進 body、不檢查。只有舊的 `engine.json` 也認，當成一個叫 `default` 的單元素清單。
-
-`defaults.json`（可有可無）是**這個資料夾自己的預設**：`{"engine": "local", "priority": 0}`——請求
-沒寫的鍵由它補，它也沒寫（或根本沒這個檔）就是 `engines.json` 第一台＋`priority` 0。
+`{"name": "local", "base_url": ".../v1", "model": "local", "max_concurrent": 1, "params":
+{"temperature": 0.7}}`。`api_key_env` 是環境變數的**名字**，那個變數有值才送 `Authorization:
+Bearer`；`params` 原樣帶進 body、不檢查。**`max_concurrent` 是那台一次最多同時跑幾個請求**
+（不寫＝1）——範例裡 deepseek 開 2、本機 LM Studio 開 1，四個請求進來就三個開跑、一個排著。
 
 請求檔是一個 JSON 物件，aos 只吃三個鍵：`priority`（整數，**大的先做**）、`engine`（引擎名字）、
-`params`（蓋在引擎 `params` 上）；**沒寫 `priority`／`engine` 就走上面那組預設**（認不得的引擎名字
-還是錯）。**其他頂層鍵全部原樣當成 chat/completions 的 body 欄位**，所以 agent 丟的請求不用改。
-body ＝ 引擎 `params` ← 請求 `params` ← 請求其他頂層鍵，**`model` 一律引擎說了算**。
+`params`（蓋在引擎 `params` 上）；**沒寫 `priority`／`engine` 就用 `defaults.json`**（`{"engine":
+"local", "priority": 0}`，沒這個檔就是 `engines.json` 第一台＋0；認不得的引擎名字還是錯）。
+**其他頂層鍵全部原樣當成 chat/completions 的 body 欄位**，所以 agent 丟的請求不用改：body ＝
+引擎 `params` ← 請求 `params` ← 請求其他頂層鍵，**`model` 一律引擎說了算**。
 
-- `aos-llm-step [dir]`——走一格：讀不成 JSON 的請求先各回一個 error 清掉，剩下的照（優先級、先
-  來後到）排序**只做第一個**。整包原始回覆多掛一個 `aos`（`engine`／`base_url`／`model`／
-  `priority`／`took_ms`／`usage`）寫進 `results/`、請求搬去 `requests/done/`。**打不通、HTTP 錯、
-  不認得的引擎，一樣回一個帶 `error` 的結果、一樣搬走**，不會再有人等到天荒地老。用量記進
-  `usage/<今天>.json`，一個 `"<base_url>|<model>"` 一列累加：**帳本是拿來算錢的，模型回的 `usage`
-  裡每個數字都會累加，思考 token、快取命中也在內**（巢狀的攤成 `completion_tokens_details.
-  reasoning_tokens` 這種點號鍵，外加我們自己數的 `requests`／`errors`／`took_ms`）。退出碼永遠 0，
-  除非那個資料夾根本沒有 `.aos/llm/`（退 1）。
-- `aos-llm send <檔> [--priority N] [--engine NAME] [--no-wait] [--timeout SEC]`——丟一個請求再等
-  結果，整包印到 stdout、**把結果檔刪掉**（拿走就沒了），裡面有 `error` 就退 1；`<檔>` 給 `-` 就
-  讀 stdin。旗標會蓋掉檔裡寫的，兩邊都沒寫就不補、讓 LLM 資料夾用自己的預設。`aos-llm usage
-  [日期]` 印當天用量表（有哪些欄看供應商回了什麼），`aos-llm ls` 印排隊順序（預設補出來的值印成
-  `local*`）。LLM 資料夾在哪：`--dir`，沒給就看 **`AOS_LLM_DIR`**，都沒有印一句退 2。
+- `aos-llm exec [dir]`——**每一格做的事**，一格很短、**絕對不等網路**：①tick 加一 ②把
+  `usage/pending/` 的紙條折進當天帳本 ③巡 `requests/running/`：結果出現了就把請求搬去 `done/`
+  （`state.json` 的 `served`／`errors` 在這裡算），pid 死了又沒結果就補一個 `{"error": "worker
+  died"}` 的結果一樣搬走、也補一張 `errors=1` 的紙條——**所以沒有人會卡在 running/ 一輩子**（時鐘
+  被砍、機器重開之後那些請求都會在下次 exec 被了結）④剩下的照（優先級、先來後到）排序由上而下
+  派工，那台引擎還沒跑滿就開一個背景 worker、請求搬進 `running/`，滿了的留著等下一格（一格能開
+  幾個就開幾個）⑤印一行摘要 `aos-llm exec: tick 7 launched 2 running 3 queued 1` 到 stderr，外加
+  每個 `launch`／`done`／`died` 各一行。讀不成 JSON 的請求、不認得的引擎當格就回一個 error 結果、
+  一樣搬去 `done/`。退出碼永遠 0，除非那個資料夾沒有 `engines.json`（退 1）。
+- 真正打 HTTP 的是背景的 `aos-llm worker <dir> <請求檔名>`（人不用自己叫）：打完把整包原始回覆多
+  掛一個 `aos`（`engine`／`base_url`／`model`／`priority`／`took_ms`／`usage`）**原子寫**進 `results/`
+  （先 `.tmp` 再 rename，撿的人不會讀到半個檔），再丟一張用量紙條給下一格折帳；打不通、HTTP 錯
+  一樣是一個帶 `error` 的結果檔。帳本是拿來算錢的，一個 `"<base_url>|<model>"` 一列累加：**模型回
+  的 `usage` 裡每個數字都會累加**，思考 token、快取命中也在內（巢狀的攤成
+  `completion_tokens_details.reasoning_tokens` 這種點號鍵，外加自己數的 `requests`／`errors`／`took_ms`）。
+- `aos-llm usage [日期]` 印當天用量表（有哪些欄看供應商回了什麼）；`aos-llm ls` 印**執行中**
+  （engine／pid／跑多久）跟**排隊中**（下一格會被派的順序，預設補出來的值印成 `local*`），最後一台
+  引擎一行 `engine local: running 1/1`。這兩個要知道資料夾在哪：`--dir`，沒給就看 **`AOS_LLM_DIR`**，
+  都沒有印一句退 2。
+- agent 或任何程式要丟請求，`import aos_llm` 用 `write_request(<LLM 資料夾>, body, priority=,
+  engine=)`／`read_result(<LLM 資料夾>, 檔名)` 最省事（原子寫、拿走就刪，`aos-agent-step` 就是用
+  它），自己寫檔也完全可以——檔案就是介面。
 
 ## 跟 agent 說話：say／listen／talk
 
@@ -158,7 +169,7 @@ aos-daemon register|unregister|pause|continue <世界> [--config x.json] [--no-w
 ```sh
 export PATH="$PWD/proto2:$PATH"
 export AOS_DAEMON_DIR=~/.aosd
-export AOS_LLM_DIR=$PWD/proto2/examples/llm    # aos-llm send/usage/ls 就不用打 --dir
+export AOS_LLM_DIR=$PWD/proto2/examples/llm    # aos-llm usage/ls 就不用打 --dir
 aos-daemon-kernel start                     # kernel 常駐起來（LM Studio 要先載一顆模型）
 aos-daemon register proto2/examples/llm     # LLM 資料夾一個時鐘
 aos-daemon register proto2/examples/agent   # agent 一個時鐘
@@ -167,12 +178,21 @@ aos-daemon pause proto2/examples/agent      # 凍住它（真的送 SIGSTOP）�
 aos-daemon-kernel stop                      # 玩完，時鐘一起收掉
 ```
 
-時鐘的輸出在 `$AOS_DAEMON_DIR/logs/`：agent 沒反應就去那裡看有沒有「打不通」（模型沒載或連不上）、是
-不是一直「等 LLM」、或「沒有 .aos/inst」。不想開 daemon 也行，一個終端機開一個 `aos-loop <資料夾>
---keep-inst` 效果一樣。其他跑法：`aos-exec examples/hello.sh`、`aos-loop examples/loop
---stop-when-empty --interval 0`、`bash proto2/test.sh`；只想問一句話不開 agent：`echo
-'{"messages":[{"role":"user","content":"1+1=?"}]}' | proto2/aos-llm send -`（吃 `AOS_LLM_DIR`）。
+時鐘的輸出在 `$AOS_DAEMON_DIR/logs/`：agent 沒反應就去那裡看是不是一直「等 LLM」、或「沒有
+.aos/inst」；某一發打不通的細節在 LLM 資料夾自己的 `logs/<請求名>.log` 跟那份結果檔裡。不想開
+daemon 也行，一個終端機開一個 `aos-loop <資料夾> --keep-inst` 效果一樣。其他跑法：`aos-exec
+examples/hello.sh`、`aos-loop examples/loop --stop-when-empty --interval 0`、`bash proto2/test.sh`。
+
+只想問一句話不開 agent：**請求就是自己寫的一個檔**，丟進去、`aos-llm ls` 看它排第幾，過幾格
+`results/` 就冒出同名的回覆（拿走記得自己刪）——
+
+```sh
+echo '{"priority": 5, "messages": [{"role": "user", "content": "1+1=?"}]}' \
+  > proto2/examples/llm/requests/ask.json
+```
 
 ## 目前刻意不做
 
-鎖、fsync、並發、逾時、重試、其他子命令、串流、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。撞到再說。
+鎖、fsync、重試、串流、其他子命令、agent 之間互相講話、批次結構（.aos/inst 就是一段 shell，不是資料）。
+並發只做到「一台引擎一次幾個」（`max_concurrent`），逾時只有 worker 那發 300 秒的 HTTP timeout；
+更細的（退避、配額、跨資料夾排程）撞到再說。
