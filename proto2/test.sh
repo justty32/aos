@@ -784,6 +784,11 @@ case "$ERRMSG" in
   True\|*"LLM 出錯：HTTP 500"*) ok "LLM 回 500 時，agent 把原因寫進 error outbox" ;;
   *) fail "LLM 500 沒送進 outbox：$ERRMSG" ;;
 esac
+if [ "$(now_state "$H")" = "retry" ]; then
+  ok "LLM 回 500 之後走 retry，不是回 idle"
+else
+  fail "LLM 500 之後的 state 不對：$(now_state "$H")"
+fi
 OUT=$("$AUSER" listen "$W" --once)
 case "$OUT" in
   *"agent!> （LLM 出錯：HTTP 500"*) ok "listen 用 agent!> 印 LLM 錯誤" ;;
@@ -791,7 +796,7 @@ case "$OUT" in
 esac
 rm -rf "$TMP"
 
-# 18c. 沒有 LLM 鐘：下一格立刻說卡在哪、回 idle，原請求留在 LLM requests/
+# 18c. 沒有 LLM 鐘：下一格立刻說卡在哪、改走 retry（等著重送），原請求留在 LLM requests/
 TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
 "$AUSER" say "$W" "這句沒有人推 LLM" >/dev/null 2>&1
 "$AGENT" exec "$W" >/dev/null 2>&1
@@ -803,8 +808,8 @@ files=glob.glob(sys.argv[1]+"/*.json")
 d=json.load(open(files[0], encoding="utf-8")) if files else {}
 print("%s|%s" % (d.get("error") is True, d.get("content") or ""))' "$H/outbox")
 NREQ=$(find "$TMP/llm/requests" -maxdepth 1 -name '*.json' | wc -l)
-if [ "$(now_state "$H")" = "idle" ] && [ "$NREQ" = "1" ]; then
-  ok "LLM 缺鐘下一格就回 idle，原請求仍留在原地"
+if [ "$(now_state "$H")" = "retry" ] && [ "$NREQ" = "1" ]; then
+  ok "LLM 缺鐘下一格就走 retry，原請求仍留在原地"
 else
   fail "LLM 沒鐘超時狀態不對：state=$(now_state "$H") requests=$NREQ"
 fi

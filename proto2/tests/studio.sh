@@ -216,7 +216,7 @@ test_studio_watch() {
     >/dev/null 2>&1
 
   # 假一點狀態：pm 在等一發排在第二的請求、有一封 chief 的未讀信；dev-a 額度用完凍住；
-  # qa 睡著等回信；chief 手上有一張 assigned 的任務；dev-b 留一段有工具的對話。
+  # qa 睡著等回信；chief 手上有一張 assigned 的任務；sales 模型出錯在等重送；dev-b 留一段有工具的對話。
   python3 - "$root" <<'PYEOF2'
 import json, os, sys, time
 root = sys.argv[1]
@@ -239,6 +239,9 @@ wr(os.path.join(studio, "team/tasks/order-20260907-123456-000001-t3.json"),
     "title": "定架構"})
 wr(os.path.join(llm, "usage", time.strftime("%Y-%m-%d") + ".json"),
    {"by-requester": {"studio/dev-a": {"total_tokens": 12345}}})
+wr(os.path.join(studio, "kids/sales/state.json"),
+   {"state": "retry", "step": 213, "busy": 100, "llm_errors": 2, "llm_error_step": 206,
+    "llm_error_reason": "HTTP 500"})
 wr(os.path.join(studio, "kids/dev-b/state.json"), {"state": "act", "step": 66, "busy": 40})
 wr(os.path.join(studio, "kids/dev-b/prompts.json"), [
     {"role": "user", "content": "請做 todo.py"},
@@ -277,6 +280,8 @@ checks["frozen"] = ("凍住" in rows["dev-a"] and "tokens 用完" in rows["dev-a
 checks["sleep"] = ("睡" in rows["qa"] and "等 mail" in rows["qa"] and "已 300 格" in rows["qa"])
 checks["task"] = ("閒" in rows["chief"] and "任務" in rows["chief"]
                   and "-t3（assigned）" in rows["chief"])
+checks["retry"] = ("重送中" in rows["sales"] and "上次出錯第 2 次" in rows["sales"]
+                   and "還有 13 格再送" in rows["sales"] and "HTTP 500" in rows["sales"])
 checks["tokens"] = "tokens 剩 170k" in rows["pm"] and "tokens 剩 20k" in rows["owner"]
 checks["width"] = all(len(l) <= 110 for l in lines)
 json.dump(checks, open(sys.argv[2], "w", encoding="utf-8"), ensure_ascii=False)
@@ -287,6 +292,7 @@ PYEOF2
     'frozen|studio：team why 凍住的人印出額度用完與等撥款幾格' \
     'sleep|studio：team why 睡著的人印出在等哪一封、睡幾格' \
     'task|studio：team why 閒著的人印出手上那張任務與狀態' \
+    'retry|studio：team why 出錯等重送的人印出錯幾次、還有幾格再送' \
     'tokens|studio：team why 每行都帶剩下的 tokens' \
     'width|studio：team why 每行不超過 110 字'; do
     studio_assert "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$checks" "${item%%|*}")" "${item#*|}"

@@ -167,7 +167,8 @@ d.update({"state": "idle", "request": "", "step": 110})   # 假裝模型讀信�
 json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False)
 PYEOF2
   "$AGENT" exec "$studio/kids/pm" >/dev/null 2>&1
-  got2=$(gate_state "$studio/kids/pm" 'd["state"]=="idle" and d.get("unread_told_step")==100')
+  # 還沒滿 30 格：不再提醒；那句「你有新信」沒人回，安全網把這格改成 retry（不是回 idle）
+  got2=$(gate_state "$studio/kids/pm" 'd["state"]=="retry" and d.get("unread_told_step")==100')
   python3 - "$studio/kids/pm/state.json" <<'PYEOF2'
 import json, sys
 p = sys.argv[1]; d = json.load(open(p, encoding="utf-8"))
@@ -386,7 +387,7 @@ test_gate_efficiency
 
 test_gate_llm_retry() {
   # 模型回錯（500、打不通、找不到執行檔）之後：以前直接回 idle、信已標讀、對話尾巴那句永遠沒人再送。
-  # 現在：記一筆 llm_errors，20 格後重送；連錯 5 次放著並喊一次；新信來了整個重來。
+  # 現在錯誤一律走 retry：記一筆 llm_errors、20 格後重送；連錯 5 次轉 stuck 只喊一次；新信來了整個重來。
   local root world home got
   root=$(make_world gate_retry)
   world="$root/agent"
@@ -397,18 +398,20 @@ import json, os, sys
 home = sys.argv[1]
 s = json.load(open(os.path.join(home, "state.json"), encoding="utf-8"))
 h = json.load(open(os.path.join(home, "prompts.json"), encoding="utf-8"))
-print(s.get("state") == "idle" and s.get("llm_errors") == 1 and isinstance(s.get("llm_error_step"), int)
-      and h and h[-1]["role"] == "user")
+print(s.get("state") == "retry" and s.get("llm_errors") == 1 and isinstance(s.get("llm_error_step"), int)
+      and (s.get("llm_error_reason") or "") != "" and h and h[-1]["role"] == "user")
 PYEOF2
 )
-  if [ "$got" = "True" ]; then ok "gate：模型回錯後記一筆、對話尾巴留著那句沒人回"; else fail "gate：回錯沒記到（$got）"; fi
-  # 還沒滿 20 格：不重送、閒著那幾格不算每題動作格；滿了：重送（state 走到 llm）
+  if [ "$got" = "True" ]; then ok "gate：模型回錯後走 retry、對話尾巴留著那句沒人回"; else fail "gate：回錯沒走 retry（$got）"; fi
+  # 還沒滿 20 格：留在 retry 不重送，那幾格也不算每題動作格
+  local before after
+  before=$(gate_state "$home" 'int(d.get("question_steps") or 0)')
   agent_tick "$world"; agent_tick "$world"; agent_tick "$world"
+  after=$(gate_state "$home" 'int(d.get("question_steps") or 0)')
   got=$(gate_state "$home" 'd.get("state")')
-  if [ "$(gate_state "$home" 'd.get("question_steps")')" = "$(gate_state "$home" 'd.get("question_steps")')" ] \
-     && [ "$(gate_state "$home" 'int(d.get("question_steps") or 0) < 5')" = "True" ]; then
-    ok "gate：等重送那幾格不算每題動作格"
-  else fail "gate：等重送燒掉了 question_steps（$(gate_state "$home" 'd.get("question_steps")')）"; fi
+  if [ "$got" = "retry" ] && [ "$before" = "$after" ]; then
+    ok "gate：等重送就待在 retry，那幾格不算每題動作格"
+  else fail "gate：等重送那幾格不對（state=$got question_steps $before→$after）"; fi
   python3 - "$home" <<'PYEOF2'
 import json, os, sys
 p = os.path.join(sys.argv[1], "state.json"); s = json.load(open(p, encoding="utf-8"))
@@ -416,32 +419,67 @@ s["step"] = int(s.get("llm_error_step") or 0) + 20; json.dump(s, open(p, "w", en
 PYEOF2
   agent_tick "$world"
   got="$got $(gate_state "$home" 'd.get("state")')"
-  if [ "$got" = "idle llm" ]; then ok "gate：沒滿 20 格不重送、滿了就重送"; else fail "gate：重送時機不對（$got）"; fi
-  # 連錯 5 次：放著、喊一次；新信來就再試
+  if [ "$got" = "retry llm" ]; then ok "gate：沒滿 20 格不重送、滿了就重送"; else fail "gate：重送時機不對（$got）"; fi
+  # 連錯 5 次：轉 stuck、只喊一次；下一格還是 stuck 也不再喊
   python3 - "$home" <<'PYEOF2'
 import json, os, sys
 p = os.path.join(sys.argv[1], "state.json"); s = json.load(open(p, encoding="utf-8"))
-s.update({"state": "idle", "llm_errors": 5, "llm_error_step": 0, "step": 100, "request": ""}); json.dump(s, open(p, "w", encoding="utf-8"))
+s.update({"state": "retry", "llm_errors": 5, "llm_error_step": 0, "step": 100, "request": ""})
+json.dump(s, open(p, "w", encoding="utf-8"))
 PYEOF2
-  agent_tick "$world"; agent_tick "$world"
+  agent_tick "$world"
   got=$(python3 - "$home" <<'PYEOF2'
 import glob, json, os, sys
 home = sys.argv[1]
 s = json.load(open(os.path.join(home, "state.json"), encoding="utf-8"))
 outs = [json.load(open(f, encoding="utf-8")) for f in glob.glob(os.path.join(home, "outbox", "*.json"))]
 gave = [o for o in outs if "連續出錯" in (o.get("content") or "")]
-print(s.get("state") == "idle" and s.get("llm_gave_up") is True and len(gave) == 1)
+print(s.get("state") == "stuck" and s.get("llm_gave_up") is True and len(gave) == 1)
 PYEOF2
 )
-  if [ "$got" = "True" ]; then ok "gate：連錯 5 次就放著、只喊一次"; else fail "gate：放棄那段不對（$got）"; fi
+  if [ "$got" = "True" ]; then ok "gate：連錯 5 次轉 stuck、喊一次"; else fail "gate：轉 stuck 那格不對（$got）"; fi
+  agent_tick "$world"
+  got=$(python3 - "$home" <<'PYEOF2'
+import glob, json, os, sys
+home = sys.argv[1]
+s = json.load(open(os.path.join(home, "state.json"), encoding="utf-8"))
+outs = [json.load(open(f, encoding="utf-8")) for f in glob.glob(os.path.join(home, "outbox", "*.json"))]
+gave = [o for o in outs if "連續出錯" in (o.get("content") or "")]
+print(s.get("state") == "stuck" and len(gave) == 1)
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：stuck 待著不動、不再喊第二次"; else fail "gate：stuck 又喊了（$got）"; fi
   "$AUSER" say "$world" "新的一句" >/dev/null 2>&1
   agent_tick "$world"
-  got=$(gate_state "$home" 'd.get("state") == "llm" and "llm_gave_up" not in d')
-  if [ "$got" = "True" ]; then ok "gate：新信來了，放棄的那句跟著再試"; else fail "gate：新信沒讓它再試（$got）"; fi
+  got=$(gate_state "$home" 'd.get("state") == "llm" and not any(k in d for k in ("llm_gave_up", "llm_errors", "llm_error_step", "llm_error_reason"))')
+  if [ "$got" = "True" ]; then ok "gate：新信來了，卡住的那句跟著再試、出錯的帳清光"; else fail "gate：新信沒讓它再試（$got）"; fi
   rm -rf "$root"
 }
 
 test_gate_llm_retry
+
+test_gate_idle_safety_net() {
+  # 安全網：不管哪條路，只要這格算完要回 idle、對話尾巴卻還是一句沒人回的話，就改成 retry。
+  local root world home got err
+  root=$(make_world gate_safety)
+  world="$root/agent"
+  home=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from aos_agent import resolve_home; print(resolve_home(sys.argv[2], None))' "$HERE" "$world")
+  python3 - "$home" <<'PYEOF2'
+import json, os, sys
+home = sys.argv[1]
+json.dump([{"role": "user", "content": "沒人回我這句"}],
+          open(os.path.join(home, "prompts.json"), "w", encoding="utf-8"), ensure_ascii=False)
+json.dump({"state": "idle", "step": 7, "busy": 3, "request": "", "announced": []},
+          open(os.path.join(home, "state.json"), "w", encoding="utf-8"), ensure_ascii=False)
+PYEOF2
+  err=$("$AGENT" exec "$world" 2>&1 >/dev/null)
+  got=$(gate_state "$home" 'd.get("state") == "retry" and int(d.get("llm_errors") or 0) >= 1 and d.get("llm_error_step") == 7')
+  case "$err" in *"安全網"*) : ;; *) got="沒印安全網那行：$err" ;; esac
+  if [ "$got" = "True" ]; then ok "gate：要回 idle 但尾巴沒人回，安全網改成 retry"; else fail "gate：安全網沒接住（$got）"; fi
+  rm -rf "$root"
+}
+
+test_gate_idle_safety_net
 
 test_gate_grant_retry() {
   # 個人額度凍住、喊過主管之後，天花板（max_per_member）抬高：以前要等 300 格才再試撥款，現在每 10 格試一次
