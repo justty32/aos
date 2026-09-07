@@ -4,11 +4,10 @@ import os
 import re
 import shlex
 
-PROMPT = ("長工作：run_long 會把 shell 指令放進另一個世界，最多跑一小時。"
-          "叫完系統會睡到結果回來；jobs_list 看工作，job_peek 看輸出，job_cancel 取消。")
+PROMPT = "run_long 最多跑一小時，叫完系統會睡到結果回來。"
 
 TOOLS = [
-    {"name": "run_long", "description": "另開一個鐘跑長時間 shell 指令；最多一小時。",
+    {"name": "run_long", "description": "另開一個鐘跑長時間 shell 指令，最多一小時。",
      "parameters": {"type": "object", "properties": {
          "command": {"type": "string"}, "name": {"type": "string"}},
          "required": ["command"]}},
@@ -16,7 +15,7 @@ TOOLS = [
      "parameters": {"type": "object", "properties": {}}},
     {"name": "job_peek", "description": "看一個長工作的輸出尾端。",
      "parameters": {"type": "object", "properties": {
-         "name": {"type": "string"}, "lines": {"type": "integer", "minimum": 1}},
+         "name": {"type": "string"}, "lines": {"type": "integer"}},
          "required": ["name"]}},
     {"name": "job_cancel", "description": "取消一個還在跑的長工作。",
      "parameters": {"type": "object", "properties": {"name": {"type": "string"}},

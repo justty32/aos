@@ -9,33 +9,33 @@ MAX_STEPS = 3
 MAX_WAIT_S = 600
 MAX_USD = 0.10
 
-PROMPT = ("1. 要同時權衡三件以上的事、錯了很難回頭，或一般作法試了兩次仍卡住，才深度思考。\n"
-          "2. 能查到、能算出、能用一次小實驗驗證的事，先直接做，不要深度思考。\n"
-          "3. 一個問題最多開一份；送出後系統會睡著，結果回來會直接接回對話。")
+PROMPT = ("要同時權衡三件以上、錯了難回頭，或試兩次仍卡住，才深度思考；能查／算／小實驗驗證的別用。"
+          "一題最多開一份，送出後睡著、結果自動接回對話。")
 
-_BUDGET = {"type": "object", "description": "可選。只能把預設上限往下調。", "properties": {
-    "max_tokens": {"type": "integer", "description": "最多輸出 token，預設 6000"},
-    "max_steps": {"type": "integer", "description": "最多幾步，預設 3"},
-    "wait_s": {"type": "number", "description": "最多等幾秒，預設 600"},
-    "max_usd": {"type": "number", "description": "估計最多花幾美元，預設 0.10"},
+_BUDGET = {"type": "object", "description": "可選，只能往下調預設上限（6000 token／3 步／600 秒／0.10 美元）",
+           "properties": {
+    "max_tokens": {"type": "integer"},
+    "max_steps": {"type": "integer"},
+    "wait_s": {"type": "number"},
+    "max_usd": {"type": "number"},
 }}
 
 TOOLS = [
-    {"name": "think", "description": "把一個難題交給深思模型。當格只排隊，不等結果。",
+    {"name": "think", "description": "交給深思模型，當格只排隊不等結果。",
      "parameters": {"type": "object", "properties": {
-         "question": {"type": "string", "description": "要想清楚的問題"}, "budget": _BUDGET},
+         "question": {"type": "string"}, "budget": _BUDGET},
          "required": ["question"]}},
-    {"name": "think_steps", "description": "把問題分成最多三步深思；每步只看原題和上一步結論。",
+    {"name": "think_steps", "description": "分最多三步深思，每步只看原題與上一步結論。",
      "parameters": {"type": "object", "properties": {
-         "question": {"type": "string", "description": "要分步想清楚的問題"}, "budget": _BUDGET},
+         "question": {"type": "string"}, "budget": _BUDGET},
          "required": ["question"]}},
-    {"name": "critique", "description": "用深思模型檢查草稿，最多找三個重要漏洞並給最小修法。",
+    {"name": "critique", "description": "用深思模型抓草稿最多三個漏洞並給修法。",
      "parameters": {"type": "object", "properties": {
-         "draft": {"type": "string", "description": "要檢查的答案或計畫"}, "budget": _BUDGET},
+         "draft": {"type": "string"}, "budget": _BUDGET},
          "required": ["draft"]}},
-    {"name": "thoughts_list", "description": "列出最近的思考編號、題目、狀態、步數與用量。",
+    {"name": "thoughts_list", "description": "列出最近的思考編號、題目、狀態、用量。",
      "parameters": {"type": "object", "properties": {}}},
-    {"name": "thought_read", "description": "重讀一份思考的題目、各步短結論、最後結論與用量。",
+    {"name": "thought_read", "description": "重讀一份思考的題目、結論與用量。",
      "parameters": {"type": "object", "properties": {
          "id": {"type": "string", "description": "思考編號"}}, "required": ["id"]}},
 ]

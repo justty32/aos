@@ -3,37 +3,35 @@ import os
 
 
 PROMPT = (
-    "交流：寄信前如果不確定名字，先用 mail_who。mail_send 寄一封新信；"
-    "讀完別人的信後用 mail_reply 回覆，source 跟 id 照 inbox_read 的結果填。"
-    "mail_broadcast 把同一句話寄給指定的人；不給 to 時只寄給父與直接小孩。"
-    "寄出後若要等回覆，用 mail_wait 登記剛才拿到的 id；系統會睡到回信或新信來。"
+    "不確定名字先 mail_who。mail_reply 的 source／id 照 inbox_read 的結果填。"
+    "mail_wait 登記剛寄出那封的 id，系統會睡到回信或新信來。"
 )
 
 TOOLS = [
     {"name": "mail_send", "description": "寄一封新信給通訊錄裡的一個人。",
      "parameters": {"type": "object", "properties": {
-         "to": {"type": "string", "description": "收件人的通訊錄名字"},
-         "content": {"type": "string", "description": "要說的話"}},
+         "to": {"type": "string", "description": "通訊錄名字"},
+         "content": {"type": "string"}},
          "required": ["to", "content"]}},
     {"name": "mail_reply", "description": "回覆一封剛讀過的信，保留回信關係。",
      "parameters": {"type": "object", "properties": {
          "source": {"type": "string", "description": "來信的來源名字"},
          "id": {"type": "string", "description": "來信的檔名"},
-         "content": {"type": "string", "description": "回覆內容"}},
+         "content": {"type": "string"}},
          "required": ["source", "id", "content"]}},
     {"name": "mail_broadcast", "description": "把同一句話寄給多人；不給名單就寄給父與直接小孩。",
      "parameters": {"type": "object", "properties": {
-         "content": {"type": "string", "description": "要說的話"},
+         "content": {"type": "string"},
          "to": {"type": "array", "items": {"type": "string"},
-                "description": "收件人名字；省略時是父與直接小孩"}},
+                "description": "省略時是父與直接小孩"}},
          "required": ["content"]}},
-    {"name": "mail_who", "description": "看通訊錄裡有誰、彼此關係，以及資料夾還在不在。",
+    {"name": "mail_who", "description": "看通訊錄裡有誰、彼此關係，資料夾還在不在。",
      "parameters": {"type": "object", "properties": {
-         "alive_only": {"type": "boolean", "description": "只列資料夾還在的人"}}}},
-    {"name": "mail_wait", "description": "登記正在等哪封信的回覆；馬上返回，不會阻塞。",
+         "alive_only": {"type": "boolean", "description": "只列還在的人"}}}},
+    {"name": "mail_wait", "description": "登記正在等哪封信的回覆；不會阻塞。",
      "parameters": {"type": "object", "properties": {
          "id": {"type": "string", "description": "剛寄出那封信的 id"},
-         "note": {"type": "string", "description": "提醒自己在等什麼"}},
+         "note": {"type": "string"}},
          "required": ["id"]}},
 ]
 

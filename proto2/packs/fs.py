@@ -8,22 +8,20 @@ import time
 
 
 PROMPT = (
-    "檔案與短指令：第一次碰一個資料夾，先用 ls 看有什麼。想看檔案時用 read，"
-    "而且只讀需要的行數範圍；結果太長就縮小 start／count 再讀。只改一小段時用 edit，"
-    "old 要抄到在檔裡剛好出現一次。新檔或確定要整份重寫才用 write。"
-    "sh 只跑很快會結束的指令，會超過一分鐘的改用 run_long。"
+    "先 ls 看資料夾有什麼；read 只讀需要的行數範圍，太長就縮小 start／count。"
+    "小修改用 edit，old 要在檔裡剛好出現一次；write 只給新檔或整份重寫。"
 )
 
 TOOLS = [
     {
         "name": "read",
-        "description": "讀文字檔的一段，回行數範圍、總行數和內容。預設從第 1 行讀 200 行。",
+        "description": "讀文字檔一段，回行數範圍、總行數與內容。預設第 1 行讀 200 行。",
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "檔案路徑，從世界資料夾算起"},
-                "start": {"type": "integer", "minimum": 1, "description": "開始行，預設 1"},
-                "count": {"type": "integer", "minimum": 1, "description": "讀幾行，預設 200"},
+                "path": {"type": "string", "description": "從世界資料夾算起"},
+                "start": {"type": "integer", "description": "預設 1"},
+                "count": {"type": "integer", "description": "預設 200"},
             },
             "required": ["path"],
         },
@@ -34,20 +32,20 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "檔案路徑，從世界資料夾算起"},
-                "text": {"type": "string", "description": "要寫入的文字"},
-                "append": {"type": "boolean", "description": "true 是追加；預設 false，會整檔覆蓋"},
+                "path": {"type": "string", "description": "從世界資料夾算起"},
+                "text": {"type": "string"},
+                "append": {"type": "boolean", "description": "true 追加，預設整檔覆蓋"},
             },
             "required": ["path", "text"],
         },
     },
     {
         "name": "ls",
-        "description": "列一層資料夾，不會往下遞迴。預設不列點開頭的名字。",
+        "description": "列一層資料夾，不遞迴，預設不列點開頭的名字。",
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "資料夾路徑，預設是世界資料夾"},
+                "path": {"type": "string", "description": "預設是世界資料夾"},
                 "all": {"type": "boolean", "description": "true 才列點開頭的名字"},
             },
         },
@@ -58,26 +56,26 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "檔案路徑，從世界資料夾算起"},
-                "old": {"type": "string", "description": "原文，要抄到只出現一次"},
-                "new": {"type": "string", "description": "換成的新文字，可以是空字串"},
+                "path": {"type": "string", "description": "從世界資料夾算起"},
+                "old": {"type": "string", "description": "要只出現一次"},
+                "new": {"type": "string"},
             },
             "required": ["path", "old", "new"],
         },
     },
     {
         "name": "sh",
-        "description": "在世界資料夾跑一條短指令。回退出碼、秒數，以及 stdout／stderr 各最後 1500 字。",
+        "description": "在世界資料夾跑一條短指令，超過一分鐘改用 run_long。",
         "parameters": {
             "type": "object",
             "properties": {
-                "command": {"type": "string", "description": "要交給 shell 跑的指令"},
-                "stdin": {"type": "string", "description": "可選，餵給指令的標準輸入"},
+                "command": {"type": "string"},
+                "stdin": {"type": "string"},
                 "timeout": {
                     "type": "number",
                     "minimum": 0.1,
                     "maximum": 120,
-                    "description": "幾秒後算逾時，預設 60，最長 120",
+                    "description": "秒，預設 60，上限 120",
                 },
             },
             "required": ["command"],

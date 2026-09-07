@@ -9,12 +9,8 @@ DEFAULT_PER_BRANCH_TOKENS = 1500
 MAX_TOTAL_TOKENS = 4500
 SUMMARY_CHARS = 800
 
-PROMPT = """branch 用法：
-只有同一題真的有兩到三條不同走法，先各自想完再比較會更清楚時，才用 fork。
-方向不要重疊；可以用「做法」「最可能失敗的地方」「完全不同的假設」切開。
-每個方向只寫一件事。送出後系統會睡著；全到齊才叫一次 join。
-join 後由你自己選一條，或合併各條的好處。某條已經做完整件事時，才用 adopt 接手它的整段記憶。
-第一版不做巢狀分支。"""
+PROMPT = ("只有真的有兩三條不重疊的走法才用 fork，方向別重疊；送出後睡著，全到齊才 join。"
+          "不做巢狀分支。")
 
 TOOLS = [
     {
@@ -28,21 +24,18 @@ TOOLS = [
                     "minItems": 2,
                     "maxItems": 3,
                     "items": {"type": "string"},
-                    "description": "兩到三個互不重疊的思考方向。",
                 },
                 "budget": {
                     "type": "object",
-                    "description": "可選。只能把預設上限往下調。",
+                    "description": "可選，只能往下調預設上限",
                     "properties": {
-                        "per_branch_tokens": {"type": "integer", "minimum": 1, "maximum": 1500},
-                        "total_tokens": {"type": "integer", "minimum": 1, "maximum": 4500},
-                        "max_cost_usd": {"type": "number", "minimum": 0},
+                        "per_branch_tokens": {"type": "integer"},
+                        "total_tokens": {"type": "integer"},
+                        "max_cost_usd": {"type": "number"},
                     },
-                    "additionalProperties": False,
                 },
             },
             "required": ["directions"],
-            "additionalProperties": False,
         },
     },
     {
@@ -50,9 +43,8 @@ TOOLS = [
         "description": "全到齊後，一次收回這組分支的全部短結論。",
         "parameters": {
             "type": "object",
-            "properties": {"branch_id": {"type": "string", "description": "fork 回傳的 id。"}},
+            "properties": {"branch_id": {"type": "string", "description": "fork 回傳的 id"}},
             "required": ["branch_id"],
-            "additionalProperties": False,
         },
     },
     {
@@ -61,11 +53,10 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "branch_id": {"type": "string", "description": "fork 回傳的 id。"},
-                "n": {"type": "integer", "minimum": 1, "maximum": 3, "description": "第幾條，從 1 開始。"},
+                "branch_id": {"type": "string", "description": "fork 回傳的 id"},
+                "n": {"type": "integer", "minimum": 1, "maximum": 3, "description": "第幾條，從 1 起"},
             },
             "required": ["branch_id", "n"],
-            "additionalProperties": False,
         },
     },
 ]

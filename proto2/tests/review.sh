@@ -257,8 +257,8 @@ review=load_pack(home,"review"); fs=load_pack(home,"fs"); loaded=[("review",revi
 ctx=Ctx(world,home,{},loaded); old=system_text(ctx,loaded)
 review.run("improve_prompt",{"pack":"fs","text":"FS_OVERRIDE_MARKER"},ctx)
 new=system_text(ctx,loaded)
-print("檔案與短指令" in old, "FS_OVERRIDE_MARKER" in new,
-      "檔案與短指令" not in new, lesson in new)
+print("先 ls 看資料夾" in old, "FS_OVERRIDE_MARKER" in new,
+      "先 ls 看資料夾" not in new, lesson in new)
 PYEOF2
 )
   if [ "$got" = "True True True True" ]; then

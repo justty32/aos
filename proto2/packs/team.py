@@ -6,13 +6,9 @@ from aos_agent import TEAM_BUDGET_KEYS, team_member_name, team_root_of, team_sta
 
 
 PROMPT = (
-    "整隊：team_budget 看自己與整隊還剩多少；owner 或 PM 用 team_grant 把自己未用額度分給成員；"
-    "team_progress 把短進度追加到共用進度；team_status 看全隊（含每人在途請求數與被擋原因）。"
-    "個人 tokens 額度是硬閘門，0 就是 0：成員沒拿到 team_grant 就一格都動不了，"
-    "所以派工之前一定要先 team_grant 給他 tokens，一次至少 20000（一輪對話就要幾千），不夠再加。"
-    "到個人額度 80% 時先停背景工作並報主管；"
-    "整隊任一項用完時全隊會自動凍住，只有 sales 會問甲方要不要追加。"
-    "首席只能建議重分，不能自己加額度。任何人都不能自行提高整隊總預算。"
+    "個人 tokens 額度是硬閘門：沒拿到 team_grant 就一格都動不了，派工前先給他至少 20000。"
+    "到 80% 先停背景工作報主管；整隊額度用完全體凍住，只有 sales 能找甲方追加；"
+    "首席只能建議重分，任何人不能自行提高整隊總預算。"
 )
 
 
@@ -29,8 +25,7 @@ TOOLS = [
     {"name": "team_grant", "description": "owner 或 PM 從自己的剩餘額度分預算給一位成員。",
      "parameters": _object({
          "role": {"type": "string", "description": "成員名字，例如 chief 或 dev-a"},
-         "amount": {"description": "各項額度的 JSON 物件；單一數字視為 tokens",
-                    "oneOf": [{"type": "number"}, {"type": "object"}]},
+         "amount": {"description": "數字視為 tokens；也可給各項額度的物件"},
      }, ["role", "amount"])},
     {"name": "team_progress", "description": "追加一則帶時間與署名的共用進度。",
      "parameters": _object({"text": {"type": "string", "description": "短進度"}}, ["text"])},

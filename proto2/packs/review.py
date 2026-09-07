@@ -8,32 +8,29 @@ import re
 
 
 PROMPT = (
-    "任務告一段落或收到回顧提醒時，先看最近摘要，再看長期規律。"
-    "檢查目標有沒有完成、哪一步失敗、哪一步重複、哪個工具太貴、思考結論有沒有真的採用。"
-    "只把會改變下次做法的事寫成教訓。格式固定為「同類任務／tag：原本平均 X 元／Y 格 → 改法 → "
-    "之後平均 Z 元／W 格」，一條一行。偶發小事、措辭喜好、已經修好的單次錯誤，不要寫成教訓。"
-    "先用教訓；只有某個工具包的做法反覆有問題，才改 prompt 覆蓋。"
-    "只有同一串 shell 已手打三次，才造工具。"
+    "任務後先看 review_recent 再看 review_patterns；只把會改變下次做法的事寫成教訓"
+    "（格式見 lesson_add）。先用教訓，工具包做法反覆有問題才 improve_prompt；"
+    "同一串 shell 手打三次才造工具。"
 )
 
 EMPTY = {"type": "object", "properties": {}}
 TOOLS = [
-    {"name": "review_recent", "description": "回顧最近幾格或某個時間以後的工具帳。只回次數、時間、token、錢、繞路和最後結果，不回原文。",
+    {"name": "review_recent", "description": "回顧最近幾格的工具帳：次數、時間、token、錢、結果，不回原文。",
      "parameters": {"type": "object", "properties": {
-         "n_steps": {"type": "integer", "minimum": 1, "description": "往回看幾格"},
+         "n_steps": {"type": "integer"},
          "since": {"type": "string", "description": "起始時間，例如 2026-09-06T14:00:00"}}}},
-    {"name": "review_patterns", "description": "看最近 30 天的花費規律。先列最貴工具，再列最貴任務、打轉工具和反覆錯誤。", "parameters": EMPTY},
-    {"name": "review_thoughts", "description": "看一次或最近五次深度思考／分支的短結論、花費，以及後來有沒有採用。",
+    {"name": "review_patterns", "description": "看最近 30 天花費規律：最貴工具、最貴任務、打轉與反覆錯誤。", "parameters": EMPTY},
+    {"name": "review_thoughts", "description": "看思考／分支的短結論、花費與後來是否採用。",
      "parameters": {"type": "object", "properties": {
-         "id": {"type": "string", "description": "思考編號；不填就看最近五次"}}}},
-    {"name": "lesson_add", "description": "新增一條帶金額與格數的教訓。格式：任務或 tag：原本平均 X 元／Y 格 → 改法 → 之後平均 Z 元／W 格。",
+         "id": {"type": "string", "description": "不填看最近五次"}}}},
+    {"name": "lesson_add", "description": "新增一條教訓。格式：任務或 tag：原本平均 X 元／Y 格 → 改法 → 之後平均 Z 元／W 格。",
      "parameters": {"type": "object", "properties": {
          "text": {"type": "string", "description": "一行完整教訓"}}, "required": ["text"]}},
     {"name": "lessons_list", "description": "列最近 20 條教訓，新的在前面。", "parameters": EMPTY},
-    {"name": "improve_prompt", "description": "整份換掉一個已開啟工具包的 prompt 覆蓋；下次走格才生效。",
+    {"name": "improve_prompt", "description": "整份換掉工具包的 prompt 覆蓋，下次走格生效。",
      "parameters": {"type": "object", "properties": {
-         "pack": {"type": "string", "description": "已開啟的工具包名字"},
-         "text": {"type": "string", "description": "新的完整 prompt 內容"}},
+         "pack": {"type": "string", "description": "工具包名字"},
+         "text": {"type": "string", "description": "新 prompt 全文"}},
          "required": ["pack", "text"]}},
 ]
 

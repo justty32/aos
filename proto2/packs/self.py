@@ -7,25 +7,22 @@ import re
 
 MEMORY_LIMIT = 80000
 
-PROMPT = (
-    "自我檢查：self_status 看格數、記憶與資料夾大小；self_time 只看現在時間，較便宜。"
-    "self_who 看自己、父母、小孩與時鐘；self_cost 看某天這台引擎用了多少 token、估計幾美元。"
-)
+PROMPT = "只想看時間用 self_time，較便宜；別為了看時間叫 self_status。"
 
 TOOLS = [
     {"name": "self_status",
      "description": "看自己的格數、開機時間、記憶長度、資料夾大小與 LLM 用量。",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "self_cost",
-     "description": "看某天這台引擎用了多少 token、發出幾次請求，並依引擎單價估算美元。",
+     "description": "看某天這台引擎用了多少 token、幾次請求，估算美元。",
      "parameters": {"type": "object", "properties": {
-         "day": {"type": "string", "description": "日期，格式 YYYY-MM-DD；不給就是今天。"}
+         "day": {"type": "string", "description": "YYYY-MM-DD，預設今天"}
      }}},
     {"name": "self_who",
-     "description": "看自己是誰、住哪、父是誰、用哪種時鐘、生了哪些小孩、連哪個 LLM。",
+     "description": "看自己是誰、住哪、父是誰、時鐘、小孩、連哪個 LLM。",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "self_time",
-     "description": "看本地現在時間、開機時間與已開機秒數；不掃資料夾。",
+     "description": "看本地時間、開機時間與已開機秒數，不掃資料夾。",
      "parameters": {"type": "object", "properties": {}}},
 ]
 

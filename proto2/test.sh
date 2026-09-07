@@ -735,9 +735,9 @@ SYS=$(python3 -c '
 import json,sys
 d=json.load(open(sys.argv[1]))
 m=d["messages"][0]
-markers=("信箱", "交流：", "檔案與短指令", "自我檢查", "記憶就是", "子 agent", "成本：")
+markers=("先 inbox_sources", "不確定名字先 mail_who", "先 ls 看資料夾", "只想看時間用 self_time", "memory_summarize_old 交回舊原文", "clock 不確定用 shared", "回傳越長的工具越貴")
 print("%s|%s" % (m["role"], "".join(k for k in markers if k in m["content"])))' "$REQ")
-if [ "$SYS" = "system|信箱交流：檔案與短指令自我檢查記憶就是子 agent成本：" ]; then
+if [ "$SYS" = "system|先 inbox_sources不確定名字先 mail_who先 ls 看資料夾只想看時間用 self_timememory_summarize_old 交回舊原文clock 不確定用 shared回傳越長的工具越貴" ]; then
   ok "system 訊息有預設七個工具包的 prompt"
 else
   fail "system 訊息不對：$SYS"

@@ -7,54 +7,39 @@ import shutil
 import subprocess
 import sys
 
-PROMPT = """你正在改一個 Python 專案。
-第一次碰檔案，先用 code_outline 看骨架。
-再用 code_search 找名字、呼叫處或錯誤文字。
-只讀真正需要的那幾行。
-改之前，用 code_checkpoint 收下準備改的檔案。
-一次只改一小段。
-小修改用 edit，而且 old 要抄到只出現一次。
-新檔或很短且已完整讀過的檔，才可以用 write 整份寫入。
-不要整份重寫既有的大檔。
-每完成一小次修改，就用 code_check 檢查 Python 語法。
-再用 sh 跑最相關的小測試或程式。
-可能超過一分鐘的工作改用 run_long，不要留在這一格等。
-最後用 code_diff 看自己改了什麼。
-如果工具說結果還有更多，縮小 path、query 或 context 再叫。
-不要為了看更多而把上限調到最大。
-改壞又救不回來時，才用 code_undo。"""
+PROMPT = ("改 Python 前用 code_outline 看骨架、code_search 找位置；改之前 code_checkpoint 存檔，"
+          "改壞用 code_undo。大檔用 edit（old 要剛好一次）不要整份 write，超過一分鐘的指令用 run_long。")
 
 
 TOOLS = [
     {"name": "code_outline",
-     "description": "看一個 Python 檔的類別、函式、方法名字與行號，不讀整份原文。",
+     "description": "看類別、函式、方法名與行號，不讀全文。",
      "parameters": {"type": "object", "properties": {
-         "path": {"type": "string", "description": "Python 檔路徑"}},
+         "path": {"type": "string"}},
          "required": ["path"]}},
     {"name": "code_search",
-     "description": "在檔案或資料夾裡找原樣文字，列出檔名、行號和前後幾行。",
+     "description": "找原樣文字，列出檔名、行號與前後幾行。",
      "parameters": {"type": "object", "properties": {
-         "query": {"type": "string", "description": "要找的原樣文字"},
-         "path": {"type": "string", "description": "從哪裡找，預設 ."},
-         "context": {"type": "integer", "description": "前後各幾行，預設 2"},
-         "limit": {"type": "integer", "description": "最多幾筆，預設 20，最大 50"}},
+         "query": {"type": "string"},
+         "path": {"type": "string", "description": "預設 ."},
+         "context": {"type": "integer", "description": "前後幾行，預設 2"},
+         "limit": {"type": "integer", "description": "預設 20，上限 50"}},
          "required": ["query"]}},
     {"name": "code_check",
-     "description": "用 py_compile 檢查一個 Python 檔的語法。",
+     "description": "檢查 Python 語法。",
      "parameters": {"type": "object", "properties": {
-         "path": {"type": "string", "description": "Python 檔路徑"}},
+         "path": {"type": "string"}},
          "required": ["path"]}},
     {"name": "code_checkpoint",
-     "description": "修改前把指定檔案存進自己的 .aos-undo，回一個存檔編號。",
+     "description": "改前存檔，回存檔編號。",
      "parameters": {"type": "object", "properties": {
-         "paths": {"type": "array", "items": {"type": "string"},
-                   "description": "準備修改的檔案清單"}},
+         "paths": {"type": "array", "items": {"type": "string"}}},
          "required": ["paths"]}},
     {"name": "code_diff",
-     "description": "比較目前檔案和最近一次存檔，列出短差異與增減行數。",
+     "description": "比較目前檔案與最近一次存檔的差異。",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "code_undo",
-     "description": "還原最近一次存檔；當時不存在的檔案會移除。存檔本身會保留。",
+     "description": "還原最近一次存檔；當時不存在的檔案會被刪除。",
      "parameters": {"type": "object", "properties": {}}},
 ]
 
