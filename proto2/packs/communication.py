@@ -57,7 +57,10 @@ def _entry_dir(ctx, entry):
 def _send(ctx, to, content, reply_to=None, thread=None):
     contacts = _contacts(ctx)
     if to not in contacts:
-        return {"ok": False, "error": "通訊錄裡沒有這個人：%s" % to}
+        # 小模型會對「甲方」「使用者」寄信；對甲方說話不用工具，直接回話就是了
+        return {"ok": False, "error": "通訊錄裡沒有這個人：%s" % to,
+                "contacts": sorted(contacts),
+                "hint": "要跟甲方／使用者說話不用寄信，直接回覆文字就是回話"}
 
     target = to if to in ctx.contacts() else ctx.world_of(_entry_dir(ctx, contacts[to]))
     extra = {}

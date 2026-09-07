@@ -165,7 +165,7 @@ sys.path.insert(0,sys.argv[1]); from aos_agent import Ctx,resolve_home
 spec=importlib.util.spec_from_file_location("communication",os.path.join(sys.argv[1],"packs","communication.py"))
 comm=importlib.util.module_from_spec(spec); spec.loader.exec_module(comm)
 r=comm.run("mail_send",{"to":"沒這個人","content":"哈囉"},Ctx(sys.argv[2],resolve_home(sys.argv[2],None)))
-print(r=={"ok":False,"error":"通訊錄裡沒有這個人：沒這個人"})
+print(r.get("ok") is False and r.get("error")=="通訊錄裡沒有這個人：沒這個人" and "hint" in r)
 PYEOF2
 )
   if [ "$got" = "True" ]; then ok "communication：不存在的名字回白話錯誤";
