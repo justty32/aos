@@ -12,8 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import aos_llm            # noqa: E402
 from aos_agent import (   # noqa: E402
     Ctx, agent_limits, append_history, load_packs, now_iso, pack_owners, read_json,
-    resolve_home, run_custom, scan_inbox, system_text, team_requester, team_status_of,
-    today_usage_for, tool_specs, warn, write_json)
+    resolve_home, run_custom, scan_inbox, system_text, team_auto_grant, team_requester,
+    team_status_of, today_usage_for, tool_specs, tools_only, warn, write_json)
 
 LLM_WAIT_TICKS = 60            # 請求已經不在 LLM 世界的排隊／執行中，結果卻沒出現：等這麼多格就放棄
 LLM_WAIT_TICKS_ALIVE = 1800    # 請求還排著或還在打（大家共用幾路引擎，慢模型一發就要一兩分鐘）：最多等這麼多格
@@ -55,7 +55,7 @@ def do_llm(ctx, loaded, extra):
     messages += history if isinstance(history, list) else []
 
     body = {"messages": messages}
-    specs = tool_specs(loaded, extra)
+    specs = tool_specs(loaded, extra, tools_only(ctx.home))
     if specs:
         body["tools"] = [{"type": "function", "function": t} for t in specs]
     conf = read_json(os.path.join(ctx.home, "llm.json"), {})
@@ -363,6 +363,12 @@ def budget_block(ctx):
         any(ctx.unread(source) for source in ctx.sources())
     if not has_work:
         return True
+    granted, why = team_auto_grant(ctx.world, ctx.name)
+    if granted:
+        warn(why + "，解凍")
+        ctx.state.pop("budget_block", None)
+        ctx.state.pop("budget_told", None)
+        return False
     ctx.state["budget_told"] = mark
     supervisor = mine.get("reports_to") if mine else None
     text = "我的 tokens 額度用完了（上限 %s、已用 %s），有工作在等，請用 team_grant 加給我（一次至少 20000）。" % (
@@ -371,6 +377,15 @@ def budget_block(ctx):
         ctx.put_mail(supervisor, "budget", text)
     else:
         ctx.reply(text, error=True)
+    if why.startswith("撥錢的人"):
+        # 池子乾了：整隊總額還沒到，但能撥錢的人都沒剩——直接替 sales 問甲方，不必再繞一輪模型
+        sales = next((row for row in data["members"] if row["name"] == "sales"), None)
+        if sales and ctx.name != "sales":
+            sales_world = os.path.join(data["root"], sales.get("path") or ".")
+            Ctx(sales_world, resolve_home(sales_world, None)).reply(
+                "額度撥不出來了（%s；整隊還剩 %s tokens 但都在已凍住的人手上）。要追加請跑："
+                "aos-user team budget %s --add '{\"tokens\": 數量}' --to pm" % (
+                    why, data["remaining"].get("tokens"), data["root"]), error=True)
     return True
 
 
