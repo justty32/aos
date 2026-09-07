@@ -432,6 +432,33 @@ print(bad.get("ok") is False and bad["test"]["exit"] == 3 and t["status"] == "as
 PYEOF2
 )
   if [ "$got" = "True" ]; then ok "studio_flow：task_report 的測試沒過就不算完成，過了才 done"; else fail "studio_flow：測試沒過的回報沒被擋（$got）"; fi
+  # qa_verdict 沒給 task_id：只有一個 done 的就當它；on_idle：手上有任務卻閒著，45 格後寄信提醒自己
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import glob, json, os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+from packs import studio
+root = sys.argv[2]
+order = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
+qa = Ctx(os.path.join(root, "kids", "qa"), os.path.join(root, "kids", "qa"))
+v = studio.run("qa_verdict", {"passed": True, "evidence": "看過了"}, qa)
+t3 = json.load(open(os.path.join(root, "team", "tasks", order["id"] + "-t3.json"), encoding="utf-8"))
+# dev-a 手上 t2 還是 assigned（chief 的第二個任務其實是 chief 的；改派給 dev-a 來測）
+pm = Ctx(os.path.join(root, "kids", "pm"), os.path.join(root, "kids", "pm"))
+studio.run("task_assign", {"task_id": order["id"] + "-t2", "to": "dev-a"}, pm)
+dev = Ctx(os.path.join(root, "kids", "dev-a"), os.path.join(root, "kids", "dev-a"))
+dev.state.update({"step": 10}); studio.on_idle(dev)            # 第一次只記時間
+dev.state.update({"step": 30}); studio.on_idle(dev)            # 才 20 格，不提醒
+box = os.path.join(root, "kids", "dev-a", "inbox", "studio")
+none_yet = not os.path.isdir(box) or not [f for f in os.listdir(box) if f.endswith(".json")]
+dev.state.update({"step": 60}); studio.on_idle(dev)            # 滿 45 格，提醒
+mails = [f for f in os.listdir(box) if f.endswith(".json")] if os.path.isdir(box) else []
+text = json.load(open(os.path.join(box, mails[0]), encoding="utf-8"))["content"] if mails else ""
+print(v.get("ok") is True and v["task_id"] == t3["id"] and t3["status"] == "passed"
+      and none_yet and len(mails) == 1 and "-t2" in text and dev.state["studio_nag_step"] == 60)
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "studio_flow：qa_verdict 漏 task_id 就認唯一等驗的；閒著有任務 45 格後提醒自己"; else fail "studio_flow：qa_verdict 預設／on_idle 提醒不對（$got）"; fi
   rm -rf "$root"
 }
 
