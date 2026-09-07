@@ -383,3 +383,108 @@ PYEOF2
 }
 
 test_gate_efficiency
+
+test_gate_llm_retry() {
+  # 模型回錯（500、打不通、找不到執行檔）之後：以前直接回 idle、信已標讀、對話尾巴那句永遠沒人再送。
+  # 現在：記一筆 llm_errors，20 格後重送；連錯 5 次放著並喊一次；新信來了整個重來。
+  local root world home got
+  root=$(make_world gate_retry)
+  world="$root/agent"
+  home=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from aos_agent import resolve_home; print(resolve_home(sys.argv[2], None))' "$HERE" "$world")
+  say_and_wait "$world" "$root/llm" 'HTTP500 第一句' 20 >/dev/null || true
+  got=$(python3 - "$home" <<'PYEOF2'
+import json, os, sys
+home = sys.argv[1]
+s = json.load(open(os.path.join(home, "state.json"), encoding="utf-8"))
+h = json.load(open(os.path.join(home, "prompts.json"), encoding="utf-8"))
+print(s.get("state") == "idle" and s.get("llm_errors") == 1 and isinstance(s.get("llm_error_step"), int)
+      and h and h[-1]["role"] == "user")
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：模型回錯後記一筆、對話尾巴留著那句沒人回"; else fail "gate：回錯沒記到（$got）"; fi
+  # 還沒滿 20 格：不重送、閒著那幾格不算每題動作格；滿了：重送（state 走到 llm）
+  agent_tick "$world"; agent_tick "$world"; agent_tick "$world"
+  got=$(gate_state "$home" 'd.get("state")')
+  if [ "$(gate_state "$home" 'd.get("question_steps")')" = "$(gate_state "$home" 'd.get("question_steps")')" ] \
+     && [ "$(gate_state "$home" 'int(d.get("question_steps") or 0) < 5')" = "True" ]; then
+    ok "gate：等重送那幾格不算每題動作格"
+  else fail "gate：等重送燒掉了 question_steps（$(gate_state "$home" 'd.get("question_steps")')）"; fi
+  python3 - "$home" <<'PYEOF2'
+import json, os, sys
+p = os.path.join(sys.argv[1], "state.json"); s = json.load(open(p, encoding="utf-8"))
+s["step"] = int(s.get("llm_error_step") or 0) + 20; json.dump(s, open(p, "w", encoding="utf-8"))
+PYEOF2
+  agent_tick "$world"
+  got="$got $(gate_state "$home" 'd.get("state")')"
+  if [ "$got" = "idle llm" ]; then ok "gate：沒滿 20 格不重送、滿了就重送"; else fail "gate：重送時機不對（$got）"; fi
+  # 連錯 5 次：放著、喊一次；新信來就再試
+  python3 - "$home" <<'PYEOF2'
+import json, os, sys
+p = os.path.join(sys.argv[1], "state.json"); s = json.load(open(p, encoding="utf-8"))
+s.update({"state": "idle", "llm_errors": 5, "llm_error_step": 0, "step": 100, "request": ""}); json.dump(s, open(p, "w", encoding="utf-8"))
+PYEOF2
+  agent_tick "$world"; agent_tick "$world"
+  got=$(python3 - "$home" <<'PYEOF2'
+import glob, json, os, sys
+home = sys.argv[1]
+s = json.load(open(os.path.join(home, "state.json"), encoding="utf-8"))
+outs = [json.load(open(f, encoding="utf-8")) for f in glob.glob(os.path.join(home, "outbox", "*.json"))]
+gave = [o for o in outs if "連續出錯" in (o.get("content") or "")]
+print(s.get("state") == "idle" and s.get("llm_gave_up") is True and len(gave) == 1)
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：連錯 5 次就放著、只喊一次"; else fail "gate：放棄那段不對（$got）"; fi
+  "$AUSER" say "$world" "新的一句" >/dev/null 2>&1
+  agent_tick "$world"
+  got=$(gate_state "$home" 'd.get("state") == "llm" and "llm_gave_up" not in d')
+  if [ "$got" = "True" ]; then ok "gate：新信來了，放棄的那句跟著再試"; else fail "gate：新信沒讓它再試（$got）"; fi
+  rm -rf "$root"
+}
+
+test_gate_llm_retry
+
+test_gate_grant_retry() {
+  # 個人額度凍住、喊過主管之後，天花板（max_per_member）抬高：以前要等 300 格才再試撥款，現在每 10 格試一次
+  local root studio got
+  root=$(mktemp -d "$TEST_RUN_DIR/gate_regrant.XXXXXX")
+  prep_llm "$root/llm"
+  studio="$root/studio"
+  export AOS_LLM_DIR="$root/llm"
+  "$AUSER" team new "$studio" --preset studio --engine local \
+    --budget '{"tokens":1000000,"hours":2,"ticks":1000,"disk_mb":20,"mem_mb":64,"money_usd":1}' \
+    >/dev/null 2>&1
+  python3 - "$studio" <<'PYEOF2'
+import json, os, sys
+root = sys.argv[1]
+p = os.path.join(root, "team", "team.json"); d = json.load(open(p, encoding="utf-8"))
+d["auto_grant"] = {"from": ["pm"], "tokens": 50000, "max_per_member": 60000}   # dev-a 20000 + 50000 > 60000 → 撥不了
+json.dump(d, open(p, "w", encoding="utf-8"))
+p = os.path.join(root, "team", "budget.json"); b = json.load(open(p, encoding="utf-8"))
+b["allocations"]["dev-a"]["tokens"] = 20000; json.dump(b, open(p, "w", encoding="utf-8"))
+u = os.path.join(os.path.dirname(root), "llm", "usage"); os.makedirs(u, exist_ok=True)   # LLM 資料夾在 studio 旁邊
+import datetime
+day = datetime.date.today().isoformat()
+json.dump({"by-requester": {"studio/dev-a": {"tokens": 25000, "prompt_tokens": 20000, "completion_tokens": 5000, "total_tokens": 25000, "requests": 1}}},
+          open(os.path.join(u, day + ".json"), "w", encoding="utf-8"))
+p = os.path.join(root, "kids", "dev-a", "state.json"); s = json.load(open(p, encoding="utf-8"))
+s.update({"state": "act"}); json.dump(s, open(p, "w", encoding="utf-8"))
+PYEOF2
+  "$AGENT" exec "$studio/kids/dev-a" >/dev/null 2>&1
+  got=$(gate_state "$studio/kids/dev-a" 'd.get("budget_block")=="own:tokens" and d.get("budget_told")=="own:tokens"')
+  if [ "$got" = "True" ]; then ok "gate：撞天花板撥不了，凍住並喊主管"; else fail "gate：撞天花板那格不對（$got）"; fi
+  python3 - "$studio" <<'PYEOF2'
+import json, os, sys
+p = os.path.join(sys.argv[1], "team", "team.json"); d = json.load(open(p, encoding="utf-8"))
+d["auto_grant"]["max_per_member"] = 300000; json.dump(d, open(p, "w", encoding="utf-8"))
+PYEOF2
+  local i=0
+  while [ "$i" -lt 12 ]; do "$AGENT" exec "$studio/kids/dev-a" >/dev/null 2>&1; i=$((i + 1)); done
+  got=$(python3 -c 'import json,sys; s=json.load(open(sys.argv[1])); b=json.load(open(sys.argv[2])); print("budget_block" not in s and b["allocations"]["dev-a"]["tokens"] == 70000 and any(g.get("kind")=="auto" for g in b["grants"]))' \
+    "$studio/kids/dev-a/state.json" "$studio/team/budget.json")
+  if [ "$got" = "True" ]; then ok "gate：天花板抬高後 10 格內自動撥款解凍"; else fail "gate：抬高天花板沒解凍（$got）"; fi
+  unset AOS_LLM_DIR
+  rm -rf "$root"
+}
+
+test_gate_grant_retry
+

@@ -502,6 +502,22 @@ print(r1.get("ok") is False and "tester" in r1.get("error", "")
 PYEOF2
 )
   if [ "$got" = "True" ]; then ok "studio_flow：任務不能派給 qa；tester 回報一定要列測試檔"; else fail "studio_flow：qa 只驗／tester 規則不對（$got）"; fi
+  # 檔案清單寫成整條 team/projects/<單號>/x.py 也認，存起來是相對專案目錄的名字（不然 deliver 找不到）
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import glob, json, os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+from packs import studio
+root = sys.argv[2]
+order = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
+oid = order["id"]
+dev = Ctx(os.path.join(root, "kids", "dev-a"), os.path.join(root, "kids", "dev-a"))
+r = studio.run("task_report", {"task_id": oid + "-t3", "summary": "再報一次", "files": ["team/projects/%s/x.py" % oid, "./team/projects/%s/y.py" % oid, "z.py"]}, dev)
+t = json.load(open(os.path.join(root, "team", "tasks", oid + "-t3.json"), encoding="utf-8"))
+print(r.get("ok") is True and t["files"] == ["x.py", "y.py", "z.py"])
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "studio_flow：檔案清單的 team/projects/<單號>/ 前綴會剝掉"; else fail "studio_flow：檔案前綴沒剝（$got）"; fi
   rm -rf "$root"
 }
 
