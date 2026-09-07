@@ -223,6 +223,10 @@ class H(http.server.BaseHTTPRequestHandler):
             # 模型把工具呼叫寫成文字（qwen 風格）：agent 要救回來當正式 tool_call
             message = {"role": "assistant", "tool_calls": [],
                        "content": '<tool_call>\n{"name": "say", "arguments": {"text": "救回來的"}}\n</tool_call>'}
+        elif "PLAINTEXT" in last_user and not tools:
+            # 另一種壞法：把工具名跟參數寫成 plaintext 區塊
+            message = {"role": "assistant", "tool_calls": [],
+                       "content": '### 行動計劃\n\n```plaintext\nsay:\n{\n  "text": "純文字救回"\n}\n```\n執行這一步。'}
         elif "GARBLED" in last_user:
             # 第一次回救不回來的壞文字，agent 同題重送後第二次才正常
             SEEN[last_user] = SEEN.get(last_user, 0) + 1

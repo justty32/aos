@@ -18,6 +18,7 @@ from aos_agent import (   # noqa: E402
 LLM_WAIT_TICKS = 60            # 請求已經不在 LLM 世界的排隊／執行中，結果卻沒出現：等這麼多格就放棄
 LLM_WAIT_TICKS_ALIVE = 1800    # 請求還排著或還在打（大家共用幾路引擎，慢模型一發就要一兩分鐘）：最多等這麼多格
 PROTOCOL_RETRIES = 1        # 模型把工具呼叫吐成壞文字：救不回來就同題重送這麼多次
+BUDGET_NAG_TICKS = 300      # 凍住的人喊過「請補額度」之後，每這麼多格再喊一次
 TOOL_CALL_SMELL = re.compile(r"<tool_call|</tool_call>|\[TOOL_CALLS\]|<function=|<\|tool")
 
 
@@ -98,15 +99,62 @@ def _json_objects(text):
     return [obj for obj in found if isinstance(obj, dict)]
 
 
+def _balanced_object(text, start):
+    """從 text[start]（一定是 '{'）往後找到配對的 '}'，回那段 JSON 解出來的 dict；壞掉回 None。"""
+    depth, in_str, esc = 0, False, False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    obj = json.loads(text[start:i + 1])
+                except ValueError:
+                    return None
+                return obj if isinstance(obj, dict) else None
+    return None
+
+
+NAMED_OBJECT = re.compile(r"`?([A-Za-z_][A-Za-z0-9_]*)`?\s*[:：]?\s*(?:```\w*\s*)?(\{)")
+
+
+def named_tool_objects(content, known):
+    """小模型另一種寫法：`team_grant:` 後面接一個參數 JSON（常包在 ```plaintext 裡）。
+    回 [(工具名, 參數 dict)]，只收我們真的有的工具。"""
+    found = []
+    for m in NAMED_OBJECT.finditer(content or ""):
+        if m.group(1) not in known:
+            continue
+        obj = _balanced_object(content, m.start(2))
+        if obj is not None:
+            found.append((m.group(1), obj))
+    return found
+
+
 def salvage_tool_calls(content, known):
     """content 裡看得像工具呼叫的 JSON，只要 name 是我們真的有的工具，就救成正式 tool_calls。"""
     calls = []
+    pairs = []
     for obj in _json_objects(content or ""):
         inner = obj.get("function") if isinstance(obj.get("function"), dict) else obj
         name = inner.get("name")
-        if name not in known:
-            continue
-        args = inner.get("arguments", inner.get("parameters", {}))
+        if name in known:
+            pairs.append((name, inner.get("arguments", inner.get("parameters", {}))))
+    if not pairs:
+        pairs = named_tool_objects(content, known)
+    for name, args in pairs:
         if isinstance(args, str):
             try:
                 args = json.loads(args) if args.strip() else {}
@@ -165,12 +213,13 @@ def do_wait(ctx, request, waited, loaded=(), extra=()):
               "content": assistant.get("content") or ""}
     calls = assistant.get("tool_calls") or []
     content = stored["content"] if isinstance(stored["content"], str) else ""
+    known = {t.get("name") for t in tool_specs(list(loaded), list(extra))} if content and not calls else set()
     smells = bool(content) and not calls and (
         bool(TOOL_CALL_SMELL.search(content)) or
         any("name" in obj and ("arguments" in obj or "parameters" in obj)
-            for obj in _json_objects(content)))
+            for obj in _json_objects(content)) or
+        bool(named_tool_objects(content, known)))
     if smells:
-        known = {t.get("name") for t in tool_specs(list(loaded), list(extra))}
         calls = salvage_tool_calls(content, known)
         if calls:
             warn("模型把工具呼叫寫成文字，救回 %d 個" % len(calls))
@@ -297,7 +346,9 @@ def budget_block(ctx):
     ctx.state["budget_block"] = mark
     # 只開口一次；個人額度 0 的人沒事做（沒信、也不在題目中間）就安靜凍著，
     # 等真的有人派活給他才喊——不然開隊當下四個沒分到額度的人會同時抱怨，主管還沒收單就先燒 token。
-    if ctx.state.get("budget_told") == mark:
+    # 喊過了還凍著，每 BUDGET_NAG_TICKS 格再喊一次（主管讀了沒動作、或把那封讀錯了）。
+    frozen = int(ctx.state.get("frozen_ticks") or 0)
+    if ctx.state.get("budget_told") == mark and (frozen == 0 or frozen % BUDGET_NAG_TICKS):
         return True
     if total_over:
         ctx.state["budget_told"] = mark
