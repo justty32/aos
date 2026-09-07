@@ -5,10 +5,8 @@ import shutil
 
 MAX_DEPTH = 2
 PROMPT = (
-    "子 agent：spawn 生一個有自己人格與記憶的小孩。clock 不確定就用 shared；"
-    "使用者說 coder、manager 或 chat 時，把同名值放進 template；模板會帶自己的工具包。"
-    "shared 跟你一起走，own 有自己的鐘。kids_tell 派活，kids_list 看進度，"
-    "kids_pause／kids_resume 暫停或續跑，kids_kill 收掉。小孩回話會自動進你的信箱。"
+    "clock 不確定用 shared（跟你走）；own 自己走。"
+    "使用者說 coder／manager／chat 時放進 template。小孩回話自動進你信箱。"
 )
 
 
@@ -22,30 +20,29 @@ def _object(properties, required=None):
 TOOLS = [
     {"name": "spawn", "description": "生一個子 agent。shared 跟你走；own 自己走。",
      "parameters": _object({
-         "name": {"type": "string", "description": "名字，只能用英數字、底線、減號"},
-         "persona": {"type": "string", "description": "它的人格與工作方式"},
+         "name": {"type": "string", "description": "只能英數字、底線、減號"},
+         "persona": {"type": "string"},
          "packs": {"type": "array", "items": {"type": "string"},
-                   "description": "它可用的工具包；不給就抄你的"},
-         "clock": {"type": "string", "enum": ["shared", "own"],
-                   "description": "shared 跟你走（預設）；own 自己走"},
-         "task": {"type": "string", "description": "生完立刻交給它的第一件事"},
-         "template": {"type": "string", "description": "可選的出廠模板名字"},
+                   "description": "不給就抄你的工具包"},
+         "clock": {"type": "string", "enum": ["shared", "own"]},
+         "task": {"type": "string", "description": "生完立刻交辦的事"},
+         "template": {"type": "string"},
      }, ["name", "persona"])},
     {"name": "kids_list", "description": "看所有小孩的鐘、進度、未讀信與最後回話。",
      "parameters": _object({})},
     {"name": "kids_pause", "description": "暫停一個小孩。",
-     "parameters": _object({"name": {"type": "string", "description": "小孩名字"}}, ["name"])},
+     "parameters": _object({"name": {"type": "string"}}, ["name"])},
     {"name": "kids_resume", "description": "讓暫停的小孩繼續走。",
-     "parameters": _object({"name": {"type": "string", "description": "小孩名字"}}, ["name"])},
-    {"name": "kids_kill", "description": "收掉一個小孩。預設保留它的資料夾與記憶。",
+     "parameters": _object({"name": {"type": "string"}}, ["name"])},
+    {"name": "kids_kill", "description": "收掉一個小孩，預設保留資料夾與記憶。",
      "parameters": _object({
-         "name": {"type": "string", "description": "小孩名字"},
-         "keep_files": {"type": "boolean", "description": "是否留檔，預設 true"},
+         "name": {"type": "string"},
+         "keep_files": {"type": "boolean", "description": "預設 true"},
      }, ["name"])},
     {"name": "kids_tell", "description": "寄一件事給小孩做。",
      "parameters": _object({
-         "name": {"type": "string", "description": "小孩名字"},
-         "text": {"type": "string", "description": "要它做的事"},
+         "name": {"type": "string"},
+         "text": {"type": "string"},
      }, ["name", "text"])},
 ]
 

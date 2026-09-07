@@ -85,9 +85,11 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 | `kids` | 生小孩、派活、看進度、暫停與收掉。 | [docs/kids.md](docs/kids.md) |
 | `mailbox` | 讀自己的信箱，讀過就搬進 `read/`。 | [docs/mailbox.md](docs/mailbox.md) |
 | `memory` | 整理本體內的短期筆記與舊對話。 | [docs/memory.md](docs/memory.md) |
+| `pyshop` | 工作室資產、生 Python 小程式骨架與跑驗收。 | [docs/pyshop.md](docs/pyshop.md) |
 | `ref` | 把太大的 JSON 結果收成可重開的指標。 | [docs/ref.md](docs/ref.md) |
 | `review` | 回顧成本、失敗、思考與可重用教訓。 | [docs/review.md](docs/review.md) |
 | `self` | 看自己的狀態、身分、時間與花費。 | [docs/self.md](docs/self.md) |
+| `studio` | 一張單從接單、派工、驗收走到交付。 | [docs/studio-flow.md](docs/studio-flow.md) |
 | `team` | 看整隊、分預算與追加共用進度。 | [docs/studio.md](docs/studio.md) |
 | `think` | 把難題交給旁線深思，再拿短結論。 | [docs/think.md](docs/think.md) |
 | `toolsmith` | 把常用指令做成自己的工具或包。 | [docs/toolsmith.md](docs/toolsmith.md) |
@@ -97,6 +99,8 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 **加一包 = 加 `packs/<包>.py` + `tests/<包>.sh` + `docs/<包>.md`。README 只加表裡一行。** 共用接口與掛勾看 [docs/packs-api.md](docs/packs-api.md)。
 
 `tools[]` 是另一條路：**一個工具就是一句 shell 指令**，`command` 不送 LLM，參數 JSON 從 stdin 進去。工具優先規則只寫在 [docs/packs-api.md](docs/packs-api.md)。
+
+`tools.json` 還有兩個省 token 的開關：`"only": ["mail_send", …]` 只把列到的工具送給模型（包照樣載入、掛勾照樣跑；不寫＝全送）；`"inline_mail": ["*"]`（或列來源名）讓那些來源的信像 `user` 一樣整封直接進記憶、當場搬進 `read/`，不用再花兩三輪去讀。
 
 ### 子世界：生一個小孩
 

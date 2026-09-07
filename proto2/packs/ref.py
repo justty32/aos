@@ -14,12 +14,12 @@ TOOLS = [
     {"name": "ref_expand", "description": "展開一個 ref:// 指標，可只讀其中一段。",
      "parameters": {"type": "object", "properties": {
          "ref": {"type": "string", "description": "ref:// 開頭的指標"},
-         "path": {"type": "string", "description": "可選的 JSON 路徑，例如 #/choices/0"},
-         "max_chars": {"type": "integer", "description": "最多回幾字，預設 6000，最高 20000"}},
+         "path": {"type": "string", "description": "可選 JSON 路徑，例如 #/choices/0"},
+         "max_chars": {"type": "integer", "description": "預設 6000，上限 20000"}},
          "required": ["ref"]}},
-    {"name": "ref_collapse", "description": "把對話中一則 JSON 內容收起來，序號從 0 開始。",
+    {"name": "ref_collapse", "description": "把對話中一則 JSON 內容收起來。",
      "parameters": {"type": "object", "properties": {
-         "message_index": {"type": "integer", "description": "prompts.json 的訊息序號，從 0 開始"}},
+         "message_index": {"type": "integer", "description": "訊息序號，從 0 起"}},
          "required": ["message_index"]}},
     {"name": "ref_list", "description": "列最近 20 個本地指標。",
      "parameters": {"type": "object", "properties": {}}},

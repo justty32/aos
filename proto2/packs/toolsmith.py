@@ -8,32 +8,31 @@ import subprocess
 TOOL_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
 PACK_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-PROMPT = ("造工具：同一串 shell 指令常手打，就先用 tool_list 看有沒有，再用 tool_add 做成工具。"
-          "shell 工具的參數 JSON 會從 stdin 送進指令。tool_add 完要立刻用 tool_try 試一次；"
-          "正式工具清單下一格才會重載。要自己寫 Python 工具包時，用 tool_add 的 pack 參數開骨架。")
+PROMPT = ("同一串 shell 指令常手打就用 tool_add 做成工具，參數 JSON 從 stdin 進指令。"
+          "tool_add 完立刻 tool_try 試一次；正式清單下一格才重載。")
 
 TOOLS = [
     {"name": "tool_add",
-     "description": "新增一個自己的 shell 工具；或只給 pack，在自己 home 建立並啟用一個 Python 工具包骨架。",
+     "description": "新增一個自己的 shell 工具；只給 pack 則建立並啟用 Python 工具包骨架。",
      "parameters": {"type": "object", "properties": {
-         "name": {"type": "string", "description": "shell 工具名"},
-         "description": {"type": "string", "description": "一句話說這個 shell 工具做什麼"},
-         "parameters": {"type": "object", "description": "工具參數的 JSON schema；不完整時會補成 object"},
-         "command": {"type": "string", "description": "要保存的一句 shell 指令；參數 JSON 從 stdin 進去"},
-         "pack": {"type": "string", "description": "要建立並啟用的 Python 工具包名字；使用這個時不用給其他欄位"}}}},
+         "name": {"type": "string"},
+         "description": {"type": "string", "description": "工具用途"},
+         "parameters": {"type": "object", "description": "參數 JSON schema，不完整會補成 object"},
+         "command": {"type": "string", "description": "shell 指令，參數走 stdin"},
+         "pack": {"type": "string", "description": "Python 包名字，用這個免填其他欄位"}}}},
     {"name": "tool_list",
-     "description": "列出目前的工具：名字、來自哪一包、用途；自製 shell 工具也會列出 command。",
+     "description": "列出目前工具：名字、來自哪一包、用途；自製工具還列 command。",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "tool_remove",
-     "description": "移除自製 shell 工具；或給 pack 關掉整包。工具包檔案不會刪掉。",
+     "description": "移除自製 shell 工具，或給 pack 關掉整包（檔案不刪）。",
      "parameters": {"type": "object", "properties": {
-         "name": {"type": "string", "description": "要移除的自製 shell 工具名"},
-         "pack": {"type": "string", "description": "要關掉的工具包名字"}}}},
+         "name": {"type": "string", "description": "自製工具名"},
+         "pack": {"type": "string", "description": "工具包名字"}}}},
     {"name": "tool_try",
      "description": "同一格立刻試跑一個自製 shell 工具，回 exit／stdout／stderr。",
      "parameters": {"type": "object", "properties": {
-         "name": {"type": "string", "description": "要試跑的自製 shell 工具名"},
-         "args": {"type": "object", "description": "送到工具 stdin 的參數 JSON"}},
+         "name": {"type": "string", "description": "自製工具名"},
+         "args": {"type": "object", "description": "送進工具 stdin 的參數"}},
          "required": ["name"]}},
 ]
 

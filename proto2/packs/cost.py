@@ -5,20 +5,17 @@ import json
 import os
 
 
-PROMPT = ("成本：每次工具呼叫都會記下時間、回傳字數、下一輪用掉的 token 和價錢。"
-          "回傳很長的工具最貴，因為內容會留在記憶裡，之後每輪都會再送一次。"
-          "貴的工具少叫；能一次講完就別分兩次；只要一小段時別抓整包。"
-          "想知道哪個工具最貴，用 cost_summary；想看剛才幾筆，用 cost_recent。")
+PROMPT = "回傳越長的工具越貴，因為內容會留在記憶裡、之後每輪都再送一次；只抓需要的一小段。"
 
 TOOLS = [
     {"name": "cost_summary",
-     "description": "按工具名看呼叫次數、平均時間、平均回傳字數、平均 prompt token 與總價錢。",
+     "description": "按工具名看次數、平均時間、平均字數、平均 token 與總價錢。",
      "parameters": {"type": "object", "properties": {
-         "day": {"type": "string", "description": "日期 YYYY-MM-DD；不填就是今天"}}}},
+         "day": {"type": "string", "description": "YYYY-MM-DD，預設今天"}}}},
     {"name": "cost_recent",
      "description": "看最近幾次工具呼叫的帳。",
      "parameters": {"type": "object", "properties": {
-         "n": {"type": "integer", "description": "要看幾筆；預設 10，最多 50"}}}},
+         "n": {"type": "integer", "description": "幾筆，預設 10，上限 50"}}}},
 ]
 
 

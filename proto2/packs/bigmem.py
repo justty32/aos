@@ -3,30 +3,29 @@ import json
 import os
 
 
-PROMPT = ("長期記憶：mem_put 存、mem_find 找、mem_get 讀全文、mem_forget 忘記。"
-          "送出後系統會睡著，結果回來會直接接回對話。長對話可用 mem_archive_history 歸檔。")
+PROMPT = "長期記憶是非同步的：送出後睡著，結果回來才接續。"
 
 TOOLS = [
-    {"name": "mem_put", "description": "把一件日後還會用到的事放進長期記憶。",
+    {"name": "mem_put", "description": "存一件長期記憶。",
      "parameters": {"type": "object", "properties": {
-         "text": {"type": "string", "description": "要記住的內容"},
-         "tags": {"type": "array", "items": {"type": "string"}, "description": "簡短標籤"}},
+         "text": {"type": "string"},
+         "tags": {"type": "array", "items": {"type": "string"}}},
          "required": ["text"]}},
     {"name": "mem_find", "description": "用文字或標籤找長期記憶。",
      "parameters": {"type": "object", "properties": {
-         "query": {"type": "string", "description": "要找的字"},
-         "limit": {"type": "integer", "description": "最多幾筆，預設 10，最高 50"}},
+         "query": {"type": "string"},
+         "limit": {"type": "integer", "description": "預設 10、上限 50"}},
          "required": ["query"]}},
-    {"name": "mem_get", "description": "用記憶 id 讀完整一筆。",
+    {"name": "mem_get", "description": "用 id 讀一筆記憶全文。",
      "parameters": {"type": "object", "properties": {
-         "id": {"type": "string", "description": "記憶 id"}}, "required": ["id"]}},
+         "id": {"type": "string"}}, "required": ["id"]}},
     {"name": "mem_forget", "description": "刪掉一筆長期記憶。",
      "parameters": {"type": "object", "properties": {
-         "id": {"type": "string", "description": "記憶 id"}}, "required": ["id"]}},
-    {"name": "mem_archive_history", "description": "歸檔一段對話；成功後原處才會縮成一句。",
+         "id": {"type": "string"}}, "required": ["id"]}},
+    {"name": "mem_archive_history", "description": "歸檔一段對話，原處縮成一句。",
      "parameters": {"type": "object", "properties": {
-         "from": {"type": "integer", "description": "第一則序號，從 0 開始"},
-         "to": {"type": "integer", "description": "最後一則序號，從 0 開始，包含這則"}},
+         "from": {"type": "integer", "description": "起始序號，從 0 起"},
+         "to": {"type": "integer", "description": "結束序號，含此則"}},
          "required": ["from", "to"]}},
 ]
 

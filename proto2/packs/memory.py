@@ -10,47 +10,45 @@ NUDGE_CHARS = 40000
 TRIM_CHARS = 80000
 
 PROMPT = (
-    "記憶就是 prompts.json 裡的對話。整理前先用 memory_list 看範圍；"
-    "memory_summarize_old 會交回舊原文，下一輪寫好摘要後一定要叫 memory_replace_old。"
-    "重要資料先用 note_save 長期保存；想找舊筆記用 note_find，再用 note_read。"
-    "想提醒以後的自己，只能用 self_note 追加，不能覆寫人格。"
+    "memory_summarize_old 交回舊原文後，下一輪寫好摘要一定要叫 memory_replace_old。"
+    "self_note 只能追加，不能覆寫人格。"
 )
 
 TOOLS = [
-    {"name": "memory_list", "description": "列出一段記憶的序號、角色與前 60 字。",
+    {"name": "memory_list", "description": "列一段記憶的序號、角色與前 60 字。",
      "parameters": {"type": "object", "properties": {
-         "offset": {"type": "integer", "minimum": 0, "description": "從第幾則開始，預設 0。"},
-         "count": {"type": "integer", "minimum": 1, "description": "列幾則，預設 20。"}
+         "offset": {"type": "integer", "description": "預設 0"},
+         "count": {"type": "integer", "description": "預設 20"}
      }}},
-    {"name": "memory_summarize_old", "description": "取出較舊的原文；不修改記憶，等下一輪交摘要。",
+    {"name": "memory_summarize_old", "description": "取出較舊原文，不改記憶，等你交摘要。",
      "parameters": {"type": "object", "properties": {
-         "keep_recent": {"type": "integer", "minimum": 0, "description": "保留最近幾則，預設 20。"}
+         "keep_recent": {"type": "integer", "description": "保留最近幾則，預設 20"}
      }}},
-    {"name": "memory_replace_old", "description": "把上一格取出的舊對話換成你寫好的摘要。",
+    {"name": "memory_replace_old", "description": "把取出的舊對話換成你寫好的摘要。",
      "parameters": {"type": "object", "properties": {
-         "summary": {"type": "string", "description": "舊對話的摘要。"}
+         "summary": {"type": "string"}
      }, "required": ["summary"]}},
-    {"name": "memory_forget", "description": "忘掉一段連續記憶；原文會先備份。",
+    {"name": "memory_forget", "description": "忘掉一段連續記憶，原文先備份。",
      "parameters": {"type": "object", "properties": {
-         "from": {"type": "integer", "minimum": 0, "description": "第一則序號，包含。"},
-         "to": {"type": "integer", "minimum": 0, "description": "最後一則序號，包含。"}
+         "from": {"type": "integer", "description": "起始序號，含"},
+         "to": {"type": "integer", "description": "結束序號，含"}
      }, "required": ["from", "to"]}},
-    {"name": "note_save", "description": "把以後還會用到的資料存成一份長期筆記。",
+    {"name": "note_save", "description": "把以後還會用到的資料存成長期筆記。",
      "parameters": {"type": "object", "properties": {
-         "title": {"type": "string", "description": "筆記標題。"},
-         "text": {"type": "string", "description": "筆記內容。"}
+         "title": {"type": "string"},
+         "text": {"type": "string"}
      }, "required": ["title", "text"]}},
-    {"name": "note_find", "description": "列長期筆記；給關鍵字時也列出命中的行。",
+    {"name": "note_find", "description": "列長期筆記，給關鍵字則列出命中的行。",
      "parameters": {"type": "object", "properties": {
-         "keyword": {"type": "string", "description": "要找的字；不給就列全部檔名。"}
+         "keyword": {"type": "string", "description": "不給就列全部檔名"}
      }}},
     {"name": "note_read", "description": "讀一份 note_find 找到的長期筆記。",
      "parameters": {"type": "object", "properties": {
-         "name": {"type": "string", "description": "筆記檔名。"}
+         "name": {"type": "string"}
      }, "required": ["name"]}},
-    {"name": "self_note", "description": "在自我提醒尾端追加一句，之後會放進 system prompt。",
+    {"name": "self_note", "description": "在自我提醒尾端追加一句，放進 system prompt。",
      "parameters": {"type": "object", "properties": {
-         "text": {"type": "string", "description": "要提醒以後自己的話。"}
+         "text": {"type": "string"}
      }, "required": ["text"]}},
 ]
 
