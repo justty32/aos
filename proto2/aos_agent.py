@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -83,6 +84,21 @@ def tools_conf(home):
     return packs, extra
 
 
+def tools_only(home):
+    """tools.json 的 `only`：只把列到的工具送給模型（包照樣載入、掛勾照樣跑）。沒寫＝全送。"""
+    data = read_json(os.path.join(home, "tools.json"), {})
+    only = data.get("only") if isinstance(data, dict) else None
+    return [n for n in only if isinstance(n, str)] if isinstance(only, list) else None
+
+
+def inline_sources(home):
+    """tools.json 的 `inline_mail`：列到的來源（或 "*"）的信整封直接接進記憶、當場搬進 read/，
+    不再只通知「你有新信」讓模型自己去讀（讀一封信要兩三輪，一輪好幾千 token）。"""
+    data = read_json(os.path.join(home, "tools.json"), {})
+    rows = data.get("inline_mail") if isinstance(data, dict) else None
+    return [n for n in rows if isinstance(n, str)] if isinstance(rows, list) else []
+
+
 _PACK_CACHE = {}
 
 
@@ -136,7 +152,8 @@ def load_packs(home):
     return loaded, extra
 
 
-def tool_specs(loaded, extra):
+def tool_specs(loaded, extra, only=None):
+    """送給模型的工具清單。only 給了就只留名字在裡面的（順序照包）。"""
     specs, owners = [], {}
     for pack_name, module in loaded:
         for t in getattr(module, "TOOLS", []):
@@ -160,6 +177,9 @@ def tool_specs(loaded, extra):
         owners[name] = "tools[]"
         specs.append({"name": name, "description": t.get("description", ""),
                       "parameters": t.get("parameters", {})})
+    if only is not None:
+        wanted = set(only)
+        specs = [t for t in specs if t.get("name") in wanted]
     return specs
 
 
@@ -271,18 +291,22 @@ def mark_read(home, source, name):
 
 
 def scan_inbox(home, announced, state=None):
-    """掃信箱。user 來源直接進 prompt；其他來源只通知一次；已通知但一直沒讀、而且 agent 正閒著，
-    每 UNREAD_REMIND_TICKS 格再提醒一次（不然模型第一輪讀信失敗就永遠躺著）。"""
+    """掃信箱。user 來源（與 tools.json `inline_mail` 列到的來源）整封直接進 prompt；
+    其他來源只通知一次；已通知但一直沒讀、而且 agent 正閒著，每 UNREAD_REMIND_TICKS 格再提醒一次
+    （不然模型第一輪讀信失敗就永遠躺著）。"""
     msgs, counts, still, fresh = [], [], [], False
+    inline = inline_sources(home)
     for src in sources(home):
         names = unread_names(home, src)
         if not names:
             continue
-        if src == DIRECT_SOURCE:
+        if src == DIRECT_SOURCE or "*" in inline or src in inline:
             for name in names:
                 for mail in mail_of(home, src, name):
+                    sender = mail.get("from") or src
+                    label = src if src == DIRECT_SOURCE or sender == src else "%s（%s）" % (src, sender)
                     msgs.append({"role": "user",
-                                 "content": "[%s] %s" % (src, mail.get("content") or "")})
+                                 "content": "[%s] %s" % (label, mail.get("content") or "")})
                 mark_read(home, src, name)
             continue
         counts.append((src, len(names)))
@@ -647,6 +671,48 @@ def team_status_of(world, light=False):
             "members": rows}
 
 
+def team_auto_grant(world, member):
+    """team.json 的 `auto_grant`：{"from": ["pm","owner"], "tokens": 50000, "max_per_member": 300000}。
+    成員 tokens 用完而且有工作在等時，閘門直接從 from 清單裡第一個「剩餘夠」的人撥一筆給他，
+    記一筆 kind: auto，當格解凍——不寄信、不叫模型。回 (撥了嗎, 一句話)。"""
+    root = team_root_of(world)
+    if not root:
+        return False, "不在工作室裡"
+    roster = read_json(os.path.join(root, "team", "team.json"), {})
+    policy = roster.get("auto_grant") if isinstance(roster, dict) else None
+    if not isinstance(policy, dict):
+        return False, "沒有 auto_grant 政策"
+    amount = policy.get("tokens")
+    if not isinstance(amount, (int, float)) or isinstance(amount, bool) or amount <= 0:
+        return False, "auto_grant.tokens 不對"
+    givers = policy.get("from") or ["pm", "owner"]
+    givers = [givers] if isinstance(givers, str) else [g for g in givers if isinstance(g, str)]
+    cap = policy.get("max_per_member")
+    path = os.path.join(root, "team", "budget.json")
+    book = read_json(path, {})
+    book = book if isinstance(book, dict) else {}
+    allocations = book.get("allocations") if isinstance(book.get("allocations"), dict) else {}
+    mine = allocations.setdefault(member, {key: 0 for key in TEAM_BUDGET_KEYS})
+    if isinstance(cap, (int, float)) and not isinstance(cap, bool) and _team_number(mine.get("tokens")) + amount > cap:
+        return False, "已到 max_per_member %s" % cap
+    data = team_status_of(root, light=True)
+    left = {row["name"]: _team_number((row.get("remaining") or {}).get("tokens")) for row in data["members"]}
+    for giver in givers:
+        if giver == member or giver not in allocations:
+            continue
+        if left.get(giver, 0) < amount:
+            continue
+        allocations[giver]["tokens"] = round(_team_number(allocations[giver].get("tokens")) - amount, 6)
+        mine["tokens"] = round(_team_number(mine.get("tokens")) + amount, 6)
+        now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+        grants = book.get("grants") if isinstance(book.get("grants"), list) else []
+        grants.append({"time": now, "from": giver, "to": member, "amount": {"tokens": amount}, "kind": "auto"})
+        book.update({"allocations": allocations, "grants": grants, "updated": now})
+        write_json_atomic(path, book)
+        return True, "自動從 %s 撥了 %s tokens" % (giver, amount)
+    return False, "撥錢的人（%s）都不夠了" % "、".join(givers)
+
+
 def team_add_budget(world, amount, to=None, who="user"):
     """甲方追加預算：總額加上去，同一份加到 `to`（預設 leader）的個人額度，並記一筆 grants。
     回新的 budget.json 內容。amount 只認 TEAM_BUDGET_KEYS，每項要是大於 0 的數字。"""
@@ -776,7 +842,12 @@ def create_team_world(world, preset_dir, engine=None, budget=None):
         parent = None if name == preset.get("leader", "owner") else {
             "name": preset.get("leader", "owner"), "dir": world,
             "clock": "own" if member.get("clock") == "own" else "shared"}
-        create_world(member_world, tools={"packs": list(member.get("packs") or []), "tools": []},
+        tools = {"packs": list(member.get("packs") or []), "tools": []}
+        if isinstance(member.get("only"), list):
+            tools["only"] = [n for n in member["only"] if isinstance(n, str)]
+        if isinstance(member.get("inline_mail"), list):
+            tools["inline_mail"] = [n for n in member["inline_mail"] if isinstance(n, str)]
+        create_world(member_world, tools=tools,
                      persona=persona, prompts=prompts, llm=llm_conf, parent=parent)
 
     contacts = {name: path for name, path in worlds.items()}
@@ -790,6 +861,9 @@ def create_team_world(world, preset_dir, engine=None, budget=None):
     os.makedirs(os.path.join(team_dir, "projects"), exist_ok=True)
     os.makedirs(os.path.join(team_dir, "notes"), exist_ok=True)
     os.makedirs(os.path.join(team_dir, "files", "final"), exist_ok=True)
+    assets = os.path.join(preset_dir, "assets")
+    if os.path.isdir(assets):        # 工作室資產（snippets、檢查腳本…）整包進共用區
+        shutil.copytree(assets, os.path.join(team_dir, "assets"))
     for member in members:
         if member["name"] == preset.get("leader", "owner"):
             continue

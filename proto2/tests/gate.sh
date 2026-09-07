@@ -103,9 +103,9 @@ PYEOF2
   "$AGENT" exec "$studio/kids/pm" >/dev/null 2>&1
   "$AGENT" exec "$studio/kids/pm" >/dev/null 2>&1
   after=$(find "$studio/kids/pm/outbox" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
-  reply=$(find "$studio/kids/sales/outbox" -maxdepth 1 -name '*.json' | sort | tail -1)
+  reply=$(grep -l "整隊額度用完" "$studio"/kids/sales/outbox/*.json 2>/dev/null | head -1)
   got=$(gate_state "$studio/kids/sales" 'd.get("budget_block")=="team:hours"')
-  if [ "$got" = "True" ] && [ -n "$reply" ] && grep -q "整隊額度用完" "$reply" && grep -q "team budget" "$reply" \
+  if [ "$got" = "True" ] && [ -n "$reply" ] && grep -q "team budget" "$reply" \
      && [ "$(gate_state "$studio/kids/pm" 'd.get("budget_block")')" = "team:hours" ] && [ "$before" = "$after" ]; then
     ok "gate：整隊用完全隊凍住，只有 sales 開口問甲方（含追加指令）"
   else
@@ -137,7 +137,12 @@ PYEOF2
   "$AUSER" team budget "$studio" --add '{"tokens": -1}' >/dev/null 2>&1; RC=$?
   check "gate：追加負數被擋" 2 "$RC"
 
-  # ⑤ 已通知但未讀的信：idle 滿 30 格再提醒一次
+  # ⑤ 已通知但未讀的信：idle 滿 30 格再提醒一次（preset 現在 inline_mail 全開，這段先把 pm 的關掉）
+  python3 - "$studio/kids/pm/tools.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]; d = json.load(open(p, encoding="utf-8")); d.pop("inline_mail", None)
+json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False)
+PYEOF2
   python3 - "$HERE" "$studio" <<'PYEOF2'
 import json, os, sys
 sys.path.insert(0, sys.argv[1])
@@ -276,3 +281,105 @@ PYEOF2
 }
 
 test_gate_code_symlink
+
+# 提效核心：工具白名單 only、信直接進 prompt inline_mail、額度自動撥 auto_grant、資產複製
+test_gate_efficiency() {
+  local root studio got
+  root=$(mktemp -d "$TEST_RUN_DIR/gateeff.XXXXXX")
+  prep_llm "$root/llm"
+  studio="$root/studio"
+  export AOS_LLM_DIR="$root/llm"
+  "$AUSER" team new "$studio" --preset studio --engine local \
+    --budget '{"tokens":1000000,"hours":2,"ticks":1000,"disk_mb":20,"mem_mb":64,"money_usd":1}' >/dev/null 2>&1
+  # only：pm 的 tools.json 有白名單，送模型的工具只剩白名單裡有、而且真的載得到的
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import json, os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import load_packs, tool_specs, tools_only, inline_sources
+home = os.path.join(sys.argv[2], "kids", "pm")
+loaded, extra = load_packs(home)
+allof = {t["name"] for t in tool_specs(loaded, extra)}
+sent = {t["name"] for t in tool_specs(loaded, extra, tools_only(home))}
+print(sent <= set(tools_only(home)) and "team_grant" in sent and "inbox_read" in allof and "inbox_read" not in sent
+      and inline_sources(home) == ["*"])
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：only 白名單只送列到的工具，inline_mail 有寫進成員 tools.json"; else fail "gate：only／inline_mail 不對（$got）"; fi
+  # inline_mail：sales 寄給 pm 的信整封進記憶、當場搬進 read/，不再只通知
+  python3 - "$HERE" "$studio" <<'PYEOF2'
+import os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+root = sys.argv[2]
+Ctx(os.path.join(root, "kids", "sales"), os.path.join(root, "kids", "sales")).put_mail("pm", "sales", "整封信的內容在這裡")
+PYEOF2
+  "$AGENT" exec "$studio/kids/pm" >/dev/null 2>&1
+  got=$(python3 - "$studio/kids/pm" <<'PYEOF2'
+import json, os, sys
+h = json.load(open(os.path.join(sys.argv[1], "prompts.json"), encoding="utf-8"))
+s = json.load(open(os.path.join(sys.argv[1], "state.json"), encoding="utf-8"))
+last = h[-1] if h else {}
+print(last.get("role") == "user" and "[sales] 整封信的內容在這裡" in (last.get("content") or "")
+      and "你有新信" not in (last.get("content") or "")
+      and not os.listdir(os.path.join(sys.argv[1], "inbox", "sales")) == [] and s["state"] == "llm"
+      and all(n == "read" for n in os.listdir(os.path.join(sys.argv[1], "inbox", "sales"))))
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：inline_mail 的信整封進 prompt、當場搬進 read/"; else fail "gate：inline_mail 不對（$got）"; fi
+  # auto_grant：dev-a 0 額度收到信，閘門直接從 pm 撥 50000、當格解凍、記一筆 kind auto
+  python3 - "$HERE" "$studio" <<'PYEOF2'
+import os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+root = sys.argv[2]
+Ctx(os.path.join(root, "kids", "pm"), os.path.join(root, "kids", "pm")).put_mail("dev-a", "pm", "做這個")
+PYEOF2
+  "$AGENT" exec "$studio/kids/dev-a" >/dev/null 2>&1
+  got=$(python3 - "$studio" <<'PYEOF2'
+import json, os, sys
+root = sys.argv[1]
+b = json.load(open(os.path.join(root, "team", "budget.json"), encoding="utf-8"))
+s = json.load(open(os.path.join(root, "kids", "dev-a", "state.json"), encoding="utf-8"))
+g = b["grants"][-1] if b["grants"] else {}
+print(g.get("kind") == "auto" and g.get("from") == "pm" and g.get("to") == "dev-a" and g["amount"]["tokens"] == 50000
+      and b["allocations"]["dev-a"]["tokens"] == 50000 and "budget_block" not in s and s["state"] == "llm"
+      and not os.path.isdir(os.path.join(root, "kids", "chief", "inbox", "budget")))
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：auto_grant 從 pm 自動撥 50000、當格解凍、不寄信"; else fail "gate：auto_grant 不對（$got）"; fi
+  # 池子乾了：pm 與 owner 都沒剩 → 才寄主管，並替 sales 對甲方喊追加
+  python3 - "$studio/team/budget.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]; b = json.load(open(p, encoding="utf-8"))
+b["allocations"]["pm"]["tokens"] = 0; b["allocations"]["owner"]["tokens"] = 0; b["allocations"]["dev-b"]["tokens"] = 0
+json.dump(b, open(p, "w", encoding="utf-8"), ensure_ascii=False)
+PYEOF2
+  python3 - "$HERE" "$studio" <<'PYEOF2'
+import os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+root = sys.argv[2]
+Ctx(os.path.join(root, "kids", "pm"), os.path.join(root, "kids", "pm")).put_mail("dev-b", "pm", "做那個")
+PYEOF2
+  "$AGENT" exec "$studio/kids/dev-b" >/dev/null 2>&1
+  got=$(python3 - "$studio" <<'PYEOF2'
+import glob, json, os, sys
+root = sys.argv[1]
+s = json.load(open(os.path.join(root, "kids", "dev-b", "state.json"), encoding="utf-8"))
+mail = glob.glob(os.path.join(root, "kids", "chief", "inbox", "budget", "*.json"))
+out = sorted(glob.glob(os.path.join(root, "kids", "sales", "outbox", "*.json")))
+last = json.load(open(out[-1], encoding="utf-8")) if out else {}
+print(s.get("budget_block") == "own:tokens" and bool(mail) and "撥不出來" in (last.get("content") or "")
+      and "team budget" in (last.get("content") or ""))
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：撥錢的池子乾了才寄主管，並替 sales 向甲方喊追加"; else fail "gate：池子乾了的路不對（$got）"; fi
+  # 資產：preset 有 assets/ 就整包進 team/assets/
+  if [ -d "$HERE/presets/studio/assets" ]; then
+    if [ -d "$studio/team/assets" ] && [ "$(ls "$studio/team/assets" | wc -l)" -ge 1 ]; then ok "gate：preset 的 assets 複製進 team/assets"; else fail "gate：assets 沒複製"; fi
+  fi
+  unset AOS_LLM_DIR
+  rm -rf "$root"
+}
+
+test_gate_efficiency
