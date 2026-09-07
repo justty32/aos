@@ -90,7 +90,7 @@ def _run_long(args, ctx):
         "name": name, "command": command, "started": started,
     })
     request = ctx.send("jobs", {"name": name, "command": command}, target=job,
-                       timeout_steps=3600)
+                       timeout_s=3600)
     meta = ctx.read_json(os.path.join(job, "meta.json"), {})
     meta["request"] = request
     ctx.write_json(os.path.join(job, "meta.json"), meta)

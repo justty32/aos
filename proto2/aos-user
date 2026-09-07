@@ -554,7 +554,13 @@ def main():
     p.add_argument("--template", default=None)
     p.set_defaults(fn=do_spawn)
 
-    args = ap.parse_args()
+    # Python 3.12 的 argparse：`say <dir> --home agent <text>` 這種「位置、選項、再位置」的順序，
+    # nargs="?" 的 text 會被吃成空、原字掉進 extras（3.13 才修）。只有 say 有這個形狀，這裡補回去。
+    args, extras = ap.parse_known_args()
+    if extras and getattr(args, "fn", None) is do_say and args.text is None and len(extras) == 1:
+        args.text = extras[0]
+    elif extras:
+        ap.error("unrecognized arguments: %s" % " ".join(extras))
     if not getattr(args, "fn", None):
         ap.print_help(sys.stderr)
         return 2

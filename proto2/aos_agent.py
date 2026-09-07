@@ -22,7 +22,7 @@ CHILD_INST = "aos-agent exec .\n"
 SH_TIMEOUT = 60
 CUT = 4000
 TEAM_BUDGET_KEYS = ("tokens", "hours", "ticks", "disk_mb", "mem_mb", "money_usd")
-SIDE_TIMEOUT_STEPS = 120
+SIDE_TIMEOUT_S = 600
 
 
 def warn(msg):
@@ -364,20 +364,14 @@ def status_of(world, home):
             uptime = None
     usage = today_usage_for(home, world)
     limits = agent_limits(home)
-    replies = []
     last_error = None
     box = os.path.join(home, "outbox")
     for name in outbox_names(box):
         msg = read_json(os.path.join(box, name), {})
         if isinstance(msg, dict) and msg.get("error"):
             last_error = msg.get("content") or "不明錯誤"
-        try:
-            reply_step = int(os.path.splitext(name)[0])
-        except ValueError:
-            continue
-        replies.append(reply_step)
-    recent = [step - (replies[i - 1] if i else 0)
-              for i, step in enumerate(replies)][-5:]
+    recent = st.get("recent_question_steps")
+    recent = recent[-5:] if isinstance(recent, list) else []
     ctx = Ctx(world, home, st)
     sleeping = st.get("sleeping") if isinstance(st.get("sleeping"), dict) else None
     clocks = []
@@ -394,7 +388,8 @@ def status_of(world, home):
         "last_error": last_error,
         "steps": {"total": st.get("step") or 0, "busy": st.get("busy") or 0},
         "question_steps": {"used": st.get("question_steps") or 0,
-                           "limit": limits["max_steps_per_question"]},
+                           "limit": limits["max_steps_per_question"],
+                           "sleeping": st.get("question_sleep_steps") or 0},
         "today": {"tokens": usage.get("total_tokens") or 0,
                   "token_limit": limits["max_tokens_per_day"],
                   "cost_usd": _team_ledger_money(home, datetime.date.today().isoformat())},
@@ -788,6 +783,8 @@ def _side_error_text(kind, result):
         return "%s 沒等到結果：%s" % (kind, why)
     if error_kind == "cancelled":
         return "%s 已取消。" % kind
+    if error_kind == "no_clock":
+        return "%s 無法處理：%s" % (kind, why)
     return "%s 失敗：%s" % (kind, why)
 
 
@@ -990,9 +987,9 @@ class Ctx:
         if not PACK_OK.match(kind):
             raise ValueError("旁線 kind 只能用英數字與底線：" + kind)
         try:
-            timeout = max(1, int(opts.pop("timeout_steps", SIDE_TIMEOUT_STEPS)))
+            timeout = max(0.001, float(opts.pop("timeout_s", SIDE_TIMEOUT_S)))
         except (TypeError, ValueError):
-            timeout = SIDE_TIMEOUT_STEPS
+            timeout = SIDE_TIMEOUT_S
         target = opts.pop("target", None)
         mail_reply_to = opts.pop("mail_reply_to", None)
         if target is None and mail_reply_to is None:
@@ -1023,8 +1020,7 @@ class Ctx:
             pending = []
             self.state["pending"] = pending
         item = {"id": name, "kind": kind, "pack": self.pack,
-                "since_step": int(self.state.get("step") or 0),
-                "timeout_steps": timeout}
+                "since_ts": time.time(), "timeout_s": timeout}
         if target is not None:
             item.update({"result_dir": os.path.join(target, "results"),
                          "result_name": filename, "request_path": request_path,
@@ -1078,7 +1074,6 @@ class Ctx:
     def collect_results(self):
         items, wake = self.pending(), []
         self.state["pending"] = []
-        step = int(self.state.get("step") or 0)
         for item in items:
             result = None
             if item.get("mail_reply_to"):
@@ -1092,15 +1087,15 @@ class Ctx:
                         os.remove(path)
                     except OSError:
                         pass
-            elapsed = step - int(item.get("since_step") or 0)
-            if result is None and elapsed >= int(item.get("timeout_steps") or SIDE_TIMEOUT_STEPS):
-                result = {"error": "等了 %d 格仍沒有結果" % elapsed,
+            elapsed = max(0.0, time.time() - float(item.get("since_ts") or 0))
+            if result is None and elapsed >= float(item.get("timeout_s") or SIDE_TIMEOUT_S):
+                result = {"error": "等了 %.3g 秒仍沒有結果" % elapsed,
                           "kind_of_error": "timeout"}
-            if result is None and item.get("clock_world") and elapsed > 0:
+            if result is None and item.get("clock_world"):
                 clock = self.clock_of(item["clock_world"])
                 if clock["kind"] == "none" or clock["state"] != "running":
-                    result = {"error": "處理這筆請求的鐘沒有在跑",
-                              "kind_of_error": "timeout"}
+                    result = {"error": "這筆請求的目標沒有鐘在跑",
+                              "kind_of_error": "no_clock"}
             if result is None:
                 self.state["pending"].append(item)
                 continue

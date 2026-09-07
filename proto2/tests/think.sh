@@ -92,13 +92,13 @@ test_think_timeout() {
   local root got
   root=$(make_world think_timeout)
   got=$(python3 - "$HERE" "$root/agent" <<'PYEOF2'
-import glob,os,sys
+import glob,os,sys,time
 sys.path.insert(0,sys.argv[1]); from aos_agent import Ctx,resolve_home
 from packs import think
 w=sys.argv[2];h=resolve_home(w,None);state={"step":5,"pending":[]}
 ctx=Ctx(w,h,state,[("think",think)],"think")
-r=think.run("think",{"question":"等不到怎麼辦？","budget":{"wait_steps":1}},ctx)
-state["step"]=6;wake=ctx.collect_results()
+r=think.run("think",{"question":"等不到怎麼辦？","budget":{"wait_s":0.02}},ctx)
+time.sleep(0.03);wake=ctx.collect_results()
 meta=Ctx.read_json(os.path.join(h,"thoughts",r["thought_id"],"meta.json"),{})
 errors=[Ctx.read_json(p,{}) for p in glob.glob(os.path.join(h,"outbox","*.json"))]
 print(meta.get("status")=="error",not wake,len(errors)==1 and errors[0].get("error") is True,

@@ -37,13 +37,13 @@ test_simplify_timeout_cancel() {
   local root got
   root=$(mktemp -d "$TEST_RUN_DIR/simplify-errors.XXXXXX")
   got=$(python3 - "$HERE" "$root" <<'PYEOF2'
-import glob, os, sys
+import glob, os, sys, time
 sys.path.insert(0, sys.argv[1])
 from aos_agent import Ctx
 world=os.path.join(sys.argv[2],"agent"); os.makedirs(os.path.join(world,"outbox"))
 state={"step":2,"pending":[]}; ctx=Ctx(world,world,state,pack="none")
-a=ctx.send("mail",{},mail_reply_to="never",timeout_steps=1)
-state["step"]=3; ctx.collect_results()
+a=ctx.send("mail",{},mail_reply_to="never",timeout_s=0.02)
+time.sleep(0.03); ctx.collect_results()
 timeout=Ctx.read_json(os.path.join(world,"side","mail",a+".json"),{})
 state["step"]=4
 b=ctx.send("mail",{},mail_reply_to="later"); cancelled=ctx.cancel(b)
@@ -76,7 +76,7 @@ state={"step":1,"pending":[]}; ctx=Ctx(world,world,state,pack="demo")
 rid=ctx.send("demo",{},target=worker); state["step"]=2; ctx.collect_results()
 side=Ctx.read_json(os.path.join(world,"side","demo",rid+".json"),{})
 reply=Ctx.read_json(glob.glob(os.path.join(world,"outbox","*.json"))[0],{})
-print(side.get("kind_of_error")=="timeout", "鐘沒有在跑" in reply.get("content",""),
+print(side.get("kind_of_error")=="no_clock", "目標沒有鐘在跑" in reply.get("content",""),
       reply.get("error") is True)
 PYEOF2
 )
@@ -84,6 +84,32 @@ PYEOF2
     ok "simplify：缺鐘會回聊天端一句人話"
   else
     fail "simplify：缺鐘回報不對（$got）"
+  fi
+  rm -rf "$root"
+}
+
+test_simplify_sleeping_question_steps() {
+  local root world home asleep awake
+  root=$(make_world simplify_sleep_steps); world="$root/agent"; home="$world/agent"
+  python3 - "$HERE" "$world" <<'PYEOF2'
+import sys,time
+sys.path.insert(0,sys.argv[1]); from aos_agent import Ctx,resolve_home
+w=sys.argv[2];h=resolve_home(w,None);state=Ctx.read_json(h+"/state.json",{})
+rid="never"
+state.update({"state":"idle","question_active":True,"question_steps":3,
+              "pending":[{"id":rid,"kind":"mail","pack":"none",
+                          "since_ts":time.time(),"timeout_s":2}],
+              "sleeping":{"kind":"mail","id":rid}})
+Ctx.write_json(h+"/state.json",state)
+PYEOF2
+  agent_tick "$world"; agent_tick "$world"; agent_tick "$world"
+  asleep=$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print(d.get("question_steps"),d.get("question_sleep_steps"),bool(d.get("sleeping")))' "$home/state.json")
+  sleep 2.1; agent_tick "$world"
+  awake=$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print(d.get("question_steps"),d.get("question_sleep_steps"),bool(d.get("sleeping")))' "$home/state.json")
+  if [ "$asleep $awake" = "3 3 True 4 3 False" ]; then
+    ok "simplify：旁線睡眠格不算題目動作，醒來後才續算"
+  else
+    fail "simplify：旁線睡眠仍算進題目（sleep=$asleep awake=$awake）"
   fi
   rm -rf "$root"
 }
@@ -199,6 +225,7 @@ PYEOF2
 test_simplify_side_lifecycle
 test_simplify_timeout_cancel
 test_simplify_missing_clock
+test_simplify_sleeping_question_steps
 test_simplify_ctx_resolution
 test_simplify_create_world
 test_simplify_agent_limits

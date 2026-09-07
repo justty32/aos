@@ -144,6 +144,10 @@ def do_act(ctx, loaded, extra):
             return "idle", True
         print(content)
         ctx.reply(content)
+        recent = ctx.state.get("recent_question_steps")
+        recent = recent if isinstance(recent, list) else []
+        ctx.state["recent_question_steps"] = (recent + [
+            int(ctx.state.get("question_steps") or 0) + 1])[-5:]
         ctx.state["question_active"] = False
         return "idle", False
 
@@ -261,6 +265,7 @@ def do_exec(args):
             if saved.get("limit_kind") == "tokens" and saved.get("limit_pause"):
                 saved["token_limit_ack_day"] = datetime.date.today().isoformat()
             saved.update({"question_active": True, "question_steps": -1,
+                          "question_sleep_steps": 0,
                           "limit_pause": False})
         if (direct or side_msgs or inbox_msgs) and saved.get("sleeping"):
             saved.pop("sleeping", None)
@@ -308,7 +313,10 @@ def do_exec(args):
     if did:
         busy += 1
     if saved.get("question_active") and not saved.get("limit_pause"):
-        saved["question_steps"] = int(saved.get("question_steps") or 0) + 1
+        if saved.get("sleeping") and not did:
+            saved["question_sleep_steps"] = int(saved.get("question_sleep_steps") or 0) + 1
+        else:
+            saved["question_steps"] = int(saved.get("question_steps") or 0) + 1
     saved.update({"state": nxt, "step": step + 1, "busy": busy,
                   "request": request, "last_usage": last_usage,
                   "started": started, "announced": announced,

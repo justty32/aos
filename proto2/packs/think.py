@@ -6,7 +6,7 @@ import os
 
 MAX_TOKENS = 6000
 MAX_STEPS = 3
-MAX_WAIT_STEPS = 120
+MAX_WAIT_S = 600
 MAX_USD = 0.10
 
 PROMPT = ("1. 要同時權衡三件以上的事、錯了很難回頭，或一般作法試了兩次仍卡住，才深度思考。\n"
@@ -16,7 +16,7 @@ PROMPT = ("1. 要同時權衡三件以上的事、錯了很難回頭，或一般
 _BUDGET = {"type": "object", "description": "可選。只能把預設上限往下調。", "properties": {
     "max_tokens": {"type": "integer", "description": "最多輸出 token，預設 6000"},
     "max_steps": {"type": "integer", "description": "最多幾步，預設 3"},
-    "wait_steps": {"type": "integer", "description": "最多等幾格，預設 120"},
+    "wait_s": {"type": "number", "description": "最多等幾秒，預設 600"},
     "max_usd": {"type": "number", "description": "估計最多花幾美元，預設 0.10"},
 }}
 
@@ -60,7 +60,7 @@ def _budget(value, stepped=False):
     return {"max_tokens": cap("max_tokens", MAX_TOKENS, 1, MAX_TOKENS, int),
             "max_steps": cap("max_steps", MAX_STEPS if stepped else 1,
                              1, MAX_STEPS if stepped else 1, int),
-            "wait_steps": cap("wait_steps", MAX_WAIT_STEPS, 1, MAX_WAIT_STEPS, int),
+            "wait_s": cap("wait_s", MAX_WAIT_S, 0.001, MAX_WAIT_S, float),
             "max_usd": cap("max_usd", MAX_USD, 0.0, MAX_USD, float)}
 
 
@@ -211,7 +211,7 @@ def _send(ctx, thought_id, mode, question, budget, step, previous=""):
     body = {"messages": _messages(mode, question, previous, step),
             "params": {"max_tokens": request_tokens}}
     name = ctx.send("think", body, priority=_priority(ctx), engine=engine_name,
-                    timeout_steps=budget["wait_steps"])
+                    timeout_s=budget["wait_s"])
     meta.update({"request": name, "engine": engine_name, "status": "waiting",
                  "request_step": step,
                  "current": {"mode": mode, "question": question, "budget": budget,

@@ -22,6 +22,9 @@
 | [think](2026-09-06-think.md) | 單段或多段深思，再收斂結論 | 能保住前一步的可用結論；但 5999 token 可能全花在隱藏思考。 |
 | [toolsmith](2026-09-06-toolsmith.md) | agent 自己新增、試跑、關閉工具 | `today` 當格造好並試跑成功；正式工具要下一格才載入。 |
 | [integration](2026-09-06-integration.md)／[whole-system](2026-09-06-whole-system.md) | 模板、生子、回信、重啟與整套操作 | 六段父子鏈和重啟都走通；也抓到啟動、錯誤回報與結果所有權問題。 |
+| [simplify-2](2026-09-07-simplify-2.md) | 旁線牆鐘逾時與每題動作格 | 睡三格不吃題目上限；醒來那格才續算，缺鐘另報 `no_clock`。 |
+| [studio-2](2026-09-07-studio-2.md) | 公司 ollama 重跑工作室，驗預算硬閘門 | 個人 token 門會擋下一筆 LLM；整隊 ticks 在 idle 時穿透到 458/300，沒有自動停鐘。 |
+| [studio-3](2026-09-07-studio-3.md) | 公司 ollama、預算五百萬重跑工作室，看交不交得出來 | 沒交付；token 第 6 分鐘後靜止、55 分鐘 idle 空轉，PM 已通知未讀的信永不重喚醒，chief 以下四人從沒開工。 |
 
 ## 最常撞到的坑
 
@@ -36,6 +39,7 @@
 - **檔案並行與原子性普遍未補。** 多進程同寫可能互蓋，斷電可能留下半份結果，微秒檔名也可能相撞。（hooks、fs、jobs、bigmem、branch、communication、cost、review、selfmem、think、toolsmith）
 - **狀態和錯誤不夠好找。** `status` 沒顯示當前 state，LLM 壞掉曾只讓使用者乾等，成功 worker 的 log 又可能是空的。（cost、mcp、whole-system）
 - **格式與欄位曾各說各話。** requester、token 名、截斷長度、模板工具優先權都出現過兩套說法。（fs、sched、selfmem、integration）
+- **預算檢查點不等於資源停止點。** 閘門只在要送 LLM 時檢查，但 idle step 仍計入 ticks；零額度還被當成不設個人上限。（studio-2）
 
 ## 介面簡不簡潔
 

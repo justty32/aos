@@ -147,7 +147,7 @@ def run(name, args, ctx):
     if name == "mail_wait":
         reply_to = args.get("id") or ""
         request = ctx.send("mail", {"reply_to": reply_to, "note": args.get("note") or ""},
-                           mail_reply_to=reply_to, timeout_steps=120)
+                           mail_reply_to=reply_to, timeout_s=600)
         ctx.write_json(os.path.join(ctx.home, "side", "mail-meta", request),
                        {"reply_to": reply_to, "note": args.get("note") or ""})
         ctx.sleep_until("mail", request)
