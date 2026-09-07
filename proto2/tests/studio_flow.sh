@@ -394,12 +394,25 @@ r1 = studio.run("task_assign", {"to": "chief", "title": "定架構", "spec": "�
 r2 = studio.run("task_assign", {"task_id": "沒這個", "to": "chief", "spec": "再一個"}, pm)
 order = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
 mails = glob.glob(os.path.join(root, "kids", "chief", "inbox", "pm", "*.json"))
+# chief 拆任務：接在 t1、t2 後面編 t3，自己手上那兩項定架構任務自動算 passed
+chief = Ctx(os.path.join(root, "kids", "chief"), os.path.join(root, "kids", "chief"))
+r3 = studio.run("plan_set", {"order_id": order["id"], "architecture": "一支檔", "tasks": [{"title": "寫程式", "owner": "dev-a"}]}, chief)
+order2 = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
+t1 = json.load(open(os.path.join(root, "team", "tasks", r1["task_id"] + ".json"), encoding="utf-8"))
+# pm 沒給 task_id、只說 to=dev-a：要派 plan_set 開給 dev-a 的 t3，不能再開 t4；短的 spec 不蓋掉首席的
+r4 = studio.run("task_assign", {"to": "dev-a", "spec": "短"}, pm)
+t3 = json.load(open(os.path.join(root, "team", "tasks", order["id"] + "-t3.json"), encoding="utf-8"))
+order3 = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
 print(r0.get("ok") is True and r1.get("ok") is True and r1["task_id"].endswith("-t1") and r1["to"] == "chief"
       and r2.get("ok") is True and r2["task_id"].endswith("-t2") and order["tasks"] == [r1["task_id"], r2["task_id"]]
-      and order["status"] == "in_progress" and len(mails) == 2)
+      and order["status"] == "in_progress" and len(mails) == 2
+      and r3.get("ok") is True and order2["tasks"] == [r1["task_id"], r2["task_id"], order["id"] + "-t3"]
+      and t1["status"] == "passed"
+      and r4.get("ok") is True and r4["task_id"] == order["id"] + "-t3" and len(order3["tasks"]) == 3
+      and t3.get("assigned") and t3["spec"] == "")
 PYEOF2
 )
-  if [ "$got" = "True" ]; then ok "studio_flow：task_assign 沒 task_id 就在單上開新任務並派出去"; else fail "studio_flow：開新任務不對（$got）"; fi
+  if [ "$got" = "True" ]; then ok "studio_flow：task_assign 沒 task_id 就開新任務；plan_set 接著編號並把定架構那項算 passed"; else fail "studio_flow：開新任務不對（$got）"; fi
   rm -rf "$root"
 }
 
