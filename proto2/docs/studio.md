@@ -29,7 +29,7 @@ studio/                         owner 世界，也是 owner home
   team/projects/                全員共用成果
 ```
 
-每個孩子家裡的 `team` 都是指向 owner 共用區的 symlink，所以全員一律用 `team/projects/...`。owner 與 chief 用自己的鐘。sales、pm、dev-a、dev-b、qa 掛在 owner 的鐘。設了 `AOS_DAEMON_DIR` 時，`team new` 會登記兩個自己的鐘；`team stop` 收掉它們，檔案與帳保留。
+每個孩子家裡的 `team` 都是指向 owner 共用區的 symlink，所以全員一律用 `team/projects/...`。成員的回話**不會**像普通小孩那樣自動轉成 owner 的信（那會讓 owner 光讀信就燒光額度、占住共用引擎）；回報一律自己 `mail_send` 給 `reports_to` 的主管。owner 與 chief 用自己的鐘。sales、pm、dev-a、dev-b、qa 掛在 owner 的鐘。設了 `AOS_DAEMON_DIR` 時，`team new` 會登記兩個自己的鐘；`team stop` 收掉它們，檔案與帳保留。
 
 ## 預算
 

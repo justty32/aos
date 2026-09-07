@@ -1247,9 +1247,21 @@ class Ctx:
             except Exception as e:
                 self.log("工具包 %s 的 on_reply 出錯：%s" % (name, e))
         parent = self.parent()
-        if isinstance(parent, dict) and parent.get("dir"):
+        # 工作室成員的回報走 mail_send 給自己的主管；每句話都自動轉給 owner 只會燒光 owner 的額度、占住共用引擎。
+        if isinstance(parent, dict) and parent.get("dir") and not self._team_reports_to():
             self.put_mail(parent["dir"], "kid-" + self.name, str(text))
         return path
+
+    def _team_reports_to(self):
+        root = team_root_of(self.world)
+        if not root:
+            return None
+        roster = read_json(os.path.join(root, "team", "team.json"), {})
+        me = team_member_name(self.world)
+        for member in roster.get("members", []) if isinstance(roster, dict) else []:
+            if isinstance(member, dict) and member.get("name") == me:
+                return member.get("reports_to")
+        return None
 
     # 信箱
     def sources(self):
