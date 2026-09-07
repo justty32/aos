@@ -7,7 +7,6 @@ import shutil
 import subprocess
 import sys
 
-
 PROMPT = """你正在改一個 Python 專案。
 第一次碰檔案，先用 code_outline 看骨架。
 再用 code_search 找名字、呼叫處或錯誤文字。
@@ -82,11 +81,20 @@ def _result(text, limit=4000, suggestion="縮小 path 或查找範圍再試一�
 
 
 def _project(ctx, path):
-    """第一版缺 Ctx.project_path，所以包內自己把路徑關在世界裡。"""
+    """第一版缺 Ctx.project_path，所以包內自己把路徑關在世界裡。
+    工作室成員家裡的 `team/` 是指向共用區的 symlink，realpath 會跑到自己世界外面，所以共用區也算裡面。"""
     world = os.path.realpath(ctx.world)
     raw = path if os.path.isabs(path) else os.path.join(world, path)
     target = os.path.realpath(raw)
-    if os.path.commonpath((world, target)) != world:
+    roots = [world]
+    try:                                # 這包也會被單獨載入測試，那時旁邊沒有 aos_agent
+        from aos_agent import team_root_of
+    except ImportError:
+        team_root_of = None
+    team_root = team_root_of(ctx.world) if team_root_of else None
+    if team_root:
+        roots.append(os.path.realpath(os.path.join(team_root, "team")))
+    if not any(os.path.commonpath((root, target)) == root for root in roots):
         raise ValueError("路徑跑到專案資料夾外面了：%s" % path)
     return target
 
