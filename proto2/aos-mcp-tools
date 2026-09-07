@@ -1,53 +1,44 @@
 #!/usr/bin/env python3
-"""aos-mcp-tools <specs.json> — 一台**只登記、不執行**的 stdio MCP 小伺服器。
+"""aos-mcp-tools <specs.json> — 一支「只登記、不執行」的 stdio MCP server。
 
-給誰用：`aos-llm` 的 `"api": "claude-cli"` 引擎。Claude Code 沒有「把工具清單塞進請求」
-這個介面，你只能給它**真的 MCP server**。可是我們的工具不是 Claude Code 執行的——是
-`aos-agent` 下一回合自己去跑的。所以這台伺服器把 `tools/call` 當成**留言**：
+給誰用：`aos-llm` 的 `"api": "claude-cli"` 與 `"api": "codex-cli"` 兩條路。Claude Code／Codex CLI 都沒有「把工具清單塞進請求、
+它回一包 tool_calls 就結束」的介面——它是一個 agent，工具得**真的掛上去**，它才會發出
+真正的工具呼叫（用講的它多半只會寫一段「我要叫 say」的字，形狀不對）。
 
-  1. `tools/list` 把 specs.json 裡的工具原樣報上去（讓模型看得到、叫得動）；
-  2. `tools/call` **什麼都不做**，只把 `{name, arguments}` 附到記錄檔（環境變數
-     `AOS_MCP_RECORD` 指的那個檔，一行一筆 JSON），然後回一句「已登記，這一輪到此為止」。
+所以這裡把請求裡的工具清單原封不動變成一台 MCP server 掛給它們，但**每個工具都不做事**：
+被叫到就把 `{"name", "arguments"}` 當一行 JSON append 進 `AOS_MCP_RECORD` 指的檔案，
+然後回一句「已登記，這一輪到此為止」。真正跑工具的是外面的 aos-agent——它下一回合才會做，
+做完把結果當 `role: tool` 的訊息接回對話裡。我們要的只是**它這一輪決定叫誰、帶什麼參數**。
 
-這樣模型就會乖乖吐真的 `tool_use` block（而不是被 Claude Code 回一句
-`No such tool available` 之後亂繞好幾輪），aos-llm 從 stream-json 撿走那些 block、
-翻成 OpenAI 的 `tool_calls` 交出去就好。記錄檔是備援：萬一 stream 沒撿到，還有這一份。
+specs.json 是一個陣列，一項就是一個 OpenAI 形狀的工具：`{name, description, parameters}`。
+`tools/list` 時把 `parameters` 改名成 MCP 要的 `inputSchema`，其他原樣。
 
-規格：JSON-RPC 2.0 一行一包（newline-delimited）走 stdin／stdout，protocol 版本
-`2024-11-05`。認得 `initialize`／`notifications/initialized`／`tools/list`／`tools/call`／
-`ping`；不認得的**通知**直接吞掉，不認得的**請求**回 -32601。純標準庫，沒有相依。
+協定：JSON-RPC 2.0，一行一則，protocol version 2024-11-05。認得 initialize、
+notifications/initialized、tools/list、tools/call、ping；不認得的通知直接吞掉，
+不認得的請求回 -32601。純標準函式庫，沒有任何相依。
 
-  aos-mcp-tools specs.json      specs.json 是一個陣列，每個元素
-                                {"name", "description", "parameters"}（OpenAI 那一味）
+自己試一支：
 
-自己測（不必開 Claude Code）：
-
-  printf '%s\\n' \\
-    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \\
-    '{"jsonrpc":"2.0","method":"notifications/initialized"}' \\
-    '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \\
-    '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"say","arguments":{"text":"hi"}}}' \\
-    | AOS_MCP_RECORD=/tmp/rec.jsonl ./aos-mcp-tools specs.json
+    echo '[{"name":"say","description":"說一句","parameters":{"type":"object"}}]' > /tmp/s.json
+    printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+      | AOS_MCP_RECORD=/tmp/rec.jsonl ./aos-mcp-tools /tmp/s.json
 """
-
 import json
 import os
 import sys
 
 PROTOCOL = "2024-11-05"
-SERVER = {"name": "aos", "version": "0.1.0"}
+# 回給模型的那句話：把「這一輪到此為止」講白，免得它登記完又接著叫第二、第三個工具。
+DONE_TEXT = "已登記 %s；這一輪到此為止，不要再叫工具、直接結束"
 
 
 def load_specs(path):
-    """讀 specs.json，翻成 MCP 的 tools/list 形狀（`parameters` → `inputSchema`）。
-
-    壞掉就當成空清單——寧可讓模型看到「沒有工具」，也不要整台伺服器起不來、
-    害 Claude Code 卡在連線那一步。
-    """
+    """讀 specs.json，順手把 OpenAI 的 parameters 換成 MCP 的 inputSchema。"""
     try:
         with open(path, encoding="utf-8") as f:
             raw = json.load(f)
-    except (OSError, ValueError):
+    except (OSError, ValueError) as e:
+        print("aos-mcp-tools: 讀不到工具清單 %s：%s" % (path, e), file=sys.stderr)
         return []
     tools = []
     for one in raw if isinstance(raw, list) else []:
@@ -63,76 +54,78 @@ def load_specs(path):
 
 
 def record(name, arguments):
-    """把這一次的呼叫附到記錄檔尾巴（一行一筆）。沒設環境變數就不記，也不算錯。"""
+    """把這一次呼叫 append 成一行 JSON。沒設 AOS_MCP_RECORD 就只印到 stderr。"""
     path = os.environ.get("AOS_MCP_RECORD") or ""
+    line = json.dumps({"name": name, "arguments": arguments},
+                      ensure_ascii=False, separators=(",", ":"))
     if not path:
+        print("aos-mcp-tools: 沒有 AOS_MCP_RECORD，這次呼叫只印在這裡：" + line,
+              file=sys.stderr)
         return
-    line = json.dumps({"name": name, "arguments": arguments}, ensure_ascii=False)
-    try:
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-            f.flush()
-    except OSError:
-        pass   # 記不了就算了，stream-json 那一路還撿得到
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+        f.flush()
+        os.fsync(f.fileno())   # 外面那支 worker 正在盯這個檔，寫完就要看得到
 
 
-def handle(msg, tools):
-    """一包進、一包出（或 None＝這是通知，不用回）。"""
-    method = msg.get("method")
-    has_id = "id" in msg and msg.get("id") is not None
+def result(req_id, value):
+    return {"jsonrpc": "2.0", "id": req_id, "result": value}
 
+
+def error(req_id, code, message):
+    return {"jsonrpc": "2.0", "id": req_id,
+            "error": {"code": code, "message": message}}
+
+
+def handle(req, tools):
+    if not isinstance(req, dict) or req.get("jsonrpc") != "2.0" or "method" not in req:
+        return error(req.get("id") if isinstance(req, dict) else None,
+                     -32600, "Invalid Request")
+    req_id = req.get("id")
+    method = req["method"]
     if method == "initialize":
-        result = {"protocolVersion": PROTOCOL,
-                  "capabilities": {"tools": {"listChanged": False}},
-                  "serverInfo": SERVER}
-    elif method == "ping":
-        result = {}
-    elif method == "tools/list":
-        result = {"tools": tools}
-    elif method == "tools/call":
-        params = msg.get("params") if isinstance(msg.get("params"), dict) else {}
+        return result(req_id, {"protocolVersion": PROTOCOL,
+                               "capabilities": {"tools": {}},
+                               "serverInfo": {"name": "aos", "version": "0.1"}})
+    if method == "ping":
+        return result(req_id, {})
+    if method == "tools/list":
+        return result(req_id, {"tools": tools})
+    if method == "tools/call":
+        params = req.get("params") if isinstance(req.get("params"), dict) else {}
         name = str(params.get("name") or "")
         args = params.get("arguments")
         if not isinstance(args, dict):
             args = {}
-        record(name, args)
-        result = {"content": [{"type": "text",
-                               "text": "已登記 %s。結果下一輪才會告訴你，"
-                                       "這一輪到此為止：不要再叫工具，直接結束。" % name}],
-                  "isError": False}
-    else:
-        if not has_id:
-            return None    # 不認得的通知：吞掉就好
-        return {"jsonrpc": "2.0", "id": msg.get("id"),
-                "error": {"code": -32601, "message": "沒有這個方法：%s" % method}}
-
-    if not has_id:
-        return None        # 認得的通知（notifications/initialized 之類）也不用回
-    return {"jsonrpc": "2.0", "id": msg.get("id"), "result": result}
+        try:
+            record(name, args)
+        except OSError as e:
+            print("aos-mcp-tools: 寫不進登記檔：%s" % e, file=sys.stderr)
+            return result(req_id, {"content": [{"type": "text", "text": "登記失敗：%s" % e}],
+                                   "isError": True})
+        return result(req_id, {"content": [{"type": "text", "text": DONE_TEXT % name}]})
+    if "id" not in req:
+        return None   # 不認得的通知：吞掉就好
+    return error(req_id, -32601, "Method not found")
 
 
-def main(argv):
-    if len(argv) < 2:
-        sys.stderr.write("用法：aos-mcp-tools <specs.json>\n")
+def main():
+    if len(sys.argv) < 2:
+        print("用法：aos-mcp-tools <specs.json>", file=sys.stderr)
         return 2
-    tools = load_specs(argv[1])
+    tools = load_specs(sys.argv[1])
     for line in sys.stdin:
-        line = line.strip()
-        if not line:
+        if not line.strip():
             continue
         try:
-            msg = json.loads(line)
+            request = json.loads(line)
         except ValueError:
-            continue       # 不是 JSON 就當沒看到，不要把整條管線弄死
-        if not isinstance(msg, dict):
-            continue
-        out = handle(msg, tools)
-        if out is None:
-            continue
-        sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
-        sys.stdout.flush()
+            response = error(None, -32700, "Parse error")
+        else:
+            response = handle(request, tools)
+        if response is not None:
+            print(json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
     return 0
 
 
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+sys.exit(main())

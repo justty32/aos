@@ -37,6 +37,8 @@ chat/completions 形狀，一進一出兩邊都在 worker 裡翻（見 to_anthro
 `"api": "claude-cli"` 則是**把 Claude Code 的 headless 模式當引擎**：開一個 `claude -p` 子進程、
 對話從 stdin 餵、工具用一台只登記不執行的 MCP（aos-mcp-tools）掛上去、只讓它跑一個回合，
 再從 stream-json 撿回那一輪的 tool_use（給有訂閱、沒 API key 的人用，見 call_claude_cli）。
+`"api": "codex-cli"` 同理，換成 `codex exec`（ChatGPT 訂閱）：同一台 aos-mcp-tools 掛給它，
+第一批呼叫進來就收工（見 codex_call）。
 
   aos-llm exec [dir]
       **每一格做的事**，不給 dir 就是目前目錄。一格很短，**絕對不等網路**：
@@ -67,10 +69,12 @@ import datetime
 import json
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -1124,12 +1128,412 @@ def call_claude_cli(engine, body, home):
     return answer
 
 
+# ── codex-cli：把 OpenAI Codex CLI 的 headless（`codex exec`）當引擎 ──────────
+# 引擎寫 `"api": "codex-cli"` 就走這條路——**給有 ChatGPT 訂閱、沒有 API key 的人用**。
+# 跟 claude-cli 最大的不同在工具：codex 沒有「工具清單塞進請求、它回一包 tool_calls 就結束」
+# 這種介面，它是一個 agent。用講的（在 prompt 裡列工具、要它照 schema 回）它多半只會寫一段
+# 「我要叫 say」的字，形狀對不上；但只要工具是**真的掛上去**的，它就會發出真的工具呼叫。
+# 所以：請求裡的 tools 寫成一份 specs.json，用 -c 把 aos-mcp-tools 掛成一台 MCP server 給它。
+# 那台 server 什麼都不做，只把被叫到的 {name, arguments} append 進登記檔——我們要的就是
+# 「它這一輪決定叫誰、帶什麼參數」。第一批登記進來、再給它幾秒把話講完，就把小孩收掉，
+# 工具真正要跑是外面 aos-agent 下一回合的事。
+
+CODEX_RULE = ("要叫工具就真的叫 MCP 工具（aos 那台伺服器），不要用文字描述你想叫什麼；"
+              "content 是給人看的話。")
+CODEX_GRACE = 2.0        # 第一批工具登記進來之後，再多給幾秒把話講完，然後收掉
+CODEX_KILL_WAIT = 3.0    # SIGTERM 之後等幾秒還不死就 SIGKILL
+CODEX_POLL = 0.2         # 讀不到新的一行時，每隔這麼久回頭看一次登記檔與時間
+
+
+def codex_toml(text):
+    """把一個字串包成 TOML 的基本字串。JSON 的跳脫規則在這裡剛好夠用。"""
+    return json.dumps(str(text), ensure_ascii=False)
+
+
+def codex_slug():
+    """這一發的名字，拿來當 side/codex/ 底下那兩個檔的檔名。
+
+    worker 是 `aos-llm worker <世界> <請求檔名>` 開起來的，請求名字就在自己的 argv 裡；
+    不是這樣被叫起來（例如有人直接叫 call()）就退回用 pid，反正只要不撞名就好。
+    """
+    argv = sys.argv
+    if len(argv) >= 4 and argv[1] == "worker":
+        return os.path.basename(str(argv[3])).rsplit(".json", 1)[0] or "req"
+    return "req-%d" % os.getpid()
+
+
+def codex_specs(body):
+    """請求裡的 OpenAI tools → aos-mcp-tools 吃的 [{name, description, parameters}]。"""
+    out = []
+    for tool in (body or {}).get("tools") or []:
+        if not isinstance(tool, dict):
+            continue
+        fn = tool.get("function") if isinstance(tool.get("function"), dict) else tool
+        name = str(fn.get("name") or "")
+        if not name:
+            continue
+        params = fn.get("parameters")
+        if not isinstance(params, dict):
+            params = {"type": "object", "properties": {}}
+        out.append({"name": name, "description": str(fn.get("description") or ""),
+                    "parameters": params})
+    return out
+
+
+def codex_transcript(body):
+    """從 stdin 餵進去的那段對話。跟 claude-cli 同一套渲染，不另外長一份。"""
+    return cli_transcript(body)
+
+
+def codex_prompt(body):
+    """整段 prompt：【系統】那一塊（system 訊息 ＋ 一條「工具要真的叫」的規矩）＋ 對話。"""
+    parts = []
+    for msg in (body or {}).get("messages") or []:
+        if isinstance(msg, dict) and msg.get("role") == "system":
+            text = flat_text(msg.get("content"))
+            if text:
+                parts.append(text)
+    parts.append(CODEX_RULE)
+    return "【系統】" + "\n\n".join(parts) + "\n\n" + codex_transcript(body)
+
+
+def codex_command(engine, body, home, specs, record):
+    """組出那一行指令。找不到執行檔就當場講清楚，不要拖到逾時。
+
+    `-c` 的值是 TOML：字串要引號、args 是陣列、env 是 inline table。
+    `--ephemeral` 不落 session 檔、`--skip-git-repo-check` 允許在非 git 資料夾跑、
+    `-s read-only` 不讓它改東西、`-C` 把工作根釘在 LLM 資料夾（絕不是誰的專案目錄）。
+    `default_tools_approval_mode="auto"` 是必要的：headless 沒人按核准，不寫這個
+    工具呼叫會被擋成「此 MCP 工具需要核准」，登記檔就永遠是空的。
+    """
+    binary = str((engine or {}).get("bin") or "codex")
+    found = shutil.which(binary)
+    if not found:
+        raise CliFailed("找不到 codex 執行檔（%s）：codex-cli 這種引擎要先裝好 "
+                        "OpenAI Codex CLI、讓它在 PATH 上，或在引擎裡寫 \"bin\"" % binary)
+    tools_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos-mcp-tools")
+    argv = [found, "exec", "--ephemeral", "--skip-git-repo-check",
+            "-s", "read-only", "--json",
+            "-C", os.path.abspath(home or os.getcwd()),
+            "-m", str((engine or {}).get("model") or "gpt-5.6-luna"),
+            "-c", "mcp_servers.aos.command=" + codex_toml(sys.executable),
+            "-c", "mcp_servers.aos.args=[%s,%s]" % (codex_toml(tools_bin),
+                                                    codex_toml(specs)),
+            "-c", "mcp_servers.aos.env={AOS_MCP_RECORD=%s}" % codex_toml(record),
+            # 不加這個，headless 又沒人可以按核准，工具呼叫會被擋成「需要核准」而沒真的打進來。
+            "-c", "mcp_servers.aos.default_tools_approval_mode=\"auto\""]
+    effort = (body or {}).get("effort")
+    if effort:
+        argv += ["-c", "model_reasoning_effort=" + codex_toml(effort)]
+    for extra in (engine or {}).get("extra_args") or []:
+        argv.append(str(extra))
+    return argv
+
+
+def codex_records(path):
+    """讀登記檔：一行一個 `{"name", "arguments"}`。還沒有檔案就是空的。"""
+    out = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    one = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(one, dict) and one.get("name"):
+                    out.append(one)
+    except OSError:
+        pass
+    return out
+
+
+def codex_kill(proc):
+    """收掉子進程：先 SIGTERM 整個 process group（codex 底下還掛著 MCP server），
+    等不到就 SIGKILL。"""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        if proc.poll() is not None:
+            return
+        try:
+            os.killpg(os.getpgid(proc.pid), sig)
+        except OSError:
+            try:
+                proc.send_signal(sig)
+            except OSError:
+                return
+        try:
+            proc.wait(timeout=CODEX_KILL_WAIT)
+            return
+        except subprocess.TimeoutExpired:
+            continue
+
+
+def codex_run(argv, prompt, home, record, grace=CODEX_GRACE):
+    """開一個 codex exec 子進程，一行一行讀它吐的 JSONL。
+
+    codex 沒有 max-turns 這種東西，會一直做下去，所以停手的規矩是我們自己訂的：
+    **登記檔一出現第一批工具呼叫，就再給 grace 秒，然後把小孩收掉**，有什麼算什麼。
+    這幾秒是留給它把 turn 收乾淨用的——`turn.completed` 一到就馬上走（那一則才有 usage，
+    被我們硬收掉的那一發帳本記 0，嫌可惜就把引擎的 `"grace"` 調大）。
+    整發另有 TIMEOUT 秒的上限。
+
+    回 (events, killed, timed_out, 退出碼, stderr)。
+    """
+    try:
+        proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, cwd=home or os.getcwd(),
+                                start_new_session=True)
+    except OSError as e:
+        raise CliFailed("codex-cli 開不起來：%s" % e)
+
+    # 一個 thread 專門把 stdout 一行一行接下來（不然 readline 會擋住我們看時間與登記檔），
+    # 另一個把 stderr 吸乾（管子塞住會害子進程卡死）。
+    lines, errs, over, lock = [], [], [], threading.Lock()
+
+    def pump():
+        for raw in proc.stdout:
+            with lock:
+                lines.append(raw.decode("utf-8", "replace"))
+        over.append(True)
+
+    def drain():
+        errs.append(proc.stderr.read().decode("utf-8", "replace"))
+
+    threading.Thread(target=pump, daemon=True).start()
+    threading.Thread(target=drain, daemon=True).start()
+    try:
+        proc.stdin.write(prompt.encode("utf-8"))
+        proc.stdin.close()
+    except OSError:
+        pass
+
+    events, killed, timed_out, stop_at, ended = [], False, False, None, []
+
+    def take():
+        with lock:
+            batch, lines[:] = list(lines), []
+        for one in batch:
+            if codex_take(one, events) in ("turn.completed", "turn.failed"):
+                ended.append(True)   # 這一輪講完了，不用再等
+        return len(batch)
+
+    deadline = time.time() + TIMEOUT
+    while True:
+        got = take()
+        now = time.time()
+        if ended:
+            break
+        if stop_at is None and codex_records(record):
+            stop_at = now + grace
+        if now >= deadline:
+            killed, timed_out = True, True
+            break
+        if stop_at is not None and now >= stop_at:
+            killed = True
+            break
+        if over and not got:
+            break          # stdout 關了，剩的也都收完了
+        if not got:
+            time.sleep(CODEX_POLL)
+    signalled = killed
+    if not killed:
+        try:
+            proc.wait(timeout=CODEX_KILL_WAIT)
+        except subprocess.TimeoutExpired:
+            signalled = True   # 話講完了還賴著不走，一樣收掉，不留孤兒進程
+    if signalled:
+        codex_kill(proc)
+        time.sleep(CODEX_POLL)
+    take()   # 收掉之前已經吐出來的那幾行（turn.completed 常常就在這裡）
+    # 我們自己送的信號會讓退出碼變成負的，那不算「它失敗了」。
+    return events, killed, timed_out, 0 if signalled else proc.returncode, "".join(errs)
+
+
+def codex_take(line, events):
+    """一行 JSONL：是 JSON 物件就收進 events、回它的 type，其他（進度字、空行）丟掉。"""
+    line = (line or "").strip()
+    if not line.startswith("{"):
+        return ""
+    try:
+        one = json.loads(line)
+    except ValueError:
+        return ""
+    if not isinstance(one, dict):
+        return ""
+    events.append(one)
+    return str(one.get("type") or "")
+
+
+def codex_item_call(item):
+    """事件流裡的一則 item 是不是一個 MCP 工具呼叫？是就回 `{name, arguments, server}`。
+
+    這一版的 `item.type` 是 `mcp_tool_call`，但版本之間改過名字，所以認寬一點：
+    type 裡有 mcp 或 tool_call 就算，名字在 tool／tool_name／name 任一個。
+    **這只拿來對帳**，真正算數的是登記檔。
+    """
+    if not isinstance(item, dict):
+        return None
+    kind = str(item.get("type") or "")
+    if "mcp" not in kind and "tool_call" not in kind:
+        return None
+    name = item.get("tool") or item.get("tool_name") or item.get("name") or ""
+    if not name:
+        return None
+    args = item.get("arguments")
+    if isinstance(args, str):
+        try:
+            args = json.loads(args) if args.strip() else {}
+        except ValueError:
+            args = {"_raw": args}
+    if not isinstance(args, dict):
+        args = {}
+    return {"name": str(name), "arguments": args, "server": str(item.get("server") or "")}
+
+
+def codex_usage(raw):
+    """codex 的 usage → OpenAI 的三個數字。帳本（write_pending／fold_pending）與 packs
+    算錢都只認 prompt_tokens／completion_tokens／total_tokens，所以一定要補齊。
+
+    codex 的 `input_tokens` 本來就含快取命中（跟 OpenAI 同一套），所以 prompt_tokens
+    直接等於它、不再加 cached；另外留 `prompt_tokens_details.cached_tokens` 給算錢的看折扣。
+    思考 token（`reasoning_output_tokens`）是輸出，折進 completion_tokens，不然會少算。
+    原始那幾個欄位也留一份（帳本會各自成一欄，不會重複進 total）。
+    """
+    if not isinstance(raw, dict):
+        return {}
+
+    def num(key):
+        value = raw.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return 0
+        return int(value)
+
+    cached = num("cached_input_tokens")
+    prompt = num("input_tokens")
+    reasoning = num("reasoning_output_tokens")
+    completion = num("output_tokens") + reasoning
+    usage = {"prompt_tokens": prompt, "completion_tokens": completion,
+             "total_tokens": prompt + completion}
+    if cached:
+        usage["prompt_tokens_details"] = {"cached_tokens": cached}
+    if reasoning:
+        usage["completion_tokens_details"] = {"reasoning_tokens": reasoning}
+    for key in ("input_tokens", "cached_input_tokens", "cache_write_input_tokens",
+                "output_tokens", "reasoning_output_tokens"):
+        if num(key):
+            usage[key] = num(key)
+    return usage
+
+
+def codex_failure(events):
+    """事件流裡有沒有 turn.failed？有就回那句錯誤訊息。"""
+    for ev in events:
+        if not isinstance(ev, dict) or str(ev.get("type") or "") != "turn.failed":
+            continue
+        err = ev.get("error") if isinstance(ev.get("error"), dict) else {}
+        return str(err.get("message") or ev.get("message") or "turn.failed")
+    return ""
+
+
+def codex_answer(events, records, model="", killed=False):
+    """一串 JSONL 事件 ＋ 登記檔 → OpenAI 的 chat/completions 形狀。
+
+    **工具呼叫以登記檔為準**（那是真的被叫到才寫進去的）；事件流裡的 mcp 工具呼叫只拿來
+    對帳，登記檔空的、事件流卻看到有叫，才退而用事件流那份，免得整發白跑。
+    話（content）來自 agent_message，usage 來自 turn.completed。
+    """
+    thread_id, texts, usage, streamed = "", [], {}, []
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        kind = str(ev.get("type") or "")
+        if kind == "thread.started":
+            thread = ev.get("thread") if isinstance(ev.get("thread"), dict) else {}
+            thread_id = str(ev.get("thread_id") or thread.get("id") or ev.get("id") or "")
+        elif kind == "turn.completed":
+            if isinstance(ev.get("usage"), dict):
+                usage = ev["usage"]
+        elif kind == "item.completed":
+            item = ev.get("item") if isinstance(ev.get("item"), dict) else {}
+            if str(item.get("type") or "") == "agent_message":
+                text = str(item.get("text") or "")
+                if text:
+                    texts.append(text)
+            one = codex_item_call(item)
+            if one:
+                streamed.append(one)
+    calls = []
+    for slot, one in enumerate(records or streamed, 1):
+        args = one.get("arguments")
+        if not isinstance(args, dict):
+            args = {}
+        calls.append({"id": "call_%d" % slot, "type": "function",
+                      "function": {"name": str(one.get("name") or ""),
+                                   "arguments": json.dumps(args, ensure_ascii=False)}})
+    message = {"role": "assistant", "content": "\n".join(texts)}
+    if calls:
+        message["tool_calls"] = calls
+    return {
+        "id": thread_id or None, "object": "chat.completion", "model": model,
+        "choices": [{"index": 0, "message": message,
+                     "finish_reason": "tool_calls" if calls else "stop"}],
+        "usage": codex_usage(usage),
+        # 這一包會被 worker 挪到結果的 aos.cli 底下，留個帳好對。
+        "cli": {"thread_id": thread_id, "usage": usage, "killed": bool(killed),
+                "recorded": len(records), "streamed": len(streamed)},
+    }
+
+
+def codex_call(engine, body, home):
+    """開一個 codex exec 子進程打那一發。
+
+    兩個小抄寫在 `<LLM 資料夾>/side/codex/<請求名>.*`：`.specs.json` 是給 MCP server 的工具
+    清單、`.record.jsonl` 是它登記回來的工具呼叫。**成功就刪掉，失敗留著給人看。**
+    """
+    slug = codex_slug()
+    side = os.path.join(home or os.getcwd(), "side", "codex")
+    specs = os.path.join(side, slug + ".specs.json")
+    record = os.path.join(side, slug + ".record.jsonl")
+    argv = codex_command(engine, body, home, specs, record)   # 找不到執行檔就先在這裡爆
+    os.makedirs(side, exist_ok=True)
+    lib.write_json_atomic(specs, codex_specs(body))
+    with open(record, "w", encoding="utf-8"):
+        pass   # 先擺一個空的，等 MCP server 往裡面 append
+    try:
+        grace = float((engine or {}).get("grace"))   # 引擎可以自己調寬限秒數
+    except (TypeError, ValueError):
+        grace = CODEX_GRACE
+    events, killed, timed_out, code, err = codex_run(argv, codex_prompt(body), home, record,
+                                                     grace)
+    if timed_out:
+        raise CliFailed("codex-cli 失敗：超時（%s 秒）" % TIMEOUT)
+    why = codex_failure(events)
+    if why:
+        raise CliFailed("codex-cli 失敗：" + why)
+    if code and not killed:   # 我們自己收掉的退出碼不算數
+        tail = (err or "").strip() or "沒有 stderr"
+        raise CliFailed("codex-cli 失敗：exit %s %s" % (code, tail[-300:]))
+    answer = codex_answer(events, codex_records(record),
+                          (engine or {}).get("model") or "", killed)
+    for path in (specs, record):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    return answer
+
+
 def call(engine, body, home=""):
     """真的送出那一發。引擎寫 `"api": "anthropic"` 就改打 /v1/messages、換一組 header，
     body 進去前翻成 Anthropic 那一味、回來再翻回 OpenAI 那一味；`"api": "claude-cli"` 走的是
     本機的 claude 子進程（不打網路、也就不探 TCP）；其餘的（預設）原樣打 /chat/completions。"""
     if api_of(engine) == "claude-cli":
         return call_claude_cli(engine, body, home)
+    if api_of(engine) == "codex-cli":
+        # 本機的 codex exec 子進程，工具用 MCP 真的掛上去（見 codex_call）。
+        return codex_call(engine, body, home)
     anthropic = api_of(engine) == "anthropic"
     default_base = "https://api.anthropic.com" if anthropic else "http://localhost:1234/v1"
     base = (engine.get("base_url") or default_base).rstrip("/")

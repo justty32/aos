@@ -168,6 +168,8 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
  {"name": "thinking", "api": "claude-cli", "model": "sonnet", "max_concurrent": 2}]
 ```
 
+同一招還有一種 `"api": "codex-cli"`：**把 OpenAI Codex CLI 的 headless（`codex exec`）當引擎**，給有 ChatGPT 訂閱的人用——工具不是用講的，是把 `aos-mcp-tools` 掛成一台只登記不執行的 MCP server 真的接上去，第一批工具呼叫進來就收工（細節與兩個坑見 [docs/llm-scheduling.md](docs/llm-scheduling.md)）。
+
 `strip_think` 不寫就是 true：寫結果前切掉 content 裡最後一個 `</think>` 以前的內容；`reasoning_content` 原樣保留。
 
 請求檔是 JSON 物件。aos 吃 `priority`、`requester`、`engine`、`params`；沒寫前兩項設定就用 `defaults.json`。其他頂層鍵原樣送 chat/completions，`model` 一律由引擎決定。
