@@ -23,6 +23,7 @@ SH_TIMEOUT = 60
 CUT = 4000
 TEAM_BUDGET_KEYS = ("tokens", "hours", "ticks", "disk_mb", "mem_mb", "money_usd")
 SIDE_TIMEOUT_S = 600
+UNREAD_REMIND_TICKS = 30   # 已通知但一直沒讀的信，idle 這麼多格後再提醒一次
 
 
 def warn(msg):
@@ -269,7 +270,9 @@ def mark_read(home, source, name):
         warn("信 %s/%s 搬不進 read/：%s" % (source, name, e))
 
 
-def scan_inbox(home, announced):
+def scan_inbox(home, announced, state=None):
+    """掃信箱。user 來源直接進 prompt；其他來源只通知一次；已通知但一直沒讀、而且 agent 正閒著，
+    每 UNREAD_REMIND_TICKS 格再提醒一次（不然模型第一輪讀信失敗就永遠躺著）。"""
     msgs, counts, still, fresh = [], [], [], False
     for src in sources(home):
         names = unread_names(home, src)
@@ -288,9 +291,20 @@ def scan_inbox(home, announced):
             still.append(key)
             if key not in announced:
                 fresh = True
+    summary = "、".join("%s %d 封" % (s, n) for s, n in counts)
+    step = int(state.get("step") or 0) if isinstance(state, dict) else 0
     if counts and fresh:
-        msgs.append({"role": "user", "content": "你有新信：%s。用信箱工具去讀。"
-                     % "、".join("%s %d 封" % (s, n) for s, n in counts)})
+        msgs.append({"role": "user", "content": "你有新信：%s。用信箱工具去讀。" % summary})
+        if isinstance(state, dict):
+            state["unread_told_step"] = step
+    elif counts and isinstance(state, dict) and (state.get("state") or "idle") == "idle" \
+            and not state.get("sleeping") and not state.get("pending"):
+        told = state.get("unread_told_step")
+        told = int(told) if isinstance(told, (int, float)) and not isinstance(told, bool) else None
+        if told is None or step - told >= UNREAD_REMIND_TICKS:
+            msgs.append({"role": "user", "content":
+                         "提醒：你還有沒讀的信：%s。先用 inbox_read_all 把它們讀掉再處理。" % summary})
+            state["unread_told_step"] = step
     return msgs, still
 
 
@@ -555,7 +569,9 @@ def _team_usage(root, roster, day):
     return rows if isinstance(rows, dict) else {}
 
 
-def team_status_of(world):
+def team_status_of(world, light=False):
+    """整隊現況。light=True 給每格都要看的閘門用：不量資料夾大小（那要走整棵樹）。
+    ticks 只算 busy 格（真的做了事的那格）；idle 空轉不算，不然閘門會被空轉穿透。"""
     root = team_root_of(world)
     if not root:
         raise ValueError("找不到 team/team.json：" + os.path.abspath(world))
@@ -571,6 +587,7 @@ def team_status_of(world):
     usage = _team_usage(root, roster, day)
     rows = []
     total_spent = {key: 0 for key in TEAM_BUDGET_KEYS}
+    total_in_flight = {"main": 0, "side": 0}
     for member in roster["members"]:
         if not isinstance(member, dict) or not member.get("name"):
             continue
@@ -587,9 +604,12 @@ def team_status_of(world):
         tokens = _team_number(used.get("total_tokens"))
         if not tokens:
             tokens = _team_number(used.get("prompt_tokens")) + _team_number(used.get("completion_tokens"))
-        spent = {"tokens": tokens, "hours": 0, "ticks": _team_number(state.get("step")),
-                 "disk_mb": round(folder_bytes(member_world) / (1024.0 * 1024.0), 6),
+        spent = {"tokens": tokens, "hours": 0, "ticks": _team_number(state.get("busy")),
+                 "disk_mb": None if light else round(folder_bytes(member_world) / (1024.0 * 1024.0), 6),
                  "mem_mb": None, "money_usd": _team_ledger_money(home, day)}
+        pending = state.get("pending") if isinstance(state.get("pending"), list) else []
+        in_flight = {"main": 1 if state.get("state") == "wait" and state.get("request") else 0,
+                     "side": len(pending)}
         limit = allocations.get(name)
         limit = limit if isinstance(limit, dict) else {key: 0 for key in TEAM_BUDGET_KEYS}
         remaining = {}
@@ -598,14 +618,17 @@ def team_status_of(world):
                 _team_number(limit.get(key)) - _team_number(spent[key]), 6)
         for key in ("tokens", "ticks", "money_usd"):
             total_spent[key] += _team_number(spent[key])
+        total_in_flight["main"] += in_flight["main"]
+        total_in_flight["side"] += in_flight["side"]
         rows.append({"name": name, "role": member.get("role") or name,
                      "reports_to": member.get("reports_to"),
                      "path": member.get("path") or ".", "clock": member.get("clock") or "shared:owner",
                      "active": member.get("active", True),
                      "state": (state.get("state") or "idle") if member.get("active", True) else "stopped",
                      "busy": _team_number(state.get("busy")), "unread": _team_unread(home),
+                     "in_flight": in_flight, "blocked": state.get("budget_block") or "",
                      "today_spent": spent, "budget": limit, "remaining": remaining})
-    total_spent["disk_mb"] = round(folder_bytes(root) / (1024.0 * 1024.0), 6)
+    total_spent["disk_mb"] = None if light else round(folder_bytes(root) / (1024.0 * 1024.0), 6)
     total_spent["mem_mb"] = None
     created = roster.get("created")
     if created:
@@ -619,7 +642,47 @@ def team_status_of(world):
                  for key in TEAM_BUDGET_KEYS}
     return {"name": roster.get("name") or os.path.basename(root), "root": root,
             "preset": roster.get("preset"), "day": day, "budget": total_budget,
-            "spent": total_spent, "remaining": remaining, "members": rows}
+            "spent": total_spent, "remaining": remaining, "in_flight": total_in_flight,
+            "members": rows}
+
+
+def team_add_budget(world, amount, to=None, who="user"):
+    """甲方追加預算：總額加上去，同一份加到 `to`（預設 leader）的個人額度，並記一筆 grants。
+    回新的 budget.json 內容。amount 只認 TEAM_BUDGET_KEYS，每項要是大於 0 的數字。"""
+    root = team_root_of(world)
+    if not root:
+        raise ValueError("找不到 team/team.json：" + os.path.abspath(world))
+    roster = read_json(os.path.join(root, "team", "team.json"), {})
+    roster = roster if isinstance(roster, dict) else {}
+    names = [m.get("name") for m in roster.get("members", []) if isinstance(m, dict)]
+    target = to or roster.get("leader") or "owner"
+    if target not in names:
+        raise ValueError("名冊裡沒有這個成員：%s" % target)
+    if not isinstance(amount, dict) or not amount:
+        raise ValueError("追加的量要是至少一項的 JSON 物件，例如 {\"tokens\": 100000}")
+    add = {}
+    for key, number in amount.items():
+        if key not in TEAM_BUDGET_KEYS:
+            raise ValueError("不認得的預算欄位：%s" % key)
+        if not isinstance(number, (int, float)) or isinstance(number, bool) or number <= 0:
+            raise ValueError("%s 要是大於 0 的數字" % key)
+        add[key] = number
+    path = os.path.join(root, "team", "budget.json")
+    book = read_json(path, {})
+    book = book if isinstance(book, dict) else {}
+    total = normalize_team_budget(book.get("total") or roster.get("budget") or {})
+    allocations = book.get("allocations") if isinstance(book.get("allocations"), dict) else {}
+    allocations.setdefault(target, {key: 0 for key in TEAM_BUDGET_KEYS})
+    for key, number in add.items():
+        total[key] = round(_team_number(total.get(key)) + number, 6)
+        allocations[target][key] = round(_team_number(allocations[target].get(key)) + number, 6)
+    now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+    grants = book.get("grants") if isinstance(book.get("grants"), list) else []
+    grants.append({"time": now, "from": who, "to": target, "amount": add, "kind": "top_up"})
+    book.update({"schema": book.get("schema") or "aos-team-budget/1", "total": total,
+                 "allocations": allocations, "grants": grants, "updated": now})
+    write_json_atomic(path, book)
+    return book
 
 
 def create_world(world, home=".", template=None, tools=None, persona=None,
@@ -686,6 +749,10 @@ def create_team_world(world, preset_dir, engine=None, budget=None):
     if not os.path.isabs(llm_path):
         llm_path = os.path.abspath(os.path.join(world, llm_path))
     created = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+    # preset 裡的 cheap／thinking 是「檔次」不是引擎名：LLM 資料夾真的有同名引擎才照用，否則走預設引擎。
+    engine_rows = read_json(os.path.join(llm_path, "engines.json"), [])
+    engine_names = {row.get("name") for row in engine_rows if isinstance(row, dict)} \
+        if isinstance(engine_rows, list) else set()
 
     worlds = {}
     for member in members:
@@ -700,7 +767,7 @@ def create_team_world(world, preset_dir, engine=None, budget=None):
             raise ValueError("preset 的 %s 人格或起手信壞了" % name)
         member_engine = engine or member.get("engine")
         llm_conf = {"dir": os.path.relpath(llm_path, member_world), "priority": 1}
-        if member_engine and member_engine not in ("cheap", "thinking"):
+        if member_engine and (member_engine not in ("cheap", "thinking") or member_engine in engine_names):
             llm_conf["engine"] = member_engine
         elif engine:
             llm_conf["engine"] = engine

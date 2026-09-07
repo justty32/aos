@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aos_agent import (   # noqa: E402
     DIRECT_SOURCE, create_team_world, create_world, load_pack, normalize_team_budget, now_iso,
     outbox_content, outbox_names, put_mail, read_json, resolve_home, spawn,
-    status_of, team_root_of, team_status_of, warn, write_json_atomic)
+    status_of, team_add_budget, team_root_of, team_status_of, warn, write_json_atomic)
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -326,15 +326,45 @@ def do_team_status(args):
         warn(str(e))
         return 2
     print("工作室 %s（%s）" % (data["name"], data["day"]))
-    print("NAME     ROLE      STATE    BUSY  UNREAD  TODAY TOKENS  TOKEN LEFT")
+    print("NAME     ROLE      STATE    BUSY  UNREAD  INFLIGHT  TODAY TOKENS  TOKEN LEFT  BLOCKED")
     for row in data["members"]:
-        print("%-8s %-9s %-8s %5s %7s %13s %11s" % (
+        flight = row.get("in_flight") or {}
+        print("%-8s %-9s %-8s %5s %7s %9s %13s %11s  %s" % (
             row["name"], row["role"], row["state"], row["busy"], row["unread"],
-            row["today_spent"]["tokens"], row["remaining"]["tokens"]))
+            "%s+%s" % (flight.get("main", 0), flight.get("side", 0)),
+            row["today_spent"]["tokens"], row["remaining"]["tokens"], row.get("blocked") or "-"))
+    flight = data.get("in_flight") or {}
+    print("在途：主線 %s 筆、旁線 %s 筆" % (flight.get("main", 0), flight.get("side", 0)))
     print("今天花費：" + _short_budget(data["spent"]))
     print("整隊剩餘：" + _short_budget(data["remaining"]))
     if data["spent"].get("mem_mb") is None:
         print("記憶體：未知（軟上限）")
+    return 0
+
+
+def do_team_budget(args):
+    """看整隊預算；--add 是甲方追加（總額加上去、同一份給 --to 的人，預設 leader）。"""
+    world = os.path.abspath(args.dir)
+    try:
+        if args.add:
+            amount = json_object(args.add, "--add")
+            book = team_add_budget(world, amount, args.to)
+            print("已追加：" + json.dumps(amount, ensure_ascii=False) + "（給 %s）" % (
+                args.to or "leader"))
+            print("總額：" + _short_budget(book["total"]))
+            return 0
+        data = team_status_of(world, light=True)
+    except (OSError, ValueError) as e:
+        warn(str(e))
+        return 2
+    print("總額：" + _short_budget(data["budget"]))
+    print("已花：" + _short_budget(data["spent"]))
+    print("剩餘：" + _short_budget(data["remaining"]))
+    print("NAME     TOKEN LIMIT   TOKEN USED   TOKEN LEFT  BLOCKED")
+    for row in data["members"]:
+        print("%-8s %11s %12s %12s  %s" % (
+            row["name"], row["budget"].get("tokens"), row["today_spent"]["tokens"],
+            row["remaining"]["tokens"], row.get("blocked") or "-"))
     return 0
 
 
@@ -519,6 +549,11 @@ def main():
     p = team.add_parser("status")
     p.add_argument("dir")
     p.set_defaults(fn=do_team_status)
+    p = team.add_parser("budget", help="看整隊預算；--add 追加")
+    p.add_argument("dir")
+    p.add_argument("--add", default=None, help='追加的量，JSON，例如 \'{"tokens": 100000}\'')
+    p.add_argument("--to", default=None, help="追加的份給誰（預設 leader）")
+    p.set_defaults(fn=do_team_budget)
     p = team.add_parser("stop")
     p.add_argument("dir")
     p.set_defaults(fn=do_team_stop)

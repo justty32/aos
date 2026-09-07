@@ -183,6 +183,8 @@ FAKE=$(mktemp -d)
 cat > "$FAKE/fake-llm.py" <<'PYEOF2'
 import http.server, json, re, sys, time
 
+SEEN = {}
+
 class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0)
@@ -217,6 +219,18 @@ class H(http.server.BaseHTTPRequestHandler):
                     triggers.append((hit.group(1), hit.group(2) or "{}"))
         if "EMPTY" in last_user:
             message = {"role": "assistant", "content": "", "tool_calls": []}
+        elif "BROKEN" in last_user and not tools:
+            # 模型把工具呼叫寫成文字（qwen 風格）：agent 要救回來當正式 tool_call
+            message = {"role": "assistant", "tool_calls": [],
+                       "content": '<tool_call>\n{"name": "say", "arguments": {"text": "救回來的"}}\n</tool_call>'}
+        elif "GARBLED" in last_user:
+            # 第一次回救不回來的壞文字，agent 同題重送後第二次才正常
+            SEEN[last_user] = SEEN.get(last_user, 0) + 1
+            if SEEN[last_user] == 1:
+                message = {"role": "assistant", "tool_calls": [],
+                           "content": '<tool_call>{"name": "say", "argu'}
+            else:
+                message = {"role": "assistant", "tool_calls": [], "content": "重送後正常"}
         elif data.get("echo"):
             message = {"role": "assistant", "reasoning_content": "blah",
                        "content": "model=%s temperature=%s auth=%s" % (
@@ -2132,7 +2146,12 @@ esac
 rm -rf "$TMP"
 
 # 各工具包自己的測試。glob 會按檔名排序，大家共用上面的 helper 與計數。
-for f in proto2/tests/*.sh; do source "$f"; done
+for f in proto2/tests/*.sh; do
+  if [ -n "$AOS_TEST_ONLY" ]; then
+    case " $AOS_TEST_ONLY " in *" $(basename "$f" .sh) "*) ;; *) continue ;; esac
+  fi
+  source "$f"
+done
 
 # 63. 只檢查這輪新開的背景進程；開工前就有的管家進程不算，也不動。
 sleep 0.5

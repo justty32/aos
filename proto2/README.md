@@ -41,13 +41,13 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 
 | state | 做什麼 | 做完變成 |
 |---|---|---|
-| `idle` | 掃一遍 `inbox/*/`（不含 `read/`），有沒讀過的信就接進記憶 | 有信 `llm`，沒信留 `idle` |
+| `idle` | 掃一遍 `inbox/*/`（不含 `read/`），有沒讀過的信就接進記憶；通知過卻一直沒讀的，閒滿 30 格再提醒一次 | 有信 `llm`，沒信留 `idle` |
 | `llm` | 人格＋工具包預設 prompt＋記憶（＋工具清單）寫成請求丟進 LLM 資料夾的 `requests/` | `wait` |
-| `wait` | 撿主線 LLM 結果；缺鐘立刻報錯 | 撿到 `act`；錯誤回 `idle`；有鐘但 60 格沒回也報錯 |
+| `wait` | 撿主線 LLM 結果；缺鐘立刻報錯。請求還在 LLM 世界排隊或執行中就一直等（最多 1800 格；等的格不算每題上限），請求不見了結果又沒出現才 60 格放棄。模型把工具呼叫寫成文字：認得的工具救回成正式 `tool_calls`，救不回來就當協定錯誤、同題重送一次 | 撿到 `act`；錯誤回 `idle`；放棄也回 `idle`；重送回 `llm` |
 | `act` | 有 `tool_calls` 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 `outbox/` | 有工具 `collect`，有文字 `idle`；只回空白就不寫 outbox、記一次後回 `idle` |
 | `collect` | 再掃一次信箱（沒新信也照走） | `llm` |
 
-`llm.json` 可設每題動作格數硬上限 `max_steps_per_question`（預設 60）與每日 `max_tokens_per_day`。睡著空等旁線不算動作格；超過會回一句話等使用者，新 user 信會重置題目格數。`status` 九欄列狀態、等待、缺鐘、最後錯誤、格數、今日用量與最近五題格數。agent 不寫 `.aos/inst`，避免洗掉 shared 小孩。
+`llm.json` 可設每題動作格數硬上限 `max_steps_per_question`（預設 60）與每日 `max_tokens_per_day`。睡著空等旁線、主線排隊等模型回，都不算動作格；超過會回一句話等使用者，新 user 信會重置題目格數。`status` 九欄列狀態、等待、缺鐘、最後錯誤、格數、今日用量與最近五題格數。agent 不寫 `.aos/inst`，避免洗掉 shared 小孩。
 
 旁線包只用 `Ctx.send/pending/cancel/sleep_until`。agent 睡著時不叫主線 LLM；共用層獨占 `results/`，保存到 `<home>/side/<kind>/<id>.json` 再叫該包 `on_result`。逾時、失敗、取消、缺鐘都走同一路並回一則聊天錯誤。
 
@@ -116,7 +116,7 @@ spawn 也會寫小孩的 `parent.json`、父子雙方的 `contacts.json`、父�
 
 ## 給人用的殼：aos-user
 
-`aos-user team new <世界> --preset studio` 一次開七人工作室，`team status` 看全隊，`team stop` 收鐘留檔。
+`aos-user team new <世界> --preset studio` 一次開七人工作室，`team status` 看全隊（含在途筆數與被擋原因），`team budget [--add JSON]` 看預算／甲方追加，`team stop` 收鐘留檔。工作室裡額度是硬閘門、每格都守：個人 tokens 用完（0 就是 0）自己凍住等主管 `team_grant`；整隊任一項用完全隊凍住、只有 sales 問甲方追加。細節見 [docs/studio.md](docs/studio.md)。
 `aos-user order <世界> "任務" --budget '{"tokens":200000,"hours":1}' --accept "驗收條件"` 只把訂單交給 sales。
 
 `aos-user say|listen|talk|status|spawn <世界> [--home DIR]`。**這支是暫時的殼**：使用者之後
@@ -160,7 +160,7 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
   退出碼永遠 0，除非那個資料夾沒有 `engines.json`（退 1）。
 - 真正打 HTTP 的是背景的 `aos-llm worker <dir> <請求檔名>`（人不用自己叫）：打完把整包原始回覆多
   掛一個 `aos`（`engine`／`base_url`／`model`／`priority`／`took_ms`／`usage`）**原子寫**進 `results/`，
-  再丟一張用量紙條、最後留完成標記給下一格收尾；打不通、HTTP 錯一樣是一個帶 `error` 的結果檔。
+  再丟一張用量紙條、最後留完成標記給下一格收尾；打不通（先探 TCP 10 秒，連不上就算）、HTTP 錯一樣是一個帶 `error` 的結果檔。
   `logs/<請求名>.log` 只收 worker 自己印的字，HTTP／連線失敗的原因以結果檔為準，所以 log 可能是空的。帳本是拿來算錢的，
   一個 `"<base_url>|<model>"` 一列累加：**模型回的 `usage` 裡每個數字都會累加**，思考 token、快取
   命中也在內（巢狀的攤成 `completion_tokens_details.reasoning_tokens` 這種點號鍵，外加自己數的

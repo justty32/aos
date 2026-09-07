@@ -7,8 +7,11 @@ from aos_agent import TEAM_BUDGET_KEYS, team_member_name, team_root_of, team_sta
 
 PROMPT = (
     "整隊：team_budget 看自己與整隊還剩多少；owner 或 PM 用 team_grant 把自己未用額度分給成員；"
-    "team_progress 把短進度追加到共用進度；team_status 看全隊。到個人額度 80% 時先停背景工作並報主管；"
-    "到 100% 時 PM 停止新工作，owner 決定縮案，並且只能請 sales 向甲方送追加預算申請。"
+    "team_progress 把短進度追加到共用進度；team_status 看全隊（含每人在途請求數與被擋原因）。"
+    "個人 tokens 額度是硬閘門，0 就是 0：成員沒拿到 team_grant 就一格都動不了，"
+    "所以派工之前一定要先 team_grant 給他 tokens，一次至少 20000（一輪對話就要幾千），不夠再加。"
+    "到個人額度 80% 時先停背景工作並報主管；"
+    "整隊任一項用完時全隊會自動凍住，只有 sales 會問甲方要不要追加。"
     "首席只能建議重分，不能自己加額度。任何人都不能自行提高整隊總預算。"
 )
 
@@ -53,13 +56,12 @@ def _budget_view(ctx):
     mine = next((row for row in data["members"] if row["name"] == me), None)
     actions = []
     if mine:
-        for key in ("tokens", "ticks", "money_usd"):
-            limit = mine["budget"].get(key) or 0
-            spent = mine["today_spent"].get(key) or 0
-            if limit and spent >= limit:
-                actions.append("%s 已到 100%%：停止新工作並報主管" % key)
-            elif limit and spent >= limit * 0.8:
-                actions.append("%s 已到 80%%：停止背景工作並報主管" % key)
+        limit = mine["budget"].get("tokens") or 0
+        spent = mine["today_spent"].get("tokens") or 0
+        if spent >= limit:
+            actions.append("tokens 已到 100%：你會被凍住，等主管 team_grant")
+        elif spent >= limit * 0.8:
+            actions.append("tokens 已到 80%：停止背景工作並報主管")
     for key in ("tokens", "hours", "ticks", "money_usd"):
         if data["remaining"].get(key) is not None and data["remaining"][key] <= 0:
             actions.append("整隊 %s 用完：PM 停止新工作；owner 請 sales 向甲方申請追加" % key)

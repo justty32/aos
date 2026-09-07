@@ -37,7 +37,7 @@
       "packs": ["mailbox", "communication", "self", "memory", "cost", "review", "ref"],
       "clock": "shared:owner",
       "engine": "cheap",
-      "budget_pct": 0
+      "budget_pct": 5
     },
     {
       "name": "pm",
@@ -49,7 +49,7 @@
       "packs": ["mailbox", "communication", "fs", "jobs", "self", "memory", "cost", "team", "think", "review", "ref"],
       "clock": "shared:owner",
       "engine": "cheap",
-      "budget_pct": 90
+      "budget_pct": 85
     },
     {
       "name": "chief",
