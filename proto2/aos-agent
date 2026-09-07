@@ -19,6 +19,9 @@ LLM_WAIT_TICKS = 60            # 請求已經不在 LLM 世界的排隊／執行
 LLM_WAIT_TICKS_ALIVE = 1800    # 請求還排著或還在打（大家共用幾路引擎，慢模型一發就要一兩分鐘）：最多等這麼多格
 PROTOCOL_RETRIES = 1        # 模型把工具呼叫吐成壞文字：救不回來就同題重送這麼多次
 BUDGET_NAG_TICKS = 300      # 凍住的人喊過「請補額度」之後，每這麼多格再喊一次
+LLM_ERROR_RETRY_TICKS = 20  # 模型回錯（打不通、500、找不到執行檔…）：對話尾巴那句沒人回的話，隔這麼多格再送一次
+LLM_ERROR_MAX = 5           # 同一句連續錯這麼多次就放著不送了，等新信來再說
+AUTO_GRANT_RETRY_TICKS = 10 # 個人額度凍住、喊過主管之後：每這麼多格再試一次自動撥款（天花板抬高、主管有錢了就當格解凍）
 TOOL_CALL_SMELL = re.compile(r"<tool_call|</tool_call>|\[TOOL_CALLS\]|<function=|<\|tool")
 
 
@@ -167,6 +170,41 @@ def salvage_tool_calls(content, known):
     return calls
 
 
+def note_llm_error(ctx):
+    ctx.state["llm_errors"] = int(ctx.state.get("llm_errors") or 0) + 1
+    ctx.state["llm_error_step"] = int(ctx.state.get("step") or 0)
+
+
+def dangling_turn(home):
+    """對話尾巴是不是一句還沒人回的話（user／tool）。模型出錯回 idle 之後就會長這樣。"""
+    history = read_json(os.path.join(home, "prompts.json"), [])
+    if not isinstance(history, list) or not history:
+        return False
+    last = history[-1]
+    return isinstance(last, dict) and last.get("role") in ("user", "tool")
+
+
+def llm_retry_due(ctx, step):
+    """閒著、沒新信、但對話尾巴那句沒人回：模型上次出錯，隔 LLM_ERROR_RETRY_TICKS 格再送一次，
+    連錯 LLM_ERROR_MAX 次就放著（只喊一次），等新信來再重來。以前這條路是「永遠不會再送」。"""
+    errors = int(ctx.state.get("llm_errors") or 0)
+    # 只管「上次是模型出錯」的尾巴；睡著等旁線的 tool 尾巴、或別人手動改 state 留下的尾巴都不碰
+    if not errors or ctx.state.get("sleeping") or not dangling_turn(ctx.home):
+        return False
+    if errors >= LLM_ERROR_MAX:
+        if not ctx.state.get("llm_gave_up"):
+            ctx.state["llm_gave_up"] = True
+            text = "（模型連續出錯 %d 次，這句先放著；來新信我再試）" % errors
+            ctx.reply(text, error=True)
+            warn(text)
+        return False
+    since = step - int(ctx.state.get("llm_error_step") or 0)
+    if since < LLM_ERROR_RETRY_TICKS:
+        return False
+    warn("對話尾巴那句還沒人回（上次出錯 %d 次），重送" % errors)
+    return True
+
+
 def do_wait(ctx, request, waited, loaded=(), extra=()):
     """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False, 已等幾格)。
     模型把工具呼叫吐成文字：認得的救回來當正式 tool_calls；救不回來當協定錯誤，同題重送一次。"""
@@ -177,6 +215,7 @@ def do_wait(ctx, request, waited, loaded=(), extra=()):
             text = "LLM 的鐘沒有在跑，這題先停下來。"
             ctx.reply(text, error=True)
             warn(text)
+            note_llm_error(ctx)
             return "idle", False, 0
         waited += 1
         box = os.path.join(aos_llm.home_of(ctx.llm_dir()), "requests")
@@ -188,6 +227,7 @@ def do_wait(ctx, request, waited, loaded=(), extra=()):
                     "（請求已經不在 LLM 的排隊裡、結果卻 %d 格沒出現，放棄這題）" % limit)
             ctx.reply(text, error=True)
             warn(text)
+            note_llm_error(ctx)
             return "idle", False, 0
         warn("等 LLM（%s，%s）" % (request or "沒有請求", "排隊／執行中" if alive else "不在排隊裡"))
         return "wait", False, waited
@@ -199,12 +239,16 @@ def do_wait(ctx, request, waited, loaded=(), extra=()):
     if answer.get("error"):
         reason = str(answer.get("error"))[:200]
         ctx.reply("（LLM 出錯：%s）" % reason, error=True)
-        warn("LLM 回了 error（%s），這輪不算，回 idle" % reason)
+        warn("LLM 回了 error（%s），這輪不算，回 idle；%d 格後重送" % (reason, LLM_ERROR_RETRY_TICKS))
+        note_llm_error(ctx)
         return "idle", usage, 0
+    ctx.state.pop("llm_errors", None)
+    ctx.state.pop("llm_error_step", None)
     try:
         assistant = answer["choices"][0]["message"]
     except (KeyError, IndexError, TypeError):
         warn("回覆裡找不到 choices[0].message，這輪不算，回 idle")
+        note_llm_error(ctx)
         return "idle", usage, 0
 
     # 只留 role／content／tool_calls，把伺服器夾帶的私有欄位（reasoning_content…）濾掉。
@@ -349,6 +393,15 @@ def budget_block(ctx):
     # 喊過了還凍著，每 BUDGET_NAG_TICKS 格再喊一次（主管讀了沒動作、或把那封讀錯了）。
     frozen = int(ctx.state.get("frozen_ticks") or 0)
     if ctx.state.get("budget_told") == mark and (frozen == 0 or frozen % BUDGET_NAG_TICKS):
+        # 喊過了就不再喊；但撥款政策可能變了（天花板抬高、主管剛拿到錢），每 AUTO_GRANT_RETRY_TICKS 格再試一次自動撥款。
+        # 以前只在第一次凍住和每 300 格才試，天花板抬了也要等五分鐘。
+        if own_over and not total_over and frozen % AUTO_GRANT_RETRY_TICKS == 0:
+            granted, why = team_auto_grant(ctx.world, ctx.name)
+            if granted:
+                warn(why + "，解凍")
+                ctx.state.pop("budget_block", None)
+                ctx.state.pop("budget_told", None)
+                return False
         return True
     if total_over:
         ctx.state["budget_told"] = mark
@@ -458,7 +511,13 @@ def do_exec(args):
     elif state == "idle":
         call_idle_hooks(ctx)
         msgs = side_msgs + inbox_msgs
-        nxt, did = (("llm", True) if msgs else ("idle", False))
+        if msgs:
+            saved.pop("llm_gave_up", None)          # 新信來了，之前放棄的那句跟著一起再試
+            nxt, did = "llm", True
+        elif llm_retry_due(ctx, step):
+            nxt, did = "llm", True
+        else:
+            nxt, did = "idle", False
     elif state == "collect":
         nxt, did = "llm", True
     elif state == "llm":
@@ -485,7 +544,8 @@ def do_exec(args):
         busy += 1
     if saved.get("question_active") and not saved.get("limit_pause"):
         # 睡著等旁線、或主線在排隊等模型回，都不是 agent 自己在繞圈，不算每題動作格
-        if not did and (saved.get("sleeping") or state == "wait"):
+        if not did and (saved.get("sleeping") or state in ("wait", "idle")):
+            # 睡著等旁線、排隊等模型、或模型出錯後閒著等重送：都不是 agent 自己在繞圈
             saved["question_sleep_steps"] = int(saved.get("question_sleep_steps") or 0) + 1
         else:
             saved["question_steps"] = int(saved.get("question_steps") or 0) + 1

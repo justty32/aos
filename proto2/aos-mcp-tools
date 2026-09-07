@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""aos-mcp-tools <specs.json> — 一台**只登記、不執行**的 stdio MCP 小伺服器。
+
+給誰用：`aos-llm` 的 `"api": "claude-cli"` 引擎。Claude Code 沒有「把工具清單塞進請求」
+這個介面，你只能給它**真的 MCP server**。可是我們的工具不是 Claude Code 執行的——是
+`aos-agent` 下一回合自己去跑的。所以這台伺服器把 `tools/call` 當成**留言**：
+
+  1. `tools/list` 把 specs.json 裡的工具原樣報上去（讓模型看得到、叫得動）；
+  2. `tools/call` **什麼都不做**，只把 `{name, arguments}` 附到記錄檔（環境變數
+     `AOS_MCP_RECORD` 指的那個檔，一行一筆 JSON），然後回一句「已登記，這一輪到此為止」。
+
+這樣模型就會乖乖吐真的 `tool_use` block（而不是被 Claude Code 回一句
+`No such tool available` 之後亂繞好幾輪），aos-llm 從 stream-json 撿走那些 block、
+翻成 OpenAI 的 `tool_calls` 交出去就好。記錄檔是備援：萬一 stream 沒撿到，還有這一份。
+
+規格：JSON-RPC 2.0 一行一包（newline-delimited）走 stdin／stdout，protocol 版本
+`2024-11-05`。認得 `initialize`／`notifications/initialized`／`tools/list`／`tools/call`／
+`ping`；不認得的**通知**直接吞掉，不認得的**請求**回 -32601。純標準庫，沒有相依。
+
+  aos-mcp-tools specs.json      specs.json 是一個陣列，每個元素
+                                {"name", "description", "parameters"}（OpenAI 那一味）
+
+自己測（不必開 Claude Code）：
+
+  printf '%s\\n' \\
+    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \\
+    '{"jsonrpc":"2.0","method":"notifications/initialized"}' \\
+    '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \\
+    '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"say","arguments":{"text":"hi"}}}' \\
+    | AOS_MCP_RECORD=/tmp/rec.jsonl ./aos-mcp-tools specs.json
+"""
+
+import json
+import os
+import sys
+
+PROTOCOL = "2024-11-05"
+SERVER = {"name": "aos", "version": "0.1.0"}
+
+
+def load_specs(path):
+    """讀 specs.json，翻成 MCP 的 tools/list 形狀（`parameters` → `inputSchema`）。
+
+    壞掉就當成空清單——寧可讓模型看到「沒有工具」，也不要整台伺服器起不來、
+    害 Claude Code 卡在連線那一步。
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError):
+        return []
+    tools = []
+    for one in raw if isinstance(raw, list) else []:
+        if not isinstance(one, dict) or not one.get("name"):
+            continue
+        schema = one.get("parameters")
+        if not isinstance(schema, dict):
+            schema = {"type": "object", "properties": {}}
+        tools.append({"name": str(one["name"]),
+                      "description": str(one.get("description") or ""),
+                      "inputSchema": schema})
+    return tools
+
+
+def record(name, arguments):
+    """把這一次的呼叫附到記錄檔尾巴（一行一筆）。沒設環境變數就不記，也不算錯。"""
+    path = os.environ.get("AOS_MCP_RECORD") or ""
+    if not path:
+        return
+    line = json.dumps({"name": name, "arguments": arguments}, ensure_ascii=False)
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+            f.flush()
+    except OSError:
+        pass   # 記不了就算了，stream-json 那一路還撿得到
+
+
+def handle(msg, tools):
+    """一包進、一包出（或 None＝這是通知，不用回）。"""
+    method = msg.get("method")
+    has_id = "id" in msg and msg.get("id") is not None
+
+    if method == "initialize":
+        result = {"protocolVersion": PROTOCOL,
+                  "capabilities": {"tools": {"listChanged": False}},
+                  "serverInfo": SERVER}
+    elif method == "ping":
+        result = {}
+    elif method == "tools/list":
+        result = {"tools": tools}
+    elif method == "tools/call":
+        params = msg.get("params") if isinstance(msg.get("params"), dict) else {}
+        name = str(params.get("name") or "")
+        args = params.get("arguments")
+        if not isinstance(args, dict):
+            args = {}
+        record(name, args)
+        result = {"content": [{"type": "text",
+                               "text": "已登記 %s。結果下一輪才會告訴你，"
+                                       "這一輪到此為止：不要再叫工具，直接結束。" % name}],
+                  "isError": False}
+    else:
+        if not has_id:
+            return None    # 不認得的通知：吞掉就好
+        return {"jsonrpc": "2.0", "id": msg.get("id"),
+                "error": {"code": -32601, "message": "沒有這個方法：%s" % method}}
+
+    if not has_id:
+        return None        # 認得的通知（notifications/initialized 之類）也不用回
+    return {"jsonrpc": "2.0", "id": msg.get("id"), "result": result}
+
+
+def main(argv):
+    if len(argv) < 2:
+        sys.stderr.write("用法：aos-mcp-tools <specs.json>\n")
+        return 2
+    tools = load_specs(argv[1])
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            continue       # 不是 JSON 就當沒看到，不要把整條管線弄死
+        if not isinstance(msg, dict):
+            continue
+        out = handle(msg, tools)
+        if out is None:
+            continue
+        sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
+        sys.stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
