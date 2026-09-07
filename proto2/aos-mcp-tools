@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """aos-mcp-tools <specs.json> — 一支「只登記、不執行」的 stdio MCP server。
 
-給誰用：`aos-llm` 的 `"api": "codex-cli"` 那條路。Codex CLI 沒有「把工具清單塞進請求、
+給誰用：`aos-llm` 的 `"api": "claude-cli"` 與 `"api": "codex-cli"` 兩條路。Claude Code／Codex CLI 都沒有「把工具清單塞進請求、
 它回一包 tool_calls 就結束」的介面——它是一個 agent，工具得**真的掛上去**，它才會發出
 真正的工具呼叫（用講的它多半只會寫一段「我要叫 say」的字，形狀不對）。
 
-所以這裡把請求裡的工具清單原封不動變成一台 MCP server 掛給 codex，但**每個工具都不做事**：
+所以這裡把請求裡的工具清單原封不動變成一台 MCP server 掛給它們，但**每個工具都不做事**：
 被叫到就把 `{"name", "arguments"}` 當一行 JSON append 進 `AOS_MCP_RECORD` 指的檔案，
 然後回一句「已登記，這一輪到此為止」。真正跑工具的是外面的 aos-agent——它下一回合才會做，
 做完把結果當 `role: tool` 的訊息接回對話裡。我們要的只是**它這一輪決定叫誰、帶什麼參數**。

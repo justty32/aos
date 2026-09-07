@@ -36,6 +36,12 @@ def main():
             step += 1
             inst = ".aos/inst"
             content = ""
+            if not os.path.isfile(inst) and os.path.isfile("engines.json"):
+                # LLM 資料夾（有 engines.json）忘了放心跳指令：鐘會空轉、請求排著沒人打。這裡直接補上。
+                os.makedirs(".aos", exist_ok=True)
+                with open(inst, "w", encoding="utf-8") as f:
+                    f.write("aos-llm exec .\n")
+                print(f"aos-loop: {args.dir} 有 engines.json 但沒有 .aos/inst，補上「aos-llm exec .」", file=sys.stderr)
             if os.path.isfile(inst):
                 with open(inst, encoding="utf-8") as f:
                     content = f.read()

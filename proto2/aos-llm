@@ -35,9 +35,10 @@ LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也
 不必架 LiteLLM 之類的轉接器。外面的人（aos-agent、帳本、packs）永遠只看得到 OpenAI 的
 chat/completions 形狀，一進一出兩邊都在 worker 裡翻（見 to_anthropic／from_anthropic）。
 `"api": "claude-cli"` 則是**把 Claude Code 的 headless 模式當引擎**：開一個 `claude -p` 子進程、
-對話從 stdin 餵、要它照 json-schema 吐回來（給有訂閱、沒 API key 的人用，見 call_claude_cli）。
-`"api": "codex-cli"` 同理，換成 `codex exec`（ChatGPT 訂閱）：工具不是用講的，是把 aos-mcp-tools
-掛成一台 MCP server 真的接上去，只登記不執行，第一批呼叫進來就收工（見 codex_call）。
+對話從 stdin 餵、工具用一台只登記不執行的 MCP（aos-mcp-tools）掛上去、只讓它跑一個回合，
+再從 stream-json 撿回那一輪的 tool_use（給有訂閱、沒 API key 的人用，見 call_claude_cli）。
+`"api": "codex-cli"` 同理，換成 `codex exec`（ChatGPT 訂閱）：同一台 aos-mcp-tools 掛給它，
+第一批呼叫進來就收工（見 codex_call）。
 
   aos-llm exec [dir]
       **每一格做的事**，不給 dir 就是目前目錄。一格很短，**絕對不等網路**：
@@ -72,6 +73,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -835,43 +837,38 @@ def http_error_text(engine, code, reason, detail):
 
 # ── claude-cli：把 Claude Code 的 headless 模式當成一台引擎 ────────────────────
 # 給「有 Claude 訂閱、沒有 API key」的人用：引擎寫 `"api": "claude-cli"`，worker 就開一個
-# `claude -p` 的子進程，把整段對話從 stdin 餵進去，要它照 --json-schema 吐回一包結構化 JSON，
+# `claude -p` 的子進程，把整段對話從 stdin 餵進去，結果從 stream-json 撿回來，
 # 再翻成 OpenAI 的形狀。用量算在訂閱的五小時窗口裡，不是 API 帳單。
 #
+# **工具一定要用 MCP 給，不能用文字列**：以前是把工具清單寫進 --system-prompt、再用
+# --json-schema 要一包 {content, tool_calls}。實跑會壞——haiku／sonnet 看到工具名字就吐**真的**
+# tool_use block，Claude Code 回一句 `<tool_use_error>No such tool available: task_assign`，
+# 模型繞五六輪、最後回「工具調用異常，無法執行派工」，tool_calls 空的。
+# 現在改成：起一台 aos-mcp-tools（只登記、不執行的 stdio MCP server）把工具真的掛上去，
+# `--allowedTools "mcp__aos__*"` 放行、`--max-turns 1` 在第一個 assistant 回合就收工，
+# 那一輪的 tool_use block 就是我們要的 tool_calls（工具留給 aos-agent 下一回合自己跑）。
+#
 # **不用 --bare**：--bare 的認證只認 ANTHROPIC_API_KEY，訂閱制的 OAuth 會直接「Not logged in」。
-# 改用 --safe-mode——一樣把 CLAUDE.md／skills／plugins／hooks／MCP 全關掉（乾淨、每發一樣），
-# 但認證、模型、內建工具照常，所以訂閱能用。
+# **也不能用 --safe-mode**：它把 MCP 一起關了，連 --mcp-config 給的都不載（實測 init 事件回
+# `mcp_servers: []`、`tools: []`，模型看不到工具，只好用 `<function_calls>` 假 XML 亂寫）。
+# 乾淨是靠這幾支湊出來的：--setting-sources ""（不載使用者／專案／本地 settings，hooks 一起沒）、
+# --disable-slash-commands（關 skills）、--tools ""（關內建工具）、--strict-mcp-config
+# （只認我們這一台 MCP）、--system-prompt（整個換掉，CLAUDE.md 那些也就進不來）。
 
-CLI_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "content": {"type": "string"},
-        "tool_calls": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {"name": {"type": "string"},
-                               "arguments": {"type": "object"}},
-                "required": ["name", "arguments"],
-            },
-        },
-    },
-    "required": ["content", "tool_calls"],
-}
-CLI_RULE = ("回覆一定要符合 json-schema：content 是給人看的話（可空字串），"
-            "tool_calls 是要叫的工具，arguments 是物件。不要叫工具就給空陣列。")
-CLI_TOOL_HEAD = "你可以叫的工具（只能從這裡挑）"
+MCP_NAME = "aos"                     # --mcp-config 裡那台伺服器的名字
+MCP_PREFIX = "mcp__%s__" % MCP_NAME  # Claude Code 給 MCP 工具加的前綴，撿回來要剝掉
+MCP_TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aos-mcp-tools")
+CLI_RULE = "要叫工具就用工具，不要用文字描述；content 是給人看的話。"
 
 
 class CliFailed(Exception):
-    """claude-cli 這條路自己的失敗：找不到執行檔、跑掛了、吐出來的不是 JSON。"""
+    """claude-cli 這條路自己的失敗：找不到執行檔、跑掛了、一句 assistant 都沒回。"""
 
 
 def cli_system_prompt(body):
-    """--append-system-prompt 那一大段：請求裡的 system 訊息 ＋ 工具清單 ＋ 一條規矩。
+    """--system-prompt 那一段：請求裡的 system 訊息 ＋ 一條規矩。
 
-    CLI 沒有 tools 這個介面（我們還把內建工具全關了），所以工具是用講的：
-    一行一個 `名字(參數 schema) — 說明`，叫哪個、參數長怎樣由 json-schema 收口。
+    工具**不寫在這裡**（寫了模型只會更想直接叫），改用 MCP 真的掛上去，見 cli_specs。
     """
     parts = []
     for msg in (body or {}).get("messages") or []:
@@ -879,18 +876,61 @@ def cli_system_prompt(body):
             text = flat_text(msg.get("content"))
             if text:
                 parts.append(text)
-    tools = anthropic_tools((body or {}).get("tools"))
-    if tools:
-        lines = [CLI_TOOL_HEAD]
-        for tool in tools:
-            lines.append("- %s(%s) — %s" % (
-                tool.get("name") or "",
-                json.dumps(tool.get("input_schema") or {}, ensure_ascii=False,
-                           separators=(",", ":")),
-                tool.get("description") or ""))
-        parts.append("\n".join(lines))
     parts.append(CLI_RULE)
     return "\n\n".join(parts)
+
+
+def cli_specs(body):
+    """請求裡的 tools → aos-mcp-tools 吃的那個陣列（OpenAI 那一味的三個鍵）。"""
+    specs = []
+    for tool in anthropic_tools((body or {}).get("tools")):
+        if not tool.get("name"):
+            continue
+        specs.append({"name": str(tool["name"]),
+                      "description": str(tool.get("description") or ""),
+                      "parameters": tool.get("input_schema")
+                      or {"type": "object", "properties": {}}})
+    return specs
+
+
+def cli_mcp_config(specs_path, record_path):
+    """--mcp-config 那一串 JSON：起一台 aos-mcp-tools，specs 當參數、記錄檔走環境變數。"""
+    return json.dumps({"mcpServers": {MCP_NAME: {
+        "command": sys.executable or "python3",
+        "args": [MCP_TOOL, specs_path],
+        "env": {"AOS_MCP_RECORD": record_path},
+    }}}, ensure_ascii=False, separators=(",", ":"))
+
+
+def cli_command(engine, body, specs_path, record_path):
+    """組出那一行指令。找不到執行檔就當場講清楚，不要拖到 300 秒逾時。"""
+    binary = str((engine or {}).get("bin") or "claude")
+    found = shutil.which(binary)
+    if not found:
+        raise CliFailed("找不到 claude 執行檔（%s）：claude-cli 這種引擎要先裝好 "
+                        "Claude Code、讓它在 PATH 上，或在引擎裡寫 \"bin\"" % binary)
+    argv = [found, "-p", "--no-session-persistence",
+            # **不能用 --safe-mode**：它會把 MCP 一起關掉，--mcp-config 給的也不例外
+            # （實測 init 事件回 mcp_servers: []、tools: []）。改用這兩支達到一樣乾淨：
+            "--setting-sources", "",        # 使用者／專案／本地 settings 都不載（含 hooks）
+            "--disable-slash-commands",     # skills 也關掉
+            # stream-json 才看得到那一輪的 tool_use block；-p 模式下它一定要配 --verbose
+            "--output-format", "stream-json", "--verbose",
+            "--model", str((engine or {}).get("model") or "sonnet"),
+            "--tools", "",                  # 內建工具全關，只留我們掛上去的
+            "--mcp-config", cli_mcp_config(specs_path, record_path),
+            "--strict-mcp-config",          # 別人裝的 MCP 一概不載
+            "--allowedTools", MCP_PREFIX + "*",
+            "--max-turns", "1",             # 第一個 assistant 回合就收工
+            # 用 --system-prompt 整個換掉，不是 append：留著 Claude Code 自己那兩萬 token 的
+            # 身份，它會拿我們的工具當「要在這台機器上執行的事」，繞好幾輪才回話
+            "--system-prompt", cli_system_prompt(body)]
+    effort = (body or {}).get("effort")
+    if effort:
+        argv += ["--effort", str(effort)]
+    for extra in (engine or {}).get("extra_args") or []:
+        argv.append(str(extra))
+    return argv
 
 
 def cli_transcript(body):
@@ -925,77 +965,134 @@ def cli_transcript(body):
     return "\n\n".join(lines)
 
 
-def cli_command(engine, body):
-    """組出那一行指令。找不到執行檔就當場講清楚，不要拖到 300 秒逾時。"""
-    binary = str((engine or {}).get("bin") or "claude")
-    found = shutil.which(binary)
-    if not found:
-        raise CliFailed("找不到 claude 執行檔（%s）：claude-cli 這種引擎要先裝好 "
-                        "Claude Code、讓它在 PATH 上，或在引擎裡寫 \"bin\"" % binary)
-    argv = [found, "-p", "--safe-mode", "--no-session-persistence",
-            "--output-format", "json", "--tools", "",
-            "--model", str((engine or {}).get("model") or "sonnet"),
-            "--json-schema", json.dumps(CLI_SCHEMA, ensure_ascii=False,
-                                        separators=(",", ":")),
-            "--append-system-prompt", cli_system_prompt(body)]
-    effort = (body or {}).get("effort")
-    if effort:
-        argv += ["--effort", str(effort)]
-    for extra in (engine or {}).get("extra_args") or []:
-        argv.append(str(extra))
-    return argv
-
-
-def from_claude_cli(data, model=""):
-    """`--output-format json` 的那一包 → OpenAI 的 chat/completions 形狀。
-
-    結構化輸出在頂層的 `structured_output`；沒有就把 `result` 當 JSON 讀；再不行就整串
-    當成 content、tool_calls 空的。usage 跟 Anthropic 同一套（快取 token 折進 prompt_tokens）。
-    """
-    if not isinstance(data, dict):
-        data = {}
-    payload = data.get("structured_output")
-    if not isinstance(payload, dict):
-        try:
-            payload = json.loads(data.get("result") or "")
-        except (ValueError, TypeError):
-            payload = None
-    if not isinstance(payload, dict):
-        payload = {"content": str(data.get("result") or ""), "tool_calls": []}
-    calls = []
-    for slot, one in enumerate(payload.get("tool_calls") or [], 1):
-        if not isinstance(one, dict) or not one.get("name"):
+def cli_events(out):
+    """stream-json 的 stdout → 一串事件。壞掉的行跳過（前面可能夾雜警告）。"""
+    events = []
+    for line in (out or "").splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
             continue
+        try:
+            one = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(one, dict):
+            events.append(one)
+    return events
+
+
+def cli_record(path):
+    """記錄檔（aos-mcp-tools 寫的一行一筆）→ [{name, arguments}]。沒有就空的。"""
+    rows = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    one = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(one, dict) and one.get("name"):
+                    rows.append(one)
+    except OSError:
+        pass
+    return rows
+
+
+def from_claude_cli(events, model="", recorded=None):
+    """stream-json 的那串事件 → OpenAI 的 chat/completions 形狀。
+
+    只看**第一則** assistant 訊息（--max-turns 1 本來就只會有一則）：text block 併成
+    content、tool_use block 翻成 tool_calls（名字剝掉 `mcp__aos__` 前綴），thinking 丟掉。
+
+    注意：**一則訊息會拆成好幾個 `type: "assistant"` 事件**（一個 block 一個事件，實測
+    thinking 一包、text 一包），所以是照 `message.id` 把同一則的都收齊，不是只拿第一個事件。
+    記錄檔當備援：MCP 那邊登記過、stream 裡卻沒有的，補進去。
+    usage／花費從最後的 `type: "result"` 事件拿，快取 token 折進 prompt_tokens。
+    """
+    blocks, first_id, msg_id, result = [], None, None, {}
+    for one in events or []:
+        if one.get("type") == "assistant":
+            msg = one.get("message") if isinstance(one.get("message"), dict) else {}
+            here = msg.get("id")
+            if first_id is None:
+                first_id, msg_id = here, here
+            elif here != first_id:
+                continue          # 第二則訊息了，不關我們的事
+            blocks += [b for b in (msg.get("content") or []) if isinstance(b, dict)]
+        if one.get("type") == "result":
+            result = one
+    if first_id is None and not blocks:
+        raise CliFailed("claude-cli 沒有回任何 assistant 訊息：%s"
+                        % (result.get("subtype") or result.get("result") or "沒有 result 事件"))
+
+    texts, calls, seen = [], [], set()
+    for block in blocks:
+        if block.get("type") == "text" and block.get("text"):
+            texts.append(str(block["text"]))
+        elif block.get("type") == "tool_use" and block.get("name"):
+            name = str(block["name"])
+            if name.startswith(MCP_PREFIX):
+                name = name[len(MCP_PREFIX):]
+            args = block.get("input")
+            if not isinstance(args, dict):
+                args = {}
+            seen.add((name, json.dumps(args, ensure_ascii=False, sort_keys=True)))
+            calls.append({"id": str(block.get("id") or "call_%d" % (len(calls) + 1)),
+                          "type": "function",
+                          "function": {"name": name,
+                                       "arguments": json.dumps(args, ensure_ascii=False)}})
+    for one in recorded or []:
+        name = str(one.get("name") or "")
+        if name.startswith(MCP_PREFIX):
+            name = name[len(MCP_PREFIX):]
         args = one.get("arguments")
-        if isinstance(args, str):
-            try:
-                args = json.loads(args) if args.strip() else {}
-            except ValueError:
-                args = {"_raw": args}
         if not isinstance(args, dict):
             args = {}
-        calls.append({"id": "call_%d" % slot, "type": "function",
-                      "function": {"name": str(one["name"]),
+        key = (name, json.dumps(args, ensure_ascii=False, sort_keys=True))
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        calls.append({"id": "call_%d" % (len(calls) + 1), "type": "function",
+                      "function": {"name": name,
                                    "arguments": json.dumps(args, ensure_ascii=False)}})
-    message = {"role": "assistant", "content": str(payload.get("content") or "")}
+
+    message = {"role": "assistant", "content": "\n".join(texts)}
     if calls:
         message["tool_calls"] = calls
     return {
-        "id": data.get("session_id"), "object": "chat.completion", "model": model,
+        "id": result.get("session_id") or msg_id,
+        "object": "chat.completion", "model": model,
         "choices": [{"index": 0, "message": message,
                      "finish_reason": "tool_calls" if calls else "stop"}],
-        "usage": anthropic_usage(data.get("usage")),
+        "usage": anthropic_usage(result.get("usage")),
         # 這一包會被 worker 挪到結果的 aos.cli 底下，留個帳好對。
-        "cli": {"session_id": data.get("session_id"),
-                "total_cost_usd": data.get("total_cost_usd"),
-                "num_turns": data.get("num_turns"),
-                "stop_reason": data.get("stop_reason")},
+        "cli": {"session_id": result.get("session_id"),
+                "total_cost_usd": result.get("total_cost_usd"),
+                "num_turns": result.get("num_turns"),
+                "stop_reason": result.get("subtype")},
     }
 
 
 def call_claude_cli(engine, body, home):
-    """開一個 claude -p 子進程打那一發。cwd 一律是 LLM 資料夾（絕不是誰的專案目錄）。"""
-    argv = cli_command(engine, body)
+    """開一個 claude -p 子進程打那一發。cwd 一律是 LLM 資料夾（絕不是誰的專案目錄）。
+
+    工具清單先落在 `side/cli/<請求>.tools.json`，MCP server 的登記簿落在同一個資料夾的
+    `.calls.jsonl`；跑順了就順手掃掉，**失敗才留著**給人翻。
+    """
+    side = os.path.join(home or os.getcwd(), "side", "cli")
+    try:
+        os.makedirs(side, exist_ok=True)
+    except OSError:
+        side = tempfile.mkdtemp(prefix="aos-cli-")
+    stem = os.path.join(side, "%d-%d" % (int(time.time()), os.getpid()))
+    specs_path, record_path = stem + ".tools.json", stem + ".calls.jsonl"
+    lib.write_json_atomic(specs_path, cli_specs(body))
+    open(record_path, "a", encoding="utf-8").close()
+
+    argv = cli_command(engine, body, specs_path, record_path)
     text = cli_transcript(body)
     try:
         proc = subprocess.run(argv, input=text.encode("utf-8"),
@@ -1007,18 +1104,28 @@ def call_claude_cli(engine, body, home):
         raise CliFailed("claude-cli 開不起來：%s" % e)
     out = proc.stdout.decode("utf-8", "replace")
     err = proc.stderr.decode("utf-8", "replace")
-    try:
-        data = json.loads(out)
-    except ValueError:
-        data = None
-    if proc.returncode != 0 or not isinstance(data, dict) or data.get("is_error"):
-        tail = err.strip()
-        if not tail and isinstance(data, dict):
-            tail = str(data.get("result") or "")
-        if not tail:
-            tail = out.strip()
+    events = cli_events(out)
+    has_assistant = any(one.get("type") == "assistant" for one in events)
+    # --max-turns 1 撞上限時 result 會是 is_error／error_max_turns，那是**正常收工**，
+    # 只要有 assistant 那一輪就算數；沒有才回錯。
+    if proc.returncode != 0 and not has_assistant:
+        tail = err.strip() or out.strip()
         raise CliFailed("claude-cli 失敗（exit %s）：%s" % (proc.returncode, tail[-300:]))
-    return from_claude_cli(data, (engine or {}).get("model") or "")
+    if not has_assistant:
+        tail = (err.strip() or out.strip())[-200:]
+        subtype = ""
+        for one in events:
+            if one.get("type") == "result":
+                subtype = str(one.get("subtype") or one.get("result") or "")
+        raise CliFailed("claude-cli 沒有回任何 assistant 訊息：%s" % (subtype or tail or "沒有 result 事件"))
+    answer = from_claude_cli(events, (engine or {}).get("model") or "",
+                             cli_record(record_path))
+    for path in (specs_path, record_path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    return answer
 
 
 # ── codex-cli：把 OpenAI Codex CLI 的 headless（`codex exec`）當引擎 ──────────
