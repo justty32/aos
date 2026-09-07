@@ -8,6 +8,7 @@ import contextlib
 import datetime
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -218,10 +219,30 @@ def _tasks_of(ctx, root, order):
     return rows
 
 
+def _norm_files(root, order_id, files):
+    """檔案清單一律存「相對專案目錄」的名字。模型常寫整條 team/projects/<單號>/todo.py（4d 的 dev-a 就這樣，
+    deliver 找不到、只交了一個檔），這裡把前面那段剝掉，兩種寫法都認。"""
+    if not isinstance(files, list):
+        return []
+    project = os.path.relpath(_project_dir(root, order_id), root)      # team/projects/<單號>
+    out = []
+    for f in files:
+        f = str(f).strip()
+        for prefix in (project + "/", "./" + project + "/", "../../projects/%s/" % order_id):
+            if f.startswith(prefix):
+                f = f[len(prefix):]
+        if f:
+            out.append(f)
+    return out
+
+
 def _run_cmd(root, order_id, command):
     """在專案目錄跑一次，只留 exit 與尾巴。長到不會回來的指令由 timeout 收掉。"""
     project = _project_dir(root, order_id)
     os.makedirs(project, exist_ok=True)
+    # 指令是在專案目錄跑的；模型常照大家平常講的「team/assets/...」寫，那從專案目錄看是 ../../assets/...。
+    # 直接幫它翻，不要讓它為了一個路徑燒一輪（實玩 4d：dev-a 為此 exit 127 繞了三輪）。
+    command = re.sub(r"(^|\s)team/", lambda m: m.group(1) + "../../", command)
     row = {"cmd": command, "cwd": project, "time": _now()}
     try:
         done = subprocess.run(command, shell=True, cwd=project, timeout=TEST_TIMEOUT_S,
@@ -367,7 +388,7 @@ def _plan_set(ctx, root, args):
         files = row.get("files")
         task = {"id": task_id, "order": order_id, "title": str(row.get("title") or task_id),
                 "spec": str(row.get("spec") or ""), "owner": str(row.get("owner") or ""),
-                "files": [str(f) for f in files] if isinstance(files, list) else [],
+                "files": _norm_files(root, order_id, files),
                 "status": "assigned", "report": "", "tests": [], "qa": None,
                 "time": _now()}
         _save_task(ctx, root, task)
@@ -511,7 +532,7 @@ def _task_report(ctx, root, args):
             return {"ok": False, "error": "找不到任務的單：%s" % task.get("order")}
         order_id = order["id"]
         files = args.get("files")
-        files = [str(f) for f in files] if isinstance(files, list) else list(task.get("files") or [])
+        files = _norm_files(root, order_id, files) if isinstance(files, list) else list(task.get("files") or [])
         if _role(ctx, root, me) == "tester" and not any("test" in os.path.basename(f).lower() for f in files):
             return {"ok": False, "task_id": task_id,
                     "error": "tester 的回報 files 裡要有測試檔（檔名含 test），現在是：%s" % ("、".join(files) or "無")}
@@ -530,7 +551,8 @@ def _task_report(ctx, root, args):
                 # 測試沒過就不算做完：小模型會無視紅字直接報「全部通過」，這裡用工具擋住，不靠它自覺
                 _save_task(ctx, root, task)
                 return {"ok": False, "task_id": task_id, "status": task["status"],
-                        "error": "test_cmd 沒有全過（exit %s），任務還不算完成；先修好再 task_report" % test.get("exit"),
+                        "error": "test_cmd 沒有全過（exit %s），任務還不算完成；先修好再 task_report。"
+                             "指令是在專案目錄跑的，工作室的檢查腳本寫 bash ../../assets/checks/run_tests.sh（或直接叫 run_checks）" % test.get("exit"),
                         "test": {"exit": test.get("exit"), "output": _tail(test.get("output"), 1200)}}
         task["status"] = "done"
         _save_task(ctx, root, task)

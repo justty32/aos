@@ -133,3 +133,46 @@
 
 派工的心得：opus 做的三件（why/tail、鎖、引擎）一次到位、回報清楚；sonnet 做 test.sh 隔離時三次停下來「等背景測試」不會自己接著跑，得推兩次，還同時開了三份全套。**簡單任務給 sonnet可以，但要在指令裡寫死「前景跑、不要等通知」。**
 
+## 10. 實玩 4d：八人＋claude-cli（haiku／sonnet），15:16 起
+
+場地 `play-4d`，同一張 todo.py 單，預算 600k。一開局就連踩四條，都是「新東西第一次真的跑」才會冒出來的：
+
+| 時間 | 坑 | 修法 |
+|---|---|---|
+| 15:17 | 新開的 LLM 資料夾沒放 `.aos/inst`，鐘空轉、請求排著沒人打 | aos-loop 看到 `engines.json` 沒 inst 就自己補「aos-llm exec .」 |
+| 15:17 | 鐘是 daemon 開的，PATH 沒有 `~/.local/bin`，worker 找不到 `claude` | engines.json 寫死 `bin`；文件註明 |
+| 15:18 | 模型回錯之後 agent 直接回 idle，信已標讀、對話尾巴那句永遠不會再送（跟早上「未讀信不再喚醒」是同一族的坑） | 記 `llm_errors`，20 格後重送，連錯 5 次放著喊一次，新信來重來 |
+| 15:20 | 出錯後閒著的格被算成「每題動作格」，60 格就撞 steps 上限、`limit_pause` 等人 | 閒著不動的格算睡眠格 |
+| 15:25 | `--append-system-prompt` 留著 Claude Code 自己那兩萬 token 的身份：一發 30k prompt、繞五輪回「無法執行工作流工具」 | 改 `--system-prompt` 整個換掉：2.6k、兩輪 |
+| 15:30 | haiku 看到工具清單就發真的 tool_use（`task_assign`），Claude Code 回 No such tool，繞三輪放棄；json-schema 那套「用文字描述工具呼叫」對會用工具的模型沒用 | 改走 MCP：aos-mcp-tools 把請求的工具表當 MCP 工具給它，`tools/call` 只登記不執行，`--max-turns 1` 第一輪就停，從 stream-json 撿 tool_use 當 tool_calls（opus agent 在做） |
+
+| 15:50 | dev-a、tester 各八輪就撞每人 100k 天花板（haiku 一輪 prompt 10～19k，對話史帶整檔 edit 長很快）；天花板抬了也要等 300 格才再試撥款 | 凍住喊過之後每 10 格再試一次自動撥款；這局天花板抬到 250k |
+| 15:55 | dev-a 的 `test_cmd` 寫 `bash team/assets/checks/run_tests.sh`，但指令在專案目錄跑，exit 127 繞了三輪 | `_run_cmd` 把開頭的 `team/` 翻成 `../../`；退回訊息講清楚路徑 |
+| 16:00 | 600k 池子 45 分鐘見底（dev-a 一個人 237k）；owner 自己燒 20k 想「要不要撥」最後說不 | `team budget --add 400k --to pm`。要記：claude-cli 的 prompt_tokens 把 cache_read 也算進去，帳面比真實成本高很多，之後預算要不要對 cached 打折是個決定 |
+| 15:53 | `--safe-mode` 連 `--mcp-config` 一起關掉、模型改寫假 XML；一則 assistant 訊息在 stream-json 是好幾個事件 | 改 `--setting-sources "" --disable-slash-commands`；照 message id 合併事件 |
+
+走通的部分：sales 一發 `order_accept`、pm 一發 `task_assign` 給 chief（3.9k）、chief（sonnet）一發 `plan_set` 拆成 dev-a 寫程式＋tester 寫測試、自己的定架構自動算過。跟 qwen 比：同樣的事 qwen 要三到五輪、還會編單號；haiku 一輪。
+
+一個想法：這局每個坑都是「換引擎」帶出來的，跟流程無關。流程層今天下午已經穩了，剩下的都是引擎接口層的事——這代表分層是對的。
+
+### 4d 收局（16:07 交付）
+
+**第一次整條鏈自己走到交付**：sales 接單 → pm 派 chief → chief（sonnet）拆 dev-a 寫程式＋tester 寫測試 → 兩人各自回報（dev-a 第一次 test_cmd 路徑錯被退回，改對再報）→ qa 跑 run_checks＋qa_run、三項判過 → pm deliver → sales 把交付單回給甲方。成品：todo.py 99 行、test_todo.py 155 行 13 條測試，我手動跑 add/list/del 都對。50 分鐘，中間我插手四次（補 inst、寫死 bin、重寄兩封信、抬天花板＋追加預算）。
+
+帳（帳面 token，claude-cli 把 cache_read 也算進 prompt）：
+
+| 角色 | 請求 | tokens | 備註 |
+|---|---:|---:|---|
+| dev-a（haiku） | 21 | 325k | 一輪 10k→20k，對話史帶整檔 |
+| pm（haiku） | 18 | 210k | 其中兩輪是引擎壞掉那段 |
+| qa（haiku） | 14 | 120k | |
+| tester（haiku） | 9 | 107k | |
+| chief（sonnet） | 6 | 39k | 一發拆對 |
+| owner（haiku） | 4 | 28k | 兩輪在想「要不要撥錢」 |
+| sales（haiku） | 4 | 13k | |
+| 合計 | 76 | 841k | haiku 49 發、sonnet 27 發 |
+
+交付漏了一個檔：dev-a 的 files 寫整條 `team/projects/<單號>/todo.py`，deliver 只認相對專案目錄的名字，只交了 test_todo.py。工具端修掉（前綴剝掉）。
+
+跟 4c（qwen）比：流程一樣、卡點完全不同。qwen 卡「做不出來」；haiku 做得出來，卡的是「額度帳面被 cache token 灌水」和「對話史越滾越大」。下一個要決定的是預算要不要對 cached token 打折，以及 dev 要不要每個任務開新對話史。
+

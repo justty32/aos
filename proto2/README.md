@@ -156,7 +156,7 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
  "max_concurrent": 4, "params": {"max_tokens": 4096}}
 ```
 
-還有一種 `"api": "claude-cli"`：**把 Claude Code 的 headless 模式當引擎**，開一個 `claude -p` 子進程、對話從 stdin 餵進去、要它照 json-schema 吐回一包 `{content, tool_calls}`——**有 Claude 訂閱、沒有 API key 的人就走這條**（`base_url`／`api_key_env` 用不到，`bin` 不寫就是 PATH 上的 `claude`）。用量算在訂閱的五小時窗口裡，每發多兩三秒的進程啟動時間。
+還有一種 `"api": "claude-cli"`：**把 Claude Code 的 headless 模式當引擎**，開一個 `claude -p` 子進程、對話從 stdin 餵進去、`--max-turns 1` 只讓它做「這一輪要叫哪個工具」這一個決定，再從 stream-json 撿回那一輪的 `tool_use`——**有 Claude 訂閱、沒有 API key 的人就走這條**（`base_url`／`api_key_env` 用不到，`bin` 不寫就是 PATH 上的 `claude`）。**工具是用 MCP 真的掛上去的**，不是寫在系統話裡：起一台 [`aos-mcp-tools`](aos-mcp-tools)（只登記、不執行的 stdio MCP 小伺服器）把請求裡的 `tools` 報給它，工具本人留給 aos-agent 下一回合自己跑。用文字列工具會壞——模型照樣吐真的 `tool_use`，Claude Code 回一句 `No such tool available`，它就繞五六輪後放棄。用量算在訂閱的五小時窗口裡，每發多兩三秒的進程啟動時間。
 
 ```json
 [{"name": "cheap", "api": "claude-cli", "model": "haiku", "max_concurrent": 2,

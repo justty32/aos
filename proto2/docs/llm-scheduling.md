@@ -122,25 +122,62 @@ score=465 level=5 chat +40 wait=10 normal=-10 recent=-75 requester=group-a/kid-1
 實際跑的是這一行（`bin` 不寫就是 PATH 上的 `claude`，`params.effort` 有寫才加 `--effort`）：
 
 ```sh
-claude -p --safe-mode --no-session-persistence --output-format json --tools ""   --model <model> --json-schema <schema> --append-system-prompt <系統話> [--effort <級>]
+claude -p --no-session-persistence --setting-sources "" --disable-slash-commands \
+  --output-format stream-json --verbose --model <model> --tools "" \
+  --mcp-config <一串 JSON> --strict-mcp-config --allowedTools "mcp__aos__*" \
+  --max-turns 1 --system-prompt <系統話> [--effort <級>]
 ```
 
-- `--safe-mode` 把 CLAUDE.md／skills／plugins／hooks／MCP 全關掉，每一發都一樣乾淨；cwd 一律是
-  LLM 資料夾，不會跑到誰的專案裡。**不用 `--bare`**：`--bare` 的認證只認 `ANTHROPIC_API_KEY`，
-  訂閱制的 OAuth 會直接回「Not logged in」。
-- `--tools ""` 關掉全部內建工具。請求裡的 `tools` 改用講的：`--append-system-prompt` 裡列一行一個
-  `名字(參數 schema) — 說明`，外加一條「回覆一定要符合 json-schema」的規矩，由 `--json-schema`
-  （`{content, tool_calls[{name, arguments}]}`）收口。
+**工具一定要用 MCP 給，不能用文字列。** 以前是把工具清單寫進 `--system-prompt`、再用
+`--json-schema` 要一包 `{content, tool_calls}`。實跑會壞：haiku／sonnet 一看到工具名字就吐
+**真的** `tool_use` block，Claude Code 回一句
+`<tool_use_error>Error: No such tool available: task_assign</tool_use_error>`，模型繞五六輪、
+最後回一句「工具調用異常，無法執行派工」，`tool_calls` 空的（`--max-turns 2` 也擋不住，
+實跑 `num_turns` 還是 6）。**模型看到工具名字就會想真的叫它——那就給它真的工具。**
+
+- 工具走 [`aos-mcp-tools`](../aos-mcp-tools)：一台**只登記、不執行**的 stdio MCP 小伺服器。
+  `tools/list` 把請求裡的 `tools` 報上去（`parameters` 翻成 `inputSchema`）；`tools/call`
+  什麼都不做，只把 `{name, arguments}` 附到記錄檔、回一句「已登記」。**工具是 aos-agent
+  下一回合自己去跑的**，Claude Code 只負責替我們做「這一輪要叫哪個工具、參數長怎樣」的決定。
+- 工具清單先落在 `<LLM 資料夾>/side/cli/<時間>-<pid>.tools.json`，MCP 的登記簿落在旁邊的
+  `.calls.jsonl`；跑順了順手掃掉，**失敗才留著**給人翻。
+- `--max-turns 1` 在第一個 assistant 回合就收工。它撞上限時 `result` 事件會是
+  `subtype: error_max_turns`、`is_error: true`——那是**正常收工**，不是失敗，只要那一輪有
+  assistant 訊息就算數。
+- **不能用 `--safe-mode`**：它把 MCP 一起關了，連 `--mcp-config` 給的都不載（實測 init 事件回
+  `mcp_servers: []`、`tools: []`，模型看不到工具，只好用 `<function_calls>` 假 XML 亂寫）。
+  乾淨是靠這幾支湊出來的：`--setting-sources ""`（不載使用者／專案／本地 settings，hooks 一起沒）、
+  `--disable-slash-commands`（關 skills）、`--tools ""`（關內建工具）、`--strict-mcp-config`
+  （別人裝的 MCP 一概不載）、`--system-prompt`（整個換掉，CLAUDE.md 那些也就進不來）。
+  cwd 一律是 LLM 資料夾，不會跑到誰的專案裡。
+- `--system-prompt` 只放兩樣：請求裡的 system 訊息 ＋ 一條「要叫工具就用工具，不要用文字描述；
+  content 是給人看的話」。**工具清單不寫在這裡**（寫了模型只會更想直接叫）。
 - 對話從 stdin 餵：`【user】…`／`【assistant】…`（它的工具呼叫寫成 `→ 名字 {參數}`）／`【tool:名字】結果`，
   最後留一個空的`【assistant】`讓它接下去。
-- 回來的 `structured_output` 翻成 `choices[0].message`（`tool_calls` 的 id 補成 `call_1`、`call_2`…），
-  `usage` 跟 Anthropic 同一套折法，`session_id` 與 `total_cost_usd` 記在結果的 `aos.cli` 底下。
-- 退出碼非 0、吐的不是 JSON、或 `is_error` → `{"error": "claude-cli 失敗（exit N）：…"}`；找不到執行檔
-  當場就講，不會拖到逾時。帳本一樣把它算成一次 error。
+- 回來的是 stream-json（一行一個事件，`-p` 模式下一定要配 `--verbose`）。只收**第一則**
+  assistant 訊息：text block 併成 `content`、`tool_use` block 翻成 `tool_calls`（名字剝掉
+  `mcp__aos__` 前綴、id 就用 block 的 id），thinking 丟掉。**一則訊息會拆成好幾個 assistant
+  事件**（一個 block 一個，thinking 也算一包），所以是照 `message.id` 收齊，不是只拿第一個事件。
+  記錄檔當備援：MCP 那邊登記過、stream 裡卻沒有的，補進去。
+- `usage` 從最後的 `type: "result"` 事件拿，跟 Anthropic 同一套折法（快取 token 折進
+  `prompt_tokens`，另留 `prompt_tokens_details.cached_tokens`）；`session_id`、`total_cost_usd`、
+  `num_turns` 記在結果的 `aos.cli` 底下。
+- 退出碼非 0 且一句 assistant 都沒有 → `{"error": "claude-cli 失敗（exit N）：…"}`；有跑完但沒有
+  assistant 訊息 → `{"error": "claude-cli 沒有回任何 assistant 訊息：…"}`；找不到執行檔當場就講，
+  不會拖到逾時。帳本一樣把它算成一次 error。
+
+實跑一發（haiku、兩個工具 say／order_status、對話「請叫 say 說 hi」）：MCP 起得來、init 事件看得到
+`mcp__aos__say`／`mcp__aos__order_status`，模型吐 `mcp__aos__say {"text":"hi"}`，撿回來就是
+`tool_calls[0].function.name == "say"`，`num_turns` 2、`stop_reason` `error_max_turns`、
+1216／114 token、約 $0.0028。
 
 兩句提醒：**這是把 Claude Code headless 當引擎，用量算在訂閱的五小時窗口裡**，不是 API 帳單，
-`total_cost_usd` 只是等值參考。**每一發多兩三秒的進程啟動**，所以 `max_concurrent` 別開太大、
-短請求別全塞這台。
+`total_cost_usd` 只是等值參考。**每一發多兩三秒的進程啟動**（再加一個 MCP 子進程），所以
+`max_concurrent` 別開太大、短請求別全塞這台。
+
+- **一定是 `--system-prompt`（整個換掉），不是 `--append-system-prompt`**：留著 Claude Code 自己那兩萬 token 的身份，它會把我們的工具當成「要在這台機器上執行的事」、繞好幾輪才回話（實玩 4d 踩到：30k prompt／5 turns／回不出東西）。
+- **`--bare` 不能用**：它只認 `ANTHROPIC_API_KEY`，會把 OAuth 登入踢掉。**`--safe-mode` 也不能用**：它把 `--mcp-config` 一起關了。
+- 引擎裡最好寫 `"bin": "/home/<你>/.local/bin/claude"`：鐘是 daemon 開的，PATH 不一定有 `~/.local/bin`。
 
 ## 用量帳本
 
