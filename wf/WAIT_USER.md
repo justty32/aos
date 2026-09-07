@@ -29,7 +29,9 @@
 8. **proto2：agent 之間的交流（tell／hear，或子回話自動變父的信）**先不做，什麼時候做、走哪種？→ [proto2/README](../proto2/README.md)
 9. **proto2：拍板題 T-01～T-77 全照建議做了（使用者 09-06 說「都 OK」）**；要翻案就回編號。→ [notes/tools/README.md](../proto2/notes/tools/README.md)
 10. **proto2：玩出來的 25 條效能與邊緣狀況、各包想要但沒有的接點**，要你看過說哪些現在要做。→ [notes/play/README.md](../proto2/notes/play/README.md)、[docs/packs-api.md](../proto2/docs/packs-api.md) 最後一節
-11. **proto2：工作室三輪都沒交付**（09-06 120 萬、09-07 6 萬與 500 萬）——斷點是 PM 未讀信永不重喚醒＋閘門缺口；修法五條在 [studio-3](../proto2/notes/play/2026-09-07-studio-3.md) 最後一節，要你點頭再開工（任務 D）。
+11. **proto2 工作室：dev 模型換不換**——4c 新流程整條會自己走了，卡在 qwen2.5:14b 改不出配測試的程式（一輪 8.9k、繞 20 輪）。三個選項：dev 換 qwen3:32b／雲端模型；小程式做成資產模板（好到不用改）；dev 每個任務開新對話史。→ [studio-4「還沒解的」](../proto2/notes/play/2026-09-07-studio-4.md)
+12. **proto2 工作室：qa 的角色**——現在 chief 拆任務會把「寫測試」派給 qa，qa 就同時是做的人跟驗的人。要 dev 寫測試 qa 只驗？還是 qa 寫、pm 驗？→ 同上
+13. **push**：今天公司這台的 commit（6253448～最新）都在本機 main，你 09-06 說「通通允許 push」，要我現在推就一句話。
 
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
