@@ -164,6 +164,19 @@ PYEOF2
   else
     fail "gate：未讀提醒不對（$got $got2 $got3 $got4）"
   fi
+  # 睡著等回信也照提醒、而且被叫醒（互等死結：PM 等 chief 回信、chief 等 PM 補額度）
+  python3 - "$studio/kids/pm/state.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]; d = json.load(open(p, encoding="utf-8"))
+d.update({"state": "idle", "request": "", "step": 170, "unread_told_step": 130,
+          "sleeping": {"kind": "mail", "id": "pm-mail-x"},
+          "pending": [{"id": "pm-mail-x", "kind": "mail", "pack": "communication",
+                       "since_ts": 9999999999, "timeout_s": 600, "mail_reply_to": "nothing.json"}]})
+json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False)
+PYEOF2
+  "$AGENT" exec "$studio/kids/pm" >/dev/null 2>&1
+  got=$(gate_state "$studio/kids/pm" 'd["state"]=="llm" and d.get("unread_told_step")==170 and not d.get("sleeping") and len(d.get("pending"))==1')
+  if [ "$got" = "True" ]; then ok "gate：睡著等回信時未讀提醒照發、叫醒它，旁線 pending 留著"; else fail "gate：睡著時的提醒不對（$(cat "$studio/kids/pm/state.json")）"; fi
   unset AOS_LLM_DIR
 
   # ③ 模型把工具呼叫寫成文字：認得的救回來當正式 tool_call 真的跑

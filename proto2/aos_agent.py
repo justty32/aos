@@ -297,8 +297,9 @@ def scan_inbox(home, announced, state=None):
         msgs.append({"role": "user", "content": "你有新信：%s。用信箱工具去讀。" % summary})
         if isinstance(state, dict):
             state["unread_told_step"] = step
-    elif counts and isinstance(state, dict) and (state.get("state") or "idle") == "idle" \
-            and not state.get("sleeping") and not state.get("pending"):
+    elif counts and isinstance(state, dict) and (state.get("state") or "idle") == "idle":
+        # 睡著等旁線／等某封回信也照提醒：不然「PM 誤讀後決定等 chief 回信，chief 卻在等 PM 補額度」
+        # 這種互等會卡到旁線逾時才解。提醒會把它叫醒；旁線結果之後照樣送到。
         told = state.get("unread_told_step")
         told = int(told) if isinstance(told, (int, float)) and not isinstance(told, bool) else None
         if told is None or step - told >= UNREAD_REMIND_TICKS:
