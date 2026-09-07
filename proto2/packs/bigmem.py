@@ -45,7 +45,7 @@ def _queue(ctx, op, args, archive=None):
     if not mem:
         return {"error": "沒設定記憶世界；請在 llm.json 加 mem_dir，或設定 AOS_MEM_DIR"}
     name = ctx.send("mem", {"op": op, "agent": ctx.name, "args": args},
-                    target=mem, timeout_steps=120)
+                    target=mem, timeout_s=600)
     item = {"op": op}
     if archive:
         item["archive"] = archive

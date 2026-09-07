@@ -237,7 +237,7 @@ def _do_fork(args, ctx):
         request = ctx.send(
             "branch",
             {"messages": prompts, "params": {"max_tokens": budget["per_branch_tokens"]}},
-            timeout_steps=120)
+            timeout_s=600)
         pending.append(request)
         lines.append({"n": number, "direction": direction.strip(), "request": request,
                       "status": "pending", "usage": {}, "cost_usd": None})

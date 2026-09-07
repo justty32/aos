@@ -29,7 +29,7 @@
 8. **proto2：agent 之間的交流（tell／hear，或子回話自動變父的信）**先不做，什麼時候做、走哪種？→ [proto2/README](../proto2/README.md)
 9. **proto2：拍板題 T-01～T-77 全照建議做了（使用者 09-06 說「都 OK」）**；要翻案就回編號。→ [notes/tools/README.md](../proto2/notes/tools/README.md)
 10. **proto2：玩出來的 25 條效能與邊緣狀況、各包想要但沒有的接點**，要你看過說哪些現在要做。→ [notes/play/README.md](../proto2/notes/play/README.md)、[docs/packs-api.md](../proto2/docs/packs-api.md) 最後一節
-11. **proto2：工作室實玩燒 120 萬 token 沒交付**——預算硬閘門簡化輪在修；修完要你再下一次單試。→ [notes/play/2026-09-06-studio.md](../proto2/notes/play/2026-09-06-studio.md)
+11. **proto2：工作室三輪都沒交付**（09-06 120 萬、09-07 6 萬與 500 萬）——斷點是 PM 未讀信永不重喚醒＋閘門缺口；修法五條在 [studio-3](../proto2/notes/play/2026-09-07-studio-3.md) 最後一節，要你點頭再開工（任務 D）。
 
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）

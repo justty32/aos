@@ -55,13 +55,13 @@ tools.json 的 packs 有列才載入：先找 <home>/packs/<包>.py，再找 pro
 request_id = ctx.send("review", {
     "messages": [{"role": "user", "content": "檢查這段"}]
 }, engine="deepseek-flash", priority=0, schedule_kind="background",
-   deadline=None, timeout_steps=120)
+   deadline=None, timeout_s=600)
 ctx.sleep_until("review", request_id)
 ~~~
 
 - ctx.send(kind, body, **opts) -> id：預設送 LLM；target=世界 可送一般 requests/ 生產者；
   mail_reply_to=id 可等回信。LLM 選項還有 engine、priority、requester、schedule_kind、
-  deadline。預設逾時 120 格。
+  deadline。預設逾時 600 秒。
 - ctx.pending() -> list[dict]：只讀尚未完成的請求。
 - ctx.cancel(id) -> bool：取消後照正常結果路徑回
   {"error":"...","kind_of_error":"cancelled"}。
@@ -79,7 +79,8 @@ def on_result(ctx, kind, request_id, result):
 
 on_result 回文字就當成新的 user 訊息喚醒主線。LLM 失敗、缺鐘、逾時與取消都會先叫
 on_result，再各寫一則 error: true 的 outbox 人話；錯誤種類只有 llm、timeout、
-cancelled。包不建自己的 waiting/pending，也不讀、搬、刪 results/。
+no_clock、cancelled。`no_clock` 表示這筆請求的目標沒有鐘在跑。包不建自己的
+waiting/pending，也不讀、搬、刪 results/。
 
 ## 信、家族、LLM 與 daemon
 

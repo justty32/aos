@@ -47,7 +47,7 @@ xxx/<home>/kids/<名字>/         它生的小孩（每個都是完整的世界�
 | `act` | 有 `tool_calls` 就跑工具、結果接進記憶；沒有就把話印出來、落一份到 `outbox/` | 有工具 `collect`，有文字 `idle`；只回空白就不寫 outbox、記一次後回 `idle` |
 | `collect` | 再掃一次信箱（沒新信也照走） | `llm` |
 
-`llm.json` 可設每題格數硬上限 `max_steps_per_question`（預設 60）與每日 `max_tokens_per_day`。超過會回一句話等使用者；新 user 信會重置題目格數。`status` 九欄列狀態、等待、缺鐘、最後錯誤、格數、今日用量與最近五題格數。agent 不寫 `.aos/inst`，避免洗掉 shared 小孩。
+`llm.json` 可設每題動作格數硬上限 `max_steps_per_question`（預設 60）與每日 `max_tokens_per_day`。睡著空等旁線不算動作格；超過會回一句話等使用者，新 user 信會重置題目格數。`status` 九欄列狀態、等待、缺鐘、最後錯誤、格數、今日用量與最近五題格數。agent 不寫 `.aos/inst`，避免洗掉 shared 小孩。
 
 旁線包只用 `Ctx.send/pending/cancel/sleep_until`。agent 睡著時不叫主線 LLM；共用層獨占 `results/`，保存到 `<home>/side/<kind>/<id>.json` 再叫該包 `on_result`。逾時、失敗、取消、缺鐘都走同一路並回一則聊天錯誤。
 

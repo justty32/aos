@@ -43,7 +43,7 @@ from packs import branch
 w=sys.argv[2];h=resolve_home(w,None);state={"pending":[]};ctx=Ctx(w,h,state,pack="branch")
 r=branch.run("fork",{"directions":["甲","乙"]},ctx); root=os.path.join(h,"branches",r["branch_id"])
 print(os.path.isfile(os.path.join(root,"base.json")),len(glob.glob(os.path.join(root,"[0-9][0-9]","prompts.json")))==2,
-      all(set(x)>={"id","kind","pack","timeout_steps"} for x in state["pending"]),
+      all(set(x)>={"id","kind","pack","since_ts","timeout_s"} for x in state["pending"]),
       "branches" not in state)
 PYEOF2
 )
