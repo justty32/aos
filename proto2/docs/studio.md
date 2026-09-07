@@ -37,7 +37,7 @@ preset 目錄裡有 `assets/` 的話（Python 小程式工作室的 snippets、�
 
 **額度是硬閘門，每格都守**（agent 每走一格、做任何事之前先看帳）：
 
-- **額度自動撥**：`team.json` 的 `auto_grant`（預設 `{"from": ["pm", "owner"], "tokens": 50000, "max_per_member": 300000}`）——成員 tokens 用完而且有工作在等，閘門直接從 pm（不夠就 owner）的剩餘撥一筆給他、記一筆 `kind: auto`、當格解凍，不寄信不叫模型。撥不出來（兩個都不夠、或到了上限）才走下面那條喊主管的路；而且會直接替 sales 對甲方回一句「撥不出來了，要追加請跑 `team budget --add … --to pm`」。
+- **額度自動撥**：`team.json` 的 `auto_grant`（預設 `{"from": ["pm", "owner"], "tokens": 50000, "max_per_member": 100000}`；`max_per_member` 別開太大——4c 那局 sales 開頭在迴圈裡自己編單號，兩次自動撥款就把 PM 的池子吃掉 10 萬）——成員 tokens 用完而且有工作在等，閘門直接從 pm（不夠就 owner）的剩餘撥一筆給他、記一筆 `kind: auto`、當格解凍，不寄信不叫模型。撥不出來（兩個都不夠、或到了上限）才走下面那條喊主管的路；而且會直接替 sales 對甲方回一句「撥不出來了，要追加請跑 `team budget --add … --to pm`」。
 - **個人 tokens**：`0 就是 0`——沒拿到 `team_grant` 的成員一格都不動（連信都不讀、step 不加）。沒事做（沒信、也不在題目中間）就安靜凍著；有人派活給他才向主管寄一封「額度用完、有工作在等」（沒主管就對外回一句）；喊過之後還凍著，每 300 格再喊一次（主管讀了沒動作、或讀錯那封）。主管 `team_grant` 之後下一格自動解凍，接著處理原本那封信。所以 PM 派工前一定要先分 tokens，一次至少 20000（一輪對話就要幾千）。個人的 ticks／money 分帳只是紀錄，不擋。
 - **整隊 tokens／hours／ticks／money**：任一項用完，**全隊凍住**（每個人都在原地不動、不叫 LLM、不跑工具），只有 sales 對甲方回一句「整隊額度用完了，要追加請跑 `aos-user team budget <世界> --add ...`」。甲方追加後（總額加上去、同一份給 leader，`--to` 可指定給誰，記一筆 `kind: top_up`），下一格全隊自動解凍。
 - 在途的那一筆 LLM 請求收不回來，所以個人 tokens 最多超過「一筆」的量；`max_concurrent` 是幾就是幾筆。

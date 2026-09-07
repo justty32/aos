@@ -550,11 +550,27 @@ def _qa_run(ctx, root, args):
             "exit": row.get("exit"), "output": _tail(row.get("output"), 1200)}
 
 
+def _done_tasks(ctx, root):
+    out = []
+    for oid in _order_ids(root):
+        order = _load_order(ctx, root, oid)
+        if not order or order.get("status") in ("delivered", "failed"):
+            continue
+        out += [t for t in _tasks_of(ctx, root, order) if t.get("status") == "done"]
+    return out
+
+
 def _qa_verdict(ctx, root, args):
-    task_id = args.get("task_id") or ""
+    task_id = str(args.get("task_id") or "")
     task = _load_task(ctx, root, task_id)
     if not task:
-        return {"ok": False, "error": "找不到這個任務：%s" % task_id}
+        # 小模型常漏 task_id：只有一個等驗的任務就當是它
+        done = _done_tasks(ctx, root)
+        if len(done) == 1:
+            task, task_id = done[0], done[0]["id"]
+        else:
+            return {"ok": False, "error": "找不到這個任務：%s" % task_id,
+                    "waiting_for_qa": [t["id"] for t in done]}
     if task["status"] == "assigned":
         return {"ok": False, "error": "%s 還沒 task_report，不能驗" % task_id}
     order = _load_order(ctx, root, task.get("order"))
@@ -716,6 +732,40 @@ def run(name, args, ctx):
     except (OSError, ValueError) as e:
         return {"ok": False, "error": str(e)}
     return {"ok": False, "error": "studio 沒有這個工具：%s" % name}
+
+
+TASK_NAG_TICKS = 45
+
+
+def on_idle(ctx):
+    """做到一半停下來（回了一句話就算結束）的人，手上還有 assigned 的任務：閒滿 TASK_NAG_TICKS 格
+    就寄一封信給自己提醒繼續（工作室的信直接進 prompt），不然沒人會再叫醒它。"""
+    root = team_root_of(ctx.world)
+    if not root or ctx.state.get("sleeping") or ctx.state.get("pending"):
+        return
+    step = int(ctx.state.get("step") or 0)
+    last = ctx.state.get("studio_nag_step")
+    if isinstance(last, (int, float)) and step - int(last) < TASK_NAG_TICKS:
+        return
+    if last is None:
+        ctx.state["studio_nag_step"] = step      # 剛派到的那一刻先給它 45 格
+        return
+    me = _member(ctx)
+    mine = []
+    try:
+        for oid in _order_ids(root):
+            order = _load_order(ctx, root, oid)
+            if not order or order.get("status") in ("delivered", "failed"):
+                continue
+            mine += [t for t in _tasks_of(ctx, root, order)
+                     if t.get("owner") == me and t.get("status") in ("assigned", "failed")]
+    except OSError:
+        return
+    ctx.state["studio_nag_step"] = step
+    if not mine:
+        return
+    ctx.put_mail(ctx.world, "studio", "提醒：你手上的任務 %s 還沒 task_report。繼續做完再回報；卡住就 mail_send 給主管講清楚卡在哪。" % (
+        "、".join(t["id"] for t in mine)))
 
 
 def on_system_prompt(ctx):
