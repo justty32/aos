@@ -454,11 +454,18 @@ none_yet = not os.path.isdir(box) or not [f for f in os.listdir(box) if f.endswi
 dev.state.update({"step": 60}); studio.on_idle(dev)            # 滿 45 格，提醒
 mails = [f for f in os.listdir(box) if f.endswith(".json")] if os.path.isdir(box) else []
 text = json.load(open(os.path.join(box, mails[0]), encoding="utf-8"))["content"] if mails else ""
+first_nag_step = dev.state.get("studio_nag_step")
+for step in (110, 160, 210, 260):                              # 三次都沒動靜→第四次改寄主管，之後不再吵
+    dev.state.update({"step": step}); studio.on_idle(dev)
+mails2 = [f for f in os.listdir(box) if f.endswith(".json")]
+boss_box = os.path.join(root, "kids", "chief", "inbox", "dev-a")
+boss = [f for f in os.listdir(boss_box) if f.endswith(".json")] if os.path.isdir(boss_box) else []
 print(v.get("ok") is True and v["task_id"] == t3["id"] and t3["status"] == "passed"
-      and none_yet and len(mails) == 1 and "-t2" in text and dev.state["studio_nag_step"] == 60)
+      and none_yet and len(mails) == 1 and "-t2" in text and first_nag_step == 60
+      and len(mails2) == 3 and len(boss) == 1 and "卡住" in json.load(open(os.path.join(boss_box, boss[0]), encoding="utf-8"))["content"])
 PYEOF2
 )
-  if [ "$got" = "True" ]; then ok "studio_flow：qa_verdict 漏 task_id 就認唯一等驗的；閒著有任務 45 格後提醒自己"; else fail "studio_flow：qa_verdict 預設／on_idle 提醒不對（$got）"; fi
+  if [ "$got" = "True" ]; then ok "studio_flow：qa_verdict 漏 task_id 就認唯一等驗的；閒著有任務 45 格提醒自己，三次沒動就交主管"; else fail "studio_flow：qa_verdict 預設／on_idle 提醒不對（$got）"; fi
   rm -rf "$root"
 }
 

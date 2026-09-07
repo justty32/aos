@@ -508,6 +508,7 @@ def _task_report(ctx, root, args):
                     "test": {"exit": test.get("exit"), "output": _tail(test.get("output"), 1200)}}
     task["status"] = "done"
     _save_task(ctx, root, task)
+    ctx.state.pop("studio_nag_count", None)
     _note(order, ctx, "%s 回報完成" % task_id)
     _save_order(ctx, root, order)
     body = "\n".join([
@@ -735,6 +736,7 @@ def run(name, args, ctx):
 
 
 TASK_NAG_TICKS = 45
+TASK_NAG_LIMIT = 3
 
 
 def on_idle(ctx):
@@ -763,9 +765,33 @@ def on_idle(ctx):
         return
     ctx.state["studio_nag_step"] = step
     if not mine:
+        ctx.state.pop("studio_nag_count", None)
         return
-    ctx.put_mail(ctx.world, "studio", "提醒：你手上的任務 %s 還沒 task_report。繼續做完再回報；卡住就 mail_send 給主管講清楚卡在哪。" % (
-        "、".join(t["id"] for t in mine)))
+    ids = "、".join(t["id"] for t in mine)
+    count = int(ctx.state.get("studio_nag_count") or 0) + 1
+    ctx.state["studio_nag_count"] = count
+    if count <= TASK_NAG_LIMIT:
+        # 小模型被空泛地提醒只會回一段「我接下來要…」的文字；要講清楚現在就叫哪個工具
+        ctx.put_mail(ctx.world, "studio",
+                     "提醒（第 %d 次）：你手上的任務 %s 還沒 task_report。不要只回文字，現在就呼叫工具：先 read 看檔案，"
+                     "改用 write 整檔重寫（edit 常對不上），再 run_checks，全過就 task_report。卡住就 mail_send 主管講清楚卡在哪。"
+                     % (count, ids))
+        return
+    if count == TASK_NAG_LIMIT + 1:
+        # 提醒三次還沒動靜：交給主管處理（改派、縮範圍），自己不再每 45 格燒一輪
+        boss = _supervisor(ctx, root)
+        if boss:
+            ctx.put_mail(boss, _member(ctx),
+                         "我卡住了：任務 %s 提醒 %d 次都沒做完。請改派給別人、或縮小範圍再派給我。" % (ids, TASK_NAG_LIMIT))
+
+
+def _supervisor(ctx, root):
+    roster = ctx.read_json(os.path.join(root, "team", "team.json"), {})
+    me = _member(ctx)
+    for member in roster.get("members", []) if isinstance(roster, dict) else []:
+        if isinstance(member, dict) and member.get("name") == me:
+            return member.get("reports_to")
+    return None
 
 
 def on_system_prompt(ctx):
