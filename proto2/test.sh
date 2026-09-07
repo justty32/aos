@@ -10,8 +10,15 @@ DKERNEL="$HERE/aos-daemon-kernel"
 DAEMON="$HERE/aos-daemon"
 unset AOS_DAEMON_DIR   # 別讓外面的環境把測試的請求丟進使用者真的 daemon 目錄
 unset AOS_LLM_DIR      # 同理：aos-llm 沒給 --dir 時不該撿到使用者真的 LLM 資料夾
+unset AOS_USER_DIR     # 同理：不該讓測試把東西寫進使用者真的 user 目錄
+unset AOS_MEM_DIR      # 同理：bigmem 找不到 mem_dir 時不該撿到使用者真的記憶世界
 TEST_RUN_DIR=$(mktemp -d)
 export TMPDIR="$TEST_RUN_DIR"   # 這輪所有暫存與 worker 都關在自己的資料夾裡
+# 上面這行是關鍵：test.sh 本體與 tests/*.sh 裡每個 `mktemp -d`（不管是不是
+# 指名 $TEST_RUN_DIR）都會落在這個資料夾底下，所以整輪測試不管是本體的 TMP、
+# daemon 的 AOSD、假 LLM server 的 FAKE，全部都在 $TEST_RUN_DIR 下面——
+# 下面的 strays() 就是靠這點只認自己這輪長出來的進程，不會被操作者在別的視窗
+# 開的 aos daemon 誤傷，也不會偷看到操作者真的 daemon 目錄。
 export PYTHONDONTWRITEBYTECODE=1  # 測試載入工具包時，不在 repo 留 __pycache__
 PASSED=0
 FAILED=0
@@ -32,7 +39,14 @@ check() {  # check <名字> <期待退出碼> <實際退出碼>
 }
 
 # 記住開工時已經存在的進程。它們是別人的，不報錯，也絕不動。
-strays() { pgrep -f 'aos-llm|aos-loop|aos-daemon-kernel|aos-agent' 2>/dev/null || true; }
+# 只認命令列裡有 $TEST_RUN_DIR 的——操作者在別的視窗開著的 aos daemon／aos-loop
+# 不會提到這輪的暫存目錄，所以不會被算進來（也就不會誤判成「這輪留下的」）；
+# 反過來，這輪自己開的東西（daemon 目錄、世界、假 LLM server）全部都在
+# $TEST_RUN_DIR 底下（見上面 TMPDIR 那行），所以真的洩漏出去的進程還是抓得到。
+strays() {
+  pgrep -af 'aos-llm|aos-loop|aos-daemon-kernel|aos-agent' 2>/dev/null \
+    | awk -v d="$TEST_RUN_DIR" 'index($0, d) { print $1 }'
+}
 BEFORE=$(strays)
 if [ -z "$BEFORE" ]; then
   ok "開跑前沒有別的 aos 背景進程"
@@ -2150,7 +2164,17 @@ esac
 rm -rf "$TMP"
 
 # 各工具包自己的測試。glob 會按檔名排序，大家共用上面的 helper 與計數。
-for f in proto2/tests/*.sh; do
+# 用 $HERE（腳本自己的絕對路徑）算，不管從哪個資料夾跑都找得到——
+# 之前寫死相對路徑 proto2/tests/*.sh，從 proto2/ 裡面跑就一個都配不到，
+# glob 沒展開會整串當成檔名塞進 source，source 出錯不會讓 FAILED 增加，
+# 於是「全部通過」卻其實漏跑了一半。
+shopt -s nullglob
+TEST_FILES=("$HERE"/tests/*.sh)
+shopt -u nullglob
+if [ ${#TEST_FILES[@]} -eq 0 ]; then
+  fail "在 $HERE/tests 找不到任何測試檔（tests/*.sh 展開是空的，八成路徑算錯了）"
+fi
+for f in "${TEST_FILES[@]}"; do
   if [ -n "$AOS_TEST_ONLY" ]; then
     case " $AOS_TEST_ONLY " in *" $(basename "$f" .sh) "*) ;; *) continue ;; esac
   fi

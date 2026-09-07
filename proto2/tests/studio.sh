@@ -203,3 +203,126 @@ PYEOF2
 }
 
 test_studio
+
+# team why／team tail：一個人在旁邊看整隊時要的兩件事。
+test_studio_watch() {
+  local root studio checks why line_count only tail_out
+  root=$(mktemp -d "$TEST_RUN_DIR/studiowatch.XXXXXX")
+  prep_llm "$root/llm"
+  studio="$root/studio"
+  export AOS_LLM_DIR="$root/llm"
+  "$AUSER" team new "$studio" --preset studio --engine local \
+    --budget '{"tokens":200000,"hours":8,"ticks":500,"disk_mb":20,"mem_mb":64,"money_usd":1}' \
+    >/dev/null 2>&1
+
+  # 假一點狀態：pm 在等一發排在第二的請求、有一封 chief 的未讀信；dev-a 額度用完凍住；
+  # qa 睡著等回信；chief 手上有一張 assigned 的任務；dev-b 留一段有工具的對話。
+  python3 - "$root" <<'PYEOF2'
+import json, os, sys, time
+root = sys.argv[1]
+studio, llm = os.path.join(root, "studio"), os.path.join(root, "llm")
+def wr(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    json.dump(obj, open(path, "w", encoding="utf-8"), ensure_ascii=False)
+wr(os.path.join(llm, "requests", "aaa-first.json"), {"priority": 5, "messages": []})
+wr(os.path.join(llm, "requests", "pm-req.json"), {"priority": 1, "messages": []})
+wr(os.path.join(studio, "kids/pm/state.json"),
+   {"state": "wait", "step": 120, "busy": 80, "request": "pm-req.json", "wait_ticks": 41})
+wr(os.path.join(studio, "kids/pm/inbox/chief/x1.json"), {"from": "chief", "content": "問一下"})
+wr(os.path.join(studio, "kids/dev-a/state.json"),
+   {"state": "llm", "step": 300, "busy": 200, "budget_block": "own:tokens", "frozen_ticks": 120})
+wr(os.path.join(studio, "kids/qa/state.json"),
+   {"state": "idle", "step": 400, "busy": 250, "question_sleep_steps": 300,
+    "sleeping": {"kind": "mail", "id": "pm-mail-20260907-123456"}})
+wr(os.path.join(studio, "team/tasks/order-20260907-123456-000001-t3.json"),
+   {"id": "order-20260907-123456-000001-t3", "owner": "chief", "status": "assigned",
+    "title": "定架構"})
+wr(os.path.join(llm, "usage", time.strftime("%Y-%m-%d") + ".json"),
+   {"by-requester": {"studio/dev-a": {"total_tokens": 12345}}})
+wr(os.path.join(studio, "kids/dev-b/state.json"), {"state": "act", "step": 66, "busy": 40})
+wr(os.path.join(studio, "kids/dev-b/prompts.json"), [
+    {"role": "user", "content": "請做 todo.py"},
+    {"role": "assistant", "content": "我先看一下現在的檔案。",
+     "tool_calls": [{"id": "c1", "function": {"name": "read",
+                                              "arguments": '{"path": "team/projects/todo.py"}'}}]},
+    {"role": "tool", "tool_call_id": "c1", "content": '{"ok": true, "text": "還是空的"}'},
+    {"role": "assistant", "content": "那我直接寫一份。",
+     "tool_calls": [{"id": "c2", "function": {"name": "write",
+                                              "arguments": '{"path": "team/projects/todo.py"}'}}]},
+    {"role": "tool", "tool_call_id": "c2", "content": '{"ok": true, "bytes": 30}'},
+])
+PYEOF2
+
+  why=$("$AUSER" team why "$studio" 2>&1)
+  line_count=$(printf '%s\n' "$why" | grep -c .)
+  if [ "$line_count" = "9" ]; then
+    ok "studio：team why 一行一個人（八行加一行抬頭）"
+  else
+    fail "studio：team why 行數不對（$line_count）：$why"
+  fi
+
+  checks="$root/why.json"
+  printf '%s\n' "$why" > "$root/why.txt"
+  python3 - "$root/why.txt" "$checks" <<'PYEOF2'
+import json, sys
+lines = [l for l in open(sys.argv[1], encoding="utf-8").read().splitlines() if l.strip()]
+rows = {l.split()[0]: l for l in lines[1:]}
+checks = {}
+checks["names"] = set(rows) == {"owner", "sales", "pm", "chief", "dev-a", "dev-b", "tester", "qa"}
+checks["wait"] = ("llm→wait" in rows["pm"] and "等 LLM 回" in rows["pm"]
+                  and "第 2 位" in rows["pm"] and "已等 41 格" in rows["pm"]
+                  and "未讀 1 封（chief 1）" in rows["pm"])
+checks["frozen"] = ("凍住" in rows["dev-a"] and "tokens 用完" in rows["dev-a"]
+                    and "已用 12k" in rows["dev-a"] and "等撥款 120 格" in rows["dev-a"])
+checks["sleep"] = ("睡" in rows["qa"] and "等 mail" in rows["qa"] and "已 300 格" in rows["qa"])
+checks["task"] = ("閒" in rows["chief"] and "任務" in rows["chief"]
+                  and "-t3（assigned）" in rows["chief"])
+checks["tokens"] = "tokens 剩 170k" in rows["pm"] and "tokens 剩 20k" in rows["owner"]
+checks["width"] = all(len(l) <= 110 for l in lines)
+json.dump(checks, open(sys.argv[2], "w", encoding="utf-8"), ensure_ascii=False)
+PYEOF2
+  for item in \
+    'names|studio：team why 八個人都印到' \
+    'wait|studio：team why 等 LLM 的人印出排隊名次、等幾格與未讀來源' \
+    'frozen|studio：team why 凍住的人印出額度用完與等撥款幾格' \
+    'sleep|studio：team why 睡著的人印出在等哪一封、睡幾格' \
+    'task|studio：team why 閒著的人印出手上那張任務與狀態' \
+    'tokens|studio：team why 每行都帶剩下的 tokens' \
+    'width|studio：team why 每行不超過 110 字'; do
+    studio_assert "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$checks" "${item%%|*}")" "${item#*|}"
+  done
+
+  only=$("$AUSER" team why "$studio" --member pm 2>&1)
+  line_count=$(printf '%s\n' "$only" | grep -c .)
+  case "$line_count:$only" in
+    "2:"*"llm→wait"*) ok "studio：team why --member 只印那一個人" ;;
+    *) fail "studio：team why --member 不對（$only）" ;;
+  esac
+  "$AUSER" team why "$studio" --member 沒這個人 >/dev/null 2>&1
+  check "studio：team why 認不得的成員回 2" 2 "$?"
+
+  tail_out=$("$AUSER" team tail "$studio" dev-b -n 2 2>&1)
+  case "$tail_out" in
+    *"dev-b"*"state=act"*"step=66"*) ok "studio：team tail 抬頭有成員、狀態與格數" ;;
+    *) fail "studio：team tail 抬頭不對（$tail_out）" ;;
+  esac
+  case "$tail_out" in
+    *"模型說：我先看一下"*"→ read"*"工具回："*"← read: "*"還是空的"*)
+      ok "studio：team tail 印得出模型說、工具呼叫與工具回" ;;
+    *) fail "studio：team tail 少了模型說／工具回（$tail_out）" ;;
+  esac
+  case "$tail_out" in
+    *"那我直接寫一份"*"← write: "*) ok "studio：team tail -n 2 兩輪都印到" ;;
+    *) fail "studio：team tail 沒印滿兩輪（$tail_out）" ;;
+  esac
+  tail_out=$("$AUSER" team tail "$studio" tester 2>&1)
+  case "$tail_out" in
+    *"還沒有模型回合"*) ok "studio：team tail 沒對話過的人印一句話不當機" ;;
+    *) fail "studio：team tail 空對話沒處理好（$tail_out）" ;;
+  esac
+  "$AUSER" team tail "$studio" 沒這個人 >/dev/null 2>&1
+  check "studio：team tail 認不得的成員回 2" 2 "$?"
+  unset AOS_LLM_DIR
+}
+
+test_studio_watch

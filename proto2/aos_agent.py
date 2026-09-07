@@ -1,5 +1,8 @@
 """aos-agent 與 aos-user 共用：世界、信箱、工具包、旁線請求、狀態與建世界。"""
+import contextlib
 import datetime
+import errno
+import fcntl
 import importlib.util
 import json
 import os
@@ -9,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,6 +29,7 @@ CUT = 4000
 TEAM_BUDGET_KEYS = ("tokens", "hours", "ticks", "disk_mb", "mem_mb", "money_usd")
 SIDE_TIMEOUT_S = 600
 UNREAD_REMIND_TICKS = 30   # 已通知但一直沒讀的信，idle 這麼多格後再提醒一次
+TEAM_LOCK_TIMEOUT_S = 10   # 搶 team/.lock 最多等這麼久，免得有人卡住就整間工作室不動
 
 
 def warn(msg):
@@ -472,6 +477,62 @@ def today_usage_for(home, world):
 
 
 # ── 整隊共用家務 ──────────────────────────────────────────────────────────
+_LOCK_HELD = threading.local()   # {鎖檔路徑: [fd, 進去幾層]}，同一個 process 重入用
+
+
+def _lock_held():
+    held = getattr(_LOCK_HELD, "held", None)
+    if held is None:
+        held = _LOCK_HELD.held = {}
+    return held
+
+
+@contextlib.contextmanager
+def team_lock(root, name="team", timeout=TEAM_LOCK_TIMEOUT_S):
+    """共用檔（orders/tasks/budget.json/team.json/progress.md）的鎖。
+
+    八個成員各是一個 process，讀出來改完再寫回去中間沒鎖的話，兩個人同時改同一個檔就會掉一筆。
+    這裡在 `<root>/<name>/.lock` 上用 flock 上獨佔鎖，拿不到就等（每 20 毫秒試一次），
+    超過 timeout 秒就丟 OSError——行程死掉 flock 本來就會自動放開，這個逾時只是保險，
+    免得有人握著不放整間工作室就停在那裡。同一個 process 裡可以重入（巢狀呼叫不會自己鎖死）。
+    別在鎖裡面跑測試那種要幾十秒的指令，先放掉鎖、跑完再重拿。"""
+    path = os.path.join(os.path.abspath(root), name, ".lock")
+    held = _lock_held()
+    if path in held:
+        held[path][1] += 1          # 已經握著了，只加一層深度
+        try:
+            yield path
+        finally:
+            held[path][1] -= 1
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
+    deadline = time.monotonic() + max(0.0, float(timeout))
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except OSError as e:
+            if e.errno not in (errno.EAGAIN, errno.EACCES):
+                os.close(fd)
+                raise
+            if time.monotonic() >= deadline:
+                os.close(fd)
+                raise OSError("等共用檔的鎖等超過 %s 秒還拿不到：%s（有人握著沒放，晚點再試）"
+                              % (timeout, path))
+            time.sleep(0.02)
+    held[path] = [fd, 1]
+    try:
+        yield path
+    finally:
+        entry = held.pop(path, None)
+        if entry:
+            try:
+                fcntl.flock(entry[0], fcntl.LOCK_UN)
+            finally:
+                os.close(entry[0])
+
+
 def team_root_of(world):
     current = os.path.abspath(world)
     seen = set()
@@ -689,27 +750,31 @@ def team_auto_grant(world, member):
     givers = [givers] if isinstance(givers, str) else [g for g in givers if isinstance(g, str)]
     cap = policy.get("max_per_member")
     path = os.path.join(root, "team", "budget.json")
-    book = read_json(path, {})
-    book = book if isinstance(book, dict) else {}
-    allocations = book.get("allocations") if isinstance(book.get("allocations"), dict) else {}
-    mine = allocations.setdefault(member, {key: 0 for key in TEAM_BUDGET_KEYS})
-    if isinstance(cap, (int, float)) and not isinstance(cap, bool) and _team_number(mine.get("tokens")) + amount > cap:
-        return False, "已到 max_per_member %s" % cap
-    data = team_status_of(root, light=True)
-    left = {row["name"]: _team_number((row.get("remaining") or {}).get("tokens")) for row in data["members"]}
-    for giver in givers:
-        if giver == member or giver not in allocations:
-            continue
-        if left.get(giver, 0) < amount:
-            continue
-        allocations[giver]["tokens"] = round(_team_number(allocations[giver].get("tokens")) - amount, 6)
-        mine["tokens"] = round(_team_number(mine.get("tokens")) + amount, 6)
-        now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-        grants = book.get("grants") if isinstance(book.get("grants"), list) else []
-        grants.append({"time": now, "from": giver, "to": member, "amount": {"tokens": amount}, "kind": "auto"})
-        book.update({"allocations": allocations, "grants": grants, "updated": now})
-        write_json_atomic(path, book)
-        return True, "自動從 %s 撥了 %s tokens" % (giver, amount)
+    try:
+        with team_lock(root):   # 讀出來改完再寫回去，中間不能被別人插隊
+            book = read_json(path, {})
+            book = book if isinstance(book, dict) else {}
+            allocations = book.get("allocations") if isinstance(book.get("allocations"), dict) else {}
+            mine = allocations.setdefault(member, {key: 0 for key in TEAM_BUDGET_KEYS})
+            if isinstance(cap, (int, float)) and not isinstance(cap, bool) and _team_number(mine.get("tokens")) + amount > cap:
+                return False, "已到 max_per_member %s" % cap
+            data = team_status_of(root, light=True)
+            left = {row["name"]: _team_number((row.get("remaining") or {}).get("tokens")) for row in data["members"]}
+            for giver in givers:
+                if giver == member or giver not in allocations:
+                    continue
+                if left.get(giver, 0) < amount:
+                    continue
+                allocations[giver]["tokens"] = round(_team_number(allocations[giver].get("tokens")) - amount, 6)
+                mine["tokens"] = round(_team_number(mine.get("tokens")) + amount, 6)
+                now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+                grants = book.get("grants") if isinstance(book.get("grants"), list) else []
+                grants.append({"time": now, "from": giver, "to": member, "amount": {"tokens": amount}, "kind": "auto"})
+                book.update({"allocations": allocations, "grants": grants, "updated": now})
+                write_json_atomic(path, book)
+                return True, "自動從 %s 撥了 %s tokens" % (giver, amount)
+    except OSError as e:      # 鎖等不到就當這格撥不出來，下一格再試，別讓閘門炸掉
+        return False, str(e)
     return False, "撥錢的人（%s）都不夠了" % "、".join(givers)
 
 
@@ -735,20 +800,21 @@ def team_add_budget(world, amount, to=None, who="user"):
             raise ValueError("%s 要是大於 0 的數字" % key)
         add[key] = number
     path = os.path.join(root, "team", "budget.json")
-    book = read_json(path, {})
-    book = book if isinstance(book, dict) else {}
-    total = normalize_team_budget(book.get("total") or roster.get("budget") or {})
-    allocations = book.get("allocations") if isinstance(book.get("allocations"), dict) else {}
-    allocations.setdefault(target, {key: 0 for key in TEAM_BUDGET_KEYS})
-    for key, number in add.items():
-        total[key] = round(_team_number(total.get(key)) + number, 6)
-        allocations[target][key] = round(_team_number(allocations[target].get(key)) + number, 6)
-    now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-    grants = book.get("grants") if isinstance(book.get("grants"), list) else []
-    grants.append({"time": now, "from": who, "to": target, "amount": add, "kind": "top_up"})
-    book.update({"schema": book.get("schema") or "aos-team-budget/1", "total": total,
-                 "allocations": allocations, "grants": grants, "updated": now})
-    write_json_atomic(path, book)
+    with team_lock(root):     # 追加也是讀出來改完再寫回去
+        book = read_json(path, {})
+        book = book if isinstance(book, dict) else {}
+        total = normalize_team_budget(book.get("total") or roster.get("budget") or {})
+        allocations = book.get("allocations") if isinstance(book.get("allocations"), dict) else {}
+        allocations.setdefault(target, {key: 0 for key in TEAM_BUDGET_KEYS})
+        for key, number in add.items():
+            total[key] = round(_team_number(total.get(key)) + number, 6)
+            allocations[target][key] = round(_team_number(allocations[target].get(key)) + number, 6)
+        now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+        grants = book.get("grants") if isinstance(book.get("grants"), list) else []
+        grants.append({"time": now, "from": who, "to": target, "amount": add, "kind": "top_up"})
+        book.update({"schema": book.get("schema") or "aos-team-budget/1", "total": total,
+                     "allocations": allocations, "grants": grants, "updated": now})
+        write_json_atomic(path, book)
     return book
 
 

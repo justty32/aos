@@ -2,7 +2,8 @@
 import datetime
 import os
 
-from aos_agent import TEAM_BUDGET_KEYS, team_member_name, team_root_of, team_status_of
+from aos_agent import (TEAM_BUDGET_KEYS, team_lock, team_member_name, team_root_of,
+                       team_status_of)
 
 
 PROMPT = (
@@ -102,24 +103,26 @@ def _grant(ctx, role, amount):
     except ValueError as e:
         return {"ok": False, "error": str(e)}
     path = os.path.join(root, "team", "budget.json")
-    book = ctx.read_json(path, {})
-    allocations = book.get("allocations") if isinstance(book, dict) else None
-    if not isinstance(allocations, dict) or not isinstance(allocations.get(giver), dict):
-        return {"ok": False, "error": "team/budget.json 的 allocations 壞了"}
-    for key, number in give.items():
-        if (allocations[giver].get(key) or 0) < number:
-            return {"ok": False, "error": "%s 的 %s 不夠，沒有寫帳" % (giver, key),
-                    "action": "停止新工作；owner 請 sales 向甲方申請最小追加量"}
-    allocations.setdefault(target, {key: 0 for key in TEAM_BUDGET_KEYS})
-    for key, number in give.items():
-        allocations[giver][key] = round((allocations[giver].get(key) or 0) - number, 6)
-        allocations[target][key] = round((allocations[target].get(key) or 0) + number, 6)
-    now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-    grants = book.get("grants")
-    grants = grants if isinstance(grants, list) else []
-    grants.append({"time": now, "from": giver, "to": target, "amount": give})
-    book.update({"allocations": allocations, "grants": grants, "updated": now})
-    ctx.write_json(path, book)
+    # 帳本是全隊共用的：整段讀→改→寫都握著鎖，不然兩個人同時撥款會掉一筆
+    with team_lock(root):
+        book = ctx.read_json(path, {})
+        allocations = book.get("allocations") if isinstance(book, dict) else None
+        if not isinstance(allocations, dict) or not isinstance(allocations.get(giver), dict):
+            return {"ok": False, "error": "team/budget.json 的 allocations 壞了"}
+        for key, number in give.items():
+            if (allocations[giver].get(key) or 0) < number:
+                return {"ok": False, "error": "%s 的 %s 不夠，沒有寫帳" % (giver, key),
+                        "action": "停止新工作；owner 請 sales 向甲方申請最小追加量"}
+        allocations.setdefault(target, {key: 0 for key in TEAM_BUDGET_KEYS})
+        for key, number in give.items():
+            allocations[giver][key] = round((allocations[giver].get(key) or 0) - number, 6)
+            allocations[target][key] = round((allocations[target].get(key) or 0) + number, 6)
+        now = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+        grants = book.get("grants")
+        grants = grants if isinstance(grants, list) else []
+        grants.append({"time": now, "from": giver, "to": target, "amount": give})
+        book.update({"allocations": allocations, "grants": grants, "updated": now})
+        ctx.write_json(path, book)
     return {"ok": True, "from": giver, "to": target, "amount": give,
             "from_left": allocations[giver], "to_budget": allocations[target]}
 
@@ -131,7 +134,7 @@ def _progress(ctx, text):
     root = _root(ctx)
     stamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
     path = os.path.join(root, "team", "progress.md")
-    with open(path, "a", encoding="utf-8") as f:
+    with team_lock(root), open(path, "a", encoding="utf-8") as f:
         f.write("- %s %s：%s\n" % (stamp, _member(ctx), text))
     return {"ok": True, "path": path, "time": stamp}
 
