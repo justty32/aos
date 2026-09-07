@@ -396,7 +396,7 @@ order = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))
 mails = glob.glob(os.path.join(root, "kids", "chief", "inbox", "pm", "*.json"))
 # chief 拆任務：接在 t1、t2 後面編 t3，自己手上那兩項定架構任務自動算 passed
 chief = Ctx(os.path.join(root, "kids", "chief"), os.path.join(root, "kids", "chief"))
-r3 = studio.run("plan_set", {"order_id": order["id"], "architecture": "一支檔", "tasks": [{"title": "寫程式", "owner": "dev-a"}]}, chief)
+r3 = studio.run("plan_set", {"order_id": order["id"], "architecture": "一支檔", "tasks": [{"title": "寫程式", "owner": "dev-a", "spec": "首席寫的完整說明"}]}, chief)
 order2 = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
 t1 = json.load(open(os.path.join(root, "team", "tasks", r1["task_id"] + ".json"), encoding="utf-8"))
 # pm 沒給 task_id、只說 to=dev-a：要派 plan_set 開給 dev-a 的 t3，不能再開 t4；短的 spec 不蓋掉首席的
@@ -409,10 +409,29 @@ print(r0.get("ok") is True and r1.get("ok") is True and r1["task_id"].endswith("
       and r3.get("ok") is True and order2["tasks"] == [r1["task_id"], r2["task_id"], order["id"] + "-t3"]
       and t1["status"] == "passed"
       and r4.get("ok") is True and r4["task_id"] == order["id"] + "-t3" and len(order3["tasks"]) == 3
-      and t3.get("assigned") and t3["spec"] == "")
+      and t3.get("assigned") and t3["spec"] == "首席寫的完整說明")
 PYEOF2
 )
   if [ "$got" = "True" ]; then ok "studio_flow：task_assign 沒 task_id 就開新任務；plan_set 接著編號並把定架構那項算 passed"; else fail "studio_flow：開新任務不對（$got）"; fi
+  # task_report 帶的 test_cmd 沒過 → 不算完成、status 不動、回 ok:false 與輸出尾巴；過了才 done
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import glob, json, os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+from packs import studio
+root = sys.argv[2]
+order = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
+tid = order["id"] + "-t3"
+dev = Ctx(os.path.join(root, "kids", "dev-a"), os.path.join(root, "kids", "dev-a"))
+bad = studio.run("task_report", {"task_id": tid, "summary": "全過了（其實沒有）", "files": ["x.py"], "test_cmd": "exit 3"}, dev)
+t = json.load(open(os.path.join(root, "team", "tasks", tid + ".json"), encoding="utf-8"))
+good = studio.run("task_report", {"task_id": tid, "summary": "真的過了", "files": ["x.py"], "test_cmd": "true"}, dev)
+t2 = json.load(open(os.path.join(root, "team", "tasks", tid + ".json"), encoding="utf-8"))
+print(bad.get("ok") is False and bad["test"]["exit"] == 3 and t["status"] == "assigned" and len(t["tests"]) == 1
+      and good.get("ok") is True and t2["status"] == "done" and len(t2["tests"]) == 2)
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "studio_flow：task_report 的測試沒過就不算完成，過了才 done"; else fail "studio_flow：測試沒過的回報沒被擋（$got）"; fi
   rm -rf "$root"
 }
 

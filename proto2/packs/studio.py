@@ -495,12 +495,18 @@ def _task_report(ctx, root, args):
         task["files"] = [str(f) for f in files]
     task["report"] = str(args.get("summary") or "")
     task["reported_by"] = _member(ctx)
-    task["status"] = "done"
     test = None
     if args.get("test_cmd"):
         test = _run_cmd(root, order["id"], str(args["test_cmd"]))
         tests = task.get("tests")
         task["tests"] = (tests if isinstance(tests, list) else []) + [test]
+        if test.get("exit") != 0:
+            # 測試沒過就不算做完：小模型會無視紅字直接報「全部通過」，這裡用工具擋住，不靠它自覺
+            _save_task(ctx, root, task)
+            return {"ok": False, "task_id": task_id, "status": task["status"],
+                    "error": "test_cmd 沒有全過（exit %s），任務還不算完成；先修好再 task_report" % test.get("exit"),
+                    "test": {"exit": test.get("exit"), "output": _tail(test.get("output"), 1200)}}
+    task["status"] = "done"
     _save_task(ctx, root, task)
     _note(order, ctx, "%s 回報完成" % task_id)
     _save_order(ctx, root, order)

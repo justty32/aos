@@ -858,7 +858,7 @@ TMP=$(mktemp -d); W="$TMP/w"; H="$W/agent"; prep_agent "$W"; prep_llm "$TMP/llm"
 "$AUSER" say "$W" "跑一輪" >/dev/null 2>&1
 "$LOOP" "$TMP/llm" --keep-inst --steps 2000 --interval 0 >/dev/null 2>&1 &
 LLM_LOOP=$!
-"$LOOP" "$W" --keep-inst --steps 80 --interval 0.05 >/dev/null 2>&1
+"$LOOP" "$W" --keep-inst --steps 80 --interval 0.1 >/dev/null 2>&1
 kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
 if [ "$(cat "$W/said.txt" 2>/dev/null)" = "hi" ] && [ "$(now_state "$H")" = "idle" ]; then
   ok "兩個 aos-loop --keep-inst 交錯跑完同一條鏈"
@@ -1134,7 +1134,7 @@ if [ "$STEP_2" = "0" ]; then ok "own 的 kid2 一格都沒走（時間跟父脫�
 # 36. 子真的能透過同一個 LLM 資料夾工作：父帶著跑，kid1 的 outbox/ 要冒出回話
 "$LOOP" "$TMP/llm" --keep-inst --steps 2000 --interval 0 >/dev/null 2>&1 &
 LLM_LOOP=$!
-"$LOOP" "$W" --keep-inst --steps 80 --interval 0.05 >/dev/null 2>&1
+"$LOOP" "$W" --keep-inst --steps 80 --interval 0.1 >/dev/null 2>&1
 kill $LLM_LOOP 2>/dev/null; wait $LLM_LOOP 2>/dev/null
 NREP=$(find "$H/kids/kid1/outbox" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
 if [ "$NREP" -ge 1 ]; then
