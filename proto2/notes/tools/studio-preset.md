@@ -6,6 +6,8 @@
 
 預設七人。人不再加。測試員值得留下，因為「寫完」和「甲方能驗收」是兩件事；文件由業務、PM 和工程師一起整理。
 
+> **2026-09-07 修正**：實玩發現 chief 會把「寫測試」派給 qa，qa 就同時是做的人跟驗的人。使用者拍板：qa 不能又寫又驗，另設 **tester**（寫測試，向 chief 報告），qa 只跑只判。所以現在是八人；規則寫進 `studio` 包的工具裡，見 [docs/studio-flow](../../docs/studio-flow.md)。
+
 ### 老闆／頭領：`owner`（世界根目錄）
 
 職責：決定接不接案、分總預算、管人，結案後回顧。工具包：`mailbox communication self memory kids cost think review ref`。鐘：自己的鐘，也是全隊主鐘。Engine：便宜的，接案或超支才用會想的。

@@ -43,7 +43,7 @@ test_studio_flow() {
   python3 - "$studio" <<'PYEOF2'
 import json, os, sys
 root = sys.argv[1]
-for name in ("sales", "pm", "chief", "dev-a", "dev-b", "qa"):
+for name in ("sales", "pm", "chief", "dev-a", "dev-b", "tester", "qa"):
     p = os.path.join(root, "kids", name, "tools.json")
     d = json.load(open(p, encoding="utf-8"))
     if "studio" not in d["packs"]:
@@ -246,6 +246,17 @@ import json, sys
 d = json.load(sys.stdin)
 print(d.get("ok") is False and "沒過驗收" in d.get("error", ""))')
   studio_flow_assert "$got" "studio_flow：還有任務沒過時 deliver 被擋"
+
+  # 判過要有憑據：t2 還沒跑過任何測試，qa 直接判過會被擋；qa_run 跑過一次才能判
+  got=$(studio_flow_call "$studio/kids/qa" qa_verdict \
+        "{\"task_id\":\"$task2\",\"passed\":true,\"evidence\":\"測試檔在\"}" \
+        | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+print(d.get("ok") is False and "exit 0" in d.get("error", "") and d.get("tests") == [])')
+  studio_flow_assert "$got" "studio_flow：沒跑過測試 qa_verdict 不能判過"
+  studio_flow_call "$studio/kids/qa" qa_run \
+        "{\"task_id\":\"$task2\",\"command\":\"python3 -m py_compile test_todo.py\"}" >/dev/null
 
   out=$(studio_flow_call "$studio/kids/qa" qa_verdict \
         "{\"task_id\":\"$task2\",\"passed\":true,\"evidence\":\"測試檔在\"}")
@@ -466,6 +477,31 @@ print(v.get("ok") is True and v["task_id"] == t3["id"] and t3["status"] == "pass
 PYEOF2
 )
   if [ "$got" = "True" ]; then ok "studio_flow：qa_verdict 漏 task_id 就認唯一等驗的；閒著有任務 45 格提醒自己，三次沒動就交主管"; else fail "studio_flow：qa_verdict 預設／on_idle 提醒不對（$got）"; fi
+  # qa 只驗不做：plan_set／task_assign 派給 qa 都被擋；tester 能 task_report 但 files 一定要有測試檔
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import glob, json, os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+from packs import studio
+root = sys.argv[2]
+order = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
+chief = Ctx(os.path.join(root, "kids", "chief"), os.path.join(root, "kids", "chief"))
+pm = Ctx(os.path.join(root, "kids", "pm"), os.path.join(root, "kids", "pm"))
+tester = Ctx(os.path.join(root, "kids", "tester"), os.path.join(root, "kids", "tester"))
+r1 = studio.run("plan_set", {"order_id": order["id"], "architecture": "x", "tasks": [{"title": "寫測試", "owner": "qa"}]}, chief)
+r2 = studio.run("task_assign", {"order_id": order["id"], "to": "qa", "spec": "寫測試"}, pm)
+r3 = studio.run("task_assign", {"order_id": order["id"], "to": "tester", "spec": "寫測試"}, pm)
+tid = r3.get("task_id") or ""
+r4 = studio.run("task_report", {"task_id": tid, "summary": "寫好了", "files": ["x.py"]}, tester)
+r5 = studio.run("task_report", {"task_id": tid, "summary": "寫好了", "files": ["test_x.py"]}, tester)
+print(r1.get("ok") is False and "tester" in r1.get("error", "")
+      and r2.get("ok") is False and "tester" in r2.get("error", "")
+      and r3.get("ok") is True and tid.endswith("-t4")
+      and r4.get("ok") is False and "test" in r4.get("error", "")
+      and r5.get("ok") is True and r5["status"] == "done")
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "studio_flow：任務不能派給 qa；tester 回報一定要列測試檔"; else fail "studio_flow：qa 只驗／tester 規則不對（$got）"; fi
   rm -rf "$root"
 }
 

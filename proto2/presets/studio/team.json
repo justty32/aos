@@ -22,12 +22,26 @@
       "reports_to": null,
       "persona": "owner/system-prompt.json",
       "prompts": "owner/prompts.json",
-      "packs": ["mailbox", "communication", "team", "studio"],
+      "packs": [
+        "mailbox",
+        "communication",
+        "team",
+        "studio"
+      ],
       "clock": "own",
       "engine": "cheap",
       "budget_pct": 10,
-      "only": ["inbox_read_all", "mail_send", "team_grant", "team_budget", "team_status", "order_status"],
-      "inline_mail": ["*"]
+      "only": [
+        "inbox_read_all",
+        "mail_send",
+        "team_grant",
+        "team_budget",
+        "team_status",
+        "order_status"
+      ],
+      "inline_mail": [
+        "*"
+      ]
     },
     {
       "name": "sales",
@@ -36,12 +50,25 @@
       "reports_to": "owner",
       "persona": "sales/system-prompt.json",
       "prompts": "sales/prompts.json",
-      "packs": ["mailbox", "communication", "studio", "team"],
+      "packs": [
+        "mailbox",
+        "communication",
+        "studio",
+        "team"
+      ],
       "clock": "shared:owner",
       "engine": "cheap",
       "budget_pct": 5,
-      "only": ["order_accept", "order_status", "mail_send", "inbox_read_all", "team_budget"],
-      "inline_mail": ["*"]
+      "only": [
+        "order_accept",
+        "order_status",
+        "mail_send",
+        "inbox_read_all",
+        "team_budget"
+      ],
+      "inline_mail": [
+        "*"
+      ]
     },
     {
       "name": "pm",
@@ -50,12 +77,33 @@
       "reports_to": "owner",
       "persona": "pm/system-prompt.json",
       "prompts": "pm/prompts.json",
-      "packs": ["mailbox", "communication", "studio", "team", "fs"],
+      "packs": [
+        "mailbox",
+        "communication",
+        "studio",
+        "team",
+        "fs"
+      ],
       "clock": "shared:owner",
       "engine": "cheap",
       "budget_pct": 85,
-      "only": ["task_assign", "deliver", "order_fail", "order_status", "qa_run", "mail_send", "inbox_read_all", "team_grant", "team_budget", "team_status", "read", "ls"],
-      "inline_mail": ["*"]
+      "only": [
+        "task_assign",
+        "deliver",
+        "order_fail",
+        "order_status",
+        "qa_run",
+        "mail_send",
+        "inbox_read_all",
+        "team_grant",
+        "team_budget",
+        "team_status",
+        "read",
+        "ls"
+      ],
+      "inline_mail": [
+        "*"
+      ]
     },
     {
       "name": "chief",
@@ -64,12 +112,39 @@
       "reports_to": "pm",
       "persona": "chief/system-prompt.json",
       "prompts": "chief/prompts.json",
-      "packs": ["mailbox", "communication", "studio", "pyshop", "fs", "code"],
+      "packs": [
+        "mailbox",
+        "communication",
+        "studio",
+        "pyshop",
+        "fs",
+        "code"
+      ],
       "clock": "own",
       "engine": "thinking",
       "budget_pct": 0,
-      "only": ["plan_set", "task_report", "order_status", "scaffold", "asset_list", "asset_get", "run_checks", "read", "write", "edit", "ls", "sh", "code_outline", "code_search", "code_check", "mail_send", "inbox_read_all"],
-      "inline_mail": ["*"]
+      "only": [
+        "plan_set",
+        "task_report",
+        "order_status",
+        "scaffold",
+        "asset_list",
+        "asset_get",
+        "run_checks",
+        "read",
+        "write",
+        "edit",
+        "ls",
+        "sh",
+        "code_outline",
+        "code_search",
+        "code_check",
+        "mail_send",
+        "inbox_read_all"
+      ],
+      "inline_mail": [
+        "*"
+      ]
     },
     {
       "name": "dev-a",
@@ -78,12 +153,38 @@
       "reports_to": "chief",
       "persona": "dev-a/system-prompt.json",
       "prompts": "dev-a/prompts.json",
-      "packs": ["mailbox", "communication", "studio", "pyshop", "fs", "code"],
+      "packs": [
+        "mailbox",
+        "communication",
+        "studio",
+        "pyshop",
+        "fs",
+        "code"
+      ],
       "clock": "shared:owner",
-      "engine": "cheap",
+      "engine": "thinking",
       "budget_pct": 0,
-      "only": ["task_report", "order_status", "scaffold", "asset_list", "asset_get", "run_checks", "read", "write", "edit", "ls", "sh", "code_outline", "code_search", "code_check", "mail_send", "inbox_read_all"],
-      "inline_mail": ["*"]
+      "only": [
+        "task_report",
+        "order_status",
+        "scaffold",
+        "asset_list",
+        "asset_get",
+        "run_checks",
+        "read",
+        "write",
+        "edit",
+        "ls",
+        "sh",
+        "code_outline",
+        "code_search",
+        "code_check",
+        "mail_send",
+        "inbox_read_all"
+      ],
+      "inline_mail": [
+        "*"
+      ]
     },
     {
       "name": "dev-b",
@@ -92,12 +193,77 @@
       "reports_to": "chief",
       "persona": "dev-b/system-prompt.json",
       "prompts": "dev-b/prompts.json",
-      "packs": ["mailbox", "communication", "studio", "pyshop", "fs", "code"],
+      "packs": [
+        "mailbox",
+        "communication",
+        "studio",
+        "pyshop",
+        "fs",
+        "code"
+      ],
+      "clock": "shared:owner",
+      "engine": "thinking",
+      "budget_pct": 0,
+      "only": [
+        "task_report",
+        "order_status",
+        "scaffold",
+        "asset_list",
+        "asset_get",
+        "run_checks",
+        "read",
+        "write",
+        "edit",
+        "ls",
+        "sh",
+        "code_outline",
+        "code_search",
+        "code_check",
+        "mail_send",
+        "inbox_read_all"
+      ],
+      "inline_mail": [
+        "*"
+      ]
+    },
+    {
+      "name": "tester",
+      "role": "tester",
+      "path": "kids/tester",
+      "reports_to": "chief",
+      "persona": "tester/system-prompt.json",
+      "prompts": "tester/prompts.json",
+      "packs": [
+        "mailbox",
+        "communication",
+        "studio",
+        "pyshop",
+        "fs",
+        "code"
+      ],
       "clock": "shared:owner",
       "engine": "cheap",
       "budget_pct": 0,
-      "only": ["task_report", "order_status", "scaffold", "asset_list", "asset_get", "run_checks", "read", "write", "edit", "ls", "sh", "code_outline", "code_search", "code_check", "mail_send", "inbox_read_all"],
-      "inline_mail": ["*"]
+      "only": [
+        "task_report",
+        "order_status",
+        "asset_list",
+        "asset_get",
+        "run_checks",
+        "read",
+        "write",
+        "edit",
+        "ls",
+        "sh",
+        "code_outline",
+        "code_search",
+        "code_check",
+        "mail_send",
+        "inbox_read_all"
+      ],
+      "inline_mail": [
+        "*"
+      ]
     },
     {
       "name": "qa",
@@ -106,16 +272,37 @@
       "reports_to": "pm",
       "persona": "qa/system-prompt.json",
       "prompts": "qa/prompts.json",
-      "packs": ["mailbox", "communication", "studio", "pyshop", "fs"],
+      "packs": [
+        "mailbox",
+        "communication",
+        "studio",
+        "pyshop",
+        "fs"
+      ],
       "clock": "shared:owner",
       "engine": "cheap",
       "budget_pct": 0,
-      "only": ["qa_run", "qa_verdict", "run_checks", "order_status", "read", "ls", "sh", "mail_send", "inbox_read_all"],
-      "inline_mail": ["*"]
+      "only": [
+        "qa_run",
+        "qa_verdict",
+        "run_checks",
+        "order_status",
+        "read",
+        "ls",
+        "sh",
+        "mail_send",
+        "inbox_read_all"
+      ],
+      "inline_mail": [
+        "*"
+      ]
     }
   ],
   "auto_grant": {
-    "from": ["pm", "owner"],
+    "from": [
+      "pm",
+      "owner"
+    ],
     "tokens": 50000,
     "max_per_member": 100000
   }

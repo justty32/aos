@@ -30,7 +30,7 @@ ALLOWED = {
     "order_accept": ("sales",),
     "plan_set": ("chief",),
     "task_assign": ("pm",),
-    "task_report": ("chief", "dev"),
+    "task_report": ("chief", "dev", "tester"),
     "qa_run": ("qa", "pm"),
     "qa_verdict": ("qa",),
     "deliver": ("pm",),
@@ -130,6 +130,12 @@ def _role(ctx, root, name):
         if isinstance(member, dict) and member.get("name") == name:
             return member.get("role") or name
     return name
+
+
+def _is_qa(ctx, root, name):
+    """qa 只驗不做：不能被派任務、不能寫測試。寫測試是 tester 的事。"""
+    name = str(name or "")
+    return name == "qa" or _role(ctx, root, name) == "qa"
 
 
 def _allowed(ctx, root, tool):
@@ -340,6 +346,10 @@ def _plan_set(ctx, root, args):
     rows = args.get("tasks")
     if not isinstance(rows, list) or not rows:
         return {"ok": False, "error": "tasks 要是至少一項的陣列"}
+    for row in rows:
+        owner = row.get("owner") if isinstance(row, dict) else None
+        if owner and _is_qa(ctx, root, owner):
+            return {"ok": False, "error": "任務不能派給 %s：qa 只驗收不動手，寫測試請派給 tester" % owner}
     made = []
     existing = [t for t in (order.get("tasks") or []) if _load_task(ctx, root, t)]
     for tid in existing:                     # 拆完任務，自己手上那項「定架構」就算做完了，不然 deliver 會被它卡住
@@ -413,6 +423,8 @@ def _new_task(ctx, root, order, title, spec, to):
 
 def _task_assign(ctx, root, args):
     task_id = str(args.get("task_id") or "")
+    if _is_qa(ctx, root, args.get("to")):      # 要在開新任務之前擋，不然會留下一個派給 qa 的空任務
+        return {"ok": False, "error": "任務不能派給 %s：qa 只驗收不動手，寫測試請派給 tester" % args.get("to")}
     task = _load_task(ctx, root, task_id)
     if task:
         order = _load_order(ctx, root, task.get("order"))
@@ -493,8 +505,12 @@ def _task_report(ctx, root, args):
     files = args.get("files")
     if isinstance(files, list):
         task["files"] = [str(f) for f in files]
+    me = _member(ctx)
+    if _role(ctx, root, me) == "tester" and not any("test" in os.path.basename(f).lower() for f in task["files"]):
+        return {"ok": False, "task_id": task_id,
+                "error": "tester 的回報 files 裡要有測試檔（檔名含 test），現在是：%s" % ("、".join(task["files"]) or "無")}
     task["report"] = str(args.get("summary") or "")
-    task["reported_by"] = _member(ctx)
+    task["reported_by"] = me
     test = None
     if args.get("test_cmd"):
         test = _run_cmd(root, order["id"], str(args["test_cmd"]))
@@ -578,6 +594,12 @@ def _qa_verdict(ctx, root, args):
     if not order:
         return {"ok": False, "error": "找不到任務的單：%s" % task.get("order")}
     passed = bool(args.get("passed"))
+    tests = task.get("tests") if isinstance(task.get("tests"), list) else []
+    if passed and not any(isinstance(t, dict) and t.get("exit") == 0 for t in tests):
+        # 判過要有憑據：小模型會「看過了」就判過，這裡要求任務檔上至少有一筆 exit 0 的測試紀錄
+        return {"ok": False, "task_id": task_id,
+                "error": "任務 %s 沒有任何一次 exit 0 的測試紀錄，不能判過；先 qa_run(task_id, command) 跑測試" % task_id,
+                "tests": [{"cmd": t.get("cmd"), "exit": t.get("exit")} for t in tests if isinstance(t, dict)]}
     task["status"] = "passed" if passed else "failed"
     task["qa"] = {"passed": passed, "evidence": str(args.get("evidence") or ""),
                   "by": _member(ctx), "time": _now()}
