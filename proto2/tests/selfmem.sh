@@ -189,8 +189,9 @@ PYEOF2
   got=$(python3 - "$home" <<'PYEOF2'
 import glob, json, os, sys
 h=sys.argv[1]; s=json.load(open(os.path.join(h,"state.json"), encoding="utf-8"))
+# 這裡的記憶是一句 user 開頭、沒人回過的話，所以這格不是回 idle 而是被安全網改成 retry
 print(len(glob.glob(os.path.join(h,"inbox","self","*.json"))) == 1,
-      s.get("nudged_at_step") == 0, s.get("state") == "idle")
+      s.get("nudged_at_step") == 0, s.get("state") == "retry")
 PYEOF2
 )
   if [ "$got" = "True True True" ]; then ok "selfmem：記憶超過 40000 字就往 inbox/self 提醒一次"; else fail "40000 字提醒不對：$got"; fi

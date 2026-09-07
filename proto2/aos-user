@@ -372,6 +372,9 @@ def do_team_budget(args):
 
 
 # ── team why／team tail：一個人在旁邊看整隊時要的兩件事 ────────────────────
+LLM_RETRY_TICKS = 20   # 跟 aos-agent 的 LLM_ERROR_RETRY_TICKS 同一個數字（那邊是狀態機的家）
+
+
 def _wide(text):
     """一行有多寬：中日文字算兩格，欄位才對得齊。"""
     return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in str(text))
@@ -517,6 +520,14 @@ def _why_of(row, state, queue, tasks, home):
     if st == "wait":
         return "llm→wait", "等 LLM 回（%s，已等 %s 格）" % (
             _queue_text(state.get("request"), queue), state.get("wait_ticks") or 0)
+    errors = state.get("llm_errors") or 0
+    reason = _cut_wide(state.get("llm_error_reason") or "?", 60)
+    if st == "retry":
+        left = LLM_RETRY_TICKS - ((state.get("step") or 0) - (state.get("llm_error_step") or 0))
+        return "重送中", "上次出錯第 %s 次，還有 %s 格再送（%s）" % (
+            errors, max(0, left), reason)
+    if st == "stuck":
+        return "卡住", "模型連錯 %s 次，等新信（%s）" % (errors, reason)
     base = {"idle": "閒", "llm": "要問模型", "act": "跑工具", "collect": "收信"}.get(st, st)
     detail = {"llm": "正把 prompt 丟進 LLM 資料夾", "act": "正在跑模型點的工具",
               "collect": "跑完工具，再掃一次信箱"}.get(

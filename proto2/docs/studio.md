@@ -27,7 +27,7 @@ aos-user team stop work/studio
 ```text
 工作室 studio（2026-09-07）
 owner   閒        上一格 14:45:51，沒有任務                         未讀 0 封                 tokens 剩 20k
-sales   閒        上一格 14:45:51，沒有任務                         未讀 0 封                 tokens 剩 10k
+sales   重送中    上次出錯第 2 次，還有 13 格再送（HTTP 500）       未讀 0 封                 tokens 剩 10k
 pm      llm→wait  等 LLM 回（排隊中，第 3 位，已等 41 格）          未讀 2 封（chief 1、qa 1） tokens 剩 12k
 chief   閒        上一格 14:45:51，任務 order-…-t3（assigned）      未讀 0 封                 tokens 剩 0
 dev-a   凍住      tokens 用完（上限 0、已用 12k），等撥款 120 格    未讀 0 封                 tokens 剩 -12k
@@ -38,7 +38,7 @@ qa      睡        等 mail pm-mail-2026090… 的回信，已 300 格        �
 
 每一格都從既有的檔案算出來，算不出來就印 `?`，不會噴 traceback：
 
-- 短狀態看 `state.json` 的 `state`（`llm→wait` ＝已經送出、在等回；`凍住` 看 `budget_block`，`睡` 看 `sleeping`，`停` ＝ `team stop` 過了）。
+- 短狀態看 `state.json` 的 `state`（`llm→wait` ＝已經送出、在等回；`重送中`／`卡住` ＝模型出錯後的 `retry`／`stuck`，原因看 `llm_error_reason`；`凍住` 看 `budget_block`，`睡` 看 `sleeping`，`停` ＝ `team stop` 過了）。
 - 等 LLM 的名次去 LLM 資料夾的 `requests/` 數，正在打的看 `requests/running/`。順序照 priority 大的先、同級先來先走——`aos-llm` 真正派工還會加等待、成本、最近誰用過的加減分，**所以名次只是個大概**，要準的看 `aos-llm ls`。
 - 等了幾格：等模型看 `wait_ticks`、睡著看 `question_sleep_steps`、凍住看 `frozen_ticks`。
 - 未讀直接數 `inbox/<來源>/`（不含 `read/`），括號裡列前三個來源。

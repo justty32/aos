@@ -170,9 +170,18 @@ def salvage_tool_calls(content, known):
     return calls
 
 
-def note_llm_error(ctx):
+def note_llm_error(ctx, reason=""):
+    """記一次模型出錯：錯第幾次、第幾格錯的、為什麼。三樣都留著，`retry` 才知道何時重送、
+    `aos-user team why` 才講得出「上次出錯什麼」。"""
     ctx.state["llm_errors"] = int(ctx.state.get("llm_errors") or 0) + 1
     ctx.state["llm_error_step"] = int(ctx.state.get("step") or 0)
+    ctx.state["llm_error_reason"] = str(reason)[:200]
+
+
+def clear_llm_errors(state):
+    """這句終於有人回了、或來了新信：出錯那幾筆帳全清掉，從頭算。"""
+    for key in ("llm_errors", "llm_error_step", "llm_error_reason", "llm_gave_up"):
+        state.pop(key, None)
 
 
 def dangling_turn(home):
@@ -184,25 +193,31 @@ def dangling_turn(home):
     return isinstance(last, dict) and last.get("role") in ("user", "tool")
 
 
-def llm_retry_due(ctx, step):
-    """閒著、沒新信、但對話尾巴那句沒人回：模型上次出錯，隔 LLM_ERROR_RETRY_TICKS 格再送一次，
-    連錯 LLM_ERROR_MAX 次就放著（只喊一次），等新信來再重來。以前這條路是「永遠不會再送」。"""
+def do_retry(ctx, state, msgs, step):
+    """兩格「出錯之後」的狀態，回 (下一格 state, 這格算不算做事)。
+
+    `retry`＝對話尾巴那句還沒人回，等 LLM_ERROR_RETRY_TICKS 格就同題再送一次；
+    `stuck`＝連錯 LLM_ERROR_MAX 次，這句先放著、喊一聲，等新信來再說。
+    兩格都照樣讀信，因為新信就是把它救回來的那件事。"""
+    if msgs:
+        clear_llm_errors(ctx.state)
+        warn("來了新信，出錯那幾筆帳清掉，重新問模型")
+        return "llm", True
+    if state == "stuck":
+        return "stuck", False
     errors = int(ctx.state.get("llm_errors") or 0)
-    # 只管「上次是模型出錯」的尾巴；睡著等旁線的 tool 尾巴、或別人手動改 state 留下的尾巴都不碰
-    if not errors or ctx.state.get("sleeping") or not dangling_turn(ctx.home):
-        return False
     if errors >= LLM_ERROR_MAX:
-        if not ctx.state.get("llm_gave_up"):
-            ctx.state["llm_gave_up"] = True
-            text = "（模型連續出錯 %d 次，這句先放著；來新信我再試）" % errors
-            ctx.reply(text, error=True)
-            warn(text)
-        return False
+        text = "（模型連續出錯 %d 次，這句先放著；來新信我再試）" % errors
+        ctx.state["llm_gave_up"] = True
+        ctx.reply(text, error=True)
+        warn(text)
+        return "stuck", False
     since = step - int(ctx.state.get("llm_error_step") or 0)
-    if since < LLM_ERROR_RETRY_TICKS:
-        return False
-    warn("對話尾巴那句還沒人回（上次出錯 %d 次），重送" % errors)
-    return True
+    if since >= LLM_ERROR_RETRY_TICKS:
+        warn("對話尾巴那句還沒人回（上次出錯 %d 次），重送" % errors)
+        return "llm", True
+    warn("等重送（上次出錯 %d 次，還有 %d 格）" % (errors, LLM_ERROR_RETRY_TICKS - since))
+    return "retry", False
 
 
 def do_wait(ctx, request, waited, loaded=(), extra=()):
@@ -215,8 +230,8 @@ def do_wait(ctx, request, waited, loaded=(), extra=()):
             text = "LLM 的鐘沒有在跑，這題先停下來。"
             ctx.reply(text, error=True)
             warn(text)
-            note_llm_error(ctx)
-            return "idle", False, 0
+            note_llm_error(ctx, "LLM 的鐘沒有在跑")
+            return "retry", False, 0
         waited += 1
         box = os.path.join(aos_llm.home_of(ctx.llm_dir()), "requests")
         alive = bool(request) and (os.path.isfile(os.path.join(box, request)) or
@@ -227,8 +242,8 @@ def do_wait(ctx, request, waited, loaded=(), extra=()):
                     "（請求已經不在 LLM 的排隊裡、結果卻 %d 格沒出現，放棄這題）" % limit)
             ctx.reply(text, error=True)
             warn(text)
-            note_llm_error(ctx)
-            return "idle", False, 0
+            note_llm_error(ctx, text)
+            return "retry", False, 0
         warn("等 LLM（%s，%s）" % (request or "沒有請求", "排隊／執行中" if alive else "不在排隊裡"))
         return "wait", False, waited
     write_json(os.path.join(ctx.home, "llm-result.json"), answer)
@@ -239,17 +254,16 @@ def do_wait(ctx, request, waited, loaded=(), extra=()):
     if answer.get("error"):
         reason = str(answer.get("error"))[:200]
         ctx.reply("（LLM 出錯：%s）" % reason, error=True)
-        warn("LLM 回了 error（%s），這輪不算，回 idle；%d 格後重送" % (reason, LLM_ERROR_RETRY_TICKS))
-        note_llm_error(ctx)
-        return "idle", usage, 0
-    ctx.state.pop("llm_errors", None)
-    ctx.state.pop("llm_error_step", None)
+        warn("LLM 回了 error（%s），這輪不算，改走 retry；%d 格後重送" % (reason, LLM_ERROR_RETRY_TICKS))
+        note_llm_error(ctx, reason)
+        return "retry", usage, 0
+    clear_llm_errors(ctx.state)
     try:
         assistant = answer["choices"][0]["message"]
     except (KeyError, IndexError, TypeError):
-        warn("回覆裡找不到 choices[0].message，這輪不算，回 idle")
-        note_llm_error(ctx)
-        return "idle", usage, 0
+        warn("回覆裡找不到 choices[0].message，這輪不算，改走 retry")
+        note_llm_error(ctx, "回覆裡找不到 choices[0].message")
+        return "retry", usage, 0
 
     # 只留 role／content／tool_calls，把伺服器夾帶的私有欄位（reasoning_content…）濾掉。
     # content 裡漏出來的 <think> 不歸這裡管——那是 LLM 資料夾那側的家務（engines.json 的 strip_think）。
@@ -412,7 +426,8 @@ def budget_block(ctx):
         else:
             warn("整隊額度用完（%s），凍住等 sales 問甲方追加" % "、".join(total_over))
         return True
-    has_work = (ctx.state.get("state") or "idle") != "idle" or \
+    # retry 手上那句還等著送出去，算有工作；stuck 是放著等新信，不算
+    has_work = (ctx.state.get("state") or "idle") not in ("idle", "stuck") or \
         any(ctx.unread(source) for source in ctx.sources())
     if not has_work:
         return True
@@ -485,9 +500,14 @@ def do_exec(args):
 
     side_msgs = ctx.collect_results()
     inbox_msgs, direct = [], False
-    if state in ("idle", "collect") or saved.get("limit_pause") or saved.get("sleeping"):
+    if state in ("idle", "collect", "retry", "stuck") or saved.get("limit_pause") \
+            or saved.get("sleeping"):
         direct = bool(ctx.unread("user"))
-        inbox_msgs, announced = scan_inbox(home, announced, saved)
+        # retry／stuck 就是閒著在等，未讀提醒那條路要照走（scan_inbox 只認 idle）
+        view = dict(saved, state="idle") if state in ("retry", "stuck") else saved
+        inbox_msgs, announced = scan_inbox(home, announced, view)
+        if view is not saved and "unread_told_step" in view:
+            saved["unread_told_step"] = view["unread_told_step"]
         if direct:
             if saved.get("limit_kind") == "tokens" and saved.get("limit_pause"):
                 saved["token_limit_ack_day"] = datetime.date.today().isoformat()
@@ -512,12 +532,12 @@ def do_exec(args):
         call_idle_hooks(ctx)
         msgs = side_msgs + inbox_msgs
         if msgs:
-            saved.pop("llm_gave_up", None)          # 新信來了，之前放棄的那句跟著一起再試
-            nxt, did = "llm", True
-        elif llm_retry_due(ctx, step):
+            clear_llm_errors(saved)                 # 新信來了，之前出錯放棄的那句跟著一起再試
             nxt, did = "llm", True
         else:
             nxt, did = "idle", False
+    elif state in ("retry", "stuck"):
+        nxt, did = do_retry(ctx, state, side_msgs + inbox_msgs, step)
     elif state == "collect":
         nxt, did = "llm", True
     elif state == "llm":
@@ -544,11 +564,20 @@ def do_exec(args):
         busy += 1
     if saved.get("question_active") and not saved.get("limit_pause"):
         # 睡著等旁線、或主線在排隊等模型回，都不是 agent 自己在繞圈，不算每題動作格
-        if not did and (saved.get("sleeping") or state in ("wait", "idle")):
+        if not did and (saved.get("sleeping")
+                        or state in ("wait", "idle", "retry", "stuck")):
             # 睡著等旁線、排隊等模型、或模型出錯後閒著等重送：都不是 agent 自己在繞圈
             saved["question_sleep_steps"] = int(saved.get("question_sleep_steps") or 0) + 1
         else:
             saved["question_steps"] = int(saved.get("question_steps") or 0) + 1
+    if (nxt == "idle" and dangling_turn(home)
+            and not saved.get("sleeping") and not saved.get("limit_pause")):
+        # 哪天又多一條「出錯就回 idle」的路，這裡把它撈回來：對話尾巴那句沒人回就不准回 idle
+        warn("安全網：這格要回 idle 但對話尾巴還有沒人回的話，改成 retry")
+        nxt = "retry"
+        saved["llm_error_step"] = step
+        saved["llm_errors"] = max(1, int(saved.get("llm_errors") or 0))
+        saved.setdefault("llm_error_reason", "不知道哪條路回了 idle，安全網撈回來")
     saved.update({"state": nxt, "step": step + 1, "busy": busy,
                   "request": request, "last_usage": last_usage,
                   "started": started, "announced": announced,
