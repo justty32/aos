@@ -18,6 +18,48 @@ aos-user team stop work/studio
 
 `say`、`listen`、`talk` 對工作室根使用時，會自動走唯一甲方窗口 `sales`。明講 `--home` 才會找指定成員。
 
+## 在旁邊看：team why 與 team tail
+
+以前要知道某個人此刻在幹嘛，得自己拼 `state.json`、鐘的 log 跟 `inbox/`。這兩句話把它們湊成一行。
+
+`aos-user team why <世界> [--member 名字]`——一人一行：短狀態、為什麼卡著、幾封沒讀、tokens 還剩多少。
+
+```text
+工作室 studio（2026-09-07）
+owner   閒        上一格 14:45:51，沒有任務                         未讀 0 封                 tokens 剩 20k
+sales   閒        上一格 14:45:51，沒有任務                         未讀 0 封                 tokens 剩 10k
+pm      llm→wait  等 LLM 回（排隊中，第 3 位，已等 41 格）          未讀 2 封（chief 1、qa 1） tokens 剩 12k
+chief   閒        上一格 14:45:51，任務 order-…-t3（assigned）      未讀 0 封                 tokens 剩 0
+dev-a   凍住      tokens 用完（上限 0、已用 12k），等撥款 120 格    未讀 0 封                 tokens 剩 -12k
+dev-b   跑工具    正在跑模型點的工具，沒有任務                      未讀 0 封                 tokens 剩 0
+tester  凍住      整隊 hours 用完，全隊凍住 9 格                    未讀 0 封                 tokens 剩 0
+qa      睡        等 mail pm-mail-2026090… 的回信，已 300 格        未讀 0 封                 tokens 剩 0
+```
+
+每一格都從既有的檔案算出來，算不出來就印 `?`，不會噴 traceback：
+
+- 短狀態看 `state.json` 的 `state`（`llm→wait` ＝已經送出、在等回；`凍住` 看 `budget_block`，`睡` 看 `sleeping`，`停` ＝ `team stop` 過了）。
+- 等 LLM 的名次去 LLM 資料夾的 `requests/` 數，正在打的看 `requests/running/`。順序照 priority 大的先、同級先來先走——`aos-llm` 真正派工還會加等待、成本、最近誰用過的加減分，**所以名次只是個大概**，要準的看 `aos-llm ls`。
+- 等了幾格：等模型看 `wait_ticks`、睡著看 `question_sleep_steps`、凍住看 `frozen_ticks`。
+- 未讀直接數 `inbox/<來源>/`（不含 `read/`），括號裡列前三個來源。
+- tokens 跟 `team status`／`team budget` 同一份帳（`team_status_of` 的 `remaining`），所以撥款前是負的很正常。
+- 手上任務讀 `team/tasks/*.json` 裡 owner 是他、狀態還是 `assigned`／`failed` 的那些，多於一張就在後面補 `+N`。
+
+`aos-user team tail <世界> <成員> [-n N]`——那個人最近 N 輪（預設 3）的「模型說 / 工具回」，其實就是他 `prompts.json` 的尾巴：一則 assistant 開一輪，後面接著的 `tool` 結果算同一輪。模型說的話切前 300 字、工具參數切前 120 字、工具結果切前 200 字，都壓成一行。
+
+```text
+dev-b  state=act  step=66  今日 tokens ?
+--- 倒數第 2 輪 ---
+模型說：那我直接寫一份。
+  → write {"path": "team/projects/todo.py", "text": "def add(x):\n return x\n"}
+工具回：
+  ← write: {"ok": true, "bytes": 30}
+--- 倒數第 1 輪 ---
+模型說：寫好了，回報 PM。
+```
+
+抬頭的今日 tokens 來自 LLM 那份 requester 帳，還沒有帳就印 `?`。沒問過模型的人只印一句「還沒有模型回合」。
+
 ## 資料夾
 
 ```text
@@ -51,7 +93,7 @@ preset 目錄裡有 `assets/` 的話（Python 小程式工作室的 snippets、�
 
 ## 已知坑
 
-- 共用檔沒有鎖。兩人同時改同一檔，後寫的可能蓋掉前面。
+- 共用檔有鎖：`team/.lock`（flock 獨佔）。撥額度（`team_grant`／自動撥／甲方追加）、寫進度、改單子與任務，都是拿著鎖讀出來、改完、寫回去，八個人同時動也不會掉一筆。等鎖最多 10 秒，等不到就回一句錯誤（行程死掉鎖會自己放開）；`team status` 這種只讀的不拿鎖。
 - `team status` 每次掃八人的狀態、信箱、帳和資料夾。小工作室很快；信件與專案很多時會變慢。閘門用的是不量資料夾的輕量版，每格一次。
 - 八個人共用兩三路本機引擎時一發要等一兩分鐘是常態：agent 只要請求還在 LLM 世界排隊或執行中就一直等（上限 1800 格），這段等待不算每題動作格。
 - 開隊做到一半失敗會留下已建檔案，不會自動回滾。修好原因後，要換一個新目錄重建。

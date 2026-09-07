@@ -120,7 +120,7 @@ spawn 也會寫小孩的 `parent.json`、父子雙方的 `contacts.json`、父�
 
 ## 給人用的殼：aos-user
 
-`aos-user team new <世界> --preset studio` 一次開八人工作室，`team status` 看全隊（含在途筆數與被擋原因），`team budget [--add JSON]` 看預算／甲方追加，`team stop` 收鐘留檔。工作室裡額度是硬閘門、每格都守：個人 tokens 用完（0 就是 0）自己凍住等主管 `team_grant`；整隊任一項用完全隊凍住、只有 sales 問甲方追加。細節見 [docs/studio.md](docs/studio.md)。
+`aos-user team new <世界> --preset studio` 一次開八人工作室，`team status` 看全隊（含在途筆數與被擋原因），`team budget [--add JSON]` 看預算／甲方追加，`team why [--member 名字]` 一人一行看誰卡在哪（等模型排第幾、凍住幾格、幾封沒讀、tokens 還剩多少）、`team tail <成員> [-n N]` 看那個人最近幾輪的「模型說／工具回」，`team stop` 收鐘留檔。工作室裡額度是硬閘門、每格都守：個人 tokens 用完（0 就是 0）自己凍住等主管 `team_grant`；整隊任一項用完全隊凍住、只有 sales 問甲方追加。細節見 [docs/studio.md](docs/studio.md)。
 `aos-user order <世界> "任務" --budget '{"tokens":200000,"hours":1}' --accept "驗收條件"` 只把訂單交給 sales。
 
 `aos-user say|listen|talk|status|spawn <世界> [--home DIR]`。**這支是暫時的殼**：使用者之後
@@ -147,6 +147,22 @@ LLM 不是誰的私有功能，是**跟 agent 平起平坐的另一個資料夾*
 個 LLM 資料夾」。**
 
 `engines.json` 是清單，第一個是預設；一台就是 endpoint、model、`params`、`max_concurrent`。`api_key_env` 有值才送 Authorization。範例裡 deepseek 可同時跑 10 發，本機 LM Studio 跑 1 發。
+
+一台可以寫 `"api": "anthropic"`（不寫＝`openai`，行為完全不變）：**直接打 Anthropic 的 `/v1/messages`**，不用架 LiteLLM 那種轉接器；送出前後由 worker 兩頭翻譯，外面的人還是只看到 OpenAI 的 chat/completions 形狀。header 走 `x-api-key` ＋ `anthropic-version`，`max_tokens` 是必填（`params` 沒寫就 4096）。
+
+```json
+{"name": "haiku", "api": "anthropic", "base_url": "https://api.anthropic.com",
+ "model": "claude-haiku-4-5-20251001", "api_key_env": "ANTHROPIC_API_KEY",
+ "max_concurrent": 4, "params": {"max_tokens": 4096}}
+```
+
+還有一種 `"api": "claude-cli"`：**把 Claude Code 的 headless 模式當引擎**，開一個 `claude -p` 子進程、對話從 stdin 餵進去、要它照 json-schema 吐回一包 `{content, tool_calls}`——**有 Claude 訂閱、沒有 API key 的人就走這條**（`base_url`／`api_key_env` 用不到，`bin` 不寫就是 PATH 上的 `claude`）。用量算在訂閱的五小時窗口裡，每發多兩三秒的進程啟動時間。
+
+```json
+[{"name": "cheap", "api": "claude-cli", "model": "haiku", "max_concurrent": 2,
+  "params": {"effort": "low"}},
+ {"name": "thinking", "api": "claude-cli", "model": "sonnet", "max_concurrent": 2}]
+```
 
 `strip_think` 不寫就是 true：寫結果前切掉 content 裡最後一個 `</think>` 以前的內容；`reasoning_content` 原樣保留。
 

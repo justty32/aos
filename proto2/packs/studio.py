@@ -4,6 +4,7 @@
 專案目錄固定 `team/projects/<order_id>/`，交付檔案複製到 `team/files/final/<order_id>/`。
 每個工具一次做完一串動作（開檔、寄信、撥額度、跑測試），模型只負責判斷要不要做。
 """
+import contextlib
 import datetime
 import json
 import os
@@ -11,7 +12,7 @@ import shutil
 import subprocess
 
 import aos_agent
-from aos_agent import team_member_name, team_root_of, team_status_of
+from aos_agent import team_lock, team_member_name, team_root_of, team_status_of
 
 
 PROMPT = ("一張單的流程：order_accept（sales 接單）→ plan_set（chief 拆任務）→ "
@@ -21,6 +22,9 @@ PROMPT = ("一張單的流程：order_accept（sales 接單）→ plan_set（chi
 DEFAULT_GRANT_TOKENS = 50000
 TEST_TIMEOUT_S = 60
 TAIL = 2000
+
+# 這幾個不由 run() 統一上鎖：order_status 只讀，另外兩個自己分段鎖（中間要跑測試）
+UNLOCKED = ("order_status", "task_report", "qa_run")
 
 ORDER_STATUS = ("received", "planned", "in_progress", "qa", "delivered", "failed")
 TASK_STATUS = ("assigned", "done", "passed", "failed")
@@ -495,38 +499,44 @@ def _task_assign(ctx, root, args):
 
 
 def _task_report(ctx, root, args):
+    """分三段：先在鎖裡看現況、放掉鎖跑測試（最多 60 秒）、再拿回鎖重讀一次存回去。"""
     task_id = args.get("task_id") or ""
-    task = _load_task(ctx, root, task_id)
-    if not task:
-        return {"ok": False, "error": "找不到這個任務：%s" % task_id}
-    order = _load_order(ctx, root, task.get("order"))
-    if not order:
-        return {"ok": False, "error": "找不到任務的單：%s" % task.get("order")}
-    files = args.get("files")
-    if isinstance(files, list):
-        task["files"] = [str(f) for f in files]
     me = _member(ctx)
-    if _role(ctx, root, me) == "tester" and not any("test" in os.path.basename(f).lower() for f in task["files"]):
-        return {"ok": False, "task_id": task_id,
-                "error": "tester 的回報 files 裡要有測試檔（檔名含 test），現在是：%s" % ("、".join(task["files"]) or "無")}
-    task["report"] = str(args.get("summary") or "")
-    task["reported_by"] = me
-    test = None
-    if args.get("test_cmd"):
-        test = _run_cmd(root, order["id"], str(args["test_cmd"]))
-        tests = task.get("tests")
-        task["tests"] = (tests if isinstance(tests, list) else []) + [test]
-        if test.get("exit") != 0:
-            # 測試沒過就不算做完：小模型會無視紅字直接報「全部通過」，這裡用工具擋住，不靠它自覺
-            _save_task(ctx, root, task)
-            return {"ok": False, "task_id": task_id, "status": task["status"],
-                    "error": "test_cmd 沒有全過（exit %s），任務還不算完成；先修好再 task_report" % test.get("exit"),
-                    "test": {"exit": test.get("exit"), "output": _tail(test.get("output"), 1200)}}
-    task["status"] = "done"
-    _save_task(ctx, root, task)
-    ctx.state.pop("studio_nag_count", None)
-    _note(order, ctx, "%s 回報完成" % task_id)
-    _save_order(ctx, root, order)
+    with team_lock(root):
+        task = _load_task(ctx, root, task_id)
+        if not task:
+            return {"ok": False, "error": "找不到這個任務：%s" % task_id}
+        order = _load_order(ctx, root, task.get("order"))
+        if not order:
+            return {"ok": False, "error": "找不到任務的單：%s" % task.get("order")}
+        order_id = order["id"]
+        files = args.get("files")
+        files = [str(f) for f in files] if isinstance(files, list) else list(task.get("files") or [])
+        if _role(ctx, root, me) == "tester" and not any("test" in os.path.basename(f).lower() for f in files):
+            return {"ok": False, "task_id": task_id,
+                    "error": "tester 的回報 files 裡要有測試檔（檔名含 test），現在是：%s" % ("、".join(files) or "無")}
+    # 跑測試這段不握鎖：一個指令最久 60 秒，握著的話整間工作室都得等它
+    test = _run_cmd(root, order_id, str(args["test_cmd"])) if args.get("test_cmd") else None
+    with team_lock(root):
+        task = _load_task(ctx, root, task_id) or task    # 重讀，接在別人這段時間寫的後面
+        order = _load_order(ctx, root, order_id) or order
+        task["files"] = files
+        task["report"] = str(args.get("summary") or "")
+        task["reported_by"] = me
+        if test:
+            tests = task.get("tests")
+            task["tests"] = (tests if isinstance(tests, list) else []) + [test]
+            if test.get("exit") != 0:
+                # 測試沒過就不算做完：小模型會無視紅字直接報「全部通過」，這裡用工具擋住，不靠它自覺
+                _save_task(ctx, root, task)
+                return {"ok": False, "task_id": task_id, "status": task["status"],
+                        "error": "test_cmd 沒有全過（exit %s），任務還不算完成；先修好再 task_report" % test.get("exit"),
+                        "test": {"exit": test.get("exit"), "output": _tail(test.get("output"), 1200)}}
+        task["status"] = "done"
+        _save_task(ctx, root, task)
+        ctx.state.pop("studio_nag_count", None)
+        _note(order, ctx, "%s 回報完成" % task_id)
+        _save_order(ctx, root, order)
     body = "\n".join([
         "【任務完成】%s（單 %s）" % (task_id, order["id"]),
         "做的人：%s" % _member(ctx),
@@ -547,23 +557,29 @@ def _qa_run(ctx, root, args):
     command = str(args.get("command") or "").strip()
     if not command:
         return {"ok": False, "error": "command 不能是空的"}
-    task = _load_task(ctx, root, args.get("task_id"))
-    order_id = task.get("order") if task else (args.get("order_id") or "")
-    order = _load_order(ctx, root, order_id)
-    if not order:
-        return {"ok": False, "error": "找不到單或任務：%s" % (args.get("task_id") or
-                                                             args.get("order_id") or "")}
-    row = _run_cmd(root, order["id"], command)
-    if task:
-        tests = task.get("tests")
-        task["tests"] = (tests if isinstance(tests, list) else []) + [row]
-        _save_task(ctx, root, task)
-    else:
-        tests = order.get("tests")
-        order["tests"] = (tests if isinstance(tests, list) else []) + [row]
-    _note(order, ctx, "跑了 %s（exit=%s）" % (_short(command, 60), row.get("exit")))
-    _save_order(ctx, root, order)
-    return {"ok": True, "task_id": task["id"] if task else None, "order_id": order["id"],
+    with team_lock(root):
+        task = _load_task(ctx, root, args.get("task_id"))
+        order_id = task.get("order") if task else (args.get("order_id") or "")
+        order = _load_order(ctx, root, order_id)
+        if not order:
+            return {"ok": False, "error": "找不到單或任務：%s" % (args.get("task_id") or
+                                                                 args.get("order_id") or "")}
+        order_id = order["id"]
+        task_id = task["id"] if task else None
+    row = _run_cmd(root, order_id, command)     # 同 task_report：跑指令不握鎖
+    with team_lock(root):
+        order = _load_order(ctx, root, order_id) or order
+        if task_id:
+            task = _load_task(ctx, root, task_id) or task
+            tests = task.get("tests")
+            task["tests"] = (tests if isinstance(tests, list) else []) + [row]
+            _save_task(ctx, root, task)
+        else:
+            tests = order.get("tests")
+            order["tests"] = (tests if isinstance(tests, list) else []) + [row]
+        _note(order, ctx, "跑了 %s（exit=%s）" % (_short(command, 60), row.get("exit")))
+        _save_order(ctx, root, order)
+    return {"ok": True, "task_id": task_id, "order_id": order_id,
             "exit": row.get("exit"), "output": _tail(row.get("output"), 1200)}
 
 
@@ -734,24 +750,28 @@ def run(name, args, ctx):
     for folder in _dirs(root).values():
         os.makedirs(folder, exist_ok=True)
     try:
-        if name == "order_accept":
-            return _order_accept(ctx, root, args.get("order_id") or "", args.get("note") or "")
-        if name == "plan_set":
-            return _plan_set(ctx, root, args)
-        if name == "task_assign":
-            return _task_assign(ctx, root, args)
-        if name == "task_report":
-            return _task_report(ctx, root, args)
-        if name == "qa_run":
-            return _qa_run(ctx, root, args)
-        if name == "qa_verdict":
-            return _qa_verdict(ctx, root, args)
-        if name == "deliver":
-            return _deliver(ctx, root, args)
-        if name == "order_status":
-            return _order_status(ctx, root, args.get("order_id") or "")
-        if name == "order_fail":
-            return _order_fail(ctx, root, args)
+        # 會改共用檔的工具整支包在鎖裡（八個成員各一個 process，不鎖就會互相蓋掉）。
+        # order_status 只讀不寫，不用鎖；task_report／qa_run 中間要跑最多 60 秒的測試，
+        # 它們自己分段上鎖（跑指令那段放掉鎖），這裡不能整支包起來。
+        with (contextlib.nullcontext() if name in UNLOCKED else team_lock(root)):
+            if name == "order_accept":
+                return _order_accept(ctx, root, args.get("order_id") or "", args.get("note") or "")
+            if name == "plan_set":
+                return _plan_set(ctx, root, args)
+            if name == "task_assign":
+                return _task_assign(ctx, root, args)
+            if name == "task_report":
+                return _task_report(ctx, root, args)
+            if name == "qa_run":
+                return _qa_run(ctx, root, args)
+            if name == "qa_verdict":
+                return _qa_verdict(ctx, root, args)
+            if name == "deliver":
+                return _deliver(ctx, root, args)
+            if name == "order_status":
+                return _order_status(ctx, root, args.get("order_id") or "")
+            if name == "order_fail":
+                return _order_fail(ctx, root, args)
     except (OSError, ValueError) as e:
         return {"ok": False, "error": str(e)}
     return {"ok": False, "error": "studio 沒有這個工具：%s" % name}

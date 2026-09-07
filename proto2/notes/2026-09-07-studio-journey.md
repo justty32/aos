@@ -122,3 +122,14 @@
 - **實玩會弄髒測試**：有背景實玩時 `test.sh` 一定紅一條（殘留進程），而且 `git stash` 一下就污染正在跑的測試；應該讓 test.sh 帶自己的 `AOS_DAEMON_DIR`，跟實玩隔開。
 - **共用檔沒鎖**：兩個人同時寫同一張單會互蓋，今天沒踩到，是運氣。
 
+## 9. 晚上：把「不順手」的四條做掉，外加兩種引擎
+
+四個 agent 並行（各管各的檔，事先講好誰不能碰哪個檔），結果：
+
+- **`aos-user team why <世界>`**：一人一行——狀態、在等什麼（LLM 排第幾位等幾格／哪封信的回信／額度凍住等撥款幾格）、未讀幾封、tokens 剩多少。**`team tail <世界> <成員> -n 3`**：印最近幾輪「模型說／→ 工具／← 工具回」。以後看局不用再翻 state.json＋monitor.log＋inbox。
+- **`team/` 加鎖**：`team_lock(root)` 在 `team/.lock` 上 flock，10 秒逾時，進程內可重入；studio 包整支工具包鎖，但跑測試那段（最多 60 秒）放掉鎖再重讀。量出來：8 個進程各撥 20 次款，有鎖 160 筆一筆不掉；沒鎖只剩 23 筆，而且 `write_json_atomic` 的暫存檔名固定，互踩之後 budget.json 直接壞掉。今天沒踩到真的是運氣。
+- **test.sh**：從 proto2/ 裡面跑會一條包測試都不跑還印「全部通過」（glob 用相對路徑）——改成以腳本位置定根目錄、找不到檔就紅；殘留進程檢查只看這輪自己的 daemon 目錄，跟實玩隔開。
+- **引擎**：aos-llm 多 `api: anthropic`（直連 Messages API，工具呼叫、usage、cache token 都轉成 OpenAI 形狀）與 `api: claude-cli`。後者是給沒有 API key、只有 Max 訂閱的人用的：`claude -p --safe-mode --no-session-persistence --output-format json --tools "" --json-schema … --append-system-prompt …`，對話史從 stdin 餵，`structured_output` 直接就是 `{content, tool_calls}`。踩到一個坑：`--bare` 只認 `ANTHROPIC_API_KEY`，會把 OAuth 登入踢掉，所以用 `--safe-mode`。這條路是「拿 Claude Code headless 當引擎」，用量算訂閱的五小時窗口；當試強模型的路，不當長期方案。
+
+派工的心得：opus 做的三件（why/tail、鎖、引擎）一次到位、回報清楚；sonnet 做 test.sh 隔離時三次停下來「等背景測試」不會自己接著跑，得推兩次，還同時開了三份全套。**簡單任務給 sonnet可以，但要在指令裡寫死「前景跑、不要等通知」。**
+

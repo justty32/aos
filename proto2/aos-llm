@@ -31,6 +31,11 @@ LLM 不是誰的私有功能，是一個跟 agent 平起平坐的資料夾，也
 引擎也可以寫 `"strip_think": false`（不寫＝true）：預設會把 qwen 那種漏進 `content` 的
 `<think>…</think>` 切掉（只留最後一個 `</think>` 之後的東西），這是 LLM 這一側的家務，
 撿結果的人不用自己處理；`reasoning_content` 這種供應商私有欄位原樣不動。
+引擎還可以寫 `"api": "anthropic"`（不寫＝openai）：**直接打 Anthropic 的 /v1/messages**，
+不必架 LiteLLM 之類的轉接器。外面的人（aos-agent、帳本、packs）永遠只看得到 OpenAI 的
+chat/completions 形狀，一進一出兩邊都在 worker 裡翻（見 to_anthropic／from_anthropic）。
+`"api": "claude-cli"` 則是**把 Claude Code 的 headless 模式當引擎**：開一個 `claude -p` 子進程、
+對話從 stdin 餵、要它照 json-schema 吐回來（給有訂閱、沒 API key 的人用，見 call_claude_cli）。
 
   aos-llm exec [dir]
       **每一格做的事**，不給 dir 就是目前目錄。一格很短，**絕對不等網路**：
@@ -60,6 +65,7 @@ import argparse
 import datetime
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -581,21 +587,466 @@ def strip_think(answer):
     return answer
 
 
-def call(engine, body):
-    base = (engine.get("base_url") or "http://localhost:1234/v1").rstrip("/")
+# ── Anthropic 直連：把 OpenAI 那一味翻成 Messages API，再翻回來 ────────────────
+# 引擎寫 `"api": "anthropic"` 就走這條路（不寫＝openai，行為完全不變）。
+# 整個系統只認 OpenAI 的 chat/completions 形狀，所以進出兩邊都在這裡翻，
+# 外面的 aos-agent、帳本、packs 都不用知道有這回事。
+
+ANTHROPIC_VERSION = "2023-06-01"   # 引擎可以寫 anthropic_version 蓋掉
+ANTHROPIC_MAX_TOKENS = 4096        # Anthropic 的 max_tokens 是必填，沒人給就用這個
+# 這些是 OpenAI 才有的鍵，原樣送過去 Anthropic 會回 400，先丟掉。
+OPENAI_ONLY = ("n", "presence_penalty", "frequency_penalty", "logit_bias", "logprobs",
+               "top_logprobs", "seed", "response_format", "stream", "stream_options",
+               "user", "parallel_tool_calls", "reasoning_effort", "modalities",
+               "prompt_cache_key", "safety_identifier", "function_call", "functions")
+# Anthropic 的 stop_reason → OpenAI 的 finish_reason
+STOP_REASON = {"tool_use": "tool_calls", "end_turn": "stop", "stop_sequence": "stop",
+               "max_tokens": "length", "refusal": "content_filter", "pause_turn": "stop"}
+
+
+def api_of(engine):
+    """這台引擎走哪一味的 API：不寫就是 openai。"""
+    return str((engine or {}).get("api") or "openai").strip().lower()
+
+
+def flat_text(content):
+    """OpenAI 的 content 可能是字串，也可能是 [{"type": "text", ...}] 陣列——一律攤成字串。"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        return "\n".join(parts)
+    if content is None:
+        return ""
+    return str(content)
+
+
+def anthropic_tools(tools):
+    """OpenAI {"type":"function","function":{name,description,parameters}} → {name,description,input_schema}。"""
+    out = []
+    for tool in tools or []:
+        if not isinstance(tool, dict):
+            continue
+        fn = tool.get("function")
+        if not isinstance(fn, dict):
+            if tool.get("name"):   # 已經是 Anthropic 那一味就原樣收下
+                out.append(tool)
+            continue
+        schema = fn.get("parameters")
+        out.append({
+            "name": str(fn.get("name") or ""),
+            "description": str(fn.get("description") or ""),
+            "input_schema": schema if isinstance(schema, dict) else {"type": "object", "properties": {}},
+        })
+    return out
+
+
+def anthropic_tool_choice(choice):
+    """OpenAI 的 tool_choice → Anthropic 的；看不懂就回 None（＝不送）。"""
+    if isinstance(choice, str):
+        return {"auto": {"type": "auto"}, "required": {"type": "any"},
+                "any": {"type": "any"}, "none": {"type": "none"}}.get(choice)
+    if isinstance(choice, dict):
+        fn = choice.get("function")
+        if isinstance(fn, dict) and fn.get("name"):
+            return {"type": "tool", "name": str(fn["name"])}
+        if choice.get("type"):     # 已經是 Anthropic 那一味
+            return choice
+    return None
+
+
+def to_anthropic(body):
+    """OpenAI 的 chat/completions body → Anthropic 的 /v1/messages body。
+
+    規矩就幾條：system 訊息抽到頂層 `system`（好幾則用空行接起來）；assistant 的
+    `tool_calls` 變成 `tool_use` 內容塊（arguments 那串 JSON 要 parse 回物件）；
+    `role: tool` 變成一則 user 的 `tool_result` 塊；**連續同一邊的訊息一定要併成一輪**
+    （Anthropic 不收兩個 user 連著，而工具結果一多就會連著好幾則）；tools 換成
+    input_schema 的寫法；max_tokens 是必填。其他頂層鍵原樣過（temperature 那些），
+    只有 OpenAI 專屬、Anthropic 不吃的先丟掉，免得整發被打回 400。
+    """
+    out, systems, turns = {}, [], []
+
+    def push(role, blocks):
+        if not blocks:
+            return
+        if turns and turns[-1][0] == role:
+            turns[-1][1].extend(blocks)
+        else:
+            turns.append((role, blocks))
+
+    for key, value in (body or {}).items():
+        if key in ("messages", "tools", "tool_choice", "system", "stop",
+                   "max_completion_tokens") or key in OPENAI_ONLY:
+            continue
+        out[key] = value
+    if isinstance((body or {}).get("system"), str) and body["system"]:
+        systems.append(body["system"])   # 有人直接寫 Anthropic 那一味的頂層 system
+
+    for index, msg in enumerate((body or {}).get("messages") or []):
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        text = flat_text(msg.get("content"))
+        if role == "system":
+            if text:
+                systems.append(text)
+        elif role == "tool":
+            push("user", [{"type": "tool_result",
+                           "tool_use_id": str(msg.get("tool_call_id") or ""),
+                           "content": text}])
+        elif role == "assistant":
+            blocks = []
+            if text.strip():
+                blocks.append({"type": "text", "text": text})
+            for slot, tc in enumerate(msg.get("tool_calls") or []):
+                if not isinstance(tc, dict):
+                    continue
+                fn = tc.get("function") if isinstance(tc.get("function"), dict) else {}
+                args = fn.get("arguments")
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args) if args.strip() else {}
+                    except ValueError:
+                        args = {"_raw": args}   # 模型自己吐壞 JSON 時別讓整發掛掉
+                if not isinstance(args, dict):
+                    args = {}
+                blocks.append({"type": "tool_use",
+                               "id": str(tc.get("id") or "toolu_%d_%d" % (index, slot)),
+                               "name": str(fn.get("name") or ""), "input": args})
+            push("assistant", blocks)
+        elif text:
+            push("user", [{"type": "text", "text": text}])
+
+    if systems:
+        out["system"] = "\n\n".join(systems)
+    out["messages"] = [{"role": role, "content": blocks} for role, blocks in turns]
+    tools = anthropic_tools((body or {}).get("tools"))
+    if tools:
+        out["tools"] = tools
+    choice = anthropic_tool_choice((body or {}).get("tool_choice"))
+    if choice:
+        out["tool_choice"] = choice
+    stop = (body or {}).get("stop")
+    if isinstance(stop, str):
+        out["stop_sequences"] = [stop]
+    elif isinstance(stop, list) and stop:
+        out["stop_sequences"] = [str(s) for s in stop]
+    if not isinstance(out.get("max_tokens"), int) or isinstance(out.get("max_tokens"), bool):
+        out["max_tokens"] = number((body or {}).get("max_completion_tokens"),
+                                   ANTHROPIC_MAX_TOKENS) or ANTHROPIC_MAX_TOKENS
+    out["max_tokens"] = int(out["max_tokens"])
+    return out
+
+
+def anthropic_usage(raw):
+    """Anthropic 的 usage → OpenAI 的三個數字。帳本（write_pending／fold_pending）與
+    packs 的算錢都只認 prompt_tokens／completion_tokens／total_tokens，所以一定要補齊。
+
+    **快取讀到的 token 算進 prompt_tokens**：OpenAI 的 prompt_tokens 本來就含快取命中，
+    而算錢那邊是 `(prompt - cached) × 進價 + cached × 快取價`，不折進去會少算。
+    寫快取（cache_creation）同樣是這一發的輸入，也折進 prompt_tokens。
+    折進去之後另外留 `prompt_tokens_details.cached_tokens`（給算錢的看折扣）與
+    Anthropic 原本的兩個數字（帳本會各自成一欄，不會重複進 total）。
+    """
+    if not isinstance(raw, dict):
+        return {}
+
+    def num(key):
+        value = raw.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return 0
+        return int(value)
+
+    cache_read = num("cache_read_input_tokens")
+    cache_make = num("cache_creation_input_tokens")
+    prompt = num("input_tokens") + cache_read + cache_make
+    completion = num("output_tokens")
+    usage = {"prompt_tokens": prompt, "completion_tokens": completion,
+             "total_tokens": prompt + completion}
+    if cache_read or cache_make:
+        usage["prompt_tokens_details"] = {"cached_tokens": cache_read}
+        usage["cache_read_input_tokens"] = cache_read
+        usage["cache_creation_input_tokens"] = cache_make
+    return usage
+
+
+def from_anthropic(answer):
+    """Anthropic 的 /v1/messages 回覆 → OpenAI 的 chat/completions 形狀。
+
+    text 塊接成 `message.content`、tool_use 塊變成 `message.tool_calls`（input 再
+    json.dumps 回字串）、thinking 塊放進 `reasoning_content`（跟別的供應商同一格）、
+    stop_reason 換成 finish_reason、usage 換成三個數字。
+    """
+    if not isinstance(answer, dict):
+        return answer
+    texts, thinks, calls = [], [], []
+    for block in answer.get("content") or []:
+        if not isinstance(block, dict):
+            continue
+        kind = block.get("type")
+        if kind == "text":
+            texts.append(str(block.get("text") or ""))
+        elif kind == "thinking":
+            thinks.append(str(block.get("thinking") or ""))
+        elif kind == "tool_use":
+            data = block.get("input")
+            calls.append({"id": str(block.get("id") or ""), "type": "function",
+                          "function": {"name": str(block.get("name") or ""),
+                                       "arguments": json.dumps(
+                                           data if isinstance(data, dict) else {},
+                                           ensure_ascii=False)}})
+    message = {"role": "assistant", "content": "\n".join(texts)}
+    if thinks:
+        message["reasoning_content"] = "\n".join(thinks)
+    if calls:
+        message["tool_calls"] = calls
+    return {
+        "id": answer.get("id"), "object": "chat.completion",
+        "model": answer.get("model"),
+        "choices": [{"index": 0, "message": message,
+                     "finish_reason": STOP_REASON.get(answer.get("stop_reason"), "stop")}],
+        "usage": anthropic_usage(answer.get("usage")),
+    }
+
+
+def http_error_text(engine, code, reason, detail):
+    """HTTP 錯誤變成結果檔裡那句 error。Anthropic 的錯誤 body 是
+    {"type":"error","error":{"type","message"}}，挑出那句人看得懂的話接在狀態碼後面。"""
+    if api_of(engine) == "anthropic":
+        try:
+            data = json.loads(detail)
+        except (ValueError, TypeError):
+            data = None
+        err = data.get("error") if isinstance(data, dict) else None
+        if isinstance(err, dict):
+            detail = ("%s: %s" % (err.get("type") or "error", err.get("message") or "")).strip()
+    return ("HTTP %s %s %s" % (code, reason, detail)).strip()
+
+
+# ── claude-cli：把 Claude Code 的 headless 模式當成一台引擎 ────────────────────
+# 給「有 Claude 訂閱、沒有 API key」的人用：引擎寫 `"api": "claude-cli"`，worker 就開一個
+# `claude -p` 的子進程，把整段對話從 stdin 餵進去，要它照 --json-schema 吐回一包結構化 JSON，
+# 再翻成 OpenAI 的形狀。用量算在訂閱的五小時窗口裡，不是 API 帳單。
+#
+# **不用 --bare**：--bare 的認證只認 ANTHROPIC_API_KEY，訂閱制的 OAuth 會直接「Not logged in」。
+# 改用 --safe-mode——一樣把 CLAUDE.md／skills／plugins／hooks／MCP 全關掉（乾淨、每發一樣），
+# 但認證、模型、內建工具照常，所以訂閱能用。
+
+CLI_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "content": {"type": "string"},
+        "tool_calls": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"name": {"type": "string"},
+                               "arguments": {"type": "object"}},
+                "required": ["name", "arguments"],
+            },
+        },
+    },
+    "required": ["content", "tool_calls"],
+}
+CLI_RULE = ("回覆一定要符合 json-schema：content 是給人看的話（可空字串），"
+            "tool_calls 是要叫的工具，arguments 是物件。不要叫工具就給空陣列。")
+CLI_TOOL_HEAD = "你可以叫的工具（只能從這裡挑）"
+
+
+class CliFailed(Exception):
+    """claude-cli 這條路自己的失敗：找不到執行檔、跑掛了、吐出來的不是 JSON。"""
+
+
+def cli_system_prompt(body):
+    """--append-system-prompt 那一大段：請求裡的 system 訊息 ＋ 工具清單 ＋ 一條規矩。
+
+    CLI 沒有 tools 這個介面（我們還把內建工具全關了），所以工具是用講的：
+    一行一個 `名字(參數 schema) — 說明`，叫哪個、參數長怎樣由 json-schema 收口。
+    """
+    parts = []
+    for msg in (body or {}).get("messages") or []:
+        if isinstance(msg, dict) and msg.get("role") == "system":
+            text = flat_text(msg.get("content"))
+            if text:
+                parts.append(text)
+    tools = anthropic_tools((body or {}).get("tools"))
+    if tools:
+        lines = [CLI_TOOL_HEAD]
+        for tool in tools:
+            lines.append("- %s(%s) — %s" % (
+                tool.get("name") or "",
+                json.dumps(tool.get("input_schema") or {}, ensure_ascii=False,
+                           separators=(",", ":")),
+                tool.get("description") or ""))
+        parts.append("\n".join(lines))
+    parts.append(CLI_RULE)
+    return "\n\n".join(parts)
+
+
+def cli_transcript(body):
+    """從 stdin 餵進去的那段對話：一則一段，最後留一個空的【assistant】讓它接下去。"""
+    names, lines = {}, []
+    for msg in (body or {}).get("messages") or []:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        text = flat_text(msg.get("content"))
+        if role == "system":
+            continue
+        if role == "assistant":
+            block = ["【assistant】" + text]
+            for tc in msg.get("tool_calls") or []:
+                if not isinstance(tc, dict):
+                    continue
+                fn = tc.get("function") if isinstance(tc.get("function"), dict) else {}
+                name = str(fn.get("name") or "")
+                args = fn.get("arguments")
+                if not isinstance(args, str):
+                    args = json.dumps(args if args is not None else {}, ensure_ascii=False)
+                names[str(tc.get("id") or "")] = name
+                block.append("→ %s %s" % (name, args.strip()))
+            lines.append("\n".join(block))
+        elif role == "tool":
+            who = msg.get("name") or names.get(str(msg.get("tool_call_id") or "")) or "tool"
+            lines.append("【tool:%s】%s" % (who, text))
+        else:
+            lines.append("【user】" + text)
+    lines.append("【assistant】")
+    return "\n\n".join(lines)
+
+
+def cli_command(engine, body):
+    """組出那一行指令。找不到執行檔就當場講清楚，不要拖到 300 秒逾時。"""
+    binary = str((engine or {}).get("bin") or "claude")
+    found = shutil.which(binary)
+    if not found:
+        raise CliFailed("找不到 claude 執行檔（%s）：claude-cli 這種引擎要先裝好 "
+                        "Claude Code、讓它在 PATH 上，或在引擎裡寫 \"bin\"" % binary)
+    argv = [found, "-p", "--safe-mode", "--no-session-persistence",
+            "--output-format", "json", "--tools", "",
+            "--model", str((engine or {}).get("model") or "sonnet"),
+            "--json-schema", json.dumps(CLI_SCHEMA, ensure_ascii=False,
+                                        separators=(",", ":")),
+            "--append-system-prompt", cli_system_prompt(body)]
+    effort = (body or {}).get("effort")
+    if effort:
+        argv += ["--effort", str(effort)]
+    for extra in (engine or {}).get("extra_args") or []:
+        argv.append(str(extra))
+    return argv
+
+
+def from_claude_cli(data, model=""):
+    """`--output-format json` 的那一包 → OpenAI 的 chat/completions 形狀。
+
+    結構化輸出在頂層的 `structured_output`；沒有就把 `result` 當 JSON 讀；再不行就整串
+    當成 content、tool_calls 空的。usage 跟 Anthropic 同一套（快取 token 折進 prompt_tokens）。
+    """
+    if not isinstance(data, dict):
+        data = {}
+    payload = data.get("structured_output")
+    if not isinstance(payload, dict):
+        try:
+            payload = json.loads(data.get("result") or "")
+        except (ValueError, TypeError):
+            payload = None
+    if not isinstance(payload, dict):
+        payload = {"content": str(data.get("result") or ""), "tool_calls": []}
+    calls = []
+    for slot, one in enumerate(payload.get("tool_calls") or [], 1):
+        if not isinstance(one, dict) or not one.get("name"):
+            continue
+        args = one.get("arguments")
+        if isinstance(args, str):
+            try:
+                args = json.loads(args) if args.strip() else {}
+            except ValueError:
+                args = {"_raw": args}
+        if not isinstance(args, dict):
+            args = {}
+        calls.append({"id": "call_%d" % slot, "type": "function",
+                      "function": {"name": str(one["name"]),
+                                   "arguments": json.dumps(args, ensure_ascii=False)}})
+    message = {"role": "assistant", "content": str(payload.get("content") or "")}
+    if calls:
+        message["tool_calls"] = calls
+    return {
+        "id": data.get("session_id"), "object": "chat.completion", "model": model,
+        "choices": [{"index": 0, "message": message,
+                     "finish_reason": "tool_calls" if calls else "stop"}],
+        "usage": anthropic_usage(data.get("usage")),
+        # 這一包會被 worker 挪到結果的 aos.cli 底下，留個帳好對。
+        "cli": {"session_id": data.get("session_id"),
+                "total_cost_usd": data.get("total_cost_usd"),
+                "num_turns": data.get("num_turns"),
+                "stop_reason": data.get("stop_reason")},
+    }
+
+
+def call_claude_cli(engine, body, home):
+    """開一個 claude -p 子進程打那一發。cwd 一律是 LLM 資料夾（絕不是誰的專案目錄）。"""
+    argv = cli_command(engine, body)
+    text = cli_transcript(body)
+    try:
+        proc = subprocess.run(argv, input=text.encode("utf-8"),
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              cwd=home or os.getcwd(), timeout=TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise CliFailed("claude-cli 超時（%s 秒）" % TIMEOUT)
+    except OSError as e:
+        raise CliFailed("claude-cli 開不起來：%s" % e)
+    out = proc.stdout.decode("utf-8", "replace")
+    err = proc.stderr.decode("utf-8", "replace")
+    try:
+        data = json.loads(out)
+    except ValueError:
+        data = None
+    if proc.returncode != 0 or not isinstance(data, dict) or data.get("is_error"):
+        tail = err.strip()
+        if not tail and isinstance(data, dict):
+            tail = str(data.get("result") or "")
+        if not tail:
+            tail = out.strip()
+        raise CliFailed("claude-cli 失敗（exit %s）：%s" % (proc.returncode, tail[-300:]))
+    return from_claude_cli(data, (engine or {}).get("model") or "")
+
+
+def call(engine, body, home=""):
+    """真的送出那一發。引擎寫 `"api": "anthropic"` 就改打 /v1/messages、換一組 header，
+    body 進去前翻成 Anthropic 那一味、回來再翻回 OpenAI 那一味；`"api": "claude-cli"` 走的是
+    本機的 claude 子進程（不打網路、也就不探 TCP）；其餘的（預設）原樣打 /chat/completions。"""
+    if api_of(engine) == "claude-cli":
+        return call_claude_cli(engine, body, home)
+    anthropic = api_of(engine) == "anthropic"
+    default_base = "https://api.anthropic.com" if anthropic else "http://localhost:1234/v1"
+    base = (engine.get("base_url") or default_base).rstrip("/")
     headers = {"Content-Type": "application/json"}
     key = os.environ.get(engine.get("api_key_env") or "")
-    if key:
-        headers["Authorization"] = "Bearer " + key
+    if anthropic:
+        if key:
+            headers["x-api-key"] = key
+        headers["anthropic-version"] = str(engine.get("anthropic_version") or ANTHROPIC_VERSION)
+        url = base + ("/messages" if base.endswith("/v1") else "/v1/messages")
+        body = to_anthropic(body)
+    else:
+        if key:
+            headers["Authorization"] = "Bearer " + key
+        url = base + "/chat/completions"
     parts = urllib.parse.urlsplit(base)
     port = parts.port or (443 if parts.scheme == "https" else 80)
     socket.create_connection((parts.hostname or "localhost", port), timeout=CONNECT_TIMEOUT).close()
     req = urllib.request.Request(
-        base + "/chat/completions",
-        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
         headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return json.loads(r.read().decode("utf-8", "replace"))
+        answer = json.loads(r.read().decode("utf-8", "replace"))
+    return from_anthropic(answer) if anthropic else answer
 
 
 def do_worker(args):
@@ -620,7 +1071,7 @@ def do_worker(args):
 
     started = time.time()
     try:
-        answer = call(engine, body)
+        answer = call(engine, body, home)
         ok = True
     except urllib.error.HTTPError as e:
         detail = ""
@@ -628,7 +1079,10 @@ def do_worker(args):
             detail = e.read().decode("utf-8", "replace")[:500]
         except OSError:
             pass
-        answer = {"error": ("HTTP %s %s %s" % (e.code, e.reason, detail)).strip()}
+        answer = {"error": http_error_text(engine, e.code, e.reason, detail)}
+        ok = False
+    except CliFailed as e:
+        answer = {"error": str(e)}
         ok = False
     except (urllib.error.URLError, OSError, ValueError) as e:
         answer = {"error": "打不通 %s（%s）" % (out["base_url"], e)}
@@ -638,6 +1092,8 @@ def do_worker(args):
     if ok and not isinstance(answer, dict):
         answer, ok = {"error": "回覆不是一個 JSON 物件"}, False
     usage = answer.get("usage") if ok else None
+    if ok and isinstance(answer.get("cli"), dict):
+        out["cli"] = answer.pop("cli")   # claude-cli 的 session_id／花費，留在 aos 底下
     if ok:
         out["usage"] = usage if isinstance(usage, dict) else None
         if engine.get("strip_think", True):

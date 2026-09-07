@@ -506,3 +506,133 @@ PYEOF2
 }
 
 test_studio_flow_new_task
+
+# 共用檔的鎖：八個成員各是一個 process，同時改同一份帳本／同一張單，一筆都不能掉。
+test_studio_flow_lock() {
+  local root studio got
+  root=$(mktemp -d "$TEST_RUN_DIR/flowlock.XXXXXX")
+  prep_llm "$root/llm"
+  studio="$root/studio"
+  AOS_LLM_DIR="$root/llm" "$AUSER" team new "$studio" --preset studio --engine local \
+    --budget '{"tokens":1000000,"hours":2,"ticks":1000,"disk_mb":20,"mem_mb":64,"money_usd":1}' >/dev/null 2>&1
+  AOS_LLM_DIR="$root/llm" "$AUSER" order "$studio" "做 todo.py" --budget '{"tokens":500}' >/dev/null 2>&1
+
+  # 八個 process 同時對同一份 budget.json 各撥 20 次款：帳要剛好對得起來，一筆都不掉
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import os, sys, time
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx, read_json, resolve_home
+from packs import team
+root = sys.argv[2]
+path = os.path.join(root, "team", "budget.json")
+before = read_json(path, {})
+own0 = before["allocations"]["owner"]["tokens"]
+pm0 = before["allocations"]["pm"]["tokens"]
+rows0 = len(before["grants"])
+WORKERS, TIMES = 8, 20
+start = time.time() + 0.5        # 大家同時開跑，撞得兇一點
+pids = []
+for i in range(WORKERS):
+    pid = os.fork()
+    if pid == 0:
+        code = 0
+        try:
+            ctx = Ctx(root, resolve_home(root, None))
+            while time.time() < start:
+                time.sleep(0.005)
+            for n in range(TIMES):
+                r = team.run("team_grant", {"role": "pm", "amount": {"tokens": 1}}, ctx)
+                if not (isinstance(r, dict) and r.get("ok")):
+                    code = 1
+                    break
+        except BaseException:
+            code = 1
+        os._exit(code)
+    pids.append(pid)
+bad = sum(1 for p in pids if os.waitpid(p, 0)[1] != 0)
+after = read_json(path, {})
+n = WORKERS * TIMES
+rows = len(after["grants"]) - rows0
+good = (bad == 0 and rows == n
+        and after["allocations"]["owner"]["tokens"] == own0 - n
+        and after["allocations"]["pm"]["tokens"] == pm0 + n)
+print(True if good else "壞的 worker %d、帳上 %d 筆（該有 %d）、owner %s→%s、pm %s→%s"
+      % (bad, rows, n, own0, after["allocations"]["owner"]["tokens"],
+         pm0, after["allocations"]["pm"]["tokens"]))
+PYEOF2
+)
+  studio_flow_assert "$got" "studio_flow：八個 process 各撥 20 次款，帳一筆都不掉"
+
+  # 同一個任務：八個 process 各跑 20 次 qa_run（跑指令那段是放掉鎖的），測試紀錄一筆都不能掉
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import json, os, sys, time
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+from packs import studio
+root = sys.argv[2]
+sales = Ctx(os.path.join(root, "kids", "sales"), os.path.join(root, "kids", "sales"))
+r0 = studio.run("order_accept", {}, sales)
+pm = Ctx(os.path.join(root, "kids", "pm"), os.path.join(root, "kids", "pm"))
+r1 = studio.run("task_assign", {"to": "dev-a", "title": "寫程式", "spec": "隨便寫"}, pm)
+task_id = (r1 or {}).get("task_id") or ""
+WORKERS, TIMES = 8, 20
+start = time.time() + 0.5
+pids = []
+for i in range(WORKERS):
+    pid = os.fork()
+    if pid == 0:
+        code = 0
+        try:
+            qa = Ctx(os.path.join(root, "kids", "qa"), os.path.join(root, "kids", "qa"))
+            while time.time() < start:
+                time.sleep(0.005)
+            for n in range(TIMES):
+                r = studio.run("qa_run", {"task_id": task_id, "command": "true"}, qa)
+                if not (isinstance(r, dict) and r.get("ok")):
+                    code = 1
+                    break
+        except BaseException:
+            code = 1
+        os._exit(code)
+    pids.append(pid)
+bad = sum(1 for p in pids if os.waitpid(p, 0)[1] != 0)
+task = json.load(open(os.path.join(root, "team", "tasks", task_id + ".json"), encoding="utf-8"))
+n = WORKERS * TIMES
+good = bad == 0 and r0.get("ok") is True and r1.get("ok") is True and len(task["tests"]) == n
+print(True if good else "接單=%s 派工=%s 壞的 worker %d、測試紀錄 %d 筆（該有 %d）"
+      % (r0.get("ok"), r1.get("ok"), bad, len(task["tests"]), n))
+PYEOF2
+)
+  studio_flow_assert "$got" "studio_flow：八個 process 各跑 20 次 qa_run，任務上的測試紀錄一筆都不掉"
+
+  # 巢狀上鎖不會自己鎖死（team_grant 裡面還會再上一次）；別人握著時等到逾時給一句中文錯誤
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import subprocess, sys, os
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx, resolve_home, team_lock
+from packs import team
+root = sys.argv[2]
+with team_lock(root, timeout=3):
+    with team_lock(root, timeout=3):        # 同一個 process 重入，不該卡住
+        ctx = Ctx(root, resolve_home(root, None))
+        r = team.run("team_grant", {"role": "chief", "amount": {"tokens": 5}}, ctx)
+        nested = isinstance(r, dict) and r.get("ok") is True
+code = ("import sys; sys.path.insert(0, %r)\n"
+        "import aos_agent\n"
+        "try:\n"
+        "    with aos_agent.team_lock(%r, timeout=0.3):\n"
+        "        print('居然拿到鎖了')\n"
+        "except OSError as e:\n"
+        "    print(e)\n" % (sys.argv[1], root))
+with team_lock(root):                       # 我握著不放，另一個 process 只能等到逾時
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True,
+                         text=True).stdout.strip()
+good = nested and "等共用檔的鎖" in out and "0.3" in out
+print(True if good else "巢狀=%s 逾時訊息=%r" % (nested, out))
+PYEOF2
+)
+  studio_flow_assert "$got" "studio_flow：巢狀上鎖不鎖死，等不到鎖給中文逾時訊息"
+  rm -rf "$root"
+}
+
+test_studio_flow_lock
