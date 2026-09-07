@@ -86,7 +86,7 @@ def handle(req, tools):
     if method == "initialize":
         return result(req_id, {"protocolVersion": PROTOCOL,
                                "capabilities": {"tools": {}},
-                               "serverInfo": {"name": "aos-mcp-tools", "version": "0.1"}})
+                               "serverInfo": {"name": "aos", "version": "0.1"}})
     if method == "ping":
         return result(req_id, {})
     if method == "tools/list":
