@@ -51,7 +51,7 @@ test_studio() {
   python3 - "$studio" "$checks" <<'PYEOF2'
 import json, os, sys
 root, output = sys.argv[1:3]
-names = ["owner", "sales", "pm", "chief", "dev-a", "dev-b", "qa"]
+names = ["owner", "sales", "pm", "chief", "dev-a", "dev-b", "tester", "qa"]
 roster = json.load(open(os.path.join(root, "team", "team.json"), encoding="utf-8"))
 members = {m["name"]: m for m in roster["members"]}
 worlds = {name: root if name == "owner" else os.path.join(root, "kids", name) for name in names}
@@ -71,13 +71,13 @@ for name, world in worlds.items():
     checks["contacts"] &= set(contacts) == expected
 checks["clocks"] = (members["owner"]["clock"] == "own" and members["chief"]["clock"] == "own"
                     and all(members[n]["clock"] == "shared:owner"
-                            for n in ("sales", "pm", "dev-a", "dev-b", "qa")))
+                            for n in ("sales", "pm", "dev-a", "dev-b", "tester", "qa")))
 checks["engine"] = all(json.load(open(os.path.join(path, "llm.json"), encoding="utf-8"))["engine"] == "local"
                        for path in worlds.values())
 json.dump(checks, open(output, "w", encoding="utf-8"), ensure_ascii=False)
 PYEOF2
   for item in \
-    'worlds|studio：team new 建出七個世界' \
+    'worlds|studio：team new 建出八個世界' \
     'roster|studio：名冊、主管與 10/5/85 初始分配正確' \
     'team_files|studio：team 共用區、三個主檔都在' \
     'contacts|studio：全員雙向通訊錄，只有 sales 有 user' \

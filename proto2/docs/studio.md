@@ -1,6 +1,6 @@
 # 小型工作室
 
-`studio` preset 一次建七個 agent。甲方只找 `sales`。專案放在 owner 世界的 `team/projects/`。
+`studio` preset 一次建八個 agent（owner、sales、pm、chief、dev-a、dev-b、tester、qa）。tester 寫測試、qa 只跑只判，兩件事分開做人。甲方只找 `sales`。專案放在 owner 世界的 `team/projects/`。
 
 ## 開隊、下單、看回覆
 
@@ -22,14 +22,14 @@ aos-user team stop work/studio
 
 ```text
 studio/                         owner 世界，也是 owner home
-  kids/{sales,pm,chief,dev-a,dev-b,qa}/
+  kids/{sales,pm,chief,dev-a,dev-b,tester,qa}/
   team/team.json                現況名冊
   team/budget.json              總額、每人額度、分帳紀錄
   team/progress.md              共用短進度
   team/projects/                全員共用成果
 ```
 
-preset 目錄裡有 `assets/` 的話（Python 小程式工作室的 snippets、檢查腳本，見 [pyshop](pyshop.md)），開隊時整包複製到 `team/assets/`。每個成員只掛用得到的包、`tools.json` 帶 `only` 白名單與 `inline_mail: ["*"]`（信直接進 prompt），一輪 prompt 從 8k token 壓到 3k 以下；流程工具見 [studio-flow](studio-flow.md)。每個孩子家裡的 `team` 都是指向 owner 共用區的 symlink，所以全員一律用 `team/projects/...`。成員的回話**不會**像普通小孩那樣自動轉成 owner 的信（那會讓 owner 光讀信就燒光額度、占住共用引擎）；回報一律自己 `mail_send` 給 `reports_to` 的主管。owner 與 chief 用自己的鐘。sales、pm、dev-a、dev-b、qa 掛在 owner 的鐘。設了 `AOS_DAEMON_DIR` 時，`team new` 會登記兩個自己的鐘；`team stop` 收掉它們，檔案與帳保留。
+preset 目錄裡有 `assets/` 的話（Python 小程式工作室的 snippets、檢查腳本，見 [pyshop](pyshop.md)），開隊時整包複製到 `team/assets/`。每個成員只掛用得到的包、`tools.json` 帶 `only` 白名單與 `inline_mail: ["*"]`（信直接進 prompt），一輪 prompt 從 8k token 壓到 3k 以下；流程工具見 [studio-flow](studio-flow.md)。每個孩子家裡的 `team` 都是指向 owner 共用區的 symlink，所以全員一律用 `team/projects/...`。成員的回話**不會**像普通小孩那樣自動轉成 owner 的信（那會讓 owner 光讀信就燒光額度、占住共用引擎）；回報一律自己 `mail_send` 給 `reports_to` 的主管。owner 與 chief 用自己的鐘。sales、pm、dev-a、dev-b、tester、qa 掛在 owner 的鐘。dev-a、dev-b、chief 走 `thinking` 檔次（146 上是 qwen3:32b），其他人走 `cheap`；LLM 資料夾沒有同名引擎就用預設引擎。設了 `AOS_DAEMON_DIR` 時，`team new` 會登記兩個自己的鐘；`team stop` 收掉它們，檔案與帳保留。
 
 ## 預算
 
@@ -52,8 +52,8 @@ preset 目錄裡有 `assets/` 的話（Python 小程式工作室的 snippets、�
 ## 已知坑
 
 - 共用檔沒有鎖。兩人同時改同一檔，後寫的可能蓋掉前面。
-- `team status` 每次掃七人的狀態、信箱、帳和資料夾。小工作室很快；信件與專案很多時會變慢。閘門用的是不量資料夾的輕量版，每格一次。
-- 七個人共用兩三路本機引擎時一發要等一兩分鐘是常態：agent 只要請求還在 LLM 世界排隊或執行中就一直等（上限 1800 格），這段等待不算每題動作格。
+- `team status` 每次掃八人的狀態、信箱、帳和資料夾。小工作室很快；信件與專案很多時會變慢。閘門用的是不量資料夾的輕量版，每格一次。
+- 八個人共用兩三路本機引擎時一發要等一兩分鐘是常態：agent 只要請求還在 LLM 世界排隊或執行中就一直等（上限 1800 格），這段等待不算每題動作格。
 - 開隊做到一半失敗會留下已建檔案，不會自動回滾。修好原因後，要換一個新目錄重建。
 - shared 成員沒有自己的 daemon clock。owner 停，它們一起停；chief 仍可能繼續走。
 - 「全隊凍住」是每個 agent 自己在原地不動，鐘還在轉（空轉很便宜）；沒有去 daemon 停鐘，所以追加後不用重開。

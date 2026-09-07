@@ -120,7 +120,7 @@ spawn 也會寫小孩的 `parent.json`、父子雙方的 `contacts.json`、父�
 
 ## 給人用的殼：aos-user
 
-`aos-user team new <世界> --preset studio` 一次開七人工作室，`team status` 看全隊（含在途筆數與被擋原因），`team budget [--add JSON]` 看預算／甲方追加，`team stop` 收鐘留檔。工作室裡額度是硬閘門、每格都守：個人 tokens 用完（0 就是 0）自己凍住等主管 `team_grant`；整隊任一項用完全隊凍住、只有 sales 問甲方追加。細節見 [docs/studio.md](docs/studio.md)。
+`aos-user team new <世界> --preset studio` 一次開八人工作室，`team status` 看全隊（含在途筆數與被擋原因），`team budget [--add JSON]` 看預算／甲方追加，`team stop` 收鐘留檔。工作室裡額度是硬閘門、每格都守：個人 tokens 用完（0 就是 0）自己凍住等主管 `team_grant`；整隊任一項用完全隊凍住、只有 sales 問甲方追加。細節見 [docs/studio.md](docs/studio.md)。
 `aos-user order <世界> "任務" --budget '{"tokens":200000,"hours":1}' --accept "驗收條件"` 只把訂單交給 sales。
 
 `aos-user say|listen|talk|status|spawn <世界> [--home DIR]`。**這支是暫時的殼**：使用者之後
