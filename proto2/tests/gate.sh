@@ -47,6 +47,19 @@ test_gate() {
   fi
   got=$(find "$studio/kids/pm/inbox/budget" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
   if [ "$got" = "1" ]; then ok "gate：凍住只報主管一次"; else fail "gate：報主管的信 $got 封"; fi
+  python3 - "$studio/kids/chief/state.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]; d = json.load(open(p, encoding="utf-8")); d["frozen_ticks"] = 300
+json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False)
+PYEOF2
+  "$AGENT" exec "$studio/kids/chief" >/dev/null 2>&1
+  got=$(find "$studio/kids/pm/inbox/budget" -maxdepth 1 -name '*.json' 2>/dev/null | wc -l)
+  if [ "$got" = "2" ]; then ok "gate：凍滿 300 格還沒人理就再喊一次"; else fail "gate：300 格再喊不對（$got 封）"; fi
+  python3 - "$studio/kids/chief/state.json" <<'PYEOF2'
+import json, sys
+p = sys.argv[1]; d = json.load(open(p, encoding="utf-8")); d["frozen_ticks"] = 3
+json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False)
+PYEOF2
 
   # 主管 team_grant 後自然解凍，接著走原本的信
   python3 - "$HERE" "$studio" <<'PYEOF2'
@@ -196,6 +209,17 @@ PYEOF2
     ok "gate：寫成文字的工具呼叫救回來、真的跑了"
   else
     fail "gate：救回失敗（got=$got said=$(cat "$world/said.txt" 2>/dev/null)）"
+  fi
+  rm -rf "$root"
+
+  # ③ 工具名: {參數} 寫在 plaintext 圍欄裡，也救得回來
+  root=$(make_world gate_plaintext)
+  world="$root/agent"
+  reply=$(say_and_wait "$world" "$root/llm" 'PLAINTEXT 請叫 say' 20) || true
+  if [ -f "$world/said.txt" ] && grep -q "純文字救回" "$world/said.txt"; then
+    ok "gate：「工具名: {參數}」寫成文字也救回來跑了"
+  else
+    fail "gate：plaintext 形式沒救回（said=$(cat "$world/said.txt" 2>/dev/null)）"
   fi
   rm -rf "$root"
 
