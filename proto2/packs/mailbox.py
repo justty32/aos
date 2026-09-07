@@ -54,7 +54,10 @@ def run(name, args, ctx):
     if name == "inbox_read":
         fname = args.get("id") or ""
         if fname not in ctx.unread(src):
-            return {"error": "這個來源沒有這封未讀的信：%s/%s" % (src, fname)}
+            # 小模型很愛自己編 id；把真的有的列給它，下一步就能對
+            return {"error": "這個來源沒有這封未讀的信：%s/%s" % (src, fname),
+                    "unread_ids": ctx.unread(src), "sources": ctx.sources(),
+                    "hint": "id 要用 inbox_list 給的完整檔名（含 .json）；要一次讀完就用 inbox_read_all"}
         mails = ctx.mail_of(src, fname)
         ctx.mark_read(src, fname)
         return {"source": src, "id": fname, "mails": mails}

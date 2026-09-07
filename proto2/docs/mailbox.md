@@ -6,7 +6,7 @@
 |---|---|
 | `inbox_sources(unread_only?)` | 看有哪些來源，各有幾封未讀與已讀。 |
 | `inbox_list(source)` | 列出一個來源的未讀信。 |
-| `inbox_read(source, id)` | 讀一封信，並搬進 `read/`。 |
+| `inbox_read(source, id)` | 讀一封信，並搬進 `read/`。id 給錯會把真的有的 id 列回來。 |
 | `inbox_read_all(source)` | 一次讀完一個來源。 |
 
 一般信不會整封塞進 prompt。agent 只會看到「哪個來源有幾封」。模型再自己叫工具讀。
