@@ -4,6 +4,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
 import time
 
@@ -14,7 +15,10 @@ from aos_agent import (   # noqa: E402
     resolve_home, run_custom, scan_inbox, system_text, team_requester, team_status_of,
     today_usage_for, tool_specs, warn, write_json)
 
-LLM_WAIT_TICKS = 60
+LLM_WAIT_TICKS = 60            # 請求已經不在 LLM 世界的排隊／執行中，結果卻沒出現：等這麼多格就放棄
+LLM_WAIT_TICKS_ALIVE = 1800    # 請求還排著或還在打（大家共用幾路引擎，慢模型一發就要一兩分鐘）：最多等這麼多格
+PROTOCOL_RETRIES = 1        # 模型把工具呼叫吐成壞文字：救不回來就同題重送這麼多次
+TOOL_CALL_SMELL = re.compile(r"<tool_call|</tool_call>|\[TOOL_CALLS\]|<function=|<\|tool")
 
 
 def call_idle_hooks(ctx):
@@ -63,8 +67,61 @@ def do_llm(ctx, loaded, extra):
     return name
 
 
-def do_wait(ctx, request, waited):
-    """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False, 已等幾格)。"""
+def _json_objects(text):
+    """把一段文字裡所有頂層 JSON 物件挖出來（qwen 的 <tool_call>…</tool_call>、mistral 的
+    [TOOL_CALLS] [...]、或整段就是 {...}／```json 圍起來的都吃得到）。壞掉的就跳過。"""
+    found, depth, start = [], 0, None
+    in_str, esc = False, False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start is not None:
+                try:
+                    found.append(json.loads(text[start:i + 1]))
+                except ValueError:
+                    pass
+                start = None
+    return [obj for obj in found if isinstance(obj, dict)]
+
+
+def salvage_tool_calls(content, known):
+    """content 裡看得像工具呼叫的 JSON，只要 name 是我們真的有的工具，就救成正式 tool_calls。"""
+    calls = []
+    for obj in _json_objects(content or ""):
+        inner = obj.get("function") if isinstance(obj.get("function"), dict) else obj
+        name = inner.get("name")
+        if name not in known:
+            continue
+        args = inner.get("arguments", inner.get("parameters", {}))
+        if isinstance(args, str):
+            try:
+                args = json.loads(args) if args.strip() else {}
+            except ValueError:
+                continue
+        if not isinstance(args, dict):
+            args = {}
+        calls.append({"id": "salvaged_%d" % (len(calls) + 1), "type": "function",
+                      "function": {"name": name, "arguments": json.dumps(args, ensure_ascii=False)}})
+    return calls
+
+
+def do_wait(ctx, request, waited, loaded=(), extra=()):
+    """去 LLM 資料夾撿回覆。回 (下一格 state, 這次的用量或 False, 已等幾格)。
+    模型把工具呼叫吐成文字：認得的救回來當正式 tool_calls；救不回來當協定錯誤，同題重送一次。"""
     answer = aos_llm.read_result(ctx.llm_dir(), request)
     if answer is None:
         clock = ctx.clock_of(ctx.llm_dir())
@@ -74,12 +131,17 @@ def do_wait(ctx, request, waited):
             warn(text)
             return "idle", False, 0
         waited += 1
-        if waited >= LLM_WAIT_TICKS:
-            text = "（等 LLM 超過 %d 格沒回應，請確認 LLM 的鐘有沒有在跑）" % LLM_WAIT_TICKS
+        box = os.path.join(aos_llm.home_of(ctx.llm_dir()), "requests")
+        alive = bool(request) and (os.path.isfile(os.path.join(box, request)) or
+                                   os.path.isfile(os.path.join(box, "running", request)))
+        limit = LLM_WAIT_TICKS_ALIVE if alive else LLM_WAIT_TICKS
+        if waited >= limit:
+            text = ("（等 LLM 超過 %d 格還沒回，放棄這題）" % limit if alive else
+                    "（請求已經不在 LLM 的排隊裡、結果卻 %d 格沒出現，放棄這題）" % limit)
             ctx.reply(text, error=True)
             warn(text)
             return "idle", False, 0
-        warn("等 LLM（%s）" % (request or "沒有請求"))
+        warn("等 LLM（%s，%s）" % (request or "沒有請求", "排隊／執行中" if alive else "不在排隊裡"))
         return "wait", False, waited
     write_json(os.path.join(ctx.home, "llm-result.json"), answer)
     call_main_result_hooks(ctx, request, answer)
@@ -102,6 +164,28 @@ def do_wait(ctx, request, waited):
     stored = {"role": assistant.get("role") or "assistant",
               "content": assistant.get("content") or ""}
     calls = assistant.get("tool_calls") or []
+    content = stored["content"] if isinstance(stored["content"], str) else ""
+    smells = bool(content) and not calls and (
+        bool(TOOL_CALL_SMELL.search(content)) or
+        any("name" in obj and ("arguments" in obj or "parameters" in obj)
+            for obj in _json_objects(content)))
+    if smells:
+        known = {t.get("name") for t in tool_specs(list(loaded), list(extra))}
+        calls = salvage_tool_calls(content, known)
+        if calls:
+            warn("模型把工具呼叫寫成文字，救回 %d 個" % len(calls))
+            stored["content"] = ""
+            assistant = dict(assistant, content="", tool_calls=calls)
+            answer["choices"][0]["message"] = assistant
+            write_json(os.path.join(ctx.home, "llm-result.json"), answer)
+        else:
+            tries = int(ctx.state.get("protocol_retries") or 0)
+            if tries < PROTOCOL_RETRIES:
+                ctx.state["protocol_retries"] = tries + 1
+                warn("模型的工具呼叫格式壞了、救不回來，同題重送（第 %d 次）" % (tries + 1))
+                return "llm", usage, 0
+            warn("模型的工具呼叫格式壞了兩次，這次照普通回覆處理")
+    ctx.state.pop("protocol_retries", None)
     if calls:
         stored["tool_calls"] = calls
     append_history(ctx.home, [stored])
@@ -185,9 +269,11 @@ def do_act(ctx, loaded, extra):
 
 
 def budget_block(ctx):
-    """工作室額度是硬閘門。回 True 表示這格不能再叫 LLM。"""
+    """工作室額度是硬閘門，每格都守。回 True 表示這格整個凍住（不走狀態機、step 不加）。
+    整隊任一項用完→全隊凍住，只有 sales 開口問甲方要不要追加（追加走 aos-user team budget --add）。
+    個人 tokens 用完（0 額度就是 0 上限）→自己凍住、報主管一次；主管 team_grant 後自然解凍。"""
     try:
-        data = team_status_of(ctx.world)
+        data = team_status_of(ctx.world, light=True)
     except (OSError, ValueError):
         ctx.state.pop("budget_block", None)
         return False
@@ -196,29 +282,44 @@ def budget_block(ctx):
                   if data["budget"].get(key) and data["remaining"].get(key) is not None
                   and data["remaining"][key] <= 0]
     own_over = []
-    if mine:
-        for key in ("tokens", "ticks", "money_usd"):
-            limit = mine["budget"].get(key) or 0
-            spent = mine["today_spent"].get(key) or 0
-            if data["budget"].get(key) and limit > 0 and spent >= limit:
-                own_over.append(key)
+    if mine and data["budget"].get("tokens"):
+        limit = mine["budget"].get("tokens") or 0
+        spent = mine["today_spent"].get("tokens") or 0
+        if spent >= limit:
+            own_over.append("tokens")
     mark = "team:" + ",".join(total_over) if total_over else \
         "own:" + ",".join(own_over) if own_over else ""
     if not mark:
-        ctx.state.pop("budget_block", None)
+        if ctx.state.pop("budget_block", None):
+            warn("額度回來了，解凍")
+        ctx.state.pop("budget_told", None)
         return False
-    if ctx.state.get("budget_block") == mark:
-        return True
     ctx.state["budget_block"] = mark
+    # 只開口一次；個人額度 0 的人沒事做（沒信、也不在題目中間）就安靜凍著，
+    # 等真的有人派活給他才喊——不然開隊當下四個沒分到額度的人會同時抱怨，主管還沒收單就先燒 token。
+    if ctx.state.get("budget_told") == mark:
+        return True
     if total_over:
+        ctx.state["budget_told"] = mark
         if ctx.name == "sales":
-            ctx.reply("整隊額度用完了，要不要追加？", error=True)
+            ctx.reply("整隊額度用完了（%s），全隊已停。要追加請跑：aos-user team budget %s --add "
+                      "'{\"tokens\": 數量}'（hours／ticks／money_usd 也可以加）。" % (
+                          "、".join(total_over), data["root"]), error=True)
         else:
-            ctx.put_mail("sales", "budget", "整隊額度用完，請向使用者申請追加。")
+            warn("整隊額度用完（%s），凍住等 sales 問甲方追加" % "、".join(total_over))
+        return True
+    has_work = (ctx.state.get("state") or "idle") != "idle" or \
+        any(ctx.unread(source) for source in ctx.sources())
+    if not has_work:
+        return True
+    ctx.state["budget_told"] = mark
+    supervisor = mine.get("reports_to") if mine else None
+    text = "我的 tokens 額度用完了（上限 %s、已用 %s），有工作在等，請用 team_grant 加給我（一次至少 20000）。" % (
+        mine["budget"].get("tokens"), mine["today_spent"].get("tokens"))
+    if supervisor:
+        ctx.put_mail(supervisor, "budget", text)
     else:
-        supervisor = mine.get("reports_to") if mine else None
-        if supervisor:
-            ctx.put_mail(supervisor, "budget", "額度用完，等主管加。")
+        ctx.reply(text, error=True)
     return True
 
 
@@ -256,11 +357,18 @@ def do_exec(args):
     loaded, extra = load_packs(home)
     ctx = Ctx(world, home, saved, loaded)
 
+    if budget_block(ctx):
+        saved["frozen_ticks"] = int(saved.get("frozen_ticks") or 0) + 1
+        write_json(st_path, saved)
+        warn("step %d 額度閘門（%s）：這格凍住不動" % (step, saved.get("budget_block")))
+        return 0
+    saved.pop("frozen_ticks", None)
+
     side_msgs = ctx.collect_results()
     inbox_msgs, direct = [], False
     if state in ("idle", "collect") or saved.get("limit_pause") or saved.get("sleeping"):
         direct = bool(ctx.unread("user"))
-        inbox_msgs, announced = scan_inbox(home, announced)
+        inbox_msgs, announced = scan_inbox(home, announced, saved)
         if direct:
             if saved.get("limit_kind") == "tokens" and saved.get("limit_pause"):
                 saved["token_limit_ack_day"] = datetime.date.today().isoformat()
@@ -288,14 +396,11 @@ def do_exec(args):
     elif state == "collect":
         nxt, did = "llm", True
     elif state == "llm":
-        if budget_block(ctx):
-            nxt, did = "idle", False
-        else:
-            request = do_llm(ctx, loaded, extra)
-            wait_ticks = 0
-            nxt, did = "wait", True
+        request = do_llm(ctx, loaded, extra)
+        wait_ticks = 0
+        nxt, did = "wait", True
     elif state == "wait":
-        nxt, usage, wait_ticks = do_wait(ctx, request, wait_ticks)
+        nxt, usage, wait_ticks = do_wait(ctx, request, wait_ticks, loaded, extra)
         if usage is not False:
             last_usage = usage
         did = nxt != "wait"
@@ -313,7 +418,8 @@ def do_exec(args):
     if did:
         busy += 1
     if saved.get("question_active") and not saved.get("limit_pause"):
-        if saved.get("sleeping") and not did:
+        # 睡著等旁線、或主線在排隊等模型回，都不是 agent 自己在繞圈，不算每題動作格
+        if not did and (saved.get("sleeping") or state == "wait"):
             saved["question_sleep_steps"] = int(saved.get("question_sleep_steps") or 0) + 1
         else:
             saved["question_steps"] = int(saved.get("question_steps") or 0) + 1

@@ -58,7 +58,8 @@ worlds = {name: root if name == "owner" else os.path.join(root, "kids", name) fo
 checks = {}
 checks["worlds"] = all(os.path.isfile(os.path.join(path, ".aos", "inst")) for path in worlds.values())
 checks["roster"] = (set(members) == set(names) and members["chief"]["reports_to"] == "pm"
-                    and members["owner"]["budget_pct"] == 10 and members["pm"]["budget_pct"] == 90)
+                    and members["owner"]["budget_pct"] == 10 and members["pm"]["budget_pct"] == 85
+                    and members["sales"]["budget_pct"] == 5)
 checks["team_files"] = (os.path.isdir(os.path.join(root, "team", "projects"))
                         and all(os.path.isfile(os.path.join(root, "team", name))
                                 for name in ("team.json", "budget.json", "progress.md")))
@@ -77,7 +78,7 @@ json.dump(checks, open(output, "w", encoding="utf-8"), ensure_ascii=False)
 PYEOF2
   for item in \
     'worlds|studio：team new 建出七個世界' \
-    'roster|studio：名冊、主管與 10/90 初始分配正確' \
+    'roster|studio：名冊、主管與 10/5/85 初始分配正確' \
     'team_files|studio：team 共用區、三個主檔都在' \
     'contacts|studio：全員雙向通訊錄，只有 sales 有 user' \
     'clocks|studio：owner/chief own，其餘 shared owner' \
@@ -109,7 +110,7 @@ ctx=Ctx(os.path.join(root,"kids","pm"), os.path.join(root,"kids","pm"))
 r=team.run("team_grant", {"role":"dev-a", "amount":{"tokens":120,"ticks":70}}, ctx)
 b=json.load(open(os.path.join(root,"team","budget.json"), encoding="utf-8"))
 print(r.get("ok") is True and b["allocations"]["dev-a"]["tokens"] == 120
-      and b["allocations"]["pm"]["tokens"] == 780
+      and b["allocations"]["pm"]["tokens"] == 730
       and b["allocations"]["dev-a"]["ticks"] == 70 and len(b["grants"]) == 1)
 PYEOF2
 )
@@ -117,7 +118,7 @@ PYEOF2
 
   status=$("$AUSER" team status "$studio" 2>&1)
   case "$status" in
-    *"owner"*"sales"*"dev-a"*"今天花費"*"整隊剩餘"*) ok "studio：team status 印得出整隊欄位" ;;
+    *"INFLIGHT"*"owner"*"sales"*"dev-a"*"在途：主線"*"今天花費"*"整隊剩餘"*) ok "studio：team status 印得出整隊欄位與在途筆數" ;;
     *) fail "studio：team status 輸出不全（$status）" ;;
   esac
 

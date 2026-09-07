@@ -60,10 +60,12 @@ import argparse
 import datetime
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -72,6 +74,7 @@ import aos_llm as lib   # noqa: E402  （同一個資料夾裡的小幫手，共
 HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
 AOS_KEYS = ("priority", "requester", "engine", "params", "aos")
 TIMEOUT = 300
+CONNECT_TIMEOUT = 10   # 先探一下 TCP 連不連得上；WSL 對關掉的埠會吞 SYN，不探就要等滿 300 秒
 FIRST_COLS = ("requests", "errors", "took_ms")
 COL_LABEL = {"requests": "請求", "errors": "錯誤", "took_ms": "毫秒"}
 KIND_SCORE = {"chat": 40, "tool": 20, "think": 0, "background": -40}
@@ -584,6 +587,9 @@ def call(engine, body):
     key = os.environ.get(engine.get("api_key_env") or "")
     if key:
         headers["Authorization"] = "Bearer " + key
+    parts = urllib.parse.urlsplit(base)
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+    socket.create_connection((parts.hostname or "localhost", port), timeout=CONNECT_TIMEOUT).close()
     req = urllib.request.Request(
         base + "/chat/completions",
         data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
