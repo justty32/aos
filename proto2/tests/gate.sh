@@ -208,3 +208,34 @@ PYEOF2
 }
 
 test_gate
+
+# code 包：工作室成員家裡的 team/ 是 symlink，指到共用區也算「專案裡面」
+test_gate_code_symlink() {
+  local root studio got
+  root=$(mktemp -d "$TEST_RUN_DIR/gatecode.XXXXXX")
+  prep_llm "$root/llm"
+  studio="$root/studio"
+  AOS_LLM_DIR="$root/llm" "$AUSER" team new "$studio" --preset studio --engine local >/dev/null 2>&1
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+from packs import code
+root = sys.argv[2]
+world = os.path.join(root, "kids", "chief")
+os.makedirs(os.path.join(root, "team", "projects", "todo"), exist_ok=True)
+open(os.path.join(root, "team", "projects", "todo", "todo.py"), "w").write("print(1)\n")
+ctx = Ctx(world, world)
+inside = code._project(ctx, "team/projects/todo/todo.py")
+try:
+    code._project(ctx, "../pm/prompts.json"); outside = False
+except ValueError:
+    outside = True
+print(os.path.isfile(inside) and outside)
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "gate：code 包認共用區 team/ 是裡面、別人家還是外面"; else fail "gate：code 包 symlink 判定不對（$got）"; fi
+  rm -rf "$root"
+}
+
+test_gate_code_symlink
