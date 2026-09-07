@@ -179,6 +179,79 @@ claude -p --no-session-persistence --setting-sources "" --disable-slash-commands
 - **`--bare` 不能用**：它只認 `ANTHROPIC_API_KEY`，會把 OAuth 登入踢掉。**`--safe-mode` 也不能用**：它把 `--mcp-config` 一起關了。
 - 引擎裡最好寫 `"bin": "/home/<你>/.local/bin/claude"`：鐘是 daemon 開的，PATH 不一定有 `~/.local/bin`。
 
+## codex-cli（用 ChatGPT 訂閱跑 Codex）
+
+引擎寫 `"api": "codex-cli"` 就開一個本機的 `codex exec` 子進程——**給有 ChatGPT 訂閱、沒有
+OpenAI API key 的人用**。模型名字要用訂閱認得的那幾個（`gpt-5.6-sol` 最強、`gpt-5.6-luna`／
+`gpt-5.6-terra` 便宜）：
+
+```json
+[{"name": "cheap", "api": "codex-cli", "model": "gpt-5.6-luna", "max_concurrent": 2,
+  "cost_class": "cheap", "params": {"effort": "low"}},
+ {"name": "thinking", "api": "codex-cli", "model": "gpt-5.6-sol", "max_concurrent": 1,
+  "cost_class": "expensive"}]
+```
+
+實際跑的是這一行（`bin` 不寫就是 PATH 上的 `codex`，`params.effort` 有寫才加那一個 `-c`，
+`extra_args` 原樣接在後面）：
+
+```sh
+codex exec --ephemeral --skip-git-repo-check -s read-only --json -C <LLM 資料夾> -m <model> \
+  -c 'mcp_servers.aos.command="<python3>"' \
+  -c 'mcp_servers.aos.args=["<aos-mcp-tools>","<specs 檔>"]' \
+  -c 'mcp_servers.aos.env={AOS_MCP_RECORD="<登記檔>"}' \
+  -c 'mcp_servers.aos.default_tools_approval_mode="auto"' \
+  [-c 'model_reasoning_effort="<級>"']
+```
+
+- `--ephemeral` 不落 session 檔、`--skip-git-repo-check` 允許在非 git 資料夾跑、`-s read-only`
+  不讓它動東西、`-C` 把工作根釘在 LLM 資料夾（絕不是誰的專案目錄）。prompt 走 stdin。
+- `-c` 的值是 TOML：字串要引號、`args` 是陣列、`env` 是 inline table。這幾個鍵都拿
+  `codex exec --strict-config -c ...` 驗過（打錯的鍵它會回「unknown configuration field」）。
+
+### 為什麼要架一台假的 MCP server
+
+claude-cli 那條路是「工具用講的、回覆用 json-schema 收口」。**codex 這樣做不行**：它是一個
+agent，不是一個「你給我工具清單、我回你一包 tool_calls」的端點。工具只用文字描述，它多半
+只會寫一段「我要叫 say」的話，形狀對不上；但只要工具是**真的掛上去**的，它就會發出真的
+工具呼叫。所以：
+
+1. 請求裡的 `tools` 寫成 `<LLM 資料夾>/side/codex/<請求名>.specs.json`。
+2. 用 `-c` 把 [`aos-mcp-tools`](../aos-mcp-tools) 掛成一台叫 `aos` 的 stdio MCP server，
+   `tools/list` 時把 OpenAI 的 `parameters` 換名成 `inputSchema` 端給它看。
+3. **那台 server 什麼都不做**：被叫到就把 `{name, arguments}` append 進登記檔
+   `<請求名>.record.jsonl`，回一句「已登記，這一輪到此為止」。真的要跑工具是外面
+   `aos-agent` 下一回合的事——我們要的只是「它這一輪決定叫誰、帶什麼參數」。
+4. codex 沒有 max-turns，會一直做下去，所以停手的規矩是我們自己訂的：**登記檔一出現第一批
+   呼叫就再給 2 秒**（引擎寫 `"grace": 5` 可以調），然後 SIGTERM／SIGKILL 收掉整個 process
+   group，有什麼算什麼。`turn.completed` 先到就直接走。
+5. 成功就把 `side/codex/` 那兩個小抄刪掉；失敗留著給人看。
+
+翻譯的部分：`item.completed` 裡 `agent_message` 的 `text` 接成 `content`、`mcp_tool_call`
+拿來對帳、`turn.completed` 的 `usage` 換算成 `prompt_tokens`（＝`input_tokens`，本來就含快取）／
+`completion_tokens`（＝`output_tokens` ＋ `reasoning_output_tokens`）／`total_tokens`，
+另外留 `prompt_tokens_details.cached_tokens` 與原始那幾欄。**`tool_calls` 以登記檔為準**，
+登記檔空的才退而用事件流那一份。`thread_id`、原始 usage、有沒有被我們收掉記在 `aos.cli`。
+`turn.failed`、非零退出碼、逾時都變成一句 `{"error": "codex-cli 失敗：…"}`；找不到執行檔當場就講。
+
+### 兩個要先知道的坑
+
+- **工具核准**：`codex exec` 是非互動的，沒人能按核准，所以 MCP 工具呼叫會被擋成「此工具需要
+  核准」——`mcp_servers.<台>.default_tools_approval_mode="auto"` 與 `approval_policy="never"`
+  都擋不住（codex 0.153.2 實測，上游 issue #24135 也是這樣）。這時**登記檔會是空的**，還好
+  事件流裡的 `mcp_tool_call` 已經帶了名字與參數，我們照樣拼得出 `tool_calls`，只是 `content`
+  會多一句模型的道歉。真的要讓登記檔生效，得在 `extra_args` 加
+  `--dangerously-bypass-approvals-and-sandbox`——**那會連 `-s read-only` 一起關掉**，自己衡量。
+- **輸入 token 很貴**：一發只有兩個工具、三句話的請求，實測 `input_tokens` 約 4.6～4.7 萬
+  （其中 3.4～3.7 萬是快取命中），比空手跑一句話的約 1.3 萬多出一大截——多的是 codex 自己的
+  工具與指示。`--ignore-user-config`、`-c project_doc_max_bytes=0`、`-C 空資料夾` 都救不了
+  （本機 `~/.codex/config.toml` 才 657 bytes，工作目錄也沒有 AGENTS.md）；真正的把手是
+  `model_instructions_file`（0.153.2 認這個鍵，`base_instructions`／`experimental_instructions_file`
+  不認），還沒實測。**所以 codex-cli 適合「一發抵一個決定」的粗活，不適合拿來聊天**。
+
+一句提醒：跟 claude-cli 一樣，這是把訂閱當引擎用，用量算在訂閱的窗口裡、不是 API 帳單，
+帳本的 token 只是等值參考；每發還多幾秒到幾十秒的進程與工具啟動時間，`max_concurrent` 別開太大。
+
 ## 用量帳本
 
 新帳本有兩層：
