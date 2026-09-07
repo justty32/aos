@@ -341,7 +341,13 @@ def _plan_set(ctx, root, args):
     if not isinstance(rows, list) or not rows:
         return {"ok": False, "error": "tasks 要是至少一項的陣列"}
     made = []
-    for i, row in enumerate(rows, 1):
+    existing = [t for t in (order.get("tasks") or []) if _load_task(ctx, root, t)]
+    for tid in existing:                     # 拆完任務，自己手上那項「定架構」就算做完了，不然 deliver 會被它卡住
+        old_task = _load_task(ctx, root, tid)
+        if old_task.get("owner") == _member(ctx) and old_task.get("status") == "assigned" and not old_task.get("files"):
+            old_task.update({"status": "passed", "report": "plan_set 完成（定架構）", "done": _now()})
+            _save_task(ctx, root, old_task)
+    for i, row in enumerate(rows, len(existing) + 1):     # 接在已有的任務後面編號，不蓋掉先派的（例如定架構那一項）
         row = row if isinstance(row, dict) else {"title": str(row)}
         task_id = "%s-t%d" % (order_id, i)
         files = row.get("files")
@@ -354,7 +360,7 @@ def _plan_set(ctx, root, args):
         made.append(task)
     order["plan"] = {"architecture": str(args.get("architecture") or ""),
                      "time": _now(), "by": _member(ctx)}
-    order["tasks"] = [t["id"] for t in made]
+    order["tasks"] = existing + [t["id"] for t in made]
     order["status"] = "planned"
     _note(order, ctx, "定計畫，%d 個任務" % len(made))
     _save_order(ctx, root, order)
@@ -432,8 +438,18 @@ def _task_assign(ctx, root, args):
         if not args.get("to"):
             return {"ok": False, "error": "找不到任務 %s；要開新任務請給 to（誰做）與 spec" % task_id,
                     "order_id": order["id"], "tasks": order.get("tasks") or []}
-        task = _new_task(ctx, root, order, args.get("title") or task_id or "任務", args.get("spec"), args.get("to"))
-        task_id = task["id"]
+        # 單上已經有 plan_set 開給同一個人、還沒真的派出去的任務，就派那一項，別再開一個重複的
+        waiting = [_load_task(ctx, root, t) for t in (order.get("tasks") or [])]
+        waiting = [t for t in waiting if t and t.get("owner") == str(args["to"])
+                   and t.get("status") == "assigned" and not t.get("assigned")]
+        if waiting:
+            task = waiting[0]
+            task_id = task["id"]
+            if len(str(args.get("spec") or "")) <= len(task.get("spec") or ""):
+                args = dict(args, spec=None)      # 首席寫的說明比較完整，別被短的蓋掉
+        else:
+            task = _new_task(ctx, root, order, args.get("title") or task_id or "任務", args.get("spec"), args.get("to"))
+            task_id = task["id"]
     to = str(args.get("to") or task.get("owner") or "")
     if not to:
         return {"ok": False, "error": "這個任務沒有負責人，請給 to"}
