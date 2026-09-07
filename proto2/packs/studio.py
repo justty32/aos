@@ -63,13 +63,14 @@ TOOLS = [
                        "files": {"type": "array", "items": {"type": "string"},
                                  "description": "要動的檔"}})}},
      ["order_id", "architecture", "tasks"])},
-    {"name": "task_assign", "description": "把任務派給成員：先確保他有 tokens，再把 spec 寄給他。",
+    {"name": "task_assign", "description": "把任務派給成員：先確保他有 tokens，再把 spec 寄給他。沒有 task_id 就在單上開一個新任務（給 to、title、spec）。",
      "parameters": _object({
-         "task_id": {"type": "string", "description": "任務編號"},
+         "task_id": {"type": "string", "description": "任務編號；開新任務可不給"},
+         "order_id": {"type": "string", "description": "開新任務時的單號"},
          "to": {"type": "string", "description": "誰做，不給就照任務上的"},
-         "spec": {"type": "string", "description": "改寫過的說明"},
-         "tokens": {"type": "number", "description": "至少要有的額度"}},
-     ["task_id"])},
+         "title": {"type": "string", "description": "新任務的題目"},
+         "spec": {"type": "string", "description": "說明"},
+         "tokens": {"type": "number", "description": "至少要有的額度"}})},
     {"name": "task_report", "description": "回報任務做完：記檔案、可跑一次測試、寄摘要給 pm 與 qa。",
      "parameters": _object({
          "task_id": {"type": "string", "description": "任務編號"},
@@ -263,9 +264,15 @@ def _letters(ctx):
 
 def _order_accept(ctx, root, order_id, note):
     letters = _letters(ctx)
+    fell_back = None
     if order_id:
-        letters = [row for row in letters if row[3].get("order_id") == order_id]
-        if not letters:
+        hits = [row for row in letters if row[3].get("order_id") == order_id]
+        if hits:
+            letters = hits
+        elif letters:
+            # 小模型很愛自己編單號；找不到就用最新那張，並在回值裡講清楚
+            fell_back = order_id
+        else:
             return {"ok": False, "error": "inbox/user 裡沒有這張單：%s" % order_id}
     if not letters:
         return {"ok": False, "error": "inbox/user 裡沒有帶 order_id 的訂單"}
@@ -317,7 +324,9 @@ def _order_accept(ctx, root, order_id, note):
         "驗收：%s" % accept,
         "下一步：已轉交 PM 排工，做完我會把交付單回給您。",
     ]))
-    return {"ok": True, "order_id": order_id, "status": "received",
+    if fell_back:
+        ctx.log("order_accept：給的單號 %s 找不到，改接最新那張 %s" % (fell_back, order_id))
+    return {"ok": True, "note": ("你給的單號 %s 找不到，已改接最新那張" % fell_back) if fell_back else "", "order_id": order_id, "status": "received",
             "project": order["project"], "mailed_pm": to_pm}
 
 
@@ -380,14 +389,51 @@ def _ensure_tokens(ctx, root, to, want):
     return True, {"granted": need, "left": round(max(0, left) + need, 6)}
 
 
+def _new_task(ctx, root, order, title, spec, to):
+    """plan_set 之前也能派工（例如先派 chief 去定架構）：在單子上直接開一個新任務。"""
+    existing = order.get("tasks") if isinstance(order.get("tasks"), list) else []
+    n = len(existing) + 1
+    task_id = "%s-t%d" % (order["id"], n)
+    while _load_task(ctx, root, task_id):
+        n += 1
+        task_id = "%s-t%d" % (order["id"], n)
+    task = {"id": task_id, "order": order["id"], "title": str(title or task_id),
+            "spec": str(spec or ""), "owner": str(to or ""), "files": [],
+            "status": "assigned", "report": "", "tests": [], "qa": None, "time": _now()}
+    _save_task(ctx, root, task)
+    order["tasks"] = existing + [task_id]
+    return task
+
+
 def _task_assign(ctx, root, args):
-    task_id = args.get("task_id") or ""
+    task_id = str(args.get("task_id") or "")
     task = _load_task(ctx, root, task_id)
-    if not task:
-        return {"ok": False, "error": "找不到這個任務：%s" % task_id}
-    order = _load_order(ctx, root, task.get("order"))
-    if not order:
-        return {"ok": False, "error": "找不到任務的單：%s" % task.get("order")}
+    if task:
+        order = _load_order(ctx, root, task.get("order"))
+        if not order:
+            return {"ok": False, "error": "找不到任務的單：%s" % task.get("order")}
+    else:
+        # 沒有這個任務：給了 to 就當作要開新任務（單號從 order_id、task_id 前綴、或唯一一張還沒結的單推）
+        order_id = str(args.get("order_id") or "")
+        if not order_id and task_id:
+            for oid in _order_ids(root):
+                if task_id.startswith(oid):
+                    order_id = oid
+                    break
+        if not order_id:
+            open_ids = [oid for oid in _order_ids(root)
+                        if (_load_order(ctx, root, oid) or {}).get("status") not in ("delivered", "failed")]
+            if len(open_ids) == 1:
+                order_id = open_ids[0]
+        order = _load_order(ctx, root, order_id) if order_id else None
+        if not order:
+            return {"ok": False, "error": "找不到這個任務：%s；要開新任務請給 order_id、to 與 spec" % task_id,
+                    "orders": _order_ids(root)}
+        if not args.get("to"):
+            return {"ok": False, "error": "找不到任務 %s；要開新任務請給 to（誰做）與 spec" % task_id,
+                    "order_id": order["id"], "tasks": order.get("tasks") or []}
+        task = _new_task(ctx, root, order, args.get("title") or task_id or "任務", args.get("spec"), args.get("to"))
+        task_id = task["id"]
     to = str(args.get("to") or task.get("owner") or "")
     if not to:
         return {"ok": False, "error": "這個任務沒有負責人，請給 to"}

@@ -371,3 +371,36 @@ PYEOF2
 }
 
 test_studio_flow
+
+# task_assign 沒有 task_id：直接在單上開新任務（pm 先派 chief 去定架構就是這條路）
+test_studio_flow_new_task() {
+  local root studio got
+  root=$(mktemp -d "$TEST_RUN_DIR/flownew.XXXXXX")
+  prep_llm "$root/llm"
+  studio="$root/studio"
+  AOS_LLM_DIR="$root/llm" "$AUSER" team new "$studio" --preset studio --engine local \
+    --budget '{"tokens":1000000,"hours":2,"ticks":1000,"disk_mb":20,"mem_mb":64,"money_usd":1}' >/dev/null 2>&1
+  AOS_LLM_DIR="$root/llm" "$AUSER" order "$studio" "做 todo.py" --budget '{"tokens":500}' >/dev/null 2>&1
+  got=$(python3 - "$HERE" "$studio" <<'PYEOF2'
+import glob, json, os, sys
+sys.path.insert(0, sys.argv[1])
+from aos_agent import Ctx
+from packs import studio
+root = sys.argv[2]
+sales = Ctx(os.path.join(root, "kids", "sales"), os.path.join(root, "kids", "sales"))
+r0 = studio.run("order_accept", {}, sales)
+pm = Ctx(os.path.join(root, "kids", "pm"), os.path.join(root, "kids", "pm"))
+r1 = studio.run("task_assign", {"to": "chief", "title": "定架構", "spec": "拆任務"}, pm)
+r2 = studio.run("task_assign", {"task_id": "沒這個", "to": "chief", "spec": "再一個"}, pm)
+order = json.load(open(glob.glob(os.path.join(root, "team", "orders", "*.json"))[0], encoding="utf-8"))
+mails = glob.glob(os.path.join(root, "kids", "chief", "inbox", "pm", "*.json"))
+print(r0.get("ok") is True and r1.get("ok") is True and r1["task_id"].endswith("-t1") and r1["to"] == "chief"
+      and r2.get("ok") is True and r2["task_id"].endswith("-t2") and order["tasks"] == [r1["task_id"], r2["task_id"]]
+      and order["status"] == "in_progress" and len(mails) == 2)
+PYEOF2
+)
+  if [ "$got" = "True" ]; then ok "studio_flow：task_assign 沒 task_id 就在單上開新任務並派出去"; else fail "studio_flow：開新任務不對（$got）"; fi
+  rm -rf "$root"
+}
+
+test_studio_flow_new_task
