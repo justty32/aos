@@ -90,6 +90,9 @@
 (check "run 之後 runs 對" (= ((get (K4 :procs) "a") :runs) 5))
 (check "run 可以接著再跑" (do (k/run K4 2 0) (= (K4 :steps) 7)))
 (check "run 跑完 :running 是 false" (not (K4 :running)))
+(def t0 (os/clock))
+(k/run K4 2 1)   # 兩格、格間睡 1 秒 → 至少 2 秒
+(check "run 的 interval 真的有睡（2 格 × 1 秒 ≥ 2 秒）" (>= (- (os/clock) t0) 2))
 (k/stop K4)
 (check "stop 把 :running 關掉（無限跑時下一格就停）" (false? (K4 :running)))
 

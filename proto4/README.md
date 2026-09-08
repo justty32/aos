@@ -16,7 +16,7 @@
   - `(run k &opt steps interval)` 連走 N 格（nil＝一直走），每格之間睡 interval 秒；`(stop k)` 讓無限迴圈下一格停。先做同步版，沒有 fiber。
   - **狀態歸資料夾自己管**：inst 想留東西就自己 `spit`（例如每格讀寫 `count.txt`），kernel 不管。
 - `src/main.janet`：命令列跑時鐘。
-- `test/runf.janet`（27 條）、`test/kernel.janet`（39 條）；`test/fx/` 是測試用的資料夾樣本（hello、outer/inner、alt、boom、k/*）。
+- `test/runf.janet`（27 條）、`test/kernel.janet`（40 條）；`test/fx/` 是測試用的資料夾樣本（hello、outer/inner、alt、boom、k/*）。
 - `notes/`：使用者原話與我的理解。
 
 ## 怎麼跑
