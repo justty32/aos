@@ -1,0 +1,2 @@
+# 一層叫一層：這裡的 ./inner 相對於 outer 自己
+[:outer (runf (./inner 3)) (runf "./inner" 4)]
