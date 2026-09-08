@@ -33,6 +33,7 @@ src/agent.janet      agent（先勾輪廓，之後會改）：wait-for 原語；
 src/main.janet       範例：報時世界、LLM、agent（借鐘小孩＋自己鐘的小孩）、旁觀者
 test/basic.janet     36 條：求值／會計／小孩／信箱／鐘／LLM 三態／agent 一輪與逾時
 notes/               設計前的盤點（packs-contract、backbone-pains）＋使用者口述想法（ideas）
+variant-cl/          同一套骨幹的 Common Lisp 版（SBCL），一比一對照，見它的 README
 ```
 
 ## 怎麼跑
