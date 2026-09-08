@@ -22,6 +22,16 @@
 (check "沒參數 args 是空 tuple" (deep= ((runf (./hello)) :args) []))
 (check "/ 開頭的絕對路徑" (= ((runf (/home/guanyu/projs/aos/proto4/test/fx/hello 7)) :args) [7]))
 (check "../ 也行" (= ((runf (../fx/hello)) :said) "hi from hello"))
+(check "加引號也行，跟不加一樣" (deep= (runf '(./hello 1 2)) (runf (./hello 1 2))))
+(def home (os/getenv "HOME"))
+(check "~ 換成家目錄" (= (r/expand "~/a/b") (string home "/a/b")))
+(check "~ 單獨也行" (= (r/expand "~") home))
+(check "不是 ~ 開頭就不動" (= (r/expand "./~x") "./~x"))
+(check "巨集認得 (~/xxx …)：~ 是準引號，頭會變成 (quasiquote /xxx)"
+       (= (macex1 '(runf (~/a/b 1))) ~(,r/run-dir "~/a/b" 1)))
+(when (string/has-prefix? home fx)   # 測試資料夾在家目錄底下才試真的跑
+  (check "用 ~ 路徑真的跑得起來"
+         (= ((r/run-dir (string "~" (string/slice fx (length home)) "/hello")) :said) "hi from hello")))
 
 # ── 一層叫一層 ──
 (check "資料夾裡可以再 runf 子資料夾，路徑相對於自己"
