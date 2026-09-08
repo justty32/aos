@@ -1,0 +1,5 @@
+# 資料夾自己存狀態：每跑一格就把 count.txt 加一（檔案不在就當 0）
+(def f "count.txt")
+(def n (inc (if (os/stat f :mode) (scan-number (string/trim (slurp f))) 0)))
+(spit f (string n))
+n
