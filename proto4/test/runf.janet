@@ -20,6 +20,8 @@
 (check "跑完工作目錄切回來" (= (os/cwd) start))
 (check "路徑用字串也行" (= ((runf "./hello") :said) "hi from hello"))
 (check "沒參數 args 是空 tuple" (deep= ((runf (./hello)) :args) []))
+(check "/ 開頭的絕對路徑" (= ((runf (/home/guanyu/projs/aos/proto4/test/fx/hello 7)) :args) [7]))
+(check "../ 也行" (= ((runf (../fx/hello)) :said) "hi from hello"))
 
 # ── 一層叫一層 ──
 (check "資料夾裡可以再 runf 子資料夾，路徑相對於自己"
