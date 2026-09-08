@@ -1,0 +1,4 @@
+# 最簡單的資料夾：回一個值，順便報自己在哪
+{:said (string "hi from " (last (string/split "/" here)))
+ :cwd (os/cwd)
+ :args args}

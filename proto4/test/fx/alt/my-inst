@@ -1,0 +1,2 @@
+# 用設定過的路徑（my-inst 而不是 .aos/inst；不叫 .janet 是因為 jpm test 會把 test/ 底下所有 .janet 都當測試跑）；子資料夾也該沿用
+[:alt (inst-path) (runf (./sub))]
