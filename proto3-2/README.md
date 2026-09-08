@@ -7,8 +7,9 @@
 
 ## 現在有什麼
 
-- `src/`：空的，等使用者的偽碼。
-- `test/`：空的。
+- `src/agent.janet`：補全了——agent 就是一個 list，`(agent/next a)` 求值它、回傳下一個 agent；三態 idle／think／act。
+- `src/clock.janet`、`src/kernel.janet`、`src/main.janet`：還是使用者的偽碼，沒動。
+- `test/agent.janet`：19 條。
 - `notes/`：使用者的想法與我的理解。
 
 ## 怎麼跑
