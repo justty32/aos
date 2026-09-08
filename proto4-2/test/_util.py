@@ -1,4 +1,5 @@
 """測試共用的小工具：路徑、複製 fixture、等條件、收乾淨。"""
+import json
 import os
 import shutil
 import signal
@@ -59,3 +60,24 @@ def kill_hard(pid):
 def cli(home, *args, timeout=30):
     return subprocess.run([PY, AOS] + list(args), env=dict(os.environ, AOS_HOME=home),
                           capture_output=True, text=True, timeout=timeout)
+
+
+def find_done(folder, pred, timeout=15.0):
+    """在一個 done 資料夾裡等到有一筆符合 pred 的請求紀錄，回傳那筆（逾時回 None）。"""
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        try:
+            names = sorted(os.listdir(folder))
+        except OSError:
+            names = []
+        for n in names:
+            p = os.path.join(folder, n)
+            try:
+                with open(p, encoding="utf-8") as f:
+                    r = json.load(f)
+            except (OSError, ValueError):
+                continue
+            if pred(r):
+                return r
+        time.sleep(0.05)
+    return None

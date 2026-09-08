@@ -4,9 +4,10 @@
 
 一次執行做四件事：
   1. 讀 $AOS_HOME/requests/*.json（使用者面的請求）。
-  2. 翻成 daemon 請求寫進 $AOS_HOME/daemon/requests/：
-       {"op":"register","dir":…,"name":…,"interval":…}  → {"op":"spawn",…}
-       {"op":"unregister","name":…}                      → {"op":"kill","name":…}
+  2. 翻成 daemon 請求寫進 $AOS_HOME/daemon/requests/（dir 先 realpath 過，
+     symlink／`..`／尾巴 `/` 都算同一個資料夾——那就是這顆 cpu 唯一的標示）：
+       {"op":"register","dir":…,"interval":…}  → {"op":"spawn","dir":…,"interval":…}
+       {"op":"unregister","dir":…}              → {"op":"kill","dir":…}
   3. 處理過的搬到 $AOS_HOME/requests/done/（多 ok／sent）。
   4. 讀 daemon/state.json 印一行摘要到 stdout——它會進 kernel 自己的 last.json，
      那就是 kernel 的日誌。
@@ -26,14 +27,17 @@ def req_name(seq):
 
 
 def translate(req):
-    """使用者面的請求 → daemon 請求。不認識的回 None。"""
+    """使用者面的請求 → daemon 請求。不認識的回 None。
+
+    dir 先 os.path.realpath()：那是這顆 cpu 唯一的標示，symlink／`..`／尾巴 `/`
+    都要正規化成同一個，daemon 的表才認得出「這資料夾已經有一顆在跑」。
+    """
     op = req.get("op")
     if op == "register":
-        d = os.path.abspath(req["dir"])
-        return {"op": "spawn", "name": req.get("name") or os.path.basename(d.rstrip("/")),
-                "dir": d, "interval": req.get("interval") or 1}
+        return {"op": "spawn", "dir": os.path.realpath(req["dir"]),
+                "interval": req.get("interval") or 1}
     if op == "unregister":
-        return {"op": "kill", "name": req["name"]}
+        return {"op": "kill", "dir": os.path.realpath(req["dir"])}
     return None
 
 
