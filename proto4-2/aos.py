@@ -2,8 +2,8 @@
 """aos：一支給人用的 CLI。
 
     python3 aos.py start|stop|ls
-    python3 aos.py register DIR [NAME] [INTERVAL]
-    python3 aos.py unregister NAME
+    python3 aos.py register DIR [INTERVAL]
+    python3 aos.py unregister DIR
 
 家目錄走 --home 或環境變數 AOS_HOME。
 
@@ -37,10 +37,12 @@ def ls(home):
     if not st:
         print("（還沒有 state.json，daemon 沒起來過）")
         return
-    print("%-14s %-8s %-6s %-6s %s" % ("NAME", "PID", "ALIVE", "TICK", "RSS_KB"))
-    for name, c in sorted(st.get("cpus", {}).items()):
-        print("%-14s %-8s %-6s %-6s %s" % (name, c.get("pid"), "yes" if c.get("alive") else "no",
-                                           c.get("tick"), c.get("rss_kb")))
+    kernel_dir = os.path.realpath(home.kernel)
+    print("DIR  PID  ALIVE  TICK  RSS_KB")
+    for dpath, c in sorted(st.get("cpus", {}).items()):
+        label = dpath + ("  (kernel)" if dpath == kernel_dir else "")
+        print("%s  %s  %s  %s  %s" % (label, c.get("pid"), "yes" if c.get("alive") else "no",
+                                      c.get("tick"), c.get("rss_kb")))
 
 
 def main():
@@ -66,14 +68,12 @@ def main():
             return 2
         req = {"op": "register", "dir": os.path.abspath(a.args[0])}
         if len(a.args) > 1:
-            req["name"] = a.args[1]
-        if len(a.args) > 2:
-            req["interval"] = float(a.args[2])
+            req["interval"] = float(a.args[1])
     else:
         if not a.args:
-            print("unregister 要給 NAME", file=sys.stderr)
+            print("unregister 要給 DIR", file=sys.stderr)
             return 2
-        req = {"op": "unregister", "name": a.args[0]}
+        req = {"op": "unregister", "dir": os.path.abspath(a.args[0])}
     put_request(home, req)
     return 0
 

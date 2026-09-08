@@ -17,6 +17,8 @@
 | **cpu** | 一個一直照 interval 反覆執行同一份 inst.json 的東西 | 一個 Linux process（`aos_cpu.py`，跑著 loop） |
 | **proc** | 被 cpu 跑的那個目標（資料夾／inst.json） | 程式本體 |
 
+一個 proc 的**本體＝它的 cwd（資料夾）＝唯一標示**：一個資料夾最多一顆 cpu 在跑，沒有另外取名字這回事（[proto4 筆記第 8 節](../proto4/notes/2026-09-08-ideas.md)）。
+
 再往上兩個角色：
 
 - **aos-daemon＝提供基礎**。它管所有 cpu：誰在跑、pid 多少、跑到第幾格、佔多少記憶體。
@@ -27,8 +29,8 @@
 - `aos_cpu.py`：執行一次 inst.json（`run_once`）＋ cpu 的 loop。`python3 aos_cpu.py DIR [--interval SEC] [--max-runs N] [--inst REL]`
 - `aos_daemon.py`：常駐進程，管所有 cpu。`python3 aos_daemon.py start|run|stop [--home H]`
 - `aos_kernel.py`：一次執行做完就退出的管理程式，被第一顆 cpu 每秒跑一次。
-- `aos.py`：給人用的 CLI。`start|stop|ls`、`register DIR [NAME] [INTERVAL]`、`unregister NAME`
-- `test/`：`python3 -m unittest discover -s test`（8 條，真的開進程，家在 /tmp、跑完自己收）。fixture 在 `test/fx/`。
+- `aos.py`：給人用的 CLI。`start|stop|ls`、`register DIR [INTERVAL]`、`unregister DIR`
+- `test/`：`python3 -m unittest discover -s test`（10 條，真的開進程，家在 /tmp、跑完自己收）。fixture 在 `test/fx/`。
 
 ## inst.json 長什麼樣
 
@@ -80,8 +82,12 @@ H/daemon/requests/   daemon 請求。規矩：只有 kernel 可以寫這裡
 
 請求都是一個 JSON 檔（先寫 `.tmp` 再 rename，別人不會讀到半個），處理完搬到同層的 `done/`，多 `ok`／`result`。
 
-- 使用者面（`requests/`）：`{"op":"register","dir":…,"name":…,"interval":…}`、`{"op":"unregister","name":…}`
-- daemon 面（`daemon/requests/`）：`{"op":"spawn","name":…,"dir":…,"interval":…}`、`{"op":"kill","name":…}`、`{"op":"ls"}`
+`dir` 一律是資料夾的路徑，翻成 daemon 請求時先 `os.path.realpath()` 正規化過（symlink、`..`、尾巴 `/` 都算同一個）——那就是這顆 cpu 唯一的標示，daemon 的表、`state.json`、`cpus.json` 都拿它當 key：
+
+- 使用者面（`requests/`）：`{"op":"register","dir":…,"interval":…}`、`{"op":"unregister","dir":…}`
+- daemon 面（`daemon/requests/`）：`{"op":"spawn","dir":…,"interval":…}`、`{"op":"kill","dir":…}`、`{"op":"ls"}`
+
+**同一個資料夾第二次 `spawn`＝拒絕**：daemon 回 `ok:false, result:"already running: <dir>"`，舊的那顆不動。`kill` 一個沒在跑的資料夾也回 `ok:false`。
 
 kernel 做的就是把上面那行翻成下面那行。它每次執行還會印一行摘要到 stdout，那行會進 `H/kernel/.aos/last.json`——那就是 kernel 的日誌。
 
@@ -89,23 +95,23 @@ kernel 做的就是把上面那行翻成下面那行。它每次執行還會印�
 
 ```sh
 cd proto4-2
-python3 -m unittest discover -s test        # 8 條測試
+python3 -m unittest discover -s test        # 10 條測試
 
 export AOS_HOME=~/.aos-home
 python3 aos.py start                        # daemon 起來，順便開第一顆 cpu 跑 kernel
-python3 aos.py register /path/to/folder cnt 1
+python3 aos.py register /path/to/folder 1
 python3 aos.py ls
-python3 aos.py unregister cnt
+python3 aos.py unregister /path/to/folder
 python3 aos.py stop
 ```
 
-`ls` 印出來長這樣：
+`ls` 印出來長這樣（欄位：`DIR  PID  ALIVE  TICK  RSS_KB`；kernel 那顆路徑後面標 `(kernel)`）：
 
 ```
 daemon  alive  pid=12345  家=/home/me/.aos-home
-NAME           PID      ALIVE  TICK   RSS_KB
-cnt            12352    yes    6      9088
-kernel         12346    yes    7      9216
+DIR  PID  ALIVE  TICK  RSS_KB
+/home/me/.aos-home/kernel  (kernel)  12346  yes  7  9216
+/path/to/folder  12352  yes  6  9088
 ```
 
 只想試「執行一次 inst.json」或「一顆 cpu」，不用開 daemon：
@@ -121,12 +127,11 @@ cat test/fx/counter/.aos/last.json
 
 - 沒有 pause／resume、沒有 user 切換、沒有 config 版本、沒有 `stdout`／`stderr` 導向檔案（一律捕回 last.json）。
 - cpu 掛掉不會自動重開；daemon 也不看它為什麼掛。
-- daemon 重開不接回原本的 cpu：`cpus.json` 有落地，但 start 不讀它。stop 之後登記就沒了。
-- daemon 被 SIGKILL 的話，那些 cpu 會變孤兒，沒人收。
-- daemon 沒跑的時候丟請求，沒人撿（proto4-1 會先放著、下次 start 撿走，這版沒做）。
 - 停止條件只有兩個：`--max-runs` 跑滿、收到 SIGTERM。沒有「exit code 到了就停」、「檔案出現就停」、「時間到就停」。
 - 錯誤只記一條在 `last.json` 的 `error`，沒有重試、沒有退避、沒有通知。
 - 請求沒有回覆通道給使用者：CLI `register` 只是把檔案丟出去就回，不等結果（要看結果自己去翻 `requests/done/`）。
-- 同名 cpu 重複 spawn＝把舊的收掉換新的，沒有問過任何人。
+- 同一個資料夾第二次 `register` 會被拒絕（daemon 那層看到的是 `spawn`，回 `ok:false`），不會把舊的收掉換新的。
 - 沒有權限檢查：誰都能寫 `daemon/requests/`，規矩只寫在這份 README。
 - `runs.jsonl`、`daemon.log` 只長不消，沒有輪替。
+
+daemon 的生死是使用者自己手動管的事（[proto4 筆記第 9 節](../proto4/notes/2026-09-08-ideas.md)）：它就是硬體，開機關機壞掉都不歸 aos 管，所以上面那些「daemon 被誰 SIGKILL」「daemon 重開接不接得回」「daemon 沒跑時丟請求誰撿」都不是這裡要解的問題。

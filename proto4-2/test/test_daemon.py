@@ -24,6 +24,7 @@ class DaemonTest(unittest.TestCase):
 
     def test_start_brings_up_kernel_cpu_then_stop_cleans_up(self):
         h = self.home
+        kdir = os.path.realpath(h.kernel)              # kernel 那顆 cpu 的 key＝它的路徑
         self.assertTrue(d.start(h))
         self.assertTrue(h.alive())
         self.assertFalse(d.start(h))                                     # 第二次：已經在跑
@@ -34,18 +35,18 @@ class DaemonTest(unittest.TestCase):
         self.assertTrue(inst["argv"][1].endswith("aos_kernel.py"))
         self.assertEqual(inst["env"]["AOS_HOME"], h.dir)
 
-        self.assertTrue(wait_until(lambda: "kernel" in (h.state() or {}).get("cpus", {})))
-        k = h.state()["cpus"]["kernel"]
+        self.assertTrue(wait_until(lambda: kdir in (h.state() or {}).get("cpus", {})))
+        k = h.state()["cpus"][kdir]
         self.assertTrue(k["alive"])
-        self.assertEqual(k["dir"], h.kernel)
+        self.assertEqual(k["dir"], kdir)
         self.assertTrue(alive(k["pid"]))
         self.assertIsNotNone(k["rss_kb"])                                # 佔用資源看得到
         t0 = k["tick"]
-        self.assertTrue(wait_until(lambda: h.state()["cpus"]["kernel"]["tick"] > t0))   # 格數在長
+        self.assertTrue(wait_until(lambda: h.state()["cpus"][kdir]["tick"] > t0))   # 格數在長
 
-        # 登記表落地了
+        # 登記表落地了，key 是路徑
         with open(h.cpusf) as f:
-            self.assertEqual(list(json.load(f)), ["kernel"])
+            self.assertEqual(list(json.load(f)), [kdir])
         # kernel 每格印的摘要進了它自己的 last.json
         with open(os.path.join(h.kernel, ".aos", "last.json")) as f:
             self.assertIn("cpu 1 顆", json.load(f)["stdout"])
