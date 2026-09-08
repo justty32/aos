@@ -142,9 +142,16 @@
 (world/send me ag2 "沒人回")
 (kernel/run 3 0)
 (check "等 LLM 時 form 是 (agent-wait …)，會計記 :wait" (and (= (agent/state ag2) 'agent-wait) (>= ((ag2 :ticks) :wait) 1)))
-(check "等待的三件事就帶在那個 list 裡" (= (length (ag2 :form)) 6))
+(def f2 (ag2 :form))
+(check "等待的四件事就帶在那個 list 裡（until then timeout since，沒有 else）" (= (length f2) 5))
+(check "until 是純資料的 tuple，不是函式" (and (tuple? (get f2 1)) (not (function? (get f2 1)))))
+(check "then 那格是符號 'agent-got-llm，不是函式" (= (get f2 2) 'agent-got-llm))
+(check "form 整條就是 (agent-wait [:llm-result id] agent-got-llm timeout since) 的形狀"
+  (deep= f2 (tuple 'agent-wait [:llm-result (get (get f2 1) 1)] 'agent-got-llm 3 (get f2 4))))
+(check "form 印出來是看得懂的資料，沒有 <function ...> 這種東西"
+  (not (string/find "<function" (string/format "%q" f2))))
 (kernel/run 3 0)
-(check "逾時沒給 else → form 換回 (agent-idle)" (= (agent/state ag2) 'agent-idle))
+(check "逾時（沒有 else）→ form 一律換回 (agent-idle)，跟 CL 版一致" (= (agent/state ag2) 'agent-idle))
 (kernel/stop-all)
 
 (print "proto3-1 基礎測試通過 ✓（" n " 條）")

@@ -18,7 +18,7 @@ proto2 的 `.aos/inst` 是「一句 shell，跑完可以把下一句寫回去」
 cd proto3-1
 janet src/main.janet 8          # 同步走 8 格就停（interval N 的鐘每 N 格才動）
 janet src/main.janet async 5    # 非同步：每個鐘一條 fiber 各走各的，5 秒後收
-jpm test                        # 51 條測試
+jpm test                        # 55 條測試
 ```
 
 同步跑出來長這樣（節錄）：
@@ -39,9 +39,9 @@ user 收到：收到：你好，agent-1
 src/world.janet   世界＝環境＋form：make／dotick／at／spawn／kill；信箱；原語綁進環境
 src/kernel.janet  時鐘：register／unregister／pause／continue／ls／step-all／run／start／stop-all（跟 proto3 一模一樣）
 src/llm.janet     LLM 世界，它的 form 是 (llm-step)；echo-engine、script-engine
-src/agent.janet   agent 狀態機＝四段 form 互相改寫；wait-for 把等待條件寫進 form
+src/agent.janet   agent 狀態機＝四段 form 互相改寫；wait-for 把等待條件（純資料）寫進 form，跟 variant-cl 一致
 src/main.janet    範例：報時世界、echo LLM、agent-1（兩個小孩）、user、旁觀者
-test/basic.janet  51 條：沿用 proto3 的 36 條精神，加上 eval／form 改寫特有的
+test/basic.janet  55 條：沿用 proto3 的 36 條精神，加上 eval／form 改寫特有的
 ```
 
 ## 跟 proto3 差在哪
@@ -53,7 +53,7 @@ test/basic.janet  51 條：沿用 proto3 的 36 條精神，加上 eval／form �
 | 跑一格 | 走一遍 table 的元素，叫 `:func-tick` | **`(eval (w :form) w)`** |
 | 下一格跑什麼 | 都一樣，函式自己看 `:state` 分支 | `(next 新form)` 把 `:form` 換掉 |
 | agent 狀態機 | `(case (a :state) :idle … :think …)` | 四段 form 互相改寫，狀態＝form 的頭 |
-| 「等待」帶在哪 | `:waiting` 一張表 | 帶在 `(agent-wait until then timeout since else)` 這個 list 裡 |
+| 「等待」帶在哪 | `:waiting` 一張表 | 帶在 `(agent-wait until then timeout since)` 這個 list 裡：until 是純資料（`[:llm-result id]`／`[:mail]`），then 是原語符號（如 `agent-got-llm`），逾時一律回 `(agent-idle)`（沒有 else，跟 variant-cl 的 `agent-wait` 一致） |
 | 跨格的狀態 | `(put w :k v)` | 一樣可以，另外多了 `(upscope (def x …))` 寫進環境 |
 | 生小孩 | `world/spawn` | form 裡 `(kid "名" '(…))`／`(kid "名" :own '(…))`；spawn 也還在 |
 | 小孩第一格 | spawn 完那格就跟著走 | `kid` 生出來的那格還不動，下一格才開始（先走小孩再 eval form） |
@@ -75,6 +75,14 @@ test/basic.janet  51 條：沿用 proto3 的 36 條精神，加上 eval／form �
    這一版剛好排在後面，於是開場的 `agent-idle` 就被漏看了。解法：旁觀者一開始先把當下的 form 記進 chain，
    之後只記「變了」的。main 和測試都這樣做，兩邊就都穩了。
 6. `=` 比 array 是比身分不是內容（tuple 才是比內容），測試一律用 `deep=`——proto3 的老教訓，這版照樣受用。
+7. **`agent-wait` 的等待條件本來是塞兩個 closure 進 form**（`until`／`then` 都是 `(fn [a] …)`），
+   跟 variant-cl 的 `agent-wait` 對不起來——CL 那邊 `until` 是純資料（`(:llm-result id)`），靠 `wait-check`
+   照 `(first until)` 分派；`then` 是函式名符號，`funcall` 叫。改成一樣的做法之後才發現一個小雷：
+   `[:llm-result id]` 這種字面值求值完是 **parens 型**tuple（不是想像中的 brackets 型），
+   照樣塞回 form 裡、下一格再 eval 一次，會被誤當成呼叫（`(:llm-result 3)` 變成「拿 3 的 :llm-result 欄位」）。
+   解法：`wait-for` 存進 form 前用 `(tuple/brackets ;until)` 轉成 brackets 型，再 eval 才會被當純資料字面值。
+   `then` 那格因為是裸符號，eval 時 Janet 自己就會把它解析成綁在 agent 環境裡的原語函式，等於 CL 版的 `funcall`，
+   不用另外處理。
 
 ## 還沒做（刻意，同 proto3）
 
