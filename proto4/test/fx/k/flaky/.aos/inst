@@ -1,0 +1,2 @@
+# 奇數格炸、偶數格好：拿來測 error 記著、下一格成功就清掉
+(if (odd? (first args)) (error "奇數格炸") [:flaky (first args)])

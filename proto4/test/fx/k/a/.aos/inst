@@ -1,0 +1,2 @@
+# 最簡單的 proc：回 [:a 現在第幾格]。(first args) 就是 kernel 給的格數。
+[:a (first args)]
