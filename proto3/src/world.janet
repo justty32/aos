@@ -30,7 +30,8 @@
       (var result :idle)
       (each key (keys w)               # 先拍快照：元素求值時可以改世界自己
         (case key
-          :func-tick (set result (or ((w :func-tick) w) :busy))
+          :func-tick (let [r ((w :func-tick) w)]      # 只認 busy／wait／idle，其他都算 busy
+                       (set result (if (index-of r [:busy :wait :idle]) r :busy)))
           :kids (each kid (values (w :kids))
                   (when (= (kid :clock) :shared) (dotick kid)))))
       (count-tick w result)
