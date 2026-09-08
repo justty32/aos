@@ -1,0 +1,1 @@
+{"version": 1, "env": {"K": "v1"}, "args": ["x", "y"], "stdout": "out.log", "stderr": "stdout"}

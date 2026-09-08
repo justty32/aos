@@ -1,0 +1,4 @@
+#!/bin/sh
+# 每格把 count.txt 加一（沒有就當 0）
+n=$(cat count.txt 2>/dev/null || echo 0)
+echo $((n+1)) > count.txt

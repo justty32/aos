@@ -1,0 +1,6 @@
+__pycache__/
+test/fx/*/count.txt
+test/fx/*/ran.txt
+test/fx/*/out.log
+test/fx/*/seen.txt
+test/fx/*/got.txt
