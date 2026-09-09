@@ -200,22 +200,25 @@ aos-run xxx [--dir-target REL] [--timeout-ms N] [--interval-ms N] [--from-start]
 
 ### 什麼時候停
 
-四個條件，任一成立就停，退出碼都是 **0**：
+四個條件，任一成立就停；退出碼多數是 **0**，只有訊號送第二次時例外：
 
-| 原因 | 什麼時候 |
-|---|---|
-| `max_runs` | 跑滿 `--max-runs N` 次 |
-| `time_limit` | 撞到 `--time-limit-ms`。**硬時限**：正在睡→醒來就退；正在跑→**那次被砍** |
-| `stop_exit` | 某一次的退出碼在 `--stop-exit` 那組裡面 |
-| `signal` | 收到 SIGTERM／SIGINT |
+| 原因 | 什麼時候 | 退出碼 |
+|---|---|---|
+| `max_runs` | 跑滿 `--max-runs N` 次 | 0 |
+| `time_limit` | 撞到 `--time-limit-ms`。**硬時限**：正在睡→醒來就退；正在跑→**那次被砍** | 0 |
+| `stop_exit` | 某一次的退出碼在 `--stop-exit` 那組裡面 | 0 |
+| `signal` | 收到**第一次** SIGTERM／SIGINT | 0 |
+| `signal_forced` | 同一個訊號又收到**第二次**（腰斬正在跑的那次） | 128+N（SIGTERM＝143、SIGINT＝130） |
+
+`signal_forced` 退出碼不是 0：**第二次代表有工作被腰斬，不算乾淨**。
 
 **硬時限怎麼砍正在跑的那次**：不另開執行緒，而是每次呼叫 `run_target()` 時把 `timeout_ms`
 換成 `min(原本的或無限, 剩下的毫秒)`，交給 aos-exec 本來就有的那套砍法（SIGTERM 整個
 process group、2 秒、SIGKILL），所以被砍那次印出來的碼是 143 或 137。
 
-**訊號**：第一次 SIGTERM／SIGINT ＝ 讓正在跑的那次**跑完**再退；第二次**同一個**訊號 ＝
-直接 SIGKILL 掉正在跑的那個 process group 再退。睡覺是小步睡的（0.05 秒一步），所以
-`--interval-ms 5000` 睡到一半也叫得醒，不會不理你五秒。
+**訊號**：第一次 SIGTERM／SIGINT ＝ 讓正在跑的那次**跑完**再退，退出碼 0；第二次**同一個**
+訊號 ＝ 直接 SIGKILL 掉正在跑的那個 process group 再退，退出碼變 128+N。睡覺是小步睡的
+（0.05 秒一步），所以 `--interval-ms 5000` 睡到一半也叫得醒，不會不理你五秒。
 
 **`run_target()` 回 1（inst.json 壞掉）不算停止條件**，照 interval 一直試——壞了也活著，
 跟 proto4-2 的 cpu 一樣。要它停就自己寫 `--stop-exit 1`。
@@ -230,9 +233,10 @@ aos-run: #2 exit=1 0.0s
 aos-run: stop max_runs
 ```
 
-aos-run 自己的退出碼只有兩種：**2**＝用法錯（旗標不認得、沒給 `xxx`、`xxx` 不存在、
-時間／次數旗標是負數）；**0**＝四種停止條件的任何一種。子行程的退出碼只出現在那些
-`#n exit=` 行裡，不會變成 aos-run 的退出碼。
+aos-run 自己的退出碼：**2**＝用法錯（旗標不認得、沒給 `xxx`、`xxx` 不存在、時間／次數
+旗標是負數）；**0**＝`max_runs`／`time_limit`／`stop_exit`／第一次訊號（`signal`）；
+**128+N**＝同一個訊號收到第二次（`signal_forced`，正在跑的那次被腰斬）。子行程的退出碼
+只出現在那些 `#n exit=` 行裡，不會變成 aos-run 的退出碼。
 
 `xxx` 只在起跑前檢查一次；跑到一半被砍掉，之後每次就是 `run_target()` 回 2 的那行，
 迴圈照樣繼續（跟回 1 一樣不算停止條件）。
