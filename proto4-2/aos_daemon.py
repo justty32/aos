@@ -3,24 +3,20 @@
 
     python3 aos_daemon.py start|run|stop [--home H]
 
-家目錄走 --home 或環境變數 AOS_HOME。裡面：
-
-    H/requests/            使用者面的請求（CLI 寫這裡，只有 kernel 讀）
-    H/kernel/              第一顆 cpu 跑的 proc（daemon 起來時自動生 .aos/inst.json）
-    H/daemon/daemon.pid    daemon 的 pid
-    H/daemon/state.json    每輪寫一次：daemon pid ＋ 每顆 cpu 的 pid／alive／tick／rss_kb
-    H/daemon/cpus.json     登記表（每輪落地；重開不接回，最簡版）
-    H/daemon/daemon.log    daemon 與各 cpu 的 stdout／stderr
-    H/daemon/requests/     daemon 請求（只有 kernel 該寫），處理完搬到 requests/done/
+家目錄走 --home 或環境變數 AOS_HOME，裡面有什麼看 aos_home.py。
 
 一個 proc 的本體＝它的 cwd（資料夾），也是它的唯一標示：一個資料夾最多一顆 cpu。
 所以「表」的 key 一律是那個資料夾的絕對路徑（先 os.path.realpath() 正規化過，
 symlink／`..`／尾巴 `/` 都算同一個），沒有另外取名字這回事。
 
 daemon 請求只有三個 op：
-    {"op":"spawn","dir":…,"interval":…}   開一顆 cpu 去跑那個資料夾（那個資料夾已經有一顆在跑＝拒絕）
+    {"op":"spawn","dir":…,"interval":…,"time_limit":…}
+                                           開一顆 cpu 去跑那個資料夾（那個資料夾已經有一顆在跑＝拒絕）
     {"op":"kill","dir":…}                  SIGTERM 那顆 cpu（那個資料夾沒在跑＝拒絕）
     {"op":"ls"}                            回登記表
+
+cpu 自己退出（時限到／跑滿／被 SIGTERM）之後，daemon reap 到就把它從登記表拿掉、
+在 daemon.log 記一行，那個資料夾才能再 register。「cpu 掛掉不自動重開」不變。
 
 start 的第一件事就是開第一顆 cpu 跑 kernel（跟真的作業系統一樣），所以 daemon 與
 kernel 是綁在一起的；kernel 那顆 cpu 的 key 就是它的路徑 H/kernel。
@@ -34,6 +30,7 @@ import sys
 import time
 
 from aos_cpu import write_json
+from aos_home import Home, alive, cpu_field, rss_kb        # 家目錄的版面＋/proc 小工具
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KERNEL_INTERVAL = 1.0
@@ -44,96 +41,40 @@ class DaemonError(Exception):
     """使用者／kernel 端可預期的拒絕（已經在跑、沒在跑…），不是程式炸了。"""
 
 
-class Home:
-    def __init__(self, d):
-        self.dir = os.path.abspath(d)
-        self.requests = os.path.join(self.dir, "requests")           # 使用者面
-        self.done = os.path.join(self.requests, "done")
-        self.kernel = os.path.join(self.dir, "kernel")
-        self.daemon = os.path.join(self.dir, "daemon")
-        self.dreq = os.path.join(self.daemon, "requests")            # daemon 面
-        self.ddone = os.path.join(self.dreq, "done")
-        self.pidf = os.path.join(self.daemon, "daemon.pid")
-        self.statef = os.path.join(self.daemon, "state.json")
-        self.cpusf = os.path.join(self.daemon, "cpus.json")
-        self.logf = os.path.join(self.daemon, "daemon.log")
-
-    def ensure(self):
-        for p in (self.dir, self.requests, self.done, self.kernel,
-                  self.daemon, self.dreq, self.ddone):
-            os.makedirs(p, exist_ok=True)
-
-    def pid(self):
-        try:
-            with open(self.pidf) as f:
-                return int(f.read().strip())
-        except (OSError, ValueError):
-            return None
-
-    def alive(self):
-        return alive(self.pid())
-
-    def state(self):
-        try:
-            with open(self.statef) as f:
-                return json.load(f)
-        except (OSError, ValueError):
-            return None
-
-
-def alive(pid):
-    """活著＝/proc 有它、而且不是殭屍。"""
-    if not pid:
-        return False
-    try:
-        with open("/proc/%d/stat" % pid) as f:
-            st = f.read()
-    except OSError:
-        return False
-    return st[st.rindex(")") + 2] != "Z"
-
-
-def rss_kb(pid):
-    """佔用資源：/proc/<pid>/status 的 VmRSS。"""
-    try:
-        with open("/proc/%d/status" % pid) as f:
-            for line in f:
-                if line.startswith("VmRSS:"):
-                    return int(line.split()[1])
-    except (OSError, ValueError, IndexError):
-        pass
-    return None
-
-
-def cpu_tick(d):
-    try:
-        with open(os.path.join(d, ".aos", "cpu.json")) as f:
-            return json.load(f)["tick"]
-    except (OSError, ValueError, KeyError):
-        return 0
-
-
 # ── daemon 本體 ──────────────────────────────────────────
 
 class Daemon:
     def __init__(self, home):
         self.home = home
-        self.cpus = {}          # 資料夾絕對路徑(realpath) -> {"proc": Popen, "pid", "dir", "interval"}
+        self.cpus = {}          # 資料夾絕對路徑(realpath) -> {"proc": Popen, "pid", "dir", "interval", "time_limit"}
         self.reaping = []       # 已經 SIGTERM、還在等它斷氣的（不收就變殭屍）
         self.stopping = False
         self.log = None
 
     # ── cpu ────────────────────────────────
-    def spawn(self, d, interval):
+    def spawn(self, d, interval, time_limit=0):
         d = os.path.realpath(d)
         if d in self.cpus:                  # 一個資料夾最多一顆 cpu：第二次＝拒絕，舊的不動
             raise DaemonError("already running: %s" % d)
         p = subprocess.Popen(
-            [sys.executable, os.path.join(HERE, "aos_cpu.py"), d, "--interval", str(interval)],
+            [sys.executable, os.path.join(HERE, "aos_cpu.py"), d,
+             "--interval", str(interval), "--time-limit", str(time_limit)],
             cwd=d, stdin=subprocess.DEVNULL, stdout=self.log, stderr=self.log)
-        self.cpus[d] = {"proc": p, "pid": p.pid, "dir": d, "interval": interval}
-        self.say("spawn pid=%d dir=%s 每 %s 秒" % (p.pid, d, interval))
-        return {"dir": d, "pid": p.pid, "interval": interval}
+        self.cpus[d] = {"proc": p, "pid": p.pid, "dir": d, "interval": interval,
+                        "time_limit": time_limit}
+        self.say("spawn pid=%d dir=%s 每 %s 秒，時限 %s 秒" % (p.pid, d, interval, time_limit))
+        return {"dir": d, "pid": p.pid, "interval": interval, "time_limit": time_limit}
+
+    def reap(self):
+        """cpu 自己退出（時限到／跑滿／被 SIGTERM）就從登記表拿掉——不然那個資料夾
+        會永遠「已經在跑」、再也 register 不進去。掛掉不自動重開，只記一行。"""
+        for dpath, c in list(self.cpus.items()):
+            if c["proc"].poll() is None:
+                continue
+            self.cpus.pop(dpath)
+            c["proc"].wait()                 # 收屍，別留殭屍
+            self.say("cpu 自己退了 dir=%s pid=%d stopped=%s：從登記表拿掉"
+                     % (dpath, c["pid"], cpu_field(dpath, "stopped")))
 
     def kill(self, d):
         d = os.path.realpath(d)
@@ -158,7 +99,8 @@ class Daemon:
             c["proc"].poll()                     # 順手收殭屍
             a = c["proc"].returncode is None
             t[dpath] = {"pid": c["pid"], "dir": c["dir"], "interval": c["interval"],
-                        "alive": a, "tick": cpu_tick(c["dir"]),
+                        "time_limit": c["time_limit"],
+                        "alive": a, "tick": cpu_field(c["dir"], "tick", 0),
                         "rss_kb": rss_kb(c["pid"]) if a else None}
         return t
 
@@ -173,7 +115,8 @@ class Daemon:
                     req = json.load(f)
                 op = req["op"]
                 if op == "spawn":
-                    r = self.spawn(req["dir"], req.get("interval", 1))
+                    r = self.spawn(req["dir"], req.get("interval", 1),
+                                   req.get("time_limit", 0))
                 elif op == "kill":
                     r = self.kill(req["dir"])
                 elif op == "ls":
@@ -203,7 +146,7 @@ class Daemon:
 
     def save(self):
         t = self.table()
-        write_json(self.home.cpusf, {dpath: {k: c[k] for k in ("pid", "dir", "interval")}
+        write_json(self.home.cpusf, {dpath: {k: c[k] for k in ("pid", "dir", "interval", "time_limit")}
                                      for dpath, c in self.cpus.items()})
         write_json(self.home.statef, {"pid": os.getpid(), "cpus": t})
 
@@ -221,6 +164,7 @@ class Daemon:
         try:
             while not self.stopping:
                 self.handle_requests()
+                self.reap()                                                    # 自己退掉的 cpu
                 self.reaping = [p for p in self.reaping if p.poll() is None]   # 收殭屍
                 self.save()
                 t0 = time.time()

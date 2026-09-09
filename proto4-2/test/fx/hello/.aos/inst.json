@@ -2,6 +2,6 @@
  "argv": ["sh", "-c", "pwd; echo env=$GREET; echo tick=$AOS_TICK; echo dir=$AOS_DIR; cat; echo oops >&2; exit 3"],
  "env": {"GREET": "hi"},
  "cwd": "sub",
- "stdin": "來自 stdin",
+ "stdin": "input.txt",
  "timeout_ms": 0
 }
