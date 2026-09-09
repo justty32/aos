@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""家目錄的版面（哪個檔在哪）＋兩個小工具：原子寫檔、pid 活不活。daemon 與 CLI 共用。
+"""家目錄的版面（哪個檔在哪）＋兩個小工具：原子寫檔、pid 活不活。daemon 與 ctl 共用。
 
-家走 `--home H` 或環境變數 `AOS_HOME`，裡面五樣東西：
+家怎麼決定：`--home H` → 環境變數 `AOS_DAEMON_HOME` → 預設 `~/.aos-daemon`（`resolve_home`）。
+裡面五樣東西：
 
     H/requests/         請求檔（誰都可以寫，daemon 每 0.2 秒掃一次；`.tmp` 忽略）
     H/requests/done/    處理完搬來這裡，內容＝原請求 ＋ `ok` ＋ `result`
@@ -15,6 +16,13 @@ kernel），這一版沒有 kernel、daemon 自己讀請求，所以只剩一層
 import json
 import os
 import time
+
+DEFAULT_HOME = os.path.expanduser("~/.aos-daemon")
+
+
+def resolve_home(explicit=None):
+    """家的優先序：`--home H`（`explicit`）→ 環境變數 `AOS_DAEMON_HOME` → 預設 `~/.aos-daemon`。"""
+    return explicit or os.environ.get("AOS_DAEMON_HOME") or DEFAULT_HOME
 
 
 class Home:

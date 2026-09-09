@@ -4,8 +4,8 @@
 [proto4 筆記第 13 節](../proto4/notes/2026-09-08-ideas.md)的原型。value 是**一個
 `aos-run` 子進程**（不是在 daemon 自己進程裡跑 `run_loop`），所以暫停／繼續＝SIGSTOP／
 SIGCONT、刪＝SIGTERM，進程的事交給 Linux 管。這裡只有本體（dict、七個動作、主迴圈），
-命令列與背景化在 `aos_daemon_cli.py`；七個動作都是 `Daemon` 的方法、都回 `(ok, result)`，
-所以測試可以不開 daemon 進程直接叫。
+命令列入口是 `aos-daemon`（前台程式，不背景化）、下指令的是 `aos_daemon_ctl.py`；
+七個動作都是 `Daemon` 的方法、都回 `(ok, result)`，所以測試可以不開 daemon 進程直接叫。
 """
 import json
 import os
@@ -112,7 +112,7 @@ class Daemon:
         self.say("remove %s pid=%d exit=%s last=%s" % (key, r.proc.pid, code, r.last_line))
         return True, {"dir": key, "pid": r.proc.pid, "exit": code, "last_line": r.last_line}
 
-    def update(self, target, args=()):
+    def restart(self, target, args=()):
         """換旗標＝`remove`（不 force）再 `add`——aos-run 開跑後旗標改不了。"""
         key = base_dir(target)
         if key not in self.table:
@@ -160,8 +160,8 @@ class Daemon:
                 return self.add(req["target"], req.get("args") or [])
             if op == "remove":
                 return self.remove(req["dir"], bool(req.get("force")))
-            if op == "update":
-                return self.update(req["target"], req.get("args") or [])
+            if op == "restart":
+                return self.restart(req["target"], req.get("args") or [])
             if op == "get":
                 return self.get(req["dir"])
             if op == "ls":
