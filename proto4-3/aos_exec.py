@@ -27,12 +27,15 @@ DEFAULT_DIR_TARGET = os.path.join(".aos", "inst.json")
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
 
 
-def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0):
+def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None):
     """把 xxx 執行一次，回 aos-exec 該用的退出碼。
 
     2＝用法錯／xxx 不存在／--dir-target 指的檔不存在；1＝inst.json 讀不到、不是物件、
     格式壞、指示詞解不開（原因印一行到 stderr）；其餘原樣是子行程的結束狀態
     （被訊號 N 砍＝128+N、找不到程式 127、沒執行權／設定失敗 126）。
+
+    `on_spawn` 是給 aos-run 的鉤子：子行程一開起來就用那個 Popen 叫它一次，收完屍再用
+    None 叫一次。aos-run 靠它在第二次訊號時砍掉正在跑的那個（命令列用不到，預設沒有）。
     """
     p = os.path.abspath(xxx)
     if not os.path.exists(p):
@@ -41,10 +44,10 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0):
         target = os.path.join(p, dir_target)
         if not os.path.isfile(target):
             return _err(2, "資料夾 %s 裡沒有 %s" % (p, dir_target))
-        return _run_inst(target, p, timeout_ms)
+        return _run_inst(target, p, timeout_ms, on_spawn)
     if p.endswith(".json"):
-        return _run_inst(p, os.path.dirname(p), timeout_ms)
-    return _run_plain(p, timeout_ms)
+        return _run_inst(p, os.path.dirname(p), timeout_ms, on_spawn)
+    return _run_plain(p, timeout_ms, on_spawn)
 
 
 def _err(code, msg):
@@ -52,17 +55,17 @@ def _err(code, msg):
     return code
 
 
-def _run_plain(path, timeout_ms):
+def _run_plain(path, timeout_ms, on_spawn=None):
     """最陽春的那個指令集：一個檔讀進來就跑。
 
     argv 就是它自己（絕對路徑）、cwd 是它所在的資料夾、三條串流原樣繼承 aos-exec 的、
     環境就是繼承的、沒有 exit 檔。沒有執行位＝126。
     """
     return _spawn([path], os.path.dirname(path), dict(os.environ),
-                  None, None, None, timeout_ms, "")
+                  None, None, None, timeout_ms, "", on_spawn)
 
 
-def _run_inst(target, base, timeout_ms):
+def _run_inst(target, base, timeout_ms, on_spawn=None):
     """把一份 inst.json 解開、開好串流、跑一次。base ＝ `xxx`（cwd 相對路徑的起點）。"""
     try:
         inst = aos_inst.load(target, base)
@@ -94,13 +97,13 @@ def _run_inst(target, base, timeout_ms):
         except OSError as e:
             return _err(126, "重導向的檔案開不起來：%s（exit 126）" % e)
         return _spawn(inst["argv"], inst["cwd"], env, fin, fout, ferr,
-                      timeout_ms, inst["exit"])
+                      timeout_ms, inst["exit"], on_spawn)
     finally:
         for f in opened:
             f.close()
 
 
-def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path):
+def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None):
     """跑一次、等它、逾時就砍，回結束狀態（順便寫 exit 檔）。
 
     argv[0] 走**疊加後**的 env 裡的 PATH（subprocess 帶 env= 時本來就這樣查；env 被
@@ -117,6 +120,8 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path):
     except OSError as e:
         return _finish(126, exit_path, "起不了子行程：%s（exit 126）" % e)
 
+    if on_spawn:
+        on_spawn(p)                                 # 開起來了：aos-run 要拿得到它才砍得掉
     limit = (timeout_ms / 1000.0) if timeout_ms else None
     try:
         p.wait(timeout=limit)
@@ -129,6 +134,8 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path):
             p.wait()
         _sig_group(p, signal.SIGKILL)               # 直接子行程死了不代表群組空了
     code = p.returncode
+    if on_spawn:
+        on_spawn(None)                              # 收完屍：那個 pid 別再被砍
     return _finish(code if code >= 0 else 128 + (-code), exit_path, None)
 
 
