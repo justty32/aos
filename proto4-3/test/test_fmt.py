@@ -45,17 +45,17 @@ class TestFmt(ExecCase):
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
         self.assertEqual(self.read("out.txt"), "[]\n")
 
-    def test_missing_variable_is_1(self):
+    def test_missing_variable_is_125(self):
         self.inst({"argv": ["true"], "envs": {"X": {"$fmt": "${env:AOSTEST_NOPE}"}}})
         r = self.aos(self.d, env=OUTER)
-        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("EnvironmentVariableMissing", r.stderr)
 
-    def test_unknown_variable_is_1(self):
+    def test_unknown_variable_is_125(self):
         """不是 env: 開頭的 ${…}＝不認得，不猜（這一版沒有 tabledb 那些路徑變數）。"""
         self.inst({"argv": ["true"], "envs": {"X": {"$fmt": "${gitRoot}/x"}}})
         r = self.aos(self.d, env=OUTER)
-        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("UnknownFormatVariable", r.stderr)
 
     def test_fmt_in_argv(self):
@@ -88,7 +88,7 @@ class TestFmt(ExecCase):
     def test_fmt_value_must_be_a_string(self):
         self.inst({"argv": ["true"], "envs": {"X": {"$fmt": 3}}})
         r = self.aos(self.d, env=OUTER)
-        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("DirectiveValueTypeMismatch", r.stderr)
 
 

@@ -1,8 +1,9 @@
 """aos-daemon（普通前台程式）＋ aos-daemon-ctl（下指令）：真的開一支 daemon 進程，
 家在 /tmp，跑完 stop 並清掉。
 
-一條測試走完一輩子：開 daemon→add→ls→get→pause→resume→rm→stop（daemon 進程真的
-退出、退出碼 0）。
+一條測試走完一輩子：開 daemon→add→ls→get→pause→resume→restart→rm→stop（daemon
+進程真的退出、退出碼 0）。ctl 的 rm／restart／pause **回來時事情已經做完了**（它會輪詢
+state.json 等到位），所以這裡不用再 wait_until。
 （`_util.py` 的坑：TestCase 裡別放叫 `run()` 的方法，那是 unittest 自己的。）
 """
 import io
@@ -95,7 +96,7 @@ class DaemonCliTest(unittest.TestCase):
 
         code, out = self.call("ls")                                  # 還沒有半個
         self.assertEqual(code, 0)
-        self.assertIn("DIR  PID  PAUSED  RUNS  LAST_EXIT", out)
+        self.assertIn("DIR  PID  STATE  RUNS  LAST_EXIT", out)
         self.assertNotIn(self.key, out)
 
         code, out = self.call("add", self.work, "--interval-ms", "200")
@@ -112,15 +113,24 @@ class DaemonCliTest(unittest.TestCase):
 
         self.assertEqual(self.call("add", self.work)[0], 1)          # 同一個資料夾第二次＝1
 
-        self.assertEqual(self.call("pause", self.key)[0], 0)
-        self.assertTrue(wait_until(lambda: self.table()[self.key]["paused"]))
-        self.assertIn("yes", self.call("ls")[1])
+        code, out = self.call("pause", self.key)                     # 回來時已經睡著了
+        self.assertEqual((code, "paused" in out), (0, True), out)
+        self.assertEqual(self.table()[self.key]["state"], "paused")
+        self.assertIn("paused", self.call("ls")[1])
         self.assertEqual(self.call("resume", self.key)[0], 0)
-        self.assertTrue(wait_until(lambda: not self.table()[self.key]["paused"]))
+        self.assertTrue(wait_until(lambda: self.table()[self.key]["state"] == "running"))
 
-        code, out = self.call("rm", self.key)
-        self.assertEqual((code, "ok=True" in out), (0, True), out)
-        self.assertTrue(wait_until(lambda: self.key not in self.table()))
+        code, out = self.call("restart", self.work, "--interval-ms", "300")
+        self.assertEqual((code, "restarted" in out), (0, True), out)
+        new_pid = self.table()[self.key]["pid"]                      # 回來時新的已經起來了
+        self.assertNotEqual(new_pid, pid)
+        self.assertEqual(self.table()[self.key]["args"], ["--interval-ms", "300"])
+        self.assertTrue(wait_until(lambda: not alive(pid)))           # 舊的收掉了
+        pid = new_pid
+
+        code, out = self.call("rm", self.key)                        # 回來時已經不在表上了
+        self.assertEqual((code, "removed" in out), (0, True), out)
+        self.assertNotIn(self.key, self.table())
         self.assertTrue(wait_until(lambda: not alive(pid)))          # aos-run 也不在了
 
         dpid = self.home.pid()

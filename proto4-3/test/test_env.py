@@ -64,10 +64,10 @@ class TestEnv(ExecCase):
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
         self.assertEqual(self.read("out.txt"), "外面來的\n")
 
-    def test_dollar_env_missing_variable_is_1(self):
+    def test_dollar_env_missing_variable_is_125(self):
         self.inst({"argv": ["sh", "-c", "true"], "envs": {"X": {"$env": "AOSTEST_NOPE"}}})
         r = self.aos(self.d, env=OUTER)
-        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("EnvironmentVariableMissing", r.stderr)
 
     def test_dollar_env_empty_string_is_ok(self):
