@@ -1,7 +1,8 @@
-# proto4-3 — aos-exec：單發執行器＋aos-run：連續執行版（Python）
+# proto4-3 — aos-exec 單發、aos-run 連續、aos-daemon 管一堆（Python）
 
-這是 [proto4 筆記第 11 節](../proto4/notes/2026-09-08-ideas.md)（aos-exec）與
-[第 12 節](../proto4/notes/2026-09-08-ideas.md)（aos-run）的原型，規格以那兩節為準
+這是 [proto4 筆記第 11 節](../proto4/notes/2026-09-08-ideas.md)（aos-exec）、
+[第 12 節](../proto4/notes/2026-09-08-ideas.md)（aos-run）與
+[第 13 節](../proto4/notes/2026-09-08-ideas.md)（aos-daemon）的原型，規格以那三節為準
 （跟第 10 節衝突的地方都聽第 11 節的）。
 
 ← [proto4-2](../proto4-2/README.md)（inst.json ＋ cpu ＋ daemon ＋ kernel；那一版的
@@ -28,7 +29,7 @@ inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu
 
 ```sh
 cd proto4-3
-python3 -m unittest discover -s test        # 125 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 142 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 ./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 ./aos-exec /path/to/folder --dir-target my/inst.json
@@ -40,6 +41,10 @@ echo $?                                     # 退出碼就是子行程的結束�
 
 ```sh
 ./aos-run /path/to/folder --interval-ms 5000            # 一直跑，每 5 秒一次
+
+export AOS_HOME=/tmp/myaos && ./aos-daemon start        # 常駐，一個資料夾一個 aos-run
+./aos-daemon add /path/to/folder --interval-ms 5000
+./aos-daemon ls
 ```
 
 當成函式用（aos-run 就是這樣接的）：
@@ -249,6 +254,125 @@ code, reason = aos_run.run_loop("/path/to/folder", interval_ms=5000, max_runs=10
                                 from_start=True, stop_exits=[1])
 ```
 
+## aos-daemon：一個 dict，key＝資料夾，value＝正在跑的 aos-run
+
+[proto4 筆記第 13 節](../proto4/notes/2026-09-08-ideas.md)的原型。**daemon 就是一個常駐
+進程，裡面一個 dict**——key 是資料夾，value 是一個正在跑的 `aos-run` 子進程，一個資料夾
+最多一個。value 是**子進程**不是執行緒，所以進程的事通通交給 Linux：暫停＝SIGSTOP、
+繼續＝SIGCONT、刪＝SIGTERM。
+
+```sh
+export AOS_HOME=/tmp/myaos
+./aos-daemon start                                          # 背景化
+./aos-daemon add /path/to/folder --interval-ms 2000         # 旗標原樣傳給 aos-run
+./aos-daemon ls
+./aos-daemon pause /path/to/folder
+./aos-daemon resume /path/to/folder
+./aos-daemon rm /path/to/folder --force
+./aos-daemon stop
+```
+
+### key＝目標的基準資料夾
+
+| `TARGET` 是 | key |
+|---|---|
+| 資料夾 | 它自己 |
+| `.json` 檔 | 它所在的資料夾 |
+| 普通檔案 | 它所在的資料夾 |
+
+一律取 realpath，所以 symlink、`..`、尾巴的 `/` 算同一個。同一個 key 第二次 `add`＝
+`ok:false`、**舊的不動**。**不拿 inst.json 裡的 `cwd` 欄位當 key**——那個每次執行都可能
+被改，還可能是 `$ref` 解出來的。
+
+### 七個動作
+
+| 動作 | 做什麼 |
+|---|---|
+| `add` | 開一個 `aos-run TARGET 旗標…` 子進程（`start_new_session`），記進表 |
+| `remove` | SIGTERM（aos-run 跑完手上那次自己退）→ 等它退（上限 5 秒）→ 從表拿掉。`force`＝再送第二次 SIGTERM（腰斬，退出碼 143），還不退就 SIGKILL 整個 group |
+| `update` | 換旗標＝`remove`（不 force）再 `add`——aos-run 開跑後旗標改不了 |
+| `get` | 一筆：`pid`／`target`／`args`／`started_at`／`paused`／`runs`／`last_exit`／`last_line`／`alive` |
+| `ls` | 全部的 `get`，key 是資料夾 |
+| `pause` | SIGSTOP。正在跑的那次會自己跑完（它在別的 session），只是不會開下一次 |
+| `resume` | SIGCONT |
+
+**暫停中的 `remove` 會先 SIGCONT 再 SIGTERM**，不然它根本收不到。
+
+### `runs`／`last_exit` 從哪來
+
+aos-run 不寫檔，但每跑完一次會在自己的 stderr 印一行。daemon 把子進程的 stderr 接成
+pipe，**每個 value 一條執行緒**逐行讀：原樣（前面加 key）append 進 `daemon.log`，順手
+解析出 `runs`（最後一個 `#n`）、`last_exit`、`last_line`。
+
+```
+22:24:49 /tmp/w aos-run: #1 exit=5 0.0s
+22:24:49 /tmp/w aos-run: stop max_runs
+22:24:49 自己退了 /tmp/w pid=223053 exit=0 last=aos-run: stop max_runs
+```
+
+aos-run **自己退了**（`--max-runs` 跑滿、時限到、`--stop-exit`、被別人殺）→ daemon 收屍、
+從表上拿掉、`daemon.log` 記一行。不自動重開；那個資料夾之後可以再 `add`。
+
+### 請求格式
+
+daemon 與外面之間只有檔案：寫一個 JSON 到 `H/requests/`（先 `.tmp` 再 rename），daemon
+每 0.2 秒掃一次（`.tmp` 忽略），處理完搬到 `H/requests/done/` 同名、內容＝**原請求 ＋
+`ok` ＋ `result`**。這一版**沒有 kernel**，daemon 自己讀請求。
+
+```json
+{"op":"add",    "target":"/path/to/folder", "args":["--interval-ms","2000"]}
+{"op":"remove", "dir":"/path/to/folder", "force":false}
+{"op":"update", "target":"/path/to/folder", "args":["--interval-ms","5000"]}
+{"op":"get",    "dir":"/path/to/folder"}
+{"op":"ls"}
+{"op":"pause",  "dir":"/path/to/folder"}
+{"op":"resume", "dir":"/path/to/folder"}
+{"op":"stop"}
+```
+
+`dir` 先 realpath 再查表。不認得的 op、缺欄位、`add` 的 target 不存在＝`ok:false`（不是
+炸掉）。`stop`＝daemon 收工：所有 aos-run 送 SIGTERM、等它們退、自己退；daemon 收到
+**SIGTERM 也一樣**。
+
+### 家目錄
+
+`--home H` 或環境變數 `AOS_HOME`：
+
+```
+H/requests/         請求檔
+H/requests/done/    處理完的
+H/daemon.pid        daemon 的 pid
+H/state.json        每 0.5 秒寫一次（先 .tmp 再 rename）
+H/daemon.log        daemon 自己的話 ＋ 每個 aos-run 的 stderr（原樣，前面加 key）
+```
+
+`state.json` 就是 `ls` 的內容：
+
+```json
+{"pid": 223051, "home": "/tmp/myaos",
+ "runs": {"/tmp/w": {"pid": 223053, "target": "/tmp/w", "args": ["--interval-ms","200"],
+                     "started_at": 1788963889.1, "paused": false, "runs": 3,
+                     "last_exit": 5, "last_line": "aos-run: #3 exit=5 0.0s", "alive": true}}}
+```
+
+### CLI
+
+```sh
+aos-daemon start|stop|ls|get DIR|add TARGET [aos-run 旗標…]|rm DIR [--force]
+           |update TARGET [旗標…]|pause DIR|resume DIR      [--home H]
+aos-daemon run [--home H]        前台跑（`start` 背景開的就是這個）
+```
+
+| 指令 | 怎麼做的 |
+|---|---|
+| `start` | 背景開一隻，等 `state.json` 裡的 pid 就是新開的那隻才說「起來了」；已經在跑＝說「已經在跑」、退出碼 1 |
+| `stop` | 丟 `{"op":"stop"}` 等它退，3 秒不退就補 SIGTERM |
+| `ls`／`get` | **直接讀 `state.json`** 印表（`DIR PID PAUSED RUNS LAST_EXIT`），不丟請求、不用等 daemon 回，所以看到的最多是 0.5 秒前的樣子 |
+| 其他 | 丟請求檔、等 `done/` 出現（上限 10 秒）、印 `ok`／`result`；`ok:false`＝退出碼 1 |
+
+`--home` 可以擺在任何位置，其他旗標**原樣**留給 aos-run（所以這支不用 argparse，不然
+`--max-runs` 之類會被吃掉）。
+
 ## 檔案
 
 - `aos-exec`：命令列入口，可執行，薄薄一層。
@@ -259,7 +383,12 @@ code, reason = aos_run.run_loop("/path/to/folder", interval_ms=5000, max_runs=10
 - `aos_run.py`：迴圈本體——什麼時候跑下一次、什麼時候停、跑完印一行。核心是
   `run_loop(xxx, *, dir_target=…, timeout_ms=…, interval_ms=…, from_start=…, max_runs=…,
   time_limit_ms=…, stop_exits=…, log=…) -> (退出碼, 停止原因)`，之後 daemon 直接 import。
-- `test/`：`python3 -m unittest discover -s test`（125 條）。
+- `aos-daemon`：daemon 的命令列入口，可執行，一樣薄薄一層。
+- `aos_daemon.py`：daemon 本體——那個 dict、七個動作（都是 `Daemon` 的方法、都回
+  `(ok, result)`，測試可以不開 daemon 進程直接叫）、主迴圈（掃請求、收屍、寫 state.json）。
+- `aos_daemon_cli.py`：daemon 的命令列——背景化、丟請求等回音、讀 `state.json` 印表。
+- `aos_home.py`：家目錄的版面（哪個檔在哪）＋原子寫檔＋pid 活不活，從 proto4-2 改的。
+- `test/`：`python3 -m unittest discover -s test`（142 條）。
 
 ## 沒做什麼
 
@@ -281,6 +410,22 @@ code, reason = aos_run.run_loop("/path/to/folder", interval_ms=5000, max_runs=10
 - `$ref` 沒有範圍限制（能不能指到 cwd 外＝行程權限說了算），也沒有深度上限。
 - `$fmt` 只有 `env:` 一個 namespace，沒有路徑變數、沒有預設值語法、沒有跳脫。
 - 沒有並行（凍結版的 `parallel`）、沒有批次、沒有重試、沒有退避。
+
+aos-daemon 這一版另外沒做的：
+
+- **不自動重開**。aos-run 自己退了（跑滿、時限到、`--stop-exit`、被別人殺）就只是從表上
+  消失、`daemon.log` 記一行，不會替你再開一個。
+- **暫停中 `--timeout-ms` 不生效**：砍逾時的是 aos-run，它被 SIGSTOP 了就沒人砍，正在跑
+  的那個子行程會一直跑下去。要不要讓 daemon 代砍，之後再說。
+- **`update` 有一小段空窗**（舊的跑完手上那次退掉→新的開起來），中間那段時間表上沒有這
+  個 key，別人可以趁隙 `add` 進來。
+- **沒有 kernel**：daemon 自己讀 `requests/`（§7.3 那個「kernel 是第一顆 cpu 跑的 proc」
+  等整合時再回來）。
+- **沒有 `.aos/` 紀錄檔**（proto4-2 的 `last.json`／`runs.jsonl`／`cpu.json` 都沒有），
+  只剩 `daemon.log` 一條線；aos-run 子進程的 stdout 直接進 `/dev/null`。
+- **daemon 的生死歸使用者**（§9）：它就是硬體，自己 `start`／`stop`，掛了 aos 不管、也不會
+  有人替你重開。
+- 沒有權限、沒有認證：**誰能寫 `H/requests/` 就能叫 daemon 用你的身分跑任何東西**。
 - 不檢查 inst.json 的權限。一份 inst.json 就是可執行的權柄：它可以指名任意程式、引數、
   輸入輸出檔、工作目錄與環境變數值，全都用你的憑證跑。能改它的人就等於能用你的身分執行
   任意程式碼。
