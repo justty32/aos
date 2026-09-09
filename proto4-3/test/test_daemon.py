@@ -167,15 +167,15 @@ class DaemonTest(ExecCase):
                       % (key, res["pid"]), self.log())
         self.assertTrue(self.dmn.add(w, MS100)[0])                  # 同一個資料夾可以再 add
 
-    def test_update_swaps_the_process(self):
+    def test_restart_swaps_the_process(self):
         w = self.work(FAST)
         old = self.dmn.add(w, MS100)[1]
-        ok, new = self.dmn.update(w, ["--interval-ms", "300"])
+        ok, new = self.dmn.restart(w, ["--interval-ms", "300"])
         self.assertTrue(ok)
         self.assertNotEqual(new["pid"], old["pid"])
         self.assertEqual(new["args"], ["--interval-ms", "300"])
         self.assertEqual(list(self.dmn.table), [os.path.realpath(w)])    # 表上只有一筆
-        self.assertEqual(self.dmn.update(os.path.join(self.d, "nope"))[0], False)
+        self.assertEqual(self.dmn.restart(os.path.join(self.d, "nope"))[0], False)
 
     # ── 請求 ───────────────────────────────────────────
 
