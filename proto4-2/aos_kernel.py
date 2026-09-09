@@ -6,7 +6,8 @@
   1. 讀 $AOS_HOME/requests/*.json（使用者面的請求）。
   2. 翻成 daemon 請求寫進 $AOS_HOME/daemon/requests/（dir 先 realpath 過，
      symlink／`..`／尾巴 `/` 都算同一個資料夾——那就是這顆 cpu 唯一的標示）：
-       {"op":"register","dir":…,"interval":…}  → {"op":"spawn","dir":…,"interval":…}
+       {"op":"register","dir":…,"interval":…,"time_limit":…}
+                                               → {"op":"spawn","dir":…,"interval":…,"time_limit":…}
        {"op":"unregister","dir":…}              → {"op":"kill","dir":…}
   3. 處理過的搬到 $AOS_HOME/requests/done/（多 ok／sent）。
   4. 讀 daemon/state.json 印一行摘要到 stdout——它會進 kernel 自己的 last.json，
@@ -35,7 +36,8 @@ def translate(req):
     op = req.get("op")
     if op == "register":
         return {"op": "spawn", "dir": os.path.realpath(req["dir"]),
-                "interval": req.get("interval") or 1}
+                "interval": req.get("interval") or 1,
+                "time_limit": req.get("time_limit") or 0}
     if op == "unregister":
         return {"op": "kill", "dir": os.path.realpath(req["dir"])}
     return None

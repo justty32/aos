@@ -1,0 +1,1 @@
+{"argv": ["sh", "-c", "trap '' TERM; sleep 5"], "timeout_ms": 300}

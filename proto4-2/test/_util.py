@@ -29,6 +29,33 @@ def copy_fx(name, into):
     return dst
 
 
+def mkinst(base, inst, files=None):
+    """開一個臨時資料夾，寫好 .aos/inst.json（inst 給 dict 或原始 JSON 字串），
+    files＝要一起放進去的檔案 {相對路徑: 內容}。回那個資料夾。"""
+    d = tempfile.mkdtemp(dir=base)
+    os.makedirs(os.path.join(d, ".aos"))
+    raw = inst if isinstance(inst, str) else json.dumps(inst, ensure_ascii=False)
+    with open(os.path.join(d, ".aos", "inst.json"), "w", encoding="utf-8") as f:
+        f.write(raw)
+    for name, body in (files or {}).items():
+        q = os.path.join(d, name)
+        os.makedirs(os.path.dirname(q), exist_ok=True)
+        with open(q, "w", encoding="utf-8") as f:
+            f.write(body)
+    return d
+
+
+def last(d):
+    """那個資料夾最後一次執行的結果。"""
+    with open(os.path.join(d, ".aos", "last.json"), encoding="utf-8") as f:
+        return json.load(f)
+
+
+def read(d, name):
+    with open(os.path.join(d, name), encoding="utf-8") as f:
+        return f.read()
+
+
 def wait_until(pred, timeout=10.0):
     t0 = time.time()
     while time.time() - t0 < timeout:

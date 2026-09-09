@@ -2,7 +2,7 @@
 """aos：一支給人用的 CLI。
 
     python3 aos.py start|stop|ls
-    python3 aos.py register DIR [INTERVAL]
+    python3 aos.py register DIR [INTERVAL] [TIME_LIMIT]
     python3 aos.py unregister DIR
 
 家目錄走 --home 或環境變數 AOS_HOME。
@@ -69,6 +69,8 @@ def main():
         req = {"op": "register", "dir": os.path.abspath(a.args[0])}
         if len(a.args) > 1:
             req["interval"] = float(a.args[1])
+        if len(a.args) > 2:                      # 整體時限（秒），0＝不限
+            req["time_limit"] = float(a.args[2])
     else:
         if not a.args:
             print("unregister 要給 DIR", file=sys.stderr)

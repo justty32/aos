@@ -86,6 +86,30 @@ class CliTest(unittest.TestCase):
         dirs = [c["dir"] for c in st.get("cpus", {}).values()]
         self.assertEqual(dirs.count(self.rd), 1)                          # 只有一顆
 
+    def test_cpu_that_exits_is_reaped_so_dir_can_register_again(self):
+        """cpu 自己退了（這裡是整體時限到）→ daemon 從登記表拿掉 → 同一個資料夾能再登記。"""
+        h = self.home.dir
+        self.assertIn("起來了", cli(h, "start").stdout)
+
+        cli(h, "register", self.d, "0.2", "1")                             # 時限 1 秒
+        self.assertTrue(wait_until(lambda: self.rd in (self.home.state() or {}).get("cpus", {}), 15.0))
+        pid1 = self.home.state()["cpus"][self.rd]["pid"]
+        self.assertEqual(self.home.state()["cpus"][self.rd]["time_limit"], 1.0)
+
+        # 時限到、cpu 自己退、daemon reap 掉：表上不見了
+        self.assertTrue(wait_until(
+            lambda: self.rd not in (self.home.state() or {}).get("cpus", {}), 15.0))
+        with open(self.home.logf, encoding="utf-8", errors="replace") as f:
+            log = f.read()
+        self.assertIn("cpu 自己退了", log)
+        self.assertIn("stopped=time_limit", log)
+
+        # 同一個資料夾再登記一次：這次不會被「already running」擋掉，是另一顆 cpu
+        cli(h, "register", self.d, "0.2")
+        self.assertTrue(wait_until(
+            lambda: (self.home.state() or {}).get("cpus", {}).get(self.rd, {}).get("pid", pid1) != pid1,
+            15.0), "同一個資料夾 reap 之後還是登記不進去")
+
     def test_unregister_not_running_dir_rejected(self):
         h = self.home.dir
         self.assertIn("起來了", cli(h, "start").stdout)
