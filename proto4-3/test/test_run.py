@@ -193,17 +193,34 @@ class TestSignals(RunCase):
         self.assertTrue(self.read("count.txt").endswith("x\n"))
 
     def test_second_sigterm_kills_the_running_one(self):
-        """第二次同一個訊號＝直接砍正在跑的（SIGKILL 整個 process group）。"""
+        """第二次同一個訊號＝直接砍正在跑的（SIGKILL 整個 process group），
+        退出碼變 128+N（SIGTERM＝143），不再是 0。"""
         self.inst({"argv": ["sh", "-c", "sleep 10"]})
+        t0 = time.monotonic()
         p = self.start(self.d, "--interval-ms", 50)
         time.sleep(0.3)
         p.send_signal(signal.SIGTERM)
         time.sleep(0.3)
         p.send_signal(signal.SIGTERM)
         _out, err = p.communicate(timeout=20)
-        self.assertEqual(p.returncode, 0)
+        self.assertEqual(p.returncode, 143)
+        self.assertLess(time.monotonic() - t0, 2)
         self.assertIn("exit=137", self.logs(err)[-1])
-        self.assertIn("aos-run: stop signal", err)
+        self.assertIn("aos-run: stop signal_forced", err)
+
+    def test_two_sigterms_exit_code_is_128_plus_n(self):
+        """兩次 SIGTERM＝腰斬，退出碼 128+15＝143，stderr 印 stop signal_forced，2 秒內結束。"""
+        self.inst({"argv": ["sleep", "5"]})
+        t0 = time.monotonic()
+        p = self.start(self.d, "--interval-ms", 50)
+        time.sleep(0.3)
+        p.send_signal(signal.SIGTERM)
+        time.sleep(0.3)
+        p.send_signal(signal.SIGTERM)
+        _out, err = p.communicate(timeout=20)
+        self.assertEqual(p.returncode, 143)
+        self.assertIn("aos-run: stop signal_forced", err)
+        self.assertLess(time.monotonic() - t0, 2)
 
     def test_sigint_while_sleeping_exits_at_once(self):
         """睡覺中收到訊號也叫得醒（小步睡），不用等 interval 睡完。"""

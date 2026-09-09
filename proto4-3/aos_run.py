@@ -30,12 +30,16 @@ class _State:
         self.stop = False       # 收到過訊號＝這次跑完就退
         self.counts = {}        # 每個訊號各自數，「第二次」是指同一個訊號
         self.child = None       # aos_exec 剛開起來的那個 Popen（跑完會被清成 None）
+        self.forced = False     # 第二次同一個訊號＝腰斬，退出碼要跟著變
+        self.signum = None      # 讓 stop（forced）的那個訊號，算 128+N 要用
 
     def on_signal(self, signum, frame):
         n = self.counts.get(signum, 0) + 1
         self.counts[signum] = n
         self.stop = True
+        self.signum = signum
         if n >= 2:              # 第二次同一個訊號：不等了，砍掉正在跑的那次
+            self.forced = True
             _killpg(self.child)
 
     def hold(self, child):
@@ -61,7 +65,9 @@ def _stderr(msg):
 def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
              interval_ms=DEFAULT_INTERVAL_MS, from_start=False, max_runs=0,
              time_limit_ms=0, stop_exits=(), log=None, install_signals=True):
-    """一直跑 `xxx`，回 `(退出碼, 停止原因)`。四種停止都是退出碼 0。
+    """一直跑 `xxx`，回 `(退出碼, 停止原因)`。多數停止是退出碼 0；只有「同一個訊號送第二次」
+    （腰斬掉正在跑的那次）例外，原因是 `signal_forced`、退出碼是 `128+N`（N＝那個訊號的編號，
+    SIGTERM→143、SIGINT→130）。
 
     - `timeout_ms`：**每一次**執行的上限，原樣傳給 `run_target()`；0＝不限。
     - `interval_ms`：兩次執行之間的間隔（毫秒）。
@@ -86,7 +92,7 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
         while True:
             reason = _sleep_until(next_at, deadline, state)
             if reason:
-                return _stop(log, reason)
+                return _stop(log, reason, state)
             started = time.monotonic()
             eff = _effective_timeout(timeout_ms, deadline, started)
             if eff == 0 and deadline is not None:
@@ -96,7 +102,7 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
             n += 1
             log("aos-run: #%d exit=%d %.1fs" % (n, code, time.monotonic() - started))
             if state.stop:
-                return _stop(log, "signal")
+                return _stop(log, "signal", state)
             if code in stop_exits:
                 return _stop(log, "stop_exit")
             if max_runs and n >= max_runs:
@@ -110,9 +116,14 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
             restore()
 
 
-def _stop(log, reason):
+def _stop(log, reason, state=None):
+    """退出碼幾乎都是 0；例外是 signal 被腰斬（第二次同訊號），改回 128+N。"""
+    code = 0
+    if reason == "signal" and state is not None and state.forced:
+        reason = "signal_forced"
+        code = 128 + state.signum
     log("aos-run: stop %s" % reason)
-    return 0, reason
+    return code, reason
 
 
 def _effective_timeout(timeout_ms, deadline, now):
