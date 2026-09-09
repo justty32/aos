@@ -3,73 +3,54 @@
 
 [proto4 筆記第 13 節](../proto4/notes/2026-09-08-ideas.md)的原型。value 是**一個
 `aos-run` 子進程**（不是在 daemon 自己進程裡跑 `run_loop`），所以暫停／繼續＝SIGSTOP／
-SIGCONT、刪＝SIGTERM，進程的事交給 Linux 管。這裡只有本體（dict、七個動作、主迴圈），
-命令列入口是 `aos-daemon`（前台程式，不背景化）、下指令的是 `aos_daemon_ctl.py`；
-七個動作都是 `Daemon` 的方法、都回 `(ok, result)`，所以測試可以不開 daemon 進程直接叫。
+SIGCONT、刪＝SIGTERM，進程的事交給 Linux 管。
+
+**主迴圈不等任何人**：七個動作都是「送個訊號、標個狀態、立刻回 `(ok, result)`」，真正
+的「等它退」「等它睡著」交給每圈跑一次的 `advance()`／`reap()`。所以 rm 一個手上那次
+要跑一小時的 aos-run，daemon 照樣每 0.2 秒收下一個請求。唯一可以卡的地方是收工
+（`shutdown()`）——那時候本來就該等大家走乾淨。
+
+近況（`ready`／`running`／`runs`／`last_exit`／`last_kind`）從 aos-run 的 `--status-fd`
+讀，**不再解 stderr**；stderr 照舊接管子、原樣（前面加 key）進 `daemon.log`。
+
+三個檔分工：這裡是本體（那個 dict、七個動作、主迴圈、收屍、收工）、一筆長什麼樣與狀態機
+在 `aos_daemon_entry.py`、請求檔那一層在 `aos_daemon_req.py`；命令列入口是 `aos-daemon`
+（前台程式，不背景化），下指令的是 `aos_daemon_ctl.py`。七個動作都是 `Daemon` 的方法、
+都回 `(ok, result)`，所以測試可以不開 daemon 進程直接叫。
 """
-import json
 import os
-import re
 import signal
 import subprocess
 import sys
 import threading
 import time
 
+import aos_daemon_req
+from aos_daemon_entry import (PAUSED, PAUSE_PENDING, RESTARTING, RUNNING, STOPPING,
+                              TERM_WAIT, Entry, base_dir, read_status, read_stderr)
 from aos_home import Home, write_json      # noqa: F401  （Home 讓外面 import 這裡就夠）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RUN = os.path.join(HERE, "aos-run")
-TICK = 0.2              # 主迴圈：多久掃一次 requests/
+TICK = 0.2              # 主迴圈：多久跑一圈（掃 requests/、推狀態機、收屍）
 SAVE = 0.5              # 多久寫一次 state.json
-TERM_WAIT = 5.0         # remove：等 aos-run 跑完手上那次的上限
-FORCE_GAP = 0.2         # 兩次 SIGTERM 之間要隔一下，不然會被併成一次
-LINE = re.compile(r"^aos-run: #(\d+) exit=(-?\d+)")     # aos-run 每跑完一次印的那行
-
-
-def base_dir(target):
-    """key＝目標**基準資料夾**的 realpath：資料夾→它自己；`.json`／普通檔案→它所在的
-    資料夾。symlink、`..`、尾巴的 `/` 算同一個。不拿 inst.json 的 `cwd` 當 key（§13.1）。
-    """
-    p = os.path.abspath(target)
-    if not os.path.isdir(p):
-        p = os.path.dirname(p)
-    return os.path.realpath(p)
-
-
-class Run:
-    """表上的一筆：一個 aos-run 子進程 ＋ 從它 stderr 解出來的近況。"""
-
-    def __init__(self, key, proc, target, args):
-        self.key = key
-        self.proc = proc
-        self.target = target
-        self.args = list(args)
-        self.started_at = time.time()
-        self.paused = False
-        self.runs = 0                   # 最後一個 `#n`
-        self.last_exit = None           # 最後一個 `exit=c`
-        self.last_line = None           # 最後一行原文（停下來時是 `aos-run: stop …`）
-        self.thread = None
-
-    def entry(self):
-        return {"pid": self.proc.pid, "target": self.target, "args": self.args,
-                "started_at": self.started_at, "paused": self.paused,
-                "runs": self.runs, "last_exit": self.last_exit,
-                "last_line": self.last_line, "alive": self.proc.poll() is None}
 
 
 class Daemon:
     def __init__(self, home):
         self.home = home
         self.home.ensure()
-        self.table = {}                 # 資料夾 realpath -> Run
+        self.table = {}                 # 資料夾 realpath -> Entry
         self.stopping = False
         self._lock = threading.Lock()   # daemon.log 是好幾條執行緒一起寫的
 
-    # ── 七個動作，一律回 (ok, result) ─────────────────────
+    # ── 七個動作，一律回 (ok, result)，而且都不等 ──────────────
     def add(self, target, args=()):
-        """開一個 `aos-run <target> <旗標…>` 子進程，記進表。同 key 第二次＝拒絕。"""
+        """開一個 `aos-run <target> <旗標…> --status-fd N` 子進程，記進表。
+
+        status 管子的寫端用 `pass_fds` 交給它，daemon 這邊立刻關掉自己那份（不然讀端
+        永遠等不到 EOF），讀端交給一條執行緒逐行讀。同 key 第二次＝拒絕，舊的不動。
+        """
         key = base_dir(target)
         if key in self.table:
             return False, "已經有一個在跑：%s" % key
@@ -77,50 +58,60 @@ class Daemon:
         if not os.path.exists(target):
             return False, "找不到 %s" % target
         args = [str(a) for a in args]
-        p = subprocess.Popen([sys.executable, RUN, target] + args,
-                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.PIPE, start_new_session=True)
-        r = Run(key, p, target, args)
+        rfd, wfd = os.pipe()
+        try:
+            p = subprocess.Popen(
+                [sys.executable, RUN, target] + args + ["--status-fd", str(wfd)],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE, start_new_session=True, pass_fds=(wfd,))
+        except OSError as e:
+            os.close(rfd)
+            os.close(wfd)
+            return False, "開不起來 %s：%s" % (target, e)
+        os.close(wfd)
+        r = Entry(key, p, target, args, rfd)
         self.table[key] = r
-        r.thread = threading.Thread(target=self._read, args=(r,), daemon=True)
-        r.thread.start()
+        r.thread = _thread(read_stderr, r, self.say)
+        r.sthread = _thread(read_status, r)
         self.say("add %s pid=%d target=%s args=%s" % (key, p.pid, target, args))
         return True, r.entry()
 
     def remove(self, d, force=False):
-        """SIGTERM（aos-run 跑完手上那次自己退）→ 等它退 → 從表拿掉。`force`＝再送第二次
-        （腰斬，退出碼 143），還不退就 SIGKILL 整個 group。暫停中的先 SIGCONT，不然收不到。
+        """送 SIGTERM 就**立刻回** `stopping`：等它退是主迴圈（`advance`／`reap`）的事。
+
+        `force`＝0.2 秒後再補一發 SIGTERM（腰斬正在跑的那次，退出碼 143）；5 秒還不退
+        ＝SIGKILL 整個 group。已經在收的再 rm＝冪等（restart 收到一半的會改成單純 rm，
+        不再重開）。
         """
         key = os.path.realpath(d)
         r = self.table.get(key)
         if r is None:
             return False, "沒有在跑：%s" % key
-        if r.paused:
-            self._sig(r, signal.SIGCONT)
-            r.paused = False
-        self._sig(r, signal.SIGTERM)
-        if force:
-            time.sleep(FORCE_GAP)
-            self._sig(r, signal.SIGTERM)
-        if not self._wait(r, TERM_WAIT):
-            self._killpg(r)
-            self._wait(r, 2.0)
-        self.table.pop(key, None)
-        code = r.proc.poll()
-        code = code if code is None or code >= 0 else 128 - code    # 被訊號 N 砍＝128+N
-        r.thread.join(1.0)
-        self.say("remove %s pid=%d exit=%s last=%s" % (key, r.proc.pid, code, r.last_line))
-        return True, {"dir": key, "pid": r.proc.pid, "exit": code, "last_line": r.last_line}
+        if r.state in (STOPPING, RESTARTING):
+            if force and r.force_at is None:
+                r.force_at = time.monotonic()
+            r.state = STOPPING
+            return True, "stopping"
+        self.say(r.begin_stop(STOPPING, force))
+        return True, "stopping"
 
     def restart(self, target, args=()):
-        """換旗標＝`remove`（不 force）再 `add`——aos-run 開跑後旗標改不了。"""
+        """換旗標＝請舊的退（SIGTERM），**收屍時**用新旗標同 key 再開一顆。立刻回。
+
+        跟舊版的「remove 再 add」比，中間那段空窗這一筆還在表上（狀態 `restarting`），
+        別人趁隙 `add` 會被擋掉。
+        """
         key = base_dir(target)
-        if key not in self.table:
+        r = self.table.get(key)
+        if r is None:
             return False, "沒有在跑：%s" % key
-        ok, res = self.remove(key)
-        if not ok:
-            return ok, res
-        return self.add(target, args)
+        r.new_args = [str(a) for a in args]
+        r.target = os.path.abspath(target)
+        if r.state in (STOPPING, RESTARTING):
+            r.state = RESTARTING        # 已經送過 SIGTERM 了，改成收屍後重開
+        else:
+            self.say(r.begin_stop(RESTARTING))
+        return True, "restarting"
 
     def get(self, d):
         key = os.path.realpath(d)
@@ -133,89 +124,77 @@ class Daemon:
         return True, {k: r.entry() for k, r in self.table.items()}
 
     def pause(self, d):
-        """SIGSTOP。正在跑的那次會自己跑完（它在別的 session），只是不會開下一次。"""
-        return self._flip(d, True)
+        """標 `pause_pending` 就回：真的 SIGSTOP 要等它睡著，主迴圈盯著。
 
-    def resume(self, d):
-        return self._flip(d, False)
-
-    def _flip(self, d, paused):
+        不打斷正在跑的那次——等 status 說它 `done` 了（`running == False`）才停。已經
+        `paused`／`pause_pending` 的再 pause＝冪等。
+        """
         key = os.path.realpath(d)
         r = self.table.get(key)
         if r is None:
             return False, "沒有在跑：%s" % key
-        self._sig(r, signal.SIGSTOP if paused else signal.SIGCONT)
-        r.paused = paused
-        self.say("%s %s pid=%d" % ("pause" if paused else "resume", key, r.proc.pid))
-        return True, r.entry()
+        if r.state in (STOPPING, RESTARTING):
+            return False, "正在收掉，不能 pause：%s" % key
+        if r.state != PAUSED:
+            r.state = PAUSE_PENDING
+            self.say("pause %s pid=%d（等它睡著）" % (key, r.proc.pid))
+        return True, r.state
 
-    # ── 請求 ─────────────────────────────────────────
+    def resume(self, d):
+        """`paused`→SIGCONT；`pause_pending`→取消那個等待。本來就在跑＝冪等。"""
+        key = os.path.realpath(d)
+        r = self.table.get(key)
+        if r is None:
+            return False, "沒有在跑：%s" % key
+        if r.state in (STOPPING, RESTARTING):
+            return False, "正在收掉，不能 resume：%s" % key
+        if r.state == PAUSED:
+            r.sig(signal.SIGCONT)
+        r.state = RUNNING
+        self.say("resume %s pid=%d" % (key, r.proc.pid))
+        return True, RUNNING
+
+    # ── 請求（真東西在 aos_daemon_req.py）──────────────────
     def dispatch(self, req):
-        """一個請求 → `(ok, result)`。不認得的 op／缺欄位一律 `ok:false`。"""
-        if not isinstance(req, dict):
-            return False, "請求不是一個 JSON 物件"
-        op = req.get("op")
-        try:
-            if op == "add":
-                return self.add(req["target"], req.get("args") or [])
-            if op == "remove":
-                return self.remove(req["dir"], bool(req.get("force")))
-            if op == "restart":
-                return self.restart(req["target"], req.get("args") or [])
-            if op == "get":
-                return self.get(req["dir"])
-            if op == "ls":
-                return self.ls()
-            if op == "pause":
-                return self.pause(req["dir"])
-            if op == "resume":
-                return self.resume(req["dir"])
-            if op == "stop":
-                self.stopping = True
-                return True, "收工中"
-        except KeyError as e:
-            return False, "缺欄位 %s" % e
-        return False, "不認得的 op：%r" % (op,)
+        return aos_daemon_req.dispatch(self, req)
 
     def handle_requests(self):
-        """掃 requests/*.json（`.tmp` 忽略）、處理、搬到 done/ 同名＋ok／result。"""
-        try:
-            names = sorted(n for n in os.listdir(self.home.requests) if n.endswith(".json"))
-        except OSError:
-            return
-        for n in names:
-            src = os.path.join(self.home.requests, n)
-            if not os.path.isfile(src):
-                continue
-            req = None
-            try:
-                with open(src, encoding="utf-8") as f:
-                    req = json.load(f)
-                ok, res = self.dispatch(req)
-            except Exception as e:                          # 壞掉的請求檔也要有回音
-                ok, res = False, "%s: %s" % (type(e).__name__, e)
-            if not ok:
-                self.say("請求 %s 被拒：%s" % (n, res))
-            try:
-                os.remove(src)
-            except OSError:
-                pass
-            if ok: self.save()                  # 先落地再回音，CLI 收到 done 時 ls 已是新的
-            out = dict(req) if isinstance(req, dict) else {"req": n}
-            out["ok"], out["result"] = ok, res
-            write_json(os.path.join(self.home.done, n), out)
+        return aos_daemon_req.handle_requests(self)
 
-    # ── 收屍、落地、主迴圈 ────────────────────────────────
+    # ── 狀態機、收屍、落地、主迴圈 ─────────────────────────
+    def advance(self):
+        """每一筆的狀態機推一格：該睡的睡、該補刀的補刀。不等、不睡，一圈很快。"""
+        now = time.monotonic()
+        for r in list(self.table.values()):
+            msg = r.advance(now)
+            if msg:
+                self.say(msg)
+                self.save()
+
     def reap(self):
-        """aos-run 自己退了就從表拿掉、log 記一行。不自動重開；那個資料夾之後可以再 `add`。"""
+        """退掉的（自己退的、被 rm 的、被 restart 的）從表拿掉、log 一行。
+
+        `restarting` 的例外：拿掉之後馬上用新旗標同 key 再 `add` 一顆。其餘都不自動重開，
+        那個資料夾之後可以再 `add`。
+        """
         for key, r in list(self.table.items()):
-            if r.proc.poll() is None:
+            if r.alive():
                 continue
             self.table.pop(key, None)
-            r.thread.join(1.0)              # 等 stderr 那條把最後一行（stop …）讀完
-            self.say("自己退了 %s pid=%d exit=%s last=%s"
-                     % (key, r.proc.pid, r.proc.returncode, r.last_line))
+            r.join()                    # 等兩條執行緒把最後幾行讀完
+            what = {STOPPING: "rm 掉了", RESTARTING: "restart 舊的退了"}.get(
+                r.state, "自己退了")
+            self.say("%s %s pid=%d exit=%s last=%s"
+                     % (what, key, r.proc.pid, r.code(), r.last_line))
+            if r.state == RESTARTING:
+                self.add(r.target, r.new_args or [])
             self.save()
+
+    def tick(self):
+        """主迴圈的一圈：收請求、推狀態機、收屍。這一圈裡沒有任何等待。"""
+        self.handle_requests()
+        self.advance()
+        self.reap()
 
     def save(self):
         write_json(self.home.statef, {"pid": os.getpid(), "home": self.home.dir,
@@ -232,8 +211,7 @@ class Daemon:
         last = 0.0
         try:
             while not self.stopping:
-                self.handle_requests()
-                self.reap()
+                self.tick()
                 if time.monotonic() - last >= SAVE:
                     self.save()
                     last = time.monotonic()
@@ -244,31 +222,36 @@ class Daemon:
             self.shutdown()
 
     def shutdown(self):
-        """收工：所有 aos-run 送 SIGTERM、等它們跑完手上那次退，再刪掉 pid／state。"""
+        """收工：全部 SIGCONT＋SIGTERM，同步等（上限 5 秒），還活著就 SIGKILL 整個 group。
+
+        **這裡可以卡**——收工就是要等大家走乾淨，跟「主迴圈不等人」是兩件事。
+        """
         self.say("收工中：%d 個 aos-run 送 SIGTERM" % len(self.table))
-        for key in list(self.table):
-            self.remove(key)
+        for r in self.table.values():
+            r.sig(signal.SIGCONT)                       # 暫停中的要先叫醒才收得到
+            r.sig(signal.SIGTERM)
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < TERM_WAIT:
+            if all(not r.alive() for r in self.table.values()):
+                break
+            time.sleep(0.02)
+        for key, r in list(self.table.items()):
+            if r.alive():
+                r.killpg()
+                try:
+                    r.proc.wait(timeout=2.0)
+                except subprocess.TimeoutExpired:
+                    pass
+            r.join()
+            self.say("收工帶走 %s pid=%d exit=%s last=%s"
+                     % (key, r.proc.pid, r.code(), r.last_line))
+        self.table.clear()
         for f in (self.home.statef, self.home.pidf):
             try:
                 os.remove(f)
             except OSError:
                 pass
         self.say("收工了 pid=%d" % os.getpid())
-
-    # ── 小工具 ───────────────────────────────────────
-    def _read(self, r):
-        """一條執行緒逐行讀 aos-run 的 stderr：原樣進 daemon.log，順手解析近況。"""
-        for raw in r.proc.stderr:                       # 一行一行來，不等它退
-            line = raw.decode("utf-8", "replace").rstrip("\n")
-            m = LINE.match(line)
-            if m:
-                r.runs, r.last_exit = int(m.group(1)), int(m.group(2))
-            r.last_line = line
-            self.say("%s %s" % (r.key, line))
-        try:
-            r.proc.stderr.close()
-        except OSError:
-            pass
 
     def say(self, s):
         with self._lock:
@@ -278,23 +261,8 @@ class Daemon:
             except OSError:
                 pass
 
-    def _sig(self, r, sig):
-        try:
-            os.kill(r.proc.pid, sig)
-        except OSError:                     # 已經死了＝ESRCH，無害
-            pass
 
-    def _killpg(self, r):
-        try:
-            os.killpg(os.getpgid(r.proc.pid), signal.SIGKILL)
-        except OSError:
-            pass
-
-    @staticmethod
-    def _wait(r, secs):
-        t0 = time.monotonic()
-        while time.monotonic() - t0 < secs:
-            if r.proc.poll() is not None:
-                return True
-            time.sleep(0.02)
-        return r.proc.poll() is not None
+def _thread(fn, *args):
+    t = threading.Thread(target=fn, args=args, daemon=True)
+    t.start()
+    return t

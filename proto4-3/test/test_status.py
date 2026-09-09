@@ -1,4 +1,4 @@
-"""退出碼：原樣傳回、127／126、開檔失敗、exit 檔的父目錄不見，還有 --timeout-ms。"""
+"""退出碼：子程式的原樣傳回、127／126，aos-exec 自己失敗的一律 125，還有 --timeout-ms。"""
 import os
 import sys
 import time
@@ -34,33 +34,35 @@ class TestStatus(ExecCase):
         self.assertEqual(r.returncode, 126)
         self.assertIn("沒有執行權", r.stderr)
 
-    def test_stdout_open_failure_is_126(self):
+    def test_stdout_open_failure_is_125(self):
+        """開不了重導向的檔＝那次根本沒跑成，是 aos-exec 自己失敗（125），不是子程式的碼。"""
         self.inst({"argv": ["true"], "stdout": "沒有這個資料夾/out.txt"})
         r = self.aos(self.d)
-        self.assertEqual(r.returncode, 126)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("重導向的檔案開不起來", r.stderr)
 
-    def test_stdin_open_failure_is_126(self):
+    def test_stdin_open_failure_is_125(self):
         self.inst({"argv": ["true"], "stdin": "沒有這個檔.txt"})
-        self.assertEqual(self.aos(self.d).returncode, 126)
+        self.assertEqual(self.aos(self.d).returncode, 125)
 
-    def test_stderr_open_failure_is_126(self):
+    def test_stderr_open_failure_is_125(self):
         self.inst({"argv": ["true"], "stderr": "沒有這個資料夾/err.txt"})
-        self.assertEqual(self.aos(self.d).returncode, 126)
+        self.assertEqual(self.aos(self.d).returncode, 125)
 
-    def test_exit_parent_dir_missing_is_1(self):
+    def test_exit_parent_dir_missing_is_125(self):
         """exit 檔的父目錄不存在＝aos-exec 自己失敗，不 mkdir、也不跑那個指令。"""
         self.inst({"argv": ["sh", "-c", "echo 跑到了 > 證據.txt"],
                    "exit": "沒有這個資料夾/code.txt"})
         r = self.aos(self.d)
-        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("父目錄不存在", r.stderr)
         self.assertFalse(self.exists("證據.txt"))
 
-    def test_cwd_missing_is_126(self):
+    def test_cwd_missing_is_125(self):
+        """連 chdir 都做不到＝那次沒跑成，一樣算 aos-exec 自己失敗。"""
         self.inst({"argv": ["true"], "cwd": "沒有這個資料夾"})
         r = self.aos(self.d)
-        self.assertEqual(r.returncode, 126)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("cwd", r.stderr)
 
     def test_timeout_sigterm_is_143(self):

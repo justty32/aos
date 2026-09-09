@@ -20,6 +20,11 @@
 印 `ok`／`result`；`ok:false` 時退出碼 1。daemon 沒在跑時這些動作不丟檔，直接印
 「daemon 沒在跑」、退出碼 1。`stop` 額外等 daemon 進程真的死掉（上限 10 秒）才回。
 
+**daemon 那邊是「收到了、開始做」就回**（rm 回 `stopping`、restart 回 `restarting`、
+pause 回 `pause_pending`），所以這三個在這裡多等一步：輪詢 `state.json` 直到真的做完
+（上限 10 秒）——rm 等那個 key 消失、restart 等 pid 換成新的且 `state` 是 `running`、
+pause 等 `state` 變 `paused`。等不到就印一句、退出碼 1（daemon 那邊還是會繼續做）。
+
 旗標原樣傳給 aos-run，所以這裡**不用 argparse**（不然 `--max-runs` 之類會被吃掉）：
 只把 `--home H` 從任何位置挑出來，其他通通當成 aos-run 的事。
 """
@@ -28,11 +33,13 @@ import os
 import sys
 import time
 
+from aos_daemon_entry import base_dir
 from aos_home import Home, alive, put_request, resolve_home
 
 CMDS = ("ls", "get", "add", "rm", "restart", "pause", "resume", "stop")
 ASK_TIMEOUT = 10.0      # 等 done/ 出現
 STOP_TIMEOUT = 10.0     # 等 daemon 進程真的死掉
+WAIT_TIMEOUT = 10.0     # 等 rm／restart／pause 真的做完（輪詢 state.json）
 
 
 def _require_alive(home):
@@ -82,15 +89,33 @@ def show(home, only=None):
             print("沒有在跑：%s" % key, file=sys.stderr)
             return 1
         runs = {key: runs[key]}
-    print("DIR  PID  PAUSED  RUNS  LAST_EXIT")
+    print("DIR  PID  STATE  RUNS  LAST_EXIT")
     for k, e in sorted(runs.items()):
-        print("%s  %s  %s  %s  %s" % (k, e.get("pid"), "yes" if e.get("paused") else "no",
+        print("%s  %s  %s  %s  %s" % (k, e.get("pid"), e.get("state"),
                                       e.get("runs"), e.get("last_exit")))
     return 0
 
 
-def ask(home, req):
-    """丟請求、等 `done/` 同名檔冒出來，印 ok／result。`ok:false`＝退出碼 1。"""
+def _runs(home):
+    return (home.state() or {}).get("runs", {})
+
+
+def _wait_for(home, cond, secs=WAIT_TIMEOUT):
+    """輪詢 state.json 直到 cond(runs) 成立——daemon 每做完一件事都會落地一次。"""
+    t0 = time.time()
+    while time.time() - t0 < secs:
+        if cond(_runs(home)):
+            return True
+        time.sleep(0.05)
+    return cond(_runs(home))
+
+
+def ask(home, req, wait=None, done=None, late=None):
+    """丟請求、等 `done/` 同名檔冒出來，印 ok／result。`ok:false`＝退出碼 1。
+
+    `wait` 是一個看 `state.json` 的條件：daemon 只回「開始做了」的那幾個動作（rm／
+    restart／pause）用它再等到真的做完，成立就印 `done` 那句，等不到印 `late`、退出碼 1。
+    """
     if not _require_alive(home):
         return 1
     name = put_request(home, req)
@@ -102,7 +127,15 @@ def ask(home, req):
                 out = json.load(f)
             print("ok=%s result=%s" % (out.get("ok"),
                                        json.dumps(out.get("result"), ensure_ascii=False)))
-            return 0 if out.get("ok") else 1
+            if not out.get("ok"):
+                return 1
+            if wait is None:
+                return 0
+            if _wait_for(home, wait):
+                print(done)
+                return 0
+            print(late, file=sys.stderr)
+            return 1
         time.sleep(0.05)
     print("等不到回應：%s" % donef, file=sys.stderr)
     return 1
@@ -139,16 +172,31 @@ def main(argv=None):
         return 2
     if cmd == "get":
         return show(home, rest[0])
-    if cmd in ("add", "restart"):
+    if cmd == "add":
         return ask(home, {"op": cmd, "target": os.path.abspath(rest[0]), "args": rest[1:]})
-    if cmd == "rm":
+    if cmd == "restart":                    # 等舊的退、新的起來（pid 要換過）
+        key = base_dir(rest[0])
+        old = _runs(home).get(key, {}).get("pid")
+        return ask(home, {"op": cmd, "target": os.path.abspath(rest[0]), "args": rest[1:]},
+                   lambda runs: (key in runs and runs[key].get("pid") != old
+                                 and runs[key].get("state") == "running"),
+                   "restarted %s" % key, "等不到新的那顆起來：%s" % key)
+    if cmd == "rm":                         # 等它從表上消失
         force = "--force" in rest
         d = [a for a in rest if a != "--force"]
         if not d:
             print("rm 要給 DIR", file=sys.stderr)
             return 2
-        return ask(home, {"op": "remove", "dir": os.path.abspath(d[0]), "force": force})
-    return ask(home, {"op": cmd, "dir": os.path.abspath(rest[0])})       # pause／resume
+        key = os.path.realpath(d[0])
+        return ask(home, {"op": "remove", "dir": os.path.abspath(d[0]), "force": force},
+                   lambda runs: key not in runs,
+                   "removed %s" % key, "等不到它退掉，還在表上：%s" % key)
+    if cmd == "pause":                      # 等它睡著（正在跑的那次會先跑完）
+        key = os.path.realpath(rest[0])
+        return ask(home, {"op": cmd, "dir": os.path.abspath(rest[0])},
+                   lambda runs: runs.get(key, {}).get("state") == "paused",
+                   "paused %s" % key, "還在等它睡著：%s" % key)
+    return ask(home, {"op": cmd, "dir": os.path.abspath(rest[0])})       # resume
 
 
 if __name__ == "__main__":

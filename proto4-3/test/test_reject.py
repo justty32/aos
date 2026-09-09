@@ -1,4 +1,4 @@
-"""格式壞掉一律退出碼 1，原因印一行 `aos-exec: <代號>: <白話>` 到 stderr。"""
+"""格式壞掉一律退出碼 125（aos-exec 自己失敗），原因印一行 `aos-exec: <代號>: <白話>`。"""
 import os
 import unittest
 
@@ -10,7 +10,7 @@ class TestReject(ExecCase):
     def bad(self, obj, code):
         self.inst(obj)
         r = self.aos(self.d)
-        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(r.returncode, 125, r.stderr)
         self.assertTrue(r.stderr.startswith("aos-exec: %s: " % code), r.stderr)
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
 
@@ -98,11 +98,11 @@ class TestReject(ExecCase):
         self.assertIn(".aos/inst.json", r.stderr)
 
     @unittest.skipIf(os.geteuid() == 0, "root 讀得到任何檔")
-    def test_unreadable_inst_json_is_1(self):
+    def test_unreadable_inst_json_is_125(self):
         p = self.inst({"argv": ["true"]}, "locked.json")
         os.chmod(p, 0)
         r = self.aos(p)
-        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.returncode, 125)
         self.assertIn("ReadFailed", r.stderr)
 
 if __name__ == "__main__":
