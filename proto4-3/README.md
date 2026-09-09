@@ -1,6 +1,7 @@
-# proto4-3 — aos-exec：單發執行器（Python）
+# proto4-3 — aos-exec：單發執行器＋aos-run：連續執行版（Python）
 
-這是 [proto4 筆記第 11 節](../proto4/notes/2026-09-08-ideas.md)的原型，規格以那一節為準
+這是 [proto4 筆記第 11 節](../proto4/notes/2026-09-08-ideas.md)（aos-exec）與
+[第 12 節](../proto4/notes/2026-09-08-ideas.md)（aos-run）的原型，規格以那兩節為準
 （跟第 10 節衝突的地方都聽第 11 節的）。
 
 ← [proto4-2](../proto4-2/README.md)（inst.json ＋ cpu ＋ daemon ＋ kernel；那一版的
@@ -20,14 +21,14 @@ inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu
    路徑從 `xxx` 起算，不然沒有中心可言。
 4. 環境欄位叫 **`envs`**（寫 `env` ＝未知 key），多一個整個物件層級的 `$opt: clear`。
 
-**「一直跑」不在這裡。** 之後的 aos-run 才是連續執行版，時限與 interval 歸它管；它會直接
-`import aos_exec` 反覆叫 `run_target()`，所以核心就是那一個函式，命令列只是包它。
+**「一直跑」是 aos-run 的事**（往下看那一節）。它就是 `import aos_exec` 反覆叫
+`run_target()`，所以核心就是那一個函式，兩支命令列都只是包它。
 
 ## 怎麼跑
 
 ```sh
 cd proto4-3
-python3 -m unittest discover -s test        # 106 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 125 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 ./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 ./aos-exec /path/to/folder --dir-target my/inst.json
@@ -37,7 +38,11 @@ python3 -m unittest discover -s test        # 106 條測試，真的開進程，
 echo $?                                     # 退出碼就是子行程的結束狀態
 ```
 
-當成函式用（aos-run 之後就是這樣接）：
+```sh
+./aos-run /path/to/folder --interval-ms 5000            # 一直跑，每 5 秒一次
+```
+
+當成函式用（aos-run 就是這樣接的）：
 
 ```python
 import aos_exec
@@ -135,7 +140,7 @@ cwd** 起算。只有 `cwd` 自己從 `xxx` 起算——它是最先解的那一
 `envs` 的清空型式 `{"$opt":"clear","$envs":{…}}` 是**唯一一個**兩個 key 的指示詞物件。
 （代價：這一版沒辦法傳一個真的叫 `$opt` 的環境變數。）
 
-## 退出碼
+## aos-exec 的退出碼
 
 | 退出碼 | 什麼時候 |
 |---|---|
@@ -155,13 +160,102 @@ cwd** 起算。只有 `cwd` 自己從 `xxx` 起算——它是最先解的那一
 **逾時怎麼砍**：先對**整個 process group** 送 SIGTERM，給 2 秒，直接子行程還活著就 SIGKILL
 整個 group（收完屍再補一發，因為直接子行程死了不代表群組空了）。
 
+## aos-run：一直跑同一個目標
+
+```sh
+aos-run xxx [--dir-target REL] [--timeout-ms N] [--interval-ms N] [--from-start]
+            [--max-runs N] [--time-limit-ms N] [--stop-exit CODE]...
+```
+
+[proto4 筆記第 12 節](../proto4/notes/2026-09-08-ideas.md)的原型。**執行那一段完全不重寫**：
+就是反覆叫 `aos_exec.run_target()`，`xxx` 是哪三種目標、退出碼怎麼來，通通照上面 aos-exec
+那幾節。aos-run 只管三件事——下一次什麼時候開始、什麼時候停、跑完印一行。
+
+**時間旗標一律是毫秒整數**，跟 aos-exec 的 `--timeout-ms` 同一個單位。
+
+| 旗標 | 預設 | 意思 |
+|---|---|---|
+| `--dir-target REL` | `.aos/inst.json` | 同 aos-exec，原樣傳給 `run_target()` |
+| `--timeout-ms N` | `0`＝不限 | **每一次**執行的上限，原樣傳給 `run_target()` |
+| `--interval-ms N` | `1000` | 兩次執行之間的間隔 |
+| `--from-start` | 沒有＝從結束算 | 間隔改從上一次**開始**的時刻算 |
+| `--max-runs N` | `0`＝不限 | 跑滿 N 次就停 |
+| `--time-limit-ms N` | `0`＝不限 | 從 aos-run 起跑算的整體時限（**硬的**） |
+| `--stop-exit CODE` | 沒有 | 某一次的退出碼是 CODE 就停，可以給很多次 |
+
+### 間隔從哪裡算
+
+`--interval-ms 5000`、某一次跑了 1.2 秒：
+
+| | 下一次什麼時候開始 |
+|---|---|
+| 預設（從上一次**結束**算） | 第 **6.2** 秒 |
+| `--from-start`（從上一次**開始**算） | 第 **5** 秒 |
+
+`--from-start` 時一次跑超過 interval（例如 interval 5 秒、跑了 7 秒），下一次**立刻**開始，
+**不補跑**錯過的格：下一次的起點是 `max(現在, 上次起點 + interval)`。長跑會慢慢往後漂
+（因為是「上次起點＋interval」不是「起跑＋n×interval」），要對齊格子之後再說。
+
+計時用 `time.monotonic()`，改系統時間不影響。
+
+### 什麼時候停
+
+四個條件，任一成立就停，退出碼都是 **0**：
+
+| 原因 | 什麼時候 |
+|---|---|
+| `max_runs` | 跑滿 `--max-runs N` 次 |
+| `time_limit` | 撞到 `--time-limit-ms`。**硬時限**：正在睡→醒來就退；正在跑→**那次被砍** |
+| `stop_exit` | 某一次的退出碼在 `--stop-exit` 那組裡面 |
+| `signal` | 收到 SIGTERM／SIGINT |
+
+**硬時限怎麼砍正在跑的那次**：不另開執行緒，而是每次呼叫 `run_target()` 時把 `timeout_ms`
+換成 `min(原本的或無限, 剩下的毫秒)`，交給 aos-exec 本來就有的那套砍法（SIGTERM 整個
+process group、2 秒、SIGKILL），所以被砍那次印出來的碼是 143 或 137。
+
+**訊號**：第一次 SIGTERM／SIGINT ＝ 讓正在跑的那次**跑完**再退；第二次**同一個**訊號 ＝
+直接 SIGKILL 掉正在跑的那個 process group 再退。睡覺是小步睡的（0.05 秒一步），所以
+`--interval-ms 5000` 睡到一半也叫得醒，不會不理你五秒。
+
+**`run_target()` 回 1（inst.json 壞掉）不算停止條件**，照 interval 一直試——壞了也活著，
+跟 proto4-2 的 cpu 一樣。要它停就自己寫 `--stop-exit 1`。
+
+### 印什麼、回什麼
+
+不寫檔。每跑完一次，在 **aos-run 自己的 stderr** 印一行（秒數一位小數）：
+
+```
+aos-run: #1 exit=0 0.3s
+aos-run: #2 exit=1 0.0s
+aos-run: stop max_runs
+```
+
+aos-run 自己的退出碼只有兩種：**2**＝用法錯（旗標不認得、沒給 `xxx`、`xxx` 不存在、
+時間／次數旗標是負數）；**0**＝四種停止條件的任何一種。子行程的退出碼只出現在那些
+`#n exit=` 行裡，不會變成 aos-run 的退出碼。
+
+`xxx` 只在起跑前檢查一次；跑到一半被砍掉，之後每次就是 `run_target()` 回 2 的那行，
+迴圈照樣繼續（跟回 1 一樣不算停止條件）。
+
+當成函式用（daemon 之後就是這樣接）：
+
+```python
+import aos_run
+code, reason = aos_run.run_loop("/path/to/folder", interval_ms=5000, max_runs=10,
+                                from_start=True, stop_exits=[1])
+```
+
 ## 檔案
 
 - `aos-exec`：命令列入口，可執行，薄薄一層。
 - `aos_exec.py`：認目標是哪一種、組出要跑的東西、跑一次、砍逾時、寫 exit 檔。核心是
   `run_target(xxx, dir_target=…, timeout_ms=…) -> int`。
 - `aos_inst.py`：inst.json 的讀、驗、解指示詞（格式那一層），從 proto4-2 抄來改的。
-- `test/`：`python3 -m unittest discover -s test`（106 條）。
+- `aos-run`：aos-run 的命令列入口，可執行，一樣薄薄一層。
+- `aos_run.py`：迴圈本體——什麼時候跑下一次、什麼時候停、跑完印一行。核心是
+  `run_loop(xxx, *, dir_target=…, timeout_ms=…, interval_ms=…, from_start=…, max_runs=…,
+  time_limit_ms=…, stop_exits=…, log=…) -> (退出碼, 停止原因)`，之後 daemon 直接 import。
+- `test/`：`python3 -m unittest discover -s test`（125 條）。
 
 ## 沒做什麼
 
@@ -169,11 +263,16 @@ cwd** 起算。只有 `cwd` 自己從 `xxx` 起算——它是最先解的那一
 
 - **沒有覆蓋串流的旗標**。「用 aos-exec 自己的 stdin／stdout／stderr／exit 蓋掉 inst.json
   裡寫的」是後續要做的方便功能，這次不做。
-- **沒有 aos-run**（連續執行版）。interval、跑幾次、整體時限、`.aos/` 的紀錄檔（`last.json`
-  那些）誰寫，全都留給它。
-- **不注入 `AOS_*` 環境變數**（`AOS_DIR`／`AOS_TICK` 都沒有）。要不要有之後撞到再說。
+- **不注入 `AOS_*` 環境變數**（`AOS_DIR`／`AOS_TICK` 都沒有），aos-exec 與 aos-run 都一樣
+  （§8：proc 不需要知道自己被誰、以什麼節奏跑）。要不要有之後撞到再說。
 - **不寫任何紀錄檔**。不抓子行程的輸出、不寫 `last.json`／`runs.jsonl`，`exit` 欄位是唯一
-  會被寫出去的東西。想看輸出就自己寫 `stdout`。
+  會被寫出去的東西。想看輸出就自己寫 `stdout`。aos-run 的每次一行只印在**它自己的 stderr**，
+  落不落檔等整合進 daemon 再說。
+- **整合進 aos-daemon 是之後的事**。aos-run 只是概念驗證：proto4-2 的 `aos_cpu.py`「跑一次」
+  那段要換成這裡的東西、`last.json`／`runs.jsonl`／`cpu.json` 歸誰寫，都還沒動。
+- aos-run **沒有對齊格子**：`--from-start` 是「上次起點＋interval」，不是「起跑＋n×interval」，
+  長跑會慢慢往後漂。
+- aos-run **不重讀自己的旗標**、不吃設定檔、沒有健康檢查、沒有退避（壞掉就是照原速一直試）。
 - `exit` 檔的父目錄不存在就直接失敗（退出碼 1），**不幫忙 mkdir**，那個指令也不會被跑。
 - `$ref` 沒有範圍限制（能不能指到 cwd 外＝行程權限說了算），也沒有深度上限。
 - `$fmt` 只有 `env:` 一個 namespace，沒有路徑變數、沒有預設值語法、沒有跳脫。
