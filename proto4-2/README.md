@@ -1,5 +1,7 @@
 # proto4-2 — inst.json ＋ cpu ＋ daemon ＋ kernel（Python）
 
+> **已作廢（2026-09-09）**：被 [proto4-3](../proto4-3/README.md) 取代（aos-exec／aos-run／aos-daemon／aos-daemon-ctl）。這裡的 inst.json 格式是舊的（還有 `timeout_ms`、stdin 是字串、欄位叫 `env`），程式與測試留著只當參考，不再改。
+
 這是 [proto4 筆記第 7 節](../proto4/notes/2026-09-08-ideas.md)的最簡原型。
 
 ← [proto4-1](../proto4-1/README.md)（那一版 kernel 是「一個進程裡一個 loop，每格 cd 進每個資料夾執行 `./.aos/inst`」）
