@@ -6,7 +6,7 @@
 `xxx` 是什麼決定怎麼跑（proto4 筆記第 11.2 節）：
 
     普通檔案（副檔名不是 .json）  直接執行它，stdin/stdout/stderr 繼承 aos-exec 的
-    .json 檔                     讀進來當 inst.json 解析、執行
+    .json 檔                     讀進來當 inst.json 解析、執行（不存在＝125，見下）
     資料夾                       執行 xxx/<--dir-target>（預設 .aos/inst.json）
 
 「反覆執行」不是這支程式的事，時限也只是命令列旗標——之後的 aos-run 會直接
@@ -41,10 +41,12 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None):
 
     - `"child"`：子程式**真的跑完了一次**——它的結束碼、被訊號 N 砍＝128+N、
       找不到程式＝127、沒執行權＝126。有寫 `exit` 欄位的話寫進去的就是這個碼。
-    - `"aos"`：**aos-exec 自己**失敗，那次根本沒跑——inst.json 讀不到／不是物件／
-      格式壞／指示詞解不開、`exit` 檔的父目錄不存在、`cwd` 不是資料夾、重導向的檔
-      開不起來。code 是 1（命令列會換成 125），不寫 exit 檔。
-    - `"usage"`：用法錯——`xxx` 不存在、`--dir-target` 指的檔不存在。code 是 2。
+    - `"aos"`：**aos-exec 自己**失敗，那次根本沒跑——inst.json 讀不到（`.json` 路徑
+      **不存在也算這種**，不是用法錯：daemon 收一個還沒出現的 inst.json 時靠的就是這條，
+      檔案一出現就自然跑起來）／不是物件／格式壞／指示詞解不開、`exit` 檔的父目錄不存在、
+      `cwd` 不是資料夾、重導向的檔開不起來。code 是 1（命令列會換成 125），不寫 exit 檔。
+    - `"usage"`：用法錯——`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔
+      不存在。code 是 2。
 
     所以 `kind == "child"` ⇔「跑完了一次」⇔ exit 檔有被寫，這條線兩邊都對得起來。
 
@@ -52,15 +54,15 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None):
     None 叫一次。aos-run 靠它在第二次訊號時砍掉正在跑的那個（命令列用不到，預設沒有）。
     """
     p = os.path.abspath(xxx)
-    if not os.path.exists(p):
-        return _err(2, USAGE, "找不到 %s" % xxx)
     if os.path.isdir(p):
         target = os.path.join(p, dir_target)
         if not os.path.isfile(target):
             return _err(2, USAGE, "資料夾 %s 裡沒有 %s" % (p, dir_target))
         return _run_inst(target, p, timeout_ms, on_spawn)
-    if p.endswith(".json"):
+    if p.endswith(".json"):                 # 不存在也走這條：讀不到＝aos 自己失敗（125）
         return _run_inst(p, os.path.dirname(p), timeout_ms, on_spawn)
+    if not os.path.exists(p):
+        return _err(2, USAGE, "找不到 %s" % xxx)
     return _run_plain(p, timeout_ms, on_spawn)
 
 

@@ -5,14 +5,17 @@
 處理完搬到 `H/requests/done/` 同名、內容＝**原請求 ＋ `ok` ＋ `result`**。這一版沒有
 kernel，daemon 自己讀請求。
 
-    {"op":"add",     "target":"/path/to/folder", "args":["--interval-ms","2000"]}
-    {"op":"remove",  "dir":"/path/to/folder", "force":false}
-    {"op":"restart", "target":"/path/to/folder", "args":["--interval-ms","5000"]}
-    {"op":"get",     "dir":"/path/to/folder"}
+    {"op":"add",     "target":"/path/to/inst.json", "args":["--interval-ms","2000"]}
+    {"op":"remove",  "target":"/path/to/inst.json", "force":false}
+    {"op":"restart", "target":"/path/to/inst.json", "args":["--interval-ms","5000"]}
+    {"op":"get",     "target":"/path/to/inst.json"}
     {"op":"ls"}
-    {"op":"pause",   "dir":"/path/to/folder"}
-    {"op":"resume",  "dir":"/path/to/folder"}
+    {"op":"pause",   "target":"/path/to/inst.json"}
+    {"op":"resume",  "target":"/path/to/inst.json"}
     {"op":"stop"}
+
+七個動作的目標欄位一律叫 **`target`**，值是那份 inst.json 的路徑（§15：key＝它的
+realpath；`add`／`restart` 只收 `.json`，`rm`／`get`／`pause`／`resume` 存不存在都查表）。
 
 不認得的 op、缺欄位、壞掉的 JSON ＝ `ok:false`（不是炸掉），一樣有回音。
 """
@@ -31,17 +34,17 @@ def dispatch(dmn, req):
         if op == "add":
             return dmn.add(req["target"], req.get("args") or [])
         if op == "remove":
-            return dmn.remove(req["dir"], bool(req.get("force")))
+            return dmn.remove(req["target"], bool(req.get("force")))
         if op == "restart":
             return dmn.restart(req["target"], req.get("args") or [])
         if op == "get":
-            return dmn.get(req["dir"])
+            return dmn.get(req["target"])
         if op == "ls":
             return dmn.ls()
         if op == "pause":
-            return dmn.pause(req["dir"])
+            return dmn.pause(req["target"])
         if op == "resume":
-            return dmn.resume(req["dir"])
+            return dmn.resume(req["target"])
         if op == "stop":
             dmn.stopping = True
             return True, "收工中"

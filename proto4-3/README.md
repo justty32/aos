@@ -3,7 +3,8 @@
 這是 [proto4 筆記第 11 節](../proto4/notes/2026-09-08-ideas.md)（aos-exec）、
 [第 12 節](../proto4/notes/2026-09-08-ideas.md)（aos-run）與
 [第 13 節](../proto4/notes/2026-09-08-ideas.md)（aos-daemon）的原型，規格以那三節為準
-（跟第 10 節衝突的地方都聽第 11 節的）。
+（跟第 10 節衝突的地方都聽第 11 節的）；第 14 節（拍板的那一輪）與第 15 節（daemon 的
+key 改成 inst.json 的路徑）是後來的修正，衝突時聽新的。
 
 ← [proto4-2](../proto4-2/README.md)（inst.json ＋ cpu ＋ daemon ＋ kernel；那一版的
 inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu 抓回 `last.json`）
@@ -29,7 +30,7 @@ inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu
 
 ```sh
 cd proto4-3
-python3 -m unittest discover -s test        # 165 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 173 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 ./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 ./aos-exec /path/to/folder --dir-target my/inst.json
@@ -43,7 +44,7 @@ echo $?                                     # 子程式的結束狀態；125＝a
 ./aos-run /path/to/folder --interval-ms 5000            # 一直跑，每 5 秒一次
 
 ./aos-daemon &                                          # 普通前台程式，自己丟去背景
-./aos-daemon-ctl add /path/to/folder --interval-ms 5000
+./aos-daemon-ctl add /path/to/inst.json --interval-ms 5000    # daemon 只收 .json 的路徑
 ./aos-daemon-ctl ls
 ```
 
@@ -63,12 +64,16 @@ code, kind = aos_exec.run_target("/path/to/folder", dir_target=".aos/inst.json",
 | `xxx` 是 | 做什麼 | cwd 預設 | 串流 |
 |---|---|---|---|
 | 普通檔案（副檔名不是 `.json`） | 直接執行它：`argv` 就是它的絕對路徑 | 它所在的資料夾 | **繼承** aos-exec 的 |
-| `.json` 檔 | 讀進來當 inst.json 解析、執行 | 那個 `.json` 所在的資料夾 | 照 inst.json |
+| `.json` 檔（**不存在也走這條**） | 讀進來當 inst.json 解析、執行 | 那個 `.json` 所在的資料夾 | 照 inst.json |
 | 資料夾 | 執行 `xxx/.aos/inst.json`（`--dir-target` 可改） | `xxx` 自己 | 照 inst.json |
 
 普通檔案模式什麼都不解析：環境就是繼承的、沒有 exit 檔、沒有重導向。它沒有執行位＝126。
 
 先看是不是資料夾再看副檔名，所以一個名字剛好以 `.json` 結尾的**資料夾**還是照資料夾走。
+
+**一個以 `.json` 結尾但不存在的路徑不是用法錯**，是 aos-exec 自己失敗（`kind=aos`、退出碼
+125）：這樣 aos-daemon 才能收下一份還沒出現的 inst.json，檔案一出現就自然跑起來。不存在
+的**非** `.json` 路徑照舊是用法錯（退出碼 2）。
 
 `--timeout-ms` 三種模式都吃；`0` 或不給＝不限。
 
@@ -176,8 +181,8 @@ key——也就是環境變數名——不能 `$` 開頭，混寫（`{"$ref": "e
 
 | 退出碼 | 什麼時候 |
 |---|---|
-| 2 | 用法錯（旗標不認得、沒給 `xxx`、`--timeout-ms` 是負數）、`xxx` 不存在、`--dir-target` 指的檔不存在 |
-| **125** | **aos-exec 自己失敗**：inst.json 讀不到／不是 JSON 物件／格式壞（未知 key、型別錯、`argv` 空、`envs` 的 key 壞、指示詞壞）／`$env`／`${env:…}` 的變數不存在／`$ref` 讀不到、pointer 壞、繞回來了／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的檔開不起來 |
+| 2 | 用法錯（旗標不認得、沒給 `xxx`、`--timeout-ms` 是負數）、`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔不存在 |
+| **125** | **aos-exec 自己失敗**：inst.json 讀不到（**指名的 `.json` 不存在也算**）／不是 JSON 物件／格式壞（未知 key、型別錯、`argv` 空、`envs` 的 key 壞、指示詞壞）／`$env`／`${env:…}` 的變數不存在／`$ref` 讀不到、pointer 壞、繞回來了／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的檔開不起來 |
 | 126 | 沒執行權 |
 | 127 | 找不到程式 |
 | 143 / 137 | `--timeout-ms` 到了：SIGTERM 就死＝143，要 SIGKILL 才死＝137 |
@@ -246,8 +251,12 @@ stderr 那些 `aos-run: …` 行是**給人看的**，照舊印。`--status-fd N
 ready                                 裝好訊號處理器了、第一次還沒開跑
 start #1                              第 1 次要開跑了
 done #1 exit=0 kind=child 0.3s        第 1 次跑完了（kind 見 aos-exec 那節）
+done #2 exit=125 kind=aos 0.0s        第 2 次：aos-exec 自己失敗（inst.json 壞／沒出現）
 stop max_runs                         停了；然後這個 fd 就關掉
 ```
+
+`kind=aos` 那種的 `exit=` 一律報 **125**（跟 aos-exec 命令列的退出碼同一個數字），所以
+「aos 自己失敗」跟「子程式回 1」在這條流上分得開。
 
 沒給 `--status-fd` 就什麼都不寫。寫失敗（對方把管子關了）＝忽略，不影響執行——回報狀態
 不該把工作弄倒。`ready` 特別重要：daemon 靠它知道「訊號處理器裝好了，現在 SIGSTOP／
@@ -289,18 +298,20 @@ aos-run: #2 exit=1 0.0s
 aos-run: stop max_runs
 ```
 
-那個 `exit=` 是 `run_target()` 回的 code **原樣**（aos-exec 自己失敗就是 1），要分辨是誰的
-碼請看 status-fd 那條的 `kind=`。
+那個 `exit=` 是 `run_target()` 回的 code，只有一個地方不是原樣：**aos-exec 自己失敗
+（`kind=aos`）一律報 125**，跟子程式自己回的 1 分得開。要看是誰的碼就看 status-fd 那條的
+`kind=`。
 
-aos-run 自己的退出碼：**2**＝用法錯（旗標不認得、沒給 `xxx`、`xxx` 不存在、時間／次數
-旗標是負數）；**0**＝`max_runs`／`time_limit`／`stop_exit`／第一次訊號（`signal`）；
+aos-run 自己的退出碼：**2**＝用法錯（旗標不認得、沒給 `xxx`、`xxx` 是不存在的**非**
+`.json` 路徑、時間／次數旗標是負數）；**0**＝`max_runs`／`time_limit`／`stop_exit`／第一次訊號（`signal`）；
 **125**＝`--stop-on-error` 撞到 aos-exec 自己失敗（`error`）；**128+N**＝同一個訊號收到
 第二次（`signal_forced`，正在跑的那次被腰斬）。子行程的退出碼只出現在那些 `#n exit=`
 行裡，不會變成 aos-run 的退出碼。
 
-`xxx` 只在起跑前檢查一次；跑到一半被砍掉，之後每次就是 `run_target()` 回 `kind=usage`
-的那行，迴圈照樣繼續——**`--stop-on-error` 只看 `kind=aos`，不管 `usage`**（資料夾被人
-搬走是外面的事，不是這份 inst.json 壞了）。
+`xxx` 只在起跑前檢查一次，而且**以 `.json` 結尾的路徑連這一次都不查**（不存在就每次回
+`exit=125 kind=aos`，檔案出現了就跑起來——daemon 靠的就是這條）。資料夾跑到一半被搬走，
+之後每次就是 `run_target()` 回 `kind=usage` 的那行，迴圈照樣繼續——**`--stop-on-error`
+只看 `kind=aos`，不管 `usage`**（資料夾被人搬走是外面的事，不是這份 inst.json 壞了）。
 
 當成函式用（daemon 之後就是這樣接）：
 
@@ -310,11 +321,12 @@ code, reason = aos_run.run_loop("/path/to/folder", interval_ms=5000, max_runs=10
                                 from_start=True, status_fd=w, stop_on_error=True)
 ```
 
-## aos-daemon：一個 dict，key＝資料夾，value＝正在跑的 aos-run
+## aos-daemon：一個 dict，key＝一份 inst.json 的路徑，value＝正在跑的 aos-run
 
-[proto4 筆記第 13 節](../proto4/notes/2026-09-08-ideas.md)的原型。**daemon 就是一個常駐
-進程，裡面一個 dict**——key 是資料夾，value 是一個正在跑的 `aos-run` 子進程，一個資料夾
-最多一個。value 是**子進程**不是執行緒，所以進程的事通通交給 Linux：暫停＝SIGSTOP、
+[proto4 筆記第 13 節](../proto4/notes/2026-09-08-ideas.md)的原型（key 那條照
+[第 15 節](../proto4/notes/2026-09-08-ideas.md)改過）。**daemon 就是一個常駐進程，裡面
+一個 dict**——key 是**那份 inst.json 的路徑**，value 是一個正在跑的 `aos-run` 子進程，
+一份 inst.json 最多一個。value 是**子進程**不是執行緒，所以進程的事通通交給 Linux：暫停＝SIGSTOP、
 繼續＝SIGCONT、刪＝SIGTERM。
 
 **`aos-daemon` 是一支普通程式，你自己開著它、自己管它的生死**（要放背景 `aos-daemon &`、
@@ -323,25 +335,35 @@ tmux、systemd 都行，aos 不管）；**`aos-daemon-ctl` 是另一支對它下
 ```sh
 ./aos-daemon &                                               # 普通前台程式，自己丟去背景
 
-./aos-daemon-ctl add /path/to/folder --interval-ms 2000      # 旗標原樣傳給 aos-run
+./aos-daemon-ctl add /path/to/inst.json --interval-ms 2000   # 旗標原樣傳給 aos-run
+./aos-daemon-ctl add /path/to/other.json --interval-ms 500   # 同資料夾第二份＝另一筆
 ./aos-daemon-ctl ls
-./aos-daemon-ctl pause /path/to/folder
-./aos-daemon-ctl resume /path/to/folder
-./aos-daemon-ctl rm /path/to/folder --force
+./aos-daemon-ctl pause /path/to/inst.json
+./aos-daemon-ctl resume /path/to/inst.json
+./aos-daemon-ctl rm /path/to/inst.json --force
 ./aos-daemon-ctl stop                                        # 請 daemon 收工、進程退出
 ```
 
-### key＝目標的基準資料夾
+### key＝那份 inst.json 的路徑
 
-| `TARGET` 是 | key |
+**key 就是那個 `.json` 檔的 realpath**（[§15](../proto4/notes/2026-09-08-ideas.md)），
+所以 symlink、`..`、相對路徑寫法通通算同一筆。同一個 key 第二次 `add`＝`ok:false`、
+**舊的不動**；**同一個資料夾可以掛好幾份不同的 inst.json，各自一支 aos-run**。
+
+| 你給的路徑 | 收不收 |
 |---|---|
-| 資料夾 | 它自己 |
-| `.json` 檔 | 它所在的資料夾 |
-| 普通檔案 | 它所在的資料夾 |
+| `.json` 檔 | **收** |
+| `.json` 路徑但檔案**還不存在** | **收**——aos-run 每次跑回 `exit=125 kind=aos`，檔案出現了就自然跑起來 |
+| 資料夾（連名字叫 `x.json` 的資料夾也是） | 拒絕：「只收 .json 檔，這是資料夾：…」 |
+| 普通檔案（副檔名不是 `.json`） | 拒絕：「只收 .json 檔：…」 |
 
-一律取 realpath，所以 symlink、`..`、尾巴的 `/` 算同一個。同一個 key 第二次 `add`＝
-`ok:false`、**舊的不動**。**不拿 inst.json 裡的 `cwd` 欄位當 key**——那個每次執行都可能
-被改，還可能是 `$ref` 解出來的。
+`add`／`restart` 照上表擋；`rm`／`get`／`pause`／`resume` 不擋，存不存在都照 realpath
+查表（表上有就找得到）。**不拿 inst.json 裡的 `cwd` 欄位當 key**——那個每次執行都可能被
+改，還可能是 `$ref` 解出來的。
+
+`aos-daemon-ctl` 的 `add`／`restart` **不收 `--dir-target`**（那是給資料夾當目標用的，
+這裡的目標一定是一份 `.json`）：寫了就是用法錯、退出碼 2，不會被偷偷吞掉。daemon 開
+aos-run 時也不會加這個旗標。`aos-run`／`aos-exec` 單獨用時照舊有這個旗標。
 
 ### 五個狀態
 
@@ -363,16 +385,16 @@ aos-run，daemon 照樣立刻收下一個請求——只有收工（`stop`）會
 
 | 動作 | 做什麼 | 回什麼 |
 |---|---|---|
-| `add` | 開一個 `aos-run TARGET 旗標… --status-fd N` 子進程（`start_new_session`），記進表 | 那一筆 |
+| `add` | 先擋掉資料夾／非 `.json`，再開一個 `aos-run FILE.json 旗標… --status-fd N` 子進程（`start_new_session`），記進表 | 那一筆 |
 | `remove` | 暫停中的先 SIGCONT → SIGTERM → 標 `stopping`、記 5 秒的 deadline。`force`＝0.2 秒後再補一發 SIGTERM（腰斬，退出碼 143）。過了 deadline 還活著＝SIGKILL 整個 group | `"stopping"` |
 | `restart` | 跟 `remove` 一樣送 SIGTERM，但標 `restarting`、把新旗標存在那一筆上；**收屍時**用新旗標同 key 再 `add`——aos-run 開跑後旗標改不了 | `"restarting"` |
 | `get` | 一筆：`pid`／`target`／`args`／`started_at`／`state`／`ready`／`running`／`runs`／`last_exit`／`last_kind`／`last_line`／`alive` | 那一筆 |
-| `ls` | 全部的 `get`，key 是資料夾 | 整張表 |
+| `ls` | 全部的 `get`，key 是那份 `.json` 的路徑 | 整張表 |
 | `pause` | 標 `pause_pending`；主迴圈每圈看，`ready` 且 `running == False`（在睡覺）才送 SIGSTOP、改 `paused` | `"pause_pending"` 或 `"paused"` |
 | `resume` | `paused`→SIGCONT、改 `running`；`pause_pending`→取消那個等待 | `"running"` |
 
-**pause 不腰斬正在跑的那次**——等 aos-run 說它 `done` 了才停，所以暫停之後那個資料夾是乾淨
-的。代價：`interval` 極短時 SIGSTOP 可能剛好落在下一次開跑之後，那次會跑完才真的停，
+**pause 不腰斬正在跑的那次**——等 aos-run 說它 `done` 了才停，所以暫停之後那份 inst.json
+沒有做到一半的工作。代價：`interval` 極短時 SIGSTOP 可能剛好落在下一次開跑之後，那次會跑完才真的停，
 **不保證從此零次**。已經 `paused`／`pause_pending` 的再 `pause`＝冪等；`stopping`／
 `restarting` 的再 `rm`＝冪等 ok（`restarting` 途中改 `rm` 就不再重開）。
 
@@ -388,13 +410,13 @@ aos-run，daemon 照樣立刻收下一個請求——只有收工（`stop`）會
   **不再從這裡解近況**。
 
 ```
-22:24:49 /tmp/w aos-run: #1 exit=5 0.0s
-22:24:49 /tmp/w aos-run: stop max_runs
-22:24:49 自己退了 /tmp/w pid=223053 exit=0 last=stop max_runs
+22:24:49 /tmp/w/inst.json aos-run: #1 exit=5 0.0s
+22:24:49 /tmp/w/inst.json aos-run: stop max_runs
+22:24:49 自己退了 /tmp/w/inst.json pid=223053 exit=0 last=stop max_runs
 ```
 
 aos-run **自己退了**（`--max-runs` 跑滿、時限到、`--stop-exit`、被別人殺）→ daemon 收屍、
-從表上拿掉、`daemon.log` 記一行。不自動重開；那個資料夾之後可以再 `add`。
+從表上拿掉、`daemon.log` 記一行。不自動重開；那份 inst.json 之後可以再 `add`。
 
 ### 請求格式
 
@@ -403,18 +425,19 @@ daemon 與外面之間只有檔案：寫一個 JSON 到 `H/requests/`（先 `.tm
 `ok` ＋ `result`**。這一版**沒有 kernel**，daemon 自己讀請求。
 
 ```json
-{"op":"add",     "target":"/path/to/folder", "args":["--interval-ms","2000"]}
-{"op":"remove",  "dir":"/path/to/folder", "force":false}
-{"op":"restart", "target":"/path/to/folder", "args":["--interval-ms","5000"]}
-{"op":"get",     "dir":"/path/to/folder"}
+{"op":"add",     "target":"/path/to/inst.json", "args":["--interval-ms","2000"]}
+{"op":"remove",  "target":"/path/to/inst.json", "force":false}
+{"op":"restart", "target":"/path/to/inst.json", "args":["--interval-ms","5000"]}
+{"op":"get",     "target":"/path/to/inst.json"}
 {"op":"ls"}
-{"op":"pause",   "dir":"/path/to/folder"}
-{"op":"resume",  "dir":"/path/to/folder"}
+{"op":"pause",   "target":"/path/to/inst.json"}
+{"op":"resume",  "target":"/path/to/inst.json"}
 {"op":"stop"}
 ```
 
-`dir` 先 realpath 再查表。不認得的 op、缺欄位、`add` 的 target 不存在＝`ok:false`（不是
-炸掉）。`stop`＝daemon 收工：所有 aos-run 送 SIGTERM、等它們退、自己退；daemon 收到
+目標欄位七個動作**一律叫 `target`**（舊的 `dir` 沒了），值是那份 inst.json 的路徑、先
+realpath 再查表。不認得的 op、缺欄位、`add`／`restart` 給了資料夾或非 `.json`＝`ok:false`
+（不是炸掉）；**`add` 的 `.json` 不存在不算錯**，照收。`stop`＝daemon 收工：所有 aos-run 送 SIGTERM、等它們退、自己退；daemon 收到
 **SIGTERM 也一樣**。
 
 ### 家目錄
@@ -434,7 +457,8 @@ H/daemon.log        daemon 自己的話 ＋ 每個 aos-run 的 stderr（原樣�
 
 ```json
 {"pid": 223051, "home": "/tmp/myaos",
- "runs": {"/tmp/w": {"pid": 223053, "target": "/tmp/w", "args": ["--interval-ms","200"],
+ "runs": {"/tmp/w/inst.json": {"pid": 223053, "target": "/tmp/w/inst.json",
+                     "args": ["--interval-ms","200"],
                      "started_at": 1788963889.1, "state": "running", "ready": true,
                      "running": false, "runs": 3, "last_exit": 5, "last_kind": "child",
                      "last_line": "done #3 exit=5 kind=child 0.0s", "alive": true}}}
@@ -452,14 +476,17 @@ SIGTERM／SIGINT（Ctrl-C）或 `aos-daemon-ctl stop` 才收工。家裡已經�
 子命令；要放背景自己 `aos-daemon &`，或交給 tmux／systemd 之類的常駐管理員，aos 不管。
 
 ```sh
-aos-daemon-ctl add TARGET [aos-run 旗標…]|rm DIR [--force]|restart TARGET [旗標…]
-              |get DIR|ls|pause DIR|resume DIR|stop        [--home H]
+aos-daemon-ctl add FILE.json [aos-run 旗標…]|rm FILE.json [--force]
+              |restart FILE.json [旗標…]|get FILE.json|ls
+              |pause FILE.json|resume FILE.json|stop       [--home H]
 ```
+
+**FILE 是一份 inst.json 的路徑**（不是資料夾），`--dir-target` 在這裡是用法錯（退出碼 2）。
 
 | 指令 | 怎麼做的 |
 |---|---|
 | `stop` | 丟 `{"op":"stop"}` 請 daemon 收工，等 `daemon.pid` 的 pid 真的死掉才回（上限 10 秒） |
-| `ls`／`get` | **直接讀 `state.json`** 印表（`DIR PID STATE RUNS LAST_EXIT`），不丟請求、不用等 daemon 回，所以看到的最多是 0.5 秒前的樣子；daemon 沒在跑時照樣印最後一份 state.json，但 stderr 提醒一句 |
+| `ls`／`get` | **直接讀 `state.json`** 印表（`FILE PID STATE RUNS LAST_EXIT`），不丟請求、不用等 daemon 回，所以看到的最多是 0.5 秒前的樣子；daemon 沒在跑時照樣印最後一份 state.json，但 stderr 提醒一句 |
 | `add`／`resume` | 丟請求檔、等 `done/` 出現（上限 10 秒）、印 `ok`／`result`；`ok:false`＝退出碼 1 |
 | `rm`／`restart`／`pause` | 同上，但因為 daemon 是「收到了、開始做」就回，**這裡再多等一步**（見下面） |
 
@@ -469,9 +496,9 @@ aos-daemon-ctl add TARGET [aos-run 旗標…]|rm DIR [--force]|restart TARGET [�
 
 | 指令 | 等到什麼 | 印 | 等不到 |
 |---|---|---|---|
-| `rm DIR` | 那個 key 從表上**消失** | `removed <key>` | 「等不到它退掉，還在表上」、退出碼 1 |
-| `restart TARGET …` | 那個 key 的 `pid` **換成新的**且 `state` 是 `running` | `restarted <key>` | 「等不到新的那顆起來」、退出碼 1 |
-| `pause DIR` | `state` 變成 `paused` | `paused <key>` | 「還在等它睡著」、退出碼 1 |
+| `rm FILE.json` | 那個 key 從表上**消失** | `removed <key>` | 「等不到它退掉，還在表上」、退出碼 1 |
+| `restart FILE.json …` | 那個 key 的 `pid` **換成新的**且 `state` 是 `running` | `restarted <key>` | 「等不到新的那顆起來」、退出碼 1 |
+| `pause FILE.json` | `state` 變成 `paused` | `paused <key>` | 「還在等它睡著」、退出碼 1 |
 
 等不到只是**這支 CLI 不等了**，daemon 那邊該做的還是會做完。
 
@@ -497,7 +524,8 @@ argparse，不然 `--max-runs` 之類會被吃掉）。
   `(ok, result)`、都立刻回，測試可以不開 daemon 進程直接叫）、主迴圈一圈 `tick()`
   （收請求、推狀態機、收屍）、落地與收工。
 - `aos_daemon_entry.py`：表上的**一筆**長什麼樣（`Entry`）＋五個狀態的**狀態機**
-  （`advance()`／`begin_stop()`）＋兩條讀取執行緒（讀 status 更新近況、讀 stderr 進 log）。
+  （`advance()`／`begin_stop()`）＋兩條讀取執行緒（讀 status 更新近況、讀 stderr 進 log）
+  ＋ key 那兩條規則：`key_of()`（那份 `.json` 的 realpath）與 `json_only()`（只收 `.json`）。
 - `aos_daemon_req.py`：**請求檔**那一層——`dispatch()`（一個請求 →`(ok, result)`）與
   `handle_requests()`（掃 `requests/`、處理、搬到 `done/`）。
 - `aos-daemon-ctl`：命令列入口，可執行，薄薄一層，真東西在 `aos_daemon_ctl.py`。
@@ -505,7 +533,10 @@ argparse，不然 `--max-runs` 之類會被吃掉）。
   跑時 `ls`／`get` 讀最後狀態、其他指令直接說「daemon 沒在跑」。
 - `aos_home.py`：家目錄的版面（哪個檔在哪）＋家的優先序（`--home` → `AOS_DAEMON_HOME` →
   `~/.aos-daemon`）＋原子寫檔＋pid 活不活，從 proto4-2 改的。
-- `test/`：`python3 -m unittest discover -s test`（165 條）。
+- `test/`：`python3 -m unittest discover -s test`（173 條）。daemon 的測試分三支：
+  `_daemon.py`（共用基底，底線開頭＝discover 不撿）、`test_daemon.py`（key 與查）、
+  `test_daemon_ops.py`（暫停／刪／restart／請求），另外 `test_daemon_cli.py` 真的開一支
+  daemon 進程走完一輩子。
 
 ## 沒做什麼
 
@@ -535,6 +566,10 @@ aos-daemon 這一版另外沒做的：
 
 - **不自動重開**。aos-run 自己退了（跑滿、時限到、`--stop-exit`、被別人殺）就只是從表上
   消失、`daemon.log` 記一行，不會替你再開一個。
+- **只看副檔名，不看內容**：`add` 只確認「不是資料夾、以 `.json` 結尾」，裡面是不是一份
+  合法的 inst.json 完全不驗——驗那個是 aos-exec 每次跑的事（壞了就每次 `exit=125 kind=aos`）。
+- **不監看檔案出現**：收下一個還不存在的 `.json` 之後，就是照 `--interval-ms` 一直試，
+  沒有 inotify、沒有退避，`runs` 會一直往上加。
 - **暫停中 `--timeout-ms` 不生效**：砍逾時的是 aos-run，它被 SIGSTOP 了就沒人砍，正在跑
   的那個子行程會一直跑下去。要不要讓 daemon 代砍，之後再說。
 - **`pause` 不保證從此零次**：等它睡著才 SIGSTOP，`interval` 極短時那一刀可能剛好落在下一次

@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """aos-daemon-ctl 的命令列：對一個正在跑的 aos-daemon 下指令。
 
-    aos-daemon-ctl add TARGET [aos-run 旗標…]
-    aos-daemon-ctl rm DIR [--force]
-    aos-daemon-ctl restart TARGET [旗標…]
-    aos-daemon-ctl get DIR
+    aos-daemon-ctl add FILE.json [aos-run 旗標…]
+    aos-daemon-ctl rm FILE.json [--force]
+    aos-daemon-ctl restart FILE.json [旗標…]
+    aos-daemon-ctl get FILE.json
     aos-daemon-ctl ls
-    aos-daemon-ctl pause DIR
-    aos-daemon-ctl resume DIR
+    aos-daemon-ctl pause FILE.json
+    aos-daemon-ctl resume FILE.json
     aos-daemon-ctl stop                  [--home H]
+
+**FILE 是一份 inst.json 的路徑**（§15）：key＝它的 realpath，`add`／`restart` 只收副檔名
+`.json`（資料夾、普通檔案一律拒絕），檔案還不存在照收；`rm`／`get`／`pause`／`resume`
+存不存在都照 realpath 查表。`add`／`restart` **不收 `--dir-target`**（那是給資料夾當目標
+用的，這裡的目標一定是 `.json`）——寫了就是用法錯、退出碼 2，不會偷偷吞掉。
 
 家怎麼決定：`--home H` → 環境變數 `AOS_DAEMON_HOME` → 預設 `~/.aos-daemon`，跟
 `aos-daemon` 一樣。
@@ -33,7 +38,7 @@ import os
 import sys
 import time
 
-from aos_daemon_entry import base_dir
+from aos_daemon_entry import key_of
 from aos_home import Home, alive, put_request, resolve_home
 
 CMDS = ("ls", "get", "add", "rm", "restart", "pause", "resume", "stop")
@@ -73,7 +78,7 @@ def _gone(pid, secs):
 
 
 def show(home, only=None):
-    """讀 state.json 印表。`only` 是 `get DIR`（先 realpath 再查）。daemon 沒在跑時
+    """讀 state.json 印表。`only` 是 `get FILE`（先 realpath 再查）。daemon 沒在跑時
     照樣印最後一份 state.json，但 stderr 提醒一句「這是最後的狀態」。
     """
     st = home.state()
@@ -84,12 +89,12 @@ def show(home, only=None):
         print("daemon 沒在跑，這是最後的狀態", file=sys.stderr)
     runs = st.get("runs", {})
     if only is not None:
-        key = os.path.realpath(only)
+        key = key_of(only)
         if key not in runs:
             print("沒有在跑：%s" % key, file=sys.stderr)
             return 1
         runs = {key: runs[key]}
-    print("DIR  PID  STATE  RUNS  LAST_EXIT")
+    print("FILE  PID  STATE  RUNS  LAST_EXIT")
     for k, e in sorted(runs.items()):
         print("%s  %s  %s  %s  %s" % (k, e.get("pid"), e.get("state"),
                                       e.get("runs"), e.get("last_exit")))
@@ -141,6 +146,11 @@ def ask(home, req, wait=None, done=None, late=None):
     return 1
 
 
+def _has_dir_target(args):
+    """`--dir-target` 在 ctl 這裡是用法錯（§15）——daemon 開 aos-run 時不傳這個旗標。"""
+    return any(a == "--dir-target" or a.startswith("--dir-target=") for a in args)
+
+
 def _pop_home(argv):
     """把 `--home H`／`--home=H` 從任何位置挑掉，其他旗標留給 aos-run。"""
     for i, a in enumerate(list(argv)):
@@ -167,15 +177,17 @@ def main(argv=None):
     if cmd == "stop":
         return 0 if stop(home) else 1
     if not rest:
-        print("%s 要給 %s" % (cmd, "TARGET" if cmd in ("add", "restart") else "DIR"),
-              file=sys.stderr)
+        print("%s 要給 FILE（一份 inst.json 的路徑）" % cmd, file=sys.stderr)
+        return 2
+    if cmd in ("add", "restart") and _has_dir_target(rest[1:]):
+        print("add／restart 不收 --dir-target：目標就是那份 .json", file=sys.stderr)
         return 2
     if cmd == "get":
         return show(home, rest[0])
     if cmd == "add":
         return ask(home, {"op": cmd, "target": os.path.abspath(rest[0]), "args": rest[1:]})
     if cmd == "restart":                    # 等舊的退、新的起來（pid 要換過）
-        key = base_dir(rest[0])
+        key = key_of(rest[0])
         old = _runs(home).get(key, {}).get("pid")
         return ask(home, {"op": cmd, "target": os.path.abspath(rest[0]), "args": rest[1:]},
                    lambda runs: (key in runs and runs[key].get("pid") != old
@@ -183,20 +195,20 @@ def main(argv=None):
                    "restarted %s" % key, "等不到新的那顆起來：%s" % key)
     if cmd == "rm":                         # 等它從表上消失
         force = "--force" in rest
-        d = [a for a in rest if a != "--force"]
-        if not d:
-            print("rm 要給 DIR", file=sys.stderr)
+        f = [a for a in rest if a != "--force"]
+        if not f:
+            print("rm 要給 FILE（一份 inst.json 的路徑）", file=sys.stderr)
             return 2
-        key = os.path.realpath(d[0])
-        return ask(home, {"op": "remove", "dir": os.path.abspath(d[0]), "force": force},
+        key = key_of(f[0])
+        return ask(home, {"op": "remove", "target": os.path.abspath(f[0]), "force": force},
                    lambda runs: key not in runs,
                    "removed %s" % key, "等不到它退掉，還在表上：%s" % key)
     if cmd == "pause":                      # 等它睡著（正在跑的那次會先跑完）
-        key = os.path.realpath(rest[0])
-        return ask(home, {"op": cmd, "dir": os.path.abspath(rest[0])},
+        key = key_of(rest[0])
+        return ask(home, {"op": cmd, "target": os.path.abspath(rest[0])},
                    lambda runs: runs.get(key, {}).get("state") == "paused",
                    "paused %s" % key, "還在等它睡著：%s" % key)
-    return ask(home, {"op": cmd, "dir": os.path.abspath(rest[0])})       # resume
+    return ask(home, {"op": cmd, "target": os.path.abspath(rest[0])})    # resume
 
 
 if __name__ == "__main__":

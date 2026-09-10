@@ -115,14 +115,14 @@ class TestStopExit(RunCase):
         self.assertIn("aos-run: stop stop_exit", r.stderr)
 
     def test_broken_inst_does_not_stop(self):
-        """inst.json 壞掉＝run_target 回 1，**不停**，照 interval 一直試。"""
+        """inst.json 壞掉＝aos 自己失敗（報 125），**不停**，照 interval 一直試。"""
         self.inst("{ 這不是 JSON")
         r = self.aos_run(self.d, "--max-runs", 2, "--interval-ms", 50)
         self.assertEqual(r.returncode, 0)
         lines = self.logs(r.stderr)
         self.assertEqual(len(lines), 2)
         for line in lines:
-            self.assertIn("exit=1", line)
+            self.assertIn("exit=125", line)
         self.assertIn("aos-run: stop max_runs", r.stderr)
 
 
