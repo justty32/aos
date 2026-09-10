@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """表上的一筆（entry）＋兩條讀取執行緒＋狀態機——從 `aos_daemon.py` 拆出來的。
 
+key 怎麼算、什麼收得下，也在這裡：`key_of()`（那份 `.json` 的 realpath）與 `json_only()`
+（`add`／`restart` 只收 `.json`）。
+
 一筆 entry ＝ 一個 aos-run 子進程 ＋ 它的近況 ＋ 它現在處在哪個**狀態**。近況不是解
 stderr 來的（那條照舊原樣進 daemon.log），而是讀 aos-run 的 `--status-fd`：
 
@@ -34,14 +37,28 @@ TERM_WAIT = 5.0         # SIGTERM 之後給它多久，還活著就 SIGKILL 整�
 FORCE_GAP = 0.2         # force：兩發 SIGTERM 之間要隔一下，不然會被併成一次
 
 
-def base_dir(target):
-    """key＝目標**基準資料夾**的 realpath：資料夾→它自己；`.json`／普通檔案→它所在的
-    資料夾。symlink、`..`、尾巴的 `/` 算同一個。不拿 inst.json 的 `cwd` 當 key（§13.1）。
+def key_of(target):
+    """key＝那個 `.json` 檔的 realpath（§15）：symlink、`..`、相對路徑算同一個。
+
+    同一個資料夾可以掛好幾個不同的 inst.json，各自一支 aos-run。檔案不存在也照算——
+    realpath 對不存在的路徑一樣給得出答案。不拿 inst.json 的 `cwd` 當 key（那個欄位每次
+    執行都可能被改、還可能是 `$ref` 解出來的）。
+    """
+    return os.path.realpath(os.path.abspath(target))
+
+
+def json_only(target):
+    """`add`／`restart` 只收副檔名 `.json` 的路徑（§15）：收得下回 None，不收回一句話。
+
+    資料夾（連叫 `foo.json` 的資料夾也是）、普通檔案一律拒絕。**不存在照收**——aos-run
+    每次跑會回 125（kind=aos），檔案出現了就自然跑起來。
     """
     p = os.path.abspath(target)
-    if not os.path.isdir(p):
-        p = os.path.dirname(p)
-    return os.path.realpath(p)
+    if os.path.isdir(p):
+        return "只收 .json 檔，這是資料夾：%s" % p
+    if not p.endswith(".json"):
+        return "只收 .json 檔：%s" % p
+    return None
 
 
 class Entry:

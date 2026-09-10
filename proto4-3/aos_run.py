@@ -16,6 +16,9 @@
     done #1 exit=0 kind=child 0.3s         第 1 次跑完了（kind 見 aos_exec）
     stop max_runs                          停了，然後 fd 就關掉
 
+`kind=aos`（aos-exec 自己失敗：inst.json 壞掉、還沒出現）時 `exit` 一律報 **125**，跟
+aos-exec 命令列的退出碼同一個數字，這樣就跟子程式自己回的 1 分得開。
+
 **不寫任何紀錄檔、不注入任何 `AOS_*` 環境變數**，跟 aos-exec 一樣乾淨（proto4 筆記 §12.1）。
 之後整合進 aos-daemon 時，cpu 的「跑一次」那段就是 import 這裡的 `run_loop()`。
 """
@@ -116,7 +119,7 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
     - `install_signals`：接管 SIGTERM／SIGINT。當函式庫用、不想被接管就傳 False。
     - `status_fd`：往這個 fd 寫事件（ready／start／done／stop），None＝不寫。
     - `stop_on_error`：某次 `kind == "aos"`（aos-exec 自己失敗）就停，原因 `error`、
-      退出碼 125。不給就照舊不停。
+      退出碼 125。不給就照舊不停（每次都報 `exit=125 kind=aos`）。
 
     aos-exec 自己失敗（inst.json 壞掉）**預設不停**，照 interval 一直試——壞了也活著，
     要停就 `--stop-on-error`（或老招 `stop_exits`）。
@@ -143,6 +146,8 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
                 return _stop(log, status, "time_limit")   # 剩不到 1 毫秒，那就別開了
             status.emit("start #%d" % (n + 1))
             code, kind = aos_exec.run_target(xxx, dir_target, eff, on_spawn=state.hold)
+            if kind == aos_exec.AOS:
+                code = EXIT_ERROR       # aos-exec 自己失敗一律報 125，跟子程式的碼分得開
             state.child = None
             n += 1
             secs = time.monotonic() - started
@@ -263,9 +268,9 @@ def main(argv=None):
             ap.error("--stop-exit 不能是負數（退出碼不會是負的）")
     if a.status_fd is not None and a.status_fd < 0:
         ap.error("--status-fd 不能是負數")
-    if not os.path.exists(a.xxx):
+    if not os.path.exists(a.xxx) and not a.xxx.endswith(".json"):
         sys.stderr.write("aos-run: 找不到 %s\n" % a.xxx)
-        return 2
+        return 2                # `.json` 不存在照跑：每次回 125（kind=aos），出現了就跑起來
 
     code, _reason = run_loop(a.xxx, dir_target=a.dir_target, timeout_ms=a.timeout_ms,
                              interval_ms=a.interval_ms, from_start=a.from_start,

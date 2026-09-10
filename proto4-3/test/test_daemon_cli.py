@@ -2,7 +2,7 @@
 家在 /tmp，跑完 stop 並清掉。
 
 一條測試走完一輩子：開 daemon→add→ls→get→pause→resume→restart→rm→stop（daemon
-進程真的退出、退出碼 0）。ctl 的 rm／restart／pause **回來時事情已經做完了**（它會輪詢
+進程真的退出、退出碼 0）。目標一律是**一份 inst.json 的路徑**（§15），ctl 的參數是 FILE。ctl 的 rm／restart／pause **回來時事情已經做完了**（它會輪詢
 state.json 等到位），所以這裡不用再 wait_until。
 （`_util.py` 的坑：TestCase 裡別放叫 `run()` 的方法，那是 unittest 自己的。）
 """
@@ -41,12 +41,18 @@ class DaemonCliTest(unittest.TestCase):
         self.tmp = tempfile.mkdtemp(prefix="aos-proto4-3-daemon-")
         self.addCleanup(self.cleanup)
         self.home = Home(os.path.join(self.tmp, "home"))
-        self.work = os.path.join(self.tmp, "work")
-        os.makedirs(os.path.join(self.work, ".aos"))
-        with open(os.path.join(self.work, ".aos", "inst.json"), "w") as f:
-            json.dump({"argv": ["sh", "-c", "exit 0"]}, f)
+        self.dir = os.path.join(self.tmp, "work")
+        os.makedirs(self.dir)
+        self.work = self.json_at("inst.json")           # 目標＝這份 .json 的路徑
         self.key = os.path.realpath(self.work)
         self.proc = None
+
+    def json_at(self, name):
+        """在 work/ 底下寫一份 inst.json，回它的路徑。"""
+        p = os.path.join(self.dir, name)
+        with open(p, "w") as f:
+            json.dump({"argv": ["sh", "-c", "exit 0"]}, f)
+        return p
 
     def spawn(self):
         """真的開一支 `aos-daemon --home H`——它自己不會背景化，這裡測的就是它前台跑著。"""
@@ -96,7 +102,7 @@ class DaemonCliTest(unittest.TestCase):
 
         code, out = self.call("ls")                                  # 還沒有半個
         self.assertEqual(code, 0)
-        self.assertIn("DIR  PID  STATE  RUNS  LAST_EXIT", out)
+        self.assertIn("FILE  PID  STATE  RUNS  LAST_EXIT", out)
         self.assertNotIn(self.key, out)
 
         code, out = self.call("add", self.work, "--interval-ms", "200")
@@ -109,9 +115,9 @@ class DaemonCliTest(unittest.TestCase):
         self.assertTrue(alive(pid))
         code, out = self.call("get", self.work)                      # get 也吃沒 realpath 的寫法
         self.assertEqual((code, self.key in out), (0, True), out)
-        self.assertEqual(self.call("get", os.path.join(self.tmp, "nope"))[0], 1)
+        self.assertEqual(self.call("get", os.path.join(self.tmp, "nope.json"))[0], 1)
 
-        self.assertEqual(self.call("add", self.work)[0], 1)          # 同一個資料夾第二次＝1
+        self.assertEqual(self.call("add", self.work)[0], 1)          # 同一份 .json 第二次＝1
 
         code, out = self.call("pause", self.key)                     # 回來時已經睡著了
         self.assertEqual((code, "paused" in out), (0, True), out)
@@ -144,6 +150,33 @@ class DaemonCliTest(unittest.TestCase):
         with open(self.home.logf, encoding="utf-8") as f:
             self.assertIn("add %s" % self.key, f.read())
 
+    def test_only_json_targets_and_two_of_them_in_one_folder(self):
+        """ctl 這一層的 §15：資料夾／普通檔案拒絕、不存在的 .json 照收、同資料夾兩份各一筆。"""
+        self.spawn()
+        self.assertTrue(wait_until(lambda: self.home.alive()))
+
+        code, out = self.call("add", self.dir, "--interval-ms", "200")   # 資料夾
+        self.assertEqual((code, "只收 .json" in out), (1, True), out)
+        plain = os.path.join(self.dir, "hello.sh")
+        with open(plain, "w") as f:
+            f.write("#!/bin/sh\necho hi\n")
+        code, out = self.call("add", plain, "--interval-ms", "200")      # 普通檔案
+        self.assertEqual((code, "只收 .json" in out), (1, True), out)
+
+        self.assertEqual(self.call("add", self.work, "--interval-ms", "200")[0], 0)
+        other = self.json_at("other.json")                               # 同資料夾第二份
+        self.assertEqual(self.call("add", other, "--interval-ms", "200")[0], 0)
+        later = os.path.join(self.dir, "later.json")                     # 還沒出現的
+        self.assertEqual(self.call("add", later, "--interval-ms", "200")[0], 0)
+        keys = {self.key, os.path.realpath(other), os.path.realpath(later)}
+        self.assertTrue(wait_until(lambda: keys <= set(self.table())))
+        self.assertEqual(len({self.table()[k]["pid"] for k in keys}), 3)  # 三支 aos-run
+        self.assertTrue(wait_until(
+            lambda: self.table()[os.path.realpath(later)]["last_exit"] == 125))
+        self.assertEqual(self.table()[os.path.realpath(later)]["last_kind"], "aos")
+        self.assertEqual(self.call("rm", later)[0], 0)                   # 不存在也 rm 得掉
+        self.assertNotIn(os.path.realpath(later), self.table())
+
     def test_second_daemon_says_already_running(self):
         self.spawn()
         self.assertTrue(wait_until(lambda: self.home.alive()))
@@ -173,7 +206,10 @@ class DaemonCliTest(unittest.TestCase):
         self.assertEqual((code, "沒在跑" in out), (1, True), out)
         self.assertEqual(self.call("ls")[0], 1)                       # 連 state.json 都沒有
         self.assertEqual(self.call("nope")[0], 2)
-        self.assertEqual(self.call("get")[0], 2)                      # get 要給 DIR
+        self.assertEqual(self.call("get")[0], 2)                      # get 要給 FILE
+        code, out = self.call("add", self.work, "--dir-target", "x.json")
+        self.assertEqual((code, "--dir-target" in out), (2, True), out)   # ctl 不收這旗標
+        self.assertEqual(self.call("restart", self.work, "--dir-target=x.json")[0], 2)
 
 
 if __name__ == "__main__":

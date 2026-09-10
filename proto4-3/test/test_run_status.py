@@ -5,6 +5,7 @@ stderr 那些 `aos-run: …` 行是給人看的、照舊；status-fd 是給程�
 （`_util.py` 的坑：TestCase 裡別放叫 `run()` 的方法，那是 unittest 自己的。）
 """
 import os
+import signal
 import subprocess
 import unittest
 
@@ -54,12 +55,37 @@ class TestStatusFd(StatusFdCase):
         self.assertTrue(lines[-2].startswith("done #2 exit=3 kind=child "), lines)
         self.assertEqual(lines[-1], "stop max_runs")
 
-    def test_aos_failures_are_kind_aos(self):
-        """inst.json 壞掉＝aos-exec 自己失敗：kind=aos（exit 還是印 1，那是給人看的）。"""
+    def test_aos_failures_are_kind_aos_and_exit_125(self):
+        """inst.json 壞掉＝aos-exec 自己失敗：kind=aos，exit 報 125（跟子程式的碼分得開）。"""
         self.inst(BROKEN)
-        lines, code, _err = self.statuses(self.d, "--max-runs", 1)
+        lines, code, err = self.statuses(self.d, "--max-runs", 1)
         self.assertEqual(code, 0)
-        self.assertRegex(lines[2], r"^done #1 exit=1 kind=aos ")
+        self.assertRegex(lines[2], r"^done #1 exit=125 kind=aos ")
+        self.assertIn("aos-run: #1 exit=125", err)
+
+    def test_a_json_that_is_not_there_yet_is_kind_aos(self):
+        """`.json` 還沒出現也是 aos 自己失敗（125），不是用法錯——檔案出現就跑起來。"""
+        p = os.path.join(self.d, "later.json")
+        lines, code, _err = self.statuses(p, "--max-runs", 1)
+        self.assertEqual(code, 0)
+        self.assertRegex(lines[2], r"^done #1 exit=125 kind=aos ")
+
+    def test_ready_comes_after_the_signal_handlers_are_installed(self):
+        """`ready` 是「訊號接得住了」的保證：一看到它就 SIGTERM，也是乾淨地退（0）。"""
+        r, w = os.pipe()
+        self.inst({"argv": ["sh", "-c", "exit 0"]})
+        p = subprocess.Popen([PY, RUN, self.d, "--interval-ms", "60000",
+                              "--status-fd", str(w)], pass_fds=(w,),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.addCleanup(_reap, p)
+        os.close(w)
+        f = os.fdopen(r, encoding="utf-8")
+        self.addCleanup(f.close)
+        self.assertEqual(f.readline().rstrip("\n"), "ready")
+        p.send_signal(signal.SIGTERM)               # 裝好了才寫 ready，所以收得住
+        _out, err = p.communicate(timeout=20)
+        self.assertEqual(p.returncode, 0)           # 不是 143（預設處置直接死）
+        self.assertIn("aos-run: stop signal", err)
 
     def test_no_status_fd_writes_nothing(self):
         """沒給 --status-fd 就什麼都不寫（管子開著也一樣，讀到的就是空的）。"""

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""aos-daemon：一個常駐進程，裡面就是一個 dict——key＝資料夾，value＝正在跑的 aos-run。
+"""aos-daemon：一個常駐進程，裡面就是一個 dict——key＝一份 inst.json 的路徑，value＝
+正在跑的 aos-run。
 
-[proto4 筆記第 13 節](../proto4/notes/2026-09-08-ideas.md)的原型。value 是**一個
+[proto4 筆記第 13 節](../proto4/notes/2026-09-08-ideas.md)的原型（key 那條看 §15）。
+**key＝那個 `.json` 檔的 realpath**：`add`／`restart` 只收副檔名 `.json` 的路徑，資料夾與
+普通檔案一律拒絕；檔案還不存在照收（aos-run 每次跑回 125，出現了就跑起來）。同一個資料夾
+可以掛好幾份不同的 inst.json，各自一支 aos-run。value 是**一個
 `aos-run` 子進程**（不是在 daemon 自己進程裡跑 `run_loop`），所以暫停／繼續＝SIGSTOP／
 SIGCONT、刪＝SIGTERM，進程的事交給 Linux 管。
 
@@ -27,7 +31,8 @@ import time
 
 import aos_daemon_req
 from aos_daemon_entry import (PAUSED, PAUSE_PENDING, RESTARTING, RUNNING, STOPPING,
-                              TERM_WAIT, Entry, base_dir, read_status, read_stderr)
+                              TERM_WAIT, Entry, json_only, key_of, read_status,
+                              read_stderr)
 from aos_home import Home, write_json      # noqa: F401  （Home 讓外面 import 這裡就夠）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +45,7 @@ class Daemon:
     def __init__(self, home):
         self.home = home
         self.home.ensure()
-        self.table = {}                 # 資料夾 realpath -> Entry
+        self.table = {}                 # inst.json 的 realpath -> Entry
         self.stopping = False
         self._lock = threading.Lock()   # daemon.log 是好幾條執行緒一起寫的
 
@@ -48,15 +53,17 @@ class Daemon:
     def add(self, target, args=()):
         """開一個 `aos-run <target> <旗標…> --status-fd N` 子進程，記進表。
 
-        status 管子的寫端用 `pass_fds` 交給它，daemon 這邊立刻關掉自己那份（不然讀端
-        永遠等不到 EOF），讀端交給一條執行緒逐行讀。同 key 第二次＝拒絕，舊的不動。
+        target 只收 `.json`（資料夾／普通檔案拒絕），不存在照收。status 管子的寫端用
+        `pass_fds` 交給它，daemon 這邊立刻關掉自己那份（不然讀端永遠等不到 EOF），讀端交給
+        一條執行緒逐行讀。同 key 第二次＝拒絕，舊的不動。
         """
-        key = base_dir(target)
+        bad = json_only(target)
+        if bad:
+            return False, bad
+        key = key_of(target)
         if key in self.table:
             return False, "已經有一個在跑：%s" % key
         target = os.path.abspath(target)
-        if not os.path.exists(target):
-            return False, "找不到 %s" % target
         args = [str(a) for a in args]
         rfd, wfd = os.pipe()
         try:
@@ -76,14 +83,14 @@ class Daemon:
         self.say("add %s pid=%d target=%s args=%s" % (key, p.pid, target, args))
         return True, r.entry()
 
-    def remove(self, d, force=False):
+    def remove(self, f, force=False):
         """送 SIGTERM 就**立刻回** `stopping`：等它退是主迴圈（`advance`／`reap`）的事。
 
         `force`＝0.2 秒後再補一發 SIGTERM（腰斬正在跑的那次，退出碼 143）；5 秒還不退
         ＝SIGKILL 整個 group。已經在收的再 rm＝冪等（restart 收到一半的會改成單純 rm，
-        不再重開）。
+        不再重開）。`f` 是那份 inst.json 的路徑，存不存在都照 realpath 查表。
         """
-        key = os.path.realpath(d)
+        key = key_of(f)
         r = self.table.get(key)
         if r is None:
             return False, "沒有在跑：%s" % key
@@ -99,9 +106,12 @@ class Daemon:
         """換旗標＝請舊的退（SIGTERM），**收屍時**用新旗標同 key 再開一顆。立刻回。
 
         跟舊版的「remove 再 add」比，中間那段空窗這一筆還在表上（狀態 `restarting`），
-        別人趁隙 `add` 會被擋掉。
+        別人趁隙 `add` 會被擋掉。target 跟 `add` 一樣只收 `.json`。
         """
-        key = base_dir(target)
+        bad = json_only(target)
+        if bad:
+            return False, bad
+        key = key_of(target)
         r = self.table.get(key)
         if r is None:
             return False, "沒有在跑：%s" % key
@@ -113,8 +123,8 @@ class Daemon:
             self.say(r.begin_stop(RESTARTING))
         return True, "restarting"
 
-    def get(self, d):
-        key = os.path.realpath(d)
+    def get(self, f):
+        key = key_of(f)
         r = self.table.get(key)
         if r is None:
             return False, "沒有在跑：%s" % key
@@ -123,13 +133,16 @@ class Daemon:
     def ls(self):
         return True, {k: r.entry() for k, r in self.table.items()}
 
-    def pause(self, d):
+    def pause(self, f):
         """標 `pause_pending` 就回：真的 SIGSTOP 要等它睡著，主迴圈盯著。
 
         不打斷正在跑的那次——等 status 說它 `done` 了（`running == False`）才停。已經
         `paused`／`pause_pending` 的再 pause＝冪等。
+
+        **不保證零次**：interval 很短時 SIGSTOP 可能剛好落在下一次開跑之後，那一次會整個
+        跑完才真的停下來。
         """
-        key = os.path.realpath(d)
+        key = key_of(f)
         r = self.table.get(key)
         if r is None:
             return False, "沒有在跑：%s" % key
@@ -140,9 +153,9 @@ class Daemon:
             self.say("pause %s pid=%d（等它睡著）" % (key, r.proc.pid))
         return True, r.state
 
-    def resume(self, d):
+    def resume(self, f):
         """`paused`→SIGCONT；`pause_pending`→取消那個等待。本來就在跑＝冪等。"""
-        key = os.path.realpath(d)
+        key = key_of(f)
         r = self.table.get(key)
         if r is None:
             return False, "沒有在跑：%s" % key
@@ -175,7 +188,7 @@ class Daemon:
         """退掉的（自己退的、被 rm 的、被 restart 的）從表拿掉、log 一行。
 
         `restarting` 的例外：拿掉之後馬上用新旗標同 key 再 `add` 一顆。其餘都不自動重開，
-        那個資料夾之後可以再 `add`。
+        那份 inst.json 之後可以再 `add`。
         """
         for key, r in list(self.table.items()):
             if r.alive():
