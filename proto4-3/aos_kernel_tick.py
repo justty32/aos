@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""kernel 的一回合＝`tick()`：五步，順序固定，做完一律退出 0。
+"""aos-kernel-tick：kernel 的心跳，獨立指令（不吃參數，cwd 就是家）。
+
+    aos-kernel-tick
+
+kernel 每隔一段時間自己跑一次的就是這支（`aos-kernel-init` 寫出的 `inst.json` 指到這裡）
+——跟很久一次的 `aos-kernel-init` 不是同一種壽命，所以也拆成自己的指令
+（[proto4 筆記 §19.7](../proto4/notes/2026-09-08-ideas.md)）。核心是 `tick()`：五步，
+順序固定，做完一律退出 0。
 
 1. **讀自己的表**（`state.json`，沒有＝空表）。
 2. **點 cpu**：讀 daemon 的 `state.json`（直接讀檔，不開 ctl 進程），看 `cpus/<n>.json`
@@ -22,7 +29,7 @@ import sys
 import time
 
 import aos_home
-from aos_kernel import CTL_BIN, IDLE_INST
+from aos_kernel import CTL_BIN, IDLE_INST, here_or_die
 
 
 def tick(h, cfg, now=None):
@@ -173,3 +180,22 @@ def _swap(h, st, queue, notes, now, n, runs_now, old):
     queue.append(old)                           # 換下來的排隊尾
     st["cpus"][str(n)] = {"pid": nxt, "since": now, "runs_at": runs_now}
     notes.append("cpu%d 換人 %s→%s" % (n, old, nxt))
+
+
+def cmd_tick(argv):
+    if argv:
+        sys.stderr.write("aos-kernel-tick: 不吃參數（cwd 就是家）\n")
+        return 2
+    h, cfg = here_or_die("aos-kernel-tick")
+    if h is None:
+        return 1
+    return tick(h, cfg)
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    return cmd_tick(argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

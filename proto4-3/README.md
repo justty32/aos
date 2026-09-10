@@ -30,7 +30,7 @@ inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu
 
 ```sh
 cd proto4-3
-python3 -m unittest discover -s test        # 183 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 185 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 ./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 ./aos-exec /path/to/folder --dir-target my/inst.json
@@ -47,7 +47,7 @@ echo $?                                     # 子程式的結束狀態；125＝a
 ./aos-daemon-ctl add /path/to/inst.json --interval-ms 5000    # daemon 只收 .json 的路徑
 ./aos-daemon-ctl ls
 
-./aos-kernel init K --ncpu 2                            # 排程的家；開機順序往下看
+./aos-kernel-init K --ncpu 2                            # 排程的家；開機順序往下看
 ./aos-daemon-ctl add K/inst.json --interval-ms 1000
 ```
 
@@ -519,12 +519,12 @@ argparse，不然 `--max-runs` 之類會被吃掉）。
 - **kernel ＝第一個程序**。它是**唯一**會叫 `aos-daemon-ctl` 的人（cpu 的存在與使用權），
   也是**唯一**會改 cpu 那份 inst.json 的人（cpu 下一次去跑誰）。
 - kernel 自己也是被 daemon 跑著的一個 proc：它的家裡有一份 `inst.json`，使用者手動
-  `ctl add` 它＝**上電**，之後 kernel 每隔一段時間自己跑一次 `aos-kernel tick`。
+  `ctl add` 它＝**上電**，之後 kernel 每隔一段時間自己跑一次 `aos-kernel-tick`。
 
 ### 家長什麼樣
 
 ```
-K/inst.json         kernel 自己那顆 cpu 的指令：{"argv":["…/aos-kernel","tick"],"cwd":"."}
+K/inst.json         kernel 自己那顆 cpu 的指令：{"argv":["…/aos-kernel-tick"],"cwd":"."}
 K/config.json       {"ncpu":2,"interval_ms":1000,"timeout_ms":0,"quantum":5}
 K/procs/<pid>.json  就緒佇列：等著上 cpu 的行程，檔名去掉 .json ＝ pid
 K/procs/bad/        退件（不是 JSON 物件／沒有 argv／沒寫 cwd 的都搬來這裡）
@@ -533,26 +533,34 @@ K/state.json        kernel 自己的表：cpu n → pid、上去的時間、上�
 K/kernel.log        每回合 append 一行
 ```
 
-`init` 寫進 `inst.json` 的 `argv[0]` 是 **`aos-kernel` 的絕對路徑**——daemon→aos-run→
-aos-exec 的 PATH 是使用者開 daemon 時那一份，未必找得到 proto4-3；寫死絕對路徑就不用管
-PATH。串流三條都不寫（aos-exec 開 `stdout` 是清空重寫，當不了 log，要看流水帳就看
-`kernel.log`）；`envs` 也不寫，`AOS_DAEMON_HOME` 從 daemon 一路繼承下來。
+`aos-kernel-init` 寫進 `inst.json` 的 `argv[0]` 是 **`aos-kernel-tick` 的絕對路徑**——
+daemon→aos-run→aos-exec 的 PATH 是使用者開 daemon 時那一份，未必找得到 proto4-3；寫死絕對
+路徑就不用管 PATH。串流三條都不寫（aos-exec 開 `stdout` 是清空重寫，當不了 log，要看流水帳
+就看 `kernel.log`）；`envs` 也不寫，`AOS_DAEMON_HOME` 從 daemon 一路繼承下來。
 
-### 三個子命令
+### 指令：一支系列，各管各的壽命
+
+`init`（重灌作業系統、很久一次）跟 `tick`（心跳、每回合）不是同一種壽命的東西，`ls`
+（給人看）也不是心跳的一部分，所以三個都是各自獨立的指令，不擠在一支程式的子命令裡
+（[proto4 筆記 §19.4／§19.7](../proto4/notes/2026-09-08-ideas.md)）：
 
 ```sh
-aos-kernel init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q]
-aos-kernel tick        # 在家裡（cwd ＝ K）跑一回合
-aos-kernel ls          # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
+aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q]
+aos-kernel-tick         # 心跳：在家裡（cwd ＝ K）跑一回合，不吃參數
+aos-kernel ls           # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
 ```
 
-| 子命令 | 做什麼 | 退出碼 |
+| 指令 | 做什麼 | 退出碼 |
 |---|---|---|
-| `init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5，單位是「cpu 跑了幾次」） | 0；**DIR 已經存在＝1**（不動它） |
-| `tick` | 跑一回合，見下面五步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
-| `ls` | 讀 `state.json` ＋ daemon 的 `state.json` 印表 | 0；不是家＝1 |
+| `aos-kernel-init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5，單位是「cpu 跑了幾次」） | 0；**DIR 已經存在＝1**（不動它） |
+| `aos-kernel-tick` | 跑一回合，見下面五步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
+| `aos-kernel ls` | 讀 `state.json` ＋ daemon 的 `state.json` 印表；目前 `aos-kernel` 只剩這一個子命令 | 0；不是家＝1 |
 
-### tick 每回合五步（順序固定）
+`aos-kernel init`／`aos-kernel tick`（舊的子命令）都拿掉了：退出碼 2，stderr 提示改用
+`aos-kernel-init`／`aos-kernel-tick`。以後 `aos-kernel-boot`（§19.3，一條指令做完「開
+daemon → kernel init → ctl add kernel 的 inst.json」）也會是同一系列的獨立指令。
+
+### aos-kernel-tick 每回合五步（順序固定）
 
 1. **讀自己的表**（`state.json`，沒有＝空表）。
 2. **點 cpu**：直接讀 daemon 的 `state.json`（不開 ctl 進程），看 `cpus/0.json`…
@@ -594,8 +602,8 @@ aos-kernel ls          # 印給人看：每顆 cpu 上是誰、上去多久、�
 
 ```sh
 ./aos-daemon &                                          # 硬體上電
-./aos-kernel init K --ncpu 2 --interval-ms 1000 --quantum 5
-./aos-daemon-ctl add K/inst.json --interval-ms 1000     # 插上第一顆 cpu ＝ 跑 kernel
+./aos-kernel-init K --ncpu 2 --interval-ms 1000 --quantum 5
+./aos-daemon-ctl add K/inst.json --interval-ms 1000     # 插上第一顆 cpu ＝ 跑 aos-kernel-tick
 cp my-proc.json K/procs/3.json                          # 把行程丟進就緒佇列（cwd 要寫死）
 ./aos-kernel ls                                         # 看誰在哪顆 cpu 上（cd K 再跑）
 ```
@@ -643,13 +651,21 @@ cp my-proc.json K/procs/3.json                          # 把行程丟進就緒�
 - `aos_daemon_ctl.py`：對 daemon 下指令——丟請求等回音、讀 `state.json` 印表；daemon 沒在
   跑時 `ls`／`get` 讀最後狀態、其他指令直接說「daemon 沒在跑」。
 - `aos-kernel`：命令列入口，可執行，薄薄一層，真東西在 `aos_kernel.py`。
-- `aos_kernel.py`：家的版面（`KHome`：哪個檔在哪、讀寫 config／state／log）＋三個子命令
-  （`init`／`tick`／`ls`）。
-- `aos_kernel_tick.py`：一回合那五步——點 cpu（`poll_cpus`／`ctl_add`）、檢查佇列
-  （`check_queue`／`bad_reason`）、排程（`schedule`／`_take`／`_swap`，硬連結＋rename 那招）。
+- `aos_kernel.py`：家的版面（`KHome`：哪個檔在哪、讀寫 config／state／log，`here_or_die()`
+  共用）＋剩下的唯一子命令 `ls`。`init`／`tick` 都拿掉了，被人叫到只回退出碼 2、提示改用
+  `aos-kernel-init`／`aos-kernel-tick`。
+- `aos-kernel-init`：命令列入口，可執行，薄薄一層，真東西在 `aos_kernel_init.py`。
+- `aos_kernel_init.py`：`init` 本體——建家與四個檔（`inst.json`／`config.json`／
+  `state.json`／`kernel.log`／`procs/`／`cpus/`），從 `aos_kernel.py` 拆出來的獨立指令
+  （§19.4：重灌作業系統跟每回合跑的心跳／給人看的 ls 不是同一種壽命），共用
+  `aos_kernel.KHome`。
+- `aos-kernel-tick`：命令列入口，可執行，薄薄一層，真東西在 `aos_kernel_tick.py`。
+- `aos_kernel_tick.py`：心跳本體——一回合那五步：點 cpu（`poll_cpus`／`ctl_add`）、檢查佇列
+  （`check_queue`／`bad_reason`）、排程（`schedule`／`_take`／`_swap`，硬連結＋rename 那招），
+  也是從 `aos_kernel.py` 拆出來的獨立指令（§19.7），共用 `aos_kernel.here_or_die()`。
 - `aos_home.py`：家目錄的版面（哪個檔在哪）＋家的優先序（`--home` → `AOS_DAEMON_HOME` →
   `~/.aos-daemon`）＋原子寫檔＋pid 活不活，從 proto4-2 改的。
-- `test/`：`python3 -m unittest discover -s test`（183 條）。kernel 的在
+- `test/`：`python3 -m unittest discover -s test`（185 條）。kernel 的在
   `test_kernel.py`（真的開一支 daemon ＋ 真的跑 aos-kernel）。daemon 的測試分三支：
   `_daemon.py`（共用基底，底線開頭＝discover 不撿）、`test_daemon.py`（key 與查）、
   `test_daemon_ops.py`（暫停／刪／restart／請求），另外 `test_daemon_cli.py` 真的開一支
