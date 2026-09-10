@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""aos-kernel-tick 的命令列入口——薄薄一層，真東西在 aos_kernel_tick.py。"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import aos_kernel_tick
+
+if __name__ == "__main__":
+    sys.exit(aos_kernel_tick.main())

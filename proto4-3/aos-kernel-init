@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""aos-kernel-init 的命令列入口——薄薄一層，真東西在 aos_kernel_init.py。"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import aos_kernel_init
+
+if __name__ == "__main__":
+    sys.exit(aos_kernel_init.main())

@@ -1,7 +1,9 @@
-"""aos-kernel：真的開一支 aos-daemon（家在 /tmp、走 `AOS_DAEMON_HOME`）＋真的跑 aos-kernel。
+"""aos-kernel：真的開一支 aos-daemon（家在 /tmp、走 `AOS_DAEMON_HOME`）＋真的跑
+aos-kernel-init／aos-kernel-tick／aos-kernel（現在只剩 ls）。
 
-init 建家、tick 把 N 顆 cpu 插上 daemon、三個行程在兩顆 cpu 上輪流、沒寫 cwd 的退件、
-cpu 被 `ctl rm` 掉下一回合補回、換人時 `cpus/n.json` 不留空窗、kernel 被 daemon 自己跑。
+`aos-kernel-init` 建家、`aos-kernel-tick` 把 N 顆 cpu 插上 daemon、三個行程在兩顆 cpu 上
+輪流、沒寫 cwd 的退件、cpu 被 `ctl rm` 掉下一回合補回、換人時 `cpus/n.json` 不留空窗、
+kernel 被 daemon 自己跑（走的就是 `aos-kernel-init` 寫進 `inst.json` 的 `aos-kernel-tick`）。
 每條測試跑完 kill daemon、刪家，不留孤兒。
 （`_util.py` 的坑：TestCase 裡別放叫 `run()` 的方法，那是 unittest 自己的。）
 """
@@ -21,6 +23,8 @@ from aos_home import Home, alive
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 KERNEL_BIN = os.path.join(ROOT, "aos-kernel")
+INIT_BIN = os.path.join(ROOT, "aos-kernel-init")
+TICK_BIN = os.path.join(ROOT, "aos-kernel-tick")
 DAEMON_BIN = os.path.join(ROOT, "aos-daemon")
 CTL_BIN = os.path.join(ROOT, "aos-daemon-ctl")
 
@@ -80,16 +84,25 @@ class KernelTest(unittest.TestCase):
         return subprocess.run([sys.executable, CTL_BIN] + [str(a) for a in args],
                               env=self.env, capture_output=True, text=True, timeout=30)
 
+    def kernel_init(self, *args):
+        return subprocess.run([sys.executable, INIT_BIN] + [str(a) for a in args],
+                              env=self.env, capture_output=True, text=True, timeout=30)
+
+    def kernel_tick(self, *args, cwd=None):
+        return subprocess.run([sys.executable, TICK_BIN] + [str(a) for a in args],
+                              env=self.env, cwd=cwd, capture_output=True, text=True,
+                              timeout=60)
+
     def init(self, ncpu=2, **kw):
-        args = ["init", self.k, "--ncpu", ncpu]
+        args = [self.k, "--ncpu", ncpu]
         for flag, v in kw.items():
             args += ["--" + flag.replace("_", "-"), v]
-        r = self.kernel(*args)
+        r = self.kernel_init(*args)
         self.assertEqual(r.returncode, 0, r.stderr)
         return r
 
     def tick(self):
-        r = self.kernel("tick", cwd=self.k)
+        r = self.kernel_tick(cwd=self.k)
         self.assertEqual(r.returncode, 0, r.stderr)
         return r
 
@@ -134,7 +147,7 @@ class KernelInitTest(KernelTest):
             self.assertTrue(os.path.exists(self.at(rel)), rel)
         with open(self.at("inst.json"), encoding="utf-8") as f:
             inst = json.load(f)
-        self.assertEqual(inst, {"argv": [KERNEL_BIN, "tick"], "cwd": "."})
+        self.assertEqual(inst, {"argv": [TICK_BIN], "cwd": "."})
         with open(self.at("config.json"), encoding="utf-8") as f:
             self.assertEqual(json.load(f), {"ncpu": 2, "interval_ms": 100,
                                             "timeout_ms": 500, "quantum": 3})
@@ -142,11 +155,25 @@ class KernelInitTest(KernelTest):
 
     def test_init_refuses_a_dir_that_is_already_there(self):
         self.init(1)
-        r = self.kernel("init", self.k, "--ncpu", 1)
+        r = self.kernel_init(self.k, "--ncpu", 1)
         self.assertEqual((r.returncode, "已經有這個資料夾" in r.stderr), (1, True), r.stderr)
 
+    def test_kernel_init_subcommand_is_gone(self):
+        """init 拆成獨立指令 aos-kernel-init 之後，aos-kernel init 要退出碼 2、提示改路。"""
+        r = self.kernel("init", self.k, "--ncpu", 1)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("aos-kernel-init", r.stderr)
+        self.assertFalse(os.path.exists(self.k))
+
+    def test_kernel_tick_subcommand_is_gone(self):
+        """tick 拆成獨立指令 aos-kernel-tick 之後，aos-kernel tick 要退出碼 2、提示改路。"""
+        self.init(1)
+        r = self.kernel("tick", cwd=self.k)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("aos-kernel-tick", r.stderr)
+
     def test_tick_and_ls_need_to_be_in_a_home(self):
-        r = self.kernel("tick", cwd=self.tmp)
+        r = self.kernel_tick(cwd=self.tmp)
         self.assertEqual((r.returncode, "config.json" in r.stderr), (1, True), r.stderr)
         self.assertEqual(self.kernel("ls", cwd=self.tmp).returncode, 1)
         self.assertEqual(self.kernel("nope").returncode, 2)
