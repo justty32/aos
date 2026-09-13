@@ -183,11 +183,11 @@ process 型 endpoint、agent／工具與 MCP；也沒有多個 tick 同時跑的
 
 ## 測試與出處
 
-測試只打 `127.0.0.1` 的臨時假 server：
+測試檔在 `test/`，只打 `127.0.0.1` 的臨時假 server；從 repo 根目錄跑：
 
 ```sh
 cd proto4-5
-python3 -m unittest discover -s test
+python -m unittest discover -s test
 ```
 
 兩層裁決與第一層規格見 [`proto4/notes/22-llm-cpu.md`](../proto4/notes/22-llm-cpu.md)

@@ -141,7 +141,14 @@ aos-daemon 這一版另外沒做的：
   輸入輸出檔、工作目錄與環境變數值，全都用你的憑證跑。能改它的人就等於能用你的身分執行
   任意程式碼。
 
-## 出處
+## 測試與出處
+
+測試檔在 `test/`；從 repo 根目錄跑：
+
+```sh
+cd proto4-3
+python -m unittest discover -s test
+```
 
 這是 [proto4 筆記第 11～15 節](../proto4/notes/2026-09-08-ideas.md)（aos-exec、aos-run、
 aos-daemon）與 [第 16～19 節](../proto4/notes/2026-09-08-ideas.md)（kernel）的原型；後面的

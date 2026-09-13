@@ -17,10 +17,11 @@ SIGCONT、刪＝SIGTERM，進程的事交給 Linux 管。
 近況（`ready`／`running`／`runs`／`last_exit`／`last_kind`）從 aos-run 的 `--status-fd`
 讀，**不再解 stderr**；stderr 照舊接管子、原樣（前面加 key）進 `daemon.log`。
 
-三個檔分工：這裡是本體（那個 dict、七個動作、主迴圈、收屍、收工）、一筆長什麼樣與狀態機
-在 `aos_daemon_entry.py`、請求檔那一層在 `aos_daemon_req.py`；命令列入口是 `aos-daemon`
-（前台程式，不背景化），下指令的是 `aos_daemon_ctl.py`。七個動作都是 `Daemon` 的方法、
-都回 `(ok, result)`，所以測試可以不開 daemon 進程直接叫。
+四個檔分工：這裡是本體（那個 dict、七個動作、推狀態機、收屍），前台主迴圈、落地與收工在
+`aos_daemon_lifecycle.py`，一筆長什麼樣與狀態機在 `aos_daemon_entry.py`、請求檔那一層在
+`aos_daemon_req.py`；命令列入口是 `aos-daemon`（前台程式，不背景化），下指令的是
+`aos_daemon_ctl.py`。七個動作都是 `Daemon` 的方法、都回 `(ok, result)`，所以測試可以不開
+daemon 進程直接叫。
 """
 import os
 import signal
@@ -30,6 +31,7 @@ import threading
 import time
 
 import aos_daemon_req
+from aos_daemon_lifecycle import SAVE, TICK, _Lifecycle
 from aos_daemon_entry import (PAUSED, PAUSE_PENDING, RESTARTING, RUNNING, STOPPING,
                               TERM_WAIT, Entry, json_only, key_of, read_status,
                               read_stderr)
@@ -37,11 +39,7 @@ from aos_home import Home, write_json      # noqa: F401  （Home 讓外面 impor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RUN = os.path.join(HERE, "aos-run")
-TICK = 0.2              # 主迴圈：多久跑一圈（掃 requests/、推狀態機、收屍）
-SAVE = 0.5              # 多久寫一次 state.json
-
-
-class Daemon:
+class Daemon(_Lifecycle):
     def __init__(self, home):
         self.home = home
         self.home.ensure()
@@ -208,72 +206,6 @@ class Daemon:
         self.handle_requests()
         self.advance()
         self.reap()
-
-    def save(self):
-        write_json(self.home.statef, {"pid": os.getpid(), "home": self.home.dir,
-                                      "runs": {k: r.entry() for k, r in self.table.items()}})
-
-    def serve(self):
-        """前台跑到收工為止（背景化是 CLI 的事）。SIGTERM＝跟 `{"op":"stop"}` 一樣。"""
-        with open(self.home.pidf, "w") as f:
-            f.write(str(os.getpid()))
-        for s in (signal.SIGTERM, signal.SIGINT):
-            signal.signal(s, lambda *_: setattr(self, "stopping", True))
-        self.say("起來了 pid=%d home=%s" % (os.getpid(), self.home.dir))
-        self.save()
-        last = 0.0
-        try:
-            while not self.stopping:
-                self.tick()
-                if time.monotonic() - last >= SAVE:
-                    self.save()
-                    last = time.monotonic()
-                t0 = time.monotonic()
-                while time.monotonic() - t0 < TICK and not self.stopping:
-                    time.sleep(0.02)
-        finally:
-            self.shutdown()
-
-    def shutdown(self):
-        """收工：全部 SIGCONT＋SIGTERM，同步等（上限 5 秒），還活著就 SIGKILL 整個 group。
-
-        **這裡可以卡**——收工就是要等大家走乾淨，跟「主迴圈不等人」是兩件事。
-        """
-        self.say("收工中：%d 個 aos-run 送 SIGTERM" % len(self.table))
-        for r in self.table.values():
-            r.sig(signal.SIGCONT)                       # 暫停中的要先叫醒才收得到
-            r.sig(signal.SIGTERM)
-        t0 = time.monotonic()
-        while time.monotonic() - t0 < TERM_WAIT:
-            if all(not r.alive() for r in self.table.values()):
-                break
-            time.sleep(0.02)
-        for key, r in list(self.table.items()):
-            if r.alive():
-                r.killpg()
-                try:
-                    r.proc.wait(timeout=2.0)
-                except subprocess.TimeoutExpired:
-                    pass
-            r.join()
-            self.say("收工帶走 %s pid=%d exit=%s last=%s"
-                     % (key, r.proc.pid, r.code(), r.last_line))
-        self.table.clear()
-        for f in (self.home.statef, self.home.pidf):
-            try:
-                os.remove(f)
-            except OSError:
-                pass
-        self.say("收工了 pid=%d" % os.getpid())
-
-    def say(self, s):
-        with self._lock:
-            try:
-                with open(self.home.logf, "a", encoding="utf-8") as f:
-                    f.write("%s %s\n" % (time.strftime("%H:%M:%S"), s))
-            except OSError:
-                pass
-
 
 def _thread(fn, *args):
     t = threading.Thread(target=fn, args=args, daemon=True)

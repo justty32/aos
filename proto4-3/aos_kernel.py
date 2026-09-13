@@ -7,7 +7,7 @@
 
 `init`（重灌，很久一次）與 `tick`（心跳，每回合）都拆成自己的獨立指令了：
 `aos-kernel-init`（見 `aos_kernel_init.py`）與 `aos-kernel-tick`（見
-`aos_kernel_tick.py`）。`aos-kernel` 這支只剩 `ls`——給人看的、不是心跳的一部分
+`aos_kernel_tick.py`）。`aos-kernel` 這支是給人用的：`ls`／`add`／`rm` 與 module 的子命令，不是心跳的一部分
 （[proto4 筆記 §19.4／§19.7](../proto4/notes/2026-09-08-ideas.md)）。
 
 [proto4 筆記第 18 節](../proto4/notes/2026-09-08-ideas.md)的原型。**硬體是 daemon**
