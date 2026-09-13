@@ -7,10 +7,12 @@
 ```sh
 cd ~/repo/simple_tools/aos
 source playground/env.sh      # 把指令放進 PATH、決定遊樂場和 daemon 的家在哪
-playground/up.sh              # 上電（daemon）、開機（kernel，掛好 LLM 排程）、鋪六站的檔案
+play-up                       # 上電（daemon）、開機（kernel，掛好 LLM 排程）、鋪六站的檔案
 ```
 
-`up.sh` 最後會印一張 `aos-kernel ls` 的表：兩顆 cpu 都 idle、最後一行 `llm:` 是 LLM 排程的狀態。看到就成功了。重複跑沒關係，它每一步都會先看有沒有做過。
+東西預設放 `~/aos-play/`，想換位置就在 `source` 之前 `export AOS_PLAY=/別的地方`（兩個人同一台機器各玩各的就靠這個）。
+
+`play-up` 最後會印一張 `aos-kernel ls` 的表：兩顆 cpu 都 idle、最後一行 `llm:` 是 LLM 排程的狀態。看到就成功了。重複跑沒關係，它每一步都會先看有沒有做過。
 
 LM Studio 要開著、載一顆模型（`lms load google/gemma-4-e4b`）。沒開的話第 1、3、4、5、6 站會失敗，第 2 站照玩。
 
@@ -20,6 +22,7 @@ LM Studio 要開著、載一顆模型（`lms load google/gemma-4-e4b`）。沒�
 aos-kernel ls $K              # 誰在哪顆 cpu、跑了幾次、上次退出碼、在等嗎、LLM 排隊幾張
 aos-daemon-ctl ls             # 硬體層：daemon 活著嗎、掛了哪些 inst
 tail -f $K/kernel.log         # kernel 每回合的流水帳
+aos-step-json prog.json --status | jq '{pc,done,waiting}'   # 任何一支逐步程式的進度摘要（py／lua 同）
 ```
 
 ## 第 1 站：問本機模型一句話（同步，不經 kernel）
@@ -31,7 +34,7 @@ aos-llm call endpoint.json request.json result.json
 jq -r .text result.json                            # 只看回答
 ```
 
-玩法：改 `request.json` 的問題再叫一次。五站的請求都沒設 `max_tokens`，因為 gemma-4 會先「想」一段（`usage.reasoning`，隨便一句話也想三四百字），想的字數也算在額度裡；設了小額度 `text` 就是空的、`finish_reason` 是 `length`。把 `endpoint.json` 的 `model` 故意打錯再叫，看它 4 毫秒就擋下來、不花 token（`error.kind` 是 `model_not_found`）。
+玩法：改 `request.json` 的問題再叫一次。要限制長度要寫在 `params` 裡（`"params": {"max_tokens": 500}`，寫在最外層會被忽略）；六站的請求都沒設，因為 gemma-4 會先「想」一段（`usage.reasoning`，隨便一句話也想三四百字），想的字數也算在額度裡，設小了 `text` 就是空的、`finish_reason` 是 `length`。把 `endpoint.json` 的 `model` 故意打錯再叫，看它 4 毫秒就擋下來、不花 token（`error.kind` 是 `model_not_found`）。
 
 ## 第 2 站：逐步 JSON，等一個檔
 
@@ -52,7 +55,7 @@ aos-step-json prog.json --status   # 隨時看進度（pc、history、waiting）
 
 ```sh
 aos-kernel add $K inst.json --name json-wait
-aos-kernel ls $K                   # 過一秒再看：CPU_STATE 是 waiting、WAIT 等了 N 回合
+sleep 2; aos-kernel ls $K          # 下一回合才會出現：CPU_STATE 是 waiting、WAIT 等了 N 回合
 echo 開門 > go.txt                  # 下一回合它就自己跑完，被收進 done
 ```
 
@@ -63,13 +66,23 @@ echo 開門 > go.txt                  # 下一回合它就自己跑完，被收�
 ```sh
 cd $AOS_PLAY/stations/3-py-llm
 aos-kernel add $K inst.json --name py-llm
-watch -n1 aos-kernel ls $K         # 看它 waiting → llm running → done（幾秒到十幾秒）
+until [ -f answer.txt ]; do sleep 1; aos-kernel ls $K | sed -n 3,4p; done   # 看它 waiting → done（十幾秒到一分鐘）
 cat answer.txt
 ```
 
-想手動一格一格走也行：`aos-step-py job.py`，等的時候會退 101。
+想手動一格一格走也行：`aos-step-py job.py`，等的時候會退 101。逐步程式跑成功不出聲，沒消息就是好消息，`--status` 看進度。
 
-玩法：改 `QUESTION`、`--reset`、再 `add` 一次——同一個名字同一個問題會直接拿回舊答案（不重花 token）；問題改了就會撞名，把 `job.py` 裡的 `"play-py-1"` 換個名字，或 `aos-kernel llm rm $K play-py-1`。`aos-kernel llm ls $K` 列出所有排過的單。
+重玩一次：
+
+```sh
+aos-step-py job.py --reset             # 清進度
+aos-kernel rm $K py-llm                # 把上一次的行程紀錄拿掉（做完的也要拿，不然同名 add 不進去）
+sed -i 's/用一句話介紹你自己。/你最喜歡哪個數字？/' job.py   # 換個問題
+aos-kernel llm rm $K play-py-1         # 上一題的 LLM 單也拿掉，不然同名不同內容會撞
+aos-kernel add $K inst.json --name py-llm
+```
+
+同名同內容再丟會直接拿回舊答案（不重花 token）；`aos-kernel llm ls $K` 列出所有排過的單。
 
 ## 第 4 站：逐步 Lua，同步問 LLM ＋ 塞 binary
 
@@ -87,7 +100,9 @@ cat job.state.json                 # blob 長成 {"$b64":"..."}（合法 UTF-8 �
 
 ```sh
 cd $AOS_PLAY/stations/5-lisp
-aos-step prog.janet                # 連叫五次，第四次開始等結果檔（退 101）
+aos-step prog.janet                # 叫一次跑一個 form；連叫五次跑完五個
+aos-step prog.janet; echo $?       # 第五個 form 宣告要等結果檔，之後每叫一次：沒到退 101、到了才跑下一個
+until aos-step prog.janet; [ $? = 100 ]; do sleep 2; done   # 懶人：一直叫到它回 100（全部做完）
 aos-step prog.janet --status
 jq -r .text answer.json
 ```
@@ -101,25 +116,36 @@ cd $AOS_PLAY/stations/6-agent
 ./make.sh
 aos-kernel add $K bob/inst.json --name bob
 aos-user bob say "用 sh 工具看看你資料夾裡有什麼，然後告訴我"
-aos-user bob listen --once       # 想留著等新回話可省略 --once
-# 或：aos-user bob talk
+aos-user bob listen --new --once # 等它的下一句回話（十幾秒到一分鐘）；省略 --once 就一直聽
+aos-user bob status              # 哪一格、第幾題第幾步、在等哪個檔、錯幾次
 aos-kernel ls $K                 # 看 bob 在 waiting／running 間走
+# 或直接 aos-user bob talk 聊天（你> 打一句、bob> 回一句）
 ```
 
-玩壞：把 `bob/agent.json` 的 `max_steps_per_question` 改小，再說一句要它做好多步的話，看它到上限後回信並標 `stuck`。也可以 `aos-daemon-ctl stop`，再 `aos-user bob say "還在嗎"`，用 `aos-user bob status` 看信留在 inbox、agent 沒有偷偷自己推格。
+一次說一句，等它回了再說下一句：它一題一題做，你連丟兩封信，第二封會等第一題做完才讀。
+
+想重來（清記憶、從頭問）：
+
+```sh
+aos-kernel rm $K bob             # 先從 kernel 拿下來
+aos-agent bob --reset            # 只清進度；messages.json 想清就 echo '[]' > bob/messages.json
+aos-kernel add $K bob/inst.json --name bob
+```
+
+玩壞：把 `bob/agent.json` 的 `max_steps_per_question` 改小，再說一句要它做好多步的話，看它到上限後回信並標 `stuck`。改回 60 它就活過來（下一封信會重新開始算）。也可以 `aos-daemon-ctl stop`，再 `aos-user bob say "還在嗎"`，用 `aos-user bob status` 看信留在 inbox、agent 沒有偷偷自己推格。
 
 ## 故意弄壞
 
 - 排一個永遠等不到檔的行程（第 2 站不寫 `go.txt`）：`ls` 標 `waiting`；再排別的進來，它會讓出 cpu。
 - 讓 Python 某格丟例外：訊息會說第幾格、哪個函式、第幾行，全文在 `job.py.error`；連續失敗 10 次 kernel 把它丟進 `$K/procs/bad/`。
 - 跑到一半改程式（插一格）：它會警告格數對不上，但照跑；想乾淨重來就 `--reset`。
-- 停掉 daemon（`playground/down.sh`）再丟 LLM 單：會說「沒送出去，已撤單」。
+- 停掉 daemon（`play-down`）再丟 LLM 單：會說「沒送出去，已撤單」。
 
 ## 收工與重來
 
 ```sh
-playground/down.sh      # 停 daemon，檔案都留著，下次 up.sh 接著玩
-playground/reset.sh     # 整個 ~/aos-play 刪掉，從零開始
+play-down               # 停 daemon，檔案都留著，下次 play-up 接著玩
+play-reset              # 整個 ~/aos-play 刪掉，從零開始
 aos-kernel rm $K NAME   # 只拿掉一個行程
 ```
 
