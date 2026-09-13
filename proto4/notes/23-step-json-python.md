@@ -48,3 +48,10 @@
 定案（Fable）：`proto4-6/aos-step-lua PROG.lua`，跟 Python 版同一套約定——每個頂層函式一格（Lua 沒有「頂層 def 順序」可反射，改成程式最後 `return {step_a, step_b, …}` 回一個有序陣列，或回一張表 `{ {"load", load}, … }`；選前者＋函式名用 `debug.getinfo` 抓不到就用序號，**所以定成 `return { {name="load", fn=load}, … }`**，名字明寫，AI 好產出）；`state` 是 table、存 JSON。機器上是 Lua 5.4（`/usr/bin/lua5.4`），沒有 JSON 函式庫，所以執行器自帶一個小 JSON＋base64（純 Lua，一檔）。
 
 **binary 用 base64 的約定（Python 版也照這個）**：state 裡的值若是「放不進 JSON 的位元組串」（Lua：不是合法 UTF-8 的字串；Python：`bytes`），存檔時自動變成 `{"$b64":"…"}`，載入時自動還原；也給 `aos.b64`／`aos.unb64` 讓人手動用。JSON 裡其他 `{"$b64":…}` 形狀的物件只要 key 只有這一個就會被當 binary 還原。
+
+**23.5／23.6 落地補記（2026-09-13 深夜）**：三支都在 `proto4-6/`，同一套約定（pc、`--status`、`--reset`、`--stderr`、改動偵測、失敗 pc 不動、做完回 100、可直接放上 kernel），狀態檔同形（`state` 放最前、`steps` 列流程）：
+- `aos-step-json`（陣列、每元素一份 inst）——15 條測試。
+- `aos-step-py`（逐函數：每個頂層 def 一格、`_` 開頭是 helper；`aos.call`／`call_dir`／`call_json`／`llm`）——15 條。README 的 `job.py` 我手跑：四格→100，`state` 裡 values 與工具回傳都在。
+- `aos-step-lua`（`return {{name=,fn=},…}`；自帶 `lua/json.lua`、`base64.lua`、`aos.lua`；不合法 UTF-8 的字串自動存成 `{"$b64":…}`）——22 條。README 的 `job.lua` 我手跑：四格→100，`raw` 存成 `{"$b64":"AP8B"}`。
+- Python 版的 `$b64`（bytes）另派一本小任務補齊（codex-task-4）。
+- 這三支加上 proto4-4 的逐步 lisp，就是「一格跑一步、狀態落檔、做完回 100」這個形狀的四種寫法；kernel 一視同仁。
