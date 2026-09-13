@@ -19,6 +19,8 @@ import unittest
 
 import _util           # noqa: F401  （它把 proto4-3 放進 sys.path）
 from aos_home import Home, alive
+from aos_kernel import IDLE_INST, KHome
+from aos_kernel_tick import _one_cpu
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -141,7 +143,8 @@ class KernelInitTest(KernelTest):
     def test_init_builds_the_home_and_the_kernel_inst(self):
         r = self.init(2, interval_ms=100, timeout_ms=500, quantum=3)
         self.assertIn(self.k, r.stdout)
-        for rel in ("procs", os.path.join("procs", "bad"), "cpus"):
+        for rel in ("procs", os.path.join("procs", "bad"),
+                    os.path.join("procs", "done"), "cpus"):
             self.assertTrue(os.path.isdir(self.at(rel)), rel)
         for rel in ("inst.json", "config.json", "state.json", "kernel.log"):
             self.assertTrue(os.path.exists(self.at(rel)), rel)
@@ -150,7 +153,8 @@ class KernelInitTest(KernelTest):
         self.assertEqual(inst, {"argv": [TICK_BIN], "cwd": "."})
         with open(self.at("config.json"), encoding="utf-8") as f:
             self.assertEqual(json.load(f), {"ncpu": 2, "interval_ms": 100,
-                                            "timeout_ms": 500, "quantum": 3})
+                                            "timeout_ms": 500, "quantum": 3,
+                                            "done_exit": 100})
         self.assertEqual(self.kstate(), {"cpus": {"0": None, "1": None}, "queue": []})
 
     def test_init_refuses_a_dir_that_is_already_there(self):
@@ -214,6 +218,53 @@ class KernelDaemonTest(KernelTest):
 
     def cpus_on_daemon(self, ncpu):
         return all(self.cpu_key(n) in self.table() for n in range(ncpu))
+
+    def test_done_exit_moves_the_proc_to_done_and_idles_the_cpu(self):
+        self.spawn_daemon()
+        self.init(1, interval_ms=50, quantum=100)
+        self.put_proc("7", body={"argv": ["sh", "-c", "exit 100"], "cwd": self.tmp})
+        self.tick()
+        self.assertTrue(wait_until(lambda: self.cpus_on_daemon(1)), self.table())
+        self.tick()
+
+        def tick_until_done():
+            self.tick()
+            return os.path.exists(self.at("procs", "done", "7.json"))
+
+        self.assertTrue(wait_until(tick_until_done), self.table())
+        self.assertFalse(os.path.exists(self.at("procs", "7.json")))
+        self.assertIsNone(self.kstate()["cpus"]["0"])
+        with open(self.at("cpus", "0.json"), encoding="utf-8") as f:
+            self.assertEqual(json.load(f), IDLE_INST)
+        self.assertIn("done: 7", self.kernel("ls", cwd=self.k).stdout)
+
+    def test_a_previous_exit_cannot_finish_the_new_proc(self):
+        self.init(1, quantum=100)
+        h = KHome(self.k)
+        self.put_proc("5", body={"argv": ["true"], "cwd": self.tmp})
+        os.replace(h.proc("5"), h.cpu(0))
+        st = {"cpus": {"0": {"pid": "5", "since": 1, "runs_at": 10}}, "queue": []}
+        notes = []
+        _one_cpu(h, h.config(), st, [], notes, 2, 0,
+                 {0: {"runs": 11, "last_kind": "child", "last_exit": 100}})
+        self.assertEqual(st["cpus"]["0"]["pid"], "5")
+        self.assertFalse(os.path.exists(h.proc_done("5")))
+        with open(h.cpu(0), encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["argv"], ["true"])
+
+    def test_done_exit_zero_disables_finishing(self):
+        self.spawn_daemon()
+        self.init(1, interval_ms=50, quantum=100, done_exit=0)
+        self.put_proc("7", body={"argv": ["sh", "-c", "exit 100"], "cwd": self.tmp})
+        self.tick()
+        self.assertTrue(wait_until(lambda: self.cpus_on_daemon(1)), self.table())
+        self.tick()
+        runs_at = self.kstate()["cpus"]["0"]["runs_at"]
+        self.assertTrue(wait_until(
+            lambda: self.table()[self.cpu_key(0)]["runs"] - runs_at >= 2), self.table())
+        self.tick()
+        self.assertEqual(self.on_cpus()["0"], "7")
+        self.assertFalse(os.path.exists(self.at("procs", "done", "7.json")))
 
     def test_the_first_tick_plugs_the_cpus_into_the_daemon(self):
         self.spawn_daemon()

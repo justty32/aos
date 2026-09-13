@@ -16,9 +16,10 @@
 家（DIR）長這樣：
 
     DIR/inst.json       kernel 自己那顆 cpu 的指令，只有 kernel 能動
-    DIR/config.json     {"ncpu":N,"interval_ms":X,"timeout_ms":Y,"quantum":Q}
+    DIR/config.json     {"ncpu":N,"interval_ms":X,"timeout_ms":Y,"quantum":Q,"done_exit":E}
     DIR/procs/<pid>.json  就緒佇列，檔名去掉 .json ＝ pid
     DIR/procs/bad/      退件（不是 JSON 物件／沒有 argv／沒寫 cwd）
+    DIR/procs/done/     用保留退出碼表示做完的行程
     DIR/cpus/<n>.json   每顆 cpu 一份 inst.json，這個路徑就是 daemon 表上的 key
     DIR/state.json      kernel 自己的表：cpu n → pid、上去的時間、上去時的 runs、佇列
     DIR/kernel.log      每回合一行流水帳
@@ -36,10 +37,11 @@ import aos_home
 HERE = os.path.dirname(os.path.abspath(__file__))
 CTL_BIN = os.path.join(HERE, "aos-daemon-ctl")
 IDLE_INST = {"argv": ["true"], "cwd": "."}
-DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5}
+DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5, "done_exit": 100}
 USAGE = "用法：aos-kernel ls\n"
 INIT_HINT = ("aos-kernel: init 改成獨立指令 aos-kernel-init（不再是 aos-kernel 的子命令）："
-             "aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q]\n")
+             "aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] "
+             "[--done-exit N]\n")
 TICK_HINT = "aos-kernel: tick 改成獨立指令 aos-kernel-tick（不再是 aos-kernel 的子命令）\n"
 
 
@@ -57,6 +59,7 @@ class KHome:
         self.configf = os.path.join(self.dir, "config.json")
         self.procs = os.path.join(self.dir, "procs")
         self.bad = os.path.join(self.procs, "bad")
+        self.done = os.path.join(self.procs, "done")
         self.cpus = os.path.join(self.dir, "cpus")
         self.statef = os.path.join(self.dir, "state.json")
         self.logf = os.path.join(self.dir, "kernel.log")
@@ -66,6 +69,9 @@ class KHome:
 
     def proc(self, pid):
         return os.path.join(self.procs, "%s.json" % pid)
+
+    def proc_done(self, pid):
+        return os.path.join(self.done, "%s.json" % pid)
 
     def config(self):
         """讀 config.json；讀不到＝這裡不是家，回 None。"""
@@ -134,8 +140,9 @@ def cmd_ls(argv):
     st = h.state()
     runs = (aos_home.Home(aos_home.resolve_home()).state() or {}).get("runs", {})
     now = time.time()
-    print("家 %s  ncpu=%d interval=%dms timeout=%dms quantum=%d"
-          % (h.dir, cfg["ncpu"], cfg["interval_ms"], cfg["timeout_ms"], cfg["quantum"]))
+    print("家 %s  ncpu=%d interval=%dms timeout=%dms quantum=%d done_exit=%d"
+          % (h.dir, cfg["ncpu"], cfg["interval_ms"], cfg["timeout_ms"], cfg["quantum"],
+             cfg["done_exit"]))
     print("CPU  PID   ON        RUNS  CPU_STATE")
     for n in range(cfg["ncpu"]):
         cur = st["cpus"].get(str(n))
@@ -153,6 +160,12 @@ def cmd_ls(argv):
     bad = sorted(os.listdir(h.bad)) if os.path.isdir(h.bad) else []
     if bad:
         print("退件（%d 個）：%s" % (len(bad), " ".join(bad)))
+    done = []
+    if os.path.isdir(h.done):
+        done = [n[:-5] for n in os.listdir(h.done)
+                if n.endswith(".json") and os.path.isfile(os.path.join(h.done, n))]
+    if done:
+        print("done: %s" % ", ".join(sorted(done, key=pid_key)))
     return 0
 
 
