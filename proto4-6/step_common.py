@@ -2,6 +2,7 @@
 """aos-step-json 與 aos-step-py 共用的狀態檔小工具。"""
 
 from datetime import datetime, timezone
+import base64
 import hashlib
 import json
 import os
@@ -16,22 +17,34 @@ class StepError(Exception):
     pass
 
 
-def atomic_json(path, value):
+def binary_default(value):
+    if isinstance(value, (bytes, bytearray)):
+        return {"$b64": base64.b64encode(value).decode("ascii")}
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
+def binary_object_hook(value):
+    if len(value) == 1 and isinstance(value.get("$b64"), str):
+        return base64.b64decode(value["$b64"])
+    return value
+
+
+def atomic_json(path, value, *, default=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = Path(str(path) + ".tmp")
     with tmp.open("w", encoding="utf-8") as out:
-        json.dump(value, out, ensure_ascii=False, separators=(",", ":"))
+        json.dump(value, out, ensure_ascii=False, separators=(",", ":"), default=default)
         out.write("\n")
         out.flush()
         os.fsync(out.fileno())
     os.replace(tmp, path)
 
 
-def load_state(path):
+def load_state(path, *, object_hook=None):
     if not path.exists():
         return None
     try:
-        state = json.loads(path.read_text(encoding="utf-8"))
+        state = json.loads(path.read_text(encoding="utf-8"), object_hook=object_hook)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise StepError(f"狀態檔壞了：{exc}") from exc
     pc = state.get("pc") if isinstance(state, dict) else None

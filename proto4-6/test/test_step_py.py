@@ -50,6 +50,31 @@ class StepPyTest(unittest.TestCase):
         self.assertEqual(state["steps"], ["load", "compute"])
         self.assertEqual(list(state)[:2], ["state", "pc"])
 
+    def test_binary_state_is_base64_and_crosses_steps_as_bytes(self):
+        self.write("def save(state): state['raw'] = b'\\x00\\xff\\x01'\n"
+                   "def check(state): state['same'] = state['raw'] == b'\\x00\\xff\\x01'\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.state()["state"]["raw"], {"$b64": "AP8B"})
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertTrue(self.state()["state"]["same"])
+
+    def test_aos_b64_and_unb64_round_trip(self):
+        self.write("def convert(state):\n"
+                   "    encoded = aos.b64(b'\\x00\\xff\\x01')\n"
+                   "    state['encoded'] = encoded\n"
+                   "    state['same'] = aos.unb64(encoded) == b'\\x00\\xff\\x01'\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.state()["state"], {"encoded": "AP8B", "same": True})
+
+    def test_reads_lua_binary_state_as_bytes(self):
+        self.write("def check(state): state['same'] = state['raw'] == b'\\x00\\xff\\x01'\n")
+        (self.home / "job.state.json").write_text(
+            '{"state":{"raw":{"$b64":"AP8B"}},"pc":0,"n":1,"done":false,"steps":["check"]}\n',
+            encoding="utf-8",
+        )
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertTrue(self.state()["state"]["same"])
+
     def test_exception_rolls_back_and_writes_traceback_with_name_and_line(self):
         self.write("def good(state): state['kept'] = 1\n\ndef boom(state):\n    state['kept'] = 9\n    raise RuntimeError('bad first line\\nmore')\n")
         self.assertEqual(self.run_tool().returncode, 0)
