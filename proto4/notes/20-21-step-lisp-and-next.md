@@ -129,3 +129,5 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 
 **21.7 續（使用者拍板）**：「我覺得可以兩者共存，像 deepseek api、lm studio，我們就自己造狀態機，更好的操控。」→ 兩條都要：**原生 HTTP endpoint（DeepSeek、LM Studio）走自己造的狀態機**（LLM cpu 排隊分發 → 之後的 agent 狀態機，控制權在我們手上）；**Claude／pi 走 CLI agent 子行程**（`claude -p`／`pi -p`，用它們自己的 agent loop，tools 走 MCP）。兩種在 kernel 眼裡都只是「一份 inst.json 的行程」。順序還是 §21.2：先 LLM cpu，再 syscall（順便做成 MCP），CLI agent 行程在 syscall 有了之後接。
 補：「但對於 claude 這種聰明的，其實他已經有一整套很完善的了，就不用費心了。」→ Claude 那邊**不造狀態機**，就把 Claude Code 當一個會自己跑完一回合的行程；我們只負責餵訊息、收結果、給 MCP tools。自己造的狀態機只服務 DeepSeek／LM Studio 這種「只有 HTTP、沒有 agent」的 endpoint。
+
+再補（使用者）：「剛剛說的這些都是後面的 agent 的事情，我們可以很後面再來思考。我們先繼續。」→ §21.7 整節只是先記著，現在不動；下一段還是 LLM cpu。
