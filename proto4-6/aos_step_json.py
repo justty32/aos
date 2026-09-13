@@ -3,27 +3,22 @@
 
 import argparse
 import copy
-import hashlib
 import json
 import os
 from pathlib import Path
 import sys
 import time
-from datetime import datetime, timezone
 
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "proto4-3"))
 import aos_exec  # noqa: E402
+from step_common import (HISTORY_LIMIT, StepError, atomic_json, load_state,
+                         now, source_info, warn_if_changed)  # noqa: E402
 
 
 DONE_EXIT = 100
-HISTORY_LIMIT = 50
 ALLOWED_KEYS = {"argv", "cwd", "stdin", "stdout", "stderr", "exit", "envs", "note"}
-
-
-class StepError(Exception):
-    pass
 
 
 def fail(message):
@@ -37,17 +32,6 @@ def paths_for(prog):
     return state, current
 
 
-def atomic_json(path, value):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = Path(str(path) + ".tmp")
-    with tmp.open("w", encoding="utf-8") as out:
-        json.dump(value, out, ensure_ascii=False, separators=(",", ":"))
-        out.write("\n")
-        out.flush()
-        os.fsync(out.fileno())
-    os.replace(tmp, path)
-
-
 def load_program(prog):
     try:
         source = prog.read_bytes()
@@ -59,35 +43,12 @@ def load_program(prog):
         raise StepError(f"PROG 不是合法 JSON：{exc}") from exc
     if not isinstance(value, list):
         raise StepError("PROG 必須是一個 JSON 陣列")
-    src = {"n": len(value), "sha256": hashlib.sha256(source).hexdigest()}
+    src = source_info(source, len(value))
     return value, src
-
-
-def load_state(path):
-    if not path.exists():
-        return None
-    try:
-        state = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise StepError(f"狀態檔壞了：{exc}") from exc
-    pc = state.get("pc") if isinstance(state, dict) else None
-    if isinstance(pc, bool) or not isinstance(pc, int) or pc < 0:
-        raise StepError("狀態檔壞了：pc 必須是非負整數")
-    return state
 
 
 def empty_state(n):
     return {"pc": 0, "n": n, "done": False}
-
-
-def warn_if_changed(state, current_src):
-    old = state.get("src")
-    if state["pc"] > 0 and isinstance(old, dict) and old.get("sha256") != current_src["sha256"]:
-        print(
-            "aos-step-json: PROG 改過了（上次 %s 個、現在 %s 個），pc=%s 可能已經錯位；確定要重來就 --reset"
-            % (old.get("n", "?"), current_src["n"], state["pc"]),
-            file=sys.stderr,
-        )
 
 
 def prepare_inst(element, pc, base):
@@ -116,7 +77,7 @@ def record(state, src, pc, code, kind, elapsed_ms, success):
         "pc": pc,
         "exit": code,
         "kind": kind,
-        "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "at": now(),
         "ms": elapsed_ms,
     }
     history = state.get("history", [])
@@ -141,7 +102,7 @@ def step(prog, stderr_override):
     except StepError as exc:
         return fail(str(exc))
 
-    warn_if_changed(state, src)
+    warn_if_changed("aos-step-json", state, src)
     pc = state["pc"]
     if pc >= len(program):
         state.update({"n": len(program), "done": True, "src": src})
