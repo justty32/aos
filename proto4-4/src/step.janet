@@ -1,5 +1,7 @@
 # 一次只跑一個 Janet 頂層 form，把環境存進 PROG 旁的 .aos-step/。
 
+(import ./state :as state)
+
 (defn- dirname [path]
   (def cuts (string/find-all "/" path))
   (if (= 0 (last cuts)) "/" (string/slice path 0 (last cuts))))
@@ -9,21 +11,24 @@
       (error "aos-step: 無法定位 src/step.janet")))
 (def- aos-file (string (dirname source-file) "/aos.janet"))
 
-(defn- path [state name] (string state "/" name))
-(defn- exists? [p] (not (nil? (os/stat p :mode))))
-
-(defn- rm-tree [p]
-  (case (os/stat p :mode)
-    :directory (do (each name (os/dir p)
-                     (rm-tree (string p "/" name)))
-                   (os/rmdir p))
-    nil nil
-    (os/rm p)))
-
-(defn- atomic-spit [p contents]
-  (def tmp (string p ".tmp." (os/getpid)))
-  (spit tmp contents)
-  (os/rename tmp p))
+(def- path (state/api :path))
+(def- exists? (state/api :exists?))
+(def- rm-tree (state/api :rm-tree))
+(def- atomic-spit (state/api :atomic-spit))
+(def- read-src (state/api :read-src))
+(def- read-state (state/api :read-state))
+(def- write-state (state/api :write-state))
+(def- now (state/api :now))
+(def- absolute-path (state/api :absolute-path))
+(def- trim-history (state/api :trim-history))
+(def- waiting-line (state/api :waiting-line))
+(def- check-waiting (state/api :check-waiting))
+(def- source-changed? (state/api :source-changed?))
+(def- write-src (state/api :write-src))
+(def- read-pc (state/api :read-pc))
+(def- error-text (state/api :error-text))
+(def- write-error (state/api :write-error))
+(def- load-env (state/api :load-env))
 
 (defn- parse-forms [prog]
   (def parser (parser/new))
@@ -54,95 +59,11 @@
   {:n (length forms) :bytes (info :size) :mtime (info :modified)
    :checksum (source-checksum source)})
 
-(defn- read-src [state]
-  (def p (path state "src"))
-  (if (exists? p) (parse (slurp p)) nil))
-
-(defn- read-state [state]
-  (def p (path state "state"))
-  (if (exists? p)
-    (let [value (parse (slurp p))]
-      (unless (table? value) (error "state 壞了：必須是 table")) value)
-    @{}))
-
-(defn- write-state [state value]
-  (atomic-spit (path state "state") (string/format "%q\n" value)))
-
-(defn- now [] (string (os/strftime "%Y-%m-%dT%H:%M:%S" (os/time) false) "+00:00"))
-
-(defn- absolute-path [given here]
-  (unless (string? given) (error "aos/wait-for: path 必須是字串"))
-  (def raw (if (string/has-prefix? "/" given) given (string here "/" given)))
-  (def parts @[])
-  (each part (string/split "/" raw)
-    (cond (or (= "" part) (= "." part)) nil
-          (= ".." part) (array/pop parts)
-          (array/push parts part)))
-  (string "/" (string/join parts "/")))
-
-(defn- trim-history [history]
-  (while (> (length history) 50) (array/remove history 0)) history)
-
-(defn- waiting-line [waiting]
-  (unless (and (dictionary? waiting)
-               (string? (waiting :for)) (string/has-prefix? "/" (waiting :for))
-               (string? (waiting :since))
-               (number? (waiting :after_pc)) (>= (waiting :after_pc) 0)
-               (number? (waiting :checks)) (>= (waiting :checks) 0))
-    (error "state 壞了：waiting 欄位不合法"))
-  (string "在等 " (waiting :for) "（已看 " (waiting :checks) " 次，從 " (waiting :since) " 起）"))
-
-(defn- check-waiting [state saved]
-  (if-let [waiting (saved :waiting)]
-    (do
-      (waiting-line waiting)
-      (if (not (exists? (waiting :for)))
-        (do (put waiting :checks (inc (waiting :checks)))
-            (put saved :waiting waiting) (write-state state saved) true)
-        (do
-          (var history (or (saved :history) @[]))
-          (unless (array? history) (set history @[]))
-          (array/push history @{:pc (waiting :after_pc) :step "(wait)" :exit 0
-                                :waited_checks (waiting :checks) :at (now) :ms 0})
-          (put saved :history (trim-history history))
-          (put saved :waiting nil)
-          (write-state state saved)
-          false)))
-    false))
-
-(defn- source-changed? [state pc current]
-  (def old (read-src state))
-  (and (> pc 0) old (not (= old current))))
-
-(defn- write-src [state src]
-  (atomic-spit (path state "src") (string/format "%q\n" src)))
-
-(defn- read-pc [state]
-  (def p (path state "pc"))
-  (if (not (exists? p))
-    0
-    (let [text (string/trim (slurp p))
-          value (scan-number text)]
-      (unless (and value (number? value) (= value (math/floor value)) (>= value 0))
-        (error (string "pc 壞了：" text)))
-      value)))
-
-(defn- error-text [state]
-  (def p (path state "error"))
-  (if (exists? p) (string (slurp p)) nil))
-
 (defn- trace-text [fib err]
   (def out @"")
   (with-dyns [*err* out]
     (debug/stacktrace fib err ""))
   (string/trim out))
-
-(defn- write-error [state pc err trace]
-  (os/mkdir state)
-  (atomic-spit (path state "error")
-               (string "form " pc "\n"
-                       (describe err) "\n"
-                       trace "\n")))
 
 (defn- fail [state pc err &opt fib]
   (def trace (if fib (trace-text fib err) (describe err)))
@@ -163,10 +84,6 @@
   (eval ~(def here ,here) env)
   (eval ~(def pc ,pc) env)
   env)
-
-(defn- load-env [state]
-  (def p (path state "env.img"))
-  (if (exists? p) (load-image (slurp p)) (make-env)))
 
 (defn- step [prog here state]
   (label finish
