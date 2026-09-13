@@ -17,3 +17,5 @@
 - 元素＝inst 物件；相對 `cwd` 以 PROG 所在資料夾為準、沒寫＝PROG 所在資料夾（跟 `aos-kernel add` 同一條規則）；其他相對路徑照 inst 規則以 cwd 為準。每格把那個元素（cwd 轉成絕對）寫成一份暫存 inst.json 交給 `proto4-3/aos-exec` 跑，自己不解析指示詞。
 - 狀態檔 `<PROG>.state.json`：`{"pc":2,"n":5,"done":false,"src":{…改動偵測…},"last":{"pc":1,"exit":0,"kind":"child","at":"…"},"history":[…]}`，人跟 AI 都能直接讀。
 - 元素回 0 → pc+1；非 0 → 停在原地、退出碼原樣回（不推 pc，修好重跑同一格）；aos-exec 自己失敗 → 125；全部跑完 → 100。`--status`、`--reset`、改動偵測警告，跟 aos-step 同一套。
+
+**23.3 落地補記（2026-09-13）**：做出來了（codex gpt-sol）：`proto4-6/aos-step-json`＋`aos_step_json.py` 211 行、15 條測試、README 84 行。我照 README 的 `job.json` 範例手跑：三格各回 0、第四次回 100，`result.txt` 是 `HELLO`，狀態檔 `job.state.json` 一眼看得懂。跟逐步 lisp 同一套約定（pc、`--status`、`--reset`、改動偵測、做完回 100、可以直接放上 kernel）。**逐步 Python 等 LLM cpu 收完再開**——現在 LLM cpu 已收（§22.8），所以下一段就是它；要先定「Python 的變數怎麼跨格」（§23.2）。
