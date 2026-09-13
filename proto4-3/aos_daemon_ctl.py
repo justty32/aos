@@ -83,7 +83,7 @@ def show(home, only=None):
     """
     st = home.state()
     if st is None:
-        print("沒有 state.json（daemon 沒起來過）", file=sys.stderr)
+        print("daemon 沒在跑，也沒有留下狀態（正常收工會清掉 state.json）", file=sys.stderr)
         return 1
     if not home.alive():
         print("daemon 沒在跑，這是最後的狀態", file=sys.stderr)

@@ -183,7 +183,6 @@ aos-daemon-ctl add FILE.json [aos-run 旗標…]|rm FILE.json [--force]
 
 等不到只是**這支 CLI 不等了**，daemon 那邊該做的還是會做完。
 
-`daemon` 沒在跑時，`ls`／`get` 照上面讀最後狀態，其他指令直接印「daemon 沒在跑」、退出碼
-1、不丟檔。`--home` 可以擺在任何位置，其他旗標**原樣**留給 aos-run（所以這支不用
+`daemon` 沒在跑時，`ls`／`get` 照上面讀最後狀態（被 kill 才會留；正常 stop 會清掉），其他指令直接印
+「daemon 沒在跑」、退出碼 1、不丟檔。`--home` 可以擺在任何位置，其他旗標**原樣**留給 aos-run（所以這支不用
 argparse，不然 `--max-runs` 之類會被吃掉）。
-

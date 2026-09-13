@@ -39,14 +39,14 @@ daemon→aos-run→aos-exec 的 PATH 是使用者開 daemon 時那一份，未�
 ```sh
 aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] [--done-exit N]
 aos-kernel-tick         # 心跳：在家裡（cwd ＝ K）跑一回合，不吃參數
-aos-kernel ls           # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
+aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
 ```
 
 | 指令 | 做什麼 | 退出碼 |
 |---|---|---|
 | `aos-kernel-init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5，單位是「cpu 跑了幾次」） | 0；**DIR 已經存在＝1**（不動它） |
 | `aos-kernel-tick` | 跑一回合，見下面五步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
-| `aos-kernel ls` | 讀 `state.json` ＋ daemon 的 `state.json` 印表；目前 `aos-kernel` 只剩這一個子命令 | 0；不是家＝1 |
+| `aos-kernel ls [DIR]` | 給 DIR 就先進去，否則用 cwd；讀 kernel ＋ daemon 的 `state.json` 印存活狀態、cpu、佇列、bad 與 done | 0；不是家＝1 |
 
 `aos-kernel init`／`aos-kernel tick`（舊的子命令）都拿掉了：退出碼 2，stderr 提示改用
 `aos-kernel-init`／`aos-kernel-tick`。以後 `aos-kernel-boot`（§19.3，一條指令做完「開
@@ -94,12 +94,18 @@ daemon → kernel init → ctl add kernel 的 inst.json」）也會是同一系�
 
 ### 開機順序
 
+`my-proc.json` 可以是：
+
+```json
+{"argv":["/abs/程式"],"cwd":"/abs/資料夾","stdout":"out.txt","stderr":"err.txt"}
+```
+
 ```sh
 ./aos-daemon &                                          # 硬體上電
 ./aos-kernel-init K --ncpu 2 --interval-ms 1000 --quantum 5
 ./aos-daemon-ctl add K/inst.json --interval-ms 1000     # 插上第一顆 cpu ＝ 跑 aos-kernel-tick
 cp my-proc.json K/procs/3.json                          # 把行程丟進就緒佇列（cwd 要寫死）
-./aos-kernel ls                                         # 看誰在哪顆 cpu 上（cd K 再跑）
+./aos-kernel ls K                                       # 看誰在哪顆 cpu 上
 ```
 
 `AOS_DAEMON_HOME` 那三支要對得上：kernel 是從 daemon 繼承下來的，所以 daemon 用

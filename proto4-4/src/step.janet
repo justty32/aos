@@ -38,6 +38,33 @@
     (set wrapped (parser/produce parser true)))
   forms)
 
+(defn- source-checksum [source]
+  # Janet 的 hash 每個行程會換 seed；這裡要的是可跨行程比對的內容指紋。
+  (var a 1)
+  (var b 0)
+  (each byte source
+    (set a (mod (+ a byte) 65521))
+    (set b (mod (+ b a) 65521)))
+  (string b "-" a))
+
+(defn- source-id [prog forms]
+  # Janet 沒有內建 sha256；照 fallback 存 bytes 與 mtime，再加內容 checksum。
+  (def info (os/stat prog))
+  (def source (slurp prog))
+  {:n (length forms) :bytes (info :size) :mtime (info :modified)
+   :checksum (source-checksum source)})
+
+(defn- read-src [state]
+  (def p (path state "src"))
+  (if (exists? p) (parse (slurp p)) nil))
+
+(defn- source-changed? [state pc current]
+  (def old (read-src state))
+  (and (> pc 0) old (not (= old current))))
+
+(defn- write-src [state src]
+  (atomic-spit (path state "src") (string/format "%q\n" src)))
+
 (defn- read-pc [state]
   (def p (path state "pc"))
   (if (not (exists? p))
@@ -68,7 +95,7 @@
 (defn- fail [state pc err &opt fib]
   (def trace (if fib (trace-text fib err) (describe err)))
   (write-error state pc err trace)
-  (eprintf "aos-step: form %d 失敗：%s" pc (describe err))
+  (eprintf "aos-step: 第 %d 個 form（0 起算）失敗：%s" pc (describe err))
   1)
 
 (defn- bind-runtime [env here pc]
@@ -85,7 +112,7 @@
   (def p (path state "env.img"))
   (if (exists? p) (load-image (slurp p)) (make-env)))
 
-(defn- step [prog here state done-exit]
+(defn- step [prog here state]
   (label finish
   (var pc 0)
   (def parsed (fiber/new (fn [] (parse-forms prog)) :e))
@@ -96,10 +123,16 @@
   (set pc (resume got-pc))
   (when (= :error (fiber/status got-pc))
     (return finish (fail state 0 (fiber/last-value got-pc) got-pc)))
+  (def src (source-id prog forms))
+  (def old-src (read-src state))
+  (when (and (> pc 0) old-src (not (= old-src src)))
+    (eprintf "aos-step: prog.janet 改過了（上次 %d 個 form、現在 %d 個），pc=%d 可能已經錯位；確定要重來就 --reset"
+             (old-src :n) (src :n) pc))
   (when (>= pc (length forms))
     (os/mkdir state)
     (spit (path state "done") "")
-    (return finish done-exit))
+    (write-src state src)
+    (return finish 100))
   (when (exists? (path state "done"))
     (os/rm (path state "done")))
   (def prepared (fiber/new
@@ -116,6 +149,7 @@
   (os/mkdir state)
   (atomic-spit (path state "env.img") image)
   (atomic-spit (path state "pc") (string (inc pc) "\n"))
+  (write-src state src)
   (when (exists? (path state "error"))
     (os/rm (path state "error")))
   (if (= (inc pc) (length forms))
@@ -136,15 +170,20 @@
   (def read (protect (read-pc state)))
   (if (read 0) (set pc (read 1)) (set parse-error (describe (read 1))))
   (def err (or parse-error (error-text state)))
+  (def changed
+    (if parse-error
+      false
+      (source-changed? state pc (source-id prog forms))))
   # table/struct 不會保留 nil value，所以手寫最外層，確保 :error nil 也真的印出來。
-  (printf "{:pc %d :n %d :done %s :error %s}"
+  (printf "{:pc %d :n %d :done %s :changed %s :error %s}"
           pc n
           (if (exists? (path state "done")) "true" "false")
+          (if changed "true" "false")
           (if err (string/format "%q" err) "nil"))
   0)
 
 (defn- usage []
-  (eprint "用法：aos-step PROG.janet [--status|--reset] [--done-exit N]")
+  (eprint "用法：aos-step PROG.janet [--status|--reset]")
   2)
 
 (defn main [& argv]
@@ -153,7 +192,6 @@
     (os/exit (usage)))
   (def given (args 0))
   (var flag nil)
-  (var done-exit 100)
   (var i 1)
   (while (< i (length args))
     (def arg (args i))
@@ -168,14 +206,8 @@
           (set flag arg))
       "--done-exit"
         (do
-          (++ i)
-          (when (>= i (length args))
-            (os/exit (usage)))
-          (def value (scan-number (args i)))
-          (unless (and value (number? value) (= value (math/floor value))
-                       (>= value 0) (<= value 255))
-            (os/exit (usage)))
-          (set done-exit value))
+          (eprint "aos-step: --done-exit 已拿掉；這個號碼由 kernel 的 config.json 說了算")
+          (os/exit 2))
       (os/exit (usage)))
     (++ i))
   (def tried (protect (os/realpath given)))
@@ -189,5 +221,5 @@
     (case flag
       "--reset" (do (rm-tree state) 0)
       "--status" (status prog state)
-      (step prog here state done-exit)))
+      (step prog here state)))
   (os/exit code))

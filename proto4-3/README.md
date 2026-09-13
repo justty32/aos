@@ -35,8 +35,9 @@ inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu
 ## 怎麼跑
 
 ```sh
+export AOS_DAEMON_HOME=~/.aos-daemon   # daemon、ctl、kernel 三支都靠這個找家；用 --home 不會傳給子孫
 cd proto4-3
-python3 -m unittest discover -s test        # 185 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 190 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 ./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 ./aos-exec /path/to/folder --dir-target my/inst.json
@@ -49,12 +50,20 @@ echo $?                                     # 子程式的結束狀態；125＝a
 ```sh
 ./aos-run /path/to/folder --interval-ms 5000            # 一直跑，每 5 秒一次
 
-./aos-daemon &                                          # 普通前台程式，自己丟去背景
+./aos-daemon &                                          # 非互動 shell 結束會把它帶走；要常駐用 nohup … &、setsid 或 tmux
 ./aos-daemon-ctl add /path/to/inst.json --interval-ms 5000    # daemon 只收 .json 的路徑
 ./aos-daemon-ctl ls
 
-./aos-kernel-init K --ncpu 2                            # 排程的家；開機順序往下看
+./aos-kernel-init K --ncpu 2                            # 這 2 顆是給行程用的，跑 kernel 自己的那顆不算在內
 ./aos-daemon-ctl add K/inst.json --interval-ms 1000
+./aos-kernel ls K
+```
+
+cpu 不用你插，kernel 第一回合會自己把 `cpus/*.json` 掛上 daemon。排進 `K/procs/`
+的行程 inst.json 例如：
+
+```json
+{"argv":["/abs/程式"],"cwd":"/abs/資料夾","stdout":"out.txt","stderr":"err.txt"}
 ```
 
 當成函式用（aos-run 就是這樣接的）：
