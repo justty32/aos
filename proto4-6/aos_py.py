@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """逐步 Python 程式可直接使用的 aos 小模組。"""
 
+import base64 as _base64
 import json as _json
 import os
 from pathlib import Path
@@ -11,6 +12,14 @@ import sys
 HERE = Path(__file__).resolve().parent
 DEFAULT_EXEC = HERE.parent / "proto4-3" / "aos-exec"
 DEFAULT_LLM = HERE.parent / "proto4-5" / "aos-llm"
+
+
+def b64(b):
+    return _base64.b64encode(b).decode("ascii")
+
+
+def unb64(s):
+    return _base64.b64decode(s)
 
 
 def _exec_path():

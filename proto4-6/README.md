@@ -79,6 +79,9 @@ def write(state):
 回 1，全文放 `.aos-step-py/error`。`aos` 有 `call`、`call_dir`、`call_json`、`ok`、`value`、
 `llm`、`llm_text`；工具路徑可用 `AOS_EXEC`／`AOS_LLM` 覆蓋。
 
+`bytes`／`bytearray` 自動存成只有 `$b64` 的物件，讀回時自動還原成 `bytes`；這也表示一般 JSON
+裡恰好只有 `$b64` 一個 key 的物件會被視為 binary。手動轉換可用 `aos.b64(b)`／`aos.unb64(s)`。
+
 狀態故意把 `state` 放最前，並明列步驟名：
 
 ```json
