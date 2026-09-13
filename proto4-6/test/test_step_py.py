@@ -244,6 +244,28 @@ class StepPyTest(unittest.TestCase):
         self.assertEqual((result["code"], result["kind"]), (3, "child"))
         self.assertEqual(set(result), {"code", "kind", "out", "err", "value"})
 
+    def test_call_plain_file_with_args(self):
+        script = self.home / "args"
+        script.write_text("#!/bin/sh\nprintf '<%s>|<%s>' \"$@\"\n")
+        script.chmod(0o755)
+        self.write("def tool(state): state['out'] = aos.call('./args', args=['a b', '--stderr'], capture=True)['out']\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.state()["state"]["out"], "<a b>|<--stderr>")
+
+    def test_call_json_rejects_args(self):
+        (self.home / "one.json").write_text('{"argv":["true"]}')
+        self.write("def tool(state): aos.call_json('one.json', args=['extra'])\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", result.stderr)
+
+    def test_call_dir_rejects_even_empty_args(self):
+        (self.home / "child").mkdir()
+        self.write("def tool(state): aos.call_dir('child', args=[])\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", result.stderr)
+
     def test_stderr_option_reaches_aos_exec(self):
         script = self.home / "noisy"
         script.write_text("#!/bin/sh\necho seen >&2\n")

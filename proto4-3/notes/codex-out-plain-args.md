@@ -1,0 +1,8 @@
+- `aos-exec` 普通檔案現支援 `-- ARG...`，原樣成為 `argv[1:]`。
+- `.json`／資料夾收到 `--` 會回用法錯 2，並提示改寫 `inst.json.argv`。
+- `aos-run` 已完整轉傳參數。
+- Janet、Python、Lua 的 `call` 均新增 `args`，並拒絕 inst 目標。
+- 三語言 `llm`／`llm_submit` 已改走 `call + args`，移除短命 inst／直接 subprocess 繞路。
+- baseline：220、38／45／12、65 全綠。
+- 完工回歸：226、42／45／12、71；根目錄 build 與 8/8 ctest 全綠。
+- 僅修改任務書允許的 15 個檔案；未 commit、未 push、未開 agent。

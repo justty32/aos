@@ -79,3 +79,5 @@
 2. 試玩 r2 清單 #7（改動偵測要不要預設停住）→ **維持現狀**（警告照跑，Opus 說這樣剛好）；#8（健康顯示、done_exit 取名）→ **不做**。
 3. harvest 五個預設（背景 worker／model 固定在設定／priority 大者先／失聯不重送／不管 load-unload）→ **全部留**。
 4. `aos.janet` 剛好 300 行 → 下次加東西時再拆。
+
+**落地補記（compact 後，codex gpt-sol 一輪）**：`aos-exec xxx -- ARG...` 對普通檔案生效、原樣成 argv[1:]；`.json`／資料夾目標帶 `--` 回用法錯 2 並提示「參數寫在 inst.json 的 argv」；aos-run 原樣轉傳。Janet／Python／Lua 三份 `call` 多了 `args`，三份 `llm`／`llm_submit` 都改走 `call + args`，短命 inst 與直接 subprocess 的繞路都拆了。測試 226、42／45／12、71 全綠。任務書 `proto4-3/notes/codex-task-plain-args.md`，回報 `codex-out-plain-args.md`。第 4 點順手做了：`aos.janet` 被加到 301 行，把路徑解析搬到 `src/paths.janet`（import 進去的名字是 private，不會被 aos-step 綁成 `aos/*`），剩 258 行。

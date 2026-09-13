@@ -1,49 +1,6 @@
 # proto4-3 aos-exec 的 Janet 薄包裝。不自己解 inst.json。
 
-(defn- dirname [path]
-  (def cuts (string/find-all "/" path))
-  (cond
-    (empty? cuts) "."
-    (= 0 (last cuts)) "/"
-    (string/slice path 0 (last cuts))))
-
-(def- source-file
-  (or (os/realpath (dyn :current-file))
-      (error "aos: 無法定位 src/aos.janet")))
-
-(def- json-module (string (dyn :syspath) "/spork/json.so"))
-
-(def- default-exec
-  (string (dirname (dirname source-file)) "/../proto4-3/aos-exec"))
-
-(def- default-llm
-  (string (dirname (dirname source-file)) "/../proto4-5/aos-llm"))
-
-(def- default-kernel (string (dirname (dirname source-file)) "/../proto4-3/aos-kernel"))
-
-(def- resolved-exec
-  (let [raw (or (os/getenv "AOS_EXEC") default-exec)
-        tried (protect (os/realpath raw))
-        path (if (tried 0) (tried 1) nil)]
-    (unless (and path (= :file (os/stat path :mode)))
-      (error (string "aos: 找不到 aos-exec：" raw)))
-    path))
-
-(def- resolved-llm
-  (let [raw (or (os/getenv "AOS_LLM") default-llm)
-        tried (protect (os/realpath raw))
-        path (if (tried 0) (tried 1) nil)]
-    (unless (and path (= :file (os/stat path :mode)))
-      (error (string "aos: 找不到 aos-llm：" raw)))
-    path))
-
-(def- resolved-kernel
-  (let [raw (or (os/getenv "AOS_KERNEL") default-kernel)
-        tried (protect (os/realpath raw))
-        path (if (tried 0) (tried 1) nil)]
-    (unless (and path (= :file (os/stat path :mode)))
-      (error (string "aos: 找不到 aos-kernel：" raw)))
-    path))
+(import ./paths :prefix "")
 
 (defn exec-path [] resolved-exec)
 
@@ -64,6 +21,13 @@
       :timeout-ms
         (unless (and (integer? value) (>= value 0))
           (error "aos/call: :timeout-ms 必須是非負整數"))
+      :args
+        (do
+          (unless (or (array? value) (tuple? value))
+            (error "aos/call: :args 必須是字串陣列"))
+          (each arg value
+            (unless (string? arg)
+              (error "aos/call: :args 必須是字串陣列"))))
       :stdin
         (unless (or (string? value) (buffer? value))
           (error "aos/call: :stdin 必須是字串或 buffer"))
@@ -87,6 +51,12 @@
   (when-let [value (opts :timeout-ms)]
     (array/push argv "--timeout-ms")
     (array/push argv (string value)))
+  (when (has-key? opts :args)
+    (when (or (string/has-suffix? ".json" target)
+              (= :directory (os/stat target :mode)))
+      (error "aos/call: :args 只能用在普通檔案目標；inst 目標的參數寫在 inst.json 的 argv 裡"))
+    (array/push argv "--")
+    (each arg (opts :args) (array/push argv arg)))
   argv)
 
 (defn- pump-pipe [stream]
@@ -198,24 +168,14 @@
       (error (string "aos/llm: 不認得的選項 " key)))
     (unless (and (integer? value) (>= value 0))
       (error "aos/llm: :timeout-ms 必須是非負整數")))
-  (def reqfile (string out ".req.json"))
-  (def instfile (string out ".aos-llm.json"))
+  (def endpoint-path (absolute-path endpoint))
+  (def out-path (absolute-path out))
+  (def reqfile (string out-path ".req.json"))
   (spit reqfile (string (encode-json req) "\n"))
-  # aos-exec 的普通檔案模式沒有傳 argv 的入口；用一份短命 inst 仍由 aos/call
-  # 執行，並把三條流接回呼叫者。相對 endpoint／out 仍以呼叫者 cwd 為中心。
-  (spit instfile
-        (string (encode-json
-                  @{"argv" @[resolved-llm "call" endpoint reqfile out]
-                    "cwd" (os/cwd)
-                    "stdout" "/dev/stdout"
-                    "stderr" "/dev/stderr"})
-                "\n"))
-  (def call-opts @{:read out :json true})
+  (def call-opts @{:args @["call" endpoint-path reqfile out-path] :read out-path :json true})
   (when-let [timeout (opts :timeout-ms)]
     (put call-opts :timeout-ms timeout))
-  (def result
-    (defer (protect (os/rm instfile))
-      (call instfile call-opts)))
+  (def result (call resolved-llm call-opts))
   # aos/call 為了辨認 kind 會接住 stderr；LLM 這條同步介面要讓它仍出現在
   # aos-step 的 stderr，同時保留在結果 table 供程式查看。
   (when (> (length (result :stderr)) 0)
@@ -241,15 +201,13 @@
   (def kernel-home (absolute-path K))
   (def reqfile (string (os/cwd) "/" name ".req.json"))
   (spit reqfile (string (encode-json req) "\n"))
-  (def proc (os/spawn [resolved-kernel "llm" kernel-home reqfile "--name" name]
-                      :p {:out :pipe :err :pipe}))
-  (def stdout-buffer (pump-pipe (proc :out)))
-  (def stderr-buffer (pump-pipe (proc :err)))
-  (def code (os/proc-wait proc))
-  (unless (= 0 code)
-    (def stderr (string/trim (string stderr-buffer)))
-    (def detail (if (> (length stderr) 0) stderr (string/trim (string stdout-buffer))))
-    (error (string "aos/llm-submit: aos-kernel 回 " code "：" detail)))
+  (def result
+    (call resolved-kernel
+          @{:args @["llm" kernel-home reqfile "--name" name] :capture true}))
+  (unless (ok? result)
+    (def stderr (string/trim (result :stderr)))
+    (def detail (if (> (length stderr) 0) stderr (string/trim (result :out))))
+    (error (string "aos/llm-submit: aos-kernel 回 " (result :code) "：" detail)))
   (string kernel-home "/llm/results/" name ".json"))
 
 (defn- copy-opts [opts]

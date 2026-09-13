@@ -103,6 +103,7 @@ def write(state):
 每格重新載入整支檔，可用 `state`、`here`、`pc`、`aos`。例外或不可 JSON 化的 state 讓該格
 回 1，全文放 `.aos-step-py/error`。`aos` 有 `call`、`call_dir`、`call_json`、`ok`、`value`、
 `llm`、`llm_text`、`wait_for`、`llm_submit`；工具路徑可用 `AOS_EXEC`／`AOS_LLM`／`AOS_KERNEL` 覆蓋。
+`aos.call(target, args=["a", "b c"])` 只對普通檔案有效；`.json` 或資料夾目標給了 `args` 就拋錯。
 
 `bytes`／`bytearray` 自動存成只有 `$b64` 的物件，讀回時自動還原成 `bytes`；這也表示一般 JSON
 裡恰好只有 `$b64` 一個 key 的物件會被視為 binary。手動轉換可用 `aos.b64(b)`／`aos.unb64(s)`。
@@ -169,7 +170,7 @@ Lua 抓不到頂層函式的可靠定義順序，因此最後明寫 `return {{na
 
 Lua 的 `aos` 一覽：`call(target, opts)`、`call_dir(dir, opts)`、`call_json(path, opts)`、`ok(r)`、
 `value(r)`、`llm(endpoint, req, out, timeout_ms)`、`llm_text(r)`、`b64`、`unb64`。`call` 的 opts 是
-`dir_target`、`timeout_ms`、`stdin`、`capture`、`read`、`read_err`、`json`；回傳
+`dir_target`、`timeout_ms`、`args`、`stdin`、`capture`、`read`、`read_err`、`json`；`args={"a","b c"}` 只能給普通檔案目標；回傳
 `{code,kind,out,err,value}`。`llm` 會保留 `out.req.json`。底層工具可由 `AOS_EXEC`／`AOS_LLM` 覆蓋。
 Lua 格可 `return aos.wait_for(path)`；`aos.llm_submit(K, req, name)` 會回 kernel 結果檔的絕對路徑。
 

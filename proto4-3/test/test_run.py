@@ -92,6 +92,29 @@ class TestMaxRuns(RunCase):
         self.assertIn("aos-run: stop max_runs", r.stderr)
         self.assertLess(sec, 8)
 
+    def test_plain_file_args_are_passed_through_every_run(self):
+        target = self.write("args.sh", "#!/bin/sh\nprintf '<%s>\\n' \"$@\" >> seen.txt\n",
+                            executable=True)
+        r = self.aos_run(target, "--max-runs", 2, "--interval-ms", 10,
+                         "--", "a b", "--max-runs", "9")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(self.read("seen.txt"),
+                         "<a b>\n<--max-runs>\n<9>\n<a b>\n<--max-runs>\n<9>\n")
+
+    def test_json_target_rejects_separator_args_before_looping(self):
+        target = self.inst({"argv": ["sh", "-c", "printf ran > marker"]}, "one.json")
+        r = self.aos_run(target, "--max-runs", 1, "--", "extra")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", r.stderr)
+        self.assertFalse(self.exists("marker"))
+
+    def test_directory_target_rejects_empty_separator_args(self):
+        self.inst({"argv": ["sh", "-c", "printf ran > marker"]})
+        r = self.aos_run(self.d, "--max-runs", 1, "--")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", r.stderr)
+        self.assertFalse(self.exists("marker"))
+
 
 class TestStopExit(RunCase):
 

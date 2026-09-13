@@ -6,7 +6,7 @@
 ```sh
 aos-run xxx [--dir-target REL] [--timeout-ms N] [--interval-ms N] [--from-start]
             [--max-runs N] [--time-limit-ms N] [--stop-exit CODE]...
-            [--status-fd N] [--stop-on-error]
+            [--status-fd N] [--stop-on-error] [--stderr PATH|-] [-- ARG...]
 ```
 
 [proto4 筆記第 12 節](../../proto4/notes/2026-09-08-ideas.md)的原型。**執行那一段完全不重寫**：
@@ -26,6 +26,7 @@ aos-run xxx [--dir-target REL] [--timeout-ms N] [--interval-ms N] [--from-start]
 | `--stop-exit CODE` | 沒有 | 某一次的退出碼是 CODE 就停，可以給很多次 |
 | `--status-fd N` | 沒有＝不寫 | 往這個 fd 寫事件（給程式看的，見下面） |
 | `--stop-on-error` | 沒有＝不停 | 某一次是 **aos-exec 自己失敗**（`kind=aos`）就停 |
+| `-- ARG...` | 沒有 | 每一次都原樣傳給普通檔案目標；`.json`／資料夾目標給了就是用法錯 2 |
 
 ### 間隔從哪裡算
 
@@ -102,7 +103,7 @@ aos-run: stop max_runs
 （`kind=aos`）一律報 125**，跟子程式自己回的 1 分得開。要看是誰的碼就看 status-fd 那條的
 `kind=`。
 
-aos-run 自己的退出碼：**2**＝用法錯（旗標不認得、沒給 `xxx`、`xxx` 是不存在的**非**
+`aos-run` 自己的退出碼：**2**＝用法錯（旗標不認得、沒給 `xxx`、inst 目標卻給了 `--`、`xxx` 是不存在的**非**
 `.json` 路徑、時間／次數旗標是負數）；**0**＝`max_runs`／`time_limit`／`stop_exit`／第一次訊號（`signal`）；
 **125**＝`--stop-on-error` 撞到 aos-exec 自己失敗（`error`）；**128+N**＝同一個訊號收到
 第二次（`signal_forced`，正在跑的那次被腰斬）。子行程的退出碼只出現在那些 `#n exit=`
@@ -120,4 +121,3 @@ import aos_run
 code, reason = aos_run.run_loop("/path/to/folder", interval_ms=5000, max_runs=10,
                                 from_start=True, status_fd=w, stop_on_error=True)
 ```
-

@@ -206,6 +206,30 @@ class StepLuaTest(unittest.TestCase):
         self.assertEqual((result["code"], result["kind"]), (3, "child"))
         self.assertEqual(set(result), {"code", "kind", "out", "err", "value"})
 
+    def test_call_plain_file_with_args(self):
+        script = self.home / "args"
+        script.write_text("#!/bin/sh\nprintf '<%s>|<%s>' \"$@\"\n"); script.chmod(0o755)
+        self.write("local function tool(s) s.out=aos.call('./args',{args={'a b','--stderr'},capture=true}).out end\n"
+                   "return {{name='tool',fn=tool}}\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.state()["state"]["out"], "<a b>|<--stderr>")
+
+    def test_call_json_rejects_args(self):
+        (self.home / "one.json").write_text('{"argv":["true"]}')
+        self.write("local function tool(s) aos.call_json('one.json',{args={'extra'}}) end\n"
+                   "return {{name='tool',fn=tool}}\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", result.stderr)
+
+    def test_call_dir_rejects_even_empty_args(self):
+        (self.home / "child").mkdir()
+        self.write("local function tool(s) aos.call_dir('child',{args={}}) end\n"
+                   "return {{name='tool',fn=tool}}\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", result.stderr)
+
     def test_stderr_option_reaches_aos_exec(self):
         script = self.home / "noisy"
         script.write_text("#!/bin/sh\necho seen >&2\n"); script.chmod(0o755)
