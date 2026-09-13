@@ -54,3 +54,10 @@
 - 這樣分完，proto4-5 v1 的東西沒有白做：worker 的請求／結果／usage 形狀直接變第一層的規格，tick 的五步直接變 module 的一格。
 
 沒定的（等使用者）：(1) 排程層是**kernel module**（kernel 要認得「LLM 請求」這種單）還是**獨立行程**（kernel 只知道它是一個 proc，像現在）；(2) 兩層分開的順序——先抽第一層 `aos-llm call` 出來、排程層照舊，還是一次改成 module。
+
+## 22.7 Fable 的決定（使用者：「都隨你」，2026-09-13）
+
+1. **排程層做 kernel module**。理由：「請求等 endpoint 容量」跟「proc 等 cpu」是同一個模型，kernel 本來就是管這個的；投請求走 syscall 收件匣（fix-r3 已建），不必再發明一條通道。
+2. **順序：先抽第一層**。`aos-llm call`（像 cuda 的一次呼叫）從 proto4-5 的 worker 抽出來變獨立指令，lisp 立刻能用；排程照現在的 `llm-cpu tick` 跑；kernel module 是下一本任務書（22.8）。
+
+第一層規格（任務書 `proto4-5/notes/codex-task-3.md`）：`aos-llm call ENDPOINT REQ OUT`——ENDPOINT 是「一個 endpoint 物件的 .json」或「endpoints.json#名字」；REQ 是請求檔或 `-`（stdin）；OUT 是結果檔或 `-`（stdout）。結果形狀＝v1 的 results；`ok:true` 退出 0、`ok:false` 退出 1（結果照寫）、用法錯 2。另給 `aos-llm models ENDPOINT`（GET /models，看 LM Studio 目前載哪顆）。`llm-cpu worker` 改成叫同一個函式庫。lisp 端 `(aos/llm ENDPOINT req-table OUT &opt opts)`：把 req 寫成檔、叫 aos-llm、`:read :json` 讀回來。
