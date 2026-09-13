@@ -80,11 +80,12 @@ echo $?                                 # 全部跑完那次回 100
 
 ```janet
 (aos/call "./tool")
+(aos/call "./tool" @{:args ["a" "b c"]})
 (aos/call-json "./job.json" @{:timeout-ms 500})
 (aos/call-dir "./child" @{:dir-target ".aos/other.json"})
 ```
 
-- `call` 不判斷目標種類，普通檔案、`.json`、資料夾原樣交給 proto4-3 `aos-exec`。
+- `call` 把目標交給 proto4-3 `aos-exec`；`:args [...]` 原樣傳給普通檔案，`.json` 或資料夾給了就 error。
 - `call-dir` 先確認目標是資料夾，再叫它。
 - `call-json` 先確認名字以 `.json` 結尾；檔案可以還沒出現。
 - `exec-path` 回 aos-exec 的絕對路徑；環境變數 `AOS_EXEC` 可以覆蓋預設值。
@@ -132,7 +133,7 @@ echo $?                                 # 全部跑完那次回 100
 (get-in r [:value "text"])
 ```
 
-`aos/llm` 用 spork 把請求寫到 `result.json.req.json` 留著對帳，再同步呼叫
+`aos/llm` 用 spork 把請求寫到 `result.json.req.json` 留著對帳，再透過 `aos/call :args` 同步呼叫
 `../proto4-5/aos-llm`，結果 table 仍有 `:code`、`:kind`、`:out`、`:value`；`:value`
 是解好的結果 dict。endpoint 與其他相對路徑都以呼叫者 cwd 為中心，跟 `:read` 一樣。
 環境變數 `AOS_LLM` 可覆蓋預設的 `aos-llm` 路徑。
@@ -178,6 +179,7 @@ echo $?                                 # 全部跑完那次回 100
 - `src/aos.janet`：透過 proto4-3 `aos-exec` 叫目標、接流、讀檔、解 JSON、串接與同步叫 LLM。
 - `src/step.janet`：切 form、eval、錯誤處理與逐格流程編排。
 - `src/state.janet`：`.aos-step/` 的 pc、image、src、state、error 與 waiting 狀態讀寫。
+- `src/paths.janet`：aos-exec／aos-llm／aos-kernel 的路徑解析（`AOS_EXEC`／`AOS_LLM`／`AOS_KERNEL` 環境變數）；只給 aos.janet 用。
 - `test/aos.janet`：函式庫、三種目標、逾時與錯誤分類測試。
 - `test/step.janet`：每步真開新行程的持久化、重試、status 與 reset 測試。
 - `test/cpu.janet`：真叫 `aos-run` 三格的整合測試。

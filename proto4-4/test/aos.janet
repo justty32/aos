@@ -64,6 +64,13 @@
     (def r4 (aos/call (string fx "/exit3.sh")))
     (check "普通檔案的子程式碼原樣回來" (and (= 3 (r4 :code)) (= "child" (r4 :kind))))
     (check "ok? 不把子程式 3 當成成功" (not (aos/ok? r4)))
+    (def with-args
+      (aos/call "/usr/bin/printf" @{:args ["<%s>|<%s>" "a b" "--stderr"] :capture true}))
+    (check ":args 原樣傳給普通檔案" (= "<a b>|<--stderr>" (with-args :out)))
+    (check "call-json 拒絕 :args"
+           (throws? (fn [] (aos/call-json direct @{:args ["extra"]}))))
+    (check "call-dir 連空 :args 也拒絕"
+           (throws? (fn [] (aos/call-dir d1 @{:args []}))))
 
     (def r5 (aos/call-json (string tmp "/missing.json")))
     (check "不存在的 .json 是 aos 失敗" (and (= 125 (r5 :code)) (= "aos" (r5 :kind))))
@@ -162,6 +169,8 @@
            (slurp (string llm-out ".req.json"))))
         (check "aos/llm 留下可對帳的 .req.json"
                (and (= :file (os/stat (string llm-out ".req.json") :mode))
-                    (= "fail:500" (get-in saved-req ["messages" 0 "content"]))))))
+                    (= "fail:500" (get-in saved-req ["messages" 0 "content"]))))
+        (check "aos/llm 不再寫短命 inst.json"
+               (nil? (os/stat (string llm-out ".aos-llm.json") :mode)))))
 
     (printf "%d 條通過 ✓" n)))

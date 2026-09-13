@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """aos-exec：單發執行器——把一個目標執行**一次**，回 `(結束狀態, 這是誰的碼)`。
 
-    aos-exec xxx [--dir-target REL] [--timeout-ms N] [--stderr PATH|-]
+    aos-exec xxx [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 
 `xxx` 是什麼決定怎麼跑（proto4 筆記第 11.2 節）：
 
@@ -34,7 +34,8 @@ CHILD, AOS, USAGE = "child", "aos", "usage"      # run_target() 回的那個 kin
 EXIT_AOS = 125          # kind=="aos" 時命令列的退出碼（不會跟子程式的碼撞號）
 
 
-def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, stderr=None):
+def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, stderr=None,
+               args=None):
     """把 xxx 執行一次，回 `(code, kind)`。
 
     `kind` 說這個 code 是誰的：
@@ -54,19 +55,24 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, 
     None 叫一次。aos-run 靠它在第二次訊號時砍掉正在跑的那個（命令列用不到，預設沒有）。
 
     `stderr` 只蓋子程式這一條流：None＝照 inst.json，`-`＝繼承呼叫者的 stderr，字串＝以
-    呼叫者當時的 cwd 為中心開檔。普通檔案模式也吃這個覆蓋。
+    呼叫者當時的 cwd 為中心開檔。普通檔案模式也吃這個覆蓋。`args` 只對普通檔案
+    有效；None 表示沒給 `--`，陣列（包括空陣列）表示有給。
     """
     p = os.path.abspath(xxx)
     if os.path.isdir(p):
+        if args is not None:
+            return _inst_args_error()
         target = os.path.join(p, dir_target)
         if not os.path.isfile(target):
             return _err(2, USAGE, "資料夾 %s 裡沒有 %s" % (p, dir_target))
         return _run_inst(target, p, timeout_ms, on_spawn, stderr)
     if p.endswith(".json"):                 # 不存在也走這條：讀不到＝aos 自己失敗（125）
+        if args is not None:
+            return _inst_args_error()
         return _run_inst(p, os.path.dirname(p), timeout_ms, on_spawn, stderr)
     if not os.path.exists(p):
         return _err(2, USAGE, "找不到 %s" % xxx)
-    return _run_plain(p, timeout_ms, on_spawn, stderr)
+    return _run_plain(p, timeout_ms, on_spawn, stderr, args)
 
 
 def _err(code, kind, msg):
@@ -74,21 +80,25 @@ def _err(code, kind, msg):
     return code, kind
 
 
-def _run_plain(path, timeout_ms, on_spawn=None, stderr=None):
+def _inst_args_error():
+    return _err(2, USAGE, "inst 目標的參數寫在 inst.json 的 argv 裡")
+
+
+def _run_plain(path, timeout_ms, on_spawn=None, stderr=None, args=None):
     """最陽春的那個指令集：一個檔讀進來就跑。
 
-    argv 就是它自己（絕對路徑）、cwd 是它所在的資料夾、三條串流原樣繼承 aos-exec 的、
+    argv[0] 是它自己（絕對路徑），args 原樣接在後面；cwd 是它所在的資料夾，三條串流原樣繼承 aos-exec 的、
     環境就是繼承的、沒有 exit 檔。沒有執行位＝`(126, "child")`。
     """
     if stderr in (None, "-"):
-        return _spawn([path], os.path.dirname(path), dict(os.environ),
+        return _spawn([path] + list(args or ()), os.path.dirname(path), dict(os.environ),
                       None, None, None, timeout_ms, "", on_spawn)
     try:
         ferr = open(stderr, "wb")
     except OSError as e:
         return _err(1, AOS, "重導向的檔案開不起來：%s" % e)
     try:
-        return _spawn([path], os.path.dirname(path), dict(os.environ),
+        return _spawn([path] + list(args or ()), os.path.dirname(path), dict(os.environ),
                       None, None, ferr, timeout_ms, "", on_spawn)
     finally:
         ferr.close()
@@ -214,6 +224,14 @@ def _write_exit(path, status):
 
 
 def main(argv=None):
+    raw = list(sys.argv[1:] if argv is None else argv)
+    try:
+        separator = raw.index("--")
+    except ValueError:
+        child_args = None
+    else:
+        child_args = raw[separator + 1:]
+        raw = raw[:separator]
     ap = argparse.ArgumentParser(
         prog="aos-exec", description="把一個目標（檔案／.json／資料夾）執行一次")
     ap.add_argument("xxx", help="要執行的東西：普通檔案、.json 檔，或資料夾")
@@ -223,10 +241,11 @@ def main(argv=None):
                     help="這一次執行的上限（毫秒），0 或不給＝不限")
     ap.add_argument("--stderr", metavar="PATH",
                     help="蓋掉子程式的 stderr；- ＝印到 aos-exec 自己的 stderr")
-    a = ap.parse_args(argv)
+    a = ap.parse_args(raw)
     if a.timeout_ms < 0:
         ap.error("--timeout-ms 不能是負數")      # argparse 的用法錯＝退出碼 2
-    code, kind = run_target(a.xxx, a.dir_target, a.timeout_ms, stderr=a.stderr)
+    code, kind = run_target(a.xxx, a.dir_target, a.timeout_ms, stderr=a.stderr,
+                            args=child_args)
     return EXIT_AOS if kind == AOS else code
 
 

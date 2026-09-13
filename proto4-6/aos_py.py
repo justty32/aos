@@ -52,9 +52,15 @@ def _read(path):
 
 
 def call(target, dir_target=None, timeout_ms=None, stdin=None, capture=False,
-         read=None, read_err=None, json=False):
+         read=None, read_err=None, json=False, args=None):
     """把 target 交給 aos-exec，並視選項接回 stdout、檔案或 JSON。"""
-    argv = [_exec_path(), os.fspath(target)]
+    target = os.fspath(target)
+    if args is not None:
+        if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+            raise ValueError("aos.call: args 必須是字串 list")
+        if target.endswith(".json") or Path(target).is_dir():
+            raise ValueError("aos.call: args 只能用在普通檔案目標；inst 目標的參數寫在 inst.json 的 argv 裡")
+    argv = [_exec_path(), target]
     if dir_target is not None:
         argv += ["--dir-target", os.fspath(dir_target)]
     if timeout_ms is not None:
@@ -64,6 +70,8 @@ def call(target, dir_target=None, timeout_ms=None, stdin=None, capture=False,
     stderr_target = os.environ.get("AOS_STEP_STDERR")
     if stderr_target:
         argv += ["--stderr", stderr_target]
+    if args is not None:
+        argv += ["--", *args]
 
     completed = subprocess.run(
         argv, input=stdin, text=True,
@@ -118,20 +126,19 @@ def value(result):
 def llm(endpoint, req, out, timeout_ms=None):
     if not isinstance(req, dict):
         raise ValueError("aos.llm: req 必須是 dict")
-    out_path = Path(out)
+    endpoint_path = Path(endpoint).absolute()
+    out_path = Path(out).absolute()
     req_path = Path(str(out_path) + ".req.json")
     req_path.write_text(_json.dumps(req, ensure_ascii=False) + "\n", encoding="utf-8")
-    argv = [_llm_path(), "call", os.fspath(endpoint), os.fspath(req_path), os.fspath(out_path)]
-    if timeout_ms is not None:
-        if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or timeout_ms < 0:
-            raise ValueError("aos.llm: timeout_ms 必須是非負整數")
-        argv += ["--timeout-ms", str(timeout_ms)]
-    subprocess.run(argv, check=False)
-    try:
-        result = _json.loads(out_path.read_text(encoding="utf-8"))
-        return result if isinstance(result, dict) else {"ok": False, "error": {"kind": "no_result"}}
-    except (OSError, UnicodeDecodeError, _json.JSONDecodeError):
-        return {"ok": False, "error": {"kind": "no_result"}}
+    result = call(
+        _llm_path(),
+        args=["call", os.fspath(endpoint_path), os.fspath(req_path), os.fspath(out_path)],
+        timeout_ms=timeout_ms, read=out_path, json=True,
+    )
+    if result["err"] and os.environ.get("AOS_STEP_STDERR") != "-":
+        print(result["err"], file=sys.stderr, end="")
+    return (result["value"] if isinstance(result["value"], dict)
+            else {"ok": False, "error": {"kind": "no_result"}})
 
 
 def llm_text(result):
@@ -146,11 +153,11 @@ def llm_submit(K, req: dict, name: str) -> str:
     req_path = Path.cwd() / (name + ".req.json")
     req_path.write_text(_json.dumps(req, ensure_ascii=False) + "\n", encoding="utf-8")
     kernel = Path(K).resolve()
-    completed = subprocess.run(
-        [_kernel_path(), "llm", os.fspath(kernel), os.fspath(req_path), "--name", name],
-        text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    result = call(
+        _kernel_path(), args=["llm", os.fspath(kernel), os.fspath(req_path), "--name", name],
+        capture=True,
     )
-    if completed.returncode != 0:
-        detail = completed.stderr.strip() or completed.stdout.strip()
-        raise RuntimeError(f"aos.llm_submit: aos-kernel 回 {completed.returncode}: {detail}")
+    if not ok(result):
+        detail = result["err"].strip() or result["out"].strip()
+        raise RuntimeError(f"aos.llm_submit: aos-kernel 回 {result['code']}: {detail}")
     return str(kernel / "llm" / "results" / (name + ".json"))

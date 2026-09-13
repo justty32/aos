@@ -19,6 +19,26 @@ class TestTargets(ExecCase):
         self.assertEqual(r.stdout, "out:fed %s\n" % self.d)   # cwd＝它所在的資料夾
         self.assertEqual(r.stderr, "err\n")
 
+    def test_plain_file_gets_everything_after_separator_verbatim(self):
+        p = self.write("args.sh", "#!/bin/sh\nprintf '<%s>\\n' \"$@\"\n", executable=True)
+        r = self.aos(p, "--timeout-ms", "1000", "--", "a b", "", "--stderr", "-")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout, "<a b>\n<>\n<--stderr>\n<->\n")
+
+    def test_json_target_rejects_separator_args(self):
+        target = self.inst({"argv": ["sh", "-c", "printf ran > marker"]}, "one.json")
+        r = self.aos(target, "--", "extra")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", r.stderr)
+        self.assertFalse(self.exists("marker"))
+
+    def test_directory_target_rejects_even_empty_separator_args(self):
+        self.inst({"argv": ["sh", "-c", "printf ran > marker"]})
+        r = self.aos(self.d, "--")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("inst 目標的參數寫在 inst.json 的 argv 裡", r.stderr)
+        self.assertFalse(self.exists("marker"))
+
     def test_plain_file_not_executable_is_126(self):
         p = self.write("noexec.sh", "#!/bin/sh\necho hi\n")
         r = self.aos(p)

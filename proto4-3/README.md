@@ -29,6 +29,7 @@ python3 -m unittest discover -s test        # 220 條測試，真的開進程，
 ./aos-exec /path/to/folder --dir-target my/inst.json
 ./aos-exec /path/to/one.json                # 直接指一份 inst.json
 ./aos-exec /path/to/script.sh               # 普通檔案：直接執行它
+./aos-exec /path/to/script.sh -- a "b c"     # 普通檔案：-- 後原樣當 argv[1:]
 ./aos-exec /path/to/folder --timeout-ms 3000
 echo $?                                     # 子程式的結束狀態；125＝aos-exec 自己失敗
 ```

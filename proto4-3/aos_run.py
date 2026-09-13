@@ -2,7 +2,7 @@
 
     aos-run xxx [--dir-target REL] [--timeout-ms N] [--interval-ms N] [--from-start]
                 [--max-runs N] [--time-limit-ms N] [--stop-exit CODE]...
-                [--status-fd N] [--stop-on-error] [--stderr PATH|-]
+                [--status-fd N] [--stop-on-error] [--stderr PATH|-] [-- ARG...]
 
 執行那一段**完全不重寫**：核心就是反覆呼叫 `aos_exec.run_target()`。這支只管三件事——
 下一次什麼時候開始（`--interval-ms`／`--from-start`）、什麼時候停（五個停止條件）、
@@ -105,7 +105,7 @@ def _stderr(msg):
 def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
              interval_ms=DEFAULT_INTERVAL_MS, from_start=False, max_runs=0,
              time_limit_ms=0, stop_exits=(), log=None, install_signals=True,
-             status_fd=None, stop_on_error=False, stderr=None):
+             status_fd=None, stop_on_error=False, stderr=None, args=None):
     """一直跑 `xxx`，回 `(退出碼, 停止原因)`。多數停止是退出碼 0；只有「同一個訊號送第二次」
     （腰斬掉正在跑的那次）例外，原因是 `signal_forced`、退出碼是 `128+N`（N＝那個訊號的編號，
     SIGTERM→143、SIGINT→130）。
@@ -121,6 +121,7 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
     - `stop_on_error`：某次 `kind == "aos"`（aos-exec 自己失敗）就停，原因 `error`、
       退出碼 125。不給就照舊不停（每次都報 `exit=125 kind=aos`）。
     - `stderr`：原樣傳給 aos-exec；None＝照 inst.json，`-`＝印到畫面，其他字串＝寫檔。
+    - `args`：原樣傳給 aos-exec；只對普通檔案目標有效。
 
     aos-exec 自己失敗（inst.json 壞掉）**預設不停**，照 interval 一直試——壞了也活著，
     要停就 `--stop-on-error`（或老招 `stop_exits`）。
@@ -147,7 +148,7 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
                 return _stop(log, status, "time_limit")   # 剩不到 1 毫秒，那就別開了
             status.emit("start #%d" % (n + 1))
             code, kind = aos_exec.run_target(xxx, dir_target, eff, on_spawn=state.hold,
-                                             stderr=stderr)
+                                             stderr=stderr, args=args)
             if kind == aos_exec.AOS:
                 code = EXIT_ERROR       # aos-exec 自己失敗一律報 125，跟子程式的碼分得開
             state.child = None
@@ -238,6 +239,14 @@ def _install(state):
 
 
 def main(argv=None):
+    raw = list(sys.argv[1:] if argv is None else argv)
+    try:
+        separator = raw.index("--")
+    except ValueError:
+        child_args = None
+    else:
+        child_args = raw[separator + 1:]
+        raw = raw[:separator]
     ap = argparse.ArgumentParser(
         prog="aos-run", description="把一個目標（檔案／.json／資料夾）一直執行下去")
     ap.add_argument("xxx", help="要執行的東西：普通檔案、.json 檔，或資料夾")
@@ -261,7 +270,7 @@ def main(argv=None):
                     help="某一次是 aos-exec 自己失敗（kind=aos）就停，退出碼 125")
     ap.add_argument("--stderr", metavar="PATH",
                     help="每回合蓋掉子程式的 stderr；- ＝印到 aos-run 自己的 stderr")
-    a = ap.parse_args(argv)
+    a = ap.parse_args(raw)
 
     for name, v in (("--timeout-ms", a.timeout_ms), ("--interval-ms", a.interval_ms),
                     ("--max-runs", a.max_runs), ("--time-limit-ms", a.time_limit_ms)):
@@ -275,12 +284,15 @@ def main(argv=None):
     if not os.path.exists(a.xxx) and not a.xxx.endswith(".json"):
         sys.stderr.write("aos-run: 找不到 %s\n" % a.xxx)
         return 2                # `.json` 不存在照跑：每次回 125（kind=aos），出現了就跑起來
+    if child_args is not None and (os.path.isdir(a.xxx) or a.xxx.endswith(".json")):
+        sys.stderr.write("aos-run: inst 目標的參數寫在 inst.json 的 argv 裡\n")
+        return 2
 
     code, _reason = run_loop(a.xxx, dir_target=a.dir_target, timeout_ms=a.timeout_ms,
                              interval_ms=a.interval_ms, from_start=a.from_start,
                              max_runs=a.max_runs, time_limit_ms=a.time_limit_ms,
                              stop_exits=a.stop_exit, status_fd=a.status_fd,
-                             stop_on_error=a.stop_on_error, stderr=a.stderr)
+                             stop_on_error=a.stop_on_error, stderr=a.stderr, args=child_args)
     return code
 
 

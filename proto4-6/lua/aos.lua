@@ -59,6 +59,17 @@ end
 function M.call(target, opts)
   opts = opts or {}
   if type(opts) ~= "table" then error("aos.call: opts 必須是 table", 2) end
+  if opts.args ~= nil then
+    if type(opts.args) ~= "table" then error("aos.call: args 必須是字串陣列", 2) end
+    for key, value in pairs(opts.args) do
+      if type(key) ~= "number" or key < 1 or key % 1 ~= 0 or key > #opts.args or type(value) ~= "string" then
+        error("aos.call: args 必須是字串陣列", 2)
+      end
+    end
+    if tostring(target):match("%.json$") or is_dir(target) then
+      error("aos.call: args 只能用在普通檔案目標；inst 目標的參數寫在 inst.json 的 argv 裡", 2)
+    end
+  end
   local argv = {os.getenv("AOS_EXEC") or default_exec, target}
   if opts.dir_target ~= nil then argv[#argv + 1] = "--dir-target"; argv[#argv + 1] = opts.dir_target end
   if opts.timeout_ms ~= nil then
@@ -69,6 +80,10 @@ function M.call(target, opts)
   end
   local stderr_target = rawget(_G, "AOS_STEP_STDERR") or os.getenv("AOS_STEP_STDERR")
   if stderr_target then argv[#argv + 1] = "--stderr"; argv[#argv + 1] = stderr_target end
+  if opts.args ~= nil then
+    argv[#argv + 1] = "--"
+    for _, value in ipairs(opts.args) do argv[#argv + 1] = value end
+  end
   local command = {}
   for _, value in ipairs(argv) do command[#command + 1] = shquote(value) end
   local stdin_path, err_path = nil, temp_file()
@@ -136,16 +151,17 @@ function M.llm(endpoint, req, out, timeout_ms)
   if timeout_ms ~= nil and (type(timeout_ms) ~= "number" or timeout_ms < 0 or timeout_ms % 1 ~= 0) then
     error("aos.llm: timeout_ms 必須是非負整數", 2)
   end
-  write_file(out .. ".req.json", json.encode(req) .. "\n")
-  local argv = {os.getenv("AOS_LLM") or default_llm, "call", endpoint, out .. ".req.json", out}
-  if timeout_ms ~= nil then argv[#argv + 1] = "--timeout-ms"; argv[#argv + 1] = tostring(timeout_ms) end
-  local command = {}; for _, value in ipairs(argv) do command[#command + 1] = shquote(value) end
-  os.execute(table.concat(command, " "))
-  local raw = read_file(out)
-  if raw then
-    local ok, value = pcall(json.decode, raw)
-    if ok and type(value) == "table" then return value end
+  local here = assert(io.popen("pwd -P", "r")); local work = assert(here:read("*l")); here:close()
+  local endpoint_path, out_path = absolute(endpoint, work), absolute(out, work)
+  write_file(out_path .. ".req.json", json.encode(req) .. "\n")
+  local result = M.call(os.getenv("AOS_LLM") or default_llm,
+    {args={"call", endpoint_path, out_path .. ".req.json", out_path},
+     timeout_ms=timeout_ms, read=out_path, json=true})
+  if result.err ~= json.null and result.err ~= "" and
+      (rawget(_G, "AOS_STEP_STDERR") or os.getenv("AOS_STEP_STDERR")) ~= "-" then
+    io.stderr:write(result.err)
   end
+  if type(result.value) == "table" and result.value ~= json.null then return result.value end
   return {ok=false, error={kind="no_result"}}
 end
 
@@ -162,16 +178,12 @@ function M.llm_submit(K, req, name)
   local req_path = work .. "/" .. name .. ".req.json"
   local kernel = absolute(K, work)
   write_file(req_path, json.encode(req) .. "\n")
-  local err_path, out_path = temp_file(), temp_file()
-  local argv = {os.getenv("AOS_KERNEL") or default_kernel, "llm", kernel, req_path, "--name", name}
-  local command = {}; for _, value in ipairs(argv) do command[#command + 1] = shquote(value) end
-  local a, why, code = os.execute(table.concat(command, " ") .. " > " .. shquote(out_path) .. " 2> " .. shquote(err_path))
-  code = exit_code(a, why, code)
-  local err, out = read_file(err_path) or "", read_file(out_path) or ""
-  os.remove(err_path); os.remove(out_path)
-  if code ~= 0 then
-    local detail = err:gsub("%s+$", ""); if detail == "" then detail = out:gsub("%s+$", "") end
-    error("aos.llm_submit: aos-kernel 回 " .. code .. ": " .. detail, 2)
+  local result = M.call(os.getenv("AOS_KERNEL") or default_kernel,
+    {args={"llm", kernel, req_path, "--name", name}, capture=true})
+  if not M.ok(result) then
+    local detail = result.err:gsub("%s+$", "")
+    if detail == "" then detail = result.out:gsub("%s+$", "") end
+    error("aos.llm_submit: aos-kernel 回 " .. result.code .. ": " .. detail, 2)
   end
   return kernel .. "/llm/results/" .. name .. ".json"
 end
