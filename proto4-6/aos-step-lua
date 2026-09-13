@@ -1,0 +1,222 @@
+#!/usr/bin/env lua5.4
+
+local function shquote(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
+local function cwd()
+  local p = assert(io.popen("pwd -P", "r")); local v = assert(p:read("*l")); p:close(); return v
+end
+local function absolute(path)
+  if path:sub(1, 1) ~= "/" then path = cwd() .. "/" .. path end
+  local parts = {}
+  for part in path:gmatch("[^/]+") do
+    if part == ".." then table.remove(parts) elseif part ~= "." then parts[#parts + 1] = part end
+  end
+  return "/" .. table.concat(parts, "/")
+end
+
+local script_arg = arg[0]
+if not script_arg:find("/", 1, true) then
+  local p = io.popen("command -v -- " .. shquote(script_arg), "r")
+  local found = p and p:read("*l") or nil
+  if p then p:close() end
+  if found and found ~= "" then script_arg = found end
+end
+local script = absolute(script_arg)
+local root = script:match("^(.*)/[^/]+$") or cwd()
+package.path = root .. "/lua/?.lua;" .. package.path
+local json = require "json"
+local aos = require "aos"
+
+local TOOL, DONE, HISTORY_LIMIT = "aos-step-lua", 100, 50
+
+local function fail(message) io.stderr:write(TOOL .. ": " .. message .. "\n"); return 2 end
+local function read_file(path)
+  local f, err = io.open(path, "rb"); if not f then return nil, err end
+  local value = f:read("*a"); f:close(); return value
+end
+local function write_file(path, value)
+  local f, err = io.open(path, "wb"); if not f then return nil, err end
+  local ok, write_err = f:write(value); f:close()
+  if not ok then return nil, write_err end
+  return true
+end
+local function dirname(path) return path:match("^(.*)/[^/]*$") or "." end
+local function basename(path) return path:match("([^/]+)$") or path end
+local function paths_for(prog)
+  local state = prog:gsub("%.lua$", "")
+  if state == prog then state = prog end
+  return state .. ".state.json", dirname(prog) .. "/.aos-step-lua/error"
+end
+local function same_array(a, b)
+  if type(a) ~= "table" or #a ~= #b then return false end
+  for i = 1, #b do if a[i] ~= b[i] then return false end end
+  return true
+end
+local function source_mtime(path)
+  local p = io.popen("stat -c %Y -- " .. shquote(path), "r")
+  if not p then return json.null end
+  local value = p:read("*l"); p:close(); return tonumber(value) or json.null
+end
+local function state_json(value)
+  local keys = {"state", "pc", "n", "done", "steps", "src", "last", "history"}
+  local out = {}
+  for _, key in ipairs(keys) do
+    if value[key] ~= nil then out[#out + 1] = json.encode(key) .. ":" .. json.encode(value[key]) end
+  end
+  return "{" .. table.concat(out, ",") .. "}"
+end
+local function atomic_state(path, value)
+  local tmp = path .. ".tmp"
+  local ok, err = write_file(tmp, state_json(value) .. "\n")
+  if not ok then return nil, err end
+  local renamed, rename_err = os.rename(tmp, path)
+  if not renamed then os.remove(tmp); return nil, rename_err end
+  return true
+end
+local function load_state(path)
+  local raw, err = read_file(path)
+  if not raw then
+    local probe = io.open(path, "rb")
+    if not probe then return nil end
+    probe:close(); error("狀態檔壞了：" .. tostring(err), 0)
+  end
+  local ok, value = pcall(json.decode, raw)
+  if not ok then error("狀態檔壞了：" .. tostring(value):match("^[^\n]*"), 0) end
+  if type(value) ~= "table" or type(value.pc) ~= "number" or value.pc < 0 or value.pc % 1 ~= 0 then
+    error("狀態檔壞了：pc 必須是非負整數", 0)
+  end
+  return value
+end
+local function validate_steps(value)
+  if type(value) ~= "table" then error("PROG 最後必須 return 步驟陣列", 0) end
+  local n = #value
+  for key in pairs(value) do
+    if type(key) ~= "number" or key < 1 or key % 1 ~= 0 or key > n then
+      error("PROG 最後必須 return 1..n 連續的步驟陣列", 0)
+    end
+  end
+  local names = {}
+  for i = 1, n do
+    local item = value[i]
+    if type(item) ~= "table" or type(item.name) ~= "string" or item.name == "" then
+      error("PROG 第 " .. (i - 1) .. " 格缺 name", 0)
+    end
+    if type(item.fn) ~= "function" then error("PROG 第 " .. (i - 1) .. " 格缺 fn", 0) end
+    names[i] = item.name
+  end
+  return value, names
+end
+local function load_program(prog, pc, user_state, source)
+  _G.state, _G.here, _G.pc, _G.aos = user_state, dirname(prog), pc, aos
+  local chunk, syntax = loadfile(prog)
+  if not chunk then error("載不起 PROG：" .. tostring(syntax):match("^[^\n]*"), 0) end
+  local ok, result = pcall(chunk)
+  if not ok then error("載不起 PROG：" .. tostring(result):match("^[^\n]*"), 0) end
+  local steps, names = validate_steps(result)
+  local src = {n=#steps, size=#source, mtime=source_mtime(prog), steps=names}
+  return steps, names, src
+end
+local function empty_state(names)
+  return {state={}, pc=0, n=#names, done=false, steps=names}
+end
+local function write_error(path, trace)
+  os.execute("mkdir -p " .. shquote(dirname(path)))
+  local tmp = path .. ".tmp"
+  local ok, err = write_file(tmp, trace)
+  if not ok then return nil, err end
+  local renamed, rename_err = os.rename(tmp, path)
+  if not renamed then os.remove(tmp); return nil, rename_err end
+  return true
+end
+local function first_line(text) return tostring(text):match("^[^\n]*") or tostring(text) end
+local function report_step_error(error_path, pc, item, detail, trace)
+  local ok, err = write_error(error_path, trace)
+  if not ok then return fail("寫不了錯誤全文：" .. tostring(err)) end
+  local info = debug.getinfo(item.fn, "S") or {}
+  local at = info.linedefined and ("，PROG 第 " .. info.linedefined .. " 行") or ""
+  io.stderr:write(string.format("%s: 第 %d 格 %s（0 起算%s）失敗：%s（全文：.aos-step-lua/error 或 --status）\n",
+    TOOL, pc, item.name, at, detail))
+  return 1
+end
+local function changed(saved, src)
+  local old = saved.src
+  return type(old) == "table" and
+      (old.size ~= src.size or old.mtime ~= src.mtime or not same_array(old.steps, src.steps))
+end
+local function run(prog, stderr_override, want_status)
+  local state_path, error_path = paths_for(prog)
+  local ok_saved, saved = pcall(load_state, state_path)
+  if not ok_saved then return fail(saved) end
+  local user_state = saved and saved.state or {}
+  if type(user_state) ~= "table" then return fail("狀態檔壞了：state 必須是物件") end
+  local source, read_err = read_file(prog)
+  if not source then return fail("讀不到 PROG：" .. tostring(read_err)) end
+  local pc = saved and saved.pc or 0
+  local ok_load, steps, names, src = pcall(load_program, prog, pc, user_state, source)
+  if not ok_load then return fail(steps) end
+  local current = saved or empty_state(names)
+  if want_status then
+    io.stdout:write(state_json(current) .. "\n")
+    local trace = read_file(error_path); if trace then io.stderr:write(trace) end
+    return 0
+  end
+  if pc > 0 and changed(current, src) then
+    io.stderr:write(string.format("%s: PROG 改過了（上次 %s 個、現在 %d 個），pc=%d 可能已經錯位；確定要重來就 --reset\n",
+      TOOL, type(current.src) == "table" and tostring(current.src.n or "?") or "?", #steps, pc))
+  end
+  if pc > 0 and type(current.steps) == "table" and pc < #current.steps and pc < #names
+      and current.steps[pc + 1] ~= names[pc + 1] then
+    io.stderr:write(string.format("%s: 第 %d 格函式名對不上（上次 %s、現在 %s），仍照目前程式執行\n",
+      TOOL, pc, tostring(current.steps[pc + 1]), tostring(names[pc + 1])))
+  end
+  if pc >= #steps then
+    current.n, current.done, current.steps, current.src = #steps, true, names, src
+    local wrote, err = atomic_state(state_path, current)
+    if not wrote then return fail("寫不了狀態檔：" .. tostring(err)) end
+    return DONE
+  end
+  local item = steps[pc + 1]
+  _G.AOS_STEP_STDERR = stderr_override
+  local started = os.clock()
+  local ran, trace = xpcall(function() return item.fn(user_state) end, debug.traceback)
+  _G.AOS_STEP_STDERR = nil
+  if not ran then return report_step_error(error_path, pc, item, first_line(trace), trace) end
+  local encoded, encode_error = xpcall(function() return json.encode(user_state) end, debug.traceback)
+  if not encoded then
+    local kind = first_line(encode_error)
+    return report_step_error(error_path, pc, item, "state 裡有 JSON 放不進的東西：" .. kind, encode_error)
+  end
+  local history = type(current.history) == "table" and current.history or {}
+  local last = {pc=pc, step=item.name, exit=0, at=os.date("!%Y-%m-%dT%H:%M:%S+00:00"),
+                ms=math.floor((os.clock() - started) * 1000)}
+  history[#history + 1] = last
+  while #history > HISTORY_LIMIT do table.remove(history, 1) end
+  local result = {state=user_state, pc=pc + 1, n=#steps, done=pc + 1 >= #steps,
+                  steps=names, src=src, last=last, history=history}
+  local wrote, err = atomic_state(state_path, result)
+  if not wrote then return fail("寫不了狀態檔：" .. tostring(err)) end
+  os.remove(error_path)
+  return 0
+end
+
+local function main()
+  local prog_arg, status, reset, stderr_override
+  local i = 1
+  while i <= #arg do
+    if arg[i] == "--status" then status = true
+    elseif arg[i] == "--reset" then reset = true
+    elseif arg[i] == "--stderr" then i = i + 1; stderr_override = arg[i]; if not stderr_override then return fail("--stderr 缺 PATH") end
+    elseif arg[i]:sub(1, 1) == "-" then return fail("不認得選項：" .. arg[i])
+    elseif prog_arg then return fail("只能給一個 PROG.lua")
+    else prog_arg = arg[i] end
+    i = i + 1
+  end
+  if not prog_arg then return fail("用法：aos-step-lua PROG.lua [--status|--reset] [--stderr -|PATH]") end
+  if status and reset then return fail("--status 與 --reset 不能一起用") end
+  local prog = absolute(prog_arg)
+  local f = io.open(prog, "rb"); if not f then return fail("找不到程式：" .. prog_arg) end; f:close()
+  local state_path, error_path = paths_for(prog)
+  if reset then os.remove(state_path); os.remove(error_path); return 0 end
+  return run(prog, stderr_override, status)
+end
+
+os.exit(main())
