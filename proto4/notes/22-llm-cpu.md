@@ -61,3 +61,10 @@
 2. **順序：先抽第一層**。`aos-llm call`（像 cuda 的一次呼叫）從 proto4-5 的 worker 抽出來變獨立指令，lisp 立刻能用；排程照現在的 `llm-cpu tick` 跑；kernel module 是下一本任務書（22.8）。
 
 第一層規格（任務書 `proto4-5/notes/codex-task-3.md`）：`aos-llm call ENDPOINT REQ OUT`——ENDPOINT 是「一個 endpoint 物件的 .json」或「endpoints.json#名字」；REQ 是請求檔或 `-`（stdin）；OUT 是結果檔或 `-`（stdout）。結果形狀＝v1 的 results；`ok:true` 退出 0、`ok:false` 退出 1（結果照寫）、用法錯 2。另給 `aos-llm models ENDPOINT`（GET /models，看 LM Studio 目前載哪顆）。`llm-cpu worker` 改成叫同一個函式庫。lisp 端 `(aos/llm ENDPOINT req-table OUT &opt opts)`：把 req 寫成檔、叫 aos-llm、`:read :json` 讀回來。
+
+## 22.8 kernel module 機制定案（Fable，任務書 `proto4-5/notes/codex-task-4.md`）
+
+- `config.json` 多 `"modules": [絕對路徑…]`，`aos-kernel-init --module PATH`。一個 module＝一個 Python 檔，五樣約定：`NAME`、`OPS`（它認的 syscall op）、`handle(h,cfg,st,ticket)`、`tick(h,cfg,st)`、`status(h,cfg)`、`cli(h,cfg,argv)`。載不起來、跑到一半炸，kernel 都只記一句、照跑。
+- 接線三處：syscall 單的 op 不是內建的就問 module；tick 在處理完 syscalls 之後跑每個 module 的一格；`aos-kernel <NAME> …` 轉給 module 的 cli；`ls` 多印 module 的 status 一行。
+- **llm module 很薄**：家在 `K/llm/`，`handle`＝把單裡的請求 submit 進 `K/llm/requests/`，`tick`＝就是 proto4-5 的 `llm_cpu_tick.tick(K/llm)`，`cli`＝`aos-kernel llm K req.json [--wait N]`。`--wait` 是給 lisp 暫時用的同步路（一格等到結果為止）；「不等」的語意（form 說「這格還沒好」）還是要另外定。
+- `llm-cpu` 獨立行程的掛法保留，但 README 推薦 module。
