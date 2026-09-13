@@ -1,0 +1,7 @@
+- [aos-step-json](/home/lorkhan/repo/simple_tools/aos/proto4-6/aos-step-json)：2 行；薄殼。
+- [aos_step_json.py](/home/lorkhan/repo/simple_tools/aos/proto4-6/aos_step_json.py)：211 行；完整逐步執行與狀態管理。
+- [test_step_json.py](/home/lorkhan/repo/simple_tools/aos/proto4-6/test/test_step_json.py)：145 行，15 條測試；最後一行 `OK`。
+- [README.md](/home/lorkhan/repo/simple_tools/aos/proto4-6/README.md)：84 行。
+- 失敗嘗試會記入 `last/history`；`src` 只在成功或完成時更新。
+- Repo 原有 CMake build 成功，ctest 8/8 全綠。
+- 只改 `proto4-6/`；沒有改 code map、commit 或 push。沒有未完成項目。
