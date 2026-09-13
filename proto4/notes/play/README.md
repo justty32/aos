@@ -7,6 +7,7 @@
 | 輪 | 日期 | 玩什麼 | 報告 | 分數（①②③④⑤） |
 |---|---|---|---|---|
 | r1 | 2026-09-13 | proto4-3（OS 層）＋ proto4-4（逐步 lisp） | [Opus](2026-09-13-r1-opus.md)、[gpt-sol](2026-09-13-r1-gptsol.md)、[任務書](task-r1.md) | Opus 4/4/3/3/3、gpt-sol 3/3/2/4/2 |
+| r2 | 2026-09-13 | 同上，fix-r1＋fix-r2 之後 | [Opus](2026-09-13-r2-opus.md)、[gpt-sol](2026-09-13-r2-gptsol.md)、[任務書](task-r2.md) | Opus 5/4/3/3/4、gpt-sol 4/3/3/4/3 |
 
 ## r1 兩份合起來的「要改的清單」（Fable 整理，2026-09-13）
 
@@ -26,9 +27,25 @@
 
 兩人都說好的（別動）：daemon＝硬體／`add`＝插 cpu／kernel＝第一個程序這組比喻；`:read`＋`:json` 一次到位；退件進 `procs/bad/` 且 log 寫原因；`form N 失敗` 加 `.aos-step/error` 雙入口；`init` 跑完印下一步。
 
+## r2 兩份合起來的「要改的清單」（Fable 整理，2026-09-13）
+
+兩人都說 r1 的坑解掉了（上手 5／4 分）。剩下集中在「排錯了怎麼辦」。
+
+| # | 問題 | 兩人都提？ | 大小 | 處理 |
+|---|---|---|---|---|
+| 1 | 沒有 `aos-kernel rm`：排錯了只能手改 `cpus/N.json` | 是 | 中 | **fix-r3**：做成第一個 syscall——rm 寫一張單進 `K/syscalls/`，tick 每回合先處理（免得跟 tick 搶檔）；正在 cpu 上的也能拿掉；拿掉＝刪掉，不進 `done/` |
+| 2 | `add` 不驗欄位；壞 inst.json（多一個 `timeout_ms`）每回合回 125 轉 256 次沒人管，`bad/` 一直空 | Opus | 中 | **fix-r3**：add 與 check_queue 都用 aos-exec 的驗證器；跑起來連續 125 的搬進 `bad/` |
+| 3 | `aos-kernel ls`：`PID` 欄裝的是名字（跟 ctl 的 PID 撞）、看不到 exit code、家不存在時吐 Errno 2 | Opus | 小 | **fix-r3**：改叫 `PROC`、加 `LAST_EXIT`、錯誤句跟 boot 同口吻 |
+| 4 | README：沒教關機；daemon 常駐沒有一條標準寫法（gpt-sol 環境 nohup 沒留下來、setsid -f 才行）；cwd 可省略沒講；cwd 與 argv[0] 基準不同沒講；規格連結佔開頭、「檔案」長表佔篇幅 | 是 | 小 | **fix-r3**：都補；「檔案」節搬 `docs/files.md`、規格連結搬到底 |
+| 5 | proto4-4 README：`:json` key 是字串沒講；每格會印 form 的值沒講；沒教「卡住看 `--status` 的 `:error`」；失敗訊息把 stacktrace 全吐 | 是 | 小 | **fix-r3**：補四句；stderr 只印第一行，全文留 `.aos-step/error` |
+| 6 | boot 第一行印 `ok=True result={…}` 一串內臟；add／boot 後 ls 要等下一回合才看得到 | 是 | 小 | **fix-r3**：boot 收掉那行；add 印完加一句「下一回合才會出現在 ls」 |
+| 7 | prog.janet 改過：gpt-sol 想預設停住等 `--accept-change`；Opus 說現在這樣完美 | 意見相反 | — | **等使用者**（不改） |
+| 8 | 沒有「健不健康」的顯示；done_exit=100 沒有名字 | 各一 | — | **等使用者** |
+
 ## 修的批次（每批一本任務書，派 codex gpt-sol；回報放同名 `-out.md`）
 
 | 批 | 做哪些 | 任務書 |
 |---|---|---|
 | fix-r1 | #1、#2、#3 前半、#4、#6、#7、#8 | [fix-r1-task.md](fix-r1-task.md) |
 | fix-r2 | #3 後半 `--stderr`、#5 boot＋add、#9 轉絕對路徑 | [fix-r2-task.md](fix-r2-task.md) |
+| fix-r3 | r2 清單 #1–#6（rm 當第一個 syscall、驗欄位＋125 進 bad、ls 欄位、文件） | [fix-r3-task.md](fix-r3-task.md) |
