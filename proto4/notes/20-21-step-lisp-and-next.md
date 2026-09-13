@@ -143,3 +143,5 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 使用者另補：「先前幾個版本的 proto 都是可以參考的遺產，只是謹慎採用。」→ 開 LLM cpu 這段時，先派人去 proto2／proto3／proto4-2 撈舊決定（cpu 怎麼排、LLM 怎麼叫、狀態機長怎樣），逐條寫「採／不採、為什麼」，不直接搬檔案。
 
 **21.8 落地補記**：fix-r2 也做完了（codex gpt-sol）：`aos-exec --stderr PATH|-`（aos-run 原樣轉傳）、`aos-kernel-boot K`（49 行，語意照 §19.3）、`aos-kernel add [K] inst.json`（拆到 `aos_kernel_add.py` 120 行）。Python 190→205 條、Janet 34/12/34，全綠。README「怎麼跑」kernel 段變四行：上電 → 灌一次 → 開機 → add／ls。同時派了另一個 gpt-sol 去撈舊 proto 的 LLM 遺產，報告在 `proto4/notes/llm-cpu/legacy-harvest.md`（198 行），它建議的 v1 骨架＋五個問題等使用者看。接著開 r2 試玩（Opus＋gpt-sol 各一份，任務書 `play/task-r2.md`）。
+
+**21.8 再補（r2 試玩＋fix-r3）**：r2 兩份回來——Opus 5/4/3/3/4、gpt-sol 4/3/3/4/3，都說上手那段解掉了，剩「排錯了怎麼辦」。fix-r3（codex gpt-sol）做完：`aos-kernel rm [K] NAME` 做成**第一個 syscall**（rm 只寫一張單進 `K/syscalls/`，tick 每回合開頭處理、回音寫 `syscalls/done/`，免得跟 tick 搶檔）；`add` 與佇列檢查都接上 aos-exec 的驗證器、跑起來連續 125 的搬進 `bad/`；`ls` 的 `PID` 改 `PROC`、加 `LAST_EXIT`；boot 靜音；README 補關機、`setsid -f`、cwd 省略規則、基準句，「檔案」節搬 `docs/files.md`；aos-step 失敗只印第一行。Python 213、Janet 34/12/34 全綠。**試玩→修的循環到這裡停**（清單 #7 改動偵測要不要預設停住、#8 健康顯示與 done_exit 取名，等使用者），進 LLM cpu（§22）。

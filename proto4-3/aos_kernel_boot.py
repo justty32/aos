@@ -37,7 +37,7 @@ def main(argv=None):
     args = ["--interval-ms", str(cfg["interval_ms"])]
     if cfg["timeout_ms"]:
         args += ["--timeout-ms", str(cfg["timeout_ms"])]
-    code = aos_daemon_ctl.ask(home, {"op": "add", "target": h.instf, "args": args})
+    code = aos_daemon_ctl.ask(home, {"op": "add", "target": h.instf, "args": args}, quiet=True)
     if code:
         return code
     print("開機了：kernel 上了 daemon（%s，每 %d ms 一回合）；看狀態：aos-kernel ls %s"

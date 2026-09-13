@@ -115,8 +115,8 @@ def _wait_for(home, cond, secs=WAIT_TIMEOUT):
     return cond(_runs(home))
 
 
-def ask(home, req, wait=None, done=None, late=None):
-    """丟請求、等 `done/` 同名檔冒出來，印 ok／result。`ok:false`＝退出碼 1。
+def ask(home, req, wait=None, done=None, late=None, quiet=False):
+    """丟請求、等 `done/` 同名檔冒出來；非 quiet 時印 ok／result。`ok:false`＝退出碼 1。
 
     `wait` 是一個看 `state.json` 的條件：daemon 只回「開始做了」的那幾個動作（rm／
     restart／pause）用它再等到真的做完，成立就印 `done` 那句，等不到印 `late`、退出碼 1。
@@ -130,8 +130,9 @@ def ask(home, req, wait=None, done=None, late=None):
         if os.path.exists(donef):
             with open(donef, encoding="utf-8") as f:
                 out = json.load(f)
-            print("ok=%s result=%s" % (out.get("ok"),
-                                       json.dumps(out.get("result"), ensure_ascii=False)))
+            if not quiet:
+                print("ok=%s result=%s" % (out.get("ok"),
+                                           json.dumps(out.get("result"), ensure_ascii=False)))
             if not out.get("ok"):
                 return 1
             if wait is None:

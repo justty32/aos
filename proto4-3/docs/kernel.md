@@ -18,9 +18,11 @@
 K/inst.json         kernel 自己那顆 cpu 的指令：{"argv":["…/aos-kernel-tick"],"cwd":"."}
 K/config.json       {"ncpu":2,"interval_ms":1000,"timeout_ms":0,"quantum":5,"done_exit":100}
 K/procs/<pid>.json  就緒佇列：等著上 cpu 的行程，檔名去掉 .json ＝ pid
-K/procs/bad/        退件（不是 JSON 物件／沒有 argv／沒寫 cwd 的都搬來這裡）
-K/procs/done/       用保留退出碼表示做完的行程
+K/procs/bad/        退件（格式壞、欄位不合 aos-exec 規則、跑起來連續回 125 的都搬來）
+K/procs/done/       回 100 收工的行程；rm 拿掉的不會進來
 K/cpus/<n>.json     每顆 cpu 一份 inst.json，這個路徑就是 daemon 表上的 key
+K/syscalls/         行程給 kernel 的單子；目前只有 rm
+K/syscalls/done/    kernel 處理完的回音
 K/state.json        kernel 自己的表：cpu n → pid、上去的時間、上去時的 runs、佇列
 K/kernel.log        每回合 append 一行
 ```
@@ -41,6 +43,7 @@ aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] [-
 aos-kernel-boot DIR [--home H] # 開機：只把已初始化的 kernel 放上正在跑的 daemon
 aos-kernel-tick         # 心跳：在家裡（cwd ＝ K）跑一回合，不吃參數
 aos-kernel add [DIR] INST.json [--name NAME] # 檢查、轉路徑、配名後排進佇列
+aos-kernel rm [DIR] NAME # 投一張單，等 kernel 拿掉佇列或 cpu 上的行程
 aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
 ```
 
@@ -48,8 +51,9 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
 |---|---|---|
 | `aos-kernel-init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5，單位是「cpu 跑了幾次」） | 0；**DIR 已經存在＝1**（不動它） |
 | `aos-kernel-boot` | 看 daemon 上有沒有 kernel 的 `inst.json`；沒有就 add，重複跑無害。**不開 daemon、不 init** | 0；還沒 init 或 daemon 沒跑＝1 |
-| `aos-kernel-tick` | 跑一回合，見下面五步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
+| `aos-kernel-tick` | 跑一回合，見下面六步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
 | `aos-kernel add` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；檢查 inst，轉 cwd／argv[0]，自動配數字名或吃 `--name`，再原子排進 `procs/` | 0；不是家、inst 不合格或撞名＝1 |
+| `aos-kernel rm` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；只寫 `syscalls/` 單子，等 tick 回音 | 成功＝0；找不到、家不對或 kernel 沒回應＝1 |
 | `aos-kernel ls [DIR]` | 給 DIR 就先進去，否則用 cwd；讀 kernel ＋ daemon 的 `state.json` 印存活狀態、cpu、佇列、bad 與 done | 0；不是家＝1 |
 
 `aos-kernel init`／`aos-kernel tick`（舊的子命令）都拿掉了：退出碼 2，stderr 提示改用
@@ -57,9 +61,10 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
 
 `add` 讀原始 JSON，只幫兩個地方轉絕對：沒寫 cwd 就用 INST.json 所在資料夾，相對 cwd 也
 從那裡算；`argv[0]` 含 `/` 且是相對路徑時，再從轉好的 cwd 算。它會先拒絕不存在的 cwd、
-空 argv、以及含 `/` 但不存在的 argv[0]。沒寫 stderr 仍可排，但會提醒你出錯可能看不到。
+空 argv、以及含 `/` 但不存在的 argv[0]；寫進暫存檔後還會用 aos-exec 的完整規則驗一次，
+未知欄位也會擋。沒寫 stderr 仍可排，但會提醒你出錯可能看不到。
 
-### aos-kernel-tick 每回合五步（順序固定）
+### aos-kernel-tick 每回合六步（順序固定）
 
 1. **讀自己的表**（`state.json`，沒有＝空表）。
 2. **點 cpu**：直接讀 daemon 的 `state.json`（不開 ctl 進程），看 `cpus/0.json`…
@@ -68,13 +73,17 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
    把它插上去（**不開 `--stop-on-error`**）。所以 aos-run 被 `ctl rm` 掉、或 daemon 重開過，
    下一回合就自己補回來。add 失敗（daemon 沒在跑之類）＝記一行 log、**那顆 cpu 這回合不排程**，
    退出仍是 0——kernel 不會因為外面的事死掉。
-3. **檢查佇列**：`procs/*.json`（不含 `bad/`）逐個讀，不是 JSON 物件／沒有 `argv`／`cwd`
-   沒寫或不是字串 → 搬去 `procs/bad/` 同名並記 log。**cwd 一定要寫死**：檔案會被搬到
+3. **處理 syscall**：按檔名讀 `syscalls/*.json`，目前只認 `rm`。佇列裡的直接刪；cpu 上的
+   原子換成 idle，兩種都不進 `procs/done/`。看不懂的單也會留下失敗回音。
+4. **檢查佇列**：`procs/*.json`（不含 `bad/`）逐個讀，不是 JSON 物件、缺必要欄位，或
+   過不了 aos-exec 的完整驗證 → 搬去 `procs/bad/` 同名並記精確原因。**cwd 一定要寫死**：檔案會被搬到
    `cpus/n.json`，沒寫 cwd 的話預設 cwd 會跟著變成 cpu 的資料夾，行程就跑錯地方了。
    （這道檢查**只有 kernel 做**，daemon／aos-run／aos-exec 維持原本行為。）
-4. **排程**：每顆 cpu 看一次——
+5. **排程**：每顆 cpu 看一次——
    - 先看做完沒：`last_kind=child` 且 `last_exit=done_exit` 且 `runs−runs_at≥2` → 搬進
      `procs/done/`、換成 idle；再看 quantum 要不要換人。
+   - `last_kind=aos` 且已跨過換人時的舊回報，連續兩個 tick 都看到 125 → 搬進
+     `procs/bad/`、換成 idle；詳細原因用 `aos-exec K/procs/bad/NAME.json --stderr -` 看。
    - 上面是 idle（或沒記錄）而且有人在等 → 把隊首那位 `rename` 上去。
    - 上面有人，而且「daemon 現在的 `runs` － 它上去時記的 `runs` ≥ quantum」，而且**還有人在等**
      → 換人。**沒人在等就讓它續跑**（v1 的行程不會自己結束）。
@@ -85,7 +94,7 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
    - **佇列是 FIFO**：新出現在 `procs/` 的排尾巴、被換下來的也排尾巴、檔案不見的（人手動刪）
      從佇列拿掉。純照 pid 大小挑的話小 pid 會永遠優先，所以 `state.json` 自己記一個
      `queue` 陣列；同一回合新冒出來的照 pid 順序排（數字比數字、非數字排在數字後面）。
-5. **寫表寫 log**：`state.json` 先 `.tmp` 再 rename、`kernel.log` append 一行，退出 0。
+6. **寫表寫 log**：`state.json` 先 `.tmp` 再 rename、`kernel.log` append 一行，退出 0。
 
 `state.json` 長這樣：
 
@@ -120,16 +129,16 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
 
 ### kernel 這一版沒做什麼
 
-- **行程做完是應急版**：保留退出碼 100，行程回這個碼就會被收進 `procs/done/`；還沒有行程
-  主動叫 kernel 的 syscall，`procs/done/` 不會自動清，做完行程的 cwd 也不動。
+- **行程做完是應急版**：保留退出碼 100，行程回這個碼就會被收進 `procs/done/`；這裡不會
+  自動清，做完行程的 cwd 也不動。
 - **沒有優先級、沒有 nice**，時間片一律 quantum 次，佇列純 FIFO。
-- **沒有 syscall 收件匣**（行程不能 fork、不能自己丟東西進 `procs/`）、**不改 cpu 的韌體設定**
-  （`ctl add` 給的 interval／timeout 定死不改）、**沒有 daemon↔kernel 專用通道**（每回合只看
+- **syscall 目前只有 rm**；不改 cpu 的韌體設定（`ctl add` 給的 interval／timeout 定死不改）、
+  **沒有 daemon↔kernel 專用通道**（每回合只看
   `state.json`，中間的退出碼看不到）。
 - **`procs/` 裡仍是 inst.json**，add 只先正規化下面兩個路徑，kernel 再直接搬上 cpu。以後那裡
   會多權限、優先級之類的欄位，到時就得由 kernel 轉一手。
 - **add 只轉 cwd／argv[0]**；stdin／stdout／stderr／`$ref` 的相對路徑不轉，那些本來就是以
   cwd 為中心。
 - **kernel 只做格式檢查，不做權限檢查**：能寫 `procs/` 的人就能用你的身分跑任何東西。
-- **搶佔不了正在跑的那一次**：rename 只影響「下一次」開跑讀到誰，手上那次會跑完。
+- **搶佔與 rm 都不會殺正在跑的那一次**：rename 只影響「下一次」開跑讀到誰，手上那次會跑完。
 - **一個家只該有一個 kernel 在 tick**：兩個 tick 同時跑會搶同一批檔案，v1 沒有鎖。

@@ -95,7 +95,9 @@
 (defn- fail [state pc err &opt fib]
   (def trace (if fib (trace-text fib err) (describe err)))
   (write-error state pc err trace)
-  (eprintf "aos-step: 第 %d 個 form（0 起算）失敗：%s" pc (describe err))
+  (def first-line ((string/split "\n" (describe err)) 0))
+  (eprintf "aos-step: 第 %d 個 form（0 起算）失敗：%s（全文：.aos-step/error 或 --status）"
+           pc first-line)
   1)
 
 (defn- bind-runtime [env here pc]
