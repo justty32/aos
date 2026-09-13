@@ -8,6 +8,7 @@
 |---|---|---|---|---|
 | r1 | 2026-09-13 | proto4-3（OS 層）＋ proto4-4（逐步 lisp） | [Opus](2026-09-13-r1-opus.md)、[gpt-sol](2026-09-13-r1-gptsol.md)、[任務書](task-r1.md) | Opus 4/4/3/3/3、gpt-sol 3/3/2/4/2 |
 | r2 | 2026-09-13 | 同上，fix-r1＋fix-r2 之後 | [Opus](2026-09-13-r2-opus.md)、[gpt-sol](2026-09-13-r2-gptsol.md)、[任務書](task-r2.md) | Opus 5/4/3/3/4、gpt-sol 4/3/3/4/3 |
+| r3 | 2026-09-13 | proto4-5（LLM 兩層）＋ proto4-6（逐步 JSON／Python／Lua） | [Opus](2026-09-13-r3-opus.md)、[gpt-sol](2026-09-13-r3-gptsol.md)、[任務書](task-r3.md) | 4-5：Opus 2.5/3.5/3/3/3.5、gpt-sol 4/3/3/-/3；4-6：Opus 4.5/4/3.5、gpt-sol 4/4/3/4/3 |
 
 ## r1 兩份合起來的「要改的清單」（Fable 整理，2026-09-13）
 
@@ -42,6 +43,26 @@
 | 7 | prog.janet 改過：gpt-sol 想預設停住等 `--accept-change`；Opus 說現在這樣完美 | 意見相反 | — | **維持現狀**（使用者 09-13：隨我定；Opus 說這樣剛好） |
 | 8 | 沒有「健不健康」的顯示；done_exit=100 沒有名字 | 各一 | — | **不做**（使用者 09-13：隨我定） |
 
+## r3 兩份合起來的「要改的清單」（Fable 整理，2026-09-13）
+
+逐步執行器三支兩人都說好用（4～4.5），`wait_for` 是最受歡迎的東西。坑集中在 LLM 那層的第一步，和「kernel 看不出行程在等」。
+
+| # | 問題 | 兩人都提？ | 大小 | 處理 |
+|---|---|---|---|---|
+| 1 | proto4-5 README 沒有 `endpoints.json` 完整範例，照 README 寫出來一定退 2（Opus 卡最久）；結果檔九成是 `raw`，`--wait` 整份倒到終端機；欄位沒分「日常／除錯／原始」 | 是 | 小 | **fix-r4a**：README 貼完整範例＋欄位分三組；`--wait` 成功只印 `text`＋結果檔路徑 |
+| 2 | module 自動生的 `K/llm/endpoints.json` 內建 DeepSeek（要錢）且 enabled；local 的 model 是佔位字串，README 沒說要改哪格 | 是 | 小 | **fix-r4a**：預設檔只留 local（其他範例搬文件），README 補「把 model 換成 `aos-llm models` 看到的 id」 |
+| 3 | 模型名打錯照樣送出去、燒完 token 才判 `model_mismatch`；失敗時 `model` 欄意思會變 | 是 | 中 | **fix-r4a**：`strict_model` 的 endpoint 送出前先比對 `/models`，沒有就回 `model_not_found` 不花錢；`model` 一律是對方回的（沒回就 null），設定值看 `model_requested` |
+| 4 | `--wait` 逾時／daemon 沒回應時退 1，但那張單還留在 `syscalls/`，daemon 回來照跑（gpt-sol 第一名） | gpt-sol | 中 | **fix-r4a**：逾時時單子還沒被撿走就撤掉並說「沒送出」；已被撿走就說「已送出，結果會在 X」 |
+| 5 | `--reset` 之後重跑，`llm_submit` 同名撞 `id 已經存在` 卡死在同一格 | Opus | 小 | **fix-r4a**：同名且請求內容一模一樣＝視為同一張，回原結果路徑不報錯；內容不同才擋 |
+| 6 | 行程在 `wait_for` 等一個永遠不來的檔，`ls` 跟健康行程長一樣、還永久佔一顆 cpu；連續失敗的行程也一樣看不出來、永遠重跑 | 是 | 中 | **fix-r4b＋4c**：執行器等檔沒到改退 **101**（等待碼，跟 100 一樣由 kernel `config.json` 說了算）；kernel 看到 101 標 `waiting`、有人排隊就讓出 cpu；連續非零退出 N 次進 `bad/`（`bad_after`，預設 10） |
+| 7 | Lua `aos.b64` 回純字串，跟自動的 `{"$b64":…}` 兩種長相並存、只有後者讀回會還原；Lua `ms` 恆 0（`os.clock` 是 CPU 時間）；`aos-step-lua --help` 不認得；`return` 表漏列函式沒任何警告 | 是 | 小 | **fix-r4b**：`aos.b64` 改回 `$b64` 物件、`unb64` 兩種都吃；`ms` 改牆鐘；補 `--help`；檔裡有 `function 名` 沒進 return 表就警告一句 |
+| 8 | `.aos-step-py/error` 一個資料夾一份會互蓋；README：Python 那節沒列 `aos.call` 選項、`out.req.json` 該寫 `<OUT>.req.json`、wait 會先推 pc 要畫時間線、`llm_submit` vs `llm` 是「兩個家」沒講、`--reset` 不會清輸出檔沒講 | 是 | 小 | **fix-r4b**：錯誤全文改 `<PROG>.error`（三支一致）；README 五句 |
+| 9 | proto4-3 README：範例 `K` 長在 repo 裡、`./aos-kernel` 與 `aos-kernel` 混用、init 沒帶 `--module` 事後補不了沒講；`ls` 把「找不到 daemon 家」也印成 `daemon dead` | Opus | 小 | **fix-r4c**：範例改絕對路徑、統一 `./`、init 那行加註解；`ls` 分開講 |
+| 10 | 程式跑一半改動要預設停住（gpt-sol 又提） | gpt-sol | — | **不做**（r2 #7 已定維持現狀） |
+| 11 | `add` 之後 `ls` 要等下一回合；`procs/` 的 id 會回收跟 done 擺一起易誤會 | 各一 | — | **先不動**（CLI 已提醒；id 回收下輪再看） |
+
+兩人都說好的（別動）：三支 `--status`／`--reset`／`--stderr` 一致；Python 例外訊息「第幾格、哪個函式、第幾行、全文在哪」滿分；`aos.call(..., args=)` 不用管 quoting；`ls` 的 `llm:` 狀態列一眼看懂容量；退出碼 0／1／2 跟 README 完全一致。
+
 ## 修的批次（每批一本任務書，派 codex gpt-sol；回報放同名 `-out.md`）
 
 | 批 | 做哪些 | 任務書 |
@@ -49,3 +70,6 @@
 | fix-r1 | #1、#2、#3 前半、#4、#6、#7、#8 | [fix-r1-task.md](fix-r1-task.md) |
 | fix-r2 | #3 後半 `--stderr`、#5 boot＋add、#9 轉絕對路徑 | [fix-r2-task.md](fix-r2-task.md) |
 | fix-r3 | r2 清單 #1–#6（rm 當第一個 syscall、驗欄位＋125 進 bad、ls 欄位、文件） | [fix-r3-task.md](fix-r3-task.md) |
+| fix-r4a | r3 清單 #1–#5（proto4-5：README 範例、預設只留 local、模型先比對、--wait 逾時撤單、同名同內容不報錯） | [fix-r4a-task.md](fix-r4a-task.md) |
+| fix-r4b | r3 清單 #6 執行器側（退 101）、#7、#8（proto4-6＋proto4-4 aos-step） | [fix-r4b-task.md](fix-r4b-task.md) |
+| fix-r4c | r3 清單 #6 kernel 側（101＝waiting、讓 cpu、bad_after）、#9（proto4-3） | [fix-r4c-task.md](fix-r4c-task.md) |
