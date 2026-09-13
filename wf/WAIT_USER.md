@@ -34,6 +34,8 @@
 11. **proto2 工作室：預算要不要對 cached token 打折**——claude-cli／anthropic 的 prompt_tokens 把 cache_read 也算進去（真實價格約 1/10），4d 帳面 841k 裡一半以上是 cache。選項：閘門只算 prompt−cached＋completion；或另開一個「真實成本」欄。→ [journey 第 10 節](../proto2/notes/2026-09-07-studio-journey.md)
 12. **proto2 工作室：dev 的對話史**——haiku 一輪 10k 漲到 20k，一個任務 21 輪 325k。要不要每個任務開新對話史（做完就清、只留任務說明＋檔案清單）？→ 同上
 13. **preset 的 `max_per_member`**——100k 對 claude-cli 太低（4d 手動抬到 500k）。改成 300k？還是照引擎不同給不同值？
+14. **LLM cpu 要不要接 Claude、走哪條**：訂閱 OAuth 那條不做（冒充 Claude Code，會被封）。剩兩條：(a) 去 Console 開 API key 按量付費、把 key 放環境變數 `ANTHROPIC_API_KEY`；(b) 把 `pi -p` 當子行程用（pi 自己登入、自己負責）。或先只用 LM Studio＋DeepSeek。→ [claude-subscription](workflows/experiments/claude-subscription/README.md)
+
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
