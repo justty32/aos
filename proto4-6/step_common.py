@@ -11,6 +11,7 @@ import sys
 
 
 HISTORY_LIMIT = 50
+WAITING_EXIT = 101
 
 
 class StepError(Exception):
@@ -107,6 +108,7 @@ def check_waiting(state, state_path, *, default=None):
     if not Path(waiting["for"]).exists():
         waiting["checks"] += 1
         atomic_json(state_path, state, default=default)
+        print(f"在等 {waiting['for']}（第 {waiting['checks']} 次）", file=sys.stderr)
         return True
     item = {
         "pc": waiting["after_pc"],

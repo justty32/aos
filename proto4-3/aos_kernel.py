@@ -20,12 +20,12 @@
     DIR/inst.json       kernel 自己那顆 cpu 的指令，只有 kernel 能動
     DIR/config.json     上述整數設定，另有 "modules":["/abs/xxx_module.py"]
     DIR/procs/<pid>.json  就緒佇列，檔名去掉 .json ＝ pid
-    DIR/procs/bad/      退件（格式／欄位不合，或跑起來連續回 125）
+    DIR/procs/bad/      退件（格式／欄位不合、連續回 125，或一般失敗達 bad_after 次）
     DIR/procs/done/     回保留退出碼做完的行程；rm 拿掉的不會進來
     DIR/cpus/<n>.json   每顆 cpu 一份 inst.json，這個路徑就是 daemon 表上的 key
     DIR/syscalls/       給 kernel 的單子
     DIR/syscalls/done/  單子的回音
-    DIR/state.json      kernel 自己的表：cpu n → pid、上去的時間、上去時的 runs、佇列
+    DIR/state.json      kernel 自己的表：cpu n → pid、runs、waiting 與佇列
     DIR/kernel.log      每回合一行流水帳
 
 一回合七步（順序固定），做完一律退出 0——**kernel 不會因為外面的事死掉**，
@@ -41,14 +41,15 @@ import aos_home
 HERE = os.path.dirname(os.path.abspath(__file__))
 CTL_BIN = os.path.join(HERE, "aos-daemon-ctl")
 IDLE_INST = {"argv": ["true"], "cwd": "."}
-DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5, "done_exit": 100}
+DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5, "done_exit": 100,
+            "wait_exit": 101, "bad_after": 10}
 USAGE = ("用法：aos-kernel ls [DIR]\n"
          "      aos-kernel add [DIR] INST.json [--name NAME]\n"
          "      aos-kernel rm [DIR] NAME\n"
          "      aos-kernel <MODULE> [DIR] ...\n")
 INIT_HINT = ("aos-kernel: init 改成獨立指令 aos-kernel-init（不再是 aos-kernel 的子命令）："
              "aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] "
-             "[--done-exit N] [--module PATH]...\n")
+             "[--done-exit N] [--wait-exit N] [--bad-after N] [--module PATH]...\n")
 TICK_HINT = "aos-kernel: tick 改成獨立指令 aos-kernel-tick（不再是 aos-kernel 的子命令）\n"
 
 
@@ -110,9 +111,13 @@ class KHome:
             st = {}
         cpus = st.get("cpus")
         queue = st.get("queue")
+        waiting = st.get("waiting")
         return {"cpus": cpus if isinstance(cpus, dict) else {},
                 "queue": [q for q in queue if isinstance(q, str)]
-                         if isinstance(queue, list) else []}
+                         if isinstance(queue, list) else [],
+                "waiting": ({pid: runs for pid, runs in waiting.items()
+                             if isinstance(pid, str) and isinstance(runs, int) and runs > 0}
+                            if isinstance(waiting, dict) else {})}
 
     def save(self, st):
         aos_home.write_json(self.statef, st)      # 先 .tmp 再 rename
@@ -158,73 +163,8 @@ def cmd_ls(argv):
     if h is None:
         return 1
     st = h.state()
-    daemon_home = aos_home.Home(aos_home.resolve_home())
-    daemon_state = daemon_home.state() or {}
-    daemon_pid = daemon_state.get("pid")
-    if isinstance(daemon_pid, int) and aos_home.alive(daemon_pid):
-        print("daemon alive pid=%d" % daemon_pid)
-    else:
-        print("daemon dead（下面是最後一次的狀態）")
-    runs = daemon_state.get("runs", {})
-    now = time.time()
-    print("家 %s  ncpu=%d interval=%dms timeout=%dms quantum=%d done_exit=%d"
-          % (h.dir, cfg["ncpu"], cfg["interval_ms"], cfg["timeout_ms"], cfg["quantum"],
-             cfg["done_exit"]))
-    print("CPU  PROC  ON        RUNS  LAST_EXIT  CPU_STATE")
-    for n in range(cfg["ncpu"]):
-        cur = st["cpus"].get(str(n))
-        ent = runs.get(os.path.realpath(h.cpu(n)))
-        state = ent.get("state", "?") if ent else "沒插上"
-        last_exit = "-"
-        if ent:
-            if ent.get("last_kind") == "aos":
-                last_exit = "125(aos)"
-            elif ent.get("last_exit") is not None:
-                last_exit = str(ent.get("last_exit"))
-        if cur:
-            got = ent.get("runs", 0) - cur.get("runs_at", 0) if ent else "-"
-            print("%-4d %-5s %-9s %-5s %-10s %s"
-                  % (n, cur.get("pid"), "%.1fs" % (now - cur.get("since", now)),
-                     got, last_exit, state))
-        else:
-            print("%-4d %-5s %-9s %-5s %-10s %s"
-                  % (n, "idle", "-", "-", last_exit, state))
-    q = st["queue"]
-    print("佇列（%d 個）：%s" % (len(q), " ".join(q) if q else "沒人在等"))
-    bad = sorted(n for n in os.listdir(h.bad)
-                 if os.path.isfile(os.path.join(h.bad, n))) if os.path.isdir(h.bad) else []
-    if bad:
-        reason = None
-        try:
-            with open(h.logf, encoding="utf-8") as f:
-                for line in reversed(f.readlines()):
-                    at = line.find("退件")
-                    if at >= 0:
-                        reason = line[at:].strip()
-                        break
-        except OSError:
-            pass
-        print("bad: %d%s" % (len(bad), "（最近：%s）" % reason if reason else ""))
-    done = []
-    if os.path.isdir(h.done):
-        done = [n[:-5] for n in os.listdir(h.done)
-                if n.endswith(".json") and os.path.isfile(os.path.join(h.done, n))]
-    if done:
-        print("done: %s" % ", ".join(sorted(done, key=pid_key)))
-    from aos_kernel_module import load_modules
-    modules = load_modules(cfg)
-    for note in modules.notes:
-        print(note)
-    for module in modules:
-        hook = getattr(module, "status", None)
-        if hook is None:
-            continue
-        try:
-            line = hook(h, cfg)
-            if line is not None:
-                print(line)
-        except BaseException as exc:
-            print("module %s 壞了：%s" % (module.NAME, str(exc).replace("\n", " ")))
+    from aos_kernel_status import show
+    show(h, cfg, st, pid_key)
     return 0
 
 

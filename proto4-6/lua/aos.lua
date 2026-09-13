@@ -139,8 +139,11 @@ function M.value(result)
       (result.out ~= json.null and result.out or nil)
 end
 
-function M.b64(s) return base64.encode(s) end
-function M.unb64(s) return base64.decode(s) end
+function M.b64(s) return {["$b64"]=base64.encode(s)} end
+function M.unb64(x)
+  if type(x) == "table" then x = x["$b64"] end
+  return base64.decode(x)
+end
 function M.wait_for(path)
   if type(path) ~= "string" then error("aos.wait_for: path 必須是字串", 2) end
   return {["$wait_for"]=path}

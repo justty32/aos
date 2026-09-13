@@ -1,5 +1,6 @@
 """llm-cpu 的家、原子檔案、submit 與給人看的 ls。"""
 import datetime as dt
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -39,13 +40,6 @@ def endpoint_document():
              "base_url": "http://localhost:1234/v1",
              "model": "loaded-model-id", "max_concurrent": 1,
              "timeout_ms": 300000},
-            {"name": "deepseek", "kind": "openai",
-             "base_url": "https://api.deepseek.com/v1",
-             "model": "deepseek-chat", "max_concurrent": 2,
-             "timeout_ms": 300000, "api_key_env": "DEEPSEEK_API_KEY",
-             "strict_model": False},
-            {"name": "pi", "kind": "process", "argv": ["pi", "-p"],
-             "enabled": False},
         ],
     }
 
@@ -76,6 +70,8 @@ def init_home(directory, make_inst=True, quiet=False):
         return 1
     if not quiet:
         print("建好了：%s" % root)
+        print("請把 %s 裡 local 的 model 換成 aos-llm models 看到的 id" %
+              (root / "endpoints.json"))
     return 0
 
 
@@ -83,6 +79,54 @@ def validate_id(request_id):
     return (bool(request_id) and ID_RE.fullmatch(request_id) is not None
             and request_id not in (".", "..")
             and not request_id.endswith(".tmp"))
+
+
+def request_sha256(request):
+    """算使用者請求的穩定指紋，不把排程器自己的 _aos 欄位算進去。"""
+    value = request
+    if isinstance(request, dict):
+        value = dict(request)
+        meta = value.get("_aos")
+        if isinstance(meta, dict):
+            meta = {key: item for key, item in meta.items()
+                    if key not in ("request_sha256", "endpoint", "pid", "started")}
+            if meta:
+                value["_aos"] = meta
+            else:
+                value.pop("_aos", None)
+    packed = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                        separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(packed).hexdigest()
+
+
+def existing_request(root, request_id):
+    """回 (位置種類, path)，done 對使用者算 results。"""
+    root = Path(root)
+    candidates = (
+        ("requests", root / "requests" / (request_id + ".json")),
+        ("running", root / "requests" / "running" / (request_id + ".json")),
+        ("results", root / "results" / (request_id + ".json")),
+        ("results", root / "requests" / "done" / (request_id + ".json")),
+    )
+    return next(((kind, path) for kind, path in candidates if path.exists()),
+                (None, None))
+
+
+def existing_request_sha256(root, request_id):
+    kind, path = existing_request(root, request_id)
+    if path is None:
+        return kind, None
+    try:
+        value = read_json(path)
+        if kind == "results":
+            result_hash = value.get("request_sha256") if isinstance(value, dict) else None
+            if isinstance(result_hash, str):
+                return kind, result_hash
+        meta = value.get("_aos") if isinstance(value, dict) else None
+        saved = meta.get("request_sha256") if isinstance(meta, dict) else None
+        return kind, saved if isinstance(saved, str) else request_sha256(value)
+    except (OSError, ValueError, TypeError):
+        return kind, None
 
 
 def submit(directory, source, requested_id=None):
@@ -134,20 +178,22 @@ def submit_object(directory, request, requested_id=None):
     request_id = requested_id or str(time.time_ns())
     if not validate_id(request_id):
         raise ValueError("id 只能用英數、點、底線、減號")
-    targets = [root / "requests" / (request_id + ".json"),
-               root / "requests" / "running" / (request_id + ".json"),
-               root / "requests" / "done" / (request_id + ".json"),
-               root / "results" / (request_id + ".json")]
-    if any(path.exists() for path in targets):
-        raise ValueError("id 已經存在：%s" % request_id)
-    tmp = targets[0].with_name(targets[0].name + ".tmp")
+    target = root / "requests" / (request_id + ".json")
+    kind, _ = existing_request(root, request_id)
+    if kind:
+        raise ValueError("id 已經存在於 %s：%s" % (kind, request_id))
+    stored = dict(request)
+    meta = dict(stored.get("_aos", {})) if isinstance(stored.get("_aos"), dict) else {}
+    meta["request_sha256"] = request_sha256(request)
+    stored["_aos"] = meta
+    tmp = target.with_name(target.name + ".tmp")
     try:
         with open(tmp, "x", encoding="utf-8") as stream:
-            json.dump(request, stream, ensure_ascii=False, separators=(",", ":"))
+            json.dump(stored, stream, ensure_ascii=False, separators=(",", ":"))
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(tmp, targets[0])
+        os.replace(tmp, target)
     except Exception:
         try:
             tmp.unlink()

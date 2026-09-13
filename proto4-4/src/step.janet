@@ -99,7 +99,7 @@
   (def checked (protect (check-waiting state saved)))
   (unless (checked 0)
     (return finish (fail state pc (checked 1))))
-  (when (checked 1) (return finish 0))
+  (when (checked 1) (return finish 101))
   (def parsed (fiber/new (fn [] (parse-forms prog)) :e))
   (def forms (resume parsed))
   (when (= :error (fiber/status parsed))

@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import unittest
+import urllib.request
 
 import aos_llm
 from _util import CpuCase, PY, ROOT
@@ -44,7 +45,7 @@ class AosLlmTest(CpuCase):
         self.assertEqual(body["text"], "hello")
         self.assertEqual(set(body), {
             "ok", "id", "endpoint", "model", "model_requested", "text",
-            "finish_reason", "usage", "ms", "raw", "error"})
+            "finish_reason", "usage", "ms", "raw", "notes", "error"})
         self.assertEqual(set(body["usage"]), {
             "prompt", "completion", "total", "cached", "reasoning"})
 
@@ -133,6 +134,49 @@ class AosLlmTest(CpuCase):
         self.assertFalse(result["ok"])
         self.assertIsNone(result["id"])
         self.assertEqual(result["error"]["kind"], "bad_request")
+
+    def stats(self):
+        with urllib.request.urlopen("http://127.0.0.1:%d/stats" % self.port) as response:
+            return json.load(response)
+
+    def test_strict_model_missing_is_blocked_before_chat(self):
+        endpoint = self.endpoint(model="not-loaded")
+        result = aos_llm.call(endpoint, {
+            "messages": [{"role": "user", "content": "echo:no-charge"}]})
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"]["kind"], "model_not_found")
+        self.assertFalse(result["error"]["retryable"])
+        self.assertIsNone(result["model"])
+        self.assertEqual(self.stats()["posts"], 0)
+
+    def test_models_404_does_not_block_chat_and_leaves_note(self):
+        endpoint = self.endpoint(
+            base_url="http://127.0.0.1:%d/models-404/v1" % self.port)
+        result = aos_llm.call(endpoint, {
+            "messages": [{"role": "user", "content": "echo:fallback"}]})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["text"], "fallback")
+        self.assertEqual(result["notes"][0]["kind"],
+                         "model_preflight_skipped")
+        self.assertEqual(self.stats()["posts"], 1)
+
+    def test_non_strict_model_skips_preflight_completely(self):
+        endpoint = self.endpoint(
+            strict_model=False,
+            base_url="http://127.0.0.1:%d/models-404/v1" % self.port)
+        result = aos_llm.call(endpoint, {
+            "messages": [{"role": "user", "content": "echo:alias"}]})
+        self.assertTrue(result["ok"])
+        self.assertEqual(self.stats(), {"gets": 0, "posts": 1})
+
+    def test_connect_failure_has_null_response_model(self):
+        endpoint = self.endpoint(base_url="http://127.0.0.1:1/v1",
+                                 timeout_ms=100)
+        result = aos_llm.call(endpoint, {
+            "messages": [{"role": "user", "content": "x"}]})
+        self.assertFalse(result["ok"])
+        self.assertIsNone(result["model"])
+        self.assertEqual(result["model_requested"], "fake-model")
 
 
 if __name__ == "__main__":

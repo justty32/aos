@@ -26,6 +26,13 @@ def _ensure_home(h):
     return True
 
 
+def _duplicate(root, request_id, request):
+    kind, old_hash = home.existing_request_sha256(root, request_id)
+    if kind is None:
+        return None, False
+    return kind, old_hash == home.request_sha256(request)
+
+
 def handle(h, cfg, st, ticket):
     root = _root(h)
     request = ticket.get("request")
@@ -37,6 +44,12 @@ def handle(h, cfg, st, ticket):
         _, _, error = ticker.validate_request(request, default, endpoints)
         if error:
             return False, error
+        kind, same = ((None, False) if request_id is None else
+                      _duplicate(root, request_id, request))
+        if kind:
+            if same:
+                return True, "同一張請求已存在於 %s：%s" % (kind, request_id)
+            return False, "id 已經存在於 %s：%s" % (kind, request_id)
         request_id = home.submit_object(root, request, request_id)
     except (OSError, ValueError, TypeError) as exc:
         return False, str(exc)
@@ -48,7 +61,10 @@ def tick(h, cfg, st):
     root = _root(h)
     notes = []
     if _ensure_home(h):
-        notes.append("llm module：建了 %s/，去改 endpoints.json" % root)
+        note = ("llm module：建了 %s/；請把 endpoints.json 裡 local 的 model "
+                "換成 aos-llm models 看到的 id" % root)
+        print(note)
+        notes.append(note)
     ticker.tick(root)
     state = _state(root)
     notes.append("llm: queued %d running %d" % (_queued(root), state["running"]))
@@ -79,6 +95,8 @@ def cli(h, cfg, argv):
     parser.add_argument("request", metavar="REQ.json|-")
     parser.add_argument("--name")
     parser.add_argument("--wait", type=float, metavar="SECS")
+    parser.add_argument("--json", action="store_true",
+                        help="等待完成後印完整結果 JSON")
     try:
         args = parser.parse_args(argv)
     except SystemExit:
@@ -96,6 +114,17 @@ def cli(h, cfg, argv):
         print("aos-kernel llm: 請求讀不到：%s" % exc, file=sys.stderr)
         return 2
     request_id = args.name or str(time.time_ns())
+    result_path = _root(h) / "results" / (request_id + ".json")
+    kind, same = _duplicate(_root(h), request_id, request)
+    if kind:
+        if not same:
+            print("aos-kernel llm: id 已經存在於 %s：%s" %
+                  (kind, request_id), file=sys.stderr)
+            return 1
+        if args.wait is None:
+            print("同一張請求已存在；結果檔：%s" % result_path)
+            return 0
+        return _wait_result(result_path, args.wait, args.json)
     name = "%d-llm.json" % time.time_ns()
     error = _write_call(h, name, {"op": "llm", "id": request_id,
                                   "request": request})
@@ -104,25 +133,51 @@ def cli(h, cfg, argv):
         return 1
     reply = _wait_reply(h, cfg, name)
     if reply is None:
-        print("kernel 沒回應（daemon 在跑嗎？aos-kernel ls K 看看）")
+        pending = Path(h.syscalls) / name
+        try:
+            pending.unlink()
+            print("kernel 沒回應；請求沒送出去，已撤單")
+        except FileNotFoundError:
+            _print_still_running(result_path)
+        except OSError as exc:
+            print("kernel 沒回應；撤單失敗，請求可能仍會執行：%s" % exc)
         return 1
-    print(reply.get("msg", ""))
     if not reply.get("ok"):
+        print(reply.get("msg", ""))
         return 1
     if args.wait is None:
+        print("結果檔：%s；下一回合處理" % result_path)
         return 0
-    result_path = _root(h) / "results" / (request_id + ".json")
-    until = time.monotonic() + args.wait
-    while time.monotonic() < until:
+    return _wait_result(result_path, args.wait, args.json)
+
+
+def _wait_result(result_path, seconds, print_json):
+    until = time.monotonic() + seconds
+    while True:
         try:
             result = home.read_json(result_path)
         except (OSError, ValueError):
+            if time.monotonic() >= until:
+                break
             time.sleep(0.05)
             continue
-        print(json.dumps(result, ensure_ascii=False))
+        if print_json:
+            print(json.dumps(result, ensure_ascii=False))
+        elif result.get("ok") is True:
+            print(result.get("text") or "")
+        else:
+            error = result.get("error") or {}
+            print("LLM 失敗：%s: %s" %
+                  (error.get("kind", "unknown"), error.get("msg", "")))
+        print("結果檔：%s" % result_path)
         return 0 if result.get("ok") is True else 1
-    print("還沒好：結果會在 %s" % result_path)
-    return 3
+    _print_still_running(result_path)
+    return 1
+
+
+def _print_still_running(result_path):
+    print("已送出，kernel 還沒做完；結果會出現在 %s；不要的話完成後刪掉這個檔" %
+          result_path)
 
 
 def _state(root):

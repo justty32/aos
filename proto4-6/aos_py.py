@@ -25,11 +25,13 @@ def wait_for(path):
 
 
 def b64(b):
-    return _base64.b64encode(b).decode("ascii")
+    return {"$b64": _base64.b64encode(b).decode("ascii")}
 
 
-def unb64(s):
-    return _base64.b64decode(s)
+def unb64(value):
+    if isinstance(value, dict):
+        value = value["$b64"]
+    return _base64.b64decode(value)
 
 
 def _exec_path():

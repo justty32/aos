@@ -19,38 +19,40 @@
 
 ## 怎麼跑
 
+以下假設你已把 `proto4-3` 的絕對路徑加進 `PATH`，所以指令都直接寫 `aos-…`。
+
 ```sh
 export AOS_DAEMON_HOME=~/.aos-daemon   # daemon、ctl、kernel 三支都靠這個找家；用 --home 不會傳給子孫
 cd proto4-3
-python3 -m unittest discover -s test        # 220 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 236 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
-./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
-./aos-exec /path/to/folder --stderr -       # 看不到錯誤時先加這個
-./aos-exec /path/to/folder --dir-target my/inst.json
-./aos-exec /path/to/one.json                # 直接指一份 inst.json
-./aos-exec /path/to/script.sh               # 普通檔案：直接執行它
-./aos-exec /path/to/script.sh -- a "b c"     # 普通檔案：-- 後原樣當 argv[1:]
-./aos-exec /path/to/folder --timeout-ms 3000
+aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
+aos-exec /path/to/folder --stderr -       # 看不到錯誤時先加這個
+aos-exec /path/to/folder --dir-target my/inst.json
+aos-exec /path/to/one.json                # 直接指一份 inst.json
+aos-exec /path/to/script.sh               # 普通檔案：直接執行它
+aos-exec /path/to/script.sh -- a "b c"     # 普通檔案：-- 後原樣當 argv[1:]
+aos-exec /path/to/folder --timeout-ms 3000
 echo $?                                     # 子程式的結束狀態；125＝aos-exec 自己失敗
 ```
 
 ```sh
-./aos-run /path/to/folder --interval-ms 5000            # 一直跑，每 5 秒一次
+aos-run /path/to/folder --interval-ms 5000            # 一直跑，每 5 秒一次
 
-setsid -f ./aos-daemon                                  # 上電（腳本／非互動 shell 用這個，不會被帶走）
-./aos-daemon &                                          # 互動終端可以這樣
-./aos-daemon-ctl add /path/to/inst.json --interval-ms 5000    # daemon 只收 .json 的路徑
-./aos-daemon-ctl ls
+setsid -f aos-daemon                                  # 上電（腳本／非互動 shell 用這個，不會被帶走）
+aos-daemon &                                          # 互動終端可以這樣
+aos-daemon-ctl add /path/to/inst.json --interval-ms 5000    # daemon 只收 .json 的路徑
+aos-daemon-ctl ls
 
-./aos-kernel-init K --ncpu 2                # 灌一次作業系統
-./aos-kernel-init K --ncpu 2 --module /abs/proto4-5/llm_cpu_module.py # LLM 排程當 kernel module
-./aos-kernel-boot K                         # 開機：把 kernel 放上 daemon
-./aos-kernel add K my-proc.json             # 排行程
-./aos-kernel ls K                           # 看狀態
-./aos-daemon-ctl stop                       # 關機
+aos-kernel-init /tmp/K --ncpu 2             # 灌一次；module 要在這時用 --module 掛，之後補只能手改 config.json 的 modules
+aos-kernel-init /tmp/K --ncpu 2 --module /abs/proto4-5/llm_cpu_module.py
+aos-kernel-boot /tmp/K                      # 開機：把 kernel 放上 daemon
+aos-kernel add /tmp/K /abs/my-proc.json     # 排行程
+aos-kernel ls /tmp/K                        # 看狀態
+aos-daemon-ctl stop                         # 關機
 ```
 
-cpu 不用你插，kernel 第一回合會自己把 `cpus/*.json` 掛上 daemon。排進 `K/procs/`
+cpu 不用你插，kernel 第一回合會自己把 `cpus/*.json` 掛上 daemon。排進 `/tmp/K/procs/`
 的行程 inst.json 例如：
 
 ```json
@@ -60,6 +62,12 @@ cpu 不用你插，kernel 第一回合會自己把 `cpus/*.json` 掛上 daemon�
 用 `aos-kernel add` 排時，`cwd` 可以省略，意思就是 inst.json 所在的資料夾；自己手放進
 `procs/` 就一定要寫，沒寫會退件。相對 `cwd` 以 inst.json 所在資料夾為準，`argv[0]` 則以
 轉完的 cwd 為準。`add` 會照 aos-exec 的規則把整份再驗一遍，多寫的欄位也會被擋。
+
+行程退出 100 表示做完；退出 101（`wait_exit` 的預設）表示正在等外面的東西。kernel 會在
+`state.json` 記 `waiting` 與連續等了幾回合，`ls` 也會印出來。有人排隊時，waiting 行程會
+回到隊尾讓出 cpu；沒人排隊就留在原 cpu。其他非零退出若連續達 `bad_after` 次（預設 10）會
+進 `procs/bad/`；設成 0 就關掉這條，永遠重跑。這兩個數字都能在 init 時用
+`--wait-exit`／`--bad-after` 改。
 
 當成函式用（aos-run 就是這樣接的）：
 

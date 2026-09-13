@@ -27,6 +27,7 @@ echo $?                                 # 全部跑完那次回 100
 
 做完回 100，這個號碼跟 kernel 的 `done_exit` 預設一致；要改就改 kernel 那邊
 （`aos-kernel-init --done-exit`），程式端不給改。
+已在等檔而檔還沒到回 101，這是 kernel `config.json` 約定的預設等待碼，程式端寫死 101。
 
 `--status` 只印一行 JDN：
 
@@ -143,6 +144,7 @@ echo $?                                 # 全部跑完那次回 100
 
 `(aos/wait-for path)` 宣告這格做完後要等一個檔；`(aos/llm-submit K req name)` 不帶
 `--wait` 把請求交給 kernel，成功時回結果檔的絕對路徑（工具可由 `AOS_KERNEL` 覆蓋）：
+兩個是不同的家：`aos/llm` 同步使用自己的 endpoint 檔、不經 kernel；`aos/llm-submit` 丟給 kernel 排隊，結果在 `K/llm/results/<name>.json`。
 
 ```janet
 (do (def result (aos/llm-submit K @{:messages [@{:role "user" :content "hi"}]} "q1"))

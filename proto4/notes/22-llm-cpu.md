@@ -81,3 +81,7 @@
 4. `aos.janet` 剛好 300 行 → 下次加東西時再拆。
 
 **落地補記（compact 後，codex gpt-sol 一輪）**：`aos-exec xxx -- ARG...` 對普通檔案生效、原樣成 argv[1:]；`.json`／資料夾目標帶 `--` 回用法錯 2 並提示「參數寫在 inst.json 的 argv」；aos-run 原樣轉傳。Janet／Python／Lua 三份 `call` 多了 `args`，三份 `llm`／`llm_submit` 都改走 `call + args`，短命 inst 與直接 subprocess 的繞路都拆了。測試 226、42／45／12、71 全綠。任務書 `proto4-3/notes/codex-task-plain-args.md`，回報 `codex-out-plain-args.md`。第 4 點順手做了：`aos.janet` 被加到 301 行，把路徑解析搬到 `src/paths.janet`（import 進去的名字是 private，不會被 aos-step 綁成 `aos/*`），剩 258 行。
+
+## 22.10 試玩 r3 之後（2026-09-13 傍晚）
+
+LLM 層是 r3 最低分（Opus 上手 2.5）：README 沒有 `endpoints.json` 範例是唯一「照做也做不出來」的地方。fix-r4a 落地：README 貼可抄的本機範例、結果欄位分「日常／除錯／raw」三組；module 預設 `endpoints.json` 只留 local（DeepSeek、pi 範例搬文件）、第一次生檔提示改 model；`strict_model` 的 endpoint 送 chat 前先比 `/models`，沒有就 `model_not_found` 不花 token（`/models` 打不到就照送、記在 `notes`）；`model` 一律是對方回的、沒回就 null；`--wait` 成功只印 text＋路徑（`--json` 才整份）；`--wait` 逾時：單子還在 inbox 就撤掉說「沒送出」，被撿走了就說「已送出、結果會在 X」；同名同內容（sha256）視為同一張退 0，內容不同才擋。任務書 `play/fix-r4a-task.md`。

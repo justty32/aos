@@ -15,8 +15,8 @@ class HomeTest(CpuCase):
         self.assertEqual(made.returncode, 0, made.stderr)
         doc = json.loads((fresh / "endpoints.json").read_text())
         self.assertEqual([x["name"] for x in doc["endpoints"]],
-                         ["local", "deepseek", "pi"])
-        self.assertFalse(doc["endpoints"][2]["enabled"])
+                         ["local"])
+        self.assertIn("local 的 model 換成 aos-llm models", made.stdout)
         inst = json.loads((fresh / "inst.json").read_text())
         self.assertTrue(Path(inst["argv"][0]).is_absolute())
         self.assertEqual(inst["cwd"], str(fresh.absolute()))

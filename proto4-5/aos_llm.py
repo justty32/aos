@@ -22,13 +22,14 @@ def _usage(raw):
 
 
 def _error(request_id, endpoint, model, model_requested, started, kind, message,
-           status=None, retryable=False, raw=None):
+           status=None, retryable=False, raw=None, notes=None):
     return {
         "ok": False, "id": request_id, "endpoint": endpoint,
         "model": model, "model_requested": model_requested,
         "text": None, "finish_reason": None,
         "usage": _usage(raw.get("usage") if isinstance(raw, dict) else None),
         "ms": round((time.monotonic() - started) * 1000), "raw": raw,
+        "notes": notes or [],
         "error": {"kind": kind, "msg": message, "status": status,
                   "retryable": retryable},
     }
@@ -116,8 +117,23 @@ def call(endpoint: dict, req: dict) -> dict:
                       "timeout_ms 必須是正整數")
     headers, key_error = _headers(endpoint)
     if key_error:
-        return _error(request_id, name, model, model, started, "no_api_key",
+        return _error(request_id, name, None, model, started, "no_api_key",
                       key_error)
+    notes = []
+    if endpoint.get("strict_model", True):
+        listing = models(endpoint, timeout_ms=timeout_ms)
+        if listing["ok"] and model not in listing["ids"]:
+            return _error(
+                request_id, name, None, model, started, "model_not_found",
+                "模型 %r 不在 endpoint 的 /models 列表；未送出 chat 請求" % model,
+                raw={"preflight": listing["raw"]})
+        if not listing["ok"]:
+            notes.append({
+                "kind": "model_preflight_skipped",
+                "msg": "/models 查不到，仍照原流程送出 chat：%s" %
+                       listing["error"]["msg"],
+                "error": listing["error"],
+            })
     body = {"model": model, "messages": req["messages"], "stream": False}
     body.update(req.get("params") or {})
     body["model"], body["stream"] = model, False
@@ -136,30 +152,31 @@ def call(endpoint: dict, req: dict) -> dict:
             detail = exc.read().decode("utf-8", "replace")
         except Exception:
             detail = str(exc)
-        return _error(request_id, name, model, model, started, "http",
+        return _error(request_id, name, None, model, started, "http",
                       detail or str(exc), exc.code,
-                      exc.code == 429 or 500 <= exc.code < 600)
+                      exc.code == 429 or 500 <= exc.code < 600, notes=notes)
     except (TimeoutError, socket.timeout) as exc:
-        return _error(request_id, name, model, model, started, "timeout",
-                      str(exc) or "連線逾時", retryable=True)
+        return _error(request_id, name, None, model, started, "timeout",
+                      str(exc) or "連線逾時", retryable=True, notes=notes)
     except urllib.error.URLError as exc:
         kind = "timeout" if isinstance(exc.reason, (TimeoutError, socket.timeout)) else "connect"
-        return _error(request_id, name, model, model, started, kind,
-                      str(exc.reason), retryable=True)
+        return _error(request_id, name, None, model, started, kind,
+                      str(exc.reason), retryable=True, notes=notes)
     except OSError as exc:
-        return _error(request_id, name, model, model, started, "connect",
-                      str(exc), retryable=True)
+        return _error(request_id, name, None, model, started, "connect",
+                      str(exc), retryable=True, notes=notes)
     try:
         raw = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        return _error(request_id, name, model, model, started, "bad_json",
-                      "回應不是合法 JSON：%s" % exc)
+        return _error(request_id, name, None, model, started, "bad_json",
+                      "回應不是合法 JSON：%s" % exc, notes=notes)
     if not isinstance(raw, dict):
-        return _error(request_id, name, model, model, started, "bad_json",
-                      "回應 JSON 不是物件", raw=raw)
+        return _error(request_id, name, None, model, started, "bad_json",
+                      "回應 JSON 不是物件", raw=raw, notes=notes)
     if endpoint.get("strict_model", True) and raw.get("model") != model:
         return _error(request_id, name, raw.get("model"), model, started,
-                      "model_mismatch", "回應 model %r，設定是 %r；別名 endpoint 請設 strict_model:false" % (raw.get("model"), model), raw=raw)
+                      "model_mismatch", "回應 model %r，設定是 %r；別名 endpoint 請設 strict_model:false" % (raw.get("model"), model), raw=raw,
+                      notes=notes)
     try:
         choice = raw["choices"][0]
         return {
@@ -169,14 +186,16 @@ def call(endpoint: dict, req: dict) -> dict:
             "finish_reason": choice.get("finish_reason"),
             "usage": _usage(raw.get("usage")),
             "ms": round((time.monotonic() - started) * 1000), "raw": raw,
-            "error": None,
+            "notes": notes, "error": None,
         }
     except (KeyError, IndexError, TypeError) as exc:
-        return _error(request_id, name, model, model, started, "bad_response",
-                      "回應缺少 choices[0].message.content：%s" % exc, raw=raw)
+        return _error(request_id, name, raw.get("model"), model, started,
+                      "bad_response",
+                      "回應缺少 choices[0].message.content：%s" % exc,
+                      raw=raw, notes=notes)
 
 
-def models(endpoint: dict) -> dict:
+def models(endpoint: dict, timeout_ms=None) -> dict:
     """列出 endpoint 的模型 id；不丟出可預期的設定或連線錯誤。"""
     error = _validate_endpoint(endpoint, need_model=False)
     if error:
@@ -192,7 +211,7 @@ def models(endpoint: dict) -> dict:
         request = urllib.request.Request(
             endpoint["base_url"].rstrip("/") + "/models", headers=headers,
             method="GET")
-        payload = _open(request, endpoint.get("timeout_ms", 300000))
+        payload = _open(request, timeout_ms or endpoint.get("timeout_ms", 300000))
         raw = json.loads(payload)
         if not isinstance(raw, dict) or not isinstance(raw.get("data"), list):
             raise TypeError("回應缺少 data 陣列")
@@ -200,6 +219,7 @@ def models(endpoint: dict) -> dict:
                if isinstance(item, dict) and isinstance(item.get("id"), str)]
         return {"ok": True, "ids": ids, "raw": raw, "error": None}
     except urllib.error.HTTPError as exc:
+        exc.close()
         return {"ok": False, "ids": [], "raw": None,
                 "error": {"kind": "http", "msg": str(exc),
                           "status": exc.code,
