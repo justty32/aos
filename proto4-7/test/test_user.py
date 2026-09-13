@@ -62,6 +62,8 @@ class UserCliTest(unittest.TestCase):
         (self.A / "outbox/0001.json").write_text('{"content":"hello"}', encoding="utf-8")
         result = self.user("listen", "--once")
         self.assertIn("--- 0001 ---\nhello", result.stdout)
+        again = self.user("listen", "--once")
+        self.assertEqual(again.stdout, "（沒有新回話）\n")
         process = subprocess.Popen(
             [str(USER), str(self.A), "listen", "--new", "--once"], text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -91,14 +93,16 @@ class UserCliTest(unittest.TestCase):
         self.assertEqual(len(files), 1)
         self.assertEqual(json.loads(files[0].read_text())["content"], "hello from talk")
 
-    def test_reset_only_removes_state(self):
+    def test_reset_writes_defaults_with_next_epoch(self):
         self.new()
-        (self.A / "state.json").write_text("{}", encoding="utf-8")
+        (self.A / "state.json").write_text('{"epoch":4}', encoding="utf-8")
         (self.A / "messages.json").write_text('[{"role":"user"}]', encoding="utf-8")
         (self.A / "outbox/0001.json").write_text("{}", encoding="utf-8")
         result = subprocess.run([str(AGENT), str(self.A), "--reset"], capture_output=True, check=False)
         self.assertEqual(result.returncode, 0)
-        self.assertFalse((self.A / "state.json").exists())
+        state = json.loads((self.A / "state.json").read_text())
+        self.assertEqual(state["epoch"], 5)
+        self.assertEqual((state["question"], state["step"], state["state"]), (0, 0, "idle"))
         self.assertTrue((self.A / "messages.json").exists())
         self.assertTrue((self.A / "outbox/0001.json").exists())
 

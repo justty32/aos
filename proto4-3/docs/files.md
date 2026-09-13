@@ -26,11 +26,11 @@
 
 - `aos-kernel`：`ls`／`add`／`rm` 的薄命令列入口。
 - `aos_kernel.py`：`KHome` 版面與 config／state／log 共用操作，以及 CLI 分派。
-- `aos_kernel_status.py`：`ls` 的 daemon、cpu、waiting、佇列與收尾狀態輸出。
+- `aos_kernel_status.py`：`ls` 的 daemon 三態、動態欄寬 cpu 表、waiting、佇列與收尾狀態輸出。
 - `aos-kernel-init`、`aos_kernel_init.py`：重灌入口與本體；建立 kernel 家、cpu、行程與 syscall 資料夾。
 - `aos-kernel-boot`、`aos_kernel_boot.py`：把已初始化的 kernel 放上正在跑的 daemon。
-- `aos_kernel_add.py`：正規化 cwd／argv[0]，用 aos-exec 規則驗證後原子排進 `procs/`。
-- `aos_kernel_syscall.py`：`rm` 投單、等回音，以及 tick 端的 syscall 收件與拿掉行程。
+- `aos_kernel_add.py`：正規化 cwd／argv[0]，用 aos-exec 規則驗證後原子排進 `procs/`；指定名只撞 done／bad 時先清舊紀錄。
+- `aos_kernel_syscall.py`：`rm` 投單、等回音，以及 tick 端的 syscall 收件；拿掉活行程或清 done／bad 舊紀錄。
 - `aos_kernel_module.py`：載入 module、檢查 `NAME`／`OPS`／hook，隔離 hook 例外。
 - `aos-kernel-tick`：tick 的薄命令列入口。
 - `aos_kernel_tick.py`：每回合點 cpu、收 syscall、退壞檔，再呼叫排程並寫表與 log。
@@ -53,6 +53,6 @@
 
 ## 測試
 
-- `test/`：`python -m unittest discover -s test`；kernel 回歸集中在 `test/test_kernel.py`。
+- `test/`：`python -m unittest discover -s test`；kernel 主回歸在 `test/test_kernel.py`，r6 的舊紀錄與狀態表案例在 `test/test_kernel_fix_r6.py`。
 - daemon 共用基底在 `test/_daemon.py`；查詢、操作與完整 CLI 生命周期分在
   `test_daemon.py`、`test_daemon_ops.py`、`test_daemon_cli.py`。

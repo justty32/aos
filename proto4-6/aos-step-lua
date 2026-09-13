@@ -222,6 +222,7 @@ local function run(prog, stderr_override, want_status)
   local wrote, err = atomic_state(state_path, result)
   if not wrote then return fail("寫不了狀態檔：" .. tostring(err)) end
   os.remove(error_path)
+  io.stderr:write(string.format("第 %d 格 ok（%s）\n", pc, item.name))
   return 0
 end
 

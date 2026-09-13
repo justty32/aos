@@ -116,3 +116,5 @@
 
 **fix-r5 落地補記（2026-09-13 晚）**：八條全做（回報 `fix-r5-out.md`）。測試 proto4-3 237、proto4-5 63、proto4-6 77、Janet 42／48／12 全綠；`aos-kernel llm ls K`／`rm K NAME` 在遊樂場真跑過。r4 循環到此停：Opus 說挑不出該動程式的地方。
 | fix-r6 | r5 清單 #1–#4、#8–#10（kernel rm／add 清 done、ls 訊息與表格；執行器出聲與行號；agent 一題一封、epoch、listen --once、stuck 用詞） | [fix-r6-task.md](fix-r6-task.md) |
+
+**fix-r6 落地補記（2026-09-13 晚）**：九條全做（回報 `fix-r6-out.md`）。測試 proto4-3 243、proto4-6 79、proto4-7 31、proto4-5 64、Janet 42／48／12 全綠。Fable 在乾淨遊樂場真跑過：做完的行程同名再 `add` 會印「清掉 done 裡的舊紀錄」直接排進去、`rm` 也清 done；`listen --once` 沒新回話印「（沒有新回話）」；`--reset` 後 `epoch` 變 1；daemon 正常收工後 `ls` 說「daemon 沒在跑（正常收工過）」、沒設變數才說找不到家。r5 循環到此停。

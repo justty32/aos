@@ -86,19 +86,50 @@ def _outbox_files(agent_dir):
     return sorted((Path(agent_dir) / "outbox").glob("*.json"))
 
 
+def _listen_seen_path(agent_dir):
+    return Path(agent_dir) / ".listen-seen"
+
+
+def _load_listen_seen(agent_dir):
+    try:
+        return int(_listen_seen_path(agent_dir).read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return 0
+
+
+def _save_listen_seen(agent_dir, paths):
+    numbers = [int(path.stem) for path in paths if path.stem.isdigit()]
+    if not numbers:
+        return
+    path = _listen_seen_path(agent_dir)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(str(max(numbers)) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def listen(agent_dir, new=False, once=False, label=None):
     current = _outbox_files(agent_dir)
     seen = set(current)
+    if not new and once:
+        last = _load_listen_seen(agent_dir)
+        fresh = [path for path in current if path.stem.isdigit() and int(path.stem) > last]
+        for path in fresh:
+            _show_outbox(path, label)
+        if fresh:
+            _save_listen_seen(agent_dir, fresh)
+        else:
+            print("（沒有新回話）")
+        return
     if not new:
         for path in current:
             _show_outbox(path, label)
-        if once and current:
-            return
+        _save_listen_seen(agent_dir, current)
     while True:
         fresh = [path for path in _outbox_files(agent_dir) if path not in seen]
         for path in fresh:
             seen.add(path)
             _show_outbox(path, label)
+        _save_listen_seen(agent_dir, fresh)
         if once and fresh:
             return
         time.sleep(0.2)

@@ -16,18 +16,20 @@ A/state.json              四格狀態與錯誤、等待計數
 A/inst.json               放進 kernel 的指令
 ```
 
-`state.json` 會記 `state`、`question`、`step`、`request`、`checks`、`errors`、`idle_since_error`、`stuck`、`last_error`、`outbox_n`。所有會改寫的 JSON 都先寫 `.tmp`，再用 rename 發佈。
+`state.json` 會記 `state`、`epoch`、`question`、`step`、`request`、`checks`、`errors`、`idle_since_error`、`stuck`、`last_error`、`outbox_n`。所有會改寫的 JSON 都先寫 `.tmp`，再用 rename 發佈。
 
 ## 四格
 
 | 格子 | 這格只做什麼 | 下一格 |
 |---|---|---|
-| `idle` | 收 `inbox/user/` 的整封信並搬到 `read/`；沒信就等。若尾巴有沒人回的 user/tool 訊息，第 20 格重送 | `ask` 或留在 `idle` |
-| `ask` | step 加一，組 system＋記憶＋工具表，送 `aos-kernel llm`；超過每題上限就回信並標 stuck | `wait` 或 `idle` |
-| `wait` | 看結果檔；未到就退 101，第 600 次算錯；壞結果記錯，連錯五次 stuck | `act`、`idle` 或留在 `wait` |
+| `idle` | 一次只收 `inbox/user/` 最舊的一個檔並搬到 `read/`；檔內若是陣列，整個陣列算同一題。沒信就等 | `ask` 或留在 `idle` |
+| `ask` | step 加一，組 system＋記憶＋工具表，送 `aos-kernel llm`；到上限會回「stuck，回一句就從頭算」 | `wait` 或 `idle` |
+| `wait` | 看結果檔；未到就退 101，第 600 次算錯；連錯五次會回「stuck，回一句再試」 | `act`、`idle` 或留在 `wait` |
 | `act` | 接 assistant 訊息；有 tool calls 就逐一跑工具，沒有就寫 outbox | `ask` 或 `idle` |
 
-每次呼叫 `aos-agent A` 就只走上面一格。`aos-agent A --status` 把 `state.json` 印成一行；`--reset` 只刪 `state.json`，不動記憶與 outbox。
+每次呼叫 `aos-agent A` 就只走上面一格。`aos-agent A --status` 把 `state.json` 印成一行；
+`--reset` 會寫回乾淨狀態並把 `epoch` 加一，不動記憶與 outbox。LLM 請求名是
+`<name>-e<epoch>-q<question>-s<step>`；底層的同名同內容冪等只限同一個 epoch，reset 後不會撞舊單。
 
 ## aos-user 用法
 
@@ -42,13 +44,15 @@ proto4-7/aos-user /tmp/bob new \
 
 ```sh
 aos-user /tmp/bob say "看看資料夾裡有什麼"  # 省略文字就從 stdin 讀
-aos-user /tmp/bob listen --once              # 印目前回話；沒有就等一則再退出
-aos-user /tmp/bob listen --new               # 只等啟動後的新回話
+aos-user /tmp/bob listen --once              # 只印上次 listen 後的新回話；沒有就明說後退出
+aos-user /tmp/bob listen --new --once        # 等啟動後的下一則，再印出並退出
+aos-user /tmp/bob listen --new               # 只聽啟動後的新回話，一直不退出
 aos-user /tmp/bob talk                       # 你> / bob> 互動介面
 aos-user /tmp/bob status                     # 一行看格子、題目、等待、錯誤、未讀信
 ```
 
-`listen` 本身不推進 agent；kernel 必須在跑。
+`listen` 本身不推進 agent；kernel 必須在跑。已看進度存在 agent 根目錄的 `.listen-seen`，
+不塞進 agent 的 `state.json`。
 
 ## 放進 kernel
 

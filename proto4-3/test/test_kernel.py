@@ -279,7 +279,7 @@ class KernelInitTest(KernelTest):
         r = subprocess.run([sys.executable, KERNEL_BIN, "ls", self.k], env=env,
                            capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("daemon ?（找不到 daemon 的家：AOS_DAEMON_HOME 沒設？）", r.stdout)
+        self.assertIn("找不到 daemon 的家（AOS_DAEMON_HOME 沒設？）", r.stdout)
 
     def test_ls_accepts_the_home_from_another_directory(self):
         self.init(1)

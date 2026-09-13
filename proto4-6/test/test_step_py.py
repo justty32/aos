@@ -87,11 +87,17 @@ class StepPyTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual((self.state()["pc"], self.state()["state"]), (1, {"kept": 1}))
         self.assertIn("第 1 格 boom", result.stderr)
-        self.assertIn("PROG 第 3 行", result.stderr)
+        self.assertIn("PROG 第 5 行", result.stderr)
         error = (self.home / "job.py.error").read_text()
         self.assertIn("Traceback", error)
         self.assertIn("RuntimeError: bad first line", error)
         self.assertIn("RuntimeError", self.run_tool("--status").stderr)
+
+    def test_success_reports_step_name(self):
+        self.write("def greet(state): state['ok'] = True\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("第 0 格 ok（greet）", result.stderr)
 
     def test_non_json_state_fails_without_advancing(self):
         self.write("def bad(state): state['x'] = {1, 2}\n")

@@ -37,7 +37,7 @@ class StepJsonTest(unittest.TestCase):
         self.assertFalse((self.home / "job.state.json").exists())
 
     def test_first_step_writes_file_and_result_state(self):
-        self.write([{"argv": ["sh", "-c", "printf one > first.txt"]}])
+        self.write([{"note": "寫第一份", "argv": ["sh", "-c", "printf one > first.txt"]}])
         result = self.run_tool()
         state = self.state()
         self.assertEqual(result.returncode, 0)
@@ -45,6 +45,7 @@ class StepJsonTest(unittest.TestCase):
         self.assertEqual(state["pc"], 1)
         self.assertEqual(state["last"]["pc"], 0)
         self.assertEqual(state["history"], [state["last"]])
+        self.assertIn("第 0 格 ok（寫第一份）", result.stderr)
 
     def test_relative_cwd_is_based_on_program_directory(self):
         (self.home / "sub").mkdir()

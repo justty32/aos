@@ -24,7 +24,7 @@
 ```sh
 export AOS_DAEMON_HOME=~/.aos-daemon   # daemon、ctl、kernel 三支都靠這個找家；用 --home 不會傳給子孫
 cd proto4-3
-python3 -m unittest discover -s test        # 236 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 243 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 aos-exec /path/to/folder --stderr -       # 看不到錯誤時先加這個
@@ -48,6 +48,7 @@ aos-kernel-init /tmp/K --ncpu 2             # 灌一次；module 要在這時用
 aos-kernel-init /tmp/K --ncpu 2 --module /abs/proto4-5/llm_cpu_module.py
 aos-kernel-boot /tmp/K                      # 開機：把 kernel 放上 daemon
 aos-kernel add /tmp/K /abs/my-proc.json     # 排行程
+aos-kernel rm /tmp/K my-proc                # 拿掉活行程，或清 done／bad 舊紀錄
 aos-kernel ls /tmp/K                        # 看狀態
 aos-daemon-ctl stop                         # 關機
 ```
@@ -68,6 +69,9 @@ cpu 不用你插，kernel 第一回合會自己把 `cpus/*.json` 掛上 daemon�
 回到隊尾讓出 cpu；沒人排隊就留在原 cpu。其他非零退出若連續達 `bad_after` 次（預設 10）會
 進 `procs/bad/`；設成 0 就關掉這條，永遠重跑。這兩個數字都能在 init 時用
 `--wait-exit`／`--bad-after` 改。
+
+同名行程若只剩在 `done/`／`bad/` 的舊紀錄，指定 `--name` 再 `add` 會先清舊紀錄後重排；
+`rm NAME` 也會在找不到活行程時改清這兩處，方便直接重玩。
 
 當成函式用（aos-run 就是這樣接的）：
 

@@ -12,7 +12,7 @@ from mailbox import collect_user_mail, write_outbox
 
 
 DEFAULT_STATE = {
-    "state": "idle", "question": 0, "step": 0, "request": None,
+    "state": "idle", "epoch": 0, "question": 0, "step": 0, "request": None,
     "checks": 0, "errors": 0, "idle_since_error": 0,
     "stuck": False, "last_error": None, "outbox_n": 0,
 }
@@ -50,6 +50,9 @@ def load_state(agent_dir):
         state.update(value)
         if state["state"] not in ("idle", "ask", "wait", "act"):
             raise ValueError
+        if (isinstance(state["epoch"], bool) or not isinstance(state["epoch"], int)
+                or state["epoch"] < 0):
+            raise ValueError
         return state
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
         raise AgentError(f"state.json 壞了：{path}") from exc
@@ -80,7 +83,7 @@ def _record_error(agent_dir, state, message):
     state["state"] = "idle"
     if state["errors"] >= 5:
         state["stuck"] = True
-        write_outbox(agent_dir, state, "這句先放著，等你新信")
+        write_outbox(agent_dir, state, "連錯 5 次，這句先放著（stuck）；回我一句再試")
 
 
 def _dangling(messages):
@@ -117,7 +120,8 @@ def do_ask(agent_dir, config, state, messages, aos_py):
     state["step"] += 1
     limit = config["max_steps_per_question"]
     if state["step"] > limit:
-        write_outbox(agent_dir, state, f"這題走了 {limit} 格先停，回我一句再繼續")
+        write_outbox(agent_dir, state,
+                     f"這題走了 {limit} 格到上限，先停（stuck）；回我一句就從頭算")
         state.update({"state": "idle", "stuck": True, "request": None, "checks": 0})
         _save(agent_dir, state)
         return 0
@@ -126,7 +130,8 @@ def do_ask(agent_dir, config, state, messages, aos_py):
     if tools:
         request["tools"] = list(tools.values())
     atomic_json(Path(agent_dir) / "req.json", request)
-    name = f"{config['name']}-q{state['question']}-s{state['step']}"
+    name = (f"{config['name']}-e{state['epoch']}-q{state['question']}"
+            f"-s{state['step']}")
     helper_request = Path(agent_dir) / f"{name}.req.json"
     old_cwd = Path.cwd()
     try:

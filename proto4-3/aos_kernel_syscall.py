@@ -167,7 +167,23 @@ def _remove(h, cfg, st, pid, notes):
         msg = "rm %s（原本在佇列）" % pid
         notes.append(msg)
         return True, msg
-    msg = "找不到這個行程：%s（佇列、cpu 上都沒有；done/ 與 bad/ 裡的檔你自己刪）" % pid
+    cleared = []
+    for label, folder in (("done", h.done), ("bad", h.bad)):
+        old = os.path.join(folder, "%s.json" % pid)
+        if not os.path.isfile(old):
+            continue
+        try:
+            os.unlink(old)
+        except OSError as e:
+            msg = "rm %s 失敗：%s" % (pid, e)
+            notes.append(msg)
+            return False, msg
+        cleared.append(label)
+    if cleared:
+        msg = "；".join("清掉 %s 裡的舊紀錄：%s" % (label, pid) for label in cleared)
+        notes.append(msg)
+        return True, msg
+    msg = "找不到這個行程：%s（佇列、cpu、done、bad 都沒有）" % pid
     notes.append(msg)
     return False, msg
 
