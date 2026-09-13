@@ -109,3 +109,5 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 ### 20.6 落地補記（第三輪：aos-step 做完回 100、接上 kernel，codex gpt-sol，2026-09-13）
 
 `aos-step` 全部 form 跑完之後改回 100（`--done-exit N` 可改，限 0–255），放進 kernel 的 `procs/` 會自己被收走。`test/cpu.janet` 加了一條真的走 daemon＋kernel 的整合測試：三個 form 的行程丟進 `procs/1.json`，約 2 秒後出現在 `procs/done/1.json`、`log.txt` 剛好 3 行、cpu 換回 idle、`aos-kernel ls` 印 `done: 1`。Janet 測試 34＋12＋28 條、proto4-3 188 條全綠。`proto4-3/docs/kernel.md` 補了 `procs/done/`、`done_exit`、五步裡的「先看做完沒」。**這一段（逐步 lisp＋kernel 應急版行程結束）到此收線。**
+
+**21.6 續（使用者拍板）**：「拿 pi -p 當子行程用。pi coding agent 用的人超多，要是 anthropic 封這個，那就有得吵了。」→ LLM cpu 的 Claude endpoint＝開 `pi -p` 子行程（登入、條款、額度都是 pi 的事，aos 不碰 token）。參考 `~/repo/langs/janet-lab/modules/pi-shell/`（已經把 `pi -p`／`claude -p` 包成子行程殼）。endpoint 三種：LM Studio（OpenAI 相容 HTTP）、DeepSeek（OpenAI 相容 HTTP）、pi 子行程。
