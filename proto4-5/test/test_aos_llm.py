@@ -49,6 +49,19 @@ class AosLlmTest(CpuCase):
         self.assertEqual(set(body["usage"]), {
             "prompt", "completion", "total", "cached", "reasoning"})
 
+    def test_tools_and_tool_choice_are_forwarded(self):
+        endpoint = self.write("one.json", self.endpoint())
+        output = Path(self.temp.name) / "out.json"
+        tool = {"type": "function", "function": {"name": "sh", "parameters": {}}}
+        req = self.request(content="tools?", tools=[tool], tool_choice="auto")
+        result = self.llm("call", endpoint, req, output)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(output.read_text())["text"], "tools=1 choice=auto")
+        bad = self.request("bad.json", content="tools?", tools={"x": 1})
+        result = self.llm("call", endpoint, bad, output)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(json.loads(output.read_text())["error"]["kind"], "bad_request")
+
     def test_endpoint_file_hash_name(self):
         endpoints = self.write("many.json", {
             "default": "other", "endpoints": [self.endpoint("other"),

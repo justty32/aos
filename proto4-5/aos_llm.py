@@ -110,6 +110,9 @@ def call(endpoint: dict, req: dict) -> dict:
     if "params" in req and not isinstance(req["params"], dict):
         return _error(request_id, name, None, model, started, "bad_request",
                       "params 必須是 JSON 物件")
+    if "tools" in req and not isinstance(req["tools"], list):
+        return _error(request_id, name, None, model, started, "bad_request",
+                      "tools 必須是陣列（OpenAI tools 格式）")
     timeout_ms = req.get("timeout_ms", endpoint.get("timeout_ms", 300000))
     if (not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool)
             or timeout_ms <= 0):
@@ -136,6 +139,9 @@ def call(endpoint: dict, req: dict) -> dict:
             })
     body = {"model": model, "messages": req["messages"], "stream": False}
     body.update(req.get("params") or {})
+    for key in ("tools", "tool_choice"):       # 工具呼叫是正式欄位，原樣轉給模型
+        if key in req:
+            body[key] = req[key]
     body["model"], body["stream"] = model, False
     try:
         http_request = urllib.request.Request(
