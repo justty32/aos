@@ -32,7 +32,15 @@ aos-kernel-boot "$K"
 
 # 4. 等 LLM module 生出 K/llm/endpoints.json，把 model 換成 LM Studio 真的載著的那顆
 i=0; while [ ! -f "$K/llm/endpoints.json" ] && [ $i -lt 20 ]; do sleep 0.5; i=$((i+1)); done
-MODEL="$(aos-llm models "$PLAY/stations/1-ask-once/endpoint.json" 2>/dev/null | grep -v embed | grep -m1 . || true)"
+# 先問 lms 現在真的載著哪顆；沒載就從 /models 清單裡挑 gemma-4-e4b（最小），再沒有就挑第一顆非 embed 的
+LOADED="$(lms ps --json 2>/dev/null | python3 -c 'import json,sys
+try:
+    d = json.load(sys.stdin); print(d[0].get("identifier") or d[0].get("modelKey") or "")
+except Exception: print("")' 2>/dev/null)"
+LISTED="$(aos-llm models "$PLAY/stations/1-ask-once/endpoint.json" 2>/dev/null | grep -v embed || true)"
+MODEL="$LOADED"
+[ -n "$MODEL" ] || MODEL="$(printf '%s\n' "$LISTED" | grep -m1 'gemma-4-e4b' || true)"
+[ -n "$MODEL" ] || MODEL="$(printf '%s\n' "$LISTED" | grep -m1 . || true)"
 if [ -n "$MODEL" ]; then
   python3 - "$MODEL" "$K/llm/endpoints.json" "$PLAY/stations/1-ask-once/endpoint.json" <<'PY'
 import json, sys
@@ -41,7 +49,8 @@ d = json.load(open(kfile)); [e.update(model=model) for e in d["endpoints"] if e[
 json.dump(d, open(kfile, "w"), indent=1, ensure_ascii=False)
 e = json.load(open(efile)); e["model"] = model; json.dump(e, open(efile, "w"), indent=1)
 PY
-  echo "LLM：本機 LM Studio 載著 $MODEL，兩份 endpoint 設定都指過去了"
+  if [ -n "$LOADED" ]; then echo "LLM：LM Studio 載著 $MODEL，兩份 endpoint 設定都指過去了"
+  else echo "LLM：LM Studio 開著但沒載模型；設定先指到 $MODEL，玩之前 lms load $MODEL（沒 JIT 的話呼叫會失敗）"; fi
 else
   echo "LLM：localhost:1234 沒回應——LM Studio 開了嗎？（lms load google/gemma-4-e4b）第 1、3、4、5 站要它"
 fi
