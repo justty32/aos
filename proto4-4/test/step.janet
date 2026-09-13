@@ -56,11 +56,11 @@
     (def lib-dir (string tmp "/lib"))
     (os/mkdir lib-dir)
     (def lib-prog (string lib-dir "/prog.janet"))
-    (spit lib-prog "(print (type aos/llm) \" \" (type aos/llm-text) \" \" (type aos/pipe))\n")
+    (spit lib-prog "(print (type aos/llm) \" \" (type aos/llm-text) \" \" (type aos/pipe) \" \" (type aos/wait-for) \" \" (type aos/llm-submit))\n")
     (def lib-run (run lib-prog))
     (check "函式庫每個公開名字都綁進 form（含新加的 aos/llm）"
            (and (= 0 (lib-run :code))
-                (not (nil? (string/find "function function function" (lib-run :out))))))
+                (not (nil? (string/find "function function function function function" (lib-run :out))))))
     (check "第三步 status 是 pc 3" (= 3 ((stat prog) :pc)))
     (def r4 (run prog))
     (check "第四步叫了 child 資料夾" (and (= 0 (r4 :code)) (= "ran" (string (slurp (string child "/child-ran.txt"))))))
@@ -119,6 +119,51 @@
     (check "重試成功後 pc 2 且 error 消失"
            (and (= "2\n" (string (slurp (string bad-dir "/.aos-step/pc"))))
                 (nil? (os/stat (string bad-dir "/.aos-step/error") :mode))))
+
+    (def wait-dir (string tmp "/wait"))
+    (os/mkdir wait-dir)
+    (def wait-prog (string wait-dir "/wait.janet"))
+    (spit wait-prog
+          "(aos/wait-for \"out.json\")\n(spit (string here \"/next.txt\") \"ran\")\n")
+    (check "wait-for 宣告那格成功且 pc 前進"
+           (and (= 0 ((run wait-prog) :code)) (= 1 ((stat wait-prog) :pc))))
+    (def waiting0 ((stat wait-prog) :waiting))
+    (check "waiting 存絕對路徑且 checks 從 0 開始"
+           (and (= (string wait-dir "/out.json") (waiting0 :for))
+                (= 0 (waiting0 :checks))))
+    (check "檔不在時再叫仍回 0、checks 加一且下一格沒跑"
+           (and (= 0 ((run wait-prog) :code))
+                (= 1 (get-in (stat wait-prog) [:waiting :checks]))
+                (nil? (os/stat (string wait-dir "/next.txt") :mode))))
+    (check "status stderr 有給人看的在等"
+           (not (nil? (string/find (string "在等 " wait-dir "/out.json")
+                                   ((run wait-prog "--status") :err)))))
+    (spit (string wait-dir "/out.json") "{}")
+    (check "檔出現後同一次呼叫會接著跑下一格"
+           (and (= 0 ((run wait-prog) :code))
+                (= "ran" (string (slurp (string wait-dir "/next.txt"))))))
+    (def waited-state (stat wait-prog))
+    (check "等完會清 waiting 並留一筆 wait history"
+           (and (nil? (waited-state :waiting))
+                (some |(= "(wait)" ($ :step)) (waited-state :history))))
+
+    (def last-dir (string tmp "/last-wait"))
+    (os/mkdir last-dir)
+    (def last-prog (string last-dir "/last.janet"))
+    (spit last-prog "(aos/wait-for \"last.out\")\n")
+    (check "最後一格宣告等待時還不是 done"
+           (and (= 0 ((run last-prog) :code)) (not ((stat last-prog) :done))))
+    (check "最後一格等待中再叫也不是 100" (= 0 ((run last-prog) :code)))
+    (spit (string last-dir "/last.out") "")
+    (check "最後一格的檔出現後下一叫才回 100"
+           (and (= 100 ((run last-prog) :code)) ((stat last-prog) :done)))
+
+    (def reset-wait (string tmp "/reset-wait.janet"))
+    (spit reset-wait "(aos/wait-for \"never\")\n")
+    (run reset-wait)
+    (check "reset 連 waiting 一起清掉"
+           (and (= 0 ((run reset-wait "--reset") :code))
+                (nil? ((stat reset-wait) :waiting))))
 
     (def parse-dir (string tmp "/parse"))
     (os/mkdir parse-dir)

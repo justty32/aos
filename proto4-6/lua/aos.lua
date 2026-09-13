@@ -8,10 +8,20 @@ local proto_dir = lua_dir:match("^(.*)/lua$") or (lua_dir .. "/..")
 local repo_dir = proto_dir:match("^(.*)/[^/]+$") or (proto_dir .. "/..")
 local default_exec = repo_dir .. "/proto4-3/aos-exec"
 local default_llm = repo_dir .. "/proto4-5/aos-llm"
+local default_kernel = repo_dir .. "/proto4-3/aos-kernel"
 
 local function shquote(s)
   s = tostring(s)
   return "'" .. s:gsub("'", "'\\''") .. "'"
+end
+
+local function absolute(path, base)
+  if path:sub(1, 1) ~= "/" then path = base .. "/" .. path end
+  local parts = {}
+  for part in path:gmatch("[^/]+") do
+    if part == ".." then table.remove(parts) elseif part ~= "." then parts[#parts + 1] = part end
+  end
+  return "/" .. table.concat(parts, "/")
 end
 
 local function exit_code(a, why, code)
@@ -116,6 +126,10 @@ end
 
 function M.b64(s) return base64.encode(s) end
 function M.unb64(s) return base64.decode(s) end
+function M.wait_for(path)
+  if type(path) ~= "string" then error("aos.wait_for: path 必須是字串", 2) end
+  return {["$wait_for"]=path}
+end
 
 function M.llm(endpoint, req, out, timeout_ms)
   if type(req) ~= "table" then error("aos.llm: req 必須是 table", 2) end
@@ -138,6 +152,28 @@ end
 function M.llm_text(result)
   if type(result) == "table" and result.ok == true then return result.text end
   return nil
+end
+
+function M.llm_submit(K, req, name)
+  if type(K) ~= "string" then error("aos.llm_submit: K 必須是字串", 2) end
+  if type(req) ~= "table" then error("aos.llm_submit: req 必須是 table", 2) end
+  if type(name) ~= "string" or name == "" then error("aos.llm_submit: name 必須是非空字串", 2) end
+  local here = assert(io.popen("pwd -P", "r")); local work = assert(here:read("*l")); here:close()
+  local req_path = work .. "/" .. name .. ".req.json"
+  local kernel = absolute(K, work)
+  write_file(req_path, json.encode(req) .. "\n")
+  local err_path, out_path = temp_file(), temp_file()
+  local argv = {os.getenv("AOS_KERNEL") or default_kernel, "llm", kernel, req_path, "--name", name}
+  local command = {}; for _, value in ipairs(argv) do command[#command + 1] = shquote(value) end
+  local a, why, code = os.execute(table.concat(command, " ") .. " > " .. shquote(out_path) .. " 2> " .. shquote(err_path))
+  code = exit_code(a, why, code)
+  local err, out = read_file(err_path) or "", read_file(out_path) or ""
+  os.remove(err_path); os.remove(out_path)
+  if code ~= 0 then
+    local detail = err:gsub("%s+$", ""); if detail == "" then detail = out:gsub("%s+$", "") end
+    error("aos.llm_submit: aos-kernel 回 " .. code .. ": " .. detail, 2)
+  end
+  return kernel .. "/llm/results/" .. name .. ".json"
 end
 
 return M

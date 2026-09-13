@@ -12,6 +12,16 @@ import sys
 HERE = Path(__file__).resolve().parent
 DEFAULT_EXEC = HERE.parent / "proto4-3" / "aos-exec"
 DEFAULT_LLM = HERE.parent / "proto4-5" / "aos-llm"
+DEFAULT_KERNEL = HERE.parent / "proto4-3" / "aos-kernel"
+
+
+class Wait:
+    def __init__(self, path):
+        self.path = os.fspath(path)
+
+
+def wait_for(path):
+    return Wait(path)
 
 
 def b64(b):
@@ -28,6 +38,10 @@ def _exec_path():
 
 def _llm_path():
     return os.environ.get("AOS_LLM", str(DEFAULT_LLM))
+
+
+def _kernel_path():
+    return os.environ.get("AOS_KERNEL", str(DEFAULT_KERNEL))
 
 
 def _read(path):
@@ -122,3 +136,21 @@ def llm(endpoint, req, out, timeout_ms=None):
 
 def llm_text(result):
     return result.get("text") if isinstance(result, dict) and result.get("ok") is True else None
+
+
+def llm_submit(K, req: dict, name: str) -> str:
+    if not isinstance(req, dict):
+        raise ValueError("aos.llm_submit: req 必須是 dict")
+    if not isinstance(name, str) or not name:
+        raise ValueError("aos.llm_submit: name 必須是非空字串")
+    req_path = Path.cwd() / (name + ".req.json")
+    req_path.write_text(_json.dumps(req, ensure_ascii=False) + "\n", encoding="utf-8")
+    kernel = Path(K).resolve()
+    completed = subprocess.run(
+        [_kernel_path(), "llm", os.fspath(kernel), os.fspath(req_path), "--name", name],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise RuntimeError(f"aos.llm_submit: aos-kernel 回 {completed.returncode}: {detail}")
+    return str(kernel / "llm" / "results" / (name + ".json"))

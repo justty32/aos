@@ -58,6 +58,58 @@
   (def p (path state "src"))
   (if (exists? p) (parse (slurp p)) nil))
 
+(defn- read-state [state]
+  (def p (path state "state"))
+  (if (exists? p)
+    (let [value (parse (slurp p))]
+      (unless (table? value) (error "state 壞了：必須是 table")) value)
+    @{}))
+
+(defn- write-state [state value]
+  (atomic-spit (path state "state") (string/format "%q\n" value)))
+
+(defn- now [] (string (os/strftime "%Y-%m-%dT%H:%M:%S" (os/time) false) "+00:00"))
+
+(defn- absolute-path [given here]
+  (unless (string? given) (error "aos/wait-for: path 必須是字串"))
+  (def raw (if (string/has-prefix? "/" given) given (string here "/" given)))
+  (def parts @[])
+  (each part (string/split "/" raw)
+    (cond (or (= "" part) (= "." part)) nil
+          (= ".." part) (array/pop parts)
+          (array/push parts part)))
+  (string "/" (string/join parts "/")))
+
+(defn- trim-history [history]
+  (while (> (length history) 50) (array/remove history 0)) history)
+
+(defn- waiting-line [waiting]
+  (unless (and (dictionary? waiting)
+               (string? (waiting :for)) (string/has-prefix? "/" (waiting :for))
+               (string? (waiting :since))
+               (number? (waiting :after_pc)) (>= (waiting :after_pc) 0)
+               (number? (waiting :checks)) (>= (waiting :checks) 0))
+    (error "state 壞了：waiting 欄位不合法"))
+  (string "在等 " (waiting :for) "（已看 " (waiting :checks) " 次，從 " (waiting :since) " 起）"))
+
+(defn- check-waiting [state saved]
+  (if-let [waiting (saved :waiting)]
+    (do
+      (waiting-line waiting)
+      (if (not (exists? (waiting :for)))
+        (do (put waiting :checks (inc (waiting :checks)))
+            (put saved :waiting waiting) (write-state state saved) true)
+        (do
+          (var history (or (saved :history) @[]))
+          (unless (array? history) (set history @[]))
+          (array/push history @{:pc (waiting :after_pc) :step "(wait)" :exit 0
+                                :waited_checks (waiting :checks) :at (now) :ms 0})
+          (put saved :history (trim-history history))
+          (put saved :waiting nil)
+          (write-state state saved)
+          false)))
+    false))
+
 (defn- source-changed? [state pc current]
   (def old (read-src state))
   (and (> pc 0) old (not (= old current))))
@@ -119,14 +171,22 @@
 (defn- step [prog here state]
   (label finish
   (var pc 0)
-  (def parsed (fiber/new (fn [] (parse-forms prog)) :e))
-  (def forms (resume parsed))
-  (when (= :error (fiber/status parsed))
-    (return finish (fail state pc (fiber/last-value parsed) parsed)))
   (def got-pc (fiber/new (fn [] (read-pc state)) :e))
   (set pc (resume got-pc))
   (when (= :error (fiber/status got-pc))
     (return finish (fail state 0 (fiber/last-value got-pc) got-pc)))
+  (def state-read (protect (read-state state)))
+  (unless (state-read 0)
+    (return finish (fail state pc (state-read 1))))
+  (def saved (state-read 1))
+  (def checked (protect (check-waiting state saved)))
+  (unless (checked 0)
+    (return finish (fail state pc (checked 1))))
+  (when (checked 1) (return finish 0))
+  (def parsed (fiber/new (fn [] (parse-forms prog)) :e))
+  (def forms (resume parsed))
+  (when (= :error (fiber/status parsed))
+    (return finish (fail state pc (fiber/last-value parsed) parsed)))
   (def src (source-id prog forms))
   (def old-src (read-src state))
   (when (and (> pc 0) old-src (not (= old-src src)))
@@ -150,13 +210,24 @@
   (when (= :error (fiber/status prepared))
     (return finish (fail state pc (fiber/last-value prepared) prepared)))
   (def [value image] result)
+  (def item @{:pc pc :step (string/format "%q" (forms pc)) :exit 0
+              :at (now) :ms 0})
+  (var history (or (saved :history) @[]))
+  (unless (array? history) (set history @[]))
+  (array/push history item)
+  (put saved :last item)
+  (put saved :history (trim-history history))
+  (when (and (dictionary? value) (has-key? value :aos/wait-for))
+    (put saved :waiting @{:for (absolute-path (value :aos/wait-for) here)
+                          :since (now) :after_pc pc :checks 0}))
   (os/mkdir state)
   (atomic-spit (path state "env.img") image)
   (atomic-spit (path state "pc") (string (inc pc) "\n"))
   (write-src state src)
+  (write-state state saved)
   (when (exists? (path state "error"))
     (os/rm (path state "error")))
-  (if (= (inc pc) (length forms))
+  (if (and (= (inc pc) (length forms)) (nil? (saved :waiting)))
     (spit (path state "done") "")
     (when (exists? (path state "done")) (os/rm (path state "done"))))
   (printf "%q" value)
@@ -173,17 +244,26 @@
   (var pc 0)
   (def read (protect (read-pc state)))
   (if (read 0) (set pc (read 1)) (set parse-error (describe (read 1))))
+  (def state-read (protect (read-state state)))
+  (def saved (if (state-read 0) (state-read 1) @{}))
+  (unless (state-read 0) (set parse-error (describe (state-read 1))))
+  (when-let [waiting (saved :waiting)]
+    (def line (protect (waiting-line waiting)))
+    (if (line 0)
+      (eprint (line 1))
+      (set parse-error (describe (line 1)))))
   (def err (or parse-error (error-text state)))
   (def changed
     (if parse-error
       false
       (source-changed? state pc (source-id prog forms))))
   # table/struct 不會保留 nil value，所以手寫最外層，確保 :error nil 也真的印出來。
-  (printf "{:pc %d :n %d :done %s :changed %s :error %s}"
+  (printf "{:pc %d :n %d :done %s :changed %s :error %s :last %q :history %q :waiting %q}"
           pc n
           (if (exists? (path state "done")) "true" "false")
           (if changed "true" "false")
-          (if err (string/format "%q" err) "nil"))
+          (if err (string/format "%q" err) "nil")
+          (saved :last) (or (saved :history) @[]) (saved :waiting))
   0)
 
 (defn- usage []

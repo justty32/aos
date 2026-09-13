@@ -61,6 +61,70 @@ def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def wait_path(path, here):
+    if not isinstance(path, (str, os.PathLike)):
+        raise StepError("wait_for 路徑必須是字串或 path-like")
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path(here) / candidate
+    return str(candidate.resolve())
+
+
+def set_waiting(state, path, here, pc):
+    state["waiting"] = {
+        "for": wait_path(path, here),
+        "since": now(),
+        "after_pc": pc,
+        "checks": 0,
+    }
+    state["done"] = False
+
+
+def waiting_line(state):
+    waiting = state.get("waiting")
+    if waiting is None:
+        return None
+    if not isinstance(waiting, dict):
+        raise StepError("狀態檔壞了：waiting 必須是物件")
+    path = waiting.get("for")
+    since = waiting.get("since")
+    checks = waiting.get("checks")
+    after_pc = waiting.get("after_pc")
+    if (not isinstance(path, str) or not os.path.isabs(path)
+            or not isinstance(since, str)
+            or isinstance(checks, bool) or not isinstance(checks, int) or checks < 0
+            or isinstance(after_pc, bool) or not isinstance(after_pc, int) or after_pc < 0):
+        raise StepError("狀態檔壞了：waiting 欄位不合法")
+    return f"在等 {path}（已看 {checks} 次，從 {since} 起）"
+
+
+def check_waiting(state, state_path, *, default=None):
+    """回 True 表示仍在等；檔案到了就記 wait history、回 False。"""
+    line = waiting_line(state)
+    if line is None:
+        return False
+    waiting = state["waiting"]
+    if not Path(waiting["for"]).exists():
+        waiting["checks"] += 1
+        atomic_json(state_path, state, default=default)
+        return True
+    item = {
+        "pc": waiting["after_pc"],
+        "step": "(wait)",
+        "exit": 0,
+        "waited_checks": waiting["checks"],
+        "at": now(),
+        "ms": 0,
+    }
+    history = state.get("history", [])
+    if not isinstance(history, list):
+        history = []
+    state["history"] = (history + [item])[-HISTORY_LIMIT:]
+    state.pop("waiting")
+    atomic_json(state_path, state, default=default)
+    return False
+
+
 def warn_if_changed(tool, state, current_src):
     old = state.get("src")
     if state["pc"] > 0 and isinstance(old, dict) and old.get("sha256") != current_src["sha256"]:
