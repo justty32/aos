@@ -29,3 +29,14 @@
 - **`import`／`def`／`class` 這三種頂層 statement 不算格**，每格開跑前全部重放一次（便宜、確定性），所以前面定義的函式後面每格都能用；只有資料走 `state`。
 - 每格拿到的名字：`state`、`here`（程式所在資料夾）、`pc`、`aos`（一個小模組：`aos.call`／`call_dir`／`call_json`／`llm`，就是 proto4-4 函式庫的 Python 版，底下一樣叫 `aos-exec`／`aos-llm`）。
 - 其餘約定跟逐步 JSON、逐步 lisp 一樣：`--status`、`--reset`、`--stderr`、改動偵測、失敗 pc 不動、做完回 100、可直接放上 kernel。
+
+## 23.5 使用者放鬆：不用太嚴格（2026-09-13）
+
+原話：「Python 逐步這塊，不用太嚴格，可以是逐 python 函數，或逐 python 檔案或 module，來做執行。」
+
+§23.4 的「用 ast 切頂層 statement、定義每格重放」太講究，作廢（派出去的 codex 停掉、半成品丟掉）。改成**逐函數**，最簡單的一種：
+
+- 程式是一支普通 `.py`。**每個頂層 `def` 就是一格**，照檔案順序；名字以 `_` 開頭的是 helper，不算格。簽名 `def 名字(state)`，`state` 是 dict、跨格活著、存 JSON。
+- 執行器每格 `importlib` 重新載入整支檔（所以 import、helper、常數都正常存在），叫第 pc 個 step 函式，成功就把 `state` 寫回 JSON、pc+1。
+- 狀態檔多記 step 的名字（`"last":{"step":"fetch_data",…}`），比純數字好讀。
+- 想「逐檔案」就在某格裡 `aos.call("./other.py")`；想「逐 module」就 import 它然後叫——都不用執行器多做事。
