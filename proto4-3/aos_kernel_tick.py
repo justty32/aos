@@ -132,18 +132,25 @@ def schedule(h, cfg, st, ready, notes, now):
             queue.append(p)
     for n in range(cfg["ncpu"]):
         if n in ready:
-            _one_cpu(h, cfg, st, queue, notes, now, n, ready[n].get("runs", 0))
+            _one_cpu(h, cfg, st, queue, notes, now, n, ready)
     st["queue"] = queue
 
 
-def _one_cpu(h, cfg, st, queue, notes, now, n, runs_now):
+def _one_cpu(h, cfg, st, queue, notes, now, n, ready):
     key = str(n)
     cur = st["cpus"].get(key)
+    ent = ready[n]
+    runs_now = ent.get("runs", 0)
     if cur and runs_now < cur.get("runs_at", 0):    # cpu 換過一支 aos-run，runs 從頭數
         cur["runs_at"] = runs_now
     if cur is None:
         if queue:
             _take(h, st, queue, notes, now, n, runs_now)
+        return
+    if (cfg["done_exit"] != 0 and ent.get("last_kind") == "child"
+            and ent.get("last_exit") == cfg["done_exit"]
+            and runs_now - cur.get("runs_at", 0) >= 2):
+        _finish(h, st, notes, now, n, cur["pid"])
         return
     if runs_now - cur.get("runs_at", 0) >= cfg["quantum"] and queue:
         _swap(h, st, queue, notes, now, n, runs_now, cur["pid"])
@@ -180,6 +187,34 @@ def _swap(h, st, queue, notes, now, n, runs_now, old):
     queue.append(old)                           # 換下來的排隊尾
     st["cpus"][str(n)] = {"pid": nxt, "since": now, "runs_at": runs_now}
     notes.append("cpu%d 換人 %s→%s" % (n, old, nxt))
+
+
+def _finish(h, st, notes, now, n, pid):
+    """保留退出碼表示做完：先留 done 名字，再用 idle 原子蓋過 cpu。"""
+    tmp = h.cpu(n) + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(IDLE_INST, f, ensure_ascii=False, indent=1)
+        os.makedirs(h.done, exist_ok=True)
+        done = h.proc_done(pid)
+        if os.path.exists(done):
+            os.unlink(done)
+        os.link(h.cpu(n), done)
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        notes.append("cpu%d 收不了 %s：%s" % (n, pid, e))
+        return
+    try:
+        os.replace(tmp, h.cpu(n))
+    except OSError as e:
+        os.unlink(done)
+        notes.append("cpu%d 收不了 %s（idle 換不上去）：%s" % (n, pid, e))
+        return
+    st["cpus"][str(n)] = None
+    notes.append("cpu%d 上 %s 做完了，收進 procs/done/" % (n, pid))
 
 
 def cmd_tick(argv):
