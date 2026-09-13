@@ -1,0 +1,7 @@
+#!/bin/sh
+# 全部重來：停 daemon、整個遊樂場資料夾刪掉。repo 裡的東西不會動。
+[ -n "$AOS_PLAY" ] || { echo "先 source $(dirname "$0")/env.sh"; exit 2; }
+printf "要刪掉 %s 整個資料夾嗎？(y/N) " "$AOS_PLAY"; read -r a
+[ "$a" = y ] || { echo "沒動"; exit 0; }
+aos-daemon-ctl stop >/dev/null 2>&1 || true
+rm -rf "$AOS_PLAY" && echo "刪了。重新開始：$(dirname "$0")/up.sh"

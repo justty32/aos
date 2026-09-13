@@ -1,0 +1,49 @@
+#!/bin/sh
+# 上電＋開機＋把五站的檔案鋪到 $AOS_PLAY/stations/。重複跑沒關係（每一步都會先看有沒有做過）。
+set -e
+HERE="$(cd "$(dirname "$0")" && pwd)"
+[ -n "$AOS_PLAY" ] || { echo "先 source $HERE/env.sh"; exit 2; }
+R="$AOS_ROOT"; PLAY="$AOS_PLAY"
+mkdir -p "$PLAY"
+
+# 1. 鋪五站：__R__ / __PLAY__ / __K__ / __HERE__ 換成真路徑；已經有的檔不覆蓋（你改過的東西留著）
+for st in "$HERE"/stations/*/; do
+  name="$(basename "$st")"; dst="$PLAY/stations/$name"; mkdir -p "$dst"
+  for f in "$st"*; do
+    out="$dst/$(basename "$f")"
+    [ -e "$out" ] && continue
+    sed -e "s|__R__|$R|g" -e "s|__PLAY__|$PLAY|g" -e "s|__K__|$K|g" -e "s|__HERE__|$dst|g" "$f" > "$out"
+  done
+done
+
+# 2. 上電：daemon 沒在跑就開（setsid 讓它脫離這個終端機）
+if aos-daemon-ctl ls >/dev/null 2>&1; then echo "daemon 已經在跑"; else
+  mkdir -p "$AOS_DAEMON_HOME"; setsid -f aos-daemon >/dev/null 2>&1 </dev/null; sleep 1
+  aos-daemon-ctl ls >/dev/null 2>&1 && echo "daemon 開了" || { echo "daemon 開不起來"; exit 1; }
+fi
+
+# 3. 灌 kernel 的家（只做一次）＋開機（重複做沒事）
+if [ ! -f "$K/config.json" ]; then
+  aos-kernel-init "$K" --ncpu 2 --interval-ms 500 --module "$R/proto4-5/llm_cpu_module.py" >/dev/null
+  echo "kernel 的家灌好了：$K（2 顆 cpu、每 0.5 秒一回合、掛了 LLM 排程 module）"
+fi
+aos-kernel-boot "$K"
+
+# 4. 等 LLM module 生出 K/llm/endpoints.json，把 model 換成 LM Studio 真的載著的那顆
+i=0; while [ ! -f "$K/llm/endpoints.json" ] && [ $i -lt 20 ]; do sleep 0.5; i=$((i+1)); done
+MODEL="$(aos-llm models "$PLAY/stations/1-ask-once/endpoint.json" 2>/dev/null | grep -v embed | grep -m1 . || true)"
+if [ -n "$MODEL" ]; then
+  python3 - "$MODEL" "$K/llm/endpoints.json" "$PLAY/stations/1-ask-once/endpoint.json" <<'PY'
+import json, sys
+model, kfile, efile = sys.argv[1:]
+d = json.load(open(kfile)); [e.update(model=model) for e in d["endpoints"] if e["name"] == "local"]
+json.dump(d, open(kfile, "w"), indent=1, ensure_ascii=False)
+e = json.load(open(efile)); e["model"] = model; json.dump(e, open(efile, "w"), indent=1)
+PY
+  echo "LLM：本機 LM Studio 載著 $MODEL，兩份 endpoint 設定都指過去了"
+else
+  echo "LLM：localhost:1234 沒回應——LM Studio 開了嗎？（lms load google/gemma-4-e4b）第 1、3、4、5 站要它"
+fi
+
+echo; aos-kernel ls "$K"
+echo; echo "下一步：cat $HERE/README.md 照著五站玩。收工：$HERE/down.sh"
