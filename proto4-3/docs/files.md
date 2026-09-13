@@ -6,13 +6,16 @@
 
 - `aos-exec`、`aos-run`：可執行的薄命令列入口。
 - `aos_exec.py`：認目標、跑一次、砍逾時、寫 exit 檔；核心是 `run_target()`。
-- `aos_inst.py`：inst.json 的讀取、嚴格驗證與指示詞解析。
-- `aos_run.py`：反覆呼叫 `run_target()`，管理間隔、停止條件與狀態事件。
+- `aos_inst.py`：inst.json 的讀取、欄位順序與完整結果組裝。
+- `aos_inst_resolve.py`：指示詞展開、`$ref`／pointer 與欄位型別驗證。
+- `aos_run.py`：反覆呼叫 `run_target()`，管理間隔與停止條件。
+- `aos_run_status.py`：訊號狀態、`--status-fd` 事件與 handler 安裝。
 
 ## daemon
 
 - `aos-daemon`：daemon 的前台命令列入口。
-- `aos_daemon.py`：daemon 狀態表、七個動作、主迴圈、落地與收工。
+- `aos_daemon.py`：daemon 狀態表、七個動作、推狀態機與收屍。
+- `aos_daemon_lifecycle.py`：state 落地、前台主迴圈、收工與 log。
 - `aos_daemon_entry.py`：表上的一筆、五態狀態機、status／stderr 讀取執行緒與 key 規則。
 - `aos_daemon_req.py`：逐張分派 `requests/` 裡的請求並寫進 `done/`。
 - `aos-daemon-ctl`：ctl 的薄命令列入口。
@@ -28,6 +31,7 @@
 - `aos-kernel-boot`、`aos_kernel_boot.py`：把已初始化的 kernel 放上正在跑的 daemon。
 - `aos_kernel_add.py`：正規化 cwd／argv[0]，用 aos-exec 規則驗證後原子排進 `procs/`。
 - `aos_kernel_syscall.py`：`rm` 投單、等回音，以及 tick 端的 syscall 收件與拿掉行程。
+- `aos_kernel_module.py`：載入 module、檢查 `NAME`／`OPS`／hook，隔離 hook 例外。
 - `aos-kernel-tick`：tick 的薄命令列入口。
 - `aos_kernel_tick.py`：每回合點 cpu、收 syscall、退壞檔，再呼叫排程並寫表與 log。
 - `aos_kernel_schedule.py`：排程、waiting 讓位，以及 done／連敗／125 的收尾規則。
@@ -49,6 +53,6 @@
 
 ## 測試
 
-- `test/`：`python3 -m unittest discover -s test`；kernel 回歸集中在 `test/test_kernel.py`。
+- `test/`：`python -m unittest discover -s test`；kernel 回歸集中在 `test/test_kernel.py`。
 - daemon 共用基底在 `test/_daemon.py`；查詢、操作與完整 CLI 生命周期分在
   `test_daemon.py`、`test_daemon_ops.py`、`test_daemon_cli.py`。

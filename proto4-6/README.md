@@ -196,7 +196,14 @@ Lua 格可 `return aos.wait_for(path)`；`aos.llm_submit(K, req, name)` 會回 k
 
 實作上 `aos-step-lua` 管逐格狀態，`lua/step_program.lua` 管載入 return 表、驗步驟形狀與漏列函式警告。
 
-## 出處
+## 測試與出處
+
+測試檔在 `test/`；從 repo 根目錄跑：
+
+```sh
+cd proto4-6
+python -m unittest discover -s test
+```
 
 定案與原話在 [proto4 筆記 §23](../proto4/notes/23-step-json-python.md)；inst 完整語意見
 [proto4-3 exec 文件](../proto4-3/docs/exec.md)。

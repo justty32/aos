@@ -207,3 +207,14 @@ echo $?                                 # 全部跑完那次回 100
 - image 存不進去的東西，例如還開著的檔案或 fiber，會讓這一格存檔失敗並留在原 pc。
 - `aos-exec` 每次會截斷 inst.json 指定的 stdout/stderr 檔；要累積每格紀錄，請由 form 自己用 append 寫另一份 log。
 - 等待沒有逾時、一次只能等一個檔，kernel 也不會在檔案出現時主動叫醒行程。
+
+## 測試與出處
+
+測試檔在 `test/`；從 repo 根目錄跑：
+
+```sh
+cd proto4-4
+for t in aos step cpu; do janet test/$t.janet; done
+```
+
+定案與原話見 [proto4 筆記 §20／§21](../proto4/notes/20-21-step-lisp-and-next.md)。

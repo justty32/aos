@@ -137,7 +137,7 @@ tick 與 ls 留一句 note，CLI 則退出 1。每回合在原第 3 步處理 sy
 `state.json` 長這樣：
 
 ```json
-{"cpus": {"0": {"pid": "3", "since": 1788999123.4, "runs_at": 12,
+{"cpus": {"0": {"pid": "3", "since": 1788999123.4, "runs_at": 12, "seen_runs": 15,
                   "waiting": true, "wait_runs": 3},
           "1": null},
  "queue": ["5", "7"],
@@ -145,8 +145,10 @@ tick 與 ls 留一句 note，CLI 則退出 1。每回合在原第 3 步處理 sy
 ```
 
 `runs_at` 是「這位上 cpu 那一刻，那顆 cpu 的 aos-run 總共跑過幾次」，時間片就是拿它跟現在
-的 `runs` 相減。cpu 被 `ctl rm` 過再插回來時 `runs` 會從 0 重數，kernel 看到「現在的比記的
-還小」就把 `runs_at` 重設，不會卡住不換人。
+的 `runs` 相減；`seen_runs` 是 kernel 上次已觀察到的 runs。等待中另有 `waiting`／`wait_runs`；
+一般非零退出連敗暫存 `bad_runs`／`bad_exit`，aos-exec 自己失敗的連續觀察暫存 `aos_ticks`。
+cpu 被 `ctl rm` 過再插回來時 `runs` 會從 0 重數，kernel 看到「現在的比記的還小」就把
+`runs_at`／`seen_runs` 重設，不會卡住不換人。
 
 ### 開機順序
 
