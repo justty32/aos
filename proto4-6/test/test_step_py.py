@@ -1,0 +1,178 @@
+import json
+import os
+from pathlib import Path
+import signal
+import subprocess
+import sys
+import tempfile
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+TOOL = ROOT / "aos-step-py"
+EXEC = ROOT.parent / "proto4-3" / "aos-exec"
+FAKE_OPENAI = ROOT.parent / "proto4-5" / "test" / "_fake_openai.py"
+
+
+class StepPyTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="aos-step-py-")
+        self.home = Path(self.tmp.name)
+        self.prog = self.home / "job.py"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write(self, source):
+        self.prog.write_text(source, encoding="utf-8")
+
+    def run_tool(self, *args, prog=None, env=None):
+        return subprocess.run(
+            [str(TOOL), str(prog or self.prog), *args], cwd=self.home,
+            text=True, capture_output=True, check=False, env=env,
+        )
+
+    def state(self):
+        return json.loads((self.home / "job.state.json").read_text(encoding="utf-8"))
+
+    def test_helper_is_skipped_and_steps_follow_definition_order(self):
+        self.write("def second(state): pass\ndef _helper(x): return x\ndef first(state): pass\n")
+        result = self.run_tool("--status")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(json.loads(result.stdout)["steps"], ["second", "first"])
+
+    def test_state_crosses_steps_and_state_file_has_readable_fields(self):
+        self.write("def load(state): state['x'] = 4\ndef compute(state): state['x'] *= 3\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.run_tool().returncode, 0)
+        state = self.state()
+        self.assertEqual(state["state"], {"x": 12})
+        self.assertEqual(state["steps"], ["load", "compute"])
+        self.assertEqual(list(state)[:2], ["state", "pc"])
+
+    def test_exception_rolls_back_and_writes_traceback_with_name_and_line(self):
+        self.write("def good(state): state['kept'] = 1\n\ndef boom(state):\n    state['kept'] = 9\n    raise RuntimeError('bad first line\\nmore')\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual((self.state()["pc"], self.state()["state"]), (1, {"kept": 1}))
+        self.assertIn("第 1 格 boom", result.stderr)
+        self.assertIn("PROG 第 3 行", result.stderr)
+        error = (self.home / ".aos-step-py/error").read_text()
+        self.assertIn("Traceback", error)
+        self.assertIn("RuntimeError: bad first line", error)
+        self.assertIn("RuntimeError", self.run_tool("--status").stderr)
+
+    def test_non_json_state_fails_without_advancing(self):
+        self.write("def bad(state): state['x'] = {1, 2}\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse((self.home / "job.state.json").exists())
+        self.assertIn("state 裡有 JSON 放不進的東西：set", result.stderr)
+
+    def test_syntax_error_is_exit_two(self):
+        self.write("def broken(:\n    pass\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("載不起 PROG", result.stderr)
+        self.assertFalse((self.home / "job.state.json").exists())
+
+    def test_done_returns_100_repeatedly(self):
+        self.write("def only(state): pass\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertTrue(self.state()["done"])
+        self.assertEqual(self.run_tool().returncode, 100)
+        self.assertEqual(self.run_tool().returncode, 100)
+
+    def test_reset_removes_progress(self):
+        self.write("def only(state): state['x'] = 1\n")
+        self.run_tool()
+        self.assertEqual(self.run_tool("--reset").returncode, 0)
+        self.assertFalse((self.home / "job.state.json").exists())
+        self.assertEqual(json.loads(self.run_tool("--status").stdout)["pc"], 0)
+
+    def test_changed_source_warns_and_runs_current_pc(self):
+        self.write("def one(state): pass\ndef two(state): state['which'] = 'old'\n")
+        self.run_tool()
+        self.write("# edited\ndef one(state): pass\ndef two(state): state['which'] = 'new'\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PROG 改過了（上次 2 個、現在 2 個）", result.stderr)
+        self.assertEqual(self.state()["state"]["which"], "new")
+
+    def test_changed_next_function_name_warns(self):
+        self.write("def one(state): pass\ndef old_name(state): pass\n")
+        self.run_tool()
+        self.write("def one(state): pass\ndef new_name(state): pass\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("函式名對不上（上次 old_name、現在 new_name）", result.stderr)
+
+    def test_here_and_pc_are_available(self):
+        self.write("def first(state): state['at'] = here; state['pc0'] = pc\ndef second(state): state['pc1'] = pc\n")
+        self.run_tool()
+        self.run_tool()
+        self.assertEqual(self.state()["state"], {"at": str(self.home), "pc0": 0, "pc1": 1})
+
+    def test_call_dir_read_and_json(self):
+        child = self.home / "child"
+        (child / ".aos").mkdir(parents=True)
+        (child / ".aos/inst.json").write_text(json.dumps({
+            "argv": ["sh", "-c", "printf '{\\\"answer\\\":42}'"], "stdout": "out.json"}))
+        self.write("def tool(state):\n    r = aos.call_dir('child', read='child/out.json', json=True)\n    state['r'] = r['value']\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.state()["state"]["r"], {"answer": 42})
+
+    def test_call_child_exit_three(self):
+        script = self.home / "exit3"
+        script.write_text("#!/bin/sh\nexit 3\n")
+        script.chmod(0o755)
+        self.write("def tool(state): state['r'] = aos.call('./exit3')\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        result = self.state()["state"]["r"]
+        self.assertEqual((result["code"], result["kind"]), (3, "child"))
+        self.assertEqual(set(result), {"code", "kind", "out", "err", "value"})
+
+    def test_stderr_option_reaches_aos_exec(self):
+        script = self.home / "noisy"
+        script.write_text("#!/bin/sh\necho seen >&2\n")
+        script.chmod(0o755)
+        self.write("def tool(state): state['ok'] = aos.ok(aos.call('./noisy'))\n")
+        result = self.run_tool("--stderr", "child.err")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.home / "child.err").read_text().strip(), "seen")
+        self.run_tool("--reset")
+        shown = self.run_tool("--stderr", "-")
+        self.assertEqual(shown.returncode, 0)
+        self.assertIn("seen", shown.stderr)
+
+    def test_llm_against_fake_server(self):
+        server = subprocess.Popen([sys.executable, str(FAKE_OPENAI)], stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL, text=True, start_new_session=True)
+        try:
+            port = int(server.stdout.readline().strip())
+            server.stdout.close()
+            endpoint = self.home / "endpoint.json"
+            endpoint.write_text(json.dumps({"name": "fake", "kind": "openai",
+                "base_url": f"http://127.0.0.1:{port}/v1", "model": "fake-model"}))
+            self.write("def ask(state):\n    r = aos.llm('endpoint.json', {'messages':[{'role':'user','content':'echo:hi'}]}, 'out.json')\n    state['text'] = aos.llm_text(r)\n")
+            result = self.run_tool()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(self.state()["state"]["text"], "hi")
+            self.assertTrue((self.home / "out.json.req.json").exists())
+        finally:
+            os.killpg(server.pid, signal.SIGTERM)
+            server.wait(timeout=2)
+
+    def test_aos_exec_runs_step_program_to_done(self):
+        self.write("def a(state): state['a']=1\ndef b(state): state['b']=2\ndef c(state): state['c']=3\ndef d(state): state['d']=4\n")
+        inst = self.home / "step.json"
+        inst.write_text(json.dumps({"argv": [str(TOOL), str(self.prog)], "cwd": str(self.home),
+                                    "stderr": "/dev/stderr"}))
+        codes = [subprocess.run([str(EXEC), str(inst)]).returncode for _ in range(5)]
+        self.assertEqual(codes, [0, 0, 0, 0, 100])
+
+
+if __name__ == "__main__":
+    unittest.main()
