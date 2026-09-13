@@ -53,6 +53,6 @@
 
 ## 測試
 
-- `test/`：`python -m unittest discover -s test`；kernel 主回歸在 `test/test_kernel.py`，r6 的舊紀錄與狀態表案例在 `test/test_kernel_fix_r6.py`。
+- `test/`：`python -m unittest discover -s test`；kernel 回歸拆成 `test/test_kernel_init.py`（init／boot／add／rm／ls）、`test_kernel_exit.py`（退出碼政策）、`test_kernel_daemon.py`（真開 daemon），共用底座在 `test/_kernel_base.py`；r6 的舊紀錄與狀態表案例在 `test/test_kernel_fix_r6.py`。
 - daemon 共用基底在 `test/_daemon.py`；查詢、操作與完整 CLI 生命周期分在
   `test_daemon.py`、`test_daemon_ops.py`、`test_daemon_cli.py`。
