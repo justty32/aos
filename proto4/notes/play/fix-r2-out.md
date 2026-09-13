@@ -1,0 +1,9 @@
+- A：完成 `--stderr PATH|-` 與 aos-run 轉傳；`aos_exec.py` 234 行、`aos_run.py` 288 行，另改 `test_targets.py`、README、`docs/exec.md`。
+- B：完成無害重複開機；新增 `aos_kernel_boot.py` 49 行、薄殼 11 行，另改 init、kernel 測試與文件。
+- C：完成檢查、路徑正規化、配名、原子入列；新增 `aos_kernel_add.py` 120 行，dispatcher `aos_kernel.py` 223 行，另改 init、測試及兩版 README。
+- Python：205 條；最後一行原文：`OK`
+- Janet 三支：34／12／34 條；最後一行原文：`34 條通過 ✓`
+- CMake／ctest：8/8 全綠，`100% tests passed out of 8`
+- 自己決定：暫存檔留在 `procs/`，因 `.json.tmp` 不會被 queue 掃到。
+- 撞到的坑：init 舊測試仍檢查已移除的 JSON 範例，已改驗 boot／add 指引。
+- 沒做到的：無；未 commit、未 push，也未碰既有的 `proto4/notes/llm-cpu/`。

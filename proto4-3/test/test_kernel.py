@@ -26,6 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 KERNEL_BIN = os.path.join(ROOT, "aos-kernel")
 INIT_BIN = os.path.join(ROOT, "aos-kernel-init")
+BOOT_BIN = os.path.join(ROOT, "aos-kernel-boot")
 TICK_BIN = os.path.join(ROOT, "aos-kernel-tick")
 DAEMON_BIN = os.path.join(ROOT, "aos-daemon")
 CTL_BIN = os.path.join(ROOT, "aos-daemon-ctl")
@@ -95,6 +96,11 @@ class KernelTest(unittest.TestCase):
                               env=self.env, cwd=cwd, capture_output=True, text=True,
                               timeout=60)
 
+    def kernel_boot(self, *args, cwd=None):
+        return subprocess.run([sys.executable, BOOT_BIN] + [str(a) for a in args],
+                              env=self.env, cwd=cwd, capture_output=True, text=True,
+                              timeout=30)
+
     def init(self, ncpu=2, **kw):
         args = [self.k, "--ncpu", ncpu]
         for flag, v in kw.items():
@@ -138,8 +144,26 @@ class KernelTest(unittest.TestCase):
             f.write(body if isinstance(body, str) else json.dumps(body))
         return os.path.join(d, "log.txt")
 
+    def write_inst(self, rel, body):
+        path = os.path.join(self.tmp, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(body, f, ensure_ascii=False)
+        return path
+
 
 class KernelInitTest(KernelTest):
+    def test_boot_refuses_a_home_that_was_not_initialized(self):
+        r = self.kernel_boot(self.k, "--home", self.home.dir)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("aos-kernel-init", r.stderr)
+
+    def test_boot_refuses_when_the_daemon_is_not_running(self):
+        self.init(1)
+        r = self.kernel_boot(self.k)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("aos-daemon", r.stderr)
+
     def test_init_builds_the_home_and_the_kernel_inst(self):
         r = self.init(2, interval_ms=100, timeout_ms=500, quantum=3)
         self.assertIn(self.k, r.stdout)
@@ -156,7 +180,8 @@ class KernelInitTest(KernelTest):
                                             "timeout_ms": 500, "quantum": 3,
                                             "done_exit": 100})
         self.assertEqual(self.kstate(), {"cpus": {"0": None, "1": None}, "queue": []})
-        self.assertIn('"stderr":"err.txt"', r.stdout)
+        self.assertIn("aos-kernel-boot %s" % self.k, r.stdout)
+        self.assertIn("aos-kernel add %s" % self.k, r.stdout)
 
     def test_init_refuses_a_dir_that_is_already_there(self):
         self.init(1)
@@ -228,6 +253,73 @@ class KernelInitTest(KernelTest):
         self.assertIn("bad: 1", out)
         self.assertIn("退件 5.json（沒寫 cwd）", out)
 
+    def test_add_makes_relative_cwd_and_argv0_absolute(self):
+        self.init(1)
+        work = os.path.join(self.tmp, "src", "work")
+        os.makedirs(os.path.join(work, "bin"))
+        program = os.path.join(work, "bin", "task")
+        with open(program, "w", encoding="utf-8") as f:
+            f.write("not run in this test")
+        inst = self.write_inst("src/job.json", {"argv": ["bin/task"], "cwd": "work",
+                                                 "stderr": "err.txt"})
+        r = self.kernel("add", self.k, inst)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(self.at("procs", "1.json"), encoding="utf-8") as f:
+            queued = json.load(f)
+        self.assertEqual(queued["cwd"], work)
+        self.assertEqual(queued["argv"][0], program)
+
+    def test_add_without_cwd_uses_the_inst_directory(self):
+        self.init(1)
+        inst = self.write_inst("jobs/job.json", {"argv": ["sh"], "stderr": "err.txt"})
+        r = self.kernel("add", inst, cwd=self.k)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(self.at("procs", "1.json"), encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["cwd"], os.path.dirname(inst))
+
+    def test_add_auto_number_skips_bad_and_done(self):
+        self.init(1)
+        self.write_inst(os.path.join("k", "procs", "done", "3.json"), {})
+        self.write_inst(os.path.join("k", "procs", "bad", "5.json"), {})
+        inst = self.write_inst("job.json", {"argv": ["true"], "stderr": "err.txt"})
+        r = self.kernel("add", self.k, inst)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(os.path.isfile(self.at("procs", "6.json")))
+
+    def test_add_named_proc_and_rejects_the_same_name(self):
+        self.init(1)
+        inst = self.write_inst("job.json", {"argv": ["true"], "stderr": "err.txt"})
+        first = self.kernel("add", self.k, inst, "--name", "foo")
+        again = self.kernel("add", self.k, inst, "--name", "foo")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertTrue(os.path.isfile(self.at("procs", "foo.json")))
+        self.assertEqual(again.returncode, 1)
+
+    def test_add_rejects_a_missing_cwd_without_queuing(self):
+        self.init(1)
+        inst = self.write_inst("job.json", {"argv": ["true"], "cwd": "missing",
+                                             "stderr": "err.txt"})
+        r = self.kernel("add", self.k, inst)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn(os.path.join(self.tmp, "missing"), r.stderr)
+        self.assertEqual([n for n in os.listdir(self.at("procs")) if n.endswith(".json")], [])
+
+    def test_add_warns_when_stderr_is_missing(self):
+        self.init(1)
+        inst = self.write_inst("job.json", {"argv": ["true"]})
+        r = self.kernel("add", self.k, inst)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("沒寫 stderr", r.stderr)
+
+    def test_add_accepts_relative_kernel_and_inst_from_another_directory(self):
+        self.init(1)
+        other = os.path.join(self.tmp, "other")
+        os.makedirs(other)
+        self.write_inst("other/x.json", {"argv": ["true"], "stderr": "err.txt"})
+        r = self.kernel("add", os.path.relpath(self.k, other), "x.json", cwd=other)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(os.path.isfile(self.at("procs", "1.json")))
+
 
 class KernelDaemonTest(KernelTest):
     """真的開 daemon 的那幾條。"""
@@ -235,19 +327,41 @@ class KernelDaemonTest(KernelTest):
     def cpus_on_daemon(self, ncpu):
         return all(self.cpu_key(n) in self.table() for n in range(ncpu))
 
+    def test_boot_adds_the_kernel_with_configured_run_flags(self):
+        self.spawn_daemon()
+        self.init(1, interval_ms=73, timeout_ms=456)
+        r = self.kernel_boot(self.k, "--home", self.home.dir)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        key = os.path.realpath(self.at("inst.json"))
+        self.assertTrue(wait_until(lambda: key in self.table()), self.table())
+        self.assertEqual(self.table()[key]["args"],
+                         ["--interval-ms", "73", "--timeout-ms", "456"])
+
+    def test_boot_is_harmless_when_the_kernel_is_already_running(self):
+        self.spawn_daemon()
+        self.init(1, interval_ms=80)
+        first = self.kernel_boot(self.k)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        key = os.path.realpath(self.at("inst.json"))
+        self.assertTrue(wait_until(lambda: key in self.table()), self.table())
+        pid = self.table()[key]["pid"]
+        again = self.kernel_boot(self.k)
+        self.assertEqual(again.returncode, 0, again.stderr)
+        self.assertIn("已經在跑", again.stdout)
+        self.assertEqual(self.table()[key]["pid"], pid)
+
     def test_done_exit_moves_the_proc_to_done_and_idles_the_cpu(self):
         self.spawn_daemon()
         self.init(1, interval_ms=50, quantum=100)
-        self.put_proc("7", body={"argv": ["sh", "-c", "exit 100"], "cwd": self.tmp})
-        self.tick()
+        boot = self.kernel_boot(self.k)
+        self.assertEqual(boot.returncode, 0, boot.stderr)
+        inst = self.write_inst("finish.json", {"argv": ["sh", "-c", "exit 100"],
+                                                "cwd": self.tmp, "stderr": "err.txt"})
+        add = self.kernel("add", self.k, inst, "--name", "7")
+        self.assertEqual(add.returncode, 0, add.stderr)
         self.assertTrue(wait_until(lambda: self.cpus_on_daemon(1)), self.table())
-        self.tick()
-
-        def tick_until_done():
-            self.tick()
-            return os.path.exists(self.at("procs", "done", "7.json"))
-
-        self.assertTrue(wait_until(tick_until_done), self.table())
+        self.assertTrue(wait_until(lambda: os.path.exists(self.at("procs", "done", "7.json"))),
+                        self.table())
         self.assertFalse(os.path.exists(self.at("procs", "7.json")))
         self.assertIsNone(self.kstate()["cpus"]["0"])
         with open(self.at("cpus", "0.json"), encoding="utf-8") as f:
