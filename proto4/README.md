@@ -4,6 +4,15 @@
 
 2026-09-08 開的。一句話：**資料夾就是可以被叫的東西**。`(runf (./xxx a b))` ＝ 切到 `./xxx`、把 `./xxx/.aos/inst` 當 Janet 程式跑、回最後一個值。
 
+## 這條線後來怎麼走
+
+這個資料夾是這條線的第一版，後面還有三版（都在 repo 頂層，**現行的是 proto4-3**）：
+
+- **proto4**（本資料夾，Janet）：資料夾就是可以被叫的東西，kernel 在自己的進程裡把 `.aos/inst` 當 Janet 程式 eval。
+- **[proto4-1](../proto4-1/README.md)**（Python）：換成每次 tick 就 cd 進那個資料夾、直接執行 `./.aos/inst`，怎麼執行看該資料夾的 `.aos/config.json`。
+- **[proto4-2](../proto4-2/README.md)**（Python，**已作廢**）：`.aos/inst` 改成一份資料 `inst.json`，「一直跑」從 kernel 身上拿走交給 cpu，再加 daemon 與 kernel。被 proto4-3 取代，留著只當參考。
+- **[proto4-3](../proto4-3/README.md)**（Python，**現行**）：拆成幾支小程式——`aos-exec` 單發、`aos-run` 連續、`aos-daemon`＋`aos-daemon-ctl` 管一堆、`aos-kernel` 那一系列排程。
+
 ## 現在有什麼
 
 - `src/runf.janet`：`runf` 巨集、`run-dir` 函式、`inst-path`。路徑寫 `./xxx`、`../xxx`、`/abs/xxx`、`~/xxx` 都行（Janet 把它們讀成一個符號，`~` 由 `expand` 換成家目錄），也可以給字串。`runf` 是巨集，所以不用加引號；加了 `'(./xxx)` 也當同一回事。
@@ -24,7 +33,7 @@
   - **dir 一律絕對路徑**：daemon 的 cwd 跟你不一樣，客戶端送之前自己 `os/realpath`（`aos-daemon.janet` 已經幫你做了）。
 - `src/aos-daemon.janet`：daemon 的命令列。home 的順序是 `--home DIR` > 環境變數 `AOS_DAEMON_DIR` > 都沒有印一句退 2（**home 只走 `--home`**，不吃位置參數，免得跟 register 的 dir／name／interval 撞在一起）。
 - `test/runf.janet`（27 條）、`test/kernel.janet`（40 條）、`test/daemon.janet`（44 條，真的開一個 daemon 進程來測，家開在 `/tmp`，跑完自己收）；`test/fx/` 是測試用的資料夾樣本（hello、outer/inner、alt、boom、k/*）。
-- `notes/`：使用者原話與我的理解。
+- `notes/`：使用者原話與我的理解。**這一份是整條線共用的設計筆記**——後半（[2026-09-08-ideas.md](notes/2026-09-08-ideas.md) 第 7 節起）記的是 proto4-1／proto4-2／proto4-3 的設計，不只 Janet 版。
 
 ## 怎麼跑
 

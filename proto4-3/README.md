@@ -6,6 +6,12 @@
 （跟第 10 節衝突的地方都聽第 11 節的）；第 14 節（拍板的那一輪）與第 15 節（daemon 的
 key 改成 inst.json 的路徑）是後來的修正，衝突時聽新的。
 
+kernel 那一段（`aos-kernel`／`aos-kernel-init`／`aos-kernel-tick`）的規格是
+[第 16～19 節](../proto4/notes/2026-09-08-ideas.md)：第 16 節對齊名詞（daemon＝硬體、
+kernel＝第一個程序）、第 17 節是 kernel 管 `procs/` 的初步想法與問答、第 18 節是原型定案、
+第 19 節把它拆成 `aos-kernel-init`（§19.4）／`aos-kernel-tick`（§19.7）一系列獨立指令，
+一樣衝突時聽新的。
+
 ← [proto4-2](../proto4-2/README.md)（inst.json ＋ cpu ＋ daemon ＋ kernel；那一版的
 inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu 抓回 `last.json`）
 
