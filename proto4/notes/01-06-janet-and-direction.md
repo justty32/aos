@@ -1,0 +1,111 @@
+# proto4 想法筆記 §1–§6：Janet 與方向
+← [索引](2026-09-08-ideas.md)｜[README](../README.md)
+
+## 1. 資料夾模擬 lisp
+
+使用者原話：
+
+> 我想要拿janet去做資料夾模擬lisp，也就是我可以用(runf (./xxx))，然後就可以跑./xxx這個資料夾下的.aos/inst，然後.aos/inst這個路徑要可以設定。
+
+我的理解：
+
+- **資料夾＝一個可以被叫的東西**。`(./xxx)` 寫起來就像叫函式，函式的「本體」是資料夾裡的 `.aos/inst`。
+- `runf` 是巨集：把 `(./xxx a b)` 拆成「路徑 `./xxx`」＋「參數 a b」，然後去跑那個資料夾。
+- **跑＝切到那個資料夾、把 `.aos/inst` 當 Janet 原始碼求值、回最後一個值**。切了工作目錄，所以 inst 裡再寫 `(runf (./yyy))` 就是相對於自己的子資料夾——資料夾可以一層叫一層，像函式互相呼叫。
+- **`.aos/inst` 這個相對路徑可以設定**：走 dynamic binding `:inst-path`，`(setdyn :inst-path "my-inst")` 全域改、`(with-dyns [:inst-path "my-inst"] …)` 只改一段；設定會傳進被跑的資料夾，子孫沿用同一個設定。
+- inst 裡看得到：`args`（參數 tuple）、`here`（自己的絕對路徑）、`runf`／`run-dir`（可以再叫別的資料夾）。
+
+先假設 inst 內容是 Janet 程式（proto2 是一段 shell），這樣「資料夾模擬 lisp」才成立；要不要也接 shell，等使用者說。
+
+## 2. 路徑寫法與引號
+
+使用者：「還有/開頭」「要（~ 展開）。然後我好奇，難道不是 (runf '(../fx/hello 3)) 嗎？」
+
+- `./xxx`、`../xxx`、`/abs/xxx` Janet 都讀成一個符號，巨集直接拆，本來就能跑。
+- `~/xxx` 不行：`~` 是 Janet 的準引號字元，`(~/x 9)` 會讀成 `((quasiquote /x) 9)`。巨集特別認這種頭，拼回 `"~/x"`，再由 `expand` 換成家目錄。
+- 不用引號是因為 `runf` 是**巨集**：拿到的是還沒求值的寫法，`../fx/hello` 這個符號還沒被當函式叫就先被拆掉了。要是函式就得加引號擋求值。現在加了引號也吃，當同一回事。
+
+## 3. aos-kernel
+
+使用者原話：
+
+> 然後可以來做aos-kernel了
+
+我的做法：
+
+- kernel 就是**時鐘**：登記一堆資料夾（proc＝`@{:dir :name :interval :paused :runs :last :error}`），`step` 走一格，輪到的（`(zero? (% steps interval))`、沒 paused）就 `run-dir` 一次，照 name 排序跑，回傳這格跑了誰。
+- 跑的時候把「現在第幾格」當參數傳進去，所以 inst 裡 `(first args)` 就是格數。
+- **狀態歸資料夾自己管**：kernel 不幫忙記，inst 想留東西就自己 `spit` 檔案（測試裡有個每格 +1 的 `count.txt` 計數器）。kernel 只記 `:runs`／`:last`／`:error`。
+- 一個資料夾炸了就記在它自己的 `:error`、印一行到 stderr，時鐘照走、別人照跑；下一格成功就把 error 清掉。
+- 名字沿用 proto3 的 CL 版（`register`／`unregister`／`pause`／`resume`／`ls`／`step`／`run`），API 形狀照使用者在 proto3-2 留的偽碼（`new`、`register kernel proc &opt name interval`）。先做同步版，不做 fiber。
+
+## 4. aos-daemon
+
+使用者原話：
+
+> 然後是aos-daemon
+
+我的做法：
+
+- **daemon ＝ 一個常駐進程裡跑著一個 kernel**。它自己不做事，就是一直「處理請求 → `kernel/step` → 寫狀態 → 睡一下」，一格一格轉。
+- **外面的人用丟檔案跟它講話**：把請求寫進 `<home>/requests/xxx.req`，daemon 處理完搬到 `requests/done/` 同名檔，內容換成 `{:req 原文 :ok :result}`；客戶端就是等 done 檔冒出來。檔案就是介面，daemon 沒在跑也可以先丟著。
+- **請求檔的內容是一個 Janet 表達式**（不是 JSON）——延續「資料夾模擬 lisp」的味道。daemon 在一個綁好 kernel 的環境裡 `eval-string` 它，回傳值就是 result，所以 `(register …)`／`(pause …)`／`(steps)` 這些跟 `(+ 1 2)` 是同一件事，不用另外設計一套指令格式。
+- **看得到現在怎麼樣，靠 `state.jdn`**：每格結束寫一次（pid／steps／interval／每個 proc 的摘要），`ls` 就是讀這個檔——所以 daemon 死了也還看得到它最後的樣子。活不活著另外看 `/proc/<pid>/stat`（殭屍不算活著）。
+- `start` 用 `os/spawn … :pd` 開一個 detach 的背景 janet，stdout／stderr 導進 `kernel.log`，等到 `state.jdn` 裡的 pid 是新開的這隻、而且第一格跑完了才回「起來了」；`stop` 先丟 `(stop)` 請求讓它跑完這格自己走，不理才 kill。
+
+跟 proto2 的 daemon 差在哪：
+
+- proto2 是**一個世界一個 `aos-loop` 進程**，daemon 只是總管；proto4 **只有一個進程、一個 kernel**，所有資料夾都在它裡面用 `kernel/step` 推。
+- 所以 proto2 的暫停／續跑／關掉是 SIGSTOP／SIGCONT／SIGTERM（借 Linux 的輪子），proto4 就只是 `kernel/pause`／`kernel/resume`／從登記表拿掉——沒有子進程要管，也就沒有「掛了自動重開」「restarts」那些東西。
+- proto2 的請求檔是 JSON、時鐘一個檔一個 `clocks/<id>.json`（id 是路徑的 percent-encoding）；proto4 的請求檔是 Janet 表達式，狀態全部塞在一個 `state.jdn` 裡（反正只有一個 kernel），name 就是 key，不用編 id。
+
+## 5. 方向：daemon／kernel 走 C++，agent 在 `.aos/inst` 之上，兩種型態＋兩層定義
+
+使用者原話（daemon 做完之後）：
+
+> daemon/kernel都應該用C++來做，因為這是很穩定的基礎設施。然後在這基礎上，也就是.aos/inst為目標的情況下，我們再來實做agent。agent的型態有兩種，一種是先前我們做的以資料夾為agent，以json做狀態儲存和工具定義，盡可能將功能分散在各檔案，第二種是普通的單檔，執行下去就是直接更新各種相關檔案及狀態。在第二種的基礎上，如果我們用janet，並且實作FUSE，那麼就等於是弄了一個更細緻的機制。然後agent這邊我要做定義：一個經過tick後會變換自身和周圍狀態的物件(任意形式都可，包括list/資料夾/單個檔案)。ai-agent(llm-agent)則是在agent的基礎上，實現了狀態機:LLM推論->工具->執行->取得prompt...。
+
+我的理解：
+
+- **分層定案**：底下兩層（daemon＝常駐進程、kernel＝時鐘）是基礎設施，要穩、不常改，用 **C++** 做，接回 monorepo 的 `core/`（`core/loop`、`core/tick` 本來就是這一塊）。proto4 的 Janet 版 daemon／kernel 是**原型**，用來把行為定清楚（請求檔、`state.jdn`、`.aos/inst` 每格跑一次），不是最後的實作。
+- **接口只有一個：`.aos/inst`**。kernel 每格對資料夾做的事就是「跑它的 `.aos/inst`」，上面的 agent 不管用什麼語言、什麼形式，只要能被這樣跑就行。agent 是在這個接口之上做的，跟底層脫鉤。
+- **agent 的定義（通用）**：一個東西，被 tick 一下之後會改變自己和周圍的狀態。形式不限：可以是一個 list（proto3-1／3-2 那種）、一個資料夾（proto2 那種）、一個單檔。
+- **ai-agent／llm-agent**：在通用 agent 之上多了一個固定的狀態機：LLM 推論 → 挑工具 → 執行 → 拿到下一段 prompt → 再推論……。也就是說「agent」是介面，「llm-agent」是其中一種實作。
+- **兩種型態**：
+  1. **資料夾型**（proto2 做過的）：一個資料夾就是一個 agent，狀態用 JSON 存、工具用 JSON 定義，功能盡量拆散到各個檔案，每格 `.aos/inst` 把它們串起來。
+  2. **單檔型**：一個普通的檔案，跑下去就直接更新相關的檔案和狀態，沒有那麼多結構。
+- **單檔型＋Janet＋FUSE**：如果單檔型用 Janet 寫，再把 FUSE 做起來（讓「讀寫檔案」本身就變成對 agent 的操作），就等於把 proto4「資料夾模擬 lisp」反過來做——不是 lisp 去跑資料夾，而是檔案系統本身就是 lisp 的一部分，粒度可以做得更細。這是使用者點出的下一個方向，還沒做。
+
+還沒定、之後會撞到的：C++ 版 daemon 跟 Janet 原型的請求格式要不要一樣（Janet 表達式在 C++ 那邊要自己 parse，還是改回 JSON）；FUSE 要掛什麼、對誰暴露；兩種型態共用哪些檔案格式。
+
+## 6. 兩個決定：請求回歸 JSON；`.aos/inst` 直接執行（帶 sh 後路）
+
+使用者：「不沿用janet表達式，回歸json。然後.aos/inst你幫我評估一下，是要讀進來後system()，還是直接執行這個inst。」
+
+### 6.1 C++ 版 daemon 的請求檔用 JSON
+
+定案：proto4 Janet 原型的「請求檔是一個 Janet 表達式」只是原型的方便，C++ 版回歸 JSON（跟 proto2 的 `requests/*.json` 同路線）。`state.jdn` 那類狀態檔到時也一起改成 JSON。
+
+### 6.2 `.aos/inst`：直接執行，不要 system()
+
+**建議：直接執行 `<dir>/.aos/inst`（fork＋execve，工作目錄＝那個資料夾），execve 回 ENOEXEC 或檔案沒執行位時退回 `/bin/sh <inst>`。** 這跟 shell 自己處理「沒有 #! 的檔案」的做法一樣，所以 proto2 那種「inst 就是一段 shell」照樣能跑。
+
+比較：
+
+| | 讀進來 system() | 直接執行 |
+|---|---|---|
+| inst 是什麼 | 一段字串，交給 sh 解釋 | 一個程式：腳本、二進位、symlink 都行 |
+| 進程數 | 每格每資料夾 2 個 fork（sh 再 fork 命令） | 1 個 fork＋exec，有 #! 不經過 sh |
+| 選語言 | 字串裡寫 `janet xxx.janet`，多一層檔 | `#!/usr/bin/env janet` 第一行決定；Janet／Python／二進位同等待遇 |
+| 傳參數 | 只有環境變數 | argv（tick、路徑）＋環境變數 |
+| 共用實作 | 每個資料夾抄一份字串 | `.aos/inst` symlink 到同一支 runner，單檔型 agent 就是這樣長 |
+| 比喻 | eval 一段字串 | 呼叫一個函式——「資料夾就是可以被叫的東西」 |
+| 代價 | 引號／注入；`system()` 屏蔽 SIGINT、擋 SIGCHLD，daemon 裡多子進程很煩 | 要執行位（git 保留 mode，但**產生 inst 的工具要 chmod**）；Windows 不認 #! |
+
+實作備忘：
+- 兩條路都不要真的叫 `system()`，用 `posix_spawn`。工作目錄要切到資料夾，而單進程 kernel 裡 `chdir` 是全域的，多執行緒會互踩——用 `posix_spawn_file_actions_addchdir_np`（glibc 2.29+）或 fork 後 chdir 再 exec。
+- argv：`inst <tick>`；環境：`AOS_TICK`、`AOS_DIR`、`AOS_HOME`（daemon 的家）。proto4 Janet 版是 `(first args)`＝tick，對應過去。
+- 執行位的後路：`access(inst, X_OK)` 失敗或 execve 回 ENOEXEC → `/bin/sh inst`。這樣「懶得 chmod」跟「一段 shell」都能跑。
+
+**邊緣狀況（要寫進 `.aos` 規格）**：inst 跑到一半改寫自己的 inst。bash 是邊讀邊跑，腳本改自己的檔會跑亂；proto2 靠「讀進來 → 先清空 → 再跑」躲掉。直接執行的規矩改成：**要換 inst 就先寫暫存檔再 `rename`**，正在跑的舊 inode 不受影響。proto4 的 Janet 版是整份 `slurp` 完才 eval，所以沒撞到。
+
