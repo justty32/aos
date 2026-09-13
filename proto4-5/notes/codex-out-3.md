@@ -1,0 +1,8 @@
+- `proto4-5` 改後行數：README 117、`aos-llm` 12、`aos_llm.py` 224、`aos_llm_cli.py` 128、worker 57。
+- `proto4-5` 測試：fake server 72、`test_aos_llm.py` 139；新增 11 條。
+- `proto4-4` 改後行數：README 192、`src/aos.janet` 257、`test/aos.janet` 164。
+- Python：39 tests；最後一行 `OK`。
+- Janet `aos.janet`：`37 條通過 ✓`；`cpu.janet`：`12 條通過 ✓`；`step.janet`：`34 條通過 ✓`。
+- 自定：REQ 含 `model` 回 `bad_request`、退出 1；CLI 因 300 行限制拆出 helper。
+- 坑：`aos-exec` 普通檔不能附加 argv，所以 `aos/llm` 用呼叫後即刪的短命 inst，stderr 仍會顯示。
+- 沒打真網路、沒 commit、沒 push；沒跑根 CMake，避免在指定兩個目錄外產生 build 寫入。

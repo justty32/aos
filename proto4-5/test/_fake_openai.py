@@ -10,6 +10,17 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
+    def do_GET(self):
+        if self.path != "/v1/models":
+            self.send_error(404)
+            return
+        data = json.dumps({"data": [{"id": "fake-model"}]}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_POST(self):
         if self.path != "/v1/chat/completions":
             self.send_error(404)
@@ -54,6 +65,8 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
 
-server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-print(server.server_address[1], flush=True)
-server.serve_forever()
+if __name__ == "__main__":
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    print(server.server_address[1], flush=True)
+    server.serve_forever()

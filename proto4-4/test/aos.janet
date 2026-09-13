@@ -9,6 +9,8 @@
   (string/slice path 0 (last (string/find-all "/" path))))
 (def cf (os/realpath (dyn :current-file)))
 (def fx (string (dirname cf) "/fx"))
+(def root (dirname (dirname (dirname cf))))
+(def fake-server (string root "/proto4-5/test/_fake_openai.py"))
 (def tmp (string "/tmp/aos-proto4-4-lib-" (os/getpid) "-" (math/floor (os/time))))
 
 (defn rm-tree [p]
@@ -23,6 +25,14 @@
 
 (defn throws? [f]
   (not ((protect (f)) 0)))
+
+(defn read-line [stream]
+  (def out @"")
+  (var ch (:read stream 1))
+  (while (and ch (not (= "\n" (string ch))))
+    (buffer/push out ch)
+    (set ch (:read stream 1)))
+  (string out))
 
 (defer (rm-tree tmp)
   (do
@@ -119,5 +129,36 @@
                 (nil? (get-in pipe-json [:steps 1 :value]))))
     (check "pipe 遇到資料夾 inst 會 error"
            (throws? (fn [] (aos/pipe @[(string fx "/pipe-echo.sh") streams]))))
+
+    (def server (os/spawn ["python3" fake-server] :p {:out :pipe :err :pipe}))
+    (defer (protect (os/proc-kill server true :term))
+      (do
+        (def port (read-line (server :out)))
+        (def endpoint (string tmp "/endpoint.json"))
+        (spit endpoint
+              (string "{\"name\":\"local\",\"kind\":\"openai\",\"base_url\":\"http://127.0.0.1:"
+                      port "/v1\",\"model\":\"fake-model\",\"timeout_ms\":2000}\n"))
+        (def llm-out (string tmp "/llm.json"))
+        (def llm-ok
+          (aos/llm endpoint
+                   @{:messages [@{:role "user" :content "echo:hi"}]}
+                   llm-out))
+        (check "aos/llm 成功回 code 0，llm-text 取到文字"
+               (and (= 0 (llm-ok :code)) (= "hi" (aos/llm-text llm-ok))))
+        (def llm-fail
+          (aos/llm endpoint
+                   @{:messages [@{:role "user" :content "fail:500"}]}
+                   llm-out))
+        (check "aos/llm HTTP 失敗回 code 1、llm-text nil 且保留 kind"
+               (and (= 1 (llm-fail :code))
+                    (nil? (aos/llm-text llm-fail))
+                    (= "http" (get-in llm-fail [:value "error" "kind"]))))
+        (def saved-req
+          ((get-in (require (string (dyn :syspath) "/spork/json.so"))
+                   ['decode :value])
+           (slurp (string llm-out ".req.json"))))
+        (check "aos/llm 留下可對帳的 .req.json"
+               (and (= :file (os/stat (string llm-out ".req.json") :mode))
+                    (= "fail:500" (get-in saved-req ["messages" 0 "content"]))))))
 
     (printf "%d 條通過 ✓" n)))
