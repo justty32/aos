@@ -40,3 +40,17 @@
 - **真打 DeepSeek** 抓到一個坑：設定 `deepseek-chat` 是別名，回應的 `model` 是 `deepseek-flash`，被「model 不符」擋成 `ok:false`。第二輪加 endpoint 選填欄 `strict_model`（預設 true，LM Studio 要嚴格；DeepSeek 範例設 false），結果多一欄 `model_requested`。改完再打一次：`ok:true`、`Hi`、420 ms。
 - 兩個 endpoint 都用 `params.max_tokens` 壓到 5～20，花費可忽略。gemma 還載在 LM Studio 上沒卸。
 - **下一步要使用者拍板**：lisp 怎麼「等」結果——逐步 lisp 一格跑一個 form、跑完 pc 就前進，沒有「這格還沒好、下格再來」的概念。要接 LLM cpu 就得定一個「等待」語意（例如 form 回一個特殊值 `:aos/wait`，aos-step 不推 pc、退出 0，下一格重跑同一個 form）。這是 tick 模型的核心決定，不是我該自己定的。
+
+## 22.6 使用者修正：LLM cpu 其實是兩層（2026-09-13，手機）
+
+原話：
+
+> 其實 llm cpu 這塊，他會分兩塊，一個是提供可以呼叫 endpoint 的指令，讓 inst 可以用的指令集，這就類似於 cuda，包裝了一些操作，對整個運作模型進行了一次舒服的抽象。另一種則是排程，用於整理目前需要使用 llm 的傢伙的請求，然後分配的，這是在 cuda 之上的。後面這個，他的角色跟 kernel 有點像，將其作為 kernel module 也未嘗不可。
+
+對到 proto4-5 現況（Fable）：
+
+- **第一層「像 cuda 的指令集」**＝現在的 `llm-cpu worker`：給它一份 endpoint 描述＋一份請求，它打一次、寫一份結果檔。它現在被綁在 llm-cpu 的家裡（要從 `requests/running/` 讀、寫回 `results/`），應該抽成獨立指令 `aos-llm call ENDPOINT.json REQ.json OUT.json`（同步、無佇列、無家，任何 inst 都能直接叫；lisp 用 `aos/call`＋`:read :json` 就接上）。這一層不管誰在排隊。
+- **第二層「排程」**＝現在的 `llm-cpu tick`：收請求、排序、按 endpoint 容量派、收尾。它管的是**資源**（endpoint 有容量上限，像 cpu），跟 kernel 管 cpu 是同一件事。做成 kernel module 的形狀：投 LLM 請求＝一個 syscall（`K/syscalls/` 收件匣已經有了，fix-r3 的 rm 就是第一張單）；kernel tick 每回合順手跑 module 的一格（就像現在先處理 syscalls 那步）；module 派工時開背景 worker 去叫第一層的 `aos-llm call`。
+- 這樣分完，proto4-5 v1 的東西沒有白做：worker 的請求／結果／usage 形狀直接變第一層的規格，tick 的五步直接變 module 的一格。
+
+沒定的（等使用者）：(1) 排程層是**kernel module**（kernel 要認得「LLM 請求」這種單）還是**獨立行程**（kernel 只知道它是一個 proc，像現在）；(2) 兩層分開的順序——先抽第一層 `aos-llm call` 出來、排程層照舊，還是一次改成 module。
