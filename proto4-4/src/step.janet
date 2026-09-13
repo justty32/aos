@@ -103,8 +103,10 @@
 (defn- bind-runtime [env here pc]
   # 絕對路徑用 require 載入，再把公開名字每次重綁進持久 env。
   (def module (require aos-file))
-  (each name ['exec-path 'call 'call-dir 'call-json 'ok? 'value 'pipe]
-    (eval ~(def ,(symbol (string "aos/" name)) (quote ,((module name) :value))) env))
+  # 函式庫每個公開名字都綁（不寫死清單：新加的 aos/llm 之類才不會漏）。
+  (eachp [name entry] module
+    (when (and (symbol? name) (table? entry) (not (entry :private)) (has-key? entry :value))
+      (eval ~(def ,(symbol (string "aos/" name)) (quote ,(entry :value))) env)))
   # env 裡的綁定有編譯器用的描述層，不能只用 put 塞裸值。
   (eval ~(def here ,here) env)
   (eval ~(def pc ,pc) env)

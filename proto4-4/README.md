@@ -73,8 +73,10 @@ echo $?                                 # 全部跑完那次回 100
 
 ## 函式庫怎麼用
 
-在 `aos-step` 跑的 form 裡，`aos/*`、`here`、`pc` 已經綁好，直接用；要在別的 Janet
-程式裡用這個函式庫才需要 import，路徑是 `<proto4-4>/src/aos.janet` 的絕對路徑。
+在 `aos-step` 跑的 form 裡，`aos/*`（函式庫的每個公開名字）、`here`、`pc` 已經綁好，直接用。
+要在別的 Janet 程式裡用這個函式庫，Janet 的 `import` 吃不了絕對路徑，先把資料夾加進搜尋路徑：
+`(array/push module/paths ["<proto4-4>/src/:all:.janet" :source])` 再 `(import aos :as aos)`；
+或者在 proto4-4 目錄裡 `(import ./src/aos :as aos)`。
 
 ```janet
 (aos/call "./tool")
