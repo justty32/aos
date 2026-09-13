@@ -99,3 +99,9 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 原話：「也可以另外讓 opus 或 gpt-sol 去試玩看看，看順不順手。判斷標準是容易上手、容易理解、複雜的東西都被隱藏起來、外層的控制結構簡單但全面、要背的東西少。每次做完一個段落都可以讓他們去玩玩看，給建議，然後我們改進。」
 
 做法：每個段落 commit 之後，開一個**沒看過設計筆記、只拿到 README 入口**的 agent（Opus 或 gpt-sol，最好各一個）當新使用者，照 README 把東西架起來、寫一個自己的小程式跑過、故意弄壞幾樣看訊息，然後照五條標準各打分＋舉例：① 容易上手 ② 容易理解 ③ 複雜的東西有沒有藏好 ④ 外層控制結構簡單但全面 ⑤ 要背的東西少。回報放 `proto4/notes/play/`，一輪一檔。我們看完挑要改的。
+
+### 21.6 Claude 訂閱怎麼接（2026-09-13，使用者拍板）
+
+查證（`wf/workflows/experiments/claude-subscription/`）：Anthropic 2026 年起明文禁止第三方拿訂閱 OAuth 冒充 Claude Code 吃方案額度、伺服器端會擋、有人被封號；但**正式允許**第三方工具用訂閱帳號登入、用量算「extra usage」按 token 計費（pi 原生 `/login anthropic` 就是這條）。gotgenes/pi-anthropic-auth 那個套件多做的是塞假的 `x-anthropic-billing-header`＋換掉 system prompt 躲指紋，目的是被當成 Claude Code 本尊——**這部分不做**（我不冒充自家客戶端；使用者：「好吧，你說的對，我也怕被封號」）。
+
+定案：aos 只走正路——讀 pi 存在 `~/.pi/agent/auth.json` 的 OAuth token、會 refresh、照 pi 原生 transport 的 header 打 Messages API、誠實報身分；用量走 extra usage（使用者要先在 claude.ai 方案設定打開）。之後 LLM cpu 的 endpoint 三個：LM Studio、DeepSeek、Claude。
