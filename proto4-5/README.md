@@ -65,6 +65,7 @@ printf '%s' '{"messages":[{"role":"user","content":"你好"}]}' | ./llm-cpu subm
 |---|---|
 | `ok` | 成功是 true，失敗是 false |
 | `id`／`endpoint`／`model` | 這一發的身分與實際回應模型 |
+| `model_requested` | endpoint 設定裡要求的模型；成功失敗都有，方便跟實際回應模型對帳 |
 | `text`／`finish_reason` | `choices[0]` 的文字與停止原因；失敗時為 null |
 | `usage` | `prompt`、`completion`、`total`、`cached`、`reasoning`；沒有就 null |
 | `ms` | worker 花的毫秒 |
@@ -80,7 +81,7 @@ printf '%s' '{"messages":[{"role":"user","content":"你好"}]}' | ./llm-cpu subm
 | `http` | endpoint 回 HTTP 錯誤；500、429 等會標 retryable |
 | `connect`／`timeout` | 連不上或逾時 |
 | `bad_json`／`bad_response` | 回應不是 JSON，或少了必要欄位 |
-| `model_mismatch` | 回應模型跟設定不同，可能是 LM Studio 換了模型 |
+| `model_mismatch` | 回應模型跟設定不同，可能是 LM Studio 換了模型；`strict_model:false` 可放行 |
 | `worker_died` | worker 消失且沒留下結果；不自動重送 |
 | `spawn`／`internal` | worker 起不來或內部未預期錯誤 |
 
@@ -95,13 +96,13 @@ printf '%s' '{"messages":[{"role":"user","content":"你好"}]}' | ./llm-cpu subm
   "default": "local",
   "endpoints": [
     {"name":"local","kind":"openai","base_url":"http://localhost:1234/v1","model":"loaded-model-id","max_concurrent":1,"timeout_ms":300000},
-    {"name":"deepseek","kind":"openai","base_url":"https://api.deepseek.com/v1","model":"deepseek-chat","max_concurrent":2,"timeout_ms":300000,"api_key_env":"DEEPSEEK_API_KEY"},
+    {"name":"deepseek","kind":"openai","base_url":"https://api.deepseek.com/v1","model":"deepseek-chat","max_concurrent":2,"timeout_ms":300000,"api_key_env":"DEEPSEEK_API_KEY","strict_model":false},
     {"name":"pi","kind":"process","argv":["pi","-p"],"enabled":false}
   ]
 }
 ```
 
-`enabled` 沒寫就是 true。`api_key_env` 放的是環境變數名字，不是 key；worker 需要時才從自己的環境讀。`kind: process` 這版只有設定槽，請求指到它會退件。
+`enabled` 沒寫就是 true。`api_key_env` 放的是環境變數名字，不是 key；worker 需要時才從自己的環境讀。`strict_model` 沒寫就是 true，會要求回應模型與設定完全相同；DeepSeek 的 `deepseek-chat` 是別名、回應會寫真名，所以該 endpoint 設為 false。`kind: process` 這版只有設定槽，請求指到它會退件。
 
 ## 一格做什麼
 

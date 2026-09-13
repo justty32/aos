@@ -24,11 +24,12 @@ def _usage(raw):
     }
 
 
-def _error(request_id, endpoint, model, started, kind, message,
+def _error(request_id, endpoint, model, model_requested, started, kind, message,
            status=None, retryable=False, raw=None):
     return {
         "ok": False, "id": request_id, "endpoint": endpoint,
-        "model": model, "text": None, "finish_reason": None,
+        "model": model, "model_requested": model_requested,
+        "text": None, "finish_reason": None,
         "usage": _usage(raw.get("usage") if isinstance(raw, dict) else None),
         "ms": round((time.monotonic() - started) * 1000), "raw": raw,
         "error": {"kind": kind, "msg": message, "status": status,
@@ -36,11 +37,12 @@ def _error(request_id, endpoint, model, started, kind, message,
     }
 
 
-def _success(request_id, endpoint, raw, started):
+def _success(request_id, endpoint, model_requested, raw, started):
     choice = raw["choices"][0]
     return {
         "ok": True, "id": request_id, "endpoint": endpoint,
-        "model": raw.get("model"), "text": choice["message"]["content"],
+        "model": raw.get("model"), "model_requested": model_requested,
+        "text": choice["message"]["content"],
         "finish_reason": choice.get("finish_reason"),
         "usage": _usage(raw.get("usage")),
         "ms": round((time.monotonic() - started) * 1000), "raw": raw,
@@ -59,7 +61,8 @@ def _request(root, request_id, started):
     if env_name:
         api_key = os.environ.get(env_name)
         if api_key is None:
-            return _error(request_id, endpoint_name, model, started, "no_api_key",
+            return _error(request_id, endpoint_name, model, model, started,
+                          "no_api_key",
                           "環境變數 %s 沒設" % env_name)
         headers["Authorization"] = "Bearer %s" % api_key
     body = {"model": model, "messages": req["messages"], "stream": False}
@@ -80,36 +83,39 @@ def _request(root, request_id, started):
             detail = exc.read().decode("utf-8", "replace")
         except Exception:
             detail = str(exc)
-        return _error(request_id, endpoint_name, model, started, "http",
+        return _error(request_id, endpoint_name, model, model, started, "http",
                       detail or str(exc), exc.code,
                       exc.code == 429 or 500 <= exc.code < 600)
     except (TimeoutError, socket.timeout) as exc:
-        return _error(request_id, endpoint_name, model, started, "timeout",
+        return _error(request_id, endpoint_name, model, model, started, "timeout",
                       str(exc) or "連線逾時", retryable=True)
     except urllib.error.URLError as exc:
         reason = exc.reason
         kind = "timeout" if isinstance(reason, (TimeoutError, socket.timeout)) else "connect"
-        return _error(request_id, endpoint_name, model, started, kind,
+        return _error(request_id, endpoint_name, model, model, started, kind,
                       str(reason), retryable=True)
     except OSError as exc:
-        return _error(request_id, endpoint_name, model, started, "connect",
+        return _error(request_id, endpoint_name, model, model, started, "connect",
                       str(exc), retryable=True)
     try:
         raw = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        return _error(request_id, endpoint_name, model, started, "bad_json",
+        return _error(request_id, endpoint_name, model, model, started, "bad_json",
                       "回應不是合法 JSON：%s" % exc)
     if not isinstance(raw, dict):
-        return _error(request_id, endpoint_name, model, started, "bad_json",
+        return _error(request_id, endpoint_name, model, model, started, "bad_json",
                       "回應 JSON 不是物件", raw=raw)
-    if raw.get("model") != model:
-        return _error(request_id, endpoint_name, raw.get("model"), started,
-                      "model_mismatch", "回應 model %r，設定是 %r" %
-                      (raw.get("model"), model), raw=raw)
+    if endpoint.get("strict_model", True) and raw.get("model") != model:
+        return _error(
+            request_id, endpoint_name, raw.get("model"), model, started,
+            "model_mismatch",
+            "回應 model %r，設定是 %r；別名 endpoint 請在 endpoints.json 這筆加 "
+            "\"strict_model\": false" % (raw.get("model"), model), raw=raw)
     try:
-        return _success(request_id, endpoint_name, raw, started)
+        return _success(request_id, endpoint_name, model, raw, started)
     except (KeyError, IndexError, TypeError) as exc:
-        return _error(request_id, endpoint_name, model, started, "bad_response",
+        return _error(request_id, endpoint_name, model, model, started,
+                      "bad_response",
                       "回應缺少 choices[0].message.content：%s" % exc, raw=raw)
 
 
@@ -140,7 +146,7 @@ def run(directory, request_id):
     try:
         result = _request(root, request_id, started)
     except BaseException as exc:
-        result = _error(request_id, None, None, started, "internal",
+        result = _error(request_id, None, None, None, started, "internal",
                         "%s: %s" % (type(exc).__name__, exc))
     try:
         home.atomic_json(root / "results" / (request_id + ".json"), result)

@@ -32,3 +32,11 @@
 - **syscall**：fix-r3 把 `aos-kernel rm` 做成第一個 syscall（`K/syscalls/` 收件匣、tick 每回合先處理）——之後「生行程」「問狀況」照這個形狀長；MCP 版是同一批東西換個殼（§21.7）。
 - **lisp 投請求**：這版只做 CLI；下一步在 proto4-4 包一個 `aos/llm`（用 `aos/call-dir` 叫 submit、`:read :json` 讀 `results/<id>.json`）。
 - **agent 狀態機**：很後面（§21.2、§21.7）。
+
+## 22.5 落地補記（2026-09-13 晚上）
+
+- v1 做出來了（codex gpt-sol，兩輪）：`proto4-5/` 六個程式檔約 670 行、26→28 條測試全用假 server。
+- **真打 LM Studio**（我自己做，`lms load google/gemma-4-e4b`）：submit「Say hi in one word」→ tick 派工 → 下一格收尾，結果 `Hello`、usage 21/2/23、97 ms。model 對得上。
+- **真打 DeepSeek** 抓到一個坑：設定 `deepseek-chat` 是別名，回應的 `model` 是 `deepseek-flash`，被「model 不符」擋成 `ok:false`。第二輪加 endpoint 選填欄 `strict_model`（預設 true，LM Studio 要嚴格；DeepSeek 範例設 false），結果多一欄 `model_requested`。改完再打一次：`ok:true`、`Hi`、420 ms。
+- 兩個 endpoint 都用 `params.max_tokens` 壓到 5～20，花費可忽略。gemma 還載在 LM Studio 上沒卸。
+- **下一步要使用者拍板**：lisp 怎麼「等」結果——逐步 lisp 一格跑一個 form、跑完 pc 就前進，沒有「這格還沒好、下格再來」的概念。要接 LLM cpu 就得定一個「等待」語意（例如 form 回一個特殊值 `:aos/wait`，aos-step 不推 pc、退出 0，下一格重跑同一個 form）。這是 tick 模型的核心決定，不是我該自己定的。
