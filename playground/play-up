@@ -47,4 +47,4 @@ else
 fi
 
 echo; aos-kernel ls "$K"
-echo; echo "下一步：cat $HERE/README.md 照著六站玩。收工：$HERE/down.sh"
+echo; echo "下一步：cat $HERE/README.md 照著六站玩。收工：play-down"
