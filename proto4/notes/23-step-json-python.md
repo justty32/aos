@@ -40,3 +40,11 @@
 - 執行器每格 `importlib` 重新載入整支檔（所以 import、helper、常數都正常存在），叫第 pc 個 step 函式，成功就把 `state` 寫回 JSON、pc+1。
 - 狀態檔多記 step 的名字（`"last":{"step":"fetch_data",…}`），比純數字好讀。
 - 想「逐檔案」就在某格裡 `aos.call("./other.py")`；想「逐 module」就 import 它然後叫——都不用執行器多做事。
+
+## 23.6 使用者再加：Lua 版（2026-09-13）
+
+原話：「做一個 lua 版本也不錯，一些 binary 資料可以用 base64。」
+
+定案（Fable）：`proto4-6/aos-step-lua PROG.lua`，跟 Python 版同一套約定——每個頂層函式一格（Lua 沒有「頂層 def 順序」可反射，改成程式最後 `return {step_a, step_b, …}` 回一個有序陣列，或回一張表 `{ {"load", load}, … }`；選前者＋函式名用 `debug.getinfo` 抓不到就用序號，**所以定成 `return { {name="load", fn=load}, … }`**，名字明寫，AI 好產出）；`state` 是 table、存 JSON。機器上是 Lua 5.4（`/usr/bin/lua5.4`），沒有 JSON 函式庫，所以執行器自帶一個小 JSON＋base64（純 Lua，一檔）。
+
+**binary 用 base64 的約定（Python 版也照這個）**：state 裡的值若是「放不進 JSON 的位元組串」（Lua：不是合法 UTF-8 的字串；Python：`bytes`），存檔時自動變成 `{"$b64":"…"}`，載入時自動還原；也給 `aos.b64`／`aos.unb64` 讓人手動用。JSON 裡其他 `{"$b64":…}` 形狀的物件只要 key 只有這一個就會被當 binary 還原。
