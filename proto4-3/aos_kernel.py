@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """aos-kernel：作業系統的第一個程序——管一張「哪顆 cpu 上是哪個行程」的表。
 
-    aos-kernel ls [DIR]             # 印給人看：每顆 cpu 上是誰、佇列裡誰在等
+    aos-kernel ls [DIR]                         # 印給人看
+    aos-kernel add [DIR] INST.json [--name NAME] # 排一個行程進佇列
 
 `init`（重灌，很久一次）與 `tick`（心跳，每回合）都拆成自己的獨立指令了：
 `aos-kernel-init`（見 `aos_kernel_init.py`）與 `aos-kernel-tick`（見
@@ -38,7 +39,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CTL_BIN = os.path.join(HERE, "aos-daemon-ctl")
 IDLE_INST = {"argv": ["true"], "cwd": "."}
 DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5, "done_exit": 100}
-USAGE = "用法：aos-kernel ls [DIR]\n"
+USAGE = ("用法：aos-kernel ls [DIR]\n"
+         "      aos-kernel add [DIR] INST.json [--name NAME]\n")
 INIT_HINT = ("aos-kernel: init 改成獨立指令 aos-kernel-init（不再是 aos-kernel 的子命令）："
              "aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] "
              "[--done-exit N]\n")
@@ -210,6 +212,9 @@ def main(argv=None):
         return 2
     if cmd == "ls":
         return cmd_ls(rest)
+    if cmd == "add":
+        from aos_kernel_add import cmd_add
+        return cmd_add(rest)
     sys.stderr.write("aos-kernel: 不認得的子命令：%s\n%s" % (cmd, USAGE))
     return 2
 

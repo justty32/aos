@@ -2,7 +2,7 @@
 
     aos-run xxx [--dir-target REL] [--timeout-ms N] [--interval-ms N] [--from-start]
                 [--max-runs N] [--time-limit-ms N] [--stop-exit CODE]...
-                [--status-fd N] [--stop-on-error]
+                [--status-fd N] [--stop-on-error] [--stderr PATH|-]
 
 執行那一段**完全不重寫**：核心就是反覆呼叫 `aos_exec.run_target()`。這支只管三件事——
 下一次什麼時候開始（`--interval-ms`／`--from-start`）、什麼時候停（五個停止條件）、
@@ -105,7 +105,7 @@ def _stderr(msg):
 def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
              interval_ms=DEFAULT_INTERVAL_MS, from_start=False, max_runs=0,
              time_limit_ms=0, stop_exits=(), log=None, install_signals=True,
-             status_fd=None, stop_on_error=False):
+             status_fd=None, stop_on_error=False, stderr=None):
     """一直跑 `xxx`，回 `(退出碼, 停止原因)`。多數停止是退出碼 0；只有「同一個訊號送第二次」
     （腰斬掉正在跑的那次）例外，原因是 `signal_forced`、退出碼是 `128+N`（N＝那個訊號的編號，
     SIGTERM→143、SIGINT→130）。
@@ -120,6 +120,7 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
     - `status_fd`：往這個 fd 寫事件（ready／start／done／stop），None＝不寫。
     - `stop_on_error`：某次 `kind == "aos"`（aos-exec 自己失敗）就停，原因 `error`、
       退出碼 125。不給就照舊不停（每次都報 `exit=125 kind=aos`）。
+    - `stderr`：原樣傳給 aos-exec；None＝照 inst.json，`-`＝印到畫面，其他字串＝寫檔。
 
     aos-exec 自己失敗（inst.json 壞掉）**預設不停**，照 interval 一直試——壞了也活著，
     要停就 `--stop-on-error`（或老招 `stop_exits`）。
@@ -145,7 +146,8 @@ def run_loop(xxx, *, dir_target=aos_exec.DEFAULT_DIR_TARGET, timeout_ms=0,
             if eff == 0 and deadline is not None:
                 return _stop(log, status, "time_limit")   # 剩不到 1 毫秒，那就別開了
             status.emit("start #%d" % (n + 1))
-            code, kind = aos_exec.run_target(xxx, dir_target, eff, on_spawn=state.hold)
+            code, kind = aos_exec.run_target(xxx, dir_target, eff, on_spawn=state.hold,
+                                             stderr=stderr)
             if kind == aos_exec.AOS:
                 code = EXIT_ERROR       # aos-exec 自己失敗一律報 125，跟子程式的碼分得開
             state.child = None
@@ -257,6 +259,8 @@ def main(argv=None):
                     help="把事件（ready／start／done／stop）一行一個寫到這個 fd")
     ap.add_argument("--stop-on-error", action="store_true",
                     help="某一次是 aos-exec 自己失敗（kind=aos）就停，退出碼 125")
+    ap.add_argument("--stderr", metavar="PATH",
+                    help="每回合蓋掉子程式的 stderr；- ＝印到 aos-run 自己的 stderr")
     a = ap.parse_args(argv)
 
     for name, v in (("--timeout-ms", a.timeout_ms), ("--interval-ms", a.interval_ms),
@@ -276,7 +280,7 @@ def main(argv=None):
                              interval_ms=a.interval_ms, from_start=a.from_start,
                              max_runs=a.max_runs, time_limit_ms=a.time_limit_ms,
                              stop_exits=a.stop_exit, status_fd=a.status_fd,
-                             stop_on_error=a.stop_on_error)
+                             stop_on_error=a.stop_on_error, stderr=a.stderr)
     return code
 
 

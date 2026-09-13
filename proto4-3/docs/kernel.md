@@ -9,8 +9,8 @@
   inst.json 就是那顆 cpu 的「指令暫存器」，aos-run 每隔 interval 讀它一次、跑一次。
 - **kernel ＝第一個程序**。它是**唯一**會叫 `aos-daemon-ctl` 的人（cpu 的存在與使用權），
   也是**唯一**會改 cpu 那份 inst.json 的人（cpu 下一次去跑誰）。
-- kernel 自己也是被 daemon 跑著的一個 proc：它的家裡有一份 `inst.json`，使用者手動
-  `ctl add` 它＝**上電**，之後 kernel 每隔一段時間自己跑一次 `aos-kernel-tick`。
+- kernel 自己也是被 daemon 跑著的一個 proc：它的家裡有一份 `inst.json`，
+  `aos-kernel-boot K` 把它放上 daemon，之後 kernel 每隔一段時間自己跑一次 `aos-kernel-tick`。
 
 ### 家長什麼樣
 
@@ -38,19 +38,26 @@ daemon→aos-run→aos-exec 的 PATH 是使用者開 daemon 時那一份，未�
 
 ```sh
 aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] [--done-exit N]
+aos-kernel-boot DIR [--home H] # 開機：只把已初始化的 kernel 放上正在跑的 daemon
 aos-kernel-tick         # 心跳：在家裡（cwd ＝ K）跑一回合，不吃參數
+aos-kernel add [DIR] INST.json [--name NAME] # 檢查、轉路徑、配名後排進佇列
 aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
 ```
 
 | 指令 | 做什麼 | 退出碼 |
 |---|---|---|
 | `aos-kernel-init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5，單位是「cpu 跑了幾次」） | 0；**DIR 已經存在＝1**（不動它） |
+| `aos-kernel-boot` | 看 daemon 上有沒有 kernel 的 `inst.json`；沒有就 add，重複跑無害。**不開 daemon、不 init** | 0；還沒 init 或 daemon 沒跑＝1 |
 | `aos-kernel-tick` | 跑一回合，見下面五步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
+| `aos-kernel add` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；檢查 inst，轉 cwd／argv[0]，自動配數字名或吃 `--name`，再原子排進 `procs/` | 0；不是家、inst 不合格或撞名＝1 |
 | `aos-kernel ls [DIR]` | 給 DIR 就先進去，否則用 cwd；讀 kernel ＋ daemon 的 `state.json` 印存活狀態、cpu、佇列、bad 與 done | 0；不是家＝1 |
 
 `aos-kernel init`／`aos-kernel tick`（舊的子命令）都拿掉了：退出碼 2，stderr 提示改用
-`aos-kernel-init`／`aos-kernel-tick`。以後 `aos-kernel-boot`（§19.3，一條指令做完「開
-daemon → kernel init → ctl add kernel 的 inst.json」）也會是同一系列的獨立指令。
+`aos-kernel-init`／`aos-kernel-tick`。
+
+`add` 讀原始 JSON，只幫兩個地方轉絕對：沒寫 cwd 就用 INST.json 所在資料夾，相對 cwd 也
+從那裡算；`argv[0]` 含 `/` 且是相對路徑時，再從轉好的 cwd 算。它會先拒絕不存在的 cwd、
+空 argv、以及含 `/` 但不存在的 argv[0]。沒寫 stderr 仍可排，但會提醒你出錯可能看不到。
 
 ### aos-kernel-tick 每回合五步（順序固定）
 
@@ -103,8 +110,8 @@ daemon → kernel init → ctl add kernel 的 inst.json」）也會是同一系�
 ```sh
 ./aos-daemon &                                          # 硬體上電
 ./aos-kernel-init K --ncpu 2 --interval-ms 1000 --quantum 5
-./aos-daemon-ctl add K/inst.json --interval-ms 1000     # 插上第一顆 cpu ＝ 跑 aos-kernel-tick
-cp my-proc.json K/procs/3.json                          # 把行程丟進就緒佇列（cwd 要寫死）
+./aos-kernel-boot K                                     # 把 kernel 放上 daemon
+./aos-kernel add K my-proc.json                         # 檢查、轉路徑後排進佇列
 ./aos-kernel ls K                                       # 看誰在哪顆 cpu 上
 ```
 
@@ -119,8 +126,10 @@ cp my-proc.json K/procs/3.json                          # 把行程丟進就緒�
 - **沒有 syscall 收件匣**（行程不能 fork、不能自己丟東西進 `procs/`）、**不改 cpu 的韌體設定**
   （`ctl add` 給的 interval／timeout 定死不改）、**沒有 daemon↔kernel 專用通道**（每回合只看
   `state.json`，中間的退出碼看不到）。
-- **`procs/` 裡就是原封不動的 inst.json**，直接搬上 cpu。以後那裡會多權限、優先級之類的欄位，
-  到時就得由 kernel 轉一手。
+- **`procs/` 裡仍是 inst.json**，add 只先正規化下面兩個路徑，kernel 再直接搬上 cpu。以後那裡
+  會多權限、優先級之類的欄位，到時就得由 kernel 轉一手。
+- **add 只轉 cwd／argv[0]**；stdin／stdout／stderr／`$ref` 的相對路徑不轉，那些本來就是以
+  cwd 為中心。
 - **kernel 只做格式檢查，不做權限檢查**：能寫 `procs/` 的人就能用你的身分跑任何東西。
 - **搶佔不了正在跑的那一次**：rename 只影響「下一次」開跑讀到誰，手上那次會跑完。
 - **一個家只該有一個 kernel 在 tick**：兩個 tick 同時跑會搶同一批檔案，v1 沒有鎖。

@@ -64,6 +64,9 @@ cd /tmp/my-proc
 {"argv": ["/abs/proto4-4/aos-step", "prog.janet"], "cwd": "/abs/那個資料夾", "stdout": "out.txt", "stderr": "err.txt"}
 ```
 
+存成 `my-step.json` 後用 `../proto4-3/aos-kernel add K my-step.json` 排進去；它會配名字，
+也會幫你把 cwd 與含 `/` 的相對 argv[0] 轉成絕對路徑。
+
 最後一個 form 跑完的那格仍回 0；下一格開始回 100，kernel 會自己把它收進 `procs/done/`。
 
 ## 函式庫怎麼用

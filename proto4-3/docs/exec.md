@@ -3,7 +3,7 @@
 
 ## 三種目標
 
-`aos-exec xxx [--dir-target REL] [--timeout-ms N]`，看 `xxx` 是什麼決定怎麼跑：
+`aos-exec xxx [--dir-target REL] [--timeout-ms N] [--stderr PATH|-]`，看 `xxx` 是什麼決定怎麼跑：
 
 | `xxx` 是 | 做什麼 | cwd 預設 | 串流 |
 |---|---|---|---|
@@ -111,6 +111,12 @@ key——也就是環境變數名——不能 `$` 開頭，混寫（`{"$ref": "e
 `envs` 的清空型式 `{"$opt":"clear","$envs":{…}}` 是**唯一一個**兩個 key 的指示詞物件
 （`$envs` 一樣可以再是 `$ref`）。代價：這一版沒辦法傳 `$` 開頭的環境變數。
 
+## 看不到錯誤？加 `--stderr -`
+
+inst.json 沒寫 `stderr` 時，子程式的錯誤預設進 `/dev/null`。加 `--stderr -` 就會印到
+aos-exec 自己的 stderr；給檔案路徑則寫進那個檔，路徑以你呼叫 aos-exec 時的 cwd 為中心。
+它會蓋過 inst.json 原有的 `stderr`，包括 `{"$opt":"merge"}`；stdin／stdout／exit 不會蓋。
+
 ## aos-exec 的退出碼：自己的失敗跟子程式的碼分開
 
 `run_target()` 回的是 **`(code, kind)`**，`kind` 說這個碼是誰的：
@@ -144,4 +150,3 @@ key——也就是環境變數名——不能 `$` 開頭，混寫（`{"$ref": "e
 
 **逾時怎麼砍**：先對**整個 process group** 送 SIGTERM，給 2 秒，直接子行程還活著就 SIGKILL
 整個 group（收完屍再補一發，因為直接子行程死了不代表群組空了）。
-

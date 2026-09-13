@@ -141,3 +141,5 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 - 之後由我判斷要不要 r2 試玩；要就再玩一輪、修完才進 LLM cpu。
 
 使用者另補：「先前幾個版本的 proto 都是可以參考的遺產，只是謹慎採用。」→ 開 LLM cpu 這段時，先派人去 proto2／proto3／proto4-2 撈舊決定（cpu 怎麼排、LLM 怎麼叫、狀態機長怎樣），逐條寫「採／不採、為什麼」，不直接搬檔案。
+
+**21.8 落地補記**：fix-r2 也做完了（codex gpt-sol）：`aos-exec --stderr PATH|-`（aos-run 原樣轉傳）、`aos-kernel-boot K`（49 行，語意照 §19.3）、`aos-kernel add [K] inst.json`（拆到 `aos_kernel_add.py` 120 行）。Python 190→205 條、Janet 34/12/34，全綠。README「怎麼跑」kernel 段變四行：上電 → 灌一次 → 開機 → add／ls。同時派了另一個 gpt-sol 去撈舊 proto 的 LLM 遺產，報告在 `proto4/notes/llm-cpu/legacy-harvest.md`（198 行），它建議的 v1 骨架＋五個問題等使用者看。接著開 r2 試玩（Opus＋gpt-sol 各一份，任務書 `play/task-r2.md`）。

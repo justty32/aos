@@ -1,0 +1,12 @@
+- #1：修正函式庫使用說明，移除錯誤 import；改 `proto4-4/README.md`。
+- #2：新增 `src` 來源標記、改動警告與 `:changed`；改 `src/step.janet`、測試及 README。
+- #3：kernel-init 印出含 stdout/stderr 的行程範例；改 init、README、kernel 文件。
+- #4：移除可設定的 `--done-exit`，固定回 100；改 step、測試及 README。
+- #6：`ls [DIR]` 支援指定家，顯示 daemon 與 bad 原因；改 kernel、測試及文件。
+- #7：正常 stop 後改成正確的無狀態訊息；改 daemon ctl、測試及文件。
+- #8：補 home、常駐、CPU 數量、串流清空與 form 編號說明；改兩份 README 與失敗訊息。
+- Janet `test/aos.janet`：34 條；最後一行：`34 條通過 ✓`
+- Janet `test/cpu.janet`：12 條；最後一行：`12 條通過 ✓`
+- Janet `test/step.janet`：34 條；最後一行：`34 條通過 ✓`
+- Python：190 tests；最後一行：`OK`
+- Janet 內建 hash 會換 seed，故採 bytes＋mtime＋穩定 checksum；指定略過項均未做，未 commit/push；`proto4/notes/play/` 的既有並行變更未碰。

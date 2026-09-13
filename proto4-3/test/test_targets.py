@@ -1,6 +1,8 @@
 """三種目標（普通檔案／.json／資料夾）、--dir-target，還有找不到東西的退出碼 2。"""
 import os
 import stat
+import subprocess
+import sys
 import unittest
 
 from _util import EXEC, ExecCase
@@ -49,6 +51,33 @@ class TestTargets(ExecCase):
         r = self.aos(self.d, "--dir-target", "other/place.json")
         self.assertEqual(r.returncode, 0)
         self.assertEqual(self.read("out.txt"), "other\n")     # cwd 還是 xxx，不是 other/
+
+    def test_stderr_dash_makes_an_inst_error_visible(self):
+        self.inst({"argv": ["sh", "-c", "echo typo >&2"]})
+        r = self.aos(self.d, "--stderr", "-")
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("typo", r.stderr)
+
+    def test_stderr_path_writes_from_the_callers_cwd(self):
+        self.inst({"argv": ["sh", "-c", "echo typo >&2"]})
+        r = subprocess.run([sys.executable, EXEC, self.d, "--stderr", "seen.err"],
+                           cwd=self.d, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("typo", self.read("seen.err"))
+
+    def test_stderr_path_overrides_merge(self):
+        self.inst({"argv": ["sh", "-c", "echo out; echo typo >&2"],
+                   "stdout": "out.txt", "stderr": {"$opt": "merge"}})
+        r = subprocess.run([sys.executable, EXEC, self.d, "--stderr", "seen.err"],
+                           cwd=self.d, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0)
+        self.assertNotIn("typo", self.read("out.txt"))
+        self.assertIn("typo", self.read("seen.err"))
+
+    def test_stderr_path_that_cannot_be_opened_is_125(self):
+        self.inst({"argv": ["true"]})
+        r = self.aos(self.d, "--stderr", os.path.join(self.d, "missing", "x"))
+        self.assertEqual(r.returncode, 125)
 
     def test_missing_xxx_is_2(self):
         r = self.aos(os.path.join(self.d, "nope"))
