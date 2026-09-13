@@ -33,8 +33,9 @@ local root = script:match("^(.*)/[^/]+$") or cwd()
 package.path = root .. "/lua/?.lua;" .. package.path
 local json = require "json"
 local aos = require "aos"
+local step_program = require "step_program"
 
-local TOOL, DONE, HISTORY_LIMIT = "aos-step-lua", 100, 50
+local TOOL, DONE, WAITING, HISTORY_LIMIT = "aos-step-lua", 100, 101, 50
 
 local function fail(message) io.stderr:write(TOOL .. ": " .. message .. "\n"); return 2 end
 local function read_file(path)
@@ -52,17 +53,12 @@ local function basename(path) return path:match("([^/]+)$") or path end
 local function paths_for(prog)
   local state = prog:gsub("%.lua$", "")
   if state == prog then state = prog end
-  return state .. ".state.json", dirname(prog) .. "/.aos-step-lua/error"
+  return state .. ".state.json", prog .. ".error"
 end
 local function same_array(a, b)
   if type(a) ~= "table" or #a ~= #b then return false end
   for i = 1, #b do if a[i] ~= b[i] then return false end end
   return true
-end
-local function source_mtime(path)
-  local p = io.popen("stat -c %Y -- " .. shquote(path), "r")
-  if not p then return json.null end
-  local value = p:read("*l"); p:close(); return tonumber(value) or json.null
 end
 local function state_json(value)
   local keys = {"state", "pc", "n", "done", "steps", "src", "last", "history", "waiting"}
@@ -94,35 +90,6 @@ local function load_state(path)
   end
   return value
 end
-local function validate_steps(value)
-  if type(value) ~= "table" then error("PROG 最後必須 return 步驟陣列", 0) end
-  local n = #value
-  for key in pairs(value) do
-    if type(key) ~= "number" or key < 1 or key % 1 ~= 0 or key > n then
-      error("PROG 最後必須 return 1..n 連續的步驟陣列", 0)
-    end
-  end
-  local names = {}
-  for i = 1, n do
-    local item = value[i]
-    if type(item) ~= "table" or type(item.name) ~= "string" or item.name == "" then
-      error("PROG 第 " .. (i - 1) .. " 格缺 name", 0)
-    end
-    if type(item.fn) ~= "function" then error("PROG 第 " .. (i - 1) .. " 格缺 fn", 0) end
-    names[i] = item.name
-  end
-  return value, names
-end
-local function load_program(prog, pc, user_state, source)
-  _G.state, _G.here, _G.pc, _G.aos = user_state, dirname(prog), pc, aos
-  local chunk, syntax = loadfile(prog)
-  if not chunk then error("載不起 PROG：" .. tostring(syntax):match("^[^\n]*"), 0) end
-  local ok, result = pcall(chunk)
-  if not ok then error("載不起 PROG：" .. tostring(result):match("^[^\n]*"), 0) end
-  local steps, names = validate_steps(result)
-  local src = {n=#steps, size=#source, mtime=source_mtime(prog), steps=names}
-  return steps, names, src
-end
 local function empty_state(names)
   return {state={}, pc=0, n=#names, done=false, steps=names}
 end
@@ -137,6 +104,11 @@ local function write_error(path, trace)
 end
 local function first_line(text) return tostring(text):match("^[^\n]*") or tostring(text) end
 local function now() return os.date("!%Y-%m-%dT%H:%M:%S+00:00") end
+local function wall_ms()
+  local f = assert(io.open("/proc/uptime", "r"))
+  local seconds = assert(f:read("*n")); f:close()
+  return math.floor(seconds * 1000)
+end
 local function waiting_line(current)
   local waiting = current.waiting
   if waiting == nil then return nil end
@@ -156,6 +128,7 @@ local function check_waiting(current, state_path)
     current.waiting.checks = current.waiting.checks + 1
     local wrote, err = atomic_state(state_path, current)
     if not wrote then error("寫不了狀態檔：" .. tostring(err), 0) end
+    io.stderr:write(string.format("在等 %s（第 %d 次）\n", current.waiting["for"], current.waiting.checks))
     return true
   end
   probe:close()
@@ -173,8 +146,8 @@ local function report_step_error(error_path, pc, item, detail, trace)
   if not ok then return fail("寫不了錯誤全文：" .. tostring(err)) end
   local info = debug.getinfo(item.fn, "S") or {}
   local at = info.linedefined and ("，PROG 第 " .. info.linedefined .. " 行") or ""
-  io.stderr:write(string.format("%s: 第 %d 格 %s（0 起算%s）失敗：%s（全文：.aos-step-lua/error 或 --status）\n",
-    TOOL, pc, item.name, at, detail))
+  io.stderr:write(string.format("%s: 第 %d 格 %s（0 起算%s）失敗：%s（全文：%s 或 --status）\n",
+    TOOL, pc, item.name, at, detail, basename(error_path)))
   return 1
 end
 local function changed(saved, src)
@@ -189,14 +162,15 @@ local function run(prog, stderr_override, want_status)
   if saved and not want_status then
     local ok_wait, still_waiting = pcall(check_waiting, saved, state_path)
     if not ok_wait then return fail(still_waiting) end
-    if still_waiting then return 0 end
+    if still_waiting then return WAITING end
   end
   local user_state = saved and saved.state or {}
   if type(user_state) ~= "table" then return fail("狀態檔壞了：state 必須是物件") end
   local source, read_err = read_file(prog)
   if not source then return fail("讀不到 PROG：" .. tostring(read_err)) end
   local pc = saved and saved.pc or 0
-  local ok_load, steps, names, src = pcall(load_program, prog, pc, user_state, source)
+  local ok_load, steps, names, src = pcall(step_program.load, prog, pc, user_state, source,
+    aos, dirname, shquote)
   if not ok_load then return fail(steps) end
   local current = saved or empty_state(names)
   if want_status then
@@ -224,7 +198,7 @@ local function run(prog, stderr_override, want_status)
   end
   local item = steps[pc + 1]
   _G.AOS_STEP_STDERR = stderr_override
-  local started = os.clock()
+  local started = wall_ms()
   local ran, returned = xpcall(function() return item.fn(user_state) end, debug.traceback)
   _G.AOS_STEP_STDERR = nil
   if not ran then return report_step_error(error_path, pc, item, first_line(returned), returned) end
@@ -235,7 +209,7 @@ local function run(prog, stderr_override, want_status)
   end
   local history = type(current.history) == "table" and current.history or {}
   local last = {pc=pc, step=item.name, exit=0, at=now(),
-                ms=math.floor((os.clock() - started) * 1000)}
+                ms=wall_ms() - started}
   history[#history + 1] = last
   while #history > HISTORY_LIMIT do table.remove(history, 1) end
   local result = {state=user_state, pc=pc + 1, n=#steps, done=pc + 1 >= #steps,
@@ -255,7 +229,15 @@ local function main()
   local prog_arg, status, reset, stderr_override
   local i = 1
   while i <= #arg do
-    if arg[i] == "--status" then status = true
+    if arg[i] == "--help" or arg[i] == "-h" then
+      io.stdout:write("usage: aos-step-lua [-h] [--status | --reset] [--stderr PATH] PROG.lua\n\n" ..
+        "一次執行 Lua 檔 return 表裡的下一個函式\n\n" ..
+        "positional arguments:\n  PROG.lua\n\n" ..
+        "options:\n  -h, --help     show this help message and exit\n" ..
+        "  --status       印出目前狀態 JSON\n  --reset        刪除狀態檔，從第 0 格重來\n" ..
+        "  --stderr PATH  給 aos.call 底下的 aos-exec；- 代表目前 stderr\n")
+      return 0
+    elseif arg[i] == "--status" then status = true
     elseif arg[i] == "--reset" then reset = true
     elseif arg[i] == "--stderr" then i = i + 1; stderr_override = arg[i]; if not stderr_override then return fail("--stderr 缺 PATH") end
     elseif arg[i]:sub(1, 1) == "-" then return fail("不認得選項：" .. arg[i])

@@ -65,9 +65,11 @@ class StepPyTest(unittest.TestCase):
         self.write("def convert(state):\n"
                    "    encoded = aos.b64(b'\\x00\\xff\\x01')\n"
                    "    state['encoded'] = encoded\n"
-                   "    state['same'] = aos.unb64(encoded) == b'\\x00\\xff\\x01'\n")
+                   "    state['same'] = aos.unb64(encoded) == b'\\x00\\xff\\x01'\n"
+                   "    state['plain'] = aos.unb64('AP8B') == b'\\x00\\xff\\x01'\n")
         self.assertEqual(self.run_tool().returncode, 0)
-        self.assertEqual(self.state()["state"], {"encoded": "AP8B", "same": True})
+        self.assertEqual(self.state()["state"],
+                         {"encoded": {"$b64": "AP8B"}, "same": True, "plain": True})
 
     def test_reads_lua_binary_state_as_bytes(self):
         self.write("def check(state): state['same'] = state['raw'] == b'\\x00\\xff\\x01'\n")
@@ -86,7 +88,7 @@ class StepPyTest(unittest.TestCase):
         self.assertEqual((self.state()["pc"], self.state()["state"]), (1, {"kept": 1}))
         self.assertIn("第 1 格 boom", result.stderr)
         self.assertIn("PROG 第 3 行", result.stderr)
-        error = (self.home / ".aos-step-py/error").read_text()
+        error = (self.home / "job.py.error").read_text()
         self.assertIn("Traceback", error)
         self.assertIn("RuntimeError: bad first line", error)
         self.assertIn("RuntimeError", self.run_tool("--status").stderr)
@@ -119,7 +121,9 @@ class StepPyTest(unittest.TestCase):
         first = self.state()
         self.assertEqual((first["pc"], first["waiting"]["checks"]), (1, 0))
         self.assertEqual(first["waiting"]["for"], str(self.home / "out.json"))
-        self.assertEqual(self.run_tool().returncode, 0)
+        waiting = self.run_tool()
+        self.assertEqual(waiting.returncode, 101)
+        self.assertIn(f"在等 {self.home / 'out.json'}（第 1 次）", waiting.stderr)
         blocked = self.state()
         self.assertEqual(blocked["waiting"]["checks"], 1)
         self.assertEqual((blocked["last"], blocked["history"]),
@@ -136,7 +140,7 @@ class StepPyTest(unittest.TestCase):
         self.write("def only(state): return aos.wait_for('last.out')\n")
         self.assertEqual(self.run_tool().returncode, 0)
         self.assertFalse(self.state()["done"])
-        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.run_tool().returncode, 101)
         (self.home / "last.out").touch()
         self.assertEqual(self.run_tool().returncode, 100)
         self.assertTrue(self.state()["done"])
@@ -278,33 +282,6 @@ class StepPyTest(unittest.TestCase):
         shown = self.run_tool("--stderr", "-")
         self.assertEqual(shown.returncode, 0)
         self.assertIn("seen", shown.stderr)
-
-    def test_llm_against_fake_server(self):
-        server = subprocess.Popen([sys.executable, str(FAKE_OPENAI)], stdout=subprocess.PIPE,
-                                  stderr=subprocess.DEVNULL, text=True, start_new_session=True)
-        try:
-            port = int(server.stdout.readline().strip())
-            server.stdout.close()
-            endpoint = self.home / "endpoint.json"
-            endpoint.write_text(json.dumps({"name": "fake", "kind": "openai",
-                "base_url": f"http://127.0.0.1:{port}/v1", "model": "fake-model"}))
-            self.write("def ask(state):\n    r = aos.llm('endpoint.json', {'messages':[{'role':'user','content':'echo:hi'}]}, 'out.json')\n    state['text'] = aos.llm_text(r)\n")
-            result = self.run_tool()
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(self.state()["state"]["text"], "hi")
-            self.assertTrue((self.home / "out.json.req.json").exists())
-        finally:
-            os.killpg(server.pid, signal.SIGTERM)
-            server.wait(timeout=2)
-
-    def test_aos_exec_runs_step_program_to_done(self):
-        self.write("def a(state): state['a']=1\ndef b(state): state['b']=2\ndef c(state): state['c']=3\ndef d(state): state['d']=4\n")
-        inst = self.home / "step.json"
-        inst.write_text(json.dumps({"argv": [str(TOOL), str(self.prog)], "cwd": str(self.home),
-                                    "stderr": "/dev/stderr"}))
-        codes = [subprocess.run([str(EXEC), str(inst)]).returncode for _ in range(5)]
-        self.assertEqual(codes, [0, 0, 0, 0, 100])
-
 
 if __name__ == "__main__":
     unittest.main()

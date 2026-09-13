@@ -15,7 +15,7 @@ sys.path.insert(0, str(HERE.parent / "proto4-3"))
 import aos_exec  # noqa: E402
 from step_common import (HISTORY_LIMIT, StepError, atomic_json, load_state,
                          check_waiting, now, set_waiting, source_info,
-                         waiting_line, warn_if_changed)  # noqa: E402
+                         WAITING_EXIT, waiting_line, warn_if_changed)  # noqa: E402
 
 
 DONE_EXIT = 100
@@ -30,7 +30,17 @@ def fail(message):
 def paths_for(prog):
     state = prog.with_suffix(".state.json") if prog.suffix == ".json" else Path(str(prog) + ".state.json")
     current = prog.parent / ".aos-step-json" / "current.json"
-    return state, current
+    error = Path(str(prog) + ".error")
+    return state, current, error
+
+
+def write_error(path, prog, pc, element, code, kind):
+    path.write_text(
+        f"PROG: {prog}\n第 {pc} 個元素（0 起算）\n"
+        f"kind: {kind}\nexit: {code}\nelement: "
+        + json.dumps(element, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def load_program(prog):
@@ -102,11 +112,11 @@ def record(state, src, pc, code, kind, elapsed_ms, success, wait_for, here):
 
 
 def step(prog, stderr_override):
-    state_path, current_path = paths_for(prog)
+    state_path, current_path, error_path = paths_for(prog)
     try:
         state = load_state(state_path)
         if state is not None and check_waiting(state, state_path):
-            return 0
+            return WAITING_EXIT
         program, src = load_program(prog)
         state = state or empty_state(len(program))
     except StepError as exc:
@@ -133,13 +143,17 @@ def step(prog, stderr_override):
     atomic_json(state_path, state)
 
     if success:
+        error_path.unlink(missing_ok=True)
         return 0
+    write_error(error_path, prog, pc, program[pc], code, kind)
     if kind == aos_exec.CHILD:
-        print(f"aos-step-json: 第 {pc} 個元素（0 起算）失敗：exit={code}", file=sys.stderr)
+        print(f"aos-step-json: 第 {pc} 個元素（0 起算）失敗：exit={code}"
+              f"（全文：{prog.name}.error 或 --status）", file=sys.stderr)
         return code
     if kind == aos_exec.AOS:
         print(
-            f"aos-step-json: 第 {pc} 個元素 aos-exec 自己失敗（125），加 --stderr - 看原因",
+            f"aos-step-json: 第 {pc} 個元素 aos-exec 自己失敗（125），加 --stderr - 看原因"
+            f"（全文：{prog.name}.error 或 --status）",
             file=sys.stderr,
         )
         return 125
@@ -158,10 +172,11 @@ def main(argv=None):
     prog = Path(args.prog).resolve()
     if not prog.is_file():
         return fail(f"找不到程式：{args.prog}")
-    state_path, _ = paths_for(prog)
+    state_path, _, error_path = paths_for(prog)
     if args.reset:
         try:
             state_path.unlink(missing_ok=True)
+            error_path.unlink(missing_ok=True)
         except OSError as exc:
             return fail(f"刪不掉狀態檔：{exc}")
         return 0
@@ -180,6 +195,8 @@ def main(argv=None):
             return fail(str(exc))
         if line:
             print(line, file=sys.stderr)
+        if error_path.exists():
+            print(error_path.read_text(encoding="utf-8"), file=sys.stderr, end="")
         return 0
     return step(prog, args.stderr)
 

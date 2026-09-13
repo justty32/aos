@@ -21,7 +21,7 @@ import _util           # noqa: F401  （它把 proto4-3 放進 sys.path）
 from aos_home import Home, alive
 from aos_kernel import IDLE_INST, KHome
 from aos_kernel_syscall import handle_syscalls
-from aos_kernel_tick import _one_cpu
+from aos_kernel_schedule import _observe_exit, _one_cpu
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -186,8 +186,10 @@ class KernelInitTest(KernelTest):
         with open(self.at("config.json"), encoding="utf-8") as f:
             self.assertEqual(json.load(f), {"ncpu": 2, "interval_ms": 100,
                                             "timeout_ms": 500, "quantum": 3,
-                                            "done_exit": 100, "modules": []})
-        self.assertEqual(self.kstate(), {"cpus": {"0": None, "1": None}, "queue": []})
+                                            "done_exit": 100, "wait_exit": 101,
+                                            "bad_after": 10, "modules": []})
+        self.assertEqual(self.kstate(), {"cpus": {"0": None, "1": None}, "queue": [],
+                                         "waiting": {}})
         self.assertIn("aos-kernel-boot %s" % self.k, r.stdout)
         self.assertIn("aos-kernel add %s" % self.k, r.stdout)
         self.assertIn("aos-kernel rm %s" % self.k, r.stdout)
@@ -196,6 +198,26 @@ class KernelInitTest(KernelTest):
         self.init(1)
         r = self.kernel_init(self.k, "--ncpu", 1)
         self.assertEqual((r.returncode, "已經有這個資料夾" in r.stderr), (1, True), r.stderr)
+        self.assertIn("module 要在 init 時就 --module 掛", r.stderr)
+
+    def test_old_config_gets_waiting_and_bad_defaults(self):
+        self.init(1)
+        with open(self.at("config.json"), encoding="utf-8") as f:
+            cfg = json.load(f)
+        cfg.pop("wait_exit")
+        cfg.pop("bad_after")
+        with open(self.at("config.json"), "w", encoding="utf-8") as f:
+            json.dump(cfg, f)
+        loaded = KHome(self.k).config()
+        self.assertEqual((loaded["wait_exit"], loaded["bad_after"]), (101, 10))
+
+    def test_init_accepts_wait_exit_and_bad_after(self):
+        self.init(1, wait_exit=77, bad_after=4)
+        cfg = KHome(self.k).config()
+        self.assertEqual((cfg["wait_exit"], cfg["bad_after"]), (77, 4))
+        bad = self.kernel_init(os.path.join(self.tmp, "bad-k"), "--ncpu", 1,
+                               "--bad-after", -1)
+        self.assertEqual(bad.returncode, 2)
 
     def test_kernel_init_subcommand_is_gone(self):
         """init 拆成獨立指令 aos-kernel-init 之後，aos-kernel init 要退出碼 2、提示改路。"""
@@ -249,6 +271,15 @@ class KernelInitTest(KernelTest):
         self.assertIn("LAST_EXIT", out)
         self.assertIn("沒插上", out)                        # daemon 沒起來
         self.assertIn("佇列（1 個）：3", out)
+
+    def test_ls_without_daemon_home_says_the_home_is_unknown(self):
+        self.init(1)
+        env = dict(os.environ)
+        env.pop("AOS_DAEMON_HOME", None)
+        r = subprocess.run([sys.executable, KERNEL_BIN, "ls", self.k], env=env,
+                           capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("daemon ?（找不到 daemon 的家：AOS_DAEMON_HOME 沒設？）", r.stdout)
 
     def test_ls_accepts_the_home_from_another_directory(self):
         self.init(1)
@@ -382,6 +413,101 @@ class KernelInitTest(KernelTest):
         for r in results:
             self.assertEqual(r.returncode, 1)
             self.assertIn("aos-kernel-init", r.stderr)
+
+
+class KernelExitPolicyTest(KernelTest):
+    def put_on_cpu(self, pid):
+        h = KHome(self.k)
+        self.put_proc(pid)
+        os.replace(h.proc(pid), h.cpu(0))
+        return h, {"cpus": {"0": {"pid": pid, "since": 1, "runs_at": 0,
+                                     "seen_runs": 0}},
+                   "queue": [], "waiting": {}}
+
+    def test_wait_exit_stays_on_an_empty_cpu_and_ls_says_waiting(self):
+        self.init(1)
+        h, st = self.put_on_cpu("waiter")
+        ent = {"runs": 1, "last_kind": "child", "last_exit": 101, "state": "running"}
+        _one_cpu(h, h.config(), st, [], [], 2, 0, {0: ent})
+        ent["runs"] = 2
+        _one_cpu(h, h.config(), st, [], [], 3, 0, {0: ent})
+        self.assertEqual(st["cpus"]["0"]["waiting"], True)
+        self.assertEqual(st["cpus"]["0"]["wait_runs"], 2)
+        self.assertEqual(st["cpus"]["0"]["pid"], "waiter")
+        h.save(st)
+        self.home.ensure()
+        with open(self.home.statef, "w", encoding="utf-8") as f:
+            json.dump({"pid": os.getpid(), "runs": {self.cpu_key(0): ent}}, f)
+        out = self.kernel("ls", self.k).stdout
+        self.assertIn("waiting", out)
+        self.assertIn("等了 2 回合", out)
+
+    def test_waiting_proc_yields_when_someone_is_queued(self):
+        self.init(1, quantum=100)
+        h, st = self.put_on_cpu("waiter")
+        ent = {0: {"runs": 1, "last_kind": "child", "last_exit": 101}}
+        _one_cpu(h, h.config(), st, [], [], 2, 0, ent)
+        self.assertEqual(st["cpus"]["0"]["pid"], "waiter")
+        self.put_proc("next")
+        queue, notes = ["next"], []
+        _one_cpu(h, h.config(), st, queue, notes, 3, 0, ent)
+        self.assertEqual(st["cpus"]["0"]["pid"], "next")
+        self.assertEqual(queue, ["waiter"])
+        self.assertEqual(st["waiting"], {"waiter": 1})
+        self.assertTrue(os.path.exists(h.proc("waiter")))
+        st["queue"] = queue
+        h.save(st)
+        out = self.kernel("ls", self.k).stdout
+        self.assertIn("waiter (waiting，等了 1 回合)", out)
+
+    def test_bad_after_moves_repeated_nonzero_exit_to_bad_with_reason(self):
+        self.init(1, quantum=100, bad_after=3)
+        h, st = self.put_on_cpu("broken")
+        notes = []
+        for runs in range(1, 4):
+            _one_cpu(h, h.config(), st, [], notes, 2, 0,
+                     {0: {"runs": runs, "last_kind": "child", "last_exit": 3}})
+        self.assertIsNone(st["cpus"]["0"])
+        self.assertTrue(os.path.exists(os.path.join(h.bad, "broken.json")))
+        self.assertIn("連續 3 次退 3", notes[-1])
+        h.save(st)
+        h.log(notes[-1])
+        self.assertIn("連續 3 次退 3", self.kernel("ls", self.k).stdout)
+
+    def test_bad_after_zero_keeps_retrying_forever(self):
+        self.init(1, quantum=100, bad_after=0)
+        h, st = self.put_on_cpu("broken")
+        _one_cpu(h, h.config(), st, [], [], 2, 0,
+                 {0: {"runs": 50, "last_kind": "child", "last_exit": 3}})
+        self.assertEqual(st["cpus"]["0"]["pid"], "broken")
+        self.assertFalse(os.path.exists(os.path.join(h.bad, "broken.json")))
+
+    def test_a_new_aos_run_resets_exit_streaks(self):
+        self.init(1, quantum=100, bad_after=3)
+        h, st = self.put_on_cpu("broken")
+        st["cpus"]["0"].update({"seen_runs": 5, "bad_runs": 2, "bad_exit": 3})
+        _one_cpu(h, h.config(), st, [], [], 2, 0,
+                 {0: {"runs": 0, "last_kind": "child", "last_exit": 3}})
+        self.assertNotIn("bad_runs", st["cpus"]["0"])
+
+    def test_special_exit_codes_break_the_bad_run(self):
+        cfg = {"done_exit": 100, "wait_exit": 101}
+        for special in (101, 100, 125):
+            cur = {}
+            _observe_exit(cfg, cur, {"last_kind": "child", "last_exit": 3}, 1)
+            self.assertEqual(cur["bad_runs"], 1)
+            _observe_exit(cfg, cur, {"last_kind": "child", "last_exit": special}, 1)
+            self.assertNotIn("bad_runs", cur)
+        cur = {"waiting": True, "wait_runs": 7}
+        _observe_exit(cfg, cur, {"last_kind": "child", "last_exit": 0}, 1)
+        self.assertNotIn("waiting", cur)
+
+    def test_ls_only_says_dead_when_a_known_daemon_pid_is_dead(self):
+        self.init(1)
+        self.home.ensure()
+        with open(self.home.statef, "w", encoding="utf-8") as f:
+            json.dump({"pid": 999999999, "runs": {}}, f)
+        self.assertIn("daemon dead", self.kernel("ls", self.k).stdout)
 
 
 class KernelDaemonTest(KernelTest):

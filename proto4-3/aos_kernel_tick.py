@@ -17,8 +17,8 @@ kernel 每隔一段時間自己跑一次的就是這支（`aos-kernel-init` 寫�
 4. **跑 module**：每個 module 一格，炸了只記 note。
 5. **檢查佇列**：`procs/*.json`（不含 `bad/`）逐個讀，基本欄位或 aos-exec 完整驗證不過
    → 搬到 `procs/bad/` 同名（§17.1：cwd 這道檢查只在 kernel 做）。
-6. **排程**：idle 的 cpu 有人等就上人；有人在跑但「daemon 的 runs － 上去時記的 runs」
-   滿 quantum 而且還有人等，就換人——**換檔不留空窗**（§17.2 第 3 條）：先
+6. **排程**：先收 done／bad、標 waiting；waiting 或跑滿 quantum 而且還有人排隊就換人。
+   **換檔不留空窗**（§17.2 第 3 條）：先
    `os.link(cpus/n.json, procs/<舊>.json)` 讓舊的先在 `procs/` 有名字，再
    `os.rename(procs/<新>.json, cpus/n.json)` 原子蓋過去，`cpus/n.json` 任何時刻都在。
    佇列是 FIFO：新出現的排尾巴、被換下來的也排尾巴、檔案不見的從佇列拿掉。
@@ -34,6 +34,7 @@ import aos_home
 import aos_inst
 from aos_kernel import CTL_BIN, IDLE_INST, here_or_die
 from aos_kernel_module import load_modules, run_modules
+from aos_kernel_schedule import schedule
 from aos_kernel_syscall import handle_syscalls
 
 
@@ -134,136 +135,6 @@ def check_queue(h, notes):
         os.makedirs(h.bad, exist_ok=True)
         os.replace(path, os.path.join(h.bad, "%s.json" % pid))
         notes.append("退件 %s.json（%s）" % (pid, why))
-
-
-def schedule(h, cfg, st, ready, notes, now):
-    present = h.pids()
-    on_cpu = {c["pid"] for c in st["cpus"].values() if c}
-    queue = [p for p in st["queue"] if p in present and p not in on_cpu]
-    for p in present:                          # 新出現的排尾巴（同一回合的照 pid 順序）
-        if p not in queue and p not in on_cpu:
-            queue.append(p)
-    for n in range(cfg["ncpu"]):
-        if n in ready:
-            _one_cpu(h, cfg, st, queue, notes, now, n, ready)
-    st["queue"] = queue
-
-
-def _one_cpu(h, cfg, st, queue, notes, now, n, ready):
-    key = str(n)
-    cur = st["cpus"].get(key)
-    ent = ready[n]
-    runs_now = ent.get("runs", 0)
-    if cur and runs_now < cur.get("runs_at", 0):    # cpu 換過一支 aos-run，runs 從頭數
-        cur["runs_at"] = runs_now
-    if cur is None:
-        if queue:
-            _take(h, st, queue, notes, now, n, runs_now)
-        return
-    if (cfg["done_exit"] != 0 and ent.get("last_kind") == "child"
-            and ent.get("last_exit") == cfg["done_exit"]
-            and runs_now - cur.get("runs_at", 0) >= 2):
-        _finish(h, st, notes, now, n, cur["pid"])
-        return
-    if ent.get("last_kind") == "aos" and runs_now - cur.get("runs_at", 0) >= 2:
-        cur["aos_ticks"] = cur.get("aos_ticks", 0) + 1
-    else:
-        cur["aos_ticks"] = 0
-    if cur["aos_ticks"] >= 2:
-        _reject_running(h, st, notes, n, cur["pid"])
-        return
-    if runs_now - cur.get("runs_at", 0) >= cfg["quantum"] and queue:
-        _swap(h, st, queue, notes, now, n, runs_now, cur["pid"])
-
-
-def _take(h, st, queue, notes, now, n, runs_now):
-    """空的 cpu 上人：直接 rename 過去。"""
-    nxt = queue[0]
-    try:
-        os.replace(h.proc(nxt), h.cpu(n))
-    except OSError as e:
-        notes.append("cpu%d 上 %s 失敗：%s" % (n, nxt, e))
-        return
-    queue.pop(0)
-    st["cpus"][str(n)] = {"pid": nxt, "since": now, "runs_at": runs_now}
-    notes.append("cpu%d 上 %s" % (n, nxt))
-
-
-def _swap(h, st, queue, notes, now, n, runs_now, old):
-    """跑滿 quantum：換人。先硬連結讓舊的在 procs/ 有名字，再 rename 蓋過去。"""
-    nxt = queue[0]
-    try:
-        os.link(h.cpu(n), h.proc(old))          # 舊的先回佇列，cpus/n.json 還在
-    except OSError as e:
-        notes.append("cpu%d 換不了（舊的搬不回去）：%s" % (n, e))
-        return
-    try:
-        os.replace(h.proc(nxt), h.cpu(n))       # 原子蓋過去，中間沒有空窗
-    except OSError as e:
-        os.unlink(h.proc(old))                  # 收回硬連結，維持原狀
-        notes.append("cpu%d 換不了（新的搬不上去）：%s" % (n, e))
-        return
-    queue.pop(0)
-    queue.append(old)                           # 換下來的排隊尾
-    st["cpus"][str(n)] = {"pid": nxt, "since": now, "runs_at": runs_now}
-    notes.append("cpu%d 換人 %s→%s" % (n, old, nxt))
-
-
-def _finish(h, st, notes, now, n, pid):
-    """保留退出碼表示做完：先留 done 名字，再用 idle 原子蓋過 cpu。"""
-    tmp = h.cpu(n) + ".tmp"
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(IDLE_INST, f, ensure_ascii=False, indent=1)
-        os.makedirs(h.done, exist_ok=True)
-        done = h.proc_done(pid)
-        if os.path.exists(done):
-            os.unlink(done)
-        os.link(h.cpu(n), done)
-    except OSError as e:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        notes.append("cpu%d 收不了 %s：%s" % (n, pid, e))
-        return
-    try:
-        os.replace(tmp, h.cpu(n))
-    except OSError as e:
-        os.unlink(done)
-        notes.append("cpu%d 收不了 %s（idle 換不上去）：%s" % (n, pid, e))
-        return
-    st["cpus"][str(n)] = None
-    notes.append("cpu%d 上 %s 做完了，收進 procs/done/" % (n, pid))
-
-
-def _reject_running(h, st, notes, n, pid):
-    """aos-exec 連續失敗：先留 bad 名字，再用 idle 原子蓋過 cpu。"""
-    tmp = h.cpu(n) + ".tmp"
-    bad = os.path.join(h.bad, "%s.json" % pid)
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(IDLE_INST, f, ensure_ascii=False, indent=1)
-        os.makedirs(h.bad, exist_ok=True)
-        if os.path.exists(bad):
-            os.unlink(bad)
-        os.link(h.cpu(n), bad)
-    except OSError as e:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        notes.append("cpu%d 退不了 %s：%s" % (n, pid, e))
-        return
-    try:
-        os.replace(tmp, h.cpu(n))
-    except OSError as e:
-        os.unlink(bad)
-        notes.append("cpu%d 退不了 %s（idle 換不上去）：%s" % (n, pid, e))
-        return
-    st["cpus"][str(n)] = None
-    notes.append("退件 %s（cpu%d 上連續回 125：aos-exec 自己失敗；原因跑 "
-                 "aos-exec K/procs/bad/%s.json --stderr - 看）" % (pid, n, pid))
 
 
 def cmd_tick(argv):

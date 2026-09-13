@@ -60,7 +60,9 @@
       (waiting-line waiting)
       (if (not (exists? (waiting :for)))
         (do (put waiting :checks (inc (waiting :checks)))
-            (put saved :waiting waiting) (write-state state saved) true)
+            (put saved :waiting waiting) (write-state state saved)
+            (eprintf "在等 %s（第 %d 次）" (waiting :for) (waiting :checks))
+            true)
         (do
           (var history (or (saved :history) @[]))
           (unless (array? history) (set history @[]))

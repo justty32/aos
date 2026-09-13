@@ -73,3 +73,5 @@
 | fix-r4a | r3 清單 #1–#5（proto4-5：README 範例、預設只留 local、模型先比對、--wait 逾時撤單、同名同內容不報錯） | [fix-r4a-task.md](fix-r4a-task.md) |
 | fix-r4b | r3 清單 #6 執行器側（退 101）、#7、#8（proto4-6＋proto4-4 aos-step） | [fix-r4b-task.md](fix-r4b-task.md) |
 | fix-r4c | r3 清單 #6 kernel 側（101＝waiting、讓 cpu、bad_after）、#9（proto4-3） | [fix-r4c-task.md](fix-r4c-task.md) |
+
+**fix-r4 落地補記（2026-09-13 傍晚）**：三本同時派、都交了（回報 `fix-r4{a,b,c}-out.md`）。測試 proto4-3 236、proto4-5 56、proto4-6 77、Janet 42／46／12 全綠。Fable 真開 daemon 跨邊界驗過：等檔的行程 `ls` 顯示 `waiting 等了 N 回合`，只有一顆 cpu 時有人排隊它就讓位、別人做完再回來；`aos-kernel llm --wait` 只印答案＋結果檔路徑；同名同內容退 0、不同內容退 1 並說撞在 running。**順手看到的小毛病（下輪清單）**：剛換上 cpu、RUNS=0 時 `LAST_EXIT` 印的是前一個佔位者的碼（等的人會被印成 100）。

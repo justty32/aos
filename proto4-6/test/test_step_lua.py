@@ -71,10 +71,14 @@ class StepLuaTest(unittest.TestCase):
         self.assertEqual(self.state()["state"]["raw"], {"$b64": "AP8B"})
 
     def test_aos_b64_and_unb64(self):
-        self.write("local function codec(s) local x='\\0\\255\\1'; s.encoded=aos.b64(x); s.same=aos.unb64(s.encoded)==x end\n"
-                   "return {{name='codec',fn=codec}}\n")
+        self.write("local function codec(s) local x='\\0\\255\\1'; s.encoded=aos.b64(x); s.same=aos.unb64(s.encoded)==x; s.plain=aos.unb64('AP8B')==x end\n"
+                   "local function reloaded(s) s.from_disk=(s.encoded=='\\0\\255\\1') end\n"
+                   "return {{name='codec',fn=codec},{name='reloaded',fn=reloaded}}\n")
         self.assertEqual(self.run_tool().returncode, 0)
-        self.assertEqual(self.state()["state"], {"encoded": "AP8B", "same": True})
+        self.assertEqual(self.state()["state"],
+                         {"encoded": {"$b64": "AP8B"}, "same": True, "plain": True})
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertTrue(self.state()["state"]["from_disk"])
 
     def test_step_failure_rolls_back_and_writes_traceback(self):
         self.write("local function good(s) s.kept=1 end\nlocal function boom(s) s.kept=9; error('bad first line\\nmore') end\n"
@@ -84,7 +88,7 @@ class StepLuaTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual((self.state()["pc"], self.state()["state"]), (1, {"kept": 1}))
         self.assertIn("第 1 格 boom", result.stderr)
-        error = (self.home / ".aos-step-lua/error").read_text()
+        error = (self.home / "job.lua.error").read_text()
         self.assertIn("stack traceback", error)
         self.assertIn("bad first line", error)
         self.assertIn("bad first line", self.run_tool("--status").stderr)
@@ -129,7 +133,9 @@ class StepLuaTest(unittest.TestCase):
         first = self.state()
         self.assertEqual((first["pc"], first["waiting"]["checks"]), (1, 0))
         self.assertEqual(first["waiting"]["for"], str(self.home / "out.json"))
-        self.assertEqual(self.run_tool().returncode, 0)
+        waiting = self.run_tool()
+        self.assertEqual(waiting.returncode, 101)
+        self.assertIn(f"在等 {self.home / 'out.json'}（第 1 次）", waiting.stderr)
         blocked = self.state()
         self.assertEqual(blocked["waiting"]["checks"], 1)
         self.assertEqual((blocked["last"], blocked["history"]),
@@ -147,7 +153,7 @@ class StepLuaTest(unittest.TestCase):
                    "return {{name='only',fn=only}}\n")
         self.assertEqual(self.run_tool().returncode, 0)
         self.assertFalse(self.state()["done"])
-        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.run_tool().returncode, 101)
         (self.home / "last.out").touch()
         self.assertEqual(self.run_tool().returncode, 100)
         self.assertTrue(self.state()["done"])

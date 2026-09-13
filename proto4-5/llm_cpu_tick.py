@@ -34,9 +34,11 @@ def _error_result(root, request_id, endpoint, kind, message, status=None,
 
 def _write_error(root, request_id, endpoint, kind, message, status=None,
                  retryable=False):
-    home.atomic_json(root / "results" / (request_id + ".json"),
-                     _error_result(root, request_id, endpoint, kind, message,
-                                   status, retryable))
+    result = _error_result(root, request_id, endpoint, kind, message,
+                           status, retryable)
+    _, request_hash = home.existing_request_sha256(root, request_id)
+    result["request_sha256"] = request_hash
+    home.atomic_json(root / "results" / (request_id + ".json"), result)
 
 
 def _move_done(root, path):
@@ -197,7 +199,8 @@ def _dispatch(root, valid, endpoints, events):
             continue
         request_id = path.stem
         running = root / "requests" / "running" / path.name
-        req["_aos"] = {"endpoint": endpoint_name, "pid": None,
+        meta = req.get("_aos") if isinstance(req.get("_aos"), dict) else {}
+        req["_aos"] = {**meta, "endpoint": endpoint_name, "pid": None,
                        "started": time.time()}
         home.atomic_json(path, req)
         os.replace(path, running)

@@ -7,14 +7,29 @@ import time
 
 
 class Handler(BaseHTTPRequestHandler):
+    gets = 0
+    posts = 0
+
     def log_message(self, fmt, *args):
         pass
 
     def do_GET(self):
+        if self.path == "/stats":
+            data = json.dumps({"gets": self.gets,
+                               "posts": self.posts}).encode()
+            self._send_json(data)
+            return
+        type(self).gets += 1
+        if self.path == "/models-404/v1/models":
+            self.send_error(404)
+            return
         if self.path != "/v1/models":
             self.send_error(404)
             return
         data = json.dumps({"data": [{"id": "fake-model"}]}).encode()
+        self._send_json(data)
+
+    def _send_json(self, data):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
@@ -22,7 +37,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self):
-        if self.path != "/v1/chat/completions":
+        type(self).posts += 1
+        if self.path not in ("/v1/chat/completions",
+                             "/models-404/v1/chat/completions"):
             self.send_error(404)
             return
         size = int(self.headers.get("Content-Length", "0"))

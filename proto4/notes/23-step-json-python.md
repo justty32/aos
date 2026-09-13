@@ -68,3 +68,7 @@
 - 搭配 LLM：`aos.llm_submit(K, req, name)`（直接跑 `aos-kernel llm K req.json --name name`，不等）回結果檔路徑 → `return aos.wait_for(那條路徑)` → 下一格讀結果。lisp／Lua 同名。
 
 **23.7 落地補記**：四支都加了（codex gpt-sol）：狀態檔多 `waiting` 欄、檔沒到就退出 0 不跑格、到了記一筆 `(wait)` 再跑下一格；`llm_submit` 三個語言都有。Janet 45、Python 65 條測試綠。我真開 daemon 端到端：kernel 帶 llm module、`aos-kernel add` 一支兩格的 `job.py`（第 0 格 `llm_submit`＋`wait_for`、第 1 格讀結果寫檔）→ 三秒後 `answer.txt` 是 `Hello!`，`history` 是 `ask → (wait) → read`，行程回 100 被收走。codex 的坑：`aos-kernel llm` 不帶 `--wait` 也要等 kernel 回 syscall 單的確認（一回合），所以測試裡要手動 tick。step.janet 因此破 300 行（309），另派一本照 STRUCTURE 拆。
+
+## 23.8 試玩 r3 之後（2026-09-13 傍晚）
+
+r3 兩份報告都說三支好用（Opus 上手 4.5），問題在「kernel 看不出行程在等」。定案：**等檔沒到退 101**（等待碼，跟 100 一樣由 kernel `config.json` 的 `wait_exit` 說了算），kernel 看到 101 標 `waiting`、有人排隊就讓出 cpu；連續非零退出 `bad_after`（預設 10）次進 `bad/`，設 0 關掉。四支執行器都改了。同批：Lua `aos.b64` 改回 `{"$b64":…}` 物件跟自動轉的長一樣；Lua `ms` 改讀 `/proc/uptime`；`aos-step-lua --help`；`return` 表漏列函式會警告（`_` 開頭跳過）；錯誤全文改 `<PROG>.error` 三支一致。清單與任務書在 `play/README.md` r3 表、`fix-r4b-task.md`、`fix-r4c-task.md`。

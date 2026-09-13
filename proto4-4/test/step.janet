@@ -131,10 +131,14 @@
     (check "waiting 存絕對路徑且 checks 從 0 開始"
            (and (= (string wait-dir "/out.json") (waiting0 :for))
                 (= 0 (waiting0 :checks))))
-    (check "檔不在時再叫仍回 0、checks 加一且下一格沒跑"
-           (and (= 0 ((run wait-prog) :code))
+    (def waiting-run (run wait-prog))
+    (check "檔不在時再叫回 101、checks 加一且下一格沒跑"
+           (and (= 101 (waiting-run :code))
                 (= 1 (get-in (stat wait-prog) [:waiting :checks]))
                 (nil? (os/stat (string wait-dir "/next.txt") :mode))))
+    (check "等待碼的 stderr 會說第幾次"
+           (not (nil? (string/find (string "在等 " wait-dir "/out.json（第 1 次）")
+                                   (waiting-run :err)))))
     (check "status stderr 有給人看的在等"
            (not (nil? (string/find (string "在等 " wait-dir "/out.json")
                                    ((run wait-prog "--status") :err)))))
@@ -153,7 +157,7 @@
     (spit last-prog "(aos/wait-for \"last.out\")\n")
     (check "最後一格宣告等待時還不是 done"
            (and (= 0 ((run last-prog) :code)) (not ((stat last-prog) :done))))
-    (check "最後一格等待中再叫也不是 100" (= 0 ((run last-prog) :code)))
+    (check "最後一格等待中再叫回 101" (= 101 ((run last-prog) :code)))
     (spit (string last-dir "/last.out") "")
     (check "最後一格的檔出現後下一叫才回 100"
            (and (= 100 ((run last-prog) :code)) ((stat last-prog) :done)))

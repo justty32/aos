@@ -1,6 +1,8 @@
 # proto4-3／aos-kernel
 ← [README](../README.md)
 
+以下指令假設你已把 `proto4-3` 的絕對路徑加進 `PATH`。
+
 ## aos-kernel：作業系統的第一個程序，管「哪顆 cpu 上是哪個行程」
 
 [proto4 筆記第 16～18 節](../../proto4/notes/2026-09-08-ideas.md)的原型。名詞先對齊：
@@ -10,7 +12,7 @@
 - **kernel ＝第一個程序**。它是**唯一**會叫 `aos-daemon-ctl` 的人（cpu 的存在與使用權），
   也是**唯一**會改 cpu 那份 inst.json 的人（cpu 下一次去跑誰）。
 - kernel 自己也是被 daemon 跑著的一個 proc：它的家裡有一份 `inst.json`，
-  `aos-kernel-boot K` 把它放上 daemon，之後 kernel 每隔一段時間自己跑一次 `aos-kernel-tick`。
+  `aos-kernel-boot /tmp/K` 把它放上 daemon，之後 kernel 每隔一段時間自己跑一次 `aos-kernel-tick`。
 
 ### 家長什麼樣
 
@@ -18,8 +20,8 @@
 K/inst.json         kernel 自己那顆 cpu 的指令：{"argv":["…/aos-kernel-tick"],"cwd":"."}
 K/config.json       上述整數設定，另可有 "modules":["/abs/xxx_module.py"]
 K/procs/<pid>.json  就緒佇列：等著上 cpu 的行程，檔名去掉 .json ＝ pid
-K/procs/bad/        退件（格式壞、欄位不合 aos-exec 規則、跑起來連續回 125 的都搬來）
-K/procs/done/       回 100 收工的行程；rm 拿掉的不會進來
+K/procs/bad/        退件（格式壞、連續回 125，或一般非零退出達 bad_after 次）
+K/procs/done/       回 done_exit（預設 100）收工的行程；rm 拿掉的不會進來
 K/cpus/<n>.json     每顆 cpu 一份 inst.json，這個路徑就是 daemon 表上的 key
 K/syscalls/         行程給 kernel 的單子；內建 rm，module 可增加 op
 K/syscalls/done/    kernel 處理完的回音
@@ -40,7 +42,7 @@ daemon→aos-run→aos-exec 的 PATH 是使用者開 daemon 時那一份，未�
 （[proto4 筆記 §19.4／§19.7](../../proto4/notes/2026-09-08-ideas.md)）：
 
 ```sh
-aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] [--done-exit N] [--module PATH]...
+aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] [--done-exit N] [--wait-exit N] [--bad-after N] [--module PATH]...
 aos-kernel-boot DIR [--home H] # 開機：只把已初始化的 kernel 放上正在跑的 daemon
 aos-kernel-tick         # 心跳：在家裡（cwd ＝ K）跑一回合，不吃參數
 aos-kernel add [DIR] INST.json [--name NAME] # 檢查、轉路徑、配名後排進佇列
@@ -50,7 +52,7 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
 
 | 指令 | 做什麼 | 退出碼 |
 |---|---|---|
-| `aos-kernel-init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5，單位是「cpu 跑了幾次」） | 0；**DIR 已經存在＝1**（不動它） |
+| `aos-kernel-init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5），`--wait-exit` 預設 101，`--bad-after` 預設 10 | 0；**DIR 已經存在＝1**（不動它） |
 | `aos-kernel-boot` | 看 daemon 上有沒有 kernel 的 `inst.json`；沒有就 add，重複跑無害。**不開 daemon、不 init** | 0；還沒 init 或 daemon 沒跑＝1 |
 | `aos-kernel-tick` | 跑一回合，見下面七步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
 | `aos-kernel add` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；檢查 inst，轉 cwd／argv[0]，自動配數字名或吃 `--name`，再原子排進 `procs/` | 0；不是家、inst 不合格或撞名＝1 |
@@ -62,6 +64,9 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
 `config.json` 可有選填的 `"modules":["/絕對路徑/xxx_module.py", ...]`；省略等於空陣列。
 初始化時用可重複的 `--module PATH`，寫入時會轉成絕對路徑。載不到檔、語法壞掉或約定不合，
 都只在當回合留一句 note，kernel 照常完成。
+
+module 要在 init 時就用 `--module` 掛。家已經存在時，init 不會覆寫；之後要補只能手改
+`config.json` 的 `modules`。
 
 一個 module 是一支 Python 檔。`NAME` 是子命令名，`OPS` 是它認得的 syscall op tuple；其餘
 hook 缺了就表示沒有那項能力：
@@ -110,7 +115,13 @@ tick 與 ls 留一句 note，CLI 則退出 1。每回合在原第 3 步處理 sy
    - 先看做完沒：`last_kind=child` 且 `last_exit=done_exit` 且 `runs−runs_at≥2` → 搬進
      `procs/done/`、換成 idle；再看 quantum 要不要換人。
    - `last_kind=aos` 且已跨過換人時的舊回報，連續兩個 tick 都看到 125 → 搬進
-     `procs/bad/`、換成 idle；詳細原因用 `aos-exec K/procs/bad/NAME.json --stderr -` 看。
+     `procs/bad/`、換成 idle；詳細原因用 `aos-exec /tmp/K/procs/bad/NAME.json --stderr -` 看。
+   - `last_kind=child` 且 `last_exit=wait_exit`（預設 101）→ 在 state 標 `waiting:true`，並用
+     `wait_runs` 記連續等了幾回合。有人排隊就把它換回隊尾；沒人排隊就繼續留在 cpu。
+     排隊中的 `ls` 仍會標 `waiting`，退出碼變成別的就清掉等待狀態。
+   - `last_kind=child` 的其他非零退出若連續達 `bad_after` 次（預設 10）→ 搬進
+     `procs/bad/`，原因會寫「連續 N 次退 CODE」。0、`done_exit`、`wait_exit` 與 125 都會
+     打斷這個計數；`bad_after:0` 會關掉這條，保留永遠重跑的做法。125 的兩次觀察規則不變。
    - 上面是 idle（或沒記錄）而且有人在等 → 把隊首那位 `rename` 上去。
    - 上面有人，而且「daemon 現在的 `runs` － 它上去時記的 `runs` ≥ quantum」，而且**還有人在等**
      → 換人。**沒人在等就讓它續跑**（v1 的行程不會自己結束）。
@@ -126,9 +137,11 @@ tick 與 ls 留一句 note，CLI 則退出 1。每回合在原第 3 步處理 sy
 `state.json` 長這樣：
 
 ```json
-{"cpus": {"0": {"pid": "3", "since": 1788999123.4, "runs_at": 12},
+{"cpus": {"0": {"pid": "3", "since": 1788999123.4, "runs_at": 12,
+                  "waiting": true, "wait_runs": 3},
           "1": null},
- "queue": ["5", "7"]}
+ "queue": ["5", "7"],
+ "waiting": {"7": 2}}
 ```
 
 `runs_at` 是「這位上 cpu 那一刻，那顆 cpu 的 aos-run 總共跑過幾次」，時間片就是拿它跟現在
@@ -144,15 +157,17 @@ tick 與 ls 留一句 note，CLI 則退出 1。每回合在原第 3 步處理 sy
 ```
 
 ```sh
-./aos-daemon &                                          # 硬體上電
-./aos-kernel-init K --ncpu 2 --interval-ms 1000 --quantum 5
-./aos-kernel-boot K                                     # 把 kernel 放上 daemon
-./aos-kernel add K my-proc.json                         # 檢查、轉路徑後排進佇列
-./aos-kernel ls K                                       # 看誰在哪顆 cpu 上
+aos-daemon &                                             # 硬體上電
+aos-kernel-init /tmp/K --ncpu 2 --interval-ms 1000 --quantum 5 # module 也要在 init 時掛
+aos-kernel-boot /tmp/K                                  # 把 kernel 放上 daemon
+aos-kernel add /tmp/K /abs/my-proc.json                 # 檢查、轉路徑後排進佇列
+aos-kernel ls /tmp/K                                    # 看誰在哪顆 cpu 上
 ```
 
 `AOS_DAEMON_HOME` 那三支要對得上：kernel 是從 daemon 繼承下來的，所以 daemon 用
 `AOS_DAEMON_HOME=…` 開比用 `--home` 保險（`--home` 不會傳給子孫）。
+`ls` 若沒有這個環境變數、家不存在或沒有 state，會印「找不到 daemon 的家」；只有找到 state
+和 pid、但 pid 已不活著時才印 `daemon dead`。
 
 ### kernel 這一版沒做什麼
 

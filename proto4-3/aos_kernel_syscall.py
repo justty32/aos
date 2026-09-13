@@ -151,6 +151,7 @@ def _remove(h, cfg, st, pid, notes):
                 notes.append(msg)
                 return False, msg
             st["cpus"][str(n)] = None
+            st.setdefault("waiting", {}).pop(pid, None)
             msg = "rm %s（原本在 cpu%d）" % (pid, n)
             notes.append(msg)
             return True, msg
@@ -162,6 +163,7 @@ def _remove(h, cfg, st, pid, notes):
             msg = "rm %s 失敗：%s" % (pid, e)
             notes.append(msg)
             return False, msg
+        st.setdefault("waiting", {}).pop(pid, None)
         msg = "rm %s（原本在佇列）" % pid
         notes.append(msg)
         return True, msg

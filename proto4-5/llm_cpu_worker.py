@@ -37,8 +37,11 @@ def _write_usage(root, result):
 def run(directory, request_id):
     root = Path(directory).absolute()
     started = time.monotonic()
+    request_hash = None
     try:
         req = home.read_json(root / "requests" / "running" / (request_id + ".json"))
+        request_hash = (req.get("_aos", {}).get("request_sha256") or
+                        home.request_sha256(req))
         endpoint_name = req["_aos"]["endpoint"]
         _, endpoints = home.load_endpoints(root)
         request = dict(req)
@@ -48,6 +51,7 @@ def run(directory, request_id):
         result = aos_llm._error(
             request_id, None, None, None, started, "internal",
             "%s: %s" % (type(exc).__name__, exc))
+    result["request_sha256"] = request_hash
     try:
         home.atomic_json(root / "results" / (request_id + ".json"), result)
         _write_usage(root, result)

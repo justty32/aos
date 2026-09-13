@@ -15,7 +15,8 @@ import traceback
 import aos_py
 from step_common import (HISTORY_LIMIT, StepError, atomic_json, binary_default,
                          binary_object_hook, check_waiting, load_state, now,
-                         set_waiting, source_info, waiting_line, warn_if_changed)
+                         set_waiting, source_info, WAITING_EXIT, waiting_line,
+                         warn_if_changed)
 
 
 DONE_EXIT = 100
@@ -29,7 +30,7 @@ def fail(message):
 
 def paths_for(prog):
     state = prog.with_suffix(".state.json") if prog.suffix == ".py" else Path(str(prog) + ".state.json")
-    error = prog.parent / ".aos-step-py" / "error"
+    error = Path(str(prog) + ".error")
     return state, error
 
 
@@ -97,7 +98,7 @@ def report_step_error(prog, error_path, pc, fn, detail, trace):
     write_error(error_path, trace)
     line = fn.__code__.co_firstlineno
     print(f"{TOOL}: 第 {pc} 格 {fn.__name__}（0 起算，PROG 第 {line} 行）失敗：{detail}"
-          f"（全文：.aos-step-py/error 或 --status）", file=sys.stderr)
+          f"（全文：{prog.name}.error 或 --status）", file=sys.stderr)
     return 1
 
 
@@ -106,7 +107,7 @@ def step(prog, stderr_override):
     try:
         saved = load_state(state_path, object_hook=binary_object_hook)
         if saved is not None and check_waiting(saved, state_path, default=binary_default):
-            return 0
+            return WAITING_EXIT
         pc = saved["pc"] if saved else 0
         source = read_source(prog)
         steps, src = load_program(prog, pc, source)

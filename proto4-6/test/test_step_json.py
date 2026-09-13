@@ -20,9 +20,9 @@ class StepJsonTest(unittest.TestCase):
     def write(self, value):
         self.prog.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
 
-    def run_tool(self, *args, cwd=None):
+    def run_tool(self, *args, cwd=None, prog=None):
         return subprocess.run(
-            [str(TOOL), str(self.prog), *args], cwd=cwd, text=True,
+            [str(TOOL), str(prog or self.prog), *args], cwd=cwd, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
         )
 
@@ -84,7 +84,9 @@ class StepJsonTest(unittest.TestCase):
         first = self.state()
         self.assertEqual((first["pc"], first["waiting"]["checks"]), (1, 0))
         self.assertEqual(first["waiting"]["for"], str(self.home / "out.json"))
-        self.assertEqual(self.run_tool().returncode, 0)
+        waiting = self.run_tool()
+        self.assertEqual(waiting.returncode, 101)
+        self.assertIn(f"在等 {self.home / 'out.json'}（第 1 次）", waiting.stderr)
         blocked = self.state()
         self.assertEqual(blocked["waiting"]["checks"], 1)
         self.assertEqual((blocked["last"], blocked["history"]),
@@ -101,7 +103,7 @@ class StepJsonTest(unittest.TestCase):
         self.write([{"argv": ["true"], "wait_for": "last.out"}])
         self.assertEqual(self.run_tool().returncode, 0)
         self.assertFalse(self.state()["done"])
-        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertEqual(self.run_tool().returncode, 101)
         (self.home / "last.out").touch()
         self.assertEqual(self.run_tool().returncode, 100)
         self.assertTrue(self.state()["done"])
@@ -180,6 +182,21 @@ class StepJsonTest(unittest.TestCase):
         for _ in range(52):
             self.run_tool()
         self.assertEqual(len(self.state()["history"]), 50)
+
+    def test_error_files_are_per_program_and_success_removes_own_file(self):
+        other = self.home / "other.json"
+        self.write([{"argv": ["false"]}])
+        other.write_text(json.dumps([{"argv": ["sh", "-c", "exit 7"]}]))
+        self.assertEqual(self.run_tool().returncode, 1)
+        self.assertEqual(self.run_tool(prog=other).returncode, 7)
+        first_error = self.home / "job.json.error"
+        second_error = self.home / "other.json.error"
+        self.assertIn("exit: 1", first_error.read_text())
+        self.assertIn("exit: 7", second_error.read_text())
+        self.write([{"argv": ["true"]}])
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertFalse(first_error.exists())
+        self.assertTrue(second_error.exists())
 
 
 if __name__ == "__main__":
