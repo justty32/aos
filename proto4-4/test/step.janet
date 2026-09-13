@@ -44,7 +44,8 @@
           "{\"argv\":[\"/bin/sh\",\"-c\",\"printf ran > child-ran.txt; printf '{\\\"answer\\\":42}'\"],\"stdout\":\"out.txt\"}\n")
 
     (def s0 (stat prog))
-    (check "初始 status 是 pc 0 / n 6" (and (= 0 (s0 :pc)) (= 6 (s0 :n)) (not (s0 :done))))
+    (check "初始 status 是 pc 0 / n 6 且沒改過" (and (= 0 (s0 :pc)) (= 6 (s0 :n))
+                                                        (not (s0 :done)) (not (s0 :changed))))
     (def r1 (run prog))
     (check "第一步成功且 stdout 一行" (and (= 0 (r1 :code)) (= 1 (length (string/split "\n" (string/trim (r1 :out)))))))
     (check "第一步後 pc 是 1" (= 1 ((stat prog) :pc)))
@@ -66,8 +67,31 @@
     (def r7 (run prog))
     (check "完成後再叫回 100 且 stdout 空" (and (= 100 (r7 :code)) (= "" (r7 :out))))
     (check "done 檔存在" (= :file (os/stat (string tmp "/.aos-step/done") :mode)))
-    (check "--done-exit 0 時完成後回 0" (= 0 ((run prog "--done-exit" "0") :code)))
-    (check "--done-exit 7 時完成後回 7" (= 7 ((run prog "--done-exit" "7") :code)))
+    (def old-done-exit (run prog "--done-exit" "7"))
+    (check "--done-exit 已拿掉" (= 2 (old-done-exit :code)))
+    (check "--done-exit 提示改由 kernel 設定"
+           (not (nil? (string/find "這個號碼由 kernel 的 config.json 說了算"
+                                  (old-done-exit :err)))))
+
+    (def changed-dir (string tmp "/changed"))
+    (os/mkdir changed-dir)
+    (def changed-prog (string changed-dir "/prog.janet"))
+    (spit changed-prog "(def a 1)\n(spit (string here \"/ran.txt\") (string a))\n")
+    (check "改程式前跑過一格" (= 0 ((run changed-prog) :code)))
+    (def unchanged (run changed-prog))
+    (check "程式沒改就沒警告"
+           (nil? (string/find "prog.janet 改過了" (unchanged :err))))
+    (spit changed-prog "(def inserted 9)\n(def a 1)\n(spit (string here \"/ran.txt\") (string a))\n")
+    (check "程式改過時 status 有 changed true" ((stat changed-prog) :changed))
+    (def shifted (run changed-prog))
+    (check "前面插 form 會警告但 pc 照走"
+           (and (= 0 (shifted :code))
+                (not (nil? (string/find "上次 2 個 form、現在 3 個" (shifted :err))))
+                (= 3 ((stat changed-prog) :n))
+                (= 3 ((stat changed-prog) :pc))))
+    (check "reset 後 changed false"
+           (and (= 0 ((run changed-prog "--reset") :code))
+                (not ((stat changed-prog) :changed))))
 
     (def bad-dir (string tmp "/bad"))
     (os/mkdir bad-dir)
@@ -76,6 +100,8 @@
     (check "錯誤程式第一步成功" (= 0 ((run bad) :code)))
     (def boom (run bad))
     (check "第二個 form 失敗回 1" (= 1 (boom :code)))
+    (check "失敗訊息說明 form 編號是 0 起算"
+           (not (nil? (string/find "第 1 個 form（0 起算）失敗" (boom :err)))))
     (check "失敗後 pc 不動" (= "1\n" (string (slurp (string bad-dir "/.aos-step/pc")))))
     (check "error 檔有 boom" (not (nil? (string/find "boom" (string (slurp (string bad-dir "/.aos-step/error")))))))
     (spit bad "(def y 1)\n(+ y 1)\n")

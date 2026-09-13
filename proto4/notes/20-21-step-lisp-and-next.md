@@ -131,3 +131,13 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 補：「但對於 claude 這種聰明的，其實他已經有一整套很完善的了，就不用費心了。」→ Claude 那邊**不造狀態機**，就把 Claude Code 當一個會自己跑完一回合的行程；我們只負責餵訊息、收結果、給 MCP tools。自己造的狀態機只服務 DeepSeek／LM Studio 這種「只有 HTTP、沒有 agent」的 endpoint。
 
 再補（使用者）：「剛剛說的這些都是後面的 agent 的事情，我們可以很後面再來思考。我們先繼續。」→ §21.7 整節只是先記著，現在不動；下一段還是 LLM cpu。
+
+### 21.8 試玩 r1 收尾：三件拍板全做；舊 proto 是遺產（2026-09-13，手機）
+
+使用者：「aos-exec 加上這個吧。aos-kernel-boot 做吧。然後你說要改的那些也都修一修。修完之後，如果你覺得還要再來一次試玩→修的循環，那就去做，做完再前進 llm cpu。」
+
+- fix-r1（#1、#2、#3 前半、#4、#6、#7、#8）codex gpt-sol 做完、兩邊測試綠（Janet 34/12/34、Python 190），已 commit。
+- fix-r2 派出去：`aos-exec --stderr PATH|-`（只蓋 stderr、`-`＝印到畫面，推翻 §12 的「不做覆蓋旗標」）；`aos-kernel-boot K`（語意照 §19.3：只把 kernel 放上 daemon，不開 daemon、不 init，重複跑無害，interval 吃 config.json）；`aos-kernel add [K] inst.json`（自動編號、cwd／argv[0] 相對轉絕對、先檢查再排、沒 stderr 提醒）。任務書在 `play/fix-r2-task.md`。
+- 之後由我判斷要不要 r2 試玩；要就再玩一輪、修完才進 LLM cpu。
+
+使用者另補：「先前幾個版本的 proto 都是可以參考的遺產，只是謹慎採用。」→ 開 LLM cpu 這段時，先派人去 proto2／proto3／proto4-2 撈舊決定（cpu 怎麼排、LLM 怎麼叫、狀態機長怎樣），逐條寫「採／不採、為什麼」，不直接搬檔案。

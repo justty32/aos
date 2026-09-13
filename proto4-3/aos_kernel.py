@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """aos-kernel：作業系統的第一個程序——管一張「哪顆 cpu 上是哪個行程」的表。
 
-    aos-kernel ls                   # 印給人看：每顆 cpu 上是誰、佇列裡誰在等
+    aos-kernel ls [DIR]             # 印給人看：每顆 cpu 上是誰、佇列裡誰在等
 
 `init`（重灌，很久一次）與 `tick`（心跳，每回合）都拆成自己的獨立指令了：
 `aos-kernel-init`（見 `aos_kernel_init.py`）與 `aos-kernel-tick`（見
@@ -38,7 +38,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CTL_BIN = os.path.join(HERE, "aos-daemon-ctl")
 IDLE_INST = {"argv": ["true"], "cwd": "."}
 DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5, "done_exit": 100}
-USAGE = "用法：aos-kernel ls\n"
+USAGE = "用法：aos-kernel ls [DIR]\n"
 INIT_HINT = ("aos-kernel: init 改成獨立指令 aos-kernel-init（不再是 aos-kernel 的子命令）："
              "aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] "
              "[--done-exit N]\n")
@@ -131,14 +131,27 @@ def here_or_die(prog):
 
 
 def cmd_ls(argv):
-    if argv:
-        sys.stderr.write("aos-kernel: ls 不吃參數（cwd 就是家）\n")
+    if len(argv) > 1:
+        sys.stderr.write(USAGE)
         return 2
+    if argv:
+        try:
+            os.chdir(argv[0])
+        except OSError as e:
+            sys.stderr.write("aos-kernel: 進不去 kernel 的家：%s（%s）\n" % (argv[0], e))
+            return 1
     h, cfg = here_or_die("aos-kernel")
     if h is None:
         return 1
     st = h.state()
-    runs = (aos_home.Home(aos_home.resolve_home()).state() or {}).get("runs", {})
+    daemon_home = aos_home.Home(aos_home.resolve_home())
+    daemon_state = daemon_home.state() or {}
+    daemon_pid = daemon_state.get("pid")
+    if isinstance(daemon_pid, int) and aos_home.alive(daemon_pid):
+        print("daemon alive pid=%d" % daemon_pid)
+    else:
+        print("daemon dead（下面是最後一次的狀態）")
+    runs = daemon_state.get("runs", {})
     now = time.time()
     print("家 %s  ncpu=%d interval=%dms timeout=%dms quantum=%d done_exit=%d"
           % (h.dir, cfg["ncpu"], cfg["interval_ms"], cfg["timeout_ms"], cfg["quantum"],
@@ -157,9 +170,20 @@ def cmd_ls(argv):
             print("%-4d %-5s %-9s %-5s %s" % (n, "idle", "-", "-", state))
     q = st["queue"]
     print("佇列（%d 個）：%s" % (len(q), " ".join(q) if q else "沒人在等"))
-    bad = sorted(os.listdir(h.bad)) if os.path.isdir(h.bad) else []
+    bad = sorted(n for n in os.listdir(h.bad)
+                 if os.path.isfile(os.path.join(h.bad, n))) if os.path.isdir(h.bad) else []
     if bad:
-        print("退件（%d 個）：%s" % (len(bad), " ".join(bad)))
+        reason = None
+        try:
+            with open(h.logf, encoding="utf-8") as f:
+                for line in reversed(f.readlines()):
+                    at = line.find("退件")
+                    if at >= 0:
+                        reason = line[at:].strip()
+                        break
+        except OSError:
+            pass
+        print("bad: %d%s" % (len(bad), "（最近：%s）" % reason if reason else ""))
     done = []
     if os.path.isdir(h.done):
         done = [n[:-5] for n in os.listdir(h.done)

@@ -147,6 +147,9 @@ class DaemonCliTest(unittest.TestCase):
         self.assertEqual(self.proc.wait(timeout=5), 0)                       # 退出碼 0
         self.assertFalse(os.path.exists(self.home.statef))
         self.assertFalse(os.path.exists(self.home.pidf))
+        code, out = self.call("ls")
+        self.assertEqual(code, 1)
+        self.assertIn("daemon 沒在跑，也沒有留下狀態（正常收工會清掉 state.json）", out)
         with open(self.home.logf, encoding="utf-8") as f:
             self.assertIn("add %s" % self.key, f.read())
 

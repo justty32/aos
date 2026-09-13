@@ -23,13 +23,16 @@ cd /tmp/my-proc
 /abs/proto4-4/aos-step prog.janet --status
 ```
 
-做完後的預設退出碼是 100；要改可加 `--done-exit N`（例如 `--done-exit 0`）。
+做完回 100，這個號碼跟 kernel 的 `done_exit` 預設一致；要改就改 kernel 那邊
+（`aos-kernel-init --done-exit`），程式端不給改。
 
 `--status` 只印一行 JDN：
 
 ```janet
-{:pc 4 :n 4 :done true :error nil}
+{:pc 4 :n 4 :done true :changed false :error nil}
 ```
+
+`:changed` 表示現在的程式跟上次成功那格時不同。
 
 要從頭來：
 
@@ -42,6 +45,8 @@ cd /tmp/my-proc
 ```json
 {"argv": ["/abs/proto4-4/aos-step", "prog.janet"], "cwd": "/abs/那個資料夾", "stdout": "out.txt", "stderr": "err.txt"}
 ```
+
+`stdout`／`stderr` 每格會被清空，要留紀錄自己 append 到別的檔。
 
 `argv[0]` 刻意用絕對路徑，不靠 PATH 找 `aos-step`；但它的 `#!/usr/bin/env janet` 仍需要執行時的 PATH 裡有 `janet`（這裡是 `~/.local/bin/janet`）。
 
@@ -63,9 +68,10 @@ cd /tmp/my-proc
 
 ## 函式庫怎麼用
 
-```janet
-(import ./src/aos :as aos)
+在 `aos-step` 跑的 form 裡，`aos/*`、`here`、`pc` 已經綁好，直接用；要在別的 Janet
+程式裡用這個函式庫才需要 import，路徑是 `<proto4-4>/src/aos.janet` 的絕對路徑。
 
+```janet
 (aos/call "./tool")
 (aos/call-json "./job.json" @{:timeout-ms 500})
 (aos/call-dir "./child" @{:dir-target ".aos/other.json"})
@@ -114,11 +120,12 @@ cd /tmp/my-proc
 .aos-step/
   pc        # 下一個 form 的 0-based 索引
   env.img   # Janet make-image 存下的環境
+  src       # 上次成功那格的 form 數、程式 bytes／mtime 與內容 checksum
   error     # 上次失敗的 form、錯誤與 stacktrace；下次成功就刪
   done      # 全部完成後出現的空檔
 ```
 
-每格都重新讀整支程式。環境裡每次都會重綁 `aos/*`、`here`（程式資料夾的絕對路徑）與 `pc`（這一格的索引）。`env.img` 與 `pc` 都先寫暫存檔再 rename，不會露出寫一半的檔案。
+每格都重新讀整支程式。環境裡每次都會重綁 `aos/*`、`here`（程式資料夾的絕對路徑）與 `pc`（這一格的索引）。`env.img`、`pc` 與 `src` 都先寫暫存檔再 rename，不會露出寫一半的檔案。
 
 ## 檔案
 
@@ -140,7 +147,8 @@ cd /tmp/my-proc
 ## 沒做什麼
 
 - 一個資料夾只有一份 `.aos-step/`，所以只能放一支這種程式；同資料夾兩支 `.janet` 會互相蓋狀態。
-- pc 數的是頂層 form 索引；程式跑一半後改掉前面的 form，之後就會錯位。
+- `form N` 的 N 是 0 起算的頂層 form 序號，不是行號。程式跑一半後改過，
+  `aos-step` 會警告 pc 可能錯位，但仍照跑；要對新程式從頭跑就 `--reset`。
 - form 失敗會一直重試同一個，不會自動跳過。
 - 放進 kernel 時，做完回 100 就會被收走；直接用 `aos-run` 跑時還是會一直來叫，只是每次都不做事並回 100。
 - 函式庫不切 cwd；相對 target 永遠是相對於目前行程 cwd，不是 proto4 舊 `runf` 的切資料夾語意。

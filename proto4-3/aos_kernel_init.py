@@ -53,6 +53,8 @@ def cmd_init(argv):
           % (a.ncpu, a.interval_ms, a.timeout_ms, a.quantum))
     print("家建好了：%s（ncpu=%d）" % (h.dir, a.ncpu))
     print("開機：aos-daemon & ； aos-daemon-ctl add %s" % h.instf)
+    print('把行程丟進佇列：cp 你的.json K/procs/<名字>.json，例如 '
+          '{"argv":["/abs/程式"],"cwd":"/abs/資料夾","stdout":"out.txt","stderr":"err.txt"}')
     return 0
 
 

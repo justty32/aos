@@ -156,6 +156,7 @@ class KernelInitTest(KernelTest):
                                             "timeout_ms": 500, "quantum": 3,
                                             "done_exit": 100})
         self.assertEqual(self.kstate(), {"cpus": {"0": None, "1": None}, "queue": []})
+        self.assertIn('"stderr":"err.txt"', r.stdout)
 
     def test_init_refuses_a_dir_that_is_already_there(self):
         self.init(1)
@@ -211,6 +212,21 @@ class KernelInitTest(KernelTest):
         self.assertIn("CPU  PID", out)
         self.assertIn("沒插上", out)                        # daemon 沒起來
         self.assertIn("佇列（1 個）：3", out)
+
+    def test_ls_accepts_the_home_from_another_directory(self):
+        self.init(1)
+        from_home = self.kernel("ls", cwd=self.k)
+        by_dir = self.kernel("ls", self.k, cwd=self.tmp)
+        self.assertEqual(by_dir.returncode, 0, by_dir.stderr)
+        self.assertEqual(by_dir.stdout, from_home.stdout)
+
+    def test_ls_prints_bad_count_and_latest_reason(self):
+        self.init(1)
+        self.put_proc("5", cwd=False)
+        self.tick()
+        out = self.kernel("ls", self.k, cwd=self.tmp).stdout
+        self.assertIn("bad: 1", out)
+        self.assertIn("退件 5.json（沒寫 cwd）", out)
 
 
 class KernelDaemonTest(KernelTest):
