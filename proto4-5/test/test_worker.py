@@ -19,7 +19,8 @@ class WorkerTest(CpuCase):
         self.assertEqual(result["usage"], {
             "prompt": 11, "completion": 7, "total": 18,
             "cached": 3, "reasoning": 2})
-        for key in ("id", "endpoint", "model", "ms", "raw", "error"):
+        for key in ("id", "endpoint", "model", "model_requested", "ms",
+                    "raw", "error"):
             self.assertIn(key, result)
         lines = (self.home / "usage.jsonl").read_text().splitlines()
         self.assertEqual(len(lines), 1)
@@ -39,6 +40,17 @@ class WorkerTest(CpuCase):
     def test_model_mismatch(self):
         self.assertEqual(self.ask("mismatch", "model:other")["error"]["kind"],
                          "model_mismatch")
+
+    def test_model_alias_allowed_when_not_strict(self):
+        self.set_local(extra={"strict_model": False})
+        result = self.ask("alias", "model:other")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["model"], "other")
+        self.assertEqual(result["model_requested"], "fake-model")
+
+    def test_success_has_model_requested(self):
+        result = self.ask("requested", "echo:x")
+        self.assertEqual(result["model_requested"], "fake-model")
 
     def test_missing_api_key(self):
         self.set_local(extra={"api_key_env": "AOS_TEST_KEY_THAT_DOES_NOT_EXIST"})

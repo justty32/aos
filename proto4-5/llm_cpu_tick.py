@@ -14,9 +14,16 @@ GRACE_MS = 5000
 
 def _error_result(root, request_id, endpoint, kind, message, status=None,
                   retryable=False):
+    model_requested = None
+    try:
+        _, endpoints = home.load_endpoints(root)
+        model_requested = endpoints.get(endpoint, {}).get("model")
+    except Exception:
+        pass
     return {
         "ok": False, "id": request_id, "endpoint": endpoint,
-        "model": None, "text": None, "finish_reason": None,
+        "model": None, "model_requested": model_requested,
+        "text": None, "finish_reason": None,
         "usage": {"prompt": None, "completion": None, "total": None,
                   "cached": None, "reasoning": None},
         "ms": 0, "raw": None,
@@ -146,6 +153,9 @@ def _validate(path, default, endpoints):
             and (not isinstance(endpoint["api_key_env"], str)
                  or not endpoint["api_key_env"])):
         return req, endpoint_name, "endpoint api_key_env 必須是非空字串"
+    if ("strict_model" in endpoint
+            and not isinstance(endpoint["strict_model"], bool)):
+        return req, endpoint_name, "endpoint strict_model 必須是布林值"
     return req, endpoint_name, None
 
 
