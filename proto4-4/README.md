@@ -5,6 +5,7 @@
 ## 是什麼
 
 一個 `.janet` 檔就是一個行程；cpu 每叫它一次，它只跑下一個頂層 form，再把環境收好等下一格。
+每一格都會把那個 form 的值印到 stdout。
 
 使用者的說法是：**「逐一執行指定 `.janet` 檔案中的每個 list」**。`def`、`defn`與閉包會藉 Janet image 跨行程留下來。
 
@@ -20,6 +21,7 @@ cd /tmp/my-proc
 /abs/proto4-4/aos-step prog.janet
 /abs/proto4-4/aos-step prog.janet
 /abs/proto4-4/aos-step prog.janet       # 全做完了：不做事，回 100
+echo $?                                 # 全部跑完那次回 100
 /abs/proto4-4/aos-step prog.janet --status
 ```
 
@@ -109,7 +111,8 @@ cd /tmp/my-proc
 
 `:read` 與 `:capture` 同時給時是 `:read` 贏；檔不存在時 `:out` 是 nil。沒給
 `:capture` 或 `:read` 時結果沒有 `:out`，所以取值也是 nil。`:json true` 的輸出是 nil 或空字串時
-`:value` 是 nil；解碼失敗不拋 error，而是放 `:json-error`。`(aos/value r)` 有 `:value`
+`:value` 是 nil；解出來的 key 是字串，要用 `(get v "count")` 取。解碼失敗不拋 error，而是
+放 `:json-error`。`(aos/value r)` 有 `:value`
 就回它，否則回 `:out`。
 
 `pipe` 的每段是 target 字串或 `[target opts]`，回最後一段的結果，`:steps` 留全部結果。
@@ -129,6 +132,11 @@ cd /tmp/my-proc
 ```
 
 每格都重新讀整支程式。環境裡每次都會重綁 `aos/*`、`here`（程式資料夾的絕對路徑）與 `pc`（這一格的索引）。`env.img`、`pc` 與 `src` 都先寫暫存檔再 rename，不會露出寫一半的檔案。
+
+## 卡住了怎麼看
+
+跑 `aos-step prog.janet --status`，`:error` 裡有錯誤與 stacktrace 全文；畫面上的失敗訊息只留
+第一行。行程若跑在 kernel 上，用 `aos-exec 你的.json --stderr -` 直接看它為什麼起不來。
 
 ## 檔案
 

@@ -5,7 +5,7 @@
 
 kernel 每隔一段時間自己跑一次的就是這支（`aos-kernel-init` 寫出的 `inst.json` 指到這裡）
 ——跟很久一次的 `aos-kernel-init` 不是同一種壽命，所以也拆成自己的指令
-（[proto4 筆記 §19.7](../proto4/notes/2026-09-08-ideas.md)）。核心是 `tick()`：五步，
+（[proto4 筆記 §19.7](../proto4/notes/2026-09-08-ideas.md)）。核心是 `tick()`：六步，
 順序固定，做完一律退出 0。
 
 1. **讀自己的表**（`state.json`，沒有＝空表）。
@@ -13,14 +13,15 @@ kernel 每隔一段時間自己跑一次的就是這支（`aos-kernel-init` 寫�
    這 N 個 key 哪些在 daemon 表上。不在表上的：檔案不見了就先寫一份 idle 指令，再
    `aos-daemon-ctl add`（**不開 `--stop-on-error`**）。add 失敗（daemon 沒跑之類）記一行
    log、那顆 cpu 這回合不排程，退出仍 0。
-3. **檢查佇列**：`procs/*.json`（不含 `bad/`）逐個讀，不是 JSON 物件／沒有 `argv`／
-   `cwd` 沒寫或不是字串 → 搬到 `procs/bad/` 同名（§17.1：cwd 這道檢查只在 kernel 做）。
-4. **排程**：idle 的 cpu 有人等就上人；有人在跑但「daemon 的 runs － 上去時記的 runs」
+3. **處理 syscall**：依序讀 `syscalls/*.json`，目前只認 rm。
+4. **檢查佇列**：`procs/*.json`（不含 `bad/`）逐個讀，基本欄位或 aos-exec 完整驗證不過
+   → 搬到 `procs/bad/` 同名（§17.1：cwd 這道檢查只在 kernel 做）。
+5. **排程**：idle 的 cpu 有人等就上人；有人在跑但「daemon 的 runs － 上去時記的 runs」
    滿 quantum 而且還有人等，就換人——**換檔不留空窗**（§17.2 第 3 條）：先
    `os.link(cpus/n.json, procs/<舊>.json)` 讓舊的先在 `procs/` 有名字，再
    `os.rename(procs/<新>.json, cpus/n.json)` 原子蓋過去，`cpus/n.json` 任何時刻都在。
    佇列是 FIFO：新出現的排尾巴、被換下來的也排尾巴、檔案不見的從佇列拿掉。
-5. **寫表寫 log**（`state.json` 先 `.tmp` 再 rename、`kernel.log` append 一行），退出 0。
+6. **寫表寫 log**（`state.json` 先 `.tmp` 再 rename、`kernel.log` append 一行），退出 0。
 """
 import json
 import os
@@ -29,7 +30,9 @@ import sys
 import time
 
 import aos_home
+import aos_inst
 from aos_kernel import CTL_BIN, IDLE_INST, here_or_die
+from aos_kernel_syscall import handle_syscalls
 
 
 def tick(h, cfg, now=None):
@@ -39,6 +42,7 @@ def tick(h, cfg, now=None):
         st["cpus"].setdefault(str(n), None)
     notes = []
     ready = poll_cpus(h, cfg, st, notes)
+    handle_syscalls(h, cfg, st, notes)
     check_queue(h, notes)
     schedule(h, cfg, st, ready, notes, now)
     h.save(st)
@@ -108,6 +112,10 @@ def bad_reason(path):
         return "沒寫 cwd"
     if not isinstance(obj["cwd"], str):
         return "cwd 不是字串"
+    try:
+        aos_inst.load(path, os.path.dirname(path))
+    except aos_inst.InstError as e:
+        return str(e)
     return None
 
 
@@ -151,6 +159,13 @@ def _one_cpu(h, cfg, st, queue, notes, now, n, ready):
             and ent.get("last_exit") == cfg["done_exit"]
             and runs_now - cur.get("runs_at", 0) >= 2):
         _finish(h, st, notes, now, n, cur["pid"])
+        return
+    if ent.get("last_kind") == "aos" and runs_now - cur.get("runs_at", 0) >= 2:
+        cur["aos_ticks"] = cur.get("aos_ticks", 0) + 1
+    else:
+        cur["aos_ticks"] = 0
+    if cur["aos_ticks"] >= 2:
+        _reject_running(h, st, notes, n, cur["pid"])
         return
     if runs_now - cur.get("runs_at", 0) >= cfg["quantum"] and queue:
         _swap(h, st, queue, notes, now, n, runs_now, cur["pid"])
@@ -215,6 +230,35 @@ def _finish(h, st, notes, now, n, pid):
         return
     st["cpus"][str(n)] = None
     notes.append("cpu%d 上 %s 做完了，收進 procs/done/" % (n, pid))
+
+
+def _reject_running(h, st, notes, n, pid):
+    """aos-exec 連續失敗：先留 bad 名字，再用 idle 原子蓋過 cpu。"""
+    tmp = h.cpu(n) + ".tmp"
+    bad = os.path.join(h.bad, "%s.json" % pid)
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(IDLE_INST, f, ensure_ascii=False, indent=1)
+        os.makedirs(h.bad, exist_ok=True)
+        if os.path.exists(bad):
+            os.unlink(bad)
+        os.link(h.cpu(n), bad)
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        notes.append("cpu%d 退不了 %s：%s" % (n, pid, e))
+        return
+    try:
+        os.replace(tmp, h.cpu(n))
+    except OSError as e:
+        os.unlink(bad)
+        notes.append("cpu%d 退不了 %s（idle 換不上去）：%s" % (n, pid, e))
+        return
+    st["cpus"][str(n)] = None
+    notes.append("退件 %s（cpu%d 上連續回 125：aos-exec 自己失敗；原因跑 "
+                 "aos-exec K/procs/bad/%s.json --stderr - 看）" % (pid, n, pid))
 
 
 def cmd_tick(argv):

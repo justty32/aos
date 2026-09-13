@@ -100,8 +100,10 @@
     (check "錯誤程式第一步成功" (= 0 ((run bad) :code)))
     (def boom (run bad))
     (check "第二個 form 失敗回 1" (= 1 (boom :code)))
-    (check "失敗訊息說明 form 編號是 0 起算"
-           (not (nil? (string/find "第 1 個 form（0 起算）失敗" (boom :err)))))
+    (check "失敗訊息說明 form 編號、只印第一行並指向全文"
+           (and (not (nil? (string/find "第 1 個 form（0 起算）失敗" (boom :err))))
+                (not (nil? (string/find "全文：.aos-step/error 或 --status" (boom :err))))
+                (= 1 (length (string/split "\n" (string/trim (boom :err)))))))
     (check "失敗後 pc 不動" (= "1\n" (string (slurp (string bad-dir "/.aos-step/pc")))))
     (check "error 檔有 boom" (not (nil? (string/find "boom" (string (slurp (string bad-dir "/.aos-step/error")))))))
     (spit bad "(def y 1)\n(+ y 1)\n")

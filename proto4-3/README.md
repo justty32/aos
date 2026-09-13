@@ -1,20 +1,5 @@
 # proto4-3 — aos-exec 單發、aos-run 連續、aos-daemon 管一堆、aos-kernel 排程（Python）
 
-這是 [proto4 筆記第 11 節](../proto4/notes/2026-09-08-ideas.md)（aos-exec）、
-[第 12 節](../proto4/notes/2026-09-08-ideas.md)（aos-run）與
-[第 13 節](../proto4/notes/2026-09-08-ideas.md)（aos-daemon）的原型，規格以那三節為準
-（跟第 10 節衝突的地方都聽第 11 節的）；第 14 節（拍板的那一輪）與第 15 節（daemon 的
-key 改成 inst.json 的路徑）是後來的修正，衝突時聽新的。
-
-kernel 那一段（`aos-kernel`／`aos-kernel-init`／`aos-kernel-tick`）的規格是
-[第 16～19 節](../proto4/notes/2026-09-08-ideas.md)：第 16 節對齊名詞（daemon＝硬體、
-kernel＝第一個程序）、第 17 節是 kernel 管 `procs/` 的初步想法與問答、第 18 節是原型定案、
-第 19 節把它拆成 `aos-kernel-init`（§19.4）／`aos-kernel-tick`（§19.7）一系列獨立指令，
-一樣衝突時聽新的。
-
-← [proto4-2](../proto4-2/README.md)（inst.json ＋ cpu ＋ daemon ＋ kernel；那一版的
-inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu 抓回 `last.json`）
-
 換的思路是：**inst.json 只是我們規定的第一版指令集**，像 ARM 那樣小而統一——欄位少、
 但每個都有定義。最陽春的指令集是「一個檔讀進來就跑」，inst.json 只是在不增加複雜度的
 前提下多給了 stdin／stdout／stderr／exit／cwd／envs。
@@ -37,7 +22,7 @@ inst.json 是八欄、相對路徑以資料夾為中心、串流沒寫會被 cpu
 ```sh
 export AOS_DAEMON_HOME=~/.aos-daemon   # daemon、ctl、kernel 三支都靠這個找家；用 --home 不會傳給子孫
 cd proto4-3
-python3 -m unittest discover -s test        # 205 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 213 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 ./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 ./aos-exec /path/to/folder --stderr -       # 看不到錯誤時先加這個
@@ -51,14 +36,16 @@ echo $?                                     # 子程式的結束狀態；125＝a
 ```sh
 ./aos-run /path/to/folder --interval-ms 5000            # 一直跑，每 5 秒一次
 
-./aos-daemon &                                          # 非互動 shell 結束會把它帶走；要常駐用 nohup … &、setsid 或 tmux
+setsid -f ./aos-daemon                                  # 上電（腳本／非互動 shell 用這個，不會被帶走）
+./aos-daemon &                                          # 互動終端可以這樣
 ./aos-daemon-ctl add /path/to/inst.json --interval-ms 5000    # daemon 只收 .json 的路徑
 ./aos-daemon-ctl ls
 
-./aos-daemon &                              # 上電
 ./aos-kernel-init K --ncpu 2                # 灌一次作業系統
 ./aos-kernel-boot K                         # 開機：把 kernel 放上 daemon
-./aos-kernel add K my-proc.json; ./aos-kernel ls K
+./aos-kernel add K my-proc.json             # 排行程
+./aos-kernel ls K                           # 看狀態
+./aos-daemon-ctl stop                       # 關機
 ```
 
 cpu 不用你插，kernel 第一回合會自己把 `cpus/*.json` 掛上 daemon。排進 `K/procs/`
@@ -67,6 +54,10 @@ cpu 不用你插，kernel 第一回合會自己把 `cpus/*.json` 掛上 daemon�
 ```json
 {"argv":["/abs/程式"],"cwd":"/abs/資料夾","stdout":"out.txt","stderr":"err.txt"}
 ```
+
+用 `aos-kernel add` 排時，`cwd` 可以省略，意思就是 inst.json 所在的資料夾；自己手放進
+`procs/` 就一定要寫，沒寫會退件。相對 `cwd` 以 inst.json 所在資料夾為準，`argv[0]` 則以
+轉完的 cwd 為準。`add` 會照 aos-exec 的規則把整份再驗一遍，多寫的欄位也會被擋。
 
 當成函式用（aos-run 就是這樣接的）：
 
@@ -84,57 +75,11 @@ code, kind = aos_exec.run_target("/path/to/folder", dir_target=".aos/inst.json",
 | aos-exec | [docs/exec.md](docs/exec.md) | 三種目標、inst.json 七欄、指示詞、退出碼 |
 | aos-run | [docs/run.md](docs/run.md) | 間隔怎麼算、`--status-fd`、什麼時候停、印什麼 |
 | aos-daemon | [docs/daemon.md](docs/daemon.md) | key、五個狀態、七個動作、請求格式、家目錄、CLI |
-| aos-kernel | [docs/kernel.md](docs/kernel.md) | init 灌一次、boot 開機、add 排行程、tick 排程、ls 看狀態 |
+| aos-kernel | [docs/kernel.md](docs/kernel.md) | init 灌一次、boot 開機、add 排行程、rm 拿掉、tick 排程、ls 看狀態 |
 
 ## 檔案
 
-- `aos-exec`：命令列入口，可執行，薄薄一層。
-- `aos_exec.py`：認目標是哪一種、組出要跑的東西、跑一次、砍逾時、寫 exit 檔。核心是
-  `run_target(xxx, dir_target=…, timeout_ms=…, stderr=…) -> (code, kind)`，`kind` 是
-  `child`／`aos`／`usage`。
-- `aos_inst.py`：inst.json 的讀、驗、解指示詞（格式那一層），從 proto4-2 抄來改的。
-- `aos-run`：aos-run 的命令列入口，可執行，一樣薄薄一層。
-- `aos_run.py`：迴圈本體——什麼時候跑下一次、什麼時候停、跑完印一行（給人）＋寫一個事件
-  （給程式）。核心是 `run_loop(xxx, *, dir_target=…, timeout_ms=…, interval_ms=…,
-  from_start=…, max_runs=…, time_limit_ms=…, stop_exits=…, log=…, status_fd=…,
-  stop_on_error=…, stderr=…) -> (退出碼, 停止原因)`。
-- `aos-daemon`：daemon 本人的命令列入口——普通前台程式，解 `--home`、檢查已經在跑、
-  `Daemon(home).serve()`。不背景化，自己 `&` 或交給 systemd。
-- `aos_daemon.py`：daemon 本體——那個 dict、七個動作（都是 `Daemon` 的方法、都回
-  `(ok, result)`、都立刻回，測試可以不開 daemon 進程直接叫）、主迴圈一圈 `tick()`
-  （收請求、推狀態機、收屍）、落地與收工。
-- `aos_daemon_entry.py`：表上的**一筆**長什麼樣（`Entry`）＋五個狀態的**狀態機**
-  （`advance()`／`begin_stop()`）＋兩條讀取執行緒（讀 status 更新近況、讀 stderr 進 log）
-  ＋ key 那兩條規則：`key_of()`（那份 `.json` 的 realpath）與 `json_only()`（只收 `.json`）。
-- `aos_daemon_req.py`：**請求檔**那一層——`dispatch()`（一個請求 →`(ok, result)`）與
-  `handle_requests()`（掃 `requests/`、處理、搬到 `done/`）。
-- `aos-daemon-ctl`：命令列入口，可執行，薄薄一層，真東西在 `aos_daemon_ctl.py`。
-- `aos_daemon_ctl.py`：對 daemon 下指令——丟請求等回音、讀 `state.json` 印表；daemon 沒在
-  跑時 `ls`／`get` 讀最後狀態、其他指令直接說「daemon 沒在跑」。
-- `aos-kernel`：命令列入口，可執行，薄薄一層，真東西在 `aos_kernel.py`。
-- `aos_kernel.py`：家的版面（`KHome`：哪個檔在哪、讀寫 config／state／log，`here_or_die()`
-  共用）＋剩下的唯一子命令 `ls`。`init`／`tick` 都拿掉了，被人叫到只回退出碼 2、提示改用
-  `aos-kernel-init`／`aos-kernel-tick`。
-- `aos-kernel-init`：命令列入口，可執行，薄薄一層，真東西在 `aos_kernel_init.py`。
-- `aos_kernel_init.py`：`init` 本體——建家與四個檔（`inst.json`／`config.json`／
-  `state.json`／`kernel.log`／`procs/`／`cpus/`），從 `aos_kernel.py` 拆出來的獨立指令
-  （§19.4：重灌作業系統跟每回合跑的心跳／給人看的 ls 不是同一種壽命），共用
-  `aos_kernel.KHome`。
-- `aos-kernel-boot`：命令列入口，可執行，薄薄一層，真東西在 `aos_kernel_boot.py`。
-- `aos_kernel_boot.py`：確認 kernel 已 init、daemon 活著，沒在跑才直接送一個 add 請求。
-- `aos_kernel_add.py`：`aos-kernel add` 本體——檢查 inst、轉 cwd／argv[0] 絕對路徑、配名後
-  原子排進 `procs/`。
-- `aos-kernel-tick`：命令列入口，可執行，薄薄一層，真東西在 `aos_kernel_tick.py`。
-- `aos_kernel_tick.py`：心跳本體——一回合那五步：點 cpu（`poll_cpus`／`ctl_add`）、檢查佇列
-  （`check_queue`／`bad_reason`）、排程（`schedule`／`_take`／`_swap`，硬連結＋rename 那招），
-  也是從 `aos_kernel.py` 拆出來的獨立指令（§19.7），共用 `aos_kernel.here_or_die()`。
-- `aos_home.py`：家目錄的版面（哪個檔在哪）＋家的優先序（`--home` → `AOS_DAEMON_HOME` →
-  `~/.aos-daemon`）＋原子寫檔＋pid 活不活，從 proto4-2 改的。
-- `test/`：`python3 -m unittest discover -s test`（185 條）。kernel 的在
-  `test_kernel.py`（真的開一支 daemon ＋ 真的跑 aos-kernel）。daemon 的測試分三支：
-  `_daemon.py`（共用基底，底線開頭＝discover 不撿）、`test_daemon.py`（key 與查）、
-  `test_daemon_ops.py`（暫停／刪／restart／請求），另外 `test_daemon_cli.py` 真的開一支
-  daemon 進程走完一輩子。
+逐檔職責搬到 [docs/files.md](docs/files.md)，新手入口只留怎麼用。
 
 ## 沒做什麼
 
@@ -185,3 +130,10 @@ aos-daemon 這一版另外沒做的：
 - 不檢查 inst.json 的權限。一份 inst.json 就是可執行的權柄：它可以指名任意程式、引數、
   輸入輸出檔、工作目錄與環境變數值，全都用你的憑證跑。能改它的人就等於能用你的身分執行
   任意程式碼。
+
+## 出處
+
+這是 [proto4 筆記第 11～15 節](../proto4/notes/2026-09-08-ideas.md)（aos-exec、aos-run、
+aos-daemon）與 [第 16～19 節](../proto4/notes/2026-09-08-ideas.md)（kernel）的原型；後面的
+裁決優先於前面的。上一版是 [proto4-2](../proto4-2/README.md)，當時 inst.json 是八欄、
+相對路徑以資料夾為中心、沒寫的串流會被 cpu 抓回 `last.json`。

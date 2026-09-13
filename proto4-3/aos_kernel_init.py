@@ -40,7 +40,7 @@ def cmd_init(argv):
     if os.path.exists(h.dir):
         sys.stderr.write("aos-kernel-init: 已經有這個資料夾了，不動它：%s\n" % h.dir)
         return 1
-    for p in (h.dir, h.procs, h.bad, h.done, h.cpus):
+    for p in (h.dir, h.procs, h.bad, h.done, h.cpus, h.syscalls, h.syscalls_done):
         os.makedirs(p)
     # argv[0] 寫絕對路徑：daemon→aos-run→aos-exec 繼承下來的 PATH 未必找得到 aos-kernel-tick
     aos_home.write_json(h.instf, {"argv": [TICK_BIN], "cwd": "."})
@@ -54,6 +54,7 @@ def cmd_init(argv):
     print("家建好了：%s（ncpu=%d）" % (h.dir, a.ncpu))
     print("開機：aos-daemon & ； aos-kernel-boot %s" % h.dir)
     print("排行程：aos-kernel add %s 你的.json（cwd／argv 相對路徑會幫你轉絕對）" % h.dir)
+    print("拿掉行程：aos-kernel rm %s NAME" % h.dir)
     return 0
 
 

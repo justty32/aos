@@ -5,6 +5,7 @@ import json
 import os
 import sys
 
+import aos_inst
 from aos_kernel import KHome
 
 
@@ -53,13 +54,14 @@ def cmd_add(argv):
     if len(a.paths) == 2:
         try:
             os.chdir(kernel_dir)
-        except OSError as e:
-            sys.stderr.write("aos-kernel: 進不去 kernel 的家：%s（%s）\n"
-                             % (a.paths[0], e))
+        except OSError:
+            sys.stderr.write("aos-kernel: %s 不是 kernel 的家（還沒灌？先跑："
+                             "aos-kernel-init %s --ncpu N）\n" % (a.paths[0], a.paths[0]))
             return 1
     h = KHome(kernel_dir)
     if h.config() is None:
-        sys.stderr.write("aos-kernel: 這裡不是 kernel 的家（沒有 config.json）：%s\n" % h.dir)
+        sys.stderr.write("aos-kernel: %s 不是 kernel 的家（還沒灌？先跑："
+                         "aos-kernel-init %s --ncpu N）\n" % (h.dir, h.dir))
         return 1
 
     try:
@@ -108,6 +110,11 @@ def cmd_add(argv):
     try:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(inst, f, ensure_ascii=False, indent=1)
+        try:
+            aos_inst.load(tmp, os.path.dirname(tmp))
+        except aos_inst.InstError as e:
+            os.unlink(tmp)
+            return _fail("inst.json 過不了 aos-exec 的檢查：%s" % e)
         os.replace(tmp, dst)
     except OSError as e:
         try:
@@ -117,4 +124,5 @@ def cmd_add(argv):
         return _fail("排不進佇列：%s" % e)
     print("排進去了：%s  cwd=%s  argv=%s"
           % (dst, cwd, json.dumps(argv_value, ensure_ascii=False)))
+    print("（下一回合才會出現在 aos-kernel ls）")
     return 0

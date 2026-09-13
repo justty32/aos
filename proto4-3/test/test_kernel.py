@@ -20,6 +20,7 @@ import unittest
 import _util           # noqa: F401  （它把 proto4-3 放進 sys.path）
 from aos_home import Home, alive
 from aos_kernel import IDLE_INST, KHome
+from aos_kernel_syscall import handle_syscalls
 from aos_kernel_tick import _one_cpu
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -151,6 +152,12 @@ class KernelTest(unittest.TestCase):
             json.dump(body, f, ensure_ascii=False)
         return path
 
+    def put_syscall(self, name, body):
+        path = self.at("syscalls", name)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(body if isinstance(body, str) else json.dumps(body))
+        return path
+
 
 class KernelInitTest(KernelTest):
     def test_boot_refuses_a_home_that_was_not_initialized(self):
@@ -168,7 +175,8 @@ class KernelInitTest(KernelTest):
         r = self.init(2, interval_ms=100, timeout_ms=500, quantum=3)
         self.assertIn(self.k, r.stdout)
         for rel in ("procs", os.path.join("procs", "bad"),
-                    os.path.join("procs", "done"), "cpus"):
+                    os.path.join("procs", "done"), "cpus", "syscalls",
+                    os.path.join("syscalls", "done")):
             self.assertTrue(os.path.isdir(self.at(rel)), rel)
         for rel in ("inst.json", "config.json", "state.json", "kernel.log"):
             self.assertTrue(os.path.exists(self.at(rel)), rel)
@@ -182,6 +190,7 @@ class KernelInitTest(KernelTest):
         self.assertEqual(self.kstate(), {"cpus": {"0": None, "1": None}, "queue": []})
         self.assertIn("aos-kernel-boot %s" % self.k, r.stdout)
         self.assertIn("aos-kernel add %s" % self.k, r.stdout)
+        self.assertIn("aos-kernel rm %s" % self.k, r.stdout)
 
     def test_init_refuses_a_dir_that_is_already_there(self):
         self.init(1)
@@ -204,7 +213,7 @@ class KernelInitTest(KernelTest):
 
     def test_tick_and_ls_need_to_be_in_a_home(self):
         r = self.kernel_tick(cwd=self.tmp)
-        self.assertEqual((r.returncode, "config.json" in r.stderr), (1, True), r.stderr)
+        self.assertEqual((r.returncode, "aos-kernel-init" in r.stderr), (1, True), r.stderr)
         self.assertEqual(self.kernel("ls", cwd=self.tmp).returncode, 1)
         self.assertEqual(self.kernel("nope").returncode, 2)
         self.assertEqual(self.kernel().returncode, 2)
@@ -234,7 +243,8 @@ class KernelInitTest(KernelTest):
         self.tick()
         out = self.kernel("ls", cwd=self.k).stdout
         self.assertIn("ncpu=2", out)
-        self.assertIn("CPU  PID", out)
+        self.assertIn("CPU  PROC", out)
+        self.assertIn("LAST_EXIT", out)
         self.assertIn("沒插上", out)                        # daemon 沒起來
         self.assertIn("佇列（1 個）：3", out)
 
@@ -320,6 +330,57 @@ class KernelInitTest(KernelTest):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(os.path.isfile(self.at("procs", "1.json")))
 
+    def test_rm_queued_proc_is_handled_without_a_daemon(self):
+        self.init(1)
+        self.put_proc("queued")
+        self.put_syscall("1-rm-queued.json", {"op": "rm", "pid": "queued"})
+        h = KHome(self.k)
+        st, notes = h.state(), []
+        handle_syscalls(h, h.config(), st, notes)
+        self.assertFalse(os.path.exists(h.proc("queued")))
+        with open(os.path.join(h.syscalls_done, "1-rm-queued.json"), encoding="utf-8") as f:
+            self.assertEqual(json.load(f), {"ok": True, "msg": "rm queued（原本在佇列）"})
+        self.assertIn("rm queued（原本在佇列）", notes)
+
+    def test_unknown_syscall_gets_a_negative_reply(self):
+        self.init(1)
+        self.put_syscall("1-wat.json", {"op": "wat"})
+        h = KHome(self.k)
+        handle_syscalls(h, h.config(), h.state(), [])
+        with open(os.path.join(h.syscalls_done, "1-wat.json"), encoding="utf-8") as f:
+            out = json.load(f)
+        self.assertFalse(out["ok"])
+        self.assertIn("看不懂這張單", out["msg"])
+        self.assertFalse(os.path.exists(os.path.join(h.syscalls, "1-wat.json")))
+
+    def test_add_rejects_an_unknown_inst_field_without_queuing(self):
+        self.init(1)
+        inst = self.write_inst("job.json", {"argv": ["true"], "timeout_ms": 20})
+        r = self.kernel("add", self.k, inst)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("UnknownKey", r.stderr)
+        self.assertEqual([n for n in os.listdir(self.at("procs")) if n.endswith(".json")], [])
+
+    def test_manually_queued_unknown_field_goes_to_bad_with_exact_validator_error(self):
+        self.init(1)
+        self.put_proc("badfield", {"argv": ["true"], "cwd": self.tmp,
+                                   "timeout_ms": 20})
+        self.tick()
+        self.assertTrue(os.path.exists(self.at("procs", "bad", "badfield.json")))
+        with open(self.at("kernel.log"), encoding="utf-8") as f:
+            log = f.read()
+        self.assertIn("UnknownKey", log)
+        self.assertIn("不認得的欄位", log)
+
+    def test_ls_of_a_missing_home_points_to_kernel_init(self):
+        missing = os.path.join(self.tmp, "missing")
+        results = (self.kernel("ls", missing),
+                   self.kernel("add", missing, "job.json"),
+                   self.kernel("rm", missing, "nobody"))
+        for r in results:
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("aos-kernel-init", r.stderr)
+
 
 class KernelDaemonTest(KernelTest):
     """真的開 daemon 的那幾條。"""
@@ -332,10 +393,56 @@ class KernelDaemonTest(KernelTest):
         self.init(1, interval_ms=73, timeout_ms=456)
         r = self.kernel_boot(self.k, "--home", self.home.dir)
         self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("ok=", r.stdout)
         key = os.path.realpath(self.at("inst.json"))
         self.assertTrue(wait_until(lambda: key in self.table()), self.table())
         self.assertEqual(self.table()[key]["args"],
                          ["--interval-ms", "73", "--timeout-ms", "456"])
+
+    def test_rm_proc_on_cpu_idles_it_without_leaving_a_done_proc(self):
+        self.spawn_daemon()
+        self.init(1, interval_ms=40, quantum=100)
+        self.assertEqual(self.kernel_boot(self.k).returncode, 0)
+        inst = self.write_inst("stay.json", {"argv": ["true"], "cwd": self.tmp})
+        self.assertEqual(self.kernel("add", self.k, inst, "--name", "stay").returncode, 0)
+        self.assertTrue(wait_until(lambda: self.on_cpus().get("0") == "stay"), self.kstate())
+        r = self.kernel("rm", self.k, "stay")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("原本在 cpu0", r.stdout)
+        self.assertTrue(wait_until(lambda: self.kstate()["cpus"]["0"] is None))
+        with open(self.at("cpus", "0.json"), encoding="utf-8") as f:
+            self.assertEqual(json.load(f), IDLE_INST)
+        self.assertFalse(os.path.exists(self.at("procs", "done", "stay.json")))
+
+    def test_rm_missing_proc_returns_the_negative_kernel_reply(self):
+        self.spawn_daemon()
+        self.init(1, interval_ms=40)
+        self.put_syscall("1-rm-nobody.json", {"op": "rm", "pid": "nobody"})
+        h = KHome(self.k)
+        handle_syscalls(h, h.config(), h.state(), [])
+        reply = os.path.join(h.syscalls_done, "1-rm-nobody.json")
+        with open(reply, encoding="utf-8") as f:
+            self.assertFalse(json.load(f)["ok"])
+        os.unlink(reply)
+        self.assertEqual(self.kernel_boot(self.k).returncode, 0)
+        r = self.kernel("rm", self.k, "nobody-either")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("找不到這個行程：nobody-either", r.stdout)
+
+    def test_two_observations_of_aos_125_move_the_proc_to_bad(self):
+        self.spawn_daemon()
+        self.init(1, interval_ms=40, quantum=100)
+        self.assertEqual(self.kernel_boot(self.k).returncode, 0)
+        inst = self.write_inst("fails.json", {"argv": ["true"], "cwd": self.tmp,
+                                               "stdout": "missing/out.txt"})
+        self.assertEqual(self.kernel("add", self.k, inst, "--name", "fails").returncode, 0)
+        bad = self.at("procs", "bad", "fails.json")
+        self.assertTrue(wait_until(lambda: os.path.exists(bad)), self.table())
+        self.assertTrue(wait_until(lambda: self.kstate()["cpus"]["0"] is None))
+        with open(self.at("cpus", "0.json"), encoding="utf-8") as f:
+            self.assertEqual(json.load(f), IDLE_INST)
+        with open(self.at("kernel.log"), encoding="utf-8") as f:
+            self.assertIn("連續回 125", f.read())
 
     def test_boot_is_harmless_when_the_kernel_is_already_running(self):
         self.spawn_daemon()

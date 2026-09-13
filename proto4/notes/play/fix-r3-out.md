@@ -1,0 +1,10 @@
+- A：完成 `rm` syscall、收件匣與回音機制；改 kernel／tick／init、新增 `aos_kernel_syscall.py` 與測試。
+- B：add 與 queue 接上 aos-exec 驗證器，連續 125 會退件；改 add／tick／測試。
+- C：ls 加 `PROC`／`LAST_EXIT`、統一家錯誤、boot 靜音、add 提醒下一回合；改 kernel／add／boot／daemon ctl。
+- D：README 收尾、逐檔說明搬到 `docs/files.md`、kernel 文件補 syscall、Janet 錯誤只印首行。
+- Python：213 條；最後一行原文：`OK`
+- Janet：34／12／34；原文：`34 條通過 ✓`／`12 條通過 ✓`／`34 條通過 ✓`
+- 根目錄驗證：build 成功；`100% tests passed, 0 tests failed out of 8`
+- 自己決定：rm 的 NAME 禁止 `/`，tick 只收完整 `.json`、略過 `.tmp`。
+- 撞到的坑：rm 回音可能早於同回合 state 落盤，測試有等 tick 收尾。
+- 沒做到：#7、#8 照要求未動；code map 因限改清單未碰；沒有 commit／push。

@@ -3,6 +3,7 @@
 
     aos-kernel ls [DIR]                         # 印給人看
     aos-kernel add [DIR] INST.json [--name NAME] # 排一個行程進佇列
+    aos-kernel rm [DIR] NAME                     # 請 kernel 拿掉一個行程
 
 `init`（重灌，很久一次）與 `tick`（心跳，每回合）都拆成自己的獨立指令了：
 `aos-kernel-init`（見 `aos_kernel_init.py`）與 `aos-kernel-tick`（見
@@ -19,14 +20,16 @@
     DIR/inst.json       kernel 自己那顆 cpu 的指令，只有 kernel 能動
     DIR/config.json     {"ncpu":N,"interval_ms":X,"timeout_ms":Y,"quantum":Q,"done_exit":E}
     DIR/procs/<pid>.json  就緒佇列，檔名去掉 .json ＝ pid
-    DIR/procs/bad/      退件（不是 JSON 物件／沒有 argv／沒寫 cwd）
-    DIR/procs/done/     用保留退出碼表示做完的行程
+    DIR/procs/bad/      退件（格式／欄位不合，或跑起來連續回 125）
+    DIR/procs/done/     回保留退出碼做完的行程；rm 拿掉的不會進來
     DIR/cpus/<n>.json   每顆 cpu 一份 inst.json，這個路徑就是 daemon 表上的 key
+    DIR/syscalls/       給 kernel 的單子
+    DIR/syscalls/done/  單子的回音
     DIR/state.json      kernel 自己的表：cpu n → pid、上去的時間、上去時的 runs、佇列
     DIR/kernel.log      每回合一行流水帳
 
-一回合五步（順序固定），做完一律退出 0——**kernel 不會因為外面的事死掉**，
-daemon 沒在跑、ctl 失敗都只是記一行 log。五步見 `aos_kernel_tick.tick()`。
+一回合六步（順序固定），做完一律退出 0——**kernel 不會因為外面的事死掉**，
+daemon 沒在跑、ctl 失敗都只是記一行 log。六步見 `aos_kernel_tick.tick()`。
 """
 import json
 import os
@@ -40,7 +43,8 @@ CTL_BIN = os.path.join(HERE, "aos-daemon-ctl")
 IDLE_INST = {"argv": ["true"], "cwd": "."}
 DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5, "done_exit": 100}
 USAGE = ("用法：aos-kernel ls [DIR]\n"
-         "      aos-kernel add [DIR] INST.json [--name NAME]\n")
+         "      aos-kernel add [DIR] INST.json [--name NAME]\n"
+         "      aos-kernel rm [DIR] NAME\n")
 INIT_HINT = ("aos-kernel: init 改成獨立指令 aos-kernel-init（不再是 aos-kernel 的子命令）："
              "aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] "
              "[--done-exit N]\n")
@@ -63,6 +67,8 @@ class KHome:
         self.bad = os.path.join(self.procs, "bad")
         self.done = os.path.join(self.procs, "done")
         self.cpus = os.path.join(self.dir, "cpus")
+        self.syscalls = os.path.join(self.dir, "syscalls")
+        self.syscalls_done = os.path.join(self.syscalls, "done")
         self.statef = os.path.join(self.dir, "state.json")
         self.logf = os.path.join(self.dir, "kernel.log")
 
@@ -127,7 +133,8 @@ def here_or_die(prog):
     h = KHome(os.getcwd())
     cfg = h.config()
     if cfg is None:
-        sys.stderr.write("%s: 這裡不是 kernel 的家（沒有 config.json）：%s\n" % (prog, h.dir))
+        sys.stderr.write("aos-kernel: %s 不是 kernel 的家（還沒灌？先跑："
+                         "aos-kernel-init %s --ncpu N）\n" % (h.dir, h.dir))
         return None, None
     return h, cfg
 
@@ -139,8 +146,9 @@ def cmd_ls(argv):
     if argv:
         try:
             os.chdir(argv[0])
-        except OSError as e:
-            sys.stderr.write("aos-kernel: 進不去 kernel 的家：%s（%s）\n" % (argv[0], e))
+        except OSError:
+            sys.stderr.write("aos-kernel: %s 不是 kernel 的家（還沒灌？先跑："
+                             "aos-kernel-init %s --ncpu N）\n" % (argv[0], argv[0]))
             return 1
     h, cfg = here_or_die("aos-kernel")
     if h is None:
@@ -158,18 +166,25 @@ def cmd_ls(argv):
     print("家 %s  ncpu=%d interval=%dms timeout=%dms quantum=%d done_exit=%d"
           % (h.dir, cfg["ncpu"], cfg["interval_ms"], cfg["timeout_ms"], cfg["quantum"],
              cfg["done_exit"]))
-    print("CPU  PID   ON        RUNS  CPU_STATE")
+    print("CPU  PROC  ON        RUNS  LAST_EXIT  CPU_STATE")
     for n in range(cfg["ncpu"]):
         cur = st["cpus"].get(str(n))
         ent = runs.get(os.path.realpath(h.cpu(n)))
         state = ent.get("state", "?") if ent else "沒插上"
+        last_exit = "-"
+        if ent:
+            if ent.get("last_kind") == "aos":
+                last_exit = "125(aos)"
+            elif ent.get("last_exit") is not None:
+                last_exit = str(ent.get("last_exit"))
         if cur:
             got = ent.get("runs", 0) - cur.get("runs_at", 0) if ent else "-"
-            print("%-4d %-5s %-9s %-5s %s"
+            print("%-4d %-5s %-9s %-5s %-10s %s"
                   % (n, cur.get("pid"), "%.1fs" % (now - cur.get("since", now)),
-                     got, state))
+                     got, last_exit, state))
         else:
-            print("%-4d %-5s %-9s %-5s %s" % (n, "idle", "-", "-", state))
+            print("%-4d %-5s %-9s %-5s %-10s %s"
+                  % (n, "idle", "-", "-", last_exit, state))
     q = st["queue"]
     print("佇列（%d 個）：%s" % (len(q), " ".join(q) if q else "沒人在等"))
     bad = sorted(n for n in os.listdir(h.bad)
@@ -215,6 +230,9 @@ def main(argv=None):
     if cmd == "add":
         from aos_kernel_add import cmd_add
         return cmd_add(rest)
+    if cmd == "rm":
+        from aos_kernel_syscall import cmd_rm
+        return cmd_rm(rest)
     sys.stderr.write("aos-kernel: 不認得的子命令：%s\n%s" % (cmd, USAGE))
     return 2
 
