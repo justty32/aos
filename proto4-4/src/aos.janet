@@ -16,12 +16,23 @@
 (def- default-exec
   (string (dirname (dirname source-file)) "/../proto4-3/aos-exec"))
 
+(def- default-llm
+  (string (dirname (dirname source-file)) "/../proto4-5/aos-llm"))
+
 (def- resolved-exec
   (let [raw (or (os/getenv "AOS_EXEC") default-exec)
         tried (protect (os/realpath raw))
         path (if (tried 0) (tried 1) nil)]
     (unless (and path (= :file (os/stat path :mode)))
       (error (string "aos: 找不到 aos-exec：" raw)))
+    path))
+
+(def- resolved-llm
+  (let [raw (or (os/getenv "AOS_LLM") default-llm)
+        tried (protect (os/realpath raw))
+        path (if (tried 0) (tried 1) nil)]
+    (unless (and path (= :file (os/stat path :mode)))
+      (error (string "aos: 找不到 aos-llm：" raw)))
     path))
 
 (defn exec-path [] resolved-exec)
@@ -85,6 +96,9 @@
   # 不把 spork 的 cfunction 綁進模組環境，讓 aos-step 可以 make-image。
   ((get-in (require json-module) ['decode :value]) text))
 
+(defn- encode-json [value]
+  (string ((get-in (require json-module) ['encode :value]) value)))
+
 (defn- aos-line? [stderr]
   (var found false)
   (each line (string/split "\n" stderr)
@@ -147,6 +161,53 @@
 
 (defn value [result]
   (if (has-key? result :value) (result :value) (result :out)))
+
+(defn llm
+  "同步呼叫一次 aos-llm，把請求與結果留在 out.req.json／out。"
+  [endpoint req out &opt opts]
+  (unless (string? endpoint)
+    (error "aos/llm: endpoint 必須是字串"))
+  (unless (or (table? req) (struct? req))
+    (error "aos/llm: req 必須是 table 或 struct"))
+  (unless (string? out)
+    (error "aos/llm: out 必須是字串"))
+  (when (and opts (not (table? opts)))
+    (error "aos/llm: opts 必須是 table"))
+  (default opts @{})
+  (eachp [key value] opts
+    (unless (= key :timeout-ms)
+      (error (string "aos/llm: 不認得的選項 " key)))
+    (unless (and (integer? value) (>= value 0))
+      (error "aos/llm: :timeout-ms 必須是非負整數")))
+  (def reqfile (string out ".req.json"))
+  (def instfile (string out ".aos-llm.json"))
+  (spit reqfile (string (encode-json req) "\n"))
+  # aos-exec 的普通檔案模式沒有傳 argv 的入口；用一份短命 inst 仍由 aos/call
+  # 執行，並把三條流接回呼叫者。相對 endpoint／out 仍以呼叫者 cwd 為中心。
+  (spit instfile
+        (string (encode-json
+                  @{"argv" @[resolved-llm "call" endpoint reqfile out]
+                    "cwd" (os/cwd)
+                    "stdout" "/dev/stdout"
+                    "stderr" "/dev/stderr"})
+                "\n"))
+  (def call-opts @{:read out :json true})
+  (when-let [timeout (opts :timeout-ms)]
+    (put call-opts :timeout-ms timeout))
+  (def result
+    (defer (protect (os/rm instfile))
+      (call instfile call-opts)))
+  # aos/call 為了辨認 kind 會接住 stderr；LLM 這條同步介面要讓它仍出現在
+  # aos-step 的 stderr，同時保留在結果 table 供程式查看。
+  (when (> (length (result :stderr)) 0)
+    (eprint (string/trimr (result :stderr))))
+  result)
+
+(defn llm-text [result]
+  (def value (result :value))
+  (if (and (dictionary? value) (get value "ok"))
+    (get value "text")
+    nil))
 
 (defn- copy-opts [opts]
   (def copied @{})

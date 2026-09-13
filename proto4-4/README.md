@@ -118,6 +118,26 @@ echo $?                                 # 全部跑完那次回 100
 `pipe` 的每段是 target 字串或 `[target opts]`，回最後一段的結果，`:steps` 留全部結果。
 只接受普通可執行檔；最外層 opts 的 `:json` 只對最後一段生效。
 
+### 叫 LLM
+
+```janet
+(def r
+  (aos/llm "endpoints.json#local"
+           @{:messages [@{:role "user" :content "你好"}]}
+           "result.json"
+           @{:timeout-ms 60000}))
+(aos/llm-text r) # 成功是文字，失敗是 nil
+(get-in r [:value "text"])
+```
+
+`aos/llm` 用 spork 把請求寫到 `result.json.req.json` 留著對帳，再同步呼叫
+`../proto4-5/aos-llm`，結果 table 仍有 `:code`、`:kind`、`:out`、`:value`；`:value`
+是解好的結果 dict。endpoint 與其他相對路徑都以呼叫者 cwd 為中心，跟 `:read` 一樣。
+環境變數 `AOS_LLM` 可覆蓋預設的 `aos-llm` 路徑。
+
+這是同步的：那一格會等到回應回來，幾十秒也等；要不等就走排程層。`:timeout-ms` 是
+整個 `aos-llm` 子行程的上限，交給 `aos/call` 處理。
+
 ## 狀態資料夾長什麼樣
 
 `prog.janet` 旁邊會出現：
@@ -143,7 +163,7 @@ echo $?                                 # 全部跑完那次回 100
 - `README.md`：本頁，解釋逐步程式、cpu 接法與限制。
 - `project.janet`：Janet 專案資料與 spork 依賴。
 - `aos-step`：可執行的薄 CLI。
-- `src/aos.janet`：透過 proto4-3 `aos-exec` 叫目標、接流、讀檔、解 JSON 與串接。
+- `src/aos.janet`：透過 proto4-3 `aos-exec` 叫目標、接流、讀檔、解 JSON、串接與同步叫 LLM。
 - `src/step.janet`：切 form、eval、錯誤處理與 image 狀態持久化。
 - `test/aos.janet`：函式庫、三種目標、逾時與錯誤分類測試。
 - `test/step.janet`：每步真開新行程的持久化、重試、status 與 reset 測試。

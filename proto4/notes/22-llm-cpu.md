@@ -68,3 +68,5 @@
 - 接線三處：syscall 單的 op 不是內建的就問 module；tick 在處理完 syscalls 之後跑每個 module 的一格；`aos-kernel <NAME> …` 轉給 module 的 cli；`ls` 多印 module 的 status 一行。
 - **llm module 很薄**：家在 `K/llm/`，`handle`＝把單裡的請求 submit 進 `K/llm/requests/`，`tick`＝就是 proto4-5 的 `llm_cpu_tick.tick(K/llm)`，`cli`＝`aos-kernel llm K req.json [--wait N]`。`--wait` 是給 lisp 暫時用的同步路（一格等到結果為止）；「不等」的語意（form 說「這格還沒好」）還是要另外定。
 - `llm-cpu` 獨立行程的掛法保留，但 README 推薦 module。
+
+**22.7 落地補記**：第一層抽出來了（codex gpt-sol）：`proto4-5/aos-llm call|models`（`aos_llm.py` 224 行是純函式庫，worker 縮到 57 行只剩讀寫檔）、lisp 端 `aos/llm`／`aos/llm-text`；Python 39 條、Janet 37/12/34 全綠。真打 LM Studio：`aos-llm models` 列出 gemma、`aos-llm call` 回 Hello、lisp 那條也通。**撞到一個 inst 慣例的邊**：普通檔案目標不能帶 argv（README 定的），所以 `aos/llm` 是寫一份短命 inst.json 叫 `aos-llm call …` 再刪——能用，但這暗示「lisp 叫指令帶參數」是常見需求，之後可能要讓 `aos/call` 對普通檔案接受 args（等碰到第二個例子再定）。
