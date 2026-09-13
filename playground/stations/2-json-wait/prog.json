@@ -1,0 +1,5 @@
+[
+  {"argv": ["/bin/sh", "-c", "date > started.txt"], "cwd": ".", "wait_for": "go.txt"},
+  {"argv": ["/bin/sh", "-c", "echo \"等到了：$(cat go.txt)\" > got.txt"], "cwd": "."},
+  {"argv": ["/bin/sh", "-c", "date > finished.txt"], "cwd": "."}
+]
