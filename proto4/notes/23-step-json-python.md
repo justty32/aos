@@ -55,3 +55,14 @@
 - `aos-step-lua`（`return {{name=,fn=},…}`；自帶 `lua/json.lua`、`base64.lua`、`aos.lua`；不合法 UTF-8 的字串自動存成 `{"$b64":…}`）——22 條。README 的 `job.lua` 我手跑：四格→100，`raw` 存成 `{"$b64":"AP8B"}`。
 - Python 版的 `$b64`（bytes）另派一本小任務補齊（codex-task-4）。
 - 這三支加上 proto4-4 的逐步 lisp，就是「一格跑一步、狀態落檔、做完回 100」這個形狀的四種寫法；kernel 一視同仁。
+
+## 23.7 等待語意定案：宣告要等的檔（使用者 2026-09-13 選的）
+
+四個選項（宣告要等的檔／特殊回傳值再來一次／同步到底／kernel sleep-wake），使用者選**宣告要等的檔**。規則（四支執行器一模一樣）：
+
+- 一格可以宣告「我在等 X 檔」：Python `return aos.wait_for("out.json")`、Lua `return aos.wait_for("out.json")`、lisp 那個 form 的值是 `(aos/wait-for "out.json")`、JSON 元素多一欄 `"wait_for": "out.json"`。路徑相對於程式所在資料夾（`here`）。一次只等一個檔。
+- 執行器看到宣告：**這格算做完**（pc+1），狀態檔多一欄 `"waiting": {"for": "/abs/out.json", "since": "…", "after_pc": k, "checks": 0}`，退出 0。
+- 之後每次被叫：先看 `waiting`——檔不在 → `checks`+1、退出 0、**什麼都不跑**；檔在了 → 清掉 `waiting`、照常跑第 pc 格（那格自己去讀檔）。
+- `--status` 印得出在等什麼、等多久；`--reset` 連 `waiting` 一起清。
+- 沒有逾時、沒有多檔、沒有 kernel 叫醒（那是選項 D，以後真的痛再做）；等待中的行程還是會被 kernel 輪到，只是每格立刻退出。
+- 搭配 LLM：`aos.llm_submit(K, req, name)`（直接跑 `aos-kernel llm K req.json --name name`，不等）回結果檔路徑 → `return aos.wait_for(那條路徑)` → 下一格讀結果。lisp／Lua 同名。
