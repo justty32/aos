@@ -26,8 +26,9 @@ def show(h, cfg, st, pid_key):
         cur = st["cpus"].get(str(n))
         ent = runs.get(os.path.realpath(h.cpu(n)))
         state = ent.get("state", "?") if ent else "沒插上"
+        got = ent.get("runs", 0) - cur.get("runs_at", 0) if ent and cur else None
         last_exit = "-"
-        if ent:
+        if ent and got:
             if ent.get("last_kind") == "aos":
                 last_exit = "125(aos)"
             elif ent.get("last_exit") is not None:
@@ -37,7 +38,6 @@ def show(h, cfg, st, pid_key):
             state = "waiting"
             wait = "等了 %d 回合" % cur.get("wait_runs", 0)
         if cur:
-            got = ent.get("runs", 0) - cur.get("runs_at", 0) if ent else "-"
             print("%-4d %-5s %-9s %-5s %-10s %-10s %s"
                   % (n, cur.get("pid"), "%.1fs" % (now - cur.get("since", now)),
                      got, last_exit, state, wait))

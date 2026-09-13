@@ -69,7 +69,7 @@ cat answer.txt
 
 想手動一格一格走也行：`aos-step-py job.py`，等的時候會退 101。
 
-玩法：改 `QUESTION`、`--reset`、再 `add` 一次——同一個名字同一個問題會直接拿回舊答案（不重花 token）；問題改了就會撞名，把 `job.py` 裡的 `"play-py-1"` 換個名字，或 `rm $K/llm/results/play-py-1.json`。
+玩法：改 `QUESTION`、`--reset`、再 `add` 一次——同一個名字同一個問題會直接拿回舊答案（不重花 token）；問題改了就會撞名，把 `job.py` 裡的 `"play-py-1"` 換個名字，或 `aos-kernel llm rm $K play-py-1`。`aos-kernel llm ls $K` 列出所有排過的單。
 
 ## 第 4 站：逐步 Lua，同步問 LLM ＋ 塞 binary
 

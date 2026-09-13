@@ -8,14 +8,15 @@
 
 ```sh
 aos-step-json job.json --status       # 印狀態 JSON
-aos-step-py job.py --reset            # 只刪執行器進度，從第 0 格重來
+aos-step-py job.py --reset            # 刪進度與錯誤檔，從第 0 格重來
 aos-step-lua job.lua --stderr -       # aos.call 的子程式錯誤送到目前 stderr
 ```
 
-狀態都在程式旁的 `<PROG 去掉副檔名>.state.json`，先寫 `.tmp` 再 rename；`pc` 是下一格，
+狀態都在程式旁的 `<PROG 去掉副檔名>.state.json`；這是公開介面，可以直接讀。檔案先寫
+`.tmp` 再 rename；`pc` 是下一格，
 `last` 是上次成功結果，`history` 留最近 50 次。`pc > 0` 後程式變動會警告但照跑。
 三支都沒有鎖、自動重試、分支或排程，同一份程式不要同時跑兩次。
-`--reset` 只重設執行器，不會清你的輸出檔或撤銷外部動作。
+`--reset` 會清執行器進度與 `<PROG>.error`，但不會清你的輸出檔或撤銷外部動作。
 
 ### 等一個檔
 
@@ -33,16 +34,27 @@ aos-step-lua job.lua --stderr -       # aos.call 的子程式錯誤送到目前 
 "waiting":{"for":"/abs/out.json","since":"2026-09-13T07:00:00+00:00","after_pc":0,"checks":1}
 ```
 
-Python 可把 kernel LLM 排程拆成兩格；`llm_submit` 不帶 `--wait`，下一格才讀結果：
+Python 可把 kernel LLM 排程拆成三格；`K` 只是普通變數，請自己填 kernel 的家：
 
 ```python
-def submit(state):
-    state["r"] = aos.llm_submit(K, {"messages":[{"role":"user","content":"hi"}]}, "q1")
-    return aos.wait_for(state["r"])
+K = "/abs/K"
 
-def consume(state):
-    state["text"] = __import__("json").load(open(state["r"]))["text"]
+def submit(state):
+    req = {"messages": [{"role": "user", "content": "hi"}]}
+    state["result"] = aos.llm_submit(K, req, "q1")
+
+def wait(state):
+    return aos.wait_for(state["result"])
+
+def save_answer(state):
+    import json
+    with open(state["result"], encoding="utf-8") as stream:
+        state["answer"] = json.load(stream)["text"]
 ```
+
+`aos.llm_submit(K, req, name) -> 結果檔的絕對路徑`；要等它時，該格必須把
+`aos.wait_for(path)` **return 出去**。`aos.llm` 是同步呼叫、用自己的 endpoint 檔、不經
+kernel；`aos.llm_submit` 是丟給 kernel 排隊，結果在 `K/llm/results/<name>.json`。
 
 放上 kernel 時，inst 只需把 argv 換成所選工具；工具回 100 後 kernel 會把行程收工：
 

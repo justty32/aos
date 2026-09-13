@@ -169,11 +169,16 @@ class StepLuaTest(unittest.TestCase):
         self.assertNotIn("waiting", json.loads(self.run_tool("--status").stdout))
 
     def test_reset_removes_progress_and_error(self):
-        self.write("local function only(s) s.x=1 end\nreturn {{name='only',fn=only}}\n")
-        self.run_tool()
+        self.write("local function only(s) error('old boom') end\nreturn {{name='only',fn=only}}\n")
+        self.assertEqual(self.run_tool().returncode, 1)
+        error = self.home / "job.lua.error"
+        self.assertTrue(error.exists())
         self.assertEqual(self.run_tool("--reset").returncode, 0)
         self.assertFalse((self.home / "job.state.json").exists())
-        self.assertEqual(json.loads(self.run_tool("--status").stdout)["pc"], 0)
+        self.assertFalse(error.exists())
+        status = self.run_tool("--status")
+        self.assertEqual(json.loads(status.stdout)["pc"], 0)
+        self.assertEqual(status.stderr, "")
 
     def test_changed_program_warns_and_runs_current_pc(self):
         self.write("local function one(s) end\nlocal function old(s) s.which='old' end\nreturn {{name='one',fn=one},{name='old',fn=old}}\n")

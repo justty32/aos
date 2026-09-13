@@ -40,7 +40,7 @@ echo $?                                 # 全部跑完那次回 100
 要從頭來：
 
 ```sh
-/abs/proto4-4/aos-step prog.janet --reset
+/abs/proto4-4/aos-step prog.janet --reset  # 連 .aos-step/error 一起清掉
 ```
 
 放到 cpu 上，先在行程資料夾寫 `inst.json`：

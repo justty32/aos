@@ -169,11 +169,14 @@ def cmd_ls(argv):
 
 
 def cmd_module(name, argv):
-    """`aos-kernel NAME [K] ...`：有 config.json 的第一個目錄參數才算 K。"""
+    """`aos-kernel NAME [K] ...`；module 子命令也可把 K 放在動作之後。"""
     kernel_dir = os.getcwd()
     rest = list(argv)
-    if rest and os.path.isdir(rest[0]) and os.path.isfile(os.path.join(rest[0], "config.json")):
-        kernel_dir = rest.pop(0)
+    candidates = range(min(2, len(rest)))
+    found = next((i for i in candidates if os.path.isdir(rest[i])
+                  and os.path.isfile(os.path.join(rest[i], "config.json"))), None)
+    if found is not None:
+        kernel_dir = rest.pop(found)
     h = KHome(kernel_dir)
     cfg = h.config()
     if cfg is None:

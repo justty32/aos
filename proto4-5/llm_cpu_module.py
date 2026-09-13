@@ -7,6 +7,7 @@ import sys
 import time
 
 import llm_cpu_home as home
+import llm_cpu_manage as manage
 import llm_cpu_tick as ticker
 
 NAME = "llm"
@@ -49,7 +50,8 @@ def handle(h, cfg, st, ticket):
         if kind:
             if same:
                 return True, "同一張請求已存在於 %s：%s" % (kind, request_id)
-            return False, "id 已經存在於 %s：%s" % (kind, request_id)
+            return False, ("id 已經存在於 %s：%s；要重問就 `aos-kernel llm rm K %s` 或換名字"
+                           % (kind, request_id, request_id))
         request_id = home.submit_object(root, request, request_id)
     except (OSError, ValueError, TypeError) as exc:
         return False, str(exc)
@@ -86,12 +88,29 @@ def status(h, cfg):
         for name, endpoint in endpoints.items()
         if endpoint.get("kind") == "openai" and endpoint.get("enabled", True) is True)
     done = len(list((root / "requests" / "done").glob("*.json")))
-    return "llm: queued %d  running %d  done %d  endpoints: %s" % (
-        _queued(root), state["running"], done, slots)
+    warning = ("  ⚠ local 的 model 還沒換"
+               if any(endpoint.get("model") == "loaded-model-id"
+                      for endpoint in endpoints.values()) else "")
+    return "llm: queued %d  running %d  done %d  endpoints: %s%s" % (
+        _queued(root), state["running"], done, slots, warning)
 
 
 def cli(h, cfg, argv):
-    parser = argparse.ArgumentParser(prog="aos-kernel llm")
+    if argv and argv[0] == "ls":
+        if len(argv) != 1:
+            print("用法：aos-kernel llm ls K", file=sys.stderr)
+            return 2
+        return manage.show(_root(h))
+    if argv and argv[0] == "rm":
+        if len(argv) != 2:
+            print("用法：aos-kernel llm rm K NAME", file=sys.stderr)
+            return 2
+        return manage.remove(_root(h), argv[1])
+    parser = argparse.ArgumentParser(
+        prog="aos-kernel llm",
+        usage=("aos-kernel llm [K] REQ.json|- [--name NAME] [--wait SECS] [--json]\n"
+               "       aos-kernel llm ls K\n"
+               "       aos-kernel llm rm K NAME"))
     parser.add_argument("request", metavar="REQ.json|-")
     parser.add_argument("--name")
     parser.add_argument("--wait", type=float, metavar="SECS")
@@ -118,8 +137,9 @@ def cli(h, cfg, argv):
     kind, same = _duplicate(_root(h), request_id, request)
     if kind:
         if not same:
-            print("aos-kernel llm: id 已經存在於 %s：%s" %
-                  (kind, request_id), file=sys.stderr)
+            print(("aos-kernel llm: id 已經存在於 %s：%s；要重問就 "
+                   "`aos-kernel llm rm K %s` 或換名字") %
+                  (kind, request_id, request_id), file=sys.stderr)
             return 1
         if args.wait is None:
             print("同一張請求已存在；結果檔：%s" % result_path)

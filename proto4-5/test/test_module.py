@@ -107,6 +107,15 @@ class LlmModuleTest(unittest.TestCase):
         self.assertIn("results/t1.json", result.stdout)
         self.assertIn("下一回合處理", result.stdout)
 
+    def test_request_file_named_ls_json_is_not_the_ls_subcommand(self):
+        self.prepare()
+        result = self.cli_while_ticking(self.request_file("ls.json"),
+                                        "--name", "named-ls")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(any((self.k / "llm" / relative).exists() for relative in (
+            "requests/named-ls.json", "requests/running/named-ls.json",
+            "requests/done/named-ls.json", "results/named-ls.json")))
+
     def test_two_ticks_produce_successful_result(self):
         self.prepare()
         result = self.cli_while_ticking(self.request_file(), "--name", "t1")
@@ -250,6 +259,7 @@ class LlmModuleTest(unittest.TestCase):
         self.assertEqual(again.returncode, 1)
         self.assertRegex(again.stderr,
                          r"id 已經存在於 (requests|running|results)")
+        self.assertIn("aos-kernel llm rm K same", again.stderr)
 
     def test_completed_result_is_idempotent_and_wait_reads_it(self):
         self.prepare()

@@ -169,6 +169,16 @@
            (and (= 0 ((run reset-wait "--reset") :code))
                 (nil? ((stat reset-wait) :waiting))))
 
+    (def reset-error-dir (string tmp "/reset-error"))
+    (os/mkdir reset-error-dir)
+    (def reset-error-prog (string reset-error-dir "/prog.janet"))
+    (spit reset-error-prog "(error \"old boom\")\n")
+    (check "reset 前有 error 檔" (= 1 ((run reset-error-prog) :code)))
+    (check "reset 連 error 一起清、status 乾淨"
+           (and (= 0 ((run reset-error-prog "--reset") :code))
+                (nil? (os/stat (string reset-error-dir "/.aos-step/error") :mode))
+                (nil? ((stat reset-error-prog) :error))))
+
     (def parse-dir (string tmp "/parse"))
     (os/mkdir parse-dir)
     (def broken (string parse-dir "/broken.janet"))
