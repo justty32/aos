@@ -198,12 +198,17 @@ class StepPyTest(unittest.TestCase):
             os.killpg(server.pid, signal.SIGTERM)
             server.wait(timeout=2)
 
-    def test_reset_removes_progress(self):
-        self.write("def only(state): state['x'] = 1\n")
-        self.run_tool()
+    def test_reset_removes_progress_and_error(self):
+        self.write("def only(state): raise RuntimeError('old boom')\n")
+        self.assertEqual(self.run_tool().returncode, 1)
+        error = self.home / "job.py.error"
+        self.assertTrue(error.exists())
         self.assertEqual(self.run_tool("--reset").returncode, 0)
         self.assertFalse((self.home / "job.state.json").exists())
-        self.assertEqual(json.loads(self.run_tool("--status").stdout)["pc"], 0)
+        self.assertFalse(error.exists())
+        status = self.run_tool("--status")
+        self.assertEqual(json.loads(status.stdout)["pc"], 0)
+        self.assertEqual(status.stderr, "")
 
     def test_changed_source_warns_and_runs_current_pc(self):
         self.write("def one(state): pass\ndef two(state): state['which'] = 'old'\n")

@@ -54,6 +54,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | [core/llm/README.md](../../../core/llm/README.md) | `core/llm/`：OpenAI 相容 chat completions client；逐檔表格見下方 `core/llm` 節 | 要改 endpoint／model／request／response、環境變數或 `aos llm` CLI |
 | [core/agent/README.md](../../../core/agent/README.md) | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見下方 `core/agent` 節 | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
 | [core/tick/README.md](../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
+| [proto4-5/README.md](../../../proto4-5/README.md) | `proto4-5/` LLM 排程原型；`llm_cpu_manage.py` 直接查／刪 `K/llm/` 的 queued、running、done，running 先終止 worker | 要改原型的 `aos-kernel llm ls／rm` |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
 
 **新增或刪除一個原始碼／測試檔（或某個檔的職責變了）時，那一列去哪裡加**：

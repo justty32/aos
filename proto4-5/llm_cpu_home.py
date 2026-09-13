@@ -12,11 +12,12 @@ PROGRAM = Path(__file__).with_name("llm-cpu").resolve()
 ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
-def atomic_json(path, value):
+def atomic_json(path, value, indent=None):
     path = Path(path)
     tmp = path.with_name(path.name + ".tmp")
     with open(tmp, "w", encoding="utf-8") as stream:
-        json.dump(value, stream, ensure_ascii=False, separators=(",", ":"))
+        json.dump(value, stream, ensure_ascii=False, indent=indent,
+                  separators=None if indent else (",", ":"))
         stream.write("\n")
         stream.flush()
         os.fsync(stream.fileno())
@@ -54,7 +55,7 @@ def init_home(directory, make_inst=True, quiet=False):
         (root / "requests" / "done").mkdir()
         (root / "results").mkdir()
         (root / "log").mkdir()
-        atomic_json(root / "endpoints.json", endpoint_document())
+        atomic_json(root / "endpoints.json", endpoint_document(), indent=2)
         if make_inst:
             atomic_json(root / "inst.json", {
                 "argv": [str(PROGRAM), "tick", "."],
@@ -89,7 +90,7 @@ def request_sha256(request):
         meta = value.get("_aos")
         if isinstance(meta, dict):
             meta = {key: item for key, item in meta.items()
-                    if key not in ("request_sha256", "endpoint", "pid", "started")}
+                    if key not in ("request_sha256", "endpoint", "pid", "started", "submitted")}
             if meta:
                 value["_aos"] = meta
             else:
@@ -185,6 +186,7 @@ def submit_object(directory, request, requested_id=None):
     stored = dict(request)
     meta = dict(stored.get("_aos", {})) if isinstance(stored.get("_aos"), dict) else {}
     meta["request_sha256"] = request_sha256(request)
+    meta["submitted"] = now_text()
     stored["_aos"] = meta
     tmp = target.with_name(target.name + ".tmp")
     try:

@@ -117,12 +117,17 @@ class StepJsonTest(unittest.TestCase):
         self.assertEqual(self.run_tool("--reset").returncode, 0)
         self.assertNotIn("waiting", json.loads(self.run_tool("--status").stdout))
 
-    def test_reset_returns_to_initial_status(self):
-        self.write([{"argv": ["true"]}])
-        self.run_tool()
+    def test_reset_removes_error_and_returns_clean_initial_status(self):
+        self.write([{"argv": ["false"]}])
+        self.assertEqual(self.run_tool().returncode, 1)
+        error = self.home / "job.json.error"
+        self.assertTrue(error.exists())
         self.assertEqual(self.run_tool("--reset").returncode, 0)
         self.assertFalse((self.home / "job.state.json").exists())
-        self.assertEqual(json.loads(self.run_tool("--status").stdout)["pc"], 0)
+        self.assertFalse(error.exists())
+        status = self.run_tool("--status")
+        self.assertEqual(json.loads(status.stdout)["pc"], 0)
+        self.assertEqual(status.stderr, "")
 
     def test_note_is_removed_before_aos_exec(self):
         self.write([{"note": "給人看的", "argv": ["true"]}])

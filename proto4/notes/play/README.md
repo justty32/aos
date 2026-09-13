@@ -94,3 +94,5 @@
 
 **fix-r4 落地補記（2026-09-13 傍晚）**：三本同時派、都交了（回報 `fix-r4{a,b,c}-out.md`）。測試 proto4-3 236、proto4-5 56、proto4-6 77、Janet 42／46／12 全綠。Fable 真開 daemon 跨邊界驗過：等檔的行程 `ls` 顯示 `waiting 等了 N 回合`，只有一顆 cpu 時有人排隊它就讓位、別人做完再回來；`aos-kernel llm --wait` 只印答案＋結果檔路徑；同名同內容退 0、不同內容退 1 並說撞在 running。**順手看到的小毛病（下輪清單）**：剛換上 cpu、RUNS=0 時 `LAST_EXIT` 印的是前一個佔位者的碼（等的人會被印成 100）。
 | fix-r5 | r4 清單 #1–#8（全小：README 五處、endpoints 排版與提醒、`aos-kernel llm ls/rm`、reset 刪 error、LAST_EXIT） | [fix-r5-task.md](fix-r5-task.md) |
+
+**fix-r5 落地補記（2026-09-13 晚）**：八條全做（回報 `fix-r5-out.md`）。測試 proto4-3 237、proto4-5 63、proto4-6 77、Janet 42／48／12 全綠；`aos-kernel llm ls K`／`rm K NAME` 在遊樂場真跑過。r4 循環到此停：Opus 說挑不出該動程式的地方。

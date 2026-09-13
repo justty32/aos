@@ -617,6 +617,28 @@ class KernelDaemonTest(KernelTest):
         with open(h.cpu(0), encoding="utf-8") as f:
             self.assertEqual(json.load(f)["argv"], ["true"])
 
+    def test_ls_hides_previous_exit_when_new_proc_has_zero_runs(self):
+        self.init(1, quantum=100)
+        h = KHome(self.k)
+        self.put_proc("old")
+        os.replace(h.proc("old"), h.cpu(0))
+        st = {"cpus": {"0": {"pid": "old", "since": 1, "runs_at": 0,
+                                "seen_runs": 0}}, "queue": [], "waiting": {}}
+        self.put_proc("new")
+        ent = {"runs": 2, "last_kind": "child", "last_exit": 100,
+               "state": "running"}
+        _one_cpu(h, h.config(), st, ["new"], [], 2, 0, {0: ent})
+        queue = ["new"]
+        _one_cpu(h, h.config(), st, queue, [], 3, 0, {0: ent})
+        h.save(st)
+        self.home.ensure()
+        with open(self.home.statef, "w", encoding="utf-8") as f:
+            json.dump({"pid": os.getpid(), "runs": {self.cpu_key(0): ent}}, f)
+        row = next(line for line in self.kernel("ls", self.k).stdout.splitlines()
+                   if line.startswith("0 "))
+        self.assertIn("new", row)
+        self.assertRegex(row, r"\s0\s+-\s+")
+
     def test_done_exit_zero_disables_finishing(self):
         self.spawn_daemon()
         self.init(1, interval_ms=50, quantum=100, done_exit=0)
