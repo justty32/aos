@@ -22,7 +22,7 @@
 ```sh
 export AOS_DAEMON_HOME=~/.aos-daemon   # daemon、ctl、kernel 三支都靠這個找家；用 --home 不會傳給子孫
 cd proto4-3
-python3 -m unittest discover -s test        # 213 條測試，真的開進程，暫存在 /tmp、跑完自己收
+python3 -m unittest discover -s test        # 220 條測試，真的開進程，暫存在 /tmp、跑完自己收
 
 ./aos-exec /path/to/folder                  # 跑 folder/.aos/inst.json
 ./aos-exec /path/to/folder --stderr -       # 看不到錯誤時先加這個
@@ -42,6 +42,7 @@ setsid -f ./aos-daemon                                  # 上電（腳本／非�
 ./aos-daemon-ctl ls
 
 ./aos-kernel-init K --ncpu 2                # 灌一次作業系統
+./aos-kernel-init K --ncpu 2 --module /abs/proto4-5/llm_cpu_module.py # LLM 排程當 kernel module
 ./aos-kernel-boot K                         # 開機：把 kernel 放上 daemon
 ./aos-kernel add K my-proc.json             # 排行程
 ./aos-kernel ls K                           # 看狀態

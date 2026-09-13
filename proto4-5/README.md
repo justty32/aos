@@ -1,9 +1,8 @@
 # proto4-5 — 一次呼叫與 LLM 排程
 
-第二層之後會變成 kernel module，見筆記 §22.7。
-
 這裡有兩層：第一層 `aos-llm` 像 cuda，替任何 inst 做一次同步 LLM 呼叫；第二層
-`llm-cpu` 收很多請求、排隊，再按 endpoint 容量派工。兩層共用 `aos_llm.call`，HTTP
+收很多請求、排隊，再按 endpoint 容量派工。第二層可當獨立行程跑，也可掛成 kernel module
+（推薦）。兩種掛法共用 `aos_llm.call`，HTTP
 實作只有一份。
 
 ## 第一層：`aos-llm`
@@ -59,11 +58,22 @@ endpoint 必須有非空的 `name`、`base_url`、`model`，且 `kind` 只能是
 它 GET `<base_url>/models`，把 id 一行一個印出。成功退出 0，endpoint 或 HTTP 失敗退出
 1；ENDPOINT 檔解不開是 2。
 
-## 第二層：`llm-cpu`
+## 第二層：排程（kernel module 推薦，獨立行程仍可用）
 
-`llm-cpu` 是普通 cpu 上的排程器：請求進資料夾，tick 依 priority 與 endpoint
-`max_concurrent` 派背景 worker；worker 只讀 running、挑 endpoint、叫 `aos_llm.call`、
-寫 result 並 append usage。
+推薦讓 kernel 每回合順手跑排程 module；家固定在 `K/llm/`，第一次 kernel tick 會建好範例
+`endpoints.json`，但不會建 `inst.json`：
+
+```sh
+../proto4-3/aos-kernel-init K --ncpu 2 --module /abs/proto4-5/llm_cpu_module.py
+(cd K && aos-kernel-tick)
+$EDITOR K/llm/endpoints.json
+aos-kernel llm K request.json --name hello --wait 60
+```
+
+不想等就省略 `--wait`，之後看 `K/llm/results/hello.json`。`--wait` 只輪詢結果，**不會替
+kernel 跑 tick**；daemon／kernel 必須真的在跑，否則 syscall 沒人收、結果也不會前進。
+
+`llm-cpu` CLI 仍保留獨立行程的掛法：
 
 ```sh
 ./llm-cpu init /tmp/my-llm
@@ -71,12 +81,6 @@ endpoint 必須有非空的 `name`、`base_url`、`model`，且 `kind` 只能是
 ./llm-cpu tick /tmp/my-llm
 ./llm-cpu ls /tmp/my-llm
 cat /tmp/my-llm/results/hello.json
-```
-
-也可放進 kernel，讓普通 cpu 每秒跑一格：
-
-```sh
-../proto4-3/aos-kernel add K /tmp/my-llm/inst.json
 ```
 
 請求除了第一層欄位，還可用 `endpoint` 選 endpoints.json 裡的名字；省略就用 default。

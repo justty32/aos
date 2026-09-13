@@ -186,7 +186,7 @@ class KernelInitTest(KernelTest):
         with open(self.at("config.json"), encoding="utf-8") as f:
             self.assertEqual(json.load(f), {"ncpu": 2, "interval_ms": 100,
                                             "timeout_ms": 500, "quantum": 3,
-                                            "done_exit": 100})
+                                            "done_exit": 100, "modules": []})
         self.assertEqual(self.kstate(), {"cpus": {"0": None, "1": None}, "queue": []})
         self.assertIn("aos-kernel-boot %s" % self.k, r.stdout)
         self.assertIn("aos-kernel add %s" % self.k, r.stdout)
@@ -215,7 +215,9 @@ class KernelInitTest(KernelTest):
         r = self.kernel_tick(cwd=self.tmp)
         self.assertEqual((r.returncode, "aos-kernel-init" in r.stderr), (1, True), r.stderr)
         self.assertEqual(self.kernel("ls", cwd=self.tmp).returncode, 1)
-        self.assertEqual(self.kernel("nope").returncode, 2)
+        unknown = self.kernel("nope")
+        self.assertEqual(unknown.returncode, 1)
+        self.assertIn("aos-kernel-init", unknown.stderr)
         self.assertEqual(self.kernel().returncode, 2)
 
     def test_a_proc_without_cwd_is_sent_to_bad(self):

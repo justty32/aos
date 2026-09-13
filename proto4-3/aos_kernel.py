@@ -18,7 +18,7 @@
 家（DIR）長這樣：
 
     DIR/inst.json       kernel 自己那顆 cpu 的指令，只有 kernel 能動
-    DIR/config.json     {"ncpu":N,"interval_ms":X,"timeout_ms":Y,"quantum":Q,"done_exit":E}
+    DIR/config.json     上述整數設定，另有 "modules":["/abs/xxx_module.py"]
     DIR/procs/<pid>.json  就緒佇列，檔名去掉 .json ＝ pid
     DIR/procs/bad/      退件（格式／欄位不合，或跑起來連續回 125）
     DIR/procs/done/     回保留退出碼做完的行程；rm 拿掉的不會進來
@@ -28,8 +28,8 @@
     DIR/state.json      kernel 自己的表：cpu n → pid、上去的時間、上去時的 runs、佇列
     DIR/kernel.log      每回合一行流水帳
 
-一回合六步（順序固定），做完一律退出 0——**kernel 不會因為外面的事死掉**，
-daemon 沒在跑、ctl 失敗都只是記一行 log。六步見 `aos_kernel_tick.tick()`。
+一回合七步（順序固定），做完一律退出 0——**kernel 不會因為外面的事死掉**，
+daemon 沒在跑、ctl 或 module 失敗都只是記一行 log。七步見 `aos_kernel_tick.tick()`。
 """
 import json
 import os
@@ -44,10 +44,11 @@ IDLE_INST = {"argv": ["true"], "cwd": "."}
 DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5, "done_exit": 100}
 USAGE = ("用法：aos-kernel ls [DIR]\n"
          "      aos-kernel add [DIR] INST.json [--name NAME]\n"
-         "      aos-kernel rm [DIR] NAME\n")
+         "      aos-kernel rm [DIR] NAME\n"
+         "      aos-kernel <MODULE> [DIR] ...\n")
 INIT_HINT = ("aos-kernel: init 改成獨立指令 aos-kernel-init（不再是 aos-kernel 的子命令）："
              "aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] "
-             "[--done-exit N]\n")
+             "[--done-exit N] [--module PATH]...\n")
 TICK_HINT = "aos-kernel: tick 改成獨立指令 aos-kernel-tick（不再是 aos-kernel 的子命令）\n"
 
 
@@ -92,6 +93,9 @@ class KHome:
             return None
         out = dict(DEFAULTS)
         out.update({k: v for k, v in cfg.items() if isinstance(v, int)})
+        modules = cfg.get("modules", [])
+        out["modules"] = (modules if isinstance(modules, list)
+                          and all(isinstance(item, str) for item in modules) else [])
         return out
 
     def state(self):
@@ -207,7 +211,45 @@ def cmd_ls(argv):
                 if n.endswith(".json") and os.path.isfile(os.path.join(h.done, n))]
     if done:
         print("done: %s" % ", ".join(sorted(done, key=pid_key)))
+    from aos_kernel_module import load_modules
+    modules = load_modules(cfg)
+    for note in modules.notes:
+        print(note)
+    for module in modules:
+        hook = getattr(module, "status", None)
+        if hook is None:
+            continue
+        try:
+            line = hook(h, cfg)
+            if line is not None:
+                print(line)
+        except BaseException as exc:
+            print("module %s 壞了：%s" % (module.NAME, str(exc).replace("\n", " ")))
     return 0
+
+
+def cmd_module(name, argv):
+    """`aos-kernel NAME [K] ...`：有 config.json 的第一個目錄參數才算 K。"""
+    kernel_dir = os.getcwd()
+    rest = list(argv)
+    if rest and os.path.isdir(rest[0]) and os.path.isfile(os.path.join(rest[0], "config.json")):
+        kernel_dir = rest.pop(0)
+    h = KHome(kernel_dir)
+    cfg = h.config()
+    if cfg is None:
+        sys.stderr.write("aos-kernel: %s 不是 kernel 的家（還沒灌？先跑："
+                         "aos-kernel-init %s --ncpu N）\n" % (h.dir, h.dir))
+        return 1
+    from aos_kernel_module import load_modules
+    for module in load_modules(cfg):
+        if module.NAME == name and getattr(module, "cli", None) is not None:
+            try:
+                return module.cli(h, cfg, rest)
+            except BaseException as exc:
+                sys.stderr.write("aos-kernel: module %s 壞了：%s\n"
+                                 % (name, str(exc).replace("\n", " ")))
+                return 1
+    return None
 
 
 def main(argv=None):
@@ -233,6 +275,9 @@ def main(argv=None):
     if cmd == "rm":
         from aos_kernel_syscall import cmd_rm
         return cmd_rm(rest)
+    code = cmd_module(cmd, rest)
+    if code is not None:
+        return code
     sys.stderr.write("aos-kernel: 不認得的子命令：%s\n%s" % (cmd, USAGE))
     return 2
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-kernel 的 syscall 收件匣；目前只有 rm。"""
+"""aos-kernel 的 syscall 收件匣；內建 rm，其餘可交給 module。"""
 import json
 import os
 import sys
@@ -69,8 +69,12 @@ def cmd_rm(argv):
     return 1
 
 
-def handle_syscalls(h, cfg, st, notes):
+def handle_syscalls(h, cfg, st, notes, modules=None):
     """按檔名處理 syscalls/*.json，回音原子寫進 syscalls/done/。"""
+    if modules is None:
+        from aos_kernel_module import load_modules
+        modules = load_modules(cfg)
+        notes.extend(modules.notes)
     os.makedirs(h.syscalls_done, exist_ok=True)
     try:
         names = sorted(n for n in os.listdir(h.syscalls)
@@ -98,6 +102,19 @@ def handle_syscalls(h, cfg, st, notes):
             continue
         op = call.get("op")
         if op != "rm":
+            owner = next((module for module in modules if op in module.OPS), None)
+            if owner is not None and getattr(owner, "handle", None) is not None:
+                try:
+                    ok, msg = owner.handle(h, cfg, st, call)
+                    ok, msg = bool(ok), str(msg)
+                except BaseException as exc:
+                    ok = False
+                    msg = "module %s 壞了：%s" % (
+                        owner.NAME, str(exc).replace("\n", " ") or type(exc).__name__)
+                notes.append(msg)
+                _done(h, name, ok, msg, notes)
+                _unlink(request, notes)
+                continue
             why = "沒有 op" if "op" not in call else "不認得的 op：%s" % op
             msg = "看不懂這張單：%s" % why
             notes.append(msg)
