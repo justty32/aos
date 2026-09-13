@@ -16,9 +16,10 @@
 
 ```
 K/inst.json         kernel 自己那顆 cpu 的指令：{"argv":["…/aos-kernel-tick"],"cwd":"."}
-K/config.json       {"ncpu":2,"interval_ms":1000,"timeout_ms":0,"quantum":5}
+K/config.json       {"ncpu":2,"interval_ms":1000,"timeout_ms":0,"quantum":5,"done_exit":100}
 K/procs/<pid>.json  就緒佇列：等著上 cpu 的行程，檔名去掉 .json ＝ pid
 K/procs/bad/        退件（不是 JSON 物件／沒有 argv／沒寫 cwd 的都搬來這裡）
+K/procs/done/       用保留退出碼表示做完的行程
 K/cpus/<n>.json     每顆 cpu 一份 inst.json，這個路徑就是 daemon 表上的 key
 K/state.json        kernel 自己的表：cpu n → pid、上去的時間、上去時的 runs、佇列
 K/kernel.log        每回合 append 一行
@@ -36,7 +37,7 @@ daemon→aos-run→aos-exec 的 PATH 是使用者開 daemon 時那一份，未�
 （[proto4 筆記 §19.4／§19.7](../../proto4/notes/2026-09-08-ideas.md)）：
 
 ```sh
-aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q]
+aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] [--done-exit N]
 aos-kernel-tick         # 心跳：在家裡（cwd ＝ K）跑一回合，不吃參數
 aos-kernel ls           # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
 ```
@@ -65,6 +66,8 @@ daemon → kernel init → ctl add kernel 的 inst.json」）也會是同一系�
    `cpus/n.json`，沒寫 cwd 的話預設 cwd 會跟著變成 cpu 的資料夾，行程就跑錯地方了。
    （這道檢查**只有 kernel 做**，daemon／aos-run／aos-exec 維持原本行為。）
 4. **排程**：每顆 cpu 看一次——
+   - 先看做完沒：`last_kind=child` 且 `last_exit=done_exit` 且 `runs−runs_at≥2` → 搬進
+     `procs/done/`、換成 idle；再看 quantum 要不要換人。
    - 上面是 idle（或沒記錄）而且有人在等 → 把隊首那位 `rename` 上去。
    - 上面有人，而且「daemon 現在的 `runs` － 它上去時記的 `runs` ≥ quantum」，而且**還有人在等**
      → 換人。**沒人在等就讓它續跑**（v1 的行程不會自己結束）。
@@ -104,8 +107,8 @@ cp my-proc.json K/procs/3.json                          # 把行程丟進就緒�
 
 ### kernel 這一版沒做什麼
 
-- **行程不會自己結束**：v1 就是永遠輪流。要拿掉一個，趁它不在 cpu 上時手動刪 `procs/` 的檔
-  （kernel 下一回合就把它從佇列拿掉）。
+- **行程做完是應急版**：保留退出碼 100，行程回這個碼就會被收進 `procs/done/`；還沒有行程
+  主動叫 kernel 的 syscall，`procs/done/` 不會自動清，做完行程的 cwd 也不動。
 - **沒有優先級、沒有 nice**，時間片一律 quantum 次，佇列純 FIFO。
 - **沒有 syscall 收件匣**（行程不能 fork、不能自己丟東西進 `procs/`）、**不改 cpu 的韌體設定**
   （`ctl add` 給的 interval／timeout 定死不改）、**沒有 daemon↔kernel 專用通道**（每回合只看
@@ -115,4 +118,3 @@ cp my-proc.json K/procs/3.json                          # 把行程丟進就緒�
 - **kernel 只做格式檢查，不做權限檢查**：能寫 `procs/` 的人就能用你的身分跑任何東西。
 - **搶佔不了正在跑的那一次**：rename 只影響「下一次」開跑讀到誰，手上那次會跑完。
 - **一個家只該有一個 kernel 在 tick**：兩個 tick 同時跑會搶同一批檔案，v1 沒有鎖。
-

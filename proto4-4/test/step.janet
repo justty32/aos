@@ -64,8 +64,10 @@
     (def s6 (stat prog))
     (check "六步完成後 status 是 done" (and (= 6 (s6 :pc)) (= 6 (s6 :n)) (s6 :done) (nil? (s6 :error))))
     (def r7 (run prog))
-    (check "完成後再叫是成功空操作" (and (= 0 (r7 :code)) (= "" (r7 :out))))
+    (check "完成後再叫回 100 且 stdout 空" (and (= 100 (r7 :code)) (= "" (r7 :out))))
     (check "done 檔存在" (= :file (os/stat (string tmp "/.aos-step/done") :mode)))
+    (check "--done-exit 0 時完成後回 0" (= 0 ((run prog "--done-exit" "0") :code)))
+    (check "--done-exit 7 時完成後回 7" (= 7 ((run prog "--done-exit" "7") :code)))
 
     (def bad-dir (string tmp "/bad"))
     (os/mkdir bad-dir)
