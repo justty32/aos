@@ -19,3 +19,13 @@
 - 元素回 0 → pc+1；非 0 → 停在原地、退出碼原樣回（不推 pc，修好重跑同一格）；aos-exec 自己失敗 → 125；全部跑完 → 100。`--status`、`--reset`、改動偵測警告，跟 aos-step 同一套。
 
 **23.3 落地補記（2026-09-13）**：做出來了（codex gpt-sol）：`proto4-6/aos-step-json`＋`aos_step_json.py` 211 行、15 條測試、README 84 行。我照 README 的 `job.json` 範例手跑：三格各回 0、第四次回 100，`result.txt` 是 `HELLO`，狀態檔 `job.state.json` 一眼看得懂。跟逐步 lisp 同一套約定（pc、`--status`、`--reset`、改動偵測、做完回 100、可以直接放上 kernel）。**逐步 Python 等 LLM cpu 收完再開**——現在 LLM cpu 已收（§22.8），所以下一段就是它；要先定「Python 的變數怎麼跨格」（§23.2）。
+
+## 23.4 逐步 Python 的定案（Fable，任務書 `proto4-6/notes/codex-task-2.md`）
+
+使用者要的：最簡單、狀態在 JSON 檔、AI 一眼看懂也容易生成。定案：
+
+- **程式就是一支普通 `.py`**（AI 最會寫的東西），用 `ast` 切成頂層 statement——跟 Janet 版「一格一個頂層 form」完全同構。
+- **只有 `state`（一個 dict）跨格活著**，存在 `<PROG>.state.json` 的 `"state"` 欄，必須 JSON 化得了（放不進去的東西當場失敗、pc 不動）。Python 沒有 Janet image 那種東西，也不需要：使用者要的就是「狀態是 JSON」。
+- **`import`／`def`／`class` 這三種頂層 statement 不算格**，每格開跑前全部重放一次（便宜、確定性），所以前面定義的函式後面每格都能用；只有資料走 `state`。
+- 每格拿到的名字：`state`、`here`（程式所在資料夾）、`pc`、`aos`（一個小模組：`aos.call`／`call_dir`／`call_json`／`llm`，就是 proto4-4 函式庫的 Python 版，底下一樣叫 `aos-exec`／`aos-llm`）。
+- 其餘約定跟逐步 JSON、逐步 lisp 一樣：`--status`、`--reset`、`--stderr`、改動偵測、失敗 pc 不動、做完回 100、可直接放上 kernel。
