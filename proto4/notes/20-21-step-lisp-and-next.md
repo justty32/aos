@@ -74,3 +74,13 @@
 做出來了：`proto4-4/`——`src/aos.janet`（96 行，函式庫）、`src/step.janet`（170 行，逐步執行器）、`aos-step`（5 行入口）、三支測試 `test/aos.janet` 15 條、`test/step.janet` 23 條、`test/cpu.janet` 4 條，全綠；proto4-3 的 185 條沒動也還綠。任務書與回報副本在 `proto4-4/notes/`。
 
 codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:error nil`；Janet 環境綁定不能塞裸值，`here`／`pc` 要包成 `@{:value …}`；放上 cpu 時 inst.json 的 `stdout` 檔每格會被截斷（inst 規則就是「建立並清空」），所以要留紀錄得自己 append 到別的檔（`test/cpu.janet` 就是這樣寫 `log.txt`）。
+
+### 21.3 kernel 應急版「行程做完了」（2026-09-13，使用者：「想個應急用的處理方法，先做，之後再看怎麼更好，盡量簡單，KISS」）
+
+我定的最簡做法：**一個保留退出碼＝「我做完了，別再排我」**。
+
+- 碼是 **100**（aos-exec 自己用 125／2，shell 用 126／127／128+N，100 沒人用）。放 kernel `config.json` 的 `done_exit`，`aos-kernel-init --done-exit N` 可改，`0`＝關掉。
+- kernel 每回合本來就從 daemon 的 `state.json` 拿每顆 cpu 的 `runs`／`last_exit`／`last_kind`。看到 `last_kind=child` 且 `last_exit=100`，而且 `runs - runs_at >= 2`（換人那一刻正在跑的那一次還是前一位的，所以要多等一次才確定這個碼是現在這位的），就把它從 cpu 拿下來：inst.json 搬去 `procs/done/<pid>.json`（留個痕跡），cpu 換回 idle。兩步用跟換人一樣的硬連結＋rename，不留空窗。
+- 逐步 lisp 那邊配合：`aos-step` 所有 form 跑完之後改回 100（原本回 0），這樣放進 kernel 就會自己下車。
+- 沒做的：行程不能自己「叫」kernel（那是 syscall 的事，§21.1 第 3 條）；做完的 cwd 資料夾不動；`procs/done/` 不會自動清。
+- 派 codex gpt-sol 做 kernel 端（`proto4-3/notes/codex-task-kernel-done.md`），aos-step 端另一輪。
