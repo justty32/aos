@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 TOOL = ROOT / "aos-step-py"
 EXEC = ROOT.parent / "proto4-3" / "aos-exec"
 FAKE_OPENAI = ROOT.parent / "proto4-5" / "test" / "_fake_openai.py"
+KERNEL_INIT = ROOT.parent / "proto4-3" / "aos-kernel-init"
+KERNEL_TICK = ROOT.parent / "proto4-3" / "aos-kernel-tick"
+LLM_MODULE = ROOT.parent / "proto4-5" / "llm_cpu_module.py"
 
 
 class StepPyTest(unittest.TestCase):
@@ -108,6 +111,88 @@ class StepPyTest(unittest.TestCase):
         self.assertTrue(self.state()["done"])
         self.assertEqual(self.run_tool().returncode, 100)
         self.assertEqual(self.run_tool().returncode, 100)
+
+    def test_wait_for_blocks_until_file_then_runs_next_step(self):
+        self.write("def submit(state): return aos.wait_for('out.json')\n"
+                   "def consume(state): open(here + '/next.txt', 'w').write('ran')\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        first = self.state()
+        self.assertEqual((first["pc"], first["waiting"]["checks"]), (1, 0))
+        self.assertEqual(first["waiting"]["for"], str(self.home / "out.json"))
+        self.assertEqual(self.run_tool().returncode, 0)
+        blocked = self.state()
+        self.assertEqual(blocked["waiting"]["checks"], 1)
+        self.assertEqual((blocked["last"], blocked["history"]),
+                         (first["last"], first["history"]))
+        self.assertFalse((self.home / "next.txt").exists())
+        (self.home / "out.json").touch()
+        self.assertEqual(self.run_tool().returncode, 0)
+        state = self.state()
+        self.assertNotIn("waiting", state)
+        self.assertEqual((self.home / "next.txt").read_text(), "ran")
+        self.assertIn("(wait)", [item.get("step") for item in state["history"]])
+
+    def test_last_python_step_can_wait_before_done_exit(self):
+        self.write("def only(state): return aos.wait_for('last.out')\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertFalse(self.state()["done"])
+        self.assertEqual(self.run_tool().returncode, 0)
+        (self.home / "last.out").touch()
+        self.assertEqual(self.run_tool().returncode, 100)
+        self.assertTrue(self.state()["done"])
+
+    def test_waiting_status_and_reset(self):
+        self.write("def only(state): return aos.wait_for('pending.out')\n")
+        self.run_tool()
+        status = self.run_tool("--status")
+        self.assertIn("waiting", json.loads(status.stdout))
+        self.assertIn("在等 " + str(self.home / "pending.out"), status.stderr)
+        self.assertEqual(self.run_tool("--reset").returncode, 0)
+        self.assertNotIn("waiting", json.loads(self.run_tool("--status").stdout))
+
+    def test_llm_submit_wait_for_with_manual_kernel_ticks(self):
+        k = self.home / "K"
+        env = dict(os.environ, AOS_DAEMON_HOME=str(self.home / "dead-daemon"))
+        init = subprocess.run([str(KERNEL_INIT), str(k), "--ncpu", "1", "--interval-ms", "100",
+                               "--module", str(LLM_MODULE)], env=env, text=True,
+                              capture_output=True, check=False)
+        self.assertEqual(init.returncode, 0, init.stderr)
+        server = subprocess.Popen([sys.executable, str(FAKE_OPENAI)], stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL, text=True, start_new_session=True)
+        try:
+            port = int(server.stdout.readline().strip()); server.stdout.close()
+            tick = lambda: subprocess.run([str(KERNEL_TICK)], cwd=k, env=env, text=True,
+                                          capture_output=True, check=False)
+            self.assertEqual(tick().returncode, 0)
+            (k / "llm/endpoints.json").write_text(json.dumps({
+                "default": "local", "endpoints": [{"name": "local", "kind": "openai",
+                "base_url": f"http://127.0.0.1:{port}/v1", "model": "fake-model",
+                "max_concurrent": 1, "timeout_ms": 2000}]}), encoding="utf-8")
+            self.write(
+                f"def submit(state):\n    state['r'] = aos.llm_submit({str(k)!r}, "
+                "{'messages':[{'role':'user','content':'echo:hi'}]}, 'q1')\n"
+                "    return aos.wait_for(state['r'])\n"
+                "def consume(state):\n    import json\n    state['text'] = json.load(open(state['r']))['text']\n")
+            proc = subprocess.Popen([str(TOOL), str(self.prog)], cwd=self.home, env=env,
+                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            deadline = __import__("time").time() + 5
+            while proc.poll() is None and __import__("time").time() < deadline:
+                if list((k / "syscalls").glob("*.json")):
+                    tick()
+                else:
+                    __import__("time").sleep(0.01)
+            out, err = proc.communicate(timeout=5)
+            self.assertEqual(proc.returncode, 0, err or out)
+            deadline = __import__("time").time() + 5
+            while self.state()["pc"] < 2 and __import__("time").time() < deadline:
+                self.assertEqual(tick().returncode, 0)
+                self.run_tool(env=env)
+                __import__("time").sleep(0.03)
+            self.assertEqual(self.state()["state"]["text"], "hi")
+            self.assertTrue((self.home / "q1.req.json").is_file())
+        finally:
+            os.killpg(server.pid, signal.SIGTERM)
+            server.wait(timeout=2)
 
     def test_reset_removes_progress(self):
         self.write("def only(state): state['x'] = 1\n")

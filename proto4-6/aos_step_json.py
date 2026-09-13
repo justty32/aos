@@ -14,11 +14,12 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "proto4-3"))
 import aos_exec  # noqa: E402
 from step_common import (HISTORY_LIMIT, StepError, atomic_json, load_state,
-                         now, source_info, warn_if_changed)  # noqa: E402
+                         check_waiting, now, set_waiting, source_info,
+                         waiting_line, warn_if_changed)  # noqa: E402
 
 
 DONE_EXIT = 100
-ALLOWED_KEYS = {"argv", "cwd", "stdin", "stdout", "stderr", "exit", "envs", "note"}
+ALLOWED_KEYS = {"argv", "cwd", "stdin", "stdout", "stderr", "exit", "envs", "note", "wait_for"}
 
 
 def fail(message):
@@ -61,18 +62,22 @@ def prepare_inst(element, pc, base):
         raise StepError(f"第 {pc} 個元素（0 起算）有未知欄位：{sorted(unknown)[0]}")
     if "note" in element and not isinstance(element["note"], str):
         raise StepError(f"第 {pc} 個元素（0 起算）的 note 必須是字串")
+    wait_for = element.get("wait_for")
+    if "wait_for" in element and not isinstance(wait_for, str):
+        raise StepError(f"第 {pc} 個元素（0 起算）的 wait_for 必須是字串")
     inst = copy.deepcopy(element)
     inst.pop("note", None)
+    inst.pop("wait_for", None)
     cwd = inst.get("cwd", str(base))
     if not isinstance(cwd, str):
         raise StepError(f"第 {pc} 個元素（0 起算）的 cwd 必須是字串")
     if not os.path.isabs(cwd):
         cwd = os.path.join(base, cwd)
     inst["cwd"] = os.path.abspath(cwd)
-    return inst
+    return inst, wait_for
 
 
-def record(state, src, pc, code, kind, elapsed_ms, success):
+def record(state, src, pc, code, kind, elapsed_ms, success, wait_for, here):
     item = {
         "pc": pc,
         "exit": code,
@@ -92,13 +97,18 @@ def record(state, src, pc, code, kind, elapsed_ms, success):
     })
     if success:
         state["src"] = src
+        if wait_for is not None:
+            set_waiting(state, wait_for, here, pc)
 
 
 def step(prog, stderr_override):
     state_path, current_path = paths_for(prog)
     try:
+        state = load_state(state_path)
+        if state is not None and check_waiting(state, state_path):
+            return 0
         program, src = load_program(prog)
-        state = load_state(state_path) or empty_state(len(program))
+        state = state or empty_state(len(program))
     except StepError as exc:
         return fail(str(exc))
 
@@ -110,7 +120,7 @@ def step(prog, stderr_override):
         return DONE_EXIT
 
     try:
-        inst = prepare_inst(program[pc], pc, prog.parent)
+        inst, wait_for = prepare_inst(program[pc], pc, prog.parent)
     except StepError as exc:
         return fail(str(exc))
     atomic_json(current_path, inst)
@@ -119,7 +129,7 @@ def step(prog, stderr_override):
     code, kind = aos_exec.run_target(str(current_path), stderr=stderr_override)
     elapsed_ms = int((time.monotonic() - started) * 1000)
     success = kind == aos_exec.CHILD and code == 0
-    record(state, src, pc, code, kind, elapsed_ms, success)
+    record(state, src, pc, code, kind, elapsed_ms, success, wait_for, prog.parent)
     atomic_json(state_path, state)
 
     if success:
@@ -164,6 +174,12 @@ def main(argv=None):
         except StepError as exc:
             return fail(str(exc))
         print(json.dumps(state, ensure_ascii=False, separators=(",", ":")))
+        try:
+            line = waiting_line(state)
+        except StepError as exc:
+            return fail(str(exc))
+        if line:
+            print(line, file=sys.stderr)
         return 0
     return step(prog, args.stderr)
 

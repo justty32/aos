@@ -38,6 +38,9 @@
   (do
     (os/mkdir tmp)
 
+    (check "aos/wait-for 回指定的宣告形狀"
+           (= {:aos/wait-for "out.json"} (aos/wait-for "out.json")))
+
     (def d1 (string tmp "/default"))
     (mkdir2 d1 ".aos")
     (spit (string d1 "/.aos/inst.json")

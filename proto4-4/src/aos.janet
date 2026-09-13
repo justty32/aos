@@ -19,6 +19,8 @@
 (def- default-llm
   (string (dirname (dirname source-file)) "/../proto4-5/aos-llm"))
 
+(def- default-kernel (string (dirname (dirname source-file)) "/../proto4-3/aos-kernel"))
+
 (def- resolved-exec
   (let [raw (or (os/getenv "AOS_EXEC") default-exec)
         tried (protect (os/realpath raw))
@@ -33,6 +35,14 @@
         path (if (tried 0) (tried 1) nil)]
     (unless (and path (= :file (os/stat path :mode)))
       (error (string "aos: 找不到 aos-llm：" raw)))
+    path))
+
+(def- resolved-kernel
+  (let [raw (or (os/getenv "AOS_KERNEL") default-kernel)
+        tried (protect (os/realpath raw))
+        path (if (tried 0) (tried 1) nil)]
+    (unless (and path (= :file (os/stat path :mode)))
+      (error (string "aos: 找不到 aos-kernel：" raw)))
     path))
 
 (defn exec-path [] resolved-exec)
@@ -98,6 +108,15 @@
 
 (defn- encode-json [value]
   (string ((get-in (require json-module) ['encode :value]) value)))
+
+(defn- absolute-path [given]
+  (def raw (if (string/has-prefix? "/" given) given (string (os/cwd) "/" given)))
+  (def parts @[])
+  (each part (string/split "/" raw)
+    (cond (or (= "" part) (= "." part)) nil
+          (= ".." part) (array/pop parts)
+          (array/push parts part)))
+  (string "/" (string/join parts "/")))
 
 (defn- aos-line? [stderr]
   (var found false)
@@ -208,6 +227,30 @@
   (if (and (dictionary? value) (get value "ok"))
     (get value "text")
     nil))
+
+(defn wait-for [path]
+  (unless (string? path) (error "aos/wait-for: path 必須是字串"))
+  {:aos/wait-for path})
+
+(defn llm-submit [K req name]
+  (unless (string? K) (error "aos/llm-submit: K 必須是字串"))
+  (unless (or (table? req) (struct? req))
+    (error "aos/llm-submit: req 必須是 table 或 struct"))
+  (unless (and (string? name) (> (length name) 0))
+    (error "aos/llm-submit: name 必須是非空字串"))
+  (def kernel-home (absolute-path K))
+  (def reqfile (string (os/cwd) "/" name ".req.json"))
+  (spit reqfile (string (encode-json req) "\n"))
+  (def proc (os/spawn [resolved-kernel "llm" kernel-home reqfile "--name" name]
+                      :p {:out :pipe :err :pipe}))
+  (def stdout-buffer (pump-pipe (proc :out)))
+  (def stderr-buffer (pump-pipe (proc :err)))
+  (def code (os/proc-wait proc))
+  (unless (= 0 code)
+    (def stderr (string/trim (string stderr-buffer)))
+    (def detail (if (> (length stderr) 0) stderr (string/trim (string stdout-buffer))))
+    (error (string "aos/llm-submit: aos-kernel 回 " code "：" detail)))
+  (string kernel-home "/llm/results/" name ".json"))
 
 (defn- copy-opts [opts]
   (def copied @{})

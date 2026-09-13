@@ -13,7 +13,32 @@ aos-step-lua job.lua --stderr -       # aos.call 的子程式錯誤送到目前 
 
 狀態都在程式旁的 `<PROG 去掉副檔名>.state.json`，先寫 `.tmp` 再 rename；`pc` 是下一格，
 `last` 是上次成功結果，`history` 留最近 50 次。`pc > 0` 後程式變動會警告但照跑。
-三支都沒有鎖、自動重試、分支、排程或非同步等待，同一份程式不要同時跑兩次。
+三支都沒有鎖、自動重試、分支或排程，同一份程式不要同時跑兩次。
+
+### 等一個檔
+
+- 一格可宣告一個要等的檔；相對路徑以程式資料夾 `here` 為準，狀態一律存絕對路徑。
+- 宣告的格算成功、`pc` 加一並回 0；之後檔不在就只把 `checks` 加一、回 0，不跑格。
+- 檔出現時會清掉 `waiting`、在 `history` 加一筆 `(wait)`，同一次呼叫接著跑下一格。
+- 最後一格也能等：檔出現前不回 100，出現後下一次呼叫才回 100。
+- 沒有逾時、一次只等一個檔、kernel 不會叫醒；`--reset` 會清掉等待。
+
+等待時的狀態多一欄；`--status` 也會在 stderr 印一行「在等…」：
+
+```json
+"waiting":{"for":"/abs/out.json","since":"2026-09-13T07:00:00+00:00","after_pc":0,"checks":1}
+```
+
+Python 可把 kernel LLM 排程拆成兩格；`llm_submit` 不帶 `--wait`，下一格才讀結果：
+
+```python
+def submit(state):
+    state["r"] = aos.llm_submit(K, {"messages":[{"role":"user","content":"hi"}]}, "q1")
+    return aos.wait_for(state["r"])
+
+def consume(state):
+    state["text"] = __import__("json").load(open(state["r"]))["text"]
+```
 
 放上 kernel 時，inst 只需把 argv 換成所選工具；工具回 100 後 kernel 會把行程收工：
 
@@ -39,7 +64,7 @@ aos-step-lua job.lua --stderr -       # aos.call 的子程式錯誤送到目前 
 ```
 
 `note` 只給人看，執行前拿掉；其餘是 inst 的 `argv`、`cwd`、`stdin`、`stdout`、`stderr`、
-`exit`、`envs`。沒寫 `cwd` 就用程式資料夾，相對 `cwd` 也從那裡算。子程式非 0 原碼退回，
+`exit`、`envs`，另可加 `"wait_for":"out.json"`，在 inst 成功後才開始等。沒寫 `cwd` 就用程式資料夾，相對 `cwd` 也從那裡算。子程式非 0 原碼退回，
 `aos-exec` 自己失敗回 125。狀態例：
 
 ```json
@@ -77,7 +102,7 @@ def write(state):
 
 每格重新載入整支檔，可用 `state`、`here`、`pc`、`aos`。例外或不可 JSON 化的 state 讓該格
 回 1，全文放 `.aos-step-py/error`。`aos` 有 `call`、`call_dir`、`call_json`、`ok`、`value`、
-`llm`、`llm_text`；工具路徑可用 `AOS_EXEC`／`AOS_LLM` 覆蓋。
+`llm`、`llm_text`、`wait_for`、`llm_submit`；工具路徑可用 `AOS_EXEC`／`AOS_LLM`／`AOS_KERNEL` 覆蓋。
 
 `bytes`／`bytearray` 自動存成只有 `$b64` 的物件，讀回時自動還原成 `bytes`；這也表示一般 JSON
 裡恰好只有 `$b64` 一個 key 的物件會被視為 binary。手動轉換可用 `aos.b64(b)`／`aos.unb64(s)`。
@@ -146,6 +171,7 @@ Lua 的 `aos` 一覽：`call(target, opts)`、`call_dir(dir, opts)`、`call_json
 `value(r)`、`llm(endpoint, req, out, timeout_ms)`、`llm_text(r)`、`b64`、`unb64`。`call` 的 opts 是
 `dir_target`、`timeout_ms`、`stdin`、`capture`、`read`、`read_err`、`json`；回傳
 `{code,kind,out,err,value}`。`llm` 會保留 `out.req.json`。底層工具可由 `AOS_EXEC`／`AOS_LLM` 覆蓋。
+Lua 格可 `return aos.wait_for(path)`；`aos.llm_submit(K, req, name)` 會回 kernel 結果檔的絕對路徑。
 
 ## 出處
 

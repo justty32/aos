@@ -14,8 +14,8 @@ import traceback
 
 import aos_py
 from step_common import (HISTORY_LIMIT, StepError, atomic_json, binary_default,
-                         binary_object_hook, load_state, now, source_info,
-                         warn_if_changed)
+                         binary_object_hook, check_waiting, load_state, now,
+                         set_waiting, source_info, waiting_line, warn_if_changed)
 
 
 DONE_EXIT = 100
@@ -105,6 +105,8 @@ def step(prog, stderr_override):
     state_path, error_path = paths_for(prog)
     try:
         saved = load_state(state_path, object_hook=binary_object_hook)
+        if saved is not None and check_waiting(saved, state_path, default=binary_default):
+            return 0
         pc = saved["pc"] if saved else 0
         source = read_source(prog)
         steps, src = load_program(prog, pc, source)
@@ -129,7 +131,7 @@ def step(prog, stderr_override):
     if stderr_override is not None:
         os.environ["AOS_STEP_STDERR"] = stderr_override
     try:
-        fn(user_state)
+        returned = fn(user_state)
     except BaseException as exc:
         return report_step_error(prog, error_path, pc, fn, exception_first_line(exc), traceback.format_exc())
     finally:
@@ -153,6 +155,11 @@ def step(prog, stderr_override):
     result = {"state": user_state, "pc": pc + 1, "n": len(steps),
               "done": pc + 1 >= len(steps), "steps": names, "src": src,
               "last": item, "history": (history + [item])[-HISTORY_LIMIT:]}
+    if isinstance(returned, aos_py.Wait):
+        try:
+            set_waiting(result, returned.path, prog.parent, pc)
+        except StepError as exc:
+            return report_step_error(prog, error_path, pc, fn, str(exc), traceback.format_exc())
     atomic_json(state_path, result, default=binary_default)
     error_path.unlink(missing_ok=True)
     return 0
@@ -167,8 +174,15 @@ def status(prog):
         steps, _ = load_program(prog, pc, source)
     except StepError as exc:
         return fail(str(exc))
-    print(json.dumps(saved or empty_state(steps), ensure_ascii=False, separators=(",", ":"),
+    current = saved or empty_state(steps)
+    print(json.dumps(current, ensure_ascii=False, separators=(",", ":"),
                      default=binary_default))
+    try:
+        line = waiting_line(current)
+    except StepError as exc:
+        return fail(str(exc))
+    if line:
+        print(line, file=sys.stderr)
     if error_path.exists():
         try:
             print(error_path.read_text(encoding="utf-8"), file=sys.stderr, end="")

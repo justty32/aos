@@ -140,6 +140,15 @@ echo $?                                 # 全部跑完那次回 100
 這是同步的：那一格會等到回應回來，幾十秒也等；要不等就走排程層。`:timeout-ms` 是
 整個 `aos-llm` 子行程的上限，交給 `aos/call` 處理。
 
+`(aos/wait-for path)` 宣告這格做完後要等一個檔；`(aos/llm-submit K req name)` 不帶
+`--wait` 把請求交給 kernel，成功時回結果檔的絕對路徑（工具可由 `AOS_KERNEL` 覆蓋）：
+
+```janet
+(do (def result (aos/llm-submit K @{:messages [@{:role "user" :content "hi"}]} "q1"))
+    (aos/wait-for result))
+(slurp result)
+```
+
 ## 狀態資料夾長什麼樣
 
 `prog.janet` 旁邊會出現：
@@ -149,6 +158,7 @@ echo $?                                 # 全部跑完那次回 100
   pc        # 下一個 form 的 0-based 索引
   env.img   # Janet make-image 存下的環境
   src       # 上次成功那格的 form 數、程式 bytes／mtime 與內容 checksum
+  state     # last／history，以及有等待時的 waiting（JDN）
   error     # 上次失敗的 form、錯誤與 stacktrace；下次成功就刪
   done      # 全部完成後出現的空檔
 ```
@@ -191,4 +201,4 @@ echo $?                                 # 全部跑完那次回 100
 - `kind` 是靠退出碼加 stderr 的 `aos-exec: ` 行猜的；子程式自己回 125 或 2 且印同樣開頭時無法分辨。
 - image 存不進去的東西，例如還開著的檔案或 fiber，會讓這一格存檔失敗並留在原 pc。
 - `aos-exec` 每次會截斷 inst.json 指定的 stdout/stderr 檔；要累積每格紀錄，請由 form 自己用 append 寫另一份 log。
-- 沒有非同步 API、結果檔或投遞機制。
+- 等待沒有逾時、一次只能等一個檔，kernel 也不會在檔案出現時主動叫醒行程。

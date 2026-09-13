@@ -121,6 +121,47 @@ class StepLuaTest(unittest.TestCase):
         self.assertEqual(self.run_tool().returncode, 100)
         self.assertEqual(self.run_tool().returncode, 100)
 
+    def test_wait_for_blocks_until_file_then_runs_next_step(self):
+        self.write("local function submit(s) return aos.wait_for('out.json') end\n"
+                   "local function consume(s) local f=assert(io.open(here..'/next.txt','w')); f:write('ran'); f:close() end\n"
+                   "return {{name='submit',fn=submit},{name='consume',fn=consume}}\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        first = self.state()
+        self.assertEqual((first["pc"], first["waiting"]["checks"]), (1, 0))
+        self.assertEqual(first["waiting"]["for"], str(self.home / "out.json"))
+        self.assertEqual(self.run_tool().returncode, 0)
+        blocked = self.state()
+        self.assertEqual(blocked["waiting"]["checks"], 1)
+        self.assertEqual((blocked["last"], blocked["history"]),
+                         (first["last"], first["history"]))
+        self.assertFalse((self.home / "next.txt").exists())
+        (self.home / "out.json").touch()
+        self.assertEqual(self.run_tool().returncode, 0)
+        state = self.state()
+        self.assertNotIn("waiting", state)
+        self.assertEqual((self.home / "next.txt").read_text(), "ran")
+        self.assertIn("(wait)", [item.get("step") for item in state["history"]])
+
+    def test_last_lua_step_can_wait_before_done_exit(self):
+        self.write("local function only(s) return aos.wait_for('last.out') end\n"
+                   "return {{name='only',fn=only}}\n")
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertFalse(self.state()["done"])
+        self.assertEqual(self.run_tool().returncode, 0)
+        (self.home / "last.out").touch()
+        self.assertEqual(self.run_tool().returncode, 100)
+        self.assertTrue(self.state()["done"])
+
+    def test_waiting_status_and_reset(self):
+        self.write("local function only(s) return aos.wait_for('pending.out') end\n"
+                   "return {{name='only',fn=only}}\n")
+        self.run_tool()
+        status = self.run_tool("--status")
+        self.assertIn("waiting", json.loads(status.stdout))
+        self.assertIn("在等 " + str(self.home / "pending.out"), status.stderr)
+        self.assertEqual(self.run_tool("--reset").returncode, 0)
+        self.assertNotIn("waiting", json.loads(self.run_tool("--status").stdout))
+
     def test_reset_removes_progress_and_error(self):
         self.write("local function only(s) s.x=1 end\nreturn {{name='only',fn=only}}\n")
         self.run_tool()

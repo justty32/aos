@@ -58,10 +58,11 @@ class StepJsonTest(unittest.TestCase):
         self.assertEqual((self.home / "where.txt").read_text().strip(), str(self.home))
 
     def test_child_failure_stays_and_fixed_step_advances(self):
-        self.write([{"argv": ["sh", "-c", "exit 3"]}])
+        self.write([{"argv": ["sh", "-c", "exit 3"], "wait_for": "must-not-wait"}])
         failed = self.run_tool()
         self.assertEqual(failed.returncode, 3)
         self.assertEqual(self.state()["pc"], 0)
+        self.assertNotIn("waiting", self.state())
         self.assertIn("第 0 個元素（0 起算）失敗：exit=3", failed.stderr)
         self.write([{"argv": ["true"]}])
         self.assertEqual(self.run_tool().returncode, 0)
@@ -73,6 +74,46 @@ class StepJsonTest(unittest.TestCase):
         self.assertTrue(self.state()["done"])
         self.assertEqual(self.run_tool().returncode, 100)
         self.assertEqual(self.run_tool().returncode, 100)
+
+    def test_wait_for_blocks_until_file_then_runs_next_step(self):
+        self.write([
+            {"argv": ["true"], "wait_for": "out.json"},
+            {"argv": ["sh", "-c", "printf ran > next.txt"]},
+        ])
+        self.assertEqual(self.run_tool().returncode, 0)
+        first = self.state()
+        self.assertEqual((first["pc"], first["waiting"]["checks"]), (1, 0))
+        self.assertEqual(first["waiting"]["for"], str(self.home / "out.json"))
+        self.assertEqual(self.run_tool().returncode, 0)
+        blocked = self.state()
+        self.assertEqual(blocked["waiting"]["checks"], 1)
+        self.assertEqual((blocked["last"], blocked["history"]),
+                         (first["last"], first["history"]))
+        self.assertFalse((self.home / "next.txt").exists())
+        (self.home / "out.json").touch()
+        self.assertEqual(self.run_tool().returncode, 0)
+        state = self.state()
+        self.assertNotIn("waiting", state)
+        self.assertEqual((self.home / "next.txt").read_text(), "ran")
+        self.assertIn("(wait)", [item.get("step") for item in state["history"]])
+
+    def test_last_json_step_can_wait_before_done_exit(self):
+        self.write([{"argv": ["true"], "wait_for": "last.out"}])
+        self.assertEqual(self.run_tool().returncode, 0)
+        self.assertFalse(self.state()["done"])
+        self.assertEqual(self.run_tool().returncode, 0)
+        (self.home / "last.out").touch()
+        self.assertEqual(self.run_tool().returncode, 100)
+        self.assertTrue(self.state()["done"])
+
+    def test_waiting_status_and_reset(self):
+        self.write([{"argv": ["true"], "wait_for": "pending.out"}])
+        self.run_tool()
+        status = self.run_tool("--status")
+        self.assertIn("waiting", json.loads(status.stdout))
+        self.assertIn("在等 " + str(self.home / "pending.out"), status.stderr)
+        self.assertEqual(self.run_tool("--reset").returncode, 0)
+        self.assertNotIn("waiting", json.loads(self.run_tool("--status").stdout))
 
     def test_reset_returns_to_initial_status(self):
         self.write([{"argv": ["true"]}])

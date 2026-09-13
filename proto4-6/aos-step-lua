@@ -12,6 +12,14 @@ local function absolute(path)
   end
   return "/" .. table.concat(parts, "/")
 end
+local function absolute_from(path, base)
+  if path:sub(1, 1) ~= "/" then path = base .. "/" .. path end
+  local parts = {}
+  for part in path:gmatch("[^/]+") do
+    if part == ".." then table.remove(parts) elseif part ~= "." then parts[#parts + 1] = part end
+  end
+  return "/" .. table.concat(parts, "/")
+end
 
 local script_arg = arg[0]
 if not script_arg:find("/", 1, true) then
@@ -57,7 +65,7 @@ local function source_mtime(path)
   local value = p:read("*l"); p:close(); return tonumber(value) or json.null
 end
 local function state_json(value)
-  local keys = {"state", "pc", "n", "done", "steps", "src", "last", "history"}
+  local keys = {"state", "pc", "n", "done", "steps", "src", "last", "history", "waiting"}
   local out = {}
   for _, key in ipairs(keys) do
     if value[key] ~= nil then out[#out + 1] = json.encode(key) .. ":" .. json.encode(value[key]) end
@@ -128,6 +136,38 @@ local function write_error(path, trace)
   return true
 end
 local function first_line(text) return tostring(text):match("^[^\n]*") or tostring(text) end
+local function now() return os.date("!%Y-%m-%dT%H:%M:%S+00:00") end
+local function waiting_line(current)
+  local waiting = current.waiting
+  if waiting == nil then return nil end
+  if type(waiting) ~= "table" or type(waiting["for"]) ~= "string"
+      or waiting["for"]:sub(1, 1) ~= "/" or type(waiting.since) ~= "string"
+      or type(waiting.after_pc) ~= "number" or waiting.after_pc < 0 or waiting.after_pc % 1 ~= 0
+      or type(waiting.checks) ~= "number" or waiting.checks < 0 or waiting.checks % 1 ~= 0 then
+    error("狀態檔壞了：waiting 欄位不合法", 0)
+  end
+  return string.format("在等 %s（已看 %d 次，從 %s 起）", waiting["for"], waiting.checks, waiting.since)
+end
+local function check_waiting(current, state_path)
+  if current.waiting == nil then return false end
+  waiting_line(current)
+  local probe = io.open(current.waiting["for"], "rb")
+  if not probe then
+    current.waiting.checks = current.waiting.checks + 1
+    local wrote, err = atomic_state(state_path, current)
+    if not wrote then error("寫不了狀態檔：" .. tostring(err), 0) end
+    return true
+  end
+  probe:close()
+  local history = type(current.history) == "table" and current.history or {}
+  history[#history + 1] = {pc=current.waiting.after_pc, step="(wait)", exit=0,
+      waited_checks=current.waiting.checks, at=now(), ms=0}
+  while #history > HISTORY_LIMIT do table.remove(history, 1) end
+  current.history, current.waiting = history, nil
+  local wrote, err = atomic_state(state_path, current)
+  if not wrote then error("寫不了狀態檔：" .. tostring(err), 0) end
+  return false
+end
 local function report_step_error(error_path, pc, item, detail, trace)
   local ok, err = write_error(error_path, trace)
   if not ok then return fail("寫不了錯誤全文：" .. tostring(err)) end
@@ -146,6 +186,11 @@ local function run(prog, stderr_override, want_status)
   local state_path, error_path = paths_for(prog)
   local ok_saved, saved = pcall(load_state, state_path)
   if not ok_saved then return fail(saved) end
+  if saved and not want_status then
+    local ok_wait, still_waiting = pcall(check_waiting, saved, state_path)
+    if not ok_wait then return fail(still_waiting) end
+    if still_waiting then return 0 end
+  end
   local user_state = saved and saved.state or {}
   if type(user_state) ~= "table" then return fail("狀態檔壞了：state 必須是物件") end
   local source, read_err = read_file(prog)
@@ -156,6 +201,9 @@ local function run(prog, stderr_override, want_status)
   local current = saved or empty_state(names)
   if want_status then
     io.stdout:write(state_json(current) .. "\n")
+    local ok_wait, line = pcall(waiting_line, current)
+    if not ok_wait then return fail(line) end
+    if line then io.stderr:write(line .. "\n") end
     local trace = read_file(error_path); if trace then io.stderr:write(trace) end
     return 0
   end
@@ -177,21 +225,26 @@ local function run(prog, stderr_override, want_status)
   local item = steps[pc + 1]
   _G.AOS_STEP_STDERR = stderr_override
   local started = os.clock()
-  local ran, trace = xpcall(function() return item.fn(user_state) end, debug.traceback)
+  local ran, returned = xpcall(function() return item.fn(user_state) end, debug.traceback)
   _G.AOS_STEP_STDERR = nil
-  if not ran then return report_step_error(error_path, pc, item, first_line(trace), trace) end
+  if not ran then return report_step_error(error_path, pc, item, first_line(returned), returned) end
   local encoded, encode_error = xpcall(function() return json.encode(user_state) end, debug.traceback)
   if not encoded then
     local kind = first_line(encode_error)
     return report_step_error(error_path, pc, item, "state 裡有 JSON 放不進的東西：" .. kind, encode_error)
   end
   local history = type(current.history) == "table" and current.history or {}
-  local last = {pc=pc, step=item.name, exit=0, at=os.date("!%Y-%m-%dT%H:%M:%S+00:00"),
+  local last = {pc=pc, step=item.name, exit=0, at=now(),
                 ms=math.floor((os.clock() - started) * 1000)}
   history[#history + 1] = last
   while #history > HISTORY_LIMIT do table.remove(history, 1) end
   local result = {state=user_state, pc=pc + 1, n=#steps, done=pc + 1 >= #steps,
                   steps=names, src=src, last=last, history=history}
+  if type(returned) == "table" and type(returned["$wait_for"]) == "string" then
+    result.waiting = {["for"]=absolute_from(returned["$wait_for"], dirname(prog)), since=now(),
+                      after_pc=pc, checks=0}
+    result.done = false
+  end
   local wrote, err = atomic_state(state_path, result)
   if not wrote then return fail("寫不了狀態檔：" .. tostring(err)) end
   os.remove(error_path)
