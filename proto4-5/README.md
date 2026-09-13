@@ -46,7 +46,7 @@ aos-llm call ENDPOINT REQ OUT [--timeout-ms N]
 
 - `ENDPOINT` 有三種寫法：單一 endpoint JSON 檔；`endpoints.json#local` 挑具名項目；
   `endpoints.json` 不加 `#` 時挑 `default`。
-- `REQ` 是 JSON 檔或 `-`（stdin），`messages` 必填；可有 `priority`（這層忽略）、
+- `REQ` 是 JSON 檔或 `-`（stdin），`messages` 必填；可有 `tools`／`tool_choice`（OpenAI 格式，原樣轉給模型；模型的 `tool_calls` 在結果的 `raw.choices[0].message` 裡）、`priority`（這層忽略）、
   `timeout_ms`、`params`、`id`，不准有 `model`。
 - `OUT` 是結果檔或 `-`（stdout）；檔案先寫 `.tmp` 再以 rename 發佈。
 - `--timeout-ms` 會蓋過請求與 endpoint 的 HTTP timeout。

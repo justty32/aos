@@ -1,18 +1,19 @@
 #!/bin/sh
-# 上電＋開機＋把五站的檔案鋪到 $AOS_PLAY/stations/。重複跑沒關係（每一步都會先看有沒有做過）。
+# 上電＋開機＋把六站的檔案鋪到 $AOS_PLAY/stations/。重複跑沒關係（每一步都會先看有沒有做過）。
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 [ -n "$AOS_PLAY" ] || { echo "先 source $HERE/env.sh"; exit 2; }
 R="$AOS_ROOT"; PLAY="$AOS_PLAY"
 mkdir -p "$PLAY"
 
-# 1. 鋪五站：__R__ / __PLAY__ / __K__ / __HERE__ 換成真路徑；已經有的檔不覆蓋（你改過的東西留著）
+# 1. 鋪六站：__R__ / __PLAY__ / __K__ / __HERE__ 換成真路徑；已經有的檔不覆蓋（你改過的東西留著）
 for st in "$HERE"/stations/*/; do
   name="$(basename "$st")"; dst="$PLAY/stations/$name"; mkdir -p "$dst"
   for f in "$st"*; do
     out="$dst/$(basename "$f")"
     [ -e "$out" ] && continue
     sed -e "s|__R__|$R|g" -e "s|__PLAY__|$PLAY|g" -e "s|__K__|$K|g" -e "s|__HERE__|$dst|g" "$f" > "$out"
+    [ -x "$f" ] && chmod +x "$out"
   done
 done
 
@@ -46,4 +47,4 @@ else
 fi
 
 echo; aos-kernel ls "$K"
-echo; echo "下一步：cat $HERE/README.md 照著五站玩。收工：$HERE/down.sh"
+echo; echo "下一步：cat $HERE/README.md 照著六站玩。收工：$HERE/down.sh"

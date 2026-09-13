@@ -52,3 +52,12 @@ A/inst.json          放進 kernel：{"argv":["/abs/proto4-7/aos-agent","."],"cw
 2. 任務書派 codex：`proto4-7/`、測試（假 LLM 結果檔、假工具）、README（大白話）、遊樂場加第 6 站。
 3. 真開 daemon＋LM Studio 跑一次「寫信 → 它用 `sh` 工具 → 回信」。
 4. 派試玩 r5（agent 那層）。
+
+## 24.5 落地補記（2026-09-13 傍晚）
+
+codex 一輪做完 `proto4-7/`（`aos-agent`、`aos-user`，28 條測試；任務書 `proto4-7/notes/codex-task-1.md`、回報 `codex-out-1.md`），遊樂場第 6 站跟著上。真開 daemon＋LM Studio（gemma-4-e4b）跑「寫信 → 用 sh 工具 → 回信」踩到兩個地基的坑，都修了：
+
+1. **第一層 `aos-llm` 沒轉 `tools`**：它只把 `params` 塞進 body，agent 放最外層的 `tools` 被丟掉，模型根本不知道有工具，回了一段「我是語言模型不能 ls」。改成 `tools`／`tool_choice` 是 REQ 的正式欄位、原樣轉給模型（proto4-5 測試 64）。
+2. **LM Studio 驗工具 schema**：`parameters` 一定要是 object 且有 `properties`，範例 `echo` 工具寫成 `additionalProperties:true` 就被整個請求退 400（`http` 錯）。agent 連錯 5 次 → stuck → outbox「這句先放著」——**stuck 那條路順便真的走過一次**。修法：`echo` 的 schema 補 `properties`，`load_tools` 一律補 `type:object` 與空 `properties`。
+
+修完整條通：`[user] 用 sh 工具看看…` → assistant `tool_calls sh {"cmd":"ls -la"}` → tool 回 `ls` 輸出 → assistant 一句話 → outbox 0001，約 20 秒。gemma-4-e4b 原生會回 `tool_calls`，文字救回那段這次沒用到。

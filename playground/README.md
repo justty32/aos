@@ -1,18 +1,18 @@
 # aos 遊樂場
 
-給人玩的。五站，每站十分鐘內。所有東西都放在 repo 外面的 `~/aos-play/`，玩壞了整個資料夾刪掉重來，repo 不會髒。
+給人玩的。六站，每站十分鐘內。所有東西都放在 repo 外面的 `~/aos-play/`，玩壞了整個資料夾刪掉重來，repo 不會髒。
 
 ## 開場（每次開新終端機都要做前兩步）
 
 ```sh
 cd ~/repo/simple_tools/aos
 source playground/env.sh      # 把指令放進 PATH、決定遊樂場和 daemon 的家在哪
-playground/up.sh              # 上電（daemon）、開機（kernel，掛好 LLM 排程）、鋪五站的檔案
+playground/up.sh              # 上電（daemon）、開機（kernel，掛好 LLM 排程）、鋪六站的檔案
 ```
 
 `up.sh` 最後會印一張 `aos-kernel ls` 的表：兩顆 cpu 都 idle、最後一行 `llm:` 是 LLM 排程的狀態。看到就成功了。重複跑沒關係，它每一步都會先看有沒有做過。
 
-LM Studio 要開著、載一顆模型（`lms load google/gemma-4-e4b`）。沒開的話第 1、3、4、5 站會失敗，第 2 站照玩。
+LM Studio 要開著、載一顆模型（`lms load google/gemma-4-e4b`）。沒開的話第 1、3、4、5、6 站會失敗，第 2 站照玩。
 
 三個常用動作，隨時可用：
 
@@ -94,6 +94,20 @@ jq -r .text answer.json
 
 或直接 `aos-kernel add $K inst.json --name lisp` 交給 kernel。
 
+## 第 6 站：跟 agent 說話
+
+```sh
+cd $AOS_PLAY/stations/6-agent
+./make.sh
+aos-kernel add $K bob/inst.json --name bob
+aos-user bob say "用 sh 工具看看你資料夾裡有什麼，然後告訴我"
+aos-user bob listen --once       # 想留著等新回話可省略 --once
+# 或：aos-user bob talk
+aos-kernel ls $K                 # 看 bob 在 waiting／running 間走
+```
+
+玩壞：把 `bob/agent.json` 的 `max_steps_per_question` 改小，再說一句要它做好多步的話，看它到上限後回信並標 `stuck`。也可以 `aos-daemon-ctl stop`，再 `aos-user bob say "還在嗎"`，用 `aos-user bob status` 看信留在 inbox、agent 沒有偷偷自己推格。
+
 ## 故意弄壞
 
 - 排一個永遠等不到檔的行程（第 2 站不寫 `go.txt`）：`ls` 標 `waiting`；再排別的進來，它會讓出 cpu。
@@ -114,4 +128,5 @@ aos-kernel rm $K NAME   # 只拿掉一個行程
 - 作業系統那層（daemon／kernel／inst.json）：[proto4-3/README.md](../proto4-3/README.md)
 - LLM 兩層：[proto4-5/README.md](../proto4-5/README.md)
 - 逐步 JSON／Python／Lua：[proto4-6/README.md](../proto4-6/README.md)；逐步 Lisp：[proto4-4/README.md](../proto4-4/README.md)
+- 簡單 agent：[proto4-7/README.md](../proto4-7/README.md)
 - 別人怎麼玩的：[proto4/notes/play/](../proto4/notes/play/README.md) 有四輪試玩報告

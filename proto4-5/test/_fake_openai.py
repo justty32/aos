@@ -60,6 +60,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         model = "other" if content == "model:other" else body["model"]
         text = content.split(":", 1)[1] if content.startswith("echo:") else content
+        if content == "tools?":
+            text = "tools=%d choice=%s" % (len(body.get("tools", [])),
+                                           body.get("tool_choice", "-"))
         answer = {
             "id": "fake", "model": model,
             "choices": [{"message": {"role": "assistant", "content": text},
