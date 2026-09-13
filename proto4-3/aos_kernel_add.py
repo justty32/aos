@@ -23,13 +23,24 @@ def _names_in(path):
             if n.endswith(".json") and os.path.isfile(os.path.join(path, n))}
 
 
-def _used_names(h):
-    names = _names_in(h.procs) | _names_in(h.bad) | _names_in(h.done)
+def _active_names(h):
+    names = _names_in(h.procs)
     st = h.state()
     names.update(q for q in st["queue"] if isinstance(q, str))
     names.update(c.get("pid") for c in st["cpus"].values()
                  if isinstance(c, dict) and isinstance(c.get("pid"), str))
     return names
+
+
+def _clear_retired(h, name):
+    cleared = []
+    for label, folder in (("done", h.done), ("bad", h.bad)):
+        path = os.path.join(folder, "%s.json" % name)
+        if os.path.isfile(path):
+            os.unlink(path)
+            cleared.append(label)
+    if cleared:
+        print("清掉 %s 裡的舊紀錄：%s" % ("、".join(cleared), name))
 
 
 def cmd_add(argv):
@@ -92,14 +103,18 @@ def cmd_add(argv):
     if "/" in argv0 and not os.path.exists(argv0):
         return _fail("argv[0] 指的檔不存在：%s" % argv0)
 
-    used = _used_names(h)
+    active = _active_names(h)
+    retired = _names_in(h.bad) | _names_in(h.done)
+    clear_old = False
     if a.name is not None:
         name = a.name
         if not name or "/" in name:
             return _fail("--name 不能是空字串，也不能含 /")
-        if name in used:
+        if name in active:
             return _fail("名字已經存在或正在 cpu 上：%s" % name)
+        clear_old = name in retired
     else:
+        used = active | retired
         nums = [int(name) for name in used if name.isdigit()]
         name = str((max(nums) if nums else 0) + 1)
 
@@ -115,6 +130,8 @@ def cmd_add(argv):
         except aos_inst.InstError as e:
             os.unlink(tmp)
             return _fail("inst.json 過不了 aos-exec 的檢查：%s" % e)
+        if clear_old:
+            _clear_retired(h, name)
         os.replace(tmp, dst)
     except OSError as e:
         try:

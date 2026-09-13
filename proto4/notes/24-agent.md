@@ -61,3 +61,5 @@ codex 一輪做完 `proto4-7/`（`aos-agent`、`aos-user`，28 條測試；任�
 2. **LM Studio 驗工具 schema**：`parameters` 一定要是 object 且有 `properties`，範例 `echo` 工具寫成 `additionalProperties:true` 就被整個請求退 400（`http` 錯）。agent 連錯 5 次 → stuck → outbox「這句先放著」——**stuck 那條路順便真的走過一次**。修法：`echo` 的 schema 補 `properties`，`load_tools` 一律補 `type:object` 與空 `properties`。
 
 修完整條通：`[user] 用 sh 工具看看…` → assistant `tool_calls sh {"cmd":"ls -la"}` → tool 回 `ls` 輸出 → assistant 一句話 → outbox 0001，約 20 秒。gemma-4-e4b 原生會回 `tool_calls`，文字救回那段這次沒用到。
+
+**試玩 r5 之後（fix-r6）**：agent 那站兩個試玩的都說最好玩。改了三處：一題一封信（idle 一次只拿最舊一個檔，其他留著）；`state.epoch`（`--reset` 不刪 state 而是寫回預設並 `epoch+1`，請求名 `<name>-e<epoch>-q<q>-s<s>`，reset 後改問題不撞名）；`listen --once` 只印沒印過的（`.listen-seen`）。stuck 兩句用詞統一含「（stuck）」。

@@ -11,7 +11,8 @@ sys.path.insert(0, str(HERE.parent / "proto4-6"))
 import aos_py  # noqa: E402
 
 from agent_tools import ToolConfigError  # noqa: E402
-from state_machine import AgentError, load_state, step  # noqa: E402
+from common import atomic_json  # noqa: E402
+from state_machine import AgentError, DEFAULT_STATE, load_state, step  # noqa: E402
 
 
 def main(argv=None):
@@ -24,9 +25,12 @@ def main(argv=None):
     agent_dir = Path(args.agent).resolve()
     if args.reset:
         try:
-            (agent_dir / "state.json").unlink(missing_ok=True)
+            previous = load_state(agent_dir)
+            reset_state = dict(DEFAULT_STATE)
+            reset_state["epoch"] = previous["epoch"] + 1
+            atomic_json(agent_dir / "state.json", reset_state)
             return 0
-        except OSError as exc:
+        except (AgentError, OSError) as exc:
             print(f"aos-agent: {exc}", file=sys.stderr)
             return 1
     if args.status:

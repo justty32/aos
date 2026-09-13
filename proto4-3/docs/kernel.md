@@ -46,7 +46,7 @@ aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q] [-
 aos-kernel-boot DIR [--home H] # 開機：只把已初始化的 kernel 放上正在跑的 daemon
 aos-kernel-tick         # 心跳：在家裡（cwd ＝ K）跑一回合，不吃參數
 aos-kernel add [DIR] INST.json [--name NAME] # 檢查、轉路徑、配名後排進佇列
-aos-kernel rm [DIR] NAME # 投一張單，等 kernel 拿掉佇列或 cpu 上的行程
+aos-kernel rm [DIR] NAME # 拿掉活行程；沒有活的就清 done／bad 同名舊紀錄
 aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、跑了幾次、誰在等
 ```
 
@@ -55,8 +55,8 @@ aos-kernel ls [DIR]     # 印給人看：每顆 cpu 上是誰、上去多久、�
 | `aos-kernel-init` | 建家與四個檔；`--interval-ms`／`--timeout-ms` 是**每顆 cpu** `ctl add` 時給 aos-run 的旗標（預設 1000／0），`--quantum` 是時間片（預設 5），`--wait-exit` 預設 101，`--bad-after` 預設 10 | 0；**DIR 已經存在＝1**（不動它） |
 | `aos-kernel-boot` | 看 daemon 上有沒有 kernel 的 `inst.json`；沒有就 add，重複跑無害。**不開 daemon、不 init** | 0；還沒 init 或 daemon 沒跑＝1 |
 | `aos-kernel-tick` | 跑一回合，見下面七步 | **一律 0**；cwd 不是家（沒有 `config.json`）＝1 |
-| `aos-kernel add` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；檢查 inst，轉 cwd／argv[0]，自動配數字名或吃 `--name`，再原子排進 `procs/` | 0；不是家、inst 不合格或撞名＝1 |
-| `aos-kernel rm` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；只寫 `syscalls/` 單子，等 tick 回音 | 成功＝0；找不到、家不對或 kernel 沒回應＝1 |
+| `aos-kernel add` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；檢查 inst，轉 cwd／argv[0]，自動配數字名或吃 `--name`，再原子排進 `procs/`；指定名只撞到 done／bad 舊紀錄時會先清掉再排 | 0；不是家、inst 不合格或撞到活行程＝1 |
+| `aos-kernel rm` | 一個參數時 DIR＝cwd，兩個時第一個是 DIR；只寫 `syscalls/` 單子，等 tick 拿掉佇列／cpu 行程；找不到活的就清 done／bad 同名舊紀錄 | 成功＝0；四處都找不到、家不對或 kernel 沒回應＝1 |
 | `aos-kernel ls [DIR]` | 給 DIR 就先進去，否則用 cwd；讀 kernel ＋ daemon 的 `state.json` 印存活狀態、cpu、佇列、bad 與 done | 0；不是家＝1 |
 
 ### kernel module
@@ -168,13 +168,14 @@ aos-kernel ls /tmp/K                                    # 看誰在哪顆 cpu �
 
 `AOS_DAEMON_HOME` 那三支要對得上：kernel 是從 daemon 繼承下來的，所以 daemon 用
 `AOS_DAEMON_HOME=…` 開比用 `--home` 保險（`--home` 不會傳給子孫）。
-`ls` 若沒有這個環境變數、家不存在或沒有 state，會印「找不到 daemon 的家」；只有找到 state
-和 pid、但 pid 已不活著時才印 `daemon dead`。
+`ls` 若沒有這個環境變數或家不存在，會印「找不到 daemon 的家」；家還在但沒有 `state.json`
+代表正常收工過，會印「daemon 沒在跑」；找到 pid 但 pid 已不活著時才印 `daemon dead（pid N 不在了）`。
+cpu 表的 `PROC` 會按最長名字撐寬，daemon 沒留下 runs 時顯示 `-`，不會漏出 Python 的 `None`。
 
 ### kernel 這一版沒做什麼
 
-- **行程做完是應急版**：保留退出碼 100，行程回這個碼就會被收進 `procs/done/`；這裡不會
-  自動清，做完行程的 cwd 也不動。
+- **行程做完是應急版**：保留退出碼 100，行程回這個碼就會被收進 `procs/done/`；同名重排或
+  `rm` 時會清舊紀錄，除此之外不自動清，做完行程的 cwd 也不動。
 - **沒有優先級、沒有 nice**，時間片一律 quantum 次，佇列純 FIFO。
 - **內建 syscall 目前只有 rm**；module 可增加其他 op。不改 cpu 的韌體設定（`ctl add` 給的 interval／timeout 定死不改）、
   **沒有 daemon↔kernel 專用通道**（每回合只看

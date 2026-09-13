@@ -36,11 +36,11 @@ def _move_read(path, read_dir):
 
 
 def collect_user_mail(agent_dir, state):
-    """搬走所有信，回傳可接進 messages 的 user 訊息。"""
+    """搬走最舊的一封信，回傳可接進 messages 的 user 訊息。"""
     inbox = agent_dir / "inbox" / "user"
     read_dir = inbox / "read"
     messages = []
-    paths = sorted(inbox.glob("*.json"))
+    paths = sorted(inbox.glob("*.json"))[:1]
     for path in paths:
         try:
             payload = read_json(path)

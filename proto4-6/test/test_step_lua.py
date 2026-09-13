@@ -49,6 +49,12 @@ class StepLuaTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(self.state()["state"]["ok"])
 
+    def test_success_reports_step_name(self):
+        self.write("local function greet(s) s.ok=true end\nreturn {{name='greet',fn=greet}}\n")
+        result = self.run_tool()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("第 0 格 ok（greet）", result.stderr)
+
     def test_state_crosses_steps_and_file_has_readable_shape(self):
         self.write("local function load(s) s.x=4 end\nlocal function compute(s) s.x=s.x*3 end\n"
                    "return {{name='load',fn=load},{name='compute',fn=compute}}\n")

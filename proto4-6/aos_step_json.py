@@ -144,6 +144,8 @@ def step(prog, stderr_override):
 
     if success:
         error_path.unlink(missing_ok=True)
+        name = program[pc].get("note") or str(program[pc]["argv"][0])
+        print(f"第 {pc} 格 ok（{name}）", file=sys.stderr)
         return 0
     write_error(error_path, prog, pc, program[pc], code, kind)
     if kind == aos_exec.CHILD:

@@ -60,7 +60,7 @@ class AgentTest(unittest.TestCase):
 
     def state(self, **changes):
         state = {
-            "state": "idle", "question": 1, "step": 0, "request": None,
+            "state": "idle", "epoch": 0, "question": 1, "step": 0, "request": None,
             "checks": 0, "errors": 0, "idle_since_error": 0,
             "stuck": False, "last_error": None, "outbox_n": 0,
         }
@@ -95,7 +95,7 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(state["step"], 1)
         self.assertEqual(self.run_agent().returncode, 101)
         self.assertEqual(self.read("state.json")["checks"], 1)
-        self.result("bob-q1-s1", "answer")
+        self.result("bob-e0-q1-s1", "answer")
         self.assertEqual(self.run_agent().returncode, 0)
         self.assertEqual(self.read("state.json")["state"], "act")
         self.assertEqual(self.run_agent().returncode, 0)
@@ -108,7 +108,7 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(request["messages"][0], {"role": "system", "content": "help"})
         self.assertEqual(request["messages"][1]["content"], "[user] question")
         self.assertEqual([x["function"]["name"] for x in request["tools"]], ["echo", "sh"])
-        copied = json.loads((self.K / "llm/requests/bob-q1-s1.json").read_text())
+        copied = json.loads((self.K / "llm/requests/bob-e0-q1-s1.json").read_text())
         self.assertEqual(copied, request)
 
     def test_request_omits_tools_key_when_tool_list_is_empty(self):
@@ -119,18 +119,23 @@ class AgentTest(unittest.TestCase):
         self.send_and_ask()
         self.assertNotIn("tools", self.read("req.json"))
 
-    def test_mail_array_moves_whole_file_and_bad_mail_reports(self):
+    def test_mail_array_moves_whole_file_as_one_question(self):
         inbox = self.A / "inbox/user"
         self.write("inbox/user/a.json", [
             {"from": "user", "time": "1", "content": "one"},
             {"from": "user", "time": "2", "content": "two"},
         ])
-        (inbox / "bad.json").write_text("{", encoding="utf-8")
         self.assertEqual(self.run_agent().returncode, 0)
         self.assertEqual([x["content"] for x in self.read("messages.json")], ["[user] one", "[user] two"])
         self.assertTrue((inbox / "read/a.json").exists())
-        self.assertTrue((inbox / "read/bad.json").exists())
-        self.assertEqual(self.read("outbox/0001.json")["content"], "有一封信讀不懂")
+
+    def test_idle_takes_only_oldest_mail_and_leaves_next_unread(self):
+        self.write("inbox/user/0001.json", {"content": "first"})
+        self.write("inbox/user/0002.json", {"content": "second"})
+        self.assertEqual(self.run_agent().returncode, 0)
+        self.assertEqual([x["content"] for x in self.read("messages.json")], ["[user] first"])
+        self.assertTrue((self.A / "inbox/user/0002.json").exists())
+        self.assertIn("unread=1", self.run_user("status").stdout)
 
     def test_bad_mail_alone_did_work_so_returns_zero(self):
         (self.A / "inbox/user/bad.json").write_text("{", encoding="utf-8")
@@ -139,7 +144,7 @@ class AgentTest(unittest.TestCase):
 
     def test_outbox_counter_survives_reset(self):
         self.send_and_ask()
-        self.result("bob-q1-s1", "first")
+        self.result("bob-e0-q1-s1", "first")
         self.run_agent(); self.run_agent()
         self.assertEqual(self.run_agent("--reset").returncode, 0)
         self.write("inbox/user/bad.json", "not a letter")
@@ -154,7 +159,8 @@ class AgentTest(unittest.TestCase):
         self.assertEqual(self.run_agent().returncode, 0)
         state = self.read("state.json")
         self.assertEqual((state["state"], state["step"], state["stuck"]), ("idle", 2, True))
-        self.assertIn("走了 1 格", self.read("outbox/0001.json")["content"])
+        self.assertEqual(self.read("outbox/0001.json")["content"],
+                         "這題走了 1 格到上限，先停（stuck）；回我一句就從頭算")
 
     def test_checks_limit_is_exactly_600(self):
         missing = self.K / "llm/results/missing.json"
@@ -172,7 +178,15 @@ class AgentTest(unittest.TestCase):
         state = self.read("state.json")
         self.assertTrue(state["stuck"])
         self.assertEqual(state["last_error"], "http: down")
-        self.assertIn("等你新信", self.read("outbox/0001.json")["content"])
+        self.assertEqual(self.read("outbox/0001.json")["content"],
+                         "連錯 5 次，這句先放著（stuck）；回我一句再試")
+
+    def test_reset_increments_epoch_and_new_request_name(self):
+        self.assertEqual(self.run_agent("--reset").returncode, 0)
+        reset = self.read("state.json")
+        self.assertEqual(reset["epoch"], 1)
+        self.send_and_ask("after reset")
+        self.assertTrue((self.K / "llm/requests/bob-e1-q1-s1.json").exists())
 
     def test_empty_and_missing_choices_are_errors(self):
         empty = self.result("empty", text="")

@@ -94,9 +94,16 @@ def json_type(exc):
     return match.group(1) if match else type(exc).__name__
 
 
-def report_step_error(prog, error_path, pc, fn, detail, trace):
+def exception_line(exc, prog, fallback):
+    wanted = prog.resolve()
+    matches = [frame.lineno for frame in traceback.extract_tb(exc.__traceback__)
+               if Path(frame.filename).resolve() == wanted]
+    return matches[-1] if matches else fallback
+
+
+def report_step_error(prog, error_path, pc, fn, detail, trace, line=None):
     write_error(error_path, trace)
-    line = fn.__code__.co_firstlineno
+    line = fn.__code__.co_firstlineno if line is None else line
     print(f"{TOOL}: 第 {pc} 格 {fn.__name__}（0 起算，PROG 第 {line} 行）失敗：{detail}"
           f"（全文：{prog.name}.error 或 --status）", file=sys.stderr)
     return 1
@@ -134,7 +141,9 @@ def step(prog, stderr_override):
     try:
         returned = fn(user_state)
     except BaseException as exc:
-        return report_step_error(prog, error_path, pc, fn, exception_first_line(exc), traceback.format_exc())
+        line = exception_line(exc, prog, fn.__code__.co_firstlineno)
+        return report_step_error(prog, error_path, pc, fn, exception_first_line(exc),
+                                 traceback.format_exc(), line)
     finally:
         if stderr_override is not None:
             if old_stderr is None:
@@ -163,6 +172,7 @@ def step(prog, stderr_override):
             return report_step_error(prog, error_path, pc, fn, str(exc), traceback.format_exc())
     atomic_json(state_path, result, default=binary_default)
     error_path.unlink(missing_ok=True)
+    print(f"第 {pc} 格 ok（{fn.__name__}）", file=sys.stderr)
     return 0
 
 
