@@ -50,7 +50,7 @@ def endpoint_document():
     }
 
 
-def init_home(directory):
+def init_home(directory, make_inst=True, quiet=False):
     root = Path(directory).absolute()
     if root.exists():
         print("llm-cpu init: DIR 已經存在：%s" % root, file=sys.stderr)
@@ -61,10 +61,11 @@ def init_home(directory):
         (root / "results").mkdir()
         (root / "log").mkdir()
         atomic_json(root / "endpoints.json", endpoint_document())
-        atomic_json(root / "inst.json", {
-            "argv": [str(PROGRAM), "tick", "."],
-            "cwd": str(root), "stderr": "tick.err",
-        })
+        if make_inst:
+            atomic_json(root / "inst.json", {
+                "argv": [str(PROGRAM), "tick", "."],
+                "cwd": str(root), "stderr": "tick.err",
+            })
         atomic_json(root / "state.json", {
             "ticks": 0, "running": 0, "endpoints": {},
         })
@@ -73,7 +74,8 @@ def init_home(directory):
     except OSError as exc:
         print("llm-cpu init: %s" % exc, file=sys.stderr)
         return 1
-    print("建好了：%s" % root)
+    if not quiet:
+        print("建好了：%s" % root)
     return 0
 
 
@@ -122,6 +124,37 @@ def submit(directory, source, requested_id=None):
     print("投進去了：requests/%s.json；結果會在 results/%s.json" %
           (request_id, request_id))
     return 0
+
+
+def submit_object(directory, request, requested_id=None):
+    """把記憶體裡的 JSON 物件原子投入佇列；成功回實際 id，失敗丟例外。"""
+    root = Path(directory).absolute()
+    if not (root / "requests").is_dir():
+        raise ValueError("這不是 llm-cpu 的家：%s" % root)
+    request_id = requested_id or str(time.time_ns())
+    if not validate_id(request_id):
+        raise ValueError("id 只能用英數、點、底線、減號")
+    targets = [root / "requests" / (request_id + ".json"),
+               root / "requests" / "running" / (request_id + ".json"),
+               root / "requests" / "done" / (request_id + ".json"),
+               root / "results" / (request_id + ".json")]
+    if any(path.exists() for path in targets):
+        raise ValueError("id 已經存在：%s" % request_id)
+    tmp = targets[0].with_name(targets[0].name + ".tmp")
+    try:
+        with open(tmp, "x", encoding="utf-8") as stream:
+            json.dump(request, stream, ensure_ascii=False, separators=(",", ":"))
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(tmp, targets[0])
+    except Exception:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+    return request_id
 
 
 def load_endpoints(root):

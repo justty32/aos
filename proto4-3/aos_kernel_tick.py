@@ -5,7 +5,7 @@
 
 kernel 每隔一段時間自己跑一次的就是這支（`aos-kernel-init` 寫出的 `inst.json` 指到這裡）
 ——跟很久一次的 `aos-kernel-init` 不是同一種壽命，所以也拆成自己的指令
-（[proto4 筆記 §19.7](../proto4/notes/2026-09-08-ideas.md)）。核心是 `tick()`：六步，
+（[proto4 筆記 §19.7](../proto4/notes/2026-09-08-ideas.md)）。核心是 `tick()`：七步，
 順序固定，做完一律退出 0。
 
 1. **讀自己的表**（`state.json`，沒有＝空表）。
@@ -13,15 +13,16 @@ kernel 每隔一段時間自己跑一次的就是這支（`aos-kernel-init` 寫�
    這 N 個 key 哪些在 daemon 表上。不在表上的：檔案不見了就先寫一份 idle 指令，再
    `aos-daemon-ctl add`（**不開 `--stop-on-error`**）。add 失敗（daemon 沒跑之類）記一行
    log、那顆 cpu 這回合不排程，退出仍 0。
-3. **處理 syscall**：依序讀 `syscalls/*.json`，目前只認 rm。
-4. **檢查佇列**：`procs/*.json`（不含 `bad/`）逐個讀，基本欄位或 aos-exec 完整驗證不過
+3. **處理 syscall**：依序讀 `syscalls/*.json`；內建 rm，其餘交給 module。
+4. **跑 module**：每個 module 一格，炸了只記 note。
+5. **檢查佇列**：`procs/*.json`（不含 `bad/`）逐個讀，基本欄位或 aos-exec 完整驗證不過
    → 搬到 `procs/bad/` 同名（§17.1：cwd 這道檢查只在 kernel 做）。
-5. **排程**：idle 的 cpu 有人等就上人；有人在跑但「daemon 的 runs － 上去時記的 runs」
+6. **排程**：idle 的 cpu 有人等就上人；有人在跑但「daemon 的 runs － 上去時記的 runs」
    滿 quantum 而且還有人等，就換人——**換檔不留空窗**（§17.2 第 3 條）：先
    `os.link(cpus/n.json, procs/<舊>.json)` 讓舊的先在 `procs/` 有名字，再
    `os.rename(procs/<新>.json, cpus/n.json)` 原子蓋過去，`cpus/n.json` 任何時刻都在。
    佇列是 FIFO：新出現的排尾巴、被換下來的也排尾巴、檔案不見的從佇列拿掉。
-6. **寫表寫 log**（`state.json` 先 `.tmp` 再 rename、`kernel.log` append 一行），退出 0。
+7. **寫表寫 log**（`state.json` 先 `.tmp` 再 rename、`kernel.log` append 一行），退出 0。
 """
 import json
 import os
@@ -32,6 +33,7 @@ import time
 import aos_home
 import aos_inst
 from aos_kernel import CTL_BIN, IDLE_INST, here_or_die
+from aos_kernel_module import load_modules, run_modules
 from aos_kernel_syscall import handle_syscalls
 
 
@@ -42,7 +44,10 @@ def tick(h, cfg, now=None):
         st["cpus"].setdefault(str(n), None)
     notes = []
     ready = poll_cpus(h, cfg, st, notes)
-    handle_syscalls(h, cfg, st, notes)
+    modules = load_modules(cfg)
+    notes.extend(modules.notes)
+    handle_syscalls(h, cfg, st, notes, modules)
+    run_modules(h, cfg, st, modules, notes)
     check_queue(h, notes)
     schedule(h, cfg, st, ready, notes, now)
     h.save(st)

@@ -105,11 +105,7 @@ def _finish_running(root, endpoints, events):
             events.append("timeout:%s" % request_id)
 
 
-def _validate(path, default, endpoints):
-    try:
-        req = home.read_json(path)
-    except (OSError, json.JSONDecodeError) as exc:
-        return None, None, "不是合法 JSON：%s" % exc
+def validate_request(req, default, endpoints):
     if not isinstance(req, dict):
         return req, None, "請求必須是 JSON 物件"
     messages = req.get("messages")
@@ -157,6 +153,14 @@ def _validate(path, default, endpoints):
             and not isinstance(endpoint["strict_model"], bool)):
         return req, endpoint_name, "endpoint strict_model 必須是布林值"
     return req, endpoint_name, None
+
+
+def _validate(path, default, endpoints):
+    try:
+        req = home.read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, None, "不是合法 JSON：%s" % exc
+    return validate_request(req, default, endpoints)
 
 
 def _reject_bad(root, default, endpoints, events):

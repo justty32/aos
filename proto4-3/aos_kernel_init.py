@@ -4,7 +4,7 @@
 (../proto4/notes/2026-09-08-ideas.md)），所以拆成自己的命令。
 
     aos-kernel-init DIR --ncpu N [--interval-ms X] [--timeout-ms Y] [--quantum Q]
-                    [--done-exit N]
+                    [--done-exit N] [--module PATH]...
 
 建出來的家（DIR）長什麼樣、`inst.json`／`config.json`／`state.json`／`kernel.log`／
 `procs/`／`cpus/` 各是什麼，見 `aos_kernel.py` 的 docstring 與 `KHome`（家的版面共用
@@ -29,6 +29,7 @@ def cmd_init(argv):
     ap.add_argument("--timeout-ms", type=int, default=DEFAULTS["timeout_ms"])
     ap.add_argument("--quantum", type=int, default=DEFAULTS["quantum"])
     ap.add_argument("--done-exit", type=int, default=DEFAULTS["done_exit"])
+    ap.add_argument("--module", action="append", default=[], metavar="PATH")
     try:
         a = ap.parse_args(argv)
     except SystemExit:
@@ -46,7 +47,8 @@ def cmd_init(argv):
     aos_home.write_json(h.instf, {"argv": [TICK_BIN], "cwd": "."})
     aos_home.write_json(h.configf, {"ncpu": a.ncpu, "interval_ms": a.interval_ms,
                                     "timeout_ms": a.timeout_ms, "quantum": a.quantum,
-                                    "done_exit": a.done_exit})
+                                    "done_exit": a.done_exit,
+                                    "modules": [os.path.abspath(path) for path in a.module]})
     aos_home.write_json(h.statef, {"cpus": {str(n): None for n in range(a.ncpu)},
                                    "queue": []})
     h.log("init ncpu=%d interval=%dms timeout=%dms quantum=%d"
