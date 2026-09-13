@@ -74,7 +74,7 @@
 (defn- bind-runtime [env here pc]
   # 絕對路徑用 require 載入，再把公開名字每次重綁進持久 env。
   (def module (require aos-file))
-  (each name ['exec-path 'call 'call-dir 'call-json 'ok?]
+  (each name ['exec-path 'call 'call-dir 'call-json 'ok? 'value 'pipe]
     (eval ~(def ,(symbol (string "aos/" name)) (quote ,((module name) :value))) env))
   # env 裡的綁定有編譯器用的描述層，不能只用 put 塞裸值。
   (eval ~(def here ,here) env)

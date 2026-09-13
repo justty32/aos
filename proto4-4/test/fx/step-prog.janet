@@ -2,3 +2,6 @@
 (defn f [a] (* a x))
 (spit (string here "/side.txt") (string (f 2)))
 (aos/call-dir (string here "/child"))
+(def r (aos/call-dir (string here "/child")
+                     @{:read (string here "/child/out.txt") :json true}))
+(spit (string here "/child-value.txt") (string (get (get r :value) "answer")))

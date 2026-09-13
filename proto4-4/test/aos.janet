@@ -68,4 +68,56 @@
     (check "call-dir 拒絕普通檔案" (throws? (fn [] (aos/call-dir plain))))
     (check "call-json 拒絕非 .json" (throws? (fn [] (aos/call-json plain))))
 
+    (def fed (aos/call (string fx "/cat.sh") @{:stdin "hello\n" :capture true}))
+    (check ":stdin 餵給普通檔並用 :capture 接回" (= "hello\n" (fed :out)))
+    (def multi (aos/call (string fx "/multi.sh") @{:capture true}))
+    (check ":capture 接到多行 stdout" (= "one\ntwo\nthree\n" (multi :out)))
+    (check "沒給 :capture 時 :out 是 nil" (nil? ((aos/call (string fx "/multi.sh")) :out)))
+
+    (def streams (string tmp "/streams"))
+    (mkdir2 streams ".aos")
+    (spit (string streams "/.aos/inst.json")
+          "{\"argv\":[\"/bin/sh\",\"-c\",\"printf '{\\\"a\\\":1,\\\"b\\\":[1,2]}'; printf warning >&2\"],\"stdout\":\"out.txt\",\"stderr\":\"err.txt\"}\n")
+    (def read-result
+      (aos/call-dir streams
+                    @{:capture true
+                      :read (string streams "/out.txt")
+                      :read-err (string streams "/err.txt")}))
+    (check ":read 把 inst stdout 檔讀進 :out" (= "{\"a\":1,\"b\":[1,2]}" (read-result :out)))
+    (check ":read 與 :capture 同時給時 :read 贏" (not (= "" (read-result :out))))
+    (check ":read-err 把檔案讀進 :err" (= "warning" (read-result :err)))
+    (def missing-read (aos/call-dir streams @{:read (string streams "/missing.txt")}))
+    (check ":read 檔案不存在時 :out 是 nil" (nil? (missing-read :out)))
+
+    (def decoded (aos/call (string fx "/json.sh") @{:capture true :json true}))
+    (check ":json 解出陣列內的值" (= 2 (get-in decoded [:value "b" 1])))
+    (def bad-json (aos/call (string fx "/bad-json.sh") @{:capture true :json true}))
+    (check "壞 JSON 的 :value 是 nil" (nil? (bad-json :value)))
+    (check "壞 JSON 會放 :json-error" (string? (bad-json :json-error)))
+    (def empty-json (aos/call (string fx "/empty.sh") @{:capture true :json true}))
+    (check "空輸出的 :value 是 nil" (nil? (empty-json :value)))
+    (check "空輸出沒有 :json-error" (nil? (empty-json :json-error)))
+    (check "aos/value 優先回解過的 :value" (= 1 (get (aos/value decoded) "a")))
+    (check "aos/value 沒有 :value 就回 :out" (= "one\ntwo\nthree\n" (aos/value multi)))
+
+    (def piped
+      (aos/pipe @[(string fx "/pipe-echo.sh")
+                  [(string fx "/pipe-upper.sh") @{}]
+                  (string fx "/pipe-count.sh")]))
+    (check "pipe 三段串接後的最後 stdout 正確" (= "2" (string/trim (piped :out))))
+    (check "pipe 回傳三段 steps" (= 3 (length (piped :steps))))
+    (check "pipe 的中間段吃到上一段 stdout"
+           (= "ONE\nTWO\n" (get-in piped [:steps 1 :out])))
+    (def pipe-json
+      (aos/pipe @[(string fx "/pipe-echo.sh")
+                  (string fx "/pipe-upper.sh")
+                  (string fx "/pipe-count.sh")]
+                @{:json true}))
+    (check "pipe opts 的 :json 只解最後一段"
+           (and (= 2 (pipe-json :value))
+                (nil? (get-in pipe-json [:steps 0 :value]))
+                (nil? (get-in pipe-json [:steps 1 :value]))))
+    (check "pipe 遇到資料夾 inst 會 error"
+           (throws? (fn [] (aos/pipe @[(string fx "/pipe-echo.sh") streams]))))
+
     (printf "%d 條通過 ✓" n)))
