@@ -126,3 +126,5 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 代價與邊緣（先記）：headless 每回合冷啟動幾秒；`--permission-mode` 要選對不然卡在問權限；session 檔在 `~/.claude/projects/` 不在 cwd（要不要搬、怎麼對應）；plan 額度用完就停（§19.6 那種「結果沒人接」）；多個 agent 同時跑會搶額度、要靠 kernel 的排程壓。
 
 **沒開工**：這條會改 roadmap（agent 狀態機可能不用從頭造），要使用者回來拍板順序——是先做 LLM cpu（排隊分發、三種 endpoint），還是直接做「CLI agent 當行程」。
+
+**21.7 續（使用者拍板）**：「我覺得可以兩者共存，像 deepseek api、lm studio，我們就自己造狀態機，更好的操控。」→ 兩條都要：**原生 HTTP endpoint（DeepSeek、LM Studio）走自己造的狀態機**（LLM cpu 排隊分發 → 之後的 agent 狀態機，控制權在我們手上）；**Claude／pi 走 CLI agent 子行程**（`claude -p`／`pi -p`，用它們自己的 agent loop，tools 走 MCP）。兩種在 kernel 眼裡都只是「一份 inst.json 的行程」。順序還是 §21.2：先 LLM cpu，再 syscall（順便做成 MCP），CLI agent 行程在 syscall 有了之後接。
