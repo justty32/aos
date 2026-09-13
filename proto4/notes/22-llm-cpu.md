@@ -72,3 +72,10 @@
 **22.7 落地補記**：第一層抽出來了（codex gpt-sol）：`proto4-5/aos-llm call|models`（`aos_llm.py` 224 行是純函式庫，worker 縮到 57 行只剩讀寫檔）、lisp 端 `aos/llm`／`aos/llm-text`；Python 39 條、Janet 37/12/34 全綠。真打 LM Studio：`aos-llm models` 列出 gemma、`aos-llm call` 回 Hello。lisp 那條一開始**不通**：aos-step 把 `aos/*` 綁進 form 用的是寫死清單，codex 只用 import 測過 `aos/llm`、沒走 aos-step，新名字漏綁。我改成自動綁函式庫所有公開名字（`test/step.janet` 加一條），再跑 `aos-step` 的 form 叫 `aos/llm` 回 Hola!。另一個小坑：Janet 的 `import` 吃不了絕對路徑，README 原本那句是錯的，改成加 `module/paths` 的寫法。**撞到一個 inst 慣例的邊**：普通檔案目標不能帶 argv（README 定的），所以 `aos/llm` 是寫一份短命 inst.json 叫 `aos-llm call …` 再刪——能用，但這暗示「lisp 叫指令帶參數」是常見需求，之後可能要讓 `aos/call` 對普通檔案接受 args（等碰到第二個例子再定）。
 
 **22.8 落地補記**：做出來了（codex gpt-sol）：`proto4-3/aos_kernel_module.py` 67 行（機制）、`proto4-5/llm_cpu_module.py` 170 行（llm module）、`aos-kernel-init --module`、`aos-kernel llm K req.json [--wait N]`、`ls` 多一行 `llm: queued/running/done/endpoints`。測試 proto4-3 220、proto4-5 45、Janet 37/12/35，全綠。我真開 daemon 端到端：init 帶 module → boot → 改 `K/llm/endpoints.json` → `aos-kernel llm … --wait 30` → LM Studio 回 `Hello!`，整條不到一秒（syscall 單→module handle→背景 worker→結果檔→cli 印出）。codex 撞到的坑：module 檔在別的資料夾，載入時要暫時把它的目錄加進 `sys.path`，它才 import 得到隔壁的 `llm_cpu_*`。**LLM cpu 這段到此算收**：兩層都在、三個 endpoint 型別兩個真打通（pi 那格留著）。還沒定的：lisp「不等」的語意（§22.5 末）。
+
+## 22.9 收尾拍板（使用者 2026-09-13 深夜，「1 可以、2 3 隨便你、4 下次再說」）
+
+1. **aos-exec 普通檔案目標收 `-- args`**：使用者同意。任務書在 `proto4-3/notes/codex-task-plain-args.md`，compact 之後派（`aos/llm`、`llm_submit` 目前繞路寫短命 inst，做完可以拆掉）。
+2. 試玩 r2 清單 #7（改動偵測要不要預設停住）→ **維持現狀**（警告照跑，Opus 說這樣剛好）；#8（健康顯示、done_exit 取名）→ **不做**。
+3. harvest 五個預設（背景 worker／model 固定在設定／priority 大者先／失聯不重送／不管 load-unload）→ **全部留**。
+4. `aos.janet` 剛好 300 行 → 下次加東西時再拆。

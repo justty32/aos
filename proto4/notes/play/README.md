@@ -39,8 +39,8 @@
 | 4 | README：沒教關機；daemon 常駐沒有一條標準寫法（gpt-sol 環境 nohup 沒留下來、setsid -f 才行）；cwd 可省略沒講；cwd 與 argv[0] 基準不同沒講；規格連結佔開頭、「檔案」長表佔篇幅 | 是 | 小 | **fix-r3**：都補；「檔案」節搬 `docs/files.md`、規格連結搬到底 |
 | 5 | proto4-4 README：`:json` key 是字串沒講；每格會印 form 的值沒講；沒教「卡住看 `--status` 的 `:error`」；失敗訊息把 stacktrace 全吐 | 是 | 小 | **fix-r3**：補四句；stderr 只印第一行，全文留 `.aos-step/error` |
 | 6 | boot 第一行印 `ok=True result={…}` 一串內臟；add／boot 後 ls 要等下一回合才看得到 | 是 | 小 | **fix-r3**：boot 收掉那行；add 印完加一句「下一回合才會出現在 ls」 |
-| 7 | prog.janet 改過：gpt-sol 想預設停住等 `--accept-change`；Opus 說現在這樣完美 | 意見相反 | — | **等使用者**（不改） |
-| 8 | 沒有「健不健康」的顯示；done_exit=100 沒有名字 | 各一 | — | **等使用者** |
+| 7 | prog.janet 改過：gpt-sol 想預設停住等 `--accept-change`；Opus 說現在這樣完美 | 意見相反 | — | **維持現狀**（使用者 09-13：隨我定；Opus 說這樣剛好） |
+| 8 | 沒有「健不健康」的顯示；done_exit=100 沒有名字 | 各一 | — | **不做**（使用者 09-13：隨我定） |
 
 ## 修的批次（每批一本任務書，派 codex gpt-sol；回報放同名 `-out.md`）
 
