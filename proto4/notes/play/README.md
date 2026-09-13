@@ -9,6 +9,7 @@
 | r1 | 2026-09-13 | proto4-3（OS 層）＋ proto4-4（逐步 lisp） | [Opus](2026-09-13-r1-opus.md)、[gpt-sol](2026-09-13-r1-gptsol.md)、[任務書](task-r1.md) | Opus 4/4/3/3/3、gpt-sol 3/3/2/4/2 |
 | r2 | 2026-09-13 | 同上，fix-r1＋fix-r2 之後 | [Opus](2026-09-13-r2-opus.md)、[gpt-sol](2026-09-13-r2-gptsol.md)、[任務書](task-r2.md) | Opus 5/4/3/3/4、gpt-sol 4/3/3/4/3 |
 | r3 | 2026-09-13 | proto4-5（LLM 兩層）＋ proto4-6（逐步 JSON／Python／Lua） | [Opus](2026-09-13-r3-opus.md)、[gpt-sol](2026-09-13-r3-gptsol.md)、[任務書](task-r3.md) | 4-5：Opus 2.5/3.5/3/3/3.5、gpt-sol 4/3/3/-/3；4-6：Opus 4.5/4/3.5、gpt-sol 4/4/3/4/3 |
+| r4 | 2026-09-13 | 只驗 LLM 層（fix-r4 之後） | [Opus](2026-09-13-r4-opus.md)、[gpt-sol](2026-09-13-r4-gptsol.md)、[任務書](task-r4.md) | Opus 4/4/4/3/4、gpt-sol 3/3/3/4/2 |
 
 ## r1 兩份合起來的「要改的清單」（Fable 整理，2026-09-13）
 
@@ -63,6 +64,23 @@
 
 兩人都說好的（別動）：三支 `--status`／`--reset`／`--stderr` 一致；Python 例外訊息「第幾格、哪個函式、第幾行、全文在哪」滿分；`aos.call(..., args=)` 不用管 quoting；`ls` 的 `llm:` 狀態列一眼看懂容量；退出碼 0／1／2 跟 README 完全一致。
 
+## r4 兩份合起來的「要改的清單」（Fable 整理，2026-09-13）
+
+兩人都確認 fix-r4a 的三個重點真的修好了：模型名打錯 4 ms 就擋、不花 token；daemon 沒開丟單會撤、重開不偷跑；`--reset` 重跑同名同內容不卡。Opus 說「挑不出該動程式的地方」。剩下全是小的。
+
+| # | 問題 | 兩人都提？ | 大小 | 處理 |
+|---|---|---|---|---|
+| 1 | proto4-5 quickstart 沒寫要先 `aos-daemon`、`aos-kernel-boot`；`./aos-llm` 跟 proto4-3 的 PATH 慣例不一致 | 是 | 小 | **fix-r5**：補兩行、統一成 PATH 慣例 |
+| 2 | proto4-6 Python 節：`llm_submit(K, req, name) -> 結果檔路徑`、`wait_for` 沒寫簽名，範例的 `K` 沒交代從哪來；`llm` vs `llm_submit` 是兩個家只寫在 Lua 節；狀態檔名算不算公開介面沒說 | 是 | 小 | **fix-r5**：完整三格範例＋`K = "/abs/K"`、簽名、兩個家、狀態檔名是公開的 |
+| 3 | 自動生的 `K/llm/endpoints.json` 是一行 minified、model 是 `loaded-model-id`，提醒只在 kernel.log；`ls` 看不出還沒換 | 是 | 小 | **fix-r5**：寫檔 indent=2；`aos-kernel-init --module` 畫面直接印提醒；`ls` 的 `llm:` 行在還是 placeholder 時加「model 還沒換」 |
+| 4 | 同名不同內容撞牆的訊息沒說怎麼解（要刪 `K/llm/results/<name>.json` 或換名字）；沒有查單／清單的指令，看排隊只能靠 `ls` 一行，清結果只能自己 rm | 是 | 中 | **fix-r5**：訊息補一句；加 `aos-kernel llm ls K`（queued／running／done＋結果路徑）與 `aos-kernel llm rm K NAME` |
+| 5 | kernel 沒活著時不帶 `--wait` 也會撤單，README 說「不想等就省略 --wait 由下一回合處理」會誤會 | Opus | 小 | **fix-r5**：README 補一句 |
+| 6 | `--reset` 後 `<PROG>.error` 還在，`--status` 先噴上次整段 traceback | Opus | 小 | **fix-r5**：`--reset` 一併刪 `<PROG>.error` |
+| 7 | `ls` 最多落後一回合（結果檔在了還顯示 running 1、WAIT 一度是 `-`） | 是 | 小 | **fix-r5**：README 一句「ls 看的是上一回合的帳」 |
+| 8 | 剛換上 cpu、RUNS=0 時 `LAST_EXIT` 印前一個佔位者的碼（Fable 自己看到的） | — | 小 | **fix-r5**：換人時清掉 |
+| 9 | 撞名這種必死的錯還被 `bad_after` 白試 10 次 | Opus | — | **不做**（kernel 分不出哪種錯會自己好，10 次一秒一次可接受） |
+| 10 | `WAIT` 欄補上在等哪個檔 | Opus | — | **不做**（kernel 不讀行程的狀態檔，只認退出碼） |
+
 ## 修的批次（每批一本任務書，派 codex gpt-sol；回報放同名 `-out.md`）
 
 | 批 | 做哪些 | 任務書 |
@@ -75,3 +93,4 @@
 | fix-r4c | r3 清單 #6 kernel 側（101＝waiting、讓 cpu、bad_after）、#9（proto4-3） | [fix-r4c-task.md](fix-r4c-task.md) |
 
 **fix-r4 落地補記（2026-09-13 傍晚）**：三本同時派、都交了（回報 `fix-r4{a,b,c}-out.md`）。測試 proto4-3 236、proto4-5 56、proto4-6 77、Janet 42／46／12 全綠。Fable 真開 daemon 跨邊界驗過：等檔的行程 `ls` 顯示 `waiting 等了 N 回合`，只有一顆 cpu 時有人排隊它就讓位、別人做完再回來；`aos-kernel llm --wait` 只印答案＋結果檔路徑；同名同內容退 0、不同內容退 1 並說撞在 running。**順手看到的小毛病（下輪清單）**：剛換上 cpu、RUNS=0 時 `LAST_EXIT` 印的是前一個佔位者的碼（等的人會被印成 100）。
+| fix-r5 | r4 清單 #1–#8（全小：README 五處、endpoints 排版與提醒、`aos-kernel llm ls/rm`、reset 刪 error、LAST_EXIT） | [fix-r5-task.md](fix-r5-task.md) |
