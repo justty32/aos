@@ -12,43 +12,43 @@
 
 一個 agent 就是一個資料夾：`system-prompt.json`（人格）、`prompts.json`（記憶，OpenAI messages 陣列）、`tools.json`（`packs` 列 Python 工具包＋`tools[]` 一句 shell 當工具）、`state.json`、`inbox/<來源>/*.json`（讀過搬 `read/`）、`outbox/0001.json`（它說的話）。`aos-agent exec 世界` 一次走一格，七格：idle（掃信）→ llm（寫請求）→ wait（等結果）→ act（跑工具或說話）→ collect（再掃信）→ llm…，出錯進 retry（每 20 格重送、連錯 5 次 stuck 只等新信）。`aos-user say|listen|talk|status|spawn`。後來長出 18 個工具包、工作室、小孩、預算。撈遺產的逐條決定在 [agent/legacy-harvest.md](agent/legacy-harvest.md)（Opus 撈，任務書 `agent/harvest-task.md`）。
 
-## 24.3 v1 定案（Fable 提、使用者沒反對就照做）
+## 24.3 v1 定案（Fable 草稿 → 撈完遺產改定；使用者沒反對就照做）
 
-**一句話**：agent 是一支「一叫走一格」的程式，放進 kernel 就活著；等模型的時候退 101 讓 cpu；叫模型走 kernel 的 LLM 排程；工具用 aos-exec 跑。
+**一句話**：agent 是一支「一叫走一格」的程式，放進 kernel 就活著；等模型、閒著沒信都退 101 讓 cpu；叫模型走 kernel 的 LLM 排程；工具是資料夾裡的可執行檔，用 aos-exec 跑。
 
-**資料夾**（`proto4-7/`，指令 `aos-agent`、`aos-user`）：
+**資料夾**（`proto4-7/`，指令 `aos-agent`、`aos-user`；世界＝本體，沒有 `--home`）：
 
 ```
-A/                       一個 agent 一個資料夾（世界＝本體，不分 --home）
-A/agent.json             {"name":"…","system":"人格一段話","K":"/abs/K","llm_name_prefix":"…"（可省，預設用資料夾名）}
-A/messages.json          記憶：OpenAI messages 陣列（system 不放這裡，每次叫模型時從 agent.json 補上）
-A/tools/<名字>/tool.json  工具宣告：{"description":"…","parameters":{JSON schema}}
-A/tools/<名字>/inst.json  或普通可執行檔 run：aos-exec 跑它，參數 JSON 從 stdin 進、stdout 當結果
-A/inbox/<來源>/*.json    一封信一個檔 {"from","time","content"}；讀過搬 inbox/<來源>/read/
-A/outbox/0001.json       它說的話 {"time","content"}，四位數遞增
-A/state.json             {"state":"idle|llm|wait|act|stuck","request":"K/llm/results/<id>.json"|null,"turn":N,"errors":N,"asked_at":…}
-A/inst.json              放進 kernel 用：{"argv":["/abs/proto4-7/aos-agent","."],"cwd":"/abs/A","stderr":"err.txt"}
+A/agent.json         {"name":"bob","system":"人格一段話","K":"/abs/K","max_steps_per_question":60,"tool_output_limit":8000}
+A/messages.json      記憶：OpenAI messages 陣列，system 不放（每次叫模型從 agent.json 補）；只有 agent 自己寫
+A/tools/<名字>/tool.json  {"description":"…","parameters":{JSON schema}}（name＝資料夾名）
+A/tools/<名字>/run        可執行檔（任何語言）：參數 JSON 從 stdin 進、stdout 當結果、退出碼非 0 也把 stdout＋stderr 當結果回給模型
+A/inbox/user/*.json  一封信一個檔 {"from","time","content"}；讀過搬 inbox/user/read/（v1 只有 user 一個來源）
+A/outbox/0001.json   它說的話 {"time","content"}，獨立遞增計數器
+A/state.json         見下
+A/inst.json          放進 kernel：{"argv":["/abs/proto4-7/aos-agent","."],"cwd":"/abs/A","stderr":"err.txt"}
 ```
 
-**一格做什麼**（`aos-agent A`，退出碼：0 做了事、101 在等模型、1 這格失敗、2 用法錯）：
+`state.json`：`{"state":"idle|ask|wait|act","question":N,"step":N,"request":"K/llm/results/<id>.json"|null,"checks":N,"errors":N,"idle_since_error":N,"stuck":false,"last_error":"…"|null,"outbox_n":N}`。
+
+**四格**（`aos-agent A`；退出碼：0 做了事、101 在等（模型或信）、100 收工（agent.json 有 `"stop":true` 時）、1 這格自己壞了（檔案壞、K 不存在）、2 用法錯）：
 
 | state | 做什麼 | 變成 |
 |---|---|---|
-| idle | 掃 `inbox/*/`（不含 `read/`），有信就以 `{"role":"user","content":"[from bob] …"}` 接進 messages、搬進 `read/`；沒信什麼都不做、退 0 | 有信→llm；沒信留 idle |
-| llm | 把 system＋messages＋工具清單（OpenAI `tools` 格式，從 `tools/*/tool.json` 生）寫成請求，`aos-kernel llm K req.json --name <prefix>-<turn>`（不等）；記 `request` 路徑 | wait |
-| wait | 結果檔還沒出現→退 **101**（跟逐步執行器一樣，kernel 會標 waiting、讓 cpu）；出現了就讀：`ok:false`→errors+1，errors≥3 進 stuck，否則回 llm 重送（新名字）；`ok:true`→act | 101／llm／stuck／act |
-| act | 有 `tool_calls`：每個都跑 `tools/<名字>/`（aos-exec，參數 JSON 走 stdin，stdout 截 8 KB 當 `tool` 訊息接回 messages；工具不存在或退非 0 也照樣把錯誤當結果接回去）→ llm；沒有 tool_calls：assistant 文字接進 messages、寫一則 outbox、退 0 → idle；空白回覆：不寫 outbox，記一次 → idle | llm／idle |
-| stuck | 連錯 3 次，這句先放著；只掃信箱，有新信才回 llm | idle-ish |
+| idle | 掃 `inbox/user/`（不含 `read/`），有信：整封以 `{"role":"user","content":"[user] …"}` 接進 messages、搬 `read/`、`question+1`、`step=0`、清 errors／stuck → ask。沒信：對話尾巴若是沒人回的 user／tool 訊息（安全網）且沒 stuck → `idle_since_error+1`，滿 20 就回 ask 重送；其他情況退 101 | ask／101 |
+| ask | `step+1`；超過 `max_steps_per_question` → 寫一則 outbox「這題走了 N 格先停，回我一句再繼續」、標 stuck → idle。否則把 system＋messages＋工具清單（OpenAI `tools` 格式，從 `tools/*/tool.json` 生）寫成 `req.json`，`aos-kernel llm K req.json --name <name>-<question>-<step>`（不等；同名同內容冪等，重跑不重扣），記 `request` → wait | wait／idle |
+| wait | 結果檔沒出現：`checks+1`，滿 600 當一次錯（見下）；否則退 101。出現了：`ok:false`／沒有 choices／空白回覆 → 算一次錯：`errors+1`、`last_error`、`idle_since_error=0` → idle（idle 會在 20 格後重送；`errors≥5` 標 stuck、寫一則 outbox「這句先放著，等你新信」）。`ok:true` → act | 101／idle／act |
+| act | assistant 訊息接進 messages（含 tool_calls）。有 `tool_calls`：每個跑 `tools/<名字>/run`（`aos.call(run, stdin=參數 JSON, capture=True, timeout_ms=60000)`，工具不存在＝結果「沒有這個工具」），stdout 截 `tool_output_limit` 字以 `{"role":"tool","tool_call_id","content"}` 接回 → ask。沒有 tool_calls：寫一則 outbox，退 0 → idle。內容是「寫成文字的 tool call」（`<tool_call>`、`[TOOL_CALLS]`、`<function=` 開頭）→ 挖出頂層 JSON 物件、name 對得上就當正式 tool_calls；救不回來算一次錯 | ask／idle |
 
-不做：七格縮成五格（collect 併進 idle、retry 併進 wait 的錯誤分支）；`--home`（世界就是本體）；packs（工具就是資料夾，跟 inst 同一套）；文字 tool call 救回（先看 gemma-4 會不會乖，不乖再說）；每題步數上限與預算（kernel 的 `bad_after` 已經擋住連續失敗）；kids／contacts／side packs／MCP。
+不做（撈遺產逐條理由見 [agent/legacy-harvest.md](agent/legacy-harvest.md)）：`collect`／`retry`／`stuck` 三格（併成欄位）；`--home`；Python 工具包與掛勾；「只通知不塞內容」的信箱（信一律整封進記憶，`inbox_*` 工具全免）；`named_tool_objects` 那種靠正則猜的救回；kids／contacts／side packs／MCP／預算／模板／team。**唯一保留的煞車**是 `max_steps_per_question`（等的格不算）；**唯一新加的**是 wait 的 `checks` 上限（新地基沒逾時）。
 
-**`aos-user`**（給人的殼）：`aos-user A say "…"`（寫一封 `inbox/user/<時間戳>.json`）、`aos-user A tail [-n N]`（印 outbox 最近幾則）、`aos-user A status`（state、turn、在等哪個 request、幾封沒讀）、`aos-user A new --name X --system "人格"`（建資料夾骨架＋兩個範例工具 `echo`、`sh`＋inst.json）。`talk` 互動模式先不做（`say` 完 `aos-kernel ls` 看它跑就好）。
+**`aos-user`**：`aos-user A say "…"`（寫 `inbox/user/<時間戳微秒>.json`；省略文字讀 stdin）、`aos-user A listen [--new] [--once]`（盯 outbox，每則印 `--- 0006 ---` 再印 content）、`aos-user A talk`（`你> ` 打一句＝say，outbox 冒新檔就印 `bob> `；自己不推格，要 kernel 在跑）、`aos-user A status`（一行：哪一格、第幾題第幾步、在等哪個檔等了幾次、錯幾次、stuck 沒、幾封沒讀）、`aos-user A new --name bob --system "…" --K /abs/K`（建骨架＋兩個範例工具 `echo`（原樣回）與 `sh`（跑一句 shell，cwd＝A，60 秒）＋inst.json）。
 
-**跟地基的接點**：agent 自己不打 HTTP、不排程、不等——全交給 kernel：等模型＝退 101；連續失敗＝`bad_after`；看它在幹嘛＝`aos-kernel ls`＋`aos-kernel llm ls`。
+**跟地基的接點**：agent 不打 HTTP、不排程、不睡；等＝退 101（kernel 標 waiting、有人排隊就讓 cpu）；模型錯誤自己記帳退 0，不會被 `bad_after` 退件（只有檔案壞掉才退 1）；看它在幹嘛＝`aos-user status`＋`aos-kernel ls`＋`aos-kernel llm ls`。
 
 ## 24.4 落地順序
 
-1. Opus 撈遺產（在跑）→ 對照上表，改的地方補進 24.3。
+1. Opus 撈遺產 → 改了草稿五處：四格、閒著退 101、空白回覆算錯、wait 的 checks 上限、請求名可重現吃冪等。
 2. 任務書派 codex：`proto4-7/`、測試（假 LLM 結果檔、假工具）、README（大白話）、遊樂場加第 6 站。
 3. 真開 daemon＋LM Studio 跑一次「寫信 → 它用 `sh` 工具 → 回信」。
 4. 派試玩 r5（agent 那層）。
