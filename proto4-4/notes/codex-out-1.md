@@ -1,0 +1,15 @@
+- `README.md`：119 行繁中使用說明。
+- `project.janet`：專案設定。
+- `aos-step`：可執行 CLI。
+- `src/aos.janet`：aos-exec 呼叫函式庫。
+- `src/step.janet`：逐步執行與環境保存。
+- `test/aos.janet`：函式庫測試。
+- `test/step.janet`：跨進程逐步測試。
+- `test/cpu.janet`：aos-run 整合測試。
+- `test/fx/*`：四份測試樣本。
+- `notes/`：已建立空目錄。
+- `test/aos.janet`：`15 條通過 ✓`
+- `test/step.janet`：`23 條通過 ✓`
+- `test/cpu.janet`：`4 條通過 ✓`
+- proto4-3：discover 到 185 條，回歸 exit 0；既有 runner 只印 dots、沒有摘要。
+- 自決／坑：手寫 status 以保留 `:error nil`；Janet env 綁定不能塞裸值；inst stdout 每次會截斷；沒有未完成項目、未改其他路徑、未 commit/push。

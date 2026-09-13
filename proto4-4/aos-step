@@ -1,0 +1,5 @@
+#!/usr/bin/env janet
+(import ./src/step :as step)
+
+(defn main [& argv]
+  (step/main ;argv))
