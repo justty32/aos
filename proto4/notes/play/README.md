@@ -10,6 +10,7 @@
 | r2 | 2026-09-13 | 同上，fix-r1＋fix-r2 之後 | [Opus](2026-09-13-r2-opus.md)、[gpt-sol](2026-09-13-r2-gptsol.md)、[任務書](task-r2.md) | Opus 5/4/3/3/4、gpt-sol 4/3/3/4/3 |
 | r3 | 2026-09-13 | proto4-5（LLM 兩層）＋ proto4-6（逐步 JSON／Python／Lua） | [Opus](2026-09-13-r3-opus.md)、[gpt-sol](2026-09-13-r3-gptsol.md)、[任務書](task-r3.md) | 4-5：Opus 2.5/3.5/3/3/3.5、gpt-sol 4/3/3/-/3；4-6：Opus 4.5/4/3.5、gpt-sol 4/4/3/4/3 |
 | r4 | 2026-09-13 | 只驗 LLM 層（fix-r4 之後） | [Opus](2026-09-13-r4-opus.md)、[gpt-sol](2026-09-13-r4-gptsol.md)、[任務書](task-r4.md) | Opus 4/4/4/3/4、gpt-sol 3/3/3/4/2 |
+| r5 | 2026-09-13 | 只拿 `playground/README.md` 玩六站（使用者今晚會走的路） | [Opus](2026-09-13-r5-opus.md)、[gpt-sol](2026-09-13-r5-gptsol.md)、[任務書](task-r5.md) | 一個總分：Opus 4/5、gpt-sol 3/5 |
 
 ## r1 兩份合起來的「要改的清單」（Fable 整理，2026-09-13）
 
@@ -81,6 +82,24 @@
 | 9 | 撞名這種必死的錯還被 `bad_after` 白試 10 次 | Opus | — | **不做**（kernel 分不出哪種錯會自己好，10 次一秒一次可接受） |
 | 10 | `WAIT` 欄補上在等哪個檔 | Opus | — | **不做**（kernel 不讀行程的狀態檔，只認退出碼） |
 
+## r5 兩份合起來的「要改的清單」（Fable 整理，2026-09-13 晚）
+
+六站有五站兩人都照抄一次過；agent 那站兩人都說最好玩（Opus：「第三次回答還會講 messages.json 變大了，記憶是真的有接上」）。坑集中在「重玩一次」。
+
+| # | 問題 | 兩人都提？ | 處理 |
+|---|---|---|---|
+| 1 | 做完的行程留在 `done/`，同名再 `add` 被擋、`rm` 又說找不到，只能手動刪檔（第 3 站重玩死路） | Opus | **fix-r6**：`rm` 連 done／bad 一起清；`add` 撞 done 自動清 |
+| 2 | 連丟兩封信，第二封插隊 | gpt-sol | **fix-r6**：一題一封信 |
+| 3 | `--reset` 後改問題撞 LLM 單名 | 是 | **fix-r6**：state 加 `epoch`，reset 加一，請求名帶 epoch |
+| 4 | `listen --once` 秒回全部舊回話像跳針 | 是 | **fix-r6**：只印沒印過的，沒有就說「沒有新回話」；指南先改用 `--new --once` |
+| 5 | `playground/down.sh` 相對路徑在別的目錄照抄找不到；橫幅 `$K` 沒展開；README 沒說 `AOS_PLAY` 可換 | 是 | **已改**：腳本改名 `play-up`／`play-down`／`play-reset` 放進 PATH；橫幅印真路徑；補一句 |
+| 6 | 第 5 站「第四次開始等」數錯（第五次才 101）；第 2 站 add 後要等一回合 | 是 | **已改**：指南 |
+| 7 | 指南第 1 站 `max_tokens` 那段跟實測不符（要放 `params` 裡） | Opus | **已改**：指南 |
+| 8 | daemon 正常收工後 `ls` 說「找不到 daemon 的家」；RUNS 印 `None`；名字長欄位歪 | Opus | **fix-r6** |
+| 9 | 逐步執行器成功不出聲；Python 例外一行訊息行號指到 def | Opus | **fix-r6** |
+| 10 | stuck 的用詞（outbox 說「先停」、status 說 stuck） | 是 | **fix-r6**：統一 |
+| 11 | 撞名這種要改設定的錯 5 秒就被 `bad_after` 退件，來不及照提示做 | Opus | **不做**（kernel 分不出；epoch 之後這條路本身就少了） |
+
 ## 修的批次（每批一本任務書，派 codex gpt-sol；回報放同名 `-out.md`）
 
 | 批 | 做哪些 | 任務書 |
@@ -96,3 +115,4 @@
 | fix-r5 | r4 清單 #1–#8（全小：README 五處、endpoints 排版與提醒、`aos-kernel llm ls/rm`、reset 刪 error、LAST_EXIT） | [fix-r5-task.md](fix-r5-task.md) |
 
 **fix-r5 落地補記（2026-09-13 晚）**：八條全做（回報 `fix-r5-out.md`）。測試 proto4-3 237、proto4-5 63、proto4-6 77、Janet 42／48／12 全綠；`aos-kernel llm ls K`／`rm K NAME` 在遊樂場真跑過。r4 循環到此停：Opus 說挑不出該動程式的地方。
+| fix-r6 | r5 清單 #1–#4、#8–#10（kernel rm／add 清 done、ls 訊息與表格；執行器出聲與行號；agent 一題一封、epoch、listen --once、stuck 用詞） | [fix-r6-task.md](fix-r6-task.md) |
