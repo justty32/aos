@@ -111,3 +111,18 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 `aos-step` 全部 form 跑完之後改回 100（`--done-exit N` 可改，限 0–255），放進 kernel 的 `procs/` 會自己被收走。`test/cpu.janet` 加了一條真的走 daemon＋kernel 的整合測試：三個 form 的行程丟進 `procs/1.json`，約 2 秒後出現在 `procs/done/1.json`、`log.txt` 剛好 3 行、cpu 換回 idle、`aos-kernel ls` 印 `done: 1`。Janet 測試 34＋12＋28 條、proto4-3 188 條全綠。`proto4-3/docs/kernel.md` 補了 `procs/done/`、`done_exit`、五步裡的「先看做完沒」。**這一段（逐步 lisp＋kernel 應急版行程結束）到此收線。**
 
 **21.6 續（使用者拍板）**：「拿 pi -p 當子行程用。pi coding agent 用的人超多，要是 anthropic 封這個，那就有得吵了。」→ LLM cpu 的 Claude endpoint＝開 `pi -p` 子行程（登入、條款、額度都是 pi 的事，aos 不碰 token）。參考 `~/repo/langs/janet-lab/modules/pi-shell/`（已經把 `pi -p`／`claude -p` 包成子行程殼）。endpoint 三種：LM Studio（OpenAI 相容 HTTP）、DeepSeek（OpenAI 相容 HTTP）、pi 子行程。
+
+### 21.7 使用者的「餿主意」：直接拿 Claude Code headless 當 agent（2026-09-13，手機）
+
+原話：「還有一種餿主意：拿 claude code headless 來用。或者是我們的 agent 那套換個型式，原本我們是自己從頭開始造狀態機，弄 llm 弄 tools，現在我們直接拿 claude code 作為 agent，tools 就是給他 mcp，然後我們給他收發訊息，就是接入他的 stdin/out。」
+
+我的看法：**不是餿主意，這是唯一一條「用訂閱額度」又完全合規的路**——Claude Code 本尊的 `-p`（headless）是官方功能，用的是你的 Max 方案額度，Anthropic 擋的是「別的程式冒充它」，不是「你用它」。而且形狀跟 aos 對得很齊：
+
+- **一個 agent 行程＝一份 inst.json，argv 是 `claude -p …`**，cwd 就是它的家（§8：本體在 cwd）。本機 claude 2.1.270 有 `--output-format stream-json`／`--input-format stream-json`（stdin 進訊息、stdout 出事件，一行一個 JSON）、`--resume <session-id>`／`--session-id`、`--mcp-config`、`--allowedTools`、`--permission-mode`、`--append-system-prompt`、`--max-turns`。
+- **接進 tick 模型的兩種做法**：(a) 一格＝一回合：每格開一次 `claude -p --resume <id> --max-turns 1`，session id 存在 cwd，跟逐步 lisp 的 pc 同一個味道，kernel 完全不用改；(b) 常駐：一顆 cpu 開一支 `claude -p --input-format stream-json` 不關，aos 往它 stdin 塞訊息、讀 stdout。(a) 簡單、可搶佔、狀態在檔案裡；(b) 省 session 重載、但 cpu 要會「餵 stdin」（現在 aos-run 不會）。先做 (a)。
+- **tools＝MCP**：aos 自己開一個 MCP server，把「叫資料夾／叫檔案」（proto4-4 那套 call）、「丟一個行程進 procs/」、「問 kernel 狀況」暴露成 MCP tools——**這就是 §19.5 的 syscall**，等於 syscall 的形式順便定了：對 lisp 是函式、對 claude 是 MCP tool、底下同一支程式。
+- **pi -p 是同一個形狀**：所以「agent cpu」其實是「跑一支 CLI agent 當子行程」，claude／pi／codex 都套得進去，janet-lab 的 pi-shell 已經是這個抽象。
+
+代價與邊緣（先記）：headless 每回合冷啟動幾秒；`--permission-mode` 要選對不然卡在問權限；session 檔在 `~/.claude/projects/` 不在 cwd（要不要搬、怎麼對應）；plan 額度用完就停（§19.6 那種「結果沒人接」）；多個 agent 同時跑會搶額度、要靠 kernel 的排程壓。
+
+**沒開工**：這條會改 roadmap（agent 狀態機可能不用從頭造），要使用者回來拍板順序——是先做 LLM cpu（排隊分發、三種 endpoint），還是直接做「CLI agent 當行程」。
