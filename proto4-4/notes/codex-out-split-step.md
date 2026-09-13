@@ -1,0 +1,4 @@
+完成：新增 `src/state.janet`，`step.janet` 相對 import；`aos-step` 入口不變，README 已補檔案職責。  
+行數：`step.janet` 226 行；`state.janet` 126 行，皆低於 300。  
+測試：`test/aos.janet` 38、`test/cpu.janet` 12、`test/step.janet` 45，全部通過。  
+原文比對：`moved='path exists? rm-tree atomic-spit read-src read-state write-state now absolute-path trim-history waiting-line check-waiting source-changed? write-src read-pc error-text write-error load-env'; diff -u <(git show HEAD:proto4-4/src/step.janet | awk -v RS='' -v moved="$moved" 'BEGIN {split(moved,a); for(i in a) keep[a[i]]=1} /^\(defn-/ && keep[$2] {print $0 "\n"}') <(awk -v RS='' -v moved="$moved" 'BEGIN {split(moved,a); for(i in a) keep[a[i]]=1} /^\(defn-/ && keep[$2] {print $0 "\n"}' src/state.janet)` → exit 0、無差異。

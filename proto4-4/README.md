@@ -176,7 +176,8 @@ echo $?                                 # 全部跑完那次回 100
 - `project.janet`：Janet 專案資料與 spork 依賴。
 - `aos-step`：可執行的薄 CLI。
 - `src/aos.janet`：透過 proto4-3 `aos-exec` 叫目標、接流、讀檔、解 JSON、串接與同步叫 LLM。
-- `src/step.janet`：切 form、eval、錯誤處理與 image 狀態持久化。
+- `src/step.janet`：切 form、eval、錯誤處理與逐格流程編排。
+- `src/state.janet`：`.aos-step/` 的 pc、image、src、state、error 與 waiting 狀態讀寫。
 - `test/aos.janet`：函式庫、三種目標、逾時與錯誤分類測試。
 - `test/step.janet`：每步真開新行程的持久化、重試、status 與 reset 測試。
 - `test/cpu.janet`：真叫 `aos-run` 三格的整合測試。
