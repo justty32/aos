@@ -19,9 +19,11 @@ cd /tmp/my-proc
 /abs/proto4-4/aos-step prog.janet
 /abs/proto4-4/aos-step prog.janet
 /abs/proto4-4/aos-step prog.janet
-/abs/proto4-4/aos-step prog.janet       # 全做完了：成功，但什麼都不做
+/abs/proto4-4/aos-step prog.janet       # 全做完了：不做事，回 100
 /abs/proto4-4/aos-step prog.janet --status
 ```
+
+做完後的預設退出碼是 100；要改可加 `--done-exit N`（例如 `--done-exit 0`）。
 
 `--status` 只印一行 JDN：
 
@@ -47,11 +49,17 @@ cd /tmp/my-proc
 /abs/proto4-3/aos-run /abs/行程/inst.json --interval-ms 100 --max-runs 5
 ```
 
-一次 run 就是一格，一格只跑一個 form。要讓 kernel 排它，放進 kernel `procs/` 的也是同一形狀的 inst.json：
+一次 run 就是一格，一格只跑一個 form。
+
+### 放進 kernel
+
+放進 kernel `procs/` 的也是同一形狀的 inst.json：
 
 ```json
 {"argv": ["/abs/proto4-4/aos-step", "prog.janet"], "cwd": "/abs/那個資料夾", "stdout": "out.txt", "stderr": "err.txt"}
 ```
+
+最後一個 form 跑完的那格仍回 0；下一格開始回 100，kernel 會自己把它收進 `procs/done/`。
 
 ## 函式庫怎麼用
 
@@ -134,7 +142,7 @@ cd /tmp/my-proc
 - 一個資料夾只有一份 `.aos-step/`，所以只能放一支這種程式；同資料夾兩支 `.janet` 會互相蓋狀態。
 - pc 數的是頂層 form 索引；程式跑一半後改掉前面的 form，之後就會錯位。
 - form 失敗會一直重試同一個，不會自動跳過。
-- 做完後 cpu 還是會一直來叫；`aos-step` 只會什麼都不做地回 0，因為 kernel v1 還沒有「行程結束」機制。
+- 放進 kernel 時，做完回 100 就會被收走；直接用 `aos-run` 跑時還是會一直來叫，只是每次都不做事並回 100。
 - 函式庫不切 cwd；相對 target 永遠是相對於目前行程 cwd，不是 proto4 舊 `runf` 的切資料夾語意。
 - `:read`／`:read-err` 的相對路徑也以呼叫者 cwd 為中心；inst 裡的流則是相對 inst 的 cwd，呼叫者要自己對上。
 - `:capture` 對資料夾／`.json` inst 目標抓的是 aos-exec 自己的 stdout（通常為空）；inst 目標請用 `:read`。

@@ -85,7 +85,7 @@
   (def p (path state "env.img"))
   (if (exists? p) (load-image (slurp p)) (make-env)))
 
-(defn- step [prog here state]
+(defn- step [prog here state done-exit]
   (label finish
   (var pc 0)
   (def parsed (fiber/new (fn [] (parse-forms prog)) :e))
@@ -99,7 +99,7 @@
   (when (>= pc (length forms))
     (os/mkdir state)
     (spit (path state "done") "")
-    (return finish 0))
+    (return finish done-exit))
   (when (exists? (path state "done"))
     (os/rm (path state "done")))
   (def prepared (fiber/new
@@ -144,17 +144,40 @@
   0)
 
 (defn- usage []
-  (eprint "用法：aos-step PROG.janet [--status|--reset]")
+  (eprint "用法：aos-step PROG.janet [--status|--reset] [--done-exit N]")
   2)
 
 (defn main [& argv]
   (def args (drop 1 argv))
-  (when (or (< (length args) 1) (> (length args) 2))
+  (when (< (length args) 1)
     (os/exit (usage)))
   (def given (args 0))
-  (def flag (get args 1))
-  (when (and flag (not (has-value? ["--status" "--reset"] flag)))
-    (os/exit (usage)))
+  (var flag nil)
+  (var done-exit 100)
+  (var i 1)
+  (while (< i (length args))
+    (def arg (args i))
+    (case arg
+      "--status"
+        (if flag
+          (os/exit (usage))
+          (set flag arg))
+      "--reset"
+        (if flag
+          (os/exit (usage))
+          (set flag arg))
+      "--done-exit"
+        (do
+          (++ i)
+          (when (>= i (length args))
+            (os/exit (usage)))
+          (def value (scan-number (args i)))
+          (unless (and value (number? value) (= value (math/floor value))
+                       (>= value 0) (<= value 255))
+            (os/exit (usage)))
+          (set done-exit value))
+      (os/exit (usage)))
+    (++ i))
   (def tried (protect (os/realpath given)))
   (def prog (if (tried 0) (tried 1) nil))
   (unless (and prog (= :file (os/stat prog :mode)))
@@ -166,5 +189,5 @@
     (case flag
       "--reset" (do (rm-tree state) 0)
       "--status" (status prog state)
-      (step prog here state)))
+      (step prog here state done-exit)))
   (os/exit code))

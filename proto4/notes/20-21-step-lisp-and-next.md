@@ -105,3 +105,7 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 查證（`wf/workflows/experiments/claude-subscription/`）：Anthropic 2026 年起明文禁止第三方拿訂閱 OAuth 冒充 Claude Code 吃方案額度、伺服器端會擋、有人被封號；但**正式允許**第三方工具用訂閱帳號登入、用量算「extra usage」按 token 計費（pi 原生 `/login anthropic` 就是這條）。gotgenes/pi-anthropic-auth 那個套件多做的是塞假的 `x-anthropic-billing-header`＋換掉 system prompt 躲指紋，目的是被當成 Claude Code 本尊——**這部分不做**（我不冒充自家客戶端；使用者：「好吧，你說的對，我也怕被封號」）。
 
 定案：aos 只走正路——讀 pi 存在 `~/.pi/agent/auth.json` 的 OAuth token、會 refresh、照 pi 原生 transport 的 header 打 Messages API、誠實報身分；用量走 extra usage（使用者要先在 claude.ai 方案設定打開）。之後 LLM cpu 的 endpoint 三個：LM Studio、DeepSeek、Claude。
+
+### 20.6 落地補記（第三輪：aos-step 做完回 100、接上 kernel，codex gpt-sol，2026-09-13）
+
+`aos-step` 全部 form 跑完之後改回 100（`--done-exit N` 可改，限 0–255），放進 kernel 的 `procs/` 會自己被收走。`test/cpu.janet` 加了一條真的走 daemon＋kernel 的整合測試：三個 form 的行程丟進 `procs/1.json`，約 2 秒後出現在 `procs/done/1.json`、`log.txt` 剛好 3 行、cpu 換回 idle、`aos-kernel ls` 印 `done: 1`。Janet 測試 34＋12＋28 條、proto4-3 188 條全綠。`proto4-3/docs/kernel.md` 補了 `procs/done/`、`done_exit`、五步裡的「先看做完沒」。**這一段（逐步 lisp＋kernel 應急版行程結束）到此收線。**
