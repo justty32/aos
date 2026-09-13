@@ -66,3 +66,5 @@
 - `--status` 印得出在等什麼、等多久；`--reset` 連 `waiting` 一起清。
 - 沒有逾時、沒有多檔、沒有 kernel 叫醒（那是選項 D，以後真的痛再做）；等待中的行程還是會被 kernel 輪到，只是每格立刻退出。
 - 搭配 LLM：`aos.llm_submit(K, req, name)`（直接跑 `aos-kernel llm K req.json --name name`，不等）回結果檔路徑 → `return aos.wait_for(那條路徑)` → 下一格讀結果。lisp／Lua 同名。
+
+**23.7 落地補記**：四支都加了（codex gpt-sol）：狀態檔多 `waiting` 欄、檔沒到就退出 0 不跑格、到了記一筆 `(wait)` 再跑下一格；`llm_submit` 三個語言都有。Janet 45、Python 65 條測試綠。我真開 daemon 端到端：kernel 帶 llm module、`aos-kernel add` 一支兩格的 `job.py`（第 0 格 `llm_submit`＋`wait_for`、第 1 格讀結果寫檔）→ 三秒後 `answer.txt` 是 `Hello!`，`history` 是 `ask → (wait) → read`，行程回 100 被收走。codex 的坑：`aos-kernel llm` 不帶 `--wait` 也要等 kernel 回 syscall 單的確認（一回合），所以測試裡要手動 tick。step.janet 因此破 300 行（309），另派一本照 STRUCTURE 拆。
