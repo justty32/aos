@@ -74,7 +74,29 @@ cd /tmp/my-proc
 @{:code 0 :kind "child" :stderr ""}
 ```
 
-`:kind` 是 `"child"`、`"aos"` 或 `"usage"`。`(aos/ok? r)` 只在 `kind` 是 `child` 且 `code` 是 0 時為真。選項只有 `:dir-target` 與 `:timeout-ms`。
+`:kind` 是 `"child"`、`"aos"` 或 `"usage"`。`(aos/ok? r)` 只在 `kind` 是 `child` 且 `code` 是 0 時為真。
+`:dir-target` 與 `:timeout-ms` 語意照舊；下面是這輪新增的選項。
+
+### 接住三條流
+
+```janet
+(aos/call "./cat.sh" @{:stdin "hello\n"})                 # 字串或 buffer 餵給 stdin
+(aos/call "./tool" @{:capture true})                      # stdout 變成結果的 :out
+(aos/call-dir "./child" @{:read "./child/out.txt"})       # 跑完讀檔進 :out
+(aos/call-dir "./child" @{:read-err "./child/err.txt"})   # 跑完讀檔進 :err
+(aos/call "./json-tool" @{:capture true :json true})      # 解 :out，值放 :value
+
+(def r (aos/pipe @["./echo.sh" ["./upper.sh" @{:timeout-ms 500}] "./count.sh"]
+                 @{:json false}))
+```
+
+`:read` 與 `:capture` 同時給時是 `:read` 贏；檔不存在時 `:out` 是 nil。沒給
+`:capture` 或 `:read` 時結果沒有 `:out`，所以取值也是 nil。`:json true` 的輸出是 nil 或空字串時
+`:value` 是 nil；解碼失敗不拋 error，而是放 `:json-error`。`(aos/value r)` 有 `:value`
+就回它，否則回 `:out`。
+
+`pipe` 的每段是 target 字串或 `[target opts]`，回最後一段的結果，`:steps` 留全部結果。
+只接受普通可執行檔；最外層 opts 的 `:json` 只對最後一段生效。
 
 ## 狀態資料夾長什麼樣
 
@@ -95,15 +117,16 @@ cd /tmp/my-proc
 - `README.md`：本頁，解釋逐步程式、cpu 接法與限制。
 - `project.janet`：Janet 專案資料與 spork 依賴。
 - `aos-step`：可執行的薄 CLI。
-- `src/aos.janet`：透過 proto4-3 `aos-exec` 叫檔案、JSON 或資料夾。
+- `src/aos.janet`：透過 proto4-3 `aos-exec` 叫目標、接流、讀檔、解 JSON 與串接。
 - `src/step.janet`：切 form、eval、錯誤處理與 image 狀態持久化。
 - `test/aos.janet`：函式庫、三種目標、逾時與錯誤分類測試。
 - `test/step.janet`：每步真開新行程的持久化、重試、status 與 reset 測試。
 - `test/cpu.janet`：真叫 `aos-run` 三格的整合測試。
 - `test/fx/exit3.sh`：回 3 的普通檔案樣本。
 - `test/fx/sleep.sh`：給 timeout 砍的慢程式樣本。
-- `test/fx/step-prog.janet`：四個 form 的跨行程樣本。
+- `test/fx/step-prog.janet`：六個 form 的跨行程樣本，包含 call 結果持久化。
 - `test/fx/cpu-prog.janet`：三個 form 的 cpu 樣本。
+- `test/fx/*.sh`：退出碼、逾時、三條流、JSON 與三段串接樣本。
 - `notes/`：留給後續任務書與實驗筆記。
 
 ## 沒做什麼
@@ -113,6 +136,9 @@ cd /tmp/my-proc
 - form 失敗會一直重試同一個，不會自動跳過。
 - 做完後 cpu 還是會一直來叫；`aos-step` 只會什麼都不做地回 0，因為 kernel v1 還沒有「行程結束」機制。
 - 函式庫不切 cwd；相對 target 永遠是相對於目前行程 cwd，不是 proto4 舊 `runf` 的切資料夾語意。
+- `:read`／`:read-err` 的相對路徑也以呼叫者 cwd 為中心；inst 裡的流則是相對 inst 的 cwd，呼叫者要自己對上。
+- `:capture` 對資料夾／`.json` inst 目標抓的是 aos-exec 自己的 stdout（通常為空）；inst 目標請用 `:read`。
+- `pipe` 是一段跑完才開下一段的「串接」，不是同時執行的真 OS pipe，中間資料全部進記憶體。
 - `kind` 是靠退出碼加 stderr 的 `aos-exec: ` 行猜的；子程式自己回 125 或 2 且印同樣開頭時無法分辨。
 - image 存不進去的東西，例如還開著的檔案或 fiber，會讓這一格存檔失敗並留在原 pc。
 - `aos-exec` 每次會截斷 inst.json 指定的 stdout/stderr 檔；要累積每格紀錄，請由 form 自己用 append 寫另一份 log。

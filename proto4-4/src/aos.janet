@@ -11,6 +11,8 @@
   (or (os/realpath (dyn :current-file))
       (error "aos: 無法定位 src/aos.janet")))
 
+(def- json-module (string (dyn :syspath) "/spork/json.so"))
+
 (def- default-exec
   (string (dirname (dirname source-file)) "/../proto4-3/aos-exec"))
 
@@ -41,6 +43,21 @@
       :timeout-ms
         (unless (and (integer? value) (>= value 0))
           (error "aos/call: :timeout-ms 必須是非負整數"))
+      :stdin
+        (unless (or (string? value) (buffer? value))
+          (error "aos/call: :stdin 必須是字串或 buffer"))
+      :capture
+        (unless (boolean? value)
+          (error "aos/call: :capture 必須是 boolean"))
+      :read
+        (unless (string? value)
+          (error "aos/call: :read 必須是字串"))
+      :read-err
+        (unless (string? value)
+          (error "aos/call: :read-err 必須是字串"))
+      :json
+        (unless (boolean? value)
+          (error "aos/call: :json 必須是 boolean"))
       (error (string "aos/call: 不認得的選項 " key))))
   (def argv @[resolved-exec target])
   (when-let [value (opts :dir-target)]
@@ -51,14 +68,22 @@
     (array/push argv (string value)))
   argv)
 
-(defn- read-pipe [stream]
+(defn- pump-pipe [stream]
   (def out @"")
-  (var chunk (:read stream 4096))
-  (while chunk
-    (buffer/push out chunk)
-    (set chunk (:read stream 4096)))
-  (:close stream)
-  (string out))
+  (ev/spawn
+    (var chunk (:read stream 4096))
+    (while chunk
+      (buffer/push out chunk)
+      (set chunk (:read stream 4096)))
+    (:close stream))
+  out)
+
+(defn- read-file [path]
+  (if (= :file (os/stat path :mode)) (string (slurp path)) nil))
+
+(defn- decode-json [text]
+  # 不把 spork 的 cfunction 綁進模組環境，讓 aos-step 可以 make-image。
+  ((get-in (require json-module) ['decode :value]) text))
 
 (defn- aos-line? [stderr]
   (var found false)
@@ -68,19 +93,44 @@
   found)
 
 (defn call
-  "把 target 原封不動交給 aos-exec，回 {:code :kind :stderr}。"
+  "把 target 原封不動交給 aos-exec，可選擇接住三條流。"
   [target &opt opts]
-  (def proc (os/spawn (argv-for target opts) :p {:err :pipe}))
-  # 先排空 pipe 再 wait，避免 aos-exec 的 stderr 撐滿後雙方互等。
-  (def stderr (read-pipe (proc :err)))
+  (def argv (argv-for target opts))
+  (default opts @{})
+  (def spawn-opts @{:err :pipe})
+  (when (opts :stdin) (put spawn-opts :in :pipe))
+  (when (opts :capture) (put spawn-opts :out :pipe))
+  (def proc (os/spawn argv :p spawn-opts))
+  # stdout/stderr 同時排空，避免任一邊撐滿 pipe 後雙方互等。
+  (def stderr-buffer (pump-pipe (proc :err)))
+  (def stdout-buffer (if (opts :capture) (pump-pipe (proc :out)) nil))
+  (when-let [input (opts :stdin)]
+    (:write (proc :in) input)
+    (:close (proc :in)))
   (def code (os/proc-wait proc))
+  (def stderr (string stderr-buffer))
   (def marked? (aos-line? stderr))
-  @{:code code
-    :kind (cond
-            (and (= code 125) marked?) "aos"
-            (and (= code 2) marked?) "usage"
-            "child")
-    :stderr stderr})
+  (def result
+    @{:code code
+      :kind (cond
+              (and (= code 125) marked?) "aos"
+              (and (= code 2) marked?) "usage"
+              "child")
+      :stderr stderr})
+  (when (opts :capture)
+    (put result :out (string stdout-buffer)))
+  (when-let [path (opts :read)]
+    (put result :out (read-file path)))
+  (when-let [path (opts :read-err)]
+    (put result :err (read-file path)))
+  (when (opts :json)
+    (def out (result :out))
+    (unless (or (nil? out) (= 0 (length out)))
+      (def decoded (protect (decode-json out)))
+      (if (decoded 0)
+        (put result :value (decoded 1))
+        (put result :json-error (describe (decoded 1))))))
+  result)
 
 (defn call-dir [dir &opt opts]
   (unless (= :directory (os/stat dir :mode))
@@ -94,3 +144,53 @@
 
 (defn ok? [result]
   (and (= "child" (result :kind)) (= 0 (result :code))))
+
+(defn value [result]
+  (if (has-key? result :value) (result :value) (result :out)))
+
+(defn- copy-opts [opts]
+  (def copied @{})
+  (when opts (eachp [key val] opts (put copied key val)))
+  copied)
+
+(defn- plain-executable? [target]
+  (and (string? target)
+       (not (string/has-suffix? ".json" target))
+       (= :file (os/stat target :mode))
+       (not (nil? (string/find "x" (os/stat target :permissions))))))
+
+(defn pipe
+  "依序執行普通可執行檔，把前一段的 stdout 當下一段 stdin。"
+  [targets &opt opts]
+  (unless (array? targets)
+    (error "aos/pipe: targets 必須是陣列"))
+  (when (empty? targets)
+    (error "aos/pipe: targets 不能是空陣列"))
+  (when (and opts (not (table? opts)))
+    (error "aos/pipe: opts 必須是 table"))
+  (def steps @[])
+  (var previous nil)
+  (for i 0 (length targets)
+    (def spec (targets i))
+    (def target (if (string? spec) spec (get spec 0)))
+    (def local-opts (if (string? spec) nil (get spec 1)))
+    (unless (or (string? spec)
+                (and (indexed? spec) (= 2 (length spec))
+                     (string? target) (table? local-opts)))
+      (error "aos/pipe: 每段必須是 target 字串或 [target opts]"))
+    (unless (plain-executable? target)
+      (error (string "aos/pipe: 只支援普通可執行檔；資料夾或 .json inst 目標的三條流由 inst.json 控制：" target)))
+    (def call-opts (copy-opts opts))
+    (when local-opts
+      (eachp [key val] local-opts (put call-opts key val)))
+    (put call-opts :capture true)
+    (when (> i 0) (put call-opts :stdin previous))
+    # pipe 最外層的 :json 只解最後一段。
+    (when (< i (dec (length targets))) (put call-opts :json false))
+    (def result (call target call-opts))
+    (array/push steps result)
+    (set previous (result :out)))
+  # 複製最後一段再加 :steps，避免結果裡產生指回自己的 cycle。
+  (def final-result (copy-opts (last steps)))
+  (put final-result :steps steps)
+  final-result)

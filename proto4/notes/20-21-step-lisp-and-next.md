@@ -84,3 +84,12 @@ codex 自己決定的（我看過認可）：`--status` 那行手寫、保留 `:
 - 逐步 lisp 那邊配合：`aos-step` 所有 form 跑完之後改回 100（原本回 0），這樣放進 kernel 就會自己下車。
 - 沒做的：行程不能自己「叫」kernel（那是 syscall 的事，§21.1 第 3 條）；做完的 cwd 資料夾不動；`procs/done/` 不會自動清。
 - 派 codex gpt-sol 做 kernel 端（`proto4-3/notes/codex-task-kernel-done.md`），aos-step 端另一輪。
+
+### 21.4 兩句話規則（2026-09-13，使用者手機）
+
+- 「janet 那邊如果因為程式語言太冷門，實作失敗很多次的話，那就改成定下 json 規範，然後用 python 實現。」→ Janet 不是信仰：逐步 lisp 的介面（狀態資料夾、pc、done、函式庫的 call）如果 Janet 那邊一直做不順，就把這些寫成 JSON 規範、換 Python 做同一件事。到 §21.4 為止 Janet 兩輪都一次過（15＋23＋4 → 34＋26＋4 條），還不用換。
+- 「本地 LM Studio 我打開了。一次只能 load 一個模型，要用另一個模型要先 unload。」→ 之後 LLM cpu 實測用 `localhost:1234`，換模型前先 unload。
+
+### 20.5 落地補記（第二輪「接住三條流」，codex gpt-sol，2026-09-13）
+
+`aos/call` 多了 `:stdin`／`:capture`／`:read`／`:read-err`／`:json`，加 `aos/value`、`aos/pipe`（串接、不是真 pipe）。測試 34＋26＋4 條全綠。codex 自己決定的：沒 capture／read 就不放 `:out`；`pipe` 回最後一段的複本再掛 `:steps`（避免 table 循環）；**spork 的 JSON 是 cfunction、存不進 image**，所以 form 裡拿到的 `:value` 是解好的純資料、解碼器每次臨時載入——這是「image 裡放不進去的東西」第一次真的撞到。
