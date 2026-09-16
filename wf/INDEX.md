@@ -25,6 +25,7 @@
 | `wf/tools/` | kernel 工具：`wf-lint.sh`（檢查壞連結／錨點／超標檔／條列／殘留）、`tabledb.py`（資料檔 CRUD／連結）、`find_big_lists.py`、`fix_moved_links.py`、`check_anchors.py`；inbox 腳本：`inbox_send.sh`／`inbox_read.sh`（單一收件匣），`inbox_mail.sh`／`inbox_poll.sh`／`inbox_team.sh`／`notify_watch.sh`（五通道升級後才用）。資料檔契約見 [common/data-files](workflows/common/data-files.md) |
 | `wf/salvage/` | **`roadmap-run` 打撈包**（2026-08-29）：那條分支跑完 M0→M2 後被凍結、系統要重新架構，這裡是抽出來的教訓與已驗證結論——七篇，給「從零重寫這套系統的人」讀。入口見 [salvage/README](salvage/README.md) |
 | `.claude/commands/` | slash 指令（[`/wf-tick`](../.claude/commands/wf-tick.md) 驅動定期心跳、[`/wf-lint`](../.claude/commands/wf-lint.md) 跑文檔檢查）。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |
+| `thinking/` | **使用者自己的想法草稿**（下一輪 CLI：`aos-agent`／`aos-inst`／`aos-user`／`aos-tools`），是他的方向、不是定案；討論脈絡在 [proto4/notes §25](../proto4/notes/24-agent.md) |
 | `README.md` | 給人讀的專案總覽 |
 
 > **非侵入式佈局**：頂層只有 `AGENTS.md`、`CLAUDE.md` 兩個 `.md` 入口（加上原本就有的 `README.md`），工作流的其他東西全在 `wf/` 底下，不弄亂原本的 C++ 專案結構。
