@@ -63,3 +63,45 @@ codex 一輪做完 `proto4-7/`（`aos-agent`、`aos-user`，28 條測試；任�
 修完整條通：`[user] 用 sh 工具看看…` → assistant `tool_calls sh {"cmd":"ls -la"}` → tool 回 `ls` 輸出 → assistant 一句話 → outbox 0001，約 20 秒。gemma-4-e4b 原生會回 `tool_calls`，文字救回那段這次沒用到。
 
 **試玩 r5 之後（fix-r6）**：agent 那站兩個試玩的都說最好玩。改了三處：一題一封信（idle 一次只拿最舊一個檔，其他留著）；`state.epoch`（`--reset` 不刪 state 而是寫回預設並 `epoch+1`，請求名 `<name>-e<epoch>-q<q>-s<s>`，reset 後改問題不撞名）；`listen --once` 只印沒印過的（`.listen-seen`）。stuck 兩句用詞統一含「（stuck）」。
+
+## §25 CLI 盤點、aos-step 概念、四態討論、aos-user 定位、使用者的 CLI 草案（2026-09-14～16）
+
+### 25.1 CLI 盤點
+
+使用者要「proto2～4.x 所有 CLI 操作方式」，整理成大白話版 [cli-cheatsheet.md](cli-cheatsheet.md)（12 個 proto、每支工具的子命令與旗標，從 README／docs／argparse 原始碼核對）。一句話總綱：整串 proto 都在做「讓一堆資料夾輪流被叫醒做事」，差別只在怎麼叫醒、資料夾裡放什麼。
+
+### 25.2 aos-step 是什麼
+
+把一支程式切成一格一格，每叫一次只跑下一格，跑完把「跑到哪」＋「變數」存磁碟後退出。它是**執行器**，跟 `sh`／`python` 同一個位置，只是「跑一步就停」——這樣普通的從上到下程式也能被 aos-run 那種「每次都是全新進程」的 cpu 推著走。
+
+四種口味：`aos-step`（Janet，一格＝一個頂層 form，用 image 存整個環境）、`aos-step-json`（一格＝一份 inst，不記變數）、`aos-step-py`（一格＝一個公開 `def(state)`，只記 `state`）、`aos-step-lua`（`return {{name,fn}}`，只記 `state`）。格內看得到 `here`／`pc`／`state`／`aos.*`（`call`、`llm`、`llm_submit`、`wait_for`）。退出碼就是跟 kernel 講話：0 做完一格、1 失敗不推進、100 全做完、101 在等檔。
+
+### 25.3 四態：使用者提 idle／think／act／wait
+
+使用者：「這四個狀態貼合我們的 bot 概念嗎？我會覺得應該是 idle, think, act, wait。」
+
+我的判斷：**`ask`→`think` 對，而且照出兩個沒對齊的地方**——
+
+1. **兩個「等」**：`idle` 等信、`wait` 等模型，都回 101、都是等外面的東西，卻用兩個名字。proto3 那課（等待與喚醒只有一個原語 `wait-for`）在 4-7 又被拆回兩種。
+2. **`act` 藏著同步的等**：模型叫工具時 `run_tool` 同步跑完（sh 工具 60 秒 timeout），工具慢就卡一格，違反「一格不等網路」；4-4／4-6 已有 `llm_submit`＋`wait_for` 兩格拆開的模式，agent 沒跟上。
+
+用使用者那組重畫：`idle`（沒事）→ `think`（決定下一步；不綁定 LLM，以後可以是規則／別的 agent）→ `wait`（只認「等哪個檔」，不管是模型／工具／別人的信）→ `act`（分派：跑工具、回信；工具若也改成丟出去→wait，act 永遠很短）。這樣 wait 只有一個，跟逐步程式的 `wait_for`、kernel 的 101 三邊對齊。
+
+保留一點：`think` 暗示 agent 自己在想，實作是外包給模型；要強調 agent 只是轉運站的話 `ask` 反而誠實。由使用者定。
+
+### 25.4 aos-user 定位
+
+不是 agent 的一部分，是「人」這個角色的化身：`say`＝往 `inbox/user/` 寫檔、`listen`＝盯 `outbox/`（看到哪記在 `.listen-seen`，故意不進 agent 的 state）、`new`＝鋪資料夾（agent.json、messages.json、echo／sh 兩個示範工具、inst.json）。`talk`＝listen 執行緒＋input 迴圈。**刻意不推進 agent、不碰 kernel、`from` 寫死 user。**
+
+它在替一件還沒做的事佔位（proto2 README 就講了：使用者之後會被當成一個 agent）：若人也是一個資料夾（有自己 inbox／outbox），agent 回信就寫進人的 `inbox/bob/`，aos-user 就退化成「人這個資料夾的 shell」。outbox 的 `{time,content}` 跟 inbox 的 `{from,time,content}` 只差一個 `from`，就是留給這步的。
+
+### 25.5 使用者的 CLI 草案
+
+使用者自己在 repo 頂層開了 [`thinking/`](../../thinking/)，寫下一輪 CLI 的想法：
+
+- [aos-agent.md](../../thinking/aos-agent.md)：`init [--config]`、`start`（＝跟 kernel register，旗標繼承）、`stop`（unregister）、`pause`／`continue`（cpu 照跑、狀態機不動、外部結果照存但不反應）、`tools ls|add|remove|enable|disable`、`llms ls|add|remove|enable|disable`、`state`。
+- [aos-inst.md](../../thinking/aos-inst.md)：`aos-inst ./inst.json|./ args|envs|stdin|stdout|stderr|stexit [--raw] [--json]`——把一份 inst 解析後的每個欄位吐出來看；要先評估牽扯多少模塊。
+- [aos-user.md](../../thinking/aos-user.md)：`say|listen|talk` 加 `--to`／`--from` 指目標 agent 資料夾，預設 `./`；不是 agent 資料夾要明講。
+- [aos-tools.md](../../thinking/aos-tools.md)：只有標題，還沒寫。
+
+這些是使用者的方向，下一步由他定；我不代替他思考（鐵律 5）。
