@@ -10,7 +10,7 @@
 
 ## 22.2 先撈遺產（使用者：「先前幾個版本的 proto 都是可以參考的遺產，只是謹慎採用」）
 
-派 codex gpt-sol 讀 proto／proto2／proto3 系／proto4-1、4-2／reference/llmkit／core/llm，寫成逐題「採／改採／不採＋為什麼」，在 [llm-cpu/legacy-harvest.md](llm-cpu/legacy-harvest.md)（198 行）。最值得撿的三樣：
+派 codex gpt-sol 讀 proto／proto2／proto3 系／proto4-1、4-2／reference/llmkit（現已獨立成 `~/repo/llmkit`）／core/llm，寫成逐題「採／改採／不採＋為什麼」，在 [llm-cpu/legacy-harvest.md](llm-cpu/legacy-harvest.md)（198 行）。最值得撿的三樣：
 
 1. **proto2 的跨格作法**：tick 只派工——把請求搬進 `running/`、開一支背景 worker 去打 API、tick 立刻返回；下一格再依 pid／結果檔收尾。這正面解掉「一格幾秒、推論幾十秒」的衝突。
 2. **proto 的「結果不明就不重送」**：送出去之後 worker 掛了、狀態不明，一律標 error（worker_died），絕不自動重送——避免重複扣款與雙回覆；要不要重投是呼叫者的事。
