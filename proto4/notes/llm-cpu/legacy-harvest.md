@@ -9,7 +9,7 @@
 - `proto3/`、`proto3-1/`：只在記憶體模擬一個有 FIFO 佇列與自己時鐘的 LLM 世界；沒有真 endpoint、磁碟與崩潰恢復。`proto3-1` 只是把世界改成可 eval 的 form，之後又往 proto3-2／proto4 的「檔案就是程式」走。
 - `proto3-2/`：只補了同步 engine 的 agent form，明說之後才改成非同步 LLM 世界；沒有 LLM 排隊／endpoint 實作，隨後方向走到 proto4。
 - `proto4-1/`、`proto4-2/`：grep 沒有 LLM／endpoint／DeepSeek 相關；只提供普通 cpu／kernel 遺產。`proto4-2` README 明標已被 proto4-3 取代。
-- `reference/llmkit/`：是已定型的單發 OpenAI 相容 client、Reply／usage 正規化、preset 與可選 LiteLLM proxy；它沒有被放下，但刻意不管 queue、retry、logging、CLI、工具執行，正好可當 endpoint adapter 參考。
+- `reference/llmkit/`（2026-09-20 起獨立成 `~/repo/llmkit`）：是已定型的單發 OpenAI 相容 client、Reply／usage 正規化、preset 與可選 LiteLLM proxy；它沒有被放下，但刻意不管 queue、retry、logging、CLI、工具執行，正好可當 endpoint adapter 參考。
 - `core/llm/`：定了 C++ `Message`／`Options`／`complete()`、OpenAI 相容非串流呼叫，以及以 `flock` 做的同步槽位／優先等待；README 沒寫為何放下，現方向則已改成由資料夾型 LLM cpu 集中排隊，不宜直接拿呼叫端搶槽當主架構。
 
 ## 2. 逐題比對
@@ -193,6 +193,6 @@ OpenAI worker 組非串流 `chat/completions`，回傳保留整包 choices、fin
 - proto3-1 CL 對照：`proto3-1/variant-cl/README.md` 98；`src/llm.lisp` 50；`src/agent.lisp` 74；`src/main.lisp` 66；`test/basic.lisp` 150。
 - proto3-2：`proto3-2/README.md` 21；`src/agent.janet` 72；`notes/2026-09-08-ideas.md` 22。
 - proto4 舊版：`proto4-1/README.md` 63；`proto4-2/README.md` 172；兩目錄的 grep 結果均無 LLM 相關檔。
-- llmkit：`reference/llmkit/README.md` 101；`llms/client.py` 119；`engine.py` 85；`presets.json` 106；`presets.py` 68；`usage.py` 23；`caps.py` 72；`reply.py` 154；`llms/README.md` 143；`llms/USAGE.md` 131。
-- llmkit proxy：`reference/llmkit/proxy/litellm.yaml` 144；`proxy/README.md` 143。
+- llmkit（現在在 `~/repo/llmkit/`）：`README.md` 101；`llms/client.py` 119；`engine.py` 85；`presets.json` 106；`presets.py` 68；`usage.py` 23；`caps.py` 72；`reply.py` 154；`llms/README.md` 143；`llms/USAGE.md` 131。
+- llmkit proxy：`~/repo/llmkit/proxy/litellm.yaml` 144；`proxy/README.md` 143。
 - C++：`core/llm/README.md` 67；`core/llm/include/aos/llm.hpp` 52；`core/llm/include/aos/slot.hpp` 81。

@@ -8,7 +8,7 @@
 2. `proto4/notes/20-21-step-lisp-and-next.md` §21、§21.1（使用者定義：LLM cpu 就是普通 cpu 上的一支程式，收請求→排序→分發 endpoint；agent 迴圈不在這層）。
 3. `proto4-3/README.md`、`proto4-3/docs/exec.md`（inst.json 規則、`aos-exec`）、`proto4-3/docs/kernel.md`（行程怎麼排進 kernel）。llm-cpu 的每一格就是 `aos-exec` 跑一次 `llm-cpu tick`。
 4. `proto4-4/README.md`（lisp 用 `aos/call-dir`＋`:read :json` 叫資料夾、讀 JSON 結果——之後 lisp 就是這樣投請求、讀結果的）。
-5. `reference/llmkit/llms/client.py`、`reply.py`、`usage.py`——OpenAI 相容的請求怎麼組、回應與 usage 怎麼正規化。**只抄形狀，不 import**。
+5. `~/repo/llmkit/llms/client.py`、`reply.py`、`usage.py`（原 `reference/llmkit/`，2026-09-20 獨立成 repo）——OpenAI 相容的請求怎麼組、回應與 usage 怎麼正規化。**只抄形狀，不 import**。
 
 ## 定案（照做；harvest §4 五個問題全部照它的預設）
 

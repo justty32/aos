@@ -8,33 +8,39 @@
 
 ## 目前放了什麼
 
-| | 來源 | 對應的 aos 小專案 |
-|---|---|---|
-| [`llmkit/tooljson/`](llmkit/tooljson/README.md) | freepy | `core/tooljson`（規劃中）|
-| [`llmkit/llms/`](llmkit/llms/README.md) | freepy | `core/llms`（規劃中）|
-| [`llmkit/proxy/`](llmkit/proxy/README.md) | freepy | 原樣搬進 `core/llms/proxy/`，沒有程式碼要重寫 |
+原文本身已經不在這裡了。**llmkit 在 2026-09-20 獨立成自己的 git repo：`~/repo/llmkit`**
+（用 `git subtree split` 帶著在 aos 裡的五個 commit 拆出去，內容一字不差）。這一層現在只剩
+本檔和 [`PORTING.md`](PORTING.md)。
 
-搬過來的時間與出處：
+| | 現在在哪 | 對應的 aos 小專案 |
+|---|---|---|
+| `tooljson/` | `~/repo/llmkit/tooljson/` | `core/tooljson`（S1 外殼已落地）|
+| `llms/` | `~/repo/llmkit/llms/` | `core/llms`（已落地）|
+| `proxy/` | `~/repo/llmkit/proxy/` | 原樣搬進 `core/llms/proxy/`，沒有程式碼要重寫 |
+
+來歷：
 
 ```
-2026-08-23  從 ~/repo/simple_tools/freepy/llmkit/ 原樣複製
+2026-08-23  從 ~/repo/simple_tools/freepy/llmkit/ 原樣複製進 reference/llmkit/
             freepy commit 3631bd2  Move the instruction runner into the aos submodule
             只排除 __pycache__，其餘一個字都沒改
+2026-09     在 reference/llmkit/proxy/ 接上 ChatGPT Pro／Claude Pro 訂閱（litellm.yaml、兩支 token 腳本）
+2026-09-20  整個 reference/llmkit/ 帶歷史拆成獨立 repo ~/repo/llmkit，aos 這邊刪掉
 ```
 
-一個字都沒改是刻意的 —— 移植過程要能隨時回頭問「原本到底怎麼寫」，改過的原文
-會讓這個問題答不出來。要修正的想法寫進 `PORTING.md`，不要寫進這裡。
+「原文不改」的規矩仍然適用：要修正的想法寫進 `PORTING.md`，不要改 `~/repo/llmkit` 的
+python 來遷就 C++。（proxy 那部分是活的設定，在那個 repo 裡照常改。）
 
 ## 讀哪幾份
 
 移植的**契約**是這兩份，不是 `.py`：
 
-- [`llmkit/tooljson/FORMAT.md`](llmkit/tooljson/FORMAT.md) —— spec 的外殼，所有 `_type` 共通
-- [`llmkit/tooljson/EXEC.md`](llmkit/tooljson/EXEC.md) —— `_type: "exec"` 的完整規則
+- `~/repo/llmkit/tooljson/FORMAT.md` —— spec 的外殼，所有 `_type` 共通
+- `~/repo/llmkit/tooljson/EXEC.md` —— `_type: "exec"` 的完整規則
 
 它們本來就是寫給「別的語言的第二個實作」看的（FORMAT.md 最後一節「一份實作要做到
 什麼」列了九條），C++ 版就是那個第二個實作。`.py` 只是同一份契約的第一個實作，
 兩者衝突時**以 .md 為準**，並把落差記進 `PORTING.md`。
 
-`llmkit/tooljson/PYTHON.md` 是 python 專屬的 `_type`，C++ 這邊照規範就是讀不懂的壞檔，
+`~/repo/llmkit/tooljson/PYTHON.md` 是 python 專屬的 `_type`，C++ 這邊照規範就是讀不懂的壞檔，
 留著只是為了讓 registry 的開放性有一個真實對照組。

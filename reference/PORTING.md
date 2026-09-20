@@ -2,7 +2,8 @@
 
 ← [reference/](README.md)
 
-把 `reference/llmkit/`（python，約 2100 行程式 + 1300 行文件）重寫成 aos 底下的
+把 llmkit（python，約 2100 行程式 + 1300 行文件；原本在 `reference/llmkit/`，2026-09-20 起獨立成
+`~/repo/llmkit`，本檔提到的 `llmkit/...` 路徑都指那裡）重寫成 aos 底下的
 核心小專案。**執行者是 codex，驗收者是 claude。** 本檔是那份工單。
 
 ---
@@ -247,7 +248,7 @@ aos llms models                 列出端點有哪些模型與能力
   與 target。
 - 外部消費測試：`env -u VCPKG_ROOT`，`find_package(aos)` + `aos::tooljson`、`aos::llms`。
   （沒有 `env -u VCPKG_ROOT` 等於白測，見 [gotchas](../wf/workflows/common/gotchas.md)。）
-- **刪掉整個 `reference/`。**
+- **刪掉整個 `reference/`。**（`reference/llmkit/` 已於 2026-09-20 獨立到 `~/repo/llmkit`，剩下 `README.md` 與本檔。）
 
 ---
 

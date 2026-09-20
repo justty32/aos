@@ -12,9 +12,8 @@
 *.pyc binary
 
 
-# 以下兩個檔案在 git 裡本來就存著 CRLF（全 repo 僅此兩例，用
-# `git ls-files --eol` 查得）。標 -text 讓 git 原樣比對，不去動它們：
+# 以下這個檔案在 git 裡本來就存著 CRLF（全 repo 僅此一例，用
+# `git ls-files --eol` 查得）。標 -text 讓 git 原樣比對，不去動它：
 #   - 試驗留存的終端輸出是證據，含控制字元，改了就不是原始記錄
-#   - PowerShell 腳本是 Windows 專用的參考資料
+# （原本還有 reference/llmkit/proxy/start_litellm.ps1，2026-09-20 隨 llmkit 獨立成 ~/repo/llmkit 一起搬走。）
 wf/workflows/dispatch/trial/sandbox/solo/out/C.stdout.log -text
-reference/llmkit/proxy/start_litellm.ps1                  -text

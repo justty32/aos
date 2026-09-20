@@ -22,7 +22,7 @@
 1. **proto（第一版，Python）**：`proto/aosp/llm.py`、`proto/README.md` 的 `llm <op>` 那列與底下三段（`max_wait_ms`、`.aos/llm-inflight/`、帳簿 `tokens_out`／`tokens_reasoning`）、`proto/FINDINGS.md`（尤其第 4 條「LLM 世界的圈跟 run 的走格是兩套」）、`proto/examples/llm-echo/`、`proto/tests/test_llm.py`。
 2. **proto2（Python）**：`proto2/aos_llm.py`、`proto2/aos-llm`、`proto2/docs/llm-scheduling.md`、`proto2/docs/cost.md`、`proto2/notes/tools/cost-metering.md`、`proto2/tests/sched.sh`、`cost.sh`、`anthropic.sh`、`claude_cli.sh`、`proto2/README.md` 裡 aos-llm 那段。
 3. **proto3／proto3-1／proto3-2（Janet）、proto4-1、proto4-2**：`grep -ril "llm\|endpoint\|deepseek" <dir>` 掃一下，有東西才讀，沒有就寫一行「沒有 LLM 相關」。
-4. **reference/llmkit/**（freepy 搬來的 Python，「已定型」的 LLM client）：`llms/client.py`、`engine.py`、`presets.json`／`presets.py`、`usage.py`、`caps.py`、`reply.py`、`llms/README.md`、`USAGE.md`；`proxy/litellm.yaml`、`proxy/README.md`。這是**打 OpenAI 相容 endpoint 的成熟寫法**，重點看：請求怎麼組、串流不串流、usage 怎麼算、錯誤與重試、preset 怎麼描述一個 endpoint＋模型。
+4. **reference/llmkit/**（freepy 搬來的 Python；2026-09-20 起獨立成 `~/repo/llmkit`，「已定型」的 LLM client）：`llms/client.py`、`engine.py`、`presets.json`／`presets.py`、`usage.py`、`caps.py`、`reply.py`、`llms/README.md`、`USAGE.md`；`proxy/litellm.yaml`、`proxy/README.md`。這是**打 OpenAI 相容 endpoint 的成熟寫法**，重點看：請求怎麼組、串流不串流、usage 怎麼算、錯誤與重試、preset 怎麼描述一個 endpoint＋模型。
 5. **core/llm/**（C++，凍結分支搬回來的）：只看 README 與標頭，寫兩三行它定了什麼介面，不深讀。
 
 ## 報告 `proto4/notes/llm-cpu/legacy-harvest.md`（繁體中文、大白話、250 行以內）
