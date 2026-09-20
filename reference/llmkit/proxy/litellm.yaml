@@ -139,12 +139,19 @@ model_list:
   # model_info 裡 mode: responses 與 supports_native_streaming 兩個不是能力旗標，是開關：
   # - 沒有 mode: responses，litellm 會打不存在的 /chat/completions（回 HTML）；
   # - 沒有 supports_native_streaming，stream: true 會被 litellm 改成假串流，後端回 400 "Stream must be set to true"。
-  # 模型清單抄 codex 的 ~/.codex/models_cache.json（2026-09-20：gpt-6-astra、gpt-5.6-sol/terra/luna、gpt-5.5）。
-  # reasoning_effort 後端吃 low / medium / high / xhigh（astra/sol/terra 還有 max / ultra），沒有 none。
+  # 模型清單抄 codex 的 ~/.codex/models_cache.json（2026-09-20 共 7 顆，全部都是 chat 型；gpt-reserve 與
+  # codex-auto-review 在 codex 裡是 visibility: hide，但 API 照樣打得通）。
+  # 思考分身：-low / -medium / -high / -xhigh / -max 是同一顆焊死 reasoning effort，-nothink 是 effort: none。
+  # 哪顆有哪幾檔以 2026-09-20 實打為準：astra 不吃 none（400）所以沒有 -nothink；gpt-5.5 不吃 max（400）；
+  # 其他六顆 none 都 200 而且 reasoning_tokens 歸 0（codex 的 models_cache 沒列 none，但後端真的收）。
+  # cache 裡的 ultra 是 codex 的多 agent 模式，API 直打 400，不做；minimal 也 400。
+  # 分身焊的是 extra_body: {reasoning: {effort: X}}、不是 reasoning_effort：litellm 1.87.5 的 chat→responses
+  # 橋接只認得字串 low / medium / high / xhigh，max 會被靜靜丟掉變成後端預設；寫成 dict {effort: max} 對
+  # astra / reserve / auto-review 有效，但名字含 gpt-5 的（sol / terra / luna / 5.5）會先被 GPT-5 chat 設定壓回
+  # 字串再丟掉。extra_body 裡的 reasoning 橋接會原樣併進 Responses 請求，七顆都通（2026-09-20 看 debug log 確認）。
+  # client 自己傳 reasoning_effort 走基底名字照樣有效（allowed_openai_params 放行），但一樣只到 xhigh。
   - model_name: chatgpt-gpt-6-astra
-    litellm_params: &cg
-      model: chatgpt/gpt-6-astra
-      allowed_openai_params: ["reasoning_effort"]
+    litellm_params: &cg {model: chatgpt/gpt-6-astra, allowed_openai_params: ["reasoning_effort"]}
     model_info: &cg_info
       mode: responses
       supports_native_streaming: true
@@ -161,124 +168,189 @@ model_list:
       supports_none_reasoning_effort: false
       max_input_tokens: 272000
       max_output_tokens: 128000
+  - {model_name: chatgpt-gpt-6-astra-low,    litellm_params: {<<: *cg, extra_body: {reasoning: {effort: low}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-6-astra-medium, litellm_params: {<<: *cg, extra_body: {reasoning: {effort: medium}}}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-6-astra-high,   litellm_params: {<<: *cg, extra_body: {reasoning: {effort: high}}},   model_info: *cg_info}
+  - {model_name: chatgpt-gpt-6-astra-xhigh,  litellm_params: {<<: *cg, extra_body: {reasoning: {effort: xhigh}}},  model_info: *cg_info}
+  - {model_name: chatgpt-gpt-6-astra-max,    litellm_params: {<<: *cg, extra_body: {reasoning: {effort: max}}},    model_info: *cg_info}
 
-  - model_name: chatgpt-gpt-6-astra-low
-    litellm_params:
-      <<: *cg
-      reasoning_effort: "low"
-    model_info: *cg_info
+  - {model_name: chatgpt-gpt-5.6-sol,        litellm_params: &cg_sol {<<: *cg, model: chatgpt/gpt-5.6-sol}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-sol-low,    litellm_params: {<<: *cg_sol, extra_body: {reasoning: {effort: low}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-sol-medium, litellm_params: {<<: *cg_sol, extra_body: {reasoning: {effort: medium}}}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-sol-high,   litellm_params: {<<: *cg_sol, extra_body: {reasoning: {effort: high}}},   model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-sol-xhigh,  litellm_params: {<<: *cg_sol, extra_body: {reasoning: {effort: xhigh}}},  model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-sol-max,    litellm_params: {<<: *cg_sol, extra_body: {reasoning: {effort: max}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-sol-nothink, litellm_params: {<<: *cg_sol, extra_body: {reasoning: {effort: none}}}, model_info: *cg_info}
 
-  - model_name: chatgpt-gpt-6-astra-high
-    litellm_params:
-      <<: *cg
-      reasoning_effort: "high"
-    model_info: *cg_info
+  - {model_name: chatgpt-gpt-5.6-terra,        litellm_params: &cg_terra {<<: *cg, model: chatgpt/gpt-5.6-terra}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-terra-low,    litellm_params: {<<: *cg_terra, extra_body: {reasoning: {effort: low}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-terra-medium, litellm_params: {<<: *cg_terra, extra_body: {reasoning: {effort: medium}}}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-terra-high,   litellm_params: {<<: *cg_terra, extra_body: {reasoning: {effort: high}}},   model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-terra-xhigh,  litellm_params: {<<: *cg_terra, extra_body: {reasoning: {effort: xhigh}}},  model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-terra-max,    litellm_params: {<<: *cg_terra, extra_body: {reasoning: {effort: max}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-terra-nothink, litellm_params: {<<: *cg_terra, extra_body: {reasoning: {effort: none}}}, model_info: *cg_info}
 
-  - model_name: chatgpt-gpt-5.6-sol
-    litellm_params:
-      <<: *cg
-      model: chatgpt/gpt-5.6-sol
-    model_info: *cg_info
+  - {model_name: chatgpt-gpt-5.6-luna,        litellm_params: &cg_luna {<<: *cg, model: chatgpt/gpt-5.6-luna}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-luna-low,    litellm_params: {<<: *cg_luna, extra_body: {reasoning: {effort: low}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-luna-medium, litellm_params: {<<: *cg_luna, extra_body: {reasoning: {effort: medium}}}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-luna-high,   litellm_params: {<<: *cg_luna, extra_body: {reasoning: {effort: high}}},   model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-luna-xhigh,  litellm_params: {<<: *cg_luna, extra_body: {reasoning: {effort: xhigh}}},  model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-luna-max,    litellm_params: {<<: *cg_luna, extra_body: {reasoning: {effort: max}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.6-luna-nothink, litellm_params: {<<: *cg_luna, extra_body: {reasoning: {effort: none}}}, model_info: *cg_info}
 
-  - model_name: chatgpt-gpt-5.6-terra
-    litellm_params:
-      <<: *cg
-      model: chatgpt/gpt-5.6-terra
-    model_info: *cg_info
+  # gpt-5.5 沒有 max 檔（實打 400，cache 也只列到 xhigh）；codex 說它 2026-10-14 退役、改用 gpt-5.6-sol。
+  - {model_name: chatgpt-gpt-5.5,        litellm_params: &cg_55 {<<: *cg, model: chatgpt/gpt-5.5}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.5-low,    litellm_params: {<<: *cg_55, extra_body: {reasoning: {effort: low}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.5-medium, litellm_params: {<<: *cg_55, extra_body: {reasoning: {effort: medium}}}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.5-high,   litellm_params: {<<: *cg_55, extra_body: {reasoning: {effort: high}}},   model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.5-xhigh,  litellm_params: {<<: *cg_55, extra_body: {reasoning: {effort: xhigh}}},  model_info: *cg_info}
+  - {model_name: chatgpt-gpt-5.5-nothink, litellm_params: {<<: *cg_55, extra_body: {reasoning: {effort: none}}}, model_info: *cg_info}
 
-  - model_name: chatgpt-gpt-5.6-luna
-    litellm_params:
-      <<: *cg
-      model: chatgpt/gpt-5.6-luna
-    model_info: *cg_info
+  - {model_name: chatgpt-gpt-reserve,        litellm_params: &cg_res {<<: *cg, model: chatgpt/gpt-reserve}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-reserve-low,    litellm_params: {<<: *cg_res, extra_body: {reasoning: {effort: low}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-reserve-medium, litellm_params: {<<: *cg_res, extra_body: {reasoning: {effort: medium}}}, model_info: *cg_info}
+  - {model_name: chatgpt-gpt-reserve-high,   litellm_params: {<<: *cg_res, extra_body: {reasoning: {effort: high}}},   model_info: *cg_info}
+  - {model_name: chatgpt-gpt-reserve-xhigh,  litellm_params: {<<: *cg_res, extra_body: {reasoning: {effort: xhigh}}},  model_info: *cg_info}
+  - {model_name: chatgpt-gpt-reserve-max,    litellm_params: {<<: *cg_res, extra_body: {reasoning: {effort: max}}},    model_info: *cg_info}
+  - {model_name: chatgpt-gpt-reserve-nothink, litellm_params: {<<: *cg_res, extra_body: {reasoning: {effort: none}}}, model_info: *cg_info}
 
-  - model_name: chatgpt-gpt-5.5
-    litellm_params:
-      <<: *cg
-      model: chatgpt/gpt-5.5
-    model_info: *cg_info
+  - {model_name: chatgpt-codex-auto-review,        litellm_params: &cg_rev {<<: *cg, model: chatgpt/codex-auto-review}, model_info: *cg_info}
+  - {model_name: chatgpt-codex-auto-review-low,    litellm_params: {<<: *cg_rev, extra_body: {reasoning: {effort: low}}},    model_info: *cg_info}
+  - {model_name: chatgpt-codex-auto-review-medium, litellm_params: {<<: *cg_rev, extra_body: {reasoning: {effort: medium}}}, model_info: *cg_info}
+  - {model_name: chatgpt-codex-auto-review-high,   litellm_params: {<<: *cg_rev, extra_body: {reasoning: {effort: high}}},   model_info: *cg_info}
+  - {model_name: chatgpt-codex-auto-review-xhigh,  litellm_params: {<<: *cg_rev, extra_body: {reasoning: {effort: xhigh}}},  model_info: *cg_info}
+  - {model_name: chatgpt-codex-auto-review-max,    litellm_params: {<<: *cg_rev, extra_body: {reasoning: {effort: max}}},    model_info: *cg_info}
+  - {model_name: chatgpt-codex-auto-review-nothink, litellm_params: {<<: *cg_rev, extra_body: {reasoning: {effort: none}}}, model_info: *cg_info}
 
   # Claude 訂閱（Claude Code 登入的 OAuth token，走 litellm 內建 anthropic/ provider 打 https://api.anthropic.com）
   # api_key 的 claude-code-login 是佔位值，不是真 key：claude_auth_from_claude_code.py（下面 callbacks 掛的）
   # 每個請求都會從 ~/.claude/.credentials.json 讀最新 accessToken 蓋掉它，順便在 messages 最前面插
   # 「You are Claude Code, Anthropic's official CLI for Claude.」這句 system（opus/sonnet 沒它就 429）。
   # 忘了掛 callback 就會 401 "invalid x-api-key"。
-  # litellm 內建資料庫不認得 opus-5 / sonnet-5，旗標手填（2026-09-20 實打，見 README「Claude 訂閱」）。
-  # opus-5 / sonnet-5 預設就會想（adaptive），但走 OAuth 拿不到思考內容、usage 的 reasoning_tokens 永遠 0；
-  # supports_adaptive_thinking 讓 litellm 把 reasoning_effort 轉成 thinking: adaptive + output_config.effort
-  # （low / medium / high / max），reasoning_effort: none 只是不送 thinking、後端照樣想，
-  # 真的要關要送 thinking: {type: disabled}，所以 -nothink 分身焊的是這個。
+  # 模型清單＝用這個 token 直打 /v1/models 看得到的 11 顆（2026-09-20），旗標照它回的 capabilities 手填，
+  # 因為 litellm 1.87.5 內建資料庫不認得 opus-5 / sonnet-5 / fable-5-1 / opus-4-8。分三個世代：
+  # - adaptive 世代（fable-5-1 / fable-5 / opus-5 / sonnet-5 / opus-4-8 / opus-4-7）：thinking 只有 adaptive，
+  #   effort 五檔 low / medium / high / xhigh / max 全吃；litellm 把 reasoning_effort 轉成
+  #   thinking: adaptive + output_config.effort。supports_xhigh/max_reasoning_effort 一定要標，
+  #   不然 litellm 會把 output_config 當不支援參數靜靜丟掉（drop_params）。
+  #   fable 的思考關不掉（thinking: disabled 會 400），所以 fable 沒有 -nothink。
+  #   opus-4-8 / 4-7 沒給參數就不想（跟 opus-5 / sonnet-5 預設就想不一樣），要想就用 -low～-max 分身。
+  # - 4.6 世代（opus-4-6 / sonnet-4-6）：adaptive，effort 沒有 xhigh。
+  # - 4.5 世代（opus-4.5 / sonnet-4.5 / haiku-4.5）：只有舊式 thinking.budget_tokens，預設不想；litellm 把
+  #   reasoning_effort low / medium / high / xhigh / max 轉成 budget 1024 / 2048 / 4096 / 8192 / 16384，
+  #   max_tokens 一定要比 budget 大不然 400。思考內容拿得到（reasoning_content）。預設就不想所以沒有 -nothink。
+  # 走 OAuth 的 adaptive 世代拿不到思考內容：回應只有 thinking block 的 signature、reasoning_content 是空的、
+  # usage 的 reasoning_tokens 永遠 0（思考 token 混在 completion_tokens 裡）。
+  # -nothink 分身焊的是 thinking: {type: disabled}（reasoning_effort: none 只是不送 thinking、後端照樣想）。
   # -nothink 不能像 lm-* 那樣標 supports_reasoning: false：litellm 把 model_info 註冊在後端模型名
   # （anthropic/claude-opus-5）底下、同一顆的所有分身共用、最後一筆贏，標了 false 會讓 thinking /
-  # reasoning_effort 變成「不支援參數」被 drop_params 吞掉，整組 opus-5 的 -low / -high / -nothink 一起失效
-  # （2026-09-20 踩過）。反正 OAuth 路線思考內容拿不到，這個旗標對 client 只是情報，就全部維持 true。
+  # reasoning_effort 變成「不支援參數」被 drop_params 吞掉，整組分身一起失效（2026-09-20 踩過）。
   - model_name: claude-opus-5
-    litellm_params: &cc
-      model: anthropic/claude-opus-5
-      api_key: claude-code-login
-    model_info: &cc_info
+    litellm_params: &cc {model: anthropic/claude-opus-5, api_key: claude-code-login}
+    model_info: &cc_info   # adaptive 世代共用
       supports_function_calling: true
       supports_vision: true
       supports_reasoning: true
       supports_adaptive_thinking: true
+      supports_xhigh_reasoning_effort: true
+      supports_max_reasoning_effort: true
       supports_tool_choice: true
       supports_parallel_function_calling: true
       supports_response_schema: true
       supports_prompt_caching: true
-      max_input_tokens: 200000
-      max_output_tokens: 64000
+      max_input_tokens: 1000000
+      max_output_tokens: 128000
+  - {model_name: claude-opus-5-low,     litellm_params: {<<: *cc, reasoning_effort: low},     model_info: *cc_info}
+  - {model_name: claude-opus-5-medium,  litellm_params: {<<: *cc, reasoning_effort: medium},  model_info: *cc_info}
+  - {model_name: claude-opus-5-high,    litellm_params: {<<: *cc, reasoning_effort: high},    model_info: *cc_info}
+  - {model_name: claude-opus-5-xhigh,   litellm_params: {<<: *cc, reasoning_effort: xhigh},   model_info: *cc_info}
+  - {model_name: claude-opus-5-max,     litellm_params: {<<: *cc, reasoning_effort: max},     model_info: *cc_info}
+  - {model_name: claude-opus-5-nothink, litellm_params: {<<: *cc, thinking: {type: disabled}}, model_info: *cc_info}
 
-  - model_name: claude-opus-5-low
-    litellm_params:
-      <<: *cc
-      reasoning_effort: "low"
-    model_info: *cc_info
+  - {model_name: claude-sonnet-5,         litellm_params: &cc_s5 {<<: *cc, model: anthropic/claude-sonnet-5}, model_info: *cc_info}
+  - {model_name: claude-sonnet-5-low,     litellm_params: {<<: *cc_s5, reasoning_effort: low},     model_info: *cc_info}
+  - {model_name: claude-sonnet-5-medium,  litellm_params: {<<: *cc_s5, reasoning_effort: medium},  model_info: *cc_info}
+  - {model_name: claude-sonnet-5-high,    litellm_params: {<<: *cc_s5, reasoning_effort: high},    model_info: *cc_info}
+  - {model_name: claude-sonnet-5-xhigh,   litellm_params: {<<: *cc_s5, reasoning_effort: xhigh},   model_info: *cc_info}
+  - {model_name: claude-sonnet-5-max,     litellm_params: {<<: *cc_s5, reasoning_effort: max},     model_info: *cc_info}
+  - {model_name: claude-sonnet-5-nothink, litellm_params: {<<: *cc_s5, thinking: {type: disabled}}, model_info: *cc_info}
 
-  - model_name: claude-opus-5-high
-    litellm_params:
-      <<: *cc
-      reasoning_effort: "high"
-    model_info: *cc_info
+  - {model_name: claude-fable-5-1,         litellm_params: &cc_f51 {<<: *cc, model: anthropic/claude-fable-5-1}, model_info: *cc_info}
+  - {model_name: claude-fable-5-1-low,     litellm_params: {<<: *cc_f51, reasoning_effort: low},     model_info: *cc_info}
+  - {model_name: claude-fable-5-1-medium,  litellm_params: {<<: *cc_f51, reasoning_effort: medium},  model_info: *cc_info}
+  - {model_name: claude-fable-5-1-high,    litellm_params: {<<: *cc_f51, reasoning_effort: high},    model_info: *cc_info}
+  - {model_name: claude-fable-5-1-xhigh,   litellm_params: {<<: *cc_f51, reasoning_effort: xhigh},   model_info: *cc_info}
+  - {model_name: claude-fable-5-1-max,     litellm_params: {<<: *cc_f51, reasoning_effort: max},     model_info: *cc_info}
 
-  - model_name: claude-opus-5-nothink
-    litellm_params:
-      <<: *cc
-      thinking: {type: disabled}
-    model_info: *cc_info
+  - {model_name: claude-fable-5,         litellm_params: &cc_f5 {<<: *cc, model: anthropic/claude-fable-5}, model_info: *cc_info}
+  - {model_name: claude-fable-5-low,     litellm_params: {<<: *cc_f5, reasoning_effort: low},     model_info: *cc_info}
+  - {model_name: claude-fable-5-medium,  litellm_params: {<<: *cc_f5, reasoning_effort: medium},  model_info: *cc_info}
+  - {model_name: claude-fable-5-high,    litellm_params: {<<: *cc_f5, reasoning_effort: high},    model_info: *cc_info}
+  - {model_name: claude-fable-5-xhigh,   litellm_params: {<<: *cc_f5, reasoning_effort: xhigh},   model_info: *cc_info}
+  - {model_name: claude-fable-5-max,     litellm_params: {<<: *cc_f5, reasoning_effort: max},     model_info: *cc_info}
 
-  - model_name: claude-sonnet-5
-    litellm_params: &cc_sonnet
-      <<: *cc
-      model: anthropic/claude-sonnet-5
-    model_info: *cc_info
+  - {model_name: claude-opus-4-8,         litellm_params: &cc_o48 {<<: *cc, model: anthropic/claude-opus-4-8}, model_info: *cc_info}
+  - {model_name: claude-opus-4-8-low,     litellm_params: {<<: *cc_o48, reasoning_effort: low},     model_info: *cc_info}
+  - {model_name: claude-opus-4-8-medium,  litellm_params: {<<: *cc_o48, reasoning_effort: medium},  model_info: *cc_info}
+  - {model_name: claude-opus-4-8-high,    litellm_params: {<<: *cc_o48, reasoning_effort: high},    model_info: *cc_info}
+  - {model_name: claude-opus-4-8-xhigh,   litellm_params: {<<: *cc_o48, reasoning_effort: xhigh},   model_info: *cc_info}
+  - {model_name: claude-opus-4-8-max,     litellm_params: {<<: *cc_o48, reasoning_effort: max},     model_info: *cc_info}
+  - {model_name: claude-opus-4-8-nothink, litellm_params: {<<: *cc_o48, thinking: {type: disabled}}, model_info: *cc_info}
 
-  - model_name: claude-sonnet-5-low
-    litellm_params:
-      <<: *cc_sonnet
-      reasoning_effort: "low"
-    model_info: *cc_info
+  - {model_name: claude-opus-4-7,         litellm_params: &cc_o47 {<<: *cc, model: anthropic/claude-opus-4-7}, model_info: *cc_info}
+  - {model_name: claude-opus-4-7-low,     litellm_params: {<<: *cc_o47, reasoning_effort: low},     model_info: *cc_info}
+  - {model_name: claude-opus-4-7-medium,  litellm_params: {<<: *cc_o47, reasoning_effort: medium},  model_info: *cc_info}
+  - {model_name: claude-opus-4-7-high,    litellm_params: {<<: *cc_o47, reasoning_effort: high},    model_info: *cc_info}
+  - {model_name: claude-opus-4-7-xhigh,   litellm_params: {<<: *cc_o47, reasoning_effort: xhigh},   model_info: *cc_info}
+  - {model_name: claude-opus-4-7-max,     litellm_params: {<<: *cc_o47, reasoning_effort: max},     model_info: *cc_info}
+  - {model_name: claude-opus-4-7-nothink, litellm_params: {<<: *cc_o47, thinking: {type: disabled}}, model_info: *cc_info}
 
-  - model_name: claude-sonnet-5-high
-    litellm_params:
-      <<: *cc_sonnet
-      reasoning_effort: "high"
-    model_info: *cc_info
+  # 4.6 世代：adaptive 但沒有 xhigh。
+  - model_name: claude-opus-4-6
+    litellm_params: &cc_o46 {<<: *cc, model: anthropic/claude-opus-4-6}
+    model_info: &cc46_info {<<: *cc_info, supports_xhigh_reasoning_effort: false}
+  - {model_name: claude-opus-4-6-low,     litellm_params: {<<: *cc_o46, reasoning_effort: low},     model_info: *cc46_info}
+  - {model_name: claude-opus-4-6-medium,  litellm_params: {<<: *cc_o46, reasoning_effort: medium},  model_info: *cc46_info}
+  - {model_name: claude-opus-4-6-high,    litellm_params: {<<: *cc_o46, reasoning_effort: high},    model_info: *cc46_info}
+  - {model_name: claude-opus-4-6-max,     litellm_params: {<<: *cc_o46, reasoning_effort: max},     model_info: *cc46_info}
+  - {model_name: claude-opus-4-6-nothink, litellm_params: {<<: *cc_o46, thinking: {type: disabled}}, model_info: *cc46_info}
 
-  - model_name: claude-sonnet-5-nothink
-    litellm_params:
-      <<: *cc_sonnet
-      thinking: {type: disabled}
-    model_info: *cc_info
+  - {model_name: claude-sonnet-4-6,         litellm_params: &cc_s46 {<<: *cc, model: anthropic/claude-sonnet-4-6}, model_info: *cc46_info}
+  - {model_name: claude-sonnet-4-6-low,     litellm_params: {<<: *cc_s46, reasoning_effort: low},     model_info: *cc46_info}
+  - {model_name: claude-sonnet-4-6-medium,  litellm_params: {<<: *cc_s46, reasoning_effort: medium},  model_info: *cc46_info}
+  - {model_name: claude-sonnet-4-6-high,    litellm_params: {<<: *cc_s46, reasoning_effort: high},    model_info: *cc46_info}
+  - {model_name: claude-sonnet-4-6-max,     litellm_params: {<<: *cc_s46, reasoning_effort: max},     model_info: *cc46_info}
+  - {model_name: claude-sonnet-4-6-nothink, litellm_params: {<<: *cc_s46, thinking: {type: disabled}}, model_info: *cc46_info}
 
-  # haiku 4.5 是舊式 thinking：預設不想；reasoning_effort low/medium/high 會變 thinking.budget_tokens
-  # 1024/2048/4096，max_tokens 一定要比 budget 大不然 400。思考內容拿得到（reasoning_content）。
-  - model_name: claude-haiku-4.5
-    litellm_params:
-      <<: *cc
-      model: anthropic/claude-haiku-4-5-20251001
-    model_info:
+  # 4.5 世代：舊式 budget_tokens，預設不想，所以沒有 -nothink。API id 帶日期，名字用短的。
+  - model_name: claude-opus-4.5
+    litellm_params: &cc_o45 {<<: *cc, model: anthropic/claude-opus-4-5-20251101}
+    model_info: &cc45_info
       <<: *cc_info
       supports_adaptive_thinking: false
+      supports_xhigh_reasoning_effort: false
+      supports_max_reasoning_effort: false
+      max_input_tokens: 200000
+      max_output_tokens: 64000
+  - {model_name: claude-opus-4.5-low,    litellm_params: {<<: *cc_o45, reasoning_effort: low},    model_info: *cc45_info}
+  - {model_name: claude-opus-4.5-medium, litellm_params: {<<: *cc_o45, reasoning_effort: medium}, model_info: *cc45_info}
+  - {model_name: claude-opus-4.5-high,   litellm_params: {<<: *cc_o45, reasoning_effort: high},   model_info: *cc45_info}
+  - {model_name: claude-opus-4.5-xhigh,  litellm_params: {<<: *cc_o45, reasoning_effort: xhigh},  model_info: *cc45_info}
+  - {model_name: claude-opus-4.5-max,    litellm_params: {<<: *cc_o45, reasoning_effort: max},    model_info: *cc45_info}
+
+  - {model_name: claude-sonnet-4.5,        litellm_params: &cc_s45 {<<: *cc, model: anthropic/claude-sonnet-4-5-20250929}, model_info: &cc_s45_info {<<: *cc45_info, max_input_tokens: 1000000}}
+  - {model_name: claude-sonnet-4.5-low,    litellm_params: {<<: *cc_s45, reasoning_effort: low},    model_info: *cc_s45_info}
+  - {model_name: claude-sonnet-4.5-medium, litellm_params: {<<: *cc_s45, reasoning_effort: medium}, model_info: *cc_s45_info}
+  - {model_name: claude-sonnet-4.5-high,   litellm_params: {<<: *cc_s45, reasoning_effort: high},   model_info: *cc_s45_info}
+  - {model_name: claude-sonnet-4.5-xhigh,  litellm_params: {<<: *cc_s45, reasoning_effort: xhigh},  model_info: *cc_s45_info}
+  - {model_name: claude-sonnet-4.5-max,    litellm_params: {<<: *cc_s45, reasoning_effort: max},    model_info: *cc_s45_info}
+
+  - {model_name: claude-haiku-4.5,        litellm_params: &cc_h45 {<<: *cc, model: anthropic/claude-haiku-4-5-20251001}, model_info: *cc45_info}
+  - {model_name: claude-haiku-4.5-low,    litellm_params: {<<: *cc_h45, reasoning_effort: low},    model_info: *cc45_info}
+  - {model_name: claude-haiku-4.5-medium, litellm_params: {<<: *cc_h45, reasoning_effort: medium}, model_info: *cc45_info}
+  - {model_name: claude-haiku-4.5-high,   litellm_params: {<<: *cc_h45, reasoning_effort: high},   model_info: *cc45_info}
+  - {model_name: claude-haiku-4.5-xhigh,  litellm_params: {<<: *cc_h45, reasoning_effort: xhigh},  model_info: *cc45_info}
+  - {model_name: claude-haiku-4.5-max,    litellm_params: {<<: *cc_h45, reasoning_effort: max},    model_info: *cc45_info}
 
 # 要 master key 就設 LITELLM_MASTER_KEY 再解開。
 # general_settings:
