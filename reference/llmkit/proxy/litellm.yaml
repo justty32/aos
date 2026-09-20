@@ -1,4 +1,4 @@
-# LiteLLM Proxy：DeepSeek 雲端、遠端 Ollama、本機 LM Studio。
+# LiteLLM Proxy：DeepSeek 雲端、ChatGPT 訂閱（codex 後端）、遠端 Ollama、本機 LM Studio。
 # 連不到的來源不擋啟動，只有真的呼叫時才失敗。
 # 啟動方式見 start_litellm.sh / start_litellm.ps1。
 
@@ -132,6 +132,71 @@ model_list:
       model: lm_studio/qwen/qwen3.5-9b
       reasoning_effort: "none"
     model_info: *lm_info_nothink
+
+  # ChatGPT Pro 訂閱（litellm 內建 chatgpt provider，打 https://chatgpt.com/backend-api/codex/responses）
+  # 不用 API key：讀 ~/.config/litellm/chatgpt/auth.json（CHATGPT_TOKEN_DIR / CHATGPT_AUTH_FILE 可改），
+  # 用 ./chatgpt_auth_from_codex.py 從 codex CLI 登入過的 ~/.codex/auth.json 轉一份過來就不用再 device login。
+  # model_info 裡 mode: responses 與 supports_native_streaming 兩個不是能力旗標，是開關：
+  # - 沒有 mode: responses，litellm 會打不存在的 /chat/completions（回 HTML）；
+  # - 沒有 supports_native_streaming，stream: true 會被 litellm 改成假串流，後端回 400 "Stream must be set to true"。
+  # 模型清單抄 codex 的 ~/.codex/models_cache.json（2026-09-20：gpt-6-astra、gpt-5.6-sol/terra/luna、gpt-5.5）。
+  # reasoning_effort 後端吃 low / medium / high / xhigh（astra/sol/terra 還有 max / ultra），沒有 none。
+  - model_name: chatgpt-gpt-6-astra
+    litellm_params: &cg
+      model: chatgpt/gpt-6-astra
+      allowed_openai_params: ["reasoning_effort"]
+    model_info: &cg_info
+      mode: responses
+      supports_native_streaming: true
+      supports_function_calling: true
+      supports_vision: true
+      supports_reasoning: true
+      supports_tool_choice: true
+      supports_parallel_function_calling: true
+      # 2026-09-20 實打：response_format 送過去 200 但被無聲丟掉（回 markdown 不是 JSON）。
+      supports_response_schema: false
+      # 2026-09-20 實打：usage.prompt_tokens_details.cached_tokens 會有數字，但只命中 codex 固定
+      # 前綴那 1408 tokens、而且時有時無；自己的長 system prompt 連打兩次沒命中過。
+      supports_prompt_caching: true
+      supports_none_reasoning_effort: false
+      max_input_tokens: 272000
+      max_output_tokens: 128000
+
+  - model_name: chatgpt-gpt-6-astra-low
+    litellm_params:
+      <<: *cg
+      reasoning_effort: "low"
+    model_info: *cg_info
+
+  - model_name: chatgpt-gpt-6-astra-high
+    litellm_params:
+      <<: *cg
+      reasoning_effort: "high"
+    model_info: *cg_info
+
+  - model_name: chatgpt-gpt-5.6-sol
+    litellm_params:
+      <<: *cg
+      model: chatgpt/gpt-5.6-sol
+    model_info: *cg_info
+
+  - model_name: chatgpt-gpt-5.6-terra
+    litellm_params:
+      <<: *cg
+      model: chatgpt/gpt-5.6-terra
+    model_info: *cg_info
+
+  - model_name: chatgpt-gpt-5.6-luna
+    litellm_params:
+      <<: *cg
+      model: chatgpt/gpt-5.6-luna
+    model_info: *cg_info
+
+  - model_name: chatgpt-gpt-5.5
+    litellm_params:
+      <<: *cg
+      model: chatgpt/gpt-5.5
+    model_info: *cg_info
 
 # 要 master key 就設 LITELLM_MASTER_KEY 再解開。
 # general_settings:
