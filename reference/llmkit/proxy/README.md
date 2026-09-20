@@ -56,21 +56,40 @@ litellm **不裝進任何 venv**，腳本用 `uv run --with` 臨時把它拉進�
 
 ## 現在有哪些模型
 
-名字定義在 `litellm.yaml`：
+名字定義在 `litellm.yaml`（2026-09-20 共 130 條：ChatGPT 47、Claude 70、LM Studio 6、Ollama 4、DeepSeek 3）。
+**思考深度統一成「換名字」**：基底名字＝後端預設、client 自己傳 `reasoning_effort` 也吃；
+`-low` / `-medium` / `-high` / `-xhigh` / `-max` 是同一顆焊死深度的分身、`-nothink` 是關掉思考的分身。
+哪顆有哪幾檔以實打為準，下面每家一段。
+
+**ChatGPT Pro 訂閱**（codex 後端；全部看得到圖、會思考、叫得動工具、JSON schema 不行）：
+
+| 基底名字 | 是誰 | 有哪些分身 |
+|---|---|---|
+| `chatgpt-gpt-6-astra` | codex 預設款、最強 | `-low` `-medium` `-high` `-xhigh` `-max`（**沒有 `-nothink`**，後端不吃 none） |
+| `chatgpt-gpt-5.6-sol` | 最新 coding 款（後端預設深度是 low） | `-low` ～ `-max` ＋ `-nothink` |
+| `chatgpt-gpt-5.6-terra` | 均衡款 | `-low` ～ `-max` ＋ `-nothink` |
+| `chatgpt-gpt-5.6-luna` | 快、便宜 | `-low` ～ `-max` ＋ `-nothink` |
+| `chatgpt-gpt-5.5` | 上一代，codex 說 2026-10-14 退役 | `-low` `-medium` `-high` `-xhigh` ＋ `-nothink`（**沒有 `-max`**，400） |
+| `chatgpt-gpt-reserve` | codex 裡藏起來的（`visibility: hide`）快款 | `-low` ～ `-max` ＋ `-nothink` |
+| `chatgpt-codex-auto-review` | codex 裡藏起來的自動 review 模型 | `-low` ～ `-max` ＋ `-nothink` |
+
+**Claude Pro 訂閱**（Claude Code 的 token；全部看得到圖、叫得動工具、JSON schema、快取都通）：
+
+| 基底名字 | 世代 | 有哪些分身 |
+|---|---|---|
+| `claude-fable-5-1` / `claude-fable-5` | adaptive，思考關不掉 | `-low` `-medium` `-high` `-xhigh` `-max`（**沒有 `-nothink`**，400） |
+| `claude-opus-5` / `claude-sonnet-5` | adaptive，預設就會想 | `-low` ～ `-max` ＋ `-nothink` |
+| `claude-opus-4-8` / `claude-opus-4-7` | adaptive，**預設不想** | `-low` ～ `-max` ＋ `-nothink` |
+| `claude-opus-4-6` / `claude-sonnet-4-6` | adaptive，預設不想，思考內容拿得到 | `-low` `-medium` `-high` `-max` ＋ `-nothink`（沒有 `-xhigh`） |
+| `claude-opus-4.5` / `claude-sonnet-4.5` / `claude-haiku-4.5` | 舊式 budget_tokens，預設不想，思考內容拿得到 | `-low` ～ `-max`（budget 1024 / 2048 / 4096 / 8192 / 16384，`max_tokens` 要比 budget 大）；預設就不想所以沒有 `-nothink` |
+
+**其他**：
 
 | 名字 | 來源 | 備註 |
 |---|---|---|
-| `deepseek-chat` | DeepSeek 雲端 | 舊名，現在打到 v4-flash 的非思考模式 |
-| `deepseek-reasoner` | DeepSeek 雲端 | 舊名，現在打到 v4-flash 的思考模式 |
+| `deepseek-chat` / `deepseek-reasoner` | DeepSeek 雲端 | 舊名，現在打到 v4-flash 的非思考 / 思考模式 |
 | `deepseek-v4-pro` | DeepSeek 雲端 | 會思考 |
-| `chatgpt-gpt-6-astra` | ChatGPT Pro 訂閱（codex 後端） | codex 預設款；看得到圖、會思考、叫得動工具；思考深度預設 medium |
-| `chatgpt-gpt-6-astra-low` / `-high` | 同一顆 | 焊死 `reasoning_effort` 的分身；沒有 `-nothink`，後端不吃 `none` |
-| `chatgpt-gpt-5.6-sol` / `-terra` / `-luna` / `chatgpt-gpt-5.5` | ChatGPT Pro 訂閱 | codex 清單上其他幾顆，能力旗標跟 astra 共用一組 |
-| `claude-opus-5` / `claude-sonnet-5` | Claude Pro 訂閱（Claude Code 的 token） | 看得到圖、叫得動工具、JSON schema、快取都通；預設就會想但思考內容拿不到 |
-| 上面兩個各加 `-low` / `-high` / `-nothink` | 同一顆 | 焊死思考深度的分身；`-nothink` 真的關掉思考 |
-| `claude-haiku-4.5` | Claude Pro 訂閱 | 預設不想，給 `reasoning_effort` 才想、而且思考內容拿得到 |
-| `lm-gemma-4-12b` / `lm-gemma-4-e4b` / `lm-qwen3.5-9b` | 本機 LM Studio | 三個都看得到圖、都會思考、都叫得動工具 |
-| 上面三個各加 `-nothink` | 同一顆模型 | 關掉思考的分身，例如 `lm-gemma-4-e4b-nothink` |
+| `lm-gemma-4-12b` / `lm-gemma-4-e4b` / `lm-qwen3.5-9b` | 本機 LM Studio | 三個都看得到圖、都會思考、都叫得動工具；各有 `-nothink` |
 | `ollama-*` | 遠端 Ollama @ 192.168.1.146 | 只有連得到那台時才通 |
 
 LM Studio 沒載入模型時第一次呼叫會由它自己 JIT 載入，會慢一下。
@@ -103,7 +122,7 @@ codex login                    # 沒登入過才要；會開瀏覽器
 （2026-09-20 兩邊都還在效期內）；哪一邊開始回 401 就重跑 `codex login` +
 `chatgpt_auth_from_codex.py`。
 
-**已知限制**（2026-09-20 實打 `chatgpt-gpt-6-astra`）：
+**已知限制**（2026-09-20 實打 `chatgpt-gpt-6-astra`；思考深度那兩列七顆都打過）：
 
 | | 結果 |
 |---|---|
@@ -113,8 +132,9 @@ codex login                    # 沒登入過才要；會開瀏覽器
 | `tool_choice: "required"` | ✓ 真的逼出呼叫 |
 | parallel function calling | ✓ 一步 2 calls |
 | 看圖（`image_url` base64 PNG） | ✓ |
-| `reasoning_effort` low / medium / high | ✓ reasoning_tokens 0 → 11 → 25 |
-| `reasoning_effort: "none"` | ✗ 400 `Unsupported value: 'none' is not supported with the 'gpt-6-astra' model. Supported values are: 'low', 'medium', 'high', 'xhigh', and 'max'.` |
+| 思考深度 low / medium / high / xhigh / max | ✓ 七顆都吃到 xhigh；max 除了 gpt-5.5（400）都吃。reasoning_tokens 會隨檔變（astra 14 → 22 → 42） |
+| 思考深度 none | astra ✗ 400 `Unsupported value: 'none' is not supported with the 'gpt-6-astra' model.`；**其他六顆 ✓** 200、reasoning_tokens 0（codex 的 cache 沒列 none，但後端真的收） |
+| 思考深度 minimal / ultra | ✗ 400（ultra 是 codex 的多 agent 模式，API 不吃） |
 | `response_format` JSON schema | ✗ 200 但被無聲丟掉，回 markdown（橋接時 `text.format` 沒傳過去） |
 | prompt caching 指標 | △ `cached_tokens` 有時 1408、有時 0；只命中 codex 固定前綴，自己的長 prompt 沒命中過 |
 
@@ -127,8 +147,15 @@ codex login                    # 沒登入過才要；會開瀏覽器
   宣告，是**開關**：少了前者 litellm 會去打不存在的 `/chat/completions`（回一頁
   HTML）；少了後者 `stream: true` 會被 litellm 改成假串流，後端回 400
   `Stream must be set to true`。改那區不要順手刪。
-- 模型清單抄 codex 的 `~/.codex/models_cache.json`（`visibility: list` 的那幾顆），
-  litellm 內建資料庫只認到 gpt-5.4，不認得這幾顆，所以旗標全部手填。
+- 模型清單抄 codex 的 `~/.codex/models_cache.json`，2026-09-20 裡面就 7 顆、全是 chat 型（沒有
+  embedding / image / tts 那種），連 `visibility: hide` 的 `gpt-reserve`、`codex-auto-review` 都打得通，
+  所以全收。litellm 內建資料庫只認到 gpt-5.4，不認得這幾顆，旗標全部手填。
+- **分身焊的是 `extra_body: {reasoning: {effort: X}}`，不是 `reasoning_effort`**：litellm 1.87.5 把 chat
+  橋接成 Responses 時只認得字串 low / medium / high / xhigh，`max` 會被**靜靜丟掉**變後端預設（前一版
+  yaml 的 `-max` 其實沒生效）。寫成 dict `{effort: max}` 對 astra / reserve / auto-review 有效，但名字含
+  `gpt-5` 的（sol / terra / luna / 5.5）會先被 litellm 的 GPT-5 chat 設定壓回字串再丟掉。`extra_body` 裡的
+  `reasoning` 會原樣併進 Responses 請求，七顆都通（看 `--detailed_debug` 的 `-d '{...}'` 那行確認）。
+  你自己在 client 傳 `reasoning_effort` 打基底名字照樣有效，但一樣只到 xhigh；要 max / none 就用分身。
 - 這是訂閱額度不是 API 計費，litellm 算不出成本是正常的。
 
 ### Claude 訂閱（`claude-*`）
@@ -162,13 +189,13 @@ block、順序不變，所以 hook 在 `messages` 最前面插一條那句話的
 內容 —— 回應裡 `thinking_blocks` 只有 signature、`reasoning_content` 是空字串、
 `usage.completion_tokens_details.reasoning_tokens` 永遠 0（思考的 token 混在 `completion_tokens` 裡）。
 yaml 標了 `supports_adaptive_thinking: true`，litellm 會把 `reasoning_effort` 轉成
-`thinking: {type: adaptive}` + `output_config: {effort: …}`（吃 low / medium / high / max）；
+`thinking: {type: adaptive}` + `output_config: {effort: …}`（吃 low / medium / high / xhigh / max，4.6 世代沒有 xhigh）；
 `reasoning_effort: "none"` 只是不送 thinking、後端照樣想，真的要關要送 `thinking: {type: disabled}`，
 `-nothink` 分身焊的就是這個。haiku-4.5 是舊式：預設不想，`reasoning_effort` low / medium / high 變
 `thinking.budget_tokens` 1024 / 2048 / 4096，**`max_tokens` 一定要比 budget 大**不然 400
 `max_tokens must be greater than thinking.budget_tokens`；它的思考內容拿得到。
 
-**實測表**（2026-09-20，經 proxy 打）：
+**實測表**（2026-09-20，經 proxy 打；上半是三顆的完整功能，下半是 11 顆的思考檔位）：
 
 | | opus-5 | sonnet-5 | haiku-4.5 |
 |---|---|---|---|
@@ -180,6 +207,7 @@ yaml 標了 `supports_adaptive_thinking: true`，litellm 會把 `reasoning_effor
 | 看圖（`image_url` base64 PNG） | ✓（`max_tokens` 要夠，見下） | ✓ | ✓ |
 | `reasoning_effort` low / high | ✓ 兩者都有 thinking block，low 省一半 token | ✓ high 有 block；low 沒有（它自己決定不想） | ✓ low 有 `reasoning_content`；medium / high 要 `max_tokens` > budget |
 | `-nothink` / `thinking: disabled` | ✓ 沒有 thinking block | ✓ | 不適用（預設就不想） |
+| `-xhigh` / `-max` | ✓ 有 thinking block | ✓ | ✓（budget 8192 / 16384） |
 | `response_format` JSON schema | ✓ 回純 JSON | ✓ | ✓ |
 | prompt caching（system block 加 `cache_control`） | ✓ 第二次 `cached_tokens: 3096` | ✓ 3097 | ✓ 但 prompt 要 **≥ 4096 tokens** 才會開始快取（2011 / 3331 都 0，5531 才命中） |
 
@@ -194,9 +222,21 @@ yaml 標了 `supports_adaptive_thinking: true`，litellm 會把 `reasoning_effor
   這是刻意的失敗方式。
 - `/v1/messages`（Anthropic 原生格式的 pass-through）沒接：hook 只處理 chat completions 的
   `messages`，走原生格式 system 前綴不會自動補。
-- `/v1/models` 用這個 token 直打 Anthropic 看得到 11 顆（含 `claude-fable-5-1` / `-5`、
-  `claude-opus-4-8` / `-4-7` / `-4-6` / `-4-5`、`claude-sonnet-4-6` / `-4-5`），yaml 先只放三顆；
-  要加就抄 `claude-sonnet-5` 那筆換 `model:`，opus / sonnet 系列都要那句 system 前綴。
+- `/v1/models` 用這個 token 直打 Anthropic 看得到 11 顆，yaml 全收；它回的 `capabilities` 就是旗標的依據
+  （哪顆吃 adaptive、哪顆 effort 有 xhigh / max）。API id 帶日期的三顆（`claude-opus-4-5-20251101`、
+  `claude-sonnet-4-5-20250929`、`claude-haiku-4-5-20251001`）名字用短的 `claude-opus-4.5` 那種。
+  **每顆都要 `supports_xhigh_reasoning_effort` / `supports_max_reasoning_effort`** 標對：litellm 靠這兩個旗標
+  決定要不要送 `output_config.effort`，沒標就當不支援、`drop_params` 靜靜丟掉，你以為 xhigh 其實是預設。
+- **11 顆的思考檔位**（2026-09-20，每顆每檔各打一次；prompt 太簡單時 adaptive 會自己決定不想，
+  所以用「1～1000 被 3 或 5 整除但不被 15 整除」那題）：
+
+  | | 預設 | low ～ max | nothink |
+  |---|---|---|---|
+  | fable-5-1 / fable-5 | 會想 | ✓ 五檔（低檔常直接在正文裡推、不出 thinking block） | ✗ 400 `"thinking.type.disabled" is not supported for this model` |
+  | opus-5 / sonnet-5 | 會想 | ✓ 五檔（sonnet low 常不想） | ✓ |
+  | opus-4-8 / opus-4-7 | **不想** | ✓ 五檔（低檔常不想，xhigh / max 一定想） | ✓（跟預設一樣） |
+  | opus-4-6 / sonnet-4-6 | 不想 | ✓ 四檔（沒 xhigh），**思考內容拿得到**（`reasoning_content`） | ✓ |
+  | opus-4.5 / sonnet-4.5 / haiku-4.5 | 不想 | ✓ 五檔都是 budget_tokens，思考內容拿得到；`max_tokens` ≤ budget 就 400 | 不適用 |
 - 這是訂閱額度不是 API 計費，litellm 算不出成本是正常的；回應 header 有
   `anthropic-ratelimit-unified-5h-utilization` / `-7d-utilization` 可以看用了多少（proxy 不轉出來，
   要看得直打）。
