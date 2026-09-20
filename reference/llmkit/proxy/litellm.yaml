@@ -1,4 +1,4 @@
-# LiteLLM Proxy：DeepSeek 雲端、ChatGPT 訂閱（codex 後端）、遠端 Ollama、本機 LM Studio。
+# LiteLLM Proxy：DeepSeek 雲端、ChatGPT 訂閱（codex 後端）、Claude 訂閱（Claude Code 登入）、遠端 Ollama、本機 LM Studio。
 # 連不到的來源不擋啟動，只有真的呼叫時才失敗。
 # 啟動方式見 start_litellm.sh / start_litellm.ps1。
 
@@ -198,11 +198,95 @@ model_list:
       model: chatgpt/gpt-5.5
     model_info: *cg_info
 
+  # Claude 訂閱（Claude Code 登入的 OAuth token，走 litellm 內建 anthropic/ provider 打 https://api.anthropic.com）
+  # api_key 的 claude-code-login 是佔位值，不是真 key：claude_auth_from_claude_code.py（下面 callbacks 掛的）
+  # 每個請求都會從 ~/.claude/.credentials.json 讀最新 accessToken 蓋掉它，順便在 messages 最前面插
+  # 「You are Claude Code, Anthropic's official CLI for Claude.」這句 system（opus/sonnet 沒它就 429）。
+  # 忘了掛 callback 就會 401 "invalid x-api-key"。
+  # litellm 內建資料庫不認得 opus-5 / sonnet-5，旗標手填（2026-09-20 實打，見 README「Claude 訂閱」）。
+  # opus-5 / sonnet-5 預設就會想（adaptive），但走 OAuth 拿不到思考內容、usage 的 reasoning_tokens 永遠 0；
+  # supports_adaptive_thinking 讓 litellm 把 reasoning_effort 轉成 thinking: adaptive + output_config.effort
+  # （low / medium / high / max），reasoning_effort: none 只是不送 thinking、後端照樣想，
+  # 真的要關要送 thinking: {type: disabled}，所以 -nothink 分身焊的是這個。
+  # -nothink 不能像 lm-* 那樣標 supports_reasoning: false：litellm 把 model_info 註冊在後端模型名
+  # （anthropic/claude-opus-5）底下、同一顆的所有分身共用、最後一筆贏，標了 false 會讓 thinking /
+  # reasoning_effort 變成「不支援參數」被 drop_params 吞掉，整組 opus-5 的 -low / -high / -nothink 一起失效
+  # （2026-09-20 踩過）。反正 OAuth 路線思考內容拿不到，這個旗標對 client 只是情報，就全部維持 true。
+  - model_name: claude-opus-5
+    litellm_params: &cc
+      model: anthropic/claude-opus-5
+      api_key: claude-code-login
+    model_info: &cc_info
+      supports_function_calling: true
+      supports_vision: true
+      supports_reasoning: true
+      supports_adaptive_thinking: true
+      supports_tool_choice: true
+      supports_parallel_function_calling: true
+      supports_response_schema: true
+      supports_prompt_caching: true
+      max_input_tokens: 200000
+      max_output_tokens: 64000
+
+  - model_name: claude-opus-5-low
+    litellm_params:
+      <<: *cc
+      reasoning_effort: "low"
+    model_info: *cc_info
+
+  - model_name: claude-opus-5-high
+    litellm_params:
+      <<: *cc
+      reasoning_effort: "high"
+    model_info: *cc_info
+
+  - model_name: claude-opus-5-nothink
+    litellm_params:
+      <<: *cc
+      thinking: {type: disabled}
+    model_info: *cc_info
+
+  - model_name: claude-sonnet-5
+    litellm_params: &cc_sonnet
+      <<: *cc
+      model: anthropic/claude-sonnet-5
+    model_info: *cc_info
+
+  - model_name: claude-sonnet-5-low
+    litellm_params:
+      <<: *cc_sonnet
+      reasoning_effort: "low"
+    model_info: *cc_info
+
+  - model_name: claude-sonnet-5-high
+    litellm_params:
+      <<: *cc_sonnet
+      reasoning_effort: "high"
+    model_info: *cc_info
+
+  - model_name: claude-sonnet-5-nothink
+    litellm_params:
+      <<: *cc_sonnet
+      thinking: {type: disabled}
+    model_info: *cc_info
+
+  # haiku 4.5 是舊式 thinking：預設不想；reasoning_effort low/medium/high 會變 thinking.budget_tokens
+  # 1024/2048/4096，max_tokens 一定要比 budget 大不然 400。思考內容拿得到（reasoning_content）。
+  - model_name: claude-haiku-4.5
+    litellm_params:
+      <<: *cc
+      model: anthropic/claude-haiku-4-5-20251001
+    model_info:
+      <<: *cc_info
+      supports_adaptive_thinking: false
+
 # 要 master key 就設 LITELLM_MASTER_KEY 再解開。
 # general_settings:
 #   master_key: os.environ/LITELLM_MASTER_KEY
 
 litellm_settings:
+  # Claude 訂閱的 token 注入器（見 claude_auth_from_claude_code.py）；沒有 claude-* 條目時拿掉也無妨。
+  callbacks: [claude_auth_from_claude_code.handler]
   # 不支援參數直接丟棄；要硬塞就用 allowed_openai_params。
   drop_params: true
   num_retries: 2

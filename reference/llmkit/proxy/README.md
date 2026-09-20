@@ -1,7 +1,7 @@
 # proxy
 
-一個 LiteLLM proxy 的設定檔和啟動腳本。它把 DeepSeek 雲端、ChatGPT Pro 訂閱、遠端
-Ollama、本機 LM Studio 收成**同一個 OpenAI 相容端點**（預設 `localhost:4000`），
+一個 LiteLLM proxy 的設定檔和啟動腳本。它把 DeepSeek 雲端、ChatGPT Pro 訂閱、Claude Pro
+訂閱、遠端 Ollama、本機 LM Studio 收成**同一個 OpenAI 相容端點**（預設 `localhost:4000`），
 所以換模型就只是換一個字串，程式碼不用動。
 
 `llms` 預設就是打這裡。但它不是必需品 —— 有現成的 OpenAI 相容端點就直接
@@ -13,18 +13,20 @@ Ollama、本機 LM Studio 收成**同一個 OpenAI 相容端點**（預設 `loca
 | `start_litellm.sh` | 啟動（Linux / macOS） |
 | `start_litellm.ps1` | 啟動（Windows），參數一樣是 `(config, port)` |
 | `chatgpt_auth_from_codex.py` | 把 codex CLI 登入過的 token 轉給 litellm 用，免再登入一次 |
+| `claude_auth_from_claude_code.py` | litellm callback：每個請求從 Claude Code 登入檔拿最新 token 餵給 `claude-*`，順便補後端要的 system 前綴 |
 
 ## 起來
 
 ```bash
 export DEEPSEEK_API_KEY=sk-...     # 只有要用 DeepSeek 才需要
 ./chatgpt_auth_from_codex.py       # 只有要用 ChatGPT 訂閱才需要，見下面「ChatGPT 訂閱」
+                                   # Claude 訂閱不用做事，登入過 Claude Code 就行，見「Claude 訂閱」
 ./start_litellm.sh                 # 等同 ./start_litellm.sh litellm.yaml 4000
 curl localhost:4000/v1/models      # 確認實際載入了哪些
 ```
 
 **連不到的來源不會擋住啟動**，只有真的去呼叫它時才失敗 —— 所以沒開 LM Studio、
-沒有 DeepSeek 金鑰、沒轉 ChatGPT token，proxy 一樣起得來，剩下的模型照用。
+沒有 DeepSeek 金鑰、沒轉 ChatGPT token、沒登入 Claude Code，proxy 一樣起得來，剩下的模型照用。
 
 litellm **不裝進任何 venv**，腳本用 `uv run --with` 臨時把它拉進來跑，不用先裝、
 也不用維護第二個 venv。
@@ -64,6 +66,9 @@ litellm **不裝進任何 venv**，腳本用 `uv run --with` 臨時把它拉進�
 | `chatgpt-gpt-6-astra` | ChatGPT Pro 訂閱（codex 後端） | codex 預設款；看得到圖、會思考、叫得動工具；思考深度預設 medium |
 | `chatgpt-gpt-6-astra-low` / `-high` | 同一顆 | 焊死 `reasoning_effort` 的分身；沒有 `-nothink`，後端不吃 `none` |
 | `chatgpt-gpt-5.6-sol` / `-terra` / `-luna` / `chatgpt-gpt-5.5` | ChatGPT Pro 訂閱 | codex 清單上其他幾顆，能力旗標跟 astra 共用一組 |
+| `claude-opus-5` / `claude-sonnet-5` | Claude Pro 訂閱（Claude Code 的 token） | 看得到圖、叫得動工具、JSON schema、快取都通；預設就會想但思考內容拿不到 |
+| 上面兩個各加 `-low` / `-high` / `-nothink` | 同一顆 | 焊死思考深度的分身；`-nothink` 真的關掉思考 |
+| `claude-haiku-4.5` | Claude Pro 訂閱 | 預設不想，給 `reasoning_effort` 才想、而且思考內容拿得到 |
 | `lm-gemma-4-12b` / `lm-gemma-4-e4b` / `lm-qwen3.5-9b` | 本機 LM Studio | 三個都看得到圖、都會思考、都叫得動工具 |
 | 上面三個各加 `-nothink` | 同一顆模型 | 關掉思考的分身，例如 `lm-gemma-4-e4b-nothink` |
 | `ollama-*` | 遠端 Ollama @ 192.168.1.146 | 只有連得到那台時才通 |
@@ -125,6 +130,76 @@ codex login                    # 沒登入過才要；會開瀏覽器
 - 模型清單抄 codex 的 `~/.codex/models_cache.json`（`visibility: list` 的那幾顆），
   litellm 內建資料庫只認到 gpt-5.4，不認得這幾顆，所以旗標全部手填。
 - 這是訂閱額度不是 API 計費，litellm 算不出成本是正常的。
+
+### Claude 訂閱（`claude-*`）
+
+走 litellm 內建的 `anthropic/` provider 打 `https://api.anthropic.com`，但 key 不是 API key，
+是 **Claude Code 登入後的 OAuth access token**（`sk-ant-oat01-…`），額度算在 Claude Pro 訂閱上。
+這違反 Anthropic 的使用條款，只拿來做少量實驗，風險自負。
+
+**token 從哪來、要不要定期做事**：不用。Claude Code 登入後把 token 放在
+`~/.claude/.credentials.json`（`claudeAiOauth.accessToken`，效期約 8 小時，`expiresAt` 是毫秒），
+到期 Claude Code 自己會續、把檔案換新。`claude_auth_from_claude_code.py` 是掛在
+`litellm_settings.callbacks` 上的 pre-call hook，**每個請求**進來時看它打到的 deployment 是不是
+`api_key: claude-code-login`（yaml 裡的佔位值），是就讀登入檔的最新 token 塞進去（檔案 mtime 沒變就用
+快取），所以只要這台機器上 Claude Code 常在跑，token 永遠是新的。它**只讀不寫**那個檔、不自己
+refresh；token 過期而 Claude Code 又沒在跑時會回 401 `Claude Code 的 accessToken 已過期而且還沒續`，
+開一下 `claude` 讓它續掉就好。登入檔路徑可用環境變數 `CLAUDE_CODE_CREDENTIALS_FILE` 改。
+
+為什麼不像 DeepSeek 那樣 `api_key: os.environ/…`：litellm 的 `os.environ/` 是**啟動時解析一次**，
+幾小時後就是死 token；1.87.5 也沒有專門讀 Claude Code 登入檔的 provider（有 `chatgpt/` 沒有
+`claude_code/`），所以用 hook。litellm 1.87.5 看到 `sk-ant-oat01-` 開頭的 key 會自動改用
+`Authorization: Bearer` 加 `anthropic-beta: oauth-2025-04-20`，header 不用另外設。
+
+**system prompt 有被強制**（2026-09-20 實打）：`claude-opus-5` / `claude-sonnet-5` 要求 Anthropic
+`system` 的**第一個 block 一字不差**是 `You are Claude Code, Anthropic's official CLI for Claude.`，
+少了、放第二塊、同一塊裡接別的字、改大小寫都會回 **429 `rate_limit_error`、訊息只有 `"Error"`**
+（不是 401，很誤導）；`claude-haiku-4.5` 不檢查。litellm 把每個 OpenAI system 訊息各自轉成一個
+block、順序不變，所以 hook 在 `messages` 最前面插一條那句話的 system 訊息，你自己的 system 變成第二塊，
+實測照樣生效（給 `You are a pirate.` 照樣回 Ahoy）。代價是每次多 14 個 prompt tokens。
+
+**思考**：opus-5 / sonnet-5 是 adaptive thinking，**沒給任何參數就會想**，而且走 OAuth 拿不到思考
+內容 —— 回應裡 `thinking_blocks` 只有 signature、`reasoning_content` 是空字串、
+`usage.completion_tokens_details.reasoning_tokens` 永遠 0（思考的 token 混在 `completion_tokens` 裡）。
+yaml 標了 `supports_adaptive_thinking: true`，litellm 會把 `reasoning_effort` 轉成
+`thinking: {type: adaptive}` + `output_config: {effort: …}`（吃 low / medium / high / max）；
+`reasoning_effort: "none"` 只是不送 thinking、後端照樣想，真的要關要送 `thinking: {type: disabled}`，
+`-nothink` 分身焊的就是這個。haiku-4.5 是舊式：預設不想，`reasoning_effort` low / medium / high 變
+`thinking.budget_tokens` 1024 / 2048 / 4096，**`max_tokens` 一定要比 budget 大**不然 400
+`max_tokens must be greater than thinking.budget_tokens`；它的思考內容拿得到。
+
+**實測表**（2026-09-20，經 proxy 打）：
+
+| | opus-5 | sonnet-5 | haiku-4.5 |
+|---|---|---|---|
+| 一般 chat completion | ✓ | ✓ | ✓ |
+| `stream: true` | ✓ | ✓ | ✓ |
+| function calling + 工具結果回填 | ✓ | ✓ | ✓ |
+| `tool_choice: "required"` | ✓ 真的逼出呼叫 | ✓ | ✓ |
+| parallel function calling | ✓ 一步 2 calls | ✓ 一步 2 calls | ✓ 一步 2 calls |
+| 看圖（`image_url` base64 PNG） | ✓（`max_tokens` 要夠，見下） | ✓ | ✓ |
+| `reasoning_effort` low / high | ✓ 兩者都有 thinking block，low 省一半 token | ✓ high 有 block；low 沒有（它自己決定不想） | ✓ low 有 `reasoning_content`；medium / high 要 `max_tokens` > budget |
+| `-nothink` / `thinking: disabled` | ✓ 沒有 thinking block | ✓ | 不適用（預設就不想） |
+| `response_format` JSON schema | ✓ 回純 JSON | ✓ | ✓ |
+| prompt caching（system block 加 `cache_control`） | ✓ 第二次 `cached_tokens: 3096` | ✓ 3097 | ✓ 但 prompt 要 **≥ 4096 tokens** 才會開始快取（2011 / 3331 都 0，5531 才命中） |
+
+其他要知道的：
+
+- **opus-5 的 `max_tokens` 別給太小**：它一定會先吐一個 thinking block，`max_tokens: 20` 會被
+  吃光、`finish_reason: length`、`content` 是 `None`；給 200 就正常。
+- **`-nothink` 不能標 `supports_reasoning: false`**（跟 `lm-*-nothink` 不一樣）：litellm 把
+  model_info 註冊在後端模型名底下、同一顆的所有分身共用、最後一筆贏，標了 false 會讓 `thinking` /
+  `reasoning_effort` 變成不支援參數被 `drop_params` 吞掉，整組 opus-5 的分身一起失效（踩過一次）。
+- 沒掛 callback 就打 `claude-*` 會回 401 `invalid x-api-key`（佔位值被當真 key 送出去了），
+  這是刻意的失敗方式。
+- `/v1/messages`（Anthropic 原生格式的 pass-through）沒接：hook 只處理 chat completions 的
+  `messages`，走原生格式 system 前綴不會自動補。
+- `/v1/models` 用這個 token 直打 Anthropic 看得到 11 顆（含 `claude-fable-5-1` / `-5`、
+  `claude-opus-4-8` / `-4-7` / `-4-6` / `-4-5`、`claude-sonnet-4-6` / `-4-5`），yaml 先只放三顆；
+  要加就抄 `claude-sonnet-5` 那筆換 `model:`，opus / sonnet 系列都要那句 system 前綴。
+- 這是訂閱額度不是 API 計費，litellm 算不出成本是正常的；回應 header 有
+  `anthropic-ratelimit-unified-5h-utilization` / `-7d-utilization` 可以看用了多少（proxy 不轉出來，
+  要看得直打）。
 
 **開關思考統一成「換名字」**：兩家的機制其實不同，是 yaml 把它們包成同一種用法。
 DeepSeek 本來就只能換名字（也**不吃** `reasoning_effort`，2026-08-05 給 `"none"`
