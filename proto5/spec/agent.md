@@ -41,11 +41,11 @@ agent-bob/
 
 ### 2.0 指示詞：每份 JSON 都一樣
 
-所有 `.json`（`state.json`、`prompts/*.json`、`tools/*.json`、`engine.json`）都照
-[directives.md](directives.md) 解，規則對每份檔都一樣：
+agent 自己讀的 `.json`（`state.json`、`prompts/*.json`、`engine.json`）都照
+[directives.md](directives.md) 解，規則對每份檔都一樣；**只有 `tools/` 裡的工具檔不解**（下面說）：
 
 - **每一格都能放**：頂層整份、每個欄位、陣列的每個元素、物件的每個值；先解再驗型別。
-  `_metainfo` 例外，不解（跟 inst 一樣，從 JSON 直接拿出來驗）。
+  **`_metainfo` 也解**（這點跟 inst 不同：inst 的 `_metainfo` 不解，agent 的全部都解）。
 - **中心路徑（`$ref` 找檔的地方）＝agent 資料夾**，不管指示詞寫在哪一份檔裡。
 - **`$ref:""`＝這個值所在的那份檔**；位置＝那份檔裡的實體路徑（`state.json` 的 `/tools/0`、
   `tools/base.json` 的 `/0/run/argv`…），相對 `$at` 照 directives.md 3.2 算。
@@ -53,9 +53,12 @@ agent-bob/
 - **agent 寫回去的檔**（`state.json` 的 `state`、`prompts/history.json`）：寫回時**寫的是原始 JSON**
   （沒解過的）改了那一格，不是把解完的結果寫回去——不然人寫的 `$ref` 會被展開後的值蓋掉。
   `history.json` 整份是 agent 產的，一般不會有指示詞；有的話讀的時候照樣解。
-- 代價（機制天生的）：內容裡出現 `$` 開頭 key 的物件會被當指示詞。`history.json` 的 `content`
-  是字串所以沒事；`parameters`（JSON schema）裡也不會有 `$` 開頭的 key（`$ref`／`$schema`
-  在 schema 裡是合法字——所以**`parameters` 也是例外，不解**，原樣送給模型）。
+- **`tools/*.json` 整份不解**：工具檔是原樣讀的。理由：`parameters` 是 JSON schema，裡面的
+  `$ref`／`$schema` 是 schema 自己的字，不能被當指示詞；`run` 是一份 inst，它裡面的指示詞
+  是**跑工具的時候**由 inst 那套（aos-exec／aos_inst，base＝agent 資料夾）解的，不是 agent 讀
+  工具檔時解。所以工具檔裡除了 `run` 以外的地方寫 `$env`／`$ref` 沒用，就是字面。
+- 代價（機制天生的）：agent 讀的那幾份檔裡，內容出現 `$` 開頭 key 的物件會被當指示詞。
+  `history.json` 的 `content` 是字串所以沒事。
 - 解錯了（`UnknownDirective`、`ReferenceCycle`…）＝讀驗錯誤，代號照 directives.md §6，退出碼 1。
 
 ### 2.1 `state.json`：總表
@@ -128,10 +131,11 @@ agent-bob/
 | 鍵 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
 | `name` | 字串 | **必填** | 工具名，模型就用這個叫它。只准 `[A-Za-z0-9_-]` |
-| `description`、`parameters` | 字串、物件 | `""`、`{"type":"object"}` | 照 OpenAI function 那套原樣送給模型；`parameters` 是 JSON schema，本文不驗它裡面、**也不解指示詞**（§2.0） |
+| `description`、`parameters` | 字串、物件 | `""`、`{"type":"object"}` | 照 OpenAI function 那套原樣送給模型；`parameters` 是 JSON schema，本文不驗它裡面 |
 | `run` | 物件 | **必填** | **一份 posix inst**（[inst-posix.md](inst-posix.md) 整體形狀，`_metainfo` 可省）。跑工具＝照它跑一次 |
 | `timeout_ms` | 整數 | `60000` | 跑超過就砍（照 inst 的逾時規則），結果算工具錯誤 |
 
+- **工具檔整份不解指示詞**（§2.0）；`run` 裡的指示詞是跑的時候由 inst 那套解。
 - 所有工具檔載完後**同名工具＝`ToolInvalid`**（不默默蓋掉，寫錯一眼看得到）。
 - 要關掉一個工具就從 `state.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉；沒有 enable／disable 開關。
 
@@ -221,5 +225,5 @@ agent-bob/
 4. `engine.json` 兩種 `kind` 都寫進規範，程式第一版先做 `llm`；兩種都當場等。
 5. `llm` 引擎當場等 HTTP 回來——違反「一格不等網路」，第一版先接受。
 6. 沒有任何上限與計數（一題幾格、連錯幾次、等多久）——使用者說先只剩 `state`，要管再說。
-7. `_metainfo` 與工具的 `parameters` 不解指示詞、其他每一格都解；agent 寫回時改的是原始 JSON。
+7. agent 寫回時改的是原始 JSON，不是解完的結果。
 8. `engine.json` 還是獨立一份、沒併進 `state.json`——使用者沒叫我併；要併也是一句話的事。
