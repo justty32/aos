@@ -110,7 +110,7 @@ touch 那個檔——不用另外做 `pause`／`continue`。
 | `idle` | 沒東西 | 不變 | **101** |
 | `think` | 用 [aos-llm-ask](aos-llm-ask.md) 的函式庫問一次，`choices[0].message` 接在記憶尾巴 | 有 `tool_calls` → `act`；沒有（回話）→ `idle` | 0 |
 | `think` | 引擎失敗（aos-llm-ask 的「3」那類）→ stderr 一行、記憶不動 | 不變（下一格重試） | 0 |
-| `act` | 記憶尾巴那則 `assistant` 的每個 `tool_calls[i]`：照名字找工具、拿 `_meta` 當 inst 跑（`arguments` 字串原樣進 stdin、stdout 整段當結果），**每個 call 接一則 `tool` 訊息**（順序照 `tool_calls`）。找不到的工具＝「沒有這個工具：xxx」；退出碼非 0＝「工具 xxx 失敗（exit n）：」＋stdout；跑超過工具的 `timeout_ms`（沒寫＝60000）＝砍掉、「逾時」 | `think` | 0 |
+| `act` | 記憶尾巴那則 `assistant` 的每個 `tool_calls[i]`：照名字找工具、拿 `_meta` 當 inst 跑（`arguments` 字串原樣進 stdin、stdout 整段當結果），**每個 call 接一則 `tool` 訊息**（順序照 `tool_calls`）。找不到的工具＝「沒有這個工具：xxx」；退出碼非 0＝「工具 xxx 失敗（exit n）：」＋stdout | `think` | 0 |
 
 - **為什麼 `act` 不用等**：模型那邊的硬規定是一則 `assistant` 帶了 `tool_calls`，下一次問之前每個 call
   都要有一則 `tool` 訊息緊接在後面。`act` 一格內全部跑完接上，就永遠不會違反。
@@ -134,7 +134,7 @@ touch 那個檔——不用另外做 `pause`／`continue`。
 
 - **非同步工具**：工具檔多一個 `async` 選項——`act` 啟動它就馬上接一則收據當 `tool` 訊息，工具跑在別的
   cpu／thread，跑完把結果寫進 `input`（當 `user` 訊息回來；順序沒限制，因為不是 `tool` 訊息）。
-- **逾時上限**：引擎連續失敗幾次要停、`waits` 等太久要怎樣——都需要在 `state.json` 記帳，之後再定。
+- **逾時**：工具跑太久要不要砍（現在不砍，跑多久等多久）、引擎連續失敗幾次要停、`waits` 等太久要怎樣——之後再定。
 - 誰把輸入丟進 `input`、誰去讀回話（aos-user 之類的外部工具）；反覆叫、放進 kernel；鎖；記憶太長。
 
 ## 我自己選的、使用者可以推翻的
