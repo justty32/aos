@@ -1,10 +1,11 @@
 # agent 資料夾規範（第 1 版，**草稿**）
 
-← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；每份 JSON 都吃指示詞（[directives.md](directives.md)）
+← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；`state.json`／`engine.json` 吃指示詞（[directives.md](directives.md)），被指到的檔原樣讀
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
-> 分配好每個檔在幹嘛，指示詞是輔助**。所以規範裡寫的都是普通的路徑字串與字面值；但**每一份
-> JSON 的每一格都吃指示詞**（規則在 §2.0），要 `$env`／`$fmt`／`$ref` 的人自己用。
+> 分配好每個檔在幹嘛，指示詞是輔助**。所以規範裡寫的都是普通的路徑字串與字面值；agent 自己的
+> 兩份檔（`state.json`、`engine.json`）每一格都吃指示詞，**被它們指到的檔（人格、記憶、工具）
+> 原樣讀、不解**（規則在 §2.0）。
 > 沒拍板的地方我先照自己的想法填，好讓使用者有東西可以改；每一節都獨立、好抽換。
 
 一句話：**一個 agent 就是一個資料夾**，`state.json` 是它的總表——這是 agent、走到哪、人格跟記憶
@@ -34,32 +35,38 @@ agent-bob/
   這樣人的設定永遠不會被程式改掉。
 - agent 寫檔一律先寫 `.tmp` 再 rename，別人永遠不會讀到寫一半的檔。
 - 每個檔的頂層都是嚴格的物件或陣列（各節有寫）；**不認得的 key 一律忽略**。
-- **每份 JSON 都解指示詞**，規則統一在 §2.0。
-- `prompts/`、`tools/` 這兩個資料夾名只是慣例，`state.json` 裡指到哪就是哪。
+- `prompts/`、`tools/` 這兩個資料夾名只是慣例，`state.json` 裡指到哪就是哪；放哪都行。
+- 指示詞：`state.json`、`engine.json` 解；**被指到的檔不解**，規則在 §2.0。
 
 ## 2. 每個檔的形狀
 
-### 2.0 指示詞：每份 JSON 都一樣
+### 2.0 指示詞：agent 自己的檔解、被指到的檔不解
 
-agent 自己讀的 `.json`（`state.json`、`prompts/*.json`、`engine.json`）都照
-[directives.md](directives.md) 解，規則對每份檔都一樣；**只有 `tools/` 裡的工具檔不解**（下面說）：
+分兩種：
+
+| 檔 | 解不解 | 為什麼 |
+|---|---|---|
+| `state.json`、`engine.json` | **每一格都解**（含 `_metainfo`） | 這是 agent 自己的設定，寫的人想 `$env`／`$fmt`／`$ref` 就用 |
+| `system`／`history`／`tools` 指到的檔 | **整份不解，原樣讀** | 這些是「內容」：人格文字、模型吐出來的對話、工具的 schema 與 inst。內容裡什麼 `$` 都可能有，不能被當指示詞 |
+
+解的那兩份，規則照 [directives.md](directives.md)：
 
 - **每一格都能放**：頂層整份、每個欄位、陣列的每個元素、物件的每個值；先解再驗型別。
-  **`_metainfo` 也解**（這點跟 inst 不同：inst 的 `_metainfo` 不解，agent 的全部都解）。
-- **中心路徑（`$ref` 找檔的地方）＝agent 資料夾**，不管指示詞寫在哪一份檔裡。
-- **`$ref:""`＝這個值所在的那份檔**；位置＝那份檔裡的實體路徑（`state.json` 的 `/tools/0`、
-  `tools/base.json` 的 `/0/run/argv`…），相對 `$at` 照 directives.md 3.2 算。
+  **`_metainfo` 也解**（這點跟 inst 不同：inst 的 `_metainfo` 不解）。
+- **中心路徑（`$ref` 找檔的地方）＝agent 資料夾**。
+- **`$ref:""`＝這個值所在的那份檔**；位置＝實體路徑（`state.json` 的 `/tools/0`…），相對 `$at`
+  照 directives.md 3.2 算。
 - **`$env` 讀的是 aos-agent 自己的環境**。
-- **agent 寫回去的檔**（`state.json` 的 `state`、`prompts/history.json`）：寫回時**寫的是原始 JSON**
-  （沒解過的）改了那一格，不是把解完的結果寫回去——不然人寫的 `$ref` 會被展開後的值蓋掉。
-  `history.json` 整份是 agent 產的，一般不會有指示詞；有的話讀的時候照樣解。
-- **`tools/*.json` 整份不解**：工具檔是原樣讀的。理由：`parameters` 是 JSON schema，裡面的
-  `$ref`／`$schema` 是 schema 自己的字，不能被當指示詞；`run` 是一份 inst，它裡面的指示詞
-  是**跑工具的時候**由 inst 那套（aos-exec／aos_inst，base＝agent 資料夾）解的，不是 agent 讀
-  工具檔時解。所以工具檔裡除了 `run` 以外的地方寫 `$env`／`$ref` 沒用，就是字面。
-- 代價（機制天生的）：agent 讀的那幾份檔裡，內容出現 `$` 開頭 key 的物件會被當指示詞。
-  `history.json` 的 `content` 是字串所以沒事。
 - 解錯了（`UnknownDirective`、`ReferenceCycle`…）＝讀驗錯誤，代號照 directives.md §6，退出碼 1。
+
+不解的那些：
+
+- `system`／`history`／`tools` 的值（路徑）本身在 `state.json` 裡，**那一格會解**（例如
+  `"history": {"$env": "BOB_HISTORY"}`）；解出路徑之後，**讀進來的東西不解**。
+- 工具的 `run` 是一份 inst，它裡面的指示詞是**跑工具的時候**由 inst 那套（aos-exec／aos_inst，
+  base＝agent 資料夾）解的，不是 agent 讀工具檔時解。
+- agent 寫回去的檔：`state.json` 只改 `state` 那一格，改的是**原始 JSON**（沒解過的），其他格
+  原樣抄回，人寫的 `$ref` 不會被展開後的值蓋掉；`history` 指到的檔本來就原樣讀寫。
 
 ### 2.1 `state.json`：總表
 
@@ -84,17 +91,16 @@ agent 自己讀的 `.json`（`state.json`、`prompts/*.json`、`engine.json`）�
 - agent 每格結束只改寫 `state`，其他 key 原樣抄回。
 - `state` 不是四格之一 → `StateInvalid`；`system`／`history` 不是字串、`tools` 不是字串陣列 → `FieldTypeMismatch`。
 
-### 2.2 `prompts/system.json`：人格
+### 2.2 人格（`system` 指到的檔，慣例放 `prompts/system.json`）
 
 ```json
 {"content": "你是個簡潔、會用工具的助手。"}
 ```
 
 - `content`：字串，就是 system prompt 本文；沒有這個檔＝空字串（不送 system 訊息）。
-- `content` 那一格跟別格一樣吃指示詞（想拼字串就 `{"$fmt": …}`、想從別的檔拿就 `$ref`）；
-  解出來要是字串。字面字串裡的 `${x}` 就是字面，不會被動。
+- **原樣讀、不解指示詞**（§2.0）：`content` 就是字面，裡面的 `${x}`、`$` 開頭的東西都不會被動。
 
-### 2.3 `prompts/history.json`：記憶（agent 寫）
+### 2.3 記憶（`history` 指到的檔，慣例放 `prompts/history.json`；agent 寫）
 
 一個陣列，一則就是 OpenAI chat 的一則訊息：
 
@@ -110,9 +116,10 @@ agent 自己讀的 `.json`（`state.json`、`prompts/*.json`、`engine.json`）�
 - `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從 `system.json` 補在最前面）。
 - `user`／`tool` 的 `content` 要是字串；`tool` 一定要有 `tool_call_id`；`assistant` 至少有 `content` 或 `tool_calls` 其中一個。不合 → `MessageInvalid`。
 - 沒有這個檔＝`[]`。
+- **原樣讀寫、不解指示詞**（§2.0）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
-### 2.4 `tools/*.json`：一份工具檔＝一組工具
+### 2.4 工具檔（`tools` 指到的檔，慣例放 `tools/`）：一份檔＝一組工具
 
 一個陣列，一個元素一個工具：
 
@@ -135,7 +142,7 @@ agent 自己讀的 `.json`（`state.json`、`prompts/*.json`、`engine.json`）�
 | `run` | 物件 | **必填** | **一份 posix inst**（[inst-posix.md](inst-posix.md) 整體形狀，`_metainfo` 可省）。跑工具＝照它跑一次 |
 | `timeout_ms` | 整數 | `60000` | 跑超過就砍（照 inst 的逾時規則），結果算工具錯誤 |
 
-- **工具檔整份不解指示詞**（§2.0）；`run` 裡的指示詞是跑的時候由 inst 那套解。
+- **工具檔原樣讀、不解指示詞**（§2.0）；`run` 裡的指示詞是跑的時候由 inst 那套解。
 - 所有工具檔載完後**同名工具＝`ToolInvalid`**（不默默蓋掉，寫錯一眼看得到）。
 - 要關掉一個工具就從 `state.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉；沒有 enable／disable 開關。
 
@@ -225,5 +232,5 @@ agent 自己讀的 `.json`（`state.json`、`prompts/*.json`、`engine.json`）�
 4. `engine.json` 兩種 `kind` 都寫進規範，程式第一版先做 `llm`；兩種都當場等。
 5. `llm` 引擎當場等 HTTP 回來——違反「一格不等網路」，第一版先接受。
 6. 沒有任何上限與計數（一題幾格、連錯幾次、等多久）——使用者說先只剩 `state`，要管再說。
-7. agent 寫回時改的是原始 JSON，不是解完的結果。
+7. agent 寫回 `state.json` 時改的是原始 JSON，不是解完的結果。
 8. `engine.json` 還是獨立一份、沒併進 `state.json`——使用者沒叫我併；要併也是一句話的事。
