@@ -211,7 +211,7 @@ aos-llm-ask ./agent-bob
 ## 7. 給程式用
 
 aos-agent 的 `think` 格 import 這支的函式庫做同一件事，不是開子進程跑 `aos-llm-ask`（跟
-[aos-agent.md §4](aos-agent.md#4-跑一個工具) 說工具要 import aos_exec／aos_inst 同一個理由）。
+[aos-agent.md §3](aos-agent.md#3-走一格到底做什麼) 說工具要 import aos_exec／aos_inst 同一個理由）。
 大概的簽名（實作時可調）：
 
 ```python
