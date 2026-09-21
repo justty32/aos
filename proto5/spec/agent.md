@@ -110,8 +110,8 @@ agent-bob/
 [
   {"role": "user",      "content": "看看資料夾裡有什麼"},
   {"role": "assistant", "content": null, "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "sh", "arguments": "{\"cmd\":\"ls\"}"}}]},
-  {"role": "tool",      "tool_call_id": "c1", "content": "state.json\nengine.json\n..."},
-  {"role": "assistant", "content": "裡面有 state.json、engine.json…"}
+  {"role": "tool",      "tool_call_id": "c1", "content": "state.json\nprompts\ntools\n"},
+  {"role": "assistant", "content": "裡面有 state.json、prompts、tools…"}
 ]
 ```
 
