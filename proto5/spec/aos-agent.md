@@ -39,7 +39,7 @@ aos-agent [dir]
 |---|---|---|---|
 | `idle` | 記憶最後一則是 `user` → 什麼都不做，只換格 | `think` | 0 |
 | `idle` | 不是（空的、或最後是 `assistant`）→ 沒事 | 不變 | **101** |
-| `think` | 組請求（`system` 有內容就補一則 `system` 在最前面 ＋ 整份記憶 ＋ 去掉 `_` key 的工具表）打 `engine`；拿到 `choices[0].message` 就接在記憶尾巴 | `act` | 0 |
+| `think` | 組請求（`system` 有內容就補一則 `system` 在最前面 ＋ 整份記憶 ＋ 去掉 `_` key 的工具表）打 `engine`；拿到 `choices[0].message` 就接在記憶尾巴（＝aos-llm-ask 做的事，見 [aos-llm-ask.md](aos-llm-ask.md)；aos-agent import 它的函式庫） | `act` | 0 |
 | `think` | 引擎失敗（HTTP 錯、逾時、回來沒有 `choices[0].message`）→ stderr 一行、記憶不動 | 不變（下一格重試） | 0 |
 | `act` | 記憶最後一則 `assistant` 有 `tool_calls` → 照順序每個跑一次（§4），每個結果接一則 `tool` 訊息 | `think` | 0 |
 | `act` | 沒有 `tool_calls`（回話，`content` 空也算） | `idle` | 0 |
