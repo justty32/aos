@@ -28,6 +28,7 @@ agent-bob/
 ```
 
 - 只有 `state.json` 是**認出「這是 agent 資料夾」**的依據（有它、而且 `_metainfo._type` 是 `llm_agent`）。
+  `_metainfo` 也吃指示詞，所以「認不認」要先解完才知道；解不開就是指示詞的錯，不是 `NotAnAgent`。
 - 檔案裡寫的路徑，**一律相對於 agent 資料夾**（不是相對於寫它的那個檔）；絕對路徑照字面。
 - **誰寫誰**：人寫 `state.json` 裡 `state` 以外的東西、`prompts/system.json`、`tools/*`；
   agent 只寫 `state.json` 的 `state` 那一格（其他 key 原樣抄回）跟 `prompts/history.json`。
@@ -89,7 +90,8 @@ agent-bob/
 | `tools` | 路徑陣列 | `[]` | 人 | 用哪幾份工具檔（§2.4），所有檔的陣列**接成一個**，順序＝檔的順序 |
 | `engine` | 物件 | **必填** | 人 | 用什麼想（§2.5） |
 
-- agent 每格結束只改寫 `state`，其他 key 原樣抄回。
+- agent 每格結束只改寫 `state`，其他 key 原樣抄回。所以 **`state` 那一格在原始 JSON 裡必須是字面
+  字串**——不能寫成指示詞、頂層也不能整份 `$ref` 出去（不然寫不回來）；違反＝`StateInvalid`。
 - `state` 不是四格之一 → `StateInvalid`；`system`／`history` 不是字串、`tools` 不是字串陣列、
   `engine` 不是物件 → `FieldTypeMismatch`。
 
@@ -99,7 +101,7 @@ agent-bob/
 {"content": "你是個簡潔、會用工具的助手。"}
 ```
 
-- `content`：字串，就是 system prompt 本文；沒有這個檔＝空字串（不送 system 訊息）。
+- `content`：字串，就是 system prompt 本文；**檔不存在＝空字串**（不送 system 訊息）；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
 - **原樣讀、不解指示詞**（§2.0）：`content` 就是字面，裡面的 `${x}`、`$` 開頭的東西都不會被動。
 
 ### 2.3 記憶（`history` 指到的檔，慣例放 `prompts/history.json`；agent 寫）
@@ -117,7 +119,7 @@ agent-bob/
 
 - `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從 `system.json` 補在最前面）。
 - `user`／`tool` 的 `content` 要是字串；`tool` 一定要有 `tool_call_id`；`assistant` 至少有 `content` 或 `tool_calls` 其中一個。不合 → `MessageInvalid`。
-- 沒有這個檔＝`[]`。
+- **檔不存在＝`[]`**；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
 - **原樣讀寫、不解指示詞**（§2.0）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
@@ -141,8 +143,10 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 ]
 ```
 
+- `tools` 列到的檔**一定要在**：不存在＝`ReadFailed`（跟人格、記憶不同——那兩個沒檔有預設，工具檔是明列的）。
 - **合併**：`state.json` 的 `tools` 列的每份檔各是一個陣列，agent 把它們**接成一個陣列**（照檔的順序）；
-  送給模型之前把每個元素的 `_meta` **拿掉**，剩下的就是原汁原味的 OpenAI `tools`。
+  送給模型之前把每個元素**所有 `_` 開頭的 key 拿掉**（`_meta`、`_note`…），剩下的原樣送——所以想加
+  註解就用 `_` 開頭，不會漏給模型。
 - `_meta`：**必填**，一份 posix inst（`_metainfo` 可省＝posix v1）。缺了、或不是物件 → `ToolInvalid`。
 - 合併後 `function.name` 同名 → `ToolInvalid`（不默默蓋掉，寫錯一眼看得到）。
 - 元素缺 `type`／`function`／`function.name` → `ToolInvalid`；`function` 裡其他東西（`description`、
@@ -152,6 +156,10 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 `_meta`（inst）跑起來的約定：
 
 - **參數 JSON 從 stdin 進去、結果從 stdout 出來**（結果是純文字，整段當 `tool` 訊息的 `content`）。
+  進 stdin 的就是模型給的 `tool_calls[i].function.arguments` **那個字串原樣**，agent 不解析、不重排；
+  它不是合法 JSON 也照塞，工具自己驗。
+- 模型叫了一個**合併表裡沒有的名字** → 不跑，回一則 `tool` 訊息 `content`＝「沒有這個工具：xxx」，
+  讓模型自己改；不算 agent 的錯。
   所以 `_meta` 裡**不准寫 `stdin`／`stdout`**（寫了＝`ToolInvalid`），其他欄位（`stderr`／`exit`／
   `cwd`／`envs`）照 inst 規則。
 - base（inst 的「家」）＝agent 資料夾；沒寫 `cwd` 就在 agent 資料夾跑。
@@ -194,7 +202,7 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 | `idle` | 沒事。有新的輸入（一則 `user` 訊息）就接進記憶——輸入從哪來不在這份規範（§5） | 有事 `think`，沒事留 `idle`（退出碼 101） |
 | `think` | 組請求交給 `engine`，拿到的 assistant 訊息接進記憶 | 拿到 `act`，錯了留 `think`（下一格重試） |
 | `wait` | 等外面的東西回來。**這一版沒東西可等**（引擎都當場回），格子先留著，等檔案機制定了再填 | — |
-| `act` | 看記憶最後那則 assistant：有 `tool_calls` 就逐一跑工具（每個結果一則 `tool` 訊息）；沒有就是回話——回給誰、怎麼回不在這份規範（§5） | 跑了工具 `think`，回了話 `idle` |
+| `act` | 看記憶最後那則 assistant：有 `tool_calls` 就逐一跑工具（每個結果一則 `tool` 訊息，順序照 `tool_calls`）；沒有就是回話（`content` 空也算回了話）——回給誰、怎麼回不在這份規範（§5） | 跑了工具 `think`，回了話 `idle` |
 
 - 退出碼：這格做了事＝0；在等（`idle` 沒事）＝101；讀驗錯誤（§4）＝1；用法錯＝2。100（收工）之後再說。
 - 一題走幾格、連錯幾次要不要停：先不管；要管的時候再決定記在哪。
@@ -205,9 +213,9 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 
 | 代號 | 什麼時候 |
 |---|---|
-| `NotAnAgent` | 沒有 `state.json`、或它的 `_metainfo._type` 不是 `agent` |
+| `NotAnAgent` | 沒有 `state.json`、沒有 `_metainfo`、或 `_metainfo._type`（解完）不是 `llm_agent` |
 | `ReadFailed`／`JsonSyntax`／`NotAnObject`／`NotAnArray` | 某個檔讀不到／不是 JSON／頂層型別不對 |
-| `MetainfoInvalid`／`UnsupportedType`／`UnsupportedVersion` | `state.json` 的 `_metainfo` 不合 §2.1 |
+| `MetainfoInvalid`／`UnsupportedVersion` | `_type` 對了但 `_metainfo` 形狀壞（不是物件、缺 `_version`）／`_version` 不是整數 `1` |
 | `FieldTypeMismatch` | 某格型別不對 |
 | `MessageInvalid` | `history.json` 裡某一則不合 §2.3 |
 | `ToolInvalid` | 工具檔不是陣列、元素缺 `type`／`function`／`function.name`、合併後同名、缺 `_meta`、`_meta` 不是合法 inst、`_meta` 寫了 `stdin`／`stdout` |
