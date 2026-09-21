@@ -10,13 +10,15 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 | 文件 | 講什麼 | 現況 |
 |---|---|---|
 | [spec/directives.md](spec/directives.md) | 指示詞機制：`$env`／`$fmt`／`$ref` 取值、`$opt`／`$val` 選項物件、先解再驗、巢狀、循環、錯誤代號。任何 aos 的 JSON 檔都能用；哪個位置認得哪些選項名由宿主規範定 | 2026-09-21 定稿；實作 [`lib/aos_directives.py`](lib/aos_directives.py) |
-| [spec/inst-posix.md](spec/inst-posix.md) | inst.json 的 `posix` 呼叫格式第 1 版：七個欄位、各位置的 `$opt` 選項（append／mkdir／inherit／merge／clear）、錯誤代號、執行語意，加上 `_metainfo`（`_type`／`_version`；沒寫＝posix v1）、頂層未知 key 忽略 | 2026-09-21 定稿；proto5 自己的 inst 實作還沒寫（proto4-3 是凍結的舊版參考） |
+| [spec/inst-posix.md](spec/inst-posix.md) | inst.json 的 `posix` 呼叫格式第 1 版：七個欄位、各位置的 `$opt` 選項（append／mkdir／inherit／merge／clear）、錯誤代號、執行語意，加上 `_metainfo`（`_type`／`_version`；沒寫＝posix v1）、頂層未知 key 忽略 | 2026-09-21 定稿；實作 [`lib/aos_inst.py`](lib/aos_inst.py)（讀／驗）＋ [`lib/aos_exec.py`](lib/aos_exec.py)（執行）。proto4-3 是凍結的舊版參考 |
+| [spec/exec.md](spec/exec.md) | aos-exec 的**命令列**：三種目標（普通檔／`.json`／資料夾）、`--dir-target`／`--timeout-ms`／`--stderr`／`--`、退出碼 2／125／原樣、125 與 2 時 stderr 印什麼。行為照 inst-posix.md 第 6 節 | 命令列走法照 proto4-3 現況整理，使用者還沒逐條拍板 |
 
 ## 程式
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | `aos_directives.py`：指示詞機制的純函式庫（`resolve`／`resolve_located`／`split_option`／`option_names`），不知道 inst 是什麼；`cd proto5/lib && python3 -m unittest discover -s test` | 101 條測試全綠 |
+| [lib/](lib/README.md) | 三支模組，一層疊一層：`aos_directives.py`（指示詞機制的純函式庫，不知道 inst 是什麼）→ `aos_inst.py`（inst.json 的讀、驗、解，回執行者能直接用的 dict）→ `aos_exec.py`（執行者：`run_target()` 回 `(code, kind)`＋命令列 `main()`）；`cd proto5/lib && python3 -m unittest discover -s test` | 328 條測試全綠（directives 101、inst 139、exec 88） |
+| [bin/aos-exec](bin/aos-exec) | 命令列入口，薄薄一層（`sys.path` 加 `../lib` 再叫 `aos_exec.main()`）。用法見 [spec/exec.md](spec/exec.md) | 能跑；命令列形狀還沒拍板 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。
 
