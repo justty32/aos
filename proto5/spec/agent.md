@@ -1,10 +1,10 @@
 # agent 資料夾規範（第 1 版，**草稿**）
 
-← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；指示詞（[directives.md](directives.md)）只在明講的地方用
+← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；每份 JSON 都吃指示詞（[directives.md](directives.md)）
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
-> 分配好每個檔在幹嘛，最後真的有需要再用指示詞輔助**。所以這份規範裡的路徑就是**普通的路徑
-> 字串**，不是 `$ref`；全文只有一個地方准用指示詞（§2.5 的 `api_key`）。
+> 分配好每個檔在幹嘛，指示詞是輔助**。所以規範裡寫的都是普通的路徑字串與字面值；但**每一份
+> JSON 的每一格都吃指示詞**（規則在 §2.0），要 `$env`／`$fmt`／`$ref` 的人自己用。
 > 沒拍板的地方我先照自己的想法填，好讓使用者有東西可以改；每一節都獨立、好抽換。
 
 一句話：**一個 agent 就是一個資料夾**，`state.json` 是它的總表——這是 agent、走到哪、人格跟記憶
@@ -34,9 +34,29 @@ agent-bob/
   這樣人的設定永遠不會被程式改掉。
 - agent 寫檔一律先寫 `.tmp` 再 rename，別人永遠不會讀到寫一半的檔。
 - 每個檔的頂層都是嚴格的物件或陣列（各節有寫）；**不認得的 key 一律忽略**。
+- **每份 JSON 都解指示詞**，規則統一在 §2.0。
 - `prompts/`、`tools/` 這兩個資料夾名只是慣例，`state.json` 裡指到哪就是哪。
 
 ## 2. 每個檔的形狀
+
+### 2.0 指示詞：每份 JSON 都一樣
+
+所有 `.json`（`state.json`、`prompts/*.json`、`tools/*.json`、`engine.json`）都照
+[directives.md](directives.md) 解，規則對每份檔都一樣：
+
+- **每一格都能放**：頂層整份、每個欄位、陣列的每個元素、物件的每個值；先解再驗型別。
+  `_metainfo` 例外，不解（跟 inst 一樣，從 JSON 直接拿出來驗）。
+- **中心路徑（`$ref` 找檔的地方）＝agent 資料夾**，不管指示詞寫在哪一份檔裡。
+- **`$ref:""`＝這個值所在的那份檔**；位置＝那份檔裡的實體路徑（`state.json` 的 `/tools/0`、
+  `tools/base.json` 的 `/0/run/argv`…），相對 `$at` 照 directives.md 3.2 算。
+- **`$env` 讀的是 aos-agent 自己的環境**。
+- **agent 寫回去的檔**（`state.json` 的 `state`、`prompts/history.json`）：寫回時**寫的是原始 JSON**
+  （沒解過的）改了那一格，不是把解完的結果寫回去——不然人寫的 `$ref` 會被展開後的值蓋掉。
+  `history.json` 整份是 agent 產的，一般不會有指示詞；有的話讀的時候照樣解。
+- 代價（機制天生的）：內容裡出現 `$` 開頭 key 的物件會被當指示詞。`history.json` 的 `content`
+  是字串所以沒事；`parameters`（JSON schema）裡也不會有 `$` 開頭的 key（`$ref`／`$schema`
+  在 schema 裡是合法字——所以**`parameters` 也是例外，不解**，原樣送給模型）。
+- 解錯了（`UnknownDirective`、`ReferenceCycle`…）＝讀驗錯誤，代號照 directives.md §6，退出碼 1。
 
 ### 2.1 `state.json`：總表
 
@@ -68,7 +88,8 @@ agent-bob/
 ```
 
 - `content`：字串，就是 system prompt 本文；沒有這個檔＝空字串（不送 system 訊息）。
-- 內容**原樣**，不解指示詞、不做模板；裡面的 `${x}` 就是字面。
+- `content` 那一格跟別格一樣吃指示詞（想拼字串就 `{"$fmt": …}`、想從別的檔拿就 `$ref`）；
+  解出來要是字串。字面字串裡的 `${x}` 就是字面，不會被動。
 
 ### 2.3 `prompts/history.json`：記憶（agent 寫）
 
@@ -86,7 +107,6 @@ agent-bob/
 - `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從 `system.json` 補在最前面）。
 - `user`／`tool` 的 `content` 要是字串；`tool` 一定要有 `tool_call_id`；`assistant` 至少有 `content` 或 `tool_calls` 其中一個。不合 → `MessageInvalid`。
 - 沒有這個檔＝`[]`。
-- 內容**原樣**，不解指示詞（模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認）。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
 ### 2.4 `tools/*.json`：一份工具檔＝一組工具
@@ -108,7 +128,7 @@ agent-bob/
 | 鍵 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
 | `name` | 字串 | **必填** | 工具名，模型就用這個叫它。只准 `[A-Za-z0-9_-]` |
-| `description`、`parameters` | 字串、物件 | `""`、`{"type":"object"}` | 照 OpenAI function 那套原樣送給模型；`parameters` 是 JSON schema，本文不驗它裡面 |
+| `description`、`parameters` | 字串、物件 | `""`、`{"type":"object"}` | 照 OpenAI function 那套原樣送給模型；`parameters` 是 JSON schema，本文不驗它裡面、**也不解指示詞**（§2.0） |
 | `run` | 物件 | **必填** | **一份 posix inst**（[inst-posix.md](inst-posix.md) 整體形狀，`_metainfo` 可省）。跑工具＝照它跑一次 |
 | `timeout_ms` | 整數 | `60000` | 跑超過就砍（照 inst 的逾時規則），結果算工具錯誤 |
 
@@ -140,8 +160,8 @@ agent-bob/
 | `llm` | `endpoint`（必）、`model`（必）、`params`（可省）、`api_key`（可省）、`timeout_ms`（預設 120000） | agent 程式自己打 OpenAI 相容的 `chat/completions`，**當場等回來**（這一格會卡住等網路；第一版接受） |
 | `posix` | `run`（必；一份 posix inst，規則同工具的 `run`：stdin 進、stdout 出、不准寫 `stdin`／`stdout`）、`timeout_ms`（預設 60000） | 引擎是外面一支程式，一樣**當場等它跑完**。以後「規則」「別的 agent」都走這條，格式不用改 |
 
-- **`api_key` 是全文唯一准用指示詞的地方**：不想把金鑰寫進檔就寫 `{"$env": "NAME"}`（只認 `$env`）。
-  變數不在＝`EngineInvalid`（設定壞就不跑，不降級）。
+- `api_key` 不想寫進檔就寫 `{"$env": "NAME"}`（跟別格一樣，任何指示詞都行）；變數不在＝
+  `EnvironmentVariableMissing`（設定壞就不跑，不降級）。
 - `posix` 引擎的 stdin／stdout 協定：
   - stdin 收一份請求：`{"messages": [system, ...history], "tools": [工具表]}`（跟 chat/completions 的 body 同形）。
   - stdout 回 `{"message": {"role": "assistant", ...}}`。
@@ -176,8 +196,11 @@ agent-bob/
 | `FieldTypeMismatch` | 某格型別不對 |
 | `MessageInvalid` | `history.json` 裡某一則不合 §2.3 |
 | `ToolInvalid` | 工具缺 `name`、名字不合法、同名、缺 `run`、`run` 不是合法 inst、`run` 寫了 `stdin`／`stdout` |
-| `EngineInvalid` | `engine.json` 的 `kind` 不認得、必填欄位缺、`api_key` 的 `$env` 變數不在 |
+| `EngineInvalid` | `engine.json` 的 `kind` 不認得、必填欄位缺 |
 | `StateInvalid` | `state.json` 的 `state` 不是四格之一 |
+
+指示詞的代號（`UnknownDirective`、`EnvironmentVariableMissing`、`ReferenceCycle`…）照
+[directives.md §6](directives.md)。
 
 讀驗錯誤＝這一格**根本沒走**，退出碼 1、`state.json` 不動。引擎回錯、工具炸掉這些是
 **跑的時候的錯**，下一格重試，不是這張表的。
@@ -198,4 +221,5 @@ agent-bob/
 4. `engine.json` 兩種 `kind` 都寫進規範，程式第一版先做 `llm`；兩種都當場等。
 5. `llm` 引擎當場等 HTTP 回來——違反「一格不等網路」，第一版先接受。
 6. 沒有任何上限與計數（一題幾格、連錯幾次、等多久）——使用者說先只剩 `state`，要管再說。
-7. `engine.json` 還是獨立一份、沒併進 `state.json`——使用者沒叫我併；要併也是一句話的事。
+7. `_metainfo` 與工具的 `parameters` 不解指示詞、其他每一格都解；agent 寫回時改的是原始 JSON。
+8. `engine.json` 還是獨立一份、沒併進 `state.json`——使用者沒叫我併；要併也是一句話的事。
