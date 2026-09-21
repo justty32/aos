@@ -39,7 +39,7 @@ aos-llm-ask [dir] [--dry-run]
 **`state.json` 不看**：不讀、不驗、不管它有沒有這個檔、寫了什麼。這份規範不是走 agent 的四格
 之一，是被 `think` 格拿去用的一支工具，跟 `state` 沒關係。
 
-讀驗錯誤（缺檔、JSON 壞、型別不對、指示詞解不開、工具重名…）代號跟 [agent.md §4](agent.md#4-錯誤代號讀驗階段)
+讀驗錯誤（缺檔、JSON 壞、型別不對、指示詞解不開、工具重名…）代號跟 [agent.md §3](agent.md#3-錯誤代號讀驗階段)
 一樣（`StateInvalid` 除外，因為不碰 `state.json`），退出碼 1（§6）。
 
 ## 3. 請求長什麼樣
