@@ -243,7 +243,7 @@ class StepPyTest(unittest.TestCase):
         child = self.home / "child"
         (child / ".aos").mkdir(parents=True)
         (child / ".aos/inst.json").write_text(json.dumps({
-            "argv": ["sh", "-c", "printf '{\\\"answer\\\":42}'"], "stdout": "out.json"}))
+            "argv": ["sh", "-c", "printf '{\"answer\":42}'"], "stdout": "out.json"}))
         self.write("def tool(state):\n    r = aos.call_dir('child', read='child/out.json', json=True)\n    state['r'] = r['value']\n")
         result = self.run_tool()
         self.assertEqual(result.returncode, 0, result.stderr)
