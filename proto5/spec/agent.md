@@ -158,10 +158,10 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 - **參數 JSON 從 stdin 進去、結果從 stdout 出來**（結果是純文字，整段當 `tool` 訊息的 `content`）。
   進 stdin 的就是模型給的 `tool_calls[i].function.arguments` **那個字串原樣**，agent 不解析、不重排；
   它不是合法 JSON 也照塞，工具自己驗。
-- 模型叫了一個**合併表裡沒有的名字** → 不跑，回一則 `tool` 訊息 `content`＝「沒有這個工具：xxx」，
-  讓模型自己改；不算 agent 的錯。
   所以 `_meta` 裡**不准寫 `stdin`／`stdout`**（寫了＝`ToolInvalid`），其他欄位（`stderr`／`exit`／
   `cwd`／`envs`）照 inst 規則。
+- 模型叫了一個**合併表裡沒有的名字** → 不跑，回一則 `tool` 訊息 `content`＝「沒有這個工具：xxx」，
+  讓模型自己改；不算 agent 的錯。
 - base（inst 的「家」）＝agent 資料夾；沒寫 `cwd` 就在 agent 資料夾跑。
 - 退出碼非 0 ＝工具錯誤：`content` 是「工具 sh 失敗（exit 1）：」＋stdout 前段，模型自己看著辦；不算 agent 的錯。
 - 要關掉一個工具就從 `state.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉；沒有 enable／disable 開關。
