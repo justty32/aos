@@ -4,13 +4,12 @@
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
 > 分配好每個檔在幹嘛，最後真的有需要再用指示詞輔助**。所以這份規範裡的路徑就是**普通的路徑
-> 字串**，不是 `$ref`；全文只有一個地方准用指示詞（§2.7 的 `api_key`）。
-> 沒拍板的地方我先照自己的想法填滿，好讓使用者有東西可以改；每一節都獨立、好抽換。
+> 字串**，不是 `$ref`；全文只有一個地方准用指示詞（§2.5 的 `api_key`）。
+> 沒拍板的地方我先照自己的想法填，好讓使用者有東西可以改；每一節都獨立、好抽換。
 
-一句話：**一個 agent 就是一個資料夾**；資料夾裡每個檔各管一件事——是 agent、走到哪
-（`state.json`）、對模型說什麼（`prompt.json`＋`prompts/`）、能用什麼（`tools.json`＋`tools/`）、
-用什麼想（`engine.json`）。這五塊就是 bot 模型：system prompt、history、tools、thinking engine、
-agent state。
+一句話：**一個 agent 就是一個資料夾**，`state.json` 是它的總表——這是 agent、走到哪、人格跟記憶
+在哪兩個檔、用哪幾份工具檔；引擎另外一份 `engine.json`。bot 模型的五塊（system prompt、history、
+tools、thinking engine、agent state）都從 `state.json` 找得到。
 
 ---
 
@@ -18,59 +17,51 @@ agent state。
 
 ```
 agent-bob/
-  state.json           _metainfo（認出這是 agent）＋ 狀態機走到哪（agent 寫）
-  prompt.json          對模型說的話從哪兩個檔來
+  state.json           總表：_metainfo ＋ state ＋ system／history／tools 三個指向
   prompts/
     system.json        人格（system prompt）
     history.json       記憶（對話史，agent 寫）
-  tools.json           工具清單：用哪幾份工具檔、關掉哪些
   tools/
     base.json          一份工具檔＝一組工具
     team.json
   engine.json          思考引擎的設定
-  wait.json            引擎晚點才給的結果落在這（誰在等就等這個檔）
 ```
 
 - 只有 `state.json` 是**認出「這是 agent 資料夾」**的依據（有它、而且 `_metainfo._type` 是 `agent`）。
 - 檔案裡寫的路徑，**一律相對於 agent 資料夾**（不是相對於寫它的那個檔）；絕對路徑照字面。
-- **誰寫誰**：人寫 `prompt`／`prompts/system`／`tools`／`tools/*`／`engine`；
-  agent 只寫 `state.json`（只動 `state` 那格，`_metainfo` 原樣抄回）、`prompts/history.json`、
-  `wait.json`（讀完刪掉）。這樣人的設定檔永遠不會被程式改掉。
+- **誰寫誰**：人寫 `state.json` 裡 `state` 以外的東西、`prompts/system.json`、`tools/*`、`engine.json`；
+  agent 只寫 `state.json` 的 `state` 那一格（其他 key 原樣抄回）跟 `prompts/history.json`。
+  這樣人的設定永遠不會被程式改掉。
 - agent 寫檔一律先寫 `.tmp` 再 rename，別人永遠不會讀到寫一半的檔。
 - 每個檔的頂層都是嚴格的物件或陣列（各節有寫）；**不認得的 key 一律忽略**。
+- `prompts/`、`tools/` 這兩個資料夾名只是慣例，`state.json` 裡指到哪就是哪。
 
 ## 2. 每個檔的形狀
 
-### 2.1 `state.json`：是 agent、走到哪（agent 寫）
+### 2.1 `state.json`：總表
 
 ```json
 {
   "_metainfo": {"_type": "agent", "_version": 1},
-  "state": "idle"
-}
-```
-
-| 鍵 | 型別 | 沒寫時 | 意思 |
-|---|---|---|---|
-| `_metainfo` | 物件 | **必填** | `_type` 只認 `"agent"`、`_version` 只認整數 `1`；規則同 [inst-posix.md §1](inst-posix.md)。跟 inst 不同的是必填：這是新格式、沒有舊檔要相容，而且這就是「這是 agent 資料夾」的記號 |
-| `state` | `idle`／`think`／`wait`／`act` | `idle` | 四格之一（§3） |
-
-- 就這兩個 key。名字＝資料夾名，不另外寫；上限、計數之類的都不放，需要再說。
-- agent 每格結束改寫 `state`，`_metainfo` 原樣抄回。`state` 不是四格之一 → `StateInvalid`。
-
-### 2.2 `prompt.json`：對模型說的話從哪來
-
-```json
-{
+  "state":   "idle",
   "system":  "prompts/system.json",
-  "history": "prompts/history.json"
+  "history": "prompts/history.json",
+  "tools":   ["tools/base.json", "tools/team.json"]
 }
 ```
 
-- 兩個值都是**路徑字串**（相對於 agent 資料夾）。沒有 `prompt.json` ＝上面這份預設；只寫一個就另一個用預設。
-- `system` 指的檔：人格。`history` 指的檔：記憶（agent 寫）。
+| 鍵 | 型別 | 沒寫時 | 誰寫 | 意思 |
+|---|---|---|---|---|
+| `_metainfo` | 物件 | **必填** | 人 | `_type` 只認 `"agent"`、`_version` 只認整數 `1`；規則同 [inst-posix.md §1](inst-posix.md)。跟 inst 不同的是必填：這是新格式、沒有舊檔要相容，而且這就是「這是 agent 資料夾」的記號 |
+| `state` | `idle`／`think`／`wait`／`act` | `idle` | **agent** | 四格之一（§3） |
+| `system` | 路徑字串 | `prompts/system.json` | 人 | 人格在哪個檔（§2.2） |
+| `history` | 路徑字串 | `prompts/history.json` | 人 | 記憶在哪個檔（§2.3；那個檔是 agent 寫的） |
+| `tools` | 路徑陣列 | `[]` | 人 | 用哪幾份工具檔（§2.4），順序＝送給模型的順序 |
 
-### 2.3 `prompts/system.json`：人格
+- agent 每格結束只改寫 `state`，其他 key 原樣抄回。
+- `state` 不是四格之一 → `StateInvalid`；`system`／`history` 不是字串、`tools` 不是字串陣列 → `FieldTypeMismatch`。
+
+### 2.2 `prompts/system.json`：人格
 
 ```json
 {"content": "你是個簡潔、會用工具的助手。"}
@@ -79,7 +70,7 @@ agent-bob/
 - `content`：字串，就是 system prompt 本文；沒有這個檔＝空字串（不送 system 訊息）。
 - 內容**原樣**，不解指示詞、不做模板；裡面的 `${x}` 就是字面。
 
-### 2.4 `prompts/history.json`：記憶（agent 寫）
+### 2.3 `prompts/history.json`：記憶（agent 寫）
 
 一個陣列，一則就是 OpenAI chat 的一則訊息：
 
@@ -87,8 +78,8 @@ agent-bob/
 [
   {"role": "user",      "content": "看看資料夾裡有什麼"},
   {"role": "assistant", "content": null, "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "sh", "arguments": "{\"cmd\":\"ls\"}"}}]},
-  {"role": "tool",      "tool_call_id": "c1", "content": "state.json\nprompt.json\n..."},
-  {"role": "assistant", "content": "裡面有 state.json、prompt.json…"}
+  {"role": "tool",      "tool_call_id": "c1", "content": "state.json\nengine.json\n..."},
+  {"role": "assistant", "content": "裡面有 state.json、engine.json…"}
 ]
 ```
 
@@ -98,25 +89,7 @@ agent-bob/
 - 內容**原樣**，不解指示詞（模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認）。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
-### 2.5 `tools.json`：用哪幾份工具檔
-
-```json
-{
-  "files": ["tools/base.json", "tools/team.json"],
-  "disabled": ["sh"]
-}
-```
-
-| 鍵 | 型別 | 沒寫時 | 意思 |
-|---|---|---|---|
-| `files` | 路徑陣列 | `[]` | 要載入的工具檔，順序＝送給模型的順序 |
-| `disabled` | 名字陣列 | `[]` | 先關掉的工具：不送模型、模型叫了也當「沒這個工具」。關在這裡不關在工具檔，因為工具檔可能是共用／複製來的，人的取捨記在自己的清單 |
-
-- 沒有 `tools.json` ＝沒有工具。
-- 所有檔載完後**同名工具＝`ToolInvalid`**（不默默蓋掉，寫錯一眼看得到）。
-- `aos-agent tools ls|add|remove|enable|disable`（[thinking/aos-agent.md](../../thinking/aos-agent.md)）改的就是這份檔。
-
-### 2.6 `tools/*.json`：一份工具檔＝一組工具
+### 2.4 `tools/*.json`：一份工具檔＝一組工具
 
 一個陣列，一個元素一個工具：
 
@@ -139,6 +112,9 @@ agent-bob/
 | `run` | 物件 | **必填** | **一份 posix inst**（[inst-posix.md](inst-posix.md) 整體形狀，`_metainfo` 可省）。跑工具＝照它跑一次 |
 | `timeout_ms` | 整數 | `60000` | 跑超過就砍（照 inst 的逾時規則），結果算工具錯誤 |
 
+- 所有工具檔載完後**同名工具＝`ToolInvalid`**（不默默蓋掉，寫錯一眼看得到）。
+- 要關掉一個工具就從 `state.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉；沒有 enable／disable 開關。
+
 `run` 的約定：
 
 - **參數 JSON 從 stdin 進去、結果從 stdout 出來**（結果是純文字，整段當 `tool` 訊息的 `content`）。
@@ -146,7 +122,7 @@ agent-bob/
 - `run` 的 base（inst 的「家」）＝agent 資料夾；沒寫 `cwd` 就在 agent 資料夾跑。
 - 退出碼非 0 ＝工具錯誤：`content` 是「工具 sh 失敗（exit 1）：」＋stdout 前段，模型自己看著辦；不算 agent 的錯。
 
-### 2.7 `engine.json`：用什麼想
+### 2.5 `engine.json`：用什麼想
 
 「想」＝把 system＋history＋工具表交出去、換一則 assistant 訊息回來。誰來換，`kind` 決定：
 
@@ -162,19 +138,17 @@ agent-bob/
 | `kind` | 欄位 | 意思 |
 |---|---|---|
 | `llm` | `endpoint`（必）、`model`（必）、`params`（可省）、`api_key`（可省）、`timeout_ms`（預設 120000） | agent 程式自己打 OpenAI 相容的 `chat/completions`，**當場等回來**（這一格會卡住等網路；第一版接受） |
-| `posix` | `run`（必；一份 posix inst，規則同工具的 `run`：stdin 進、stdout 出、不准寫 `stdin`／`stdout`）、`timeout_ms`（預設 60000） | 引擎是外面一支程式。以後「規則」「別的 agent」「kernel 的 LLM 排程」都走這條，格式不用改 |
+| `posix` | `run`（必；一份 posix inst，規則同工具的 `run`：stdin 進、stdout 出、不准寫 `stdin`／`stdout`）、`timeout_ms`（預設 60000） | 引擎是外面一支程式，一樣**當場等它跑完**。以後「規則」「別的 agent」都走這條，格式不用改 |
 
 - **`api_key` 是全文唯一准用指示詞的地方**：不想把金鑰寫進檔就寫 `{"$env": "NAME"}`（只認 `$env`）。
   變數不在＝`EngineInvalid`（設定壞就不跑，不降級）。
 - `posix` 引擎的 stdin／stdout 協定：
   - stdin 收一份請求：`{"messages": [system, ...history], "tools": [工具表]}`（跟 chat/completions 的 body 同形）。
-  - stdout 回兩種之一：
-    - `{"message": {"role": "assistant", ...}}`——當場想好了。
-    - `{"wait": true}`——結果晚點才有：引擎（或它交代的別人）之後把 `{"message": {...}}`（或
-      `{"error": "白話"}`）寫到 agent 資料夾的 **`wait.json`**；agent 進 `wait` 格等這個檔。檔名固定，
-      所以 `state.json` 不用記「在等哪個檔」。
-  - 兩種都不是、或退出碼非 0 → 這次「想」算錯（下一格重試，不是讀驗錯誤）。
+  - stdout 回 `{"message": {"role": "assistant", ...}}`。
+  - 形狀不對、或退出碼非 0 → 這次「想」算錯（下一格重試，不是讀驗錯誤）。
 - `kind` 不認得、必填欄位缺 → `EngineInvalid`。
+- 「引擎晚點才給結果、agent 先去等一個檔」這套機制**之後再說**（使用者說的）；所以這一版兩種引擎
+  都是當場等。
 
 ## 3. 四格
 
@@ -183,12 +157,11 @@ agent-bob/
 | 格 | 只做什麼 | 下一格 |
 |---|---|---|
 | `idle` | 沒事。有新的輸入（一則 `user` 訊息）就接進記憶——輸入從哪來不在這份規範（§5） | 有事 `think`，沒事留 `idle`（退出碼 101） |
-| `think` | 組請求交給 `engine`：當場拿到訊息→接進記憶；拿到 `wait`→去等 | 拿到 `act`，要等 `wait`，錯了留 `think`（下一格重試） |
-| `wait` | 只認一個檔：`wait.json` 出現了就讀進來當引擎結果、刪掉它；沒出現就退出讓 CPU | 到了 `act`（`error` 就留 `think` 重試），沒到留 `wait`（退出碼 101） |
+| `think` | 組請求交給 `engine`，拿到的 assistant 訊息接進記憶 | 拿到 `act`，錯了留 `think`（下一格重試） |
+| `wait` | 等外面的東西回來。**這一版沒東西可等**（引擎都當場回），格子先留著，等檔案機制定了再填 | — |
 | `act` | 看記憶最後那則 assistant：有 `tool_calls` 就逐一跑工具（每個結果一則 `tool` 訊息）；沒有就是回話——回給誰、怎麼回不在這份規範（§5） | 跑了工具 `think`，回了話 `idle` |
 
-- 退出碼：這格做了事＝0；在等（`idle` 沒事、`wait` 沒到）＝101；讀驗錯誤（§4）＝1；用法錯＝2。
-  100（收工）之後再說。
+- 退出碼：這格做了事＝0；在等（`idle` 沒事）＝101；讀驗錯誤（§4）＝1；用法錯＝2。100（收工）之後再說。
 - 一題走幾格、連錯幾次要不要停：先不管；要管的時候再決定記在哪。
 
 ## 4. 錯誤代號（讀／驗階段）
@@ -201,7 +174,7 @@ agent-bob/
 | `ReadFailed`／`JsonSyntax`／`NotAnObject`／`NotAnArray` | 某個檔讀不到／不是 JSON／頂層型別不對 |
 | `MetainfoInvalid`／`UnsupportedType`／`UnsupportedVersion` | `state.json` 的 `_metainfo` 不合 §2.1 |
 | `FieldTypeMismatch` | 某格型別不對 |
-| `MessageInvalid` | `history.json` 裡某一則不合 §2.4 |
+| `MessageInvalid` | `history.json` 裡某一則不合 §2.3 |
 | `ToolInvalid` | 工具缺 `name`、名字不合法、同名、缺 `run`、`run` 不是合法 inst、`run` 寫了 `stdin`／`stdout` |
 | `EngineInvalid` | `engine.json` 的 `kind` 不認得、必填欄位缺、`api_key` 的 `$env` 變數不在 |
 | `StateInvalid` | `state.json` 的 `state` 不是四格之一 |
@@ -213,15 +186,16 @@ agent-bob/
 
 - **輸入從哪來、回話回給誰**（信箱、aos-user、別的 agent）：不在這份，之後另寫；這裡只知道
   `idle` 會拿到一則 `user` 訊息、`act` 會產出一則回話。
+- **等檔案**（引擎或工具晚點才給結果）：之後再說；`wait` 格先留著。
 - **怎麼被叫醒、多久走一格、怎麼放進 kernel**：kernel／daemon 的事。
 - **aos-agent 的命令列**：另寫（草案在 [thinking/](../../thinking/)）。
 
 ## 我自己選的、使用者可以推翻的
 
 1. `system.json` 用 `{"content": "…"}`，不用整則訊息——role 是固定的，沒必要寫。
-2. 工具的 enable／disable 記在 `tools.json` 的 `disabled`，工具檔不動。
+2. `tools` 併進 `state.json` 後就是一個路徑陣列，沒有 `disabled` 開關：要關就從陣列拿掉。
 3. 同名工具直接報錯，不用「後面蓋前面」。
-4. `engine.json` 兩種 `kind` 都寫進規範，程式第一版先做 `llm`；`posix` 的 `{"wait": true}`＋固定的
-   `wait.json` 是為了讓 `wait` 格有東西可等、又不用在 `state.json` 記路徑（kernel 的 LLM 排程就包成這種）。
-5. `llm` 引擎當場等 HTTP 回來——違反「一格不等網路」，第一版先接受，要嚴格就只用 `posix`。
+4. `engine.json` 兩種 `kind` 都寫進規範，程式第一版先做 `llm`；兩種都當場等。
+5. `llm` 引擎當場等 HTTP 回來——違反「一格不等網路」，第一版先接受。
 6. 沒有任何上限與計數（一題幾格、連錯幾次、等多久）——使用者說先只剩 `state`，要管再說。
+7. `engine.json` 還是獨立一份、沒併進 `state.json`——使用者沒叫我併；要併也是一句話的事。
