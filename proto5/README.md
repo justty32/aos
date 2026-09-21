@@ -12,9 +12,9 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 | [spec/directives.md](spec/directives.md) | 指示詞機制：`$env`／`$fmt`／`$ref` 取值、`$opt`／`$val` 選項物件、先解再驗、巢狀、循環、錯誤代號。任何 aos 的 JSON 檔都能用；哪個位置認得哪些選項名由宿主規範定 | 2026-09-21 定稿；實作 [`lib/aos_directives.py`](lib/aos_directives.py) |
 | [spec/inst-posix.md](spec/inst-posix.md) | inst.json 的 `posix` 呼叫格式第 1 版：七個欄位、各位置的 `$opt` 選項（append／mkdir／inherit／merge／clear）、錯誤代號、執行語意，加上 `_metainfo`（`_type`／`_version`；沒寫＝posix v1）、頂層未知 key 忽略 | 2026-09-21 定稿；實作 [`lib/aos_inst.py`](lib/aos_inst.py)（讀／驗）＋ [`lib/aos_exec.py`](lib/aos_exec.py)（執行）。proto4-3 是凍結的舊版參考 |
 | [spec/exec.md](spec/exec.md) | aos-exec 的**命令列**：三種目標（普通檔／`.json`／資料夾）、`--dir-target`／`--timeout-ms`／`--stderr`／`--`、退出碼 2／125／原樣、125 與 2 時 stderr 印什麼。行為照 inst-posix.md 第 6 節 | 命令列走法照 proto4-3 現況整理，使用者還沒逐條拍板 |
-| [spec/agent.md](spec/agent.md) | agent 資料夾：`info.json` 總表（人寫：`_metainfo`＝`llm_agent`、`system`／`history`／`tools` 三個指向、`engine`）＋`state.json`（agent 寫：四格 `state`）；`info.json` 以外原樣讀；工具檔＝OpenAI tools 陣列＋`_meta`（一份 posix inst） | **草稿**，跟使用者一步步改中；最精簡標準 |
+| [spec/agent.md](spec/agent.md) | 什麼是 agent 資料夾：`info.json`（人寫，`_metainfo`＝`llm_agent`，每格解指示詞）＋`state.json`（agent 寫，只有 `state`）、誰寫誰、指示詞解不解、共用錯誤代號；`info.json` 其他欄位由用它的程式定 | **草稿**，跟使用者一步步改中；最精簡標準 |
 | [spec/aos-agent.md](spec/aos-agent.md) | `aos-agent [dir]` 走一格：記憶就是信箱、四格各做什麼、跑工具、退出碼 0／101／1／2 | **草稿**；程式還沒寫 |
-| [spec/aos-llm-ask.md](spec/aos-llm-ask.md) | `aos-llm-ask [dir]` 把 agent 資料夾問模型一次：組請求、`--dry-run` 只印請求、輸出 `choices[0].message`、退出碼 0／1／2／3；`state.json` 不看，不寫任何檔 | **草稿**；程式還沒寫 |
+| [spec/aos-llm-ask.md](spec/aos-llm-ask.md) | `aos-llm-ask [dir]` 把 agent 資料夾問模型一次：`info.json` 的 `system`／`history`／`tools`／`engine` 四格與它們指到的檔（人格、記憶、工具檔＝OpenAI tools 陣列＋`_meta`）長什麼樣、組請求、`--dry-run` 只印請求、輸出 `choices[0].message`、退出碼 0／1／2／3；`state.json` 不看，不寫任何檔 | **草稿**；程式在寫 |
 
 ## 程式
 

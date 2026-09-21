@@ -1,10 +1,10 @@
 # aos-llm-ask：把一個 agent 資料夾問模型一次（程式規範，**草稿**）
 
-← [proto5 README](../README.md)｜資料夾長什麼樣在 [agent.md](agent.md)；aos-agent 的 `think` 格會
+← [proto5 README](../README.md)｜什麼是 agent 資料夾在 [agent.md](agent.md)；aos-agent 的 `think` 格會
 import 這支做同一件事，見 [aos-agent.md](aos-agent.md)
 
-> **這一版只管「問一次」**：讀 [agent.md](agent.md) 那套以 `info.json` 開頭的體系（`system`／
-> `history`／`tools`／`engine`），組請求、打出去、印回話。`state.json`、記憶怎麼接、要不要跑
+> **這一版只管「問一次」**：讀以 `info.json` 開頭的體系（`system`／`history`／`tools`／`engine`，
+> 形狀在 §2），組請求、打出去、印回話。`state.json`、記憶怎麼接、要不要跑
 > 工具，這份都不管——那是 aos-agent 的事。不記修訂記錄。
 
 一句話：**`aos-llm-ask [dir]` 讀 `dir` 這個 agent 資料夾，組一份請求問模型一次，把模型的回話印到
@@ -20,27 +20,118 @@ aos-llm-ask [dir] [--dry-run]
 - `--dry-run`：不送出去，只印組好的請求（§4）。
 - 沒有別的旗標、沒有子命令。
 
-## 2. 讀什麼：照 [agent.md](agent.md)，但只碰用得到的幾格
+## 2. 讀什麼：`info.json` 的四格＋它們指到的檔
 
-讀驗規則整套照 [agent.md §2](agent.md#2-每個檔的形狀)：`info.json` 每一格解指示詞
-（[directives.md](directives.md)）、`_metainfo._type` 要是 `llm_agent`（不是＝`NotAnAgent`）；
-`system`／`history`／`tools` 指到的檔原樣讀、不解指示詞；`tools` 列的每份檔合併成一個陣列、送
-模型前把每個元素所有 `_` 開頭的 key 拿掉。
+資料夾本身（`info.json` 的 `_metainfo`、`state.json`、指示詞解不解、共用的錯誤代號）照
+[agent.md](agent.md)。這一節定的是 **`info.json` 裡 aos-llm-ask 用的四格**跟**它們指到的檔長什麼樣**：
 
-這份只用得到 `info.json` 裡的四格：
+```json
+{
+  "_metainfo": {"_type": "llm_agent", "_version": 1},
+  "system":  "prompts/system.json",
+  "history": "prompts/history.json",
+  "tools":   ["tools/base.json", "tools/team.json"],
+  "engine":  {"endpoint": "http://127.0.0.1:1234/v1", "model": "qwen/qwen3-1.7b"}
+}
+```
 
-| 格 | 用來幹嘛 |
-|---|---|
-| `system` | 組 `messages` 的第一則（§3） |
-| `history` | 組 `messages` 剩下的部分（§3） |
-| `tools` | 合併成請求的 `tools`（§3） |
-| `engine` | 打去哪（`endpoint`／`model`／`params`／`api_key`／`timeout_ms`，§3） |
+| 鍵 | 型別 | 沒寫時 | 意思 |
+|---|---|---|---|
+| `system` | 路徑字串 | `prompts/system.json` | 人格在哪個檔（§2.2），組 `messages` 的第一則 |
+| `history` | 路徑字串 | `prompts/history.json` | 記憶在哪個檔（§2.3；那個檔是 agent 寫的），組 `messages` 剩下的部分 |
+| `tools` | 路徑陣列 | `[]` | 用哪幾份工具檔（§2.4），所有檔的陣列**接成一個**、順序＝檔的順序，成為請求的 `tools` |
+| `engine` | 物件 | **必填** | 打去哪（§2.5） |
 
-**`state.json` 不看**：不讀、不驗、不管它有沒有這個檔、寫了什麼。這份規範不是走 agent 的四格
-之一，是被 `think` 格拿去用的一支工具，跟 `state` 沒關係。
+- `system`／`history` 不是字串、`tools` 不是字串陣列、`engine` 不是物件 → `FieldTypeMismatch`。
+- `info.json` 每一格解指示詞、指到的檔原樣讀——規則在 [agent.md §2](agent.md)。
+- **`state.json` 不看**：不讀、不驗、不管它有沒有這個檔、寫了什麼。
 
-讀驗錯誤（缺檔、JSON 壞、型別不對、指示詞解不開、工具重名…）代號跟 [agent.md §3](agent.md#3-錯誤代號讀驗階段)
-一樣（`StateInvalid` 除外，因為不碰 `state.json`），退出碼 1（§6）。
+讀驗錯誤（缺檔、JSON 壞、型別不對、指示詞解不開、工具重名…）＝退出碼 1（§6）；共用代號在
+[agent.md §5](agent.md)，這支自己的三個（`MessageInvalid`／`ToolInvalid`／`EngineInvalid`）在下面各節。
+
+### 2.2 人格（`system` 指到的檔，慣例放 `prompts/system.json`）
+
+```json
+{"content": "你是個簡潔、會用工具的助手。"}
+```
+
+- `content`：字串，就是 system prompt 本文；**檔不存在＝空字串**（不送 system 訊息）；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
+- **原樣讀、不解指示詞**（[agent.md §2](agent.md)）：`content` 就是字面，裡面的 `${x}`、`$` 開頭的東西都不會被動。
+
+### 2.3 記憶（`history` 指到的檔，慣例放 `prompts/history.json`；agent 寫）
+
+一個陣列，一則就是 OpenAI chat 的一則訊息：
+
+```json
+[
+  {"role": "user",      "content": "看看資料夾裡有什麼"},
+  {"role": "assistant", "content": null, "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "sh", "arguments": "{\"cmd\":\"ls\"}"}}]},
+  {"role": "tool",      "tool_call_id": "c1", "content": "state.json\nprompts\ntools\n"},
+  {"role": "assistant", "content": "裡面有 state.json、prompts、tools…"}
+]
+```
+
+- `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從 `system.json` 補在最前面）。
+- `user`／`tool` 的 `content` 要是字串；`tool` 一定要有 `tool_call_id`；`assistant` 至少有 `content` 或 `tool_calls` 其中一個。不合 → `MessageInvalid`。
+- **檔不存在＝`[]`**；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
+- **原樣讀寫、不解指示詞**（[agent.md §2](agent.md)）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
+- 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
+
+### 2.4 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`
+
+一份工具檔就是**一個 OpenAI chat/completions 的 `tools` 陣列**，一個元素一個工具、形狀照 OpenAI
+原樣；唯一的修改是每個元素多一個 **`_meta`**，說「這個工具真的被叫到時怎麼跑」——內容就是**一份
+posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
+
+```json
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "sh",
+      "description": "在 agent 資料夾執行一句 shell 指令",
+      "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}}, "required": ["cmd"]}
+    },
+    "_meta": {"argv": ["tools/bin/sh-tool"], "stderr": "tools/log/sh.err"}
+  }
+]
+```
+
+- `tools` 列到的檔**一定要在**：不存在＝`ReadFailed`（跟人格、記憶不同——那兩個沒檔有預設，工具檔是明列的）。
+- **合併**：`info.json` 的 `tools` 列的每份檔各是一個陣列，agent 把它們**接成一個陣列**（照檔的順序）；
+  送給模型之前把每個元素**所有 `_` 開頭的 key 拿掉**（`_meta`、`_note`…），剩下的原樣送——所以想加
+  註解就用 `_` 開頭，不會漏給模型。
+- `_meta`：**必填**，一份 posix inst（`_metainfo` 可省＝posix v1）。缺了、或不是物件 → `ToolInvalid`。
+- 合併後 `function.name` 同名 → `ToolInvalid`（不默默蓋掉，寫錯一眼看得到）。
+- 元素缺 `type`／`function`／`function.name` → `ToolInvalid`；`function` 裡其他東西（`description`、
+  `parameters`、`strict`…）本文不驗，原樣送模型。
+- **工具檔原樣讀、不解指示詞**（[agent.md §2](agent.md)）；`_meta` 裡的指示詞是跑的時候由 inst 那套解。
+
+`_meta` 這支程式**只驗不跑**（是物件、沒寫 `stdin`／`stdout`——寫了＝`ToolInvalid`，因為跑的時候參數走
+stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事。要關掉一個工具就從 `info.json` 的
+`tools` 拿掉那份檔、或從工具檔裡刪掉。
+
+### 2.5 `engine`（在 `info.json` 裡）：用什麼想
+
+這一版只有一種引擎：OpenAI 相容的 `chat/completions`。這裡定欄位；請求怎麼組、怎麼打、回來怎麼拿
+在 §3～§5。
+
+```json
+"engine": {"endpoint": "http://127.0.0.1:1234/v1", "model": "qwen/qwen3-1.7b",
+           "params": {"temperature": 0.2}, "api_key": {"$env": "LMSTUDIO_KEY"}, "timeout_ms": 120000}
+```
+
+| 鍵 | 型別 | 沒寫時 | 意思 |
+|---|---|---|---|
+| `endpoint` | 字串 | **必填** | base URL，agent 自己接 `/chat/completions` |
+| `model` | 字串 | **必填** | 送出去的 `model` |
+| `params` | 物件 | `{}` | 原樣併進請求 body（`temperature`、`max_tokens`…） |
+| `api_key` | 字串 | 不送 Authorization | 有值才送 `Authorization: Bearer`；不想寫進檔就 `{"$env": "NAME"}`，變數不在＝`EnvironmentVariableMissing`（設定壞就不跑，不降級） |
+| `timeout_ms` | 整數 | `120000` | HTTP 等多久 |
+
+- 必填欄位缺、型別不對 → `EngineInvalid`。
+- `engine` 整格在 `info.json` 裡，所以跟別格一樣吃指示詞：整包 `{"$ref": "engines/lmstudio.json"}`
+  從別的檔拿也行。
 
 ## 3. 請求長什麼樣
 
@@ -62,7 +153,7 @@ aos-llm-ask [dir] [--dry-run]
 
 - `model`：`engine.model` 原樣。
 - `messages`：`system.json` 的 `content` **有內容才加一則** `{"role": "system", "content": …}`
-  放最前面（`content` 是空字串就不加，照 [agent.md §2.2](agent.md#22-人格system-指到的檔慣例放-promptssystemjson)）；
+  放最前面（`content` 是空字串就不加，照 §2.2）；
   後面接 `history.json` 那個陣列，**原樣接上去**，一則不動。
 - `tools`：`info.json` 的 `tools` 列到的每份檔（各是一個陣列）**接成一個**、照檔的順序；送出去
   之前把每個元素**所有 `_` 開頭的 key 拿掉**（`_meta` 首當其衝）。**合併後是空陣列就不送 `tools`
@@ -74,7 +165,7 @@ aos-llm-ask [dir] [--dry-run]
   header（不是送空字串）。
 - URL：`engine.endpoint` 去掉結尾多餘的 `/` 之後接上 `/chat/completions`（`http://x/v1` 跟
   `http://x/v1/` 都變 `http://x/v1/chat/completions`）。
-- `timeout_ms`：這次 HTTP 呼叫等多久，沒寫用 `engine` 的預設（120000，見 [agent.md §2.5](agent.md#25-engine在-infojson-裡用什麼想)）。
+- `timeout_ms`：這次 HTTP 呼叫等多久，沒寫用 `engine` 的預設（120000，見 §2.5）。
 
 ## 4. `--dry-run`：不送出去，只印請求
 
