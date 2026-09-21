@@ -1,12 +1,14 @@
 # agent 資料夾規範（第 1 版，**草稿**）
 
-← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；`info.json` 吃指示詞（[directives.md](directives.md)），其他檔原樣讀
+← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；`info.json` 吃指示詞（[directives.md](directives.md)），其他檔原樣讀；程式怎麼用這些檔見 [aos-llm-ask.md](aos-llm-ask.md)／[aos-agent.md](aos-agent.md)
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
 > 分配好每個檔在幹嘛，指示詞是輔助**。所以規範裡寫的都是普通的路徑字串與字面值；人寫的那一份
 > 設定檔（`info.json`）每一格都吃指示詞，**其他檔（狀態、人格、記憶、工具）原樣讀、不解**
 > （規則在 §2.0）。
-> 沒拍板的地方我先照自己的想法填，好讓使用者有東西可以改；每一節都獨立、好抽換。
+>
+> 這份**只講資料夾跟檔案長什麼樣**；程式拿這些檔做什麼，各自的規範講：問模型一次＝
+> [aos-llm-ask.md](aos-llm-ask.md)，走一格（狀態機、跑工具）＝[aos-agent.md](aos-agent.md)。
 
 一句話：**一個 agent 就是一個資料夾**，`info.json` 是它的總表（人寫）——這是 agent、人格跟記憶
 在哪兩個檔、用哪幾份工具檔、用什麼想；`state.json` 只記走到哪（agent 寫）。bot 模型的五塊
@@ -96,7 +98,7 @@ agent-bob/
 {"state": "idle"}
 ```
 
-- `state`：`idle`／`think`／`wait`／`act` 四格之一（§3）。就這一個 key。
+- `state`：`idle`／`think`／`wait`／`act` 之一（四格各做什麼是 [aos-agent.md](aos-agent.md) 的事）。就這一個 key。
 - **檔不存在＝`{"state": "idle"}`**，agent 第一次動就會把它寫出來；存在但壞掉＝`ReadFailed`／`JsonSyntax`。
 - 原樣讀寫、不解指示詞；`state` 不是四格之一 → `StateInvalid`。
 
@@ -158,23 +160,14 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
   `parameters`、`strict`…）本文不驗，原樣送模型。
 - **工具檔原樣讀、不解指示詞**（§2.0）；`_meta` 裡的指示詞是跑的時候由 inst 那套解。
 
-`_meta`（inst）跑起來的約定：
-
-- **參數 JSON 從 stdin 進去、結果從 stdout 出來**（結果是純文字，整段當 `tool` 訊息的 `content`）。
-  進 stdin 的就是模型給的 `tool_calls[i].function.arguments` **那個字串原樣**，agent 不解析、不重排；
-  它不是合法 JSON 也照塞，工具自己驗。
-  所以 `_meta` 裡**不准寫 `stdin`／`stdout`**（寫了＝`ToolInvalid`），其他欄位（`stderr`／`exit`／
-  `cwd`／`envs`）照 inst 規則。
-- 模型叫了一個**合併表裡沒有的名字** → 不跑，回一則 `tool` 訊息 `content`＝「沒有這個工具：xxx」，
-  讓模型自己改；不算 agent 的錯。
-- base（inst 的「家」）＝agent 資料夾；沒寫 `cwd` 就在 agent 資料夾跑。
-- 退出碼非 0 ＝工具錯誤：`content` 是「工具 sh 失敗（exit 1）：」＋stdout 前段，模型自己看著辦；不算 agent 的錯。
-- 要關掉一個工具就從 `info.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉；沒有 enable／disable 開關。
+`_meta` 是給 aos-agent 跑工具用的：參數走 stdin、結果走 stdout，所以 **`_meta` 裡不准寫 `stdin`／
+`stdout`**（寫了＝`ToolInvalid`）；base＝agent 資料夾。怎麼跑、結果怎麼接回記憶，見
+[aos-agent.md](aos-agent.md)。要關掉一個工具就從 `info.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉。
 
 ### 2.5 `engine`（在 `info.json` 裡）：用什麼想
 
-「想」＝把 system＋history＋工具表交出去、換一則 assistant 訊息回來。這一版只有一種：agent 程式
-自己打 OpenAI 相容的 `chat/completions`，**當場等回來**（這一格會卡住等網路；第一版接受）。
+這一版只有一種引擎：OpenAI 相容的 `chat/completions`。這裡只定欄位；請求怎麼組、怎麼打、回來怎麼
+拿，見 [aos-llm-ask.md](aos-llm-ask.md)。
 
 ```json
 "engine": {"endpoint": "http://127.0.0.1:1234/v1", "model": "qwen/qwen3-1.7b",
@@ -189,30 +182,11 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 | `api_key` | 字串 | 不送 Authorization | 有值才送 `Authorization: Bearer`；不想寫進檔就 `{"$env": "NAME"}`，變數不在＝`EnvironmentVariableMissing`（設定壞就不跑，不降級） |
 | `timeout_ms` | 整數 | `120000` | HTTP 等多久 |
 
-- 請求 body：`{"model", "messages": [system, ...history], "tools": [合併後、去掉 _meta 的工具表], ...params}`。
-  沒有工具就不送 `tools`。
-- 回來拿 `choices[0].message` 當 assistant 訊息接進記憶；HTTP 錯、逾時、形狀不對 → 這次「想」算錯
-  （下一格重試，不是讀驗錯誤）。
 - 必填欄位缺、型別不對 → `EngineInvalid`。
 - `engine` 整格在 `info.json` 裡，所以跟別格一樣吃指示詞：整包 `{"$ref": "engines/lmstudio.json"}`
   從別的檔拿也行。
-- 「引擎是外面一支程式」「引擎晚點才給結果、agent 先去等一個檔」**之後再說**。
 
-## 3. 四格
-
-照 [24-agent.md §25](../../proto4/notes/24-agent.md) 使用者那組。每叫一次 aos-agent 只走一格：
-
-| 格 | 只做什麼 | 下一格 |
-|---|---|---|
-| `idle` | 沒事。有新的輸入（一則 `user` 訊息）就接進記憶——輸入從哪來不在這份規範（§5） | 有事 `think`，沒事留 `idle`（退出碼 101） |
-| `think` | 組請求交給 `engine`，拿到的 assistant 訊息接進記憶 | 拿到 `act`，錯了留 `think`（下一格重試） |
-| `wait` | 等外面的東西回來。**這一版沒東西可等**（引擎都當場回），格子先留著，等檔案機制定了再填 | — |
-| `act` | 看記憶最後那則 assistant：有 `tool_calls` 就逐一跑工具（每個結果一則 `tool` 訊息，順序照 `tool_calls`）；沒有就是回話（`content` 空也算回了話）——回給誰、怎麼回不在這份規範（§5） | 跑了工具 `think`，回了話 `idle` |
-
-- 退出碼：這格做了事＝0；在等（`idle` 沒事）＝101；讀驗錯誤（§4）＝1；用法錯＝2。100（收工）之後再說。
-- 一題走幾格、連錯幾次要不要停：先不管；要管的時候再決定記在哪。
-
-## 4. 錯誤代號（讀／驗階段）
+## 3. 錯誤代號（讀／驗階段）
 
 `str(e)`＝「代號: 白話」，訊息裡一定說是哪個檔：
 
@@ -225,21 +199,19 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 | `MessageInvalid` | `history.json` 裡某一則不合 §2.3 |
 | `ToolInvalid` | 工具檔不是陣列、元素缺 `type`／`function`／`function.name`、合併後同名、缺 `_meta`、`_meta` 不是合法 inst、`_meta` 寫了 `stdin`／`stdout` |
 | `EngineInvalid` | `engine` 缺 `endpoint`／`model`、型別不對 |
-| `StateInvalid` | `state.json` 的 `state` 不是四格之一（§2.1.1） |
+| `StateInvalid` | `state.json` 的 `state` 不是 `idle`／`think`／`wait`／`act` 之一（§2.1.1） |
 
 指示詞的代號（`UnknownDirective`、`EnvironmentVariableMissing`、`ReferenceCycle`…）照
 [directives.md §6](directives.md)。
 
-讀驗錯誤＝這一格**根本沒走**，退出碼 1、`state.json` 不動。引擎回錯、工具炸掉這些是
-**跑的時候的錯**，下一格重試，不是這張表的。
+這張表只管「檔案讀不讀得起來、形狀對不對」。引擎回錯、工具炸掉那些是程式跑的時候的事，
+各程式的規範自己講。
 
-## 5. 這份規範沒管的事
+## 4. 這份規範沒管的事
 
-- **輸入從哪來、回話回給誰**（信箱、aos-user、別的 agent）：不在這份，之後另寫；這裡只知道
-  `idle` 會拿到一則 `user` 訊息、`act` 會產出一則回話。
-- **等檔案**（引擎或工具晚點才給結果）、**引擎是外面一支程式**：之後再說；`wait` 格先留著。
-- **怎麼被叫醒、多久走一格、怎麼放進 kernel**：kernel／daemon 的事。
-- **aos-agent 的命令列**：另寫（草案在 [thinking/](../../thinking/)）。
+- **程式做什麼**：問模型＝[aos-llm-ask.md](aos-llm-ask.md)；狀態機、收 user 訊息、等檔案、逾時、
+  跑工具＝[aos-agent.md](aos-agent.md)（使用者還在想）。
+- **輸入從哪來、回話回給誰**（信箱、aos-user、別的 agent）、**怎麼放進 kernel**：之後再說。
 
 ## 我自己選的、使用者可以推翻的
 
@@ -247,7 +219,4 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 2. `tools` 是路徑陣列，沒有 `disabled` 開關：要關就從陣列拿掉。
 3. 合併後同名工具直接報錯，不用「後面蓋前面」。
 4. `_meta` 放在工具元素的頂層（跟 `type`／`function` 平行），不放在 `function` 裡面。
-5. 工具沒有逾時設定（inst 本身沒有逾時欄位）；要的話之後加。
-6. `engine` 只剩 OpenAI 相容 HTTP、當場等回來——違反「一格不等網路」，第一版先接受。
-7. 沒有任何上限與計數（一題幾格、連錯幾次、等多久）——使用者說先只剩 `state`，要管再說。
-8. `state.json` 不解指示詞、沒檔＝`idle`：它是 agent 自己的檔，只有一格，沒必要吃指示詞。
+5. `state.json` 不解指示詞、沒檔＝`idle`：它是 agent 自己的檔，只有一格，沒必要吃指示詞。

@@ -70,7 +70,7 @@ aos-agent [dir]
 |---|---|
 | 0 | 這格做了事（換了格、問了模型、跑了工具、或引擎失敗但會重試） |
 | 101 | 沒事做（`idle` 而且記憶尾巴不是 `user`） |
-| 1 | 讀驗錯誤（[agent.md §4](agent.md) 與 [directives.md §6](directives.md) 的代號）：stderr 一行 `aos-agent: <代號>: <白話>`，什麼都不寫 |
+| 1 | 讀驗錯誤（[agent.md §3](agent.md) 與 [directives.md §6](directives.md) 的代號）：stderr 一行 `aos-agent: <代號>: <白話>`，什麼都不寫 |
 | 2 | 用法錯（旗標不認得、`dir` 不存在） |
 
 引擎失敗、工具失敗都**不是**錯誤碼：前者 stderr 一行 `aos-agent: engine: <白話>` 然後退 0，
