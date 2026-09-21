@@ -14,7 +14,7 @@
 aos-agent [dir]
 ```
 
-- `dir` 留空＝`.`（跟 aos-exec 一樣）。`dir` 必須是 agent 資料夾（有 `state.json`、`_metainfo._type`
+- `dir` 留空＝`.`（跟 aos-exec 一樣）。`dir` 必須是 agent 資料夾（有 `info.json`、`_metainfo._type`
   是 `llm_agent`），不是＝`NotAnAgent`。
 - 沒有別的旗標、沒有子命令。`init`／`start`／`stop`／`tools …` 那些（[thinking/aos-agent.md](../../thinking/aos-agent.md)）
   之後再說。
@@ -31,8 +31,9 @@ aos-agent [dir]
 
 ## 3. 走一格到底做什麼
 
-先讀驗（照 [agent.md](agent.md)：`state.json` 每格解指示詞、指到的檔原樣讀、工具檔合併）；讀驗
-不過＝這格沒走，退出碼 1、什麼都不寫。過了就照 `state` 做**一格**：
+先讀驗（照 [agent.md](agent.md)：`info.json` 每格解指示詞、`state.json` 與指到的檔原樣讀、工具檔
+合併；`state.json` 不存在＝`idle`）；讀驗不過＝這格沒走，退出碼 1、什麼都不寫。過了就照 `state`
+做**一格**：
 
 | 現在是 | 做什麼 | 寫回 `state` | 退出碼 |
 |---|---|---|---|
@@ -44,8 +45,8 @@ aos-agent [dir]
 | `act` | 沒有 `tool_calls`（回話，`content` 空也算） | `idle` | 0 |
 | `wait` | 這一版進不去這格；`state.json` 裡寫著 `wait` 就當 `StateInvalid` | — | 1 |
 
-- 一格只寫兩個檔：`state.json`（只動 `state`，原始 JSON 其他格原樣抄回）、記憶檔（整份重寫）；
-  都是先 `.tmp` 再 rename。
+- 一格只寫兩個檔：`state.json`（`{"state": …}` 整份重寫）、記憶檔（整份重寫）；都是先 `.tmp` 再
+  rename。`info.json` 永遠不寫。
 - `$env` 讀的是 aos-agent 自己的環境；`$ref` 相對路徑以 agent 資料夾為中心。
 - 同一個 agent **不要同時跑兩份**（沒有鎖）。
 

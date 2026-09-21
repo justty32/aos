@@ -1,16 +1,16 @@
 # agent 資料夾規範（第 1 版，**草稿**）
 
-← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；`state.json` 吃指示詞（[directives.md](directives.md)），被它指到的檔原樣讀
+← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；`info.json` 吃指示詞（[directives.md](directives.md)），其他檔原樣讀
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
-> 分配好每個檔在幹嘛，指示詞是輔助**。所以規範裡寫的都是普通的路徑字串與字面值；agent 自己的
-> 那一份檔（`state.json`）每一格都吃指示詞，**被它指到的檔（人格、記憶、工具）原樣讀、不解**
+> 分配好每個檔在幹嘛，指示詞是輔助**。所以規範裡寫的都是普通的路徑字串與字面值；人寫的那一份
+> 設定檔（`info.json`）每一格都吃指示詞，**其他檔（狀態、人格、記憶、工具）原樣讀、不解**
 > （規則在 §2.0）。
 > 沒拍板的地方我先照自己的想法填，好讓使用者有東西可以改；每一節都獨立、好抽換。
 
-一句話：**一個 agent 就是一個資料夾**，`state.json` 是它的總表——這是 agent、走到哪、人格跟記憶
-在哪兩個檔、用哪幾份工具檔、用什麼想。bot 模型的五塊（system prompt、history、tools、thinking
-engine、agent state）全在 `state.json` 裡或由它指出去。
+一句話：**一個 agent 就是一個資料夾**，`info.json` 是它的總表（人寫）——這是 agent、人格跟記憶
+在哪兩個檔、用哪幾份工具檔、用什麼想；`state.json` 只記走到哪（agent 寫）。bot 模型的五塊
+（system prompt、history、tools、thinking engine、agent state）全在這兩份裡或由 `info.json` 指出去。
 
 ---
 
@@ -18,7 +18,8 @@ engine、agent state）全在 `state.json` 裡或由它指出去。
 
 ```
 agent-bob/
-  state.json           總表：_metainfo ＋ state ＋ system／history／tools 三個指向 ＋ engine
+  info.json            總表（人寫）：_metainfo ＋ system／history／tools 三個指向 ＋ engine
+  state.json           走到哪（agent 寫）：只有 state
   prompts/
     system.json        人格（system prompt）
     history.json       記憶（對話史，agent 寫）
@@ -27,53 +28,51 @@ agent-bob/
     team.json
 ```
 
-- 只有 `state.json` 是**認出「這是 agent 資料夾」**的依據（有它、而且 `_metainfo._type` 是 `llm_agent`）。
+- 只有 `info.json` 是**認出「這是 agent 資料夾」**的依據（有它、而且 `_metainfo._type` 是 `llm_agent`）。
   `_metainfo` 也吃指示詞，所以「認不認」要先解完才知道；解不開就是指示詞的錯，不是 `NotAnAgent`。
 - 檔案裡寫的路徑，**一律相對於 agent 資料夾**（不是相對於寫它的那個檔）；絕對路徑照字面。
-- **誰寫誰**：人寫 `state.json` 裡 `state` 以外的東西、`prompts/system.json`、`tools/*`；
-  agent 只寫 `state.json` 的 `state` 那一格（其他 key 原樣抄回）跟 `prompts/history.json`。
-  這樣人的設定永遠不會被程式改掉。
+- **誰寫誰**：人寫 `info.json`、`prompts/system.json`、`tools/*`；agent 只寫 `state.json` 跟
+  `prompts/history.json`。人的檔跟 agent 的檔分開，人的設定永遠不會被程式改掉。
 - agent 寫檔一律先寫 `.tmp` 再 rename，別人永遠不會讀到寫一半的檔。
 - 每個檔的頂層都是嚴格的物件或陣列（各節有寫）；**不認得的 key 一律忽略**。
-- `prompts/`、`tools/` 這兩個資料夾名只是慣例，`state.json` 裡指到哪就是哪；放哪都行。
-- 指示詞：`state.json` 解；**被它指到的檔不解**，規則在 §2.0。
+- `prompts/`、`tools/` 這兩個資料夾名只是慣例，`info.json` 裡指到哪就是哪；放哪都行。
+- 指示詞：`info.json` 解；**其他檔不解**，規則在 §2.0。
 
 ## 2. 每個檔的形狀
 
-### 2.0 指示詞：`state.json` 解、被指到的檔不解
+### 2.0 指示詞：`info.json` 解、其他檔不解
 
 分兩種：
 
 | 檔 | 解不解 | 為什麼 |
 |---|---|---|
-| `state.json` | **每一格都解**（含 `_metainfo`、`engine`） | 這是 agent 自己的設定，寫的人想 `$env`／`$fmt`／`$ref` 就用 |
-| `system`／`history`／`tools` 指到的檔 | **整份不解，原樣讀** | 這些是「內容」：人格文字、模型吐出來的對話、工具的 schema 與 inst。內容裡什麼 `$` 都可能有，不能被當指示詞 |
+| `info.json` | **每一格都解**（含 `_metainfo`、`engine`） | 這是人寫的設定，寫的人想 `$env`／`$fmt`／`$ref` 就用 |
+| `state.json`、`system`／`history`／`tools` 指到的檔 | **整份不解，原樣讀** | `state.json` 是 agent 自己寫的、只有一格；其他是「內容」：人格文字、模型吐出來的對話、工具的 schema 與 inst。內容裡什麼 `$` 都可能有，不能被當指示詞 |
 
 解的那一份，規則照 [directives.md](directives.md)：
 
 - **每一格都能放**：頂層整份、每個欄位、陣列的每個元素、物件的每個值；先解再驗型別。
   **`_metainfo` 也解**（這點跟 inst 不同：inst 的 `_metainfo` 不解）。
 - **中心路徑（`$ref` 找檔的地方）＝agent 資料夾**。
-- **`$ref:""`＝這個值所在的那份檔**；位置＝實體路徑（`state.json` 的 `/tools/0`…），相對 `$at`
+- **`$ref:""`＝這個值所在的那份檔**；位置＝實體路徑（`info.json` 的 `/tools/0`…），相對 `$at`
   照 directives.md 3.2 算。
 - **`$env` 讀的是 aos-agent 自己的環境**。
 - 解錯了（`UnknownDirective`、`ReferenceCycle`…）＝讀驗錯誤，代號照 directives.md §6，退出碼 1。
 
 不解的那些：
 
-- `system`／`history`／`tools` 的值（路徑）本身在 `state.json` 裡，**那一格會解**（例如
+- `system`／`history`／`tools` 的值（路徑）本身在 `info.json` 裡，**那一格會解**（例如
   `"history": {"$env": "BOB_HISTORY"}`）；解出路徑之後，**讀進來的東西不解**。
 - 工具的 `_meta` 是一份 inst，它裡面的指示詞是**跑工具的時候**由 inst 那套（aos-exec／aos_inst，
   base＝agent 資料夾）解的，不是 agent 讀工具檔時解。
-- agent 寫回去的檔：`state.json` 只改 `state` 那一格，改的是**原始 JSON**（沒解過的），其他格
-  原樣抄回，人寫的 `$ref` 不會被展開後的值蓋掉；`history` 指到的檔本來就原樣讀寫。
+- agent 寫的檔（`state.json`、`history` 指到的檔）都是原樣讀寫，跟 `info.json` 沒關係；`info.json`
+  agent 永遠不寫，所以人寫的 `$ref` 不會被展開後的值蓋掉。
 
-### 2.1 `state.json`：總表
+### 2.1 `info.json`：總表（人寫）
 
 ```json
 {
   "_metainfo": {"_type": "llm_agent", "_version": 1},
-  "state":   "idle",
   "system":  "prompts/system.json",
   "history": "prompts/history.json",
   "tools":   ["tools/base.json", "tools/team.json"],
@@ -81,19 +80,25 @@ agent-bob/
 }
 ```
 
-| 鍵 | 型別 | 沒寫時 | 誰寫 | 意思 |
-|---|---|---|---|---|
-| `_metainfo` | 物件 | **必填** | 人 | `_type` 只認 `"llm_agent"`、`_version` 只認整數 `1`；規則同 [inst-posix.md §1](inst-posix.md)。跟 inst 不同的是必填：這是新格式、沒有舊檔要相容，而且這就是「這是 agent 資料夾」的記號 |
-| `state` | `idle`／`think`／`wait`／`act` | `idle` | **agent** | 四格之一（§3） |
-| `system` | 路徑字串 | `prompts/system.json` | 人 | 人格在哪個檔（§2.2） |
-| `history` | 路徑字串 | `prompts/history.json` | 人 | 記憶在哪個檔（§2.3；那個檔是 agent 寫的） |
-| `tools` | 路徑陣列 | `[]` | 人 | 用哪幾份工具檔（§2.4），所有檔的陣列**接成一個**，順序＝檔的順序 |
-| `engine` | 物件 | **必填** | 人 | 用什麼想（§2.5） |
+| 鍵 | 型別 | 沒寫時 | 意思 |
+|---|---|---|---|
+| `_metainfo` | 物件 | **必填** | `_type` 只認 `"llm_agent"`、`_version` 只認整數 `1`；規則同 [inst-posix.md §1](inst-posix.md)。跟 inst 不同的是必填：這是新格式、沒有舊檔要相容，而且這就是「這是 agent 資料夾」的記號 |
+| `system` | 路徑字串 | `prompts/system.json` | 人格在哪個檔（§2.2） |
+| `history` | 路徑字串 | `prompts/history.json` | 記憶在哪個檔（§2.3；那個檔是 agent 寫的） |
+| `tools` | 路徑陣列 | `[]` | 用哪幾份工具檔（§2.4），所有檔的陣列**接成一個**，順序＝檔的順序 |
+| `engine` | 物件 | **必填** | 用什麼想（§2.5） |
 
-- agent 每格結束只改寫 `state`，其他 key 原樣抄回。所以 **`state` 那一格在原始 JSON 裡必須是字面
-  字串**——不能寫成指示詞、頂層也不能整份 `$ref` 出去（不然寫不回來）；違反＝`StateInvalid`。
-- `state` 不是四格之一 → `StateInvalid`；`system`／`history` 不是字串、`tools` 不是字串陣列、
-  `engine` 不是物件 → `FieldTypeMismatch`。
+- `system`／`history` 不是字串、`tools` 不是字串陣列、`engine` 不是物件 → `FieldTypeMismatch`。
+
+### 2.1.1 `state.json`：走到哪（agent 寫）
+
+```json
+{"state": "idle"}
+```
+
+- `state`：`idle`／`think`／`wait`／`act` 四格之一（§3）。就這一個 key。
+- **檔不存在＝`{"state": "idle"}`**，agent 第一次動就會把它寫出來；存在但壞掉＝`ReadFailed`／`JsonSyntax`。
+- 原樣讀寫、不解指示詞；`state` 不是四格之一 → `StateInvalid`。
 
 ### 2.2 人格（`system` 指到的檔，慣例放 `prompts/system.json`）
 
@@ -144,7 +149,7 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 ```
 
 - `tools` 列到的檔**一定要在**：不存在＝`ReadFailed`（跟人格、記憶不同——那兩個沒檔有預設，工具檔是明列的）。
-- **合併**：`state.json` 的 `tools` 列的每份檔各是一個陣列，agent 把它們**接成一個陣列**（照檔的順序）；
+- **合併**：`info.json` 的 `tools` 列的每份檔各是一個陣列，agent 把它們**接成一個陣列**（照檔的順序）；
   送給模型之前把每個元素**所有 `_` 開頭的 key 拿掉**（`_meta`、`_note`…），剩下的原樣送——所以想加
   註解就用 `_` 開頭，不會漏給模型。
 - `_meta`：**必填**，一份 posix inst（`_metainfo` 可省＝posix v1）。缺了、或不是物件 → `ToolInvalid`。
@@ -164,9 +169,9 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
   讓模型自己改；不算 agent 的錯。
 - base（inst 的「家」）＝agent 資料夾；沒寫 `cwd` 就在 agent 資料夾跑。
 - 退出碼非 0 ＝工具錯誤：`content` 是「工具 sh 失敗（exit 1）：」＋stdout 前段，模型自己看著辦；不算 agent 的錯。
-- 要關掉一個工具就從 `state.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉；沒有 enable／disable 開關。
+- 要關掉一個工具就從 `info.json` 的 `tools` 拿掉那份檔、或從工具檔裡刪掉；沒有 enable／disable 開關。
 
-### 2.5 `engine`（在 `state.json` 裡）：用什麼想
+### 2.5 `engine`（在 `info.json` 裡）：用什麼想
 
 「想」＝把 system＋history＋工具表交出去、換一則 assistant 訊息回來。這一版只有一種：agent 程式
 自己打 OpenAI 相容的 `chat/completions`，**當場等回來**（這一格會卡住等網路；第一版接受）。
@@ -189,7 +194,7 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 - 回來拿 `choices[0].message` 當 assistant 訊息接進記憶；HTTP 錯、逾時、形狀不對 → 這次「想」算錯
   （下一格重試，不是讀驗錯誤）。
 - 必填欄位缺、型別不對 → `EngineInvalid`。
-- `engine` 整格在 `state.json` 裡，所以跟別格一樣吃指示詞：整包 `{"$ref": "engines/lmstudio.json"}`
+- `engine` 整格在 `info.json` 裡，所以跟別格一樣吃指示詞：整包 `{"$ref": "engines/lmstudio.json"}`
   從別的檔拿也行。
 - 「引擎是外面一支程式」「引擎晚點才給結果、agent 先去等一個檔」**之後再說**。
 
@@ -213,14 +218,14 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 
 | 代號 | 什麼時候 |
 |---|---|
-| `NotAnAgent` | 沒有 `state.json`、沒有 `_metainfo`、或 `_metainfo._type`（解完）不是 `llm_agent` |
+| `NotAnAgent` | 沒有 `info.json`、沒有 `_metainfo`、或 `_metainfo._type`（解完）不是 `llm_agent` |
 | `ReadFailed`／`JsonSyntax`／`NotAnObject`／`NotAnArray` | 某個檔讀不到／不是 JSON／頂層型別不對 |
 | `MetainfoInvalid`／`UnsupportedVersion` | `_type` 對了但 `_metainfo` 形狀壞（不是物件、缺 `_version`）／`_version` 不是整數 `1` |
 | `FieldTypeMismatch` | 某格型別不對 |
 | `MessageInvalid` | `history.json` 裡某一則不合 §2.3 |
 | `ToolInvalid` | 工具檔不是陣列、元素缺 `type`／`function`／`function.name`、合併後同名、缺 `_meta`、`_meta` 不是合法 inst、`_meta` 寫了 `stdin`／`stdout` |
 | `EngineInvalid` | `engine` 缺 `endpoint`／`model`、型別不對 |
-| `StateInvalid` | `state.json` 的 `state` 不是四格之一 |
+| `StateInvalid` | `state.json` 的 `state` 不是四格之一（§2.1.1） |
 
 指示詞的代號（`UnknownDirective`、`EnvironmentVariableMissing`、`ReferenceCycle`…）照
 [directives.md §6](directives.md)。
@@ -245,4 +250,4 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 5. 工具沒有逾時設定（inst 本身沒有逾時欄位）；要的話之後加。
 6. `engine` 只剩 OpenAI 相容 HTTP、當場等回來——違反「一格不等網路」，第一版先接受。
 7. 沒有任何上限與計數（一題幾格、連錯幾次、等多久）——使用者說先只剩 `state`，要管再說。
-8. agent 寫回 `state.json` 時改的是原始 JSON，不是解完的結果。
+8. `state.json` 不解指示詞、沒檔＝`idle`：它是 agent 自己的檔，只有一格，沒必要吃指示詞。
