@@ -45,7 +45,7 @@ aos-agent [dir]
 | 檔裡是 | 變成 |
 |---|---|
 | 字串 | 一則 `{"role": "user", "content": …}` |
-| 一則訊息物件 | 原樣一則（`role` 照 [aos-llm-ask.md §2.3](aos-llm-ask.md) 驗，不合＝`MessageInvalid`） |
+| 一則訊息物件 | 原樣一則（`role` 照 [aos-llm-ask.md §2.2](aos-llm-ask.md) 驗，不合＝`MessageInvalid`） |
 | 訊息陣列 | 原樣一串 |
 
 - 檔不存在、或空陣列＝沒有輸入。
@@ -71,8 +71,10 @@ aos-agent [dir]
 - 一條＝路徑字串，或 `{"$opt": 名字|[名字…], "$val": 路徑|[路徑…]}`（`$opt` 慣例跟 inst 一樣；不認得
   ＝`UnknownOption`、互斥＝`OptionConflict`）。`$val` 陣列＝這一條同時盯好幾個檔。
 - `waits` 本身可以是一條（不包陣列）或一條陣列。路徑相對於 agent 資料夾；`.done` 結尾的檔不算。
-- 這格跟別格一樣解指示詞，所以整張表 `$ref` 到別的檔、路徑用 `$fmt` 拼都行；`since` 這種不是 `$`
-  開頭的 key 指示詞機制會放著不動，agent 自己讀。
+- aos-agent 會**改寫這格**（劃掉到了的條目），所以 `waits` 在原始 JSON 裡必須是**字面的陣列**（或字面
+  的一條），不能整格 `$ref` 出去（[agent.md §2](agent.md)；違反＝`FieldTypeMismatch`）。陣列裡**每一條**
+  照樣解指示詞（路徑用 `$fmt` 拼、一條 `$ref` 到別的檔都行），劃掉是按索引劃原始那一條。`since` 這種
+  不是 `$` 開頭的 key 指示詞機制會放著不動，agent 自己讀。
 
 | 選項 | 「到了」的意思 | 備註 |
 |---|---|---|
@@ -110,7 +112,7 @@ touch 那個檔——不用另外做 `pause`／`continue`。
 | `idle` | 沒東西 | 不變 | **101** |
 | `think` | 用 [aos-llm-ask](aos-llm-ask.md) 的函式庫問一次，`choices[0].message` 接在記憶尾巴 | 有 `tool_calls` → `act`；沒有（回話）→ `idle` | 0 |
 | `think` | 引擎失敗（aos-llm-ask 的「3」那類）→ stderr 一行、記憶不動 | 不變（下一格重試） | 0 |
-| `act` | 記憶尾巴那則 `assistant` 的每個 `tool_calls[i]`：照名字找工具、拿 `_meta` 當 inst 跑（`arguments` 字串原樣進 stdin、stdout 整段當結果），**每個 call 接一則 `tool` 訊息**（順序照 `tool_calls`）。找不到的工具＝「沒有這個工具：xxx」；退出碼非 0＝「工具 xxx 失敗（exit n）：」＋stdout | `think` | 0 |
+| `act` | 記憶尾巴那則 `assistant` 的每個 `tool_calls[i]`：照名字找工具、拿 `_meta` 當 inst 跑（`arguments` 字串原樣進 stdin、stdout 整段當結果），**每個 call 接一則 `tool` 訊息**（順序照 `tool_calls`）。找不到的工具＝「沒有這個工具：xxx」；退出碼非 0＝「工具 xxx 失敗（exit n）：」＋stdout；`_meta` 那份 inst 解不開／跑不起來（aos-exec 的 125 那類）＝「工具 xxx 跑不起來：」＋那一行錯誤。三種都只是給模型看的 `tool` 訊息，不算 agent 的錯 | `think` | 0 |
 
 - **為什麼 `act` 不用等**：模型那邊的硬規定是一則 `assistant` 帶了 `tool_calls`，下一次問之前每個 call
   都要有一則 `tool` 訊息緊接在後面。`act` 一格內全部跑完接上，就永遠不會違反。

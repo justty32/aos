@@ -1,6 +1,6 @@
 # agent 資料夾規範（第 1 版，**草稿**）
 
-← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-llm-ask.md](aos-llm-ask.md)（問模型一次）、[aos-agent.md](aos-agent.md)（走一格；使用者還在想）
+← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-llm-ask.md](aos-llm-ask.md)（問模型一次）、[aos-agent.md](aos-agent.md)（走一格）
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
 > 分配好每個檔在幹嘛，指示詞是輔助**。
@@ -8,7 +8,7 @@
 > 這份**只講「什麼是一個 agent 資料夾」**：兩份檔（`info.json`、`state.json`）、指示詞解不解、
 > 共用的錯誤代號。兩份檔裡各程式自己的欄位、它們指到的檔長什麼樣，**由用它的程式的規範定**
 > （`info.json` 的 `system`／`history`／`tools`／`engine`＝[aos-llm-ask.md §2](aos-llm-ask.md)；
-> `state.json` 的 `input`／`returns`／`waits`＝[aos-agent.md §2](aos-agent.md)）。
+> `state.json` 的 `input`／`waits`＝[aos-agent.md §2](aos-agent.md)）。
 
 一句話：**一個 agent 就是一個資料夾**——`info.json` 說這是 agent、以及各程式要的設定；
 `state.json` 記走到哪、以及走的時候要看哪些外面的檔。
@@ -20,7 +20,7 @@
 ```
 agent-bob/
   info.json            _metainfo ＋ 各程式要的設定（system／history／tools／engine…，見 aos-llm-ask.md）
-  state.json           state ＋ aos-agent 的三個入口（input／returns／waits，見 aos-agent.md）
+  state.json           state ＋ aos-agent 的兩個入口（input／waits，見 aos-agent.md）
   prompts/             慣例位置：人格、記憶
   tools/               慣例位置：工具檔
 ```
@@ -53,9 +53,9 @@ agent-bob/
 - 指到別的檔的那一格（例如 `"history": {"$env": "BOB_HISTORY"}`）**會解**；解出路徑之後，
   **讀進來的東西不解**。工具的 `_meta` 是一份 inst，它裡面的指示詞是跑工具的時候由 inst 那套
   （base＝agent 資料夾）解的。
-- 程式要改寫這兩份檔的某一格（例如 aos-agent 改 `state`）時，改的是**原始 JSON** 的那一格、其他格
-  原樣抄回，不是把解完的結果寫回去——所以被程式改寫的那一格在原始 JSON 裡必須是字面值，頂層也不能
-  整份是指示詞（不然寫不回來）。
+- 程式要改寫這兩份檔的某一格（例如 aos-agent 改 `state`、劃掉 `waits` 的一條）時，改的是**原始 JSON**
+  的那一格、其他格原樣抄回，不是把解完的結果寫回去——所以被程式改寫的那一格在原始 JSON 裡必須是
+  字面值（哪些格由各程式的規範說），頂層也不能整份是指示詞（不然寫不回來）。
 
 ## 3. `info.json`
 
@@ -105,7 +105,7 @@ agent-bob/
 ## 6. 這份規範沒管的事
 
 - **程式做什麼**：問模型＝[aos-llm-ask.md](aos-llm-ask.md)；狀態機、收 user 訊息、等檔案、逾時、
-  跑工具＝[aos-agent.md](aos-agent.md)（使用者還在想）。
+  跑工具＝[aos-agent.md](aos-agent.md)。
 - **輸入從哪來、回話回給誰**（信箱、aos-user、別的 agent）、**怎麼放進 kernel**：之後再說。
 
 ## 我自己選的、使用者可以推翻的
