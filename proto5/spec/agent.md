@@ -195,3 +195,17 @@ agent。`_type` 只認 `"agent"`、`_version` 只認整數 `1`。
    拿到、不經過 `wait`，四格裡 `wait` 只有 `posix` 引擎與慢工具會用到。這樣可以嗎？
 7. `tools` 裡工具**通常會 `$ref` 到 `tools/<名字>/tool.json`**，那 `run` 裡的相對路徑（`argv[0]`）
    以誰為中心——agent 資料夾（現在寫的）還是 `tool.json` 所在的資料夾？
+
+我自己再讀一遍挖到的邊緣狀況（也要決定）：
+
+8. **`history`／`state` 根本沒寫**時，agent 第一次寫回去要寫到哪？照 §4 的邏輯是「字面」那條
+   ＝寫進 `agent.json` 本身；但這樣一個原本只有設定的 `agent.json` 會開始被 agent 改寫。要不要規定
+   「沒寫＝預設寫到 `history.json`／`state.json`」，讓 `agent.json` 永遠是人的？
+9. **`tools` 陣列裡每個元素是 `$ref`**（常態），改工具的 `enabled` 時（`aos-agent tools disable`）
+   要寫回哪份檔——`tool.json` 還是 `agent.json` 那個元素？跟 §4 同一個問題，但 `tools` 是人寫的、
+   不是 agent 寫的，所以改的人是 CLI 不是狀態機。
+10. **`history` 的 `$ref` 讀的時候會經過指示詞解析**：如果 `history.json` 裡某則訊息的 `content`
+    剛好是一個 `$` 開頭 key 的物件（模型回了 JSON），會被誤當指示詞。要不要規定 `history` 只解
+    最外層那一格、裡面的訊息**不解指示詞**（原樣）？`system` 同理——人格文字裡有 `${x}` 不該被動。
+11. **`engine.api_key` 用 `$env`**：agent 每格重讀 `agent.json`，環境變數不在＝`EnvironmentVariableMissing`
+    ＝整個 agent 讀不起來。這是我們要的（設定壞就不跑）還是該降級成「引擎壞、其他照走」？
