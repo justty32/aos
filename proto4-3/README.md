@@ -7,12 +7,14 @@
 跟 proto4-2 比，這一版改了四件事：
 
 1. **`timeout_ms` 拿掉**。時限不是指令的事，是「反覆執行 inst.json 的傢伙」的事。單發的
-   aos-exec 只用命令列旗標 `--timeout-ms` 自己管；寫在 inst.json 裡＝未知 key、拒絕。
+   aos-exec 只用命令列旗標 `--timeout-ms` 自己管；寫在 inst.json 裡不認得、直接忽略
+   （2026-09-21 起；之前是拒絕）。
 2. **沒寫的串流一律 `/dev/null`**，不是繼承、也不是抓回哪個檔。單發執行器不替你收輸出，
    要就自己寫檔名。
 3. **相對路徑的中心是 cwd**（解析完的那個工作目錄），不是 `xxx`。只有 `cwd` 自己的相對
    路徑從 `xxx` 起算，不然沒有中心可言。
-4. 環境欄位叫 **`envs`**（寫 `env` ＝未知 key），多一個整個物件層級的 `$opt: clear`。
+4. 環境欄位叫 **`envs`**（寫 `env` 不認得、忽略），多一個整個物件層級的選項 `clear`。
+   選項物件 `{"$opt": …, "$val": …}` 的全部規則見 [docs/exec.md](docs/exec.md)。
 
 **「一直跑」是 aos-run 的事**（往下看那一節）。它就是 `import aos_exec` 反覆叫
 `run_target()`，所以核心就是那一個函式，兩支命令列都只是包它。
@@ -115,7 +117,8 @@ code, kind = aos_exec.run_target("/path/to/folder", dir_target=".aos/inst.json",
   會被擋（同一條鏈撞到同一個 realpath＋pointer），一條夠長的鏈可以一直解下去。
 - **`$ref` 的相對路徑一律以 cwd 為中心**，不是以「被 `$ref` 的那個檔所在的資料夾」為中心。
   所以從別的資料夾 `$ref` 進來的一份 inst.json，它裡面的相對路徑還是照 cwd 算。
-- `$fmt` 只有 `env:` 一個 namespace，沒有路徑變數、沒有預設值語法、沒有跳脫。
+- `$fmt` 的 `${name}` 只查自己那張本地變數表，沒有 namespace、沒有路徑變數、沒有預設值語法、
+  沒有跳脫。
 - 沒有並行（凍結版的 `parallel`）、沒有批次、沒有重試、沒有退避。
 
 aos-daemon 這一版另外沒做的：

@@ -14,17 +14,6 @@ class TestReject(ExecCase):
         self.assertTrue(r.stderr.startswith("aos-exec: %s: " % code), r.stderr)
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
 
-    def test_timeout_ms_is_now_an_unknown_key(self):
-        """時限歸 aos-exec 的旗標管，寫在 inst.json 裡就是未知欄位。"""
-        self.bad({"argv": ["true"], "timeout_ms": 1000}, "UnknownKey")
-
-    def test_env_is_now_an_unknown_key(self):
-        """欄位名是 `envs`；寫成 `env` 就是不認得的欄位，拒絕。"""
-        self.bad({"argv": ["true"], "env": {"A": "1"}}, "UnknownKey")
-
-    def test_other_unknown_key(self):
-        self.bad({"argv": ["true"], "parallel": True}, "UnknownKey")
-
     def test_not_json(self):
         self.bad("{這不是 JSON", "JsonSyntax")
 
@@ -61,13 +50,18 @@ class TestReject(ExecCase):
     def test_env_key_empty(self):
         self.bad({"argv": ["true"], "envs": {"": "x"}}, "EnvKeyInvalid")
 
-    def test_envs_not_an_object(self):
-        self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$envs": "x"}},
+    def test_envs_clear_val_not_an_object(self):
+        self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$val": "x"}},
                  "FieldTypeMismatch")
 
     def test_env_clear_with_extra_key(self):
-        """清空型式只准 $opt ＋ $envs 這兩個 key。"""
-        self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$envs": {}, "A": "1"}},
+        """選項物件只准 $opt ＋ $val 這兩個 key。"""
+        self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$val": {}, "A": "1"}},
+                 "DirectiveKeyCountInvalid")
+
+    def test_old_dollar_envs_key_is_rejected(self):
+        """舊寫法 {"$opt":"clear","$envs":{…}} 不再認得：$envs 就是多了一個 key。"""
+        self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$envs": {"A": "1"}}},
                  "DirectiveKeyCountInvalid")
 
     def test_env_unknown_option(self):
@@ -85,18 +79,14 @@ class TestReject(ExecCase):
                  "DirectiveValueTypeMismatch")
 
     def test_opt_merge_only_on_stderr(self):
-        self.bad({"argv": ["true"], "stdout": {"$opt": "merge"}}, "UnknownDirective")
+        """選項名是看位置的：stdout 沒有 merge 這個選項。"""
+        self.bad({"argv": ["true"], "stdout": {"$opt": "merge"}}, "UnknownOption")
 
     def test_stderr_unknown_option(self):
         self.bad({"argv": ["true"], "stderr": {"$opt": "split"}}, "UnknownOption")
 
     def test_metainfo_not_an_object(self):
         self.bad({"argv": ["true"], "_metainfo": "posix"}, "MetainfoInvalid")
-
-    def test_metainfo_extra_key(self):
-        self.bad({"argv": ["true"],
-                 "_metainfo": {"_type": "posix", "_version": 1, "extra": 1}},
-                 "MetainfoInvalid")
 
     def test_metainfo_missing_version(self):
         self.bad({"argv": ["true"], "_metainfo": {"_type": "posix"}}, "MetainfoInvalid")

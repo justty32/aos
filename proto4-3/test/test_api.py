@@ -38,10 +38,10 @@ class TestApi(ExecCase):
         self.assertEqual((code, kind), (143, "child"))       # 逾時也算「跑完了一次」
 
     def test_run_target_reports_the_reason_on_stderr(self):
-        self.inst({"argv": ["true"], "timeout_ms": 5})
+        self.inst({"argv": "true"})
         code, kind, err = self.call(self.d)
         self.assertEqual((code, kind), (1, "aos"))
-        self.assertTrue(err.startswith("aos-exec: UnknownKey: "), err)
+        self.assertTrue(err.startswith("aos-exec: FieldTypeMismatch: "), err)
 
     def test_kind_says_whose_code_it_is(self):
         """三種 kind：child＝子程式跑完了、aos＝aos-exec 自己失敗、usage＝用法錯。"""

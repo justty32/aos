@@ -12,8 +12,8 @@
 「反覆執行」不是這支程式的事，時限也只是命令列旗標——之後的 aos-run 會直接
 `import aos_exec` 反覆叫 `run_target()`，所以核心就是那一個函式，命令列只是包它。
 
-這支程式**不替你收輸出**：inst.json 裡沒寫的串流一律 `/dev/null`，不繼承、不抓回。
-也**不注入任何 `AOS_*` 環境變數**。
+這支程式**不替你收輸出**：inst.json 裡沒寫的串流一律 `/dev/null`，不繼承、不抓回
+（要繼承就自己在那一格開 `{"$opt":"inherit"}`）。也**不注入任何 `AOS_*` 環境變數**。
 
 `run_target()` 回的是 **`(code, kind)`**：`kind` 說這個碼是誰的——`"child"`＝子程式真的
 跑完了一次（它的結束碼／128+N／126／127），`"aos"`＝aos-exec 自己失敗（inst.json 壞、
@@ -44,8 +44,9 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, 
       找不到程式＝127、沒執行權＝126。有寫 `exit` 欄位的話寫進去的就是這個碼。
     - `"aos"`：**aos-exec 自己**失敗，那次根本沒跑——inst.json 讀不到（`.json` 路徑
       **不存在也算這種**，不是用法錯：daemon 收一個還沒出現的 inst.json 時靠的就是這條，
-      檔案一出現就自然跑起來）／不是物件／格式壞／指示詞解不開、`exit` 檔的父目錄不存在、
-      `cwd` 不是資料夾、重導向的檔開不起來。code 是 1（命令列會換成 125），不寫 exit 檔。
+      檔案一出現就自然跑起來）／不是物件／格式壞／指示詞解不開、`mkdir` 建不起來、`exit`
+      檔的父目錄不存在、`cwd` 不是資料夾、重導向的檔開不起來。code 是 1（命令列會換成
+      125），不寫 exit 檔。
     - `"usage"`：用法錯——`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔
       不存在。code 是 2。
 
@@ -105,16 +106,36 @@ def _run_plain(path, timeout_ms, on_spawn=None, stderr=None, args=None):
 
 
 def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
-    """把一份 inst.json 解開、開好串流、跑一次。base ＝ `xxx`（cwd 相對路徑的起點）。"""
+    """把一份 inst.json 解開、開好串流、跑一次。base ＝ `xxx`（cwd 相對路徑的起點）。
+
+    選項在這裡落地：`mkdir` 在 chdir／開檔前 `makedirs`（建不起來＝aos-exec 自己失敗）、
+    `append` 用 `ab` 開檔、`inherit` 那條串流傳 None 給 Popen（跟普通檔案模式一樣）、
+    stderr 的 `merge` 傳 `subprocess.STDOUT`（所以 stdout 是 append／inherit 它就跟著）。
+    命令列的 `stderr` 蓋過 inst.json 的整個 stderr 設定，包括 merge／inherit／append／mkdir。
+    """
     try:
         inst = aos_inst.load(target, base)
     except aos_inst.InstError as e:
         return _err(1, AOS, str(e))
 
-    if inst["exit"]:                    # 父目錄不存在＝aos-exec 自己失敗，不幫忙 mkdir
-        d = os.path.dirname(inst["exit"]) or "."
+    # 先建該建的目錄：cwd 自己，再來是三個輸出檔的父目錄。建不起來＝沒跑成（125）。
+    to_make = [("cwd", inst["cwd"])] if inst["cwd_mkdir"] else []
+    for name in ("stdout", "stderr", "exit"):
+        if name == "stderr" and stderr is not None:
+            continue                            # 命令列蓋掉了，inst 的 stderr 設定整個不算
+        if inst[name]["mkdir"]:
+            to_make.append((name, os.path.dirname(inst[name]["path"]) or "."))
+    for name, d in to_make:
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError as e:
+            return _err(1, AOS, "%s 的 mkdir 建不起來 %s：%s" % (name, d, e))
+
+    exit_path = inst["exit"]["path"]
+    if exit_path:                       # 父目錄不存在＝aos-exec 自己失敗（沒開 mkdir 就不幫建）
+        d = os.path.dirname(exit_path) or "."
         if not os.path.isdir(d):
-            return _err(1, AOS, "exit 檔的父目錄不存在（不會幫你建）：%s" % d)
+            return _err(1, AOS, "exit 檔的父目錄不存在（沒開 mkdir 不會幫你建）：%s" % d)
     if not os.path.isdir(inst["cwd"]):  # 連 chdir 都做不到＝aos-exec 自己失敗，沒跑成
         return _err(1, AOS, "cwd 不是資料夾：%s" % inst["cwd"])
 
@@ -124,30 +145,41 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
     opened = []
     try:
         try:
-            fin = open(inst["stdin"] or os.devnull, "rb")
+            fin = None if inst["stdin"]["inherit"] else open(
+                inst["stdin"]["path"] or os.devnull, "rb")
             opened.append(fin)
-            fout = open(inst["stdout"] or os.devnull, "wb")
+            fout = _open_out(inst["stdout"])
             opened.append(fout)
             if stderr == "-":
                 ferr = sys.stderr                # 繼承 aos-exec 的 stderr，不能 close
             elif stderr is not None:
                 ferr = open(stderr, "wb")        # 命令列路徑以呼叫 aos-exec 時的 cwd 為中心
                 opened.append(ferr)
-            elif inst["stderr_merge"]:           # {"$opt":"merge"}＝跟 stdout 同一條
-                ferr = fout
+            elif inst["stderr"]["merge"]:        # 跟 stdout 同一條，stdout 怎麼設它就怎麼走
+                ferr = subprocess.STDOUT
             else:
-                ferr = open(inst["stderr"] or os.devnull, "wb")
+                ferr = _open_out(inst["stderr"])
                 opened.append(ferr)
         except OSError as e:
             return _err(1, AOS, "重導向的檔案開不起來：%s" % e)
         return _spawn(inst["argv"], inst["cwd"], env, fin, fout, ferr,
-                      timeout_ms, inst["exit"], on_spawn)
+                      timeout_ms, exit_path, on_spawn, inst["exit"]["append"])
     finally:
         for f in opened:
-            f.close()
+            if f is not None:                    # inherit 的那條是 None，沒東西可關
+                f.close()
 
 
-def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None):
+def _open_out(field):
+    """stdout／stderr 一格：inherit＝None（Popen 就繼承）、append＝`ab`、不然 `wb`（建立並清空）；
+    沒寫路徑＝/dev/null。"""
+    if field["inherit"]:
+        return None
+    return open(field["path"] or os.devnull, "ab" if field["append"] else "wb")
+
+
+def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None,
+           exit_append=False):
     """跑一次、等它、逾時就砍，回 `(結束狀態, "child")`（順便寫 exit 檔）。
 
     argv[0] 走**疊加後**的 env 裡的 PATH（subprocess 帶 env= 時本來就這樣查；env 被
@@ -158,11 +190,11 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
         p = subprocess.Popen(argv, cwd=cwd, env=env, start_new_session=True,
                              stdin=fin, stdout=fout, stderr=ferr)
     except PermissionError as e:
-        return _finish(126, exit_path, "沒有執行權：%s（exit 126）" % e)
+        return _finish(126, exit_path, "沒有執行權：%s（exit 126）" % e, exit_append)
     except (FileNotFoundError, NotADirectoryError) as e:
-        return _finish(127, exit_path, "找不到程式：%s（exit 127）" % e)
+        return _finish(127, exit_path, "找不到程式：%s（exit 127）" % e, exit_append)
     except OSError as e:
-        return _finish(126, exit_path, "起不了子行程：%s（exit 126）" % e)
+        return _finish(126, exit_path, "起不了子行程：%s（exit 126）" % e, exit_append)
 
     if on_spawn:
         on_spawn(p)                                 # 開起來了：aos-run 要拿得到它才砍得掉
@@ -180,7 +212,7 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     code = p.returncode
     if on_spawn:
         on_spawn(None)                              # 收完屍：那個 pid 別再被砍
-    return _finish(code if code >= 0 else 128 + (-code), exit_path, None)
+    return _finish(code if code >= 0 else 128 + (-code), exit_path, None, exit_append)
 
 
 def _sig_group(p, sig):
@@ -191,26 +223,27 @@ def _sig_group(p, sig):
         pass
 
 
-def _finish(status, exit_path, note):
+def _finish(status, exit_path, note, exit_append=False):
     """收尾：該說的說一句、該寫的 exit 檔寫掉，回 `(那個結束狀態, "child")`。
 
     走到這裡就代表**跑完了一次**（126／127／逾時也算），所以 kind 是 child、exit 檔照寫；
-    只有 exit 檔本身寫不進去才翻成 aos。
+    只有 exit 檔本身寫不進去才翻成 aos。`exit_append`＝接在檔尾（`exit` 的 append 選項）。
     """
     if note:
         sys.stderr.write("aos-exec: %s\n" % note)
     if exit_path:
         try:
-            _write_exit(exit_path, status)
+            _write_exit(exit_path, status, exit_append)
         except OSError as e:
             return _err(1, AOS, "exit 檔寫不進去 %s：%s" % (exit_path, e))
     return status, CHILD
 
 
-def _write_exit(path, status):
-    """`exit` 欄位：十進位結束碼＋一個換行，fsync 檔案與它的父目錄（崩潰後對帳的證據）。"""
+def _write_exit(path, status, append=False):
+    """`exit` 欄位：十進位結束碼＋一個換行，fsync 檔案與它的父目錄（崩潰後對帳的證據）。
+    `append`＝不清空、接在檔尾（一次一行）；不然建立並清空。"""
     d = os.path.dirname(path) or "."
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o666)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | (os.O_APPEND if append else os.O_TRUNC), 0o666)
     try:
         os.write(fd, ("%d\n" % status).encode("ascii"))
         os.fsync(fd)
