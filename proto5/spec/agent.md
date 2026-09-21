@@ -62,7 +62,7 @@ agent-bob/
 
 - `system`／`history`／`tools` 的值（路徑）本身在 `state.json` 裡，**那一格會解**（例如
   `"history": {"$env": "BOB_HISTORY"}`）；解出路徑之後，**讀進來的東西不解**。
-- 工具的 `run` 是一份 inst，它裡面的指示詞是**跑工具的時候**由 inst 那套（aos-exec／aos_inst，
+- 工具的 `_meta` 是一份 inst，它裡面的指示詞是**跑工具的時候**由 inst 那套（aos-exec／aos_inst，
   base＝agent 資料夾）解的，不是 agent 讀工具檔時解。
 - agent 寫回去的檔：`state.json` 只改 `state` 那一格，改的是**原始 JSON**（沒解過的），其他格
   原樣抄回，人寫的 `$ref` 不會被展開後的值蓋掉；`history` 指到的檔本來就原樣讀寫。
