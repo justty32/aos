@@ -28,10 +28,12 @@ argv 元素。環境就是繼承的、沒有 exit 檔、沒有重導向。它沒
 ## inst.json 長什麼樣
 
 只能是**一個 JSON 物件**，七個欄位，只有 `argv` 必填，**沒寫在表上的 key 一律拒絕**——
-不是忽略，舊的執行檔碰到新欄位寧可硬失敗，也別默默少一個限制。
+不是忽略，舊的執行檔碰到新欄位寧可硬失敗，也別默默少一個限制。頂層另外允許一個可選
+的 `_metainfo`，見下方說明。
 
 ```json
 {
+  "_metainfo": {"_type": "posix", "_version": 1},
   "argv": ["sh", "-c", "cat; echo $GREET"],
   "stdin": "in.txt",
   "stdout": "out.txt",
@@ -41,6 +43,19 @@ argv 元素。環境就是繼承的、沒有 exit 檔、沒有重導向。它沒
   "envs": {"GREET": "hi", "PATH": {"$fmt": "${env:PATH}:/opt/bin"}}
 }
 ```
+
+### `_metainfo`：這份 inst 是哪一種、第幾版（可選）
+
+只講「這份 inst.json 用的是哪一種格式、第幾版」，不參與執行——不是環境變數、不是參數、
+不會傳給子程式：
+
+- **沒寫就等於 `{"_type": "posix", "_version": 1}`**，所以以前寫的 inst.json 都不用改。
+- 寫了就必須**剛好**是 `{"_type": "posix", "_version": 1}` 這個形狀：一個 JSON 物件、
+  剛好 `_type` 跟 `_version` 這兩個 key，不多不少；`_type` 是字串 `"posix"`；`_version`
+  是整數 `1`（JSON 的 `true`／`false` 不算整數）。
+- 不符合上面任何一條都拒絕（見下面 125 的表）：不是物件或 key 不對＝`MetainfoInvalid`、
+  `_type` 不是 `"posix"`＝`UnsupportedInstType`、`_version` 不是 `1`＝
+  `UnsupportedInstVersion`。
 
 | 欄位 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
@@ -136,7 +151,7 @@ aos-exec 自己的 stderr；給檔案路徑則寫進那個檔，路徑以你呼�
 | 退出碼 | 什麼時候 |
 |---|---|
 | 2 | 用法錯（旗標不認得、沒給 `xxx`、`--timeout-ms` 是負數、inst 目標卻給了 `--`）、`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔不存在 |
-| **125** | **aos-exec 自己失敗**：inst.json 讀不到（**指名的 `.json` 不存在也算**）／不是 JSON 物件／格式壞（未知 key、型別錯、`argv` 空、`envs` 的 key 壞、指示詞壞）／`$env`／`${env:…}` 的變數不存在／`$ref` 讀不到、pointer 壞、繞回來了／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的檔開不起來 |
+| **125** | **aos-exec 自己失敗**：inst.json 讀不到（**指名的 `.json` 不存在也算**）／不是 JSON 物件／格式壞（未知 key、型別錯、`argv` 空、`envs` 的 key 壞、指示詞壞、`_metainfo` 形狀不對＝`MetainfoInvalid`／`UnsupportedInstType`／`UnsupportedInstVersion`）／`$env`／`${env:…}` 的變數不存在／`$ref` 讀不到、pointer 壞、繞回來了／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的檔開不起來 |
 | 126 | 沒執行權 |
 | 127 | 找不到程式 |
 | 143 / 137 | `--timeout-ms` 到了：SIGTERM 就死＝143，要 SIGKILL 才死＝137 |

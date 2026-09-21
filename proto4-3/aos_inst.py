@@ -3,7 +3,9 @@
 
 格式是 proto4 筆記第 11 節那套（凍結分支 `core/inst` 的 SPEC §C-3～§C-6 改過來的）：
 一份 inst.json 是嚴格一個 JSON 物件、**七個**欄位、只有 `argv` 必填、**未知的 key
-一律拒絕**（不是忽略）。
+一律拒絕**（不是忽略）。頂層另外允許一個可選的 `_metainfo`（proto5 起，見
+`proto5/spec/inst-posix.md` 第 1 節）：只講這份 inst 是哪一種格式、第幾版，不參與
+執行、沒寫就當 `{"_type":"posix","_version":1}`。
 
     argv     字串（或指示詞）陣列，必填；argv[0] 走疊加後 env 的 PATH
     stdin    檔案當標準輸入，沒寫＝/dev/null
@@ -49,7 +51,8 @@ def load(path, base):
 
     回傳的 dict：`argv`（list）、`stdin`／`stdout`／`stderr`／`exit`（絕對路徑，
     ""＝沒寫）、`cwd`（絕對路徑）、`envs`（dict）、`envs_clear`（bool）、
-    `stderr_merge`（bool）。
+    `stderr_merge`（bool）、`metainfo`（dict，沒寫 `_metainfo` 就是
+    `{"_type":"posix","_version":1}`）。
     """
     base = os.path.abspath(base)
     try:
@@ -65,13 +68,38 @@ def load(path, base):
     if not isinstance(obj, dict):
         raise InstError("NotAnObject", "inst.json 必須是一個 JSON 物件，不是 %s"
                         % type(obj).__name__)
+
+    # _metainfo：可選的頂層鍵，只講「這份 inst 是哪一種格式、第幾版」，不參與執行，
+    # 不解指示詞（它的值原樣看，不丟進 _resolve），也不會傳給子程式。沒寫就當
+    # {"_type":"posix","_version":1}；proto5/spec/inst-posix.md 第 1 節。
+    metainfo = {"_type": "posix", "_version": 1}
+    if "_metainfo" in obj:
+        mi = obj.pop("_metainfo")
+        if not isinstance(mi, dict):
+            raise InstError("MetainfoInvalid", "_metainfo 必須是一個 JSON 物件，不是 %s"
+                            % type(mi).__name__)
+        if set(mi) != {"_type", "_version"}:
+            raise InstError("MetainfoInvalid",
+                            "_metainfo 只能有 _type 跟 _version 這兩個 key，不多不少，收到：%s"
+                            % "、".join(sorted(map(repr, mi))))
+        mi_type = mi["_type"]
+        if not (isinstance(mi_type, str) and mi_type == "posix"):
+            raise InstError("UnsupportedInstType",
+                            "_metainfo 的 _type 只認得 \"posix\"，不是 %r" % (mi_type,))
+        mi_version = mi["_version"]
+        if not (isinstance(mi_version, int) and not isinstance(mi_version, bool)
+                and mi_version == 1):
+            raise InstError("UnsupportedInstVersion",
+                            "_metainfo（posix）的 _version 只認得 1，不是 %r" % (mi_version,))
+
     for k in obj:
         if k not in FIELDS:
             raise InstError("UnknownKey", "不認得的欄位 %r，只有這七個：%s"
                             % (k, "、".join(FIELDS)))
 
     inst = {"argv": [], "stdin": "", "stdout": "", "stderr": "", "exit": "",
-            "cwd": "", "envs": {}, "envs_clear": False, "stderr_merge": False}
+            "cwd": "", "envs": {}, "envs_clear": False, "stderr_merge": False,
+            "metainfo": metainfo}
 
     # cwd 先解：它是所有相對路徑的中心，自己的相對路徑則以 base（xxx）為中心。
     cwd_raw = _str(_resolve(obj["cwd"], base, "cwd", []), "cwd") if "cwd" in obj else ""

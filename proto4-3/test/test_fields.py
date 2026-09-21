@@ -105,6 +105,21 @@ class TestFields(ExecCase):
         self.assertEqual(self.aos(self.d).returncode, 0)
         self.assertEqual(self.read("out.txt"), "hi\n")
 
+    def test_metainfo_absent_defaults_to_posix_v1(self):
+        """proto5 起可選的 `_metainfo`：沒寫就當 posix v1，舊的 inst.json 意思不變。"""
+        self.inst({"argv": ["sh", "-c", "echo out"], "stdout": "out.txt"})
+        r = self.aos(self.d)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(self.read("out.txt"), "out\n")
+
+    def test_metainfo_valid_loads_and_runs(self):
+        """寫對的 `_metainfo` 讀完就丟掉，不影響執行，也不會傳給子程式。"""
+        self.inst({"_metainfo": {"_type": "posix", "_version": 1},
+                   "argv": ["sh", "-c", "echo out"], "stdout": "out.txt"})
+        r = self.aos(self.d)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(self.read("out.txt"), "out\n")
+
 
 if __name__ == "__main__":
     unittest.main()

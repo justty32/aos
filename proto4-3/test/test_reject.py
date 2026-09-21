@@ -90,6 +90,30 @@ class TestReject(ExecCase):
     def test_stderr_unknown_option(self):
         self.bad({"argv": ["true"], "stderr": {"$opt": "split"}}, "UnknownOption")
 
+    def test_metainfo_not_an_object(self):
+        self.bad({"argv": ["true"], "_metainfo": "posix"}, "MetainfoInvalid")
+
+    def test_metainfo_extra_key(self):
+        self.bad({"argv": ["true"],
+                 "_metainfo": {"_type": "posix", "_version": 1, "extra": 1}},
+                 "MetainfoInvalid")
+
+    def test_metainfo_missing_version(self):
+        self.bad({"argv": ["true"], "_metainfo": {"_type": "posix"}}, "MetainfoInvalid")
+
+    def test_metainfo_type_wrong(self):
+        self.bad({"argv": ["true"], "_metainfo": {"_type": "windows", "_version": 1}},
+                 "UnsupportedInstType")
+
+    def test_metainfo_version_2(self):
+        self.bad({"argv": ["true"], "_metainfo": {"_type": "posix", "_version": 2}},
+                 "UnsupportedInstVersion")
+
+    def test_metainfo_version_true_is_not_an_int(self):
+        """`_version` 要 int；JSON 的 true／false 是 bool，不算數。"""
+        self.bad({"argv": ["true"], "_metainfo": {"_type": "posix", "_version": True}},
+                 "UnsupportedInstVersion")
+
     def test_dir_named_dot_json_is_still_a_dir(self):
         """名字剛好以 .json 結尾的**資料夾**還是照資料夾走（先看是不是資料夾）。"""
         self.write("weird.json/inside.txt", "")
