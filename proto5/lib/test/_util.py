@@ -14,8 +14,8 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIB = os.path.dirname(HERE)
-EXEC = os.path.join(os.path.dirname(LIB), "bin", "aos-exec")
-LLM_ASK = os.path.join(os.path.dirname(LIB), "bin", "aos-llm-ask")
+EXEC = os.path.join(os.path.dirname(LIB), "cli", "aos-exec")
+LLM_ASK = os.path.join(os.path.dirname(LIB), "cli", "aos-llm-ask")
 PY = sys.executable
 DEFAULT_INST = os.path.join(".aos", "inst.json")
 
@@ -78,7 +78,7 @@ class InstCase(Base):
 
 
 class ExecCase(Base):
-    """真的把 bin/aos-exec 開成一個進程。"""
+    """真的把 cli/aos-exec 開成一個進程。"""
 
     def aos(self, *args, stdin="", env=None, timeout=60, cwd=None):
         """開一個 aos-exec 進程。env 給 dict＝整個換掉（不然繼承）。"""
@@ -98,7 +98,7 @@ class ExecCase(Base):
 
 # ---------------------------------------------------------------- agent 資料夾 ----
 
-ENGINE = {"endpoint": "http://127.0.0.1:9/v1", "model": "test-model"}      # 打不到也沒關係：build_request 不碰網路
+ENGINE = {"endpoint": "http://nope.invalid/v1", "model": "test-model"}   # 打不到也沒關係：build_request 不碰網路
 TOOL_SH = {"type": "function",
            "function": {"name": "sh", "description": "跑一句 shell",
                         "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}},

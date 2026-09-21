@@ -42,7 +42,9 @@ aos-llm-ask [dir] [--dry-run]
 | `tools` | 路徑陣列 | `[]` | 用哪幾份工具檔（§2.4），所有檔的陣列**接成一個**、順序＝檔的順序，成為請求的 `tools` |
 | `engine` | 物件 | **必填** | 打去哪（§2.5） |
 
-- `system`／`history` 不是字串、`tools` 不是字串陣列、`engine` 不是物件 → `FieldTypeMismatch`。
+- `system`／`history` 不是字串、`tools` 不是字串陣列、`engine` 不是物件 → `FieldTypeMismatch`；
+  `engine` 整格缺了、或裡面的欄位缺／型別不對 → `EngineInvalid`（§2.5）。
+- `info.json` 任何一格出現 `$opt`（選項物件）＝`UnknownOption`：這份檔沒有任何位置吃選項。
 - `info.json` 每一格解指示詞、指到的檔原樣讀——規則在 [agent.md §2](agent.md)。
 - **`state.json` 不看**：不讀、不驗、不管它有沒有這個檔、寫了什麼。
 
@@ -55,7 +57,7 @@ aos-llm-ask [dir] [--dry-run]
 {"content": "你是個簡潔、會用工具的助手。"}
 ```
 
-- `content`：字串，就是 system prompt 本文；**檔不存在＝空字串**（不送 system 訊息）；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
+- `content`：字串，就是 system prompt 本文；缺了或不是字串＝`FieldTypeMismatch`。**檔不存在＝空字串**（不送 system 訊息）；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
 - **原樣讀、不解指示詞**（[agent.md §2](agent.md)）：`content` 就是字面，裡面的 `${x}`、`$` 開頭的東西都不會被動。
 
 ### 2.3 記憶（`history` 指到的檔，慣例放 `prompts/history.json`；agent 寫）
@@ -72,7 +74,7 @@ aos-llm-ask [dir] [--dry-run]
 ```
 
 - `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從 `system.json` 補在最前面）。
-- `user`／`tool` 的 `content` 要是字串；`tool` 一定要有 `tool_call_id`；`assistant` 至少有 `content` 或 `tool_calls` 其中一個。不合 → `MessageInvalid`。
+- `user`／`tool` 的 `content` 要是字串；`tool` 一定要有字串的 `tool_call_id`；`assistant` 要有「`content` 是字串」或「`tool_calls` 是陣列」至少一樣（`content: ""` 算有，`content: null` 又沒 `tool_calls` 不算）。不合 → `MessageInvalid`。
 - **檔不存在＝`[]`**；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
 - **原樣讀寫、不解指示詞**（[agent.md §2](agent.md)）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
@@ -103,6 +105,7 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
   註解就用 `_` 開頭，不會漏給模型。
 - `_meta`：**必填**，一份 posix inst（`_metainfo` 可省＝posix v1）。缺了、或不是物件 → `ToolInvalid`。
 - 合併後 `function.name` 同名 → `ToolInvalid`（不默默蓋掉，寫錯一眼看得到）。
+- 工具檔頂層不是陣列 → `ToolInvalid`（記憶檔不是陣列才是 `NotAnArray`）。
 - 元素缺 `type`／`function`／`function.name` → `ToolInvalid`；`function` 裡其他東西（`description`、
   `parameters`、`strict`…）本文不驗，原樣送模型。
 - **工具檔原樣讀、不解指示詞**（[agent.md §2](agent.md)）；`_meta` 裡的指示詞是跑的時候由 inst 那套解。
@@ -129,7 +132,8 @@ stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事�
 | `api_key` | 字串 | 不送 Authorization | 有值才送 `Authorization: Bearer`；不想寫進檔就 `{"$env": "NAME"}`，變數不在＝`EnvironmentVariableMissing`（設定壞就不跑，不降級） |
 | `timeout_ms` | 整數 | `120000` | HTTP 等多久 |
 
-- 必填欄位缺、型別不對 → `EngineInvalid`。
+- `engine` 整格缺、必填欄位缺、型別不對 → `EngineInvalid`；`timeout_ms` 要是正整數；`api_key` 寫了就要是字串
+  （`null` 也算型別不對；不想送就別寫這個 key，`""` 合法但不送 header）。
 - `engine` 整格在 `info.json` 裡，所以跟別格一樣吃指示詞：整包 `{"$ref": "engines/lmstudio.json"}`
   從別的檔拿也行。
 

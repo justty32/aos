@@ -1,7 +1,7 @@
 """aos_exec：真的跑——三種目標、退出碼、選項落地（append／mkdir／inherit／merge／clear）、逾時、
 run_target() 的 API。案例從 proto4-3 的 test_targets／test_status／test_opts／test_env／test_api 搬來。
 
-大多數條目透過 bin/aos-exec 開子進程（驗命令列的退出碼與 stderr），API 那群直接 import。
+大多數條目透過 cli/aos-exec 開子進程（驗命令列的退出碼與 stderr），API 那群直接 import。
 """
 import io
 import os

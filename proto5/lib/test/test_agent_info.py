@@ -1,7 +1,7 @@
-"""aos_agent_info.load()：讀驗 agent 資料夾——照 spec/agent.md §1～§2、§4。全部在這個進程裡跑，不開子進程。
+"""aos_agent_info.load()：讀驗 agent 資料夾——照 spec/agent.md §1～§3、§5 ＋ spec/aos-llm-ask.md §2。全部在這個進程裡跑，不開子進程。
 
 分幾群：預設值與回傳形狀、_metainfo 與 NotAnAgent、info.json 的指示詞（每格都解、位置、循環、
-$opt 不吃）、人格檔、記憶檔（§2.3 每則怎麼驗）、工具檔（合併、去 _ key、ToolInvalid 各種）、engine。
+$opt 不吃）、人格檔、記憶檔（aos-llm-ask.md §2.3 每則怎麼驗）、工具檔（合併、去 _ key、ToolInvalid 各種）、engine。
 """
 import json
 import os
@@ -42,7 +42,7 @@ class TestShape(AgentCase):
                                        "params": {}, "api_key": None, "timeout_ms": 120000})
 
     def test_full_agent(self):
-        """agent.md §1 那個範例：人格、記憶、兩份工具檔、engine 全寫。"""
+        """aos-llm-ask.md §2 那個範例：人格、記憶、兩份工具檔、engine 全寫。"""
         r = self.load(system={"content": "你是助手"},
                       history=[{"role": "user", "content": "hi"}],
                       tools={"tools/base.json": [TOOL_SH], "tools/team.json": [tool("mail")]},
@@ -504,7 +504,7 @@ class TestEngine(AgentCase):
         self.bad_eng(endpoint="e", model="m", api_key=123)
 
     def test_api_key_from_env_missing_is_an_error(self):
-        """設定壞就不跑，不降級（agent.md §2.5）。"""
+        """設定壞就不跑，不降級（aos-llm-ask.md §2.5）。"""
         self.bad("EnvironmentVariableMissing",
                  info={"engine": {"endpoint": "e", "model": "m", "api_key": {"$env": "LMSTUDIO_KEY"}}}, env={})
         r = self.load(info={"engine": {"endpoint": "e", "model": "m", "api_key": {"$env": "LMSTUDIO_KEY"}}},

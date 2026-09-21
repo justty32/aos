@@ -85,9 +85,9 @@ agent-bob/
 
 | 代號 | 什麼時候 |
 |---|---|
-| `NotAnAgent` | 沒有 `info.json`、沒有 `_metainfo`、或 `_metainfo._type`（解完）不是 `llm_agent` |
-| `ReadFailed`／`JsonSyntax`／`NotAnObject`／`NotAnArray` | 某個檔讀不到／不是 JSON／頂層型別不對 |
-| `MetainfoInvalid`／`UnsupportedVersion` | `_type` 對了但 `_metainfo` 形狀壞（不是物件、缺 `_version`）／`_version` 不是整數 `1` |
+| `NotAnAgent` | 沒有 `info.json`、沒有 `_metainfo`、`_metainfo` 缺 `_type`、或 `_type`（解完）不是 `llm_agent` |
+| `ReadFailed`／`JsonSyntax`／`NotAnObject`／`NotAnArray` | 某個檔讀不到／不是 JSON／頂層型別不對（各程式可以對自己的檔另訂更準的代號，例如工具檔不是陣列＝`ToolInvalid`） |
+| `MetainfoInvalid`／`UnsupportedVersion` | `_metainfo` 不是物件、或缺 `_version`／`_version` 不是整數 `1` |
 | `FieldTypeMismatch` | 某格型別不對 |
 | `StateInvalid` | `state.json` 的 `state` 不是四個之一（§4） |
 
