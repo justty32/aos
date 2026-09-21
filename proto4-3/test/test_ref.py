@@ -162,17 +162,65 @@ class TestDirectiveAnywhere(ExecCase):
         self.assertEqual(self.aos(self.d, env=env).returncode, 0)
         self.assertEqual(self.read("out.txt"), "[只有這個][]\n")   # 清空了，外面的看不到
 
-    def test_envs_ref_mixed_with_a_plain_key_is_125(self):
-        """有 $ 開頭的 key 就整包當指示詞看，所以混著普通 key＝兩個 key＝拒絕。"""
+    def test_envs_ref_mixed_with_a_plain_key_runs_the_ref(self):
+        """有 $ 開頭的 key 就整包當指示詞物件看：混著的普通 key 忽略、不會變成環境變數。"""
         self.write("e.json", '{"A": "1"}')
-        r = self.bad_inst({"argv": ["true"], "envs": {"$ref": "e.json", "X": "1"}})
-        self.assertIn("DirectiveKeyCountInvalid", r.stderr)
+        self.inst({"argv": ["sh", "-c", "echo \"[$A][$X]\""], "stdout": "out.txt",
+                   "envs": {"$ref": "e.json", "X": "1"}})
+        self.assertEqual(self.aos(self.d).returncode, 0)
+        self.assertEqual(self.read("out.txt"), "[1][]\n")
 
     def bad_inst(self, obj):
         self.inst(obj)
         r = self.aos(self.d)
         self.assertEqual(r.returncode, 125, r.stderr)
         return r
+
+
+class TestDirectivePrecedence(ExecCase):
+    """一個指示詞物件裡好幾個 $ key：只跑優先序最高的（$opt > $ref > $fmt > $env），其餘不看。"""
+
+    def run_envs(self, value):
+        self.inst({"argv": ["printenv", "X"], "stdout": "out.txt", "envs": {"X": value}})
+        r = self.aos(self.d, env=dict(os.environ, AOSTEST_OUTER="外面來的"))
+        return r, self.read("out.txt") if r.returncode == 0 else r.stderr
+
+    def test_unknown_keys_beside_a_directive_are_ignored(self):
+        self.write("a.json", '"從 a 來的"')
+        r, out = self.run_envs({"$ref": "a.json", "_note": "說明", "x": 1})
+        self.assertEqual(r.returncode, 0, out)
+        self.assertEqual(out, "從 a 來的\n")
+
+    def test_ref_beats_fmt(self):
+        """$fmt 故意寫壞（值是字串）來證明它根本沒被看。"""
+        self.write("a.json", '"從 a 來的"')
+        r, out = self.run_envs({"$ref": "a.json", "$fmt": "壞的"})
+        self.assertEqual(r.returncode, 0, out)
+        self.assertEqual(out, "從 a 來的\n")
+
+    def test_fmt_beats_env(self):
+        r, out = self.run_envs({"$fmt": {"$val": "fmt 贏"}, "$env": "AOSTEST_NOPE"})
+        self.assertEqual(r.returncode, 0, out)
+        self.assertEqual(out, "fmt 贏\n")
+
+    def test_opt_beats_ref_at_an_option_position(self):
+        """有 $opt 就是選項物件：$ref 被忽略（指到不存在的檔也沒事）。"""
+        self.inst({"argv": ["sh", "-c", "echo 一"],
+                   "stdout": {"$opt": "append", "$val": "f.txt", "$ref": "nope.json"}})
+        self.assertEqual(self.aos(self.d).returncode, 0)
+        self.assertEqual(self.read("f.txt"), "一\n")
+
+    def test_opt_at_a_no_option_position_is_still_unknown_option(self):
+        """不吃選項的位置放了 $opt：優先序一樣是 $opt 先，所以是 UnknownOption，不會退去跑 $ref。"""
+        self.write("a.json", '"x"')
+        r, out = self.run_envs({"$opt": "clear", "$ref": "a.json"})
+        self.assertEqual(r.returncode, 125)
+        self.assertIn("UnknownOption", out)
+
+    def test_only_unknown_dollar_keys_is_unknown_directive(self):
+        r, out = self.run_envs({"$xyz": 1})
+        self.assertEqual(r.returncode, 125)
+        self.assertIn("UnknownDirective", out)
 
 
 if __name__ == "__main__":

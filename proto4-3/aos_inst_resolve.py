@@ -3,7 +3,8 @@ import json
 import os
 import re
 
-DIRECTIVES = ("$env", "$ref", "$fmt")
+# 同一個物件裡好幾個指示詞 key 一起出現時，只跑排最前面的那一個（$opt 又排在這三個前面）
+DIRECTIVES = ("$ref", "$fmt", "$env")
 # $fmt 的模板：只有 ${…} 會被代換，單獨的 $ 與 $NAME 都是字面
 _FMT = re.compile(r"\$\{([^{}]*)\}")
 
@@ -55,22 +56,26 @@ def _resolve(v, base, where, chain):
 
 
 def _is_directive(d):
-    """一個 dict 只要有 `$` 開頭的 key 就是指示詞；選項物件（有 `$opt` 的）除外——那個
-    由各位置自己用 `options()` 認，因為它是唯一可以有兩個 key（`$opt`＋`$val`）的。"""
+    """一個 dict 只要有 `$` 開頭的 key 就是指示詞物件；選項物件（有 `$opt` 的）除外——
+    `$opt` 的優先序最高，所以有它就不在這裡解，交給各位置自己用 `options()` 認。"""
     return "$opt" not in d and any(k.startswith("$") for k in d)
 
 
 def _apply(d, base, where, chain):
-    """解一層指示詞，回 `(值, 新的鏈)`。指示詞＝剛好一個 key；`$env`／`$ref` 的值是字串，
-    `$fmt` 的值是物件（模板＋變數表）。"""
-    if len(d) != 1:
-        raise InstError("DirectiveKeyCountInvalid",
-                        "%s 的指示詞要剛好一個 key，這個有 %d 個" % (where, len(d)))
-    key, val = next(iter(d.items()))
-    if key not in DIRECTIVES:
+    """解一層指示詞，回 `(值, 新的鏈)`。
+
+    物件裡可以有任何別的 key，不認得的一律忽略；好幾個指示詞 key 一起出現就只跑
+    `DIRECTIVES` 裡排最前面的（`$ref` > `$fmt` > `$env`），其餘不看。`$env`／`$ref` 的
+    值是字串，`$fmt` 的值是物件（模板＋變數表）。有 `$` 開頭的 key 但三個都不是＝
+    `UnknownDirective`。
+    """
+    key = next((k for k in DIRECTIVES if k in d), None)
+    if key is None:
         raise InstError("UnknownDirective",
-                        "%s 的指示詞 %r 不認得，只有 %s（外加各位置自己的 $opt 選項物件）"
-                        % (where, key, "／".join(DIRECTIVES)))
+                        "%s 的指示詞 %s 不認得，只有 %s（外加各位置自己的 $opt 選項物件）"
+                        % (where, "、".join(repr(k) for k in d if k.startswith("$")),
+                           "／".join(DIRECTIVES)))
+    val = d[key]
     if key == "$fmt":
         return _fmt(val, base, where, chain), chain
     if not isinstance(val, str):
@@ -99,19 +104,16 @@ def options(v, where, allowed):
     """一個位置解出來的值 `v`：是選項物件就拆開驗，回 `(選項名集合, $val, 有沒有 $val)`；
     不是選項物件就原樣回 `(空集合, v, True)`。
 
-    選項物件長 `{"$opt": "名字"}`／`{"$opt": ["名字1","名字2"], "$val": 值}`：只能有 `$opt`
-    跟 `$val` 兩個 key（舊的 `$envs` 不再認得＝多了一個 key）；`$opt` 是字串或非空字串陣列；
+    選項物件長 `{"$opt": "名字"}`／`{"$opt": ["名字1","名字2"], "$val": 值}`：只認 `$opt`
+    跟 `$val`，其他 key（含 `$ref`／`$fmt`／`$env`、舊的 `$envs`）一律忽略——所以舊寫法
+    `{"$opt":"clear","$envs":{…}}` 不報錯、但 `$envs` 沒人看，等於清成空環境；
+    `$opt` 是字串或非空字串陣列；
     名字重複、或不是這個位置（`allowed`）認得的＝`UnknownOption`；帶不帶 `$val` 跟哪些
     能一起出現，不合＝`OptionConflict`。`$val` 這裡**不解、不驗型別**——它本來就是「該直接
     寫在那一格的值」，交回去給那一格照自己的規則處理（所以還能再是指示詞）。
     """
     if not (isinstance(v, dict) and "$opt" in v):
         return frozenset(), v, True
-    extra = [k for k in v if k not in ("$opt", "$val")]
-    if extra:
-        raise InstError("DirectiveKeyCountInvalid",
-                        "%s 的選項物件只能有 $opt 與 $val，多了 %s"
-                        % (where, "、".join(repr(k) for k in extra)))
     raw = v["$opt"]
     names = [raw] if isinstance(raw, str) else raw
     if not (isinstance(names, list) and names and all(isinstance(n, str) for n in names)):
