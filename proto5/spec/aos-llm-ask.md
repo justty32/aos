@@ -38,7 +38,7 @@ aos-llm-ask [dir] [--dry-run]
 | 鍵 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
 | `system` | 路徑字串 | `prompts/system.json` | 人格在哪個檔（§2.2），組 `messages` 的第一則 |
-| `history` | 路徑字串 | `prompts/history.json` | 記憶在哪個檔（§2.3；那個檔是 agent 寫的），組 `messages` 剩下的部分 |
+| `history` | 路徑字串 | `prompts/history.json` | 記憶在哪個檔（§2.3；慣例上是程式寫的），組 `messages` 剩下的部分 |
 | `tools` | 路徑陣列 | `[]` | 用哪幾份工具檔（§2.4），所有檔的陣列**接成一個**、順序＝檔的順序，成為請求的 `tools` |
 | `engine` | 物件 | **必填** | 打去哪（§2.5） |
 
@@ -60,7 +60,7 @@ aos-llm-ask [dir] [--dry-run]
 - `content`：字串，就是 system prompt 本文；缺了或不是字串＝`FieldTypeMismatch`。**檔不存在＝空字串**（不送 system 訊息）；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
 - **原樣讀、不解指示詞**（[agent.md §2](agent.md)）：`content` 就是字面，裡面的 `${x}`、`$` 開頭的東西都不會被動。
 
-### 2.3 記憶（`history` 指到的檔，慣例放 `prompts/history.json`；agent 寫）
+### 2.3 記憶（`history` 指到的檔，慣例放 `prompts/history.json`）
 
 一個陣列，一則就是 OpenAI chat 的一則訊息：
 
