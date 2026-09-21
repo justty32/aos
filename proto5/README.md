@@ -14,6 +14,7 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 | [spec/exec.md](spec/exec.md) | aos-exec 的**命令列**：三種目標（普通檔／`.json`／資料夾）、`--dir-target`／`--timeout-ms`／`--stderr`／`--`、退出碼 2／125／原樣、125 與 2 時 stderr 印什麼。行為照 inst-posix.md 第 6 節 | 命令列走法照 proto4-3 現況整理，使用者還沒逐條拍板 |
 | [spec/agent.md](spec/agent.md) | agent 資料夾：`info.json` 總表（人寫：`_metainfo`＝`llm_agent`、`system`／`history`／`tools` 三個指向、`engine`）＋`state.json`（agent 寫：四格 `state`）；`info.json` 以外原樣讀；工具檔＝OpenAI tools 陣列＋`_meta`（一份 posix inst） | **草稿**，跟使用者一步步改中；最精簡標準 |
 | [spec/aos-agent.md](spec/aos-agent.md) | `aos-agent [dir]` 走一格：記憶就是信箱、四格各做什麼、跑工具、退出碼 0／101／1／2 | **草稿**；程式還沒寫 |
+| [spec/aos-llm-ask.md](spec/aos-llm-ask.md) | `aos-llm-ask [dir]` 把 agent 資料夾問模型一次：組請求、`--dry-run` 只印請求、輸出 `choices[0].message`、退出碼 0／1／2／3；`state.json` 不看，不寫任何檔 | **草稿**；程式還沒寫 |
 
 ## 程式
 
