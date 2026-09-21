@@ -54,25 +54,13 @@ class TestReject(ExecCase):
         self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$val": "x"}},
                  "FieldTypeMismatch")
 
-    def test_env_clear_with_extra_key(self):
-        """選項物件只准 $opt ＋ $val 這兩個 key。"""
-        self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$val": {}, "A": "1"}},
-                 "DirectiveKeyCountInvalid")
-
-    def test_old_dollar_envs_key_is_rejected(self):
-        """舊寫法 {"$opt":"clear","$envs":{…}} 不再認得：$envs 就是多了一個 key。"""
-        self.bad({"argv": ["true"], "envs": {"$opt": "clear", "$envs": {"A": "1"}}},
-                 "DirectiveKeyCountInvalid")
-
     def test_env_unknown_option(self):
         self.bad({"argv": ["true"], "envs": {"$opt": "merge"}}, "UnknownOption")
 
-    def test_directive_two_keys(self):
-        self.bad({"argv": ["true"], "envs": {"A": {"$env": "HOME", "$ref": "x.json"}}},
-                 "DirectiveKeyCountInvalid")
-
     def test_unknown_directive(self):
+        """有 $ 開頭的 key、但 $opt／$ref／$fmt／$env 一個都不是＝不認得的指示詞。"""
         self.bad({"argv": ["true"], "envs": {"A": {"$nope": "x"}}}, "UnknownDirective")
+        self.bad({"argv": ["true"], "envs": {"A": {"$xyz": 1, "plain": "x"}}}, "UnknownDirective")
 
     def test_directive_value_not_a_string(self):
         self.bad({"argv": ["true"], "envs": {"A": {"$env": 3}}},

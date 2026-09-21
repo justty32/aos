@@ -86,8 +86,9 @@ cwd** 起算。只有 `cwd` 自己從 `xxx` 起算——它是最先解的那一
 
 - `$val` 就是「本來要直接寫在那一格的值」：型別照那一格的規則驗（路徑欄要字串、`envs`
   要物件），**自己還能再是指示詞**（`$env`／`$fmt`／`$ref`），解完再驗。
-- 選項物件**只能有** `$opt`、`$val` 兩個 key，多了＝`DirectiveKeyCountInvalid`。舊寫法
-  `{"$opt":"clear","$envs":{…}}` 裡的 `$envs` 已經不認得，就是多了一個 key。
+- 選項物件**只認** `$opt`、`$val`，其他 key（連 `$ref`／`$fmt`／`$env` 都一樣）一律忽略、
+  不報錯。**容易踩的**：舊寫法 `{"$opt":"clear","$envs":{…}}` 裡的 `$envs` 已經不認得，
+  它會安靜地被忽略——結果是清成**完全空**的環境，不是你以為的那幾個變數。
 - `$opt` 是字串或**非空**字串陣列，別的型別＝`DirectiveValueTypeMismatch`。陣列裡同一個
   名字寫兩次＝`UnknownOption`。
 - 選項名區分大小寫、只認小寫；這個位置不認得的名字＝`UnknownOption`（包括根本不吃選項的
@@ -131,7 +132,7 @@ aos-exec 自己失敗，退出碼 125。沒開 `mkdir` 就照舊：父目錄不�
 ### 指示詞：任何位置都能放
 
 **先解、再驗。** inst.json 裡**任何一個值的位置**都可以不寫本來該寫的東西，改寫一個
-**指示詞**——剛好一個 key、值一定是字串的物件。位置包括：**頂層整份**、每個欄位、
+**指示詞**——有 `$` 開頭的 key 的物件。位置包括：**頂層整份**、每個欄位、
 `argv` **整個陣列**與它的每個元素、四個路徑欄位、`cwd`、`envs` **整個物件**與它的每個值、
 選項物件的 `$val`。指示詞解出來的東西就當成本來寫在那裡，**解出來又是指示詞就繼續解**，
 最後才照那個位置該有的型別驗（頂層要物件、`argv` 要非空字串陣列、路徑欄要字串、`envs`
@@ -143,7 +144,14 @@ aos-exec 自己失敗，退出碼 125。沒開 `mkdir` 就照舊：父目錄不�
 | `{"$fmt":{"$val":"模板", 變數名: 值, …}}` | 接字串用的：`$val` 是模板、其餘 key 是本地變數表，見下面 |
 | `{"$ref":"file.json#/a/b"}` | 相對於 **cwd** 讀那份 JSON，`#` 後面是 RFC 6901 的 JSON Pointer（`~1` 代表 `/`、`~0` 代表 `~`），沒有 `#` 就取整份 |
 
-（`{"$opt": …}` 不是指示詞，是上一節的選項物件——它是唯一可以有兩個 key 的東西。）
+**指示詞物件裡可以混寫別的 key**：不認得的（`_note`、`x`…）一律忽略。同一個物件裡好幾個
+指示詞 key 一起出現，**只跑優先序最高的那一個，其餘不看**：
+
+    $opt  >  $ref  >  $fmt  >  $env
+
+所以 `{"$ref": "a.json", "$fmt": {…}}` 只跑 `$ref`（`$fmt` 寫壞了也不會發現）；
+`{"$ref": "a.json", "_note": "說明"}` 跑 `$ref`。有 `$opt` 就是上一節的選項物件，其他全忽略。
+有 `$` 開頭的 key 但四個都不是（像 `{"$xyz": 1}`）＝`UnknownDirective`。
 
 ```json
 {"$ref": "base.json"}                              整份 inst.json 從別的檔拿
@@ -158,9 +166,9 @@ aos-exec 自己失敗，退出碼 125。沒開 `mkdir` 就照舊：父目錄不�
 **循環**：`$ref` 沿著一條鏈記「檔案 realpath ＋ pointer」，**任何深度都記**，同一條鏈再
 撞到同一個身分＝繞回來了＝錯誤。頂層寫 `{"$ref": "自己"}` 也擋得到。
 
-**一個物件只要有 `$` 開頭的 key 就被當指示詞看**（有 `$opt` 的選項物件除外）。所以 `envs`
-的 key——也就是環境變數名——不能 `$` 開頭，混寫（`{"$ref": "e.json", "X": "1"}`）＝兩個
-key＝拒絕。`envs` 的 key 本身不吃指示詞。代價：這一版沒辦法傳 `$` 開頭的環境變數。
+**一個物件只要有 `$` 開頭的 key 就被當指示詞物件看**。所以 `envs` 的 key——也就是環境
+變數名——不能 `$` 開頭；混寫（`{"$ref": "e.json", "X": "1"}`）整包當 `$ref`、`X` 被忽略，
+不會變成環境變數。`envs` 的 key 本身不吃指示詞。代價：這一版沒辦法傳 `$` 開頭的環境變數。
 
 **`$fmt`**：模板＋本地變數表，值**一定是物件**（2026-09-21 起；舊的字串寫法
 `{"$fmt": "…${env:NAME}…"}` 不再認得＝`DirectiveValueTypeMismatch`）：
@@ -218,7 +226,7 @@ aos-exec 自己的 stderr；給檔案路徑則寫進那個檔，路徑以你呼�
 
 讀／驗階段的代號全表：`ReadFailed`、`JsonSyntax`、`NotAnObject`、`MetainfoInvalid`、
 `UnsupportedInstType`、`UnsupportedInstVersion`、`EmptyArgv`、`FieldTypeMismatch`、
-`EnvKeyInvalid`、`DirectiveKeyCountInvalid`、`UnknownDirective`、`DirectiveValueTypeMismatch`、
+`EnvKeyInvalid`、`UnknownDirective`、`DirectiveValueTypeMismatch`、
 `FormatVariableInvalid`、`UnknownOption`、`OptionConflict`、`EnvironmentVariableMissing`、
 `UnknownFormatVariable`、
 `ReferenceReadFailed`、`ReferenceJsonInvalid`、`ReferencePointerInvalid`、`ReferenceCycle`。

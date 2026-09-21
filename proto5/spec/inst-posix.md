@@ -116,8 +116,9 @@
   `/bin:/usr/bin`），所以 `sh` 之類的還是找得到；想讓它找不到就自己塞一個 `PATH`。
 - 整包 `envs` 或 `$val` 都可以是 `$ref` 從別的檔拿來的。
 - 執行者（aos-exec）**不注入任何 `AOS_*` 變數**。
-- **舊的 `$envs` 這個 key 不再認得**：`{"$opt":"clear","$envs":{…}}` 這種舊寫法，`$envs`
-  會被當成選項物件裡不認得的多餘 key，一樣是 `DirectiveKeyCountInvalid`（見 3.3）。
+- **舊的 `$envs` 這個 key 不再認得**：`{"$opt":"clear","$envs":{…}}` 這種舊寫法不會報錯，
+  但 `$envs` 會被選項物件忽略，等於只剩 `{"$opt":"clear"}`——清成**空環境**，不是
+  `$envs` 裡那些值（見 3.3）。
 
 ### 3.3 `$opt` 選項物件
 
@@ -134,9 +135,10 @@
   陣列裡重複同一個名字 → `UnknownOption`（訊息會說「重複」）。
 - `$val` 是「本來要直接寫在那一格的值」，型別照那一格的規則驗；`$val` 本身**可以再是
   指示詞**（`$env`／`$fmt`／`$ref`），解完再驗。
-- 選項物件只能有 `$opt`、`$val` 兩個 key，多了 → `DirectiveKeyCountInvalid`。**舊的
-  `$envs` 這個 key 現在不認得**，出現就等於多了一個不認得的 key，一樣是
-  `DirectiveKeyCountInvalid`。
+- 選項物件只**讀 `$opt`、`$val`** 這兩個 key，其他 key 一律忽略（含 `$ref`／`$fmt`／`$env`、
+  舊的 `$envs`），不會報錯。**容易踩的坑**：舊寫法 `{"$opt":"clear","$envs":{"LANG":"C"}}`
+  不會報錯，但 `$envs` 被忽略，等於只剩 `{"$opt":"clear"}`——清成**空環境**，不是
+  `$envs` 裡那些值；要用 `$val` 才會被讀到。
 - 這個位置不認得的選項名 → `UnknownOption`。
 - 選項名區分大小寫，只認小寫。
 
@@ -187,9 +189,13 @@
 
 ### 4.1 幾個容易踩的
 
-- `envs` 的 key 不能 `$` 開頭——那樣整包會先被當指示詞，實際冒出來的代號是 `UnknownDirective`
-  （剛好一個 key）或 `DirectiveKeyCountInvalid`（不只一個 key），不是 `EnvKeyInvalid`（那個
-  代號只管空字串跟含 `=`）。代價：這一版沒辦法傳 `$` 開頭的環境變數。
+- `envs` 的 key 不能 `$` 開頭：只要 `envs` 這個物件裡出現 `$` 開頭的 key，整包 `envs` 就會
+  先被當成指示詞（或選項物件）看，不會被當成一般的環境變數清單。例如 `envs` 寫成
+  `{"$ref":"e.json","X":"1"}`，現在會照優先順序跑 `$ref`，`"X":"1"` 被當成指示詞物件裡的
+  多餘 key **忽略**——不會變成一個名叫 `X` 的環境變數。只有一個 `$xyz` 這種不認得的 `$` key
+  （不是 `$opt`／`$ref`／`$fmt`／`$env`）單獨出現 → `UnknownDirective`。這些狀況都不會走到
+  `EnvKeyInvalid`（那個代號只管空字串跟含 `=` 的 key）。代價：這一版沒辦法傳 `$` 開頭的
+  環境變數。
 - `$env`／`$fmt` 一定解出字串，放在 `envs` 這種要物件的位置就是 `FieldTypeMismatch`；`$ref`
   解出字串放在 `argv`（要陣列）也一樣。
 
@@ -208,8 +214,7 @@
 | `UnsupportedInstVersion` | `_metainfo`（posix）的 `_version` 不是整數 `1`（`true`／`false` 也不算） |
 | `EmptyArgv` | 沒有 `argv`、解出來是空陣列、或 `argv[0]` 是空字串 |
 | `FieldTypeMismatch` | 某個位置解完型別不對 |
-| `EnvKeyInvalid` | `envs` 的 key 空、或含 `=`（`$` 開頭不會走到這裡，實際代號是 `UnknownDirective`／`DirectiveKeyCountInvalid`，見 4.1） |
-| `DirectiveKeyCountInvalid` | 指示詞不是剛好一個 key；`$opt` 選項物件多了 `$opt`／`$val` 以外的 key（包括舊的 `$envs`）也算 |
+| `EnvKeyInvalid` | `envs` 的 key 空、或含 `=`（`$` 開頭不會走到這裡，實際代號是 `UnknownDirective`，見 4.1） |
 | `UnknownDirective` | `$` 開頭的 key 不是 `$env`／`$ref`／`$fmt`（也不是 `$opt`） |
 | `DirectiveValueTypeMismatch` | 指示詞的值不是字串；或 `$opt` 的值不是字串／非空字串陣列 |
 | `UnknownOption` | `$opt` 的值不是那個位置認得的選項名（見 3.3 的表），或陣列裡的名字重複 |
@@ -260,3 +265,5 @@
 
 - 2026-09-21 使用者拍板：頂層未知 key 忽略、`$opt` 統一（`$val`）、append／mkdir／inherit、
   stdin inherit、`_metainfo` 多餘 key 忽略、`$fmt` 改成模板＋變數表、拿掉 `${env:…}`。
+- 2026-09-21 使用者再拍板：指示詞物件可以混寫、優先順序 `$opt`＞`$ref`＞`$fmt`＞`$env`，
+  其餘 key（含舊的 `$envs`）一律忽略；`DirectiveKeyCountInvalid` 這個代號整個刪掉。

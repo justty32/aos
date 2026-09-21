@@ -79,9 +79,20 @@ class TestOptShape(ExecCase):
         self.bad({"argv": ["true"], "stdout": {"$opt": "append", "$val": ""}},
                  "OptionConflict")
 
-    def test_extra_key_beside_opt_and_val(self):
-        self.bad({"argv": ["true"], "stdout": {"$opt": "append", "$val": "x", "$mode": 1}},
-                 "DirectiveKeyCountInvalid")
+    def test_extra_keys_beside_opt_and_val_are_ignored(self):
+        """選項物件只認 $opt／$val：別的 key（連 $ref 也是）一律忽略，不看、不報錯。"""
+        self.inst({"argv": ["sh", "-c", "echo 一"],
+                   "stdout": {"$opt": "append", "$val": "f.txt", "$ref": "nope.json",
+                              "$mode": 1, "_note": "說明"}})
+        self.assertEqual(self.aos(self.d).returncode, 0)
+        self.assertEqual(self.read("f.txt"), "一\n")
+
+    def test_old_dollar_envs_key_is_silently_ignored(self):
+        """舊寫法 {"$opt":"clear","$envs":{…}}：不報錯，但 $envs 沒人看＝清成空環境。"""
+        self.inst({"argv": ["sh", "-c", "echo \"[$A][$HOME]\""], "stdout": "out.txt",
+                   "envs": {"$opt": "clear", "$envs": {"A": "1"}}})
+        self.assertEqual(self.aos(self.d).returncode, 0)
+        self.assertEqual(self.read("out.txt"), "[][]\n")
 
     def test_val_type_is_checked_per_position(self):
         self.bad({"argv": ["true"], "stdout": {"$opt": "append", "$val": 3}},
