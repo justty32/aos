@@ -116,9 +116,6 @@
   `/bin:/usr/bin`），所以 `sh` 之類的還是找得到；想讓它找不到就自己塞一個 `PATH`。
 - 整包 `envs` 或 `$val` 都可以是 `$ref` 從別的檔拿來的。
 - 執行者（aos-exec）**不注入任何 `AOS_*` 變數**。
-- **舊的 `$envs` 這個 key 不再認得**：`{"$opt":"clear","$envs":{…}}` 這種舊寫法不會報錯，
-  但 `$envs` 會被選項物件忽略，等於只剩 `{"$opt":"clear"}`——清成**空環境**，不是
-  `$envs` 裡那些值（見 3.3）。
 
 ### 3.3 `$opt` 選項物件
 
@@ -131,14 +128,16 @@
 {"$opt": ["名字1", "名字2"], "$val": 值}  多個選項一起用
 ```
 
+> 機制層（[directives.md](./directives.md) 第 4 節）的 `$opt` 值**任何 JSON 都可以**、不限
+> 型別——機制本身不解讀、不驗。「`$opt` 必須是選項名字串或非空字串陣列」是 **inst 這個
+> 宿主自己訂的規則**，不是指示詞機制規定的。
+
 - `$opt` 的值是**字串**或**非空字串陣列**；別的型別 → `DirectiveValueTypeMismatch`。
   陣列裡重複同一個名字 → `UnknownOption`（訊息會說「重複」）。
 - `$val` 是「本來要直接寫在那一格的值」，型別照那一格的規則驗；`$val` 本身**可以再是
   指示詞**（`$env`／`$fmt`／`$ref`），解完再驗。
 - 選項物件只**讀 `$opt`、`$val`** 這兩個 key，其他 key 一律忽略（含 `$ref`／`$fmt`／`$env`、
-  舊的 `$envs`），不會報錯。**容易踩的坑**：舊寫法 `{"$opt":"clear","$envs":{"LANG":"C"}}`
-  不會報錯，但 `$envs` 被忽略，等於只剩 `{"$opt":"clear"}`——清成**空環境**，不是
-  `$envs` 裡那些值；要用 `$val` 才會被讀到。
+  舊的 `$envs`），不會報錯。
 - 這個位置不認得的選項名 → `UnknownOption`。
 - 選項名區分大小寫，只認小寫。
 
@@ -176,13 +175,17 @@
 ## 4. 指示詞：任何值的位置都能放
 
 指示詞（`$env`／`$fmt`／`$ref`）與選項物件（`$opt`／`$val`）的**機制**——怎麼判定、先解再驗、
-巢狀、`$fmt` 模板、`$ref` 的 pointer 與循環、錯誤代號——**獨立成一份規範：
+巢狀、`$fmt` 模板、`$ref`／`$at` 與循環、錯誤代號——**獨立成一份規範：
 [directives.md](directives.md)**，本文不重講。這裡只寫 inst.json 這個宿主自己決定的事：
 
 - **哪些位置能放指示詞**：頂層整份、每個欄位、`argv` 整個陣列與它的每個元素、`envs` 整個物件
   與它的每個值、選項物件的 `$val`。`envs` 的 key 不吃指示詞。
 - **`$env` 讀的是執行者（aos-exec）自己的環境**，不是這份 inst 的 `envs`。
-- **`$ref` 的中心路徑是解出來的 `cwd`**（3.1）；只有頂層整份與 `cwd` 自己以 base 為中心。
+- **`$ref` 找檔案用的中心路徑是解出來的 `cwd`**（3.1）；只有頂層整份與 `cwd` 自己以 base 為
+  中心。`$ref:""`（空字串）＝**這份 inst.json 自己**：這時 `$at` 可以用 `./`／`../` 相對寫法，
+  相對的起點是這個指示詞物件在 inst.json 裡自己的位置——例如 `/envs/PATH` 這格上寫
+  `{"$ref":"","$at":"../GREET"}`，就是去抓 `/envs/GREET`。`$ref` 指別的檔（非空字串）就只能
+  用絕對 `$at`（`/` 開頭）。完整語法、位置怎麼記見 [directives.md](directives.md) 第 3.2 節。
 - **各位置認得的選項名**在 3.3；不在表上的名字＝`UnknownOption`。
 - 解完之後那一格的型別由本文驗：頂層要物件、`argv` 要非空字串陣列、路徑欄要字串、`envs` 要物件，
   不對＝`FieldTypeMismatch`。
@@ -216,13 +219,13 @@
 | `FieldTypeMismatch` | 某個位置解完型別不對 |
 | `EnvKeyInvalid` | `envs` 的 key 空、或含 `=`（`$` 開頭不會走到這裡，實際代號是 `UnknownDirective`，見 4.1） |
 | `UnknownDirective` | `$` 開頭的 key 不是 `$env`／`$ref`／`$fmt`（也不是 `$opt`） |
-| `DirectiveValueTypeMismatch` | 指示詞的值不是字串；或 `$opt` 的值不是字串／非空字串陣列 |
+| `DirectiveValueTypeMismatch` | 指示詞的值不是字串；`$ref` 的 `$at` 有寫但不是字串；或 `$opt` 的值不是字串／非空字串陣列 |
 | `UnknownOption` | `$opt` 的值不是那個位置認得的選項名（見 3.3 的表），或陣列裡的名字重複 |
 | `OptionConflict` | 選項彼此互斥卻一起出現、該帶 `$val` 卻沒帶、或不該帶 `$val` 卻帶了（見 3.3） |
 | `EnvironmentVariableMissing` | `$env` 指的變數不存在 |
 | `UnknownFormatVariable` | `$fmt` 模板裡的 `${name}` 不在變數表裡，見 [directives.md](directives.md) 第 3.1 節 |
 | `FormatVariableInvalid` | `$fmt` 變數表裡的變數名不合法，見 [directives.md](directives.md) 第 3.1 節 |
-| `ReferenceReadFailed`／`ReferenceJsonInvalid`／`ReferencePointerInvalid` | `$ref` 讀不到、不是 JSON、pointer 走不到 |
+| `ReferenceReadFailed`／`ReferenceJsonInvalid`／`ReferencePointerInvalid` | `$ref` 指的檔讀不到、不是合法 JSON、`$at` 語法錯或走不到 |
 | `ReferenceCycle` | `$ref` 繞回來了 |
 
 ## 6. 執行語意（執行者要做到的）
@@ -267,3 +270,5 @@
   stdin inherit、`_metainfo` 多餘 key 忽略、`$fmt` 改成模板＋變數表、拿掉 `${env:…}`。
 - 2026-09-21 使用者再拍板：指示詞物件可以混寫、優先順序 `$opt`＞`$ref`＞`$fmt`＞`$env`，
   其餘 key（含舊的 `$envs`）一律忽略；`DirectiveKeyCountInvalid` 這個代號整個刪掉。
+- 2026-09-21 使用者第四次拍板：`$ref` 拆成 `$ref`＋`$at`、支援 `""`／`./`／`../`、`#` 寫法刪。
+- 2026-09-21 使用者第五次拍板：`$opt` 值型別不限（機制層），名字／名字陣列是 inst 的規則。

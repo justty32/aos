@@ -142,7 +142,7 @@ aos-exec 自己失敗，退出碼 125。沒開 `mkdir` 就照舊：父目錄不�
 |---|---|
 | `{"$env":"NAME"}` | 從 **aos-exec 自己的**環境取值。變數不存在＝錯誤；存在但空＝空字串（兩件不同的事） |
 | `{"$fmt":{"$val":"模板", 變數名: 值, …}}` | 接字串用的：`$val` 是模板、其餘 key 是本地變數表，見下面 |
-| `{"$ref":"file.json#/a/b"}` | 相對於 **cwd** 讀那份 JSON，`#` 後面是 RFC 6901 的 JSON Pointer（`~1` 代表 `/`、`~0` 代表 `~`），沒有 `#` 就取整份 |
+| `{"$ref":"file.json", "$at":"/a/b"}` | `$ref` 是檔（相對於 **cwd**；空字串＝這個值所在的那份文件自己）、`$at` 是位置（可省＝整份），見下面 |
 
 **指示詞物件裡可以混寫別的 key**：不認得的（`_note`、`x`…）一律忽略。同一個物件裡好幾個
 指示詞 key 一起出現，**只跑優先序最高的那一個，其餘不看**：
@@ -153,18 +153,37 @@ aos-exec 自己失敗，退出碼 125。沒開 `mkdir` 就照舊：父目錄不�
 `{"$ref": "a.json", "_note": "說明"}` 跑 `$ref`。有 `$opt` 就是上一節的選項物件，其他全忽略。
 有 `$` 開頭的 key 但四個都不是（像 `{"$xyz": 1}`）＝`UnknownDirective`。
 
+**`$ref`＋`$at`**：`$ref` 說哪份檔、`$at` 說檔裡哪個位置。
+
 ```json
-{"$ref": "base.json"}                              整份 inst.json 從別的檔拿
-{"argv": {"$ref": "a.json#/argv"}}                 argv 整個陣列從別的檔拿
-{"argv": ["true"], "envs": {"$ref": "e.json"}}     envs 整包從別的檔拿
+{"$ref": "base.json"}                                    整份 inst.json 從別的檔拿
+{"argv": {"$ref": "a.json", "$at": "/argv"}}             argv 整個陣列從 a.json 的 /argv 拿
+{"argv": ["true"], "envs": {"$ref": "e.json"}}           envs 整包從別的檔拿
+{"argv": ["echo", {"$ref": "", "$at": "/envs/GREET"}]}   $ref 空字串＝這份 inst.json 自己
+{"argv": ["echo", {"$ref": "", "$at": "./a", "a": "x"}]} ./ ＝這個指示詞物件自己的位置 → 它的 key a
+"envs": {"GREET": "hi", "M": {"$ref": "", "$at": "../GREET"}}   ../ ＝往上一層（兄弟 key）
 ```
+
+- `$ref` 一定是字串（不是＝`DirectiveValueTypeMismatch`）。相對路徑以 **cwd** 為中心找檔；
+  **空字串＝目前正在解析的那份文件**（頂層就是 inst.json；透過 `$ref` 取進來的值裡再寫
+  `$ref:""`，指的就是被引用的那份檔）。檔名裡的 `#` 只是檔名的一部分（舊的 `file#/pointer`
+  寫法拿掉了，那樣寫會變 `ReferenceReadFailed`）。
+- `$at` 可省＝整份；有寫必須是字串。用 `/` 分段：開頭 `/`＝從那份文件的**根**算；開頭 `./`
+  或 `../`＝從**目前位置**（這個指示詞物件自己在文件裡的位置）算，**只有 `$ref:""` 能用**
+  （指別的檔沒有「目前位置」可言＝`ReferencePointerInvalid`）。`.` 段略過、`..` 段往上一層、
+  爬過根＝`ReferencePointerInvalid`；其他段 `~1` 代表 `/`、`~0` 代表 `~`，物件用 key、陣列用
+  十進位索引，走不到＝`ReferencePointerInvalid`。不是這三種開頭的＝`ReferencePointerInvalid`。
+- 位置怎麼算：頂層是根，欄位就是 `/argv/0`、`/envs/PATH`、`/stdout`；選項物件的 `$val`
+  是 `/stdout/$val`；`$fmt` 物件內的變數是 `/envs/PATH/p` 這種（模板是 `/envs/PATH/$val`）。
 
 `$ref` **取回來的值原樣當成本來寫在那裡**：字串、陣列、物件都行，型別對不對是那個**位置**
 說了算——所以 `envs` 的 `$ref` 解出來是字串＝`FieldTypeMismatch`、`argv` 的解出來是字串
-也一樣。`$env`／`$fmt` 解出來一定是字串，放在 `envs` 那種要物件的位置就是型別錯。
+也一樣。`$env`／`$fmt` 解出來一定是字串，放在 `envs` 那種要物件的位置就是型別錯。取回來的
+值裡若再有指示詞，繼續解時「目前文件」＝被引用的那份檔、「目前位置」＝取到的位置。
 
-**循環**：`$ref` 沿著一條鏈記「檔案 realpath ＋ pointer」，**任何深度都記**，同一條鏈再
-撞到同一個身分＝繞回來了＝錯誤。頂層寫 `{"$ref": "自己"}` 也擋得到。
+**循環**：`$ref` 沿著一條鏈記「檔案 realpath ＋ 解出來的絕對位置」，**任何深度都記**，同一
+條鏈再撞到同一個身分＝繞回來了＝錯誤。頂層寫 `{"$ref": "自己"}`、任何地方寫
+`{"$ref": "", "$at": "."}` 都擋得到。
 
 **一個物件只要有 `$` 開頭的 key 就被當指示詞物件看**。所以 `envs` 的 key——也就是環境
 變數名——不能 `$` 開頭；混寫（`{"$ref": "e.json", "X": "1"}`）整包當 `$ref`、`X` 被忽略，
@@ -211,7 +230,7 @@ aos-exec 自己的 stderr；給檔案路徑則寫進那個檔，路徑以你呼�
 | 退出碼 | 什麼時候 |
 |---|---|
 | 2 | 用法錯（旗標不認得、沒給 `xxx`、`--timeout-ms` 是負數、inst 目標卻給了 `--`）、`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔不存在 |
-| **125** | **aos-exec 自己失敗**：inst.json 讀不到（**指名的 `.json` 不存在也算**）／不是 JSON 物件／格式壞（型別錯、`argv` 空、`envs` 的 key 壞、指示詞壞、選項物件壞＝`UnknownOption`／`OptionConflict`、`_metainfo` 形狀不對＝`MetainfoInvalid`／`UnsupportedInstType`／`UnsupportedInstVersion`）／`$fmt` 的變數表壞＝`FormatVariableInvalid`、模板用了表裡沒有的變數＝`UnknownFormatVariable`／`$env` 的變數不存在／`$ref` 讀不到、pointer 壞、繞回來了／`mkdir` 建不起來／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的檔開不起來 |
+| **125** | **aos-exec 自己失敗**：inst.json 讀不到（**指名的 `.json` 不存在也算**）／不是 JSON 物件／格式壞（型別錯、`argv` 空、`envs` 的 key 壞、指示詞壞、選項物件壞＝`UnknownOption`／`OptionConflict`、`_metainfo` 形狀不對＝`MetainfoInvalid`／`UnsupportedInstType`／`UnsupportedInstVersion`）／`$fmt` 的變數表壞＝`FormatVariableInvalid`、模板用了表裡沒有的變數＝`UnknownFormatVariable`／`$env` 的變數不存在／`$ref` 讀不到、`$at` 壞、繞回來了／`mkdir` 建不起來／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的檔開不起來 |
 | 126 | 沒執行權 |
 | 127 | 找不到程式 |
 | 143 / 137 | `--timeout-ms` 到了：SIGTERM 就死＝143，要 SIGKILL 才死＝137 |
