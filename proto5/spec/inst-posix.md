@@ -1,9 +1,13 @@
 # inst.json 規範：`posix` 呼叫（第 1 版）
 
-← [proto5 README](../README.md)｜實作在 [proto4-3/aos_inst.py](../../proto4-3/aos_inst.py)、[aos_inst_resolve.py](../../proto4-3/aos_inst_resolve.py)，跑的那一半在 [aos_exec.py](../../proto4-3/aos_exec.py)（使用手冊 [docs/exec.md](../../proto4-3/docs/exec.md)）
+← [proto5 README](../README.md)｜規範先行；指示詞機制的實作是
+[proto5/lib/aos_directives.py](../lib/aos_directives.py)（[lib README](../lib/README.md)）；inst
+本身（讀、驗、執行）的 proto5 實作還沒寫，proto4-3 的 [aos_inst.py](../../proto4-3/aos_inst.py)／
+[aos_exec.py](../../proto4-3/aos_exec.py) 是凍結的舊版參考（大致照這份做到 §I 為止；使用手冊
+[docs/exec.md](../../proto4-3/docs/exec.md)）
 
-這份文件把「一份 inst.json 到底長什麼樣、怎麼解讀」寫成規範。內容照 proto4-3 **現在的程式碼**寫，
-不是照想像；程式碼跟本文對不上的地方，以程式碼為準、回來改本文。
+這份文件把「一份 inst.json 到底長什麼樣、怎麼解讀」寫成規範。規範先行：程式照本文做；程式跟
+本文對不上、又不是本文寫錯的地方，回來改本文。
 
 一句話：**一份 inst.json 就是「叫作業系統跑一個程式」那一句話的 JSON 版**——跑什麼（`argv`）、
 在哪跑（`cwd`）、三條串流接哪（`stdin`／`stdout`／`stderr`）、結束碼寫哪（`exit`）、環境變數
@@ -30,30 +34,23 @@
 
 **規則：**
 
-1. **沒寫 `_metainfo`，就等於 `{"_type": "posix", "_version": 1}`**。所以 proto4-3 之前寫的所有
-   inst.json 都不用動、意思不變。
-2. `_metainfo` 只描述格式，**不參與執行**——不是環境變數、不是參數、不會傳給子程式。
-3. `_type` 不是 `"posix"` 的 inst，本文管不到；那是之後別種 inst（例如以後可能有的
+1. **沒寫 `_metainfo`，就等於 `{"_type": "posix", "_version": 1}`**。所以之前寫的所有 inst.json
+   都不用動、意思不變。
+2. `_metainfo` 本身要是物件；除了 `_type`、`_version`，裡面**其他 key 一律忽略**，不要求「剛好
+   只有這兩個 key」。少了 `_type` 或 `_version` → `MetainfoInvalid`。
+3. `_type` 只認字面的 `"posix"`；別的字串（例如以後可能的 `"step"`）或非字串 →
+   `UnsupportedInstType`。
+4. `_version`（`posix`）只認整數 `1`；JSON 的 `true`／`false` 不算數（有些語言把 bool 當
+   int 的子類，這裡特地擋掉）→ `UnsupportedInstVersion`。版號大於本文版號的 `posix` inst，
+   讀的人**不該假裝看得懂**：要嘛拒絕（同一個代號），要嘛明講降級。
+5. `_metainfo` 只描述格式，**不參與執行**——不是環境變數、不是參數、不會傳給子程式；它的值也
+   **不吃指示詞**：是從 JSON 直接拿出來驗，不會丟進第 4 節那套 `$env`／`$fmt`／`$ref` 展開。
+   所以寫 `{"_metainfo": {"$ref": "x.json"}}`，`$ref` 這個 key 不是 `_type`／`_version`，會被
+   忽略——這個例子等於沒寫 `_type`／`_version`，一樣是 `MetainfoInvalid`（原因是缺欄位，不是
+   多欄位）。
+6. `_type` 不是 `"posix"` 的 inst，本文管不到；那是之後別種 inst（例如以後可能有的
    `"step"`、`"llm"` 之類）各自的規範。
-4. `_version` 大於本文版號的 `posix` inst，讀的人**不該假裝看得懂**：要嘛拒絕、要嘛明講降級。
-5. 以 `_` 開頭的頂層鍵保留給 metainfo 這類「講格式本身」的東西，**不會**拿來當一般欄位名。
-
-> **現況（proto4-3 已照做）**：`aos_inst.load()` 認得
-> `_metainfo`，驗法如下：
->
-> - `_metainfo` 本身要是物件；除了 `_type`、`_version`，裡面**其他 key 一律忽略**，不再
->   要求「剛好只有這兩個 key」。少了 `_type` 或 `_version` 才算 `MetainfoInvalid`。
-> - `_type` 只認字面的 `"posix"`；別的字串（例如以後可能的 `"step"`）直接退件
->   （`UnsupportedInstType`），不是「本文管不到、放過」。
-> - `_version` 只認整數 `1`；JSON 的 `true`／`false` 在 Python 裡雖然是 `int` 的子類，
->   程式特地擋掉、不算數（`UnsupportedInstVersion`）。
-> - `_metainfo` 的值**不吃指示詞**：它是從 JSON 直接拿出來驗，不會丟進第 4 節那套
->   `$env`／`$fmt`／`$ref` 展開。所以寫 `{"_metainfo": {"$ref": "x.json"}}` 不會被當成
->   「整個 `_metainfo` 從別的檔拿」——`$ref` 這個 key 現在會被忽略（它不是 `_type`／
->   `_version`），這個例子等於沒寫 `_type`／`_version`，一樣是 `MetainfoInvalid`（原因
->   是缺欄位，不是多欄位）。
-> - 沒寫 `_metainfo`、或寫對了，`load()` 回傳的 dict 都會多一個 `metainfo` 欄位
->   （`{"_type": "posix", "_version": 1}`），但目前 aos-exec 沒用到它，不影響執行結果。
+7. 以 `_` 開頭的頂層鍵保留給 metainfo 這類「講格式本身」的東西，**不會**拿來當一般欄位名。
 
 ---
 
@@ -136,8 +133,7 @@
   陣列裡重複同一個名字 → `UnknownOption`（訊息會說「重複」）。
 - `$val` 是「本來要直接寫在那一格的值」，型別照那一格的規則驗；`$val` 本身**可以再是
   指示詞**（`$env`／`$fmt`／`$ref`），解完再驗。
-- 選項物件只**讀 `$opt`、`$val`** 這兩個 key，其他 key 一律忽略（含 `$ref`／`$fmt`／`$env`、
-  舊的 `$envs`），不會報錯。
+- 選項物件只**讀 `$opt`、`$val`** 這兩個 key，其他 key 一律忽略（含 `$ref`／`$fmt`／`$env`），不會報錯。
 - 這個位置不認得的選項名 → `UnknownOption`。
 - 選項名區分大小寫，只認小寫。
 
@@ -182,10 +178,11 @@
   與它的每個值、選項物件的 `$val`。`envs` 的 key 不吃指示詞。
 - **`$env` 讀的是執行者（aos-exec）自己的環境**，不是這份 inst 的 `envs`。
 - **`$ref` 找檔案用的中心路徑是解出來的 `cwd`**（3.1）；只有頂層整份與 `cwd` 自己以 base 為
-  中心。`$ref:""`（空字串）＝**這份 inst.json 自己**：這時 `$at` 可以用 `./`／`../` 相對寫法，
-  相對的起點是這個指示詞物件在 inst.json 裡自己的位置——例如 `/envs/PATH` 這格上寫
-  `{"$ref":"","$at":"../GREET"}`，就是去抓 `/envs/GREET`。`$ref` 指別的檔（非空字串）就只能
-  用絕對 `$at`（`/` 開頭）。完整語法、位置怎麼記見 [directives.md](directives.md) 第 3.2 節。
+  中心。`$ref:""`（或 `#` 前面留空）＝**這份 inst.json 自己**。
+- **位置一律是原始 JSON 裡的實體路徑**，例如 `argv` 第一個元素是 `/argv/0`；某格改寫成
+  `$fmt` 之後，它底下的變數 `p` 的位置是 `.../$fmt/p`，模板本身（`$val`）是 `.../$fmt/$val`。
+  完整語法（`$ref`／`$at`、相對 `./`／`../` 怎麼算、位置怎麼記）見
+  [directives.md](directives.md) 第 3.2 節。
 - **各位置認得的選項名**在 3.3；不在表上的名字＝`UnknownOption`。
 - 解完之後那一格的型別由本文驗：頂層要物件、`argv` 要非空字串陣列、路徑欄要字串、`envs` 要物件，
   不對＝`FieldTypeMismatch`。
@@ -216,17 +213,14 @@
 | `UnsupportedInstType` | `_metainfo` 的 `_type` 不是字串 `"posix"` |
 | `UnsupportedInstVersion` | `_metainfo`（posix）的 `_version` 不是整數 `1`（`true`／`false` 也不算） |
 | `EmptyArgv` | 沒有 `argv`、解出來是空陣列、或 `argv[0]` 是空字串 |
-| `FieldTypeMismatch` | 某個位置解完型別不對 |
+| `FieldTypeMismatch` | 某個位置解完型別不對（頂層要物件、`argv` 要非空字串陣列、路徑欄要字串、`envs` 要物件） |
 | `EnvKeyInvalid` | `envs` 的 key 空、或含 `=`（`$` 開頭不會走到這裡，實際代號是 `UnknownDirective`，見 4.1） |
-| `UnknownDirective` | `$` 開頭的 key 不是 `$env`／`$ref`／`$fmt`（也不是 `$opt`） |
-| `DirectiveValueTypeMismatch` | 指示詞的值不是字串；`$ref` 的 `$at` 有寫但不是字串；或 `$opt` 的值不是字串／非空字串陣列 |
-| `UnknownOption` | `$opt` 的值不是那個位置認得的選項名（見 3.3 的表），或陣列裡的名字重複 |
-| `OptionConflict` | 選項彼此互斥卻一起出現、該帶 `$val` 卻沒帶、或不該帶 `$val` 卻帶了（見 3.3） |
-| `EnvironmentVariableMissing` | `$env` 指的變數不存在 |
-| `UnknownFormatVariable` | `$fmt` 模板裡的 `${name}` 不在變數表裡，見 [directives.md](directives.md) 第 3.1 節 |
-| `FormatVariableInvalid` | `$fmt` 變數表裡的變數名不合法，見 [directives.md](directives.md) 第 3.1 節 |
-| `ReferenceReadFailed`／`ReferenceJsonInvalid`／`ReferencePointerInvalid` | `$ref` 指的檔讀不到、不是合法 JSON、`$at` 語法錯或走不到 |
-| `ReferenceCycle` | `$ref` 繞回來了 |
+
+指示詞機制的代號（`UnknownDirective`、`DirectiveValueTypeMismatch`、`FormatVariableInvalid`、
+`UnknownOption`、`OptionConflict`、`EnvironmentVariableMissing`、`UnknownFormatVariable`、
+`ReferenceReadFailed`／`ReferenceJsonInvalid`／`ReferencePointerInvalid`／`ReferenceCycle`）見
+[directives.md](directives.md) 第 6 節，本文不重複定義；本文只在 3.3／第 4 節訂了「這個位置
+認不認得這個選項」之類的宿主規則，實際判定與報錯代號是機制層的事。
 
 ## 6. 執行語意（執行者要做到的）
 
@@ -266,9 +260,18 @@
 
 ## 修訂記錄
 
-- 2026-09-21 使用者拍板：頂層未知 key 忽略、`$opt` 統一（`$val`）、append／mkdir／inherit、
-  stdin inherit、`_metainfo` 多餘 key 忽略、`$fmt` 改成模板＋變數表、拿掉 `${env:…}`。
-- 2026-09-21 使用者再拍板：指示詞物件可以混寫、優先順序 `$opt`＞`$ref`＞`$fmt`＞`$env`，
-  其餘 key（含舊的 `$envs`）一律忽略；`DirectiveKeyCountInvalid` 這個代號整個刪掉。
-- 2026-09-21 使用者第四次拍板：`$ref` 拆成 `$ref`＋`$at`、支援 `""`／`./`／`../`、`#` 寫法刪。
-- 2026-09-21 使用者第五次拍板：`$opt` 值型別不限（機制層），名字／名字陣列是 inst 的規則。
+- 2026-09-21 A：頂層未知 key（含 `_metainfo` 內未知 key）一律忽略，`UnknownKey` 代號刪除。
+- 2026-09-21 B：`$opt` 統一成 `{$opt: 名|[名…], $val}` 形狀，`$val` 可再是指示詞。
+- 2026-09-21 C：訂出 `stdin`／`stdout`／`stderr`／`exit`／`cwd`／`envs` 各自認得的選項與互斥規則。
+- 2026-09-21 D：`aos_inst.load()` 回傳值把每個選項位置的選項一起帶出來給執行者用（proto4-3 實作細節）。
+- 2026-09-21 E：repo 裡舊的 `{"$opt":"clear","$envs":{…}}` 一律遷移成 `{"$opt":"clear","$val":{…}}`。
+- 2026-09-21 F：錯誤代號表定案：拿掉 `UnknownKey`，加入 `OptionConflict`。
+- 2026-09-21 G：`$fmt` 改成「模板＋變數表」（`{$val:模板, 變數:值…}`），拿掉 `${env:…}` 特例。
+- 2026-09-21 H：指示詞物件可以混寫其他 key；多個指示詞照優先序 `$opt`＞`$ref`＞`$fmt`＞`$env`
+  只跑一個；`DirectiveKeyCountInvalid` 代號刪除。
+- 2026-09-21 I：`$ref` 拆成 `$ref`＋`$at`，支援 `/`（絕對）、`./`／`../`（相對「目前位置」）；
+  舊的 `檔案#/pointer` 寫法先刪。
+- 2026-09-21 J：機制層 `$opt` 值型別不限；「值是選項名字串或非空名字陣列」是 inst 自訂的宿主規則。
+- 2026-09-21 K：`$ref` 字串可帶 `#位置`（等同另寫 `$at`）；相對位置指到別的檔時也能用，統一
+  相對於「目前位置」，取代 I 的限制。
+- 2026-09-21 L：「位置」一律是原始 JSON 的實體路徑，`$fmt`／`$val`／`$opt` 這些 key 也算一段。

@@ -1,5 +1,7 @@
 # proto4-3 — aos-exec 單發、aos-run 連續、aos-daemon 管一堆、aos-kernel 排程（Python）
 
+> **2026-09-21 起凍結、只當參考**：inst.json 與指示詞的正式規範搬到 [proto5/spec/](../proto5/spec/)，指示詞機制的實作是 [proto5/lib](../proto5/lib/README.md)。本資料夾跟到規範修訂的 I 節為止（K：`$ref` 帶 `#位置`、L：位置＝實體路徑沒跟），之後不再改。
+
 換的思路是：**inst.json 只是我們規定的第一版指令集**，像 ARM 那樣小而統一——欄位少、
 但每個都有定義。最陽春的指令集是「一個檔讀進來就跑」，inst.json 只是在不增加複雜度的
 前提下多給了 stdin／stdout／stderr／exit／cwd／envs。
