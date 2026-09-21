@@ -1,9 +1,10 @@
-"""agent 資料夾（agent.md 第 1 版）的讀、驗——「這個資料夾是哪個 agent、它的人格／記憶／工具／引擎長什麼樣」。
+"""agent 資料夾的讀、驗——「這個資料夾是不是 agent、它的人格／記憶／工具／引擎長什麼樣」。
 
-規範是 ../spec/agent.md §1～§2、§4。這個檔只讀、只驗、不寫任何檔，也**不碰 `state.json`**
-（那是 aos-agent 走格子時的事）；跑工具也不在這裡。
+規範：資料夾本身（`_metainfo`、指示詞解不解、共用代號）在 ../spec/agent.md §1～§3、§5；
+`system`／`history`／`tools`／`engine` 四格與它們指到的檔在 ../spec/aos-llm-ask.md §2。
+這個檔只讀、只驗、不寫任何檔，也**不碰 `state.json`**（那是 aos-agent 走格子時的事）；跑工具也不在這裡。
 
-分兩種讀法（agent.md §2.0）：
+分兩種讀法（agent.md §2）：
 
 - `info.json`（人寫的總表）**每一格都解指示詞**（含 `_metainfo`、`engine`），機制全交給
   aos_directives.py：中心路徑（`$ref` 的相對檔名從哪找）＝agent 資料夾；位置＝實體路徑
@@ -13,7 +14,7 @@
 - `system`／`history`／`tools` 指到的檔**原樣讀、不解指示詞**：那是內容（人格文字、模型吐出
   來的對話、工具的 schema 與 inst），裡面什麼 `$` 都可能有。
 
-驗不過就丟 `AgentError(code, msg)`，`str(e)` 是「代號: 白話」；代號照 agent.md §4
+驗不過就丟 `AgentError(code, msg)`，`str(e)` 是「代號: 白話」；代號照 agent.md §5 與 aos-llm-ask.md §2
 （`NotAnAgent`、`ReadFailed`、`JsonSyntax`、`NotAnObject`、`NotAnArray`、`MetainfoInvalid`、
 `UnsupportedVersion`、`FieldTypeMismatch`、`MessageInvalid`、`ToolInvalid`、`EngineInvalid`）；
 指示詞機制丟的 `DirectiveError` 在 `load()` 裡包成同形狀的 `AgentError`（代號照 directives.md §6），
@@ -25,7 +26,7 @@
     metainfo      {"_type": "llm_agent", "_version": 1}
     system        system prompt 本文（字串；檔不存在＝""）
     system_path   人格檔的絕對路徑
-    history       記憶（陣列；檔不存在＝[]），每則照 agent.md §2.3 驗過、原樣
+    history       記憶（陣列；檔不存在＝[]），每則照 aos-llm-ask.md §2.3 驗過、原樣
     history_path  記憶檔的絕對路徑
     tools         送模型用的工具表：所有檔接成一個陣列、每個元素去掉所有 `_` 開頭的 key
     tools_raw     原始工具表：同順序、含 `_meta`（跑工具時用）
@@ -46,7 +47,7 @@ DEFAULT_SYSTEM = os.path.join("prompts", "system.json")
 DEFAULT_HISTORY = os.path.join("prompts", "history.json")
 DEFAULT_TIMEOUT_MS = 120000
 ROLES = ("user", "assistant", "tool")
-_META_FORBIDDEN = ("stdin", "stdout")       # _meta 是 inst，但這兩格由 agent 自己接（agent.md §2.4）
+_META_FORBIDDEN = ("stdin", "stdout")       # _meta 是 inst，但這兩格由 agent 自己接（aos-llm-ask.md §2.4）
 _NO_OPTIONS = {}                            # agent.md 沒定義任何 $opt 選項：哪一格放了都是 UnknownOption
 
 
@@ -67,7 +68,7 @@ def load(dir, env=None):
     """讀驗 `dir` 這個 agent 資料夾，回一個欄位都填好的 dict（形狀見模組說明）。
 
     `env` 是 `$env` 查的表（沒給＝`os.environ`，也就是執行者自己的環境）。
-    沒有 `info.json`＝`NotAnAgent`；其他代號見 agent.md §4 與 directives.md §6。
+    沒有 `info.json`＝`NotAnAgent`；其他代號見 agent.md §5、aos-llm-ask.md §2 與 directives.md §6。
     """
     dir = os.path.abspath(dir)
     info_path = os.path.join(dir, "info.json")
@@ -209,7 +210,7 @@ def _tools_field(obj, top):
 def _engine(obj, top):
     """`engine`：必填物件；`endpoint`／`model` 必填字串、`params` 物件（整棵解）、`api_key` 字串、
     `timeout_ms` 正整數。缺整格、缺必填、型別不對＝`EngineInvalid`（`engine` 本身不是物件照
-    agent.md §2.1 算 `FieldTypeMismatch`）。"""
+    aos-llm-ask.md §2 算 `FieldTypeMismatch`）。"""
     loc = _field(obj, "engine", top)
     if loc is None:
         raise AgentError("EngineInvalid", "info.json 沒有 engine（必填：endpoint 跟 model）")
@@ -272,7 +273,7 @@ def _read_system(path, rel):
 
 
 def _read_history(path, rel):
-    """記憶檔：一個陣列，每則照 agent.md §2.3 驗；不存在＝`[]`。訊息原樣回，不認得的 key 照留。"""
+    """記憶檔：一個陣列，每則照 aos-llm-ask.md §2.3 驗；不存在＝`[]`。訊息原樣回，不認得的 key 照留。"""
     if not os.path.exists(path):
         return []
     msgs = _read_json(path, "記憶檔 %s" % rel)

@@ -22,6 +22,7 @@
 不跑工具、不重試。aos-agent 的 think 格之後直接 import 這裡的函式，不開子進程。
 """
 import argparse
+import http.client
 import json
 import os
 import socket
@@ -96,7 +97,7 @@ def call(engine, body):
         if isinstance(reason, (socket.timeout, TimeoutError)):
             raise EngineFailed("%s 等了 %d ms 沒回（逾時）" % (url, engine.get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS)))
         raise EngineFailed("連不上 %s：%s" % (url, reason))
-    except OSError as e:
+    except (OSError, http.client.HTTPException) as e:
         raise EngineFailed("跟 %s 講話時出錯：%s" % (url, e))
     if not 200 <= status < 300:
         raise EngineFailed("%s 回 HTTP %d：%s" % (url, status, _preview(raw)))

@@ -1,7 +1,7 @@
 # aos-exec：把一個目標跑一次（命令列說明）
 
 ← [proto5 README](../README.md)｜實作：[lib/aos_exec.py](../lib/aos_exec.py)（執行）＋
-[lib/aos_inst.py](../lib/aos_inst.py)（讀／驗 inst.json）＋ [bin/aos-exec](../bin/aos-exec)（入口）；
+[lib/aos_inst.py](../lib/aos_inst.py)（讀／驗 inst.json）＋ [cli/aos-exec](../cli/aos-exec)（入口）；
 inst.json 的格式與執行語意在 [inst-posix.md](inst-posix.md)，指示詞在 [directives.md](directives.md)
 
 > **命令列走法照 proto4-3 現況整理，使用者還沒逐條拍板。** 旗標、三種目標的分法、退出碼都

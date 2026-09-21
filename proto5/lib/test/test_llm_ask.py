@@ -1,10 +1,11 @@
-"""aos_llm_ask：組請求（build_request）、打引擎（call／ask）、命令列（bin/aos-llm-ask）——照 spec/aos-llm-ask.md。
+"""aos_llm_ask：組請求（build_request）、打引擎（call／ask）、命令列（cli/aos-llm-ask）——照 spec/aos-llm-ask.md。
 
 HTTP 那群用 http.server 在執行緒裡開一個假的 chat/completions（能回正常、回 500、回壞 JSON、回沒有
 choices、故意慢讓逾時觸發），**不打真模型**；命令列那群開子進程驗退出碼 0／1／2／3 與 stdout 只有一行。
 """
 import json
 import os
+import socket
 import threading
 import time
 import unittest
@@ -16,6 +17,9 @@ import aos_llm_ask
 from aos_llm_ask import AgentError, EngineFailed
 
 OK_MESSAGE = {"role": "assistant", "content": "裡面有 state.json、prompts、tools…"}
+# 連不上的 endpoint：.invalid 這個網域保證解不開（RFC 2606），一下就失敗。
+# 不用 127.0.0.1 的死 port：這台 WSL 連 localhost 沒人聽的 port 會等到逾時而不是被拒。
+UNREACHABLE = "http://nope.invalid/v1"
 
 
 # ---------------------------------------------------------------- 假的 chat/completions ----
@@ -55,9 +59,14 @@ class FakeLLM:
                     self._json(200, {"choices": [{"index": 0, "text": "old style"}]})
                 elif mode == "notobject":
                     self._json(200, [1, 2, 3])
-                elif mode == "close":
-                    self.close_connection = True
-                    self.wfile.close()
+                elif mode == "truncated":       # 標頭說 100 bytes，只給一半就掛掉
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", "100")
+                    self.end_headers()
+                    self.wfile.write(b'{"choices": [')
+                    self.wfile.flush()
+                    self.connection.shutdown(socket.SHUT_RDWR)
                 else:
                     raise AssertionError(mode)
 
@@ -135,8 +144,9 @@ class TestBuildRequest(AgentCase):
     def test_empty_history_means_only_system(self):
         d = self.agent(system={"content": "S"})
         self.assertEqual(aos_llm_ask.build_request(d)["messages"], [{"role": "system", "content": "S"}])
-        d = self.agent()
-        self.assertEqual(aos_llm_ask.build_request(d)["messages"], [])
+
+    def test_nothing_at_all_means_empty_messages(self):
+        self.assertEqual(aos_llm_ask.build_request(self.agent())["messages"], [])
 
     def test_history_verbatim_including_unknown_keys(self):
         h = [{"role": "user", "content": "a", "name": "bob", "_ts": 1},
@@ -193,7 +203,7 @@ class TestBuildRequest(AgentCase):
 
     def test_does_not_touch_network_or_state(self):
         self.write("state.json", "{broken")
-        d = self.agent(info={"engine": {"endpoint": "http://127.0.0.1:9/v1", "model": "m"}})
+        d = self.agent(info={"engine": {"endpoint": UNREACHABLE, "model": "m"}})
         aos_llm_ask.build_request(d)        # 打不到的 endpoint 也沒關係
         self.assertEqual(self.read("state.json"), "{broken")
 
@@ -276,12 +286,13 @@ class TestAsk(LLMCase):
     def test_response_not_object(self):
         self.assertIn("choices[0]", self.fails("notobject"))
 
-    def test_connection_closed(self):
-        self.fails("close")
+    def test_truncated_response(self):
+        self.fails("truncated")
 
-    def test_connection_refused(self):
+    def test_cannot_connect(self):
+        """主機名解不開（.invalid 保證不存在）；timeout_ms 只是保險，這條不該等到它。"""
         with self.assertRaises(EngineFailed) as cm:
-            aos_llm_ask.ask(self.agent(info={"engine": {"endpoint": "http://127.0.0.1:9/v1"}}))
+            aos_llm_ask.ask(self.agent(info={"engine": {"endpoint": UNREACHABLE, "timeout_ms": 3000}}))
         self.assertIn("連不上", str(cm.exception))
 
     def test_timeout(self):
@@ -421,8 +432,8 @@ class TestCli(LLMCase):
             self.assertIn(hint, r.stderr)
             self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
 
-    def test_connection_refused_is_3(self):
-        r = self.ask(self.agent(info={"engine": {"endpoint": "http://127.0.0.1:9/v1"}}))
+    def test_cannot_connect_is_3(self):
+        r = self.ask(self.agent(info={"engine": {"endpoint": UNREACHABLE, "timeout_ms": 3000}}))
         self.assertEqual(r.returncode, 3, r.stderr)
         self.assertTrue(r.stderr.startswith("aos-llm-ask: engine: "), r.stderr)
 
