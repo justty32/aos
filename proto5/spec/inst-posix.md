@@ -1,10 +1,9 @@
 # inst.json 規範：`posix` 呼叫（第 1 版）
 
-← [proto5 README](../README.md)｜規範先行；指示詞機制的實作是
-[proto5/lib/aos_directives.py](../lib/aos_directives.py)（[lib README](../lib/README.md)）；inst
-本身（讀、驗、執行）的 proto5 實作還沒寫，proto4-3 的 [aos_inst.py](../../proto4-3/aos_inst.py)／
-[aos_exec.py](../../proto4-3/aos_exec.py) 是凍結的舊版參考（大致照這份做到 §I 為止；使用手冊
-[docs/exec.md](../../proto4-3/docs/exec.md)）
+← [proto5 README](../README.md)｜規範先行；實作：[lib/aos_directives.py](../lib/aos_directives.py)（指示詞）、
+[lib/aos_inst.py](../lib/aos_inst.py)（讀、驗，第 1～5 節）、[lib/aos_exec.py](../lib/aos_exec.py)（執行，第 6 節；
+命令列說明在 [exec.md](exec.md)）；proto4-3 的 [aos_inst.py](../../proto4-3/aos_inst.py)／
+[aos_exec.py](../../proto4-3/aos_exec.py) 是凍結的舊版參考（`$ref` 帶 `#位置`、位置＝實體路徑那幾條沒跟上）
 
 這份文件把「一份 inst.json 到底長什麼樣、怎麼解讀」寫成規範。規範先行：程式照本文做；程式跟
 本文對不上、又不是本文寫錯的地方，回來改本文。
@@ -257,21 +256,3 @@
 - **退出碼的約定語意**（100＝做完、101＝在等）：那是 kernel 跟程式之間的約定，不是 inst 格式
   的一部分。
 - **`_type` 不是 `posix` 的 inst**：各自另寫規範。
-
-## 修訂記錄
-
-- 2026-09-21 A：頂層未知 key（含 `_metainfo` 內未知 key）一律忽略，`UnknownKey` 代號刪除。
-- 2026-09-21 B：`$opt` 統一成 `{$opt: 名|[名…], $val}` 形狀，`$val` 可再是指示詞。
-- 2026-09-21 C：訂出 `stdin`／`stdout`／`stderr`／`exit`／`cwd`／`envs` 各自認得的選項與互斥規則。
-- 2026-09-21 D：`aos_inst.load()` 回傳值把每個選項位置的選項一起帶出來給執行者用（proto4-3 實作細節）。
-- 2026-09-21 E：repo 裡舊的 `{"$opt":"clear","$envs":{…}}` 一律遷移成 `{"$opt":"clear","$val":{…}}`。
-- 2026-09-21 F：錯誤代號表定案：拿掉 `UnknownKey`，加入 `OptionConflict`。
-- 2026-09-21 G：`$fmt` 改成「模板＋變數表」（`{$val:模板, 變數:值…}`），拿掉 `${env:…}` 特例。
-- 2026-09-21 H：指示詞物件可以混寫其他 key；多個指示詞照優先序 `$opt`＞`$ref`＞`$fmt`＞`$env`
-  只跑一個；`DirectiveKeyCountInvalid` 代號刪除。
-- 2026-09-21 I：`$ref` 拆成 `$ref`＋`$at`，支援 `/`（絕對）、`./`／`../`（相對「目前位置」）；
-  舊的 `檔案#/pointer` 寫法先刪。
-- 2026-09-21 J：機制層 `$opt` 值型別不限；「值是選項名字串或非空名字陣列」是 inst 自訂的宿主規則。
-- 2026-09-21 K：`$ref` 字串可帶 `#位置`（等同另寫 `$at`）；相對位置指到別的檔時也能用，統一
-  相對於「目前位置」，取代 I 的限制。
-- 2026-09-21 L：「位置」一律是原始 JSON 的實體路徑，`$fmt`／`$val`／`$opt` 這些 key 也算一段。
