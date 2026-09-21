@@ -98,13 +98,13 @@ class TestFmt(ExecCase):
 
     def test_val_resolving_to_non_string_is_125(self):
         self.write("vals.json", '{"t": ["不是字串"]}')
-        self.bad({"argv": ["true"], "envs": {"X": fmt({"$ref": "vals.json#/t"})}},
+        self.bad({"argv": ["true"], "envs": {"X": fmt({"$ref": "vals.json", "$at": "/t"})}},
                  "DirectiveValueTypeMismatch")
 
     def test_variable_resolving_to_non_string_is_125(self):
         """變數是 $ref 拿到一個物件＝解完不是字串。"""
         self.write("vals.json", '{"o": {"k": "v"}}')
-        self.bad({"argv": ["true"], "envs": {"X": fmt("${a}", a={"$ref": "vals.json#/o"})}},
+        self.bad({"argv": ["true"], "envs": {"X": fmt("${a}", a={"$ref": "vals.json", "$at": "/o"})}},
                  "DirectiveValueTypeMismatch")
 
     def test_variable_literal_non_string_is_125(self):
@@ -124,7 +124,7 @@ class TestFmt(ExecCase):
         """模板自己也能是指示詞：從別的檔 $ref 一個模板進來。"""
         self.write("vals.json", '{"t": "模板來自 ${who}"}')
         self.inst({"argv": ["printenv", "X"], "stdout": "out.txt",
-                   "envs": {"X": fmt({"$ref": "vals.json#/t"}, who="別的檔")}})
+                   "envs": {"X": fmt({"$ref": "vals.json", "$at": "/t"}, who="別的檔")}})
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
         self.assertEqual(self.read("out.txt"), "模板來自 別的檔\n")
 
@@ -132,7 +132,7 @@ class TestFmt(ExecCase):
         """$ref 的相對路徑跟 $fmt 用同一個中心（cwd）。"""
         self.write("vals.json", '{"w": "從檔案來的"}')
         self.inst({"argv": ["printenv", "X"], "stdout": "out.txt",
-                   "envs": {"X": fmt("[${w}]", w={"$ref": "vals.json#/w"})}})
+                   "envs": {"X": fmt("[${w}]", w={"$ref": "vals.json", "$at": "/w"})}})
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
         self.assertEqual(self.read("out.txt"), "[從檔案來的]\n")
 
@@ -169,7 +169,7 @@ class TestFmt(ExecCase):
         self.write("vals.json",
                    '{"v": {"$fmt": {"$val": "取自 ${o}", "o": {"$env": "AOSTEST_OUTER"}}}}')
         self.inst({"argv": ["printenv", "X"], "stdout": "out.txt",
-                   "envs": {"X": {"$ref": "vals.json#/v"}}})
+                   "envs": {"X": {"$ref": "vals.json", "$at": "/v"}}})
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
         self.assertEqual(self.read("out.txt"), "取自 外面來的\n")
 

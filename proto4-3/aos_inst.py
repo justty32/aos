@@ -29,14 +29,18 @@
 才照那個位置該有的型別驗（頂層要物件、argv 要非空字串陣列、路徑欄要字串、envs 要物件）。
 型別不對就是 `NotAnObject`／`FieldTypeMismatch`／`EmptyArgv` 那些代號。
 
-指示詞三種：`{"$env":"NAME"}`、`{"$ref":"file.json#/pointer"}`、
+指示詞三種：`{"$env":"NAME"}`、`{"$ref":"file.json","$at":"/a/b"}`（`$ref` 是檔、空字串＝
+目前這份文件；`$at` 是位置、可省＝整份，`/` 開頭從根算、`./`／`../` 從這個指示詞自己的
+位置算——相對寫法只有 `$ref:""` 能用）、
 `{"$fmt":{"$val":"模板", 變數名: 值, …}}`（模板裡 `${name}` 只查那張本地變數表，變數值
 可以再是指示詞；沒有 `${env:…}` 這種 namespace）。**一個 dict 只要有 `$` 開頭的 key 就當
 指示詞物件看**，裡面其他不認得的 key 忽略；好幾個指示詞 key 一起出現只跑優先序最高的
 （`$opt` > `$ref` > `$fmt` > `$env`）。所以環境變數名不能是 `$` 開頭的。
 
-**循環**：`$ref` 沿著一條鏈記「檔案 realpath ＋ pointer」，任何深度都記；同一條鏈再遇到
-同一個身分＝`ReferenceCycle`（頂層 `{"$ref":"自己"}` 也擋得到）。
+**循環**：`$ref` 沿著一條鏈記「檔案 realpath ＋ 絕對位置」，任何深度都記；同一條鏈再遇到
+同一個身分＝`ReferenceCycle`（頂層 `{"$ref":"自己"}`、`{"$ref":"","$at":"."}` 都擋得到）。
+透過 `$ref` 取進來的值裡再有指示詞，「目前文件」就是被引用的那份檔、「目前位置」是取到的
+位置（解析器帶著 `aos_inst_resolve.Ctx` 走）。
 
 相對路徑的中心是**解出來的 cwd**，只有頂層與 `cwd` 自己以 `xxx`（base）為中心，所以順序
 是：先解頂層 → 解 `cwd` → 其餘欄位。
@@ -47,7 +51,7 @@
 import json
 import os
 
-from aos_inst_resolve import OPTIONS, InstError, _envs, _resolve, _str, abspath, options
+from aos_inst_resolve import OPTIONS, Ctx, InstError, _envs, _resolve, _str, abspath, options
 
 FIELDS = ("argv", "stdin", "stdout", "stderr", "exit", "cwd", "envs")
 PATH_FIELDS = ("stdin", "stdout", "stderr", "exit")
@@ -78,7 +82,9 @@ def load(path, base):
         obj = json.loads(raw)
     except ValueError as e:
         raise InstError("JsonSyntax", "JSON 語法錯：%s" % e)
-    obj = _resolve(obj, base, "inst.json", [])          # 頂層整份也能是指示詞
+    # 頂層整份也能是指示詞。Ctx：目前文件＝這份 inst.json 自己（原始物件當根）、位置＝根；
+    # 頂層是 $ref 的話，解完的 ctx 就換成被引用的那份檔。
+    obj, ctx = _resolve(obj, base, "inst.json", [], Ctx(os.path.realpath(path), obj, []))
     if not isinstance(obj, dict):
         raise InstError("NotAnObject", "inst.json 必須是一個 JSON 物件，不是 %s"
                         % type(obj).__name__)
@@ -96,25 +102,27 @@ def load(path, base):
     # cwd 先解：它是所有相對路徑的中心，自己的相對路徑則以 base（xxx）為中心。
     cwd_raw = ""
     if "cwd" in obj:
-        cwd_raw, opts = _path(obj["cwd"], base, "cwd")
+        cwd_raw, opts = _path(obj["cwd"], base, "cwd", ctx.down("cwd"))
         inst["cwd_mkdir"] = "mkdir" in opts
     cwd = abspath(base, cwd_raw) if cwd_raw else base
     inst["cwd"] = cwd
 
-    argv = _resolve(obj.get("argv"), cwd, "argv", [])
+    argv, actx = _resolve(obj.get("argv"), cwd, "argv", [], ctx.down("argv"))
     if argv is None:
         raise InstError("EmptyArgv", "argv 必填")
     if not isinstance(argv, list):
         raise InstError("FieldTypeMismatch", "argv 要是陣列，不是 %s" % type(argv).__name__)
-    inst["argv"] = [_str(_resolve(x, cwd, "argv[%d]" % i, []), "argv[%d]" % i)
+    inst["argv"] = [_str(_resolve(x, cwd, "argv[%d]" % i, [], actx.down(str(i)))[0],
+                         "argv[%d]" % i)
                     for i, x in enumerate(argv)]
 
-    _envs(_resolve(obj.get("envs", {}), cwd, "envs", []), cwd, inst)
+    envs, ectx = _resolve(obj.get("envs", {}), cwd, "envs", [], ctx.down("envs"))
+    _envs(envs, cwd, inst, ectx)
 
     for name in PATH_FIELDS:
         if name not in obj:
             continue
-        v, opts = _path(obj[name], cwd, name)
+        v, opts = _path(obj[name], cwd, name, ctx.down(name))
         for o in opts:
             inst[name][o] = True
         if v:
@@ -152,21 +160,21 @@ def _metainfo(mi):
     return {"_type": "posix", "_version": 1}
 
 
-def _path(raw, base, name):
+def _path(raw, base, name, ctx):
     """一個路徑欄（stdin／stdout／stderr／exit／cwd）：解指示詞、拆選項物件、`$val` 再解
-    一次、最後驗是字串。回 `(路徑字串, 選項名集合)`。
+    一次、最後驗是字串。回 `(路徑字串, 選項名集合)`。`ctx`＝這一格的位置。
 
     帶路徑的選項（append／mkdir）`$val` 不能是空字串——空字串在這裡的意思是「沒寫」
     （＝/dev/null／不寫），跟「接在檔尾」「先建父目錄」兜不起來，算 `OptionConflict`。
     """
-    v = _resolve(raw, base, name, [])
+    v, ctx = _resolve(raw, base, name, [], ctx)
     opts, v, _ = options(v, name, OPTIONS[name])
     if not opts:
         return _str(v, name), opts
     if opts & {"inherit", "merge"}:         # 不能帶 $val 的：路徑就是「沒寫」
         return "", opts
     where = "%s 的 $val" % name
-    v = _str(_resolve(v, base, where, []), where)
+    v = _str(_resolve(v, base, where, [], ctx.down("$val"))[0], where)
     if v == "":
         raise InstError("OptionConflict", "%s 的 %s 要帶一個路徑，不能是空字串"
                         % (name, "／".join(sorted(opts))))
