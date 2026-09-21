@@ -37,13 +37,13 @@ aos-llm-ask [dir] [--dry-run]
 
 | 鍵 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
-| `system` | 路徑字串 | `prompts/system.json` | 人格在哪個檔（§2.2），組 `messages` 的第一則 |
-| `history` | 路徑字串 | `prompts/history.json` | 記憶在哪個檔（§2.3；慣例上是程式寫的），組 `messages` 剩下的部分 |
-| `tools` | 路徑陣列 | `[]` | 用哪幾份工具檔（§2.4），所有檔的陣列**接成一個**、順序＝檔的順序，成為請求的 `tools` |
-| `engine` | 物件 | **必填** | 打去哪（§2.5） |
+| `system` | 路徑字串 | `prompts/system.json` | 人格在哪個檔（§2.1），組 `messages` 的第一則 |
+| `history` | 路徑字串 | `prompts/history.json` | 記憶在哪個檔（§2.2；慣例上是程式寫的），組 `messages` 剩下的部分 |
+| `tools` | 路徑陣列 | `[]` | 用哪幾份工具檔（§2.3），所有檔的陣列**接成一個**、順序＝檔的順序，成為請求的 `tools` |
+| `engine` | 物件 | **必填** | 打去哪（§2.4） |
 
 - `system`／`history` 不是字串、`tools` 不是字串陣列、`engine` 不是物件 → `FieldTypeMismatch`；
-  `engine` 整格缺了、或裡面的欄位缺／型別不對 → `EngineInvalid`（§2.5）。
+  `engine` 整格缺了、或裡面的欄位缺／型別不對 → `EngineInvalid`（§2.4）。
 - `info.json` 任何一格出現 `$opt`（選項物件）＝`UnknownOption`：這份檔沒有任何位置吃選項。
 - `info.json` 每一格解指示詞、指到的檔原樣讀——規則在 [agent.md §2](agent.md)。
 - **`state.json` 不看**：不讀、不驗、不管它有沒有這個檔、寫了什麼。
@@ -51,7 +51,7 @@ aos-llm-ask [dir] [--dry-run]
 讀驗錯誤（缺檔、JSON 壞、型別不對、指示詞解不開、工具重名…）＝退出碼 1（§6）；共用代號在
 [agent.md §5](agent.md)，這支自己的三個（`MessageInvalid`／`ToolInvalid`／`EngineInvalid`）在下面各節。
 
-### 2.2 人格（`system` 指到的檔，慣例放 `prompts/system.json`）
+### 2.1 人格（`system` 指到的檔，慣例放 `prompts/system.json`）
 
 ```json
 {"content": "你是個簡潔、會用工具的助手。"}
@@ -60,7 +60,7 @@ aos-llm-ask [dir] [--dry-run]
 - `content`：字串，就是 system prompt 本文；缺了或不是字串＝`FieldTypeMismatch`。**檔不存在＝空字串**（不送 system 訊息）；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
 - **原樣讀、不解指示詞**（[agent.md §2](agent.md)）：`content` 就是字面，裡面的 `${x}`、`$` 開頭的東西都不會被動。
 
-### 2.3 記憶（`history` 指到的檔，慣例放 `prompts/history.json`）
+### 2.2 記憶（`history` 指到的檔，慣例放 `prompts/history.json`）
 
 一個陣列，一則就是 OpenAI chat 的一則訊息：
 
@@ -73,13 +73,13 @@ aos-llm-ask [dir] [--dry-run]
 ]
 ```
 
-- `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從 `system.json` 補在最前面）。
+- `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從人格檔補在最前面）。
 - `user`／`tool` 的 `content` 要是字串；`tool` 一定要有字串的 `tool_call_id`；`assistant` 要有「`content` 是字串」或「`tool_calls` 是陣列」至少一樣（`content: ""` 算有，`content: null` 又沒 `tool_calls` 不算）。不合 → `MessageInvalid`。
 - **檔不存在＝`[]`**；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
 - **原樣讀寫、不解指示詞**（[agent.md §2](agent.md)）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
-### 2.4 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`
+### 2.3 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`
 
 一份工具檔就是**一個 OpenAI chat/completions 的 `tools` 陣列**，一個元素一個工具、形狀照 OpenAI
 原樣；唯一的修改是每個元素多一個 **`_meta`**，說「這個工具真的被叫到時怎麼跑」——內容就是**一份
@@ -114,7 +114,7 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事。要關掉一個工具就從 `info.json` 的
 `tools` 拿掉那份檔、或從工具檔裡刪掉。
 
-### 2.5 `engine`（在 `info.json` 裡）：用什麼想
+### 2.4 `engine`（在 `info.json` 裡）：用什麼想
 
 這一版只有一種引擎：OpenAI 相容的 `chat/completions`。這裡定欄位；請求怎麼組、怎麼打、回來怎麼拿
 在 §3～§5。
@@ -156,8 +156,8 @@ stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事�
 ```
 
 - `model`：`engine.model` 原樣。
-- `messages`：`system.json` 的 `content` **有內容才加一則** `{"role": "system", "content": …}`
-  放最前面（`content` 是空字串就不加，照 §2.2）；
+- `messages`：人格檔（`system` 指到的）的 `content` **有內容才加一則** `{"role": "system", "content": …}`
+  放最前面（`content` 是空字串就不加，照 §2.1）；
   後面接 `history.json` 那個陣列，**原樣接上去**，一則不動。
 - `tools`：`info.json` 的 `tools` 列到的每份檔（各是一個陣列）**接成一個**、照檔的順序；送出去
   之前把每個元素**所有 `_` 開頭的 key 拿掉**（`_meta` 首當其衝）。**合併後是空陣列就不送 `tools`
@@ -169,7 +169,7 @@ stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事�
   header（不是送空字串）。
 - URL：`engine.endpoint` 去掉結尾多餘的 `/` 之後接上 `/chat/completions`（`http://x/v1` 跟
   `http://x/v1/` 都變 `http://x/v1/chat/completions`）。
-- `timeout_ms`：這次 HTTP 呼叫等多久，沒寫用 `engine` 的預設（120000，見 §2.5）。
+- `timeout_ms`：這次 HTTP 呼叫等多久，沒寫用 `engine` 的預設（120000，見 §2.4）。
 
 ## 4. `--dry-run`：不送出去，只印請求
 
