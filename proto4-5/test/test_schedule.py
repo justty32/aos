@@ -29,10 +29,11 @@ class ScheduleTest(CpuCase):
 
     def test_full_endpoint_leaves_second_until_later_tick(self):
         self.set_local(max_concurrent=1)
-        self.request("first", "slow:0.2")
-        self.request("second", "echo:second")
+        first = self.request("first", "slow:0.2")
+        second = self.request("second", "echo:second")
         now = time.time_ns()
-        os.utime(self.home / "requests/first.json", ns=(now - 1_000_000, now - 1_000_000))
+        os.utime(first, ns=(now - 2_000_000_000, now - 2_000_000_000))
+        os.utime(second, ns=(now, now))
         self.tick()
         self.assertTrue((self.home / "requests/second.json").exists())
         self.result("first")
