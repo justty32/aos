@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """aos-exec：單發執行器——把一個目標執行**一次**，回 `(結束狀態, 這是誰的碼)`。
 
-    aos-exec xxx [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
+    aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 
 `xxx` 是什麼決定怎麼跑（命令列說明在 ../spec/exec.md）：
 
@@ -274,7 +274,8 @@ def main(argv=None):
         raw = raw[:separator]
     ap = argparse.ArgumentParser(
         prog="aos-exec", description="把一個目標（檔案／.json／資料夾）執行一次")
-    ap.add_argument("xxx", help="要執行的東西：普通檔案、.json 檔，或資料夾")
+    ap.add_argument("xxx", nargs="?", default=".",
+                    help="要執行的東西：普通檔案、.json 檔，或資料夾；留空＝. （現在所在的資料夾）")
     ap.add_argument("--dir-target", default=DEFAULT_DIR_TARGET,
                     help="xxx 是資料夾時要跑的相對路徑（預設 .aos/inst.json）")
     ap.add_argument("--timeout-ms", type=int, default=0,

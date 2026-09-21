@@ -16,8 +16,11 @@ inst.json 的格式與執行語意在 [inst-posix.md](inst-posix.md)，指示詞
 ## 用法
 
 ```
-aos-exec xxx [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
+aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 ```
+
+`xxx` **留空＝`.`**：就是「跑我現在所在的這個資料夾」（`aos-exec` ＝ `aos-exec .` ＝ 跑
+`./.aos/inst.json`）。
 
 ## 三種目標：`xxx` 是什麼決定怎麼跑
 
@@ -61,7 +64,7 @@ aos-exec xxx [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 
 | 退出碼 | 什麼時候 |
 |---|---|
-| 2 | 用法錯：旗標不認得、沒給 `xxx`、`--timeout-ms` 是負數、inst 目標卻給了 `--`、`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔不存在 |
+| 2 | 用法錯：旗標不認得、`--timeout-ms` 是負數、inst 目標卻給了 `--`、`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔不存在 |
 | **125** | **aos-exec 自己失敗**：inst.json 讀不到（**指名的 `.json` 不存在也算**）、不是 JSON、格式壞（[inst-posix.md 第 5 節](inst-posix.md#5-錯誤代號讀驗階段)的代號）、指示詞解不開（[directives.md 第 6 節](directives.md#6-錯誤代號)的代號）、`mkdir` 建不起來、`exit` 檔的父目錄不存在、`cwd` 不是資料夾、重導向的檔開不起來、`--stderr PATH` 開不起來 |
 | 126 | 沒執行權（普通檔案沒 +x、或 inst 的 `argv[0]` 沒 +x） |
 | 127 | 找不到程式（`argv[0]` 在疊加後的 PATH 裡找不到） |
@@ -104,6 +107,7 @@ code, kind = aos_exec.run_target(xxx, dir_target=".aos/inst.json", timeout_ms=0,
 ## 例子
 
 ```sh
+aos-exec                                # ＝ aos-exec .：跑 ./.aos/inst.json，base＝現在的資料夾
 aos-exec ./job                          # 跑 ./job/.aos/inst.json，base＝./job
 aos-exec ./job --dir-target other.json  # 改跑 ./job/other.json，base 還是 ./job
 aos-exec ./one.json --timeout-ms 5000   # 單一 .json，base＝它所在的資料夾，5 秒上限

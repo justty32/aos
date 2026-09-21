@@ -88,6 +88,15 @@ class TestTargets(ExecCase):
         self.assertEqual(r.returncode, 0)
         self.assertEqual(self.read("out.txt"), self.d + "\n")
 
+    def test_no_target_means_current_dir(self):
+        """xxx 留空＝`.`：跑呼叫時所在資料夾的 .aos/inst.json，base 就是那個資料夾。"""
+        self.inst({"argv": ["sh", "-c", "pwd"], "stdout": "out.txt"})
+        r = self.aos(cwd=self.d)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("out.txt"), self.d + "\n")
+        r = self.aos("--timeout-ms", "1000", cwd=self.d)          # 只有旗標、沒有 xxx 也一樣
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_dir_target_flag(self):
         self.inst({"argv": ["sh", "-c", "echo other"], "stdout": "out.txt"}, "other/place.json")
         r = self.aos(self.d, "--dir-target", "other/place.json")
