@@ -1,16 +1,16 @@
 # agent 資料夾規範（第 1 版，**草稿**）
 
-← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；`state.json`／`engine.json` 吃指示詞（[directives.md](directives.md)），被指到的檔原樣讀
+← [proto5 README](../README.md)｜跑工具與引擎靠 [inst-posix.md](inst-posix.md)；`state.json` 吃指示詞（[directives.md](directives.md)），被它指到的檔原樣讀
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
 > 分配好每個檔在幹嘛，指示詞是輔助**。所以規範裡寫的都是普通的路徑字串與字面值；agent 自己的
-> 兩份檔（`state.json`、`engine.json`）每一格都吃指示詞，**被它們指到的檔（人格、記憶、工具）
-> 原樣讀、不解**（規則在 §2.0）。
+> 那一份檔（`state.json`）每一格都吃指示詞，**被它指到的檔（人格、記憶、工具）原樣讀、不解**
+> （規則在 §2.0）。**工具檔的格式使用者還在想**，§2.4 只是暫時的。
 > 沒拍板的地方我先照自己的想法填，好讓使用者有東西可以改；每一節都獨立、好抽換。
 
 一句話：**一個 agent 就是一個資料夾**，`state.json` 是它的總表——這是 agent、走到哪、人格跟記憶
-在哪兩個檔、用哪幾份工具檔；引擎另外一份 `engine.json`。bot 模型的五塊（system prompt、history、
-tools、thinking engine、agent state）都從 `state.json` 找得到。
+在哪兩個檔、用哪幾份工具檔、用什麼想。bot 模型的五塊（system prompt、history、tools、thinking
+engine、agent state）全在 `state.json` 裡或由它指出去。
 
 ---
 
@@ -18,38 +18,37 @@ tools、thinking engine、agent state）都從 `state.json` 找得到。
 
 ```
 agent-bob/
-  state.json           總表：_metainfo ＋ state ＋ system／history／tools 三個指向
+  state.json           總表：_metainfo ＋ state ＋ system／history／tools 三個指向 ＋ engine
   prompts/
     system.json        人格（system prompt）
     history.json       記憶（對話史，agent 寫）
   tools/
-    base.json          一份工具檔＝一組工具
+    base.json          一份工具檔＝一組工具（格式待定）
     team.json
-  engine.json          思考引擎的設定
 ```
 
 - 只有 `state.json` 是**認出「這是 agent 資料夾」**的依據（有它、而且 `_metainfo._type` 是 `agent`）。
 - 檔案裡寫的路徑，**一律相對於 agent 資料夾**（不是相對於寫它的那個檔）；絕對路徑照字面。
-- **誰寫誰**：人寫 `state.json` 裡 `state` 以外的東西、`prompts/system.json`、`tools/*`、`engine.json`；
+- **誰寫誰**：人寫 `state.json` 裡 `state` 以外的東西、`prompts/system.json`、`tools/*`；
   agent 只寫 `state.json` 的 `state` 那一格（其他 key 原樣抄回）跟 `prompts/history.json`。
   這樣人的設定永遠不會被程式改掉。
 - agent 寫檔一律先寫 `.tmp` 再 rename，別人永遠不會讀到寫一半的檔。
 - 每個檔的頂層都是嚴格的物件或陣列（各節有寫）；**不認得的 key 一律忽略**。
 - `prompts/`、`tools/` 這兩個資料夾名只是慣例，`state.json` 裡指到哪就是哪；放哪都行。
-- 指示詞：`state.json`、`engine.json` 解；**被指到的檔不解**，規則在 §2.0。
+- 指示詞：`state.json` 解；**被它指到的檔不解**，規則在 §2.0。
 
 ## 2. 每個檔的形狀
 
-### 2.0 指示詞：agent 自己的檔解、被指到的檔不解
+### 2.0 指示詞：`state.json` 解、被指到的檔不解
 
 分兩種：
 
 | 檔 | 解不解 | 為什麼 |
 |---|---|---|
-| `state.json`、`engine.json` | **每一格都解**（含 `_metainfo`） | 這是 agent 自己的設定，寫的人想 `$env`／`$fmt`／`$ref` 就用 |
+| `state.json` | **每一格都解**（含 `_metainfo`、`engine`） | 這是 agent 自己的設定，寫的人想 `$env`／`$fmt`／`$ref` 就用 |
 | `system`／`history`／`tools` 指到的檔 | **整份不解，原樣讀** | 這些是「內容」：人格文字、模型吐出來的對話、工具的 schema 與 inst。內容裡什麼 `$` 都可能有，不能被當指示詞 |
 
-解的那兩份，規則照 [directives.md](directives.md)：
+解的那一份，規則照 [directives.md](directives.md)：
 
 - **每一格都能放**：頂層整份、每個欄位、陣列的每個元素、物件的每個值；先解再驗型別。
   **`_metainfo` 也解**（這點跟 inst 不同：inst 的 `_metainfo` 不解）。
@@ -76,7 +75,8 @@ agent-bob/
   "state":   "idle",
   "system":  "prompts/system.json",
   "history": "prompts/history.json",
-  "tools":   ["tools/base.json", "tools/team.json"]
+  "tools":   ["tools/base.json", "tools/team.json"],
+  "engine":  {"kind": "llm", "endpoint": "http://127.0.0.1:1234/v1", "model": "qwen/qwen3-1.7b"}
 }
 ```
 
@@ -86,10 +86,12 @@ agent-bob/
 | `state` | `idle`／`think`／`wait`／`act` | `idle` | **agent** | 四格之一（§3） |
 | `system` | 路徑字串 | `prompts/system.json` | 人 | 人格在哪個檔（§2.2） |
 | `history` | 路徑字串 | `prompts/history.json` | 人 | 記憶在哪個檔（§2.3；那個檔是 agent 寫的） |
-| `tools` | 路徑陣列 | `[]` | 人 | 用哪幾份工具檔（§2.4），順序＝送給模型的順序 |
+| `tools` | 路徑陣列 | `[]` | 人 | 用哪幾份工具檔（§2.4，格式待定），順序＝送給模型的順序 |
+| `engine` | 物件 | **必填** | 人 | 用什麼想（§2.5） |
 
 - agent 每格結束只改寫 `state`，其他 key 原樣抄回。
-- `state` 不是四格之一 → `StateInvalid`；`system`／`history` 不是字串、`tools` 不是字串陣列 → `FieldTypeMismatch`。
+- `state` 不是四格之一 → `StateInvalid`；`system`／`history` 不是字串、`tools` 不是字串陣列、
+  `engine` 不是物件 → `FieldTypeMismatch`。
 
 ### 2.2 人格（`system` 指到的檔，慣例放 `prompts/system.json`）
 
@@ -120,6 +122,8 @@ agent-bob/
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
 ### 2.4 工具檔（`tools` 指到的檔，慣例放 `tools/`）：一份檔＝一組工具
+
+> **格式待定——使用者還要再想**。下面是暫時的版本，只當佔位。
 
 一個陣列，一個元素一個工具：
 
@@ -153,7 +157,7 @@ agent-bob/
 - `run` 的 base（inst 的「家」）＝agent 資料夾；沒寫 `cwd` 就在 agent 資料夾跑。
 - 退出碼非 0 ＝工具錯誤：`content` 是「工具 sh 失敗（exit 1）：」＋stdout 前段，模型自己看著辦；不算 agent 的錯。
 
-### 2.5 `engine.json`：用什麼想
+### 2.5 `engine`（在 `state.json` 裡）：用什麼想
 
 「想」＝把 system＋history＋工具表交出去、換一則 assistant 訊息回來。誰來換，`kind` 決定：
 
@@ -178,6 +182,8 @@ agent-bob/
   - stdout 回 `{"message": {"role": "assistant", ...}}`。
   - 形狀不對、或退出碼非 0 → 這次「想」算錯（下一格重試，不是讀驗錯誤）。
 - `kind` 不認得、必填欄位缺 → `EngineInvalid`。
+- `engine` 整格在 `state.json` 裡，所以跟別格一樣吃指示詞：整包 `{"$ref": "engines/lmstudio.json"}`
+  從別的檔拿也行。
 - 「引擎晚點才給結果、agent 先去等一個檔」這套機制**之後再說**（使用者說的）；所以這一版兩種引擎
   都是當場等。
 
@@ -207,7 +213,7 @@ agent-bob/
 | `FieldTypeMismatch` | 某格型別不對 |
 | `MessageInvalid` | `history.json` 裡某一則不合 §2.3 |
 | `ToolInvalid` | 工具缺 `name`、名字不合法、同名、缺 `run`、`run` 不是合法 inst、`run` 寫了 `stdin`／`stdout` |
-| `EngineInvalid` | `engine.json` 的 `kind` 不認得、必填欄位缺 |
+| `EngineInvalid` | `engine` 的 `kind` 不認得、必填欄位缺 |
 | `StateInvalid` | `state.json` 的 `state` 不是四格之一 |
 
 指示詞的代號（`UnknownDirective`、`EnvironmentVariableMissing`、`ReferenceCycle`…）照
@@ -229,8 +235,7 @@ agent-bob/
 1. `system.json` 用 `{"content": "…"}`，不用整則訊息——role 是固定的，沒必要寫。
 2. `tools` 併進 `state.json` 後就是一個路徑陣列，沒有 `disabled` 開關：要關就從陣列拿掉。
 3. 同名工具直接報錯，不用「後面蓋前面」。
-4. `engine.json` 兩種 `kind` 都寫進規範，程式第一版先做 `llm`；兩種都當場等。
+4. `engine` 兩種 `kind` 都寫進規範，程式第一版先做 `llm`；兩種都當場等。
 5. `llm` 引擎當場等 HTTP 回來——違反「一格不等網路」，第一版先接受。
 6. 沒有任何上限與計數（一題幾格、連錯幾次、等多久）——使用者說先只剩 `state`，要管再說。
 7. agent 寫回 `state.json` 時改的是原始 JSON，不是解完的結果。
-8. `engine.json` 還是獨立一份、沒併進 `state.json`——使用者沒叫我併；要併也是一句話的事。
