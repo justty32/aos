@@ -8,7 +8,7 @@
 > 這份**只講「什麼是一個 agent 資料夾」**：兩份檔（`info.json`、`state.json`）、指示詞解不解、
 > 共用的錯誤代號。兩份檔裡各程式自己的欄位、它們指到的檔長什麼樣，**由用它的程式的規範定**
 > （`info.json` 的 `system`／`history`／`tools`／`engine`＝[aos-llm-ask.md §2](aos-llm-ask.md)；
-> `state.json` 的 `input`／`waits`＝[aos-agent.md §2](aos-agent.md)）。
+> `state.json` 的 `input`／`returns`／`waits`＝[aos-agent.md §2](aos-agent.md)）。
 
 一句話：**一個 agent 就是一個資料夾**——`info.json` 說這是 agent、以及各程式要的設定；
 `state.json` 記走到哪、以及走的時候要看哪些外面的檔。
@@ -20,7 +20,7 @@
 ```
 agent-bob/
   info.json            _metainfo ＋ 各程式要的設定（system／history／tools／engine…，見 aos-llm-ask.md）
-  state.json           state ＋ aos-agent 要看的外面的檔（input／waits…，見 aos-agent.md）
+  state.json           state ＋ aos-agent 的三個入口（input／returns／waits，見 aos-agent.md）
   prompts/             慣例位置：人格、記憶
   tools/               慣例位置：工具檔
 ```
@@ -81,10 +81,10 @@ agent-bob/
 }
 ```
 
-- `state`：`idle`／`think`／`wait`／`act` 之一（四格各做什麼是 [aos-agent.md](aos-agent.md) 的事）。
+- `state`：`idle`／`think`／`act` 之一（各格做什麼是 [aos-agent.md](aos-agent.md) 的事；「等」不是狀態，是門，也在那份）。
   程式改寫它時只動這一格、其他格原樣抄回（§2），所以 `state` 在原始 JSON 裡要是字面字串。
 - **檔不存在＝`{"state": "idle"}`**，aos-agent 第一次動就會把它寫出來；存在但壞掉＝`ReadFailed`／`JsonSyntax`。
-- 每一格解指示詞（§2）；`state` 不是四個之一、或不是字面字串 → `StateInvalid`。
+- 每一格解指示詞（§2）；`state` 不是三個之一、或不是字面字串 → `StateInvalid`。
 
 ## 5. 共用的錯誤代號（讀／驗階段）
 
@@ -96,7 +96,7 @@ agent-bob/
 | `ReadFailed`／`JsonSyntax`／`NotAnObject`／`NotAnArray` | 某個檔讀不到／不是 JSON／頂層型別不對（各程式可以對自己的檔另訂更準的代號，例如工具檔不是陣列＝`ToolInvalid`） |
 | `MetainfoInvalid`／`UnsupportedVersion` | `_metainfo` 不是物件、或缺 `_version`／`_version` 不是整數 `1` |
 | `FieldTypeMismatch` | 某格型別不對 |
-| `StateInvalid` | `state.json` 的 `state` 不是四個之一、或在原始 JSON 裡不是字面字串（§4） |
+| `StateInvalid` | `state.json` 的 `state` 不是三個之一、或在原始 JSON 裡不是字面字串（§4） |
 
 指示詞的代號（`UnknownDirective`、`EnvironmentVariableMissing`、`ReferenceCycle`…）照
 [directives.md §6](directives.md)；各程式自己欄位的代號（`MessageInvalid`、`ToolInvalid`、
