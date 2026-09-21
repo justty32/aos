@@ -112,6 +112,22 @@ class TestFields(ExecCase):
         self.assertEqual(r.returncode, 0)
         self.assertEqual(self.read("out.txt"), "out\n")
 
+    def test_unknown_top_level_key_is_ignored(self):
+        """七個欄位＋ _metainfo 以外的頂層 key 一律忽略（2026-09-21 起，不再是 UnknownKey）。"""
+        self.inst({"argv": ["sh", "-c", "echo out"], "stdout": "out.txt",
+                   "timeout_ms": 5, "parallel": True, "env": {"A": "1"}})
+        r = self.aos(self.d)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("out.txt"), "out\n")
+
+    def test_metainfo_extra_key_is_ignored(self):
+        """_metainfo 裡 _type／_version 以外的 key 也忽略。"""
+        self.inst({"_metainfo": {"_type": "posix", "_version": 1, "note": "隨便"},
+                   "argv": ["sh", "-c", "echo out"], "stdout": "out.txt"})
+        r = self.aos(self.d)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("out.txt"), "out\n")
+
     def test_metainfo_valid_loads_and_runs(self):
         """寫對的 `_metainfo` 讀完就丟掉，不影響執行，也不會傳給子程式。"""
         self.inst({"_metainfo": {"_type": "posix", "_version": 1},

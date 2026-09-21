@@ -1,4 +1,4 @@
-"""envs：疊加、$opt clear（有／沒 $envs）、清空之後 PATH 怎麼找 argv[0]、$env 指示詞。"""
+"""envs：疊加、$opt clear（有／沒 $val）、清空之後 PATH 怎麼找 argv[0]、$env 指示詞。"""
 import os
 import unittest
 
@@ -23,15 +23,15 @@ class TestEnv(ExecCase):
         self.assertEqual(self.read("out.txt"), "蓋掉\n")
 
     def test_clear_with_envs(self):
-        """{"$opt":"clear","$envs":{…}}＝從空環境開始，只放 $envs 裡的。"""
+        """{"$opt":"clear","$val":{…}}＝從空環境開始，只放 $val 裡的。"""
         self.inst({"argv": ["sh", "-c", "echo \"[$AOSTEST_OUTER][$ONLY]\""],
-                   "envs": {"$opt": "clear", "$envs": {"ONLY": "只有我"}},
+                   "envs": {"$opt": "clear", "$val": {"ONLY": "只有我"}},
                    "stdout": "out.txt"})
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
         self.assertEqual(self.read("out.txt"), "[][只有我]\n")
 
     def test_clear_without_envs(self):
-        """$envs 可省＝完全空的環境。"""
+        """$val 可省＝完全空的環境。"""
         self.inst({"argv": ["sh", "-c", "echo \"[$AOSTEST_OUTER]\""],
                    "envs": {"$opt": "clear"}, "stdout": "out.txt"})
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
@@ -48,7 +48,7 @@ class TestEnv(ExecCase):
     def test_argv0_uses_the_overlaid_path(self):
         """argv[0] 走的是**疊加後**的 PATH：故意指到空的地方就 127。"""
         self.inst({"argv": ["sh", "-c", "true"],
-                   "envs": {"$opt": "clear", "$envs": {"PATH": os.path.join(self.d, "空")}}})
+                   "envs": {"$opt": "clear", "$val": {"PATH": os.path.join(self.d, "空")}}})
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 127)
 
     def test_envs_value_can_be_dollar_env_directive(self):
@@ -60,7 +60,7 @@ class TestEnv(ExecCase):
     def test_envs_value_can_be_dollar_env(self):
         self.inst({"argv": ["sh", "-c", "echo $COPIED"], "stdout": "out.txt",
                    "envs": {"$opt": "clear",
-                           "$envs": {"COPIED": {"$env": "AOSTEST_OUTER"}}}})
+                           "$val": {"COPIED": {"$env": "AOSTEST_OUTER"}}}})
         self.assertEqual(self.aos(self.d, env=OUTER).returncode, 0)
         self.assertEqual(self.read("out.txt"), "外面來的\n")
 

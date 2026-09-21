@@ -22,17 +22,18 @@ def abspath(base, p):
 
 
 def _envs(v, cwd, inst):
-    """`envs` 位置：普通的「變數名→值」物件，或清空型式 `{"$opt":"clear","$envs":{…}}`。
+    """`envs` 位置：普通的「變數名→值」物件，或清空型式 `{"$opt":"clear","$val":{…}}`。
 
-    清空型式先把繼承來的環境整個丟掉，再只放 `$envs` 裡的（`$envs` 可省＝完全空的環境）。
-    兩者都可以是指示詞解出來的（整包 `$ref` 從別的檔拿），`$envs` 一樣還能再是指示詞。
+    清空型式先把繼承來的環境整個丟掉，再只放 `$val` 裡的（`$val` 可省＝完全空的環境）。
+    兩者都可以是指示詞解出來的（整包 `$ref` 從別的檔拿），`$val` 一樣還能再是指示詞。
     key 是純字串、不解指示詞，而且不能 `$` 開頭——那種 key 一出現整包就被當指示詞看了。
     """
     where = "envs"
-    if isinstance(v, dict) and "$opt" in v:
+    opts, v, has_val = options(v, where, OPTIONS["envs"])
+    if "clear" in opts:
         inst["envs_clear"] = True
-        where = "envs 的 $envs"
-        v = _resolve(_opt(v, "envs", "clear"), cwd, where, [])
+        where = "envs 的 $val"
+        v = _resolve(v if has_val else {}, cwd, where, [])
     if not isinstance(v, dict):
         raise InstError("FieldTypeMismatch", "%s 要是物件，不是 %s" % (where, type(v).__name__))
     for k, val in v.items():
@@ -54,60 +55,97 @@ def _resolve(v, base, where, chain):
 
 
 def _is_directive(d):
-    """一個 dict 只要有 `$` 開頭的 key 就是指示詞；`$opt` 的兩種型式除外（stderr 與
-    envs 自己認，因為清空型式是唯一可以有兩個 key 的）。"""
+    """一個 dict 只要有 `$` 開頭的 key 就是指示詞；選項物件（有 `$opt` 的）除外——那個
+    由各位置自己用 `options()` 認，因為它是唯一可以有兩個 key（`$opt`＋`$val`）的。"""
     return "$opt" not in d and any(k.startswith("$") for k in d)
 
 
 def _apply(d, base, where, chain):
-    """解一層指示詞，回 `(值, 新的鏈)`。指示詞＝剛好一個 key、值一定是字串。"""
+    """解一層指示詞，回 `(值, 新的鏈)`。指示詞＝剛好一個 key；`$env`／`$ref` 的值是字串，
+    `$fmt` 的值是物件（模板＋變數表）。"""
     if len(d) != 1:
         raise InstError("DirectiveKeyCountInvalid",
                         "%s 的指示詞要剛好一個 key，這個有 %d 個" % (where, len(d)))
     key, val = next(iter(d.items()))
     if key not in DIRECTIVES:
         raise InstError("UnknownDirective",
-                        "%s 的指示詞 %r 不認得，只有 %s（外加 stderr／envs 的 $opt）"
+                        "%s 的指示詞 %r 不認得，只有 %s（外加各位置自己的 $opt 選項物件）"
                         % (where, key, "／".join(DIRECTIVES)))
+    if key == "$fmt":
+        return _fmt(val, base, where, chain), chain
     if not isinstance(val, str):
         raise InstError("DirectiveValueTypeMismatch",
                         "%s 的 %s 值要是字串，不是 %s" % (where, key, type(val).__name__))
     if key == "$env":
         return _lookup(val, where, "$env"), chain
-    if key == "$fmt":
-        return _fmt(val, where), chain
     return _ref(val, base, where, chain)
 
 
-def _opt(d, where, want):
-    """`$opt` 的兩種型式：`stderr` 的 merge、`envs` 的 clear。回清空型式的 `$envs`。
+# 各位置認得的選項名（小寫、區分大小寫）。沒列在這裡的位置（argv、envs 的值…）一個都不吃。
+OPTIONS = {
+    "stdin": ("inherit",),
+    "stdout": ("append", "mkdir", "inherit"),
+    "stderr": ("append", "mkdir", "inherit", "merge"),
+    "exit": ("append", "mkdir"),
+    "cwd": ("mkdir",),
+    "envs": ("clear",),
+}
+_NO_VAL = ("inherit", "merge")          # 帶了 $val 就衝突
+_NEED_VAL = ("append", "mkdir")         # 沒帶 $val 就衝突（clear 可省）
+_ALONE = ("inherit", "merge")           # 跟任何別的選項都互斥
 
-    `want=None`＝這個位置根本不准 `$opt`（一定丟）。
+
+def options(v, where, allowed):
+    """一個位置解出來的值 `v`：是選項物件就拆開驗，回 `(選項名集合, $val, 有沒有 $val)`；
+    不是選項物件就原樣回 `(空集合, v, True)`。
+
+    選項物件長 `{"$opt": "名字"}`／`{"$opt": ["名字1","名字2"], "$val": 值}`：只能有 `$opt`
+    跟 `$val` 兩個 key（舊的 `$envs` 不再認得＝多了一個 key）；`$opt` 是字串或非空字串陣列；
+    名字重複、或不是這個位置（`allowed`）認得的＝`UnknownOption`；帶不帶 `$val` 跟哪些
+    能一起出現，不合＝`OptionConflict`。`$val` 這裡**不解、不驗型別**——它本來就是「該直接
+    寫在那一格的值」，交回去給那一格照自己的規則處理（所以還能再是指示詞）。
     """
-    extra = [k for k in d if k not in ("$opt", "$envs")]
+    if not (isinstance(v, dict) and "$opt" in v):
+        return frozenset(), v, True
+    extra = [k for k in v if k not in ("$opt", "$val")]
     if extra:
         raise InstError("DirectiveKeyCountInvalid",
-                        "%s 的 $opt 型式只能有 $opt 與 $envs，多了 %s"
+                        "%s 的選項物件只能有 $opt 與 $val，多了 %s"
                         % (where, "、".join(repr(k) for k in extra)))
-    v = d["$opt"]
-    if not isinstance(v, str):
+    raw = v["$opt"]
+    names = [raw] if isinstance(raw, str) else raw
+    if not (isinstance(names, list) and names and all(isinstance(n, str) for n in names)):
         raise InstError("DirectiveValueTypeMismatch",
-                        "%s 的 $opt 值要是字串，不是 %s" % (where, type(v).__name__))
-    if want is None:
-        raise InstError("UnknownDirective",
-                        "%s 不能用 $opt（只有 stderr 的 merge 與 envs 的 clear）" % where)
-    if v != want:
-        raise InstError("UnknownOption",
-                        "%s 的 $opt 只認得 %r，不是 %r" % (where, want, v))
-    return d.get("$envs", {})
+                        "%s 的 $opt 要是字串或非空的字串陣列，不是 %r" % (where, raw))
+    seen = []
+    for n in names:
+        if n in seen:
+            raise InstError("UnknownOption", "%s 的 $opt 重複了 %r" % (where, n))
+        if n not in allowed:
+            raise InstError("UnknownOption",
+                            "%s 的 $opt 不認得 %r，這個位置%s"
+                            % (where, n, ("只有 " + "／".join(allowed)) if allowed
+                               else "沒有任何選項可用"))
+        seen.append(n)
+    has_val = "$val" in v
+    for n in seen:
+        if n in _ALONE and len(seen) > 1:
+            raise InstError("OptionConflict",
+                            "%s 的 %s 不能跟別的選項一起用，這裡還有 %s"
+                            % (where, n, "／".join(x for x in seen if x != n)))
+        if n in _NO_VAL and has_val:
+            raise InstError("OptionConflict", "%s 的 %s 不能帶 $val" % (where, n))
+        if n in _NEED_VAL and not has_val:
+            raise InstError("OptionConflict", "%s 的 %s 一定要帶 $val（路徑）" % (where, n))
+    return frozenset(seen), v.get("$val"), has_val
 
 
 def _str(v, where):
-    """字串位置：解完之後不是字串就是型別錯（`$opt` 放錯地方也在這裡被抓）。"""
+    """字串位置：解完之後不是字串就是型別錯（選項物件放到不吃選項的位置也在這裡被抓）。"""
     if isinstance(v, str):
         return v
     if isinstance(v, dict) and "$opt" in v:
-        _opt(v, where, None)
+        options(v, where, ())
     raise InstError("FieldTypeMismatch",
                     "%s 要是字串或指示詞，不是 %s" % (where, type(v).__name__))
 
@@ -121,26 +159,53 @@ def _lookup(name, where, kind):
     return os.environ[name]
 
 
-def _fmt(s, where):
-    """{"$fmt":"${env:PATH}:/opt/bin"}：接字串用的。
+def _fmt(d, base, where, chain):
+    """{"$fmt": {"$val": "${p}:/opt/bin", "p": {"$env": "PATH"}}}：接字串用的。
 
-    寫法沿用 repo 既有的那套（`wf/workflows/common/data-files-fmt.md`），這裡只有
-    `env:` 這一個 namespace：
+    值**必須是物件**：`$val` 是模板（必填），其餘每個 key 都是**本地變數**。模板裡只有
+    `${name}` 會被代換、只查這張本地表，沒有任何 namespace（要環境變數就在表裡寫
+    `"x": {"$env": "NAME"}`）；單獨的 `$` 與 `$NAME` 都是**字面**，不展開也不用跳脫。
 
-    - 只有 `${…}` 會被代換；單獨的 `$` 與 `$NAME` 都是**字面**，不展開也不用跳脫。
-    - `${env:NAME}` 讀 **aos-exec 自己的**環境（不是 inst.json 的 `envs`，跟 `$env`
-      同一個來源）。不存在＝錯誤；存在但空＝空字串。
-    - 不是 `env:` 開頭的 `${…}`＝不認得的變數＝錯誤，不猜。
+    - 模板與每個變數值都可以再是指示詞（`$env`／`$ref`／巢狀 `$fmt`），用同一個中心路徑
+      與同一條 `$ref` 鏈解，解完**必須是字串**（不是 → `DirectiveValueTypeMismatch`）。
+    - 變數名不能 `$` 開頭、不能空、不能含 `{`／`}` → `FormatVariableInvalid`。
+    - 表裡沒有的 `${name}` → `UnknownFormatVariable`；定義了沒用到的沒關係。
     - **展開一次、不再掃結果**：換進來的值裡再出現 `${…}` 就是字面。
     """
+    if not isinstance(d, dict):
+        raise InstError("DirectiveValueTypeMismatch",
+                        "%s 的 $fmt 值要是物件（{\"$val\": 模板, 變數名: 值, …}），不是 %s"
+                        % (where, type(d).__name__))
+    if "$val" not in d:
+        raise InstError("DirectiveValueTypeMismatch", "%s 的 $fmt 少了 $val（模板）" % where)
+    table = {}
+    for name, v in d.items():
+        if name == "$val":
+            continue
+        if name == "" or name.startswith("$") or "{" in name or "}" in name:
+            raise InstError("FormatVariableInvalid",
+                            "%s 的 $fmt 變數名不能是空字串、$ 開頭、或含大括號：%r" % (where, name))
+        w = "%s 的 $fmt 變數 %s" % (where, name)
+        table[name] = _fmt_str(_resolve(v, base, w, chain), w)
+    w = "%s 的 $fmt 的 $val" % where
+    template = _fmt_str(_resolve(d["$val"], base, w, chain), w)
+
     def one(m):
         name = m.group(1)
-        if not name.startswith("env:"):
+        if name not in table:
             raise InstError("UnknownFormatVariable",
-                            "%s 的 $fmt 不認得變數 ${%s}（這一版只有 ${env:NAME}）"
-                            % (where, name))
-        return _lookup(name[len("env:"):], where, "$fmt 的 ${env:…}")
-    return _FMT.sub(one, s)
+                            "%s 的 $fmt 模板用了表裡沒有的變數 ${%s}（表裡有：%s）"
+                            % (where, name, "、".join(sorted(table)) or "沒有"))
+        return table[name]
+    return _FMT.sub(one, template)
+
+
+def _fmt_str(v, where):
+    """`$fmt` 的模板與變數解完都要是字串。"""
+    if not isinstance(v, str):
+        raise InstError("DirectiveValueTypeMismatch",
+                        "%s 解完要是字串，不是 %s" % (where, type(v).__name__))
+    return v
 
 
 def _ref(spec, base, where, chain):

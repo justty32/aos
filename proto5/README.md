@@ -9,7 +9,8 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 
 | 文件 | 講什麼 | 現況 |
 |---|---|---|
-| [spec/inst-posix.md](spec/inst-posix.md) | inst.json 的 `posix` 呼叫格式第 1 版（七個欄位、指示詞、錯誤代號、執行語意），加上新的 `_metainfo`（`_type`／`_version`；沒寫＝posix v1） | 照 proto4-3 程式碼寫成；`_metainfo` 的相容處理補在 proto4-3 |
+| [spec/directives.md](spec/directives.md) | 指示詞機制：`$env`／`$fmt`／`$ref` 取值、`$opt`／`$val` 選項物件、先解再驗、巢狀、循環、錯誤代號。任何 aos 的 JSON 檔都能用；哪個位置認得哪些選項名由宿主規範定 | 2026-09-21 寫成，proto4-3 程式已照做 |
+| [spec/inst-posix.md](spec/inst-posix.md) | inst.json 的 `posix` 呼叫格式第 1 版：七個欄位、各位置的 `$opt` 選項（append／mkdir／inherit／merge／clear）、錯誤代號、執行語意，加上 `_metainfo`（`_type`／`_version`；沒寫＝posix v1）、頂層未知 key 忽略 | 2026-09-21 使用者修訂拍板，proto4-3 程式已照做（299 測試） |
 
 ## 還沒定的
 

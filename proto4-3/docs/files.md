@@ -7,7 +7,7 @@
 - `aos-exec`、`aos-run`：可執行的薄命令列入口。
 - `aos_exec.py`：認目標、跑一次、砍逾時、寫 exit 檔；核心是 `run_target()`。
 - `aos_inst.py`：inst.json 的讀取、欄位順序與完整結果組裝。
-- `aos_inst_resolve.py`：指示詞展開、`$ref`／pointer 與欄位型別驗證。
+- `aos_inst_resolve.py`：指示詞展開、`$ref`／pointer、選項物件（`$opt`／`$val`）驗證與欄位型別驗證。
 - `aos_run.py`：反覆呼叫 `run_target()`，管理間隔與停止條件。
 - `aos_run_status.py`：訊號狀態、`--status-fd` 事件與 handler 安裝。
 

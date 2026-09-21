@@ -231,24 +231,25 @@ class KernelInitTest(KernelTest):
         self.assertIn("看不懂這張單", out["msg"])
         self.assertFalse(os.path.exists(os.path.join(h.syscalls, "1-wat.json")))
 
-    def test_add_rejects_an_unknown_inst_field_without_queuing(self):
+    def test_add_rejects_a_bad_inst_field_without_queuing(self):
+        """add 只做幾個表面檢查，剩下的交給 aos-exec 的完整規則：型別錯就不排。"""
         self.init(1)
-        inst = self.write_inst("job.json", {"argv": ["true"], "timeout_ms": 20})
+        inst = self.write_inst("job.json", {"argv": ["true"], "envs": {"A": 1}})
         r = self.kernel("add", self.k, inst)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("UnknownKey", r.stderr)
+        self.assertIn("FieldTypeMismatch", r.stderr)
         self.assertEqual([n for n in os.listdir(self.at("procs")) if n.endswith(".json")], [])
 
-    def test_manually_queued_unknown_field_goes_to_bad_with_exact_validator_error(self):
+    def test_manually_queued_bad_field_goes_to_bad_with_exact_validator_error(self):
         self.init(1)
         self.put_proc("badfield", {"argv": ["true"], "cwd": self.tmp,
-                                   "timeout_ms": 20})
+                                   "envs": {"A": 1}})
         self.tick()
         self.assertTrue(os.path.exists(self.at("procs", "bad", "badfield.json")))
         with open(self.at("kernel.log"), encoding="utf-8") as f:
             log = f.read()
-        self.assertIn("UnknownKey", log)
-        self.assertIn("不認得的欄位", log)
+        self.assertIn("FieldTypeMismatch", log)
+        self.assertIn("要是字串", log)
 
     def test_ls_of_a_missing_home_points_to_kernel_init(self):
         missing = os.path.join(self.tmp, "missing")

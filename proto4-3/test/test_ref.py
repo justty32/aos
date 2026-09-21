@@ -84,6 +84,23 @@ class TestRef(ExecCase):
         self.assertEqual(self.aos(self.d).returncode, 0)
         self.assertEqual(self.read("named.txt"), "從 argv 來的\n")
 
+    def test_option_val_can_be_a_ref(self):
+        """路徑欄的選項物件：$val 是 $ref，解出來的字串當那一格的路徑（相對於 cwd）。"""
+        self.write("vals.json", '{"out": "deep/named.txt"}')
+        self.inst({"argv": ["echo", "來了"],
+                   "stdout": {"$opt": "mkdir", "$val": {"$ref": "vals.json#/out"}}})
+        self.assertEqual(self.aos(self.d).returncode, 0)
+        self.assertEqual(self.read("deep/named.txt"), "來了\n")
+
+    def test_option_val_ref_to_a_number_is_125(self):
+        """$val 解出來還是照那一格的型別驗：路徑欄拿到數字＝型別錯。"""
+        self.write("vals.json", '{"out": 3}')
+        self.inst({"argv": ["true"],
+                   "stdout": {"$opt": "append", "$val": {"$ref": "vals.json#/out"}}})
+        r = self.aos(self.d)
+        self.assertEqual(r.returncode, 125)
+        self.assertIn("FieldTypeMismatch", r.stderr)
+
 
 class TestDirectiveAnywhere(ExecCase):
     """先解、再驗：頂層、argv 整包、envs 整包都能是指示詞，解出來才照那個位置驗型別。"""
@@ -132,14 +149,15 @@ class TestDirectiveAnywhere(ExecCase):
 
     def test_envs_fmt_is_125(self):
         """$fmt 解出來一定是字串，envs 要的是物件。"""
-        r = self.bad_inst({"argv": ["true"], "envs": {"$fmt": "x"}})
+        r = self.bad_inst({"argv": ["true"], "envs": {"$fmt": {"$val": "x"}}})
         self.assertIn("FieldTypeMismatch", r.stderr)
 
-    def test_envs_clear_form_can_ref_its_envs(self):
+    def test_envs_clear_form_can_ref_its_val(self):
+        """選項物件的 $val 自己還能再是指示詞：清空型式的 $val 用 $ref 從別的檔拿。"""
         self.write("e.json", '{"ONLY": "只有這個"}')
         self.inst({"argv": ["sh", "-c", "echo [$ONLY][$AOSTEST_OUTER]"],
                    "stdout": "out.txt",
-                   "envs": {"$opt": "clear", "$envs": {"$ref": "e.json"}}})
+                   "envs": {"$opt": "clear", "$val": {"$ref": "e.json"}}})
         env = dict(os.environ, AOSTEST_OUTER="外面來的")
         self.assertEqual(self.aos(self.d, env=env).returncode, 0)
         self.assertEqual(self.read("out.txt"), "[只有這個][]\n")   # 清空了，外面的看不到
