@@ -109,9 +109,3 @@ aos-agent 會在送出 LLM／工具請求或引擎連敗三次時自己往 `wait
   cpu／thread，跑完把結果寫進 `input`（當 `user` 訊息回來；順序沒限制，因為不是 `tool` 訊息）。
 - **整格硬上限與 waits 期限**：這輪不做；工具每次 60 秒與引擎連敗三次暫停已在 §3。HTTP 的 timeout 仍是 socket 逾時，不是整次呼叫總上限。
 - 誰把輸入丟進 `input`、誰去讀回話（aos-user 之類的外部工具）；反覆叫、放進 kernel；鎖；記憶太長。
-
-## 我自己選的、使用者可以推翻的
-
-1. `waits` 是動態表：aos-agent 也能加；要「永遠等某個檔」的靜態門先不做。
-2. `think` 直接看 `tool_calls` 決定去 `act` 還是 `idle`；`act` 對 CPU call 分送收兩格，全部結果到齊才接記憶。
-3. 先寫記憶再寫 `state`；`think`／`act` 進場先看記憶尾巴自癒。
