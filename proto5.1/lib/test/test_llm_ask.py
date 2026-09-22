@@ -188,6 +188,13 @@ class TestBuildRequest(AgentCase):
     def test_stream_never_sent(self):
         self.assertNotIn("stream", aos_llm_ask.build_request(self.agent()))
 
+    def test_cpu_never_sent_even_from_params(self):
+        d = self.agent(info={"engine": {"endpoint": "e", "model": "m", "cpu": "../cpu",
+                                        "params": {"cpu": "private/path", "temperature": 0.3}}})
+        body = aos_llm_ask.build_request(d)
+        self.assertNotIn("cpu", body)
+        self.assertEqual(body["temperature"], 0.3)
+
     def test_read_errors_raise_agent_error(self):
         with self.assertRaises(AgentError) as cm:
             aos_llm_ask.build_request(self.d)

@@ -29,9 +29,10 @@
     history       記憶（陣列；檔不存在＝[]），每則照 aos-llm-ask.md §2.3 驗過、原樣
     history_path  記憶檔的絕對路徑
     tools         送模型用的工具表：所有檔接成一個陣列、每個元素去掉所有 `_` 開頭的 key
-    tools_raw     原始工具表：同順序、含 `_meta`（跑工具時用）
+    tools_raw     原始工具表：同順序、含 `_meta` 與可選的 `_timeout_ms`（跑工具時用）
     tool_paths    工具檔的絕對路徑，照 info.json 的順序
-    engine        {"endpoint", "model", "params", "api_key", "timeout_ms"}（api_key 沒寫＝None）
+    engine        {"endpoint", "model", "params", "api_key", "timeout_ms", "cpu"}
+                  api_key／cpu 沒寫＝None；cpu 有寫＝相對 agent 解成絕對路徑
 """
 import json
 import os
@@ -111,7 +112,7 @@ def _load(obj, ctx, dir):
     info["tools_raw"] = _read_tools(info["tool_paths"], rels)
     info["tools"] = [strip_private(t) for t in info["tools_raw"]]
 
-    info["engine"] = _engine(obj, top)
+    info["engine"] = _engine(obj, top, dir)
     return info
 
 
@@ -207,9 +208,9 @@ def _tools_field(obj, top):
     return out
 
 
-def _engine(obj, top):
+def _engine(obj, top, base):
     """`engine`：必填物件；`endpoint`／`model` 必填字串、`params` 物件（整棵解）、`api_key` 字串、
-    `timeout_ms` 正整數。缺整格、缺必填、型別不對＝`EngineInvalid`（`engine` 本身不是物件照
+    `timeout_ms` 正整數、`cpu` 路徑字串。缺整格、缺必填、型別不對＝`EngineInvalid`（`engine` 本身不是物件照
     aos-llm-ask.md §2 算 `FieldTypeMismatch`）。"""
     loc = _field(obj, "engine", top)
     if loc is None:
@@ -217,7 +218,7 @@ def _engine(obj, top):
     eng = loc.value
     if not isinstance(eng, dict):
         raise AgentError("FieldTypeMismatch", "info.json 的 engine 要是物件，不是 %s" % type(eng).__name__)
-    out = {"params": {}, "api_key": None, "timeout_ms": DEFAULT_TIMEOUT_MS}
+    out = {"params": {}, "api_key": None, "timeout_ms": DEFAULT_TIMEOUT_MS, "cpu": None}
     for key in ("endpoint", "model"):
         if key not in eng:
             raise AgentError("EngineInvalid", "info.json 的 engine 缺了 %s（必填）" % key)
@@ -240,6 +241,12 @@ def _engine(obj, top):
         if not (isinstance(v, int) and not isinstance(v, bool) and v > 0):
             raise AgentError("EngineInvalid", "info.json 的 engine.timeout_ms 要是正整數（毫秒），不是 %r" % (v,))
         out["timeout_ms"] = v
+    if "cpu" in eng:
+        v = _inner(eng["cpu"], loc, "cpu").value
+        if not isinstance(v, str):
+            raise AgentError("EngineInvalid", "info.json 的 engine.cpu 要是路徑字串，不是 %s"
+                             % type(v).__name__)
+        out["cpu"] = _abspath(base, v)
     return out
 
 
@@ -323,7 +330,7 @@ def _read_tools(paths, rels):
 
 def _check_tool(t, where):
     """一個工具元素：`type`（字串）、`function`（物件）、`function.name`（非空字串）、`_meta`（物件，
-    不准有 `stdin`／`stdout`）。其他東西不驗、原樣。回工具名。"""
+    不准有 `stdin`／`stdout`）、可選的 `_timeout_ms`（正整數）。其他東西不驗、原樣。回工具名。"""
     if not isinstance(t, dict):
         raise AgentError("ToolInvalid", "%s 要是物件，不是 %s" % (where, type(t).__name__))
     if not isinstance(t.get("type"), str):
@@ -342,6 +349,11 @@ def _check_tool(t, where):
     if bad:
         raise AgentError("ToolInvalid", "%s（%s）的 _meta 不准寫 %s：參數從 stdin 進、結果從 stdout 出，由 agent 自己接"
                          % (where, name, "／".join(bad)))
+    if "_timeout_ms" in t:
+        v = t["_timeout_ms"]
+        if not (isinstance(v, int) and not isinstance(v, bool) and v > 0):
+            raise AgentError("ToolInvalid", "%s（%s）的 _timeout_ms 要是正整數（毫秒），不是 %r"
+                             % (where, name, v))
     return name
 
 
