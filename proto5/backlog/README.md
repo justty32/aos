@@ -13,3 +13,4 @@
 | [cpu-simpler.md](cpu-simpler.md) | cpu 佇列實作再精簡（不加複雜度）→ proto5-2 試 |
 | [kill-tree-exceptions.md](kill-tree-exceptions.md) | kill_tree 開著時，某些工具要能例外存活 |
 | [kiss-holes.md](kiss-holes.md) | proto5.1 為了 KISS 先接受的七個洞 |
+| [review-leftovers.md](review-leftovers.md) | fable 重審裡先不做的 R4、R10～R13 |
