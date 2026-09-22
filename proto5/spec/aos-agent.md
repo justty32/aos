@@ -44,12 +44,18 @@ aos-agent 自己**不會**往 `waits` 加條目，只劃。誰要它停下來等
 | `idle` | 沒東西 | 不變 | **101** |
 | `think` | 用 [aos-llm-ask](aos-llm-ask.md) 的函式庫問一次，`choices[0].message` 接在記憶尾巴 | 有 `tool_calls` → `act`；沒有（回話）→ `idle` | 0 |
 | `think` | 引擎失敗（aos-llm-ask 的「3」那類）→ stderr 一行、記憶不動 | 不變（下一格重試） | 0 |
+| `think` | 記憶尾巴已經是帶 `tool_calls` 的 `assistant`（上次崩在寫記憶與寫 `state` 之間）→ 不問模型 | `act` | 0 |
 | `act` | 記憶尾巴那則 `assistant` 的每個 `tool_calls[i]`：照名字找工具、拿 `_meta` 當 inst 跑（`arguments` 字串原樣進 stdin、stdout 整段當結果），**每個 call 接一則 `tool` 訊息**（順序照 `tool_calls`）。找不到的工具＝「沒有這個工具：xxx」；退出碼非 0＝「工具 xxx 失敗（exit n）：」＋stdout；`_meta` 那份 inst 解不開／跑不起來（aos-exec 的 125 那類）＝「工具 xxx 跑不起來：」＋那一行錯誤。三種都只是給模型看的 `tool` 訊息，不算 agent 的錯 | `think` | 0 |
+| `act` | 記憶尾巴不是帶 `tool_calls` 的 `assistant`（沒東西可跑）→ 不跑 | `think` | 0 |
 
 - **為什麼 `act` 不用等**：模型那邊的硬規定是一則 `assistant` 帶了 `tool_calls`，下一次問之前每個 call
   都要有一則 `tool` 訊息緊接在後面。`act` 一格內全部跑完接上，就永遠不會違反。
 - 一格只寫：`state.json`（原始 JSON 只動 `state`／`waits`）、記憶檔（整份重寫）、`input`／`waits`
-  指到的檔（rename）；都先 `.tmp` 再 rename。**先寫記憶、再寫 `state`**：崩在中間頂多重做一格。
+  指到的檔（rename）；都先 `.tmp` 再 rename。**先寫記憶、再寫 `state`**：崩在中間頂多重做一格——
+  表裡 `think`／`act` 各多的那一列就是「重做」時看記憶尾巴自己對回來，不會把帶 `tool_calls` 的
+  `assistant` 再拿去問一次（模型那邊會拒絕）。
+- `think` 回來的 `message` 原樣接；只有 `content` 是 `null` 又沒有 `tool_calls` 時補成 `""`（不然下次
+  讀驗過不了 [aos-llm-ask.md §2.2](aos-llm-ask.md)）。
 - 跑工具是 import proto5 的 aos_exec／aos_inst，不是開 `aos-exec` 子進程（inst 在記憶體、stdin 要塞
   字串、stdout 要收回來——函式庫層要補一個入口）。
 - `$env` 讀的是 aos-agent 自己的環境；`$ref` 相對路徑以 agent 資料夾為中心。
@@ -75,4 +81,4 @@ aos-agent 自己**不會**往 `waits` 加條目，只劃。誰要它停下來等
 
 1. `waits` 是動態表：aos-agent 只劃不加；要「永遠等某個檔」的靜態門先不做。
 2. `think` 直接看 `tool_calls` 決定去 `act` 還是 `idle`；`act` 一格內跑完所有 call。
-3. 先寫記憶再寫 `state`。
+3. 先寫記憶再寫 `state`；`think`／`act` 進場先看記憶尾巴自癒。
