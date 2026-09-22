@@ -36,5 +36,10 @@ code 為退出碼／aos 失敗碼；timed_out 取真實逾時旗標，不用 exi
 UTF-8 文字（非法位元組替換），逾時仍保留已收到輸出。inst 的 stdin／stdout 由管線接管，
 stderr／exit／cwd／envs 按既有 aos_exec 規則。
 
-壞 payload、執行建立請求時的 ValueError／OSError、共用層收屍：
-`{"ok":false,"error":"原因"}`。結果沒有 name／id。
+壞 payload、執行建立請求時的 ValueError／OSError：`{"ok":false,"error":"原因"}`。
+這些是已知失敗；工具的逾時與非零退出也已有執行結果，不算結果不明。
+
+收屍／失聯固定為 `{"ok":false,"error":"結果不明：工具可能已經跑了，也可能沒有"}`。
+running 超過收屍期限還沒有結果，就無法知道崩在認領後、工具執行中，還是工具已完成而未發布結果；
+原程序也可能仍在跑。這幾種都算結果不明，不重試、不推測副作用。agent 交給模型的 tool content
+是這整個物件的 JSON 字串，不加工具名稱或其他前綴。結果沒有 name／id。

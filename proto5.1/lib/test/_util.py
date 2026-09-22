@@ -98,7 +98,7 @@ class ExecCase(Base):
 
 # ---------------------------------------------------------------- agent 資料夾 ----
 
-ENGINE = {"endpoint": "http://nope.invalid/v1", "model": "test-model"}   # 打不到也沒關係：build_request 不碰網路
+ENGINE = {"cpu": "cpu", "model": "test-model"}   # build_request 不碰網路
 TOOL_SH = {"type": "function",
            "function": {"name": "sh", "description": "跑一句 shell",
                         "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}},
@@ -124,6 +124,9 @@ class AgentCase(Base):
                 obj["_metainfo"] = {"_type": "llm_agent", "_version": 1}
             if "engine" not in obj:
                 obj["engine"] = dict(ENGINE)
+            if obj.get("engine") == ENGINE:
+                self.write("cpu/info.json", json.dumps({"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                           "models": {"test-model": {"endpoint": "http://unused.invalid/v1", "model": "test-model"}}}))
             if tools and "tools" not in obj:
                 obj["tools"] = list(tools)
             self.write("info.json", json.dumps(obj, ensure_ascii=False))

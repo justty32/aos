@@ -8,6 +8,7 @@
 
 收屍年齡必須大於 `timeout_ms / 1000 + 30` 秒。payload 的 timeout_ms 壞掉且程序又崩在
 認領後時，採 60000 ms 預設期限加 30 秒，讓它仍能收屍；正常壞 payload 立即回 ok:false。
+收屍使用 [tool-cpu](tool-cpu.md) 的固定「結果不明」文字，不重試；不把失聯猜成已知逾時。
 真工具逾時先依 aos_exec 規則 TERM、寬限 2 秒再 KILL 整個 process group；收屍本身不殺進程。
 
 | 退出碼 | 意思 |

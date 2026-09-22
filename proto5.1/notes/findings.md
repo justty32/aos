@@ -1,6 +1,6 @@
-# 第 1～3 段實作 findings（2026-09-22）
+# 第 1～4 段實作 findings（2026-09-22）
 
-範圍：[stage1-task.md](stage1-task.md)（#1～#17）、[stage2-task.md](stage2-task.md)（#18～#26）與 [stage3-task.md](stage3-task.md)（#27 起）。以下是實作與測試遇到的具體問題、這次採用的決定與仍存在的限制；不是要求使用者現在拍板。程式與規範只改 `proto5.1/`。
+範圍：[stage1-task.md](stage1-task.md)（#1～#17）、[stage2-task.md](stage2-task.md)（#18～#26）、[stage3-task.md](stage3-task.md)（#27～#35）與 [stage4-task.md](stage4-task.md)（#36～#44）。以下是實作與測試遇到的具體問題、這次採用的決定與仍存在的限制；不是要求使用者現在拍板。程式與規範只改 `proto5.1/`。
 
 ## 1. POSIX rename 不會替我們拒絕同名
 
@@ -203,3 +203,59 @@ ctl 最多只等十秒，daemon 若逐支 runner 各等五秒，三顆 CPU 就�
 曾評估把 daemon sleep 改成 status pipe select 立即喚醒；它只縮短延遲，不能保證 kernel 一定看到空檔，所以撤回該變更，保留原輪詢與一套確定交接。代價是 kernel 若崩在留下意圖後，runner 會停在兩次工作之間；重新 tick 可完成交接，daemon stop 仍能中止它。不做自動清意圖的時限，以免舊行程又在未交接完成時開跑。
 
 最終驗證：修正後 Python **760/760、84.607 秒、無 skip**；原 15 ms 與新增 0 ms 的三行程／兩 CPU 長任務案例各重跑三輪，**6/6** 全過。原失敗測試保留、期限未放寬，另加意圖取消、remove 失敗保留與 run 等待／中止的測試。完整真跑與停止記錄見 [stage3-report](stage3-report.md)。
+
+## 36. 模型連線設定移到 CPU，請求只留代號
+
+第 4 段照使用者拍板：agent 的 engine 只有 cpu／model／params，cpu 必填；LLM CPU 的 info 必須有 models 物件，可以是空表。表裡的 endpoint、真名、api_key、timeout_ms 在 CPU 讀 info 時解指示詞，timeout_ms 預設 120000。送件檔只有 model 代號／body／result，body 不含 model；CPU 用表裡真名填入，不信請求自己塞的 body.model。連線設定與 api_key 不再因 engine 整包抄入 requests／done。
+
+整合審查抓到 agent 送件前若呼叫完整 LLM CPU load，就會拿 agent 的環境先解 models；API key 只放在 CPU 環境時，合法請求反而交不出去。修正為 agent 只驗 CPU 身分，models 留到 CPU 執行時解。回歸測試讓 agent 環境沒有 KEY，CPU tick 才提供 KEY，實際 HTTP 驗 Bearer 與真模型名。
+
+不認識的代號是一次有結果的請求：不打 HTTP，回 `{"ok":false,"error":"不認識的模型代號"}`，照常進 done。models 壞掉則是 CPU 設定讀驗錯，不能假裝是某一次模型失敗。沒有新增請求身分、重試或路由備援；#11～#13／#23 的跨檔中斷限制仍在。
+
+## 37. 同步路徑拿掉後，aos-llm-ask CLI 只組 body
+
+刪除 `ask`／`request_from_info` 與 agent 直接打 HTTP 的分支。`build_request(dir_or_info)` 可用家路徑或已讀驗 info 組 body，`call(engine, body)` 留給 CPU。原本不帶 --dry-run 就同步詢問的 CLI，現在跟 --dry-run 一樣只印 body，退出碼只剩 0／1／2；沒有另做一套 CLI 交件等待流程。這是任務未細定 CLI 去向時採取的最小保留方式，使用者要跑一次思考走 agent 與 CPU tick。
+
+規範也分開：人格、記憶、工具、engine 的資料格式集中到 agent.md；aos-llm-ask.md 只講組 body 的程式，HTTP 行為寫在 aos-llm-cpu.md。原本的 HTTP 測試改搭 CPU 家、交件後呼叫 tick，沒有留同步相容分支。
+
+## 38. continue 的 consume 是門開時吃，不是暫停時先清
+
+第三次引擎失敗把 errors 歸零，加入 `{"$opt":"consume","$val":"continue.json"}`。達門檻時不再封存既有 continue.json；如果使用者已放檔，下一格會開門並把檔 rename 成 .done。第一次恢復後檔已被吃掉，所以第二次連敗仍會停住，必須再放一次檔。任務書示意的 `{file, consume}` 不是 agent.md 既有 waits 格式，因此按同一句「照 agent.md 的 waits 格式寫」使用 `$opt`／`$val`，沒有新增第二套等待語法。這取代 #3 的「每次暫停先清舊檔」，沒有另外的暫停狀態或欄位。
+
+## 39. 結果不明只用在工具執行結果無法確認時
+
+tool CPU 的 running 超過執行預算加 30 秒、由另一顆 CPU 收屍而沒有已發布結果時，error 固定為「結果不明：工具可能已經跑了，也可能沒有」。agent 收到這個錯誤，tool content 就是 `{"ok":false,"error":"結果不明：工具可能已經跑了，也可能沒有"}` 的 JSON 字串，不重送。共用佇列讓工具薄層指定收屍文字，不加新的結果型別欄位。
+
+真的拿到 run_inst 回傳的逾時、非零退出、執行前已知錯誤，各自維持原訊息；不因工具出錯就一律宣稱結果不明。已有結果時收屍仍保留結果，遲到回覆仍按 inode 檢查丟棄。CPU 失聯要等既有收屍期限才會變成結果；沒有另加心跳、掃 requests 猜執行狀態或自動重試。
+
+## 40. run.json 的 target 必須是固定檔案，連 idle 都一樣
+
+硬連結沒有「原始檔路徑」可讓 realpath 還原，若 run.json 只寫 cpus/N.json，就無法跨 CPU 辨認 X。因此 procs/<NAME>.json 保留實體檔，CPU 槽改成原子替換的符號連結。runner 在 busy:true／target:null 之後解析連結，公布固定的 procs 路徑，再從同一路徑讀 inst；換槽不會改掉已選定的目標。aos_exec 多一個 on_target callback，只有 runner 使用時才固定 realpath，普通 exec 的既有路徑語意保留。
+
+審查還抓到 idle 的同一個漏洞：如果空槽仍是普通 inst，runner 先公布 target=槽路徑，kernel 隨後把槽換成 X 連結，load 就會實跑 X 卻仍宣告空槽。修正為固定 K/idle.json，所有 CPU 槽連 idle 都只換連結。測試卡在 on_target 後把 idle 換成 X，確認當次仍執行原本的 idle。
+
+防重疊的順序是：kernel 先撤掉舊槽，再逐顆新讀 run.json；busy 且 target 是 X 或 null，這格就不排 X。撤槽前已選 X 的 runner 必先寫 busy，會被擋住；撤槽後才選目標的 runner 只能看到別的固定檔。新增 idle.json 與常駐 procs 是讓這個推論成立的必要檔案佈局補充，不加鎖、讓位意圖或新狀態欄位。rm 同樣立即撤槽／移除行程，不等已讀入的工作完成；它不是中止命令。
+
+## 41. run.json 不是完成歷史，不能把不明的差值算成失敗
+
+runner 忙碌時 target 是本次工作，last_exit／last_kind 仍可能屬於上次工作。kernel 因此只在 busy:false、target 符合目前行程且 runs 有新進展時收結果。換人不用重建 runner，runs 不歸零，quantum 仍用完成次數差；跨換人的 waiting／bad 計數跟行程保存。
+
+審查抓到另一個具體窗口：kernel 讀基線 runs=0 → idle 在指派前完成一次 → X 第一回失敗時 runs=2。若把差值 2 全當 X 的失敗，bad_after=2 就會首敗退件。修正為每個可確認的新快照最多增加一次 wait／bad／aos 計數，未知差值不灌入連敗。測試保留這個時序，確認 X 第一回失敗不會退 bad。
+
+代價是抽樣可能少算：interval=0 時，kernel 可能一直只看到 busy，漏掉 done／wait／失敗碼；即使觀察到新完成，也不能還原中間每次結果。quantum 仍可前進並換人。這與 #30 原本「差值按最新碼全部累計」不同，是拿掉狀態事件、又不新增 last_target 或逐次歷史後採取的保守計數。沒有把有限快照宣稱為逐次對帳。
+
+## 42. 兩段停止要給 ctl 足夠時間，kill_tree 只存 daemon 內部
+
+預設 stop 是同時 TERM 所有 runner，各等 5 秒、再 TERM、再等 5 秒才 KILL runner group；kill_tree 模式是 TERM 後 5 秒 KILL。若沿用 request／ctl 的 10 秒期限，前者可能剛要回音時 ctl 已超時，因此等回音的預設改為 15 秒。remove 使用同一套停止流程；stop 仍等 runner 全收屍、state 清空、pidfile 移除後才回成功。
+
+runner 預設首次 TERM／INT 只請它做完本次，第二次才 TERM 直接子程式那組；kill_tree 首次才走既有 terminate 的後代快照與兩秒升級，重複訊號不重入 terminate。daemon 不複製 busy／runs／last_*，entry 只留 pid／target／args／state／home；kill_tree 供停止流程用，放內部 job，沒有再加一個公開 state 欄位。
+
+## 43. runner 家每次 add 取新名字，避免吃到舊 ctl
+
+每次 daemon add 建立新的 runners/<唯一名>/，home 寫進 entry；remove 後留下 run.json 供查看，不重用那個家的 ctl.json。這避免同一 target 再 add 時被上次留下的 hold／stop 控制；daemon 與 runner 都不代替寫 ctl 的人刪檔。代價是 runner 家與請求 done 一樣會累積，本段不加清理政策。
+
+## 44. 全套抓到遷移測試把合法輪轉當成失敗
+
+第一輪完整測試 780 條、109.640 秒，只有 `test_swap_busy_two_second_job_blocks_other_cpu_at_zero_interval` 失敗：最後預期 CPU1 是 X，實際是 Y。X 原本的兩秒工作已完成，替代者 Y 卻是立即結束的 pass；interval=0 下，下一次測試觀察前 Y 已用完量子，kernel 合法把 X 排回 CPU0、Y 排到 CPU1。測試只等「CPU1 非空」就認定「X 已移往 CPU1」，這個前提不成立，失敗本身不是重疊證據。
+
+修正只把測試的替代者 Y 也設成兩秒工作，讓 X 舊工作完成後 CPU0 仍由 Y 佔用，才有確定條件驗 X 遷往 CPU1。X 維持兩秒、interval 維持 0，等待期限與 busy／target／無重疊斷言都保留，排程程式不為測試改規則。首輪失敗 log 與修後完整測試數字見 stage4-report.md。

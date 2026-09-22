@@ -57,7 +57,7 @@ class InstResult(tuple):
 
 
 def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, stderr=None,
-               args=None):
+               args=None, on_target=None):
     """把 xxx 執行一次，回 `(code, kind)`。
 
     `kind` 說這個 code 是誰的：
@@ -76,19 +76,27 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, 
     `on_spawn` 是給 aos-run 的鉤子：子行程一開起來就用那個 Popen 叫它一次，收完屍再用 None
     叫一次（aos-run 靠它砍正在跑的那個；命令列用不到）。
 
+    `on_target` 在目標路徑選定後、讀 inst 前接到絕對路徑；給 aos-run 公布 busy 目標。
+
     `stderr` 只蓋子程式這一條流：None＝照 inst.json，`-`＝繼承呼叫者的 stderr，字串＝以
     呼叫者當時的 cwd 為中心開檔；蓋的是 inst.json 的**整個** stderr 設定（含 merge／inherit／
     append／mkdir）。普通檔案模式也吃這個覆蓋。`args` 只對普通檔案有效；None 表示沒給 `--`，
     陣列（包括空陣列）表示有給。
     """
-    p = os.path.abspath(xxx)
+    p = os.path.realpath(xxx) if on_target else os.path.abspath(xxx)
     if os.path.isdir(p):
         if args is not None:
             return _inst_args_error()
         target = os.path.join(p, dir_target)
+        if on_target:
+            target = os.path.realpath(target)
+        if on_target:
+            on_target(target)
         if not os.path.isfile(target):
             return _err(2, USAGE, "資料夾 %s 裡沒有 %s" % (p, dir_target))
         return _run_inst(target, p, timeout_ms, on_spawn, stderr)
+    if on_target:
+        on_target(p)
     if p.endswith(".json"):                 # 不存在也走這條：讀不到＝aos 自己失敗（125）
         if args is not None:
             return _inst_args_error()

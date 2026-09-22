@@ -45,9 +45,10 @@ cpu/
 POSIX rename 本身會覆蓋目標，故檢查同名與搬移必須同一把鎖。執行工作時不持鎖，
 可以讓多個 CPU 進程同時處理不同請求；不使用同一把鎖的外部寫入者不在競態保證內。
 
-`tick(dir, execute, *, validate=None, timeout_ms=None)`：呼叫者先驗 CPU info，execute 接請求 dict、
+`tick(dir, execute, *, validate=None, timeout_ms=None, reap_error=None)`：呼叫者先驗 CPU info，execute 接請求 dict、
 回結果 dict；可選 validate 在認領前讀驗 payload，timeout_ms 是取得毫秒期限的函式，沒給預設
-120000。流程：
+120000。reap_error 可給收屍的 error 字串；沒給沿用共用的逾期錯誤文字，
+tool CPU 用它提供固定「結果不明」。這是函式參數，不是請求或結果的新欄位。流程：
 
 1. 在鎖內掃全部 running；mtime 年齡**嚴格大於**期限／1000 + 30 秒即收屍。
    done 已有同名跳過。result 位置已被占用就保留；否則寫 ok:false，再搬原請求到 done。

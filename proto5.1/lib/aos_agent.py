@@ -2,13 +2,13 @@
 """aos-agent：先看 waits 這道門，再把 agent 資料夾走一格。
 
 規範在 ../spec/aos-agent.md 與 ../spec/agent.md。info.json 的讀驗交給 aos_agent_info；
-think 問模型交給 aos_llm_ask；act 用 aos_inst／aos_exec 跑工具，不開 aos-exec 子進程。
+think 組 body 交给 aos_llm_ask、問模型交給 llm CPU；act 用 aos_inst／aos_exec 跑工具，不開 aos-exec 子進程。
 
 `step(dir, env=None)` 回 0（做了一格）或 101（還在等），讀驗錯丟 AgentError。
 state.json 留原始 JSON，只換 state／waits／errors；記憶整份寫。寫檔先 .tmp 再 os.replace，
 走格的順序是記憶 → input rename .done → state。think／act 看記憶尾巴自癒；沒有鎖，
 同一個 agent 不要同時跑兩份。工具預設 60 秒；引擎連敗三次等 continue.json。
-engine.cpu 有填就用 requests／ask-result.json 分兩格問模型；_run:cpu 的工具也分送收兩格，
+think 一律用 requests／ask-result.json 分兩格問模型；_run:cpu 的工具也分送收兩格，
 用 tool-results/<i>.json 等齊後才跑 sync，整批依原始 call 順序接記憶。
 """
 import contextlib
@@ -23,7 +23,6 @@ import aos_cpu
 import aos_exec
 import aos_inst
 import aos_llm_ask
-import aos_llm_cpu
 import aos_tool_cpu
 from aos_agent_info import AgentError
 from aos_directives import (Context, DirectiveError, Document, is_directive,
@@ -240,7 +239,9 @@ def _read_tool_result(path):
 def _cpu_tool_message(call, info, result):
     name = _tool_call(call, info)[1]
     if not result["ok"]:
-        content = "工具 %s 跑不起來：%s" % (name, result["error"])
+        content = (json.dumps({"ok": False, "error": aos_tool_cpu.UNKNOWN_RESULT}, ensure_ascii=False)
+                   if result["error"] == aos_tool_cpu.UNKNOWN_RESULT
+                   else "工具 %s 跑不起來：%s" % (name, result["error"]))
     elif result["timed_out"]:
         content = "工具 %s 逾時" % name
     elif result["code"]:
@@ -310,21 +311,18 @@ def _submit(info):
     """agent 已解好 engine；與 cpu 共用短鎖，三個階段都沒有同名才發布。"""
     cpu = info["engine"]["cpu"]
     name = "%s-%d.json" % (os.path.basename(info["dir"]), time.time_ns())
-    request = {"engine": info["engine"], "body": aos_llm_ask.request_from_info(info),
+    request = {"model": info["engine"]["model"], "body": aos_llm_ask.build_request(info),
                "result": os.path.join(info["dir"], "ask-result.json")}
     aos_cpu.submit(cpu, name, request)
 
 
-def _failure(base, raw, error):
-    """引擎失敗累計；舊的繼續信號封存，下一輪三敗仍能停住。"""
+def _failure(raw, error):
+    """引擎失敗累計；繼續門開時 consume，下一輪三敗仍能停住。"""
     _err("engine: %s" % error)
     raw["errors"] = raw.get("errors", 0) + 1
     if raw["errors"] >= 3:
-        resume = os.path.join(base, "continue.json")
-        if os.path.lexists(resume):
-            _consume([resume])
         raw["errors"] = 0
-        raw.setdefault("waits", []).append("continue.json")
+        raw.setdefault("waits", []).append({"$opt": "consume", "$val": "continue.json"})
         _err("stuck: 引擎連敗 3 次，touch continue.json 繼續")
 
 
@@ -347,7 +345,7 @@ def step(dir, env=None):
                         if os.path.lexists(path)}
         if not tool_results:
             aos_tool_cpu.load(info["tool_cpu"], env=env)
-    if state == "think" and not remaining and info["engine"].get("cpu"):
+    if state == "think" and not remaining:
         if _calls(history):
             # 自癒優先；只封存確定已接到記憶的同一則結果，壞檔不擋 act。
             if os.path.lexists(result_path):
@@ -359,7 +357,7 @@ def step(dir, env=None):
         elif os.path.lexists(result_path):
             result = _read_result(result_path)
         else:
-            aos_llm_cpu.load(info["engine"]["cpu"], env=env)
+            aos_cpu.load(info["engine"]["cpu"], "llm_cpu", env=env)
     # 門開了才讀輸入，但讀驗仍要在 consume／寫 waits 之前完成：壞訊息不能留下半次寫入。
     messages, read = _inputs(base, inputs, consumed) if state == "idle" and not remaining else ([], [])
     state_path = os.path.join(base, "state.json")
@@ -384,30 +382,20 @@ def step(dir, env=None):
                 raw["errors"] = 0
             next_state = "act"
         else:
-            if info["engine"].get("cpu") and result is None:
+            if result is None:
                 _submit(info)
                 raw.setdefault("waits", []).append("ask-result.json")
                 _write_json(state_path, raw)
                 return 0
-            try:
-                if result is not None:
-                    if not result["ok"]:
-                        raise aos_llm_ask.EngineFailed(result["error"])
-                    message = result["message"]
-                else:
-                    message = aos_llm_ask.call(info["engine"], aos_llm_ask.request_from_info(info))
-            except aos_llm_ask.EngineFailed as e:
-                _failure(base, raw, e.msg)
-                if result is not None:
-                    _consume([result_path])
+            if not result["ok"]:
+                _failure(raw, result["error"])
+                _consume([result_path])
                 _write_json(state_path, raw)
                 return 0
-            if message.get("content") is None and not message.get("tool_calls"):
-                message["content"] = ""
+            message = result["message"]
             history.append(message)
             _write_json(info["history_path"], history)
-            if result is not None:
-                _consume([result_path])
+            _consume([result_path])
             raw["errors"] = 0
             calls = message.get("tool_calls")
             next_state = "act" if isinstance(calls, list) and calls else "idle"

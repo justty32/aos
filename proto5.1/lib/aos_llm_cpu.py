@@ -7,36 +7,56 @@ import aos_agent_info
 import aos_cpu
 import aos_llm_ask
 from aos_agent_info import AgentError
+from aos_directives import Context, DirectiveError, Document, resolve_located
 
 __all__ = ["load", "queue_lock", "tick", "main"]
 queue_lock = aos_cpu.queue_lock
 
 
 def load(dir, env=None):
-    return aos_cpu.load(dir, "llm_cpu", env=env)
+    info = aos_cpu.load(dir, "llm_cpu", env=env)
+    path = os.path.join(info["dir"], "info.json")
+    obj = aos_cpu._read_json(path)
+    try:
+        top = resolve_located(obj, Context(Document(path, obj), base_dir=info["dir"], env=env), [])
+        if "models" not in top.value:
+            raise AgentError("EngineInvalid", "llm cpu 的 info.json 缺少 models 表")
+        models = aos_agent_info._deep(top.value["models"], top, "models")
+    except DirectiveError as e:
+        raise AgentError(e.code, e.msg)
+    if not isinstance(models, dict):
+        raise AgentError("EngineInvalid", "llm cpu 的 models 必須是物件")
+    for alias, engine in models.items():
+        if not alias or not isinstance(engine, dict):
+            raise AgentError("EngineInvalid", "models 代號必須非空，設定必須是物件")
+        for key in ("endpoint", "model"):
+            if not isinstance(engine.get(key), str) or not engine[key]:
+                raise AgentError("EngineInvalid", "models.%s.%s 必須是非空字串" % (alias, key))
+        if engine.get("api_key") is not None and not isinstance(engine["api_key"], str):
+            raise AgentError("EngineInvalid", "models.%s.api_key 必須是字串或 null" % alias)
+        timeout = engine.get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS)
+        if type(timeout) is not int or timeout <= 0:
+            raise AgentError("EngineInvalid", "models.%s.timeout_ms 必須是正整數" % alias)
+        models[alias] = {"endpoint": engine["endpoint"], "model": engine["model"],
+                         "api_key": engine.get("api_key"), "timeout_ms": timeout}
+    info["models"] = models
+    return info
 
 
 def _validate(req, path):
-    engine = req.get("engine")
-    if not isinstance(engine, dict):
-        raise AgentError("EngineInvalid", "%s 的 engine 必須是物件" % path)
-    for key in ("endpoint", "model"):
-        if not isinstance(engine.get(key), str) or not engine[key]:
-            raise AgentError("EngineInvalid", "%s 的 engine.%s 必須是非空字串" % (path, key))
-    if not isinstance(engine.get("params", {}), dict):
-        raise AgentError("EngineInvalid", "%s 的 engine.params 必須是物件" % path)
-    if engine.get("api_key") is not None and not isinstance(engine["api_key"], str):
-        raise AgentError("EngineInvalid", "%s 的 engine.api_key 必須是字串或 null" % path)
-    timeout = engine.get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS)
-    if type(timeout) is not int or timeout <= 0:
-        raise AgentError("EngineInvalid", "%s 的 engine.timeout_ms 必須是正整數" % path)
+    if not isinstance(req.get("model"), str) or not req["model"]:
+        raise AgentError("EngineInvalid", "%s 的 model 必須是非空代號字串" % path)
     if not isinstance(req.get("body"), dict):
         raise AgentError("FieldTypeMismatch", "%s 的 body 必須是物件" % path)
 
 
-def _execute(req):
+def _execute(req, models):
+    engine = models.get(req["model"])
+    if engine is None:
+        return {"ok": False, "error": "不認識的模型代號"}
     try:
-        return {"ok": True, "message": aos_llm_ask.call(req["engine"], req["body"])}
+        body = dict(req["body"], model=engine["model"])
+        return {"ok": True, "message": aos_llm_ask.call(engine, body)}
     except aos_llm_ask.EngineFailed as e:
         return {"ok": False, "error": e.msg}
     except ValueError as e:
@@ -44,8 +64,11 @@ def _execute(req):
 
 
 def tick(dir, env=None):
-    return aos_cpu.tick(load(dir, env=env)["dir"], _execute, validate=_validate,
-                        timeout_ms=lambda req: req["engine"].get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS))
+    info = load(dir, env=env)
+    models = info["models"]
+    return aos_cpu.tick(info["dir"], lambda req: _execute(req, models), validate=_validate,
+                        timeout_ms=lambda req: models.get(req["model"], {}).get(
+                            "timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS))
 
 
 def main(argv=None):

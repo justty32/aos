@@ -1,7 +1,7 @@
 """agent 資料夾的讀、驗——「這個資料夾是不是 agent、它的人格／記憶／工具／引擎長什麼樣」。
 
 規範：資料夾本身（`_metainfo`、指示詞解不解、共用代號）在 ../spec/agent.md §1～§3、§5；
-`system`／`history`／`tools`／`engine` 四格與它們指到的檔在 ../spec/aos-llm-ask.md §2。
+`system`／`history`／`tools`／`engine` 四格與它們指到的檔在 ../spec/agent.md §3。
 這個檔只讀、只驗、不寫任何檔，也**不碰 `state.json`**（那是 aos-agent 走格子時的事）；跑工具也不在這裡。
 
 分兩種讀法（agent.md §2）：
@@ -14,7 +14,7 @@
 - `system`／`history`／`tools` 指到的檔**原樣讀、不解指示詞**：那是內容（人格文字、模型吐出
   來的對話、工具的 schema 與 inst），裡面什麼 `$` 都可能有。
 
-驗不過就丟 `AgentError(code, msg)`，`str(e)` 是「代號: 白話」；代號照 agent.md §5 與 aos-llm-ask.md §2
+驗不過就丟 `AgentError(code, msg)`，`str(e)` 是「代號: 白話」；代號照 agent.md §5
 （`NotAnAgent`、`ReadFailed`、`JsonSyntax`、`NotAnObject`、`NotAnArray`、`MetainfoInvalid`、
 `UnsupportedVersion`、`FieldTypeMismatch`、`MessageInvalid`、`ToolInvalid`、`EngineInvalid`）；
 指示詞機制丟的 `DirectiveError` 在 `load()` 裡包成同形狀的 `AgentError`（代號照 directives.md §6），
@@ -26,14 +26,14 @@
     metainfo      {"_type": "llm_agent", "_version": 1}
     system        system prompt 本文（字串；檔不存在＝""）
     system_path   人格檔的絕對路徑
-    history       記憶（陣列；檔不存在＝[]），每則照 aos-llm-ask.md §2.3 驗過、原樣
+    history       記憶（陣列；檔不存在＝[]），每則照 agent.md §3.2 驗過、原樣
     history_path  記憶檔的絕對路徑
     tools         送模型用的工具表：所有檔接成一個陣列、每個元素去掉所有 `_` 開頭的 key
     tools_raw     原始工具表：同順序、含 `_meta` 與可選的 `_timeout_ms`／`_run`（跑工具時用）
     tool_paths    工具檔的絕對路徑，照 info.json 的順序
     tool_cpu      工具 cpu 絕對路徑；沒寫＝None，有 cpu 工具時必填
-    engine        {"endpoint", "model", "params", "api_key", "timeout_ms", "cpu"}
-                  api_key／cpu 沒寫＝None；cpu 有寫＝相對 agent 解成絕對路徑
+    engine        {"cpu", "model", "params"}
+                  cpu 必填，相對 agent 解成絕對路徑；params 沒寫＝{}
 """
 import json
 import os
@@ -215,44 +215,27 @@ def _tools_field(obj, top):
 
 
 def _engine(obj, top, base):
-    """`engine`：必填物件；`endpoint`／`model` 必填字串、`params` 物件（整棵解）、`api_key` 字串、
-    `timeout_ms` 正整數、`cpu` 路徑字串。缺整格、缺必填、型別不對＝`EngineInvalid`（`engine` 本身不是物件照
-    aos-llm-ask.md §2 算 `FieldTypeMismatch`）。"""
+    """agent 只選 CPU、模型代號與參數；連線設定在 CPU 家。"""
     loc = _field(obj, "engine", top)
     if loc is None:
-        raise AgentError("EngineInvalid", "info.json 沒有 engine（必填：endpoint 跟 model）")
+        raise AgentError("EngineInvalid", "info.json 沒有 engine（必填：cpu 跟 model）")
     eng = loc.value
     if not isinstance(eng, dict):
         raise AgentError("FieldTypeMismatch", "info.json 的 engine 要是物件，不是 %s" % type(eng).__name__)
-    out = {"params": {}, "api_key": None, "timeout_ms": DEFAULT_TIMEOUT_MS, "cpu": None}
-    for key in ("endpoint", "model"):
+    out = {"params": {}}
+    for key in ("cpu", "model"):
         if key not in eng:
             raise AgentError("EngineInvalid", "info.json 的 engine 缺了 %s（必填）" % key)
         v = _inner(eng[key], loc, key).value
-        if not isinstance(v, str) or v == "":
-            raise AgentError("EngineInvalid", "info.json 的 engine.%s 要是非空字串，不是 %r" % (key, v))
-        out[key] = v
+        if not isinstance(v, str) or (key == "model" and not v):
+            raise AgentError("EngineInvalid", "info.json 的 engine.%s 必須是%s字串" %
+                             (key, "非空" if key == "model" else "路徑"))
+        out[key] = _abspath(base, v) if key == "cpu" else v
     if "params" in eng:
         v = _deep(eng["params"], loc, "params")
         if not isinstance(v, dict):
             raise AgentError("EngineInvalid", "info.json 的 engine.params 要是物件，不是 %s" % type(v).__name__)
         out["params"] = v
-    if "api_key" in eng:
-        v = _inner(eng["api_key"], loc, "api_key").value
-        if not isinstance(v, str):
-            raise AgentError("EngineInvalid", "info.json 的 engine.api_key 要是字串，不是 %s" % type(v).__name__)
-        out["api_key"] = v
-    if "timeout_ms" in eng:
-        v = _inner(eng["timeout_ms"], loc, "timeout_ms").value
-        if not (isinstance(v, int) and not isinstance(v, bool) and v > 0):
-            raise AgentError("EngineInvalid", "info.json 的 engine.timeout_ms 要是正整數（毫秒），不是 %r" % (v,))
-        out["timeout_ms"] = v
-    if "cpu" in eng:
-        v = _inner(eng["cpu"], loc, "cpu").value
-        if not isinstance(v, str):
-            raise AgentError("EngineInvalid", "info.json 的 engine.cpu 要是路徑字串，不是 %s"
-                             % type(v).__name__)
-        out["cpu"] = _abspath(base, v)
     return out
 
 

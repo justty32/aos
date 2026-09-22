@@ -13,7 +13,7 @@ from unittest.mock import patch
 import aos_daemon as d
 
 CLI = Path(__file__).resolve().parents[2] / "cli"
-FIELDS = {"pid", "target", "args", "state", "ready", "running", "runs", "last_exit", "last_kind"}
+FIELDS = {"pid", "target", "args", "state", "home"}
 
 
 def wait_for(fn, timeout=5):
@@ -47,7 +47,7 @@ class DaemonTest(unittest.TestCase):
             if self.proc.poll() is None:
                 self.proc.terminate()
                 try:
-                    self.proc.wait(timeout=8)
+                    self.proc.wait(timeout=13)
                 except subprocess.TimeoutExpired:
                     self.proc.kill()
                     self.proc.wait()
@@ -71,8 +71,8 @@ class DaemonTest(unittest.TestCase):
         target.write_text(json.dumps({"argv": [sys.executable, "-c", code]}))
         return str(target)
 
-    def req(self, op, target=None, args=None):
-        result = d.request(op, target, args, home=self.home)
+    def req(self, op, target=None, args=None, kill_tree=False):
+        result = d.request(op, target, args, home=self.home, kill_tree=kill_tree)
         if op == "add":
             self.runners.append(result["pid"])
         return result
@@ -80,9 +80,18 @@ class DaemonTest(unittest.TestCase):
     def state(self):
         return d.read_state(self.home)
 
+    def status(self, target):
+        entry = self.state()["runs"].get(target)
+        if not entry:
+            return {}
+        try:
+            return json.loads(Path(entry["home"], "run.json").read_text())
+        except FileNotFoundError:
+            return {}
+
     def ctl(self, *args):
         return subprocess.run([sys.executable, str(CLI / "aos-daemon-ctl"), *args], env=self.env,
-                              capture_output=True, text=True, timeout=12)
+                              capture_output=True, text=True, timeout=17)
 
     def test_home_environment_and_default(self):
         with patch.dict(os.environ, {"AOS_DAEMON_HOME": str(self.home)}):
@@ -106,10 +115,11 @@ class DaemonTest(unittest.TestCase):
         target = self.inst("raise SystemExit(7)")
         added = self.req("add", target, ["--interval-ms", "100"])
         self.assertEqual(set(added), FIELDS)
-        state = wait_for(lambda: (e if (e := self.state()["runs"].get(target)) and e["runs"] else None))
+        state = wait_for(lambda: (e if (e := self.status(target)) and e["runs"] else None))
         self.assertEqual((state["last_exit"], state["last_kind"]), (7, "child"))
         final = self.req("remove", target)
-        self.assertFalse(final["running"])
+        self.assertEqual(final["state"], "stopping")
+        self.assertFalse(json.loads(Path(final["home"], "run.json").read_text())["busy"])
         self.assertFalse(alive(added["pid"]))
         self.assertEqual(self.state()["runs"], {})
 
@@ -133,9 +143,9 @@ class DaemonTest(unittest.TestCase):
         self.start()
         target = str(self.root / "later.json")
         self.req("add", target, ["--interval-ms", "100"])
-        wait_for(lambda: self.state()["runs"][target]["last_kind"] == "aos")
+        wait_for(lambda: self.status(target).get("last_kind") == "aos")
         self.inst("raise SystemExit(12)", "later.json")
-        wait_for(lambda: self.state()["runs"][target]["last_exit"] == 12)
+        wait_for(lambda: self.status(target).get("last_exit") == 12)
 
     def test_stop_publishes_empty_state_and_removes_pid(self):
         self.start()
@@ -151,7 +161,7 @@ class DaemonTest(unittest.TestCase):
         self.start()
         self.req("add", self.inst())
         self.proc.terminate()
-        self.assertEqual(self.proc.wait(timeout=8), 0)
+        self.assertEqual(self.proc.wait(timeout=13), 0)
         self.assertFalse(alive(self.runners[0]))
 
     def test_ctl_all_commands_and_ls_does_not_enqueue(self):
@@ -186,7 +196,8 @@ class DaemonTest(unittest.TestCase):
         for n, payload, code in ((1, "{", "JsonSyntax"), (2, "[]", "FieldTypeMismatch"),
                                   (3, '{"op":"restart"}', "FieldTypeMismatch"),
                                   (4, '{"op":"add","target":"relative.json"}', "FieldTypeMismatch"),
-                                  (5, '{"op":"add","target":"/x.json","args":["--status-fd","3"]}', "FieldTypeMismatch")):
+                                  (5, '{"op":"add","target":"/x.json","args":["--status-fd","3"]}', "FieldTypeMismatch"),
+                                  (6, '{"op":"add","target":"/x.json","kill_tree":1}', "FieldTypeMismatch")):
             name = "%d.json" % n
             (self.home / "requests" / name).write_text(payload)
             done = self.home / "requests/done" / name
@@ -265,7 +276,7 @@ class DaemonTest(unittest.TestCase):
         code = ("import os,signal,time; from pathlib import Path; "
                 "signal.signal(signal.SIGTERM,signal.SIG_IGN); child=os.fork(); "
                 "f=open(%r,'a'); f.write(str(os.getpid())+'\\n'); f.close(); time.sleep(60)" % str(marker))
-        self.req("add", self.inst(code))
+        self.req("add", self.inst(code), kill_tree=True)
         wait_for(lambda: marker.exists() and len(marker.read_text().splitlines()) == 2)
         pids = [int(x) for x in marker.read_text().splitlines()]
         self.req("stop")
@@ -273,17 +284,17 @@ class DaemonTest(unittest.TestCase):
         for pid in pids:
             wait_for(lambda pid=pid: not alive(pid))
 
-    def test_daemon_five_second_fallback_kills_runner_group(self):
+    def test_default_ten_second_fallback_kills_runner_group(self):
         self.start()
         target = self.inst()
         entry = self.req("add", target, ["--interval-ms", "10000"])
-        wait_for(lambda: self.state()["runs"][target]["runs"] >= 1)
+        wait_for(lambda: self.status(target).get("runs", 0) >= 1)
         os.kill(entry["pid"], signal.SIGSTOP)
         started = time.monotonic()
         self.req("remove", target)
         elapsed = time.monotonic() - started
-        self.assertGreaterEqual(elapsed, 4.8)
-        self.assertLess(elapsed, 7)
+        self.assertGreaterEqual(elapsed, 9.8)
+        self.assertLess(elapsed, 12)
         self.assertFalse(alive(entry["pid"]))
 
     def test_explicit_home_propagates_to_runner(self):
@@ -309,7 +320,7 @@ class DaemonTest(unittest.TestCase):
         for i in range(2):
             self.req("add", self.inst(name="io%d.json" % i))
         (self.home / "fail").touch()
-        self.assertEqual(self.proc.wait(timeout=8), 1)
+        self.assertEqual(self.proc.wait(timeout=13), 1)
         self.assertTrue(all(not alive(pid) for pid in self.runners))
         error = self.proc.stderr.read().decode()
         self.assertIn("aos-daemon: ReadFailed:", error)
@@ -336,13 +347,71 @@ class DaemonTest(unittest.TestCase):
         for i in range(2):
             target = self.inst(name="x%d.json" % i)
             entry = self.req("add", target, ["--interval-ms", "10000"])
-            wait_for(lambda: self.state()["runs"][target]["runs"] >= 1)
+            wait_for(lambda: self.status(target).get("runs", 0) >= 1)
             os.kill(entry["pid"], signal.SIGSTOP)
         started = time.monotonic()
         self.req("stop")
-        self.assertLess(time.monotonic() - started, 7)
+        self.assertGreaterEqual(time.monotonic() - started, 9.8)
+        self.assertLess(time.monotonic() - started, 12)
         self.proc.wait(timeout=3)
         self.assertTrue(all(not alive(pid) for pid in self.runners))
+
+    def test_kill_tree_five_second_fallback(self):
+        self.start()
+        target = self.inst()
+        entry = self.req("add", target, ["--interval-ms", "10000"], kill_tree=True)
+        wait_for(lambda: self.status(target).get("runs", 0) >= 1)
+        os.kill(entry["pid"], signal.SIGSTOP)
+        start = time.monotonic()
+        self.req("remove", target)
+        self.assertGreaterEqual(time.monotonic() - start, 4.8)
+        self.assertLess(time.monotonic() - start, 7)
+        self.assertFalse(alive(entry["pid"]))
+
+    def test_ctl_kill_tree_flag_and_fresh_runner_home(self):
+        self.start()
+        target = self.inst()
+        out = self.ctl("add", target, "--kill-tree")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        entry = json.loads(out.stdout)
+        self.runners.append(entry["pid"])
+        self.assertEqual(Path(entry["home"]).parent, self.home / "runners")
+        self.req("remove", target)
+        Path(entry["home"], "ctl.json").write_text('{"op":"hold"}')
+        new = self.req("add", target)
+        self.assertNotEqual(new["home"], entry["home"])
+        wait_for(lambda: self.status(target).get("runs", 0) >= 1)
+
+    def test_kill_tree_rejects_non_boolean(self):
+        self.start()
+        target = self.inst()
+        for value in (None, 1, "false", {}):
+            with self.assertRaises(d.DaemonError) as caught:
+                self.req("add", target, kill_tree=value)
+            self.assertEqual(caught.exception.code, "FieldTypeMismatch")
+        self.assertEqual(self.state()["runs"], {})
+
+    def test_symlink_target_stays_slot_path(self):
+        self.start()
+        target = self.inst()
+        slot = self.root / "slot.json"
+        slot.symlink_to(target)
+        entry = self.req("add", str(slot))
+        self.assertEqual(entry["target"], str(slot))
+        wait_for(lambda: self.status(str(slot)).get("target") == target)
+        self.req("remove", str(slot))
+
+    def test_default_stop_second_term_ends_child(self):
+        self.start()
+        marker = self.root / "started"
+        target = self.inst("from pathlib import Path; import time; Path(%r).touch(); time.sleep(30)" % str(marker))
+        self.req("add", target)
+        wait_for(marker.exists)
+        start = time.monotonic()
+        self.req("stop")
+        self.assertGreaterEqual(time.monotonic() - start, 4.8)
+        self.assertLess(time.monotonic() - start, 7)
+        self.proc.wait(timeout=3)
 
 
 if __name__ == "__main__":

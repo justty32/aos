@@ -9,6 +9,7 @@ from aos_agent_info import AgentError
 
 __all__ = ["load", "execute", "tick", "main"]
 DEFAULT_TIMEOUT_MS = 60000
+UNKNOWN_RESULT = "結果不明：工具可能已經跑了，也可能沒有"
 
 
 def load(dir, env=None):
@@ -67,7 +68,7 @@ def execute(req):
 
 
 def tick(dir, env=None):
-    return aos_cpu.tick(load(dir, env=env)["dir"], execute, timeout_ms=_timeout)
+    return aos_cpu.tick(load(dir, env=env)["dir"], execute, timeout_ms=_timeout, reap_error=UNKNOWN_RESULT)
 
 
 def main(argv=None):

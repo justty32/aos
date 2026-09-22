@@ -23,7 +23,7 @@ class CPUCase(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.dir = Path(self.tmp.name) / "cpu"
         self.dir.mkdir()
-        self.write(self.dir / "info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1}})
+        self.write(self.dir / "info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1}, "models": {}})
         for part in ("requests", "running", "done"):
             (self.dir / part).mkdir()
 
@@ -31,9 +31,11 @@ class CPUCase(unittest.TestCase):
         path.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
 
     def request(self, name="a", part="requests", **kw):
-        req = {"engine": {"endpoint": "http://unused.invalid/v1", "model": "fake", "params": {},
-                          "api_key": None, "timeout_ms": 1000, "cpu": str(self.dir)},
-               "body": {"model": "fake", "messages": [{"role": "user", "content": "$env is literal"}]},
+        engine = kw.pop("engine", {"endpoint": "http://unused.invalid/v1", "model": "real-fake",
+                                    "timeout_ms": 1000})
+        self.write(self.dir / "info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                                            "models": {"fake": engine}})
+        req = {"model": "fake", "body": {"messages": [{"role": "user", "content": "$env is literal"}]},
                "result": str(self.dir.parent / (name + "-result.json"))}
         req.update(kw)
         self.write(self.dir / part / (name + ".json"), req)
@@ -54,12 +56,12 @@ class TestLoad(CPUCase):
         self.assertEqual(aos_llm_cpu.load(self.dir)["metainfo"], {"_type": "llm_cpu", "_version": 1})
 
     def test_metainfo_directives(self):
-        self.write(self.dir / "info.json", {"_metainfo": {"$ref": "meta.json"}})
+        self.write(self.dir / "info.json", {"_metainfo": {"$ref": "meta.json"}, "models": {}})
         self.write(self.dir / "meta.json", {"_type": {"$env": "KIND"}, "_version": 1})
         self.assertEqual(aos_llm_cpu.load(self.dir, env={"KIND": "llm_cpu"})["metainfo"]["_type"], "llm_cpu")
 
     def test_top_ref(self):
-        self.write(self.dir / "real.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1}})
+        self.write(self.dir / "real.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1}, "models": {}})
         self.write(self.dir / "info.json", {"$ref": "real.json"})
         aos_llm_cpu.load(self.dir)
 
@@ -75,6 +77,39 @@ class TestLoad(CPUCase):
                 with self.assertRaises(AgentError) as cm:
                     aos_llm_cpu.load(self.dir)
                 self.assertEqual(cm.exception.code, code)
+
+    def test_models_resolve_all_directives_in_referenced_file(self):
+        self.write(self.dir / "models.json", {"table": {"small": {"endpoint": {"$env": "URL"},
+                   "model": {"$ref": "#/real"}, "api_key": {"$env": "KEY"},
+                   "timeout_ms": {"$ref": "#/ms"}}}, "real": "real-name", "ms": 99})
+        self.write(self.dir / "info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                                            "models": {"$ref": "models.json#/table"}})
+        self.assertEqual(aos_llm_cpu.load(self.dir, env={"URL": "http://fake/v1", "KEY": "secret"})["models"],
+                         {"small": {"endpoint": "http://fake/v1", "model": "real-name", "api_key": "secret", "timeout_ms": 99}})
+        with self.assertRaisesRegex(AgentError, "EnvironmentVariableMissing"):
+            aos_llm_cpu.load(self.dir, env={})
+
+    def test_models_defaults_and_null_key(self):
+        self.write(self.dir / "info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                                            "models": {"small": {"endpoint": "http://x", "model": "m", "api_key": None}}})
+        self.assertEqual(aos_llm_cpu.load(self.dir)["models"]["small"],
+                         {"endpoint": "http://x", "model": "m", "api_key": None, "timeout_ms": 120000})
+
+    def test_models_invalid(self):
+        base = {"endpoint": "http://x", "model": "m"}
+        cases = [None, [], {"": base}, {"m": []}, {"m": {}}, {"m": dict(base, endpoint="")},
+                 {"m": dict(base, model="")}, {"m": dict(base, api_key=2)}]
+        cases += [{"m": dict(base, timeout_ms=value)} for value in (0, -1, True, 1.2, "5", None)]
+        for models in cases:
+            with self.subTest(models=models):
+                self.write(self.dir / "info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1}, "models": models})
+                with self.assertRaisesRegex(AgentError, "EngineInvalid"):
+                    aos_llm_cpu.load(self.dir)
+
+    def test_models_required(self):
+        self.write(self.dir / "info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1}})
+        with self.assertRaisesRegex(AgentError, "EngineInvalid"):
+            aos_llm_cpu.load(self.dir)
 
     def test_missing_info(self):
         (self.dir / "info.json").unlink()
@@ -102,11 +137,26 @@ class TestTick(CPUCase):
         req = self.request(engine={"endpoint": fake.endpoint, "model": "fake", "api_key": "secret", "timeout_ms": 1000})
         self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
         self.assertEqual(json.loads(Path(req["result"]).read_text()), {"ok": True, "message": OK_MESSAGE})
-        self.assertEqual(fake.last["body"], req["body"])
+        self.assertEqual(fake.last["body"], dict(req["body"], model="fake"))
         self.assertEqual(fake.last["headers"]["Authorization"], "Bearer secret")
         self.assertTrue((self.dir / "done" / "a.json").exists())
         self.assertFalse((self.dir / "running" / "a.json").exists())
         self.assertFalse(list(self.dir.parent.glob("*.tmp")))
+
+    def test_unknown_alias_returns_exact_error_without_http(self):
+        req = self.request(model="missing")
+        with patch("aos_llm_cpu.aos_llm_ask.call", side_effect=AssertionError("不應 HTTP")):
+            self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
+        self.assertEqual(json.loads(Path(req["result"]).read_text()),
+                         {"ok": False, "error": "不認識的模型代號"})
+        self.assertTrue((self.dir / "done" / "a.json").exists())
+
+    def test_cpu_fills_real_model_and_does_not_mutate_payload(self):
+        req = self.request(body={"model": "wrong", "messages": [], "temperature": 0.2})
+        with patch("aos_llm_cpu.aos_llm_ask.call", return_value=OK_MESSAGE) as call:
+            self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
+        self.assertEqual(call.call_args.args[1], {"model": "real-fake", "messages": [], "temperature": 0.2})
+        self.assertEqual(json.loads((self.dir / "done" / "a.json").read_text()), req)
 
     def test_engine_failure_is_result_and_zero(self):
         fake = self.llm()
@@ -192,9 +242,9 @@ class TestTick(CPUCase):
         self.assertFalse(json.loads(Path(req["result"]).read_text())["ok"])
 
     def test_bad_request_stays_queued(self):
-        for changes, code in [({"engine": {}}, "EngineInvalid"), ({"body": []}, "FieldTypeMismatch"),
+        for changes, code in [({"model": ""}, "EngineInvalid"), ({"body": []}, "FieldTypeMismatch"),
                               ({"result": "relative.json"}, "FieldTypeMismatch"),
-                              ({"engine": {"endpoint": "x", "model": "x", "timeout_ms": True}}, "EngineInvalid")]:
+                              ({"model": None}, "EngineInvalid")]:
             with self.subTest(changes=changes):
                 self.request(**changes)
                 with self.assertRaisesRegex(AgentError, code):

@@ -123,7 +123,7 @@ def _write_result(path, result):
             os.unlink(tmp)
 
 
-def _reap(dir, validate, timeout_ms):
+def _reap(dir, validate, timeout_ms, reap_error):
     """鎖內收掉所有過期 running；已有結果表示可能崩在發布後，保留它。"""
     count = 0
     for name in _names(os.path.join(dir, "running")):
@@ -136,18 +136,18 @@ def _reap(dir, validate, timeout_ms):
         if time.time() - os.stat(path).st_mtime <= timeout / 1000 + GRACE_SECONDS:
             continue
         if not os.path.lexists(req["result"]):
-            _write_result(req["result"], {"ok": False, "error": "cpu 執行逾時或上次中止（%d ms + 30 秒）" % timeout})
+            _write_result(req["result"], {"ok": False, "error": reap_error or "cpu 執行逾時或上次中止（%d ms + 30 秒）" % timeout})
         os.rename(path, done)
         count += 1
     return count
 
 
-def tick(dir, execute, *, validate=None, timeout_ms=None):
+def tick(dir, execute, *, validate=None, timeout_ms=None, reap_error=None):
     """收屍再認領一份：有處理（含只收屍）回 0，沒事回 101；讀驗錯丟 AgentError。"""
     dir = os.path.abspath(dir)
     claimed = None
     with queue_lock(dir):
-        reaped = _reap(dir, validate, timeout_ms)
+        reaped = _reap(dir, validate, timeout_ms, reap_error)
         for name in _names(os.path.join(dir, "requests")):
             src = os.path.join(dir, "requests", name)
             running = os.path.join(dir, "running", name)

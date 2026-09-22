@@ -16,7 +16,7 @@ from aos_directives import Context, DirectiveError, Document, resolve_located
 
 __all__ = ["KernelError", "load", "init", "boot", "add", "remove", "tick", "status", "main"]
 DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5,
-            "done_exit": 100, "wait_exit": 101, "bad_after": 10}
+            "done_exit": 100, "wait_exit": 101, "bad_after": 10, "kill_tree": False}
 CLI = str(Path(__file__).resolve().parent.parent / "cli" / "aos-kernel")
 IDLE = {"argv": [sys.executable, "-c", "pass"]}
 COUNTERS = ("waiting", "wait_runs", "bad_runs", "bad_exit", "aos_ticks")
@@ -79,6 +79,10 @@ def load(dir, env=None):
     except DirectiveError as e:
         raise KernelError("FieldTypeMismatch", str(e))
     for key, value in cfg.items():
+        if key == "kill_tree":
+            if type(value) is not bool:
+                raise KernelError("FieldTypeMismatch", "kill_tree 必須是布林")
+            continue
         minimum = 1 if key in ("ncpu", "quantum", "wait_exit") else 0
         if type(value) is not int or value < minimum:
             raise KernelError("FieldTypeMismatch", "%s 必須是 >= %d 的整數" % (key, minimum))
@@ -167,9 +171,9 @@ def init(dir, ncpu):
     _write(root / "inst.json", {"argv": [sys.executable, CLI, "tick"], "cwd": str(root),
                                 "stderr": {"$opt": "append", "$val": "kernel.log"}})
     _write(root / "state.json", {"cpus": {str(n): None for n in range(ncpu)}, "queue": [], "waiting": {}})
+    _write(root / "idle.json", IDLE)
     for n in range(ncpu):
-        _write(root / "cpus" / ("%d.json" % n), IDLE)
-        (root / "cpus" / ("%d.json.lock" % n)).touch()
+        _assign(root / "cpus" / ("%d.json" % n), root / "idle.json")
     (root / "kernel.log").touch()
     return str(root)
 
@@ -180,9 +184,9 @@ def _args(cfg):
 
 def boot(dir):
     root, cfg = load(dir)
-    # Kernel tick 可能等 daemon 的 remove；timeout_ms 是工作格的限制，不砍 kernel 自己。
+    # timeout_ms 是工作格的限制，不砍 kernel 自己。
     return aos_daemon.request("add", target=str(root / "inst.json"),
-                              args=["--interval-ms", str(cfg["interval_ms"])])
+                              args=["--interval-ms", str(cfg["interval_ms"])], kill_tree=cfg["kill_tree"])
 
 
 def _inst(path):
@@ -261,46 +265,59 @@ def _log(root, notes):
 
 def _observe(cfg, cur, entry):
     runs = entry["runs"]
-    if runs < cur["seen_runs"]:
-        cur["runs_at"] = cur["seen_runs"] = 0
-    count = runs - cur["seen_runs"]
-    if not count:
+    if runs <= cur["seen_runs"]:
         return
+    # 差值可能含換檔前的 idle；只把目前能確定的一份結果算一次。
     cur["seen_runs"] = runs
     kind, code = entry["last_kind"], entry["last_exit"]
     cur["waiting"] = kind == "child" and code == cfg["wait_exit"]
-    cur["wait_runs"] = cur.get("wait_runs", 0) + count if cur["waiting"] else 0
+    cur["wait_runs"] = cur.get("wait_runs", 0) + 1 if cur["waiting"] else 0
     bad = kind == "child" and code not in (0, cfg["done_exit"], cfg["wait_exit"])
-    cur["bad_runs"] = cur.get("bad_runs", 0) + count if bad else 0
+    cur["bad_runs"] = cur.get("bad_runs", 0) + 1 if bad else 0
     if bad:
         cur["bad_exit"] = code
-    cur["aos_ticks"] = cur.get("aos_ticks", 0) + count if kind == "aos" else 0
+    cur["aos_ticks"] = cur.get("aos_ticks", 0) + 1 if kind == "aos" else 0
 
 
 def _retire(cfg, cur, entry):
-    if cfg["done_exit"] and cur["seen_runs"] and entry["last_kind"] == "child" and entry["last_exit"] == cfg["done_exit"]:
+    if cfg["done_exit"] and cur["seen_runs"] > cur["runs_at"] and entry["last_kind"] == "child" and entry["last_exit"] == cfg["done_exit"]:
         return "done"
     if cur.get("aos_ticks", 0) >= 2 or (cfg["bad_after"] and cur.get("bad_runs", 0) >= cfg["bad_after"]):
         return "bad"
     return None
 
 
-def _quiesce(path, entry):
-    # 沒拿到成功回音就不搬檔；NotRunning 也可能是 daemon 已死，不能當作已收屍。
-    return aos_daemon.request("remove", target=str(path)) if entry is not None else None
+def _run(entry):
+    if entry is None:
+        return {"busy": False, "target": None, "runs": 0, "last_exit": None, "last_kind": None}
+    path = Path(entry["home"]) / "run.json"
+    # add 回音可能早於 runner 第一次寫狀態；未知期間先不排新工作。
+    if not path.exists():
+        return {"busy": True, "target": None, "runs": 0, "last_exit": None, "last_kind": None}
+    return _read(path)
 
 
-def _yield_intent(path, wanted):
-    """穩定 slot 鎖檔的一個 byte；設定不中斷本格，清除者必須已持 EX 鎖。"""
-    with open(str(path) + ".lock", "r+b", buffering=0) as f:
-        if wanted:
-            f.write(b"Y")
-        else:
-            f.truncate(0)
+def _assign(path, target):
+    tmp = path.with_name(".cpu-" + secrets.token_hex(8))
+    try:
+        tmp.symlink_to(target)
+        os.replace(tmp, path)
+    finally:
+        if tmp.is_symlink():
+            tmp.unlink()
+
+
+def _blocked(root, runs, target):
+    for slot, entry in runs.items():
+        if Path(slot).parent != root / "cpus":
+            continue
+        status = _run(entry)
+        if status["busy"] and status["target"] in (None, str(target)):
+            return True
+    return False
 
 
 def _syscalls(root, cfg, st, runs, notes):
-    pending = set()
     for path in sorted((root / "syscalls").glob("*.json")):
         done = root / "syscalls/done" / path.name
         if done.exists():
@@ -313,28 +330,14 @@ def _syscalls(root, cfg, st, runs, notes):
             name = _name(call.get("pid"))
             n = next((n for n, cur in st["cpus"].items() if cur and cur["pid"] == name), None)
             if n is not None:
-                cpu = root / "cpus" / (n + ".json")
-                entry = runs.get(str(cpu))
-                _yield_intent(cpu, True)
-                if entry and entry["running"]:
-                    pending.add(name)
-                    continue
-                with _lock(str(cpu) + ".lock", False) as acquired:
-                    if not acquired:
-                        pending.add(name)
-                        continue
-                    _quiesce(cpu, entry)
-                    runs.pop(str(cpu), None)
-                    _write(cpu, IDLE)
-                    _yield_intent(cpu, False)
-                    st["cpus"][n] = None
-            else:
-                files = [root / folder / (name + ".json") for folder in ("procs", "procs/done", "procs/bad")]
-                found = [file for file in files if file.exists()]
-                if not found:
-                    raise KernelError("NotRunning", "找不到行程：%s" % name)
-                for file in found:
-                    file.unlink()
+                _assign(root / "cpus" / (n + ".json"), root / "idle.json")
+                st["cpus"][n] = None
+            files = [root / folder / (name + ".json") for folder in ("procs", "procs/done", "procs/bad")]
+            found = [file for file in files if file.exists()]
+            if not found and n is None:
+                raise KernelError("NotRunning", "找不到行程：%s" % name)
+            for file in found:
+                file.unlink()
             st["queue"] = [p for p in st["queue"] if p != name]
             st["waiting"].pop(name, None)
             _save(root, st)
@@ -344,7 +347,6 @@ def _syscalls(root, cfg, st, runs, notes):
             out = {"ok": False, "code": e.code, "msg": e.msg}
         _write(done, out)
         path.unlink()
-    return pending
 
 
 def _queue(root, st, notes):
@@ -352,7 +354,7 @@ def _queue(root, st, notes):
     present = []
     for path in sorted((root / "procs").glob("*.json"), key=lambda p: _name_key(p.stem)):
         if path.stem in on_cpu:
-            raise KernelError("FieldTypeMismatch", "cpu 與 queue 同名：%s" % path.stem)
+            continue
         try:
             # 手工排進來的檔同樣完整解指示詞，搬家之前固化中心路徑。
             raw = _portable(_inst(path))
@@ -367,65 +369,53 @@ def _queue(root, st, notes):
     st["waiting"] = {p: value for p, value in st["waiting"].items() if p in present}
 
 
-def _schedule(root, cfg, st, runs, notes, pending_rm=()):
+def _schedule(root, cfg, st, runs, notes):
     for n, cur in st["cpus"].items():
         path = root / "cpus" / (n + ".json")
         entry = runs.get(str(path))
-        Path(str(path) + ".lock").touch(exist_ok=True)
-        if cur and entry:
-            _observe(cfg, cur, entry)
-        retire = _retire(cfg, cur, entry) if cur and entry else None
+        status = _run(entry)
+        matching = cur and not status["busy"] and status["target"] == str(root / "procs" / (cur["pid"] + ".json"))
+        if matching:
+            _observe(cfg, cur, status)
+        retire = _retire(cfg, cur, status) if matching else None
         switch = st["queue"] and (cur is None or cur.get("waiting")
-                   or cur["seen_runs"] - cur["runs_at"] >= cfg["quantum"])
-        wanted = retire or switch or (cur and cur["pid"] in pending_rm)
-        if wanted:
-            # 不等瞬間 false 快照碰巧被 tick 看見；請 run 完成本格後讓出下一格。
-            _yield_intent(path, True)
-        else:
-            # 例如候選 queue 被 rm，取消等待。只能在 slot 閒置、鎖內清意圖。
-            with _lock(str(path) + ".lock", False) as acquired:
-                if acquired:
-                    _yield_intent(path, False)
-        if (retire or switch) and not (entry and entry["running"]):
-            with _lock(str(path) + ".lock", False) as acquired:
-                if acquired:
-                    final = _quiesce(path, entry)
-                    if cur and final:
-                        _observe(cfg, cur, final)
-                        retire = _retire(cfg, cur, final)
-                    entry = None
-                    if cur:
-                        name = cur["pid"]
-                        if retire:
-                            os.replace(path, root / "procs" / retire / (name + ".json"))
-                            st["waiting"].pop(name, None)
-                            notes.append("%s %s" % (retire, name))
-                        else:
-                            os.replace(path, root / "procs" / (name + ".json"))
-                            st["waiting"][name] = {k: cur[k] for k in COUNTERS if k in cur}
-                            st["queue"].append(name)
-                        st["cpus"][n] = None
-                    if st["queue"]:
-                        name = st["queue"].pop(0)
-                        os.replace(root / "procs" / (name + ".json"), path)
-                        st["cpus"][n] = {"pid": name, "since": time.time(), "runs_at": 0,
-                                         "seen_runs": 0, **st["waiting"].pop(name, {})}
-                        notes.append("cpu%s=%s" % (n, name))
-                    else:
-                        _write(path, IDLE)
-                    # 先存指派再啟動；remove 的 ack 已經排空舊 runner 的事件。
-                    _save(root, st)
-                    _yield_intent(path, False)
+                   or status["runs"] - cur["runs_at"] >= cfg["quantum"])
+        if retire or switch:
+            # 先撤掉舊目標，runner 下次便不會再讀到它；不等這次跑完。
+            _assign(path, root / "idle.json")
+            if cur:
+                name = cur["pid"]
+                if retire:
+                    os.replace(root / "procs" / (name + ".json"), root / "procs" / retire / (name + ".json"))
+                    st["waiting"].pop(name, None)
+                    notes.append("%s %s" % (retire, name))
+                else:
+                    st["waiting"][name] = {k: cur[k] for k in COUNTERS if k in cur}
+                    st["queue"].append(name)
+                st["cpus"][n] = None
+            for name in list(st["queue"]):
+                target = root / "procs" / (name + ".json")
+                # 每個候選都重讀各 runner 的 run.json，不用 tick 開始時的快照。
+                if _blocked(root, runs, target):
+                    continue
+                status = _run(entry)
+                baseline = status["runs"] + int(status["busy"])
+                _assign(path, target)
+                st["queue"].remove(name)
+                st["cpus"][n] = {"pid": name, "since": time.time(), "runs_at": baseline,
+                                 "seen_runs": baseline, **st["waiting"].pop(name, {})}
+                notes.append("cpu%s=%s" % (n, name))
+                break
+            _save(root, st)
         if entry is None:
             if not path.exists():
                 if st["cpus"][n]:
                     raise KernelError("ReadFailed", "cpu 檔案不見：%s" % path)
-                _write(path, IDLE)
-            Path(str(path) + ".lock").touch(exist_ok=True)
+                _assign(path, root / "idle.json")
             if st["cpus"][n]:
                 st["cpus"][n]["runs_at"] = st["cpus"][n]["seen_runs"] = 0
                 _save(root, st)
-            aos_daemon.request("add", target=str(path), args=_args(cfg))
+            runs[str(path)] = aos_daemon.request("add", target=str(path), args=_args(cfg), kill_tree=cfg["kill_tree"])
 
 
 def tick(dir="."):
@@ -439,9 +429,9 @@ def tick(dir="."):
             raise KernelError("NotRunning", "daemon 沒在跑")
         runs = daemon["runs"]
         notes = []
-        pending_rm = _syscalls(root, cfg, st, runs, notes)
+        _syscalls(root, cfg, st, runs, notes)
         _queue(root, st, notes)
-        _schedule(root, cfg, st, runs, notes, pending_rm)
+        _schedule(root, cfg, st, runs, notes)
         _save(root, st)
         _log(root, notes)
     return 0
@@ -457,8 +447,8 @@ def status(dir):
     lines = ["kernel %s ncpu=%d quantum=%d daemon=%s" % (root, cfg["ncpu"], cfg["quantum"], daemon["pid"]),
              "CPU PROC RUNNING RUNS LAST_EXIT WAIT BAD"]
     for n, cur in st["cpus"].items():
-        entry = daemon["runs"].get(str(root / "cpus" / (n + ".json")), {})
-        lines.append("%s %s %s %s %s %s %s" % (n, cur["pid"] if cur else "idle", entry.get("running", False),
+        entry = _run(daemon["runs"].get(str(root / "cpus" / (n + ".json"))))
+        lines.append("%s %s %s %s %s %s %s" % (n, cur["pid"] if cur else "idle", entry.get("busy", False),
                      entry.get("runs", 0), entry.get("last_exit"), (cur or {}).get("waiting", False),
                      (cur or {}).get("bad_runs", 0)))
     lines.append("queue: " + (" ".join(st["queue"]) or "-"))
