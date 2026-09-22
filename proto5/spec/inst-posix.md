@@ -2,7 +2,7 @@
 
 ← [proto5 README](../README.md)｜規範先行；實作：[lib/aos_directives.py](../lib/aos_directives.py)（指示詞）、
 [lib/aos_inst.py](../lib/aos_inst.py)（讀、驗，第 1～5 節）、[lib/aos_exec.py](../lib/aos_exec.py)（執行，第 6 節；
-命令列說明在 [exec.md](exec.md)）；proto4-3 的 [aos_inst.py](../../proto4-3/aos_inst.py)／
+命令列說明在 [aos-exec.md](aos-exec.md)）；proto4-3 的 [aos_inst.py](../../proto4-3/aos_inst.py)／
 [aos_exec.py](../../proto4-3/aos_exec.py) 是凍結的舊版參考（`$ref` 帶 `#位置`、位置＝實體路徑那幾條沒跟上）
 
 這份文件把「一份 inst.json 到底長什麼樣、怎麼解讀」寫成規範。規範先行：程式照本文做；程式跟

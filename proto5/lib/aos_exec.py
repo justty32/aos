@@ -3,7 +3,7 @@
 
     aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 
-`xxx` 是什麼決定怎麼跑（命令列說明在 ../spec/exec.md）：
+`xxx` 是什麼決定怎麼跑（命令列說明在 ../spec/aos-exec.md）：
 
     普通檔案（副檔名不是 .json）  直接執行它，stdin/stdout/stderr 繼承 aos-exec 的
     .json 檔                     讀進來當 inst.json 解析、執行（不存在＝125，見下）
