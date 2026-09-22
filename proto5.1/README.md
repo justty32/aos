@@ -19,6 +19,7 @@ proto5 那邊 2026-09-22 做了四份調查，冒出 23 題要使用者拍板（
 | 1 | llm cpu（資料夾＋`aos-llm-cpu` 一次 tick 問一件）、aos-agent 的 `think` 改成丟請求＋`waits` 等結果、兩個逾時關卡（工具 `_timeout_ms` 60 秒、引擎連敗 3 次→`continue.json` 暫停） | [notes/stage1-task.md](notes/stage1-task.md) | 做完 |
 | 2 | 共用 CPU 佇列、tool cpu、工具 `_run: "cpu"`、act 送收；請求對帳只評估 | [notes/stage2-task.md](notes/stage2-task.md) | 做完 |
 | 3 | aos-run／aos-daemon／aos-kernel 的 proto5 版（照 daemon／kernel 總結：擋重疊、砍到底、具名代號、沒有 module） | [notes/stage3-task.md](notes/stage3-task.md) | 做完 |
+| 4 | 照使用者拍板改六件事（[proto5/notes/2026-09-22-decisions.md](../proto5/notes/2026-09-22-decisions.md)）：engine 只剩代號＋llm cpu 的 models 表、同步模式拿掉、連敗暫停用 consume、結果不明固定文字、aos-run 的 run.json／ctl.json 取代槽鎖、kill_tree 可選預設不開 | [notes/stage4-task.md](notes/stage4-task.md) | 進行中 |
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -s proto5.1/lib/test
