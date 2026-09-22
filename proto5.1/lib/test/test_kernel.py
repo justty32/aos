@@ -20,7 +20,9 @@ CLI = Path(__file__).resolve().parents[2] / "cli"
 
 class KernelTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(dir=CLI.parent / ".build")
+        build = CLI.parent / ".build"
+        build.mkdir(exist_ok=True)
+        self.tmp = tempfile.TemporaryDirectory(dir=build)
         self.root = Path(self.tmp.name)
         self.k = self.root / "K"
         self.d = self.root / "D"

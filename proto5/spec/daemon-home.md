@@ -2,8 +2,6 @@
 
 ← [README](../README.md)｜程式：[aos-daemon](aos-daemon.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 家由 `AOS_DAEMON_HOME` 決定，沒寫是 `~/.aos-daemon`；`--home PATH` 可覆蓋。
 內容都是字面值，不解指示詞。檔案原子寫入使用同目錄唯一 `.tmp` 再 replace，沒有 fsync。
 

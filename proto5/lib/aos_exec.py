@@ -31,10 +31,11 @@ import os
 import signal
 import subprocess
 import sys
+import time
 
 import aos_inst
 
-__all__ = ["run_target", "run_inst", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
+__all__ = ["run_target", "run_inst", "terminate", "InstResult", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
 
 DEFAULT_DIR_TARGET = os.path.join(".aos", "inst.json")
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
@@ -42,8 +43,21 @@ CHILD, AOS, USAGE = "child", "aos", "usage"      # run_target() 回的那個 kin
 EXIT_AOS = 125          # kind=="aos" 時命令列的退出碼（不會跟子程式的碼撞號）
 
 
+class InstResult(tuple):
+    """`run_inst()` 的三元素 tuple，另帶 `timed_out`，不靠退出碼猜是否逾時。
+
+    舊呼叫者的三值解包、索引與 tuple 比較照舊；期限到了即為 True，即使子程式收到
+    SIGTERM 後自行以 0 結束也一樣。
+    """
+
+    def __new__(cls, code, kind, stdout_text, timed_out=False):
+        result = super().__new__(cls, (code, kind, stdout_text))
+        result.timed_out = timed_out
+        return result
+
+
 def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, stderr=None,
-               args=None):
+               args=None, on_target=None):
     """把 xxx 執行一次，回 `(code, kind)`。
 
     `kind` 說這個 code 是誰的：
@@ -62,19 +76,27 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, 
     `on_spawn` 是給 aos-run 的鉤子：子行程一開起來就用那個 Popen 叫它一次，收完屍再用 None
     叫一次（aos-run 靠它砍正在跑的那個；命令列用不到）。
 
+    `on_target` 在目標路徑選定後、讀 inst 前接到絕對路徑；給 aos-run 公布 busy 目標。
+
     `stderr` 只蓋子程式這一條流：None＝照 inst.json，`-`＝繼承呼叫者的 stderr，字串＝以
     呼叫者當時的 cwd 為中心開檔；蓋的是 inst.json 的**整個** stderr 設定（含 merge／inherit／
     append／mkdir）。普通檔案模式也吃這個覆蓋。`args` 只對普通檔案有效；None 表示沒給 `--`，
     陣列（包括空陣列）表示有給。
     """
-    p = os.path.abspath(xxx)
+    p = os.path.realpath(xxx) if on_target else os.path.abspath(xxx)
     if os.path.isdir(p):
         if args is not None:
             return _inst_args_error()
         target = os.path.join(p, dir_target)
+        if on_target:
+            target = os.path.realpath(target)
+        if on_target:
+            on_target(target)
         if not os.path.isfile(target):
             return _err(2, USAGE, "資料夾 %s 裡沒有 %s" % (p, dir_target))
         return _run_inst(target, p, timeout_ms, on_spawn, stderr)
+    if on_target:
+        on_target(p)
     if p.endswith(".json"):                 # 不存在也走這條：讀不到＝aos 自己失敗（125）
         if args is not None:
             return _inst_args_error()
@@ -89,10 +111,14 @@ def run_inst(inst, stdin_text, timeout_ms=0):
 
     stdin／stdout 由呼叫者接管；stderr 沒寫＝/dev/null。錯誤跟 `run_target()` 一樣印 stderr，
     kind 也是 child／aos；stdout 用 UTF-8 解碼，壞位元組換成替代字元。
+    回傳的 `InstResult.timed_out` 表示真的撞到期限，跟子程式自己的退出碼分開。
     """
     output = []
-    code, kind = _execute_inst(inst, timeout_ms, input_bytes=stdin_text.encode("utf-8"), output=output)
-    return code, kind, (output[0] if output else b"").decode("utf-8", errors="replace")
+    timed_out = [False]
+    code, kind = _execute_inst(inst, timeout_ms, input_bytes=stdin_text.encode("utf-8"),
+                              output=output, timed_out=timed_out)
+    return InstResult(code, kind, (output[0] if output else b"").decode("utf-8", errors="replace"),
+                      timed_out[0])
 
 
 def _err(code, kind, msg):
@@ -134,12 +160,18 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
     """
     try:
         inst = aos_inst.load(target, base)
+    except UnicodeError as e:
+        return _err(1, AOS, "JsonSyntax: %s 不是 UTF-8：%s" % (target, e))
     except aos_inst.InstError as e:
         return _err(1, AOS, str(e))
-    return _execute_inst(inst, timeout_ms, on_spawn, stderr)
+    try:
+        return _execute_inst(inst, timeout_ms, on_spawn, stderr)
+    except ValueError as e:
+        return _err(1, AOS, "FieldTypeMismatch: 無法執行 inst：%s" % e)
 
 
-def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None, output=None):
+def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None, output=None,
+                  timed_out=None):
     """共用的前置檢查與串流設定；有 input_bytes 時改走 stdin／stdout 管線。"""
 
     # 先建該建的目錄：cwd 自己，再來是三個輸出檔的父目錄。建不起來＝沒跑成（125）。
@@ -192,7 +224,8 @@ def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None
         except OSError as e:
             return _err(1, AOS, "重導向的檔案開不起來：%s" % e)
         return _spawn(inst["argv"], inst["cwd"], env, fin, fout, ferr,
-                      timeout_ms, exit_path, on_spawn, inst["exit"]["append"], input_bytes, output)
+                      timeout_ms, exit_path, on_spawn, inst["exit"]["append"], input_bytes, output,
+                      timed_out)
     finally:
         for f in opened:
             if f is not None:                    # inherit 的那條是 None，沒東西可關
@@ -208,7 +241,7 @@ def _open_out(field):
 
 
 def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None,
-           exit_append=False, input_bytes=None, output=None):
+           exit_append=False, input_bytes=None, output=None, timed_out=None):
     """跑一次、等它、逾時就砍，回 `(結束狀態, "child")`（順便寫 exit 檔）。
 
     argv[0] 走**疊加後**的 env 裡的 PATH（subprocess 帶 env= 時本來就這樣查；env 被清空、
@@ -218,6 +251,8 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     try:
         p = subprocess.Popen(argv, cwd=cwd, env=env, start_new_session=True,
                              stdin=fin, stdout=fout, stderr=ferr)
+    except ValueError as e:
+        return _err(1, AOS, "FieldTypeMismatch: 無法啟動子程式：%s" % e)
     except PermissionError as e:
         return _finish(126, exit_path, "沒有執行權：%s（exit 126）" % e, exit_append)
     except (FileNotFoundError, NotADirectoryError) as e:
@@ -227,27 +262,44 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
 
     if on_spawn:
         on_spawn(p)                                 # 開起來了：aos-run 要拿得到它才砍得掉
-    limit = (timeout_ms / 1000.0) if timeout_ms else None
+    deadline = time.monotonic() + timeout_ms / 1000.0 if timeout_ms else None
     captured = b""
-    try:
-        if input_bytes is None:
-            p.wait(timeout=limit)
-        else:
-            captured, _ = p.communicate(input=input_bytes, timeout=limit)
-    except subprocess.TimeoutExpired:
-        _sig_group(p, signal.SIGTERM)               # 先好好講：整個 process group
+    pending_input = input_bytes
+    while not getattr(p, "_aos_stop", None):
+        limit = max(0, deadline - time.monotonic()) if deadline is not None else None
+        if on_spawn is not None:
+            limit = min(limit, 0.05) if limit is not None else 0.05
         try:
             if input_bytes is None:
-                p.wait(timeout=GRACE)
+                p.wait(timeout=limit)
             else:
-                captured, _ = p.communicate(timeout=GRACE)
+                captured, _ = p.communicate(input=pending_input, timeout=limit)
+            break
         except subprocess.TimeoutExpired:
-            _sig_group(p, signal.SIGKILL)
+            pending_input = None
+            if deadline is not None and time.monotonic() >= deadline:
+                if timed_out is not None:
+                    timed_out[0] = True
+                terminate(p)
+    if getattr(p, "_aos_stop", None):
+        until, groups = p._aos_stop
+        # 父進程先退出也給後代同一個寬限；nested run_inst 另開的 session 也在快照裡。
+        try:
+            remaining = max(0, until - time.monotonic())
             if input_bytes is None:
-                p.wait()
+                p.wait(timeout=remaining)
             else:
-                captured, _ = p.communicate()
-        _sig_group(p, signal.SIGKILL)               # 直接子行程死了不代表群組空了
+                captured, _ = p.communicate(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            pass
+        # 沒有活後代就不必等滿；killpg(0) 把 zombie 當存在，至多多等兩秒。
+        while time.monotonic() < until and any(_group_exists(g) for g in groups):
+            time.sleep(min(0.02, max(0, until - time.monotonic())))
+        _signal_groups(groups, signal.SIGKILL)
+        if input_bytes is None:
+            p.wait()
+        else:
+            captured, _ = p.communicate()
     if output is not None:
         output.append(captured)
     code = p.returncode
@@ -256,12 +308,54 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     return _finish(code if code >= 0 else 128 + (-code), exit_path, None, exit_append)
 
 
-def _sig_group(p, sig):
-    """砍整個 process group：留在群組裡的孫行程要跟著走。空群組＝ESRCH，無害。"""
+def terminate(p):
+    """第一次取消：快照後代 groups、TERM；_spawn 在兩秒期限後 KILL 並收屍。
+
+    Linux /proc 補上 nested run_inst 的 setsid 邊界；其他 POSIX 至少處理原 group。
+    不追捕終止開始後才新生或已脫離親子樹的 daemon。
+    """
+    if getattr(p, "_aos_stop", None):
+        return
+    groups = {p.pid}
+    parents = {}
     try:
-        os.killpg(p.pid, sig)                      # setsid 後 pgid＝pid；父行程收屍後仍能砍孫行程
+        for name in os.listdir("/proc"):
+            if not name.isdigit():
+                continue
+            try:
+                with open("/proc/%s/stat" % name) as f:
+                    fields = f.read().rsplit(")", 1)[1].split()
+                parents[int(name)] = (int(fields[1]), int(fields[2]))
+            except (OSError, ValueError, IndexError):
+                continue
     except OSError:
         pass
+    descendants = {p.pid}
+    while True:
+        added = {pid for pid, (parent, _) in parents.items() if parent in descendants} - descendants
+        if not added:
+            break
+        descendants.update(added)
+    groups.update(parents[pid][1] for pid in descendants if pid in parents)
+    groups.discard(os.getpgrp())
+    p._aos_stop = (time.monotonic() + GRACE, groups)
+    _signal_groups(groups, signal.SIGTERM)
+
+
+def _signal_groups(groups, sig):
+    for group in groups:
+        try:
+            os.killpg(group, sig)
+        except ProcessLookupError:
+            pass
+
+
+def _group_exists(group):
+    try:
+        os.killpg(group, 0)
+        return True
+    except ProcessLookupError:
+        return False
 
 
 def _finish(status, exit_path, note, exit_append=False):

@@ -1,8 +1,6 @@
 # aos_cpu：共用佇列程式規範
 
-← [proto5 README](../README.md)｜格式：[cpu-queue](cpu-queue.md)｜實作：[aos_cpu.py](../../proto5.1/lib/aos_cpu.py)
-
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
+← [proto5 README](../README.md)｜格式：[cpu-queue](cpu-queue.md)｜實作：[aos_cpu.py](../lib/aos_cpu.py)
 
 共用層不建立背景 worker，payload 由各 CPU 的 execute 處理。
 

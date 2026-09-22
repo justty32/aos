@@ -2,8 +2,6 @@
 
 ← [README](../README.md)｜程式：[aos-kernel](aos-kernel.md)｜[inst](inst-posix.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 Kernel 排程的行程都是普通 posix inst；agent、llm cpu、tool cpu 沒有特別身分。沒有 module。
 
 ## 目錄

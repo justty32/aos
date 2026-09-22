@@ -2,8 +2,6 @@
 
 ← [proto5 README](../README.md)｜資料夾與 `state.json` 長什麼樣在 [agent.md](agent.md)；組請求靠 [aos-llm-ask.md](aos-llm-ask.md)，問模型交 llm CPU；跑工具靠 [inst-posix.md](inst-posix.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 > **最精簡的標準**（使用者定的）：缺的東西之後遇到了再補；不記修訂記錄。
 > 這份只講「叫一次 aos-agent 到底做什麼」：先看**門**（`waits`），再走**一格**（`state`）。
 > `state`／`input`／`waits`／`errors` 四格的形狀在 [agent.md §4](agent.md)，這裡不重講。
@@ -91,7 +89,7 @@ aos-agent 會在送出 LLM／工具請求或引擎連敗三次時自己往 `wait
   `assistant` 再拿去問一次（模型那邊會拒絕）。
 - `think` 回來的 `message` 原樣接；只有 `content` 是 `null` 又沒有 `tool_calls` 時補成 `""`（不然下次
   讀驗過不了 [agent.md §3.2](agent.md)）。
-- 跑工具是 import proto5.1 的 aos_exec／aos_inst，不是開 `aos-exec` 子進程（inst 在記憶體、stdin 要塞
+- 跑工具是 import 同目錄的 aos_exec／aos_inst，不是開 `aos-exec` 子進程（inst 在記憶體、stdin 要塞
   字串、stdout 要收回來——函式庫層要補一個入口）。
 - `$env` 讀的是 aos-agent 自己的環境；`$ref` 相對路徑以 agent 資料夾為中心。
 - 同一個 agent **不要同時跑兩份**（沒有鎖）。

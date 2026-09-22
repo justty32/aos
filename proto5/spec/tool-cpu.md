@@ -2,8 +2,6 @@
 
 ← [proto5 README](../README.md)｜共用格式：[cpu-queue](cpu-queue.md)｜程式：[aos-tool-cpu](aos-tool-cpu.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 CPU 身分 `_type`＝`tool_cpu`、版本 1。資料夾、info、共同 result 欄位、短鎖與收屍見共用規範。
 
 ## 1. 請求 payload

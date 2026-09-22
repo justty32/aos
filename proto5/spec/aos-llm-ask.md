@@ -2,8 +2,6 @@
 
 ← [proto5 README](../README.md)｜資料格式：[agent.md](agent.md)｜送件：[aos-agent.md](aos-agent.md)｜HTTP：[aos-llm-cpu.md](aos-llm-cpu.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 `aos-llm-ask [dir]` 讀 agent 家、組 body，stdout 印一行 JSON 後退出。
 dir 省略是 `.`；只印 body，不打 HTTP、不交 CPU 請求。
 

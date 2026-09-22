@@ -2,8 +2,6 @@
 
 ← [proto5 README](../README.md)｜格式：[tool-cpu](tool-cpu.md)｜佇列：[cpu-queue](cpu-queue.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 `aos-tool-cpu [dir]`：省略 dir＝`.`。先驗 `tool_cpu` info，透過 `aos_cpu.tick` 收屍、
 再執行最多一份請求。execute 只驗解好的 payload，再呼叫
 `aos_exec.run_inst(inst, stdin, timeout_ms)`，不解指示詞也不讀 agent 家。

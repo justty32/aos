@@ -2,9 +2,7 @@
 
 ← [README](../README.md)｜格式：[kernel-home](kernel-home.md)｜下層：[aos-daemon](aos-daemon.md)、[aos-run](aos-run.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
-實作：[`lib/aos_kernel.py`](../../proto5.1/lib/aos_kernel.py)，入口 [`cli/aos-kernel`](../../proto5.1/cli/aos-kernel)。只用 Python 標準庫與本目錄模組。
+實作：[`lib/aos_kernel.py`](../lib/aos_kernel.py)，入口 [`cli/aos-kernel`](../cli/aos-kernel)。只用 Python 標準庫與本目錄模組。
 
 ## 命令列
 

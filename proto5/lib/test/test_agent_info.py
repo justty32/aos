@@ -38,23 +38,23 @@ class TestShape(AgentCase):
         self.assertEqual(r["history"], [])
         self.assertEqual(r["history_path"], os.path.join(self.d, "prompts", "history.json"))
         self.assertEqual((r["tools"], r["tools_raw"], r["tool_paths"]), ([], [], []))
-        self.assertEqual(r["engine"], {"endpoint": ENGINE["endpoint"], "model": "test-model",
-                                       "params": {}, "api_key": None, "timeout_ms": 120000})
+        self.assertEqual(r["engine"], {"cpu": os.path.join(self.d, ENGINE["cpu"]), "model": "test-model",
+                                       "params": {}})
 
     def test_full_agent(self):
         """aos-llm-ask.md §2 那個範例：人格、記憶、兩份工具檔、engine 全寫。"""
         r = self.load(system={"content": "你是助手"},
                       history=[{"role": "user", "content": "hi"}],
                       tools={"tools/base.json": [TOOL_SH], "tools/team.json": [tool("mail")]},
-                      info={"engine": {"endpoint": "http://x/v1", "model": "m", "params": {"temperature": 0.2},
+                      info={"engine": {"cpu": "/x/v1", "model": "m", "params": {"temperature": 0.2},
                                        "api_key": "k", "timeout_ms": 5}})
         self.assertEqual(r["system"], "你是助手")
         self.assertEqual(r["history"], [{"role": "user", "content": "hi"}])
         self.assertEqual(r["tool_paths"], [os.path.join(self.d, "tools", "base.json"),
                                            os.path.join(self.d, "tools", "team.json")])
         self.assertEqual([t["function"]["name"] for t in r["tools"]], ["sh", "mail"])
-        self.assertEqual(r["engine"], {"endpoint": "http://x/v1", "model": "m", "params": {"temperature": 0.2},
-                                       "api_key": "k", "timeout_ms": 5})
+        self.assertEqual(r["engine"], {"cpu": "/x/v1", "model": "m", "params": {"temperature": 0.2},
+                                       })
 
     def test_custom_paths_relative_to_agent_dir(self):
         """system／history／tools 的路徑相對於 agent 資料夾；絕對路徑照字面。"""
@@ -172,33 +172,33 @@ class TestDirectives(AgentCase):
         self.write("h.json", "[]")
         self.write("t.json", json.dumps([tool("a")]))
         r = self.load(info={"system": {"$env": "S"}, "history": {"$env": "H"}, "tools": [{"$env": "T"}],
-                            "engine": {"endpoint": {"$env": "E"}, "model": {"$env": "M"}}},
-                      env={"S": "s.json", "H": "h.json", "T": "t.json", "E": "http://e/v1", "M": "mm"})
+                            "engine": {"cpu": {"$env": "E"}, "model": {"$env": "M"}}},
+                      env={"S": "s.json", "H": "h.json", "T": "t.json", "E": "/e/v1", "M": "mm"})
         self.assertEqual(r["system"], "S")
         self.assertEqual(r["tool_paths"], [os.path.join(self.d, "t.json")])
-        self.assertEqual((r["engine"]["endpoint"], r["engine"]["model"]), ("http://e/v1", "mm"))
+        self.assertEqual((r["engine"]["cpu"], r["engine"]["model"]), ("/e/v1", "mm"))
 
     def test_env_reads_the_given_table_not_os_environ(self):
         self.bad("EnvironmentVariableMissing", info={"system": {"$env": "PATH"}}, env={})
 
     def test_env_default_is_os_environ(self):
-        d = self.agent(info={"engine": {"endpoint": "http://e", "model": {"$env": "PATH"}}})
+        d = self.agent(info={"engine": {"cpu": "/e", "model": {"$env": "PATH"}}})
         self.assertEqual(aos_agent_info.load(d)["engine"]["model"], os.environ["PATH"])
 
     def test_fmt(self):
-        r = self.load(info={"engine": {"endpoint": fmt("http://${h}:${p}/v1", h="127.0.0.1", p={"$env": "P"}),
+        r = self.load(info={"engine": {"cpu": fmt("/${h}:${p}/v1", h="127.0.0.1", p={"$env": "P"}),
                                        "model": "m"}}, env={"P": "1234"})
-        self.assertEqual(r["engine"]["endpoint"], "http://127.0.0.1:1234/v1")
+        self.assertEqual(r["engine"]["cpu"], "/127.0.0.1:1234/v1")
 
     def test_ref_relative_to_agent_dir_not_to_info_json(self):
         """$ref 的中心路徑＝agent 資料夾（info.json 就在那裡，所以一樣）；整包 engine 從別的檔拿。"""
-        self.write("engines/lm.json", json.dumps({"endpoint": "http://lm/v1", "model": "q", "params": {"t": 1}}))
+        self.write("engines/lm.json", json.dumps({"cpu": "/lm/v1", "model": "q", "params": {"t": 1}}))
         r = self.load(info={"engine": {"$ref": "engines/lm.json"}})
-        self.assertEqual(r["engine"]["endpoint"], "http://lm/v1")
+        self.assertEqual(r["engine"]["cpu"], "/lm/v1")
         self.assertEqual(r["engine"]["params"], {"t": 1})
 
     def test_ref_with_at_and_hash(self):
-        self.write("all.json", json.dumps({"eng": {"endpoint": "http://a/v1", "model": "m"}, "tools": ["t.json"]}))
+        self.write("all.json", json.dumps({"eng": {"cpu": "/a/v1", "model": "m"}, "tools": ["t.json"]}))
         self.write("t.json", json.dumps([tool("a")]))
         r = self.load(info={"engine": {"$ref": "all.json", "$at": "/eng"}, "tools": {"$ref": "all.json#/tools"}})
         self.assertEqual(r["engine"]["model"], "m")
@@ -206,7 +206,7 @@ class TestDirectives(AgentCase):
 
     def test_ref_self_relative_position_is_physical_path(self):
         """$ref:"" 相對 $at：位置是實體路徑（/engine/model 往上一層是 /engine）。"""
-        r = self.load(info={"engine": {"endpoint": "http://a/v1", "model": {"$ref": "", "$at": "../name"},
+        r = self.load(info={"engine": {"cpu": "/a/v1", "model": {"$ref": "", "$at": "../name"},
                                        "name": "from-sibling"}})
         self.assertEqual(r["engine"]["model"], "from-sibling")
 
@@ -220,22 +220,22 @@ class TestDirectives(AgentCase):
 
     def test_container_from_other_file_resolves_inside_that_file(self):
         """走進 $ref 取回來的容器：裡面的 $ref:"" 指的是那份檔，不是 info.json。"""
-        self.write("eng.json", json.dumps({"endpoint": {"$ref": "", "$at": "/real"}, "model": "m",
-                                           "real": "http://from-eng-json/v1"}))
+        self.write("eng.json", json.dumps({"cpu": {"$ref": "", "$at": "/real"}, "model": "m",
+                                           "real": "/from-eng-json/v1"}))
         r = self.load(info={"engine": {"$ref": "eng.json"}})
-        self.assertEqual(r["engine"]["endpoint"], "http://from-eng-json/v1")
+        self.assertEqual(r["engine"]["cpu"], "/from-eng-json/v1")
 
     def test_top_level_ref(self):
         """整份 info.json 可以是一個 $ref。"""
         self.write("real-info.json", json.dumps({"_metainfo": {"_type": "llm_agent", "_version": 1},
-                                                 "engine": {"endpoint": "http://top/v1", "model": "m"}}))
+                                                 "engine": {"cpu": "/top/v1", "model": "m"}}))
         self.write("info.json", json.dumps({"$ref": "real-info.json"}))
         r = aos_agent_info.load(self.d, env=OUTER)
-        self.assertEqual(r["engine"]["endpoint"], "http://top/v1")
+        self.assertEqual(r["engine"]["cpu"], "/top/v1")
 
     def test_params_resolved_deeply(self):
         """engine.params 每一格都解，巢狀的也解。"""
-        r = self.load(info={"engine": {"endpoint": "http://a/v1", "model": "m",
+        r = self.load(info={"engine": {"cpu": "/a/v1", "model": "m",
                                        "params": {"temperature": {"$ref": "", "$at": "/t"},
                                                   "nested": {"x": [{"$env": "V"}, "lit"]}}}, "t": 0.5},
                       env={"V": "vv"})
@@ -375,6 +375,60 @@ class TestHistory(AgentCase):
 
 class TestTools(AgentCase):
 
+    def test_run_defaults_sync_without_modifying_raw_tool(self):
+        t = tool("plain")
+        r = self.load(tools={"t.json": [t]})
+        self.assertIsNone(r["tool_cpu"])
+        self.assertEqual(r["tools_raw"], [t])
+        r = self.load(tools={"t.json": [tool("plain", _run="sync")]})
+        self.assertNotIn("_run", r["tools"][0])
+
+    def test_cpu_tool_requires_tool_cpu_even_before_it_is_called(self):
+        e = self.bad("FieldTypeMismatch", tools={"t.json": [tool("slow", _run="cpu")]})
+        self.assertIn("tool_cpu", str(e))
+
+    def test_run_is_literal_enum_and_hidden_from_model(self):
+        t = tool("slow", _run="cpu")
+        r = self.load(info={"tool_cpu": "workers"}, tools={"t.json": [t]})
+        self.assertEqual(r["tools_raw"], [t])
+        self.assertNotIn("_run", r["tools"][0])
+        for value in ("", "CPU", None, True, 1, [], {}, {"$env": "RUN"}):
+            with self.subTest(value=value):
+                e = self.bad("ToolInvalid", info={"tool_cpu": "workers"},
+                             tools={"t.json": [tool("slow", _run=value)]})
+                self.assertIn("_run", str(e))
+
+    def test_tool_cpu_path_resolves_from_agent_and_does_not_read_cpu(self):
+        for value, expected in (("workers", os.path.join(self.d, "workers")),
+                                ("/tmp/cpu", "/tmp/cpu"), ("", self.d)):
+            with self.subTest(value=value):
+                r = self.load(info={"tool_cpu": value}, tools={"t.json": [tool("slow", _run="cpu")]})
+                self.assertEqual(r["tool_cpu"], expected)
+        self.write("conf/cpu.json", json.dumps({"path": {"$env": "CPU"}}))
+        r = self.load(info={"tool_cpu": {"$ref": "conf/cpu.json#/path"}}, env={"CPU": "workers"})
+        self.assertEqual(r["tool_cpu"], os.path.join(self.d, "workers"))
+
+    def test_tool_cpu_invalid_path_and_directive(self):
+        for value in (None, True, 1, [], {}):
+            with self.subTest(value=value):
+                self.bad("FieldTypeMismatch", info={"tool_cpu": value})
+        self.bad("EnvironmentVariableMissing", info={"tool_cpu": {"$env": "CPU"}}, env={})
+        self.bad("UnknownOption", info={"tool_cpu": {"$opt": "cpu", "$val": "workers"}})
+
+    def test_timeout_preserved_raw_and_hidden_from_model(self):
+        t = tool("slow", _timeout_ms=17)
+        r = self.load(tools={"t.json": [t]})
+        self.assertEqual(r["tools_raw"], [t])
+        self.assertNotIn("_timeout_ms", r["tools"][0])
+        self.assertNotIn("_timeout_ms", r["tools_raw"][0]["_meta"])
+
+    def test_timeout_requires_literal_positive_integer(self):
+        for value in (0, -1, True, False, 1.5, "60", None, {"$env": "LIMIT"}):
+            with self.subTest(value=value):
+                e = self.bad("ToolInvalid", tools={"t.json": [tool("slow", _timeout_ms=value)]})
+                self.assertIn("_timeout_ms", str(e))
+                self.assertIn("t.json", str(e))
+
     def test_merge_in_file_order(self):
         r = self.load(tools={"tools/b.json": [tool("b1"), tool("b2")], "tools/a.json": [tool("a1")]},
                       info={"tools": ["tools/b.json", "tools/a.json"]})
@@ -482,47 +536,55 @@ class TestEngine(AgentCase):
         self.assertEqual(cm.exception.code, "EngineInvalid")
 
     def test_engine_not_object_is_field_type_mismatch(self):
-        self.bad("FieldTypeMismatch", info={"engine": "http://x"})
+        self.bad("FieldTypeMismatch", info={"engine": "/x"})
 
     def test_required(self):
         self.bad_eng(model="m")
-        self.bad_eng(endpoint="http://x")
-        self.bad_eng(endpoint="", model="m")
-        self.bad_eng(endpoint=1, model="m")
-        self.bad_eng(endpoint="http://x", model=None)
+        self.bad_eng(cpu="/x")
+        self.bad_eng(cpu="/cpu", model="")
+        self.bad_eng(cpu=1, model="m")
+        self.bad_eng(cpu="/x", model=None)
 
     def test_params(self):
-        self.assertEqual(self.eng(endpoint="e", model="m", params={"a": 1})["engine"]["params"], {"a": 1})
-        self.bad_eng(endpoint="e", model="m", params=[1])
-        self.bad_eng(endpoint="e", model="m", params="t=1")
+        self.assertEqual(self.eng(cpu="e", model="m", params={"a": 1})["engine"]["params"], {"a": 1})
+        self.bad_eng(cpu="e", model="m", params=[1])
+        self.bad_eng(cpu="e", model="m", params="t=1")
 
-    def test_api_key(self):
-        self.assertEqual(self.eng(endpoint="e", model="m", api_key="k")["engine"]["api_key"], "k")
-        self.assertEqual(self.eng(endpoint="e", model="m", api_key="")["engine"]["api_key"], "")
-        self.assertIsNone(self.eng(endpoint="e", model="m")["engine"]["api_key"])
-        self.bad_eng(endpoint="e", model="m", api_key=None)
-        self.bad_eng(endpoint="e", model="m", api_key=123)
+    def test_connection_settings_are_not_agent_fields(self):
+        r = self.eng(cpu="/cpu", model="m", endpoint="unused", api_key="secret", timeout_ms=7)
+        self.assertEqual(r["engine"], {"cpu": "/cpu", "model": "m", "params": {}})
 
-    def test_api_key_from_env_missing_is_an_error(self):
-        """設定壞就不跑，不降級（aos-llm-ask.md §2.5）。"""
-        self.bad("EnvironmentVariableMissing",
-                 info={"engine": {"endpoint": "e", "model": "m", "api_key": {"$env": "LMSTUDIO_KEY"}}}, env={})
-        r = self.load(info={"engine": {"endpoint": "e", "model": "m", "api_key": {"$env": "LMSTUDIO_KEY"}}},
-                      env={"LMSTUDIO_KEY": "sk"})
-        self.assertEqual(r["engine"]["api_key"], "sk")
+    def test_removed_fields_do_not_resolve_directives(self):
+        r = self.load(info={"engine": {"cpu": "/cpu", "model": "m", "api_key": {"$env": "NO"}}}, env={})
+        self.assertNotIn("api_key", r["engine"])
 
-    def test_timeout_ms(self):
-        self.assertEqual(self.eng(endpoint="e", model="m", timeout_ms=7)["engine"]["timeout_ms"], 7)
-        self.assertEqual(self.eng(endpoint="e", model="m")["engine"]["timeout_ms"], 120000)
-        self.bad_eng(endpoint="e", model="m", timeout_ms=0)
-        self.bad_eng(endpoint="e", model="m", timeout_ms=-1)
-        self.bad_eng(endpoint="e", model="m", timeout_ms="5")
-        self.bad_eng(endpoint="e", model="m", timeout_ms=True)
-        self.bad_eng(endpoint="e", model="m", timeout_ms=1.5)
+    def test_model_alias_nonempty_string(self):
+        for model in ("", None, 1, [], {}):
+            with self.subTest(model=model):
+                self.bad_eng(cpu="/cpu", model=model)
 
     def test_unknown_engine_keys_ignored(self):
-        r = self.eng(endpoint="e", model="m", kind="openai", retries=3)
-        self.assertEqual(sorted(r["engine"]), ["api_key", "endpoint", "model", "params", "timeout_ms"])
+        r = self.eng(cpu="e", model="m", kind="openai", retries=3)
+        self.assertEqual(sorted(r["engine"]), ["cpu", "model", "params"])
+
+    def test_cpu_path_defaults_and_relative_absolute(self):
+        self.bad_eng(model="m")
+        self.assertEqual(self.eng(model="m", cpu="../cpu")["engine"]["cpu"],
+                         os.path.normpath(os.path.join(self.d, "../cpu")))
+        self.assertEqual(self.eng(model="m", cpu="/tmp/cpu")["engine"]["cpu"], "/tmp/cpu")
+        self.assertEqual(self.eng(model="m", cpu="")["engine"]["cpu"], self.d)
+
+    def test_cpu_directive_and_referenced_engine_stay_relative_to_agent(self):
+        self.write("conf/engine.json", json.dumps({"model": "m", "cpu": {"$env": "CPU"}}))
+        r = self.load(info={"engine": {"$ref": "conf/engine.json"}}, env={"CPU": "workers"})
+        self.assertEqual(r["engine"]["cpu"], os.path.join(self.d, "workers"))
+
+    def test_cpu_invalid_type_and_missing_directive(self):
+        for value in (None, 7, True, [], {}):
+            with self.subTest(value=value):
+                self.bad_eng(model="m", cpu=value)
+        self.bad("EnvironmentVariableMissing",
+                 info={"engine": {"model": "m", "cpu": {"$env": "CPU"}}}, env={})
 
 
 if __name__ == "__main__":
