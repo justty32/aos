@@ -256,10 +256,3 @@ aos-agent 自己也會加條目（送出 LLM／工具請求、引擎連敗暫停
 
 - **程式做什麼**：組模型請求＝[aos-llm-ask.md](aos-llm-ask.md)；門怎麼判、狀態機、跑工具＝[aos-agent.md](aos-agent.md)。
 - **輸入從哪來、回話回給誰**（信箱、aos-user、別的 agent）、**怎麼放進 kernel**：之後再說。
-
-## 我自己選的、使用者可以推翻的
-
-1. `_metainfo` 必填、也解指示詞。
-2. `state.json` 沒檔＝全部預設。
-3. `input` 沒寫＝`input.json`；檔裡可以是字串／一則／一串；清掉＝rename `.done`。
-4. `waits` 的五個選項名與預設（`exists`、`all`）；`mtime` 對資料夾＝看裡面每個 `*.json`。
