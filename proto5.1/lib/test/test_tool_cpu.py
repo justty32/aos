@@ -125,6 +125,13 @@ class TestToolCPU(unittest.TestCase):
             self.assertEqual(aos_tool_cpu.tick(self.dir), 0)
         self.assertFalse(self.read_result()["ok"])
 
+    def test_reaped_result_is_exact_unknown_failure(self):
+        self.request()
+        os.rename(self.dir / "requests" / "a.json", self.dir / "running" / "a.json")
+        os.utime(self.dir / "running" / "a.json", (1, 1))
+        self.assertEqual(aos_tool_cpu.tick(self.dir), 0)
+        self.assertEqual(self.read_result(), {"ok": False, "error": "結果不明：工具可能已經跑了，也可能沒有"})
+
     def test_bad_timeout_interrupted_payload_uses_fallback_reaping(self):
         self.request(timeout_ms=False)
         running = self.dir / "running" / "a.json"

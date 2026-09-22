@@ -4,7 +4,6 @@ import fcntl
 import json
 import os
 from pathlib import Path
-import re
 import secrets
 import signal
 import subprocess
@@ -61,7 +60,7 @@ def _check_home(path):
 def _target(value):
     if not isinstance(value, str) or not value or "\0" in value or not value.endswith(".json"):
         raise DaemonError("FieldTypeMismatch", "target 必須是非空 .json 路徑")
-    return os.path.realpath(value)
+    return os.path.abspath(value)
 
 
 def _args(value):
@@ -88,14 +87,11 @@ def read_state(path=None):
         raise DaemonError("FieldTypeMismatch", "%s/state.json 的 pid／runs 壞了" % p)
     for key, entry in obj["runs"].items():
         if (not isinstance(entry, dict)
-                or not {"pid", "target", "args", "state", "ready", "running", "runs", "last_exit", "last_kind"} <= entry.keys()
+                or not {"pid", "target", "args", "state", "home"} <= entry.keys()
                 or not os.path.isabs(key)
                 or entry.get("target") != key or type(entry.get("pid")) is not int
                 or entry["pid"] <= 0 or entry.get("state") not in ("running", "stopping")
-                or any(type(entry.get(k)) is not bool for k in ("ready", "running"))
-                or type(entry.get("runs")) is not int or entry["runs"] < 0
-                or (entry.get("last_exit") is not None and type(entry["last_exit"]) is not int)
-                or entry.get("last_kind") not in (None, "child", "aos", "usage")):
+                or not isinstance(entry.get("home"), str) or not os.path.isabs(entry["home"])):
             raise DaemonError("FieldTypeMismatch", "%s/state.json 的 entry %s 壞了" % (p, key))
         _args(entry.get("args"))
     return obj
@@ -113,7 +109,7 @@ def _active(p):
     return False
 
 
-def request(op, target=None, args=None, home=None, timeout=10):
+def request(op, target=None, args=None, home=None, timeout=15, kill_tree=False):
     """送請求、等同名 done；remove 回傳收尾後 entry，stop 在所有 runner 已收屍後回覆。"""
     p = _check_home(globals()["home"](home))
     if op == "ls":
@@ -125,6 +121,10 @@ def request(op, target=None, args=None, home=None, timeout=10):
     if not active:
         raise DaemonError("NotRunning", "%s 的 daemon 沒在跑" % p)
     obj = {"op": op}
+    if op == "add":
+        if type(kill_tree) is not bool:
+            raise DaemonError("FieldTypeMismatch", "kill_tree 必須是布林")
+        obj["kill_tree"] = kill_tree
     if target is not None:
         obj["target"] = _target(os.fspath(target))
     if args is not None:
@@ -180,24 +180,22 @@ class _Daemon:
     def save(self, pid=None):
         _write(self.p / "state.json", self.snapshot(pid))
 
-    def add(self, target, args):
+    def add(self, target, args, kill_tree=False):
         if target in self.jobs:
             raise DaemonError("AlreadyRunning", "%s 已登記" % target)
-        rd, wr = os.pipe()
-        try:
-            proc = subprocess.Popen([sys.executable, RUN_CLI, target, *args, "--status-fd", str(wr)],
-                                    pass_fds=(wr,), start_new_session=True, stdin=subprocess.DEVNULL,
-                                    env=dict(os.environ, AOS_DAEMON_HOME=str(self.p)),
-                                    stdout=self.log, stderr=self.log)
-        except BaseException:
-            os.close(rd)
-            raise
-        finally:
-            os.close(wr)
-        os.set_blocking(rd, False)
+        if type(kill_tree) is not bool:
+            raise DaemonError("FieldTypeMismatch", "kill_tree 必須是布林")
+        runner_home = self.p / "runners" / ("%d-%s" % (time.time_ns(), secrets.token_hex(2)))
+        runner_home.mkdir(parents=True)
+        command = [sys.executable, RUN_CLI, target, *args, "--home", str(runner_home)]
+        if kill_tree:
+            command.append("--kill-tree")
+        proc = subprocess.Popen(command, start_new_session=True, stdin=subprocess.DEVNULL,
+                                env=dict(os.environ, AOS_DAEMON_HOME=str(self.p)),
+                                stdout=self.log, stderr=self.log)
         entry = {"pid": proc.pid, "target": target, "args": args, "state": "running",
-                 "ready": False, "running": False, "runs": 0, "last_exit": None, "last_kind": None}
-        self.jobs[target] = {"proc": proc, "fd": rd, "buffer": b"", "entry": entry, "deadline": None}
+                 "home": str(runner_home)}
+        self.jobs[target] = {"proc": proc, "entry": entry, "deadline": None, "escalated": False, "kill_tree": kill_tree}
         if self.stopping:
             self.stop_job(self.jobs[target])
         self.save()
@@ -214,40 +212,19 @@ class _Daemon:
         for job in self.jobs.values():
             self.stop_job(job)
 
-    def events(self, job):
-        while True:
-            try:
-                data = os.read(job["fd"], 65536)
-            except BlockingIOError:
-                break
-            if not data:
-                break
-            job["buffer"] += data
-        lines = job["buffer"].split(b"\n")
-        job["buffer"] = lines.pop()
-        e = job["entry"]
-        for raw in lines:
-            line = raw.decode("utf-8", "replace")
-            if line == "ready":
-                e["ready"] = True
-            elif re.fullmatch(r"start #\d+", line):
-                e["running"] = True
-            elif (m := re.fullmatch(r"done #(\d+) exit=(\d+) kind=(child|aos|usage)", line)):
-                e.update(running=False, runs=int(m[1]), last_exit=int(m[2]), last_kind=m[3])
-            elif line.startswith("stop "):
-                e.update(running=False, state="stopping")
-
     def reap(self):
         for key, job in list(self.jobs.items()):
-            self.events(job)
-            if job["deadline"] is not None and time.monotonic() >= job["deadline"]:
-                _signal(job["proc"], signal.SIGKILL)
             if job["proc"].poll() is None:
+                if job["deadline"] is not None and time.monotonic() >= job["deadline"]:
+                    if not job["kill_tree"] and not job["escalated"]:
+                        _signal(job["proc"], signal.SIGTERM)
+                        job["escalated"] = True
+                        job["deadline"] = time.monotonic() + GRACE
+                    else:
+                        _signal(job["proc"], signal.SIGKILL)
                 continue
-            self.events(job)
-            os.close(job["fd"])
             entry = job["entry"].copy()
-            entry.update(running=False, state="stopping")
+            entry["state"] = "stopping"
             del self.jobs[key]
             self.save()
             for path, (obj, target) in list(self.pending.items()):
@@ -281,7 +258,7 @@ class _Daemon:
                     if not os.path.isabs(obj["target"]):
                         raise DaemonError("FieldTypeMismatch", "請求 target 必須是絕對路徑")
                     if op == "add":
-                        result = self.add(target, _args(obj.get("args", [])))
+                        result = self.add(target, _args(obj.get("args", [])), obj.get("kill_tree", False))
                     else:
                         if target not in self.jobs:
                             raise DaemonError("NotRunning", "%s 沒在跑" % target)
@@ -360,6 +337,7 @@ def ctl_main(argv=None):
     sub = ap.add_subparsers(dest="op", required=True)
     add = sub.add_parser("add")
     add.add_argument("target")
+    add.add_argument("--kill-tree", action="store_true")
     for flag in ("interval-ms", "timeout-ms", "max-runs"):
         add.add_argument("--" + flag, type=int)
     add.add_argument("--stop-exit", type=int, action="append", default=[])
@@ -382,7 +360,8 @@ def ctl_main(argv=None):
             ap.error(e.msg)
     try:
         result = request("remove" if a.op == "rm" else a.op, getattr(a, "target", None),
-                         args if a.op == "add" else None, home=a.home)
+                         args if a.op == "add" else None, home=a.home,
+                         kill_tree=getattr(a, "kill_tree", False))
         print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
         return 0
     except (DaemonError, OSError) as e:
