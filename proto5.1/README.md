@@ -28,6 +28,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -
 第 1 段：635 條 Python 測試全綠、C++ ctest 8/8；LM Studio `qwen/qwen3-1.7b` 已真跑 now 工具往返。
 第 2 段：686 條 Python 測試全綠、C++ ctest 8/8；LM Studio 與 `sleep 2; date` 的 tool CPU 往返完成。
 第 3 段：760 條 Python 測試全綠、C++ ctest 8/8；daemon＋三顆 kernel CPU 的 agent／LLM／tool 往返已真跑通。
+**先看 [notes/findings-brief.md](notes/findings-brief.md)**：35 條 findings 歸組的結論＋逐題對照 23 題（15 題可行照建議、6 題要修、2 題還是要使用者決定）。
 完整交付、ls／最後記憶／停止驗證見 [stage3-report](notes/stage3-report.md)，可重跑腳本見 [stage3-demo.py](notes/stage3-demo.py)。
 回報與逐次退出碼見 [stage1-report](notes/stage1-report.md)、[stage2-report](notes/stage2-report.md)；實作決定、KISS 限制與對帳評估見 [findings](notes/findings.md)（第 2 段 #18～#26，第 3 段 #27～#35）。
 
