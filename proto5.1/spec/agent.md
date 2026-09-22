@@ -19,7 +19,7 @@
 ```
 agent-bob/
   info.json            _metainfo ＋ 各程式要的設定（system／history／tools／engine…，見 aos-llm-ask.md）
-  state.json           state ＋ input ＋ waits（§4）
+  state.json           state ＋ input ＋ waits ＋ errors（§4）
   prompts/             慣例位置：人格、記憶
   tools/               慣例位置：工具檔
 ```
@@ -55,7 +55,7 @@ agent-bob/
   （base＝agent 資料夾）解的。
 - 程式要改寫這兩份檔的某一格（aos-agent 改 `state`、劃掉 `waits` 的一條）時，改的是**原始 JSON**
   的那一格、其他格原樣抄回，不是把解完的結果寫回去——所以**被程式改寫的那一格在原始 JSON 裡必須是
-  字面值**（`state` 是字面字串、`waits` 是字面陣列），頂層也不能整份是指示詞（不然寫不回來）。
+  字面值**（`state` 是字面字串、`errors` 是字面整數、`waits` 是字面陣列或單條），頂層也不能整份是指示詞（不然寫不回來）。
 
 ## 3. `info.json`
 
@@ -85,13 +85,14 @@ agent-bob/
 | 鍵 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
 | `state` | `idle`／`think`／`act` | `idle` | 狀態機走到哪。各格做什麼是 [aos-agent.md §3](aos-agent.md) 的事；**沒有 `wait` 這一格**：等不是狀態，是門（`waits`） |
+| `errors` | 非負字面整數 | `0` | 連續引擎失敗次數，由 aos-agent 寫；成功歸零、第三次失敗歸零並等 `continue.json`（見 [aos-agent.md §3](aos-agent.md)） |
 | `input` | 路徑或路徑陣列 | `input.json` | 輸入從哪來：指到的東西接進記憶（§4.1），接完清掉 |
 | `waits` | 一條或一條陣列（§4.2） | 沒寫＝不用等 | 門：還有沒到的就不走這一格（§4.2；怎麼判在 [aos-agent.md §2](aos-agent.md)） |
 
 - **檔不存在＝全部預設**（`state` 是 `idle`），aos-agent 第一次動就會把它寫出來；存在但壞掉＝
   `ReadFailed`／`JsonSyntax`。
 - `state` 不是三個之一、或在原始 JSON 裡不是字面字串 → `StateInvalid`；`input`／`waits` 型別不對、
-  `waits` 在原始 JSON 裡不是字面陣列 → `FieldTypeMismatch`（§2 最後一條）。
+  `waits` 在原始 JSON 裡不是字面陣列或單條、或 `errors` 不是非負字面整數（bool 不算） → `FieldTypeMismatch`（§2 最後一條）。
 
 ### 4.1 `input`：輸入長什麼樣
 
@@ -110,7 +111,7 @@ agent-bob/
 ### 4.2 `waits`：等待表
 
 一張**等待表**：一條或多條「等某個檔」。空的或沒寫＝不用等。誰要 agent 停下來等，誰就往表尾加一條；
-aos-agent 到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2](aos-agent.md)）。
+aos-agent 自己也會加條目（送出 LLM 請求、引擎連敗暫停），到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2](aos-agent.md)）。
 
 ```json
 "waits": [

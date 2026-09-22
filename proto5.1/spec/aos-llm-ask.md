@@ -79,10 +79,10 @@ aos-llm-ask [dir] [--dry-run]
 - **原樣讀寫、不解指示詞**（[agent.md §2](agent.md)）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
-### 2.3 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`
+### 2.3 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`／`_timeout_ms`
 
 一份工具檔就是**一個 OpenAI chat/completions 的 `tools` 陣列**，一個元素一個工具、形狀照 OpenAI
-原樣；唯一的修改是每個元素多一個 **`_meta`**，說「這個工具真的被叫到時怎麼跑」——內容就是**一份
+原樣；每個元素多一個 **`_meta`**，說「這個工具真的被叫到時怎麼跑」——內容就是**一份
 posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
 
 ```json
@@ -104,6 +104,7 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
   送給模型之前把每個元素**所有 `_` 開頭的 key 拿掉**（`_meta`、`_note`…），剩下的原樣送——所以想加
   註解就用 `_` 開頭，不會漏給模型。
 - `_meta`：**必填**，一份 posix inst（`_metainfo` 可省＝posix v1）。缺了、或不是物件 → `ToolInvalid`。
+- `_timeout_ms`：可選，工具元素旁的正整數毫秒（bool 不算），沒寫＝`60000`；不解指示詞、型別不對＝`ToolInvalid`。保留在 `tools_raw`，送模型前跟其他 `_` key 一起拿掉。`_meta` 仍是純 inst。
 - 合併後 `function.name` 同名 → `ToolInvalid`（不默默蓋掉，寫錯一眼看得到）。
 - 工具檔頂層不是陣列 → `ToolInvalid`（記憶檔不是陣列才是 `NotAnArray`）。
 - 元素缺 `type`／`function`／`function.name` → `ToolInvalid`；`function` 裡其他東西（`description`、
@@ -130,10 +131,12 @@ stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事�
 | `model` | 字串 | **必填** | 送出去的 `model` |
 | `params` | 物件 | `{}` | 原樣併進請求 body（`temperature`、`max_tokens`…） |
 | `api_key` | 字串 | 不送 Authorization | 有值才送 `Authorization: Bearer`；不想寫進檔就 `{"$env": "NAME"}`，變數不在＝`EnvironmentVariableMissing`（設定壞就不跑，不降級） |
-| `timeout_ms` | 整數 | `120000` | HTTP 等多久 |
+| `timeout_ms` | 正整數 | `120000` | socket 每次讀寫阻塞的逾時，不是整次 HTTP 的總時限；慢慢滴回來的回應可能超過它 |
+| `cpu` | 路徑字串 | 同步；讀驗 API 回 `None` | 相對 agent 資料夾，解指示詞後回絕對路徑；aos-agent 有寫就交給 llm cpu。aos-llm-ask 本身仍同步問一次，不把這格送模型 |
 
 - `engine` 整格缺、必填欄位缺、型別不對 → `EngineInvalid`；`timeout_ms` 要是正整數；`api_key` 寫了就要是字串
   （`null` 也算型別不對；不想送就別寫這個 key，`""` 合法但不送 header）。
+- `cpu` 有寫就必須是字串（`null` 不合法）；空字串沿用路徑規則，指 agent 資料夾自己。只解路徑，不在這一層驗 CPU 的 info.json；aos-agent 真正送出時才驗。
 - `engine` 整格在 `info.json` 裡，所以跟別格一樣吃指示詞：整包 `{"$ref": "engines/lmstudio.json"}`
   從別的檔拿也行。
 
@@ -164,7 +167,7 @@ stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事�
   這個欄位**（跟沒有工具是兩回事：沒有工具就別讓模型以為它能叫工具）。
 - 其餘欄位：`engine.params`（物件，沒寫就是 `{}`）**原樣併進 body**，跟 `model`／`messages`／
   `tools` 同一層（例如 `params: {"temperature": 0.2}` 就會多一個 `"temperature": 0.2`）。
-  `params` 裡若也寫了 `model`／`messages`／`tools`／`stream`，**忽略**——這四個是這支程式自己決定的。
+  `params` 裡若也寫了 `model`／`messages`／`tools`／`stream`／`cpu`，**忽略**——前四個由這支程式決定，`cpu` 是本機路由欄位。
 - `api_key`：**有值才送** `Authorization: Bearer <api_key>` 這個 HTTP header；沒寫就不送這個
   header（不是送空字串）。
 - URL：`engine.endpoint` 去掉結尾多餘的 `/` 之後接上 `/chat/completions`（`http://x/v1` 跟
@@ -240,7 +243,7 @@ message = aos_llm_ask.ask(dir)          # build_request 再打 engine，回 choi
 1. `--dry-run` 這個旗標：沒有模型也想測「組得對不對」，所以留一條不碰網路的路。
 2. 退出碼 3 專門留給引擎失敗，跟讀驗錯誤（1）分開：一個是「設定壞了」、一個是「這次連線／模型
    出包」，看 stderr 的人不用猜。
-3. `params` 撞到 `model`／`messages`／`tools`／`stream` 就忽略、`endpoint` 結尾 `/` 自動去掉——兩條小規則
+3. `params` 撞到 `model`／`messages`／`tools`／`stream`／`cpu` 就忽略、`endpoint` 結尾 `/` 自動去掉——兩條小規則
    是為了少一種寫壞的方式。
 4. stdout 只印 `choices[0].message` 那一行：不印整個 HTTP response、不印 debug 訊息，讓這支
    程式的輸出好被別的程式接（管線、`aos-agent` 之後 import 它）。

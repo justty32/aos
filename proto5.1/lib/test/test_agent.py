@@ -1,7 +1,7 @@
 """aos-agent：新 inst／exec 入口、waits 門、三格、自癒、寫檔順序與命令列。
 
 工具用真的 sh／Python；模型沿用 test_llm_ask.FakeLLM，在本機假 HTTP 伺服器跑，不打真模型。
-既有測試不動，每條獨立暫存資料夾；錯誤案例也檢查沒有偷寫記憶、state 或 consume。
+既有案例保留，連敗計數的斷言隨新契約調整；每條獨立暫存資料夾。
 """
 import contextlib
 import io
@@ -563,11 +563,11 @@ class TestThink(StepCase):
         self.assertEqual(self.get()["state"], "idle")
         aos_agent_info.load(self.d)
 
-    def test_http_500_preserves_files_and_returns_zero(self):
+    def test_http_500_preserves_history_and_counts_failure(self):
         self.llm.mode = "500"
         self.engine_failure("500")
 
-    def test_disconnect_preserves_files_and_returns_zero(self):
+    def test_disconnect_preserves_history_and_counts_failure(self):
         self.llm.mode = "truncated"
         self.engine_failure("engine:")
 
@@ -576,7 +576,10 @@ class TestThink(StepCase):
         err = io.StringIO()
         with contextlib.redirect_stderr(err):
             self.assertEqual(self.step(), 0)
-        self.assertEqual(self.snapshot(), before)
+        after = self.snapshot()
+        self.assertEqual(json.loads(after.pop("state.json")), {"state": "think", "errors": 1})
+        before.pop("state.json")
+        self.assertEqual(after, before)
         self.assertTrue(err.getvalue().startswith("aos-agent: engine: "))
         self.assertIn(hint, err.getvalue())
         self.assertEqual(len(err.getvalue().splitlines()), 1)
@@ -600,7 +603,269 @@ class TestThink(StepCase):
         self.llm.mode = "500"
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(self.step(), 0)
-        self.assertEqual(self.get(), {"state": "think", "waits": []})
+        self.assertEqual(self.get(), {"state": "think", "waits": [], "errors": 1})
+
+    def test_three_failures_pause_touch_resumes_and_can_pause_again(self):
+        self.llm.mode = "500"
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            for count in (1, 2, 0):
+                self.assertEqual(self.step(), 0)
+                self.assertEqual(self.get()["errors"], count)
+            self.assertEqual(self.get()["waits"], ["continue.json"])
+            self.assertEqual(self.step(), 101)
+            self.assertEqual(len(self.llm.requests), 3)
+            self.write("continue.json", "")
+            for count in (1, 2, 0):
+                self.assertEqual(self.step(), 0)
+                self.assertEqual(self.get()["errors"], count)
+            self.assertEqual(self.step(), 101)
+        self.assertEqual(err.getvalue().count("aos-agent: stuck:"), 2)
+        self.assertFalse(self.exists("continue.json"))
+        self.assertTrue(self.exists("continue.json.done"))
+        self.assertEqual(len(self.llm.requests), 6)
+
+    def test_success_resets_consecutive_errors(self):
+        self.state(state="think", errors=2, note={"$env": "untouched"})
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(), {"state": "idle", "errors": 0, "note": {"$env": "untouched"}})
+
+    def test_invalid_error_counter_does_not_consume_gate(self):
+        self.put("ready.json", {})
+        for value in (True, -1, 1.5, "1", None, {"$env": "COUNT"}):
+            with self.subTest(value=value):
+                self.state(state="think", errors=value,
+                           waits=[{"$opt": "consume", "$val": "ready.json"}])
+                self.rejected("FieldTypeMismatch")
+
+
+# ---------------------------------------------------------------- think 丟給 cpu ----
+
+class TestThinkCpu(StepCase):
+
+    def setUp(self):
+        super().setUp()
+        self.agent(info={"engine": {"endpoint": "http://unused.invalid/v1", "model": "fake",
+                                    "cpu": "cpu", "api_key": "already-resolved"}},
+                   history=[{"role": "user", "content": "hi"}])
+        self.put("cpu/info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1}})
+        self.state(state="think")
+
+    def requests(self):
+        folder = os.path.join(self.d, "cpu", "requests")
+        return sorted(n for n in os.listdir(folder) if n.endswith(".json"))
+
+    def result(self, message=None, error=None):
+        if error is None:
+            return self.put("ask-result.json", {"ok": True, "message": message or
+                                                {"role": "assistant", "content": "answer"}})
+        return self.put("ask-result.json", {"ok": False, "error": error})
+
+    def test_send_body_engine_absolute_result_and_wait(self):
+        with mock.patch.object(aos_agent.aos_llm_ask, "call", side_effect=AssertionError("不能同步問")):
+            self.assertEqual(self.step(), 0)
+            self.assertEqual(self.step(), 101)
+        names = self.requests()
+        self.assertEqual(len(names), 1)
+        self.assertRegex(names[0], r"^" + os.path.basename(self.d) + r"-\d+\.json$")
+        request = self.get("cpu/requests/" + names[0])
+        self.assertEqual(request["result"], os.path.join(self.d, "ask-result.json"))
+        self.assertEqual(request["engine"]["api_key"], "already-resolved")
+        self.assertEqual(request["engine"]["cpu"], os.path.join(self.d, "cpu"))
+        self.assertNotIn("cpu", request["body"])
+        self.assertEqual(request["body"]["messages"], [{"role": "user", "content": "hi"}])
+        self.assertEqual(self.get(), {"state": "think", "waits": ["ask-result.json"]})
+
+    def test_success_goes_idle_and_result_is_done(self):
+        self.state(state="think", waits=["ask-result.json"], errors=2)
+        self.result()
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(), {"state": "idle", "waits": [], "errors": 0})
+        self.assertEqual(self.get(HISTORY)[-1], {"role": "assistant", "content": "answer"})
+        self.assertFalse(self.exists("ask-result.json"))
+        self.assertTrue(self.exists("ask-result.json.done"))
+        self.assertEqual(self.step(), 101)
+
+    def test_success_tool_calls_go_act_verbatim(self):
+        message = dict(assistant(call()), reasoning_content="不要解 ${x}")
+        self.result(message)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertEqual(self.get(HISTORY)[-1], message)
+
+    def test_null_content_is_normalized(self):
+        self.result({"role": "assistant", "content": None})
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "")
+        aos_agent_info.load(self.d)
+
+    def test_failure_consumed_keeps_history_and_think_then_resubmits(self):
+        self.state(state="think", waits=["ask-result.json"])
+        self.result(error="引擎\n斷線")
+        before = self.read(HISTORY)
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(self.step(), 0)
+        self.assertEqual(err.getvalue(), "aos-agent: engine: 引擎 斷線\n")
+        self.assertEqual(self.read(HISTORY), before)
+        self.assertEqual(self.get(), {"state": "think", "waits": [], "errors": 1})
+        self.assertTrue(self.exists("ask-result.json.done"))
+        self.assertFalse(self.exists("ask-result.json"))
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(len(self.requests()), 1)
+
+    def test_third_async_failure_pauses_and_touch_submits_again(self):
+        self.state(state="think", waits=["ask-result.json"], errors=2)
+        self.result(error="故障")
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(self.step(), 0)
+        self.assertIn("stuck: 引擎連敗 3 次", err.getvalue())
+        self.assertEqual(self.get(), {"state": "think", "waits": ["continue.json"], "errors": 0})
+        self.assertEqual(self.step(), 101)
+        self.write("continue.json", "")
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["waits"], ["ask-result.json"])
+        self.assertEqual(len(self.requests()), 1)
+
+    def test_self_heal_precedes_submission(self):
+        self.put(HISTORY, [assistant(call())])
+        before = self.read(HISTORY)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertEqual(self.read(HISTORY), before)
+        self.assertFalse(self.exists("cpu/requests"))
+
+    def test_bad_result_does_not_change_gate_history_or_result(self):
+        self.put("ready.json", {})
+        cases = [(None, "NotAnObject"), ({"ok": 1}, "FieldTypeMismatch"),
+                 ({"ok": False}, "FieldTypeMismatch"),
+                 ({"ok": False, "error": 3}, "FieldTypeMismatch"),
+                 ({"ok": True}, "MessageInvalid"),
+                 ({"ok": True, "message": {"role": "user", "content": "wrong"}}, "MessageInvalid"),
+                 ({"ok": True, "message": {"role": "assistant", "content": 4}}, "MessageInvalid"),
+                 ({"ok": True, "message": {"role": "assistant", "content": "x",
+                                           "tool_calls": {}}}, "MessageInvalid")]
+        for result, code in cases:
+            with self.subTest(result=result):
+                self.state(state="think", waits=[{"$opt": "consume", "$val": "ready.json"},
+                                                  "ask-result.json"])
+                self.put("ask-result.json", result)
+                self.rejected(code)
+
+    def test_malformed_json_cli_returns_one_and_keeps_files(self):
+        self.state(state="think", waits=["ask-result.json"])
+        self.write("ask-result.json", "{broken")
+        before = self.snapshot()
+        process = self.cli(self.d)
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("JsonSyntax", process.stderr)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_non_utf8_result_cli_is_one_line_error_and_keeps_files(self):
+        self.state(state="think", waits=["ask-result.json"])
+        with open(os.path.join(self.d, "ask-result.json"), "wb") as f:
+            f.write(b"\xff")
+        before = self.snapshot()
+        process = self.cli(self.d)
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("JsonSyntax", process.stderr)
+        self.assertEqual(len(process.stderr.splitlines()), 1)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_other_wait_still_blocks_valid_result(self):
+        self.state(state="think", waits=["ask-result.json", "missing.json"])
+        self.result()
+        before = self.read(HISTORY)
+        self.assertEqual(self.step(), 101)
+        self.assertEqual(self.get()["waits"], ["missing.json"])
+        self.assertTrue(self.exists("ask-result.json"))
+        self.assertEqual(self.read(HISTORY), before)
+
+    def test_closed_gate_defers_reading_bad_result(self):
+        self.state(state="think", waits=["pause.json"])
+        self.write("ask-result.json", "{bad")
+        self.assertEqual(self.step(), 101)
+        self.assertTrue(self.exists("ask-result.json"))
+        self.put("pause.json", {})
+        self.rejected("JsonSyntax")
+
+    def test_bad_cpu_info_does_not_consume_gate(self):
+        self.put("ready.json", {})
+        self.state(state="think", waits=[{"$opt": "consume", "$val": "ready.json"}])
+        self.write("cpu/info.json", "{bad")
+        self.rejected("JsonSyntax")
+
+    def test_duplicate_name_in_each_stage_is_not_overwritten(self):
+        name = os.path.basename(self.d) + "-123.json"
+        for stage in ("requests", "running", "done"):
+            with self.subTest(stage=stage):
+                path = "cpu/" + stage + "/" + name
+                self.put(path, {"existing": stage})
+                with mock.patch.object(aos_agent.time, "time_ns", return_value=123):
+                    with self.assertRaises(AgentError) as cm:
+                        self.step()
+                self.assertEqual(cm.exception.code, "ReadFailed")
+                self.assertEqual(self.get(path), {"existing": stage})
+                self.assertEqual(self.get(), {"state": "think"})
+                os.rename(os.path.join(self.d, path), os.path.join(self.d, path + ".saved"))
+
+    def test_submit_then_waits_write_failure_leaves_queued_request(self):
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if dst == os.path.join(self.d, "state.json"):
+                raise PermissionError("模擬請求送出後 state 寫失敗")
+            real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        self.assertEqual(len(self.requests()), 1)
+        self.assertEqual(self.get(), {"state": "think"})
+
+    def test_receipt_write_order_history_done_state(self):
+        self.result()
+        real_replace = os.replace
+        destinations = []
+
+        def replace(src, dst):
+            destinations.append(os.path.relpath(dst, self.d))
+            real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            self.assertEqual(self.step(), 0)
+        self.assertEqual(destinations, [HISTORY, "ask-result.json.done", "state.json"])
+
+    def test_failed_result_rename_leaves_history_ahead_and_result_unconsumed(self):
+        message = assistant(call())
+        self.result(message)
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if src == os.path.join(self.d, "ask-result.json"):
+                raise PermissionError("模擬記憶寫好後結果 rename 失敗")
+            real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        self.assertEqual(self.get()["state"], "think")
+        self.assertEqual(self.get(HISTORY)[-1], message)
+        self.assertTrue(self.exists("ask-result.json"))
+        # 帶工具的尾訊息與結果完全相同，足以判斷此結果已接進記憶。
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertFalse(self.exists("ask-result.json"))
+        self.assertTrue(self.exists("ask-result.json.done"))
+        self.assertEqual(self.get()["errors"], 0)
+        self.assertEqual(self.step(), 0)  # 跑工具，回 think。
+        self.assertEqual(self.step(), 0)  # 送新單，不再收舊 assistant。
+        self.assertEqual(len(self.requests()), 1)
+
+    def test_bad_result_does_not_block_tool_call_self_healing(self):
+        self.put(HISTORY, [assistant(call())])
+        self.write("ask-result.json", "{broken")
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertTrue(self.exists("ask-result.json"))
 
 
 # ---------------------------------------------------------------- act ----
@@ -645,6 +910,25 @@ class TestAct(StepCase):
         self.setup_act([call()], [tool(argv=["sh", "-c", "printf oops; exit 9"])])
         self.assertEqual(self.step(), 0)
         self.assertEqual(self.get(HISTORY)[-1]["content"], "工具 echo 失敗（exit 9）：oops")
+
+    def test_timeout_keeps_stdout_and_runs_next_call(self):
+        slow = dict(tool("slow", argv=["sh", "-c", "printf before; exec sleep 20"]), _timeout_ms=150)
+        self.setup_act([call("slow", id="a"), call(arguments="after", id="b")], [slow, tool()])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual([m["content"] for m in self.get(HISTORY)[1:]],
+                         ["工具 slow 逾時（150 ms）：before", "after"])
+        self.assertEqual(self.get()["state"], "think")
+
+    def test_default_timeout_is_sixty_seconds(self):
+        self.setup_act([call(arguments="ok")])
+        with mock.patch.object(aos_exec, "run_inst", wraps=aos_exec.run_inst) as run:
+            self.assertEqual(self.step(), 0)
+        self.assertEqual(run.call_args.kwargs["timeout_ms"], 60000)
+
+    def test_exit_143_is_not_mistaken_for_timeout(self):
+        self.setup_act([call()], [tool(argv=["sh", "-c", "printf own; exit 143"])])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "工具 echo 失敗（exit 143）：own")
 
     def test_missing_program_is_tool_failure(self):
         self.setup_act([call()], [tool(argv=["/no-aos-program"])])

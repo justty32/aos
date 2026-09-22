@@ -39,7 +39,7 @@ class TestShape(AgentCase):
         self.assertEqual(r["history_path"], os.path.join(self.d, "prompts", "history.json"))
         self.assertEqual((r["tools"], r["tools_raw"], r["tool_paths"]), ([], [], []))
         self.assertEqual(r["engine"], {"endpoint": ENGINE["endpoint"], "model": "test-model",
-                                       "params": {}, "api_key": None, "timeout_ms": 120000})
+                                       "params": {}, "api_key": None, "timeout_ms": 120000, "cpu": None})
 
     def test_full_agent(self):
         """aos-llm-ask.md §2 那個範例：人格、記憶、兩份工具檔、engine 全寫。"""
@@ -54,7 +54,7 @@ class TestShape(AgentCase):
                                            os.path.join(self.d, "tools", "team.json")])
         self.assertEqual([t["function"]["name"] for t in r["tools"]], ["sh", "mail"])
         self.assertEqual(r["engine"], {"endpoint": "http://x/v1", "model": "m", "params": {"temperature": 0.2},
-                                       "api_key": "k", "timeout_ms": 5})
+                                       "api_key": "k", "timeout_ms": 5, "cpu": None})
 
     def test_custom_paths_relative_to_agent_dir(self):
         """system／history／tools 的路徑相對於 agent 資料夾；絕對路徑照字面。"""
@@ -375,6 +375,20 @@ class TestHistory(AgentCase):
 
 class TestTools(AgentCase):
 
+    def test_timeout_preserved_raw_and_hidden_from_model(self):
+        t = tool("slow", _timeout_ms=17)
+        r = self.load(tools={"t.json": [t]})
+        self.assertEqual(r["tools_raw"], [t])
+        self.assertNotIn("_timeout_ms", r["tools"][0])
+        self.assertNotIn("_timeout_ms", r["tools_raw"][0]["_meta"])
+
+    def test_timeout_requires_literal_positive_integer(self):
+        for value in (0, -1, True, False, 1.5, "60", None, {"$env": "LIMIT"}):
+            with self.subTest(value=value):
+                e = self.bad("ToolInvalid", tools={"t.json": [tool("slow", _timeout_ms=value)]})
+                self.assertIn("_timeout_ms", str(e))
+                self.assertIn("t.json", str(e))
+
     def test_merge_in_file_order(self):
         r = self.load(tools={"tools/b.json": [tool("b1"), tool("b2")], "tools/a.json": [tool("a1")]},
                       info={"tools": ["tools/b.json", "tools/a.json"]})
@@ -522,7 +536,26 @@ class TestEngine(AgentCase):
 
     def test_unknown_engine_keys_ignored(self):
         r = self.eng(endpoint="e", model="m", kind="openai", retries=3)
-        self.assertEqual(sorted(r["engine"]), ["api_key", "endpoint", "model", "params", "timeout_ms"])
+        self.assertEqual(sorted(r["engine"]), ["api_key", "cpu", "endpoint", "model", "params", "timeout_ms"])
+
+    def test_cpu_path_defaults_and_relative_absolute(self):
+        self.assertIsNone(self.eng(endpoint="e", model="m")["engine"]["cpu"])
+        self.assertEqual(self.eng(endpoint="e", model="m", cpu="../cpu")["engine"]["cpu"],
+                         os.path.normpath(os.path.join(self.d, "../cpu")))
+        self.assertEqual(self.eng(endpoint="e", model="m", cpu="/tmp/cpu")["engine"]["cpu"], "/tmp/cpu")
+        self.assertEqual(self.eng(endpoint="e", model="m", cpu="")["engine"]["cpu"], self.d)
+
+    def test_cpu_directive_and_referenced_engine_stay_relative_to_agent(self):
+        self.write("conf/engine.json", json.dumps({"endpoint": "e", "model": "m", "cpu": {"$env": "CPU"}}))
+        r = self.load(info={"engine": {"$ref": "conf/engine.json"}}, env={"CPU": "workers"})
+        self.assertEqual(r["engine"]["cpu"], os.path.join(self.d, "workers"))
+
+    def test_cpu_invalid_type_and_missing_directive(self):
+        for value in (None, 7, True, [], {}):
+            with self.subTest(value=value):
+                self.bad_eng(endpoint="e", model="m", cpu=value)
+        self.bad("EnvironmentVariableMissing",
+                 info={"engine": {"endpoint": "e", "model": "m", "cpu": {"$env": "CPU"}}}, env={})
 
 
 if __name__ == "__main__":

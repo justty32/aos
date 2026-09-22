@@ -34,12 +34,25 @@ import sys
 
 import aos_inst
 
-__all__ = ["run_target", "run_inst", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
+__all__ = ["run_target", "run_inst", "InstResult", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
 
 DEFAULT_DIR_TARGET = os.path.join(".aos", "inst.json")
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
 CHILD, AOS, USAGE = "child", "aos", "usage"      # run_target() 回的那個 kind
 EXIT_AOS = 125          # kind=="aos" 時命令列的退出碼（不會跟子程式的碼撞號）
+
+
+class InstResult(tuple):
+    """`run_inst()` 的三元素 tuple，另帶 `timed_out`，不靠退出碼猜是否逾時。
+
+    舊呼叫者的三值解包、索引與 tuple 比較照舊；期限到了即為 True，即使子程式收到
+    SIGTERM 後自行以 0 結束也一樣。
+    """
+
+    def __new__(cls, code, kind, stdout_text, timed_out=False):
+        result = super().__new__(cls, (code, kind, stdout_text))
+        result.timed_out = timed_out
+        return result
 
 
 def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, stderr=None,
@@ -89,10 +102,14 @@ def run_inst(inst, stdin_text, timeout_ms=0):
 
     stdin／stdout 由呼叫者接管；stderr 沒寫＝/dev/null。錯誤跟 `run_target()` 一樣印 stderr，
     kind 也是 child／aos；stdout 用 UTF-8 解碼，壞位元組換成替代字元。
+    回傳的 `InstResult.timed_out` 表示真的撞到期限，跟子程式自己的退出碼分開。
     """
     output = []
-    code, kind = _execute_inst(inst, timeout_ms, input_bytes=stdin_text.encode("utf-8"), output=output)
-    return code, kind, (output[0] if output else b"").decode("utf-8", errors="replace")
+    timed_out = [False]
+    code, kind = _execute_inst(inst, timeout_ms, input_bytes=stdin_text.encode("utf-8"),
+                              output=output, timed_out=timed_out)
+    return InstResult(code, kind, (output[0] if output else b"").decode("utf-8", errors="replace"),
+                      timed_out[0])
 
 
 def _err(code, kind, msg):
@@ -139,7 +156,8 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
     return _execute_inst(inst, timeout_ms, on_spawn, stderr)
 
 
-def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None, output=None):
+def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None, output=None,
+                  timed_out=None):
     """共用的前置檢查與串流設定；有 input_bytes 時改走 stdin／stdout 管線。"""
 
     # 先建該建的目錄：cwd 自己，再來是三個輸出檔的父目錄。建不起來＝沒跑成（125）。
@@ -192,7 +210,8 @@ def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None
         except OSError as e:
             return _err(1, AOS, "重導向的檔案開不起來：%s" % e)
         return _spawn(inst["argv"], inst["cwd"], env, fin, fout, ferr,
-                      timeout_ms, exit_path, on_spawn, inst["exit"]["append"], input_bytes, output)
+                      timeout_ms, exit_path, on_spawn, inst["exit"]["append"], input_bytes, output,
+                      timed_out)
     finally:
         for f in opened:
             if f is not None:                    # inherit 的那條是 None，沒東西可關
@@ -208,7 +227,7 @@ def _open_out(field):
 
 
 def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None,
-           exit_append=False, input_bytes=None, output=None):
+           exit_append=False, input_bytes=None, output=None, timed_out=None):
     """跑一次、等它、逾時就砍，回 `(結束狀態, "child")`（順便寫 exit 檔）。
 
     argv[0] 走**疊加後**的 env 裡的 PATH（subprocess 帶 env= 時本來就這樣查；env 被清空、
@@ -235,6 +254,8 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
         else:
             captured, _ = p.communicate(input=input_bytes, timeout=limit)
     except subprocess.TimeoutExpired:
+        if timed_out is not None:
+            timed_out[0] = True
         _sig_group(p, signal.SIGTERM)               # 先好好講：整個 process group
         try:
             if input_bytes is None:

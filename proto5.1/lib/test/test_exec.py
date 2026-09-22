@@ -14,6 +14,7 @@ import unittest
 from _util import EXEC, OUTER, ExecCase
 
 import aos_exec
+import aos_inst
 
 # 一個攔下 SIGTERM 不理的程式：只有 SIGKILL 弄得死它。
 IGNORE_TERM = "import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(30)"
@@ -603,6 +604,45 @@ class TestApi(ExecCase):
             self.assertEqual(aos_exec.main([self.d]), 1)
         finally:
             sys.stderr = old
+
+
+class TestRunInstTimeout(ExecCase):
+    """期限真的到才標記，不能拿 143／137 猜；stdout 仍保留已收的部分。"""
+
+    def run_memory(self, script, timeout_ms=1000):
+        inst = aos_inst.load_obj({"argv": [sys.executable, "-c", script]}, self.d)
+        return aos_exec.run_inst(inst, "", timeout_ms=timeout_ms)
+
+    def test_normal_exit_143_is_not_timeout_and_tuple_compatible(self):
+        r = self.run_memory("print('正常'); raise SystemExit(143)")
+        code, kind, out = r
+        self.assertEqual(r, (143, "child", "正常\n"))
+        self.assertEqual((code, kind, out), r)
+        self.assertFalse(r.timed_out)
+
+    def test_sigterm_timeout_keeps_output(self):
+        r = self.run_memory("import time; print('已開始', flush=True); time.sleep(30)", 200)
+        self.assertEqual(r, (143, "child", "已開始\n"))
+        self.assertTrue(r.timed_out)
+
+    def test_sigkill_timeout_keeps_output(self):
+        r = self.run_memory("import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+                            "print('已開始', flush=True); time.sleep(30)", 200)
+        self.assertEqual(r, (137, "child", "已開始\n"))
+        self.assertTrue(r.timed_out)
+
+    def test_graceful_zero_exit_after_deadline_is_still_timeout(self):
+        r = self.run_memory("import signal, sys, time; "
+                            "signal.signal(signal.SIGTERM, lambda *args: sys.exit(0)); "
+                            "print('已開始', flush=True); time.sleep(30)", 200)
+        self.assertEqual(r, (0, "child", "已開始\n"))
+        self.assertTrue(r.timed_out)
+
+    def test_spawn_failure_is_not_timeout(self):
+        inst = aos_inst.load_obj({"argv": ["aos-no-such-tool"]}, self.d)
+        r = aos_exec.run_inst(inst, "", timeout_ms=1)
+        self.assertEqual(r, (127, "child", ""))
+        self.assertFalse(r.timed_out)
 
 
 if __name__ == "__main__":

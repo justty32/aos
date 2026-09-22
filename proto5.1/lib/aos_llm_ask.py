@@ -9,7 +9,7 @@
 1. `build_request(dir)`：讀驗 ＋ 組一份 OpenAI chat/completions 的 body（不碰網路）。
    `messages`＝（`system` 有內容才加一則 system）＋ 記憶原樣；`tools`＝合併後去掉 `_` key 的
    工具表（空的就不送這個欄位）；`engine.params` 原樣併進 body，但 `model`／`messages`／
-   `tools`／`stream` 四個是這支程式自己決定的，params 撞到就忽略；`stream` 永遠不送。
+   `tools` 是這支程式自己決定的，params 撞到就忽略；`stream`／`cpu` 永遠不送。
 2. `call(engine, body)`：用 `urllib.request` POST 到 `endpoint`（結尾多餘的 `/` 去掉）＋
    `/chat/completions`，`api_key` 有值才送 `Authorization: Bearer`，等 `timeout_ms`；回
    `choices[0].message` 那個 dict。連不上、非 2xx、逾時、回來不是 JSON、沒有
@@ -36,7 +36,7 @@ from aos_agent_info import AgentError
 __all__ = ["EngineFailed", "AgentError", "RESERVED", "build_request", "request_from_info",
            "call", "ask", "main"]
 
-RESERVED = ("model", "messages", "tools", "stream")     # params 裡撞到這四個就忽略
+RESERVED = ("model", "messages", "tools", "stream", "cpu")  # params 裡撞到這些就忽略
 _BODY_PREVIEW = 300                                     # 引擎回錯時 stderr 帶多少回應本文
 
 
