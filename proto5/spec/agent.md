@@ -1,13 +1,14 @@
 # agent 資料夾規範（第 1 版，**草稿**）
 
-← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-llm-ask.md](aos-llm-ask.md)（問模型一次）、[aos-agent.md](aos-agent.md)（走一格）
+← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-llm-ask.md](aos-llm-ask.md)（組模型請求）、[aos-agent.md](aos-agent.md)（走一格）
+
+> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
 
 > **這是草稿，還在跟使用者一步一步改**；不記修訂記錄。原則（使用者定的）：**先規劃檔案架構、
 > 分配好每個檔在幹嘛，指示詞是輔助**。
 >
 > 這份講「什麼是一個 agent 資料夾」：兩份檔（`info.json`、`state.json`）長什麼樣、指示詞解不解、
-> 共用的錯誤代號。`info.json` 裡 `_metainfo` 以外的欄位是給 aos-llm-ask 用的，形狀在
-> [aos-llm-ask.md §2](aos-llm-ask.md)；程式拿這些檔**做什麼**在各程式的規範。
+> 共用的錯誤代號。`info.json` 的設定與它們指到的內容都在這份；程式拿這些檔**做什麼**在各程式的規範。
 
 一句話：**一個 agent 就是一個資料夾**——`info.json` 說這是 agent、以及各程式要的設定；
 `state.json` 記走到哪、輸入從哪來、在等什麼。
@@ -18,10 +19,11 @@
 
 ```
 agent-bob/
-  info.json            _metainfo ＋ 各程式要的設定（system／history／tools／engine…，見 aos-llm-ask.md）
-  state.json           state ＋ input ＋ waits（§4）
+  info.json            _metainfo ＋ 各程式要的設定（system／history／tools／engine…，見 §3）
+  state.json           state ＋ input ＋ waits ＋ errors（§4）
   prompts/             慣例位置：人格、記憶
   tools/               慣例位置：工具檔
+  tool-results/        CPU 工具結果 <call 索引>.json；收回改 .json.done
 ```
 
 - 只有 `info.json` 是**認出「這是 agent 資料夾」**的依據（有它、而且 `_metainfo._type` 是 `llm_agent`）。
@@ -55,24 +57,119 @@ agent-bob/
   （base＝agent 資料夾）解的。
 - 程式要改寫這兩份檔的某一格（aos-agent 改 `state`、劃掉 `waits` 的一條）時，改的是**原始 JSON**
   的那一格、其他格原樣抄回，不是把解完的結果寫回去——所以**被程式改寫的那一格在原始 JSON 裡必須是
-  字面值**（`state` 是字面字串、`waits` 是字面陣列），頂層也不能整份是指示詞（不然寫不回來）。
+  字面值**（`state` 是字面字串、`errors` 是字面整數、`waits` 是字面陣列或單條），頂層也不能整份是指示詞（不然寫不回來）。
 
 ## 3. `info.json`
 
 ```json
 {
   "_metainfo": {"_type": "llm_agent", "_version": 1},
-  "...": "其他欄位由用它的程式定，見 aos-llm-ask.md §2"
+  "system": "prompts/system.json",
+  "history": "prompts/history.json",
+  "tools": ["tools/base.json"],
+  "engine": {"cpu": "../llm", "model": "small", "params": {"temperature": 0.2}},
+  "tool_cpu": "../tool"
 }
 ```
 
 | 鍵 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
-| `_metainfo` | 物件 | **必填** | `_type` 只認 `"llm_agent"`、`_version` 只認整數 `1`；規則同 [inst-posix.md §1](inst-posix.md)。跟 inst 不同的是必填：這是新格式、沒有舊檔要相容，而且這就是「這是 agent 資料夾」的記號 |
+| `_metainfo` | 物件 | **必填** | `_type` 只認 `"llm_agent"`、`_version` 只認整數 `1`，bool 不算 |
+| `system` | 路徑字串 | `prompts/system.json` | 人格檔（§3.1） |
+| `history` | 路徑字串 | `prompts/history.json` | 記憶檔（§3.2） |
+| `tools` | 路徑字串陣列 | `[]` | 工具檔，照列表順序合併（§3.3） |
+| `engine` | 物件 | **必填** | llm CPU 路徑、模型代號與參數（§3.4） |
+| `tool_cpu` | 路徑字串 | 無；load 回 `None` | 工具 CPU 家；有 `_run: "cpu"` 的工具時必填 |
 
-其他欄位（`system`／`history`／`tools`／`engine`）與它們指到的檔長什麼樣：[aos-llm-ask.md §2](aos-llm-ask.md)。
+`system`／`history`／`tools`／`tool_cpu` 型別不對為 `FieldTypeMismatch`；明寫 null 不合法。
+info 裡沒有欄位吃 `$opt`，出現為 `UnknownOption`。先解指示詞，再驗欄位；真正送件才驗 CPU 家。
+
+### 3.1 人格（`system` 指到的檔，慣例放 `prompts/system.json`）
+
+```json
+{"content": "你是個簡潔、會用工具的助手。"}
+```
+
+- `content`：字串，就是 system prompt 本文；缺了或不是字串＝`FieldTypeMismatch`。**檔不存在＝空字串**（不送 system 訊息）；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
+- **原樣讀、不解指示詞**（[agent.md §2](agent.md)）：`content` 就是字面，裡面的 `${x}`、`$` 開頭的東西都不會被動。
+
+### 3.2 記憶（`history` 指到的檔，慣例放 `prompts/history.json`）
+
+一個陣列，一則就是 OpenAI chat 的一則訊息：
+
+```json
+[
+  {"role": "user",      "content": "看看資料夾裡有什麼"},
+  {"role": "assistant", "content": null, "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "sh", "arguments": "{\"cmd\":\"ls\"}"}}]},
+  {"role": "tool",      "tool_call_id": "c1", "content": "state.json\nprompts\ntools\n"},
+  {"role": "assistant", "content": "裡面有 state.json、prompts、tools…"}
+]
+```
+
+- `role` 只認 `user`／`assistant`／`tool`；`system` 不放這裡（每次組請求時從人格檔補在最前面）。
+- `user`／`tool` 的 `content` 要是字串；`tool` 一定要有字串的 `tool_call_id`；`assistant` 要有「`content` 是字串」或「`tool_calls` 是陣列」至少一樣（`content: ""` 算有，`content: null` 又沒 `tool_calls` 不算）。不合 → `MessageInvalid`。
+- **檔不存在＝`[]`**；存在但讀不到／壞掉＝`ReadFailed`／`JsonSyntax`。
+- **原樣讀寫、不解指示詞**（[agent.md §2](agent.md)）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
+- 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
+
+### 3.3 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`／`_timeout_ms`／`_run`
+
+一份工具檔就是**一個 OpenAI chat/completions 的 `tools` 陣列**，一個元素一個工具、形狀照 OpenAI
+原樣；每個元素多一個 **`_meta`**，說「這個工具真的被叫到時怎麼跑」——內容就是**一份
+posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
+
+```json
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "sh",
+      "description": "在 agent 資料夾執行一句 shell 指令",
+      "parameters": {"type": "object", "properties": {"cmd": {"type": "string"}}, "required": ["cmd"]}
+    },
+    "_meta": {"argv": ["tools/bin/sh-tool"], "stderr": "tools/log/sh.err"}
+  }
+]
+```
+
+- `tools` 列到的檔**一定要在**：不存在＝`ReadFailed`（跟人格、記憶不同——那兩個沒檔有預設，工具檔是明列的）。
+- **合併**：`info.json` 的 `tools` 列的每份檔各是一個陣列，agent 把它們**接成一個陣列**（照檔的順序）；
+  送給模型之前把每個元素**所有 `_` 開頭的 key 拿掉**（`_meta`、`_note`…），剩下的原樣送——所以想加
+  註解就用 `_` 開頭，不會漏給模型。
+- `_meta`：**必填**，一份 posix inst（`_metainfo` 可省＝posix v1）。缺了、或不是物件 → `ToolInvalid`。
+- `_timeout_ms`：可選，工具元素旁的正整數毫秒（bool 不算），沒寫＝`60000`；不解指示詞、型別不對＝`ToolInvalid`。保留在 `tools_raw`，送模型前跟其他 `_` key 一起拿掉。`_meta` 仍是純 inst。
+- `_run`：可選，字面 `"sync"`（預設）或 `"cpu"`，其他值＝`ToolInvalid`；不解指示詞，送模型前移除。`sync` 由 agent 執行，`cpu` 交給 `info.json` 頂層 `tool_cpu` 指到的 CPU；有任何 CPU 工具卻未設定 `tool_cpu`＝`FieldTypeMismatch`。路徑相對 agent 家、可解指示詞；讀驗層只解路徑，真正送件才驗 CPU 家。詳見 [agent.md](agent.md) 與 [aos-agent.md](aos-agent.md)。
+- 合併後 `function.name` 同名 → `ToolInvalid`（不默默蓋掉，寫錯一眼看得到）。
+- 工具檔頂層不是陣列 → `ToolInvalid`（記憶檔不是陣列才是 `NotAnArray`）。
+- 元素缺 `type`／`function`／`function.name` → `ToolInvalid`；`function` 裡其他東西（`description`、
+  `parameters`、`strict`…）本文不驗，原樣送模型。
+- **工具檔原樣讀、不解指示詞**（[agent.md §2](agent.md)）；`_meta` 裡的指示詞是跑的時候由 inst 那套解。
+
+`_meta` 讀驗時**只驗不跑**（是物件、沒寫 `stdin`／`stdout`——寫了＝`ToolInvalid`，因為跑的時候參數走
+stdin、結果走 stdout）；真的跑是 [aos-agent.md](aos-agent.md) 的事。要關掉一個工具就從 `info.json` 的
+`tools` 拿掉那份檔、或從工具檔裡刪掉。
+
+### 3.4 `engine`：用哪顆 CPU、哪個模型代號
+
+```json
+"engine": {"cpu": "../llm", "model": "small", "params": {"temperature": 0.2}}
+```
+
+| 鍵 | 型別 | 沒寫時 | 意思 |
+|---|---|---|---|
+| `cpu` | 路徑字串 | **必填** | llm CPU 家，相對 agent 家；解完回絕對路徑 |
+| `model` | 非空字串 | **必填** | CPU 的 `models` 表中的代號 |
+| `params` | 物件 | `{}` | 組 body 用的模型參數，例如 temperature |
+
+engine 整格不是物件為 `FieldTypeMismatch`；缺 engine、內部必填欄位缺失或型別錯為 `EngineInvalid`。
+cpu 空字串沿路徑規則指 agent 家自己；
+讀驗只解路徑，送件時才驗 CPU 身分。整格與每格都可解指示詞。
+endpoint、真實模型名稱、api_key、timeout_ms 由 [llm CPU 的 models 表](llm-cpu.md) 定義；
+agent 的 engine 只保留上表三格。think 一律交 CPU，沒有同步模式。
 
 ## 4. `state.json`
+
+工具 CPU 路徑 `tool_cpu` 是上節的 info 設定；state 仍只有以下四個已知欄位，不新增 `ask`／`calls`。act 的等待以 `waits` 一條 all 條目表達，值是所有 `<agent>/tool-results/<i>.json` 絕對路徑。
 
 ```json
 {
@@ -85,13 +182,14 @@ agent-bob/
 | 鍵 | 型別 | 沒寫時 | 意思 |
 |---|---|---|---|
 | `state` | `idle`／`think`／`act` | `idle` | 狀態機走到哪。各格做什麼是 [aos-agent.md §3](aos-agent.md) 的事；**沒有 `wait` 這一格**：等不是狀態，是門（`waits`） |
+| `errors` | 非負字面整數 | `0` | 連續引擎失敗次數，由 aos-agent 寫；成功歸零、第三次失敗歸零並等 `continue.json`（見 [aos-agent.md §3](aos-agent.md)） |
 | `input` | 路徑或路徑陣列 | `input.json` | 輸入從哪來：指到的東西接進記憶（§4.1），接完清掉 |
 | `waits` | 一條或一條陣列（§4.2） | 沒寫＝不用等 | 門：還有沒到的就不走這一格（§4.2；怎麼判在 [aos-agent.md §2](aos-agent.md)） |
 
 - **檔不存在＝全部預設**（`state` 是 `idle`），aos-agent 第一次動就會把它寫出來；存在但壞掉＝
   `ReadFailed`／`JsonSyntax`。
 - `state` 不是三個之一、或在原始 JSON 裡不是字面字串 → `StateInvalid`；`input`／`waits` 型別不對、
-  `waits` 在原始 JSON 裡不是字面陣列 → `FieldTypeMismatch`（§2 最後一條）。
+  `waits` 在原始 JSON 裡不是字面陣列或單條、或 `errors` 不是非負字面整數（bool 不算） → `FieldTypeMismatch`（§2 最後一條）。
 
 ### 4.1 `input`：輸入長什麼樣
 
@@ -100,7 +198,7 @@ agent-bob/
 | 檔裡是 | 變成 |
 |---|---|
 | 字串 | 一則 `{"role": "user", "content": …}` |
-| 一則訊息物件 | 原樣一則（`role` 照 [aos-llm-ask.md §2.2](aos-llm-ask.md) 驗，不合＝`MessageInvalid`） |
+| 一則訊息物件 | 原樣一則（`role` 照 本份 §3.2 驗，不合＝`MessageInvalid`） |
 | 訊息陣列 | 原樣一串 |
 
 - 檔不存在、或空陣列＝沒有輸入。
@@ -110,7 +208,7 @@ agent-bob/
 ### 4.2 `waits`：等待表
 
 一張**等待表**：一條或多條「等某個檔」。空的或沒寫＝不用等。誰要 agent 停下來等，誰就往表尾加一條；
-aos-agent 到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2](aos-agent.md)）。
+aos-agent 自己也會加條目（送出 LLM／工具請求、引擎連敗暫停），到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2](aos-agent.md)）。
 
 ```json
 "waits": [
@@ -153,12 +251,12 @@ aos-agent 到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2]
 | `StateInvalid` | `state.json` 的 `state` 不是三個之一、或在原始 JSON 裡不是字面字串（§4） |
 
 指示詞的代號（`UnknownDirective`、`EnvironmentVariableMissing`、`ReferenceCycle`…）照
-[directives.md §6](directives.md)；各程式自己欄位的代號（`MessageInvalid`、`ToolInvalid`、
-`EngineInvalid`…）在各程式的規範。
+[directives.md §6](directives.md)；內容欄位的代號（`MessageInvalid`、`ToolInvalid`、
+`EngineInvalid`）見 §3。
 
 ## 6. 這份規範沒管的事
 
-- **程式做什麼**：問模型＝[aos-llm-ask.md](aos-llm-ask.md)；門怎麼判、狀態機、跑工具＝[aos-agent.md](aos-agent.md)。
+- **程式做什麼**：組模型請求＝[aos-llm-ask.md](aos-llm-ask.md)；門怎麼判、狀態機、跑工具＝[aos-agent.md](aos-agent.md)。
 - **輸入從哪來、回話回給誰**（信箱、aos-user、別的 agent）、**怎麼放進 kernel**：之後再說。
 
 ## 我自己選的、使用者可以推翻的
