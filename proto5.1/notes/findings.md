@@ -1,6 +1,6 @@
-# 第 1～2 段實作 findings（2026-09-22）
+# 第 1～3 段實作 findings（2026-09-22）
 
-範圍：[stage1-task.md](stage1-task.md)（#1～#17）與 [stage2-task.md](stage2-task.md)（#18 起）。以下是實作與測試遇到的具體問題、這次採用的決定與仍存在的限制；不是要求使用者現在拍板。程式與規範只改 `proto5.1/`。
+範圍：[stage1-task.md](stage1-task.md)（#1～#17）、[stage2-task.md](stage2-task.md)（#18～#26）與 [stage3-task.md](stage3-task.md)（#27 起）。以下是實作與測試遇到的具體問題、這次採用的決定與仍存在的限制；不是要求使用者現在拍板。程式與規範只改 `proto5.1/`。
 
 ## 1. POSIX rename 不會替我們拒絕同名
 
@@ -145,3 +145,61 @@ CPU 的 `ok:true` 表示拿到了 run_inst 的回傳，並不等於子程式 exi
 對 #11，name 比對可拒絕把舊 running 收屍結果當下一單；但舊結果若已蓋掉新結果，識別錯配並不能把新結果變回來，CPU 發布／封存也必須配合身分。對 #13，可確定結果屬於哪個請求，工具尾巴的相等猜測可收斂；**單靠 name＋ask/calls 仍不能證明文字回覆是否已接過記憶**，記憶已寫但 state 未清時仍會重接。相同文字在新一輪本來也合法，不能靠內容相等去重。#12 和 #23 的部分交件只有加上「先記名、重用名字、缺單恢復」才改善。失敗 errors 漏計／重計、sync 工具副作用、CPU 執行與發布的窗口，仍需消費標記或交易紀錄，不能由三個欄位承諾 exactly-once。
 
 **拍板結論：目前這個可重建、人工觀察的原型可維持 KISS，接受並保留 #11～#13／#23 的中斷限制；若下一步要在崩潰後自動續跑、又不能接受工具重做或結果串單，就值得採 B，但應把「請求身分＋送件恢復」一起列入範圍。B 能辨識串單，不能單獨保證只執行或只收回一次；若第 6 題要的是後者，還必須另決定消費紀錄／交易機制。本段沒有實作對帳，也沒有把工具尾巴自癒當成對帳完成。**
+
+## 27. 只看 running=false，仍有換檔到下一次 start 的窗口
+
+`state.json` 是 daemon 最後寫出的快照。kernel 讀到 `running:false` 後，runner 可能已開始下一次，但新的 start 尚未反映到 state；只在換檔前查這個布林，仍會把正在執行的行程排到另一顆 CPU。
+
+這段採最小的實際互斥：init 預建固定的 `cpus/<n>.json.lock`；aos-run 只對已存在的 sidecar 取 flock，從讀／解 inst 到寫完 done event 都持有。kernel 保留 `running:true` 直接跳過；false 時再非阻塞取同一把鎖，拿不到也跳過。拿到後，透過既有 remove 等 runner 真正退出、取最後結果，再換檔與 add，最後放鎖。這也避免 pipe 裡的舊 done 被算到新行程。沒有新公開旗標、op 或 daemon entry 欄位；代價是換人時重建 runner、多兩次請求。sidecar 不能隨 CPU JSON replace／刪除，否則兩邊會鎖到不同 inode。整套回歸後另補完成後的 yield 交接意圖，解短間隔飢餓，見 #35。
+
+## 28. tool CPU 的工具在另一個 session，外層 killpg 不足以砍到底
+
+實際呼叫鏈是 daemon → aos-run → tool CPU → run_inst 的工具 → 工具孫進程；exec 每層都可能 setsid。只 TERM tool CPU 的 group，另一個 session 的工具不會收到訊號。這次在 aos_exec 共用終止函式：Linux 上先由 `/proc` 快照直接子程式及其後代所屬 groups，全部 TERM，同一個兩秒寬限後全部 KILL，再收直接子程式；run 第一次 TERM 與原本 timeout 共用這條路。父程式先退出，也不能因此忘記已記下的後代 groups。
+
+這不是 cgroup：終止開始前已脫離親子樹、或快照後另生並脫離原 group 的程序不在保證內；其他 POSIX 沒有 `/proc` 時只保證原 group。沒有環境標記、daemon 子孫 PID registry 或新的服務。既有 run_target 二元素／run_inst 三元素 tuple 與 timed_out 語意保持；主動停止不冒充 timeout。
+
+## 29. done 先寫能防失單，但不是副作用與回音的交易
+
+daemon 的回音先用同目錄 tmp 原子發布到 `requests/done/<名>.json`，成功後才刪原請求。重跑看到 done 已存在，只收掉原單，不再次 add／remove。stop 的回音等所有 runner 收屍、state 寫成 pid=0／runs={}、移除 daemon.pid 後才發布，因此 ctl stop 成功可以接著檢查停止結果；remove 同樣等被移除的 runner 收屍，result 是它最後的 entry。
+
+若崩在 add 已產生子進程、但 done 尚未寫出，仍可能留下沒人收養的 runner；先寫 done 不能解這個窗口。這段不做 daemon 重啟收養或跨檔交易。JSON 語法壞到讀不出原物件時，無法把『原請求欄位＋ok＋result』照常合併，回音以 request:null 表示；可讀但非物件則放在 request。正常物件維持原欄位，再覆寫回音用 ok／result。
+
+## 30. 換 runner 會歸零 runs，行程的連敗不能跟著歸零
+
+CPU 的 `runs_at`／`seen_runs` 只描述目前 runner；換人後重新以 0 為基準。`waiting`、`wait_runs`、`bad_runs`、`bad_exit`、`aos_ticks` 則跟行程一起移到 `state.waiting[名字]` 的計數物件，重新上 CPU 時取回。保留 state 頂層 cpus／queue／waiting 三格，不另增一張 failure 表。這段的 waiting 表也能保存「不在等待、只是被量子換下」的行程計數；名稱沿用舊版，但值已由單一等待次數改成物件，格式在 kernel-home 明列。
+
+daemon 仍只保留最後退出碼，不加 invocation journal。kernel 兩次觀察之間若完成多次，只能把 runs 差值依最新碼累計，無法還原中間不同結果；100 也可能在 kernel 看到並停 runner 前被再執行。這段沒有宣稱精確每次對帳或行程 exactly-once。aos 失敗改按新完成的次數計，不把同一份不變快照在兩次 tick 反覆算失敗；一般 child 125 也屬非零失敗，靠 kind 分開判。
+
+## 31. inst 搬進 procs／cpus，必須保留原本的解析中心
+
+直接複製原始 inst 會把相對 cwd、串流路徑、外部 `$ref` 的中心換成 kernel 資料夾。這次 add 先在來源 inst 的家用 `aos_inst.load()` 完整解析，再重建等價的 posix v1 JSON：絕對 cwd／串流路徑、已解 argv／envs、以及原有 mkdir／append／inherit／merge／clear 選項。tick 對手工放到 procs 的檔也先完整 load，再固化後排程；不再要求 raw argv／cwd 是字面，也不因 argv[0] 的檔暫時不存在就拒收。
+
+代價是 add 成功後 `$env`／`$ref` 已在當時固定，下次執行不再重新追原引用；未 clear 的環境仍依 exec 語意繼承 daemon／runner 執行環境，並非整份環境快照。這是在『把一個行程 add 進 kernel』時保存可搬移 inst 的選擇，沒有新增第二種 inst 格式或指向舊 repo 的 import。
+
+## 32. run 的事件必須用 125，壞編碼也不能讓 done 消失
+
+`aos_exec.run_target()` 既有 library API 對 kind=aos 回 1，CLI 才換成 125。aos-run 若直接把 library code 寫事件，`--stop-exit 1` 就會把 inst 讀驗錯誤跟子程式 exit 1 混在一起。這次只在 run 的事件／stop-exit 判斷正規化為 125，保留函式庫原回傳；kind 照樣保留，普通 child 125 不冒充 aos。
+
+真進程測試另撞到兩條 traceback 路：非 UTF-8 inst 在 load 讀字串時逸出 UnicodeDecodeError；argv 含 NUL 在 Popen 逸出 ValueError。exec 執行入口分別轉為 JsonSyntax／FieldTypeMismatch 的 aos 結果，讓 runner 可照常產生 done、重試或停；沒有改指示詞或 inst 的讀驗 API，也沒有刪舊測試。
+
+## 33. daemon 的 stop 預算與家路徑必須跨層一致
+
+ctl 最多只等十秒，daemon 若逐支 runner 各等五秒，三顆 CPU 就會超過它。因此停止時先同時 TERM 所有 runner，各自以同一輪起算的五秒 deadline 做 KILL；remove 留 pending，主迴圈繼續收其他事件與請求。收到 SIGTERM 剛好落在 Popen 與 jobs 登記之間時，新登記的 runner 也必須補 stop；I/O 失敗退場時，寫 state／done 再失敗不能跳過其他 runner 的清理。這些都有故障注入或真進程驗證。
+
+`--home X` 可以覆蓋 daemon 的環境／預設家，但 child kernel tick 若只繼承原環境，會去讀另一個家。daemon 因此在啟動 runner 時把實際 `AOS_DAEMON_HOME` 放進環境；不是由底層 exec 注入，exec 既有環境規則不變。`.daemon.lock` 判斷本家是否有人執行，pidfile 只供觀察，不靠舊 PID 推斷身分或殺程序。
+
+## 34. 工作 timeout 不應順便砍 kernel 自己的控制流程
+
+`info.timeout_ms` 用於各 CPU runner 的一次工作；boot 只把 interval 傳給 kernel 自己的 runner，不給工作 timeout。tick 換人時可能正等 daemon 的 remove 回音，若也套一個很短的工作期限，控制流程會在搬檔／存 state 中途被截斷。這段沒有另外加 kernel_timeout 欄位。
+
+其他 KISS 邊界：init 不覆蓋已存在的 K；具名 add 連 done／bad 同名也拒絕，要重用先 rm；done_exit=0 保留關閉完成判定，bad_after=0 保留關閉一般連敗。rm CPU 上的行程等本次執行結束才移除，十秒未完成就退錯但 syscall 留著，因此 rm 不是緊急中止；緊急停整套走 daemon stop。kernel 沒收到成功 remove 回音，就不把 NotRunning／其他失敗猜成『舊 runner 已死』並搬檔。設定改動只在 runner 下次重建時套用，不加熱更新控制命令。
+
+## 35. 全套測試抓到短間隔飢餓：安全的鎖還不夠，必須留下交接窗口
+
+第一輪整套跑 **754 條、90.241 秒，1 條失敗**：三個行程輪用兩顆 CPU，工作每次 220 ms、間隔 15 ms、quantum=1；十二秒後 a／b 各完成 44 次，c 仍在 queue，沒有換到它。單跑時曾通過，整套才重現。原因是 daemon 的 20 ms 輪詢與 kernel 抽樣可能一直錯過短暫的 running=false；即使快照曾 false，取得槽鎖前也可能已開始下一次。這不是把測試等待時間拉長就能解的公平性問題，interval=0 更沒有自然交接窗口。
+
+採用既有 sidecar 的一個內部 yield 意圖，不加檔案、公開旗標或 state 欄位：kernel 有換人／退休／rm 需求時，先要求 runner 在本次完成後等；running=true 的當輪仍不換人。run 完成本次後放鎖，下次取得槽鎖時看見意圖就再放鎖、可被 TERM 中止地等候，不再開始新工作。下一格 kernel 便有穩定的 running=false，可按 #27 的槽鎖／remove 回音換檔，成功後在鎖內清意圖。這讓 0 ms 也有真正可交接的間隔，沒有用 TERM 中止正常工作。
+
+曾評估把 daemon sleep 改成 status pipe select 立即喚醒；它只縮短延遲，不能保證 kernel 一定看到空檔，所以撤回該變更，保留原輪詢與一套確定交接。代價是 kernel 若崩在留下意圖後，runner 會停在兩次工作之間；重新 tick 可完成交接，daemon stop 仍能中止它。不做自動清意圖的時限，以免舊行程又在未交接完成時開跑。
+
+最終驗證：修正後 Python **760/760、84.607 秒、無 skip**；原 15 ms 與新增 0 ms 的三行程／兩 CPU 長任務案例各重跑三輪，**6/6** 全過。原失敗測試保留、期限未放寬，另加意圖取消、remove 失敗保留與 run 等待／中止的測試。完整真跑與停止記錄見 [stage3-report](stage3-report.md)。

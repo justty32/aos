@@ -1,0 +1,292 @@
+{
+  "demo": "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822",
+  "endpoint": "http://127.0.0.1:1234/v1",
+  "model": "qwen/qwen3-1.7b",
+  "before_pgrep": {
+    "exit": 0,
+    "stdout": "82087\n",
+    "stderr": ""
+  },
+  "commands": [
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "init",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K",
+        "--ncpu",
+        "3"
+      ],
+      "exit": 0,
+      "stdout": "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "add",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/A/inst.json",
+        "--name",
+        "agent"
+      ],
+      "exit": 0,
+      "stdout": "agent\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "add",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/C/inst.json",
+        "--name",
+        "llm"
+      ],
+      "exit": 0,
+      "stdout": "llm\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "add",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/T/inst.json",
+        "--name",
+        "tool"
+      ],
+      "exit": 0,
+      "stdout": "tool\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "boot",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "boot /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 idle False 0 None False 0\n1 idle False 0 None False 0\n2 idle False 0 None False 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 1 0 False 0\n1 llm False 1 101 False 0\n2 tool False 1 101 False 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 2 0 False 0\n1 llm True 1 101 True 0\n2 tool False 2 101 True 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 4 0 True 0\n1 llm False 2 0 False 0\n2 tool False 4 101 True 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 5 0 False 0\n1 llm False 3 101 True 0\n2 tool False 5 101 True 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 8 0 True 0\n1 llm False 6 101 True 0\n2 tool False 6 0 False 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 9 0 False 0\n1 llm False 7 101 True 0\n2 tool False 7 101 True 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-kernel",
+        "ls",
+        "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K"
+      ],
+      "exit": 0,
+      "stdout": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 12 0 True 0\n1 llm True 8 0 False 0\n2 tool False 10 101 True 0\nqueue: -\ndone: -\nbad: -\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/guanyu/projs/aos/proto5.1/cli/aos-daemon-ctl",
+        "stop"
+      ],
+      "exit": 0,
+      "stdout": "{\"stopped\":true}\n",
+      "stderr": ""
+    }
+  ],
+  "snapshots": [
+    {
+      "seconds": 0.035,
+      "state": {},
+      "history_length": 0,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 idle False 0 None False 0\n1 idle False 0 None False 0\n2 idle False 0 None False 0\nqueue: -\ndone: -\nbad: -\n"
+    },
+    {
+      "seconds": 0.27,
+      "state": {
+        "state": "think"
+      },
+      "history_length": 1,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 1 0 False 0\n1 llm False 1 101 False 0\n2 tool False 1 101 False 0\nqueue: -\ndone: -\nbad: -\n"
+    },
+    {
+      "seconds": 1.307,
+      "state": {
+        "state": "think",
+        "waits": [
+          "ask-result.json"
+        ]
+      },
+      "history_length": 1,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 2 0 False 0\n1 llm True 1 101 True 0\n2 tool False 2 101 True 0\nqueue: -\ndone: -\nbad: -\n"
+    },
+    {
+      "seconds": 3.344,
+      "state": {
+        "state": "act",
+        "waits": [],
+        "errors": 0
+      },
+      "history_length": 2,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 4 0 True 0\n1 llm False 2 0 False 0\n2 tool False 4 101 True 0\nqueue: -\ndone: -\nbad: -\n"
+    },
+    {
+      "seconds": 4.387,
+      "state": {
+        "state": "act",
+        "waits": [
+          {
+            "$opt": "all",
+            "$val": [
+              "/home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/A/tool-results/0.json"
+            ]
+          }
+        ],
+        "errors": 0
+      },
+      "history_length": 2,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 5 0 False 0\n1 llm False 3 101 True 0\n2 tool False 5 101 True 0\nqueue: -\ndone: -\nbad: -\n"
+    },
+    {
+      "seconds": 7.629,
+      "state": {
+        "state": "think",
+        "waits": [],
+        "errors": 0
+      },
+      "history_length": 3,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 8 0 True 0\n1 llm False 6 101 True 0\n2 tool False 6 0 False 0\nqueue: -\ndone: -\nbad: -\n"
+    },
+    {
+      "seconds": 8.666,
+      "state": {
+        "state": "think",
+        "waits": [
+          "ask-result.json"
+        ],
+        "errors": 0
+      },
+      "history_length": 3,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 9 0 False 0\n1 llm False 7 101 True 0\n2 tool False 7 101 True 0\nqueue: -\ndone: -\nbad: -\n"
+    },
+    {
+      "seconds": 11.713,
+      "state": {
+        "state": "idle",
+        "waits": [],
+        "errors": 0
+      },
+      "history_length": 4,
+      "ls": "kernel /home/guanyu/projs/aos/proto5.1/.build/stage3-demo-1790045509426954822/K ncpu=3 quantum=5 daemon=96760\nCPU PROC RUNNING RUNS LAST_EXIT WAIT BAD\n0 agent False 12 0 True 0\n1 llm True 8 0 False 0\n2 tool False 10 101 True 0\nqueue: -\ndone: -\nbad: -\n"
+    }
+  ],
+  "history": [
+    {
+      "role": "user",
+      "content": "現在幾點？用工具查"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "reasoning_content": "好的，用户问现在几点，我需要使用提供的now工具来查询台湾的当前时间。首先，调用now函数，不需要参数。然后等待返回结果，直接把结果告诉用户。确保回答简洁明了，符合要求。\n",
+      "tool_calls": [
+        {
+          "type": "function",
+          "id": "pt3YggGnMiWKJivRbn6W5vOEukqcBUTe",
+          "function": {
+            "name": "now",
+            "arguments": "{}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "pt3YggGnMiWKJivRbn6W5vOEukqcBUTe",
+      "content": "2026-09-22 10:51:56 CST\n"
+    },
+    {
+      "role": "assistant",
+      "content": "現在時間是2026年9月22日中午10:51。",
+      "reasoning_content": "好的，用户问现在几点，我用now工具查询到台湾的时间是2026年9月22日中午10点51分56秒。需要直接回答，所以简要说明时间即可。确保使用繁体中文，保持简洁明了。\n",
+      "tool_calls": []
+    }
+  ],
+  "cpu_done": {
+    "C": 2,
+    "T": 1
+  },
+  "daemon_exit": 0,
+  "after_pgrep": {
+    "exit": 0,
+    "stdout": "82087\n",
+    "stderr": ""
+  },
+  "new_aos_pids_after_stop": [],
+  "remaining_demo_processes": []
+}
