@@ -1,7 +1,7 @@
 # proto5/lib — 六支 Python 模組
 
 ← [proto5 README](../README.md)｜規範：[spec/directives.md](../spec/directives.md)、
-[spec/inst-posix.md](../spec/inst-posix.md)、[spec/exec.md](../spec/exec.md)、
+[spec/inst-posix.md](../spec/inst-posix.md)、[spec/aos-exec.md](../spec/aos-exec.md)、
 [spec/agent.md](../spec/agent.md)、[spec/aos-llm-ask.md](../spec/aos-llm-ask.md)、[spec/aos-agent.md](../spec/aos-agent.md)
 
 Python 3.12、只用標準庫。六個檔，一層疊一層、下層不知道上層（inst／exec 一條線，agent_info／llm_ask
@@ -11,7 +11,7 @@ Python 3.12、只用標準庫。六個檔，一層疊一層、下層不知道上
 |---|---|---|
 | [`aos_directives.py`](aos_directives.py) | 指示詞機制的純函式庫：一個值是不是指示詞、怎麼解成別的值。**不知道 inst.json** | [directives.md](../spec/directives.md) |
 | [`aos_inst.py`](aos_inst.py) | inst.json（posix v1）的讀、驗、解：`_metainfo`、七個欄位、各位置的 `$opt` 選項表，指示詞全交給上面那個。回一個執行者能直接用的 dict | [inst-posix.md](../spec/inst-posix.md) 第 1～5 節 |
-| [`aos_exec.py`](aos_exec.py) | 執行者：`run_target()` 把一個目標跑一次、回 `(code, kind)`，`main()` 是命令列；入口是 [`../cli/aos-exec`](../cli/aos-exec) | [inst-posix.md](../spec/inst-posix.md) 第 6 節（行為）、[exec.md](../spec/exec.md)（命令列） |
+| [`aos_exec.py`](aos_exec.py) | 執行者：`run_target()` 把一個目標跑一次、回 `(code, kind)`，`main()` 是命令列；入口是 [`../cli/aos-exec`](../cli/aos-exec) | [inst-posix.md](../spec/inst-posix.md) 第 6 節（行為）、[exec.md](../spec/aos-exec.md)（命令列） |
 | [`aos_agent_info.py`](aos_agent_info.py) | agent 資料夾的讀、驗：`info.json` 每格解指示詞、人格／記憶／工具檔原樣讀、工具表合併與去 `_` key、`engine` 補預設。只讀不寫，**不碰 `state.json`** | [agent.md](../spec/agent.md) §1～§3、§5（資料夾本身）＋ [aos-llm-ask.md](../spec/aos-llm-ask.md) §2（四格與指到的檔） |
 | [`aos_llm_ask.py`](aos_llm_ask.py) | 把一個 agent 資料夾問模型一次：`build_request()` 組 chat/completions 的 body、`call()`／`ask()` 用 `urllib` 打出去回 `choices[0].message`，`main()` 是命令列；入口是 [`../cli/aos-llm-ask`](../cli/aos-llm-ask) | [aos-llm-ask.md](../spec/aos-llm-ask.md) |
 | [`aos_agent.py`](aos_agent.py) | `step()` 先判 waits，再走 idle／think／act 一格；記憶、input 消化、state 原子寫回與自癒；入口 [`../cli/aos-agent`](../cli/aos-agent) | [aos-agent.md](../spec/aos-agent.md)、[agent.md](../spec/agent.md) §4 |
@@ -191,7 +191,7 @@ metainfo   {"_type": "posix", "_version": 1}
 
 ## aos_exec — 執行者
 
-`aos_exec.py` 是 [inst-posix.md 第 6 節](../spec/inst-posix.md) 的實作＋命令列（[exec.md](../spec/exec.md)）。
+`aos_exec.py` 是 [inst-posix.md 第 6 節](../spec/inst-posix.md) 的實作＋命令列（[exec.md](../spec/aos-exec.md)）。
 核心是一個函式，之後的 aos-run 直接 import 它反覆叫：
 
 ```python
@@ -202,7 +202,7 @@ code, kind = aos_exec.run_target(xxx, dir_target=".aos/inst.json", timeout_ms=0,
 
 - `kind`：`"child"`＝子程式真的跑完了一次（它的碼／128+N／126／127／143／137，有 `exit` 就寫）、
   `"aos"`＝aos-exec 自己失敗那次沒跑（code 1，命令列換成 125，不寫 exit）、`"usage"`＝用法錯（2）。
-- 三種目標（普通檔案／`.json`／資料夾）、旗標、退出碼與 stderr 印什麼，見 [exec.md](../spec/exec.md)。
+- 三種目標（普通檔案／`.json`／資料夾）、旗標、退出碼與 stderr 印什麼，見 [exec.md](../spec/aos-exec.md)。
 - 行為：驗完才跑；`mkdir` 在 chdir／開檔前 `makedirs`；`append` 用 `ab`；`inherit` 傳 `None` 給
   `Popen`；`merge` 傳 `subprocess.STDOUT`（跟著 stdout 的 append／inherit）；`clear` 從空環境開始
   否則複製 `os.environ` 再疊 `envs`；`argv[0]` 走疊加後的 PATH；`start_new_session=True`；逾時
