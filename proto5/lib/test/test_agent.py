@@ -1,7 +1,7 @@
 """aos-agent：新 inst／exec 入口、waits 門、三格、自癒、寫檔順序與命令列。
 
 工具用真的 sh／Python；模型沿用 test_llm_ask.FakeLLM，在本機假 HTTP 伺服器跑，不打真模型。
-既有測試不動，每條獨立暫存資料夾；錯誤案例也檢查沒有偷寫記憶、state 或 consume。
+既有案例保留，連敗計數的斷言隨新契約調整；每條獨立暫存資料夾。
 """
 import contextlib
 import io
@@ -19,6 +19,8 @@ import aos_agent
 import aos_agent_info
 import aos_exec
 import aos_inst
+import aos_tool_cpu
+import aos_llm_cpu
 from aos_agent_info import AgentError
 
 AGENT = os.path.join(os.path.dirname(LIB), "cli", "aos-agent")
@@ -534,12 +536,21 @@ class TestThink(StepCase):
         super().setUp()
         self.llm = FakeLLM()
         self.addCleanup(self.llm.close)
-        self.agent(info={"engine": {"endpoint": self.llm.endpoint, "model": "fake"}},
+        self.agent(info={"engine": {"cpu": "cpu", "model": "fake"}},
                    system={"content": "人格"}, history=[{"role": "user", "content": "hi"}])
+        self.put("cpu/info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                                    "models": {"fake": {"endpoint": self.llm.endpoint, "model": "real-fake"}}})
         self.state(state="think")
 
+    def think_round(self, **kw):
+        result = self.step(**kw)
+        if result == 0 and self.get().get("waits") == ["ask-result.json"]:
+            self.assertEqual(aos_llm_cpu.tick(os.path.join(self.d, "cpu")), 0)
+            return self.step(**kw)
+        return result
+
     def test_reply_goes_idle(self):
-        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.think_round(), 0)
         self.assertEqual(self.get()["state"], "idle")
         self.assertEqual(self.get(HISTORY)[-1], self.llm.message)
         self.assertEqual(self.llm.last["body"]["messages"],
@@ -547,36 +558,37 @@ class TestThink(StepCase):
 
     def test_tool_calls_go_act_verbatim(self):
         self.llm.message = dict(assistant(call()), reasoning_content="想一下", extra={"$x": 1})
-        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.think_round(), 0)
         self.assertEqual(self.get()["state"], "act")
         self.assertEqual(self.get(HISTORY)[-1], self.llm.message)
 
     def test_null_content_without_calls_becomes_empty(self):
         self.llm.message = {"role": "assistant", "content": None}
-        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.think_round(), 0)
         self.assertEqual(self.get(HISTORY)[-1]["content"], "")
         aos_agent_info.load(self.d)                 # 下一次確實讀得回來
 
     def test_empty_tool_calls_go_idle(self):
         self.llm.message = assistant()
-        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.think_round(), 0)
         self.assertEqual(self.get()["state"], "idle")
         aos_agent_info.load(self.d)
 
-    def test_http_500_preserves_files_and_returns_zero(self):
+    def test_http_500_preserves_history_and_counts_failure(self):
         self.llm.mode = "500"
         self.engine_failure("500")
 
-    def test_disconnect_preserves_files_and_returns_zero(self):
+    def test_disconnect_preserves_history_and_counts_failure(self):
         self.llm.mode = "truncated"
         self.engine_failure("engine:")
 
     def engine_failure(self, hint):
-        before = self.snapshot()
+        before = self.read(HISTORY)
         err = io.StringIO()
         with contextlib.redirect_stderr(err):
-            self.assertEqual(self.step(), 0)
-        self.assertEqual(self.snapshot(), before)
+            self.assertEqual(self.think_round(), 0)
+        self.assertEqual(self.get(), {"state": "think", "errors": 1, "waits": []})
+        self.assertEqual(self.read(HISTORY), before)
         self.assertTrue(err.getvalue().startswith("aos-agent: engine: "))
         self.assertIn(hint, err.getvalue())
         self.assertEqual(len(err.getvalue().splitlines()), 1)
@@ -584,14 +596,14 @@ class TestThink(StepCase):
     def test_self_heal_does_not_call_model_or_write_history(self):
         self.put(HISTORY, [assistant(call())])
         before = self.read(HISTORY)
-        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.think_round(), 0)
         self.assertEqual(self.get()["state"], "act")
         self.assertEqual(self.read(HISTORY), before)
         self.assertEqual(self.llm.requests, [])
 
     def test_waits_block_model(self):
         self.state(state="think", waits=["missing.json"])
-        self.assertEqual(self.step(), 101)
+        self.assertEqual(self.think_round(), 101)
         self.assertEqual(self.llm.requests, [])
 
     def test_gate_progress_survives_engine_failure(self):
@@ -599,8 +611,299 @@ class TestThink(StepCase):
         self.state(state="think", waits=["ready.json"])
         self.llm.mode = "500"
         with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(self.think_round(), 0)
+        self.assertEqual(self.get(), {"state": "think", "waits": [], "errors": 1})
+
+    def test_three_failures_pause_touch_resumes_and_can_pause_again(self):
+        self.llm.mode = "500"
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            for count in (1, 2, 0):
+                self.assertEqual(self.think_round(), 0)
+                self.assertEqual(self.get()["errors"], count)
+            self.assertEqual(self.get()["waits"], [{"$opt": "consume", "$val": "continue.json"}])
+            self.assertEqual(self.think_round(), 101)
+            self.assertEqual(len(self.llm.requests), 3)
+            self.write("continue.json", "")
+            for count in (1, 2, 0):
+                self.assertEqual(self.think_round(), 0)
+                self.assertEqual(self.get()["errors"], count)
+            self.assertEqual(self.think_round(), 101)
+        self.assertEqual(err.getvalue().count("aos-agent: stuck:"), 2)
+        self.assertFalse(self.exists("continue.json"))
+        self.assertTrue(self.exists("continue.json.done"))
+        self.assertEqual(len(self.llm.requests), 6)
+
+    def test_success_resets_consecutive_errors(self):
+        self.state(state="think", errors=2, note={"$env": "untouched"})
+        self.assertEqual(self.think_round(), 0)
+        self.assertEqual(self.get(), {"state": "idle", "errors": 0, "waits": [], "note": {"$env": "untouched"}})
+
+    def test_invalid_error_counter_does_not_consume_gate(self):
+        self.put("ready.json", {})
+        for value in (True, -1, 1.5, "1", None, {"$env": "COUNT"}):
+            with self.subTest(value=value):
+                self.state(state="think", errors=value,
+                           waits=[{"$opt": "consume", "$val": "ready.json"}])
+                self.rejected("FieldTypeMismatch")
+
+
+# ---------------------------------------------------------------- think 丟給 cpu ----
+
+class TestThinkCpu(StepCase):
+
+    def setUp(self):
+        super().setUp()
+        self.agent(info={"engine": {"model": "fake", "cpu": "cpu"}},
+                   history=[{"role": "user", "content": "hi"}])
+        self.put("cpu/info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                                    "models": {"fake": {"endpoint": "http://unused.invalid/v1", "model": "real-fake"}}})
+        self.state(state="think")
+
+    def requests(self):
+        folder = os.path.join(self.d, "cpu", "requests")
+        return sorted(n for n in os.listdir(folder) if n.endswith(".json"))
+
+    def result(self, message=None, error=None):
+        if error is None:
+            return self.put("ask-result.json", {"ok": True, "message": message or
+                                                {"role": "assistant", "content": "answer"}})
+        return self.put("ask-result.json", {"ok": False, "code": "EngineFailed", "msg": error})
+
+    def test_send_body_engine_absolute_result_and_wait(self):
+        with mock.patch.object(aos_agent.aos_llm_ask, "call", side_effect=AssertionError("不能同步問")):
             self.assertEqual(self.step(), 0)
-        self.assertEqual(self.get(), {"state": "think", "waits": []})
+            self.assertEqual(self.step(), 101)
+        names = self.requests()
+        self.assertEqual(len(names), 1)
+        self.assertRegex(names[0], r"^" + os.path.basename(self.d) + r"-\d+\.json$")
+        request = self.get("cpu/requests/" + names[0])
+        self.assertEqual(request["result"], os.path.join(self.d, "ask-result.json"))
+        self.assertEqual(set(request), {"model", "body", "result"})
+        self.assertEqual(request["model"], "fake")
+        self.assertNotIn("model", request["body"])
+        self.assertNotIn("cpu", request["body"])
+        self.assertEqual(request["body"]["messages"], [{"role": "user", "content": "hi"}])
+        self.assertEqual(self.get(), {"state": "think", "waits": ["ask-result.json"]})
+
+    def test_model_credentials_resolve_only_in_cpu_environment(self):
+        fake = FakeLLM()
+        self.addCleanup(fake.close)
+        self.put("cpu/info.json", {"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                 "models": {"fake": {"endpoint": fake.endpoint, "model": "real-fake",
+                                     "api_key": {"$env": "CPU_KEY"}}}})
+        self.assertEqual(self.step(env={}), 0)
+        request = self.get("cpu/requests/" + self.requests()[0])
+        self.assertNotIn("CPU_KEY", json.dumps(request))
+        self.assertEqual(aos_llm_cpu.tick(os.path.join(self.d, "cpu"), env={"CPU_KEY": "secret"}), 0)
+        self.assertEqual(fake.last["headers"]["Authorization"], "Bearer secret")
+        self.assertEqual(fake.last["body"]["model"], "real-fake")
+        self.assertEqual(self.step(env={}), 0)
+        self.assertEqual(self.get()["state"], "idle")
+
+    def test_success_goes_idle_and_result_is_done(self):
+        self.state(state="think", waits=["ask-result.json"], errors=2)
+        self.result()
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(), {"state": "idle", "waits": [], "errors": 0})
+        self.assertEqual(self.get(HISTORY)[-1], {"role": "assistant", "content": "answer"})
+        self.assertFalse(self.exists("ask-result.json"))
+        self.assertTrue(self.exists("ask-result.json.done"))
+        self.assertEqual(self.step(), 101)
+
+    def test_success_tool_calls_go_act_verbatim(self):
+        message = dict(assistant(call()), reasoning_content="不要解 ${x}")
+        self.result(message)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertEqual(self.get(HISTORY)[-1], message)
+
+    def test_null_content_is_normalized(self):
+        self.result({"role": "assistant", "content": None})
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "")
+        aos_agent_info.load(self.d)
+
+    def test_failure_consumed_keeps_history_and_think_then_resubmits(self):
+        self.state(state="think", waits=["ask-result.json"])
+        self.result(error="引擎\n斷線")
+        before = self.read(HISTORY)
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(self.step(), 0)
+        self.assertEqual(err.getvalue(), "aos-agent: engine: 引擎 斷線\n")
+        self.assertEqual(self.read(HISTORY), before)
+        self.assertEqual(self.get(), {"state": "think", "waits": [], "errors": 1})
+        self.assertTrue(self.exists("ask-result.json.done"))
+        self.assertFalse(self.exists("ask-result.json"))
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(len(self.requests()), 1)
+
+    def test_third_async_failure_pauses_and_touch_submits_again(self):
+        self.state(state="think", waits=["ask-result.json"], errors=2)
+        self.result(error="故障")
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(self.step(), 0)
+        self.assertIn("stuck: 引擎連敗 3 次", err.getvalue())
+        self.assertEqual(self.get(), {"state": "think", "waits": [{"$opt": "consume", "$val": "continue.json"}], "errors": 0})
+        self.assertEqual(self.step(), 101)
+        self.write("continue.json", "")
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["waits"], ["ask-result.json"])
+        self.assertEqual(len(self.requests()), 1)
+
+    def test_continue_is_not_consumed_until_gate_opens(self):
+        self.state(state="think", errors=2)
+        self.write("continue.json", "")
+        self.result(error="故障")
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(self.step(), 0)
+        self.assertTrue(self.exists("continue.json"))
+        self.assertFalse(self.exists("continue.json.done"))
+        self.assertEqual(self.step(), 0)
+        self.assertFalse(self.exists("continue.json"))
+        self.assertTrue(self.exists("continue.json.done"))
+        self.assertEqual(self.get()["waits"], ["ask-result.json"])
+
+    def test_self_heal_precedes_submission(self):
+        self.put(HISTORY, [assistant(call())])
+        before = self.read(HISTORY)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertEqual(self.read(HISTORY), before)
+        self.assertFalse(self.exists("cpu/requests"))
+
+    def test_bad_result_does_not_change_gate_history_or_result(self):
+        self.put("ready.json", {})
+        cases = [(None, "NotAnObject"), ({"ok": 1}, "FieldTypeMismatch"),
+                 ({"ok": False}, "FieldTypeMismatch"),
+                 ({"ok": False, "error": 3}, "FieldTypeMismatch"),
+                 ({"ok": True}, "MessageInvalid"),
+                 ({"ok": True, "message": {"role": "user", "content": "wrong"}}, "MessageInvalid"),
+                 ({"ok": True, "message": {"role": "assistant", "content": 4}}, "MessageInvalid"),
+                 ({"ok": True, "message": {"role": "assistant", "content": "x",
+                                           "tool_calls": {}}}, "MessageInvalid")]
+        for result, code in cases:
+            with self.subTest(result=result):
+                self.state(state="think", waits=[{"$opt": "consume", "$val": "ready.json"},
+                                                  "ask-result.json"])
+                self.put("ask-result.json", result)
+                self.rejected(code)
+
+    def test_malformed_json_cli_returns_one_and_keeps_files(self):
+        self.state(state="think", waits=["ask-result.json"])
+        self.write("ask-result.json", "{broken")
+        before = self.snapshot()
+        process = self.cli(self.d)
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("JsonSyntax", process.stderr)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_non_utf8_result_cli_is_one_line_error_and_keeps_files(self):
+        self.state(state="think", waits=["ask-result.json"])
+        with open(os.path.join(self.d, "ask-result.json"), "wb") as f:
+            f.write(b"\xff")
+        before = self.snapshot()
+        process = self.cli(self.d)
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("JsonSyntax", process.stderr)
+        self.assertEqual(len(process.stderr.splitlines()), 1)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_other_wait_still_blocks_valid_result(self):
+        self.state(state="think", waits=["ask-result.json", "missing.json"])
+        self.result()
+        before = self.read(HISTORY)
+        self.assertEqual(self.step(), 101)
+        self.assertEqual(self.get()["waits"], ["missing.json"])
+        self.assertTrue(self.exists("ask-result.json"))
+        self.assertEqual(self.read(HISTORY), before)
+
+    def test_closed_gate_defers_reading_bad_result(self):
+        self.state(state="think", waits=["pause.json"])
+        self.write("ask-result.json", "{bad")
+        self.assertEqual(self.step(), 101)
+        self.assertTrue(self.exists("ask-result.json"))
+        self.put("pause.json", {})
+        self.rejected("JsonSyntax")
+
+    def test_bad_cpu_info_does_not_consume_gate(self):
+        self.put("ready.json", {})
+        self.state(state="think", waits=[{"$opt": "consume", "$val": "ready.json"}])
+        self.write("cpu/info.json", "{bad")
+        self.rejected("JsonSyntax")
+
+    def test_duplicate_name_in_each_stage_is_not_overwritten(self):
+        name = os.path.basename(self.d) + "-123.json"
+        for stage in ("requests", "running", "done"):
+            with self.subTest(stage=stage):
+                path = "cpu/" + stage + "/" + name
+                self.put(path, {"existing": stage})
+                with mock.patch.object(aos_agent.time, "time_ns", return_value=123):
+                    with self.assertRaises(AgentError) as cm:
+                        self.step()
+                self.assertEqual(cm.exception.code, "ReadFailed")
+                self.assertEqual(self.get(path), {"existing": stage})
+                self.assertEqual(self.get(), {"state": "think"})
+                os.rename(os.path.join(self.d, path), os.path.join(self.d, path + ".saved"))
+
+    def test_submit_then_waits_write_failure_leaves_queued_request(self):
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if dst == os.path.join(self.d, "state.json"):
+                raise PermissionError("模擬請求送出後 state 寫失敗")
+            real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        self.assertEqual(len(self.requests()), 1)
+        self.assertEqual(self.get(), {"state": "think"})
+
+    def test_receipt_write_order_history_done_state(self):
+        self.result()
+        real_replace = os.replace
+        destinations = []
+
+        def replace(src, dst):
+            destinations.append(os.path.relpath(dst, self.d))
+            real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            self.assertEqual(self.step(), 0)
+        self.assertEqual(destinations, [HISTORY, "ask-result.json.done", "state.json"])
+
+    def test_failed_result_rename_leaves_history_ahead_and_result_unconsumed(self):
+        message = assistant(call())
+        self.result(message)
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if src == os.path.join(self.d, "ask-result.json"):
+                raise PermissionError("模擬記憶寫好後結果 rename 失敗")
+            real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        self.assertEqual(self.get()["state"], "think")
+        self.assertEqual(self.get(HISTORY)[-1], message)
+        self.assertTrue(self.exists("ask-result.json"))
+        # 帶工具的尾訊息與結果完全相同，足以判斷此結果已接進記憶。
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertFalse(self.exists("ask-result.json"))
+        self.assertTrue(self.exists("ask-result.json.done"))
+        self.assertEqual(self.get()["errors"], 0)
+        self.assertEqual(self.step(), 0)  # 跑工具，回 think。
+        self.assertEqual(self.step(), 0)  # 送新單，不再收舊 assistant。
+        self.assertEqual(len(self.requests()), 1)
+
+    def test_bad_result_does_not_block_tool_call_self_healing(self):
+        self.put(HISTORY, [assistant(call())])
+        self.write("ask-result.json", "{broken")
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertTrue(self.exists("ask-result.json"))
 
 
 # ---------------------------------------------------------------- act ----
@@ -645,6 +948,25 @@ class TestAct(StepCase):
         self.setup_act([call()], [tool(argv=["sh", "-c", "printf oops; exit 9"])])
         self.assertEqual(self.step(), 0)
         self.assertEqual(self.get(HISTORY)[-1]["content"], "工具 echo 失敗（exit 9）：oops")
+
+    def test_timeout_keeps_stdout_and_runs_next_call(self):
+        slow = dict(tool("slow", argv=["sh", "-c", "printf before; exec sleep 20"]), _timeout_ms=150)
+        self.setup_act([call("slow", id="a"), call(arguments="after", id="b")], [slow, tool()])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual([m["content"] for m in self.get(HISTORY)[1:]],
+                         ["工具 slow 逾時（150 ms）：before", "after"])
+        self.assertEqual(self.get()["state"], "think")
+
+    def test_default_timeout_is_sixty_seconds(self):
+        self.setup_act([call(arguments="ok")])
+        with mock.patch.object(aos_exec, "run_inst", wraps=aos_exec.run_inst) as run:
+            self.assertEqual(self.step(), 0)
+        self.assertEqual(run.call_args.kwargs["timeout_ms"], 60000)
+
+    def test_exit_143_is_not_mistaken_for_timeout(self):
+        self.setup_act([call()], [tool(argv=["sh", "-c", "printf own; exit 143"])])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "工具 echo 失敗（exit 143）：own")
 
     def test_missing_program_is_tool_failure(self):
         self.setup_act([call()], [tool(argv=["/no-aos-program"])])
@@ -702,6 +1024,249 @@ class TestAct(StepCase):
 
 
 # ---------------------------------------------------------------- 寫檔順序與命令列 ----
+
+class TestCpuAct(StepCase):
+
+    def setup_cpu(self, calls=None, tools=None):
+        self.agent(info={"tool_cpu": "T"}, history=[assistant(*(calls or [call()]))],
+                   tools={"tools.json": tools or [dict(tool(), _run="cpu")]})
+        self.put("T/info.json", {"_metainfo": {"_type": "tool_cpu", "_version": 1}})
+        self.state(state="act")
+
+    def tick(self):
+        return aos_tool_cpu.tick(os.path.join(self.d, "T"))
+
+    def results(self, i=0, **changes):
+        result = dict(ok=True, code=0, kind="child", timed_out=False, stdout="done")
+        result.update(changes)
+        self.put("tool-results/%d.json" % i, result)
+
+    def test_submit_wait_collect_real_tool(self):
+        self.setup_cpu([call(arguments=' {"中文": 1} \n')])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(), {"state": "act", "waits": [{"$opt": "all", "$val": [
+            os.path.join(self.d, "tool-results/0.json")]}]})
+        self.assertEqual(len(self.get(HISTORY)), 1)
+        self.assertEqual(self.step(), 101)
+        request_names = os.listdir(os.path.join(self.d, "T/requests"))
+        request = self.get("T/requests/" + request_names[0])
+        self.assertEqual(request["inst"]["cwd"], self.d)
+        self.assertNotIn("stdin", request["inst"])
+        self.assertNotIn("stdout", request["inst"])
+        self.assertEqual(request["timeout_ms"], 60000)
+        self.assertEqual(request["stdin"], ' {"中文": 1} \n')
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], ' {"中文": 1} \n')
+        self.assertEqual(self.get(), {"state": "think", "waits": []})
+        self.assertTrue(self.exists("tool-results/0.json.done"))
+
+    def test_mixed_all_submitted_before_sync_and_keeps_original_order(self):
+        sync = tool("sync", argv=["sh", "-c", "touch SYNC; printf sync"])
+        cpu = dict(tool("cpu"), _run="cpu")
+        self.setup_cpu([call("sync", id="a"), call("cpu", "first", "b"),
+                        call("cpu", "second", "c")], [sync, cpu])
+        self.assertEqual(self.step(), 0)
+        self.assertFalse(self.exists("SYNC"))
+        self.assertEqual(len(os.listdir(os.path.join(self.d, "T/requests"))), 2)
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 101)
+        self.assertFalse(self.exists("SYNC"))
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertTrue(self.exists("SYNC"))
+        self.assertEqual([(m["tool_call_id"], m["content"]) for m in self.get(HISTORY)[1:]],
+                         [("a", "sync"), ("b", "first"), ("c", "second")])
+        self.assertFalse(self.exists("tool-results/0.json.done"))
+
+    def test_cpu_result_text_contract(self):
+        cases = [(dict(code=9, stdout="oops"), "工具 echo 失敗（exit 9）：oops"),
+                 (dict(code=0, timed_out=True, stdout="partial"), "工具 echo 逾時"),
+                 (dict(ok=False, code="EngineFailed", msg="broken"), "工具 echo 跑不起來：broken"),
+                 (dict(ok=False, code="Reaped", msg="不同的收屍說明"),
+                  '{"ok": false, "error": "結果不明：工具可能已經跑了，也可能沒有"}'),
+                 (dict(ok=False, code="EngineFailed", msg="結果不明：工具可能已經跑了，也可能沒有"),
+                  "工具 echo 跑不起來：結果不明：工具可能已經跑了，也可能沒有"),
+                 (dict(code=143, stdout="own"), "工具 echo 失敗（exit 143）：own"),
+                 (dict(code=1, kind="aos", stdout=""), "工具 echo 失敗（exit 1）：")]
+        for result, expected in cases:
+            with self.subTest(result=result):
+                self.setup_cpu()
+                self.results(**result)
+                self.assertEqual(self.step(), 0)
+                self.assertEqual(self.get(HISTORY)[-1]["content"], expected)
+
+    def test_reaped_tool_is_exact_unknown_json_and_not_retried(self):
+        self.setup_cpu()
+        self.assertEqual(self.step(), 0)
+        request_dir = os.path.join(self.d, "T", "requests")
+        name = next(n for n in os.listdir(request_dir) if n.endswith(".json"))
+        running = os.path.join(self.d, "T", "running", name)
+        os.rename(os.path.join(request_dir, name), running)
+        os.utime(running, (1, 1))
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"],
+                         '{"ok": false, "error": "結果不明：工具可能已經跑了，也可能沒有"}')
+        self.assertEqual(self.get()["state"], "think")
+        self.assertEqual(os.listdir(request_dir), [])
+        self.assertEqual(self.tick(), 101)
+
+    def test_real_cpu_timeout(self):
+        self.setup_cpu(tools=[dict(tool(argv=["sh", "-c", "exec sleep 5"]),
+                                   _run="cpu", _timeout_ms=30)])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.tick(), 0)
+        self.assertTrue(self.get("tool-results/0.json")["timed_out"])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "工具 echo 逾時")
+
+    def test_bad_inst_becomes_failure_without_blocking_other_cpu(self):
+        self.setup_cpu([call("bad", id="a"), call(id="b")],
+                       [dict(tool("bad", argv=[]), _run="cpu"), dict(tool(), _run="cpu")])
+        self.assertEqual(self.step(), 0)
+        self.assertFalse(self.get("tool-results/0.json")["ok"])
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertIn("EmptyArgv", self.get(HISTORY)[1]["content"])
+        self.assertEqual(self.get(HISTORY)[2]["content"], "{}")
+
+    def test_result_read_validation_before_gate_or_sync(self):
+        self.setup_cpu([call("sync", id="a"), call(id="b")],
+                       [tool("sync", argv=["touch", "BAD"]), dict(tool(), _run="cpu")])
+        self.put("ready", {})
+        self.state(state="act", waits=[{"$opt": "consume", "$val": "ready"}])
+        for value, code in [(None, "NotAnObject"), ({"ok": 1}, "FieldTypeMismatch"),
+                            ({"ok": False}, "FieldTypeMismatch"),
+                            ({"ok": True, "code": True, "kind": "child", "timed_out": False,
+                              "stdout": "x"}, "FieldTypeMismatch")]:
+            with self.subTest(value=value):
+                self.put("tool-results/1.json", value)
+                self.rejected(code)
+        self.assertFalse(self.exists("BAD"))
+
+    def test_invalid_utf8_is_one_line_cli_error(self):
+        self.setup_cpu()
+        path = self.put("tool-results/0.json", {})
+        with open(path, "wb") as f:
+            f.write(b"\xff")
+        process = self.cli(self.d)
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("JsonSyntax", process.stderr)
+        self.assertEqual(len(process.stderr.splitlines()), 1)
+
+    def test_bad_cpu_info_before_gate_mutation(self):
+        self.setup_cpu()
+        self.put("ready", {})
+        self.state(state="act", waits=[{"$opt": "consume", "$val": "ready"}])
+        self.write("T/info.json", "{broken")
+        self.rejected("JsonSyntax")
+
+    def test_receipt_does_not_need_cpu_info(self):
+        self.setup_cpu()
+        self.results()
+        self.write("T/info.json", "{broken")
+        self.assertEqual(self.step(), 0)
+
+    def test_partial_results_without_waits_restore_all_gate(self):
+        self.setup_cpu([call(id="a"), call(id="b")])
+        self.results(1)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(len(self.get()["waits"][0]["$val"]), 2)
+        self.assertEqual(self.step(), 101)
+        self.assertFalse(self.exists("T/requests"))
+
+    def test_previous_done_result_is_not_reused_for_new_batch(self):
+        self.setup_cpu()
+        self.put("tool-results/0.json.done", {"ok": True, "code": 0, "kind": "child",
+                                              "timed_out": False, "stdout": "old"})
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(len(self.get(HISTORY)), 1)
+        self.assertEqual(len(os.listdir(os.path.join(self.d, "T/requests"))), 1)
+        self.assertEqual(self.step(), 101)
+
+    def test_closed_gate_defers_bad_tool_result(self):
+        self.setup_cpu()
+        self.state(state="act", waits=["pause"])
+        self.write("tool-results/0.json", "{broken")
+        self.assertEqual(self.step(), 101)
+        self.put("pause", {})
+        self.rejected("JsonSyntax")
+
+    def test_partial_submission_failure_records_existing_work_without_sync(self):
+        self.setup_cpu([call("sync", id="s"), call(id="a"), call(id="b")],
+                       [tool("sync", argv=["touch", "BAD"]), dict(tool(), _run="cpu")])
+        real_submit = aos_agent.aos_cpu.submit
+        submitted = []
+
+        def submit(cpu, name, request):
+            if submitted:
+                raise AgentError("ReadFailed", "第二份交件失敗")
+            submitted.append(name)
+            return real_submit(cpu, name, request)
+
+        with mock.patch.object(aos_agent.aos_cpu, "submit", side_effect=submit):
+            with self.assertRaises(AgentError):
+                self.step()
+        self.assertEqual(self.get(), {"state": "act"})
+        self.assertFalse(self.exists("BAD"))
+        self.assertEqual(self.tick(), 0)
+        # D 不做 pending journal；第一份已有結果，就只能恢復 all 門。
+        # 第二份尚未交件，因此這個已記 findings 的窗口仍可能永久等待。
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.step(), 101)
+        self.assertFalse(self.exists("BAD"))
+        self.assertEqual(os.listdir(os.path.join(self.d, "T/requests")), [])
+
+    def test_crash_after_history_before_rename_heals_and_discards_finished_results(self):
+        self.setup_cpu([call(id="a"), call(id="b")])
+        self.results(0, stdout="a")
+        self.results(1, stdout="b")
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if src == os.path.join(self.d, "tool-results/1.json"):
+                raise PermissionError("第二份結果封存中斷")
+            return real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        history = self.read(HISTORY)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertTrue(self.exists("tool-results/0.json.done"))
+        self.assertTrue(self.exists("tool-results/1.json"))
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.read(HISTORY), history)
+        self.assertEqual(self.get()["state"], "think")
+        self.assertTrue(self.exists("tool-results/1.json.done"))
+        self.assertFalse(self.exists("tool-results/1.json"))
+
+    def test_crash_after_rename_before_state_does_not_repeat_sync(self):
+        self.setup_cpu([call("sync", id="a"), call(id="b")],
+                       [tool("sync", argv=["sh", "-c", "echo once >> side-effect"]),
+                        dict(tool(), _run="cpu")])
+        self.results(1)
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if dst == os.path.join(self.d, "state.json"):
+                raise PermissionError("state 中斷")
+            return real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.read("side-effect"), "once\n")
+
+    def test_inst_directives_resolved_on_agent_before_cpu(self):
+        self.setup_cpu(tools=[dict(tool(argv=["printf", {"$env": "VALUE"}]), _run="cpu")])
+        self.assertEqual(self.step(env={"VALUE": "literal $env"}), 0)
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "literal $env")
+
 
 class TestWrites(StepCase):
 

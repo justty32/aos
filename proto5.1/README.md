@@ -10,7 +10,7 @@ proto5 那邊 2026-09-22 做了四份調查，冒出 23 題要使用者拍板（
 - **proto5.1 是實驗場**：codex（gpt-6-astra）照 [proto5 四份總結](../proto5/notes-brief/README.md) 裡的建議實作；
   規範（`spec/`）跟著實作改；撞到的問題、被迫做的決定、跟建議不一樣的地方，全部記在
   [`notes/findings.md`](notes/findings.md)。
-- 第 4 段照[使用者拍板](../proto5/notes/2026-09-22-decisions.md)落地；之後哪些東西要回流到 proto5，仍由使用者決定。
+- 第 4 段照[使用者拍板](../proto5/notes/2026-09-22-decisions.md)落地、第 5 段照 fable 重審修；**2026-09-22 下午規範與程式已整套回流 proto5**（[回流紀錄](../proto5/notes/2026-09-22-backflow.md)）。這裡從此只當紀錄，不再改。
 
 ## 分段
 

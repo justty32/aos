@@ -2,8 +2,6 @@
 
 ← [proto5 README](../README.md)｜格式：[llm-cpu](llm-cpu.md)｜共用佇列：[cpu-queue](cpu-queue.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 `aos-llm-cpu [dir]` 一次收屍、再問最多一份請求；省略 dir＝`.`。
 先讀驗 info 身分與 models 表、解 CPU 的指示詞，再透過 `aos_cpu` 收屍與認領。
 認領後在 execute 驗請求 model／body，壞 payload 回 BadPayload；合法代號若不在表裡，

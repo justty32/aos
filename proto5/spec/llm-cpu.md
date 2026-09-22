@@ -2,8 +2,6 @@
 
 ← [proto5 README](../README.md)｜共用格式：[cpu-queue](cpu-queue.md)｜程式：[aos-llm-cpu](aos-llm-cpu.md)
 
-> 這份是 proto5.1 做出來的版本（2026-09-22 回流，照 [23 題拍板](../notes/2026-09-22-decisions.md)）。**proto5 的程式還沒照這份實作**；能跑的實作在 [proto5.1/lib](../../proto5.1/lib/README.md)。
-
 ## 1. info.json
 
 ```json

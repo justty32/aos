@@ -1,8 +1,4 @@
-"""aos_llm_ask：組請求（build_request）、打引擎（call／ask）、命令列（cli/aos-llm-ask）——照 spec/aos-llm-ask.md。
-
-HTTP 那群用 http.server 在執行緒裡開一個假的 chat/completions（能回正常、回 500、回壞 JSON、回沒有
-choices、故意慢讓逾時觸發），**不打真模型**；命令列那群開子進程驗退出碼 0／1／2／3 與 stdout 只有一行。
-"""
+"""組 body、CPU tick 問假 HTTP、CLI 只預覽；不打真模型。"""
 import json
 import os
 import socket
@@ -14,6 +10,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from _util import AgentCase, TOOL_SH
 
 import aos_llm_ask
+import aos_agent_info
+import aos_cpu
+import aos_llm_cpu
 from aos_llm_ask import AgentError, EngineFailed
 
 OK_MESSAGE = {"role": "assistant", "content": "裡面有 state.json、prompts、tools…"}
@@ -109,10 +108,28 @@ class LLMCase(AgentCase):
     def agent(self, info=None, **kw):
         obj = dict(info or {})
         eng = dict(obj.get("engine") or {})
-        eng.setdefault("endpoint", self.llm.endpoint)
-        eng.setdefault("model", "fake-model")
+        config = {key: eng.pop(key) for key in ("endpoint", "api_key", "timeout_ms") if key in eng}
+        config.setdefault("endpoint", self.llm.endpoint)
+        config["model"] = "fake-model"
+        eng.setdefault("model", "small")
+        eng.setdefault("cpu", "cpu")
         obj["engine"] = eng
-        return super().agent(info=obj, **kw)
+        d = super().agent(info=obj, **kw)
+        self.write("cpu/info.json", json.dumps({"_metainfo": {"_type": "llm_cpu", "_version": 1},
+                                              "models": {"small": config}}))
+        return d
+
+    def tick_ask(self, d):
+        info = aos_agent_info.load(d)
+        result_path = os.path.join(d, "ask-result.json")
+        aos_cpu.submit(info["engine"]["cpu"], "%d.json" % time.time_ns(),
+                       {"model": info["engine"]["model"], "body": aos_llm_ask.build_request(info), "result": result_path})
+        self.assertEqual(aos_llm_cpu.tick(info["engine"]["cpu"]), 0)
+        with open(result_path, encoding="utf-8") as f:
+            result = json.load(f)
+        if not result["ok"]:
+            raise EngineFailed(result["msg"], result["code"])
+        return result["message"]
 
 
 # ---------------------------------------------------------------- build_request ----
@@ -124,16 +141,15 @@ class TestBuildRequest(AgentCase):
         d = self.agent(system={"content": "你是個簡潔、會用工具的助手。"},
                        history=[{"role": "user", "content": "看看資料夾裡有什麼"}],
                        tools={"tools/base.json": [TOOL_SH]},
-                       info={"engine": {"endpoint": "http://127.0.0.1:1234/v1", "model": "qwen/qwen3-1.7b",
+                       info={"engine": {"cpu": "http://127.0.0.1:1234/v1", "model": "qwen/qwen3-1.7b",
                                         "params": {"temperature": 0.2}}})
         body = aos_llm_ask.build_request(d)
         self.assertEqual(body, {
-            "model": "qwen/qwen3-1.7b",
             "messages": [{"role": "system", "content": "你是個簡潔、會用工具的助手。"},
                          {"role": "user", "content": "看看資料夾裡有什麼"}],
             "tools": [{"type": "function", "function": TOOL_SH["function"]}],
             "temperature": 0.2})
-        self.assertEqual(list(body), ["model", "messages", "tools", "temperature"])
+        self.assertEqual(list(body), ["messages", "tools", "temperature"])
 
     def test_empty_system_means_no_system_message(self):
         d = self.agent(system={"content": ""}, history=[{"role": "user", "content": "hi"}])
@@ -168,18 +184,18 @@ class TestBuildRequest(AgentCase):
                                          {"type": "function", "function": {"name": "b"}}])
 
     def test_params_merged_at_top_level(self):
-        d = self.agent(info={"engine": {"endpoint": "e", "model": "m",
+        d = self.agent(info={"engine": {"cpu": "e", "model": "m",
                                         "params": {"temperature": 0.2, "max_tokens": 10, "response_format": {"type": "text"}}}})
         body = aos_llm_ask.build_request(d)
         self.assertEqual((body["temperature"], body["max_tokens"], body["response_format"]), (0.2, 10, {"type": "text"}))
 
     def test_params_cannot_override_reserved(self):
         d = self.agent(history=[{"role": "user", "content": "hi"}],
-                       info={"engine": {"endpoint": "e", "model": "m",
+                       info={"engine": {"cpu": "e", "model": "m",
                                         "params": {"model": "other", "messages": [], "tools": [{"x": 1}],
                                                    "stream": True, "temperature": 1}}})
         body = aos_llm_ask.build_request(d)
-        self.assertEqual(body["model"], "m")
+        self.assertNotIn("model", body)
         self.assertEqual(body["messages"], [{"role": "user", "content": "hi"}])
         self.assertNotIn("tools", body)
         self.assertNotIn("stream", body)
@@ -187,6 +203,13 @@ class TestBuildRequest(AgentCase):
 
     def test_stream_never_sent(self):
         self.assertNotIn("stream", aos_llm_ask.build_request(self.agent()))
+
+    def test_cpu_never_sent_even_from_params(self):
+        d = self.agent(info={"engine": {"cpu": "e", "model": "m", "cpu": "../cpu",
+                                        "params": {"cpu": "private/path", "temperature": 0.3}}})
+        body = aos_llm_ask.build_request(d)
+        self.assertNotIn("cpu", body)
+        self.assertEqual(body["temperature"], 0.3)
 
     def test_read_errors_raise_agent_error(self):
         with self.assertRaises(AgentError) as cm:
@@ -198,29 +221,29 @@ class TestBuildRequest(AgentCase):
         self.assertEqual(cm.exception.code, "MessageInvalid")
 
     def test_env_parameter(self):
-        d = self.agent(info={"engine": {"endpoint": "e", "model": {"$env": "MODEL"}}})
-        self.assertEqual(aos_llm_ask.build_request(d, env={"MODEL": "from-env"})["model"], "from-env")
+        d = self.agent(info={"engine": {"cpu": "e", "model": {"$env": "MODEL"}}})
+        self.assertNotIn("model", aos_llm_ask.build_request(d, env={"MODEL": "from-env"}))
 
     def test_does_not_touch_network_or_state(self):
         self.write("state.json", "{broken")
-        d = self.agent(info={"engine": {"endpoint": UNREACHABLE, "model": "m"}})
+        d = self.agent(info={"engine": {"cpu": UNREACHABLE, "model": "m"}})
         aos_llm_ask.build_request(d)        # 打不到的 endpoint 也沒關係
         self.assertEqual(self.read("state.json"), "{broken")
 
 
-# ---------------------------------------------------------------- call／ask（假伺服器）----
+# ---------------------------------------------------------------- CPU tick／call（假伺服器）----
 
-class TestAsk(LLMCase):
+class TestCpuHTTP(LLMCase):
 
     def test_ok_returns_choices0_message(self):
         d = self.agent(system={"content": "S"}, history=[{"role": "user", "content": "hi"}],
                        tools={"t.json": [TOOL_SH]}, info={"engine": {"params": {"temperature": 0.2}}})
-        msg = aos_llm_ask.ask(d)
+        msg = self.tick_ask(d)
         self.assertEqual(msg, OK_MESSAGE)
         req = self.llm.last
         self.assertEqual(req["path"], "/v1/chat/completions")
         self.assertEqual(req["headers"]["Content-Type"], "application/json")
-        self.assertEqual(req["body"], aos_llm_ask.build_request(d))
+        self.assertEqual(req["body"], dict(aos_llm_ask.build_request(d), model="fake-model"))
         self.assertEqual(req["body"]["messages"][0], {"role": "system", "content": "S"})
         self.assertNotIn("_meta", req["body"]["tools"][0])
         self.assertNotIn("stream", req["body"])
@@ -230,40 +253,40 @@ class TestAsk(LLMCase):
                             "tool_calls": [{"id": "c1", "type": "function",
                                             "function": {"name": "sh", "arguments": "{\"cmd\":\"ls\"}"}}],
                             "reasoning_content": "thinking…"}
-        self.assertEqual(aos_llm_ask.ask(self.agent()), self.llm.message)
+        self.assertEqual(self.tick_ask(self.agent()), self.llm.message)
 
     def test_body_is_utf8_json(self):
         d = self.agent(history=[{"role": "user", "content": "中文 ✓"}])
-        aos_llm_ask.ask(d)
+        self.tick_ask(d)
         self.assertEqual(self.llm.last["body"]["messages"][0]["content"], "中文 ✓")
 
     def test_no_api_key_means_no_authorization_header(self):
-        aos_llm_ask.ask(self.agent())
+        self.tick_ask(self.agent())
         self.assertNotIn("Authorization", self.llm.last["headers"])
 
     def test_empty_api_key_means_no_authorization_header(self):
-        aos_llm_ask.ask(self.agent(info={"engine": {"api_key": ""}}))
+        self.tick_ask(self.agent(info={"engine": {"api_key": ""}}))
         self.assertNotIn("Authorization", self.llm.last["headers"])
 
     def test_api_key_sent_as_bearer(self):
-        aos_llm_ask.ask(self.agent(info={"engine": {"api_key": "sk-123"}}))
+        self.tick_ask(self.agent(info={"engine": {"api_key": "sk-123"}}))
         self.assertEqual(self.llm.last["headers"]["Authorization"], "Bearer sk-123")
 
     def test_trailing_slashes_stripped(self):
-        aos_llm_ask.ask(self.agent(info={"engine": {"endpoint": self.llm.endpoint + "/"}}))
+        self.tick_ask(self.agent(info={"engine": {"endpoint": self.llm.endpoint + "/"}}))
         self.assertEqual(self.llm.last["path"], "/v1/chat/completions")
-        aos_llm_ask.ask(self.agent(info={"engine": {"endpoint": self.llm.endpoint + "///"}}))
+        self.tick_ask(self.agent(info={"engine": {"endpoint": self.llm.endpoint + "///"}}))
         self.assertEqual(self.llm.last["path"], "/v1/chat/completions")
 
     def test_endpoint_without_v1_is_literal(self):
         base = self.llm.endpoint[:-len("/v1")]
-        aos_llm_ask.ask(self.agent(info={"engine": {"endpoint": base}}))
+        self.tick_ask(self.agent(info={"engine": {"endpoint": base}}))
         self.assertEqual(self.llm.last["path"], "/chat/completions")
 
     def fails(self, mode, **engine):
         self.llm.mode = mode
         with self.assertRaises(EngineFailed) as cm:
-            aos_llm_ask.ask(self.agent(info={"engine": engine}))
+            self.tick_ask(self.agent(info={"engine": engine}))
         return str(cm.exception)
 
     def test_http_500(self):
@@ -292,7 +315,7 @@ class TestAsk(LLMCase):
     def test_cannot_connect(self):
         """主機名解不開（.invalid 保證不存在）；timeout_ms 只是保險，這條不該等到它。"""
         with self.assertRaises(EngineFailed) as cm:
-            aos_llm_ask.ask(self.agent(info={"engine": {"endpoint": UNREACHABLE, "timeout_ms": 3000}}))
+            self.tick_ask(self.agent(info={"engine": {"endpoint": UNREACHABLE, "timeout_ms": 3000}}))
         self.assertIn("連不上", str(cm.exception))
 
     def test_timeout(self):
@@ -310,7 +333,7 @@ class TestAsk(LLMCase):
     def test_read_error_raised_before_any_http(self):
         d = self.agent(history="[broken")
         with self.assertRaises(AgentError):
-            aos_llm_ask.ask(d)
+            self.tick_ask(d)
         self.assertEqual(self.llm.requests, [])
 
     def test_call_with_engine_and_body_directly(self):
@@ -319,10 +342,10 @@ class TestAsk(LLMCase):
         self.assertEqual(msg, OK_MESSAGE)
         self.assertEqual(self.llm.last["body"], {"model": "m", "messages": []})
 
-    def test_ask_writes_nothing(self):
+    def test_cpu_receipt_does_not_write_agent_memory_or_state(self):
         d = self.agent(history=[{"role": "user", "content": "hi"}])
         before = self.read(os.path.join("prompts", "history.json"))
-        aos_llm_ask.ask(d)
+        self.tick_ask(d)
         self.assertEqual(self.read(os.path.join("prompts", "history.json")), before)
         self.assertFalse(self.exists("state.json"))
 
@@ -336,49 +359,48 @@ class TestCli(LLMCase):
         self.assertTrue(r.stdout.endswith("\n"))
         return json.loads(r.stdout)
 
-    def test_dry_run_prints_request_and_exits_0(self):
+    def test_cli_prints_request_and_exits_0(self):
         d = self.agent(system={"content": "S"}, history=[{"role": "user", "content": "hi"}],
                        tools={"t.json": [TOOL_SH]}, info={"engine": {"params": {"temperature": 0.2}}})
-        r = self.ask(d, "--dry-run")
+        r = self.ask(d)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stderr, "")
         self.assertEqual(self.one_line(r), aos_llm_ask.build_request(d))
         self.assertEqual(self.llm.requests, [])                 # 真的沒打出去
 
-    def test_dry_run_flag_before_dir(self):
+    def test_removed_dry_run_flag_is_usage_error(self):
         d = self.agent()
         r = self.ask("--dry-run", d)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.one_line(r)["model"], "fake-model")
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("unrecognized arguments", r.stderr)
 
     def test_dir_defaults_to_cwd(self):
         d = self.agent()
-        r = self.ask("--dry-run", cwd=d)
+        r = self.ask(cwd=d)
         self.assertEqual(r.returncode, 0, r.stderr)
 
-    def test_ask_prints_message_and_exits_0(self):
+    def test_default_cli_prints_body_without_http(self):
         d = self.agent(history=[{"role": "user", "content": "hi"}])
         r = self.ask(d)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stderr, "")
-        self.assertEqual(self.one_line(r), OK_MESSAGE)
-        self.assertEqual(len(self.llm.requests), 1)
+        self.assertEqual(self.one_line(r), aos_llm_ask.build_request(d))
+        self.assertEqual(self.llm.requests, [])
 
     def test_output_is_compact_and_not_ascii_escaped(self):
         d = self.agent(history=[{"role": "user", "content": "hi"}])
         r = self.ask(d)
-        self.assertIn("裡面有", r.stdout)
+        self.assertIn("hi", r.stdout)
         self.assertNotIn(", ", r.stdout)
 
     def test_message_with_newlines_still_one_line(self):
-        self.llm.message = {"role": "assistant", "content": "第一行\n第二行\n"}
-        r = self.ask(self.agent())
+        r = self.ask(self.agent(history=[{"role": "user", "content": "第一行\n第二行\n"}]))
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(self.one_line(r)["content"], "第一行\n第二行\n")
+        self.assertEqual(self.one_line(r)["messages"][0]["content"], "第一行\n第二行\n")
 
     def test_read_error_is_1(self):
         d = self.agent(history=[{"role": "system", "content": "x"}])
-        for args in ((d,), (d, "--dry-run")):
+        for args in ((d,),):
             r = self.ask(*args)
             self.assertEqual(r.returncode, 1, r.stderr)
             self.assertEqual(r.stdout, "")
@@ -392,15 +414,15 @@ class TestCli(LLMCase):
 
     def test_directive_error_is_1(self):
         d = self.agent(info={"system": {"$env": "AOSTEST_NOPE"}})
-        r = self.ask(d, "--dry-run", env={k: v for k, v in os.environ.items() if k != "AOSTEST_NOPE"})
+        r = self.ask(d, env={k: v for k, v in os.environ.items() if k != "AOSTEST_NOPE"})
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertTrue(r.stderr.startswith("aos-llm-ask: EnvironmentVariableMissing: "), r.stderr)
 
     def test_env_is_the_process_environment(self):
         d = self.agent(info={"engine": {"model": {"$env": "AOSTEST_MODEL"}}})
-        r = self.ask(d, "--dry-run", env=dict(os.environ, AOSTEST_MODEL="from-outer"))
+        r = self.ask(d, env=dict(os.environ, AOSTEST_MODEL="from-outer"))
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.one_line(r)["model"], "from-outer")
+        self.assertNotIn("model", self.one_line(r))
 
     def test_missing_dir_is_2(self):
         r = self.ask(os.path.join(self.d, "nope"))
@@ -421,32 +443,19 @@ class TestCli(LLMCase):
     def test_extra_positional_is_2(self):
         self.assertEqual(self.ask(self.agent(), "extra").returncode, 2)
 
-    def test_engine_failure_is_3(self):
-        d = self.agent(history=[{"role": "user", "content": "hi"}])
-        for mode, hint in (("500", "500"), ("badjson", "JSON"), ("nochoices", "choices[0]"), ("nomessage", "message")):
-            self.llm.mode = mode
-            r = self.ask(d)
-            self.assertEqual(r.returncode, 3, r.stderr)
-            self.assertEqual(r.stdout, "")
-            self.assertTrue(r.stderr.startswith("aos-llm-ask: engine: "), r.stderr)
-            self.assertIn(hint, r.stderr)
-            self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
-
-    def test_cannot_connect_is_3(self):
-        r = self.ask(self.agent(info={"engine": {"endpoint": UNREACHABLE, "timeout_ms": 3000}}))
-        self.assertEqual(r.returncode, 3, r.stderr)
-        self.assertTrue(r.stderr.startswith("aos-llm-ask: engine: "), r.stderr)
-
-    def test_timeout_is_3(self):
-        self.llm.sleep = 1.0
-        r = self.ask(self.agent(info={"engine": {"timeout_ms": 150}}))
-        self.assertEqual(r.returncode, 3, r.stderr)
-        self.assertIn("逾時", r.stderr)
-
-    def test_engine_failure_500_body_kept_on_one_line(self):
+    def test_no_http_even_if_server_would_fail(self):
         self.llm.mode = "500"
         r = self.ask(self.agent())
-        self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.llm.requests, [])
+
+    def test_unreachable_endpoint_still_previews(self):
+        r = self.ask(self.agent(info={"engine": {"endpoint": UNREACHABLE}}))
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_sync_entry_points_removed(self):
+        self.assertFalse(hasattr(aos_llm_ask, "ask"))
+        self.assertFalse(hasattr(aos_llm_ask, "request_from_info"))
 
     def test_writes_nothing(self):
         d = self.agent(history=[{"role": "user", "content": "hi"}])
