@@ -375,6 +375,46 @@ class TestHistory(AgentCase):
 
 class TestTools(AgentCase):
 
+    def test_run_defaults_sync_without_modifying_raw_tool(self):
+        t = tool("plain")
+        r = self.load(tools={"t.json": [t]})
+        self.assertIsNone(r["tool_cpu"])
+        self.assertEqual(r["tools_raw"], [t])
+        r = self.load(tools={"t.json": [tool("plain", _run="sync")]})
+        self.assertNotIn("_run", r["tools"][0])
+
+    def test_cpu_tool_requires_tool_cpu_even_before_it_is_called(self):
+        e = self.bad("FieldTypeMismatch", tools={"t.json": [tool("slow", _run="cpu")]})
+        self.assertIn("tool_cpu", str(e))
+
+    def test_run_is_literal_enum_and_hidden_from_model(self):
+        t = tool("slow", _run="cpu")
+        r = self.load(info={"tool_cpu": "workers"}, tools={"t.json": [t]})
+        self.assertEqual(r["tools_raw"], [t])
+        self.assertNotIn("_run", r["tools"][0])
+        for value in ("", "CPU", None, True, 1, [], {}, {"$env": "RUN"}):
+            with self.subTest(value=value):
+                e = self.bad("ToolInvalid", info={"tool_cpu": "workers"},
+                             tools={"t.json": [tool("slow", _run=value)]})
+                self.assertIn("_run", str(e))
+
+    def test_tool_cpu_path_resolves_from_agent_and_does_not_read_cpu(self):
+        for value, expected in (("workers", os.path.join(self.d, "workers")),
+                                ("/tmp/cpu", "/tmp/cpu"), ("", self.d)):
+            with self.subTest(value=value):
+                r = self.load(info={"tool_cpu": value}, tools={"t.json": [tool("slow", _run="cpu")]})
+                self.assertEqual(r["tool_cpu"], expected)
+        self.write("conf/cpu.json", json.dumps({"path": {"$env": "CPU"}}))
+        r = self.load(info={"tool_cpu": {"$ref": "conf/cpu.json#/path"}}, env={"CPU": "workers"})
+        self.assertEqual(r["tool_cpu"], os.path.join(self.d, "workers"))
+
+    def test_tool_cpu_invalid_path_and_directive(self):
+        for value in (None, True, 1, [], {}):
+            with self.subTest(value=value):
+                self.bad("FieldTypeMismatch", info={"tool_cpu": value})
+        self.bad("EnvironmentVariableMissing", info={"tool_cpu": {"$env": "CPU"}}, env={})
+        self.bad("UnknownOption", info={"tool_cpu": {"$opt": "cpu", "$val": "workers"}})
+
     def test_timeout_preserved_raw_and_hidden_from_model(self):
         t = tool("slow", _timeout_ms=17)
         r = self.load(tools={"t.json": [t]})

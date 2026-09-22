@@ -79,7 +79,7 @@ aos-llm-ask [dir] [--dry-run]
 - **原樣讀寫、不解指示詞**（[agent.md §2](agent.md)）：模型回的 JSON 裡有 `$` 開頭的 key 也不會被誤認。
 - 整份讀、整份寫；記憶長了怎麼辦之後再說（先跟 proto4-7 一樣）。
 
-### 2.3 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`／`_timeout_ms`
+### 2.3 工具檔（`tools` 指到的檔，慣例放 `tools/`）：OpenAI tools 陣列 ＋ `_meta`／`_timeout_ms`／`_run`
 
 一份工具檔就是**一個 OpenAI chat/completions 的 `tools` 陣列**，一個元素一個工具、形狀照 OpenAI
 原樣；每個元素多一個 **`_meta`**，說「這個工具真的被叫到時怎麼跑」——內容就是**一份
@@ -105,6 +105,7 @@ posix inst**（[inst-posix.md](inst-posix.md) 整體形狀）：
   註解就用 `_` 開頭，不會漏給模型。
 - `_meta`：**必填**，一份 posix inst（`_metainfo` 可省＝posix v1）。缺了、或不是物件 → `ToolInvalid`。
 - `_timeout_ms`：可選，工具元素旁的正整數毫秒（bool 不算），沒寫＝`60000`；不解指示詞、型別不對＝`ToolInvalid`。保留在 `tools_raw`，送模型前跟其他 `_` key 一起拿掉。`_meta` 仍是純 inst。
+- `_run`：可選，字面 `"sync"`（預設）或 `"cpu"`，其他值＝`ToolInvalid`；不解指示詞，送模型前移除。`sync` 由 agent 執行，`cpu` 交給 `info.json` 頂層 `tool_cpu` 指到的 CPU；有任何 CPU 工具卻未設定 `tool_cpu`＝`FieldTypeMismatch`。路徑相對 agent 家、可解指示詞；讀驗層只解路徑，真正送件才驗 CPU 家。詳見 [agent.md](agent.md) 與 [aos-agent.md](aos-agent.md)。
 - 合併後 `function.name` 同名 → `ToolInvalid`（不默默蓋掉，寫錯一眼看得到）。
 - 工具檔頂層不是陣列 → `ToolInvalid`（記憶檔不是陣列才是 `NotAnArray`）。
 - 元素缺 `type`／`function`／`function.name` → `ToolInvalid`；`function` 裡其他東西（`description`、

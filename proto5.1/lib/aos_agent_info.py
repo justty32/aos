@@ -29,8 +29,9 @@
     history       記憶（陣列；檔不存在＝[]），每則照 aos-llm-ask.md §2.3 驗過、原樣
     history_path  記憶檔的絕對路徑
     tools         送模型用的工具表：所有檔接成一個陣列、每個元素去掉所有 `_` 開頭的 key
-    tools_raw     原始工具表：同順序、含 `_meta` 與可選的 `_timeout_ms`（跑工具時用）
+    tools_raw     原始工具表：同順序、含 `_meta` 與可選的 `_timeout_ms`／`_run`（跑工具時用）
     tool_paths    工具檔的絕對路徑，照 info.json 的順序
+    tool_cpu      工具 cpu 絕對路徑；沒寫＝None，有 cpu 工具時必填
     engine        {"endpoint", "model", "params", "api_key", "timeout_ms", "cpu"}
                   api_key／cpu 沒寫＝None；cpu 有寫＝相對 agent 解成絕對路徑
 """
@@ -111,6 +112,11 @@ def _load(obj, ctx, dir):
     info["tool_paths"] = [_abspath(dir, r) for r in rels]
     info["tools_raw"] = _read_tools(info["tool_paths"], rels)
     info["tools"] = [strip_private(t) for t in info["tools_raw"]]
+
+    tool_cpu = _path_field(obj, "tool_cpu", None, top)
+    if tool_cpu is None and any(t.get("_run", "sync") == "cpu" for t in info["tools_raw"]):
+        raise AgentError("FieldTypeMismatch", "info.json 有 _run:cpu 的工具，必須寫 tool_cpu 路徑")
+    info["tool_cpu"] = _abspath(dir, tool_cpu) if tool_cpu is not None else None
 
     info["engine"] = _engine(obj, top, dir)
     return info
@@ -330,7 +336,7 @@ def _read_tools(paths, rels):
 
 def _check_tool(t, where):
     """一個工具元素：`type`（字串）、`function`（物件）、`function.name`（非空字串）、`_meta`（物件，
-    不准有 `stdin`／`stdout`）、可選的 `_timeout_ms`（正整數）。其他東西不驗、原樣。回工具名。"""
+    不准有 `stdin`／`stdout`）、`_timeout_ms`（正整數）、`_run`（sync／cpu）。其他東西不驗、原樣。回工具名。"""
     if not isinstance(t, dict):
         raise AgentError("ToolInvalid", "%s 要是物件，不是 %s" % (where, type(t).__name__))
     if not isinstance(t.get("type"), str):
@@ -354,6 +360,8 @@ def _check_tool(t, where):
         if not (isinstance(v, int) and not isinstance(v, bool) and v > 0):
             raise AgentError("ToolInvalid", "%s（%s）的 _timeout_ms 要是正整數（毫秒），不是 %r"
                              % (where, name, v))
+    if t.get("_run", "sync") not in ("sync", "cpu"):
+        raise AgentError("ToolInvalid", "%s（%s）的 _run 只認字面的 sync／cpu" % (where, name))
     return name
 
 
