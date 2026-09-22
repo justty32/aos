@@ -29,7 +29,7 @@ import os
 
 from aos_directives import Context, DirectiveError, Document, parse_options, resolve, resolve_located
 
-__all__ = ["InstError", "OPTIONS", "FIELDS", "PATH_FIELDS", "load"]
+__all__ = ["InstError", "OPTIONS", "FIELDS", "PATH_FIELDS", "load", "load_obj"]
 
 FIELDS = ("argv", "stdin", "stdout", "stderr", "exit", "cwd", "envs")
 PATH_FIELDS = ("stdin", "stdout", "stderr", "exit")
@@ -84,6 +84,18 @@ def load(path, base, env=None):
         raise InstError("JsonSyntax", "JSON 語法錯：%s" % e)
     try:
         return _load(obj, Context(Document(path, obj), base_dir=base, env=env), base)
+    except DirectiveError as e:
+        raise InstError(e.code, e.msg)
+
+
+def load_obj(obj, base, env=None):
+    """讀驗記憶體裡的一份 inst（例如工具的 `_meta`），回傳形狀與 `load()` 相同。
+
+    `base` 是 inst 的家；`$ref:""` 指這份純記憶體文件，其他解析規則共用 `_load`。
+    """
+    base = os.path.abspath(base)
+    try:
+        return _load(obj, Context(Document(None, obj), base_dir=base, env=env), base)
     except DirectiveError as e:
         raise InstError(e.code, e.msg)
 
