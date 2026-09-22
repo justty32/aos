@@ -18,7 +18,7 @@ proto5 那邊 2026-09-22 做了四份調查，冒出 23 題要使用者拍板（
 |---|---|---|---|
 | 1 | llm cpu（資料夾＋`aos-llm-cpu` 一次 tick 問一件）、aos-agent 的 `think` 改成丟請求＋`waits` 等結果、兩個逾時關卡（工具 `_timeout_ms` 60 秒、引擎連敗 3 次→`continue.json` 暫停） | [notes/stage1-task.md](notes/stage1-task.md) | 做完 |
 | 2 | 共用 CPU 佇列、tool cpu、工具 `_run: "cpu"`、act 送收；請求對帳只評估 | [notes/stage2-task.md](notes/stage2-task.md) | 做完 |
-| 3 | aos-run／aos-daemon／aos-kernel 的 proto5 版（照 daemon／kernel 總結：擋重疊、砍到底、具名代號、沒有 module） | 之後 | — |
+| 3 | aos-run／aos-daemon／aos-kernel 的 proto5 版（照 daemon／kernel 總結：擋重疊、砍到底、具名代號、沒有 module） | [notes/stage3-task.md](notes/stage3-task.md) | 做完 |
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -s proto5.1/lib/test
@@ -27,7 +27,9 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -
 
 第 1 段：635 條 Python 測試全綠、C++ ctest 8/8；LM Studio `qwen/qwen3-1.7b` 已真跑 now 工具往返。
 第 2 段：686 條 Python 測試全綠、C++ ctest 8/8；LM Studio 與 `sleep 2; date` 的 tool CPU 往返完成。
-回報與逐次退出碼見 [stage1-report](notes/stage1-report.md)、[stage2-report](notes/stage2-report.md)；實作決定、KISS 限制與對帳評估見 [findings](notes/findings.md) #18～#26。
+第 3 段：760 條 Python 測試全綠、C++ ctest 8/8；daemon＋三顆 kernel CPU 的 agent／LLM／tool 往返已真跑通。
+完整交付、ls／最後記憶／停止驗證見 [stage3-report](notes/stage3-report.md)，可重跑腳本見 [stage3-demo.py](notes/stage3-demo.py)。
+回報與逐次退出碼見 [stage1-report](notes/stage1-report.md)、[stage2-report](notes/stage2-report.md)；實作決定、KISS 限制與對帳評估見 [findings](notes/findings.md)（第 2 段 #18～#26，第 3 段 #27～#35）。
 
 ## 規範
 
@@ -44,5 +46,18 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -
 | [spec/tool-cpu.md](spec/tool-cpu.md) | 已解 inst／stdin／timeout_ms 與工具執行結果 | 第 2 段已實作 |
 | [spec/aos-tool-cpu.md](spec/aos-tool-cpu.md) | 一次收屍再執行一個工具請求、退出碼 | 第 2 段已實作 |
 | [spec/aos-llm-cpu.md](spec/aos-llm-cpu.md) | 一次問一件的薄層與退出碼；共用佇列另見 cpu-queue | 第 2 段已實作 |
+| [spec/aos-run.md](spec/aos-run.md) | 完成後計時、status 事件、第一次 TERM 即終止子程式 | 第 3 段 |
+| [spec/daemon-home.md](spec/daemon-home.md) | daemon 家、四個 op、請求回音與最小 state | 第 3 段 |
+| [spec/aos-daemon.md](spec/aos-daemon.md) | daemon／ctl、done 先寫、停止與具名錯誤 | 第 3 段 |
+| [spec/kernel-home.md](spec/kernel-home.md) | kernel info、CPU／queue／waiting、rm syscall | 第 3 段 |
+| [spec/aos-kernel.md](spec/aos-kernel.md) | init／boot／tick／add／rm／ls、排程與防重疊 | 第 3 段 |
 
 逐檔職責、API 與測試表見 [lib/README.md](lib/README.md)，命令列入口在 [cli/](cli/)。
+
+## 程式
+
+| 模組 | 命令列入口 | 做什麼 |
+|---|---|---|
+| [lib/aos_run.py](lib/aos_run.py) | `cli/aos-run` | 反覆跑一個目標，回報每次開始／完成 |
+| [lib/aos_daemon.py](lib/aos_daemon.py) | `cli/aos-daemon`、`cli/aos-daemon-ctl` | 管理 aos-run 的生命週期 |
+| [lib/aos_kernel.py](lib/aos_kernel.py) | `cli/aos-kernel` | 把普通 inst 行程排到 CPU；LLM／tool CPU 不需 module |

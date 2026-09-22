@@ -31,10 +31,11 @@ import os
 import signal
 import subprocess
 import sys
+import time
 
 import aos_inst
 
-__all__ = ["run_target", "run_inst", "InstResult", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
+__all__ = ["run_target", "run_inst", "terminate", "InstResult", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
 
 DEFAULT_DIR_TARGET = os.path.join(".aos", "inst.json")
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
@@ -151,9 +152,14 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
     """
     try:
         inst = aos_inst.load(target, base)
+    except UnicodeError as e:
+        return _err(1, AOS, "JsonSyntax: %s 不是 UTF-8：%s" % (target, e))
     except aos_inst.InstError as e:
         return _err(1, AOS, str(e))
-    return _execute_inst(inst, timeout_ms, on_spawn, stderr)
+    try:
+        return _execute_inst(inst, timeout_ms, on_spawn, stderr)
+    except ValueError as e:
+        return _err(1, AOS, "FieldTypeMismatch: 無法執行 inst：%s" % e)
 
 
 def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None, output=None,
@@ -237,6 +243,8 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     try:
         p = subprocess.Popen(argv, cwd=cwd, env=env, start_new_session=True,
                              stdin=fin, stdout=fout, stderr=ferr)
+    except ValueError as e:
+        return _err(1, AOS, "FieldTypeMismatch: 無法啟動子程式：%s" % e)
     except PermissionError as e:
         return _finish(126, exit_path, "沒有執行權：%s（exit 126）" % e, exit_append)
     except (FileNotFoundError, NotADirectoryError) as e:
@@ -246,29 +254,44 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
 
     if on_spawn:
         on_spawn(p)                                 # 開起來了：aos-run 要拿得到它才砍得掉
-    limit = (timeout_ms / 1000.0) if timeout_ms else None
+    deadline = time.monotonic() + timeout_ms / 1000.0 if timeout_ms else None
     captured = b""
-    try:
-        if input_bytes is None:
-            p.wait(timeout=limit)
-        else:
-            captured, _ = p.communicate(input=input_bytes, timeout=limit)
-    except subprocess.TimeoutExpired:
-        if timed_out is not None:
-            timed_out[0] = True
-        _sig_group(p, signal.SIGTERM)               # 先好好講：整個 process group
+    pending_input = input_bytes
+    while not getattr(p, "_aos_stop", None):
+        limit = max(0, deadline - time.monotonic()) if deadline is not None else None
+        if on_spawn is not None:
+            limit = min(limit, 0.05) if limit is not None else 0.05
         try:
             if input_bytes is None:
-                p.wait(timeout=GRACE)
+                p.wait(timeout=limit)
             else:
-                captured, _ = p.communicate(timeout=GRACE)
+                captured, _ = p.communicate(input=pending_input, timeout=limit)
+            break
         except subprocess.TimeoutExpired:
-            _sig_group(p, signal.SIGKILL)
+            pending_input = None
+            if deadline is not None and time.monotonic() >= deadline:
+                if timed_out is not None:
+                    timed_out[0] = True
+                terminate(p)
+    if getattr(p, "_aos_stop", None):
+        until, groups = p._aos_stop
+        # 父進程先退出也給後代同一個寬限；nested run_inst 另開的 session 也在快照裡。
+        try:
+            remaining = max(0, until - time.monotonic())
             if input_bytes is None:
-                p.wait()
+                p.wait(timeout=remaining)
             else:
-                captured, _ = p.communicate()
-        _sig_group(p, signal.SIGKILL)               # 直接子行程死了不代表群組空了
+                captured, _ = p.communicate(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            pass
+        # 沒有活後代就不必等滿；killpg(0) 把 zombie 當存在，至多多等兩秒。
+        while time.monotonic() < until and any(_group_exists(g) for g in groups):
+            time.sleep(min(0.02, max(0, until - time.monotonic())))
+        _signal_groups(groups, signal.SIGKILL)
+        if input_bytes is None:
+            p.wait()
+        else:
+            captured, _ = p.communicate()
     if output is not None:
         output.append(captured)
     code = p.returncode
@@ -277,12 +300,54 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     return _finish(code if code >= 0 else 128 + (-code), exit_path, None, exit_append)
 
 
-def _sig_group(p, sig):
-    """砍整個 process group：留在群組裡的孫行程要跟著走。空群組＝ESRCH，無害。"""
+def terminate(p):
+    """第一次取消：快照後代 groups、TERM；_spawn 在兩秒期限後 KILL 並收屍。
+
+    Linux /proc 補上 nested run_inst 的 setsid 邊界；其他 POSIX 至少處理原 group。
+    不追捕終止開始後才新生或已脫離親子樹的 daemon。
+    """
+    if getattr(p, "_aos_stop", None):
+        return
+    groups = {p.pid}
+    parents = {}
     try:
-        os.killpg(p.pid, sig)                      # setsid 後 pgid＝pid；父行程收屍後仍能砍孫行程
+        for name in os.listdir("/proc"):
+            if not name.isdigit():
+                continue
+            try:
+                with open("/proc/%s/stat" % name) as f:
+                    fields = f.read().rsplit(")", 1)[1].split()
+                parents[int(name)] = (int(fields[1]), int(fields[2]))
+            except (OSError, ValueError, IndexError):
+                continue
     except OSError:
         pass
+    descendants = {p.pid}
+    while True:
+        added = {pid for pid, (parent, _) in parents.items() if parent in descendants} - descendants
+        if not added:
+            break
+        descendants.update(added)
+    groups.update(parents[pid][1] for pid in descendants if pid in parents)
+    groups.discard(os.getpgrp())
+    p._aos_stop = (time.monotonic() + GRACE, groups)
+    _signal_groups(groups, signal.SIGTERM)
+
+
+def _signal_groups(groups, sig):
+    for group in groups:
+        try:
+            os.killpg(group, sig)
+        except ProcessLookupError:
+            pass
+
+
+def _group_exists(group):
+    try:
+        os.killpg(group, 0)
+        return True
+    except ProcessLookupError:
+        return False
 
 
 def _finish(status, exit_path, note, exit_append=False):

@@ -1,11 +1,11 @@
-# proto5.1/lib — 九支 Python 模組
+# proto5.1/lib — 十二支 Python 模組
 
 ← [proto5.1 README](../README.md)｜規範：[spec/directives.md](../spec/directives.md)、
 [spec/inst-posix.md](../spec/inst-posix.md)、[spec/exec.md](../spec/exec.md)、
 [spec/agent.md](../spec/agent.md)、[spec/aos-llm-ask.md](../spec/aos-llm-ask.md)、[spec/aos-agent.md](../spec/aos-agent.md)
 
-Python 3.12、只用標準庫。九個檔，一層疊一層、下層不知道上層（inst／exec 一條線，agent_info／llm_ask
-另一條線，兩條線都踩在 aos_directives 上，aos_cpu 提供共用佇列，llm_cpu／tool_cpu 各自接 llm_ask／exec，最後由 aos_agent 接起來）：
+Python 3.12、只用標準庫。十二個檔，一層疊一層、下層不知道上層（inst／exec 一條線，agent_info／llm_ask
+另一條線，兩條線都踩在 aos_directives 上，aos_cpu 提供共用佇列，llm_cpu／tool_cpu 各自接 llm_ask／exec，最後由 aos_agent 接起來；run 疊 exec、daemon 管 run、kernel 使用 daemon）：
 
 | 檔 | 職責 | 規範 |
 |---|---|---|
@@ -18,9 +18,12 @@ Python 3.12、只用標準庫。九個檔，一層疊一層、下層不知道上
 | [`aos_llm_cpu.py`](aos_llm_cpu.py) | LLM 薄層：驗 engine／body，以 `aos_llm_ask.call()` 執行；入口 [`../cli/aos-llm-cpu`](../cli/aos-llm-cpu) | [llm-cpu.md](../spec/llm-cpu.md)、[aos-llm-cpu.md](../spec/aos-llm-cpu.md) |
 | [`aos_tool_cpu.py`](aos_tool_cpu.py) | 工具薄層：驗已解好的 inst，以 `aos_exec.run_inst()` 執行；入口 [`../cli/aos-tool-cpu`](../cli/aos-tool-cpu) | [tool-cpu.md](../spec/tool-cpu.md)、[aos-tool-cpu.md](../spec/aos-tool-cpu.md) |
 | [`aos_agent.py`](aos_agent.py) | `step()` 先判 waits，再走 idle／think／act 一格；記憶、input 消化、state 原子寫回與自癒；think／act 可同步或交 cpu，混合工具批次收回、工具限時、引擎連敗暫停；入口 [`../cli/aos-agent`](../cli/aos-agent) | [aos-agent.md](../spec/aos-agent.md)、[agent.md](../spec/agent.md) §4 |
+| [`aos_run.py`](aos_run.py) | 反覆呼叫 run_target、完成後間隔、status-fd 事件、第一次 TERM 終止子孫 | [aos-run.md](../spec/aos-run.md) |
+| [`aos_daemon.py`](aos_daemon.py) | 四 op 檔案請求、管理 runner、原子 state、done 先寫與 ctl | [daemon-home.md](../spec/daemon-home.md)、[aos-daemon.md](../spec/aos-daemon.md) |
+| [`aos_kernel.py`](aos_kernel.py) | kernel 家與 inst 讀驗、FIFO／quantum／100／101／bad_after 排程、rm syscall與防重疊 | [kernel-home.md](../spec/kernel-home.md)、[aos-kernel.md](../spec/aos-kernel.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -s proto5.1/lib/test      # 686 條全綠（directives 101、inst 139、exec 94、agent_info 98、llm_ask 54、agent 141、llm_cpu 29、cpu 14、tool_cpu 16）
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -s proto5.1/lib/test      # 760 條全綠（既有 686＋run 24＋daemon 25＋kernel 25）
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -360,10 +363,60 @@ code = aos_agent.step("agent-bob", env=None)  # 0＝做了一格，101＝在等�
 all 為真、any 為假。既有訊息驗法只驗 tool_calls 是陣列，殘缺 call 當找不到工具；id 缺了用空字串，
 非字串轉成字串，避免新寫的 tool 訊息下次讀不回來。
 
+## aos_run — 反覆執行
+
+`main(argv=None)` 對同一目標反覆呼叫 `aos_exec.run_target()`；旗標、預設、事件與停止理由見
+[aos-run](../spec/aos-run.md)。`kind=aos` 的 library code 1 在事件與 stop-exit 判斷時轉成 125；
+run 自己正常停回 0、用法錯回 2。沒有額外的 runner 家或狀態檔。
+
+exec 新增 `terminate(popen)`，供第一次 TERM 與 timeout 共用：TERM 直接子程式 group，Linux
+另由 `/proc` 快照後代 groups，兩秒後 KILL、收屍。`run_target`／`run_inst` 的回傳形狀不變；
+主動取消不設 timed_out。Linux／其他 POSIX 及脫離程序的邊界見 [findings #28](../notes/findings.md)。
+若已有 `TARGET.lock`，run 用 flock 包住 start 到 done；沒有就不建立。kernel 用同一把鎖換槽，
+並可在 sidecar 留 yield 意圖，要求 run 在本次完成後等交接，避免短間隔或 interval=0 飢餓。
+
+## aos_daemon — 管 runner
+
+```python
+import aos_daemon
+state = aos_daemon.read_state(path=None)  # AOS_DAEMON_HOME，預設 ~/.aos-daemon
+entry = aos_daemon.request("add", target="/abs/job.json", args=["--interval-ms", "1000"])
+last = aos_daemon.request("remove", target="/abs/job.json")
+aos_daemon.request("stop")
+```
+
+`home(path=None)` 回正規化家路徑；`serve(path=None)` 前景迴圈，`main`／`ctl_main` 是兩個 CLI。
+`request(op, target=None, args=None, home=None, timeout=10)` 回 result，失敗丟帶 code／msg 的
+`DaemonError`；ls 直接讀 state。remove 等 runner 收屍才回最後 entry；stop 同時停所有 runner，
+清空 state／pidfile 後才回音。done 先寫再刪原單，既有 done 不重做。`.daemon.lock` 防同家雙開。
+完整格式與限制見 [daemon-home](../spec/daemon-home.md)、[aos-daemon](../spec/aos-daemon.md)。
+
+## aos_kernel — 排程普通 inst
+
+```python
+import aos_kernel
+root, cfg = aos_kernel.load("K")
+aos_kernel.init("new-K", ncpu=3)
+name = aos_kernel.add("K", "agent/inst.json", name="agent")
+aos_kernel.boot("K")
+aos_kernel.tick("K")                   # CLI tick 只用 cwd
+print(aos_kernel.status("K"))
+aos_kernel.remove("K", "agent")       # rm syscall，最多等十秒
+```
+
+`load(dir, env=None)` 解 info 指示詞，回 Path／設定；`init` 拒覆蓋已有路徑。add 在來源家完整 load
+inst、保存可搬移的等價 v1 JSON；raw procs 也先完整 load。kernel 只有 cpus／queue／waiting，
+waiting 保存換下行程的等待／失敗計數；100 完成、101 讓位、quantum 與 bad_after 見
+[kernel-home](../spec/kernel-home.md)。`.kernel.lock` 序列化 tick／add；CPU 穩定 sidecar 鎖加
+remove 回音排空舊 runner 後才換檔，`running=true` 或拿不到槽鎖這輪不換；有換人需求則
+先留 yield 意圖，讓 runner 完成本次後等待下一格交接。
+`KernelError` 帶 code／msg，CLI 也把 daemon 的錯誤轉為 `aos-kernel:` 前綴。沒有 module；
+LLM CPU、tool CPU、agent 都是普通行程。API 與排程限制見 [aos-kernel](../spec/aos-kernel.md)。
+
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -s proto5.1/lib/test      # 686 條；從 repo 根執行
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -s proto5.1/lib/test      # 760 條；從 repo 根執行
 ```
 
 | 檔 | 條數 | 開不開進程 |
@@ -377,4 +430,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -
 | `test/test_llm_cpu.py` | 29 | FakeLLM 成功／失敗、排序、讀驗、重名、收屍與遲到回覆、CLI；真兩進程同搶一單只打一次 HTTP、Barrier 驗 HTTP 並行 |
 | `test/test_cpu.py` | 14 | 共用層交件、三處重名、認領、收屍、原子結果 I/O、執行鎖外並行與遲到回覆 |
 | `test/test_tool_cpu.py` | 16 | 真工具 stdin／stdout、非零／timeout、壞 payload、CPU 環境邊界、收屍、CLI、真兩進程同搶一單 |
+| `test/test_run.py` | 24 | 真進程事件／旗標、完成後間隔、首次 TERM／timeout 子孫與跨 session 工具、穩定槽鎖／yield 交接 |
+| `test/test_daemon.py` | 25 | 真 daemon／ctl lifecycle、具名錯誤、done 先寫、重播、並行停機／五秒 fallback、I/O 與 signal 故障清理、home 傳遞 |
+| `test/test_kernel.py` | 25 | 真 boot／tick／rm、完整 inst、FIFO／100／101／連敗跨換人、過期快照、3 proc／2 CPU 防重疊與 15 ms／0 ms 無飢餓 |
 | `test/_util.py` | — | 共用：暫存資料夾、寫 inst、`InstCase`（直接 load）、`ExecCase`（開進程）、`AgentCase`（寫一個 agent 資料夾、直接 load、開 `aos-llm-ask` 進程） |
