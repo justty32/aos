@@ -19,7 +19,7 @@ DEFAULTS = {"interval_ms": 1000, "timeout_ms": 0, "quantum": 5,
             "done_exit": 100, "wait_exit": 101, "bad_after": 10, "kill_tree": False}
 CLI = str(Path(__file__).resolve().parent.parent / "cli" / "aos-kernel")
 IDLE = {"argv": [sys.executable, "-c", "pass"]}
-COUNTERS = ("waiting", "wait_runs", "bad_runs", "bad_exit", "aos_ticks")
+COUNTERS = ("waiting", "wait_runs", "bad_runs", "aos_ticks")
 
 
 class KernelError(Exception):
@@ -62,6 +62,7 @@ def load(dir, env=None):
     if not path.is_file():
         raise KernelError("NotAHome", "%s 沒有 kernel info.json" % root)
     obj = _read(path)
+    source = obj
     try:
         top = resolve_located(obj, Context(Document(str(path), obj), base_dir=str(root), env=env), [])
         obj = top.value
@@ -76,6 +77,8 @@ def load(dir, env=None):
             raise KernelError("NotAHome", "_metainfo 必須是 kernel 第 1 版")
         cfg = {key: _field(obj, key, top, value).value for key, value in DEFAULTS.items()}
         cfg["ncpu"] = _field(obj, "ncpu", top).value
+        # boot 寫在最外層的固定 binding，不隨整份 $ref 被吃掉。
+        daemon = source["daemon"] if "daemon" in source else _field(obj, "daemon", top).value
     except DirectiveError as e:
         raise KernelError("FieldTypeMismatch", str(e))
     for key, value in cfg.items():
@@ -88,6 +91,9 @@ def load(dir, env=None):
             raise KernelError("FieldTypeMismatch", "%s 必須是 >= %d 的整數" % (key, minimum))
     if cfg["done_exit"] > 255 or cfg["wait_exit"] > 255 or cfg["done_exit"] == cfg["wait_exit"]:
         raise KernelError("FieldTypeMismatch", "done_exit 要是 0～255（0 關閉），wait_exit 要是不同的 1～255")
+    cfg["daemon"] = daemon
+    if cfg["daemon"] is not None and (not isinstance(cfg["daemon"], str) or not os.path.isabs(cfg["daemon"])):
+        raise KernelError("FieldTypeMismatch", "daemon 必須是絕對路徑")
     return root, cfg
 
 
@@ -128,7 +134,7 @@ def _state(root, cfg):
             continue
         if not isinstance(cur, dict):
             raise KernelError("FieldTypeMismatch", "cpu entry 必須是物件或 null")
-        name = _name(cur.get("pid"))
+        name = _name(cur.get("name"))
         if name in seen:
             raise KernelError("FieldTypeMismatch", "同一行程不能在兩顆 cpu：%s" % name)
         seen.add(name)
@@ -151,7 +157,7 @@ def _state(root, cfg):
 def _counters(cur):
     if not isinstance(cur, dict):
         raise KernelError("FieldTypeMismatch", "行程計數必須是物件")
-    for key in ("wait_runs", "bad_runs", "bad_exit", "aos_ticks"):
+    for key in ("wait_runs", "bad_runs", "aos_ticks"):
         if key in cur and (type(cur[key]) is not int or cur[key] < 0):
             raise KernelError("FieldTypeMismatch", "%s 必須是非負整數" % key)
     if "waiting" in cur and type(cur["waiting"]) is not bool:
@@ -182,11 +188,30 @@ def _args(cfg):
     return ["--interval-ms", str(cfg["interval_ms"]), "--timeout-ms", str(cfg["timeout_ms"])]
 
 
+def _daemon(cfg):
+    if cfg["daemon"] is None:
+        raise KernelError("NotRunning", "請先 boot，記下 daemon 家")
+    return aos_daemon._check_home(cfg["daemon"])
+
+
 def boot(dir):
     root, cfg = load(dir)
-    # timeout_ms 是工作格的限制，不砍 kernel 自己。
-    return aos_daemon.request("add", target=str(root / "inst.json"),
-                              args=["--interval-ms", str(cfg["interval_ms"])], kill_tree=cfg["kill_tree"])
+    daemon = aos_daemon._check_home(aos_daemon.home())
+    if not aos_daemon._active(daemon):
+        raise aos_daemon.DaemonError("NotRunning", "%s 的 daemon 沒在跑" % daemon)
+    original = _read(root / "info.json")
+    info = {**original, "daemon": str(daemon)}
+    changed = info != original
+    if changed:
+        _write(root / "info.json", info)
+    try:
+        # timeout_ms 是工作格的限制，不砍 kernel 自己。
+        return aos_daemon.request("add", home=daemon, target=str(root / "inst.json"),
+                                  args=["--interval-ms", str(cfg["interval_ms"])], kill_tree=cfg["kill_tree"])
+    except (aos_daemon.DaemonError, OSError):
+        if changed:
+            _write(root / "info.json", original)
+        raise
 
 
 def _inst(path):
@@ -224,7 +249,7 @@ def add(dir, inst_path, name=None):
     with _lock(root / ".kernel.lock"):
         st = _state(root, cfg)
         used = {p.stem for folder in ("procs", "procs/done", "procs/bad") for p in (root / folder).glob("*.json")}
-        used.update(cur["pid"] for cur in st["cpus"].values() if cur)
+        used.update(cur["name"] for cur in st["cpus"].values() if cur)
         if name is None:
             name = str(max([int(n) for n in used if n.isdigit()] + [0]) + 1)
         _name(name)
@@ -235,10 +260,11 @@ def add(dir, inst_path, name=None):
 
 
 def remove(dir, name, timeout=10):
-    root, _ = load(dir)
+    root, cfg = load(dir)
+    _daemon(cfg)
     _name(name)
     file = "%d-%d-%s.json" % (time.time_ns(), os.getpid(), secrets.token_hex(2))
-    _write(root / "syscalls" / file, {"op": "rm", "pid": name})
+    _write(root / "syscalls" / file, {"op": "rm", "name": name})
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         done = root / "syscalls/done" / file
@@ -251,7 +277,7 @@ def remove(dir, name, timeout=10):
                 raise KernelError(result.get("code", "NotRunning"), result["msg"])
             return result
         time.sleep(.02)
-    raise KernelError("NotRunning", "kernel 10 秒內未回覆，rm 請求仍保留")
+    raise KernelError("ReadFailed", "kernel %g 秒內未回覆，rm 請求仍保留" % timeout)
 
 
 def _save(root, st):
@@ -274,8 +300,6 @@ def _observe(cfg, cur, entry):
     cur["wait_runs"] = cur.get("wait_runs", 0) + 1 if cur["waiting"] else 0
     bad = kind == "child" and code not in (0, cfg["done_exit"], cfg["wait_exit"])
     cur["bad_runs"] = cur.get("bad_runs", 0) + 1 if bad else 0
-    if bad:
-        cur["bad_exit"] = code
     cur["aos_ticks"] = cur.get("aos_ticks", 0) + 1 if kind == "aos" else 0
 
 
@@ -289,11 +313,11 @@ def _retire(cfg, cur, entry):
 
 def _run(entry):
     if entry is None:
-        return {"busy": False, "target": None, "runs": 0, "last_exit": None, "last_kind": None}
+        return {"busy": False, "target": None, "last_target": None, "runs": 0, "last_exit": None, "last_kind": None}
     path = Path(entry["home"]) / "run.json"
     # add 回音可能早於 runner 第一次寫狀態；未知期間先不排新工作。
     if not path.exists():
-        return {"busy": True, "target": None, "runs": 0, "last_exit": None, "last_kind": None}
+        return {"busy": True, "target": None, "last_target": None, "runs": 0, "last_exit": None, "last_kind": None}
     return _read(path)
 
 
@@ -327,8 +351,8 @@ def _syscalls(root, cfg, st, runs, notes):
             call = _read(path)
             if not isinstance(call, dict) or call.get("op") != "rm":
                 raise KernelError("FieldTypeMismatch", "syscall 只接受 rm")
-            name = _name(call.get("pid"))
-            n = next((n for n, cur in st["cpus"].items() if cur and cur["pid"] == name), None)
+            name = _name(call.get("name"))
+            n = next((n for n, cur in st["cpus"].items() if cur and cur["name"] == name), None)
             if n is not None:
                 _assign(root / "cpus" / (n + ".json"), root / "idle.json")
                 st["cpus"][n] = None
@@ -350,7 +374,7 @@ def _syscalls(root, cfg, st, runs, notes):
 
 
 def _queue(root, st, notes):
-    on_cpu = {cur["pid"] for cur in st["cpus"].values() if cur}
+    on_cpu = {cur["name"] for cur in st["cpus"].values() if cur}
     present = []
     for path in sorted((root / "procs").glob("*.json"), key=lambda p: _name_key(p.stem)):
         if path.stem in on_cpu:
@@ -362,7 +386,8 @@ def _queue(root, st, notes):
             os.replace(path, root / "procs/bad" / path.name)
             notes.append("bad %s: %s" % (path.stem, e))
             continue
-        _write(path, raw)
+        if _read(path) != raw:
+            _write(path, raw)
         present.append(path.stem)
     st["queue"] = [p for p in st["queue"] if p in present]
     st["queue"].extend(p for p in present if p not in st["queue"])
@@ -374,7 +399,7 @@ def _schedule(root, cfg, st, runs, notes):
         path = root / "cpus" / (n + ".json")
         entry = runs.get(str(path))
         status = _run(entry)
-        matching = cur and not status["busy"] and status["target"] == str(root / "procs" / (cur["pid"] + ".json"))
+        matching = cur and status.get("last_target") == str(root / "procs" / (cur["name"] + ".json"))
         if matching:
             _observe(cfg, cur, status)
         retire = _retire(cfg, cur, status) if matching else None
@@ -384,7 +409,7 @@ def _schedule(root, cfg, st, runs, notes):
             # 先撤掉舊目標，runner 下次便不會再讀到它；不等這次跑完。
             _assign(path, root / "idle.json")
             if cur:
-                name = cur["pid"]
+                name = cur["name"]
                 if retire:
                     os.replace(root / "procs" / (name + ".json"), root / "procs" / retire / (name + ".json"))
                     st["waiting"].pop(name, None)
@@ -402,7 +427,7 @@ def _schedule(root, cfg, st, runs, notes):
                 baseline = status["runs"] + int(status["busy"])
                 _assign(path, target)
                 st["queue"].remove(name)
-                st["cpus"][n] = {"pid": name, "since": time.time(), "runs_at": baseline,
+                st["cpus"][n] = {"name": name, "runs_at": baseline,
                                  "seen_runs": baseline, **st["waiting"].pop(name, {})}
                 notes.append("cpu%s=%s" % (n, name))
                 break
@@ -415,7 +440,7 @@ def _schedule(root, cfg, st, runs, notes):
             if st["cpus"][n]:
                 st["cpus"][n]["runs_at"] = st["cpus"][n]["seen_runs"] = 0
                 _save(root, st)
-            runs[str(path)] = aos_daemon.request("add", target=str(path), args=_args(cfg), kill_tree=cfg["kill_tree"])
+            runs[str(path)] = aos_daemon.request("add", home=_daemon(cfg), target=str(path), args=_args(cfg), kill_tree=cfg["kill_tree"])
 
 
 def tick(dir="."):
@@ -424,7 +449,7 @@ def tick(dir="."):
         if not acquired:
             return 0
         st = _state(root, cfg)
-        daemon = aos_daemon.read_state()
+        daemon = aos_daemon.read_state(_daemon(cfg))
         if not daemon.get("pid"):
             raise KernelError("NotRunning", "daemon 沒在跑")
         runs = daemon["runs"]
@@ -440,15 +465,16 @@ def tick(dir="."):
 def status(dir):
     root, cfg = load(dir)
     st = _state(root, cfg)
+    daemon_home = _daemon(cfg) if cfg["daemon"] is not None else None
     try:
-        daemon = aos_daemon.read_state()
+        daemon = aos_daemon.read_state(daemon_home) if daemon_home is not None else {"pid": None, "runs": {}}
     except aos_daemon.DaemonError:
         daemon = {"pid": None, "runs": {}}
     lines = ["kernel %s ncpu=%d quantum=%d daemon=%s" % (root, cfg["ncpu"], cfg["quantum"], daemon["pid"]),
              "CPU PROC RUNNING RUNS LAST_EXIT WAIT BAD"]
     for n, cur in st["cpus"].items():
         entry = _run(daemon["runs"].get(str(root / "cpus" / (n + ".json"))))
-        lines.append("%s %s %s %s %s %s %s" % (n, cur["pid"] if cur else "idle", entry.get("busy", False),
+        lines.append("%s %s %s %s %s %s %s" % (n, cur["name"] if cur else "idle", entry.get("busy", False),
                      entry.get("runs", 0), entry.get("last_exit"), (cur or {}).get("waiting", False),
                      (cur or {}).get("bad_runs", 0)))
     lines.append("queue: " + (" ".join(st["queue"]) or "-"))

@@ -259,3 +259,63 @@ runner 預設首次 TERM／INT 只請它做完本次，第二次才 TERM 直接�
 第一輪完整測試 780 條、109.640 秒，只有 `test_swap_busy_two_second_job_blocks_other_cpu_at_zero_interval` 失敗：最後預期 CPU1 是 X，實際是 Y。X 原本的兩秒工作已完成，替代者 Y 卻是立即結束的 pass；interval=0 下，下一次測試觀察前 Y 已用完量子，kernel 合法把 X 排回 CPU0、Y 排到 CPU1。測試只等「CPU1 非空」就認定「X 已移往 CPU1」，這個前提不成立，失敗本身不是重疊證據。
 
 修正只把測試的替代者 Y 也設成兩秒工作，讓 X 舊工作完成後 CPU0 仍由 Y 佔用，才有確定條件驗 X 遷往 CPU1。X 維持兩秒、interval 維持 0，等待期限與 busy／target／無重疊斷言都保留，排程程式不為測試改規則。首輪失敗 log 與修後完整測試數字見 stage4-report.md。
+
+## 45. daemon 死掉後先等本次工作完成，舊 runner 活著就拒絕重啟
+
+第 5 段照 R1：有 `--home` 的 runner 記住啟動時的父 PID，每圈與間歇檢查；父 PID 改變就不再開下一次，正在跑的工作仍完成。不加心跳、收養或子程序登記表。daemon 在持家鎖後掃 `runners/*/run.json`，任何 pid 仍可被 `kill(pid, 0)` 看見便回 AlreadyRunning；權限不足也保守視為存活。舊 run.json 壞 JSON、不可讀或 pid 非正整數時，用既有讀驗錯誤拒起，不略過未知狀態。
+
+這個雙保險的代價是舊 PID 已被重用、或退出後尚未收屍的 zombie，仍可能擋住重啟；沒有擴充程序身分協議。runner 本身被 KILL、另一個 session 的工具仍活著（R4）這輪不處理。
+
+## 46. 壞單隔離與結果寫入失敗，不能再堵住整顆 CPU
+
+R2 分兩條：JSON／共同 result 欄位讀驗失敗，在短鎖內搬 `bad/<原名>.json`、stderr 一行，繼續掃後面的單，這格最後退 1；可讀 result 的 payload 錯誤則先認領，再由 LLM／tool execute 回 BadPayload，照常進 done，這格退 0。running 的壞檔同樣隔離，不中斷其他收屍或新單。
+
+結果發布遇到 OSError 也搬 done、退 1。這表示 CPU 可以繼續，但結果沒寫出來的 agent 仍可能一直等；沒有假裝結果已交付，也不增加重試／等待期限。submit 先驗 result 父目錄存在只能擋住交件當下的錯誤，擋不了交件後家被移除。同名拒收統一用 AgentError ReadFailed（R14），壞檔名的 bad 副本不列入原本三處同名檢查；之後同名壞單會替換 bad 裡的舊副本。
+
+## 47. last_target 讓忙碌快照也能對上最新完成的工作
+
+R5 取代 #41「必須 busy=false 才能算」：run.json 的 target 描述本次，last_target 與 last_exit／last_kind／last_ms 描述最後完成那次，完成時一起發布。kernel 用 last_target 對 NAME，即使 runner 已 busy，新的 runs 仍可算一次。
+
+仍然只有最後一份快照，沒有新增逐次歷史；一份新快照最多加一次等待／連敗，不能把 runs 差值全當成同一結果。這保留 #41 防止 idle 差值灌到新人身上的修正，但不再因忙碌而整段拒讀結果。同格多次完成與已換下行程的遲到結果仍可能漏記。
+
+## 48. 失敗回音統一，但模型看見的工具文字保持原樣
+
+R8 的 CPU 結果、daemon done、kernel syscall done 都使用 `{ok:false,code,msg}`。daemon 失敗不再附原請求或巢狀 result；成功仍保留原請求與 ok／result。CPU 代號包括 Reaped、UnknownModel、Timeout、EngineFailed、BadPayload；tool 真正拿到 run_inst 回傳的非零／逾時仍是 ok:true，因為已取得執行結果。
+
+agent 用 code=Reaped 判斷結果不明，不比較 msg；交給模型的 tool 訊息仍是原本 `{"ok":false,"error":"結果不明：工具可能已經跑了，也可能沒有"}` 字串，不重送。這個模型文字不是第四種 CPU 回音格式。tool 請求的 inst.stdin／stdout 不再交件，CPU 不讀驗也不用它們，實際輸入仍是請求頂層 stdin，輸出仍由管線收回。
+
+## 49. kernel 的 daemon 家只在 boot 選一次
+
+R9：daemon 啟動時缺 info.json 才建 daemon/version1 身分；ctl／kernel 先驗身分。kernel init 暫不綁 daemon，boot 以當時環境／預設選家並把絕對路徑寫進 K/info.json；tick／ls／rm 從此讀這格。未 boot 時 tick／rm 回 NotRunning，ls 仍能看本地排程、顯示 daemon=None，不偷偷借當下 shell 的家。既有家沒有新身分檔時，先啟 daemon 才會補上；沒有另做遷移命令。
+
+整份 info 可以是 `$ref`；若 boot 只新增 daemon 而 load 仍先解整份引用，這格會被忽略。因此 boot 寫的最外層 daemon 是字面綁定、讀取優先於引用內容；沒有最外層值才讀解開後的 daemon，其餘設定照舊解指示詞，沒有為記路徑把整份設定固化。
+
+state 的行程名稱與 rm syscall 都改 name，Linux pid 保持 pid。remove 等回音逾時與 daemon ctl 同用 ReadFailed，請求仍留著；kernel 判 daemon 是否在跑依然只看最後 state 快照的 pid，不新增存活探測（R16）。
+
+## 50. 減少重寫只改有把握的地方，格式與程式分開
+
+R3 的 hold 固定睡 50 ms，held 只有變化才寫；R6 daemon state 只在啟動、add、停止狀態改變、收屍與收尾時寫。原本靠閒置重寫觸發的磁碟故障測試，改由 stop 觸發真正的狀態變動。R7 add 固化 inst 一次，tick 讀驗排隊檔，與固化後內容相同就不寫；手放進 procs 的未固化 inst 仍按原解析中心固化一次。
+
+依「格式一份、程式一份」，runner 家抽成 run-home.md，aos-run.md 留命令列與行為；CPU 共用函式與步驟抽成 aos-cpu.md，cpu-queue.md 留交件／回音協議。沒有新增執行模組或修訂記錄。R4、R10～R13 依任務留在 backlog，未延伸實作。
+
+## 51. 完整測試撞到 idle 的 busy/null 窗口
+
+第 5 段首輪完整測試 **800 條、112.199 秒，1 個 error**。零間隔換槽測試預期 CPU0 當格已指派 Y，實際是 null。CPU1 雖在空轉，每次開始仍先發布 busy=true／target=null；kernel 此時無法排除它已選定候選，因此暫不派 Y，這是既有防重疊規則的合法結果，不是 X 被 last_target 誤判退休。
+
+可控快照重現：CPU0 busy X／runs=1／last_exit=0，CPU1 busy／target=null，queue=[Y]；排程後兩槽 null、queue=[Y,X]、bad_runs=0。測試改用既有 ctl hold 把 CPU1 固定在 idle 間歇，X 指派到 CPU1 後再解除 hold 驗實跑。只固定測試前提，不改排程、兩秒 X、interval=0、期限與防重疊斷言。首輪 log 保留在 `.build/stage5-first-tests.log`。
+
+## 52. JSON 合法的 result 字串也可能不是可用檔名
+
+整合審查找到 result 含孤立 Unicode surrogate（例如 JSON 的 `"/tmp/\ud800.json"`）會通過字串／絕對路徑檢查，發布時卻拋 UnicodeEncodeError，不屬 OSError；原單留 running，之後收屍同樣失敗，重新造成 R2 的堵單。共同讀驗加 `os.fsencode` 檢查，不能編碼就回 FieldTypeMismatch，走既有 bad 隔離路徑。新增壞 result 與後續好單同格的回歸，確認好單完成、下一格 101；沒有新增路徑抽象或捕捉所有例外。
+
+## 53. 失敗的 boot 不應留下換錯的 daemon 家
+
+原本 boot 先改 K/info.json 再 add；若 K 正在 D1 跑，換環境指向身份完整但已停止的 D2，再 boot 會回 NotRunning，卻把 K 永久留在 D2，連 D1 的後續 tick 都找錯家。
+
+先驗目標 daemon 持鎖存活，確認後才寫 binding；值相同不重寫。若後續 add 丟 DaemonError／OSError，恢復原 info。回歸涵蓋同家重複 boot 的 AlreadyRunning 不改 inode、停止的 D2 不改原綁定，以及存活檢查後交件失敗的還原。這是失敗路徑的本地復原，仍不是跨檔交易：程序中途崩潰或等回音逾時但 add 實際已發生，仍不能保證自動對帳。
+
+## 54. pgrep 命中啟動本次 Codex 的上層 shell
+
+真跑前、stop 後的 `pgrep -f aos-` 都只列 PID 158716。查 `/proc/158716/cmdline` 與父鏈，這是啟動本次 Codex 的 zsh 包裝程序，其命令列包含整份任務書與 `aos-` 字樣；不是 daemon／runner，也不是本輪新增進程。不能為了讓字面輸出空白而殺掉本次工作所依附的上層 shell。
+
+因此原始 pgrep 證據如實保留，另加 `pgrep -A -f aos-`（排除祖先程序）驗證。第一次真跑 12.950 秒完成，daemon 退 0、state 清空、pidfile 消失、new_aos_pids_after_stop 與 remaining_demo_processes 都是空陣列；補上祖先排除輸出後再完整真跑一次，最後證據見 stage5-report／stage5-trace。這是任務要求「pgrep 字面空」與本次啟動環境之間的差異，沒有留下實際 aos 程序。

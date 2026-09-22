@@ -667,7 +667,7 @@ class TestThinkCpu(StepCase):
         if error is None:
             return self.put("ask-result.json", {"ok": True, "message": message or
                                                 {"role": "assistant", "content": "answer"}})
-        return self.put("ask-result.json", {"ok": False, "error": error})
+        return self.put("ask-result.json", {"ok": False, "code": "EngineFailed", "msg": error})
 
     def test_send_body_engine_absolute_result_and_wait(self):
         with mock.patch.object(aos_agent.aos_llm_ask, "call", side_effect=AssertionError("不能同步問")):
@@ -1051,6 +1051,8 @@ class TestCpuAct(StepCase):
         request_names = os.listdir(os.path.join(self.d, "T/requests"))
         request = self.get("T/requests/" + request_names[0])
         self.assertEqual(request["inst"]["cwd"], self.d)
+        self.assertNotIn("stdin", request["inst"])
+        self.assertNotIn("stdout", request["inst"])
         self.assertEqual(request["timeout_ms"], 60000)
         self.assertEqual(request["stdin"], ' {"中文": 1} \n')
         self.assertEqual(self.tick(), 0)
@@ -1080,7 +1082,11 @@ class TestCpuAct(StepCase):
     def test_cpu_result_text_contract(self):
         cases = [(dict(code=9, stdout="oops"), "工具 echo 失敗（exit 9）：oops"),
                  (dict(code=0, timed_out=True, stdout="partial"), "工具 echo 逾時"),
-                 (dict(ok=False, error="broken"), "工具 echo 跑不起來：broken"),
+                 (dict(ok=False, code="EngineFailed", msg="broken"), "工具 echo 跑不起來：broken"),
+                 (dict(ok=False, code="Reaped", msg="不同的收屍說明"),
+                  '{"ok": false, "error": "結果不明：工具可能已經跑了，也可能沒有"}'),
+                 (dict(ok=False, code="EngineFailed", msg="結果不明：工具可能已經跑了，也可能沒有"),
+                  "工具 echo 跑不起來：結果不明：工具可能已經跑了，也可能沒有"),
                  (dict(code=143, stdout="own"), "工具 echo 失敗（exit 143）：own"),
                  (dict(code=1, kind="aos", stdout=""), "工具 echo 失敗（exit 1）：")]
         for result, expected in cases:

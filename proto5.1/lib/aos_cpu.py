@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import fcntl
 import json
 import os
+import sys
 import tempfile
 import time
 
@@ -50,9 +51,9 @@ def load(dir, cpu_type, env=None):
 
 @contextmanager
 def queue_lock(dir):
-    """送件／認領／完成共用的短鎖；先建立三個佇列資料夾，離開就解鎖。"""
+    """送件／認領／完成共用的短鎖；先建立佇列資料夾，離開就解鎖。"""
     try:
-        for part in ("requests", "running", "done"):
+        for part in ("requests", "running", "done", "bad"):
             os.makedirs(os.path.join(dir, part), exist_ok=True)
         with open(os.path.join(dir, ".queue.lock"), "a") as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
@@ -74,11 +75,9 @@ def _read_json(path):
         raise AgentError("ReadFailed", "讀不到 %s：%s" % (path, e))
 
 
-def _request(path, validate=None):
+def _request(path):
     req = _read_json(path)
     _validate_request(req, path)
-    if validate is not None:
-        validate(req, path)
     return req
 
 
@@ -88,6 +87,10 @@ def _validate_request(req, path):
     result = req.get("result")
     if not isinstance(result, str) or not os.path.isabs(result) or "\0" in result:
         raise AgentError("FieldTypeMismatch", "%s 的 result 必須是絕對路徑字串" % path)
+    try:
+        os.fsencode(result)
+    except UnicodeEncodeError:
+        raise AgentError("FieldTypeMismatch", "%s 的 result 無法編碼成檔案路徑" % path)
 
 
 def submit(dir, name, request):
@@ -96,9 +99,11 @@ def submit(dir, name, request):
             os.path.basename(name) != name or "\0" in name):
         raise AgentError("FieldTypeMismatch", "請求名稱必須是含 .json 的單一檔名")
     _validate_request(request, name)
+    if not os.path.isdir(os.path.dirname(request["result"])):
+        raise AgentError("ReadFailed", "result 的父目錄不存在：%s" % request["result"])
     with queue_lock(dir):
         if any(os.path.lexists(os.path.join(dir, part, name)) for part in ("requests", "running", "done")):
-            raise FileExistsError("cpu 三處已有同名請求：%s" % name)
+            raise AgentError("ReadFailed", "cpu 三處已有同名請求：%s" % name)
         path = os.path.join(dir, "requests", name)
         _write_result(path, request)
     return path
@@ -109,7 +114,7 @@ def _names(dir):
 
 
 def _write_result(path, result):
-    """同目錄唯一 .tmp 再 replace；失敗不移走 running，留給下一次收屍。"""
+    """同目錄唯一 .tmp 再 replace。"""
     tmp = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=os.path.dirname(path),
@@ -123,37 +128,68 @@ def _write_result(path, result):
             os.unlink(tmp)
 
 
-def _reap(dir, validate, timeout_ms, reap_error):
+def _err(error):
+    sys.stderr.write("aos-cpu: %s\n" % " ".join(str(error).split()))
+
+
+def _read_queued(dir, path):
+    try:
+        return _request(path)
+    except AgentError as e:
+        os.rename(path, os.path.join(dir, "bad", os.path.basename(path)))
+        _err(e)
+        return None
+
+
+def _publish(path, result):
+    try:
+        _write_result(path, result)
+        return True
+    except OSError as e:
+        _err("寫不進結果 %s：%s" % (path, e))
+        return False
+
+
+def _reap(dir, timeout_ms, reap_error):
     """鎖內收掉所有過期 running；已有結果表示可能崩在發布後，保留它。"""
     count = 0
+    failed = False
     for name in _names(os.path.join(dir, "running")):
         path = os.path.join(dir, "running", name)
         done = os.path.join(dir, "done", name)
         if os.path.lexists(done):
             continue
-        req = _request(path, validate)
+        req = _read_queued(dir, path)
+        if req is None:
+            failed = True
+            continue
         timeout = timeout_ms(req) if timeout_ms else aos_agent_info.DEFAULT_TIMEOUT_MS
         if time.time() - os.stat(path).st_mtime <= timeout / 1000 + GRACE_SECONDS:
             continue
         if not os.path.lexists(req["result"]):
-            _write_result(req["result"], {"ok": False, "error": reap_error or "cpu 執行逾時或上次中止（%d ms + 30 秒）" % timeout})
+            if not _publish(req["result"], {"ok": False, "code": "Reaped",
+                            "msg": reap_error or "cpu 執行逾時或上次中止（%d ms + 30 秒）" % timeout}):
+                failed = True
         os.rename(path, done)
         count += 1
-    return count
+    return count, failed
 
 
-def tick(dir, execute, *, validate=None, timeout_ms=None, reap_error=None):
-    """收屍再認領一份：有處理（含只收屍）回 0，沒事回 101；讀驗錯丟 AgentError。"""
+def tick(dir, execute, *, timeout_ms=None, reap_error=None):
+    """收屍再認領一份：有處理回 0，沒事回 101；隔離壞檔或發布失敗回 1。"""
     dir = os.path.abspath(dir)
     claimed = None
     with queue_lock(dir):
-        reaped = _reap(dir, validate, timeout_ms, reap_error)
+        reaped, failed = _reap(dir, timeout_ms, reap_error)
         for name in _names(os.path.join(dir, "requests")):
             src = os.path.join(dir, "requests", name)
             running = os.path.join(dir, "running", name)
             if any(os.path.lexists(os.path.join(dir, part, name)) for part in ("running", "done")):
                 continue
-            req = _request(src, validate)
+            req = _read_queued(dir, src)
+            if req is None:
+                failed = True
+                continue
             try:
                 # rename 不會更新 mtime：排隊很久也要從認領這刻算執行逾時。
                 os.utime(src, None)
@@ -164,18 +200,17 @@ def tick(dir, execute, *, validate=None, timeout_ms=None, reap_error=None):
             claimed = (running, os.path.join(dir, "done", name), req, (stat.st_dev, stat.st_ino))
             break
     if claimed is None:
-        return 0 if reaped else 101
+        return 1 if failed else (0 if reaped else 101)
     running, done, req, identity = claimed
     result = execute(req)
     with queue_lock(dir):
         try:
             stat = os.stat(running)
         except FileNotFoundError:
-            return 0                # 已被另一顆 cpu 收屍，遲到的執行回覆不准覆蓋結果
+            return 1 if failed else 0  # 已被收屍，遲到回覆不准覆蓋結果
         if (stat.st_dev, stat.st_ino) != identity or os.path.lexists(done):
-            return 0
-        _write_result(req["result"], result)
+            return 1 if failed else 0
+        if not _publish(req["result"], result):
+            failed = True
         os.rename(running, done)
-    return 0
-
-
+    return 1 if failed else 0

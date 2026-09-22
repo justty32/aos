@@ -128,7 +128,7 @@ class LLMCase(AgentCase):
         with open(result_path, encoding="utf-8") as f:
             result = json.load(f)
         if not result["ok"]:
-            raise EngineFailed(result["error"])
+            raise EngineFailed(result["msg"], result["code"])
         return result["message"]
 
 
@@ -359,24 +359,24 @@ class TestCli(LLMCase):
         self.assertTrue(r.stdout.endswith("\n"))
         return json.loads(r.stdout)
 
-    def test_dry_run_prints_request_and_exits_0(self):
+    def test_cli_prints_request_and_exits_0(self):
         d = self.agent(system={"content": "S"}, history=[{"role": "user", "content": "hi"}],
                        tools={"t.json": [TOOL_SH]}, info={"engine": {"params": {"temperature": 0.2}}})
-        r = self.ask(d, "--dry-run")
+        r = self.ask(d)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stderr, "")
         self.assertEqual(self.one_line(r), aos_llm_ask.build_request(d))
         self.assertEqual(self.llm.requests, [])                 # 真的沒打出去
 
-    def test_dry_run_flag_before_dir(self):
+    def test_removed_dry_run_flag_is_usage_error(self):
         d = self.agent()
         r = self.ask("--dry-run", d)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertNotIn("model", self.one_line(r))
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("unrecognized arguments", r.stderr)
 
     def test_dir_defaults_to_cwd(self):
         d = self.agent()
-        r = self.ask("--dry-run", cwd=d)
+        r = self.ask(cwd=d)
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_default_cli_prints_body_without_http(self):
@@ -400,7 +400,7 @@ class TestCli(LLMCase):
 
     def test_read_error_is_1(self):
         d = self.agent(history=[{"role": "system", "content": "x"}])
-        for args in ((d,), (d, "--dry-run")):
+        for args in ((d,),):
             r = self.ask(*args)
             self.assertEqual(r.returncode, 1, r.stderr)
             self.assertEqual(r.stdout, "")
@@ -414,13 +414,13 @@ class TestCli(LLMCase):
 
     def test_directive_error_is_1(self):
         d = self.agent(info={"system": {"$env": "AOSTEST_NOPE"}})
-        r = self.ask(d, "--dry-run", env={k: v for k, v in os.environ.items() if k != "AOSTEST_NOPE"})
+        r = self.ask(d, env={k: v for k, v in os.environ.items() if k != "AOSTEST_NOPE"})
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertTrue(r.stderr.startswith("aos-llm-ask: EnvironmentVariableMissing: "), r.stderr)
 
     def test_env_is_the_process_environment(self):
         d = self.agent(info={"engine": {"model": {"$env": "AOSTEST_MODEL"}}})
-        r = self.ask(d, "--dry-run", env=dict(os.environ, AOSTEST_MODEL="from-outer"))
+        r = self.ask(d, env=dict(os.environ, AOSTEST_MODEL="from-outer"))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertNotIn("model", self.one_line(r))
 

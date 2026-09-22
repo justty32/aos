@@ -25,9 +25,10 @@ class EngineFailed(Exception):
     `msg` 是白話，`str(e)` 就是它。
     """
 
-    def __init__(self, msg):
+    def __init__(self, msg, code="EngineFailed"):
         super().__init__(msg)
         self.msg = msg
+        self.code = code
 
 
 def build_request(dir, env=None):
@@ -65,11 +66,11 @@ def call(engine, body):
     except urllib.error.HTTPError as e:
         raise EngineFailed("%s 回 HTTP %d：%s" % (url, e.code, _preview(_safe_read(e))))
     except (socket.timeout, TimeoutError):
-        raise EngineFailed("%s 等了 %d ms 沒回（逾時）" % (url, engine.get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS)))
+        raise EngineFailed("%s 等了 %d ms 沒回（逾時）" % (url, engine.get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS)), "Timeout")
     except urllib.error.URLError as e:
         reason = e.reason
         if isinstance(reason, (socket.timeout, TimeoutError)):
-            raise EngineFailed("%s 等了 %d ms 沒回（逾時）" % (url, engine.get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS)))
+            raise EngineFailed("%s 等了 %d ms 沒回（逾時）" % (url, engine.get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS)), "Timeout")
         raise EngineFailed("連不上 %s：%s" % (url, reason))
     except (OSError, http.client.HTTPException) as e:
         raise EngineFailed("跟 %s 講話時出錯：%s" % (url, e))
@@ -112,10 +113,9 @@ def _preview(raw):
 # ---------------------------------------------------------------- 命令列 ----
 
 def main(argv=None):
-    """命令列：`aos-llm-ask [dir] [--dry-run]`。stdout 只印一行 JSON；退出碼 0／1／2。"""
+    """命令列：`aos-llm-ask [dir]`。stdout 只印一行 JSON；退出碼 0／1／2。"""
     ap = argparse.ArgumentParser(prog="aos-llm-ask", description="印出 agent 的模型請求 body")
     ap.add_argument("dir", nargs="?", default=".", help="agent 資料夾（有 info.json 的那個）；留空＝.")
-    ap.add_argument("--dry-run", action="store_true", help="不送出去，只把組好的請求印成一行 JSON")
     a = ap.parse_args(sys.argv[1:] if argv is None else argv)
     if not os.path.isdir(a.dir):
         _err("%s 不是資料夾" % a.dir)

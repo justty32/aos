@@ -35,16 +35,26 @@ info 在 CPU 讀取時解指示詞，中心是 CPU 家；models 整格、每筆�
 }
 ```
 
-model 是非空代號字串，缺失或型別不對為 `EngineInvalid`；body 是已組好的 chat/completions 物件，
-缺失或不是物件為 `FieldTypeMismatch`；result 照共用格式為絕對路徑。
+model 是非空代號字串；body 是已組好的 chat/completions 物件；result 照共用格式為絕對路徑。
+model／body 缺失或型別不對，在認領後回 BadPayload。
 agent 不填 body.model，CPU 查表後填真名；請求不帶 endpoint、api_key 或 timeout_ms。
 CPU 不讀 agent、不重驗 body 裡訊息與工具、不解請求指示詞，未知請求欄位忽略。
 
-壞 payload 在認領前退 1、原檔保留。格式合法但代號不在 models 表裡，認領後寫
-`{"ok":false,"error":"不認識的模型代號"}` 並搬 done，不送 HTTP。
+合法 result 下的壞 payload 認領後寫失敗結果、搬 done，當次 tick 回 0，後面的單可繼續處理。
+格式合法但代號不在 models 表裡，回 `{"ok":false,"code":"UnknownModel","msg":"不認識的模型代號"}`，
+不送 HTTP。共用欄位壞掉則搬 bad、tick 回 1，詳見 [cpu-queue](cpu-queue.md)。
 
 ## 3. 結果
 
 成功：`{"ok":true,"message":{"role":"assistant","content":"你好"}}`，message 是
-`choices[0].message` 原樣。失敗：`{"ok":false,"error":"原因"}`，包含未知模型代號、HTTP／網路／
-模型錯誤、建立 Request 時的 ValueError，以及共用層收屍。結果沒有 name／id。
+`choices[0].message` 原樣。失敗固定 `{"ok":false,"code":"代號","msg":"白話"}`：
+
+| code | 意思 |
+|---|---|
+| BadPayload | model／body 形狀不合 |
+| UnknownModel | models 沒有這個代號 |
+| Timeout | HTTP 逾時 |
+| EngineFailed | HTTP／網路／模型回應錯誤，或建立 Request 失敗 |
+| Reaped | 共用層收屍，沒有可靠結果 |
+
+結果沒有 name／id。

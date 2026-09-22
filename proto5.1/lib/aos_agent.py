@@ -231,8 +231,8 @@ def _read_tool_result(path):
                 or type(result.get("timed_out")) is not bool
                 or not isinstance(result.get("stdout"), str)):
             raise AgentError("FieldTypeMismatch", "%s 的 code／kind／timed_out／stdout 型別不對" % path)
-    elif not isinstance(result.get("error"), str):
-        raise AgentError("FieldTypeMismatch", "%s 的 error 要是字串" % path)
+    elif not all(isinstance(result.get(key), str) for key in ("code", "msg")):
+        raise AgentError("FieldTypeMismatch", "%s 的 code／msg 要是字串" % path)
     return result
 
 
@@ -240,8 +240,8 @@ def _cpu_tool_message(call, info, result):
     name = _tool_call(call, info)[1]
     if not result["ok"]:
         content = (json.dumps({"ok": False, "error": aos_tool_cpu.UNKNOWN_RESULT}, ensure_ascii=False)
-                   if result["error"] == aos_tool_cpu.UNKNOWN_RESULT
-                   else "工具 %s 跑不起來：%s" % (name, result["error"]))
+                   if result["code"] == "Reaped"
+                   else "工具 %s 跑不起來：%s" % (name, result["msg"]))
     elif result["timed_out"]:
         content = "工具 %s 逾時" % name
     elif result["code"]:
@@ -260,8 +260,10 @@ def _submit_tools(calls, paths, info, env):
         try:
             inst = aos_inst.load_obj(tool["_meta"], base=info["dir"], env=env)
         except aos_inst.InstError as e:
-            _write_json(path, {"ok": False, "error": " ".join(str(e).split())})
+            _write_json(path, {"ok": False, "code": "BadPayload", "msg": " ".join(str(e).split())})
             continue
+        inst.pop("stdin", None)
+        inst.pop("stdout", None)
         name = "%s-%d-%d.json" % (os.path.basename(info["dir"]), stamp, i)
         request = {"inst": inst, "stdin": arguments, "timeout_ms": tool.get("_timeout_ms", 60000),
                    "result": path}
@@ -293,8 +295,8 @@ def _read_result(path):
     if type(result.get("ok")) is not bool:
         raise AgentError("FieldTypeMismatch", "%s 的 ok 要是布林值" % path)
     if not result["ok"]:
-        if not isinstance(result.get("error"), str):
-            raise AgentError("FieldTypeMismatch", "%s 的 error 要是字串" % path)
+        if not all(isinstance(result.get(key), str) for key in ("code", "msg")):
+            raise AgentError("FieldTypeMismatch", "%s 的 code／msg 要是字串" % path)
         return result
     message = result.get("message")
     if not isinstance(message, dict) or message.get("role") != "assistant":
@@ -388,7 +390,7 @@ def step(dir, env=None):
                 _write_json(state_path, raw)
                 return 0
             if not result["ok"]:
-                _failure(raw, result["error"])
+                _failure(raw, result["msg"])
                 _consume([result_path])
                 _write_json(state_path, raw)
                 return 0

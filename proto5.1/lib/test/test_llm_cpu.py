@@ -1,4 +1,6 @@
 """llm cpu：FakeLLM、讀驗、收屍、原子認領，以及真兩進程同搶一份。"""
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -148,7 +150,7 @@ class TestTick(CPUCase):
         with patch("aos_llm_cpu.aos_llm_ask.call", side_effect=AssertionError("不應 HTTP")):
             self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
         self.assertEqual(json.loads(Path(req["result"]).read_text()),
-                         {"ok": False, "error": "不認識的模型代號"})
+                         {"ok": False, "code": "UnknownModel", "msg": "不認識的模型代號"})
         self.assertTrue((self.dir / "done" / "a.json").exists())
 
     def test_cpu_fills_real_model_and_does_not_mutate_payload(self):
@@ -165,7 +167,8 @@ class TestTick(CPUCase):
         self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
         result = json.loads(Path(req["result"]).read_text())
         self.assertFalse(result["ok"])
-        self.assertIn("HTTP 500", result["error"])
+        self.assertEqual(result["code"], "EngineFailed")
+        self.assertIn("HTTP 500", result["msg"])
         self.assertTrue((self.dir / "done" / "a.json").exists())
 
     def test_sorted_one_only_and_tmp_ignored(self):
@@ -241,22 +244,52 @@ class TestTick(CPUCase):
             self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
         self.assertFalse(json.loads(Path(req["result"]).read_text())["ok"])
 
-    def test_bad_request_stays_queued(self):
-        for changes, code in [({"model": ""}, "EngineInvalid"), ({"body": []}, "FieldTypeMismatch"),
-                              ({"result": "relative.json"}, "FieldTypeMismatch"),
-                              ({"model": None}, "EngineInvalid")]:
+    def test_bad_payload_is_claimed_and_published(self):
+        for i, changes in enumerate([{"model": ""}, {"body": []}, {"model": None}, {"model": []}]):
             with self.subTest(changes=changes):
-                self.request(**changes)
-                with self.assertRaisesRegex(AgentError, code):
-                    aos_llm_cpu.tick(self.dir)
-                self.assertTrue((self.dir / "requests" / "a.json").exists())
+                name = str(i)
+                req = self.request(name, **changes)
+                with patch("aos_llm_cpu.aos_llm_ask.call") as call:
+                    self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
+                call.assert_not_called()
+                result = json.loads(Path(req["result"]).read_text())
+                self.assertEqual(result["code"], "BadPayload")
+                self.assertEqual(set(result), {"ok", "code", "msg"})
+                self.assertFalse(result["ok"])
+                self.assertTrue((self.dir / "done" / (name + ".json")).exists())
 
-    def test_write_failure_keeps_running(self):
+    def test_bad_result_path_is_quarantined_and_next_request_runs(self):
+        self.request(result="relative.json")
+        req = self.request("b", model="missing")
+        with contextlib.redirect_stderr(io.StringIO()) as errors:
+            self.assertEqual(aos_llm_cpu.tick(self.dir), 1)
+        self.assertEqual(len(errors.getvalue().splitlines()), 1)
+        self.assertTrue((self.dir / "bad" / "a.json").exists())
+        self.assertEqual(json.loads(Path(req["result"]).read_text())["code"], "UnknownModel")
+
+    def test_bad_model_running_uses_default_timeout(self):
+        req = self.request(model=[], part="running")
+        os.utime(self.dir / "running" / "a.json", (1, 1))
+        self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
+        self.assertEqual(json.loads(Path(req["result"]).read_text())["code"], "Reaped")
+
+    def test_http_timeout_has_timeout_code(self):
+        fake = self.llm()
+        fake.sleep = 0.2
+        req = self.request(engine={"endpoint": fake.endpoint, "model": "fake", "timeout_ms": 30})
+        self.assertEqual(aos_llm_cpu.tick(self.dir), 0)
+        result = json.loads(Path(req["result"]).read_text())
+        self.assertEqual(result["code"], "Timeout")
+        self.assertEqual(set(result), {"ok", "code", "msg"})
+
+    def test_write_failure_moves_done(self):
         self.request(result=str(self.dir / "missing" / "result.json"))
         with patch("aos_llm_cpu.aos_llm_ask.call", return_value=OK_MESSAGE):
-            with self.assertRaisesRegex(AgentError, "ReadFailed"):
-                aos_llm_cpu.tick(self.dir)
-        self.assertTrue((self.dir / "running" / "a.json").exists())
+            with contextlib.redirect_stderr(io.StringIO()) as errors:
+                self.assertEqual(aos_llm_cpu.tick(self.dir), 1)
+        self.assertEqual(len(errors.getvalue().splitlines()), 1)
+        self.assertFalse((self.dir / "running" / "a.json").exists())
+        self.assertTrue((self.dir / "done" / "a.json").exists())
 
     def test_real_two_processes_claim_once(self):
         fake = self.llm()

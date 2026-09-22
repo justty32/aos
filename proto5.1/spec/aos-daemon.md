@@ -13,16 +13,22 @@ aos-daemon-ctl [--home PATH] stop
 daemon 在前景執行，由呼叫者決定是否放背景。ctl 的 FILE 相對呼叫者 cwd 轉成絕對路徑，
 保留符號連結路徑，不把 kernel 的 CPU 槽固定到某一個行程。只支援 JSON inst 目標。
 
-## 一輪
+## 啟動與一輪
+
+先取得 daemon 鎖，再建立或驗證家的 info 身分，接著掃 `runners/*/run.json` 的 pid。
+任何 PID 還活著（或無權限查活）就回 AlreadyRunning，避免重啟疊到舊 runner；
+不收養，也不向這些 PID 發訊號。快照讀不到／JSON 壞掉／pid 不是正整數，分別回
+ReadFailed／JsonSyntax／FieldTypeMismatch。runner 會自行察覺父 PID 改變，做完本次後停。
 
 1. 收已退出的 runner；檢查正在停止者的下一個訊號期限。
 2. 按檔名處理 requests。add 建 runner 家，再啟動新 session 的 aos-run；
    傳 `--home <D>/runners/<名>`，kill_tree=true 時加 --kill-tree。
    stdin=/dev/null、stdout／stderr 追加 daemon.log；只傳允許的數值旗標，不解析 inst。
-   runner 的 AOS_DAEMON_HOME 設成實際 daemon 家，讓 kernel tick 找回同一處。
+   runner 的 AOS_DAEMON_HOME 設成實際 daemon 家；kernel tick 仍以 K/info.json 的 daemon 為準。
 3. remove 標 stopping，送第一個 TERM；請求留 pending，直到 runner 退出才回 entry。
    其他 runner 和請求照常推進，不為每份 remove 阻塞主迴圈。
-4. 原子保存 state，輪詢間隔 20 ms。daemon 不接執行事件、不代讀 run.json。
+4. 輪詢間隔 20 ms。只在 add、stopping、收屍或停機等狀態變動時原子保存 state；
+   閒著不重寫。daemon 不接執行事件，主迴圈不代讀 runner 的 run.json。
 
 ## 停止
 
@@ -57,15 +63,16 @@ ctl ls 直接讀 state。其他指令送件後最多等同名 done **15 秒**，
 
 | 代號 | 情況 |
 |---|---|
-| NotAHome | home 不是資料夾；ctl 缺 requests／done |
+| NotAHome | home 不是資料夾、info 身分不合或 ctl 缺 info／requests／done |
+| UnsupportedVersion | info 版本不是整數 1 |
 | ReadFailed | 讀寫失敗或等 done 逾時 |
 | JsonSyntax | JSON 語法／UTF-8 壞了 |
 | FieldTypeMismatch | state、op／target／args／kill_tree 型別或範圍不合 |
 | NotRunning | daemon 沒持鎖、target 未登記、或正在停止 |
-| AlreadyRunning | 同家已有 daemon、或 target 已登記 |
+| AlreadyRunning | 同家已有 daemon、舊 runner 快照的 PID 還活著、或 target 已登記 |
 
 壞請求在 done 收到錯誤，daemon 繼續服務。兩支 daemon 同家靠 .daemon.lock 排他；
-不靠舊 PID 判斷身分或殺程序。重啟從空表開始，不收養、不掃 PID 猜身分。
+不靠舊 PID 猜程序身分或殺程序。重啟前只檢查 runner 快照裡的 PID 是否仍活著，通過後從空表開始。
 
 ## Python API
 
@@ -78,6 +85,7 @@ main(argv=None)
 ctl_main(argv=None)
 ```
 
-home 回實際家的絕對 realpath。read_state 讀驗最後快照，不要求 daemon 還活著。
+home 回實際家的絕對 realpath。read_state 與 request 都先驗 daemon 家身分；
+read_state 讀驗最後快照，不要求 daemon 還活著。
 request 回 result，失敗丟帶 code／msg 的 DaemonError；ls 就是 read_state，
 remove 回收屍後 entry，stop 等全部收尾。serve 正常回 0。

@@ -93,7 +93,8 @@ class TestToolCPU(unittest.TestCase):
                 req = self.request(**kw)
                 aos_tool_cpu.tick(self.dir)
                 self.assertFalse(self.read_result()["ok"])
-                self.assertIsInstance(self.read_result()["error"], str)
+                self.assertEqual(self.read_result()["code"], "BadPayload")
+                self.assertIsInstance(self.read_result()["msg"], str)
                 (self.dir / "done" / "a.json").unlink()
 
     def test_inst_relative_path_rejected_without_executing(self):
@@ -105,14 +106,28 @@ class TestToolCPU(unittest.TestCase):
         run.assert_not_called()
         self.assertFalse(self.read_result()["ok"])
 
-    def test_bad_json_leaves_queue(self):
+    def test_bad_json_is_quarantined(self):
         self.request()
         queued = self.dir / "requests" / "a.json"
         queued.write_text("{")
-        with self.assertRaisesRegex(AgentError, "JsonSyntax"):
-            aos_tool_cpu.tick(self.dir)
-        self.assertTrue(queued.exists())
+        with contextlib.redirect_stderr(io.StringIO()) as errors:
+            self.assertEqual(aos_tool_cpu.tick(self.dir), 1)
+        self.assertEqual(len(errors.getvalue().splitlines()), 1)
+        self.assertFalse(queued.exists())
+        self.assertTrue((self.dir / "bad" / "a.json").exists())
         self.assertFalse(self.result.exists())
+
+    def test_inst_stdin_stdout_not_required_or_validated(self):
+        for extra in ({}, {"stdin": 5, "stdout": {"path": "relative"}}):
+            with self.subTest(extra=extra):
+                inst = aos_inst.load_obj({"argv": ["cat"]}, str(self.dir))
+                inst.pop("stdin")
+                inst.pop("stdout")
+                inst.update(extra)
+                self.request(inst=inst)
+                self.assertEqual(aos_tool_cpu.tick(self.dir), 0)
+                self.assertEqual(self.read_result()["stdout"], '{"literal":"$env"}')
+                (self.dir / "done" / "a.json").unlink()
 
     def test_reaper_uses_tool_timeout_plus_30(self):
         self.request(timeout_ms=1000)
@@ -130,7 +145,7 @@ class TestToolCPU(unittest.TestCase):
         os.rename(self.dir / "requests" / "a.json", self.dir / "running" / "a.json")
         os.utime(self.dir / "running" / "a.json", (1, 1))
         self.assertEqual(aos_tool_cpu.tick(self.dir), 0)
-        self.assertEqual(self.read_result(), {"ok": False, "error": "結果不明：工具可能已經跑了，也可能沒有"})
+        self.assertEqual(self.read_result(), {"ok": False, "code": "Reaped", "msg": "結果不明：工具可能已經跑了，也可能沒有"})
 
     def test_bad_timeout_interrupted_payload_uses_fallback_reaping(self):
         self.request(timeout_ms=False)

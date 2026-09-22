@@ -52,8 +52,16 @@ def _write(path, obj):
 
 def _check_home(path):
     p = Path(path)
-    if not p.is_dir() or not (p / "requests").is_dir() or not (p / "requests/done").is_dir():
+    if not (p / "info.json").is_file():
         raise DaemonError("NotAHome", "%s 不是 daemon 家" % p)
+    info = _read(p / "info.json")
+    meta = info.get("_metainfo") if isinstance(info, dict) else None
+    if not isinstance(meta, dict) or meta.get("_type") != "daemon":
+        raise DaemonError("NotAHome", "%s 不是 daemon 家" % p)
+    if type(meta.get("_version")) is not int or meta["_version"] != 1:
+        raise DaemonError("UnsupportedVersion", "%s 的 _version 只認整數 1" % p)
+    if not (p / "requests").is_dir() or not (p / "requests/done").is_dir():
+        raise DaemonError("NotAHome", "%s 缺少 daemon 請求目錄" % p)
     return p
 
 
@@ -138,14 +146,15 @@ def request(op, target=None, args=None, home=None, timeout=15, kill_tree=False):
         while time.monotonic() < until:
             if done.exists():
                 response = _read(done)
-                if not isinstance(response, dict) or type(response.get("ok")) is not bool or "result" not in response:
+                if not isinstance(response, dict) or type(response.get("ok")) is not bool:
                     raise DaemonError("FieldTypeMismatch", "%s 的回應格式錯誤" % done)
                 if response["ok"]:
+                    if "result" not in response:
+                        raise DaemonError("FieldTypeMismatch", "%s 缺少 result" % done)
                     return response["result"]
-                result = response["result"]
-                if not isinstance(result, dict) or not all(isinstance(result.get(k), str) for k in ("code", "msg")):
+                if not all(isinstance(response.get(k), str) for k in ("code", "msg")):
                     raise DaemonError("FieldTypeMismatch", "%s 的錯誤回應格式錯誤" % done)
-                raise DaemonError(result["code"], result["msg"])
+                raise DaemonError(response["code"], response["msg"])
             time.sleep(POLL)
         raise DaemonError("ReadFailed", "等待 %s 的 done 超過 %g 秒；請求保留" % (name, timeout))
     except OSError as e:
@@ -154,8 +163,11 @@ def request(op, target=None, args=None, home=None, timeout=15, kill_tree=False):
 
 def _finish_request(path, obj, ok, result):
     """發布順序不可顛倒；重跑看見 done 就只收原单，不重做副作用。"""
-    response = dict(obj) if isinstance(obj, dict) else {"request": obj}
-    response.update(ok=ok, result=result)
+    if ok:
+        response = dict(obj) if isinstance(obj, dict) else {"request": obj}
+        response.update(ok=True, result=result)
+    else:
+        response = {"ok": False, "code": result["code"], "msg": result["msg"]}
     _write(path.parent / "done" / path.name, response)
     path.unlink()
 
@@ -206,11 +218,17 @@ class _Daemon:
             job["entry"]["state"] = "stopping"
             job["deadline"] = time.monotonic() + GRACE
             _signal(job["proc"], signal.SIGTERM)
+            return True
+        return False
 
     def stop(self):
         self.stopping = True
+        changed = False
         for job in self.jobs.values():
-            self.stop_job(job)
+            if self.stop_job(job):
+                changed = True
+        if changed:
+            self.save()
 
     def reap(self):
         for key, job in list(self.jobs.items()):
@@ -242,12 +260,10 @@ class _Daemon:
             obj = None
             try:
                 obj = _read(path)
-                if not isinstance(obj, dict) or obj.get("op") not in ("add", "remove", "ls", "stop"):
-                    raise DaemonError("FieldTypeMismatch", "%s 的 op 只認 add／remove／ls／stop" % path)
+                if not isinstance(obj, dict) or obj.get("op") not in ("add", "remove", "stop"):
+                    raise DaemonError("FieldTypeMismatch", "%s 的 op 只認 add／remove／stop" % path)
                 op = obj["op"]
-                if op == "ls":
-                    result = self.snapshot()
-                elif op == "stop":
+                if op == "stop":
                     self.stop()
                     self.pending[path] = (obj, None)
                     continue
@@ -262,7 +278,8 @@ class _Daemon:
                     else:
                         if target not in self.jobs:
                             raise DaemonError("NotRunning", "%s 沒在跑" % target)
-                        self.stop_job(self.jobs[target])
+                        if self.stop_job(self.jobs[target]):
+                            self.save()
                         self.pending[path] = (obj, target)
                         continue
                 _finish_request(path, obj, True, result)
@@ -281,6 +298,21 @@ def serve(path=None):
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 raise DaemonError("AlreadyRunning", "%s 的 daemon 已在跑" % p)
+            if not (p / "info.json").exists():
+                _write(p / "info.json", {"_metainfo": {"_type": "daemon", "_version": 1}})
+            _check_home(p)
+            for path in (p / "runners").glob("*/run.json"):
+                status = _read(path)
+                pid = status.get("pid") if isinstance(status, dict) else None
+                if type(pid) is not int or pid <= 0:
+                    raise DaemonError("FieldTypeMismatch", "%s 的 pid 必須是正整數" % path)
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    continue
+                except PermissionError:
+                    pass
+                raise DaemonError("AlreadyRunning", "%s 的 runner %d 還在跑" % (path, pid))
             with open(p / "daemon.log", "ab", buffering=0) as log:
                 daemon = _Daemon(p, log)
                 old = {sig: signal.signal(sig, lambda *_: daemon.stop()) for sig in (signal.SIGTERM, signal.SIGINT)}
@@ -290,12 +322,14 @@ def serve(path=None):
                     while True:
                         daemon.reap()
                         daemon.requests()
-                        daemon.save()
                         if daemon.stopping and not daemon.jobs:
                             break
                         time.sleep(POLL)
                 finally:
-                    daemon.stop()
+                    try:
+                        daemon.stop()
+                    except OSError:
+                        pass
                     while daemon.jobs:
                         try:
                             daemon.reap()
