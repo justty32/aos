@@ -31,6 +31,8 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 
 - [notes/](notes/)：任務書副本、astra 的調查報告、我的精簡總結（每份都有「要使用者拍板的」清單）。
 - [notes-brief/](notes-brief/README.md)：**notes/ 的精簡版**，每份不超過 5000 字；README 尾巴有「今天要使用者拍板的題目總表」，先看這裡。
+- [notes/2026-09-22-decisions.md](notes/2026-09-22-decisions.md)：**23 題的拍板紀錄**（2026-09-22），proto5.1 第 4 段與之後的回流都照這份。
+- [backlog/](backlog/README.md)：先記著、之後再做的事，一件一個檔。
 
 ## 還沒定的
 
