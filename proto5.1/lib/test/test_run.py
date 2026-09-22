@@ -65,7 +65,7 @@ class RunTests(Base):
         out, err, status = self.finish(p)
         self.assertEqual((out, err), ("", ""))
         self.assertEqual(status, dict(pid=p.pid, busy=False, target=target, runs=2,
-                                     last_exit=7, last_kind="child", last_ms=status["last_ms"], held=False))
+                                     last_target=target, last_exit=7, last_kind="child", last_ms=status["last_ms"], held=False))
         self.assertGreaterEqual(status["last_ms"], 0)
 
     def test_repeatable_stop_exit(self):
@@ -254,6 +254,34 @@ class RunTests(Base):
         Path(self.d, "R/ctl.json").unlink()
         self.assertFalse(self.finish(p)[2]["held"])
         self.assertTrue(self.exists("ran"))
+
+    def test_zero_interval_hold_does_not_rewrite_state(self):
+        self.write("R/ctl.json", '{"op":"hold"}')
+        p = self.start(self.target(), "--interval-ms", 0)
+        self.wait_for(lambda: self.status().get("held"))
+        path = Path(self.d, "R/run.json")
+        mtimes = [path.stat().st_mtime_ns]
+        until = time.monotonic() + .5
+        while time.monotonic() < until:
+            time.sleep(.01)
+            mtimes.append(path.stat().st_mtime_ns)
+        self.assertLessEqual(sum(a != b for a, b in zip(mtimes, mtimes[1:])), 1)
+        self.assertEqual(self.status()["runs"], 0)
+        p.terminate()
+        self.finish(p)
+
+    def test_busy_target_preserves_last_completed_target(self):
+        first = self.target()
+        second = self.inst({"argv": [PY, "-c", "import time; time.sleep(.4)"]}, "second.json")
+        slot = Path(self.d, "slot.json")
+        slot.symlink_to(first)
+        p = self.start(slot, "--interval-ms", 150, "--max-runs", 2)
+        self.wait_for(lambda: self.status().get("runs") == 1)
+        slot.unlink()
+        slot.symlink_to(second)
+        self.wait_for(lambda: self.status().get("busy") and self.status().get("target") == second)
+        self.assertEqual(self.status()["last_target"], first)
+        self.assertEqual(self.finish(p)[2]["last_target"], second)
 
     def test_ctl_stop_retains_control_and_does_not_start(self):
         self.write("R/ctl.json", '{"op":"stop"}')

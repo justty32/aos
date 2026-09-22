@@ -60,8 +60,9 @@ def main(argv=None):
     if any(code < 0 or code > 255 for code in a.stop_exit):
         ap.error("FieldTypeMismatch: stop-exit 必須在 0～255")
     home = Path(a.home).resolve() if a.home is not None else None
+    parent = os.getppid() if home is not None else None
     state = dict(pid=os.getpid(), busy=False, target=None, runs=0,
-                 last_exit=None, last_kind=None, last_ms=None, held=False)
+                 last_target=None, last_exit=None, last_kind=None, last_ms=None, held=False)
     signals = [0]
     active = [None]
     terminating = [False]
@@ -92,20 +93,25 @@ def main(argv=None):
         if p is not None and signals[0]:
             cancel(p)
 
+    def stopped():
+        if parent is not None and os.getppid() != parent and not signals[0]:
+            signals[0] = 1
+        return bool(signals[0])
+
     previous = {sig: signal.signal(sig, stop) for sig in (signal.SIGTERM, signal.SIGINT)}
-    reason, result = "signal", 0
+    result = 0
     try:
         if home is not None:
             home.mkdir(parents=True, exist_ok=True)
             save()
-        while not signals[0]:
+        while not stopped():
             op = _control(home) if home is not None else None
             if op == "stop":
-                reason = "ctl"
                 break
             if op == "hold":
-                save(held=True)
-                _sleep(a.interval_ms / 1000, lambda: bool(signals[0]))
+                if not state["held"]:
+                    save(held=True)
+                _sleep(0.05, stopped)
                 continue
             # 保證：尚未讀目標前先 busy/null；exec 選定檔後、load 前再公布絕對路徑。
             save(busy=True, target=None, held=False)
@@ -114,20 +120,18 @@ def main(argv=None):
                                             on_target=lambda path: save(target=path))
             if kind == aos_exec.AOS:
                 code = aos_exec.EXIT_AOS
-            save(busy=False, runs=state["runs"] + 1, last_exit=code, last_kind=kind,
+            save(busy=False, runs=state["runs"] + 1, last_target=state["target"], last_exit=code, last_kind=kind,
                  last_ms=round((time.monotonic() - started) * 1000))
-            if signals[0]:
+            if stopped():
                 break
             if kind == aos_exec.USAGE:
-                reason, result = "usage", 2
+                result = 2
                 break
             if code in a.stop_exit:
-                reason = "stop-exit"
                 break
             if a.max_runs and state["runs"] >= a.max_runs:
-                reason = "max-runs"
                 break
-            _sleep(a.interval_ms / 1000, lambda: bool(signals[0]))
+            _sleep(a.interval_ms / 1000, stopped)
     except OSError as e:
         sys.stderr.write("aos-run: ReadFailed: %s\n" % " ".join(str(e).split()))
         result = 2

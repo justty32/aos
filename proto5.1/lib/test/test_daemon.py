@@ -130,6 +130,56 @@ class DaemonTest(unittest.TestCase):
         self.assertIn("AlreadyRunning", out.stderr)
         self.assertIsNone(self.proc.poll())
 
+    def test_killed_daemon_runner_finishes_current_and_restart_refuses_live_runner(self):
+        self.start()
+        begun, finished = self.root / "begun", self.root / "finished"
+        target = self.inst("from pathlib import Path; import time; Path(%r).touch(); "
+                           "time.sleep(2); Path(%r).touch()" % (str(begun), str(finished)))
+        entry = self.req("add", target, ["--interval-ms", "0"])
+        wait_for(begun.exists)
+        self.proc.kill()
+        self.assertEqual(self.proc.wait(timeout=3), -signal.SIGKILL)
+        out = subprocess.run([sys.executable, str(CLI / "aos-daemon")], env=self.env,
+                             capture_output=True, text=True, timeout=3)
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("AlreadyRunning", out.stderr)
+        wait_for(lambda: not alive(entry["pid"]))
+        self.assertTrue(finished.exists())
+        state = json.loads(Path(entry["home"], "run.json").read_text())
+        self.assertEqual((state["runs"], state["busy"], state["last_exit"]), (1, False, 0))
+
+    def test_start_rejects_live_runner_even_without_daemon_state(self):
+        path = self.home / "runners/old/run.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"pid": os.getpid()}))
+        out = subprocess.run([sys.executable, str(CLI / "aos-daemon")], env=self.env,
+                             capture_output=True, text=True, timeout=3)
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("AlreadyRunning", out.stderr)
+        self.assertFalse((self.home / "state.json").exists())
+
+    def test_idle_state_is_not_rewritten(self):
+        self.start()
+        path = self.home / "state.json"
+        before = path.stat().st_mtime_ns
+        time.sleep(.5)
+        self.assertEqual(path.stat().st_mtime_ns, before)
+
+    def test_daemon_creates_identity_and_ctl_rejects_wrong_home(self):
+        self.start()
+        path = self.home / "info.json"
+        self.assertEqual(json.loads(path.read_text()), {"_metainfo": {"_type": "daemon", "_version": 1}})
+        path.write_text('{"_metainfo":{"_type":"kernel","_version":1}}')
+        out = self.ctl("ls")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("NotAHome", out.stderr)
+
+    def test_requests_directories_alone_are_not_a_home(self):
+        (self.home / "requests/done").mkdir(parents=True)
+        out = self.ctl("ls")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("NotAHome", out.stderr)
+
     def test_duplicate_target_and_absent_remove(self):
         self.start()
         target = self.inst()
@@ -204,18 +254,20 @@ class DaemonTest(unittest.TestCase):
             wait_for(done.exists)
             reply = json.loads(done.read_text())
             self.assertFalse(reply["ok"])
-            self.assertEqual(reply["result"]["code"], code)
+            self.assertEqual(set(reply), {"ok", "code", "msg"})
+            self.assertEqual(reply["code"], code)
         self.assertIsNone(self.proc.poll())
 
-    def test_raw_ls_supported(self):
+    def test_raw_ls_rejected(self):
         self.start()
         path = self.home / "requests/raw-ls.json"
         path.write_text('{"op":"ls","note":"preserved"}')
         done = path.parent / "done" / path.name
         wait_for(done.exists)
         reply = json.loads(done.read_text())
-        self.assertEqual(reply["note"], "preserved")
-        self.assertEqual(reply["result"]["pid"], self.proc.pid)
+        self.assertEqual(set(reply), {"ok", "code", "msg"})
+        self.assertFalse(reply["ok"])
+        self.assertEqual(reply["code"], "FieldTypeMismatch")
 
     def test_done_published_before_unlink(self):
         path = self.root / "requests/r.json"
@@ -262,6 +314,7 @@ class DaemonTest(unittest.TestCase):
 
     def test_read_state_errors(self):
         (self.home / "requests/done").mkdir(parents=True)
+        (self.home / "info.json").write_text('{"_metainfo":{"_type":"daemon","_version":1}}')
         path = self.home / "state.json"
         for content, code in ((None, "ReadFailed"), (b"\xff", "JsonSyntax"), (b'{"pid":true,"runs":{}}', "FieldTypeMismatch")):
             if content is not None:
@@ -320,6 +373,7 @@ class DaemonTest(unittest.TestCase):
         for i in range(2):
             self.req("add", self.inst(name="io%d.json" % i))
         (self.home / "fail").touch()
+        (self.home / "requests/fail.json").write_text('{"op":"stop"}')
         self.assertEqual(self.proc.wait(timeout=13), 1)
         self.assertTrue(all(not alive(pid) for pid in self.runners))
         error = self.proc.stderr.read().decode()

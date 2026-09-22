@@ -62,6 +62,10 @@ class KernelTests(unittest.TestCase):
         self.daemon = subprocess.Popen([sys.executable, str(CLI / "aos-daemon")],
                                        env=self.env, stdout=self.log, stderr=self.log)
         self.until(lambda: (self.d / "state.json").exists())
+        if not boot:
+            # 只保存 boot 的 daemon 家，手動 tick 案例不啟動 kernel runner。
+            with patch.object(aos_daemon, "request"):
+                kernel.boot(self.k)
         if boot:
             result = self.cli("boot", self.k)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -186,11 +190,11 @@ class KernelTests(unittest.TestCase):
         self.setup_kernel(interval=100)
         kernel.add(self.k, self.inst("job", "import sys; sys.exit(101)"), "job")
         self.start()
-        self.until(lambda: any(cur and cur["pid"] == "job" for cur in self.state()["cpus"].values()))
+        self.until(lambda: any(cur and cur["name"] == "job" for cur in self.state()["cpus"].values()))
         result = self.cli("rm", self.k, "job")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("removed job", result.stdout)
-        self.assertFalse(any(cur and cur["pid"] == "job" for cur in self.state()["cpus"].values()))
+        self.assertFalse(any(cur and cur["name"] == "job" for cur in self.state()["cpus"].values()))
         replies = list((self.k / "syscalls/done").glob("*.json"))
         self.assertEqual(len(replies), 1)
         self.assertTrue(json.loads(replies[0].read_text())["ok"])
@@ -240,7 +244,7 @@ class KernelTests(unittest.TestCase):
     def test_duplicate_cpu_state_rejected(self):
         self.setup_kernel(2)
         st = self.state()
-        cur = {"pid": "same", "runs_at": 0, "seen_runs": 0}
+        cur = {"name": "same", "runs_at": 0, "seen_runs": 0}
         st["cpus"] = {"0": cur, "1": cur}
         (self.k / "state.json").write_text(json.dumps(st))
         self.assertIn("FieldTypeMismatch", self.cli("ls", self.k).stderr)
@@ -260,13 +264,21 @@ class KernelTests(unittest.TestCase):
         self.start(boot=False)
         kernel.tick(self.k)
         target = str(self.k / "procs/x.json")
-        self.until(lambda: self.runner_states()[0]["busy"] and self.runner_states()[0]["target"] == target
-                   and self.runner_states()[0]["runs"] >= 1)
+        # CPU1 的 idle 在 interval=0 也會短暫 busy/null，合法擋住所有候選；
+        # 先 hold 它，讓這個案例只驗 X 忙碌時不能跨 CPU 重疊。
+        idle_home = Path(aos_daemon.read_state()["runs"][str(self.k / "cpus/1.json")]["home"])
+        idle_control = idle_home / "ctl.json"
+        idle_control.write_text('{"op":"hold"}')
+        self.until(lambda: self.runner_states()[1].get("held", False))
+        def x_busy_again():
+            status = self.runner_states()[0]
+            return status["busy"] and status["target"] == target and status["runs"] >= 1
+        self.until(x_busy_again)
         # Y 留在 CPU0，避免 pass 在下一次觀察前用完量子，又合法換回 X。
         kernel.add(self.k, self.inst("y", "import time; time.sleep(2)"), "y")
         before = aos_daemon.read_state()["runs"]
         kernel.tick(self.k)
-        self.assertEqual(self.state()["cpus"]["0"]["pid"], "y")
+        self.assertEqual(self.state()["cpus"]["0"]["name"], "y")
         self.assertIsNone(self.state()["cpus"]["1"])
         self.assertEqual(aos_daemon.read_state()["runs"], before)
         self.assertTrue((self.k / "cpus/0.json").is_symlink())
@@ -284,7 +296,8 @@ class KernelTests(unittest.TestCase):
             kernel.tick(self.k)
             return self.state()["cpus"]["1"] is not None
         self.until(migrated)
-        self.assertEqual(self.state()["cpus"]["1"]["pid"], "x")
+        self.assertEqual(self.state()["cpus"]["1"]["name"], "x")
+        idle_control.unlink()
         self.until(lambda: self.runner_states()[1]["busy"] and self.runner_states()[1]["target"] == target)
         self.assertFalse(self.runner_states()[0]["busy"] and self.runner_states()[0]["target"] == target)
 
@@ -306,7 +319,7 @@ class KernelTests(unittest.TestCase):
         status["busy"] = False
         (home / "run.json").write_text(json.dumps(status))
         kernel._schedule(self.k, kernel.load(self.k)[1], st, runs, [])
-        self.assertEqual(st["cpus"]["0"]["pid"], "x")
+        self.assertEqual(st["cpus"]["0"]["name"], "x")
 
     def test_old_completion_and_busy_last_exit_not_counted_for_new_proc(self):
         self.setup_kernel(quantum=100)
@@ -314,14 +327,129 @@ class KernelTests(unittest.TestCase):
         home = self.root / "runner"
         home.mkdir()
         st = self.state()
-        st["cpus"]["0"] = {"pid": "x", "runs_at": 0, "seen_runs": 0}
+        st["cpus"]["0"] = {"name": "x", "runs_at": 0, "seen_runs": 0}
         runs = {str(self.k / "cpus/0.json"): {"home": str(home)}}
         for busy, target in ((False, "old.json"), (True, str(self.k / "procs/x.json"))):
             (home / "run.json").write_text(json.dumps({"busy": busy, "target": target, "runs": 1,
-                                                        "last_kind": "child", "last_exit": 100}))
+                                                        "last_target": "old.json", "last_kind": "child", "last_exit": 100}))
             kernel._schedule(self.k, kernel.load(self.k)[1], st, runs, [])
             self.assertEqual(st["cpus"]["0"]["seen_runs"], 0)
             self.assertFalse((self.k / "procs/done/x.json").exists())
+
+    def test_busy_last_target_completion_counted_once(self):
+        self.setup_kernel(quantum=100, bad_after=2)
+        kernel.add(self.k, self.inst("x"), "x")
+        home = self.root / "runner"
+        home.mkdir()
+        st = self.state()
+        st["cpus"]["0"] = {"name": "x", "runs_at": 0, "seen_runs": 0}
+        runs = {str(self.k / "cpus/0.json"): {"home": str(home)}}
+        status = {"busy": True, "target": None, "last_target": str(self.k / "procs/x.json"),
+                  "runs": 3, "last_kind": "child", "last_exit": 7}
+        (home / "run.json").write_text(json.dumps(status))
+        cfg = kernel.load(self.k)[1]
+        kernel._schedule(self.k, cfg, st, runs, [])
+        self.assertEqual(st["cpus"]["0"]["bad_runs"], 1)
+        self.assertEqual(st["cpus"]["0"]["seen_runs"], 3)
+        self.assertNotIn("bad_exit", st["cpus"]["0"])
+        kernel._schedule(self.k, cfg, st, runs, [])
+        self.assertEqual(st["cpus"]["0"]["bad_runs"], 1)
+        self.assertFalse((self.k / "procs/bad/x.json").exists())
+        status.update(runs=4, last_exit=100)
+        (home / "run.json").write_text(json.dumps(status))
+        kernel._schedule(self.k, cfg, st, runs, [])
+        self.assertTrue((self.k / "procs/done/x.json").exists())
+
+    def test_queue_does_not_rewrite_frozen_inst(self):
+        self.setup_kernel()
+        kernel.add(self.k, self.inst("x"), "x")
+        path = self.k / "procs/x.json"
+        before = path.stat()
+        st = self.state()
+        for _ in range(3):
+            kernel._queue(self.k, st, [])
+        after = path.stat()
+        self.assertEqual(after.st_ino, before.st_ino)
+        self.assertEqual(after.st_mtime_ns, before.st_mtime_ns)
+
+    def test_failed_syscall_has_flat_error(self):
+        self.setup_kernel()
+        (self.k / "syscalls/no.json").write_text('{"op":"rm","name":"missing"}')
+        kernel._syscalls(self.k, kernel.load(self.k)[1], self.state(), {}, [])
+        reply = json.loads((self.k / "syscalls/done/no.json").read_text())
+        self.assertEqual(reply, {"ok": False, "code": "NotRunning", "msg": "找不到行程：missing"})
+
+    def test_boot_pins_daemon_home_for_tick_ls_rm(self):
+        self.setup_kernel()
+        self.start(boot=False)
+        self.assertEqual(json.loads((self.k / "info.json").read_text())["daemon"], str(self.d))
+        with patch.dict(os.environ, {"AOS_DAEMON_HOME": str(self.root / "different")}):
+            self.assertEqual(kernel.tick(self.k), 0)
+            self.assertIn("daemon=%s" % self.daemon.pid, kernel.status(self.k))
+            with self.assertRaisesRegex(kernel.KernelError, "ReadFailed"):
+                kernel.remove(self.k, "missing", timeout=0)
+        call = json.loads(next((self.k / "syscalls").glob("*.json")).read_text())
+        self.assertEqual(call, {"op": "rm", "name": "missing"})
+        info = self.d / "info.json"
+        original = info.read_text()
+        try:
+            info.write_text('{"_metainfo":{"_type":"kernel","_version":1}}')
+            for action in (lambda: kernel.tick(self.k), lambda: kernel.status(self.k),
+                           lambda: kernel.remove(self.k, "missing", timeout=0)):
+                with self.assertRaisesRegex(aos_daemon.DaemonError, "NotAHome"):
+                    action()
+        finally:
+            info.write_text(original)
+
+    def test_boot_preserves_whole_info_reference_and_local_daemon_binding(self):
+        self.setup_kernel()
+        info = self.k / "info.json"
+        source = self.k / "settings.json"
+        settings = json.loads(info.read_text())
+        source.write_text(json.dumps(settings))
+        info.write_text('{"$ref":"settings.json"}')
+        self.start(boot=False)
+        self.assertEqual(json.loads(info.read_text()), {"$ref": "settings.json", "daemon": str(self.d)})
+        settings["quantum"] = 9
+        source.write_text(json.dumps(settings))
+        cfg = kernel.load(self.k)[1]
+        self.assertEqual(cfg["daemon"], str(self.d))
+        self.assertEqual(cfg["quantum"], 9)
+        self.assertEqual(kernel.tick(self.k), 0)
+
+    def test_failed_boot_keeps_original_daemon_binding(self):
+        self.setup_kernel()
+        self.start()
+        info = self.k / "info.json"
+        original = json.loads(info.read_text())
+        before = info.stat()
+        with self.assertRaisesRegex(aos_daemon.DaemonError, "AlreadyRunning"):
+            kernel.boot(self.k)
+        self.assertEqual(info.stat().st_ino, before.st_ino)
+        self.assertEqual(json.loads(info.read_text()), original)
+        other = self.root / "stopped-daemon"
+        (other / "requests/done").mkdir(parents=True)
+        (other / "info.json").write_text('{"_metainfo":{"_type":"daemon","_version":1}}')
+        (other / "state.json").write_text('{"pid":0,"runs":{}}')
+        with patch.dict(os.environ, {"AOS_DAEMON_HOME": str(other)}):
+            with self.assertRaisesRegex(aos_daemon.DaemonError, "NotRunning"):
+                kernel.boot(self.k)
+            self.assertEqual(info.stat().st_ino, before.st_ino)
+            self.assertEqual(json.loads(info.read_text()), original)
+            # 檢查時還在、交件時已停：失敗後也恢復原 binding。
+            with patch.object(aos_daemon, "_active", return_value=True), patch.object(
+                    aos_daemon, "request", side_effect=aos_daemon.DaemonError("NotRunning", "已停止")):
+                with self.assertRaisesRegex(aos_daemon.DaemonError, "NotRunning"):
+                    kernel.boot(self.k)
+            self.assertEqual(json.loads(info.read_text()), original)
+            self.assertIn("daemon=%s" % self.daemon.pid, kernel.status(self.k))
+
+    def test_unbooted_kernel_does_not_select_daemon_from_environment(self):
+        self.setup_kernel()
+        self.assertIn("daemon=None", kernel.status(self.k))
+        for action in (lambda: kernel.tick(self.k), lambda: kernel.remove(self.k, "x", timeout=0)):
+            with self.assertRaisesRegex(kernel.KernelError, "NotRunning"):
+                action()
 
     def test_idle_resolve_then_slot_assignment_keeps_selected_inst(self):
         self.setup_kernel()
@@ -342,7 +470,7 @@ class KernelTests(unittest.TestCase):
         self.setup_kernel(bad_after=2)
         cfg = kernel.load(self.k)[1]
         # 基線後 idle 完成一次，接著 X 第一次失敗：只能確定最後那一次屬於 X。
-        cur = {"pid": "x", "runs_at": 0, "seen_runs": 0}
+        cur = {"name": "x", "runs_at": 0, "seen_runs": 0}
         status = {"busy": False, "target": str(self.k / "procs/x.json"), "runs": 2,
                   "last_kind": "child", "last_exit": 7}
         kernel._observe(cfg, cur, status)
@@ -364,6 +492,7 @@ class KernelTests(unittest.TestCase):
             kernel.load(self.k)
         cfg["kill_tree"] = True
         path.write_text(json.dumps(cfg))
+        self.start(boot=False)
         with patch.object(aos_daemon, "request", return_value={"home": str(self.root)}) as request:
             kernel.boot(self.k)
             self.assertTrue(request.call_args.kwargs["kill_tree"])
@@ -421,7 +550,7 @@ open(name + '.runs', 'a').write('d')
         self.assertFalse((self.root / "unexpected-term").exists())
         self.assertIn("cpu", (self.k / "kernel.log").read_text())
         st = self.state()
-        names = [cur["pid"] for cur in st["cpus"].values() if cur]
+        names = [cur["name"] for cur in st["cpus"].values() if cur]
         self.assertEqual(len(names), len(set(names)))
 
 

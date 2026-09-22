@@ -44,8 +44,7 @@ def _validate(req):
     env = inst.get("envs")
     if not isinstance(env, dict) or not all(text(k) and k and "=" not in k and text(v) for k, v in env.items()):
         raise ValueError("inst.envs 必須是合法的環境字串表")
-    for key, flags in (("stdin", ("inherit",)), ("stdout", ("append", "mkdir", "inherit")),
-                       ("stderr", ("append", "mkdir", "inherit", "merge")), ("exit", ("append", "mkdir"))):
+    for key, flags in (("stderr", ("append", "mkdir", "inherit", "merge")), ("exit", ("append", "mkdir"))):
         stream = inst.get(key)
         if (not isinstance(stream, dict) or not path(stream.get("path"), empty=True)
                 or any(type(stream.get(flag)) is not bool for flag in flags)):
@@ -59,12 +58,15 @@ def _validate(req):
 def execute(req):
     try:
         _validate(req)
+    except ValueError as e:
+        return {"ok": False, "code": "BadPayload", "msg": "工具請求無法執行：%s" % e}
+    try:
         outcome = aos_exec.run_inst(req["inst"], req["stdin"], req["timeout_ms"])
         code, kind, stdout = outcome
         return {"ok": True, "code": code, "kind": kind,
                 "timed_out": outcome.timed_out, "stdout": stdout}
     except (ValueError, OSError) as e:
-        return {"ok": False, "error": "工具請求無法執行：%s" % e}
+        return {"ok": False, "code": "EngineFailed", "msg": "工具請求無法執行：%s" % e}
 
 
 def tick(dir, env=None):

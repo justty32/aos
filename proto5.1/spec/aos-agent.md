@@ -1,6 +1,6 @@
 # aos-agent：把一個 agent 資料夾走一格（程式規範，**草稿**）
 
-← [proto5 README](../README.md)｜資料夾與 `state.json` 長什麼樣在 [agent.md](agent.md)；組請求靠 [aos-llm-ask.md](aos-llm-ask.md)，問模型交 llm CPU；跑工具靠 [inst-posix.md](inst-posix.md)
+← [proto5.1 README](../README.md)｜資料夾與 `state.json` 長什麼樣在 [agent.md](agent.md)；組請求靠 [aos-llm-ask.md](aos-llm-ask.md)，問模型交 llm CPU；跑工具靠 [inst-posix.md](inst-posix.md)
 
 > **最精簡的標準**（使用者定的）：缺的東西之後遇到了再補；不記修訂記錄。
 > 這份只講「叫一次 aos-agent 到底做什麼」：先看**門**（`waits`），再走**一格**（`state`）。
@@ -55,7 +55,7 @@ aos-agent 會在送出 LLM／工具請求或引擎連敗三次時自己往 `wait
 - CPU 資料夾與協議見 [llm-cpu.md](llm-cpu.md)，一次執行的行為見 [aos-llm-cpu.md](aos-llm-cpu.md)。
 - 送出前只驗 CPU 的 `info.json` 身分；models 與其中的環境變數留給 CPU 自己讀解。請求＝`{"model": engine.model 的代號, "body": 已組好且不含 model 的請求, "result": agent/ask-result.json 的絕對路徑}`。CPU 查自己的 models 表，填真名後呼叫模型；連線設定與 api_key 不經 agent 請求。
 - 檔名＝`<agent 資料夾名>-<epoch ns>.json`。在 CPU 共用短鎖內先檢查 requests／running／done 三處同名，有就拒收、不覆蓋；寫 `.tmp` 再 rename 到 requests，才寫 waits。HTTP 不在這把鎖內。
-- 下一次門沒開＝101；結果到了，同次呼叫劃門並收回。結果完整讀驗先於門的 consume／寫回；壞 JSON 或形狀錯誤＝1、結果與 state 保留。`ok` 必須是 bool；成功需要合法 assistant message，失敗需要字串 error。結果內容不解指示詞。
+- 下一次門沒開＝101；結果到了，同次呼叫劃門並收回。結果完整讀驗先於門的 consume／寫回；壞 JSON 或形狀錯誤＝1、結果與 state 保留。`ok` 必須是 bool；成功需要合法 assistant message，失敗需要字串 code／msg。結果內容不解指示詞。
 - 記憶尾巴帶 tool_calls 的自癒優先於收回；若完整驗過、正規化的成功結果恰等於尾巴，先封存這份已接過的結果、清 errors，避免下次重收。壞結果不擋自癒並保留到後續 think；送出不清 errors，因為還沒得到引擎成功。
 - 寫入順序為請求 → waits；收回成功為記憶 → 結果 `.done` → state。沒有跨檔交易或 request id：崩在這些寫入之間仍可能重送、重複接回或漏掉狀態推進，具體窗口見 [findings](../notes/findings.md)。不要把這套當成 exactly-once。
 
@@ -70,12 +70,12 @@ aos-agent 會在送出 LLM／工具請求或引擎連敗三次時自己往 `wait
 
 - 工具 `_run` 沒寫或是 `"sync"`＝同步；`"cpu"`＝交到 `info.json` 頂層 `tool_cpu` 指定的資料夾（相對 agent 家）。CPU 協議見 [tool-cpu.md](tool-cpu.md)。
 - 記憶尾巴有 calls、當批尚無任何結果：先驗 tool CPU 身分，建立 `tool-results/`，所有 CPU call 各送一份請求；sync call 這格先不跑。結果絕對路徑為 `<agent>/tool-results/<i>.json`，`i` 是原始 `tool_calls` 索引。請求名為 `<agent 名>-<epoch ns>-<i>.json`，由共用 `aos_cpu.submit` 交件。
-- `_meta` 在 agent 端以 agent 家／環境解成 inst，`stdin` 為 arguments 字串、`timeout_ms` 為工具預算。inst 解不開則 agent 直接寫 `ok:false` 結果，其他 CPU call 照送。
+- `_meta` 在 agent 端以 agent 家／環境解成 inst，交件時去掉 inst.stdin／inst.stdout；請求外層 `stdin` 為 arguments 字串、`timeout_ms` 為工具預算。inst 解不開則 agent 直接寫 `ok:false` 結果，其他 CPU call 照送。
 - 送完往 waits 加一條 `{"$opt":"all","$val":[所有 CPU 結果的絕對路徑]}`，不開 consume，state 留 act、退 0；沒全到退 101。若結果只到一部分而 waits 缺失，補回整批 all 門，不重送已有結果。
-- 全到後先驗整批結果，再劃門／跑 sync。按原始 call 順序組訊息：sync 現在跑；CPU 的 `ok:true` 且 code=0 用 stdout、非零用「工具 xxx 失敗（exit n）：」＋stdout；`timed_out:true` 優先為「工具 xxx 逾時」；一般 `ok:false` 為「工具 xxx 跑不起來：」＋error；收屍／失聯的固定結果見下段。CPU 的 `kind` 原樣驗為 child／aos，這階段顯示依退出碼。全部訊息一起寫記憶，全部結果 rename `.done`，state 轉 think。
-- CPU 收屍代表未取得可靠執行結果：可能崩在認領後、執行中，或工具已完成但還沒發布結果；也可能原程序仍活著、只超過收屍期限。這些都算「結果不明」，不猜副作用、不重試。當 `ok:false` 且 error 精確等於「結果不明：工具可能已經跑了，也可能沒有」，tool content 固定為 `json.dumps({"ok": False, "error": "結果不明：工具可能已經跑了，也可能沒有"}, ensure_ascii=False)`，不加工具名前綴。已知逾時、非零退出、壞 payload、跑不起來仍用各自的已知失敗文字。
+- 全到後先驗整批結果，再劃門／跑 sync。按原始 call 順序組訊息：sync 現在跑；CPU 的 `ok:true` 且 code=0 用 stdout、非零用「工具 xxx 失敗（exit n）：」＋stdout；`timed_out:true` 優先為「工具 xxx 逾時」；一般 `ok:false` 為「工具 xxx 跑不起來：」＋msg；收屍／失聯的固定結果見下段。CPU 的 `kind` 原樣驗為 child／aos，這階段顯示依退出碼。全部訊息一起寫記憶，全部結果 rename `.done`，state 轉 think。
+- CPU 收屍代表未取得可靠執行結果：可能崩在認領後、執行中，或工具已完成但還沒發布結果；也可能原程序仍活著、只超過收屍期限。這些都算「結果不明」，不猜副作用、不重試。當 `ok:false` 且 `code == "Reaped"`，tool content 固定為 `json.dumps({"ok": False, "error": "結果不明：工具可能已經跑了，也可能沒有"}, ensure_ascii=False)`，不加工具名前綴。已知逾時、非零退出、壞 payload、跑不起來仍用各自的已知失敗文字。
 - 同一則 assistant 叫多個 `_run: "cpu"` 工具，只保證收回的訊息順序，**不保證執行順序**。模型一次叫多個並未指定先後；有先後關係的工具別標 cpu，或合成一個工具。
-- 結果不解指示詞。`ok`／`timed_out` 必須是 bool、`code` 是整數（bool 不算）、stdout／error 是字串；壞 JSON／UTF-8 或欄位錯誤退 1，門／記憶／結果不動，也不跑 sync。收回不再要求 CPU 的 info 可讀。
+- 結果不解指示詞。`ok` 必須是 bool；成功的 `timed_out` 是 bool、`code` 是整數（bool 不算）、stdout 是字串；失敗的 code／msg 是字串；壞 JSON／UTF-8 或欄位錯誤退 1，門／記憶／結果不動，也不跑 sync。收回不再要求 CPU 的 info 可讀。
 - 崩在記憶已寫、結果尚未全封存／state 尚未寫：下次 act 看尾端整批 tool 訊息，確認筆數與 call id 順序吻合，封存該批剩餘的 CPU 索引結果，再轉 think，不重跑 sync。
 - **限制**：沒新增請求 id、state ask／calls 或交易。交件中途崩潰可能重送；若部分結果已到而其他 call 尚未交件，補回的門可能永遠等不到；sync 已跑但記憶尚未寫也可能重跑。固定結果路徑無法辨認任意遲到舊結果。這些情境列在 findings，D 只評估對帳、不實作。
 

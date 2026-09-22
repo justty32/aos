@@ -9,8 +9,7 @@ import aos_llm_ask
 from aos_agent_info import AgentError
 from aos_directives import Context, DirectiveError, Document, resolve_located
 
-__all__ = ["load", "queue_lock", "tick", "main"]
-queue_lock = aos_cpu.queue_lock
+__all__ = ["load", "tick", "main"]
 
 
 def load(dir, env=None):
@@ -51,24 +50,33 @@ def _validate(req, path):
 
 
 def _execute(req, models):
+    try:
+        _validate(req, "請求")
+    except AgentError as e:
+        return {"ok": False, "code": "BadPayload", "msg": e.msg}
     engine = models.get(req["model"])
     if engine is None:
-        return {"ok": False, "error": "不認識的模型代號"}
+        return {"ok": False, "code": "UnknownModel", "msg": "不認識的模型代號"}
     try:
         body = dict(req["body"], model=engine["model"])
         return {"ok": True, "message": aos_llm_ask.call(engine, body)}
     except aos_llm_ask.EngineFailed as e:
-        return {"ok": False, "error": e.msg}
+        return {"ok": False, "code": e.code, "msg": e.msg}
     except ValueError as e:
-        return {"ok": False, "error": "引擎請求無法送出：%s" % e}
+        return {"ok": False, "code": "BadPayload", "msg": "引擎請求無法送出：%s" % e}
+
+
+def _timeout(req, models):
+    alias = req.get("model")
+    return models.get(alias, {}).get("timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS) \
+        if isinstance(alias, str) else aos_agent_info.DEFAULT_TIMEOUT_MS
 
 
 def tick(dir, env=None):
     info = load(dir, env=env)
     models = info["models"]
-    return aos_cpu.tick(info["dir"], lambda req: _execute(req, models), validate=_validate,
-                        timeout_ms=lambda req: models.get(req["model"], {}).get(
-                            "timeout_ms", aos_agent_info.DEFAULT_TIMEOUT_MS))
+    return aos_cpu.tick(info["dir"], lambda req: _execute(req, models),
+                        timeout_ms=lambda req: _timeout(req, models))
 
 
 def main(argv=None):

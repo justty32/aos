@@ -7,6 +7,7 @@
 
 ```text
 D/
+  info.json
   requests/<epoch ns>-<pid>-<random 4 hex>.json
   requests/done/<同名>.json
   runners/<epoch ns>-<random 4 hex>/
@@ -18,21 +19,22 @@ D/
   .daemon.lock
 ```
 
+info.json 的身分固定為 `{"_metainfo":{"_type":"daemon","_version":1}}`，版本必須是整數 1，bool 不算。
+daemon 啟動時沒有 info 就建，有就驗，不覆寫錯誤身分；ctl 與 kernel 認家先驗它。
 daemon 建立缺少的家、requests／done；每次 add 另外建一個 runner 家，不重用舊家的控制檔與快照。
-runner 退出後家保留供觀察。run.json／ctl.json 格式見 [aos-run 的家](aos-run.md#家檔案格式)。
-ctl 不建立 daemon 家：缺 requests／done 為 NotAHome。
+runner 退出後家保留供觀察。run.json／ctl.json 格式見 [run-home](run-home.md)。
+ctl 不建立 daemon 家：缺 info／身分不合或缺 requests／done 為 NotAHome；版本不合為 UnsupportedVersion。
 .daemon.lock 是持續存在的 flock 檔；daemon 執行期間持獨占鎖，防止同家兩支 daemon。
 daemon.pid 只放十進位 PID 加換行，正常停機移除；log 接 runner 的 stdout／stderr。
 
 ## 請求與回音
 
-只處理 requests 第一層的 `.json` 檔，只認四個 op：
+只處理 requests 第一層的 `.json` 檔，只認三個 op：
 
 | op | 欄位 | 成功 result |
 |---|---|---|
 | `add` | target 必填；args 缺省 []；kill_tree 是布林，缺省 false | 新增 entry |
 | `remove` | target 必填 | runner 完全退出後的 entry，state=stopping |
-| `ls` | 無 | `{pid,runs}` 快照；ctl 直接讀 state，不交件 |
 | `stop` | 無 | 所有 runner 退出、state 清空、pidfile 移除後回 `{stopped:true}` |
 
 target 必須是非空的絕對 `.json` 路徑，以 abspath 正規化並作為 runs 的 key；不解符號連結，
@@ -45,9 +47,9 @@ args 是旗標與整數值配對的字串陣列，只接受 --interval-ms、--ti
 {"op":"add","target":"/abs/x.json","args":["--interval-ms","100"],"kill_tree":false}
 ```
 
-回音是原請求物件加 ok 布林與 result，未知欄位原樣保留。
-失敗 result 是 `{"code":"代號","msg":"白話"}`；壞 JSON 無法保留原物件，就放 request:null；
-可讀的非物件 JSON 放在 request。
+成功回音是原請求物件加 `ok:true` 與 result，未知欄位原樣保留。
+所有失敗回音都只有 `{"ok":false,"code":"代號","msg":"白話"}` 三格，包括壞 JSON 或非物件請求。
+檔案請求不接受 ls；ctl ls 直接讀 state。
 
 順序固定：執行 op → 先寫 done → 再刪原請求。done 寫失敗則原單留著；重掃看見已有 done
 只刪原單，不重做 op。請求與 done 同名，done 保留、不自動清理。

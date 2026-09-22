@@ -2,8 +2,8 @@
 
 ← [proto5.1 README](../README.md)｜資料格式：[agent.md](agent.md)｜送件：[aos-agent.md](aos-agent.md)｜HTTP：[aos-llm-cpu.md](aos-llm-cpu.md)
 
-`aos-llm-ask [dir] [--dry-run]` 讀 agent 家、組 body，stdout 印一行 JSON 後退出。
-dir 省略是 `.`；`--dry-run` 保留，但有沒有給都只印 body，不打 HTTP、不交 CPU 請求。
+`aos-llm-ask [dir]` 讀 agent 家、組 body，stdout 印一行 JSON 後退出。
+dir 省略是 `.`；只印 body，不打 HTTP、不交 CPU 請求。
 
 ## 1. 讀驗與組 body
 
