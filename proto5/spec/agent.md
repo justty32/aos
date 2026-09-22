@@ -131,7 +131,7 @@ aos-agent 到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2]
 | 選項 | 「到了」的意思 | 備註 |
 |---|---|---|
 | `exists` | 檔存在。資料夾＝裡面有任何一個 `*.json` | **預設** |
-| `mtime` | 檔的修改時間 > 這條的 `since`（epoch 秒，整數或小數） | 加這條的人寫 `since`；沒寫＝`FieldTypeMismatch`。跟 `exists` 互斥 |
+| `mtime` | 檔的修改時間 > 這條的 `since`（epoch 秒，整數或小數）。資料夾＝裡面任何一個 `*.json` 的修改時間 > `since` | 加這條的人寫 `since`；沒寫或不是數字＝`FieldTypeMismatch`。跟 `exists` 互斥 |
 | `consume` | （不改「到了」的判斷）到了之後把檔 rename 成 `<原名>.done`，資料夾＝裡面當時在的 `*.json` 都 rename | 不然檔一直在，下次沒得等 |
 | `any` | `$val` 陣列裡**任一個**到＝這條到 | 跟 `all` 互斥；`$val` 只有一個路徑時無差 |
 | `all` | `$val` 陣列裡**全部**到＝這條到 | **預設** |
@@ -166,4 +166,4 @@ aos-agent 到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2]
 1. `_metainfo` 必填、也解指示詞。
 2. `state.json` 沒檔＝全部預設。
 3. `input` 沒寫＝`input.json`；檔裡可以是字串／一則／一串；清掉＝rename `.done`。
-4. `waits` 的五個選項名與預設（`exists`、`all`）。
+4. `waits` 的五個選項名與預設（`exists`、`all`）；`mtime` 對資料夾＝看裡面每個 `*.json`。
