@@ -16,6 +16,8 @@
 
 ## 今天要使用者拍板的題目總表
 
+> **實作之後的對照**：proto5.1 照這 23 題的建議做完三段（daemon＋kernel＋agent＋llm cpu＋tool cpu 一條龍跑通），逐題結論在 [proto5.1/notes/findings-brief.md](../../proto5.1/notes/findings-brief.md) 第 3 節——15 題可行照建議、6 題要修、2 題（llm cpu 1、6）還是要你決定。
+
 以下共 23 題，題號保留各份 summary 的原編號，前綴用來區分來源。建議是原文 Claude 的建議，尚未拍板；完整選項與理由請看同列連到的精簡版。astra 原報告與 summary 的方案若不同，各篇保留自己的說法，本表只彙整四份 summary。
 
 | 題號 | 一句話 | 建議 |
