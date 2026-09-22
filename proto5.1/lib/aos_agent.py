@@ -8,7 +8,8 @@ think 問模型交給 aos_llm_ask；act 用 aos_inst／aos_exec 跑工具，不�
 state.json 留原始 JSON，只換 state／waits／errors；記憶整份寫。寫檔先 .tmp 再 os.replace，
 走格的順序是記憶 → input rename .done → state。think／act 看記憶尾巴自癒；沒有鎖，
 同一個 agent 不要同時跑兩份。工具預設 60 秒；引擎連敗三次等 continue.json。
-engine.cpu 有填就用 requests／ask-result.json 分兩格問模型。
+engine.cpu 有填就用 requests／ask-result.json 分兩格問模型；_run:cpu 的工具也分送收兩格，
+用 tool-results/<i>.json 等齊後才跑 sync，整批依原始 call 順序接記憶。
 """
 import contextlib
 import io
@@ -18,10 +19,12 @@ import sys
 import time
 
 import aos_agent_info
+import aos_cpu
 import aos_exec
 import aos_inst
 import aos_llm_ask
 import aos_llm_cpu
+import aos_tool_cpu
 from aos_agent_info import AgentError
 from aos_directives import (Context, DirectiveError, Document, is_directive,
                             is_option_object, parse_options, resolve_located)
@@ -162,8 +165,8 @@ def _calls(history):
     return []
 
 
-def _tool_result(call, info, env):
-    """一個 call 對一則 tool 訊息；工具失敗變成給模型看的結果，不中斷其他 call。"""
+def _tool_call(call, info):
+    """找工具與原樣 arguments；殘缺 call 沿用找不到工具的結果。"""
     # 記憶驗法只驗 tool_calls 是陣列；殘缺的 call 當找不到名字，不讓 AttributeError 炸掉整格。
     call = call if isinstance(call, dict) else {}
     fn = call.get("function")
@@ -173,6 +176,18 @@ def _tool_result(call, info, env):
     if not isinstance(arguments, str):
         arguments = json.dumps(arguments)
     tool = next((t for t in info["tools_raw"] if t["function"]["name"] == name), None)
+    return call, name, arguments, tool
+
+
+def _tool_message(call, content):
+    call_id = call.get("id", "") if isinstance(call, dict) else ""
+    return {"role": "tool", "tool_call_id": call_id if isinstance(call_id, str) else str(call_id),
+            "content": content}
+
+
+def _tool_result(call, info, env):
+    """一個 call 對一則 tool 訊息；工具失敗變成給模型看的結果，不中斷其他 call。"""
+    call, name, arguments, tool = _tool_call(call, info)
     if tool is None:
         content = "沒有這個工具：%s" % name
     else:
@@ -193,9 +208,77 @@ def _tool_result(call, info, env):
                 content = out
         except aos_inst.InstError as e:
             content = "工具 %s 跑不起來：%s" % (name, " ".join(str(e).split()))
-    call_id = call.get("id", "")
-    return {"role": "tool", "tool_call_id": call_id if isinstance(call_id, str) else str(call_id),
-            "content": content}
+    return _tool_message(call, content)
+
+
+def _cpu_calls(calls, info):
+    """結果檔索引跟原始 tool_calls 一致，不把 sync 的位置壓掉。"""
+    return {i: os.path.join(info["dir"], "tool-results", "%d.json" % i)
+            for i, call in enumerate(calls)
+            if (_tool_call(call, info)[3] or {}).get("_run", "sync") == "cpu"}
+
+
+def _read_tool_result(path):
+    try:
+        result = aos_agent_info._read_json(path, "工具結果")
+    except UnicodeDecodeError as e:
+        raise AgentError("JsonSyntax", "%s 不是合法 UTF-8 JSON：%s" % (path, e))
+    if not isinstance(result, dict):
+        raise AgentError("NotAnObject", "%s 要是 JSON 物件" % path)
+    if type(result.get("ok")) is not bool:
+        raise AgentError("FieldTypeMismatch", "%s 的 ok 要是布林值" % path)
+    if result["ok"]:
+        if (type(result.get("code")) is not int or result.get("kind") not in ("child", "aos")
+                or type(result.get("timed_out")) is not bool
+                or not isinstance(result.get("stdout"), str)):
+            raise AgentError("FieldTypeMismatch", "%s 的 code／kind／timed_out／stdout 型別不對" % path)
+    elif not isinstance(result.get("error"), str):
+        raise AgentError("FieldTypeMismatch", "%s 的 error 要是字串" % path)
+    return result
+
+
+def _cpu_tool_message(call, info, result):
+    name = _tool_call(call, info)[1]
+    if not result["ok"]:
+        content = "工具 %s 跑不起來：%s" % (name, result["error"])
+    elif result["timed_out"]:
+        content = "工具 %s 逾時" % name
+    elif result["code"]:
+        content = "工具 %s 失敗（exit %d）：%s" % (name, result["code"], result["stdout"])
+    else:
+        content = result["stdout"]
+    return _tool_message(call, content)
+
+
+def _submit_tools(calls, paths, info, env):
+    """整批 cpu 先交件，sync 留到收回；inst 解不開也留一份可收回的失敗。"""
+    os.makedirs(os.path.join(info["dir"], "tool-results"), exist_ok=True)
+    stamp = time.time_ns()
+    for i, path in paths.items():
+        _, _, arguments, tool = _tool_call(calls[i], info)
+        try:
+            inst = aos_inst.load_obj(tool["_meta"], base=info["dir"], env=env)
+        except aos_inst.InstError as e:
+            _write_json(path, {"ok": False, "error": " ".join(str(e).split())})
+            continue
+        name = "%s-%d-%d.json" % (os.path.basename(info["dir"]), stamp, i)
+        request = {"inst": inst, "stdin": arguments, "timeout_ms": tool.get("_timeout_ms", 60000),
+                   "result": path}
+        aos_cpu.submit(info["tool_cpu"], name, request)
+
+
+def _finished_tool_paths(history, info):
+    """記憶已接好整批才清遺留結果；不把任意 tool 尾巴當成已完成。"""
+    start = len(history)
+    while start and history[start - 1].get("role") == "tool":
+        start -= 1
+    calls = _calls(history[:start])
+    messages = history[start:]
+    if calls and len(calls) == len(messages) and all(
+            _tool_message(call, "")["tool_call_id"] == message.get("tool_call_id")
+            for call, message in zip(calls, messages)):
+        return [p for p in _cpu_calls(calls, info).values() if os.path.lexists(p)]
+    return []
 
 
 def _read_result(path):
@@ -229,11 +312,7 @@ def _submit(info):
     name = "%s-%d.json" % (os.path.basename(info["dir"]), time.time_ns())
     request = {"engine": info["engine"], "body": aos_llm_ask.request_from_info(info),
                "result": os.path.join(info["dir"], "ask-result.json")}
-    with aos_llm_cpu.queue_lock(cpu):
-        if any(os.path.lexists(os.path.join(cpu, stage, name))
-               for stage in ("requests", "running", "done")):
-            raise FileExistsError("llm cpu 三處已有同名請求：%s" % os.path.join(cpu, name))
-        _write_json(os.path.join(cpu, "requests", name), request)
+    aos_cpu.submit(cpu, name, request)
 
 
 def _failure(base, raw, error):
@@ -259,6 +338,15 @@ def step(dir, env=None):
     result_path = os.path.join(base, "ask-result.json")
     result = None
     healed_result = False
+    calls = _calls(history) if state == "act" else []
+    tool_paths = _cpu_calls(calls, info)
+    tool_results = {}
+    if state == "act" and not remaining and tool_paths:
+        # 先讀驗全部結果，壞資料不得先劃門，也不得先跑 sync 的副作用。
+        tool_results = {i: _read_tool_result(path) for i, path in tool_paths.items()
+                        if os.path.lexists(path)}
+        if not tool_results:
+            aos_tool_cpu.load(info["tool_cpu"], env=env)
     if state == "think" and not remaining and info["engine"].get("cpu"):
         if _calls(history):
             # 自癒優先；只封存確定已接到記憶的同一則結果，壞檔不擋 act。
@@ -324,10 +412,19 @@ def step(dir, env=None):
             calls = message.get("tool_calls")
             next_state = "act" if isinstance(calls, list) and calls else "idle"
     else:
-        calls = _calls(history)
+        if tool_paths and len(tool_results) != len(tool_paths):
+            if not tool_results:
+                _submit_tools(calls, tool_paths, info, env)
+            raw.setdefault("waits", []).append({"$opt": "all", "$val": list(tool_paths.values())})
+            _write_json(state_path, raw)
+            return 0
         if calls:
-            history.extend(_tool_result(call, info, env) for call in calls)
+            history.extend(_cpu_tool_message(call, info, tool_results[i]) if i in tool_paths
+                           else _tool_result(call, info, env) for i, call in enumerate(calls))
             _write_json(info["history_path"], history)
+            _consume(tool_paths.values())
+        else:
+            _consume(_finished_tool_paths(history, info))
         next_state = "think"
     raw["state"] = next_state
     _write_json(state_path, raw)

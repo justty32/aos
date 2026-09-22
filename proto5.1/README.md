@@ -17,7 +17,7 @@ proto5 那邊 2026-09-22 做了四份調查，冒出 23 題要使用者拍板（
 | 段 | 做什麼 | 任務書 | 狀態 |
 |---|---|---|---|
 | 1 | llm cpu（資料夾＋`aos-llm-cpu` 一次 tick 問一件）、aos-agent 的 `think` 改成丟請求＋`waits` 等結果、兩個逾時關卡（工具 `_timeout_ms` 60 秒、引擎連敗 3 次→`continue.json` 暫停） | [notes/stage1-task.md](notes/stage1-task.md) | 做完 |
-| 2 | tool cpu（跟 llm cpu 同一套請求／結果協議）、工具檔 `_run: "cpu"`、`act` 送出與收回 | 之後 | — |
+| 2 | 共用 CPU 佇列、tool cpu、工具 `_run: "cpu"`、act 送收；請求對帳只評估 | [notes/stage2-task.md](notes/stage2-task.md) | 做完 |
 | 3 | aos-run／aos-daemon／aos-kernel 的 proto5 版（照 daemon／kernel 總結：擋重疊、砍到底、具名代號、沒有 module） | 之後 | — |
 
 ```sh
@@ -26,7 +26,8 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -
 
 
 第 1 段：635 條 Python 測試全綠、C++ ctest 8/8；LM Studio `qwen/qwen3-1.7b` 已真跑 now 工具往返。
-回報與逐次退出碼見 [stage1-report](notes/stage1-report.md)；實作決定與已知限制見 [findings](notes/findings.md)。
+第 2 段：686 條 Python 測試全綠、C++ ctest 8/8；LM Studio 與 `sleep 2; date` 的 tool CPU 往返完成。
+回報與逐次退出碼見 [stage1-report](notes/stage1-report.md)、[stage2-report](notes/stage2-report.md)；實作決定、KISS 限制與對帳評估見 [findings](notes/findings.md) #18～#26。
 
 ## 規範
 
@@ -35,10 +36,13 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5.1/lib python3 -m unittest discover -
 | [spec/directives.md](spec/directives.md) | 指示詞機制：env／fmt／ref、opt／val、實體位置與循環 | 沿用母本 |
 | [spec/inst-posix.md](spec/inst-posix.md) | posix inst 七欄位、讀驗與執行語意 | 沿用母本 |
 | [spec/exec.md](spec/exec.md) | aos-exec 命令列、三種目標、退出碼 | 沿用母本；run_inst 的逾時旗標見 [lib API](lib/README.md) |
-| [spec/agent.md](spec/agent.md) | agent 家、info／state、input／waits／errors | 第 1 段已實作 |
-| [spec/aos-agent.md](spec/aos-agent.md) | waits 門、idle／think／act、CPU 送收、工具限時與連敗暫停 | 第 1 段已實作 |
-| [spec/aos-llm-ask.md](spec/aos-llm-ask.md) | 模型請求、工具 _meta／_timeout_ms、engine.cpu、同步 HTTP | 第 1 段已實作 |
-| [spec/llm-cpu.md](spec/llm-cpu.md) | CPU 資料夾與請求／結果格式 | 第 1 段已實作 |
-| [spec/aos-llm-cpu.md](spec/aos-llm-cpu.md) | 一次收屍再問一件、認領、短鎖、退出碼 | 第 1 段已實作 |
+| [spec/agent.md](spec/agent.md) | agent 家、info／state、input／waits／errors、tool_cpu | 第 2 段已實作 |
+| [spec/aos-agent.md](spec/aos-agent.md) | waits 門、idle／think／act、LLM／工具 CPU 送收、工具限時與連敗暫停 | 第 2 段已實作 |
+| [spec/aos-llm-ask.md](spec/aos-llm-ask.md) | 模型請求、工具 _meta／_timeout_ms／_run、engine.cpu、同步 HTTP | 第 2 段已實作 |
+| [spec/cpu-queue.md](spec/cpu-queue.md) | 共用 CPU 資料夾、交件／認領／收屍與原子結果 | 第 2 段已實作 |
+| [spec/llm-cpu.md](spec/llm-cpu.md) | LLM 的 engine／body payload 與 message 結果 | 第 2 段抽取共用層 |
+| [spec/tool-cpu.md](spec/tool-cpu.md) | 已解 inst／stdin／timeout_ms 與工具執行結果 | 第 2 段已實作 |
+| [spec/aos-tool-cpu.md](spec/aos-tool-cpu.md) | 一次收屍再執行一個工具請求、退出碼 | 第 2 段已實作 |
+| [spec/aos-llm-cpu.md](spec/aos-llm-cpu.md) | 一次問一件的薄層與退出碼；共用佇列另見 cpu-queue | 第 2 段已實作 |
 
 逐檔職責、API 與測試表見 [lib/README.md](lib/README.md)，命令列入口在 [cli/](cli/)。

@@ -22,6 +22,7 @@ agent-bob/
   state.json           state ＋ input ＋ waits ＋ errors（§4）
   prompts/             慣例位置：人格、記憶
   tools/               慣例位置：工具檔
+  tool-results/        CPU 工具結果 <call 索引>.json；收回改 .json.done
 ```
 
 - 只有 `info.json` 是**認出「這是 agent 資料夾」**的依據（有它、而且 `_metainfo._type` 是 `llm_agent`）。
@@ -70,9 +71,13 @@ agent-bob/
 |---|---|---|---|
 | `_metainfo` | 物件 | **必填** | `_type` 只認 `"llm_agent"`、`_version` 只認整數 `1`；規則同 [inst-posix.md §1](inst-posix.md)。跟 inst 不同的是必填：這是新格式、沒有舊檔要相容，而且這就是「這是 agent 資料夾」的記號 |
 
+`info.json` 頂層另有 `tool_cpu`：路徑字串，可解指示詞，相對路徑以 agent 家為中心。沒有 CPU 工具時可省略，load 回 None；明寫 null 型別錯。任何工具使用 `_run: "cpu"` 卻缺 `tool_cpu`，讀驗退 `FieldTypeMismatch`。它不放在 state，工具表的 `_run` 見 [aos-llm-ask.md §2.3](aos-llm-ask.md)。
+
 其他欄位（`system`／`history`／`tools`／`engine`）與它們指到的檔長什麼樣：[aos-llm-ask.md §2](aos-llm-ask.md)。
 
 ## 4. `state.json`
+
+工具 CPU 路徑 `tool_cpu` 是上節的 info 設定；state 仍只有以下四個已知欄位，不新增 `ask`／`calls`。act 的等待以 `waits` 一條 all 條目表達，值是所有 `<agent>/tool-results/<i>.json` 絕對路徑。
 
 ```json
 {
@@ -111,7 +116,7 @@ agent-bob/
 ### 4.2 `waits`：等待表
 
 一張**等待表**：一條或多條「等某個檔」。空的或沒寫＝不用等。誰要 agent 停下來等，誰就往表尾加一條；
-aos-agent 自己也會加條目（送出 LLM 請求、引擎連敗暫停），到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2](aos-agent.md)）。
+aos-agent 自己也會加條目（送出 LLM／工具請求、引擎連敗暫停），到了就劃掉（怎麼判、劃掉之後怎樣在 [aos-agent.md §2](aos-agent.md)）。
 
 ```json
 "waits": [

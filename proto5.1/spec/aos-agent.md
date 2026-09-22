@@ -30,7 +30,7 @@ aos-agent [dir]
 
 所以「一部分到了」的進度會留下來：到了的已經劃掉、consume 過，下次只等剩下的，不會重複判同一個檔。
 
-aos-agent 會在送出 LLM 請求或引擎連敗三次時自己往 `waits` 加條目。人要它**暫停**也可以加一條指到
+aos-agent 會在送出 LLM／工具請求或引擎連敗三次時自己往 `waits` 加條目。人要它**暫停**也可以加一條指到
 不存在的檔（例如 `continue.json`），要它**繼續**就 touch 那個檔——不用另外做 `pause`／`continue`。
 
 ## 3. 走一格到底做什麼
@@ -47,7 +47,8 @@ aos-agent 會在送出 LLM 請求或引擎連敗三次時自己往 `waits` 加�
 | `think` | `engine.cpu` 有寫、`ask-result.json` 存在：讀驗後收回；`ok:true` 的 message 接記憶、`errors` 歸零，結果 rename 成 `.done` | 有非空 `tool_calls` → `act`；否則 → `idle` | 0 |
 | `think` | `engine.cpu` 有寫、結果不存在：送出請求，再向 `waits` 加字面 `"ask-result.json"`，不開 consume | 不變 | 0 |
 | `think` | 同步 `EngineFailed` 或收回 `ok:false`：stderr 一行 `aos-agent: engine: <白話>`、記憶不動、`errors` 加一；非同步結果 rename 成 `.done`；第三敗的處理見下 | 留 `think` | 0 |
-| `act` | 記憶尾巴的每個 `tool_calls[i]` 依序按名字找工具、拿 `_meta` 當 inst 跑；`arguments` 字串原樣進 stdin、stdout 整段當結果，每個 call 接一則 `tool` 訊息。每個工具有 `_timeout_ms` 上限，沒寫＝60000 ms。找不到＝「沒有這個工具：xxx」；逾時＝「工具 xxx 逾時（60000 ms）：」＋stdout（數字用實際預算）；非零退出＝「工具 xxx 失敗（exit n）：」＋stdout；inst 解不開／跑不起來＝「工具 xxx 跑不起來：」＋一行錯誤。這些都只是給模型的結果，其他 call 照跑 | `think` | 0 |
+| `act` | 沒有 `_run: "cpu"` 的 call：記憶尾巴的每個 `tool_calls[i]` 依序按名字找工具、拿 `_meta` 當 inst 跑；`arguments` 字串原樣進 stdin、stdout 整段當結果，每個 call 接一則 `tool` 訊息。每個工具有 `_timeout_ms` 上限，沒寫＝60000 ms。找不到＝「沒有這個工具：xxx」；逾時＝「工具 xxx 逾時（60000 ms）：」＋stdout（數字用實際預算）；非零退出＝「工具 xxx 失敗（exit n）：」＋stdout；inst 解不開／跑不起來＝「工具 xxx 跑不起來：」＋一行錯誤。這些都只是給模型的結果，其他 call 照跑 | `think` | 0 |
+| `act` | 有 `_run: "cpu"` 的 call：先交整批 CPU 請求並等全部結果；收回時按原始順序接整批訊息（§3.3） | 送出留 `act`；收回轉 `think` | 0 |
 | `act` | 記憶尾巴不是帶 `tool_calls` 的 `assistant`（沒東西可跑）→ 不跑 | `think` | 0 |
 
 ### 3.1 llm cpu 的送出與收回
@@ -66,13 +67,23 @@ aos-agent 會在送出 LLM 請求或引擎連敗三次時自己往 `waits` 加�
 - 加這道門前若舊 `continue.json` 已存在，先 rename `.done`，確保第二輪暫停仍要新的 touch。新 input 不能解鎖；touch 後同次呼叫可以繼續 think。
 - 工具限時用 `run_inst(inst, arguments, timeout_ms=…)`；TERM 整個 process group → 最多 2 秒寬限 → KILL。是否逾時用獨立 `timed_out` 旗標，不能猜 143／137；因此工具在 TERM handler 回 0 仍是逾時，自己 exit 143 則是一般失敗。stdout 不截斷，已收到的部分保留。
 
-### 3.3 寫檔與原有自癒
+### 3.3 tool cpu：整批送出、整批收回
 
-- **為什麼 `act` 不用等**：模型那邊的硬規定是一則 `assistant` 帶了 `tool_calls`，下一次問之前每個 call
-  都要有一則 `tool` 訊息緊接在後面。`act` 一格內全部跑完接上，就永遠不會違反。
+- 工具 `_run` 沒寫或是 `"sync"`＝同步；`"cpu"`＝交到 `info.json` 頂層 `tool_cpu` 指定的資料夾（相對 agent 家）。CPU 協議見 [tool-cpu.md](tool-cpu.md)。
+- 記憶尾巴有 calls、當批尚無任何結果：先驗 tool CPU 身分，建立 `tool-results/`，所有 CPU call 各送一份請求；sync call 這格先不跑。結果絕對路徑為 `<agent>/tool-results/<i>.json`，`i` 是原始 `tool_calls` 索引。請求名為 `<agent 名>-<epoch ns>-<i>.json`，由共用 `aos_cpu.submit` 交件。
+- `_meta` 在 agent 端以 agent 家／環境解成 inst，`stdin` 為 arguments 字串、`timeout_ms` 為工具預算。inst 解不開則 agent 直接寫 `ok:false` 結果，其他 CPU call 照送。
+- 送完往 waits 加一條 `{"$opt":"all","$val":[所有 CPU 結果的絕對路徑]}`，不開 consume，state 留 act、退 0；沒全到退 101。若結果只到一部分而 waits 缺失，補回整批 all 門，不重送已有結果。
+- 全到後先驗整批結果，再劃門／跑 sync。按原始 call 順序組訊息：sync 現在跑；CPU 的 `ok:true` 且 code=0 用 stdout、非零用「工具 xxx 失敗（exit n）：」＋stdout；`timed_out:true` 優先為「工具 xxx 逾時」；`ok:false` 為「工具 xxx 跑不起來：」＋error。CPU 的 `kind` 原樣驗為 child／aos，這階段顯示依退出碼。全部訊息一起寫記憶，全部結果 rename `.done`，state 轉 think。
+- 結果不解指示詞。`ok`／`timed_out` 必須是 bool、`code` 是整數（bool 不算）、stdout／error 是字串；壞 JSON／UTF-8 或欄位錯誤退 1，門／記憶／結果不動，也不跑 sync。收回不再要求 CPU 的 info 可讀。
+- 崩在記憶已寫、結果尚未全封存／state 尚未寫：下次 act 看尾端整批 tool 訊息，確認筆數與 call id 順序吻合，封存該批剩餘的 CPU 索引結果，再轉 think，不重跑 sync。
+- **限制**：沒新增請求 id、state ask／calls 或交易。交件中途崩潰可能重送；若部分結果已到而其他 call 尚未交件，補回的門可能永遠等不到；sync 已跑但記憶尚未寫也可能重跑。固定結果路徑無法辨認任意遲到舊結果。這些情境列在 findings，D 只評估對帳、不實作。
+
+### 3.4 寫檔與原有自癒
+
+- 模型要求每個 call 的 tool 訊息緊接在 assistant 後。CPU call 等齊之後與 sync 一起按原始順序整批接上，這之前不進 think。
 - `idle` 收輸入的順序是：全部讀完驗完 → 寫記憶 → rename `.done` → 寫 `state`；壞訊息（`MessageInvalid`）就整格不寫。
 - 一格只寫：`state.json`（原始 JSON 只動 `state`／`waits`／`errors`）、記憶檔（整份重寫）、`input`／`waits`
-  指到的檔（rename）、CPU 請求與 `ask-result.json`（收回 rename）；都先 `.tmp` 再 rename。**先寫記憶、再寫 `state`**：崩在中間頂多重做一格——
+  指到的檔（rename）、CPU 請求與 `ask-result.json`／`tool-results/<i>.json`（收回 rename）；都先 `.tmp` 再 rename。**先寫記憶、再寫 `state`**：崩在中間依記憶尾巴修復狀態；副作用與跨檔窗口見 findings。
   表裡 `think`／`act` 各多的那一列就是「重做」時看記憶尾巴自己對回來，不會把帶 `tool_calls` 的
   `assistant` 再拿去問一次（模型那邊會拒絕）。
 - `think` 回來的 `message` 原樣接；只有 `content` 是 `null` 又沒有 `tool_calls` 時補成 `""`（不然下次
@@ -93,7 +104,7 @@ aos-agent 會在送出 LLM 請求或引擎連敗三次時自己往 `waits` 加�
 
 ## 5. 之後會有、現在不做的
 
-- **非同步工具**：工具檔多一個 `async` 選項——`act` 啟動它就馬上接一則收據當 `tool` 訊息，工具跑在別的
+- **送出即收據的背景工具**：另加一個 `async` 選項——`act` 啟動它就馬上接一則收據當 `tool` 訊息，工具跑在別的
   cpu／thread，跑完把結果寫進 `input`（當 `user` 訊息回來；順序沒限制，因為不是 `tool` 訊息）。
 - **整格硬上限與 waits 期限**：這輪不做；工具每次 60 秒與引擎連敗三次暫停已在 §3。HTTP 的 timeout 仍是 socket 逾時，不是整次呼叫總上限。
 - 誰把輸入丟進 `input`、誰去讀回話（aos-user 之類的外部工具）；反覆叫、放進 kernel；鎖；記憶太長。
@@ -101,5 +112,5 @@ aos-agent 會在送出 LLM 請求或引擎連敗三次時自己往 `waits` 加�
 ## 我自己選的、使用者可以推翻的
 
 1. `waits` 是動態表：aos-agent 也能加；要「永遠等某個檔」的靜態門先不做。
-2. `think` 直接看 `tool_calls` 決定去 `act` 還是 `idle`；`act` 一格內跑完所有 call。
+2. `think` 直接看 `tool_calls` 決定去 `act` 還是 `idle`；`act` 對 CPU call 分送收兩格，全部結果到齊才接記憶。
 3. 先寫記憶再寫 `state`；`think`／`act` 進場先看記憶尾巴自癒。

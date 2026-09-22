@@ -19,6 +19,7 @@ import aos_agent
 import aos_agent_info
 import aos_exec
 import aos_inst
+import aos_tool_cpu
 from aos_agent_info import AgentError
 
 AGENT = os.path.join(os.path.dirname(LIB), "cli", "aos-agent")
@@ -986,6 +987,227 @@ class TestAct(StepCase):
 
 
 # ---------------------------------------------------------------- 寫檔順序與命令列 ----
+
+class TestCpuAct(StepCase):
+
+    def setup_cpu(self, calls=None, tools=None):
+        self.agent(info={"tool_cpu": "T"}, history=[assistant(*(calls or [call()]))],
+                   tools={"tools.json": tools or [dict(tool(), _run="cpu")]})
+        self.put("T/info.json", {"_metainfo": {"_type": "tool_cpu", "_version": 1}})
+        self.state(state="act")
+
+    def tick(self):
+        return aos_tool_cpu.tick(os.path.join(self.d, "T"))
+
+    def results(self, i=0, **changes):
+        result = dict(ok=True, code=0, kind="child", timed_out=False, stdout="done")
+        result.update(changes)
+        self.put("tool-results/%d.json" % i, result)
+
+    def test_submit_wait_collect_real_tool(self):
+        self.setup_cpu([call(arguments=' {"中文": 1} \n')])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(), {"state": "act", "waits": [{"$opt": "all", "$val": [
+            os.path.join(self.d, "tool-results/0.json")]}]})
+        self.assertEqual(len(self.get(HISTORY)), 1)
+        self.assertEqual(self.step(), 101)
+        request_names = os.listdir(os.path.join(self.d, "T/requests"))
+        request = self.get("T/requests/" + request_names[0])
+        self.assertEqual(request["inst"]["cwd"], self.d)
+        self.assertEqual(request["timeout_ms"], 60000)
+        self.assertEqual(request["stdin"], ' {"中文": 1} \n')
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], ' {"中文": 1} \n')
+        self.assertEqual(self.get(), {"state": "think", "waits": []})
+        self.assertTrue(self.exists("tool-results/0.json.done"))
+
+    def test_mixed_all_submitted_before_sync_and_keeps_original_order(self):
+        sync = tool("sync", argv=["sh", "-c", "touch SYNC; printf sync"])
+        cpu = dict(tool("cpu"), _run="cpu")
+        self.setup_cpu([call("sync", id="a"), call("cpu", "first", "b"),
+                        call("cpu", "second", "c")], [sync, cpu])
+        self.assertEqual(self.step(), 0)
+        self.assertFalse(self.exists("SYNC"))
+        self.assertEqual(len(os.listdir(os.path.join(self.d, "T/requests"))), 2)
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 101)
+        self.assertFalse(self.exists("SYNC"))
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertTrue(self.exists("SYNC"))
+        self.assertEqual([(m["tool_call_id"], m["content"]) for m in self.get(HISTORY)[1:]],
+                         [("a", "sync"), ("b", "first"), ("c", "second")])
+        self.assertFalse(self.exists("tool-results/0.json.done"))
+
+    def test_cpu_result_text_contract(self):
+        cases = [(dict(code=9, stdout="oops"), "工具 echo 失敗（exit 9）：oops"),
+                 (dict(code=0, timed_out=True, stdout="partial"), "工具 echo 逾時"),
+                 (dict(ok=False, error="broken"), "工具 echo 跑不起來：broken"),
+                 (dict(code=143, stdout="own"), "工具 echo 失敗（exit 143）：own"),
+                 (dict(code=1, kind="aos", stdout=""), "工具 echo 失敗（exit 1）：")]
+        for result, expected in cases:
+            with self.subTest(result=result):
+                self.setup_cpu()
+                self.results(**result)
+                self.assertEqual(self.step(), 0)
+                self.assertEqual(self.get(HISTORY)[-1]["content"], expected)
+
+    def test_real_cpu_timeout(self):
+        self.setup_cpu(tools=[dict(tool(argv=["sh", "-c", "exec sleep 5"]),
+                                   _run="cpu", _timeout_ms=30)])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.tick(), 0)
+        self.assertTrue(self.get("tool-results/0.json")["timed_out"])
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "工具 echo 逾時")
+
+    def test_bad_inst_becomes_failure_without_blocking_other_cpu(self):
+        self.setup_cpu([call("bad", id="a"), call(id="b")],
+                       [dict(tool("bad", argv=[]), _run="cpu"), dict(tool(), _run="cpu")])
+        self.assertEqual(self.step(), 0)
+        self.assertFalse(self.get("tool-results/0.json")["ok"])
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertIn("EmptyArgv", self.get(HISTORY)[1]["content"])
+        self.assertEqual(self.get(HISTORY)[2]["content"], "{}")
+
+    def test_result_read_validation_before_gate_or_sync(self):
+        self.setup_cpu([call("sync", id="a"), call(id="b")],
+                       [tool("sync", argv=["touch", "BAD"]), dict(tool(), _run="cpu")])
+        self.put("ready", {})
+        self.state(state="act", waits=[{"$opt": "consume", "$val": "ready"}])
+        for value, code in [(None, "NotAnObject"), ({"ok": 1}, "FieldTypeMismatch"),
+                            ({"ok": False}, "FieldTypeMismatch"),
+                            ({"ok": True, "code": True, "kind": "child", "timed_out": False,
+                              "stdout": "x"}, "FieldTypeMismatch")]:
+            with self.subTest(value=value):
+                self.put("tool-results/1.json", value)
+                self.rejected(code)
+        self.assertFalse(self.exists("BAD"))
+
+    def test_invalid_utf8_is_one_line_cli_error(self):
+        self.setup_cpu()
+        path = self.put("tool-results/0.json", {})
+        with open(path, "wb") as f:
+            f.write(b"\xff")
+        process = self.cli(self.d)
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("JsonSyntax", process.stderr)
+        self.assertEqual(len(process.stderr.splitlines()), 1)
+
+    def test_bad_cpu_info_before_gate_mutation(self):
+        self.setup_cpu()
+        self.put("ready", {})
+        self.state(state="act", waits=[{"$opt": "consume", "$val": "ready"}])
+        self.write("T/info.json", "{broken")
+        self.rejected("JsonSyntax")
+
+    def test_receipt_does_not_need_cpu_info(self):
+        self.setup_cpu()
+        self.results()
+        self.write("T/info.json", "{broken")
+        self.assertEqual(self.step(), 0)
+
+    def test_partial_results_without_waits_restore_all_gate(self):
+        self.setup_cpu([call(id="a"), call(id="b")])
+        self.results(1)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(len(self.get()["waits"][0]["$val"]), 2)
+        self.assertEqual(self.step(), 101)
+        self.assertFalse(self.exists("T/requests"))
+
+    def test_previous_done_result_is_not_reused_for_new_batch(self):
+        self.setup_cpu()
+        self.put("tool-results/0.json.done", {"ok": True, "code": 0, "kind": "child",
+                                              "timed_out": False, "stdout": "old"})
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(len(self.get(HISTORY)), 1)
+        self.assertEqual(len(os.listdir(os.path.join(self.d, "T/requests"))), 1)
+        self.assertEqual(self.step(), 101)
+
+    def test_closed_gate_defers_bad_tool_result(self):
+        self.setup_cpu()
+        self.state(state="act", waits=["pause"])
+        self.write("tool-results/0.json", "{broken")
+        self.assertEqual(self.step(), 101)
+        self.put("pause", {})
+        self.rejected("JsonSyntax")
+
+    def test_partial_submission_failure_records_existing_work_without_sync(self):
+        self.setup_cpu([call("sync", id="s"), call(id="a"), call(id="b")],
+                       [tool("sync", argv=["touch", "BAD"]), dict(tool(), _run="cpu")])
+        real_submit = aos_agent.aos_cpu.submit
+        submitted = []
+
+        def submit(cpu, name, request):
+            if submitted:
+                raise AgentError("ReadFailed", "第二份交件失敗")
+            submitted.append(name)
+            return real_submit(cpu, name, request)
+
+        with mock.patch.object(aos_agent.aos_cpu, "submit", side_effect=submit):
+            with self.assertRaises(AgentError):
+                self.step()
+        self.assertEqual(self.get(), {"state": "act"})
+        self.assertFalse(self.exists("BAD"))
+        self.assertEqual(self.tick(), 0)
+        # D 不做 pending journal；第一份已有結果，就只能恢復 all 門。
+        # 第二份尚未交件，因此這個已記 findings 的窗口仍可能永久等待。
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.step(), 101)
+        self.assertFalse(self.exists("BAD"))
+        self.assertEqual(os.listdir(os.path.join(self.d, "T/requests")), [])
+
+    def test_crash_after_history_before_rename_heals_and_discards_finished_results(self):
+        self.setup_cpu([call(id="a"), call(id="b")])
+        self.results(0, stdout="a")
+        self.results(1, stdout="b")
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if src == os.path.join(self.d, "tool-results/1.json"):
+                raise PermissionError("第二份結果封存中斷")
+            return real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        history = self.read(HISTORY)
+        self.assertEqual(self.get()["state"], "act")
+        self.assertTrue(self.exists("tool-results/0.json.done"))
+        self.assertTrue(self.exists("tool-results/1.json"))
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.read(HISTORY), history)
+        self.assertEqual(self.get()["state"], "think")
+        self.assertTrue(self.exists("tool-results/1.json.done"))
+        self.assertFalse(self.exists("tool-results/1.json"))
+
+    def test_crash_after_rename_before_state_does_not_repeat_sync(self):
+        self.setup_cpu([call("sync", id="a"), call(id="b")],
+                       [tool("sync", argv=["sh", "-c", "echo once >> side-effect"]),
+                        dict(tool(), _run="cpu")])
+        self.results(1)
+        real_replace = os.replace
+
+        def replace(src, dst):
+            if dst == os.path.join(self.d, "state.json"):
+                raise PermissionError("state 中斷")
+            return real_replace(src, dst)
+
+        with mock.patch.object(aos_agent.os, "replace", side_effect=replace):
+            with self.assertRaises(PermissionError):
+                self.step()
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.read("side-effect"), "once\n")
+
+    def test_inst_directives_resolved_on_agent_before_cpu(self):
+        self.setup_cpu(tools=[dict(tool(argv=["printf", {"$env": "VALUE"}]), _run="cpu")])
+        self.assertEqual(self.step(env={"VALUE": "literal $env"}), 0)
+        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.step(), 0)
+        self.assertEqual(self.get(HISTORY)[-1]["content"], "literal $env")
+
 
 class TestWrites(StepCase):
 
