@@ -1,11 +1,11 @@
-# proto5/lib — 五支 Python 模組
+# proto5/lib — 六支 Python 模組
 
 ← [proto5 README](../README.md)｜規範：[spec/directives.md](../spec/directives.md)、
 [spec/inst-posix.md](../spec/inst-posix.md)、[spec/exec.md](../spec/exec.md)、
-[spec/agent.md](../spec/agent.md)、[spec/aos-llm-ask.md](../spec/aos-llm-ask.md)
+[spec/agent.md](../spec/agent.md)、[spec/aos-llm-ask.md](../spec/aos-llm-ask.md)、[spec/aos-agent.md](../spec/aos-agent.md)
 
-Python 3.12、只用標準庫。五個檔，一層疊一層、下層不知道上層（inst／exec 一條線，agent_info／llm_ask
-另一條線，兩條線都踩在 aos_directives 上）：
+Python 3.12、只用標準庫。六個檔，一層疊一層、下層不知道上層（inst／exec 一條線，agent_info／llm_ask
+另一條線，兩條線都踩在 aos_directives 上，最後由 aos_agent 接起來）：
 
 | 檔 | 職責 | 規範 |
 |---|---|---|
@@ -14,9 +14,10 @@ Python 3.12、只用標準庫。五個檔，一層疊一層、下層不知道上
 | [`aos_exec.py`](aos_exec.py) | 執行者：`run_target()` 把一個目標跑一次、回 `(code, kind)`，`main()` 是命令列；入口是 [`../cli/aos-exec`](../cli/aos-exec) | [inst-posix.md](../spec/inst-posix.md) 第 6 節（行為）、[exec.md](../spec/exec.md)（命令列） |
 | [`aos_agent_info.py`](aos_agent_info.py) | agent 資料夾的讀、驗：`info.json` 每格解指示詞、人格／記憶／工具檔原樣讀、工具表合併與去 `_` key、`engine` 補預設。只讀不寫，**不碰 `state.json`** | [agent.md](../spec/agent.md) §1～§3、§5（資料夾本身）＋ [aos-llm-ask.md](../spec/aos-llm-ask.md) §2（四格與指到的檔） |
 | [`aos_llm_ask.py`](aos_llm_ask.py) | 把一個 agent 資料夾問模型一次：`build_request()` 組 chat/completions 的 body、`call()`／`ask()` 用 `urllib` 打出去回 `choices[0].message`，`main()` 是命令列；入口是 [`../cli/aos-llm-ask`](../cli/aos-llm-ask) | [aos-llm-ask.md](../spec/aos-llm-ask.md) |
+| [`aos_agent.py`](aos_agent.py) | `step()` 先判 waits，再走 idle／think／act 一格；記憶、input 消化、state 原子寫回與自癒；入口 [`../cli/aos-agent`](../cli/aos-agent) | [aos-agent.md](../spec/aos-agent.md)、[agent.md](../spec/agent.md) §4 |
 
 ```sh
-cd proto5/lib && python3 -m unittest discover -s test      # 470 條全綠（directives 101、inst 139、exec 89、agent_info 88、llm_ask 53）
+cd proto5/lib && python3 -m unittest discover -s test      # 571 條全綠（directives 101、inst 139、exec 89、agent_info 88、llm_ask 53、agent 101）
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -175,6 +176,10 @@ envs       dict；另有 envs_clear（bool）
 metainfo   {"_type": "posix", "_version": 1}
 ```
 
+`load_obj(obj, base, env=None)`：inst 已經是 dict（例如工具的 `_meta`）時用這個入口。
+用 `Document(None, obj)` 表示純記憶體文件，`$ref:""` 指向 obj 自己；與 `load()` 共用 `_load`，
+解析順序、回傳 dict 與錯誤代號相同。`load()` 保留檔案身分，不把檔案當純記憶體文件。
+
 - 錯誤是 `InstError(code, msg)`，`str(e)` 是「代號: 白話」；aos_directives 丟的 `DirectiveError`
   在 `load()` 裡包成同形狀的 `InstError`（代號不變），呼叫者只要接一種。
 - `OPTIONS` 是各位置認得的選項表（inst-posix.md 3.3），用 `option_names` 的表格式寫：
@@ -204,11 +209,17 @@ code, kind = aos_exec.run_target(xxx, dir_target=".aos/inst.json", timeout_ms=0,
   對整個 group SIGTERM → 2 秒 → SIGKILL；exit 檔十進位＋換行、fsync 檔與父目錄。
 - `on_spawn(popen)`／`on_spawn(None)`：子行程開起來／收完屍各叫一次（aos-run 用）。
 
+`run_inst(inst, stdin_text, timeout_ms=0) -> (code, kind, stdout_text)`：吃 `load_obj()` 解好的 dict，
+用 UTF-8 把文字送入 stdin，stdout 全收回（壞位元組以替代字元表示）。stdin／stdout 由 API 接管，
+stderr／exit／cwd／envs 照 inst；stderr 沒寫就是 /dev/null、`merge` 則併進回傳的 stdout。
+kind 是 child／aos，錯誤跟 `run_target()` 一樣印 stderr。兩個入口共用前置檢查、mkdir、
+啟動、126／127、exit 檔與逾時砍 group；管線用 `communicate()`，同時收送避免大輸出卡住。
+
 ## aos_agent_info — agent 資料夾的讀、驗
 
 `aos_agent_info.py` 是 [agent.md](../spec/agent.md) §1～§3、§5（資料夾本身：`_metainfo`、指示詞解不解、共用代號）＋
 [aos-llm-ask.md](../spec/aos-llm-ask.md) §2（`system`／`history`／`tools`／`engine` 四格與它們指到的檔）的實作：只讀、只驗、不寫任何檔，
-也**不碰 `state.json`**（走格子是之後 aos-agent 的事）。
+也**不碰 `state.json`**（走格子是 aos-agent 的事）。
 
 ```python
 import aos_agent_info
@@ -241,7 +252,7 @@ engine         {"endpoint", "model", "params", "api_key", "timeout_ms"}（api_ke
 ## aos_llm_ask — 把一個 agent 資料夾問模型一次
 
 `aos_llm_ask.py` 是 [aos-llm-ask.md](../spec/aos-llm-ask.md) 的實作＋命令列（[`../cli/aos-llm-ask`](../cli/aos-llm-ask)）。
-讀驗交給 aos_agent_info，這個檔只做「組請求、打出去、挖 message」。aos-agent 的 `think` 格之後直接 import
+讀驗交給 aos_agent_info，這個檔只做「組請求、打出去、挖 message」。aos-agent 的 `think` 格直接 import
 這裡的函式，不開子進程。
 
 ```python
@@ -262,10 +273,46 @@ message = aos_llm_ask.call(info["engine"], body)     # 只打不讀（aos-agent 
   `dir` 不是資料夾）／3（引擎失敗，stderr `aos-llm-ask: engine: <白話>`）。不寫任何檔、不碰 `state.json`、不跑
   工具、不重試。
 
+## aos_agent — 先看門，再走一格
+
+規範：[aos-agent.md](../spec/aos-agent.md)、[agent.md §4](../spec/agent.md)。
+
+```python
+import aos_agent
+code = aos_agent.step("agent-bob", env=None)  # 0＝做了一格，101＝在等；讀驗錯丟 AgentError
+```
+
+- 先用 `aos_agent_info.load()` 讀驗，再讀 `state.json`（不存在＝idle、input.json、不用等）。
+  state 必須是字面三格之一，waits 接受字面陣列或單條；input、waits 的每條與 `$val` 解指示詞，
+  中心＝agent 資料夾，位置沿用原始文件。未知 key 保留，讀驗失敗不寫檔。
+- 門：exists／mtime、consume、any／all。資料夾只看當時的 `*.json` 普通檔，按檔名排序；
+  mtime 嚴格大於 since，資料夾任一檔達標就算到。consume rename 成 `.done`，覆蓋舊檔；
+  資料夾一旦到就 consume 裡面全部 JSON，any 只 consume 達標的路徑。依原始索引劃掉到的條目，
+  有剩退 101，空了接著走格。沒寫或本來空 waits，不為了門另外寫 state。
+- idle：原樣讀 input（字串／一則訊息／訊息陣列），先全部驗好，才接進記憶、rename 讀過的檔、
+  把 state 換 think。沒有訊息＝101，不 consume 空陣列。若其他檔有訊息，同批讀過的空陣列也清掉；
+  重複輸入路徑只讀、消化一次。門開了才讀 input，仍在門的 consume 與寫回之前完成讀驗。
+- think：問一次模型，message 原樣接進記憶（content 為 null 且沒 tool_calls 時補空字串）；
+  非空 tool_calls 陣列去 act，否則回 idle。引擎失敗 stderr 一行 `aos-agent: engine: …`、
+  記憶和 state 值不動、退 0；已完成的 waits 劃除仍保留。尾巴已是帶 tool_calls 的 assistant，
+  直接轉 act，不再問模型。
+- act：依序用 `_meta` 的 `load_obj()`／`run_inst()` 跑所有 call，arguments 字串原樣進 stdin，
+  非字串用 `json.dumps`。每個結果接一則 tool（保留 tool_call_id）；找不到、非零退出、inst 解錯或
+  跑不起來都變成文字結果，其他工具照跑。尾巴沒有待跑的 assistant，就直接回 think。
+- 記憶整份 `ensure_ascii=False, indent=2` 加換行；state 只改原始 JSON 的 state／waits。
+  寫 JSON 先 `.tmp` 再 `os.replace`，缺父目錄會建立；走格順序＝記憶 → input rename → state。
+  **沒有鎖，也沒有跨檔交易**；同一個 agent 不要同時跑兩份。
+- 命令列 `aos-agent [dir]`（省略＝`.`）：0／101／1（讀驗錯）／2（用法錯）；沒有其他旗標。
+  檔案操作中途失敗另印 `aos-agent: io: …`、退 1，可能已有部分寫入；不把它冒充讀驗錯。
+
+未定細節的實作選擇：`since` 讀字面數字（bool 不算、指示詞物件不算數字）；空路徑陣列
+all 為真、any 為假。既有訊息驗法只驗 tool_calls 是陣列，殘缺 call 當找不到工具；id 缺了用空字串，
+非字串轉成字串，避免新寫的 tool 訊息下次讀不回來。
+
 ## 測試
 
 ```sh
-cd proto5/lib && python3 -m unittest discover -s test      # 470 條
+cd proto5/lib && python3 -m unittest discover -s test      # 571 條
 ```
 
 | 檔 | 條數 | 開不開進程 |
@@ -275,4 +322,5 @@ cd proto5/lib && python3 -m unittest discover -s test      # 470 條
 | `test/test_exec.py` | 89 | 開：透過 `cli/aos-exec` 真的跑（三種目標、`--stderr`、選項落地、環境、退出碼、逾時 143／137）＋ `run_target()` API |
 | `test/test_agent_info.py` | 88 | 不開：直接叫 `aos_agent_info.load()`——預設值與回傳形狀、`_metainfo`／`NotAnAgent`、info.json 的指示詞（每格都解、位置、循環、`$opt` 不吃、指到的檔不解）、人格檔、記憶檔每則怎麼驗、工具檔（合併、去 `_` key、`ToolInvalid` 各種）、engine |
 | `test/test_llm_ask.py` | 53 | 兩種都有：`build_request()` 直接叫；`call()`／`ask()` 打**執行緒裡一個假的 chat/completions**（`http.server`：回正常、500、壞 JSON、沒 choices、回到一半斷線、故意慢讓逾時觸發），不打真模型；命令列那群開 `cli/aos-llm-ask` 子進程驗退出碼 0／1／2／3 與 stdout 只有一行。「連不上」用 `nope.invalid` 這個保證解不開的主機名（這台 WSL 連 localhost 死 port 會等到逾時而不是被拒） |
+| `test/test_agent.py` | 101 | 新入口 load_obj／run_inst、waits 五選項與指示詞、idle／think／act、自癒、寫檔順序、命令列；真的 sh／Python 工具＋沿用 `test_llm_ask.FakeLLM` |
 | `test/_util.py` | — | 共用：暫存資料夾、寫 inst、`InstCase`（直接 load）、`ExecCase`（開進程）、`AgentCase`（寫一個 agent 資料夾、直接 load、開 `aos-llm-ask` 進程） |

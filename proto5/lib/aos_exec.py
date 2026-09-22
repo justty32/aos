@@ -16,8 +16,10 @@ inst.json 怎麼讀、怎麼驗在 aos_inst.py；「照一份 inst 跑一次」�
 「反覆執行」不是這支程式的事，時限也只是命令列旗標——之後的 aos-run 會直接
 `import aos_exec` 反覆叫 `run_target()`，所以核心就是那一個函式，命令列只是包它。
 
-這支程式**不替你收輸出**：inst.json 裡沒寫的串流一律 `/dev/null`，不繼承、不抓回
+`run_target()` **不替你收輸出**：inst.json 裡沒寫的串流一律 `/dev/null`，不繼承、不抓回
 （要繼承就自己在那一格開 `{"$opt":"inherit"}`）。也**不注入任何 `AOS_*` 環境變數**。
+`run_inst(inst, stdin_text)` 給 agent 跑記憶體裡解好的 inst：stdin 送 UTF-8、stdout 收回字串，
+stderr／exit／cwd／envs 照 inst，前置檢查、啟動與逾時都跟 `run_target()` 共用。
 
 `run_target()` 回的是 **`(code, kind)`**：`kind` 說這個碼是誰的——`"child"`＝子程式真的
 跑完了一次（它的結束碼／128+N／126／127）、`"aos"`＝aos-exec 自己失敗（inst.json 壞、
@@ -32,7 +34,7 @@ import sys
 
 import aos_inst
 
-__all__ = ["run_target", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
+__all__ = ["run_target", "run_inst", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
 
 DEFAULT_DIR_TARGET = os.path.join(".aos", "inst.json")
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
@@ -82,6 +84,17 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, 
     return _run_plain(p, timeout_ms, on_spawn, stderr, args)
 
 
+def run_inst(inst, stdin_text, timeout_ms=0):
+    """跑 `aos_inst.load_obj()` 解好的 inst，回 `(code, kind, stdout_text)`。
+
+    stdin／stdout 由呼叫者接管；stderr 沒寫＝/dev/null。錯誤跟 `run_target()` 一樣印 stderr，
+    kind 也是 child／aos；stdout 用 UTF-8 解碼，壞位元組換成替代字元。
+    """
+    output = []
+    code, kind = _execute_inst(inst, timeout_ms, input_bytes=stdin_text.encode("utf-8"), output=output)
+    return code, kind, (output[0] if output else b"").decode("utf-8", errors="replace")
+
+
 def _err(code, kind, msg):
     sys.stderr.write("aos-exec: %s\n" % msg)
     return code, kind
@@ -123,10 +136,17 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
         inst = aos_inst.load(target, base)
     except aos_inst.InstError as e:
         return _err(1, AOS, str(e))
+    return _execute_inst(inst, timeout_ms, on_spawn, stderr)
+
+
+def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None, output=None):
+    """共用的前置檢查與串流設定；有 input_bytes 時改走 stdin／stdout 管線。"""
 
     # 先建該建的目錄：cwd 自己，再來是三個輸出檔的父目錄。建不起來＝沒跑成（125）。
     to_make = [("cwd", inst["cwd"])] if inst["cwd_mkdir"] else []
     for name in ("stdout", "stderr", "exit"):
+        if name == "stdout" and input_bytes is not None:
+            continue                            # 收回 stdout，不開 inst 的輸出檔
         if name == "stderr" and stderr is not None:
             continue                            # 命令列蓋掉了，inst 的 stderr 設定整個不算
         if inst[name]["mkdir"]:
@@ -151,11 +171,14 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
     opened = []
     try:
         try:
-            fin = None if inst["stdin"]["inherit"] else open(
-                inst["stdin"]["path"] or os.devnull, "rb")
-            opened.append(fin)
-            fout = _open_out(inst["stdout"])
-            opened.append(fout)
+            if input_bytes is not None:
+                fin, fout = subprocess.PIPE, subprocess.PIPE
+            else:
+                fin = None if inst["stdin"]["inherit"] else open(
+                    inst["stdin"]["path"] or os.devnull, "rb")
+                opened.append(fin)
+                fout = _open_out(inst["stdout"])
+                opened.append(fout)
             if stderr == "-":
                 ferr = sys.stderr                # 繼承 aos-exec 的 stderr，不能 close
             elif stderr is not None:
@@ -169,7 +192,7 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
         except OSError as e:
             return _err(1, AOS, "重導向的檔案開不起來：%s" % e)
         return _spawn(inst["argv"], inst["cwd"], env, fin, fout, ferr,
-                      timeout_ms, exit_path, on_spawn, inst["exit"]["append"])
+                      timeout_ms, exit_path, on_spawn, inst["exit"]["append"], input_bytes, output)
     finally:
         for f in opened:
             if f is not None:                    # inherit 的那條是 None，沒東西可關
@@ -185,7 +208,7 @@ def _open_out(field):
 
 
 def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None,
-           exit_append=False):
+           exit_append=False, input_bytes=None, output=None):
     """跑一次、等它、逾時就砍，回 `(結束狀態, "child")`（順便寫 exit 檔）。
 
     argv[0] 走**疊加後**的 env 裡的 PATH（subprocess 帶 env= 時本來就這樣查；env 被清空、
@@ -205,16 +228,28 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     if on_spawn:
         on_spawn(p)                                 # 開起來了：aos-run 要拿得到它才砍得掉
     limit = (timeout_ms / 1000.0) if timeout_ms else None
+    captured = b""
     try:
-        p.wait(timeout=limit)
+        if input_bytes is None:
+            p.wait(timeout=limit)
+        else:
+            captured, _ = p.communicate(input=input_bytes, timeout=limit)
     except subprocess.TimeoutExpired:
         _sig_group(p, signal.SIGTERM)               # 先好好講：整個 process group
         try:
-            p.wait(timeout=GRACE)
+            if input_bytes is None:
+                p.wait(timeout=GRACE)
+            else:
+                captured, _ = p.communicate(timeout=GRACE)
         except subprocess.TimeoutExpired:
             _sig_group(p, signal.SIGKILL)
-            p.wait()
+            if input_bytes is None:
+                p.wait()
+            else:
+                captured, _ = p.communicate()
         _sig_group(p, signal.SIGKILL)               # 直接子行程死了不代表群組空了
+    if output is not None:
+        output.append(captured)
     code = p.returncode
     if on_spawn:
         on_spawn(None)                              # 收完屍：那個 pid 別再被砍
@@ -224,7 +259,7 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
 def _sig_group(p, sig):
     """砍整個 process group：留在群組裡的孫行程要跟著走。空群組＝ESRCH，無害。"""
     try:
-        os.killpg(os.getpgid(p.pid), sig)
+        os.killpg(p.pid, sig)                      # setsid 後 pgid＝pid；父行程收屍後仍能砍孫行程
     except OSError:
         pass
 
