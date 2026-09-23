@@ -25,8 +25,16 @@ stderr／exit／cwd／envs 照 inst，前置檢查、啟動與逾時都跟 `run_
 跑完了一次（它的結束碼／128+N／126／127）、`"aos"`＝aos-exec 自己失敗（inst.json 壞、
 指示詞解不開、前置檢查沒過）、`"usage"`＝用法錯。命令列的退出碼照 kind 換算：
 `usage`→2、`aos`→**125**、`child`→原樣。125 是特意挑的：跟子程式的碼分得開。
+
+`run_target_full()` 是 cpu.md §4.1 的新增入口：保留三種目標的語意，另回真實的
+timed_out／stopped 與耗時；等待期間可輪詢控制訊息，強停只處理工作的 process group。
+`spawn_target()` 是 daemon.md §2 的非同步入口：接管控制 pipe、同 session 開新 group，
+將登記／go／收屍的時機交給 daemon；前置檢查與 stderr／exit 仍照 inst。
 """
 import argparse
+import contextlib
+import io
+import json
 import os
 import signal
 import subprocess
@@ -34,8 +42,11 @@ import sys
 import time
 
 import aos_inst
+from aos_directives import Context, DirectiveError, Document, resolve_located
 
 __all__ = ["run_target", "run_inst", "terminate", "InstResult", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
+__all__ += ["run_target_full", "TargetResult"]
+__all__ += ["spawn_target", "Spawned", "SpawnError"]
 
 DEFAULT_DIR_TARGET = os.path.join(".aos", "inst.json")
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
@@ -54,6 +65,152 @@ class InstResult(tuple):
         result = super().__new__(cls, (code, kind, stdout_text))
         result.timed_out = timed_out
         return result
+
+
+class TargetResult:
+    """一次完整執行的結果；旗標不從退出碼推測。"""
+
+    def __init__(self, code, kind, timed_out=False, ms=0, stopped=False):
+        self.code, self.kind = code, kind
+        self.timed_out, self.ms, self.stopped = timed_out, ms, stopped
+
+
+class SpawnError(Exception):
+    """daemon 的 Usage 或 SpawnFailed；尚未交出孩子，不登記。"""
+
+    def __init__(self, code, msg):
+        super().__init__("%s: %s" % (code, msg))
+        self.code, self.msg = code, msg
+
+
+class Spawned:
+    """daemon 擁有的孩子與 exit 檔收尾；控制 pipe 由呼叫者關閉。"""
+
+    def __init__(self, process, exit_path="", exit_append=False):
+        self.process = process
+        self.exit_path, self.exit_append = exit_path, exit_append
+
+    def finish(self, code=None):
+        """收屍後呼叫；省略 code 時將 Popen 的負訊號碼轉為 128+N。"""
+        if code is None:
+            code = self.process.poll()
+            if code is None:
+                raise SpawnError("SpawnFailed", "孩子尚未退出，不能寫 exit")
+            code = code if code >= 0 else 128 - code
+        return _finish(code, self.exit_path, None, self.exit_append)
+
+
+def spawn_target(xxx, dir_target=DEFAULT_DIR_TARGET):
+    """daemon.md §2：讀目標、開控制 pipe，回孩子；登記與 go 由 daemon 做。
+
+    與同步執行共用 inst 的前置檢查、環境、stderr 及 exit；孩子使用獨立 pgid、同一
+    session。Popen 起不來（包括普通執行的 126／127）都丟 SpawnFailed，不登記假 pid。
+    """
+    p = os.path.abspath(xxx)
+    if os.path.isdir(p):
+        target, base = os.path.join(p, dir_target), p
+        if not os.path.isfile(target):
+            raise SpawnError("Usage", "資料夾 %s 裡沒有 %s" % (p, dir_target))
+    elif p.endswith(".json"):
+        target, base = p, os.path.dirname(p)
+    else:
+        if not os.path.exists(p):
+            raise SpawnError("Usage", "找不到 %s" % xxx)
+        return _spawn_control([p], os.path.dirname(p), dict(os.environ), None,
+                              None, None, 0, "")
+    inst = _load_control_inst(target, base)
+    diagnostic = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(diagnostic):
+            result = _execute_inst(inst, 0, launcher=_spawn_control)
+    except ValueError as e:
+        raise SpawnError("SpawnFailed", "FieldTypeMismatch: 無法執行 inst：%s" % e)
+    if not isinstance(result, Spawned):
+        raise SpawnError("SpawnFailed", diagnostic.getvalue().strip())
+    return result
+
+
+def _load_control_inst(target, base):
+    """只讀一份快照，檢查頂層顯式串流，再以原文件位置解 inst。"""
+    try:
+        with open(target, encoding="utf-8") as f:
+            raw = f.read()
+    except OSError as e:
+        raise SpawnError("SpawnFailed", "ReadFailed: %s" % e)
+    except UnicodeError as e:
+        raise SpawnError("SpawnFailed", "JsonSyntax: %s" % e)
+    try:
+        obj = json.loads(raw)
+    except ValueError as e:
+        raise SpawnError("SpawnFailed", "JsonSyntax: %s" % e)
+    try:
+        top = resolve_located(obj, Context(Document(target, obj), base_dir=base), [])
+        if isinstance(top.value, dict) and any(key in top.value for key in ("stdin", "stdout")):
+            raise SpawnError("Usage", "daemon 孩子的 stdin／stdout 由控制 pipe 接管，不可寫在 inst")
+        # load_obj 會丟掉原文件與 subtree 位置；指回已在記憶體的文件，保留 $ref:"" 語意。
+        reference = {"$ref": ""}
+        if top.position:
+            reference["$at"] = "/" + "/".join(str(x).replace("~", "~0").replace("/", "~1")
+                                               for x in top.position)
+        ctx = Context(top.ctx.doc, base_dir=base, env=top.ctx.env)
+        return aos_inst._load(reference if top.position else top.value, ctx, base)
+    except (aos_inst.InstError, DirectiveError) as e:
+        raise SpawnError("SpawnFailed", str(e))
+
+
+def _spawn_control(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path,
+                   on_spawn=None, exit_append=False, *unused):
+    """Popen 自己開的四個 pipe 端都是 CLOEXEC；只 dup 子端到 fd 0／1。"""
+    try:
+        p = subprocess.Popen(argv, cwd=cwd, env=env, process_group=0, close_fds=True,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=ferr,
+                             bufsize=0)
+    except (OSError, ValueError) as e:
+        raise SpawnError("SpawnFailed", "無法啟動子程式：%s" % e)
+    os.set_blocking(p.stdin.fileno(), False)
+    os.set_blocking(p.stdout.fileno(), False)
+    return Spawned(p, exit_path, exit_append)
+
+
+def run_target_full(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None,
+                    stderr=None, args=None, on_target=None, *, on_poll=None, poll_ms=20):
+    """`run_target` 的完整結果版本，舊入口的兩值 tuple 完全保留。
+
+    `on_poll(p)` 每 poll_ms 毫秒接到仍活著的子行程；回真值代表強停。
+    強停只 TERM 該 process group，寬限 GRACE 秒再 KILL；等待仍持續回呼。
+    kind=usage 沿用舊契約，由 cpu 映射為 JSON-RPC 的 Usage 錯誤。
+    """
+    started = time.monotonic()
+    details = {"timed_out": False, "stopped": False,
+               "on_poll": on_poll, "poll": max(1, poll_ms) / 1000}
+    p = os.path.realpath(xxx) if on_target else os.path.abspath(xxx)
+    if os.path.isdir(p):
+        if args is not None:
+            code, kind = _inst_args_error()
+        else:
+            target = os.path.join(p, dir_target)
+            if on_target:
+                target = os.path.realpath(target)
+                on_target(target)
+            if not os.path.isfile(target):
+                code, kind = _err(2, USAGE, "資料夾 %s 裡沒有 %s" % (p, dir_target))
+            else:
+                code, kind = _run_inst(target, p, timeout_ms, on_spawn, stderr, details)
+    else:
+        if on_target:
+            on_target(p)
+        if p.endswith(".json"):
+            if args is not None:
+                code, kind = _inst_args_error()
+            else:
+                code, kind = _run_inst(p, os.path.dirname(p), timeout_ms, on_spawn,
+                                       stderr, details)
+        elif not os.path.exists(p):
+            code, kind = _err(2, USAGE, "找不到 %s" % xxx)
+        else:
+            code, kind = _run_plain(p, timeout_ms, on_spawn, stderr, args, details)
+    return TargetResult(code, kind, details["timed_out"],
+                        int((time.monotonic() - started) * 1000), details["stopped"])
 
 
 def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, stderr=None,
@@ -130,7 +287,7 @@ def _inst_args_error():
     return _err(2, USAGE, "inst 目標的參數寫在 inst.json 的 argv 裡")
 
 
-def _run_plain(path, timeout_ms, on_spawn=None, stderr=None, args=None):
+def _run_plain(path, timeout_ms, on_spawn=None, stderr=None, args=None, details=None):
     """普通檔案：一個檔讀進來就跑。
 
     argv[0] 是它自己（絕對路徑），args 原樣接在後面；cwd 是它所在的資料夾，三條串流原樣繼承
@@ -139,19 +296,19 @@ def _run_plain(path, timeout_ms, on_spawn=None, stderr=None, args=None):
     argv = [path] + list(args or ())
     if stderr in (None, "-"):
         return _spawn(argv, os.path.dirname(path), dict(os.environ), None, None, None,
-                      timeout_ms, "", on_spawn)
+                      timeout_ms, "", on_spawn, details=details)
     try:
         ferr = open(stderr, "wb")
     except OSError as e:
         return _err(1, AOS, "重導向的檔案開不起來：%s" % e)
     try:
         return _spawn(argv, os.path.dirname(path), dict(os.environ), None, None, ferr,
-                      timeout_ms, "", on_spawn)
+                      timeout_ms, "", on_spawn, details=details)
     finally:
         ferr.close()
 
 
-def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
+def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None, details=None):
     """把一份 inst.json 解開、做前置檢查、開好串流、跑一次。base＝這份 inst 的家。
 
     照 inst-posix.md 第 6 節：`mkdir` 在 chdir／開檔前 `makedirs`（建不起來＝aos-exec 自己失敗）、
@@ -165,19 +322,19 @@ def _run_inst(target, base, timeout_ms, on_spawn=None, stderr=None):
     except aos_inst.InstError as e:
         return _err(1, AOS, str(e))
     try:
-        return _execute_inst(inst, timeout_ms, on_spawn, stderr)
+        return _execute_inst(inst, timeout_ms, on_spawn, stderr, details=details)
     except ValueError as e:
         return _err(1, AOS, "FieldTypeMismatch: 無法執行 inst：%s" % e)
 
 
 def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None, output=None,
-                  timed_out=None):
+                  timed_out=None, details=None, launcher=None):
     """共用的前置檢查與串流設定；有 input_bytes 時改走 stdin／stdout 管線。"""
 
     # 先建該建的目錄：cwd 自己，再來是三個輸出檔的父目錄。建不起來＝沒跑成（125）。
     to_make = [("cwd", inst["cwd"])] if inst["cwd_mkdir"] else []
     for name in ("stdout", "stderr", "exit"):
-        if name == "stdout" and input_bytes is not None:
+        if name == "stdout" and (input_bytes is not None or launcher is not None):
             continue                            # 收回 stdout，不開 inst 的輸出檔
         if name == "stderr" and stderr is not None:
             continue                            # 命令列蓋掉了，inst 的 stderr 設定整個不算
@@ -203,7 +360,7 @@ def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None
     opened = []
     try:
         try:
-            if input_bytes is not None:
+            if input_bytes is not None or launcher is not None:
                 fin, fout = subprocess.PIPE, subprocess.PIPE
             else:
                 fin = None if inst["stdin"]["inherit"] else open(
@@ -223,9 +380,9 @@ def _execute_inst(inst, timeout_ms, on_spawn=None, stderr=None, input_bytes=None
                 opened.append(ferr)
         except OSError as e:
             return _err(1, AOS, "重導向的檔案開不起來：%s" % e)
-        return _spawn(inst["argv"], inst["cwd"], env, fin, fout, ferr,
+        return (launcher or _spawn)(inst["argv"], inst["cwd"], env, fin, fout, ferr,
                       timeout_ms, exit_path, on_spawn, inst["exit"]["append"], input_bytes, output,
-                      timed_out)
+                      timed_out, details)
     finally:
         for f in opened:
             if f is not None:                    # inherit 的那條是 None，沒東西可關
@@ -241,7 +398,7 @@ def _open_out(field):
 
 
 def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None,
-           exit_append=False, input_bytes=None, output=None, timed_out=None):
+           exit_append=False, input_bytes=None, output=None, timed_out=None, details=None):
     """跑一次、等它、逾時就砍，回 `(結束狀態, "child")`（順便寫 exit 檔）。
 
     argv[0] 走**疊加後**的 env 裡的 PATH（subprocess 帶 env= 時本來就這樣查；env 被清空、
@@ -262,6 +419,12 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
 
     if on_spawn:
         on_spawn(p)                                 # 開起來了：aos-run 要拿得到它才砍得掉
+    if details is not None:
+        _wait_full(p, timeout_ms, details)
+        if on_spawn:
+            on_spawn(None)
+        code = p.returncode
+        return _finish(code if code >= 0 else 128 + (-code), exit_path, None, exit_append)
     deadline = time.monotonic() + timeout_ms / 1000.0 if timeout_ms else None
     captured = b""
     pending_input = input_bytes
@@ -306,6 +469,39 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     if on_spawn:
         on_spawn(None)                              # 收完屍：那個 pid 別再被砍
     return _finish(code if code >= 0 else 128 + (-code), exit_path, None, exit_append)
+
+
+def _wait_full(p, timeout_ms, details):
+    """cpu 專用等待：取消／逾時都只處理一個 pgid，控制回呼不中斷。"""
+    deadline = time.monotonic() + timeout_ms / 1000 if timeout_ms else None
+    until = None
+    while True:
+        alive = p.poll() is None
+        if until is None and not alive:
+            return
+        cancel = bool(details["on_poll"](p)) if details["on_poll"] else False
+        now = time.monotonic()
+        if cancel and p.poll() is None:
+            details["stopped"] = True
+        if until is None and p.poll() is None:
+            expired = deadline is not None and now >= deadline
+            if cancel or expired:
+                details["timed_out"] = expired
+                _signal_groups({p.pid}, signal.SIGTERM)
+                until = now + GRACE
+        if until is not None:
+            if not _group_exists(p.pid):
+                p.wait()
+                return
+            if now >= until:
+                _signal_groups({p.pid}, signal.SIGKILL)
+                p.wait()
+                return
+        pause = details["poll"]
+        limit = until if until is not None else deadline
+        if limit is not None:
+            pause = min(pause, max(0, limit - time.monotonic()))
+        time.sleep(pause)
 
 
 def terminate(p):

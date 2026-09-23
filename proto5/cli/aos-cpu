@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""aos-run 的命令列入口。"""
+"""aos-cpu 的薄入口，主人實作在 ../lib/aos_exec_cpu.py。"""
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+from aos_exec_cpu import main
 
-import aos_run  # noqa: E402
-
-if __name__ == "__main__":
-    sys.exit(aos_run.main())
+sys.exit(main())
