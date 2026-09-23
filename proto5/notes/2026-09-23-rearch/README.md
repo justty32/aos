@@ -11,5 +11,6 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | review1-task.md／review1-report.md | astra（gpt-6-astra，唯讀）第一輪：cpu.md＋kernel.md，C／K／X／R 編號＋痛點對照表 |
 | review2-task.md／review2-report.md | 第二輪：驗收第一輪、新機制的洞（C2／K2／X2／R2）、daemon 必答 18 題 |
 | review3-task.md／review3-report.md | 第三輪：三份一起，驗收第二輪＋新機制的洞（C3／K3／D3／X3／R3） |
+| review4-task.md／review4-report.md | 第四輪：措辭、易用性（人／agent／實作者各走一遍）、未來（W／X／U／F）；尾巴有「定稿前必改」13 條 |
 
 舊的十份規範（run／daemon／kernel／cpu-queue／llm-cpu／tool-cpu）等新的定稿後一次換掉，README 規範表到時一起改。

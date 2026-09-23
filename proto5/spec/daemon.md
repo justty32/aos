@@ -5,8 +5,8 @@
 > 2026-09-23 重架構第三份；同日照 astra 第二輪 D 清單（18 題）與第三輪（D3／X3／C3）改過。
 > 舊 daemon-home.md／aos-daemon.md 等新的齊了一次換掉。已拍板的前提在 §8，我自己選的在 §9。
 
-一句話：**daemon 只做一件事——當爸爸。誰叫它把一個 aos-exec 目標拉起來當孩子，它就拉；孩子死了看要不要再拉；
-要停就照階梯把孩子都停掉。** 它不認識 kernel、不看孩子在做什麼、不轉發任何工作。
+一句話：**daemon 只管 cpu 行程的生死——啟動、重拉、停止，也就是當爸爸。誰叫它把一個 aos-exec 目標拉起來當孩子，
+它就拉；孩子死了看要不要再拉；要停就照階梯把孩子都停掉。** 它不認識 kernel、不看孩子在做什麼、不轉發任何工作。
 它自己的家也照 [cpu 範式](cpu.md)長：`info`／`state`／`requests`／`responses`，訊息是 JSON-RPC。
 
 ---
@@ -21,18 +21,18 @@
 | 階梯 | 停一個孩子的三段式，一段比一段狠：先從 pipe 好好說 `stop` → 還活著就 SIGTERM → 再不走就 SIGKILL；段跟段之間有等待時間 |
 | 孩子表（`children`） | daemon 的記憶：誰是誰、pid 多少、活不活、死過幾次。它**不是**排程狀態，孩子忙不忙 daemon 不知道也不記 |
 | `.daemon.lock`／flock | 一把檔案鎖，由「持有它的行程還活著」撐著，行程一死鎖就自動消失，所以沒有「鎖沒人解」的問題。拿不到＝同一個家已經有一支 daemon 在跑；外人也拿它探測 daemon 活不活 |
-| 重拉（`restart`） | 孩子非 0 退出、而且沒被主動叫停，就再拉一次同一個 target。退 0 是孩子自願停，daemon 不跟它作對 |
+| 重拉（`restart`） | 只有 `restart:true`、非 0 退出、而且沒被主動叫停（`kill`／daemon `stop`）的孩子，才再拉一次同一個目標。退 0 是孩子自願停，daemon 不跟它作對 |
 | 崩潰迴圈／退避 | 「一拉起來就死、死了又拉」的空轉。這裡只用固定的 `restart_delay_ms` 隔開，沒有「越死越久才拉」的退避 |
 | `stopping`（daemon 的） | 整個 daemon 收過 stop、正在把所有孩子停掉。這期間 `spawn` 一律拒絕、不重拉 |
 | `killing`（孩子的） | 這一個孩子被 `kill` 了、正在走階梯；死透就從表裡消失、不重拉 |
 | `dead`（孩子的） | 非 0 死了、在等 `restart_delay_ms` 到了重拉 |
-| `spawn` | 「把這個目標拉起來當孩子」。同名同目標已經活著就什麼都不做、直接回它的 pid |
+| `spawn` | 「把這個目標拉起來當孩子」。同名、同 `target`＋`dir_target` 的孩子已經在跑＝沿用它的 pid，只把 `restart` 更新成新的 |
 | process group／session | 兩層分組。孩子自己一個 process group＝訊號可以只打它那一組；但仍在同一個 session（同一個終端底下）＝終端的 Ctrl-C 打到前景那組（daemon），不會直接打到孩子，停孩子一律由 daemon 走階梯 |
 | SIGHUP | session 的頭沒了（終端關掉）時系統發給同 session 行程的訊號，預設會把它們帶走。這裡不靠它：daemon 死了孩子是靠 pipe EOF 自己停 |
 | 冪等 | 同一則做一次跟做兩次結果一樣；所以呼叫者等回音等到逾時、重送一次，也不會多拉一支 |
 | 收屍（`waitpid`） | 子行程死掉之後，父行程要去把它的退出碼收回來，它才真的從系統消失（不收就留成殭屍，占著行程表的一格） |
 | `WNOHANG` | `waitpid` 的旗標：「有死掉的就給我、沒有就馬上回來，別卡住我」。daemon 一圈問一次，問完繼續做別的 |
-| 128+N | 被訊號 N 砍死的行程，退出碼慣例記成 128+N（SIGTERM 是 15→143、SIGKILL 是 9→137）。算非 0，沒被主動叫停的話會被重拉 |
+| 128+N | 被訊號 N 砍死的行程，退出碼慣例記成 128+N（SIGTERM 是 15→143、SIGKILL 是 9→137）。算非 0，符合上面重拉條件的會被重拉 |
 | SIGTERM／SIGINT／SIGKILL | TERM＝「請你結束」，程式可以先收尾；INT＝Ctrl-C，跟 TERM 同級；KILL＝直接砍掉，程式擋不了也來不及收尾 |
 | SIGPIPE／EPIPE | 往一條讀端已經關掉的 pipe 寫東西：預設會收到 SIGPIPE 被打死；忽略這個訊號之後只會得到 EPIPE 錯誤＝孩子那頭沒人了 |
 | `kill(pid, 0)` | 不送訊號、只拿 kill 這個系統呼叫問「這個 pid 還在不在」的用法。啟動時拿它輪詢上一任的孩子死透了沒。「在」不等於「還在做事」（殭屍也算在） |
@@ -124,8 +124,11 @@ fd 1 那條讀走就丟，不拿來做決定（現在孩子不會往上寫；不
 fd 0 那條只寫 `go` 跟 `stop` 各一行；寫失敗（EPIPE）＝孩子那頭讀端關了＝它在死的路上或已經死了，
 階梯直接跳到下一階（EPIPE 不證明它死了，只證明它不聽了）。
 
-`target` 讀不到、inst 壞掉、起不來（aos-exec 的 kind=aos）：`spawn` 回 `-32000`／`SpawnFailed`，
-`data.code` 是 aos-exec 的代號、`message` 是它那一行 stderr；不登記。
+`target` 讀不到、inst 壞掉、起不來（aos-exec 的 kind=aos）：`spawn` 回 `error.code=-32000`、`data.code="SpawnFailed"`，
+`message` 帶 aos-exec 那一行（含它的代號）；不登記。
+
+**誰能當孩子**：只有遵守範式 §6.1 控制 pipe 契約的程式（等 `go`、認 `stop`、EOF 就溫和停）——現在就是 `aos-cpu`。
+一般工作程式不是 daemon 的孩子，是 exec cpu 跑的。
 
 ## 3. method（`D/requests/`）
 
@@ -199,9 +202,9 @@ aos-daemon [--home D]
    這是整個系統唯一的一把鎖：它綁的是 daemon 行程的壽命（行程死鎖就消失），不是跨檔交易，
    所以沒有「鎖沒人解」的問題；外人也靠它探測 daemon 活不活（§1）。
 3. **等上一任的孩子死透**：讀舊 `state.json`，對每個記錄的 pid 用 `kill(pid, 0)` 看還在不在——在的
-   就對它走 §5 的階梯（從 TERM 那階開始，因為 pipe 已經沒了），直到全部不在。注意兩件事：
-   (a) 那個 TERM 對孩子來說可能是「第一次」（它還沒讀到 EOF）、只會溫和停，所以這裡等的是
-   `stop_wait_ms`＋`kill_wait_ms`，最後可能落到硬砍；(b) 上一任 daemon 死後它的孩子歸 init 管、死了 init 會收屍，
+   就送 TERM、等 **`stop_wait_ms`＋`kill_wait_ms`**、還在就 KILL 整組，直到全部不在（這是接手專用的等法，
+   跟 §5 正常停機的階梯不同：pipe 已經沒了，沒得先好好說）。注意兩件事：
+   (a) 那個 TERM 對孩子來說可能是「第一次」（它還沒讀到 EOF）、只會溫和停，所以才等兩段加起來的時間，最後可能落到硬砍；(b) 上一任 daemon 死後它的孩子歸 init 管、死了 init 會收屍，
    所以 `kill(pid,0)` 看到「不在」就是真的不在了。pid 被別的程式重用的機率當作可忽略，寫在這裡讓人知道。
    上一任 fork 了、還沒寫表就死的孩子不在表裡——但它等不到 `go`、自己就退了（§2），不用找。
 4. 照範式 §6.2 對帳自己的 `current`（上一任崩在處理哪則 request）。
@@ -221,7 +224,7 @@ aos-daemon [--home D]
 
 ## 7. 這份沒管的
 
-孩子在做什麼（kernel／cpu 範式）；誰該被拉、幾顆（kernel 的 `info.cpus`）；多機（以後 socket）。
+適用範圍同範式 §8（同一台 POSIX 機器；fork／waitpid／flock／訊號都是 POSIX 的）。孩子在做什麼（kernel／cpu 範式）；誰該被拉、幾顆（kernel 的 `info.cpus`）；多機（以後 socket）。
 沒有 `aos-daemon-ctl`：客戶端就是往 `D/requests/` 放檔，kernel 的 boot／tick 已經在做；人要看就 `cat D/state.json`，
 要停就放一份 `stop-*.json` 或 Ctrl-C。
 
@@ -231,6 +234,8 @@ daemon 是所有 cpu 的父行程、最單純；IPC 用 pipe，只管生死；`s
 同名不同目標＝`NameTaken`。
 
 ## 9. 我自己選的（等你確認）
+
+沒翻案就照這樣實作。
 
 1. **重拉只在非 0 退出、且沒被主動叫停**：退 0＝孩子自願停（kernel 的 stop、pipe EOF），daemon 不跟它作對；
    `kill`／`stop` 一定贏過重拉。
