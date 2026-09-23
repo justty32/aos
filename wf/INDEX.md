@@ -49,6 +49,7 @@
 | [WORKFLOWS.md](WORKFLOWS.md) | 派發器：意圖 → 工作流入口 |
 | [STRUCTURE.md](STRUCTURE.md) | 結構整理參考（被動）|
 | [SESSION-LOG.md](SESSION-LOG.md) | 我的 open 進度（hub）|
+| [session_logs/](session_logs/README.md) | SESSION-LOG 搬出的舊條目（按月份全文＋索引）|
 | [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的事 |
 
 ## 通用（跨工作流共享）

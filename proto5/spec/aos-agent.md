@@ -1,13 +1,24 @@
-# aos-agent：把一個 agent 資料夾走一格（程式規範，**草稿**）
+# aos-agent：把一個 agent 資料夾走一格（第 2 版，**草稿**）
 
-← [proto5 README](../README.md)｜資料夾與 `state.json` 長什麼樣在 [agent.md](agent.md)；組請求靠 [aos-llm-ask.md](aos-llm-ask.md)，問模型交 llm CPU；跑工具靠 [inst-posix.md](inst-posix.md)
+← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜問模型：[aos-llm-call.md](aos-llm-call.md)｜送件：[kernel.md §2](kernel.md)、[cpu.md §3.3](cpu.md)
 
-> **最精簡的標準**（使用者定的）：缺的東西之後遇到了再補；不記修訂記錄。
-> 這份只講「叫一次 aos-agent 到底做什麼」：先看**門**（`waits`），再走**一格**（`state`）。
-> `state`／`input`／`waits`／`errors` 四格的形狀在 [agent.md §4](agent.md)，這裡不重講。
+> 2026-09-23 草稿，取代第 1 版。**程式還沒照這份改**：現在的 `aos_agent.py` 仍是舊版（直接往 llm cpu／tool cpu 放單）。
+> 這版：問模型、跑工具**都是往 kernel `add --once` 的普通工作**；agent 只認識 kernel 一個入口。
 
-一句話：**`aos-agent [dir]` 先看 `waits` 這道門——還在等就退出；門開了就把狀態機走一格，然後退出。**
-跟 aos-exec 一樣是「一次做一件事」的程式，反覆叫它是 kernel 的事。
+一句話：**`aos-agent [dir]` 先看 `waits` 這道門——還在等就退出；門開了就把狀態機走一格：`idle` 收輸入、`think` 問模型、
+`act` 跑工具，問跟跑都是「寫一份 inst、往 kernel 放單、等回音檔、讀結果、ack」。**
+反覆叫它是 kernel 的事（agent 自己就是 kernel 裡的一個反覆行程）。
+
+## 0. 名詞（白話）
+
+| 詞 | 意思 |
+|---|---|
+| 走一格 | 叫一次 `aos-agent`，照 `state` 做一件事就退出 |
+| 門 | `state.json` 的 `waits`；還有沒到的檔就這格不走，退 101 |
+| 放單 | 用 `aos_client` 往 `K/requests/` 放一則 `add`（`once: true`），檔名就是這件工作的名字 |
+| 回音檔 | `K/responses/<名>.json`；內容只有執行狀態（code／kind／timed_out／stopped），模型答案跟工具輸出在 agent 家自己的檔裡 |
+| ack | 讀完回音後往 `K/requests/` 放一則 `ack`，kernel 才刪回音（[cpu.md §3.3](cpu.md)） |
+| 工作名 | `<agent 資料夾名>-<epoch ns>-<pid>`（工具再加 `-<i>`）；inst、輸入、輸出檔都用它取名，所以看檔名就知道是哪件 |
 
 ## 1. 用法
 
@@ -15,97 +26,115 @@
 aos-agent [dir]
 ```
 
-- `dir` 留空＝`.`（跟 aos-exec 一樣）。`dir` 必須是 agent 資料夾（有 `info.json`、`_metainfo._type`
-  是 `llm_agent`），不是＝`NotAnAgent`。
-- 沒有別的旗標、沒有子命令。
+`dir` 留空＝`.`，必須是 agent 家（`NotAnAgent`）。沒有別的旗標。
 
 ## 2. 門怎麼判
 
-每次被叫，讀驗完（§3 第一段）、走格之前，先看 `state.json` 的 `waits`（[agent.md §4.2](agent.md)）：
+每次被叫、讀驗完、走格之前：
 
-1. 逐條檢查。**到了的那一條**：先照 `consume` 處理（`any` 的話只 consume 真的到了的那幾個檔），再
-   **從表裡劃掉**（按索引劃原始 JSON 那一條）。沒到的留著。
-2. 表劃完還有剩 → 把改過的 `waits` 寫回 `state.json`（只動這格），退出碼 101，這次不走格。
-3. 表空了 → 寫回（`waits` 變空陣列），接著照 `state` 走一格（§3）。
+1. 逐條看 `waits`。到了的：先照 `consume` 處理（有開才 rename `.done`），再從表裡劃掉（按索引改原始 JSON）。
+2. 表還有剩 → 把改過的 `waits` 寫回、退 101。
+3. 表空了 → 寫回（空陣列）、照 `state` 走一格。
 
-所以「一部分到了」的進度會留下來：到了的已經劃掉、consume 過，下次只等剩下的，不會重複判同一個檔。
+所以「一部分到了」的進度會留下來。人要它暫停就加一條指到不存在的檔（例如 `continue.json`）、要它繼續就 touch 那個檔。
 
-aos-agent 會在送出 LLM／工具請求或引擎連敗三次時自己往 `waits` 加條目。人要它**暫停**也可以加一條指到
-不存在的檔（例如 `continue.json`），要它**繼續**就 touch 那個檔——不用另外做 `pause`／`continue`。
+## 3. 走一格
 
-## 3. 走一格到底做什麼
+先讀驗（[agent.md](agent.md)：`info.json`／`state.json` 每格解指示詞、指到的檔原樣讀）；讀驗不過＝退 1、什麼都不寫。
 
-先讀驗（[agent.md](agent.md)：`info.json`／`state.json` 每格解指示詞、指到的檔原樣讀；`state.json`
-不存在＝全部預設）；讀驗不過＝這格沒走，退出碼 1、什麼都不寫。門開了（§2）就照 `state` 做**一格**：
+| 現在是 | 情況 | 做什麼 | 寫回 `state` | 退出碼 |
+|---|---|---|---|---|
+| `idle` | `input` 有東西 | 接進記憶、rename `.done` | `think` | 0 |
+| `idle` | 沒東西 | 不動 | 不變 | 101 |
+| `think` | 記憶尾巴是帶 `tool_calls` 的 `assistant`（上次崩在寫記憶跟寫 state 之間） | 自癒，不問 | `act` | 0 |
+| `think` | 沒有在途的問（§3.1 第 1 步） | 送出一份「問模型」工作、加門 | 不變 | 0 |
+| `think` | 回音到了、跑成功 | 讀 `llm-out/<名>.json` 接記憶、`errors`＝0、ack、清工作區 | 有 `tool_calls` → `act`；否則 `idle` | 0 |
+| `think` | 回音到了、跑失敗 | stderr 一行、記憶不動、`errors`＋1、ack、清工作區；第三次見 §3.4 | `think` | 0 |
+| `act` | 記憶尾巴不是帶 `tool_calls` 的 `assistant` | 沒東西可跑 | `think` | 0 |
+| `act` | 記憶尾巴已經接了整批 `tool` 訊息（上次崩在寫記憶跟寫 state 之間） | 自癒：ack 還沒 ack 的、清工作區 | `think` | 0 |
+| `act` | 沒有在途的工具 | 每個 call 送一份工作、加一條 `all` 門 | 不變 | 0 |
+| `act` | 全部回音到了 | 照原順序組 `tool` 訊息接記憶、ack 全部、清工作區 | `think` | 0 |
 
-| 現在是 | 做什麼 | 寫回 `state` | 退出碼 |
-|---|---|---|---|
-| `idle` | 收 `input`（[agent.md §4.1](agent.md)）：有東西就接進記憶、清掉 | `think` | 0 |
-| `idle` | 沒東西 | 不變 | **101** |
-| `think` | 記憶尾巴已經是帶 `tool_calls` 的 `assistant`（上次崩在寫記憶與寫 `state` 之間）→ 自癒，不問模型也不送新請求 | `act` | 0 |
-| `think` | `ask-result.json` 存在：讀驗後收回；`ok:true` 的 message 接記憶、`errors` 歸零，結果 rename 成 `.done` | 有非空 `tool_calls` → `act`；否則 → `idle` | 0 |
-| `think` | 結果不存在：送出請求，再向 `waits` 加字面 `"ask-result.json"`，不開 consume | 不變 | 0 |
-| `think` | 收回 `ok:false`：stderr 一行 `aos-agent: engine: <白話>`、記憶不動、`errors` 加一；結果 rename 成 `.done`；第三敗的處理見下 | 留 `think` | 0 |
-| `act` | 沒有 `_run: "cpu"` 的 call：記憶尾巴的每個 `tool_calls[i]` 依序按名字找工具、拿 `_meta` 當 inst 跑；`arguments` 字串原樣進 stdin、stdout 整段當結果，每個 call 接一則 `tool` 訊息。每個工具有 `_timeout_ms` 上限，沒寫＝60000 ms。找不到＝「沒有這個工具：xxx」；逾時＝「工具 xxx 逾時（60000 ms）：」＋stdout（數字用實際預算）；非零退出＝「工具 xxx 失敗（exit n）：」＋stdout；inst 解不開／跑不起來＝「工具 xxx 跑不起來：」＋一行錯誤。這些都只是給模型的結果，其他 call 照跑 | `think` | 0 |
-| `act` | 有 `_run: "cpu"` 的 call：先交整批 CPU 請求並等全部結果；收回時按原始順序接整批訊息（§3.3） | 送出留 `act`；收回轉 `think` | 0 |
-| `act` | 記憶尾巴不是帶 `tool_calls` 的 `assistant`（沒東西可跑）→ 不跑 | `think` | 0 |
+「有沒有在途」看 `waits` 裡有沒有指到 `K/responses/` 的條目——工作名就寫在路徑裡，不用另外記。
 
-### 3.1 llm cpu 的送出與收回
+### 3.1 think：問一次模型
 
-- CPU 資料夾與協議見 [llm-cpu.md](llm-cpu.md)，一次執行的行為見 [aos-llm-cpu.md](aos-llm-cpu.md)。
-- 送出前只驗 CPU 的 `info.json` 身分；models 與其中的環境變數留給 CPU 自己讀解。請求＝`{"model": engine.model 的代號, "body": 已組好且不含 model 的請求, "result": agent/ask-result.json 的絕對路徑}`。CPU 查自己的 models 表，填真名後呼叫模型；連線設定與 api_key 不經 agent 請求。
-- 檔名＝`<agent 資料夾名>-<epoch ns>.json`。在 CPU 共用短鎖內先檢查 requests／running／done 三處同名，有就拒收、不覆蓋；寫 `.tmp` 再 rename 到 requests，才寫 waits。HTTP 不在這把鎖內。
-- 下一次門沒開＝101；結果到了，同次呼叫劃門並收回。結果完整讀驗先於門的 consume／寫回；壞 JSON 或形狀錯誤＝1、結果與 state 保留。`ok` 必須是 bool；成功需要合法 assistant message，失敗需要字串 code／msg。結果內容不解指示詞。
-- 記憶尾巴帶 tool_calls 的自癒優先於收回；若完整驗過、正規化的成功結果恰等於尾巴，先封存這份已接過的結果、清 errors，避免下次重收。壞結果不擋自癒並保留到後續 think；送出不清 errors，因為還沒得到引擎成功。
-- 寫入順序為請求 → waits；收回成功為記憶 → 結果 `.done` → state。沒有跨檔交易或 request id：崩在這些寫入之間仍可能重送、重複接回或漏掉狀態推進，具體窗口見 [findings](../../proto5.1/notes/findings.md)。不要把這套當成 exactly-once。
+1. 取工作名 N。寫 `insts/N.json`（字面 inst、路徑全絕對）：
 
-### 3.2 引擎連敗暫停與工具限時
+   ```json
+   {"argv": ["aos-llm-call", "/abs/agent-bob"], "cwd": "/abs/agent-bob",
+    "stdout": {"$opt": "mkdir", "$val": "/abs/agent-bob/llm-out/N.json"},
+    "stderr": {"$opt": ["append", "mkdir"], "$val": "/abs/agent-bob/log/llm.err"}}
+   ```
 
-- 收回 `ok:false` 讓 `errors` 加一，成功清零；設定讀驗／檔案 I/O 錯誤不算引擎失敗。
-- 到第三次失敗：`errors` 歸零，往 waits 加 `{"$opt":"consume","$val":"continue.json"}`，stderr 另印一行 `aos-agent: stuck: 引擎連敗 3 次，touch continue.json 繼續`；本次仍退 0，下一次門未開就 101。
-- 門開時依 consume 把 `continue.json` rename `.done`，第二次暫停自然要再 touch；加門前不封存檔案。新 input 不能解鎖；touch 後同次呼叫可以繼續 think。
-- 工具限時用 `run_inst(inst, arguments, timeout_ms=…)`；TERM 整個 process group → 最多 2 秒寬限 → KILL。是否逾時用獨立 `timed_out` 旗標，不能猜 143／137；因此工具在 TERM handler 回 0 仍是逾時，自己 exit 143 則是一般失敗。stdout 不截斷，已收到的部分保留。
+   `argv[0]` 就寫 `aos-llm-call`，靠那顆 cpu 的 PATH 找（[cpu.md §4.1](cpu.md)）；金鑰也是那顆 cpu 的環境給的。
+2. `aos_client` 放單：`add`，`target`＝`/abs/agent-bob/insts/N.json`、`name`＝N、`once: true`、`pool`＝`info.llm.pool`、
+   `timeout_ms`＝llm.json 那筆的 `timeout_ms` 加 5000（HTTP 逾時交給 aos-llm-call 自己，這裡只是保險）。
+   `AlreadyExists`／`-32602` 等 kernel 退件＝當引擎失敗（`errors`＋1、stderr 一行）。
+3. `waits` 加一條字面 `"<K>/responses/N.json"`（不開 consume），寫回。
+4. 下一次門開：讀回音（先查原單再查回音是 `aos_client` 的事）。**成功**＝`result` 且 `kind=child`、`code=0`、`timed_out=false`、`stopped=false`
+   → 讀 `llm-out/N.json` 那一行 JSON 當 assistant message（照 agent.md §3.2 驗，不合＝`MessageInvalid`、退 1、不 ack），
+   接記憶、`errors`＝0。其他（`error`、`kind=aos`、非 0、逾時、被停）＝引擎失敗。
+5. 寫記憶 → ack → 刪 `insts/N.json`、`llm-out/N.json` → 寫 state。
 
-### 3.3 tool cpu：整批送出、整批收回
+### 3.2 act：跑工具
 
-- 工具 `_run` 沒寫或是 `"sync"`＝同步；`"cpu"`＝交到 `info.json` 頂層 `tool_cpu` 指定的資料夾（相對 agent 家）。CPU 協議見 [tool-cpu.md](tool-cpu.md)。
-- 記憶尾巴有 calls、當批尚無任何結果：先驗 tool CPU 身分，建立 `tool-results/`，所有 CPU call 各送一份請求；sync call 這格先不跑。結果絕對路徑為 `<agent>/tool-results/<i>.json`，`i` 是原始 `tool_calls` 索引。請求名為 `<agent 名>-<epoch ns>-<i>.json`，由共用 `aos_cpu.submit` 交件。
-- `_meta` 在 agent 端以 agent 家／環境解成 inst，交件時去掉 inst.stdin／inst.stdout；請求外層 `stdin` 為 arguments 字串、`timeout_ms` 為工具預算。inst 解不開則 agent 直接寫 `ok:false` 結果，其他 CPU call 照送。
-- 送完往 waits 加一條 `{"$opt":"all","$val":[所有 CPU 結果的絕對路徑]}`，不開 consume，state 留 act、退 0；沒全到退 101。若結果只到一部分而 waits 缺失，補回整批 all 門，不重送已有結果。
-- 全到後先驗整批結果，再劃門／跑 sync。按原始 call 順序組訊息：sync 現在跑；CPU 的 `ok:true` 且 code=0 用 stdout、非零用「工具 xxx 失敗（exit n）：」＋stdout；`timed_out:true` 優先為「工具 xxx 逾時」；一般 `ok:false` 為「工具 xxx 跑不起來：」＋msg；收屍／失聯的固定結果見下段。CPU 的 `kind` 原樣驗為 child／aos，這階段顯示依退出碼。全部訊息一起寫記憶，全部結果 rename `.done`，state 轉 think。
-- CPU 收屍代表未取得可靠執行結果：可能崩在認領後、執行中，或工具已完成但還沒發布結果；也可能原程序仍活著、只超過收屍期限。這些都算「結果不明」，不猜副作用、不重試。當 `ok:false` 且 `code == "Reaped"`，tool content 固定為 `json.dumps({"ok": False, "error": "結果不明：工具可能已經跑了，也可能沒有"}, ensure_ascii=False)`，不加工具名前綴。已知逾時、非零退出、壞 payload、跑不起來仍用各自的已知失敗文字。
-- 同一則 assistant 叫多個 `_run: "cpu"` 工具，只保證收回的訊息順序，**不保證執行順序**。模型一次叫多個並未指定先後；有先後關係的工具別標 cpu，或合成一個工具。
-- 結果不解指示詞。`ok` 必須是 bool；成功的 `timed_out` 是 bool、`code` 是整數（bool 不算）、stdout 是字串；失敗的 code／msg 是字串；壞 JSON／UTF-8 或欄位錯誤退 1，門／記憶／結果不動，也不跑 sync。收回不再要求 CPU 的 info 可讀。
-- 崩在記憶已寫、結果尚未全封存／state 尚未寫：下次 act 看尾端整批 tool 訊息，確認筆數與 call id 順序吻合，封存該批剩餘的 CPU 索引結果，再轉 think，不重跑 sync。
-- **限制**：沒新增請求 id、state ask／calls 或交易。交件中途崩潰可能重送；若部分結果已到而其他 call 尚未交件，補回的門可能永遠等不到；sync 已跑但記憶尚未寫也可能重跑。固定結果路徑無法辨認任意遲到舊結果。這些情境列在 findings，D 只評估對帳、不實作。
+記憶尾巴那則 `assistant` 的每個 `tool_calls[i]`：
 
-### 3.4 寫檔與原有自癒
+1. 按 `function.name` 找工具；找不到＝這個 call 不送，回音時直接給模型「沒有這個工具：xxx」。
+2. 工作名 `N-i`。`arguments` 字串原樣寫成 `tool-in/N-i.json`。`_meta` 先以 agent 家為中心 `aos_inst.load_obj` 解成字面 inst、
+   路徑全絕對，再補 `stdin`＝`tool-in/N-i.json`、`stdout`＝`tool-out/N-i.json`（mkdir），寫成 `insts/N-i.json`。
+3. 放單：`add`，`target`＝那份 inst、`name`＝`N-i`、`once: true`、`pool`＝`info.tool_pool`、`timeout_ms`＝`_timeout_ms`。
+   放單失敗的 call 當「跑不起來」，其他照送。
+4. `waits` 加一條 `{"$opt": "all", "$val": [所有送出去的回音檔路徑]}`，寫回。
+5. 全到了：照 i 的順序組每個 call 的 `tool` 訊息（`tool_call_id` 對應）：
 
-- 模型要求每個 call 的 tool 訊息緊接在 assistant 後。CPU call 等齊之後與 sync 一起按原始順序整批接上，這之前不進 think。
-- `idle` 收輸入的順序是：全部讀完驗完 → 寫記憶 → rename `.done` → 寫 `state`；壞訊息（`MessageInvalid`）就整格不寫。
-- 一格只寫：`state.json`（原始 JSON 只動 `state`／`waits`／`errors`）、記憶檔（整份重寫）、`input`／`waits`
-  指到的檔（rename）、CPU 請求與 `ask-result.json`／`tool-results/<i>.json`（收回 rename）；都先 `.tmp` 再 rename。**先寫記憶、再寫 `state`**：崩在中間依記憶尾巴修復狀態；副作用與跨檔窗口見 findings。
-  表裡 `think`／`act` 各多的那一列就是「重做」時看記憶尾巴自己對回來，不會把帶 `tool_calls` 的
-  `assistant` 再拿去問一次（模型那邊會拒絕）。
-- `think` 回來的 `message` 原樣接；只有 `content` 是 `null` 又沒有 `tool_calls` 時補成 `""`（不然下次
-  讀驗過不了 [agent.md §3.2](agent.md)）。
-- 跑工具是 import 同目錄的 aos_exec／aos_inst，不是開 `aos-exec` 子進程（inst 在記憶體、stdin 要塞
-  字串、stdout 要收回來——函式庫層要補一個入口）。
-- `$env` 讀的是 aos-agent 自己的環境；`$ref` 相對路徑以 agent 資料夾為中心。
-- 同一個 agent **不要同時跑兩份**（沒有鎖）。
+   | 回音 | `content` |
+   |---|---|
+   | `result`、`code=0`、沒逾時沒被停 | `tool-out/N-i.json` 整份文字 |
+   | `timed_out=true` | 「工具 xxx 逾時（N ms）：」＋已有的 stdout |
+   | `code≠0`（child） | 「工具 xxx 失敗（exit n）：」＋stdout |
+   | `kind=aos`、`error` 非 Interrupted | 「工具 xxx 跑不起來：」＋一行原因 |
+   | `error.data.code=Interrupted`、或 `stopped=true` | 固定 `{"ok": false, "error": "結果不明：工具可能已經跑了，也可能沒有"}` 的 JSON 字串 |
+   | 沒送（找不到工具、放單失敗） | 「沒有這個工具：xxx」／「工具 xxx 跑不起來：」＋原因 |
+
+6. 全部訊息一起寫記憶 → ack 全部 → 刪這批的 inst／in／out → 寫 state。
+   同一則 assistant 叫多個工具，只保證接回的順序，**不保證執行順序**（kernel 可能派到不同 cpu 平行跑）。
+
+### 3.3 寫入順序與自癒
+
+- 一格只寫：`state.json`（原始 JSON 只動 `state`／`waits`／`errors`）、記憶檔、`input`／`consume` 的 rename、工作區的檔、K 的 request／ack。
+- **先寫記憶、再 ack、再寫 state**。崩在記憶之後：下次靠記憶尾巴自癒（表裡兩列）；崩在 ack 之前：回音還在，自癒那列會補 ack
+  （ack 指到已經不在的回音是 no-op，多送無害）。崩在放單之後、寫 waits 之前：下次 `think`／`act` 看到沒有在途就會再送一份——
+  第一份會跑完、沒人收、回音留在 K 到 boot 才清。這是接受的（跟 [cpu.md §10-4](cpu.md) 同一種責任）。
+- 回音、`llm-out`、`tool-out` 原樣讀、不解指示詞。
+
+### 3.4 引擎連敗暫停
+
+`errors` 到 3：歸零、`waits` 加 `{"$opt": "consume", "$val": "continue.json"}`、stderr 一行
+`aos-agent: stuck: 引擎連敗 3 次，touch continue.json 繼續`；本次退 0，之後門沒開就 101。
+設定讀驗、檔案 I/O 錯不算引擎失敗；工具失敗也不算（那是給模型看的結果）。
 
 ## 4. 退出碼與 stderr
 
 | 碼 | 什麼時候 |
 |---|---|
-| 0 | 這格做了事（換了格、送出或收回模型請求、跑了工具、或引擎失敗但會重試） |
-| 101 | 在等（`waits` 沒到、`idle` 沒輸入） |
-| 1 | 讀驗錯誤（[agent.md §5](agent.md)、[agent.md §3](agent.md)、[directives.md §6](directives.md) 的代號）：stderr 一行 `aos-agent: <代號>: <白話>`，什麼都不寫。寫檔／rename 中途失敗也是 1：`aos-agent: io: <白話>`，這種可能已經寫了一部分（下一次靠自癒對回來） |
-| 2 | 用法錯（旗標不認得、`dir` 不存在） |
+| 0 | 這格做了事（換格、送單、收回、引擎失敗但會重試） |
+| 101 | 在等（門沒開、`idle` 沒輸入） |
+| 1 | 讀驗錯（agent.md §5 的代號；stderr 一行 `aos-agent: <代號>: <白話>`，什麼都不寫）；寫檔中途失敗 `aos-agent: io: <白話>`（可能寫了一半，下次自癒） |
+| 2 | 用法錯 |
 
-## 5. 之後會有、現在不做的
+## 5. 這份沒管的
 
-- **送出即收據的背景工具**：另加一個 `async` 選項——`act` 啟動它就馬上接一則收據當 `tool` 訊息，工具跑在別的
-  cpu／thread，跑完把結果寫進 `input`（當 `user` 訊息回來；順序沒限制，因為不是 `tool` 訊息）。
-- **整格硬上限與 waits 期限**：這輪不做；工具每次 60 秒與引擎連敗三次暫停已在 §3。HTTP 的 timeout 仍是 socket 逾時，不是整次呼叫總上限。
-- 誰把輸入丟進 `input`、誰去讀回話（aos-user 之類的外部工具）；反覆叫、放進 kernel；鎖；記憶太長。
+agent 怎麼被放進 kernel（就是 `aos-kernel add <agent>/tick.json`，那份 inst 的 argv 是 `aos-agent /abs/agent-bob`；
+`interval_ms` 決定它多久醒一次）；誰丟輸入、誰讀回話；記憶太長；同一個 agent 同時跑兩份（沒有鎖，別這樣）。
+
+## 6. 我自己選的（等你確認）
+
+1. **問跟跑都走 kernel `add --once`**，沒有同步工具；agent 不認識任何 cpu。
+2. **工作名寫在 `waits` 的路徑裡**，state 不加 `ask`／`calls` 這種欄位；在途與否看 `waits`。
+3. **inst 由 agent 產生、路徑全絕對、放 `insts/`**；`_meta` 在 agent 端解好，kernel／cpu 不用知道 agent 家。
+4. **think 的 `timeout_ms`＝模型 timeout＋5 秒**，只是保險。
+5. **順序：記憶 → ack → state**；崩在放單與加門之間會重送一份，接受。
+6. **「結果不明」的固定文字沿用**（`Interrupted` 跟 `stopped:true` 都算）。
+7. **工作區檔案用完就刪**，不留 `.done`。
