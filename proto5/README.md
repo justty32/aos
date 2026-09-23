@@ -30,12 +30,14 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 
 ## 程式
 
-> 2026-09-22 下午：proto5.1 的程式整套搬回來（[回流紀錄](notes/2026-09-22-backflow.md)），現在規範與程式對得上。proto5.1 留著當紀錄，不再改。
+2026-09-23：cpu／daemon／kernel 已依 [cpu.md](spec/cpu.md)、[daemon.md](spec/daemon.md)、
+[kernel.md](spec/kernel.md) 重寫。agent 與舊 llm／tool cpu 保留原實作，尚未接上新架構；
+新 agent 規範另待實作。實作中的規範歧義與限制記在 [impl-findings.md](notes/2026-09-23-rearch/impl-findings.md)。
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 十二支模組。底層：`aos_directives.py`（指示詞）→ `aos_inst.py`（inst.json 讀驗解）→ `aos_exec.py`（跑一次）。agent 線：`aos_agent_info.py`（agent 資料夾讀驗）→ `aos_llm_ask.py`（組 body、給 cpu 用的 HTTP）→ `aos_agent.py`（waits 門、idle／think／act 一格、交 cpu 等結果）。cpu 線：`aos_cpu.py`（共用佇列：交件／認領／收屍／壞單）→ `aos_llm_cpu.py`、`aos_tool_cpu.py`。作業系統線：`aos_run.py`（反覆跑一個目標、run.json／ctl.json）→ `aos_daemon.py`（管 runner）→ `aos_kernel.py`（排班）。逐檔 API 與測試表見 lib README | 802 條測試全綠：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test`（約兩分鐘） |
-| [cli/](cli/) | 九個薄入口，各自 `sys.path` 加 `../lib` 再叫對應模組的 `main()`：`aos-exec`、`aos-llm-ask`、`aos-agent`、`aos-llm-cpu`、`aos-tool-cpu`、`aos-run`、`aos-daemon`、`aos-daemon-ctl`、`aos-kernel`。用法各見同名規範 | 能跑；LM Studio（`qwen/qwen3-1.7b`）整條真跑過：daemon＋三顆 kernel cpu 跑 agent／llm cpu／tool cpu，問時間→now 工具→回話，stop 後無殘留 |
+| [lib/](lib/README.md) | 十四支標準庫 Python 3.12 模組。底層 directives → inst → exec；新共用 home／client；exec_cpu 執行一次、daemon 管孩子、kernel 用 tick 鏈與帳本排程。六支舊 agent／llm／tool／cpu 模組保留。逐檔 API 與測試表見 lib README | 19 個測試檔、883 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [cli/](cli/) | 八個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`，以及保留的 `aos-llm-ask`、`aos-agent`、`aos-llm-cpu`、`aos-tool-cpu`。`aos-run`／`aos-daemon-ctl` 已移除 | 新架構端到端使用真 daemon＋k／0／llm exec cpu，透過 envs PATH 找假 llm-http，驗 once 輸出、反覆 done_exit 與完整停機；舊 agent 尚未遷移 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。
 

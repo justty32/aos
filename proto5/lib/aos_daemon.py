@@ -1,405 +1,391 @@
-"""管理 aos-run 的檔案請求迴圈；不替 kernel 排程。"""
-import argparse
+"""所有 cpu 的父行程：daemon.md §1～§6 的握手、孩子表、重拉與停機。
+
+工作 request 使用 aos_home 的信封與對帳；目標的讀驗與 fork 交給
+aos_exec.spawn_target，daemon 只在孩子表寫好後送 go。
+"""
+import contextlib
 import fcntl
+import io
 import json
 import os
 from pathlib import Path
-import secrets
 import signal
-import subprocess
 import sys
-import tempfile
 import time
 
-__all__ = ["DaemonError", "home", "read_state", "request", "serve", "main", "ctl_main"]
-GRACE = 5.0
-POLL = 0.02
-RUN_CLI = str(Path(__file__).resolve().parents[1] / "cli" / "aos-run")
+import aos_exec
+import aos_home
 
 
-class DaemonError(Exception):
-    def __init__(self, code, msg):
-        self.code, self.msg = code, msg
-        super().__init__("%s: %s" % (code, msg))
+class DaemonError(aos_home.HomeError):
+    def __init__(self, code, msg, rpc_code=-32000, position=None):
+        super().__init__(code, msg)
+        self.rpc_code, self.position = rpc_code, position
 
 
-def home(path=None):
-    return os.path.realpath(os.path.expanduser(os.fspath(path) if path is not None else
-                            os.environ.get("AOS_DAEMON_HOME", "~/.aos-daemon")))
+def daemon_home(value=None):
+    return os.path.abspath(os.path.expanduser(value or os.environ.get("AOS_DAEMON_HOME", "~/.aos-daemon")))
 
 
-def _read(path):
+def is_alive(home):
+    """共享 flock 只探測獨占主人；state 裡的 pid 不作生死判斷。"""
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
-    except (UnicodeError, ValueError) as e:
-        raise DaemonError("JsonSyntax", "%s：%s" % (path, e))
-    except OSError as e:
-        raise DaemonError("ReadFailed", "%s：%s" % (path, e))
-
-
-def _write(path, obj):
-    path = Path(path)
-    fd, tmp = tempfile.mkstemp(prefix="." + path.name + "-", suffix=".tmp", dir=path.parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(obj, f, ensure_ascii=False, indent=2)
-            f.write("\n")
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-
-
-def _check_home(path):
-    p = Path(path)
-    if not (p / "info.json").is_file():
-        raise DaemonError("NotAHome", "%s 不是 daemon 家" % p)
-    info = _read(p / "info.json")
-    meta = info.get("_metainfo") if isinstance(info, dict) else None
-    if not isinstance(meta, dict) or meta.get("_type") != "daemon":
-        raise DaemonError("NotAHome", "%s 不是 daemon 家" % p)
-    if type(meta.get("_version")) is not int or meta["_version"] != 1:
-        raise DaemonError("UnsupportedVersion", "%s 的 _version 只認整數 1" % p)
-    if not (p / "requests").is_dir() or not (p / "requests/done").is_dir():
-        raise DaemonError("NotAHome", "%s 缺少 daemon 請求目錄" % p)
-    return p
-
-
-def _target(value):
-    if not isinstance(value, str) or not value or "\0" in value or not value.endswith(".json"):
-        raise DaemonError("FieldTypeMismatch", "target 必須是非空 .json 路徑")
-    return os.path.abspath(value)
-
-
-def _args(value):
-    if not isinstance(value, list) or any(not isinstance(x, str) for x in value) or len(value) % 2:
-        raise DaemonError("FieldTypeMismatch", "args 必須是 aos-run 旗標與整數值的字串陣列")
-    for flag, number in zip(value[::2], value[1::2]):
-        if flag not in ("--interval-ms", "--timeout-ms", "--max-runs", "--stop-exit"):
-            raise DaemonError("FieldTypeMismatch", "不允許的 aos-run 旗標：%s" % flag)
-        try:
-            n = int(number)
-        except ValueError:
-            raise DaemonError("FieldTypeMismatch", "%s 必須帶整數" % flag)
-        if n < 0 or (flag == "--stop-exit" and n > 255):
-            raise DaemonError("FieldTypeMismatch", "%s 的數值超出範圍" % flag)
-    return value
-
-
-def read_state(path=None):
-    """讀最後快照；正常停止後 pid=0、runs={}，不把快照當互斥鎖。"""
-    p = _check_home(home(path))
-    obj = _read(p / "state.json")
-    if (not isinstance(obj, dict) or type(obj.get("pid")) is not int or obj["pid"] < 0
-            or not isinstance(obj.get("runs"), dict)):
-        raise DaemonError("FieldTypeMismatch", "%s/state.json 的 pid／runs 壞了" % p)
-    for key, entry in obj["runs"].items():
-        if (not isinstance(entry, dict)
-                or not {"pid", "target", "args", "state", "home"} <= entry.keys()
-                or not os.path.isabs(key)
-                or entry.get("target") != key or type(entry.get("pid")) is not int
-                or entry["pid"] <= 0 or entry.get("state") not in ("running", "stopping")
-                or not isinstance(entry.get("home"), str) or not os.path.isabs(entry["home"])):
-            raise DaemonError("FieldTypeMismatch", "%s/state.json 的 entry %s 壞了" % (p, key))
-        _args(entry.get("args"))
-    return obj
-
-
-def _active(p):
-    try:
-        with open(p / ".daemon.lock", "rb") as f:
-            try:
-                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                return True
+        fd = os.open(os.path.join(home, ".daemon.lock"), os.O_RDONLY | os.O_CLOEXEC)
     except FileNotFoundError:
-        pass
-    return False
-
-
-def request(op, target=None, args=None, home=None, timeout=15, kill_tree=False):
-    """送請求、等同名 done；remove 回傳收尾後 entry，stop 在所有 runner 已收屍後回覆。"""
-    p = _check_home(globals()["home"](home))
-    if op == "ls":
-        return read_state(p)
+        return False
     try:
-        active = _active(p)
-    except OSError as e:
-        raise DaemonError("ReadFailed", str(e))
-    if not active:
-        raise DaemonError("NotRunning", "%s 的 daemon 沒在跑" % p)
-    obj = {"op": op}
-    if op == "add":
-        if type(kill_tree) is not bool:
-            raise DaemonError("FieldTypeMismatch", "kill_tree 必須是布林")
-        obj["kill_tree"] = kill_tree
-    if target is not None:
-        obj["target"] = _target(os.fspath(target))
-    if args is not None:
-        obj["args"] = _args(args)
-    name = "%d-%d-%s.json" % (time.time_ns(), os.getpid(), secrets.token_hex(2))
-    path = p / "requests" / name
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return False
+    finally:
+        os.close(fd)
+
+
+def read_state(home):
+    return aos_home.read_state(home, {"pid": 0, "stopping": False, "current": None, "children": {}})
+
+
+def _signal_pid(pid, sig, group=False):
     try:
-        _write(path, obj)
-        until = time.monotonic() + timeout
-        done = p / "requests/done" / name
-        while time.monotonic() < until:
-            if done.exists():
-                response = _read(done)
-                if not isinstance(response, dict) or type(response.get("ok")) is not bool:
-                    raise DaemonError("FieldTypeMismatch", "%s 的回應格式錯誤" % done)
-                if response["ok"]:
-                    if "result" not in response:
-                        raise DaemonError("FieldTypeMismatch", "%s 缺少 result" % done)
-                    return response["result"]
-                if not all(isinstance(response.get(k), str) for k in ("code", "msg")):
-                    raise DaemonError("FieldTypeMismatch", "%s 的錯誤回應格式錯誤" % done)
-                raise DaemonError(response["code"], response["msg"])
-            time.sleep(POLL)
-        raise DaemonError("ReadFailed", "等待 %s 的 done 超過 %g 秒；請求保留" % (name, timeout))
-    except OSError as e:
-        raise DaemonError("ReadFailed", str(e))
-
-
-def _finish_request(path, obj, ok, result):
-    """發布順序不可顛倒；重跑看見 done 就只收原单，不重做副作用。"""
-    if ok:
-        response = dict(obj) if isinstance(obj, dict) else {"request": obj}
-        response.update(ok=True, result=result)
-    else:
-        response = {"ok": False, "code": result["code"], "msg": result["msg"]}
-    _write(path.parent / "done" / path.name, response)
-    path.unlink()
-
-
-def _signal(proc, sig):
-    try:
-        os.killpg(proc.pid, sig)
+        (os.killpg if group else os.kill)(pid, sig)
     except ProcessLookupError:
         pass
 
 
-class _Daemon:
-    def __init__(self, p, log):
-        self.p, self.log = p, log
-        self.jobs, self.pending = {}, {}
-        self.stopping = False
-
-    def snapshot(self, pid=None):
-        return {"pid": os.getpid() if pid is None else pid,
-                "runs": {key: job["entry"].copy() for key, job in self.jobs.items()}}
-
-    def save(self, pid=None):
-        _write(self.p / "state.json", self.snapshot(pid))
-
-    def add(self, target, args, kill_tree=False):
-        if target in self.jobs:
-            raise DaemonError("AlreadyRunning", "%s 已登記" % target)
-        if type(kill_tree) is not bool:
-            raise DaemonError("FieldTypeMismatch", "kill_tree 必須是布林")
-        runner_home = self.p / "runners" / ("%d-%s" % (time.time_ns(), secrets.token_hex(2)))
-        runner_home.mkdir(parents=True)
-        command = [sys.executable, RUN_CLI, target, *args, "--home", str(runner_home)]
-        if kill_tree:
-            command.append("--kill-tree")
-        proc = subprocess.Popen(command, start_new_session=True, stdin=subprocess.DEVNULL,
-                                env=dict(os.environ, AOS_DAEMON_HOME=str(self.p)),
-                                stdout=self.log, stderr=self.log)
-        entry = {"pid": proc.pid, "target": target, "args": args, "state": "running",
-                 "home": str(runner_home)}
-        self.jobs[target] = {"proc": proc, "entry": entry, "deadline": None, "escalated": False, "kill_tree": kill_tree}
-        if self.stopping:
-            self.stop_job(self.jobs[target])
-        self.save()
-        return entry.copy()
-
-    def stop_job(self, job):
-        if job["deadline"] is None:
-            job["entry"]["state"] = "stopping"
-            job["deadline"] = time.monotonic() + GRACE
-            _signal(job["proc"], signal.SIGTERM)
-            return True
+def _pid_exists(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
         return False
+    except PermissionError:
+        return True
 
-    def stop(self):
-        self.stopping = True
-        changed = False
-        for job in self.jobs.values():
-            if self.stop_job(job):
-                changed = True
-        if changed:
+
+def _previous_children(state, info):
+    """接手沒有 pipe 的上一任孩子：TERM、等兩段、KILL、等 pid 消失。"""
+    pids = {child["pid"] for child in state.get("children", {}).values()
+            if type(child.get("pid")) is int and child["pid"] > 0}
+    pids = {pid for pid in pids if _pid_exists(pid)}
+    for pid in pids:
+        _signal_pid(pid, signal.SIGTERM)
+    deadline = time.monotonic() + (info["stop_wait_ms"] + info["kill_wait_ms"]) / 1000
+    killed = False
+    while pids:
+        pids = {pid for pid in pids if _pid_exists(pid)}
+        if pids and not killed and time.monotonic() >= deadline:
+            for pid in pids:
+                _signal_pid(pid, signal.SIGKILL, group=True)
+            killed = True
+        if pids:
+            time.sleep(info["poll_ms"] / 1000)
+
+
+class Daemon:
+    """一個活著的主人；執行中期限只放記憶體，state 只放持久身分。"""
+
+    def __init__(self, home, info, state=None):
+        self.home, self.info = Path(home), info
+        self.state = state if state is not None else {
+            "pid": os.getpid(), "stopping": False, "current": None, "children": {}}
+        self.procs = {}
+        self.stages = {}                     # name -> (stop / term / kill, deadline)
+        self.restarts = {}
+        self.pending = {}                    # 非阻塞寫暫時塞住的控制行
+        self.stop_requested = False
+
+    @property
+    def children(self):
+        return self.state["children"]
+
+    def save(self):
+        aos_home.write_state(self.home, self.state)
+
+    def _params(self, params, spawning=False):
+        def bad(key, msg):
+            raise DaemonError("FieldTypeMismatch", msg, -32602, ["params", key])
+        if not isinstance(params, dict):
+            raise DaemonError("FieldTypeMismatch", "params 必須是物件", -32602, ["params"])
+        name = params.get("name")
+        if not isinstance(name, str) or name in ("", ".", "..") or "/" in name or "\0" in name:
+            bad("name", "name 必須是合法單一檔名")
+        if not spawning:
+            return name
+        target, dir_target, restart = params.get("target"), params.get("dir_target", ".aos/inst.json"), params.get("restart", False)
+        if not isinstance(target, str) or "\0" in target or not os.path.isabs(target):
+            bad("target", "target 必須是絕對路徑")
+        if not isinstance(dir_target, str) or "\0" in dir_target:
+            bad("dir_target", "dir_target 必須是字串")
+        if type(restart) is not bool:
+            bad("restart", "restart 必須是布林")
+        return name, target, dir_target, restart
+
+    def _term(self, name):
+        _signal_pid(self.children[name]["pid"], signal.SIGTERM)
+        self.stages[name] = ("term", time.monotonic() + self.info["kill_wait_ms"] / 1000)
+        self.pending.pop(name, None)
+
+    def _send(self, name, method):
+        data = (json.dumps({"jsonrpc": "2.0", "method": method}) + "\n").encode()
+        self.pending[name] = data
+        self._flush(name)
+
+    def _flush(self, name):
+        try:
+            os.write(self.procs[name].process.stdin.fileno(), self.pending[name])
+        except BlockingIOError:
+            return
+        except BrokenPipeError:
+            self._term(name)                 # EPIPE 不等於死亡，直接升一階
+        else:
+            self.pending.pop(name, None)
+
+    def _launch(self, name, target, dir_target, restart, previous=None):
+        try:
+            handle = aos_exec.spawn_target(target, dir_target=dir_target)
+        except aos_exec.SpawnError as exc:
+            if exc.code == "Usage":
+                raise DaemonError("Usage", exc.msg, -32602, ["params", "target"]) from exc
+            raise DaemonError("SpawnFailed", exc.msg) from exc
+        self.procs[name] = handle            # save 失敗時 finally 也能關 pipe，孩子不會收到 go
+        self.children[name] = {"target": target, "dir_target": dir_target, "restart": restart,
+            "pid": handle.process.pid, "alive": True, "state": "running",
+            "exits": previous["exits"] if previous else 0,
+            "last_exit": previous["last_exit"] if previous else None, "since": time.time()}
+        self.restarts.pop(name, None)
+        self.save()                         # fork → 寫孩子表 → go
+        self._send(name, "go")
+        return {"pid": handle.process.pid}
+
+    def spawn(self, params):
+        name, target, dir_target, restart = self._params(params, True)
+        if self.state["stopping"]:
+            raise DaemonError("Stopping", "daemon 正在停機")
+        child = self.children.get(name)
+        if child is not None:
+            if (child["target"], child["dir_target"]) != (target, dir_target):
+                raise DaemonError("NameTaken", "名字已由另一個目標使用：%s" % name)
+            if child["state"] == "killing":
+                raise DaemonError("Killing", "孩子正在停止：%s" % name)
+            if child["state"] == "running":
+                if child["restart"] != restart:
+                    child["restart"] = restart
+                    self.save()
+                return {"pid": child["pid"]}
+        return self._launch(name, target, dir_target, restart, child)
+
+    def _start_stop(self, name):
+        self.children[name]["state"] = "killing"
+        self.save()
+        self.stages[name] = ("stop", time.monotonic() + self.info["stop_wait_ms"] / 1000)
+        self._send(name, "stop")
+
+    def kill(self, params):
+        name = self._params(params)
+        child = self.children.get(name)
+        if child is None:
+            raise DaemonError("NotFound", "沒有這個孩子：%s" % name)
+        result = {"pid": child["pid"]}
+        if child["state"] == "dead":
+            del self.children[name]
+            self.restarts.pop(name, None)
             self.save()
+        elif child["state"] == "running":
+            self._start_stop(name)
+        return result
+
+    def request_stop(self):
+        if self.state["stopping"]:
+            return
+        self.state["stopping"] = True
+        self.save()
+        for name in list(self.children):
+            self.kill({"name": name})
+
+    def process_request(self, name):
+        path = self.home / "requests" / name
+        env = aos_home.read_request(path)
+        self.state["current"] = {"name": name, "id": env.id, "notify": env.notify}
+        self.save()
+        response = env.error
+        if response is None:
+            try:
+                if env.method == "spawn":
+                    result = self.spawn(env.params)
+                elif env.method == "kill":
+                    result = self.kill(env.params)
+                else:
+                    raise DaemonError("MethodNotFound", "不認得 method：%s" % env.method, -32601)
+                response = aos_home.result_response(env.id, result)
+            except DaemonError as exc:
+                data = None if exc.rpc_code == -32601 else {"code": exc.code}
+                if exc.position is not None:
+                    data["position"] = exc.position
+                response = aos_home.error_response(env.id, exc.rpc_code, exc.msg, data)
+        if not env.notify:
+            aos_home.write_json(self.home / "responses" / name, response)
+        path.unlink()
+        self.state["current"] = None
+        self.save()
 
     def reap(self):
-        for key, job in list(self.jobs.items()):
-            if job["proc"].poll() is None:
-                if job["deadline"] is not None and time.monotonic() >= job["deadline"]:
-                    if not job["kill_tree"] and not job["escalated"]:
-                        _signal(job["proc"], signal.SIGTERM)
-                        job["escalated"] = True
-                        job["deadline"] = time.monotonic() + GRACE
-                    else:
-                        _signal(job["proc"], signal.SIGKILL)
+        for name, handle in list(self.procs.items()):
+            raw_code = handle.process.poll()
+            if raw_code is None:
                 continue
-            entry = job["entry"].copy()
-            entry["state"] = "stopping"
-            del self.jobs[key]
+            code = raw_code if raw_code >= 0 else 128 - raw_code
+            diagnostic = io.StringIO()
+            with contextlib.redirect_stderr(diagnostic):
+                _, kind = handle.finish(code)
+            if kind == "aos":
+                _log("WriteFailed", "孩子 %s 的 exit 檔收尾失敗（退出碼 %d）：%s" %
+                     (name, code, diagnostic.getvalue().strip()))
+            child = self.children[name]
+            child.update(alive=False, exits=child["exits"] + 1, last_exit=code)
+            self._close(name)
+            if child["restart"] and code != 0 and child["state"] == "running" and not self.state["stopping"]:
+                child["state"] = "dead"
+                self.restarts[name] = time.monotonic() + self.info["restart_delay_ms"] / 1000
+            else:
+                del self.children[name]
             self.save()
-            for path, (obj, target) in list(self.pending.items()):
-                if target == key:
-                    _finish_request(path, obj, True, entry)
-                    del self.pending[path]
 
-    def requests(self):
-        for path in sorted((self.p / "requests").glob("*.json")):
-            if path in self.pending or not path.is_file():
+    def restart_due(self):
+        if self.stop_requested:
+            self.request_stop()
+        for name, deadline in list(self.restarts.items()):
+            if self.stop_requested and not self.state["stopping"]:
+                self.request_stop()
+            if name not in self.children:
                 continue
-            if (path.parent / "done" / path.name).exists():
-                path.unlink()
+            if self.state["stopping"]:
+                self.children.pop(name, None)
+                self.restarts.pop(name, None)
+                self.save()
+            elif time.monotonic() >= deadline:
+                child = self.children[name]
+                try:
+                    self._launch(name, child["target"], child["dir_target"], child["restart"], child)
+                except DaemonError as exc:
+                    _log(exc.code, exc.msg)
+                    self.restarts[name] = time.monotonic() + self.info["restart_delay_ms"] / 1000
+
+    def advance_stops(self):
+        for name, (stage, deadline) in list(self.stages.items()):
+            if self.procs[name].process.poll() is not None or time.monotonic() < deadline:
                 continue
-            obj = None
-            try:
-                obj = _read(path)
-                if not isinstance(obj, dict) or obj.get("op") not in ("add", "remove", "stop"):
-                    raise DaemonError("FieldTypeMismatch", "%s 的 op 只認 add／remove／stop" % path)
-                op = obj["op"]
-                if op == "stop":
-                    self.stop()
-                    self.pending[path] = (obj, None)
-                    continue
-                elif self.stopping:
-                    raise DaemonError("NotRunning", "daemon 正在停止")
-                else:
-                    target = _target(obj.get("target"))
-                    if not os.path.isabs(obj["target"]):
-                        raise DaemonError("FieldTypeMismatch", "請求 target 必須是絕對路徑")
-                    if op == "add":
-                        result = self.add(target, _args(obj.get("args", [])), obj.get("kill_tree", False))
-                    else:
-                        if target not in self.jobs:
-                            raise DaemonError("NotRunning", "%s 沒在跑" % target)
-                        if self.stop_job(self.jobs[target]):
-                            self.save()
-                        self.pending[path] = (obj, target)
-                        continue
-                _finish_request(path, obj, True, result)
-            except DaemonError as e:
-                _finish_request(path, obj, False, {"code": e.code, "msg": e.msg})
+            if stage == "stop":
+                self._term(name)
+            elif stage == "term":
+                _signal_pid(self.children[name]["pid"], signal.SIGKILL, group=True)
+                self.stages[name] = ("kill", float("inf"))
+
+    def drain(self):
+        for name, handle in list(self.procs.items()):
+            if name in self.pending:
+                self._flush(name)
+            # 每圈限制讀量，會不停吐 stdout 的孩子也不能餓死其他孩子。
+            for _ in range(16):
+                try:
+                    if not os.read(handle.process.stdout.fileno(), 65536):
+                        break
+                except BlockingIOError:
+                    break
+
+    def _close(self, name):
+        handle = self.procs.pop(name)
+        handle.process.stdin.close()
+        handle.process.stdout.close()
+        self.stages.pop(name, None)
+        self.pending.pop(name, None)
+
+    def close(self):
+        for name in list(self.procs):
+            self._close(name)
+
+    def step(self):
+        if self.stop_requested:
+            self.request_stop()
+        aos_home.scan_controls(self.home, self.request_stop)
+        for name in aos_home.list_requests(self.home):
+            if self.stop_requested:
+                self.request_stop()
+            self.process_request(name)
+        self.drain()
+        self.reap()
+        self.restart_due()
+        self.advance_stops()
+        return self.state["stopping"] and not self.children
 
 
-def serve(path=None):
-    p = Path(home(path))
-    if p.exists() and not p.is_dir():
-        raise DaemonError("NotAHome", "%s 不是資料夾" % p)
+def _log(code, msg):
+    sys.stderr.write("aos-daemon: %s: %s\n" % (code, str(msg).replace("\n", " ")))
+
+
+def run(home):
+    home = Path(home).absolute()
+    home.mkdir(parents=True, exist_ok=True)
+    if not (home / "info.json").exists():
+        aos_home.write_json(home / "info.json", {"_metainfo": {"_type": "daemon", "_version": 1},
+            "poll_ms": 20, "restart_delay_ms": 1000, "stop_wait_ms": 5000, "kill_wait_ms": 5000})
+    info = aos_home.load_info(home, "daemon")
+    for key, default in (("restart_delay_ms", 1000), ("stop_wait_ms", 5000), ("kill_wait_ms", 5000)):
+        if type(info.setdefault(key, default)) is not int or info[key] < 0:
+            raise DaemonError("FieldTypeMismatch", "%s 必須是非負整數" % key)
+    lock = os.open(home / ".daemon.lock", os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
+    handlers = {}
+    owner = None
     try:
-        (p / "requests/done").mkdir(parents=True, exist_ok=True)
-        with open(p / ".daemon.lock", "a+") as lock:
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                raise DaemonError("AlreadyRunning", "%s 的 daemon 已在跑" % p)
-            if not (p / "info.json").exists():
-                _write(p / "info.json", {"_metainfo": {"_type": "daemon", "_version": 1}})
-            _check_home(p)
-            for path in (p / "runners").glob("*/run.json"):
-                status = _read(path)
-                pid = status.get("pid") if isinstance(status, dict) else None
-                if type(pid) is not int or pid <= 0:
-                    raise DaemonError("FieldTypeMismatch", "%s 的 pid 必須是正整數" % path)
-                try:
-                    os.kill(pid, 0)
-                except ProcessLookupError:
-                    continue
-                except PermissionError:
-                    pass
-                raise DaemonError("AlreadyRunning", "%s 的 runner %d 還在跑" % (path, pid))
-            with open(p / "daemon.log", "ab", buffering=0) as log:
-                daemon = _Daemon(p, log)
-                old = {sig: signal.signal(sig, lambda *_: daemon.stop()) for sig in (signal.SIGTERM, signal.SIGINT)}
-                try:
-                    (p / "daemon.pid").write_text(str(os.getpid()) + "\n", encoding="ascii")
-                    daemon.save()
-                    while True:
-                        daemon.reap()
-                        daemon.requests()
-                        if daemon.stopping and not daemon.jobs:
-                            break
-                        time.sleep(POLL)
-                finally:
-                    try:
-                        daemon.stop()
-                    except OSError:
-                        pass
-                    while daemon.jobs:
-                        try:
-                            daemon.reap()
-                        except OSError:
-                            # reap 已先收屍／移除 entry；磁碟壞了也要繼續收其他 runner。
-                            pass
-                        time.sleep(POLL)
-                    try:
-                        daemon.save(pid=0)
-                        (p / "daemon.pid").unlink(missing_ok=True)
-                        for request_path, (obj, _) in daemon.pending.items():
-                            _finish_request(request_path, obj, True, {"stopped": True})
-                    finally:
-                        for sig, handler in old.items():
-                            signal.signal(sig, handler)
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise DaemonError("AlreadyRunning", "同家已有 daemon 在跑") from exc
+        aos_home.ensure_queue(home)
+        old_state = read_state(home)
+        owner = Daemon(home, info)
+        def on_signal(signum, frame):
+            owner.stop_requested = True
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            handlers[sig] = signal.signal(sig, on_signal)
+        handlers[signal.SIGPIPE] = signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+        _previous_children(old_state, info)
+        aos_home.reconcile(home, old_state.get("current"))
+        owner.save()
+        while not owner.step():
+            time.sleep(info["poll_ms"] / 1000)
+        owner.state["pid"] = 0
+        owner.save()
         return 0
-    except OSError as e:
-        raise DaemonError("ReadFailed", str(e))
+    finally:
+        if owner is not None:
+            owner.close()
+        for sig, previous in handlers.items():
+            signal.signal(sig, previous)
+        os.close(lock)
 
 
-def _error(e):
-    sys.stderr.write("aos-daemon: %s\n" % " ".join(str(e).split()))
-    return 1
+serve = run
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos-daemon", description="前景管理 aos-run")
-    ap.add_argument("--home")
-    a = ap.parse_args(argv)
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        home = daemon_home()
+    elif len(args) == 2 and args[0] == "--home" and args[1]:
+        home = daemon_home(args[1])
+    else:
+        _log("Usage", "用法是 aos-daemon [--home DIR]")
+        return 2
     try:
-        return serve(a.home)
-    except DaemonError as e:
-        return _error(e)
-
-
-def ctl_main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos-daemon-ctl", description="交件或直接讀 daemon 狀態")
-    ap.add_argument("--home")
-    sub = ap.add_subparsers(dest="op", required=True)
-    add = sub.add_parser("add")
-    add.add_argument("target")
-    add.add_argument("--kill-tree", action="store_true")
-    for flag in ("interval-ms", "timeout-ms", "max-runs"):
-        add.add_argument("--" + flag, type=int)
-    add.add_argument("--stop-exit", type=int, action="append", default=[])
-    rm = sub.add_parser("rm")
-    rm.add_argument("target")
-    sub.add_parser("ls")
-    sub.add_parser("stop")
-    a = ap.parse_args(argv)
-    args = []
-    if a.op == "add":
-        for flag in ("interval-ms", "timeout-ms", "max-runs"):
-            val = getattr(a, flag.replace("-", "_"))
-            if val is not None:
-                args += ["--" + flag, str(val)]
-        for val in a.stop_exit:
-            args += ["--stop-exit", str(val)]
-        try:
-            _args(args)
-        except DaemonError as e:
-            ap.error(e.msg)
-    try:
-        result = request("remove" if a.op == "rm" else a.op, getattr(a, "target", None),
-                         args if a.op == "add" else None, home=a.home,
-                         kill_tree=getattr(a, "kill_tree", False))
-        print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
-        return 0
-    except (DaemonError, OSError) as e:
-        return _error(e if isinstance(e, DaemonError) else DaemonError("ReadFailed", str(e)))
+        return run(home)
+    except aos_home.HomeError as exc:
+        _log(exc.code, exc.msg)
+    except (OSError, ValueError, TypeError) as exc:
+        _log("IOFailed", exc)
+    return 1
 
 
 if __name__ == "__main__":

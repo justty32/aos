@@ -1,29 +1,33 @@
-# proto5/lib — 十二支 Python 模組
+# proto5/lib — 十四支 Python 模組
 
-← [proto5 README](../README.md)｜規範：[spec/directives.md](../spec/directives.md)、
-[spec/inst-posix.md](../spec/inst-posix.md)、[spec/aos-exec.md](../spec/aos-exec.md)、
-[spec/agent.md](../spec/agent.md)、[spec/aos-llm-ask.md](../spec/aos-llm-ask.md)、[spec/aos-agent.md](../spec/aos-agent.md)
+← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu.md)、[daemon.md](../spec/daemon.md)、[kernel.md](../spec/kernel.md)
 
-Python 3.12、只用標準庫。十二個檔，一層疊一層、下層不知道上層（inst／exec 一條線，agent_info／llm_ask
-另一條線，兩條線都踩在 aos_directives 上，aos_cpu 提供共用佇列，llm_cpu／tool_cpu 各自接 llm_ask／exec，最後由 aos_agent 接起來；run 疊 exec、daemon 管 run、kernel 使用 daemon）：
+Python 3.12、只用標準庫。底層 `aos_directives` → `aos_inst` → `aos_exec`；新架構由
+`aos_home` 共用檔案範式、`aos_client` 交件，`aos_exec_cpu` 跑一次、`aos_daemon` 管孩子，
+`aos_kernel` 用一格接一格的 tick 排程。`aos_run` 與 `aos-daemon-ctl` 已移除。
 
-| 檔 | 職責 | 規範 |
+agent 與舊 llm／tool cpu 六支模組及測試保留原行為，**尚未接上新 cpu／kernel 架構**。
+本頁的舊架構 API 說明記錄現有程式；`agent.md`／`aos-agent.md` 的新設計另待實作。
+
+| 檔 | 職責 | 規範／狀態 |
 |---|---|---|
-| [`aos_directives.py`](aos_directives.py) | 指示詞機制的純函式庫：一個值是不是指示詞、怎麼解成別的值。**不知道 inst.json** | [directives.md](../spec/directives.md) |
-| [`aos_inst.py`](aos_inst.py) | inst.json（posix v1）的讀、驗、解：`_metainfo`、七個欄位、各位置的 `$opt` 選項表，指示詞全交給上面那個。回一個執行者能直接用的 dict | [inst-posix.md](../spec/inst-posix.md) 第 1～5 節 |
-| [`aos_exec.py`](aos_exec.py) | 執行者：`run_target()` 把一個目標跑一次、回 `(code, kind)`，`main()` 是命令列；入口是 [`../cli/aos-exec`](../cli/aos-exec) | [inst-posix.md](../spec/inst-posix.md) 第 6 節（行為）、[aos-exec.md](../spec/aos-exec.md)（命令列） |
-| [`aos_agent_info.py`](aos_agent_info.py) | agent 資料夾的讀、驗：`info.json` 每格解指示詞、人格／記憶／工具檔原樣讀、工具表合併與去 `_` key、`engine` 讀模型代號與 CPU 路徑。只讀不寫，**不碰 `state.json`** | [agent.md](../spec/agent.md)（資料夾、設定與指到的檔） |
-| [`aos_llm_ask.py`](aos_llm_ask.py) | `build_request()` 組不含 model 的 body；`call()` 留給 LLM CPU 用 `urllib` 取回 `choices[0].message`，`main()` 是命令列；入口是 [`../cli/aos-llm-ask`](../cli/aos-llm-ask) | [aos-llm-ask.md](../spec/aos-llm-ask.md) |
-| [`aos_cpu.py`](aos_cpu.py) | 共用檔案佇列：`load()` 驗呼叫者指定的 CPU 身分、`submit()` 交件、`tick()` 認領／收屍／原子發布；短鎖只包檔案轉移、壞單隔離到 bad | [cpu-queue.md](../spec/cpu-queue.md)、[aos-cpu.md](../spec/aos-cpu.md) |
-| [`aos_llm_cpu.py`](aos_llm_cpu.py) | LLM 薄層：解 models 表、以代號查連線設定並驗 body，以 `aos_llm_ask.call()` 執行；入口 [`../cli/aos-llm-cpu`](../cli/aos-llm-cpu) | [llm-cpu.md](../spec/llm-cpu.md)、[aos-llm-cpu.md](../spec/aos-llm-cpu.md) |
-| [`aos_tool_cpu.py`](aos_tool_cpu.py) | 工具薄層：驗已解好的 inst，以 `aos_exec.run_inst()` 執行；入口 [`../cli/aos-tool-cpu`](../cli/aos-tool-cpu) | [tool-cpu.md](../spec/tool-cpu.md)、[aos-tool-cpu.md](../spec/aos-tool-cpu.md) |
-| [`aos_agent.py`](aos_agent.py) | `step()` 先判 waits，再走 idle／think／act 一格；記憶、input 消化、state 原子寫回與自癒；think 一律交 CPU，act 收回混合工具批次、工具限時、引擎連敗暫停；入口 [`../cli/aos-agent`](../cli/aos-agent) | [aos-agent.md](../spec/aos-agent.md)、[agent.md](../spec/agent.md) §4 |
-| [`aos_run.py`](aos_run.py) | 反覆呼叫 run_target、完成後間隔、run.json／ctl.json、可選 kill-tree | [aos-run.md](../spec/aos-run.md) |
-| [`aos_daemon.py`](aos_daemon.py) | 三 op 檔案請求、管理 runner、原子 state、done 先寫與 ctl | [daemon-home.md](../spec/daemon-home.md)、[aos-daemon.md](../spec/aos-daemon.md) |
-| [`aos_kernel.py`](aos_kernel.py) | kernel 家與 inst 讀驗、FIFO／quantum／100／101／bad_after 排程、rm syscall與防重疊 | [kernel-home.md](../spec/kernel-home.md)、[aos-kernel.md](../spec/aos-kernel.md) |
+| [`aos_directives.py`](aos_directives.py) | 指示詞解析的純函式庫，不知道 inst | [directives.md](../spec/directives.md) |
+| [`aos_inst.py`](aos_inst.py) | inst.json 的讀、驗、解，回執行用 dict | [inst-posix.md](../spec/inst-posix.md) §1～§5 |
+| [`aos_exec.py`](aos_exec.py) | 同步 `run_target`／`run_inst`、完整旗標 `run_target_full`、daemon 用 `spawn_target` | [aos-exec.md](../spec/aos-exec.md)、[inst-posix.md](../spec/inst-posix.md) §6 |
+| [`aos_home.py`](aos_home.py) | JSON-RPC 信封、原子放單與狀態、ack／stop、開機對帳 | [cpu.md](../spec/cpu.md) §2、§3、§6 |
+| [`aos_client.py`](aos_client.py) | 取名、放單、先查原單再等回音、讀與 ack | [cpu.md](../spec/cpu.md) §3、§6.3 |
+| [`aos_exec_cpu.py`](aos_exec_cpu.py) | 長命 exec cpu：go／stop、逐件執行、訊號與對帳；入口 `aos-cpu` | [cpu.md](../spec/cpu.md) |
+| [`aos_daemon.py`](aos_daemon.py) | flock、spawn 登記與 go、非零重拉、kill／stop 階梯；入口 `aos-daemon` | [daemon.md](../spec/daemon.md) |
+| [`aos_kernel.py`](aos_kernel.py) | 帳本與四出貨箱、分池派工、once／反覆、boot 換鏈；入口 `aos-kernel` | [kernel.md](../spec/kernel.md) |
+| [`aos_agent_info.py`](aos_agent_info.py) | agent 家的設定與內容讀驗，只讀不寫 | 保留舊架構 |
+| [`aos_llm_ask.py`](aos_llm_ask.py) | `build_request` 組 body、`call` 用 urllib 問模型；CLI 只印 body | [aos-llm-ask.md](../spec/aos-llm-ask.md)，保留舊架構 |
+| [`aos_cpu.py`](aos_cpu.py) | 舊 requests／running／done 佇列、短鎖認領與收屍 | 保留給舊 agent／llm／tool cpu 使用；不是 `aos-cpu` CLI |
+| [`aos_llm_cpu.py`](aos_llm_cpu.py) | 舊 LLM CPU：models 查表、呼叫 `aos_llm_ask.call` | 保留舊架構 |
+| [`aos_tool_cpu.py`](aos_tool_cpu.py) | 舊工具 CPU：驗 payload、呼叫 `aos_exec.run_inst` | 保留舊架構 |
+| [`aos_agent.py`](aos_agent.py) | 舊 waits 門、idle／think／act、混合工具與記憶寫回 | 保留舊架構，仍 import `aos_cpu`／`aos_tool_cpu` |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test      # 802 條
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 883 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -198,7 +202,7 @@ metainfo   {"_type": "posix", "_version": 1}
 ## aos_exec — 執行者
 
 `aos_exec.py` 是 [inst-posix.md 第 6 節](../spec/inst-posix.md) 的實作＋命令列（[aos-exec.md](../spec/aos-exec.md)）。
-核心是一個函式，之後的 aos-run 直接 import 它反覆叫：
+舊同步 API 保持原回傳形狀：
 
 ```python
 import aos_exec
@@ -213,8 +217,8 @@ code, kind = aos_exec.run_target(xxx, dir_target=".aos/inst.json", timeout_ms=0,
   `Popen`；`merge` 傳 `subprocess.STDOUT`（跟著 stdout 的 append／inherit）；`clear` 從空環境開始
   否則複製 `os.environ` 再疊 `envs`；`argv[0]` 走疊加後的 PATH；`start_new_session=True`；逾時
   對整個 group SIGTERM → 2 秒 → SIGKILL；exit 檔十進位＋換行、fsync 檔與父目錄。
-- `on_spawn(popen)`／`on_spawn(None)`：子行程開起來／收完屍各叫一次（aos-run 用）。
-- `on_target(path)`：runner 用來在讀 inst 前公布選定的絕對目標；公布後從同一路徑 load，不再追可被替換的 CPU 槽。
+- `on_spawn(popen)`／`on_spawn(None)`：子行程開起來／收完屍各叫一次（保留給既有呼叫者）。
+- `on_target(path)`：在讀 inst 前公布選定的絕對目標，供呼叫者觀察。
 
 `run_inst(inst, stdin_text, timeout_ms=0) -> InstResult`（三元素 tuple：`code, kind, stdout_text`）：吃 `load_obj()` 解好的 dict，
 用 UTF-8 把文字送入 stdin，stdout 全收回（壞位元組以替代字元表示）。stdin／stdout 由 API 接管，
@@ -223,7 +227,65 @@ stderr／exit／cwd／envs 照 inst；stderr 沒寫就是 /dev/null、`merge` �
 kind 是 child／aos，錯誤跟 `run_target()` 一樣印 stderr。兩個入口共用前置檢查、mkdir、
 啟動、126／127、exit 檔與逾時砍 group；管線用 `communicate()`，同時收送避免大輸出卡住。
 
-## aos_agent_info — agent 資料夾的讀、驗
+### 完整執行結果與 daemon 啟動入口
+
+`run_target_full(xxx, dir_target=".aos/inst.json", timeout_ms=0, on_spawn=None, stderr=None,
+args=None, on_target=None, *, on_poll=None, poll_ms=20) -> TargetResult`：三種目標、base、
+串流與 Usage 判定同 `run_target`，物件提供 `.code`、`.kind`、`.timed_out`、`.stopped`、`.ms`。
+`on_poll(popen)` 定期讀控制狀態，回真值要求強停；逾時與強停只處理工作的 process group。
+`.timed_out` 是實際期限旗標，即使 TERM 後退出 0 仍為真；已退出的孩子不標 `.stopped`。
+
+`spawn_target(xxx, dir_target=".aos/inst.json") -> Spawned`：給 daemon 的非同步入口，回
+`.process`（Popen），stdin／stdout 是控制 pipe；四端 CLOEXEC、`close_fds=True`，孩子獨立 pgid、
+與 daemon 同 session。inst 顯式寫 stdin／stdout 即拒絕；stderr、cwd、envs、exit 沿用 inst。
+登記、送 go、輪詢及收屍由 daemon 負責；收屍後 `Spawned.finish(code=None)` 寫 exit、回 `(code, kind)`。
+起不了 Popen 丟 `SpawnError(code, msg)`，不登記假 pid；與同步 126／127 的差異見 [實作發現](../notes/2026-09-23-rearch/impl-findings.md)。
+
+## aos_home — 共用家與信封
+
+- `read_request(path) -> Envelope`：`.name`、`.id`、`.notify`、`.method`、`.params`、`.error`。
+  壞 JSON／信封回 -32700／-32600；合法 notification 即使 method／params 壞也不回音。
+- `result_response(id, result)`、`error_response(id, code, message, data=None)`、
+  `params_error(id, msg, position, code="FieldTypeMismatch")` 組完整 JSON-RPC 回音。
+- `post_request(home, name, obj)`：同目錄 `.tmp` → `os.link`，已存在丟 `RequestExists`。
+  `link_json(path, obj)` 同樣有就失敗；`write_json(path, obj)` 是 `.tmp` → 原子替換。
+- `read_state(home, default=None)`：缺檔回預設（未指定時 current=null、runs=0）；
+  `write_state(home, state)` 原子替換。`ensure_queue(home)` 建 requests／responses。
+- `scan_controls(home, on_stop)` 掃 ack-／stop-：ack 先刪回音、再刪通知；不存在視為完成。
+  `reconcile_actions(current, request_exists, response_exists)` 是開機五列表的純判定；
+  `reconcile(home, current)` 補 Interrupted／刪原單。
+- `load_info(home, kind)` 解共用設定指示詞、驗身分與 poll_ms／timeout_ms；錯誤統一
+  `HomeError(code, msg)`。kernel 有保留 envs 原文的專用 `load_info`。
+
+## aos_client — 交件者
+
+```python
+import aos_client
+response = aos_client.call(cpu_home, "aos-exec", {"target": "/abs/job.json"},
+                           client="agent", timeout_ms=5000, poll_ms=20)
+```
+
+`call(home, method, params=None, *, name=None, client="client", timeout_ms=None, poll_ms=20,
+acknowledge=True)` 完成取名、放單、等回音、讀、放 ack，回完整 response（含 error，交件者自行判定）。
+等待先確認原單不在，再讀回音；等待逾時不取消工作。ack 是放通知，不同步等待主人刪回音。
+
+要先記帳再 ack，可傳 `acknowledge=False`，或分別用 `new_name(prefix="client")`、
+`submit(home, method, params=None, *, name=None, client="client")`（回 request 檔名）、
+`wait_response(home, name, *, timeout_ms=None, poll_ms=20)`、`ack(home, name)`。
+名稱是 `<名>-<epoch ns>-<pid>.json`；名稱不可重用。客戶端錯誤為 `ClientError(code, msg)`。
+
+## aos_exec_cpu — exec cpu 的主人
+
+`run(home)`／`main(argv=None)`；CLI：`aos-cpu DIR`。stdin 是 pipe 時先等 JSON-RPC go，
+EOF 先到則不碰家；啟動後控制 fd 搬高位並設 CLOEXEC，工作 stdin 接 /dev/null、stdout 接 cpu 的 stderr。
+stdin 不是 pipe 時直接啟動。info 身分是 `exec_cpu`。
+
+每件依序寫 current、`run_target_full`、寫回音、刪原單、清 current／更新 runs；開機先對帳。
+result 含 code／kind／timed_out／stopped／ms；Usage 映射 -32602，kind=aos 仍是 result。
+pipe stop／EOF、stop- 檔與第一次訊號溫和停；再次訊號強停工作 group，回音照寫。
+正常停退 0、主人讀寫錯退 1、CLI 用法錯退 2。
+
+## aos_agent_info — agent 資料夾的讀、驗（保留舊架構）
 
 `aos_agent_info.py` 是 [agent.md](../spec/agent.md) 的資料夾、指示詞、設定與內容讀驗實作：只讀、只驗、不寫任何檔，
 也**不碰 `state.json`**（走格子是 aos-agent 的事）。
@@ -257,7 +319,7 @@ engine         {"cpu", "model", "params"}（cpu 必填，回絕對路徑；model
   `_meta` 是不是合法 inst 是**跑的時候**由 aos_inst 解（那時才解它裡面的指示詞）。
 - `strip_private(tool)`：一個工具元素去掉頂層所有 `_` 開頭 key 的樣子（`tools` 就是每個元素過一次它）。
 
-## aos_llm_ask — 組 body 與 CPU 用的 HTTP 函式
+## aos_llm_ask — 組 body 與 CPU 用的 HTTP 函式（保留舊架構）
 
 規範：[aos-llm-ask.md](../spec/aos-llm-ask.md)。`build_request(dir_or_info, env=None)` 把 system、history、tools 與
 engine.params 組成 body，不寫 model；真實模型名由 LLM CPU 填入。model／messages／tools／stream／cpu
@@ -270,7 +332,7 @@ endpoint 加 `/chat/completions`，有 api_key 才帶 Bearer，timeout_ms 是 so
 `aos-llm-ask [dir]` 只印一行 body；退出碼 0／1（讀驗）／2（用法）。
 agent 的送件與收回由 `aos_agent.step()` 處理，沒有同步問模型的入口。
 
-## aos_cpu — 共用檔案佇列
+## aos_cpu — 共用檔案佇列（保留舊架構）
 
 格式：[cpu-queue.md](../spec/cpu-queue.md)；程式：[aos-cpu.md](../spec/aos-cpu.md)。只用一個模組與函式，不建類別階層。
 
@@ -291,7 +353,7 @@ code = aos_cpu.tick(info["dir"], execute)
 - 完成前核對 running inode，收屍後的遲到回覆不覆蓋結果；結果同目錄唯一 .tmp 再 rename，發布後搬 done；結果寫入 OSError 也搬 done 並退 1，不留 running。
   `tick` 回 0（有做事，含只收屍）、101（沒事）或 1（隔離壞檔／結果寫入失敗）；家／佇列操作失敗丟 AgentError。execute 的例外由各 CPU 薄層轉換。
 
-## aos_llm_cpu／aos_tool_cpu — 兩種執行薄層
+## aos_llm_cpu／aos_tool_cpu — 兩種執行薄層（保留舊架構）
 
 ```python
 import aos_llm_cpu, aos_tool_cpu
@@ -308,7 +370,7 @@ code = aos_tool_cpu.tick("tool-T") # load tool_cpu → run_inst(inst, stdin, tim
 - 交件者使用 aos_cpu.submit。沒有背景 worker、重試、優先序、usage、排隊期限或請求對帳。
   固定結果路徑與跨檔中斷限制見 [findings](../../proto5.1/notes/findings.md)。
 
-## aos_agent — 先看門，再走一格
+## aos_agent — 先看門，再走一格（保留舊架構）
 
 規範：[aos-agent.md](../spec/aos-agent.md)、[agent.md §4](../spec/agent.md)。
 
@@ -355,67 +417,66 @@ code = aos_agent.step("agent-bob", env=None)  # 0＝做了一格，101＝在等�
 all 為真、any 為假。既有訊息驗法只驗 tool_calls 是陣列，殘缺 call 當找不到工具；id 缺了用空字串，
 非字串轉成字串，避免新寫的 tool 訊息下次讀不回來。
 
-## aos_run — 反覆執行
+## aos_daemon — 長命孩子管理者
 
-`main(argv=None)` 反覆呼叫 `aos_exec.run_target()`；旗標見 [aos-run](../spec/aos-run.md)，家格式見 [run-home](../spec/run-home.md)。
-`--home DIR` 可省，給了才原子寫 run.json、每次執行前讀 ctl.json；hold 固定每 50 ms 再看且 held 只在變化時寫，stop 正常退出。
-帶 home 時記住啟動的父 PID，每圈比對，父程序換了就做完本次後停。
-保證先寫 busy:true／target:null，再確定絕對目標、寫 target，才讀 inst。完成後 busy:false，更新 runs／last_*（含完成工作的 last_target）。
-kind=aos 的 library code 1 在 run.json 與 stop-exit 判斷換成 125。沒有 status-fd 或槽鎖。
+`daemon_home(value=None)` 依參數／`AOS_DAEMON_HOME`／`~/.aos-daemon` 找家；
+`run(home)`（別名 `serve`）是前景主迴圈，`main(argv=None)` 包 CLI `aos-daemon [--home DIR]`。
+`read_state(home)` 偷看孩子表，`is_alive(home)` 以非阻塞共享 flock 探測主人，不靠 pid 猜。
 
-預設第一次 TERM／INT 等本次完成，第二次 TERM 直接子程式 group；`--kill-tree` 開啟時第一次就走
-`aos_exec.terminate(popen)`。terminate 在 Linux 先從 `/proc` 快照後代 groups，TERM、兩秒後 KILL、收屍。
-每次 timeout 仍走 terminate；`run_target`／`run_inst` 的回傳形狀不變，主動停止不冒充 timed_out。
+客戶用 `aos_client.call` 送 `spawn {name,target,dir_target?,restart?}` 或 `kill {name}`；
+stop 是檔名以 stop- 開頭的 notification。daemon 寫孩子表之後才送 go、再回 spawn 回音；
+同名同 target 冪等並更新 restart，不同 target 回 NameTaken。非零且未被主動停的孩子按固定延遲重讀目標再拉。
+停機各孩子並行走 pipe stop → TERM 給孩子 → KILL 給整組，EPIPE 提前進下一階。
+啟動先收掉舊表記錄的孩子，再對帳自己的 current；不收養上一任孩子。
 
-## aos_daemon — 管 runner
+## aos_kernel — 帳本、分池與 tick 鏈
 
-`home(path=None)`、`read_state(path=None)` 依明給路徑／AOS_DAEMON_HOME／預設家解析。
-`serve(path=None)` 是前景主迴圈，`main`／`ctl_main` 是兩個 CLI。三個檔案 op 與 request API 見
-[aos-daemon](../spec/aos-daemon.md)，檔案格式見 [daemon-home](../spec/daemon-home.md)。
+`init(home)` 建預設 k＋0／1／2 的家、拒覆蓋；`load_info(home)` 每格讀驗設定，cpu.envs 原樣留給 inst。
+`boot(home, daemon=None, wait_ms=30000)` 驗 daemon、收舊 kernel cpu、換 chain、保留在途與出貨、拉 cpu、放第 1 格。
+`tick(home, chain, seq)` 跑一格；`status(home)` 偷看帳本、daemon 孩子與 kernel cpu 的 current／requests。
+`new_state(info, chain, kcpu, cli)` 建初始帳本；`classify(proc, response, info, now=None)` 純判定反覆工作結果。
 
-每個 runner 有 `runners/<名>/`；daemon entry 的 home 指向它，busy／runs／last_* 直接讀其 run.json。
-add 的 kill_tree 預設 false，真才傳 `--kill-tree`。stop 同時 TERM 全部 runner：預設等五秒、再 TERM、
-再五秒才 KILL；kill_tree 模式 TERM 後五秒 KILL。remove 等該 runner 收屍，stop 清 state／pidfile 後才回音。
-done 先原子發布才刪原單，既有 done 不重做；失敗回音是 `{ok:false,code,msg}`。
-啟動缺 info.json 就建 daemon/version1 身分，ctl 先驗身分；`.daemon.lock` 防同家雙開，
-啟動再掃舊 runner 快照，pid 還活著就回 AlreadyRunning。state 只在變動時寫；ctl ls 直接讀快照。
+`Kernel` 包每格操作：syscall 一次記帳、`deletes` 去重、收回音、派工、四出貨箱重放與停機。
+只接鏈先放後記；派工與 ack／replies／stops／deletes 都先記後做。收回音先查原單，兩者都沒有才補放原名。
+once 把 exec 的 result／error 原樣回給 add；rm 立即讓未回覆的 once add 收到 Removed，
+rm 自身回 name，正在跑的行程保留 discard 到收完。
+反覆工作按 done_exit／bad_after 判定；pool 只派同池，kernel 池專用。
 
-## aos_kernel — 排程普通 inst
-
-`load(dir, env=None)` 解 info，`init(dir, ncpu=3)` 建家；add 在來源家完整 load inst，固定路徑後存入 procs。
-`boot(dir)` 把 daemon 的絕對家記進 info.json；tick／ls／rm 從此讀這格、不依環境換家。
-`tick(dir)` 排程，`status(dir)` 組 ls，`remove(dir, name)` 交 rm syscall。
-格式見 [kernel-home](../spec/kernel-home.md)，命令列與排程見 [aos-kernel](../spec/aos-kernel.md)。
-
-procs 保留行程原檔，空轉用固定的 idle.json；cpus/N.json 一律是原子換上的符號連結；換人先換掉舊槽，再讀所有 runner 家的 run.json。
-有 busy:true 且 target 是候選行程或 null，該格就不排。runner 保證先宣告 busy 再讀目標，
-兩個順序合起來防止舊工作未完成便在另一顆重開。換人不停止 runner，不使用槽鎖或讓位標記。
-
-`.kernel.lock` 只序列化 tick／add。info.kill_tree 傳給 daemon add，預設 false。
-state 與 rm syscall 以 name 表示行程名稱，沒有 since／bad_exit。
-未指派 procs 每格讀驗，只有尚未固化的內容才寫回；add 已固化的檔不反覆重寫。
-queue／waiting 保存排隊與跨換人的行程計數；100／101／quantum／bad_after 沿既有排程。
-run.json 是目前工作與最新完成碼的快照，沒有逐次歷史；以 last_target 對應最新完成的工作，busy 時也能收一次新結果；每個可確認的新快照最多增加一次等待／失敗計數。
-`KernelError` 與 `DaemonError` 保留具名錯誤；沒有 module，LLM CPU、tool CPU、agent 都是普通行程。
+CLI：`aos-kernel init／boot／tick／add／rm／ls／stop`，完整參數見 [kernel.md §6](../spec/kernel.md)。
+反覆 add 等回音印 NAME；once 預設印 request 與回音路徑，帶 `--wait-ms` 才等。
+CLI 收到回音代 ack，JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成敗。
+stop 只確認放單；看 ls 的 phase=stopped 與此 kernel 的 cpu 都從 daemon 表消失後再停 daemon。
 
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test      # 802 條；從 repo 根執行
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 883 條；repo 根目錄
 ```
 
-| 檔 | 條數 | 開不開進程 |
-|---|---|---|
-| `test/test_directives.py` | 101 | 不開：純記憶體＋暫存資料夾 |
-| `test/test_inst.py` | 139 | 不開：直接叫 `aos_inst.load()`，驗回傳的 dict 與錯誤代號（案例從 proto4-3 的 test_fields／opts／ref／fmt／env／reject 搬來） |
-| `test/test_exec.py` | 94 | 開：透過 `cli/aos-exec` 真的跑（三種目標、`--stderr`、選項落地、環境、退出碼、逾時 143／137）＋ `run_target()` API |
-| `test/test_agent_info.py` | 98 | 不開：直接叫 `aos_agent_info.load()`——預設值與回傳形狀、`_metainfo`／`NotAnAgent`、info.json 的指示詞（每格都解、位置、循環、`$opt` 不吃、指到的檔不解）、人格檔、記憶檔每則怎麼驗、工具檔（合併、去 `_` key、`ToolInvalid` 各種）、engine |
-| `test/test_llm_ask.py` | 53 | build_request 與 CLI 只印 body；HTTP 案例搭 CPU 家、交件後 tick，驗成功、HTTP／JSON／連線／timeout 失敗 |
-| `test/test_agent.py` | 144 | waits／idle／think／act、混合工具、自癒、兩次 consume 暫停、結果不明不重試；agent 沒 KEY、CPU 自己解 KEY 的 HTTP 往返 |
-| `test/test_llm_cpu.py` | 38 | models 指示詞／型別、代號查表與未知代號、覆蓋 body.model、佇列排序／收屍／遲到結果、跨進程認領與 HTTP 並行、BadPayload／Timeout 等失敗代號 |
-| `test/test_cpu.py` | 18 | 共用層交件、三處重名、認領、收屍、原子結果 I/O、執行鎖外並行與遲到回覆、壞單隔離後續單、結果發布失敗仍搬 done |
-| `test/test_tool_cpu.py` | 18 | 真工具 stdin／stdout、非零／timeout、壞 payload、CPU 環境、固定收屍文字、CLI、跨進程認領 |
-| `test/test_run.py` | 30 | run.json 寫入順序、ctl hold／stop、完成後間隔、首次等完成／二次 TERM、kill-tree 關時孫存活／開時死亡、hold 0 ms 不重寫、last_target |
-| `test/test_daemon.py` | 35 | runner 家、kill_tree 布林與 CLI、done 先寫、並行 5＋5／5 秒停止、I/O／signal 清理與 home 傳遞、kill -9 後自停與拒重啟、閒置不重寫 |
-| `test/test_kernel.py` | 34 | FIFO／完成／等待／跨換人計數；0 interval＋2 秒 X 用 run.json 驗防重疊；固定 idle 身分、未知完成差值、15 ms／0 ms 公平性、busy 對帳、固定 daemon 家與頂層引用、procs 不重寫 |
-| `test/_util.py` | — | 共用：暫存資料夾、寫 inst、`InstCase`（直接 load）、`ExecCase`（開進程）、`AgentCase`（寫一個 agent 資料夾、直接 load、開 `aos-llm-ask` 進程） |
+共 19 個測試檔、883 條；舊 agent／llm／tool 與底層測試保留，run 測試移除，daemon／kernel 測試重寫。
+真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
+
+| 檔 | 條數 | 驗證內容 |
+|---|---:|---|
+| [test_directives.py](test/test_directives.py) | 101 | 指示詞、引用、選項與錯誤 |
+| [test_inst.py](test/test_inst.py) | 139 | inst 讀驗、指示詞位置、欄位與選項 |
+| [test_exec.py](test/test_exec.py) | 94 | 保留三種目標、串流、env、退出碼及舊 API |
+| [test_exec_full.py](test/test_exec_full.py) | 14 | 三類 timed_out、強停、TERM 後退 0、相容性 |
+| [test_exec_spawn.py](test/test_exec_spawn.py) | 19 | daemon pipe、pgid／session、顯式串流拒絕、exit 與啟動失敗 |
+| [test_home.py](test/test_home.py) | 27 | 三類信封、原子放單、ack、五列對帳與 info |
+| [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
+| [test_exec_cpu.py](test/test_exec_cpu.py) | 24 | 真 cpu 握手、EOF、訊號、stop、Interrupted、timeout、工作串流 |
+| [test_daemon.py](test/test_daemon.py) | 25 | 真 daemon／cpu、spawn 冪等、重拉、三階停機、flock、崩潰接手 |
+| [test_kernel.py](test/test_kernel.py) | 29 | 判定表、syscall 去重、rm／once、pool、設定 |
+| [test_kernel_recovery.py](test/test_kernel_recovery.py) | 14 | 出貨重放、先記未放、鏈與 boot 交接、ack 唯一性 |
+| [test_kernel_integration.py](test/test_kernel_integration.py) | 15 | 真 daemon＋cpu、反覆／once、stop、重 boot、pool、Interrupted |
+| [test_rearch_e2e.py](test/test_rearch_e2e.py) | 1 | k／0／llm、envs PATH 的假 llm-http、once 輸出、done_exit、完整停機 |
+| [test_agent_info.py](test/test_agent_info.py) | 98 | 保留舊 agent 設定、人格／記憶／工具與 engine 讀驗 |
+| [test_llm_ask.py](test/test_llm_ask.py) | 53 | 保留組 body 與 HTTP 成功／錯誤／timeout |
+| [test_agent.py](test/test_agent.py) | 144 | 保留 waits、三格、混合工具、自癒與失敗暫停 |
+| [test_cpu.py](test/test_cpu.py) | 18 | 保留舊共用佇列、認領、收屍、並行與壞單 |
+| [test_llm_cpu.py](test/test_llm_cpu.py) | 38 | 保留 models／body、並行 HTTP 與失敗代號 |
+| [test_tool_cpu.py](test/test_tool_cpu.py) | 18 | 保留工具 stdin／stdout、timeout、環境與認領 |
+
+共用工具：[\_util.py](test/_util.py)（既有底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
+（控制協議孩子、輪詢、孤兒隔離 driver）、[\_kernel_util.py](test/_kernel_util.py)（真 daemon／kernel 測試家與清理）。
