@@ -5,57 +5,57 @@
 > 2026-09-23 重架構第二份；同日照 astra 三輪審查改過（K／X／R、K2／X2／R2、K3／X3／R3）。
 > 舊 kernel-home.md／aos-kernel.md 等新的齊了一次換掉。已拍板的前提在 §9，我自己選的在 §10。
 
-一句話：**kernel 不是長命行程，是一格一格的 `aos-kernel tick`：每一格是一則普通的 `aos-exec` request、
-跑在一顆專用的 exec cpu 上，格的開頭先把下一格放進那顆 cpu 的 `requests/`，像尾遞迴一樣接下去**
-（意思是：這格不等下一格跑完，先把它排上去就自己退出）。
+一句話：**kernel 替登記好的工作（行程）挑一顆空著的 cpu 派下去、收回執行結果、決定要不要再跑。**
+它不是長命行程：每次只跑一格 `aos-kernel tick`，格的開頭先把下一格放進一顆專用 exec cpu 的 `requests/`，
+再做自己的事、然後退出（像尾遞迴：不等下一格跑完，排上去就走），排程就這樣一格接一格。
 工作與 syscall 走資料夾（往 cpu 的 `requests/` 放、從 `responses/` 收、放 `ack`），父子生死走 pipe，
 兩者共用 JSON-RPC 信封。kernel 跟 daemon 講話也走 daemon 家的資料夾。
-**`K/state.json` 是唯一的帳本**：每個決定都是一次原子寫；除了接鏈，其他檔都是先記進帳本再放出去的。
+**`K/state.json` 是唯一的帳本**：每個決定都是一次原子寫；派工跟四類出貨都是先記帳再動檔，只有接鏈反過來。
 
 ---
 
 ## 0. 名詞（白話）
 
-跟 cpu 範式共用的詞（inst、目標、request、主人、link、notification、偷看…）在 [cpu.md §0](cpu.md)，這裡只列 kernel 自己的。
+跟 cpu 範式共用的詞（家、主人、交件者、request、目標、ack、偷看、link、notification…）在 [cpu.md §0](cpu.md)，
+這裡只列 kernel 自己的，照正文第一次出現的順序排。
 
 | 詞 | 意思 |
 |---|---|
+| 行程（`procs.<NAME>`） | **不是**作業系統那個行程。在 kernel 這裡是「一份登記好的工作」：記著要跑哪個 target、多久跑一次、跑到哪；真的有東西在跑是派工之後的事 |
+| 派工 | 從佇列挑一個輪得到的行程，把它的 `aos-exec` request 放進某顆閒著的 cpu |
+| 收回音 | 去 `cpus/<name>/responses/` 讀那則 request 的結果，判定（§4）、更新帳本、再放 ack |
+| 反覆行程 | `once: false` 的行程：跑完回佇列，隔 `interval_ms` 再跑一次，直到完成或被退件 |
+| `once` | 只跑一次的行程：那次跑完把結果直接交給當初 `add` 的人，行程跟著消失 |
 | 長命行程 | 開著就不退、一直待命的程式（daemon、cpu 的主人都是）。kernel **不是**：它每次只活一格的時間，記憶全放在 `K/state.json` 裡 |
 | tick（一格） | kernel 的一次心跳：跑一次 `aos-kernel tick K --chain C --seq N`，把 §3 那十步做完就退出。「格」就是一次 tick |
 | kernel cpu（`kcpu`） | 專門拿來排 tick 的那一顆 exec cpu，boot 時從 `info.cpus` 裡 pool 標 `kernel` 的挑出來、名字釘進帳本；一般工作不准進去。要換得重 boot |
+| 池（`pool`） | 給 cpu 貼的一個字串標籤；行程也標一個，只會被派到標籤相同的 cpu 上（例如打模型的工作都排去 `llm` 那顆） |
 | 鏈／接鏈 | 一格排下一格、一格接一格串成的那一串 tick。接鏈＝這格開頭就把下一格的 request 放進 kernel cpu 的 `requests/` |
 | 尾遞迴 | 借程式的講法：這格**不等**下一格跑完，只把它排上去就自己退出。所以不會越疊越深，也不會兩格同時在跑 |
+| syscall | 借作業系統的講法；在這裡只是「往 `K/requests/` 放一個 JSON 檔」（`add`／`rm`／`stop`）。下一格會讀它，需要回音的回在 `K/responses/` |
+| 帳本 | `K/state.json`。kernel 所有的記憶：鏈、階段、每顆 cpu 手上的工作、每個行程的紀錄與計數、還沒做完的出貨。一次原子寫 |
+| 出貨箱（outbox）／出貨 | 帳本裡四張「還沒做完的待辦」：送 ack（`acks`）、寫回音（`replies`）、送 stop（`stops`）、刪 syscall 原單（`deletes`）。**出貨**＝把這些待辦做掉——前三種是放檔、最後一種是刪檔，每做完一筆才從帳本拿掉。做過又重做是安全的 |
 | 鏈 id（`chain`） | boot 發的一串 `<epoch ns>-<pid>`，用來認「你是哪條鏈的格」。**kernel 取的每個檔名都帶它**，所以跨 boot 名字不會重複 |
 | 序號（`seq`） | 這格在鏈裡是第幾格，寫在 tick 的 args 裡；下一格就是 seq+1。只拿來取名，不拿來守門 |
 | 殘格 | 舊鏈排在隊上、現在才被跑到的 tick。它 args 裡的 chain 對不上帳本的，所以什麼都不做就退出（自滅） |
-| syscall | 借作業系統的講法；在這裡只是「往 `K/requests/` 放一個 JSON 檔」（`add`／`rm`／`stop`）。下一格會讀它，回音寫在 `K/responses/` |
-| ack | 收件者說「這份回音我拿走了」的那張單（範式 §3.3）；放了對方才刪回音。kernel 收 cpu／daemon 的回音要放 ack 給它們；別人收 kernel 的回音要放 ack 給 kernel |
-| 帳本 | `K/state.json`。kernel 所有的記憶：鏈、階段、每顆 cpu 手上的工作、每個行程的紀錄與計數、還沒結清的出貨。一次原子寫 |
-| 出貨箱（outbox） | 帳本裡四張「記了、還沒結清」的清單：`acks`（欠 cpu／daemon 的 ack）、`replies`（欠客戶的回音）、`stops`（欠 cpu 的 stop）、`deletes`（該刪的 syscall 原單）。先記進帳本、再放檔、放完清掉；「還沒結清」包含「已放還沒清」，重放是安全的 |
 | 階段（`phase`） | kernel 整體在哪：`running` 照常派工／`stopping` 不再派新的、把在途的收完／`stopped` 連鏈都不接了 |
-| 行程（`procs.<NAME>`） | **不是**作業系統那個行程。在 kernel 這裡是「一份登記好的工作」：記著要跑哪個 target、多久跑一次、跑到哪；真的有東西在跑是派工之後的事 |
 | 狀態（`status`） | 一個行程現在在哪：`queued` 排隊中／`running` 派出去了／`done` 做完了／`bad` 被退件。後兩種只是留給人看，`rm` 能刪 |
 | 佇列（`queue`） | 等著被派上 cpu 的行程名單；已經派出去的不在裡面 |
-| boot | 開機：先叫 daemon 把舊的 kernel cpu 收掉、等它從孩子表消失，發一個新鏈 id、拉起所有 cpu、把第 1 格放進 kernel cpu。boot 自己不跑格 |
-| 反覆行程 | `once: false` 的行程：跑完回佇列，隔 `interval_ms` 再跑一次，直到完成或被退件 |
-| `once` | 只跑一次的行程：那次跑完把結果直接交給當初 `add` 的人，行程跟著消失 |
-| 完成／`done_exit` | 反覆行程的退出碼剛好是 `done_exit`（預設 100）＝它自己說「我做完了」，狀態改 `done`、不再排 |
-| 退件／`bad_after` | 一直失敗就不再排它，狀態改 `bad` 給人看：連續失敗 `bad_after` 次（預設 10）。kind=aos（檔讀不到、inst 壞掉）也算一次失敗 |
-| 池（`pool`） | 給 cpu 貼的一個字串標籤；行程也標一個，只會被派到標籤相同的 cpu 上（例如打模型的工作都排去 `llm` 那顆） |
-| `tick_ms` | 一格睡多久。跟行程的 `interval_ms`（同一個行程兩次之間隔多久）是兩回事 |
 | `req`／`proc` | `req`＝派給這顆 cpu、還沒結清的 request 檔名（可能已放、也可能剛記還沒放）；`proc`＝那則是哪個行程的。**一顆 cpu 忙不忙只看 `req` 是不是 `null`**，kernel 不去讀 cpu 自己的 state |
 | `discard` | 那個行程已經被 `rm` 了，但工作還在 cpu 上跑；回音到了直接丟掉、不計數 |
 | 在途 | 已經記了 `req`、還沒收到回音的工作。`stopping` 要等它們全部收完才真的停 |
+| boot | 開機：先叫 daemon 把舊的 kernel cpu 收掉、等它從孩子表消失，發一個新鏈 id、拉起所有 cpu、把第 1 格放進 kernel cpu。boot 自己不跑格 |
+| 完成／`done_exit` | 反覆行程的退出碼剛好是 `done_exit`（預設 100）＝它自己說「我做完了」，狀態改 `done`、不再排 |
+| 退件／`bad_after` | 一直失敗就不再排它，狀態改 `bad` 給人看：連續失敗 `bad_after` 次（預設 10）。kind=aos（檔讀不到、inst 壞掉）也算一次失敗 |
+| `tick_ms` | 一格睡多久。跟行程的 `interval_ms`（同一個行程兩次之間隔多久）是兩回事 |
 | 冪等 | 同一步做一次跟做兩次結果一樣。崩了重跑才安全——帳本＋出貨箱就是為這個 |
 | EEXIST（在這裡） | `link` 到已經存在的名字會失敗。kernel 把它當「已經放過了」的訊號，照樣往下走，不當錯誤 |
 | 先放後記 | **只有接鏈**用的順序：**先**把下一格放進 kernel cpu 的 `requests/`、**再**寫帳本。崩在中間下一格照跑，鏈不會斷 |
-| 先記後放 | 其他所有出貨（派工、回音、ack、stop、刪原單）的順序：**先**寫帳本、**再**放檔。崩在中間最多「記了沒放」、下一格補放，絕不會同一個行程被派到兩顆 cpu |
-| 收回音 | 去 `cpus/<name>/responses/` 讀那則 request 的結果，判定（§4）、更新帳本、再放 ack |
-| `spawn` | 叫 daemon「把這份 inst 拉起來當孩子」。同名同 target 已經活著就回它的 pid、不重拉，所以逾時後重送是安全的 |
-| `restart:true` | 拉起來時交代 daemon：這孩子非 0 退出就自己再拉一次，kernel 不用管 |
-| `Interrupted` | 「結果不明」的錯誤回音：cpu 的上一任死在那件工作上，下一任補的（範式 §6.2）。kernel 當一般失敗計數 |
-| 派工 | 從佇列挑一個輪得到的行程，把它的 `aos-exec` request 放進某顆閒著的 cpu |
-| `stopped`（回音裡的） | 這次是被強制停砍掉的，結果不算數：計數不動，行程直接回佇列 |
+| 先記後放 | 派工跟四類出貨的順序：**先**寫帳本、**再**動檔。崩在中間最多「記了沒做」、下一格補做，絕不會同一個行程被派到兩顆 cpu |
+| `Interrupted` | 「結果不明」的錯誤回音：cpu 的上一任死在那件工作上，下一任補的（範式 §6.2）。反覆行程當一次失敗；`once` 原樣交給交件者 |
+| `stopped`（回音裡的） | 這次是被強制停砍掉的：反覆行程計數不動、直接回佇列；`once` 原樣交給交件者 |
+| `spawn` | 叫 daemon「把這份 inst 拉起來當孩子」。同名同目標已經活著就回它的 pid、不重拉，所以逾時後重送是安全的 |
+| `restart:true` | 拉起來時交代 daemon：這孩子非 0 退出、又沒被主動叫停，就自己再拉一次，kernel 不用管 |
 
 ---
 
@@ -83,7 +83,9 @@ kernel 對它們也是外人，**只在家不存在時**替它們建家、寫 `i
   "_metainfo": {"_type": "kernel", "_version": 1},
   "daemon": "/abs/D",
   "cpus": {"k": {"pool": "kernel"}, "0": {}, "1": {},
-           "llm": {"pool": "llm", "envs": {"PATH": {"$fmt": "/abs/tools/llm:${PATH}", "PATH": {"$env": "PATH"}}, "LMSTUDIO_KEY": {"$env": "LMSTUDIO_KEY"}}}},
+           "llm": {"pool": "llm",
+                   "envs": {"PATH": {"$fmt": {"$val": "/abs/tools/llm:${p}", "p": {"$env": "PATH"}}},
+                            "LMSTUDIO_KEY": {"$env": "LMSTUDIO_KEY"}}}},
   "tick_ms": 1000,
   "interval_ms": 1000,
   "timeout_ms": 0,
@@ -110,6 +112,10 @@ boot 把整份驗完才動任何東西（§6）。「專門打 LLM 的 cpu 只�
 改 info 之後：tick 每格重讀；多出來的 cpu 下格會拉，被拿掉的 cpu 若帳本裡還有 `req`，照樣收完那則才忘掉它；
 池裡沒有 cpu 的行程就一直排隊，不算錯，`ls` 看得出。**kernel 池那顆例外**：帳本裡釘死的 `kcpu` 才算數，
 改 info 不會換，要換就重 boot。
+
+**要改一顆已經存在的 cpu 的環境**：`envs` 只在第一次建家時抄進去；之後得 `aos-kernel stop`、等那顆 cpu 退出
+（`D/state.json` 裡消失），改 `K/cpus/<c>/inst.json`，再 boot。只改 info、或對還活著的 cpu 重 boot，環境都不會變。
+那份 inst 裡的 `$env` 讀的是**daemon 的環境**（是 daemon 在拉它）；在別的終端 `export` 不會影響已經在跑的 daemon。
 
 ### 1.2 `state.json`（帳本）
 
@@ -138,7 +144,7 @@ boot 把整份驗完才動任何東西（§6）。「專門打 LLM 的 cpu 只�
 | 鍵 | 意思 |
 |---|---|
 | `chain` | 這條鏈的 id，boot 給的（`<epoch ns>-<pid>`）。tick 帶著它來，對不上就是舊鏈的殘格 |
-| `kcpu`、`cli` | boot 釘的：kernel cpu 的名字、`cli/aos-kernel` 的絕對路徑（tick 的 target 用它）。tick 只認帳本這兩格，不看 info、不看自己怎麼被叫 |
+| `kcpu`、`cli` | boot 釘的：kernel cpu 的名字、`cli/aos-kernel` 的絕對路徑（tick 的 target 用它）。這兩格 tick 只認帳本；其他設定仍每格重讀 `info.json` |
 | `last_seq` | 最後一格的序號，給人看；下一格的序號來自 tick 自己的 args，不從這裡拿 |
 | `phase` | `running`／`stopping`／`stopped`（§3 第 9 步） |
 | `cpus.<name>` | **只有工作 cpu**，kernel cpu 不在這裡。`req`＝派給它、還沒結清的 request 檔名，`null`＝閒（**cpu 忙不忙就看這格**）；`proc`＝那則是哪個行程的；`discard`＝那個行程已被 `rm`，回音到了丟掉 |
@@ -174,8 +180,11 @@ kernel 放出去的檔名全部帶 `chain`，跨 boot 永不重複；同一格�
 同名 `add`（不管 `status` 是什麼、含被 rm 但還在 cpu 上跑的）回 `-32000`／`AlreadyExists`；
 params 形狀或 pool 不合回 `-32602`。kernel 不解指示詞、不驗 inst、不看檔在不在——那些都是跑起來的回音。
 
-**每則 syscall 都是「一次帳本寫入」＋出貨**：判定 → 把結果（行程紀錄、queue、pending）跟兩筆出貨
-（回音進 `replies`、原單名進 `deletes`）**一次**寫進帳本 → 出貨（放回音、刪原單）。
+**每則 syscall 都是「一次帳本寫入」＋出貨**：收到 `add`／`rm` → 判定 → 把結果（行程紀錄、queue、pending）跟
+出貨待辦**一次**寫進帳本 → 出貨。待辦是：原單名進 `deletes`（一定有）；要馬上回的回音進 `replies`
+（反覆的 add、rm）；`once` 的 add 只記 `pending`，跑完或取消時才進 `replies`。`ack`／`stop` 照各自的規則，不產生回音。
+**`once` 的回音只報執行狀態**（code／kind／timed_out…），不含模型的答案或工具的輸出——要輸出就在工作 inst 裡
+指定 `stdout` 檔，收到成功的回音後再去讀那個檔。
 重掃看到某份原單，先看 `deletes`：**在裡面＝已收過**，只補刪、不重判——去重憑據是出貨箱，不是行程紀錄
 （行程紀錄會被別的 rm 刪掉，靠不住）。`deletes` 在原單真的刪掉之後才清。
 
@@ -194,18 +203,19 @@ aos-kernel tick K --chain C --seq N
 
 每一步標了 **讀**／**寫帳本**／**放檔**；「崩在這裡」的後果寫在步驟後面。cpu 那邊的順序是
 「先發回音、再刪原單」（範式 §6.3），這裡查檔一律**先查原單、再查回音**，才不會看錯。
-第 5～9 步新增的出貨不在當步放，統一在第 10 步；崩在中間下格第 4 步補。
+第 5～9 步新增的四類出貨待辦（ack／回音／stop／刪原單）不在當步做，統一在第 10 步；崩在中間下格第 4 步補。
+第 6 步補放、第 7 步 spawn、第 8 步派工不是出貨箱的東西，各在自己那步當場放。
 
 1. **讀** info、帳本。`--chain` ≠ `chain` → 舊鏈的殘格：退 0、什麼都不做。
 2. `phase=stopped` → 出貨（第 4 步的方式，含 `stops`）、不接鏈、退 0。否則**放檔**：把下一格 `link` 到
    `cpus/<kcpu>/requests/k-<chain>-<N+1>.json`（`aos-exec`：`target`＝帳本的 `cli`，是普通檔，
-   `args`＝`["tick", K 的絕對路徑, "--chain", C, "--seq", "N+1"]`，全是字串；沒有 timeout）。EEXIST＝上一格已放過
+   `args`＝`["tick", K 的絕對路徑, "--chain", C, "--seq", "N+1"]`，全是字串；**明寫 `timeout_ms: 0`**，不吃 cpu 的預設）。EEXIST＝上一格已放過
    （它崩在放檔之後、寫帳本之前，這格被重跑）——只有第 N 格會放第 N+1 格，所以 EEXIST 不會是別人。
    然後**寫帳本** `last_seq=N`。**先放後記**：這格之後崩了，下一格照跑。崩在放檔之前＝鏈斷，daemon 的
    `restart` 救不了（cpu 沒死、是沒單），`ls` 看得出（§6），人重新 boot。
 3. 睡 `tick_ms`（下一格已在隊上，但 kernel cpu 正被這格佔著，睡完退出它才開始；實際週期＝睡＋這格做事的時間）。
 4. **出貨**：四張出貨箱每筆放檔（`link`，EEXIST 當已放；`deletes` 是刪檔，ENOENT 當已刪）、每放完一筆**寫帳本**拿掉。
-   順手把 kernel cpu 的 `responses/` 全部 ack 掉（都是舊 tick 的回音，不進 `acks`；`code≠0` 的記 log 一行）。
+   順手把 kernel cpu 的 `responses/` 全部 ack 掉——這是唯一不進帳本的出貨（都是舊 tick 的回音；`code≠0` 的記 log 一行）。
 5. **讀** `requests/`，收 syscall（§2；`ack-` 照範式 §3.3、`stop-` 只改 `phase`）。放在 daemon 操作之前。
 6. **收回音**：每顆 `req` 非 null 的工作 cpu，先**讀** `cpus/<c>/requests/<req>` 在不在——
    - 在：在途，跳過。
@@ -219,7 +229,7 @@ aos-kernel tick K --chain C --seq N
    - 表裡有 c 但 `target` **不是**我們的 → 別的 kernel 的孩子：stderr `NameTaken`、退 1，不派工。
    - 表裡沒有 c、或 `alive=false` 且 `state` 不是 `dead`（不是在等重拉）→ 家不在就建（info、inst，`envs` 照 info），
      `spawn`（`name`＝c、`restart:true`），等回音。`state=dead` 的讓 daemon 自己重拉。
-   死了的 daemon 自己會重拉，這裡不用管；重生那顆手上若有 `req`，它的開機對帳會回 `Interrupted`
+   cpu 非 0 死掉是 daemon 自動重拉，這裡不用管（daemon 自己重啟過則要人重 boot，§6）；重生那顆手上若有 `req`，它的開機對帳會回 `Interrupted`
    （原單還沒開始的它照做，不是每件都 `Interrupted`），下格在第 6 步照常收。
 8. **派工**（`phase=running` 才做）：每顆 `req` 為 null 的工作 cpu，從 `queue` 頭找第一個 pool 相符且
    `not_before` 已到的行程 → 從 queue 拿掉、`status=running`、`req`＝`k-<chain>-<N>-<c>.json`、`proc`＝NAME、
@@ -231,7 +241,9 @@ aos-kernel tick K --chain C --seq N
    下次 boot 換了 chain 它會自滅。崩在寫帳本之後、放完之前＝下格（若還跑得到）第 2 步補放；跑不到
    （kernel cpu 已停）就算了——boot 會把舊的 `stops` **丟掉**不重放（§6），因為那些 stop 是給上一代 cpu 的。
    `stopped` 之後再來的 syscall／ack 沒人處理，留在 `K/requests/`，下次 boot 的第 1 格會收。
-10. **出貨**（同第 4 步）、**寫帳本**、append `kernel.log`、退 0。
+10. **出貨**（同第 4 步）、**寫帳本**、append `kernel.log`、退 0。`kernel.log` 每格至少記：派了誰去哪顆（行程名、cpu、request 檔名）、
+    收到的每則回音（行程名、cpu、`result` 或 `error` 整段）、退件時的門檻——回音 ack 掉就沒了，這是事後查「為什麼退件」唯一的地方；
+    子程式自己的錯誤在工作 inst 的 `stderr` 檔。
 
 一格裡 daemon 或磁碟出錯：stderr 一行、退 1、可能只做了一半；帳本＋出貨箱讓下格接得上。
 
@@ -240,7 +252,7 @@ aos-kernel tick K --chain C --seq N
 回音是範式 §4.1 的 aos-exec 回音。先看 cpu 那格的 `discard`：是 → 丟掉、行程紀錄拿掉，不計數
 （`once` 的 pending 在 rm 時就回過 `Removed` 了）。再分兩種：
 
-**`once`**：不管內容是什麼，把回音原樣（`result` 或 `error`）當成 `pending` 那則 add 的回音進 `replies`，
+**`once`**：把 cpu 回音的 `result` 或 `error` 原樣抄過來，外層 `id` 用原 add 的 id、檔名用原 add 的檔名，進 `replies`；
 行程紀錄拿掉。`stopped:true` 也原樣交，交件者自己決定。
 
 **反覆**：照順序第一個命中的列做，每列寫清楚兩個計數：
@@ -255,7 +267,7 @@ aos-kernel tick K --chain C --seq N
 | 其他非零 | +1 | +1 | 看退件 |
 
 看退件＝`fails` 達 `bad_after`（≠ 0）→ `status=bad`、不回 queue；沒達 → 回 queue。
-回 queue＝`status=queued`、`not_before = now + interval_ms`、排到 `queue` 尾。
+回 queue＝`status=queued`、排到 `queue` 尾；`not_before = 現在的 epoch 秒 + interval_ms / 1000`（`stopped:true` 那列不改 `not_before`）。
 **每次派工對應恰好一則回音**，計數才準；沒有 quantum、沒有 runs 差值、沒有另外的 aos 計數。
 
 ## 5. 跟 daemon 講話
@@ -277,7 +289,7 @@ kernel 對 daemon 只做兩件事：`spawn`（每格第 7 步）、`kill`（只�
 aos-kernel init K                     # 建家、預設 info（cpus: k＋0、1、2）；拒絕覆蓋
 aos-kernel boot K [--daemon D] [--wait-ms N]   # 見下；不跑整格
 aos-kernel tick K --chain C --seq N   # 一格；正常只有鏈自己會叫
-aos-kernel add K TARGET [--name NAME] [--once] [--pool P] [--wait-ms N]
+aos-kernel add K TARGET [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--wait-ms N] [-- ARG...]
 aos-kernel rm K NAME
 aos-kernel ls K                       # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看
 aos-kernel stop K
@@ -294,6 +306,7 @@ aos-kernel stop K
 3. 寫 info.daemon；帳本：`chain`＝新 id、`kcpu`＝c、`cli`、`last_seq`＝0、`phase`＝running、**`stops` 清空**
    （上一條鏈欠的 stop 是給上一代 cpu 的，不重放）；`cpus`／`queue`／`procs`／`acks`／`replies`／`deletes` **照舊**
    （在途 `req`、`pending` 都留著，新鏈接手收；名字帶舊 chain 沒關係，收的是舊名、ack 用新名）。
+   **第一次 boot 沒有帳本**＝這些全部從空的開始（`cpus` 照 info 列工作 cpu、`req` 都 null）。
 4. 每顆 cpu：家不在才建（info、inst，`envs` 照 info）；`spawn` 全部、等回音（c 剛被收掉，這裡拉回來；
    其他活著的同名同 target 就回 pid、不動）。
 5. `link` 第 1 格 `k-<chain>-1.json` 到 `cpus/<c>/requests/`。退 0。
@@ -302,9 +315,16 @@ aos-kernel stop K
 **daemon 重啟過**（孩子表被清空）也要 boot——kernel cpu 死了沒人會放第 1 格，「每格補拉」補的是工作 cpu。
 
 **add**：TARGET 轉絕對路徑放單（kernel 不解指示詞，指示詞是跑的時候 aos-exec 以它自己的規則解——`.json`
-是檔所在資料夾、資料夾目標是資料夾本身）。反覆＝等回音印 NAME；`--once` 預設不等、印自己取的檔名
-（`--name` 沒給時 NAME 就用這個檔名），`--wait-ms N` 才等跑完印回音。**stop** 只確認放單成功。
-其餘等回音最多 10 秒。D 預設 `AOS_DAEMON_HOME`，再預設 `~/.aos-daemon`。
+是檔所在資料夾、資料夾目標是資料夾本身）；旗標一對一對到 §2 的 params，`-- ARG...` 對到 `args`。
+反覆＝等回音印 NAME；`--once` 預設不等、印自己取的檔名（`--name` 沒給時 NAME 就用這個檔名）跟回音會出現的路徑，
+`--wait-ms N` 才等跑完印回音。
+
+**CLI 等到回音就替你 ack**；沒等或等逾時就印出回音的路徑，之後自己去讀、自己 ack（逾時不取消工作）。
+拿到 JSON-RPC `error` 印代號與 message、退 1；拿到 exec 的 `result` 整段印出來、退 0——**工作本身成不成功看內容**
+（`kind`、`code`、`timed_out`、`stopped`），不看退出碼。
+
+**stop** 只確認放單成功；接著用 `ls` 等到 `phase=stopped`、再確認 `D/state.json` 裡這個 kernel 的 cpu 都不見了，
+才去停 daemon。其餘等回音最多 10 秒。D 預設 `AOS_DAEMON_HOME`，再預設 `~/.aos-daemon`。
 
 **ls** 印帳本的摘要（chain、phase、每顆 cpu 的 req／proc、queue、每個行程的 status／runs／fails）、daemon 孩子表的
 alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份——鏈斷了（`current` null、`requests/` 空、
@@ -323,8 +343,9 @@ alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份—
 
 ## 8. 這份沒管的
 
-daemon 的 method 完整形狀、`restart`、daemon 自己怎麼停（[daemon](daemon.md)）；agent 怎麼用 `add --once`
-問模型／跑工具（agent）；`aos-llm-call` 這支程式（之後）。
+適用範圍同範式 §8（同一台 POSIX 機器）。daemon 的 method 完整形狀、`restart`、daemon 自己怎麼停（[daemon](daemon.md)）。
+agent 那份要接的：怎麼用 `add --once` 問模型／跑工具、輸入檔跟答案檔放哪、誰清——kernel 只交執行結果，不交內容。
+`aos-llm-call` 這支程式（之後）。實作時值得順手做一支小函式庫（取名、放單、等回音、ack 包成一個呼叫），不然每個交件者都要自己寫這五步。
 
 ## 9. 已拍板的前提（使用者定的，不重問）
 
@@ -333,6 +354,8 @@ add 拒絕到它跑完；stop 分 stopping／stopped 兩段，在途與 once 的
 沒有獨立 aos 計數；兩個 kernel 共用 daemon 而 cpu 同名＝`NameTaken` 大聲失敗。
 
 ## 10. 我自己選的（等你確認）
+
+沒翻案就照這樣實作。
 
 1. **kernel 跟 daemon 也走資料夾**，不走 pipe——pipe 在 cpu 手上，tick 是孫子。「只有 kernel 能叫 daemon」
    因此是軟性的，換來全系統兩條路一個信封。

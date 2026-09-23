@@ -14,28 +14,34 @@ kernel 跟 daemon 的家也照這個範式長，它們多認的 method 各在自
 
 ## 0. 名詞（白話）
 
+照正文第一次出現的順序排；跟實作有關的（fd、訊號）放後面。
+
 | 詞 | 意思 |
 |---|---|
-| inst | 一份 `inst.json`：說要跑什麼程式、cwd、環境、串流怎麼接（[inst-posix](inst-posix.md)）。cpu 不碰它的內容，交給 aos-exec |
-| 目標（target） | aos-exec 的 `xxx`：普通檔、`.json` inst、資料夾三種（[aos-exec 三種目標](aos-exec.md)）。request 裡放的是目標路徑，不是 inst 內容 |
-| request／response | 一則 JSON-RPC 請求／回音（§3）。工作 request 說「跑這個目標」，response 說跑得怎樣；`ack`、`stop` 也是 request，只是不用回音 |
 | 家 | 一個 cpu 的資料夾（下面的 `C/`）。kernel 的家 `K/`、daemon 的家 `D/` 也是家；`K/cpus/k/` 是 kernel 專用那顆 cpu 的家，跟 `K/` 是兩個家 |
 | 主人（行程） | 管這個家的執行與狀態的那支行程：exec cpu 的主人就是 `aos-cpu C`。啟動前人寫 `info.json` 是初始化，不算主人的事 |
 | 外人 | 主人以外的行程：kernel、agent、人用 shell |
+| 交件者／收件者 | 交件者＝送出 request 的那個程式；它同時就是那則回音的收件者。本文統一叫交件者 |
+| request／response | 一則 JSON-RPC 請求／回音（§3）。工作 request 說「跑這個目標」，response 說跑得怎樣；`ack`、`stop` 也是 request，只是不用回音 |
+| 目標（target） | aos-exec 的 `xxx`：普通檔、`.json` inst、資料夾三種（[aos-exec 三種目標](aos-exec.md)）。request 裡放的是目標路徑，不是 inst 內容 |
+| inst | 一份 `inst.json`：說要跑什麼程式、cwd、環境、串流怎麼接（[inst-posix](inst-posix.md)）。cpu 不碰它的內容，交給 aos-exec |
+| ack | 交件者讀完並記下回音後，再放一則「我拿走了」的通知（§3.3）；主人收到才刪回音 |
+| 偷看 | 直接讀別人家的 `state.json`、`requests/`、`responses/`，不放單、不改任何檔 |
 | 原子 | 一步做完、別人看不到「做到一半」。`rename`、`link`、`mkdir` 都是 |
 | `.tmp` 再 rename | 先寫同目錄暫存檔、寫完 `rename` 蓋過去；讀的人永遠不會讀到半份 |
 | `link` | 硬連結；目標已存在就失敗（EEXIST）。拿它做「有就失敗」的放單（§3.1） |
 | base／cwd | base 是 inst 裡相對路徑的起點，aos-exec 定：`.json` 目標是檔所在的資料夾、資料夾目標是那個資料夾自己；cwd 是程式跑起來的工作目錄。關係在 aos-exec 三種目標那張表 |
+| 指示詞、中心 | JSON 裡 `$env`／`$ref`／`$fmt` 那套（[directives](directives.md)）；「中心是 C」＝解 `$ref` 時相對路徑從 cpu 的家算起 |
 | JSON-RPC 2.0 | 一種「請求／回音」的 JSON 信封格式（§3）；request 有 `method`／`params`，response 有 `result` 或 `error` |
 | notification | JSON-RPC 裡**沒有 `id`** 的 request＝不用回音（`id: null` 不算沒有） |
 | epoch ns | 1970 年到現在的奈秒數（`time.time_ns()`），檔名慣例用的。kernel 的 `not_before`、daemon 的 `since` 用的是 epoch **秒**（帶小數），同一個起點、差十億倍 |
+| 旗標 | 程式裡的一個布林。訊號 handler 只能安全地做「把它設成 true」這件事，真正的動作由主迴圈看到旗標才做 |
 | 控制 pipe、fd 0／fd 1 | 父行程開給孩子的管子：fd 0 父寫子讀、fd 1 子寫父讀。主人啟動時會把它們搬到別的號碼（§6.1） |
 | `go` | 父行程在控制 pipe 上寫的第一行：「我登記好你了，開工吧」。等不到（EOF）＝父行程在登記前就死了，孩子什麼都不碰就退（§6.1） |
 | EOF | 管子所有寫端都關了。父行程死了、且沒把寫端漏給別人，孩子就讀到 EOF |
 | close-on-exec | 一個 fd 標了這個，跑別的程式（exec）時會自動關掉，孩子拿不到 |
 | process group | 子程式跟它自己生的孫子被歸成一組，訊號可以一次發給整組；孫子自己脫離這組就管不到 |
 | TERM／KILL | 兩種訊號：TERM 是「請你結束」（程式可以先收尾）；KILL 是直接砍掉、擋不了 |
-| 旗標 | 程式裡的一個布林。訊號 handler 只能安全地做「把它設成 true」這件事，真正的動作由主迴圈看到旗標才做 |
 
 ---
 
@@ -52,7 +58,7 @@ C/
 
 **規則一（一個家一個主人）**：只有主人行程會改這個家。外人被允許的動作只有兩個，都是往
 `requests/` 放檔：(a) 放一則 request（§3.1）；(b) 放一則 `ack`，說「`responses/` 那份我拿走了」（§3.3）。
-外人**讀** `responses/`、`state.json`、`requests/` 隨意（「偷看」），但不刪不改。現在是軟性約定、靠自律；要硬性的以後走 FUSE。
+外人**讀** `responses/`、`state.json`、`requests/` 隨意（偷看），但不刪不改。現在是軟性約定、靠自律；要硬性的以後走 FUSE。
 
 所以這裡**沒有鎖**：放單靠 `link` 的「有就失敗」、換檔靠 `rename` 的原子性。沒有 `running/`
 （正在做哪一件在 `state.json`）、沒有 `bad/`（壞單也回音，§4.3）、沒有收屍（主人死了拉它的人
@@ -75,7 +81,7 @@ C/
 | `poll_ms` | 正整數 | 20 | 沒事時看一次 `requests/` 的間隔（不准 0，避免空轉） |
 | `timeout_ms` | 非負整數 | 0 | request 沒帶 `timeout_ms` 時的預設；0＝不限 |
 
-整份解 [指示詞](directives.md)，中心是 C；不提供 `$opt`；解完驗型別。缺檔、身分不合＝`NotAHome`。
+讀的時候先展開 [指示詞](directives.md)（`$ref` 的相對路徑從 C 算起），再驗欄位型別；不提供 `$opt`。缺檔、身分不合＝`NotAHome`。
 
 ```json
 {"pid": 1234, "current": {"name": "agent-1790000000000000000-77.json", "id": "agent-1790000000000000000-77", "notify": false}, "runs": 3}
@@ -118,7 +124,7 @@ C/
 
 ### 3.2 error.code 怎麼編
 
-JSON-RPC 規定 `code` 是整數。信封層錯誤用它保留的四個號碼；aos 自己的錯誤一律 `-32000`，
+JSON-RPC 規定 `code` 是整數。信封、method、params 的檢查用它保留的四個號碼（下表）；其餘 aos 錯誤一律 `-32000`，
 真正的代號放 `data.code`（字串，沿用現有的 `NotAHome`／`FieldTypeMismatch`…），`message` 是白話。
 
 | code | 什麼時候 | data |
@@ -182,7 +188,7 @@ result：
 | 鍵 | 意思 |
 |---|---|
 | `code`、`kind` | 就是 `run_target()` 回的 `(code, kind)`：`child`＝子程式真的跑了一次（`code` 是它的退出碼，找不到程式 127、沒執行權 126、逾時 143／137 都算 child）；`aos`＝aos-exec 自己失敗、那次根本沒跑（`code` 是 1，跟 API 一樣、不換算成 125） |
-| `timed_out` | 真的撞到 `timeout_ms`（真實旗標，不從 143／137 猜）。**aos-exec 那邊要補**：`run_target()` 三種目標都要回這格，[aos-exec.md](aos-exec.md) 定稿時一起加 |
+| `timed_out` | 真的撞到 `timeout_ms`（真實旗標，不從 143／137 猜）。**aos-exec 的 `run_target()` 三種目標都必須回這格**——現行程式沒有，是實作時要補的函式庫契約，[aos-exec.md](aos-exec.md) 定稿一起改 |
 | `stopped` | 是被強制停砍掉的（§5.2）；子程式在強制停到達**之前**就自己結束的，`stopped` 是 false、結果算數 |
 | `ms` | 耗時 |
 
@@ -197,6 +203,9 @@ notification，**檔名必須以 `stop-` 開頭**（主人只掃前綴）。細�
 
 §3 那張三類表：讀不出來的回 -32700／-32600（`id` 能抓就抓）、有 id 但 method／params 壞的回
 -32601／-32602，都寫 `responses/<n>.json`、再刪原單；notification 壞了只刪不回。cpu 不停、不隔離、不重試。
+
+幾個邊角：request 檔名必須是 `.json` 結尾的單一檔名（不含 `/`、NUL）；`ack-`／`stop-` 開頭但 `method` 不是
+`ack`／`stop` 的，照三類表處理（有 id 回 -32600、沒 id 只刪）；`state.runs` 只數真的跑過 aos-exec 的，壞單不算。
 
 ## 5. 停下來
 
@@ -260,8 +269,10 @@ aos-cpu DIR
 3. 若 fd 0 是 pipe：把 fd 0／fd 1 **搬到高位 fd、標 close-on-exec** 當控制 pipe，然後 fd 0 接 `/dev/null`、
    fd 1 接 fd 2。這樣工作繼承串流時拿到的是 `/dev/null` 與 `cpu.log`，高位那兩個又因 close-on-exec 跟不
    進工作——工作既拿不到控制訊息、也握不住回程寫端（fork 到 exec 之間的那一瞬間有副本，exec 就沒了）。
-   fd 0 不是 pipe（人在終端跑）就沒有控制 pipe，只認檔案與訊號，也不等 `go`。
+   fd 0 不是 pipe（人在終端跑、或 stdin 接 `/dev/null`）就沒有控制 pipe，只認檔案與訊號，也不等 `go`。
+   用程式包 `aos-cpu` 的人注意：`stdin=PIPE` 就等於「我要用控制協議」，得送 `go`、還得一直握著那條 pipe。
 4. **先讀舊 `state.json` 做開機對帳（§6.2），對帳完才寫**新的 `state.json`（pid、current=null、runs 照舊）。
+   沒有舊 `state.json`（第一次跑）＝當作 `current: null`、`runs: 0`。
 
 ### 6.2 開機對帳
 
@@ -313,16 +324,21 @@ aos-cpu DIR
 
 ## 8. 這份沒管的
 
+**適用範圍**：同一台 POSIX 機器、大家都直接摸得到各家的檔案。多機（socket）、Windows 都是以後另訂，
+這份寫的 fd／訊號／flock／`link` 都是 POSIX 的。
+
 誰拉 cpu 起來、怎麼知道它死了、`restart`、停機階梯（[daemon](daemon.md)）；誰決定哪個目標去哪顆、
 一次性還是反覆、專門打 LLM 的 cpu 怎麼保留（[kernel](kernel.md)）；agent 怎麼用 aos-exec 取代原本的 llm／tool cpu（agent）。
 
 ## 9. 已拍板的前提（使用者定的，不重問）
 
 規則一是軟性的（硬性以後走 FUSE）；cpu 聽命執行不自己迴圈；IPC 用 pipe（多機以後再 socket）；
-JSON-RPC 2.0；所有 request 都是 aos-exec；params 就是 aos-exec 的 argv（`target`＋旗標），不包 inst 內容；
+JSON-RPC 2.0；所有**工作** request 的 method 都是 `aos-exec`（`ack`／`stop` 是管理用的）；params 就是 aos-exec 的 argv（`target`＋旗標），不包 inst 內容；
 cpu 的環境就是工作的環境（llm cpu＝環境裡有 `llm-http` 的普通 exec cpu）；daemon 的 `spawn` 有 `restart:true`。
 
 ## 10. 我自己選的（等你確認）
+
+沒翻案就照這樣實作。
 
 1. **pipe 只管生死，工作走資料夾**：kernel 派工是往 exec cpu 的 `requests/` 放檔，不經 daemon 轉發。
 2. **回音要 `ack` 才刪**（§3.3），不是收件者自己刪：規則一回到純的、開機對帳沒有歧義、收件者崩了重讀不漏。
