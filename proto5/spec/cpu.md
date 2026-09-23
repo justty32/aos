@@ -2,14 +2,14 @@
 
 ← [proto5 README](../README.md)｜跑一次：[aos-exec.md](aos-exec.md)｜inst 長相：[inst-posix.md](inst-posix.md)｜上層：[kernel](kernel.md)、[daemon](daemon.md)
 
-> 2026-09-23 重架構的第一份；同日照 astra 兩輪審查改過（第一輪 C／X／R，第二輪 C2／X2／R2）。
+> 2026-09-23 重架構的第一份；同日照 astra 三輪審查改過（C／X／R、C2／X2／R2、C3／X3／R3）。
 > 舊的 run／daemon／kernel／cpu-queue／llm-cpu／tool-cpu 十份規範等新的齊了一次換掉。
 > 已拍板的前提在 §9，我自己選的在 §10。
 
-一句話：**一顆 exec cpu 是一個資料夾加一個主人行程：逐件把 `requests/` 裡的 request 照 `aos-exec`
+一句話：**一顆 exec cpu 是一個資料夾加一個主人行程：逐件把 `requests/` 裡的工作 request 照 `aos-exec`
 跑一次，回音寫到 `responses/` 同名檔；反覆、排程都是 kernel 的事，cpu 只做一次。**
 
-問模型、跑工具、agent 走一格，全是 aos-exec 的目標、全是程式；能力差別在程式，不在 cpu。
+問模型、跑工具、agent 走一格，全是 aos-exec 的目標、全是程式；能力差別在程式跟 cpu 的環境（§4.1），不在 cpu 的種類。
 kernel 跟 daemon 的家也照這個範式長，它們多認的 method 各在自己那份。
 
 ## 0. 名詞（白話）
@@ -18,18 +18,19 @@ kernel 跟 daemon 的家也照這個範式長，它們多認的 method 各在自
 |---|---|
 | inst | 一份 `inst.json`：說要跑什麼程式、cwd、環境、串流怎麼接（[inst-posix](inst-posix.md)）。cpu 不碰它的內容，交給 aos-exec |
 | 目標（target） | aos-exec 的 `xxx`：普通檔、`.json` inst、資料夾三種（[aos-exec 三種目標](aos-exec.md)）。request 裡放的是目標路徑，不是 inst 內容 |
-| request／response | 一則 JSON-RPC 請求／回音（§3）。request 說「跑這個目標」；response 說跑得怎樣 |
+| request／response | 一則 JSON-RPC 請求／回音（§3）。工作 request 說「跑這個目標」，response 說跑得怎樣；`ack`、`stop` 也是 request，只是不用回音 |
 | 家 | 一個 cpu 的資料夾（下面的 `C/`）。kernel 的家 `K/`、daemon 的家 `D/` 也是家；`K/cpus/k/` 是 kernel 專用那顆 cpu 的家，跟 `K/` 是兩個家 |
 | 主人（行程） | 管這個家的執行與狀態的那支行程：exec cpu 的主人就是 `aos-cpu C`。啟動前人寫 `info.json` 是初始化，不算主人的事 |
 | 外人 | 主人以外的行程：kernel、agent、人用 shell |
 | 原子 | 一步做完、別人看不到「做到一半」。`rename`、`link`、`mkdir` 都是 |
 | `.tmp` 再 rename | 先寫同目錄暫存檔、寫完 `rename` 蓋過去；讀的人永遠不會讀到半份 |
 | `link` | 硬連結；目標已存在就失敗（EEXIST）。拿它做「有就失敗」的放單（§3.1） |
-| base／cwd | base 是 inst 裡相對路徑的起點（aos-exec 定：目標所在的資料夾）；cwd 是程式跑起來的工作目錄。兩者的關係在 aos-exec 三種目標那張表 |
+| base／cwd | base 是 inst 裡相對路徑的起點，aos-exec 定：`.json` 目標是檔所在的資料夾、資料夾目標是那個資料夾自己；cwd 是程式跑起來的工作目錄。關係在 aos-exec 三種目標那張表 |
 | JSON-RPC 2.0 | 一種「請求／回音」的 JSON 信封格式（§3）；request 有 `method`／`params`，response 有 `result` 或 `error` |
 | notification | JSON-RPC 裡**沒有 `id`** 的 request＝不用回音（`id: null` 不算沒有） |
 | epoch ns | 1970 年到現在的奈秒數（`time.time_ns()`），檔名慣例用的。kernel 的 `not_before`、daemon 的 `since` 用的是 epoch **秒**（帶小數），同一個起點、差十億倍 |
 | 控制 pipe、fd 0／fd 1 | 父行程開給孩子的管子：fd 0 父寫子讀、fd 1 子寫父讀。主人啟動時會把它們搬到別的號碼（§6.1） |
+| `go` | 父行程在控制 pipe 上寫的第一行：「我登記好你了，開工吧」。等不到（EOF）＝父行程在登記前就死了，孩子什麼都不碰就退（§6.1） |
 | EOF | 管子所有寫端都關了。父行程死了、且沒把寫端漏給別人，孩子就讀到 EOF |
 | close-on-exec | 一個 fd 標了這個，跑別的程式（exec）時會自動關掉，孩子拿不到 |
 | process group | 子程式跟它自己生的孫子被歸成一組，訊號可以一次發給整組；孫子自己脫離這組就管不到 |
@@ -51,7 +52,7 @@ C/
 
 **規則一（一個家一個主人）**：只有主人行程會改這個家。外人被允許的動作只有兩個，都是往
 `requests/` 放檔：(a) 放一則 request（§3.1）；(b) 放一則 `ack`，說「`responses/` 那份我拿走了」（§3.3）。
-外人**讀** `responses/`、`state.json` 隨意（「偷看」），但不刪不改。現在是軟性約定、靠自律；要硬性的以後走 FUSE。
+外人**讀** `responses/`、`state.json`、`requests/` 隨意（「偷看」），但不刪不改。現在是軟性約定、靠自律；要硬性的以後走 FUSE。
 
 所以這裡**沒有鎖**：放單靠 `link` 的「有就失敗」、換檔靠 `rename` 的原子性。沒有 `running/`
 （正在做哪一件在 `state.json`）、沒有 `bad/`（壞單也回音，§4.3）、沒有收屍（主人死了拉它的人
@@ -59,7 +60,7 @@ C/
 
 **名字不重用**：一個家裡，request 的檔名一旦用過（放過、做過、回音 ack 掉了）就**不能再給另一件工作用**。
 `link` 只擋「當下同名」，擋不了「刪掉後再用同名」；再用同名會讓遲到的 ack 刪錯回音、舊回音被當成新結果。
-慣例 `<交件者名>-<epoch ns>-<交件者 pid>`；kernel 另有帶鏈 id 的取名法（[kernel §1.2](kernel.md)）。
+慣例 `<交件者名>-<epoch ns>-<交件者 pid>`；kernel 另有帶鏈 id 的取名法（[kernel §1.3](kernel.md)）。
 唯一性是交件者的責任，cpu 不查歷史。
 
 ## 2. `info.json` 與 `state.json`
@@ -93,7 +94,7 @@ C/
 | 路 | 一則長怎樣 | 誰對誰 | 載什麼 |
 |---|---|---|---|
 | 檔案 | `requests/<n>.json` 一份一則；回音 `responses/<n>.json` 同名 | 任何人 → cpu | 工作、ack、stop |
-| 控制 pipe | 一行一則（換行結尾，內容不含換行） | 父行程 ↔ cpu | 只有 stop 與 EOF |
+| 控制 pipe | 一行一則（換行結尾，內容不含換行） | 父行程 ↔ cpu | 只有 `go`、`stop` 與 EOF |
 
 信封照 JSON-RPC 2.0 原樣：request `{"jsonrpc":"2.0","id":…,"method":…,"params":…}`；`method` 必須是
 字串；`id` 是字串、數字或 `null`。response `{"jsonrpc":"2.0","id":…,"result":…}` 或
@@ -158,6 +159,12 @@ request 的意思是「像命令列 `aos-exec TARGET --dir-target R --timeout-ms
 | `stderr` | `null`／`"-"`／字串 | `null` | 同 `--stderr`；`"-"`＝接 cpu 自己的 stderr（`cpu.log`）；路徑相對 C |
 | `args` | 字串陣列 | **沒這個鍵**＝沒給 | 同 `--`；只有普通檔目標能給。`[]` 是「有給 `--` 但沒元素」，inst 目標一樣拒；`null` 不合法 |
 
+**cpu 的環境就是工作的環境。** cpu 是被拉起來的一支行程，它帶著什麼——環境變數、PATH、跑它的身分與權限、
+cwd（＝它的家）——工作 inst 沒寫 `clear` 就整包繼承（aos-exec 的規則）；普通檔目標更是全部繼承。
+所以「llm cpu」不是另一種 cpu：是一顆普通 exec cpu，拉它的那份 inst（[kernel 替它寫的 `K/cpus/<c>/inst.json`](kernel.md)）
+把 `llm-http` 所在目錄放進 PATH、把 API key 放進 `envs`；工作 inst 的 argv 直接寫 `llm-http` 就找得到。
+cpu 自己讀的是它自己的環境，不會替工作補任何東西。
+
 cpu **不讀、不解 inst**：指示詞、base、`$ref` 都是 aos-exec 讀那份檔時照它自己的規則做。
 指到還不存在的 `.json` 也收，跑起來是 kind=aos（`ReadFailed`），跟 aos-exec 一樣——**收下不等於會等它出現**，
 每次跑都是一次 aos 失敗，怎麼算是收件者的事（[kernel §4](kernel.md)）。
@@ -175,7 +182,7 @@ result：
 | 鍵 | 意思 |
 |---|---|
 | `code`、`kind` | 就是 `run_target()` 回的 `(code, kind)`：`child`＝子程式真的跑了一次（`code` 是它的退出碼，找不到程式 127、沒執行權 126、逾時 143／137 都算 child）；`aos`＝aos-exec 自己失敗、那次根本沒跑（`code` 是 1，跟 API 一樣、不換算成 125） |
-| `timed_out` | 真的撞到 `timeout_ms`（真實旗標，不從 143／137 猜；**實作要補**：現在 `run_target()` 沒回這格，`run_inst()` 的 `InstResult.timed_out` 有，函式庫要對齊） |
+| `timed_out` | 真的撞到 `timeout_ms`（真實旗標，不從 143／137 猜）。**aos-exec 那邊要補**：`run_target()` 三種目標都要回這格，[aos-exec.md](aos-exec.md) 定稿時一起加 |
 | `stopped` | 是被強制停砍掉的（§5.2）；子程式在強制停到達**之前**就自己結束的，`stopped` 是 false、結果算數 |
 | `ms` | 耗時 |
 
@@ -199,7 +206,7 @@ notification，**檔名必須以 `stop-` 開頭**（主人只掃前綴）。細�
 
 | 來源 | 長怎樣 |
 |---|---|
-| 控制 pipe | 一行 `{"jsonrpc":"2.0","method":"stop"}`；不是這個的行一律忽略 |
+| 控制 pipe | 一行 `{"jsonrpc":"2.0","method":"stop"}`；不是 `go`／`stop` 的行一律忽略。半行先留著等下一段；EOF 時剩下的半行丟掉 |
 | 控制 pipe EOF | 所有寫端關了（正常就是父行程死了）。拉起它的人**不可以**把寫端漏給別的孩子，不然永遠等不到 EOF |
 | 檔案 | `requests/stop-*.json`，內容同上；任何人都能放 |
 | 訊號 | 第一次 SIGTERM 或 SIGINT（handler 只設旗標） |
@@ -220,7 +227,9 @@ notification，**檔名必須以 `stop-` 開頭**（主人只掃前綴）。細�
 發 TERM、寬限 2 秒、再 KILL；回音**照常寫**，`result.stopped=true`、`code` 是子程式實際的退出碼
 （通常 143 或 137）、`kind` 照實。子程式已經自己結束、只是回音還沒寫 → 不砍、`stopped=false`、結果算數。
 之後跟 5.1 的 3、4 一樣退出。
-（同種訊號連發太快 Linux 可能合併成一次，所以「第二次」是指主人已經處理完第一次之後才到的那次。）
+（同種訊號連發太快 Linux 可能合併成一次，所以「第二次」是指主人已經處理完第一次之後才到的那次。
+父行程死了、cpu 還沒讀到 EOF 就先收到別人的 TERM，那個 TERM 就是「第一次」，只會溫和停——
+接手的人得有再等一段、最後硬砍的心理準備，見 [daemon §6.1](daemon.md)。）
 
 砍的是「子程式那一組」；脫離這組的後代砍不到，跟 timeout 一樣，不另做 kill-tree。
 收件者看到 `stopped:true` 就知道這次結果不算數。
@@ -228,7 +237,7 @@ notification，**檔名必須以 `stop-` 開頭**（主人只掃前綴）。細�
 ### 5.3 硬砍：主人被 KILL
 
 主人來不及做任何事。下一任主人開機對帳（§6.2）照表處理：回音已經發出去的就留著，
-還沒發的補一則 `Interrupted`。子程式如果還活著沒人管（在保證外）。
+還沒發的補一則 `Interrupted`，原單還沒開始的照常做。子程式如果還活著沒人管（在保證外）。
 
 ### 5.4 誰負責發
 
@@ -244,11 +253,15 @@ aos-cpu DIR
 
 ### 6.1 啟動
 
-1. 讀驗 `info.json`；`requests/`、`responses/` 沒有就建。
-2. 若 fd 0 是 pipe：把 fd 0／fd 1 **搬到高位 fd、標 close-on-exec** 當控制 pipe，然後 fd 0 接 `/dev/null`、
+1. 若 fd 0 是 pipe：**先等 `go`**。用非阻塞讀一行一行組，讀到 `{"jsonrpc":"2.0","method":"go"}` 才往下；
+   先讀到 EOF＝拉它的人在登記前就死了，**什麼都不碰**（不讀 info、不寫 state）、退出碼 0。
+   `SIGPIPE` 一律忽略（往關掉的 pipe 寫只會得到 EPIPE，不會被訊號打死）。
+2. 讀驗 `info.json`；`requests/`、`responses/` 沒有就建。
+3. 若 fd 0 是 pipe：把 fd 0／fd 1 **搬到高位 fd、標 close-on-exec** 當控制 pipe，然後 fd 0 接 `/dev/null`、
    fd 1 接 fd 2。這樣工作繼承串流時拿到的是 `/dev/null` 與 `cpu.log`，高位那兩個又因 close-on-exec 跟不
-   進工作——工作既拿不到控制訊息、也握不住回程寫端。fd 0 不是 pipe（人在終端跑）就沒有控制 pipe，只認檔案與訊號。
-3. **先讀舊 `state.json` 做開機對帳（§6.2），對帳完才寫**新的 `state.json`（pid、current=null、runs 照舊）。
+   進工作——工作既拿不到控制訊息、也握不住回程寫端（fork 到 exec 之間的那一瞬間有副本，exec 就沒了）。
+   fd 0 不是 pipe（人在終端跑）就沒有控制 pipe，只認檔案與訊號，也不等 `go`。
+4. **先讀舊 `state.json` 做開機對帳（§6.2），對帳完才寫**新的 `state.json`（pid、current=null、runs 照舊）。
 
 ### 6.2 開機對帳
 
@@ -264,6 +277,7 @@ aos-cpu DIR
 | X | 不在 | 不在 | notification 的正常路徑（沒回音、原單刪了、current 還沒清）；有 id 的不該出現 | 沒事 |
 
 然後 current 清 null。對帳自己崩了再來一次也是同一張表（每列的動作都可重做）。
+`requests/` 裡其他還沒開始的單不在對帳範圍，照常一件一件做。
 
 ### 6.3 迴圈
 
@@ -291,7 +305,7 @@ aos-cpu DIR
 
 | 碼 | 什麼時候 |
 |---|---|
-| 0 | 正常停（§5.1／5.2） |
+| 0 | 正常停（§5.1／5.2）、或等 `go` 等到 EOF |
 | 1 | `info.json` 讀驗不過、`state.json`／回音寫不進去、佇列目錄建不起來；stderr 一行 `aos-cpu: <代號>: <白話>` |
 | 2 | 用法錯：DIR 不是資料夾、多餘旗標 |
 
@@ -306,17 +320,18 @@ aos-cpu DIR
 
 規則一是軟性的（硬性以後走 FUSE）；cpu 聽命執行不自己迴圈；IPC 用 pipe（多機以後再 socket）；
 JSON-RPC 2.0；所有 request 都是 aos-exec；params 就是 aos-exec 的 argv（`target`＋旗標），不包 inst 內容；
-daemon 的 `spawn` 有 `restart:true`。
+cpu 的環境就是工作的環境（llm cpu＝環境裡有 `llm-http` 的普通 exec cpu）；daemon 的 `spawn` 有 `restart:true`。
 
 ## 10. 我自己選的（等你確認）
 
 1. **pipe 只管生死，工作走資料夾**：kernel 派工是往 exec cpu 的 `requests/` 放檔，不經 daemon 轉發。
 2. **回音要 `ack` 才刪**（§3.3），不是收件者自己刪：規則一回到純的、開機對帳沒有歧義、收件者崩了重讀不漏。
    代價：一件工作三個檔（request／response／ack）。
-3. **名字不重用是交件者的責任**（§1），cpu 不查歷史。
-4. **`stop-`、`ack-` 檔名前綴是規定**，主人只掃前綴，不逐份打開。
-5. **`running/`、`bad/`、收屍、`hold`、kill-tree 旗標全部拿掉**。
-6. **aos 錯誤統一 `-32000` ＋ `data.code` 字串**，不給每個代號編整數。
-7. **上一任死掉的單回 `Interrupted`**，語意「結果不明」，收件者自己決定要不要重送。
-8. **訊號：第一次＝溫和停、第二次＝砍子程式那組並回 `stopped:true`**；KILL 主人交給開機對帳。
-9. **`_type` 叫 `exec_cpu`**、程式叫 `aos-cpu`；aos-run 這個名字退休。
+3. **`go` 握手**（§6.1）：父行程登記完才放行，登記前死了孩子自己退、不碰家。多一行，換掉「同家兩個主人」。
+4. **名字不重用是交件者的責任**（§1），cpu 不查歷史。
+5. **`stop-`、`ack-` 檔名前綴是規定**，主人只掃前綴，不逐份打開。
+6. **`running/`、`bad/`、收屍、`hold`、kill-tree 旗標全部拿掉**。
+7. **aos 錯誤統一 `-32000` ＋ `data.code` 字串**，不給每個代號編整數。
+8. **上一任死掉的單回 `Interrupted`**，語意「結果不明」，收件者自己決定要不要重送。
+9. **訊號：第一次＝溫和停、第二次＝砍子程式那組並回 `stopped:true`**；KILL 主人交給開機對帳。
+10. **`_type` 叫 `exec_cpu`**、程式叫 `aos-cpu`；aos-run 這個名字退休。
