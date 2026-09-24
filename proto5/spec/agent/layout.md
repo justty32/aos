@@ -9,6 +9,7 @@ agent-bob/
   tick.json      aos-agent start 寫的：kernel 反覆跑的那份 inst（aos-agent.md §11）
   .tick.lock     tick 整格持著的 flock（aos-agent.md §2.1）；內容是持有者 pid，不刪（09-24 fix-r4 補）
   paused         有這個檔＝手動暫停，tick 什麼都不做（aos-agent.md §1.6）；pause 建、continue 刪（09-24 fix-r4 補）
+  resumed        有這個檔＝continue 解了連敗暫停、還沒等到一次成功（aos-agent.md §1.4）；continue 建、think 成功結清時 tick 刪（09-24 fix-r5 補）
   prompts/       慣例：人格、記憶
   tools/         慣例：工具檔
   input.json     慣例：輸入（§4.1）

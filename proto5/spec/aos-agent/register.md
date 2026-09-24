@@ -41,7 +41,10 @@ start／stop 的 request 檔名是 `aa-<資料夾名>-<epoch ns>-<pid>.json`（i
 `aos-agent: ReadFailed: 等回音逾時，回音會出現在 <K>/responses/<檔名>，讀完自己放 ack（cpu.md §3.3）`、退 1——
 操作可能已經生效，不會撤回；那則回音 agent 之後不會再管。
 
-退出碼：0＝kernel 回了 `{"name"}`；1＝`KernelIncompatible`、`KernelMismatch`、kernel 回 `error`（`AlreadyExists`：已登記或上次 stop 的那格還在跑；
+（09-24 fix-r5 補）**已登記退 0**：`start` 收到 `AlreadyExists` 時再讀一次 K 帳本：`procs.agent-<資料夾名>` 在、`target` 就是這個家的 `tick.json`、帳本 `cpus` 裡沒有它標 `discard` 的那格（被 `rm` 了、還在跑）、`status` 不是 `bad`＝印 `already started agent-<資料夾名>`、退 0（每天開機腳本 `set -e` 不會斷）。
+其他 `AlreadyExists`（上次 stop 的那格還在跑＝`discard` 那格；被判 `bad`；同名但別的家）照舊退 1，訊息各補一句：`discard`＝「上次 stop 的那格還在跑，等它跑完再 start」、`bad`＝「已登記但被判 bad，看 log/agent.err 修好後 stop 再 start」、別的家＝「同名行程是 <那個 target>，改資料夾名」。
+
+退出碼：0＝kernel 回了 `{"name"}`，或（fix-r5）已登記；1＝`KernelIncompatible`、`KernelMismatch`、kernel 回 `error`（`AlreadyExists`：已登記或上次 stop 的那格還在跑；
 `-32602`：池不在 K；`NotFound`）、讀驗錯、放檔錯、等回音逾時；stderr 一行 `aos-agent: <代號>: <白話>`；2＝用法錯。
 
 stop 之後：正在跑的那格會跑完（kernel 丟掉它的回音）；當批送出去的工作照跑，回音留在 K，下次 start 之後再收。

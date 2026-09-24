@@ -8,23 +8,27 @@
 aos-agent tick     [--target DIR]
 aos-agent start    [--target DIR]
 aos-agent stop     [--target DIR]
-aos-agent init     [--target DIR]
+aos-agent init     [--target DIR] [--force]
 aos-agent say      TEXT [--target DIR] [--wait [秒]]
 aos-agent listen   [--target DIR] [--last | --wait [秒] | --follow] [--json]
 aos-agent status   [--target DIR] [--json] [-v]
 aos-agent pause    [--target DIR]
-aos-agent continue [--target DIR]
+aos-agent continue [--target DIR | --all]
 aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 ```
 
 `--target` 省略＝目前資料夾（agent 沒有對應的環境變數），必須是 agent 家（`NotAnAgent`；`init` 例外）；`NotAnAgent` 的訊息講清楚這次用的家是 `--target` 給的還是目前資料夾。
+（09-24 fix-r5 補）`info.json` 的 `_metainfo._type` 是別的字串（例如指到 kernel 家）時，`NotAnAgent` 直接說「`<dir>` 是 kernel 家，不是 agent 家」（`kernel` 換成那個 `_type`）。
+`continue --all`（§1.4）跟 `--target` 互斥（兩個都給＝用法錯 2），要 `AOS_KERNEL_HOME`（沒設＝用法錯 2）。
 `tick`／`start` 都要 `AOS_KERNEL_HOME`：沒設或不是絕對路徑＝用法錯 2；
 （09-24 試玩 r2 補）`stop` 沒設 `AOS_KERNEL_HOME` 就用 `tick.json` 記的（§11，字面絕對路徑才算），兩個都沒有＝用法錯 2。其他子命令不要 `AOS_KERNEL_HOME`（`say`／`status`／`listen` 有設就拿來看登記狀態）。
 `--json` 只給 `listen`、`status`，給別的＝用法錯 2。`--wait` 的秒數：省略＝**300 秒**；給了要是 0～604800（7 天）的數字（可帶小數），不是＝用法錯 2。
 
 ## 1.1 `init`：生一個最小可跑的家（09-24 試玩 r2 補）
 
-家（`--target`，省略＝目前資料夾）不在就建。`<家>/info.json` 已在＝`AlreadyExists`、退 1、什麼都不寫。否則寫出**內建的一份預設**（寫死在程式裡；之後會有 `--template`，這版沒有）：
+家（`--target`，省略＝目前資料夾）不在就建。`<家>/info.json` 已在＝`AlreadyExists`、退 1、什麼都不寫（`--force` 也一樣）。
+（09-24 fix-r5 補）家已在、不是空資料夾、又沒有 `info.json`（不是 agent 家）＝`NotEmpty`、退 1、什麼都不寫，訊息列出前幾個已有的檔名、說「確定要生在這裡就加 `--force`」；`--force` 才照樣生（已有的檔不動，同名的 `prompts/system.json` 等會被蓋掉）。
+否則寫出**內建的一份預設**（寫死在程式裡；之後會有 `--template`，這版沒有）：
 
 | 檔 | 內容 |
 |---|---|

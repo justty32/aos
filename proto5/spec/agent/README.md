@@ -4,7 +4,7 @@
 
 ← [proto5 README](../../README.md)｜指示詞：[directives.md](../directives/README.md)｜用這個資料夾的程式：[aos-agent.md](../aos-agent/README.md)（走一格、登記）、[aos-llm.md](../aos-llm/README.md)（問模型，`aos-llm call`）｜排程：[kernel.md](../kernel/README.md)
 
-> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列；已實作（`lib/aos_agent_info.py`／`aos_agent_home.py`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列、fix-r5 家裡多一個 `resumed`；已實作（`lib/aos_agent_info.py`／`aos_agent_home.py`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**agent 資料夾保存設定、對話記憶與跨次執行的進度，讓 aos-agent 每次被叫都能接著做。**
 `info.json` 說它是誰、記憶在哪、有哪些工具、用哪個模型代號；`state.json` 記走到哪、輸入從哪來、

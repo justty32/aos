@@ -11,7 +11,7 @@ aos-kernel rm    NAME [--target K]
 aos-kernel ack   NAME [--target K]              # （09-24 補）替 K/responses/NAME 放 ack
 aos-kernel ls    [--target K] [--json]          # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看
 aos-kernel halt  [--target K] [--wait-ms N] [--no-wait]   # （09-24 試玩 r1 補；fix-r4 從 stop 改名）預設等停好
-aos-kernel check [--target K] [--agent DIR] [--daemon-target D]   # （09-24 試玩 r1 補）啟動前檢查
+aos-kernel check [--target K] [--agent DIR] [--daemon-target D] [--probe]   # （09-24 試玩 r1 補）啟動前檢查；--probe 真的打一次模型 endpoint（09-24 fix-r5 補）
 aos-kernel -h ／ aos-kernel <子命令> -h    # （09-24 補）用法
 ```
 
