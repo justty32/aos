@@ -1,4 +1,4 @@
-# proto5/lib — 十四支 Python 模組
+# proto5/lib — 十六支 Python 模組
 
 ← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu.md)、[daemon.md](../spec/daemon.md)、[kernel.md](../spec/kernel.md)
 
@@ -19,6 +19,8 @@ agent 與舊 llm／tool cpu 六支模組及測試保留原行為，**尚未接�
 | [`aos_exec_cpu.py`](aos_exec_cpu.py) | 長命 exec cpu：go／stop、逐件執行、訊號與對帳；入口 `aos-cpu` | [cpu.md](../spec/cpu.md) |
 | [`aos_daemon.py`](aos_daemon.py) | flock、spawn 登記與 go、非零重拉、kill／stop 階梯；入口 `aos-daemon` | [daemon.md](../spec/daemon.md) |
 | [`aos_kernel.py`](aos_kernel.py) | 帳本與四出貨箱、分池派工、once／反覆、boot 換鏈；入口 `aos-kernel` | [kernel.md](../spec/kernel.md) |
+| [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（`_metainfo`、人格／記憶／工具、message 驗證）與 aos-llm-call 的六格 loader，帶原文件與位置解欄位 | [agent.md](../spec/agent.md) §2～§3、§5；[aos-llm-call.md](../spec/aos-llm-call.md) §3 |
+| [`aos_llm_call.py`](aos_llm_call.py) | 問模型一次：讀驗 `AOS_LLM_CONFIG` 的 llm.json、組 body、HTTP、正規化並驗 message；入口 `aos-llm-call` | [aos-llm-call.md](../spec/aos-llm-call.md) |
 | [`aos_agent_info.py`](aos_agent_info.py) | agent 家的設定與內容讀驗，只讀不寫 | 保留舊架構 |
 | [`aos_llm_ask.py`](aos_llm_ask.py) | `build_request` 組 body、`call` 用 urllib 問模型；CLI 只印 body | [aos-llm-ask.md](../spec/aos-llm-ask.md)，保留舊架構 |
 | [`aos_cpu.py`](aos_cpu.py) | 舊 requests／running／done 佇列、短鎖認領與收屍 | 保留給舊 agent／llm／tool cpu 使用；不是 `aos-cpu` CLI |
