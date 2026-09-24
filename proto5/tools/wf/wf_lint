@@ -22,7 +22,12 @@ def main(args, root):
         fail(e.code, e.message, **e.extra)
     except OSError as e:
         fail('WriteFailed', 'cannot write %s: %s' % (rel(root, log), e.strerror or e))
-    out = ['PASS' if res['ok'] else 'FAIL (exit %d)' % res['exit'], res['total_line'] or '(no TOTAL line)']
+    if res['status'] == 'error':
+        tail = ' | '.join(res['output'].strip().splitlines()[-3:]) or 'no output'
+        fail('LintFailed', 'the bundled wf-lint itself broke (exit %d, %s), so there is no lint result; this is not '
+             'a problem in the project files. Tell the user. Last output: %s'
+             % (res['exit'], 'TOTAL line present' if res['total_line'] else 'no TOTAL line', tail[:400]))
+    out = ['PASS' if res['ok'] else 'FAIL (exit %d)' % res['exit'], res['total_line']]
     out += res['summaries'][:5]
     out += res['problems'][:SHOW]
     if len(res['problems']) > SHOW:
