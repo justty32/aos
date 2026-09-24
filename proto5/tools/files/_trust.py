@@ -94,8 +94,9 @@ def trusted(home):
     json_files = [(info_path, 0)]
     info = _load(info_path)
     if isinstance(info, dict):
+        defaults = {'system': 'prompts/system.json', 'history': 'prompts/history.json', 'access': 'access.json'}
         for key, label in (('system', 'persona file'), ('history', 'memory file'), ('access', 'access file')):
-            p = _val(info.get(key))
+            p = _val(info.get(key)) if key in info else defaults[key]
             if p:
                 add(p, label)
                 if key == 'access':
@@ -160,5 +161,17 @@ def blocked(full, home=None, env=None):
     for q in path_chain(full):
         for t, label in trust.items():
             if _under(q, t):
+                return label
+    try:                                   # 硬連結：路徑不同、同一個檔
+        st = os.stat(full)
+    except OSError:
+        return None
+    if st.st_nlink > 1:
+        for t, label in trust.items():
+            try:
+                tt = os.stat(t)
+            except OSError:
+                continue
+            if (tt.st_dev, tt.st_ino) == (st.st_dev, st.st_ino):
                 return label
     return None

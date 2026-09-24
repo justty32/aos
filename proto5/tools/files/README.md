@@ -32,7 +32,7 @@ aos-agent tools add files --target $W/bob     # 工作根目錄跟 base 一樣�
 
 - 路徑關在工作根目錄裡（`OutsideRoot`），跟 base 同一份 `_common.py`（逐字複製；base 那份改了，測試 `test_common_is_base_copy` 會紅，照它的訊息再複製一次）。
 - **保護檔名**：`config.json` 的 `protected`（預設 `SESSION-LOG.md`、`WAIT_USER.md`，團隊裡是書記在寫）＝寫入回 `Protected`，讀可以。
-- **信任資料**（沒關牢時）：工具的 cwd 是 agent 家，照家裡 `info.json` 的**實際設定**算出人格、記憶、access 檔、工具檔與工具程式、`$ref` 引用到的檔（一路追下去）、家裡固定的 `info.json`／`state.json`／`tools/`／`prompts/`…，目標落在裡面＝`TrustedData`，不看檔名。
+- **信任資料**（沒關牢時）：工具的 cwd 是 agent 家，照家裡 `info.json` 的**實際設定**算出人格、記憶、access 檔、工具檔與工具程式、`$ref` 引用到的檔（一路追下去）、家裡固定的 `info.json`／`state.json`／`tools/`／`prompts/`…，目標落在裡面（或是它們的硬連結）＝`TrustedData`，不看檔名。
   關牢時不另外擋：權限牆本來就不准可寫的資料夾蓋到信任資料，牢裡寫不到。用 `$env`／`$fmt` 拼出來的路徑算不到——這條是防手滑，真正的邊界是牆。
 
 ## 錯誤代號
@@ -51,4 +51,4 @@ aos-agent tools add files --target $W/bob     # 工作根目錄跟 base 一樣�
 
 ## 測試
 
-[`lib/test/test_tools_files.py`](../../lib/test/test_tools_files.py)：五種 op、壞 pointer、改完非法不寫、`Conflict` 與重送不多做、縮排風格、信任資料（含 `$ref`、自訂路徑、工具資料夾、符號連結）、保護檔名、`tools add files` 裝得起來、描述字數。
+[`lib/test/test_tools_files.py`](../../lib/test/test_tools_files.py)：五種 op、壞 pointer、改完非法不寫、`Conflict` 與重送不多做、縮排風格、信任資料（含 `$ref`、自訂路徑、工具資料夾、符號連結、硬連結）、保護檔名、`tools add files` 裝得起來、描述字數。

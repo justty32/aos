@@ -1,0 +1,8 @@
+{
+  "repo": "~/repo/workflows",
+  "commit": "2021d9b7c385a9a68ce138b02c419d66dbc23784",
+  "kernel": "v0.6",
+  "made": "2026-09-24",
+  "files": 136,
+  "contents": ["tools (no tests)", "template", "flavors", "docs", "IMPORT.md", "README.md", "CHANGELOG.md", "skills/README.md"]
+}

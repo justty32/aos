@@ -269,6 +269,12 @@ class TrustTests(FilesCase):
         self.err('json_edit', {'path': 'workspace/alias.json', 'op': 'set', 'pointer': '/x', 'value': 1},
                  'TrustedData')
 
+    def test_hardlink_to_persona(self):
+        self.agent_home()
+        os.link(os.path.join(self.home, 'prompts', 'system.json'), os.path.join(self.ws, 'hl.json'))
+        self.err('json_edit', {'path': 'workspace/hl.json', 'op': 'set', 'pointer': '/content', 'value': 'x'},
+                 'TrustedData')
+
     def test_md_section_also_guarded(self):
         self.put('notes.md', '# A\n\nx\n')
         self.agent_home(system={'$ref': 'workspace/notes.md'})
