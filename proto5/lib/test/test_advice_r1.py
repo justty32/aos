@@ -39,8 +39,9 @@ class Homes(unittest.TestCase):
         self.home, self.daemon = self.root / 'K', self.root / 'D'
         self.daemon.mkdir()
         self.llm('http://127.0.0.1:%d/v1' % free_port())
-        kernel.init(self.home, {'k': {'pool': 'kernel'}, '0': {}, 'llm': {
-            'pool': 'llm', 'envs': {'AOS_LLM_CONFIG': str(self.root / 'llm.json')}}})
+        # 池式（proto5-2 納入）：info 第 2 版是池表，daemon 家寫在 info 頂層。
+        kernel.init(self.home, {'pools': {'default': {'count': 1}, 'llm': {
+            'count': 1, 'envs': {'AOS_LLM_CONFIG': str(self.root / 'llm.json')}}}}, daemon=str(self.daemon))
         self.bin = self.root / 'bin'
         self.bin.mkdir()
         for name in aos_kernel_check.COMMANDS:
@@ -80,19 +81,17 @@ class AgentCheck(Homes):
         lines = out.splitlines()
         self.assertEqual(lines[0], 'ok   kernel: K＝%s（取自 AOS_KERNEL_HOME）' % self.home)
         for item in ('ok   info:', 'ok   dirs:', 'warn daemon:', 'ok   pools:', 'ok   llm/llm: 模型代號：small',
-                     'ok   agent:', 'ok   agent/tick.pool:', 'ok   agent/llm.pool:', 'ok   agent/llm.model:'):
+                     'ok   agent:', 'ok   agent/tick.pool:', 'ok   agent/llm.pool:', 'ok   agent/tool_pool:',
+                     'ok   agent/llm.model:'):
             self.assertIn(item, out)
         self.assertEqual(lines[-1], '設定檢查通過；未測模型連線（--probe 會測）')
         self.assertNotIn('probe/', out)
 
     def test_kernel_from_tick_json_and_recorded_daemon(self):
         self.put(self.agent / 'tick.json', {'argv': ['aos-agent', 'tick'], 'envs': {'AOS_KERNEL_HOME': str(self.home)}})
-        info = aos_home.read_json(self.home / 'info.json')
-        info['daemon'] = str(self.daemon)
-        self.put(self.home / 'info.json', info)
         out, _ = self.agent_check()
         self.assertTrue(out.startswith('ok   kernel: K＝%s（取自 tick.json）\n' % self.home), out)
-        # 沒設 AOS_DAEMON_HOME：用 K 的 info 記的 daemon（boot 寫的），不是目前資料夾
+        # 沒設 AOS_DAEMON_HOME：用 K 的池表記的 daemon，不是目前資料夾
         self.assertIn('aos-daemon boot --target %s' % self.daemon, out)
 
     def test_no_kernel_is_bad_but_agent_still_checked(self):
@@ -124,7 +123,7 @@ class AgentCheck(Homes):
         self.put(self.agent / 'info.json', {'_metainfo': {'_type': 'llm_agent', '_version': 1},
                                             'llm': {'model': 'nope', 'pool': 'gpu'}})
         out, _ = self.agent_check(code=1, env={'AOS_KERNEL_HOME': str(self.home)})
-        self.assertIn('bad  agent/llm.pool: 池 gpu 不存在', out)
+        self.assertIn('bad  agent/llm.pool: 池 gpu 不在 pools', out)
         self.assertIn('bad  agent/llm.model: 模型 nope 不在 llm 設定', out)
 
     def test_not_an_agent(self):
@@ -190,35 +189,45 @@ class AgentCheck(Homes):
         self.assertNotIn('agent', out.getvalue())
 
 
-TOP = {'_metainfo', 'health', 'kernel', 'cpus', 'procs', 'queue', 'counts'}
+TOP = {'_metainfo', 'health', 'kernel', 'pools', 'procs', 'queue', 'counts'}
 KERNEL = {'home', 'chain', 'phase', 'last_seq', 'daemon', 'cpu', 'settings'}
-CPU = {'name', 'pool', 'kernel', 'busy', 'proc', 'req', 'discard', 'child'}
+POOL = {'pool', 'want', 'daemon', 'dpool', 'daemon_alive', 'summary', 'declared', 'removing', 'moving',
+        'new_location', 'phase', 'sent', 'busy', 'idle', 'draining', 'pending', 'error', 'waiting', 'gone'}
 PROC = {'name', 'once', 'pool', 'status', 'runs', 'fails', 'pending', 'target', 'mark', 'look'}
 
 
 class LsJson(Homes):
+    """ls 的 --json 第 2 版（池式納入）與對齊表；帳本、daemon 摘要都是手寫的，不開 daemon。"""
     LONG = 'aw-amy-think-1790000000000000000-77-3'
 
     def setUp(self):
         super().setUp()
-        info = aos_home.read_json(self.home / 'info.json')
-        info['daemon'] = str(self.daemon)
-        self.put(self.home / 'info.json', info)
         lock = (self.daemon / '.daemon.lock').open('w')
         self.addCleanup(lock.close)
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        children = {name: {'target': str(self.home / 'cpus' / name / 'inst.json'), 'state': 'running'}
-                    for name in ('k', '0', 'llm')}
-        self.put(self.daemon / 'state.json', {'pid': os.getpid(), 'children': children})
-        ledger = kernel.new_state(kernel.load_info(self.home), '17-1', 'k', kernel.CLI)
-        ledger.update(phase='running', last_seq=7, queue=['agent-amy'])
-        ledger['cpus']['0'] = {'req': 'k-17-1-7-0.json', 'proc': self.LONG, 'discard': False}
+        self.put(self.daemon / 'state.json', {'pid': os.getpid()})
+        ledger = kernel.new_state('17-1', kernel.CLI)
+        ledger.update(last_seq=7)
+        for pool, count in (('kernel', 1), ('default', 1), ('llm', 1)):
+            entry = kernel.new_pool(str(self.daemon), pool)
+            entry.update(want=count, sent={'count': count, 'skip': []}, dirty=False, redeclare=False, acquired=True)
+            ledger['pools'][pool] = entry
+            self.summary(pool, running=count)
+        ledger['pools']['llm']['free'] = [0]
+        ledger['busy']['default/0'] = {'req': 'k-17-1-7-0.json', 'proc': self.LONG}
+        ledger['on'][self.LONG] = 'default/0'
         for name, once, status in (('agent-amy', False, 'queued'), (self.LONG, True, 'running'),
                                    ('broken', False, 'bad')):
             ledger['procs'][name] = {'target': str(self.agent / 'tick.json'), 'once': once, 'pool': 'default',
                                      'status': status, 'runs': 2, 'fails': 1 if status == 'bad' else 0,
                                      'not_before': 0, 'pending': {'name': 'x.json', 'id': 'x'} if once else None}
         self.put(self.home / 'state.json', ledger)
+
+    def summary(self, pool, **counts):
+        body = {'pool': pool, 'owner': str(self.home), 'count': 1, 'ver': 1, 'running': 0, 'restarting': 0,
+                'pending': 0, 'dead': 0, 'failed': 0, 'killing': 0, 'draining': 0, 'updated': 0}
+        body.update(counts)
+        self.put(self.daemon / 'pools' / pool / 'summary.json', body)
 
     def ls(self, *flags, code=0):
         out, err = io.StringIO(), io.StringIO()
@@ -232,35 +241,44 @@ class LsJson(Homes):
         data = json.loads(out)  # stdout 整份就是一個 JSON 物件
         self.assertEqual(out.count('\n'), 1)
         self.assertEqual(set(data), TOP)
-        self.assertEqual(data['_metainfo'], {'_type': 'aos_kernel_ls', '_version': 1})
+        self.assertEqual(data['_metainfo'], {'_type': 'aos_kernel_ls', '_version': 2})
         self.assertEqual(set(data['health']), {'code', 'message'})
         self.assertEqual(set(data['kernel']), KERNEL)
         self.assertEqual(set(data['kernel']['daemon']), {'home', 'alive'})
         self.assertEqual(set(data['kernel']['cpu']), {'name', 'current', 'requests'})
         self.assertEqual(set(data['kernel']['settings']), {'tick_ms', 'interval_ms', 'timeout_ms', 'done_exit', 'bad_after'})
-        self.assertEqual(set(data['counts']), {'cpus', 'procs', 'queue'})
-        self.assertEqual(set(data['counts']['cpus']), {'total', 'busy', 'idle'})
+        self.assertEqual(set(data['counts']), {'pools', 'procs', 'queue'})
+        self.assertEqual(set(data['counts']['pools']), {'total', 'want', 'sent', 'busy', 'idle', 'draining'})
         self.assertEqual(set(data['counts']['procs']), {'total', 'repeat', 'once', 'status'})
-        for cpu in data['cpus']:
-            self.assertEqual(set(cpu), CPU)
+        self.assertEqual(list(data['pools']), ['kernel', 'default', 'llm'])
+        for row in data['pools'].values():
+            self.assertEqual(set(row), POOL)
         for proc in data['procs']:
             self.assertEqual(set(proc), PROC)
+        data = json.loads(self.ls('--json', '--pool', 'default')[0])
+        self.assertEqual(list(data['pools']), ['default'])
+        self.assertEqual(set(data['pools']['default']), POOL | {'cpus'})
+        self.assertEqual(set(data['pools']['default']['cpus'][0]), {'cpu', 'status', 'proc', 'daemon', 'declared'})
 
     def test_values(self):
         data = json.loads(self.ls('--json')[0])
         self.assertEqual(data['kernel']['home'], str(self.home))
         self.assertEqual((data['kernel']['phase'], data['kernel']['last_seq']), ('running', 7))
         self.assertEqual(data['kernel']['daemon'], {'home': str(self.daemon), 'alive': True})
-        cpus = {c['name']: c for c in data['cpus']}
-        self.assertEqual((cpus['0']['busy'], cpus['0']['proc'], cpus['0']['child']), (True, self.LONG, 'running'))
-        self.assertTrue(cpus['k']['kernel'])
-        self.assertEqual(data['counts']['cpus'], {'total': 2, 'busy': 1, 'idle': 1})
+        self.assertEqual(data['kernel']['cpu']['name'], 'kernel/0')
+        default = data['pools']['default']
+        self.assertEqual((default['want'], default['sent'], default['busy'], default['idle']), (1, 1, 1, 0))
+        self.assertEqual(default['summary']['running'], 1)
+        self.assertEqual(data['counts']['pools'], {'total': 2, 'want': 2, 'sent': 2, 'busy': 1, 'idle': 1, 'draining': 0})
         self.assertEqual(data['counts']['procs'], {'total': 3, 'repeat': 2, 'once': 1,
                                                    'status': {'queued': 1, 'running': 1, 'bad': 1}})
+        self.assertEqual((data['queue'], data['counts']['queue']), (['agent-amy'], 1))
         procs = {p['name']: p for p in data['procs']}
         self.assertTrue(procs[self.LONG]['pending'])
         self.assertEqual(procs['broken']['look'], str(self.agent / 'tick.json'))
         self.assertIsNone(procs['agent-amy']['look'])
+        cpus = json.loads(self.ls('--json', '--pool', 'default')[0])['pools']['default']['cpus']
+        self.assertEqual([(c['cpu'], c['status'], c['proc']) for c in cpus], [('default/0', 'busy', self.LONG)])
 
     def test_health_matches_text_first_line_and_exit_codes(self):
         text, _ = self.ls()
@@ -272,14 +290,16 @@ class LsJson(Homes):
             self.assertEqual(out, '')
             self.assertTrue(err.startswith('aos-kernel: '), err)
 
-    def test_daemon_dead_child_is_null(self):
+    def test_daemon_dead(self):
         (self.daemon / '.daemon.lock').unlink()
         data = json.loads(self.ls('--json')[0])
-        self.assertEqual({c['child'] for c in data['cpus']}, {None})
+        self.assertEqual({row['daemon_alive'] for row in data['pools'].values()}, {False})
+        self.assertFalse(data['kernel']['daemon']['alive'])
         self.assertEqual(data['health']['code'], 'daemon')
+        self.assertIn('daemon 沒在跑', self.ls()[0].split('\n', 1)[1])
 
     def test_text_table_aligned_and_long_names_cut(self):
-        text, _ = self.ls()
+        text, _ = self.ls('--procs')
         self.assertNotIn(self.LONG, text)
         self.assertNotIn(str(self.home), text.split('\n', 1)[1])  # 長路徑不進主表
         rows = [line for line in text.splitlines() if line.startswith('  ') and ('反覆' in line or 'once' in line
@@ -290,11 +310,27 @@ class LsJson(Homes):
         self.assertEqual(len(cols), 1, rows)  # 種類欄對齊（中文算兩格）
         self.assertIn('broken 壞了，看 %s' % (self.agent / 'tick.json'), text)
         self.assertIn('proc    3 個（反覆 2、once 1）：bad 1、queued 1、running 1', text)
-        self.assertIn('cpu     3 顆：忙 1、閒 1、kernel 1', text)
+        self.assertIn('pool    2 個工作池：要 2 顆、忙 1、閒 1', text)
+        self.assertIn('  default  want 1  sent 1  busy 1  idle 0  draining 0   daemon default: running 1', text)
         self.assertIn('queue   1：agent-amy', text)
 
+    def test_default_lists_only_procs_with_trouble(self):
+        text, _ = self.ls()
+        rows = [line.split()[0] for line in text.splitlines()
+                if line.startswith('  ') and ('反覆' in line or 'once' in line) and '種類' not in line]
+        self.assertEqual(rows, ['broken'])
+        self.assertIn('  （其餘 2 個沒事的沒列；--procs 全列）', text)
+        self.assertNotIn('其餘', self.ls('--procs')[0])
+
+    def test_pool_filter_adds_cpu_rows(self):
+        text, _ = self.ls('--pool', 'default')
+        self.assertIn('    default/0  busy %s' % self.LONG, text)
+        self.assertNotIn('  llm ', text)
+        _, err = self.ls('--pool', 'nope', code=1)
+        self.assertTrue(err.startswith('aos-kernel: NotFound: '), err)
+
     def test_verbose_shows_full_names_and_paths(self):
-        text, _ = self.ls('-v')
+        text, _ = self.ls('-v', '--procs')
         self.assertIn(self.LONG, text)
         self.assertIn('  K       %s' % self.home, text)
         self.assertIn('  D       %s' % self.daemon, text)
@@ -306,8 +342,6 @@ class LsJson(Homes):
         ledger = aos_home.read_json(self.home / 'state.json')
         ledger['procs'] = {'a': {}, 'b': {'status': None, 'runs': None, 'pool': 3},
                            'c': {'status': 'null', 'target': 'rel', 'fails': 'x'}}
-        ledger['queue'] = []
-        ledger['cpus']['0'] = {'req': None, 'proc': None, 'discard': False}
         self.put(self.home / 'state.json', ledger)
         out, _ = self.ls('--json')
         data = json.loads(out)
@@ -337,19 +371,6 @@ class LsJson(Homes):
             out, err = self.ls('--json', code=1)
         self.assertEqual(out, '')
         self.assertTrue(err.startswith('aos-kernel: ReadFailed: kernel 家讀不到'), err)
-
-    def test_pools_grouped_by_raw_value(self):
-        """astra 必修 6：空字串池、字面 - 池、info 沒有的 cpu 不併成一組。"""
-        info = aos_home.read_json(self.home / 'info.json')
-        info['cpus'].update({'a': {'pool': ''}, 'b': {'pool': '-'}})
-        self.put(self.home / 'info.json', info)
-        ledger = aos_home.read_json(self.home / 'state.json')
-        ledger['cpus']['ghost'] = {'req': None, 'proc': None, 'discard': False}
-        self.put(self.home / 'state.json', ledger)
-        text = self.ls()[0]
-        heads = {line.split()[1]: line.split()[0] for line in text.splitlines()
-                 if line.startswith('  ') and len(line.split()) > 2 and line.split()[1] in ('a', 'b', 'ghost')}
-        self.assertEqual(heads, {'a': '""', 'b': '-', 'ghost': '?'})
 
     def test_json_ignores_verbose(self):
         self.assertEqual(self.ls('--json')[0], self.ls('--json', '-v')[0])

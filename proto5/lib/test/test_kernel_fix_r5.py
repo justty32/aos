@@ -1,4 +1,9 @@
-"""fix-r5：kernel 這一半——boot 印一行、check --probe 與總結行、ls 的恢復中與 agent 標記。"""
+"""fix-r5：kernel 這一半——boot 印一行、check --probe 與總結行、ls 的恢復中與 agent 標記。
+
+proto5-2 搬遷：K 家用池表；health 不再逐顆看 daemon 孩子表，改看每池摘要（kernel-cli.md 的 ls）：
+proto5 的「llm cpu dead，daemon 重拉中」換成「池 llm 少 1 顆（daemon 在補…）」、「cpu missing」換成「kernel cpu 不在」；
+假 daemon 用 _kernel_fake（拿 flock、手寫 summary.json），不再 patch aos_daemon.read_state。boot 印 `booted N pools, M cpus`。
+"""
 import contextlib
 import http.server
 import io
@@ -9,11 +14,13 @@ import socket
 import threading
 from unittest.mock import patch
 
+import aos_home
 import aos_kernel as kernel
 import aos_kernel_check
 import aos_kernel_cli
 from aos_kernel_health import health
 from _daemon_util import read_json, wait_for
+from _kernel_fake import FakeDaemon
 from _kernel_util import CLI, KernelCase
 
 
@@ -129,10 +136,9 @@ class ProbeTests(KernelCase):
         llm = self.write(self.root / 'llm.json', {'_metainfo': {'_type': 'llm_config', '_version': 1},
                                                   'models': {'default': {'endpoint': endpoint, 'model': 'm'},
                                                              'again': {'endpoint': endpoint, 'model': 'm'}}})
-        self.initialize(cpus={'k': {'pool': 'kernel'}, '0': {},
-                              'llm': {'pool': 'llm', 'envs': {'AOS_LLM_CONFIG': llm}}})
+        self.initialize({'default': {'count': 1}, 'llm': {'count': 1, 'envs': {'AOS_LLM_CONFIG': llm}}})
         env = dict(os.environ, PATH='%s:%s' % (CLI, os.environ.get('PATH', '')))
-        return self.raw_cli('check', '--target', self.home, '--daemon-target', self.daemon, *extra, env=env)
+        return self.raw_cli('check', '--target', self.home, *extra, env=env)
 
     def test_check_summary_lines(self):
         server = self.serve({'data': [{'id': 'm'}]})
@@ -154,34 +160,59 @@ class ProbeTests(KernelCase):
 
 
 class HealthAndLsTests(KernelCase):
+    """帳本＋每池摘要都手寫；daemon 活不活靠假 daemon 拿著 flock。"""
+
     def setUp(self):
         super().setUp()
-        self.initialize(daemon=str(self.daemon))
-        self.ledger = kernel.new_state(self.info, 'chain', 'k', kernel.CLI)
+        self.fake = FakeDaemon(self.daemon)
+        self.addCleanup(self.fake.close)
+        self.initialize()
+        self.ledger = kernel.new_state('1000-1', kernel.CLI)
+        self.ledger['pools']['kernel'] = {'daemon': str(self.daemon), 'dpool': 'kernel',
+                                          'sent': {'count': 1, 'skip': []}, 'pending': None}
+        for pool in ('default', 'llm'):
+            entry = self.ledger['pools'][pool] = kernel.new_pool(str(self.daemon), pool)
+            entry.update(want={'count': 1, 'skip': []}, sent={'count': 1, 'skip': []}, free=[0],
+                         dirty=False, redeclare=False)
+        for pool in ('kernel', 'default', 'llm'):
+            self.summary_file(pool, running=1)
         self.write(self.home / 'state.json', self.ledger)
-        self.children = {name: {'state': 'running', 'alive': True, 'target': ''} for name in self.info['cpus']}
-        self.alive = patch('aos_daemon.is_alive', return_value=True).start()
-        self.addCleanup(patch.stopall)
-        patch('aos_daemon.read_state', return_value={'children': self.children}).start()
+
+    def summary_file(self, pool, **counts):
+        d = self.daemon / 'pools' / pool
+        d.mkdir(parents=True, exist_ok=True)
+        summary = {'pool': pool, 'owner': str(self.home), 'count': 1, 'ver': 1, 'running': 0, 'restarting': 0,
+                   'pending': 0, 'dead': 0, 'failed': 0, 'killing': 0, 'draining': 0, 'updated': 0}
+        summary.update(counts)
+        aos_home.write_json(d / 'summary.json', summary)
 
     def ls(self):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(aos_kernel_cli.main(['ls', '--target', str(self.home)]), 0)
         return out.getvalue()
 
-    def test_dead_child_is_recovering(self):
-        self.children['llm'].update(state='dead', alive=False)
-        self.assertEqual(health(self.home), ('recovering', '恢復中（llm cpu dead，daemon 重拉中）'))
-        self.assertTrue(self.ls().startswith('health 恢復中（llm cpu dead，daemon 重拉中）\n'))
+    def test_all_pools_full_is_ok(self):
+        self.assertEqual(health(self.home), ('ok', 'ok'))
+        self.assertTrue(self.ls().startswith('health ok\n'))
 
-    def test_daemon_down_cpu_lines_not_running(self):
-        self.alive.return_value = False
+    def test_short_pool_is_recovering(self):
+        """proto5 的「cpu dead，daemon 重拉中」：現在是某池 running＜sent，warn 不是停住。"""
+        self.summary_file('llm', running=0, dead=1)
+        code, text = health(self.home)
+        self.assertEqual(code, 'recovering')
+        self.assertTrue(text.startswith('池 llm 少 1 顆（daemon 在補'), text)
+        self.assertTrue(self.ls().startswith('health 池 llm 少 1 顆'))
+
+    def test_kernel_cpu_missing(self):
+        self.summary_file('kernel', running=0, pending=1)
+        code, text = health(self.home)
+        self.assertEqual(code, 'cpus')
+        self.assertTrue(text.startswith('kernel cpu 不在'), text)
+
+    def test_daemon_down(self):
+        self.fake.set_alive(False)
         text = self.ls()
-        self.assertTrue(text.startswith('health daemon 沒在跑'))
-        rows = [line for line in text.splitlines() if line.split()[:2] in (['kernel', 'k'], ['default', '0'], ['llm', 'llm'])]
-        self.assertEqual(len(rows), 3, text)
-        self.assertTrue(all(row.split()[-1] == '-' for row in rows), text)
-        self.assertIn('（daemon 沒在跑，孩子狀態不明）', text)
+        self.assertTrue(text.startswith('health daemon 沒在跑'), text)
 
     def agent(self, name, state=None, paused=False):
         home = self.root / name
@@ -191,24 +222,30 @@ class HealthAndLsTests(KernelCase):
             self.write(home / 'state.json', state)
         if paused:
             (home / 'paused').write_text('x')
-        self.ledger['procs']['agent-' + name] = {'target': str(home / 'tick.json'), 'once': False, 'status': 'idle',
+        self.ledger['procs']['agent-' + name] = {'target': str(home / 'tick.json'), 'once': False, 'status': 'queued',
+                                                 'pool': 'default', 'request': 'add-%s.json' % name,
                                                  'runs': 1, 'fails': 0, 'pending': None, 'not_before': 0}
         self.write(self.home / 'state.json', self.ledger)
         return home
+
+    def procs_ls(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(aos_kernel_cli.main(['ls', '--target', str(self.home), '--procs']), 0)
+        return out.getvalue()
 
     def test_agent_marks_on_first_line_and_rows(self):
         self.agent('bob', {'state': 'think', 'waits': [{'$opt': 'consume', '$val': 'continue-x.json'}]})
         self.agent('amy', paused=True)
         self.agent('cat', {'errors': 2})
         self.agent('dan')
-        text = self.ls()
+        text = self.procs_ls()
         self.assertTrue(text.startswith('health agent 暫停中：agent-bob（連敗）、agent-amy（手動）'
                                         '（修好原因後 aos-agent continue --all）\n'), text)
         rows = {line.split()[0]: line for line in text.splitlines() if line.startswith('  agent-')}
         self.assertTrue(rows['agent-bob'].endswith('連敗暫停中'))
         self.assertTrue(rows['agent-amy'].endswith('手動暫停中'))
         self.assertTrue(rows['agent-cat'].endswith('重試中（連敗 2/3）'))
-        self.assertEqual(rows['agent-dan'].split()[1:], ['反覆', 'idle', '1', '0', '-'])
+        self.assertEqual(rows['agent-dan'].split()[1:], ['反覆', 'queued', '1', '0', '-'])
         data = json.loads(aos_kernel_cli._summary(self.home, kernel.status(self.home), as_json=True))
         self.assertEqual(data['health']['code'], 'agents_paused')
         marks = {p['name']: p['mark'] for p in data['procs']}
@@ -225,27 +262,26 @@ class HealthAndLsTests(KernelCase):
 
     def test_kernel_problem_wins_over_agents(self):
         self.agent('bob', {'state': 'think', 'waits': [{'$opt': 'consume', '$val': 'continue-x.json'}]})
-        self.children['llm'].update(state='dead')
-        self.assertTrue(self.ls().startswith('health 恢復中'))
+        self.summary_file('llm', running=0, dead=1)
+        self.assertTrue(self.ls().startswith('health 池 llm 少 1 顆'))
 
 
 class RealDaemonTests(KernelCase):
-    def test_boot_prints_and_kill_llm_shows_recovering(self):
+    def test_boot_prints_and_kill_llm_shows_short_pool(self):
         info = read_json(self.daemon / 'info.json')
-        info['restart_delay_ms'] = 3000  # 放慢重拉，才看得到「恢復中」
+        info.update(restart_delay_ms=3000, restart_max_ms=3000)  # 放慢重拉，才看得到「少 1 顆」
         self.write(self.daemon / 'info.json', info)
         self.initialize()
         self.start_daemon()
-        result = self.good_cli('boot', self.home, '--daemon-target', self.daemon)
-        self.assertEqual(result.stdout, 'booted 3 cpus\n')
+        result = self.good_cli('boot', self.home)
+        self.assertEqual(result.stdout, 'booted 3 pools, 3 cpus\n')
         wait_for(lambda: self.state().get('last_seq', 0) >= 1)
-        pid = self.dstate()['children']['llm']['pid']
-        self.groups.update(child['pid'] for child in self.dstate()['children'].values())
-        os.kill(pid, signal.SIGKILL)
-        wait_for(lambda: self.dstate()['children']['llm']['state'] == 'dead')
+        self.wait_running('llm', 1)
+        wait_for(lambda: self.state()['pools']['llm']['sent']['count'] == 1)
+        os.kill(self.kid_pid('llm', 0), signal.SIGKILL)
+        wait_for(lambda: (self.kid('llm', 0) or {}).get('state') == 'dead')
         text = self.good_cli('ls', self.home).stdout
-        self.assertTrue(text.startswith('health 恢復中（llm cpu dead，daemon 重拉中）\n'), text)
-        wait_for(lambda: self.dstate()['children']['llm']['state'] == 'running', timeout=8)
-        self.groups.update(child['pid'] for child in self.dstate()['children'].values())
+        self.assertTrue(text.startswith('health 池 llm 少 1 顆（daemon 在補'), text)
+        self.wait_running('llm', 1)
         self.kernel_stop()
         self.daemon_stop()

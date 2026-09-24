@@ -215,8 +215,9 @@ class ToolsBaseIntegrationTests(KernelCase):
                         'model': 'local-test', 'timeout_ms': 3000}}})
         path = str(CLI) + os.pathsep + os.environ.get('PATH', '/usr/bin:/bin')
         self.env = dict(os.environ, AOS_KERNEL_HOME=str(self.home), PATH=path, PYTHONDONTWRITEBYTECODE='1')
-        self.cpus = {'k': {'pool': 'kernel'}, '0': {'envs': {'PATH': path}},
-                     'llm': {'pool': 'llm', 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
+        # 池式（proto5-2 納入）：info 是池表，kernel 池不用另外寫。
+        self.pools = {'default': {'count': 1, 'envs': {'PATH': path}},
+                      'llm': {'count': 1, 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
         self.base = self.root / 'coder'
         self.addCleanup(self.orderly_stop)
 
@@ -239,7 +240,7 @@ class ToolsBaseIntegrationTests(KernelCase):
 
     def test_write_bash_edit_bash_round_trip(self):
         """真 daemon＋kernel＋agent：模型依序叫 write→bash→edit→bash，檔案與記憶都對。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         self.agent('init', '--target', self.base)
         self.agent('tools', 'add', 'base', '--target', self.base)
         info = read_json(self.base / 'info.json')

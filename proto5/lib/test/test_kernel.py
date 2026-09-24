@@ -1,40 +1,61 @@
-"""kernel.md §1～§4：純判定、syscall 帳本與派工；不開外部行程。"""
+"""kernel 判定、syscall、收回音與派工（proto5 kernel.md §2、§4 不變；帳本改第 2 版 kernel-ledger）；不開外部行程。
+
+proto5 版搬過來時改了什麼：
+- info 是第 2 版池表（`default` 2 顆、`llm` 1 顆）；帳本 `cpus`／`queue` 換成 `pools`＋`busy`＋`on`、`ready`／`delayed`。
+- syscall 不再「一則寫一次帳本」：判定只改記憶體，提交點 3 才一起寫（kernel-ledger §3）；原本「恰好寫一次」那條改成「一次都不寫」。
+- 派工「先記後放」：dispatch 只記，post_dispatched 才放檔（kernel-tick 第 8 步）。
+- 停機拿掉 queued once 改在收到 stop 當下（start_stopping，kernel-tick 第 9 步）。
+"""
 import copy
-import json
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
 import aos_home as home
 import aos_kernel as kernel
+import aos_kernel_info
 
 CLI = Path(__file__).resolve().parents[2] / "cli" / "aos-kernel"
+POOLS = {"default": {"count": 2}, "llm": {"count": 1}}
 
 
 class KernelCase(unittest.TestCase):
+    """一個已 boot 過、池都確認過（sent＝want、free 滿）的 K 家；daemon 家只是個資料夾（不會用到）。"""
+
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="aos-kernel-unit-")
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.k, self.d = self.root / "K", self.root / "D"
-        self.k.mkdir()
         self.d.mkdir()
-        home.ensure_queue(self.k)
         home.ensure_queue(self.d)
-        self.raw = {"_metainfo": {"_type": "kernel", "_version": 1},
-                    "daemon": str(self.d), "cpus": {"k": {"pool": "kernel"},
-                    "0": {}, "1": {}, "llm": {"pool": "llm"}},
-                    "tick_ms": 0, "interval_ms": 100, "timeout_ms": 0,
-                    "done_exit": 100, "bad_after": 3}
-        home.write_json(self.k / "info.json", self.raw)
+        self.raw = {"daemon": str(self.d), "pools": copy.deepcopy(POOLS),
+                    "tick_ms": 0, "interval_ms": 100, "timeout_ms": 0, "done_exit": 100, "bad_after": 3}
+        kernel.init(self.k, copy.deepcopy(self.raw))
+        self.raw = home.read_json(self.k / "info.json")
         self.info = kernel.load_info(self.k)
-        self.state = kernel.new_state(self.info, "test-chain", "k", str(CLI))
+        self.state = kernel.new_state("1000-1", str(CLI))
         self.engine = kernel.Kernel(self.k, self.info, self.state, 7)
-        for name in self.raw["cpus"]:
-            (self.k / "cpus" / name).mkdir(parents=True)
-            home.ensure_queue(self.k / "cpus" / name)
+        self.state["pools"]["kernel"] = {"daemon": str(self.d), "dpool": "kernel",
+                                         "sent": {"count": 1, "skip": []}, "pending": None}
+        self.engine.ensure_cpu_home("kernel", 0)
+        for pool, config in self.info["pools"].items():
+            if pool == "kernel":
+                continue
+            entry = self.state["pools"][pool] = kernel.new_pool(str(self.d), pool)
+            spec = {"count": config["count"], "skip": []}
+            entry.update(want=spec, sent=dict(spec), dirty=False, redeclare=False,
+                         free=list(range(config["count"]))[::-1],
+                         envs_digest=self.engine.write_pool_files(pool, config["envs"]))
+            for i in range(config["count"]):
+                self.engine.ensure_cpu_home(pool, i)
         self.engine.save()
+
+    def cpu(self, key):
+        pool, i = key.split("/")
+        return self.k / "pools" / pool / "cpus" / i
 
     def proc(self, name="p", **values):
         proc = {"request": "add-%s.json" % name, "target": str(self.root / "missing.json"),
@@ -44,7 +65,7 @@ class KernelCase(unittest.TestCase):
         proc.update(values)
         self.state["procs"][name] = proc
         if proc["status"] == "queued":
-            self.state["queue"].append(name)
+            self.engine.enqueue(name)
         return proc
 
     def syscall(self, method, params=None, name="syscall.json", id="request-id", notify=False):
@@ -59,10 +80,20 @@ class KernelCase(unittest.TestCase):
     def reply(self, request="syscall.json"):
         return next(item["body"] for item in self.state["replies"] if item["name"] == request)
 
-    def assign(self, name="p", cpu="0", req="k-old-chain-1-0.json", **values):
+    def assign(self, name="p", key="default/0", req="k-old-chain-1-default-0.json", **values):
+        """那件已派到 key（帳上記了 busy／on），回（行程, cpu 家, 單名）。"""
         proc = self.proc(name, status="running", **values)
-        self.state["cpus"][cpu] = {"req": req, "proc": name, "discard": False}
-        return proc, self.k / "cpus" / cpu, req
+        pool, i = key.split("/")
+        self.state["busy"][key] = {"req": req, "proc": name, "discard": False}
+        self.state["on"][name] = key
+        free = self.state["pools"][pool]["free"]
+        if int(i) in free:
+            free.remove(int(i))
+        return proc, self.cpu(key), req
+
+    def queued(self, pool="default"):
+        """ready 裡還有效的行程名（懶刪的舊格不算）。"""
+        return [n for n, r in self.state["ready"].get(pool, []) if self.engine._valid(n, r)]
 
     def result(self, code=0, kind="child", **flags):
         return home.result_response("cpu-id", dict(code=code, kind=kind, timed_out=False,
@@ -111,23 +142,19 @@ class ClassifyTests(KernelCase):
 
 
 class SyscallTests(KernelCase):
-    def test_add_commits_proc_reply_delete_together_once(self):
+    def test_add_decides_in_memory_without_writing_ledger(self):
+        """kernel-ledger §3：syscall 判定進提交點 3 一起寫；apply_syscall 自己一次都不寫帳本。"""
         env = self.syscall("add", {"target": str(self.root / "not-created.json"), "name": "bob"})
-        snapshots = []
-        save = self.engine.save
-        def recorded_save():
-            snapshots.append(copy.deepcopy(self.state))
-            return save()
-        with patch.object(self.engine, "save", side_effect=recorded_save):
+        with patch.object(self.engine, "save", side_effect=AssertionError("syscall 不該自己寫帳本")):
             self.engine.apply_syscall(env)
-        self.assertEqual(len(snapshots), 1)
-        saved = snapshots[0]
-        self.assertIn("bob", saved["procs"])
-        self.assertEqual(saved["queue"], ["bob"])
-        self.assertIn(env.name, saved["deletes"])
-        self.assertEqual(saved["replies"][0]["body"], {"result": {"name": "bob"}})
+        self.assertIn("bob", self.state["procs"])
+        self.assertEqual(self.queued(), ["bob"])
+        self.assertEqual(self.state["ready"]["default"][0], ["bob", env.name])   # 排隊的格帶 request
+        self.assertIn(env.name, self.state["deletes"])
+        self.assertEqual(self.state["replies"][0]["body"], {"result": {"name": "bob"}})
         self.assertTrue((self.k / "requests" / env.name).exists())
         self.assertFalse((self.k / "responses" / env.name).exists())
+        self.assertNotIn("bob", home.read_state(self.k)["procs"])
 
     def test_once_add_delays_reply_and_preserves_args(self):
         env = self.syscall("add", {"target": str(self.root / "program"), "name": "one",
@@ -153,7 +180,7 @@ class SyscallTests(KernelCase):
         env = self.syscall("add", {"target": "/future.json", "name": "p"})
         self.engine.apply_syscall(env)
         self.state["procs"].clear()
-        self.state["queue"].clear()
+        self.state["ready"].clear()
         self.engine.apply_syscall(env)
         self.assertEqual(self.state["procs"], {})
         self.assertEqual(self.state["deletes"], [env.name])
@@ -169,6 +196,7 @@ class SyscallTests(KernelCase):
                 self.assertEqual(self.reply(env.name)["error"]["data"]["code"], "AlreadyExists")
 
     def test_invalid_params_and_pool(self):
+        """pool 必須是 info.pools 的 key、且不是 kernel 池（proto5-diffs：syscall §2）。"""
         cases = [{"target": "relative.json"}, {"target": "/x", "pool": "kernel"},
                  {"target": "/x", "pool": "absent"}, {"target": "/x", "args": None},
                  {"target": "/x", "interval_ms": True}, {"target": "/x", "name": ".."}]
@@ -179,13 +207,22 @@ class SyscallTests(KernelCase):
                 self.assertEqual(self.reply(env.name)["error"]["code"], -32602)
         self.assertEqual(self.state["procs"], {})
 
+    def test_add_to_count_zero_pool_is_accepted_and_waits(self):
+        """count 0 的池照收（同 proto5：沒 cpu 就一直排隊，不算錯）。"""
+        self.state["pools"]["llm"].update(free=[])
+        env = self.syscall("add", {"target": "/x", "name": "m", "pool": "llm"})
+        self.engine.apply_syscall(env)
+        self.engine.dispatch()
+        self.assertEqual(self.queued("llm"), ["m"])
+
     def test_rm_nonrunning_states(self):
         for index, status in enumerate(("queued", "done", "bad")):
             name = "p%d" % index
             self.proc(name, status=status)
             self.engine.apply_syscall(self.syscall("rm", {"name": name}, name="rm-%d.json" % index))
             self.assertNotIn(name, self.state["procs"])
-            self.assertNotIn(name, self.state["queue"])
+            self.assertNotIn(name, self.queued())
+        self.assertIsNone(self.engine.pop_ready("default"))   # 懶刪的舊格拿不出來
 
     def test_rm_missing_returns_not_found(self):
         self.engine.apply_syscall(self.syscall("rm", {"name": "absent"}))
@@ -196,7 +233,7 @@ class SyscallTests(KernelCase):
         home.post_request(cpu, req, {"jsonrpc": "2.0", "id": 1, "method": "aos-exec"})
         self.engine.remove("p")
         self.assertIs(self.state["procs"]["p"], proc)
-        self.assertTrue(self.state["cpus"]["0"]["discard"])
+        self.assertTrue(self.state["busy"]["default/0"]["discard"])
         env = self.syscall("add", {"target": "/other.json", "name": "p"})
         self.engine.apply_syscall(env)
         self.assertEqual(self.reply()["error"]["data"]["code"], "AlreadyExists")
@@ -206,23 +243,25 @@ class SyscallTests(KernelCase):
         home.write_json(cpu / "responses" / req, self.result())
         self.engine.remove("p")
         self.assertIs(self.state["procs"]["p"], proc)
-        self.assertTrue(self.state["cpus"]["0"]["discard"])
+        self.assertTrue(self.state["busy"]["default/0"]["discard"])
 
     def test_rm_recorded_but_unsent_cancels_assignment(self):
         self.assign()
         self.engine.remove("p")
         self.assertNotIn("p", self.state["procs"])
-        self.assertEqual(self.state["cpus"]["0"], {"req": None, "proc": None, "discard": False})
+        self.assertNotIn("default/0", self.state["busy"])
+        self.assertNotIn("p", self.state["on"])
+        self.assertIn(0, self.state["pools"]["default"]["free"])     # 號碼放回 free
 
     def test_rm_once_immediately_removed_for_all_three_cases(self):
+        keys = ("default/0", "default/1", "llm/0")
         for index, mode in enumerate(("queued", "inflight", "responded", "unsent")):
             name = "one%d" % index
             pending = {"name": "pending-%d.json" % index, "id": index}
             if mode == "queued":
                 self.proc(name, once=True, pending=pending)
             else:
-                proc, cpu, req = self.assign(name, cpu=("0", "1", "llm")[index - 1],
-                                             once=True, pending=pending,
+                proc, cpu, req = self.assign(name, key=keys[index - 1], once=True, pending=pending,
                                              req="work-%d.json" % index)
                 if mode == "inflight":
                     home.post_request(cpu, req, {"jsonrpc": "2.0", "method": "aos-exec", "id": 1})
@@ -239,9 +278,9 @@ class CollectDispatchTests(KernelCase):
         proc, cpu, req = self.assign()
         home.post_request(cpu, req, {"jsonrpc": "2.0", "id": 1, "method": "aos-exec"})
         home.write_json(cpu / "responses" / req, self.result())
-        self.engine.collect()
+        self.engine.collect(["default/0"])
         self.assertEqual(proc["runs"], 0)
-        self.assertEqual(self.state["cpus"]["0"]["req"], req)
+        self.assertEqual(self.state["busy"]["default/0"]["req"], req)
         self.assertEqual(self.state["acks"], [])
 
     def test_collect_checks_request_before_response(self):
@@ -254,9 +293,11 @@ class CollectDispatchTests(KernelCase):
                 accesses.append(path.parent.name)
             return original(path)
         with patch.object(Path, "exists", exists):
-            self.engine.collect()
+            self.engine.collect(["default/0"])
         self.assertEqual(accesses[:2], ["requests", "responses"])
         self.assertEqual(self.state["procs"]["p"]["runs"], 1)
+        self.assertEqual(self.state["busy"], {})
+        self.assertEqual([e[1] for e in self.state["delayed"]], ["p"])  # interval 100 ms 還沒到：進 delayed 堆積
 
     def test_once_response_is_copied_with_original_pending_identity(self):
         for index, body in enumerate(({"result": {"code": 137, "kind": "child", "stopped": True}},
@@ -267,7 +308,7 @@ class CollectDispatchTests(KernelCase):
             proc, cpu, req = self.assign(name, req="result-%d.json" % index,
                                          once=True, pending=pending)
             home.write_json(cpu / "responses" / req, dict(jsonrpc="2.0", id="cpu-id", **body))
-            self.engine.collect()
+            self.engine.collect(["default/0"])
             self.assertNotIn(name, self.state["procs"])
             item = next(x for x in self.state["replies"] if x["name"] == pending["name"])
             self.assertEqual(item, dict(pending, body=body))
@@ -275,9 +316,9 @@ class CollectDispatchTests(KernelCase):
 
     def test_discard_collect_drops_without_counting(self):
         proc, cpu, req = self.assign(runs=5, fails=2)
-        self.state["cpus"]["0"]["discard"] = True
+        self.state["busy"]["default/0"]["discard"] = True
         home.write_json(cpu / "responses" / req, self.result())
-        self.engine.collect()
+        self.engine.collect(["default/0"])
         self.assertNotIn("p", self.state["procs"])
         self.assertEqual((proc["runs"], proc["fails"]), (5, 2))
         self.assertEqual(self.state["replies"], [])
@@ -285,28 +326,32 @@ class CollectDispatchTests(KernelCase):
     def test_two_free_cpus_do_not_dispatch_same_proc(self):
         self.proc()
         self.engine.dispatch()
-        busy = [c for c in self.state["cpus"].values() if c["req"] is not None]
-        self.assertEqual(len(busy), 1)
-        self.assertEqual(busy[0]["proc"], "p")
-        self.assertEqual(self.state["queue"], [])
+        self.assertEqual(list(self.state["busy"].values()),
+                         [{"req": "k-1000-1-7-default-0.json", "proc": "p", "discard": False}])
+        self.assertEqual(self.state["on"], {"p": "default/0"})
+        self.assertEqual(self.state["recent"], ["default/0"])
+        self.assertEqual(self.queued(), [])
+        self.assertEqual(self.state["pools"]["default"]["free"], [1])
 
-    def test_pool_and_not_before(self):
+    def test_pool_and_not_before_and_record_before_post(self):
         self.proc("future", not_before=10**12)
         self.proc("model", pool="llm", args=["hello"])
         self.engine.dispatch()
-        self.assertIsNone(self.state["cpus"]["0"]["req"])
-        self.assertIsNone(self.state["cpus"]["1"]["req"])
-        self.assertEqual(self.state["cpus"]["llm"]["proc"], "model")
-        req = self.state["cpus"]["llm"]["req"]
-        request = home.read_json(self.k / "cpus" / "llm" / "requests" / req)
+        self.assertNotIn("default/0", self.state["busy"])
+        self.assertNotIn("default/1", self.state["busy"])
+        self.assertEqual(self.state["busy"]["llm/0"]["proc"], "model")
+        req = self.state["busy"]["llm/0"]["req"]
+        self.assertFalse((self.cpu("llm/0") / "requests" / req).exists())   # 先記後放：還沒放
+        self.engine.post_dispatched()
+        request = home.read_json(self.cpu("llm/0") / "requests" / req)
         self.assertEqual(request["params"]["args"], ["hello"])
-        self.assertEqual(self.state["queue"], ["future"])
+        self.assertEqual([e[1] for e in self.state["delayed"]], ["future"])
 
     def test_stopping_cancels_queued_once_and_keeps_repeat(self):
         self.proc("one", once=True, pending={"name": "once.json", "id": "once-id"})
         self.proc("repeat")
-        self.state["phase"] = "stopping"
-        self.engine.stopping()
+        self.engine.start_stopping()
+        self.assertEqual(self.state["phase"], "stopping")
         self.assertNotIn("one", self.state["procs"])
         self.assertIn("repeat", self.state["procs"])
         self.assertEqual(self.reply("once.json")["error"]["data"]["code"], "Stopping")
@@ -314,31 +359,39 @@ class CollectDispatchTests(KernelCase):
 
 class InfoTests(KernelCase):
     def test_initial_state_shape(self):
-        self.assertEqual(self.state["chain"], "test-chain")
-        self.assertEqual(self.state["kcpu"], "k")
-        self.assertEqual(self.state["cli"], str(CLI))
-        self.assertEqual(self.state["phase"], "running")
-        self.assertEqual(set(self.state["cpus"]), {"0", "1", "llm"})
-        for name in ("procs", "queue", "acks", "replies", "stops", "deletes"):
-            self.assertFalse(self.state[name])
-        self.assertTrue(all(c == {"req": None, "proc": None, "discard": False}
-                            for c in self.state["cpus"].values()))
+        state = kernel.new_state("test-chain", str(CLI))
+        self.assertEqual(state["chain"], "test-chain")
+        self.assertEqual(state["kcpu"], "kernel/0")
+        self.assertEqual(state["cli"], str(CLI))
+        self.assertEqual(state["phase"], "running")
+        for name in ("pools", "busy", "on", "recent", "ready", "delayed", "procs", "acks", "replies", "deletes", "sends"):
+            self.assertFalse(state[name], name)
+        self.assertNotIn("cpus", state)
+        self.assertNotIn("stops", state)
 
     def test_envs_copied_without_expansion_or_validation(self):
         envs = {"$opt": "clear", "$val": {"PATH": {"$env": "AOS_UNSET_KERNEL_TEST"}}}
-        self.raw["cpus"]["llm"]["envs"] = envs
+        self.raw["pools"]["llm"]["envs"] = envs
         home.write_json(self.k / "info.json", self.raw)
-        self.assertEqual(kernel.load_info(self.k)["cpus"]["llm"]["envs"], envs)
+        self.assertEqual(kernel.load_info(self.k)["pools"]["llm"]["envs"], envs)
 
     def test_info_rejects_nonliteral_top_and_wrong_kernel_count(self):
-        bad_values = [{"$ref": "other.json"}, dict(self.raw, cpus={"0": {}}),
-                      dict(self.raw, cpus={"k": {"pool": "kernel"}, "j": {"pool": "kernel"}})]
+        bad_values = [{"$ref": "other.json"}, dict(self.raw, pools=[]),
+                      dict(self.raw, pools={"kernel": {"count": 2}}),
+                      dict(self.raw, pools={"default": {"count": -1}})]
         for value in bad_values:
             with self.subTest(value=value):
                 home.write_json(self.k / "info.json", value)
                 with self.assertRaises(kernel.KernelError) as cm:
                     kernel.load_info(self.k)
                 self.assertEqual(cm.exception.code, "FieldTypeMismatch")
+
+    def test_proto5_info_is_refused(self):
+        home.write_json(self.k / "info.json", {"_metainfo": {"_type": "kernel", "_version": 1},
+                                               "cpus": {"k": {"pool": "kernel"}}})
+        with self.assertRaises(kernel.KernelError) as cm:
+            kernel.load_info(self.k)
+        self.assertEqual(cm.exception.code, "InfoVersion")
 
     def test_info_integer_boundaries(self):
         for key, value in (("tick_ms", -1), ("interval_ms", True), ("timeout_ms", -1),
