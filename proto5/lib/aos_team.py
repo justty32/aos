@@ -201,7 +201,36 @@ def cmd_ls(team_dir, argv):
     for r in data:
         print('%s  %-8s %-12s 單：%-14s 最後寄出：%s' % (r['name'].ljust(width), r['template'], r['health'],
                                                   ','.join(r['tasks']) or '-', r['last_sent'] or '-'))
+    for line in machine_lines(team_dir, os.environ):
+        print(line)
     return 0
+
+
+def machine_lines(team_dir, env):
+    """郵差、心跳在 kernel 那邊的狀態（T5：真跑時郵差壞了，成員那幾行全是 ok、人看不出信為什麼不動）。"""
+    import aos_agent_status
+    import aos_team_post
+    home = env.get('AOS_KERNEL_HOME')
+    if not home or not os.path.isabs(home):
+        return ['郵差、心跳：沒設 AOS_KERNEL_HOME，看不到']
+    try:
+        procs = aos_agent_status.ledger(home)['procs']
+    except Exception as exc:                              # 帳本讀不到：只少這兩行，不擋 ls
+        return ['郵差、心跳：kernel 帳本讀不到（%s）' % exc]
+    lay = Layout(team_dir)
+    out = []
+    for what, label, err in (('post', '郵差', 'post.err'), ('beat', '心跳', 'beat.err')):
+        name = aos_team_post.proc_name(team_dir, what)
+        p = procs.get(name)
+        if not isinstance(p, dict):
+            state = '沒登記（aos-team start）'
+        elif p.get('status') == 'bad':
+            state = '壞了（連錯 %s 次）：看 %s，修好後 aos-kernel rm %s 再 aos-team start' % (
+                p.get('fails'), lay.team / 'post' / err, name)
+        else:
+            state = 'ok'
+        out.append('%s  %s  %s' % (label, name, state))
+    return out
 
 
 # -------------------------------------------------------------------- rm ----

@@ -5,11 +5,20 @@ sys.dont_write_bytecode = True
 import os  # noqa: E402
 from _common import run, arg, resolve, fail, open_regular, ToolError, MAX_BYTES  # noqa: E402
 import _wf  # noqa: E402
+import _common  # noqa: E402
 
 MAX_LIMIT = 2000
+# T5 真跑：模型找不到手冊裡的 wf-init.sh，就照快照的 template/ 一檔一檔手抄（51 次模型、220 萬 token）。
+# 手冊的指令在這個包裡都有對應的工具，讀手冊時先講清楚。
+IMPORT_NOTE = ('[wf tools: the scripts below are already wrapped as tools - step 1 wf-init.sh = wf_init '
+               '(no bash, no copying files by hand); steps 2-4 grep = wf_residue (gives file:line); '
+               'step 5 wf-lint.sh = wf_lint. Fill placeholders with edit.]\n\n')
 
 
 def main(args, _root):
+    # 快照在工具包裡（關牢時是 /opt/tool/snapshot），不在 /work 裡：碰得到的範圍只看快照本身，
+    # 不看 AOS_TOOL_FENCE（不然關牢時一律 OutsideRoot；T5 真跑撞到）。
+    _common._FENCE = None
     snap = os.path.realpath(_wf.SNAP)
     path = arg(args, 'path', str, '.')
     offset = arg(args, 'offset', int, 1)
@@ -46,6 +55,8 @@ def main(args, _root):
         out.append(line)
         size += b
     text = ''.join(out)
+    if os.path.normpath(os.path.relpath(full, snap)) == 'IMPORT.md' and offset == 1:
+        text = IMPORT_NOTE + text
     last = offset + len(out) - 1
     if last < total:
         text += ('' if text.endswith('\n') else '\n') + \

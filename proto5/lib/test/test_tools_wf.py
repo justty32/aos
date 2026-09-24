@@ -138,6 +138,14 @@ class DocTests(WfCase):
         self.assertIn('use offset=4 to continue', out)
         self.assertIn('flavor', self.tool('wf_doc', {'path': 'flavors'}) + 'flavor')
 
+    def test_import_note_maps_steps_to_tools(self):
+        """T5：讀 IMPORT.md 開頭先講「手冊的腳本＝哪支工具」；從中間讀不重複。"""
+        out = self.tool('wf_doc', {'path': 'IMPORT.md', 'limit': 3})
+        self.assertTrue(out.startswith('[wf tools:'), out[:80])
+        self.assertIn('wf_init', out.split('\n\n')[0])
+        self.assertNotIn('[wf tools:', self.tool('wf_doc', {'path': 'IMPORT.md', 'offset': 2}))
+        self.assertNotIn('[wf tools:', self.tool('wf_doc', {'path': 'README.md', 'limit': 3}))
+
     def test_outside_snapshot_refused(self):
         self.w('secret.md', 'x')
         for path in ('../wf.json', '../../../workspace/secret.md', '/etc/passwd', 'tools/../../_wf.py'):
@@ -146,6 +154,16 @@ class DocTests(WfCase):
             self.assertIn('only reads the workflows snapshot', err['message'])
         self.assertEqual(self.tool('wf_doc', {'path': 'nope.md'}, code=1)['error'], 'NotFound')
         self.assertEqual(self.tool('wf_doc', {'offset': 0}, code=1)['error'], 'BadArguments')
+
+
+    def test_reads_snapshot_when_jailed(self):
+        """關牢時 AOS_TOOL_FENCE＝/work（這裡用工作區模擬），快照在工具包裡、不在範圍內：照樣讀得到（T5 真跑撞到）。"""
+        env = {'AOS_TOOL_ROOT': self.ws, 'AOS_TOOL_FENCE': self.ws}
+        self.assertIn('IMPORT.md', self.tool('wf_doc', {}, env=env).split())
+        self.assertIn('Done when', self.tool('wf_doc', {'path': 'IMPORT.md'}, env=env))
+        self.w('secret.md', 'x')
+        err = self.tool('wf_doc', {'path': '../workspace/secret.md'}, code=1, env=env)
+        self.assertEqual(err['error'], 'OutsideRoot')
 
 
 class ResidueTests(WfCase):

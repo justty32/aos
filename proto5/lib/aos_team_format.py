@@ -76,10 +76,12 @@ class Layout:
         return self.team / 'outbox' / name
 
     def notes(self, name):
+        """成員的長期筆記資料夾（模板 notes: true 的成員 init 時建、掛成牢裡的 /work/notes）。"""
         return self.team / 'notes' / name
 
     def events(self, name):
-        return self.team / 'events' / (name + '.jsonl')
+        """成員的事件紀錄：在成員家裡（aos_agent_events.EVENTS；寫的人是持那個家 tick 鎖的一方），不在 team/。"""
+        return self.member(name) / 'log' / 'events.jsonl'
 
     def task(self, tid):
         return self.tasks / (tid + '.json')
@@ -639,16 +641,17 @@ def may_send(roster, sender, kind):
 
 # --------------------------------------------------------- 模板、門房規則 ----
 
-TEMPLATE_KEYS = ('_metainfo', 'description', 'system', 'team', 'project', 'may', 'llm', 'tick', 'tools', 'mounts')
+TEMPLATE_KEYS = ('_metainfo', 'description', 'system', 'team', 'project', 'notes', 'may', 'llm', 'tick', 'tools',
+                 'mounts')
 TOOL_ENTRY_KEYS = ('pack', 'only', 'team', 'optional')
-RESERVED_MOUNTS = ('ws', 'outbox', 'board')
+RESERVED_MOUNTS = ('ws', 'outbox', 'board', 'notes')   # notes：模板 notes: true 時 init 內建掛自己那格
 
 
 def _mounts(mounts, where):
     _obj(mounts, where)
     for mk, mv in mounts.items():
         if not re.match(r'[a-z0-9_-]+\Z', mk) or mk in RESERVED_MOUNTS:
-            bad(where, '名字 %r 不行（[a-z0-9_-]+，且 ws／outbox／board 是保留的）' % mk)
+            bad(where, '名字 %r 不行（[a-z0-9_-]+，且 ws／outbox／board／notes 是保留的）' % mk)
         if not (isinstance(mv, str) and mv) and not (
                 isinstance(mv, dict) and set(mv) == {'$opt', '$val'} and mv['$opt'] == 'ro'
                 and isinstance(mv['$val'], str) and mv['$val']):
@@ -666,6 +669,10 @@ def validate_template(obj, where='template.json'):
         bad(where + '.team', '要是 true／false')
     if obj.get('project', 'rw') not in ('rw', 'ro'):
         bad(where + '.project', '要是 rw 或 ro')
+    if not isinstance(obj.get('notes', False), bool):
+        bad(where + '.notes', '要是 true／false')
+    if obj.get('notes') and not obj.get('team'):
+        bad(where + '.notes', 'notes: true 只給團隊模板（掛的是 team/notes/<名>/）')
     may = obj.get('may', [])
     if not isinstance(may, list) or not all(isinstance(x, str) for x in may):
         bad(where + '.may', '要是申請種類名字的陣列')

@@ -56,6 +56,7 @@
 | `review_result` | 那張審查子單的負責人 | `task`（`t-0001.r1`）、`items`：`[{"i": 0, "pass": true, "why": "…"}]` 每條都要回 | 子單 done，父單收到 reviewed（tasks.md） |
 | `ask` | 模板 may 有它的、人 | `question`、`options`?、`default`?（要在 options 裡）、`reply_to`? | 建問題（ask.md） |
 | `answer` | 只有人 | `q`、`text` | 投回發問者（ask.md） |
+| `compact` | 模板 may 有它的（領隊、工人；`compact_me` 工具）、人 | `member`?（只有人能替別人寄）、`keep_rounds`?、`max_tokens`?、`reason`? | 投進那個成員家的 `compact-req/`，閒著時 tick 縮記憶（[compact-more.md §5](../agent/compact-more.md)） |
 
 `done_when` 每條：`{"kind": "file_exists", "path": …}`、`{"kind": "table_filled", "path": …, 其他參數…}`、`{"kind": "check", "name": 檢查器名, "args": {…}?}`、`{"kind": "judge", "text": 要審查員判的一句}`。前三種是驗收員（第 2 隊）跑的固定檢查器，`judge` 給審查員。
 

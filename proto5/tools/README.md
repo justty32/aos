@@ -2,8 +2,16 @@
 
 ← [proto5 README](../README.md)｜怎麼裝：[aos-agent.md §1.8](../spec/aos-agent/tools.md)｜工具格式：[agent.md §3.3](../spec/agent/info.md)
 
-一個資料夾＝一個工具包，用 `aos-agent tools add <名> --target <agent 家>` 裝進 agent 家。現在只有 [`base/`](base/)：
-pi coding agent 那一組 read、write、edit、bash、grep、find、ls，裝了就能叫 agent 寫程式、跑程式、改程式。純 Python 標準庫，沒有別的依賴（grep 有 `rg` 就用，沒有退回 `grep`）。
+一個資料夾＝一個工具包，用 `aos-agent tools add <名> --target <agent 家>` 裝進 agent 家。純 Python 標準庫，沒有別的依賴。09-24 工具大開發時代後現在有六包：
+
+| 包 | 一句話 | 說明在 |
+|---|---|---|
+| [`base/`](base/) | pi coding agent 那一組 read、write、edit、bash、grep、find、ls，裝了就能叫 agent 寫程式、跑程式、改程式（grep 有 `rg` 就用，沒有退回 `grep`） | 本檔下方〈七個工具〉 |
+| [`files/`](files/README.md) | `json_edit`、`md_section`：按 JSON Pointer 改 JSON 的一格、按標題改 md 的一節 | [files README](files/README.md) |
+| [`wf/`](wf/README.md) | `wf_doc`、`wf_init`、`wf_lint`、`wf_residue`、`wf_table`：把 workflows 手冊導入專案、檢查導得乾不乾淨、讀寫資料表 | [wf README](wf/README.md) |
+| [`notes/`](notes/) | `note`：長期筆記（跟對話記憶分開），add／find／get／rm，存 `wf-table/1` 的 `notes.json` | [spec/agent/](../spec/agent/README.md)、[aos-agent notes](../spec/aos-agent/cli-memory.md) |
+| [`team/`](team/) | `team_say`：往自己的 `team/outbox/<名>/` 寫一封信，郵差之後投遞 | [spec/team/mail.md](../spec/team/mail.md) |
+| [`task/`](task/README.md) | `handoff`、`board`、`review_result`、`ask_human`、`compact_me`：給團隊成員（領隊、工人、審查）用，派工、看任務表、審查、問人、縮自己的記憶 | [task README](task/README.md) |
 
 ## 裝
 

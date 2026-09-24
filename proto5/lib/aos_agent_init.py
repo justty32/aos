@@ -75,6 +75,8 @@ def _access(base, tpl, folder, member):
         mounts['ws'] = {'$opt': 'ro', '$val': ws} if tpl.get('project', 'rw') == 'ro' else ws
         mounts['outbox'] = _rel(os.path.join(team, 'team', 'outbox', member['name']), base)
         mounts['board'] = {'$opt': 'ro', '$val': _rel(os.path.join(team, 'team', 'tasks'), base)}
+        if tpl.get('notes'):
+            mounts['notes'] = _rel(_notes_dir(member), base)
     for name, value in tpl.get('mounts', {}).items():
         mounts[name] = _mount_value(value, folder, base, True)
     for name, value in (member or {}).get('mounts', {}).items():
@@ -86,12 +88,12 @@ def _access(base, tpl, folder, member):
 
 def _guard_team(base, mounts, member):
     """多掛的可寫資料夾不准碰團隊的控制資料：team.json、team/（別人的 outbox、任務表、問題）、members/（所有人的家）、
-    proto5 自己（模板、工具包、程式）。自己的 outbox 是預設掛點，不在這裡查。只查可寫的；唯讀照 access.md 的規則。"""
+    proto5 自己（模板、工具包、程式）。自己的 outbox、notes 是內建掛點（保留名，名冊與模板用不了），不在這裡查。只查可寫的；唯讀照 access.md 的規則。"""
     team = os.path.realpath(member['team_dir'])
     guarded = [os.path.join(team, 'team.json'), os.path.join(team, 'team'), os.path.join(team, 'members'),
                os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))]
     for name, value in mounts.items():
-        if name in ('ws', 'outbox', 'board') or isinstance(value, dict):
+        if name in ('ws', 'outbox', 'board', 'notes') or isinstance(value, dict):
             continue
         real = os.path.realpath(os.path.join(base, os.path.expanduser(value)))
         for g in guarded:
@@ -99,6 +101,32 @@ def _guard_team(base, mounts, member):
             if real == g or real.startswith(g.rstrip(os.sep) + os.sep) or g.startswith(real.rstrip(os.sep) + os.sep):
                 raise AgentError('AccessUnsafe', '多掛的 %s（%s）可寫，但碰到團隊控制資料 %s；改成唯讀 '
                                  '{"$opt": "ro", "$val": …} 或換一個資料夾' % (name, real, g))
+
+
+def _notes_dir(member):
+    """成員自己的筆記資料夾 team/notes/<名>/（spec/team/layout.md）；牢裡是 /work/notes，note 工具寫 notes.json。"""
+    return os.path.join(member['team_dir'], 'team', 'notes', member['name'])
+
+
+def _ensure_notes(base, tpl, member, lines):
+    """模板 notes: true：建 team/notes/<名>/；已生的舊家 access.json 沒有 notes 掛載就補這一格（只補這格，
+    其他掛載不動；notes 已被人改指別處也不動）。不補的話重跑 init 裝上的 note 工具在牢裡找不到 /work/notes。"""
+    if member is None or not tpl.get('notes'):
+        return
+    os.makedirs(_notes_dir(member), exist_ok=True)
+    path = base / 'access.json'
+    if not path.is_file():
+        return                                            # 新生的家：_access 已經寫了
+    import aos_agent_access
+    try:
+        doc = aos_home.read_json(path)
+    except aos_home.HomeError:
+        return                                            # 壞掉的交給最後的 aos_agent_access.load 報
+    mounts = doc.get('mounts') if isinstance(doc, dict) else None
+    if isinstance(mounts, dict) and 'notes' not in mounts:
+        mounts['notes'] = _rel(_notes_dir(member), base)
+        aos_agent_access.write_access(path, doc)
+        lines.append('access.json 補掛 notes（→ team/notes/%s/）' % member['name'])
 
 
 def _system_text(folder, tpl, name, member):
@@ -172,7 +200,8 @@ def init_from_template(agent_dir, template, *, name=None, member=None, force=Fal
     member（團隊成員才給）：{"name", "team_dir", "project"（絕對路徑）, "mail_to", "members", "tz",
     "model", "mounts"（相對團隊資料夾）, "tools"（多裝的包）}。
     家已在：有 .aos-template.json 且 complete=false＝上次生到一半，補完；complete=true 且是團隊成員＝只更新
-    工具包的團隊設定與補裝新加的包（不動人格、記憶、access.json）；其他＝AlreadyExists。
+    工具包的團隊設定與補裝新加的包（不動人格、記憶、access.json；唯一例外：模板 notes: true 而 access.json
+    還沒有 notes 掛載＝補那一格）；其他＝AlreadyExists。
     """
     from aos_team_format import TeamError, load_template
     try:
@@ -219,6 +248,7 @@ def init_from_template(agent_dir, template, *, name=None, member=None, force=Fal
             'history': 'prompts/history.json', 'tools': [], 'llm': llm, 'tool_pool': 'default',
             'tick': {'pool': 'default', 'interval_ms': tpl.get('tick', {}).get('interval_ms', 1000)}})
         lines.append('生了 %s（模板 %s，模型代號 %s）' % (base, template, llm['model']))
+    _ensure_notes(base, tpl, member, lines)
     _install_tools(base, entries, member, lines)
     import aos_agent_access
     aos_agent_access.load(str(base))                      # access.json 要解得開、不蓋到信任資料

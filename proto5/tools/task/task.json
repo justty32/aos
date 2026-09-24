@@ -13,7 +13,7 @@
           "facts": {"type": "string", "description": "Facts file or short facts"},
           "done_when": {
             "type": "array",
-            "description": "Checks run after DONE: file_exists{path}, table_filled{path}, check{name,args}, judge{text} (judge = reviewer decides)",
+            "description": "Checks after DONE: file_exists{path}, table_filled{path}, check{name,args} (contains/not_contains{path,text}, wf_residue, wf_lint_strict), judge{text} (reviewer)",
             "items": {"type": "object", "properties": {"kind": {"type": "string", "enum": ["file_exists", "table_filled", "check", "judge"]}}, "required": ["kind"]}
           },
           "max_attempts": {"type": "integer", "minimum": 1, "maximum": 10},
@@ -76,5 +76,21 @@
       }
     },
     "_meta": {"argv": ["tools/task/ask_human"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "compact_me",
+      "description": "Shrink your own memory: old rounds become a short summary after this turn ends.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "reason": {"type": "string"},
+          "keep_rounds": {"type": "integer", "minimum": 0, "maximum": 1000, "description": "Recent rounds kept word for word"},
+          "max_tokens": {"type": "integer", "minimum": 100}
+        }
+      }
+    },
+    "_meta": {"argv": ["tools/task/compact_me"]}
   }
 ]
