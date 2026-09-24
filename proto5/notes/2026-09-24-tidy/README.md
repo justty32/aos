@@ -60,4 +60,8 @@
 
 ## 審查
 
-（見下節，astra 唯讀審一輪後補。）
+codex gpt-6-astra 唯讀審一輪：[任務書](review-task.md)、[回報](review-report.md)。結論：非 spec 的死連結 0、archive 那 102 條都指對檔、行號搬進文字沒弄壞表格、索引沒漏、SESSION-LOG 的 open 與 (a)～(f) 全在、09-24 全文除了連結多一層 `../` 外逐字、WAIT_USER 沒丟內容。挑出三條，都修了：
+
+1. （真問題，舊的）proto5 README 第 3 段說「`aos-kernel add` 退 0 代表 kernel 收了單、回了音」，但 `add --once` 沒帶 `--wait-ms` 時只印單名與回音路徑就退 0、不等回音——補上這個例外。
+2. （小，舊的）第 5 段「三行各印 `stopped`」：`aos-agent stop` 實際印 `stopped agent-bob`——改正。
+3. （小）session_logs 索引「WAIT_USER 集中說明」只連到「最小原型」那節——拆成兩列，各連自己的節。
