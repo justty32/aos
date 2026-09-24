@@ -17,6 +17,8 @@ inst.json 的格式與執行語意在 [inst-posix.md](../inst-posix/README.md)�
 
 ## 各節
 
+原文裡「檔尾〈沿革〉」「檔尾〈實作補記〉」「見下」這類方位詞是拆檔前的位置，拆後照下表找對應檔（`history.md`、`impl-notes.md`、`rulings.md` 等）。
+
 | 檔 | 內容 |
 |---|---|
 | [usage.md](usage.md) | 用法；三種目標：`xxx` 是什麼決定怎麼跑；旗標 |

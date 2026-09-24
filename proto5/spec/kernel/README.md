@@ -29,6 +29,8 @@ agent 那份要接的：怎麼用 `add --once` 問模型／跑工具、輸入檔
 
 ## 各節
 
+原文裡「檔尾〈沿革〉」「檔尾〈實作補記〉」「見下」這類方位詞是拆檔前的位置，拆後照下表找對應檔（`history.md`、`impl-notes.md`、`rulings.md` 等）。
+
 | 檔 | 內容 |
 |---|---|
 | [terms.md](terms.md) | §0 名詞：行程、tick、鏈、帳本、kernel cpu 等白話解釋 |

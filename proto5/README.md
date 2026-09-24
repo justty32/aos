@@ -41,7 +41,7 @@ aos-kernel check
 aos-kernel boot
 ```
 
-`check` 每行 `ok`／`warn`／`bad`；有 `bad` 先照提示修好再 boot。`kernel.json` 還能寫 `tick_ms`、`interval_ms`、`timeout_ms` 這些排程預設，格式就是 `K/info.json` 那幾格（[kernel.md §1.1、§6](spec/kernel/home.md)）。
+`check` 每行 `ok`／`warn`／`bad`；有 `bad` 先照提示修好再 boot。`kernel.json` 還能寫 `tick_ms`、`interval_ms`、`timeout_ms` 這些排程預設，格式就是 `K/info.json` 那幾格（kernel 規範 [§1.1](spec/kernel/home.md)、[§6](spec/kernel/cli.md)）。
 
 **3. 跑一次、跑反覆。**
 
