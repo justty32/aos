@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # inst 作為 CPU 指令的地位
-← [machine-shape](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [machine-shape](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 > **貫穿三份的一條線**：`instruction` 第 1、2 條與 `loop` 第 6 條是**同一個決定**——
 > **給「批」一個名字和一個 header**，它同時解決 ISA 版本、指令來源、與 loop 分支所需的旗標。

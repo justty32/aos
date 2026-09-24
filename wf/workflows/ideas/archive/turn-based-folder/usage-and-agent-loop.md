@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 怎麼跑起來：最基礎使用方式、agent loop 與單回合流程
-← [turn-based-folder](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [turn-based-folder](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 ## 最基礎的 aos 使用方式（方向已定）
 
@@ -43,7 +43,7 @@ aos exec --loop 0 監看 folder
 > **第一版 agent loop 不需要 `core/llms`**：`inst` 跑的是 POSIX 指令，所以「呼叫一次
 > 模型」可以先用任何一支現成的 LLM CLI 頂著，整個 loop 就是一份 `.aos/inst.json` 加幾
 > 支腳本。自家的 LLM CPU 是之後把它換掉，不是前置條件。見
-> [roadmap 的 T5／T6](../../roadmap.md)。
+> [roadmap 的 T5／T6](../../../roadmap.md)。
 
 - `aos agent start` 是使用者在指定資料夾內啟動 agent 的入口；它準備所需內容，並讓
   `.aos/inst.json` 的下一回合包含 `aos agent init ...`。
@@ -59,8 +59,8 @@ aos exec --loop 0 監看 folder
 
 - `core/inst` 提供「執行一次狀態轉移」的底層能力，`aos exec` 是它的子命令。
 - `core/llms` 與 `core/tooljson` 可提供 agent 回合中的思考與工具能力——但兩者目前的
-  形狀不符合本模型，要改造（見 [SESSION-LOG](../../../SESSION-LOG.md) 與
-  [roadmap](../../roadmap.md)）。
+  形狀不符合本模型，要改造（見 [SESSION-LOG](../../../../SESSION-LOG.md) 與
+  [roadmap](../../../roadmap.md)）。
 - **不再需要獨立的 `core/daemon`**：持續執行是 `aos exec --loop 0` 這個旗標，
   不是另一個小專案。
 - agent 初始化與 LLM 回合邏輯仍是建立在 `exec`／`inst` 之上的後續能力，不混進回合

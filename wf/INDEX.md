@@ -1,6 +1,6 @@
 # INDEX — aos 專案地圖
 
-整個專案的頂層導航。aos = **一個 monorepo：一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（第一個小專案是 `core/inst/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
+整個專案的頂層導航。aos = **一個 monorepo：一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（小專案清單見 [core/README](../core/README.md)）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
 
 ---
 
@@ -16,15 +16,16 @@
 | `cmake/` | 共用 CMake 函式（`aos_add_subproject()` 等）與 `find_package(aos CONFIG)` 的匯出設定 |
 | `common/` | `aos::common`，header-only，目前只有 `<aos/export.h>` |
 | `app/` | 唯一的執行檔 `aos`，靠子命令分派（如 `aos init`／`aos exec`）|
-| `core/` | **核心小專案**（aos 的基本組成，一定會建）。目前只有 `inst/`：lib `aos::inst`（`libaos_inst.so`）＋ `inst` 子命令。內部分工 → [code map](workflows/common/code-map.md) |
+| `core/` | **核心小專案**（aos 的基本組成，一定會建）：`exec`／`wire`／`loop`／`llm`／`agent`／`tick`（另有 `tool/`），各自一個 `aos::<name>` lib，清單在 [core/README](../core/README.md)。內部分工 → [code map](workflows/common/code-map.md) |
 | `modules/` | **擴充小專案**（可選，`-DAOS_BUILD_MODULES=OFF` 整批不建）。目前是空的。新增小專案 → [add-subproject](workflows/add-subproject.md) |
 | `docs/` | **整體文件**（給使用者與新加入的人）：總覽、建置、使用、新增小專案，以及最新的 [`aos-core-guide.md`](../docs/aos-core-guide.md)（目前的子命令與建置實況）。入口是 [docs/README.md](../docs/README.md)。**`.aos` 版面與回合模型的規格不在 `docs/`**，現有程式的唯一真源是 [PROTOCOL](workflows/dispatch/proto/PROTOCOL.md)，**另起爐灶的新實作**照 [workflows/spec/](workflows/spec/README.md)；階段表在 [`roadmap`](workflows/roadmap.md)。個別小專案自己的細節在它們的 `docs/`，例如 `core/inst/docs/` |
-| `proto*/` | **原型區**（任意語言、跟 `core/` 切開、不進 CMake）：現行有 [`proto5/`](../proto5/README.md)（規範先行：`spec/` 有 inst.json `posix` 格式與指示詞機制兩份規範，`lib/` 是指示詞機制的 Python 函式庫；proto4-3 自 2026-09-21 凍結當參考）、[`proto4-3/`](../proto4-3/README.md) 作業系統層、[`proto4-4/`](../proto4-4/README.md) 逐步 lisp、[`proto4-5/`](../proto4-5/README.md) LLM 兩層、[`proto4-6/`](../proto4-6/README.md) 逐步 JSON／Python／Lua；[`playground/`](../playground/README.md) 是給人玩的五站遊樂場，設計筆記在 [`proto4/notes/`](../proto4/notes/)，其餘舊版留著參考 |
+| `proto*/` | **原型區**（任意語言、跟 `core/` 切開、不進 CMake）：現行是 [`proto5/`](../proto5/README.md)（規範先行：`spec/` 規範、`lib/` Python 實作、`cli/` 六支指令 daemon→kernel→cpu＋agent，`notes/` 見 [notes 索引](../proto5/notes/README.md)）；[`proto5.1/`](../proto5.1/README.md) 是 09-22 的實驗場、只當紀錄；更早的 [`proto4-3/`](../proto4-3/README.md) 作業系統層（2026-09-21 凍結當參考）、[`proto4-4/`](../proto4-4/README.md) 逐步 lisp、[`proto4-5/`](../proto4-5/README.md) LLM 兩層、[`proto4-6/`](../proto4-6/README.md) 逐步 JSON／Python／Lua、[`proto4-7/`](../proto4-7/README.md) 簡單 agent；[`playground/`](../playground/README.md) 是給人玩的遊樂場，設計筆記在 [`proto4/notes/`](../proto4/notes/)，其餘舊版留著參考 |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](WORKFLOWS.md)；共享區 [workflows/common/](workflows/common/README.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣：頂層＝未處理、`done/`＝已處理（放信處，保持乾淨；使用方式見 [workflows/inbox/](workflows/inbox/README.md)）|
 | `wf/tools/` | kernel 工具：`wf-lint.sh`（檢查壞連結／錨點／超標檔／條列／殘留）、`tabledb.py`（資料檔 CRUD／連結）、`find_big_lists.py`、`fix_moved_links.py`、`check_anchors.py`；inbox 腳本：`inbox_send.sh`／`inbox_read.sh`（單一收件匣），`inbox_mail.sh`／`inbox_poll.sh`／`inbox_team.sh`／`notify_watch.sh`（五通道升級後才用）。資料檔契約見 [common/data-files](workflows/common/data-files.md) |
 | `wf/salvage/` | **`roadmap-run` 打撈包**（2026-08-29）：那條分支跑完 M0→M2 後被凍結、系統要重新架構，這裡是抽出來的教訓與已驗證結論——七篇，給「從零重寫這套系統的人」讀。入口見 [salvage/README](salvage/README.md) |
 | `.claude/commands/` | slash 指令（[`/wf-tick`](../.claude/commands/wf-tick.md) 驅動定期心跳、[`/wf-lint`](../.claude/commands/wf-lint.md) 跑文檔檢查）。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |
+| `reference/` | **移植用的原始碼**，不建置、不安裝（C++ 重寫時對照用），見 [reference/README](../reference/README.md) |
 | `thinking/` | **使用者自己的想法草稿**（下一輪 CLI：`aos-agent`／`aos-inst`／`aos-user`／`aos-tools`），是他的方向、不是定案；討論脈絡在 [proto4/notes §25](../proto4/notes/24-agent.md) |
 | `README.md` | 給人讀的專案總覽 |
 

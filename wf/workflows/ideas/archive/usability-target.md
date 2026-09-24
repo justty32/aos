@@ -19,7 +19,7 @@
 
 **第二級：指揮與管理 agent 團隊**——一隻主 agent 派生子 agent（各住一個資料夾），透過通訊錄投遞任務、
 收回報、看 `state.json` 知道誰在忙；使用者只跟主 agent 說話。比較對象是現在用 Claude Code 開隊的體驗
-（[team-model](../team-model.md)、[dispatch](../dispatch/README.md)）。
+（[team-model](../../team-model.md)、[dispatch](../../dispatch/README.md)）。
 
 ## 怎麼量「順手」
 
@@ -28,5 +28,5 @@
 
 ## 交接
 
-- 試用隊等 [proto-U-tools-impl](../dispatch/proto/done/proto-U-tools-impl.md) 落地後開；發現進 `wf/workflows/dispatch/trial/findings.csv`（`wf-table/1`）。
+- 試用隊等 [proto-U-tools-impl](../../dispatch/proto/done/proto-U-tools-impl.md) 落地後開；發現進 `wf/workflows/dispatch/trial/findings.csv`（`wf-table/1`）。
 - 第二級要先有通訊錄（裁決 12）與子 agent 派生的最小路徑；沒有就先記「做不到」當第一條發現。

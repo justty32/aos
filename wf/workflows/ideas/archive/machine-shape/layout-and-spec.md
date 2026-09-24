@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 資料夾結構、所需程式、規範
-← [machine-shape](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [machine-shape](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 **驗證過**：handoff 的 `aggregate`／`claim`／`release` **一個都沒進 C ABI**，也沒有 `deliver`。
 

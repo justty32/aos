@@ -2,7 +2,7 @@
 
 # scheduling — 有限的 LLM CPU 給所有 agent 共用，排程該怎麼做
 
-← [ideas](../README.md)｜前身 [llm-cpu](../llm-cpu.md)｜[top-down-cli §三](../top-down-cli.md)｜workshop [finite-resource-queue](../../workshop/records/finite-resource-queue.md)｜實測 [experiments](experiments.md)｜交接書 [proto-S-scheduling](../../dispatch/proto/done/proto-S-scheduling.md)
+← [ideas](../README.md)｜前身 [llm-cpu](../llm-cpu.md)｜[top-down-cli §三](../top-down-cli.md)｜workshop [finite-resource-queue](../../../workshop/records/finite-resource-queue.md)｜實測 [experiments](experiments.md)｜交接書 [proto-S-scheduling](../../../dispatch/proto/done/proto-S-scheduling.md)
 
 **記錄日期**：2026-08-30，隊 S（Fable 隊長＋codex ×3）。**純規劃，沒動程式。方向留給使用者，本頁只列選項＋建議＋代價。**
 
@@ -101,7 +101,7 @@ DeepSeek 官方帳號併發上限 2500，端點不會替我們擋「同時 3 個
 ## 八、交接
 
 - **待使用者**：模型載好時跑 [experiments §四](experiments.md) 的並行度腳本，把四行數字填回 §五（今天不能跑：POST 會觸發 JIT 載入）。
-- 拍板 1／2／3 之後：D → 開一條 `core/llm` 的實作線；B → 先寫 spool contract（請求檔、結果檔、六個目錄）再開 worker 線；兩者都要回頭改 [pi-cpu](../../../../core/agent/docs/pi-cpu.md) 的「pi 繞過」段。
+- 拍板 1／2／3 之後：D → 開一條 `core/llm` 的實作線；B → 先寫 spool contract（請求檔、結果檔、六個目錄）再開 worker 線；兩者都要回頭改 [pi-cpu](../../../../../core/agent/docs/pi-cpu.md) 的「pi 繞過」段。
 - 隊員成品原文（sol：盤點表＋log 掃描＋CPU 表欄位草案；terra：A/B＋CPU 表＋JSON 原型；luna：C/D＋回合邊界＋選 CPU）只留在隊長 scratchpad，本頁已合成；要看細節再開線重跑。
 - sol 對 CPU 表的一個提醒值得留：**表的列 ≠ 配額邊界**——本機容量按「載入的 instance」、DeepSeek 容量按「帳號」（多把 key 共用）、價格按「model」；欄位要分 `cpu_id`／`capacity_scope`／`credential_scope`／`model`，別把三件事塞進一個名字。
 

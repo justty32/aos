@@ -1,9 +1,9 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 版面與交接協定（工作假設，**尚未定案**）
-← [turn-based-folder](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [turn-based-folder](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
-> **規格已經抽走，現行正本是 [PROTOCOL](../../dispatch/proto/PROTOCOL.md)。** 版面、命名、
+> **規格已經抽走，現行正本是 [PROTOCOL](../../../dispatch/proto/PROTOCOL.md)。** 版面、命名、
 > 交接協定、路徑基準、版本、git 邊界一律以那份為準。下面這幾節留著是**脈絡**——記錄
 > 這些形狀是怎麼想出來的、為什麼不是別的樣子。兩邊不一致時以規格為準。
 
@@ -32,7 +32,7 @@
 > **`.runi`（已取走、正在跑）**。
 
 這條標準是為了 `.aos` 提前訂的，但它不限於 `.aos`；真的落地時應該升格進
-[conventions](../../common/conventions.md)。
+[conventions](../../../common/conventions.md)。
 
 ## 檔案版面
 

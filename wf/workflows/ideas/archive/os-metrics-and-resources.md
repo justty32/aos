@@ -90,13 +90,13 @@ serie 自報未來幾回合的資源消耗（cpu／llm…）與建議優先級�
 
 **e. 評估的「任務集」是什麼還沒有。** 現代 OS 有標準 benchmark 套件；aos 要能量，就需要
 **一組固定的 series 當 benchmark**。現成起點可能是
-[dispatch/trial](../dispatch/trial/README.md)：那個資料夾收 2026-08-30 兩級大量試用的成果
+[dispatch/trial](../../dispatch/trial/README.md)：那個資料夾收 2026-08-30 兩級大量試用的成果
 ——L1 單人／L2 團隊共 60 條發現（兩份 csv）＋ `repro/` 底下 28 支可重跑的最小重現腳本，當初
 就設計成**修完可以當回歸**。把它們從「重現 bug」改讀成「固定工作負載」，就是任務集的雛形。
 
 **f. aos 的計算資源是「LLM 呼叫」，而它的閥門不在我們手上。** 限速在 API 端（併發上限、
 rate limit、配額）。排隊那題已傾向**「外部處理器自己的家務」**
-（[WAIT_USER A5](../../WAIT_USER.md)，只等確認就收掉）。若那句成立，**「管理計算資源」
+（[WAIT_USER A5](../../../WAIT_USER.md)，只等確認就收掉）。若那句成立，**「管理計算資源」
 在 aos 可能只剩計量與預算，不含真的分配**——這會影響 [gaps `G16`](cpu-to-os-gaps.json)
 （配額、併發上限與排隊）該落在哪一層。
 
@@ -198,4 +198,4 @@ s. 整個堆疊是**下面大核心、上面微核心**：linux（大核心）�
 - [agent-messaging](agent-messaging.md)——訊息語意失真與三條對策（可理解性的落點之一）
 - [cpu-to-os-gaps](cpu-to-os-gaps.json)——L2 資源管理五條（`G15`–`G19`）、L4 的 `G23`
 - [core-layering](core-layering.md)——`core` 由內往外四圈；第七節 q 讀成微核心的形狀
-- [core/tick README](../../../core/tick/README.md)——heartbeat／routine／schedule；第七節 p 的軟即時落點
+- [core/tick README](../../../../core/tick/README.md)——heartbeat／routine／schedule；第七節 p 的軟即時落點

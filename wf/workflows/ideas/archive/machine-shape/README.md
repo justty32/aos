@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 這台機器的形狀 — 導航
-← [ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 使用者**迫切想確定**的三件事：`inst` 作為 CPU 指令的地位、稍微外圈的 loop、以及承載整套
 體系的資料夾結構／所需程式／規範。這一組逐項拷問這三塊。

@@ -15,6 +15,8 @@
 
 ### A. 等你一句話（其餘我都做得下去，卡的只有這幾條）
 
+> 編號是固定的（別處用「WAIT_USER 第 N 條」引用），拍掉的號碼不回收，所以會跳號（1、2、7 已結；9 移到 C）。
+
 3. **辯論場的四件轉交提案**：`deliver`／`aos enqueue` 要不要插進 T5 之前、「回合中途死掉
    的洞」歸不歸 roadmap 第六節、`k/`／`c/` 兩層命名進不進 `.aos` 標準、有限資源要不要
    獨立成 idea。**四件都是改規格文件，要人拍板。**
@@ -27,20 +29,15 @@
    → [finite-resource-queue](workflows/workshop/records/finite-resource-queue.md)
 6. **proto2：子 agent 會自動繼承 `spawn` 工具**，子孫一路都能生小孩（驗過三層）。要不要擋、要不要限深度？（使用者 09-06 說「之後再說」）→ [proto2/README](../proto2/README.md)
 8. **proto2：agent 之間的交流（tell／hear，或子回話自動變父的信）**先不做，什麼時候做、走哪種？→ [proto2/README](../proto2/README.md)
-9. **proto2：拍板題 T-01～T-77 全照建議做了（使用者 09-06 說「都 OK」）**；要翻案就回編號。→ [notes/tools/README.md](../proto2/notes/tools/README.md)
 10. **proto2：玩出來的 25 條效能與邊緣狀況、各包想要但沒有的接點**，要你看過說哪些現在要做。→ [notes/play/README.md](../proto2/notes/play/README.md)、[docs/packs-api.md](../proto2/docs/packs-api.md) 最後一節
-
-
 11. **proto2 工作室：預算要不要對 cached token 打折**——claude-cli／anthropic 的 prompt_tokens 把 cache_read 也算進去（真實價格約 1/10），4d 帳面 841k 裡一半以上是 cache。選項：閘門只算 prompt−cached＋completion；或另開一個「真實成本」欄。→ [journey 第 10 節](../proto2/notes/2026-09-07-studio-journey.md)
 12. **proto2 工作室：dev 的對話史**——haiku 一輪 10k 漲到 20k，一個任務 21 輪 325k。要不要每個任務開新對話史（做完就清、只留任務說明＋檔案清單）？→ 同上
-13. **preset 的 `max_per_member`**——100k 對 claude-cli 太低（4d 手動抬到 500k）。改成 300k？還是照引擎不同給不同值？
-
-14. **proto5 重架構收線後的八題**（都不卡實作，agent 重寫照現況做）：(a) 跨代 stop——已送進 cpu 家的舊 stop 在 boot 後仍有效、新 kernel cpu 可能一開機就停，要不要讓 boot 去刪 cpu 家裡舊 chain 的 stop 檔（違反「不由外人刪 cpu 家的檔」）？(b) `kernel.log` 要不要輪替／限大小？(c) 硬砍 kernel cpu 時另一組的 tick 子程式可能還活著，要不要補 kill-tree？(d) agent 連敗暫停要不要改成明確 `fail` 狀態（[cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)）？(e) `pause`（09-24 你已拍：kernel 照跑、agent 不動，fix-r4 在做）：門關了還收不收結果？(f) agent 要不要在 info 記自己屬於哪個 K（現在只在 tick.json 與 batch.kernel）？(g) 模型多回的欄位（`reasoning_content`）收回時要不要拿掉——現在原樣進記憶、下一問原樣送回，推理長的模型記憶會一起長大；(h) 封存檔 `*.<消費 id>.done` 誰清、何時清（每收一次輸入多一個，agent 不清）？→ [impl-fix-round1](../proto5/notes/2026-09-23-rearch/impl-fix-round1.md)、[agent-round2-changes](../proto5/notes/2026-09-23-rearch/agent-round2-changes.md)、[agent-impl-findings](../proto5/notes/2026-09-23-rearch/agent-impl-findings.md)
+13. **preset 的 `max_per_member`**——100k 對 claude-cli 太低（4d 手動抬到 500k）。改成 300k？還是照引擎不同給不同值？→ 同上
+14. **proto5 重架構收線後的八題**（都不卡實作，agent 重寫照現況做）：(a) 跨代 stop——已送進 cpu 家的舊 stop 在 boot 後仍有效、新 kernel cpu 可能一開機就停，要不要讓 boot 去刪 cpu 家裡舊 chain 的 stop 檔（違反「不由外人刪 cpu 家的檔」）？(b) `kernel.log` 要不要輪替／限大小？(c) 硬砍 kernel cpu 時另一組的 tick 子程式可能還活著，要不要補 kill-tree？(d) agent 連敗暫停要不要改成明確 `fail` 狀態（[cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)）？(e) ~~`pause` 門關了還收不收結果~~——fix-r4 已做掉：暫停中 tick 直接退 0，連回音也不收（aos-agent.md §1.6，[fix-r4 筆記](../proto5/notes/play/fix-r4.md)），要翻案再說；(f) agent 要不要在 info 記自己屬於哪個 K（現在只在 tick.json 與 batch.kernel）？(g) 模型多回的欄位（`reasoning_content`）收回時要不要拿掉——現在原樣進記憶、下一問原樣送回，推理長的模型記憶會一起長大；(h) 封存檔 `*.<消費 id>.done` 誰清、何時清（每收一次輸入多一個，agent 不清）？→ [impl-fix-round1](../proto5/notes/2026-09-23-rearch/impl-fix-round1.md)、[agent-round2-changes](../proto5/notes/2026-09-23-rearch/agent-round2-changes.md)、[agent-impl-findings](../proto5/notes/2026-09-23-rearch/agent-impl-findings.md)
 15. **daemon 崩潰窗口測試（C-2／C-3）挖出的兩題**（不卡實作）：(a) daemon 回完音、刪原單前被 KILL——回音裡的 `pid` 已被新任 daemon 弄死，規範沒說回音的 pid 可能過期，要不要在 daemon.md 補一句？(b) 舊孩子的 pid 若被別的使用者的程序重用，新任 daemon 送 TERM 失敗會直接退 1、不自救——要不要改成「發不出 TERM 就當它已消失」？→ [daemon-crash](../proto5/notes/2026-09-24-daemon-crash/README.md)
 16. **問模型的 endpoint 壞掉要不要做自動換手**（原 backlog `llm-cpu-fallback`）：現在一個模型代號在 llm.json 只認一個 endpoint、不重試；要支援就要把 `models` 表一個代號改成一串。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
 17. **kernel 排隊要不要加期限**（原 backlog `kiss-holes` 第 2 條的 kernel 那半）：`queue` 裡等派工的行程沒有期限，只有 `timeout_ms` 管跑的時間；agent 那半（半批沒送完永遠等）已有手動 escape（stop 後把 `batch` 設 `null`）。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
 18. **once 工作綁在 `tick_ms` 的延遲算不算要處理**（原 backlog `review-leftovers` R11）：kernel 一格派、下一格才收，一次問答最快也要等一格；09-23 已判「算不算要做要人判」，agent 重寫沒碰這塊。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
-
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
@@ -58,9 +55,6 @@
 - **workshop 那四個設計選擇**（World 抽象、`kernel.json` 分層合成、子行程拓樸、親緣綁
   路徑還是 UUID）——你明講「窩不想看惹」，方向是**用實測取代拍板**，所以不列 A 區。
 - **top-down-cli 的 14 條**——已裁「實作時順便解決」。
+- （原 A.9）**proto2：拍板題 T-01～T-77 全照建議做了（使用者 09-06 說「都 OK」）**；要翻案就回編號。→ [notes/tools/README.md](../proto2/notes/tools/README.md)
 
-> 2026-08-24：原本卡著的「移植 S2 的決策 A（`core/tooljson` 的 exec 引擎自己寫還是動
-> `core/inst`）」已經整條解掉——使用者批准解凍 `core/inst`，並拍板 `stderr` 併流用
-> `{"$opt": "merge"}` 由 `inst` 自己支援；`core/tooljson` 本身則
-> 先不動、排在 agent loop 之後。設計上還沒答完的細節不放這裡——它們不卡使用者，記在
-> [`roadmap`](workflows/roadmap.md) 與各 idea 文件的開放問題。
+> 設計上還沒答完、但不卡你的細節不放這裡——記在 [`roadmap`](workflows/roadmap.md) 與各 idea 文件的開放問題。

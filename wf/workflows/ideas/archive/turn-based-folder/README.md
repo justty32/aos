@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 指定資料夾的回合制演化模型 — 導航
-← [ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 aos 的核心心智模型：指定資料夾是被演化的世界，一份 `inst` 推進一回合。這個資料夾把原本一整檔的內容按職責分成四塊——模型本身、當初推導版面的脈絡、怎麼跑起來、以及決策狀態。
 

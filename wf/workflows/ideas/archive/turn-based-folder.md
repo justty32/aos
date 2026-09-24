@@ -2,7 +2,7 @@
 
 # 指定資料夾的回合制演化模型
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 aos 的核心心智模型：指定資料夾是被演化的世界，一份 `inst` 推進一回合。內容已拆進 [`turn-based-folder/`](turn-based-folder/README.md)。
 

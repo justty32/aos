@@ -2,7 +2,7 @@
 
 # 三段式生產線：寫 → 編譯 → 執行（§二十–§二十一）
 
-← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 [c-language](c-language.md) 把 C 的函數／堆疊框對應到串之後，剩下的問題是
 **巢狀運算式與型別由誰拆平**。使用者在 2026-09-01 同日拍了這件事，於是長出一條生產線。

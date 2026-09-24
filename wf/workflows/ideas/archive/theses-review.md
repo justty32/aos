@@ -2,7 +2,7 @@
 
 # 根基三論的複審（2026-09-01，主 session ＋ 兩個 fork）
 
-← [ideas](README.md)｜上游 [turing-to-os](turing-to-os.md)、[program-form](program-form.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜上游 [turing-to-os](turing-to-os.md)、[program-form](program-form.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 **這一整篇都是 AI 的觀察，不是裁決，使用者可否決。** 記的是 2026-09-01 上午主 session 與
 兩個 fork（理論／工程）就根基論證做的一次複審。它**不新增方向**，只指出既有論證的
@@ -54,7 +54,7 @@
 **推論**：為了效率把相依步驟塞進同一批的那一天，**REPL 讀法即刻破產**——REPL 的語意是
 一句求值完看到結果再下一句，同批內有依賴就沒有「看到結果」這個點。所以
 [verdicts B3](verdicts.md)（一回合內沒有資料流，已寫進
-[PROTOCOL §5](../dispatch/proto/PROTOCOL.md#5-一回合)）不只是實作現況，它**還是 REPL
+[PROTOCOL §5](../../dispatch/proto/PROTOCOL.md#5-一回合)）不只是實作現況，它**還是 REPL
 讀法的存在條件**。
 
 **兩條讀法在缺口上收斂到同一處**：
@@ -109,7 +109,7 @@ namespace **必須在 `fork` 之後、`execve` 之前**建，只有 exec 層碰�
 
 **「文件是程式碼的上游」成立的前提是有回寫協定。** 當日 `verdicts.md` 漂掉已修復，
 「**實作閉合就在同一個 commit 回寫文件**」的提議也已在該次 commit 落實為做法。要不要立成
-[AGENTS.md](../../../AGENTS.md) 鐵律第 3 條（改程式碼就同步 code map）的姊妹條，
+[AGENTS.md](../../../../AGENTS.md) 鐵律第 3 條（改程式碼就同步 code map）的姊妹條，
 **使用者未裁——記為開放**。
 
 ## 相關

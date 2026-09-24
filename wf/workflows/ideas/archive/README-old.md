@@ -2,7 +2,7 @@
 
 # ideas — 構想記錄入口
 
-← [WORKFLOWS](../../WORKFLOWS.md)｜[INDEX](../../INDEX.md)
+← [WORKFLOWS](../../../WORKFLOWS.md)｜[INDEX](../../../INDEX.md)
 
 記錄尚未進入 spec／plan／feature-dev 的產品構想。這裡保存的是**方向、心智模型與待釐清
 問題**，不是已實作行為；構想準備落地時，再轉交對應工作流。
@@ -50,10 +50,10 @@
 
 > **現況落差**：使用者已判定 `core/llms` 與 `core/tooljson` 是失敗作——它們不符合這裡
 > 記的回合制／抽象 CPU 模型，之後要找時間改到符合。所以讀這些構想時別把現有程式碼
-> 當成它們的實作。open 狀態記在 [SESSION-LOG](../../SESSION-LOG.md)。
+> 當成它們的實作。open 狀態記在 [SESSION-LOG](../../../SESSION-LOG.md)。
 
 > **落地順序**：這些構想要照什麼順序做、哪些決策擋著哪一階段，見
-> [`roadmap`](../roadmap.md)。那份只排順序，模型定義仍以本目錄為準。
+> [`roadmap`](../../roadmap.md)。那份只排順序，模型定義仍以本目錄為準。
 
 新增內容優先歸入既有主題；出現獨立方向時才新增內容檔。構想被正式 spec／plan 取代後，
 在這裡改留指標，不讓 idea 文件與已拍板規格形成兩份真相。

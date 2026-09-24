@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 第二輪：fork/exec 這個原語夠不夠通用
-← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 上一節問的是**格式與序列化**；這一節問的是 **fork/exec 這個原語本身夠不夠通用**。
 結論先講：**invocation 層面夠，interface 層面不夠，而且界外有六樣東西。**

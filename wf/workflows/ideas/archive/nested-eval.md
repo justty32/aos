@@ -2,7 +2,7 @@
 
 # list 裡還有 list：運算式巢狀與資料夾巢狀
 
-← [program-form](program-form.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [program-form](program-form.md)｜[ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 **本檔是 [program-form](program-form.md) 的續篇**——那份已經超過檔案大小上限，所以使用者
 2026-09-03 接著問的這一題另開一檔。**本檔無裁決**：除了「使用者提問」那節的原話之外，

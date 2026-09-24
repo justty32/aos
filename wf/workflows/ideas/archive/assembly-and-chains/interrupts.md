@@ -2,7 +2,7 @@
 
 # 中斷、跳轉與「批」的裁決（§一–§八）
 
-← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 ## 第一部分 · 使用者口述
 
@@ -52,7 +52,7 @@
 ### 七、中斷天然落在 tick 邊界（C 區「沒有中斷線」可以結）
 
 現行管線是**整批 claim 進 `batch/<turn>/insts/` 之後才執行**
-（[PROTOCOL §5](../../dispatch/proto/PROTOCOL.md#5-一回合)）。這使外部投遞
+（[PROTOCOL §5](../../../dispatch/proto/PROTOCOL.md#5-一回合)）。這使外部投遞
 **打不進一個 tick 的中間**，只能落在兩個 tick 之間——**和遊戲模型「輸入在 frame 邊界處理」
 是同一件事**。所以：
 
@@ -62,7 +62,7 @@
 
 ### 八、（開放項）`deliver` 撞名的碰撞規則，是中斷語意的前置
 
-`aos deliver <file.json>` **撞名無聲覆蓋**已記在 [gotchas](../../common/gotchas.md)（實作缺陷）。
+`aos deliver <file.json>` **撞名無聲覆蓋**已記在 [gotchas](../../../common/gotchas.md)（實作缺陷）。
 但在這條線上它**從 gotcha 升格成語意問題**：鏈自投的後繼、與外部中斷，**寫的是同一格**，
 現在是 **last-writer-wins、無警告**。也就是說「中斷覆蓋跳轉」與「跳轉覆蓋中斷」目前**都會
 無聲發生**，而哪個該贏沒人定過。

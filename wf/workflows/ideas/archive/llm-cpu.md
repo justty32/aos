@@ -2,7 +2,7 @@
 
 # 全域 LLM CPU 與跨資料夾排程
 
-← [ideas](README.md)｜[回合制資料夾](turn-based-folder.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[回合制資料夾](turn-based-folder.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 ## 前提：LLM CPU 疊在 `inst` 之上（方向已定）
 
