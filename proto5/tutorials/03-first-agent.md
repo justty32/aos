@@ -28,12 +28,26 @@ aos-agent init --target $W/bob
 ## 2. 檢查
 
 ```sh
-aos-agent check --target $W/bob
+aos-agent check --target $W/bob --probe
 ```
 
-<!-- TODO A隊合併後補實際輸出（aos-agent check 新指令） -->
-每行 `ok`／`warn`／`bad`：設定讀不讀得懂、它要的池（`default`、`llm`）kernel 有沒有、模型代號在不在 `llm.json`、工具找不找得到。
-加 `--probe` 會真的問一次模型端點。有 `bad` 就照提示修。
+你會看到（先把 kernel 整段查一遍，再查這個家）：
+
+```text
+ok   kernel: K＝/home/you/aos-try/K（取自 AOS_KERNEL_HOME）
+ok   info: kernel 設定讀驗通過
+…（跟 01 第 5 步一樣的 kernel 項目）
+ok   agent: agent 設定讀驗通過
+ok   agent/tick.pool: 池 default 存在
+ok   agent/llm.pool: 池 llm 存在
+ok   agent/llm.model: 模型 default 存在
+ok   agent/tool/date: 可執行 date
+ok   probe/default: endpoint 通，模型清單裡有 deepseek-chat（endpoint http://localhost:4000/v1，模型 deepseek-chat）
+設定檢查通過；模型連線也測過
+```
+
+它查：設定讀不讀得懂、它要的池（`default`、`llm`）kernel 有沒有、模型代號在不在 `llm.json`、工具找不找得到；`--probe` 真的問一次模型端點。
+有 `bad` 就照提示修，最後一行會說「修好再 aos-agent start」。K 從 `AOS_KERNEL_HOME` 找（沒設就用上次 `start` 記在家裡的）。（[check 規範](../spec/aos-agent/cli-check.md)）
 
 ## 3. 登記、說一句、等回話
 

@@ -53,7 +53,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-kernel init --config FILE` | 照一份 JSON 建 kernel 的家（cpu 表、排程預設） | [01](tutorials/01-daemon-kernel.md) |
 | `aos-kernel check [--probe]` | 開機前檢查 kernel 家、daemon、PATH、llm 設定；`--probe` 真的打一次模型端點 | [01](tutorials/01-daemon-kernel.md) |
 | `aos-kernel boot`／`halt` | 拉起 cpu、開始排程／停排程並等 cpu 都退出 | [01](tutorials/01-daemon-kernel.md) |
-| `aos-kernel ls [--json]` | 全局：第一行 `health`，再來 cpu、行程、佇列 | [01](tutorials/01-daemon-kernel.md)、[05](tutorials/05-many-agents.md) |
+| `aos-kernel ls [-v] [--json]` | 全局：第一行 `health`，再來 cpu 表、行程表、佇列；`-v` 印完整路徑、`--json` 給程式讀 | [01](tutorials/01-daemon-kernel.md)、[05](tutorials/05-many-agents.md) |
 | `aos-kernel add INST [--once]` | 登記一份工作：跑一次，或反覆跑到做完 | [02](tutorials/02-kernel-jobs.md) |
 | `aos-kernel rm NAME`／`ack NAME` | 撤掉一份工作／簽收一則回音 | [02](tutorials/02-kernel-jobs.md) |
 | `aos-agent init` | 生一個最小可跑的 agent 家 | [03](tutorials/03-first-agent.md) |
@@ -86,7 +86,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | [spec/kernel/](spec/kernel/README.md) | kernel：替登記的工作挑空 cpu 派下去、收結果、決定要不要再跑；每次只跑一格 `aos-kernel tick`，格接格排程 | 2026-09-23 定稿；實作 [`lib/aos_kernel.py`](lib/aos_kernel.py)（`aos-kernel`；09-24 拆成 `aos_kernel_*.py` 幾支） |
 | [spec/daemon/](spec/daemon/README.md) | daemon：所有 cpu 的父行程，只管孩子的啟動、重拉、停止；家也照 cpu 範式長 | 2026-09-23 定稿；實作 [`lib/aos_daemon.py`](lib/aos_daemon.py)（`aos-daemon`） |
 | [spec/agent/](spec/agent/README.md) | 一個 agent 就是一個資料夾：info.json 記人格、記憶、工具與排程設定；state.json 記三格進度、批次與恢復紀錄 | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent_home.py`](lib/aos_agent_home.py)＋[`lib/aos_agent_info.py`](lib/aos_agent_info.py) |
-| [spec/aos-agent/](spec/aos-agent/README.md) | `aos-agent tick／start／stop [--target DIR]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`listen`／`status`／`pause`／`continue` 在 §1（09-24 試玩 r2 補；fix-r4 改 `--target`、`listen`、`pause`、tick 鎖） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
+| [spec/aos-agent/](spec/aos-agent/README.md) | `aos-agent tick／start／stop [--target DIR]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`listen`／`status`／`pause`／`continue`／`check` 在 §1（09-24 試玩 r2 補；fix-r4 改 `--target`、`listen`、`pause`、tick 鎖；advice-r1 加 `check`） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
 | [spec/aos-llm/](spec/aos-llm/README.md) | `aos-llm call [AGENT_DIR]`（09-24 fix-r4 由 `aos-llm-call` 改名）：讀 agent 家與 `AOS_LLM_CONFIG`、組請求、打一次 HTTP、印模型回的 message | 2026-09-24 定稿第 2 版；實作 [`lib/aos_llm_call.py`](lib/aos_llm_call.py) |
 
 ## 程式
