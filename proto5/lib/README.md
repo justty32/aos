@@ -45,6 +45,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_kernel_cli.py`](aos_kernel_cli.py) | `aos-kernel` 參數解析與 `main` |
 | [`aos_up.py`](aos_up.py) | （09-24 one-boot）`aos up`／`aos down`：需要的 daemon 沒在跑就開（背景、`D/daemon.log`）→ `aos-kernel boot` → 等第一格；down＝halt → 沒人用的 daemon 一起停 |
 | [`aos_llm_call.py`](aos_llm_call.py) | `aos-llm call`：讀驗 llm.json、組 body、HTTP、正規化並驗 message |
+| [`aos_llm_ask.py`](aos_llm_ask.py) | （第三波 W3-2）不需要 agent 家的「多問一次模型」：`ask`／`ask_json`／`parse_json`，給工具的模型選項共用；temperature 0、不重試 |
 | [`aos_agent.py`](aos_agent.py) | agent 的 tick 三格流程、批次派工與 kernel 排程登記；`main` 轉給 aos_agent_cli |
 | [`aos_agent_cli.py`](aos_agent_cli.py) | `aos-agent` 各子命令的 argparse 與分派 |
 | [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（人格／記憶／工具、message）與 `aos-llm call` 的六格 loader |
@@ -64,12 +65,13 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_check.py`](aos_agent_check.py) | `aos-agent check`：找 K、跑 kernel 檢查、再查 agent 家、工具與權限牆 |
 | [`aos_agent_tools.py`](aos_agent_tools.py) | `aos-agent tools add`：裝工具包或原地引用工具檔／資料夾 |
 | [`aos_agent_tools_edit.py`](aos_agent_tools_edit.py) | `aos-agent tools ls／rm／alias／unalias` 與共用的 info 編輯（管理鎖、試算後整份重寫） |
-| [`aos_agent_tools_dev.py`](aos_agent_tools_dev.py) | （第二波 A 隊，spec/aos-agent/tools-dev.md）造工具：`tools new`（骨架）、`tools test`（照工具檔描述自動跑正例／型別錯／缺參數＋`cases.json`，預設用 aos-jail 關牢）、`tools wrap-py`（`ast` 靜態讀 Python 檔、有註解的函式包成工具包、拒收表）；不需要 agent 家、不叫模型 |
+| [`aos_agent_tools_dev.py`](aos_agent_tools_dev.py) | （第二波 A 隊，spec/aos-agent/tools-dev.md）造工具：`tools new`（骨架）、`tools test`（照工具檔描述自動跑正例／型別錯／缺參數＋`cases.json`，預設用 aos-jail 關牢）、`tools wrap-py`（`ast` 靜態讀 Python 檔、有註解的函式包成工具包、拒收表）；不需要 agent 家、不叫模型（wrap-py 的 `--describe-with-llm` 例外：第三波 W3-2，只寫提案檔、人看過用 `--describe` 才產包） |
+| [`aos_agent_tools_wrapcli.py`](aos_agent_tools_wrapcli.py) | （第三波 W3-2，spec/aos-agent/tools-wrapcli.md）`tools wrap-cli CMD`：argparse 靜態讀／`--help` 文字規則解 → 工具包；`--describe-with-llm` 只寫提案、`--spec` 照人看過的表產包 |
 | [`aos_agent_access.py`](aos_agent_access.py) | 權限牆（access.json）讀驗、信任資料、重疊檢查、快照 |
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
 | [`aos_agent_events.py`](aos_agent_events.py) | 事件紀錄（tool-era T4，spec/agent/events.md）：agent 家 `log/events.jsonl` 一行一事件（收件、每批起訖、壓縮），`aos-llm call` 的 `log/usage.jsonl` token 用量；只有持 `.tick.lock` 的一方寫，至少一次＋去重，滿了自動輪換 |
 | [`aos_agent_context.py`](aos_agent_context.py) | `aos-agent context`（tool-era T4，cli-memory.md）：送給模型的東西多大，人格＋記憶＋工具的字數／token 粗估；跟 `talk` 的 `/context` 共用同一份算法 |
-| [`aos_agent_compact.py`](aos_agent_compact.py) | `aos-agent compact`（tool-era T4，spec/agent/compact.md）：機械壓縮記憶（封存＝8 KB 機械摘要），tick idle 時的自動壓縮、`compact` 申請、`history --archive`；不叫模型，每步可重跑 |
+| [`aos_agent_compact.py`](aos_agent_compact.py) | `aos-agent compact`（tool-era T4，spec/agent/compact.md）：機械壓縮記憶（封存＝8 KB 機械摘要），tick idle 時的自動壓縮、`compact` 申請、`history --archive`；不叫模型，每步可重跑。`--summarize`（第三波 W3-2，spec/agent/compact-summarize.md）：人用的旗標，模型濃縮封存摘要、機械檢查不過退回 |
 | [`aos_agent_notes.py`](aos_agent_notes.py) | `aos-agent notes ls／show`（tool-era T4）：讀 `tools/notes/` 那支 `note` 工具寫的 `wf-table/1` 長期筆記檔，不叫模型 |
 | [`aos_agent_persona.py`](aos_agent_persona.py) | `aos-agent persona show／set／append`（第二波 C 隊，spec/agent/persona.md）：人格是信任資料，模型只能用 `persona_propose` 提案，人批了才用這支寫進 `prompts/system.json`；不叫模型、不進牢 |
 | [`aos_jail.py`](aos_jail.py) | `aos-jail`：組 bwrap 參數並 exec（工具關進牢裡跑） |
@@ -81,7 +83,8 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_cli.py`](aos_team_cli.py) | `aos-team` 的分派表：子命令 →（模組、函式、哪一隊做、一句話），還沒做的印「還沒做（第 N 隊）」退 1 |
 | [`aos_team.py`](aos_team.py) | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
 | [`aos_team_ask_cli.py`](aos_team_ask_cli.py) | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
-| [`aos_team_route.py`](aos_team_route.py) | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型；`route try` 只印判決、什麼都不做（第二波 A 隊）；`tool` 規則經 aos-jail 關牢（專案預設唯讀，第二波 B 隊） |
+| [`aos_team_route.py`](aos_team_route.py) | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型；`route try` 只印判決、什麼都不做（第二波 A 隊）；`tool` 規則經 aos-jail 關牢（專案預設唯讀，第二波 B 隊）；落穿那行記 `letter`（第三波 W3-2） |
+| [`aos_team_crystal.py`](aos_team_crystal.py) | （第三波 W3-2，spec/team/crystal.md）`aos-team crystal` 固化建議：落穿句型統計、機械候選規則＋回測，只寫提案檔；`--suggest-with-llm` 預設關 |
 | [`aos_team_mail.py`](aos_team_mail.py) | `aos-team mail`（第二波 A 隊從 `aos_team_post.cmd_mail` 接手，讀法與一行印法仍用郵差那份）：多列等人回答的題目（`ASK q-0001`，答完先顯示答案）；`--task` 連落穿給領隊的那封一起列 |
 | [`aos_team_task_cli.py`](aos_team_task_cli.py) | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
 | [`aos_team_post.py`](aos_team_post.py) | 郵差兼書記（tool-era T2，spec/team/post.md）：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER；崩在任何一步重跑同一行都收得回來，不叫模型 |
@@ -98,7 +101,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2370 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2490 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -497,10 +500,10 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2370 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2490 條；repo 根目錄
 ```
 
-共 86 個測試檔、2370 條（第二波 C 隊在第二波 B 隊之上實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
+共 90 個測試檔、2490 條（第三波 W3-2 隊在 main d6603b9 之上實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
@@ -589,6 +592,10 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_escape.py](test/test_team_escape.py) | 第二波 B 隊驗收③逃逸測試：`aos-team init` 生真團隊，工具走 `tool_inst` 真送件路徑進 bwrap；讀別人的家、寫 access.json／工具包、寫別人的 outbox、硬連結、冒名、假信頭、越權申請、符號連結、主機 /tmp、環境與網路、wf_doc 讀快照、wf_init staging 在牢裡 |
 | [test_notes_recall_context.py](test/test_notes_recall_context.py) | 第二波 B 隊：notes 包的 `recall`、`context` 兩支工具（token 粗估跟 aos_agent_context 同一套）、`mem` 唯讀掛點（新家、舊家補掛、保留名）、真牢裡寫不進 `/work/mem` |
 | [test_team_lock.py](test/test_team_lock.py) | 第二波 C 隊 `aos_team_lock`（lock.md）：acquire／release／ls、Busy 拒絕、同持有者續租、過期可被搶／可被別人放、冪等、`may_send`、`cmd_lock` |
+| [test_llm_ask.py](test/test_llm_ask.py) | 第三波 W3-2 `aos_llm_ask`：假端點、temperature 0、`parse_json` 各種包法、沒設定／端點掛；`context` 的「上一次問模型」略過 compact 濃縮那一問 |
+| [test_agent_tools_wrapcli.py](test/test_agent_tools_wrapcli.py) | 第三波 W3-2 `tools wrap-cli` 與 wrap-py 描述：fixture（[fixtures/wrapcli/](test/fixtures/wrapcli/)）argparse 靜態讀與拒收、GNU／怪 help 解析、標準答案比分、`run` 組 argv 不經 shell、提案檔只寫不產包、`--spec`／`--describe` 核 sha（假 ask，不打真模型） |
+| [test_compact_summarize.py](test/test_compact_summarize.py) | 第三波 W3-2 `compact --summarize`：假 ask 回好的／太長／丟關鍵詞／含 `[aos`／丟例外 → 退回機械版照樣縮、dry-run 不叫不寫、tick 自動與申請絕不叫模型、usage 有記、崩在 archive 後重跑 |
+| [test_team_crystal.py](test/test_team_crystal.py) | 第三波 W3-2 `aos-team crystal`：route.log 的 `letter`、句型骨架、機械候選全過 route test、舊 log 靠原文對信、群組只收相對路徑、`--suggest-with-llm` 的機械檢查（假 ask） |
 | [test_agent_persona.py](test/test_agent_persona.py) | 第二波 C 隊 `aos_agent_persona`（persona.md）：show／set／append、自訂 `system` 路徑、壞檔、用法錯、`aos-agent persona` CLI 接線 |
 
 共用工具（不是測試檔）：[\_util.py](test/_util.py)（底層／agent）、[\_daemon_util.py](test/_daemon_util.py)

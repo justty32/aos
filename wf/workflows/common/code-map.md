@@ -104,6 +104,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_up` | （one-boot，入口 `cli/aos`）`aos up`：daemon 沒在跑就開→`aos-kernel boot`→等第一格；`aos down`：halt→沒人用的 daemon 一起停 |
 | `test/test_one_boot.py` | one-boot 的真 daemon＋真 tick 測試：交易中 kill -9 回滾、tick 逾時與連敗、新單觸發、同時一格、`aos up`／`down` 不留行程、舊帳本匯入 |
 | `aos_llm_call` | `aos-llm call`：問模型一次 |
+| `aos_llm_ask` | （第三波 W3-2）不需要 agent 家的「多問一次模型」：工具的 `--describe-with-llm`／`--summarize`／`--suggest-with-llm` 共用；temperature 0、從回話抽 JSON |
 | `aos_agent` | agent 的 tick 三格、批次派工、kernel 排程登記 |
 | `aos_agent_cli` | `aos-agent` 各子命令的 argparse 與分派 |
 | `aos_agent_home` | agent 家的內容讀驗與 `aos-llm call` 的六格 loader |
@@ -122,12 +123,13 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_agent_check` | `aos-agent check`（kernel 檢查＋agent 家、工具、權限牆） |
 | `aos_agent_tools` | `aos-agent tools add` |
 | `aos_agent_tools_edit` | `aos-agent tools ls／rm／alias／unalias` 與共用 info 編輯 |
-| `aos_agent_tools_dev` | `aos-agent tools new／test／wrap-py`：造工具（骨架、照描述自動跑案例、Python 函式包成工具包），不需要 agent 家 |
+| `aos_agent_tools_dev` | `aos-agent tools new／test／wrap-py`：造工具（骨架、照描述自動跑案例、Python 函式包成工具包），不需要 agent 家；wrap-py 的 `--describe-with-llm`（只寫提案檔）／`--describe`（照人看過的提案產包）（第三波 W3-2） |
+| `aos_agent_tools_wrapcli` | （第三波 W3-2）`aos-agent tools wrap-cli CMD`：argparse 腳本靜態讀、其他指令解 `--help` 文字 → 工具包（`run` 把 JSON 組成 argv、不經 shell）；`--describe-with-llm` 只寫提案、`--spec` 照人看過的參數表產包 |
 | `aos_agent_access` | 權限牆（access.json）讀驗與快照 |
 | `aos_agent_access_cli` | `aos-agent access ls／set／rm／cwd／net` |
 | `aos_agent_events` | 事件紀錄：`log/events.jsonl` 追加與去重讀取，`aos-llm call` 的 `log/usage.jsonl` |
 | `aos_agent_context` | 送給模型的東西多大：`aos-agent context` 與 `talk /context` 共用的字數／token 粗估 |
-| `aos_agent_compact` | 機械壓縮記憶：`aos-agent compact`、tick idle 自動壓縮、compact 申請、`history --archive` |
+| `aos_agent_compact` | 機械壓縮記憶：`aos-agent compact`、tick idle 自動壓縮、compact 申請、`history --archive`；`--summarize`（第三波 W3-2，只給人用）：模型濃縮封存摘要，機械檢查不過退回機械版 |
 | `aos_agent_notes` | `aos-agent notes ls／show`：讀 `tools/notes/` 寫的 `wf-table/1` 筆記檔 |
 | `aos_agent_persona` | `aos-agent persona show／set／append`：人格是信任資料，讀寫 `prompts/system.json`，不叫模型不進牢 |
 | `aos_jail` | `aos-jail`：組 bwrap 參數並 exec |
@@ -139,7 +141,8 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_team_cli` | `aos-team` 子命令分派表（模組、函式、哪一隊做、一句話） |
 | `aos_team` | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
 | `aos_team_ask_cli` | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
-| `aos_team_route` | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型；`route try` 只印判決；`tool` 規則經 aos-jail 關牢跑 |
+| `aos_team_route` | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型；`route try` 只印判決；`tool` 規則經 aos-jail 關牢跑；落穿那行 route.log 記 `letter`（第三波 W3-2） |
+| `aos_team_crystal` | （第三波 W3-2）`aos-team crystal` 固化建議：從 route.log＋領隊開的單找常落穿句型，機械產候選規則＋回測，只寫提案檔給人批；`--suggest-with-llm` 預設關 |
 | `aos_team_mail` | `aos-team mail`：一信一行＋等人回答的題目、`--task` 連落穿給領隊的那封 |
 | `aos_team_task_cli` | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
 | `aos_team_post` | 郵差兼書記：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER；讀 outbox 時再驗路徑、cmd_ok 白名單、假信頭（`recheck`） |

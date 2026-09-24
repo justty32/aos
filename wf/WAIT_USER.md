@@ -101,6 +101,10 @@
     - **已裁決（2026-09-24，翻案原預設「先不改」）**：新加的兩種申請（`access_request`、`persona_propose`）借用既有的 `kind: ask`，`aos-team wait ls` 在這兩種問句前加固定前綴分辨：權限申請 `[權限]`、人格申請 `[人格]`，一般問題不加；前綴從申請的 kind／欄位判斷，不靠字串猜。
     - 代裁（翻案就回這條，細節在報告 §4）：領隊派「改寫 X.md 更白話」這類單忘記放 `wf_lint_strict`，選在 `handoff` 工具層機械補、不改門房規則（A 隊地盤，改動範圍較大）；`access_request`／`persona_propose` 不開新申請種類、借用 `kind: ask`；鎖（`lock`）的 `acquire／release／ls` 全部非同步（模型端沒有同步等待）；鎖逾時只看時間，不跨查 agent 還在不在跑；人格只做 show／set／append，不做結構化分段；不因為模型收到「同意」後自己嘗試跑指令（被牢擋住、老實回 BLOCKED）就改問句措辭——這是牢起作用的證據，不是漏洞。
     - 真跑結果（不用拍、給你看）：四種申請（`access_request`、`persona_propose`、`lock`、`routine_propose`）各真跑一次，都走完「模型寄申請→人 answer→生效」（lock 例外，設計上不經問人）；`routine_propose` 批准後心跳真的派出任務、worker 做完、檔案真的寫出來。
+38. **工具大開發時代第三波 W3-2 隊（多叫一次模型的四個工具）：一題待拍＋代裁**（[報告](../proto5/notes/2026-09-24-tool-era/w3b/README.md) §6、§7）：
+    - **待拍**：`tools wrap-py` 碰到「沒 docstring」時，要不要在警告後面多一句「可加 `--describe-with-llm` 請模型寫描述（只寫提案、你看過才產包）」？這是四項裡唯一證明有用的模型選項（函式名看不出用途時，選對工具 0/3 → 3/3）。**預設：先不加**。
+    - 代裁（翻案就回這條，細節在報告 §6）：四項的模型版（wrap-cli／wrap-py 的 `--describe-with-llm`、`compact --summarize`、`crystal --suggest-with-llm`）**全部預設關、只留旗標**；tick 自動壓縮與 compact 申請絕不叫模型；「人確認」做成「提案檔 → `--describe`／`--spec` 產包」兩步，不做互動問答；crystal 候選只收專案裡的相對路徑；`crystal` 沒加進門房禁跑清單。
+    - 結果（不用拍、給你看）：wrap-cli 模型版 74 格只多對 4 格、還丟 2 格（不值得）；wrap-py 補描述答對 3/6 → 6/6（值得）；compact 濃縮每問省 283 token、第 3～4 問回本（勉強）；crystal 機械候選接住新句 12/12、刁鑽句 0/8，模型版 11/12、7/8，還多花 5.5k token（不值得）。
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
