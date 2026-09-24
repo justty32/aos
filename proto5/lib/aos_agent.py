@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""aos-agent tick／start／stop／last；按規範持久化，再執行可重做的副作用。"""
-import argparse
+"""aos-agent tick／start／stop；按規範持久化，再執行可重做的副作用。"""
 import os
 from pathlib import Path
 
@@ -10,7 +9,7 @@ import aos_home
 from aos_agent_batch import META, collect, make_batch, send
 from aos_agent_home import AgentError, resolve_field
 from aos_agent_inputs import finish_consuming, gate, intake
-from aos_agent_runtime import Runtime, report, unique_id
+from aos_agent_runtime import KERNEL_ENV, Runtime, manual_paused, report, tick_lock, unique_id
 from aos_directives import Context, Document, is_directive
 
 WAIT_TIMEOUT_MS = 10000
@@ -22,9 +21,9 @@ def _hook(step_name):
 
 def _environment(env):
     env = os.environ if env is None else env
-    kernel = env.get('AOS_K')
+    kernel = env.get(KERNEL_ENV)
     if not isinstance(kernel, str) or not os.path.isabs(kernel):
-        raise AgentError('Usage', 'AOS_K 必須設成 kernel 家的絕對路徑')
+        raise AgentError('Usage', KERNEL_ENV + ' 必須設成 kernel 家的絕對路徑')
     return env, kernel
 
 
@@ -35,8 +34,19 @@ def _error(exc):
 
 
 def tick(agent_dir, env=None):
+    lock = None
     try:
         env, kernel = _environment(env)
+        base = Path(os.path.abspath(agent_dir))
+        if (base / 'info.json').exists():
+            # aos-agent.md §2.1：同一個家同時只有一個 tick 做事；被佔就讓掉，不動任何檔。
+            got, lock = tick_lock(base)
+            if not got:
+                report('busy', '另一個 tick 正在跑（pid %s），這格不做事' % (lock or '不明'))
+                lock = None
+                return 101
+            if manual_paused(base) is not None:
+                return 0
         # 此段讀驗全部完成前不建立 work，不做任何寫入。
         info = aos_agent_info.load(agent_dir, env=env)
         st = aos_agent_info.load_state(agent_dir, env=env)
@@ -59,6 +69,9 @@ def tick(agent_dir, env=None):
         return send(run)
     except (AgentError, aos_home.HomeError, OSError) as exc:
         return _error(exc)
+    finally:
+        if lock is not None:
+            os.close(lock)
 
 
 def _compatible(kernel, env):
@@ -82,32 +95,31 @@ def _compatible(kernel, env):
 
 
 def _tick_inst(run, kernel):
+    from aos_agent_status import tick_binding
     path = run.base / 'tick.json'
     if path.exists():
-        try:
-            raw = aos_home.read_json(path)
-            value = raw.get('envs', {}).get('AOS_K') if isinstance(raw, dict) else None
-        except (aos_home.HomeError, AttributeError):
-            value = None
+        value, legacy = tick_binding(run.base)
         if not isinstance(value, str) or value != kernel:
             raise AgentError('KernelMismatch', 'tick.json 綁在另一個 K，要換就刪掉 tick.json 再 start')
-    else:
-        run.write(path, {'_metainfo': dict(META), 'argv': ['aos-agent', 'tick', str(run.base)],
-                         'cwd': str(run.base), 'envs': {'AOS_K': kernel},
-                         'stderr': {'$opt': ['append', 'mkdir'],
-                                    '$val': str(run.base / 'log' / 'agent.err')}}, 'tick.inst')
+        if not legacy:
+            return str(path)
+    # 沒有、或是 fix-r4 前的舊版（位置參數＋AOS_K）：照新格式寫。
+    run.write(path, {'_metainfo': dict(META), 'argv': ['aos-agent', 'tick', '--target', str(run.base)],
+                     'cwd': str(run.base), 'envs': {KERNEL_ENV: kernel},
+                     'stderr': {'$opt': ['append', 'mkdir'],
+                                '$val': str(run.base / 'log' / 'agent.err')}}, 'tick.inst')
     return str(path)
 
 
 def _register(agent_dir, env, starting):
     try:
         env = os.environ if env is None else env
-        if not starting and not env.get('AOS_K'):
-            from aos_agent_status import tick_kernel
+        from aos_agent_status import tick_binding, tick_kernel
+        if not starting and not env.get(KERNEL_ENV):
             bound = tick_kernel(agent_dir)
             if bound is None:
-                raise AgentError('Usage', '沒設 AOS_K，tick.json 也沒記')
-            env = dict(env, AOS_K=bound)
+                raise AgentError('Usage', '沒設 %s，tick.json 也沒記' % KERNEL_ENV)
+            env = dict(env, **{KERNEL_ENV: bound})
         env, kernel = _environment(env)
         if starting:
             info = aos_agent_info.load(agent_dir, env=env)
@@ -115,11 +127,7 @@ def _register(agent_dir, env, starting):
             base = Path(os.path.abspath(agent_dir))
             if not base.is_dir():
                 raise AgentError('NotAnAgent', '%s 不是存在的資料夾' % base)
-            try:
-                raw = aos_home.read_json(base / 'tick.json')
-                bound = raw.get('envs', {}).get('AOS_K') if isinstance(raw, dict) else None
-            except (aos_home.HomeError, AttributeError):
-                bound = None
+            bound = tick_binding(base)[0]
             if isinstance(bound, str) and bound != kernel:
                 raise AgentError('KernelMismatch', '%s 綁在 %s' % (base / 'tick.json', bound))
             info = {'dir': str(base)}
@@ -161,61 +169,10 @@ def stop(agent_dir, env=None):
     return _register(agent_dir, env, False)
 
 
-class Parser(argparse.ArgumentParser):
-    def error(self, message):
-        report('Usage', message)
-        raise SystemExit(2)
-
-
 def main(argv=None):
-    ap = Parser(prog='aos-agent')
-    commands = ap.add_subparsers(dest='command', required=True)
-    helps = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登記這個 agent',
-             'stop': '撤銷登記', 'last': '印最後一則 assistant 回話',
-             'init': '在資料夾生一個最小可跑的 agent 家',
-             'say': '投一則 user 訊息（--wait 等回話）',
-             'status': '印 agent 現在的狀態、在等什麼、最近的錯', 'continue': '解除連敗暫停'}
-    for name, help_text in helps.items():
-        sub = commands.add_parser(name, help=help_text)
-        if name == 'say':
-            sub.formatter_class = argparse.RawDescriptionHelpFormatter
-            sub.description = '投一則 user 訊息：say TEXT（目前的家），或 say dir TEXT（指定家）。'
-            sub.epilog = ('例子：\n  cd 家 && aos-agent say "現在幾點？" --wait\n'
-                          '  aos-agent say ~/agents/amy "現在幾點？" --wait --timeout-ms 60000')
-            sub.add_argument('values', nargs='+', metavar='[dir] TEXT')
-            sub.add_argument('--wait', action='store_true')
-            sub.add_argument('--timeout-ms', type=int, help='預設 300000（5 分鐘），只能搭 --wait')
-        else:
-            sub.add_argument('agent_dir', nargs='?', default='.')
-        if name == 'status':
-            sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令與 stuck 原行')
-        if name in ('last', 'status'):
-            sub.add_argument('--json', action='store_true')
-    args = ap.parse_args(argv)
-    try:
-        if args.command == 'say':
-            if len(args.values) not in (1, 2) or not args.values[-1]:
-                ap.error('say 需要 TEXT，或 dir TEXT；TEXT 不可為空')
-            if args.timeout_ms is not None and (not args.wait or args.timeout_ms < 0):
-                ap.error('--timeout-ms 必須搭配 --wait，且不可為負數')
-            from aos_agent_say import say
-            return say(args.values[0] if len(args.values) == 2 else '.', args.values[-1],
-                       wait=args.wait, timeout_ms=300000 if args.timeout_ms is None else args.timeout_ms)
-        if args.command == 'last':
-            from aos_agent_last import last
-            return last(args.agent_dir, as_json=args.json)
-        if args.command == 'status':
-            from aos_agent_status import status
-            return status(args.agent_dir, as_json=args.json, verbose=args.verbose)
-        if args.command == 'continue':
-            from aos_agent_status import resume
-            return resume(args.agent_dir)
-        if args.command == 'init':
-            from aos_agent_init import init
-            return init(args.agent_dir)
-        return {'tick': tick, 'start': start, 'stop': stop}[args.command](args.agent_dir)
-    except (AgentError, aos_home.HomeError, OSError) as exc:
-        return _error(exc)
+    """命令列在 aos_agent_cli.py；這裡留入口給 cli/aos-agent 與測試。"""
+    from aos_agent_cli import main as cli_main
+    return cli_main(argv)
 
 
 if __name__ == '__main__':

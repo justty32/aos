@@ -215,8 +215,10 @@ def run(home):
 
 def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
+    if not args:
+        args = ["."]  # 09-24 fix-r4：DIR 可省略，省略＝目前資料夾
     if len(args) != 1 or args[0].startswith("-") or not os.path.isdir(args[0]):
-        sys.stderr.write("aos-cpu: Usage: 用法是 aos-cpu DIR，DIR 必須是資料夾\n")
+        sys.stderr.write("aos-cpu: Usage: 用法是 aos-cpu [DIR]，DIR（省略＝目前資料夾）必須是資料夾\n")
         return 2
     try:
         return run(args[0])

@@ -24,7 +24,7 @@ from aos_kernel_info import (
 from aos_kernel_engine import Kernel, tick
 from aos_kernel_boot import boot, status, stop
 from aos_kernel_cli import (
-    _cpu_options, _stderr_hint, _summary, _Parser, _parser, _cli_request, main,
+    _stderr_hint, _summary, _Parser, _parser, _cli_request, main,
 )
 
 

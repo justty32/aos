@@ -1,8 +1,8 @@
 """agent 家的共用內容讀驗層：只讀、不寫、不執行工具，也不讀 state.json。
 
-依 agent.md §1～§3、§5 驗人格、記憶、工具與錯誤代號；依 aos-llm-call.md §3
+依 agent.md §1～§3、§5 驗人格、記憶、工具與錯誤代號；依 aos-llm.md §3
 只解 info.json 的六格。resolve_field 保留 directives.md §3.2 的原文件與位置，
-被指到的內容檔不解指示詞，供 aos-llm-call 與 aos-agent 共用。
+被指到的內容檔不解指示詞，供 aos-llm call 與 aos-agent 共用。
 """
 import json
 import os

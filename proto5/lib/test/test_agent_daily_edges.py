@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch
 
 import aos_agent as agent
+import aos_agent_pause as pause_api
 import aos_agent_say as say
 import aos_agent_status as status
 import aos_llm_call as llm
@@ -25,7 +26,7 @@ class DailyEdgeTests(unittest.TestCase):
             self.assertEqual(agent.main(['continue']), 0)
             self.assertEqual(agent.main(['say', '你好']), 0)
             self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
-            self.assertEqual(agent.main(['last']), 0)
+            self.assertEqual(agent.main(['listen']), 0)
             (self.base / 'info.json').unlink()
             self.assertEqual(agent.main(['init']), 0)
 
@@ -33,7 +34,7 @@ class DailyEdgeTests(unittest.TestCase):
         with patch('sys.stdout', new_callable=io.StringIO) as out, self.assertRaises(SystemExit) as cm:
             agent.main(['--help'])
         self.assertEqual(cm.exception.code, 0)
-        for word in ('tick', 'start', 'stop', 'last', 'init', 'say', 'status', 'continue', '解除連敗暫停'):
+        for word in ('tick', 'start', 'stop', 'listen', 'init', 'say', 'status', 'pause', 'continue', '解除手動暫停與連敗暫停'):
             self.assertIn(word, out.getvalue())
 
     def test_wait_retries_partial_state_and_history(self):
@@ -113,14 +114,14 @@ class DailyEdgeTests(unittest.TestCase):
     def test_continue_multiple_resolved_paths(self):
         self.put(self.base / 'state.json', {'waits': {'$opt': 'consume', '$val': {'$env': 'GO'}}})
         with patch('sys.stdout', new_callable=io.StringIO):
-            self.assertEqual(status.resume(self.base, {'GO': 'continue-one.json'}), 0)
+            self.assertEqual(pause_api.resume(self.base, {'GO': 'continue-one.json'}), 0)
         self.assertTrue((self.base / 'continue-one.json').exists())
 
     def test_last_bad_fallback_preserves_original_error(self):
         (self.base / 'info.json').write_text('{')
         self.put(self.base / 'prompts/history.json', {})
         with patch('sys.stdout', new_callable=io.StringIO):
-            self.assertEqual(agent.main(['last', str(self.base)]), 1)
+            self.assertEqual(agent.main(['listen', '--target', str(self.base)]), 1)
         self.assertIn('JsonSyntax', self.err.getvalue())
 
     def test_engine_error_redacts_echoed_key(self):

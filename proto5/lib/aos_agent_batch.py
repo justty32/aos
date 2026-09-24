@@ -67,7 +67,7 @@ def tool_inst(meta, base, name, env):
 
 
 def think_inst(base, name):
-    return {'_metainfo': dict(META), 'argv': ['aos-llm-call', str(base)], 'cwd': str(base),
+    return {'_metainfo': dict(META), 'argv': ['aos-llm', 'call', str(base)], 'cwd': str(base),
             'stdout': {'$opt': 'mkdir', '$val': str(base / 'work' / (name + '.out'))},
             'stderr': {'$opt': ['append', 'mkdir'], '$val': str(base / 'log' / 'llm.err')}}
 

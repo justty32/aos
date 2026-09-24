@@ -1,4 +1,4 @@
-"""問模型一次：aos-llm-call.md §1～§7 的設定讀驗、組請求、HTTP 與命令列。
+"""aos-llm call（問模型一次）：aos-llm.md §1～§7 的設定讀驗、組請求、HTTP 與命令列。
 
 agent 內容讀驗共用 aos_agent_home；不寫記憶、不碰 state、不重試、不跑工具。
 """
@@ -159,13 +159,20 @@ def call(agent_dir, env=None):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="aos-llm-call", description="問模型一次，印出 assistant message")
-    ap.add_argument("agent_dir", metavar="AGENT_DIR", nargs="?", default=".", help="agent 家（預設為目前資料夾）")
+    """aos-llm 的入口：call 是第一個子命令，之後 llm 相關的都掛這裡（09-24 fix-r4）。"""
+    ap = argparse.ArgumentParser(prog="aos-llm", description="llm 相關工具；call＝問模型一次，印出 assistant message")
+    subs = ap.add_subparsers(dest="command", metavar="{call}")
+    sub = subs.add_parser("call", help="問模型一次，印出 assistant message",
+                          description="問模型一次，印出 assistant message")
+    sub.add_argument("agent_dir", metavar="AGENT_DIR", nargs="?", default=".", help="agent 家（預設為目前資料夾）")
     args = ap.parse_args(argv)
+    if args.command is None:
+        ap.print_usage(sys.stderr)
+        ap.exit(2, "aos-llm: error: 要給子命令：aos-llm call [AGENT_DIR]\n")
     try:
         msg = call(args.agent_dir)
     except AgentError as e:
-        sys.stderr.write("aos-llm-call: %s\n" % " ".join(str(e).split()))
+        sys.stderr.write("aos-llm: %s\n" % " ".join(str(e).split()))
         return 1
     sys.stdout.write(json.dumps(msg, ensure_ascii=False) + "\n")
     return 0

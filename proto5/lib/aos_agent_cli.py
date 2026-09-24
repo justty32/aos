@@ -1,0 +1,122 @@
+"""aos-agent 的命令列（aos-agent.md §1）：家一律 --target DIR，省略＝目前資料夾。"""
+import argparse
+import os
+
+import aos_home
+from aos_agent_home import AgentError
+from aos_agent_runtime import report
+
+WAIT_SECONDS = 300
+HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登記這個 agent',
+         'stop': '撤銷登記', 'init': '在資料夾生一個最小可跑的 agent 家',
+         'say': '投一則 user 訊息（--wait 等回話）',
+         'listen': '看回話：--last 最後一則（預設）、--wait 等下一則、--follow 一直印',
+         'status': '印 agent 現在的狀態、在等什麼、最近的錯',
+         'pause': '手動暫停：還登記著，但每格什麼都不做',
+         'continue': '解除手動暫停與連敗暫停'}
+WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        report('Usage', message)
+        raise SystemExit(2)
+
+
+def _parser():
+    ap = Parser(prog='aos-agent', description='agent 家的日常指令；家用 --target DIR 指定，省略＝目前資料夾')
+    commands = ap.add_subparsers(dest='command', required=True, parser_class=Parser)
+    for name, help_text in HELPS.items():
+        sub = commands.add_parser(name, help=help_text, description=help_text)
+        sub.add_argument('--target', metavar='DIR', help='agent 家（省略＝目前資料夾）')
+        if name == 'say':
+            sub.formatter_class = argparse.RawDescriptionHelpFormatter
+            sub.description = '投一則 user 訊息到 --target 的家（省略＝目前資料夾）。'
+            sub.epilog = ('例子：\n  cd 家 && aos-agent say "現在幾點？" --wait\n'
+                          '  aos-agent say "現在幾點？" --target ~/agents/amy --wait 60\n'
+                          '--wait 不帶數字＝等 %d 秒；暫停中照收，continue 後才處理。' % WAIT_SECONDS)
+            sub.add_argument('text', nargs='*', metavar='TEXT')
+            sub.add_argument('--wait', nargs='?', const='', metavar='秒', help=WAIT_HELP)
+        elif name == 'listen':
+            modes = sub.add_mutually_exclusive_group()
+            modes.add_argument('--last', action='store_true', help='印最後一則回話就退（預設）')
+            modes.add_argument('--wait', nargs='?', const='', metavar='秒',
+                               help='等下一則新回話，印出就退；' + WAIT_HELP)
+            modes.add_argument('--follow', action='store_true', help='每一則新回話都印，直到 Ctrl-C')
+        if name == 'status':
+            sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令與 stuck 原行')
+        if name in ('listen', 'status'):
+            sub.add_argument('--json', action='store_true')
+    return ap
+
+
+def _seconds(ap, value):
+    """--wait 的秒數：空＝預設；要是非負數字。回毫秒。"""
+    if value == '':
+        return WAIT_SECONDS * 1000
+    try:
+        seconds = float(value)
+    except ValueError:
+        ap.error('--wait 後面要是秒數（或不帶數字＝%d 秒）：%s' % (WAIT_SECONDS, value))
+    if seconds < 0 or seconds != seconds:
+        ap.error('--wait 的秒數不可為負數')
+    return int(seconds * 1000)
+
+
+def _is_number(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
+def main(argv=None):
+    ap = _parser()
+    args = ap.parse_args(argv)
+    if args.target == '':
+        ap.error('--target 不可為空')
+    target = args.target or '.'
+    source = '--target' if args.target else aos_home.SOURCE_CWD
+    # 用法先驗完（退 2），才看家在不在（退 1）。
+    if args.command == 'say':
+        text = list(args.text)
+        if args.wait and not text and not _is_number(args.wait):
+            text, args.wait = [args.wait], ''  # say --wait "你好"：那個字是 TEXT
+        if len(text) > 1:
+            ap.error('say 只收一段 TEXT；要指定家用 --target DIR（舊的 say dir TEXT 不再支援）')
+        if not text or not text[0]:
+            ap.error('say 需要 TEXT，且不可為空')
+    wait = getattr(args, 'wait', None)
+    timeout = _seconds(ap, wait) if wait is not None else WAIT_SECONDS * 1000
+    try:
+        base = os.path.abspath(target)
+        if args.command == 'stop' and not os.path.isdir(base):
+            raise AgentError('NotAnAgent', '%s 不是存在的資料夾' % base)
+        if args.command not in ('init', 'tick', 'stop') and not os.path.exists(os.path.join(base, 'info.json')):
+            raise AgentError('NotAnAgent', '%s 沒有 info.json' % base)
+        if args.command == 'say':
+            from aos_agent_say import say
+            return say(target, text[0], wait=wait is not None, timeout_ms=timeout)
+        if args.command == 'listen':
+            from aos_agent_listen import listen
+            mode = 'wait' if wait is not None else 'follow' if args.follow else 'last'
+            return listen(target, mode, timeout_ms=timeout, as_json=args.json)
+        if args.command == 'status':
+            from aos_agent_status import status
+            return status(target, as_json=args.json, verbose=args.verbose)
+        if args.command in ('pause', 'continue'):
+            from aos_agent_pause import pause, resume
+            return pause(target) if args.command == 'pause' else resume(target)
+        if args.command == 'init':
+            from aos_agent_init import init
+            return init(target)
+        import aos_agent
+        return {'tick': aos_agent.tick, 'start': aos_agent.start,
+                'stop': aos_agent.stop}[args.command](target)
+    except (AgentError, aos_home.HomeError, OSError) as exc:
+        if getattr(exc, 'code', None) == 'NotAnAgent':
+            exc.msg = getattr(exc, 'msg', str(exc)) + aos_home.target_note(
+                'agent 家', os.path.abspath(target), source)
+        from aos_agent import _error
+        return _error(exc)

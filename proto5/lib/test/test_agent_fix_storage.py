@@ -76,7 +76,7 @@ class AgentFixStorageTests(unittest.TestCase):
         path = self.base / 'log/llm.err'
         path.parent.mkdir()
         path.write_text('舊錯誤\n\n' + '錯' * 350 + '\n \n')
-        self.assertEqual(self.failure(code=7), 'aos-llm-call exit 7，看 %s：%s' % (path, '錯' * 300))
+        self.assertEqual(self.failure(code=7), 'aos-llm call exit 7，看 %s：%s' % (path, '錯' * 300))
 
     def test_llm_timeout_log_path_and_tail(self):
         path = self.base / 'log/llm.err'
@@ -94,11 +94,11 @@ class AgentFixStorageTests(unittest.TestCase):
                 elif mode == 'unreadable':
                     path.unlink()
                     path.mkdir()
-                self.assertEqual(self.failure(code=1), 'aos-llm-call exit 1，看 %s' % path)
+                self.assertEqual(self.failure(code=1), 'aos-llm call exit 1，看 %s' % path)
 
     def test_llm_aos_pool_cpu_paths_use_batch_kernel(self):
         self.put(self.k / 'info.json', {'cpus': {'l1': {'pool': 'llm'}, 'l2': {'pool': 'llm'}, 'x': {}}})
-        self.env['AOS_K'] = str(self.root / 'otherK')
+        self.env['AOS_KERNEL_HOME'] = str(self.root / 'otherK')
         fail = self.failure(kind='aos', code=125)
         self.assertIn(str(self.k / 'cpus/l1/cpu.log'), fail)
         self.assertIn(str(self.k / 'cpus/l2/cpu.log'), fail)

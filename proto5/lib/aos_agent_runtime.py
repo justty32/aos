@@ -11,8 +11,42 @@ from aos_agent_home import AgentError
 from aos_agent_info import write_state
 
 
+PAUSED = 'paused'
+LOCK = '.tick.lock'
+KERNEL_ENV = 'AOS_KERNEL_HOME'
+
+
 def report(code, message):
     sys.stderr.write('aos-agent: %s: %s\n' % (code, ' '.join(str(message).split())))
+
+
+def manual_paused(base):
+    """手動暫停＝家裡有 paused 檔（aos-agent.md §1.6）；回修改時間（epoch 秒）或 None。"""
+    try:
+        return os.stat(Path(base) / PAUSED).st_mtime
+    except OSError:
+        return None
+
+
+def tick_lock(base):
+    """拿 <家>/.tick.lock 的非阻塞獨占 flock（aos-agent.md §2.1）。
+
+    拿到＝寫入自己的 pid、回 fd（持到行程結束）；被佔＝回持有者 pid 字串（讀不到＝None），不動檔。
+    """
+    import fcntl
+    fd = os.open(Path(base) / LOCK, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        try:
+            holder = os.read(fd, 64).decode('ascii', 'replace').strip() or None
+        except OSError:
+            holder = None
+        os.close(fd)
+        return False, holder
+    os.ftruncate(fd, 0)
+    os.write(fd, b'%d\n' % os.getpid())
+    return True, fd
 
 
 def unique_id():

@@ -1,4 +1,4 @@
-"""真 daemon／kernel／aos-llm-call 與本機 HTTP 假模型的完整往返。"""
+"""真 daemon／kernel／aos-llm call 與本機 HTTP 假模型的完整往返。"""
 import copy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -55,7 +55,7 @@ class AgentIntegrationTests(KernelCase):
             'fake': {'endpoint': 'http://127.0.0.1:%d/v1' % self.server.server_port,
                      'model': 'local-test', 'timeout_ms': 3000}}})
         path = str(CLI) + os.pathsep + os.environ.get('PATH', '/usr/bin:/bin')
-        self.env = dict(os.environ, AOS_K=str(self.home), PATH=path, PYTHONDONTWRITEBYTECODE='1')
+        self.env = dict(os.environ, AOS_KERNEL_HOME=str(self.home), PATH=path, PYTHONDONTWRITEBYTECODE='1')
         self.cpus = {'k': {'pool': 'kernel'}, '0': {'envs': {'PATH': path}},
                      'llm': {'pool': 'llm', 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
         # 即使測試 assertion 失敗，也先正常停 kernel，再停 daemon，最後才由基底兜底。
@@ -80,7 +80,7 @@ class AgentIntegrationTests(KernelCase):
         return read_json(self.base / 'prompts/history.json', [])
 
     def agent_cli(self, command):
-        return subprocess.run([PY, str(CLI / 'aos-agent'), command, str(self.base)],
+        return subprocess.run([PY, str(CLI / 'aos-agent'), command, '--target', str(self.base)],
                               env=self.env, capture_output=True, text=True, timeout=12)
 
     def tick(self):
@@ -136,8 +136,8 @@ class AgentIntegrationTests(KernelCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         inst = read_json(self.base / 'tick.json')
         self.assertEqual(inst, {'_metainfo': {'_type': 'posix', '_version': 1},
-                               'argv': ['aos-agent', 'tick', str(self.base)], 'cwd': str(self.base),
-                               'envs': {'AOS_K': str(self.home)},
+                               'argv': ['aos-agent', 'tick', '--target', str(self.base)], 'cwd': str(self.base),
+                               'envs': {'AOS_KERNEL_HOME': str(self.home)},
                                'stderr': {'$opt': ['append', 'mkdir'],
                                           '$val': str(self.base / 'log/agent.err')}})
         self.write(self.base / 'input.json', '開始')
@@ -170,7 +170,7 @@ class AgentIntegrationTests(KernelCase):
         name = self.astate()['batch']['calls'][0]['name']
         wait_for(lambda: self.state().get('procs', {}).get(name, {}).get('status') == 'queued')
         self.assertEqual(self.requests, [])
-        self.good_cli('stop', self.home, '--no-wait')
+        self.good_cli('halt', self.home, '--no-wait')
         wait_for(lambda: self.state().get('phase') in ('stopping', 'stopped'))
         release.touch()
         wait_for(lambda: self.state().get('phase') == 'stopped', timeout=8)

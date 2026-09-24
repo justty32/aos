@@ -32,7 +32,7 @@ class KernelCheck(unittest.TestCase):
         self.bin.mkdir()
         for name in check.COMMANDS:
             self.executable(self.bin / name)
-        env = patch.dict(os.environ, {'PATH': str(self.bin)})
+        env = patch.dict(os.environ, {'PATH': str(self.bin), 'AOS_DAEMON_HOME': str(self.daemon)})
         env.start()
         self.addCleanup(env.stop)
 
@@ -50,7 +50,7 @@ class KernelCheck(unittest.TestCase):
     def run_check(self, *args, code=0):
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            result = kernel.main(['check', str(self.home), *map(str, args)])
+            result = kernel.main(['check', '--target', str(self.home), *map(str, args)])
         self.assertEqual(result, code, out.getvalue() + err.getvalue())
         self.assertEqual(err.getvalue(), '')
         return out.getvalue()
@@ -80,7 +80,7 @@ class KernelCheck(unittest.TestCase):
         self.lock_daemon(pid=2 ** 31 - 1)
         cli = Path(check.__file__).resolve().parents[1] / 'cli'
         with patch.dict(os.environ, {'PATH': str(cli)}):
-            text = self.run_check('--daemon', other)
+            text = self.run_check('--daemon-target', other)
         self.assertIn('ok   daemon: daemon 活著：%s' % other, text)
 
     def test_bad_info_stops_checks(self):
@@ -126,7 +126,8 @@ class KernelCheck(unittest.TestCase):
         self.save()
         text = self.run_check(code=1)
         self.assertIn('bad  pools: llm', text)
-        self.assertIn('--cpu llm:llm --env llm:AOS_LLM_CONFIG=', text)
+        self.assertIn('"pool": "llm"', text)
+        self.assertIn('AOS_LLM_CONFIG', text)
 
     def test_llm_missing_config_env(self):
         self.info['cpus']['llm'].pop('envs')
@@ -170,7 +171,7 @@ class KernelCheck(unittest.TestCase):
         inst = self.home / 'cpus/llm/inst.json'
         self.put(inst, {'envs': {'AOS_LLM_CONFIG': str(self.config), 'PATH': str(self.bin)}})
         text = self.run_check()
-        self.assertIn('inst.json 已建，改 info 不生效，要 stop 後改 inst.json', text)
+        self.assertIn('inst.json 已建，改 info 不生效，要 aos-kernel halt 後改 inst.json', text)
         self.assertIn('ok   path/llm:', text)
         self.assertIn('ok   llm/llm:', text)
         self.put(inst, {'envs': {'AOS_LLM_CONFIG': str(self.config), 'PATH': '/missing'}})
@@ -266,7 +267,7 @@ class KernelCheck(unittest.TestCase):
         for phase in ('running', 'stopping'):
             with self.subTest(phase=phase):
                 self.cpu_ledger(phase)
-                self.assertIn('bad  cpus: daemon 重開過／cpu 不在（k, 0, llm）：執行 aos-kernel boot %s --daemon %s' %
+                self.assertIn('bad  cpus: daemon 重開過／cpu 不在（k, 0, llm）：執行 aos-kernel boot --target %s --daemon-target %s' %
                               (self.home, self.daemon), self.run_check(code=1))
 
     def test_ledger_kernel_cpu_not_in_info_is_checked(self):
@@ -307,4 +308,25 @@ class KernelCheck(unittest.TestCase):
         self.daemon = other
         self.lock_daemon(999999999)
         self.cpu_ledger(children=self.owned_children())
-        self.assertIn('ok   cpus:', self.run_check('--daemon', other))
+        self.assertIn('ok   cpus:', self.run_check('--daemon-target', other))
+
+    def test_daemon_target_three_sources_and_info_mismatch_warns(self):
+        other = self.root / 'D2'
+        other.mkdir()
+        text = self.run_check('--daemon-target', other)
+        self.assertIn('warn daemon: daemon 沒在跑；先開 daemon：aos-daemon boot --target %s' % other, text)
+        self.assertIn('warn daemon: info.json 記的 daemon 是 %s' % self.daemon, text)
+        with patch.dict(os.environ, {'AOS_DAEMON_HOME': str(other)}):
+            self.assertIn('aos-daemon boot --target %s' % other, self.run_check())
+        env = {k: v for k, v in os.environ.items() if k != 'AOS_DAEMON_HOME'}
+        cwd = os.getcwd()
+        try:
+            os.chdir(other)
+            with patch.dict(os.environ, env, clear=True):
+                text = self.run_check()
+        finally:
+            os.chdir(cwd)
+        self.assertIn('aos-daemon boot --target %s' % other, text)
+        self.assertNotIn('~/.aos-daemon', text)
+        text = self.run_check()
+        self.assertNotIn('info.json 記的 daemon', text)

@@ -38,7 +38,7 @@ class AgentTickTests(unittest.TestCase):
         self.base.mkdir()
         (self.k / 'requests').mkdir(parents=True)
         (self.k / 'responses').mkdir()
-        self.env = {'AOS_K': str(self.k)}
+        self.env = {'AOS_KERNEL_HOME': str(self.k)}
         self.info = {'_metainfo': {'_type': 'llm_agent', '_version': 1}, 'llm': {'model': 'small'}}
         self.put(self.base / 'info.json', self.info)
         self.put(self.k / 'info.json', {})
@@ -208,7 +208,7 @@ class AgentTickTests(unittest.TestCase):
 
     def test_batch_kernel_fixed(self):
         name = self.prepare(sent=False)
-        self.env['AOS_K'] = str(self.root / 'other')
+        self.env['AOS_KERNEL_HOME'] = str(self.root / 'other')
         self.assertEqual(self.tick(), 0)
         self.assertTrue((self.k / 'requests' / (name + '.json')).exists())
         self.assertFalse((self.root / 'other').exists())
@@ -450,8 +450,10 @@ class AgentTickTests(unittest.TestCase):
         self.assertNotEqual(*signals)
 
     def snapshot(self):
-        return {str(p.relative_to(self.base)): (p.stat().st_mtime_ns, p.read_bytes() if p.is_file() else None)
-                for p in [self.base, *self.base.rglob('*')]}
+        # tick 鎖檔（aos-agent.md §2.1）是第 0 步唯一允許建的檔；家本身的 mtime 會因它變動。
+        return {str(p.relative_to(self.base)): (None if p == self.base else p.stat().st_mtime_ns,
+                                                p.read_bytes() if p.is_file() else None)
+                for p in [self.base, *self.base.rglob('*')] if p.name != '.tick.lock'}
 
     def kernel_thread(self, error=None):
         seen, failures = [], []
@@ -497,7 +499,7 @@ class AgentTickTests(unittest.TestCase):
         self.assertEqual(request['params'], {'name': 'agent-bob', 'target': str(self.base / 'tick.json'),
                                               'pool': 'agents', 'interval_ms': 42})
         self.assertEqual(self.read(self.base / 'tick.json'), {'_metainfo': {'_type': 'posix', '_version': 1},
-                         'argv': ['aos-agent', 'tick', str(self.base)], 'cwd': str(self.base),
+                         'argv': ['aos-agent', 'tick', '--target', str(self.base)], 'cwd': str(self.base),
                          'envs': self.env, 'stderr': {'$opt': ['append', 'mkdir'],
                                                     '$val': str(self.base / 'log/agent.err')}})
 
@@ -659,8 +661,8 @@ think_rows = [
      {'fail': '被強制停', 'count': False}),
     ('timeout', {'timed_out': True, 'kind': 'aos', 'code': 9}, None, {'fail': '逾時（125000 ms）', 'count': True}),
     ('aos', {'kind': 'aos', 'code': 125}, None,
-     {'fail': 'aos-llm-call 沒跑起來（kind=aos），看 llm 池 cpu 的 cpu.log', 'count': True}),
-    ('exit', {'code': 7}, None, {'fail': 'aos-llm-call exit 7，看 log/llm.err', 'count': True}),
+     {'fail': 'aos-llm call 沒跑起來（kind=aos），看 llm 池 cpu 的 cpu.log', 'count': True}),
+    ('exit', {'code': 7}, None, {'fail': 'aos-llm call exit 7，看 log/llm.err', 'count': True}),
     ('stopping', {}, 'Stopping', {'fail': 'kernel 停機時取消，沒跑', 'count': False}),
     ('interrupted', {}, 'Interrupted', {'fail': '結果不明（Interrupted）', 'count': True}),
     ('removed', {}, 'Removed', {'fail': '結果不明（Removed）', 'count': True}),
@@ -799,7 +801,7 @@ def mismatch_case(value):
     return test
 
 
-for label, value in [('other', {'envs': {'AOS_K': '/other'}}), ('directive', {'envs': {'AOS_K': {'$env': 'AOS_K'}}}),
+for label, value in [('other', {'envs': {'AOS_KERNEL_HOME': '/other'}}), ('directive', {'envs': {'AOS_KERNEL_HOME': {'$env': 'AOS_KERNEL_HOME'}}}),
                      ('type', {'envs': []}), ('nonobject', [])]:
     setattr(AgentTickTests, 'test_start_mismatch_' + label, mismatch_case(value))
 
@@ -821,13 +823,13 @@ setattr(AgentTickTests, 'test_stop_timeout', timeout_case(False))
 def main_env_case(env):
     def test(self):
         with patch.dict(os.environ, env, clear=True):
-            self.assertEqual(agent.main(['tick', str(self.base)]), 2)
+            self.assertEqual(agent.main(['tick', '--target', str(self.base)]), 2)
         self.assertFalse((self.base / 'state.json').exists())
     return test
 
 
 setattr(AgentTickTests, 'test_main_missing_kernel', main_env_case({}))
-setattr(AgentTickTests, 'test_main_relative_kernel', main_env_case({'AOS_K': 'relative'}))
+setattr(AgentTickTests, 'test_main_relative_kernel', main_env_case({'AOS_KERNEL_HOME': 'relative'}))
 
 
 def kernel_field_case(key, value):

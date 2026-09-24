@@ -308,6 +308,10 @@ while True: time.sleep(.01)
         result = subprocess.run([PY, CPU, self.d, "extra"], capture_output=True, timeout=4)
         self.assertEqual(result.returncode, 2)
         self.assertEqual(len(result.stderr.splitlines()), 1)
+        # 09-24 fix-r4：DIR 省略＝目前資料夾，讀到的是同一個壞 info。
+        result = subprocess.run([PY, CPU], cwd=self.d, stdin=subprocess.DEVNULL, capture_output=True, timeout=4)
+        self.assertEqual(result.returncode, 1)
+        self.assertTrue(result.stderr.startswith(b"aos-cpu: NotAHome:"))
 
     def test_response_write_failure_preserves_current_and_request(self):
         home = self.d

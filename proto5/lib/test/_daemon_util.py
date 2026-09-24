@@ -84,7 +84,7 @@ def wait(predicate):
         time.sleep(.005)
     raise RuntimeError('isolated restart timed out')
 def start():
-    p=subprocess.Popen([sys.executable,cli,'--home',str(home)],stdin=subprocess.DEVNULL,
+    p=subprocess.Popen([sys.executable,cli,'boot','--target',str(home)],stdin=subprocess.DEVNULL,
                        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     procs.append(p)
     return p

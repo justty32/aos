@@ -114,6 +114,6 @@ def stop(home, wait_ms=30000, no_wait=False):
             print("stopped")
             return 0
         if time.monotonic() >= deadline:
-            raise KernelError("Timeout", "等了 %d ms 還沒停好（stop 已放、不撤回），用 aos-kernel ls 看" % wait_ms)
+            raise KernelError("Timeout", "等了 %d ms 還沒停好（stop 已放、不撤回），用 aos-kernel ls --target %s 看" % (wait_ms, home))
         time.sleep(.005)
 

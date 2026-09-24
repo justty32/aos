@@ -1,4 +1,4 @@
-"""日常診斷與解除連敗門；只讀狀態，不推進回合。"""
+"""日常診斷；只讀狀態，不推進回合。"""
 from datetime import datetime
 import json
 import os
@@ -8,16 +8,29 @@ import aos_agent_info
 import aos_home
 import aos_kernel_health
 from aos_agent_home import AgentError
-from aos_agent_runtime import files, ledger
+from aos_agent_runtime import KERNEL_ENV, files, ledger, manual_paused
+
+
+def tick_binding(base):
+    """tick.json 記的 K：回（原值, 是否 fix-r4 前的舊鍵 AOS_K）；讀不懂＝(None, False)。"""
+    try:
+        envs = aos_home.read_json(Path(base) / 'tick.json').get('envs', {})
+        if KERNEL_ENV in envs:
+            return envs[KERNEL_ENV], False
+        if 'AOS_K' in envs:
+            return envs['AOS_K'], True
+    except (aos_home.HomeError, AttributeError, TypeError):
+        pass
+    return None, False
 
 
 def tick_kernel(base):
-    try:
-        raw = aos_home.read_json(Path(base) / 'tick.json')
-        value = raw.get('envs', {}).get('AOS_K')
-        return value if isinstance(value, str) and os.path.isabs(value) else None
-    except (aos_home.HomeError, AttributeError):
-        return None
+    value = tick_binding(base)[0]
+    return value if isinstance(value, str) and os.path.isabs(value) else None
+
+
+def _iso(stamp):
+    return None if stamp is None else datetime.fromtimestamp(stamp).astimezone().isoformat()
 
 
 def pause_path(base, path, consume):
@@ -45,17 +58,17 @@ def waits(base, state):
 
 
 def kernel_status(base, env):
-    home = env.get('AOS_K')
+    home = env.get(KERNEL_ENV)
     if not isinstance(home, str) or not os.path.isabs(home):
         home = tick_kernel(base)
     result = dict(home=home, name='agent-' + Path(base).name, proc=None, note='')
     if home is None:
-        result['note'] = '（沒設 AOS_K）'
+        result['note'] = '（沒設 %s）' % KERNEL_ENV
         return result
     try:
         result['proc'] = ledger(home)['procs'].get(result['name'])
         if result['proc'] is None:
-            result['note'] = '沒登記（aos-agent start）'
+            result['note'] = '沒登記（aos-agent start --target %s）' % base
         elif not isinstance(result['proc'], dict):
             result['note'] = '帳本行程資料形狀不合'
         elif result['proc'].get('status') == 'bad':
@@ -80,9 +93,14 @@ def agent_health(data):
         if code != 'ok':
             return dict(code='kernel', message='kernel 家有問題：' + message)
     if unregistered(k):
-        return dict(code='unregistered', message='沒登記（aos-agent start %s）' % base)
+        return dict(code='unregistered', message='沒登記（aos-agent start --target %s）' % base)
+    if data['manual_paused'] and data['paused']:
+        return dict(code='manual_paused',
+                    message='手動暫停＋連敗暫停（修好原因後 aos-agent continue --target %s）' % base)
+    if data['manual_paused']:
+        return dict(code='manual_paused', message='手動暫停（aos-agent continue --target %s）' % base)
     if data['paused']:
-        return dict(code='paused', message='連敗暫停（aos-agent continue %s）' % base)
+        return dict(code='paused', message='連敗暫停（aos-agent continue --target %s）' % base)
     if isinstance(k['proc'], dict) and k['proc'].get('status') == 'bad':
         return dict(code='bad', message='kernel 判壞了（看 %s/log/agent.err）' % base)
     if data['info_error'] or data['state_error']:
@@ -126,6 +144,8 @@ def collect(agent_dir, env=None):
     result = dict(dir=base, info_error=None, state_error=None, state=None, errors=None,
                   batch=None, waits=[], pending_inputs=[], intake=False, last_error=None,
                   kernel=kernel_status(base, env))
+    since = manual_paused(base)
+    result.update(manual_paused=since is not None, manual_paused_since=_iso(since))
     try:
         aos_agent_info.load(base, env=env)
     except (AgentError, OSError) as exc:
@@ -160,8 +180,10 @@ def show(data, *, as_json=False, verbose=False):
     if data['state_error']:
         print('state bad：' + ' '.join(data['state_error'].split()))
     else:
-        print('state  %s  %s' % (data['state'], '連敗暫停中（已連敗 3 次）' if data['paused']
-                                  else 'errors %s' % data['errors']))
+        manual = ('  手動暫停中（%s）' % datetime.fromisoformat(data['manual_paused_since']).strftime('%m-%d %H:%M:%S')
+                  if data['manual_paused'] else '')
+        print('state  %s  %s%s' % (data['state'], '連敗暫停中（已連敗 3 次）' if data['paused']
+                                    else 'errors %s' % data['errors'], manual))
         b = data['batch']
         print('batch  ' + ('%s  送出 %s／%s  收回 %s%s' %
               (b['kind'], b['sent_n'], b['total'], b['done_n'], '' if b['sent'] else '  送件中') if b else '-'))
@@ -179,10 +201,10 @@ def show(data, *, as_json=False, verbose=False):
             print('intake 收到一半（下一格會接著做）')
     current = data['current_error']
     if current and data['paused'] and not verbose and current.startswith('aos-agent: stuck:'):
-        current = current.split('touch ', 1)[0] + 'aos-agent continue ' + data['dir']
+        current = current.split('touch ', 1)[0] + 'aos-agent continue --target ' + data['dir']
     print('error  ' + (current or '（無）'))
     if data['paused']:
-        print('       已連敗 3 次，等 aos-agent continue ' + data['dir'])
+        print('       已連敗 3 次，等 aos-agent continue --target ' + data['dir'])
         if verbose:
             detail = dict(data)
             stuck = error_details(detail)
@@ -195,7 +217,8 @@ def show(data, *, as_json=False, verbose=False):
         print('last-error  %s  %s（已恢復）' % (stamp, data['last_error']))
     k = data['kernel']
     if k['home'] is None:
-        print('kernel 從沒 start 過（沒設 AOS_K、也沒 tick.json）；aos-agent start ' + data['dir'])
+        print('kernel 從沒 start 過（沒設 %s、也沒 tick.json）；aos-agent start --target %s'
+              % (KERNEL_ENV, data['dir']))
     elif isinstance(k['proc'], dict):
         p = k['proc']
         print('kernel %s  %s  runs %s  fails %s  %s' %
@@ -207,21 +230,4 @@ def show(data, *, as_json=False, verbose=False):
 
 def status(agent_dir, *, as_json=False, verbose=False, env=None):
     show(collect(agent_dir, env), as_json=as_json, verbose=verbose)
-    return 0
-
-
-def resume(agent_dir, env=None):
-    base = os.path.abspath(agent_dir)
-    st = aos_agent_info.load_state(base, env=env)
-    paths = dict.fromkeys(p for w in waits(base, st) for p in w['paths']
-                          if pause_path(base, p, w['consume']))
-    for path in paths:
-        try:
-            with open(path, 'x'):
-                pass
-            print('continued: touched ' + path)
-        except FileExistsError:
-            print('已經 touch 過，等下一格 tick：' + path)
-    if not paths:
-        print('沒有在暫停')
     return 0

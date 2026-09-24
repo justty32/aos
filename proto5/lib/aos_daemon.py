@@ -26,7 +26,8 @@ class DaemonError(aos_home.HomeError):
 
 
 def daemon_home(value=None):
-    return os.path.abspath(os.path.expanduser(value or os.environ.get("AOS_DAEMON_HOME", "~/.aos-daemon")))
+    """--target → AOS_DAEMON_HOME → 目前資料夾（09-24 fix-r4：~/.aos-daemon 預設拿掉）。"""
+    return str(aos_home.resolve_target(value, "AOS_DAEMON_HOME")[0])
 
 
 def is_alive(home):
@@ -389,31 +390,39 @@ def stop(home, wait_ms=30000):
     return 0
 
 
+TARGET_HELP = "daemon 家（省略＝AOS_DAEMON_HOME，再沒有就目前資料夾）"
+
+
 def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
-    parser = argparse.ArgumentParser(prog="aos-daemon", description="執行 daemon；stop 子命令送出停機通知並等待退出")
-    parser.add_argument("--home", metavar="D", help="daemon 家（預設 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
-    commands = parser.add_subparsers(dest="command")
-    stopping = commands.add_parser("stop", help="停止 daemon 並等待退出")
-    stopping.add_argument("--home", metavar="D", default=argparse.SUPPRESS,
-                          help="daemon 家（預設 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
-    stopping.add_argument("--wait-ms", type=int, default=30000, metavar="N",
-                          help="等退出的上限，非負毫秒（預設 30000）")
+    parser = argparse.ArgumentParser(prog="aos-daemon", description="daemon：boot 跑起來（前景程式）、halt 送停機通知並等它退出")
+    commands = parser.add_subparsers(dest="command", metavar="{boot,halt}")
+    booting = commands.add_parser("boot", help="跑 daemon（前景程式，自己放背景）",
+                                  description="跑 daemon（前景程式，自己放背景）")
+    booting.add_argument("--target", metavar="D", help=TARGET_HELP)
+    halting = commands.add_parser("halt", help="停止 daemon 並等待退出", description="停止 daemon 並等待退出")
+    halting.add_argument("--target", metavar="D", help=TARGET_HELP)
+    halting.add_argument("--wait-ms", type=int, default=30000, metavar="N",
+                         help="等退出的上限，非負毫秒（預設 30000）")
     try:
         options = parser.parse_args(args)
-        if options.home == "":
-            parser.error("--home 不可為空")
-        if options.command == "stop" and options.wait_ms < 0:
-            stopping.error("--wait-ms 必須是非負整數")
+        if options.command is None:
+            parser.print_usage(sys.stderr)
+            parser.exit(2, "aos-daemon: error: 要給子命令：aos-daemon boot [--target D]／aos-daemon halt [--target D]\n")
+        if options.target == "":
+            parser.error("--target 不可為空")
+        if options.command == "halt" and options.wait_ms < 0:
+            halting.error("--wait-ms 必須是非負整數")
     except SystemExit as exc:
         return exc.code
-    home = daemon_home(options.home)
+    home, source = aos_home.resolve_target(options.target, "AOS_DAEMON_HOME")
+    note = aos_home.target_note("D", home, source, "AOS_DAEMON_HOME")
     try:
-        return stop(home, options.wait_ms) if options.command == "stop" else run(home)
+        return stop(str(home), options.wait_ms) if options.command == "halt" else run(str(home))
     except aos_home.HomeError as exc:
-        _log(exc.code, exc.msg)
+        _log(exc.code, exc.msg + note)
     except (OSError, ValueError, TypeError) as exc:
-        _log("IOFailed", exc)
+        _log("IOFailed", str(exc) + note)
     return 1
 
 

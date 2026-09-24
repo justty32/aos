@@ -181,7 +181,7 @@ class KernelIntegration(KernelCase):
     def test_boot_rejects_absent_daemon_using_lock_not_stale_pid(self):
         self.initialize()
         self.write(self.daemon / "state.json", {"pid": os.getpid(), "children": {}})
-        result = self.cli("boot", self.home, "--daemon", self.daemon)
+        result = self.cli("boot", self.home, "--daemon-target", self.daemon)
         self.assertEqual(result.returncode, 1)
         self.assertFalse((self.home / "state.json").exists())
         self.assertNotIn("daemon", read_json(self.home / "info.json"))
@@ -193,7 +193,7 @@ class KernelIntegration(KernelCase):
         response = aos_client.call(self.daemon, "spawn", {"name": "k", "target": target}, timeout_ms=3000, poll_ms=5)
         self.assertIn("result", response)
         before = (self.home / "info.json").read_bytes()
-        result = self.cli("boot", self.home, "--daemon", self.daemon)
+        result = self.cli("boot", self.home, "--daemon-target", self.daemon)
         self.assertEqual(result.returncode, 1)
         self.assertIn("NameTaken", result.stderr)
         self.assertEqual((self.home / "info.json").read_bytes(), before)
@@ -233,7 +233,7 @@ class KernelIntegration(KernelCase):
         wait_for(lambda: marker.exists())
         queued = aos_client.submit(self.home, "add", {"target": self.job(name="queued"), "name": "queued", "once": True})
         wait_for(lambda: self.state().get("procs", {}).get("queued", {}).get("status") == "queued")
-        self.good_cli("stop", self.home, "--no-wait")
+        self.good_cli("halt", self.home, "--no-wait")
         rejected = aos_client.wait_response(self.home, queued, timeout_ms=5000, poll_ms=5)
         self.assertEqual(rejected["error"]["data"]["code"], "Stopping")
         self.assertEqual(self.state()["phase"], "stopping")
@@ -265,8 +265,8 @@ class KernelIntegration(KernelCase):
         self.info["cpus"]["k"]["pool"] = "default"
         self.info["cpus"]["0"]["pool"] = "kernel"
         self.write(self.home / "info.json", self.info)
-        boot = subprocess.Popen([PY, str(CLI / "aos-kernel"), "boot", str(self.home),
-                                 "--daemon", str(self.daemon)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        boot = subprocess.Popen([PY, str(CLI / "aos-kernel"), "boot", "--target", str(self.home),
+                                 "--daemon-target", str(self.daemon)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 stdin=subprocess.DEVNULL, text=True)
         def cleanup_boot():
             if boot.poll() is None:

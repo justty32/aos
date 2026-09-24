@@ -50,7 +50,7 @@ class DaemonTest(unittest.TestCase):
     def start(self, ready=True, controlled=False):
         log = open(self.root / "daemon.log", "ab")
         self.addCleanup(log.close)
-        command = [PY, str(CLI / "aos-daemon"), "--home", str(self.home)]
+        command = [PY, str(CLI / "aos-daemon"), "boot", "--target", str(self.home)]
         if controlled:
             self.write(self.root / "clock.json", 10)
             command = [PY, "-c", CLOCK_DRIVER, str(CLI.parent / "lib"), str(self.home),
@@ -284,7 +284,7 @@ class DaemonTest(unittest.TestCase):
         self.assertFalse(aos_daemon.is_alive(self.home))
         self.start()
         self.assertTrue(aos_daemon.is_alive(self.home))
-        second = subprocess.run([PY, str(CLI / "aos-daemon"), "--home", str(self.home)],
+        second = subprocess.run([PY, str(CLI / "aos-daemon"), "boot", "--target", str(self.home)],
                                 stdin=subprocess.DEVNULL, capture_output=True, timeout=4)
         self.assertEqual(second.returncode, 1)
         self.assertIn(b"AlreadyRunning", second.stderr)
@@ -336,7 +336,7 @@ class DaemonTest(unittest.TestCase):
         self.assertEqual(read_json(self.home / "info.json")["_metainfo"]["_type"], "daemon")
         self.stop()
         self.write(self.home / "info.json", {"_metainfo": {"_type": "wrong", "_version": 1}})
-        bad = subprocess.run([PY, str(CLI / "aos-daemon"), "--home", str(self.home)],
+        bad = subprocess.run([PY, str(CLI / "aos-daemon"), "boot", "--target", str(self.home)],
                              stdin=subprocess.DEVNULL, capture_output=True, timeout=4)
         self.assertEqual(bad.returncode, 1)
         self.assertIn(b"NotAHome", bad.stderr)
@@ -483,8 +483,14 @@ class DaemonTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"AOS_DAEMON_HOME": str(self.home), "HOME": str(self.root)}):
             self.assertEqual(aos_daemon.daemon_home(), str(self.home))
             self.assertEqual(aos_daemon.daemon_home(str(self.root / "explicit")), str(self.root / "explicit"))
-        with mock.patch.dict(os.environ, {"HOME": str(self.root)}, clear=True):
-            self.assertEqual(aos_daemon.daemon_home(), str(self.root / ".aos-daemon"))
+        cwd = os.getcwd()
+        try:
+            os.chdir(self.root)
+            with mock.patch.dict(os.environ, {"HOME": str(self.root)}, clear=True):
+                # 09-24 fix-r4：~/.aos-daemon 預設拿掉，沒給也沒設就是目前資料夾。
+                self.assertEqual(aos_daemon.daemon_home(), str(Path(self.root).resolve()))
+        finally:
+            os.chdir(cwd)
 
     def test_missing_plain_target_is_spawn_failed(self):
         self.start()

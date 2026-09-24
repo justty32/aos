@@ -95,7 +95,7 @@ class AgentCrashTests(unittest.TestCase):
             self.respond(name)
         self.put(self.k / 'state.json', ledger)
         if change_kernel:
-            self.env['AOS_K'] = str(self.root / 'other-K')
+            self.env['AOS_KERNEL_HOME'] = str(self.root / 'other-K')
         with patch.object(agent.aos_client, 'submit', wraps=agent.aos_client.submit) as submit:
             self.assertEqual(self.tick(), 0)
             self.assertEqual(submit.call_count, int(location == 'absent'))
@@ -124,7 +124,7 @@ class AgentCrashTests(unittest.TestCase):
         self.recover_post('responses')
 
     def test_C3_changed_kernel(self):
-        """C-3b：換 AOS_K 後仍查舊 K；缺單時仍放到舊 K。"""
+        """C-3b：換 AOS_KERNEL_HOME 後仍查舊 K；缺單時仍放到舊 K。"""
         self.recover_post('procs', True)
         name = self.state()['batch']['calls'][0]['name']
         st = self.state()

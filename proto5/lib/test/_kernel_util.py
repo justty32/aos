@@ -37,7 +37,15 @@ class KernelCase(unittest.TestCase):
         return str(path)
 
     def cli(self, *args, timeout=10):
-        return subprocess.run([PY, str(CLI / "aos-kernel"), *map(str, args)],
+        """cli(子命令, K, 其他…)：第二個參數是 K 家時換成 --target K（09-24 fix-r4 起 K 不是位置參數）。"""
+        args = [str(a) for a in args]
+        if len(args) >= 2 and not args[1].startswith("-"):
+            args = [args[0], "--target", args[1], *args[2:]]
+        return self.raw_cli(*args, timeout=timeout)
+
+    def raw_cli(self, *args, timeout=10, cwd=None, env=None):
+        """原樣把參數交給 aos-kernel，不替你補 --target。"""
+        return subprocess.run([PY, str(CLI / "aos-kernel"), *map(str, args)], cwd=cwd, env=env,
                               stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout)
 
     def good_cli(self, *args, timeout=10):
@@ -46,7 +54,8 @@ class KernelCase(unittest.TestCase):
         return result
 
     def initialize(self, cpus=None, **settings):
-        self.good_cli("init", self.home)
+        config = self.write(self.root / "kernel-config.json", {"cpus": {"0": {}, "1": {}, "2": {}}})
+        self.good_cli("init", self.home, "--config", config)
         self.info = read_json(self.home / "info.json")
         self.info.update(cpus=cpus or {"k": {"pool": "kernel"}, "0": {}, "llm": {"pool": "llm"}},
                          tick_ms=5, interval_ms=5, bad_after=3)
@@ -57,12 +66,12 @@ class KernelCase(unittest.TestCase):
         log = open(self.root / "daemon.log", "ab")
         self.addCleanup(log.close)
         self.daemon_process = subprocess.Popen(
-            [PY, str(CLI / "aos-daemon"), "--home", str(self.daemon)],
+            [PY, str(CLI / "aos-daemon"), "boot", "--target", str(self.daemon)],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=log, start_new_session=True)
         wait_for(lambda: self.dstate().get("pid") == self.daemon_process.pid)
 
     def boot(self):
-        self.good_cli("boot", self.home, "--daemon", self.daemon)
+        self.good_cli("boot", self.home, "--daemon-target", self.daemon)
         self.info = read_json(self.home / "info.json")
         wait_for(lambda: self.state().get("last_seq", 0) >= 1)
 
@@ -89,7 +98,7 @@ class KernelCase(unittest.TestCase):
         return self.write(self.root / (name + ".json"), dict(argv=[PY, "-c", source], **extra))
 
     def kernel_stop(self):
-        self.good_cli("stop", self.home)
+        self.good_cli("halt", self.home)
         wait_for(lambda: self.state().get("phase") == "stopped", timeout=8)
         wait_for(lambda: not self.dstate().get("children"), timeout=8)
 
