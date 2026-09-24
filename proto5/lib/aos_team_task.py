@@ -115,6 +115,14 @@ def dispatch(t, text):
     return e
 
 
+def _tell_human_for_beat(t, status, ev):
+    """心跳派的例行單卡住：等的是人，但回報多半寄給 beat（只記不投）→ 補一封給人（原信就寄給人＝不重複）。"""
+    if t['opened_by'] != BEAT or ev.get('to') == HUMAN:
+        return []
+    return [letter(HUMAN, status, t, '例行單 %s 的負責人 %s 回 %s，等你決定：%s'
+                   % (t['id'], t['assignee'], status, ev.get('note') or ''))]
+
+
 def _is_int(v):
     return isinstance(v, int) and not isinstance(v, bool)
 
@@ -212,8 +220,10 @@ def apply(t, ev, now=None):
                 effects += _notify(t, 'DONE', '%s 完成：%s' % (t['id'], t['goal']))
         elif status == 'BLOCKED' and st in ('sent', 'working', 'waiting_user'):
             move('blocked', ev.get('note'), waiting_on=t['opened_by'] if t['opened_by'] not in (POST, BEAT) else HUMAN)
+            effects += _tell_human_for_beat(t, status, ev)
         elif status == 'NEEDS-USER' and st in ('sent', 'working', 'blocked'):
             move('waiting_user', ev.get('note'), waiting_on=HUMAN)
+            effects += _tell_human_for_beat(t, status, ev)
         elif status == 'FAILED':
             move('failed', ev.get('note'), waiting_on=None)
             effects += _notify(t, 'FAILED', '%s 負責人 %s 回報 FAILED：%s' % (t['id'], t['assignee'], ev.get('note') or ''),

@@ -240,6 +240,88 @@ class CheckerBrokenTests(TeamCase):
         self.assertEqual(self.ticket()['attempt'], 1)
         self.assertTrue([m for m in self.human_mail() if '檢查器壞了' in m['text']])
 
+    def test_deadline_does_not_fail_while_waiting_for_checker(self):
+        """astra2 M1：檢查器壞、等人修的時候過了期限，不判隊員逾時；人 --again 之後的那份還在跑也不判。"""
+        self.working([{'kind': 'check', 'name': 'nope'}])
+        t = self.ticket()
+        t['deadline'] = (self.now + datetime.timedelta(minutes=1)).isoformat()
+        fmt.write_json(self.lay.task('t-0001'), t, indent=2)
+        self.broken_result('v-t-0001-r1-a1')
+        self.post()
+        self.now += datetime.timedelta(minutes=5)
+        self.post()
+        self.assertEqual(self.ticket()['status'], 'verifying')
+        self.request('human', 'reverify', task='t-0001')
+        self.post()
+        self.post()
+        self.assertEqual(self.ticket()['status'], 'verifying')      # 重驗的工作在跑：照樣不判逾時
+        self.assertFalse((self.lay.team / 'post' / 'checker-broken' / 't-0001').exists())
+
+    def test_stale_broken_result_not_mailed(self):
+        """astra2 M5：人先取消，舊的驗收才回「檢查器壞」＝只記，不寄「等你修」。"""
+        self.working([{'kind': 'check', 'name': 'nope'}])
+        self.request('human', 'cancel', task='t-0001')
+        self.post()
+        self.broken_result('v-t-0001-r1-a1')
+        self.post()
+        self.assertFalse([m for m in self.human_mail() if '檢查器壞了' in m['text']])
+        job = json.loads((self.lay.team / 'post' / 'jobs-done' / 'v-t-0001-r1-a1' / 'job.json').read_text())
+        self.assertTrue(job['stale'])
+
+    def test_result_without_broken_field_rejected(self):
+        """astra2 M4：結果檔漏了 broken（或逐條 result 跟 pass 對不上）＝不收，不會把 error 當成不過扣次數。"""
+        self.working([{'kind': 'check', 'name': 'nope'}])
+        self.job_result('v-t-0001-r1-a1', False, results=[
+            {'i': 0, 'kind': 'check:nope', 'result': 'error', 'pass': False, 'why': 'x'}], broken=None)
+        self.post()
+        jobdir = self.lay.team / 'post' / 'jobs' / 'v-t-0001-r1-a1'
+        self.assertTrue((jobdir / 'result-1.json.bad').exists())
+        self.assertEqual(self.ticket()['attempt'], 1)
+        self.self_check_result_mismatch()
+
+    def self_check_result_mismatch(self):
+        job = {'task': 't-0001', 'rev': 1, 'attempt': 1}
+        res = {'task': 't-0001', 'rev': 1, 'attempt': 1, 'pass': False, 'broken': False,
+               'results': [{'i': 0, 'result': 'pass', 'pass': False}]}
+        self.assertIn('result', post.check_result(res, job))
+
+    def test_blocked_routine_tells_human(self):
+        """astra2 M2：例行單負責人回 BLOCKED（寄給 beat）：人收到一封，等的是人。"""
+        import aos_team_task as task_mod
+        rid = self.new_id('beat')
+        (self.lay.outbox('beat') / (rid + '.json')).write_text(json.dumps(
+            {'id': rid, 'from': 'beat', 'kind': 'handoff', 'at': self.now.isoformat(), 'assignee': 'worker-1',
+             'workflow': '無', 'goal': '〔例行 x〕做事', 'done_when': [{'kind': 'file_exists', 'path': 'a'}]},
+            ensure_ascii=False))
+        self.post()
+        self.pick_up('worker-1')
+        self.post()
+        self.letter('worker-1', 'beat', 'BLOCKED', '缺 facts.json', reply_to='t-0001', rev=1)
+        self.post()
+        t = self.ticket()
+        self.assertEqual((t['status'], t['waiting_on']), ('blocked', 'human'))
+        got = [m for m in self.human_mail() if m['status'] == 'BLOCKED']
+        self.assertEqual(len(got), 1)
+        self.assertIn('缺 facts.json', got[0]['text'])
+        self.letter('worker-1', 'human', 'NEEDS-USER', '要你決定', reply_to='t-0001', rev=1)
+        self.post()
+        self.assertEqual(len([m for m in self.human_mail() if m['status'] == 'NEEDS-USER']), 1)   # 原信給人＝不重複
+
+    def test_bad_done_when_is_broken_even_if_file_missing(self):
+        """astra2 M3：條目寫錯（缺 text、column 寫法不對）先判檢查器壞，不看交付物在不在。"""
+        import aos_team_verify as verify
+        with self.assertRaises(verify.CheckError):
+            verify.check_contains(self.project, {'path': 'nope.md'})
+        with self.assertRaises(verify.CheckError):
+            verify.check_table_filled(self.project, {'path': 'nope.json', 'column': 3})
+
+    def test_again_busy_while_verify_running(self):
+        """astra2 S1：這一次的驗收還在跑就不收 --again。"""
+        self.working([{'kind': 'file_exists', 'path': 'AGENTS.md'}])
+        rid = self.request('human', 'reverify', task='t-0001')
+        self.post()
+        self.assertEqual(self.record(rid)['code'], 'Busy')
+
     def test_again_only_for_verifying(self):
         self.handoff()
         self.post()

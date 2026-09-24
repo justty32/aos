@@ -43,7 +43,7 @@
 ## 結果
 
 ```json
-{"task": "t-0001", "rev": 1, "attempt": 2, "pass": false, "at": "2026-09-25T10:05:00+08:00",
+{"task": "t-0001", "rev": 1, "attempt": 2, "pass": false, "broken": false, "at": "2026-09-25T10:05:00+08:00",
  "results": [{"i": 0, "kind": "file_exists", "result": "pass", "pass": true, "why": "AGENTS.md 在"},
              {"i": 1, "kind": "check:wf_residue", "result": "fail", "pass": false, "why": "{{ 3、〔導入判斷〕 0、〔模板說明〕 1（AGENTS.md:3、…）"}]}
 ```
@@ -81,6 +81,6 @@ t-0001 rev1 第 2 次 驗收：不過（1/2 條過）
 - 結果 `broken: true`＝檢查器壞：照上表寄給人、單子停著，不送 `verified`。
 
 先把「要起第 n 次」記進 `job.json`、再真的起；崩在中間：kernel 那邊查原單、回音、帳本，有就當起了，沒有就用**同一個單名**重放；另開行程的不知道起了沒，當它丟了，照樣看它的結果檔。
-之後每輪看每一次的 `result-<n>.json`：**先驗身分與格式**（`task`／`rev`／`attempt` 要等於這份工作、`pass` 是布林、`results` 每條有整數 `i` 與布林 `pass`、`pass` 等於逐條全過），不對＝改名 `.bad`、不收；對＝`verified` 事件。
+之後每輪看每一次的 `result-<n>.json`：**先驗身分與格式**（`task`／`rev`／`attempt` 要等於這份工作、`pass` 是布林、`results` 每條有整數 `i`、`result`（pass／fail／error）與跟它一致的布林 `pass`、`pass` 等於逐條全過、`broken` 布林且等於「有一條 error」），不對＝改名 `.bad`、不收；對：`broken` 是 false＝`verified` 事件；true＝檢查器壞（上表）——但單子已經不在等這一次（改派、取消、別份驗收先回來）就只記 `stale`、不寄。等人修的單記在 `team/post/checker-broken/<單號>`（內容是 rev、attempt）；郵差看期限時略過它，人 `--again` 的那份工作在跑時也略過。
 都沒結果：某一次 kernel 回音到了卻沒結果、kernel 不記得了、行程死了、或超過 10 分鐘（另開的行程會被整組砍掉）＝那一次結束；沒有在跑的了就再交一次（最多 3 次），還是不行＝也算檢查器壞：寄 `BLOCKED` 給人、單子停在 verifying、不扣次數。
 **每一次** kernel 執行的回音都要簽收（`acked` 記在那一次上）；回音還沒到、kernel 也還記得那一次＝工作不收尾。都結清了＝記 `complete`、搬進 `team/post/jobs-done/`（崩在中間，下一輪看到 `complete` 就只補搬）。

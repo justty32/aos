@@ -155,7 +155,7 @@ class TeamCase(unittest.TestCase):
         import re
         m = re.match(r'v-(t-[0-9]+(?:\.r[0-9]+)?)-r([0-9]+)-a([0-9]+)(?:-x[0-9a-f]+)?\Z', jid)
         head, rev, attempt = m.group(1), int(m.group(2)), int(m.group(3))
-        res = {'task': head, 'rev': rev, 'attempt': attempt, 'pass': passed,
+        res = {'task': head, 'rev': rev, 'attempt': attempt, 'pass': passed, 'broken': False,
                'results': results if results is not None else
                [{'i': 0, 'kind': 'file_exists', 'result': 'pass' if passed else 'fail', 'pass': passed,
                  'why': 'AGENTS.md %s' % ('在' if passed else '不在')}]}

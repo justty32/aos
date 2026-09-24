@@ -62,7 +62,7 @@ opened:queued → delivered:sent → picked_up:working → report:verifying → 
 | `wf_lint_strict`（空專案） | 0.061 | 59 ms | 19 MB |
 | `team_say` | 0.018 | 18 ms | 17 MB |
 
-郵差 1 秒一輪＝閒著每小時約 **125 cpu 秒**（約一顆核心的 3.5%）；多半是 Python 起行程與 import。心跳 60 秒一輪＝每小時約 1.8 cpu 秒。
+郵差 1 秒一輪＝閒著每小時約 **125 cpu 秒**（約一顆核心的 3.5%）；多半是 Python 起行程與 import。**裁決後預設 5 秒一輪＝每小時約 25 cpu 秒**（見文末追加）。心跳 60 秒一輪＝每小時約 1.8 cpu 秒。
 工具描述：`team_say` 描述 138 字元，整段 function JSON 680 字元（約 170 token）。
 
 ## 六軸自評（axes.md §5；每軸 1～5、不加總）
@@ -165,10 +165,58 @@ opened:queued → delivered:sent → picked_up:working → report:verifying → 
 - `notes/README.md`：本報告、`2026-09-24-tool-era/review-post-task.md`／`review-post-astra.md`。
 - `spec/team/README.md` 的〈各節〉表：`post.md`、`verify.md`、`beat.md` 三列（這三份是新檔，README 我沒動）。
 
-## 要使用者拍的
+## 要使用者拍的（已裁決，見下一節）
 
-1. **郵差多久一輪**：現在 1 秒（catalog 的例），閒著每小時約 125 cpu 秒（資源軸 2 分）。改 5 秒＝約 25 秒（3 分），代價是信晚到最多 5 秒。先照 1 秒做。
-2. **心跳要不要有自己的寄件身分**：現在用 human 名義寄派工申請，單子的開單人是人、完成信寄給人。另一種是讓 `post` 也能寄 handoff（要改隊 1 的權限規則）。先照 human 做。
-3. **一次性例行的欄位名**：`once`（避開申請的 `at`）。要不要把 catalog 改成 `once`？
-4. **驗收的「檢查失敗」要不要用掉工人的次數**：現在算沒過（例如 wf 工具包快照壞了，工人三次後 failed）。另一種是檢查失敗直接 BLOCKED 給人、不扣次數。先照「算沒過」做。
-5. **例行的完成信**：心跳派的單完成時人會收到一封 DONE。要不要讓心跳派的單完成時不通知人（只記在 `routine ls`）？先照現狀。
+五題 2026-09-24 已拍板，改動在〈追加：五題裁決與改動〉。原題：①郵差多久一輪 ②心跳要不要自己的寄件身分 ③一次性例行叫 `once` ④檢查器壞要不要扣次數 ⑤例行完成要不要寄信給人。
+
+## 追加：五題裁決與改動（2026-09-24）
+
+| # | 裁決 | 改了什麼 | 測試 |
+|---|---|---|---|
+| ① | 郵差間隔可設定，預設 5 秒 | `team.json` 多一個頂層鍵 `"post": {"interval_s": 5}`（1～3600；沒寫＝5）；`aos_team_post.start` 讀它登記 kernel 反覆工作；改了要 `aos-team stop`、`start`。整合測試自己設 1 秒 | `IntervalTests`（預設、自訂、壞值、`start` 用名冊的值） |
+| ② | 心跳用自己的身分派工 | `beat` 是保留名（跟 `human`、`post` 一樣）；寄件格 `team/outbox/beat/`（`aos-team init` 會建）；只能寄 `handoff`、`cancel`；信頭「心跳（定時器）」；派工信多一行「這張單是心跳（定時器）照例行派的」，叫負責人回 DONE 給 `beat`；成員都能寄給 `beat`（`team_say` 一定收這個名字），郵差只記投遞紀錄、不投；心跳的漏跑／失敗報告也從 `outbox/beat/` 寄；`routes.json` 寫死的負責人不能是保留名，例子加一條「看一下例行」→ `routine ls` | `BeatIdentityTests`（6 條）；原有心跳測試全改看 `outbox/beat/` |
+| ③ | catalog 改 `once` | catalog T-beat 寫 `once`，也補了②⑤兩句 | `CatalogTests` |
+| ④ | 檢查器壞≠沒過 | 驗收結果分三種：過／不過（隊員的東西不合：檔不在、表沒填、殘留、lint 沒過）／檢查器壞（不認得的檢查器、缺參數、`done_when` 寫絕對路徑、wf-lint 本身故障或逾時、驗收三次沒結果）。整份多一欄 `broken`。檢查器壞：不送 `verified`、不扣次數、寄 `BLOCKED` 給人列出哪幾條、單子停在 `verifying`；人修好後 `aos-team verify t-0001 --again`（寄 `reverify` 申請，只有人能寄）重交同一次驗收 | `CheckerBrokenTests`（10 條，含 astra 第二輪的 5 條） |
+| ⑤ | 例行做完不寄 DONE 給人 | 開單人是 `beat` 的單完成時，給人的 DONE 省掉；failed（三次沒過、負責人 FAILED）、逾時、檢查器壞、重派用完、漏跑、卡住等人照寄 | `QuietRoutineTests`（3 條）、`test_blocked_routine_tells_human` |
+
+改到隊 1 的共用檔（照裁決必須改的）：`lib/aos_team_format.py`（`BEAT`、保留名、名冊 `post` 鍵、`mail_to` 可寫 beat、`read_outbox_file`、`may_send`、信頭、routes 的寫死負責人）、`lib/aos_team_task.py`（`render_handoff` 一行、`_notify` 例行 DONE 不給人、BLOCKED 的 `waiting_on`、`on_handoff` 的 mail_to 檢查略過 beat、例行卡住補寄給人）、`spec/team/layout.md`、`roster.md`、`examples/routes.json`；`lib/aos_team_requests.py` 加 `reverify` 一行。沒碰 kernel／daemon 的檔。
+
+**astra 第二輪**（[任務書](2026-09-24-tool-era/review-post2-task.md)／[回報](2026-09-24-tool-era/review-post2-astra.md)，只審這次改動）：必修 5 條全修、建議 2 條都做。
+
+| # | 問題 | 改法 |
+|---|---|---|
+| M1 | 檢查器壞、等人修的單過了期限會被判 failed | 郵差記 `team/post/checker-broken/<單號>`（rev、attempt），看期限時略過；人 `--again` 的那份在跑時也略過 |
+| M2 | 例行單負責人回 BLOCKED／NEEDS-USER 給 beat，人收不到 | 狀態機在這兩種時補一封給人（原信寄給人就不重複） |
+| M3 | 條目缺參數但交付物也不在，被算成「不過」 | 先驗條目參數（`contains` 的 text／path、`table_filled` 的 column／heading），再讀交付物 |
+| M4 | 結果檔漏了 `broken`，error 被當成不過 | 結果檔一定要有 `broken`，逐條 `result` 跟 `pass` 要一致，否則 `.bad` 不收 |
+| M5 | 過期的驗收回「檢查器壞」照樣寄「等你修」 | 寄之前核對單子還在等這一次（verifying、rev、attempt），不是就只記 `stale` |
+| S1 | `--again` 可以在驗收還在跑時疊好幾份 | 這一次的驗收還在跑＝`Busy` 退件 |
+| S2 | 規範幾句沒同步 | beat.md、verify.md、post.md 已改 |
+
+**真跑 3 次**（LiteLLM `deepseek-chat`；`aos-team init`／`start` 的家；郵差照預設 5 秒；K2 的停車喚醒在）：每次先跑人開的單，再 `aos-team routine add count-md --every 30m`，等心跳派出、做完。
+
+| 次 | 人開的單 | 例行單 | 例行單開單人 | 例行完成後人收到的 DONE |
+|---|---|---|---|---|
+| 1 | done，50.6 秒 | done，63.9 秒 | beat | 0 封 |
+| 2 | done，44.6 秒 | done，63.9 秒 | beat | 0 封 |
+| 3 | done，44.6 秒 | done，56.8 秒 | beat | 0 封 |
+
+比上一版（1 秒郵差）慢 10～15 秒：郵差 5 秒一輪、經手兩三次；例行多等心跳的一輪（60 秒）。工人停車後都被投信喚醒（K2 的 `drop_new` 會投 wake）。第 1 次的 `aos-team mail` 節錄：
+
+```text
+09-24 19:50  post → worker-1  REQUEST  t-0002 rev1  ✓收  任務 t-0002（rev1，第 1/3 次）：〔例行 count-md @ 09-24 19:50〕數專案裡有幾個 .…
+09-24 19:51  worker-1 → beat  DONE  t-0002 rev1  數到專案內 1 個 .md 檔（notes/hello.md），已把數字 1 寫進 notes/md-count.txt…
+```
+
+**測試**：71＋1 檔（新增 `test_team_rulings.py` 24 條），全套 2068 條全綠。
+
+**六軸重評**（只列有變的）：
+
+| 工具 | 軸 | 原 | 新 | 為什麼 |
+|---|---|---|---|---|
+| 郵差 | 3 資源 | 2 | 3 | 5 秒一輪：閒著每小時約 25 cpu 秒（10～<60 那一級） |
+| 郵差 | 4 快 | 5 | 4 | 一輪還是 37 ms，但信多等一個巡查週期（最多 5 秒），整件事慢 10～15 秒 |
+| 心跳 | 6 邊界 | 3 | 4 | 只寫自己的東西（`beat.json`、自己的 `outbox/beat/`），不再代人寄申請；權限只剩 handoff、cancel |
+| 驗收員 | 5 人易懂 | 4 | 4 | 不變；但「不過」和「檢查器壞」分開，人收到的信講得清是誰的問題 |
+
+最弱兩軸更新：郵差＝資源（3）、邊界（3）；心跳＝穩定（4）、資源（4）。

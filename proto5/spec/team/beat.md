@@ -30,7 +30,7 @@
 
 - 時間三選一：`every`（`30s`／`10m`／`6h`／`1d`，從 `added_at` 起算，登記當下就算第一次）、`daily`（`09:00`，照 `tz`，沒寫＝團隊的）、`once`（含時區的 ISO 時刻，一次性）。
   `tz` 要是認得的 IANA 名字（打錯＝`BadRoutine`，不默默變本機）；到期一律換成 UTC 比；夏令重複的那一小時取第一次，跳過的那一小時照 zoneinfo 往後推。
-  （catalog 寫 `at`；申請本身已經有 `at`＝寄出時間，所以一次性的改叫 `once`。）
+  （申請本身已經有 `at`＝寄出時間，所以一次性的叫 `once`；catalog 也已改成 `once`。）
 - `done_when`：同任務單（[tasks.md](tasks.md)），**一定要有**——心跳派的單一樣走驗收。
 - `timeout_minutes`：寫進那張單的 `deadline_minutes`，到了郵差把單子判 failed。`retries`：這一次失敗後重派幾次（0～5，預設 0）。
 
@@ -62,7 +62,7 @@
 **派出**＝先把在途寫進 `beat.json`，再往 `team/outbox/beat/` 放一份 `handoff` 申請（寄件人 `beat`；授權來源仍是「人登記或人批准」這一列）：
 id＝`<那一次的 epoch 秒×10⁹＋第幾次>-<「名字｜登記它的申請 id」的 crc32>-beat`，重跑算出來一樣、不覆蓋；刪掉再重加同名的是新的一條，不會沿用舊單；`goal` 前面加 `〔例行 名字 @ 09-25 10:00〕`，`workflow` 沒寫＝`無`。
 郵差開單、派給 `to`；單子的開單人是 `beat`，派工信多一行「這張單是心跳（定時器）照例行派的」，叫負責人做完回 DONE 給 `beat`。
-**做完不寄信給人**（2026-09-24 使用者裁）：只有異常才寄——單子 failed（驗收三次沒過、負責人回 FAILED）、逾時（`timeout_minutes` 到）、檢查器壞（[verify.md](verify.md)）、重派用完、漏跑。卡住（BLOCKED）時等的是人。
+**做完不寄信給人**（2026-09-24 使用者裁）：只有異常才寄——單子 failed（驗收三次沒過、負責人回 FAILED）、逾時（`timeout_minutes` 到）、檢查器壞（[verify.md](verify.md)）、重派用完、漏跑、卡住等人（負責人回 BLOCKED／NEEDS-USER 給 `beat` 時，郵差另寄一封給人；原信就是寄給人的不重複）。
 
 **報告**（漏跑、失敗）：先記進 `beat.json` 那條的 `reports`（跟「放棄這一次」「派出」同一次寫），再寫進 `team/outbox/beat/`（一封給每個領隊、一封給人，`from: beat`、`PROGRESS`；id＝`<crc>-<crc>-beat`，由事件、這條例行、收件人算出來、不覆蓋），全寫好才從 `reports` 拿掉；崩在中間下一輪照寄。郵差投。
 
