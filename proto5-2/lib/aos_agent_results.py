@@ -52,15 +52,15 @@ def llm_log(path):
 
 
 def cpu_logs(kernel, pool):
+    """kernel-home.md §1：cpu.log 在 K/pools/<池>/cpus/<i>/cpu.log；找不到那個池名就印萬用字元（proto5-2）。"""
     base = Path(kernel)
     try:
         raw = json.loads((base / 'info.json').read_text(encoding='utf-8'))
-        cpus = raw.get('cpus', {})
-        names = [name for name, cpu in cpus.items() if isinstance(cpu, dict)
-                 and cpu.get('pool', 'default') == pool]
+        pools = raw.get('pools')
+        found = isinstance(pools, dict) and pool in pools
     except (OSError, ValueError, AttributeError):
-        names = []
-    return '、'.join(str(base / 'cpus' / name / 'cpu.log') for name in names or ['*'])
+        found = False
+    return str(base / 'pools' / (pool if found else '*') / 'cpus' / '*' / 'cpu.log')
 
 
 def exec_failure(path, code):

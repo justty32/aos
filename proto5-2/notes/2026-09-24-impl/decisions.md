@@ -25,6 +25,7 @@ D-n 是實作中撞到規範沒寫或矛盾、自己選的（一律選最保守�
 - **D-1 程式與入口**：`proto5/lib` 整份複製到 `proto5-2/lib`，`proto5/cli` 複製到 `proto5-2/cli`（任務書寫「含 cli/」，但 proto5 的 cli 在 lib 旁邊）。池模板的 `argv[0]` 指 `proto5-2/cli/aos-cpu`。
 - **D-2 模組分工**：daemon 相關只在 `aos_daemon*.py`；kernel 相關只在 `aos_kernel*.py`；cpu 通知只在 `aos_exec_cpu.py`；`aos_home.py`／`aos_client.py` 只准**加**函式、不改既有函式的行為。
 - **D-3 錯誤回音形狀**：沿用 proto5 `aos_home.error_response`：`{"code": -32000, "message": …, "data": {"code": "NameTaken"}}`；`-32602` 用 `params_error`（`data.code`＝`FieldTypeMismatch`、`data.position`）。kernel 判錯一律看 `data.code`，沒有 `data.code` 時用 `str(code)`。
+- **D-4（＝ D-38 拍板）skip 一律保留不丟**：`cpu add／rm` 整理 `skip` 時只排序、去重，不丟大於最大成員號的項目，因為 Q4「永久退休」優先於 skip 長度；代價是 skip 只增不減，要清得手改 info。詳見下面 D-38。
 
 ## kernel 隊 D-20～D-49
 
@@ -45,6 +46,20 @@ D-n 是實作中撞到規範沒寫或矛盾、自己選的（一律選最保守�
 - **D-34 init 寫進 info 的預設**：`tick_ms`…`bad_after` 五格照 proto5 寫進去；`cpu`、`sweep` 不寫（讀時補）；`--config` 可以寫 `daemon`（proto5 禁止，proto5-2 規範允許，`--daemon` 優先）。翻案：`info_from_config`。
 - **D-35 kernel.log 新事件**：`scale_send`、`scale_echo`（`result`＝ok 或錯誤碼）、`pool_new`、`pool_envs`、`pool_gone`、`pool_no_daemon`、`bad_notify`、`halting`、`stopped`；舊的 `dispatch`／`response`／`bad`／`tick_error` 不變，`cpu` 欄改成 `P/<i>`。
 - **D-36 ls 只求不崩**：`aos-kernel ls` 印鏈、按池一行（want／sent／busy／idle／draining＋daemon 摘要）、行程、排隊數；health 仍呼叫 `aos_kernel_health.health`（還沒改，會回 `broken`）。按池的完整 ls、health、check 留給下一隊。`boot` 成功印 `booted N pools, M cpus`。
+
+**kernel 指令隊（第二階段）D-37～**：
+
+- **D-37 cpu add／rm 只改字面的格**：撞到——「指示詞原樣保留、只動 count／skip／新池那格」，但那格本身若是指示詞（`"count": {"$ref": …}`、`pools` 整個 `$ref`）就沒法「只改那格」。選——`pools` 不是字面物件、或既有池那格／它的 `count`／`skip` 不是字面值＝`NotLiteral` 退 1、不寫；新池不碰別格，照加。保守：絕不把人寫的指示詞換成展開後的值。原本沒有 `skip` 鍵又沒東西要寫就不加這鍵。翻案：`aos_kernel_cpu._literal_pool`。
+- **D-38 skip 整理與「永久退休」衝突**：撞到——kernel-info §5「大於最大成員號的 skip 寫入時拿掉」（隊長任務書也這樣寫），但 `cpu rm P/<最大號>` 寫進去的那號當場就大於新的最大成員號，會被丟掉；之後 `cpu add` 會用回那號（家壞了的那顆又回來）。選——照規範字面丟掉（排序、去重、丟大於最大成員號的；count 0 時全丟）。保守的點在於不自己改規範；**這條建議隊長拍板**。翻案：`aos_kernel_cpu._set_count` 改成「本次退休的號不丟」或整條不丟。
+  **隊長裁定：保留不丟，因為 Q4 永久退休優先於 skip 長度；代價是 skip 只增不減，要清得手改 info。**
+- **D-39 cpu add／rm 參數邊界**：`--count` 在 add 可以是 0（新池先宣告 0 顆；既有池印 `A -> A`），負數＝用法錯；`--env` 要 `KEY=VALUE`，KEY 空、以 `$` 開頭（會被當指示詞）、同 KEY 給兩次＝用法錯；`--daemon` 轉絕對路徑；池名、`--dpool` 不合 kernel-info §5 規則＝用法錯 2（不等寫完再讀驗報 `FieldTypeMismatch`）；改完讀驗不過（例如 count 超過 1000000）＝退 1 不寫。`PoolExists` 走用法錯 2、代號照印 `PoolExists`。翻案：`cpu_add`／`cpu_rm` 開頭。
+- **D-40 「kernel 沒在跑」怎麼判**：帳本 `phase` 是 `running`、帳本有 kernel 池、那個 daemon 活著、它那邊 kernel 池摘要 `running` > 0，四個都成立才算在跑；否則多印「kernel 沒在跑：下次 boot 生效（aos-kernel boot --target K）」。規範只說 add 要印，rm 也照印（同理）。翻案：`kernel_running`、`_report`。
+- **D-41 cpu ls 的欄位來源**：`want`＝info 現在的 count（剛 `cpu add` 完就看得到）；`sent`／`busy`／`idle`（帳本 `free` 長度）／`draining` 取帳本；kernel 池只印 want／sent。info 有、帳本沒有＝`sent -`＋「還沒宣告」；帳本有、info 沒有＝「移除中」；搬池中印新位置。daemon 標籤：用的是頂層 `daemon` 就只印 dpool，否則印 `D dpool`。池列 kernel 排第一。`--pool` 每顆的狀態除了 idle／busy／draining 另有「待宣告」（在 W 不在 S）、「收掉中」（在 S 不在 W、沒在忙）；kids 檔沒有時：在 S＝`daemon pending`，否則 `daemon -`。有 draining 時池行尾印「收掉中 N 顆，等 <行程名>」（kernel-pools §3）。翻案：`aos_kernel_cpu.pool_row／row_line／cpu_rows`。
+- **D-42 ls 的格式**：health 行之後保留 proto5 的鏈資訊，併成一行 `chain … phase … last_seq … kernel cpu kernel/0 current … requests N`（鏈斷了靠它看）；計數行固定 `queued／running／done／bad` 四格（有別的狀態接在後面）；預設只逐行印 `bad`（agent 的暫停標記只在 bad 行與 `--procs` 出現，第一行 health 仍會講）；`--json`＝`status()` 快照＋`health`，`--pool` 時 `pools`／`busy`／`procs` 只留那池；`--pool` 在 info 與帳本都沒有＝`NotFound` 退 1。翻案：`aos_kernel_cli._summary`。
+- **D-43 health 的碼與順序**：dirs（`requests/`、`responses/`、`pools/`）→ stopped → daemon（先 kernel 池的 daemon，再其他已宣告池的 daemon）→ cpus（kernel 池摘要不在或 `running 0`）→ stall → pools（新碼：池 error、池不見了，可多池用「；」接）→ 停機收尾中到這裡就算 ok（池本來就在縮）→ recovering（搬池中、池少 N 顆）→ ok。「少顆」「搬池中」用 **recovering** 碼，讓 aos-agent status 照 fix-r5 當成「會自己好」不喊「kernel 家有問題」。縮到 0 的單在路上時摘要消失不算「池不見了」。提示裡的 `aos-daemon ls` 帶 `--target D`（規範原句沒帶，但 fix-r4 起不帶會找錯家）；停機中的提示拿掉 `--daemon-target`（boot 不收了）；daemon 沒在跑的提示照 handoff §2「每天重開機」改成「先 aos-daemon boot；之後 health 還不是 ok 再 aos-kernel boot」。翻案：`aos_kernel_health.health`。
+- **D-44 check 的細節**：`--daemon-target` 保留（proto5 §6 有；池表以外多查一個 daemon，PATH 也取它的 `/proc` 環境），省略時 PATH 取 kernel 池那個 daemon 的；池解不出 daemon＝bad（boot 會 `NoDaemon`）；`cpus` 項只看 daemon 活著的已宣告池，一個都沒有就不印；`K/pools/<池>/envs.json` 跟 info 的 envs 不同＝warn；沒 `--agent` 時 envs 整個是指示詞（看不出有沒有 `AOS_LLM_CONFIG`）的池不查 llm，有 `--agent` 時它的 `llm.pool` 一律查；`tool_pool` 跟 `tick.pool`／`llm.pool` 一起查。翻案：`aos_kernel_check.check`。
+- **D-45 `init --config` 內容是 JSON null**：`info_from_config(None)` 會當成沒給 `--config`、建預設家；CLI 先擋，`FieldTypeMismatch` 退 1、不建家（fix-r4 的既有行為）。翻案：`aos_kernel_cli._run` 的 init 段。
+- **D-46 add 的池不在時的提示**：kernel 回 `-32602` 且 `data.position` 是 `params.pool` 時，CLI 在訊息尾補「先 aos-kernel cpu add --target K --pool P」。翻案：`_cli_request`。
 
 ## daemon 隊 D-50～D-69
 
@@ -79,3 +94,18 @@ D-n 是實作中撞到規範沒寫或矛盾、自己選的（一律選最保守�
 - **D-72 放通知的寫法**：直接重用既有的 `aos_home.link_json`（同目錄 `.tmp`→`link`→刪 `.tmp`，本來就是規則一那套放單寫法），`FileExistsError`（`aos_home.RequestExists`）當成功、其餘 `aos_home.HomeError` 才記 `NotifyFailed`。沒有另外重寫一套放單邏輯。理由：`aos_home.py` 只准加函式不准改行為，而 `link_json` 現成的行為完全對得上 cpu-notify §2／§3.1 的要求，重用比照抄一份更保守（少一套邏輯要保持一致）。若之後要讓通知內容允許覆蓋既有同名檔，要改 `aos_exec_cpu._send_notify`，不能改 `aos_home.link_json` 的行為（那是共用函式）。
 
 ## 其他 D-80～
+
+### 整合測試隊（第二階段，D-80～D-89）
+
+- **D-80 K 經過 symlink 時每則 resp- 通知都被當成壞通知**：現象——K 家的路徑裡有 symlink（例如 `/link/K`，`/link` 指到 `/real`）時，
+  真 aos-cpu 丟來的每張通知都在 kernel.log 記一行 `bad_notify`（「home 不在 K/pools/*/cpus/ 底下」），回音只能等巡檢／`recent` 收，通知形同沒開。
+  根因——cpu 的 `home` 是 `os.path.abspath(".")`＝它 `getcwd()` 的**實際路徑**（`/real/K/pools/…`），kernel 卻拿字面的 `self.home / "pools"`（`/link/K/pools`）比。
+  修法——`aos_kernel_engine.Kernel._notified_cpu`：先照舊用 normpath 字面比，比不上再把通知的 home 與 `K/pools` 都 realpath 之後比；
+  兩種都比不上才算壞通知。其他壞通知的判法不變（仍只刪、記 log、不退 1）。測試：`test_p52_e2e.Grow.test_notify_through_symlinked_kernel_home`。
+  保守：只多接受「同一個實際位置」的寫法，不放寬 `P/<i>` 格式或 `busy` 檢查。翻案：刪 `_notified_cpu` 的第二組比法（那 symlink 的 K 就只靠巡檢收音）。
+
+### agent 隊（proto5-2 實作隊第二階段，D-90～）
+
+- **D-90 `_already()` 的 discard 怎麼查**：kernel-ledger.md 只說「`on[NAME]` 指的那格 `busy[...]` 的 `discard`」，沒講 `on` 剛好沒這個 NAME（帳本卡在中間狀態、或壞了）時要不要退回掃描。選：先查 `on.get(name)` 拿格子鍵，格子存在就直接看它的 `discard`；`on` 沒有這個名字（或格子不在 `busy` 裡）就退回掃一遍 `busy`，找 `proc == name` 且 `discard` 的格子。保守：跟 proto5 舊版「掃全部 slots」的行為完全相容，只是多了一條正常路徑的快路徑，帳本形狀有點走樣也不會直接判「查不到」。翻案要改：`aos_agent.py` 的 `_already()`。
+- **D-91 `cpu_logs()` 不再列出每顆 cpu 名**：proto5 版本會把同池每顆 cpu 的名字都列出來（`K/cpus/l1/cpu.log、K/cpus/l2/cpu.log`）；kernel-home.md 的新家是 `K/pools/<P>/cpus/<i>/`，cpu 的號碼由 `count`／`skip` 算出來，不會再一顆顆列在 info 裡，要列全部得額外解 members()。選：直接印萬用字元 `K/pools/<P>/cpus/*/cpu.log`（池名不在 `info.pools` 就整段池名也用 `*`），不去解那個池實際有哪幾號。保守：不用另外 import kernel 的 `members()` 公式（agent 這邊不该碰 kernel 內部算法），使用者拿著萬用字元路徑自己 `ls`／`cat` 一样能找到。翻案要改：`aos_agent_results.py` 的 `cpu_logs()`；連帶改了 `test/test_agent_fix_storage.py`、`test/test_agent_tick.py` 裡照舊路徑斷言的測試。
+- **D-92（測試修正，非規範決定）`test_agent_integration.py` 誤用舊參數名沒報錯**：`self.setup_running(cpus=self.cpus)` 傳的是舊 proto5 的 `cpus=` 關鍵字，但 `_kernel_util.py`（整合測試隊已改成 proto5-2 版）的 `setup_running(self, pools=None, **settings)` 不會因為多餘的關鍵字報錯——`cpus` 被 `**settings` 吃掉、原樣塞進 `kernel-config.json` 當一個沒人理的頂層鍵，而 `pools` 因為沒傳、退回預設 `POOLS`（`default`／`llm` 各 1 顆、都沒 `envs`）。後果是 llm 池 cpu 沒有 `PATH`／`AOS_LLM_CONFIG` 環境，`aos-llm` 顯示 exit 127（不是 kernel 的 bug，是我這邊測試沒跟著改參數名）。修法：把 `self.cpus =` 改成 `self.pools =`（值也從舊的 `{'k': {...}, '0': {...}, 'llm': {...}}` 換成新的 `{'default': {'count': 1, 'envs': …}, 'llm': {'count': 1, 'envs': …}}`，kernel 池不用另外寫），六處 `setup_running(cpus=self.cpus, …)` 一併改成 `setup_running(pools=self.pools, …)`。改完 6 條整合測試全線變綠。

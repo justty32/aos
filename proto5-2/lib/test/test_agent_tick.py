@@ -645,7 +645,7 @@ def result_case(kind, change, code, expected):
         wanted = copy.deepcopy(expected)
         if kind == 'think' and 'fail' in wanted:
             wanted['fail'] = wanted['fail'].replace('log/llm.err', str(self.base / 'log/llm.err'))
-            wanted['fail'] = wanted['fail'].replace('llm 池 cpu 的 cpu.log', str(self.k / 'cpus/*/cpu.log'))
+            wanted['fail'] = wanted['fail'].replace('llm 池 cpu 的 cpu.log', str(self.k / 'pools/*/cpus/*/cpu.log'))
             if wanted['fail'] == '逾時（125000 ms）':
                 wanted['fail'] = ('逾時（125000 ms，是 info.llm.timeout_ms；要更久就改 agent 的 info.json；'
                                   'llm.err 在 %s）' % (self.base / 'log/llm.err'))

@@ -1,4 +1,12 @@
-"""kernel 崩潰窗口（審查 C-7、C-8）：閘門卡住真 tick、真 SIGKILL、下一格（或 boot）接手。
+"""kernel 崩潰窗口（審查 C-7、C-8；proto5-2 加 C-9）：閘門卡住真 tick、真 SIGKILL、下一格（或 boot）接手。
+
+proto5-2 搬遷：
+- cpu 家改在 K/pools/<P>/cpus/<i>，trace 裡的 home 記成 `P/i`（kernel cpu 是 `kernel/0`，daemon 家記 `D`）。
+- 派工「先記後放」：同一格派的幾件在提交點 3 就全部記好，才逐一放檔（kernel-tick 第 8 步）。
+  proto5 的「第一顆放了、第二顆還沒記」這個窗口不存在了，那條改成驗「兩件都已記、沒放的下一格照原名補放」。
+- 出貨箱 `stops` 拿掉：停機改成每池縮 0（handoff §3）。proto5 的 C-8 stop 箱三條改測 `sends` 箱的縮池單：
+  送出後、清帳前被 KILL（daemon 在 kernel 死掉時已處理、回音）與記帳後、送出前被 KILL；kernel 池那張同理，下次 boot 收尾。
+- C-9（新）：kernel 改宣告（長大）一半死、真 daemon 在中間處理完——下一格不重放同名單、照回音結帳（D-25、kernel-pools §5）。
 
 手法照 test_daemon_crash：
 - 真 daemon 由 HUB（測試專用 subreaper，借 test_daemon_crash 的）拉起；kernel cpu 被砍後
@@ -47,7 +55,10 @@ def matches(spec, detail):
     if spec.get("chain") is not None and spec["chain"] != CHAIN:
         return False
     for key, value in spec.get("match", {}).items():
-        if key == "response_proc":
+        if key.endswith("_endswith"):
+            if not str(detail.get(key[:-len("_endswith")])).endswith(value):
+                return False
+        elif key == "response_proc":
             if value not in [e.get("proc") for e in detail.get("events", []) if e.get("event") == "response"]:
                 return False
         elif isinstance(value, list):
@@ -77,13 +88,19 @@ def gate(point, **detail):
         while not (GATES / (gid + ".release")).exists():
             time.sleep(.005)
 
+def label(home):
+    home = Path(home)
+    if home.parent.name == "cpus":
+        return "%%s/%%s" %% (home.parent.parent.name, home.name)
+    return home.name
+
 def kind_of(home, name):
     home = Path(home)
     if name.startswith("ack-"):
         return "ack" if ctx["flush"] else "tick_ack"
     if name.startswith("stop-"):
         return "stop"
-    if home.parent.name == "cpus" and name == "k-%%s-%%s.json" %% (CHAIN, SEQ + 1):
+    if home.parent.name == "cpus" and SEQ is not None and name == "k-%%s-%%s.json" %% (CHAIN, SEQ + 1):
         return "tick"
     if home.parent.name == "cpus":
         return "work"
@@ -92,9 +109,9 @@ def kind_of(home, name):
 real_post = aos_home.post_request
 def post_request(home, name, obj):
     kind = kind_of(home, name)
-    detail = {"box": kind, "home": Path(home).name, "name": name,
+    detail = {"box": kind, "home": label(home), "name": name,
               "target": (obj.get("params") or {}).get("name") if kind in ("ack", "tick_ack") else None}
-    if kind in ("ack", "stop"):
+    if kind in ("ack", "stop", "daemon"):
         gate("before_put", **detail)
     try:
         real_post(home, name, obj)
@@ -102,7 +119,7 @@ def post_request(home, name, obj):
         trace(op="post", outcome="exists", **detail)
         raise
     trace(op="post", outcome="ok", **detail)
-    if kind in ("ack", "stop"):
+    if kind in ("ack", "stop", "daemon"):
         gate("after_put", **detail)
     return name
 aos_home.post_request = post_request
@@ -137,7 +154,7 @@ real_flush = ledger.KernelLedger.flush_outboxes
 def flush_outboxes(self):
     ctx["flush"] = True
     try:
-        real_flush(self)
+        return real_flush(self)          # 回「有沒有做事」：engine 靠它決定寫不寫提交點 2／4
     finally:
         ctx["flush"] = False
 ledger.KernelLedger.flush_outboxes = flush_outboxes
@@ -175,8 +192,8 @@ import sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 import aos_kernel_boot
-aos_kernel_boot.CLI = Path(sys.argv[4])
-sys.exit(aos_kernel_boot.boot(sys.argv[2], sys.argv[3], wait_ms=8000))
+aos_kernel_boot.CLI = Path(sys.argv[3])
+sys.exit(aos_kernel_boot.boot(sys.argv[2], wait_ms=8000))
 '''
 
 JOB = "import sys; open(sys.argv[1], 'a').write('x\\n'); sys.exit(int(sys.argv[2]))"
@@ -228,17 +245,21 @@ class KernelCrashWindowTest(KernelCase):
 
     def boot(self):
         chain = self.state().get("chain")
-        result = subprocess.run([PY, "-c", BOOT, str(LIB), str(self.home), str(self.daemon), str(self.wrapper)],
+        result = subprocess.run([PY, "-c", BOOT, str(LIB), str(self.home), str(self.wrapper)],
                                 stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.info = read_json(self.home / "info.json")
         wait_for(lambda: self.state().get("chain") != chain and self.state().get("last_seq", 0) >= 1)
 
-    def setup_running(self, cpus=None, **settings):
-        self.initialize(cpus=cpus or {"k": {"pool": "kernel"}, "0": {}, "1": {}}, **settings)
+    def setup_running(self, pools=None, **settings):
+        pools = pools or {"default": {"count": 2}}
+        self.initialize(pools, **settings)
         self.start_daemon()
         self.boot()
         self.assertEqual(self.state()["cli"], str(self.wrapper))
+        for pool, config in pools.items():                       # 工作池宣告確認過（第一張 scale 單收完音）
+            wait_for(lambda: (self.state()["pools"].get(pool) or {}).get("sent", {}).get("count") == config["count"])
+            self.wait_running(pool, config["count"])
 
     def held_pids(self):
         """所有還活著的 TICK（照 cmdline 找），收尾時一律 KILL，免得 cpu 溫和停永遠等它。"""
@@ -340,7 +361,16 @@ class KernelCrashWindowTest(KernelCase):
                 seen[key] = e
 
     def cpu_pids(self):
-        return {n: c["pid"] for n, c in self.dstate()["children"].items()}
+        pids = {"kernel/0": self.kid_pid("kernel", 0)}
+        for pool, entry in self.state()["pools"].items():
+            if pool != "kernel":
+                for i in range(entry["sent"]["count"]):
+                    pids["%s/%d" % (pool, i)] = self.kid_pid(pool, i)
+        return pids
+
+    def home_of(self, label):
+        pool, i = label.split("/")
+        return self.cpu_home(pool, i)
 
     # ---- C-7：已結帳、已送 ack，append kernel.log 之前被 KILL ----
 
@@ -362,11 +392,12 @@ class KernelCrashWindowTest(KernelCase):
         ledger = self.state()
         job = ledger["procs"]["job"]
         self.assertEqual((job["runs"], job["fails"], job["status"]), (1, fails, "queued"))
-        self.assertTrue(all(slot["req"] is None for slot in ledger["cpus"].values()))
-        self.assertTrue(all(not ledger[box] for box in ("acks", "replies", "stops", "deletes")))
-        ack = [e for e in self.trace(box="ack", outcome="ok", seq=n) if e["home"] in ("0", "1")]
+        self.assertEqual(ledger["busy"], {})
+        self.assertEqual({box: ledger[box] for box in ("acks", "replies", "sends", "deletes")},
+                         {"acks": [], "replies": [], "sends": [], "deletes": []})
+        ack = [e for e in self.trace(box="ack", outcome="ok", seq=n) if e["home"] in ("default/0", "default/1")]
         self.assertEqual(len(ack), 1, ack)
-        cpu = self.home / "cpus" / ack[0]["home"]
+        cpu = self.home_of(ack[0]["home"])
         # 下一格開始前，cpu 就把 ack 消化掉（回音沒了、ack 單也沒了）
         wait_for(lambda: not (cpu / "responses" / ack[0]["target"]).exists()
                  and not list((cpu / "requests").glob("ack-*.json")))
@@ -427,7 +458,7 @@ class KernelCrashWindowTest(KernelCase):
         job = ledger["procs"]["job"]
         self.assertEqual((job["runs"], job["fails"], job["status"]), (1, 0, "queued"))
         self.assertEqual(self.runs("job"), 1)
-        self.assertTrue(all(slot["req"] is None for slot in ledger["cpus"].values()))
+        self.assertEqual(ledger["busy"], {})
         self.assertFalse([e for line in self.log_lines() for e in line["events"]
                           if e["event"] == "response" and e["proc"] == "job"])
         # 舊鏈殘格（若跑到）什麼都沒放：它之後沒有任何屬於舊鏈、seq > n+1 的放檔
@@ -456,39 +487,41 @@ class KernelCrashWindowTest(KernelCase):
 
     def test_c8_dispatch_first_cpu_posted_second_recorded_not_posted(self):
         self.two_jobs_in_one_tick()
-        self.gate("post", "before_post", cpu="1")
+        self.gate("post", "before_post", cpu="default/1")
         self.release("hold")
         hit, held = self.kill_tick("post", hold="next")
         ledger = self.state()
-        req0, req1 = ledger["cpus"]["0"]["req"], ledger["cpus"]["1"]["req"]
-        self.assertEqual((ledger["cpus"]["1"]["proc"], req1), (hit["proc"], hit["name"]))
-        self.assertIsNotNone(req0)
-        self.assertEqual(ledger["queue"], [])
-        self.assertFalse((self.home / "cpus" / "1" / "requests" / req1).exists())
-        self.assertEqual(len(self.trace(op="post", home="0", name=req0, outcome="ok")), 1)
+        req0, req1 = ledger["busy"]["default/0"]["req"], ledger["busy"]["default/1"]["req"]
+        self.assertEqual((ledger["busy"]["default/1"]["proc"], req1), (hit["proc"], hit["name"]))
+        self.assertEqual(ledger["ready"]["default"], [])
+        self.assertEqual(ledger["recent"], ["default/0", "default/1"])
+        self.assertFalse((self.cpu_home("default", 1) / "requests" / req1).exists())
+        self.assertEqual(len(self.trace(op="post", home="default/0", name=req0, outcome="ok")), 1)
         self.release("next")
         self.finish_two_jobs()
-        # 已送的 cpu 0 沒被重放；沒送的 cpu 1 由下一格照帳本原名補放一次
-        self.assertEqual(len(self.trace(op="post", home="0", name=req0)), 1)
-        self.assertEqual([e["seq"] for e in self.trace(op="post", home="1", name=req1)], [hit["seq"] + 1])
+        # 已送的 default/0 沒被重放；沒送的 default/1 由下一格（recent）照帳本原名補放一次
+        self.assertEqual(len(self.trace(op="post", home="default/0", name=req0)), 1)
+        self.assertEqual([e["seq"] for e in self.trace(op="post", home="default/1", name=req1)], [hit["seq"] + 1])
 
-    def test_c8_dispatch_first_cpu_posted_second_not_recorded(self):
+    def test_c8_dispatch_both_recorded_before_first_post(self):
+        """proto5 的「第一顆放了、第二顆還沒記」：proto5-2 先記後放，放第一顆時兩件都已在帳上。"""
         self.two_jobs_in_one_tick()
-        self.gate("post", "after_post", cpu="0")
+        self.gate("post", "after_post", cpu="default/0")
         self.release("hold")
         hit, held = self.kill_tick("post", hold="next")
         ledger = self.state()
-        self.assertEqual(ledger["cpus"]["0"]["req"], hit["name"])
-        self.assertEqual(ledger["cpus"]["1"]["req"], None)
+        self.assertEqual(ledger["busy"]["default/0"]["req"], hit["name"])
+        req1 = ledger["busy"]["default/1"]["req"]
         other = "b" if hit["proc"] == "a" else "a"
-        self.assertEqual(ledger["queue"], [other])
-        self.assertEqual(ledger["procs"][other]["status"], "queued")
+        self.assertEqual(ledger["busy"]["default/1"]["proc"], other)
+        self.assertEqual(ledger["procs"][other]["status"], "running")
+        self.assertEqual(ledger["ready"]["default"], [])
         self.release("next")
         self.finish_two_jobs()
-        self.assertEqual(len(self.trace(op="post", home="0", name=hit["name"])), 1)
-        # 另一件在新的一格才派（新名字），不是沿用被砍那格的名字
+        self.assertEqual(len(self.trace(op="post", home="default/0", name=hit["name"])), 1)
+        # 另一件沿用被砍那格記下的名字，下一格才真的放出去；沒有第二個名字
         later = [e for e in self.trace(op="post", box="work", outcome="ok") if e["name"] != hit["name"]]
-        self.assertEqual([e["seq"] > hit["seq"] for e in later], [True])
+        self.assertEqual([(e["name"], e["seq"]) for e in later], [(req1, hit["seq"] + 1)])
 
     # ---- C-8：四張出貨箱逐箱，「送出後、清帳前」與「記帳後、送出前」 ----
 
@@ -496,15 +529,15 @@ class KernelCrashWindowTest(KernelCase):
         """一件反覆工作跑完被收帳時，卡在給工作 cpu 的那則 ack 的 point；回它的 request 名。"""
         self.setup_running()
         target, _ = self.job("job")
-        self.gate(gid, point, box="ack", home=["0", "1"])
+        self.gate(gid, point, box="ack", home=["default/0", "default/1"])
         self.add(target, "job", interval_ms=600000)
         return self.reached(gid)["target"]
 
     def test_c8_ack_delivered_before_clear_receiver_consumes_then_replay(self):
         req = self.booked_job("ack", "after_put")
         hit, held = self.kill_tick("ack", hold="next")
-        cpu = self.home / "cpus" / hit["home"]
-        self.assertEqual(self.state()["acks"][0]["name"], req)                # 帳上還在
+        cpu = self.home_of(hit["home"])
+        self.assertIn(req, [a["name"] for a in self.state()["acks"]])         # 帳上還在
         wait_for(lambda: not (cpu / "responses" / req).exists()               # cpu 先消化掉
                  and not list((cpu / "requests").glob("ack-*.json")))
         self.release("next")
@@ -517,13 +550,13 @@ class KernelCrashWindowTest(KernelCase):
         self.assertEqual(len({e["name"] for e in acks}), 2)
         wait_for(lambda: not list((cpu / "requests").glob("ack-*.json")))
         self.assertEqual(sorted(p.name for p in (cpu / "responses").iterdir()), [])
-        self.assertTrue(self.dstate()["children"][hit["home"]]["alive"])
+        self.assertEqual(self.kid(*hit["home"].split("/"))["state"], "running")
 
     def test_c8_ack_recorded_not_delivered_is_delivered_next_tick(self):
         req = self.booked_job("ack", "before_put")
         hit, held = self.kill_tick("ack", hold="next")
-        cpu = self.home / "cpus" / hit["home"]
-        self.assertEqual(self.state()["acks"][0]["name"], req)
+        cpu = self.home_of(hit["home"])
+        self.assertIn(req, [a["name"] for a in self.state()["acks"]])
         self.assertTrue((cpu / "responses" / req).exists())                   # 沒人 ack，回音留著
         self.release("next")
         wait_for(lambda: not (cpu / "responses" / req).exists())
@@ -610,64 +643,104 @@ class KernelCrashWindowTest(KernelCase):
         self.check_delete_converged(name, early=False)
         self.assertEqual([e["outcome"] for e in self.trace(op="delete", name=name)], ["ok"])
 
-    def stop_window(self, point):
-        # cpu 0 自己一池，boot 後才能確定新工作一定落在它身上
-        self.setup_running(cpus={"k": {"pool": "kernel"}, "0": {"pool": "solo"}, "1": {}})
-        self.gate("stop", point, box="stop", home="0")
+    # ---- C-8：sends 箱的縮池單（取代 proto5 的 stop 箱；handoff §3） ----
+
+    def shrink_window(self, point):
+        """kernel halt：停機縮池那格要送 default 的 count 0；卡在那張 scale 單的 point。"""
+        self.setup_running()
+        self.gate("scale", point, box="daemon", name_endswith="-scale-default.json")
         aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        hit, held = self.kill_tick("stop", hold="next")
+        hit, held = self.kill_tick("scale", hold="next")
         ledger = self.state()
-        self.assertEqual(ledger["phase"], "stopped")
-        self.assertEqual(ledger["stops"][0], "0")
+        entry = ledger["pools"]["default"]
+        self.assertEqual((ledger["phase"], ledger["halting"]), ("stopping", True))
+        self.assertEqual(entry["pending"], {"name": hit["name"], "count": 0, "skip": []})
+        self.assertEqual([s["name"] for s in ledger["sends"]], [hit["name"]])     # 帳上還在
         return hit
 
-    def wait_all_stopped(self):
-        wait_for(lambda: not self.state()["stops"], timeout=8)
-        wait_for(lambda: not self.dstate()["children"], timeout=8)             # 退 0 的孩子 daemon 從表上拿掉
-
-    def test_c8_stop_delivered_before_clear_is_redelivered_and_next_boot_recovers(self):
-        hit = self.stop_window("after_put")
-        stop = self.home / "cpus" / "0" / "requests" / ("stop-%s.json" % hit["chain"])
-        wait_for(lambda: "0" not in self.dstate()["children"])               # cpu 0 讀到 stop、退 0、出表
-        self.assertFalse(stop.exists())
+    def finish_halt_and_reboot(self, hit):
         self.release("next")
-        self.wait_all_stopped()
-        # 規範「EEXIST 當已放」：cpu 0 已消化、已退，重放的是一份新的同名 stop，留在它家（跨代 stop，B-10）
-        self.assertEqual([e["outcome"] for e in self.trace(op="post", box="stop", home="0")], ["ok", "ok"])
-        self.assertTrue(stop.exists())
-        # 下次 boot：新 cpu 0 讀到舊 stop 又退（exit 0、不走 daemon 重拉），下一格第 7 步看它不活就再拉，收斂
+        wait_for(lambda: self.state()["phase"] == "stopped", timeout=8)
+        self.wait_gone("default")
+        self.wait_gone("kernel")
+        # 縮池單的回音收完就 ack 掉；kernel 池那張的回音照 handoff §3 留在 daemon 家，等下次 boot 讀
+        wait_for(lambda: not (self.daemon / "responses" / hit["name"]).exists(), timeout=8)
+        self.assertEqual(len(self.trace(op="post", box="daemon", name=hit["name"], outcome="ok")), 1)
+        self.assertEqual(self.state()["pools"]["default"]["sent"], {"count": 0, "skip": []})
+        # 下次 boot 照常：重宣告、派工
         self.boot()
-        wait_for(lambda: not stop.exists())
         target, _ = self.job("after")
-        self.add(target, "after", pool="solo", interval_ms=600000)
+        self.add(target, "after", interval_ms=600000)
         wait_for(lambda: self.state()["procs"]["after"]["runs"] == 1, timeout=8)
         self.assertEqual((self.runs("after"), self.state()["procs"]["after"]["fails"]), (1, 0))
-        self.assertTrue(self.dstate()["children"]["0"]["alive"])
+        self.assertEqual(self.summary("default")["count"], 2)
 
-    def test_c8_stop_recorded_not_delivered_is_delivered_next_tick(self):
-        hit = self.stop_window("before_put")
-        self.assertTrue(self.dstate()["children"]["0"]["alive"])
-        self.release("next")
-        self.wait_all_stopped()
-        self.assertEqual([e["outcome"] for e in self.trace(op="post", box="stop", home="0")], ["ok"])
-        self.assertEqual({e["home"] for e in self.trace(op="post", box="stop", outcome="ok")}, {"0", "1", "k"})
+    def test_c8_shrink_delivered_before_clear_daemon_answers_while_kernel_dead(self):
+        hit = self.shrink_window("after_put")
+        # kernel 那格死了，daemon 照樣處理：池收完、拿掉，回音在 D/responses
+        self.wait_gone("default")
+        self.assertIn("result", read_json(self.daemon / "responses" / hit["name"]))
+        self.finish_halt_and_reboot(hit)
+        # 下一格出貨看到回音已在，不再放同名單（D-25）；收音照 kernel-pools §2 第 1 步
+        self.assertEqual([e["seq"] for e in self.trace(op="post", box="daemon", name=hit["name"])], [hit["seq"]])
 
-    def test_c8_kernel_cpu_stop_delivered_before_clear_next_boot_recovers(self):
-        """stop 箱最後一筆是 kernel cpu：它消化 stop 就退，下一格不會再跑，帳上的 stops 由下次 boot 丟掉。"""
+    def test_c8_shrink_recorded_not_delivered_is_delivered_next_tick(self):
+        hit = self.shrink_window("before_put")
+        self.assertFalse((self.daemon / "requests" / hit["name"]).exists())
+        self.assertEqual(self.summary("default")["count"], 2)                    # daemon 什麼都不知道
+        self.finish_halt_and_reboot(hit)
+        self.assertEqual([e["seq"] for e in self.trace(op="post", box="daemon", name=hit["name"])], [hit["seq"] + 1])
+
+    def test_c8_kernel_pool_shrink_delivered_before_clear_next_boot_recovers(self):
+        """停機最後一張是 kernel 池的 count 0：它送出後 kernel cpu 就被收，帳上沒清的由下次 boot 收尾（handoff §3 第 3 步）。"""
         self.setup_running()
-        self.gate("stop", "after_put", box="stop", home="k")
+        self.gate("scale", "after_put", box="daemon", name_endswith="-scale-kernel.json")
         aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        hit = self.reached("stop")
+        hit = self.reached("scale")
         os.kill(hit["pid"], signal.SIGKILL)
-        wait_for(lambda: not self.dstate()["children"], timeout=8)            # 三顆都退 0、出表
+        self.wait_gone("kernel")
+        self.wait_gone("default")
         ledger = self.state()
-        self.assertEqual((ledger["phase"], ledger["stops"]), ("stopped", ["k"]))
-        stop = self.home / "cpus" / "k" / "requests" / ("stop-%s.json" % hit["chain"])
-        self.assertFalse(stop.exists())                                       # 已被 kernel cpu 消化，沒有重放
-        self.assertEqual(len(self.trace(op="post", box="stop", home="k")), 1)
-        self.boot()                                                           # 丟掉未清帳的 stops、換鏈
-        self.assertEqual((self.state()["stops"], self.state()["phase"]), ([], "running"))
+        self.assertEqual(ledger["phase"], "stopped")
+        self.assertEqual(ledger["pools"]["kernel"]["pending"]["name"], hit["name"])
+        self.assertEqual(len(self.trace(op="post", box="daemon", name=hit["name"])), 1)   # 沒重放
+        self.assertTrue((self.daemon / "responses" / hit["name"]).exists())       # 回音留在 daemon 家
+        self.boot()                                                               # 第 2 步讀掉舊 pending、ack
+        self.assertEqual(self.state()["phase"], "running")
+        wait_for(lambda: not (self.daemon / "responses" / hit["name"]).exists(), timeout=8)
         target, _ = self.job("after")
         self.add(target, "after", interval_ms=600000)
         wait_for(lambda: self.state()["procs"]["after"]["runs"] == 1, timeout=8)
         self.assertEqual(self.runs("after"), 1)
+
+    # ---- C-9：kernel 改宣告（長大）一半死，真 daemon 在中間處理 ----
+
+    def test_c9_grow_delivered_then_killed_daemon_grows_meanwhile(self):
+        """scale 單已放、帳還沒清就被 KILL；daemon 在 kernel 死掉時照單長大、回音。
+        下一格：回音已在所以不重放（D-25）；收音照結帳，新的號進 free，派得到。"""
+        self.setup_running({"default": {"count": 1}})
+        ver = self.summary("default")["ver"]
+        self.gate("grow", "after_put", box="daemon", name_endswith="-scale-default.json")
+        self.set_count("default", 3)
+        hit, held = self.kill_tick("grow", hold="next")
+        entry = self.state()["pools"]["default"]
+        self.assertEqual((entry["sent"]["count"], entry["pending"]["count"]), (1, 3))
+        self.wait_running("default", 3)                                         # daemon 自己長大了
+        self.assertEqual(self.summary("default")["ver"], ver + 1)
+        self.assertIn("result", read_json(self.daemon / "responses" / hit["name"]))
+        self.assertEqual(self.state()["pools"]["default"]["free"], [0])          # 還沒確認的號不派
+        self.release("next")
+        wait_for(lambda: self.state()["pools"]["default"]["sent"]["count"] == 3)
+        self.assertEqual(sorted(self.state()["pools"]["default"]["free"]), [0, 1, 2])
+        wait_for(lambda: not (self.daemon / "responses" / hit["name"]).exists())
+        self.assertEqual([e["seq"] for e in self.trace(op="post", box="daemon", name=hit["name"])], [hit["seq"]])
+        self.assertEqual(self.summary("default")["ver"], ver + 1)                # 沒有第二次宣告
+        self.two_jobs_after_grow()
+
+    def two_jobs_after_grow(self):
+        targets = [self.job(n)[0] for n in ("a", "b", "c")]
+        for n, t in zip(("a", "b", "c"), targets):
+            self.add(t, n, interval_ms=600000)
+        wait_for(lambda: all(self.state()["procs"][n]["runs"] == 1 for n in ("a", "b", "c")), timeout=10)
+        self.assertEqual({self.runs(n) for n in ("a", "b", "c")}, {1})
+        self.assert_no_same_name_twice()

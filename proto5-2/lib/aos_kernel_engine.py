@@ -89,9 +89,8 @@ class Kernel(PoolsMixin, KernelLedger):
         elif not isinstance(params.get("home"), str) or not isinstance(params.get("name"), str):
             why = "params.home／name 必須是字串"
         else:
-            home = Path(os.path.normpath(params["home"]))
-            parsed = split_key("%s/%s" % (home.parent.parent.name, home.name))
-            if home.parent.name != "cpus" or home.parent.parent.parent != self.home / "pools" or parsed is None:
+            parsed = self._notified_cpu(params["home"])
+            if parsed is None:
                 why = "home 不在 K/pools/*/cpus/ 底下"
             else:
                 key = cpu_key(*parsed)
@@ -104,6 +103,17 @@ class Kernel(PoolsMixin, KernelLedger):
             self.events.append({"event": "bad_notify", "file": path.name, "why": why})
             return None
         return key
+
+    def _notified_cpu(self, raw):
+        """通知的 home → (P, i)；不在 K/pools/*/cpus/ 底下回 None。
+        cpu 報的是它 getcwd() 的實際路徑，K 若經過 symlink 給的就跟 self.home 字面不同：字面比不上再用 realpath 比（D-80）。"""
+        for home, pools in ((Path(os.path.normpath(raw)), self.home / "pools"),
+                            (Path(os.path.realpath(raw)), Path(os.path.realpath(self.home / "pools")))):
+            if home.parent.name == "cpus" and home.parent.parent.parent == pools:
+                parsed = split_key("%s/%s" % (home.parent.parent.name, home.name))
+                if parsed is not None:
+                    return parsed
+        return None
 
     # ---- 第 6 步：收回音 ----
     def collect(self, notified):

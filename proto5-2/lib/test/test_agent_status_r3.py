@@ -131,8 +131,10 @@ class StatusR3Tests(unittest.TestCase):
 
     def test_real_kernel_health_missing_directory(self):
         self.registered()
-        self.put(self.k / 'info.json', {'_metainfo': {'_type': 'kernel', '_version': 1}, 'cpus': {'k': {'pool': 'kernel'}}})
-        (self.k / 'cpus').mkdir()
+        # proto5-2：info.json 第 2 版是 pools 表（kernel-info.md），不是 cpus 表。
+        self.put(self.k / 'info.json', {'_metainfo': {'_type': 'kernel', '_version': 2},
+                 'pools': {'kernel': {'count': 1}}})
+        (self.k / 'pools').mkdir()
         (self.k / 'requests').rmdir()
         data = status.collect(self.base, {})
         self.assertEqual(data['health']['code'], 'kernel')

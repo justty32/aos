@@ -30,48 +30,54 @@ def _stderr_hint(target):
     return "%s 的 stderr 設定" % target
 
 
-def _summary(home, snapshot, as_json=False):
-    """ls：health 一行、鏈、按池一行、行程。按池的完整 ls 是下一隊的事，這裡只求印得出來。"""
-    code, message = health(home, snapshot=snapshot)
+def _proc_line(name, proc, marks):
+    return ("proc %s  %s  %s  runs %s  fails %s  pending %s" % (
+        name, "once" if proc.get("once") else "repeat", proc.get("status"), proc.get("runs"), proc.get("fails"),
+        "有" if proc.get("pending") else "-") +
+        ("  " + marks[name][1] if name in marks else "") +
+        ("  看 " + _stderr_hint(proc.get("target")) if proc.get("status") == "bad" else ""))
+
+
+PROC_STATES = ("queued", "running", "done", "bad")
+
+
+def _summary(home, snapshot, as_json=False, pool=None, procs=False, info=None):
+    """ls：health 一行、鏈一行、按池摘要（同 cpu ls 的池行）、行程（預設只印各狀態數量＋bad）。"""
+    from aos_kernel_cpu import _Alive, cpu_line, cpu_rows, pool_lines, pool_rows
+    info = load_info(home) if info is None else info
+    code, message = health(home, snapshot=snapshot, info=info)
     marks = agent_marks(snapshot)
     if code == "ok":
         # fix-r5：kernel 正常時再看 agent 的暫停／重試，別印一個樂觀的 ok。
         code, message = agents_health(marks) or (code, message)
+    if pool is not None:
+        if pool not in info["pools"] and pool not in (snapshot.get("pools") or {}):
+            raise KernelError("NotFound", "沒有這個池：%s（info 與帳本都沒有）" % pool)
+        snapshot = {**snapshot, "pools": {p: e for p, e in (snapshot.get("pools") or {}).items() if p == pool},
+                    "busy": {k: v for k, v in (snapshot.get("busy") or {}).items() if k.startswith(pool + "/")},
+                    "procs": {n: p for n, p in (snapshot.get("procs") or {}).items() if p.get("pool") == pool}}
     if as_json:
         return json.dumps({**snapshot, "health": {"code": code, "message": message}}, ensure_ascii=False)
-    kcpu = snapshot["kernel_cpu"]
     daemon = snapshot["daemon"]
-    lines = ["health " + message, "chain %s  phase %s  last_seq %s  daemon %s" % (
+    alive = _Alive({daemon["home"]: bool(daemon["alive"])} if daemon.get("home") else {})
+    summaries = {p: e.get("summary") for p, e in (snapshot.get("pools") or {}).items()}
+    rows = pool_rows(home, info, snapshot, only=pool, summaries=summaries, alive=alive)
+    kcpu = snapshot["kernel_cpu"]
+    lines = ["health " + message, "chain %s  phase %s  last_seq %s  kernel cpu %s  current %s  requests %s" % (
         snapshot["chain"] or "-", snapshot["phase"] or "-",
         snapshot["last_seq"] if snapshot["last_seq"] is not None else "-",
-        "alive" if daemon["alive"] else "dead"),
-        "kernel cpu %s  current %s  requests %s" % (
-            kcpu["name"], (kcpu["current"] or {}).get("name", "-"), kcpu["requests"])]
-    busy = snapshot.get("busy") or {}
-    for pool, entry in (snapshot.get("pools") or {}).items():
-        summary = entry.get("summary")
-        daemon_part = ("daemon %s: 不在" % entry["dpool"] if summary is None else
-                       "daemon %s: running %s pending %s dead %s failed %s" % (
-                           entry["dpool"], *(summary.get(k, 0) for k in ("running", "pending", "dead", "failed"))))
-        if pool == "kernel":
-            lines.append("pool kernel  sent %s  %s" % (entry["sent"]["count"], daemon_part))
-            continue
-        nbusy = sum(1 for k in busy if k.startswith(pool + "/"))
-        line = "pool %s  want %s  sent %s  busy %d  idle %d  draining %s  %s" % (
-            pool, (entry.get("want") or {}).get("count", "-"), entry["sent"]["count"], nbusy,
-            len(entry.get("free") or []), entry.get("draining", 0), daemon_part)
-        if entry.get("pending"):
-            line += "  scale 單在路上"
-        if entry.get("error"):
-            line += "  錯誤 %s（%s）" % (entry["error"]["code"], entry["error"]["message"])
-        lines.append(line)
-    for name, proc in (snapshot["procs"] or {}).items():
-        lines.append("proc %s  %s  %s  runs %s  fails %s  pending %s" % (
-            name, "once" if proc["once"] else "repeat", proc["status"], proc["runs"], proc["fails"],
-            "有" if proc["pending"] else "-") +
-            ("  " + marks[name][1] if name in marks else "") +
-            ("  看 " + _stderr_hint(proc["target"]) if proc["status"] == "bad" else ""))
-    lines.append("queued %s" % snapshot.get("queued", 0))
+        kcpu["name"], (kcpu["current"] or {}).get("name", "-"), kcpu["requests"])]
+    lines.extend(pool_lines(home, info, rows))
+    if pool is not None:
+        lines.extend(cpu_line(item) for item in cpu_rows(info, snapshot, pool, rows[pool]))
+    all_procs = snapshot.get("procs") or {}
+    counts = {state: 0 for state in PROC_STATES}
+    for proc in all_procs.values():
+        counts[proc.get("status")] = counts.get(proc.get("status"), 0) + 1
+    lines.append("  ".join("%s %d" % item for item in counts.items()))
+    for name, proc in all_procs.items():
+        if procs or proc.get("status") == "bad":
+            lines.append(_proc_line(name, proc, marks))
     return "\n".join(lines)
 
 
@@ -86,19 +92,55 @@ class _Parser(argparse.ArgumentParser):
 
 
 TARGET_HELP = "kernel 家（省略＝AOS_KERNEL_HOME，再沒有就目前資料夾）"
-DAEMON_HELP = "daemon 家（省略＝AOS_DAEMON_HOME，再沒有就目前資料夾）"
+DAEMON_HELP = "再多查一個 daemon 家（池表裡提到的 daemon 家一律會查）"
 INIT_EPILOG = ("--config 是一份 JSON，就是 info.json 要寫的那幾格：kernel 參數＋pools 池表，工作池可以一個都沒有"
-               "（kernel 池沒寫就補 {\"count\": 1}）。沒給 --config＝只有 kernel 池。例：\n  " + CONFIG_EXAMPLE)
+               "（kernel 池沒寫就補 {\"count\": 1}）。沒給 --config＝只有 kernel 池，之後用 aos-kernel cpu add 加池。例：\n  "
+               + CONFIG_EXAMPLE)
+CPU_EPILOG = ("cpu add／rm 只改 K/info.json 的池表，不放單、不用 boot：kernel 在跑就下一格照新數字做，沒在跑就下次 boot 生效。\n"
+              "例：\n  aos-kernel cpu add --pool default --count 4\n"
+              "  aos-kernel cpu add --pool llm --env AOS_LLM_CONFIG=/abs/llm.json\n"
+              "  aos-kernel cpu rm default/3            # 永久退休 3 號（寫進 skip）\n"
+              "  aos-kernel cpu rm --pool default --count 2   # 收最大的 2 號\n"
+              "  aos-kernel cpu ls --pool default")
+
+
+def _cpu_parser(subs):
+    description = "增減與查看 cpu 池（改 K/info.json 的 pools）"
+    p = subs.add_parser("cpu", help=description, description=description, epilog=CPU_EPILOG,
+                        formatter_class=argparse.RawDescriptionHelpFormatter)
+    cpu = p.add_subparsers(dest="cpu_command", required=True, parser_class=_Parser, metavar="{add,rm,ls}")
+    add = cpu.add_parser("add", help="加池或加 count", description="池不在就新增，在就把 count 加 N；下一格（或下次 boot）生效",
+                         usage="aos-kernel cpu add [--target K] --pool P [--count N] [--env KEY=VALUE]... [--daemon D] [--dpool NAME]")
+    add.add_argument("--pool", metavar="P", required=True, help="池名（不能是 kernel）")
+    add.add_argument("--count", metavar="N", type=int, help="加幾顆（省略＝1）")
+    add.add_argument("--env", metavar="KEY=VALUE", action="append", help="新池的環境變數（字面字串，可重複；既有池不收）")
+    add.add_argument("--daemon", metavar="D", help="新池交給哪個 daemon 家（省略＝info 頂層的 daemon）")
+    add.add_argument("--dpool", metavar="NAME", help="新池在 daemon 那邊的名字（省略＝池名）")
+    rm = cpu.add_parser("rm", help="退休一顆或收掉幾顆", description="P/<i>＝永久退休那一號（寫進 skip）；--pool P --count N＝收最大的 N 號。"
+                        "手上有工作的做完才真的收",
+                        usage="aos-kernel cpu rm [--target K] (P/<i> | --pool P --count N)")
+    rm.add_argument("name", metavar="P/<i>", nargs="?", help="要永久退休的那顆")
+    rm.add_argument("--pool", metavar="P", help="池名")
+    rm.add_argument("--count", metavar="N", type=int, help="收幾顆（正整數）")
+    ls = cpu.add_parser("ls", help="一池一行；--pool 再一顆一行", description="一池一行（帳本＋daemon 的 summary.json）；--pool P 再一顆一行",
+                        usage="aos-kernel cpu ls [--target K] [--pool P] [--json]")
+    ls.add_argument("--pool", metavar="P", help="只看這池，並一顆一行")
+    ls.add_argument("--json", action="store_true", help="輸出 JSON")
+    for sub in (add, rm, ls):
+        sub.add_argument("--target", metavar="K", help=TARGET_HELP)
 
 
 def _parser():
-    parser = _Parser(prog="aos-kernel", description="管理 kernel 家、cpu 與排程行程；K 一律用 --target 給")
+    parser = _Parser(prog="aos-kernel", description="管理 kernel 家、cpu 池與排程行程；K 一律用 --target 給")
     subs = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
-    descriptions = {"init": "建立 kernel 家（照 --config 寫 info.json）", "boot": "交接並啟動 cpu 與 tick 鏈",
-                    "tick": "執行一格排程（鏈自己會叫）", "add": "登記工作", "rm": "移除行程",
-                    "ls": "顯示狀態摘要", "halt": "要求 kernel 停機並等停好", "ack": "確認已收回音",
+    descriptions = {"init": "建立 kernel 家（照 --config 寫 info.json）", "boot": "交接並啟動 kernel 池與 tick 鏈",
+                    "cpu": None, "tick": "執行一格排程（鏈自己會叫）", "add": "登記工作", "rm": "移除行程",
+                    "ls": "顯示健康、按池摘要與行程", "halt": "要求 kernel 停機並等停好", "ack": "確認已收回音",
                     "check": "啟動前檢查設定與執行環境"}
     for command, description in descriptions.items():
+        if command == "cpu":
+            _cpu_parser(subs)
+            continue
         p = subs.add_parser(command, help=description, description=description,
                             formatter_class=argparse.RawDescriptionHelpFormatter)
         if command == "add":
@@ -119,6 +161,9 @@ def _parser():
             p.add_argument("--wait-ms", type=int, default=30000, help="停機等待上限（毫秒，預設 30000）")
             p.add_argument("--no-wait", action="store_true", help="只放 stop 單，不等待、不輸出")
         elif command == "ls":
+            p.usage = "aos-kernel ls [--target K] [--pool P] [--procs] [--json]"
+            p.add_argument("--pool", metavar="P", help="只看這池的 cpu（一顆一行）與行程")
+            p.add_argument("--procs", action="store_true", help="每個行程一行（預設只印各狀態數量與 bad）")
             p.add_argument("--json", action="store_true", help="輸出完整狀態 JSON")
         elif command == "boot":
             p.add_argument("--wait-ms", type=int, default=30000, help="交接等待上限（毫秒，預設 30000）")
@@ -126,7 +171,8 @@ def _parser():
             p.add_argument("--chain", required=True, help="tick 所屬鏈 id")
             p.add_argument("--seq", required=True, type=int, help="tick 序號（從 1 起）")
         elif command == "add":
-            for key, help_text in (("name", "行程名稱"), ("pool", "工作池"), ("dir-target", "資料夾內的 inst 路徑")):
+            for key, help_text in (("name", "行程名稱"), ("pool", "工作池（省略＝default；池要先 aos-kernel cpu add）"),
+                                   ("dir-target", "資料夾內的 inst 路徑")):
                 p.add_argument("--" + key, help=help_text)
             for key, help_text in (("interval-ms", "反覆執行間隔（毫秒）"),
                                    ("timeout-ms", "工作逾時（毫秒）"), ("wait-ms", "等待回音上限（毫秒）")):
@@ -162,7 +208,12 @@ def _cli_request(args, trailing):
     aos_client.ack(home, name)
     if "error" in response:
         error = response["error"]
-        raise KernelError(error.get("data", {}).get("code", str(error["code"])), error["message"])
+        data = error.get("data") if isinstance(error.get("data"), dict) else {}
+        message = error["message"]
+        if args.command == "add" and data.get("position") == ["params", "pool"]:
+            message += "（池 %s 不在 info.json 的 pools；先 aos-kernel cpu add --target %s --pool %s）" % (
+                params.get("pool", "default"), home, params.get("pool", "default"))
+        raise KernelError(data.get("code", str(error["code"])), message)
     if args.command == "add" and args.once:
         print(json.dumps(response["result"], ensure_ascii=False))
     else:
@@ -175,6 +226,9 @@ def _run(args, trailing):
         if args.config == "" or args.daemon == "":
             raise CLIUsage("--config／--daemon 不可為空")
         config = aos_home.read_json(Path(args.config)) if args.config else None
+        if args.config and config is None:
+            # fix-r4（astra 審查）：JSON null 不能落回「沒給 --config」的預設家。
+            raise KernelError("FieldTypeMismatch", "--config 的頂層必須是物件（JSON null 不行）")
         print("initialized " + init(args.home, config=config, daemon=args.daemon))
         return 0
     if args.command == "check":
@@ -198,9 +252,13 @@ def _run(args, trailing):
     if args.command == "tick":
         return tick(args.home, args.chain, args.seq)
     if args.command == "ls":
+        if args.pool == "":
+            raise CLIUsage("--pool 不可為空")
         snapshot = status(args.home)
-        print(_summary(args.home, snapshot, as_json=args.json))
+        print(_summary(args.home, snapshot, as_json=args.json, pool=args.pool, procs=args.procs))
         return 0
+    if args.command == "cpu":
+        return _run_cpu(args)
     if args.command == "ack":
         name = Path(args.name).name
         path = Path(args.home) / "responses" / name
@@ -209,6 +267,19 @@ def _run(args, trailing):
         aos_client.ack(args.home, name)
         return 0
     return _cli_request(args, trailing)
+
+
+def _run_cpu(args):
+    import aos_kernel_cpu
+    if args.cpu_command == "add":
+        print(aos_kernel_cpu.cpu_add(args.home, args.pool, args.count, args.env, args.daemon, args.dpool))
+    elif args.cpu_command == "rm":
+        print(aos_kernel_cpu.cpu_rm(args.home, args.name, args.pool, args.count))
+    else:
+        if args.pool == "":
+            raise CLIUsage("--pool 不可為空")
+        print(aos_kernel_cpu.cpu_ls(args.home, args.pool, args.json))
+    return 0
 
 
 def main(argv=None):

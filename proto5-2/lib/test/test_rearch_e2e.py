@@ -1,4 +1,7 @@
-"""重架構端到端：agent 交一次模型工作，再跑反覆行程直到 done_exit，依序停乾淨。"""
+"""重架構端到端：agent 交一次模型工作，再跑反覆行程直到 done_exit，依序停乾淨。
+
+proto5-2：cpu 由池宣告拉起（default／llm 各 1 顆），孩子看 daemon 的 kids 檔；停完 daemon 那邊池全消失。
+"""
 import json
 import os
 from pathlib import Path
@@ -19,10 +22,10 @@ print(json.dumps({"answer": "假模型回答：" + prompt.strip(), "args": sys.a
 ''')
         executable.chmod(0o755)
         path_env = {"$fmt": {"$val": str(tools) + ":${old}", "old": {"$env": "PATH"}}}
-        self.setup_running(cpus={"k": {"pool": "kernel"}, "0": {},
-                                 "llm": {"pool": "llm", "envs": {"PATH": path_env}}})
-        cpu_pids = {name: child["pid"] for name, child in self.dstate()["children"].items()}
-        self.assertEqual(set(cpu_pids), {"k", "0", "llm"})
+        self.setup_running({"default": {"count": 1}, "llm": {"count": 1, "envs": {"PATH": path_env}}})
+        for pool in ("kernel", "default", "llm"):
+            self.wait_running(pool, 1)
+        cpu_pids = {pool: self.kid_pid(pool, 0) for pool in ("kernel", "default", "llm")}
         daemon_pid = self.daemon_process.pid
 
         prompt = self.root / "question.txt"
@@ -72,7 +75,7 @@ raise SystemExit(100 if number == 3 else 0)
 
         self.kernel_stop()
         self.assertEqual(self.state()["phase"], "stopped")
-        self.assertEqual(self.dstate()["children"], {})
+        self.assertEqual(list((self.daemon / "pools").iterdir()), [])
         self.daemon_stop()
         all_pids = {*cpu_pids.values(), daemon_pid, answer["pid"],
                     *(int(pid) for pid in workers.read_text().splitlines())}

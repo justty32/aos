@@ -1,362 +1,292 @@
-"""kernel CLI 的 --target、init --config、halt、help、ack 與人讀摘要。"""
+"""kernel CLI（kernel-cli.md）：--target、init、help、ack、ls 的按池摘要與行程計數。用假 daemon，不拉真行程。"""
 import contextlib
 import io
 import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+from unittest.mock import patch
 
+import aos_home
 import aos_kernel as kernel
-from _kernel_util import KernelCase, read_json, wait_for
-import aos_client
+from _kernel_fake import FakeCase
+
+CLI = Path(__file__).resolve().parents[2] / "cli" / "aos-kernel"
+COMMANDS = ('init', 'boot', 'cpu', 'tick', 'add', 'rm', 'ls', 'halt', 'ack', 'check')
 
 
-class KernelCLI(KernelCase):
-    def init_config(self, config, name='kernel.json'):
+class CLICase(FakeCase):
+    def main(self, *args, code=0, target=True):
+        args = [str(a) for a in args]
+        if target:
+            depth = 2 if args[0] == 'cpu' else 1
+            args = [*args[:depth], '--target', str(self.K), *args[depth:]]
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            result = kernel.main(args)
+        self.assertEqual(result, code, out.getvalue() + err.getvalue())
+        return out.getvalue(), err.getvalue()
+
+    def raw_cli(self, *args, cwd=None, env=None):
+        return subprocess.run([sys.executable, str(CLI), *map(str, args)], cwd=cwd, env=env,
+                              stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
+
+    def config(self, value, name='kernel.json'):
         path = self.root / name
-        path.write_text(config if isinstance(config, str) else json.dumps(config), encoding='utf-8')
+        path.write_text(value if isinstance(value, str) else json.dumps(value), encoding='utf-8')
         return path
 
-    def test_init_config_adds_kernel_cpu_and_defaults(self):
-        config = self.init_config({'cpus': {'0': {}, 'llm': {'pool': 'llm', 'envs': {'AOS_LLM_CONFIG': '/abs/llm.json'}}},
-                                   'tick_ms': 250})
-        result = self.good_cli('init', self.home, '--config', config)
-        self.assertEqual(result.stdout, 'initialized %s\n' % self.home.absolute())
-        info = read_json(self.home / 'info.json')
-        self.assertEqual(info['cpus'], {'k': {'pool': 'kernel'}, '0': {},
-                                        'llm': {'pool': 'llm', 'envs': {'AOS_LLM_CONFIG': '/abs/llm.json'}}})
-        self.assertEqual(info['_metainfo'], {'_type': 'kernel', '_version': 1})
-        self.assertEqual((info['tick_ms'], info['interval_ms'], info['bad_after']), (250, 1000, 10))
-        kernel.load_info(self.home)
 
-    def test_init_config_explicit_kernel_cpu(self):
-        config = self.init_config({'cpus': {'kk': {'pool': 'kernel'}, '0': {}}})
-        self.good_cli('init', self.home, '--config', config)
-        self.assertEqual(read_json(self.home / 'info.json')['cpus'], {'kk': {'pool': 'kernel'}, '0': {}})
+class Init(CLICase):
+    def test_init_without_config_has_only_kernel_pool(self):
+        env = {k: v for k, v in os.environ.items() if k != 'AOS_DAEMON_HOME'}
+        with patch.dict(os.environ, env, clear=True):
+            out, _ = self.main('init')
+        self.assertEqual(out, 'initialized %s\n' % self.K)
+        info = self.info()
+        self.assertEqual(info['pools'], {'kernel': {'count': 1}})
+        self.assertNotIn('daemon', info)
+        for name in ('requests', 'responses', 'pools'):
+            self.assertTrue((self.K / name).is_dir())
+        self.assertFalse((self.K / 'cpus').exists())
 
-    def test_init_without_config_is_usage_error(self):
-        result = self.cli('init', self.home)
-        self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertTrue(result.stderr.startswith('aos-kernel: Usage: init 要給 --config FILE'), result.stderr)
-        self.assertIn('"cpus"', result.stderr)
-        self.assertFalse(self.home.exists())
+    def test_init_config_and_daemon_sources(self):
+        config = self.config({'pools': {'default': {'count': 2}}, 'tick_ms': 250, 'daemon': '/abs/Dc'})
+        self.main('init', '--config', config)
+        info = self.info()
+        self.assertEqual(info['pools'], {'default': {'count': 2}, 'kernel': {'count': 1}})
+        self.assertEqual((info['tick_ms'], info['daemon']), (250, '/abs/Dc'))
+        self.assertEqual(info['_metainfo'], {'_type': 'kernel', '_version': 2})
+        other = self.root / 'K2'
+        self.main('init', '--target', self.root / 'K3', '--config', config, '--daemon', 'Dx', target=False)
+        self.assertEqual(aos_home.read_json(self.root / 'K3' / 'info.json')['daemon'], os.path.abspath('Dx'))
+        with patch.dict(os.environ, {'AOS_DAEMON_HOME': str(self.root / 'De')}):
+            self.main('init', '--target', other, '--config', self.config({'pools': {}}, 'e.json'), target=False)
+        self.assertEqual(aos_home.read_json(other / 'info.json')['daemon'], str(self.root / 'De'))
+
+    def test_init_existing_home_refused(self):
+        self.main('init')
+        _, err = self.main('init', code=1)
+        self.assertTrue(err.startswith('aos-kernel: AlreadyExists: '), err)
 
     def test_init_bad_config_exit_1_without_writes(self):
-        cases = ['{', '[]', {'cpus': []}, {}, {'cpus': {'k': {}}}, {'cpus': {'a': {'pool': 'kernel'}, 'b': {'pool': 'kernel'}}},
-                 {'cpus': {'0': {}}, 'daemon': '/abs/D'}, {'cpus': {'0': {}}, 'tick_ms': -1},
-                 {'cpus': {'../bad': {}}}, {'cpus': {'0': {}}, '_metainfo': {'_type': 'daemon', '_version': 1}}]
-        for i, config in enumerate(cases):
-            with self.subTest(config=config):
-                path = self.init_config(config, 'bad%d.json' % i)
-                result = self.cli('init', self.home, '--config', path)
-                self.assertEqual(result.returncode, 1, result.stderr)
-                self.assertEqual(len(result.stderr.splitlines()), 1)
-                self.assertIn('K＝%s，取自 --target' % self.home, result.stderr)
-                self.assertFalse(self.home.exists())
-        result = self.cli('init', self.home, '--config', self.root / 'missing.json')
-        self.assertEqual(result.returncode, 1)
-        self.assertTrue(result.stderr.startswith('aos-kernel: ReadFailed: '))
-        self.assertFalse(self.home.exists())
+        cases = ['{', '[]', 'null', {'pools': []}, {'pools': {'kernel': {'count': 2}}}, {'pools': {'a/b': {'count': 1}}},
+                 {'pools': {'x': {}}}, {'pools': {}, 'tick_ms': -1}, {'pools': {}, 'daemon': 'relative'},
+                 {'pools': {}, '_metainfo': {'_type': 'daemon', '_version': 1}}]
+        for i, value in enumerate(cases):
+            with self.subTest(config=value):
+                _, err = self.main('init', '--config', self.config(value, 'bad%d.json' % i), code=1)
+                self.assertEqual(len(err.splitlines()), 1)
+                self.assertIn('K＝%s，取自 --target' % self.K, err)
+                self.assertFalse(self.K.exists())
+        _, err = self.main('init', '--config', self.root / 'missing.json', code=1)
+        self.assertTrue(err.startswith('aos-kernel: ReadFailed: '))
 
-    def test_init_config_null_and_directive_pool(self):
-        """fix-r4（astra 審查）：JSON null 不能落回預設家；pool 用指示詞時照解完的值決定補不補 k。"""
-        import os
-        result = self.cli('init', self.home, '--config', self.init_config('null', 'null.json'))
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertFalse(self.home.exists())
-        config = self.init_config({'cpus': {'s': {'pool': {'$env': 'AOSTEST_POOL'}}, '0': {}}}, 'dir.json')
-        result = self.raw_cli('init', '--target', self.home, '--config', config,
-                              env=dict(os.environ, AOSTEST_POOL='kernel'), cwd=self.root)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(list(read_json(self.home / 'info.json')['cpus']), ['s', '0'])
 
-    def test_check_bad_info_names_source(self):
-        import os
-        env = {k: v for k, v in os.environ.items() if k != 'AOS_KERNEL_HOME'}
-        result = self.raw_cli('check', env=env, cwd=self.root)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn('取自 目前資料夾', result.stdout + result.stderr)
+class Help(CLICase):
+    def test_help_lists_all_commands(self):
+        for flag in ('-h', '--help'):
+            result = self.raw_cli(flag)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for command in COMMANDS:
+                self.assertIn(command, result.stdout)
+            self.assertNotIn('stop', result.stdout)
 
-    def test_init_config_daemon_rejected(self):
-        path = self.init_config({'cpus': {'0': {}}, 'daemon': '/abs/D'})
-        result = self.cli('init', self.home, '--config', path)
-        self.assertTrue(result.stderr.startswith('aos-kernel: FieldTypeMismatch: --config 不能寫 daemon'), result.stderr)
-
-    def test_init_help_has_config_example(self):
-        text = self.good_cli('init', '-h').stdout
-        self.assertIn('--config', text)
+    def test_subcommand_help(self):
+        for command in COMMANDS:
+            result = self.raw_cli(command, '-h')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('usage: aos-kernel ' + command, result.stdout)
+            if command != 'cpu':
+                self.assertIn('--target', result.stdout)
+            self.assertNotIn('--daemon-target', result.stdout if command != 'check' else '')
+        text = self.raw_cli('init', '-h').stdout
+        self.assertIn('aos-kernel cpu add', text)
         self.assertIn('"AOS_LLM_CONFIG"', text)
-        self.assertNotIn('--cpu', text)
+        text = self.raw_cli('ls', '-h').stdout
+        for flag in ('--pool', '--procs', '--json'):
+            self.assertIn(flag, text)
+
+    def test_cpu_help(self):
+        text = self.raw_cli('cpu', '-h').stdout
+        for word in ('add', 'rm', 'ls', 'aos-kernel cpu rm default/3', '下次 boot'):
+            self.assertIn(word, text)
+        for sub, flags in (('add', ('--pool', '--count', '--env', '--daemon', '--dpool', '--target')),
+                           ('rm', ('P/<i>', '--pool', '--count', '--target')), ('ls', ('--pool', '--json', '--target'))):
+            result = self.raw_cli('cpu', sub, '-h')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('usage: aos-kernel cpu ' + sub, result.stdout)
+            for flag in flags:
+                self.assertIn(flag, result.stdout)
+
+    def test_usage_errors(self):
+        self.init({})
+        for args in [('halt', '--wait-ms', '-1'), ('check', '--unknown'), ('stop',), ('cpu',), ('cpu', 'nope'),
+                     ('boot', '--daemon-target', 'D'), ('init', '--cpu', 'x'), ('ls', '--pool', ''),
+                     ('check', '--daemon', 'D')]:
+            with self.subTest(args=args):
+                result = self.raw_cli(*args, '--target', self.K)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertTrue(result.stderr.startswith('aos-kernel: '), result.stderr)
+
+    def test_positional_kernel_and_empty_target(self):
+        self.init({})
+        self.assertEqual(self.raw_cli('ls', self.K).returncode, 2)
+        self.assertEqual(self.raw_cli('ls', '--target', '').returncode, 2)
+        self.assertEqual(self.raw_cli('cpu', 'ls', '--target', '').returncode, 2)
 
     def test_target_three_sources_and_error_names_source(self):
-        import os
-        self.initialize()
+        self.init({})
         env = {k: v for k, v in os.environ.items() if k != 'AOS_KERNEL_HOME'}
-        result = self.raw_cli('ls', '--target', self.home, env=env, cwd=self.root)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(result.stdout.startswith('health '))
-        result = self.raw_cli('ls', env=dict(env, AOS_KERNEL_HOME=str(self.home)), cwd=self.root)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        result = self.raw_cli('ls', env=env, cwd=self.home)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('chain -', result.stdout)
+        for args, extra, cwd in ((('--target', self.K), {}, self.root), ((), {'AOS_KERNEL_HOME': str(self.K)}, self.root),
+                                 ((), {}, self.K)):
+            result = self.raw_cli('ls', *args, env=dict(env, **extra), cwd=cwd)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(result.stdout.startswith('health 停機中'))
+            result = self.raw_cli('cpu', 'ls', *args, env=dict(env, **extra), cwd=cwd)
+            self.assertEqual(result.returncode, 0, result.stderr)
         missing = self.root / 'nope'
-        for args, extra, cwd, source in [
-                (('--target', missing), {}, self.root, '取自 --target）'),
-                ((), {'AOS_KERNEL_HOME': str(missing)}, self.root, '取自 AOS_KERNEL_HOME）'),
-                ((), {}, self.root, '取自 目前資料夾（沒給 --target、也沒設 AOS_KERNEL_HOME））')]:
+        for args, extra, source in [
+                (('--target', missing), {}, '取自 --target）'),
+                ((), {'AOS_KERNEL_HOME': str(missing)}, '取自 AOS_KERNEL_HOME）'),
+                ((), {}, '取自 目前資料夾（沒給 --target、也沒設 AOS_KERNEL_HOME））')]:
             with self.subTest(source=source):
-                result = self.raw_cli('ls', *args, env=dict(env, **extra), cwd=cwd)
+                result = self.raw_cli('ls', *args, env=dict(env, **extra), cwd=self.root)
                 self.assertEqual(result.returncode, 1)
                 where = missing if args or extra else self.root
                 self.assertTrue(result.stderr.rstrip().endswith('（K＝%s，%s' % (where, source)), result.stderr)
                 self.assertEqual(len(result.stderr.splitlines()), 1)
 
-    def test_positional_kernel_is_usage_error(self):
-        self.initialize()
-        result = self.raw_cli('ls', self.home)
-        self.assertEqual(result.returncode, 2)
-        self.assertTrue(result.stderr.startswith('aos-kernel: Usage: '))
-        result = self.raw_cli('ls', '--target', '')
-        self.assertEqual(result.returncode, 2)
 
-    def test_ack_missing_response_does_not_post(self):
-        self.initialize()
-        result = self.cli('ack', self.home, '/elsewhere/missing.json')
-        self.assertEqual(result.returncode, 1)
-        self.assertTrue(result.stderr.startswith('aos-kernel: NotFound: '))
-        self.assertEqual(result.stdout, '')
-        self.assertEqual(list((self.home / 'requests').iterdir()), [])
+class Ls(CLICase):
+    def running(self):
+        self.init({'default': {'count': 2}, 'llm': {'count': 1}})
+        self.boot()
+        self.settle()
 
-    def test_help_lists_all_commands(self):
-        for flag in ('-h', '--help'):
-            result = self.good_cli(flag)
-            for command in ('init', 'boot', 'tick', 'add', 'rm', 'ls', 'halt', 'ack', 'check'):
-                self.assertIn(command, result.stdout)
-            self.assertNotIn('stop', result.stdout)
+    def test_ls_without_ledger(self):
+        self.init({'default': {'count': 2}})
+        lines = self.main('ls')[0].splitlines()
+        self.assertEqual(lines[0], 'health 停機中（aos-kernel boot --target %s）' % self.K)
+        self.assertEqual(lines[1], 'chain -  phase -  last_seq -  kernel cpu kernel/0  current -  requests 0')
+        self.assertTrue(lines[2].startswith('kernel   want 1  sent -'), lines[2])
+        self.assertTrue(lines[3].startswith('default  want 2  sent -'), lines[3])
+        self.assertEqual(lines[4], 'queued 0  running 0  done 0  bad 0')
+        self.assertEqual(len(lines), 5)
 
-    def test_subcommand_help(self):
-        for command in ('init', 'boot', 'tick', 'add', 'rm', 'ls', 'halt', 'ack', 'check'):
-            result = self.good_cli(command, '-h')
-            self.assertIn('--target', result.stdout)
-            self.assertIn('usage: aos-kernel ' + command, result.stdout)
-            if command == 'add':
-                self.assertIn('--once', result.stdout)
-                self.assertIn('INST', result.stdout)
-            if command in ('boot', 'check'):
-                self.assertIn('--daemon-target', result.stdout)
+    def test_ls_pools_counts_and_bad(self):
+        self.running()
+        self.add('a')
+        self.add('b')
+        self.add('c', pool='llm')
+        self.tick()
+        state = self.state()
+        state['procs']['b'].update(status='bad')
+        state['procs']['z'] = dict(state['procs']['a'], status='done')
+        aos_home.write_state(self.K, state)
+        aos_home.write_json(self.root / 'work.json', {'argv': ['x'], 'stderr': 'log/err.txt'})
+        lines = self.main('ls')[0].splitlines()
+        self.assertTrue(lines[2].startswith('kernel '))
+        self.assertTrue(lines[3].startswith('default  want 2  sent 2  busy 2  idle 0  draining 0   daemon default: running 2'), lines[3])
+        self.assertTrue(lines[4].startswith('llm      want 1  sent 1  busy 1  idle 0'), lines[4])
+        self.assertEqual(lines[5], 'queued 0  running 2  done 1  bad 1')
+        self.assertEqual(lines[6], 'proc b  repeat  bad  runs 0  fails 0  pending -  看 %s' % (self.root / 'log/err.txt'))
+        self.assertEqual(len(lines), 7)
+        procs = self.main('ls', '--procs')[0].splitlines()[6:]
+        self.assertEqual([line.split()[1] for line in procs], ['a', 'b', 'c', 'z'])
 
-    def test_ls_json_matches_status_without_ledger(self):
-        self.initialize()
-        actual = json.loads(self.good_cli('ls', self.home, '--json').stdout)
-        self.assertEqual(actual.pop("health")["code"], "stopped")
-        self.assertEqual(actual, kernel.status(self.home))
+    def test_ls_pool_filter(self):
+        self.running()
+        self.add('a')
+        self.add('c', pool='llm')
+        state = self.tick()
+        key = state['on']['a']
+        lines = self.main('ls', '--pool', 'default', '--procs')[0].splitlines()
+        self.assertTrue(lines[2].startswith('default  want 2'), lines[2])
+        self.assertIn('%s  busy a  daemon pending' % key, lines)
+        self.assertEqual(sum(1 for line in lines if line.startswith('default/')), 2)
+        self.assertIn('queued 0  running 1  done 0  bad 0', lines)
+        self.assertTrue(lines[-1].startswith('proc a '))
+        self.assertNotIn('llm', '\n'.join(lines[2:]))
+        data = json.loads(self.main('ls', '--pool', 'llm', '--json')[0])
+        self.assertEqual(list(data['pools']), ['llm'])
+        self.assertEqual(list(data['procs']), ['c'])
+        self.assertEqual(list(data['busy']), ['llm/0'])
+        _, err = self.main('ls', '--pool', 'nope', code=1)
+        self.assertTrue(err.startswith('aos-kernel: NotFound: '), err)
 
-    def test_ls_summary_includes_cpus_and_procs(self):
-        self.setup_running()
-        self.add(self.job('raise SystemExit(100)'), 'visible')
-        self.kernel_stop()
-        expected = kernel.status(self.home)
-        output = io.StringIO()
-        with contextlib.redirect_stdout(output):
-            self.assertEqual(kernel.main(['ls', '--target', str(self.home), '--json']), 0)
-        actual = json.loads(output.getvalue())
-        self.assertEqual(actual.pop("health")["code"], "stopped")
-        self.assertEqual(actual, expected)
-        summary = self.good_cli('ls', self.home).stdout
-        self.assertFalse(summary.startswith('{'))
-        for name in self.info['cpus']:
-            self.assertIn('cpu ' + name + '  pool ', summary)
-        self.assertIn('proc visible  repeat ', summary)
-        self.assertIn('queue ', summary)
+    def test_ls_json_matches_status(self):
+        self.running()
+        data = json.loads(self.main('ls', '--json')[0])
+        self.assertIn(data.pop('health')['code'], ('ok', 'stall'))
+        self.assertEqual(data, json.loads(json.dumps(kernel.status(self.K))))
 
-    def test_ls_summary_without_ledger(self):
-        self.initialize()
-        text = self.good_cli('ls', self.home).stdout
-        self.assertIn('chain -  phase -  last_seq -  daemon dead', text)
-        self.assertIn('kernel cpu -  current -  requests 0', text)
-        self.assertIn('cpu llm  pool llm  idle  dead（daemon 沒在跑）', text)  # fix-r5
-
-    def test_ack_once_response_by_filename_or_path(self):
-        self.setup_running()
-        for use_path in (False, True):
-            with self.subTest(use_path=use_path):
-                output = self.good_cli('add', self.home, self.job(), '--once').stdout
-                name = output.split()[0]
-                aos_client.wait_response(self.home, name, timeout_ms=5000, poll_ms=5)
-                response = self.home / 'responses' / name
-                result = self.good_cli('ack', self.home, response if use_path else name)
-                self.assertEqual((result.stdout, result.stderr), ('', ''))
-                wait_for(lambda: not response.exists())
-        self.kernel_stop()
-
-    def test_new_help_and_usage(self):
-        for command, flags in [('init', ['--config']), ('halt', ['--wait-ms', '--no-wait']), ('check', ['--agent', '--daemon-target'])]:
-            text = self.good_cli(command, '-h').stdout
-            for flag in flags:
-                self.assertIn(flag, text)
-        for args in [('halt', '--wait-ms', '-1'), ('check', '--unknown'), ('stop',), ('check', '--daemon', 'D')]:
-            self.assertEqual(self.cli(args[0], self.home, *args[1:]).returncode, 2)
-
-    def test_halt_without_ledger_posts_nothing(self):
-        self.initialize()
-        self.assertEqual(self.good_cli('halt', self.home).stdout, 'stopped\n')
-        self.assertEqual(list((self.home / 'requests').iterdir()), [])
-
-    def test_halt_no_wait_posts_without_info_or_ledger(self):
-        (self.home / "requests").mkdir(parents=True)
-        result = self.good_cli('halt', self.home, '--no-wait')
-        self.assertEqual((result.stdout, result.stderr), ('', ''))
-        files = list((self.home / 'requests').glob('stop-*.json'))
-        self.assertEqual(len(files), 1)
-        self.assertEqual(read_json(files[0])['method'], 'stop')
-
-    def test_halt_dead_daemon_and_missing_kernel_cpu_do_not_post(self):
-        from unittest.mock import patch
-        self.initialize(daemon=str(self.daemon))
-        self.write(self.home / 'state.json', {'phase': 'running', 'cpus': {}, 'kcpu': 'k'})
-        for alive in (False, True):
-            with patch.object(kernel.aos_daemon, 'is_alive', return_value=alive), contextlib.redirect_stdout(io.StringIO()) as out:
-                self.assertEqual(kernel.stop(self.home), 0)
-            self.assertEqual(out.getvalue(), 'not running\n')
-            self.assertEqual(list((self.home / 'requests').iterdir()), [])
-
-    def test_halt_ignores_other_kernel_same_names(self):
-        self.initialize(daemon=str(self.daemon))
-        self.write(self.home / 'state.json', {'phase': 'stopped', 'cpus': {'0': {}}, 'kcpu': 'k'})
-        self.write(self.daemon / 'state.json', {'children': {
-            'k': {'target': str(self.root / 'other/cpus/k/inst.json')},
-            '0': {'target': str(self.home / 'cpus-other/0/inst.json')}}})
-        self.assertEqual(self.good_cli('halt', self.home).stdout, 'stopped\n')
-        self.assertEqual(list((self.home / 'requests').iterdir()), [])
-
-    def test_halt_waits_for_removed_and_ledger_only_cpus(self):
-        from unittest.mock import patch
-        self.initialize(daemon=str(self.daemon))
-        state = {'phase': 'stopping', 'cpus': {'old': {}}, 'kcpu': 'k'}
-        self.write(self.home / 'state.json', state)
-        owned = {name: {'target': str(self.home / 'cpus' / name / 'inst.json')} for name in ('k', 'old')}
-        self.write(self.daemon / 'state.json', {'children': owned})
-        calls = []
-        def advance(_):
-            calls.append(1)
-            state['phase'] = 'stopped'
-            self.write(self.home / 'state.json', state)
-            owned.pop('k' if len(calls) == 1 else 'old')
-            self.write(self.daemon / 'state.json', {'children': owned})
-        with patch.object(kernel.aos_daemon, 'is_alive', return_value=True), \
-                patch.object(kernel.time, 'sleep', side_effect=advance), contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(kernel.stop(self.home), 0)
-        self.assertEqual(len(calls), 2)
-        self.assertEqual(out.getvalue(), 'stopped\n')
-
-    def test_halt_timeout_retains_posted_request(self):
-        from unittest.mock import patch
-        self.initialize(daemon=str(self.daemon))
-        self.write(self.home / 'state.json', {'phase': 'running', 'cpus': {}, 'kcpu': 'k'})
-        self.write(self.daemon / 'state.json', {'children': {'k': {'target': str(self.home / 'cpus/k/inst.json')}}})
-        with patch.object(kernel.aos_daemon, 'is_alive', return_value=True), contextlib.redirect_stderr(io.StringIO()) as err:
-            self.assertEqual(kernel.main(['halt', '--target', str(self.home), '--wait-ms', '0']), 1)
-        self.assertEqual(err.getvalue(), 'aos-kernel: Timeout: 等了 0 ms 還沒停好（stop 已放、不撤回），用 aos-kernel ls --target %s 看（K＝%s，取自 --target）\n' % (self.home, self.home))
-        self.assertEqual(len(list((self.home / 'requests').glob('stop-*.json'))), 1)
-
-    def test_halt_real_daemon_returns_after_children_disappear(self):
-        self.setup_running()
-        self.assertEqual(self.good_cli('halt', self.home).stdout, 'stopped\n')
-        self.assertEqual(self.state()['phase'], 'stopped')
-        self.assertEqual(self.dstate()['children'], {})
-        self.assertEqual(self.good_cli('halt', self.home).stdout, 'stopped\n')
-
-    def test_bad_agent_summary_points_to_stderr_and_json_unchanged(self):
-        self.initialize()
-        agent = self.root / 'agent'
-        agent.mkdir()
-        target = agent / 'tick.json'
-        for stderr in ('log/agent.err', {'$opt': 'append', '$val': 'log/agent.err'}):
-            self.write(target, {'argv': ['aos-agent', 'tick', '--target', str(agent)], 'stderr': stderr})
-            proc = dict(target=str(target), once=False, status='bad', runs=3, fails=3, pending=None)
-            self.write(self.home / 'state.json', {'procs': {'agent': proc}})
-            text = self.good_cli('ls', self.home).stdout
-            self.assertIn('  看 %s\n' % (agent / 'log/agent.err'), text)
-            self.assertEqual(json.loads(self.good_cli('ls', self.home, '--json').stdout)['procs']['agent'], proc)
+    def test_ls_error_line(self):
+        self.running()
+        self.fake.errors['default'] = ['NameTaken']
+        self.edit_info(default={'count': 3})
+        self.ticks(2)
+        lines = self.main('ls')[0].splitlines()
+        self.assertEqual(lines[0], 'health 池 default：NameTaken（NameTaken）')
+        self.assertIn('daemon default: 錯誤 NameTaken（NameTaken）', lines[3])
 
     def test_bad_summary_stderr_fallbacks(self):
         target = self.root / 'inst.json'
         self.assertEqual(kernel._stderr_hint(str(target)), str(target))
         for value in ({'$env': 'ERR'}, {'$opt': 'append', '$val': {'$env': 'ERR'}}, None):
-            self.write(target, {'stderr': value})
+            aos_home.write_json(target, {'stderr': value})
             self.assertEqual(kernel._stderr_hint(str(target)), str(target) + ' 的 stderr 設定')
+        aos_home.write_json(target, {'stderr': {'$opt': 'append', '$val': 'a.log'}})
+        self.assertEqual(kernel._stderr_hint(str(target)), str(self.root / 'a.log'))
 
-    def fake_daemon_snapshot(self, phase='running', alive=True, missing=True):
-        import fcntl
-        self.initialize(daemon=str(self.daemon))
-        if alive:
-            lock = (self.daemon / '.daemon.lock').open('w')
-            self.addCleanup(lock.close)
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        self.write(self.home / 'state.json', {'phase': phase, 'kcpu': 'k'})
-        children = {} if missing else {
-            name: {'target': str(self.home / 'cpus' / name / 'inst.json'), 'state': 'alive'}
-            for name in self.info['cpus']}
-        self.write(self.daemon / 'state.json', {'children': children})
 
-    def test_ls_missing_cpu_hint_and_json_unchanged(self):
-        self.fake_daemon_snapshot()
-        text = self.good_cli('ls', self.home).stdout
-        self.assertIn('cpu k  pool kernel  idle  missing', text)
-        self.assertEqual(text.splitlines()[0],
-                         'health 停機中（aos-kernel boot --target %s --daemon-target %s）' %
-                         (self.home, self.daemon))
-        actual = json.loads(self.good_cli('ls', self.home, '--json').stdout)
-        self.assertEqual(actual.pop("health")["code"], "stopped")
-        self.assertEqual(actual, kernel.status(self.home))
+class Misc(CLICase):
+    def test_ack_missing_response_does_not_post(self):
+        self.init({})
+        out, err = self.main('ack', '/elsewhere/missing.json', code=1)
+        self.assertTrue(err.startswith('aos-kernel: NotFound: '))
+        self.assertEqual(out, '')
+        self.assertEqual(list((self.K / 'requests').iterdir()), [])
 
-    def test_ls_all_cpus_present_has_no_hint(self):
-        self.fake_daemon_snapshot(missing=False)
-        self.assertNotIn('hint ', self.good_cli('ls', self.home).stdout)
+    def test_ack_by_name_or_path(self):
+        self.init({})
+        for use_path in (False, True):
+            name = 'r-%s.json' % use_path
+            aos_home.write_json(self.K / 'responses' / name, {'result': {}})
+            self.assertEqual(self.main('ack', self.K / 'responses' / name if use_path else name), ('', ''))
+            acks = [aos_home.read_json(p) for p in (self.K / 'requests').glob('ack-*.json')]
+            self.assertIn(name, [a['params']['name'] for a in acks])
 
-    def test_ls_stopped_missing_cpus_has_no_restart_hint(self):
-        self.fake_daemon_snapshot(phase='stopped')
-        self.assertNotIn('hint ', self.good_cli('ls', self.home).stdout)
+    def test_add_unknown_pool_hints_cpu_add(self):
+        self.init({})
+        error = aos_home.params_error('x', 'pool 必須是現有的工作池', ['params', 'pool'])
+        with patch('aos_client.wait_response', return_value=error), patch('aos_client.ack'):
+            _, err = self.main('add', self.root / 'job.json', '--pool', 'gpu', code=1)
+        self.assertIn('先 aos-kernel cpu add --target %s --pool gpu' % self.K, err)
+        self.assertTrue(err.startswith('aos-kernel: FieldTypeMismatch: '), err)
 
-    def test_ls_stopping_missing_cpus_has_restart_hint(self):
-        self.fake_daemon_snapshot(phase='stopping')
-        self.assertTrue(self.good_cli('ls', self.home).stdout.startswith('health 停機中（'))
+    def test_halt_without_ledger_posts_nothing(self):
+        self.init({})
+        self.assertEqual(self.main('halt')[0], 'stopped\n')
+        self.assertEqual(list((self.K / 'requests').iterdir()), [])
 
-    def test_ls_dead_daemon_hint(self):
-        self.fake_daemon_snapshot(alive=False)
-        self.assertEqual(self.good_cli('ls', self.home).stdout.splitlines()[0],
-                         'health 停機中（aos-kernel boot --target %s --daemon-target %s）' %
-                         (self.home, self.daemon))
+    def test_halt_no_wait_posts(self):
+        (self.K / 'requests').mkdir(parents=True)
+        self.assertEqual(self.main('halt', '--no-wait'), ('', ''))
+        files = list((self.K / 'requests').glob('stop-*.json'))
+        self.assertEqual(len(files), 1)
 
-    def test_ls_hint_default_daemon_and_absolute_kernel(self):
-        import os
-        from unittest.mock import patch
-        self.initialize()
-        out = io.StringIO()
-        with patch.dict(os.environ, {'AOS_DAEMON_HOME': str(self.daemon)}), contextlib.redirect_stdout(out):
-            self.assertEqual(kernel.main(['ls', '--target', os.path.relpath(self.home)]), 0)
-        self.assertIn('aos-kernel boot --target %s --daemon-target %s' % (self.home, self.daemon), out.getvalue())
+    def test_check_repeated_options_are_usage_errors(self):
+        for flag in ('--agent', '--daemon-target'):
+            out, err = self.main('check', flag, 'A', flag + '=B', code=2)
+            self.assertEqual(out, '')
+            self.assertEqual(err, 'aos-kernel: Usage: %s 只能給一次；要查多個請分開跑 check\n' % flag)
 
-    def test_check_repeated_agent_is_usage_error(self):
-        result = self.cli('check', self.home, '--agent', 'A', '--agent=B')
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(result.stdout, '')
-        self.assertEqual(result.stderr,
-                         'aos-kernel: Usage: --agent 只能給一次；要查多個請分開跑 check\n')
-
-    def test_check_repeated_daemon_is_usage_error(self):
-        result = self.cli('check', self.home, '--daemon-target=A', '--daemon-target', 'B')
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(result.stdout, '')
-        self.assertEqual(result.stderr,
-                         'aos-kernel: Usage: --daemon-target 只能給一次；要查多個請分開跑 check\n')
-
-    def test_check_single_options_pass_scalar_values(self):
-        from unittest.mock import patch
+    def test_check_options_pass_scalars(self):
         with patch('aos_kernel_check.check', return_value=0) as check:
-            self.assertEqual(kernel.main(['check', '--target', str(self.home), '--agent', 'A', '--daemon-target', 'D']), 0)
-        check.assert_called_once_with(str(self.home), 'A', 'D', note=check.call_args.kwargs['note'], probe=False)
-
-    def test_check_omitted_options_pass_none(self):
-        from unittest.mock import patch
+            self.main('check', '--agent', 'A', '--daemon-target', 'D')
+        check.assert_called_once_with(str(self.K), 'A', 'D', note=check.call_args.kwargs['note'], probe=False)
         with patch('aos_kernel_check.check', return_value=0) as check:
-            self.assertEqual(kernel.main(['check', '--target', str(self.home)]), 0)
-        check.assert_called_once_with(str(self.home), None, None, note=check.call_args.kwargs['note'], probe=False)
+            self.main('check')
+        check.assert_called_once_with(str(self.K), None, None, note=check.call_args.kwargs['note'], probe=False)

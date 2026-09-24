@@ -56,8 +56,9 @@ class AgentIntegrationTests(KernelCase):
                      'model': 'local-test', 'timeout_ms': 3000}}})
         path = str(CLI) + os.pathsep + os.environ.get('PATH', '/usr/bin:/bin')
         self.env = dict(os.environ, AOS_KERNEL_HOME=str(self.home), PATH=path, PYTHONDONTWRITEBYTECODE='1')
-        self.cpus = {'k': {'pool': 'kernel'}, '0': {'envs': {'PATH': path}},
-                     'llm': {'pool': 'llm', 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
+        # kernel-info.md（proto5-2）：info 是池表，不再列每顆 cpu；kernel 池不用另外寫（預設 count 1）。
+        self.pools = {'default': {'count': 1, 'envs': {'PATH': path}},
+                      'llm': {'count': 1, 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
         # 即使測試 assertion 失敗，也先正常停 kernel，再停 daemon，最後才由基底兜底。
         self.addCleanup(self.orderly_stop)
 
@@ -113,7 +114,7 @@ class AgentIntegrationTests(KernelCase):
 
     def test_manual_round_trip(self):
         """手動 tick 走完 idle→think→act→think→idle 並清空回音與工作檔。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         self.assertEqual(self.tick(), 101)
         self.write(self.base / 'input.json', '開始')
         states = ['idle']
@@ -131,7 +132,7 @@ class AgentIntegrationTests(KernelCase):
 
     def test_start_kernel_drives_and_stop_unregisters(self):
         """start 登記後由 kernel 驅動，stop 後 ls 不再列出 agent。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         result = self.agent_cli('start')
         self.assertEqual(result.returncode, 0, result.stderr)
         inst = read_json(self.base / 'tick.json')
@@ -156,7 +157,7 @@ class AgentIntegrationTests(KernelCase):
 
     def test_C9_queued_think_stop_boot_retry(self):
         """C-9 真版：llm cpu 被佔住時 stop 產生 Stopping，boot 後新批完成。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         ready, release = self.root / 'ready', self.root / 'release'
         target = self.job('from pathlib import Path\nimport time\n'
                           'Path(%r).touch()\ndeadline = time.monotonic() + 10\n'
@@ -174,7 +175,8 @@ class AgentIntegrationTests(KernelCase):
         wait_for(lambda: self.state().get('phase') in ('stopping', 'stopped'))
         release.touch()
         wait_for(lambda: self.state().get('phase') == 'stopped', timeout=8)
-        wait_for(lambda: not self.dstate().get('children'), timeout=8)
+        for pool in self.pools:
+            self.wait_gone(pool, timeout=8)
         response = read_json(self.home / 'responses' / (name + '.json'))
         self.assertEqual(response['error']['data']['code'], 'Stopping')
         self.boot()
@@ -196,7 +198,7 @@ class AgentIntegrationTests(KernelCase):
 
     def test_start_kernel_incompatible(self):
         """done_exit=101 的真 K 家讓 start 拒絕登記。"""
-        self.setup_running(cpus=self.cpus, done_exit=101)
+        self.setup_running(pools=self.pools, done_exit=101)
         result = self.agent_cli('start')
         self.assertEqual(result.returncode, 1)
         self.assertIn('KernelIncompatible', result.stderr)
@@ -205,7 +207,7 @@ class AgentIntegrationTests(KernelCase):
 
     def test_duplicate_start_already_exists(self):
         """重複 start：真 kernel 回 AlreadyExists，但就是這個家、正常登記著＝already started、退 0（fix-r5）。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         first = self.agent_cli('start')
         self.assertEqual(first.returncode, 0, first.stderr)
         second = self.agent_cli('start')
@@ -216,7 +218,7 @@ class AgentIntegrationTests(KernelCase):
         wait_for(lambda: 'agent-bob' not in self.state().get('procs', {}))
 
     def test_stop_unregisters_with_broken_or_missing_info(self):
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         for mode in ('llm', 'tools', 'missing', 'folder_only'):
             with self.subTest(mode=mode):
                 self.write(self.base / 'info.json', self.agent_info)

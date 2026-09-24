@@ -34,7 +34,8 @@ class FixR5Tests(unittest.TestCase):
     def registered(self, **values):
         self.put(self.base / 'tick.json', {'envs': self.env})
         proc = {'status': 'idle', 'fails': 0, 'target': str(self.base / 'tick.json'), 'once': False, **values}
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': proc}, 'replies': [], 'cpus': {}})
+        # kernel-ledger.md（proto5-2）：忙的格子在 busy（key P/<i>），on 反查行程名 → 格子。
+        self.put(self.k / 'state.json', {'procs': {'agent-bob': proc}, 'replies': [], 'busy': {}, 'on': {}})
 
     def health(self, code='ok', message='ok'):
         return patch('aos_kernel_health.health', return_value=(code, message))
@@ -182,7 +183,8 @@ class FixR5Tests(unittest.TestCase):
 
     def test_start_already_started_same_home(self):
         self.put(self.k / 'state.json', {'procs': {'agent-bob': {
-            'status': 'idle', 'target': str(self.base / 'tick.json'), 'once': False}}, 'replies': [], 'cpus': {}})
+            'status': 'idle', 'target': str(self.base / 'tick.json'), 'once': False}}, 'replies': [],
+            'busy': {}, 'on': {}})
         with patch('sys.stdout', new_callable=io.StringIO) as out:
             rc, _ = self.register(error={'code': -32000, 'message': '已存在', 'data': {'code': 'AlreadyExists'}})
         self.assertEqual(rc, 0)
@@ -191,16 +193,18 @@ class FixR5Tests(unittest.TestCase):
 
     def test_start_already_exists_other_cases_still_fail(self):
         target = str(self.base / 'tick.json')
-        cases = {'discard': ({'target': target}, {'0': {'proc': 'agent-bob', 'req': 'x', 'discard': True}}, '上次 stop 的那格還在跑'),
-                 'bad': ({'target': target, 'status': 'bad'}, {}, '被判 bad'),
-                 'other': ({'target': '/else/bob/tick.json'}, {}, '同名行程是 /else/bob/tick.json')}
-        for label, (proc, cpus, text) in cases.items():
+        # kernel-ledger.md（proto5-2）：discard 看 on[NAME] 指的那格 busy[...] 的 discard。
+        cases = {'discard': ({'target': target}, {'default/0': {'proc': 'agent-bob', 'req': 'x', 'discard': True}},
+                              {'agent-bob': 'default/0'}, '上次 stop 的那格還在跑'),
+                 'bad': ({'target': target, 'status': 'bad'}, {}, {}, '被判 bad'),
+                 'other': ({'target': '/else/bob/tick.json'}, {}, {}, '同名行程是 /else/bob/tick.json')}
+        for label, (proc, busy, on, text) in cases.items():
             with self.subTest(label), patch('sys.stdout', new_callable=io.StringIO):
                 self.err.truncate(0); self.err.seek(0)
                 for leftover in (self.k / 'requests').glob('*'):
                     leftover.unlink()
                 self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'once': False, **proc}},
-                                                 'replies': [], 'cpus': cpus})
+                                                 'replies': [], 'busy': busy, 'on': on})
                 rc, _ = self.register(error={'code': -32000, 'message': '已存在', 'data': {'code': 'AlreadyExists'}})
                 self.assertEqual(rc, 1)
                 self.assertIn('AlreadyExists', self.err.getvalue())
