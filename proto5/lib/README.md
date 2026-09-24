@@ -71,6 +71,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_context.py`](aos_agent_context.py) | `aos-agent context`（tool-era T4，cli-memory.md）：送給模型的東西多大，人格＋記憶＋工具的字數／token 粗估；跟 `talk` 的 `/context` 共用同一份算法 |
 | [`aos_agent_compact.py`](aos_agent_compact.py) | `aos-agent compact`（tool-era T4，spec/agent/compact.md）：機械壓縮記憶（封存＝8 KB 機械摘要），tick idle 時的自動壓縮、`compact` 申請、`history --archive`；不叫模型，每步可重跑 |
 | [`aos_agent_notes.py`](aos_agent_notes.py) | `aos-agent notes ls／show`（tool-era T4）：讀 `tools/notes/` 那支 `note` 工具寫的 `wf-table/1` 長期筆記檔，不叫模型 |
+| [`aos_agent_persona.py`](aos_agent_persona.py) | `aos-agent persona show／set／append`（第二波 C 隊，spec/agent/persona.md）：人格是信任資料，模型只能用 `persona_propose` 提案，人批了才用這支寫進 `prompts/system.json`；不叫模型、不進牢 |
 | [`aos_jail.py`](aos_jail.py) | `aos-jail`：組 bwrap 參數並 exec（工具關進牢裡跑） |
 | [`aos_json_cli.py`](aos_json_cli.py) | `aos-json`（tool-era T3）：人用的 JSON Pointer 改檔（get／set／del／append／merge），照原檔縮排重寫、`--expect-sha` 防衝突，`--check-directives` 先過 aos_directives 才寫 |
 | [`aos_team_format.py`](aos_team_format.py) | 團隊共用格式（spec/team/）：資料夾佈局、名冊 `team.json`、信、申請、任務單、問題的讀驗，以及共用的 id／時間／寫檔 |
@@ -87,6 +88,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡。第二波 B 隊：`wf_lint_strict` 與新條目 `cmd_ok`（team.json 白名單裡的專案指令）經 aos-jail 關牢、專案唯讀 |
 | [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
 | [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
+| [`aos_team_lock.py`](aos_team_lock.py) | `lock` 工具與 `aos-team lock`（第二波 C 隊，spec/team/lock.md）：短期獨佔一個檔或資料夾的名字，申請 `kind: lock`（acquire／release／ls，全部非同步）記在 `team/locks/<名>.json`，逾時自動放 |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
 `aos`→`aos_up.main`、`aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、
@@ -96,7 +98,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2330 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # REBASE_COUNT_PLACEHOLDER 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -495,10 +497,10 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2330 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # REBASE_COUNT_PLACEHOLDER 條；repo 根目錄
 ```
 
-共 84 個測試檔、2330 條（第二波 B 隊在 main b62e0df 之上實跑，約 172 秒，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
+共 REBASE_FILES_PLACEHOLDER 個測試檔、REBASE_COUNT_PLACEHOLDER 條（第二波 C 隊在第二波 B 隊之上實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
@@ -586,6 +588,8 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_wall.py](test/test_team_wall.py) | 第二波 B 隊（spec/team/wall.md）：`cmd_ok` 白名單格式與比對、牢裡執行（退出碼、逾時砍孫行程、輸出只留尾、程式假冒 bwrap 錯誤仍算不過）、wf_lint 關牢、門房 `tool` 關牢與 `NoBwrap`、郵差再驗（路徑、控制字元、假信頭、角色） |
 | [test_team_escape.py](test/test_team_escape.py) | 第二波 B 隊驗收③逃逸測試：`aos-team init` 生真團隊，工具走 `tool_inst` 真送件路徑進 bwrap；讀別人的家、寫 access.json／工具包、寫別人的 outbox、硬連結、冒名、假信頭、越權申請、符號連結、主機 /tmp、環境與網路、wf_doc 讀快照、wf_init staging 在牢裡 |
 | [test_notes_recall_context.py](test/test_notes_recall_context.py) | 第二波 B 隊：notes 包的 `recall`、`context` 兩支工具（token 粗估跟 aos_agent_context 同一套）、`mem` 唯讀掛點（新家、舊家補掛、保留名）、真牢裡寫不進 `/work/mem` |
+| [test_team_lock.py](test/test_team_lock.py) | 第二波 C 隊 `aos_team_lock`（lock.md）：acquire／release／ls、Busy 拒絕、同持有者續租、過期可被搶／可被別人放、冪等、`may_send`、`cmd_lock` |
+| [test_agent_persona.py](test/test_agent_persona.py) | 第二波 C 隊 `aos_agent_persona`（persona.md）：show／set／append、自訂 `system` 路徑、壞檔、用法錯、`aos-agent persona` CLI 接線 |
 
 共用工具（不是測試檔）：[\_util.py](test/_util.py)（底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
 （控制協議孩子、輪詢、孤兒隔離 driver、`read_json`／`wait_for`）、[\_kernel_util.py](test/_kernel_util.py)

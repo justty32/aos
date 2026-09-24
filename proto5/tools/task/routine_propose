@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""routine_propose：提議加一條心跳例行（T-beat 的申請 kind=routine，這支是模型端缺的那半——beat.md 已經有
+郵差怎麼處理：成員提的自動開一題問人，人用 aos-team answer 批准才會被心跳排進去；人加的才會直接生效）。
+
+也能 op=rm 拿掉自己提過的那條（人或提出的成員都能拿掉，郵差驗）。
+"""
+import sys
+
+from _team import arg, fail, only_keys, run, send
+
+KEYS = ('op', 'name', 'every', 'daily', 'once', 'to', 'goal', 'done_when', 'workflow', 'tz', 'timeout_minutes',
+       'retries')
+DONE_KINDS = {'file_exists': 'path', 'table_filled': 'path', 'check': 'name', 'judge': 'text'}
+
+
+def main(args, cfg):
+    only_keys(args, KEYS)
+    op = arg(args, 'op', str, 'add')
+    if op not in ('add', 'rm'):
+        fail('BadArguments', 'op must be "add" or "rm"')
+    name = arg(args, 'name', str, required=True)
+    if op == 'rm':
+        rid = send(cfg, 'routine', {'op': 'rm', 'name': name})
+        return 'queued routine rm %s (%s). End this turn.' % (name, rid)
+    when = [k for k in ('every', 'daily', 'once') if arg(args, k, str) is not None]
+    if len(when) != 1:
+        fail('BadArguments', 'give exactly one of every/daily/once')
+    to = arg(args, 'to', str, required=True)
+    goal = arg(args, 'goal', str, required=True)
+    done = arg(args, 'done_when', list, required=True)
+    if not done:
+        fail('BadArguments', 'done_when needs at least one item')
+    for i, it in enumerate(done):
+        if not isinstance(it, dict) or it.get('kind') not in DONE_KINDS:
+            fail('BadArguments', 'done_when[%d].kind must be one of %s' % (i, ', '.join(DONE_KINDS)))
+    body = {'op': 'add', 'name': name, when[0]: arg(args, when[0], str), 'to': to, 'goal': goal, 'done_when': done}
+    workflow = arg(args, 'workflow', str)
+    if workflow is not None:
+        body['workflow'] = workflow
+    tz = arg(args, 'tz', str)
+    if tz is not None:
+        body['tz'] = tz
+    for key, lo, hi in (('timeout_minutes', 1, 7 * 24 * 60), ('retries', 0, 5)):
+        value = arg(args, key, int)
+        if value is not None:
+            if not lo <= value <= hi:
+                fail('BadArguments', '%s must be %d..%d' % (key, lo, hi))
+            body[key] = value
+    rid = send(cfg, 'routine', body)
+    return ('queued routine proposal %s -> %s (%s). This opens a question for the user to approve; it only runs '
+            'after they answer. End this turn.' % (name, to, rid))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

@@ -134,6 +134,17 @@ class AgentTickTests(unittest.TestCase):
         self.assertEqual(self.tick(), 0)
         self.assertEqual(self.state()['batch']['calls'][0]['tool_call_id'], 'c1')
 
+    def test_act_tool_pool_override(self):
+        """T-pool：工具檔寫了 _pool 就送那個池，不是 info.tool_pool（priority-and-shared-cpu 提案）。"""
+        self.put(self.base / 'prompts/history.json', [ASSISTANT])
+        self.info['tools'] = ['tools.json']
+        self.put(self.base / 'tools.json', [dict(TOOL, _pool='gpu', _jail=False)])
+        self.put(self.base / 'info.json', self.info)
+        self.put(self.base / 'state.json', {'state': 'act'})
+        self.assertEqual(self.tick(), 0)
+        [path] = list((self.k / 'requests').glob('*.json'))
+        self.assertEqual(self.read(path)['params']['pool'], 'gpu')
+
     def test_act_missing_tool_local_done(self):
         self.put(self.base / 'prompts/history.json', [ASSISTANT])
         self.put(self.base / 'state.json', {'state': 'act'})

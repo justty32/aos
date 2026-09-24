@@ -252,7 +252,7 @@ class Checks:
                 else:
                     self.report('ok', 'agent/' + item, '池 %s 存在（count %d）' % (pool, pools[pool]['count']))
             self.agent_model(info, pools, models, env)
-        self.agent_tools(directory, info, env)
+        self.agent_tools(directory, info, env, pools)
         return info
 
     def agent_model(self, info, pools, models, env):
@@ -267,9 +267,26 @@ class Checks:
         self.report('ok' if exists else 'bad', 'agent/llm.model',
                     '模型 %s 存在' % model if exists else '模型 %s 不在 llm 設定；請修正模型代號或 llm.json' % model)
 
-    def agent_tools(self, directory, info, env):
+    def agent_tools(self, directory, info, env, pools=None):
+        """池式（priority-and-shared-cpu §T-pool）：工具檔寫了 `_pool` 就查它在不在 K 的池裡、不能是 kernel 池；
+        沒寫的工具照舊用 `tool_pool`（agent() 那段已經查過），這裡不重查。"""
         for tool in info['tools_raw']:
             item = 'agent/tool/' + tool['function']['name']
+            pool = tool.get('_pool')
+            if pool is not None:
+                where = item + '/_pool'
+                if pools is None:
+                    pass   # K 讀不到：agent() 那段已經警告過，這裡不重複
+                elif pool == KERNEL_POOL:
+                    self.report('bad', where, '池 %s 是 kernel 池，不能派工作；請修改工具檔的 _pool' % pool)
+                elif pool not in pools:
+                    self.report('bad', where, '池 %s 不在 pools；請修改工具檔的 _pool，或 aos-kernel cpu add --target %s --pool %s'
+                                % (pool, self.home, pool))
+                elif pools[pool]['count'] == 0:
+                    self.report('warn', where, '池 %s 的 count 是 0，工具會一直排隊；aos-kernel cpu add --target %s --pool %s'
+                                % (pool, self.home, pool))
+                else:
+                    self.report('ok', where, '池 %s 存在（count %d）' % (pool, pools[pool]['count']))
             argv = tool['_meta'].get('argv')
             if not isinstance(argv, list) or not argv or not isinstance(argv[0], str):
                 self.report('warn', item, '_meta.argv[0] 無法靜態判斷；請確認工具的執行目標')

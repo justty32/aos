@@ -86,14 +86,17 @@ def render_handoff(t):
 
 
 def render_review(sub, parent):
-    lines = ['審查單 %s：替 %s（rev%d，第 %d 次）判下面幾條；機械檢查已經過了。'
-             % (sub['id'], parent['id'], sub['review_of']['rev'], sub['review_of']['attempt']),
+    """（09-24 W2C 修：條目保留父單原編號，不從 0 重編，task show／review_result 才對得起來）"""
+    indices = sub['review_of']['indices']
+    lines = ['審查單 %s：替 %s（rev%d，第 %d 次）判下面幾條（編號跟 %s 一致，不是從 0 數）；機械檢查已經過了。'
+             % (sub['id'], parent['id'], sub['review_of']['rev'], sub['review_of']['attempt'], parent['id']),
              '任務目標：%s' % parent['goal']]
     if parent.get('facts'):
         lines.append('事實（開單人給的，例如改之前的原文）：%s' % parent['facts'])
-    lines += ['  %d. %s' % (i, it['text']) for i, it in enumerate(sub['done_when'])]
-    lines.append('用 review_result 逐條回：{"task": "%s", "items": [{"i": 0, "pass": true, "why": "一句理由"}, …]}；'
-                 '每一條都要回。回完這一輪就結束。' % sub['id'])
+    lines += ['  %d. %s' % (i, it['text']) for i, it in zip(indices, sub['done_when'])]
+    example = indices[0] if indices else 0
+    lines.append('用 review_result 逐條回：{"task": "%s", "items": [{"i": %d, "pass": true, "why": "一句理由"}, …]}；'
+                 '每一條都要回。回完這一輪就結束。' % (sub['id'], example))
     return '\n'.join(lines)
 
 
@@ -445,14 +448,15 @@ def on_review_result(lay, roster, req):
         raise TeamError('NotAllowed', '%s 的審查員是 %s，不是 %s' % (sub['id'], sub['assignee'], req['from']))
     if sub['status'] in TERMINAL:
         raise TeamError('Closed', '%s 已經 %s' % (sub['id'], sub['status']))
-    want = set(range(len(sub['done_when'])))
+    ro = sub['review_of']
+    # （09-24 W2C 修）i 用父單的原編號，不是子單裡 0..n 的位置——跟 render_review、task show 顯示的一致。
+    want = set(ro['indices'])
     got = {it['i'] for it in req['items']}
     if got != want:
         raise TeamError('BadItems', '%s 要逐條回第 %s 條（收到 %s）'
                         % (sub['id'], '、'.join(map(str, sorted(want))), '、'.join(map(str, sorted(got))) or '無'))
     ok = all(it['pass'] for it in req['items'])
-    ro = sub['review_of']
-    items = [dict(it, i=ro['indices'][it['i']]) for it in sorted(req['items'], key=lambda x: x['i'])]
+    items = sorted(req['items'], key=lambda x: x['i'])
     now = req.get('at') or now_iso(roster.get('tz'))
     effects = [{'do': 'step', 'task': ro['task'],
                 'event': {'type': 'reviewed', 'src': req['id'], 'by': req['from'], 'rev': ro['rev'],

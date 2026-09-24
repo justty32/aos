@@ -41,6 +41,7 @@
 | [events.md](events.md) | （09-24 第 4 隊補）事件紀錄 `log/events.jsonl`（每批起訖與成敗、收件、壓縮）與 `log/usage.jsonl`（token 用量） |
 | [compact.md](compact.md) | （09-24 第 4 隊補）記憶的機械壓縮：什麼時候能縮、怎麼縮（封存＝8 KB 機械摘要）、每步可重跑、tick 自動（預設開、32000） |
 | [compact-more.md](compact-more.md) | （09-24 第 4 隊補）壓縮續：compact 申請（欄位、郵差投檔、tick 收據）與保證外 |
+| [persona.md](persona.md) | （09-24 第二波 C 隊）人格是信任資料：`aos-agent persona show／set／append`；模型只能 `persona_propose` 提案，走團隊的 T-ask 待辦 |
 | [state.md](state.md) | §4 `state.json`：§4.1 `input`、§4.2 `waits`、§4.3 `batch`、§4.4 `intake`／`consuming`／`sweep` |
 | [errors.md](errors.md) | §5 錯誤代號 |
 | [rulings.md](rulings.md) | 調度者裁決（第 2～3 輪，實作層級） |

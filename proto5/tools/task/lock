@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""lock：短期獨佔一個檔或資料夾的名字，給多工人同專案用（寫一份 kind=lock 申請；回信是新一輪的輸入）。
+
+op=acquire 拿不到會收到退信說誰拿著；op=release 放掉自己拿的；op=ls 列出所有鎖。過期沒放的鎖誰都能重新 acquire。
+"""
+import sys
+
+from _team import arg, fail, only_keys, run, send
+
+OPS = ('acquire', 'release', 'ls')
+
+
+def main(args, cfg):
+    only_keys(args, ('op', 'name', 'why', 'ttl_seconds'))
+    op = arg(args, 'op', str, required=True)
+    if op not in OPS:
+        fail('BadArguments', 'op must be one of %s' % ', '.join(OPS))
+    body = {'op': op}
+    if op == 'ls':
+        rid = send(cfg, 'lock', body)
+        return 'queued lock ls %s. The listing comes back as new mail. End this turn.' % rid
+    name = arg(args, 'name', str, required=True)
+    body['name'] = name
+    if op == 'acquire':
+        why = arg(args, 'why', str)
+        if why is not None:
+            if len(why) > 500:
+                fail('BadArguments', 'why is too long (max 500 chars)')
+            body['why'] = why
+        ttl = arg(args, 'ttl_seconds', int)
+        if ttl is not None:
+            if not 60 <= ttl <= 86400:
+                fail('BadArguments', 'ttl_seconds must be 60..86400')
+            body['ttl_seconds'] = ttl
+    rid = send(cfg, 'lock', body)
+    return ('queued lock %s %s (%s). Whether it worked comes back as new mail (FAILED if busy/not owner). '
+            'End this turn.' % (op, name, rid))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

@@ -19,7 +19,7 @@ class ReviewLetterTests(unittest.TestCase):
         return {'id': 't-0001', 'goal': '把 WORKFLOWS.md 開頭改白話，意思不能變', 'facts': facts}
 
     def sub(self):
-        return {'id': 't-0001.r1', 'review_of': {'rev': 1, 'attempt': 1},
+        return {'id': 't-0001.r1', 'review_of': {'rev': 1, 'attempt': 1, 'indices': [0]},
                 'done_when': [{'kind': 'judge', 'text': '原意沒變'}]}
 
     def test_facts_shown_to_reviewer(self):

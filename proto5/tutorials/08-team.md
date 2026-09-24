@@ -161,7 +161,19 @@ aos-team ask "看一下單子"
 規則是整句比對，不是找關鍵字：「列任務給 bob 看」對不上；句子裡有否定詞（「不要看單子」）也一律落穿給領隊：領隊可能用 `team_say` 回你一封信（`aos-team mail` 看得到），也可能反問你——反問不是信，但 `aos-team mail` 也會列一行 `lead → 人  ASK  q-0001`；`aos-team wait ls` 看題目、`aos-team answer q-0001 "…"` 回答。每次判了什麼記在 `$W/myteam/team/route.log`。
 `routes.json` 裡還有「看一下例行」（列心跳的例行）、「每 2m 數一次 md 檔」（登記一條例行，心跳每 2 分鐘派給工人）、「把 workflows 導入 …，照 …」（直接開單給工人，領隊不經手），規則怎麼寫見 [route.md](../spec/team/route.md)。
 
-## 7. 這件事花了多少
+## 7. 申請：多掛資料夾、改人格、搶檔、加例行
+
+模型自己改不到信任資料（`access.json`、人格、`routines.json`），碰得到的只有寄一份**申請**——`aos-team wait ls`
+看得到、你 `answer` 准或拒；**答案本身不會自動生效**，准了之後你要自己跑對應的指令。四種：
+
+- 工人想多掛一個資料夾：`access_request` → 你 `aos-team answer q-0004 "同意"` → 你自己 `aos-agent access set NAME PATH --ro --target $W/myteam/members/worker-1`。
+- 工人想改自己的人格：`persona_propose` → 同意後你自己 `aos-agent persona append --target $W/myteam/members/worker-1 "…"`（也能 `persona show`／`set`）。
+- 工人跟別的工人搶同一個檔：`lock`（`acquire`／`release`／`ls`）——這個**不用你批准**，拿不到立即退一封信說誰拿著、到期幾點；過期後誰都能重拿。人也能用 `aos-team lock ls／acquire／release` 插一腳。
+- 領隊想加一條重複做的事：`routine_propose` → 開一題問你「要讓心跳自動跑嗎？」→ `answer q-0005 "批准"` 之後心跳才會照時間派（`aos-team routine ls` 看得到「人批准了」）。
+
+細節：[ask.md〈借用〉](../spec/team/ask.md)、[lock.md](../spec/team/lock.md)、[persona.md](../spec/agent/persona.md)、[beat.md〈模型端〉](../spec/team/beat.md)。
+
+## 8. 這件事花了多少
 
 ```sh
 aos-team score --task t-0001
@@ -169,7 +181,7 @@ aos-team score --task t-0001
 
 印一句總結和一張六軸表：問了模型幾次（按成員分）、用了多少 token、從你丟話到單子結束幾秒、時間花在哪。人易懂、邊界兩軸留給人填。量法見 [score.md](../spec/team/score.md)。
 
-## 8. 收工
+## 9. 收工
 
 ```sh
 aos-team stop

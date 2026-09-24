@@ -244,7 +244,7 @@ def send(run):
                 run.text(run.base / 'work' / (name + '.in'), source[i]['function']['arguments'])
             run.write(path, inst, 'work.inst')
         if not posted:
-            pool = run.info['llm']['pool'] if think else run.info['tool_pool']
+            pool = run.info['llm']['pool'] if think else (tool or {}).get('_pool', run.info['tool_pool'])
             timeout = run.info['llm']['timeout_ms'] if think else (tool or {}).get('_timeout_ms', 60000)
             run.submit(batch['kernel'], name + '.json', 'add',
                        {'target': str(path), 'name': name, 'once': True, 'pool': pool, 'timeout_ms': timeout,

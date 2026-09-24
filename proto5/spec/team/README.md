@@ -23,7 +23,8 @@
 | [roster.md](roster.md) | `team.json` 名冊：專案、時區、成員（模板、模型、能寄給誰、多掛的資料夾）、上限 |
 | [mail.md](mail.md) | 信與申請：outbox 檔名與 id、欄位、六個 STATUS、郵差怎麼投（`input/mail-<id>.json`、信頭一行）、申請種類與處理函式的約定 |
 | [tasks.md](tasks.md) | 任務單（交接書）：欄位、十個狀態、事件、後續動作、審查子單、冪等 |
-| [ask.md](ask.md) | 問人：`ask_human` → `team/wait-user/q-NNNN.json` → `aos-team answer` → 投回發問者 |
+| [ask.md](ask.md) | 問人：`ask_human` → `team/wait-user/q-NNNN.json` → `aos-team answer` → 投回發問者；`access_request`／`persona_propose` 也是包成一題問人（見該檔） |
+| [lock.md](lock.md) | 短期獨佔鎖：`lock` 工具（acquire／release／ls，都是非同步）、`team/locks/<名>.json`、逾時自動放（第二波 C 隊） |
 | [templates.md](templates.md) | 成員模板 `proto5/templates/<名>/`：人格、工具包、`access.json`、工具包的 `config.json` |
 | [route.md](route.md) | 門房 `team/routes.json`：整句句型、命中兩條或有否定詞就落穿給領隊、例句全過才准存 |
 | [cli.md](cli.md) | `aos-team` 子命令一覽、哪一隊做、共同慣例（`--target`、退出碼） |
@@ -51,3 +52,4 @@ python3 proto5/lib/aos_team_format.py proto5/spec/team/examples/*.json   # 每�
 | `wf_*`、`json_edit`、`md_section`（工人的工具；wf 快照唯讀掛成 `/work/wf`） | 第 3 隊 | `proto5/tools/wf/`、`proto5/tools/files/` |
 | 事件紀錄、`context`、`compact`、`note`、`aos-agent init --template` 的旗標 | 第 4 隊 | `lib/aos_agent_*.py` |
 | README／索引彙整、`aos-team score`、`compact_me`（task 包第五支）、模板 `notes: true`、成員模板人格定稿、`route.md` 的 routes 例子、教程 08（一支小團隊） | 收尾隊（第 5 隊） | `lib/aos_team_score.py`、`proto5/tools/task/compact_me`、`proto5/templates/`、`proto5/tutorials/08-team.md` |
+| **第二波 C 隊（申請類）**：`lock`／`access_request`／`persona_propose`／`routine_propose` 工具、`aos-team lock`、審查子單編號跟父單一致、領隊改寫類單子自動補 `wf_lint_strict`、工具檔 `_pool`（走 `tool_pool` 選池那一段，[T-pool](../../notes/2026-09-24-priority-and-shared-cpu/README.md)） | 第二波 C 隊 | `lib/aos_team_lock.py`、`aos_team_requests.py`、`aos_team_ask.py`、`aos_agent_persona.py`、`tools/task/`、[w2c 報告](../../notes/2026-09-24-tool-era/w2c/README.md) |

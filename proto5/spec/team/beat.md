@@ -77,3 +77,12 @@ id＝`<那一次的 epoch 秒×10⁹＋第幾次>-<「名字｜登記它的申�
 | `aos-team start`／`stop`（第 1 隊） | 會叫 `aos_team_beat.start(團隊資料夾)`：登記 `team-beat-<資料夾名>`，60 秒一次 |
 
 `routine import`（把 workflows 的 `routines.md`／`schedule.md` 表抄過來）這一版沒做。
+
+## 模型端：`routine_propose` 工具（第二波 C 隊補）
+
+第一波這裡只寫好郵差怎麼處理成員提的 `add`（開一題問人），但沒有模型能叫的工具——第二波 C 隊補上
+[`tools/task/routine_propose`](../../tools/task/routine_propose)：領隊（模板 `may` 要有 `routine`，`templates/lead/template.json` 已加）
+填跟 `aos-team routine add` 一樣的欄位（`name`、`every`／`daily`／`once` 三選一、`to`、`goal`、`done_when`…），
+工具只做輕量的本地檢查（缺欄位、格式明顯不對）就寄出 `kind: routine, op: add` 申請；郵差那邊的 `on_routine`
+沒有變——照樣加一列 `added_by: 領隊名`、開一題問人，人 `aos-team answer q-NNNN 批准` 才會被心跳排進去。
+也支援 `op: rm`（拿掉自己提過的那條；人或提出的成員都能拿掉，郵差驗）。

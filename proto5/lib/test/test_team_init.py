@@ -71,8 +71,8 @@ class InitTests(unittest.TestCase):
             self.assertTrue(lay.outbox(name).is_dir())
         lead = read_json(lay.member('lead') / 'info.json')
         names = [e['$opt']['only'] if isinstance(e, dict) else e for e in lead['tools']]
-        self.assertEqual(names, [['handoff', 'board', 'ask_human', 'compact_me'], ['team_say'], 'tools/notes.json',
-                                 ['read', 'grep', 'find', 'ls']])   # team 包（第 2 隊）已在
+        self.assertEqual(names, [['handoff', 'board', 'ask_human', 'compact_me', 'routine_propose'], ['team_say'],
+                                 'tools/notes.json', ['read', 'grep', 'find', 'ls']])   # team 包（第 2 隊）已在
         self.assertTrue(lay.outbox('human').is_dir())
         self.assertEqual(read_json(self.team / 'team.json'), ROSTER)
 
@@ -224,6 +224,26 @@ class ToolUnitTests(unittest.TestCase):
         self.assertTrue(req['id'].endswith('-lead'))
         self.assertEqual([p.name for p in self.outbox.iterdir()], [path.name])   # 沒有暫存殘檔
 
+    def test_handoff_auto_adds_wf_lint_strict_for_wording_rewrite(self):
+        """G（09-24 W2C）：「改寫 X.md 更白話」這類單，忘記放 wf_lint_strict 就機械補上。"""
+        out = self.tool('handoff', {'assignee': 'worker-1', 'workflow': 'IMPORT.md',
+                                    'goal': '把 p 的 WORKFLOWS.md 開頭那段說明改寫得更白話，意思不能變',
+                                    'done_when': [{'kind': 'judge', 'text': '原意沒變'}]})
+        self.assertIn('auto-added to done_when', out)
+        self.assertEqual(self.sent()[0]['done_when'], [{'kind': 'judge', 'text': '原意沒變'},
+                                                        {'kind': 'check', 'name': 'wf_lint_strict'}])
+        # 已經放了就不重複加
+        out = self.tool('handoff', {'assignee': 'worker-1', 'workflow': 'IMPORT.md',
+                                    'goal': '把 WORKFLOWS.md 改寫更白話',
+                                    'done_when': [{'kind': 'check', 'name': 'wf_lint_strict'}]})
+        self.assertNotIn('auto-added', out)
+        self.assertEqual(self.sent()[1]['done_when'], [{'kind': 'check', 'name': 'wf_lint_strict'}])
+        # 不像改寫、或不是 .md：不補
+        out = self.tool('handoff', {'assignee': 'worker-1', 'workflow': 'IMPORT.md', 'goal': '導入 heartbeat 包',
+                                    'done_when': [{'kind': 'file_exists', 'path': 'x'}]})
+        self.assertNotIn('auto-added', out)
+        self.assertEqual(self.sent()[2]['done_when'], [{'kind': 'file_exists', 'path': 'x'}])
+
     def test_handoff_refuses(self):
         e = self.tool('handoff', {'assignee': 'ghost', 'workflow': 'w', 'goal': 'g',
                                   'done_when': [{'kind': 'check', 'name': 'x'}]}, code=1)
@@ -260,18 +280,23 @@ class ToolUnitTests(unittest.TestCase):
         out = self.tool('board', {'op': 'show', 'task': 't-0001'})
         self.assertIn('done_when:', out)
         self.assertIn('last check (rev1 try1): pass', out)
+        # 審查子單保留父單原編號（09-24 W2C 修）：judge 條目在 request-handoff.json 的 done_when 排第 3（0 起算）
+        out = self.tool('board', {'op': 'show', 'task': 't-0001.r1'})
+        self.assertIn('  3. kind=judge', out)
         e = self.tool('review_result', {'task': 't-0001.r1', 'items': []}, code=1)
         self.assertIn('answer every item', e['message'])
         e = self.tool('review_result', {'task': 't-0001', 'items': []}, code=1)
         self.assertIn('not a review task', e['message'])
-        out = self.tool('review_result', {'task': 't-0001.r1', 'items': [{'i': 0, 'pass': True, 'why': '一樣'}]})
+        e = self.tool('review_result', {'task': 't-0001.r1', 'items': [{'i': 0, 'pass': True, 'why': '一樣'}]}, code=1)
+        self.assertIn('BadArguments', e['error'])
+        out = self.tool('review_result', {'task': 't-0001.r1', 'items': [{'i': 3, 'pass': True, 'why': '一樣'}]})
         self.assertIn('PASS', out)
         [req] = self.sent()
         effects = requests.handle(lay, roster, req)
         task.step(lay, effects[0]['task'], effects[0]['event'])
         self.assertEqual(task.load(lay, 't-0001')['status'], 'done')
         self.config(board=str(lay.tasks), member='worker-1')
-        e = self.tool('review_result', {'task': 't-0001.r1', 'items': [{'i': 0, 'pass': True, 'why': 'x'}]}, code=1)
+        e = self.tool('review_result', {'task': 't-0001.r1', 'items': [{'i': 3, 'pass': True, 'why': 'x'}]}, code=1)
         self.assertIn('assigned to reviewer', e['message'])
         e = self.tool('board', {'op': 'show', 'task': 't-0009'}, code=1)
         self.assertEqual(e['error'], 'NotFound')
@@ -287,11 +312,62 @@ class ToolUnitTests(unittest.TestCase):
         e = self.tool('ask_human', {'question': 'x', 'options': ['a'], 'default': 'b'}, code=1)
         self.assertIn('default', e['message'])
 
+    def test_lock(self):
+        self.config(member='worker-1')
+        out = self.tool('lock', {'op': 'acquire', 'name': 'shared-file', 'why': '改共用檔', 'ttl_seconds': 300})
+        self.assertIn('End this turn', out)
+        [req] = self.sent()
+        self.assertEqual((req['kind'], req['op'], req['name'], req['ttl_seconds']), ('lock', 'acquire', 'shared-file', 300))
+        e = self.tool('lock', {'op': 'bogus'}, code=1)
+        self.assertIn('op must be', e['message'])
+        e = self.tool('lock', {'op': 'acquire'}, code=1)
+        self.assertEqual(e['error'], 'BadArguments')
+
+    def test_access_request(self):
+        self.config(member='worker-1')
+        out = self.tool('access_request', {'name': 'notes2', 'path_hint': '/home/x/notes2', 'mode': 'ro',
+                                           'why': '要查另一份筆記'})
+        self.assertIn('End this turn', out)
+        [req] = self.sent()
+        fmt.validate_request(req)
+        self.assertEqual(req['kind'], 'ask')
+        self.assertIn('notes2', req['question'])
+        self.assertIn('access set', req['question'])
+        self.assertEqual(req['options'], ['同意', '不同意'])
+        e = self.tool('access_request', {'name': 'x', 'path_hint': 'y', 'mode': 'rwx', 'why': 'z'}, code=1)
+        self.assertIn('mode', e['message'])
+
+    def test_persona_propose(self):
+        self.config(member='worker-1')
+        out = self.tool('persona_propose', {'text': '遇到殘留一律先跑 wf_residue', 'why': '省一次來回'})
+        self.assertIn('End this turn', out)
+        [req] = self.sent()
+        fmt.validate_request(req)
+        self.assertEqual(req['kind'], 'ask')
+        self.assertIn('殘留', req['question'])
+        self.assertIn('persona append', req['question'])
+
+    def test_routine_propose(self):
+        self.config(member='lead')
+        out = self.tool('routine_propose', {'name': 'count-md', 'every': '2m', 'to': 'worker-1', 'goal': '數 md 檔',
+                                            'done_when': [{'kind': 'file_exists', 'path': 'x'}]})
+        self.assertIn('End this turn', out)
+        [req] = self.sent()
+        self.assertEqual((req['kind'], req['op'], req['name'], req['every'], req['to']),
+                         ('routine', 'add', 'count-md', '2m', 'worker-1'))
+        e = self.tool('routine_propose', {'name': 'x', 'to': 'worker-1', 'goal': 'g', 'done_when': []}, code=1)
+        self.assertIn('exactly one of', e['message'])
+        out = self.tool('routine_propose', {'op': 'rm', 'name': 'count-md'})
+        self.assertIn('End this turn', out)
+
     def test_descriptions_are_short(self):
         tools = json.loads((TOOLS / 'task.json').read_text(encoding='utf-8'))
         sizes = {t['function']['name']: len(json.dumps(t['function'], ensure_ascii=False)) for t in tools}
-        self.assertEqual(set(sizes), {'handoff', 'board', 'review_result', 'ask_human', 'compact_me'})
-        self.assertLess(sum(sizes.values()), 2700, sizes)            # 約 670 token；單支都 < 300 token
+        self.assertEqual(set(sizes), {'handoff', 'board', 'review_result', 'ask_human', 'compact_me',
+                                      'lock', 'access_request', 'persona_propose', 'routine_propose'})
+        # 09-24 W2C 加 4 支申請類工具：整包（9 支全裝）比第一波大，但沒有哪個成員一次全裝——
+        # lead／worker 的 template.json 各自只 only 挑幾支（見 templates/*/template.json）。
+        self.assertLess(sum(sizes.values()), 5500, sizes)            # 約 1370 token；單支都 < 300 token 起跳
         self.assertTrue(all(v < 1200 for v in sizes.values()), sizes)
 
 
@@ -309,7 +385,8 @@ SCRIPTS = {
                                                           {'kind': 'judge', 'text': '內容是問候'}]})],
     '工人 worker-1': [('write', {'path': 'hello.txt', 'content': 'hi'}), ('board', {'op': 'show', 'task': 't-0001'}),
                     ('ask_human', {'question': '要不要加驚嘆號？', 'reply_to': 't-0001'})],
-    '審查員 reviewer': [('review_result', {'task': 't-0001.r1', 'items': [{'i': 0, 'pass': True, 'why': '是問候'}]})],
+    # judge 在這張單 done_when 排第 1（0 起算，file_exists 是第 0）：子單保留父單原編號（09-24 W2C 修）
+    '審查員 reviewer': [('review_result', {'task': 't-0001.r1', 'items': [{'i': 1, 'pass': True, 'why': '是問候'}]})],
 }
 
 
@@ -490,8 +567,8 @@ class TeamIntegrationTests(KernelCase):
         for body in self.requests:
             who = next(k for k in SCRIPTS if k in body['messages'][0]['content'])
             tools[who] = {t['function']['name'] for t in body['tools']}
-        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'team_say', 'note', 'recall', 'context',
-                                             'read', 'grep', 'find', 'ls'})
+        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'routine_propose',
+                                             'team_say', 'note', 'recall', 'context', 'read', 'grep', 'find', 'ls'})
         self.assertEqual(tools['審查員 reviewer'], {'board', 'review_result', 'read', 'grep', 'find', 'ls'})
         self.assertTrue({'write', 'bash', 'board', 'ask_human', 'compact_me', 'team_say', 'note', 'recall', 'context'} <= tools['工人 worker-1'])
         self.assertNotIn('handoff', tools['工人 worker-1'])

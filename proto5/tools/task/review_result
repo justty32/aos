@@ -14,7 +14,9 @@ def main(args, cfg):
         fail('BadArguments', '%s is not a review task (they look like t-0001.r1)' % tid)
     if t.get('assignee') != cfg['member']:
         fail('BadArguments', '%s is assigned to %s, not you' % (tid, t.get('assignee')))
-    want = list(range(len(t.get('done_when', []))))
+    # i is the ORIGINAL index from the parent task's done_when (review_of.indices), not 0..n here
+    # (09-24 W2C fix: numbering used to be re-counted from 0, out of sync with task show / board show).
+    want = (t.get('review_of') or {}).get('indices') or list(range(len(t.get('done_when', []))))
     seen = []
     for k, it in enumerate(items):
         if not isinstance(it, dict) or set(it) != {'i', 'pass', 'why'}:

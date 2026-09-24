@@ -20,6 +20,7 @@ KINDS = {
     'compact': 'aos_agent_compact:on_request',   # 第 4 隊（spec/agent/compact-more.md §5）
     'routine': 'aos_team_beat:on_routine',       # 第 2 隊（spec/team/beat.md〈申請〉）
     'reverify': 'aos_team_post:on_reverify',     # 第 2 隊：檢查器修好後重交驗收（spec/team/verify.md）
+    'lock': 'aos_team_lock:on_lock',             # 第二波 C 隊：T-lock（spec/team/lock.md）
 }
 
 

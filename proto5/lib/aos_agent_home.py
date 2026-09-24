@@ -193,6 +193,8 @@ def _check_tool(t, where):
         raise AgentError("ToolInvalid", where + "工具 _timeout_ms 必須是非負整數（bool 不算）")
     if "_jail" in t and type(t["_jail"]) is not bool:
         raise AgentError("ToolInvalid", where + "工具 _jail 只收 true／false")
+    if "_pool" in t and (type(t["_pool"]) is not str or not t["_pool"]):
+        raise AgentError("ToolInvalid", where + "工具 _pool 必須是非空字串（沒寫才是 info.tool_pool）")
 
 
 def _tool_file(path, files=None):

@@ -70,6 +70,7 @@ class Layout:
         self.routines = self.team / 'routines.json'
         self.schedule = self.team / 'schedule.json'
         self.route_log = self.team / 'route.log'
+        self.locks = self.team / 'locks'          # T-lock（09-24 W2C）：一個檔一把鎖，team/locks/<名>.json
 
     def member(self, name):
         return self.members / name
@@ -90,6 +91,9 @@ class Layout:
 
     def question(self, qid):
         return self.wait_user / (qid + '.json')
+
+    def lock(self, name):
+        return self.locks / (name + '.json')
 
     def skeleton(self, names):
         """init 要建的資料夾（不含成員的家）。"""

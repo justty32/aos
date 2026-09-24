@@ -26,8 +26,12 @@ def main(args, cfg):
     t = load_ticket(cfg, arg(args, 'task', str, required=True))
     out = [line(t), 'opened by %s; workflow %s; facts %s' % (t.get('opened_by'), t.get('workflow'), t.get('facts')),
            'waiting on: %s; deadline: %s' % (t.get('waiting_on') or '-', t.get('deadline') or '-'), 'done_when:']
+    # review sub-tasks keep the parent's original numbering (review_of.indices), not 0..n here
+    # (09-24 W2C fix: matches what review_result expects and what the parent task's done_when shows).
+    indices = (t.get('review_of') or {}).get('indices')
     for i, it in enumerate(t.get('done_when', [])):
-        out.append('  %d. %s' % (i, ' '.join('%s=%s' % kv for kv in it.items())))
+        label = indices[i] if indices else i
+        out.append('  %d. %s' % (label, ' '.join('%s=%s' % kv for kv in it.items())))
     for v in (t.get('verify') or [])[-1:]:
         out.append('last check (rev%s try%s): %s' % (v.get('rev'), v.get('attempt'), 'pass' if v.get('pass') else 'FAIL'))
     for h in (t.get('history') or [])[-6:]:

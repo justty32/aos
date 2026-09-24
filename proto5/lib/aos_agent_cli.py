@@ -26,7 +26,9 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'compact': '機械壓縮記憶（不叫模型）：舊的輪只留原話與最後回話，原文存進 prompts/archive/',
          'events': '事件紀錄：每批起訖與成敗、收件、壓縮（--usage 看模型回報的 token 用量）',
          'history': '看壓縮前的原文：history --archive [SHA] [--grep 字]',
-         'notes': '長期筆記：notes ls｜notes show KEY'}
+         'notes': '長期筆記：notes ls｜notes show KEY',
+         # 第二波 C 隊（申請類）：spec/agent/persona.md
+         'persona': '人格是信任資料，模型改不到：persona show｜persona set TEXT｜persona append TEXT'}
 TALK_WAIT_SECONDS = 120
 ACCESS_EPILOG = ('用法：\n'
                  '  aos-agent access ls  [--target DIR] [--json]\n'
@@ -140,6 +142,10 @@ def _parser():
             sub.add_argument('action', choices=['ls', 'show'], help='ls 列全部；show KEY 看一則')
             sub.add_argument('args', nargs='*', metavar='KEY')
             sub.add_argument('--json', action='store_true', help='ls：印機器格式')
+        if name == 'persona':
+            sub.add_argument('action', choices=['show', 'set', 'append'], help='show 印目前人格；set 整份換掉；append 加一行')
+            sub.add_argument('text', nargs='?', metavar='TEXT', help='set／append 要給；show 不收')
+            sub.add_argument('--json', action='store_true', help='show：印機器格式')
         if name == 'tools':
             sub.formatter_class = argparse.RawDescriptionHelpFormatter
             sub.usage = 'aos-agent tools {ls,add,rm,alias,unalias,new,test,wrap-py} [ARG…] [--target DIR] [選項]'
@@ -322,6 +328,11 @@ def _memory_usage(ap, args):
             from aos_agent_notes import main as notes_main
             return notes_main(t, a.action, a.args, as_json=a.json)
         return {cmd: notes}
+    if cmd == 'persona':
+        def persona(t, a):
+            from aos_agent_persona import main as persona_main
+            return persona_main(t, a.action, a.text, as_json=a.json)
+        return {cmd: persona}
     if cmd == 'init' and args.template is not None and not args.template:
         ap.error('--template 不可為空')
     return {}

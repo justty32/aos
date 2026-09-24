@@ -92,5 +92,83 @@
       }
     },
     "_meta": {"argv": ["tools/task/compact_me"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "lock",
+      "description": "Short-term exclusive lock on a file or folder name, for teammates sharing a project. acquire fails fast if busy; ls/acquire/release results arrive as new mail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["acquire", "release", "ls"]},
+          "name": {"type": "string"},
+          "why": {"type": "string"},
+          "ttl_seconds": {"type": "integer", "minimum": 60, "maximum": 86400, "description": "Auto-release after this long if not released (default 1800)"}
+        },
+        "required": ["op"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/lock"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "access_request",
+      "description": "Ask the user to mount one more folder or turn networking on for you. You cannot edit access.json yourself; the answer arrives as new mail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "description": "Mount name to request"},
+          "path_hint": {"type": "string", "description": "Where it should point"},
+          "mode": {"type": "string", "enum": ["ro", "rw"]},
+          "why": {"type": "string"}
+        },
+        "required": ["name", "path_hint", "mode", "why"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/access_request"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "persona_propose",
+      "description": "Propose adding one sentence to your own persona. You cannot edit it yourself; the user's answer arrives as new mail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": {"type": "string", "description": "The sentence to add"},
+          "why": {"type": "string"}
+        },
+        "required": ["text"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/persona_propose"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "routine_propose",
+      "description": "Propose a recurring heartbeat routine (every/daily/once). Opens a question for the user to approve; only runs after they say yes.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["add", "rm"]},
+          "name": {"type": "string"},
+          "every": {"type": "string", "description": "Interval like 2m, 6h, 1d"},
+          "daily": {"type": "string", "description": "Time of day like 09:00"},
+          "once": {"type": "string", "description": "One-shot ISO timestamp with timezone"},
+          "to": {"type": "string", "description": "Who does it (team mate name)"},
+          "goal": {"type": "string"},
+          "done_when": {"type": "array", "items": {"type": "object", "properties": {"kind": {"type": "string", "enum": ["file_exists", "table_filled", "check", "judge"]}}, "required": ["kind"]}},
+          "workflow": {"type": "string"},
+          "tz": {"type": "string"},
+          "timeout_minutes": {"type": "integer", "minimum": 1},
+          "retries": {"type": "integer", "minimum": 0, "maximum": 5}
+        },
+        "required": ["name"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/routine_propose"]}
   }
 ]
