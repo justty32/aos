@@ -285,8 +285,12 @@ class SendTests(SendBase):
         self.assertTrue(batch['access']['error'].startswith('AccessInvalid: '))
         call = batch['calls'][0]
         self.assertTrue(call['acked'])
-        self.assertTrue(call['done']['content'].startswith('工具 sh 跑不起來：AccessInvalid: '))
-        self.assertIn('mounts.ws', call['done']['content'])
+        content = call['done']['content']
+        self.assertTrue(content.startswith('工具 sh 沒有執行：這個 agent 的權限設定（access.json）有問題'))
+        self.assertIn('（AccessInvalid）', content)
+        self.assertIn('請告訴使用者', content)
+        self.assertIn('aos-agent check --target %s' % self.base, content)
+        self.assertNotIn('mounts.ws', content)                  # 細節留給人（check／status）
         self.assertFalse(list((self.k / 'requests').iterdir()))
 
     def test_unsafe_table_that_batch_does_not_run(self):
@@ -299,7 +303,10 @@ class SendTests(SendBase):
         self.access({'mounts': {'ws': 'workspace'}})
         with patch.object(batch_api.shutil, 'which', return_value=None):
             batch = self.tick()
-        self.assertIn('工具 sh 跑不起來：NoBwrap: 找不到 bwrap', batch['calls'][0]['done']['content'])
+        content = batch['calls'][0]['done']['content']
+        self.assertTrue(content.startswith('工具 sh 沒有執行：這台機器沒有裝關牢要用的 bwrap'))
+        self.assertIn('（NoBwrap）', content)
+        self.assertIn('請告訴使用者', content)
         self.assertFalse(list((self.k / 'requests').iterdir()))
 
     def test_jail_false_runs_as_before(self):
@@ -570,8 +577,11 @@ class EnvTests(SendBase):
                 batch = self.jailed({'argv': ['tools/bin/sh-tool'], 'envs': {'FOO': {'$env': key}}},
                                     {key: value})
                 call = batch['calls'][0]
-                self.assertIn('跑不起來：EnvUnsafe: ', call['done']['content'])
-                self.assertIn(key, call['done']['content'])
+                content = call['done']['content']
+                self.assertIn('設定有安全問題（會把金鑰類環境變數帶進牢裡）', content)
+                self.assertIn('（EnvUnsafe）', content)
+                self.assertIn('請告訴使用者', content)
+                self.assertNotIn('拿掉那一格', content)             # 不叫模型自己動手
                 self.assertNotIn(value, self.on_disk())
                 self.assertFalse(list((self.k / 'requests').iterdir()))
 
@@ -596,6 +606,35 @@ class EnvTests(SendBase):
         self.env['OPENAI_API_KEY'] = 'sk-x'
         batch = self.tick()
         self.assertEqual(self.inst(batch)['envs'], {'FOO': 'sk-x'})
+
+
+class EnvCheckTests(CheckBase):
+    """check 跟送件用同一個判定：會 EnvUnsafe 的關牢工具＝bad，講哪支、哪一格、讀了哪個名字。"""
+
+    def test_check_flags_env_unsafe(self):
+        self.put(self.base / 'tools/t.json', [
+            {'type': 'function', 'function': {'name': 'leaky'},
+             '_meta': {'argv': ['sh'], 'envs': {'FOO': {'$env': 'OPENAI_API_KEY'}}}},
+            {'type': 'function', 'function': {'name': 'fmt'},
+             '_meta': {'argv': ['sh', {'$fmt': {'$val': '${k}', 'k': {'$env': 'AOS_KERNEL_HOME'}}}]}},
+            {'type': 'function', 'function': {'name': 'loose'}, '_jail': False,
+             '_meta': {'argv': ['sh'], 'envs': {'FOO': {'$env': 'OPENAI_API_KEY'}}}},
+            {'type': 'function', 'function': {'name': 'fine'},
+             '_meta': {'argv': ['sh'], 'envs': {'FOO': {'$env': 'PLAIN'}}}}])
+        self.put(self.base / 'info.json', dict(self.info, tools=['tools/t.json']))
+        self.access({'mounts': {'ws': 'workspace'}, 'cwd': 'ws'})
+        with patch.object(aos_agent_check, 'bwrap_probe', return_value=(True, 'ok')):
+            out = self.check()
+        self.assertIn('bad  agent/tool/leaky: EnvUnsafe: _meta 的 envs.FOO 用 $env 讀了 OPENAI_API_KEY', out)
+        self.assertIn('bad  agent/tool/fmt: EnvUnsafe: _meta 的 argv.1.$fmt.k 用 $env 讀了 AOS_KERNEL_HOME', out)
+        self.assertNotIn('bad  agent/tool/loose', out)
+        self.assertNotIn('agent/tool/fine', out)
+
+    def test_no_access_file_no_env_check(self):
+        self.put(self.base / 'tools/t.json', [{'type': 'function', 'function': {'name': 'leaky'},
+                                               '_meta': {'argv': ['sh'], 'envs': {'FOO': {'$env': 'OPENAI_API_KEY'}}}}])
+        self.put(self.base / 'info.json', dict(self.info, tools=['tools/t.json']))
+        self.assertNotIn('EnvUnsafe', self.check())
 
 
 class CliReviewTests(CliBase):

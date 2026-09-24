@@ -77,8 +77,10 @@ class TwoCallBatchTests(fixture.Home):
         self.assertEqual(len(batch['calls']), 2)
         for call, name in zip(batch['calls'], ('sh1', 'sh2')):
             self.assertTrue(call['acked'])
-            self.assertTrue(call['done']['content'].startswith('工具 %s 跑不起來：AccessInvalid: ' % name))
-            self.assertIn('mounts.ws', call['done']['content'])
+            # 給模型的話：講被擋、叫它轉告使用者；細節（mounts.ws）留給 check／status
+            self.assertTrue(call['done']['content'].startswith('工具 %s 沒有執行：' % name))
+            self.assertIn('（AccessInvalid）', call['done']['content'])
+            self.assertIn('請告訴使用者', call['done']['content'])
         self.assertFalse(list((self.k / 'requests').iterdir()))
 
 
