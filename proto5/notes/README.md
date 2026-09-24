@@ -45,6 +45,7 @@
 | [2026-09-24-kernel-crash/](2026-09-24-kernel-crash/README.md) | kernel 崩潰窗口 C-7／C-8 測試（15 條，真 KILL）：都照規範收斂，產品程式沒改；stop 箱重放會留同名 stop（同 B-10，待拍） |
 | [2026-09-24-advice-r1.md](2026-09-24-advice-r1.md) | 使用者兩條建議：`aos-kernel check --agent` 搬到 `aos-agent check`（K 自己找）、`aos-kernel ls` 改對齊表＋`-v`＋穩定的 `--json`；astra 必修 6 條全修（[任務書](2026-09-24-advice-r1-review-task.md)、[審查](2026-09-24-advice-r1-review-astra.md)） |
 | [2026-09-24-tutorials.md](2026-09-24-tutorials.md) | 同輪 B 隊：README 的上手教程拆成 [tutorials/](../tutorials/README.md) 五篇＋附錄（`llm.json`／`AOS_LLM_CONFIG` 在 01 一次設好），README 瘦身；六篇＋五分鐘照抄實跑全過；九條文件／行為不符 |
+| [2026-09-24-tools-base.md](2026-09-24-tools-base.md) | base 工具包（仿 pi 的 read／write／edit／bash／grep／find／ls）＋`aos-agent tools add`；deepseek 實跑 write→bash→edit→bash；astra 必修 7 全修（[任務書](2026-09-24-tools-base-review-task.md)、[審查](2026-09-24-tools-base-review-astra.md)） |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 

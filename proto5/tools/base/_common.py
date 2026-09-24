@@ -9,7 +9,9 @@
 """
 import json
 import os
+import stat
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MAX_BYTES = 50 * 1024      # 單次輸出上限（位元組）
@@ -35,11 +37,18 @@ def run(main):
         sys.stdout.write(out if out.endswith('\n') else out + '\n')
         return 0
     except ToolError as e:
-        if e.output:
-            sys.stdout.write(e.output if e.output.endswith('\n') else e.output + '\n')
-        sys.stdout.write(json.dumps(dict({'ok': False, 'error': e.code, 'message': e.message}, **e.extra),
-                                    ensure_ascii=False) + '\n')
-        return 1
+        return report(e)
+    except Exception as e:  # 沒料到的錯也要照約定：最後一行 JSON
+        return report(ToolError('InternalError', '%s: %s' % (type(e).__name__, e)))
+
+
+def report(e):
+    """帶輸出的先印輸出，最後一行一定是 JSON；退 1。"""
+    if e.output:
+        sys.stdout.write(e.output if e.output.endswith('\n') else e.output + '\n')
+    sys.stdout.write(json.dumps(dict({'ok': False, 'error': e.code, 'message': e.message}, **e.extra),
+                                ensure_ascii=False) + '\n')
+    return 1
 
 
 def read_args():
@@ -81,7 +90,7 @@ def work_root():
 
 
 def arg(args, name, kind, default=None, required=False):
-    """取一個參數並驗型別；kind 是 str／int／bool（int 不收 bool）。"""
+    """取一個參數並驗型別；kind 是 str／int／bool（int 不收 bool）。字串不收 NUL 與編不成 UTF-8 的字元。"""
     if name not in args or args[name] is None:
         if required:
             fail('BadArguments', 'missing required argument "%s"' % name)
@@ -90,11 +99,22 @@ def arg(args, name, kind, default=None, required=False):
     if not isinstance(value, kind) or (kind is int and isinstance(value, bool)):
         fail('BadArguments', 'argument "%s" must be %s' % (name, {str: 'a string', int: 'an integer',
                                                                     bool: 'a boolean'}[kind]))
+    if kind is str:
+        if '\0' in value:
+            fail('BadArguments', 'argument "%s" must not contain NUL characters' % name)
+        try:
+            value.encode('utf-8')
+        except UnicodeEncodeError:
+            fail('BadArguments', 'argument "%s" contains characters that are not valid UTF-8' % name)
     return value
 
 
 def resolve(root, path, must_exist=True):
-    """相對路徑相對 root；絕對路徑也收。解開符號連結後必須還在 root 裡，否則 OutsideRoot。"""
+    """相對路徑相對 root；絕對路徑也收。解開符號連結後必須還在 root 裡，否則 OutsideRoot。
+
+    這是防手滑、不是沙盒：只保證「檢查當下」沒有別人在換路徑（bash 本來就碰得到外面）。
+    真的打開之後，read／edit 會再用 check_open 驗一次打開的是誰。
+    """
     if not isinstance(path, str) or not path:
         fail('BadArguments', 'path must be a non-empty string')
     if '\0' in path:
@@ -111,23 +131,65 @@ def inside(root, full):
     return full == root or full.startswith(root.rstrip(os.sep) + os.sep)
 
 
+def check_open(root, fd, path):
+    """打開之後再驗：/proc/self/fd 指的真實路徑要在 root 裡（沒有 /proc 就略過）。"""
+    try:
+        real = os.readlink('/proc/self/fd/%d' % fd)
+    except OSError:
+        return
+    if real.startswith('/') and not inside(root, real):
+        fail('OutsideRoot', '%s resolved outside the project directory while opening' % path)
+
+
+def open_regular(root, full, path, max_bytes=None):
+    """以唯讀打開一般檔案（不是 FIFO／裝置），打開後再驗位置；可設大小上限。回 file 物件（rb）。"""
+    try:
+        fd = os.open(full, os.O_RDONLY | os.O_NONBLOCK | getattr(os, 'O_CLOEXEC', 0))
+    except OSError as e:
+        fail('ReadFailed', 'cannot open %s: %s' % (path, e.strerror or e))
+    try:
+        check_open(root, fd, path)
+        st = os.fstat(fd)
+        if stat.S_ISDIR(st.st_mode):
+            fail('IsADirectory', '%s is a directory; use ls' % path)
+        if not stat.S_ISREG(st.st_mode):
+            fail('NotARegularFile', '%s is not a regular file (device, FIFO or socket)' % path)
+        if max_bytes is not None and st.st_size > max_bytes:
+            fail('FileTooLarge', '%s is %d bytes; this tool handles files up to %d bytes'
+                 % (path, st.st_size, max_bytes), size=st.st_size)
+        os.set_blocking(fd, True)
+        return os.fdopen(fd, 'rb')
+    except BaseException:
+        os.close(fd)
+        raise
+
+
 def rel(root, full):
     return os.path.relpath(full, root)
 
 
-def write_atomic(full, content):
-    """同目錄暫存檔再 rename；已有的檔保留權限位。"""
-    tmp = '%s.aos-tmp-%d' % (full, os.getpid())
+def write_atomic(root, full, content, path):
+    """同目錄用隨機名、O_EXCL 建暫存檔（不會踩到預先放好的符號連結），寫完再 rename；已有的檔保留權限位。"""
+    parent = os.path.dirname(full)
+    fd, tmp = tempfile.mkstemp(dir=parent, prefix='.' + os.path.basename(full) + '.', suffix='.aos-tmp')
     try:
-        with open(tmp, 'w', encoding='utf-8', newline='') as f:
+        check_open(root, fd, path)
+        with os.fdopen(fd, 'w', encoding='utf-8', newline='') as f:
+            fd = None
             f.write(content)
         if os.path.exists(full):
             os.chmod(tmp, os.stat(full).st_mode & 0o7777)
+        else:
+            umask = os.umask(0)
+            os.umask(umask)
+            os.chmod(tmp, 0o666 & ~umask)
         os.replace(tmp, full)
+        tmp = None
     finally:
-        if os.path.exists(tmp):
+        if fd is not None:
+            os.close(fd)
+        if tmp is not None and os.path.lexists(tmp):
             os.unlink(tmp)
-
 
 
 def truncate_tail(text, max_lines, max_bytes=MAX_BYTES):

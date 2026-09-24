@@ -59,8 +59,8 @@ def main(args, root):
     except re.error as e:
         fail('BadArguments', 'bad glob pattern: %s' % e)
     by_path = '/' in pattern
-    found, more = [], False
-    for dirpath, dirnames, filenames in os.walk(base):
+    found, more, errors = [], False, []
+    for dirpath, dirnames, filenames in os.walk(base, onerror=errors.append):
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
         here = os.path.relpath(dirpath, base)
         for name, is_dir in [(d, True) for d in dirnames] + [(f, False) for f in sorted(filenames)]:
@@ -72,13 +72,19 @@ def main(args, root):
                 found.append(rel(root, os.path.join(dirpath, name)) + ('/' if is_dir else ''))
         if more:
             break
+    skipped = ''
+    if errors:
+        first = errors[0]
+        skipped = '\n[warning: %d director%s could not be read and were skipped, e.g. %s: %s]' % (
+            len(errors), 'y' if len(errors) == 1 else 'ies',
+            rel(root, first.filename) if first.filename else '?', first.strerror or first)
     if not found:
-        return 'No files found matching %r in %s' % (pattern, rel(root, base))
+        return 'No files found matching %r in %s' % (pattern, rel(root, base)) + skipped
     found.sort()
     text = '\n'.join(found)
     if more:
         text += '\n[stopped at limit=%d; narrow the pattern or path]' % limit
-    return text
+    return text + skipped
 
 
 if __name__ == '__main__':
