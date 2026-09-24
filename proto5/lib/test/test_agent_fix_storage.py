@@ -40,7 +40,7 @@ class AgentFixStorageTests(unittest.TestCase):
         self.prepare(done={'fail': '錯', 'count': True}, acked=True, errors=2)
         self.assertEqual(self.tick(), 0)
         signal = self.state()['waits'][0]['$val']
-        self.assertIn('touch %s 繼續' % (self.base / signal), self.err.getvalue())
+        self.assertIn('修好原因後 aos-agent continue --target %s' % self.base, self.err.getvalue())  # fix-r5：不再叫人 touch
         self.assertNotIn('/', signal)
         (self.base / signal).touch()
         self.assertEqual(self.tick(), 0)

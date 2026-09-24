@@ -5,7 +5,7 @@ import aos_home
 import aos_inst
 from aos_agent_home import AgentError
 from aos_agent_results import act_done, model_message, think_done
-from aos_agent_runtime import history_prefix, ledger, report, unique_id
+from aos_agent_runtime import RESUMED, history_prefix, ledger, report, unique_id
 
 META = {'_type': 'posix', '_version': 1}
 
@@ -190,10 +190,13 @@ def settle(run):
                 st['errors'] = 0
                 signal = 'continue-%s.json' % calls[0]['name'].rsplit('-', 1)[0]
                 st['waits'].append({'$opt': 'consume', '$val': signal})
-                stuck = '問模型連敗 3 次，touch %s 繼續' % (run.base / signal)
+                stuck = '問模型連敗 3 次，修好原因後 aos-agent continue --target %s' % run.base
     st['sweep'].extend({'kernel': batch['kernel'], 'name': c['name']} for c in calls if c['name'] is not None)
     st['batch'] = None
     run.save('state.settled')
+    if think and done.get('ok'):
+        # fix-r5（aos-agent.md §7）：真的成功一次，continue 的「等下一次成功」才算完。
+        (run.base / RESUMED).unlink(missing_ok=True)
     if engine is not None:
         report('engine', engine)
     if stuck is not None:

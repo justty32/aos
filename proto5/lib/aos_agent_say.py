@@ -12,6 +12,8 @@ from aos_agent_runtime import manual_paused, report, unique_id
 from aos_agent_status import collect, kernel_status, unregistered
 
 INPUT_WAIT_SECONDS = 10
+# fix-r5（aos-agent.md §1.2）：話已經投了，再說一次就會進記憶兩次。
+UNREGISTERED_NOTE = '已投入，start 後會處理，不要再說一次：aos-agent start --target '
 
 
 def deliver(base, value, text):
@@ -68,6 +70,7 @@ def say(agent_dir, text, *, wait=False, timeout_ms=300000, env=None):
     if not wait:
         print('said -> ' + str(target))
         if unregistered(kernel_status(info['dir'], os.environ if env is None else env)):
+            print(UNREGISTERED_NOTE + info['dir'])
             report('warn', '目前沒登記、沒人處理：aos-agent start --target ' + info['dir'])
         _warn_paused(info['dir'], env)
         return 0

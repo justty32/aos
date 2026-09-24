@@ -2,6 +2,7 @@
 
 say --wait 也用這裡的 wait_reply，同一套等法只有一份。
 """
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -29,8 +30,10 @@ def print_message(message, *, as_json=False):
 def last(agent_dir, *, as_json=False):
     base = Path(os.path.abspath(agent_dir))
     try:
-        history = aos_agent_info.load(base)['history']
+        info = aos_agent_info.load(base)
+        history, history_path = info['history'], info['history_path']
     except AgentError as original:
+        history_path = base / 'prompts/history.json'
         if not (base / 'info.json').exists():
             raise AgentError('NotAnAgent', '%s 沒有 info.json' % base) from original
         report('warn', 'info.json 讀不了（%s），改讀 prompts/history.json' % original.code)
@@ -43,33 +46,69 @@ def last(agent_dir, *, as_json=False):
     message = next((m for m in reversed(history) if isinstance(m, dict) and m.get('role') == 'assistant'), None)
     if message is None:
         raise AgentError('NotFound', '記憶裡還沒有 assistant 的回話')
+    warned = False
     try:
         try:
             data = collect(base)
         except AgentError:
             data = {'waits': waits(base, aos_agent_info.load_state(base)), 'manual_paused': False}
         if data.get('manual_paused'):
+            warned = True
             report('warn', '已手動暫停（aos-agent continue --target %s 解除），這則回話可能是舊的' % base)
         closed = [(p, w) for w in data['waits'] for p in w['paths'] if not files(base, p)]
         if closed:
+            warned = True
             path, entry = closed[0]
             note = ('連敗暫停中，aos-agent continue --target %s 解除' % base
                     if pause_path(base, path, entry['consume']) else '門關著（在等 %s）' % path)
             report('warn', note + '，這則回話可能是舊的；看 aos-agent status --target %s' % base)
-    except (AgentError, OSError, ValueError):
+        if not warned:
+            _warn_processing(base, data, history, message)
+    except (AgentError, OSError, ValueError, KeyError):
         pass
+    _report_time(history_path, history, message)
     print_message(message, as_json=as_json)
     return 0
 
 
+def _warn_processing(base, data, history, message):
+    """fix-r5（§1.5）：這一輪還沒走完就講，免得把中途那句當答案。"""
+    busy = (history[-1] is not message or data.get('state') not in (None, 'idle')
+            or data.get('batch') is not None or data.get('intake') or data.get('pending_inputs'))
+    if not busy:
+        return
+    if message.get('tool_calls'):
+        names = ', '.join(c['function']['name'] for c in message['tool_calls'])
+        report('warn', '還在處理中（tool_calls: %s）：最後的回話還沒出來；要等就 aos-agent listen --wait --target %s'
+               % (names, base))
+    else:
+        report('warn', '還在處理中（新輸入還沒回）：這則是上一輪的回話；要等就 aos-agent listen --wait --target %s' % base)
+
+
+def _report_time(history_path, history, message):
+    """fix-r5（§1.5）：回話附時間＝記憶檔的修改時間（stderr，stdout 照舊只有回話）。"""
+    try:
+        stamp = datetime.fromtimestamp(os.stat(history_path).st_mtime).strftime('%m-%d %H:%M:%S')
+    except OSError:
+        return
+    report('time', stamp + ('' if history and history[-1] is message else '（記憶最後更新，這則更早）'))
+
+
 def _stopped(data, base):
-    """等回話時不必再等的三種：沒登記、手動暫停、連敗暫停（先後照 §1.2）。"""
+    """等回話時不必再等的（先後照 §1.2）：kernel 家有問題、沒登記、手動暫停、連敗暫停、bad。
+
+    fix-r5 加 kernel 與 bad；恢復中、重試中會自己好，不在這裡。
+    """
+    if data['health']['code'] == 'kernel':
+        return 'kernel', data['health']['message']
     if unregistered(data['kernel']):
         return 'unregistered', '目前沒登記、沒人處理：aos-agent start --target ' + base
     if data['manual_paused']:
         return 'paused', '已手動暫停，continue 後才會處理：aos-agent continue --target ' + base
     if data['paused']:
         return 'stuck', '問模型連敗暫停了，修好後 aos-agent continue --target ' + base
+    if data['health']['code'] == 'bad':
+        return 'bad', data['health']['message']
     return None
 
 
@@ -84,6 +123,11 @@ def wait_reply(info, h0, timeout_ms, env=None, *, dropped=None, text=None, as_js
             stop = _stopped(data, base)
             if stop is not None:
                 report(*stop)
+                if dropped is not None:
+                    # say --wait：話已經投了，講清楚別再說一次（aos-agent.md §1.2，fix-r5）。
+                    print('已投入，start 後會處理，不要再說一次：aos-agent start --target ' + base
+                          if stop[0] == 'unregistered' else
+                          '已投入 %s，不要再說一次（照上面的原因修好後會處理）' % dropped)
                 show(data)
                 return 101
             history = read_history(info['history_path'])

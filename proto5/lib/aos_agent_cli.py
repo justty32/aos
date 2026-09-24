@@ -47,7 +47,12 @@ def _parser():
                                help='等下一則新回話，印出就退；' + WAIT_HELP)
             modes.add_argument('--follow', action='store_true', help='每一則新回話都印，直到 Ctrl-C')
         if name == 'status':
-            sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令與 stuck 原行')
+            sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令、舊錯原文與 stuck 原行')
+        if name == 'init':
+            sub.add_argument('--force', action='store_true', help='資料夾裡已有別的東西也照樣生（info.json 已在仍拒絕）')
+        if name == 'continue':
+            sub.add_argument('--all', action='store_true',
+                             help='解開 AOS_KERNEL_HOME 帳本裡所有登記的 agent（不能跟 --target 一起給）')
         if name in ('listen', 'status'):
             sub.add_argument('--json', action='store_true')
     return ap
@@ -90,18 +95,27 @@ def main(argv=None):
             ap.error('say 只收一段 TEXT；要指定家用 --target DIR（舊的 say dir TEXT 不再支援）')
         if not text or not text[0]:
             ap.error('say 需要 TEXT，且不可為空')
+    if args.command == 'continue' and args.all:
+        if args.target is not None:
+            ap.error('continue --all 不能跟 --target 一起給')
+        if not os.path.isabs(os.environ.get('AOS_KERNEL_HOME') or ''):
+            ap.error('continue --all 要 AOS_KERNEL_HOME（kernel 家的絕對路徑）')
     wait = getattr(args, 'wait', None)
     timeout = _seconds(ap, wait) if wait is not None else WAIT_SECONDS * 1000
     try:
         base = os.path.abspath(target)
         if args.command == 'stop' and not os.path.isdir(base):
             raise AgentError('NotAnAgent', '%s 不是存在的資料夾' % base)
+        if args.command == 'continue' and args.all:
+            from aos_agent_pause import resume_all
+            return resume_all()
         if args.command not in ('init', 'tick', 'stop'):
             from aos_agent import _other_home
             if not os.path.exists(os.path.join(base, 'info.json')):
                 raise AgentError('NotAnAgent', '%s 沒有 info.json' % base)
-            if _other_home(Path(base)):
-                raise AgentError('NotAnAgent', '%s/info.json 不是 agent 家（_metainfo._type 不是 llm_agent）' % base)
+            kind = _other_home(Path(base))
+            if kind:
+                raise AgentError('NotAnAgent', '%s 是 %s 家，不是 agent 家（_metainfo._type 是 %s）' % (base, kind, kind))
         if args.command == 'say':
             from aos_agent_say import say
             return say(target, text[0], wait=wait is not None, timeout_ms=timeout)
@@ -117,7 +131,7 @@ def main(argv=None):
             return pause(target) if args.command == 'pause' else resume(target)
         if args.command == 'init':
             from aos_agent_init import init
-            return init(target)
+            return init(target, force=args.force)
         import aos_agent
         return {'tick': aos_agent.tick, 'start': aos_agent.start,
                 'stop': aos_agent.stop}[args.command](target, note=aos_home.target_note(

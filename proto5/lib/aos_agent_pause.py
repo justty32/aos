@@ -4,8 +4,9 @@ import os
 from pathlib import Path
 
 import aos_agent_info
+import aos_home
 from aos_agent_home import AgentError
-from aos_agent_runtime import PAUSED, manual_paused
+from aos_agent_runtime import KERNEL_ENV, PAUSED, RESUMED, ledger, manual_paused
 from aos_agent_status import pause_path, waits
 
 
@@ -17,23 +18,26 @@ def pause(agent_dir):
     if manual_paused(base) is not None:
         print('已經暫停了（aos-agent continue --target %s 解除）' % base)
         return 0
-    stamp = datetime.now().astimezone().isoformat(timespec='seconds')
-    temp = base / ('.%s.%d.tmp' % (PAUSED, os.getpid()))
-    temp.write_text('paused at %s\n' % stamp, encoding='utf-8')
-    os.rename(temp, base / PAUSED)
+    _mark(base, PAUSED)
     print('paused %s（aos-agent continue --target %s 解除）' % (base, base))
     return 0
 
 
-def resume(agent_dir, env=None):
-    base = os.path.abspath(agent_dir)
-    if not os.path.exists(os.path.join(base, 'info.json')):
-        raise AgentError('NotAnAgent', '%s 沒有 info.json' % base)
+def _mark(base, name):
+    stamp = datetime.now().astimezone().isoformat(timespec='seconds')
+    temp = Path(base) / ('.%s.%d.tmp' % (name, os.getpid()))
+    temp.write_text('%s at %s\n' % (name, stamp), encoding='utf-8')
+    os.rename(temp, Path(base) / name)
+
+
+def _resume(base, env=None, lines=None):
+    """解兩種暫停；回 (手動解了沒, 連敗解了沒, 要印的行)。state 讀驗錯照拋（手動暫停已先解，行已記進 lines）。"""
+    lines = [] if lines is None else lines
     manual = False
     try:
         os.unlink(os.path.join(base, PAUSED))
         manual = True
-        print('continued: 解除手動暫停')
+        lines.append('continued: 解除手動暫停')
     except FileNotFoundError:
         pass
     st = aos_agent_info.load_state(base, env=env)
@@ -43,9 +47,61 @@ def resume(agent_dir, env=None):
         try:
             with open(path, 'x'):
                 pass
-            print('continued: touched ' + path)
+            lines.append('continued: touched ' + path)
         except FileExistsError:
-            print('已經 touch 過，等下一格 tick：' + path)
-    if not paths and not manual:
-        print('沒有在暫停')
+            lines.append('已經 touch 過，等下一格 tick：' + path)
+    if paths:
+        # fix-r5：兩階段——先標「已解除暫停，等下一次成功」，think 真的成功結清時 tick 才刪（§1.4、§7）。
+        _mark(base, RESUMED)
+        lines.append('已解除暫停，等下一次成功（aos-agent status --target %s 看）' % base)
+    return manual, bool(paths), lines
+
+
+def resume(agent_dir, env=None):
+    base = os.path.abspath(agent_dir)
+    if not os.path.exists(os.path.join(base, 'info.json')):
+        raise AgentError('NotAnAgent', '%s 沒有 info.json' % base)
+    lines = []
+    try:
+        _resume(base, env, lines)
+    except BaseException:
+        if lines:
+            print('\n'.join(lines))
+        raise
+    print('\n'.join(lines) if lines else '沒有在暫停')
     return 0
+
+
+def resume_all(env=None):
+    """continue --all（aos-agent.md §1.4）：K 帳本裡登記的 agent 家，暫停中的逐個解。"""
+    from aos_agent import _other_home
+    env = os.environ if env is None else env
+    kernel = env.get(KERNEL_ENV)
+    if not isinstance(kernel, str) or not os.path.isabs(kernel):
+        raise AgentError('Usage', 'continue --all 要 %s（kernel 家的絕對路徑）' % KERNEL_ENV)
+    procs = ledger(kernel)['procs']
+    homes = []
+    for name, proc in procs.items():
+        if not name.startswith('agent-') or not isinstance(proc, dict) or proc.get('once'):
+            continue
+        target = proc.get('target')
+        if isinstance(target, str) and Path(target).name == 'tick.json':
+            base = str(Path(target).parent)
+            if os.path.exists(os.path.join(base, 'info.json')) and not _other_home(Path(base)):
+                homes.append((name, base))
+    if not homes:
+        print('K 帳本裡沒有登記的 agent（%s）' % kernel)
+        return 0
+    done = skipped = 0
+    for name, base in homes:
+        try:
+            manual, stuck, _ = _resume(base, env)
+        except (AgentError, aos_home.HomeError, OSError, ValueError) as exc:
+            skipped += 1
+            print('%s  %s  跳過：%s' % (name, base, ' '.join(str(exc).split())))
+            continue
+        what = '、'.join(w for w, on in (('解除手動暫停', manual), ('解除連敗暫停（等下一次成功）', stuck)) if on)
+        done += bool(what)
+        print('%s  %s  %s' % (name, base, what or '沒在暫停'))
+    print('continued %d／%d' % (done, len(homes)))
+    return 1 if skipped else 0

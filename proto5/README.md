@@ -37,11 +37,11 @@ cat > $W/kernel.json <<EOF
           "llm": {"pool": "llm", "envs": {"AOS_LLM_CONFIG": "$W/llm.json"}}}}
 EOF
 aos-kernel init --config $W/kernel.json
-aos-kernel check
+aos-kernel check --probe
 aos-kernel boot
 ```
 
-`check` 每行 `ok`／`warn`／`bad`；有 `bad` 先照提示修好再 boot。`kernel.json` 還能寫 `tick_ms`、`interval_ms`、`timeout_ms` 這些排程預設，格式就是 `K/info.json` 那幾格（kernel 規範 [§1.1](spec/kernel/home.md)、[§6](spec/kernel/cli.md)）。
+`check` 每行 `ok`／`warn`／`bad`；有 `bad` 先照提示修好再 boot。`--probe` 會真的對 llm.json 的 endpoint 打一次（port 寫錯在這裡就抓到）；不帶它只驗設定，最後一行會寫「未測模型連線」（09-24 fix-r5）。`boot` 成功印 `booted 4 cpus`（`k` 自動加的那顆也算）。`kernel.json` 還能寫 `tick_ms`、`interval_ms`、`timeout_ms` 這些排程預設，格式就是 `K/info.json` 那幾格（kernel 規範 [§1.1](spec/kernel/home.md)、[§6](spec/kernel/cli.md)）。
 
 **3. 跑一次、跑反覆。**
 
@@ -74,8 +74,10 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 `init` 生出人格、一個 `date` 工具、`input/`、`log/`，`llm.model` 是代號 `default`（就是第 2 段 llm.json 裡那個）。`start` 印 `started agent-bob`（它用 `AOS_KERNEL_HOME` 找 kernel）。
 `say --wait` 把話投進 `bob/input/`，等它自己走完 idle→think（問模型）→act（跑 date）→think→idle，印出回話（看模型：純文字約 5 秒、要跑工具約 10～20 秒）。
 `--wait` 不帶數字最多等 300 秒，`--wait 60` 就是等 60 秒。還沒被收的話如果有好幾則，下一格會**合成一輪**一起問模型（09-24 試玩 r3 補）。
+**agent 多了要多開 cpu**（09-24 fix-r5）：每個 agent 每走一格都要佔一顆 `default` 池的 cpu，工具也在那裡跑；兩、三個以上的 agent 就在 `kernel.json` 的 `cpus` 多寫幾顆（例：`"2": {}, "3": {}`），`aos-kernel halt` 後改 `K/info.json` 再 `boot`。
 
 看回話用 `listen`（09-24 fix-r4，取代舊的 `last`），三種擇一：`--last`（預設）印最後一則就退；`--wait [秒]` 等**下一則新**回話、印出就退（等不到退 101）；`--follow` 每來一則印一則，Ctrl-C 結束。
+`--last` 在 stderr 附一行時間；它取到的如果是中途叫工具的那句、或新的話還沒回，stderr 會多一行「還在處理中（tool_calls: …）」——那不是最後答案，用 `--wait` 等（09-24 fix-r5）。
 
 ```sh
 aos-agent listen --target $W/bob
@@ -84,10 +86,12 @@ aos-agent listen --target $W/bob --wait 60
 aos-agent listen --target $W/bob --follow     # 開著看，看夠了按 Ctrl-C
 ```
 
-不順就 `aos-agent status --target $W/bob`：第一行 `health` 一句話說正不正常（`ok`／`沒登記`／`手動暫停`／`連敗暫停`／`kernel 家有問題`，括號裡是該打的指令），`error` 是**這次**卡住的原因（沒卡住印「（無）」，舊錯另列一行標「已恢復」），再往下是在哪一格、在等什麼、kernel 那邊的狀態（09-24 試玩 r3 改）。
-問模型連敗 3 次它會暫停，修好原因後 `aos-agent continue --target $W/bob`。
+不順就 `aos-agent status --target $W/bob`：第一行 `health` 一句話說正不正常（`ok`／`沒登記`／`手動暫停`／`連敗暫停`／`kernel 家有問題`，括號裡是該打的指令；09-24 fix-r5 再加三種會自己好的：`重試中（連敗 N/3）`、`恢復中（llm cpu dead，daemon 重拉中）`、`已解除暫停，等下一次成功`），`error` 是**這次**卡住的原因（沒卡住印「（無）」，舊錯另列一行、開頭標「（已恢復）」），再往下是在哪一格、在等什麼、kernel 那邊的狀態（09-24 試玩 r3 改）。
+問模型連敗 3 次它會暫停，修好原因後 `aos-agent continue --target $W/bob`；`continue` 之後先標「已解除暫停，等下一次成功」，真的問成功了才標「已恢復」。
+llm.json 是所有 agent 共用的，它一壞，正在說話的 agent 會一起暫停：修好後 `aos-agent continue --all` 一次解開全部（它看 `AOS_KERNEL_HOME` 帳本裡登記的 agent；`aos-kernel ls` 的 agent 行也會標出誰在暫停）（09-24 fix-r5）。
 想讓它先停手（還登記著，但每格什麼都不做）就 `aos-agent pause --target $W/bob`；這時 `say` 照收、提示「continue 後才會處理」，`continue` 同時解手動暫停和連敗暫停（09-24 fix-r4）。
-沒 `start` 就 `say`：話照樣投進去，但 stderr 會警告「目前沒登記、沒人處理」；`--wait` 則立刻退 101，不乾等（09-24 試玩 r3 補）。
+沒 `start` 就 `say`：話照樣投進去，stdout 會說「已投入，start 後會處理，不要再說一次」——`start` 之後它就會回，別再說一次（不然同一句會進記憶兩次）；`--wait` 則立刻退 101，不乾等（09-24 試玩 r3 補；fix-r5 改）。
+`say --wait`／`listen --wait` 開始等之前先看一次：kernel 家壞了、daemon 沒在跑、手動暫停、連敗暫停、被判 bad，都立刻退 101 並印原因（09-24 fix-r5）。
 
 **5. 停機（順序：agent → kernel → daemon）。** 要接著做第 6 段就先跳過這段，最後再停。
 
@@ -112,8 +116,8 @@ aos-kernel check --agent $W/bob
 aos-kernel ls                          # 第一行 health ok 就是正常
 ```
 
-- 昨天照第 5 段停過 agent 才要 `start`；沒停就關機的，登記還留在 kernel 帳本，`start` 會回 `AlreadyExists`——那代表已登記，不用管。
-- `aos-kernel ls` 第一行 `health` 分得出「停住」跟「正常忙碌」：`ok`、`daemon 沒在跑`、`K 家缺目錄（跑 aos-kernel check）`、`cpu missing（跑 boot）`、`tick 停住`、`停機中`。不是 `ok` 就照括號裡的指令做。
+- 昨天照第 5 段停過 agent 才要 `start`；沒停就關機的，登記還留在 kernel 帳本，`start` 印 `already started agent-bob`、退 0（09-24 fix-r5；寫成 `set -e` 的開機腳本也不會斷）。
+- `aos-kernel ls` 第一行 `health` 分得出「停住」跟「正常忙碌」：`ok`、`daemon 沒在跑`、`K 家缺目錄（跑 aos-kernel check）`、`cpu missing（跑 boot）`、`tick 停住`、`停機中`；（09-24 fix-r5）`恢復中（… cpu dead，daemon 重拉中）` 會自己好；kernel 沒事時還會講 agent：`agent 暫停中：…（aos-agent continue --all）`、`重試中：…`、`已解除暫停，等下一次成功：…`。不是 `ok` 就照括號裡的指令做。
 - 三種壞法各一個指令：daemon 掛了 → 重開 daemon＋`boot`；kernel 家壞了（`health` 說缺目錄或停住）→ `aos-kernel check` 照提示修；agent 暫停 → 修好原因後 `aos-agent continue --target $W/bob`。
 - （09-24 fix-r4）從舊版升上來的：**換版前**用舊版的指令停（`aos-kernel stop $W/K`、`aos-daemon stop --home $W/D`，舊版還沒有 `halt`），換版後照這段重開；舊鏈排好的下一格是舊指令格式，不重 `boot` 會停住。agent 家的舊 `tick.json` 在 `start` 時自動改寫。
 
@@ -140,7 +144,7 @@ aos-kernel check --agent $W/bob
 aos-agent say "請用 add 工具算 1234 加 4321，只回數字。" --target $W/bob --wait
 ```
 
-工具壞了（JSON 寫錯、沒執行位）`check --agent` 會指出來；跑起來失敗時模型看得到 `exit 126／127` 的說明，`log/agent.err` 有詳情。完整格式在 [agent.md §3.3](spec/agent/info.md)。做完回第 5 段停機。
+工具壞了（JSON 寫錯、沒執行位）`check --agent` 會指出來；跑起來失敗時模型看得到 `exit 126／127` 的說明（寫進記憶裡那則 tool 訊息，`listen --follow` 或看 `prompts/history.json`）。**`log/agent.err` 不會有這一行**：工具失敗是給模型看的結果，不算 agent 自己的錯（09-24 fix-r5 對回實際行為）。完整格式在 [agent.md §3.3](spec/agent/info.md)。做完回第 5 段停機。
 
 **附：不用 `init` 的手動做法。** 家就是一個資料夾，`init` 只是替你寫好這三份。這種家的輸入投 `input.json`，要原子地投：先寫暫存檔再 `mv`。
 
@@ -196,7 +200,7 @@ aos-agent stop --target $W/amy
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 二十九支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 30 個測試檔、1100 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 二十九支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 32 個測試檔、1133 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。

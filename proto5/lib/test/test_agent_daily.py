@@ -53,7 +53,7 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(set(data), {'dir', 'info_error', 'state_error', 'state', 'errors',
                                     'batch', 'waits', 'pending_inputs', 'intake', 'last_error', 'kernel',
                                     'health', 'current_error', 'streak', 'paused', 'last_error_time',
-                                    'manual_paused', 'manual_paused_since'})
+                                    'manual_paused', 'manual_paused_since', 'resumed', 'resumed_since'})
         self.assertEqual(data['state'], 'idle')
         self.assertIsNone(data['kernel']['home'])
         self.assertIn('沒設 AOS_KERNEL_HOME', data['kernel']['note'])
@@ -123,8 +123,10 @@ class DailyTests(unittest.TestCase):
     def test_continue_three_cases(self):
         self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, '沒有在暫停\n'))
         path = self.pause()
-        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, 'continued: touched %s\n' % path))
-        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, '已經 touch 過，等下一格 tick：%s\n' % path))
+        note = '已解除暫停，等下一次成功（aos-agent status --target %s 看）\n' % self.base
+        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, 'continued: touched %s\n' % path + note))
+        self.assertTrue((self.base / 'resumed').exists())  # fix-r5：兩階段的第一段
+        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, '已經 touch 過，等下一格 tick：%s\n' % path + note))
         self.assertFalse((self.base / 'outside.json').exists())
 
     def test_continue_only_owned_consume_paths(self):

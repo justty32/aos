@@ -166,7 +166,8 @@ class FixR4Tests(unittest.TestCase):
         (self.base / 'paused').write_text('x')
         code, output = self.cli('continue', '--target', str(self.base))
         self.assertEqual(code, 0)
-        self.assertEqual(output, 'continued: 解除手動暫停\ncontinued: touched %s\n' % (self.base / 'continue-x.json'))
+        self.assertEqual(output, 'continued: 解除手動暫停\ncontinued: touched %s\n' % (self.base / 'continue-x.json')
+                         + '已解除暫停，等下一次成功（aos-agent status --target %s 看）\n' % self.base)
         self.assertFalse((self.base / 'paused').exists())
 
     def test_status_distinguishes_pauses(self):

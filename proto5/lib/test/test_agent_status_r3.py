@@ -64,7 +64,7 @@ class StatusR3Tests(unittest.TestCase):
             data = status.collect(self.base, {})
         self.assertTrue(output.startswith('health ok\n'))
         self.assertIn('error  （無）\n', output)
-        self.assertRegex(output, r'last-error  \d\d-\d\d \d\d:\d\d:\d\d  .*（已恢復）')
+        self.assertRegex(output, r'last-error  （已恢復） \d\d-\d\d \d\d:\d\d:\d\d  stuck: ')  # fix-r5：標記在最前
         self.assertIsNone(data['current_error'])
         self.assertIsNotNone(data['last_error_time'])
 
@@ -161,7 +161,9 @@ class StatusR3Tests(unittest.TestCase):
         self.assertLess(time.monotonic() - start, 2)
         self.assertEqual(code, 101)
         self.assertIn('aos-agent: unregistered:', self.err.getvalue())
-        self.assertTrue(output.startswith('health 沒登記'))
+        # fix-r5：stdout 先說話已投入、別再說一次，再印 status。
+        self.assertTrue(output.startswith('已投入，start 後會處理，不要再說一次'))
+        self.assertIn('\nhealth 沒登記', output)
         self.assertTrue((self.base / 'input.json').exists())
 
     def test_unreadable_ledger_does_not_warn(self):
