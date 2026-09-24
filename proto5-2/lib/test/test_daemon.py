@@ -1,284 +1,352 @@
-"""daemon.md 的真父子行程測試：握手、重拉、階梯、鎖與崩潰接手。"""
+"""proto5-2 daemon（按池、宣告式）的真父子行程測試：scale、補／收／重拉、退避、節流、fd 預算、kill、halt、重開。"""
 import json
 import os
 from pathlib import Path
 import signal
 import subprocess
-import sys
-import tempfile
+import threading
 import time
 import unittest
 from unittest import mock
 
 import aos_client
-import aos_home
 import aos_daemon
+import aos_daemon_pools
+import aos_home
 
-CLI = Path(__file__).resolve().parents[2] / "cli"
-PY = sys.executable
-
-from _daemon_util import CHILD, CLOCK_DRIVER, wait_for, read_json
+from _daemon_util import CLI, PY, DaemonCase, read_json, wait_for, write_json
 
 
-class DaemonTest(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(prefix="aos-daemon-test-")
-        self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
-        self.home = self.root / "D"
-        self.home.mkdir()
-        self.info = {"_metainfo": {"_type": "daemon", "_version": 1}, "poll_ms": 5,
-                     "restart_delay_ms": 80, "stop_wait_ms": 80, "kill_wait_ms": 80}
-        self.write(self.home / "info.json", self.info)
-        self.child = self.root / "child.py"
-        self.child.write_text(CHILD)
-        self.proc = None
-        self.groups = set()
-        self.addCleanup(self.cleanup_groups)
-
-    def write(self, path, value):
-        aos_home.write_json(path, value)
-        return str(path)
-
-    def cleanup_groups(self):
-        for pid in self.groups:
-            try:
-                os.killpg(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-
-    def start(self, ready=True, controlled=False):
-        log = open(self.root / "daemon.log", "ab")
-        self.addCleanup(log.close)
-        command = [PY, str(CLI / "aos-daemon"), "boot", "--target", str(self.home)]
-        if controlled:
-            self.write(self.root / "clock.json", 10)
-            command = [PY, "-c", CLOCK_DRIVER, str(CLI.parent / "lib"), str(self.home),
-                       str(self.root / "clock.json"), str(self.root / "clock-state.json"),
-                       str(self.root / "signals.jsonl")]
-        proc = subprocess.Popen(command,
-                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                stderr=log, start_new_session=True)
-        self.proc = proc
-        def cleanup():
-            if proc.poll() is None:
-                proc.terminate()
-                try:
-                    proc.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    self.cleanup_groups()
-                    proc.kill()
-            proc.wait(timeout=4)
-        self.addCleanup(cleanup)
-        if ready:
-            wait_for(lambda: self.state().get("pid") == proc.pid)
-        return proc
-
-    def clock_state(self):
-        return read_json(self.root / "clock-state.json", {})
-
-    def advance(self, value):
-        self.write(self.root / "clock.json", value)
-        return wait_for(lambda: self.clock_state().get("clock") == value and self.clock_state())
-
-    def stage(self, name="child", stage="stop"):
-        return wait_for(lambda: self.clock_state().get("stages", {}).get(name, [None])[0] == stage
-                        and self.clock_state()["stages"][name])
-
-    def signals(self):
-        path = self.root / "signals.jsonl"
-        return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
-
-    def state(self):
-        return read_json(self.home / "state.json", {})
-
-    def children(self):
-        return self.state().get("children", {})
-
-    def target(self, mode="normal", name="child"):
-        ready = self.root / (name + ".ready")
-        target = self.root / (name + ".json")
-        self.write(target, {"argv": [PY, str(self.child), mode, str(ready)]})
-        return str(target), ready
-
-    def call(self, method, params=None, **kwargs):
-        return aos_client.call(self.home, method, params, timeout_ms=6000, poll_ms=5, **kwargs)
-
-    def spawn(self, target, name="child", restart=False):
-        response = self.call("spawn", {"name": name, "target": target, "restart": restart})
-        self.assertIn("result", response, response)
-        pid = response["result"]["pid"]
-        self.groups.add(pid)
-        return pid
-
-    def stop(self):
-        aos_home.post_request(self.home, aos_client.new_name("stop"),
-                              {"jsonrpc": "2.0", "method": "stop"})
-        self.assertEqual(self.proc.wait(timeout=5), 0, (self.root / "daemon.log").read_text())
-        self.assertEqual(self.children(), {})
-        self.assertEqual(self.state()["pid"], 0)
-
-    def test_spawn_real_cpu_idempotent_restart_update_and_name_taken(self):
-        cpu = self.root / "cpu"
-        cpu.mkdir()
-        self.write(cpu / "info.json", {"_metainfo": {"_type": "exec_cpu", "_version": 1}, "poll_ms": 5})
-        target = self.write(cpu / "inst.json", {"argv": [PY, str(CLI / "aos-cpu"), str(cpu)]})
+class ScaleTest(DaemonCase):
+    def test_scale_fills_pool_kid_files_summary_one_pipe(self):
         self.start()
-        pid = self.spawn(target)
-        wait_for(lambda: read_json(cpu / "state.json", {}).get("pid") == pid)
-        self.assertEqual(self.spawn(target, restart=True), pid)
-        self.assertTrue(self.children()["child"]["restart"])
-        other, _ = self.target(name="different")
-        error = self.call("spawn", {"name": "child", "target": other})["error"]
-        self.assertEqual(error["data"]["code"], "NameTaken")
-        result = aos_client.call(cpu, "aos-exec", {"target": str(cpu / "absent.json")}, timeout_ms=4000, poll_ms=5)
-        self.assertEqual(result["result"]["kind"], "aos")
-        self.stop()
-        self.assertIsNone(read_json(cpu / "state.json")["current"])
+        target = self.targets(3)
+        self.assertEqual(self.ok(self.scale(count=3, target=target, decl=[5, 0])),
+                         {"pool": "p", "count": 3, "ver": 1})
+        summary = self.running("p", 3)
+        self.assertEqual({k: summary[k] for k in ("pool", "owner", "count", "ver", "pending", "dead",
+                                                  "failed", "killing", "draining", "restarting")},
+                         {"pool": "p", "owner": "/k", "count": 3, "ver": 1, "pending": 0, "dead": 0,
+                          "failed": 0, "killing": 0, "draining": 0, "restarting": 0})
+        decl = read_json(self.home / "pools/p/pool.json")
+        self.assertEqual((decl["count"], decl["skip"], decl["ver"], decl["decl"], decl["target"]),
+                         (3, [], 1, [5, 0], target))
+        self.assertEqual(set(self.state()), {"pid", "stopping", "current"})
+        for i in range(3):
+            start = wait_for(lambda: self.starts("p", i))[0]
+            kid = self.kid("p", i)
+            self.assertEqual((kid["pid"], kid["gen"], kid["state"], kid["streak"], kid["next_at"]),
+                             (start["pid"], 1, "running", 0, None))
+            self.assertEqual(aos_daemon.pool_kid(self.home, "p", i), kid)
+            self.assertEqual(start["pgid"], start["pid"])                    # 自己一個 process group
+            self.assertEqual(start["sid"], os.getsid(self.proc.pid))         # 同一個 session
+            self.assertEqual(start["fd1"], "/dev/null")                      # 只留 fd 0 一條 pipe
+        self.assertEqual(aos_daemon.pool_summary(self.home, "p")["running"], 3)
+        self.assertIsNone(aos_daemon.pool_summary(self.home, "nope"))
+        self.assertIsNone(aos_daemon.pool_kid(self.home, "p", 9))
+        self.halt()
 
-    def test_children_have_own_group_same_session(self):
+    def test_ver_only_changes_when_members_change(self):
         self.start()
-        target, ready = self.target()
-        pid = self.spawn(target)
-        child = wait_for(lambda: read_json(ready))
-        self.assertEqual(child["pgid"], pid)
-        self.assertEqual(child["sid"], os.getsid(self.proc.pid))
-        self.assertNotEqual(child["pgid"], os.getpgid(self.proc.pid))
-        self.stop()
+        target = self.targets(4)
+        self.assertEqual(self.ok(self.scale(count=2, target=target))["ver"], 1)
+        self.assertEqual(self.ok(self.scale(count=2, target=target))["ver"], 1)      # 重送：冪等
+        self.assertEqual(self.ok(self.scale(count=2, skip=[5]))["ver"], 1)            # 成員沒變
+        self.assertEqual(self.ok(self.scale(count=2, home="/h/{name}"))["ver"], 1)    # 只換樣板
+        self.assertEqual(self.ok(self.scale(count=2, skip=[0]))["ver"], 2)            # 0 退休 → 1、2
+        self.assertEqual(read_json(self.home / "pools/p/pool.json")["home"], "/h/{name}")
+        wait_for(lambda: self.kid("p", 0) is None and (self.summary() or {}).get("running") == 2)
+        self.assertEqual(self.kid("p", 2)["state"], "running")
+        self.halt()
 
-    def test_nonzero_restart_and_target_reread(self):
-        self.info["restart_delay_ms"] = 200
-        self.write(self.home / "info.json", self.info)
-        self.start(controlled=True)
-        target, ready = self.target("exit7")
-        original = self.spawn(target, restart=True)
-        wait_for(lambda: self.children().get("child", {}).get("state") == "dead")
-        dead = self.children()["child"]
-        self.assertEqual(dead["last_exit"], 7)
-        wait_for(lambda: self.clock_state().get("restarts", {}).get("child"))
-        self.advance(10.199)
-        self.assertEqual(self.children()["child"]["state"], "dead")
-        self.target("normal")
-        self.advance(10.201)
-        new = wait_for(lambda: self.children().get("child", {}).get("pid") != original and
-                       self.children().get("child", {}).get("state") == "running" and self.children()["child"])
-        self.groups.add(new["pid"])
-        self.assertEqual(new["exits"], 1)
-        self.stop()
-
-    def test_zero_exit_not_restarted(self):
+    def test_scale_errors(self):
+        self.set_info(max_children=3)
         self.start()
-        target, _ = self.target("exit0")
-        self.spawn(target, restart=True)
-        wait_for(lambda: not self.children())
-        self.assertEqual(self.children(), {})
-        self.stop()
+        target = self.targets(3)
+        bad = [{"pool": "../x", "owner": "/k", "count": 1, "target": target},
+               {"pool": "p", "owner": "", "count": 1, "target": target},
+               {"pool": "p", "owner": "/k", "count": -1, "target": target},
+               {"pool": "p", "owner": "/k", "count": True, "target": target},
+               {"pool": "p", "owner": "/k", "count": 1, "skip": [1, 1], "target": target},
+               {"pool": "p", "owner": "/k", "count": 1, "skip": [-1], "target": target},
+               {"pool": "p", "owner": "/k", "count": 1, "target": "rel/{name}.json"},
+               {"pool": "p", "owner": "/k", "count": 1, "target": "/abs/x.json"},
+               {"pool": "p", "owner": "/k", "count": 1, "target": "/{name}/{name}.json"},
+               {"pool": "p", "owner": "/k", "count": 1, "target": target, "decl": [1]},
+               {"pool": "p", "owner": "/k", "count": 1},                                   # 池不在要 target
+               "not-an-object"]
+        for params in bad:
+            with self.subTest(params=params):
+                self.assertEqual(self.call("scale", params)["error"]["code"], -32602)
+        self.assertFalse((self.home / "pools/p").exists())
+        # 池不在、count 0：什麼都不建，ver 0
+        self.assertEqual(self.ok(self.scale(count=0)), {"pool": "p", "count": 0, "ver": 0})
+        self.assertFalse((self.home / "pools/p").exists())
+        self.ok(self.scale(count=2, target=target, decl=[5, 3]))
+        self.assertEqual(self.code(self.scale(count=2, owner="/other")), "NameTaken")
+        self.assertIn("/k", self.scale(count=2, owner="/other")["error"]["message"])
+        self.assertEqual(self.code(self.scale(count=1, decl=[5, 2])), "Stale")
+        self.assertEqual(self.code(self.scale(count=1, decl=[4, 9])), "Stale")
+        self.assertEqual(read_json(self.home / "pools/p/pool.json")["count"], 2)      # 什麼都沒改
+        self.assertEqual(self.ok(self.scale(count=2, decl=[5, 3]))["ver"], 1)          # 相等＝重送
+        self.assertEqual(self.ok(self.scale(count=2))["ver"], 1)                       # 沒給 decl 不擋
+        self.assertEqual(read_json(self.home / "pools/p/pool.json")["decl"], [5, 3])   # 舊 decl 留著
+        self.assertEqual(self.code(self.scale("q", 2, target=self.targets(2, pool="q"))), "TooMany")
+        self.assertFalse((self.home / "pools/q").exists())
+        self.assertEqual(self.ok(self.scale("q", 1, target=self.targets(1, pool="q")))["ver"], 1)
+        self.assertEqual(self.call("spawn", {"name": "x", "target": target})["error"]["code"], -32601)
+        self.halt()
 
-    def test_kill_running_does_not_restart(self):
+    def test_shrink_drains_and_count_zero_removes_pool(self):
         self.start()
-        target, ready = self.target()
-        pid = self.spawn(target, restart=True)
-        wait_for(lambda: ready.exists())
-        self.assertEqual(self.call("kill", {"name": "child"})["result"]["pid"], pid)
-        wait_for(lambda: not self.children())
-        self.assertEqual(self.call("kill", {"name": "child"})["error"]["data"]["code"], "NotFound")
-        self.stop()
+        target = self.targets(3)
+        self.ok(self.scale(count=3, target=target))
+        self.running("p", 3)
+        self.assertEqual(self.ok(self.scale(count=1))["ver"], 2)
+        wait_for(lambda: self.summary()["running"] == 1 and self.summary()["draining"] == 0)
+        self.assertEqual(sorted(os.listdir(self.home / "pools/p/kids")), ["0.json"])
+        self.assertEqual(self.ok(self.scale(count=0))["ver"], 3)
+        wait_for(lambda: not (self.home / "pools/p").exists())
+        # 名字空出來：別的 owner 可以用，ver 從 1 算
+        self.assertEqual(self.ok(self.scale(count=1, owner="/other", target=target))["ver"], 1)
+        self.running("p", 1)
+        self.assertEqual(self.kid("p", 0)["gen"], 1)
+        self.halt()
 
-    def test_kill_dead_cancels_restart(self):
-        self.info["restart_delay_ms"] = 1000
-        self.write(self.home / "info.json", self.info)
-        self.start(controlled=True)
-        target, _ = self.target("exit3")
-        pid = self.spawn(target, restart=True)
-        wait_for(lambda: self.children().get("child", {}).get("state") == "dead")
-        self.assertEqual(self.call("kill", {"name": "child"})["result"]["pid"], pid)
-        self.assertNotIn("child", self.children())
-        self.stop()
-
-    def test_spawn_dead_restarts_immediately(self):
-        self.start(controlled=True)
-        target, _ = self.target("exit3")
-        first = self.spawn(target, restart=True)
-        wait_for(lambda: self.clock_state().get("restarts", {}).get("child"))
-        self.target("normal")
-        self.assertNotEqual(self.spawn(target, restart=True), first)
-        self.assertEqual(read_json(self.root / "clock.json"), 10)
-        self.stop()
-
-    def test_spawn_killing_rejected_and_kill_idempotent(self):
-        self.start(controlled=True)
-        target, ready = self.target("kill")
-        pid = self.spawn(target)
-        wait_for(ready.exists)
-        self.call("kill", {"name": "child"})
-        deadline = self.stage()
-        self.assertEqual(self.call("spawn", {"name": "child", "target": target})["error"]["data"]["code"], "Killing")
-        self.assertEqual(self.call("kill", {"name": "child"})["result"]["pid"], pid)
-        self.advance(10.01)
-        self.assertEqual(self.stage(), deadline)
-        self.advance(11)
-        self.stage(stage="term")
-        self.advance(12)
-        wait_for(lambda: not self.children())
-        self.stop()
-
-    def test_stop_pipe_stage(self):
+    def test_readded_while_draining_comes_back(self):
+        self.set_info(stop_wait_ms=150, kill_wait_ms=150)
         self.start()
-        target, ready = self.target()
-        self.spawn(target)
-        wait_for(lambda: ready.exists())
-        self.stop()
-        self.assertFalse(Path(str(ready) + ".term").exists())
+        target = self.targets(2, "kill")
+        self.ok(self.scale(count=2, target=target))
+        self.running("p", 2)
+        wait_for(lambda: self.starts("p", 1))
+        self.ok(self.scale(count=1))
+        wait_for(lambda: self.summary()["draining"] == 1)
+        self.ok(self.scale(count=2))
+        wait_for(lambda: self.summary()["killing"] == 1)          # 又是成員：draining → killing
+        wait_for(lambda: len(self.starts("p", 1)) == 2)            # 死透後當 pending 拉回來
+        self.assertEqual(self.kid("p", 1)["gen"], 2)
+        self.assertEqual(self.kid("p", 1)["streak"], 0)
+        self.halt()
 
-    def test_stop_term_stage(self):
-        self.start(controlled=True)
-        target, ready = self.target("term")
-        pid = self.spawn(target)
-        wait_for(ready.exists)
+
+class RestartTest(DaemonCase):
+    def gaps(self, pool, i, n):
+        starts = wait_for(lambda: len(self.starts(pool, i)) >= n and self.starts(pool, i), timeout=10)
+        return [b["at"] - a["at"] for a, b in zip(starts, starts[1:])][:n - 1]
+
+    def test_backoff_doubles_up_to_max_any_exit_code(self):
+        self.set_info(restart_delay_ms=100, restart_max_ms=400)
+        self.start()
+        self.ok(self.scale(count=1, target=self.targets(1, "exit0")))    # 退 0 也重拉
+        gaps = self.gaps("p", 0, 5)
+        for gap, want in zip(gaps, (0.1, 0.2, 0.4, 0.4)):
+            self.assertGreaterEqual(gap, want - 0.01, gaps)
+            self.assertLess(gap, want + 0.25, gaps)
+        kid = self.kid("p", 0)
+        self.assertEqual(kid["last_exit"], 0)
+        self.assertGreaterEqual(kid["exits"], 4)
+        self.halt()
+
+    def test_stable_resets_streak_and_restarting(self):
+        mode = self.root / "mode"
+        mode.write_text("exit1")
+        self.set_info(restart_delay_ms=60, restart_max_ms=5000, stable_ms=150)
+        self.start()
+        self.ok(self.scale(count=1, target=self.targets(1, "@%s" % mode)))
+        wait_for(lambda: (self.kid("p", 0) or {}).get("streak") == 2 and self.kid("p", 0)["state"] == "dead")
+        mode.write_text("after400:1")
+        wait_for(lambda: self.summary()["restarting"] == 1)       # 重拉了、還沒穩
+        wait_for(lambda: self.summary()["restarting"] == 0 and self.summary()["running"] == 1)
+        # 活過 stable_ms 才死：streak 先歸 0 再加 1，等待回到起點
+        dead = wait_for(lambda: self.kid("p", 0)["state"] == "dead" and self.kid("p", 0)["gen"] >= 4
+                        and self.kid("p", 0))
+        self.assertEqual(dead["streak"], 1)
+        self.assertLess(dead["next_at"] - time.time(), 0.07)
+        self.halt()
+
+    def test_spawn_failed_backoff_and_new_target_clears_wait(self):
+        self.set_info(restart_delay_ms=5000)
+        self.start()
+        target = self.targets(1)
+        self.ok(self.scale(count=1, target=str(self.root / "missing/{name}.json")))
+        failed = wait_for(lambda: (self.kid("p", 0) or {}).get("state") == "failed" and self.kid("p", 0))
+        self.assertEqual((failed["pid"], failed["gen"], failed["streak"]), (None, 0, 1))
+        self.assertGreater(failed["next_at"] - time.time(), 3)
+        self.assertEqual(self.summary()["failed"], 1)
+        self.assertIn("SpawnFailed", self.log())
+        self.assertEqual(self.ok(self.scale(count=1, target=target))["ver"], 1)
+        self.running("p", 1)
+        self.assertEqual(self.kid("p", 0)["gen"], 1)
+        self.halt()
+
+    def test_token_bucket_throttles_spawns(self):
+        self.set_info(spawn_per_sec=5)
+        self.start()
+        self.ok(self.scale(count=8, target=self.targets(8)))
+        self.running("p", 8)
+        wait_for(lambda: all(self.starts("p", i) for i in range(8)))
+        starts = sorted(self.starts("p", i)[0]["at"] for i in range(8))
+        self.assertLess(starts[4] - starts[0], 0.15)               # 桶是滿的：前 5 顆一起
+        self.assertGreaterEqual(starts[5] - starts[0], 0.15)       # 之後一秒 5 顆
+        self.assertGreaterEqual(starts[7] - starts[0], 0.5)
+        self.halt()
+
+    def test_pools_take_turns(self):
+        self.set_info(spawn_per_sec=4)
+        for pool, count in (("a", 8), ("b", 2)):
+            (self.home / "pools" / pool / "kids").mkdir(parents=True)
+            write_json(self.home / "pools" / pool / "pool.json",
+                       {"pool": pool, "owner": "/k", "count": count, "skip": [], "ver": 1,
+                        "target": self.targets(count, pool=pool)})
+        self.start()
+        self.running("b", 2)
+        wait_for(lambda: all(self.starts("b", i) for i in range(2)))
+        first_a = sorted(self.starts("a", i)[0]["at"] for i in range(8) if self.starts("a", i))
+        last_b = max(self.starts("b", i)[0]["at"] for i in range(2))
+        self.assertLess(last_b, first_a[2] if len(first_a) > 2 else float("inf"), first_a)
+        self.halt()
+
+    def test_fd_budget_waits_for_draining_pool(self):
+        self.set_info(max_children=2, stop_wait_ms=200, kill_wait_ms=200)
+        self.start()
+        self.ok(self.scale("a", 2, target=self.targets(2, "kill", pool="a")))
+        self.running("a", 2)
+        wait_for(lambda: self.starts("a", 1))
+        self.ok(self.scale("a", 0))
+        self.ok(self.scale("b", 2, target=self.targets(2, pool="b")))    # 宣告合計 2：合法
+        time.sleep(.2)
+        self.assertEqual((self.summary("b") or {}).get("running", 0), 0)  # a 還在 killing：先不拉
+        self.assertEqual(self.summary("a")["draining"], 2)
+        self.running("b", 2)
+        wait_for(lambda: not (self.home / "pools/a").exists())
+        self.halt()
+
+
+class KillTest(DaemonCase):
+    def test_kill_restarts_without_backoff(self):
+        self.set_info(restart_delay_ms=5000)
+        mode = self.root / "mode"
+        mode.write_text("normal")
+        self.start()
+        self.ok(self.scale(count=2, target=self.targets(2, "@%s" % mode)))
+        self.running("p", 2)
+        self.assertEqual(self.ok(self.call("kill", {"pool": "p", "names": ["0", "7"]})),
+                         {"killed": ["0"], "skipped": {"7": "not-member"}})
+        wait_for(lambda: len(self.starts("p", 0)) == 2)
+        kid = self.kid("p", 0)
+        self.assertEqual((kid["gen"], kid["streak"], kid["exits"]), (2, 0, 1))
+        # dead 的：清掉等待，馬上重拉
+        mode.write_text("exit3")
+        self.ok(self.call("kill", {"pool": "p", "names": ["1"]}))
+        dead = wait_for(lambda: self.kid("p", 1)["state"] == "dead" and self.kid("p", 1))
+        self.assertGreater(dead["next_at"] - time.time(), 3)
+        mode.write_text("normal")
+        self.assertEqual(self.ok(self.call("kill", {"pool": "p", "all": True}))["killed"], ["0", "1"])
+        wait_for(lambda: len(self.starts("p", 1)) == 3)
+        self.assertEqual(self.code(self.call("kill", {"pool": "zz", "all": True})), "NotFound")
+        for params in ({"pool": "p"}, {"pool": "p", "all": True, "names": ["1"]},
+                       {"pool": "p", "names": ["01"]}, {"pool": "p", "names": "1"},
+                       {"pool": "p", "all": 1}):
+            self.assertEqual(self.call("kill", params)["error"]["code"], -32602, params)
+        self.halt()
+
+    def test_kill_skips_pending_and_killing(self):
+        self.set_info(spawn_per_sec=1, stop_wait_ms=300, kill_wait_ms=300)
+        self.start()
+        self.ok(self.scale(count=2, target=self.targets(2, "kill")))
+        self.running("p", 1)
+        wait_for(lambda: self.starts("p", 0))
+        self.assertEqual(self.ok(self.call("kill", {"pool": "p", "all": True})),
+                         {"killed": ["0"], "skipped": {"1": "pending"}})
+        self.assertEqual(self.ok(self.call("kill", {"pool": "p", "names": ["0"]}))["skipped"], {"0": "killing"})
+        self.halt()
+
+
+class HaltBootTest(DaemonCase):
+    def test_halt_keeps_pool_json_and_boot_brings_kids_back(self):
+        self.start()
+        self.ok(self.scale(count=2, target=self.targets(2), home=str(self.root / "h/{name}")))
+        self.running("p", 2)
+        self.halt()
+        self.assertTrue((self.home / "pools/p/pool.json").exists())
+        for i in range(2):
+            kid = self.kid("p", i)
+            self.assertEqual((kid["state"], kid["pid"], kid["gen"], kid["exits"]), ("pending", None, 1, 1))
+        self.start()
+        self.running("p", 2)
+        self.assertEqual([self.kid("p", i)["gen"] for i in range(2)], [2, 2])
+        self.assertEqual(self.ok(self.scale(count=2))["ver"], 1)
+        self.halt()
+
+    def test_stopping_rejects_scale_kill_still_answers(self):
+        self.set_info(stop_wait_ms=300, kill_wait_ms=300)
+        self.start()
+        self.ok(self.scale(count=1, target=self.targets(1, "kill")))
+        wait_for(lambda: self.starts("p", 0))
         aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        self.stage()
-        self.advance(10.079)
-        self.assertEqual(self.signals(), [])
-        self.advance(10.081)
+        wait_for(lambda: self.state().get("stopping"))
+        self.assertEqual(self.code(self.scale(count=2)), "Stopping")
+        self.assertEqual(self.ok(self.call("kill", {"pool": "p", "all": True}))["skipped"], {"0": "killing"})
         self.assertEqual(self.proc.wait(timeout=6), 0)
-        self.assertEqual(self.signals(), [[pid, signal.SIGTERM, False, 10.081]])
+        self.assertEqual(read_json(self.home / "pools/p/pool.json")["count"], 1)
 
-    def test_stop_kill_stage_and_children_parallel(self):
-        self.start(controlled=True)
-        pids = set()
-        for i in range(4):
-            target, ready = self.target("kill", "child%d" % i)
-            pids.add(self.spawn(target, "child%d" % i))
-            wait_for(ready.exists)
+    def test_batch_ladder_stop_then_term_then_kill(self):
+        self.set_info(stop_wait_ms=200, kill_wait_ms=200)
+        self.start()
+        self.ok(self.scale("t", 2, target=self.targets(2, "term", pool="t")))
+        self.ok(self.scale("k", 2, target=self.targets(2, "kill", pool="k")))
+        self.ok(self.scale("n", 1, target=self.targets(1, pool="n")))
+        for pool, n in (("t", 2), ("k", 2), ("n", 1)):
+            wait_for(lambda: all(self.starts(pool, i) for i in range(n)))
+        began = time.monotonic()
         aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        for i in range(4):
-            self.assertEqual(self.stage("child%d" % i), ["stop", 10.08])
-        self.advance(10.079)
-        self.assertEqual(self.signals(), [])
-        self.advance(10.081)
-        for i in range(4):
-            self.assertEqual(self.stage("child%d" % i, "term"), ["term", 10.161])
-        self.assertEqual({tuple(row[:3]) for row in self.signals()},
-                         {(pid, signal.SIGTERM, False) for pid in pids})
-        self.advance(10.162)
         self.assertEqual(self.proc.wait(timeout=6), 0)
-        self.assertEqual({tuple(row[:3]) for row in self.signals()[4:]},
-                         {(pid, signal.SIGKILL, True) for pid in pids})
-        self.assertEqual(self.children(), {})
+        took = time.monotonic() - began
+        self.assertGreaterEqual(took, 0.39)                         # kill 模式要走到最後一階
+        terms = [float(Path(str(self.ready("t", i)) + ".term").read_text()) for i in range(2)]
+        self.assertLess(abs(terms[0] - terms[1]), 0.05)             # 同一批一起 TERM
+        self.assertGreaterEqual(min(terms) - began, 0.19)
+        self.assertFalse(Path(str(self.ready("n", 0)) + ".term").exists())   # 聽 stop 的不用 TERM
+        self.assertEqual(self.kid("n", 0)["last_exit"], 0)
+        self.assertEqual(self.kid("k", 0)["last_exit"], 137)
 
     def test_epipe_skips_stop_wait(self):
-        self.info.update(stop_wait_ms=1500, kill_wait_ms=60)
-        self.write(self.home / "info.json", self.info)
-        self.start(controlled=True)
-        target, ready = self.target("epipe")
-        pid = self.spawn(target)
-        wait_for(ready.exists)
+        self.set_info(stop_wait_ms=3000, kill_wait_ms=60)
+        self.start()
+        self.ok(self.scale(count=1, target=self.targets(1, "epipe")))
+        wait_for(lambda: self.starts("p", 0))
+        began = time.monotonic()
         aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        self.assertEqual(self.stage(stage="term"), ["term", 10.06])
-        self.assertEqual(self.signals(), [[pid, signal.SIGTERM, False, 10]])
-        self.advance(10.061)
         self.assertEqual(self.proc.wait(timeout=6), 0)
-        self.assertEqual(self.signals()[-1], [pid, signal.SIGKILL, True, 10.061])
+        self.assertLess(time.monotonic() - began, 1.5)
+
+    def test_signal_stops_daemon(self):
+        self.start()
+        self.ok(self.scale(count=1, target=self.targets(1)))
+        wait_for(lambda: self.starts("p", 0))
+        self.proc.send_signal(signal.SIGINT)
+        self.assertEqual(self.proc.wait(timeout=4), 0)
+        self.assertTrue((self.home / "pools/p/pool.json").exists())
+
+    def test_v1_home_children_are_killed_and_dropped(self):
+        write_json(self.home / "info.json", {"_metainfo": {"_type": "daemon", "_version": 1},
+                                             "poll_ms": 5, "stop_wait_ms": 50, "kill_wait_ms": 50})
+        ready = self.root / "old.ready"
+        old = subprocess.Popen([PY, str(self.child), "kill", str(ready)], stdin=subprocess.PIPE,
+                               stdout=subprocess.DEVNULL, start_new_session=True)
+        old.stdin.write(b'{"method": "go"}\n')
+        old.stdin.flush()
+        wait_for(ready.exists)
+        threading.Thread(target=old.wait, daemon=True).start()     # 替它收屍，kill(pid,0) 才看得到消失
+        write_json(self.home / "state.json", {"pid": 0, "stopping": False, "current": None,
+                                              "children": {"k": {"pid": old.pid, "state": "running"}}})
+        self.start()
+        self.assertIsNotNone(old.returncode if old.poll() is not None else wait_for(lambda: old.poll() is not None))
+        self.assertEqual(old.returncode, -signal.SIGKILL)
+        self.assertNotIn("children", read_json(self.home / "state.json"))
+        old.stdin.close()
+        self.halt()
 
     def test_lock_refuses_second_daemon_and_shared_probe(self):
         self.assertFalse(aos_daemon.is_alive(self.home))
@@ -288,196 +356,74 @@ class DaemonTest(unittest.TestCase):
                                 stdin=subprocess.DEVNULL, capture_output=True, timeout=4)
         self.assertEqual(second.returncode, 1)
         self.assertIn(b"AlreadyRunning", second.stderr)
-        self.stop()
+        self.halt()
         self.assertFalse(aos_daemon.is_alive(self.home))
 
-    def test_signal_stops_daemon(self):
-        self.start()
-        target, ready = self.target()
-        self.spawn(target)
-        wait_for(lambda: ready.exists())
-        self.proc.send_signal(signal.SIGINT)
-        self.assertEqual(self.proc.wait(timeout=4), 0)
-        self.assertEqual(self.children(), {})
 
-    def test_spawn_validation_and_failure_do_not_register(self):
+class HomeTest(DaemonCase):
+    def boot_fails(self, needle):
+        bad = subprocess.run([PY, str(CLI / "aos-daemon"), "boot", "--target", str(self.home)],
+                             stdin=subprocess.DEVNULL, capture_output=True, timeout=4)
+        self.assertEqual(bad.returncode, 1)
+        self.assertIn(needle, bad.stderr.decode())
+
+    def test_info_defaults_versions_and_validation(self):
+        os.unlink(self.home / "info.json")
         self.start()
-        target, _ = self.target()
-        for params in ({}, {"name": "x", "target": "relative.json"},
-                       {"name": "../x", "target": target}, {"name": "x", "target": target, "restart": 1}):
-            self.assertEqual(self.call("spawn", params)["error"]["code"], -32602)
-        for field in ("stdin", "stdout"):
-            inst = self.write(self.root / (field + ".json"), {"argv": [PY, "-c", "pass"], field: ""})
-            self.assertEqual(self.call("spawn", {"name": field, "target": inst})["error"]["code"], -32602)
-        error = self.call("spawn", {"name": "missing", "target": str(self.root / "missing.json")})["error"]
-        self.assertEqual(error["data"]["code"], "SpawnFailed")
-        self.assertEqual(self.children(), {})
-        self.stop()
+        info = read_json(self.home / "info.json")
+        self.assertEqual(info["_metainfo"], {"_type": "daemon", "_version": 2})
+        self.assertEqual((info["spawn_per_sec"], info["max_children"], info["restart_max_ms"]), (50, 20000, 60000))
+        self.halt()
+        loaded = aos_daemon.load_info(self.home)
+        self.assertEqual(loaded["stable_ms"], 10000)
+        write_json(self.home / "info.json", {"_metainfo": {"_type": "daemon", "_version": 1},
+                                             "restart_delay_ms": 90000})
+        self.assertEqual(aos_daemon.load_info(self.home)["restart_max_ms"], 90000)
+        for bad in ({"spawn_per_sec": 0}, {"max_children": True}, {"poll_ms": 0}, {"stable_ms": -1},
+                    {"restart_delay_ms": 10, "restart_max_ms": 5}):
+            with self.subTest(bad=bad):
+                write_json(self.home / "info.json", dict({"_metainfo": {"_type": "daemon", "_version": 2}}, **bad))
+                self.boot_fails("FieldTypeMismatch")
+        write_json(self.home / "info.json", {"_metainfo": {"_type": "daemon", "_version": 3}})
+        self.boot_fails("NotAHome")
+
+    def test_broken_pool_json_refuses_to_start(self):
+        (self.home / "pools/p").mkdir(parents=True)
+        write_json(self.home / "pools/p/pool.json", {"pool": "other", "owner": "/k", "count": 1})
+        self.boot_fails("ReadFailed")
 
     def test_requests_ack_and_reconciliation(self):
         aos_home.ensure_queue(self.home)
         original = "interrupted.json"
-        aos_home.post_request(self.home, original, {"jsonrpc": "2.0", "id": "saved", "method": "spawn"})
-        self.write(self.home / "state.json", {"pid": 0, "children": {}, "current": {
+        aos_home.post_request(self.home, original, {"jsonrpc": "2.0", "id": "saved", "method": "scale"})
+        write_json(self.home / "state.json", {"pid": 0, "current": {
             "name": original, "id": "saved", "notify": False}})
         self.start()
         response = aos_client.wait_response(self.home, original, timeout_ms=3000, poll_ms=5)
         self.assertEqual(response["error"]["data"]["code"], "Interrupted")
-        self.assertEqual(response["id"], "saved")
         ack = aos_client.ack(self.home, original)
         wait_for(lambda: not (self.home / "requests" / ack).exists())
         self.assertFalse((self.home / "responses" / original).exists())
         self.assertEqual(self.call("unknown")["error"]["code"], -32601)
-        self.stop()
-
-    def test_default_home_info_creation_and_bad_info(self):
-        os.unlink(self.home / "info.json")
-        self.start()
-        self.assertEqual(read_json(self.home / "info.json")["_metainfo"]["_type"], "daemon")
-        self.stop()
-        self.write(self.home / "info.json", {"_metainfo": {"_type": "wrong", "_version": 1}})
-        bad = subprocess.run([PY, str(CLI / "aos-daemon"), "boot", "--target", str(self.home)],
-                             stdin=subprocess.DEVNULL, capture_output=True, timeout=4)
-        self.assertEqual(bad.returncode, 1)
-        self.assertIn(b"NotAHome", bad.stderr)
-
-    def test_killed_daemon_restart_reaps_old_children_in_isolated_driver(self):
-        from _daemon_util import ORPHAN_DRIVER
-        target, ready = self.target("kill")
-        driver = self.root / "restart-driver.py"
-        driver.write_text(ORPHAN_DRIVER)
-        proc = subprocess.Popen([PY, str(driver), str(CLI.parent / "lib"),
-                                 str(CLI / "aos-daemon"), str(self.home), target, str(ready)],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
-        def cleanup():
-            if proc.poll() is None:
-                proc.send_signal(signal.SIGINT)  # 讓 driver 的 finally 收養並收屍
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    child = read_json(ready, {}).get("pid")
-                    if child is not None:
-                        try:
-                            os.killpg(child, signal.SIGKILL)
-                        except ProcessLookupError:
-                            pass
-                    os.killpg(proc.pid, signal.SIGKILL)
-            proc.wait(timeout=4)
-            proc.stdout.close()
-            proc.stderr.close()
-        self.addCleanup(cleanup)
-        stdout, stderr = proc.communicate(timeout=14)
-        self.assertEqual(proc.returncode, 0, stderr.decode())
-        self.assertEqual(json.loads(stdout)["children"], {})
-
-    def test_failure_before_child_table_write_closes_pipe_without_go(self):
-        cpu = self.root / "untouched-cpu"
-        cpu.mkdir()
-        target = self.write(self.root / "cpu-inst.json", {"argv": [PY, str(CLI / "aos-cpu"), str(cpu)]})
-        owner = aos_daemon.Daemon(self.home, self.info)
-        self.addCleanup(owner.close)
-        with mock.patch.object(owner, "save", side_effect=aos_home.HomeError("WriteFailed", "injected")):
-            with self.assertRaises(aos_home.HomeError):
-                owner.spawn({"name": "cpu", "target": target})
-        proc = owner.procs["cpu"].process
-        def cleanup():
-            if proc.poll() is None:
-                proc.kill()
-            proc.wait(timeout=4)
-        self.addCleanup(cleanup)
-        owner.close()
-        self.assertEqual(proc.wait(timeout=4), 0)
-        self.assertEqual(list(cpu.iterdir()), [])
-
-    def test_stopping_rejects_spawn_and_kill_remains_available(self):
-        self.start(controlled=True)
-        target, ready = self.target("kill")
-        self.spawn(target)
-        wait_for(ready.exists)
-        aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        self.stage()
-        error = self.call("spawn", {"name": "new", "target": target})["error"]
-        self.assertEqual(error["data"]["code"], "Stopping")
-        self.assertIn("result", self.call("kill", {"name": "child"}))
-        self.advance(11)
-        self.stage(stage="term")
-        self.advance(12)
-        self.assertEqual(self.proc.wait(timeout=6), 0)
-
-    def test_stop_deadline_is_per_child_and_repeat_kill_does_not_reset(self):
-        owner = aos_daemon.Daemon(self.home, self.info)
-        owner.state["children"] = {
-            "a": {"pid": 101, "state": "running"}, "b": {"pid": 102, "state": "running"}}
-        with mock.patch.object(owner, "save"), mock.patch.object(owner, "_send"), \
-             mock.patch("aos_daemon.time.monotonic", return_value=10):
-            owner.kill({"name": "a"})
-        with mock.patch.object(owner, "save"), mock.patch.object(owner, "_send"), \
-             mock.patch("aos_daemon.time.monotonic", return_value=11):
-            owner.kill({"name": "a"})
-            owner.kill({"name": "b"})
-        self.assertEqual(owner.stages["a"], ("stop", 10.08))
-        self.assertEqual(owner.stages["b"], ("stop", 11.08))
-        for name in ("a", "b"):
-            handle = mock.Mock()
-            handle.process.poll.return_value = None
-            owner.procs[name] = handle
-        with mock.patch("aos_daemon.time.monotonic", return_value=10.09), \
-             mock.patch("aos_daemon._signal_pid") as send:
-            owner.advance_stops()
-            send.assert_called_once_with(101, signal.SIGTERM)
-        with mock.patch("aos_daemon.time.monotonic", return_value=10.18), \
-             mock.patch("aos_daemon._signal_pid") as send:
-            owner.advance_stops()
-            send.assert_called_once_with(101, signal.SIGKILL, group=True)
-        self.assertEqual(owner.stages["b"], ("stop", 11.08))
-
-    def test_exit_file_failure_does_not_turn_zero_exit_into_restart(self):
-        owner = aos_daemon.Daemon(self.home, self.info)
-        owner.children["child"] = {"pid": 123, "state": "running", "restart": True,
-                                   "alive": True, "exits": 0, "last_exit": None}
-        handle = mock.Mock()
-        handle.process.poll.return_value = 0
-        handle.finish.return_value = (1, "aos")
-        owner.procs["child"] = handle
-        with mock.patch.object(owner, "save"), mock.patch("aos_daemon._log"):
-            owner.reap()
-        self.assertEqual(owner.children, {})
-        self.assertEqual(owner.restarts, {})
-        self.assertEqual(owner.procs, {})
-
-    def test_restart_target_missing_then_restored_retries(self):
-        self.info["restart_delay_ms"] = 150
-        self.write(self.home / "info.json", self.info)
-        self.start(controlled=True)
-        target, _ = self.target("exit9")
-        old = self.spawn(target, restart=True)
-        wait_for(lambda: self.children().get("child", {}).get("state") == "dead")
-        wait_for(lambda: self.clock_state().get("restarts", {}).get("child"))
-        Path(target).unlink()
-        self.advance(10.151)
-        wait_for(lambda: "SpawnFailed" in (self.root / "daemon.log").read_text())
-        self.assertEqual(self.children()["child"]["state"], "dead")
-        self.target("normal")
-        self.advance(10.302)
-        new = wait_for(lambda: self.children().get("child", {}).get("pid") != old and
-                       self.children().get("child", {}).get("state") == "running" and self.children()["child"])
-        self.groups.add(new["pid"])
-        self.stop()
-
-    def test_notification_and_broken_json_follow_shared_envelopes(self):
-        self.start()
         name = aos_client.new_name("notification")
         aos_home.post_request(self.home, name, {"jsonrpc": "2.0", "method": "unknown"})
         wait_for(lambda: not (self.home / "requests" / name).exists())
         self.assertFalse((self.home / "responses" / name).exists())
-        broken = self.home / "requests" / "broken.tmp"
-        broken.write_bytes(b"{")
-        os.link(broken, self.home / "requests" / "broken.json")
-        broken.unlink()
-        response = aos_client.wait_response(self.home, "broken.json", timeout_ms=3000, poll_ms=5)
-        self.assertEqual(response["error"]["code"], -32700)
-        aos_client.ack(self.home, "broken.json")
-        self.stop()
+        self.assertEqual(self.ok(self.call("ls")), {"pools": {}})
+        self.halt()
+
+    def test_ls_rpc(self):
+        self.start()
+        self.ok(self.scale(count=2, target=self.targets(2), home=str(self.root / "h/{name}")))
+        self.running("p", 2)
+        (self.root / "h/1").mkdir(parents=True)
+        write_json(self.root / "h/1/state.json", {"current": {"name": "x"}})
+        everything = self.ok(self.call("ls", {}))
+        self.assertEqual(everything["pools"]["p"]["running"], 2)
+        one = self.ok(self.call("ls", {"pool": "p"}))
+        self.assertEqual((one["children"]["0"]["busy"], one["children"]["1"]["busy"]), (False, True))
+        self.assertEqual(self.code(self.call("ls", {"pool": "zz"})), "NotFound")
+        self.halt()
 
     def test_home_resolution_precedence(self):
         with mock.patch.dict(os.environ, {"AOS_DAEMON_HOME": str(self.home), "HOME": str(self.root)}):
@@ -487,22 +433,43 @@ class DaemonTest(unittest.TestCase):
         try:
             os.chdir(self.root)
             with mock.patch.dict(os.environ, {"HOME": str(self.root)}, clear=True):
-                # 09-24 fix-r4：~/.aos-daemon 預設拿掉，沒給也沒設就是目前資料夾。
                 self.assertEqual(aos_daemon.daemon_home(), str(Path(self.root).resolve()))
         finally:
             os.chdir(cwd)
 
-    def test_missing_plain_target_is_spawn_failed(self):
-        self.start()
-        error = self.call("spawn", {"name": "missing", "target": str(self.root / "absent")})["error"]
-        self.assertEqual((error["code"], error["data"]["code"]), (-32000, "SpawnFailed"))
-        self.assertEqual(self.children(), {})
-        self.stop()
 
-    def test_directory_missing_dir_target_is_spawn_failed(self):
-        self.start()
-        error = self.call("spawn", {"name": "missing", "target": str(self.root),
-                                    "dir_target": "absent.json"})["error"]
-        self.assertEqual((error["code"], error["data"]["code"]), (-32000, "SpawnFailed"))
-        self.assertEqual(self.children(), {})
-        self.stop()
+class UnitTest(unittest.TestCase):
+    def test_members_and_backoff(self):
+        self.assertEqual(aos_daemon_pools.members(3, [1]), [0, 2, 3])
+        self.assertEqual(aos_daemon_pools.members(0, [5]), [])
+        owner = aos_daemon.Daemon("/nonexistent", dict(aos_daemon.INFO_DEFAULTS), budget=10)
+        self.assertEqual([owner.backoff_ms(s) for s in (1, 2, 3, 7, 8)], [1000, 2000, 4000, 60000, 60000])
+
+    def test_remove_pool_deletes_summary_first(self):
+        import tempfile
+        with tempfile.TemporaryDirectory(prefix="aos-daemon-test-") as tmp:
+            pool = Path(tmp) / "pools" / "p"
+            (pool / "kids").mkdir(parents=True)
+            for leaf in ("summary.json", "pool.json"):
+                (pool / leaf).write_text("{}")
+            order = []
+            real = os.unlink
+            def unlink(path, *a, **k):
+                order.append(Path(path).name)
+                return real(path, *a, **k)
+            with mock.patch("aos_daemon_pools.os.unlink", unlink):
+                aos_daemon_pools.remove_pool(tmp, "p")
+            self.assertEqual(order[:2], ["summary.json", "pool.json"])
+            self.assertFalse(pool.exists())
+
+    def test_fd_budget_takes_open_file_limit(self):
+        info = dict(aos_daemon.INFO_DEFAULTS, max_children=10 ** 9)
+        with mock.patch("aos_daemon.resource.getrlimit", return_value=(1000, 1000)):
+            self.assertEqual(aos_daemon.fd_budget(info), 936)
+        info["max_children"] = 5
+        with mock.patch("aos_daemon.resource.getrlimit", return_value=(1000, 1000)):
+            self.assertEqual(aos_daemon.fd_budget(info), 5)
+
+
+if __name__ == "__main__":
+    unittest.main()

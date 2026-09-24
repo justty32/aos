@@ -6,7 +6,6 @@ from pathlib import Path
 import sys
 
 import aos_client
-import aos_daemon
 import aos_home
 from aos_kernel_boot import boot, status, stop
 from aos_kernel_engine import tick
@@ -32,8 +31,8 @@ def _stderr_hint(target):
 
 
 def _summary(home, snapshot, as_json=False):
-    info = load_info(home)
-    code, message = health(home, snapshot=snapshot, info=info)
+    """ls：health 一行、鏈、按池一行、行程。按池的完整 ls 是下一隊的事，這裡只求印得出來。"""
+    code, message = health(home, snapshot=snapshot)
     marks = agent_marks(snapshot)
     if code == "ok":
         # fix-r5：kernel 正常時再看 agent 的暫停／重試，別印一個樂觀的 ok。
@@ -47,30 +46,33 @@ def _summary(home, snapshot, as_json=False):
         snapshot["last_seq"] if snapshot["last_seq"] is not None else "-",
         "alive" if daemon["alive"] else "dead"),
         "kernel cpu %s  current %s  requests %s" % (
-            kcpu["name"] or "-", (kcpu["current"] or {}).get("name", "-"), kcpu["requests"])]
-    slots = snapshot["cpus"] or {}
-    names = dict.fromkeys([*info["cpus"], *slots])
-    if kcpu["name"]:
-        names[kcpu["name"]] = None
-    for name in names:
-        slot = slots.get(name, {})
-        busy = "busy %s (%s)" % (slot.get("proc"), slot["req"]) if slot.get("req") else "idle"
-        child = daemon["children"].get(name)
-        child_status = child["state"] if child else "missing"
-        if not daemon["alive"]:
-            child_status = "dead（daemon 沒在跑）"  # fix-r5：daemon 被 KILL 時孩子表不會更新
-        pool = info["cpus"].get(name, {}).get("pool", "-")
-        lines.append("cpu %s  pool %s  %s  %s" % (name, pool, busy, child_status))
+            kcpu["name"], (kcpu["current"] or {}).get("name", "-"), kcpu["requests"])]
+    busy = snapshot.get("busy") or {}
+    for pool, entry in (snapshot.get("pools") or {}).items():
+        summary = entry.get("summary")
+        daemon_part = ("daemon %s: 不在" % entry["dpool"] if summary is None else
+                       "daemon %s: running %s pending %s dead %s failed %s" % (
+                           entry["dpool"], *(summary.get(k, 0) for k in ("running", "pending", "dead", "failed"))))
+        if pool == "kernel":
+            lines.append("pool kernel  sent %s  %s" % (entry["sent"]["count"], daemon_part))
+            continue
+        nbusy = sum(1 for k in busy if k.startswith(pool + "/"))
+        line = "pool %s  want %s  sent %s  busy %d  idle %d  draining %s  %s" % (
+            pool, (entry.get("want") or {}).get("count", "-"), entry["sent"]["count"], nbusy,
+            len(entry.get("free") or []), entry.get("draining", 0), daemon_part)
+        if entry.get("pending"):
+            line += "  scale 單在路上"
+        if entry.get("error"):
+            line += "  錯誤 %s（%s）" % (entry["error"]["code"], entry["error"]["message"])
+        lines.append(line)
     for name, proc in (snapshot["procs"] or {}).items():
         lines.append("proc %s  %s  %s  runs %s  fails %s  pending %s" % (
             name, "once" if proc["once"] else "repeat", proc["status"], proc["runs"], proc["fails"],
             "有" if proc["pending"] else "-") +
             ("  " + marks[name][1] if name in marks else "") +
             ("  看 " + _stderr_hint(proc["target"]) if proc["status"] == "bad" else ""))
-    lines.append("queue %s" % (" ".join(snapshot["queue"] or []) or "-"))
+    lines.append("queued %s" % snapshot.get("queued", 0))
     return "\n".join(lines)
-
-
 
 
 class _Parser(argparse.ArgumentParser):
@@ -85,8 +87,8 @@ class _Parser(argparse.ArgumentParser):
 
 TARGET_HELP = "kernel 家（省略＝AOS_KERNEL_HOME，再沒有就目前資料夾）"
 DAEMON_HELP = "daemon 家（省略＝AOS_DAEMON_HOME，再沒有就目前資料夾）"
-INIT_EPILOG = ("--config 是一份 JSON，就是 info.json 要寫的那幾格（cpus 必填；tick_ms、interval_ms、timeout_ms、"
-               "done_exit、bad_after 可省）。沒有 pool 是 kernel 的 cpu 就自動加 k。最小例子：\n  " + CONFIG_EXAMPLE)
+INIT_EPILOG = ("--config 是一份 JSON，就是 info.json 要寫的那幾格：kernel 參數＋pools 池表，工作池可以一個都沒有"
+               "（kernel 池沒寫就補 {\"count\": 1}）。沒給 --config＝只有 kernel 池。例：\n  " + CONFIG_EXAMPLE)
 
 
 def _parser():
@@ -105,9 +107,10 @@ def _parser():
             p.add_argument("name", help="回音檔名或路徑" if command == "ack" else "行程名稱")
         p.add_argument("--target", metavar="K", help=TARGET_HELP)
         if command == "init":
-            p.usage = "aos-kernel init [--target K] --config FILE"
+            p.usage = "aos-kernel init [--target K] [--config FILE] [--daemon D]"
             p.epilog = INIT_EPILOG
-            p.add_argument("--config", metavar="FILE", help="info 設定檔（JSON）；必填")
+            p.add_argument("--config", metavar="FILE", help="info 設定檔（JSON）；省略＝只有 kernel 池")
+            p.add_argument("--daemon", metavar="D", help="預設的 daemon 家（省略＝config 裡的，再沒有就 AOS_DAEMON_HOME）")
         elif command == "check":
             p.add_argument("--agent", action="append", help="一併檢查 agent 家")
             p.add_argument("--daemon-target", action="append", metavar="D", help=DAEMON_HELP)
@@ -118,7 +121,6 @@ def _parser():
         elif command == "ls":
             p.add_argument("--json", action="store_true", help="輸出完整狀態 JSON")
         elif command == "boot":
-            p.add_argument("--daemon-target", metavar="D", help=DAEMON_HELP)
             p.add_argument("--wait-ms", type=int, default=30000, help="交接等待上限（毫秒，預設 30000）")
         elif command == "tick":
             p.add_argument("--chain", required=True, help="tick 所屬鏈 id")
@@ -170,11 +172,10 @@ def _cli_request(args, trailing):
 
 def _run(args, trailing):
     if args.command == "init":
-        if not args.config:
-            raise CLIUsage("init 要給 --config FILE：一份 JSON，就是 info.json 要寫的那幾格（cpus 必填），"
-                           "例：" + CONFIG_EXAMPLE)
-        config = aos_home.read_json(Path(args.config))
-        print("initialized " + init(args.home, config=config))
+        if args.config == "" or args.daemon == "":
+            raise CLIUsage("--config／--daemon 不可為空")
+        config = aos_home.read_json(Path(args.config)) if args.config else None
+        print("initialized " + init(args.home, config=config, daemon=args.daemon))
         return 0
     if args.command == "check":
         from aos_kernel_check import check
@@ -189,10 +190,10 @@ def _run(args, trailing):
     if args.command == "halt":
         return stop(args.home, args.wait_ms, args.no_wait)
     if args.command == "boot":
-        if args.daemon_target == "":
-            raise CLIUsage("--daemon-target 不可為空")
-        code = boot(args.home, args.daemon_target, args.wait_ms)
-        print("booted %d cpus" % len(load_info(args.home)["cpus"]))  # fix-r5：成功也講一聲
+        code = boot(args.home, args.wait_ms)
+        pools = load_info(args.home)["pools"]
+        # fix-r5：成功也講一聲
+        print("booted %d pools, %d cpus" % (len(pools), sum(p["count"] for p in pools.values())))
         return code
     if args.command == "tick":
         return tick(args.home, args.chain, args.seq)
