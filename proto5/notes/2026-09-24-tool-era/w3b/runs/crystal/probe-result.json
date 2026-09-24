@@ -8,12 +8,9 @@
   },
   {
    "text": "把 old.md 改名成 ../../etc/x.md",
-   "result": "handoff",
-   "rule": "crystal-2",
-   "groups": {
-    "f1": "old.md",
-    "f2": "../../etc/x.md"
-   }
+   "result": "lead",
+   "rule": null,
+   "groups": {}
   },
   {
    "text": "把 -rf.md 改名成 y.md",
@@ -35,12 +32,9 @@
   },
   {
    "text": "在專案建一個 ../x.md，內容寫「a」",
-   "result": "handoff",
-   "rule": "crystal-1",
-   "groups": {
-    "f1": "../x.md",
-    "q1": "a"
-   }
+   "result": "lead",
+   "rule": null,
+   "groups": {}
   },
   {
    "text": "把x.md改名成y.md",

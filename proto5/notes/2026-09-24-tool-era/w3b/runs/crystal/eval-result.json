@@ -180,7 +180,7 @@
   ]
  },
  {
-  "file": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/notes/2026-09-24-tool-era/w3b/runs/crystal/out/mech.json",
+  "file": "out/mech.json",
   "candidates": [
    "crystal-1",
    "crystal-2",
@@ -365,7 +365,7 @@
   ]
  },
  {
-  "file": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/notes/2026-09-24-tool-era/w3b/runs/crystal/out/llm-1.json",
+  "file": "out/llm-1.json",
   "candidates": [
    "llm-create-md",
    "llm-rename-md",
@@ -550,7 +550,7 @@
   ]
  },
  {
-  "file": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/notes/2026-09-24-tool-era/w3b/runs/crystal/out/llm-2.json",
+  "file": "out/llm-2.json",
   "candidates": [
    "llm-create-md",
    "llm-rename-md",
@@ -735,7 +735,7 @@
   ]
  },
  {
-  "file": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/notes/2026-09-24-tool-era/w3b/runs/crystal/out/llm-3.json",
+  "file": "out/llm-3.json",
   "candidates": [
    "llm-create-md",
    "llm-rename-md",
