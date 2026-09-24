@@ -213,9 +213,17 @@ class CpuLs(CpuCase):
         self.booted({"default": {"count": 2}, "llm": {"count": 1}})
         out, _ = self.main("cpu", "ls")
         lines = out.splitlines()
-        self.assertEqual(lines[0], "kernel   want 1  sent 1   daemon kernel: running 1 restarting 0 pending 0 dead 0 failed 0")
+        self.assertEqual(lines[0], "kernel   want 1  sent 1   daemon kernel: running 1 pending 0 dead 0 failed 0")
         self.assertEqual(lines[1], "default  want 2  sent 2  busy 0  idle 2  draining 0   "
-                                   "daemon default: running 2 restarting 0 pending 0 dead 0 failed 0")
+                                   "daemon default: running 2 pending 0 dead 0 failed 0")
+        # restarting 是 running 的子集：>0 才寫進 running 那格（使用者代裁）；--json 照舊分兩欄
+        row = {"pool": "default", "want": 2, "sent": 2, "declared": True, "busy": 0, "idle": 2, "draining": 0,
+               "daemon": "/d", "dpool": "default", "error": None, "gone": False, "pending": None,
+               "phase": "running", "daemon_alive": True, "moving": False, "removing": False, "waiting": [],
+               "summary": {"running": 2, "restarting": 1, "pending": 0, "dead": 0, "failed": 0}}
+        self.assertEqual(aos_kernel_rows.row_line("/k", {"daemon": "/d"}, row),
+                         "default  want 2  sent 2  busy 0  idle 2  draining 0   "
+                         "daemon default: running 2（含 restarting 1） pending 0 dead 0 failed 0")
         self.assertTrue(lines[2].startswith("llm      want 1  sent 1  busy 0  idle 1"), lines[2])
 
     def test_ls_pool_one_line_per_cpu_with_kids(self):
