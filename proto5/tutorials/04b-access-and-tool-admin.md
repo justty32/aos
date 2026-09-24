@@ -41,7 +41,7 @@ bwrap: ok
 aos-agent access set ref ~/docs --target $W/bob
 ```
 
-表裡多一行 `ref   ro    在    /home/you/docs`（碰到信任資料自動改唯讀，下面會講）；`../ref/x.txt` 或 `/work/ref/x.txt` 兩種寫法工具都讀得到——**碰得到的範圍是整個 `/work`，不只是起點那一個 mount**。想連網：`access net on`。換起點：`access cwd ref`。拿掉一個 mount：`access rm NAME`——但**正被當 `cwd` 用的那個不能 rm**。**換完起點或改完表，記得 `aos-agent say` 跟模型說一聲**，不然它會以為自己弄壞了。
+表裡多一行 `ref   rw    在    /home/you/docs`，結尾多印一行 `下一批工具生效，不用重 start`；`../ref/x.txt` 或 `/work/ref/x.txt` 兩種寫法工具都讀得到——**碰得到的範圍是整個 `/work`，不只是起點那一個 mount**。想連網：`access net on`。換起點：`access cwd ref`。拿掉一個 mount：`access rm NAME`——但**正被當 `cwd` 用的那個不能 rm**。**換完起點或改完表，記得 `aos-agent say` 跟模型說一聲**，不然它會以為自己弄壞了。
 
 ### `self`（整個家）只能唯讀
 
@@ -60,11 +60,11 @@ self 可寫、但包含 /home/you/aos-try/bob/info.json（家裡的 info.json）
 ### 掛兩個資料夾：一個可寫、一個唯讀
 
 ```sh
-aos-agent access set ws workspace --cwd --target $W/bob     # 起點，可寫
+aos-agent access set ws $W/bob/workspace --cwd --target $W/bob   # 起點，可寫（家裡的寫絕對路徑）
 aos-agent access set ref ~/docs --ro --target $W/bob        # 第二個，唯讀
 ```
 
-工具起點在 `/work/ws`，照樣讀得到 `../ref/笔记.txt`；但寫 `../ref/新檔.txt` 會退：
+工具起點在 `/work/ws`，照樣讀得到 `../ref/筆記.txt`；但寫 `../ref/新檔.txt` 會退：
 
 ```text
 {"ok": false, "error": "ReadOnly",
@@ -164,6 +164,7 @@ aos-agent tools rm date --target $W/bob
 
 ```text
 拿掉 date：info.tools 第 0 條改成只挑（原名）read、write、edit、bash、grep、find、ls
+注意：這條是整個資料夾，之後放進去的新工具要加進 only（或 tools add）才會出現
 檔還在 …/tools/date.json（第 0 個，原名 date）；沒刪任何檔
 下一批工具生效，不用重 start
 ```
