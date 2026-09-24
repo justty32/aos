@@ -213,6 +213,41 @@ class TaskFlowTests(TeamCase):
         self.assertEqual(self.human_mail()[-1]['status'], 'DONE')
         self.assertTrue((self.lay.team / 'post' / 'jobs-done' / 'v-t-0001-r1-a1').is_dir())
 
+    def test_kernel_submit_crash_recovery(self):
+        """崩在「放單、記下已交」之間：kernel 收了＝不重放；沒收到＝用同一個單名重放（不多一次）。"""
+        kernel = self.tmp / 'K'
+        (kernel / 'requests').mkdir(parents=True)
+        (kernel / 'responses').mkdir()
+        self.open_ticket()
+        self.done()
+        env = dict(os.environ, AOS_KERNEL_HOME=str(kernel))
+        self.post(submit=None, env=env)
+        jobdir = self.lay.team / 'post' / 'jobs' / 'v-t-0001-r1-a1'
+        job = json.loads((jobdir / 'job.json').read_text())
+        self.assertEqual((job['mode'], job['status'], job['tries']), ('kernel', 'submitted', 1))
+        req = kernel / 'requests' / job['request']
+        body = json.loads(req.read_text())
+        self.assertEqual((body['method'], body['params']['once'], body['params']['name']),
+                         ('add', True, 'v-t-0001-r1-a1-1'))
+        job['status'] = 'submitting'                       # 假裝崩在記下之前
+        fmt.write_json(jobdir / 'job.json', job)
+        self.post(submit=None, env=env)
+        job = json.loads((jobdir / 'job.json').read_text())
+        self.assertEqual((job['status'], job['tries']), ('submitted', 1))
+        req.unlink()                                       # kernel 沒收到（原單不見、也沒回音、帳本沒有）
+        job['status'] = 'submitting'
+        fmt.write_json(jobdir / 'job.json', job)
+        self.post(submit=None, env=env)
+        job = json.loads((jobdir / 'job.json').read_text())
+        self.assertEqual((job['status'], job['tries']), ('submitted', 1))
+        self.assertTrue(req.exists())
+        (kernel / 'responses' / job['request']).write_text('{}')   # 回音到了、結果也在 → 收、ack
+        self.job_result('v-t-0001-r1-a1', True)
+        self.post(submit=None, env=env)
+        self.assertEqual(self.ticket()['status'], 'done')
+        acks = [json.loads(p.read_text()) for p in (kernel / 'requests').glob('ack-*.json')]
+        self.assertEqual([a['params']['name'] for a in acks], [job['request']])
+
     def test_real_verify_command_result_is_collected(self):
         """真的跑 aos-team verify（就像 kernel 會跑的那一行），郵差下一輪收。"""
         self.open_ticket()

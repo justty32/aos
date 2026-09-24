@@ -420,10 +420,25 @@ class Post:
                 '--attempt', str(job['attempt']), '--out', str(self.job_dir(job['id']) / 'result.json'),
                 '--target', str(self.root)]
 
-    def launch(self, job):
-        """提交：有 kernel（AOS_KERNEL_HOME）＝aos-kernel add --once；沒有＝另開一個行程（不等它）。"""
+    def kernel_has(self, job):
+        """這份單 kernel 收了沒：原單還在 requests/、回音在 responses/、或帳本有這個行程。"""
+        if job.get('mode') != 'kernel':
+            return False
+        k = Path(job['kernel'])
+        if (k / 'requests' / job['request']).exists() or (k / 'responses' / job['request']).exists():
+            return True
+        try:
+            procs = json.loads((k / 'state.json').read_text(encoding='utf-8')).get('procs') or {}
+        except (OSError, ValueError, AttributeError):
+            return False
+        return '%s-%d' % (job['id'], job['tries']) in procs
+
+    def launch(self, job, again=False):
+        """提交：有 kernel（AOS_KERNEL_HOME）＝aos-kernel add --once；沒有＝另開一個行程（不等它）。
+        again：上次崩在放單途中、kernel 也沒收到＝用同一個單名重放，不算新的一次。"""
         d = self.job_dir(job['id'])
-        job['tries'] += 1
+        if not again:
+            job['tries'] += 1
         argv = self.verify_argv(job)
         kernel = self.env.get(KERNEL_ENV)
         if self.submitter is not None:
@@ -462,8 +477,11 @@ class Post:
 
     def collect_job(self, job):
         d = self.job_dir(job['id'])
-        if job['status'] in ('new', 'submitting'):
-            self.launch(job)
+        if job['status'] == 'submitting' and self.kernel_has(job):
+            job.update(status='submitted', submitted_at=self.now_iso())   # 崩在「放單、記下已交」之間：kernel 已經收了
+            self.save_job(job)
+        elif job['status'] in ('new', 'submitting'):
+            self.launch(job, again=job['status'] == 'submitting')
             return
         if job['status'] == 'submitted':
             result = d / 'result.json'
