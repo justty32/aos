@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""write：整個檔寫入（已有就覆蓋），父資料夾自動建。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+from _common import run, arg, resolve, rel, fail, write_atomic  # noqa: E402
+
+
+def main(args, root):
+    path = arg(args, 'path', str, required=True)
+    content = arg(args, 'content', str, required=True)
+    full = resolve(root, path, must_exist=False)
+    if os.path.isdir(full):
+        fail('IsADirectory', '%s is a directory' % path)
+    existed = os.path.exists(full)
+    try:
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        write_atomic(full, content)
+    except OSError as e:
+        fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
+    return '%s %s (%d bytes)' % ('overwrote' if existed else 'created', rel(root, full),
+                                 len(content.encode('utf-8')))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

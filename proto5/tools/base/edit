@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""edit：精確字串取代。old_string 必須剛好出現一次（或 replace_all=true）。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+from _common import run, arg, resolve, rel, fail, write_atomic  # noqa: E402
+
+
+def main(args, root):
+    path = arg(args, 'path', str, required=True)
+    old = arg(args, 'old_string', str, required=True)
+    new = arg(args, 'new_string', str, required=True)
+    replace_all = arg(args, 'replace_all', bool, False)
+    if old == '':
+        fail('BadArguments', 'old_string must not be empty (use write to create or overwrite a file)')
+    if old == new:
+        fail('BadArguments', 'old_string and new_string are identical; nothing to change')
+    full = resolve(root, path)
+    if os.path.isdir(full):
+        fail('IsADirectory', '%s is a directory' % path)
+    try:
+        with open(full, encoding='utf-8', newline='') as f:
+            text = f.read()
+    except UnicodeDecodeError:
+        fail('BinaryFile', '%s is not UTF-8 text' % path)
+    except OSError as e:
+        fail('ReadFailed', 'cannot read %s: %s' % (path, e.strerror or e))
+    starts = _positions(text, old)
+    if not starts:
+        fail('NoMatch', 'old_string not found in %s; read the file and copy the text exactly '
+             '(including whitespace and indentation)' % path)
+    if len(starts) > 1 and not replace_all:
+        lines = [str(text.count('\n', 0, i) + 1) for i in starts[:10]]
+        fail('NotUnique', 'old_string occurs %d times in %s (lines %s); include more surrounding lines to '
+             'make it unique, or set replace_all=true' % (len(starts), path, ', '.join(lines)),
+             count=len(starts))
+    line = text.count('\n', 0, starts[0]) + 1
+    result = text.replace(old, new) if replace_all else text.replace(old, new, 1)
+    try:
+        write_atomic(full, result)
+    except OSError as e:
+        fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
+    n = len(starts) if replace_all else 1
+    return 'edited %s: replaced %d occurrence%s (first at line %d)' % (
+        rel(root, full), n, '' if n == 1 else 's', line)
+
+
+def _positions(text, sub):
+    """不重疊的出現位置（跟 str.replace／str.count 同一套算法）。"""
+    out, i = [], text.find(sub)
+    while i != -1:
+        out.append(i)
+        i = text.find(sub, i + len(sub))
+    return out
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

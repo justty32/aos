@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""ls：列一個資料夾（照名字排序，資料夾結尾加 /，含 . 開頭的）。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+from _common import run, arg, resolve, rel, fail  # noqa: E402
+
+DEFAULT_LIMIT = 500
+MAX_LIMIT = 5000
+
+
+def main(args, root):
+    path = arg(args, 'path', str, '.')
+    limit = arg(args, 'limit', int, DEFAULT_LIMIT)
+    if not 1 <= limit <= MAX_LIMIT:
+        fail('BadArguments', 'limit must be 1..%d' % MAX_LIMIT)
+    full = resolve(root, path)
+    if not os.path.isdir(full):
+        fail('NotADirectory', '%s is not a directory; use read' % path)
+    try:
+        names = sorted(os.listdir(full))
+    except OSError as e:
+        fail('ReadFailed', 'cannot list %s: %s' % (path, e.strerror or e))
+    if not names:
+        return '(empty directory: %s)' % rel(root, full)
+    shown = [n + ('/' if os.path.isdir(os.path.join(full, n)) else '') for n in names[:limit]]
+    text = '\n'.join(shown)
+    if len(names) > limit:
+        text += '\n[showing %d of %d entries; raise limit or use find]' % (limit, len(names))
+    return text
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))
