@@ -347,10 +347,10 @@ def on_tool_draft(lay, roster, req):
         qid = next_number(lay.wait_user, 'q-')
         rel = 'team/tool-drafts/%s/%s/draft.py' % (did, req['name'])
         ask = {'id': req['id'] + '.q', 'from': member, 'kind': 'ask', 'at': now, 'reply_to': None,
-               'options': ['批准', '不要'],
-               'question': '%s %s 寫了一支工具 %s：%s。牢裡測試 %d 條全過。程式在 %s（先看過）。'
+               'options': ['批准', '不要'], 'tag': 'tool',
+               'question': '%s 寫了一支工具 %s：%s。牢裡測試 %d 條全過。程式在 %s（先看過）。'
                            '要裝給 %s 就跑 aos-team tool approve %s；不要就 aos-team answer %s 不要'
-                           % (PREFIX, member, req['name'], req['description'].strip(), test['total'], rel, member,
+                           % (member, req['name'], req['description'].strip(), test['total'], rel, member,
                               qid, qid)}
         rec['effects'] = aos_team_ask.on_ask(lay, roster, ask)
         rec['q'] = next(x['id'] for x in aos_team_ask.all_questions(lay) if x.get('request') == ask['id'])

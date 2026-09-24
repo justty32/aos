@@ -151,6 +151,8 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_team_beat` | 心跳：`aos-team beat`／`routine`，照 `team/routines.json` 算誰到期、以開單方式派出 |
 | `aos_team_score` | `aos-team score`：把六軸表能自動量的部分讀紀錄填好，只讀不叫模型 |
 | `aos_team_lock` | 短期獨佔鎖：`lock` 工具與 `aos-team lock`，`team/locks/<名>.json`，acquire／release／ls 全非同步，逾時自動放 |
+| `aos_team_spawn` | 生新成員（第三波 W3-1）：`kind: spawn` 郵差檢查＋開「[成員]」題，`aos-team spawn ls／approve`（改名冊、init、start、回覆） |
+| `aos_team_toolsmith` | 模型造工具（第三波 W3-1）：`kind: tool_draft` 郵差生包＋牢裡 `tools test`，`aos-team tool ls／approve`（核 sha256、`tools add`） |
 
 ---
 

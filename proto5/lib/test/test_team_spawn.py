@@ -84,7 +84,9 @@ class OnSpawnTests(Base):
         self.assertEqual(eff, [])                       # 不叫醒申請者：人答了才有信
         qs = self.open_questions()
         self.assertEqual(len(qs), 1)
-        self.assertTrue(qs[0]['question'].startswith('[成員] lead 想生一個新成員 worker-2'), qs[0]['question'])
+        self.assertTrue(qs[0]['question'].startswith('lead 想生一個新成員 worker-2'), qs[0]['question'])
+        self.assertEqual(qs[0]['tag'], 'member')
+        self.assertTrue(ask.describe(qs[0]).startswith('[成員] '))
         self.assertIn('aos-team spawn approve %s' % qs[0]['id'], qs[0]['question'])
         rec = spawn.records(self.lay)[0]
         self.assertEqual((rec['id'], rec['name'], rec['mail_to'], rec['q']), ('s-0001', 'worker-2', ['lead', 'human'],
@@ -284,7 +286,7 @@ class ToolAndPostTests(Base):
         self.post_once()
         qs = self.open_questions()
         self.assertEqual(len(qs), 1, qs)
-        self.assertTrue(qs[0]['question'].startswith('[成員]'))
+        self.assertEqual(qs[0]['tag'], 'member')
 
     def test_tool_catches_mail_to_typo(self):
         self.point_outbox('lead')

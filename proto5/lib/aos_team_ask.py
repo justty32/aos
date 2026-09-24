@@ -87,7 +87,8 @@ def on_answer(lay, roster, req):
 
 # 借用 kind=ask 的申請種類 → aos-team wait ls 的固定前綴（09-24 W2C 待拍題，2026-09-24 已裁決要加）：
 # 從申請的 tag 欄位判斷，不猜問句字串；一般問題（沒有 tag）不加前綴。
-TAG_LABEL = {'access': '權限', 'persona': '人格'}
+TAG_LABEL = {'access': '權限', 'persona': '人格',
+             'member': '成員', 'tool': '工具'}   # 第三波 W3-1：spawn／tool_draft 的題目（郵差自己開題帶 tag，不經 ask 申請）
 
 
 def describe(q):

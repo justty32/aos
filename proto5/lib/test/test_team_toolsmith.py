@@ -158,7 +158,8 @@ class DraftTests(Team):
         rec = self.rec('d-0001')
         self.assertTrue(rec['test']['passed'], rec)
         q = ask.load(self.lay, rec['q'])
-        self.assertTrue(q['question'].startswith('[工具] worker-1 寫了一支工具 count_md_words'), q['question'])
+        self.assertTrue(q['question'].startswith('worker-1 寫了一支工具 count_md_words'), q['question'])
+        self.assertTrue(ask.describe(q).startswith('[工具] '))
         self.assertIn('aos-team tool approve %s' % q['id'], q['question'])
         self.assertIn('team/tool-drafts/d-0001/count_md_words/draft.py', q['question'])
 
@@ -337,7 +338,7 @@ class ToolThroughPostTests(Team):
                   health=lambda n: ('ok', 'ok'), watch_every=0).run()
         qs = ask.open_questions(self.lay)
         self.assertEqual(len(qs), 1)
-        self.assertTrue(qs[0]['question'].startswith('[工具]'))
+        self.assertEqual(qs[0]['tag'], 'tool')
         # staging 資料夾留在 outbox 裡，郵差不當信處理、不搬
         self.assertTrue((self.lay.outbox('worker-1') / 'tools-staging').is_dir())
 
