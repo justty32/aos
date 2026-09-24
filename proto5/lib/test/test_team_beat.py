@@ -161,12 +161,72 @@ class BeatTests(BeatCase):
         d = beat.Schedule({'name': 'y', 'daily': '09:00', 'added_at': '2026-09-25T10:00:00+08:00'}, 'Asia/Taipei')
         self.assertIsNone(d.latest(t))                        # 今天 9 點在登記之前：明天才第一次
         t2 = fmt.parse_iso('2026-09-28T09:30:00+08:00')
-        self.assertEqual(d.latest(t2).isoformat(), '2026-09-28T09:00:00+08:00')
+        self.assertEqual(d.latest(t2), fmt.parse_iso('2026-09-28T09:00:00+08:00'))
         self.assertEqual(d.count(None, d.latest(t2)), 3)
         with self.assertRaises(fmt.TeamError):
             beat.parse_every('2 weeks')
         with self.assertRaises(fmt.TeamError):
             beat.parse_daily('25:00')
+
+    def test_daily_dst_repeated_hour(self):
+        """紐約 2026-11-01 01:00～02:00 重複一次：第二次的 01:15 時，最近一次到期是當天第一次的 01:30（astra M11）。"""
+        d = beat.Schedule({'name': 'z', 'daily': '01:30', 'tz': 'America/New_York',
+                           'added_at': '2026-10-20T00:00:00-04:00'}, None)
+        second_0115 = fmt.parse_iso('2026-11-01T01:15:00-05:00')
+        self.assertEqual(d.latest(second_0115), fmt.parse_iso('2026-11-01T01:30:00-04:00'))
+        self.assertEqual(d.latest(fmt.parse_iso('2026-11-01T00:59:00-04:00')),
+                         fmt.parse_iso('2026-10-31T01:30:00-04:00'))
+
+    def test_bad_timezone_rejected(self):
+        r = self.cli('routine', 'add', 'x', '--daily', '09:00', '--tz', 'Asia/Taipie', '--to', 'worker-1',
+                     '--goal', 'g', '--done-file', 'a')
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('BadRoutine', r.stderr)
+        self.assertIn('Asia/Taipie', r.stderr)
+
+    def test_readded_routine_gets_new_tickets(self):
+        """同名的一次性例行刪掉、同一個時刻重加：是新的一條，不沿用舊的單（astra M6）。"""
+        at = (self.now + datetime.timedelta(minutes=1)).isoformat()
+        self.add('once-x', once=at)
+        self.now += datetime.timedelta(minutes=2)
+        self.beat()
+        self.post()
+        self.finish('t-0001')
+        self.beat()
+        self.assertTrue(self.state('once-x')['finished'])
+        self.assertEqual(self.cli('routine', 'rm', 'once-x').returncode, 0)
+        self.post()
+        row = self.add('once-x', once=at)
+        data = beat.load_routines(self.lay)
+        data['rows'][0]['added_at'] = (self.now - datetime.timedelta(minutes=2)).isoformat()
+        fmt.write_json(self.lay.routines, data, indent=2)
+        self.beat()
+        reqs = self.requests()
+        self.assertEqual(len(reqs), 2)
+        self.assertNotEqual(reqs[0]['id'], reqs[1]['id'])
+        self.post()
+        self.assertEqual(self.ticket('t-0002')['status'], 'sent')
+        self.assertFalse(self.state('once-x').get('finished'))
+
+    def test_failure_report_survives_crash(self):
+        """放棄這一次之後、寄報告之前崩了：報告記在待寄裡，下一輪照寄（astra M7）。"""
+        self.add()
+        self.beat()
+        self.post()
+        self.request('human', 'cancel', task='t-0001')
+        self.post()
+        orig = beat.Beat.flush_reports
+        beat.Beat.flush_reports = lambda *a: None                 # 模擬：寫完狀態就崩，報告沒寄
+        try:
+            self.beat()
+        finally:
+            beat.Beat.flush_reports = orig
+        self.assertEqual(self.state()['last_result'], 'failed')
+        self.assertEqual(len(self.state()['reports']), 1)
+        self.beat()
+        self.post()
+        self.assertIn('1 次都沒成', self.mails('lead')[-1][1])
+        self.assertEqual(self.state()['reports'], [])
 
     def test_routine_command_errors_and_ls(self):
         r = self.cli('routine', 'add', 'x', '--every', '2m', '--to', 'worker-1', '--goal', 'g')

@@ -28,7 +28,6 @@ import subprocess
 import sys
 import time
 
-import aos_agent_say
 import aos_team_ask
 import aos_team_format as fmt
 from aos_team_format import HUMAN, POST, TeamError, Layout
@@ -44,7 +43,6 @@ HEALTH_GRACE = 60                          # 秒：健康不是 ok 要持續多�
 JOB_TIMEOUT = 600                          # 秒：驗收工作多久沒結果算壞了
 JOB_TRIES = 3                              # 驗收工作跑不起來最多試幾次
 CLI_TEAM = Path(__file__).resolve().parent.parent / 'cli' / 'aos-team'
-MANAGED = re.compile(r'- \[(t-[0-9]{4,}(\.r[0-9]+)?|q-[0-9]{4,})[ \]]')
 CLERK_FILES = (('SESSION-LOG.md', '## 最新進度'), ('WAIT_USER.md', '## 待使用者項'))
 EMPTY_LINE = '（目前無）'
 
@@ -193,7 +191,8 @@ class Post:
         if rec.get('watch_pickup') and rec.get('picked_up_at') is None:
             if not Path(rec['where']).exists():
                 rec['picked_up_at'] = self.now_iso()
-                add_effects(rec, aos_team_task.letter_picked_up(self.lay, rec_letter(rec)))
+                if rec.get('dispatch'):            # 只有派工信推單子（sent → working）
+                    add_effects(rec, aos_team_task.letter_picked_up(self.lay, rec_letter(rec), rec['dispatch']))
                 self.save_rec(rec)
                 self.advance(rec)
         if not rec['complete'] and all(e['done'] for e in rec['effects']) and \
@@ -232,11 +231,11 @@ class Post:
                 letter ={'id': e['id'], 'from': e.get('from') or POST, 'to': e['to'], 'status': e['status'],
                           'reply_to': e.get('reply_to'), 'rev': e.get('rev'), 'text': trim(e['text']),
                           'at': self.now_iso()}
-                return [], self.send(letter, src=e['id'].rsplit('.e', 1)[0]), None
+                return [], self.send(letter, src=e['id'].rsplit('.e', 1)[0], dispatch=e.get('dispatch')), None
             if kind == 'verify':
                 return [], self.submit_verify(e['task'], e['rev'], e['attempt'], e['id']), None
             if kind == 'open_review':
-                return aos_team_task.open_review(self.lay, self.roster, e['task'], e['id']), None, None
+                return aos_team_task.open_review(self.lay, self.roster, e['task'], e['id'], e['rev'], e['attempt']), None, None
             if kind == 'step':
                 return aos_team_task.step(self.lay, e['task'], e['event']), None, None
             return [], None, '不認得的動作 %r' % kind
@@ -260,19 +259,23 @@ class Post:
             raise TeamError('NoHome', '收件人 %s 的家 %s 還沒建（aos-team init）' % (to, home))
         inbox = home / 'input'
         name = fmt.mail_filename(letter['id'])
-        if not already_delivered(home, inbox, name):
+        if fmt.already_delivered(home, name) is None:      # 還在 input／已收進 done/／正在 intake：都算投過
+            import aos_agent_say
             aos_agent_say.drop_new(inbox, name, fmt.mail_message(letter, self.tz))
         return str(inbox / name)
 
-    def send(self, letter, src):
-        """郵差自己生的信（後續動作、退信、通知）：投＋紀錄（id＝動作 id，重跑不重投）。"""
+    def send(self, letter, src, dispatch=None):
+        """郵差自己生的信（後續動作、退信、通知）：投＋紀錄（id＝動作 id，重跑不重投）。
+        dispatch：派工信（spec/team/tasks.md）；投到、被收走時原樣交給 letter_delivered／letter_picked_up。"""
         rid = letter['id']
         rec = self.load_rec(rid)
         if rec is None:
             where = self.deliver(letter)
             crash('delivered')
-            effects = [] if letter['to'] == HUMAN else aos_team_task.letter_delivered(self.lay, letter)
-            rec = self.new_rec(rid, 'letter', letter=letter, effects=effects, src=src, where=where)
+            effects = aos_team_task.letter_delivered(self.lay, letter, dispatch) \
+                if dispatch and letter['to'] != HUMAN else []
+            rec = self.new_rec(rid, 'letter', letter=letter, effects=effects, src=src, where=where,
+                               dispatch=dispatch)
             self.start_rec(rec)
             crash('recorded')
             self.say('投遞 %s  %s → %s  %s%s' % (rid, letter['from'], letter['to'], letter['status'],
@@ -317,16 +320,15 @@ class Post:
         rec = self.load_rec(rid)
         if rec is None:
             rec = self.take(sender, path, rid)
-        dest = path.parent / ('rejected' if rec['kind'] == 'rejected' else 'done')
-        dest.mkdir(exist_ok=True)
-        if path.exists():
-            os.replace(path, dest / path.name)
+        archive(path, 'rejected' if rec['kind'] == 'rejected' else 'done')
         crash('moved')
         self.finish(rec)
 
     def take(self, sender, path, rid):
         """第一次看到這個檔：驗、叫處理函式、投；寫紀錄。回紀錄。"""
         try:
+            if path.is_symlink() or not path.is_file():      # outbox 是模型寫得到的：不跟連結去讀別處
+                raise TeamError('NotARegularFile', '%s 不是一般檔（符號連結或別的東西），不讀' % path.name)
             if sender == POST:
                 kind, obj = 'letter', self.read_system_letter(path)
             else:
@@ -358,9 +360,7 @@ class Post:
                                     % (obj['id'], obj.get('reply_to'), e.code, e.msg)}]
         where = self.deliver(obj)
         crash('delivered')
-        if obj['to'] != HUMAN:
-            effects += aos_team_task.letter_delivered(self.lay, obj)
-        rec = self.new_rec(rid, 'letter', letter=obj, effects=effects, src=str(path), where=where)
+        rec =self.new_rec(rid, 'letter', letter=obj, effects=effects, src=str(path), where=where)
         self.start_rec(rec)
         crash('recorded')
         self.say('投遞 %s  %s → %s  %s%s' % (rid, obj['from'], obj['to'], obj['status'],
@@ -400,7 +400,7 @@ class Post:
         fmt.write_json(self.job_dir(job['id']) / 'job.json', job)
 
     def submit_verify(self, tid, rev, attempt, src):
-        """動作 verify：建一份一次性驗收工作並提交（不在這裡同步跑）。同一個 rev／attempt 只建一次。"""
+        """動作 verify：建一份驗收工作並提交第 1 次執行（不在這裡同步跑）。同一個 rev／attempt 只建一次。"""
         jid = 'v-%s-r%d-a%d' % (tid, rev, attempt)
         d = self.job_dir(jid)
         if d.exists() or (self.jobs_done / jid).exists():
@@ -408,63 +408,74 @@ class Post:
         tmp = self.jobs / ('.%s.tmp' % jid)
         tmp.mkdir(parents=True, exist_ok=True)
         job = {'_metainfo': {'_type': JOB_TYPE, '_version': 1}, 'id': jid, 'task': tid, 'rev': rev,
-               'attempt': attempt, 'src': src, 'status': 'new', 'tries': 0, 'created_at': self.now_iso(),
+               'attempt': attempt, 'src': src, 'status': 'open', 'runs': [], 'created_at': self.now_iso(),
                'effects': [], 'complete': False}
         fmt.write_json(tmp / 'job.json', job)
         os.rename(tmp, d)
         self.launch(job)
         return jid
 
-    def verify_argv(self, job):
-        return [sys.executable, str(CLI_TEAM), 'verify', job['task'], '--rev', str(job['rev']),
-                '--attempt', str(job['attempt']), '--out', str(self.job_dir(job['id']) / 'result.json'),
-                '--target', str(self.root)]
+    def run_names(self, job, run):
+        """kernel 的單名與行程名：帶團隊識別（同一個 kernel 上別隊的 t-0001 不會撞名）與第幾次執行。"""
+        tag = team_tag(self.root)
+        return 'post-%s-%s-%d.json' % (tag, job['id'], run['n']), '%s-%s-%d' % (job['id'], tag, run['n'])
 
-    def kernel_has(self, job):
-        """這份單 kernel 收了沒：原單還在 requests/、回音在 responses/、或帳本有這個行程。"""
-        if job.get('mode') != 'kernel':
-            return False
-        k = Path(job['kernel'])
-        if (k / 'requests' / job['request']).exists() or (k / 'responses' / job['request']).exists():
+    def launch(self, job):
+        """提交一次新的執行（第 n 次；結果寫 result-<n>.json，每次各寫各的檔）。
+        有 kernel（AOS_KERNEL_HOME）＝aos-kernel add --once；沒有＝另開一個行程（不等它）。"""
+        d = self.job_dir(job['id'])
+        run = {'n': len(job['runs']) + 1, 'state': 'starting', 'started_at': self.now_iso(), 'acked': False}
+        argv = [sys.executable, str(CLI_TEAM), 'verify', job['task'], '--rev', str(job['rev']),
+                '--attempt', str(job['attempt']), '--out', str(d / ('result-%d.json' % run['n'])),
+                '--target', str(self.root)]
+        kernel = self.env.get(KERNEL_ENV)
+        if self.submitter is not None:
+            run['mode'] = 'test'
+        elif kernel and os.path.isabs(kernel) and os.path.isdir(kernel):
+            fmt.write_json(d / ('inst-%d.json' % run['n']),
+                           {'argv': argv, 'cwd': str(self.root), 'stdout': 'out-%d.log' % run['n'],
+                            'stderr': 'err-%d.log' % run['n']})
+            run.update(mode='kernel', kernel=kernel)
+            run['request'], run['proc'] = self.run_names(job, run)
+        else:
+            run['mode'] = 'spawn'
+        job['runs'].append(run)
+        self.save_job(job)                       # 先記「要起這一次」，再真的起
+        self.start_run(job, run, argv)
+
+    def start_run(self, job, run, argv=None):
+        d = self.job_dir(job['id'])
+        if run['mode'] == 'test':
+            self.submitter(job, argv)
+        elif run['mode'] == 'kernel':
+            import aos_client
+            import aos_home
+            try:
+                aos_client.submit(run['kernel'], 'add', {'target': str(d / ('inst-%d.json' % run['n'])), 'once': True,
+                                                         'name': run['proc']}, name=run['request'])
+            except aos_home.RequestExists:
+                pass
+        else:
+            with open(d / ('out-%d.log' % run['n']), 'ab') as o, open(d / ('err-%d.log' % run['n']), 'ab') as e:
+                proc = subprocess.Popen(argv, cwd=str(self.root), stdin=subprocess.DEVNULL, stdout=o, stderr=e,
+                                        start_new_session=True)
+            run['pid'] = proc.pid
+        run['state'] = 'running'
+        self.save_job(job)
+        crash('job-submitted')
+        self.say('驗收 %s rev%d 第 %d 次：提交第 %d 次執行（%s）'
+                 % (job['task'], job['rev'], job['attempt'], run['n'], run['mode']))
+
+    def kernel_has(self, run):
+        """這次執行 kernel 還記得嗎：原單還在 requests/、回音在 responses/、或帳本有這個行程。"""
+        k = Path(run['kernel'])
+        if (k / 'requests' / run['request']).exists() or (k / 'responses' / run['request']).exists():
             return True
         try:
             procs = json.loads((k / 'state.json').read_text(encoding='utf-8')).get('procs') or {}
         except (OSError, ValueError, AttributeError):
             return False
-        return '%s-%d' % (job['id'], job['tries']) in procs
-
-    def launch(self, job, again=False):
-        """提交：有 kernel（AOS_KERNEL_HOME）＝aos-kernel add --once；沒有＝另開一個行程（不等它）。
-        again：上次崩在放單途中、kernel 也沒收到＝用同一個單名重放，不算新的一次。"""
-        d = self.job_dir(job['id'])
-        if not again:
-            job['tries'] += 1
-        argv = self.verify_argv(job)
-        kernel = self.env.get(KERNEL_ENV)
-        if self.submitter is not None:
-            job.update(self.submitter(job, argv) or {}, status='submitted', submitted_at=self.now_iso())
-        elif kernel and os.path.isabs(kernel) and os.path.isdir(kernel):
-            import aos_client
-            import aos_home
-            fmt.write_json(d / 'inst.json', {'argv': argv, 'cwd': str(self.root), 'stdout': 'out.log',
-                                             'stderr': 'err.log'})
-            request = 'post-%s-%d.json' % (job['id'], job['tries'])
-            job.update(status='submitting', mode='kernel', kernel=kernel, request=request)
-            self.save_job(job)
-            try:
-                aos_client.submit(kernel, 'add', {'target': str(d / 'inst.json'), 'once': True,
-                                                  'name': '%s-%d' % (job['id'], job['tries'])}, name=request)
-            except aos_home.RequestExists:
-                pass
-            job.update(status='submitted', submitted_at=self.now_iso())
-        else:
-            with open(d / 'out.log', 'ab') as o, open(d / 'err.log', 'ab') as e:
-                proc = subprocess.Popen(argv, cwd=str(self.root), stdin=subprocess.DEVNULL, stdout=o, stderr=e,
-                                        start_new_session=True)
-            job.update(status='submitted', mode='spawn', pid=proc.pid, submitted_at=self.now_iso())
-        self.save_job(job)
-        crash('job-submitted')
-        self.say('驗收 %s rev%d 第 %d 次：提交（%s）' % (job['task'], job['rev'], job['attempt'], job.get('mode', 'test')))
+        return run['proc'] in procs
 
     def collect_jobs(self):
         for d in sorted(self.jobs.iterdir()):
@@ -475,78 +486,121 @@ class Post:
             except (TeamError, OSError, ValueError, KeyError) as e:
                 self.warn('驗收工作 %s 收不下去：%s（留著，下一輪再試）' % (d.name, e))
 
+    def read_result(self, job, run):
+        """讀第 n 次執行的結果檔：沒有＝None；有但身分或格式不對＝改名成 .bad、回 False。"""
+        path = self.job_dir(job['id']) / ('result-%d.json' % run['n'])
+        if not path.exists():
+            return None
+        try:
+            res = fmt.read_json(path)
+            why = check_result(res, job)
+        except TeamError as e:
+            why = e.msg
+        if why:
+            self.warn('驗收工作 %s 第 %d 次的結果不對（%s），不收' % (job['id'], run['n'], why))
+            os.replace(path, path.with_name(path.name + '.bad'))
+            return False
+        return res
+
     def collect_job(self, job):
         d = self.job_dir(job['id'])
-        if job['status'] == 'submitting' and self.kernel_has(job):
-            job.update(status='submitted', submitted_at=self.now_iso())   # 崩在「放單、記下已交」之間：kernel 已經收了
-            self.save_job(job)
-        elif job['status'] in ('new', 'submitting'):
-            self.launch(job, again=job['status'] == 'submitting')
+        if job.get('complete'):                     # 崩在「記完成、搬進 jobs-done/」之間
+            os.replace(d, self.jobs_done / job['id'])
             return
-        if job['status'] == 'submitted':
-            result = d / 'result.json'
-            if result.exists():
-                res = fmt.read_json(result)
-                ev = {'type': 'verified', 'src': 'verify:%s' % job['id'], 'pass': bool(res.get('pass')),
-                      'results': res.get('results', []), 'rev': job['rev'], 'attempt': job['attempt']}
+        for run in job['runs']:
+            if run['state'] == 'starting':          # 崩在「記要起、真的起」之間
+                if run['mode'] == 'kernel' and not self.kernel_has(run):
+                    self.start_run(job, run)
+                elif run['mode'] in ('kernel', 'test'):
+                    run['state'] = 'running'
+                    self.save_job(job)
+                else:                               # 另開的行程起了沒不知道：當它丟了，照樣看它的結果檔
+                    run['state'] = 'lost'
+                    self.save_job(job)
+        if job['status'] == 'open':
+            res = None
+            for run in job['runs']:
+                got = self.read_result(job, run)
+                if got is False:
+                    run['state'] = 'ended'
+                elif got is not None:
+                    res, run['state'] = got, 'ended'
+                    break
+            if res is not None:
+                ev = {'type': 'verified', 'src': 'verify:%s' % job['id'], 'pass': res['pass'],
+                      'results': res['results'], 'rev': job['rev'], 'attempt': job['attempt']}
                 effects = aos_team_task.step(self.lay, job['task'], ev)
-                job.update(status='collected', passed=ev['pass'], collected_at=self.now_iso())
+                job.update(status='collected', passed=res['pass'], collected_at=self.now_iso())
                 add_effects(job, effects)
                 self.save_job(job)
-                ok = sum(1 for r in ev['results'] if r.get('pass'))
+                ok = sum(1 for r in res['results'] if r['pass'])
                 self.say('驗收 %s rev%d 第 %d 次：%s（%d/%d 條過）' % (job['task'], job['rev'], job['attempt'],
-                                                              '過' if ev['pass'] else '不過', ok, len(ev['results'])))
+                                                              '過' if res['pass'] else '不過', ok, len(res['results'])))
             else:
-                broken = self.job_broken(job)
-                if broken is None:
+                for run in job['runs']:
+                    why = self.run_gone(run)
+                    if why:
+                        run.update(state='ended', why=why)
+                if any(r['state'] in ('starting', 'running') for r in job['runs']):
+                    self.save_job(job)
                     return
-                if job['tries'] < JOB_TRIES:
-                    self.warn('驗收工作 %s 沒結果（%s），重試' % (job['id'], broken))
-                    self.ack_job(job)
+                if len(job['runs']) < JOB_TRIES:
+                    self.warn('驗收工作 %s 沒結果（%s），再交一次' % (job['id'], job['runs'][-1].get('why')))
                     self.launch(job)
                     return
-                job.update(status='broken', broken=broken)
+                job.update(status='broken')
                 add_effects(job, [{'do': 'letter', 'to': HUMAN, 'status': 'BLOCKED', 'reply_to': job['task'],
                                    'rev': job['rev'],
-                                   'text': '%s 的驗收工作跑了 %d 次都沒結果（%s；看 %s/err.log）。單子停在 verifying，'
+                                   'text': '%s 的驗收跑了 %d 次都沒結果（最後一次：%s；看 %s/err-*.log）。單子停在 verifying，'
                                            '要重來用 aos-team task reassign 或 cancel。'
-                                           % (job['task'], job['tries'], broken, d)}])
+                                           % (job['task'], len(job['runs']), job['runs'][-1].get('why'), d)}])
                 self.save_job(job)
         self.advance(job, save=self.save_job)
-        if job['status'] in ('collected', 'broken') and all(e['done'] for e in job['effects']):
-            if not self.ack_job(job) and job['status'] == 'collected' and not self.job_overdue(job, 'collected_at'):
-                return      # kernel 的回音還沒到：等它到了簽收再收尾
-            job.update(complete=True, status='complete' if job['status'] == 'collected' else 'broken')
-            self.save_job(job)
-            os.replace(d, self.jobs_done / job['id'])
+        if not all(e['done'] for e in job['effects']):
+            return
+        if not self.settle_runs(job):
+            return                                  # 還有 kernel 回音沒到：等它到了簽收再收尾
+        job['complete'] = True
+        self.save_job(job)
+        os.replace(d, self.jobs_done / job['id'])
 
-    def job_overdue(self, job, key):
-        start = fmt.parse_iso(job.get(key))
-        return start is None or (self.now() - start).total_seconds() > JOB_TIMEOUT
-
-    def job_broken(self, job):
-        """沒結果的工作壞了沒：回原因或 None（還在跑）。"""
-        if job.get('mode') == 'kernel':
-            if (Path(job['kernel']) / 'responses' / job['request']).exists():
-                return 'kernel 回音到了但沒寫結果檔'
-        elif job.get('mode') == 'spawn' and job.get('pid') and not _pid_alive(job['pid']):
-            return '行程 %d 已經結束但沒寫結果檔' % job['pid']
-        if self.job_overdue(job, 'submitted_at'):
+    def run_gone(self, run):
+        """還在跑的那次執行結束了沒（沒寫結果）：回原因或 None。逾時的另開行程會被整組砍掉。"""
+        if run['state'] not in ('running', 'lost'):
+            return None
+        if run['mode'] == 'kernel' and (Path(run['kernel']) / 'responses' / run['request']).exists():
+            return 'kernel 回音到了但沒寫結果檔'
+        if run['mode'] == 'kernel' and not self.kernel_has(run):
+            return 'kernel 已經不記得這次執行'
+        if run['mode'] == 'spawn' and run.get('pid') and not _pid_alive(run['pid']):
+            return '行程 %d 結束了但沒寫結果檔' % run['pid']
+        if run['state'] == 'lost':
+            return '起到一半崩了，不確定有沒有起'
+        start = fmt.parse_iso(run.get('started_at'))
+        if start is None or (self.now() - start).total_seconds() > JOB_TIMEOUT:
+            if run['mode'] == 'spawn' and run.get('pid'):
+                try:
+                    os.killpg(run['pid'], signal.SIGKILL)
+                except OSError:
+                    pass
             return '超過 %d 秒' % JOB_TIMEOUT
         return None
 
-    def ack_job(self, job):
-        """kernel 的一次性工作：回音讀完要簽收。回「不用再等回音了」。"""
-        if job.get('mode') != 'kernel':
-            return True
-        response = Path(job['kernel']) / 'responses' / job['request']
-        if not response.exists():
-            return job.get('acked', False)
+    def settle_runs(self, job):
+        """每一次 kernel 執行的回音都要簽收（綁在那一次上）。回「都結清了」。
+        回音還沒到、kernel 也還記得這次執行＝還沒結清；kernel 已經不記得＝沒東西可簽。"""
         import aos_client
-        aos_client.ack(job['kernel'], job['request'])
-        job['acked'] = True
-        self.save_job(job)
-        return True
+        done = True
+        for run in job['runs']:
+            if run['mode'] != 'kernel' or run.get('acked'):
+                continue
+            if (Path(run['kernel']) / 'responses' / run['request']).exists():
+                aos_client.ack(run['kernel'], run['request'])
+                run['acked'] = True
+                self.save_job(job)
+            elif self.kernel_has(run):
+                done = False
+        return done
 
     # ------------------------------------------------------------ 停滯 ----
 
@@ -557,13 +611,10 @@ class Post:
         last = fmt.parse_iso(state.get('last'))
         if not force and last is not None and (now - last).total_seconds() < self.watch_every:
             return
+        for tid, ev in aos_team_task.due_deadlines(self.lay, now.isoformat(timespec='seconds')):
+            self.notice('expire.%s.%s' % (tid, hashlib.sha1(ev['src'].encode()).hexdigest()[:10]),
+                        [{'do': 'step', 'task': tid, 'event': ev}])
         tickets = aos_team_task.all_tickets(self.lay)
-        for t in tickets:
-            dl = fmt.parse_iso(t.get('deadline')) if t.get('deadline') else None
-            if dl is not None and t['status'] not in fmt.TERMINAL and now > dl:
-                self.notice('expire.%s.r%d' % (t['id'], t['rev']), [
-                    {'do': 'step', 'task': t['id'],
-                     'event': {'type': 'expire', 'src': 'expire:%s:%d' % (t['id'], t['rev'])}}])
         health = state.get('health', {})
         seen = {}
         stale = self.roster['limits']['stale_minutes'] * 60
@@ -574,12 +625,13 @@ class Post:
             if m not in seen:
                 code, message = self.member_health(m)
                 old = health.get(m) or {}
-                since = old.get('since') if old.get('code') == code else now.isoformat(timespec='seconds')
+                # 連續不健康的起點：代碼換來換去（retrying → paused）也算同一段，回到 ok 才重算
+                since = None if code == 'ok' else (old.get('since') or now.isoformat(timespec='seconds'))
                 seen[m] = {'code': code, 'message': message, 'since': since}
             h = seen[m]
             if h['code'] != 'ok':
                 if (now - fmt.parse_iso(h['since'])).total_seconds() >= self.health_grace:
-                    key = '%s|%d|%d|health|%s|%s' % (t['id'], t['rev'], t['attempt'], h['code'], h['since'])
+                    key = '%s|%d|%d|health|%s' % (t['id'], t['rev'], t['attempt'], h['since'])
                     self.stall(t, key, '健康不是 ok：%s（從 %s 起）' % (h['message'], fmt.short_time(h['since'], self.tz)))
                 continue
             progress = self.last_progress(t, m)
@@ -672,6 +724,56 @@ def add_effects(rec, effects, prefix=None):
         rec['effects'].append(e)
 
 
+def team_tag(root):
+    """團隊的穩定識別（資料夾真路徑的雜湊前 8 碼）：kernel 上的名字都帶它，不同團隊不撞名。"""
+    return hashlib.sha1(os.path.realpath(str(root)).encode()).hexdigest()[:8]
+
+
+def check_result(res, job):
+    """驗收結果檔的身分與格式：回錯在哪（白話）或 None。"""
+    if not isinstance(res, dict):
+        return '不是 JSON 物件'
+    for key in ('task', 'rev', 'attempt'):
+        if res.get(key) != job[key]:
+            return '%s 是 %r，這份工作是 %r' % (key, res.get(key), job[key])
+    if not isinstance(res.get('pass'), bool):
+        return 'pass 要是 true／false'
+    items = res.get('results')
+    if not isinstance(items, list) or not all(
+            isinstance(r, dict) and isinstance(r.get('i'), int) and not isinstance(r.get('i'), bool)
+            and isinstance(r.get('pass'), bool) for r in items):
+        return 'results 每條要有整數 i 與 true／false 的 pass'
+    if res['pass'] != all(r['pass'] for r in items):
+        return 'pass 跟逐條結果對不上'
+    return None
+
+
+def archive(path, sub):
+    """把 outbox 裡處理完的檔搬進同一格的 done/ 或 rejected/。outbox 是模型寫得到的地方：
+    用資料夾的 fd 搬、不跟符號連結（done／rejected 被換成連結或檔＝先改名成 <名>.bad-<ns> 再建真的資料夾）。"""
+    flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, 'O_NOFOLLOW', 0)
+    box = os.open(str(path.parent), flags)
+    try:
+        try:
+            os.mkdir(sub, dir_fd=box)
+        except FileExistsError:
+            pass
+        try:
+            dest = os.open(sub, flags, dir_fd=box)
+        except OSError:
+            os.rename(sub, '%s.bad-%d' % (sub, time.time_ns()), src_dir_fd=box, dst_dir_fd=box)
+            os.mkdir(sub, dir_fd=box)
+            dest = os.open(sub, flags, dir_fd=box)
+        try:
+            os.rename(path.name, path.name, src_dir_fd=box, dst_dir_fd=dest)
+        except FileNotFoundError:
+            pass                                  # 上一輪搬過了
+        finally:
+            os.close(dest)
+    finally:
+        os.close(box)
+
+
 def rec_letter(rec):
     return {'id': rec['id'], 'from': rec.get('from'), 'to': rec.get('to'), 'status': rec.get('status'),
             'reply_to': rec.get('reply_to'), 'rev': rec.get('rev'), 'text': rec.get('text'), 'at': rec.get('at')}
@@ -686,58 +788,73 @@ def ref_text(letter):
     return '%s%s' % (letter['reply_to'], ' rev%d' % letter['rev'] if letter.get('rev') else '')
 
 
-def already_delivered(home, inbox, name):
-    """這封是不是已經投過：還在 input、已收進 done/（封存名 <名>.<消費 id>.done）、或停在 state.json 的 intake。"""
-    if (inbox / name).exists():
-        return True
-    for folder in (inbox / 'done', inbox):      # 後者：改版前的舊式同資料夾封存名
-        if glob.glob(os.path.join(glob.escape(str(folder)), glob.escape(name) + '.*.done')):
-            return True
-    try:
-        state = json.loads((home / 'state.json').read_text(encoding='utf-8'))
-    except (OSError, ValueError):
-        return False
-    src = os.path.abspath(inbox / name)
-    pairs = list((state.get('intake') or {}).get('files') or []) + list(state.get('consuming') or [])
-    return any(isinstance(p, dict) and os.path.abspath(str(p.get('src', ''))) == src for p in pairs)
-
-
 STATUS_WORDS = {'queued': '等投遞', 'sent': '已投、還沒收', 'working': '做事中', 'verifying': '驗收中',
                 'reviewing': '審查中', 'blocked': '卡住', 'waiting_user': '等人回答'}
+
+
+def one_line(text, limit):
+    """攤成一行（換行、連續空白變一格），太長截掉：插不進新標題、新清單。"""
+    text = ' '.join(str(text or '').split())
+    text = text[:limit] + ('…' if len(text) > limit else '')
+    return text
 
 
 def session_line(t):
     nxt = {'blocked': '等 %s 決定' % (t.get('waiting_on') or '開單人'),
            'waiting_user': '等人回答 %s' % (t.get('waiting_on') or ''),
            'verifying': '等驗收結果', 'reviewing': '等審查'}.get(t['status'], '等 %s 回報' % t['assignee'])
-    goal = ' '.join(t['goal'].split())
     return '- [%s %s] %s（%s，第 %d/%d 次）→ %s：%s' % (
-        t['id'], t['workflow'], STATUS_WORDS.get(t['status'], t['status']), t['assignee'], t['attempt'],
-        t['max_attempts'], nxt, goal[:80] + ('…' if len(goal) > 80 else ''))
+        t['id'], one_line(t['workflow'], 40), STATUS_WORDS.get(t['status'], t['status']), t['assignee'],
+        t['attempt'], t['max_attempts'], nxt, one_line(t['goal'], 80))
 
 
 def wait_line(q):
-    opts = '（選項：%s）' % ' / '.join(q['options']) if q.get('options') else ''
+    opts = '（選項：%s）' % ' / '.join(one_line(o, 30) for o in q['options']) if q.get('options') else ''
     ref = ' [%s]' % q['reply_to'] if q.get('reply_to') else ''
-    question = ' '.join(q['question'].split())
-    return '- [%s] %s 問：%s%s%s → aos-team answer %s "…"' % (q['id'], q['from'], question[:120], opts, ref, q['id'])
+    return '- [%s] %s 問：%s%s%s → aos-team answer %s "…"' % (q['id'], q['from'], one_line(q['question'], 120),
+                                                           opts, ref, q['id'])
+
+
+BLOCK_BEGIN = '<!-- aos-team 書記：這一段自動產生，別手改 -->'
+BLOCK_END = '<!-- /aos-team 書記 -->'
+
+
+def _outside_fences(lines):
+    """每一行在不在 ``` 程式碼區塊外。"""
+    out, inside = [], False
+    for ln in lines:
+        fence = ln.lstrip().startswith('```')
+        out.append(not inside and not fence)
+        if fence:
+            inside = not inside
+    return out
 
 
 def update_section(path, heading, managed_lines):
-    """改一節：標題底下（到下一個 # 標題前）換成「人寫的行＋書記的行」，沒有就寫（目前無）。回有沒有改。"""
+    """書記只改自己的區塊（BLOCK_BEGIN～BLOCK_END 之間），區塊外逐字不動。回有沒有改。
+
+    沒有區塊：放在標題底下（那一節只有「（目前無）」就換掉它）；標題也沒有：加在檔尾。區塊空＝寫「（目前無）」。"""
     text = path.read_text(encoding='utf-8')
     lines = text.split('\n')
-    try:
-        start = next(i for i, ln in enumerate(lines) if ln.strip() == heading)
-    except StopIteration:
-        lines += ([''] if lines and lines[-1].strip() else []) + [heading, '']
-        start = len(lines) - 2
-    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith('#')), len(lines))
-    kept = [ln for ln in lines[start + 1:end] if ln.strip() and ln.strip() != EMPTY_LINE and not MANAGED.match(ln)]
-    body = kept + list(managed_lines) or [EMPTY_LINE]
-    new = lines[:start + 1] + [''] + body + ([''] if end < len(lines) else []) + lines[end:]
-    if end == len(lines) and text.endswith('\n'):
-        new.append('')
+    ok = _outside_fences(lines)
+    block = [BLOCK_BEGIN] + (list(managed_lines) or [EMPTY_LINE]) + [BLOCK_END]
+    begin = next((i for i, ln in enumerate(lines) if ok[i] and ln.strip() == BLOCK_BEGIN), None)
+    end = next((i for i, ln in enumerate(lines) if ok[i] and ln.strip() == BLOCK_END
+                and begin is not None and i > begin), None)
+    if begin is not None and end is not None:
+        new = lines[:begin] + block + lines[end + 1:]
+    else:
+        start = next((i for i, ln in enumerate(lines) if ok[i] and ln.strip() == heading), None)
+        if start is None:
+            tail = lines[:-1] if lines and lines[-1] == '' else lines
+            new = tail + ([''] if tail and tail[-1].strip() else []) + [heading, ''] + block + ['']
+        else:
+            stop = next((i for i in range(start + 1, len(lines)) if ok[i] and lines[i].startswith('#')), len(lines))
+            body = [i for i in range(start + 1, stop) if lines[i].strip()]
+            if len(body) == 1 and lines[body[0]].strip() == EMPTY_LINE:
+                new = lines[:body[0]] + block + lines[body[0] + 1:]
+            else:
+                new = lines[:start + 1] + [''] + block + lines[start + 1:]
     out = '\n'.join(new)
     if out == text:
         return False
@@ -830,7 +947,7 @@ def cmd_mail(team_dir, argv):
 
 def proc_name(team_dir, what):
     base = re.sub(r'[^A-Za-z0-9_-]', '-', Path(team_dir).resolve().name) or 'team'
-    return 'team-%s-%s' % (what, base)
+    return 'team-%s-%s-%s' % (what, base, team_tag(team_dir))
 
 
 def register(team_dir, what, argv, interval_ms, env=None):
@@ -858,8 +975,16 @@ def register(team_dir, what, argv, interval_ms, env=None):
     if 'error' in res:
         code = (res['error'].get('data') or {}).get('code')
         if code == 'AlreadyExists':
-            print('already started %s' % name)
-            return 0
+            try:
+                proc = (json.loads((Path(kernel) / 'state.json').read_text(encoding='utf-8')).get('procs') or {}).get(name)
+            except (OSError, ValueError, AttributeError):
+                proc = None
+            if isinstance(proc, dict) and proc.get('target') == str(inst) and proc.get('status') != 'bad':
+                print('already started %s' % name)
+                return 0
+            sys.stderr.write('aos-team: AlreadyExists: kernel 裡的 %s 不是這個團隊的（或被判 bad）：%s\n'
+                             % (name, (proc or {}).get('target') if isinstance(proc, dict) else proc))
+            return 1
         sys.stderr.write('aos-team: %s: %s\n' % (code or res['error'].get('code'), res['error'].get('message')))
         return 1
     print('started %s' % name)

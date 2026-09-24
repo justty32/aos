@@ -167,8 +167,9 @@ class LiveTeamTests(KernelCase):
         done_job = self.lay.team / 'post' / 'jobs-done' / 'v-t-0001-r1-a1' / 'job.json'
         wait_for(done_job.exists, timeout=30)
         job = read_json(done_job)
-        self.assertEqual((job['mode'], job['status'], job.get('acked')), ('kernel', 'complete', True))
-        wait_for(lambda: not (self.home / 'responses' / job['request']).exists(), timeout=10)   # 簽收了，kernel 收掉
+        run = job['runs'][0]
+        self.assertEqual((run['mode'], job['status'], job['complete'], run['acked']), ('kernel', 'collected', True, True))
+        wait_for(lambda: not (self.home / 'responses' / run['request']).exists(), timeout=10)   # 簽收了，kernel 收掉
         sent = sorted(self.lay.outbox('worker-1').glob('done/*.json'))
         self.assertEqual(len(sent), 1)                      # 牢裡的 team_say 寫的那封
         wait_for(lambda: any('完成' in json.loads(p.read_text())['text'] for p in self.lay.human_inbox.glob('*.json')),
@@ -179,6 +180,49 @@ class LiveTeamTests(KernelCase):
         tool_results = [m for m in read_json(self.worker / 'prompts/history.json') if m['role'] == 'tool']
         self.assertIn('queued', tool_results[0]['content'])
         self.agent('stop', '--target', self.worker)
+
+
+    @unittest.skipUnless(HAS_BWRAP, '這台沒有 bwrap')
+    def test_real_init_start_whole_team(self):
+        """在 aos-team init 生出來的家上：aos-team start（連郵差、心跳一起登記）→ 人寄 handoff →
+        工人在牢裡 team_say DONE → 驗收（kernel 一次性工作）→ done → 領隊記憶裡有完成信 → aos-team mail 看得到整串。"""
+        self.setup_running(cpus=self.cpus)
+        shutil.rmtree(self.team)
+        (self.project / 'AGENTS.md').write_text('# p\n', encoding='utf-8')
+        src = self.root / 'roster.json'
+        src.write_text(json.dumps(ROSTER), encoding='utf-8')
+        env = dict(self.env)
+
+        def team(*args):
+            r = subprocess.run([PY, str(CLI / 'aos-team'), *map(str, args), '--target', str(self.team)], env=env,
+                               capture_output=True, text=True, timeout=60)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            return r.stdout
+        team('init', '--config', src)
+        for name in ROSTER['members']:
+            info = read_json(self.lay.member(name) / 'info.json')
+            info['tick']['interval_ms'] = 5
+            self.write(self.lay.member(name) / 'info.json', info)
+        out = team('start')
+        self.assertIn('started team-post-team-', out)
+        self.assertIn('started team-beat-team-', out)
+        self.addCleanup(lambda: subprocess.run([PY, str(CLI / 'aos-team'), 'stop', '--target', str(self.team)],
+                                               env=env, capture_output=True, timeout=60)
+                        if self.daemon_process is not None and self.daemon_process.poll() is None
+                        and self.state().get('phase') != 'stopped' else None)
+        rid = fmt.new_id('human')
+        fmt.write_new(self.lay.outbox('human') / (rid + '.json'), {
+            'id': rid, 'from': 'human', 'kind': 'handoff', 'at': fmt.now_iso(), 'assignee': 'worker-1',
+            'workflow': '無', 'goal': '確認 AGENTS.md 在', 'done_when': [{'kind': 'file_exists', 'path': 'AGENTS.md'}]})
+        wait_for(lambda: read_json(self.lay.task('t-0001'), {}).get('status') == 'done', timeout=60)
+        wait_for(lambda: any('t-0001 完成' in str(m.get('content'))
+                             for m in read_json(self.lay.member('lead') / 'prompts/history.json', [])), timeout=60)
+        mail = team('mail')
+        self.assertIn('post → worker-1  REQUEST  t-0001 rev1', mail)
+        self.assertIn('worker-1 → lead  DONE  t-0001 rev1', mail)
+        self.assertIn('post → 人  DONE  t-0001 rev1', mail)
+        out = team('stop')
+        self.assertIn('stopped team-post-team-', out)
 
 
 if __name__ == '__main__':

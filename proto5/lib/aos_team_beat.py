@@ -48,6 +48,15 @@ def _zone(tz):
 
 # ------------------------------------------------------------ 時間表 ----
 
+def check_tz(tz):
+    """IANA 時區名字要載得起來；打錯字不要默默變成本機時間。"""
+    try:
+        from zoneinfo import ZoneInfo
+        ZoneInfo(str(tz))
+    except Exception:
+        raise TeamError('BadRoutine', 'tz %r 不是認得的 IANA 時區（例 Asia/Taipei）' % (tz,))
+    return tz
+
 def parse_every(text):
     m = re.fullmatch(r'\s*([0-9]+)\s*([smhd])\s*', str(text or ''))
     if not m or int(m.group(1)) <= 0:
@@ -87,8 +96,11 @@ class Schedule:
             raise TeamError('BadRoutine', '%s 沒寫 every／daily／once' % row.get('name'))
 
     def _daily(self, day):
+        """那一天的當地時刻，換成 UTC 回（同一個 ZoneInfo 的兩個時刻比大小會照牆上時間比、不管夏令，所以一律用 UTC 比）。
+        夏令時間重複的那一小時取第一次（fold=0）；跳過的那一小時照 zoneinfo 換算（等於往後推一小時）。"""
         local = datetime.datetime(day.year, day.month, day.day, self.hm[0], self.hm[1])
-        return local.replace(tzinfo=self.tz) if self.tz else local.astimezone()
+        local = local.replace(tzinfo=self.tz) if self.tz else local.astimezone()
+        return local.astimezone(datetime.timezone.utc)
 
     def _first_daily(self):
         day = self.anchor.astimezone(self.tz).date()
@@ -173,6 +185,8 @@ def check_routine(req, roster):
     if op not in ('add', 'rm'):
         fmt.bad(where + '.op', '要是 add 或 rm')
     fmt.check_name(req.get('name'), where + '.name', member=False)
+    if req.get('tz') is not None:
+        check_tz(req['tz'])
     if op == 'rm':
         return {'name': req['name']}
     when = [k for k in ('every', 'daily', 'once') if req.get(k)]
@@ -290,6 +304,7 @@ class Beat:
         if st.get('request') != row.get('request'):      # 同名的列被拿掉又重加：從頭算
             st.clear()
             st['request'] = row.get('request')
+        self.flush_reports(row, st)
         if st.get('finished'):
             return
         ok, _ = authorized(self.lay, row)
@@ -306,19 +321,22 @@ class Beat:
         if latest is None or (handled is not None and latest <= handled):
             return
         n = sched.count(handled, latest)
-        if n >= 2:      # 先報再派：崩在中間重跑，報告 id 一樣不會重寄，派工照常補上
-            self.report(row, 'missed-%d' % int(latest.timestamp()),
-                        '心跳：例行 %s 到 %s 為止有 %d 次沒跑（心跳沒在跑，或上一次做太久），只補最近一次（%s）。'
-                        % (name, fmt.short_time(latest.isoformat(), self.tz), n,
-                           fmt.short_time(latest.isoformat(), self.tz)))
+        if n >= 2:      # 報告先記進待寄（跟在途同一次寫），寄完才勾掉
+            self.queue_report(st, 'missed-%d' % int(latest.timestamp()),
+                              '心跳：例行 %s 到 %s 為止有 %d 次沒跑（心跳沒在跑，或上一次做太久），只補最近一次（%s）。'
+                              % (name, fmt.short_time(latest.isoformat(), self.tz), n,
+                                 fmt.short_time(latest.isoformat(), self.tz)))
         self.dispatch(row, st, latest, 1)
+        self.flush_reports(row, st)
 
-    def request_id(self, name, occ, attempt):
-        return '%d-%d-%s' % (int(occ.timestamp()) * 10 ** 9 + attempt, zlib.crc32(name.encode()) % 10 ** 9, HUMAN)
+    def request_id(self, row, occ, attempt):
+        """派工申請的 id：那一次的時刻＋第幾次＋這條例行（名字＋登記它的申請），重跑算出來一樣；刪掉重加是新的一條。"""
+        ident = '%s|%s' % (row['name'], row.get('request'))
+        return '%d-%d-%s' % (int(occ.timestamp()) * 10 ** 9 + attempt, zlib.crc32(ident.encode()) % 10 ** 9, HUMAN)
 
     def dispatch(self, row, st, occ, attempt):
         """先記在途、再寫申請（不覆蓋）：崩在中間，下一輪看到在途但沒申請檔就補寫同一份。"""
-        rid = self.request_id(row['name'], occ, attempt)
+        rid = self.request_id(row, occ, attempt)
         st['inflight'] = {'occ': occ.isoformat(timespec='seconds'), 'try': attempt, 'request': rid,
                           'dispatched_at': self.now.isoformat(timespec='seconds')}
         self.save()
@@ -378,20 +396,33 @@ class Beat:
         st.update(handled=inflight['occ'], last_result='failed', last_task=t['id'] if t else None, inflight=None)
         if row.get('once'):
             st['finished'] = True
-        self.save()
-        self.report(row, 'failed-%s' % inflight['request'],
-                    '心跳：例行 %s（%s 那一次）%d 次都沒成（%s），這一次放棄，下次到期照常派。'
-                    % (row['name'], fmt.short_time(inflight['occ'], self.tz), inflight['try'], why))
+        self.queue_report(st, 'failed-%s' % inflight['request'],
+                          '心跳：例行 %s（%s 那一次）%d 次都沒成（%s），這一次放棄，下次到期照常派。'
+                          % (row['name'], fmt.short_time(inflight['occ'], self.tz), inflight['try'], why))
+        self.save()                              # 放棄這一次與「待寄報告」同一次寫
+        self.flush_reports(row, st)
 
-    def report(self, row, tag, text):
-        """寄給領隊與人：寫進郵差的 team/post/outbox/（from post），郵差投。id 由事件算出來，重跑不重寄。"""
+    def queue_report(self, st, tag, text):
+        st.setdefault('reports', [])
+        if not any(r['tag'] == tag for r in st['reports']):
+            st['reports'].append({'tag': tag, 'text': text})
+
+    def flush_reports(self, row, st):
+        """寄待寄的報告（給每個領隊與人）：寫進郵差的 team/post/outbox/（from post），郵差投。
+        id 由事件與這條例行算出來、不覆蓋，重寄不會多一封；全部寫好才從待寄拿掉。"""
+        if not st.get('reports'):
+            return
         self.sys_outbox.mkdir(parents=True, exist_ok=True)
-        for to in fmt.members_by_template(self.roster, 'lead') + [HUMAN]:
-            lid = 'beat-%s-%s-%s' % (row['name'], tag, to)
-            letter = {'id': lid, 'from': POST, 'to': to, 'status': 'PROGRESS', 'reply_to': None, 'rev': None,
-                      'text': text, 'at': self.now.isoformat(timespec='seconds')}
-            fmt.write_new(self.sys_outbox / (lid + '.json'), letter)
-        self.out(text)
+        ident = '%08x' % zlib.crc32(('%s|%s' % (row['name'], row.get('request'))).encode())
+        for r in st['reports']:
+            for to in fmt.members_by_template(self.roster, 'lead') + [HUMAN]:
+                lid = 'beat-%s-%s-%s-%s' % (row['name'], ident, r['tag'], to)
+                letter = {'id': lid, 'from': POST, 'to': to, 'status': 'PROGRESS', 'reply_to': None, 'rev': None,
+                          'text': r['text'], 'at': self.now.isoformat(timespec='seconds')}
+                fmt.write_new(self.sys_outbox / (lid + '.json'), letter)
+            self.out(r['text'])
+        st['reports'] = []
+        self.save()
 
 
 # --------------------------------------------------------------- 指令 ----
