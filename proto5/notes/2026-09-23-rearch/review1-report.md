@@ -109,7 +109,7 @@ CPU request 的 timeout 只准正整數，但 kernel 明寫 tick `timeout_ms:0`�
 現有 `load_obj({"cwd":"sub","stdout":"out",…}, base=C)` 得到 `C/sub/out`；解完 cwd 後，其他 `$ref` 也以 cwd 為中心。這和「相對路徑／$ref 的中心一律是 CPU 家」不同。  
 **建議：**保留已定的 CPU 中心方向，但明列 CPU 宿主的解析差異與適配方式，不能同時聲稱直接 `load_obj(params, base=C)` 就與 inst 完全相同。**嚴重度：要修。**
 
-**X-4｜在哪：[cpu §4.1](../../spec/cpu.md:125)、[load_obj](../../lib/aos_inst.py:91)／問題：`$ref:""` 的根不是整個 request。**  
+**X-4｜在哪：[cpu §4.1](../../spec/cpu.md:125)、[load_obj:91](../../lib/aos_inst.py)／問題：`$ref:""` 的根不是整個 request。**  
 `load_obj(params, …)` 的文件根是 params，故 `/argv/0` 有效、`/params/argv/0` 無效；進入外部 `$ref` 後，目前文件還會切換成被引用的文件。  
 **建議：**改寫成「最初文件是 params，之後依 directives 跟隨目前文件」；若真的要 request 根，必須另傳文件與位置 context。**嚴重度：要修。**
 
@@ -169,10 +169,10 @@ F＝[findings](../../../proto5.1/notes/findings.md)；舊 R＝[review-fable](../
 
 | 舊項目／來源 | 判定 | 新草稿的效果與剩餘問題 |
 |---|---|---|
-| [cpu-simpler](../../backlog/cpu-simpler.md)；F1、8、10、19 | 解了舊機制 | 單一主人消除多 consumer 認領、短鎖、running 搬移、inode 核對；link 正確解決當下同名覆蓋。 |
+| `cpu-simpler`（已刪，見 [09-23 backlog-cleanup](backlog-cleanup.md)）；F1、8、10、19 | 解了舊機制 | 單一主人消除多 consumer 認領、短鎖、running 搬移、inode 核對；link 正確解決當下同名覆蓋。 |
 | F27、35、40、51：換槽、短間隔飢餓、idle/null 窗口 | 解了舊機制 | 不再用符號連結換槽，也不靠 runner 自己反覆跑；新的提交窗口另見 K-4。 |
 | F30、41、47；舊 R5；kiss-holes #6：漏中間退出碼 | 部分解 | 逐次回音消除快照資訊不足；收件後崩潰仍會漏計，見 K-4。 |
-| [request-identity](../../backlog/request-identity.md)；F11–13、18、23、26；kiss-holes #1、7 | 沒解交易問題 | 獨立回音名稱減少串單，但送件／記帳、收件／記帳仍分離；C-2、K-4、K-7。 |
+| `request-identity`（已刪，見 [backlog-cleanup](../2026-09-24-backlog-cleanup.md)）；F11–13、18、23、26；kiss-holes #1、7 | 沒解交易問題 | 獨立回音名稱減少串單，但送件／記帳、收件／記帳仍分離；C-2、K-4、K-7。 |
 | kiss-holes #2；F8、23：排隊與等待無期限 | 沒解 | 不存在的池、停鏈、未完成 once 都能永久等待；CLI 超時不等於工作取消。 |
 | F20、46、52；舊 R2、15、18、27：壞單堵整顆 CPU | 部分解 | 固定 responses 讓壞 JSON 有回址，非法自訂結果路徑消失；發布 I/O 失敗處置漏寫，見 C-7。 |
 | F4、25、32、39、48：timeout、執行失敗、結果不明 | 部分保留 | 真實 timed_out 與 Interrupted 方向正確；找不到 executable 的 kind 改錯，見 X-5。 |
@@ -183,17 +183,17 @@ F＝[findings](../../../proto5.1/notes/findings.md)；舊 R＝[review-fable](../
 | 舊 R11：工作與 kernel 共用 interval | 部分解 | CPU poll 與 kernel interval 分開；收結果、派下一件仍受 tick 延遲影響。 |
 | 舊 R13；F9：mtime／牆鐘收屍 | 解了舊機制 | 不再按逾期 mtime 猜死亡；取代它的父子與重生契約仍須補齊。 |
 | 舊 R4；kiss-holes #3：主人死而子程式活著 | 沒解，明確接受 | cpu §5.3 已列保證外；kernel §7 的不重疊宣稱也須排除這種情形。 |
-| [kill-tree-exceptions](../../backlog/kill-tree-exceptions.md)；F28、42 | 沒解，方向已改 | 不做 kill-tree 是既定方向；同 group 個別存活例外並未因此實現。 |
+| `kill-tree-exceptions`（已刪，見 [09-23 backlog-cleanup](backlog-cleanup.md)）；F28、42 | 沒解，方向已改 | 不做 kill-tree 是既定方向；同 group 個別存活例外並未因此實現。 |
 | 舊 R1、16；F45；kiss-holes #5：daemon 死後孤兒與重啟重疊 | 部分解／待 daemon | EOF 停止接新單的方向可行；舊 CPU 尚活時不得同家再起的邊界仍要保留，見 C-6、K-5。 |
 | F29、33、42；舊 R17、21、25：daemon 副作用、回音、停機预算 | 部分解／待 daemon | RPC ls 與超時代號有定義；spawn 結果未知仍沒解，見 K-5。 |
 | F43：新 runner 家避免吃舊 ctl | 舊機制消失，新限制需寫 | 固定 CPU 家會保留 queued stop；重複 stop、崩在刪 stop 前、重 boot 如何消費舊控制單尚未定義。 |
 | F31：inst 搬家失去解析中心 | 部分保留 | CLI 先解、直接 RPC 到 CPU 才解是明示的新契約；實際 base／cwd 說法仍矛盾，見 X-3、X-4。 |
 | F34：工作 timeout 砍 kernel 控制流程 | 意圖保留，契約有錯 | tick 不限時已寫，但其 0 值被 CPU 拒絕，見 X-1。 |
 | 舊 R9；F49、53：daemon 綁定與失敗 boot | 部分保留，有回歸風險 | K 記 daemon、name／pid 分開；頂層 `$ref` 綁定與失敗復原漏寫，見 X-8、K-2。 |
-| [agent-fail-state](../../backlog/agent-fail-state.md)；F3、5、6、13、14、21、22、38 | 沒解，屬 agent 後續 | consume、批次讀驗、工具記憶自癒不因 transport 改變自動解決；依前提不列本次阻塞。 |
+| `agent-fail-state`（已刪，見 [backlog-cleanup](../2026-09-24-backlog-cleanup.md)）；F3、5、6、13、14、21、22、38 | 沒解，屬 agent 後續 | consume、批次讀驗、工具記憶自癒不因 transport 改變自動解決；依前提不列本次阻塞。 |
 | kiss-holes #4：其他入口同時跑同一 agent | 沒解，已接受邊界 | 排程行程身分不等於 agent 家的排他；但 boot 自己造成並行不能用此邊界豁免。 |
-| [tool-call-order](../../backlog/tool-call-order.md) | 沒解 | FIFO 派工不等於工具依賴順序，多顆同池 CPU 仍可並行。 |
-| [llm-cpu-fallback](../../backlog/llm-cpu-fallback.md)；F15、24、36 | 沒解，責任移到程式 | pool 不提供 endpoint failover，也不自動提供模型設定與金鑰隔離。 |
+| `tool-call-order`（已刪，見 [backlog-cleanup](../2026-09-24-backlog-cleanup.md)） | 沒解 | FIFO 派工不等於工具依賴順序，多顆同池 CPU 仍可並行。 |
+| `llm-cpu-fallback`（已刪，見 [backlog-cleanup](../2026-09-24-backlog-cleanup.md)）；F15、24、36 | 沒解，責任移到程式 | pool 不提供 endpoint failover，也不自動提供模型設定與金鑰隔離。 |
 | 舊 R24、26；F37、48：LLM／tool CPU 特例 | 解了舊機制 | 薄層與工具串流接管特例消失；改由 inst 指定檔案，但 inherit 控制通道衝突須修，見 X-6。 |
 | 新 tick 鏈、boot、序號重用 | **新引入** | 接鏈提交失敗、首次 boot 並行、kernel cpu 無法自救，見 K-1、K-2、K-6。 |
 | 新 kernel 派工／收件狀態 | **新引入到排程層** | 舊跨檔交易問題擴散到排程控制，能重派同一工作或永久占住 CPU，見 K-3、K-4。 |

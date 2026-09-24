@@ -2,7 +2,7 @@
 
 對照 [notes-brief/README.md](../notes-brief/README.md) 的題目表與 [proto5.1 findings-brief](../../proto5.1/notes/findings-brief.md)。
 使用者看完 findings-brief 後逐題拍板；這份是唯一的決策來源，之後 proto5.1 第 4 段照這份改、proto5 規範照這份回流。
-以後想到「先記著、之後再做」的事，放 [backlog/](../backlog/README.md)。
+以後想到「先記著、之後再做」的事，放 `backlog/`（已刪，見 [backlog-cleanup](2026-09-24-backlog-cleanup.md)）。
 
 ## 一、改變原方案的（6 題）
 

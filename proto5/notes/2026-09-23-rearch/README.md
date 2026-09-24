@@ -1,6 +1,6 @@
 # 2026-09-23 重架構：daemon→kernel→cpu 這條線的規範重寫
 
-← [proto5 README](../../README.md)｜新規範：[spec/cpu.md](../../spec/cpu.md)、[spec/kernel.md](../../spec/kernel.md)、[spec/daemon.md](../../spec/daemon.md)
+← [notes 索引](../README.md)｜[proto5 README](../../README.md)｜新規範：[spec/cpu.md](../../spec/cpu.md)、[spec/kernel.md](../../spec/kernel.md)、[spec/daemon.md](../../spec/daemon.md)
 
 使用者當天拍板的方向（都寫在各規範的「已拍板的前提」一節）：cpu 範式（一個家一個主人、info／state／requests／responses）、
 規則一軟性、cpu 聽命執行不自己迴圈、pipe 只管生死、JSON-RPC 2.0、所有 request 都是 aos-exec（llm／tool cpu 變成程式）、
@@ -13,6 +13,8 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | review3-task.md／review3-report.md | 第三輪：三份一起，驗收第二輪＋新機制的洞（C3／K3／D3／X3／R3） |
 | review4-task.md／review4-report.md | 第四輪：措辭、易用性（人／agent／實作者各走一遍）、未來（W／X／U／F）；尾巴有「定稿前必改」13 條 |
 | impl-task.md | 派 astra（bypass）照三份規範實作 lib／cli／測試的任務書（四段） |
+| impl-findings.md | 2026-09-23 astra 照三份規範實作時記下的規範歧義、與既有底層的差異、保證邊界（12 條，ack 名加 hash、換 kernel cpu 要 kill 兩顆…）；逐條裁決在 impl-review-report.md B 節 |
+| backlog-cleanup.md | 2026-09-23 重架構後 `proto5/backlog/` 第一輪清理：一件一列，原問題、結論、對到新規範哪節；09-24 第二輪清光見 [../2026-09-24-backlog-cleanup.md](../2026-09-24-backlog-cleanup.md) |
 | review-agent1-task.md／review-agent1-report.md | agent 線三份草稿（aos-llm-call／agent／aos-agent）第一輪審查：結論「還不能定稿」，必改 12 條（waits 兼工作索引、批次紀錄、記憶／ack／state 恢復…） |
 | lmstudio-run.md＋lmstudio/ | 2026-09-24 用本機 LM Studio（gemma-4-e4b）真跑新架構一條龍：daemon→kernel（k／0／llm）→once 問模型 6 秒回音、反覆行程 done、停機 0.3 秒、重跑通；`lmstudio/run.sh` 可重跑；撞到 8 條（daemon 沒停機 CLI、kernel 沒 ack 子命令、init 不能帶 cpu 表、kernel.log 空格也寫…） |
 | impl-review-task.md／impl-review-report.md | 2026-09-24 astra（唯讀）審實作是否照三份規範：A 偏差 5 條（daemon 缺檔回 Usage、控制 pipe 沒驗信封、ack 名加 digest／boot 交接兩顆 kcpu 要回寫規範）、B 12 條 impl-findings 逐條裁（7 條規範補寫、1 條改程式、4 條照現況）、C 測試沒蓋到的崩潰窗口 8 條（cpu 家初始化半成品最急）、D 測試 flaky 7 條 |
