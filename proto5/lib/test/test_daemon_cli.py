@@ -10,6 +10,7 @@ import unittest
 from unittest import mock
 
 import aos_daemon
+import aos_daemon_cli
 import aos_home
 from _daemon_util import DaemonCase, wait_for, read_json, write_json
 
@@ -159,8 +160,14 @@ class PoolCliTest(DaemonCase):
         write_json(self.root / "h/1/state.json", {"current": {"name": "x"}})
         out = self.cli("ls").stdout.splitlines()
         self.assertTrue(out[0].startswith("daemon running  pid %d  pools 1  children 2" % self.proc.pid), out)
-        self.assertRegex(out[1], r"^w  owner cli  want 2  running 2  busy 1  restarting 0  pending 0  dead 0  "
+        self.assertRegex(out[1], r"^w  owner cli  want 2  running 2  busy 1  pending 0  dead 0  "
                                  r"failed 0  killing 0  draining 0$")
+        # restarting 是 running 的子集：>0 才在 running 那格寫「（含 restarting N）」（使用者代裁）
+        view = {"pool": "w", "owner": "cli", "count": 2, "running": 2, "busy": 1, "restarting": 1,
+                "pending": 0, "dead": 0, "failed": 0, "killing": 0, "draining": 0}
+        self.assertEqual(aos_daemon_cli._table([aos_daemon_cli._summary_row(view)])[0],
+                         "w  owner cli  want 2  running 2（含 restarting 1）  busy 1  pending 0  dead 0  "
+                         "failed 0  killing 0  draining 0")
         self.assertIn("busy -", self.cli("ls", "--no-busy").stdout)
         lines = self.cli("ls", "--pool", "w").stdout.splitlines()
         self.assertEqual(len(lines), 4, lines)

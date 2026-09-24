@@ -17,7 +17,7 @@ import aos_home
 
 TARGET_HELP = "daemon 家（省略＝AOS_DAEMON_HOME，再沒有就目前資料夾）"
 WAIT_MS = 10000
-COLUMNS = ("running", "busy", "restarting", "pending", "dead", "failed", "killing", "draining")
+COLUMNS = ("running", "busy", "pending", "dead", "failed", "killing", "draining")  # restarting 併進 running 那格
 
 
 class CliError(aos_home.HomeError):
@@ -85,10 +85,17 @@ def _table(rows):
                       for k, (label, value) in enumerate(row)).rstrip() for row in rows]
 
 
+def _running_text(summary):
+    """restarting 是 running 的子集：印成「2（含 restarting 1）」，0 就只印「2」（使用者代裁，09-24）。"""
+    running, restarting = summary.get("running"), summary.get("restarting")
+    text = "-" if running is None else str(running)
+    return text + ("（含 restarting %s）" % restarting if restarting else "")
+
+
 def _summary_row(view):
     row = [("", view["pool"]), ("owner", view.get("owner")), ("want", view.get("count"))]
     for key in COLUMNS:
-        value = view.get(key)
+        value = _running_text(view) if key == "running" else view.get(key)
         row.append((key, "-" if value is None else value))
     return row
 

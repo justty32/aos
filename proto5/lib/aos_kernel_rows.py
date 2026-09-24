@@ -113,7 +113,10 @@ def row_line(home, info, row, width=0):
     elif summary is None:
         part = "沒有這池"
     else:
-        part = " ".join("%s %s" % (k, summary.get(k, 0)) for k in ("running", "restarting", "pending", "dead", "failed"))
+        # restarting 是 running 的子集，寫進 running 那格（使用者代裁，09-24）；--json 照舊兩欄分開。
+        restarting = summary.get("restarting", 0)
+        part = "running %s%s " % (summary.get("running", 0), "（含 restarting %s）" % restarting if restarting else "")
+        part += " ".join("%s %s" % (k, summary.get(k, 0)) for k in ("pending", "dead", "failed"))
         for k in ("killing", "draining"):
             if summary.get(k):
                 part += " %s %s" % (k, summary[k])
