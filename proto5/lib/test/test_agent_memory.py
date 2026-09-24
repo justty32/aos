@@ -736,15 +736,23 @@ class ArchiveTests(MemoryBase):
 
 
 class CliMiscTests(MemoryBase):
-    def test_init_template_reserved(self):
-        import aos_agent_init
-        target = self.root / 'new'
-        if hasattr(aos_agent_init, 'init_from_template'):
-            self.skipTest('第 1 隊的 init_from_template 已合進來')
-        with patch('sys.stdout', new_callable=io.StringIO):
-            code = agent.main(['init', '--target', str(target), '--template', 'worker'])
+    def test_init_template(self):
+        """init --template：接第 1 隊的 init_from_template；團隊專用模板單獨生會被拒。"""
+        target = self.root / 'coder1'
+        with patch('sys.stdout', new_callable=io.StringIO) as out, patch.dict(os.environ, {}, clear=True):
+            code = agent.main(['init', '--target', str(target), '--template', 'coder'])
+        self.assertEqual(code, 0, self.err.getvalue())
+        self.assertIn('模板 coder', out.getvalue())
+        self.assertTrue((target / 'info.json').exists())
+        info_api.load(target, env={})
+        with patch('sys.stdout', new_callable=io.StringIO), patch.dict(os.environ, {}, clear=True):
+            code = agent.main(['init', '--target', str(self.root / 'w'), '--template', 'worker'])
+        self.assertEqual(code, 2)                      # 第 1 隊定的：團隊模板單獨生＝用法錯
+        self.assertIn('aos-team init', self.err.getvalue())
+        with patch('sys.stdout', new_callable=io.StringIO), patch.dict(os.environ, {}, clear=True):
+            code = agent.main(['init', '--target', str(self.root / 'x'), '--template', 'no-such'])
         self.assertEqual(code, 1)
-        self.assertIn('NotImplemented', self.err.getvalue())
+        self.assertEqual(self.cli('init', '--template', '', env={})[0], 2)
 
     def test_notes_usage(self):
         self.assertEqual(self.cli('notes', 'show', env={})[0], 2)
