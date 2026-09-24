@@ -93,3 +93,10 @@
 | [memo-merge.md](memo-merge.md) | 合併派（「範式不動」「30～50 行」兩句已在反駁更正） |
 | [rebuttals.md](rebuttals.md) | 互相反駁 |
 | [codex-astra.md](codex-astra.md) | astra 兩份獨立意見 |
+
+## 使用者裁決（2026-09-24）
+
+1. 撤掉「daemon 要 sudo 切使用者所以跟 kernel 分開」這條理由；daemon 規範加一句「daemon 永遠不用 root，隔離走 bwrap 牢」（已寫進 [spec/daemon/README.md §8](../../spec/daemon/README.md)）。
+2. daemon／kernel 分法現在不動；等 proto5-2 重寫 kernel（帳本換 sqlite）時，順路做「開機合一、家不合一」（§5 原第 2、3 題合併拍板）。
+3. 隔離範圍：第一版只有工具進牢，Claude Code／Codex 這種 CLI agent 先不進牢。
+4. 現在不替 agent／cpu 配不同 uid（subuid），有需求再開題。
