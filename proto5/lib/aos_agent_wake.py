@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import aos_home
+import aos_hops
 from aos_agent_runtime import KERNEL_ENV, unique_id
 
 
@@ -34,4 +35,5 @@ def wake(base, env=None):
                                            'params': {'name': 'agent-' + base.name}})
     except (aos_home.HomeError, OSError):
         return None
+    aos_hops.mark('wake', 'sent', agent=base.name, name=name)
     return name

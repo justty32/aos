@@ -11,6 +11,7 @@ from pathlib import Path
 import time
 
 import aos_home
+import aos_hops
 import aos_kernel_store
 from aos_kernel_info import (
     FEATURES, KERNEL_POOL, PARK_MS, KernelError, _bad, _body_error, _name, _put, is_member, split_key,
@@ -314,6 +315,7 @@ class KernelLedger:
                 aos_home.link_json(self.home / "responses" / item["name"], response)
             except aos_home.RequestExists:
                 pass
+            aos_hops.mark("kernel", "reply", name=item["name"], wake=item.get("wake"))
             if item.get("wake") is not None:
                 # 09-24 停車：回音檔放好之後才叫醒；叫醒的結果跟「拿掉這筆」同一次存帳本（呼叫者存）。
                 self.wake(item["wake"])

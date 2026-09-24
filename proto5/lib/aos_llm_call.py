@@ -12,6 +12,7 @@ import time
 import urllib.error
 import urllib.request
 
+import aos_hops
 from aos_agent_home import AgentError, check_message, load_llm_view, resolve_field
 from aos_directives import Context, DirectiveError, is_directive, load_document
 
@@ -159,9 +160,12 @@ def call(agent_dir, env=None):
     config = load_config(config_path(env), env=env)
     body, entry, alias = build_request(agent_dir, config, env=env, with_alias=True)
     seen, start = {}, time.monotonic()
+    batch = env.get("AOS_LLM_BATCH")
+    aos_hops.mark("llm", "http_start", batch=batch)
     try:
         return _post(body, entry, alias, seen)
     finally:
+        aos_hops.mark("llm", "http_end", batch=batch)
         if "usage" in seen:
             record_usage(agent_dir, env, alias, entry["model"], seen["usage"],
                          int((time.monotonic() - start) * 1000))
@@ -191,11 +195,15 @@ def main(argv=None):
     if args.command is None:
         ap.print_usage(sys.stderr)
         ap.exit(2, "aos-llm: error: 要給子命令：aos-llm call [AGENT_DIR]\n")
+    batch = os.environ.get("AOS_LLM_BATCH")
+    aos_hops.mark("llm", "begin", boot=True, batch=batch)
     try:
         msg = call(args.agent_dir)
     except AgentError as e:
         sys.stderr.write("aos-llm: %s\n" % " ".join(str(e).split()))
         return 1
+    finally:
+        aos_hops.mark("llm", "end", batch=batch)
     sys.stdout.write(json.dumps(msg, ensure_ascii=False) + "\n")
     return 0
 

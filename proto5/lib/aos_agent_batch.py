@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 
 import aos_home
+import aos_hops
 import aos_inst
 import aos_agent_access
 from aos_jail import secret_name
@@ -202,6 +203,8 @@ def jail_problem(access, tool, env):
 
 def send(run):
     batch, tools = run.st['batch'], tool_map(run)
+    aos_hops.mark('agent', 'send', agent=run.base.name, kind=batch['kind'],
+                  jobs=[c['name'] for c in batch['calls'] if c['name'] is not None and c['done'] is None])
     access = batch.get('access')
     for i, call in enumerate(batch['calls']):
         name = call['name']
