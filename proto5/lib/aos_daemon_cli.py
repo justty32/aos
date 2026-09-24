@@ -13,6 +13,7 @@ import aos_client
 import aos_daemon
 import aos_daemon_pools as pools
 import aos_daemon_rpc
+import aos_daemon_ticks
 import aos_home
 
 TARGET_HELP = "daemon 家（省略＝AOS_DAEMON_HOME，再沒有就目前資料夾）"
@@ -102,15 +103,20 @@ def ls(home, pool=None, as_json=False, busy=True):
             got = _pool_view(home, path.name, busy) if path.is_dir() else None
             if got is not None:
                 views[path.name] = got[0]
+        kernels = aos_daemon_ticks.registered(home)     # one-boot：這個 daemon 替哪些 kernel 開 tick
         if as_json:
-            print(json.dumps({"daemon": head, "pools": views}, ensure_ascii=False))
+            print(json.dumps({"daemon": head, "pools": views, "kernels": kernels}, ensure_ascii=False))
             return 0
         total = sum(sum(v.get(k) or 0 for k in ("running", "pending", "dead", "failed", "killing", "draining"))
                     for v in views.values())
         state = ("daemon running  pid %s" % head["pid"]) if head["running"] else "daemon not running（以下是最後的摘要）"
-        print("%s  pools %d  children %d" % (state, len(views), total))
+        print("%s  pools %d  children %d  kernels %d" % (state, len(views), total, len(kernels)))
         for line in _table([_summary_row(v) for v in views.values()]):
             print(line)
+        for record in kernels:
+            fails = record.get("fails") or 0
+            print("kernel %s  每 %s ms 開一格 tick%s" % (record["home"], record.get("every_ms"),
+                  "  連敗 %d（最後退出 %s）" % (fails, record.get("last_exit")) if fails else ""))
         return 0
     if not pools.valid_pool_name(pool):
         raise CliError("FieldTypeMismatch", "池名不合法：%s" % pool)

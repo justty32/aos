@@ -11,7 +11,7 @@ aos-daemon kill  [--target D] --pool P (NAME... | --all)          # §6.3
 aos-daemon -h ／ aos-daemon <子命令> -h
 ```
 
-（2026-09-24 proto5-2 池式納入：加 `ls`／`scale`／`kill`，全帶 `--pool`；啟動時照 `pool.json` 把孩子拉回來。）
+（2026-09-24 proto5-2 池式納入：加 `ls`／`scale`／`kill`，全帶 `--pool`；啟動時照 `pool.json` 把孩子拉回來。2026-09-24 one-boot：啟動時也照 `kernels/` 接著開 tick；平常用 `aos up` 開。）
 
 裸 `aos-daemon`（沒子命令）不直接跑 daemon：stderr 印用法、退 2。D 一樣找：`--target D`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾；`--target ""`＝用法錯 2。
 退 1 的錯誤行尾巴附 `（D＝<絕對路徑>，取自 --target｜AOS_DAEMON_HOME｜目前資料夾（…））`，講清楚這次用了哪個家。
@@ -22,12 +22,14 @@ aos-daemon -h ／ aos-daemon <子命令> -h
 
 ## 6.1 啟動
 
-**開之前先想好環境**：daemon 拉的每顆 cpu、cpu 跑的每件工作都繼承 daemon 啟動那一刻的環境。
+**平常用 `aos up`**（[§11](up.md)）：它會替你在背景開 daemon、PATH 補好、stderr 接到 `D/daemon.log`。下面是自己開的做法（debug 用）。
+
+**開之前先想好環境**：daemon 拉的每顆 cpu、開的每格 tick、cpu 跑的每件工作都繼承 daemon 啟動那一刻的環境。
 所以 PATH 要先含 `proto5/cli`（`aos-cpu`、`aos-exec`、`aos-kernel`、`aos-agent`、`aos-llm` 都靠 PATH 找）再開 daemon：
 
 ```sh
 export PATH=/abs/repo/proto5/cli:$PATH
-aos-daemon boot --target D 2>>daemon.log &              # 前景程式，放背景或另開終端
+aos-daemon boot --target D 2>>D/daemon.log &            # 前景程式，放背景或另開終端
 aos-kernel check --target K                             # boot 前檢查 PATH、池、llm 設定（kernel §6）
 ```
 
@@ -45,10 +47,12 @@ daemon 開了之後再 `export` 不會影響它；PATH 漏了就停掉 daemon �
 4. 照範式 §6.2 對帳自己的 `current`（上一任崩在處理哪則 request；scale 單對帳成 `Interrupted`，kernel 會整份重送）。
 5. 殺完：每個 kids 檔改成 `pending`（`pid` null；`gen`、`exits` 照留，`streak` 歸 0），不是成員的刪掉；沒有 `pool.json` 的池資料夾整個刪掉；
    寫新 `state.json`（pid、`current` null、`stopping` false；`children` 拿掉）；重算 `summary.json`。
-6. **照 `pool.json` 把孩子拉回來**：每池的成員全部進 `pending`，照節流慢慢拉（§4）。第 1 版的「孩子表從空開始、等客戶再 spawn」**拿掉**。然後進 §4 的迴圈。
+6. **照 `pool.json` 把孩子拉回來**：每池的成員全部進 `pending`，照節流慢慢拉（§4）。第 1 版的「孩子表從空開始、等客戶再 spawn」**拿掉**。
+   （one-boot）再照 `kernels/*.json` 載入登記（壞的略過），每個登記的 kernel 馬上開一格（[§10](ticks.md)）。上一任開的 tick 還活著的**不殺**，它撞鎖就退 75。然後進 §4 的迴圈。
 
 對 kernel 的影響（[kernel §6 boot](../kernel/boot.md)）：工作 cpu 上一任在做的那件，新主人開機對帳回 `Interrupted`、再補丟通知，kernel 照常收；
-kernel cpu 的鏈多半**自己接得上**（下一格早就放在它家裡），`aos-kernel ls` 的 health 不是 ok 才要 `aos-kernel boot`。
+kernel 的 tick 照 `kernels/` 的登記接著開，**不用重 boot**（2026-09-24 one-boot 改；第 2 版是「kernel cpu 的鏈多半自己接得上」）。
+`aos-kernel ls` 的 health 不是 ok 時，`aos up` 一次就好。
 
 ## 6.2 退出碼與 stderr
 

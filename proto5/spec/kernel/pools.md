@@ -2,7 +2,7 @@
 
 ## 3.1 池怎麼增減（tick 第 7 步）
 
-（2026-09-24 proto5-2 池式納入，新節；取代第 1 版 §1.1 末「改 info 之後」那段與 §3 第 7 步的「每格偷看孩子表、spawn」。）
+（2026-09-24 proto5-2 池式納入，新節；取代第 1 版 §1.1 末「改 info 之後」那段與 §3 第 7 步的「每格偷看孩子表、spawn」。2026-09-24 one-boot：kernel 池拿掉。）
 
 一句話：**info 說要幾顆，kernel 算出「要哪幾號」，把這組號碼整份告訴 daemon（宣告式）；要收的號先等它手上那件做完再收。**
 kernel 不記 pid、不問哪顆活著，只記 daemon 確認過的號碼（`sent`）。單的形狀見 [daemon §3 `scale`](../daemon/methods.md)。
@@ -49,7 +49,7 @@ daemon 確認過（S）、在途的單沒有要拿掉它（Q）、info 還要它
    `acquired` 是 false 的位置（從沒被確認過）直接換，不送縮 0、不等（[§1.1](info.md)）。
    排在它 `ready`／`delayed` 的行程照排（沒 cpu 就一直排隊）。
 
-**kernel 池**不走這一段：它只在 boot 與停機時送 scale（[§6 boot](boot.md)）。
+（one-boot 起沒有 kernel 池。舊帳本留下的 kernel 池不走這一段：boot 把它縮到 0、收乾淨後從帳本拿掉，[§6 boot](boot.md)。）
 
 ### 為什麼「先做完再收」
 

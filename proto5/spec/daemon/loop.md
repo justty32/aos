@@ -2,10 +2,11 @@
 
 # 4. 一圈：按池對帳
 
-（2026-09-24 proto5-2 池式納入：改成宣告式；任何退出碼都重拉、有退避；全 daemon 節流；孩子只留一條 pipe。）
+（2026-09-24 proto5-2 池式納入：改成宣告式；任何退出碼都重拉、有退避；全 daemon 節流；孩子只留一條 pipe。2026-09-24 one-boot：一圈多一步「開 tick」。）
 
 一句話：**daemon 手上是一份「每池要哪幾號」的宣告；每一圈把實際的孩子往宣告靠——少了補、多了收、死了等一下再拉。**
 它不問 kernel、也不需要 kernel 每格來確認。孩子在做什麼、忙不忙，daemon 不知道也不記。
+（one-boot）另外每圈替登記過的 kernel 看要不要開一格 tick（下面第 8 步，細節在 [§10](ticks.md)）。
 
 ## 一顆孩子的狀態
 
@@ -30,16 +31,19 @@
 
 ```text
 1. 處理 requests/ 的 ack-、stop-（範式 §6.3 那套）
-2. 處理其他單：scale、kill、ls（§3）。scale 只改宣告、標這池「要對帳」
+2. 處理其他單：scale、kill、ls、tick（§3）。scale 只改宣告、標這池「要對帳」；tick 只改登記
 3. 收屍：waitpid(-1, WNOHANG) 一直收到沒有——只碰死掉的那幾個，不逐顆問
    daemon 在 stopping → 不管原本什麼狀態，一律拿掉、不排回 pending（先判這條）
    killing 的：還是成員 → pending（不加 streak）；不是 → 刪 kids 檔
    running 的：還是成員 → dead，streak 照下面算，寫 kids 檔
+   （one-boot）不在孩子表裡的 pid 是 daemon 開的 tick：照 §10 看退出碼（0 好、75 別人在跑、其他算失敗）
 4. 對帳（只對「要對帳」的池）：新加的號 → pending；拿掉的號 → 照上面的狀態圖收
 5. 拉（stopping 時整步跳過）：從「pending＋到期的 dead／failed」裡拿，最多拿到節流額度與 fd 預算，拉（§2 那套）
 6. 推進停機階梯（§5），只看到期的那批
 7. 有變的池重寫 summary.json
-8. 睡到 poll_ms 或下一個到期時間，取較短的
+8. 開 tick（§10）：正在跑的格看逾時（到了整組 KILL）；stopping 時到此為止。每個沒在跑格的登記 kernel：
+   stat 一次 K/requests/，時間到（上一格開始後 every_ms）或來了新檔（不在退避中）就開一格
+9. 睡到 poll_ms、下一個到期時間、下一格 tick 該開的時間，取最短的
 ```
 
 **怎麼做到不掃全池**：

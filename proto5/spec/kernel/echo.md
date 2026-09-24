@@ -21,6 +21,6 @@
 | 其他非零 | +1 | +1 | 看退件 |
 
 看退件＝`fails` 達 `bad_after`（≠ 0）→ `status=bad`、不回 queue；沒達 → 回 queue。
-判完這格（不管哪列）`woken` 清掉，跟判定同一次存帳本（提交點 3）；`park_ms` 取行程紀錄的，舊行程沒有就取 info 的。`done_exit` 先比，所以 `done_exit` 是 102 時 102＝完成、不停車。
+判完這格（不管哪列）`woken` 清掉，跟判定同一次存帳本（提交點 B）；`park_ms` 取行程紀錄的，舊行程沒有就取 info 的。`done_exit` 先比，所以 `done_exit` 是 102 時 102＝完成、不停車。
 回 queue＝`status=queued`、`not_before = 現在的 epoch 秒 + interval_ms / 1000`（`stopped:true` 那列不改 `not_before`）；已到的接那池 `ready` 尾，沒到的推進 `delayed` 堆積（§3 第 8 步）。
 **每次派工對應恰好一則回音**，計數才準；沒有 quantum、沒有 runs 差值、沒有另外的 aos 計數。

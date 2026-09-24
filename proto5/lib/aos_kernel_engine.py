@@ -1,19 +1,27 @@
-"""kernel 一格十步（kernel-tick.md）：只碰有事的 cpu——有通知的、上一格剛派的、輪到巡檢的。
+"""kernel 一格（kernel/tick.md）：只碰有事的 cpu——有通知的、上一格剛派的、輪到巡檢的。
 
-提交點（kernel-ledger §3）：1＝第 2 步 last_seq；2＝第 4 步出貨完；3＝第 5～9 步全部決定完；4＝第 10 步出貨完。
+2026-09-24 one-boot：一格由 daemon 開（定時、或 K/requests/ 有新檔），不再放下一格、不再睡 tick_ms；
+一開始拿 K/.tick.lock（同時只准一格；拿不到退 75），序號＝帳本 last_seq＋1。
+提交點（kernel/ledger.md）：A＝第 4 步出貨完；B＝第 5～9 步全部決定完；C＝第 10 步出貨完。每個提交點一筆 sqlite 交易。
 """
+import fcntl
 import itertools
 import json
 import os
 from pathlib import Path
+import signal
 import time
 
 import aos_home
+import aos_kernel_store
 from aos_kernel_info import (
-    KCPU, KERNEL_POOL, _put, chain_epoch, classify, cpu_key, load_info, split_key,
+    KERNEL_POOL, KernelError, _put, classify, cpu_key, load_info, split_key,
 )
 from aos_kernel_ledger import KernelLedger
-from aos_kernel_pools import PoolsMixin, scale_request
+from aos_kernel_pools import PoolsMixin
+
+LOCK = ".tick.lock"
+BUSY_EXIT = 75   # 鎖被佔（別的 tick 正在跑）：daemon 不算失敗
 
 
 class Kernel(PoolsMixin, KernelLedger):
@@ -209,12 +217,11 @@ class Kernel(PoolsMixin, KernelLedger):
         if not self.pools_quiet():
             return
         st["phase"] = "stopped"
-        entry = st["pools"].get(KERNEL_POOL)
-        if entry is not None:
-            name = "k-%s-%d-scale-%s.json" % (st["chain"], self.seq, KERNEL_POOL)
-            body = scale_request(name, self.home, KERNEL_POOL, entry, 0, [], [chain_epoch(st["chain"]), self.seq])
-            st["sends"].append({"home": entry["daemon"], "name": name, "body": body})
-            entry["pending"] = {"name": name, "count": 0, "skip": []}
+        ticker = st.get("ticker")
+        if ticker:
+            # one-boot：停好了，請 daemon 別再開 tick（notification，不回音）；下次 boot 重新登記。
+            name = "k-%s-%d-untick.json" % (st["chain"], self.seq)
+            st["sends"].append({"home": ticker, "name": name, "body": untick_request(self.home)})
         self.events.append({"event": "stopped"})
 
     # ---- 一格 ----
@@ -223,33 +230,67 @@ class Kernel(PoolsMixin, KernelLedger):
             if self.flush_outboxes():
                 self.save()
             return 0
-        name, request = self.tick_request(self.seq + 1)
-        _put(self.cpu_home(KCPU), name, request)
         self.state["last_seq"] = self.seq
-        self.save()                                   # 提交點 1
-        time.sleep(self.info["tick_ms"] / 1000)
         if self.flush_outboxes():
-            self.save()                               # 提交點 2
-        self.ack_ticks()
+            self.save()                               # 提交點 A：出貨完
         self.now = time.time()
         notified = self.read_requests()               # 第 5 步
         self.collect(notified)                        # 第 6 步
         self.pools_step()                             # 第 7 步
         self.dispatch()                               # 第 8 步
         self.stopping()                               # 第 9 步
-        self.save()                                   # 提交點 3
+        self.state["last_tick_at"] = self.now
+        self.save()                                   # 提交點 B：決定完（連同 last_seq、last_tick_at）
         self.post_dispatched()                        # 先記後放
         if self.flush_outboxes():
-            self.save()                               # 提交點 4
+            self.save()                               # 提交點 C：出貨完
         if self.events:
             with (self.home / "kernel.log").open("a", encoding="utf-8") as out:
                 out.write(json.dumps({"chain": self.state["chain"], "seq": self.seq, "events": self.events}, ensure_ascii=False) + "\n")
         return 0
 
 
-def tick(home, chain, seq):
-    info = load_info(home)
-    state = aos_home.read_state(home)
-    if chain != state.get("chain"):
+def untick_request(home):
+    return {"jsonrpc": "2.0", "method": "tick", "params": {"home": str(home), "off": True}}
+
+
+def take_lock(home, wait_ms=0):
+    """K/.tick.lock 的獨占 flock；wait_ms 0＝不等。拿到回 fd，拿不到回 None。行程死了（含 kill -9）鎖自己消失。"""
+    fd = os.open(Path(home) / LOCK, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
+    deadline = time.monotonic() + wait_ms / 1000
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return fd
+        except BlockingIOError:
+            if time.monotonic() >= deadline:
+                os.close(fd)
+                return None
+            time.sleep(.005)
+
+
+def tick(home, chain=None, seq=None):
+    """一格。chain／seq 只為了舊 kernel cpu 裡還排著的舊格：帶了就是舊鏈殘格，退 0、什麼都不做。"""
+    if chain is not None or seq is not None:
         return 0
-    return Kernel(home, info, state, seq).step()
+    home = Path(home).absolute()
+    info = load_info(home)
+    if aos_kernel_store.legacy(home):
+        raise KernelError("LedgerVersion", "帳本還是舊的 K/state.json；先 aos up（或 aos-kernel boot）換成 sqlite")
+    if not aos_kernel_store.exists(home):
+        raise KernelError("NotBooted", "K 還沒 boot 過（aos up 或 aos-kernel boot）")
+    lock = take_lock(home)
+    if lock is None:
+        return BUSY_EXIT
+    try:
+        if info["tick_timeout_ms"]:
+            # daemon 逾時會先 KILL 這格；鬧鐘設兩倍，只給 daemon 被殺後留下的孤兒 tick 用（SIGALRM 預設就是結束行程）。
+            signal.setitimer(signal.ITIMER_REAL, 2 * info["tick_timeout_ms"] / 1000)
+        store = aos_kernel_store.Store(home)
+        try:
+            state = store.load()
+            return Kernel(home, info, state, int(state.get("last_seq") or 0) + 1, store=store).step()
+        finally:
+            store.close()
+    finally:
+        os.close(lock)

@@ -2,12 +2,12 @@
 
 # 1. 家
 
-（2026-09-24 proto5-2 池式納入：`K/cpus/<name>/` 改成 `K/pools/<P>/cpus/<i>/`，多了池模板與 `envs.json`。）池表見 [§1.1](info.md)，帳本見 [§1.2](ledger.md)。
+（2026-09-24 proto5-2 池式納入：`K/cpus/<name>/` 改成 `K/pools/<P>/cpus/<i>/`，多了池模板與 `envs.json`。2026-09-24 one-boot：帳本換成 `ledger.sqlite`、多了 `.tick.lock`；kernel 池那顆拿掉。）池表見 [§1.1](info.md)，帳本見 [§1.2](ledger.md)。
 
 ```text
 K/
   info.json                 池表（§1.1）；人寫，或 aos-kernel cpu add／rm 改
-  state.json                帳本（§1.2）
+  ledger.sqlite             帳本（§1.2；sqlite 檔，旁邊可能有 sqlite 自己的 -wal、-shm 檔）
   requests/                 syscall、ack、stop，加上 cpu 丟來的回音通知 resp-*（[cpu §6.4](../cpu/notify.md)）
   responses/
   pools/<P>/envs.json       這池的環境；kernel 照 info.pools.P.envs 寫
@@ -15,13 +15,15 @@ K/
   pools/<P>/cpus/<i>/       一顆 cpu 的家：info.json、inst.json、state.json、requests/、responses/、cpu.log
   kernel.log                有事件的格 append
   .info.lock                cpu add／rm 改 info 時拿的鎖（§6 cpu）
+  .tick.lock                同時只准一格的鎖：tick 一開始拿、boot 寫帳本時拿（§3、§7）
+  state.json.v2-old         舊版（第 2 版）帳本匯入 sqlite 後改的名；留著給人查，程式不再讀
 ```
 
-kernel 池那顆固定是 `K/pools/kernel/cpus/0/`。沒有 `procs/` 資料夾：行程紀錄全在帳本裡。
+沒有 `procs/` 資料夾：行程紀錄全在帳本裡。（第 2 版的 kernel 池那顆 `K/pools/kernel/cpus/0/` one-boot 起不再用；舊家留著的不刪。）
 
 ## 主人與外人
 
-- `K/` 的主人是「當下正在跑的那一格 tick」（鏈保證同時只有一格，§7）；外人只能往 `requests/` 放單、讀 `responses/` 然後放 `ack`；`state.json` 隨便偷看。
+- `K/` 的主人是「當下正在跑的那一格 tick」（daemon 只開一格、再加 `.tick.lock`，保證同時只有一格，§7）；外人只能往 `requests/` 放單、讀 `responses/` 然後放 `ack`；帳本隨便看（只讀：用 `aos-kernel proc`／`ls`，或同一支 lib `lib/aos_kernel_store.py`，§1.2）。
 - `K/pools/<P>/envs.json`、`inst.json` 也是 kernel 的東西，只有 tick 與 boot 寫。
 - `K/pools/<P>/cpus/<i>/` 各是另一個家，主人是那顆 `aos-cpu`；kernel 對它們也是外人，**只在家缺東西時補**（初始化，不算動別人的家），已經在的一律不改。
 - cpu 往 `K/requests/` 丟通知，是外人被允許的那一種動作（放一則 request，[cpu §1](../cpu/layout.md) 規則一）。
@@ -59,7 +61,7 @@ kernel 池那顆固定是 `K/pools/kernel/cpus/0/`。沒有 `procs/` 資料夾�
 ```
 
 `poll_ms`／`timeout_ms` 照 info 的 `cpu` 格；`notify` 叫 cpu 回完音就往 kernel 家丟一張通知（[cpu §6.4](../cpu/notify.md)）。
-kernel 池那顆**不帶 `notify`**（它跑的是 tick，回音由 tick 自己收），`poll_ms` 20。
+通知丟進 `K/requests/`，daemon 看到有新檔就馬上開一格（[daemon §10](../daemon/ticks.md)），所以回音不用等到下一次 `tick_ms`。
 
 什麼時候建：
 - tick 決定要長大時，只建**新加的那幾號**（[§3.1](pools.md)），O(新增數)。

@@ -2,7 +2,7 @@
 
 # 6. 命令列（續）：add／ack／halt／check／退出碼
 
-（2026-09-24 proto5-2 池式納入：halt 改等「每個池消失或歸 0」；check 改看池表；ls 的 health 行搬到 [health.md](health.md)、ls 本體在 [cli-ls.md](cli-ls.md)、cpu 在 [cli-cpu.md](cli-cpu.md)。）
+（2026-09-24 proto5-2 池式納入：halt 改等「每個池消失或歸 0」；check 改看池表；ls 的 health 行搬到 [health.md](health.md)、ls 本體在 [cli-ls.md](cli-ls.md)、cpu 在 [cli-cpu.md](cli-cpu.md)。2026-09-24 one-boot：halt 的 `not running` 改看 tick 登記；check 加 `tick` 項、拿掉 kernel 池；新增的 `proc` 放在 [cli.md](cli.md)。）
 
 **add**：TARGET 轉絕對路徑放單（kernel 不解指示詞，指示詞是跑的時候 aos-exec 以它自己的規則解——`.json`
 是檔所在資料夾、資料夾目標是資料夾本身）；旗標一對一對到 §2 的 params，`-- ARG...` 對到 `args`。
@@ -17,20 +17,23 @@
 給 `add --once` 不等的人用。
 
 **halt** 預設等停好（機制見 [§6 停機](boot.md)）：
-- 帳本沒 kernel 池、kernel 池的 daemon 不活、或 daemon 那邊 kernel 池摘要不在／`count 0`＝鏈沒在跑：**不放單**（放了下次 boot 一開機就停）、印 `not running`。
-  kernel 池摘要讀不到（壞了）當「在跑」，照放、照等。`phase` 已是 `stopped` 就不再放單、直接等。
-- 其餘放 stop 單，等到 `phase=stopped` 且帳本裡每個池（含 kernel 池、搬池中的舊位置，按 (daemon, dpool) 去重）在 daemon 那邊都確定消失
+- 沒帳本（沒 boot 過）＝印 `stopped`、退 0。帳本還是舊的 `state.json`＝`LedgerVersion`、退 1（先 `aos up`）。
+- 帳本沒 `ticker`、那個 daemon 不活、或它沒登記這個 kernel（`D/kernels/` 沒這格）＝沒人開 tick：**不放單**（放了下次 boot 一開機就停）、印 `not running`。
+  `phase` 已是 `stopped` 就不再放單、直接等。
+- 其餘放 stop 單，等到 `phase=stopped` 且帳本裡每個池（含搬池中的舊位置，按 (daemon, dpool) 去重）在 daemon 那邊都確定消失
   或 `count 0`、`running 0`、`killing 0`、`draining 0`，印 `stopped`、退 0。
 - 等超過 `--wait-ms`（預設 30000）＝`Timeout`、退 1（單已放、不撤回，用 `ls` 看）；訊息印出哪池讀不到或哪格不是 0，並提醒「這時去停 daemon 會留下非 0 的宣告，下次開 daemon 會拉回來」。
 - `--no-wait`：只放單、不印、退 0，之後自己用 `ls` 等。停好之後才去停 daemon。
 
 **check** 啟動前檢查，每項一行 `ok`／`warn`／`bad`，有 `bad` 退 1：
 - `info`：讀驗（第 2 版池表）。`dirs`：`requests/`、`responses/`、`pools/` 在不在，缺＝bad（手建的家要 `mkdir -p` 補）。
-- `daemon`：池表裡提到的每個 daemon 家都查活不活（沒開＝warn）、池解不出 daemon＝bad（boot 會 `NoDaemon`）；
+- `daemon`：池表裡提到的每個 daemon 家、還有開 tick 的那個（頂層 `daemon`），都查活不活（沒開＝warn）；池或開 tick 的解不出 daemon＝bad（boot 會 `NoDaemon`）；
   活著時分開印「kernel 設定的池：…」與「daemon 目前有：…」（沒有就寫「還沒有」）。`--daemon-target D`（只能給一次，重複＝用法錯 2）再多查一個 daemon 家。
-- `cpus`：帳本在、`phase` 是 `running`／`stopping`、daemon 活著的已宣告池，看摘要（同 [health](health.md)：kernel 池 `running 0`＝bad、要 `aos-kernel boot`；工作池少顆＝warn）。一個都沒有就不印。
-- `path`：`aos-exec`、`aos-cpu`、`aos-kernel`、`aos-agent`、`aos-llm` 在 daemon 的 PATH 找不找得到（讀得到 `/proc/<daemon pid>/environ` 就用它，省略 `--daemon-target` 時取 kernel 池那個 daemon；否則用目前 shell 的並註明）。
-- `pools`：列出每池 `count`；**不強制**有叫 `llm` 的池（agent 可以把 `llm.pool` 設成別的名字，純工具的 kernel 也合法）。`K/pools/<P>/envs.json` 跟 info 的 envs 不同＝warn。
+- `ledger`：（one-boot）帳本還是舊的 `K/state.json`＝warn（`aos up` 或 boot 會換成 sqlite），這時不印 `tick`、`cpus`。
+- `tick`：（one-boot）帳本 `phase` 是 `running`／`stopping` 時看開 tick 的 daemon：活著卻沒登記這個 kernel＝bad（`aos up` 或 boot）；登記著但連敗＝warn（看 daemon 的 stderr，例如 `D/daemon.log`）；正常＝ok `daemon D 每 N ms 開一格 tick`。
+- `cpus`：帳本在、`phase` 是 `running`／`stopping`、daemon 活著的已宣告池，看摘要（同 [health](health.md)：工作池少顆＝warn）。一個都沒有就不印。
+- `path`：`aos-exec`、`aos-cpu`、`aos-kernel`、`aos-agent`、`aos-llm` 在 daemon 的 PATH 找不找得到（讀得到 `/proc/<daemon pid>/environ` 就用它，省略 `--daemon-target` 時取開 tick 的那個 daemon；否則用目前 shell 的並註明）。
+- `pools`：列出每池 `count`（沒有工作池＝`還沒有工作池`）；info 還有舊版的 `kernel` 池＝warn（可以刪）；**不強制**有叫 `llm` 的池（agent 可以把 `llm.pool` 設成別的名字，純工具的 kernel 也合法）。`K/pools/<P>/envs.json` 跟 info 的 envs 不同＝warn。
 - `llm/<池>`：**對每個 envs 裡有 `AOS_LLM_CONFIG` 的池各查一次**（`K/pools/<池>/envs.json` 在就讀它，否則讀 info；envs 整個是指示詞、看不出來的池不查）：
   路徑在不在、llm.json 讀驗過不過、有哪些模型代號。
 - **agent 不在這裡查**：`aos-kernel check` 給 `--agent`（帶不帶值、給幾次都一樣）＝用法錯 2，stderr 指到 [`aos-agent check`](../aos-agent/cli-check.md)；`-h` 不列 `--agent`。
@@ -42,4 +45,6 @@
   回 404／405 就改 `POST <endpoint>/chat/completions` 一句話（`max_tokens: 1`），2xx＝ok；連不上、逾時、其他 HTTP 錯＝bad，寫原因與 endpoint（金鑰遮掉）。
   每個請求最多等 `min(timeout_ms, 10 秒)`。有 `--probe` 時總結行改成 `設定檢查通過；模型連線也測過`。
 
-**退出碼**：0 成功；1 讀驗／daemon／I/O 錯，stderr 一行 `aos-kernel: <代號>: <白話>`；2 用法錯。
+**proc**（2026-09-24 one-boot 新增，查一筆行程、`--json` 的形狀與退出碼）：在 [cli.md](cli.md) 的 proc 段。
+
+**退出碼**：0 成功；1 讀驗／daemon／I/O 錯，stderr 一行 `aos-kernel: <代號>: <白話>`；2 用法錯。`tick` 另有 75＝鎖被佔（別的一格在跑，[§3](tick.md)）。

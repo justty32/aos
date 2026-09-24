@@ -18,9 +18,9 @@ SWEEP = 32
 PARK_MS = 300000   # 09-24 停車：info 沒寫 park_ms 的預設（init 不寫進 info）
 PARK_EXIT = 102    # 反覆行程退這個碼＝停車（kernel/echo.md）
 FEATURES = ["park"]  # 帳本 features：aos-agent start 靠它確認這個 kernel 認得 102（kernel/ledger.md）
+TICK_TIMEOUT_MS = 60000  # one-boot：一格最久跑多久，daemon 逾時整組 KILL、tick 自己也設鬧鐘（init 不寫進 info）
 CPU_DEFAULTS = {"poll_ms": 200, "timeout_ms": 0}
-KERNEL_POOL = "kernel"
-KCPU = "kernel/0"
+KERNEL_POOL = "kernel"   # 保留名：one-boot 起沒有 kernel 池了，但一般池仍不准叫這個名字（舊 info 寫了就略過）
 MAX_COUNT = 1000000
 _POOL_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 
@@ -158,8 +158,6 @@ def _validate_pool(name, config, top_daemon):
     envs = config.setdefault("envs", {})
     if not isinstance(envs, dict):
         _bad("envs 必須是物件", pos + ["envs"])
-    if name == KERNEL_POOL and (count != 1 or skip):
-        _bad("kernel 池的 count 只能是 1、skip 只能是空的", pos)
     return config.get("daemon", top_daemon)
 
 
@@ -173,7 +171,6 @@ def _validate_info(info):
     pools = info.get("pools")
     if not isinstance(pools, dict):
         _bad("pools 必須是物件", ["pools"])
-    pools.setdefault(KERNEL_POOL, {"count": 1})
     seen = {}
     for name, config in pools.items():
         daemon = _validate_pool(name, config, info.get("daemon"))
@@ -192,6 +189,9 @@ def _validate_info(info):
         value = info.setdefault(key, default)
         if not _int(value) or value < 0 or (key == "done_exit" and value > 255):
             _bad("%s 必須是合法非負整數" % key, [key])
+    timeout = info.setdefault("tick_timeout_ms", TICK_TIMEOUT_MS)
+    if not _int(timeout) or timeout < 0:
+        _bad("tick_timeout_ms 必須是非負整數", ["tick_timeout_ms"])
     park = info.setdefault("park_ms", PARK_MS)
     if not _int(park) or park < 0:
         _bad("park_ms 必須是非負整數", ["park_ms"])
@@ -199,6 +199,17 @@ def _validate_info(info):
     if not _int(sweep) or sweep < 1:
         _bad("sweep 必須是正整數", ["sweep"])
     return info
+
+
+def ticker_daemon(info):
+    """one-boot：替這個 kernel 開 tick 的 daemon 家——舊 info 的 kernel 池自己寫了 daemon 就用它，否則頂層 daemon；都沒有回 None。"""
+    legacy = info["pools"].get(KERNEL_POOL) or {}
+    return legacy.get("daemon") or info.get("daemon")
+
+
+def work_pools(info):
+    """工作池名（kernel 這個保留名略過：舊 info 留下的 kernel 池不再有 cpu）。"""
+    return [p for p in info["pools"] if p != KERNEL_POOL]
 
 
 def pool_location(info, pool):
@@ -216,7 +227,7 @@ CONFIG_EXAMPLE = ('{"pools": {"default": {"count": 2}, "llm": {"count": 1, '
 
 
 def info_from_config(config, home=None, daemon=None, env=None):
-    """init：config 只放 kernel 參數＋池；補 _metainfo、kernel 池、預設值、daemon。回（已驗的）要寫的 info。"""
+    """init：config 只放 kernel 參數＋池；補 _metainfo、預設值、daemon。回（已驗的）要寫的 info。"""
     home = Path(home or ".").absolute()
     env = os.environ if env is None else env
     if config is None:
@@ -230,8 +241,9 @@ def info_from_config(config, home=None, daemon=None, env=None):
     info.setdefault("_metainfo", {"_type": "kernel", "_version": 2})
     pools = info.setdefault("pools", {})
     if not isinstance(pools, dict) or any(k.startswith("$") for k in pools):
-        _bad("pools 必須是字面物件（補 kernel 池要改它），例：" + CONFIG_EXAMPLE, ["pools"])
-    pools.setdefault(KERNEL_POOL, {"count": 1})
+        _bad("pools 必須是字面物件，例：" + CONFIG_EXAMPLE, ["pools"])
+    if KERNEL_POOL in pools:
+        _bad("kernel 是保留名：one-boot 起 kernel 不再有自己的池（tick 由 daemon 開），池表別寫它", ["pools", KERNEL_POOL])
     for key, value in DEFAULTS.items():
         info.setdefault(key, value)
     if daemon:
@@ -257,7 +269,7 @@ def init(home, config=None, daemon=None):
 # ---- 帳本 ----
 
 def new_state(chain, cli):
-    return {"chain": chain, "kcpu": KCPU, "cli": str(cli), "last_seq": 0, "phase": "running", "halting": False,
+    return {"chain": chain, "cli": str(cli), "last_seq": 0, "phase": "running", "halting": False,
             "pools": {}, "busy": {}, "on": {}, "recent": [], "ready": {}, "delayed": [], "stale": {},
             "procs": {}, "acks": [], "replies": [], "deletes": [], "sends": [], "features": list(FEATURES)}
 

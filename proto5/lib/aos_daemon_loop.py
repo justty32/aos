@@ -15,6 +15,7 @@ import time
 
 import aos_daemon_pools as pools
 import aos_daemon_rpc
+import aos_daemon_ticks
 import aos_home
 from aos_exec_run import DEFAULT_DIR_TARGET
 from aos_exec_spawn import SpawnError
@@ -29,8 +30,8 @@ class Batch:
         self.kids, self.stage = kids, stage          # kids: [(pool, kid, gen)]
 
 
-class Daemon(aos_daemon_rpc.Requests):
-    """一個活著的主人。真正的狀態＝記憶體＋pool.json；kids／summary 是給外人看的影子。"""
+class Daemon(aos_daemon_rpc.Requests, aos_daemon_ticks.TicksMixin):
+    """一個活著的主人。真正的狀態＝記憶體＋pool.json＋kernels/*.json；kids／summary 是給外人看的影子。"""
 
     def __init__(self, home, info, budget=None):
         self.home, self.info = Path(home), info
@@ -47,6 +48,7 @@ class Daemon(aos_daemon_rpc.Requests):
         self.stop_requested = False
         self.budget = info["max_children"] if budget is None else budget
         self.tokens, self.refilled = float(info["spawn_per_sec"]), time.monotonic()
+        self.init_ticks()
 
     # ---- 小工具 ----
 
@@ -127,6 +129,7 @@ class Daemon(aos_daemon_rpc.Requests):
             return
         self.state["stopping"] = True
         self.save()
+        self.stop_ticks()
         for pool in self.pools.values():
             for kid in list(pool.kids.values()):
                 if kid.state == "running":
@@ -176,6 +179,7 @@ class Daemon(aos_daemon_rpc.Requests):
                 return
             entry = self.by_pid.pop(pid, None)
             if entry is None:
+                self.tick_exited(pid, pools.exit_code(status))   # one-boot：kernel 的一格
                 continue
             pool, kid = entry
             code = pools.exit_code(status)
@@ -343,7 +347,8 @@ class Daemon(aos_daemon_rpc.Requests):
         self.spawn_round()
         self.start_batch()
         self.publish()
-        return self.state["stopping"] and not self.by_pid
+        self.ticks_step()
+        return self.state["stopping"] and not self.by_pid and not self.tick_pids
 
     def sleep_s(self):
         """睡到 poll_ms 或下一個到期時間，取較短的（daemon-reconcile §2 第 8 步）。"""
@@ -353,7 +358,7 @@ class Daemon(aos_daemon_rpc.Requests):
             delay = min(delay, self.timers[0][0] - now)
         if self.rotation and not self.state["stopping"] and len(self.by_pid) < self.budget:
             delay = min(delay, (1 - self.tokens) / self.info["spawn_per_sec"])
-        return max(delay, 0.0005)
+        return max(self.ticks_sleep(delay), 0.0005)
 
     def close(self):
         for pool, kid in list(self.by_pid.values()):

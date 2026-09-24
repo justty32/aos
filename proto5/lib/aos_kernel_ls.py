@@ -1,16 +1,18 @@
 """aos-kernel ls（advice-r1，kernel/cli-ls.md）：先收成一份穩定的資料，再印成對齊的表或 JSON。
 
-`ls_data()` 回的 dict 就是 `--json` 的 schema（_metainfo aos_kernel_ls 第 2 版；池式納入後以池取代逐顆 cpu）；文字版只從它排版，
+`ls_data()` 回的 dict 就是 `--json` 的 schema（_metainfo aos_kernel_ls 第 3 版：one-boot 拿掉 kernel cpu 與 kernel 池，
+`kernel.cpu` 換成 `kernel.tick`；第 2 版是池式納入時以池取代逐顆 cpu）；文字版只從它排版，
 兩邊看到的是同一份判定。第一行 health 的判定在 aos_kernel_health，這裡不改順序。
 """
 import os
+import time
 import unicodedata
 
 import aos_home
 from aos_kernel_health import agent_marks, agents_health, health
 from aos_kernel_info import DEFAULTS, KERNEL_POOL, KernelError, load_info
 
-META = {"_type": "aos_kernel_ls", "_version": 2}  # 池式（proto5-2 納入）升第 2 版
+META = {"_type": "aos_kernel_ls", "_version": 3}  # one-boot（09-24）：kernel cpu 拿掉，kernel.cpu → kernel.tick、pools 不再有 kernel
 NAME_WIDTH = 24   # 主表行程名最多幾格寬，超過截斷（-v 印全名）
 QUEUE_SHOW = 8    # queue 行最多列幾個名字
 SETTINGS = ("tick_ms", "interval_ms", "timeout_ms", "done_exit", "bad_after")  # v1 固定這五個
@@ -76,8 +78,8 @@ def ls_data(home, snapshot, pool=None):
     for proc in procs:
         by_status[proc["status"]] = by_status.get(proc["status"], 0) + 1
     work = [r for p, r in rows.items() if p != KERNEL_POOL]
-    kcpu = snapshot["kernel_cpu"]
-    current = kcpu["current"]
+    reg = snapshot.get("ticker") if isinstance(snapshot.get("ticker"), dict) else None
+    last = snapshot.get("last_tick_at")
     return {
         "_metainfo": dict(META),
         "health": {"code": code, "message": message},
@@ -86,8 +88,11 @@ def ls_data(home, snapshot, pool=None):
             "last_seq": snapshot["last_seq"],
             "daemon": {"home": os.path.abspath(daemon["home"]) if daemon.get("home") else None,
                        "alive": bool(daemon["alive"])},
-            "cpu": {"name": kcpu["name"], "current": current.get("name") if isinstance(current, dict) else None,
-                    "requests": kcpu["requests"]},
+            "tick": {"registered": reg is not None,
+                     "every_ms": reg.get("every_ms") if reg else None,
+                     "fails": reg.get("fails", 0) if reg else None,
+                     "last_exit": reg.get("last_exit") if reg else None,
+                     "last_at": last if isinstance(last, (int, float)) else None},
             "settings": {key: info.get(key, DEFAULTS[key]) for key in SETTINGS}},
         "pools": rows, "procs": procs, "queue": queue,
         "counts": {"pools": {"total": len(work), "want": sum(r["want"] for r in work),
@@ -148,14 +153,16 @@ def render(data, verbose=False, procs=False):
              "kernel  %s  seq %s  daemon %s  tick %sms" % (
                  phase, "-" if k["last_seq"] is None else k["last_seq"],
                  "alive" if k["daemon"]["alive"] else "dead", k["settings"]["tick_ms"])]
+    tick = k["tick"]
+    if tick["registered"]:
+        ago = "-" if tick["last_at"] is None else "%d 秒前" % max(0, time.time() - tick["last_at"])
+        text = "  tick 由 daemon 開：上一格 %s%s" % (ago, "、連敗 %d" % tick["fails"] if tick["fails"] else "")
+    else:
+        text = "  tick 沒人開（daemon 沒登記這個 kernel；aos up）"
     if verbose:
         lines += ["  K       " + k["home"], "  D       " + (k["daemon"]["home"] or "-"),
-                  "  chain   " + (k["chain"] or "-"),
-                  "  kcpu    %s  current %s  requests %s" % (
-                      k["cpu"]["name"] or "-", k["cpu"]["current"] or "-", k["cpu"]["requests"])]
-    else:
-        lines.append("  kcpu %s  %s  requests %s" % (
-            k["cpu"]["name"] or "-", "正在跑一格" if k["cpu"]["current"] else "沒在跑", k["cpu"]["requests"]))
+                  "  chain   " + (k["chain"] or "-")]
+    lines.append(text)
     c = counts["pools"]
     lines.append("pool    %d 個工作池：要 %d 顆、忙 %d、閒 %d%s" % (
         c["total"], c["want"], c["busy"], c["idle"], "、收掉中 %d" % c["draining"] if c["draining"] else ""))

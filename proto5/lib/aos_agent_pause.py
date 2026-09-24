@@ -6,7 +6,7 @@ from pathlib import Path
 import aos_agent_info
 import aos_home
 from aos_agent_home import AgentError
-from aos_agent_runtime import KERNEL_ENV, PAUSED, RESUMED, ledger, manual_paused
+from aos_agent_runtime import KERNEL_ENV, PAUSED, RESUMED, kernel_procs, manual_paused
 from aos_agent_status import pause_path, waits
 
 
@@ -83,7 +83,7 @@ def resume_all(env=None):
     kernel = env.get(KERNEL_ENV)
     if not isinstance(kernel, str) or not os.path.isabs(kernel):
         raise AgentError('Usage', 'continue --all 要 %s（kernel 家的絕對路徑）' % KERNEL_ENV)
-    procs = ledger(kernel)['procs']
+    procs = kernel_procs(kernel)
     homes = []
     for name, proc in procs.items():
         if not name.startswith('agent-') or not isinstance(proc, dict) or proc.get('once'):

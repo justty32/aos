@@ -20,7 +20,7 @@ aos-agent check [--target DIR] [--probe]
 - `AOS_KERNEL_HOME` 有設、`tick.json` 也在，但它記的 K 跟 `AOS_KERNEL_HOME` 逐字不同、或讀不到字串 K（檔壞了、沒有 `envs.AOS_KERNEL_HOME`／`AOS_K`、值不是字串）＝多一行 `bad  kernel`（判法跟 `start` 一樣）：`start` 會回 `KernelMismatch`，要換 K 先 `stop` 再刪 `tick.json`；K 的項目照 `AOS_KERNEL_HOME` 那個查。
 - 沒設 `AOS_KERNEL_HOME`，`tick.json` 在但讀不到絕對路徑 K＝`bad  kernel: 找不到 K：沒設 AOS_KERNEL_HOME，<家>/tick.json 也讀不到合法的絕對路徑 K；…`；兩個都沒有＝`bad  kernel: 找不到 K：沒設 AOS_KERNEL_HOME，也沒有 tick.json（沒 start 過）；export AOS_KERNEL_HOME=<kernel 家的絕對路徑> 再跑`。這兩種 K 的項目全部略過。
 
-daemon 家：跟 `aos-kernel check` 一樣從 K 的池表拿（每池的 `daemon`，沒寫用 info 頂層的），逐池查；解不出＝`bad daemon`，不退回 `AOS_DAEMON_HOME` 或目前資料夾。PATH 看 kernel 池的 daemon；池 envs 的 `$env` 照拉那池的 daemon 的環境解（2026-09-24 池式納入改）。這裡沒有 `--daemon-target`。
+daemon 家：跟 `aos-kernel check` 一樣從 K 的池表拿（每池的 `daemon`，沒寫用 info 頂層的），逐池查；解不出＝`bad daemon`，不退回 `AOS_DAEMON_HOME` 或目前資料夾。PATH 看開 tick 的 daemon（K 的 info 頂層 `daemon`；2026-09-24 one-boot 改，以前看 kernel 池的）；池 envs 的 `$env` 照拉那池的 daemon 的環境解（2026-09-24 池式納入改）。這裡沒有 `--daemon-target`。
 
 ## 查什麼、印什麼
 

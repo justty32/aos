@@ -1,4 +1,7 @@
-"""kernel 的 boot 交接（handoff §1 六步）、狀態快照與 halt 等待（kernel-cli halt、handoff §3）。"""
+"""kernel 的 boot（kernel/boot.md）、狀態快照與 halt 等待。
+
+2026-09-24 one-boot：沒有 kernel cpu、沒有 tick 鏈；boot＝寫 sqlite 帳本＋向 daemon 登記「請替我開 tick」。
+"""
 import hashlib
 import os
 from pathlib import Path
@@ -6,19 +9,21 @@ import time
 
 import aos_client
 import aos_daemon
+import aos_daemon_ticks
 import aos_home
-from aos_kernel_engine import Kernel
+import aos_kernel_store
+from aos_kernel_engine import Kernel, take_lock
 from aos_kernel_info import (
-    CLI, KCPU, KERNEL_POOL, KernelError, _put, chain_epoch, error_code, load_info, members,
-    new_pool, new_state, pool_location,
+    CLI, KERNEL_POOL, KernelError, _put, chain_epoch, error_code, load_info, members,
+    new_pool, new_state, pool_location, ticker_daemon, work_pools,
 )
 from aos_kernel_pools import pool_summary, pool_summary_state, scale_request
 
 
 def _ledger_version_check(state):
     if "cpus" in state and "pools" not in state:
-        raise KernelError("LedgerVersion", "K/state.json 是 proto5 的帳本（cpus 表）；請先用 proto5 halt、"
-                          "把 state.json 移走再 boot（proto5-2 不接手舊帳本）")
+        raise KernelError("LedgerVersion", "K/state.json 是 proto5 第 1 版的帳本（cpus 表）；請先用舊版 halt、"
+                          "把 state.json 移走再 boot（只接手第 2 版的 state.json）")
 
 
 def _call(daemon, name, body, wait_ms):
@@ -55,95 +60,117 @@ def _why_busy(targets):
 
 
 def boot(home, wait_ms=30000):
+    """one-boot（kernel/boot.md）：驗 → 拿 tick 鎖 → （舊帳本）匯入、舊 kernel 池縮到 0 → 寫帳本 → 建家 → 向 daemon 登記開 tick。"""
     home = Path(home).absolute()
     # 1. 驗（不改任何東西）
     info = load_info(home)
     cli = CLI.resolve()
     if not cli.is_file() or not os.access(cli, os.X_OK):
         raise KernelError("ReadFailed", "kernel CLI 必須有執行位：%s" % cli)
-    locations = {p: pool_location(info, p) for p in info["pools"]}
+    ticker = ticker_daemon(info)
+    if ticker is None:
+        raise KernelError("NoDaemon", "解不出替 kernel 開 tick 的 daemon 家（在 info.json 寫 daemon，或 init --daemon）")
+    locations = {p: pool_location(info, p) for p in work_pools(info)}
     missing = [p for p, loc in locations.items() if loc[0] is None]
     if missing:
         raise KernelError("NoDaemon", "這些池解不出 daemon 家：%s（在 info.json 寫 daemon，或 init --daemon）" % "、".join(missing))
-    for daemon in dict.fromkeys(loc[0] for loc in locations.values()):
+    for daemon in dict.fromkeys([ticker, *(loc[0] for loc in locations.values())]):
         if not aos_daemon.is_alive(daemon):
-            raise KernelError("NotRunning", "daemon 沒在跑：%s（先 aos-daemon boot --target %s）" % (daemon, daemon))
-    old = aos_home.read_state(home, {})
-    _ledger_version_check(old)
+            raise KernelError("NotRunning", "daemon 沒在跑：%s（先 aos-daemon boot --target %s，或直接 aos up）" % (daemon, daemon))
+    legacy = aos_kernel_store.legacy(home)
+    if legacy:
+        _ledger_version_check(aos_home.read_state(home, {}))
     # 納入後文件組實測：手建的家缺 requests/、responses/ 時 boot 會成功、之後 add／halt 才 WriteFailed；boot 先補上。
     aos_home.ensure_queue(home)
+    (home / "pools").mkdir(exist_ok=True)
+    # 2. 拿 tick 鎖：boot 寫帳本時不能有一格正在跑（tick 被 kill -9 鎖自己消失）。
+    lock = take_lock(home, wait_ms)
+    if lock is None:
+        raise KernelError("AlreadyRunning", "有一格 tick 跑了超過 %d ms 還沒完（K/.tick.lock 被佔）；等一下再 boot" % wait_ms)
+    try:
+        return _boot_locked(home, info, cli, ticker, locations, legacy, wait_ms)
+    finally:
+        os.close(lock)
+
+
+def _boot_locked(home, info, cli, ticker, locations, legacy, wait_ms):
     chain = "%d-%d" % (time.time_ns(), os.getpid())
     decl = [chain_epoch(chain), 0]
-    # 2. 交接 kernel 池：帳本的與 info 的各縮到 0、等回音、等 daemon 那池收乾淨。
+    store = aos_kernel_store.Store(home, create=True)
+    try:
+        if legacy:
+            state = aos_home.read_state(home, {})
+            store.orig = aos_kernel_store._rows(store.conn)[1]
+        else:
+            state = store.load()
+        # 3. 舊版（kernel cpu 時代）帳本的 kernel 池：縮到 0、等 daemon 收乾淨，才寫新帳本。
+        acks = _retire_kernel_pool(home, (state.get("pools") or {}).get(KERNEL_POOL), chain, decl, wait_ms)
+        # 4. 寫帳本（一筆交易）
+        if not state.get("chain") and not state.get("procs"):
+            state = new_state(chain, cli)
+        state.update(chain=chain, cli=str(cli), ticker=ticker, last_seq=0, phase="running", halting=False,
+                     last_tick_at=time.time())
+        state.pop("kcpu", None)
+        for key, default in (("busy", {}), ("ready", {}), ("delayed", []), ("stale", {}), ("procs", {}),
+                             ("acks", []), ("replies", []), ("deletes", []), ("sends", []), ("pools", {})):
+            state.setdefault(key, default)
+        state["sends"] = [s for s in state["sends"] if (s.get("body") or {}).get("method") not in ("scale", "tick")]
+        state["acks"].extend(acks)
+        state["pools"].pop(KERNEL_POOL, None)
+        for entry in state["pools"].values():
+            entry.update(dirty=True, redeclare=True, boot_redeclare=True, retry_at=None)  # 整份重送（astra P3）
+        state["recent"] = list(state["busy"])
+        kernel = Kernel(home, info, state, 0, store=store)
+        # 5. 建家與模板：每池 envs.json、inst.json；W 裡每一號缺的補齊。
+        for pool in work_pools(info):
+            config = info["pools"][pool]
+            entry = state["pools"].get(pool)
+            if entry is None:
+                entry = state["pools"][pool] = new_pool(*locations[pool])
+            entry["envs_digest"] = kernel.write_pool_files(pool, config["envs"])
+            for i in members(config["count"], config["skip"]):
+                kernel.ensure_cpu_home(pool, i)
+        kernel.save()
+        if legacy:
+            os.replace(home / aos_kernel_store.LEGACY, home / (aos_kernel_store.LEGACY + ".v2-old"))
+    finally:
+        store.close()
+    # 6. 向 daemon 登記：請它定時（tick_ms）或 K/requests/ 有新檔時開一格。
+    name = "k-%s-boot-tick.json" % chain
+    body = {"jsonrpc": "2.0", "id": name[:-5], "method": "tick",
+            "params": {"home": str(home), "cli": str(cli), "every_ms": info["tick_ms"], "timeout_ms": info["tick_timeout_ms"]}}
+    response, code = _call(ticker, name, body, wait_ms)
+    _ack_now([{"home": ticker, "name": name}], chain)
+    if code is not None:
+        raise KernelError(code, "daemon %s 不肯開 tick：%s（%s）" % (ticker, code, response["error"].get("message")))
+    return 0
+
+
+def _retire_kernel_pool(home, old_kernel, chain, decl, wait_ms):
+    """舊版帳本才有 kernel 池（那顆 kernel cpu）：送 scale 0、等回音、等 daemon 那池收乾淨；回要 ack 的回音。"""
+    if not old_kernel:
+        return []
     acks = []
-    old_kernel = (old.get("pools") or {}).get(KERNEL_POOL)
-    targets = [(old_kernel["daemon"], old_kernel["dpool"])] if old_kernel else []
-    targets = list(dict.fromkeys([*targets, tuple(locations[KERNEL_POOL])]))
-    if old_kernel and old_kernel.get("pending"):
+    if old_kernel.get("pending"):
         name = old_kernel["pending"]["name"]
         if (Path(old_kernel["daemon"]) / "responses" / name).exists():
             acks.append({"home": old_kernel["daemon"], "name": name})
-    for n, (daemon, dpool) in enumerate(targets):
-        name = "k-%s-boot-scale-%s-down%s.json" % (chain, KERNEL_POOL, "" if n == 0 else "-%d" % (n + 1))
-        body = scale_request(name, home, KERNEL_POOL, {"dpool": dpool}, 0, [], decl)
-        _, code = _call(daemon, name, body, wait_ms)
-        acks.append({"home": daemon, "name": name})
-        if code is not None:
-            _ack_now(acks, chain)
-            raise KernelError(code, "kernel 池 %s（daemon %s）縮到 0 失敗：%s" % (dpool, daemon, code))
+    target = (old_kernel["daemon"], old_kernel["dpool"])
+    name = "k-%s-boot-scale-%s-down.json" % (chain, KERNEL_POOL)
+    body = scale_request(name, home, KERNEL_POOL, {"dpool": target[1]}, 0, [], decl)
+    _, code = _call(target[0], name, body, wait_ms)
+    acks.append({"home": target[0], "name": name})
+    if code is not None:
+        _ack_now(acks, chain)
+        raise KernelError(code, "舊 kernel 池 %s（daemon %s）縮到 0 失敗：%s" % (target[1], target[0], code))
     deadline = time.monotonic() + wait_ms / 1000
-    while not all(_gone_or_idle(d, p) for d, p in targets):
+    while not _gone_or_idle(*target):
         if time.monotonic() >= deadline:
             _ack_now(acks, chain)
             raise KernelError("AlreadyRunning", "舊 kernel cpu 還沒收乾淨（縮到 0 的單已送、不撤回；%s）；等一下再 boot"
-                              % _why_busy(targets))
+                              % _why_busy([target]))
         time.sleep(.005)
-    # 3. 寫帳本：舊主人確認退出後重讀（astra P1）；交接前的 old 只拿來找舊 kernel 池，
-    #    等待期間舊 tick 可能又提交過（新登記的行程、結清的工作），不能拿舊快照蓋掉。
-    state = aos_home.read_state(home, {})
-    _ledger_version_check(state)
-    state = state if state else new_state(chain, cli)
-    state.update(chain=chain, kcpu=KCPU, cli=str(cli), last_seq=0, phase="running", halting=False)
-    for key, default in (("busy", {}), ("on", {}), ("ready", {}), ("delayed", []), ("stale", {}), ("procs", {}),
-                         ("acks", []), ("replies", []), ("deletes", []), ("sends", []), ("pools", {})):
-        state.setdefault(key, default)
-    state["sends"] = [s for s in state["sends"] if (s.get("body") or {}).get("method") != "scale"]
-    state["acks"].extend(acks)
-    for pool, entry in list(state["pools"].items()):
-        if pool == KERNEL_POOL:
-            continue
-        entry.update(dirty=True, redeclare=True, boot_redeclare=True, retry_at=None)  # 整份重送（astra P3）
-    kernel_daemon, kernel_dpool = locations[KERNEL_POOL]
-    state["pools"][KERNEL_POOL] = {"daemon": kernel_daemon, "dpool": kernel_dpool,
-                                   "sent": {"count": 0, "skip": []}, "pending": None}
-    state["recent"] = list(state["busy"])
-    kernel = Kernel(home, info, state, 0)
-    kernel.save()
-    # 4. 建家與模板：每池 envs.json、inst.json；W 裡每一號缺的補齊。
-    for pool, config in info["pools"].items():
-        entry = state["pools"].get(pool)
-        if pool != KERNEL_POOL and entry is None:
-            entry = state["pools"][pool] = new_pool(*locations[pool])
-        digest = kernel.write_pool_files(pool, config["envs"])
-        if pool != KERNEL_POOL:
-            entry["envs_digest"] = digest
-        for i in members(config["count"], config["skip"]):
-            kernel.ensure_cpu_home(pool, i)
-    kernel.save()
-    # 5. 拉 kernel 池
-    name = "k-%s-boot-scale-%s.json" % (chain, KERNEL_POOL)
-    body = scale_request(name, home, KERNEL_POOL, {"dpool": kernel_dpool}, 1, [], decl)
-    _, code = _call(kernel_daemon, name, body, wait_ms)
-    state["acks"].append({"home": kernel_daemon, "name": name})
-    if code is None:
-        state["pools"][KERNEL_POOL]["sent"] = {"count": 1, "skip": []}
-    kernel.save()
-    if code is not None:
-        raise KernelError(code, "kernel 池 %s（daemon %s）拉起失敗：%s" % (kernel_dpool, kernel_daemon, code))
-    # 6. 放第 1 格
-    name, request = kernel.tick_request(1)
-    _put(kernel.cpu_home(KCPU), name, request)
-    return 0
+    return acks
 
 
 def _ack_now(acks, chain):
@@ -155,35 +182,45 @@ def _ack_now(acks, chain):
 
 
 def status(home):
-    """ls 用的快照：帳本＋每池 daemon 摘要（O(池數)）。"""
+    """ls 用的快照：帳本＋每池 daemon 摘要（O(池數)）＋替它開 tick 的 daemon 登記（one-boot）。"""
     home = Path(home).absolute()
-    info, state = load_info(home), aos_home.read_state(home, {})
+    info = load_info(home)
+    state = aos_kernel_store.read(home, None)
+    legacy = state is None and aos_kernel_store.legacy(home)
+    if state is None:
+        state = aos_home.read_state(home, {}) if legacy else {}
     pools = {}
     for pool, entry in (state.get("pools") or {}).items():
+        if pool == KERNEL_POOL:
+            continue
         summary = None
         try:
             summary = pool_summary(entry["daemon"], entry["dpool"])
         except (AttributeError, aos_home.HomeError, OSError):
             pass
         pools[pool] = {**entry, "summary": summary}
-    kernel = (state.get("pools") or {}).get(KERNEL_POOL) or {}
-    daemon = kernel.get("daemon") or (pool_location(info, KERNEL_POOL) or (None,))[0]
-    cpu_home = home / "pools" / KERNEL_POOL / "cpus" / "0"
-    cpu_state = aos_home.read_state(cpu_home) if cpu_home.exists() else {}
-    return {k: state.get(k) for k in ("chain", "phase", "last_seq", "halting", "busy", "procs")} | {
-        "pools": pools,
+    daemon = state.get("ticker") or ticker_daemon(info)
+    alive = bool(daemon) and aos_daemon.is_alive(daemon)
+    reg = aos_daemon_ticks.peek(daemon, home) if daemon else None
+    return {k: state.get(k) for k in ("chain", "phase", "last_seq", "last_tick_at", "halting", "busy", "procs")} | {
+        "pools": pools, "legacy": legacy,
         "queued": sum(len(q) for q in (state.get("ready") or {}).values()) + len(state.get("delayed") or []),
-        "daemon": {"home": daemon, "alive": bool(daemon) and aos_daemon.is_alive(daemon)},
-        "kernel_cpu": {"name": KCPU, "current": cpu_state.get("current"),
-                       "requests": len(list((cpu_home / "requests").glob("*.json"))) if cpu_home.exists() else 0}}
+        "daemon": {"home": daemon, "alive": alive},
+        "ticker": reg}
 
 
 def _halted(state):
     """phase=stopped，且這個 kernel 的每個池在 daemon 那邊都消失或 count 0、running 0、killing 0、draining 0。"""
     if state.get("phase") != "stopped":
         return False
-    seen = {(e["daemon"], e["dpool"]) for e in (state.get("pools") or {}).values()}
+    seen = {(e["daemon"], e["dpool"]) for p, e in (state.get("pools") or {}).items() if p != KERNEL_POOL}
     return all(_gone_or_idle(d, p) for d, p in seen)
+
+
+def _read(home):
+    if aos_kernel_store.legacy(home):
+        raise KernelError("LedgerVersion", "帳本還是舊的 K/state.json；先 aos up（或 aos-kernel boot）換成 sqlite")
+    return aos_kernel_store.read(home, {})
 
 
 def stop(home, wait_ms=30000, no_wait=False):
@@ -193,31 +230,28 @@ def stop(home, wait_ms=30000, no_wait=False):
     if no_wait:
         post()
         return 0
-    state = aos_home.read_state(home, {})
+    state = _read(home)
     if not state:
         print("stopped")
         return 0
-    _ledger_version_check(state)
     if _halted(state):
         print("stopped")
         return 0
     if state.get("phase") != "stopped":
-        kernel = (state.get("pools") or {}).get(KERNEL_POOL)
-        # summary 讀不到（unknown）當還在跑：照放 stop、照等（astra P6）。
-        known, summary = pool_summary_state(kernel["daemon"], kernel["dpool"]) if kernel else ("gone", None)
-        if (kernel is None or not aos_daemon.is_alive(kernel["daemon"]) or known == "gone"
-                or (known == "ok" and summary.get("count", 0) == 0)):
+        ticker = state.get("ticker")
+        # one-boot：沒有 daemon 替它開 tick（daemon 不在、或沒登記）＝沒在跑，放了 stop 也沒人收。
+        if not ticker or not aos_daemon.is_alive(ticker) or aos_daemon_ticks.peek(ticker, home) is None:
             print("not running")
             return 0
         post()
     deadline = time.monotonic() + wait_ms / 1000
     while True:
-        state = aos_home.read_state(home)
+        state = _read(home)
         if _halted(state):
             print("stopped")
             return 0
         if time.monotonic() >= deadline:
-            why = _why_busy({(e["daemon"], e["dpool"]) for e in (state.get("pools") or {}).values()})
+            why = _why_busy({(e["daemon"], e["dpool"]) for p, e in (state.get("pools") or {}).items() if p != KERNEL_POOL})
             raise KernelError("Timeout", "等了 %d ms 還沒停好（stop 已放、不撤回）。若卡在縮池，daemon 那邊會留下非 0 的宣告，"
                               "這時停 daemon 的話下次開 daemon 會把那些池拉回來；先用 aos-kernel ls --target %s 看原因%s"
                               % (wait_ms, home, "（%s）" % why if why else ""))

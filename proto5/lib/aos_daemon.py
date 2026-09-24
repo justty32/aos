@@ -220,6 +220,7 @@ def run(home):
         _previous_children(pids, info)
         aos_home.reconcile(home, old_state.get("current"))
         owner.adopt(decls, old_kids)
+        owner.load_tickers()                           # one-boot：照 kernels/*.json 接著開 tick
         owner.save()                                   # 舊孩子死透才公布新狀態（children 拿掉）
         while not owner.step():
             time.sleep(owner.sleep_s())

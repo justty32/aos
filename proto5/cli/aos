@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""aos up／aos down 的薄入口，實作在 ../lib/aos_up.py。"""
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+from aos_up import main
+
+sys.exit(main())

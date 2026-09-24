@@ -2,7 +2,7 @@
 
 ## 6.3 `ls`、`scale`、`kill`
 
-（2026-09-24 proto5-2 池式納入，新節；推翻第 1 版「沒有 ls、沒有 ctl」。）用法總表在 [§6](lifecycle.md)。
+（2026-09-24 proto5-2 池式納入，新節；推翻第 1 版「沒有 ls、沒有 ctl」。2026-09-24 one-boot：`ls` 多印登記的 kernel。）用法總表在 [§6](lifecycle.md)。
 
 ### `ls`
 
@@ -11,13 +11,14 @@
 沒給 `--pool`：一池一行，讀 `pools/*/summary.json`：
 
 ```text
-daemon running  pid 100  pools 3  children 10011
-k1-kernel   owner /abs/K  want 1      running 1（含 restarting 0）     busy 1     pending 0  dead 0  failed 0  killing 0  draining 0
+daemon running  pid 100  pools 2  children 10010  kernels 1
 k1-default  owner /abs/K  want 10000  running 9990（含 restarting 3）  busy 8123  pending 7  dead 3  failed 0  killing 0  draining 0
 k1-llm      owner /abs/K  want 2      running 2（含 restarting 1）     busy 0     pending 0  dead 0  failed 0  killing 0  draining 0
+kernel /abs/K  每 1000 ms 開一格 tick
 ```
 
-- 第一行 `children`＝各池 running＋pending＋dead＋failed＋killing＋draining 的和。
+- 第一行 `children`＝各池 running＋pending＋dead＋failed＋killing＋draining 的和（不含 tick）；`kernels`＝登記了幾個 kernel（one-boot）。
+- 池表下面每個登記的 kernel 一行（讀 `kernels/*.json`，[§10](ticks.md)）：`kernel <K>  每 N ms 開一格 tick`，連敗時行尾加 `  連敗 N（最後退出 X）`。
 - **`restarting` 是 `running` 的子集**，所以印成 `running 2（含 restarting 1）`，不另開一欄——避免被讀成「running 2 加 restarting 1 比 want 2 多一顆」（09-24 裁定，實作 D-126）。
   `dead`＝死了在等重拉，`restarting`＝已經重拉、還沒活過 `stable_ms`。
 - `busy`＝活著的孩子裡，家（宣告的 `home` 樣板）的 `state.json` 有 `current` 的。**要逐顆偷看**，是 O(活著的數量)；
@@ -34,7 +35,7 @@ k1-llm      owner /abs/K  want 2      running 2（含 restarting 1）     busy 0
 ```
 
 `busy` 欄：活著且忙＝`busy`、活著不忙＝`idle`、其他＝`-`。kids 檔的 `streak` 可能比記憶體的舊（活滿 `stable_ms` 不寫檔）。
-`--json` 印同樣的東西成一份 JSON：形狀同 [§3 `ls`](methods.md) 的回音，多一格 `daemon: {running, pid}`。
+`--json` 印同樣的東西成一份 JSON：形狀同 [§3 `ls`](methods.md) 的回音，多一格 `daemon: {running, pid}`。沒給 `--pool` 時還多一格 `kernels`：**陣列**，每格是一個登記檔的內容（照檔名排）——跟 `ls` method 回的 `kernels`（以 id 為鍵的物件、多 `running`）形狀不同，因為 CLI 是偷看檔、daemon 沒在跑也看得到。
 
 ### `scale`
 

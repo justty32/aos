@@ -25,3 +25,13 @@
 - §6 boot：等 draining 0（D-5，09-24 裁定）；交接完重讀帳本（D-47）；兩個 kernel 池的檔名（D-28）；第 1 版帳本不接手（D-29）；半途失敗的 ack（D-30）；印 `booted N pools, M cpus`（D-36）。
 - §6：cpu add／rm 的邊界與 `NotLiteral`（D-37、D-39）、「kernel 沒在跑」怎麼判（D-40）、cpu ls 欄位與尾註字眼（D-41、D-120～D-123）、halt 的 not running（D-31）、health 的碼與順序（D-43）、check 的細節（D-44、D-124）。
 - §5：池刪掉後舊鏈晚到的 scale 單列保證外（D-69，09-24 裁定）。
+
+## one-boot（2026-09-24，P 隊）
+
+上面講的 kernel 池、kernel cpu、交接、`state.json`、四個提交點，one-boot 後已不存在（計畫在 [plan.md](../../notes/2026-09-24-one-boot/plan.md)，報告在 [README.md](../../notes/2026-09-24-one-boot/README.md)）。實作時定下、已寫進本資料夾的細節：
+- §3：舊 kernel cpu 裡還排著的舊格帶 `--chain`／`--seq`（-h 不列）＝退 0、什麼都不做；檢查順序是「舊格 → 讀 info → 舊帳本／沒帳本 → 拿鎖」；`stopped` 那格不更新 `last_seq`。
+- §1.2：`meta` 另存 `version`；提交點 A、C 沒東西出貨就不存；`last_seq` 跟 A 或 B 一起存；`busy` 的 `ord` 只在順序被打亂的列換新號。
+- §6 boot：登記單在放鎖**之前**送，所以 daemon 開的第 1 格常撞鎖退 75、`tick_ms` 後才真的跑（`aos up` 等的就是這格）；登記的回音 boot 當場 ack，不進帳本。
+- §6 halt：沒帳本＝印 `stopped`；判 `not running` 看 `ticker` 活著而且登記著。
+- §6 proc：`--json` 沒找到也印一份、退 1；文字版沒找到 stderr `NotFound`。
+- §1.1：舊 info 的 `pools.kernel` 讀得過、整格略過；`init --config` 寫了才拒絕。

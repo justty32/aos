@@ -26,7 +26,7 @@
 | **連敗暫停**：問模型連續失敗 3 次 | `status` 第一行 `連敗暫停`、`wait` 行寫「連敗暫停」；`log/agent.err` 有 `stuck` 行；`aos-kernel ls` 的 proc 表備註欄標 `連敗暫停中` | 修好原因（endpoint、模型代號、逾時），`aos-agent continue`（好幾個一起就 `continue --all`） |
 | **恢復中**（09-24 fix-r5 補）：某顆 cpu 死了、daemon 正在重拉 | `status`／`aos-kernel ls` 第一行 `恢復中（llm cpu dead，daemon 重拉中）` | 不用做什麼，通常幾秒內好 |
 | **bad**：設定讀驗錯（info／工具檔壞了）連退 1 達 kernel 的 `bad_after` 次 | `aos-kernel ls` 的 proc 表狀態 `bad`、表下一行 `agent-<名> 壞了，看 <agent>/log/agent.err`；`status` 的 `kernel` 行也看得到 | 照 agent.err 修好，`aos-agent stop` 再 `start` |
-| **沒在跑**：daemon 重開過、kernel 沒 boot | `aos-kernel ls` 第一行 `cpu missing：…（跑 aos-kernel boot …）`、cpu 表 daemon 欄 `missing` | `aos-kernel boot --target K --daemon-target D` |
+| **沒在跑**：daemon 沒開、kernel 沒 boot、或沒人替 kernel 開 tick | `aos-kernel ls` 第一行 `daemon 沒在跑`、`停機中`、`daemon … 沒在替這個 kernel 開 tick` 之類（2026-09-24 one-boot 改） | `aos up --target K` |
 | **沒登記**：`stop` 過或從沒 `start` | `status` 的 `kernel` 行寫「沒登記」 | `aos-agent start` |
 
 `info.json` 各格與工具檔的格式在 [agent.md 的「使用者只需要懂的」](../agent/README.md)。

@@ -2,7 +2,7 @@
 
 # 0. 名詞（白話）
 
-跟 cpu 範式共用的詞（inst、目標、request、主人、控制 pipe、`go`、EOF、close-on-exec、process group、TERM／KILL…）在 [cpu.md §0](../cpu/terms.md)，這裡只列 daemon 自己的。（2026-09-24 proto5-2 池式納入：池、宣告、退避、各狀態改寫或新增。）
+跟 cpu 範式共用的詞（inst、目標、request、主人、控制 pipe、`go`、EOF、close-on-exec、process group、TERM／KILL…）在 [cpu.md §0](../cpu/terms.md)，這裡只列 daemon 自己的。（2026-09-24 proto5-2 池式納入：池、宣告、退避、各狀態改寫或新增。2026-09-24 one-boot：表尾加開 tick、登記、連敗、`aos up`／`aos down`。）
 
 | 詞 | 意思 |
 |---|---|
@@ -16,7 +16,7 @@
 | 重拉 | 成員死了（**任何退出碼**）就等一下再拉同一號；宣告不要它了、或 daemon 在停機，就不拉 |
 | 崩潰迴圈／退避 | 「一拉起來就死、死了又拉」的空轉。用退避擋：連死越多次等越久（1、2、4…最多 60 秒），活過 `stable_ms` 歸零 |
 | 令牌桶（`spawn_per_sec`） | 整個 daemon 每秒最多拉幾顆的上限，池之間輪流拿 |
-| `stopping`（daemon 的） | 整個 daemon 收過 stop、正在把所有孩子停掉。這期間 `scale` 一律拒絕、不重拉 |
+| `stopping`（daemon 的） | 整個 daemon 收過 stop、正在把所有孩子停掉。這期間 `scale` 與新的 `tick` 登記一律拒絕、不重拉、不開新的 tick |
 | `pending`（孩子的） | 宣告裡有、現在沒有孩子：還沒拉過，或 kill 之後等重拉 |
 | `killing`（孩子的） | 正在走階梯：被 `kill`（死透後還是成員就重拉＝砍掉重來），或移出宣告（死透就消失） |
 | `draining` | 已經移出宣告、正在收的孩子（摘要另一格，不算成員） |
@@ -34,6 +34,10 @@
 | SIGPIPE／EPIPE | 往一條讀端已經關掉的 pipe 寫東西：預設會收到 SIGPIPE 被打死；忽略這個訊號之後只會得到 EPIPE 錯誤＝孩子那頭沒人了 |
 | `kill(pid, 0)` | 不送訊號、只拿 kill 這個系統呼叫問「這個 pid 還在不在」的用法。啟動時拿它輪詢上一任的孩子死透了沒。「在」不等於「還在做事」（殭屍也算在） |
 | pid 被重用 | 行程號碼會循環使用，久了可能有別的程式撿到同一個號。這裡當作機率可忽略，寫出來讓人知道 |
-| 收養 | 接手上一任 daemon 留下的孩子、當成自己的孩子繼續管。**這份不做**：上一任的孩子一律殺掉，再照 `pool.json` 拉新的 |
+| 收養 | 接手上一任 daemon 留下的孩子、當成自己的孩子繼續管。**這份不做**：上一任的孩子一律殺掉，再照 `pool.json` 拉新的（上一任開的 tick 例外：不殺，讓它自己跑完，[§10](ticks.md)） |
+| 開 tick | （one-boot）替登記過的 kernel 家開一格 `aos-kernel tick --target K`，當孩子、不等它。同一個 kernel 家同時只開一格（[§10](ticks.md)） |
+| 登記（`kernels/<id>.json`） | kernel boot 時送 `tick` 單說「請替我開 tick」，daemon 記成一個小檔；kernel 停好時送 `off: true` 撤掉。daemon 重開照這些檔接著開 |
+| 連敗（tick 的） | 連續幾格失敗（退出碼不是 0 或 75、逾時被 KILL、開不起來）。越多等越久（退避），但 daemon 不會自己放棄 |
+| `aos up`／`aos down` | 一條指令開機（daemon 沒在跑就開、再 boot kernel）、一條指令停機（kernel halt、再停沒別人要用的 daemon）（[§11](up.md)） |
 
 ---

@@ -2,7 +2,7 @@
 
 # 6. 命令列（續）：ls 第一行 health
 
-（原本在 cli-ops.md 的 ls 段；2026-09-24 proto5-2 池式納入：cpu 不再逐顆查，改看池摘要。）
+（原本在 cli-ops.md 的 ls 段；2026-09-24 proto5-2 池式納入：cpu 不再逐顆查，改看池摘要。2026-09-24 one-boot：`cpus`（kernel cpu 不在）拿掉，加 `legacy`、`tick`，`stall` 改看帳本的 `last_tick_at` 與 daemon 登記的連敗。）
 
 `aos-kernel ls` 文字版**第一行** `health <一句>` 說整體正不正常，把「停住」跟「正常忙碌」「會自己好」分開；`--json` 的 `health: {code, message}` 是同一句。
 同一套判定在 `lib/aos_kernel_health.py`，[`aos-agent status`](../aos-agent/cli-status.md) 也用它（code 是 `ok` 以外、也不是 `recovering` 就印 `kernel 家有問題：…`）。
@@ -12,11 +12,13 @@
 | code | 什麼時候 | 句子 |
 |---|---|---|
 | `dirs` | 缺 `requests/`、`responses/`、`pools/` | `K 家缺目錄：…（跑 aos-kernel check --target <K>）` |
-| `stopped` | `phase` 是 `stopped` 或從沒 boot | `停機中（aos-kernel boot --target <K>）` |
-| `daemon` | kernel 池的 daemon 沒活（或解不出來） | `daemon 沒在跑：<D>（先 aos-daemon boot --target <D>；之後 health 還不是 ok 再 aos-kernel boot …）` |
+| `legacy` | 帳本還是舊的 `K/state.json`（one-boot 之前的 kernel 寫的） | `帳本還是舊的 K/state.json（跑 aos up 或 aos-kernel boot --target <K>，換成 sqlite）` |
+| `stopped` | `phase` 是 `stopped` 或從沒 boot | `停機中（aos up 或 aos-kernel boot --target <K>）` |
+| `daemon` | 開 tick 的 daemon 沒活（或解不出來） | `daemon 沒在跑：<D>（aos up；或 aos-daemon boot --target <D> 之後 health 還不是 ok 再 aos-kernel boot …）` |
 | `daemon` | 其他已宣告池的 daemon 沒活 | `daemon 沒在跑：<D>（先 aos-daemon boot --target <D>）` |
-| `cpus` | kernel 池的摘要不在或 `running` 是 0 | `kernel cpu 不在（daemon 沒在跑或還在拉；跑 aos-kernel boot …）` |
-| `stall` | `phase` 是 `running` 但 `state.json` 超過 max(10 秒, 10 格) 沒更新 | `tick 停住：N 秒沒前進（跑 aos-kernel check --target <K>）` |
+| `tick` | daemon 活著，但沒登記這個 kernel（`D/kernels/` 沒這格）：沒人開 tick | `daemon <D> 沒在替這個 kernel 開 tick（跑 aos up 或 aos-kernel boot …）` |
+| `stall` | `phase` 是 `running`，daemon 登記的連敗次數 > 0 | `tick 連敗 N 次（最後退出 X；看 daemon 的 stderr，例如 D/daemon.log；跑 aos-kernel check …）` |
+| `stall` | `phase` 是 `running`，帳本 `last_tick_at` 超過 max(10 秒, 10×`tick_ms`) 沒前進 | `tick 停住：N 秒沒前進（跑 aos-kernel check --target <K>）` |
 | `pools` | 某工作池 `error` 不是 null、或摘要不在但 `sent` 不空（正在縮到 0 的不算） | `池 P：<代號>（<message>）`／`池 P：池不見了（跑 aos-kernel boot …）`；多池用「；」接 |
 | — | 上面都沒中、`phase` 是 `stopping`（停機收尾中，池本來就在縮） | `ok` |
 | `recovering` | 有池在搬 | `搬池中：池 P（舊位置 <D> <dpool> 收完才換）` |
@@ -31,6 +33,6 @@
 這三個 code 只在 `ls`，`aos-agent status` 不用（它有自己的一套）。每個 agent 的行程在 proc 表的 `備註` 欄也標同樣的字（[cli-ls.md](cli-ls.md)）。
 
 跟第 1 版的差別：
-- 「cpu missing」「恢復中（cpu dead）」拿掉——daemon 沒有孩子表了。kernel cpu 在不在改看 kernel 池摘要（`cpus`）；工作池少了是 `recovering`（warn），不逐顆列名字。
+- 「cpu missing」「恢復中（cpu dead）」拿掉——daemon 沒有孩子表了。工作池少了是 `recovering`（warn），不逐顆列名字。（第 2 版看 kernel 池摘要的 `cpus`，one-boot 拿掉，換成 `tick`。）
 - 新增 `pools`（池出錯、池不見了）。
-- daemon 沒在跑的提示改成「先 aos-daemon boot；之後 health 還不是 ok 再 aos-kernel boot」：daemon 重開後池會自己拉回來，鏈多半接得上（[§6 boot](boot.md)）。
+- daemon 沒在跑的提示改成「aos up；或先 aos-daemon boot，之後 health 還不是 ok 再 aos-kernel boot」：daemon 重開後池會自己拉回來、照登記接著開 tick（[§6 boot](boot.md)）。

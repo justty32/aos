@@ -8,9 +8,9 @@ stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，修好原因後 aos-age
 
 # 10. 清工作檔
 
-每次 `tick` 第 3 步，對 `sweep` 的每一筆 `{kernel: K, name: N}`：`K/requests/N.json` 不在、**而且**偷看 `K/state.json` 的 `procs` 沒有 `N`
+每次 `tick` 第 3 步，對 `sweep` 的每一筆 `{kernel: K, name: N}`：`K/requests/N.json` 不在、**而且**查 K 帳本 `procs` 沒有 `N`（2026-09-24 one-boot：用 `aos-kernel proc` 同一支 lib，只讀那一列）
 → 刪 `work/N.inst.json`、`work/N.in`、`work/N.out`（ENOENT＝已刪）→ 把這筆拿掉。全部看完一次寫 state。
 
 依據：kernel 對一件派出去的工作，`procs.N` 一直留到那顆 cpu 的回音收回來才拿掉——被 `rm` 的也一樣（標 `discard`，[kernel.md §2](../kernel/syscall.md)）。
 所以 `procs` 沒有 `N`＝它已經不在任何 cpu 上（或根本沒送出去），檔可以刪；有 `N`＝可能還在讀 `.in`、寫 `.out`，先留著。
-`K/state.json` 讀不到就整段跳過，下次再看。（cpu 被 KILL、子程式還活著這種情況在 [cpu.md §5.3](../cpu/stop.md) 的保證外。）
+K 帳本讀不到（還是舊的 `K/state.json`、壞了）就那一筆跳過、留著下次再看；K 沒有帳本（從沒 boot 過）當成 `procs` 沒有 `N`。（cpu 被 KILL、子程式還活著這種情況在 [cpu.md §5.3](../cpu/stop.md) 的保證外。）

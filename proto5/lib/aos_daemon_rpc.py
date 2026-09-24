@@ -89,7 +89,7 @@ class Requests:
         response = env.error
         if response is None:
             try:
-                handler = {"scale": self.scale, "kill": self.kill, "ls": self.ls}.get(env.method)
+                handler = {"scale": self.scale, "kill": self.kill, "ls": self.ls, "tick": self.tick}.get(env.method)
                 if handler is None:
                     raise DaemonError("MethodNotFound", "不認得 method：%s" % env.method, -32601)
                 response = aos_home.result_response(env.id, handler(env.params))
@@ -194,7 +194,8 @@ class Requests:
             raise DaemonError("FieldTypeMismatch", "params 必須是物件", -32602, ["params"])
         now = time.time()
         if "pool" not in params:
-            return {"pools": {name: pool.summary(now) for name, pool in sorted(self.pools.items())}}
+            return {"pools": {name: pool.summary(now) for name, pool in sorted(self.pools.items())},
+                    "kernels": self.ticks_view()}
         pool = self.pools.get(params["pool"])
         if pool is None:
             raise DaemonError("NotFound", "沒有這個池：%s" % params["pool"])

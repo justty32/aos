@@ -77,20 +77,26 @@ def files(base, value):
     return [str(path)] if path.exists() else []
 
 
-def ledger(kernel, *, missing=False):
-    path = Path(kernel) / 'state.json'
-    try:
-        value = aos_home.read_json(path)
-    except aos_home.HomeError as exc:
-        if missing and isinstance(exc.__cause__, FileNotFoundError):
-            return {'procs': {}, 'replies': []}
-        raise
-    if (not isinstance(value, dict) or not isinstance(value.get('procs'), dict)
-            or not isinstance(value.get('replies'), list)
-            or any(not isinstance(r, dict) or not isinstance(r.get('name'), str)
-                   for r in value['replies'])):
-        raise AgentError('ReadFailed', 'K/state.json 的 procs／replies 形狀不合')
-    return value
+def kernel_proc(kernel, name):
+    """查一筆行程（one-boot：K/ledger.sqlite，aos-kernel proc 同一支 lib）：回 None 或 {name, proc, cpu, discard}。
+    沒 boot 過回 None；帳本還是舊的 state.json、讀不懂＝HomeError（LedgerVersion／ReadFailed）。"""
+    import aos_kernel_store
+    found = aos_kernel_store.proc(kernel, name)
+    if found is not None and not isinstance(found['proc'], dict):
+        raise AgentError('ReadFailed', 'K 帳本裡 %s 的行程資料形狀不合' % name)
+    return found
+
+
+def kernel_knows(kernel, name):
+    """kernel 還記得這張單嗎（帳本有這個行程，或出貨箱裡有它的回音）。"""
+    import aos_kernel_store
+    return aos_kernel_store.knows(kernel, name)
+
+
+def kernel_procs(kernel):
+    """{名: 行程紀錄}：要掃全部的才用（continue --all）。"""
+    import aos_kernel_store
+    return aos_kernel_store.procs(kernel)
 
 
 def history_prefix(history, length, messages):
@@ -168,11 +174,13 @@ class Runtime:
                 remaining.append(item)
                 continue
             try:
-                state = ledger(kernel)
-            except (AgentError, aos_home.HomeError):
+                import aos_kernel_store
+                # 沒 boot 過（沒帳本）就先留著，跟以前「帳本讀不到就留」一樣。
+                known = not aos_kernel_store.exists(kernel) or kernel_proc(kernel, name) is not None
+            except (AgentError, aos_home.HomeError, ValueError):
                 remaining.append(item)
                 continue
-            if name in state['procs']:
+            if known:
                 remaining.append(item)
                 continue
             for suffix in ('.inst.json', '.in', '.out'):

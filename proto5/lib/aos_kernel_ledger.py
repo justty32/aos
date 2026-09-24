@@ -1,6 +1,7 @@
-"""kernel 的帳本第 2 版（kernel-ledger.md）：排隊（ready／delayed 堆積、懶刪）、syscall、出貨箱。
+"""kernel 的帳本（kernel/ledger.md）：排隊（ready／delayed 堆積、懶刪）、syscall、出貨箱。
 
-帳本仍是一份 state.json、一次原子寫；一格最多寫四次（提交點 1～4），寫入由 engine 決定，這裡的函式只改記憶體。
+2026-09-24 one-boot：帳本換成 K/ledger.sqlite（aos_kernel_store）；記憶體裡仍是第 2 版同形的 dict。
+一格最多存三次（提交點：出貨完、決定完、出貨完），每次一筆交易、只寫變了的列；寫入由 engine 決定，這裡的函式只改記憶體。
 """
 import collections
 import hashlib
@@ -10,14 +11,16 @@ from pathlib import Path
 import time
 
 import aos_home
+import aos_kernel_store
 from aos_kernel_info import (
-    FEATURES, KCPU, KERNEL_POOL, PARK_MS, KernelError, _bad, _body_error, _name, _put, is_member, split_key,
+    FEATURES, KERNEL_POOL, PARK_MS, KernelError, _bad, _body_error, _name, _put, is_member, split_key,
 )
 
 
 class KernelLedger:
-    def __init__(self, home, info, state, seq, now=None):
+    def __init__(self, home, info, state, seq, now=None, store=None):
         self.home, self.info, self.seq = Path(home).absolute(), info, seq
+        self.store = store
         self.now = time.time() if now is None else now
         self.state = state
         for key, default in (("busy", {}), ("on", {}), ("recent", []), ("ready", {}), ("delayed", []),
@@ -39,14 +42,18 @@ class KernelLedger:
         return out
 
     def save(self):
-        aos_home.write_state(self.home, self.snapshot())
+        """一筆交易、只寫變了的列（aos_kernel_store.Store.save）。"""
+        if self.store is None:
+            self.store = aos_kernel_store.Store(self.home, create=True)
+            self.store.orig = aos_kernel_store._rows(self.store.conn)[1]
+        self.store.save(self.snapshot())
 
     # ---- 路徑 ----
     def pool_dir(self, pool):
         return self.home / "pools" / pool
 
     def cpu_home(self, key):
-        """key 是 'P/<i>'（kcpu 就是 kernel/0）。"""
+        """key 是 'P/<i>'。"""
         pool, i = split_key(key)
         return self.pool_dir(pool) / "cpus" / str(i)
 
@@ -321,21 +328,3 @@ class KernelLedger:
                 did = True
                 self.state[box] = []
         return did
-
-    def tick_request(self, seq):
-        name = "k-%s-%d.json" % (self.state["chain"], seq)
-        return name, {"jsonrpc": "2.0", "id": name[:-5], "method": "aos-exec", "params": {
-            "target": self.state["cli"], "args": ["tick", "--target", str(self.home), "--chain", self.state["chain"], "--seq", str(seq)],
-            "timeout_ms": 0}}
-
-    def ack_ticks(self):
-        home = self.cpu_home(KCPU)
-        for path in sorted((home / "responses").glob("*.json")):
-            if (home / "requests" / path.name).exists():
-                continue
-            response = aos_home.read_json(path)
-            if "error" in response or response.get("result", {}).get("code", 0) != 0:
-                self.events.append({"event": "tick_error", "request": path.name, "response": response})
-            digest = hashlib.sha256(path.name.encode()).hexdigest()[:16]
-            name = "ack-%s-%d-%s-%s.json" % (self.state["chain"], self.seq, "0", digest)
-            _put(home, name, {"jsonrpc": "2.0", "method": "ack", "params": {"name": path.name}})

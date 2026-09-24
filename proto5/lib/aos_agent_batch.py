@@ -11,7 +11,7 @@ from aos_jail import secret_name
 from aos_agent_home import AgentError
 from aos_agent_results import act_done, model_message, response_parts, success, think_done
 import aos_agent_events as events
-from aos_agent_runtime import RESUMED, history_prefix, ledger, report, unique_id
+from aos_agent_runtime import RESUMED, history_prefix, kernel_knows, report, unique_id
 
 META = {'_type': 'posix', '_version': 1}
 # 權限牆擋下的那件，給模型看的話（它讀得懂、不會以為要自己修；細節留給人在 check／status 看）
@@ -73,8 +73,7 @@ def already_posted(kernel, name):
     kernel = Path(kernel)
     if (kernel / 'requests' / (name + '.json')).exists():
         return True
-    state = ledger(kernel, missing=True)
-    if name in state['procs'] or any(r['name'] == name + '.json' for r in state['replies']):
+    if kernel_knows(kernel, name):
         return True
     return (kernel / 'responses' / (name + '.json')).exists()
 
