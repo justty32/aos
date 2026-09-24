@@ -70,7 +70,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 ## 去哪讀
 
-- **[tutorials/](tutorials/README.md)**：五篇照抄就能跑的教程＋附錄，從開機到管一堆 agent。
+- **[tutorials/](tutorials/README.md)**：五篇照抄就能跑的教程＋附錄，從開機到管一堆 agent；第 07 篇讓 Claude Code／Codex 當 cpu 跑單子。
 - **[spec/](spec/README.md)**：每個指令、每種檔案的規範（下表）；給使用者的精簡版是 [agent 家](spec/agent/essentials.md)、[aos-agent 指令](spec/aos-agent/essentials.md) 兩份「使用者只需要懂的」。
 - **[lib/](lib/README.md)**：程式模組與測試（下面「程式」）。
 - **[notes/](notes/README.md)**：任務書、審查、試玩紀錄（下面「筆記」）。
@@ -101,6 +101,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 |---|---|---|
 | [lib/](lib/README.md) | 三十二支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 40 個測試檔、1366 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
+| [templates/cli-agents/](templates/cli-agents/README.md) | Claude Code／Codex 當普通 cpu 的範本（階 0，不是程式）：另一個 kernel 家的設定、`claude -p` 與 `codex exec` 唯讀審查的單子、接著聊的分岔版 | 09-24 stage0；用法見[教程 07](tutorials/07-cli-agents.md) |
 | [tools/](tools/README.md) | `aos-agent tools add` 裝的工具包：內建 `base`（read／write／edit／bash／grep／find／ls，仿 pi） | 09-24 tools-base；每支工具怎麼用、錯誤長怎樣見 [tools/README.md](tools/README.md) |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。
