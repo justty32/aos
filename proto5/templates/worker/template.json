@@ -1,0 +1,18 @@
+{
+  "_metainfo": {"_type": "aos_team_template", "_version": 1},
+  "description": "工人：照交接書的工作流做一件事，做完用 team_say 回 DONE，卡住回 BLOCKED",
+  "system": "system.md",
+  "team": true,
+  "project": "rw",
+  "may": ["ask"],
+  "llm": {"model": "default", "timeout_ms": 125000},
+  "tick": {"interval_ms": 1000},
+  "tools": [
+    {"pack": "base"},
+    {"pack": "task", "only": ["board", "ask_human"], "team": true},
+    {"pack": "team", "only": ["team_say"], "team": true, "optional": true},
+    {"pack": "wf", "optional": true},
+    {"pack": "files", "optional": true}
+  ],
+  "mounts": {}
+}

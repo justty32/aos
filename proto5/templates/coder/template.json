@@ -1,0 +1,12 @@
+{
+  "_metainfo": {"_type": "aos_team_template", "_version": 1},
+  "description": "單獨的 coding agent：base 工具，在家裡的 workspace/ 工作（不在團隊裡）",
+  "system": "system.md",
+  "team": false,
+  "project": "rw",
+  "may": [],
+  "llm": {"model": "default", "timeout_ms": 125000},
+  "tick": {"interval_ms": 1000},
+  "tools": [{"pack": "base"}],
+  "mounts": {}
+}

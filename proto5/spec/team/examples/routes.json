@@ -1,0 +1,39 @@
+{
+  "_metainfo": {"_type": "aos_team_routes", "_version": 1},
+  "negations": ["不要", "別", "取消", "不用", "勿", "不准"],
+  "routes": [
+    {
+      "name": "tasks",
+      "pattern": "(列|看)(一下)?(任務|單子)",
+      "do": "tool",
+      "run": ["task", "ls"],
+      "tests": {"hit": ["列任務", "看一下單子"], "miss": ["列任務給 bob 看", "把任務刪掉"]}
+    },
+    {
+      "name": "waiting",
+      "pattern": "(有什麼|哪些)(在)?等我(回答|決定)的?",
+      "do": "tool",
+      "run": ["wait", "ls"],
+      "tests": {"hit": ["有什麼等我回答的", "哪些在等我決定"], "miss": ["等我回來再說"]}
+    },
+    {
+      "name": "import",
+      "pattern": "把 workflows 導入 (?P<project>\\S+)，照 (?P<facts>\\S+)",
+      "do": "handoff",
+      "handoff": {
+        "assignee": "worker-1",
+        "workflow": "IMPORT.md",
+        "goal": "把 workflows 的 heartbeat 包導入 {project}，照 {facts} 填事實",
+        "facts": "{facts}",
+        "done_when": [
+          {"kind": "check", "name": "wf_residue"},
+          {"kind": "check", "name": "wf_lint_strict"}
+        ]
+      },
+      "tests": {
+        "hit": ["把 workflows 導入 ~/tmp/wf-try/p，照 facts.json"],
+        "miss": ["把 workflows 導入 p", "不要把 workflows 導入 p，照 facts.json"]
+      }
+    }
+  ]
+}

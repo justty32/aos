@@ -1,0 +1,15 @@
+{
+  "_metainfo": {"_type": "aos_team_template", "_version": 1},
+  "description": "審查：只判審查單列的 judge 條目，用 review_result 逐條回 PASS／FAIL＋一句理由",
+  "system": "system.md",
+  "team": true,
+  "project": "ro",
+  "may": ["review_result"],
+  "llm": {"model": "default", "timeout_ms": 125000},
+  "tick": {"interval_ms": 1000},
+  "tools": [
+    {"pack": "task", "only": ["board", "review_result"], "team": true},
+    {"pack": "base", "only": ["read", "grep", "find", "ls"]}
+  ],
+  "mounts": {}
+}

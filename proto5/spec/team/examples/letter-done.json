@@ -1,0 +1,2 @@
+{"id": "1790000000123456789-4242-worker-1", "from": "worker-1", "to": "lead", "status": "DONE",
+ "reply_to": "t-0001", "rev": 1, "text": "導入完成：四種殘留都是 0，wf-lint --strict 退 0。", "at": "2026-09-25T10:00:00+08:00"}

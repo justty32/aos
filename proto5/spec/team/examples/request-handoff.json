@@ -1,0 +1,10 @@
+{"id": "1790000000000000001-4100-lead", "from": "lead", "kind": "handoff", "at": "2026-09-25T09:58:00+08:00",
+ "assignee": "worker-1", "workflow": "IMPORT.md",
+ "goal": "把 workflows 的 heartbeat 包導入 /work/ws，照 facts.json 填事實",
+ "facts": "facts.json",
+ "done_when": [
+   {"kind": "file_exists", "path": "AGENTS.md"},
+   {"kind": "check", "name": "wf_residue"},
+   {"kind": "check", "name": "wf_lint_strict"},
+   {"kind": "judge", "text": "WORKFLOWS.md 開頭說明的原意沒變"}],
+ "max_attempts": 3, "deadline_minutes": 60}

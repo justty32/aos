@@ -1,0 +1,16 @@
+{
+  "_metainfo": {"_type": "aos_team_template", "_version": 1},
+  "description": "領隊：門房濾不掉的話由它判斷、切件、用 handoff 派給工人；收 BLOCKED 與求救信決定怎麼辦。不動手做事",
+  "system": "system.md",
+  "team": true,
+  "project": "ro",
+  "may": ["handoff", "cancel", "reassign", "ask"],
+  "llm": {"model": "default", "timeout_ms": 125000},
+  "tick": {"interval_ms": 1000},
+  "tools": [
+    {"pack": "task", "only": ["handoff", "board", "ask_human"], "team": true},
+    {"pack": "team", "only": ["team_say"], "team": true, "optional": true},
+    {"pack": "base", "only": ["read", "grep", "find", "ls"]}
+  ],
+  "mounts": {}
+}

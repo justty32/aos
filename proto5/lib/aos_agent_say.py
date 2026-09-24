@@ -53,6 +53,31 @@ def deliver(base, value, text, *, with_inode=False):
     return (target, inode) if with_inode else target
 
 
+def drop_new(directory, name, message):
+    """把一則訊息原子地投成 <directory>/<name>，**不覆蓋**：暫存檔（. 開頭）＋link。
+
+    建了回 True；同名已在（EEXIST）回 False、不動它。message 是一則訊息物件（照 agent §3.2）或字串。
+    郵差（spec/team/mail.md）投 input/mail-<id>.json 用這支；say 自己的 deliver 行為不變。
+    """
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    body = {'role': 'user', 'content': message} if isinstance(message, str) else message
+    fd, temp = tempfile.mkstemp(dir=directory, prefix='.drop-', suffix='.json.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as out:
+            json.dump(body, out, ensure_ascii=False)
+        try:
+            os.link(temp, directory / name)
+        except FileExistsError:
+            return False
+        return True
+    finally:
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
+
+
 def _warn_paused(base, env):
     """暫停中照收，但講清楚 continue 之後才會處理（aos-agent.md §1.2）。"""
     if manual_paused(base) is not None:
