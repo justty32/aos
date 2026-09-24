@@ -53,6 +53,11 @@ class BeatCase(TeamCase):
         self.job_result('v-%s-r%d-a%d' % (tid, t['rev'], t['attempt']), passed)
         self.post()
 
+    def lead_got(self, words):
+        """領隊 input 裡有沒有一封含這段字的信。不要用「照檔名排的最後一封」：檔名順序不是時間順序
+        （spec/team/mail.md；心跳報告的 id 是 <crc>-<crc>-beat，跟 <epoch ns>-… 的信比字串大小是隨機的）。"""
+        return any(words in body for _, body in self.mails('lead'))
+
     def state(self, name='count-md'):
         return json.loads((self.team / 'team' / 'beat.json').read_text())['routines'][name]
 
@@ -81,7 +86,7 @@ class BeatTests(BeatCase):
         self.assertEqual(st['last_run'], self.now.isoformat())
         self.assertEqual(len(self.requests()), 2)              # 完成後補最近一次
         self.post()
-        self.assertIn('次沒跑', self.mails('lead')[-1][1])
+        self.assertTrue(self.lead_got('次沒跑'), self.mails('lead'))
 
     def test_done_then_next_occurrence(self):
         self.add()
@@ -132,7 +137,7 @@ class BeatTests(BeatCase):
         self.assertEqual(len(self.requests()), 2)
         self.assertEqual(self.state()['last_result'], 'failed')
         self.post()
-        self.assertIn('2 次都沒成', self.mails('lead')[-1][1])
+        self.assertTrue(self.lead_got('2 次都沒成'), self.mails('lead'))
 
     def test_daily_and_at(self):
         self.now = self.now.replace(hour=8, minute=0, second=0)
@@ -225,7 +230,7 @@ class BeatTests(BeatCase):
         self.assertEqual(len(self.state()['reports']), 1)
         self.beat()
         self.post()
-        self.assertIn('1 次都沒成', self.mails('lead')[-1][1])
+        self.assertTrue(self.lead_got('1 次都沒成'), self.mails('lead'))
         self.assertEqual(self.state()['reports'], [])
 
     def test_routine_command_errors_and_ls(self):
@@ -319,7 +324,7 @@ class ProposalTests(BeatCase):
         self.post()
         self.beat()
         self.assertEqual(len(self.requests()), 1)
-        self.assertIn('批准', self.mails('lead')[-1][1])     # 提議的人收到答案
+        self.assertTrue(self.lead_got('批准'), self.mails('lead'))     # 提議的人收到答案
 
     def test_worker_cannot_propose(self):
         rid = self.request('worker-1', 'routine', op='add', name='x', every='2m', to='worker-1', goal='g',
