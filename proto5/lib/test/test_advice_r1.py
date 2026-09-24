@@ -18,6 +18,9 @@ import aos_kernel as kernel
 import aos_kernel_check
 import aos_kernel_cli
 import aos_kernel_ls
+import aos_kernel_store
+import aos_daemon_ticks
+import time
 from test_kernel_fix_r5 import Server
 
 CLI = Path(__file__).resolve().parents[2] / 'cli'
@@ -190,14 +193,14 @@ class AgentCheck(Homes):
 
 
 TOP = {'_metainfo', 'health', 'kernel', 'pools', 'procs', 'queue', 'counts'}
-KERNEL = {'home', 'chain', 'phase', 'last_seq', 'daemon', 'cpu', 'settings'}
+KERNEL = {'home', 'chain', 'phase', 'last_seq', 'daemon', 'tick', 'settings'}  # one-boot：cpu → tick（第 3 版）
 POOL = {'pool', 'want', 'daemon', 'dpool', 'daemon_alive', 'summary', 'declared', 'removing', 'moving',
         'new_location', 'phase', 'sent', 'busy', 'idle', 'draining', 'pending', 'error', 'waiting', 'gone'}
 PROC = {'name', 'once', 'pool', 'status', 'runs', 'fails', 'pending', 'target', 'mark', 'look', 'parked'}  # parked：09-24 停車加鍵
 
 
 class LsJson(Homes):
-    """ls 的 --json 第 2 版（池式納入）與對齊表；帳本、daemon 摘要都是手寫的，不開 daemon。"""
+    """ls 的 --json 第 3 版（one-boot：kernel cpu → kernel.tick、沒有 kernel 池）與對齊表；帳本、daemon 摘要、tick 登記都是手寫的，不開 daemon。"""
     LONG = 'aw-amy-think-1790000000000000000-77-3'
 
     def setUp(self):
@@ -207,8 +210,8 @@ class LsJson(Homes):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         self.put(self.daemon / 'state.json', {'pid': os.getpid()})
         ledger = kernel.new_state('17-1', kernel.CLI)
-        ledger.update(last_seq=7)
-        for pool, count in (('kernel', 1), ('default', 1), ('llm', 1)):
+        ledger.update(last_seq=7, ticker=str(self.daemon), last_tick_at=time.time())
+        for pool, count in (('default', 1), ('llm', 1)):
             entry = kernel.new_pool(str(self.daemon), pool)
             entry.update(want=count, sent={'count': count, 'skip': []}, dirty=False, redeclare=False, acquired=True)
             ledger['pools'][pool] = entry
@@ -221,7 +224,11 @@ class LsJson(Homes):
             ledger['procs'][name] = {'target': str(self.agent / 'tick.json'), 'once': once, 'pool': 'default',
                                      'status': status, 'runs': 2, 'fails': 1 if status == 'bad' else 0,
                                      'not_before': 0, 'pending': {'name': 'x.json', 'id': 'x'} if once else None}
-        self.put(self.home / 'state.json', ledger)
+        aos_kernel_store.write(self.home, ledger)  # one-boot：帳本是 K/ledger.sqlite
+        # daemon 替這個 K 開 tick 的登記（D/kernels/<id>.json）
+        self.put(aos_daemon_ticks.reg_path(self.daemon, self.home),
+                 {'home': str(self.home), 'cli': str(kernel.CLI), 'every_ms': 5, 'timeout_ms': 60000,
+                  'fails': 0, 'last_exit': None, 'last_error_at': None})
 
     def summary(self, pool, **counts):
         body = {'pool': pool, 'owner': str(self.home), 'count': 1, 'ver': 1, 'running': 0, 'restarting': 0,
@@ -241,16 +248,16 @@ class LsJson(Homes):
         data = json.loads(out)  # stdout 整份就是一個 JSON 物件
         self.assertEqual(out.count('\n'), 1)
         self.assertEqual(set(data), TOP)
-        self.assertEqual(data['_metainfo'], {'_type': 'aos_kernel_ls', '_version': 2})
+        self.assertEqual(data['_metainfo'], {'_type': 'aos_kernel_ls', '_version': 3})
         self.assertEqual(set(data['health']), {'code', 'message'})
         self.assertEqual(set(data['kernel']), KERNEL)
         self.assertEqual(set(data['kernel']['daemon']), {'home', 'alive'})
-        self.assertEqual(set(data['kernel']['cpu']), {'name', 'current', 'requests'})
+        self.assertEqual(set(data['kernel']['tick']), {'registered', 'every_ms', 'fails', 'last_exit', 'last_at'})
         self.assertEqual(set(data['kernel']['settings']), {'tick_ms', 'interval_ms', 'timeout_ms', 'done_exit', 'bad_after'})
         self.assertEqual(set(data['counts']), {'pools', 'procs', 'queue'})
         self.assertEqual(set(data['counts']['pools']), {'total', 'want', 'sent', 'busy', 'idle', 'draining'})
         self.assertEqual(set(data['counts']['procs']), {'total', 'repeat', 'once', 'status', 'parked'})
-        self.assertEqual(list(data['pools']), ['kernel', 'default', 'llm'])
+        self.assertEqual(list(data['pools']), ['default', 'llm'])
         for row in data['pools'].values():
             self.assertEqual(set(row), POOL)
         for proc in data['procs']:
@@ -265,7 +272,9 @@ class LsJson(Homes):
         self.assertEqual(data['kernel']['home'], str(self.home))
         self.assertEqual((data['kernel']['phase'], data['kernel']['last_seq']), ('running', 7))
         self.assertEqual(data['kernel']['daemon'], {'home': str(self.daemon), 'alive': True})
-        self.assertEqual(data['kernel']['cpu']['name'], 'kernel/0')
+        tick = data['kernel']['tick']
+        self.assertEqual((tick['registered'], tick['every_ms'], tick['fails'], tick['last_exit']), (True, 5, 0, None))
+        self.assertIsInstance(tick['last_at'], float)
         default = data['pools']['default']
         self.assertEqual((default['want'], default['sent'], default['busy'], default['idle']), (1, 1, 1, 0))
         self.assertEqual(default['summary']['running'], 1)
@@ -284,7 +293,7 @@ class LsJson(Homes):
         text, _ = self.ls()
         data = json.loads(self.ls('--json')[0])
         self.assertEqual(text.splitlines()[0], 'health ' + data['health']['message'])
-        (self.home / 'state.json').write_text('{')
+        (self.home / 'ledger.sqlite').write_text('{')  # one-boot：帳本壞掉（不是 sqlite）
         for flags in ((), ('--json',)):
             out, err = self.ls(*flags, code=1)
             self.assertEqual(out, '')
@@ -339,10 +348,11 @@ class LsJson(Homes):
 
     def test_proc_fields_normalized(self):
         """astra 必修 2、3：缺鍵／null／錯型別照 cli-ls.md 的型別輸出，status 統計不會撞鍵。"""
-        ledger = aos_home.read_json(self.home / 'state.json')
+        ledger = aos_kernel_store.read(self.home)
         ledger['procs'] = {'a': {}, 'b': {'status': None, 'runs': None, 'pool': 3},
                            'c': {'status': 'null', 'target': 'rel', 'fails': 'x'}}
-        self.put(self.home / 'state.json', ledger)
+        ledger['busy'] = {}  # busy 那格的行程不在 procs 了，一起清（跟以前寫 JSON 一樣只換 procs 的話 on 會指到沒有的行程）
+        aos_kernel_store.write(self.home, ledger)
         out, _ = self.ls('--json')
         data = json.loads(out)
         self.assertEqual(out.count('"null": '), 1)
@@ -361,13 +371,14 @@ class LsJson(Homes):
         self.assertEqual(next(p for p in data['procs'] if p['name'] == 'broken')['look'], str(self.agent / 'tick.json'))
 
     def test_broken_health_exits_one(self):
-        """astra 必修 5：status() 讀完後帳本才消失，health 判 broken，也要退 1、stdout 空。"""
-        real = aos_kernel_cli.status
-        def vanish(home):
-            snapshot = real(home)
-            (self.home / 'state.json').unlink()
-            return snapshot
-        with patch('aos_kernel_cli.status', vanish):
+        """astra 必修 5：health 判 broken（讀快照途中出錯），也要退 1、stdout 空。
+        one-boot：health 不再自己 stat 帳本檔（last_tick_at 從快照拿），「status 讀完帳本才消失」撞不出 broken 了；
+        改成讓 health 讀 info 的池表時出錯（KeyError→broken；ls_data 自己已經先讀過 info），驗的仍是 ls 碰到 broken 的退法。"""
+        import aos_kernel_health
+        real = aos_kernel_health.health
+        def bad(home, snapshot=None, info=None, now=None):
+            return real(home, snapshot=snapshot, info={k: v for k, v in info.items() if k != 'pools'}, now=now)
+        with patch('aos_kernel_ls.health', bad):
             out, err = self.ls('--json', code=1)
         self.assertEqual(out, '')
         self.assertTrue(err.startswith('aos-kernel: ReadFailed: kernel 家讀不到'), err)

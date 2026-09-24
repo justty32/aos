@@ -121,6 +121,15 @@ def down(home, wait_ms=30000, keep_daemon=False):
     home = Path(home).absolute()
     info = load_info(home)
     daemons = _daemons(info)
+    # astra 建議：改過 info 的 daemon、池在搬家時，帳本記的才是實際用著的位置；一起算進來。
+    try:
+        state = aos_kernel_store.read(home, {}) if not aos_kernel_store.legacy(home) else {}
+    except aos_home.HomeError:
+        state = {}
+    if state.get("ticker"):
+        daemons = list(dict.fromkeys([state["ticker"], *daemons]))
+    daemons = list(dict.fromkeys([*daemons, *(e.get("daemon") for e in (state.get("pools") or {}).values()
+                                              if isinstance(e, dict) and e.get("daemon"))]))
     code = aos_kernel_boot.stop(home, wait_ms)
     if code:
         return code

@@ -7,6 +7,7 @@ proto5 版搬過來時改了什麼：
 - 停機拿掉 queued once 改在收到 stop 當下（start_stopping，kernel-tick 第 9 步）。
 """
 import copy
+import signal
 from pathlib import Path
 import tempfile
 import time
@@ -16,6 +17,7 @@ from unittest.mock import patch
 import aos_home as home
 import aos_kernel as kernel
 import aos_kernel_info
+import aos_kernel_store
 
 CLI = Path(__file__).resolve().parents[2] / "cli" / "aos-kernel"
 POOLS = {"default": {"count": 2}, "llm": {"count": 1}}
@@ -38,12 +40,10 @@ class KernelCase(unittest.TestCase):
         self.info = kernel.load_info(self.k)
         self.state = kernel.new_state("1000-1", str(CLI))
         self.engine = kernel.Kernel(self.k, self.info, self.state, 7)
-        self.state["pools"]["kernel"] = {"daemon": str(self.d), "dpool": "kernel",
-                                         "sent": {"count": 1, "skip": []}, "pending": None}
-        self.engine.ensure_cpu_home("kernel", 0)
+        # one-boot：直接呼叫 kernel.tick 會設 ITIMER_REAL 鬧鐘（2×tick_timeout_ms）；測試行程收尾時關掉。
+        self.addCleanup(signal.setitimer, signal.ITIMER_REAL, 0)
+        self.addCleanup(self.close_store)
         for pool, config in self.info["pools"].items():
-            if pool == "kernel":
-                continue
             entry = self.state["pools"][pool] = kernel.new_pool(str(self.d), pool)
             spec = {"count": config["count"], "skip": []}
             entry.update(want=spec, sent=dict(spec), dirty=False, redeclare=False,
@@ -52,6 +52,12 @@ class KernelCase(unittest.TestCase):
             for i in range(config["count"]):
                 self.engine.ensure_cpu_home(pool, i)
         self.engine.save()
+
+    def close_store(self):
+        """engine.save() 自己開的 sqlite 連線（產品的 tick 會自己關；測試直接建 Kernel 的要收）。"""
+        if getattr(self.engine, "store", None) is not None:
+            self.engine.store.close()
+            self.engine.store = None
 
     def cpu(self, key):
         pool, i = key.split("/")
@@ -154,7 +160,7 @@ class SyscallTests(KernelCase):
         self.assertEqual(self.state["replies"][0]["body"], {"result": {"name": "bob"}})
         self.assertTrue((self.k / "requests" / env.name).exists())
         self.assertFalse((self.k / "responses" / env.name).exists())
-        self.assertNotIn("bob", home.read_state(self.k)["procs"])
+        self.assertNotIn("bob", (aos_kernel_store.read(self.k, {}) or {}).get("procs", {}))
 
     def test_once_add_delays_reply_and_preserves_args(self):
         env = self.syscall("add", {"target": str(self.root / "program"), "name": "one",
@@ -361,7 +367,7 @@ class InfoTests(KernelCase):
     def test_initial_state_shape(self):
         state = kernel.new_state("test-chain", str(CLI))
         self.assertEqual(state["chain"], "test-chain")
-        self.assertEqual(state["kcpu"], "kernel/0")
+        self.assertNotIn("kcpu", state)   # one-boot：沒有 kernel cpu 了
         self.assertEqual(state["cli"], str(CLI))
         self.assertEqual(state["phase"], "running")
         for name in ("pools", "busy", "on", "recent", "ready", "delayed", "procs", "acks", "replies", "deletes", "sends"):
@@ -375,9 +381,8 @@ class InfoTests(KernelCase):
         home.write_json(self.k / "info.json", self.raw)
         self.assertEqual(kernel.load_info(self.k)["pools"]["llm"]["envs"], envs)
 
-    def test_info_rejects_nonliteral_top_and_wrong_kernel_count(self):
+    def test_info_rejects_nonliteral_top(self):
         bad_values = [{"$ref": "other.json"}, dict(self.raw, pools=[]),
-                      dict(self.raw, pools={"kernel": {"count": 2}}),
                       dict(self.raw, pools={"default": {"count": -1}})]
         for value in bad_values:
             with self.subTest(value=value):
@@ -385,6 +390,22 @@ class InfoTests(KernelCase):
                 with self.assertRaises(kernel.KernelError) as cm:
                     kernel.load_info(self.k)
                 self.assertEqual(cm.exception.code, "FieldTypeMismatch")
+
+    def test_legacy_kernel_pool_is_skipped(self):
+        """one-boot：舊 info 留著 kernel 池（連 count 2 也是）讀得過、不算工作池；它的 daemon 當開 tick 的 daemon。"""
+        other = str(self.root / "D2")
+        home.write_json(self.k / "info.json", dict(self.raw, pools=dict(self.raw["pools"], kernel={"count": 2, "daemon": other})))
+        info = kernel.load_info(self.k)
+        self.assertEqual(aos_kernel_info.work_pools(info), ["default", "llm"])
+        self.assertEqual(aos_kernel_info.ticker_daemon(info), other)
+        home.write_json(self.k / "info.json", self.raw)
+        self.assertEqual(aos_kernel_info.ticker_daemon(kernel.load_info(self.k)), str(self.d))
+        self.assertEqual(kernel.load_info(self.k)["tick_timeout_ms"], 60000)
+
+    def test_init_refuses_kernel_pool(self):
+        with self.assertRaises(kernel.KernelError) as cm:
+            aos_kernel_info.info_from_config({"pools": {"kernel": {"count": 1}}}, self.root / "K2")
+        self.assertEqual(cm.exception.code, "FieldTypeMismatch")
 
     def test_proto5_info_is_refused(self):
         home.write_json(self.k / "info.json", {"_metainfo": {"_type": "kernel", "_version": 1},

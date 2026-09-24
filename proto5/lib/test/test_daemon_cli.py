@@ -214,7 +214,7 @@ class PoolCliTest(DaemonCase):
         self.assertTrue(result.stderr.startswith("aos-daemon: NotRunning:"), result.stderr)
         self.assertEqual(list((self.home).iterdir()), [self.home / "info.json"])     # 沒放單
         out = self.cli("ls").stdout
-        self.assertEqual(out, "daemon not running（以下是最後的摘要）  pools 0  children 0\n")
+        self.assertEqual(out, "daemon not running（以下是最後的摘要）  pools 0  children 0  kernels 0\n")
         result = self.cli("ls", "--pool", "p")
         self.assertEqual(result.returncode, 1)
         self.assertIn("NotFound", result.stderr)

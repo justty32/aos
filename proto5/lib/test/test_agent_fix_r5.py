@@ -13,6 +13,7 @@ from unittest.mock import patch
 import aos_agent as agent
 import aos_agent_status as status
 import test_agent_tick as fixture
+import aos_kernel_store
 
 MESSAGE = fixture.MESSAGE
 
@@ -35,7 +36,7 @@ class FixR5Tests(unittest.TestCase):
         self.put(self.base / 'tick.json', {'envs': self.env})
         proc = {'status': 'idle', 'fails': 0, 'target': str(self.base / 'tick.json'), 'once': False, **values}
         # kernel-ledger.md（proto5-2）：忙的格子在 busy（key P/<i>），on 反查行程名 → 格子。
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': proc}, 'replies': [], 'busy': {}, 'on': {}})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': proc}, 'replies': [], 'busy': {}, 'on': {}})
 
     def health(self, code='ok', message='ok'):
         return patch('aos_kernel_health.health', return_value=(code, message))
@@ -182,7 +183,7 @@ class FixR5Tests(unittest.TestCase):
     # 4. start 已登記退 0 -------------------------------------------------------
 
     def test_start_already_started_same_home(self):
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': {
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': {
             'status': 'idle', 'target': str(self.base / 'tick.json'), 'once': False}}, 'replies': [],
             'busy': {}, 'on': {}})
         with patch('sys.stdout', new_callable=io.StringIO) as out:
@@ -203,7 +204,7 @@ class FixR5Tests(unittest.TestCase):
                 self.err.truncate(0); self.err.seek(0)
                 for leftover in (self.k / 'requests').glob('*'):
                     leftover.unlink()
-                self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'once': False, **proc}},
+                aos_kernel_store.write(self.k, {'procs': {'agent-bob': {'status': 'idle', 'once': False, **proc}},
                                                  'replies': [], 'busy': busy, 'on': on})
                 rc, _ = self.register(error={'code': -32000, 'message': '已存在', 'data': {'code': 'AlreadyExists'}})
                 self.assertEqual(rc, 1)
@@ -268,7 +269,7 @@ class FixR5Tests(unittest.TestCase):
         procs = {'agent-%s' % h.name: {'status': 'idle', 'once': False, 'target': str(h / 'tick.json')}
                  for h in (self.base, amy, cat)}
         procs['job'] = {'status': 'idle', 'once': True, 'target': '/x.json'}
-        self.put(self.k / 'state.json', {'procs': procs, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': procs, 'replies': []})
         code, output = self.cli('continue', '--all', env=self.env)
         self.assertEqual(code, 0, self.err.getvalue())
         lines = output.splitlines()
@@ -283,10 +284,10 @@ class FixR5Tests(unittest.TestCase):
     def test_continue_all_usage_and_skips(self):
         self.assertEqual(self.cli('continue', '--all')[0], 2)
         self.assertEqual(self.cli('continue', '--all', '--target', str(self.base), env=self.env)[0], 2)
-        self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})
         self.assertEqual(self.cli('continue', '--all', env=self.env), (0, 'K 帳本裡沒有登記的 agent（%s）\n' % self.k))
         self.put(self.base / 'state.json', {'state': 'bogus'})
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'once': False,
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': {'status': 'idle', 'once': False,
                                                                  'target': str(self.base / 'tick.json')}}, 'replies': []})
         code, output = self.cli('continue', '--all', env=self.env)
         self.assertEqual(code, 1)

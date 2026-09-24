@@ -8,8 +8,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import aos_daemon_ticks
 import aos_home
 import aos_kernel as kernel
+import aos_kernel_store
 import aos_kernel_check as check
 
 
@@ -79,14 +81,21 @@ class KernelCheck(unittest.TestCase):
         return agent
 
     # ---- 帳本與 daemon 摘要 ----
-    def ledger(self, phase='running', pools=None):
-        pools = pools or {'kernel': 1, 'default': 1, 'llm': 1}
+    def ledger(self, phase='running', pools=None, registered=True, **reg):
+        """寫 sqlite 帳本（one-boot）；registered：daemon 那邊有沒有替這個 K 開 tick 的登記（reg 蓋在登記檔上）。"""
+        pools = pools or {'default': 1, 'llm': 1}
         entries = {}
         for name, sent in pools.items():
             entry = kernel.new_pool(str(self.daemon), name)
             entry['sent'] = {'count': sent, 'skip': []}
             entries[name] = entry
-        self.put(self.home / 'state.json', {'chain': 'c', 'phase': phase, 'pools': entries, 'busy': {}, 'procs': {}})
+        aos_kernel_store.write(self.home, {'chain': 'c', 'phase': phase, 'ticker': str(self.daemon),
+                                           'pools': entries, 'busy': {}, 'procs': {}})
+        path = aos_daemon_ticks.reg_path(self.daemon, self.home)
+        if registered:
+            self.put(path, {'home': str(self.home), 'cli': '/x/aos-kernel', 'every_ms': 5, 'timeout_ms': 60000, **reg})
+        else:
+            path.unlink(missing_ok=True)
 
     def summary(self, dpool, running, **extra):
         self.put(self.daemon / 'pools' / dpool / 'summary.json',
@@ -96,8 +105,8 @@ class KernelCheck(unittest.TestCase):
     # ---- info／daemon／path ----
     def test_valid_info_llm_and_daemon_warning(self):
         text = self.run_check()
-        for expected in ('ok   info:', 'warn daemon: daemon 沒在跑：%s（池 default、llm、kernel）' % self.daemon, '先開 daemon',
-                         'ok   path:', check.SHELL_NOTE, 'ok   pools: 池：default 1、llm 1、kernel 1',
+        for expected in ('ok   info:', 'warn daemon: daemon 沒在跑：%s（池 default、llm）；aos up 會開它' % self.daemon,
+                         'ok   path:', check.SHELL_NOTE, 'ok   pools: 池：default 1、llm 1',
                          'ok   llm/llm: 模型代號：small', '設定檢查通過；未測模型連線'):
             self.assertIn(expected, text)
 
@@ -116,15 +125,15 @@ class KernelCheck(unittest.TestCase):
         # run.md 碰到的問題 5：daemon 剛開、還沒收到任何 scale 單時，分清楚「kernel 設定的池」跟
         # 「daemon 目前真的有的池」，不要讓人以為 daemon 已經有這些池了。
         self.assertIn('ok   daemon: daemon 活著：%s'
-                      '（kernel 設定的池：default、llm、kernel；daemon 目前有：還沒有）' % self.daemon, text)
-        self.assertIn('warn daemon: daemon 沒在跑：%s（池 gpu）；先開 daemon：aos-daemon boot --target %s' % (other, other), text)
+                      '（kernel 設定的池：default、llm；daemon 目前有：還沒有）' % self.daemon, text)
+        self.assertIn('warn daemon: daemon 沒在跑：%s（池 gpu）；aos up 會開它（只開 daemon：aos-daemon boot --target %s）' % (other, other), text)
 
     def test_daemon_alive_reports_pools_it_actually_has(self):
         self.lock_daemon(pid=999999999)
         self.summary('default', 1)
         text = self.run_check()
         self.assertIn('ok   daemon: daemon 活著：%s'
-                      '（kernel 設定的池：default、llm、kernel；daemon 目前有：default）' % self.daemon, text)
+                      '（kernel 設定的池：default、llm；daemon 目前有：default）' % self.daemon, text)
 
     def test_pool_without_daemon_is_bad(self):
         del self.info['daemon']
@@ -166,8 +175,24 @@ class KernelCheck(unittest.TestCase):
         del self.info['pools']['default']
         self.save()
         text = self.run_check()
-        self.assertIn('ok   pools: 池：kernel 1', text)
+        self.assertIn('ok   pools: 池：還沒有工作池', text)
+        self.assertIn('warn daemon: daemon 沒在跑：%s（替 kernel 開 tick；池表沒用到）' % self.daemon, text)
         self.assertNotIn('llm/', text)
+
+    def test_legacy_kernel_pool_in_info_warns(self):
+        """one-boot：舊 info 還留著 kernel 池＝讀得過、略過、warn 可以刪。"""
+        self.info['pools']['kernel'] = {'count': 1}
+        self.save()
+        text = self.run_check()
+        self.assertIn('warn pools: info 還有 kernel 池（舊版留下的）', text)
+        self.assertIn('ok   pools: 池：default 1、llm 1', text)
+
+    def test_legacy_ledger_warns(self):
+        self.lock_daemon(pid=999999999)
+        self.put(self.home / 'state.json', {'chain': 'c', 'phase': 'running', 'pools': {}, 'busy': {}, 'procs': {}})
+        text = self.run_check()
+        self.assertIn('warn ledger: 帳本還是舊的 K/state.json；aos up（或 aos-kernel boot）會換成 sqlite', text)
+        self.assertNotIn('cpus:', text)
 
     def test_llm_every_pool_with_config(self):
         self.info['pools']['big'] = {'count': 0, 'envs': {'AOS_LLM_CONFIG': str(self.root / 'missing.json')}}
@@ -298,28 +323,31 @@ class KernelCheck(unittest.TestCase):
     def test_cpus_all_present(self):
         self.lock_daemon(pid=999999999)
         self.ledger()
-        for pool in ('kernel', 'default', 'llm'):
+        for pool in ('default', 'llm'):
             self.summary(pool, 1)
-        self.assertIn('ok   cpus: 各池都在 daemon 那邊（kernel 1、default 1、llm 1）', self.run_check())
+        text = self.run_check()
+        self.assertIn('ok   cpus: 各池都在 daemon 那邊（default 1、llm 1）', text)
+        self.assertIn('ok   tick: daemon %s 每 5 ms 開一格 tick' % self.daemon, text)
 
-    def test_cpus_kernel_missing_error_gone_short(self):
+    def test_tick_unregistered_error_gone_short(self):
+        """one-boot：「kernel cpu 不在」換成「daemon 沒登記替這個 kernel 開 tick」（bad tick）；池的錯與少顆照舊。"""
         self.lock_daemon(pid=999999999)
         for phase in ('running', 'stopping'):
             with self.subTest(phase=phase):
-                self.ledger(phase, {'kernel': 1, 'default': 2, 'llm': 1})
-                state = aos_home.read_json(self.home / 'state.json')
+                self.ledger(phase, {'default': 2, 'llm': 1}, registered=False)
+                state = aos_kernel_store.read(self.home)
                 state['pools']['llm']['error'] = {'code': 'NameTaken', 'message': 'owner /x'}
-                aos_home.write_json(self.home / 'state.json', state)
-                self.summary('kernel', 0, pending=1)
+                aos_kernel_store.write(self.home, state)
                 self.summary('default', 1, dead=1)
                 text = self.run_check(code=1)
-                self.assertIn('bad  cpus: kernel cpu 不在（daemon 重開過或還在拉）；池 llm：NameTaken（owner /x）：'
-                              '執行 aos-kernel boot --target %s' % self.home, text)
+                self.assertIn('bad  tick: daemon %s 沒在替這個 kernel 開 tick：執行 aos up 或 aos-kernel boot --target %s'
+                              % (self.daemon, self.home), text)
+                self.assertIn('bad  cpus: 池 llm：NameTaken（owner /x）：執行 aos-kernel boot --target %s' % self.home, text)
                 self.assertIn('warn cpus: 池 default 少 1 顆（daemon 在補；看 aos-daemon ls --target %s --pool default）'
                               % self.daemon, text)
-        self.ledger()
-        self.summary('kernel', 1)
+        self.ledger(fails=4, last_exit=1)
         text = self.run_check(code=1)
+        self.assertIn('warn tick: tick 連敗 4 次（最後退出 1）；看 daemon 的 stderr（例如 D/daemon.log）', text)
         self.assertIn('bad  cpus: 池 llm：池不見了', text)
 
     def test_cpus_skipped_without_ledger_stopped_or_dead_daemon(self):

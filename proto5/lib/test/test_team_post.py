@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import unittest
 
+import aos_kernel_store
 import aos_team_format as fmt
 import aos_team_post as post
 from _team_util import EXAMPLES, TeamCase
@@ -281,8 +282,7 @@ class TaskFlowTests(TeamCase):
         self.assertNotEqual(r1['request'], r2['request'])
         (kernel / 'requests' / r2['request']).unlink()
         self.job_result('v-t-0001-r1-a1', True, run=2)
-        state = kernel / 'state.json'
-        state.write_text(json.dumps({'procs': {r2['proc']: {'status': 'running'}}}))
+        aos_kernel_store.write(kernel, {'procs': {r2['proc']: {'status': 'running'}}})  # one-boot：K 帳本是 sqlite
         self.post(submit=None, env=env)
         self.assertEqual(self.ticket()['status'], 'done')
         self.assertTrue(jobdir.exists())                   # 第 2 次的回音還沒到：不收尾

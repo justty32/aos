@@ -14,6 +14,7 @@ import aos_agent_say
 import aos_agent_talk as talk
 import aos_home
 import test_agent_tick as fixture
+import aos_kernel_store
 
 CLI = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'cli', 'aos-agent')
 CALL = {'id': 'd1', 'type': 'function', 'function': {'name': 'date', 'arguments': '{"fmt": "%H"}'}}
@@ -29,7 +30,7 @@ class TalkTests(unittest.TestCase):
     def registered(self):
         self.put(self.base / 'tick.json', {'envs': self.env})
         proc = {'status': 'idle', 'fails': 0, 'target': str(self.base / 'tick.json'), 'once': False}
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': proc}, 'replies': [], 'cpus': {}})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': proc}, 'replies': [], 'cpus': {}})
         patch('aos_kernel_health.health', return_value=('ok', 'ok')).start()
 
     def run_talk(self, lines, *args, env=None):

@@ -12,8 +12,10 @@ import os
 import signal
 import socket
 import threading
+import time
 from unittest.mock import patch
 
+import aos_daemon_ticks
 import aos_home
 import aos_kernel as kernel
 import aos_kernel_check
@@ -168,15 +170,18 @@ class HealthAndLsTests(KernelCase):
         self.addCleanup(self.fake.close)
         self.initialize()
         self.ledger = kernel.new_state('1000-1', kernel.CLI)
-        self.ledger['pools']['kernel'] = {'daemon': str(self.daemon), 'dpool': 'kernel',
-                                          'sent': {'count': 1, 'skip': []}, 'pending': None}
+        # one-boot：沒有 kernel 池；替它開 tick 的 daemon 記在 ticker，登記在 D/kernels/<id>.json
+        self.ledger.update(ticker=str(self.daemon), last_tick_at=time.time())
+        (self.daemon / 'kernels').mkdir(exist_ok=True)
+        self.write(aos_daemon_ticks.reg_path(self.daemon, self.home),
+                   {'home': str(self.home), 'cli': str(kernel.CLI), 'every_ms': 5, 'timeout_ms': 60000})
         for pool in ('default', 'llm'):
             entry = self.ledger['pools'][pool] = kernel.new_pool(str(self.daemon), pool)
             entry.update(want={'count': 1, 'skip': []}, sent={'count': 1, 'skip': []}, free=[0],
                          dirty=False, redeclare=False)
-        for pool in ('kernel', 'default', 'llm'):
+        for pool in ('default', 'llm'):
             self.summary_file(pool, running=1)
-        self.write(self.home / 'state.json', self.ledger)
+        self.put_state(self.ledger)
 
     def summary_file(self, pool, **counts):
         d = self.daemon / 'pools' / pool
@@ -203,11 +208,14 @@ class HealthAndLsTests(KernelCase):
         self.assertTrue(text.startswith('池 llm 少 1 顆（daemon 在補'), text)
         self.assertTrue(self.ls().startswith('health 池 llm 少 1 顆'))
 
-    def test_kernel_cpu_missing(self):
-        self.summary_file('kernel', running=0, pending=1)
+    def test_tick_not_registered(self):
+        """one-boot：取代「kernel cpu 不在」——daemon 在但沒登記替這個 kernel 開 tick。"""
+        self.assertEqual(self.ls().splitlines()[2].split('：')[0], '  tick 由 daemon 開')
+        aos_daemon_ticks.reg_path(self.daemon, self.home).unlink()
         code, text = health(self.home)
-        self.assertEqual(code, 'cpus')
-        self.assertTrue(text.startswith('kernel cpu 不在'), text)
+        self.assertEqual(code, 'tick')
+        self.assertTrue(text.startswith('daemon %s 沒在替這個 kernel 開 tick' % self.daemon), text)
+        self.assertEqual(self.ls().splitlines()[2], '  tick 沒人開（daemon 沒登記這個 kernel；aos up）')
 
     def test_daemon_down(self):
         self.fake.set_alive(False)
@@ -225,7 +233,7 @@ class HealthAndLsTests(KernelCase):
         self.ledger['procs']['agent-' + name] = {'target': str(home / 'tick.json'), 'once': False, 'status': 'queued',
                                                  'pool': 'default', 'request': 'add-%s.json' % name,
                                                  'runs': 1, 'fails': 0, 'pending': None, 'not_before': 0}
-        self.write(self.home / 'state.json', self.ledger)
+        self.put_state(self.ledger)
         return home
 
     def procs_ls(self):
@@ -263,12 +271,12 @@ class HealthAndLsTests(KernelCase):
     def test_shrinking_pool_is_not_short(self):
         """納入真跑：cpu rm 剛下、縮小單在途時 daemon 已收完，不該報「少 N 顆」。"""
         self.ledger['pools']['llm']['pending'] = {'count': 0, 'skip': [], 'decl': [1000, 1]}
-        self.write(self.home / 'state.json', self.ledger)
+        self.put_state(self.ledger)
         self.summary_file('llm', running=0, count=0)
         self.assertEqual(health(self.home), ('ok', 'ok'))
         self.summary_file('llm', running=0, dead=1)
         self.ledger['pools']['llm']['pending'] = {'count': 1, 'skip': [], 'decl': [1000, 1]}
-        self.write(self.home / 'state.json', self.ledger)
+        self.put_state(self.ledger)
         self.assertEqual(health(self.home)[0], 'recovering')
 
     def test_kernel_problem_wins_over_agents(self):
@@ -285,7 +293,7 @@ class RealDaemonTests(KernelCase):
         self.initialize()
         self.start_daemon()
         result = self.good_cli('boot', self.home)
-        self.assertEqual(result.stdout, 'booted 3 pools, 3 cpus\n')
+        self.assertEqual(result.stdout, 'booted 2 pools, 2 cpus\n')   # one-boot：kernel 池不算了
         wait_for(lambda: self.state().get('last_seq', 0) >= 1)
         self.wait_running('llm', 1)
         wait_for(lambda: self.state()['pools']['llm']['sent']['count'] == 1)

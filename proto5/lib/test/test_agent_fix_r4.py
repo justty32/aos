@@ -15,6 +15,7 @@ import aos_agent as agent
 import aos_agent_listen as listen_api
 import aos_agent_status as status
 import test_agent_tick as fixture
+import aos_kernel_store
 
 CLI = Path(__file__).resolve().parents[2] / 'cli' / 'aos-agent'
 
@@ -31,7 +32,7 @@ class FixR4Tests(unittest.TestCase):
 
     def registered(self):
         self.put(self.base / 'tick.json', {'envs': self.env})
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'fails': 0}}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': {'status': 'idle', 'fails': 0}}, 'replies': []})
 
     def healthy(self):
         return patch('aos_kernel_health.health', return_value=('ok', 'ok'))

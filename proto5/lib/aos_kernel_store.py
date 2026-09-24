@@ -58,8 +58,8 @@ def _connect(home, create=False):
     path = path_of(home)
     if not create and not path.is_file():
         raise LedgerError("NotBooted", "沒有帳本：%s（還沒 boot 過；aos up 或 aos-kernel boot）" % path)
-    uri = "file:%s?mode=%s" % (path.absolute().as_posix().replace("?", "%3f").replace("#", "%23"),
-                               "rwc" if create else "rw")
+    # as_uri() 會把 %、?、# 這些字元照 URI 規矩跳脫；自己拼字串的話字面的 %2F 會被 sqlite 解成 /，開到別的家（astra 必修 2）。
+    uri = "%s?mode=%s" % (path.absolute().as_uri(), "rwc" if create else "rw")
     try:
         conn = sqlite3.connect(uri, uri=True, isolation_level=None, timeout=10)
         conn.execute("PRAGMA busy_timeout=10000")
@@ -178,6 +178,11 @@ class Store:
                 raise
             c.execute("COMMIT")
         except sqlite3.Error as exc:
+            if c.in_transaction:           # COMMIT 本身失敗也要收掉，免得這條連線卡在交易裡（astra 建議）
+                try:
+                    c.execute("ROLLBACK")
+                except sqlite3.Error:
+                    pass
             raise LedgerError("WriteFailed", "帳本寫不進去：%s（%s）" % (path_of(self.home), exc)) from exc
         self.orig = new
 
@@ -275,6 +280,8 @@ def knows(home, name):
     if proc(home, name) is not None:
         return True
     replies = meta(home, "replies").get("replies") or []
+    if not isinstance(replies, list):
+        raise LedgerError("ReadFailed", "帳本的 replies 形狀不合：%s" % path_of(home))
     return any(isinstance(r, dict) and r.get("name") == name + ".json" for r in replies)
 
 

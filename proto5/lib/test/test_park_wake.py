@@ -28,6 +28,7 @@ import aos_kernel_engine
 import aos_kernel_info
 import aos_kernel_ledger
 import aos_kernel_ls
+import aos_kernel_store
 from _kernel_fake import Crash, FakeCase
 
 PARK = 102
@@ -352,7 +353,7 @@ class KernelPark(FakeCase):
         self.assertEqual(self.state()["features"], ["park"])
         st = self.state()
         del st["features"]
-        aos_home.write_state(self.K, st)
+        self.put_state(st)  # one-boot：帳本是 K/ledger.sqlite
         self.assertEqual(self.tick()["features"], ["park"])
 
     def test_ls_shows_parked(self):
@@ -527,7 +528,7 @@ class AgentPark(unittest.TestCase):
         self.info = {"_metainfo": {"_type": "llm_agent", "_version": 1}, "llm": {"model": "small"}}
         self.put(self.base / "info.json", self.info)
         self.put(self.k / "info.json", {})
-        self.put(self.k / "state.json", {"procs": {}, "replies": []})
+        aos_kernel_store.write(self.k, {"procs": {}, "replies": []})  # one-boot：K 帳本是 K/ledger.sqlite
         self.err = io.StringIO()
         self.addCleanup(mock.patch.stopall)
         mock.patch("sys.stderr", self.err).start()
@@ -573,17 +574,17 @@ class AgentPark(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "KernelIncompatible")
         self.put(self.k / "info.json", {})
         agent._compatible(str(self.k), self.env)  # 假帳本沒 chain＝還沒 boot 過，不擋
-        self.put(self.k / "state.json", {"chain": "1-1", "procs": {}, "replies": []})
+        aos_kernel_store.write(self.k, {"chain": "1-1", "procs": {}, "replies": []})
         with self.assertRaises(agent.AgentError) as ctx:
             agent._compatible(str(self.k), self.env)
         self.assertIn("102", ctx.exception.msg)
-        self.put(self.k / "state.json", {"chain": "1-1", "features": ["park"], "procs": {}, "replies": []})
+        aos_kernel_store.write(self.k, {"chain": "1-1", "features": ["park"], "procs": {}, "replies": []})
         agent._compatible(str(self.k), self.env)
-        (self.k / "state.json").unlink()
+        (self.k / "ledger.sqlite").unlink()  # 沒帳本＝沒 boot 過，不擋
         agent._compatible(str(self.k), self.env)
 
     def test_start_refuses_old_kernel_end_to_end(self):
-        self.put(self.k / "state.json", {"chain": "1-1", "procs": {}, "replies": []})
+        aos_kernel_store.write(self.k, {"chain": "1-1", "procs": {}, "replies": []})
         self.assertEqual(agent.start(self.base, self.env), 1)
         self.assertIn("KernelIncompatible", self.err.getvalue())
         self.assertEqual(list((self.k / "requests").iterdir()), [])  # 沒登記
@@ -632,7 +633,7 @@ class AgentPark(unittest.TestCase):
 
     def test_status_shows_parked(self):
         import aos_agent_status
-        self.put(self.k / "state.json", {"chain": "1-1", "features": ["park"], "replies": [], "procs": {
+        aos_kernel_store.write(self.k, {"chain": "1-1", "features": ["park"], "replies": [], "procs": {
             "agent-bob": {"status": "queued", "runs": 3, "fails": 0, "parked": True}}})
         out = io.StringIO()
         with contextlib.redirect_stdout(out):

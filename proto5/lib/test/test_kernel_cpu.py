@@ -204,17 +204,16 @@ class CpuLs(CpuCase):
         self.init({"default": {"count": 2}})
         out, _ = self.main("cpu", "ls")
         lines = out.splitlines()
-        self.assertEqual(len(lines), 2)
-        self.assertTrue(lines[0].startswith("kernel   want 1  sent -   daemon kernel: 沒有這池"), lines[0])
-        self.assertIn("default  want 2  sent -   daemon default: 沒有這池", lines[1])
-        self.assertIn("還沒宣告", lines[1])
+        self.assertEqual(len(lines), 1)                      # one-boot：沒有 kernel 池那行
+        self.assertIn("default  want 2  sent -   daemon default: 沒有這池", lines[0])
+        self.assertIn("還沒宣告", lines[0])
 
     def test_ls_running_pools(self):
         self.booted({"default": {"count": 2}, "llm": {"count": 1}})
         out, _ = self.main("cpu", "ls")
         lines = out.splitlines()
-        self.assertEqual(lines[0], "kernel   want 1  sent 1   daemon kernel: running 1 pending 0 dead 0 failed 0")
-        self.assertEqual(lines[1], "default  want 2  sent 2  busy 0  idle 2  draining 0   "
+        self.assertEqual(len(lines), 2)                      # one-boot：沒有 kernel 池那行
+        self.assertEqual(lines[0], "default  want 2  sent 2  busy 0  idle 2  draining 0   "
                                    "daemon default: running 2 pending 0 dead 0 failed 0")
         # restarting 是 running 的子集：>0 才寫進 running 那格（使用者代裁）；--json 照舊分兩欄
         row = {"pool": "default", "want": 2, "sent": 2, "declared": True, "busy": 0, "idle": 2, "draining": 0,
@@ -224,7 +223,7 @@ class CpuLs(CpuCase):
         self.assertEqual(aos_kernel_rows.row_line("/k", {"daemon": "/d"}, row),
                          "default  want 2  sent 2  busy 0  idle 2  draining 0   "
                          "daemon default: running 2（含 restarting 1） pending 0 dead 0 failed 0")
-        self.assertTrue(lines[2].startswith("llm      want 1  sent 1  busy 0  idle 1"), lines[2])
+        self.assertTrue(lines[1].startswith("llm      want 1  sent 1  busy 0  idle 1"), lines[1])
 
     def test_ls_pool_one_line_per_cpu_with_kids(self):
         self.booted({"default": {"count": 3}})
@@ -271,7 +270,7 @@ class CpuLs(CpuCase):
         self.assertIn("宣告已送出，下一格確認", out.splitlines()[0])
         state = self.state()
         state["phase"] = "stopped"
-        aos_home.write_json(self.K / "state.json", state)
+        self.put_state(state)
         out, _ = self.main("cpu", "ls", "--pool", "default")
         self.assertIn("停機中，下次 boot 收回音", out.splitlines()[0])
         self.assertNotIn("在路上", out)
@@ -320,7 +319,7 @@ class CpuLs(CpuCase):
     def test_json_and_unknown_pool(self):
         self.booted({"default": {"count": 2}})
         data = json.loads(self.main("cpu", "ls", "--json")[0])
-        self.assertEqual(list(data["pools"]), ["kernel", "default"])
+        self.assertEqual(list(data["pools"]), ["default"])
         row = data["pools"]["default"]
         self.assertEqual((row["want"], row["sent"], row["busy"], row["idle"], row["draining"]), (2, 2, 0, 2, 0))
         self.assertEqual(row["summary"]["running"], 2)

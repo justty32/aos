@@ -1,4 +1,4 @@
-"""proto5-2 kernel：搬池、池從 info 消失、停機縮池與 halt 等待（kernel-info §4、kernel-pools §2 第 5 步、handoff §3）。
+"""proto5-2 kernel：搬池、池從 info 消失、停機縮池與 halt 等待（kernel-info §4、kernel-pools §2 第 5 步、kernel/tick.md 第 9 步）。
 
 全部用假 daemon（_kernel_fake），直接呼叫 tick 一格一格跑；cpu 的回音由測試自己寫。
 """
@@ -107,16 +107,22 @@ class Halt(FakeCase):
                 break
         self.assertEqual(st["phase"], "stopped")
         self.assertIn("result", self.reply(waiting))
-        scales = [(name, p["pool"], p["count"]) for name, p in self.fake.seen[n:]]
+        scales = [(name, p["pool"], p["count"]) for name, p in self.fake.seen[n:] if "pool" in (p or {})]
         pools = [p for _, p, _ in scales]
-        self.assertEqual(pools[-1], "kernel")
-        self.assertEqual(sorted(pools[:-1]), ["default", "llm"])
+        self.assertEqual(sorted(pools), ["default", "llm"])
         self.assertTrue(all(c == 0 for _, _, c in scales))
         self.assertIsNone(self.fake.summary("default"))
-        self.assertIsNone(self.fake.summary("kernel"))
-        self.assertEqual(st["pools"]["kernel"]["pending"]["count"], 0)
-        st = self.tick()  # stopped 之後的格：只出貨、不接鏈
+        # one-boot：沒有 kernel 池可縮；停好那格最後寄撤登記（tick off）給開 tick 的 daemon
+        name, last = self.fake.seen[-1]
+        self.assertTrue(name.endswith("-untick.json"), name)
+        self.assertEqual(last, {"home": str(self.K.absolute()), "off": True})
+        import aos_daemon_ticks
+        self.assertIsNone(aos_daemon_ticks.peek(self.D, self.K.absolute()))
+        self.assertNotIn("kernel", st["pools"])
+        n = len(self.fake.seen)
+        st = self.tick()  # stopped 之後的格：只出貨，什麼都不寄
         self.assertEqual(st["phase"], "stopped")
+        self.assertEqual(self.fake.seen[n:], [])
 
     def test_halt_blocked_by_daemon_error(self):
         self.fake.stopping = True
@@ -179,10 +185,23 @@ class Halt(FakeCase):
 
 
 class NotRunning(FakeCase):
-    def test_not_running_when_kernel_pool_absent(self):
+    def test_not_running_when_tick_not_registered(self):
+        """one-boot：daemon 沒登記替這個 kernel 開 tick（或 daemon 不在）＝沒在跑；halt 印 not running、不放 stop。"""
+        import aos_daemon_ticks
         self.init({"default": {"count": 1}})
         self.boot()
-        self.fake.gone("kernel")
+        self.assertIsNotNone(aos_daemon_ticks.peek(self.D, self.K.absolute()))
+        aos_daemon_ticks.reg_path(self.D, self.K.absolute()).unlink()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            aos_kernel_boot.stop(self.K)
+        self.assertEqual(out.getvalue().strip(), "not running")
+        self.assertEqual(list((self.K / "requests").glob("stop-*")), [])
+
+    def test_not_running_when_daemon_dead(self):
+        self.init({"default": {"count": 1}})
+        self.boot()
+        self.fake.set_alive(False)
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             aos_kernel_boot.stop(self.K)

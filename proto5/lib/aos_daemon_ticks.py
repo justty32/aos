@@ -155,7 +155,15 @@ class TicksMixin:
             raise DaemonError("Stopping", "daemon 正在停機")
         ticker = self.tickers.get(ident)
         if ticker is None:
-            ticker = self.tickers[ident] = Ticker(p)
+            # 撤登記後那格可能還在跑（只剩在 tick_pids）：沿用它，收屍後才開下一格（astra 必修 4）。
+            ticker = next((t for t in self.tick_pids.values() if t.id == ident), None)
+            if ticker is not None:
+                ticker.removed = False
+                self.tickers[ident] = ticker
+                ticker.cli, ticker.every_ms, ticker.timeout_ms = p["cli"], p["every_ms"], p["timeout_ms"]
+                ticker.hold, ticker.fails = 0.0, 0
+            else:
+                ticker = self.tickers[ident] = Ticker(p)
         else:
             ticker.cli, ticker.every_ms, ticker.timeout_ms = p["cli"], p["every_ms"], p["timeout_ms"]
             ticker.next_at, ticker.hold, ticker.fails = time.monotonic(), 0.0, 0   # 重登記＝人來處理過了，連敗歸零

@@ -16,6 +16,7 @@ import aos_agent_batch as batch_api
 import aos_agent_info as info_api
 import aos_home
 import aos_inst
+import aos_kernel_store
 from aos_agent_results import UNKNOWN
 
 MESSAGE = {'role': 'assistant', 'content': '完成'}
@@ -42,7 +43,7 @@ class AgentTickTests(unittest.TestCase):
         self.info = {'_metainfo': {'_type': 'llm_agent', '_version': 1}, 'llm': {'model': 'small'}}
         self.put(self.base / 'info.json', self.info)
         self.put(self.k / 'info.json', {})
-        self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})  # one-boot：K 帳本是 K/ledger.sqlite（借 setUp 的類別不一定有 ledger()）
         self.err = io.StringIO()
         self.addCleanup(patch.stopall)
         patch('sys.stderr', self.err).start()
@@ -53,6 +54,17 @@ class AgentTickTests(unittest.TestCase):
 
     def read(self, path):
         return json.loads(path.read_text(encoding='utf-8'))
+
+    def ledger(self, value):
+        aos_kernel_store.write(self.k, value)
+
+    def drop_ledger(self):
+        for suffix in ('', '-wal', '-shm'):
+            (self.k / ('ledger.sqlite' + suffix)).unlink(missing_ok=True)
+
+    def break_ledger(self):
+        self.drop_ledger()
+        (self.k / 'ledger.sqlite').write_text('{')
 
     def state(self):
         return self.read(self.base / 'state.json')
@@ -600,22 +612,22 @@ class AgentTickTests(unittest.TestCase):
 def posting_case(where):
     def test(self):
         name = self.prepare(sent=False)
-        kp = self.k / 'state.json'
         if where == 'requests':
             self.put(self.k / 'requests' / (name + '.json'), {'原單': True})
-            kp.write_text('{')  # 第一步命中後，不得去讀壞帳本。
+            self.break_ledger()  # 第一步命中後，不得去讀壞帳本。
         elif where == 'procs':
-            self.put(kp, {'procs': {name: {}}, 'replies': []})
+            self.ledger({'procs': {name: {}}, 'replies': []})
         elif where == 'replies':
-            self.put(kp, {'procs': {}, 'replies': [{'name': name + '.json'}]})
+            self.ledger({'procs': {}, 'replies': [{'name': name + '.json'}]})
         elif where == 'responses':
             self.respond(name)
         elif where == 'missing':
-            kp.unlink()
+            self.drop_ledger()
         elif where == 'broken':
-            kp.write_text('{'); self.respond(name)  # 不准越過帳本先看回音。
+            self.break_ledger(); self.respond(name)  # 不准越過帳本先看回音。
         elif where == 'shape':
-            self.put(kp, {'procs': [], 'replies': []})
+            # one-boot：procs 是表、不會「不是物件」；還是舊的 K/state.json（沒換 sqlite）＝讀不懂，一樣不准送。
+            self.drop_ledger(); self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
         with patch('aos_client.submit', wraps=agent.aos_client.submit) as submit:
             self.assertEqual(self.tick(), 1 if where in ('broken', 'shape') else 0)
             self.assertEqual(submit.call_count, int(where in ('none', 'missing')))
@@ -734,13 +746,13 @@ def sweep_case(mode):
         for suffix in ('.in', '.out', '.inst.json'):
             self.put(self.base / 'work' / (name + suffix), {})
         if mode == 'procs':
-            self.put(self.k / 'state.json', {'procs': {name: {'discard': True}}, 'replies': []})
+            self.ledger({'procs': {name: {'discard': True}}, 'replies': []})
         elif mode == 'requests':
             self.put(self.k / 'requests' / (name + '.json'), {})
         elif mode == 'missing':
-            (self.k / 'state.json').unlink()
+            self.drop_ledger()
         elif mode == 'broken':
-            (self.k / 'state.json').write_text('{')
+            self.break_ledger()
         self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertEqual(bool(self.state()['sweep']), mode != 'clear')
         self.assertEqual(len(list((self.base / 'work').iterdir())), 0 if mode == 'clear' else 3)

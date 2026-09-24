@@ -14,6 +14,7 @@ import time
 
 import aos_client
 import aos_daemon
+import aos_daemon_ticks
 import aos_home
 from _kernel_util import CLI, PY, KernelCase, read_json, wait_for
 
@@ -200,7 +201,8 @@ class DaemonRestarts(P52Case):
         self.kernel_stop()
 
     def test_daemon_halt_then_boot_pulls_pools_back_and_chain_resumes(self):
-        """daemon halt → pool.json 留著 → 再開 daemon 照宣告拉回，kernel 鏈自己接上（handoff §2），不用 aos-kernel boot。"""
+        """daemon halt → pool.json 留著 → 再開 daemon 照宣告拉回，tick 自己接上，不用 aos-kernel boot。
+        （one-boot：沒有 kernel 池；接上靠 daemon 照 D/kernels/ 的登記繼續替 K 開 tick，chain 不變。）"""
         self.setup_running({"default": {"count": 2}})
         self.wait_running("default", 2)
         chain = self.state()["chain"]
@@ -210,7 +212,6 @@ class DaemonRestarts(P52Case):
         self.assertEqual(self.summary("default")["running"], 0)
         seq = self.state()["last_seq"]
         self.start_daemon()
-        self.wait_running("kernel", 1)
         self.wait_running("default", 2)
         wait_for(lambda: self.state()["last_seq"] >= seq + 3)
         self.assertEqual(self.state()["chain"], chain)
@@ -234,14 +235,20 @@ sys.path.insert(0, %(lib)r)
 import aos_kernel
 argv = sys.argv[1:]
 rec = {"pid": os.getpid(), "argv": argv[:1]}
-if argv[:1] == ["tick"]:
-    rec.update(chain=argv[argv.index("--chain") + 1], seq=int(argv[argv.index("--seq") + 1]))
 start = time.monotonic()
+code = 1
 try:
     code = aos_kernel.main()
 finally:
+    end = time.monotonic()
+    if argv[:1] == ["tick"]:   # one-boot：daemon 開的一格是 `tick --target K`，沒有 --chain/--seq；chain 事後從帳本讀
+        import aos_kernel_store
+        try:
+            rec["chain"] = aos_kernel_store.meta(argv[argv.index("--target") + 1], "chain").get("chain")
+        except Exception:
+            rec["chain"] = None
     with open(%(log)r, "a") as f:
-        f.write(json.dumps(dict(rec, start=start, end=time.monotonic())) + "\n")
+        f.write(json.dumps(dict(rec, start=start, end=end, code=code)) + "\n")
 sys.exit(code)
 '''
 BOOT = r'''
@@ -268,8 +275,9 @@ class Handoff(P52Case):
         text = path.read_text() if path.exists() else ""
         return [json.loads(line) for line in text[:text.rfind("\n") + 1].splitlines()]
 
-    def test_kernel_boot_shrinks_old_kernel_pool_before_new_chain(self):
-        """再 boot：舊 kernel 池縮 0、等 daemon 收乾淨才開新鏈；任何兩格的執行時間都不重疊。"""
+    def test_reboot_new_chain_ticks_never_overlap(self):
+        """再 boot：換新 chain、daemon 接著開 tick；任何兩格（拿到 K/.tick.lock 的，退 75 的不算）執行時間都不重疊。
+        （one-boot 前是「舊 kernel 池縮 0、等 daemon 收乾淨才開新鏈」；kernel 池拿掉了，不重疊改由 K/.tick.lock 保證。）"""
         self.wrapper = self.root / "aos-kernel-timed"
         self.wrapper.write_text("#!%s\n%s" % (PY, TICK % {"lib": str(CLI.parent / "lib"),
                                                             "log": str(self.root / "ticks.jsonl")}))
@@ -279,34 +287,30 @@ class Handoff(P52Case):
         self.wrapped_boot()
         old = self.state()["chain"]
         wait_for(lambda: self.state()["last_seq"] >= 5)
-        old_pid = self.kid_pid("kernel", 0)
         self.wrapped_boot()
         new = self.state()["chain"]
         self.assertNotEqual(new, old)
-        with self.assertRaises(ProcessLookupError):
-            os.kill(old_pid, 0)
-        # 新 kernel cpu 是另一支行程。不比 gen：boot 等舊池收乾淨（astra P2），池常整個拿掉再重建，kids 檔從 gen 1 重算。
-        new_pid = self.kid_pid("kernel", 0)
-        self.assertIsNotNone(new_pid)
-        self.assertNotEqual(new_pid, old_pid)
         wait_for(lambda: self.state()["last_seq"] >= 5)
         response = self.call("add", {"name": "after", "target": self.counted("after"), "once": True})
         self.assertEqual(response["result"]["code"], 0, response)
         self.kernel_stop()
-        spans = sorted((t["start"], t["end"], t["chain"], t["seq"]) for t in self.ticks() if t["argv"] == ["tick"])
+        spans = sorted((t["start"], t["end"], t["chain"], t["pid"]) for t in self.ticks()
+                       if t["argv"] == ["tick"] and t["code"] != 75)
         self.assertTrue({s[2] for s in spans} >= {old, new})
-        for (s1, e1, c1, n1), (s2, e2, c2, n2) in zip(spans, spans[1:]):
-            self.assertLessEqual(e1, s2, "兩格同時在跑：%s-%d 與 %s-%d" % (c1, n1, c2, n2))
+        for (s1, e1, c1, p1), (s2, e2, c2, p2) in zip(spans, spans[1:]):
+            self.assertLessEqual(e1, s2, "兩格同時在跑：%s pid %d 與 %s pid %d" % (c1, p1, c2, p2))
 
     def test_kernel_halt_shrinks_every_pool_and_daemon_forgets_them(self):
-        """kernel halt：每個工作池縮 0 → kernel 池縮 0；daemon 那邊池全消失，重開 daemon 也不會拉回來。"""
+        """kernel halt：每個工作池縮 0、停好那格請 daemon 撤登記；daemon 那邊池全消失、不再開 tick，重開 daemon 也不會拉回來。"""
         self.setup_running({"default": {"count": 2}, "llm": {"count": 1}})
         self.wait_running("default", 2)
         self.wait_running("llm", 1)
+        self.assertIsNotNone(aos_daemon_ticks.peek(str(self.daemon), self.home))
         self.kernel_stop()
-        for pool in ("kernel", "default", "llm"):
+        for pool in ("default", "llm"):
             self.assertIsNone(self.summary(pool))
             self.assertFalse((self.daemon / "pools" / self.dpool(pool)).exists())
+        wait_for(lambda: aos_daemon_ticks.peek(str(self.daemon), self.home) is None)  # one-boot：取代「kernel 池縮 0」
         self.assertTrue(aos_daemon.is_alive(str(self.daemon)))
         self.daemon_stop()
         self.start_daemon()

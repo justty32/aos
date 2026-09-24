@@ -409,7 +409,7 @@ class HomeTest(DaemonCase):
         aos_home.post_request(self.home, name, {"jsonrpc": "2.0", "method": "unknown"})
         wait_for(lambda: not (self.home / "requests" / name).exists())
         self.assertFalse((self.home / "responses" / name).exists())
-        self.assertEqual(self.ok(self.call("ls")), {"pools": {}})
+        self.assertEqual(self.ok(self.call("ls")), {"pools": {}, "kernels": {}})  # one-boot：多 kernels（替哪些 kernel 開 tick）
         self.halt()
 
     def test_ls_rpc(self):
@@ -436,6 +436,137 @@ class HomeTest(DaemonCase):
                 self.assertEqual(aos_daemon.daemon_home(), str(Path(self.root).resolve()))
         finally:
             os.chdir(cwd)
+
+
+TICK = r"""#!%s
+import os, sys, time
+k = sys.argv[sys.argv.index("--target") + 1]
+with open(os.path.join(k, "runs.txt"), "a") as f:
+    f.write("%%s %%d\n" %% (" ".join(sys.argv[1:]), os.getpid()))
+code = open(os.path.join(k, "exit")).read().strip() if os.path.exists(os.path.join(k, "exit")) else "0"
+if code == "hang":
+    time.sleep(60)
+sys.exit(int(code))
+"""
+
+
+class TickTest(DaemonCase):
+    """one-boot：daemon 替登記的 kernel 家開 `<cli> tick --target K`（假 cli 只記一行、照 K/exit 退出）。"""
+
+    def setUp(self):
+        super().setUp()
+        self.K = self.root / "K"
+        (self.K / "requests").mkdir(parents=True)
+        self.tick_cli = self.root / "fake-kernel"
+        self.tick_cli.write_text(TICK % PY)
+        self.tick_cli.chmod(0o755)
+
+    def runs(self):
+        path = self.K / "runs.txt"
+        return path.read_text().splitlines() if path.exists() else []
+
+    def register(self, **extra):
+        return self.call("tick", dict({"home": str(self.K), "cli": str(self.tick_cli)}, **extra))
+
+    def reg(self):
+        import aos_daemon_ticks
+        return read_json(aos_daemon_ticks.reg_path(self.home, self.K))
+
+    def test_register_runs_every_ms_and_new_request_file_triggers(self):
+        self.start()
+        for params, key in (({"home": "rel/K", "cli": str(self.tick_cli)}, "home"),
+                            ({"home": str(self.K)}, "cli"),
+                            ({"home": str(self.K), "cli": str(self.tick_cli), "every_ms": -1}, "every_ms"),
+                            ({"home": str(self.K), "cli": str(self.tick_cli), "timeout_ms": True}, "timeout_ms"),
+                            ({"home": str(self.K), "off": "yes"}, "off")):
+            with self.subTest(key=key):
+                response = self.call("tick", params)
+                self.assertEqual(response["error"]["code"], -32602, response)
+        result = self.ok(self.register(every_ms=60000))
+        self.assertEqual(result["home"], str(self.K))
+        self.assertEqual(self.reg(), {"home": str(self.K), "cli": str(self.tick_cli), "every_ms": 60000,
+                                      "timeout_ms": 60000, "fails": 0, "last_exit": None, "last_error_at": None})
+        wait_for(lambda: len(self.runs()) == 1)                  # 登記當下開第一格
+        self.assertEqual(self.runs()[0].split()[:3], ["tick", "--target", str(self.K)])
+        time.sleep(.3)
+        self.assertEqual(len(self.runs()), 1)                    # 60 秒一格：閒著不開
+        write_json(self.K / "requests" / "cli-1.json", {"jsonrpc": "2.0", "method": "x"})
+        wait_for(lambda: len(self.runs()) == 2)                  # K/requests/ 有新檔：馬上開一格
+        view = self.ok(self.call("ls", {}))["kernels"]
+        self.assertEqual(list(view), [self.reg_id()])
+        self.assertEqual(view[self.reg_id()]["home"], str(self.K))
+        text = subprocess.run([PY, str(CLI / "aos-daemon"), "ls", "--target", str(self.home)],
+                              capture_output=True, text=True, timeout=8).stdout
+        self.assertIn("kernels 1", text.splitlines()[0])
+        self.assertIn("kernel %s  每 60000 ms 開一格 tick" % self.K, text)
+        data = json.loads(subprocess.run([PY, str(CLI / "aos-daemon"), "ls", "--target", str(self.home), "--json"],
+                                         capture_output=True, text=True, timeout=8).stdout)
+        self.assertEqual([k["home"] for k in data["kernels"]], [str(self.K)])
+        self.ok(self.register(every_ms=5))                       # 重登記＝改參數
+        wait_for(lambda: len(self.runs()) >= 6)
+        self.assertIsNone(self.call("tick", {"home": str(self.K), "off": True}).get("error"))
+        wait_for(lambda: not (self.home / "kernels" / (self.reg_id() + ".json")).exists())
+        time.sleep(.1)
+        n = len(self.runs())
+        time.sleep(.3)
+        self.assertEqual(len(self.runs()), n)                    # 撤登記：不再開
+        self.halt()
+
+    def reg_id(self):
+        import aos_daemon_ticks
+        return aos_daemon_ticks.kernel_id(self.K)
+
+    def test_failures_back_off_never_stop_busy_is_not_failure(self):
+        self.set_info(restart_max_ms=400)
+        (self.K / "exit").write_text("75")                      # 鎖被佔：不算失敗
+        self.start()
+        self.ok(self.register(every_ms=5))
+        wait_for(lambda: len(self.runs()) >= 3)
+        self.assertEqual(self.reg()["fails"], 0)
+        self.assertNotIn("TickFailed", self.log())
+        (self.K / "exit").write_text("3")
+        wait_for(lambda: self.reg()["fails"] >= 3, timeout=8)
+        reg = self.reg()
+        self.assertEqual(reg["last_exit"], 3)
+        self.assertIsNotNone(reg["last_error_at"])
+        self.assertIn("aos-daemon: TickFailed: K=%s 這格退出 3（連敗 1，100 ms 後再試）" % self.K, self.log())
+        self.assertIn("（連敗 2，200 ms 後再試）", self.log())
+        text = subprocess.run([PY, str(CLI / "aos-daemon"), "ls", "--target", str(self.home)],
+                              capture_output=True, text=True, timeout=8).stdout
+        self.assertRegex(text, r"kernel %s  每 5 ms 開一格 tick  連敗 \d+（最後退出 3）" % self.K)
+        self.assertIsNone(self.proc.poll())                      # daemon 不自己停
+        (self.K / "exit").write_text("0")
+        wait_for(lambda: self.reg()["fails"] == 0, timeout=8)    # 從失敗恢復才重寫登記檔
+        self.assertEqual(self.reg()["last_exit"], 0)
+        self.halt()
+
+    def test_timeout_kills_and_registration_survives_restart(self):
+        (self.K / "exit").write_text("hang")
+        self.start()
+        self.ok(self.register(every_ms=5, timeout_ms=200))
+        wait_for(lambda: self.reg()["fails"] >= 1, timeout=8)
+        self.assertIn("逾時（跑超過 200 ms）", self.log())
+        (self.K / "exit").write_text("0")
+        self.halt()                                              # 停機：卡著的那格給 stop_wait＋kill_wait 再 KILL
+        self.assertTrue(self.reg())                              # 登記檔留著
+        n = len(self.runs())
+        self.start()
+        wait_for(lambda: len(self.runs()) > n)                   # 重開照登記接著開
+        wait_for(lambda: self.reg()["fails"] == 0, timeout=8)
+        self.halt()
+
+    def test_stopping_daemon_refuses_registration(self):
+        self.set_info(stop_wait_ms=1000, kill_wait_ms=1000)     # 卡著的那格讓停機拖一下
+        self.start()
+        import aos_home
+        (self.K / "exit").write_text("hang")
+        self.ok(self.register(every_ms=5, timeout_ms=0))
+        wait_for(lambda: len(self.runs()) == 1)
+        aos_home.post_request(self.home, "stop-x.json", {"jsonrpc": "2.0", "method": "stop"})
+        wait_for(lambda: self.state().get("stopping"))
+        response = self.register()
+        self.assertEqual(self.code(response), "Stopping")
+        self.assertEqual(self.proc.wait(timeout=6), 0, self.log())
 
 
 class UnitTest(unittest.TestCase):

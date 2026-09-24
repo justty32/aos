@@ -14,6 +14,7 @@ import aos_agent_say as say
 import aos_agent_status as status
 import aos_home
 import test_agent_tick as fixture
+import aos_kernel_store
 
 
 class DailyTests(unittest.TestCase):
@@ -114,7 +115,7 @@ class DailyTests(unittest.TestCase):
     def test_status_kernel_fallback_and_bad(self):
         self.put(self.base / 'tick.json', {'envs': self.env})
         proc = {'status': 'bad', 'runs': 12, 'fails': 3}
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': proc}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': proc}, 'replies': []})
         data = status.collect(self.base, {})
         self.assertEqual(data['kernel']['proc'], proc)
         self.assertEqual(data['kernel']['home'], str(self.k))
@@ -122,7 +123,7 @@ class DailyTests(unittest.TestCase):
 
     def test_status_kernel_missing_and_unreadable(self):
         self.assertIn('沒登記', status.collect(self.base, self.env)['kernel']['note'])
-        (self.k / 'state.json').write_text('{')
+        (self.k / 'ledger.sqlite').write_text('{')  # one-boot：帳本壞掉（不是 sqlite）
         self.assertIn('帳本讀不到', status.collect(self.base, self.env)['kernel']['note'])
 
     def test_tick_fallback_literal_absolute_only(self):

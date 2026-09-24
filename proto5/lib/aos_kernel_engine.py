@@ -224,9 +224,22 @@ class Kernel(PoolsMixin, KernelLedger):
             st["sends"].append({"home": ticker, "name": name, "body": untick_request(self.home)})
         self.events.append({"event": "stopped"})
 
+    def resend_untick(self):
+        """停好了卻還被開格＝daemon 那邊還登記著（撤登記單在 daemon 崩潰對帳時被丟掉之類）：再送一張（astra 必修 3）。
+        偷看 D/kernels/<id>.json 在不在（跟偷看 summary.json 一樣，不改 daemon 的家）；出貨箱裡已經有一張就不重複排。"""
+        import aos_daemon_ticks
+        ticker = self.state.get("ticker")
+        if not ticker or aos_daemon_ticks.peek(ticker, self.home) is None:
+            return
+        if any((s.get("body") or {}).get("method") == "tick" for s in self.state["sends"]):
+            return
+        name = "k-%s-%d-untick.json" % (self.state["chain"], self.seq)
+        self.state["sends"].append({"home": ticker, "name": name, "body": untick_request(self.home)})
+
     # ---- 一格 ----
     def step(self):
         if self.state["phase"] == "stopped":
+            self.resend_untick()
             if self.flush_outboxes():
                 self.save()
             return 0
@@ -293,4 +306,5 @@ def tick(home, chain=None, seq=None):
         finally:
             store.close()
     finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)   # 同一個行程裡直接呼叫 tick（測試）時別留著鬧鐘
         os.close(lock)

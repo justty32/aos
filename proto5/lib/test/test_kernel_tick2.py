@@ -366,35 +366,60 @@ class Queue(FakeCase):
 
 
 class Commits(FakeCase):
-    def test_at_most_four_writes(self):
+    def test_at_most_three_writes(self):
+        """one-boot：一格最多三筆交易（提交點 A 出貨完、B 決定完、C 出貨完）；沒事做的提交點不寫。"""
+        import aos_kernel_store
         self.init({"default": {"count": 2}})
         self.boot()
         self.settle()
         writes = []
-        real = aos_home.write_state
-        def spy(home, state):
-            if Path(home) == self.K:
+        real = aos_kernel_store.Store.save
+        def spy(store, state):
+            if store.home == self.K.absolute():
                 writes.append({k: state[k] for k in ("last_seq", "acks", "sends", "busy")})
-            return real(home, state)
-        with mock.patch.object(aos_home, "write_state", spy):
+            return real(store, state)
+        with mock.patch.object(aos_kernel_store.Store, "save", spy):
             self.tick()
-            self.assertEqual(len(writes), 2)  # 閒格：提交點 1、3
+            self.assertEqual(len(writes), 1)  # 閒格：只有提交點 B
             writes.clear()
             self.add("a")
             self.add("b")
             self.edit_info(default={"count": 3})
             st = self.tick(process=False)
-            self.assertLessEqual(len(writes), 4)
-            self.assertEqual(writes[0]["last_seq"], self.seq)
-            self.assertTrue(writes[-2]["sends"])  # 提交點 3 帶著新單
-            self.assertEqual(writes[-1]["sends"], [])  # 提交點 4 出貨完拿掉
+            self.assertEqual(len(writes), 2)  # 上一格出貨完了：B、C
+            self.assertEqual(writes[0]["last_seq"], st["last_seq"])
+            self.assertTrue(writes[0]["sends"])  # 提交點 B 帶著新單
+            self.assertEqual(writes[-1]["sends"], [])  # 提交點 C 出貨完拿掉
             writes.clear()
             for key in list(st["busy"]):
                 self.respond(key)
             self.fake.process()
             self.tick()
-            # 上一格第 10 步已出貨完，這格第 4 步沒事做就不寫：提交點 1、3、4
-            self.assertEqual(len(writes), 3)
+            # 上一格第 10 步已出貨完，這格第 4 步沒事做就不寫：B（帶 acks）、C
+            self.assertEqual(len(writes), 2)
+            self.assertTrue(writes[0]["acks"])
+            self.assertEqual(writes[1]["acks"], [])
+
+    def test_commit_a_when_outbox_left(self):
+        """上一格崩在 B 之後、C 之前（出貨箱還有東西）：這格第 4 步先出貨、存提交點 A（帶 last_seq）。"""
+        import aos_kernel_store
+        self.init({"default": {"count": 2}})
+        self.boot()
+        self.settle()
+        st = self.state()
+        st["acks"] = [{"home": str(self.cpu("default/0")), "name": "gone.json"}]
+        self.put_state(st)
+        writes = []
+        real = aos_kernel_store.Store.save
+        def spy(store, state):
+            if store.home == self.K.absolute():
+                writes.append({k: state[k] for k in ("last_seq", "acks")})
+            return real(store, state)
+        with mock.patch.object(aos_kernel_store.Store, "save", spy):
+            st = self.tick()
+        self.assertEqual(len(writes), 2)  # A、B
+        self.assertEqual(writes[0]["acks"], [])
+        self.assertEqual(writes[0]["last_seq"], st["last_seq"])
 
 
 if __name__ == "__main__":

@@ -1,4 +1,7 @@
-"""proto5-2 kernel boot 交接（handoff §1）與崩潰窗口（kernel-pools §5、kernel-tick 第 8 步、handoff §1 崩在哪）。
+"""kernel boot（kernel/boot.md）與崩潰窗口（kernel-pools §5、kernel-tick 第 8 步、boot 崩在哪）。
+
+2026-09-24 one-boot：沒有 kernel 池／kernel cpu／開機交接；boot＝寫 sqlite 帳本＋向 daemon 登記開 tick。
+舊的第 2 版 K/state.json 帳本裡的 kernel 池 boot 時縮到 0、等收乾淨（Legacy 那組）。
 
 「崩」＝在某一步丟出 Crash（BaseException），記憶體全丟、磁碟停在那一刻；下一格／下一次 boot 照常跑。
 """
@@ -10,8 +13,10 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import aos_daemon_ticks
 import aos_home
 import aos_kernel_boot
+import aos_kernel_store
 import aos_kernel_engine
 import aos_kernel_info
 from _kernel_fake import Crash, FakeCase
@@ -22,25 +27,32 @@ def crash(*args, **kwargs):
 
 
 class Boot(FakeCase):
+    def reg(self):
+        return aos_daemon_ticks.peek(self.D, self.K.absolute())
+
     def test_fresh_boot(self):
-        self.init({"default": {"count": 2}, "kernel": {"count": 1, "dpool": "k1-kernel"}})
+        self.init({"default": {"count": 2}}, tick_ms=250, tick_timeout_ms=9000)
         self.boot()
         st = self.state()
         chain = st["chain"]
-        epoch = int(chain.split("-")[0])
-        seen = [(n, p["pool"], p["count"], p["decl"]) for n, p in self.fake.seen]
-        self.assertEqual(seen, [("k-%s-boot-scale-kernel-down.json" % chain, "k1-kernel", 0, [epoch, 0]),
-                                ("k-%s-boot-scale-kernel.json" % chain, "k1-kernel", 1, [epoch, 0])])
-        self.assertEqual(self.fake.pool("k1-kernel")["target"], str(self.K / "pools/kernel/cpus") + "/{name}/inst.json")
-        self.assertEqual((st["kcpu"], st["last_seq"], st["phase"]), ("kernel/0", 0, "running"))
-        self.assertEqual(st["pools"]["kernel"]["sent"], {"count": 1, "skip": []})
+        # 只寄一張：向 daemon 登記開 tick（工作池第一格才宣告；沒有 kernel 池）
+        self.assertEqual(self.fake.seen, [("k-%s-boot-tick.json" % chain, {
+            "home": str(self.K.absolute()), "cli": str(aos_kernel_info.CLI.resolve()), "every_ms": 250, "timeout_ms": 9000})])
+        self.assertEqual(self.reg(), {"home": str(self.K.absolute()), "cli": str(aos_kernel_info.CLI.resolve()),
+                                      "every_ms": 250, "timeout_ms": 9000})
+        self.assertIsNone(self.fake.pool("kernel"))
+        self.assertNotIn("kcpu", st)
+        self.assertNotIn("kernel", st["pools"])
+        self.assertEqual((st["last_seq"], st["phase"], st["ticker"]), (0, "running", self.D))
+        self.assertIn("park", st["features"])
         self.assertTrue(st["pools"]["default"]["dirty"] and st["pools"]["default"]["redeclare"])
-        first = self.K / "pools/kernel/cpus/0/requests" / ("k-%s-1.json" % chain)
-        body = aos_home.read_json(first)
-        self.assertEqual(body["params"]["args"], ["tick", "--target", str(self.K), "--chain", chain, "--seq", "1"])
-        self.assertEqual(len(st["acks"]), 2)
-        self.tick()
-        self.assertEqual(list(Path(self.D, "responses").glob("*boot*")), [])  # boot 的回音第一格 ack 掉
+        self.assertFalse((self.K / "pools/kernel").exists())
+        self.assertEqual(st["acks"], [])                                     # 登記的回音 boot 當場 ack
+        self.fake.process()
+        self.assertEqual(list(Path(self.D, "responses").glob("*boot*")), [])
+        st = self.tick()
+        self.assertEqual(st["last_seq"], 1)
+        self.assertEqual(self.fake.pool("default")["count"], 2)
 
     def test_boot_restores_queue_dirs(self):
         """納入後文件組實測：手建的家少了 requests/、responses/，boot 先補上，不留到 add／halt 才 WriteFailed。"""
@@ -64,17 +76,24 @@ class Boot(FakeCase):
         with self.assertRaises(aos_kernel_info.KernelError) as cm:
             aos_kernel_boot.boot(self.K, 500)
         self.assertEqual(cm.exception.code, "NotRunning")
-        self.assertFalse((self.K / "state.json").exists())
+        self.assertFalse(aos_kernel_store.exists(self.K))
 
-    def test_kernel_pool_name_taken(self):
+    def test_tick_registration_refused(self):
+        """daemon 不肯登記（停機中）：boot 退錯；帳本已寫（提交在登記之前），health 報沒人開 tick，再 boot 就好。"""
         self.init()
-        (Path(self.D) / "pools" / "kernel").mkdir(parents=True)
-        aos_home.write_json(Path(self.D) / "pools/kernel/pool.json",
-                            {"pool": "kernel", "owner": "/abs/other", "count": 1, "skip": [], "ver": 1, "decl": None})
+        self.fake.stopping = True
         with self.assertRaises(aos_kernel_info.KernelError) as cm:
             self.boot()
-        self.assertEqual(cm.exception.code, "NameTaken")
-        self.assertFalse((self.K / "state.json").exists())
+        self.assertEqual(cm.exception.code, "Stopping")
+        self.assertIsNone(self.reg())
+        self.assertEqual(self.state()["phase"], "running")
+        from aos_kernel_health import health
+        self.assertEqual(health(self.K)[0], "tick")
+        self.fake.process()
+        self.assertEqual(list(Path(self.D, "responses").glob("*")), [])       # 被拒的回音也 ack 掉
+        self.fake.stopping = False
+        self.boot()
+        self.assertIsNotNone(self.reg())
 
     def test_reboot_handoff(self):
         self.init({"default": {"count": 2}})
@@ -100,14 +119,13 @@ class Boot(FakeCase):
         self.assertEqual(st["sends"], [])
         self.assertEqual(sorted(st["recent"]), sorted(st["busy"]))
         self.assertTrue(st["pools"]["default"]["redeclare"])
-        kernel_scales = [(p["pool"], p["count"]) for _, p in self.fake.seen[n:]]
-        self.assertEqual(kernel_scales, [("kernel", 0), ("kernel", 1)])
+        self.assertEqual([name for name, _ in self.fake.seen[n:]], ["k-%s-boot-tick.json" % st["chain"]])  # 只重登記
         self.tick()
         self.assertIn({"event": "scale_echo", "pool": "default", "request": pending, "result": "Interrupted"},
                       self.log_events())
         st = self.ticks(2)
         self.assertEqual(st["pools"]["default"]["sent"]["count"], 3)
-        # 舊鏈的殘格自滅
+        # 舊 kernel cpu 裡還排著的舊格（帶 --chain／--seq）自滅
         self.assertEqual(aos_kernel_engine.tick(self.K, old_chain, 99), 0)
         # 忙的照舊收
         for key in list(st["busy"]):
@@ -116,26 +134,71 @@ class Boot(FakeCase):
         st = self.tick()
         self.assertEqual({st["procs"]["a"]["runs"], st["procs"]["b"]["runs"]}, {1})
 
-    def test_boot_waits_for_old_kernel_cpu(self):
+    def legacy_ledger(self):
+        """做一份第 2 版 K/state.json（kernel cpu 那一版）：帳本裡有 kernel 池，假 daemon 那邊 kernel 池 1 顆在跑。"""
         self.init()
         self.boot()
+        self.settle()
+        self.add("a")
+        st = self.tick()
+        st.pop("ticker", None)
+        st.pop("on", None)
+        st["kcpu"] = "kernel/0"
+        st["pools"]["kernel"] = dict(st["pools"]["default"], dpool="kernel", sent={"count": 1, "skip": []},
+                                     pending=None, free=[])
+        self.fake._scale({"jsonrpc": "2.0", "id": "x", "method": "scale",
+                          "params": {"pool": "kernel", "owner": str(self.K.absolute()), "count": 1, "skip": []}})
+        for name in ("ledger.sqlite", "ledger.sqlite-wal", "ledger.sqlite-shm"):
+            (self.K / name).unlink(missing_ok=True)
+        aos_home.write_state(self.K, st)
+        self.assertTrue(aos_kernel_store.legacy(self.K))
+        return st
+
+    def test_legacy_boot_waits_for_old_kernel_cpu(self):
+        """舊帳本的 kernel 池：boot 送 count 0、等 daemon 收乾淨才寫新帳本；等不到＝AlreadyRunning，什麼都沒換。"""
+        old = self.legacy_ledger()
         self.fake.linger.add("kernel")
         with self.assertRaises(aos_kernel_info.KernelError) as cm:
             self.boot(wait_ms=200)
         self.assertEqual(cm.exception.code, "AlreadyRunning")
+        self.assertTrue(aos_kernel_store.legacy(self.K))                      # 還是舊的 state.json
+        self.assertEqual(self.fake.pool("kernel")["count"], 0)               # 縮 0 的單已送、不撤回
         self.fake.gone("kernel")
         self.fake.linger.clear()
         self.boot()
-        self.assertEqual(self.fake.pool("kernel")["count"], 1)
-
-    def test_boot_moves_kernel_pool(self):
-        self.init()
-        self.boot()
-        self.edit_info(kernel={"count": 1, "dpool": "k2-kernel"})
-        self.boot()
+        st = self.state()
+        self.assertFalse(aos_kernel_store.legacy(self.K))
+        self.assertTrue((self.K / "state.json.v2-old").is_file())
+        self.assertNotIn("kernel", st["pools"])
+        self.assertNotIn("kcpu", st)
+        self.assertNotEqual(st["chain"], old["chain"])
+        self.assertEqual(st["procs"]["a"]["status"], "running")               # 行程留著
+        self.assertEqual(sorted(st["recent"]), sorted(st["busy"]))
         self.assertIsNone(self.fake.pool("kernel"))
-        self.assertEqual(self.fake.pool("k2-kernel")["count"], 1)
-        self.assertEqual(self.state()["pools"]["kernel"]["dpool"], "k2-kernel")
+        self.assertEqual(len(st["acks"]), 1)                                  # 縮 0 的回音記帳、第一格出貨 ack
+        self.respond(st["on"]["a"])
+        st = self.settle()
+        self.assertEqual(list(Path(self.D, "responses").glob("*")), [])       # 縮 0 與登記的回音都 ack 了
+        self.assertEqual(st["procs"]["a"]["runs"], 1)
+
+    def test_legacy_import_rereads_after_old_tick_stopped(self):
+        """astra 必修 1：舊程式的 tick 沒有 .tick.lock，boot 等舊 kernel 池收乾淨期間它還可能提交 state.json；
+        匯入的要是停妥之後重讀的那份，不是 boot 一開始讀到的。"""
+        import threading, time
+        self.legacy_ledger()
+        self.fake.linger.add("kernel")
+        def old_tick_commits_then_exits():
+            time.sleep(.2)
+            st = aos_home.read_state(self.K)
+            st["procs"]["late"] = dict(st["procs"]["a"], request="late.json", status="queued")
+            aos_home.write_state(self.K, st)            # 舊 tick 在等待期間又提交了一次
+            self.fake.gone("kernel")
+            self.fake.linger.clear()
+        worker = threading.Thread(target=old_tick_commits_then_exits)
+        worker.start()
+        self.boot()
+        worker.join()
+        self.assertIn("late", self.state()["procs"])
 
     def test_old_ledger_refused(self):
         self.init()
@@ -151,11 +214,13 @@ class Boot(FakeCase):
         self.stop_kernel()
         st = self.ticks(5)
         self.assertEqual(st["phase"], "stopped")
+        self.assertIsNone(aos_daemon_ticks.peek(self.D, self.K.absolute()))      # 停好那格撤登記
         self.boot()
         st = self.settle()
         self.assertEqual(st["phase"], "running")
         self.assertEqual(st["pools"]["default"]["sent"]["count"], 1)
         self.assertEqual(list(Path(self.D, "responses").glob("*")), [])
+        self.assertIsNotNone(aos_daemon_ticks.peek(self.D, self.K.absolute()))   # 重新登記
 
 
 class CrashScale(FakeCase):
@@ -198,7 +263,7 @@ class CrashScale(FakeCase):
         st = self.tick()  # 放了單、daemon 回了音
         name = st["pools"]["default"]["pending"]["name"]
         self.assertTrue((Path(self.D) / "responses" / name).exists())
-        with mock.patch.object(aos_kernel_engine.Kernel, "stopping", crash):  # 讀了回音、提交點 3 前死
+        with mock.patch.object(aos_kernel_engine.Kernel, "stopping", crash):  # 讀了回音、提交點 B 前死
             with self.assertRaises(Crash):
                 self.tick()
         st = self.state()
@@ -213,14 +278,14 @@ class CrashScale(FakeCase):
     def test_flushed_but_not_cleared(self):
         """放完單、清帳前死：下一格重放同名單時回音已在就不再放（不讓 daemon 處理兩次）。"""
         self.edit_info(default={"count": 2})
-        real = aos_home.write_state
+        real = aos_kernel_store.Store.save
         calls = []
-        def write(home, state):
+        def write(store, state):
             calls.append(1)
-            if len(calls) == 3:  # 提交點 4 之前死（1、3 已寫）
+            if len(calls) == 2:  # 提交點 C 之前死（B 已寫）
                 raise Crash()
-            return real(home, state)
-        with mock.patch.object(aos_home, "write_state", write):
+            return real(store, state)
+        with mock.patch.object(aos_kernel_store.Store, "save", write):
             with self.assertRaises(Crash):
                 self.tick()
         self.assertEqual(len(self.state()["sends"]), 1)
@@ -274,7 +339,7 @@ class CrashBoot(FakeCase):
         self.boot()
         st = self.settle()
         self.assertEqual(st["phase"], "running")
-        self.assertEqual(self.fake.pool("kernel")["count"], 1)
+        self.assertIsNotNone(aos_daemon_ticks.peek(self.D, self.K.absolute()))
         self.assertEqual(st["pools"]["default"]["sent"]["count"], 2)
         self.respond(st["on"]["a"])
         st = self.tick()
@@ -285,23 +350,29 @@ class CrashBoot(FakeCase):
             with self.assertRaises(Crash):
                 self.boot()
 
-    def test_after_step2_before_step3(self):
+    def test_before_ledger_built(self):
+        """拿了鎖、還沒建帳本就死：帳本照舊（同 chain），鎖跟著行程放掉，再 boot 照常。"""
         old = self.state()["chain"]
         self.crash_boot(aos_kernel_boot, "Kernel")
         self.assertEqual(self.state()["chain"], old)
-        self.assertIsNone(self.fake.summary("kernel"))  # kernel 池 0 顆
         self.reboot_and_check()
 
-    def test_after_step3_before_step5(self):
+    def test_after_ledger_built_before_commit(self):
+        """建家（寫池檔）時死：帳本那筆交易還沒提交＝整筆沒發生（one-boot：以前這裡已寫了新 chain）。"""
         old = self.state()["chain"]
         self.crash_boot(aos_kernel_engine.Kernel, "write_pool_files")
-        self.assertNotEqual(self.state()["chain"], old)
-        self.assertIsNone(self.fake.summary("kernel"))
+        self.assertEqual(self.state()["chain"], old)
         self.reboot_and_check()
 
-    def test_after_step5_before_step6(self):
-        self.crash_boot(aos_kernel_engine.Kernel, "tick_request")
-        self.assertEqual(self.fake.pool("kernel")["count"], 1)
+    def test_after_commit_before_registration(self):
+        """帳本寫好、還沒向 daemon 登記就死：daemon 不開 tick，health 報 tick；再 boot 就好。"""
+        from aos_kernel_health import health
+        aos_daemon_ticks.reg_path(self.D, self.K.absolute()).unlink()   # 例如 halt 之後重開
+        old = self.state()["chain"]
+        self.crash_boot(aos_kernel_boot, "_call")
+        self.assertNotEqual(self.state()["chain"], old)
+        self.assertIsNone(aos_daemon_ticks.peek(self.D, self.K.absolute()))
+        self.assertEqual(health(self.K)[0], "tick")
         self.reboot_and_check()
 
 
@@ -323,8 +394,9 @@ class Cli(FakeCase):
 
     def cli_tick(self):
         self.seq += 1
-        r = self.run_cli("tick", "--target", self.K, "--chain", self.state()["chain"], "--seq", self.seq)
+        r = self.run_cli("tick", "--target", self.K)
         self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.state()["last_seq"], self.seq)
         self.fake.process()
 
     def test_add_tick_rm_ack_ls(self):

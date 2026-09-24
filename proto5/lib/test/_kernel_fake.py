@@ -213,6 +213,10 @@ class FakeCase(unittest.TestCase):
         self.D = str(self.fake.home)
         self.seq = 0
         self.n = 0
+        # one-boot：直接呼叫 aos_kernel_engine.tick 會在測試行程設 ITIMER_REAL 鬧鐘（2×tick_timeout_ms，tick 退出後沒關）；
+        # 不關的話同一個 unittest 行程 120 秒後會被 SIGALRM 殺掉。收尾時關掉。
+        import signal
+        self.addCleanup(signal.setitimer, signal.ITIMER_REAL, 0)
 
     # ---- 家 ----
     def init(self, pools=None, **settings):

@@ -1,20 +1,23 @@
 """kernel 崩潰窗口（審查 C-7、C-8；proto5-2 加 C-9）：閘門卡住真 tick、真 SIGKILL、下一格（或 boot）接手。
 
 proto5-2 搬遷：
-- cpu 家改在 K/pools/<P>/cpus/<i>，trace 裡的 home 記成 `P/i`（kernel cpu 是 `kernel/0`，daemon 家記 `D`）。
-- 派工「先記後放」：同一格派的幾件在提交點 3 就全部記好，才逐一放檔（kernel-tick 第 8 步）。
-  proto5 的「第一顆放了、第二顆還沒記」這個窗口不存在了，那條改成驗「兩件都已記、沒放的下一格照原名補放」。
-- 出貨箱 `stops` 拿掉：停機改成每池縮 0（handoff §3）。proto5 的 C-8 stop 箱三條改測 `sends` 箱的縮池單：
-  送出後、清帳前被 KILL（daemon 在 kernel 死掉時已處理、回音）與記帳後、送出前被 KILL；kernel 池那張同理，下次 boot 收尾。
-- C-9（新）：kernel 改宣告（長大）一半死、真 daemon 在中間處理完——下一格不重放同名單、照回音結帳（D-25、kernel-pools §5）。
+- cpu 家改在 K/pools/<P>/cpus/<i>，trace 裡的 home 記成 `P/i`（daemon 家記 `D`）。
+- 派工「先記後放」：同一格派的幾件在提交點 B 就全部記好，才逐一放檔（kernel-tick 第 8 步）。
+- 出貨箱 `stops` 拿掉：停機改成每池縮 0。C-8 測 `sends` 箱的縮池單：送出後、清帳前被 KILL
+  （daemon 在 kernel 死掉時已處理、回音）與記帳後、送出前被 KILL。
+- C-9：kernel 改宣告（長大）一半死、真 daemon 在中間處理完——下一格不重放同名單、照回音結帳（D-25、kernel-pools §5）。
+
+2026-09-24 one-boot：沒有 kernel cpu、沒有 tick 鏈。daemon 替 kernel 開 `<cli> tick --target K`（同一個 K 同時一格）；
+被砍的格記在 daemon 的 stderr（TickFailed）與 D/kernels/<id>.json，不是 kernel.log。停機縮池最後那張改成
+撤登記（tick off）單：C-8 另測它的兩個窗口。
 
 手法照 test_daemon_crash：
-- 真 daemon 由 HUB（測試專用 subreaper，借 test_daemon_crash 的）拉起；kernel cpu 被砍後
-  另一組的 tick 孤兒歸它收屍。
-- kernel 的 `cli` 換成測試專用啟動器 TICK（boot 時把 aos_kernel_boot.CLI 指過去），它跑的是真的
+- 真 daemon 由 HUB（測試專用 subreaper，借 test_daemon_crash 的）拉起，stderr 在 hub/daemon-<n>.log。
+- kernel 的 `cli` 換成測試專用啟動器 TICK（boot 時把 aos_kernel_boot.CLI 指過去；daemon 照登記開它），它跑的是真的
   `aos_kernel.main()`，只在測試 driver 裡替換幾個函式當閘門，**產品程式沒有測試掛鉤**。
   閘門是 gates/ 下的檔：`<id>.json` 點名「哪一步、什麼條件」，一次性；命中寫 `<id>.reached`
-  （pid、seq、細節）後停住，等測試 SIGKILL 或放 `<id>.release`。
+  （pid、seq、chain、細節）後停住，等測試 SIGKILL 或放 `<id>.release`。seq／chain 在開頭（gate start）照帳本猜
+  （last_seq＋1），進了 Kernel.step 換成它自己的。
 - TICK 另把 kernel 每次放檔／回音／刪單記進 trace.jsonl（成功或 EEXIST），用來查「同名只到一次」。
 - 工作是真的 aos-cpu 跑一份 inst，每跑一次往 runs-<名>.txt 加一行，查「副作用恰好一次」。
 """
@@ -41,8 +44,9 @@ GATES = HERE / "gates"
 sys.path.insert(0, %(lib)r)
 import aos_home, aos_kernel, aos_kernel_engine as engine, aos_kernel_ledger as ledger
 argv = sys.argv[1:]
-SEQ = int(argv[argv.index("--seq") + 1]) if "--seq" in argv else None
-CHAIN = argv[argv.index("--chain") + 1] if "--chain" in argv else None
+# one-boot：daemon 開 `<cli> tick --target K`，不再帶 --chain／--seq。開頭（gate start）先照帳本猜這格的序號，
+# 進了 Kernel.step 再換成它自己的 self.seq／chain（boot 若在中間換了 chain，以 step 看到的為準）。
+SEQ = CHAIN = None
 ctx = {"kernel": None, "flush": False}
 
 def trace(**entry):
@@ -97,11 +101,9 @@ def label(home):
 def kind_of(home, name):
     home = Path(home)
     if name.startswith("ack-"):
-        return "ack" if ctx["flush"] else "tick_ack"
+        return "ack"
     if name.startswith("stop-"):
         return "stop"
-    if home.parent.name == "cpus" and SEQ is not None and name == "k-%%s-%%s.json" %% (CHAIN, SEQ + 1):
-        return "tick"
     if home.parent.name == "cpus":
         return "work"
     return "daemon"
@@ -110,7 +112,7 @@ real_post = aos_home.post_request
 def post_request(home, name, obj):
     kind = kind_of(home, name)
     detail = {"box": kind, "home": label(home), "name": name,
-              "target": (obj.get("params") or {}).get("name") if kind in ("ack", "tick_ack") else None}
+              "target": (obj.get("params") or {}).get("name") if kind == "ack" else None}
     if kind in ("ack", "stop", "daemon"):
         gate("before_put", **detail)
     try:
@@ -154,7 +156,7 @@ real_flush = ledger.KernelLedger.flush_outboxes
 def flush_outboxes(self):
     ctx["flush"] = True
     try:
-        return real_flush(self)          # 回「有沒有做事」：engine 靠它決定寫不寫提交點 2／4
+        return real_flush(self)          # 回「有沒有做事」：engine 靠它決定寫不寫提交點 A／C
     finally:
         ctx["flush"] = False
 ledger.KernelLedger.flush_outboxes = flush_outboxes
@@ -169,7 +171,9 @@ engine.Kernel._post_work = post_work
 
 real_step = engine.Kernel.step
 def step(self):
+    global SEQ, CHAIN
     ctx["kernel"] = self
+    SEQ, CHAIN = self.seq, self.state.get("chain")
     return real_step(self)
 engine.Kernel.step = step
 
@@ -182,6 +186,12 @@ def path_open(self, mode="r", *args, **kwargs):
 Path.open = path_open
 
 if argv[:1] == ["tick"]:
+    try:
+        import aos_kernel_store
+        meta = aos_kernel_store.meta(argv[argv.index("--target") + 1], "last_seq", "chain")
+        SEQ, CHAIN = int(meta.get("last_seq") or 0) + 1, meta.get("chain")
+    except Exception:
+        pass
     gate("start")
 sys.exit(aos_kernel.main())
 '''
@@ -243,13 +253,14 @@ class KernelCrashWindowTest(KernelCase):
         self.daemon_pid = wait_for(lambda: read_json(self.hub / ("started-%d.json" % seq), {}).get("pid"))
         wait_for(lambda: self.dstate().get("pid") == self.daemon_pid)
 
-    def boot(self):
+    def boot(self, wait=True):
         chain = self.state().get("chain")
         result = subprocess.run([PY, "-c", BOOT, str(LIB), str(self.home), str(self.wrapper)],
                                 stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.info = read_json(self.home / "info.json")
-        wait_for(lambda: self.state().get("chain") != chain and self.state().get("last_seq", 0) >= 1)
+        if wait:
+            wait_for(lambda: self.state().get("chain") != chain and self.state().get("last_seq", 0) >= 1)
 
     def setup_running(self, pools=None, **settings):
         pools = pools or {"default": {"count": 2}}
@@ -311,10 +322,11 @@ class KernelCrashWindowTest(KernelCase):
         aos_home.write_json(self.gates / (gid + ".release"), {})
 
     def kill_tick(self, gid, hold=None):
-        """KILL 卡在 gid 的那格；hold 給了就先把下一格卡在開頭（下一格要等這格死才會開始，沒有競態）。"""
+        """KILL 卡在 gid 的那格；hold 給了就先把下一格卡在開頭（daemon 同一個 K 同時只開一格，
+        下一格要等這格死才會開始，沒有競態）。被砍的格若沒存到提交點 B，下一格的序號跟它一樣，所以 seq_min＝它的 seq。"""
         hit = self.reached(gid)
         if hold:
-            self.gate(hold, "start", seq_min=hit["seq"] + 1, chain=hit["chain"])
+            self.gate(hold, "start", seq_min=hit["seq"], chain=hit["chain"])
         os.kill(hit["pid"], signal.SIGKILL)
         wait_for(lambda: not self.alive(hit["pid"]))
         return hit, (self.reached(hold) if hold else None)
@@ -361,12 +373,21 @@ class KernelCrashWindowTest(KernelCase):
                 seen[key] = e
 
     def cpu_pids(self):
-        pids = {"kernel/0": self.kid_pid("kernel", 0)}
+        pids = {}
         for pool, entry in self.state()["pools"].items():
-            if pool != "kernel":
-                for i in range(entry["sent"]["count"]):
-                    pids["%s/%d" % (pool, i)] = self.kid_pid(pool, i)
+            for i in range(entry["sent"]["count"]):
+                pids["%s/%d" % (pool, i)] = self.kid_pid(pool, i)
         return pids
+
+    def daemon_log(self):
+        return "".join(p.read_text() for p in sorted(self.hub.glob("daemon-*.log")))
+
+    def assert_tick_failed_logged(self):
+        """被 KILL 的格記在 daemon 的 stderr（TickFailed）與 D/kernels/<id>.json（last_error_at）。"""
+        import aos_daemon_ticks
+        wait_for(lambda: "TickFailed: K=%s" % self.home in self.daemon_log())
+        reg = aos_daemon_ticks.peek(self.daemon, self.home)
+        self.assertIsNotNone(reg["last_error_at"], reg)
 
     def home_of(self, label):
         pool, i = label.split("/")
@@ -411,9 +432,7 @@ class KernelCrashWindowTest(KernelCase):
         self.assertNotIn(n, [line["seq"] for line in lines])                 # 缺那一格
         self.assertFalse([e for line in lines for e in line["events"]
                           if e["event"] == "response" and e["proc"] == "job"])
-        # 被砍的那格由後面某格記成 tick_error（kernel cpu 的回音 code≠0）
-        self.assertTrue([e for line in lines for e in line["events"] if e["event"] == "tick_error"
-                         and e["request"] == "k-%s-%d.json" % (chain, n)])
+        self.assert_tick_failed_logged()
         self.assertEqual(self.cpu_pids(), pids)                               # 沒有 cpu 被重拉
         self.assert_no_same_name_twice()
 
@@ -444,15 +463,17 @@ class KernelCrashWindowTest(KernelCase):
         self.add(target, "job", interval_ms=600000)
         hit, held = self.kill_tick("log", hold="next")
         old_chain = hit["chain"]
-        # 下一格卡在開頭時重新 boot：舊 kernel cpu 被收，卡住的那格是另一組、成了孤兒（歸 HUB）
-        self.boot()
+        # one-boot：下一格卡在開頭（還沒拿 K/.tick.lock）時重新 boot：boot 拿得到鎖、換新 chain、重登記。
+        # daemon 同一個 K 同時只開一格，卡住那格不放走就不會有下一格，所以 boot 不等第一格。
+        self.boot(wait=False)
         new_chain = self.state()["chain"]
         self.assertNotEqual(new_chain, old_chain)
-        # 卡住的下一格通常被舊 cpu 的強制停（第二次 TERM 轉給工作那組）砍掉；若還活著（成了孤兒、歸 HUB），
-        # 放它走，舊鏈殘格在第 1 步自滅
-        if self.alive(held["pid"]):
-            self.release("next")
+        self.assertEqual(self.state()["last_seq"], 0)
+        # 放它走：它拿鎖時帳本已是新 chain，就當新 chain 的第 1 格跑
+        self.release("next")
         wait_for(lambda: not self.alive(held["pid"]))
+        wait_for(lambda: self.state().get("last_seq", 0) >= 1)
+        self.assertEqual(self.state()["chain"], new_chain)
         self.settle()
         ledger = self.state()
         job = ledger["procs"]["job"]
@@ -461,8 +482,9 @@ class KernelCrashWindowTest(KernelCase):
         self.assertEqual(ledger["busy"], {})
         self.assertFalse([e for line in self.log_lines() for e in line["events"]
                           if e["event"] == "response" and e["proc"] == "job"])
-        # 舊鏈殘格（若跑到）什麼都沒放：它之後沒有任何屬於舊鏈、seq > n+1 的放檔
+        # boot 之後沒有任何屬於舊 chain、seq > n 的放檔
         self.assertFalse([e for e in self.trace(chain=old_chain) if e["seq"] > hit["seq"]])
+        self.assertTrue(self.trace(chain=new_chain))
         self.assert_no_same_name_twice()
 
     # ---- C-8：派工逐顆放檔，中途被 KILL ----
@@ -662,8 +684,9 @@ class KernelCrashWindowTest(KernelCase):
         self.release("next")
         wait_for(lambda: self.state()["phase"] == "stopped", timeout=8)
         self.wait_gone("default")
-        self.wait_gone("kernel")
-        # 縮池單的回音收完就 ack 掉；kernel 池那張的回音照 handoff §3 留在 daemon 家，等下次 boot 讀
+        # 縮池單的回音收完就 ack 掉；停好那格請 daemon 撤登記（不再開 tick）
+        import aos_daemon_ticks
+        wait_for(lambda: aos_daemon_ticks.peek(self.daemon, self.home) is None)
         wait_for(lambda: not (self.daemon / "responses" / hit["name"]).exists(), timeout=8)
         self.assertEqual(len(self.trace(op="post", box="daemon", name=hit["name"], outcome="ok")), 1)
         self.assertEqual(self.state()["pools"]["default"]["sent"], {"count": 0, "skip": []})
@@ -691,27 +714,51 @@ class KernelCrashWindowTest(KernelCase):
         self.finish_halt_and_reboot(hit)
         self.assertEqual([e["seq"] for e in self.trace(op="post", box="daemon", name=hit["name"])], [hit["seq"] + 1])
 
-    def test_c8_kernel_pool_shrink_delivered_before_clear_next_boot_recovers(self):
-        """停機最後一張是 kernel 池的 count 0：它送出後 kernel cpu 就被收，帳上沒清的由下次 boot 收尾（handoff §3 第 3 步）。"""
+    def untick_window(self, point):
+        """停好那格最後寄撤登記（tick off）給 daemon；卡在那張的 point、KILL。"""
+        import aos_daemon_ticks
         self.setup_running()
-        self.gate("scale", "after_put", box="daemon", name_endswith="-scale-kernel.json")
+        self.gate("untick", point, box="daemon", name_endswith="-untick.json")
         aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        hit = self.reached("scale")
-        os.kill(hit["pid"], signal.SIGKILL)
-        self.wait_gone("kernel")
+        hit = self.reached("untick")
         self.wait_gone("default")
-        ledger = self.state()
-        self.assertEqual(ledger["phase"], "stopped")
-        self.assertEqual(ledger["pools"]["kernel"]["pending"]["name"], hit["name"])
-        self.assertEqual(len(self.trace(op="post", box="daemon", name=hit["name"])), 1)   # 沒重放
-        self.assertTrue((self.daemon / "responses" / hit["name"]).exists())       # 回音留在 daemon 家
-        self.boot()                                                               # 第 2 步讀掉舊 pending、ack
+        return hit, aos_daemon_ticks
+
+    def reboot_and_run(self):
+        self.boot()                                          # sends 裡殘留的 tick 單丟掉、重新登記
         self.assertEqual(self.state()["phase"], "running")
-        wait_for(lambda: not (self.daemon / "responses" / hit["name"]).exists(), timeout=8)
+        self.assertEqual([s for s in self.state()["sends"] if s["body"].get("method") == "tick"], [])
         target, _ = self.job("after")
         self.add(target, "after", interval_ms=600000)
         wait_for(lambda: self.state()["procs"]["after"]["runs"] == 1, timeout=8)
         self.assertEqual(self.runs("after"), 1)
+
+    def test_c8_untick_delivered_before_clear_next_boot_recovers(self):
+        """撤登記單已送、清帳前被 KILL：daemon 已撤登記、不再開格（被砍那格不算失敗）；帳上的殘單由下次 boot 丟掉。"""
+        hit, ticks = self.untick_window("after_put")
+        wait_for(lambda: ticks.peek(self.daemon, self.home) is None)
+        os.kill(hit["pid"], signal.SIGKILL)
+        wait_for(lambda: not self.alive(hit["pid"]))
+        ledger = self.state()
+        self.assertEqual(ledger["phase"], "stopped")
+        self.assertEqual([s["name"] for s in ledger["sends"]], [hit["name"]])
+        seq = ledger["last_seq"]
+        time.sleep(.3)
+        self.assertEqual(self.state()["last_seq"], seq)                          # 沒人再開格
+        self.assertNotIn("TickFailed", self.daemon_log())
+        self.assertEqual(len(self.trace(op="post", box="daemon", name=hit["name"])), 1)
+        self.reboot_and_run()
+
+    def test_c8_untick_recorded_not_delivered_is_delivered_next_tick(self):
+        """撤登記單記了、還沒送就被 KILL：daemon 還登記著，下一格（stopped）只出貨、把它送出去。"""
+        hit, ticks = self.untick_window("before_put")
+        os.kill(hit["pid"], signal.SIGKILL)
+        wait_for(lambda: ticks.peek(self.daemon, self.home) is None)
+        wait_for(lambda: self.state()["sends"] == [])
+        self.assertEqual(self.state()["phase"], "stopped")
+        self.assertEqual([e["seq"] for e in self.trace(op="post", box="daemon", name=hit["name"], outcome="ok")],
+                         [hit["seq"] + 1])
+        self.reboot_and_run()
 
     # ---- C-9：kernel 改宣告（長大）一半死，真 daemon 在中間處理 ----
 

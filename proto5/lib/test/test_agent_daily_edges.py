@@ -11,6 +11,7 @@ import aos_agent_status as status
 import aos_llm_call as llm
 from aos_agent_home import AgentError
 import test_agent_tick as fixture
+import aos_kernel_store
 
 
 class DailyEdgeTests(unittest.TestCase):
@@ -41,7 +42,7 @@ class DailyEdgeTests(unittest.TestCase):
     def registered(self):
         """fix-r4（astra 審查）：先登記、kernel 健康，等待條件的反例才會真的走到「等」而不是「沒登記」。"""
         self.put(self.base / 'tick.json', {'envs': self.env})
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'fails': 0}}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': {'status': 'idle', 'fails': 0}}, 'replies': []})
         health = patch('aos_kernel_health.health', return_value=('ok', 'ok'))
         health.start()
         self.addCleanup(health.stop)
