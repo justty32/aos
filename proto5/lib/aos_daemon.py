@@ -3,6 +3,7 @@
 工作 request 使用 aos_home 的信封與對帳；目標的讀驗與 fork 交給
 aos_exec.spawn_target，daemon 只在孩子表寫好後送 go。
 """
+import argparse
 import contextlib
 import fcntl
 import io
@@ -13,6 +14,7 @@ import signal
 import sys
 import time
 
+import aos_client
 import aos_exec
 import aos_home
 
@@ -370,17 +372,44 @@ def run(home):
 serve = run
 
 
+def stop(home, wait_ms=30000):
+    """放 stop notification 後，以 flock 等主人退出；逾時保留已送通知。"""
+    if not is_alive(home):
+        print("not running")
+        return 0
+    aos_home.post_request(home, aos_client.new_name("stop"),
+                          {"jsonrpc": "2.0", "method": "stop"})
+    deadline = time.monotonic() + wait_ms / 1000
+    while is_alive(home):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise DaemonError("Timeout", "等 daemon 退出逾時；stop 通知已送出，未撤回")
+        time.sleep(min(.02, remaining))
+    print("stopped")
+    return 0
+
+
 def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
-    if not args:
-        home = daemon_home()
-    elif len(args) == 2 and args[0] == "--home" and args[1]:
-        home = daemon_home(args[1])
-    else:
-        _log("Usage", "用法是 aos-daemon [--home DIR]")
-        return 2
+    parser = argparse.ArgumentParser(prog="aos-daemon", description="執行 daemon；stop 子命令送出停機通知並等待退出")
+    parser.add_argument("--home", metavar="D", help="daemon 家（預設 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
+    commands = parser.add_subparsers(dest="command")
+    stopping = commands.add_parser("stop", help="停止 daemon 並等待退出")
+    stopping.add_argument("--home", metavar="D", default=argparse.SUPPRESS,
+                          help="daemon 家（預設 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
+    stopping.add_argument("--wait-ms", type=int, default=30000, metavar="N",
+                          help="等退出的上限，非負毫秒（預設 30000）")
     try:
-        return run(home)
+        options = parser.parse_args(args)
+        if options.home == "":
+            parser.error("--home 不可為空")
+        if options.command == "stop" and options.wait_ms < 0:
+            stopping.error("--wait-ms 必須是非負整數")
+    except SystemExit as exc:
+        return exc.code
+    home = daemon_home(options.home)
+    try:
+        return stop(home, options.wait_ms) if options.command == "stop" else run(home)
     except aos_home.HomeError as exc:
         _log(exc.code, exc.msg)
     except (OSError, ValueError, TypeError) as exc:

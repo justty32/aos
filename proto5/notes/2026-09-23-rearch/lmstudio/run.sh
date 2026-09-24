@@ -71,9 +71,7 @@ TS=$(now)
 "$CLI/aos-kernel" stop "$K"
 waitfor "phase=stopped" '[ "$(peek "$K/state.json" phase)" = stopped ]' 20
 waitfor "daemon 孩子表清空" '[ "$(peek "$D/state.json" children)" = "{}" ]' 20
-# 沒有 daemon 的停機 CLI：照範式 §3.1 放一則 stop notification
-N=stop-$(date +%s%N).json
-echo '{"jsonrpc":"2.0","method":"stop"}' > "$D/requests/.$N.tmp"; ln "$D/requests/.$N.tmp" "$D/requests/$N"; rm "$D/requests/.$N.tmp"
+"$CLI/aos-daemon" stop --home "$D"
 DRC=0; wait "$DPID" || DRC=$?; echo "daemon 退出碼 $DRC"
 TE=$(now)
 echo "停機：$(since "$TS" "$TE") 秒；整條龍：$(since "$T0" "$TE") 秒"

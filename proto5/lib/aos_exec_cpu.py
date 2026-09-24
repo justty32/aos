@@ -4,7 +4,6 @@
 目標的三種解讀與執行一律交給 aos_exec.run_target_full。
 """
 import fcntl
-import json
 import os
 import signal
 import stat
@@ -13,6 +12,16 @@ import time
 
 import aos_exec
 import aos_home
+
+
+def _control_error(obj):
+    if not isinstance(obj, dict) or obj.get("jsonrpc") != "2.0" or not isinstance(obj.get("method"), str):
+        return "控制行必須是含 jsonrpc 2.0 與字串 method 的物件"
+    if "id" in obj and not aos_home._valid_id(obj["id"]):
+        return "id 必須是字串、數字或 null（布林不算數字）"
+    if obj["method"] == "stop" and "id" in obj:
+        return "stop 必須是沒有 id 的 notification"
+    return None
 
 
 class Control:
@@ -60,11 +69,15 @@ class Control:
         methods = []
         for line in lines:
             try:
-                obj = json.loads(line)
+                obj = aos_home._loads(line)
             except (ValueError, UnicodeError):
-                continue
-            if isinstance(obj, dict) and obj.get("jsonrpc") == "2.0":
-                methods.append(obj.get("method"))
+                reason = "控制行不是合法 JSON"
+            else:
+                reason = _control_error(obj)
+                if reason is None:
+                    methods.append(obj["method"])
+                    continue
+            sys.stderr.write("aos-cpu: BadControl: %s\n" % reason)
         return methods
 
     def wait_go(self):

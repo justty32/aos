@@ -240,6 +240,7 @@ args=None, on_target=None, *, on_poll=None, poll_ms=20) -> TargetResult`：三�
 與 daemon 同 session。inst 顯式寫 stdin／stdout 即拒絕；stderr、cwd、envs、exit 沿用 inst。
 登記、送 go、輪詢及收屍由 daemon 負責；收屍後 `Spawned.finish(code=None)` 寫 exit、回 `(code, kind)`。
 起不了 Popen 丟 `SpawnError(code, msg)`，不登記假 pid；與同步 126／127 的差異見 [實作發現](../notes/2026-09-23-rearch/impl-findings.md)。
+目標不存在（含非 `.json`）、資料夾缺 dir_target 也是 `SpawnFailed`（09-24 起，同步入口仍是 Usage）。
 
 ## aos_home — 共用家與信封
 
@@ -283,6 +284,7 @@ stdin 不是 pipe 時直接啟動。info 身分是 `exec_cpu`。
 每件依序寫 current、`run_target_full`、寫回音、刪原單、清 current／更新 runs；開機先對帳。
 result 含 code／kind／timed_out／stopped／ms；Usage 映射 -32602，kind=aos 仍是 result。
 pipe stop／EOF、stop- 檔與第一次訊號溫和停；再次訊號強停工作 group，回音照寫。
+控制行要是合法信封（jsonrpc 2.0、字串 method、合法 id，stop 不可帶 id）才算數，否則忽略並在 stderr 記 BadControl。
 正常停退 0、主人讀寫錯退 1、CLI 用法錯退 2。
 
 ## aos_agent_info — agent 資料夾的讀、驗（保留舊架構）
@@ -420,7 +422,8 @@ all 為真、any 為假。既有訊息驗法只驗 tool_calls 是陣列，殘缺
 ## aos_daemon — 長命孩子管理者
 
 `daemon_home(value=None)` 依參數／`AOS_DAEMON_HOME`／`~/.aos-daemon` 找家；
-`run(home)`（別名 `serve`）是前景主迴圈，`main(argv=None)` 包 CLI `aos-daemon [--home DIR]`。
+`run(home)`（別名 `serve`）是前景主迴圈，`main(argv=None)` 包 CLI `aos-daemon [--home DIR]` 與 `aos-daemon stop [--home DIR] [--wait-ms N]`。
+`stop(home, wait_ms=30000)`：daemon 不活就不放檔、印 not running；活的放 stop notification、以 flock 等它退出，逾時 DaemonError(Timeout)。
 `read_state(home)` 偷看孩子表，`is_alive(home)` 以非阻塞共享 flock 探測主人，不靠 pid 猜。
 
 客戶用 `aos_client.call` 送 `spawn {name,target,dir_target?,restart?}` 或 `kill {name}`；
@@ -431,7 +434,7 @@ stop 是檔名以 stop- 開頭的 notification。daemon 寫孩子表之後才送
 
 ## aos_kernel — 帳本、分池與 tick 鏈
 
-`init(home)` 建預設 k＋0／1／2 的家、拒覆蓋；`load_info(home)` 每格讀驗設定，cpu.envs 原樣留給 inst。
+`init(home, cpus=None)` 建家（cpus 省略＝k＋0／1／2），info.json 已在才拒絕、半成品補齊；`load_info(home)` 每格讀驗設定，cpu.envs 原樣留給 inst。
 `boot(home, daemon=None, wait_ms=30000)` 驗 daemon、收舊 kernel cpu、換 chain、保留在途與出貨、拉 cpu、放第 1 格。
 `tick(home, chain, seq)` 跑一格；`status(home)` 偷看帳本、daemon 孩子與 kernel cpu 的 current／requests。
 `new_state(info, chain, kcpu, cli)` 建初始帳本；`classify(proc, response, info, now=None)` 純判定反覆工作結果。
@@ -442,7 +445,10 @@ once 把 exec 的 result／error 原樣回給 add；rm 立即讓未回覆的 onc
 rm 自身回 name，正在跑的行程保留 discard 到收完。
 反覆工作按 done_exit／bad_after 判定；pool 只派同池，kernel 池專用。
 
-CLI：`aos-kernel init／boot／tick／add／rm／ls／stop`，完整參數見 [kernel.md §6](../spec/kernel.md)。
+cpu 家「缺的補齊」：資料夾、info、inst 各自不在才寫，已在不覆蓋。沒有事件的格不寫 kernel.log。
+
+CLI：`aos-kernel init [--cpu NAME[:POOL]]…／boot／tick／add／rm／ack／ls [--json]／stop`，各有 `-h`，完整參數見 [kernel.md §6](../spec/kernel.md)。
+`ls` 預設印文字摘要（cpu、行程、queue 各一行），`--json` 印 `status()` 原樣；`ack K NAME` 替 once 不等的人收回音。
 反覆 add 等回音印 NAME；once 預設印 request 與回音路徑，帶 `--wait-ms` 才等。
 CLI 收到回音代 ack，JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成敗。
 stop 只確認放單；看 ls 的 phase=stopped 與此 kernel 的 cpu 都從 daemon 表消失後再停 daemon。

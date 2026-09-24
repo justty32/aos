@@ -43,8 +43,11 @@ def _bad(msg, position):
 
 def load_info(home):
     home = Path(home).absolute()
+    return _parse_info(home, aos_home.read_json(home / "info.json"))
+
+
+def _parse_info(home, raw):
     path = home / "info.json"
-    raw = aos_home.read_json(path)
     if not isinstance(raw, dict) or any(k.startswith("$") for k in raw):
         _bad("info 頂層必須是字面物件", [])
     def expand(value, ctx, position, field=()):
@@ -61,6 +64,10 @@ def load_info(home):
         info = expand(raw, Context(Document(str(path), raw), base_dir=str(home)), [])
     except DirectiveError as exc:
         raise KernelError(exc.code, exc.msg) from exc
+    return _validate_info(info)
+
+
+def _validate_info(info):
     mi = info.get("_metainfo")
     if (not isinstance(mi, dict) or mi.get("_type") != "kernel" or
             type(mi.get("_version")) is not int or mi["_version"] != 1):
@@ -87,15 +94,16 @@ def load_info(home):
     return info
 
 
-def init(home):
+def init(home, cpus=None):
     home = Path(home).absolute()
-    if home.exists():
+    if (home / "info.json").exists():
         raise KernelError("AlreadyExists", "拒絕覆蓋既有的家：%s" % home)
-    home.mkdir(parents=True)
-    aos_home.ensure_queue(home)
-    (home / "cpus").mkdir()
     info = {"_metainfo": {"_type": "kernel", "_version": 1},
-            "cpus": {"k": {"pool": "kernel"}, "0": {}, "1": {}, "2": {}}, **DEFAULTS}
+            "cpus": cpus if cpus is not None else {"k": {"pool": "kernel"}, "0": {}, "1": {}, "2": {}}, **DEFAULTS}
+    _parse_info(home, info)
+    home.mkdir(parents=True, exist_ok=True)
+    aos_home.ensure_queue(home)
+    (home / "cpus").mkdir(exist_ok=True)
     aos_home.write_json(home / "info.json", info)
     return str(home)
 
@@ -330,16 +338,16 @@ class Kernel:
 
     def _create_cpu(self, c, config):
         home = self.cpu_home(c)
-        if home.exists():
-            return
-        home.mkdir(parents=True)
+        home.mkdir(parents=True, exist_ok=True)
         aos_home.ensure_queue(home)
-        aos_home.write_json(home / "info.json", {"_metainfo": {"_type": "exec_cpu", "_version": 1}, "poll_ms": 20, "timeout_ms": 0})
+        if not (home / "info.json").exists():
+            aos_home.write_json(home / "info.json", {"_metainfo": {"_type": "exec_cpu", "_version": 1}, "poll_ms": 20, "timeout_ms": 0})
         inst = {"argv": [str(CPU_CLI.resolve()), str(home)], "cwd": str(home),
                 "stderr": {"$opt": "append", "$val": str(home / "cpu.log")}}
         if "envs" in config:
             inst["envs"] = copy.deepcopy(config["envs"])
-        aos_home.write_json(home / "inst.json", inst)
+        if not (home / "inst.json").exists():
+            aos_home.write_json(home / "inst.json", inst)
 
     def _daemon_call(self, method, params, name, allow_not_found=False):
         daemon = self.info["daemon"]
@@ -443,8 +451,9 @@ class Kernel:
         self.stopping()
         self.flush_outboxes()
         self.save()
-        with (self.home / "kernel.log").open("a", encoding="utf-8") as out:
-            out.write(json.dumps({"chain": self.state["chain"], "seq": self.seq, "events": self.events}, ensure_ascii=False) + "\n")
+        if self.events:
+            with (self.home / "kernel.log").open("a", encoding="utf-8") as out:
+                out.write(json.dumps({"chain": self.state["chain"], "seq": self.seq, "events": self.events}, ensure_ascii=False) + "\n")
         return 0
 
 
@@ -526,32 +535,88 @@ def status(home):
                        "requests": len(list((cpu_home / "requests").glob("*.json"))) if cpu_home else 0}}
 
 
+def _cpu_options(values):
+    if values is None:
+        return None
+    cpus = {}
+    for value in values:
+        name, separator, pool = value.partition(":")
+        if not _name(name) or name in cpus:
+            raise CLIUsage("cpu 名稱不合法或重複：%s" % name)
+        cpus[name] = {"pool": pool} if separator else {}
+    kernels = sum(c.get("pool") == "kernel" for c in cpus.values())
+    if kernels == 0:
+        if "k" in cpus:
+            raise CLIUsage("k 已被非 kernel cpu 使用")
+        cpus = {"k": {"pool": "kernel"}, **cpus}
+    elif kernels > 1:
+        raise CLIUsage("恰好一顆 cpu 的 pool 必須是 kernel")
+    return cpus
+
+
+def _summary(home, snapshot):
+    info = load_info(home)
+    kcpu = snapshot["kernel_cpu"]
+    daemon = snapshot["daemon"]
+    lines = ["chain %s  phase %s  last_seq %s  daemon %s" % (
+        snapshot["chain"] or "-", snapshot["phase"] or "-",
+        snapshot["last_seq"] if snapshot["last_seq"] is not None else "-",
+        "alive" if daemon["alive"] else "dead"),
+        "kernel cpu %s  current %s  requests %s" % (
+            kcpu["name"] or "-", (kcpu["current"] or {}).get("name", "-"), kcpu["requests"])]
+    slots = snapshot["cpus"] or {}
+    names = dict.fromkeys([*info["cpus"], *slots])
+    if kcpu["name"]:
+        names[kcpu["name"]] = None
+    for name in names:
+        slot = slots.get(name, {})
+        busy = "busy %s (%s)" % (slot.get("proc"), slot["req"]) if slot.get("req") else "idle"
+        child = daemon["children"].get(name)
+        child_status = child["state"] if child else "missing"
+        pool = info["cpus"].get(name, {}).get("pool", "-")
+        lines.append("cpu %s  pool %s  %s  %s" % (name, pool, busy, child_status))
+    for name, proc in (snapshot["procs"] or {}).items():
+        lines.append("proc %s  %s  %s  runs %s  fails %s  pending %s" % (
+            name, "once" if proc["once"] else "repeat", proc["status"], proc["runs"], proc["fails"],
+            "有" if proc["pending"] else "-"))
+    lines.append("queue %s" % (" ".join(snapshot["queue"] or []) or "-"))
+    return "\n".join(lines)
+
+
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
         raise CLIUsage(message)
 
 
 def _parser():
-    parser = _Parser(prog="aos-kernel", add_help=False)
+    parser = _Parser(prog="aos-kernel", description="管理 kernel 家、cpu 與排程行程")
     subs = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
-    for command in ("init", "boot", "tick", "add", "rm", "ls", "stop"):
-        p = subs.add_parser(command, add_help=False)
-        p.add_argument("home")
-        if command == "boot":
-            p.add_argument("--daemon")
-            p.add_argument("--wait-ms", type=int, default=30000)
+    descriptions = {"init": "建立 kernel 家", "boot": "交接並啟動 cpu 與 tick 鏈",
+                    "tick": "執行一格排程", "add": "登記工作", "rm": "移除行程",
+                    "ls": "顯示狀態摘要", "stop": "要求 kernel 停機", "ack": "確認已收回音"}
+    for command, description in descriptions.items():
+        p = subs.add_parser(command, help=description, description=description)
+        p.add_argument("home", help="kernel 家路徑")
+        if command == "init":
+            p.add_argument("--cpu", action="append", metavar="NAME[:POOL]", help="cpu 名稱與選用池；可重複")
+        elif command == "ls":
+            p.add_argument("--json", action="store_true", help="輸出完整狀態 JSON")
+        elif command == "boot":
+            p.add_argument("--daemon", help="daemon 家路徑")
+            p.add_argument("--wait-ms", type=int, default=30000, help="交接等待上限（毫秒，預設 30000）")
         elif command == "tick":
-            p.add_argument("--chain", required=True)
-            p.add_argument("--seq", required=True, type=int)
+            p.add_argument("--chain", required=True, help="tick 所屬鏈 id")
+            p.add_argument("--seq", required=True, type=int, help="tick 序號（從 1 起）")
         elif command == "add":
-            p.add_argument("target")
-            for key in ("name", "pool", "dir-target"):
-                p.add_argument("--" + key)
-            for key in ("interval-ms", "timeout-ms", "wait-ms"):
-                p.add_argument("--" + key, type=int)
-            p.add_argument("--once", action="store_true")
-        elif command == "rm":
-            p.add_argument("name")
+            p.add_argument("target", help="要執行的目標；-- ARG... 傳入目標參數")
+            for key, help_text in (("name", "行程名稱"), ("pool", "工作池"), ("dir-target", "資料夾內的 inst 路徑")):
+                p.add_argument("--" + key, help=help_text)
+            for key, help_text in (("interval-ms", "反覆執行間隔（毫秒）"),
+                                   ("timeout-ms", "工作逾時（毫秒）"), ("wait-ms", "等待回音上限（毫秒）")):
+                p.add_argument("--" + key, type=int, help=help_text)
+            p.add_argument("--once", action="store_true", help="只執行一次；--wait-ms 可等回音")
+        elif command in ("rm", "ack"):
+            p.add_argument("name", help="回音檔名或路徑" if command == "ack" else "行程名稱")
     return parser
 
 
@@ -608,14 +673,22 @@ def main(argv=None):
             if value is not None and value < (1 if key == "seq" else 0):
                 raise CLIUsage("%s 不在合法範圍" % key)
         if args.command == "init":
-            init(args.home)
+            init(args.home, _cpu_options(args.cpu))
             return 0
         if args.command == "boot":
             return boot(args.home, args.daemon, args.wait_ms)
         if args.command == "tick":
             return tick(args.home, args.chain, args.seq)
         if args.command == "ls":
-            print(json.dumps(status(args.home), ensure_ascii=False))
+            snapshot = status(args.home)
+            print(json.dumps(snapshot, ensure_ascii=False) if args.json else _summary(args.home, snapshot))
+            return 0
+        if args.command == "ack":
+            name = Path(args.name).name
+            path = Path(args.home) / "responses" / name
+            if not path.is_file():
+                raise KernelError("NotFound", "回音不存在：%s" % path)
+            aos_client.ack(args.home, name)
             return 0
         return _cli_request(args, trailing)
     except aos_home.HomeError as exc:

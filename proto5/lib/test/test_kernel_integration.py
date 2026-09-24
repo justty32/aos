@@ -93,9 +93,29 @@ class KernelIntegration(KernelCase):
         state = self.state()
         self.assertEqual((state["procs"]["bad"]["runs"], state["procs"]["bad"]["fails"]), (2, 2))
         self.assertEqual((state["procs"]["done"]["runs"], state["procs"]["done"]["fails"]), (1, 0))
-        log = (self.home / "kernel.log").read_text()
-        for part in ("bad", "done", "kind", "aos", "2"):
-            self.assertIn(part, log)
+        def logged_events():
+            path = self.home / "kernel.log"
+            if not path.exists():
+                return []
+            # append 可能還沒完成；只解析完整行，下次輪詢再讀尾端。
+            return [event for line in path.read_text().splitlines(keepends=True)
+                    if line.endswith("\n") for event in json.loads(line)["events"]]
+        def completed_log():
+            events = logged_events()
+            responses = [e for e in events if e["event"] == "response" and e["proc"] in ("bad", "done")]
+            return events if len(responses) == 3 and any(e["event"] == "bad" for e in events) else None
+        events = wait_for(completed_log)
+        self.assertEqual([e for e in events if e["event"] == "bad"],
+                         [{"event": "bad", "proc": "bad", "fails": 2, "bad_after": 2}])
+        for name, code, kind, count in (("bad", 1, "aos", 2), ("done", 7, "child", 1)):
+            responses = [e["response"] for e in events if e["event"] == "response" and e["proc"] == name]
+            self.assertEqual(len(responses), count)
+            for response in responses:
+                ms = response["result"]["ms"]
+                self.assertIs(type(ms), int)
+                self.assertGreaterEqual(ms, 0)
+                self.assertEqual(response, {"result": {"code": code, "kind": kind,
+                                 "timed_out": False, "stopped": False, "ms": ms}})
         self.kernel_stop()
 
     def test_info_reload_tick_timing_and_add_defaults_are_immutable(self):
@@ -107,12 +127,9 @@ class KernelIntegration(KernelCase):
         self.add(target, "new")
         self.assertEqual(self.state()["procs"]["old"]["interval_ms"], 500)
         self.assertEqual(self.state()["procs"]["new"]["interval_ms"], 0)
+        # 睡眠設定由 RecoveryTests 的受控 sleep 驗證；此處只驗新設定仍可接鏈。
         seq = self.state()["last_seq"]
-        wait_for(lambda: self.state()["last_seq"] > seq)
-        seq = self.state()["last_seq"]
-        started = time.monotonic()
         wait_for(lambda: self.state()["last_seq"] >= seq + 3)
-        self.assertGreaterEqual(time.monotonic() - started, .30)
         self.kernel_stop()
 
     def test_cli_once_wait_ack_and_work_failure_is_successful_cli(self):
@@ -141,7 +158,8 @@ class KernelIntegration(KernelCase):
         name = response[0].name
         self.assertIn(name, result.stdout)
         self.assertEqual(read_json(response[0])["result"]["code"], 0)
-        aos_client.ack(self.home, name)
+        ack = self.good_cli("ack", self.home, self.home / "responses" / name)
+        self.assertEqual(ack.stdout, "")
         wait_for(lambda: not response[0].exists())
         self.kernel_stop()
 
