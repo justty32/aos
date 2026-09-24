@@ -39,7 +39,7 @@
 | [2026-09-24-backlog-cleanup.md](2026-09-24-backlog-cleanup.md) | `proto5/backlog/` 六個檔逐一判掉、資料夾拿掉（沒解的進 WAIT_USER A.14／16～18）；09-23 那輪在 [rearch/backlog-cleanup](2026-09-23-rearch/backlog-cleanup.md) |
 | [2026-09-24-py312-run.md](2026-09-24-py312-run.md) | Python 3.12 實跑：1016 條在 3.12.13／3.14.7 都綠，不用改程式 |
 | [2026-09-24-fix-abs-links.md](2026-09-24-fix-abs-links.md) | 另一台機器的絕對路徑改成相對路徑（16 檔、828 處） |
-| [play/](play/README.md) | 試玩 r1～r4 與 fix-r1～r4（每輪兩份報告＋任務書、五條標準分數） |
+| [play/](play/README.md) | 試玩 r1～r5 與 fix-r1～r5（每輪兩份報告＋任務書、五條標準分數） |
 | [2026-09-24-tidy/](2026-09-24-tidy/README.md) | 整理 wf／proto5 notes：SESSION-LOG 搬檔、本索引、壞連結 |
 | [2026-09-24-spec-split/](2026-09-24-spec-split/README.md) | spec 九份拆成資料夾＋小檔（逐字搬、≤ 8 KB），指進 spec 的連結全改、astra 抽查 |
 | [2026-09-24-kernel-crash/](2026-09-24-kernel-crash/README.md) | kernel 崩潰窗口 C-7／C-8 測試（15 條，真 KILL）：都照規範收斂，產品程式沒改；stop 箱重放會留同名 stop（同 B-10，待拍） |
