@@ -42,6 +42,14 @@ class Boot(FakeCase):
         self.tick()
         self.assertEqual(list(Path(self.D, "responses").glob("*boot*")), [])  # boot 的回音第一格 ack 掉
 
+    def test_boot_restores_queue_dirs(self):
+        """納入後文件組實測：手建的家少了 requests/、responses/，boot 先補上，不留到 add／halt 才 WriteFailed。"""
+        self.init()
+        for name in ("requests", "responses"):
+            (self.K / name).rmdir()
+        self.boot()
+        self.assertTrue((self.K / "requests").is_dir() and (self.K / "responses").is_dir())
+
     def test_no_daemon_and_not_running(self):
         aos_kernel_info.init(self.K, {"pools": {"default": {"count": 1}}}, daemon=None)
         info = self.info()

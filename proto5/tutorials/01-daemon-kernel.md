@@ -162,7 +162,7 @@ aos-kernel ls | head -1
 | `probe/default` 是 `bad`、`Connection refused` | 端點沒開或 `llm.json` 的 port 寫錯。改 `llm.json` 就好，不用重開 |
 | `init` 印 `AlreadyExists: 拒絕覆蓋既有的家` | 家已經建過了，直接 `boot`；要重來就 `aos-kernel halt`、`aos-daemon halt`、`rm -rf $W/K` |
 | `boot` 印 `InfoVersion` | `K/info.json` 還是舊的「一顆顆列 `cpus`」格式。刪掉 `K`，照第 2 步的池表重新 `init` |
-| `init` 沒報錯，但 `ls` 只有 kernel 池 | `--config` 用了舊的 `{"cpus": {…}}` 格式：`cpus` 那格被當成不認得的欄位略過。用 `aos-kernel cpu add` 補池，或刪掉 `K` 照第 2 步重來 |
+| `init` 印 `FieldTypeMismatch: cpus 是 proto5 舊格式…` | `--config` 用了舊的 `{"cpus": {…}}` 格式。照第 2 步改成 `pools` 池表再 `init` |
 | 關掉終端後 daemon 不見了 | 用了 `&` 卻沒加 `setsid`。照第 3 步那行重開，health 不是 `ok` 再 `boot` |
 | 要把 `llm.json` 搬到別處 | 手改 `K/info.json` 裡 `llm` 池 `envs` 的路徑，下一格生效；已經活著的 cpu 不會變，要現在就全換：`aos-daemon kill --pool llm --all`（[池模板](../spec/kernel/home.md)） |
 | `ls` 的 health 不是 `ok` | 照括號做；各種說法見 [health](../spec/kernel/health.md) |

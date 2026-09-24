@@ -74,13 +74,16 @@ class Init(CLICase):
     def test_init_bad_config_exit_1_without_writes(self):
         cases = ['{', '[]', 'null', {'pools': []}, {'pools': {'kernel': {'count': 2}}}, {'pools': {'a/b': {'count': 1}}},
                  {'pools': {'x': {}}}, {'pools': {}, 'tick_ms': -1}, {'pools': {}, 'daemon': 'relative'},
-                 {'pools': {}, '_metainfo': {'_type': 'daemon', '_version': 1}}]
+                 {'pools': {}, '_metainfo': {'_type': 'daemon', '_version': 1}},
+                 {'cpus': {'0': {}}}]  # 納入：proto5 舊格式明確拒絕，不再默默只剩 kernel 池
         for i, value in enumerate(cases):
             with self.subTest(config=value):
                 _, err = self.main('init', '--config', self.config(value, 'bad%d.json' % i), code=1)
                 self.assertEqual(len(err.splitlines()), 1)
                 self.assertIn('K＝%s，取自 --target' % self.K, err)
                 self.assertFalse(self.K.exists())
+        _, err = self.main('init', '--config', self.config({'cpus': {}}, 'old.json'), code=1)
+        self.assertIn('cpus 是 proto5 舊格式', err)
         _, err = self.main('init', '--config', self.root / 'missing.json', code=1)
         self.assertTrue(err.startswith('aos-kernel: ReadFailed: '))
 

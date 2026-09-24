@@ -70,6 +70,8 @@ def boot(home, wait_ms=30000):
             raise KernelError("NotRunning", "daemon 沒在跑：%s（先 aos-daemon boot --target %s）" % (daemon, daemon))
     old = aos_home.read_state(home, {})
     _ledger_version_check(old)
+    # 納入後文件組實測：手建的家缺 requests/、responses/ 時 boot 會成功、之後 add／halt 才 WriteFailed；boot 先補上。
+    aos_home.ensure_queue(home)
     chain = "%d-%d" % (time.time_ns(), os.getpid())
     decl = [chain_epoch(chain), 0]
     # 2. 交接 kernel 池：帳本的與 info 的各縮到 0、等回音、等 daemon 那池收乾淨。
