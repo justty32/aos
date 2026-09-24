@@ -5,6 +5,7 @@
 > 2026-09-23 重架構第三份；同日照 astra 第二輪 D 清單（18 題）與第三輪（D3／X3／C3）改過。
 > 2026-09-23 定稿並已實作：[`aos_daemon.py`](../lib/aos_daemon.py)（入口 `aos-daemon`）。舊 daemon-home.md／aos-daemon.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
 > 已拍板的前提在 §8，我自己選的在 §9。
+> 2026-09-24 實作補記：依實作審查回寫，見 [notes/2026-09-23-rearch/impl-review-report.md](../notes/2026-09-23-rearch/impl-review-report.md)；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。
 
 一句話：**daemon 只管 cpu 行程的生死——啟動、重拉、停止，也就是當爸爸。誰叫它把一個 aos-exec 目標拉起來當孩子，
 它就拉；孩子死了看要不要再拉；要停就照階梯把孩子都停掉。** 它不認識 kernel、不看孩子在做什麼、不轉發任何工作。
@@ -99,6 +100,9 @@ D/
 重啟後只拿來找上一任的孩子（§6.1），不拿來接手。重拉的倒數、階梯走到哪一段這種**執行中的東西**只在記憶體，
 daemon 崩了就沒了，也不需要——重啟後孩子表清空。
 
+（09-24 補）`last_exit` 與重拉判定只用孩子實際的退出碼；exit 檔寫失敗另記 `WriteFailed`，不改退出碼，
+也不因此重拉正常退出的孩子。
+
 ## 2. 孩子怎麼拉
 
 `spawn` 的 `target` 照 [aos-exec](aos-exec.md) 讀（三種目標、base、指示詞都照它）——**每次拉都重讀**，
@@ -127,6 +131,8 @@ fd 0 那條只寫 `go` 跟 `stop` 各一行；寫失敗（EPIPE）＝孩子那�
 
 `target` 讀不到、inst 壞掉、起不來（aos-exec 的 kind=aos）：`spawn` 回 `error.code=-32000`、`data.code="SpawnFailed"`，
 `message` 帶 aos-exec 那一行（含它的代號）；不登記。
+（09-24 補）target 不存在（不管是不是 `.json`）、資料夾目標缺 `dir_target` 指的檔，在這裡也一律是 `SpawnFailed`——
+不照同步 aos-exec 分成用法錯；只有 inst 顯式寫了 `stdin`／`stdout` 的 `-32602` 不變。起不來時不造 pid、不寫 exit 檔。
 
 **誰能當孩子**：只有遵守範式 §6.1 控制 pipe 契約的程式（等 `go`、認 `stop`、EOF 就溫和停）——現在就是 `aos-cpu`。
 一般工作程式不是 daemon 的孩子，是 exec cpu 跑的。
@@ -193,8 +199,14 @@ kernel 改綁另一個 daemon（`boot --daemon D2`）：**不支援交接**，�
 ## 6. 主人的一生
 
 ```text
-aos-daemon [--home D]
+aos-daemon [--home D]                       # 跑 daemon
+aos-daemon stop [--home D] [--wait-ms N]    # （09-24 補）放 stop、等它退出
+aos-daemon -h ／ aos-daemon stop -h
 ```
+
+（09-24 補）`stop`：先用 flock 探測 daemon 活不活——**不活就不放檔**（放了會讓下一任一開機就停）、印 `not running`、退 0；
+活的就照範式 §3.1 往 `D/requests/` 放一則 `stop-*.json` notification，等到 flock 探測不到它、印 `stopped`、退 0。
+`--wait-ms` 預設 30000，逾時 stderr `Timeout`、退 1（stop 已放、不撤回）。
 
 ### 6.1 啟動
 
@@ -206,7 +218,7 @@ aos-daemon [--home D]
    就送 TERM、等 **`stop_wait_ms`＋`kill_wait_ms`**、還在就 KILL 整組，直到全部不在（這是接手專用的等法，
    跟 §5 正常停機的階梯不同：pipe 已經沒了，沒得先好好說）。注意兩件事：
    (a) 那個 TERM 對孩子來說可能是「第一次」（它還沒讀到 EOF）、只會溫和停，所以才等兩段加起來的時間，最後可能落到硬砍；(b) 上一任 daemon 死後它的孩子歸 init 管、死了 init 會收屍，
-   所以 `kill(pid,0)` 看到「不在」就是真的不在了。pid 被別的程式重用的機率當作可忽略，寫在這裡讓人知道。
+   所以 `kill(pid,0)` 看到「不在」就是真的不在了（09-24 補：不會收孤兒的 PID 1 環境，不在接手完成保證內）。pid 被別的程式重用的機率當作可忽略，寫在這裡讓人知道。
    上一任 fork 了、還沒寫表就死的孩子不在表裡——但它等不到 `go`、自己就退了（§2），不用找。
 4. 照範式 §6.2 對帳自己的 `current`（上一任崩在處理哪則 request）。
 5. 寫新 `state.json`（pid、`current` null、children 空）。孩子表**從空開始**：daemon 不收養；要什麼孩子由客戶再
@@ -227,7 +239,7 @@ aos-daemon [--home D]
 
 適用範圍同範式 §8（同一台 POSIX 機器；fork／waitpid／flock／訊號都是 POSIX 的）。孩子在做什麼（kernel／cpu 範式）；誰該被拉、幾顆（kernel 的 `info.cpus`）；多機（以後 socket）。
 沒有 `aos-daemon-ctl`：客戶端就是往 `D/requests/` 放檔，kernel 的 boot／tick 已經在做；人要看就 `cat D/state.json`，
-要停就放一份 `stop-*.json` 或 Ctrl-C。
+要停就放一份 `stop-*.json` 或 Ctrl-C（09-24 補：或 `aos-daemon stop`，§6）。
 
 ## 8. 已拍板的前提（使用者定的，不重問）
 
@@ -253,3 +265,12 @@ daemon 是所有 cpu 的父行程、最單純；IPC 用 pipe，只管生死；`s
 10. **`spawn` 同步**：拉起來、登記、`go`、回音；失敗不登記；等價鍵是 `target`＋`dir_target`，`restart` 不同就更新。
 11. **重拉每次重讀 target**，不用保存的副本。
 12. **改綁 daemon 不支援交接**，先停舊的；**daemon 重啟後 kernel 要重 boot**。
+
+## 實作補記（2026-09-24）
+
+依 [實作審查報告](../notes/2026-09-23-rearch/impl-review-report.md) 回寫；修正輪紀錄見 [impl-fix-round1.md](../notes/2026-09-23-rearch/impl-fix-round1.md)。不改上面的節號，只把句子補進原節：
+
+- §1.2：`last_exit`／重拉只看孩子實際退出碼，exit 檔寫失敗另記（審查 B-3）。
+- §2：缺檔一律 `SpawnFailed`（A-1、B-2），程式同步改了。
+- §6：新增 `aos-daemon stop` 子命令與 `-h`（LM Studio 真跑報告 ⑤-1）；§7 同步一句。
+- §6.1：不收孤兒的 PID 1 環境在保證外（B-9）。

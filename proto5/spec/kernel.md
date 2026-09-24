@@ -5,6 +5,7 @@
 > 2026-09-23 重架構第二份；同日照 astra 三輪審查改過（K／X／R、K2／X2／R2、K3／X3／R3）。
 > 2026-09-23 定稿並已實作：[`aos_kernel.py`](../lib/aos_kernel.py)（入口 `aos-kernel`）。舊 kernel-home.md／aos-kernel.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
 > 已拍板的前提在 §9，我自己選的在 §10。
+> 2026-09-24 實作補記：依實作審查回寫，見 [notes/2026-09-23-rearch/impl-review-report.md](../notes/2026-09-23-rearch/impl-review-report.md)；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。
 
 一句話：**kernel 替登記好的工作（行程）挑一顆空著的 cpu 派下去、收回執行結果、決定要不要再跑。**
 它不是長命行程：每次只跑一格 `aos-kernel tick`，格的開頭先把下一格放進一顆專用 exec cpu 的 `requests/`，
@@ -118,6 +119,9 @@ boot 把整份驗完才動任何東西（§6）。「專門打 LLM 的 cpu 只�
 （`D/state.json` 裡消失），改 `K/cpus/<c>/inst.json`，再 boot。只改 info、或對還活著的 cpu 重 boot，環境都不會變。
 那份 inst 裡的 `$env` 讀的是**daemon 的環境**（是 daemon 在拉它）；在別的終端 `export` 不會影響已經在跑的 daemon。
 
+（09-24 補）「建家」是**缺的補齊**：資料夾、`info.json`、`inst.json` 各自不在才寫，已經在的一律不覆蓋（含人手改過的 `envs`）。
+所以建到一半崩掉，下一格第 7 步或下次 boot 會補齊，不會卡住。
+
 ### 1.2 `state.json`（帳本）
 
 ```json
@@ -162,11 +166,15 @@ NAME 是非空檔名，不能是 `.`／`..`、含 `/` 或 NUL。kernel **不讀 
 |---|---|---|
 | kernel cpu 的 `requests/` | `k-<chain>-<seq>.json` | 第 seq 格 tick |
 | 工作 cpu `<c>` 的 `requests/` | `k-<chain>-<seq>-<c>.json` | 第 seq 格派給 c 的工作 |
-| 任一 cpu 的 `requests/` | `ack-<chain>-<seq>-<c>.json`（同格對同顆最多一則）、`stop-<chain>.json` | ack、stop |
-| daemon 的 `requests/` | `k-<chain>-<seq>-spawn-<c>.json`、`ack-<chain>-<seq>-<c>.json`、boot 用 `k-<chain>-boot-kill.json` | 拉 cpu、ack、boot 收舊 kernel cpu |
+| 任一 cpu 的 `requests/` | `ack-<chain>-<seq>-<c>-<digest>.json`（09-24 補，見表下）、`stop-<chain>.json` | ack、stop |
+| daemon 的 `requests/` | `k-<chain>-<seq>-spawn-<c>.json`、`ack-<chain>-<seq>-<家名>-<digest>.json`、boot 用 `k-<chain>-boot-kill.json`（要收兩顆時各加 cpu 名：`k-<chain>-boot-kill-<c>.json`） | 拉 cpu、ack、boot 收舊 kernel cpu |
 
 kernel 放出去的檔名全部帶 `chain`，跨 boot 永不重複；同一格對同一個家的同一種東西最多一份，所以格內也不重複。
 這是範式 §1「名字不重用」在 kernel 這邊的做法。前提是 `chain` 本身不重複——`<epoch ns>-<pid>` 在同一台機器上夠用。
+
+（09-24 補）ack 是例外：同格同家可能要好幾則（第 4 步補前格的、清多則舊 tick 回音、第 6 步收的），所以 ack 名稱為
+`ack-<chain>-<seq>-<c>-<digest>.json`，digest 是**被 ack 的檔名**之 SHA-256 前 16 個十六進位字元。同格同家可以有多筆 ack，
+不得把不同回音的確認合併成一則。
 
 ## 2. syscall（`K/requests/`）
 
@@ -180,6 +188,7 @@ kernel 放出去的檔名全部帶 `chain`，跨 boot 永不重複；同一格�
 沒有 `ls` syscall：看狀態就偷看 `K/state.json`（§6 的 `ls` 就是這樣做，鏈斷了也看得到）。
 同名 `add`（不管 `status` 是什麼、含被 rm 但還在 cpu 上跑的）回 `-32000`／`AlreadyExists`；
 params 形狀或 pool 不合回 `-32602`。kernel 不解指示詞、不驗 inst、不看檔在不在——那些都是跑起來的回音。
+（09-24 補）省略 `name` 時只計 ASCII 十進位名稱：有數字名取最大值加一，沒有就從 `0` 開始。CLI 的 `--once` 沒給 `--name` 時仍用自己的 request 檔名（§6）。
 
 **每則 syscall 都是「一次帳本寫入」＋出貨**：收到 `add`／`rm` → 判定 → 把結果（行程紀錄、queue、pending）跟
 出貨待辦**一次**寫進帳本 → 出貨。待辦是：原單名進 `deletes`（一定有）；要馬上回的回音進 `replies`
@@ -245,6 +254,8 @@ aos-kernel tick K --chain C --seq N
 10. **出貨**（同第 4 步）、**寫帳本**、append `kernel.log`、退 0。`kernel.log` 每格至少記：派了誰去哪顆（行程名、cpu、request 檔名）、
     收到的每則回音（行程名、cpu、`result` 或 `error` 整段）、退件時的門檻——回音 ack 掉就沒了，這是事後查「為什麼退件」唯一的地方；
     子程式自己的錯誤在工作 inst 的 `stderr` 檔。
+    （09-24 補）沒有任何事件的格（`events` 空）**不寫** `kernel.log`，免得空轉一天幾十萬行。
+    kernel.log 在出貨、寫帳本之後才 append，所以**不保證涵蓋崩潰中途已結帳的回音**——它不是完整的持久稽核紀錄。
 
 一格裡 daemon 或磁碟出錯：stderr 一行、退 1、可能只做了一半；帳本＋出貨箱讓下格接得上。
 
@@ -287,28 +298,39 @@ kernel 對 daemon 只做兩件事：`spawn`（每格第 7 步）、`kill`（只�
 ## 6. 命令列
 
 ```sh
-aos-kernel init K                     # 建家、預設 info（cpus: k＋0、1、2）；拒絕覆蓋
+aos-kernel init K [--cpu NAME[:POOL]]...   # 建家、預設 info（cpus: k＋0、1、2）；拒絕覆蓋（09-24 補 --cpu）
 aos-kernel boot K [--daemon D] [--wait-ms N]   # 見下；不跑整格
 aos-kernel tick K --chain C --seq N   # 一格；正常只有鏈自己會叫
 aos-kernel add K TARGET [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--wait-ms N] [-- ARG...]
 aos-kernel rm K NAME
-aos-kernel ls K                       # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看
+aos-kernel ack K NAME                 # （09-24 補）替 K/responses/NAME 放 ack
+aos-kernel ls K [--json]              # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看
 aos-kernel stop K
+aos-kernel -h ／ aos-kernel <子命令> -h    # （09-24 補）用法
 ```
+
+（09-24 補）**init `--cpu`** 可重複，`NAME` 或 `NAME:POOL`（POOL 省略＝default）。省略整個旗標＝預設表。
+沒有任何一顆標 `:kernel` 就自動加 `k`（pool kernel）；`k` 被別的池佔了、兩顆以上 kernel、重名、不合法檔名＝用法錯。
+`envs` 沒有旗標，照舊改 info.json。`K/info.json` 已在才拒絕；K 資料夾在但沒有 info（上次建到一半）就補齊。
 
 **boot** 只做「交接、拉起來、放第 1 格」，K 的帳本從此只在 kernel cpu 上被改。**兩個 boot 不能同時跑**——
 這是給人的規矩，不在保證內（沒有 boot 鎖）。步驟：
 1. K 轉絕對路徑；`cli/aos-kernel` 取自己的 realpath、驗有執行位；驗 D 是 daemon 家、daemon 活著（§5 的 flock 探測）；
    info 整份驗過（頂層字面物件、恰好一顆 kernel 池）。這一步不改任何東西。
-2. **交接**：kernel 池那顆叫 c。偷看 `D/state.json`：表裡有 c 且 `target` 不是我們的 → `NameTaken`、退 1。
+2. **交接**：kernel 池那顆叫 c。（09-24 補：boot 對帳本裡舊的 `kcpu` 與新 info 選出的 c 去重後**兩顆都交接**——先全部驗 target，
+   再依序 kill 並等各自從孩子表消失；只殺新 c 的話，換池時舊鏈還可能在改帳本。新 c 若原本是工作 cpu，它手上的工作 slot
+   暫留到 collect 結清，第 4 步清舊 tick 回音時跳過那則。）偷看 `D/state.json`：表裡有 c 且 `target` 不是我們的 → `NameTaken`、退 1。
    表裡有 c（不管 alive／dead）→ 向 daemon `kill c`（`NotFound` 也算成功），然後**等到 c 從孩子表消失**
    （最多 `--wait-ms`，預設 30 秒）。逾時＝退 1、`AlreadyRunning`——**kill 已送出、不會撤回**，舊的那格做完
    還是會被收掉，只是 chain 沒換；等一下再 boot 一次就好。c 消失＝沒有任何一格在跑、也不會再有——這才是「舊鏈停了」的證據。
+   （09-24 補）例外：cpu 若是被 KILL 硬砍，另一個 process group 的 tick 子程式可能還活著（範式 §5.3 的保證外），
+   這種情況「c 消失」不保證 tick 已死；本版不做 kill-tree。
 3. 寫 info.daemon；帳本：`chain`＝新 id、`kcpu`＝c、`cli`、`last_seq`＝0、`phase`＝running、**`stops` 清空**
-   （上一條鏈欠的 stop 是給上一代 cpu 的，不重放）；`cpus`／`queue`／`procs`／`acks`／`replies`／`deletes` **照舊**
+   （上一條鏈欠的 stop 是給上一代 cpu 的，不重放。09-24 補：只丟**帳本裡還沒出貨**的；已經放進 cpu `requests/` 的 stop 仍有效，
+   新主人可能一開機就讀到而退出——boot 成功不保證排除這種跨代通知，要另確認鏈真的在跑）；`cpus`／`queue`／`procs`／`acks`／`replies`／`deletes` **照舊**
    （在途 `req`、`pending` 都留著，新鏈接手收；名字帶舊 chain 沒關係，收的是舊名、ack 用新名）。
    **第一次 boot 沒有帳本**＝這些全部從空的開始（`cpus` 照 info 列工作 cpu、`req` 都 null）。
-4. 每顆 cpu：家不在才建（info、inst，`envs` 照 info）；`spawn` 全部、等回音（c 剛被收掉，這裡拉回來；
+4. 每顆 cpu：家缺什麼補什麼（info、inst，`envs` 照 info；已在的不覆蓋，§1.1 末）；`spawn` 全部、等回音（c 剛被收掉，這裡拉回來；
    其他活著的同名同 target 就回 pid、不動）。
 5. `link` 第 1 格 `k-<chain>-1.json` 到 `cpus/<c>/requests/`。退 0。
 
@@ -330,6 +352,12 @@ aos-kernel stop K
 **ls** 印帳本的摘要（chain、phase、每顆 cpu 的 req／proc、queue、每個行程的 status／runs／fails）、daemon 孩子表的
 alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份——鏈斷了（`current` null、`requests/` 空、
 `last_seq` 不動）就看得出來。
+（09-24 補）預設印給人看的文字摘要：一行總覽（chain、phase、last_seq、daemon 活不活）、kernel cpu 一行、
+每顆 cpu 一行（名、pool、閒／忙哪個行程、daemon 孩子狀態）、每個行程一行（名、once／反覆、status、runs／fails、pending）、queue 一行；
+`--json` 才印原始 JSON。
+
+（09-24 補）**ack**：`aos-kernel ack K NAME` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。
+給 `add --once` 不等的人用。
 
 退出碼：0 成功；1 讀驗／daemon／I/O 錯，stderr 一行 `aos-kernel: <代號>: <白話>`；2 用法錯。
 
@@ -372,3 +400,14 @@ add 拒絕到它跑完；stop 分 stopping／stopped 兩段，在途與 once 的
 9. **死掉的 cpu 只等 daemon 重拉**，它手上的單靠範式的開機對帳回 `Interrupted`。
 10. **kernel 不讀 target 指的檔**，連在不在都不看；一切都是跑起來的回音。
 11. **`ls` 不是 syscall**，直接偷看三個地方。
+
+## 實作補記（2026-09-24）
+
+依 [實作審查報告](../notes/2026-09-23-rearch/impl-review-report.md) 與 [LM Studio 真跑](../notes/2026-09-23-rearch/lmstudio-run.md) 回寫；修正輪紀錄見 [impl-fix-round1.md](../notes/2026-09-23-rearch/impl-fix-round1.md)。不改上面的節號，只把句子補進原節：
+
+- §1.1：cpu 家「缺的補齊、不覆蓋」（審查 C-1）。
+- §1.3：ack 名加 digest（A-3、B-5）；boot-kill 兩顆時加 cpu 名（B-6）。
+- §2：省略 name 從 0 起（B-7）。
+- §3 第 10 步：空格不寫 log（真跑 ⑤-4）；log 不保證涵蓋崩潰中途（B-11）。
+- §6：init `--cpu`、`ack`、`ls` 摘要／`--json`、`-h`（真跑 ⑤-2、3、5）；boot 第 2 步交接兩顆 kcpu（A-4、B-6）與硬砍例外（B-12）；
+  第 3 步只丟未出貨的 stops（B-10）；第 4 步補齊家（C-1）。
