@@ -1,4 +1,4 @@
-# proto5/lib — 四十七支 Python 模組
+# proto5/lib — 五十四支 Python 模組
 
 ← [proto5 README](../README.md)｜規範：[cpu](../spec/cpu/README.md)、[daemon](../spec/daemon/README.md)、[kernel](../spec/kernel/README.md)、[aos-agent](../spec/aos-agent/README.md)
 
@@ -16,6 +16,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | 檔 | 職責 |
 |---|---|
 | [`aos_directives.py`](aos_directives.py) | 指示詞（`$env`／`$fmt`／`$ref`／`$opt`）解析的純函式庫，不知道 inst |
+| [`aos_directives_edit.py`](aos_directives_edit.py) | `aos-directives`（tool-era T3）：人格（system prompt）按 Markdown 標題分節 ls／show／set／add／rm／export／import／versions／revert，並解／驗一份 aos JSON 檔的指示詞（resolve／check） |
 | [`aos_inst.py`](aos_inst.py) | inst.json 的讀、驗、解，回執行用的 dict |
 | [`aos_exec.py`](aos_exec.py) | 執行一次的上層：三種目標的解讀（`run_target`／`run_target_full`／`run_inst`）與 `aos-exec` 命令列 |
 | [`aos_exec_run.py`](aos_exec_run.py) | 執行一次的底層：前置檢查、開串流、起子行程、等待／逾時／強停整組、寫 exit 檔 |
@@ -62,15 +63,22 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_access.py`](aos_agent_access.py) | 權限牆（access.json）讀驗、信任資料、重疊檢查、快照 |
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
 | [`aos_jail.py`](aos_jail.py) | `aos-jail`：組 bwrap 參數並 exec（工具關進牢裡跑） |
+| [`aos_json_cli.py`](aos_json_cli.py) | `aos-json`（tool-era T3）：人用的 JSON Pointer 改檔（get／set／del／append／merge），照原檔縮排重寫、`--expect-sha` 防衝突，`--check-directives` 先過 aos_directives 才寫 |
+| [`aos_team_format.py`](aos_team_format.py) | 團隊共用格式（spec/team/）：資料夾佈局、名冊 `team.json`、信、申請、任務單、問題的讀驗，以及共用的 id／時間／寫檔 |
+| [`aos_team_requests.py`](aos_team_requests.py) | 申請登記表：`kind → 處理函式`，郵差讀到 outbox 裡帶 `kind` 的檔就叫 `handle()`；別隊新增 kind 在這裡加一行 |
+| [`aos_team_task.py`](aos_team_task.py) | 任務單（交接書）與狀態機：只有郵差寫，處理函式改單子並回「後續動作」清單；同一 `src` 重跑冪等 |
+| [`aos_team_ask.py`](aos_team_ask.py) | 問人：成員 `ask_human` 寄 `kind=ask` 建問題檔，人用 `aos-team answer` 把答案投回發問者 |
+| [`aos_team_cli.py`](aos_team_cli.py) | `aos-team` 的分派表：子命令 →（模組、函式、哪一隊做、一句話），還沒做的印「還沒做（第 N 隊）」退 1 |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
 `aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、
-`aos-jail`→`aos_jail.main`、`aos-llm`→`aos_llm_call.main`。
+`aos-jail`→`aos_jail.main`、`aos-llm`→`aos_llm_call.main`、`aos-directives`→`aos_directives_edit.main`、
+`aos-json`→`aos_json_cli.main`、`aos-team`→`aos_team_cli.main`。
 
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1597 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1724 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -451,16 +459,17 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1597 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1724 條；repo 根目錄
 ```
 
-共 52 個測試檔、1597 條（09-24 拆檔＋tidy 後實跑，約 100～130 秒）；涵蓋底層執行、daemon／kernel 按池行為、
+共 57 個測試檔、1724 條（09-24 拆檔＋tidy 後實跑，約 100～130 秒）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
 | 檔 | 驗證內容 |
 |---|---|
 | [test_directives.py](test/test_directives.py) | 指示詞、引用、選項與錯誤 |
+| [test_directives_edit.py](test/test_directives_edit.py) | `cli/aos-directives`（人格分節編輯＋resolve／check）與 `cli/aos-json`（人用 JSON Pointer 改檔）：子行程跑、退出碼、錯誤格式、檔案真的改對 |
 | [test_inst.py](test/test_inst.py) | inst 讀驗、指示詞位置、欄位與選項 |
 | [test_exec.py](test/test_exec.py) | 三種目標、串流、env、退出碼、逾時及舊 API（`run_target`／`run_inst`／`main`） |
 | [test_exec_full.py](test/test_exec_full.py) | `run_target_full`：三類 timed_out、強停、TERM 後退 0、相容性 |
@@ -508,10 +517,14 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_agent_tools_manage.py](test/test_agent_tools_manage.py) | `tools` 元素 `$opt`（as／only）、`tools ls／rm／alias／unalias`、管理鎖串行化 |
 | [test_agent_access.py](test/test_agent_access.py) | 權限牆 access.json 讀驗、重疊、送件快照、`access` 子命令、check／status |
 | [test_access_more.py](test/test_access_more.py) | 權限牆補測：一批共用快照、壞表整批跑不起來、下一批才用新表、壞 JSON 拒寫 |
+| [test_access_round2.py](test/test_access_round2.py) | 09-24 使用者裁決 1：檔案工具根＝整個 `/work`、唯讀掛點寫不進去、錯誤看得懂；真跑 bwrap（沒有就 skip）與不用 bwrap 兩路 |
 | [test_jail.py](test/test_jail.py) | `aos-jail` 單元與真 bwrap（沒有就 skip）：路徑、環境、網路、唯讀 mount、經真 aos-exec 跑 |
 | [test_tools_base.py](test/test_tools_base.py) | base 工具包：共用參數／config／OutsideRoot、read／write／edit／grep／find／ls |
 | [test_tools_base_bash.py](test/test_tools_base_bash.py) | base 的 bash：輸出合併、cwd、退出碼、逾時、截斷、背景行程收掉 |
 | [test_tools_base_fix.py](test/test_tools_base_fix.py) | base 工具包 astra 後修正：暫存檔與符號連結、大檔、CRLF、grep 各種退路、tools add 併發 |
+| [test_tools_files.py](test/test_tools_files.py) | `proto5/tools/files/`：json_edit、md_section 兩支工具；files／wf 的 `_common.py` 跟 base 逐字一樣；描述字數；`tools add files` 裝得起來 |
+| [test_tools_wf.py](test/test_tools_wf.py) | `proto5/tools/wf/`：workflows 工具包（wf_doc／wf_init／wf_lint／wf_residue／wf_table）；wf_init 兩個崩潰窗口真 SIGKILL 重跑收得回來 |
+| [test_team_format.py](test/test_team_format.py) | 工具大開發時代 T1 第 0 步：團隊共用格式（spec/team/）、任務狀態機、問人、申請登記表、`aos-team` 分派 |
 
 共用工具（不是測試檔）：[\_util.py](test/_util.py)（底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
 （控制協議孩子、輪詢、孤兒隔離 driver、`read_json`／`wait_for`）、[\_kernel_util.py](test/_kernel_util.py)
