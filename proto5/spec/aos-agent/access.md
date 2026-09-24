@@ -56,7 +56,7 @@ act 批在 §5.1 建批、寫 state 之前，照 [agent access.md](../agent/acce
 - **敏感環境變數在寫 inst 之前就擋**（值一寫進 inst 就落盤了）。敏感名字＝`AOS_*`、含 `KEY`／`TOKEN`／`SECRET`／`PASSWORD`／`CREDENTIAL`（不分大小寫）、`SSH_AUTH_SOCK`：
   - `_meta` **任何一格**（envs、argv、`$fmt` 變數…）用 `$env` 讀了敏感名字＝這件照上面記成沒執行（`EnvUnsafe`）、不送、不寫 inst——不論值被換成什麼名字或放進 argv。`check` 用同一個判定（`secret_env_reads`）把這種工具標 bad，講哪支、哪一格、讀了哪個名字。
   - `envs` 的**輸出名字**是敏感名字（例如字面寫 `"GITHUB_TOKEN": "…"`）＝那一對直接丟掉，不寫進 inst。
-  - aos-jail 端照樣再過濾一次 `--setenv`（第二層）。不關牢（`_jail: false`、沒 access 檔）的工具不受這條管。
+  - aos-jail 端照樣再過濾一次 `--setenv`（第二層）。不關牢（`_jail: false`）的工具不受這條管；沒 access 檔時要關牢的工具根本不送（`NoAccess`）。
 - 外層 `cwd`＝原本解出的（agent 家或 `_meta.cwd`）；`stdin`／`stdout`／`stderr`／`exit` 照 §5.3 不變——這幾個是 aos-exec 在牢外開好、fd 帶進牢裡的。
 - **牢裡的起點只看 access 的 `cwd`**；`_meta.cwd` 只影響牢外（串流的相對路徑、`argv[0]` 的相對路徑）。
 - `_jail: false` 的工具照 §5.3 原樣（不包、`envs` 照舊）；`aos-agent check` 對它 warn。

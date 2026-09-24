@@ -2,6 +2,7 @@
 
 真的跑 bwrap 的那組在這台沒 bwrap 時 skip；不用 bwrap 的那組直接給 AOS_TOOL_ROOT／AOS_TOOL_FENCE。
 """
+import errno
 import json
 import os
 from pathlib import Path
@@ -116,6 +117,18 @@ class FenceEnvTests(unittest.TestCase):
 
     def test_no_fence_is_old_behaviour(self):
         self.assertEqual(last_json(self.read('../ref/x.txt').stdout)['error'], 'OutsideRoot')
+
+    def test_readonly_message_without_jail(self):
+        """astra r2 #4：沒關牢時碰到唯讀檔案系統，不說成 access.json 設的。"""
+        sys.path.insert(0, str(BASE_TOOLS))
+        self.addCleanup(sys.path.remove, str(BASE_TOOLS))
+        import _common
+        _common._FENCE = None
+        with self.assertRaises(_common.ToolError) as cm:
+            _common.write_error(OSError(errno.EROFS, 'Read-only file system'), 'x.txt', '/ro/x.txt')
+        self.assertEqual(cm.exception.code, 'ReadOnly')
+        self.assertIn('the file system there is read-only', cm.exception.message)
+        self.assertNotIn('access.json', cm.exception.message)
 
     def test_fence_not_containing_root_is_ignored(self):
         r = self.read('../ref/x.txt', AOS_TOOL_FENCE=str(self.d / 'top' / 'ref'))

@@ -105,6 +105,10 @@ def access_checks(checks, base, env):
         checks.report('bad', 'access', '%s；看 info.json 的 access 欄' % exc)
         return
     if state == 'absent':
+        for tool in tools:
+            if tool.get('_jail', True) is False:
+                checks.report('warn', 'agent/tool/' + tool['function']['name'],
+                              '_jail: false：這支不關牢，碰得到你碰得到的所有檔')
         jailed = [t['function']['name'] for t in tools if t.get('_jail', True) is not False]
         if jailed:
             # 09-24 使用者裁決 4：有要關牢的工具卻沒表＝送件時一律拒跑（NoAccess），所以是 bad
