@@ -93,7 +93,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-team wait ls`／`answer Q "…"` | 人看等他回答的問題、回答一題（寄申請給郵差） | [spec/team/ask.md](spec/team/ask.md) |
 | `aos-team mail [--task t-0001] [--follow]` | 一封信一行，看團隊的信件往來；等你回答的題目也一題一行（`ASK q-0001`，答完先顯示答案）；`--task` 連落穿給領隊的那封一起列 | [spec/team/mail.md](spec/team/mail.md) |
 | `aos-team post`（kernel 反覆叫）／`beat`（kernel 反覆叫，同上） | 郵差兼書記走一輪：投信、收驗收結果、看停滯、同步 SESSION-LOG／WAIT_USER；心跳走一輪：照 `routines.json` 算誰到期、以開單派出 | [spec/team/post.md](spec/team/post.md)、[beat.md](spec/team/beat.md) |
-| `aos-team verify t-0001 [--again]` | 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞三種；`--again` 給檢查器壞、人修好之後重交 | [spec/team/verify.md](spec/team/verify.md) |
+| `aos-team verify t-0001 [--again]` | 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞三種；`--again` 給檢查器壞、人修好之後重交。`cmd_ok`（跑 `team.json` 白名單裡的專案指令）與 wf-lint 關在牢裡、專案唯讀 | [spec/team/verify.md](spec/team/verify.md)、[wall.md](spec/team/wall.md) |
 | `aos-team routine ls／add／rm` | 心跳的例行事務：新增、看、刪一條到期就派工的例行 | [spec/team/beat.md](spec/team/beat.md) |
 | `aos-team score` | 把六軸表（`axes.md` 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型、不寫檔 | [spec/team/score.md](spec/team/score.md) |
 | `aos-kernel tick`、`aos-agent tick` | 走一格；kernel 自己會叫，人不用打 | — |
@@ -132,7 +132,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 七十支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組；tool-era T3 補人用 aos-directives／aos-json，T1 補 aos-team 骨架，T2 補郵差／驗收／心跳，T4 補記憶（events／context／compact／notes）。逐檔 API 與測試表見 lib README | 81 個測試檔、2265 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 七十支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組；tool-era T3 補人用 aos-directives／aos-json，T1 補 aos-team 骨架，T2 補郵差／驗收／心跳，T4 補記憶（events／context／compact／notes）。逐檔 API 與測試表見 lib README | 84 個測試檔、2330 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 十一個薄入口：`aos`（09-24 one-boot，`aos up`／`aos down` 一條開機、一條停機）、`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent`、`aos-jail`（09-24 access-impl，aos-agent 自動用）、`aos-directives`／`aos-json`（09-24 tool-era T3，人用）、`aos-team`（09-24 tool-era T1，團隊分派） | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 | [templates/](templates/) | `aos-agent init --template` 生家用的成員模板：`lead`／`worker`／`reviewer`／`coder`，加第二波 A 隊的 `importer`（導入工人：只裝導入用得到的 10 支工具，工具表約 worker 的一半）共五個（人格、工具包、`access.json` 一定附；`notes: true` 的多掛 `/work/notes`） | 09-24 tool-era T1；`init_from_template()` 在 [`lib/aos_agent_init.py`](lib/aos_agent_init.py) |
 | [templates/cli-agents/](templates/cli-agents/README.md) | Claude Code／Codex 當普通 cpu 的範本（階 0，不是程式）：另一個 kernel 家的設定、`claude -p` 與 `codex exec` 唯讀審查的單子、接著聊的分岔版 | 09-24 stage0；用法見[教程 07](tutorials/07-cli-agents.md) |
