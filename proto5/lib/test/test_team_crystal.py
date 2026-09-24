@@ -135,6 +135,24 @@ class SkeletonTests(unittest.TestCase):
                          '把 {f1} 改成 {f2}')
 
 
+class SlotTests(unittest.TestCase):
+    """候選規則的群組只收專案裡的相對路徑（W3-2 審查前補）。"""
+    def test_file_slot(self):
+        import re
+        rx = re.compile(crystal.SLOT_PATTERN['f'] + r'\Z')
+        for ok in ('a.md', 'docs/a.md', 'a.b.md', 'x_1/y-2.txt'):
+            self.assertTrue(rx.match(ok), ok)
+        for bad in ('../x.md', '/etc/a.md', '-rf.md', '~/a.md', 'x/../y.md', '.env.md'):
+            self.assertIsNone(rx.match(bad), bad)
+
+    def test_path_slot(self):
+        import re
+        rx = re.compile(crystal.SLOT_PATTERN['p'] + r'\Z')
+        self.assertTrue(rx.match('src/lib'))
+        for bad in ('/etc/x', '../up', '~/h/x', 'a/../b'):
+            self.assertIsNone(rx.match(bad), bad)
+
+
 class MechanicalTests(Base):
     def test_candidate_proposal_passes_route_test(self):
         self.three_renames()

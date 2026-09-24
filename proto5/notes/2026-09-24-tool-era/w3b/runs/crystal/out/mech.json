@@ -10,7 +10,7 @@
         "crystal-4"
       ],
       "source": "mechanical",
-      "made_at": "2026-09-24T23:20:14+08:00",
+      "made_at": "2026-09-24T23:41:02+08:00",
       "note": "候選不會自動生效：aos-team route test --file 這個檔 → aos-team route save 這個檔"
     }
   },
@@ -180,7 +180,7 @@
     },
     {
       "name": "crystal-1",
-      "pattern": "在專案建一個\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*，內容寫\\s*「\\s*(?P<q1>[^」]+)\\s*」",
+      "pattern": "在專案建一個\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*，內容寫\\s*「\\s*(?P<q1>[^」]+)\\s*」",
       "do": "handoff",
       "handoff": {
         "assignee": "worker-1",
@@ -223,7 +223,7 @@
     },
     {
       "name": "crystal-2",
-      "pattern": "把\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*改名成\\s*(?P<f2>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})",
+      "pattern": "把\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*改名成\\s*(?P<f2>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})",
       "do": "handoff",
       "handoff": {
         "assignee": "worker-1",
@@ -261,7 +261,7 @@
     },
     {
       "name": "crystal-3",
-      "pattern": "數\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*有幾行，寫進\\s*(?P<f2>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})",
+      "pattern": "數\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*有幾行，寫進\\s*(?P<f2>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})",
       "do": "handoff",
       "handoff": {
         "assignee": "worker-1",
@@ -296,7 +296,7 @@
     },
     {
       "name": "crystal-4",
-      "pattern": "把\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*的第\\s*(?P<n1>[0-9]+)\\s*行刪掉",
+      "pattern": "把\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*的第\\s*(?P<n1>[0-9]+)\\s*行刪掉",
       "do": "handoff",
       "handoff": {
         "assignee": "worker-1",
