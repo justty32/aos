@@ -44,6 +44,7 @@ def probe_endpoint(entry):
 
     先 GET <endpoint>/models；404／405 再退回 POST chat/completions 一句話（max_tokens 1）。
     """
+    import http.client
     import json
     import urllib.error
     import urllib.request
@@ -77,15 +78,18 @@ def probe_endpoint(entry):
                                                'messages': [{'role': 'user', 'content': 'hi'}]})
             return 'ok', '模型回了一句話' + where
         try:
-            listed = {m.get('id') for m in json.loads(raw).get('data', []) if isinstance(m, dict)}
+            data = json.loads(raw).get('data')
+            if not isinstance(data, list):
+                raise TypeError
+            listed = {m.get('id') for m in data if isinstance(m, dict)}
         except (ValueError, AttributeError, TypeError):
             return 'ok', 'endpoint 通' + where
-        if listed and entry['model'] not in listed:
+        if entry['model'] not in listed:  # 空清單也算沒有（astra 審查）
             return 'warn', 'endpoint 通，但模型清單裡沒有 %s%s' % (entry['model'], where)
         return 'ok', 'endpoint 通，模型清單裡有 %s%s' % (entry['model'], where)
     except urllib.error.HTTPError as exc:
         return 'bad', 'HTTP %d%s' % (exc.code, where)
-    except (urllib.error.URLError, OSError, ValueError) as exc:
+    except (urllib.error.URLError, OSError, ValueError, http.client.HTTPException) as exc:
         reason = getattr(exc, 'reason', exc)
         return 'bad', '連不上：%s%s；改 llm.json 的 endpoint' % (hide(reason), where)
 

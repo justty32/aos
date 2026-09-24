@@ -73,7 +73,8 @@ def last(agent_dir, *, as_json=False):
 
 def _warn_processing(base, data, history, message):
     """fix-r5（§1.5）：這一輪還沒走完就講，免得把中途那句當答案。"""
-    busy = (history[-1] is not message or data.get('state') not in (None, 'idle')
+    busy = (bool(message.get('tool_calls')) or history[-1] is not message
+            or data.get('state') not in (None, 'idle')
             or data.get('batch') is not None or data.get('intake') or data.get('pending_inputs'))
     if not busy:
         return

@@ -132,7 +132,7 @@ def error_details(data):
             lines = [s.strip() for s in log if s.strip()]
             if lines:
                 data['last_error_time'] = datetime.fromtimestamp(os.fstat(log.fileno()).st_mtime).astimezone().isoformat()
-        data['last_error'] = lines[-1][:300] if lines else None
+        data['last_error'] = lines[-1] if lines else None  # 原文；一般輸出才縮短（fix-r5）
     except OSError:
         pass
     stuck = next((i for i in reversed(range(len(lines)))

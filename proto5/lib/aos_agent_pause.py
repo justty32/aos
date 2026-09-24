@@ -44,6 +44,12 @@ def _resume(base, env=None, lines=None):
     paths = dict.fromkeys(p for w in waits(base, st) for p in w['paths']
                           if pause_path(base, p, w['consume']))
     for path in paths:
+        if os.path.exists(path):
+            lines.append('已經 touch 過，等下一格 tick：' + path)
+            continue
+        # fix-r5：兩階段——先放 resumed 再 touch 門（§1.4）。門沒開之前 tick 不會重問，
+        # 所以「成功結清刪 resumed」一定排在這之後，不會被這裡蓋回去（astra 審查）。
+        _mark(base, RESUMED)
         try:
             with open(path, 'x'):
                 pass
@@ -51,8 +57,6 @@ def _resume(base, env=None, lines=None):
         except FileExistsError:
             lines.append('已經 touch 過，等下一格 tick：' + path)
     if paths:
-        # fix-r5：兩階段——先標「已解除暫停，等下一次成功」，think 真的成功結清時 tick 才刪（§1.4、§7）。
-        _mark(base, RESUMED)
         lines.append('已解除暫停，等下一次成功（aos-agent status --target %s 看）' % base)
     return manual, bool(paths), lines
 
