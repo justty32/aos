@@ -41,3 +41,149 @@ def init(agent_dir, force=False):
     print('llm.model 是代號 "default"：llm.json（kernel 的 llm cpu 用 AOS_LLM_CONFIG 指的那份，'
           '見 proto5/README.md 第 2 段）要有 default 這個代號')
     return 0
+
+
+# ------------------------------------------------------------ 照模板生 ----
+# spec/team/templates.md。aos-team init 對名冊每一列叫它；aos-agent init --template 的旗標由第 4 隊接。
+
+MARKER = '.aos-template.json'
+VARS = ('name', 'mail_to', 'members')
+
+
+def _rel(path, base):
+    return os.path.relpath(os.path.abspath(path), base)
+
+
+def _mount_value(value, anchor, base, absolute):
+    """名冊／模板的 mount 值（相對 anchor）→ access.json 的值（相對家，或絕對）。"""
+    ro = isinstance(value, dict)
+    raw = value['$val'] if ro else value
+    full = os.path.abspath(os.path.join(anchor, os.path.expanduser(raw)))
+    val = full if absolute else _rel(full, base)
+    return {'$opt': 'ro', '$val': val} if ro else val
+
+
+def _access(base, tpl, folder, member):
+    import aos_agent_access
+    mounts = {}
+    if member is None:
+        (base / 'workspace').mkdir(exist_ok=True)
+        mounts['ws'] = 'workspace'
+    else:
+        team = member['team_dir']
+        ws = _rel(member['project'], base)
+        mounts['ws'] = {'$opt': 'ro', '$val': ws} if tpl.get('project', 'rw') == 'ro' else ws
+        mounts['outbox'] = _rel(os.path.join(team, 'team', 'outbox', member['name']), base)
+        mounts['board'] = {'$opt': 'ro', '$val': _rel(os.path.join(team, 'team', 'tasks'), base)}
+    for name, value in tpl.get('mounts', {}).items():
+        mounts[name] = _mount_value(value, folder, base, True)
+    for name, value in (member or {}).get('mounts', {}).items():
+        mounts[name] = _mount_value(value, member['team_dir'], base, False)
+    return {'_metainfo': dict(aos_agent_access.METAINFO), 'mounts': mounts, 'cwd': 'ws', 'net': False}
+
+
+def _system_text(folder, tpl, name, member):
+    text = (folder / tpl['system']).read_text(encoding='utf-8')
+    values = {'name': name,
+              'mail_to': '、'.join((member or {}).get('mail_to', [])) or '（無）',
+              'members': '、'.join((member or {}).get('members', [])) or '（無）'}
+    for k in VARS:
+        text = text.replace('{%s}' % k, values[k])
+    return text.strip()
+
+
+def team_config(member):
+    """team: true 的工具包裝完寫進 config.json 的鍵（牢裡看到的路徑）。"""
+    return {'member': member['name'], 'mail_to': list(member['mail_to']), 'members': list(member['members']),
+            'outbox': '/work/outbox', 'board': '/work/board', 'tz': member.get('tz')}
+
+
+def _write_team_config(base, pack, member):
+    import json
+    cfg_path = base / 'tools' / pack / 'config.json'
+    cfg = {}
+    if cfg_path.is_file():
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
+        except ValueError:
+            cfg = {}
+        if not isinstance(cfg, dict):
+            cfg = {}
+    cfg.update(team_config(member))
+    aos_home.write_json(cfg_path, cfg, indent=2)
+
+
+def _install_tools(base, entries, member, lines):
+    """依序裝工具包；裝過的（tools/<包>.json 在）不重裝；optional 的包不在就跳過。回有沒有全裝好。"""
+    import contextlib
+    import io
+    import aos_agent_tools
+    for entry in entries:
+        pack = entry['pack']
+        if not (aos_agent_tools.PACKAGES / pack / (pack + '.json')).is_file():
+            if entry.get('optional'):
+                lines.append('跳過工具包 %s（還沒有這個包，之後重跑 init 會補）' % pack)
+                continue
+            raise AgentError('NotFound', '模板要的工具包 %s 不在 %s' % (pack, aos_agent_tools.PACKAGES))
+        if not (base / 'tools' / (pack + '.json')).exists():
+            with contextlib.redirect_stdout(io.StringIO()):
+                aos_agent_tools.add(str(base), pack, only=entry.get('only'))
+            lines.append('裝了 %s%s' % (pack, '（%s）' % '、'.join(entry['only']) if entry.get('only') else ''))
+        if entry.get('team'):
+            if member is None:
+                raise AgentError('Usage', '工具包 %s 要團隊設定，這個模板只能用 aos-team init 生' % pack)
+            _write_team_config(base, pack, member)
+
+
+def init_from_template(agent_dir, template, *, name=None, member=None, force=False):
+    """照模板生一個 agent 家；回要印的幾行。
+
+    member（團隊成員才給）：{"name", "team_dir", "project"（絕對路徑）, "mail_to", "members", "tz",
+    "model", "mounts"（相對團隊資料夾）, "tools"（多裝的包）}。
+    家已在：有 .aos-template.json 且 complete=false＝上次生到一半，補完；complete=true 且是團隊成員＝只更新
+    工具包的團隊設定與補裝新加的包（不動人格、記憶、access.json）；其他＝AlreadyExists。
+    """
+    from aos_team_format import TeamError, load_template
+    try:
+        folder, tpl = load_template(template)
+    except TeamError as e:
+        raise AgentError(e.code, e.msg)
+    base = Path(os.path.abspath(agent_dir))
+    name = name or (member or {}).get('name') or base.name
+    if tpl.get('team') and member is None:
+        raise AgentError('Usage', '模板 %s 是團隊用的（要名冊），請用 aos-team init' % template)
+    entries = list(tpl.get('tools', [])) + list((member or {}).get('tools', []))
+    marker = base / MARKER
+    lines = []
+    if os.path.lexists(base / 'info.json'):
+        try:
+            mark = aos_home.read_json(marker)
+        except aos_home.HomeError:
+            raise AgentError('AlreadyExists', '%s 已經是 agent 家（拒絕覆蓋）' % (base / 'info.json'))
+        if mark.get('complete') and member is None:
+            raise AgentError('AlreadyExists', '%s 已經照模板 %s 生好了' % (base, mark.get('template')))
+        lines.append('已在，%s' % ('補完上次沒生完的' if not mark.get('complete') else '更新工具設定'))
+    else:
+        if not force and base.is_dir() and any(base.iterdir()):
+            raise AgentError('NotEmpty', '%s 不是空資料夾，也不是 agent 家；確定要生在這裡就加 --force' % base)
+        for sub in ('prompts', 'tools', 'input', 'log'):
+            (base / sub).mkdir(parents=True, exist_ok=True)
+        aos_home.write_json(marker, {'template': template, 'member': name, 'complete': False})
+        aos_home.write_json(base / 'prompts/system.json', {'content': _system_text(folder, tpl, name, member)})
+        aos_home.write_json(base / 'state.json', {'input': 'input/'})
+        from aos_agent_access import write_access
+        write_access(base / 'access.json', _access(base, tpl, folder, member))
+        llm = dict({'model': 'default', 'timeout_ms': 125000}, **tpl.get('llm', {}))
+        if member is not None and member.get('model'):
+            llm['model'] = member['model']
+        llm['pool'] = 'llm'
+        aos_home.write_json(base / 'info.json', indent=2, obj={
+            '_metainfo': {'_type': 'llm_agent', '_version': 1}, 'system': 'prompts/system.json',
+            'history': 'prompts/history.json', 'tools': [], 'llm': llm, 'tool_pool': 'default',
+            'tick': {'pool': 'default', 'interval_ms': tpl.get('tick', {}).get('interval_ms', 1000)}})
+        lines.append('生了 %s（模板 %s，模型代號 %s）' % (base, template, llm['model']))
+    _install_tools(base, entries, member, lines)
+    import aos_agent_access
+    aos_agent_access.load(str(base))                      # access.json 要解得開、不蓋到信任資料
+    aos_home.write_json(marker, {'template': template, 'member': name, 'complete': True})
+    return lines

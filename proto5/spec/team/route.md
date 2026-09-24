@@ -23,7 +23,7 @@
 - 具名群組（`(?P<名>…)`）都要有值才算命中；`handoff` 裡字串的 `{名}` 換成群組的值（只換名字對得上的）。
 - **命中兩條以上**或**句子含否定詞**（`negations`，沒寫用上面那六個）＝不自己做、**落穿給領隊**（「不要導入 heartbeat」不能觸發導入）。
 - 沒命中＝落穿：原話當一封 `REQUEST` 從 `human` 寄給領隊（名冊第一個 `template: lead` 的成員；沒有領隊＝退 1、說清楚）。
-- 每次結果記一行進 `team/route.log`：`{"at", "text", "result": "tool"|"handoff"|"lead", "route": 名或 null, "why"}`。
+- 每次結果記一行進 `team/route.log`：`{"at", "text", "result": "tool"|"handoff"|"lead"|"none", "route": 名或 null, "why"}`（`none`＝該落穿但隊裡沒有領隊，退 1、代號 `NoLead`）。
 
 ## `do` 三種
 
@@ -40,5 +40,5 @@
 - `hit` 的每一句：**整個門房**的判決要是「這一條」（不能因為命中兩條、有否定詞而落穿）。
 - `miss` 的每一句：不能命中這一條。
 
-`aos-team route test [--file F]` 全跑、逐條印 PASS／FAIL，全過退 0；`aos-team route save F` 先跑同一套，全過才原子地換成 `team/routes.json`。
-人直接用文字編輯器改 `routes.json` 也行：`aos-team ask` 每次都先跑一遍例句，**沒全過就退 1、叫你跑 `route test`**，不會拿壞規則去判。
+`aos-team route test [--file F]` 全跑、逐條印 PASS／FAIL，全過退 0（沒給 `--file`＝測 `team/routes.json`，不在＝`NotFound`）；`aos-team route save F` 先跑同一套，全過才原子地換成 `team/routes.json`。
+人直接用文字編輯器改 `routes.json` 也行：`aos-team ask` 每次都先跑一遍例句，**沒全過就退 1（`RoutesFailed`）、叫你跑 `route test`**，不會拿壞規則去判。

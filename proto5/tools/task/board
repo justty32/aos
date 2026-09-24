@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""board：唯讀看任務表（ls 一行一張；show 一張的內容與最近幾筆經過）。"""
+import sys
+
+from _team import arg, fail, load_ticket, only_keys, run, tickets
+
+CLOSED = ('done', 'failed', 'cancelled')
+
+
+def line(t):
+    goal = str(t.get('goal', ''))
+    goal = goal if len(goal) <= 50 else goal[:50] + '…'
+    return '%s %s %s rev%s try%s/%s %s' % (t['id'], t.get('status'), t.get('assignee'), t.get('rev'),
+                                            t.get('attempt'), t.get('max_attempts'), goal)
+
+
+def main(args, cfg):
+    only_keys(args, ('op', 'task', 'all'))
+    op = arg(args, 'op', str, 'ls')
+    if op == 'ls':
+        show_all = arg(args, 'all', bool, False)
+        rows = [line(t) for t in tickets(cfg) if show_all or t.get('status') not in CLOSED]
+        return '\n'.join(rows) if rows else 'No open tasks.'
+    if op != 'show':
+        fail('BadArguments', 'op must be "ls" or "show"')
+    t = load_ticket(cfg, arg(args, 'task', str, required=True))
+    out = [line(t), 'opened by %s; workflow %s; facts %s' % (t.get('opened_by'), t.get('workflow'), t.get('facts')),
+           'waiting on: %s; deadline: %s' % (t.get('waiting_on'), t.get('deadline')), 'done_when:']
+    for i, it in enumerate(t.get('done_when', [])):
+        out.append('  %d. %s' % (i, ' '.join('%s=%s' % kv for kv in it.items())))
+    for v in (t.get('verify') or [])[-1:]:
+        out.append('last check (rev%s try%s): %s' % (v.get('rev'), v.get('attempt'), 'pass' if v.get('pass') else 'FAIL'))
+    for h in (t.get('history') or [])[-6:]:
+        note = (' - ' + str(h['note'])[:80]) if h.get('note') else ''
+        out.append('  %s %s %s->%s%s' % (str(h.get('at', ''))[5:16], h.get('event'), h.get('from'), h.get('to'), note))
+    return '\n'.join(out)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

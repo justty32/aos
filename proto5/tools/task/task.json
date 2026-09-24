@@ -1,0 +1,80 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "handoff",
+      "description": "Hand one piece of work to a team mate. The postman opens a task (t-NNNN) and sends it; you get mail when it is done, blocked or failed.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "assignee": {"type": "string", "description": "Team mate name"},
+          "workflow": {"type": "string", "description": "Workflow entry file to follow"},
+          "goal": {"type": "string", "description": "One sentence: what done looks like"},
+          "facts": {"type": "string", "description": "Facts file or short facts"},
+          "done_when": {
+            "type": "array",
+            "description": "Checks run after DONE: file_exists{path}, table_filled{path}, check{name,args}, judge{text} (judge = reviewer decides)",
+            "items": {"type": "object", "properties": {"kind": {"type": "string", "enum": ["file_exists", "table_filled", "check", "judge"]}}, "required": ["kind"]}
+          },
+          "max_attempts": {"type": "integer", "minimum": 1, "maximum": 10},
+          "deadline_minutes": {"type": "integer", "minimum": 1}
+        },
+        "required": ["assignee", "workflow", "goal", "done_when"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/handoff"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "board",
+      "description": "Read the team task board. op=ls lists open tasks (all=true includes finished); op=show shows one task.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["ls", "show"]},
+          "task": {"type": "string", "description": "Task id for show"},
+          "all": {"type": "boolean"}
+        }
+      }
+    },
+    "_meta": {"argv": ["tools/task/board"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "review_result",
+      "description": "Answer a review task: one item per listed point, each with pass and a one-line why.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task": {"type": "string", "description": "Review task id, like t-0001.r1"},
+          "items": {
+            "type": "array",
+            "items": {"type": "object", "properties": {"i": {"type": "integer"}, "pass": {"type": "boolean"}, "why": {"type": "string"}}, "required": ["i", "pass", "why"]}
+          }
+        },
+        "required": ["task", "items"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/review_result"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "ask_human",
+      "description": "Ask the user something only they can decide. The answer arrives later as new mail; end your turn after asking.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "question": {"type": "string"},
+          "options": {"type": "array", "items": {"type": "string"}},
+          "default": {"type": "string"},
+          "reply_to": {"type": "string", "description": "Task id this is about"}
+        },
+        "required": ["question"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/ask_human"]}
+  }
+]
