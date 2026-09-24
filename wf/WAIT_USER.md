@@ -46,7 +46,7 @@
     - **priority-and-shared-cpu 提案 J**（[報告](../proto5/notes/2026-09-24-priority-and-shared-cpu/README.md)，共 6 題）：優先級①只做到 aos 這層、模型伺服器看端點 ②先用 (c) 專屬池（零改動） ③多級優先 (a) 先不要；共用 cpu ①指 (v) 某支工具給多個 agent 排隊共用 ②工具檔加 `_pool` 一欄可以 ③閒著的 agent 每格被叫醒列進 proto5-2 規模題，這版不做。
     - **tools-base 六題**（[報告](../proto5/notes/2026-09-24-tools-base.md) 尾節「要使用者拍的」，共 6 題，維持現況＝預設）：①工作根目錄維持 `config.json` 的 `root`（`<家>/workspace/`） ②bash 暫不加白名單／沙盒 ③結束時收掉背景行程（要長駐另設計） ④給模型的描述維持英文 ⑤跟 pi 還差的能力（多段 edit、長行續讀、bash 存檔、read 圖片）先不補 ⑥`init --tools base`／`tools ls`／`tools remove` 先不做。
 22. **N 隊 cli-agents 提案五題**（[報告](../proto5/notes/2026-09-24-cli-agents/README.md)，2026-09-24 裁決，全部照預設）：①一般用 cpu 池方案 ②第一版牢外靠保守旗標、跳過權限旗標只准牢裡 ③花錢的池另開一個 kernel 家（claude 一個、codex 一個） ④接續對話從上次成功分岔 ⑤不讓它們讀 `~/.claude`／`CLAUDE.md`／codex 設定。
-23. **P 隊 daemon-split-review**（[報告](../proto5/notes/2026-09-24-daemon-split-review/README.md)，2026-09-24 裁決）：撤「daemon 要 sudo 切使用者」這條理由並寫進 daemon 規範（已做，7e60aa8）；「開機合一、家不合一」＋帳本換 sqlite **已做**（[one-boot](../proto5/notes/2026-09-24-one-boot/README.md)：`aos up`／`aos down`、daemon 開 tick、kernel cpu 拿掉；報告 §9 有 3 題附預設）；隔離第一版只有工具進牢、CLI agent 先不進；現在不配 subuid。
+23. **P 隊 daemon-split-review**（[報告](../proto5/notes/2026-09-24-daemon-split-review/README.md)，2026-09-24 裁決）：撤「daemon 要 sudo 切使用者」這條理由並寫進 daemon 規範（已做，7e60aa8）；「開機合一、家不合一」＋帳本換 sqlite **已做**（[one-boot](../proto5/notes/2026-09-24-one-boot/README.md)：`aos up`／`aos down`、daemon 開 tick、kernel cpu 拿掉；報告 §9 三題已裁決，見 A.36）；隔離第一版只有工具進牢、CLI agent 先不進；現在不配 subuid。
 24. **K 隊「等模型的 agent 不空轉」提案**（[報告](../proto5-2/notes/2026-09-24-idle-wait/README.md)，2026-09-24 裁決）：方案選 (b) 停車＋喚醒（退出碼 102），閒置沒輸入的也停車，第二步加 kernel 喚醒指令；`park_ms` 300 秒；`start` 拒絕 `done_exit 102` 的 kernel 照預設。
 25. **M 隊工具大開發計畫**（[報告](../proto5/notes/2026-09-24-tool-era/README.md)，2026-09-24 裁決）：加第六軸「邊界」；隊形三 agent＋四機械幫手；第一波等 L 牆合上再開（已合，T1／T3 已開）；及格線照 `plan.md`。
 26. **O 隊 cli-agents 階 0**（[報告](../proto5/notes/2026-09-24-cli-agents/stage0.md)，2026-09-24 裁決）：claude 範本預設**不帶** `--restricted`（能跑程式；使用者選的不是預設選項）；其他四題照預設——範本放 `proto5/templates/`、K2 家 `check` 報沒 llm 池先忽略、codex 登入檔用符號連結、上限 0.5 美元／8 輪／30 分。
@@ -80,8 +80,8 @@
     - 暫停的 agent（連敗暫停／手動暫停）不停車，照舊每格輪詢——門是外人開的，kernel 不知道何時開。
     - `ls --json` 留在第 2 版，只加 `parked` 鍵，不升版。
     翻案就回這條。
-33. **工具大開發時代第一波收尾（T5）：一題待拍＋十條代裁**（[報告](../proto5/notes/2026-09-24-tool-era/t5/README.md) §5、§6）：
-    - **待拍**：工人每問一次模型都送整份工具表（六包約 11,000 字元≈2,800 token；一件導入 17～25 次＝5～7 萬 token，是資源軸 2 分的一半原因）。要不要讓派工信決定「這件裝哪幾包」、或拆成「導入工人／改稿工人」兩種模板？**預設：先不改**，列進第二波 A 隊，跟「照事實機械填佔位」的工具一起提案。
+33. **工具大開發時代第一波收尾（T5）：已裁決＋十條代裁**（[報告](../proto5/notes/2026-09-24-tool-era/t5/README.md) §5、§6）：
+    - **已裁決＋已做**：工人每問一次模型都送整份工具表（六包約 11,000 字元≈2,800 token；一件導入 17～25 次＝5～7 萬 token，是資源軸 2 分的一半原因）——使用者裁決「先不改，併進第二波 A 隊」；第二波 A 隊已做（見 34：拆模板、新增導入工人 `importer`，只裝 10 支工具，例子 1 從 17～25 次降到 6～7 次）。
     - 代裁（翻案就回這條，細節在報告 §5）：寄壓縮申請的工具叫 `compact_me` 放 task 包（不讓 `team_say` 帶 kind），reviewer 不給；筆記掛載做成模板旗標 `notes: true`，舊家重跑 init 只補這一格；事件一律在成員家 `log/`；門房 `run` 會換 `{群組}` 但子命令寫死、群組值不准當選項；`examples/routes.json` 的導入規則只放通用檢查（試跑的事實檢查放腳本）；`wf_doc` 讀 IMPORT.md 開頭先講「腳本＝哪支工具」；facts.json 比 plan 多給專案名、語言、直接做／先問、回覆風格、頂層目錄、導入日期；score 的起點推定與「信照時間窗、郵差終局通知例外」；`aos-team ls` 多兩行郵差／心跳（`--json` 不變）；例子 1 正式數字用 one-boot 之後那 3 次。
     - 真跑結果（不用拍、給你看）：導入 3/3、改寫＋審查 2/2、心跳 1/1 都 done；新手試玩 4/4/4/3/4 → 5/4/4/4/4（**模型扮的新手只是代理，你要自己照 [教程 08](../proto5/tutorials/08-team.md) 走一遍**）。
 34. **工具大開發時代第二波 A 隊（造工具）：一題待拍＋代裁**（[報告](../proto5/notes/2026-09-24-tool-era/w2a/README.md) §5、§6；33 的「工具表瘦身」由這條接手）：
@@ -92,6 +92,11 @@
     - **待拍**：團隊的邊界軸要不要把「郵差替大家投信到別人的 `input/`」算成整隊的扣分？算＝B 3；只看會想的成員能寫哪裡＝B 4（成員只寫得到專案、自己的寄件格和筆記，逃逸測試 19 條全擋）。**預設：只看成員（B＝4）**，郵差是寫死的機械員、讀信時又再驗一次；照嚴的算，任何有郵差的團隊都上不了 3。
     - 代裁（翻案就回這條，細節在報告 §8）：真跑場地改用 `~/tmp/wf-try-b/`（避開 A 隊同時真跑）；`cmd_ok` 白名單放 `team.json` 頂層由人寫、單子上的 `run` 要整串對上、逾時不能更長；`cmd_ok` 與門房 `tool` 規則預設專案唯讀（門房要寫得明寫 `"project": "rw"`）；純讀的檢查器（file_exists、table_filled、contains、wf_residue）留在牢外；假信頭只擋成員、一律退件不偷改字；recall／context 放進 notes 包；`mem` 只掛自己家的 `prompts/`；board 唯讀掛給每個成員（含 importer）；commit 署名照你規定的 Fable 5.1。
     - 真跑結果（不用拍、給你看）：例子 1 在關牢下跑 10/10 過（15～29 次、19～40 萬 token、122～224 秒，領隊 0 次）、例子 2 2/2、例子 3 1/1；六軸 L2 S4 R2 F4 H4 B4。新手試玩 wall-r1 4/4/3/4/4（**模型扮的新手只是代理，你要自己照 [教程 08](../proto5/tutorials/08-team.md) 第 9 節走一遍**）。
+36. **P 隊 one-boot 報告三題（2026-09-24 已裁決）**（[報告](../proto5/notes/2026-09-24-one-boot/README.md) §9）：
+    - `proto5/cli/aos` 跟 repo 的 C++ 主程式 `aos` 同名（PATH 把 `proto5/cli` 放前面會蓋過 C++ 那支）→ **保留 `aos`**（跟 C++ 的 aos 同名，接受；C++ 那支平常在 `build/`，不在 PATH）。
+    - 新單觸發沒有最小間隔（忙的時候 kernel 一格接一格，每格一次 Python 起動）→ 照預設不設，等上千顆 cpu 再量。
+    - 機器崩過之後 `aos down` 印 `not running`、但帳本還寫 `running`（daemon 不在，沒人跑 halt）→ 照預設不管，下次 `aos up` 會接上。
+    翻案就回這條。
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
