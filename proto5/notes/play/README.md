@@ -19,3 +19,4 @@
 | one-boot | 2026-09-24 | `aos up`／`aos down` 合一開關機之後：只拿 README＋教程 01、02、06 照抄（開機、kernel 跑工作、手寫 agent 家、第二個 kernel 共用 daemon 與故意撞名）、README 五分鐘 agent、daemon 閒時與忙時各 kill -9 再 `aos up` | [Opus](2026-09-24-one-boot-opus.md) | Opus 5/4/4/4/4；七件已修：[one-boot 追加](../2026-09-24-one-boot/README.md#追加試玩七件) |
 | team-r1 | 2026-09-24 | 工具大開發時代第一波收尾：只拿 README＋教程 08，建三人團隊、丟一件事、逐行說 `aos-team mail` 每步誰做、門房、score（模型扮的新手只是代理，使用者要自己看一遍） | [Opus](2026-09-24-team-r1-opus.md)、[任務書](2026-09-24-team-r1-task.md) | Opus 4/4/4/3/4 |
 | team-r2 | 2026-09-24 | team-r1 修正＋one-boot 之後：同一份任務書，另一個乾淨的 Opus；多試「不要看單子」看領隊回信（模型扮的新手只是代理） | [Opus](2026-09-24-team-r2-opus.md)、[任務書](2026-09-24-team-r1-task.md) | Opus 5/4/4/4/4 |
+| wall-r1 | 2026-09-24 | 第二波 B 隊（牆接線）：只拿 README＋教程 08 第 9 節＋wall.md，不開 kernel：三個成員的 `access ls`、手放兩封冒名信讓郵差退件、`team.json` 加 `cmd_ok` 白名單與故意寫錯、「工人偷看領隊人格會怎樣」（模型扮的新手只是代理） | [Opus](2026-09-24-wall-r1-opus.md) | Opus 4/4/3/4/4；照它改的見 [w2b 報告](../2026-09-24-tool-era/w2b/README.md) |

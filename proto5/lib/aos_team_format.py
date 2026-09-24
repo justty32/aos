@@ -510,14 +510,15 @@ def read_outbox_file(path, roster):
     """
     path = Path(path)
     sender = path.parent.name
-    where = str(path)
+    # 退信會寄回給寄件人（在牢裡看不到主機路徑）：訊息裡只寫團隊資料夾裡的相對位置（wall-r1 試玩）
+    where = 'outbox/%s/%s' % (sender, path.name)
     if sender not in (HUMAN, BEAT) and sender not in roster['members']:
         bad(where, '寄件人 %s 不在名冊裡' % sender, 'NotSender')
     stem = path.name[:-5] if path.name.endswith('.json') else path.name
     m = OUTBOX_ID.match(stem)
     if not m or m.group(1) != sender:
         bad(where, '檔名要是 <epoch ns>-<pid>-%s.json' % sender, 'BadId')
-    obj = read_json(path)
+    obj = read_json(path, where)
     _obj(obj, where)
     if obj.get('id') != stem:
         bad(where + '.id', 'id 要跟檔名一樣（%s）' % stem, 'BadId')
