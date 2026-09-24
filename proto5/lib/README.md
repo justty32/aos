@@ -98,7 +98,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # REBASE_COUNT_PLACEHOLDER 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2370 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -497,10 +497,10 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # REBASE_COUNT_PLACEHOLDER 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2370 條；repo 根目錄
 ```
 
-共 REBASE_FILES_PLACEHOLDER 個測試檔、REBASE_COUNT_PLACEHOLDER 條（第二波 C 隊在第二波 B 隊之上實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
+共 86 個測試檔、2370 條（第二波 C 隊在第二波 B 隊之上實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
