@@ -7,6 +7,7 @@
 純標準庫；不叫模型。
 """
 import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -93,7 +94,11 @@ class Layout:
         return self.wait_user / (qid + '.json')
 
     def lock(self, name):
-        return self.locks / (name + '.json')
+        """鎖檔（09-24 astra M2 修）：name 可以含 `/`、中文（_check_lock_name 只擋 NUL、開頭 /、.. 段），
+        直接拿來當檔名會撞「要先建子目錄」「.hidden 被 json_files 排除」「檔名位元組長度上限」三個坑；
+        改成固定長度、非隱藏的平面檔名（sha256 十六進位），原名存在 JSON 內容裡（on_lock 寫、describe 讀）。"""
+        h = hashlib.sha256(name.encode('utf-8')).hexdigest()
+        return self.locks / (h + '.json')
 
     def skeleton(self, names):
         """init 要建的資料夾（不含成員的家）。"""

@@ -97,6 +97,10 @@
     - 新單觸發沒有最小間隔（忙的時候 kernel 一格接一格，每格一次 Python 起動）→ 照預設不設，等上千顆 cpu 再量。
     - 機器崩過之後 `aos down` 印 `not running`、但帳本還寫 `running`（daemon 不在，沒人跑 halt）→ 照預設不管，下次 `aos up` 會接上。
     翻案就回這條。
+37. **工具大開發時代第二波 C 隊（申請類）：一題待拍＋六條代裁**（[報告](../proto5/notes/2026-09-24-tool-era/w2c/README.md) §4、§5）：
+    - **待拍**：新加的兩種申請（`access_request`、`persona_propose`）借用既有的 `kind: ask`，答案跟一般問題混在 `aos-team wait ls` 裡。要不要加個固定前綴（例如 `[access_request]`）分辨？**預設：先不改**，問句本文已經寫清楚要跑的指令，真的常常翻不出來再加。
+    - 代裁（翻案就回這條，細節在報告 §4）：領隊派「改寫 X.md 更白話」這類單忘記放 `wf_lint_strict`，選在 `handoff` 工具層機械補、不改門房規則（A 隊地盤，改動範圍較大）；`access_request`／`persona_propose` 不開新申請種類、借用 `kind: ask`；鎖（`lock`）的 `acquire／release／ls` 全部非同步（模型端沒有同步等待）；鎖逾時只看時間，不跨查 agent 還在不在跑；人格只做 show／set／append，不做結構化分段；不因為模型收到「同意」後自己嘗試跑指令（被牢擋住、老實回 BLOCKED）就改問句措辭——這是牢起作用的證據，不是漏洞。
+    - 真跑結果（不用拍、給你看）：四種申請（`access_request`、`persona_propose`、`lock`、`routine_propose`）各真跑一次，都走完「模型寄申請→人 answer→生效」（lock 例外，設計上不經問人）；`routine_propose` 批准後心跳真的派出任務、worker 做完、檔案真的寫出來。
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 

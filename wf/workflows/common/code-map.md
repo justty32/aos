@@ -129,6 +129,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_agent_context` | 送給模型的東西多大：`aos-agent context` 與 `talk /context` 共用的字數／token 粗估 |
 | `aos_agent_compact` | 機械壓縮記憶：`aos-agent compact`、tick idle 自動壓縮、compact 申請、`history --archive` |
 | `aos_agent_notes` | `aos-agent notes ls／show`：讀 `tools/notes/` 寫的 `wf-table/1` 筆記檔 |
+| `aos_agent_persona` | `aos-agent persona show／set／append`：人格是信任資料，讀寫 `prompts/system.json`，不叫模型不進牢 |
 | `aos_jail` | `aos-jail`：組 bwrap 參數並 exec |
 | `aos_json_cli` | `aos-json`：人用的 JSON Pointer 改檔（get／set／del／append／merge），`--check-directives` 先驗才寫 |
 | `aos_team_format` | 團隊共用格式（資料夾佈局、`team.json`、信、申請、任務單、問題讀驗）與共用 id／時間／寫檔 |
@@ -145,6 +146,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_team_verify` | 驗收員：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞；`wf_lint_strict` 與 `cmd_ok` 經 aos-jail 關牢（專案唯讀） |
 | `aos_team_beat` | 心跳：`aos-team beat`／`routine`，照 `team/routines.json` 算誰到期、以開單方式派出 |
 | `aos_team_score` | `aos-team score`：把六軸表能自動量的部分讀紀錄填好，只讀不叫模型 |
+| `aos_team_lock` | 短期獨佔鎖：`lock` 工具與 `aos-team lock`，`team/locks/<名>.json`，acquire／release／ls 全非同步，逾時自動放 |
 
 ---
 

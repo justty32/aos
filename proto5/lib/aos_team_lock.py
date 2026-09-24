@@ -85,7 +85,9 @@ def on_lock(lay, roster, req):
     """
     op, name, why, ttl = check_lock(req)
     lay.locks.mkdir(parents=True, exist_ok=True)
-    now = req.get('at') or now_iso(roster.get('tz'))
+    # 安全考量（astra 審查找到）：跟 on_ask／on_routine 不一樣，這裡不能信 req['at']——它算進 expires_at，
+    # 模型能自己往 outbox 塞一份帶未來時刻 at 的申請，把鎖的到期日推到很遠；一律用郵差自己的時鐘。
+    now = now_iso(roster.get('tz'))
     if op == 'ls':
         lines = [describe(read_json(p)) for p in json_files(lay.locks)]
         text = '\n'.join(lines) if lines else '沒有任何鎖'

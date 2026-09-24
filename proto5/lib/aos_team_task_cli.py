@@ -38,7 +38,9 @@ def show(t):
     if t.get('deadline'):
         out.append('期限：%s' % t['deadline'])
     out.append('驗收：')
-    out += ['  %d. %s' % (i, describe_item(it)) for i, it in enumerate(t['done_when'])]
+    # 審查子單保留父單原編號，不是這裡從 0 重編（09-24 astra 審查 M5：aos-team task show 這條之前漏改）
+    indices = (t.get('review_of') or {}).get('indices')
+    out += ['  %d. %s' % (indices[i] if indices else i, describe_item(it)) for i, it in enumerate(t['done_when'])]
     for v in t.get('verify') or []:
         out.append('驗收結果 rev%s 第%s次：%s' % (v.get('rev'), v.get('attempt'), '過' if v.get('pass') else '不過'))
         for r in v.get('results') or []:

@@ -115,7 +115,7 @@
     "type": "function",
     "function": {
       "name": "access_request",
-      "description": "Ask the user to mount one more folder or turn networking on for you. You cannot edit access.json yourself; the answer arrives as new mail.",
+      "description": "Ask the user to mount one more folder for you (folders only, not networking). You cannot edit access.json yourself; the answer arrives as new mail.",
       "parameters": {
         "type": "object",
         "properties": {
