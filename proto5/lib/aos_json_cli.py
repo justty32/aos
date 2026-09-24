@@ -83,6 +83,24 @@ def run(argv, stdin=None):
     if os.path.isdir(full):
         raise AgentError('IsADirectory', '%s 是資料夾' % path)
     root = os.path.dirname(full)
+    if op == 'get':
+        return _apply(op, path, full, root, tokens, value, opts)
+    try:
+        lock = _files.locked(full)
+        lock.__enter__()
+    except OSError as e:
+        raise AgentError('WriteFailed', '鎖不了 %s 所在的資料夾：%s' % (path, e.strerror or e))
+    try:
+        return _apply(op, path, full, root, tokens, value, opts)
+    finally:
+        lock.__exit__(None, None, None)
+
+
+def _apply(op, path, full, root, tokens, value, opts):
+    """讀、比 expect_sha、改、寫；寫入時整段在資料夾鎖裡（跟 json_edit 同一把，審查 M2）。"""
+    exists = os.path.exists(full)
+    if not exists and not (op == 'set' and not tokens):
+        raise AgentError('NotFound', '沒有這個檔：%s' % path)
     text, data = _files.read_text(root, full, path) if exists else ('', b'')
     doc = J.parse_doc(text, path) if exists else None
     if op == 'get':
@@ -95,8 +113,8 @@ def run(argv, stdin=None):
     if exists and json.dumps(new) == json.dumps(doc):
         return '沒改：%s %s 已經是這個值（sha=%s）' % (path, J.show(tokens), _files.sha(data))
     out = J.dumps(new, J.style_of(text) if text.strip() else NEW_STYLE)
-    os.makedirs(root, exist_ok=True)
     try:
+        os.makedirs(root, exist_ok=True)
         _common.write_atomic(root, full, out, path)
     except OSError as e:
         raise AgentError('WriteFailed', '寫不進 %s：%s' % (path, e.strerror or e))
@@ -118,6 +136,9 @@ def main(argv=None):
         return 1
     except _common.ToolError as e:
         print('aos-json: %s: %s' % (e.code, e.message), file=sys.stderr)
+        return 1
+    except OSError as e:          # 漏網的檔案錯誤也只印一行（審查 M6）
+        print('aos-json: IOFailed: %s' % e, file=sys.stderr)
         return 1
     sys.stdout.write(out + '\n')
     return 0

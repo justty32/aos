@@ -29,6 +29,14 @@ def main(args, root):
     full = resolve(root, path, must_exist=not create)
     if os.path.isdir(full):
         fail('IsADirectory', '%s is a directory' % path)
+    if op == 'get':
+        return edit(root, full, path, op, tokens, args, expect)
+    _files.guard_write(root, full, path)
+    with _files.locked(full):
+        return edit(root, full, path, op, tokens, args, expect)
+
+
+def edit(root, full, path, op, tokens, args, expect):
     if os.path.lexists(full):
         text, data = _files.read_text(root, full, path)
         doc = J.parse_doc(text, path)
@@ -41,7 +49,6 @@ def main(args, root):
                 '\n...(cut at 50 KB; use a deeper pointer)'
         return '%s\nsha=%s (pass it as expect_sha when you change this file)' % (shown, _files.sha(data))
     _files.check_sha(expect, data, path)
-    _files.guard_write(root, full, path)
     new = J.apply(doc, op, tokens, args.get('value'))
     out = J.dumps(new, J.style_of(text) if text.strip() else NEW_STYLE)
     if data and json.dumps(new) == json.dumps(doc):

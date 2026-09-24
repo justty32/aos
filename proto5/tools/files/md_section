@@ -52,6 +52,14 @@ def main(args, root):
     if op in ('replace', 'append_item', 'remove_item') and text is None:
         fail('BadArguments', 'op %s needs "text"' % op)
     full = resolve(root, path)
+    if op in ('list', 'get'):
+        return edit(root, full, path, op, heading, text, expect)
+    _files.guard_write(root, full, path)
+    with _files.locked(full):
+        return edit(root, full, path, op, heading, text, expect)
+
+
+def edit(root, full, path, op, heading, text, expect):
     content, data = _files.read_text(root, full, path)
     lines = M.split_lines(content)
     secs = M.sections(lines)
@@ -66,7 +74,6 @@ def main(args, root):
             shown = shown.encode('utf-8')[:MAX_SHOW].decode('utf-8', 'ignore') + '\n...(cut at 50 KB)'
         return '%s\nsha=%s (pass it as expect_sha when you change this file)' % (shown.rstrip('\n'), digest)
     _files.check_sha(expect, data, path)
-    _files.guard_write(root, full, path)
     nl = M.newline_of(lines)
     if lines and not lines[-1].endswith(('\n', '\r')):
         lines[-1] += nl
@@ -85,11 +92,9 @@ def main(args, root):
         item = one_item(text)
         mine = M.items(lines, sec.start + 1, own_end(sec, secs))
         if op == 'append_item':
-            if not M.ITEM.match(item):
-                fail('BadItem', 'text must be one list item starting with "- ", e.g. "- [work] doing X → next Y"')
-            if mine and all(M.WF_ITEM.match(b) for _, b in mine) and not M.WF_ITEM.match(item):
-                fail('BadItem', 'items in %r use the format "- [workflow] status → next step" (e.g. %r); '
-                     'write yours the same way' % (sec.heading, mine[-1][1]))
+            if not M.WF_ITEM.match(item):
+                fail('BadItem', 'text must be one list item in the format "- [workflow] status → next step", '
+                     'e.g. "- [dev] writing tests → run all tests"')
             if mine:
                 at = mine[-1][0] + 1
                 while at < own_end(sec, secs) and lines[at].strip() and lines[at][:1] in ' \t' \
@@ -105,6 +110,8 @@ def main(args, root):
             new, what = lines[:at] + add + lines[at:], 'added an item to %r (line %d)' % (sec.heading, at + 1)
         else:
             want = item.strip()
+            if not M.WF_ITEM.match(want if want.startswith('- ') else '- ' + want):
+                fail('BadItem', 'text must be the item to remove, in the format "- [workflow] status → next step"')
             hits = [(i, b) for i, b in mine if b.strip() == want or b.strip()[2:].strip() == want]
             if not hits:
                 listed = '; '.join(b.strip() for _, b in mine[:20]) or '(no items)'

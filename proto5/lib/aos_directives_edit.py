@@ -41,9 +41,11 @@ def system_path(home):
     return Path(home, os.path.expanduser(value)).absolute()
 
 
-def read_persona(path, for_write=False):
-    """回 (整個物件, content)。檔不在＝({}, '')。"""
+def read_persona(path, for_write=False, missing_ok=True):
+    """回 (整個物件, content)。檔不在＝({}, '')（missing_ok=False＝NotFound，讀舊版本用）。"""
     if not path.exists():
+        if not missing_ok:
+            raise AgentError('NotFound', '版本檔 %s 不在了（可能剛被別的指令淘汰）' % path)
         return {}, ''
     try:
         obj = aos_home.read_json(path)
@@ -88,11 +90,14 @@ def save_version(path, obj):
 
 def write_persona(path, obj, content):
     """先存舊版、再整份換掉；回版本 id（原本沒檔＝None）。"""
-    vid = save_version(path, obj)
-    new = dict(obj) if obj else {}
-    new['content'] = content
-    path.parent.mkdir(parents=True, exist_ok=True)
-    aos_home.write_json(path, new, indent=2)
+    try:
+        vid = save_version(path, obj)
+        new = dict(obj) if obj else {}
+        new['content'] = content
+        path.parent.mkdir(parents=True, exist_ok=True)
+        aos_home.write_json(path, new, indent=2)
+    except OSError as e:
+        raise AgentError('WriteFailed', '寫不進 %s：%s' % (path, e.strerror or e))
     return vid
 
 
@@ -178,20 +183,29 @@ def cmd_show(home, spec=None):
 
 
 def _edit(home, fn):
-    """鎖內：讀、算新內容、存舊版、寫。fn(content) → (新內容, 做了什麼)。"""
-    with info_lock(home):
+    """鎖內：讀、算新內容、存舊版、寫。fn(content, path) → (新內容, 做了什麼)。
+    先在鎖外驗一次家（沒 info.json＝NotAnAgent，不會去建鎖檔），鎖內再重算一次人格路徑。"""
+    system_path(home)
+    try:
+        lock = info_lock(home)
+        lock.__enter__()
+    except OSError as e:
+        raise AgentError('WriteFailed', '拿不到管理鎖 %s/.admin.lock：%s' % (home, e.strerror or e))
+    try:
         path = system_path(home)
         obj, content = read_persona(path, for_write=True)
-        new, what = fn(content)
+        new, what = fn(content, path)
         if new == content:
             return '沒改：%s（內容一樣，沒寫檔）' % what
         vid = write_persona(path, obj, new)
+    finally:
+        lock.__exit__(None, None, None)
     kept = '；舊的存成版本 %s（aos-directives revert %s 可還原）' % (vid, vid) if vid else ''
     return '%s → %s%s\n%s' % (what, path, kept, LAST)
 
 
 def cmd_set(home, spec, text):
-    def fn(content):
+    def fn(content, _path):
         lines, secs = parse(content)
         sec = pick(lines, secs, spec)
         return ''.join(replace_body(lines, secs, sec, text)), '改了%s的內容' % label(sec)
@@ -203,7 +217,7 @@ def cmd_add(home, heading, text, after=None):
     if level is None or not title:
         raise AgentError('Usage', '新節的標題要以 # 開頭，例如 "## 回話規則"')
 
-    def fn(content):
+    def fn(content, _path):
         lines, secs = parse(content)
         if M.find(secs, heading):
             raise AgentError('AlreadyExists', '已經有 %s 這節；要改內容用 aos-directives set' % heading)
@@ -224,7 +238,7 @@ def cmd_add(home, heading, text, after=None):
 
 
 def cmd_rm(home, spec):
-    def fn(content):
+    def fn(content, _path):
         lines, secs = parse(content)
         sec = pick(lines, secs, spec)
         if sec == 'prelude':
@@ -237,12 +251,15 @@ def cmd_export(home, out=None):
     _, content = read_persona(system_path(home))
     if out is None:
         return content
-    Path(out).write_text(content, encoding='utf-8')
+    try:
+        Path(out).write_text(content, encoding='utf-8')
+    except OSError as e:
+        raise AgentError('WriteFailed', '寫不進 %s：%s' % (out, e.strerror or e))
     return '人格寫到 %s（%d 字）；用文字編輯器改完，aos-directives import %s 放回去' % (out, len(content), out)
 
 
 def cmd_import(home, src, text):
-    return _edit(home, lambda content: (text, '整份人格換成 %s 的內容' % src))
+    return _edit(home, lambda content, _path: (text, '整份人格換成 %s 的內容' % src))
 
 
 def cmd_versions(home):
@@ -262,15 +279,17 @@ def cmd_versions(home):
 
 
 def cmd_revert(home, vid=None):
-    path = system_path(home)
-    vs = versions(path)
-    if not vs:
-        raise AgentError('NotFound', '%s 沒有舊版本可以還原' % path)
-    chosen = dict(vs).get(vid) if vid else vs[0][1]
-    if chosen is None:
-        raise AgentError('NotFound', '沒有版本 %s；有：%s' % (vid, '、'.join(v for v, _ in vs)))
-    _, old = read_persona(chosen)
-    return _edit(home, lambda content: (old, '還原成版本 %s' % (vid or vs[0][0])))
+    """選版、讀版、存現在的、還原：整段在同一把鎖裡（審查 M7）。"""
+    def fn(content, path):
+        vs = versions(path)
+        if not vs:
+            raise AgentError('NotFound', '%s 沒有舊版本可以還原' % path)
+        chosen = vid or vs[0][0]
+        if chosen not in dict(vs):
+            raise AgentError('NotFound', '沒有版本 %s；有：%s' % (chosen, '、'.join(v for v, _ in vs)))
+        _, old = read_persona(dict(vs)[chosen], missing_ok=False)
+        return old, '還原成版本 %s' % chosen
+    return _edit(home, fn)
 
 
 # ------------------------------------------------------------ resolve／check ----
@@ -443,6 +462,9 @@ def main(argv=None):
         return 2 if e.args[0] else 0
     except (AgentError, aos_home.HomeError) as e:
         print('aos-directives: %s: %s' % (e.code, e.msg), file=sys.stderr)
+        return 1
+    except OSError as e:          # 漏網的檔案錯誤也只印一行（審查 M6）
+        print('aos-directives: IOFailed: %s' % e, file=sys.stderr)
         return 1
     if out:
         sys.stdout.write(out if out.endswith('\n') else out + '\n')
