@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import aos_agent
 from _kernel_util import KernelCase, CLI, PY, read_json, wait_for
+from test_jail import bwrap_works
 
 ARGUMENTS = '{"文字":"原樣往返"}\n'
 CALL = {'id': 'echo-1', 'type': 'function',
@@ -48,8 +49,14 @@ class AgentIntegrationTests(KernelCase):
                            'llm': {'model': 'fake'}, 'tools': ['tools.json'],
                            'tick': {'interval_ms': 5}}
         self.write(self.base / 'info.json', self.agent_info)
-        self.write(self.base / 'tools.json', [{'type': 'function', 'function': {'name': 'echo'},
-                                             '_meta': {'argv': ['sh', '-c', 'cat']}}])
+        echo = {'type': 'function', 'function': {'name': 'echo'}, '_meta': {'argv': ['sh', '-c', 'cat']}}
+        # 有工具的家要有 access.json（09-24 裁決 4）：有 bwrap 就真的關牢跑；這台沒 bwrap 才明寫 _jail: false
+        if bwrap_works():
+            (self.base / 'workspace').mkdir()
+            self.write(self.base / 'access.json', {'mounts': {'ws': 'workspace'}, 'cwd': 'ws'})
+        else:
+            echo['_jail'] = False
+        self.write(self.base / 'tools.json', [echo])
         config = self.root / 'llm.json'
         self.write(config, {'_metainfo': {'_type': 'llm_config', '_version': 1}, 'models': {
             'fake': {'endpoint': 'http://127.0.0.1:%d/v1' % self.server.server_port,

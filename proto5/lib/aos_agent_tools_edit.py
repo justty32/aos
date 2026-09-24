@@ -94,7 +94,7 @@ def rel(base, path):
 def access_state(base):
     """回 (access 檔路徑或 None, 錯誤白話或 None)。
 
-    沒明寫 access 欄、預設的 access.json 不在＝(None, None)，工具不關牢；
+    沒明寫 access 欄、預設的 access.json 不在＝(None, None)：要關牢的工具不送（NoAccess）；
     info.json 明寫的 access 檔不在、或 access 欄本身壞了＝錯誤（送件時也會是 AccessInvalid）。
     """
     from aos_agent_access import configured_path   # A2 的模組；延遲載入
@@ -162,7 +162,7 @@ def ls(agent_dir, as_json=False):
            [(r['name'], r['original'] if r['original'] != r['name'] else '-',
              rel(base, r['file']), mark[r['jail']], str(r['pool'])) for r in rows])
     where = (('關牢設定有錯（關牢欄印「錯」，這批要關牢的工具都跑不起來）：%s' % access_error) if access_error
-             else ('關牢照 %s' % access) if access else '沒有 access 檔：工具不關牢')
+             else ('關牢照 %s' % access) if access else '沒有 access 檔：要關牢的工具不會送（NoAccess），先 aos-agent access set')
     print('%d 個工具；%s' % (len(rows), where))
     return 0
 

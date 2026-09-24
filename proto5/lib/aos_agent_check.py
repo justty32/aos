@@ -105,9 +105,12 @@ def access_checks(checks, base, env):
         checks.report('bad', 'access', '%s；看 info.json 的 access 欄' % exc)
         return
     if state == 'absent':
-        if tools:
-            checks.report('warn', 'access', '沒有 access.json：工具不關牢（碰得到你碰得到的所有檔）；'
-                          '要關：aos-agent access set ws workspace --cwd --target %s' % base)
+        jailed = [t['function']['name'] for t in tools if t.get('_jail', True) is not False]
+        if jailed:
+            # 09-24 使用者裁決 4：有要關牢的工具卻沒表＝送件時一律拒跑（NoAccess），所以是 bad
+            checks.report('bad', 'access', '沒有 access.json：%s 這 %d 支工具都不會跑（NoAccess）。先建一份：%s'
+                          % ('、'.join(jailed[:5]) + ('…' if len(jailed) > 5 else ''), len(jailed),
+                             aos_agent_batch.no_access_fix(base)))
         return
     try:
         table = aos_agent_access.load(base, env=env, info=info)

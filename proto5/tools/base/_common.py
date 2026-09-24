@@ -3,11 +3,15 @@
 約定（proto5/tools/README.md）：
 - cwd＝agent 家（aos-agent 預設）；arguments 從 stdin 來（JSON 字串）。
 - 工作根目錄＝環境變數 AOS_TOOL_ROOT（關牢時由 aos-jail 給）；沒有才看本資料夾 config.json 的 "root"；
-  相對路徑相對 agent 家（＝cwd）；沒寫＝workspace。
+  相對路徑相對 agent 家（＝cwd）；沒寫＝workspace。相對路徑從工作根目錄算。
+- 碰得到的範圍（fence）：關牢時 aos-jail 另給 AOS_TOOL_FENCE=/work（掛進來的全部資料夾），
+  所以起點以外、同樣掛進來的資料夾（../ref、/work/ref）也讀得到；沒給＝就是工作根目錄。
+  唯讀掛的寫不進去（ReadOnly）。
 - 成功：純文字印到 stdout、退 0。
 - 失敗：stdout 最後一行印一個 JSON {"ok": false, "error": 代號, "message": 白話, …}、退 1。
   帶輸出的失敗（bash 退出碼非 0、逾時）先原樣印輸出，JSON 放最後一行。
 """
+import errno
 import json
 import os
 import stat
@@ -17,6 +21,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 MAX_BYTES = 50 * 1024      # 單次輸出上限（位元組）
 MAX_LINE = 2000            # 單行字元上限（read）
+_FENCE = None              # work_root() 設：碰得到的範圍；None＝跟工作根目錄同一個
 
 
 class ToolError(Exception):
@@ -72,11 +77,19 @@ def config_path():
 def work_root():
     """環境變數 AOS_TOOL_ROOT 有值就用它（關牢時 aos-jail 給 /work/<cwd>，不看 config.json）；
     否則 config.json 的 root（相對＝相對 cwd，也就是 agent 家）；沒檔或沒欄＝workspace。不存在＝RootMissing。"""
+    global _FENCE
+    _FENCE = None
     env_root = os.environ.get('AOS_TOOL_ROOT')
     if env_root:
         root = os.path.realpath(env_root)
         if not os.path.isdir(root):
             fail('RootMissing', 'project directory (work root) %s does not exist (from AOS_TOOL_ROOT)' % env_root)
+        env_fence = os.environ.get('AOS_TOOL_FENCE')
+        if env_fence:
+            fence = os.path.realpath(env_fence)
+            # 範圍要包住起點才算數；不然當沒給（只看得到起點）
+            if os.path.isdir(fence) and inside(fence, root):
+                _FENCE = fence
         return root
     root = 'workspace'
     cfg = config_path()
@@ -128,11 +141,17 @@ def resolve(root, path, must_exist=True):
     if '\0' in path:
         fail('BadArguments', 'path must not contain NUL')
     full = os.path.realpath(os.path.join(root, os.path.expanduser(path)))
-    if not inside(root, full):
-        fail('OutsideRoot', '%s is outside the project directory %s' % (path, root))
+    top = fence(root)
+    if not inside(top, full):
+        fail('OutsideRoot', '%s is outside the project directory %s' % (path, top))
     if must_exist and not os.path.exists(full):
         fail('NotFound', 'no such file or directory: %s' % path, path=path)
     return full
+
+
+def fence(root):
+    """碰得到的範圍：關牢時是 /work（AOS_TOOL_FENCE），否則就是工作根目錄。"""
+    return _FENCE or root
 
 
 def inside(root, full):
@@ -145,7 +164,7 @@ def check_open(root, fd, path):
         real = os.readlink('/proc/self/fd/%d' % fd)
     except OSError:
         return
-    if real.startswith('/') and not inside(root, real):
+    if real.startswith('/') and not inside(fence(root), real):
         fail('OutsideRoot', '%s resolved outside the project directory while opening' % path)
 
 
@@ -174,6 +193,28 @@ def open_regular(root, full, path, max_bytes=None):
 
 def rel(root, full):
     return os.path.relpath(full, root)
+
+
+def write_error(e, path, full):
+    """寫入的作業系統錯誤 → ToolError；唯讀掛點給看得懂的話（列出寫得進去的資料夾）。"""
+    if getattr(e, 'errno', None) == errno.EROFS:
+        top = _FENCE
+        writable = []
+        if top:
+            try:
+                writable = sorted(n for n in os.listdir(top)
+                                  if os.path.isdir(os.path.join(top, n)) and os.access(os.path.join(top, n), os.W_OK))
+            except OSError:
+                pass
+        where = (' Writable folders: %s.' % ', '.join('%s/%s' % (top, n) for n in writable)
+                 if writable else '')
+        first = os.path.relpath(full, top).split(os.sep) if top else []
+        if top and (len(first) < 2 or not os.path.isdir(os.path.join(top, first[0]))):
+            fail('ReadOnly', 'cannot write %s: files cannot be created directly in %s, only inside one of '
+                 'the folders in it.%s' % (path, top, where), path=path)
+        fail('ReadOnly', 'cannot write %s: that folder is read-only (mounted read-only by the user in '
+             'access.json).%s If you really need to change it, ask the user.' % (path, where), path=path)
+    fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
 
 
 def write_atomic(root, full, content, path):

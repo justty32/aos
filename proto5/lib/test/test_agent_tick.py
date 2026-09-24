@@ -216,6 +216,7 @@ class AgentTickTests(unittest.TestCase):
     def test_meta_failure_done(self):
         self.prepare('act', sent=False)
         bad = copy.deepcopy(TOOL); bad['_meta'] = {'argv': [{'$env': 'MISSING'}]}
+        bad['_jail'] = False            # 測的是 _meta 解不開；沒 access.json 時要關牢的會先被 NoAccess 擋
         self.put(self.base / 'tools.json', [bad])
         self.assertEqual(self.tick(), 0)
         call = self.state()['batch']['calls'][0]
@@ -229,6 +230,7 @@ class AgentTickTests(unittest.TestCase):
         tool['_meta'].update(cwd={'$opt': 'mkdir', '$val': 'sub'}, envs={'$opt': 'clear', '$val': {}},
                              stderr={'$opt': ['append', 'mkdir'], '$val': 'err'},
                              exit={'$opt': ['append', 'mkdir'], '$val': 'exit'})
+        tool['_jail'] = False           # 測的是不包牢時 inst 的每一格（包牢的在 test_agent_access）
         self.put(self.base / 'tools.json', [tool])
         self.assertEqual(self.tick(), 0)
         raw = self.read(self.base / 'work' / (name + '.inst.json'))

@@ -52,7 +52,11 @@ class BuildArgvTests(unittest.TestCase):
         self.assertEqual(argv[argv.index('--chdir') + 1], '/work/ws')
         env = dict(pairs(argv, '--setenv'))
         self.assertEqual(env, {'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': '/tmp', 'LANG': 'C.UTF-8',
-                               'AOS_TOOL_ROOT': '/work/ws'})
+                               'AOS_TOOL_ROOT': '/work/ws', 'AOS_TOOL_FENCE': '/work'})
+        # 09-24 裁決 1：牢的根（含 /work 本身）唯讀，而且在掛完之後才改
+        ro = argv.index('--remount-ro')
+        self.assertEqual(argv[ro + 1], '/')
+        self.assertGreater(ro, argv.index('/work/ref'))
         self.assertNotIn(('/etc/resolv.conf', '/etc/resolv.conf'), pairs(argv, '--ro-bind-try'))
         self.assertNotIn(('/etc', '/etc'), pairs(argv, '--ro-bind'))
         self.assertEqual(argv[-4:], ['--', 'sh', '-c', 'x'])

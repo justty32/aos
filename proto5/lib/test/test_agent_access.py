@@ -241,7 +241,26 @@ class SendBase(Home):
 
 
 class SendTests(SendBase):
-    def test_no_access_file_keeps_old_inst(self):
+    def test_no_access_file_refuses(self):
+        """09-24 裁決 4：沒 access.json＝要關牢的工具不送（NoAccess）；給模型的話含要跑的那行，log 也印。"""
+        batch = self.tick()
+        self.assertIsNone(batch['access'])
+        call = batch['calls'][0]
+        self.assertTrue(call['acked'])
+        content = call['done']['content']
+        ws = self.base / 'workspace'
+        fix = 'mkdir -p %s && aos-agent access set ws %s --cwd --target %s' % (ws, ws, self.base)
+        self.assertIn('（NoAccess）', content)
+        self.assertIn('這不是你能修的', content)
+        self.assertIn(fix, content)
+        self.assertFalse((self.base / 'work' / (call['name'] + '.inst.json')).exists())
+        self.assertFalse(list((self.k / 'requests').iterdir()))
+        self.assertIn('aos-agent: NoAccess: 工具 sh 沒送', self.err.getvalue())
+        self.assertIn(fix, self.err.getvalue())
+
+    def test_no_access_file_unjailed_tool_keeps_old_inst(self):
+        """_jail: false 的那支沒有表也照舊送、inst 不包牢。"""
+        self.tool({'argv': ['tools/bin/sh-tool', '-v'], 'envs': {'FOO': 'bar'}}, _jail=False)
         batch = self.tick()
         self.assertIsNone(batch['access'])
         inst = self.inst(batch)
@@ -374,7 +393,8 @@ class CliTests(CliBase):
     def test_ls_without_file(self):
         out = self.cli('ls')
         self.assertIn('沒有 access.json', out)
-        self.assertIn('aos-agent access set ws workspace --cwd', out)
+        self.assertIn('要關牢的工具都不會送（NoAccess）', out)
+        self.assertIn('aos-agent access set ws <家>/workspace --cwd', out)
         self.assertIn('bwrap: ', out)
         data = json.loads(self.cli('ls', '--json'))
         self.assertEqual(set(data), {'file', 'exists', 'mounts', 'cwd', 'net', 'bwrap', 'error'})
@@ -459,11 +479,22 @@ class CheckBase(Home):
 
 
 class CheckStatusTests(CheckBase):
-    def test_warn_without_access_when_tools(self):
+    def test_bad_without_access_when_tools(self):
+        """09-24 裁決 4：有要關牢的工具卻沒 access.json＝bad（送件會拒跑），教那行指令。"""
         self.assertEqual(self.check(), '')
         self.put(self.base / 'tools/t.json', [{'type': 'function', 'function': {'name': 'sh'}, '_meta': {'argv': ['sh']}}])
         self.put(self.base / 'info.json', dict(self.info, tools=['tools/t.json']))
-        self.assertIn('warn access: 沒有 access.json', self.check())
+        out = self.check()
+        self.assertIn('bad  access: 沒有 access.json：sh 這 1 支工具都不會跑（NoAccess）', out)
+        ws = self.base / 'workspace'
+        self.assertIn('mkdir -p %s && aos-agent access set ws %s --cwd --target %s' % (ws, ws, self.base), out)
+
+    def test_no_access_all_tools_unjailed_is_not_bad(self):
+        """全部 _jail: false：不用表，不印 bad（各支照舊 warn _jail: false）。"""
+        self.put(self.base / 'tools/t.json', [{'type': 'function', 'function': {'name': 'sh'},
+                                               '_meta': {'argv': ['sh']}, '_jail': False}])
+        self.put(self.base / 'info.json', dict(self.info, tools=['tools/t.json']))
+        self.assertNotIn('access:', self.check())
 
     def test_bad_access_and_no_bwrap(self):
         self.access({'mounts': {'ws': 'nope'}})

@@ -3,7 +3,7 @@
     "type": "function",
     "function": {
       "name": "read",
-      "description": "Read a text file. Paths are relative to the project directory (the configured work root; paths outside it are refused). Returns up to 2000 lines or 50 KB; lines over 2000 chars are cut. A note at the end tells you the offset to continue from.",
+      "description": "Read a text file. Relative paths start from the project directory. When tools are sandboxed, every folder under /work is reachable (e.g. ../other or /work/other); paths outside are refused. Returns up to 2000 lines or 50 KB; lines over 2000 chars are cut. A note at the end tells you the offset to continue from.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -231,7 +231,7 @@
     "type": "function",
     "function": {
       "name": "ls",
-      "description": "List a directory, sorted by name. Directories end with /. Includes hidden entries.",
+      "description": "List a directory, sorted by name. Directories end with /. Includes hidden entries. When tools are sandboxed, ls /work shows every folder you can reach.",
       "parameters": {
         "type": "object",
         "properties": {

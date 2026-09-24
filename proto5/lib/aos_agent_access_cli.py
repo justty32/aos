@@ -69,8 +69,9 @@ def _pad(text, width):
 def render(data):
     lines = []
     if not data['exists'] and not data['error']:
-        lines.append('沒有 access.json：工具不關牢（照舊在 agent 家跑，碰得到你碰得到的所有檔）。')
-        lines.append('要關：aos-agent access set ws workspace --cwd（工作資料夾掛成 /work/ws、起點設在那）')
+        lines.append('沒有 access.json：要關牢的工具都不會送（NoAccess），只有 _jail: false 的那支照跑。')
+        lines.append('先建一份：aos-agent access set ws <家>/workspace --cwd（工作資料夾掛成 /work/ws、起點設在那；'
+                     'PATH 照你殼的目前資料夾算，指家裡的就寫絕對路徑）')
     elif data['mounts'] or not data['error']:
         width = max([_width(n) for n in data['mounts']] + [4])
         lines.append('  '.join([_pad('名字', width), '權限', _pad('存在', 4), '路徑']))
