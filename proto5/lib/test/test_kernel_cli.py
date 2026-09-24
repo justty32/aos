@@ -54,8 +54,9 @@ class KernelCLI(KernelCase):
 
     def test_ls_json_matches_status_without_ledger(self):
         self.initialize()
-        self.assertEqual(json.loads(self.good_cli('ls', self.home, '--json').stdout),
-                         kernel.status(self.home))
+        actual = json.loads(self.good_cli('ls', self.home, '--json').stdout)
+        self.assertEqual(actual.pop("health")["code"], "stopped")
+        self.assertEqual(actual, kernel.status(self.home))
 
     def test_ls_summary_includes_cpus_and_procs(self):
         self.setup_running()
@@ -65,7 +66,9 @@ class KernelCLI(KernelCase):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             self.assertEqual(kernel.main(['ls', str(self.home), '--json']), 0)
-        self.assertEqual(json.loads(output.getvalue()), expected)
+        actual = json.loads(output.getvalue())
+        self.assertEqual(actual.pop("health")["code"], "stopped")
+        self.assertEqual(actual, expected)
         summary = self.good_cli('ls', self.home).stdout
         self.assertFalse(summary.startswith('{'))
         for name in self.info['cpus']:
@@ -229,10 +232,12 @@ class KernelCLI(KernelCase):
         self.fake_daemon_snapshot()
         text = self.good_cli('ls', self.home).stdout
         self.assertIn('cpu k  pool kernel  idle  missing', text)
-        self.assertEqual(text.splitlines()[-1],
-                         'hint daemon 重開過／cpu 不在：執行 aos-kernel boot %s --daemon %s' %
+        self.assertEqual(text.splitlines()[0],
+                         'health 停機中（aos-kernel boot %s --daemon %s）' %
                          (self.home, self.daemon))
-        self.assertEqual(json.loads(self.good_cli('ls', self.home, '--json').stdout), kernel.status(self.home))
+        actual = json.loads(self.good_cli('ls', self.home, '--json').stdout)
+        self.assertEqual(actual.pop("health")["code"], "stopped")
+        self.assertEqual(actual, kernel.status(self.home))
 
     def test_ls_all_cpus_present_has_no_hint(self):
         self.fake_daemon_snapshot(missing=False)
@@ -244,13 +249,13 @@ class KernelCLI(KernelCase):
 
     def test_ls_stopping_missing_cpus_has_restart_hint(self):
         self.fake_daemon_snapshot(phase='stopping')
-        self.assertIn('hint daemon 重開過／cpu 不在：', self.good_cli('ls', self.home).stdout)
+        self.assertTrue(self.good_cli('ls', self.home).stdout.startswith('health 停機中（'))
 
     def test_ls_dead_daemon_hint(self):
         self.fake_daemon_snapshot(alive=False)
-        self.assertEqual(self.good_cli('ls', self.home).stdout.splitlines()[-1],
-                         'hint daemon 沒在跑：先開 daemon（aos-daemon --home %s），再 aos-kernel boot %s --daemon %s' %
-                         (self.daemon, self.home, self.daemon))
+        self.assertEqual(self.good_cli('ls', self.home).stdout.splitlines()[0],
+                         'health 停機中（aos-kernel boot %s --daemon %s）' %
+                         (self.home, self.daemon))
 
     def test_ls_hint_default_daemon_and_absolute_kernel(self):
         import os

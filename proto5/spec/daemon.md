@@ -1,11 +1,8 @@
-# daemon：所有 cpu 的父行程（第 1 版，2026-09-23 定稿）
+# daemon：所有 cpu 的父行程
 
 ← [proto5 README](../README.md)｜範式：[cpu.md](cpu.md)｜客戶：[kernel](kernel.md)｜跑一次：[aos-exec.md](aos-exec.md)
 
-> 2026-09-23 重架構第三份；同日照 astra 第二輪 D 清單（18 題）與第三輪（D3／X3／C3）改過。
-> 2026-09-23 定稿並已實作：[`aos_daemon.py`](../lib/aos_daemon.py)（入口 `aos-daemon`）。舊 daemon-home.md／aos-daemon.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
-> 已拍板的前提在 §8，我自己選的在 §9。
-> 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> 第 1 版，2026-09-23 定稿；已實作（[`aos_daemon.py`](../lib/aos_daemon.py)，入口 `aos-daemon`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**daemon 只管 cpu 行程的生死——啟動、重拉、停止，也就是當爸爸。誰叫它把一個 aos-exec 目標拉起來當孩子，
 它就拉；孩子死了看要不要再拉；要停就照階梯把孩子都停掉。** 它不認識 kernel、不看孩子在做什麼、不轉發任何工作。
@@ -285,3 +282,12 @@ daemon 是所有 cpu 的父行程、最單純；IPC 用 pipe，只管生死；`s
 - §2：缺檔一律 `SpawnFailed`（A-1、B-2），程式同步改了。
 - §6：新增 `aos-daemon stop` 子命令與 `-h`（LM Studio 真跑報告 ⑤-1）；§7 同步一句。
 - §6.1：不收孤兒的 PID 1 環境在保證外（B-9）。
+
+## 沿革
+
+原標題：`daemon：所有 cpu 的父行程（第 1 版，2026-09-23 定稿）`
+
+> 2026-09-23 重架構第三份；同日照 astra 第二輪 D 清單（18 題）與第三輪（D3／X3／C3）改過。
+> 2026-09-23 定稿並已實作：[`aos_daemon.py`](../lib/aos_daemon.py)（入口 `aos-daemon`）。舊 daemon-home.md／aos-daemon.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
+> 已拍板的前提在 §8，我自己選的在 §9。
+> 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
