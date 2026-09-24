@@ -64,6 +64,23 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 `--wait` 不帶數字最多等 300 秒，`--wait 60` 就是 60 秒；等不到退 101。
 
+**想來回聊就用 `talk`**：不用自己輪流打 `say`／`listen`，`aos-agent talk --target $W/bob` 開一個極簡 REPL——打一行送出、等它回、印出來，再打下一行：
+
+```sh
+$ aos-agent talk --target $W/bob
+talk …/bob  health ok（/help 看指令，Ctrl-C 或 Ctrl-D 離開）
+> 你好，用一句話介紹你自己。
+你好，我是繁體中文助理，能簡短回答並在需要時查詢現在時間。
+> /status
+health ok  state idle  batch -  input -
+> 現在幾點？請用工具查。
+現在是 2026 年 9 月 24 日下午 3 點 53 分。
+> ^D
+[退出碼 0]
+```
+
+`/status` 看狀態一行、`/context` 看這次要送給模型的東西多大（system、記憶、工具各幾字）、`/help` 印全部 slash 指令。等太久會在 stderr 印「還在想：等了 N 秒」，按 Enter 或 `/wait` 再看一次；`--show-calls` 連工具呼叫也印出來。Ctrl-C、Ctrl-D、`/quit` 都直接退出（畫面片段見 [talk 筆記](../notes/2026-09-24-talk.md)）。
+
 ## 4. 看回話的三種方法
 
 `listen` 三種看法**一定要給一種**，不給會退 2（用法錯）：
