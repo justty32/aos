@@ -334,7 +334,7 @@ agent 的送件與收回由 `aos_agent.step()` 處理，沒有同步問模型的
 
 ## aos_cpu — 共用檔案佇列（保留舊架構）
 
-格式：[cpu-queue.md](../spec/cpu-queue.md)；程式：[aos-cpu.md](../spec/aos-cpu.md)。只用一個模組與函式，不建類別階層。
+格式：[cpu-queue.md](../../proto5.1/spec/cpu-queue.md)；程式：[aos-cpu.md](../../proto5.1/spec/aos-cpu.md)（舊規範已從 proto5 刪除，看 proto5.1 的複本）。只用一個模組與函式，不建類別階層。
 
 ```python
 import aos_cpu

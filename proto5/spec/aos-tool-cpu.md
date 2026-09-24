@@ -1,6 +1,6 @@
 # aos-tool-cpu 程式規範（第 1 版）
 
-← [proto5 README](../README.md)｜格式：[tool-cpu](tool-cpu.md)｜佇列：[cpu-queue](cpu-queue.md)
+← [proto5 README](../README.md)｜格式：[tool-cpu](tool-cpu.md)｜佇列：[cpu-queue](../../proto5.1/spec/cpu-queue.md)
 
 `aos-tool-cpu [dir]`：省略 dir＝`.`。先驗 `tool_cpu` info，透過 `aos_cpu.tick` 收屍、
 再執行最多一份請求。execute 只驗解好的 payload，再呼叫

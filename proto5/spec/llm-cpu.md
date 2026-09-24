@@ -1,6 +1,6 @@
 # llm CPU 家、請求與結果（格式規範）
 
-← [proto5 README](../README.md)｜共用格式：[cpu-queue](cpu-queue.md)｜程式：[aos-llm-cpu](aos-llm-cpu.md)
+← [proto5 README](../README.md)｜共用格式：[cpu-queue](../../proto5.1/spec/cpu-queue.md)｜程式：[aos-llm-cpu](aos-llm-cpu.md)
 
 ## 1. info.json
 
@@ -18,7 +18,7 @@
 }
 ```
 
-身分與資料夾見 [cpu-queue](cpu-queue.md)。models 必填且是物件；每個 key 是非空模型代號、值是物件。
+身分與資料夾見 [cpu-queue](../../proto5.1/spec/cpu-queue.md)。models 必填且是物件；每個 key 是非空模型代號、值是物件。
 值裡 endpoint／model 必填且是非空字串；api_key 可省、字串或 null，預設 null；timeout_ms 可省、
 正整數且 bool 不算，預設 120000。模型設定不合法為 `EngineInvalid`。
 
@@ -42,7 +42,7 @@ CPU 不讀 agent、不重驗 body 裡訊息與工具、不解請求指示詞，�
 
 合法 result 下的壞 payload 認領後寫失敗結果、搬 done，當次 tick 回 0，後面的單可繼續處理。
 格式合法但代號不在 models 表裡，回 `{"ok":false,"code":"UnknownModel","msg":"不認識的模型代號"}`，
-不送 HTTP。共用欄位壞掉則搬 bad、tick 回 1，詳見 [cpu-queue](cpu-queue.md)。
+不送 HTTP。共用欄位壞掉則搬 bad、tick 回 1，詳見 [cpu-queue](../../proto5.1/spec/cpu-queue.md)。
 
 ## 3. 結果
 

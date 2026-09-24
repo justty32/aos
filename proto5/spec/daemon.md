@@ -1,9 +1,10 @@
-# daemon：所有 cpu 的父行程（第 1 版，**草稿**）
+# daemon：所有 cpu 的父行程（第 1 版，2026-09-23 定稿）
 
 ← [proto5 README](../README.md)｜範式：[cpu.md](cpu.md)｜客戶：[kernel](kernel.md)｜跑一次：[aos-exec.md](aos-exec.md)
 
 > 2026-09-23 重架構第三份；同日照 astra 第二輪 D 清單（18 題）與第三輪（D3／X3／C3）改過。
-> 舊 daemon-home.md／aos-daemon.md 等新的齊了一次換掉。已拍板的前提在 §8，我自己選的在 §9。
+> 2026-09-23 定稿並已實作：[`aos_daemon.py`](../lib/aos_daemon.py)（入口 `aos-daemon`）。舊 daemon-home.md／aos-daemon.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
+> 已拍板的前提在 §8，我自己選的在 §9。
 
 一句話：**daemon 只管 cpu 行程的生死——啟動、重拉、停止，也就是當爸爸。誰叫它把一個 aos-exec 目標拉起來當孩子，
 它就拉；孩子死了看要不要再拉；要停就照階梯把孩子都停掉。** 它不認識 kernel、不看孩子在做什麼、不轉發任何工作。
