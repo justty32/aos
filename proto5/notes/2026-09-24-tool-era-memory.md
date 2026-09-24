@@ -28,6 +28,10 @@ astra 唯讀審查：任務書 [review-memory-task.md](2026-09-24-tool-era/revie
 - **事件「至少一次」**：每個事件都在提交那一步之前寫，崩了重做會多寫一行同 `ev`＋`id` 的，讀的人去重；不會「做了沒記」。寫不進去只丟那一行，不擋 tick。
 - **自動壓縮不空轉**：縮不動（還是超過、或驗不過）就把「記憶 sha＋選項」寫進 `log/compact-skip`，同一份記憶不再每格重算。
 
+## 1.5 測試數字
+
+新增 **95 條**：`test_agent_memory.py` 56 條、`test_agent_notes.py` 39 條。rebase 到 main `dba8cbe` 後全部 **63 檔 1867 條全綠**（main 是 1772）。
+
 ## 2. 驗收 8 條
 
 | # | 驗收 | 怎麼證明 | 結果 |
@@ -39,7 +43,7 @@ astra 唯讀審查：任務書 [review-memory-task.md](2026-09-24-tool-era/revie
 | ⑤ | 還沒 done 的任務那幾輪原樣 | `test_unfinished_task_rounds_kept`：假團隊資料夾，t-0001 working 那輪原樣、t-0002 done 那輪縮了、讀不到的單也留；上限壓到 100 也不封存沒做完的 | 過 |
 | ⑥ | 寫 archive 後、換 history 前 KILL，重跑一樣、history 從不缺 | 子行程真的 `SIGKILL` 自己（`_hook('compact.archive')`）：記憶還是原檔 bytes、archive 在；重跑結果＝沒崩的副本；另測 KILL 在換完之後、KILL 在 tick 自動壓縮裡 | 過 |
 | ⑦ | 鎖被佔退 101、`batch` 不是 null 拒絕；自動壓縮同一把鎖不死鎖 | 測試拿住 flock → `compact`（含 dry-run）退 101、不動檔；think／有 batch／intake 做到一半 → `NotIdle`；tick 內自動壓縮（同行程、另開子行程各一條）退 0 且縮了 | 過 |
-| ⑧ | 真模型壓縮後再問一句，回話正常不 400 | LiteLLM `deepseek-chat` 真跑 10 次（§3）：壓縮後問「我最喜歡的水果」10/10 答「芒果」、0 次 EngineFailed | 過 |
+| ⑧ | 真模型壓縮後再問一句，回話正常不 400 | LiteLLM `deepseek-chat` 真跑 10 次（§3）：壓縮後問「我最喜歡的水果」10/10 答「芒果」、0 次 EngineFailed；每次也都觸發一次自動壓縮；rebase 到池式 kernel 後再跑一次一樣 | 過 |
 
 ## 3. 真跑（LiteLLM `http://localhost:4000/v1`，`deepseek-chat`；沒碰 LM Studio／ollama）
 
@@ -65,7 +69,7 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
 - **粗估 vs 真數字**：deepseek 回報的 prompt token 約是粗估合計的 1.15～1.3 倍（包裝與工具 schema），所以 `context` 多印一行真數字。
 - **第一次真跑抓到的**：只叫一次 `date` 的輪，說明行比換掉的東西還長，縮了反而 129→199 token。改成「換掉的比說明行短就不換」，說明行也縮短（`[aos 已壓縮 4 則：read×2；原文 … 第 2～5 則]`）。
 - **封存會丟資訊**：自動壓縮封存了「讀 long.txt」那輪之後問「long.txt 幾行」，模型答 21（原本 40），沒說不知道。這是封存的本質；要找回原文是二波 T-recall（模型）或人 `history --archive --grep`。寫進 compact.md〈保證外〉。
-- 穩定：同一段連跑 10 次，見 §4 S 軸。
+- 穩定：同一段連跑 10 次：10/10 手動壓縮成功、10/10 壓縮後答對芒果、10/10 自動壓縮觸發、0 次模型端錯誤。
 
 ## 4. 六軸自評（[axes.md §5](2026-09-24-tool-era/axes.md)；每軸 1～5，不加總）
 
@@ -115,7 +119,7 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
 | 軸 | 分 | 依據 |
 |---|---|---|
 | 1 LLM 參與 | 5 | 工具本身不叫模型 |
-| 2 穩定 | n/10 | 沒真模型跑；單元 36 條（含 20 個平行 add 全在） |
+| 2 穩定 | n/10 | 沒真模型跑；單元 39 條（含 20 個平行 add 全在） |
 | 3 資源 | 5 | 單檔、上限 500 筆×4000 字 |
 | 4 快 | 5 | flock＋整檔讀寫 |
 | 5 人易懂 | 4 | 描述 672 字元（英文）；筆記檔在哪要看 access.json（關牢時在牢裡 `/work/notes`） |
@@ -125,12 +129,27 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
 
 **`history --archive`、`events` 命令列**：唯讀、不拿鎖，L5 S5 R5 F5 H4 B5（沒另外量）。
 
+## 4.5 astra 審查：必修 7 修 7
+
+| # | 問題 | 怎麼修 |
+|---|---|---|
+| M1 | `--prune-archive` 沒拿鎖，可能刪掉「archive 寫了、記憶還沒換」那一份 | prune 也持 tick 鎖（被佔退 101） |
+| M2 | 「值不值得換」看說明行長度，行裡的位置數字會變 → 縮兩次結果不同（不是不動點） | 判斷一律照最長位數（6 位）估說明行；補 40 個邊界的測試 |
+| M3 | 封存沒檢查會不會越封越大 | 要開新封存行時，那輪比封存行小就不封；接在上一段後面的併進同一行 |
+| M4 | 郵差「先查 done 再投」與 tick 搬檔之間有窗口，會重投已處理的申請 | 申請原檔不搬，tick 在 `done/` 放同名收據；郵差只靠 `drop_new` 不覆蓋去重 |
+| M5 | 自動壓縮的 skip 記號沒含任務狀態，任務做完了也不重看 | 記號加上記憶提到的單號的狀態 |
+| M6 | note 的相對路徑：工具相對牢裡起點、人相對家 → 看到不同檔；也沒看 `_jail: false` | 關牢時相對路徑兩邊都回 `ConfigInvalid`；人這邊看 info 裡 `note` 的 `_jail` |
+| M7 | 整批工具都不存在的 act 批沒有批 id，崩了重做沒法去重 | 建批時把身分存進 `batch.id`，事件用它 |
+
+建議做了：S1（短寫補換行、規範寫明「寫檔失敗會丟」）、S2（任務狀態先讀成快照、`TASK_RE` 貼著中文也抓得到）、S3（申請的 `reason` 進事件）、S5（dry-run 也驗成對）。
+沒做：S3 後半（`aos-agent check` 驗 `info.compact`）、S4（notes 讀檔完整驗 `wf-table/1` 的 contract／columns）——留給下一輪。
+
 ## 5. 跟共用格式不合、或要別隊接的
 
 1. **事件放哪**：catalog 寫成員家 `log/events.jsonl`，spec/team/layout.md 列了 `team/events/<名>.jsonl`（「也可能放在成員家的 log/」）。我放**成員家 `log/`**：寫的人是持 tick 鎖的那方，它只知道自己的家。`Layout.events()` 那格建議改指 `members/<名>/log/events.jsonl`，或拿掉（隊 1）。
 2. **筆記放哪**：layout.md 寫 `team/notes/<名>/`。工具關牢時預設 `/work/notes/notes.json`，所以**團隊模板要多掛一個 `notes` → `team/notes/<名>/`（rw）**；人看的 `aos-agent notes` 從 `access.json` 的 `notes` 掛載找回主機路徑。要隊 1（或收尾隊）在 worker／lead 模板的 `mounts` 加這一格、工具清單加 `{"pack": "notes"}`。
 3. **compact 申請**：處理函式登記好了（`KINDS['compact']`），但模板的 `may` 沒有 `compact`，也還沒有模型用來寄這種申請的工具（`team_say` 不帶 kind）。要：模板 `may` 加 `compact`；寄申請的工具由隊 1（task 包）或隊 2 加一支 `compact_me` 之類，或讓 `team_say` 能寄 kind。
-4. **申請檔落在成員家 `compact-req/`**：這是新位置（layout.md 的「一份資料一個寫的人」表要加一列：郵差建、tick 搬走）。
+4. **申請檔落在成員家 `compact-req/`**：這是新位置（layout.md 的「一份資料一個寫的人」表要加一列：郵差建原檔、tick 在 `done/` 放收據、原檔不刪）。原檔很小、會一直留；要清就在成員停著時連收據一起刪。
 5. `Layout.notes()`／`events()` 兩個路徑函式目前沒人用（見 1、2）。
 
 ## 6. README／索引要加的列（收尾隊加）
@@ -143,15 +162,15 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
   - `aos-agent notes ls｜show KEY`｜看 `note` 工具寫的長期筆記
   - `aos-agent init --template NAME`｜照模板生家（第 1 隊）
 - 規範表：spec/agent 那列補「事件紀錄 events.md、記憶壓縮 compact.md」；spec/aos-agent 那列補「cli-memory.md（context／compact／events／history／notes）」。
-- `lib/README.md`：模組表加 `aos_agent_events.py`、`aos_agent_context.py`、`aos_agent_compact.py`、`aos_agent_notes.py`；測試表加 `test_agent_memory.py`（49 條）、`test_agent_notes.py`（36 條）；總數 **55 檔 1725 條**（rebase 到 0e8a3c5 後）。
+- `lib/README.md`：模組表加 `aos_agent_events.py`、`aos_agent_context.py`、`aos_agent_compact.py`、`aos_agent_notes.py`；測試表加 `test_agent_memory.py`（56 條）、`test_agent_notes.py`（39 條）；總數 **63 檔 1867 條**（rebase 到 dba8cbe 後）。
 - `tools/README.md`：工具包加 `notes/`（`note`：add／find／get／rm，`wf-table/1`；關牢時要掛 `notes`）。
 - `notes/README.md`：加這份報告與 `2026-09-24-tool-era/review-memory-{task,astra}.md`。
 
 ## 7. 改到別人的檔（合併時注意）
 
 - `lib/aos_agent_cli.py`：五個子命令＋`init --template`（這波只有我改）。
-- `lib/aos_agent.py`：idle 那一步多 4 行（叫 `aos_agent_compact.auto`）。
-- `lib/aos_agent_batch.py`：`send` 結尾記 `*_start`、`collect` 記 `calls[].ms/ok`、`settle` 記 `*_end`、think inst 多 `envs.AOS_LLM_BATCH`。
+- `lib/aos_agent.py`：idle 那一步多 4 行（叫 `aos_agent_compact.auto`，邏輯全在那一個函式；之後做「閒置停車、tick 退 102」的隊要接，只要知道它回 True＝這格做了事退 0）。
+- `lib/aos_agent_batch.py`：`make_batch` 多存 `batch.id`、`send` 結尾記 `*_start`、`collect` 記 `calls[].ms/ok`、`settle` 記 `*_end`、think inst 多 `envs.AOS_LLM_BATCH`。
 - `lib/aos_agent_inputs.py`：intake 提交前記事件（2 行）。
 - `lib/aos_llm_call.py`：`_post`／`_post_http` 多一個可省的 `seen` 參數、`call` 寫 usage。
 - `lib/aos_agent_talk.py`：`/context`、`_brief` 改叫 `aos_agent_context`。
