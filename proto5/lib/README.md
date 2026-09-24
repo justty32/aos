@@ -1,4 +1,4 @@
-# proto5/lib — 三十二支 Python 模組
+# proto5/lib — 三十八支 Python 模組
 
 ← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu/README.md)、[daemon.md](../spec/daemon/README.md)、[kernel.md](../spec/kernel/README.md)
 
@@ -28,7 +28,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_kernel_ls.py`](aos_kernel_ls.py) | （advice-r1）`ls_data()` 收成穩定的 `aos_kernel_ls` 第 1 版資料（就是 `--json`），`render()` 排成按池分組的對齊表（中文算 2 格、長名砍中間、`-v` 才印路徑）；`stderr_hint()` 給 bad 行程指路 | [kernel/cli-ls.md](../spec/kernel/cli-ls.md) |
 | [`aos_kernel_health.py`](aos_kernel_health.py) | `health(home)`：kernel 整體健康一句話（ok／缺目錄／停機中／daemon 沒活／cpu missing／恢復中（fix-r5）／tick 停住／讀不到），不丟例外；`ls` 與 `aos-agent status` 共用。`agent_marks()`／`agents_health()`（fix-r5）給 `ls` 標 agent 的暫停／重試 | [kernel.md](../spec/kernel/README.md) §6 |
 | [`aos_kernel_check.py`](aos_kernel_check.py) | `aos-kernel check`：啟動前唯讀檢查 info、K 家必要目錄、daemon、cpu 在不在孩子表（daemon 重開提示 boot）、PATH、池、llm 設定；`--probe`（fix-r5）真的打一次 endpoint（`probe_endpoint()`），結尾印總結行。（advice-r1）拆出 `kernel_checks()`／`finish()` 給 `aos-agent check` 共用，`Checks.agent()` 只由它呼叫 | [kernel.md](../spec/kernel/README.md) §6 |
-| [`aos_agent_check.py`](aos_agent_check.py) | （advice-r1）`aos-agent check`：`find_kernel()` 由 `AOS_KERNEL_HOME`→`tick.json` 找 K，整段跑 kernel 檢查再查 agent 家（池、模型代號、工具），`--probe` 同一套；（access-impl）`access_checks()` 查 access 檔、`bwrap_probe()` 跑一次無副作用的 bwrap、aos-jail 在不在、`_jail:false` 與牢裡找不到程式的 warn、mount 頂層的 socket／FIFO | [aos-agent/cli-check.md](../spec/aos-agent/cli-check.md) |
+| [`aos_agent_check.py`](aos_agent_check.py) | （advice-r1）`aos-agent check`：`find_kernel()` 由 `AOS_KERNEL_HOME`→`tick.json` 找 K，整段跑 kernel 檢查再查 agent 家（池、模型代號、工具），`--probe` 同一套；（access-impl）`access_checks()` 查 access 檔、`bwrap_probe()` 跑一次無副作用的 bwrap、aos-jail 在不在、`_jail:false` 與牢裡找不到程式的 warn、會 `EnvUnsafe` 的工具＝bad、mount 頂層的 socket／FIFO | [aos-agent/cli-check.md](../spec/aos-agent/cli-check.md) |
 | [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（`_metainfo`、人格／記憶／工具、message 驗證）與 `aos-llm call` 的六格 loader，帶原文件與位置解欄位；（09-24 access-impl）`tool_entries()`／`read_tool_entries()` 解 `tools` 元素的 `$opt`（`as`／`only`），每條工具帶 `_source`、驗 `_jail`；`load_llm_view(doc=, files=)` 給寫入指令試算 | [agent.md](../spec/agent/README.md) §2～§3、§5、[§3.4](../spec/agent/tools-opt.md)；[aos-llm.md](../spec/aos-llm/README.md) §3 |
 | [`aos_llm_call.py`](aos_llm_call.py) | 問模型一次：讀驗 `AOS_LLM_CONFIG` 的 llm.json、組 body、HTTP、正規化並驗 message；入口 `aos-llm call`（fix-r4 由 `aos-llm-call` 改名） | [aos-llm.md](../spec/aos-llm/README.md) |
 | [`aos_agent_info.py`](aos_agent_info.py) | 完整 info 設定、state 進度與恢復紀錄讀驗，並原子寫回 state；（access-impl）`check_access()` 驗 `batch.access` 快照形狀 | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
@@ -43,7 +43,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_init.py`](aos_agent_init.py) | `aos-agent init`：寫死的單一預設家（info／人格／date 工具／`input/`），info 最後寫、已有就拒絕；（fix-r5）非空的非 agent 資料夾要 `force` | [aos-agent.md](../spec/aos-agent/README.md) §1.1 |
 | [`aos_agent_tools.py`](aos_agent_tools.py) | （09-24 tools-base）`aos-agent tools add`：找工具包（名字＝`proto5/tools/<名>/`、含 `/`＝資料夾）、驗、同名檢查、程式複製到 `tools/<名>/`、`--root` 寫 `config.json`、工具檔最後寫、`info.tools` 沒涵蓋就補；（access-impl）原地引用資料夾／`.json` 檔、`--as`／`--only`、寫前整份試算、裝包時叫 `aos_agent_access.ensure_default` | [aos-agent/tools.md](../spec/aos-agent/tools.md) §1.8 |
 | [`aos_agent_tools_edit.py`](aos_agent_tools_edit.py) | （09-24 access-impl）`tools ls [--json]`／`rm`／`alias`／`unalias`；與 add 共用的 `info_lock()`（管理鎖 `<家>/.admin.lock` 的 flock，access CLI 也用）、`write_info()`（縮排 2）、`access_state()`（明寫的 access 檔不在＝錯）、字面 `tools` 檢查、`simulate()`／`commit()` 試算後整份重寫 | [aos-agent/tools-manage.md](../spec/aos-agent/tools-manage.md) |
-| [`aos_agent_batch.py`](aos_agent_batch.py) | 批次建立、inst 產生、kernel 交件、收回音與 ack、結清；（access-impl）act 批建批時存 `batch.access` 快照、`jail_argv()` 把工具包成 `aos-jail …`、`jail_problem()` 壞表／沒 bwrap 那件記成跑不起來；aos-jail 用絕對路徑；關牢工具的 `_meta` 用 `$env` 讀敏感名字＝`EnvUnsafe`、敏感輸出名字寫 inst 前就丟 | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md)、[aos-agent/access.md](../spec/aos-agent/access.md) |
+| [`aos_agent_batch.py`](aos_agent_batch.py) | 批次建立、inst 產生、kernel 交件、收回音與 ack、結清；（access-impl）act 批建批時存 `batch.access` 快照、`jail_argv()` 把工具包成 `aos-jail …`、`jail_problem()` 壞表／沒 bwrap 那件記成跑不起來；aos-jail 用絕對路徑；`secret_env_reads()`（check 共用）判關牢工具的 `_meta` 用 `$env` 讀敏感名字＝`EnvUnsafe`、敏感輸出名字寫 inst 前就丟；權限牆擋下的那件由 `jail_message()` 寫給模型看（只講被擋、叫它轉告使用者跑 check） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md)、[aos-agent/access.md](../spec/aos-agent/access.md) |
 | [`aos_agent_access.py`](aos_agent_access.py) | （09-24 access-impl）權限牆讀驗：`access_path()`／`configured_path()` 找檔（`info.access` 欄或 `access.json`）、`parse()` 解指示詞與 `~`、realpath、驗格式（錯帶檔路徑與 `mounts.ws` 位置）、`trusted()` 算信任資料（含 `$ref` 到的檔、這份 proto5 的 `cli/`／`lib/`；每項用 `path_chain()` 連途中的符號連結本身一起收）、`access_lookup()` 分辨檔在／預設不在／明寫不在、`check_overlap()`、`load()`／`snapshot()` 回快照；`ensure_default()` 給 `tools add` 建預設檔 | [agent/access.md](../spec/agent/access.md) |
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | （09-24 access-impl）`aos-agent access ls [--json]／set／rm／cwd／net`：跟 tools 共用 `info_lock()`、唯一 .tmp＋rename、壞檔拒寫、落盤前整份驗候選（跟送件同一套信任集合）、重疊自動 ro 或拒絕、印改完的表 | [aos-agent/access.md](../spec/aos-agent/access.md) §3 |
 | [`aos_jail.py`](aos_jail.py) | （09-24 access-impl）`aos-jail`：`parse_args()`、純函式 `build_argv()` 組 bwrap（`/usr` 唯讀、`/etc` 少數檔、`/work/<名>`、`/opt/tool`、清環境、丟金鑰名）、`exec` bwrap；入口 `cli/aos-jail` | [aos-exec/aos-jail.md](../spec/aos-exec/aos-jail.md) |
@@ -52,7 +52,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1358 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1470 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -376,10 +376,10 @@ halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1366 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1470 條；repo 根目錄
 ```
 
-共 40 個測試檔、1366 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 44 個測試檔、1470 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -402,7 +402,8 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_tools_base_bash.py](test/test_tools_base_bash.py) | 11 | （tools-base）bash：輸出合併、cwd、退出碼、逾時、截斷、背景行程收掉、stdin 空 |
 | [test_tools_base_fix.py](test/test_tools_base_fix.py) | 29 | （tools-base astra 後）暫存檔與符號連結、NUL／surrogate、read 大檔與 FIFO、edit 上限與 CRLF、grep 設定檔／逾時／stderr 死鎖／超長行（假 rg）、find 讀不到的資料夾、bash 被 TERM、tools add 版本連結／修復／清殘渣／併發／BadName |
 | [test_agent_tick.py](test/test_agent_tick.py) | 118 | waits、三格、批次收送、錯誤與 start／stop |
-| [test_agent_access.py](test/test_agent_access.py) | 51 | （access-impl）access.json 解析好／壞（位置、行列）、指示詞、`~`、`info.access` 指別處、重疊（self 只能 ro、家裡控制夾、symlink、共用工具夾與程式、`$ref` 到的檔、輸入與門）、`ensure_default`；送件：快照存 state、inst 長相、`_meta.cwd` 只管牢外、壞表／重疊／沒 bwrap 那件不送、`_jail:false`、崩潰重送用舊快照、think 批沒快照、state 形狀；`access` 各子命令與用法錯；check／status；（astra 必修）aos 程式與符號連結本身算信任資料、換名的 `$env` 金鑰與 inst 落盤、set 用 access 的 `$ref`、rm 比解好的 cwd、候選驗證、明寫不在、state 形狀、`/opt/tool` 蓋到家 |
+| [test_agent_access.py](test/test_agent_access.py) | 53 | （access-impl）access.json 解析好／壞（位置、行列）、指示詞、`~`、`info.access` 指別處、重疊（self 只能 ro、家裡控制夾、symlink、共用工具夾與程式、`$ref` 到的檔、輸入與門）、`ensure_default`；送件：快照存 state、inst 長相、`_meta.cwd` 只管牢外、壞表／重疊／沒 bwrap 那件不送、`_jail:false`、崩潰重送用舊快照、think 批沒快照、state 形狀；`access` 各子命令與用法錯；check／status；（astra 必修）aos 程式與符號連結本身算信任資料、換名的 `$env` 金鑰與 inst 落盤、set 用 access 的 `$ref`、rm 比解好的 cwd、候選驗證、明寫不在、state 形狀、`/opt/tool` 蓋到家；check 標 EnvUnsafe、給模型的擋下訊息 |
+| [test_agent_tools_manage.py](test/test_agent_tools_manage.py) | 31 | （access-impl A1）`tools` 元素 `$opt`（`as`／`only`）改名與只挑、原地引用資料夾／`.json` 檔、裝包合併選項、改名撞名、`llm_call` 看得到新名；`tools ls`（文字／`--json`／`_jail` 欄）／`add`／`rm`／`alias`／`unalias`：用法錯、併發改寫都落地、`info.json` 縮排、明寫的 access 檔不在是錯、預設不在不是錯、裝包時講牢裡的工作根目錄、`.admin.lock` 串行化 tools／access 寫入 |
 | [test_jail.py](test/test_jail.py) | 13 | （access-impl）`build_argv`／`parse_args` 單元、沒 bwrap 退 126、用法錯 2；**真的跑 bwrap**（沒有就 skip）：`../amy`、絕對路徑、symlink 讀不到、環境乾淨、net off／on 連自己開的 port、唯讀 mount、`/opt/tool` 與 base read、aos-agent 包的 inst 經真 aos-exec 跑；base 的 `AOS_TOOL_ROOT` |
 | [test_access_more.py](test/test_access_more.py) | 7 | （access-impl B 隊補測）一批兩件工具共用同一份快照（中途改 access.json 不影響第二件）、壞表整批每件都跑不起來、下一批才用新表（批 1 settle 後換 access.json）、access rm／cwd／net 在 JSON 壞掉時拒絕且檔案不動、AccessUnsafe 的既有檔仍可用 `access rm` 修、`check` 的 bad 訊息指得到哪一格、牢裡看不到 `AOS_LLM_CONFIG` |
 | [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
