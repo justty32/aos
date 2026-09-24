@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""aos-llm 的命令列入口（子命令 call…）——實作在 ../lib/aos_llm_call.py。"""
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+
+import aos_llm_call  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(aos_llm_call.main())
