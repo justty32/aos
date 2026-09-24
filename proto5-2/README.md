@@ -2,7 +2,7 @@
 
 ← [INDEX](../wf/INDEX.md)｜上一版 [proto5](../proto5/README.md)
 
-**狀態：規範草稿，未實作**（第 1 版，2026-09-24）。沒有程式、沒有測試；要不要照這份做、先做哪段，等使用者拍。
+**狀態：已實作（第 1 版），2026-09-24**。程式在 [lib/](lib/README.md)＋[cli/](cli/)；測試 1247 條全綠（`cd proto5-2/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test`，約 74 秒）；實作筆記在 [notes/2026-09-24-impl/](notes/README.md)。
 
 ## 這是什麼
 
@@ -14,6 +14,97 @@ daemon 要帶上萬個孩子，指令會變多，但一律按池管。六點定�
 1. **kernel 只說「池 P 要 N 顆」**，daemon 自己補到 N、死了自己拉（會越等越久，不會狂拉）、多了自己收。kernel 不記 pid。
 2. **加 cpu 就是改一個數字**：`aos-kernel cpu add --pool default --count 100`，下一格生效，不用 boot。
 3. **kernel 每格只碰有事的 cpu**：cpu 回完音往 kernel 家丟一張通知，kernel 只看通知、剛派的、輪到巡檢的那幾顆；派工從閒著的號碼裡直接拿。
+
+## 十分鐘上手（2026-09-24 第 1 版）
+
+從 repo 根目錄照抄，一段一段貼進 bash／zsh。需要 Python 3.12 以上；第 4 段起要一個 OpenAI 相容的模型端點，例：LiteLLM 的 `http://localhost:4000/v1`／`deepseek-chat`（換別的就改 `llm.json` 的 `endpoint`、`model`）。工作目錄 `W` 隨你放；重來一次先 `rm -rf $W`。跟 proto5 一樣，三支指令一律用 `--target DIR` 指家，省略時 daemon 找 `AOS_DAEMON_HOME`、kernel 找 `AOS_KERNEL_HOME`，再沒有用目前資料夾；agent 省略就是目前資料夾。下面先把兩個環境變數設好。
+
+**1. PATH 與 daemon。**
+
+```sh
+export PATH=$PWD/proto5-2/cli:$PATH
+W=/tmp/aos2-try; mkdir -p $W
+export AOS_DAEMON_HOME=$W/D AOS_KERNEL_HOME=$W/K
+setsid aos-daemon boot 2>>$W/daemon.log </dev/null &
+```
+
+daemon 是前景程式，一定要放背景；用 `setsid`（或 `nohup`）才不會跟著終端機被收掉，跟 proto5 一樣。
+
+**2. kernel：池可以先 0 顆 init，之後再用 cpu add 補。** proto5-2 的 `init --config` 只收 kernel 參數＋池表（不像 proto5 逐顆列 cpu）。
+
+```sh
+cat > $W/llm.json <<'EOF'
+{"_metainfo": {"_type": "llm_config", "_version": 1},
+ "models": {"default": {"endpoint": "http://localhost:4000/v1", "model": "deepseek-chat"}}}
+EOF
+cat > $W/kernel.json <<EOF
+{"pools": {"default": {"count": 0}}}
+EOF
+aos-kernel init --config $W/kernel.json
+aos-kernel boot
+```
+
+`init` 印 `initialized <K>`；`boot` 印 `booted N pools, M cpus`（這裡只有 kernel 池那顆真的拉起來，`default` 還是 0 顆）。
+
+**3. `cpu add`：把 `default`、`llm` 兩池加上去。**
+
+```sh
+aos-kernel cpu add --pool default --count 2
+aos-kernel cpu add --pool llm --count 1 --env AOS_LLM_CONFIG=$W/llm.json
+```
+
+`cpu add` 只改 `K/info.json` 的池表，不放單、不用 `boot`——kernel 在跑的話下一格就照新數字補；上面兩行印 `pool default count 0 -> 2`、`pool llm count 0 -> 1`。等個一兩格（約 1 秒）再看：
+
+```sh
+aos-kernel ls              # health＋按池摘要＋行程數
+aos-kernel cpu ls          # 只看池摘要
+aos-daemon ls               # daemon 自己看到的活／忙／dead／重拉中，偷看檔案不用放單
+```
+
+**4. 最小 agent：生家、登記、說一句、等回話。**（這條線跟 proto5 完全一樣）
+
+```sh
+aos-agent init --target $W/bob
+aos-kernel check --agent $W/bob
+aos-agent start --target $W/bob
+aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
+```
+
+`check --agent` 現在按池表查，不再假設有個叫 `llm` 的池；其餘（`llm.model` 是代號 `default`、`say --wait` 等回話）跟 proto5 一樣。
+
+**5. 加減 cpu。**
+
+```sh
+aos-kernel cpu add --pool default --count 1         # 3 顆
+aos-kernel cpu rm default/2                          # 永久退休 2 號（寫進 skip，之後不會再用它）
+aos-kernel cpu rm --pool default --count 1           # 收最大的 1 號
+aos-kernel cpu ls --pool default                     # 每顆的狀態
+```
+
+兩種 `cpu rm` 都是「手上工作做完才真的收」，沒有 `--now`；被收的號要重新啟用得先 `cpu add` 生新號。
+
+**6. 每天重開機。** 關機、登出或關掉終端後 daemon 跟 cpu 都沒了，家還在：
+
+```sh
+export PATH=$PWD/proto5-2/cli:$PATH
+W=/tmp/aos2-try; export AOS_DAEMON_HOME=$W/D AOS_KERNEL_HOME=$W/K
+setsid aos-daemon boot 2>>$W/daemon.log </dev/null &
+aos-kernel ls               # 第一行 health＝ok 就好
+```
+
+跟 proto5 最大的差別：`aos-daemon boot` 會照上次的宣告自己把池拉回來，kernel 的鏈多半自己接上，**通常不用再打 `aos-kernel boot`**。只有 `aos-kernel ls` 的 health 不是 `ok`（例如印「tick 停住」）才補一次 `aos-kernel boot`。agent 家要不要 `aos-agent start`，看昨天有沒有做過第 7 段的 `stop`。
+
+**7. 全停。**
+
+```sh
+aos-agent stop --target $W/bob
+aos-kernel halt
+aos-daemon halt
+```
+
+`aos-kernel halt` 會把每個池（含 kernel 池）縮到 0，等 daemon 那邊全部消失才印 `stopped`；`aos-daemon halt` 停掉這批空池，`pool.json` 宣告留著，下次 `boot` 不會拉回任何東西（除非又 `cpu add`）。
+
+其餘（`listen`／`status`／`pause`／`continue`、自訂工具、手動不用 `init` 的家）跟 proto5 完全一樣，見 [proto5 README 十分鐘上手](../proto5/README.md#十分鐘上手09-24-試玩-r1-補fix-r4-全文改成新指令)第 4～6 段。
 
 ## 跟 proto5 的關係
 
@@ -61,13 +152,16 @@ daemon 是 `boot／halt`，kernel 停機是 `halt`；agent 的 `say --wait`、`l
 
 ## 要使用者拍的
 
-1. **kernel 帳本仍是整份讀寫，要不要接受？** 這一版做到「不逐顆查檔、不逐顆找閒的」，但每格仍要讀、寫一份跟 cpu 數成比例的 `K/state.json`（上萬顆約數 MB）。
-   要做到 (f) 的全部，得把帳本拆開——而 aos-agent 現在直接偷看 `K/state.json` 的 `procs`，拆了就要一起改 aos-agent（[spec/scale.md §2](spec/scale.md)）。
-2. **aos-agent 每格偷看整份帳本**：上萬個 agent 時是全系統最大的負擔（[spec/scale.md §3](spec/scale.md) 第 4 點）。要不要讓 kernel 另外維護「一行程一個小檔」，agent 改看它？（要改 aos-agent.md）
-3. **一顆 cpu＝一支 Python 行程**：1 萬顆約 100～200 GB 記憶體，而且每顆每 0.2 秒掃一次資料夾。「開一顆 cpu 很便宜」以現在的 `aos-cpu` 不成立。要不要改（一支行程管多個家、換語言），還是先以千顆為目標？
-4. **`cpu rm NAME` 的意思**：草稿定成 `NAME`＝`P/<i>`、**永久退休那個號**（寫進 `skip`，之後擴池也不再用它）。如果你的意思只是「這次收掉哪一顆」，要改。
-5. **既有池的 `cpu add --env`**：草稿直接拒絕（改環境請編 info）。要不要允許「改池環境、之後拉的 cpu 繼承」？活著的要不要一起重拉？
-6. **縮小要不要有 `--now`**：現在一律等被收的那顆把手上的工作做完；沒設 timeout 的工作可能等很久（[spec/kernel-pools.md §3](spec/kernel-pools.md)）。
-7. **拉不起來的號卡住的工作**：家壞了、cpu 永遠起不來時，派給它的那件只能靠把家修好來解開。要不要訂一個「確認沒人會跑這張單就放棄它」的協定？
-8. **daemon `halt` 後再 `boot` 要不要自動把池拉回來**：草稿選「要」（宣告留在 `pool.json`），所以 daemon 重開後通常不用 `aos-kernel boot`；代價是想「乾淨重來」得先讓 kernel 把池縮到 0。
-9. **退休的 cpu 家要不要有清理指令**：家從不刪，磁碟上的家數＝池曾經到過的最大號（[spec/kernel-home.md §4](spec/kernel-home.md)）。
+九題已由隊長先代為拍板（全部照草稿；Q1～Q3 先不動、Q4～Q9 照草稿定案），細節與翻案要改哪裡見 [notes/2026-09-24-impl/decisions.md](notes/2026-09-24-impl/decisions.md) 開頭「Q1～Q9」那段。每題都可以翻案。
+
+| 題 | 定成什麼 |
+|---|---|
+| Q1 kernel 帳本整份讀寫 | 先不動，照現況（一份 `K/state.json`），先以幾百到一千顆為準 |
+| Q2 aos-agent 每格偷看整份帳本 | 先不動 |
+| Q3 一顆 cpu＝一支 Python 行程 | 先不動，先以千顆為目標 |
+| Q4 `cpu rm NAME` 的意思 | 照草稿：`NAME`＝`P/<i>`、永久退休那個號（寫進 `skip`） |
+| Q5 既有池的 `cpu add --env` | 照草稿：拒絕，改環境請編 info |
+| Q6 縮小要不要有 `--now` | 照草稿：沒有，一律等手上工作做完 |
+| Q7 拉不起來的號卡住的工作 | 照草稿：不訂放棄協定，只能修好家 |
+| Q8 daemon `halt` 後 `boot` 自動拉回池 | 照草稿：要 |
+| Q9 退休 cpu 家要不要清理指令 | 照草稿：不做，家不刪 |
