@@ -39,7 +39,7 @@ aos-agent check --target $W/amy
 aos-agent start --target $W/amy
 echo '"現在幾點？請用工具查。"' > $W/amy/input.tmp && mv $W/amy/input.tmp $W/amy/input.json
 sleep 20
-aos-agent listen --target $W/amy
+aos-agent listen --target $W/amy --last
 ```
 
 `start` 印 `started agent-amy`；`listen` 印一句報時。收過的輸入搬進 `amy/done/`（`init` 的家是 `input/done/`）。

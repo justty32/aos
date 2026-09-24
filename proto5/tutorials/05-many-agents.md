@@ -71,10 +71,10 @@ for a in alice carol dave; do echo "== $a"; cat $W/$a.reply; done
 ```
 
 **別寫成「先全部 `say`，再一個個 `listen --wait`」**：`listen --wait` 只等**下一則新的**回話，
-輪到 carol 時她的回話可能早就到了，於是白等到逾時。已經說完了才想看，用 `listen`（最後一則）：
+輪到 carol 時她的回話可能早就到了，於是白等到逾時。已經說完了才想看，用 `listen --last`（最後一則）：
 
 ```sh
-for a in alice carol dave; do echo "== $a"; aos-agent listen --target $W/$a; done
+for a in alice carol dave; do echo "== $a"; aos-agent listen --target $W/$a --last; done
 ```
 
 ## 4. 看全局
@@ -157,7 +157,7 @@ agent-dave  /home/you/aos-try/dave  解除連敗暫停（等下一次成功）
 continued 3／4
 ```
 
-它看的是 kernel 帳本裡登記的所有 agent（用 `AOS_KERNEL_HOME` 找）。過幾秒 `for a in …; do aos-agent listen …; done` 就看得到各自的回話。
+它看的是 kernel 帳本裡登記的所有 agent（用 `AOS_KERNEL_HOME` 找）。過幾秒 `for a in …; do aos-agent listen … --last; done` 就看得到各自的回話。
 
 ## 7. 一次撤掉一批
 

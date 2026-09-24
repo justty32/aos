@@ -60,7 +60,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-agent check [--probe]` | 檢查 agent 家：設定、池、模型代號、工具 | [03](tutorials/03-first-agent.md) |
 | `aos-agent start`／`stop` | 向 kernel 登記／撤銷這個 agent | [03](tutorials/03-first-agent.md) |
 | `aos-agent say "…" [--wait]` | 投一則話；`--wait` 等回話印出來 | [03](tutorials/03-first-agent.md) |
-| `aos-agent listen [--last｜--wait｜--follow]` | 看回話：最後一則／等下一則新的／一直印 | [03](tutorials/03-first-agent.md) |
+| `aos-agent listen [--last [N]｜--wait [秒]｜--follow] [--show-calls｜--show-calls-full]` | 三種一定要給一種：`--last [N]` 印最後 N 則（N＞1 時每輪有標頭）｜`--wait [秒]`｜`--follow`；加 `--show-calls` 連工具呼叫一起印，`--show-calls-full` 印完整參數與回傳 | [03](tutorials/03-first-agent.md) |
 | `aos-agent status` | 第一行 `health`，再來在哪一格、在等什麼、這次的錯 | [03](tutorials/03-first-agent.md) |
 | `aos-agent pause`／`continue [--all]` | 手動暫停／解除手動暫停與連敗暫停（`--all`＝kernel 登記的全部） | [04](tutorials/04-tools-and-pause.md)、[05](tutorials/05-many-agents.md) |
 | `aos-agent tools add base --target 家 [--root DIR]` | 裝內建工具包 base（read／write／edit／bash／grep／find／ls），`--root` 指工作根目錄 | [04](tutorials/04-tools-and-pause.md) |

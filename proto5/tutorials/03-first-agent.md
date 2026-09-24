@@ -66,8 +66,10 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 ## 4. 看回話的三種方法
 
+`listen` 三種看法**一定要給一種**，不給會退 2（用法錯）：
+
 ```sh
-aos-agent listen --target $W/bob                 # 印最後一則就退（同 --last）
+aos-agent listen --target $W/bob --last          # 印最後一則就退
 aos-agent say "再說一次現在幾點。" --target $W/bob
 aos-agent listen --target $W/bob --wait 60       # 等「下一則新的」回話，印出就退
 aos-agent listen --target $W/bob --follow        # 每來一則印一則，看夠了按 Ctrl-C
@@ -75,6 +77,25 @@ aos-agent listen --target $W/bob --follow        # 每來一則印一則，看�
 
 `listen` 會在 stderr 多印一行時間（`aos-agent: time: 09-24 15:16:48`）。
 如果印的是它中途叫工具的那句、或你剛說的話還沒處理，stderr 會多一行「還在處理中」——那不是最後答案，用 `--wait` 等。
+
+`--last N` 印最後 N 則、每輪前面一行標頭；加 `--show-calls` 連叫了哪些工具、結果第一行一起印（真跑，`$W/bob` 說了三句）：
+
+```sh
+$ aos-agent listen --target $W/bob --last 3 --show-calls
+aos-agent: time: 09-24 15:41:41
+── 第 1 輪 · 收話 09-24 15:41:07 ──
+[呼叫 date]
+[結果 date：2026-09-24 15:41:14]
+現在是 2026年9月24日 下午3點41分。
+── 第 2 輪 · 收話 09-24 15:41:22 ──
+你好，我是繁體中文助理，可協助回答問題與查詢時間。
+── 第 3 輪 · 收話 09-24 15:41:28 ──
+[呼叫 date]
+[結果 date：2026-09-24 15:41:35]
+現在是 15:41:35，與上次（15:41:14）相差 21 秒。
+```
+
+`--show-calls-full` 再印完整參數與回傳（各截到 4000 字）；細節見 [cli-listen.md](../spec/aos-agent/cli-listen.md)。
 
 ## 5. 它現在怎樣
 
@@ -113,7 +134,7 @@ aos-agent stop --target $W/bob
   下一格再去收結果。（[一格做什麼](../spec/aos-agent/tick.md)）
 - 所以一句話的回覆要好幾格：純聊天約 5 秒，要跑工具約 10～20 秒，看模型快慢。
 - `say` 只是往 `input/` 放一個檔；還沒收的話有好幾則，下一格會合成一輪一起問模型。收過的搬到 `input/done/`。
-- 記憶在 `prompts/history.json`（每則 user／assistant／tool 訊息），`listen` 只印 assistant 的話。（[agent 家](../spec/agent/essentials.md)）
+- 記憶在 `prompts/history.json`（每則 user／assistant／tool 訊息），`listen` 預設只印 assistant 的話；要連工具呼叫一起看，用 `listen --last --show-calls`（簡化版）或 `--show-calls-full`（完整參數與回傳），或直接看 `prompts/history.json`。（[agent 家](../spec/agent/essentials.md)）
 
 ## 常見錯誤
 

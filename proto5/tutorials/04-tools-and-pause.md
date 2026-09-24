@@ -72,9 +72,11 @@ ok   agent/tool/date: 可執行 date
 agent 照樣會回話，模型看得到失敗原因，例如：「工具 add 執行失敗（exit 126，無法執行）…」。
 
 工具失敗是**給模型看的結果**，不算 agent 自己的錯：`log/agent.err` 不會有這一行，`status` 也照樣 `ok`。
-要看工具到底回了什麼，看記憶裡那則 `tool` 訊息：
+要看工具到底回了什麼，用 `aos-agent listen --last --show-calls-full`（或直接看記憶裡那則 `tool` 訊息）：
 
 ```sh
+aos-agent listen --target $W/bob --last --show-calls-full
+# 或直接看記憶檔
 python3 -c "import json; [print(m['role'], str(m.get('content'))[:120]) for m in json.load(open('$W/bob/prompts/history.json'))[-3:]]"
 ```
 
