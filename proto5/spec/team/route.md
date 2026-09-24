@@ -24,6 +24,7 @@
 - **命中兩條以上**或**句子含否定詞**（`negations`，沒寫用上面那六個）＝不自己做、**落穿給領隊**（「不要導入 heartbeat」不能觸發導入）。
 - 沒命中＝落穿：原話當一封 `REQUEST` 從 `human` 寄給領隊（名冊第一個 `template: lead` 的成員；沒有領隊＝退 1、說清楚）。
 - 每次結果記一行進 `team/route.log`：`{"at", "text", "result": "tool"|"handoff"|"lead"|"none", "route": 名或 null, "why"}`（`none`＝該落穿但隊裡沒有領隊，退 1、代號 `NoLead`）。
+  （第三波 W3-2）`result` 是 `lead` 的那行多一格 `"letter"`：投給領隊的那封 REQUEST 的 id（只加欄位，讀舊格式的程式不受影響；舊 log 沒有這格）。`aos-team crystal`（[crystal.md](crystal.md)）靠它對回「落穿之後領隊開了什麼單」，從常落穿的句型提候選規則給人批。
 
 ## `do` 三種
 

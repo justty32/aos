@@ -1,0 +1,15 @@
+PASS crystal-3
+PASS crystal-4
+9 條規則，0 條沒過
+存好了：/home/lorkhan/tmp/w3b-crystal/myteam/team/routes.json
+開單申請已交給郵差：1790263302527617587-2477779-human（派給 worker-1）
+含否定詞「不要」，已交給領隊 lead：1790263302557072049-2477780-human
+{"at": "2026-09-24T23:21:42+08:00", "text": "把 d.md 改名成 dd.md", "result": "handoff", "route": "crystal-2", "why": "命中 crystal-2"}
+{"at": "2026-09-24T23:21:42+08:00", "text": "不要把 d.md 改名成 dd.md", "result": "lead", "route": null, "why": "含否定詞「不要」", "letter": "1790263302557072049-2477780-human"}
+lead: stopped agent-lead
+worker-1: aos-agent: NotFound: 沒有這個行程：agent-worker-1
+
+郵差: stopped team-post-myteam-010aa92e
+心跳: stopped team-beat-myteam-010aa92e
+kernel /home/lorkhan/tmp/w3b-crystal/K 剛停
+daemon /home/lorkhan/tmp/w3b-crystal/D 剛停

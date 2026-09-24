@@ -1,0 +1,1663 @@
+{
+ "stats": {
+  "lines": 20,
+  "bad_lines": 0,
+  "by_result": {
+   "lead": 20
+  },
+  "by_rule": {},
+  "fallthrough": {
+   "nomatch": 19,
+   "negation": 1
+  }
+ },
+ "fallthrough": [
+  {
+   "at": "2026-09-24T23:10:19+08:00",
+   "text": "在專案建一個 hello.md，內容寫「你好世界」",
+   "reason": "nomatch",
+   "letter": "1790262619789024268-2419574-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0001",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "在專案根目錄建立 hello.md，內容為「你好世界」（原話：內容寫「你好世界」，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "hello.md"
+      },
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "hello.md",
+        "text": "你好世界"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "hello.md 的內容是否就是「你好世界」，沒有多餘文字、標點或翻譯改寫，原意未變。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:10:52+08:00",
+   "text": "把 a.md 改名成 alpha.md",
+   "reason": "nomatch",
+   "letter": "1790262652823917745-2421038-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0002",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄的 a.md 改名成 alpha.md：改名後專案裡看得到 alpha.md、看不到 a.md，內容與改名前一模一樣（原話：把 a.md 改名成 alpha.md，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "alpha.md"
+      },
+      {
+       "kind": "check",
+       "name": "wf_residue",
+       "args": {
+        "path": "a.md"
+       }
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:wf_residue",
+       "file_exists"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:11:28+08:00",
+   "text": "數 poem.md 有幾行，寫進 poem-lines.txt",
+   "reason": "nomatch",
+   "letter": "1790262688859001471-2425778-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0003",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "數專案根目錄 poem.md 有幾行，把這個行數寫進新檔 poem-lines.txt（原話：數 poem.md 有幾行，寫進 poem-lines.txt）。poem-lines.txt 內容要是那個行數數字。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "poem-lines.txt"
+      },
+      {
+       "kind": "judge",
+       "text": "poem-lines.txt 裡的數字是否等於 poem.md 的實際行數（不多不少、沒有其他多餘文字）。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:11:58+08:00",
+   "text": "把 e.md 的第 2 行刪掉",
+   "reason": "nomatch",
+   "letter": "1790262718891813752-2426575-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0004",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄 e.md 的第 2 行刪掉，其餘每一行原文照留、順序不變（原話：把 e.md 的第 2 行刪掉）。做完後 e.md 的行數比原本少 1 行，且原本第 1 行仍是第 1 行，原本第 3 行以後的各行原封不動。",
+     "facts": "改前（要保留起來給審查員比對的主檔原文）：派工時 e.md 的內容。審查員看不到改前的檔，請審查員向 worker-1 的同批產出確認「刪掉的是原本的第 2 行，其餘行原樣」。改前內容：",
+     "done_when": [
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "e.md",
+        "text": "e"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "比對改前改後：原第 2 行是否已被刪掉，且原本第 1 行與第 3 行以後的每一行是否原封不動、順序未變、內容未改寫。改前原文見 facts。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:12:16+08:00",
+   "text": "專案裡有哪些檔？",
+   "reason": "nomatch",
+   "letter": "1790262736923754978-2427103-human",
+   "linked": "log",
+   "tickets": []
+  },
+  {
+   "at": "2026-09-24T23:12:49+08:00",
+   "text": "在專案建一個 todo.md，內容寫「買牛奶」",
+   "reason": "nomatch",
+   "letter": "1790262769957795129-2427898-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0005",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "在專案根目錄建立 todo.md，內容為「買牛奶」（原話：內容寫「買牛奶」，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "todo.md"
+      },
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "todo.md",
+        "text": "買牛奶"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "todo.md 的內容是否就是「買牛奶」，沒有多餘文字、標點或改寫，原意未變。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:13:16+08:00",
+   "text": "把 b.md 改名成 beta.md",
+   "reason": "nomatch",
+   "letter": "1790262796991465393-2428674-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0006",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄的 b.md 改名成 beta.md：改名後專案裡看得到 beta.md、看不到 b.md，內容與改名前一模一樣（原話：把 b.md 改名成 beta.md，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "beta.md"
+      },
+      {
+       "kind": "check",
+       "name": "wf_residue",
+       "args": {
+        "path": "b.md"
+       }
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:wf_residue",
+       "file_exists"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:13:47+08:00",
+   "text": "數 story.md 有幾行，寫進 story-lines.txt",
+   "reason": "nomatch",
+   "letter": "1790262827026362084-2429800-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0007",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "數專案根目錄 story.md 有幾行，把這個行數寫進新檔 story-lines.txt（原話：數 story.md 有幾行，寫進 story-lines.txt）。story-lines.txt 內容要是那個行數數字。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "story-lines.txt"
+      },
+      {
+       "kind": "judge",
+       "text": "story-lines.txt 裡的數字是否等於 story.md 的實際行數（不多不少、沒有其他多餘文字）。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:14:17+08:00",
+   "text": "把 f.md 的第 3 行刪掉",
+   "reason": "nomatch",
+   "letter": "1790262857061278590-2431211-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0008",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄 f.md 的第 3 行刪掉，其餘每一行原文照留、順序不變（原話：把 f.md 的第 3 行刪掉）。做完後 f.md 的行數比原本少 1 行，原本第 1、2 行仍是第 1、2 行，原本第 4 行以後的各行原封不動。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "f.md",
+        "text": "f"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "比對改前改後：原第 3 行是否已被刪掉，且原本第 1、2 行與第 4 行以後的每一行是否原封不動、順序未變、內容未改寫。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:14:44+08:00",
+   "text": "幫我寫一段 README 介紹這個專案",
+   "reason": "nomatch",
+   "letter": "1790262884095558902-2435243-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0009",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "在專案根目錄建立 README.md，寫一段介紹這個專案的文字（原話：幫我寫一段 README 介紹這個專案）。內容要貼合專案實際內容（先看過目錄裡的檔案再寫），一段即可，不要虛構不存在的功能。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "README.md"
+      },
+      {
+       "kind": "judge",
+       "text": "README.md 是否是一段通順、能讀懂的專案介紹，且描述與專案實際檔案相符、沒有捏造不存在的東西。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:15:14+08:00",
+   "text": "在專案建一個 idea.md，內容寫「做一個小遊戲」",
+   "reason": "nomatch",
+   "letter": "1790262914131512164-2435522-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0010",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "在專案根目錄建立 idea.md，內容為「做一個小遊戲」（原話：內容寫「做一個小遊戲」，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "idea.md"
+      },
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "idea.md",
+        "text": "做一個小遊戲"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "idea.md 的內容是否就是「做一個小遊戲」，沒有多餘文字、標點或改寫，原意未變。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:15:41+08:00",
+   "text": "把 c.md 改名成 gamma.md",
+   "reason": "nomatch",
+   "letter": "1790262941165983668-2436047-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0011",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄的 c.md 改名成 gamma.md：改名後專案裡看得到 gamma.md、看不到 c.md，內容與改名前一模一樣（原話：把 c.md 改名成 gamma.md，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "gamma.md"
+      },
+      {
+       "kind": "check",
+       "name": "wf_residue",
+       "args": {
+        "path": "c.md"
+       }
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:wf_residue",
+       "file_exists"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:16:08+08:00",
+   "text": "數 list.md 有幾行，寫進 count.txt",
+   "reason": "nomatch",
+   "letter": "1790262968200996820-2436935-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0012",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "數專案根目錄 list.md 有幾行，把這個行數寫進新檔 count.txt（原話：數 list.md 有幾行，寫進 count.txt）。count.txt 內容要是那個行數數字。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "count.txt"
+      },
+      {
+       "kind": "judge",
+       "text": "count.txt 裡的數字是否等於 list.md 的實際行數（不多不少、沒有其他多餘文字）。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:16:32+08:00",
+   "text": "把 g.md 的第 1 行刪掉",
+   "reason": "nomatch",
+   "letter": "1790262992234557602-2438019-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0013",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄 g.md 的第 1 行刪掉，其餘每一行原文照留、順序不變（原話：把 g.md 的第 1 行刪掉）。做完後 g.md 的行數比原本少 1 行，原本第 2 行以後的各行依序變成新的第 1 行起，內容原封不動。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "g.md",
+        "text": "g"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "比對改前改後：原第 1 行是否已被刪掉，且原本第 2 行以後的每一行是否原封不動、順序未變、內容未改寫。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:17:02+08:00",
+   "text": "把所有 md 檔的標題都改成大寫",
+   "reason": "nomatch",
+   "letter": "1790263022269051668-2439772-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0014",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄所有 .md 檔裡的標題文字改成大寫（原話：把所有 md 檔的標題都改成大寫）。只改標題那行的標題文字，正文與其他行原文照留；中文字不受影響，遇英文標題才轉大寫。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "judge",
+       "text": "比對改前改後：每個 .md 檔的標題是否已改成大寫，且正文及其餘行未被更動、原意未變。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:17:29+08:00",
+   "text": "在專案建一個 memo.md，內容寫「明天開會」",
+   "reason": "nomatch",
+   "letter": "1790263049305283123-2441203-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0015",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "在專案根目錄建立 memo.md，內容為「明天開會」（原話：內容寫「明天開會」，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "memo.md"
+      },
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "memo.md",
+        "text": "明天開會"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "memo.md 的內容是否就是「明天開會」，沒有多餘文字、標點或改寫，原意未變。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:17:59+08:00",
+   "text": "把 d.md 改名成 delta.md",
+   "reason": "nomatch",
+   "letter": "1790263079342194029-2449729-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0016",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄的 d.md 改名成 delta.md：改名後專案裡看得到 delta.md、看不到 d.md，內容與改名前一模一樣（原話：把 d.md 改名成 delta.md，意思不能變）。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "delta.md"
+      },
+      {
+       "kind": "check",
+       "name": "wf_residue",
+       "args": {
+        "path": "d.md"
+       }
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:wf_residue",
+       "file_exists"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:18:23+08:00",
+   "text": "數 notes.md 有幾行，寫進 n.txt",
+   "reason": "nomatch",
+   "letter": "1790263103376696166-2451464-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0017",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "數專案根目錄 notes.md 有幾行，把這個行數寫進新檔 n.txt（原話：數 notes.md 有幾行，寫進 n.txt）。n.txt 內容要是那個行數數字。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "n.txt"
+      },
+      {
+       "kind": "judge",
+       "text": "n.txt 裡的數字是否等於 notes.md 的實際行數（不多不少、沒有其他多餘文字）。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "file_exists",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:18:50+08:00",
+   "text": "把 h.md 的第 4 行刪掉",
+   "reason": "nomatch",
+   "letter": "1790263130411238984-2455231-human",
+   "linked": "log",
+   "tickets": [
+    {
+     "id": "t-0018",
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄 h.md 的第 4 行刪掉，其餘每一行原文照留、順序不變（原話：把 h.md 的第 4 行刪掉）。做完後 h.md 的行數比原本少 1 行，原本第 1～3 行仍是第 1～3 行，原本第 5 行以後的各行原封不動。",
+     "facts": null,
+     "done_when": [
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "h.md",
+        "text": "h"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "比對改前改後：原第 4 行是否已被刪掉，且原本第 1～3 行與第 5 行以後的每一行是否原封不動、順序未變、內容未改寫。"
+      }
+     ],
+     "max_attempts": 3,
+     "kind": {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "judge"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "at": "2026-09-24T23:19:20+08:00",
+   "text": "不要把 a.md 刪掉",
+   "reason": "negation",
+   "letter": "1790263160448136481-2465795-human",
+   "linked": "log",
+   "tickets": []
+  }
+ ],
+ "classes": [
+  {
+   "skeleton": "在專案建一個{檔名}，內容寫「{引號內文}」",
+   "items": [
+    {
+     "at": "2026-09-24T23:10:19+08:00",
+     "text": "在專案建一個 hello.md，內容寫「你好世界」",
+     "reason": "nomatch",
+     "letter": "1790262619789024268-2419574-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0001",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "在專案根目錄建立 hello.md，內容為「你好世界」（原話：內容寫「你好世界」，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "hello.md"
+        },
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "hello.md",
+          "text": "你好世界"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "hello.md 的內容是否就是「你好世界」，沒有多餘文字、標點或翻譯改寫，原意未變。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:12:49+08:00",
+     "text": "在專案建一個 todo.md，內容寫「買牛奶」",
+     "reason": "nomatch",
+     "letter": "1790262769957795129-2427898-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0005",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "在專案根目錄建立 todo.md，內容為「買牛奶」（原話：內容寫「買牛奶」，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "todo.md"
+        },
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "todo.md",
+          "text": "買牛奶"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "todo.md 的內容是否就是「買牛奶」，沒有多餘文字、標點或改寫，原意未變。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:15:14+08:00",
+     "text": "在專案建一個 idea.md，內容寫「做一個小遊戲」",
+     "reason": "nomatch",
+     "letter": "1790262914131512164-2435522-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0010",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "在專案根目錄建立 idea.md，內容為「做一個小遊戲」（原話：內容寫「做一個小遊戲」，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "idea.md"
+        },
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "idea.md",
+          "text": "做一個小遊戲"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "idea.md 的內容是否就是「做一個小遊戲」，沒有多餘文字、標點或改寫，原意未變。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:17:29+08:00",
+     "text": "在專案建一個 memo.md，內容寫「明天開會」",
+     "reason": "nomatch",
+     "letter": "1790263049305283123-2441203-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0015",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "在專案根目錄建立 memo.md，內容為「明天開會」（原話：內容寫「明天開會」，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "memo.md"
+        },
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "memo.md",
+          "text": "明天開會"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "memo.md 的內容是否就是「明天開會」，沒有多餘文字、標點或改寫，原意未變。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "count": 4,
+   "with_ticket": 4,
+   "same_kind": true
+  },
+  {
+   "skeleton": "把{檔名}改名成{檔名}",
+   "items": [
+    {
+     "at": "2026-09-24T23:10:52+08:00",
+     "text": "把 a.md 改名成 alpha.md",
+     "reason": "nomatch",
+     "letter": "1790262652823917745-2421038-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0002",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄的 a.md 改名成 alpha.md：改名後專案裡看得到 alpha.md、看不到 a.md，內容與改名前一模一樣（原話：把 a.md 改名成 alpha.md，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "alpha.md"
+        },
+        {
+         "kind": "check",
+         "name": "wf_residue",
+         "args": {
+          "path": "a.md"
+         }
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:wf_residue",
+         "file_exists"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:13:16+08:00",
+     "text": "把 b.md 改名成 beta.md",
+     "reason": "nomatch",
+     "letter": "1790262796991465393-2428674-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0006",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄的 b.md 改名成 beta.md：改名後專案裡看得到 beta.md、看不到 b.md，內容與改名前一模一樣（原話：把 b.md 改名成 beta.md，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "beta.md"
+        },
+        {
+         "kind": "check",
+         "name": "wf_residue",
+         "args": {
+          "path": "b.md"
+         }
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:wf_residue",
+         "file_exists"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:15:41+08:00",
+     "text": "把 c.md 改名成 gamma.md",
+     "reason": "nomatch",
+     "letter": "1790262941165983668-2436047-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0011",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄的 c.md 改名成 gamma.md：改名後專案裡看得到 gamma.md、看不到 c.md，內容與改名前一模一樣（原話：把 c.md 改名成 gamma.md，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "gamma.md"
+        },
+        {
+         "kind": "check",
+         "name": "wf_residue",
+         "args": {
+          "path": "c.md"
+         }
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:wf_residue",
+         "file_exists"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:17:59+08:00",
+     "text": "把 d.md 改名成 delta.md",
+     "reason": "nomatch",
+     "letter": "1790263079342194029-2449729-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0016",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄的 d.md 改名成 delta.md：改名後專案裡看得到 delta.md、看不到 d.md，內容與改名前一模一樣（原話：把 d.md 改名成 delta.md，意思不能變）。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "delta.md"
+        },
+        {
+         "kind": "check",
+         "name": "wf_residue",
+         "args": {
+          "path": "d.md"
+         }
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:wf_residue",
+         "file_exists"
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "count": 4,
+   "with_ticket": 4,
+   "same_kind": true
+  },
+  {
+   "skeleton": "數{檔名}有幾行，寫進{檔名}",
+   "items": [
+    {
+     "at": "2026-09-24T23:11:28+08:00",
+     "text": "數 poem.md 有幾行，寫進 poem-lines.txt",
+     "reason": "nomatch",
+     "letter": "1790262688859001471-2425778-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0003",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "數專案根目錄 poem.md 有幾行，把這個行數寫進新檔 poem-lines.txt（原話：數 poem.md 有幾行，寫進 poem-lines.txt）。poem-lines.txt 內容要是那個行數數字。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "poem-lines.txt"
+        },
+        {
+         "kind": "judge",
+         "text": "poem-lines.txt 裡的數字是否等於 poem.md 的實際行數（不多不少、沒有其他多餘文字）。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:13:47+08:00",
+     "text": "數 story.md 有幾行，寫進 story-lines.txt",
+     "reason": "nomatch",
+     "letter": "1790262827026362084-2429800-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0007",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "數專案根目錄 story.md 有幾行，把這個行數寫進新檔 story-lines.txt（原話：數 story.md 有幾行，寫進 story-lines.txt）。story-lines.txt 內容要是那個行數數字。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "story-lines.txt"
+        },
+        {
+         "kind": "judge",
+         "text": "story-lines.txt 裡的數字是否等於 story.md 的實際行數（不多不少、沒有其他多餘文字）。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:16:08+08:00",
+     "text": "數 list.md 有幾行，寫進 count.txt",
+     "reason": "nomatch",
+     "letter": "1790262968200996820-2436935-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0012",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "數專案根目錄 list.md 有幾行，把這個行數寫進新檔 count.txt（原話：數 list.md 有幾行，寫進 count.txt）。count.txt 內容要是那個行數數字。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "count.txt"
+        },
+        {
+         "kind": "judge",
+         "text": "count.txt 裡的數字是否等於 list.md 的實際行數（不多不少、沒有其他多餘文字）。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:18:23+08:00",
+     "text": "數 notes.md 有幾行，寫進 n.txt",
+     "reason": "nomatch",
+     "letter": "1790263103376696166-2451464-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0017",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "數專案根目錄 notes.md 有幾行，把這個行數寫進新檔 n.txt（原話：數 notes.md 有幾行，寫進 n.txt）。n.txt 內容要是那個行數數字。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "n.txt"
+        },
+        {
+         "kind": "judge",
+         "text": "n.txt 裡的數字是否等於 notes.md 的實際行數（不多不少、沒有其他多餘文字）。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "count": 4,
+   "with_ticket": 4,
+   "same_kind": true
+  },
+  {
+   "skeleton": "把{檔名}的第{數字}行刪掉",
+   "items": [
+    {
+     "at": "2026-09-24T23:11:58+08:00",
+     "text": "把 e.md 的第 2 行刪掉",
+     "reason": "nomatch",
+     "letter": "1790262718891813752-2426575-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0004",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄 e.md 的第 2 行刪掉，其餘每一行原文照留、順序不變（原話：把 e.md 的第 2 行刪掉）。做完後 e.md 的行數比原本少 1 行，且原本第 1 行仍是第 1 行，原本第 3 行以後的各行原封不動。",
+       "facts": "改前（要保留起來給審查員比對的主檔原文）：派工時 e.md 的內容。審查員看不到改前的檔，請審查員向 worker-1 的同批產出確認「刪掉的是原本的第 2 行，其餘行原樣」。改前內容：",
+       "done_when": [
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "e.md",
+          "text": "e"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "比對改前改後：原第 2 行是否已被刪掉，且原本第 1 行與第 3 行以後的每一行是否原封不動、順序未變、內容未改寫。改前原文見 facts。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:14:17+08:00",
+     "text": "把 f.md 的第 3 行刪掉",
+     "reason": "nomatch",
+     "letter": "1790262857061278590-2431211-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0008",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄 f.md 的第 3 行刪掉，其餘每一行原文照留、順序不變（原話：把 f.md 的第 3 行刪掉）。做完後 f.md 的行數比原本少 1 行，原本第 1、2 行仍是第 1、2 行，原本第 4 行以後的各行原封不動。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "f.md",
+          "text": "f"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "比對改前改後：原第 3 行是否已被刪掉，且原本第 1、2 行與第 4 行以後的每一行是否原封不動、順序未變、內容未改寫。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:16:32+08:00",
+     "text": "把 g.md 的第 1 行刪掉",
+     "reason": "nomatch",
+     "letter": "1790262992234557602-2438019-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0013",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄 g.md 的第 1 行刪掉，其餘每一行原文照留、順序不變（原話：把 g.md 的第 1 行刪掉）。做完後 g.md 的行數比原本少 1 行，原本第 2 行以後的各行依序變成新的第 1 行起，內容原封不動。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "g.md",
+          "text": "g"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "比對改前改後：原第 1 行是否已被刪掉，且原本第 2 行以後的每一行是否原封不動、順序未變、內容未改寫。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "judge"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "at": "2026-09-24T23:18:50+08:00",
+     "text": "把 h.md 的第 4 行刪掉",
+     "reason": "nomatch",
+     "letter": "1790263130411238984-2455231-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0018",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄 h.md 的第 4 行刪掉，其餘每一行原文照留、順序不變（原話：把 h.md 的第 4 行刪掉）。做完後 h.md 的行數比原本少 1 行，原本第 1～3 行仍是第 1～3 行，原本第 5 行以後的各行原封不動。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "check",
+         "name": "contains",
+         "args": {
+          "path": "h.md",
+          "text": "h"
+         }
+        },
+        {
+         "kind": "judge",
+         "text": "比對改前改後：原第 4 行是否已被刪掉，且原本第 1～3 行與第 5 行以後的每一行是否原封不動、順序未變、內容未改寫。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "check:contains",
+         "judge"
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "count": 4,
+   "with_ticket": 4,
+   "same_kind": true
+  },
+  {
+   "skeleton": "專案裡有哪些檔？",
+   "items": [
+    {
+     "at": "2026-09-24T23:12:16+08:00",
+     "text": "專案裡有哪些檔？",
+     "reason": "nomatch",
+     "letter": "1790262736923754978-2427103-human",
+     "linked": "log",
+     "tickets": []
+    }
+   ],
+   "count": 1,
+   "with_ticket": 0,
+   "same_kind": false
+  },
+  {
+   "skeleton": "幫我寫一段README介紹這個專案",
+   "items": [
+    {
+     "at": "2026-09-24T23:14:44+08:00",
+     "text": "幫我寫一段 README 介紹這個專案",
+     "reason": "nomatch",
+     "letter": "1790262884095558902-2435243-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0009",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "在專案根目錄建立 README.md，寫一段介紹這個專案的文字（原話：幫我寫一段 README 介紹這個專案）。內容要貼合專案實際內容（先看過目錄裡的檔案再寫），一段即可，不要虛構不存在的功能。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "file_exists",
+         "path": "README.md"
+        },
+        {
+         "kind": "judge",
+         "text": "README.md 是否是一段通順、能讀懂的專案介紹，且描述與專案實際檔案相符、沒有捏造不存在的東西。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "file_exists",
+         "judge"
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "count": 1,
+   "with_ticket": 1,
+   "same_kind": true
+  },
+  {
+   "skeleton": "把所有md檔的標題都改成大寫",
+   "items": [
+    {
+     "at": "2026-09-24T23:17:02+08:00",
+     "text": "把所有 md 檔的標題都改成大寫",
+     "reason": "nomatch",
+     "letter": "1790263022269051668-2439772-human",
+     "linked": "log",
+     "tickets": [
+      {
+       "id": "t-0014",
+       "assignee": "worker-1",
+       "workflow": "無",
+       "goal": "把專案根目錄所有 .md 檔裡的標題文字改成大寫（原話：把所有 md 檔的標題都改成大寫）。只改標題那行的標題文字，正文與其他行原文照留；中文字不受影響，遇英文標題才轉大寫。",
+       "facts": null,
+       "done_when": [
+        {
+         "kind": "judge",
+         "text": "比對改前改後：每個 .md 檔的標題是否已改成大寫，且正文及其餘行未被更動、原意未變。"
+        }
+       ],
+       "max_attempts": 3,
+       "kind": {
+        "assignee": "worker-1",
+        "workflow": "無",
+        "done_when": [
+         "judge"
+        ]
+       }
+      }
+     ]
+    }
+   ],
+   "count": 1,
+   "with_ticket": 1,
+   "same_kind": true
+  }
+ ],
+ "min": 2,
+ "source": "mechanical",
+ "candidates": [
+  {
+   "rule": {
+    "name": "crystal-1",
+    "pattern": "在專案建一個\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*，內容寫\\s*「\\s*(?P<q1>[^」]+)\\s*」",
+    "do": "handoff",
+    "handoff": {
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "在專案根目錄建立 {f1}，內容為「{q1}」（原話：內容寫「{q1}」，意思不能變）。",
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "{f1}"
+      },
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "{f1}",
+        "text": "{q1}"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "{f1} 的內容是否就是「{q1}」，沒有多餘文字、標點或改寫，原意未變。"
+      }
+     ],
+     "max_attempts": 3
+    },
+    "tests": {
+     "hit": [
+      "在專案建一個 hello.md，內容寫「你好世界」",
+      "在專案建一個 todo.md，內容寫「買牛奶」",
+      "在專案建一個 idea.md，內容寫「做一個小遊戲」",
+      "在專案建一個 memo.md，內容寫「明天開會」"
+     ],
+     "miss": [
+      "把 a.md 改名成 alpha.md",
+      "數 poem.md 有幾行，寫進 poem-lines.txt",
+      "把 e.md 的第 2 行刪掉",
+      "不要在專案建一個 hello.md，內容寫「你好世界」"
+     ]
+    }
+   },
+   "backtest": {
+    "checked": 16,
+    "eats": []
+   }
+  },
+  {
+   "rule": {
+    "name": "crystal-2",
+    "pattern": "把\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*改名成\\s*(?P<f2>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})",
+    "do": "handoff",
+    "handoff": {
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄的 {f1} 改名成 {f2}：改名後專案裡看得到 {f2}、看不到 {f1}，內容與改名前一模一樣（原話：把 {f1} 改名成 {f2}，意思不能變）。",
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "{f2}"
+      },
+      {
+       "kind": "check",
+       "name": "wf_residue",
+       "args": {
+        "path": "{f1}"
+       }
+      }
+     ],
+     "max_attempts": 3
+    },
+    "tests": {
+     "hit": [
+      "把 a.md 改名成 alpha.md",
+      "把 b.md 改名成 beta.md",
+      "把 c.md 改名成 gamma.md",
+      "把 d.md 改名成 delta.md"
+     ],
+     "miss": [
+      "在專案建一個 hello.md，內容寫「你好世界」",
+      "數 poem.md 有幾行，寫進 poem-lines.txt",
+      "把 e.md 的第 2 行刪掉",
+      "不要把 a.md 改名成 alpha.md"
+     ]
+    }
+   },
+   "backtest": {
+    "checked": 16,
+    "eats": []
+   }
+  },
+  {
+   "rule": {
+    "name": "crystal-3",
+    "pattern": "數\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*有幾行，寫進\\s*(?P<f2>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})",
+    "do": "handoff",
+    "handoff": {
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "數專案根目錄 {f1} 有幾行，把這個行數寫進新檔 {f2}（原話：數 {f1} 有幾行，寫進 {f2}）。{f2} 內容要是那個行數數字。",
+     "done_when": [
+      {
+       "kind": "file_exists",
+       "path": "{f2}"
+      },
+      {
+       "kind": "judge",
+       "text": "{f2} 裡的數字是否等於 {f1} 的實際行數（不多不少、沒有其他多餘文字）。"
+      }
+     ],
+     "max_attempts": 3
+    },
+    "tests": {
+     "hit": [
+      "數 poem.md 有幾行，寫進 poem-lines.txt",
+      "數 story.md 有幾行，寫進 story-lines.txt",
+      "數 list.md 有幾行，寫進 count.txt",
+      "數 notes.md 有幾行，寫進 n.txt"
+     ],
+     "miss": [
+      "在專案建一個 hello.md，內容寫「你好世界」",
+      "把 a.md 改名成 alpha.md",
+      "把 e.md 的第 2 行刪掉",
+      "不要數 poem.md 有幾行，寫進 poem-lines.txt"
+     ]
+    }
+   },
+   "backtest": {
+    "checked": 16,
+    "eats": []
+   }
+  },
+  {
+   "rule": {
+    "name": "crystal-4",
+    "pattern": "把\\s*(?P<f1>[A-Za-z0-9_~./][A-Za-z0-9_~./-]*\\.[A-Za-z0-9]{1,8})\\s*的第\\s*(?P<n1>[0-9]+)\\s*行刪掉",
+    "do": "handoff",
+    "handoff": {
+     "assignee": "worker-1",
+     "workflow": "無",
+     "goal": "把專案根目錄 {f1} 的第 {n1} 行刪掉，其餘每一行原文照留、順序不變（原話：把 {f1} 的第 {n1} 行刪掉）。做完後 {f1} 的行數比原本少 1 行，且原本第 1 行仍是第 1 行，原本第 3 行以後的各行原封不動。",
+     "done_when": [
+      {
+       "kind": "check",
+       "name": "contains",
+       "args": {
+        "path": "{f1}",
+        "text": "e"
+       }
+      },
+      {
+       "kind": "judge",
+       "text": "比對改前改後：原第 {n1} 行是否已被刪掉，且原本第 1 行與第 3 行以後的每一行是否原封不動、順序未變、內容未改寫。改前原文見 facts。"
+      }
+     ],
+     "max_attempts": 3
+    },
+    "tests": {
+     "hit": [
+      "把 e.md 的第 2 行刪掉",
+      "把 f.md 的第 3 行刪掉",
+      "把 g.md 的第 1 行刪掉",
+      "把 h.md 的第 4 行刪掉"
+     ],
+     "miss": [
+      "在專案建一個 hello.md，內容寫「你好世界」",
+      "把 a.md 改名成 alpha.md",
+      "數 poem.md 有幾行，寫進 poem-lines.txt",
+      "不要把 e.md 的第 2 行刪掉"
+     ]
+    }
+   },
+   "backtest": {
+    "checked": 16,
+    "eats": []
+   }
+  }
+ ],
+ "skipped": [],
+ "dropped": [],
+ "proposal": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/notes/2026-09-24-tool-era/w3b/runs/crystal/out/mech.json",
+ "llm": null
+}

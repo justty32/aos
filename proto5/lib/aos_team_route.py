@@ -107,8 +107,11 @@ def fill(value, groups):
 
 # ------------------------------------------------------------------ 做事 ----
 
-def _log(lay, text, result, rule, why):
+def _log(lay, text, result, rule, why, letter=None):
+    """一行一次判決。落穿給領隊的那行多一格 letter＝那封 REQUEST 的 id（第三波 W3-2，給 aos-team crystal 對單）。"""
     line = {'at': now_iso(), 'text': text, 'result': result, 'route': rule['name'] if rule else None, 'why': why}
+    if letter is not None:
+        line['letter'] = letter
     lay.route_log.parent.mkdir(parents=True, exist_ok=True)
     with open(lay.route_log, 'a', encoding='utf-8') as f:
         f.write(json.dumps(line, ensure_ascii=False) + '\n')
@@ -211,7 +214,7 @@ def ask(team_dir, text):
            'rev': None, 'text': text, 'at': now_iso(roster.get('tz'))}
     validate_letter(ltr)
     _put(lay, ltr)
-    _log(lay, text, 'lead', None, why)
+    _log(lay, text, 'lead', None, why, letter=ltr['id'])
     print('%s，已交給領隊 %s：%s' % (why, leads[0], ltr['id']))
     return 0
 

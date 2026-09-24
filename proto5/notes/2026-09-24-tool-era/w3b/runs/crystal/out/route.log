@@ -1,0 +1,20 @@
+{"at": "2026-09-24T23:10:19+08:00", "text": "在專案建一個 hello.md，內容寫「你好世界」", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262619789024268-2419574-human"}
+{"at": "2026-09-24T23:10:52+08:00", "text": "把 a.md 改名成 alpha.md", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262652823917745-2421038-human"}
+{"at": "2026-09-24T23:11:28+08:00", "text": "數 poem.md 有幾行，寫進 poem-lines.txt", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262688859001471-2425778-human"}
+{"at": "2026-09-24T23:11:58+08:00", "text": "把 e.md 的第 2 行刪掉", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262718891813752-2426575-human"}
+{"at": "2026-09-24T23:12:16+08:00", "text": "專案裡有哪些檔？", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262736923754978-2427103-human"}
+{"at": "2026-09-24T23:12:49+08:00", "text": "在專案建一個 todo.md，內容寫「買牛奶」", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262769957795129-2427898-human"}
+{"at": "2026-09-24T23:13:16+08:00", "text": "把 b.md 改名成 beta.md", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262796991465393-2428674-human"}
+{"at": "2026-09-24T23:13:47+08:00", "text": "數 story.md 有幾行，寫進 story-lines.txt", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262827026362084-2429800-human"}
+{"at": "2026-09-24T23:14:17+08:00", "text": "把 f.md 的第 3 行刪掉", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262857061278590-2431211-human"}
+{"at": "2026-09-24T23:14:44+08:00", "text": "幫我寫一段 README 介紹這個專案", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262884095558902-2435243-human"}
+{"at": "2026-09-24T23:15:14+08:00", "text": "在專案建一個 idea.md，內容寫「做一個小遊戲」", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262914131512164-2435522-human"}
+{"at": "2026-09-24T23:15:41+08:00", "text": "把 c.md 改名成 gamma.md", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262941165983668-2436047-human"}
+{"at": "2026-09-24T23:16:08+08:00", "text": "數 list.md 有幾行，寫進 count.txt", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262968200996820-2436935-human"}
+{"at": "2026-09-24T23:16:32+08:00", "text": "把 g.md 的第 1 行刪掉", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790262992234557602-2438019-human"}
+{"at": "2026-09-24T23:17:02+08:00", "text": "把所有 md 檔的標題都改成大寫", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790263022269051668-2439772-human"}
+{"at": "2026-09-24T23:17:29+08:00", "text": "在專案建一個 memo.md，內容寫「明天開會」", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790263049305283123-2441203-human"}
+{"at": "2026-09-24T23:17:59+08:00", "text": "把 d.md 改名成 delta.md", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790263079342194029-2449729-human"}
+{"at": "2026-09-24T23:18:23+08:00", "text": "數 notes.md 有幾行，寫進 n.txt", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790263103376696166-2451464-human"}
+{"at": "2026-09-24T23:18:50+08:00", "text": "把 h.md 的第 4 行刪掉", "result": "lead", "route": null, "why": "沒有規則命中", "letter": "1790263130411238984-2455231-human"}
+{"at": "2026-09-24T23:19:20+08:00", "text": "不要把 a.md 刪掉", "result": "lead", "route": null, "why": "含否定詞「不要」", "letter": "1790263160448136481-2465795-human"}

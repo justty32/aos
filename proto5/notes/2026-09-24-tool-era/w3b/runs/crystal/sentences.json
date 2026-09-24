@@ -1,0 +1,41 @@
+{
+  "_note": "T-crystal 真跑的句子。train：真的 aos-team ask 給領隊（4 種句型各 4 句＋4 句雜的）；test_pos：同句型換值（每型 3 句，只拿 decide 判）；test_neg：別的話與否定句（8 句）。",
+  "train": [
+    "在專案建一個 hello.md，內容寫「你好世界」",
+    "把 a.md 改名成 alpha.md",
+    "數 poem.md 有幾行，寫進 poem-lines.txt",
+    "把 e.md 的第 2 行刪掉",
+    "專案裡有哪些檔？",
+    "在專案建一個 todo.md，內容寫「買牛奶」",
+    "把 b.md 改名成 beta.md",
+    "數 story.md 有幾行，寫進 story-lines.txt",
+    "把 f.md 的第 3 行刪掉",
+    "幫我寫一段 README 介紹這個專案",
+    "在專案建一個 idea.md，內容寫「做一個小遊戲」",
+    "把 c.md 改名成 gamma.md",
+    "數 list.md 有幾行，寫進 count.txt",
+    "把 g.md 的第 1 行刪掉",
+    "把所有 md 檔的標題都改成大寫",
+    "在專案建一個 memo.md，內容寫「明天開會」",
+    "把 d.md 改名成 delta.md",
+    "數 notes.md 有幾行，寫進 n.txt",
+    "把 h.md 的第 4 行刪掉",
+    "不要把 a.md 刪掉"
+  ],
+  "test_pos": {
+    "create": ["在專案建一個 plan.md，內容寫「第一步」", "在專案建一個 x1.md，內容寫「hello」", "在專案建一個 diary.md，內容寫「今天下雨」"],
+    "rename": ["把 old.md 改名成 new.md", "把 docs/draft.md 改名成 docs/final.md", "把x.md改名成y.md"],
+    "count": ["數 book.md 有幾行，寫進 book.txt", "數 a1.md 有幾行，寫進 out.txt", "數 log.md 有幾行，寫進 lines.txt"],
+    "delline": ["把 k.md 的第 5 行刪掉", "把 m.md 的第 10 行刪掉", "把 z.md 的第 1 行刪掉"]
+  },
+  "test_neg": [
+    "不要把 old.md 改名成 new.md",
+    "別在專案建一個 plan.md，內容寫「第一步」",
+    "把 old.md 複製成 new.md",
+    "數 book.md 有幾個字，寫進 book.txt",
+    "把 k.md 的第 5 行改成「hi」",
+    "在專案建一個資料夾 docs",
+    "看一下 plan.md",
+    "把 old.md 改名成 new.md，然後刪掉 x.md"
+  ]
+}

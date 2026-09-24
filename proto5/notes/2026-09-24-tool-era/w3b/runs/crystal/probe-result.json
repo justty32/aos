@@ -1,0 +1,274 @@
+{
+ "out/mech.json": [
+  {
+   "text": "把 old.md 改名成 new.md，然後刪掉x.md",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  },
+  {
+   "text": "把 old.md 改名成 ../../etc/x.md",
+   "result": "handoff",
+   "rule": "crystal-2",
+   "groups": {
+    "f1": "old.md",
+    "f2": "../../etc/x.md"
+   }
+  },
+  {
+   "text": "把 -rf.md 改名成 y.md",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 /etc/passwd",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 out",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  },
+  {
+   "text": "在專案建一個 ../x.md，內容寫「a」",
+   "result": "handoff",
+   "rule": "crystal-1",
+   "groups": {
+    "f1": "../x.md",
+    "q1": "a"
+   }
+  },
+  {
+   "text": "把x.md改名成y.md",
+   "result": "handoff",
+   "rule": "crystal-2",
+   "groups": {
+    "f1": "x.md",
+    "f2": "y.md"
+   }
+  },
+  {
+   "text": "把 筆記.md 改名成 note.md",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  }
+ ],
+ "out/llm-1.json": [
+  {
+   "text": "把 old.md 改名成 new.md，然後刪掉x.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "old.md",
+    "new": "new.md，然後刪掉x.md"
+   }
+  },
+  {
+   "text": "把 old.md 改名成 ../../etc/x.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "old.md",
+    "new": "../../etc/x.md"
+   }
+  },
+  {
+   "text": "把 -rf.md 改名成 y.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "-rf.md",
+    "new": "y.md"
+   }
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 /etc/passwd",
+   "result": "handoff",
+   "rule": "llm-count-lines",
+   "groups": {
+    "src": "a.md",
+    "dst": "/etc/passwd"
+   }
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 out",
+   "result": "handoff",
+   "rule": "llm-count-lines",
+   "groups": {
+    "src": "a.md",
+    "dst": "out"
+   }
+  },
+  {
+   "text": "在專案建一個 ../x.md，內容寫「a」",
+   "result": "handoff",
+   "rule": "llm-create-md",
+   "groups": {
+    "file": "../x.md",
+    "content": "a"
+   }
+  },
+  {
+   "text": "把x.md改名成y.md",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  },
+  {
+   "text": "把 筆記.md 改名成 note.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "筆記.md",
+    "new": "note.md"
+   }
+  }
+ ],
+ "out/llm-2.json": [
+  {
+   "text": "把 old.md 改名成 new.md，然後刪掉x.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "old.md",
+    "new": "new.md，然後刪掉x.md"
+   }
+  },
+  {
+   "text": "把 old.md 改名成 ../../etc/x.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "old.md",
+    "new": "../../etc/x.md"
+   }
+  },
+  {
+   "text": "把 -rf.md 改名成 y.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "-rf.md",
+    "new": "y.md"
+   }
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 /etc/passwd",
+   "result": "handoff",
+   "rule": "llm-count-lines",
+   "groups": {
+    "src": "a.md",
+    "dst": "/etc/passwd"
+   }
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 out",
+   "result": "handoff",
+   "rule": "llm-count-lines",
+   "groups": {
+    "src": "a.md",
+    "dst": "out"
+   }
+  },
+  {
+   "text": "在專案建一個 ../x.md，內容寫「a」",
+   "result": "handoff",
+   "rule": "llm-create-md",
+   "groups": {
+    "file": "../x.md",
+    "content": "a"
+   }
+  },
+  {
+   "text": "把x.md改名成y.md",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  },
+  {
+   "text": "把 筆記.md 改名成 note.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "筆記.md",
+    "new": "note.md"
+   }
+  }
+ ],
+ "out/llm-3.json": [
+  {
+   "text": "把 old.md 改名成 new.md，然後刪掉x.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "old.md",
+    "new": "new.md，然後刪掉x.md"
+   }
+  },
+  {
+   "text": "把 old.md 改名成 ../../etc/x.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "old.md",
+    "new": "../../etc/x.md"
+   }
+  },
+  {
+   "text": "把 -rf.md 改名成 y.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "-rf.md",
+    "new": "y.md"
+   }
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 /etc/passwd",
+   "result": "handoff",
+   "rule": "llm-count-lines",
+   "groups": {
+    "src": "a.md",
+    "dst": "/etc/passwd"
+   }
+  },
+  {
+   "text": "數 a.md 有幾行，寫進 out",
+   "result": "handoff",
+   "rule": "llm-count-lines",
+   "groups": {
+    "src": "a.md",
+    "dst": "out"
+   }
+  },
+  {
+   "text": "在專案建一個 ../x.md，內容寫「a」",
+   "result": "handoff",
+   "rule": "llm-create-md",
+   "groups": {
+    "file": "../x.md",
+    "content": "a"
+   }
+  },
+  {
+   "text": "把x.md改名成y.md",
+   "result": "lead",
+   "rule": null,
+   "groups": {}
+  },
+  {
+   "text": "把 筆記.md 改名成 note.md",
+   "result": "handoff",
+   "rule": "llm-rename-md",
+   "groups": {
+    "old": "筆記.md",
+    "new": "note.md"
+   }
+  }
+ ]
+}
