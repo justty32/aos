@@ -4,13 +4,13 @@
 對得上的規則（寫死，改了要改測試）：
 - 佔位的「名字」＝{{ }} 裡去掉例子的那段（「，如…」「，例…」「例：…」「；…」「：…」之後都不算），
   表格列另外用第一格的字當第二個名字（第一格本身沒有佔位時）。
-- 名字跟事實表的鍵比：一樣 → 同義詞表（ALIASES）→ 一邊包含另一邊（至少兩個字）；每一層恰好一個才算，
+- 名字跟事實表的鍵比：一樣 → 同義詞表（ALIASES）→ 一邊包含另一邊（這層才要至少兩個字）；每一層恰好一個才算，某一層不只一個就整個停（不再拿表格第一格去猜），
   兩個以上＝對不上（列「不只一條事實像它」）。
 - 第一格整格是佔位的表格列＝「範本列」（例：INDEX 的 `{{src/ 或主要產出目錄}}`）：整列都不填，
   template_rows="delete" 才整列刪掉。
 - 事實值是「今天…」或 "today"：換成今天的日期（照事實表的時區；沒有就用本機）。
 - examples="delete"：〔導入判斷〕說是「範例」的——上方表格裡第一格是「（範例）」的列，
-  或它底下「下面…」指的 ### 小節（到下一個 ## 為止）——連同那段〔導入判斷〕一起刪。
+  或它底下「下面 N 段」緊接著的 N 個同級小節（不夠 N 個就不動）——連同那段〔導入判斷〕一起刪。
   認不出範圍的〔導入判斷〕不動，列給模型。
 """
 import datetime
@@ -21,6 +21,9 @@ import re
 import _wf
 
 PH = re.compile(r'\{\{(.*?)\}\}')
+ONE_PH = re.compile(r'\{\{[^{}]*\}\}')
+NUM = {'一': 1, '二': 2, '兩': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
+BELOW = re.compile(r'下面([一二兩三四五六七八九十]|[0-9]+)段')
 NOTE = '〔模板說明〕'
 JUDGE = '〔導入判斷〕'
 CUTS = ('，如', ',如', '，例', ',例', '例：', '例:', '；', ';', '：', ':')
@@ -74,9 +77,10 @@ def _canon(n):
 def match(name, facts):
     """回 (事實鍵, None) 或 (None, 原因)。facts：{鍵: 值}。"""
     n = norm(name, drop_paren=True)
-    if len(n) < 2 and n not in _CANON:
+    if not n:
         return None, None
     keys = list(facts)
+    # 兩個字的下限只給「包含」那層；完全一樣的一個字也算（astra M10）
     levels = (
         lambda k: norm(k, True) == n or norm(k) == norm(name),
         lambda k: _canon(n) is not None and _canon(norm(k, True)) == _canon(n),
@@ -158,7 +162,7 @@ def is_template_row(line):
     if not c:
         return False
     first = c[0].strip('`').strip()
-    return bool(first) and PH.fullmatch(first) is not None
+    return bool(first) and ONE_PH.fullmatch(first) is not None     # 恰好一個佔位、外面沒別的字（astra M9）
 
 
 def row_label(line):
@@ -232,22 +236,30 @@ def drop_examples(lines):
             n += 1
             i = min(rows)
             continue
-        # 2) 底下「下面…」的 ### 小節，到下一個同級以上的標題
+        # 2) 底下「下面 N 段」：緊接著的 N 個同級小節（小節裡更深的標題算它的）。
+        #    沒寫段數、或小節不夠 N 個（中途碰到更高級標題）就不動（astra M8：不能一路刪到下一個 ##）
         k = end
         while k < len(lines) and not lines[k].strip():
             k += 1
         above = next((_heading_level(lines[h]) for h in range(i - 1, -1, -1) if _heading_level(lines[h])), None)
         sub = _heading_level(lines[k]) if k < len(lines) else None
-        if '下面' in text and sub and above and sub > above:
-            stop = k + 1
+        m = BELOW.search(text)
+        want = (NUM.get(m.group(1)) or int(m.group(1))) if m else 0
+        if want and sub and above and sub > above:
+            stop, seen = k, 0
             while stop < len(lines):
                 lv = _heading_level(lines[stop])
-                if lv is not None and lv <= above:
+                if lv is not None and lv < sub:
                     break
+                if lv == sub:
+                    if seen == want:
+                        break
+                    seen += 1
                 stop += 1
-            _drop(lines, i, stop)
-            n += 1
-            continue
+            if seen == want:
+                _drop(lines, i, stop)
+                n += 1
+                continue
         i = end
     return n
 
@@ -291,7 +303,9 @@ def fill_file(text, facts, used, reasons, *, notes, examples, template_rows, now
                     used.setdefault(key, []).append(idx + 1)
                     stat['filled'] += 1
                     return value_of(facts, key, now)
-                why = why or why2
+                if why2:            # 不只一條事實像它：停，不拿第一格去猜（astra M10）
+                    why = why2
+                    break
             reasons.setdefault(m.group(0), why or 'no fact for it')
             return m.group(0)
         lines[idx] = PH.sub(repl, line)

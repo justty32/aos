@@ -8,6 +8,7 @@
 """
 import ast
 import datetime
+import errno
 import hashlib
 import inspect
 import json
@@ -15,7 +16,9 @@ import os
 from pathlib import Path
 import re
 import shutil
+import selectors
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -28,6 +31,9 @@ BASE_COMMON = PACKAGES / 'base' / '_common.py'
 TOOL_NAME = re.compile(r'[A-Za-z0-9_]{1,64}\Z')        # 模型端（OpenAI 相容）的工具名限制，函式名要過這條
 TEST_TIMEOUT_MS = 30000                                  # tools test 對每一次執行的封頂
 TOKEN_LIMIT = 300                                        # axes.md 資源軸：工具描述 < 300 token＝5 分
+OUTPUT_CAP = 1024 * 1024        # tools test：stdout、stderr 各最多留多少位元組（留尾巴）
+KILL_GRACE = 5                  # SIGKILL 之後最多再等幾秒
+DRAIN_GRACE = 2                 # 主行程結束後，管子還被別人握著最多再收幾秒
 TAIL = 200                                               # FAIL 時「得到什麼」最多印幾個字
 
 
@@ -56,10 +62,43 @@ def _check_dest(folder, name, force):
     return dest
 
 
+def _alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return True
+    return True
+
+
+def recover(folder, name):
+    """清前一次被硬中止留下的殘渣（名字帶 pid，那個行程還活著的不碰）：
+    .NAME.new-<pid>-* 直接刪；.NAME.old-<pid>-* 是 --force 的備份——正式包在就刪，
+    正式包不在（崩在「舊的改名」與「新的就位」之間）就改回正式名。回印給人看的話（清單）。"""
+    notes = []
+    pattern = re.compile(r'\.%s\.(new|old)-(\d+)-' % re.escape(name))
+    for entry in sorted(folder.iterdir()):
+        m = pattern.match(entry.name)
+        if not m or _alive(int(m.group(2))) or entry.is_symlink() or not entry.is_dir():
+            continue
+        dest = folder / name
+        if m.group(1) == 'old' and not os.path.lexists(dest):
+            os.rename(entry, dest)
+            notes.append('上次 --force 中斷：把舊包 %s 改回 %s' % (entry.name, dest))
+        else:
+            shutil.rmtree(entry, ignore_errors=True)
+            notes.append('清掉上次中斷留下的 %s' % entry)
+    return notes
+
+
 def publish(folder, name, files, force=False):
-    """files＝{相對路徑: (內容 str 或 bytes, 可執行?)}；寫進 folder/.name.new-XXXX/ 再 rename 成 folder/name。"""
+    """files＝{相對路徑: (內容 str 或 bytes, 可執行?)}；寫進 folder/.name.new-<pid>-XXXX/ 再 rename 成 folder/name。
+    --force：舊包先改名成 .name.old-<pid>-…，新包就位才刪它；新包 rename 失敗就把舊包改回來。"""
+    for note in recover(folder, name):
+        print(note, file=sys.stderr)
     dest = _check_dest(folder, name, force)
-    tmp = Path(tempfile.mkdtemp(dir=folder, prefix='.%s.new-' % name))
+    tmp = Path(tempfile.mkdtemp(dir=folder, prefix='.%s.new-%d-' % (name, os.getpid())))
     old = None
     try:
         for rel, (content, executable) in files.items():
@@ -74,14 +113,32 @@ def publish(folder, name, files, force=False):
             _check_dest(folder, name, force)                  # 寫檔這段時間裡被換成別的東西就不蓋
             old = folder / ('.%s.old-%d-%d' % (name, os.getpid(), time.time_ns()))
             os.rename(dest, old)
-        os.rename(tmp, dest)
+        try:
+            os.rename(tmp, dest)
+        except BaseException:
+            if old is not None and not os.path.lexists(dest):
+                os.rename(old, dest)                          # 新的沒就位：舊的放回去
+                old = None
+            raise
         tmp = None
+        if old is not None:
+            shutil.rmtree(old, ignore_errors=True)            # 新的就位了才刪備份
+            old = None
     finally:
         if tmp is not None:
             shutil.rmtree(tmp, ignore_errors=True)
-        if old is not None:
-            shutil.rmtree(old, ignore_errors=True)
     return dest
+
+
+def package_files(name, entries):
+    """[(相對路徑, 內容, 可執行?)] → dict；同一個路徑出現兩次＝包名撞到必要檔（BadName），不靜默蓋掉。"""
+    files = {}
+    for rel, content, executable in entries:
+        if rel in files:
+            raise AgentError('BadName', '包名 %r 會讓 %s 跟包裡另一個必要檔撞名（例如工具描述被設定檔蓋掉）；換個名字'
+                             % (name, rel))
+        files[rel] = (content, executable)
+    return files
 
 
 def _shown(dest):
@@ -154,7 +211,7 @@ aos-agent tools add {path} --target 家
 '''
 
 
-def new_files(name):
+def new_files(name, path):
     """tools new 生的整包：{相對路徑: (內容, 可執行?)}。"""
     tool = [{'type': 'function',
              'function': {'name': name,
@@ -169,11 +226,12 @@ def new_files(name):
              {'name': 'missing-text', 'tool': name, 'args': {'count': 2}, 'expect': 'BadArguments'},
              {'name': 'count-not-int', 'tool': name, 'args': {'text': 'hi', 'count': 'x'}, 'expect': 'BadArguments'},
              {'name': 'count-zero', 'tool': name, 'args': {'text': 'hi', 'count': 0}, 'expect': 'BadArguments'}]
-    return {name + '.json': (_dump(tool), False),
-            name: (NEW_PROGRAM.format(name=name), True),
-            '_common.py': (BASE_COMMON.read_bytes(), False),
-            'config.json': (_dump({'root': 'workspace'}), False),
-            'cases.json': (_dump(cases), False)}
+    return [(name + '.json', _dump(tool), False),
+            (name, NEW_PROGRAM.format(name=name), True),
+            ('_common.py', BASE_COMMON.read_bytes(), False),
+            ('config.json', _dump({'root': 'workspace'}), False),
+            ('cases.json', _dump(cases), False),
+            ('README.md', NEW_README.format(name=name, path=path), False)]
 
 
 def _dump(value):
@@ -184,10 +242,9 @@ def new(name, out=None, force=False):
     if not NAME.match(name):
         raise AgentError('BadName', '工具包名字 %r 只能用英數、底線、連字號（不能以 . 或 - 開頭）' % name)
     folder = _out_dir(out)
-    _check_dest(folder, name, force)
-    files = new_files(name)
     path = _shown(folder / name)
-    files['README.md'] = (NEW_README.format(name=name, path=path), False)
+    files = package_files(name, new_files(name, path))   # new config／new cases 在這裡擋
+    _check_dest(folder, name, force)
     dest = publish(folder, name, files, force)
     print('生了 %s/：%s' % (dest, '、'.join(files)))
     print('下一步：改 %s/%s 與 %s.json，然後 aos-agent tools test %s' % (path, name, name, path))
@@ -363,6 +420,10 @@ def _numpy_params(lines, base, params):
                 params[n] = (params[n] + ' ' + line.strip()).strip()
 
 
+BLOCK = {'If': 'if', 'For': 'for', 'AsyncFor': 'async for', 'While': 'while', 'Try': 'try', 'TryStar': 'try',
+         'With': 'with', 'AsyncWith': 'async with', 'Match': 'match'}
+
+
 class _Finder(ast.NodeVisitor):
     """找出所有函式定義：頂層的、以及包在函式或類別裡的（後者只為了列「不是頂層」）。"""
 
@@ -444,7 +505,14 @@ def analyze(source, filename='<file>', only=None):
         raise AgentError('SyntaxError', '%s 第 %s 行語法錯：%s' % (filename, e.lineno, e.msg))
     finder = _Finder()
     finder.visit(tree)
-    top = {n.name for n, parent in finder.found if parent is None}
+    direct = {id(n) for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    blocks = {}                                            # 頂層 if／for／try… 區塊裡的定義 → 區塊種類
+    for stmt in tree.body:
+        if id(stmt) not in direct:
+            for n in ast.walk(stmt):
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    blocks.setdefault(id(n), BLOCK.get(type(stmt).__name__, type(stmt).__name__))
+    top = {n.name for n, parent in finder.found if id(n) in direct}
     if only is not None:
         missing = [n for n in only if n not in top]
         if missing:
@@ -453,9 +521,15 @@ def analyze(source, filename='<file>', only=None):
     rows, functions, warnings, seen = [], {}, [], {}
     for node, parent in sorted(finder.found, key=lambda x: x[0].lineno):
         name, line = node.name, node.lineno
-        if parent is not None:
-            if not name.startswith('_'):
+        if parent is not None or id(node) not in direct:
+            if name.startswith('_'):
+                continue
+            if only is not None and name not in only:
+                rows.append([name, 'skip', '沒在 --only 裡', line])
+            elif parent is not None:
                 rows.append([name, 'reject', '不是頂層（在%s %s 裡）' % parent, line])
+            else:
+                rows.append([name, 'reject', '不是頂層（在頂層的 %s 區塊裡，import 後不一定有這支）' % blocks[id(node)], line])
             continue
         if name.startswith('_'):
             rows.append([name, 'skip', '私有（底線開頭）', line])
@@ -587,13 +661,13 @@ def main(args, root):
     try:
         with contextlib.redirect_stdout(sys.stderr):     # 函式自己 print 的走 stderr，stdout 只放結果
             result = fn(**keyword)
-    except (Exception, SystemExit) as e:
+    except BaseException as e:  # noqa: B902 —— KeyboardInterrupt、SystemExit 也一樣轉成 PythonError，不噴 Traceback
         fail('PythonError', '%s: %s' % (type(e).__name__, e), exception=type(e).__name__)
     if isinstance(result, str):
         return result
     try:
         return json.dumps(result, ensure_ascii=False, allow_nan=False)
-    except (TypeError, ValueError) as e:
+    except (TypeError, ValueError, RecursionError) as e:
         fail('ResultNotJSON', '%s returned %s, which is not JSON-serializable: %s'
              % (name, type(result).__name__, e))
 
@@ -613,6 +687,7 @@ if __name__ == '__main__':
     sys.exit(check_import() if sys.argv[1:] == ['--check-import'] else run(main))
 '''
 
+WRAP_FIXED = ('run', 'wrap.json', '_common.py', 'config.json', 'README.md')
 STATUS = {'ok': '收', 'reject': '拒收', 'skip': '跳過'}
 STATUS_COL = {'ok': '收  ', 'reject': '拒收', 'skip': '跳過'}   # 中文字佔兩格，對齊用
 
@@ -682,6 +757,7 @@ def wrap_py(file, only=None, name=None, out=None, force=False):
     if not NAME.match(pack):
         raise AgentError('BadName', '工具包名字 %r 只能用英數、底線、連字號（不能以 . 或 - 開頭）' % pack)
     folder = _out_dir(out)
+    package_files(pack, [(pack + '.json', '', False)] + [(f, '', False) for f in WRAP_FIXED])  # 先擋撞名（wrap、config）
     result = analyze(source, str(src), only)
     _print_rows(result)
     if not result['functions']:
@@ -696,10 +772,11 @@ def wrap_py(file, only=None, name=None, out=None, force=False):
             'rejected': [{'name': r[0], 'line': r[3], 'reason': r[2]} for r in result['rows'] if r[1] == 'reject'],
             'skipped': [{'name': r[0], 'line': r[3], 'reason': r[2]} for r in result['rows'] if r[1] == 'skip']}
     path = _shown(folder / pack)
-    files = {pack + '.json': (_dump(tools), False), 'run': (WRAP_RUN, True), 'src/' + src.name: (data, False),
-             'wrap.json': (_dump(info), False), '_common.py': (BASE_COMMON.read_bytes(), False),
-             'config.json': (_dump({'root': 'workspace'}), False),
-             'README.md': (_wrap_readme(pack, src.name, result, path), False)}
+    files = package_files(pack, [(pack + '.json', _dump(tools), False), ('run', WRAP_RUN, True),
+                                 ('src/' + src.name, data, False), ('wrap.json', _dump(info), False),
+                                 ('_common.py', BASE_COMMON.read_bytes(), False),
+                                 ('config.json', _dump({'root': 'workspace'}), False),
+                                 ('README.md', _wrap_readme(pack, src.name, result, path), False)])
     dest = publish(folder, pack, files, force)
     print('生了 %s/：%d 支工具（%s）' % (dest, len(tools), '、'.join(result['functions'])))
     print('下一步：aos-agent tools test %s' % path)
@@ -730,9 +807,90 @@ def jail_ready():
 
 
 class Result:
-    def __init__(self, code=None, out='', err='', ms=0, timed_out=False, spawn_error=None):
+    def __init__(self, code=None, out='', err='', ms=0, timed_out=False, spawn_error=None, dropped=0,
+                 stuck=None):
         self.code, self.out, self.err, self.ms = code, out, err, ms
         self.timed_out, self.spawn_error = timed_out, spawn_error
+        self.dropped, self.stuck = dropped, stuck        # 丟掉的輸出位元組；殺不掉的行程說明
+
+
+def _killpg(pid):
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+def pump(proc, data, limit, cap=None):
+    """餵 stdin、收 stdout／stderr（每條只留最後 cap 位元組，邊讀邊丟），不靠執行緒、不會無限等：
+    - 到 limit 秒整個行程群組 SIGKILL，再最多等 KILL_GRACE 秒；
+    - 主行程結束後管子還被別人（另開 session 的子孫）握著，最多再收 DRAIN_GRACE 秒就關掉。
+    回 (退出碼或 None, stdout bytes, stderr bytes, 逾時?, 丟了幾位元組, 殺不掉的說明或 None)。"""
+    cap = OUTPUT_CAP if cap is None else cap
+    sel = selectors.DefaultSelector()
+    bufs = {proc.stdout: bytearray(), proc.stderr: bytearray()}
+    dropped = 0
+    for f in bufs:
+        os.set_blocking(f.fileno(), False)
+        sel.register(f, selectors.EVENT_READ)
+    if data:
+        os.set_blocking(proc.stdin.fileno(), False)
+        sel.register(proc.stdin, selectors.EVENT_WRITE)
+    else:
+        proc.stdin.close()
+    offset, timed_out, stop_at = 0, False, None
+    deadline = time.monotonic() + limit
+    try:
+        while sel.get_map():
+            now = time.monotonic()
+            if stop_at is None and proc.poll() is not None:
+                stop_at = now + DRAIN_GRACE
+            if not timed_out and now >= deadline:
+                timed_out = True
+                _killpg(proc.pid)
+                stop_at = now + KILL_GRACE
+            if stop_at is not None and now >= stop_at:
+                break
+            ends = [now + 0.2] + ([deadline] if not timed_out else []) + ([stop_at] if stop_at else [])
+            for key, _ in sel.select(max(min(ends) - now, 0)):
+                f = key.fileobj
+                if f is proc.stdin:
+                    try:
+                        offset += os.write(f.fileno(), data[offset:offset + 65536])
+                    except BlockingIOError:
+                        continue
+                    except OSError:                       # 對方不讀了（BrokenPipe 等）
+                        offset = len(data)
+                    if offset >= len(data):
+                        sel.unregister(f)
+                        f.close()
+                    continue
+                try:
+                    chunk = os.read(f.fileno(), 65536)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    sel.unregister(f)
+                    continue
+                buf = bufs[f]
+                buf += chunk
+                if len(buf) > cap:
+                    dropped += len(buf) - cap
+                    del buf[:len(buf) - cap]
+    finally:
+        sel.close()
+        for f in (proc.stdin, proc.stdout, proc.stderr):
+            try:
+                f.close()
+            except OSError:
+                pass
+    _killpg(proc.pid)                                     # 同一群組留下的背景行程也收掉
+    stuck = None
+    try:
+        proc.wait(KILL_GRACE)
+    except subprocess.TimeoutExpired:
+        stuck = '行程 %d 送了 SIGKILL 還是沒結束（可能卡在核心裡），沒等它' % proc.pid
+    return proc.returncode, bytes(bufs[proc.stdout]), bytes(bufs[proc.stderr]), timed_out, dropped, stuck
 
 
 class Runner:
@@ -796,18 +954,38 @@ class Runner:
                                     stderr=subprocess.PIPE, start_new_session=True)
         except OSError as e:
             return Result(spawn_error='跑不起來：%s' % (e.strerror or e))
-        try:
-            out, err = proc.communicate(stdin.encode('utf-8'), timeout=limit)
-            timed_out = False
-        except subprocess.TimeoutExpired:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except OSError:
-                pass
-            out, err = proc.communicate()
-            timed_out = True
+        code, out, err, timed_out, dropped, stuck = pump(proc, stdin.encode('utf-8'), limit)
         ms = int((time.monotonic() - start) * 1000)
-        return Result(proc.returncode, out.decode('utf-8', 'replace'), err.decode('utf-8', 'replace'), ms, timed_out)
+        return Result(code, out.decode('utf-8', 'replace'), err.decode('utf-8', 'replace'), ms, timed_out,
+                      dropped=dropped, stuck=stuck)
+
+    def write_file(self, rel, content):
+        """固定案例的 files 寫進 workspace：從 workspace 的目錄 fd 一層層開，每層都不跟符號連結（O_NOFOLLOW），
+        最後的檔也 O_NOFOLLOW、有硬連結（nlink > 1）不寫——前面的工具在 workspace 放的連結帶不出去。"""
+        parts = Path(rel).parts
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, 'O_CLOEXEC', 0)
+        fd = os.open(self.ws, flags)
+        try:
+            for part in parts[:-1]:
+                try:
+                    nxt = os.open(part, flags, dir_fd=fd)
+                except FileNotFoundError:
+                    os.mkdir(part, 0o755, dir_fd=fd)
+                    nxt = os.open(part, flags, dir_fd=fd)
+                os.close(fd)
+                fd = nxt
+            out = os.open(parts[-1], os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | getattr(os, 'O_CLOEXEC', 0),
+                          0o644, dir_fd=fd)
+            try:
+                st = os.fstat(out)
+                if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
+                    raise OSError(errno.EPERM, '%s 不是一般檔或有硬連結' % rel)
+                os.ftruncate(out, 0)
+                os.write(out, content.encode('utf-8'))
+            finally:
+                os.close(out)
+        finally:
+            os.close(fd)
 
 
 def error_code(out):
@@ -833,7 +1011,7 @@ def got(res):
     if res.spawn_error:
         return res.spawn_error
     if res.timed_out:
-        return '逾時被砍（%d 毫秒）' % res.ms
+        return '逾時被砍（%d 毫秒）%s' % (res.ms, '；' + res.stuck if res.stuck else '')
     lines = [l for l in res.out.splitlines() if l.strip()]
     last = lines[-1] if lines else '（stdout 空的）'
     text = '退 %s，最後一行：%s' % (res.code, _cut(last))
@@ -841,6 +1019,10 @@ def got(res):
         err = [l for l in res.err.splitlines() if l.strip()]
         if err:
             text += '；stderr 最後一行：%s' % _cut(err[-1])
+    if res.dropped:
+        text += '（輸出太多，前面丟了 %d 位元組）' % res.dropped
+    if res.stuck:
+        text += '；' + res.stuck
     return text
 
 
@@ -987,7 +1169,10 @@ def test(spec, args=None, case_file=None, no_jail=False, as_json=False, tool=Non
     else:
         jail, why = jail_ready()
     note = None if jail else '沒關牢（%s）：工具直接在這台機器上跑，碰得到你碰得到的檔' % why
-    with tempfile.TemporaryDirectory(prefix='aos-tools-test-') as tmp:
+    if note:                                              # 跑任何程式之前就講（卡住或崩了也看得到）
+        sys.stderr.write(note + '\n')
+        sys.stderr.flush()
+    with tempfile.TemporaryDirectory(prefix='aos-tools-test-', ignore_cleanup_errors=True) as tmp:
         home = Path(os.path.realpath(tmp))
         shutil.copytree(folder, home / 'tools' / name, symlinks=True,
                         ignore=shutil.ignore_patterns(name + '.json', '__pycache__', '*.pyc'))
@@ -1003,17 +1188,18 @@ def _single(runner, tool, args, jail, note, as_json):
     if as_json:
         print(json.dumps({'_type': 'aos_agent_tools_run', '_version': 1, 'tool': tool['function']['name'],
                           'jail': jail, 'jail_note': note, 'exit_code': res.code, 'ms': res.ms,
-                          'timed_out': res.timed_out, 'error': res.spawn_error, 'stdout': res.out,
-                          'stderr': res.err}, ensure_ascii=False))
+                          'timed_out': res.timed_out, 'error': res.spawn_error or res.stuck,
+                          'dropped': res.dropped, 'stdout': res.out, 'stderr': res.err}, ensure_ascii=False))
     else:
-        if note:
-            sys.stderr.write(note + '\n')
         sys.stdout.write(res.out)
         sys.stdout.flush()
         sys.stderr.write(res.err)
+        extra = ''.join(x for x in ('，逾時被砍' if res.timed_out else '',
+                                    '，前面丟了 %d 位元組輸出' % res.dropped if res.dropped else '',
+                                    '；' + res.stuck if res.stuck else ''))
         sys.stderr.write('（%s：%s，%d 毫秒%s）\n' % (tool['function']['name'],
                                                    '退出碼 %s' % res.code if res.spawn_error is None else res.spawn_error,
-                                                   res.ms, '，逾時被砍' if res.timed_out else ''))
+                                                   res.ms, extra))
     return 0 if res.code == 0 and not res.timed_out else 1
 
 
@@ -1025,11 +1211,29 @@ def _suite(runner, name, folder, tools, cases, jail, note, as_json):
     for t in tools:
         n = _tokens(t)
         sizes.append({'name': t['function']['name'], 'tokens': n, 'over': n > TOKEN_LIMIT})
+    if not as_json:                                       # 表頭先印（跑任何工具之前），每條跑完就印
+        print('包 %s（%s）：%d 支工具；%s' % (name, folder, len(tools),
+                                         '關在牢裡跑（aos-jail，拋棄式 workspace 掛成 /work/ws，net off）' if jail
+                                         else '在拋棄式的假 agent 家裡跑（沒關牢）'))
+        for size in sizes:
+            print('描述  %s  約 %d token%s' % (size['name'], size['tokens'],
+                                           '（超過 %d，資源軸扣分：描述再短一點）' % TOKEN_LIMIT if size['over'] else ''))
+        for w in warnings:
+            print('警告：' + w)
+        sys.stdout.flush()
+
+    def add(row):
+        rows.append(row)
+        if not as_json:
+            print('%s  %s  %s  (%d ms)' % ('PASS' if row['pass'] else 'FAIL', row['tool'], row['case'], row['ms']))
+            if not row['pass']:
+                print('      期待 %s；得到 %s' % (row['expect'], row['got']))
+            sys.stdout.flush()
 
     def record(tool_name, case, res, expect, contains=None):
         ok, want = judge(res, expect, contains)
-        rows.append({'tool': tool_name, 'case': case, 'pass': ok, 'ms': res.ms, 'expect': want,
-                     'got': got(res), 'exit_code': res.code})
+        add({'tool': tool_name, 'case': case, 'pass': ok, 'ms': res.ms, 'expect': want,
+             'got': got(res), 'exit_code': res.code})
 
     if (folder / 'wrap.json').is_file():                  # wrap-py 產的：先試 import 一次原檔副本
         probe = {'type': 'function', 'function': {'name': name},
@@ -1039,8 +1243,8 @@ def _suite(runner, name, folder, tools, cases, jail, note, as_json):
     for t in tools:
         tname = t['function']['name']
         problem = runner.program(t)
-        rows.append({'tool': tname, 'case': 'program', 'pass': problem is None, 'ms': 0,
-                     'expect': '程式在、有執行位', 'got': problem or '', 'exit_code': None})
+        add({'tool': tname, 'case': 'program', 'pass': problem is None, 'ms': 0,
+             'expect': '程式在、有執行位', 'got': problem or '', 'exit_code': None})
         if problem is None:
             runnable.append(t)
     for t in runnable:
@@ -1050,10 +1254,15 @@ def _suite(runner, name, folder, tools, cases, jail, note, as_json):
     for c in cases or []:
         if c['tool'] not in by_name:
             continue
-        for rel, content in c['files'].items():
-            path = runner.ws / rel
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding='utf-8')
+        try:
+            for rel, content in c['files'].items():
+                runner.write_file(rel, content)
+        except OSError as e:
+            add({'tool': c['tool'], 'case': c['name'], 'pass': False, 'ms': 0,
+                 'expect': '先把 files 寫進 workspace',
+                 'got': '寫不進去（路徑經過符號連結、硬連結，或不是資料夾）：%s' % (e.strerror or e),
+                 'exit_code': None})
+            continue
         record(c['tool'], c['name'], runner.run(by_name[c['tool']], c['stdin']), c['expect'], c['contains'])
     failed = sum(1 for r in rows if not r['pass'])
     if as_json:
@@ -1061,19 +1270,5 @@ def _suite(runner, name, folder, tools, cases, jail, note, as_json):
                           'jail': jail, 'jail_note': note, 'warnings': warnings, 'tools': sizes,
                           'cases': rows, 'total': len(rows), 'failed': failed}, ensure_ascii=False))
         return 1 if failed else 0
-    if note:
-        print(note)
-    print('包 %s（%s）：%d 支工具；%s' % (name, folder, len(tools),
-                                     '關在牢裡跑（aos-jail，拋棄式 workspace 掛成 /work/ws，net off）' if jail
-                                     else '在拋棄式的假 agent 家裡跑'))
-    for s in sizes:
-        print('描述  %s  約 %d token%s' % (s['name'], s['tokens'],
-                                       '（超過 %d，資源軸扣分：描述再短一點）' % TOKEN_LIMIT if s['over'] else ''))
-    for w in warnings:
-        print('警告：' + w)
-    for r in rows:
-        print('%s  %s  %s  (%d ms)' % ('PASS' if r['pass'] else 'FAIL', r['tool'], r['case'], r['ms']))
-        if not r['pass']:
-            print('      期待 %s；得到 %s' % (r['expect'], r['got']))
     print('%d 條，%d 條沒過' % (len(rows), failed))
     return 1 if failed else 0

@@ -134,6 +134,23 @@ class MailTests(TeamCase):
         self.assertTrue(any('ASK  %s  [t-0002]' % q in ln for ln in lines), r.stdout)
         self.assertNotIn('t-0001', r.stdout)
 
+    def test_same_pick_as_score_and_naive_times(self):
+        """astra M11／M12：跟 score 同一個挑信函式；信的時間沒時區也不會炸。"""
+        import aos_team_post
+        import aos_team_score
+        import aos_team_task
+        self.letter('human', 'lead', 'REQUEST', '沒時區的一封', at=self.now.replace(tzinfo=None).isoformat())
+        self.post()
+        self.handoff(goal='x')
+        self.post()
+        r = self.cli('mail', '--task', 't-0001')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('沒時區的一封', r.stdout.split('\n')[0])
+        letters = aos_team_post.load_records(self.lay)
+        tasks = {t['id']: t for t in aos_team_task.all_tickets(self.lay)}
+        self.assertEqual(mail.fallthrough_letter(self.lay, 't-0001', letters),
+                         aos_team_score.lead_letter(tasks['t-0001'], letters, ['lead'], tasks))
+
     def test_human_opened_task_has_no_fallthrough(self):
         self.letter('human', 'lead', 'REQUEST', '跟單子無關')
         self.post()

@@ -21,7 +21,7 @@ aos-team <子命令> [參數…] [--target 團隊資料夾]
 | `route test [--file F]`／`route save F`／`route try "一句話" [--file F]` | 跑門房規則的例句；save 全過才存；try 印這句話會怎麼判（命中哪條、會跑什麼或開什麼單、落穿給誰），不跑、不開單、不寄信、不寫 route.log（第二波 A 隊） | 1 |
 | `task ls [--all] [--json]`／`task show ID`／`task cancel ID [--reason …]`／`task reassign ID NAME` | 看任務表；取消、改派（寄申請給郵差） | 1 |
 | `wait ls [--json]`／`answer Q "…"` | 看等人回答的問題；回答一題（寄申請給郵差） | 1 |
-| `mail [--task t-0001] [--follow]`、`post` | 一封信一行，等人回答的題目也一題一行（`lead → 人  ASK  q-0001`，答完那行先顯示答案）；`--task` 連落穿給領隊、開出這張單的那封人寫的信一起列（挑法同 score 的起點）；郵差走一次（kernel 反覆叫）。mail 第二波 A 隊搬到 `lib/aos_team_mail.py` | 2 |
+| `mail [--task t-0001] [--follow]`、`post` | 一封信一行，等人回答的題目也一題一行（`lead → 人  ASK  q-0001`，答完那行先顯示答案）；`--task` 連落穿給領隊、開出這張單的那封人寫的信一起列（挑法同 score 的起點）；郵差走一次（kernel 反覆叫）。`--json`：信照舊；題目一行 `{"kind": "ask", "id", "from", "to": "human", "status": "ASK", "reply_to", "recorded_at", "question", "answer", "state"}`（沒有 `text`），讀的程式照 `kind` 分。mail 第二波 A 隊搬到 `lib/aos_team_mail.py` | 2 |
 | `verify ID`、`routine ls/add/rm`、`beat` | 驗收；心跳排程；心跳走一次 | 2 |
 | `score` | 六軸自動彙整 | 5 |
 
