@@ -165,7 +165,7 @@ daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻
 | `run_target` | 同步執行；`on_spawn(Popen)`／結束後 `on_spawn(None)`；可 timeout。 | `on_spawn` 是持有 child、供控制用的鉤子，**不是非同步 API**。 |
 | 新 `run_inst` | 記憶體 inst＋stdin 字串→`code,kind,stdout`；也是同步。 | 目前沒有公開 `on_spawn` 參數，agent 呼叫沒有傳 timeout。 |
 
-來源：[agent.md:75](/home/guanyu/projs/aos/proto5/spec/agent.md:75)、[aos-agent.md:22](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:22)、[工具格式:82](/home/guanyu/projs/aos/proto5/spec/aos-llm-ask.md:82)、[run_target:45](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:45)、[run_inst:87](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:87)。
+來源：[agent.md:75](/home/guanyu/projs/aos/proto5/spec/agent.md:75)、[aos-agent.md:22](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:22)、[工具格式:82](../../proto5.1/spec/aos-llm-ask.md)、[run_target:45](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:45)、[run_inst:87](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:87)。
 
 `waits` 的五個選項各自只做這些事：
 

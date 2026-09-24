@@ -11,12 +11,12 @@
 |---|---|---|---|---|
 | **inst.json 本身** | **沒有** `timeout_ms`。只有七個執行欄位；未知頂層 key 忽略 | 寫 `"timeout_ms": 1000` 不會啟用限時 | 不適用 | [inst 格式](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:56)、[解析實作](/home/guanyu/projs/aos/proto5/lib/aos_inst.py:103) |
 | **aos-exec 子程式** | 有可選限時：CLI `--timeout-ms`、library 參數；**預設 0＝不限** | 到期 TERM 整個工作 group；最多等 **2 秒**，必要時 KILL；另補殺殘留 group | 回實際 child 結束碼；有指定 `exit` 檔就寫入。exec 不懂 agent state | [旗標規格](/home/guanyu/projs/aos/proto5/spec/exec.md:42)、[_spawn](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:210) |
-| **aos-llm-ask HTTP** | **有，預設 120000 ms**；`info.json.engine.timeout_ms`，必須正整數，不能用 0 表示無限 | urllib/socket 逾時→`EngineFailed`；CLI 退 **3**。關閉本地連線，**沒有取消遠端推論的協定** | aos-llm-ask 不改記憶、不讀寫 state、不重試 | [engine 規格](/home/guanyu/projs/aos/proto5/spec/aos-llm-ask.md:117)、[call](/home/guanyu/projs/aos/proto5/lib/aos_llm_ask.py:77) |
+| **aos-llm-ask HTTP** | **有，預設 120000 ms**；`info.json.engine.timeout_ms`，必須正整數，不能用 0 表示無限 | urllib/socket 逾時→`EngineFailed`；CLI 退 **3**。關閉本地連線，**沒有取消遠端推論的協定** | aos-llm-ask 不改記憶、不讀寫 state、不重試 | [engine 規格](../../proto5.1/spec/aos-llm-ask.md)、[call](../../proto5.1/lib/aos_llm_ask.py) |
 | **idle 一格** | **沒有整格限時**。讀設定、記憶及 input 都沒有獨立期限 | 正常沒輸入就立刻退 101；讀寫卡住則沒有 watchdog | 有輸入：接記憶、input rename `.done`、轉 `think`；無輸入：留 `idle` | [格的規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:36)、[step](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:191) |
 | **think 一格** | **沒有整格限時**；只有內部 HTTP 的上述 timeout | HTTP 能判到的失敗會返回；其他讀寫、DNS、慢速完整回應等不能以 120 秒總期限概括 | 成功有 calls→`act`；無 calls→`idle`；引擎失敗→留 `think`，退 **0** | [規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:45)、[實作](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:215) |
 | **act 一格** | **沒有整格限時**；所有 tool calls 在一格內**依序跑完** | 某個工具不回，後面工具與記憶寫回都等著 | 全部結果接成 `tool` 訊息後→`think`。中途不回就沒有這次 state 寫回 | [規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:48)、[實作](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:230) |
 | **工具跑太久** | **沒有**。agent 呼叫 `run_inst(inst, arguments)`，未傳 timeout；library 預設 **0** | **不砍，跑多久等多久**。工具自身另設的限時不算 agent 的保證 | 工具若自行失敗，非零退出碼包成 `tool` 訊息；不回則停在該次 act | [工具呼叫](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:159)、[run_inst 預設](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:87) |
-| **工具檔 `_meta`** | **沒有逾時欄位的契約**；目前就是一份 posix inst | 加 `_meta.timeout_ms` 也不會生效：工具讀驗未賦予語意，inst 解析忽略它 | 不適用 | [工具檔規格](/home/guanyu/projs/aos/proto5/spec/aos-llm-ask.md:82)、[工具讀驗](/home/guanyu/projs/aos/proto5/lib/aos_agent_info.py:325) |
+| **工具檔 `_meta`** | **沒有逾時欄位的契約**；目前就是一份 posix inst | 加 `_meta.timeout_ms` 也不會生效：工具讀驗未賦予語意，inst 解析忽略它 | 不適用 | [工具檔規格](../../proto5.1/spec/aos-llm-ask.md)、[工具讀驗](/home/guanyu/projs/aos/proto5/lib/aos_agent_info.py:325) |
 | **`waits` 門** | **沒有期限、沒有最大檢查次數**。`mtime`／`since` 只判檔案是否更新 | 每次劃掉已到條目；有剩→101。沒有到期分支，也不殺產生結果的工作 | state 原樣保留；只更新 waits。可以跨無限多次呼叫一直101 | [等待規格](/home/guanyu/projs/aos/proto5/spec/agent.md:110)、[_gate](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:98) |
 | **引擎失敗重試** | **沒有連敗上限、沒有退避、没有總期限** | 每次 stderr 一行，退0；外部下一次叫它就再問 | 一直留 `think`，記憶不動；沒有 retry／stuck 狀態或錯誤計數 | [規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:46)、[實作](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:219) |
 | **整個「走一格」呼叫** | **沒有**。CLI 只收 dir，沒有 timeout 旗標；step 沒有整體計時器 | 沒有人在整格到期時中止它。外部執行器可以另外包限時，但不是目前 agent 契約 | 沒有「整格逾時後」的狀態轉換規格 | [CLI](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:246)、[延後決定事項](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:73) |
@@ -37,7 +37,7 @@ proto5 的七欄規格沿用「inst 描述怎麼執行，執行者決定願意�
 
 **HTTP 的 120 秒實際管到哪裡？**
 
-`call()` 只有 `urlopen(req, timeout=T)` 接 `resp.read()`，沒有建立整次呼叫共用的 deadline。[實作](/home/guanyu/projs/aos/proto5/lib/aos_llm_ask.py:84)
+`call()` 只有 `urlopen(req, timeout=T)` 接 `resp.read()`，沒有建立整次呼叫共用的 deadline。[實作](../../proto5.1/lib/aos_llm_ask.py)
 
 | 階段 | 120 秒是否涵蓋 | 準確解讀 |
 |---|---|---|
@@ -62,7 +62,7 @@ proto5 的七欄規格沿用「inst 描述怎麼執行，執行者決定願意�
 
 來源：[spawn／計時／回碼](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:218)、[group 清理](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:259)。
 
-另外，proto5 工具 stdout 以 `communicate()` 全量收進記憶體，**沒有輸出上限**；HTTP body 也整份讀取。限時與輸出容量是兩個不同問題。[exec](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:230)、[HTTP](/home/guanyu/projs/aos/proto5/lib/aos_llm_ask.py:88)
+另外，proto5 工具 stdout 以 `communicate()` 全量收進記憶體，**沒有輸出上限**；HTTP body 也整份讀取。限時與輸出容量是兩個不同問題。[exec](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:230)、[HTTP](../../proto5.1/lib/aos_llm_ask.py)
 
 **2．歷代怎麼做**
 
