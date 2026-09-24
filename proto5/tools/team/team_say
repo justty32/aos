@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""team_say：寫一封信進自己的 team/outbox/（spec/team/mail.md）。郵差之後投遞；這支只寫一個檔。
+
+設定在同資料夾的 config.json（aos-team init 寫，spec/team/templates.md）：member、mail_to、outbox、tz。
+關牢時牢裡的 /opt/tool 就是這個資料夾，outbox 是 /work/outbox。不看工作根目錄（寄信用不到專案）。
+成功：印 `queued <id> <STATUS> → <to>` 退 0。失敗：最後一行 JSON {"ok": false, "error", "message"} 退 1。
+_common.py 是 base 那份的逐位元組副本（test_team_post 檢查）。
+"""
+import sys
+sys.dont_write_bytecode = True
+import datetime  # noqa: E402
+import json  # noqa: E402
+import os  # noqa: E402
+import re  # noqa: E402
+import tempfile  # noqa: E402
+import time  # noqa: E402
+from _common import HERE, ToolError, arg, fail, read_args, report  # noqa: E402
+
+STATUSES = ('REQUEST', 'DONE', 'BLOCKED', 'NEEDS-USER', 'FAILED', 'PROGRESS')
+NAME = re.compile(r'[a-z][a-z0-9_-]{0,31}\Z')
+REF = re.compile(r'[A-Za-z0-9][A-Za-z0-9._~-]{0,127}\Z')
+TEXT_LIMIT = 20000
+KEYS = ('to', 'status', 'reply_to', 'rev', 'text')
+
+
+def load_config():
+    path = os.path.join(HERE, 'config.json')
+    try:
+        with open(path, encoding='utf-8') as f:
+            cfg = json.load(f)
+    except FileNotFoundError:
+        fail('ConfigInvalid', 'team_say is not set up for a team (no %s; run aos-team init)' % path)
+    except (OSError, ValueError) as e:
+        fail('ConfigInvalid', 'cannot read %s: %s' % (path, e))
+    if not isinstance(cfg, dict):
+        fail('ConfigInvalid', '%s must be a JSON object' % path)
+    member, mail_to, outbox = cfg.get('member'), cfg.get('mail_to'), cfg.get('outbox')
+    if not (isinstance(member, str) and NAME.match(member)):
+        fail('ConfigInvalid', '%s: "member" must be a member name' % path)
+    if not (isinstance(mail_to, list) and all(isinstance(x, str) for x in mail_to)):
+        fail('ConfigInvalid', '%s: "mail_to" must be a list of names' % path)
+    if not (isinstance(outbox, str) and outbox):
+        fail('ConfigInvalid', '%s: "outbox" must be a path' % path)
+    return cfg
+
+
+def now_iso(tz):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    zone = None
+    if isinstance(tz, str) and tz:
+        try:
+            from zoneinfo import ZoneInfo
+            zone = ZoneInfo(tz)
+        except Exception:  # 牢裡沒有 tzdata 或名字不對：用本機時區，不讓寄信失敗
+            zone = None
+    return now.astimezone(zone).isoformat(timespec='seconds')
+
+
+def check_args(args, cfg):
+    extra = sorted(set(args) - set(KEYS))
+    if extra:
+        fail('BadArguments', 'unknown argument(s) %s; allowed: %s' % (', '.join(extra), ', '.join(KEYS)))
+    to, status = args.get('to'), args.get('status')
+    allowed = cfg['mail_to']
+    if not isinstance(to, str) or to not in allowed:
+        fail('BadArguments', '"to" must be one of: %s (got %r)' % (', '.join(allowed) or '(nobody)', to))
+    if status not in STATUSES:
+        fail('BadArguments', '"status" must be one of: %s (got %r)' % (', '.join(STATUSES), status))
+    text = arg(args, 'text', str, required=True)
+    if not text.strip() or len(text) > TEXT_LIMIT:
+        fail('BadArguments', '"text" must be non-empty and at most %d characters' % TEXT_LIMIT)
+    reply = arg(args, 'reply_to', str)
+    if reply is not None and not REF.match(reply):
+        fail('BadArguments', '"reply_to" must be a task id like t-0001 or a letter id')
+    rev = arg(args, 'rev', int)
+    if rev is not None and rev < 1:
+        fail('BadArguments', '"rev" must be an integer >= 1')
+    return to, status, reply, rev, text
+
+
+def write_letter(outbox, letter):
+    """暫存檔（. 開頭、.tmp 結尾）＋link：不覆蓋；郵差只收不以 . 開頭的 *.json。"""
+    if not os.path.isdir(outbox):
+        fail('WriteFailed', 'outbox %s does not exist' % outbox)
+    path = os.path.join(outbox, letter['id'] + '.json')
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(dir=outbox, prefix='.%s.' % letter['id'], suffix='.tmp')
+        with os.fdopen(fd, 'w', encoding='utf-8') as out:
+            json.dump(letter, out, ensure_ascii=False)
+            out.write('\n')
+        os.link(tmp, path)
+    except FileExistsError:
+        fail('WriteFailed', '%s already exists' % path)
+    except OSError as e:
+        fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
+    finally:
+        if tmp is not None:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
+
+def main():
+    args = read_args()
+    cfg = load_config()
+    to, status, reply, rev, text = check_args(args, cfg)
+    member = cfg['member']
+    letter = {'id': '%d-%d-%s' % (time.time_ns(), os.getpid(), member), 'from': member, 'to': to,
+              'status': status, 'reply_to': reply, 'rev': rev, 'text': text, 'at': now_iso(cfg.get('tz'))}
+    write_letter(cfg['outbox'], letter)
+    return 'queued %s %s → %s' % (letter['id'], status, to)
+
+
+if __name__ == '__main__':
+    try:
+        sys.stdout.write(main() + '\n')
+        sys.exit(0)
+    except ToolError as e:
+        sys.exit(report(e))
+    except Exception as e:  # 沒料到的也照約定：最後一行 JSON
+        sys.exit(report(ToolError('InternalError', '%s: %s' % (type(e).__name__, e))))
