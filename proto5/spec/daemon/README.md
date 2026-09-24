@@ -15,7 +15,9 @@
 ## 8. 已拍板的前提（使用者定的，不重問）
 
 daemon 是所有 cpu 的父行程、最單純；IPC 用 pipe，只管生死；`spawn` 有 `restart:true`；家照 cpu 範式、JSON-RPC；
-同名不同目標＝`NameTaken`。
+同名不同目標＝`NameTaken`。daemon 永遠以一般使用者跑，不用 root、不 sudo、不切使用者；隔離交給工具那層的 bwrap 牢
+（見 [notes/2026-09-24-agent-access](../../notes/2026-09-24-agent-access/README.md)）——2026-09-24 使用者裁決，撤掉
+「daemon 要 sudo 切使用者所以跟 kernel 分開」這條理由（見 [daemon-split-review](../../notes/2026-09-24-daemon-split-review/README.md)）。
 
 ## 7. 這份沒管的
 

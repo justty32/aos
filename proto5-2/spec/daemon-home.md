@@ -7,6 +7,10 @@
 
 為什麼改：proto5 每次有孩子生或死就整份重寫 `state.json`。上萬個孩子時那份有幾 MB，一秒死幾顆就要重寫幾次。
 
+沿用 proto5 的拍板（2026-09-24，[daemon-split-review](../../proto5/notes/2026-09-24-daemon-split-review/README.md)）：
+daemon 永遠以一般使用者跑，不用 root、不 sudo、不切使用者；隔離交給工具那層的 bwrap 牢
+（見 [notes/2026-09-24-agent-access](../../proto5/notes/2026-09-24-agent-access/README.md)）。這份沒有要改這條。
+
 ## 1. 目錄與 `info.json`
 
 ```text
