@@ -58,7 +58,14 @@
     - **T1**（[報告](../proto5/notes/2026-09-24-tool-era/t1/README.md) §「要你拍的」共 5 題）：門房跑工具不關牢，第二波再接 aos-jail → 是；`aos-team rm` 預設只搬到已拆資料夾，**加 `--purge` 旗標才真刪**（使用者選非預設，已追加落地 `dba8cbe`）。調度者代裁三條：同一 kernel 兩隊不能同名成員（文件寫明）、`answer` 不在選項照收多印提醒、改名冊重跑 init 只更新工具設定。
     - **S**（[fold-in 報告](../proto5/notes/2026-09-24-fold-in/README.md)「要你拍的」，代裁四條照預設）：`aos-kernel ls` 預設只列有事的行程、`--procs` 看全部；`ls --json` 第 2 版拿掉 `cpus[]`；`init --config` 舊 cpus 格式報錯不轉；`aos-daemon kill` 的 `killed 0` 字眼先不動。
     翻案就回這條。
-30. **T4「記憶與紀錄」要你拍的六題**（[報告](../proto5/notes/2026-09-24-tool-era-memory.md) §8，尚未裁決，先照現況跑）：①自動壓縮預設開不開、`init`／團隊模板要不要預設寫 `compact.max_tokens`（多少合適）；②說明行用 `user` 角色會不會讓模型誤以為是人說的，可以接受嗎；③封存行要不要多加一句「這段你已經看不到，問到就說不記得」（人格／規則層的事）；④`archive` 要不要自動清（現在全留，靠 `compact --prune-archive` 手動）；⑤`failed` 任務算不算「沒做完」（現在算沒結束，因為能 `reassign`）；⑥事件檔 `events.jsonl` 要不要設輪替上限（例如 30 天）。
+30. **T4「記憶與紀錄」六題（2026-09-24 已裁決）**（[報告](../proto5/notes/2026-09-24-tool-era-memory.md) §8）：
+    - 封存：不要只剩一行，每段改成機械摘要、上限 8 KB（使用者：「一行？太粗暴了，8kb吧」）；仍不叫模型、仍要壓到上限以下。
+    - 自動壓縮：預設開，上限 32000 token，`info.json` 的 `compact` 可改；寫 `false` 或 `max_tokens: 0` 關掉。
+    - 封存段尾加一句「這段細節你看不到了，問到就說不記得」（放在封存內容裡，不是人格）。
+    - archive 全留，人手動 `compact --prune-archive`（照現況）。
+    - `events.jsonl`／`usage.jsonl` 滿就輪換：使用者選「滿 N MB」沒給數字，調度者代裁 10 MB、留 3 份，`info.json` 的 `logs` 可改。
+    - 調度者代裁：說明行用 `user` 角色照現況；`failed` 任務算沒做完、不縮，照現況。
+    翻案就回這條。
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 

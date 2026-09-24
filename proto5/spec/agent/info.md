@@ -50,7 +50,7 @@
 `function.arguments` 是字串；同一則裡 `id` 不重複。空陣列＝當作沒寫。其他 key（例如模型多回的欄位）原樣留著、不驗。
 
 **模型回的那一則**另外要求 `role` 是 `assistant`（`aos-llm call` 印之前驗一次、aos-agent 收回時再驗一次，同一套規則）。
-整份讀、整份寫；記憶太長怎麼辦之後再說。（09-24 第 4 隊補）記憶太長的機械壓縮見 [compact.md](compact.md)；`info.json` 可多寫一格 `compact`（物件，可省）設自動壓縮（compact.md §4），只有 aos-agent 讀，aos-llm 不看。
+整份讀、整份寫；記憶太長怎麼辦之後再說。（09-24 第 4 隊補）記憶太長的機械壓縮見 [compact.md](compact.md)；`info.json` 可多寫一格 `compact`（物件或 `false`，可省；沒寫＝自動壓縮開、上限 32000，compact.md §4）與 `logs`（事件檔輪換，[events.md](events.md)）。
 
 ## 3.3 工具檔：OpenAI tools 陣列 ＋ `_meta` ＋ `_timeout_ms`
 

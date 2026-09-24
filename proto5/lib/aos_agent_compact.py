@@ -22,6 +22,7 @@ from aos_agent_listen_render import call_names
 from aos_agent_runtime import LOCK, files, report, tick_lock
 
 DEFAULT_KEEP = 3
+DEFAULT_MAX = 32000            # 自動壓縮預設上限（使用者 09-24 裁決；info.json 的 compact 可改）
 MIN_TOKENS = 100
 MAX_TOKENS = 10 ** 8
 MAX_KEEP = 1000
@@ -48,19 +49,26 @@ def _int(value, where, lo, hi):
 
 
 def config(base):
-    """info.json 的 compact（字面物件，不解指示詞）：{"max_tokens", "keep_rounds", "auto"}；沒寫＝都預設。"""
+    """info.json 的 compact（字面物件或 false，不解指示詞）：{"max_tokens", "keep_rounds", "auto"}。
+
+    沒寫＝自動壓縮開、上限 32000 token（使用者 09-24 裁決）；false 或 max_tokens 0＝關（也沒上限）。
+    """
     raw = aos_home.read_json(Path(base) / 'info.json')
     value = raw.get('compact') if isinstance(raw, dict) else None
-    out = {'max_tokens': None, 'keep_rounds': DEFAULT_KEEP, 'auto': False}
+    out = {'max_tokens': DEFAULT_MAX, 'keep_rounds': DEFAULT_KEEP, 'auto': True}
     if value is None:
         return out
+    if value is False:
+        return dict(out, max_tokens=None, auto=False)
     if not isinstance(value, dict) or any(k.startswith('$') for k in value):
-        raise AgentError('FieldTypeMismatch', 'info.json 的 compact 要是字面物件')
-    if value.get('max_tokens') is not None:
-        out['max_tokens'] = _int(value['max_tokens'], 'compact.max_tokens', MIN_TOKENS, MAX_TOKENS)
+        raise AgentError('FieldTypeMismatch', 'info.json 的 compact 要是字面物件或 false')
+    if value.get('max_tokens') == 0 and type(value.get('max_tokens')) is int:
+        out['max_tokens'] = None
+    elif 'max_tokens' in value:
+        out['max_tokens'] = _int(value['max_tokens'], 'compact.max_tokens（0＝關）', MIN_TOKENS, MAX_TOKENS)
     if 'keep_rounds' in value:
         out['keep_rounds'] = _int(value['keep_rounds'], 'compact.keep_rounds', 0, MAX_KEEP)
-    auto = value.get('auto', out['max_tokens'] is not None)
+    auto = value.get('auto', True)
     if type(auto) is not bool:
         raise AgentError('FieldTypeMismatch', 'compact.auto 要是 true／false')
     out['auto'] = auto and out['max_tokens'] is not None
@@ -153,8 +161,77 @@ def _sealed_marker(m):
     return m['role'] == 'user' and (m.get('content') or '').startswith(SEALED)
 
 
-def _assemble(parts, archive):
-    """照每輪的 action 組出新記憶；相連要封存的幾輪併成一行。"""
+DIGEST_BYTES = 8192
+BUDGETS = (DIGEST_BYTES, 4096, 2048, 1024, 512, 0)   # 摘要上限逐級降，挑放得下的最大一級（0＝只剩一行）
+# 每一級每輪留多少：(使用者原話字數, 工具參數字數, 結果留幾行, 每行字數, 回話字數)；None＝工具只留「名字（幾行）」
+LEVELS = ((300, 120, 3, 160, 400), (160, 60, 1, 100, 200), (80, None, 0, 0, 100), (40, None, 0, 0, 40),
+          (30, None, 0, 0, 0))
+FORGET = '這段細節你看不到了，問到就說不記得。'
+FORGET_DIGEST = '摘要以外的細節你看不到了，問到就說不記得（摘要裡寫的可以照著回答）。'
+
+
+def _cut(text, limit):
+    text = ' '.join((text or '').split())
+    return text if len(text) <= limit else text[:limit] + '…'
+
+
+def _round_digest(n, messages, level):
+    """一輪的機械摘要（幾行）：使用者原話、叫了什麼工具（參數摘要）、結果前幾行與行數、最後回話。"""
+    user_n, arg_n, res_lines, res_n, reply_n = LEVELS[level]
+    names = call_names(messages, len(messages))
+    out = ['第 %d 輪' % n]
+    said = [m.get('content') or '' for m in messages if m['role'] == 'user'
+            and not (m.get('content') or '').startswith('[aos ')]
+    if said:
+        out.append('  使用者：' + _cut(' / '.join(said), user_n))
+    if arg_n is None:
+        # 短的幾級：每個結果只留「工具名（幾行）」——行數這種關鍵數字很便宜，最後才丟
+        shown = ['%s（%d 行）' % (names.get(m.get('tool_call_id'), '?'),
+                                  len([l for l in (m.get('content') or '').splitlines() if l.strip()]))
+                 for m in messages if m['role'] == 'tool']
+        if shown:
+            out.append('  工具：' + '、'.join(shown))
+    else:
+        for m in messages:
+            if m['role'] == 'assistant':
+                for c in m.get('tool_calls') or []:
+                    out.append('  呼叫 %s %s' % (c['function']['name'], _cut(c['function']['arguments'], arg_n)))
+            elif m['role'] == 'tool':
+                lines = [l for l in (m.get('content') or '').splitlines() if l.strip()]
+                head = '  結果 %s（%d 行）' % (names.get(m.get('tool_call_id'), '?'), len(lines))
+                out.append(head + ('：' if res_lines and lines else ''))
+                out += ['    ' + _cut(l, res_n) for l in lines[:res_lines]]
+    replies = [m.get('content') for m in messages if m['role'] == 'assistant' and m.get('content')]
+    if replies and reply_n:
+        out.append('  回話：' + _cut(replies[-1], reply_n))
+    return out
+
+
+def _digest(group, archive, budget, lo, hi):
+    """相連封存的幾輪 → 一則 user。budget＝這段最多幾 bytes（UTF-8）；0＝只剩一行。"""
+    count = hi - lo + 1
+    head = '%s較早的 %d 輪（%d 則）' % (SEALED, len(group), count)
+    tail = '%s原文 %s 第 %d～%d 則]' % (FORGET_DIGEST, archive, lo, hi)
+    if budget:
+        for level in range(len(LEVELS)):
+            body = [line for p in group for line in _round_digest(p['round'], p['orig'], level)]
+            text = '\n'.join([head + '，下面是機械摘要：'] + body + [tail])
+            if len(text.encode('utf-8')) <= budget:
+                return {'role': 'user', 'content': text}
+        # 最短的一級還放不下：從最舊的輪丟，留得下幾輪算幾輪
+        rows = [_round_digest(p['round'], p['orig'], len(LEVELS) - 1) for p in group]
+        while rows:
+            rows.pop(0)
+            skipped = len(group) - len(rows)
+            body = ['（更早的 %d 輪只剩原文位置）' % skipped] + [line for r in rows for line in r]
+            text = '\n'.join([head + '，下面是機械摘要：'] + body + [tail])
+            if len(text.encode('utf-8')) <= budget:
+                return {'role': 'user', 'content': text}
+    return {'role': 'user', 'content': '%s。%s原文 %s 第 %d～%d 則]' % (head, FORGET, archive, lo, hi)}
+
+
+def _assemble(parts, archive, budget=0):
+    """照每輪的 action 組出新記憶；相連要封存的幾輪併成一則摘要（每則最多 budget bytes）。"""
     out, k = [], 0
     while k < len(parts):
         p = parts[k]
@@ -165,14 +242,9 @@ def _assemble(parts, archive):
         j = k
         while j + 1 < len(parts) and parts[j + 1]['action'] == 'seal':
             j += 1
-        out.append(_marker(j - k + 1, parts[j]['to'] - p['from'] + 1, archive, p['from'], parts[j]['to']))
+        out.append(_digest(parts[k:j + 1], archive, budget, p['from'], parts[j]['to']))
         k = j + 1
     return out
-
-
-def _marker(n_rounds, count, archive, lo, hi):
-    return {'role': 'user', 'content': '%s較早的 %d 輪（%d 則）；原文 %s 第 %d～%d 則]' % (
-        SEALED, n_rounds, count, archive, lo, hi)}
 
 
 def plan(history, *, keep_rounds, max_tokens, archive, status=None):
@@ -185,7 +257,7 @@ def plan(history, *, keep_rounds, max_tokens, archive, status=None):
     parts = []
     for n, (s, e) in enumerate(spans):
         part = history[s:e]
-        entry = {'round': n + 1, 'from': s + 1, 'to': e, 'action': 'keep', 'messages': part}
+        entry = {'round': n + 1, 'from': s + 1, 'to': e, 'action': 'keep', 'messages': part, 'orig': part}
         protect = open_tasks(history, (s, e), status)
         if n >= last:
             entry['why'] = 'recent'
@@ -216,18 +288,36 @@ def plan(history, *, keep_rounds, max_tokens, archive, status=None):
         parts.append(entry)
     out = _assemble(parts, archive)
     if max_tokens is not None:
-        # 從最舊的一輪起逐輪封存，直到不超過。每封一輪先估值不值得：接在前一段封存後面＝併進同一行（多付 0），
-        # 否則要多一行封存行（照最長位數估）；那輪本身比這個還小就不封（封存不能讓記憶變長，astra M3）
-        marker = history_tokens([_marker(1, 1, archive, WIDE, WIDE)])
-        prev_sealed = False
-        for p in parts:
-            if history_tokens(out) <= max_tokens:
+        # 從最舊的一輪起封存到不超過。摘要上限從 8 KB 起逐級降：每一級找「最少要封幾輪」（二分），
+        # 找得到就用這一級（所以放得下就留大摘要）；都不行就全封、只剩一行。封完反而比沒封大就全部不封
+        # （封存不能讓記憶變長，astra M3）。
+        plain = history_tokens(out)
+        cands = [p for p in parts if p.get('sealable')]
+        for p in cands:
+            p['was'] = p['action']
+
+        def trial(k, budget):
+            for i, p in enumerate(cands):
+                p['action'] = 'seal' if i < k else p['was']
+            return _assemble(parts, archive, budget)
+
+        if plain > max_tokens and cands:
+            chosen = (len(cands), 0)
+            for budget in BUDGETS:
+                if history_tokens(trial(len(cands), budget)) > max_tokens:
+                    continue
+                lo, hi = 1, len(cands)
+                while lo < hi:
+                    mid = (lo + hi) // 2
+                    if history_tokens(trial(mid, budget)) <= max_tokens:
+                        hi = mid
+                    else:
+                        lo = mid + 1
+                chosen = (lo, budget)
                 break
-            cost = 0 if prev_sealed else marker
-            if p.get('sealable') and history_tokens(p['messages']) > cost:
-                p['action'] = 'seal'
-                out = _assemble(parts, archive)
-            prev_sealed = p['action'] == 'seal'
+            out = trial(*chosen)
+            if history_tokens(out) >= plain:
+                out = trial(0, 0)
     after = history_tokens(out)
     return {'history': out, 'changed': out != history,
             'rounds': [{x: p[x] for x in ('round', 'from', 'to', 'action', 'why', 'tasks', 'dropped') if x in p}

@@ -642,10 +642,24 @@ class AutoCompactTests(MemoryBase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertLess(len(self.history()), len(self.original))
 
-    def test_auto_off_without_config(self):
+    def test_auto_off_when_false_or_zero(self):
+        for value in (False, {'max_tokens': 0}, {'max_tokens': 500, 'auto': False}):
+            with self.subTest(value=value):
+                self.put(self.base / 'info.json', dict(self.info, compact=value))
+                self.assertEqual(self.tick(), 101)
+                self.assertEqual(self.history(), self.original)
+
+    def test_auto_default_on_32000(self):
+        """使用者裁決：沒寫 compact＝自動壓縮開、上限 32000 token。"""
         self.put(self.base / 'info.json', self.info)
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(compact_api.config(self.base), {'max_tokens': 32000, 'keep_rounds': 3, 'auto': True})
+        self.assertEqual(self.tick(), 101)                        # 還沒超過 32000：不動
         self.assertEqual(self.history(), self.original)
+        big = rounds(40, fat=4000)                                  # 約 40×2×1000 token
+        self.history(big)
+        self.assertEqual(self.tick(), 0)
+        self.assertLessEqual(context_api.history_tokens(self.history()), 32000)
+        self.assertEqual(self.events()[-1]['max_tokens'], 32000)
 
     def test_auto_waits_for_pending_input(self):
         self.put(self.base / 'input.json', '新的一句')
@@ -782,6 +796,92 @@ class RequestHandlerTests(unittest.TestCase):
 
 
 # ===================================================== history --archive ====
+
+class DigestTests(MemoryBase):
+    """使用者裁決：封存不只一行——每段是機械摘要（上限 8 KB），段尾一句「看不到了，問到就說不記得」。"""
+
+    def seal(self, h, keep=1, limit=2000):
+        return compact_api.plan(h, keep_rounds=keep, max_tokens=limit, archive='prompts/archive/0123456789abcdef.json')
+
+    def long(self, n=6):
+        """舊輪縮完還是很胖（最後回話很長），一定要封存。"""
+        h = rounds(n, fat=3000)
+        for i in range(5, len(h), 6):
+            h[i]['content'] = '答案 %d：' % (i // 6) + 'z' * 8000
+        return h
+
+    def test_digest_keeps_details(self):
+        h = self.long()
+        h[4]['content'] = '\n'.join('第 %d 行：abc' % i for i in range(1, 41))   # 第 0 輪 read 的結果 40 行
+        result = self.seal(h, limit=8000)
+        digest = result['history'][0]['content']
+        self.assertTrue(digest.startswith('[aos 已封存較早的 '))
+        self.assertIn('第 1 輪', digest)
+        self.assertIn('使用者：第 0 個問題', digest)
+        self.assertIn('結果 read（40 行）', digest)
+        self.assertIn('第 1 行：abc', digest)
+        self.assertIn('回話：答案 0：zzz', digest)
+        self.assertIn(compact_api.FORGET_DIGEST, digest)
+        self.assertLessEqual(len(digest.encode('utf-8')), 8192)
+        self.assertLessEqual(result['after']['tokens'], 8000)
+        compact_api.check_pairs(result['history'])
+
+    def test_digest_capped_at_8kb(self):
+        h = rounds(200, fat=3000)
+        for i in range(0, len(h), 6):
+            h[i]['content'] += '，' + '很長的問題' * 100
+        result = self.seal(h, limit=20000)
+        digests = [m['content'] for m in result['history'] if m['content'] and m['content'].startswith('[aos 已封存')]
+        self.assertEqual(len(digests), 1)
+        self.assertLessEqual(len(digests[0].encode('utf-8')), 8192)
+        self.assertGreater(len(digests[0].encode('utf-8')), 4096)       # 放得下就用大的
+        self.assertLessEqual(result['after']['tokens'], 20000)
+
+    def test_digest_shrinks_to_fit_limit(self):
+        result = self.seal(self.long(), limit=4000)
+        self.assertLessEqual(result['after']['tokens'], 4000)
+        self.assertTrue(compact_api.FORGET_DIGEST in result['history'][0]['content']
+                        or compact_api.FORGET in result['history'][0]['content'])
+        one = self.seal(self.long(), limit=300)['history'][0]['content']   # 放不下摘要＝只剩一行，也帶那句
+        self.assertIn(compact_api.FORGET, one)
+
+    def test_digest_fixpoint(self):
+        for limit in (300, 900, 4000, 9000, 20000):
+            with self.subTest(limit=limit):
+                first = self.seal(self.long(8), limit=limit)
+                again = compact_api.plan(first['history'], keep_rounds=1, max_tokens=limit,
+                                         archive='prompts/archive/fedcba9876543210.json')
+                self.assertFalse(again['changed'])
+
+
+class RotateTests(MemoryBase):
+    """調度者代裁：events.jsonl／usage.jsonl 滿 10 MB 輪換、留 3 份；info.json 的 logs 可改。"""
+
+    def test_default_limits(self):
+        self.assertEqual(events_api.limits(self.base), (10 * 1024 * 1024, 3))
+
+    def test_rotate_and_read_all(self):
+        self.put(self.base / 'info.json', dict(self.info, logs={'rotate_mb': 0.001, 'keep': 2}))
+        for i in range(60):
+            events_api.emit(self.base, 'intake', 'x%d' % i)
+        log = self.base / 'log'
+        self.assertTrue((log / 'events.1.jsonl').exists())
+        self.assertTrue((log / 'events.2.jsonl').exists())
+        self.assertFalse((log / 'events.3.jsonl').exists())
+        self.assertLess((log / 'events.jsonl').stat().st_size, 1048 + 200)
+        rows = events_api.read_all(log / 'events.jsonl')
+        ids = [int(r['id'][1:]) for r in rows]
+        self.assertEqual(ids, sorted(ids))                          # 舊的在前
+        self.assertEqual(ids[-1], 59)
+        code, out = self.cli('events', '--last', '0', '--json', env={})
+        self.assertEqual(len(json.loads(out)), len(rows))
+
+    def test_rotate_off(self):
+        self.put(self.base / 'info.json', dict(self.info, logs={'rotate_mb': 0}))
+        for i in range(30):
+            events_api.emit(self.base, 'intake', 'x%d' % i)
+        self.assertFalse((self.base / 'log/events.1.jsonl').exists())
+
 
 class ArchiveTests(MemoryBase):
     def setUp(self):

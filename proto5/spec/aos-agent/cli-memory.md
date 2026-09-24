@@ -40,7 +40,7 @@ tools  8 個，5267 字，約 1326 token：read, write, edit, bash, grep, find, 
 
 規則、恢復、自動、申請都在 [agent/compact.md](../agent/compact.md)。這裡只講命令列：
 
-- `--keep-rounds N`（0 以上）、`--max-tokens X`（100 以上）：沒給就照 `info.json` 的 `compact`，再沒有＝3 輪、沒上限。
+- `--keep-rounds N`（0 以上）、`--max-tokens X`（100 以上）：沒給就照 `info.json` 的 `compact`，再沒有＝3 輪、上限 32000（`compact` 寫 `false` 或 `max_tokens: 0`＝沒上限）。封存的輪變成每段最多 8 KB 的機械摘要（[compact.md §2](../agent/compact.md)）。
 - 成功印：`compacted：記憶 14 則、約 1184 token → 13 則、約 238 token；原文 <archive 路徑>`＋一行各輪怎麼處理；沒得縮印 `nothing to compact：…`；還超過上限多一行「還超過 --max-tokens X…」。都退 0。
 - `--dry-run`：同樣的輸出開頭是「（dry-run，沒寫）」，**不寫任何檔、不建鎖檔**。
 - 鎖被佔＝stderr `aos-agent: busy: 另一個 tick 正在跑（pid N），…`、**退 101**、不動檔（dry-run 也一樣）。
@@ -50,7 +50,7 @@ tools  8 個，5267 字，約 1326 token：read, write, edit, bash, grep, find, 
 
 ## `events`：事件與用量
 
-- 印 `log/events.jsonl` 最後 N 則（預設 20，`0`＝全部），同 `ev`＋`id` 只印一次（格式與「至少一次」在 [agent/events.md](../agent/events.md)）。一則一行：`時間  ev  id  其他欄位 k=v`。
+- 印 `log/events.jsonl`（連輪換掉的 `events.1.jsonl`… 一起，舊的在前）最後 N 則（預設 20，`0`＝全部），同 `ev`＋`id` 只印一次（格式與「至少一次」在 [agent/events.md](../agent/events.md)）。一則一行：`時間  ev  id  其他欄位 k=v`。
 - `--usage`：改印 `log/usage.jsonl`：`時間  批 id  代號→真名  prompt P  completion C  total T  N ms`。
 - `--json`：那幾則原樣的陣列。
 
