@@ -278,3 +278,23 @@ def link_json(path, obj):
     finally:
         if temp is not None:
             Path(temp).unlink(missing_ok=True)
+
+
+SOURCE_CWD = "目前資料夾"
+
+
+def resolve_target(value=None, env_var=None, env=None):
+    """三支指令共用的「家」找法：--target → 環境變數 → 目前資料夾；回（絕對路徑, 來源）。"""
+    env = os.environ if env is None else env
+    if value:
+        return Path(os.path.abspath(os.path.expanduser(value))), "--target"
+    if env_var and env.get(env_var):
+        return Path(os.path.abspath(os.path.expanduser(env[env_var]))), env_var
+    return Path(os.path.abspath(".")), SOURCE_CWD
+
+
+def target_note(label, path, source, env_var=None):
+    """錯誤訊息尾巴：講清楚這次用的是哪個家、從哪來的。"""
+    if source == SOURCE_CWD:
+        source = "目前資料夾（沒給 --target%s）" % ("、也沒設 " + env_var if env_var else "")
+    return "（%s＝%s，取自 %s）" % (label, path, source)

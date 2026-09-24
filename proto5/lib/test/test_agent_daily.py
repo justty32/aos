@@ -34,7 +34,7 @@ class DailyTests(unittest.TestCase):
 
     def test_init_valid(self):
         base = self.root / 'nested/new'
-        code, output = self.cli('init', str(base))
+        code, output = self.cli('init', '--target', str(base))
         self.assertEqual(code, 0)
         self.assertEqual(len(output.splitlines()), 2)
         self.assertEqual(info.load(base)['model'], 'default')
@@ -44,24 +44,25 @@ class DailyTests(unittest.TestCase):
 
     def test_init_refuses_without_writes(self):
         before = {p: p.read_bytes() for p in self.base.rglob('*') if p.is_file()}
-        self.assertEqual(self.cli('init', str(self.base))[0], 1)
+        self.assertEqual(self.cli('init', '--target', str(self.base))[0], 1)
         self.assertIn('AlreadyExists', self.err.getvalue())
         self.assertEqual(before, {p: p.read_bytes() for p in self.base.rglob('*') if p.is_file()})
 
     def test_status_json(self):
-        data = json.loads(self.cli('status', str(self.base), '--json')[1])
+        data = json.loads(self.cli('status', '--target', str(self.base), '--json')[1])
         self.assertEqual(set(data), {'dir', 'info_error', 'state_error', 'state', 'errors',
                                     'batch', 'waits', 'pending_inputs', 'intake', 'last_error', 'kernel',
-                                    'health', 'current_error', 'streak', 'paused', 'last_error_time'})
+                                    'health', 'current_error', 'streak', 'paused', 'last_error_time',
+                                    'manual_paused', 'manual_paused_since'})
         self.assertEqual(data['state'], 'idle')
         self.assertIsNone(data['kernel']['home'])
-        self.assertIn('沒設 AOS_K', data['kernel']['note'])
+        self.assertIn('沒設 AOS_KERNEL_HOME', data['kernel']['note'])
 
     def test_status_wait_text_and_arrival(self):
         path = self.pause()
-        self.assertIn('（連敗暫停，aos-agent continue）', self.cli('status', str(self.base))[1])
+        self.assertIn('（連敗暫停，aos-agent continue）', self.cli('status', '--target', str(self.base))[1])
         path.touch()
-        self.assertIn('已到，下一格會開', self.cli('status', str(self.base))[1])
+        self.assertIn('已到，下一格會開', self.cli('status', '--target', str(self.base))[1])
         self.assertEqual(status.collect(self.base, {})['waits'][0],
                          dict(paths=[str(path)], arrived=True, consume=True, pause=True, touch=str(path)))
 
@@ -77,14 +78,14 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(data['batch'], dict(kind='think', sent=False, total=1, sent_n=1, done_n=0))
         self.assertTrue(data['intake'])
         self.assertEqual(len(data['last_error']), 300)
-        output = self.cli('status', str(self.base))[1]
+        output = self.cli('status', '--target', str(self.base))[1]
         for word in ('送件中', '收到一半', '1 個檔還沒收'):
             self.assertIn(word, output)
 
     def test_status_broken_info_and_state(self):
         (self.base / 'info.json').write_text('{')
         (self.base / 'state.json').write_text('{')
-        code, output = self.cli('status', str(self.base))
+        code, output = self.cli('status', '--target', str(self.base))
         self.assertEqual(code, 0)
         self.assertIn('info  bad：JsonSyntax', output)
         self.assertIn('state bad：JsonSyntax', output)
@@ -96,7 +97,7 @@ class DailyTests(unittest.TestCase):
                 (self.base / 'info.json').unlink()
             else:
                 self.put(self.base / 'info.json', value)
-            self.assertEqual(self.cli('status', str(self.base))[0], 1)
+            self.assertEqual(self.cli('status', '--target', str(self.base))[0], 1)
             self.assertIn('NotAnAgent', self.err.getvalue())
 
     def test_status_kernel_fallback_and_bad(self):
@@ -106,7 +107,7 @@ class DailyTests(unittest.TestCase):
         data = status.collect(self.base, {})
         self.assertEqual(data['kernel']['proc'], proc)
         self.assertEqual(data['kernel']['home'], str(self.k))
-        self.assertIn(str(self.base / 'log/agent.err'), self.cli('status', str(self.base))[1])
+        self.assertIn(str(self.base / 'log/agent.err'), self.cli('status', '--target', str(self.base))[1])
 
     def test_status_kernel_missing_and_unreadable(self):
         self.assertIn('沒登記', status.collect(self.base, self.env)['kernel']['note'])
@@ -115,44 +116,44 @@ class DailyTests(unittest.TestCase):
 
     def test_tick_fallback_literal_absolute_only(self):
         for value in ('relative', {'$env': 'K'}, None):
-            self.put(self.base / 'tick.json', {'envs': {'AOS_K': value}})
+            self.put(self.base / 'tick.json', {'envs': {'AOS_KERNEL_HOME': value}})
             self.assertIsNone(status.collect(self.base, {})['kernel']['home'])
-            self.assertEqual(self.cli('stop', str(self.base))[0], 2)
+            self.assertEqual(self.cli('stop', '--target', str(self.base))[0], 2)
 
     def test_continue_three_cases(self):
-        self.assertEqual(self.cli('continue', str(self.base)), (0, '沒有在暫停\n'))
+        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, '沒有在暫停\n'))
         path = self.pause()
-        self.assertEqual(self.cli('continue', str(self.base)), (0, 'continued: touched %s\n' % path))
-        self.assertEqual(self.cli('continue', str(self.base)), (0, '已經 touch 過，等下一格 tick：%s\n' % path))
+        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, 'continued: touched %s\n' % path))
+        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, '已經 touch 過，等下一格 tick：%s\n' % path))
         self.assertFalse((self.base / 'outside.json').exists())
 
     def test_continue_only_owned_consume_paths(self):
         external = self.root / 'continue-foreign.json'
         self.state(waits=[{'$opt': 'consume', '$val': str(external)}, 'continue-own.json'])
-        self.assertEqual(self.cli('continue', str(self.base)), (0, '沒有在暫停\n'))
+        self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, '沒有在暫停\n'))
         self.assertFalse(external.exists())
         self.assertFalse((self.base / 'continue-own.json').exists())
 
     def test_continue_bad_state(self):
         self.state(state='invalid')
-        self.assertEqual(self.cli('continue', str(self.base))[0], 1)
+        self.assertEqual(self.cli('continue', '--target', str(self.base))[0], 1)
 
     def test_stop_fallback(self):
         self.put(self.base / 'tick.json', {'envs': self.env})
         thread, seen, failures = self.kernel_thread()
-        self.assertEqual(self.cli('stop', str(self.base))[0], 0)
+        self.assertEqual(self.cli('stop', '--target', str(self.base))[0], 0)
         thread.join(3)
         self.assertFalse(failures)
         self.assertEqual(seen[0]['method'], 'rm')
 
     def test_stop_no_fallback(self):
-        self.assertEqual(self.cli('stop', str(self.base))[0], 2)
-        self.assertIn('沒設 AOS_K，tick.json 也沒記', self.err.getvalue())
+        self.assertEqual(self.cli('stop', '--target', str(self.base))[0], 2)
+        self.assertIn('沒設 AOS_KERNEL_HOME，tick.json 也沒記', self.err.getvalue())
 
     def test_say_directory_and_first_input(self):
         self.state(input=['inbox/', 'other.json'])
         for _ in range(2):
-            self.assertEqual(self.cli('say', str(self.base), '你好')[0], 0)
+            self.assertEqual(self.cli('say', '--target', str(self.base), '你好')[0], 0)
         paths = list((self.base / 'inbox').iterdir())
         self.assertEqual(len(paths), 2)
         self.assertEqual(self.read(paths[0]), {'role': 'user', 'content': '你好'})
@@ -161,7 +162,7 @@ class DailyTests(unittest.TestCase):
     def test_say_file_busy(self):
         self.put(self.base / 'input.json', '舊訊息')
         with patch.object(say, 'INPUT_WAIT_SECONDS', .01):
-            self.assertEqual(self.cli('say', str(self.base), '新訊息')[0], 1)
+            self.assertEqual(self.cli('say', '--target', str(self.base), '新訊息')[0], 1)
         self.assertEqual(self.read(self.base / 'input.json'), '舊訊息')
         self.assertIn('InputBusy', self.err.getvalue())
         self.assertFalse(list(self.base.glob('.*.tmp')))
@@ -171,12 +172,12 @@ class DailyTests(unittest.TestCase):
         def consumed(_):
             (self.base / 'input.json').unlink()
         with patch.object(say.time, 'sleep', side_effect=consumed):
-            self.assertEqual(self.cli('say', str(self.base), '新訊息')[0], 0)
+            self.assertEqual(self.cli('say', '--target', str(self.base), '新訊息')[0], 0)
         self.assertEqual(self.read(self.base / 'input.json')['content'], '新訊息')
 
     def test_say_requires_valid_info(self):
         self.put(self.base / 'info.json', {})
-        self.assertEqual(self.cli('say', str(self.base), '你好')[0], 1)
+        self.assertEqual(self.cli('say', '--target', str(self.base), '你好')[0], 1)
         self.assertFalse((self.base / 'input.json').exists())
 
     def test_say_wait_fake_agent(self):
@@ -198,7 +199,7 @@ class DailyTests(unittest.TestCase):
         thread = threading.Thread(target=fake)
         thread.start()
         try:
-            self.assertEqual(self.cli('say', str(self.base), '你好', '--wait', '--timeout-ms', '2000')[0], 101)
+            self.assertEqual(self.cli('say', '--target', str(self.base), '你好', '--wait', '2')[0], 101)
         finally:
             thread.join(3)
         self.assertFalse(errors)
@@ -206,21 +207,25 @@ class DailyTests(unittest.TestCase):
 
     def test_say_wait_timeout_old_answer(self):
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
-        code, output = self.cli('say', str(self.base), '你好', '--wait', '--timeout-ms', '1')
+        code, output = self.cli('say', '--target', str(self.base), '你好', '--wait', '0.001')
         self.assertEqual(code, 101)
         self.assertIn('agent  ', output)
         self.assertIn('unregistered: 目前沒登記', self.err.getvalue())
 
     def test_say_wait_stuck(self):
         self.pause()
-        code, output = self.cli('say', str(self.base), '你好', '--wait', '--timeout-ms', '300000')
+        code, output = self.cli('say', '--target', str(self.base), '你好', '--wait', '300')
         self.assertEqual(code, 101)
         self.assertIn('（連敗暫停，aos-agent continue）', output)
         self.assertIn('unregistered:', self.err.getvalue())
 
     def test_usage(self):
         for args in [('say',), ('say', ''), ('say', 'a', 'b', 'c'), ('say', 'x', '--timeout-ms', '2'),
-                     ('say', 'x', '--wait', '--timeout-ms', '-1'), ('init', '--json'), ('continue', '--json')]:
+                     ('say', 'x', '--wait', '--timeout-ms', '-1'), ('init', '--json'), ('continue', '--json'),
+                     ('say', 'a', 'b'), ('say', 'x', '--wait', '-1'), ('say', 'x', '--wait', 'abc'),
+                     ('listen', '--last', '--wait'), ('listen', '--follow', '--wait', '3'),
+                     ('listen', '--wait', 'x'), ('pause', '--json'), ('status', '--target', ''),
+                     ('tick', '/some/dir')]:
             with self.subTest(args=args), self.assertRaises(SystemExit) as exc:
                 self.cli(*args)
             self.assertEqual(exc.exception.code, 2)
@@ -229,18 +234,18 @@ class DailyTests(unittest.TestCase):
         (self.base / 'info.json').write_text('{')
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
         self.pause()
-        self.assertEqual(self.cli('last', str(self.base)), (0, '完成\n'))
+        self.assertEqual(self.cli('listen', '--target', str(self.base)), (0, '完成\n'))
         self.assertIn('改讀 prompts/history.json', self.err.getvalue())
         self.assertIn('連敗暫停中', self.err.getvalue())
 
     def test_last_external_gate(self):
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
         self.state(waits='outside.json')
-        self.assertEqual(self.cli('last', str(self.base)), (0, '完成\n'))
+        self.assertEqual(self.cli('listen', '--target', str(self.base)), (0, '完成\n'))
         self.assertIn('門關著（在等 %s）' % (self.base / 'outside.json'), self.err.getvalue())
 
     def test_last_missing_info(self):
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
         (self.base / 'info.json').unlink()
-        self.assertEqual(self.cli('last', str(self.base))[0], 1)
+        self.assertEqual(self.cli('listen', '--target', str(self.base))[0], 1)
         self.assertIn('NotAnAgent', self.err.getvalue())

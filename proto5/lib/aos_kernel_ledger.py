@@ -139,7 +139,7 @@ class KernelLedger:
     def tick_request(self, seq):
         name = "k-%s-%d.json" % (self.state["chain"], seq)
         return name, {"jsonrpc": "2.0", "id": name[:-5], "method": "aos-exec", "params": {
-            "target": self.state["cli"], "args": ["tick", str(self.home), "--chain", self.state["chain"], "--seq", str(seq)],
+            "target": self.state["cli"], "args": ["tick", "--target", str(self.home), "--chain", self.state["chain"], "--seq", str(seq)],
             "timeout_ms": 0}}
 
     def ack_ticks(self):

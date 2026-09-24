@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-llm-call 的命令列入口——實作在 ../lib/aos_llm_call.py。"""
+"""aos-llm 的命令列入口（子命令 call…）——實作在 ../lib/aos_llm_call.py。"""
 import os
 import sys
 

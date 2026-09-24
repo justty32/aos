@@ -18,8 +18,8 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
             state = aos_home.read_state(home)
             snapshot = {**state, "kernel_cpu": {"name": state.get("kcpu")}}
         daemon_home = os.path.abspath(info.get("daemon") or aos_daemon.daemon_home())
-        boot = "aos-kernel boot %s --daemon %s" % (home, daemon_home)
-        check = "aos-kernel check %s" % home
+        boot = "aos-kernel boot --target %s --daemon-target %s" % (home, daemon_home)
+        check = "aos-kernel check --target %s" % home
         missing = [str(home / name) + '/' for name in ('requests', 'responses', 'cpus')
                    if not (home / name).is_dir()]
         if missing:
@@ -29,7 +29,7 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
         daemon = snapshot.get('daemon')
         alive = daemon['alive'] if daemon is not None else aos_daemon.is_alive(daemon_home)
         if not alive:
-            return 'daemon', 'daemon 沒在跑：%s（先 aos-daemon --home %s，再 %s）' % (
+            return 'daemon', 'daemon 沒在跑：%s（先 aos-daemon boot --target %s，再 %s）' % (
                 daemon_home, daemon_home, boot)
         children = daemon['children'] if daemon is not None else aos_daemon.read_state(daemon_home)['children']
         names = dict.fromkeys([*info['cpus'], *(snapshot.get('cpus') or {})])
@@ -46,4 +46,4 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
         return 'ok', 'ok'
     except (aos_home.HomeError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         reason = ' '.join(str(exc).splitlines())
-        return 'broken', 'kernel 家讀不到：%s（跑 aos-kernel check %s）' % (reason, home)
+        return 'broken', 'kernel 家讀不到：%s（跑 aos-kernel check --target %s）' % (reason, home)

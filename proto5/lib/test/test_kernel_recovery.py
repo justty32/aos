@@ -65,7 +65,7 @@ class RecoveryTests(KernelCase):
     def test_next_tick_placed_before_last_seq_record_is_idempotent(self):
         name = "k-test-chain-8.json"
         request = {"jsonrpc": "2.0", "id": "next-id", "method": "aos-exec",
-                   "params": {"target": str(CLI), "args": ["tick", str(self.k), "--chain",
+                   "params": {"target": str(CLI), "args": ["tick", "--target", str(self.k), "--chain",
                               "test-chain", "--seq", "8"], "timeout_ms": 0}}
         cpu = self.k / "cpus" / "k"
         home.post_request(cpu, name, request)
@@ -80,7 +80,7 @@ class RecoveryTests(KernelCase):
     def test_tick_request_uses_plain_cli_args_and_no_timeout(self):
         self.step()
         request = home.read_json(self.k / "cpus" / "k" / "requests" / "k-test-chain-8.json")
-        self.assertEqual(request["params"], {"target": str(CLI), "args": ["tick", str(self.k),
+        self.assertEqual(request["params"], {"target": str(CLI), "args": ["tick", "--target", str(self.k),
                           "--chain", "test-chain", "--seq", "8"], "timeout_ms": 0})
 
     def populate_outboxes(self):
@@ -345,7 +345,7 @@ class LiveRecoveryTests(LiveKernelCase):
         self.assertTrue(stop.exists())
         state['stops'] = ['k']  # 另有尚未出貨的帳本待辦；boot 只清掉這一層。
         engine.save()
-        self.good_cli('boot', self.home, '--daemon', self.daemon)
+        self.good_cli('boot', self.home, '--daemon-target', self.daemon)
         wait_for(lambda: 'k' not in self.dstate()['children'])
         self.assertFalse(stop.exists())
         current = self.state()

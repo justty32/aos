@@ -84,13 +84,42 @@ def _validate_info(info):
     return info
 
 
-def init(home, cpus=None):
+CONFIG_EXAMPLE = ('{"cpus": {"0": {}, "llm": {"pool": "llm", '
+                  '"envs": {"AOS_LLM_CONFIG": "/abs/llm.json"}}}}')
+
+
+def info_from_config(config):
+    """init --config（09-24 fix-r4）：設定檔就是 info.json 要寫的那幾格；補 _metainfo、預設值與 k。"""
+    if not isinstance(config, dict) or any(k.startswith("$") for k in config):
+        _bad("--config 的頂層必須是字面物件", [])
+    if "daemon" in config:
+        _bad("--config 不能寫 daemon（那格是 boot 寫的）", ["daemon"])
+    cpus = config.get("cpus")
+    if not isinstance(cpus, dict) or not cpus or any(k.startswith("$") for k in cpus):
+        _bad("--config 要有 cpus（字面物件，至少一顆），例：" + CONFIG_EXAMPLE, ["cpus"])
+    cpus = copy.deepcopy(cpus)
+    if not any(isinstance(c, dict) and c.get("pool") == "kernel" for c in cpus.values()):
+        if "k" in cpus:
+            _bad("沒有 pool 是 kernel 的 cpu，而 k 已被別的池用；請把一顆標成 {\"pool\": \"kernel\"}", ["cpus", "k"])
+        cpus = {"k": {"pool": "kernel"}, **cpus}
+    info = {"_metainfo": copy.deepcopy(config.get("_metainfo", {"_type": "kernel", "_version": 1})), "cpus": cpus}
+    for key, default in DEFAULTS.items():
+        info[key] = copy.deepcopy(config.get(key, default))
+    for key, value in config.items():
+        info.setdefault(key, copy.deepcopy(value))
+    return info
+
+
+def init(home, cpus=None, config=None):
     home = Path(home).absolute()
     if (home / "info.json").exists():
         raise KernelError("AlreadyExists", "拒絕覆蓋既有的家：%s" % home)
-    info = {"_metainfo": {"_type": "kernel", "_version": 1},
-            "cpus": cpus if cpus is not None else {"k": {"pool": "kernel"}, "0": {}, "1": {}, "2": {}}, **DEFAULTS}
-    _parse_info(home, info)
+    if config is not None:
+        info = info_from_config(config)
+    else:
+        info = {"_metainfo": {"_type": "kernel", "_version": 1},
+                "cpus": cpus if cpus is not None else {"k": {"pool": "kernel"}, "0": {}, "1": {}, "2": {}}, **DEFAULTS}
+    _parse_info(home, copy.deepcopy(info))
     home.mkdir(parents=True, exist_ok=True)
     aos_home.ensure_queue(home)
     (home / "cpus").mkdir(exist_ok=True)

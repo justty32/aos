@@ -22,7 +22,7 @@ class KernelHealth(KernelCase):
         self.addCleanup(patch.stopall)
         patch('aos_daemon.read_state', return_value={'children': self.children}).start()
         self.now = (self.home / 'state.json').stat().st_mtime
-        self.boot = 'aos-kernel boot %s --daemon %s' % (self.home, self.daemon)
+        self.boot = 'aos-kernel boot --target %s --daemon-target %s' % (self.home, self.daemon)
 
     def save(self):
         self.write(self.home / 'state.json', self.ledger)
@@ -34,13 +34,13 @@ class KernelHealth(KernelCase):
         (self.home / 'requests').rmdir()
         self.ledger['phase'] = 'stopped'
         self.save()
-        self.assertEqual(health(self.home), ('dirs', 'K 家缺目錄：%s/requests/（跑 aos-kernel check %s）' %
+        self.assertEqual(health(self.home), ('dirs', 'K 家缺目錄：%s/requests/（跑 aos-kernel check --target %s）' %
                                            (self.home, self.home)))
 
     def test_all_required_dirs(self):
         for name in ('requests', 'responses', 'cpus'):
             (self.home / name).rmdir()
-        self.assertEqual(health(self.home)[1], 'K 家缺目錄：%s（跑 aos-kernel check %s）' % (
+        self.assertEqual(health(self.home)[1], 'K 家缺目錄：%s（跑 aos-kernel check --target %s）' % (
             '、'.join(str(self.home / name) + '/' for name in ('requests', 'responses', 'cpus')), self.home))
 
     def test_stopped_precedes_dead_daemon(self):
@@ -56,7 +56,7 @@ class KernelHealth(KernelCase):
     def test_daemon_precedes_missing_cpu(self):
         self.alive.return_value = False
         self.children.clear()
-        self.assertEqual(health(self.home), ('daemon', 'daemon 沒在跑：%s（先 aos-daemon --home %s，再 %s）' %
+        self.assertEqual(health(self.home), ('daemon', 'daemon 沒在跑：%s（先 aos-daemon boot --target %s，再 %s）' %
                                            (self.daemon, self.daemon, self.boot)))
 
     def test_cpu_missing_precedes_stall(self):
@@ -73,7 +73,7 @@ class KernelHealth(KernelCase):
 
     def test_stall(self):
         self.assertEqual(health(self.home, now=self.now + 11),
-                         ('stall', 'tick 停住：11 秒沒前進（跑 aos-kernel check %s）' % self.home))
+                         ('stall', 'tick 停住：11 秒沒前進（跑 aos-kernel check --target %s）' % self.home))
 
     def test_stall_threshold(self):
         for tick_ms, threshold in ((0, 10), (1000, 10), (2000, 20)):
@@ -93,7 +93,7 @@ class KernelHealth(KernelCase):
             code, message = health(self.home)
             self.assertEqual(code, 'broken')
             self.assertTrue(message.startswith('kernel 家讀不到：'))
-            self.assertTrue(message.endswith('（跑 aos-kernel check %s）' % self.home))
+            self.assertTrue(message.endswith('（跑 aos-kernel check --target %s）' % self.home))
             self.assertEqual(len(message.splitlines()), 1)
 
     def test_not_kernel_home(self):
@@ -124,14 +124,14 @@ class KernelHealth(KernelCase):
     def test_ls_first_line_and_no_duplicate_hint(self):
         self.alive.return_value = False
         with contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(kernel.main(['ls', str(self.home)]), 0)
+            self.assertEqual(kernel.main(['ls', '--target', str(self.home)]), 0)
         self.assertEqual(out.getvalue().splitlines()[0], 'health ' + health(self.home)[1])
         self.assertNotIn('hint ', out.getvalue())
 
     def test_ls_json_health_and_other_fields_unchanged(self):
         expected = kernel.status(self.home)
         with contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(kernel.main(['ls', str(self.home), '--json']), 0)
+            self.assertEqual(kernel.main(['ls', '--target', str(self.home), '--json']), 0)
         actual = json.loads(out.getvalue())
         self.assertEqual(actual.pop('health'), {'code': 'ok', 'message': 'ok'})
         self.assertEqual(actual, expected)
@@ -140,5 +140,5 @@ class KernelHealth(KernelCase):
         (self.home / 'state.json').write_text('{')
         for flags in ([], ['--json']):
             with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
-                self.assertEqual(kernel.main(['ls', str(self.home), *flags]), 1)
+                self.assertEqual(kernel.main(['ls', '--target', str(self.home), *flags]), 1)
             self.assertEqual(out.getvalue(), '')

@@ -99,9 +99,9 @@ def think_done(response, path, timeout, *, kernel, pool):
             fail = ('逾時（%s ms，是 info.llm.timeout_ms；要更久就改 agent 的 info.json；llm.err 在 %s）'
                     % (timeout, path.absolute().parent.parent / 'log/llm.err'))
         elif result['kind'] == 'aos':
-            fail = 'aos-llm-call 沒跑起來（kind=aos），看 ' + cpu_logs(kernel, pool)
+            fail = 'aos-llm call 沒跑起來（kind=aos），看 ' + cpu_logs(kernel, pool)
         else:
-            fail = 'aos-llm-call exit %s，看 %s' % (result['code'], llm_log(path))
+            fail = 'aos-llm call exit %s，看 %s' % (result['code'], llm_log(path))
     elif code == 'Stopping':
         fail, count = 'kernel 停機時取消，沒跑', False
     elif code in ('Interrupted', 'Removed'):

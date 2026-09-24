@@ -40,13 +40,13 @@ class AgentFixCliTests(unittest.TestCase):
                 self.assertEqual(self.register(False)[0], 0)
 
     def test_stop_ignores_unreadable_tick(self):
-        for value in ('{', '[]', '{"envs": []}', '{"envs":{"AOS_K":{"$env":"K"}}}'):
+        for value in ('{', '[]', '{"envs": []}', '{"envs":{"AOS_KERNEL_HOME":{"$env":"K"}}}'):
             with self.subTest(value=value):
                 (self.base / 'tick.json').write_text(value)
                 self.assertEqual(self.register(False)[0], 0)
 
     def test_stop_mismatch(self):
-        self.put(self.base / 'tick.json', {'envs': {'AOS_K': '/other/K'}})
+        self.put(self.base / 'tick.json', {'envs': {'AOS_KERNEL_HOME': '/other/K'}})
         self.assertEqual(agent.stop(self.base, self.env), 1)
         self.assertIn('KernelMismatch', self.err.getvalue())
         self.assertIn(str(self.base / 'tick.json') + ' 綁在 /other/K', self.err.getvalue())
@@ -89,7 +89,7 @@ class AgentFixCliTests(unittest.TestCase):
         self.put(self.base / 'info.json', self.info)
         self.put(self.base / 'memory/custom.json', history)
         with patch.dict(os.environ, {}, clear=True), patch('sys.stdout', new_callable=io.StringIO) as out:
-            code = agent.main(['last', str(self.base), *flags])
+            code = agent.main(['listen', '--target', str(self.base), *flags])
         return code, out.getvalue()
 
     def test_last_text(self):
@@ -126,5 +126,5 @@ class AgentFixCliTests(unittest.TestCase):
     def test_json_only_last(self):
         for command in ('tick', 'start', 'stop'):
             with self.assertRaises(SystemExit) as cm:
-                agent.main([command, str(self.base), '--json'])
+                agent.main([command, '--target', str(self.base), '--json'])
             self.assertEqual(cm.exception.code, 2)

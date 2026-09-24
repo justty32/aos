@@ -45,8 +45,8 @@ class StatusR3Tests(unittest.TestCase):
         self.registered()
         self.pause()
         with self.healthy():
-            _, output = self.cli('status', str(self.base))
-            _, verbose = self.cli('status', str(self.base), '-v')
+            _, output = self.cli('status', '--target', str(self.base))
+            _, verbose = self.cli('status', '--target', str(self.base), '-v')
         self.assertTrue(output.startswith('health 連敗暫停'))
         self.assertIn('error  Connection refused endpoint http://localhost:1234', output)
         self.assertIn('已連敗 3 次', output)
@@ -60,7 +60,7 @@ class StatusR3Tests(unittest.TestCase):
         path = self.log()
         os.utime(path, (1700000000, 1700000000))
         with self.healthy():
-            _, output = self.cli('status', str(self.base))
+            _, output = self.cli('status', '--target', str(self.base))
             data = status.collect(self.base, {})
         self.assertTrue(output.startswith('health ok\n'))
         self.assertIn('error  （無）\n', output)
@@ -71,7 +71,7 @@ class StatusR3Tests(unittest.TestCase):
     def test_streak_one_uses_latest_engine(self):
         self.put(self.base / 'state.json', {'errors': 1})
         self.log('aos-agent: engine: old\naos-agent: engine: new\n')
-        _, output = self.cli('status', str(self.base))
+        _, output = self.cli('status', '--target', str(self.base))
         self.assertIn('error  new\n', output)
         self.assertIn('已連敗 1 次（3 次會暫停）', output)
 
@@ -86,13 +86,13 @@ class StatusR3Tests(unittest.TestCase):
         self.log('aos-agent: stuck: 問模型連敗 3 次，touch /x 繼續\n')
         data = status.collect(self.base, {})
         self.assertTrue(data['current_error'].startswith('aos-agent: stuck:'))
-        self.assertNotIn('touch ', self.cli('status', str(self.base))[1])
+        self.assertNotIn('touch ', self.cli('status', '--target', str(self.base))[1])
 
     def test_health_unregistered_and_no_kernel(self):
         data = status.collect(self.base, {})
         self.assertEqual(data['health']['code'], 'unregistered')
-        self.assertIn('kernel 從沒 start 過（沒設 AOS_K、也沒 tick.json）',
-                      self.cli('status', str(self.base))[1])
+        self.assertIn('kernel 從沒 start 過（沒設 AOS_KERNEL_HOME、也沒 tick.json）',
+                      self.cli('status', '--target', str(self.base))[1])
         with self.healthy():
             self.assertEqual(status.collect(self.base, self.env)['health']['code'], 'unregistered')
 
@@ -127,7 +127,7 @@ class StatusR3Tests(unittest.TestCase):
         self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'fails': 1}}, 'replies': []})
         self.log('tick failed\n')
         with self.healthy():
-            self.assertIn('error  tick failed', self.cli('status', str(self.base))[1])
+            self.assertIn('error  tick failed', self.cli('status', '--target', str(self.base))[1])
 
     def test_real_kernel_health_missing_directory(self):
         self.registered()
@@ -141,7 +141,7 @@ class StatusR3Tests(unittest.TestCase):
 
     def test_json_new_keys_and_old_last_error(self):
         self.pause()
-        data = json.loads(self.cli('status', str(self.base), '--json')[1])
+        data = json.loads(self.cli('status', '--target', str(self.base), '--json')[1])
         self.assertTrue({'health', 'current_error', 'streak', 'paused', 'last_error_time'} <= data.keys())
         self.assertEqual(data['streak'], 3)
         self.assertTrue(data['paused'])
@@ -149,7 +149,7 @@ class StatusR3Tests(unittest.TestCase):
         self.assertIn('touch', data['waits'][0])
 
     def test_say_warn_and_delivery(self):
-        code, output = self.cli('say', str(self.base), 'hello')
+        code, output = self.cli('say', '--target', str(self.base), 'hello')
         self.assertEqual(code, 0)
         self.assertIn('said -> ', output)
         self.assertIn('aos-agent: warn: 目前沒登記、沒人處理', self.err.getvalue())
@@ -157,7 +157,7 @@ class StatusR3Tests(unittest.TestCase):
 
     def test_say_wait_unregistered_immediate(self):
         start = time.monotonic()
-        code, output = self.cli('say', str(self.base), 'hello', '--wait')
+        code, output = self.cli('say', '--target', str(self.base), 'hello', '--wait')
         self.assertLess(time.monotonic() - start, 2)
         self.assertEqual(code, 101)
         self.assertIn('aos-agent: unregistered:', self.err.getvalue())
@@ -167,7 +167,7 @@ class StatusR3Tests(unittest.TestCase):
     def test_unreadable_ledger_does_not_warn(self):
         self.registered()
         (self.k / 'state.json').write_text('{')
-        self.assertEqual(self.cli('say', str(self.base), 'hello')[0], 0)
+        self.assertEqual(self.cli('say', '--target', str(self.base), 'hello')[0], 0)
         self.assertNotIn('warn:', self.err.getvalue())
 
     def test_stop_during_wait(self):
@@ -175,7 +175,7 @@ class StatusR3Tests(unittest.TestCase):
         def stopped(_):
             self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
         with self.healthy(), patch.object(say.time, 'sleep', side_effect=stopped):
-            self.assertEqual(self.cli('say', str(self.base), 'hello', '--wait')[0], 101)
+            self.assertEqual(self.cli('say', '--target', str(self.base), 'hello', '--wait')[0], 101)
         self.assertIn('unregistered:', self.err.getvalue())
 
     def test_registered_wait_reply(self):
@@ -185,13 +185,13 @@ class StatusR3Tests(unittest.TestCase):
             (self.base / 'input.json').unlink()
             self.put(self.base / 'prompts/history.json', [message, fixture.MESSAGE])
         with self.healthy(), patch.object(say.time, 'sleep', side_effect=reply):
-            self.assertEqual(self.cli('say', str(self.base), 'hello', '--wait'), (0, '完成\n'))
+            self.assertEqual(self.cli('say', '--target', str(self.base), 'hello', '--wait'), (0, '完成\n'))
 
     def test_registered_wait_paused(self):
         self.registered()
         self.pause()
         with self.healthy():
-            code, output = self.cli('say', str(self.base), 'hello', '--wait')
+            code, output = self.cli('say', '--target', str(self.base), 'hello', '--wait')
         self.assertEqual(code, 101)
         self.assertIn('stuck:', self.err.getvalue())
         self.assertIn('error  Connection refused', output)
@@ -203,15 +203,15 @@ class StatusR3Tests(unittest.TestCase):
         self.put(self.base / 'state.json', {'waits': [{'$opt': 'consume', '$val': ['continue-test.json', 'external']}]})
         with self.healthy():
             self.assertFalse(status.collect(self.base, {})['paused'])
-            self.assertEqual(self.cli('say', str(self.base), 'hello', '--wait', '--timeout-ms', '0')[0], 101)
+            self.assertEqual(self.cli('say', '--target', str(self.base), 'hello', '--wait', '0')[0], 101)
         self.assertIn('Timeout:', self.err.getvalue())
 
     def test_say_help(self):
         with patch('sys.stdout', new_callable=io.StringIO) as out, self.assertRaises(SystemExit):
             agent.main(['say', '-h'])
         for text in ('cd 家 && aos-agent say "現在幾點？" --wait',
-                     'aos-agent say ~/agents/amy "現在幾點？" --wait --timeout-ms 60000',
-                     '300000', '5 分鐘', '只能搭 --wait'):
+                     'aos-agent say "現在幾點？" --target ~/agents/amy --wait 60',
+                     '不帶數字＝等 300 秒', '--target DIR', '暫停中照收'):
             self.assertIn(text, out.getvalue())
 
     def test_registered_wait_retries_partial_files(self):
@@ -230,5 +230,5 @@ class StatusR3Tests(unittest.TestCase):
                 self.put(self.base / 'prompts/history.json',
                          [{'role': 'user', 'content': 'hello'}, fixture.MESSAGE])
         with self.healthy(), patch.object(say.time, 'sleep', side_effect=advance):
-            self.assertEqual(self.cli('say', str(self.base), 'hello', '--wait'), (0, '完成\n'))
+            self.assertEqual(self.cli('say', '--target', str(self.base), 'hello', '--wait'), (0, '完成\n'))
         self.assertEqual(len(loops), 3)

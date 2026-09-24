@@ -1,4 +1,4 @@
-"""aos-llm-call 的離線整合驗證：每例建立本機端點並完整收尾。"""
+"""aos-llm call 的離線整合驗證：每例建立本機端點並完整收尾。"""
 import contextlib
 import copy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,7 +18,7 @@ from unittest.mock import patch
 import aos_llm_call as llm
 from aos_agent_home import AgentError
 
-CLI = Path(__file__).resolve().parents[2] / "cli" / "aos-llm-call"
+CLI = Path(__file__).resolve().parents[2] / "cli" / "aos-llm"
 
 
 class LlmCallTest(unittest.TestCase):
@@ -98,8 +98,8 @@ class LlmCallTest(unittest.TestCase):
         self.save()
         self.error(code, llm.load_config, self.path, self.env)
 
-    def cli(self, *args, env=None):
-        return subprocess.run([sys.executable, str(CLI), *args], cwd=self.base,
+    def cli(self, *args, env=None, sub=("call",)):
+        return subprocess.run([sys.executable, str(CLI), *sub, *args], cwd=self.base,
                               env=dict(os.environ, **(self.env if env is None else env)),
                               capture_output=True, text=True, timeout=5)
 
@@ -186,7 +186,7 @@ class LlmCallTest(unittest.TestCase):
         self.assertIn("first line second line", e.msg)
         result = self.cli(str(self.base))
         self.assertEqual((result.returncode, result.stdout), (1, ""))
-        self.assertIn("aos-llm-call: EngineFailed: HTTP 500", result.stderr)
+        self.assertIn("aos-llm: EngineFailed: HTTP 500", result.stderr)
         self.assertEqual(len(result.stderr.splitlines()), 1)
 
     def test_non_json(self):
@@ -335,7 +335,7 @@ class LlmCallTest(unittest.TestCase):
     def test_cli_failure_stdout_empty(self):
         result = self.cli(env={"AOS_LLM_CONFIG": "relative"})
         self.assertEqual((result.returncode, result.stdout), (1, ""))
-        self.assertTrue(result.stderr.startswith("aos-llm-call: ConfigInvalid:"))
+        self.assertTrue(result.stderr.startswith("aos-llm: ConfigInvalid:"))
         self.assertEqual(len(result.stderr.splitlines()), 1)
 
     def test_cli_agent_error(self):
@@ -348,12 +348,27 @@ class LlmCallTest(unittest.TestCase):
         self.assertEqual((result.returncode, result.stdout), (2, ""))
         self.assertIn("usage:", result.stderr)
 
+    def test_bare_aos_llm_and_old_form_are_usage_errors(self):
+        for sub in ((), ("nope",)):
+            with self.subTest(sub=sub):
+                result = self.cli(sub=sub)
+                self.assertEqual((result.returncode, result.stdout), (2, ""))
+                self.assertIn("usage: aos-llm", result.stderr)
+        self.assertFalse((CLI.parent / "aos-llm-call").exists())
+
+    def test_help_lists_call(self):
+        result = self.cli("-h", sub=())
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("call", result.stdout)
+        result = self.cli("-h")
+        self.assertIn("AGENT_DIR", result.stdout)
+
     def test_main_error_one_line(self):
         self.info["llm"]["model"] = "missing\nmodel"
         self.save()
         out, err = io.StringIO(), io.StringIO()
         with patch.dict(os.environ, self.env), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            self.assertEqual(llm.main([str(self.base)]), 1)
+            self.assertEqual(llm.main(["call", str(self.base)]), 1)
         self.assertEqual(out.getvalue(), "")
         self.assertEqual(len(err.getvalue().splitlines()), 1)
 

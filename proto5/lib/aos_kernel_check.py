@@ -9,7 +9,7 @@ import aos_home
 import aos_llm_call
 from aos_agent_home import AgentError
 
-COMMANDS = ('aos-exec', 'aos-cpu', 'aos-kernel', 'aos-agent', 'aos-llm-call')
+COMMANDS = ('aos-exec', 'aos-cpu', 'aos-kernel', 'aos-agent', 'aos-llm')
 SHELL_NOTE = '（目前 shell 的 PATH；daemon 以開它那一刻的 PATH 為準）'
 ERRORS = (aos_home.HomeError, AgentError, OSError, ValueError, TypeError)
 
@@ -70,7 +70,7 @@ class Checks:
                  and os.path.abspath(child['target']).startswith(base)}
         missing = [name for name in names if name not in owned]
         self.report('bad' if missing else 'ok', 'cpus',
-                    'daemon 重開過／cpu 不在（%s）：執行 aos-kernel boot %s --daemon %s' %
+                    'daemon 重開過／cpu 不在（%s）：執行 aos-kernel boot --target %s --daemon-target %s' %
                     (', '.join(missing), home, daemon) if missing else '帳本裡的 cpu 都在 daemon 孩子表')
 
     def envs(self, home, name, config):
@@ -88,7 +88,7 @@ class Checks:
                             '%s；請修正 %s' % (exc, inst))
                 return None
             if effective != expected:
-                self.report('warn', 'envs/' + name, 'inst.json 已建，改 info 不生效，要 stop 後改 inst.json')
+                self.report('warn', 'envs/' + name, 'inst.json 已建，改 info 不生效，要 aos-kernel halt 後改 inst.json')
         return effective
 
     def llm(self, name, effective, env):
@@ -162,13 +162,18 @@ def check(home, agent=None, daemon=None):
         return 1
     checks.report('ok', 'info', 'kernel 設定讀驗通過')
     checks.dirs(home)
-    daemon = os.path.abspath(daemon) if daemon else info.get('daemon', aos_daemon.daemon_home())
+    daemon = str(aos_daemon.daemon_home(daemon))
     try:
         alive = aos_daemon.is_alive(daemon)
     except OSError:
         alive = False
     checks.report('ok' if alive else 'warn', 'daemon',
-                  'daemon 活著：%s' % daemon if alive else 'daemon 沒在跑；先開 daemon：%s' % daemon)
+                  'daemon 活著：%s' % daemon if alive else
+                  'daemon 沒在跑；先開 daemon：aos-daemon boot --target %s' % daemon)
+    recorded = info.get('daemon')
+    if recorded and os.path.abspath(recorded) != daemon:
+        checks.report('warn', 'daemon', 'info.json 記的 daemon 是 %s（上次 boot 寫的），這次查的是 %s；'
+                      '要查那個就加 --daemon-target %s' % (recorded, daemon, recorded))
     if alive:
         checks.cpus(home, info, daemon)
     env, note = daemon_environment(daemon, alive)
@@ -178,7 +183,7 @@ def check(home, agent=None, daemon=None):
     if 'default' not in pools:
         checks.report('warn', 'pools', 'default 池沒有 cpu；一般工作需要時請補 default cpu')
     if 'llm' not in pools:
-        checks.report('bad', 'pools', 'llm 池沒有 cpu；init 時加 --cpu llm:llm --env llm:AOS_LLM_CONFIG=…')
+        checks.report('bad', 'pools', 'llm 池沒有 cpu；在 info.json（或 init 的 --config 檔）的 cpus 加 {"llm": {"pool": "llm", "envs": {"AOS_LLM_CONFIG": …}}}')
     models = set()
     for name, config in info['cpus'].items():
         effective = checks.envs(home, name, config)

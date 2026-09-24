@@ -11,34 +11,10 @@ import aos_home
 from aos_kernel_boot import boot, status, stop
 from aos_kernel_engine import tick
 from aos_kernel_health import health
-from aos_kernel_info import CLIUsage, KernelError, _name, init, load_info
+from aos_kernel_info import CONFIG_EXAMPLE, CLIUsage, KernelError, init, load_info
 
-def _cpu_options(values, envs=()):
-    if values is None:
-        values = ["k:kernel", "0", "1", "2"]
-    cpus = {}
-    for value in values:
-        name, separator, pool = value.partition(":")
-        if not _name(name) or name in cpus:
-            raise CLIUsage("cpu 名稱不合法或重複：%s" % name)
-        cpus[name] = {"pool": pool} if separator else {}
-    kernels = sum(c.get("pool") == "kernel" for c in cpus.values())
-    if kernels == 0:
-        if "k" in cpus:
-            raise CLIUsage("k 已被非 kernel cpu 使用")
-        cpus = {"k": {"pool": "kernel"}, **cpus}
-    elif kernels > 1:
-        raise CLIUsage("恰好一顆 cpu 的 pool 必須是 kernel")
-    for entry in envs:
-        name, colon, assignment = entry.partition(":")
-        key, equal, value = assignment.partition("=")
-        if not colon or name not in cpus or not equal or not key:
-            raise CLIUsage("--env 必須是既有 cpu 的 NAME:KEY=VALUE")
-        target = cpus[name].setdefault("envs", {})
-        if key in target:
-            raise CLIUsage("--env 同一顆 cpu 的 KEY 重複：%s:%s" % (name, key))
-        target[key] = value
-    return cpus
+ENV = "AOS_KERNEL_HOME"
+DAEMON_ENV = "AOS_DAEMON_HOME"
 
 
 def _stderr_hint(target):
@@ -88,55 +64,70 @@ def _summary(home, snapshot, as_json=False):
     return "\n".join(lines)
 
 
+
+
 class _Parser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        # 不收縮寫：舊的 --daemon 不能被當成 --daemon-target 的縮寫悄悄吃掉。
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
     def error(self, message):
         raise CLIUsage(message)
 
 
+TARGET_HELP = "kernel 家（省略＝AOS_KERNEL_HOME，再沒有就目前資料夾）"
+DAEMON_HELP = "daemon 家（省略＝AOS_DAEMON_HOME，再沒有就目前資料夾）"
+INIT_EPILOG = ("--config 是一份 JSON，就是 info.json 要寫的那幾格（cpus 必填；tick_ms、interval_ms、timeout_ms、"
+               "done_exit、bad_after 可省）。沒有 pool 是 kernel 的 cpu 就自動加 k。最小例子：\n  " + CONFIG_EXAMPLE)
+
+
 def _parser():
-    parser = _Parser(prog="aos-kernel", description="管理 kernel 家、cpu 與排程行程")
+    parser = _Parser(prog="aos-kernel", description="管理 kernel 家、cpu 與排程行程；K 一律用 --target 給")
     subs = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
-    descriptions = {"init": "建立 kernel 家", "boot": "交接並啟動 cpu 與 tick 鏈",
-                    "tick": "執行一格排程", "add": "登記工作", "rm": "移除行程",
-                    "ls": "顯示狀態摘要", "stop": "要求 kernel 停機", "ack": "確認已收回音",
+    descriptions = {"init": "建立 kernel 家（照 --config 寫 info.json）", "boot": "交接並啟動 cpu 與 tick 鏈",
+                    "tick": "執行一格排程（鏈自己會叫）", "add": "登記工作", "rm": "移除行程",
+                    "ls": "顯示狀態摘要", "halt": "要求 kernel 停機並等停好", "ack": "確認已收回音",
                     "check": "啟動前檢查設定與執行環境"}
     for command, description in descriptions.items():
-        p = subs.add_parser(command, help=description, description=description)
-        p.add_argument("home", help="kernel 家路徑")
+        p = subs.add_parser(command, help=description, description=description,
+                            formatter_class=argparse.RawDescriptionHelpFormatter)
+        if command == "add":
+            p.add_argument("inst", metavar="INST", help="要執行的目標（inst.json、資料夾或普通檔）；-- ARG... 傳入目標參數")
+        elif command in ("rm", "ack"):
+            p.add_argument("name", help="回音檔名或路徑" if command == "ack" else "行程名稱")
+        p.add_argument("--target", metavar="K", help=TARGET_HELP)
         if command == "init":
-            p.add_argument("--cpu", action="append", metavar="NAME[:POOL]", help="cpu 名稱與選用池；可重複")
-            p.add_argument("--env", action="append", default=[], metavar="NAME:KEY=VALUE", help="cpu 的字面環境變數；可重複")
+            p.epilog = INIT_EPILOG
+            p.add_argument("--config", metavar="FILE", help="info 設定檔（JSON）；必填")
         elif command == "check":
             p.add_argument("--agent", action="append", help="一併檢查 agent 家")
-            p.add_argument("--daemon", action="append", help="daemon 家（預設 info.daemon，boot 前是 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
-        elif command == "stop":
+            p.add_argument("--daemon-target", action="append", metavar="D", help=DAEMON_HELP)
+        elif command == "halt":
             p.add_argument("--wait-ms", type=int, default=30000, help="停機等待上限（毫秒，預設 30000）")
             p.add_argument("--no-wait", action="store_true", help="只放 stop 單，不等待、不輸出")
         elif command == "ls":
             p.add_argument("--json", action="store_true", help="輸出完整狀態 JSON")
         elif command == "boot":
-            p.add_argument("--daemon", help="daemon 家路徑")
+            p.add_argument("--daemon-target", metavar="D", help=DAEMON_HELP)
             p.add_argument("--wait-ms", type=int, default=30000, help="交接等待上限（毫秒，預設 30000）")
         elif command == "tick":
             p.add_argument("--chain", required=True, help="tick 所屬鏈 id")
             p.add_argument("--seq", required=True, type=int, help="tick 序號（從 1 起）")
         elif command == "add":
-            p.add_argument("target", help="要執行的目標；-- ARG... 傳入目標參數")
             for key, help_text in (("name", "行程名稱"), ("pool", "工作池"), ("dir-target", "資料夾內的 inst 路徑")):
                 p.add_argument("--" + key, help=help_text)
             for key, help_text in (("interval-ms", "反覆執行間隔（毫秒）"),
                                    ("timeout-ms", "工作逾時（毫秒）"), ("wait-ms", "等待回音上限（毫秒）")):
                 p.add_argument("--" + key, type=int, help=help_text)
             p.add_argument("--once", action="store_true", help="只執行一次；--wait-ms 可等回音")
-        elif command in ("rm", "ack"):
-            p.add_argument("name", help="回音檔名或路徑" if command == "ack" else "行程名稱")
     return parser
 
 
 def _cli_request(args, trailing):
     home = Path(args.home).absolute()
     name = aos_client.new_name("cli")
-    params = {"name": args.name} if args.command == "rm" else {"target": os.path.abspath(args.target), "once": args.once}
+    params = {"name": args.name} if args.command == "rm" else {"target": os.path.abspath(args.inst), "once": args.once}
     if args.command == "add":
         for key in ("name", "pool", "dir_target", "interval_ms", "timeout_ms"):
             value = getattr(args, key)
@@ -168,53 +159,71 @@ def _cli_request(args, trailing):
     return 0
 
 
+def _run(args, trailing):
+    if args.command == "init":
+        if not args.config:
+            raise CLIUsage("init 要給 --config FILE：一份 JSON，就是 info.json 要寫的那幾格（cpus 必填），"
+                           "例：" + CONFIG_EXAMPLE)
+        config = aos_home.read_json(Path(args.config))
+        print("initialized " + init(args.home, config=config))
+        return 0
+    if args.command == "check":
+        from aos_kernel_check import check
+        for key in ("agent", "daemon_target"):
+            values = getattr(args, key)
+            if values is not None and len(values) > 1:
+                raise CLIUsage("--%s 只能給一次；要查多個請分開跑 check" % key.replace("_", "-"))
+            setattr(args, key, values[0] if values else None)
+        if args.daemon_target == "":
+            raise CLIUsage("--daemon-target 不可為空")
+        return check(args.home, args.agent, args.daemon_target)
+    if args.command == "halt":
+        return stop(args.home, args.wait_ms, args.no_wait)
+    if args.command == "boot":
+        if args.daemon_target == "":
+            raise CLIUsage("--daemon-target 不可為空")
+        return boot(args.home, args.daemon_target, args.wait_ms)
+    if args.command == "tick":
+        return tick(args.home, args.chain, args.seq)
+    if args.command == "ls":
+        snapshot = status(args.home)
+        print(_summary(args.home, snapshot, as_json=args.json))
+        return 0
+    if args.command == "ack":
+        name = Path(args.name).name
+        path = Path(args.home) / "responses" / name
+        if not path.is_file():
+            raise KernelError("NotFound", "回音不存在：%s" % path)
+        aos_client.ack(args.home, name)
+        return 0
+    return _cli_request(args, trailing)
+
+
 def main(argv=None):
     values = list(sys.argv[1:] if argv is None else argv)
     trailing = None
     if "--" in values:
         pos = values.index("--")
         values, trailing = values[:pos], values[pos + 1:]
+    note = ""
     try:
         args = _parser().parse_args(values)
         if trailing is not None and args.command != "add":
             raise CLIUsage("只有 add 能帶 -- ARG...")
+        if args.target == "":
+            raise CLIUsage("--target 不可為空")
         for key in ("wait_ms", "interval_ms", "timeout_ms", "seq"):
             value = getattr(args, key, None)
             if value is not None and value < (1 if key == "seq" else 0):
                 raise CLIUsage("%s 不在合法範圍" % key)
-        if args.command == "init":
-            print("initialized " + init(args.home, _cpu_options(args.cpu, args.env)))
-            return 0
-        if args.command == "check":
-            from aos_kernel_check import check
-            for key in ("agent", "daemon"):
-                values = getattr(args, key)
-                if values is not None and len(values) > 1:
-                    raise CLIUsage("--%s 只能給一次；要查多個 %s 請分開跑 check" % (key, key))
-                setattr(args, key, values[0] if values else None)
-            return check(args.home, args.agent, args.daemon)
-        if args.command == "stop":
-            return stop(args.home, args.wait_ms, args.no_wait)
-        if args.command == "boot":
-            return boot(args.home, args.daemon, args.wait_ms)
-        if args.command == "tick":
-            return tick(args.home, args.chain, args.seq)
-        if args.command == "ls":
-            snapshot = status(args.home)
-            print(_summary(args.home, snapshot, as_json=args.json))
-            return 0
-        if args.command == "ack":
-            name = Path(args.name).name
-            path = Path(args.home) / "responses" / name
-            if not path.is_file():
-                raise KernelError("NotFound", "回音不存在：%s" % path)
-            aos_client.ack(args.home, name)
-            return 0
-        return _cli_request(args, trailing)
+        home, source = aos_home.resolve_target(args.target, ENV)
+        args.home = str(home)
+        note = aos_home.target_note("K", home, source, ENV)
+        return _run(args, trailing)
     except aos_home.HomeError as exc:
-        sys.stderr.write("aos-kernel: %s: %s\n" % (exc.code, exc.msg.replace("\n", " ")))
-        return 2 if isinstance(exc, CLIUsage) else 1
+        usage = isinstance(exc, CLIUsage)
+        sys.stderr.write("aos-kernel: %s: %s%s\n" % (exc.code, exc.msg.replace("\n", " "), "" if usage else note))
+        return 2 if usage else 1
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        sys.stderr.write("aos-kernel: IOFailed: %s\n" % str(exc).replace("\n", " "))
+        sys.stderr.write("aos-kernel: IOFailed: %s%s\n" % (str(exc).replace("\n", " "), note))
         return 1
-
