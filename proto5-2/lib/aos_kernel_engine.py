@@ -89,10 +89,13 @@ class Kernel(PoolsMixin, KernelLedger):
         elif not isinstance(params.get("home"), str) or not isinstance(params.get("name"), str):
             why = "params.home／name 必須是字串"
         else:
-            parsed = self._notified_cpu(params["home"])
-            if parsed is None:
+            try:
+                parsed = self._notified_cpu(params["home"])
+            except (ValueError, OSError) as exc:  # astra P7：\0、怪路徑…解析本身出錯也只是壞通知
+                parsed, why = None, "home 解析失敗：%s" % type(exc).__name__
+            if why is None and parsed is None:
                 why = "home 不在 K/pools/*/cpus/ 底下"
-            else:
+            elif why is None:
                 key = cpu_key(*parsed)
                 slot = self.state["busy"].get(key)
                 if slot is None:

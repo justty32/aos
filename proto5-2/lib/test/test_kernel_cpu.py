@@ -5,6 +5,7 @@ import io
 import json
 import os
 import threading
+import unittest
 from unittest.mock import patch
 
 import aos_home
@@ -237,6 +238,11 @@ class CpuLs(CpuCase):
         state = self.tick()
         key = next(iter(state["busy"]))
         self.main("cpu", "rm", key)
+        # run.md 碰到的問題 3：cpu rm 剛下時池行的 draining 要跟單顆行對得上，不必等帳本下一格重算。
+        out, _ = self.main("cpu", "ls", "--pool", "default")
+        self.assertIn("收掉中 1 顆，等 job", out.splitlines()[0])
+        self.assertRegex(out.splitlines()[0], r"\bdraining 1\b")
+        self.assertIn("%s  draining job" % key, out)
         self.ticks(2)
         out, _ = self.main("cpu", "ls", "--pool", "default")
         self.assertIn("收掉中 1 顆，等 job", out.splitlines()[0])
@@ -246,6 +252,20 @@ class CpuLs(CpuCase):
         out, _ = self.main("cpu", "ls")
         self.assertNotIn("收掉中", out)
         self.assertRegex(out, r"default  want 1  sent 1  busy \d  idle \d  draining 0 ")
+
+    def test_pending_scale_order_wording(self):
+        # run.md 碰到的問題 1／4：daemon 活著、kernel 在跑時「等下一格」，kernel 停機時「等下次 boot」。
+        self.booted({"default": {"count": 1}})
+        self.main("cpu", "add", "--pool", "default")
+        self.tick(process=False)
+        out, _ = self.main("cpu", "ls", "--pool", "default")
+        self.assertIn("宣告已送出，下一格確認", out.splitlines()[0])
+        state = self.state()
+        state["phase"] = "stopped"
+        aos_home.write_json(self.K / "state.json", state)
+        out, _ = self.main("cpu", "ls", "--pool", "default")
+        self.assertIn("停機中，下次 boot 收回音", out.splitlines()[0])
+        self.assertNotIn("在路上", out)
 
     def test_error_pending_dead_daemon_moving_removed(self):
         self.booted({"default": {"count": 1}, "gpu": {"count": 1}})
@@ -259,7 +279,7 @@ class CpuLs(CpuCase):
         self.main("cpu", "add", "--pool", "default")
         self.tick(process=False)
         out, _ = self.main("cpu", "ls", "--pool", "default")
-        self.assertIn("scale 單在路上，daemon 沒在跑", out.splitlines()[0])
+        self.assertIn("宣告已送出，daemon 沒在跑（daemon 一上線就會收到）", out.splitlines()[0])
         self.fake.set_alive(True)
         self.ticks(2)
         # 搬池
@@ -299,3 +319,36 @@ class CpuLs(CpuCase):
         self.assertEqual([c["cpu"] for c in data["pools"]["default"]["cpus"]], ["default/0", "default/1"])
         _, err = self.main("cpu", "ls", "--pool", "nope", code=1)
         self.assertTrue(err.startswith("aos-kernel: NotFound: "), err)
+
+    def test_awaiting_cpu_status_wording_text_only_json_unchanged(self):
+        # run.md 碰到的問題 1：剛 cpu add 完、還沒宣告到帳本前，單顆行的字要白話，
+        # 但 cpu_rows() 回的 status（--json 也讀這個）不動（team-rules：只改印出來的字）。
+        self.init({"default": {"count": 1}})
+        out, _ = self.main("cpu", "ls", "--pool", "default")
+        self.assertIn("default/0  等 daemon 確認  daemon -", out)
+        data = json.loads(self.main("cpu", "ls", "--pool", "default", "--json")[0])
+        self.assertEqual(data["pools"]["default"]["cpus"][0]["status"], "待宣告")
+
+
+class CpuLineWording(unittest.TestCase):
+    """cpu_line() 是純文字排版；直接餵假 item，不用拉真假 daemon（run.md 碰到的問題 1／3）。"""
+
+    def test_pending_declared_relabelled_to_plain_words(self):
+        line = aos_kernel_cpu.cpu_line({"cpu": "default/0", "status": "待宣告", "proc": None,
+                                        "daemon": None, "declared": False})
+        self.assertEqual(line, "default/0  等 daemon 確認  daemon -")
+
+    def test_collecting_with_no_kid_record_reads_as_in_progress_not_pending(self):
+        line = aos_kernel_cpu.cpu_line({"cpu": "default/0", "status": "收掉中", "proc": None,
+                                        "daemon": None, "declared": True})
+        self.assertEqual(line, "default/0  收掉中  daemon 在收")
+
+    def test_busy_with_no_kid_record_is_unchanged(self):
+        line = aos_kernel_cpu.cpu_line({"cpu": "default/1", "status": "busy", "proc": "job",
+                                        "daemon": None, "declared": True})
+        self.assertEqual(line, "default/1  busy job  daemon pending")
+
+    def test_idle_with_kid_record_is_unchanged(self):
+        line = aos_kernel_cpu.cpu_line({"cpu": "default/1", "status": "idle", "proc": None,
+                                        "daemon": {"state": "running", "gen": 2, "pid": 5}, "declared": True})
+        self.assertEqual(line, "default/1  idle  daemon running gen 2")

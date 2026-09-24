@@ -41,6 +41,9 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(info.load_state(base)['input'], ['input'])
         self.assertEqual(info.load(base)['tools'][0]['function']['name'], 'date')
         self.assertTrue((base / 'log').is_dir())
+        # run.md 碰到的問題 6：提示要指到 proto5-2 自己的 README，不是 proto5 那份（找不到對應段落）。
+        self.assertIn('proto5-2/README.md 的「十分鐘上手」第 2 段', output)
+        self.assertNotIn('proto5/README.md', output)
 
     def test_init_refuses_without_writes(self):
         before = {p: p.read_bytes() for p in self.base.rglob('*') if p.is_file()}

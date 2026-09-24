@@ -2,7 +2,7 @@
 
 規範：spec/daemon-home.md（家）、daemon-reconcile.md（一圈）、protocol.md（單）、handoff.md §2（重開）、
 daemon-cli.md（指令）；沒寫的照 proto5/spec/daemon/。分檔：
-  aos_daemon.py        家、info 讀驗、活不活、給 kernel 的兩個小函式、啟動（run）與 halt（stop）
+  aos_daemon.py        家、info 讀驗、活不活、給 kernel 的小函式、啟動（run）與 halt（stop）
   aos_daemon_pools.py  池與一顆一檔的形狀、檔案動作、拉孩子
   aos_daemon_loop.py   一圈：收屍、狀態機、退避、節流、fd 預算、批次階梯、停機
   aos_daemon_rpc.py    scale／kill／ls 的驗與判
@@ -72,6 +72,27 @@ def pool_summary(home, dpool):
     if not pools.valid_pool_name(dpool):
         return None
     return _peek(pools.pool_dir(home, dpool) / "summary.json")
+
+
+def pool_summary_state(home, dpool):
+    """給交接用（review P6）：回 (狀態, 摘要)。
+    ("gone", None)＝summary.json 確定不存在（FileNotFoundError／NotADirectoryError，池資料夾不在也算；
+    名字本身不合法的池 daemon 永遠不會建，也算 gone）；("ok", dict)＝讀到物件；
+    ("unknown", None)＝檔在但讀不到、壞 JSON、不是物件、其他 OSError——呼叫端要等或報錯，不能放行。"""
+    if not pools.valid_pool_name(dpool):
+        return "gone", None
+    path = pools.pool_dir(home, dpool) / "summary.json"
+    try:
+        text = path.read_bytes()
+    except (FileNotFoundError, NotADirectoryError):
+        return "gone", None
+    except OSError:
+        return "unknown", None
+    try:
+        value = aos_home._loads(text.decode("utf-8"))
+    except (ValueError, UnicodeError):
+        return "unknown", None
+    return ("ok", value) if isinstance(value, dict) else ("unknown", None)
 
 
 def pool_kid(home, dpool, i):

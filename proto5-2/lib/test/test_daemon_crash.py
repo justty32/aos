@@ -94,7 +94,8 @@ while True:
 # 閘門 daemon：跑真的 aos_daemon.run，只在 AOS_TEST_GATES 點名的步驟寫 <點>.reached 後停住，等測試 SIGKILL。
 # 沒點名的步驟照常走。另記證據：spawns.jsonl（每次 fork 的孩子）、responses.jsonl（每次寫回音）、
 # published.json（第一次寫自己的 state 那一刻，上一任 kids 檔／舊表裡每個 pid 還在不在）。
-# spawned 閘門在第 AOS_TEST_GATE_N 顆拉起來（go 已送）之後停。
+# spawned 閘門在第 AOS_TEST_GATE_N 顆拉起來（go 已送）之後停；pool_written／before_pool_json 有
+# AOS_TEST_GATE_VER 時只在那個 ver 停。另記 forks.jsonl（每次 fork，kids 檔還沒寫）與 summaries.jsonl（寫摘要的池）。
 GATED = r'''
 import json, os, signal, sys, time
 from pathlib import Path
@@ -104,6 +105,7 @@ home = Path(sys.argv[2]).absolute()
 gates = set(filter(None, os.environ.get('AOS_TEST_GATES', '').split(',')))
 gate_dir = Path(os.environ['AOS_TEST_GATE_DIR'])
 nth = int(os.environ.get('AOS_TEST_GATE_N', '1'))
+only_ver = os.environ.get('AOS_TEST_GATE_VER')
 phase = ['startup']
 real_write = aos_home.write_json
 (home / 'pools').mkdir(parents=True, exist_ok=True)
@@ -119,16 +121,38 @@ def gate(point, **extra):
 def write_json(path, obj):
     real_write(path, obj)
     path = Path(path)
+    if path.name == 'summary.json':
+        record('summaries.jsonl', path.parent.name)
     if path.parent == home / 'responses':
         record('responses.jsonl', path.name)
         gate('reconcile_interrupted' if phase[0] == 'reconcile' else 'responded', name=path.name)
 aos_home.write_json = write_json
 real_pool = aos_daemon_pools.write_pool_json
 def write_pool_json(target, decl):
-    gate('before_pool_json', ver=decl['ver'])                  # 收了單、寫 pool.json 之前
+    hit = only_ver is None or int(only_ver) == decl['ver']
+    if hit:
+        gate('before_pool_json', ver=decl['ver'])              # 收了單、寫 pool.json 之前
     real_pool(target, decl)
-    gate('pool_written', ver=decl['ver'])                      # 寫了 pool.json、回音之前
+    if hit:
+        gate('pool_written', ver=decl['ver'])                  # 寫了 pool.json、回音之前
 aos_daemon_pools.write_pool_json = write_pool_json
+class GatedOs:
+    """只給 aos_daemon_pools 用：刪完某池的 summary.json 之後停（還沒刪 pool.json）。"""
+    def __getattr__(self, name):
+        return getattr(os, name)
+    def unlink(self, path, *args, **kwargs):
+        os.unlink(path, *args, **kwargs)
+        path = Path(path)
+        if path.name == 'summary.json' and path.parent.parent == home / 'pools':
+            gate('summary_removed', pool=path.parent.name)
+aos_daemon_pools.os = GatedOs()
+real_spawn = aos_daemon_pools.spawn_child
+def spawn_child(*args, **kwargs):
+    handle = real_spawn(*args, **kwargs)
+    record('forks.jsonl', handle.process.pid)
+    gate('forked', child=handle.process.pid)                   # fork 完、kids 檔還沒寫
+    return handle
+aos_daemon_pools.spawn_child = spawn_child
 real_launch = aos_daemon_loop.Daemon.launch
 spawned = []
 def launch(self, pool, kid):
@@ -199,11 +223,13 @@ class DaemonCrashWindowTest(DaemonCase):
 
     # ---- hub 與 daemon ----
 
-    def daemon(self, gates=(), n=1):
+    def daemon(self, gates=(), n=1, ver=None):
         seq, self.seq = self.seq, self.seq + 1
         gate_dir = self.root / ("gates-%d" % seq)
         gate_dir.mkdir()
         env = {"AOS_TEST_GATES": ",".join(gates), "AOS_TEST_GATE_DIR": str(gate_dir), "AOS_TEST_GATE_N": str(n)}
+        if ver is not None:
+            env["AOS_TEST_GATE_VER"] = str(ver)
         aos_home.write_json(self.hub / ("cmd-%d.json" % seq),
                             {"argv": ["-c", GATED, str(LIB), str(self.home)], "env": env})
         pid = wait_for(lambda: read_json(self.hub / ("started-%d.json" % seq), {}).get("pid"))
@@ -228,9 +254,11 @@ class DaemonCrashWindowTest(DaemonCase):
         self.assertEqual(read_json(gate_dir / "published.json"), {str(p): False for p in old_pids})
         return self.reaped()
 
-    def records(self, name):
+    def records(self, name, gate_dir=None):
         found = []
-        for path in sorted(self.root.glob("gates-*/" + name)):
+        for path in sorted(self.root.glob("gates-*/" + name) if gate_dir is None else [gate_dir / name]):
+            if not path.exists():
+                continue
             found += [json.loads(line) for line in path.read_text().splitlines()]
         return found
 
@@ -385,6 +413,98 @@ class DaemonCrashWindowTest(DaemonCase):
         self.assertEqual((self.home / "responses" / request).read_bytes(), written)
         self.running("p", 1)
         self.stop_daemon(gen3)
+
+
+    # ---- review P10：跨邊界的定點崩潰 ----
+
+    def test_killed_after_scale_response_before_request_deleted(self):
+        """回了成功、還沒刪原單就崩：重開保留成功回音（bytes 不變）、消掉原單、不重做。"""
+        target = self.targets(1)
+        gen1, g1 = self.daemon(["responded"])
+        wait_for(lambda: self.state().get("pid") == gen1)
+        request = self.submit_scale(1, target, [3, 1])
+        self.reached(g1, "responded")
+        self.sigkill(gen1)
+        written = (self.home / "responses" / request).read_bytes()
+        self.assertEqual(json.loads(written)["result"], {"pool": "p", "count": 1, "ver": 1})
+        self.assertTrue((self.home / "requests" / request).exists())
+        gen2, g2 = self.daemon()
+        self.published(gen2, g2, [])
+        self.assertFalse((self.home / "requests" / request).exists())
+        self.assertEqual((self.home / "responses" / request).read_bytes(), written)
+        self.assertEqual(self.records("responses.jsonl").count(request), 1)   # 沒重做
+        self.assertEqual(read_json(self.home / "pools/p/pool.json")["ver"], 1)
+        self.running("p", 1)
+        self.stop_daemon(gen2)
+
+    def test_killed_after_summary_removed_before_pool_json(self):
+        """刪了 summary、還沒刪 pool.json 就崩：重開不把池拉回來（不寫摘要、不拉孩子），照規則收完再刪。"""
+        target = self.targets(1)
+        gen1, g1 = self.daemon(["summary_removed"])
+        wait_for(lambda: self.state().get("pid") == gen1)
+        self.ok(self.scale(count=1, target=target))
+        self.running("p", 1)
+        self.ok(self.scale(count=0))
+        self.assertEqual(self.reached(g1, "summary_removed")["pool"], "p")
+        self.sigkill(gen1)
+        self.assertIsNone(self.summary())
+        self.assertEqual(read_json(self.home / "pools/p/pool.json")["count"], 0)
+        gen2, g2 = self.daemon()
+        self.published(gen2, g2, [])
+        wait_for(lambda: not (self.home / "pools/p").exists())
+        self.assertEqual(self.records("summaries.jsonl", g2), [])              # 沒把池發布回來
+        self.assertEqual(len(self.records("spawns.jsonl")), 1)                 # 沒再拉
+        self.assertEqual(self.ok(self.call("ls"))["pools"], {})
+        self.stop_daemon(gen2)
+
+    def test_killed_after_readd_of_killing_before_reconcile(self):
+        """killing 中的號又被加回、pool.json 已寫、還沒對帳就崩：下一任先收乾淨舊的，再照最新宣告拉恰好一支。"""
+        self.set_info(stop_wait_ms=5000, kill_wait_ms=5000)
+        target = self.targets(2, "kill")                                       # 不理 stop 也不理 TERM
+        gen1, g1 = self.daemon(["pool_written"], ver=3)
+        wait_for(lambda: self.state().get("pid") == gen1)
+        self.assertEqual(self.ok(self.scale(count=2, target=target))["ver"], 1)
+        self.running("p", 2)
+        old = self.records("spawns.jsonl")
+        self.assertEqual(self.ok(self.scale(count=1))["ver"], 2)
+        wait_for(lambda: (self.kid("p", 1) or {}).get("state") == "killing")
+        request = self.submit_scale(2, target)
+        self.assertEqual(self.reached(g1, "pool_written")["ver"], 3)
+        self.sigkill(gen1)
+        self.assertEqual(read_json(self.home / "pools/p/pool.json")["count"], 2)
+        self.assertEqual(self.kid("p", 1)["state"], "killing")
+        self.set_info(stop_wait_ms=80, kill_wait_ms=80)
+        gen2, g2 = self.daemon()
+        reaped = self.published(gen2, g2, old)
+        for pid in old:
+            self.assertEqual(reaped.get(pid), {"pid": pid, "signal": 9})
+        self.assert_interrupted(request)
+        self.running("p", 2)
+        time.sleep(.2)
+        self.assertEqual(len(self.records("spawns.jsonl", g2)), 2)            # 每號恰好一支
+        self.assertEqual([len(self.starts("p", i)) for i in range(2)], [2, 2])
+        self.assertEqual(self.summary()["killing"] + self.summary()["draining"], 0)
+        self.stop_daemon(gen2)
+
+    def test_killed_after_fork_before_kid_file(self):
+        """fork 完、kids 檔還沒寫就崩：沒收到 go 的孩子不碰家、自己退；下一任不多拉。"""
+        target = self.cpu_targets(1)
+        gen1, g1 = self.daemon(["forked"])
+        wait_for(lambda: self.state().get("pid") == gen1)
+        self.submit_scale(1, target)
+        child = self.reached(g1, "forked")["child"]
+        self.assertIsNone(self.kid("p", 0))
+        self.sigkill(gen1)
+        self.assertEqual(wait_for(lambda: self.reaped().get(child)), {"pid": child, "exit": 0})
+        self.assertEqual(sorted(os.listdir(self.root / "cpus/0")), ["info.json", "inst.json"])
+        gen2, g2 = self.daemon()
+        self.published(gen2, g2, [])
+        fresh = wait_for(lambda: (self.kid("p", 0) or {}).get("state") == "running" and self.kid("p", 0)["pid"])
+        wait_for(lambda: read_json(self.root / "cpus/0/state.json", {}).get("pid") == fresh)
+        time.sleep(.2)
+        self.assertEqual(self.records("forks.jsonl", g2), [fresh])            # 下一任只拉一支
+        self.assertEqual(self.kid("p", 0)["gen"], 1)
+        self.stop_daemon(gen2)
 
 
 if __name__ == "__main__":

@@ -253,15 +253,17 @@ def pool_row(home, info, state, pool, summaries=None, alive=None):
            "daemon_alive": alive(daemon) if daemon else False, "summary": summary,
            "declared": entry is not None, "removing": config is None,
            "moving": bool(entry) and loc is not None and (entry["daemon"], entry["dpool"]) != tuple(loc),
-           "new_location": list(loc) if loc else None}
+           "new_location": list(loc) if loc else None, "phase": state.get("phase")}
     if entry is None:
         row.update(sent=None, busy=0, idle=None, draining=None, pending=None, error=None, waiting=[])
     elif pool == KERNEL_POOL:
         row.update(sent=entry["sent"]["count"], busy=None, idle=None, draining=None,
                    pending=entry.get("pending"), error=entry.get("error"), waiting=[])
     else:
+        # draining 即時算「不在 W 且在 busy」（run.md 碰到的問題 3）：帳本自己的 draining 計數要等一格
+        # 才重算，`cpu rm` 剛下時會跟單顆行的 draining 狀態對不上；這裡不碰帳本，只在顯示時多算一次。
         row.update(sent=entry["sent"]["count"], busy=len(busy), idle=len(entry.get("free") or []),
-                   draining=entry.get("draining", 0), pending=entry.get("pending"), error=entry.get("error"),
+                   draining=len(waiting), pending=entry.get("pending"), error=entry.get("error"),
                    waiting=waiting)
     row["gone"] = pool_gone(row)
     return row
@@ -311,7 +313,14 @@ def row_line(home, info, row, width=0):
     if not row["declared"]:
         tails.append("還沒宣告（kernel 在跑就下一格送，否則下次 boot）")
     if row["pending"]:
-        tails.append("scale 單在路上" + ("，daemon 沒在跑" if not row["daemon_alive"] else "（等回音）"))
+        if row.get("phase") == "stopped":
+            # run.md 碰到的問題 4：kernel 已停機，這張回音本來就留給下次 boot 讀，「在路上」會讓人以為卡住。
+            tails.append("停機中，下次 boot 收回音")
+        elif not row["daemon_alive"]:
+            tails.append("宣告已送出，daemon 沒在跑（daemon 一上線就會收到）")
+        else:
+            # run.md 碰到的問題 1：daemon 早就拉齊了、只是帳本還沒收回音，等一格就好，不是卡住。
+            tails.append("宣告已送出，下一格確認")
     elif row["daemon"] is not None and not row["daemon_alive"]:
         tails.append("daemon 沒在跑")
     if row["moving"]:
@@ -362,11 +371,20 @@ def cpu_rows(info, state, pool, row):
     return out
 
 
+# run.md 碰到的問題 1／3：只換 cpu ls --pool 印出來的字眼，`cpu_rows()` 回的 status（含 --json）不動，
+# 免得改到協定（kernel-cli.md §「cpu ls」）約定的欄位值。
+_STATUS_LABEL = {"待宣告": "等 daemon 確認"}
+
+
 def cpu_line(item):
-    status = item["status"] + (" " + str(item["proc"]) if item["proc"] is not None else "")
+    status = _STATUS_LABEL.get(item["status"], item["status"]) + (
+        " " + str(item["proc"]) if item["proc"] is not None else "")
     kid = item["daemon"]
     if kid is not None:
         daemon = "daemon %s gen %s" % (kid.get("state"), _num(kid.get("gen")))
+    elif item["declared"] and item["status"] == "收掉中":
+        # 剛收掉那一刻 kids 檔可能還沒消失／還沒被讀到；「daemon pending」讀起來像要再拉一顆。
+        daemon = "daemon 在收"
     else:
         daemon = "daemon pending" if item["declared"] else "daemon -"
     return "%s  %s  %s" % (item["cpu"], status, daemon)

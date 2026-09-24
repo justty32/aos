@@ -2,7 +2,8 @@
 
 照 proto5-2 spec/protocol.md §1 回音；寫 D/pools/<dpool>/pool.json 與 summary.json；count 0 時刪 summary（池拿掉）。
 可設定：某池下一張回指定錯誤、整個暫停不回、把某張單「吃掉」（刪單不回音，模擬兩個檔都不在）、
-count 0 時先留著 summary（running＞0）模擬還在收孩子。
+count 0 時先留著 summary（照真 daemon 的形狀：count 0、running 0、draining 1）模擬還在收孩子；
+count 0 時把 summary 寫壞（garble）模擬摘要在但讀不到。
 可一步一步呼叫 process()，也可 start() 在背景執行緒自己跑（boot 要等回音時用）。
 """
 import fcntl
@@ -40,7 +41,8 @@ class FakeDaemon:
         aos_home.write_json(self.home / "info.json", {"_metainfo": {"_type": "daemon", "_version": 2}})
         self.errors = {}        # dpool -> [code, ...]：下一張依序回這些錯
         self.swallow = set()    # 單名：刪掉不回音
-        self.linger = set()     # dpool：count 0 時先留著 summary（running 1）
+        self.linger = set()     # dpool：count 0 時先留著 summary（count 0、running 0、draining 1）
+        self.garble = set()     # dpool：count 0 時 summary 寫成壞 JSON（摘要在但讀不到）
         self.paused = False
         self.stopping = False
         self.seen = []          # 處理過的 (單名, params)
@@ -134,12 +136,14 @@ class FakeDaemon:
         d = self.home / "pools" / dpool
         d.mkdir(parents=True, exist_ok=True)
         aos_home.write_json(d / "pool.json", decl)
-        if count == 0 and dpool not in self.linger:
+        if count == 0 and dpool in self.garble:
+            (d / "summary.json").write_text("{壞")
+        elif count == 0 and dpool not in self.linger:
             self.gone(dpool)
         else:
             aos_home.write_json(d / "summary.json", {
                 "pool": dpool, "owner": p.get("owner"), "count": count, "ver": ver,
-                "running": count if count else 1, "restarting": 0, "pending": 0, "dead": 0, "failed": 0,
+                "running": count, "restarting": 0, "pending": 0, "dead": 0, "failed": 0,
                 "killing": 0, "draining": 0 if count else 1, "updated": time.time()})
         return aos_home.result_response(rid, {"pool": dpool, "count": count, "ver": ver})
 

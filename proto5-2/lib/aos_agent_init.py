@@ -33,5 +33,5 @@ def init(agent_dir, force=False):
         'tool_pool': 'default', 'tick': {'pool': 'default', 'interval_ms': 1000}})
     print('initialized ' + str(base))
     print('llm.model 是代號 "default"：llm.json（kernel 的 llm cpu 用 AOS_LLM_CONFIG 指的那份，'
-          '見 proto5/README.md 第 2 段）要有 default 這個代號')
+          '見 proto5-2/README.md 的「十分鐘上手」第 2 段 kernel）要有 default 這個代號')
     return 0

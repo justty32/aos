@@ -280,13 +280,15 @@ class Handoff(P52Case):
         old = self.state()["chain"]
         wait_for(lambda: self.state()["last_seq"] >= 5)
         old_pid = self.kid_pid("kernel", 0)
-        old_gen = self.kid("kernel", 0)["gen"]
         self.wrapped_boot()
         new = self.state()["chain"]
         self.assertNotEqual(new, old)
         with self.assertRaises(ProcessLookupError):
             os.kill(old_pid, 0)
-        self.assertGreater(self.kid("kernel", 0)["gen"], old_gen)
+        # 新 kernel cpu 是另一支行程。不比 gen：boot 等舊池收乾淨（astra P2），池常整個拿掉再重建，kids 檔從 gen 1 重算。
+        new_pid = self.kid_pid("kernel", 0)
+        self.assertIsNotNone(new_pid)
+        self.assertNotEqual(new_pid, old_pid)
         wait_for(lambda: self.state()["last_seq"] >= 5)
         response = self.call("add", {"name": "after", "target": self.counted("after"), "once": True})
         self.assertEqual(response["result"]["code"], 0, response)

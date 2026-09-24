@@ -102,8 +102,18 @@ class KernelCheck(unittest.TestCase):
         self.save()
         self.lock_daemon(pid=999999999)
         text = self.run_check()
-        self.assertIn('ok   daemon: daemon 活著：%s（池 default、llm、kernel）' % self.daemon, text)
+        # run.md 碰到的問題 5：daemon 剛開、還沒收到任何 scale 單時，分清楚「kernel 設定的池」跟
+        # 「daemon 目前真的有的池」，不要讓人以為 daemon 已經有這些池了。
+        self.assertIn('ok   daemon: daemon 活著：%s'
+                      '（kernel 設定的池：default、llm、kernel；daemon 目前有：還沒有）' % self.daemon, text)
         self.assertIn('warn daemon: daemon 沒在跑：%s（池 gpu）；先開 daemon：aos-daemon boot --target %s' % (other, other), text)
+
+    def test_daemon_alive_reports_pools_it_actually_has(self):
+        self.lock_daemon(pid=999999999)
+        self.summary('default', 1)
+        text = self.run_check()
+        self.assertIn('ok   daemon: daemon 活著：%s'
+                      '（kernel 設定的池：default、llm、kernel；daemon 目前有：default）' % self.daemon, text)
 
     def test_pool_without_daemon_is_bad(self):
         del self.info['daemon']

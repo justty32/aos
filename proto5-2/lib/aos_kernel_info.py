@@ -90,7 +90,7 @@ def cpu_key(pool, i):
 def split_key(key):
     """'P/<i>' → (P, i)；i 必須是不帶前導 0 的十進位，不合回 None。"""
     pool, sep, num = key.rpartition("/")
-    if not sep or not pool_name_ok(pool) or not num.isascii() or not num.isdecimal():
+    if not sep or not pool_name_ok(pool) or not num.isascii() or not num.isdecimal() or len(num) > 18:
         return None
     if num != str(int(num)):
         return None
@@ -261,7 +261,7 @@ def new_pool(daemon, dpool):
     """帳本裡新池的一格（kernel-pools §2 第 0 步）。want＝None 表示還沒處理過 info。"""
     return {"daemon": daemon, "dpool": dpool, "want": None, "sent": {"count": 0, "skip": []}, "pending": None,
             "free": [], "draining": 0, "dirty": True, "redeclare": True,
-            "envs_digest": None, "error": None, "retry_at": None}
+            "envs_digest": None, "error": None, "retry_at": None, "acquired": False, "boot_redeclare": False}
 
 
 def chain_epoch(chain):

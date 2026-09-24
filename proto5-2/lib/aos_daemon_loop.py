@@ -1,8 +1,10 @@
 """daemon-reconcile §1～§7：一圈怎麼走——收屍、狀態機、退避、節流、fd 預算、批次階梯、停機。
 
 每圈的工作只跟「這圈有事的」成比例：收屍用 waitpid(-1)；dead／failed 的到期、活滿 stable_ms、
-階梯的下一段都放在同一個按時間排的堆積裡；可以拉的號每池一條佇列，只有佇列不空的池參加輪流。
+階梯的下一段都放在同一個按時間排的堆積裡；可以拉的號每池一條佇列，只有佇列不空的池參加輪流
+（輪流用 deque）；要重算成員、要發布摘要的池各一個待處理集合（review P9），刪池失敗的另記待刪（P5）。
 """
+import collections
 import heapq
 import itertools
 import json
@@ -36,7 +38,9 @@ class Daemon(aos_daemon_rpc.Requests):
         self.by_pid = {}                             # pid -> (pool, kid)：活著＋killing 的
         self.timers = []                             # (monotonic, seq, kind, payload)
         self.seq = itertools.count()
-        self.rotation = []                           # 有可以拉的號的池，輪流
+        self.rotation = collections.deque()          # 有可以拉的號的池，輪流
+        self.todo = ({}, {})                         # (要重算的池, 要發布的池)：有序集合
+        self.removing = set()                        # 刪失敗的池名：待刪、每圈重試到成功
         self.batch = []                              # 這圈要開始收的
         self.unflushed = {}                          # kid -> (gen, bytes)：EAGAIN 沒寫完的
         self.stop_requested = False
@@ -47,6 +51,14 @@ class Daemon(aos_daemon_rpc.Requests):
 
     def save(self):
         aos_home.write_state(self.home, self.state)
+
+    def new_pool(self, decl):
+        """建池並登記進 todo；同名池還在待刪就取消（新宣告要用這個資料夾）。"""
+        self.removing.discard(decl["pool"])
+        return Pool(self.home, decl, self.todo)
+
+    def current(self, pool):
+        return self.pools.get(pool.name) is pool
 
     def declared(self):
         return sum(pool.count for pool in self.pools.values())
@@ -214,8 +226,8 @@ class Daemon(aos_daemon_rpc.Requests):
         self.tokens = min(float(rate), self.tokens + (now - self.refilled) * rate)
         self.refilled = now
         while self.rotation and self.tokens >= 1 and len(self.by_pid) < self.budget:
-            pool = self.rotation.pop(0)
-            if self.pools.get(pool.name) is not pool:
+            pool = self.rotation.popleft()
+            if not self.current(pool):
                 continue
             kid = self.next_ready(pool)
             if kid is not None:
@@ -291,14 +303,24 @@ class Daemon(aos_daemon_rpc.Requests):
                 self.enqueue(pool, kid)
 
     def publish(self):
-        """有變的池重寫 summary；count 0 收完的整池拿掉（先 summary、再 pool.json、再資料夾）。"""
+        """有變的池重寫 summary；count 0 收完的整池拿掉（先 summary、再 pool.json、再資料夾）。
+        只看 todo 裡登記過的池：池變成「count 0 收完」那一刻一定剛設過 changed（drop／scale／新建）。
+        寫失敗留在 todo、刪失敗記進 removing，下一圈都再試，直到成功（review P5）。"""
         now = time.time()
-        for name, pool in list(self.pools.items()):
+        for name in list(self.removing):
+            if pools.remove_pool(self.home, name, quiet=True):
+                self.removing.discard(name)
+        todo = list(self.todo[1])
+        self.todo[1].clear()
+        for pool in todo:
+            if not self.current(pool):
+                continue
             if pool.count == 0 and not pool.kids:
-                del self.pools[name]
-                pools.remove_pool(self.home, name)
-            elif pool.changed:
-                pool.write_summary(now)
+                del self.pools[pool.name]
+                if not pools.remove_pool(self.home, pool.name):
+                    self.removing.add(pool.name)
+            elif pool.changed and not pool.write_summary(now):
+                self.todo[1][pool] = None                    # 寫失敗：下一圈再試
 
     def step(self):
         if self.stop_requested:
@@ -311,8 +333,10 @@ class Daemon(aos_daemon_rpc.Requests):
         for kid in list(self.unflushed):
             self.flush(kid)
         self.reap()
-        for pool in list(self.pools.values()):
-            if pool.dirty:
+        todo = list(self.todo[0])
+        self.todo[0].clear()
+        for pool in todo:
+            if pool.dirty and self.current(pool):
                 self.reconcile(pool)
         self.run_timers()
         self.spawn_round()
@@ -343,7 +367,7 @@ class Daemon(aos_daemon_rpc.Requests):
     def adopt(self, decls, old_kids):
         """舊孩子死透之後：kids 檔改 pending（非成員刪），照 pool.json 把成員排進 pending。"""
         for decl in decls:
-            pool = Pool(self.home, decl)
+            pool = self.new_pool(decl)
             self.pools[pool.name] = pool
             self.reconcile(pool)
         for name, i, path, record in old_kids:
