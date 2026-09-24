@@ -183,7 +183,7 @@ aos-agent stop $W/amy
 - [notes/](notes/)：任務書副本、astra 的調查報告、我的精簡總結（每份都有「要使用者拍板的」清單）。
 - [notes-brief/](notes-brief/README.md)：**notes/ 的精簡版**，每份不超過 5000 字；README 尾巴有「今天要使用者拍板的題目總表」，先看這裡。
 - [notes/2026-09-22-decisions.md](notes/2026-09-22-decisions.md)：**23 題的拍板紀錄**（2026-09-22），proto5.1 第 4 段與之後的回流都照這份。
-- [backlog/](backlog/README.md)：先記著、之後再做的事，一件一個檔。
+- ~~backlog/~~：2026-09-24 agent 線定稿後六個檔逐一判掉、資料夾拿掉，見 [backlog-cleanup](notes/2026-09-24-backlog-cleanup.md)。
 - [notes/2026-09-22-backflow.md](notes/2026-09-22-backflow.md)：**規範回流紀錄**：哪些從 proto5.1 搬回來、跟舊版差在哪、程式還差什麼。
 
 ## 還沒定的
