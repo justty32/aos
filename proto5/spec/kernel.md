@@ -1,9 +1,10 @@
-# kernel：排程也是一格一格的 aos-exec（第 1 版，**草稿**）
+# kernel：排程也是一格一格的 aos-exec（第 1 版，2026-09-23 定稿）
 
 ← [proto5 README](../README.md)｜範式：[cpu.md](cpu.md)｜跑一次：[aos-exec.md](aos-exec.md)｜下層：[daemon](daemon.md)
 
 > 2026-09-23 重架構第二份；同日照 astra 三輪審查改過（K／X／R、K2／X2／R2、K3／X3／R3）。
-> 舊 kernel-home.md／aos-kernel.md 等新的齊了一次換掉。已拍板的前提在 §9，我自己選的在 §10。
+> 2026-09-23 定稿並已實作：[`aos_kernel.py`](../lib/aos_kernel.py)（入口 `aos-kernel`）。舊 kernel-home.md／aos-kernel.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
+> 已拍板的前提在 §9，我自己選的在 §10。
 
 一句話：**kernel 替登記好的工作（行程）挑一顆空著的 cpu 派下去、收回執行結果、決定要不要再跑。**
 它不是長命行程：每次只跑一格 `aos-kernel tick`，格的開頭先把下一格放進一顆專用 exec cpu 的 `requests/`，

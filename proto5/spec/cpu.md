@@ -1,9 +1,10 @@
-# cpu 範式與 exec cpu（第 1 版，**草稿**）
+# cpu 範式與 exec cpu（第 1 版，2026-09-23 定稿）
 
 ← [proto5 README](../README.md)｜跑一次：[aos-exec.md](aos-exec.md)｜inst 長相：[inst-posix.md](inst-posix.md)｜上層：[kernel](kernel.md)、[daemon](daemon.md)
 
 > 2026-09-23 重架構的第一份；同日照 astra 三輪審查改過（C／X／R、C2／X2／R2、C3／X3／R3）。
-> 舊的 run／daemon／kernel／cpu-queue／llm-cpu／tool-cpu 十份規範等新的齊了一次換掉。
+> 2026-09-23 定稿並已實作：[`aos_home.py`](../lib/aos_home.py)、[`aos_client.py`](../lib/aos_client.py)、[`aos_exec_cpu.py`](../lib/aos_exec_cpu.py)（入口 `aos-cpu`）。
+> 舊的 run／daemon／kernel／cpu-queue 八份已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）；llm-cpu／tool-cpu 四份等 agent 重寫落地再刪。
 > 已拍板的前提在 §9，我自己選的在 §10。
 
 一句話：**一顆 exec cpu 是一個資料夾加一個主人行程：逐件把 `requests/` 裡的工作 request 照 `aos-exec`

@@ -1,6 +1,6 @@
 # aos-llm-cpu 程式規範
 
-← [proto5 README](../README.md)｜格式：[llm-cpu](llm-cpu.md)｜共用佇列：[cpu-queue](cpu-queue.md)
+← [proto5 README](../README.md)｜格式：[llm-cpu](llm-cpu.md)｜共用佇列：[cpu-queue](../../proto5.1/spec/cpu-queue.md)
 
 `aos-llm-cpu [dir]` 一次收屍、再問最多一份請求；省略 dir＝`.`。
 先讀驗 info 身分與 models 表、解 CPU 的指示詞，再透過 `aos_cpu` 收屍與認領。
@@ -32,6 +32,6 @@ HTTP 期間不持佇列鎖；另一顆 CPU 已收屍時，原程序遲到回覆�
 
 stdout 不輸出，引擎錯誤只寫結果。`load(dir, env=None)` 回 dir／metainfo／已解好的 models；
 `tick(dir, env=None)` 回 0／1／101，無法繼續的讀驗／I/O 錯丟 AgentError；`main(argv=None)` 是 CLI。
-交件者統一使用 `aos_cpu.submit`；共用 API 見 [aos-cpu](aos-cpu.md)。
+交件者統一使用 `aos_cpu.submit`；共用 API 見 [aos-cpu](../../proto5.1/spec/aos-cpu.md)。
 
-收屍、遲到檔案身分核對、原子發布與故障界線見 [cpu-queue](cpu-queue.md)。
+收屍、遲到檔案身分核對、原子發布與故障界線見 [cpu-queue](../../proto5.1/spec/cpu-queue.md)。

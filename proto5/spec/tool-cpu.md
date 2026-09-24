@@ -1,6 +1,6 @@
 # tool cpu payload 與結果（第 1 版）
 
-← [proto5 README](../README.md)｜共用格式：[cpu-queue](cpu-queue.md)｜程式：[aos-tool-cpu](aos-tool-cpu.md)
+← [proto5 README](../README.md)｜共用格式：[cpu-queue](../../proto5.1/spec/cpu-queue.md)｜程式：[aos-tool-cpu](aos-tool-cpu.md)
 
 CPU 身分 `_type`＝`tool_cpu`、版本 1。資料夾、info、共同 result 欄位、短鎖與收屍見共用規範。
 
