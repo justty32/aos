@@ -77,10 +77,11 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-agent pause`／`continue [--all]` | 手動暫停／解除手動暫停與連敗暫停（`--all`＝kernel 登記的全部） | [04](tutorials/04-tools-and-pause.md)、[05](tutorials/05-many-agents.md) |
 | `aos-agent tools add base --target 家 [--root DIR]` | 裝內建工具包 base（read／write／edit／bash／grep／find／ls），`--root` 指工作根目錄 | [04](tutorials/04-tools-and-pause.md) |
 | `aos-agent tools ls/add/rm/alias/unalias [--target 家]` | 看有哪些工具／裝或原地引用一個工具檔或資料夾／拿掉一支（不刪檔）／改名 | [04b](tutorials/04b-access-and-tool-admin.md) |
-| `aos-agent tools new NAME`／`test NAME\|DIR`／`wrap-py FILE.py` | 造工具（不需要 agent 家）：生工具包骨架／照工具檔的描述自動跑正例、型別錯、缺參數（預設關牢）／把有型別註解的 Python 函式包成工具包、印拒收表 | [spec/aos-agent/tools-dev.md](spec/aos-agent/tools-dev.md) |
+| `aos-agent tools new NAME`／`test NAME\|DIR`／`wrap-py FILE.py` | 造工具（不需要 agent 家）：生工具包骨架／照工具檔的描述自動跑正例、型別錯、缺參數（預設關牢）／把有型別註解的 Python 函式包成工具包、印拒收表；wrap-py 加 `--describe-with-llm` 請模型替沒 docstring 的函式寫描述（只寫提案檔），人看過再 `--describe 提案檔` 產包 | [spec/aos-agent/tools-dev.md](spec/aos-agent/tools-dev.md)、[tools-llm.md](spec/aos-agent/tools-llm.md) |
+| `aos-agent tools wrap-cli CMD [--help-file F] [--describe-with-llm｜--spec F]` | 把一支命令列指令包成工具包：有 argparse 的 `.py` 靜態讀，其他解 `--help` 文字；解不出來的行列出來、不猜。`--describe-with-llm` 請模型整理參數表（只寫提案檔），人看過再 `--spec` 產包 | [spec/aos-agent/tools-wrapcli.md](spec/aos-agent/tools-wrapcli.md) |
 | `aos-agent access ls/set/rm/cwd/net [--target 家]` | 看／改工具被關進的牢（`access.json`）：掛哪些資料夾、起點、能不能連網 | [04b](tutorials/04b-access-and-tool-admin.md) |
 | `aos-agent context [--by-round] [--json]` | 送給模型的東西多大（人格、記憶、工具，token 粗估＋上一次端點回報的真數字）；`talk` 的 `/context` 同一份 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
-| `aos-agent compact [--keep-rounds N] [--max-tokens X] [--dry-run] [--prune-archive]` | 機械壓縮記憶，原文存 `prompts/archive/`；`info.json` 的 `compact` 開自動（預設開、上限 32000） | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
+| `aos-agent compact [--keep-rounds N] [--max-tokens X] [--dry-run] [--prune-archive] [--summarize [--model A]]` | 機械壓縮記憶，原文存 `prompts/archive/`；`info.json` 的 `compact` 開自動（預設開、上限 32000）；`--summarize` 讓模型把封存摘要濃縮成幾句（只有人跑時；檢查不過退回機械版） | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
 | `aos-agent events [--last N] [--usage]` | 事件紀錄（每批起訖、成敗、毫秒）與 token 用量；滿了自動輪換 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
 | `aos-agent history --archive [SHA] [--grep 字]` | 看壓縮前封存的原文 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
 | `aos-agent notes ls／show KEY` | 看 `note` 工具寫的長期筆記 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
@@ -95,6 +96,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-team post`（kernel 反覆叫）／`beat`（kernel 反覆叫，同上） | 郵差兼書記走一輪：投信、收驗收結果、看停滯、同步 SESSION-LOG／WAIT_USER；心跳走一輪：照 `routines.json` 算誰到期、以開單派出 | [spec/team/post.md](spec/team/post.md)、[beat.md](spec/team/beat.md) |
 | `aos-team verify t-0001 [--again]` | 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞三種；`--again` 給檢查器壞、人修好之後重交。`cmd_ok`（跑 `team.json` 白名單裡的專案指令）與 wf-lint 關在牢裡、專案唯讀 | [spec/team/verify.md](spec/team/verify.md)、[wall.md](spec/team/wall.md) |
 | `aos-team routine ls／add／rm` | 心跳的例行事務：新增、看、刪一條到期就派工的例行 | [spec/team/beat.md](spec/team/beat.md) |
+| `aos-team crystal [--min N] [--out F] [--suggest-with-llm]` | 固化建議：從 `route.log` 找常落穿給領隊、領隊每次都開同一種單的句型，產候選門房規則（只寫提案檔；人 `route test --file F` → `route save F` 才生效） | [spec/team/crystal.md](spec/team/crystal.md) |
 | `aos-team score` | 把六軸表（`axes.md` 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型、不寫檔 | [spec/team/score.md](spec/team/score.md) |
 | `aos-kernel tick`、`aos-agent tick` | 走一格；kernel 自己會叫，人不用打 | — |
 | `aos-cpu` | cpu 的主人程式：顧一個 cpu 家、照單跑程式；daemon 拉起來的每個孩子就是它，平常不用自己叫 | [01](tutorials/01-daemon-kernel.md) |
@@ -132,7 +134,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 七十支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組；tool-era T3 補人用 aos-directives／aos-json，T1 補 aos-team 骨架，T2 補郵差／驗收／心跳，T4 補記憶（events／context／compact／notes），第二波 A 隊補造工具與 `wf_fill`，第二波 B 隊補牆接線與 `cmd_ok`，第二波 C 隊補申請類（lock／persona）與 `_pool`。逐檔 API 與測試表見 lib README | 86 個測試檔、2370 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 七十支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組；tool-era T3 補人用 aos-directives／aos-json，T1 補 aos-team 骨架，T2 補郵差／驗收／心跳，T4 補記憶（events／context／compact／notes），第二波 A 隊補造工具與 `wf_fill`，第二波 B 隊補牆接線與 `cmd_ok`，第二波 C 隊補申請類（lock／persona）與 `_pool`，第三波 W3-2 隊補「多問一次模型」的四個選項（wrap-cli、描述、compact 濃縮、crystal）。逐檔 API 與測試表見 lib README | 90 個測試檔、2490 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 十一個薄入口：`aos`（09-24 one-boot，`aos up`／`aos down` 一條開機、一條停機）、`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent`、`aos-jail`（09-24 access-impl，aos-agent 自動用）、`aos-directives`／`aos-json`（09-24 tool-era T3，人用）、`aos-team`（09-24 tool-era T1，團隊分派） | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 | [templates/](templates/) | `aos-agent init --template` 生家用的成員模板：`lead`／`worker`／`reviewer`／`coder`，加第二波 A 隊的 `importer`（導入工人：只裝導入用得到的 10 支工具，工具表約 worker 的一半）共五個（人格、工具包、`access.json` 一定附；`notes: true` 的多掛 `/work/notes`） | 09-24 tool-era T1；`init_from_template()` 在 [`lib/aos_agent_init.py`](lib/aos_agent_init.py) |
 | [templates/cli-agents/](templates/cli-agents/README.md) | Claude Code／Codex 當普通 cpu 的範本（階 0，不是程式）：另一個 kernel 家的設定、`claude -p` 與 `codex exec` 唯讀審查的單子、接著聊的分岔版 | 09-24 stage0；用法見[教程 07](tutorials/07-cli-agents.md) |

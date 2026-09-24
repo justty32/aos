@@ -81,6 +81,8 @@ grep 沒找到、find 沒找到、ls 空資料夾都**不是**錯誤：退 0、�
 
 （第二波 A 隊）有三個指令幫你做，不需要 agent 家（[tools-dev](../spec/aos-agent/tools-dev.md)）：`aos-agent tools new NAME` 生骨架（含 `_common.py` 副本、範例工具檔、`cases.json`）；`aos-agent tools test NAME|DIR` 照工具檔的描述自動跑正例、每個參數型別錯、缺必填、`cases.json` 的固定案例，預設關在牢裡跑；`aos-agent tools wrap-py FILE.py` 把有型別註解與 docstring 的函式包成工具包、印拒收表（不 import、不執行），產的包不寫 `_jail`＝裝進有 `access.json` 的家就關牢。
 
+（第三波 W3-2）命令列指令用 `aos-agent tools wrap-cli CMD`（有 argparse 的 `.py` 靜態讀，其他解 `--help` 文字；[tools-wrapcli](../spec/aos-agent/tools-wrapcli.md)）。函式沒 docstring、名字又看不出用途時，wrap-py 加 `--describe-with-llm` 請模型寫描述，只寫提案檔、你看過再 `--describe 提案檔` 產包（[tools-llm](../spec/aos-agent/tools-llm.md)）。
+
 手寫的話，照 `base/` 的樣子做一個資料夾，名字跟裡面的 `<名>.json` 一致：
 
 ```

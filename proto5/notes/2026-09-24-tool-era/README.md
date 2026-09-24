@@ -13,6 +13,7 @@
 | [catalog.md](catalog.md) | 30 個工具，每個：給誰、輸入輸出、進不進牢、叫不叫模型、依賴、六軸粗估、難度、哪一波；末尾總表 |
 | [plan.md](plan.md) | 三波：共用契約先行、誰改共用檔、每波幾隊、任務書骨架、各隊寫死的驗收、整波的真跑驗收 |
 | [review-task.md](review-task.md)／[review-astra.md](review-astra.md) | astra 唯讀審查（必修 15 條、建議 7 條，全部改進，見最下面） |
+| [w3b/](w3b/README.md) | 第三波 W3-2 隊：wrap-cli、wrap-py 補描述、compact 濃縮、crystal 固化建議——四項機械版 vs 加模型版對照與真跑，模型版全預設關 |
 
 ## 一頁摘要
 
