@@ -13,4 +13,4 @@ stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，修好原因後 aos-age
 
 依據：kernel 對一件派出去的工作，`procs.N` 一直留到那顆 cpu 的回音收回來才拿掉——被 `rm` 的也一樣（標 `discard`，[kernel.md §2](../kernel/syscall.md)）。
 所以 `procs` 沒有 `N`＝它已經不在任何 cpu 上（或根本沒送出去），檔可以刪；有 `N`＝可能還在讀 `.in`、寫 `.out`，先留著。
-K 帳本讀不到（還是舊的 `K/state.json`、壞了）就那一筆跳過、留著下次再看；K 沒有帳本（從沒 boot 過）當成 `procs` 沒有 `N`。（cpu 被 KILL、子程式還活著這種情況在 [cpu.md §5.3](../cpu/stop.md) 的保證外。）
+K 帳本讀不到（還是舊的 `K/state.json`、壞了）就那一筆跳過、留著下次再看；K 沒有帳本（從沒 boot 過）也一樣先留著。（cpu 被 KILL、子程式還活著這種情況在 [cpu.md §5.3](../cpu/stop.md) 的保證外。）

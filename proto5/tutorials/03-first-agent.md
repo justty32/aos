@@ -4,7 +4,7 @@
 
 **目標**：生一個 agent 的家、檢查、登記給 kernel、跟它說話、看回話、看它現在怎樣，最後撤掉。
 
-**前提**：做完 [01](01-daemon-kernel.md)，kernel 開著、`health ok`；`llm.json` 裡有代號 `default`。新終端先 `. $HOME/aos-try/env.sh`。
+**前提**：做完 [01](01-daemon-kernel.md)，開著機（`aos up`）、`health ok`；`llm.json` 裡有代號 `default`。新終端先 `. $HOME/aos-try/env.sh`。
 
 ## 1. 生一個家
 
@@ -37,7 +37,12 @@ aos-agent check --target $W/bob --probe
 ```text
 ok   kernel: K＝/home/you/aos-try/K（取自 AOS_KERNEL_HOME）
 ok   info: kernel 設定讀驗通過
-…（跟 01 第 5 步一樣的 kernel 項目）
+ok   dirs: requests/、responses/、pools/ 都在
+ok   daemon: daemon 活著：/home/you/aos-try/D（kernel 設定的池：default、llm；daemon 目前有：default、llm）
+ok   tick: daemon /home/you/aos-try/D 每 1000 ms 開一格 tick
+ok   cpus: 各池都在 daemon 那邊（default 2、llm 1）
+ok   path: 五支 CLI 都找得到（daemon 的 PATH）
+ok   pools: 池：default 2、llm 1
 ok   agent: agent 設定讀驗通過
 ok   agent/tick.pool: 池 default 存在（count 2）
 ok   agent/llm.pool: 池 llm 存在（count 1）
@@ -45,13 +50,15 @@ ok   agent/tool_pool: 池 default 存在（count 2）
 ok   llm/llm: 模型代號：default
 ok   agent/llm.model: 模型 default 存在
 ok   agent/tool/date: 可執行 date
-warn access: 沒有 access.json：工具不關牢（碰得到你碰得到的所有檔）；要關：aos-agent access set ws workspace --cwd --target /home/you/aos-try/bob
+ok   access: /home/you/aos-try/bob/access.json 讀驗通過：1 個 mount、起點 /work/ws、net off
+ok   access/bwrap: /usr/bin/bwrap 開得起來
+ok   access/aos-jail: 送件用 /home/you/repo/proto5/cli/aos-jail（絕對路徑，不看 PATH）
 ok   probe/default: endpoint 通，模型清單裡有 deepseek-chat（endpoint http://localhost:4000/v1，模型 deepseek-chat）
 設定檢查通過；模型連線也測過
 ```
 
-它查：設定讀不讀得懂、它要的三個池（走格 `tick.pool`、問模型 `llm.pool`、跑工具 `tool_pool`）在 kernel 的池表裡有沒有、模型代號在不在 `llm.json`、工具找不找得到；`--probe` 真的問一次模型端點。
-`warn access` 是提醒工具還沒關牢，[04b](04b-access-and-tool-admin.md) 再教；有 `bad` 就照提示修，最後一行會說「修好再 aos-agent start」。K 從 `AOS_KERNEL_HOME` 找（沒設就用上次 `start` 記在家裡的）。（[check 規範](../spec/aos-agent/cli-check.md)）
+它查：設定讀不讀得懂、它要的三個池（走格 `tick.pool`、問模型 `llm.pool`、跑工具 `tool_pool`）在 kernel 的池表裡有沒有、模型代號在不在 `llm.json`、工具找不找得到、工具的牢（`access`）開不開得起來；`--probe` 真的問一次模型端點。
+牢的細節 [04b](04b-access-and-tool-admin.md) 再教；有 `bad` 就照提示修，最後一行會說「修好再 aos-agent start」。K 從 `AOS_KERNEL_HOME` 找（沒設就用上次 `start` 記在家裡的）。（[check 規範](../spec/aos-agent/cli-check.md)）
 
 ## 3. 登記、說一句、等回話
 
@@ -63,7 +70,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 `start` 印 `started agent-bob`。`say --wait` 把話投進去、等回話印出來，你會看到（約 10～20 秒）：
 
 ```text
-現在是 2026年9月24日 下午3點16分。
+現在是 2026 年 9 月 24 日 晚上 8 點 21 分。
 ```
 
 `--wait` 不帶數字最多等 300 秒，`--wait 60` 就是 60 秒；等不到退 101。
@@ -131,9 +138,10 @@ state  idle  errors 0
 batch  -
 input  -
 error  （無）
-kernel agent-bob  running  runs 7  fails 0
+kernel agent-bob  queued（停車：等回音或輸入，最晚 park_ms 自己醒）  runs 18  fails 0
 ```
 
+最後一行是 kernel 那邊的登記：閒著沒事時是「停車」，有人 `say` 就馬上醒，不佔 cpu。
 **看第一行 `health`**：`ok` 就沒事；不是 `ok` 就照括號裡的指令做（還沒 `start` 時是 `沒登記（aos-agent start …）`）。
 `error` 是**這次**卡住的原因，已經好了的舊錯另起一行、開頭標「（已恢復）」。各種說法與怎麼救見 [aos-agent 使用者只需要懂的](../spec/aos-agent/essentials.md)。
 
@@ -143,8 +151,8 @@ kernel agent-bob  running  runs 7  fails 0
 aos-agent stop --target $W/bob
 ```
 
-印 `stopped agent-bob`。家、記憶都還在，之後 `start` 就接著用。**每天關機前**先 stop 每個 agent 再照 [01 第 7 步](01-daemon-kernel.md#7-關機順序kernel--daemon)關；
-沒 stop 就關機也沒關係，登記留在 kernel 帳本裡，開機後 `start` 印 `already started agent-bob`、退 0。
+印 `stopped agent-bob`。家、記憶都還在，之後 `start` 就接著用。**每天關機前**先 stop 每個 agent 再照 [01 第 6 步](01-daemon-kernel.md#6-關機) `aos down`；
+沒 stop 就關機也沒關係，登記留在 kernel 帳本裡，下次 `aos up` 之後 `start` 印 `already started agent-bob`、退 0，說話照樣會回。
 
 ## 底下在幹嘛
 

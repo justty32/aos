@@ -32,7 +32,7 @@ cpu 死了是 daemon 自己照宣告補（[daemon §4](../daemon/loop.md)），k
 | kernel：讀了回音、還沒寫帳本 | 回音還在 | 下一格重讀重判（冪等） |
 | boot：寫好帳本、還沒登記 tick | daemon 沒登記這個 kernel，沒人開 tick | `ls` 的 health 報 `tick`；再 boot 或 `aos up` |
 | kernel：停好那格排了撤登記、還沒出貨 | 撤登記單在 `sends` | daemon 還登記著、照開下一格；那格（`stopped`）只出貨，撤登記就送出去了 |
-| daemon 被 kill -9、有一格正在跑 | 那格變孤兒 | 自己跑完退出（卡住就被自己的鬧鐘結束）；新 daemon 照 `D/kernels/` 接著開，拿不到鎖的那格退 75、下次再試 |
+| daemon 被 kill -9、有一格正在跑 | 那格變孤兒 | 自己跑完退出（卡住就被自己的鬧鐘結束，鬧鐘是 2×`tick_timeout_ms`）；新 daemon 照 `D/kernels/` 接著開，拿不到鎖的那格退 75、下次再試 |
 | 兩個 kernel 用同一個 `dpool` | 後來的收到 `NameTaken` | kernel 記進 `pools.P.error`、`ls` 大聲印；人改 `dpool` |
 | 人刪了 `D/pools/<pool>/` 或換了 daemon 家 | kernel 的 `sent` 還在、daemon 沒這池 | kernel 平常不知道（不送單就不會發現）；`ls` 看摘要不在就報 `池 P：池不見了（跑 aos-kernel boot）`，boot 會重送全部宣告 |
 | 人用 `aos-daemon scale --force` 改了 kernel 的池 | daemon 宣告跟 kernel 的 `sent` 不同 | kernel 下次送單就蓋回去；中間派到被收掉的號會卡住，所以 `--force` 只給救急（[daemon §6.3](../daemon/cli.md)） |

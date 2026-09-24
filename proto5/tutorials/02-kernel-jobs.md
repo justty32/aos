@@ -5,7 +5,7 @@
 **目標**：不碰 agent，直接叫 kernel 跑程式——跑一次就好的（once）、隔一陣子跑一次直到做完的（反覆），
 還有一直失敗會怎樣、怎麼撤掉。看懂這些，後面的 agent 就只是「一份反覆工作」而已。
 
-**前提**：做完 [01](01-daemon-kernel.md) 第 1～6 步，kernel 開著、`aos-kernel ls` 第一行 `health ok`。新終端先 `. $HOME/aos-try/env.sh`。
+**前提**：做完 [01](01-daemon-kernel.md) 第 1～5 步，開著機（`aos up`）、`aos-kernel ls` 第一行 `health ok`。新終端先 `. $HOME/aos-try/env.sh`。
 
 ## 1. 工作單長什麼樣
 
@@ -26,11 +26,11 @@ aos-kernel add $W/jobs/hello.json --once --wait-ms 10000
 cat $W/jobs/hello.out
 ```
 
-你會看到（約 1～2 秒）：
+你會看到（不到 1 秒）：
 
 ```text
 {"code": 0, "kind": "child", "timed_out": false, "stopped": false, "ms": 200}
-17:59:34
+20:21:07
 ```
 
 **第一行是「執行狀態」，不含程式的輸出**：`date` 印的東西在 inst 指的 `hello.out` 裡。
@@ -46,13 +46,13 @@ aos-kernel add $W/jobs/hello.json --once
 你會看到單名和回音會出現的位置，指令馬上退 0：
 
 ```text
-cli-1790243975791616474-1277717.json /home/you/aos-try/K/responses/cli-1790243975791616474-1277717.json
+cli-1790252468048533194-1716878.json /home/you/aos-try/K/responses/cli-1790252468048533194-1716878.json
 ```
 
-過幾秒（等 kernel 走到下一格）回音就在那個檔裡（`cat` 它）。看完要替它「簽收」，不然回音一直留在 `K/responses/`：
+一兩秒後回音就在那個檔裡（`cat` 它）。看完要替它「簽收」，不然回音一直留在 `K/responses/`：
 
 ```sh
-aos-kernel ack cli-1790243975791616474-1277717.json     # 換成你看到的單名
+aos-kernel ack cli-1790252468048533194-1716878.json     # 換成你看到的單名
 ```
 
 帶 `--wait-ms` 等到的回音，指令已經替你簽收了。
@@ -94,7 +94,7 @@ aos-kernel ls | grep boom
 連續失敗 10 次就被「退件」，不再排它。`bad` 的不用 `--procs` 也會列出來，表下另起一行告訴你去哪看：
 
 ```text
-  boom   反覆  bad     10     10  -
+  boom  反覆  bad     10     10  -
   boom 壞了，看 /home/you/aos-try/jobs/boom.err
 ```
 
@@ -109,12 +109,12 @@ aos-kernel rm count
 
 ## 底下在幹嘛
 
-- `aos-kernel add` 只是往 `K/requests/` 放一張單（kernel 的 syscall）。下一格 tick 讀到它，記進帳本 `K/state.json`、排進佇列。（[syscall](../spec/kernel/syscall.md)）
+- `aos-kernel add` 只是往 `K/requests/` 放一張單（kernel 的 syscall）。daemon 看到有新單就馬上開一格 tick；那格讀到它，記進帳本 `K/ledger.sqlite`、排進佇列。（[syscall](../spec/kernel/syscall.md)）
 - 每一格，kernel 從佇列挑輪得到的工作，找一顆**同池**又閒著的 cpu（沒寫 `--pool` 就是 `default`），把單放進那顆 cpu 的 `requests/`（`K/pools/<池>/cpus/<號>/requests/`）；
   cpu 照 inst 跑一次程式、回音寫進自己的 `responses/`；下一格 kernel 收回音、判定、簽收。（[一格做什麼](../spec/kernel/tick.md)）
 - **判定**（[回音怎麼判](../spec/kernel/echo.md)）：once 的回音原樣轉給當初 `add` 的人（放在 `K/responses/`）；反覆的退出碼 100＝完成，
   0 或 101（「還在等，不算錯」）算成功、失敗計數歸零；102＝「停車」，也不算錯，但下次要等 `park_ms`（預設 5 分鐘）或被叫醒（`aos-kernel wake NAME`，agent 的回音到了或有人 `say` 會自動叫）；其他非 0、逾時、跑不起來都算一次失敗，連續 10 次＝`bad`。`100` 和 `10` 在 `K/info.json` 的 `done_exit`、`bad_after` 改。
-- 所以最快也要等一格（`tick_ms`，預設 1 秒）才輪得到；工作之間彼此不等，同池有幾顆閒 cpu 就能同時跑幾件。
+- 所以 once 通常不到 1 秒就有回音；沒有新單時，daemon 每 `tick_ms`（預設 1 秒）開一格，反覆的工作就照這個節奏排。工作之間彼此不等，同池有幾顆閒 cpu 就能同時跑幾件。
 - inst.json 還能寫 `cwd`、`envs`、`stdin`、`exit`、逾時等，見 [inst-posix 規範](../spec/inst-posix/README.md)；`add` 的全部旗標見 [kernel 命令列](../spec/kernel/cli.md)。
 
 ## 常見錯誤
@@ -129,4 +129,4 @@ aos-kernel rm count
 
 ## 收工
 
-`rm` 掉自己加的行程就好；kernel 留著給 [03](03-first-agent.md) 用。今天到此為止就照 [01 第 7 步](01-daemon-kernel.md#7-關機順序kernel--daemon)關機。
+`rm` 掉自己加的行程就好；kernel 留著給 [03](03-first-agent.md) 用。今天到此為止就照 [01 第 6 步](01-daemon-kernel.md#6-關機) `aos down`。

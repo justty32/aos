@@ -62,6 +62,7 @@ daemon 被 kill -9 的情況見 [daemon §10](../daemon/ticks.md)。
    daemon 收到就不再開這個 kernel 的 tick（正在跑的那格照樣跑完），直到下次 boot。
 4. CLI 等的是：`phase=stopped`，而且這個 kernel 帳本裡的**每個池**（含搬池中的舊位置）在 daemon 那邊都確定消失（`summary.json` 不在）
    或 `count 0`、`running 0`、`killing 0`、`draining 0`。只看 `running 0` 不夠——宣告還是 N、孩子都在等重拉時也是 0。
+   （one-boot 真跑挖到）帳本裡**從沒被 daemon 確認過**的池位置（`acquired` 是 false，例如一開始就撞 `NameTaken`、那池其實是別人的）不等。
 
 不往每顆 cpu 放 `stop-` 檔，縮到 0 讓 daemon 用批次階梯收、一池一張單。CLI 的細節（`not running`、`--no-wait`、逾時）在 [cli-ops.md](cli-ops.md)。
 

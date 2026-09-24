@@ -40,7 +40,7 @@
 31. **daemon 直接開 `aos-kernel tick --target K`**（當孩子、新 session、stdout 接 /dev/null、stderr 跟 daemon），不經 cpu、不經 aos-exec。
 32. **「有新單就開」只看 `K/requests/` 的修改時間**，變了才列一次目錄比檔名；daemon 不讀 kernel 家任何檔的內容。`wake`、cpu 的回音通知都是往這裡丟檔，所以都會馬上觸發。
 33. **鎖被佔退 75**，daemon 不算失敗、`tick_ms` 後再開；其他退出碼（含逾時被 KILL）算失敗、退避、**不自己停**。
-34. **`tick_timeout_ms` 預設 60 秒**，daemon 砍、tick 自己也設鬧鐘（孤兒 tick 也會死）。
+34. **`tick_timeout_ms` 預設 60 秒**，daemon 砍；tick 自己另設 2 倍長的鬧鐘（daemon 先砍，孤兒 tick 也會死）。
 35. **帳本 sqlite：tick 仍整份讀、只寫變了的列、一筆交易**；`on` 不存、讀時從 `busy` 反推；別人讀帳本走同一支 lib 或 `aos-kernel proc`／`ls --json`。
 36. **舊 `state.json` 由 boot 匯入後改名 `state.json.v2-old`**，不刪；舊 kernel 池先縮到 0、收乾淨才寫新帳本。
 37. **撤登記由停好那格自己排進 `sends`**（跟停機判定同一次提交），不由 CLI 送；所以 `aos-kernel halt` 不用知道 daemon 在哪。

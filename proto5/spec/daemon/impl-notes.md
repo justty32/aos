@@ -22,4 +22,4 @@
 ## one-boot（2026-09-24，P 隊）
 
 新增 [§10](ticks.md)、[§11](up.md)（計畫在 [plan.md](../../notes/2026-09-24-one-boot/plan.md)）。實作時定下、已寫進本資料夾的細節：
-`tick` 撤登記在 `stopping` 期間照收、給了 `id` 也回音；重登記連敗歸零；`ls` method 的 `kernels` 是以 id 為鍵的物件（多 `running`），CLI `ls --json` 的是陣列（偷看檔）；tick 開不起來（`OSError`）也算一次失敗、`last_exit` 是 null；逾時 KILL 的 `last_exit` 是 137；登記後、daemon 開機時都馬上開第一格。
+`tick` 撤登記在 `stopping` 期間照收、給了 `id` 也回音；重登記連敗歸零；`ls` method 的 `kernels` 是以 id 為鍵的物件（多 `running`），CLI `ls --json` 的是陣列（偷看檔）；tick 開不起來（`OSError`）也算一次失敗、`last_exit` 是 null；逾時 KILL 的 `last_exit` 是 137；停機時砍的那格不算失敗；登記後、daemon 開機時都馬上開第一格。

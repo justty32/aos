@@ -4,7 +4,7 @@
 
 **目標**：好幾個 agent 共用一個 kernel：cpu 開幾顆、`cpu add／rm／ls` 加減、一次操作一批、`aos-kernel ls` 看全局、共用的模型設定壞了一次救回來。
 
-**前提**：做完 [01](01-daemon-kernel.md)、[03](03-first-agent.md)；kernel 開著、`health ok`。新終端先 `. $HOME/aos-try/env.sh`。
+**前提**：做完 [01](01-daemon-kernel.md)、[03](03-first-agent.md)；開著機（`aos up`）、`health ok`。新終端先 `. $HOME/aos-try/env.sh`。
 批次操作就是 shell 的 `for` 迴圈。
 
 ## 1. cpu 要開幾顆、怎麼加減
@@ -12,7 +12,7 @@
 每個 agent 每走一格都要佔一顆 `default` 池的 cpu 一下，它叫的工具也在 `default` 池跑；問模型則全排到 `llm` 池。
 **經驗值：`default` 池的 cpu 數 ≥ agent 數**，工具多、工具慢的再多開；`llm` 池一顆就夠（它一次只問一件，agent 多了問模型會排隊，要更快就多開幾顆）。
 
-加 cpu 就是改池的數字，**不用 halt、不用 boot**，下一格就拉起來：
+加 cpu 就是改池的數字，**不用關機、不用重開**，下一格就拉起來：
 
 ```sh
 aos-kernel cpu add --pool default --count 4
@@ -24,7 +24,6 @@ aos-kernel cpu ls
 兩行 `add` 各印 `pool default count 2 -> 6`、`pool llm count 1 -> 2`。`cpu ls` 一池一行：
 
 ```text
-kernel   want 1  sent 1   daemon kernel: running 1 pending 0 dead 0 failed 0
 default  want 6  sent 6  busy 1  idle 5  draining 0   daemon default: running 6 pending 0 dead 0 failed 0
 llm      want 2  sent 2  busy 0  idle 2  draining 0   daemon llm: running 2 pending 0 dead 0 failed 0
 ```
@@ -57,7 +56,7 @@ for a in alice carol dave; do echo "== $a"; aos-agent check --target $W/$a | gre
 for a in alice carol dave; do aos-agent start --target $W/$a; done
 ```
 
-`check` 那行只印不是 `ok` 的：每個剩 `warn access`（工具沒關牢，見 [04b](04b-access-and-tool-admin.md)）和「設定檢查通過；…」就是全過。
+`check` 那行只印不是 `ok` 的：每個只剩一行「設定檢查通過；未測模型連線（--probe 會測）」就是全過。
 `start` 各印 `started agent-alice` 等。要各自不同的工具，就照 [04](04-tools-and-pause.md) 放進各自的 `tools/`。
 
 ## 3. 一次對一批說話、收回話
@@ -78,11 +77,11 @@ for a in alice carol dave; do echo "== $a"; cat $W/$a.reply; done
 == alice
 我是圖書館員，為你找書、指路、解疑惑。
 
-書海無涯勤作舟。
+架上萬卷書，隨手取一冊。
 == carol
-我是會計師。
+會計師。
 == dave
-哼！老子是這片海上最兇的船長，少廢話！
+哼！老子是縱橫七海的海盜船長，識相的就乖乖把金幣交出來，別逼老子動刀！
 ```
 
 **別寫成「先全部 `say`，再一個個 `listen --wait`」**：`listen --wait` 只等**下一則新的**回話，
@@ -108,29 +107,29 @@ aos-kernel ls --procs
 
 ```text
 health ok
-kernel  running  seq 99  daemon alive  tick 1000ms
-  kcpu kernel/0  正在跑一格  requests 2
-pool    2 個工作池：要 6 顆、忙 2、閒 4
-  kernel   want 1  sent 1   daemon kernel: running 1 pending 0 dead 0 failed 0
-  default  want 4  sent 4  busy 2  idle 2  draining 0   daemon default: running 4 pending 0 dead 0 failed 0
+kernel  running  seq 36  daemon alive  tick 1000ms
+  tick 由 daemon 開：上一格 0 秒前
+pool    2 個工作池：要 6 顆、忙 0、閒 6
+  default  want 4  sent 4  busy 0  idle 4  draining 0   daemon default: running 4 pending 0 dead 0 failed 0
   llm      want 2  sent 2  busy 0  idle 2  draining 0   daemon llm: running 2 pending 0 dead 0 failed 0
-proc    4 個（反覆 4、once 0）：queued 2、running 2
-  行程         種類  狀態     runs  fails  回音  備註
-  agent-alice  反覆  running     2      0  -
-  agent-carol  反覆  queued      2      0  -
-  agent-dave   反覆  running     1      0  -
-  agent-bob    反覆  queued      1      0  -
-queue   2：agent-carol agent-bob
+proc    4 個（反覆 4、once 0）：queued 4；停車 3
+  行程         種類  狀態    runs  fails  回音  備註
+  agent-bob    反覆  queued     1      0  -
+  agent-alice  反覆  queued     4      0  -
+  agent-carol  反覆  queued     4      0  -
+  agent-dave   反覆  queued     4      0  -
+queue   4：agent-bob agent-alice agent-carol agent-dave
 ```
 
 （bob 是 03、04 留下來的，有 `start` 才會出現。）
 不帶 `--procs` 時行程表只列出事的（`bad`、暫停、重試中），其餘只寫「其餘 N 個沒事的沒列」——agent 一多，平常就看這個短的。`--pool default` 只看那池，一顆一行。
 
-`queue` 裡的是在等下一次輪到它（每格隔 1 秒，本來就會排一下）；一直很長、池那行 `idle` 老是 0 才是該加 cpu。
+`停車 3`：三個剛回完話、閒著的 agent 在等下一句話，不佔 cpu，有人 `say` 就馬上醒。
+`queue` 裡的是在等下一次輪到它（本來就會排一下）；一直很長、池那行 `idle` 老是 0 才是該加 cpu。
 
 ## 5. health 怎麼讀
 
-`aos-kernel ls` 第一行先講 **kernel 自己**，由重到輕：`K 家缺目錄`、`停機中`、`daemon 沒在跑`、`kernel cpu 不在`、`tick 停住`、`池 P：池不見了`（或池出錯）、`搬池中`、`池 P 少 N 顆（daemon 在補…）`。
+`aos-kernel ls` 第一行先講 **kernel 自己**，由重到輕：`K 家缺目錄`、`停機中`、`daemon 沒在跑`、`tick 沒人開`（daemon 沒在替它走格：`aos up`）、`tick 停住`（走格一直失敗或卡住）、`池 P：池不見了`（或池出錯）、`搬池中`、`池 P 少 N 顆（daemon 在補…）`。
 kernel 沒事時才講 **agent**，這三個階段依序出現：
 
 | 第一行 | 意思 | 要做什麼 |
@@ -174,8 +173,8 @@ continued 3／4
 for a in alice carol dave bob; do aos-agent stop --target $W/$a; done
 ```
 
-各印 `stopped agent-…`。全部撤完再照 [01 第 7 步](01-daemon-kernel.md#7-關機順序kernel--daemon)關 kernel、daemon。
-每天開機就是 [01 第 8 步](01-daemon-kernel.md#8-每天重開機)之後 `for` 迴圈 `aos-agent start` 每一個（已登記的印 `already started`、退 0）。
+各印 `stopped agent-…`。全部撤完再照 [01 第 6 步](01-daemon-kernel.md#6-關機) `aos down`。
+每天開機就是 [01 第 7 步](01-daemon-kernel.md#7-每天重開機)的 `aos up` 之後 `for` 迴圈 `aos-agent start` 每一個（已登記的印 `already started`、退 0）。
 
 ## 底下在幹嘛
 
@@ -188,7 +187,7 @@ for a in alice carol dave bob; do aos-agent stop --target $W/$a; done
 | 看到 | 原因與怎麼辦 |
 |---|---|
 | 回話越來越慢、`ls` 池那行 `idle 0`、`queue` 很長 | cpu 不夠，照第 1 步 `cpu add` |
-| 過了好幾秒 `sent` 還沒追上 `want` | kernel 沒在跑（`ls` 第一行不是 `ok`，照括號做），或手改的 `K/info.json` 壞了（`aos-kernel check` 會指出） |
+| 過了好幾秒 `sent` 還沒追上 `want` | kernel 沒在走格（`ls` 第一行不是 `ok`，照括號做，多半是 `aos up`），或手改的 `K/info.json` 壞了（`aos-kernel check` 會指出） |
 | `cpu add --pool llm --env …` 印 `PoolExists` | `--env` 只給新池；既有池改環境請直接編 `K/info.json` |
 | `health 池 default 少 1 顆（daemon 在補…）` | 有 cpu 死了、daemon 正在重拉。一直不好就看 `aos-daemon ls --pool default` 與那顆家裡的 `cpu.log` |
 

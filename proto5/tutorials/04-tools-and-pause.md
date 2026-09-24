@@ -165,4 +165,4 @@ bob 從 [03](03-first-agent.md) 的 `aos-agent init` 就已經有一份 `access.
 
 ## 收工
 
-`aos-agent stop --target $W/bob`；今天到此為止就照 [01 第 7 步](01-daemon-kernel.md#7-關機順序kernel--daemon)關機。要接著做 [05](05-many-agents.md) 就先留著。
+`aos-agent stop --target $W/bob`；今天到此為止就照 [01 第 6 步](01-daemon-kernel.md#6-關機) `aos down`。要接著做 [05](05-many-agents.md) 就先留著。

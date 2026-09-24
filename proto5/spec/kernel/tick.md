@@ -17,7 +17,7 @@ cpu 那邊的順序是「先發回音、再刪原單」（範式 §6.3），這�
 1. **讀、拿鎖**：帶了舊版的 `--chain`／`--seq`（舊 kernel cpu 裡還排著的舊格才會帶）→ 退 0、什麼都不做。
    讀 info；帳本還是舊的 `K/state.json`＝`LedgerVersion`、退 1；沒有帳本＝`NotBooted`、退 1（要先 `aos up` 或 boot）。
    然後**非阻塞**拿 `K/.tick.lock`：拿不到＝別的一格正在跑 → **退 75**、什麼都不做（daemon 不算失敗，[§7](no-overlap.md)）。
-   拿到了就設鬧鐘 `tick_timeout_ms`（0＝不設）：這格跑太久會被 SIGALRM 結束，daemon 被殺後留下的孤兒 tick 也不會永遠卡著。再讀帳本。
+   拿到了就設鬧鐘 2×`tick_timeout_ms`（0＝不設）：daemon 過了 `tick_timeout_ms` 會先砍它；鬧鐘只給 daemon 被殺後留下的孤兒 tick 用，讓它不會永遠卡著（被 SIGALRM 結束）。再讀帳本。
 2. 這格的序號 N＝帳本 `last_seq`＋1（記在記憶體，跟提交點 A 或 B 一起存）。`phase=stopped` → 只出貨（有出貨就存帳本）、退 0。
 3. （第 2 版的「放下一格」「睡 `tick_ms`」都拿掉了：兩格之間隔多久由 daemon 管，[daemon §10](../daemon/ticks.md)。）
 4. **出貨**：`acks`／`replies`／`deletes`／`sends` 全部做一遍（`link`，EEXIST 當已放；刪檔 ENOENT 當已刪），**做完存一次帳本**拿掉（提交點 A）。

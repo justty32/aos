@@ -99,6 +99,7 @@ def _boot_locked(home, info, cli, ticker, locations, legacy, wait_ms):
     store = aos_kernel_store.Store(home, create=True)
     try:
         if legacy:
+            # 整份換掉 sqlite 裡可能有的半成品（上次匯入崩在提交或改名之前）。
             state = aos_home.read_state(home, {})
             store.orig = aos_kernel_store._rows(store.conn)[1]
         else:
@@ -185,10 +186,8 @@ def status(home):
     """ls 用的快照：帳本＋每池 daemon 摘要（O(池數)）＋替它開 tick 的 daemon 登記（one-boot）。"""
     home = Path(home).absolute()
     info = load_info(home)
-    state = aos_kernel_store.read(home, None)
-    legacy = state is None and aos_kernel_store.legacy(home)
-    if state is None:
-        state = aos_home.read_state(home, {}) if legacy else {}
+    legacy = aos_kernel_store.legacy(home)
+    state = aos_home.read_state(home, {}) if legacy else aos_kernel_store.read(home, {})
     pools = {}
     for pool, entry in (state.get("pools") or {}).items():
         if pool == KERNEL_POOL:
@@ -213,8 +212,13 @@ def _halted(state):
     """phase=stopped，且這個 kernel 的每個池在 daemon 那邊都消失或 count 0、running 0、killing 0、draining 0。"""
     if state.get("phase") != "stopped":
         return False
-    seen = {(e["daemon"], e["dpool"]) for p, e in (state.get("pools") or {}).items() if p != KERNEL_POOL}
-    return all(_gone_or_idle(d, p) for d, p in seen)
+    return all(_gone_or_idle(d, p) for d, p in _ours(state))
+
+
+def _ours(state):
+    """這個 kernel 在 daemon 那邊真的有的池位置：從沒被 daemon 確認過的（例如一開始就撞 NameTaken，別人的池）不等（P 隊真跑挖到）。"""
+    return {(e["daemon"], e["dpool"]) for p, e in (state.get("pools") or {}).items()
+            if p != KERNEL_POOL and e.get("acquired", True)}
 
 
 def _read(home):
@@ -251,7 +255,7 @@ def stop(home, wait_ms=30000, no_wait=False):
             print("stopped")
             return 0
         if time.monotonic() >= deadline:
-            why = _why_busy({(e["daemon"], e["dpool"]) for p, e in (state.get("pools") or {}).items() if p != KERNEL_POOL})
+            why = _why_busy(_ours(state))
             raise KernelError("Timeout", "等了 %d ms 還沒停好（stop 已放、不撤回）。若卡在縮池，daemon 那邊會留下非 0 的宣告，"
                               "這時停 daemon 的話下次開 daemon 會把那些池拉回來；先用 aos-kernel ls --target %s 看原因%s"
                               % (wait_ms, home, "（%s）" % why if why else ""))

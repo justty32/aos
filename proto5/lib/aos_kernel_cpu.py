@@ -201,7 +201,7 @@ def cpu_rm(home, name=None, pool=None, count=None):
 def cpu_ls(home, pool=None, as_json=False):
     home = Path(home).absolute()
     info = load_info(home)
-    state = aos_kernel_store.read(home, None) or aos_home.read_state(home, {})
+    state = aos_home.read_state(home, {}) if aos_kernel_store.legacy(home) else aos_kernel_store.read(home, {})
     rows = pool_rows(home, info, state, only=pool)
     if pool is not None and not rows:
         raise KernelError("NotFound", "沒有這個池：%s（info 與帳本都沒有）" % pool)

@@ -45,8 +45,9 @@ def exists(home):
 
 
 def legacy(home):
-    """還是第 2 版（K/state.json）、沒換過 sqlite 的家。"""
-    return not exists(home) and (Path(home) / LEGACY).is_file()
+    """還是第 2 版（K/state.json）、沒換過 sqlite 的家。boot 匯入成功才把 state.json 改名，
+    所以只要 state.json 還在就算舊的（崩在「建好 sqlite、還沒提交／還沒改名」之間，下次 boot 會整份重匯）。"""
+    return (Path(home) / LEGACY).is_file()
 
 
 def _dumps(value):
@@ -200,11 +201,9 @@ def crash_hook(where, state=None):
 
 def _ready(home):
     """讀之前：有 sqlite 帳本回 True；沒 boot 過回 False；還是舊的 state.json＝LedgerVersion。"""
-    if exists(home):
-        return True
     if legacy(home):
         raise LedgerError("LedgerVersion", "K 的帳本還是舊的 state.json（sqlite 之前的 kernel）；aos up（或 aos-kernel boot）換成 sqlite")
-    return False
+    return exists(home)
 
 
 def read(home, default=None):

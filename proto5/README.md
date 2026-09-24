@@ -7,14 +7,14 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 
 ## 這是什麼
 
-一套用資料夾跑 LLM agent 的小作業系統，十支 Python 指令（`proto5/cli/`，Python 3.12 以上），模型走任何 OpenAI 相容端點。
+一套用資料夾跑 LLM agent 的小作業系統，十一支 Python 指令（`proto5/cli/`，Python 3.12 以上），模型走任何 OpenAI 相容端點。
 
 ```text
-daemon（家 D）          所有 cpu 的爸爸，按池管：池 P 要 N 顆就補到 N、死了重拉（越死越等久）、多了就收
- ├─ kernel 池  1 顆     kernel/0：一格一格跑 aos-kernel tick——這就是 kernel 的排程
+daemon（家 D）          所有 cpu 的爸爸，按池管：池 P 要 N 顆就補到 N、死了重拉（越死越等久）、多了就收；
+                        也替 kernel 每秒開一格 aos-kernel tick（有新單就馬上開）——這就是 kernel 的排程
  ├─ default 池 N 顆     default/0、default/1…：跑一般工作、agent 的每一格、agent 的工具
  └─ llm 池     N 顆     跑 aos-llm call 問模型；池的環境裡 AOS_LLM_CONFIG 指到 llm.json
-kernel（家 K）          不是常駐程式：池表 K/info.json＋帳本 K/state.json＋一格接一格的 tick，
+kernel（家 K）          不是常駐程式：池表 K/info.json＋帳本 K/ledger.sqlite＋一格接一格的 tick，
                         替登記的工作挑空 cpu、收結果、決定要不要再跑；照池表跟 daemon 講每池要幾顆
 agent（一個資料夾）      人格、記憶、工具、進度；登記成 kernel 的一份反覆工作 agent-<資料夾名>
 ```
@@ -30,7 +30,6 @@ agent 每一格只做一小步（收輸入→問模型→跑工具→再問）�
 ```sh
 W=$HOME/aos-try; mkdir -p $W
 export PATH=$PWD/proto5/cli:$PATH AOS_DAEMON_HOME=$W/D AOS_KERNEL_HOME=$W/K
-setsid aos-daemon boot >>$W/daemon.log 2>&1 </dev/null &
 cat > $W/llm.json <<'EOF'
 {"_metainfo": {"_type": "llm_config", "_version": 1},
  "models": {"default": {"endpoint": "http://localhost:4000/v1", "model": "deepseek-chat"}}}
@@ -38,13 +37,13 @@ EOF
 cat > $W/kernel.json <<EOF
 {"pools": {"default": {"count": 2}, "llm": {"count": 1, "envs": {"AOS_LLM_CONFIG": "$W/llm.json"}}}}
 EOF
-aos-kernel init --config $W/kernel.json && aos-kernel check --probe && aos-kernel boot
+aos-kernel init --config $W/kernel.json && aos-kernel check --probe && aos up
 aos-agent init --target $W/bob && aos-agent start --target $W/bob
 aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 ```
 
-最後一行約 10～20 秒印出回話。停機：`aos-agent stop --target $W/bob; aos-kernel halt; aos-daemon halt`。
-隔天重開：`setsid aos-daemon boot …&` 之後看 `aos-kernel ls | head -1`，不是 `health ok` 才 `aos-kernel boot`（[教程 01 第 8 步](tutorials/01-daemon-kernel.md#8-每天重開機)）。
+最後一行約 10～20 秒印出回話（`check` 那行的 `warn daemon` 是還沒開機，不用管）。停機：`aos-agent stop --target $W/bob; aos down`。
+隔天重開：新終端 `export` 同樣三個變數之後 `aos up` 就好（[教程 01 第 7 步](tutorials/01-daemon-kernel.md#7-每天重開機)）。
 
 ## 指令一覽
 
@@ -52,17 +51,20 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 | 指令 | 一句話 | 教程 |
 |---|---|---|
-| `aos-daemon boot`／`halt` | 開 daemon（前景程式，自己放背景；會照上次的宣告把池拉回來）／停 daemon 並等它退出 | [01](tutorials/01-daemon-kernel.md) |
+| `aos up` | 開機：daemon 沒在跑就開（放背景），再開 kernel，等它走完第一格，最後印一行 `health`（不是 `ok` 就退 1）；每天開機也是它，開著再跑一次也不壞 | [01](tutorials/01-daemon-kernel.md) |
+| `aos down [--keep-daemon]` | 關機：先停 kernel（每池縮到 0、等 cpu 都退出），daemon 沒別的 kernel 要用就一起停 | [01](tutorials/01-daemon-kernel.md) |
+| `aos-daemon boot`／`halt` | debug 用（平常 `aos up`／`down` 會叫它）：開 daemon（前景程式）／停 daemon 並等它退出 | [01](tutorials/01-daemon-kernel.md) |
 | `aos-daemon ls [--pool P]` | 看 daemon 這邊每池活幾顆、忙幾顆、重拉中幾顆；`--pool` 一顆一行（偷看檔案，不放單） | [05](tutorials/05-many-agents.md) |
 | `aos-daemon scale --pool P --count N [--force]` | 直接改 daemon 那邊池的顆數；kernel 的池要 `--force`（只給救急，平常用 `aos-kernel cpu add／rm`） | [05](tutorials/05-many-agents.md) |
 | `aos-daemon kill --pool P NAME…｜--all` | 把某幾顆砍掉重來（宣告不變，砍完再拉）；取消跑到一半的單子只能靠它 | [07](tutorials/07-cli-agents.md) |
-| `aos-kernel init [--config FILE]` | 照一份 JSON 建 kernel 的家：kernel 參數＋池表（每池幾顆、環境）；不給＝只有 kernel 池 | [01](tutorials/01-daemon-kernel.md)、[06](tutorials/06-appendix-manual-home.md) |
+| `aos-kernel init [--config FILE]` | 照一份 JSON 建 kernel 的家：kernel 參數＋池表（每池幾顆、環境）；不給＝一個池都沒有；池名 `kernel` 是保留名 | [01](tutorials/01-daemon-kernel.md)、[06](tutorials/06-appendix-manual-home.md) |
 | `aos-kernel check [--probe]` | 開機前檢查 kernel 家、daemon、PATH、llm 設定；`--probe` 真的打一次模型端點 | [01](tutorials/01-daemon-kernel.md) |
-| `aos-kernel boot`／`halt` | 照池表拉起 cpu、開始排程／停排程、每池縮到 0 並等 cpu 都退出 | [01](tutorials/01-daemon-kernel.md) |
-| `aos-kernel cpu add --pool P [--count N] [--env K=V]` | 加池或加顆數；下一格生效，不用 boot | [05](tutorials/05-many-agents.md) |
+| `aos-kernel boot`／`halt` | debug 用（平常 `aos up`／`down` 會叫它）：寫帳本、請 daemon 開始替它走格／停排程、每池縮到 0 並等 cpu 都退出 | [01](tutorials/01-daemon-kernel.md) |
+| `aos-kernel cpu add --pool P [--count N] [--env K=V]` | 加池或加顆數；下一格生效，不用重開 | [05](tutorials/05-many-agents.md) |
 | `aos-kernel cpu rm P/<i>`／`cpu rm --pool P --count N` | 永久退休某一號／收最大的 N 號；手上工作做完才收 | [05](tutorials/05-many-agents.md) |
 | `aos-kernel cpu ls [--pool P] [--json]` | 一池一行：要幾顆、講好幾顆、忙／閒／收掉中、daemon 那邊的數字；`--pool` 一顆一行 | [05](tutorials/05-many-agents.md) |
 | `aos-kernel ls [--pool P] [--procs] [-v] [--json]` | 全局：第一行 `health`，再來每池一行、行程（預設只列出事的，`--procs` 全列）、佇列；`--pool` 只看一池、`-v` 印完整路徑、`--json` 給程式讀 | [01](tutorials/01-daemon-kernel.md)、[05](tutorials/05-many-agents.md) |
+| `aos-kernel proc NAME [--json]` | 只看一個行程：帳本裡那筆、在哪顆 cpu 上跑；沒有這個行程退 1（給程式讀帳本用） | [spec](spec/kernel/cli.md) |
 | `aos-kernel add INST [--once]` | 登記一份工作：跑一次，或反覆跑到做完 | [02](tutorials/02-kernel-jobs.md) |
 | `aos-kernel rm NAME`／`ack NAME` | 撤掉一份工作／簽收一則回音 | [02](tutorials/02-kernel-jobs.md) |
 | `aos-agent init` | 生一個最小可跑的 agent 家 | [03](tutorials/03-first-agent.md) |
@@ -97,8 +99,8 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | [spec/inst-posix/](spec/inst-posix/README.md) | inst.json 的 `posix` 呼叫格式第 1 版：七個欄位、各位置的 `$opt` 選項（append／mkdir／inherit／merge／clear）、錯誤代號、執行語意，加上 `_metainfo`（`_type`／`_version`；沒寫＝posix v1）、頂層未知 key 忽略 | 2026-09-21 定稿；實作 [`lib/aos_inst.py`](lib/aos_inst.py)（讀／驗）＋ [`lib/aos_exec.py`](lib/aos_exec.py)（執行）。proto4-3 是凍結的舊版參考 |
 | [spec/aos-exec/](spec/aos-exec/README.md) | aos-exec 的**命令列**：三種目標（普通檔／`.json`／資料夾）、`--dir-target`／`--timeout-ms`／`--stderr`／`--`、退出碼 2／125／原樣、125 與 2 時 stderr 印什麼。行為照 inst-posix.md 第 6 節 | 命令列走法照 proto4-3 現況整理，使用者還沒逐條拍板 |
 | [spec/cpu/](spec/cpu/README.md) | cpu 範式（一個家一個主人：`info`／`state`／`requests`／`responses`、JSON-RPC 信封、ack）與 exec cpu：逐件照 aos-exec 跑一次、回音寫 `responses/` | 2026-09-23 定稿；實作 [`lib/aos_home.py`](lib/aos_home.py)＋[`lib/aos_client.py`](lib/aos_client.py)＋[`lib/aos_exec_cpu.py`](lib/aos_exec_cpu.py)（`aos-cpu`） |
-| [spec/kernel/](spec/kernel/README.md) | kernel：替登記的工作挑空 cpu 派下去、收結果、決定要不要再跑；每次只跑一格 `aos-kernel tick`，格接格排程。cpu 按池管（`info.json` 第 2 版池表，09-24 由 proto5-2 納入） | 2026-09-23 定稿；實作 [`lib/aos_kernel.py`](lib/aos_kernel.py)（`aos-kernel`；09-24 拆成 `aos_kernel_*.py` 幾支） |
-| [spec/daemon/](spec/daemon/README.md) | daemon：所有 cpu 的父行程，按池宣告管孩子的啟動、重拉（退避）、收掉；家也照 cpu 範式長 | 2026-09-23 定稿；實作 [`lib/aos_daemon.py`](lib/aos_daemon.py)（`aos-daemon`） |
+| [spec/kernel/](spec/kernel/README.md) | kernel：替登記的工作挑空 cpu 派下去、收結果、決定要不要再跑；每次只跑一格 `aos-kernel tick`（09-24 one-boot 起由 daemon 開，帳本 `K/ledger.sqlite`），格接格排程。cpu 按池管（`info.json` 第 2 版池表，09-24 由 proto5-2 納入） | 2026-09-23 定稿；實作 [`lib/aos_kernel.py`](lib/aos_kernel.py)（`aos-kernel`；09-24 拆成 `aos_kernel_*.py` 幾支） |
+| [spec/daemon/](spec/daemon/README.md) | daemon：所有 cpu 的父行程，按池宣告管孩子的啟動、重拉（退避）、收掉；09-24 one-boot 起也替 kernel 定時開 tick；家也照 cpu 範式長；`aos up`／`aos down` 見 [up.md](spec/daemon/up.md) | 2026-09-23 定稿；實作 [`lib/aos_daemon.py`](lib/aos_daemon.py)（`aos-daemon`） |
 | [spec/agent/](spec/agent/README.md) | 一個 agent 就是一個資料夾：info.json 記人格、記憶、工具與排程設定；state.json 記三格進度、批次與恢復紀錄 | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent_home.py`](lib/aos_agent_home.py)＋[`lib/aos_agent_info.py`](lib/aos_agent_info.py) |
 | [spec/aos-agent/](spec/aos-agent/README.md) | `aos-agent tick／start／stop [--target DIR]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`listen`／`status`／`pause`／`continue`／`check`／`tools add`／`talk` 在 §1（09-24 試玩 r2 補；fix-r4 改 `--target`、`listen`、`pause`、tick 鎖；advice-r1 加 `check`；tools-base 加 `tools add`（tools.md §1.8）；talk 加 `talk`（cli-talk-repl.md §1.9）） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
 | [spec/aos-llm/](spec/aos-llm/README.md) | `aos-llm call [AGENT_DIR]`（09-24 fix-r4 由 `aos-llm-call` 改名）：讀 agent 家與 `AOS_LLM_CONFIG`、組請求、打一次 HTTP、印模型回的 message | 2026-09-24 定稿第 2 版；實作 [`lib/aos_llm_call.py`](lib/aos_llm_call.py) |
@@ -112,7 +114,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
 | [lib/](lib/README.md) | 五十八支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組；tool-era T3 補人用 aos-directives／aos-json，T1 補 aos-team。逐檔 API 與測試表見 lib README | 71 個測試檔、2044 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
-| [cli/](cli/) | 十個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent`、`aos-jail`（09-24 access-impl，aos-agent 自動用）、`aos-directives`／`aos-json`（09-24 tool-era T3，人用）、`aos-team`（09-24 tool-era T1，團隊分派） | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
+| [cli/](cli/) | 十一個薄入口：`aos`（09-24 one-boot，`aos up`／`aos down` 一條開機、一條停機）、`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent`、`aos-jail`（09-24 access-impl，aos-agent 自動用）、`aos-directives`／`aos-json`（09-24 tool-era T3，人用）、`aos-team`（09-24 tool-era T1，團隊分派） | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 | [templates/cli-agents/](templates/cli-agents/README.md) | Claude Code／Codex 當普通 cpu 的範本（階 0，不是程式）：另一個 kernel 家的設定、`claude -p` 與 `codex exec` 唯讀審查的單子、接著聊的分岔版 | 09-24 stage0；用法見[教程 07](tutorials/07-cli-agents.md) |
 | [tools/](tools/README.md) | `aos-agent tools add` 裝的工具包：內建 `base`（read／write／edit／bash／grep／find／ls，仿 pi） | 09-24 tools-base；每支工具怎麼用、錯誤長怎樣見 [tools/README.md](tools/README.md) |
 

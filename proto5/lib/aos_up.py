@@ -84,13 +84,29 @@ def up(home, wait_ms=30000):
             raise UpError("Timeout", "boot 完了但第一格 tick 沒跑完；看 aos-kernel ls --target %s 與 %s" % (
                 home, Path(daemons[0]) / "daemon.log"))
         time.sleep(.005)
+    code, message = _settle(home, info, deadline)
     pools = work_pools(info)
     print("up K=%s  daemon %s%s  %d 個池、%d 顆 cpu" % (
         home, daemons[0], "（新開）" if daemons[0] in started else "（本來就在）", len(pools),
         sum(info["pools"][p]["count"] for p in pools)))
     for extra in daemons[1:]:
         print("  另一個 daemon %s%s" % (extra, "（新開）" if extra in started else "（本來就在）"))
-    return 0
+    print("health " + message)
+    return 1 if code in ("pools", "daemon", "tick", "legacy", "broken", "dirs") else 0
+
+
+def _settle(home, info, deadline):
+    """第一格跑完後，再等各池的第一張宣告有回音（講好了或出錯），最多 5 秒；回 health。
+    池名撞了（NameTaken）這類錯要等 daemon 回音後的下一格才看得到，不等就會先印 up 再出事（教程組真跑挖到）。"""
+    import aos_kernel_health
+    until = min(deadline, time.monotonic() + 5)
+    while True:
+        state = aos_kernel_store.read(home, {})
+        pools = state.get("pools") or {}
+        if all(p in pools and (pools[p].get("error") or (pools[p].get("pending") is None and not pools[p].get("redeclare")))
+               for p in work_pools(info)) or time.monotonic() >= until:
+            return aos_kernel_health.health(home, info=info)
+        time.sleep(.02)
 
 
 def _others(daemon, home):
@@ -121,9 +137,9 @@ def down(home, wait_ms=30000, keep_daemon=False):
             continue
         kernels, pools = _others(daemon, home)
         if kernels or pools:
-            print("daemon %s 沒停：還在替%s服務（要停就 aos-daemon halt --target %s）" % (
-                daemon, "、".join(filter(None, ["別的 kernel " + "、".join(kernels) if kernels else "",
-                                                 "池 " + "、".join(pools) if pools else ""])), daemon))
+            print("daemon %s 沒停：還有 %s（要停就 aos-daemon halt --target %s）" % (
+                daemon, "；".join(filter(None, ["別的 kernel：" + "、".join(kernels) if kernels else "",
+                                                 "池：" + "、".join(pools) if pools else ""])), daemon))
             continue
         aos_daemon.stop(daemon, wait_ms)
     return 0
