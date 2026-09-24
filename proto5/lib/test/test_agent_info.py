@@ -1,591 +1,225 @@
-"""aos_agent_info.load()：讀驗 agent 資料夾——照 spec/agent.md §1～§3、§5 ＋ spec/aos-llm-ask.md §2。全部在這個進程裡跑，不開子進程。
-
-分幾群：預設值與回傳形狀、_metainfo 與 NotAnAgent、info.json 的指示詞（每格都解、位置、循環、
-$opt 不吃）、人格檔、記憶檔（aos-llm-ask.md §2.3 每則怎麼驗）、工具檔（合併、去 _ key、ToolInvalid 各種）、engine。
-"""
+"""新版 agent info／state 的純讀驗契約；不啟動任何行程。"""
+import copy
 import json
-import os
+from pathlib import Path
+import tempfile
 import unittest
 
-from _util import OUTER, AgentCase, ENGINE, TOOL_SH, fmt
-
-import aos_agent_info
-from aos_agent_info import AgentError
-
-
-def tool(name, **extra):
-    """一個最小的合法工具元素，名字是 name。"""
-    t = {"type": "function", "function": {"name": name}, "_meta": {"argv": ["true"]}}
-    t.update(extra)
-    return t
-
-
-# ---------------------------------------------------------------- 預設值與回傳形狀 ----
-
-class TestShape(AgentCase):
-
-    def test_error_shape(self):
-        e = AgentError("Foo", "白話")
-        self.assertEqual((e.code, e.msg, str(e)), ("Foo", "白話", "Foo: 白話"))
-
-    def test_minimal_agent_defaults(self):
-        """只有 _metainfo 跟 engine：人格空、記憶空、沒工具、engine 補預設。"""
-        r = self.load()
-        self.assertEqual(r["dir"], self.d)
-        self.assertEqual(r["metainfo"], {"_type": "llm_agent", "_version": 1})
-        self.assertEqual(r["system"], "")
-        self.assertEqual(r["system_path"], os.path.join(self.d, "prompts", "system.json"))
-        self.assertEqual(r["history"], [])
-        self.assertEqual(r["history_path"], os.path.join(self.d, "prompts", "history.json"))
-        self.assertEqual((r["tools"], r["tools_raw"], r["tool_paths"]), ([], [], []))
-        self.assertEqual(r["engine"], {"cpu": os.path.join(self.d, ENGINE["cpu"]), "model": "test-model",
-                                       "params": {}})
-
-    def test_full_agent(self):
-        """aos-llm-ask.md §2 那個範例：人格、記憶、兩份工具檔、engine 全寫。"""
-        r = self.load(system={"content": "你是助手"},
-                      history=[{"role": "user", "content": "hi"}],
-                      tools={"tools/base.json": [TOOL_SH], "tools/team.json": [tool("mail")]},
-                      info={"engine": {"cpu": "/x/v1", "model": "m", "params": {"temperature": 0.2},
-                                       "api_key": "k", "timeout_ms": 5}})
-        self.assertEqual(r["system"], "你是助手")
-        self.assertEqual(r["history"], [{"role": "user", "content": "hi"}])
-        self.assertEqual(r["tool_paths"], [os.path.join(self.d, "tools", "base.json"),
-                                           os.path.join(self.d, "tools", "team.json")])
-        self.assertEqual([t["function"]["name"] for t in r["tools"]], ["sh", "mail"])
-        self.assertEqual(r["engine"], {"cpu": "/x/v1", "model": "m", "params": {"temperature": 0.2},
-                                       })
-
-    def test_custom_paths_relative_to_agent_dir(self):
-        """system／history／tools 的路徑相對於 agent 資料夾；絕對路徑照字面。"""
-        self.write("p/s.json", json.dumps({"content": "S"}))
-        self.write("p/h.json", "[]")
-        abs_tool = self.write("elsewhere/t.json", json.dumps([tool("a")]))
-        r = self.load(info={"system": "p/s.json", "history": "p/h.json", "tools": [abs_tool]})
-        self.assertEqual(r["system"], "S")
-        self.assertEqual(r["system_path"], os.path.join(self.d, "p", "s.json"))
-        self.assertEqual(r["history_path"], os.path.join(self.d, "p", "h.json"))
-        self.assertEqual(r["tool_paths"], [abs_tool])
-
-    def test_unknown_top_level_keys_ignored(self):
-        r = self.load(info={"state": "think", "note": 1, "x": [1]})
-        self.assertNotIn("state", r)
-
-    def test_state_json_is_not_touched(self):
-        """state.json 壞掉也不管：這個模組不碰它。"""
-        self.write("state.json", "{not json")
-        self.load()
-        self.assertEqual(self.read("state.json"), "{not json")
-
-    def test_load_does_not_write_anything(self):
-        d = self.agent(system={"content": "x"})
-        before = sorted(os.listdir(d)), sorted(os.listdir(os.path.join(d, "prompts")))
-        aos_agent_info.load(d)
-        self.assertEqual((sorted(os.listdir(d)), sorted(os.listdir(os.path.join(d, "prompts")))), before)
-
-    def test_strip_private(self):
-        self.assertEqual(aos_agent_info.strip_private({"type": "f", "_meta": 1, "_note": 2, "x": {"_y": 3}}),
-                         {"type": "f", "x": {"_y": 3}})
-
-
-# ---------------------------------------------------------------- _metainfo／NotAnAgent ----
-
-class TestMetainfo(AgentCase):
-
-    def test_no_info_json(self):
-        with self.assertRaises(AgentError) as cm:
-            aos_agent_info.load(self.d)
-        self.assertEqual(cm.exception.code, "NotAnAgent")
-        self.assertIn("info.json", str(cm.exception))
-
-    def test_dir_missing_is_also_not_an_agent(self):
-        with self.assertRaises(AgentError) as cm:
-            aos_agent_info.load(os.path.join(self.d, "nope"))
-        self.assertEqual(cm.exception.code, "NotAnAgent")
-
-    def test_info_not_json(self):
-        self.bad("JsonSyntax", info="{oops")
-
-    def test_info_not_object(self):
-        self.bad("NotAnObject", info="[1, 2]")
-
-    def test_info_unreadable(self):
-        d = self.agent()
-        os.chmod(os.path.join(d, "info.json"), 0)
-        self.addCleanup(os.chmod, os.path.join(d, "info.json"), 0o644)
-        if os.access(os.path.join(d, "info.json"), os.R_OK):
-            self.skipTest("root 什麼都讀得到")
-        with self.assertRaises(AgentError) as cm:
-            aos_agent_info.load(d)
-        self.assertEqual(cm.exception.code, "ReadFailed")
-
-    def test_missing_metainfo(self):
-        self.bad("NotAnAgent", info={}, metainfo=False)
-
-    def test_metainfo_not_object(self):
-        self.bad("MetainfoInvalid", info={"_metainfo": "llm_agent"})
-
-    def test_metainfo_missing_type(self):
-        self.bad("NotAnAgent", info={"_metainfo": {"_version": 1}})
-
-    def test_wrong_type(self):
-        e = self.bad("NotAnAgent", info={"_metainfo": {"_type": "posix", "_version": 1}})
-        self.assertIn("posix", str(e))
-
-    def test_type_not_string(self):
-        self.bad("NotAnAgent", info={"_metainfo": {"_type": 1, "_version": 1}})
-
-    def test_missing_version(self):
-        self.bad("MetainfoInvalid", info={"_metainfo": {"_type": "llm_agent"}})
-
-    def test_version_not_1(self):
-        self.bad("UnsupportedVersion", info={"_metainfo": {"_type": "llm_agent", "_version": 2}})
-        self.bad("UnsupportedVersion", info={"_metainfo": {"_type": "llm_agent", "_version": "1"}})
-        self.bad("UnsupportedVersion", info={"_metainfo": {"_type": "llm_agent", "_version": True}})
-
-    def test_metainfo_extra_keys_ignored(self):
-        r = self.load(info={"_metainfo": {"_type": "llm_agent", "_version": 1, "_note": "x"}})
-        self.assertEqual(r["metainfo"], {"_type": "llm_agent", "_version": 1})
-
-    def test_metainfo_is_resolved(self):
-        """跟 inst 不同：_metainfo 也解指示詞——整包 $ref、_type 用 $env。"""
-        self.write("mi.json", json.dumps({"_type": "llm_agent", "_version": 1}))
-        r = self.load(info={"_metainfo": {"$ref": "mi.json"}})
-        self.assertEqual(r["metainfo"]["_type"], "llm_agent")
-        r = self.load(info={"_metainfo": {"_type": {"$env": "T"}, "_version": 1}}, env={"T": "llm_agent"})
-        self.assertEqual(r["metainfo"]["_type"], "llm_agent")
-        self.bad("NotAnAgent", info={"_metainfo": {"_type": {"$env": "T"}, "_version": 1}}, env={"T": "posix"})
-
-    def test_metainfo_directive_error_is_not_notanagent(self):
-        """解不開是指示詞的錯，不是 NotAnAgent。"""
-        self.bad("EnvironmentVariableMissing", info={"_metainfo": {"_type": {"$env": "NOPE"}, "_version": 1}},
-                 env={})
-        self.bad("ReferenceReadFailed", info={"_metainfo": {"$ref": "missing.json"}})
-
-
-# ---------------------------------------------------------------- info.json 的指示詞 ----
-
-class TestDirectives(AgentCase):
-
-    def test_env_in_every_field(self):
-        self.write("s.json", json.dumps({"content": "S"}))
-        self.write("h.json", "[]")
-        self.write("t.json", json.dumps([tool("a")]))
-        r = self.load(info={"system": {"$env": "S"}, "history": {"$env": "H"}, "tools": [{"$env": "T"}],
-                            "engine": {"cpu": {"$env": "E"}, "model": {"$env": "M"}}},
-                      env={"S": "s.json", "H": "h.json", "T": "t.json", "E": "/e/v1", "M": "mm"})
-        self.assertEqual(r["system"], "S")
-        self.assertEqual(r["tool_paths"], [os.path.join(self.d, "t.json")])
-        self.assertEqual((r["engine"]["cpu"], r["engine"]["model"]), ("/e/v1", "mm"))
-
-    def test_env_reads_the_given_table_not_os_environ(self):
-        self.bad("EnvironmentVariableMissing", info={"system": {"$env": "PATH"}}, env={})
-
-    def test_env_default_is_os_environ(self):
-        d = self.agent(info={"engine": {"cpu": "/e", "model": {"$env": "PATH"}}})
-        self.assertEqual(aos_agent_info.load(d)["engine"]["model"], os.environ["PATH"])
-
-    def test_fmt(self):
-        r = self.load(info={"engine": {"cpu": fmt("/${h}:${p}/v1", h="127.0.0.1", p={"$env": "P"}),
-                                       "model": "m"}}, env={"P": "1234"})
-        self.assertEqual(r["engine"]["cpu"], "/127.0.0.1:1234/v1")
-
-    def test_ref_relative_to_agent_dir_not_to_info_json(self):
-        """$ref 的中心路徑＝agent 資料夾（info.json 就在那裡，所以一樣）；整包 engine 從別的檔拿。"""
-        self.write("engines/lm.json", json.dumps({"cpu": "/lm/v1", "model": "q", "params": {"t": 1}}))
-        r = self.load(info={"engine": {"$ref": "engines/lm.json"}})
-        self.assertEqual(r["engine"]["cpu"], "/lm/v1")
-        self.assertEqual(r["engine"]["params"], {"t": 1})
-
-    def test_ref_with_at_and_hash(self):
-        self.write("all.json", json.dumps({"eng": {"cpu": "/a/v1", "model": "m"}, "tools": ["t.json"]}))
-        self.write("t.json", json.dumps([tool("a")]))
-        r = self.load(info={"engine": {"$ref": "all.json", "$at": "/eng"}, "tools": {"$ref": "all.json#/tools"}})
-        self.assertEqual(r["engine"]["model"], "m")
-        self.assertEqual([t["function"]["name"] for t in r["tools"]], ["a"])
-
-    def test_ref_self_relative_position_is_physical_path(self):
-        """$ref:"" 相對 $at：位置是實體路徑（/engine/model 往上一層是 /engine）。"""
-        r = self.load(info={"engine": {"cpu": "/a/v1", "model": {"$ref": "", "$at": "../name"},
-                                       "name": "from-sibling"}})
-        self.assertEqual(r["engine"]["model"], "from-sibling")
-
-    def test_tools_array_elements_resolved_and_position_is_index(self):
-        self.write("t1.json", json.dumps([tool("a")]))
-        self.write("t2.json", json.dumps([tool("b")]))
-        self.write("t3.json", json.dumps([tool("c")]))
-        r = self.load(info={"tools": ["t1.json", {"$ref": "", "$at": "/alt"}, {"$ref": "", "$at": "../../third"}],
-                            "alt": "t2.json", "third": "t3.json"}, tools=None)
-        self.assertEqual([os.path.basename(p) for p in r["tool_paths"]], ["t1.json", "t2.json", "t3.json"])
-
-    def test_container_from_other_file_resolves_inside_that_file(self):
-        """走進 $ref 取回來的容器：裡面的 $ref:"" 指的是那份檔，不是 info.json。"""
-        self.write("eng.json", json.dumps({"cpu": {"$ref": "", "$at": "/real"}, "model": "m",
-                                           "real": "/from-eng-json/v1"}))
-        r = self.load(info={"engine": {"$ref": "eng.json"}})
-        self.assertEqual(r["engine"]["cpu"], "/from-eng-json/v1")
-
-    def test_top_level_ref(self):
-        """整份 info.json 可以是一個 $ref。"""
-        self.write("real-info.json", json.dumps({"_metainfo": {"_type": "llm_agent", "_version": 1},
-                                                 "engine": {"cpu": "/top/v1", "model": "m"}}))
-        self.write("info.json", json.dumps({"$ref": "real-info.json"}))
-        r = aos_agent_info.load(self.d, env=OUTER)
-        self.assertEqual(r["engine"]["cpu"], "/top/v1")
-
-    def test_params_resolved_deeply(self):
-        """engine.params 每一格都解，巢狀的也解。"""
-        r = self.load(info={"engine": {"cpu": "/a/v1", "model": "m",
-                                       "params": {"temperature": {"$ref": "", "$at": "/t"},
-                                                  "nested": {"x": [{"$env": "V"}, "lit"]}}}, "t": 0.5},
-                      env={"V": "vv"})
-        self.assertEqual(r["engine"]["params"], {"temperature": 0.5, "nested": {"x": ["vv", "lit"]}})
-
-    def test_cycle(self):
-        self.bad("ReferenceCycle", info={"system": {"$ref": "", "$at": "."}})
-        self.bad("ReferenceCycle", info={"system": {"$ref": "", "$at": "/history"},
-                                         "history": {"$ref": "", "$at": "/system"}})
-
-    def test_same_target_from_two_fields_is_fine(self):
-        self.write("p.json", json.dumps("prompts/x.json"))
-        r = self.load(info={"system": {"$ref": "p.json"}, "history": {"$ref": "p.json"}})
-        self.assertEqual(r["system_path"], r["history_path"])
-
-    def test_unknown_directive(self):
-        self.bad("UnknownDirective", info={"system": {"$xyz": 1}})
-
-    def test_opt_is_not_accepted_anywhere(self):
-        """agent.md 沒有任何選項表：哪一格放 $opt 都是 UnknownOption。"""
-        self.bad("UnknownOption", info={"system": {"$opt": "append", "$val": "s.json"}})
-        self.bad("UnknownOption", info={"engine": {"$opt": "x"}})
-        self.bad("UnknownOption", info={"tools": [{"$opt": "x", "$val": "t.json"}]})
-        self.bad("UnknownOption", info={"_metainfo": {"$opt": "x"}})
-
-    def test_directive_error_wrapped_as_agent_error(self):
-        e = self.bad("ReferencePointerInvalid", info={"system": {"$ref": "", "$at": "x/y"}})
-        self.assertIsInstance(e, AgentError)
-
-    def test_referenced_files_are_not_resolved(self):
-        """system／history／tools 指到的檔原樣：裡面的 $ 開頭 key 不會被當指示詞。"""
-        r = self.load(system={"content": "有 ${x} 跟 $env 都是字面"},
-                      history=[{"role": "assistant", "content": None,
-                                "tool_calls": [{"id": "c1", "type": "function",
-                                                "function": {"name": "sh", "arguments": "{\"$ref\": 1}"}}]},
-                               {"role": "tool", "tool_call_id": "c1", "content": "x", "$weird": {"$env": "NOPE"}}],
-                      tools={"t.json": [tool("a", _meta={"argv": [{"$env": "NOPE"}], "cwd": {"$ref": "no.json"}},
-                                             _note={"$opt": "x"})]},
-                      env={})
-        self.assertEqual(r["system"], "有 ${x} 跟 $env 都是字面")
-        self.assertEqual(r["history"][1]["$weird"], {"$env": "NOPE"})
-        self.assertEqual(r["tools_raw"][0]["_meta"]["argv"], [{"$env": "NOPE"}])
-
-
-# ---------------------------------------------------------------- 人格檔 ----
-
-class TestSystem(AgentCase):
-
-    def test_missing_file_is_empty_string(self):
-        self.assertEqual(self.load(info={"system": "nope.json"})["system"], "")
-
-    def test_content(self):
-        self.assertEqual(self.load(system={"content": "嗨"})["system"], "嗨")
-
-    def test_empty_content_stays_empty(self):
-        self.assertEqual(self.load(system={"content": ""})["system"], "")
-
-    def test_bad_json(self):
-        self.bad("JsonSyntax", system="{")
-
-    def test_not_object(self):
-        self.bad("NotAnObject", system="[]")
-
-    def test_content_not_string(self):
-        self.bad("FieldTypeMismatch", system={"content": 1})
-        self.bad("FieldTypeMismatch", system={"no": "content"})
-
-    def test_extra_keys_ignored(self):
-        self.assertEqual(self.load(system={"content": "x", "role": "system"})["system"], "x")
-
-    def test_field_type(self):
-        self.bad("FieldTypeMismatch", info={"system": ["a"]})
-        self.bad("FieldTypeMismatch", info={"system": None})
-
-
-# ---------------------------------------------------------------- 記憶檔 ----
-
-class TestHistory(AgentCase):
-
-    def test_missing_file_is_empty_list(self):
-        self.assertEqual(self.load(info={"history": "nope.json"})["history"], [])
-
-    def test_example_from_spec(self):
-        h = [{"role": "user", "content": "看看資料夾裡有什麼"},
-             {"role": "assistant", "content": None,
-              "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "sh", "arguments": "{\"cmd\":\"ls\"}"}}]},
-             {"role": "tool", "tool_call_id": "c1", "content": "state.json\nprompts\ntools\n"},
-             {"role": "assistant", "content": "裡面有 state.json、prompts、tools…"}]
-        self.assertEqual(self.load(history=h)["history"], h)
-
-    def test_unknown_keys_kept_verbatim(self):
-        h = [{"role": "user", "content": "x", "name": "bob", "_ts": 123, "reasoning": {"a": 1}}]
-        self.assertEqual(self.load(history=h)["history"], h)
-
-    def test_bad_json(self):
-        self.bad("JsonSyntax", history="[")
-
-    def test_not_array(self):
-        self.bad("NotAnArray", history="{}")
-
-    def test_message_not_object(self):
-        self.bad("MessageInvalid", history=["hi"])
-
-    def test_system_role_not_allowed(self):
-        self.bad("MessageInvalid", history=[{"role": "system", "content": "x"}])
-
-    def test_unknown_role(self):
-        self.bad("MessageInvalid", history=[{"role": "developer", "content": "x"}])
-        self.bad("MessageInvalid", history=[{"content": "x"}])
-
-    def test_user_content_must_be_string(self):
-        self.bad("MessageInvalid", history=[{"role": "user"}])
-        self.bad("MessageInvalid", history=[{"role": "user", "content": None}])
-        self.bad("MessageInvalid", history=[{"role": "user", "content": [{"type": "text", "text": "x"}]}])
-
-    def test_tool_needs_string_content_and_call_id(self):
-        self.bad("MessageInvalid", history=[{"role": "tool", "content": "x"}])
-        self.bad("MessageInvalid", history=[{"role": "tool", "content": "x", "tool_call_id": 1}])
-        self.bad("MessageInvalid", history=[{"role": "tool", "tool_call_id": "c1", "content": None}])
-
-    def test_assistant_needs_content_or_tool_calls(self):
-        self.bad("MessageInvalid", history=[{"role": "assistant"}])
-        self.bad("MessageInvalid", history=[{"role": "assistant", "content": None}])
-        self.bad("MessageInvalid", history=[{"role": "assistant", "content": None, "tool_calls": None}])
-        self.assertEqual(len(self.load(history=[{"role": "assistant", "content": ""}])["history"]), 1)
-        self.assertEqual(len(self.load(history=[{"role": "assistant", "tool_calls": []}])["history"]), 1)
-
-    def test_error_says_which_message(self):
-        e = self.bad("MessageInvalid", history=[{"role": "user", "content": "ok"}, {"role": "x"}])
-        self.assertIn("第 1 則", str(e))
-
-    def test_field_type(self):
-        self.bad("FieldTypeMismatch", info={"history": 3})
-
-
-# ---------------------------------------------------------------- 工具檔 ----
-
-class TestTools(AgentCase):
-
-    def test_run_defaults_sync_without_modifying_raw_tool(self):
-        t = tool("plain")
-        r = self.load(tools={"t.json": [t]})
-        self.assertIsNone(r["tool_cpu"])
-        self.assertEqual(r["tools_raw"], [t])
-        r = self.load(tools={"t.json": [tool("plain", _run="sync")]})
-        self.assertNotIn("_run", r["tools"][0])
-
-    def test_cpu_tool_requires_tool_cpu_even_before_it_is_called(self):
-        e = self.bad("FieldTypeMismatch", tools={"t.json": [tool("slow", _run="cpu")]})
-        self.assertIn("tool_cpu", str(e))
-
-    def test_run_is_literal_enum_and_hidden_from_model(self):
-        t = tool("slow", _run="cpu")
-        r = self.load(info={"tool_cpu": "workers"}, tools={"t.json": [t]})
-        self.assertEqual(r["tools_raw"], [t])
-        self.assertNotIn("_run", r["tools"][0])
-        for value in ("", "CPU", None, True, 1, [], {}, {"$env": "RUN"}):
-            with self.subTest(value=value):
-                e = self.bad("ToolInvalid", info={"tool_cpu": "workers"},
-                             tools={"t.json": [tool("slow", _run=value)]})
-                self.assertIn("_run", str(e))
-
-    def test_tool_cpu_path_resolves_from_agent_and_does_not_read_cpu(self):
-        for value, expected in (("workers", os.path.join(self.d, "workers")),
-                                ("/tmp/cpu", "/tmp/cpu"), ("", self.d)):
-            with self.subTest(value=value):
-                r = self.load(info={"tool_cpu": value}, tools={"t.json": [tool("slow", _run="cpu")]})
-                self.assertEqual(r["tool_cpu"], expected)
-        self.write("conf/cpu.json", json.dumps({"path": {"$env": "CPU"}}))
-        r = self.load(info={"tool_cpu": {"$ref": "conf/cpu.json#/path"}}, env={"CPU": "workers"})
-        self.assertEqual(r["tool_cpu"], os.path.join(self.d, "workers"))
-
-    def test_tool_cpu_invalid_path_and_directive(self):
-        for value in (None, True, 1, [], {}):
-            with self.subTest(value=value):
-                self.bad("FieldTypeMismatch", info={"tool_cpu": value})
-        self.bad("EnvironmentVariableMissing", info={"tool_cpu": {"$env": "CPU"}}, env={})
-        self.bad("UnknownOption", info={"tool_cpu": {"$opt": "cpu", "$val": "workers"}})
-
-    def test_timeout_preserved_raw_and_hidden_from_model(self):
-        t = tool("slow", _timeout_ms=17)
-        r = self.load(tools={"t.json": [t]})
-        self.assertEqual(r["tools_raw"], [t])
-        self.assertNotIn("_timeout_ms", r["tools"][0])
-        self.assertNotIn("_timeout_ms", r["tools_raw"][0]["_meta"])
-
-    def test_timeout_requires_literal_positive_integer(self):
-        for value in (0, -1, True, False, 1.5, "60", None, {"$env": "LIMIT"}):
-            with self.subTest(value=value):
-                e = self.bad("ToolInvalid", tools={"t.json": [tool("slow", _timeout_ms=value)]})
-                self.assertIn("_timeout_ms", str(e))
-                self.assertIn("t.json", str(e))
-
-    def test_merge_in_file_order(self):
-        r = self.load(tools={"tools/b.json": [tool("b1"), tool("b2")], "tools/a.json": [tool("a1")]},
-                      info={"tools": ["tools/b.json", "tools/a.json"]})
-        self.assertEqual([t["function"]["name"] for t in r["tools"]], ["b1", "b2", "a1"])
-        r = self.load(tools={"tools/b.json": [tool("b1"), tool("b2")], "tools/a.json": [tool("a1")]},
-                      info={"tools": ["tools/a.json", "tools/b.json"]})
-        self.assertEqual([t["function"]["name"] for t in r["tools"]], ["a1", "b1", "b2"])
-
-    def test_underscore_keys_stripped_for_model_only(self):
-        t = tool("a", _note="說明", description="d")
-        t["function"]["description"] = "desc"
-        t["function"]["_private"] = "stays: only top-level _ keys are stripped"
-        r = self.load(tools={"t.json": [t]})
-        self.assertEqual(r["tools"], [{"type": "function", "description": "d",
-                                       "function": {"name": "a", "description": "desc",
-                                                    "_private": "stays: only top-level _ keys are stripped"}}])
-        self.assertEqual(r["tools_raw"], [t])
-        self.assertIn("_meta", r["tools_raw"][0])
-
-    def test_function_extras_verbatim(self):
-        t = tool("a")
-        t["function"].update({"parameters": {"type": "object"}, "strict": True, "weird": [1]})
-        self.assertEqual(self.load(tools={"t.json": [t]})["tools"][0]["function"], t["function"])
-
-    def test_missing_file_is_read_failed(self):
-        e = self.bad("ReadFailed", info={"tools": ["tools/nope.json"]})
-        self.assertIn("tools/nope.json", str(e))
-
-    def test_bad_json(self):
-        self.bad("JsonSyntax", tools={"t.json": "[oops"})
-
-    def test_file_not_array(self):
-        self.bad("ToolInvalid", tools={"t.json": {"type": "function"}})
-
-    def test_empty_file_ok(self):
-        self.assertEqual(self.load(tools={"t.json": []})["tools"], [])
-
-    def test_element_not_object(self):
-        self.bad("ToolInvalid", tools={"t.json": ["sh"]})
-
-    def test_missing_type(self):
-        t = tool("a"); del t["type"]
-        self.bad("ToolInvalid", tools={"t.json": [t]})
-
-    def test_missing_function(self):
-        self.bad("ToolInvalid", tools={"t.json": [{"type": "function", "_meta": {}}]})
-        self.bad("ToolInvalid", tools={"t.json": [{"type": "function", "function": "sh", "_meta": {}}]})
-
-    def test_missing_name(self):
-        self.bad("ToolInvalid", tools={"t.json": [{"type": "function", "function": {}, "_meta": {}}]})
-        self.bad("ToolInvalid", tools={"t.json": [{"type": "function", "function": {"name": ""}, "_meta": {}}]})
-        self.bad("ToolInvalid", tools={"t.json": [{"type": "function", "function": {"name": 1}, "_meta": {}}]})
-
-    def test_missing_meta(self):
-        t = tool("a"); del t["_meta"]
-        e = self.bad("ToolInvalid", tools={"t.json": [t]})
-        self.assertIn("_meta", str(e))
-
-    def test_meta_not_object(self):
-        self.bad("ToolInvalid", tools={"t.json": [tool("a", _meta="tools/bin/x")]})
-        self.bad("ToolInvalid", tools={"t.json": [tool("a", _meta=["x"])]})
-
-    def test_meta_forbids_stdin_stdout(self):
-        self.bad("ToolInvalid", tools={"t.json": [tool("a", _meta={"argv": ["x"], "stdin": "in.txt"})]})
-        self.bad("ToolInvalid", tools={"t.json": [tool("a", _meta={"argv": ["x"], "stdout": {"$opt": "inherit"}})]})
-        r = self.load(tools={"t.json": [tool("a", _meta={"argv": ["x"], "stderr": "e", "exit": "c",
-                                                          "cwd": "sub", "envs": {"A": "1"}})]})
-        self.assertEqual(r["tools_raw"][0]["_meta"]["stderr"], "e")
-
-    def test_meta_is_not_validated_as_inst_here(self):
-        """_meta 是不是合法 inst 是跑的時候的事：這裡只看它是物件、沒 stdin／stdout。"""
-        self.assertEqual(len(self.load(tools={"t.json": [tool("a", _meta={})]})["tools"]), 1)
-
-    def test_duplicate_name_across_files(self):
-        e = self.bad("ToolInvalid", tools={"a.json": [tool("sh")], "b.json": [tool("sh")]})
-        self.assertIn("sh", str(e))
-
-    def test_duplicate_name_in_same_file(self):
-        self.bad("ToolInvalid", tools={"a.json": [tool("sh"), tool("sh")]})
-
-    def test_error_says_which_file_and_index(self):
-        e = self.bad("ToolInvalid", tools={"ok.json": [tool("a")], "bad.json": [tool("b"), "x"]})
-        self.assertIn("bad.json", str(e))
-        self.assertIn("第 1 個", str(e))
-
-    def test_field_type(self):
-        self.bad("FieldTypeMismatch", info={"tools": "tools/base.json"})
-        self.bad("FieldTypeMismatch", info={"tools": [1]})
-
-
-# ---------------------------------------------------------------- engine ----
-
-class TestEngine(AgentCase):
-
-    def eng(self, **kw):
-        return self.load(info={"engine": kw})
-
-    def bad_eng(self, code="EngineInvalid", **kw):
-        return self.bad(code, info={"engine": kw})
-
-    def test_missing_engine(self):
-        self.write("info.json", json.dumps({"_metainfo": {"_type": "llm_agent", "_version": 1}}))
-        with self.assertRaises(AgentError) as cm:
-            aos_agent_info.load(self.d)
-        self.assertEqual(cm.exception.code, "EngineInvalid")
-
-    def test_engine_not_object_is_field_type_mismatch(self):
-        self.bad("FieldTypeMismatch", info={"engine": "/x"})
-
-    def test_required(self):
-        self.bad_eng(model="m")
-        self.bad_eng(cpu="/x")
-        self.bad_eng(cpu="/cpu", model="")
-        self.bad_eng(cpu=1, model="m")
-        self.bad_eng(cpu="/x", model=None)
-
-    def test_params(self):
-        self.assertEqual(self.eng(cpu="e", model="m", params={"a": 1})["engine"]["params"], {"a": 1})
-        self.bad_eng(cpu="e", model="m", params=[1])
-        self.bad_eng(cpu="e", model="m", params="t=1")
-
-    def test_connection_settings_are_not_agent_fields(self):
-        r = self.eng(cpu="/cpu", model="m", endpoint="unused", api_key="secret", timeout_ms=7)
-        self.assertEqual(r["engine"], {"cpu": "/cpu", "model": "m", "params": {}})
-
-    def test_removed_fields_do_not_resolve_directives(self):
-        r = self.load(info={"engine": {"cpu": "/cpu", "model": "m", "api_key": {"$env": "NO"}}}, env={})
-        self.assertNotIn("api_key", r["engine"])
-
-    def test_model_alias_nonempty_string(self):
-        for model in ("", None, 1, [], {}):
-            with self.subTest(model=model):
-                self.bad_eng(cpu="/cpu", model=model)
-
-    def test_unknown_engine_keys_ignored(self):
-        r = self.eng(cpu="e", model="m", kind="openai", retries=3)
-        self.assertEqual(sorted(r["engine"]), ["cpu", "model", "params"])
-
-    def test_cpu_path_defaults_and_relative_absolute(self):
-        self.bad_eng(model="m")
-        self.assertEqual(self.eng(model="m", cpu="../cpu")["engine"]["cpu"],
-                         os.path.normpath(os.path.join(self.d, "../cpu")))
-        self.assertEqual(self.eng(model="m", cpu="/tmp/cpu")["engine"]["cpu"], "/tmp/cpu")
-        self.assertEqual(self.eng(model="m", cpu="")["engine"]["cpu"], self.d)
-
-    def test_cpu_directive_and_referenced_engine_stay_relative_to_agent(self):
-        self.write("conf/engine.json", json.dumps({"model": "m", "cpu": {"$env": "CPU"}}))
-        r = self.load(info={"engine": {"$ref": "conf/engine.json"}}, env={"CPU": "workers"})
-        self.assertEqual(r["engine"]["cpu"], os.path.join(self.d, "workers"))
-
-    def test_cpu_invalid_type_and_missing_directive(self):
-        for value in (None, 7, True, [], {}):
-            with self.subTest(value=value):
-                self.bad_eng(model="m", cpu=value)
-        self.bad("EnvironmentVariableMissing",
-                 info={"engine": {"model": "m", "cpu": {"$env": "CPU"}}}, env={})
-
-
-if __name__ == "__main__":
+import aos_agent_info as info
+from aos_agent_home import AgentError
+
+
+class AgentInfoTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.base = Path(temp.name)
+        self.raw = {'_metainfo': {'_type': 'llm_agent', '_version': 1}, 'llm': {'model': 'small'}}
+        self.put('info.json', self.raw)
+
+    def put(self, name, value):
+        path = self.base / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value, ensure_ascii=False), encoding='utf-8')
+
+    def bad(self, code, reader):
+        with self.assertRaises(AgentError) as caught:
+            reader(self.base)
+        self.assertEqual(code, caught.exception.code)
+
+    def test_six_shared_fields(self):
+        value = info.load(self.base)
+        self.assertEqual(value['system'], '')
+        self.assertEqual(value['history'], [])
+        self.assertEqual(value['tools_raw'], [])
+        self.assertEqual(value['llm']['model'], 'small')
+        self.assertEqual(value['llm']['params'], {})
+
+    def test_meta_not_resolved(self):
+        meta = {'argv': [{'$env': 'UNSET'}]}
+        self.raw['tools'] = ['tools.json']
+        self.put('info.json', self.raw)
+        self.put('tools.json', [{'type': 'function', 'function': {'name': 't'}, '_meta': meta}])
+        self.assertEqual(info.load(self.base)['tools_raw'][0]['_meta'], meta)
+
+    def test_tick_reference_with_relative_pointer(self):
+        self.raw.update(tick={'$ref': 'tick-options.json'})
+        self.put('tick-options.json', {'pool': {'$ref': '', '$at': '../other'}, 'other': 'p', 'interval_ms': 0})
+        self.put('info.json', self.raw)
+        self.assertEqual(info.load(self.base)['tick'], {'pool': 'p', 'interval_ms': 0})
+
+    def test_info_env(self):
+        self.raw['llm']['pool'] = {'$env': 'POOL'}
+        self.put('info.json', self.raw)
+        self.assertEqual(info.load(self.base, {'POOL': 'x'})['llm']['pool'], 'x')
+
+    def test_input_directive(self):
+        self.put('state.json', {'input': {'$env': 'INPUT'}})
+        st = info.load_state(self.base, {'INPUT': 'in/a.json'})
+        self.assertEqual(st['input'], ['in/a.json'])
+        self.assertEqual(st['_input_raw'], {'$env': 'INPUT'})
+
+    def test_input_reference_array(self):
+        self.put('state.json', {'input': {'$ref': '', '$at': '/paths'}, 'paths': ['a', 'b']})
+        self.assertEqual(info.load_state(self.base)['input'], ['a', 'b'])
+
+    def test_wait_single_string(self):
+        self.put('state.json', {'waits': 'signal'})
+        self.assertEqual(info.load_state(self.base)['waits'], ['signal'])
+
+    def test_wait_array(self):
+        self.put('state.json', {'waits': ['a', 'b']})
+        self.assertEqual([x['paths'] for x in info.load_state(self.base)['_waits']], [['a'], ['b']])
+
+    def test_wait_option_value_reference(self):
+        self.put('state.json', {'p': ['a', 'b'], 'waits': {'$opt': ['consume', 'exists', 'all'],
+                                                        '$val': {'$ref': '', '$at': '/p'}}})
+        st = info.load_state(self.base)
+        self.assertEqual(st['_waits'][0]['paths'], ['a', 'b'])
+        self.assertEqual(st['_waits'][0]['options'], {'consume', 'exists', 'all'})
+
+    def test_write_preserves_input_and_wait_shapes(self):
+        raw = {'input': {'$env': 'INPUT'}, 'waits': {'$opt': 'consume', '$val': {'$env': 'SIGNAL'}},
+               'unknown': {'$env': 'DO_NOT_RESOLVE'}}
+        self.put('state.json', raw)
+        st = info.load_state(self.base, {'INPUT': 'x', 'SIGNAL': 'go'})
+        st['errors'] = 2
+        info.write_state(self.base, st)
+        out = json.loads((self.base / 'state.json').read_text())
+        self.assertEqual(out['input'], raw['input'])
+        self.assertEqual(out['waits'], [raw['waits']])
+        self.assertEqual(out['unknown'], raw['unknown'])
+        self.assertEqual(out['errors'], 2)
+        self.assertFalse(list(self.base.glob('*.tmp')))
+        self.assertNotIn('_waits', out)
+
+    def test_valid_records(self):
+        pair = {'src': str(self.base / 'x'), 'dst': str(self.base / 'x.id.done')}
+        batch = {'kind': 'think', 'kernel': '/K', 'base_len': 0, 'sent': False,
+                 'calls': [{'name': 'B-0', 'done': {'fail': 'x', 'count': False}, 'acked': True}]}
+        self.put('state.json', {'batch': batch, 'intake': {'id': 'id', 'base_len': 0, 'files': [pair]},
+                                'consuming': [pair], 'sweep': [{'kernel': '/K', 'name': 'B-0'}]})
+        self.assertEqual(info.load_state(self.base)['batch'], batch)
+
+    def test_valid_act_done(self):
+        batch = {'kind': 'act', 'kernel': '/K', 'base_len': 1, 'sent': True,
+                 'calls': [{'name': None, 'tool': 'x', 'tool_call_id': 'c',
+                            'done': {'content': '無'}, 'acked': True}]}
+        self.put('state.json', {'batch': batch})
+        self.assertEqual(info.load_state(self.base)['batch'], batch)
+
+    def test_state_bad_json(self):
+        (self.base / 'state.json').write_text('{')
+        self.bad('JsonSyntax', info.load_state)
+
+    def test_state_nonobject(self):
+        self.put('state.json', [])
+        self.bad('NotAnObject', info.load_state)
+
+
+# 每格是獨立 unittest，避免 subTest 掩蓋驗收條數；每條都驗可觀察契約。
+def info_case(path, value, expected=None, error=None, omit=False):
+    def test(self):
+        raw = copy.deepcopy(self.raw)
+        parent = raw
+        for key in path[:-1]:
+            parent = parent.setdefault(key, {})
+        if not omit:
+            parent[path[-1]] = value
+        self.put('info.json', raw)
+        if error:
+            self.bad(error, info.load)
+        else:
+            result = info.load(self.base)
+            for key in path:
+                result = result[key]
+            self.assertEqual(result, expected)
+    return test
+
+
+for path, default in [(('llm', 'pool'), 'llm'), (('llm', 'timeout_ms'), 125000),
+                      (('tool_pool',), 'default'), (('tick', 'pool'), 'default'),
+                      (('tick', 'interval_ms'), None)]:
+    label = '_'.join(path)
+    setattr(AgentInfoTests, 'test_default_' + label, info_case(path, None, default, omit=True))
+    for i, wrong in enumerate(([None, 7, {}] if isinstance(default, str) else [None, True, -1, '10'])):
+        setattr(AgentInfoTests, 'test_type_%s_%d' % (label, i),
+                info_case(path, wrong, error='FieldTypeMismatch'))
+for name, path, value, error in [
+        ('llm_literal', ('llm',), {'$ref': 'x'}, 'FieldTypeMismatch'),
+        ('llm_null', ('llm',), None, 'FieldTypeMismatch'),
+        ('tick_null', ('tick',), None, 'FieldTypeMismatch'),
+        ('pool_options', ('llm', 'pool'), {'$opt': 'clear'}, 'UnknownOption'),
+        ('tick_options', ('tick',), {'$opt': 'clear'}, 'UnknownOption')]:
+    setattr(AgentInfoTests, 'test_' + name, info_case(path, value, error=error))
+
+
+def state_case(raw, code=None, key=None, expected=None):
+    def test(self):
+        if raw is not None:
+            self.put('state.json', raw)
+        if code:
+            self.bad(code, info.load_state)
+        else:
+            self.assertEqual(info.load_state(self.base)[key], expected)
+    return test
+
+
+for key, expected in [('state', 'idle'), ('errors', 0), ('input', ['input.json']), ('waits', []),
+                      ('batch', None), ('intake', None), ('consuming', []), ('sweep', [])]:
+    setattr(AgentInfoTests, 'test_state_default_' + key, state_case(None, key=key, expected=expected))
+for key, wrong in [('state', 'wait'), ('state', None), ('errors', True), ('errors', -1),
+                   ('input', []), ('input', [3]), ('input', None), ('waits', None),
+                   ('batch', []), ('intake', []), ('consuming', {}), ('sweep', {})]:
+    label = '%s_%s' % (key, str(wrong).replace(' ', ''))
+    setattr(AgentInfoTests, 'test_state_type_' + label,
+            state_case({key: wrong}, 'StateInvalid' if key == 'state' else 'FieldTypeMismatch'))
+for key in ('state', 'errors', 'batch', 'intake', 'consuming', 'sweep'):
+    setattr(AgentInfoTests, 'test_state_literal_' + key,
+            state_case({key: {'$ref': 'x.json'}}, 'FieldTypeMismatch'))
+for name, value, code in [
+        ('missing_opt', {'$val': 'a'}, 'UnknownDirective'),
+        ('unknown_opt', {'$opt': 'any', '$val': 'a'}, 'UnknownOption'),
+        ('duplicate', {'$opt': ['consume', 'consume'], '$val': 'a'}, 'UnknownOption'),
+        ('unknown_in_array', [{'$opt': 'mtime', '$val': 'a'}], 'UnknownOption'),
+        ('bad_value', {'$opt': 'all', '$val': []}, 'FieldTypeMismatch'),
+        ('missing_value', {'$opt': 'consume'}, 'OptionConflict'),
+        ('bad_option_type', {'$opt': 1, '$val': 'a'}, 'DirectiveValueTypeMismatch'),
+        ('literal_list', {'$ref': 'x.json'}, 'FieldTypeMismatch')]:
+    setattr(AgentInfoTests, 'test_wait_' + name, state_case({'waits': value}, code))
+
+
+def record_case(field, value):
+    def test(self):
+        batch = {'kind': 'think', 'kernel': '/K', 'base_len': 0, 'sent': False,
+                 'calls': [{'name': 'B-0', 'done': None, 'acked': False}]}
+        parent = batch
+        for token in field[:-1]:
+            parent = parent[token]
+        parent[field[-1]] = value
+        self.put('state.json', {'batch': batch})
+        self.bad('FieldTypeMismatch', info.load_state)
+    return test
+
+
+for i, (field, value) in enumerate([
+        (['kind'], 'idle'), (['kernel'], 'relative'), (['base_len'], True),
+        (['sent'], 1), (['calls'], []), (['calls'], {}), (['calls', 0, 'name'], 3),
+        (['calls', 0, 'acked'], 0), (['calls', 0, 'done'], {'ok': 1}),
+        (['calls', 0, 'done'], {'fail': 'x', 'count': 1}),
+        (['calls', 0, 'done'], {'$ref': 'x'}), (['calls', 0, 'name'], '../bad')]):
+    setattr(AgentInfoTests, 'test_batch_shape_%02d' % i, record_case(field, value))
+for label, raw in [
+        ('intake_id', {'intake': {'id': 1, 'base_len': 0, 'files': []}}),
+        ('intake_length', {'intake': {'id': 'x', 'base_len': -1, 'files': []}}),
+        ('intake_files', {'intake': {'id': 'x', 'base_len': 0, 'files': {}}}),
+        ('consuming_paths', {'consuming': [{'src': 'relative', 'dst': '/abs'}]}),
+        ('consuming_literal', {'consuming': [{'$ref': 'x'}]}),
+        ('sweep_paths', {'sweep': [{'kernel': 'relative', 'name': 'n'}]}),
+        ('sweep_literal', {'sweep': [{'$ref': 'x'}]}),
+        ('top_literal', {'$ref': 'x'})]:
+    setattr(AgentInfoTests, 'test_record_' + label, state_case(raw, 'FieldTypeMismatch'))
+
+
+if __name__ == '__main__':
     unittest.main()
