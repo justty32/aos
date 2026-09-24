@@ -29,7 +29,9 @@ agent 家裡一行一個 JSON 物件，只追加。共同欄位：
 - **寫的人只有一個**：持 `.tick.lock` 的那一方（tick 本身，或 `aos-agent compact`）。
 - **至少一次**：每個事件都在「提交那一步」之前寫；崩了重做會再寫一次同一行（同 `ev`＋`id`）。讀的人照 `ev`＋`id` 去重（`id` 是 `null` 的不去重），`aos-agent events` 已經去重。所以行程崩潰只會「記了兩次」，不會「做了沒記」；例外是寫檔本身失敗（下一條）。上一行寫到一半（短寫）時新行先補換行，不黏在一起。
 - **寫不進去不擋路**：`log/` 不能寫、磁碟滿，只丟掉這一行，tick 照常。壞掉的行（寫到一半、手改壞）讀的時候跳過。
-- 追加是一次 `write`（`O_APPEND`），一行在幾 KB 以內。檔案不輪替、不清；要清就在 agent 停著時自己刪（刪了只是少了歷史）。
+- 追加是一次 `write`（`O_APPEND`），一行在幾 KB 以內。
+- **滿就輪換**（09-24 使用者選「滿 N MB 就輪換」，調度者代裁 10 MB、留 3 份）：寫之前看檔，滿 `rotate_mb` 就 `events.jsonl`→`events.1.jsonl`→`events.2.jsonl`→`events.3.jsonl`，最舊的丟掉；`usage.jsonl` 同規則。輪換與追加都在 `log/` 資料夾的 flock 裡做（usage 可能兩個 `aos-llm call` 同時寫）。`aos-agent events` 連舊檔一起讀、舊的在前。
+  `info.json` 可寫 `"logs": {"rotate_mb": 10, "keep": 3}`（`rotate_mb` 可帶小數、`0`＝不輪換；`keep` 0～20）；寫壞了照預設。
 
 ## 2. `log/usage.jsonl`
 

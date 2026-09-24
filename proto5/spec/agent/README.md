@@ -39,7 +39,8 @@
 | [tools-opt.md](tools-opt.md) | §3.4 `tools` 元素的 `$opt`：`as` 改名、`only` 挑幾支、`_source`、`_jail`（09-24 access-impl） |
 | [access.md](access.md) | §3.5 `access.json`：工具關進牢裡看得到哪些資料夾、信任資料與重疊、生效時機、擋不住的（09-24 access-impl） |
 | [events.md](events.md) | （09-24 第 4 隊補）事件紀錄 `log/events.jsonl`（每批起訖與成敗、收件、壓縮）與 `log/usage.jsonl`（token 用量） |
-| [compact.md](compact.md) | （09-24 第 4 隊補）記憶的機械壓縮：什麼時候能縮、怎麼縮、每步可重跑、tick 自動、compact 申請 |
+| [compact.md](compact.md) | （09-24 第 4 隊補）記憶的機械壓縮：什麼時候能縮、怎麼縮（封存＝8 KB 機械摘要）、每步可重跑、tick 自動（預設開、32000） |
+| [compact-more.md](compact-more.md) | （09-24 第 4 隊補）壓縮續：compact 申請（欄位、郵差投檔、tick 收據）與保證外 |
 | [state.md](state.md) | §4 `state.json`：§4.1 `input`、§4.2 `waits`、§4.3 `batch`、§4.4 `intake`／`consuming`／`sweep` |
 | [errors.md](errors.md) | §5 錯誤代號 |
 | [rulings.md](rulings.md) | 調度者裁決（第 2～3 輪，實作層級） |

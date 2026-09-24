@@ -30,7 +30,7 @@ astra 唯讀審查：任務書 [review-memory-task.md](2026-09-24-tool-era/revie
 
 ## 1.5 測試數字
 
-新增 **95 條**：`test_agent_memory.py` 56 條、`test_agent_notes.py` 39 條。rebase 到 main `dba8cbe` 後全部 **63 檔 1867 條全綠**（main 是 1772）。
+新增 **103 條**：`test_agent_memory.py` 64 條、`test_agent_notes.py` 39 條。第二輪 rebase 到 main `325a602` 後全部 **69 檔 1999 條全綠**（main 是 69 檔 1991 條）。
 
 ## 2. 驗收 8 條
 
@@ -162,7 +162,7 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
   - `aos-agent notes ls｜show KEY`｜看 `note` 工具寫的長期筆記
   - `aos-agent init --template NAME`｜照模板生家（第 1 隊）
 - 規範表：spec/agent 那列補「事件紀錄 events.md、記憶壓縮 compact.md」；spec/aos-agent 那列補「cli-memory.md（context／compact／events／history／notes）」。
-- `lib/README.md`：模組表加 `aos_agent_events.py`、`aos_agent_context.py`、`aos_agent_compact.py`、`aos_agent_notes.py`；測試表加 `test_agent_memory.py`（56 條）、`test_agent_notes.py`（39 條）；總數 **63 檔 1867 條**（rebase 到 dba8cbe 後）。
+- `lib/README.md`：模組表加 `aos_agent_events.py`、`aos_agent_context.py`、`aos_agent_compact.py`、`aos_agent_notes.py`；測試表加 `test_agent_memory.py`（64 條）、`test_agent_notes.py`（39 條）；總數 **69 檔 1999 條**（rebase 到 325a602 後）。
 - `tools/README.md`：工具包加 `notes/`（`note`：add／find／get／rm，`wf-table/1`；關牢時要掛 `notes`）。
 - `notes/README.md`：加這份報告與 `2026-09-24-tool-era/review-memory-{task,astra}.md`。
 
@@ -177,11 +177,34 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
 - `lib/aos_team_requests.py`：`KINDS` 加一行 `compact`。
 - `lib/test/test_agent_fix_storage.py`：一行 `mkdir(exist_ok=True)`（tick 現在會先建 `log/` 寫事件）。
 
-## 8. 要使用者拍的
+## 8. 使用者的裁決（09-24，已照做，見 §9）
 
-1. **自動壓縮預設開不開**：現在 `info.json` 沒寫 `compact` 就不自動（不改既有 agent 的行為）。要不要讓 `init`／團隊模板預設寫 `"compact": {"max_tokens": …}`？多少合適（deepseek 的 context 很大，但 token 是錢）？
-2. **說明行用 `user` 角色**：放 `assistant` 模型會學著自己寫「[aos 已壓縮…]」；放 `user` 模型可能以為是人說的。現在用 `user`、內容開頭一律 `[aos `。可以接受嗎？
-3. **封存會讓模型亂答**（真跑看到 40 行答成 21）：要不要在封存行多加一句「這段內容你已經看不到，問到就說不記得」？這是人格／規則層的事，我沒自己加。
-4. **archive 保留多久**：現在全留、人跑 `compact --prune-archive 天數` 才清（而且記憶還指著的不清）。要不要自動清？
-5. **「沒做完的任務」**：現在 `done`、`cancelled` 算結束，`failed` 算沒結束（因為 `reassign` 可以把它拉回來），讀不到的單也算沒結束（寧可多留）。這樣對嗎？
-6. **事件檔不輪替**：一直長。要不要定一個上限（例如留 30 天）？
+1. **封存不要只剩一行**（「一行？太粗暴了，8kb吧」）：每段封存改成機械摘要、上限 8 KB，仍不叫模型、仍壓到上限以下。
+2. **自動壓縮預設開，上限 32000**，`info.json` 的 `compact` 可改；`false` 或 `max_tokens: 0` 關。
+3. **封存段尾加一句「看不到了，問到就說不記得」**（放在封存內容裡，不是人格）。有摘要時改成「摘要以外的細節…」（理由見 §9）。
+4. archive 全留、人手動 `--prune-archive`（照現況）。
+5. `events.jsonl`／`usage.jsonl` 滿就輪換：調度者代裁 10 MB、留 3 份，`info.json` 的 `logs` 可改。
+6. 調度者代裁：說明行用 `user` 角色照現況；`failed` 任務算沒做完、不縮，照現況。
+
+## 9. 第二輪：照裁決改
+
+- **封存摘要**（`_digest`）：照原本的輪寫（不是縮過的）：使用者原話、每個工具呼叫與參數、每個結果「幾行＋前 3 行」、最後回話，都截斷；放不下就逐級變短，最短的幾級每個結果仍留「工具名（幾行）」這種便宜的關鍵數字，最後才從最舊的輪丟。
+  封幾輪、摘要多大：上限 8 KB 起逐級降（8／4／2／1 KB／512 B），每一級二分找「最少封幾輪才壓得到上限以下」，找得到就用；都不行就全封、只剩一行。封完比沒封大就全不封。不動點、KILL 窗口、成對的測試照舊全過；4000 則基準 0.35 s。
+- **那一句的字眼**：照字面「這段細節你看不到了，問到就說不記得」放在摘要尾，真跑時摘要裡明明有 `read（40 行）`，模型還是答「不記得」，連摘要裡的東西都不用。所以有摘要時寫「摘要以外的細節你看不到了，問到就說不記得（摘要裡寫的可以照著回答）」；只剩一行時照字面。
+- **預設開 32000**：`config()` 沒寫＝`{max_tokens: 32000, keep_rounds: 3, auto: true}`；`false`、`max_tokens: 0`、`auto: false` 都能關。
+- **輪換**：`log/` 資料夾的 flock 裡先看大小、滿了 `events.jsonl→events.1.jsonl→…→events.3.jsonl`，再追加；`usage.jsonl` 同規則；`aos-agent events` 連舊檔一起讀。`info.json` 的 `"logs": {"rotate_mb": 10, "keep": 3}` 可改。
+- 規範：`compact.md` 改 §2、§4，申請（§5）與保證外（§6）搬到新檔 `compact-more.md`（不然超過 8 KB）；`events.md` 加輪換；`cli-memory.md`、`info.md` 對回。`wf/WAIT_USER.md` A.30 改成已裁決。
+- 測試：`test_agent_memory.py` 56→64 條（摘要內容、8 KB 上限、放不下逐級降、摘要的不動點、預設 32000 與關法、輪換與讀舊檔）。
+
+### 真跑對比（LiteLLM `deepseek-chat`，腳本 `scratchpad/t4mem/live_seal.sh`）
+
+情境：①讀 long.txt（40 行）、只回「讀好了」②「記住我最喜歡的水果是芒果」③～⑤三段約 300 字的介紹 → 開自動壓縮（上限 900、留 1 輪）→ 最舊 4 輪被封存 → 問「long.txt 幾行？不要再讀，不記得就說不記得」、再問「我最喜歡的水果」。各跑 5 次：
+
+| 版本 | 封存段大小 | 行數題亂編 | 行數題答「不記得」 | 水果題答對 |
+|---|---|---|---|---|
+| 8 KB 摘要（現在） | 880～890 bytes（含 `read（40 行）`） | **0/5** | 5/5（2 次說明「摘要裡的 40 行是那次讀到的，不一定是檔案總行數」） | **5/5** |
+| 只剩一行＋「看不到了」 | 156 bytes | 0/5 | 5/5 | **1/5**（4 次連芒果都說不記得） |
+| 第一輪（只剩一行、沒有那句；另一個情境，10 次） | — | **4/10**（答 21、2000、21、200） | 6/10 | —（那個情境芒果沒被封） |
+
+結論：「看不到了」那句把亂編從 4/10 壓到 0；8 KB 摘要再把被封存的事實留住（芒果 1/5→5/5）。行數題模型仍保守答不記得——摘要寫的是「讀了 40 行」，它分不出是不是全檔。
+全部測試：rebase 到 main `325a602` 後見 §1.5。

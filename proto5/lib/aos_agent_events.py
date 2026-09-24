@@ -12,17 +12,64 @@ from pathlib import Path
 
 EVENTS = 'log/events.jsonl'
 USAGE = 'log/usage.jsonl'
+ROTATE_MB = 10   # 滿 10 MB 輪換、留 3 份舊的（09-24 調度者代裁；info.json 的 logs 可改）
+KEEP = 3
+
+
+def limits(base):
+    """info.json 的 logs：{"rotate_mb": 非負整數（0＝不輪換）, "keep": 0～20}；沒寫或壞了＝預設。回 (bytes 或 0, keep)。"""
+    try:
+        with open(Path(base) / 'info.json', encoding='utf-8') as f:
+            value = json.load(f).get('logs')
+    except (OSError, ValueError, AttributeError):
+        value = None
+    value = value if isinstance(value, dict) else {}
+    mb, keep = value.get('rotate_mb', ROTATE_MB), value.get('keep', KEEP)
+    mb = mb if type(mb) in (int, float) and mb >= 0 else ROTATE_MB
+    keep = keep if type(keep) is int and 0 <= keep <= 20 else KEEP
+    return int(mb * 1024 * 1024), keep
+
+
+def rotated(path, i):
+    """events.jsonl 的第 i 份舊檔：events.<i>.jsonl。"""
+    path = Path(path)
+    return path.with_name('%s.%d%s' % (path.stem, i, path.suffix))
+
+
+def _rotate(path, max_bytes, keep):
+    """滿了就 events.jsonl→events.1.jsonl→…→events.<keep>.jsonl，最舊的丟掉。呼叫的人持資料夾的 flock。"""
+    try:
+        if not max_bytes or os.stat(path).st_size < max_bytes:
+            return
+    except FileNotFoundError:
+        return
+    if keep == 0:
+        os.unlink(path)
+        return
+    rotated(path, keep).unlink(missing_ok=True)
+    for i in range(keep - 1, 0, -1):
+        if rotated(path, i).exists():
+            os.rename(rotated(path, i), rotated(path, i + 1))
+    os.rename(path, rotated(path, 1))
 
 
 def now_iso():
     return datetime.datetime.now().astimezone().isoformat(timespec='milliseconds')
 
 
-def append_line(path, record):
-    """追加一行 JSON；失敗回 False（不丟例外）。"""
+def append_line(path, record, limit=(0, KEEP)):
+    """追加一行 JSON；limit＝(滿幾 bytes 輪換, 留幾份)。失敗回 False（不丟例外）。
+
+    輪換與追加都在 log/ 資料夾的 flock 裡做（usage.jsonl 可能有兩個 aos-llm call 同時寫）。
+    """
+    import fcntl
+    lock = None
     try:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        lock = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        _rotate(path, *limit)
         data = (json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n').encode('utf-8')
         fd = os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_CLOEXEC, 0o644)
         try:
@@ -36,13 +83,16 @@ def append_line(path, record):
         return True
     except (OSError, ValueError, TypeError):
         return False
+    finally:
+        if lock is not None:
+            os.close(lock)
 
 
 def emit(base, ev, ident, **fields):
     """記一件事：{"at", "ev", "id", …}。ident 是去重用的身分（批 id、消費 id、壓縮前的 sha）。"""
     record = {'at': now_iso(), 'ev': ev, 'id': ident}
     record.update(fields)
-    return append_line(Path(base) / EVENTS, record)
+    return append_line(Path(base) / EVENTS, record, limits(base))
 
 
 def batch_id(batch):
@@ -53,6 +103,16 @@ def batch_id(batch):
         if call.get('name'):
             return call['name'].rsplit('-', 1)[0]
     return None
+
+
+def read_all(path):
+    """連輪換掉的舊檔一起讀，舊的在前（events.<N>.jsonl … events.1.jsonl、events.jsonl）。"""
+    olds = []
+    i = 1
+    while rotated(path, i).exists() and i <= 20:
+        olds.append(rotated(path, i))
+        i += 1
+    return [row for p in reversed(olds) for row in read(p)] + read(path)
 
 
 def read(path):
@@ -131,7 +191,7 @@ def _line(e):
 def show(agent_dir, *, last=20, as_json=False, usage=False):
     """印最後 last 則（去重後）；usage＝改看 log/usage.jsonl。"""
     base = Path(os.path.abspath(agent_dir))
-    rows = read(base / (USAGE if usage else EVENTS))
+    rows = read_all(base / (USAGE if usage else EVENTS))
     if not usage:
         rows = dedupe(rows)
     rows = rows[-last:] if last else rows

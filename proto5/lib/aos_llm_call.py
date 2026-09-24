@@ -173,10 +173,11 @@ def record_usage(agent_dir, env, alias, model, usage, ms):
     批 id 從 AOS_LLM_BATCH 拿（aos-agent 送 think 時放進工作 inst 的 envs）；手動跑的沒有＝null。
     usage 是端點回的原樣（LiteLLM／OpenAI 的 prompt_tokens、completion_tokens、total_tokens…），沒回＝null。
     """
-    from aos_agent_events import USAGE, append_line, now_iso
+    from aos_agent_events import USAGE, append_line, limits, now_iso
     batch = env.get("AOS_LLM_BATCH") or None
-    append_line(os.path.join(os.path.abspath(agent_dir), USAGE),
-                {"at": now_iso(), "batch": batch, "alias": alias, "model": model, "ms": ms, "usage": usage})
+    base = os.path.abspath(agent_dir)
+    record = {"at": now_iso(), "batch": batch, "alias": alias, "model": model, "ms": ms, "usage": usage}
+    append_line(os.path.join(base, USAGE), record, limits(base))
 
 
 def main(argv=None):
