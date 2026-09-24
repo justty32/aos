@@ -13,6 +13,7 @@ import time
 
 import aos_exec
 import aos_home
+import aos_hops
 
 
 def _control_error(obj):
@@ -241,6 +242,7 @@ def run(home):
             name = names[0]
             request = os.path.join(home, "requests", name)
             envelope = aos_home.read_request(request)
+            aos_hops.mark("cpu", "pick", request=name, home=home)
             state["current"] = {"name": name, "id": envelope.id, "notify": envelope.notify}
             aos_home.write_state(home, state)
             response, ran = _execute(envelope, info, control)
@@ -252,6 +254,7 @@ def run(home):
             state["current"] = None
             state["runs"] += int(ran)
             aos_home.write_state(home, state)
+            aos_hops.mark("cpu", "done", request=name, home=home)
     finally:
         os.chdir(previous_cwd)
         control.close()

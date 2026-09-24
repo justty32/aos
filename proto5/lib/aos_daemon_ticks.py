@@ -17,6 +17,7 @@ import time
 
 import aos_daemon_pools as pools
 import aos_home
+import aos_hops
 
 KERNELS = "kernels"
 BUSY_EXIT = 75
@@ -214,6 +215,7 @@ class TicksMixin:
             ticker.mtime = os.stat(folder).st_mtime_ns
         except OSError:
             ticker.mtime = None
+        aos_hops.mark("daemon", "tick", home=str(ticker.home), why="new" if ticker.poked else "time")
         ticker.seen, ticker.poked = _listing(folder), False
         ticker.next_at = now + ticker.every_ms / 1000
         try:

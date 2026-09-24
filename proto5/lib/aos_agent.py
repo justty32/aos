@@ -6,6 +6,7 @@ from pathlib import Path
 import aos_agent_info
 import aos_client
 import aos_home
+import aos_hops
 from aos_agent_batch import META, collect, make_batch, send
 from aos_agent_home import AgentError, resolve_field
 from aos_agent_inputs import finish_consuming, gate, intake
@@ -49,6 +50,17 @@ def _error(exc, note=''):
 
 
 def tick(agent_dir, env=None, note=''):
+    name = os.path.basename(os.path.abspath(agent_dir))
+    aos_hops.mark('agent', 'begin', boot=True, agent=name)
+    code = None
+    try:
+        code = _tick(agent_dir, env, note)
+        return code
+    finally:
+        aos_hops.mark('agent', 'end', agent=name, code=code)
+
+
+def _tick(agent_dir, env=None, note=''):
     lock = None
     try:
         env, kernel = _environment(env)

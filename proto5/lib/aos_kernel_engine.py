@@ -13,6 +13,7 @@ import signal
 import time
 
 import aos_home
+import aos_hops
 import aos_kernel_store
 from aos_kernel_info import (
     KERNEL_POOL, KernelError, _put, classify, cpu_key, load_info, split_key,
@@ -40,7 +41,11 @@ class Kernel(PoolsMixin, KernelLedger):
         for name in stops:
             self._stop_control(req_dir / name)
         for name in calls:
-            self.apply_syscall(aos_home.read_request(req_dir / name))
+            env = aos_home.read_request(req_dir / name)
+            if aos_hops.on():
+                params = env.params if isinstance(env.params, dict) else {}
+                aos_hops.mark("kernel", "req", name=name, method=env.method, proc=params.get("name"), wake=params.get("wake"))
+            self.apply_syscall(env)
         notified = []
         for name in resps:
             key = self._notification(req_dir / name)
@@ -153,6 +158,9 @@ class Kernel(PoolsMixin, KernelLedger):
             proc = self.state["procs"][name]
             self.events.append({"event": "response", "proc": name, "cpu": key,
                                 "response": {k: response[k] for k in ("result", "error") if k in response}})
+            if aos_hops.on():
+                result = response.get("result")
+                aos_hops.mark("kernel", "resp", proc=name, cpu=key, code=result.get("code") if isinstance(result, dict) else None)
             if slot["discard"]:
                 del self.state["procs"][name]
             elif proc["once"]:
@@ -201,6 +209,7 @@ class Kernel(PoolsMixin, KernelLedger):
             slot = self.state["busy"].get(key)
             if slot is not None:
                 self._post_work(key, slot["req"], self.state["procs"][slot["proc"]])
+                aos_hops.mark("kernel", "dispatch", proc=slot["proc"], cpu=key, request=slot["req"])
 
     # ---- 第 9 步：停機 ----
     def stopping(self):
@@ -299,12 +308,14 @@ def tick(home, chain=None, seq=None):
         if info["tick_timeout_ms"]:
             # daemon 逾時會先 KILL 這格；鬧鐘設兩倍，只給 daemon 被殺後留下的孤兒 tick 用（SIGALRM 預設就是結束行程）。
             signal.setitimer(signal.ITIMER_REAL, 2 * info["tick_timeout_ms"] / 1000)
+        aos_hops.mark("kernel", "begin", boot=True)
         store = aos_kernel_store.Store(home)
         try:
             state = store.load()
             return Kernel(home, info, state, int(state.get("last_seq") or 0) + 1, store=store).step()
         finally:
             store.close()
+            aos_hops.mark("kernel", "end")
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)   # 同一個行程裡直接呼叫 tick（測試）時別留著鬧鐘
         os.close(lock)
