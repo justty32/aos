@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""json_edit：用 JSON Pointer 讀／改 JSON 檔的一個位置（get／set／del／append／merge），不用字串取代。"""
+import json
+import os
+import sys
+sys.dont_write_bytecode = True
+from _common import run, arg, resolve, fail  # noqa: E402
+import _files  # noqa: E402
+import _jsonedit as J  # noqa: E402
+
+MAX_SHOW = 50 * 1024
+NEW_STYLE = {'indent': 2, 'separators': (',', ': '), 'ensure_ascii': False, 'trailing_nl': True}
+
+
+def main(args, root):
+    path = arg(args, 'path', str, required=True)
+    op = arg(args, 'op', str, 'get')
+    pointer = arg(args, 'pointer', str, '')
+    expect = arg(args, 'expect_sha', str)
+    if op not in J.OPS:
+        fail('BadArguments', 'op must be one of %s' % ', '.join(J.OPS))
+    tokens = J.parse_pointer(pointer)
+    has_value = 'value' in args
+    if op in ('set', 'append', 'merge') and not has_value:
+        fail('BadArguments', 'op %s needs "value" (any JSON value; for merge an object)' % op)
+    if op in ('get', 'del') and has_value:
+        fail('BadArguments', 'op %s takes no "value"' % op)
+    create = op == 'set' and not tokens
+    full = resolve(root, path, must_exist=not create)
+    if os.path.isdir(full):
+        fail('IsADirectory', '%s is a directory' % path)
+    if os.path.lexists(full):
+        text, data = _files.read_text(root, full, path)
+        doc = J.parse_doc(text, path)
+    else:
+        text, data, doc = '', b'', None
+    if op == 'get':
+        shown = json.dumps(J.lookup(doc, tokens), indent=2, ensure_ascii=False)
+        if len(shown.encode('utf-8')) > MAX_SHOW:
+            shown = shown.encode('utf-8')[:MAX_SHOW].decode('utf-8', 'ignore') + \
+                '\n...(cut at 50 KB; use a deeper pointer)'
+        return '%s\nsha=%s (pass it as expect_sha when you change this file)' % (shown, _files.sha(data))
+    _files.check_sha(expect, data, path)
+    _files.guard_write(root, full, path)
+    new = J.apply(doc, op, tokens, args.get('value'))
+    out = J.dumps(new, J.style_of(text) if text.strip() else NEW_STYLE)
+    if data and json.dumps(new) == json.dumps(doc):
+        return 'no change: %s %s already has that value; sha=%s' % (path, J.show(tokens), _files.sha(data))
+    name = _files.save(root, full, out, path)
+    verb = {'set': 'set', 'del': 'deleted', 'append': 'appended to', 'merge': 'merged into'}[op]
+    return '%s %s in %s; sha=%s' % (verb, J.show(tokens), name, _files.sha(out.encode('utf-8')))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

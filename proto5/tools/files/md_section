@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""md_section：按標題讀／改 Markdown 的一節（list／get／replace／delete／append_item／remove_item）。"""
+import sys
+sys.dont_write_bytecode = True
+from _common import run, arg, resolve, fail  # noqa: E402
+import _files  # noqa: E402
+import _mdsec as M  # noqa: E402
+
+OPS = ('list', 'get', 'replace', 'delete', 'append_item', 'remove_item')
+MAX_SHOW = 50 * 1024
+
+
+def pick(secs, heading, path):
+    hits = M.find(secs, heading)
+    if not hits:
+        known = ', '.join('%r' % s.heading for s in secs[:30]) or '(this file has no headings)'
+        fail('HeadingNotFound', 'no heading %r in %s; headings: %s%s' % (heading, path, known,
+                                                                        ', ...' if len(secs) > 30 else ''))
+    if len(hits) > 1:
+        fail('NotUnique', 'heading %r appears %d times in %s (lines %s); add the #s to pick the level, or '
+             'edit one of them first' % (heading, len(hits), path, ', '.join(str(s.start + 1) for s in hits)),
+             lines=[s.start + 1 for s in hits])
+    return hits[0]
+
+
+def own_end(sec, secs):
+    """這一節自己的本文到哪（第一個子節之前）。"""
+    for t in secs[sec.index + 1:]:
+        if t.start >= sec.end:
+            break
+        return t.start
+    return sec.end
+
+
+def one_item(text):
+    item = text.rstrip('\r\n')
+    if '\n' in item or '\r' in item:
+        fail('BadItem', 'text must be one line (one list item)')
+    return item
+
+
+def main(args, root):
+    path = arg(args, 'path', str, required=True)
+    op = arg(args, 'op', str, 'get')
+    heading = arg(args, 'heading', str)
+    text = arg(args, 'text', str)
+    expect = arg(args, 'expect_sha', str)
+    if op not in OPS:
+        fail('BadArguments', 'op must be one of %s' % ', '.join(OPS))
+    if op != 'list' and not heading:
+        fail('BadArguments', 'op %s needs "heading" (e.g. "## Status"; op list shows them)' % op)
+    if op in ('replace', 'append_item', 'remove_item') and text is None:
+        fail('BadArguments', 'op %s needs "text"' % op)
+    full = resolve(root, path)
+    content, data = _files.read_text(root, full, path)
+    lines = M.split_lines(content)
+    secs = M.sections(lines)
+    digest = _files.sha(data)
+    if op == 'list':
+        rows = ['line %d: %s%s' % (s.start + 1, '  ' * (s.level - 1), s.heading) for s in secs]
+        return '\n'.join(rows or ['(no headings)']) + '\nsha=%s' % digest
+    sec = pick(secs, heading, path)
+    if op == 'get':
+        shown = ''.join(lines[sec.start:sec.end])
+        if len(shown.encode('utf-8')) > MAX_SHOW:
+            shown = shown.encode('utf-8')[:MAX_SHOW].decode('utf-8', 'ignore') + '\n...(cut at 50 KB)'
+        return '%s\nsha=%s (pass it as expect_sha when you change this file)' % (shown.rstrip('\n'), digest)
+    _files.check_sha(expect, data, path)
+    _files.guard_write(root, full, path)
+    nl = M.newline_of(lines)
+    if lines and not lines[-1].endswith(('\n', '\r')):
+        lines[-1] += nl
+    if op == 'delete':
+        new, what = lines[:sec.start] + lines[sec.end:], 'deleted section %r (lines %d-%d)' % (
+            sec.heading, sec.start + 1, sec.end)
+    elif op == 'replace':
+        start, end = M.body_range(sec, lines)
+        body = M.as_lines(text, nl)
+        if body and start < len(lines) and start < end and not lines[start].strip() and body[0].strip():
+            body.insert(0, nl)
+        if body and end == sec.end and end < len(lines):
+            body.append(nl)
+        new, what = lines[:start] + body + lines[end:], 'replaced the body of %r' % sec.heading
+    else:
+        item = one_item(text)
+        mine = M.items(lines, sec.start + 1, own_end(sec, secs))
+        if op == 'append_item':
+            if not M.ITEM.match(item):
+                fail('BadItem', 'text must be one list item starting with "- ", e.g. "- [work] doing X → next Y"')
+            if mine and all(M.WF_ITEM.match(b) for _, b in mine) and not M.WF_ITEM.match(item):
+                fail('BadItem', 'items in %r use the format "- [workflow] status → next step" (e.g. %r); '
+                     'write yours the same way' % (sec.heading, mine[-1][1]))
+            if mine:
+                at = mine[-1][0] + 1
+                while at < own_end(sec, secs) and lines[at].strip() and lines[at][:1] in ' \t' \
+                        and not M.ITEM.match(lines[at]):
+                    at += 1
+                add = [item + nl]
+            else:
+                start, at = M.body_range(sec, lines)
+                at = min(at, own_end(sec, secs))
+                add = ([nl] if at > start and lines[at - 1].strip() else []) + [item + nl]
+                if at < len(lines) and lines[at].lstrip().startswith('#'):
+                    add.append(nl)
+            new, what = lines[:at] + add + lines[at:], 'added an item to %r (line %d)' % (sec.heading, at + 1)
+        else:
+            want = item.strip()
+            hits = [(i, b) for i, b in mine if b.strip() == want or b.strip()[2:].strip() == want]
+            if not hits:
+                listed = '; '.join(b.strip() for _, b in mine[:20]) or '(no items)'
+                fail('NoMatch', 'no item %r in %r; items: %s' % (want, sec.heading, listed))
+            if len(hits) > 1:
+                fail('NotUnique', 'item %r appears %d times in %r (lines %s); remove it with text that matches '
+                     'one line exactly' % (want, len(hits), sec.heading, ', '.join(str(i + 1) for i, _ in hits)))
+            i = hits[0][0]
+            new, what = lines[:i] + lines[i + 1:], 'removed an item from %r (was line %d)' % (sec.heading, i + 1)
+    out = ''.join(new)
+    name = _files.save(root, full, out, path)
+    return '%s in %s; sha=%s' % (what, name, _files.sha(out.encode('utf-8')))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))
