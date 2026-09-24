@@ -158,7 +158,7 @@ LLM：不叫。六軸：L5 S4 R5 F5 H4 B5。難度：小。波：二（兩個工
 
 ## B. 記憶與 prompt history（`/context`、`/compact`）
 
-現況：`talk` 有 `/context`（人格＋記憶＋工具的字數表）、`/history`（規範 `spec/aos-agent/cli-talk-repl.md` 在 talk 那隊的分支，還沒進 main）。記憶是 `prompts/history.json` 整份讀寫、**沒有上限**（agent 規範自己寫「記憶太長怎麼辦之後再說」）。
+現況：`talk` 有 `/context`（人格＋記憶＋工具的字數表）、`/history`（規範見 [../../spec/aos-agent/cli-talk-repl.md](../../spec/aos-agent/cli-talk-repl.md)）。記憶是 `prompts/history.json` 整份讀寫、**沒有上限**（agent 規範自己寫「記憶太長怎麼辦之後再說」）。
 
 ### T-events
 
@@ -334,7 +334,7 @@ LLM：不叫。六軸：L5 S4 R5 F5 H5 B5。難度：小（資料先記好的話
 
 ### T-pool
 
-**工具檔 `_pool` 欄**（priority-and-shared-cpu 提案，commit 64a3427，還沒進 main）：某支工具走指定的池（例：GPU 工具一顆 cpu 排隊）。給：人（寫工具檔）。
+**工具檔 `_pool` 欄**（[priority-and-shared-cpu 提案](../2026-09-24-priority-and-shared-cpu/README.md)）：某支工具走指定的池（例：GPU 工具一顆 cpu 排隊）。給：人（寫工具檔）。
 規範改 agent info §3.3、aos-agent send §5.2；程式十幾行。LLM：不叫。六軸：L5 S5 R4 F4 H5 B5。難度：小。波：二。
 
 ### T-crystal
