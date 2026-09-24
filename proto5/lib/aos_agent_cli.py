@@ -14,11 +14,13 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'stop': '撤銷登記', 'init': '在資料夾生一個最小可跑的 agent 家',
          'say': '投一則 user 訊息（--wait 等回話）',
          'listen': '看回話：--last [N] 最後 N 則、--wait 等下一則、--follow 一直印（三選一，要給）',
+         'talk': '來回對話：打一行送出、等回話印出、再打下一行；/help 看 slash 指令，Ctrl-C 離開',
          'status': '印 agent 現在的狀態、在等什麼、最近的錯',
          'pause': '手動暫停：還登記著，但每格什麼都不做',
          'continue': '解除手動暫停與連敗暫停',
          'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）',
          'tools': '裝工具包：tools add NAME|DIR（內建 base＝read／write／edit／bash／grep／find／ls）'}
+TALK_WAIT_SECONDS = 120
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
 FULL_LIMIT = 4000  # 跟 aos_agent_listen_render.FULL_LIMIT 一致（-h 不為了一個數字載入印法模組）
 LISTEN_MODES = '--last [N]（最後 N 則）、--wait [秒]（等下一則）、--follow（一直印）'
@@ -66,6 +68,16 @@ def _parser():
                                help='連同工具呼叫一起印：一個呼叫一行 [呼叫 名 參數]、結果一行 [結果 名：第一行]')
             shows.add_argument('--show-calls-full', action='store_true',
                                help='連同工具呼叫一起印完整參數 JSON 與工具回傳（各超過 %d 字截斷並註明）' % FULL_LIMIT)
+        elif name == 'talk':
+            from aos_agent_talk import HELP
+            sub.formatter_class = argparse.RawDescriptionHelpFormatter
+            sub.epilog = ('提示符打 / 開頭是指令，不送給模型：\n' +
+                          '\n'.join('  %-14s %s' % pair for pair in HELP) +
+                          '\n例子：cd 家 && aos-agent talk --show-calls')
+            sub.add_argument('--wait', metavar='秒', default=None,
+                             help='每句最多等幾秒（預設 %d；0＝不等，按 Enter 再看）' % TALK_WAIT_SECONDS)
+            sub.add_argument('--show-calls', action='store_true',
+                             help='印出工具呼叫與結果的簡化行，例如 [呼叫 date] [結果 ok 1 行]')
         if name == 'status':
             sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令、舊錯原文與 stuck 原行')
         if name == 'init':
@@ -145,6 +157,10 @@ def main(argv=None):
         count = _listen_count(ap, args)
     wait = getattr(args, 'wait', None)
     timeout = _seconds(ap, wait) if wait is not None else WAIT_SECONDS * 1000
+    if args.command == 'talk':
+        if wait == '':
+            ap.error('talk --wait 後面要是秒數')
+        timeout = _seconds(ap, wait) if wait is not None else TALK_WAIT_SECONDS * 1000
     try:
         base = os.path.abspath(target)
         if args.command == 'stop' and not os.path.isdir(base):
@@ -167,6 +183,9 @@ def main(argv=None):
             mode = 'wait' if wait is not None else 'follow' if args.follow else 'last'
             calls = 'full' if args.show_calls_full else 'short' if args.show_calls else None
             return listen(target, mode, count=count, calls=calls, timeout_ms=timeout, as_json=args.json)
+        if args.command == 'talk':
+            from aos_agent_talk import talk
+            return talk(target, timeout_ms=timeout, show_calls=args.show_calls)
         if args.command == 'status':
             from aos_agent_status import status
             return status(target, as_json=args.json, verbose=args.verbose)
