@@ -1,26 +1,28 @@
+← [本輪報告](README.md)｜[任務書](review-task.md)（codex exec -m gpt-6-astra -s read-only 的原文；連結的行號改成連到檔案）
+
 ## 必修
 
-1. **[aos_kernel_boot.py:103](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a744cbeb4944cdf6d/proto5/lib/aos_kernel_boot.py:103)：舊帳本在舊 tick 停妥之前就讀取，可能匯入過期狀態。**  
+1. **[aos_kernel_boot.py:103](../../lib/aos_kernel_boot.py)：舊帳本在舊 tick 停妥之前就讀取，可能匯入過期狀態。**  
    第 108 行才縮掉舊 kernel 池；等待期間，已載入舊程式的 tick 仍可能提交 `state.json`、派工、刪原單。舊版沒有 `.tick.lock`，新鎖擋不住它。結果可能漏登記工作，或把已完成的工作再派一次。**建議：先讀舊池位置、停妥舊執行者，再重讀最終 `state.json` 作為匯入來源。**
 
-2. **[aos_kernel_store.py:61](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a744cbeb4944cdf6d/proto5/lib/aos_kernel_store.py:61)：SQLite URI 沒有跳脫 `%`，可能開到另一個家的帳本。**  
+2. **[aos_kernel_store.py:61](../../lib/aos_kernel_store.py)：SQLite URI 沒有跳脫 `%`，可能開到另一個家的帳本。**  
    例如路徑中的字面 `%2F` 會被 SQLite 解碼成 `/`；boot 可能持有 K1 的鎖，卻修改 K2 的資料庫，破壞家與鎖的隔離。已用純記憶體 SQLite 驗證百分比解碼會造成名稱別名。**建議：使用 `Path.absolute().as_uri()`，再附加 `mode` 參數。**
 
-3. **[aos_kernel_engine.py:253](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a744cbeb4944cdf6d/proto5/lib/aos_kernel_engine.py:253)：`tick off` 通知可能在 daemon 崩潰恢復時永久遺失。**  
+3. **[aos_kernel_engine.py:253](../../lib/aos_kernel_engine.py)：`tick off` 通知可能在 daemon 崩潰恢復時永久遺失。**  
    daemon 先保存 `current`，再執行撤登記；若崩在兩者之間，重啟時 `aos_home.reconcile()` 會直接刪掉 notification。此時 kernel 可能已清空 `sends`，而 stopped 分支不會再產生撤登記單，造成 daemon 永久替 stopped K 開空格。**建議：讓撤登記有可重試的完成確認，或對這種冪等操作實作崩潰重播。**
 
-4. **[aos_daemon_ticks.py:149](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a744cbeb4944cdf6d/proto5/lib/aos_daemon_ticks.py:149)：撤登記後立即重登記，會繞過 daemon「同一 K 同時一格」的限制。**  
+4. **[aos_daemon_ticks.py:149](../../lib/aos_daemon_ticks.py)：撤登記後立即重登記，會繞過 daemon「同一 K 同時一格」的限制。**  
    舊 Ticker 從 `tickers` 移除，但行程仍留在 `tick_pids`；重登記建立的新 Ticker 的 `proc=None`，下一圈就能再開一格。已用無檔案寫入的 mock 驗證此狀態。**flock 仍能防止兩格同時改帳本**，但 daemon 的單格保證不成立。**建議：以 K 身分保留執行中行程，重登記沿用它，收屍後才准開下一格。**
 
-5. **[spec/kernel/boot.md:46](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a744cbeb4944cdf6d/proto5/spec/kernel/boot.md:46)：匯入後、改名前的恢復說明與程式相反。**  
+5. **[spec/kernel/boot.md:46](../../spec/kernel/boot.md)：匯入後、改名前的恢復說明與程式相反。**  
    規範說「有 sqlite 就只認它，舊 JSON 不再讀」；實作 `legacy()` 卻只看 `state.json` 是否存在，tick／agent 會拒絕，boot 會重新匯入。`spec/kernel/ledger.md:29` 也有同樣矛盾。**建議：統一成目前的恢復策略，明寫此窗口必須再 boot；不能只憑 SQLite 檔存在就認定匯入完成。**
 
 ## 建議
 
-- **[aos_up.py:123](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a744cbeb4944cdf6d/proto5/lib/aos_up.py:123)：down 應從帳本取得實際使用中的 daemon。**  
+- **[aos_up.py:123](../../lib/aos_up.py)：down 應從帳本取得實際使用中的 daemon。**  
   修改 info 的 daemon、尚未 boot，或池正在搬家時，`_daemons(info)` 會漏掉舊位置。halt 使用帳本停好 K，down 卻可能留下已無其他用途的舊 daemon。建議停機前保存帳本 `ticker` 與池位置，納入撤登記等待及「還有別人使用嗎」的檢查。
 
-- **[aos_kernel_store.py:176](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a744cbeb4944cdf6d/proto5/lib/aos_kernel_store.py:176)：補上 COMMIT 失敗後的連線清理。**  
+- **[aos_kernel_store.py:176](../../lib/aos_kernel_store.py)：補上 COMMIT 失敗後的連線清理。**  
   交易本體失敗會 rollback，COMMIT 失敗卻不會；部分錯誤會留下開啟中的交易，同一 Store 再 save 就失敗。正式 tick 會關連線，因此未見直接壞帳路徑。建議失敗時檢查 `in_transaction` 並 rollback，`orig` 保持原值。
 
 其餘面向：
