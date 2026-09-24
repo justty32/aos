@@ -171,6 +171,13 @@ class TaskScopeTest(ScoreCase):
         self.assertEqual(r['letters'], {'total': 3, 'by_sender': {'human': 1, 'post': 1, 'worker-1': 1},
                                         'rejected': 1})
 
+    def test_done_letters_after_end_counted(self):
+        """T5 試玩：單子結束那一刻之後才記的完成信（post → lead／人）也算這張單的信。"""
+        self.sent('p9', **{'from': 'post', 'to': 'human', 'status': 'DONE', 'reply_to': 't-0001', 'at': at(5000)})
+        self.sent('p8', **{'from': 'post', 'to': 'lead', 'status': 'DONE', 'reply_to': 't-0001.r1', 'at': at(5000)})
+        r = self.js('--task', 't-0001')
+        self.assertEqual(r['letters']['by_sender']['post'], 3)
+
     def test_json_keys(self):
         r = self.js('--task', 't-0001')
         self.assertEqual(set(r), {'scope', 'task', 'summary', 'axes', 'tasks', 'letters', 'skipped'})

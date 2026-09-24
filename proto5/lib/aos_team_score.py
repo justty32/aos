@@ -410,8 +410,10 @@ def collect(team_dir, tid=None, runs_file=None):
                           'done_when': done_when_count(t),
                           'opened_at': s.isoformat() if s else None, 'ended_at': e.isoformat() if e else None})
     by_sender, rejected = {}, 0
+    scope_ids = {t['id'] for t in scope_tasks}
     for r in sent:
-        if not in_window(r.get('at') or r.get('recorded_at'), wlo, whi):
+        mine = str(r.get('reply_to') or '').split('.r')[0] in scope_ids    # 回這張單的信（含結束那一刻寄的完成信）
+        if not mine and not in_window(r.get('at') or r.get('recorded_at'), wlo, whi):
             continue
         if r.get('kind') == 'letter':
             k = str(r.get('from'))
