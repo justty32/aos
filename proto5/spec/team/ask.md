@@ -17,7 +17,7 @@
 {"_metainfo": {"_type": "aos_team_question", "_version": 1},
  "id": "q-0003", "request": "<ask 申請的 id>", "from": "worker-1",
  "question": "facts.json 沒寫分支慣例，要用 main 還是開分支？", "options": ["main", "開分支"], "default": "main",
- "reply_to": "t-0001", "asked_at": "…", "status": "open",
+ "reply_to": "t-0001", "task_rev": 1, "asked_at": "…", "status": "open",
  "answer": null, "answered_at": null, "answer_request": null, "effects": []}
 ```
 
@@ -28,7 +28,8 @@
 ## 答案怎麼到發問者
 
 `on_answer` 回的後續動作：`{"do": "letter", "from": "human", "to": 發問者, "status": "DONE", "reply_to": "q-0003", "text": "問：…\n答：B"}`，
-問題的 `reply_to` 是單號時再加 `{"do": "step", "task": 單號, "event": {"type": "resume", …}}`。
+問題綁在單上（發問時問的人是那張單的負責人、單還沒結束；問題檔記 `task_rev`）時再加 `{"do": "step", "task": 單號, "event": {"type": "resume", "q": …, "rev": task_rev, …}}`；
+狀態機只在單子正等這一題、rev 沒變時恢復。不是負責人問的、或單已結束的：問題照建、答案照寄，**不動單子**。
 信頭（mail.md）：`【人 → worker-1 · 回覆 q-0003 · 09-25 10:03】`。
 
 ## 人的指令（第 1 隊）

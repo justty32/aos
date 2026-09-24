@@ -217,7 +217,8 @@ class FakePost:
             elif e['do'] == 'step':
                 self.run(task.step(self.case.lay, e['task'], e['event']), src)
             elif e['do'] == 'open_review':
-                self.run(task.open_review(self.case.lay, self.case.roster, e['task'], '%s.e%d' % (src, k)), src)
+                self.run(task.open_review(self.case.lay, self.case.roster, e['task'], '%s.e%d' % (src, k),
+                                          e['rev'], e['attempt']), src)
             elif e['do'] == 'verify':
                 self.verifies.append(e)
 
@@ -241,10 +242,11 @@ class TaskTests(Base):
         return ltr, effects
 
     def deliver(self, tid='t-0001'):
-        t = self.t(tid)
-        ltr = {'id': 'L%d-%s' % (len(t['history']), tid), 'to': t['assignee'], 'reply_to': tid, 'rev': t['rev']}
-        task.letter_delivered(self.lay, ltr)
-        task.letter_picked_up(self.lay, ltr)
+        """把這張單最後一封派工信投到、再被收走。"""
+        e = [x for x in self.post.letters if x.get('dispatch', {}).get('task') == tid][-1]
+        ltr = dict(e, id='L%d-%s' % (len(self.post.letters), tid))
+        task.letter_delivered(self.lay, ltr, e['dispatch'])
+        task.letter_picked_up(self.lay, ltr, e['dispatch'])
 
     def test_open_is_queued_and_idempotent(self):
         req, effects = self.open()
@@ -403,7 +405,8 @@ class AskTests(Base):
     def test_ask_answer_roundtrip(self):
         post = FakePost(self)
         post.run(requests.handle(self.lay, self.roster, handoff(id=fmt.new_id('lead'))))
-        task.letter_delivered(self.lay, {'id': 'a', 'to': 'worker-1', 'reply_to': 't-0001', 'rev': 1})
+        task.letter_delivered(self.lay, {'id': 'a', 'to': 'worker-1', 'reply_to': 't-0001', 'rev': 1},
+                              {'task': 't-0001', 'rev': 1, 'attempt': 1})
         req = json.loads((EXAMPLES / 'request-ask.json').read_text(encoding='utf-8'))
         eff = requests.handle(self.lay, self.roster, req)
         post.run(eff)

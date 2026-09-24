@@ -237,10 +237,10 @@ class ToolUnitTests(unittest.TestCase):
         roster = fmt.load_roster(lay_root)
         req = json.loads((PROTO / 'spec/team/examples/request-handoff.json').read_text(encoding='utf-8'))
         requests.handle(lay, roster, req)
-        task.step(lay, 't-0001', {'type': 'delivered', 'src': 'd'})
+        task.step(lay, 't-0001', {'type': 'delivered', 'src': 'd', 'rev': 1, 'attempt': 1})
         task.step(lay, 't-0001', {'type': 'report', 'src': 'r', 'by': 'worker-1', 'rev': 1, 'status': 'DONE'})
         task.step(lay, 't-0001', {'type': 'verified', 'src': 'v', 'pass': True, 'rev': 1, 'attempt': 1})
-        task.open_review(lay, roster, 't-0001', 'o')
+        task.open_review(lay, roster, 't-0001', 'o', 1, 1)
         self.config(board=str(lay.tasks), member='reviewer')
         out = self.tool('board', {})
         self.assertIn('t-0001 reviewing worker-1 rev1 try1/3', out)
@@ -387,11 +387,12 @@ class TeamIntegrationTests(KernelCase):
                 if ltr['to'] != 'human':
                     aos_agent_say.drop_new(self.lay.member(ltr['to']) / 'input', fmt.mail_filename(ltr['id']),
                                            fmt.mail_message(ltr, roster['tz']))
-                    self.effects(roster, task.letter_delivered(self.lay, ltr), ltr['id'])
+                    self.effects(roster, task.letter_delivered(self.lay, ltr, e.get('dispatch')), ltr['id'])
             elif e['do'] == 'step':
                 self.effects(roster, task.step(self.lay, e['task'], e['event']), src)
             elif e['do'] == 'open_review':
-                self.effects(roster, task.open_review(self.lay, roster, e['task'], '%s.e%d' % (src, k)), src)
+                self.effects(roster, task.open_review(self.lay, roster, e['task'], '%s.e%d' % (src, k),
+                                                      e['rev'], e['attempt']), src)
 
     def history(self, name):
         return read_json(self.lay.member(name) / 'prompts/history.json', [])

@@ -67,6 +67,9 @@ members/worker-1/
 - 領隊、審查的 `ws` 是 `{"$opt": "ro", …}`。
 - 不在團隊裡（`coder`）：`{"mounts": {"ws": "workspace"}, "cwd": "ws", "net": false}`。
 - **一定有 `access.json`**：工具一律關牢，不靠「沒 access.json 也能跑」。
+- 名冊或模板**多掛的可寫資料夾**不准碰團隊控制資料：`team.json`、`team/`（別人的 outbox、任務表、問題）、`members/`（所有人的家）、proto5 本身——一個包著另一個也算，`AccessUnsafe`；要看就掛唯讀。
+- 自訂模板（名冊寫資料夾路徑）不准放在專案裡（工人改得到它的 `may` 與人格）：`BadTemplate`。換模板要先 `aos-team rm`（`.aos-template.json` 記了是哪個模板，不一樣＝`AlreadyExists`）。
+- 生到一半崩了：`.aos-template.json` 的 `complete: false` 在就接著做；工具包算裝好要「工具檔在＋`info.tools` 有那一條」都成立。
 
 ## 工具包的團隊設定（`team: true` 的包）
 

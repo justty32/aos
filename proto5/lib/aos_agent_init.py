@@ -79,7 +79,26 @@ def _access(base, tpl, folder, member):
         mounts[name] = _mount_value(value, folder, base, True)
     for name, value in (member or {}).get('mounts', {}).items():
         mounts[name] = _mount_value(value, member['team_dir'], base, False)
+    if member is not None:
+        _guard_team(base, mounts, member)
     return {'_metainfo': dict(aos_agent_access.METAINFO), 'mounts': mounts, 'cwd': 'ws', 'net': False}
+
+
+def _guard_team(base, mounts, member):
+    """多掛的可寫資料夾不准碰團隊的控制資料：team.json、team/（別人的 outbox、任務表、問題）、members/（所有人的家）、
+    proto5 自己（模板、工具包、程式）。自己的 outbox 是預設掛點，不在這裡查。只查可寫的；唯讀照 access.md 的規則。"""
+    team = os.path.realpath(member['team_dir'])
+    guarded = [os.path.join(team, 'team.json'), os.path.join(team, 'team'), os.path.join(team, 'members'),
+               os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))]
+    for name, value in mounts.items():
+        if name in ('ws', 'outbox', 'board') or isinstance(value, dict):
+            continue
+        real = os.path.realpath(os.path.join(base, os.path.expanduser(value)))
+        for g in guarded:
+            g = os.path.realpath(g)
+            if real == g or real.startswith(g.rstrip(os.sep) + os.sep) or g.startswith(real.rstrip(os.sep) + os.sep):
+                raise AgentError('AccessUnsafe', '多掛的 %s（%s）可寫，但碰到團隊控制資料 %s；改成唯讀 '
+                                 '{"$opt": "ro", "$val": …} 或換一個資料夾' % (name, real, g))
 
 
 def _system_text(folder, tpl, name, member):
@@ -113,6 +132,18 @@ def _write_team_config(base, pack, member):
     aos_home.write_json(cfg_path, cfg, indent=2)
 
 
+def _installed(base, pack):
+    """裝好＝工具檔在，而且 info.tools 有一條指到它（只有工具檔、沒有那一條＝崩在 tools add 中間，要重裝）。"""
+    if not (base / 'tools' / (pack + '.json')).exists():
+        return False
+    try:
+        tools = aos_home.read_json(base / 'info.json').get('tools', [])
+    except (aos_home.HomeError, AttributeError):
+        return False
+    want = 'tools/%s.json' % pack
+    return any((e if isinstance(e, str) else e.get('$val') if isinstance(e, dict) else None) == want for e in tools)
+
+
 def _install_tools(base, entries, member, lines):
     """依序裝工具包；裝過的（tools/<包>.json 在）不重裝；optional 的包不在就跳過。回有沒有全裝好。"""
     import contextlib
@@ -125,7 +156,7 @@ def _install_tools(base, entries, member, lines):
                 lines.append('跳過工具包 %s（還沒有這個包，之後重跑 init 會補）' % pack)
                 continue
             raise AgentError('NotFound', '模板要的工具包 %s 不在 %s' % (pack, aos_agent_tools.PACKAGES))
-        if not (base / 'tools' / (pack + '.json')).exists():
+        if not _installed(base, pack):
             with contextlib.redirect_stdout(io.StringIO()):
                 aos_agent_tools.add(str(base), pack, only=entry.get('only'))
             lines.append('裝了 %s%s' % (pack, '（%s）' % '、'.join(entry['only']) if entry.get('only') else ''))
@@ -155,16 +186,22 @@ def init_from_template(agent_dir, template, *, name=None, member=None, force=Fal
     entries = list(tpl.get('tools', [])) + list((member or {}).get('tools', []))
     marker = base / MARKER
     lines = []
+    try:
+        mark = aos_home.read_json(marker) if marker.exists() else None
+    except aos_home.HomeError:
+        mark = None
+    if mark is not None and mark.get('template') != template:
+        raise AgentError('AlreadyExists', '%s 是照模板 %s 生的，不是 %s；要換模板先 aos-team rm 再 init'
+                         % (base, mark.get('template'), template))
     if os.path.lexists(base / 'info.json'):
-        try:
-            mark = aos_home.read_json(marker)
-        except aos_home.HomeError:
+        if mark is None:
             raise AgentError('AlreadyExists', '%s 已經是 agent 家（拒絕覆蓋）' % (base / 'info.json'))
         if mark.get('complete') and member is None:
             raise AgentError('AlreadyExists', '%s 已經照模板 %s 生好了' % (base, mark.get('template')))
         lines.append('已在，%s' % ('補完上次沒生完的' if not mark.get('complete') else '更新工具設定'))
     else:
-        if not force and base.is_dir() and any(base.iterdir()):
+        # 有自己的 marker（complete=false）＝上次崩在寫 info.json 之前，照新生的做（檔都會整份重寫）
+        if not force and mark is None and base.is_dir() and any(base.iterdir()):
             raise AgentError('NotEmpty', '%s 不是空資料夾，也不是 agent 家；確定要生在這裡就加 --force' % base)
         for sub in ('prompts', 'tools', 'input', 'log'):
             (base / sub).mkdir(parents=True, exist_ok=True)
