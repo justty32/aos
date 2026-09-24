@@ -3,7 +3,8 @@
 給別隊當 Python 用（T2 驗收員）：
     import sys; sys.path.insert(0, '<proto5>/tools/wf'); import _wf
     _wf.residue(project_dir)            -> {'total', 'counts', 'hits', 'unreadable'}
-    _wf.lint(project_dir, strict=True)  -> {'exit', 'ok', 'total_line', 'summaries', 'problems', 'output'}
+    _wf.lint(project_dir, strict=True)  -> {'status': pass|fail|error, 'exit', 'ok', 'total_line', 'summaries',
+                                            'problems', 'output'}
 兩個都不寫專案（lint 只在給了 log_path 時寫那一個檔）、不叫模型、只跑本包自帶的快照程式。
 """
 import json
@@ -31,9 +32,15 @@ class WfError(Exception):
         self.code, self.message, self.extra = code, message, extra
 
 
+# 會改變快照程式行為的環境變數：Python 搜尋路徑／啟動檔、bash 非互動啟動檔
+DROP_ENV = ('PYTHONPATH', 'PYTHONSTARTUP', 'PYTHONHOME', 'PYTHONINSPECT', 'PYTHONUSERBASE', 'PYTHONSAFEPATH',
+            'BASH_ENV', 'ENV', 'CDPATH', 'GLOBIGNORE', 'SHELLOPTS', 'BASHOPTS')
+
+
 def _env():
-    env = dict(os.environ)
+    env = {k: v for k, v in os.environ.items() if k not in DROP_ENV and not k.startswith('BASH_FUNC_')}
     env['PYTHONDONTWRITEBYTECODE'] = '1'   # 快照是唯讀的（關牢時也是），不要寫 __pycache__
+    env['PYTHONNOUSERSITE'] = '1'          # 不讀使用者的 site-packages
     return env
 
 
@@ -97,7 +104,9 @@ def residue_text(res, limit=200):
 # ---------------------------------------------------------------- lint ----
 
 def lint(project_dir, strict=True, log_path=None, timeout=LINT_TIMEOUT):
-    """跑快照裡的 wf-lint.sh（不跑專案裡那份）。回 {'exit', 'ok', 'total_line', 'summaries', 'problems', 'output'}。"""
+    """跑快照裡的 wf-lint.sh（不跑專案裡那份）。回 {'status', 'exit', 'ok', 'total_line', 'summaries',
+    'problems', 'output'}；status＝pass／fail（檢查有效）／error（檢查器本身故障，不能當成通過或不通過）。
+    逾時、叫不起 bash 才 raise WfError。"""
     # 用 '.'＋cwd＝專案：輸出裡的路徑都是相對專案的短路徑
     argv = ['bash', os.path.join(SNAP, 'tools', 'wf-lint.sh')] + (['--strict'] if strict else []) + ['.']
     try:
@@ -117,7 +126,11 @@ def lint(project_dir, strict=True, log_path=None, timeout=LINT_TIMEOUT):
     total = next((ln for ln in reversed(lines) if ln.startswith('TOTAL ')), '')
     problems = [ln for ln in lines if PROBLEM.match(ln)]
     summaries = [ln for ln in lines if ln.startswith('SUMMARY ')]
-    return {'exit': p.returncode, 'ok': p.returncode == 0, 'total_line': total,
+    if p.returncode in (0, 1) and total:
+        status = 'pass' if p.returncode == 0 else 'fail'
+    else:                   # 檢查器自己壞了：退出碼不是 0/1，或沒印 TOTAL（被砍、FATAL、快照缺檔）
+        status = 'error'
+    return {'status': status, 'exit': p.returncode, 'ok': status == 'pass', 'total_line': total,
             'summaries': summaries, 'problems': problems, 'output': output}
 
 
@@ -164,13 +177,70 @@ def _manifest(tree):
     return files, dirs
 
 
+IDENT = re.compile(r'[0-9]{1,25}-[0-9]{1,10}\Z')
+RESERVED = (STAGING, BACKUP)
+
+
+def _safe_rel(p):
+    """journal 裡的路徑：相對、非空、不含 .. 與 NUL、normpath 不變、第一格不是 staging／backup。"""
+    return (isinstance(p, str) and p and '\0' not in p and not p.startswith('/')
+            and os.path.normpath(p) == p and '..' not in p.split('/')
+            and not p.split('/')[0].startswith(RESERVED))
+
+
+def _bad_journal(staging, why):
+    return WfError('BadJournal', '%s/%s is not a valid wf_init journal (%s); nothing was changed. This is not '
+                   'something you can fix: ask the user to inspect %s and delete it'
+                   % (os.path.basename(staging), COMMIT, why, os.path.basename(staging)))
+
+
+def load_journal(staging):
+    """讀 commit.json 並當成不可信輸入驗一遍；不合＝BadJournal（什麼都沒寫）。"""
+    try:
+        with open(os.path.join(staging, COMMIT), encoding='utf-8') as f:
+            plan = json.load(f)
+    except (OSError, ValueError) as e:
+        raise _bad_journal(staging, 'cannot read it: %s' % e)
+    if not isinstance(plan, dict):
+        raise _bad_journal(staging, 'not a JSON object')
+    ident = plan.get('id')
+    if not isinstance(ident, str) or not IDENT.match(ident) or os.path.basename(staging) != STAGING + ident:
+        raise _bad_journal(staging, 'id does not match the folder name')
+    if plan.get('backup') != BACKUP + ident:
+        raise _bad_journal(staging, 'backup must be %s' % (BACKUP + ident))
+    for key in ('files', 'dirs'):
+        items = plan.get(key)
+        if not isinstance(items, list):
+            raise _bad_journal(staging, '%s must be a list' % key)
+        for p in items:
+            if not _safe_rel(p):
+                raise _bad_journal(staging, 'unsafe path in %s: %r' % (key, p))
+    return plan
+
+
+def _inside(parent, child):
+    return child == parent or child.startswith(parent.rstrip('/') + '/')
+
+
 def _roll_forward(target, staging):
     """照 commit.json 把還在 staging 的檔一個個 rename 進 target；被蓋掉的舊檔挪進 .wf-backup-<id>/。
-    每一步都可重做：src 不在＝已經搬過。回 (搬了幾個, 備份了幾個)。"""
-    with open(os.path.join(staging, COMMIT), encoding='utf-8') as f:
-        plan = json.load(f)
+    每一步都可重做：src 不在＝已經搬過。先整份驗過（journal、目的地途中、來源在 staging/tree 裡）才動手。
+    回 (搬了幾個, 備份了幾個)。"""
+    plan = load_journal(staging)
     tree = os.path.join(staging, 'tree')
+    if os.path.islink(tree) or not os.path.isdir(tree):
+        raise _bad_journal(staging, 'tree/ is missing or a symbolic link')
+    real_tree = os.path.realpath(tree)
     backup = os.path.join(target, plan['backup'])
+    if os.path.islink(backup) or (os.path.lexists(backup) and not os.path.isdir(backup)):
+        raise WfError('UnsafePath', '%s is not a real folder; nothing was changed. Ask the user to remove it'
+                      % plan['backup'])
+    _check_no_links(target, plan['files'] + plan['dirs'])
+    _check_no_links(backup, plan['files'] + plan['dirs'], base=target)
+    for relp in plan['files']:
+        src = os.path.join(tree, relp)
+        if os.path.lexists(src) and not _inside(real_tree, os.path.realpath(os.path.dirname(src))):
+            raise _bad_journal(staging, '%s points outside the staging area' % relp)
     moved = backed = 0
     for d in plan['dirs']:
         dst = os.path.join(target, d)
@@ -208,13 +278,14 @@ def _backup(target, backup, relp):
 
 
 def recover(target):
-    """處理上次沒做完的 staging：有 commit.json＝往前做完；沒有＝丟掉。回白話清單。"""
+    """處理上次沒做完的 staging：有 commit.json＝驗過再往前做完；沒有＝丟掉。回白話清單。
+    呼叫端要持專案鎖（init 會拿）。"""
     notes = []
     for name in sorted(os.listdir(target)):
         full = os.path.join(target, name)
         if not name.startswith(STAGING) or os.path.islink(full) or not os.path.isdir(full):
             continue
-        if os.path.exists(os.path.join(full, COMMIT)):
+        if os.path.lexists(os.path.join(full, COMMIT)):
             moved, backed = _roll_forward(target, full)
             notes.append('finished an interrupted import from %s (%d files moved, %d backed up)'
                          % (name, moved, backed))
@@ -224,13 +295,35 @@ def recover(target):
     return notes
 
 
+def _lock(target):
+    """專案鎖：flock 專案資料夾本身的 fd（不建檔、不會被 rename）；拿不到＝Busy。"""
+    import fcntl
+    fd = os.open(target, os.O_RDONLY | os.O_DIRECTORY | getattr(os, 'O_CLOEXEC', 0))
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        raise WfError('Busy', 'another wf_init is running on this project; wait for it to finish, then call '
+                      'wf_init again')
+    return fd
+
+
 def init(target, flavor_list, non_invasive=None, timeout=INIT_TIMEOUT):
-    """在 target 裡的 .wf-staging-<id>/ 跑快照的 wf-init.sh，成功才搬進 target。回 {'notes', 'moved', 'backed'}。"""
+    """在 target 裡的 .wf-staging-<id>/ 跑快照的 wf-init.sh，成功才搬進 target。回 {'notes', 'moved', 'backed'}。
+    從收拾舊 staging 到搬完、清完整段持專案鎖。"""
     known = flavors()
     bad = [f for f in flavor_list if f not in known]
     if bad:
         raise WfError('BadArguments', 'unknown flavor %s; available: %s' % (', '.join(bad), ', '.join(known)))
     os.makedirs(target, exist_ok=True)
+    fd = _lock(target)
+    try:
+        return _init_locked(target, flavor_list, non_invasive, timeout)
+    finally:
+        os.close(fd)
+
+
+def _init_locked(target, flavor_list, non_invasive, timeout):
     notes = recover(target)
     if os.path.lexists(os.path.join(target, 'AGENTS.md')):
         if notes:
@@ -266,7 +359,11 @@ def init(target, flavor_list, non_invasive=None, timeout=INIT_TIMEOUT):
                       % (proc.returncode, msg[-1] if msg else 'no output'))
     _check_no_staging_path(tree, staging)
     files, dirs = _manifest(tree)
-    _check_no_links(target, staging, files + dirs)
+    try:
+        _check_no_links(target, files + dirs)
+    except WfError:
+        shutil.rmtree(staging, ignore_errors=True)     # 這份 staging 是這次自己建的，可以刪
+        raise
     _write_json(os.path.join(staging, COMMIT), {'id': ident, 'files': files, 'dirs': dirs,
                                                 'backup': BACKUP + ident})
     moved, backed = _roll_forward(target, staging)
@@ -274,18 +371,21 @@ def init(target, flavor_list, non_invasive=None, timeout=INIT_TIMEOUT):
             'backup': BACKUP + ident if backed else None}
 
 
-def _check_no_links(target, staging, rels):
-    """要搬進去的路徑，途中（不含最後一格）若有符號連結，搬的時候會寫到連結指的地方：先拒絕、什麼都不動。"""
+def _check_no_links(top, rels, base=None):
+    """要搬進去（或備份進去）的路徑，途中（不含最後一格）若有符號連結，搬的時候會寫到連結指的地方：
+    先拒絕、什麼都不動（不刪任何東西，由呼叫端決定）。top 自己是連結也算。"""
+    if os.path.islink(top):
+        raise WfError('UnsafePath', '%s is a symbolic link; wf_init will not write through it. Nothing was '
+                      'changed; ask the user to replace the link with a real folder' % os.path.relpath(top, base or top))
     for relp in rels:
         parts = relp.split(os.sep)[:-1]
-        cur = target
+        cur = top
         for part in parts:
             cur = os.path.join(cur, part)
             if os.path.islink(cur):
-                shutil.rmtree(staging, ignore_errors=True)
                 raise WfError('UnsafePath', '%s in the project is a symbolic link; wf_init will not write through '
                               'it. Nothing was changed; ask the user to replace the link with a real folder'
-                              % os.path.relpath(cur, target))
+                              % os.path.relpath(cur, base or top))
             if not os.path.exists(cur):
                 break
 
@@ -342,7 +442,8 @@ def table(root, relfile, op, index=None, fields=None, regex=None, start=None, en
     else:
         raise WfError('BadArguments', 'unknown op %s' % op)
     try:
-        p = subprocess.run(['python3', tdb] + argv, cwd=root, stdin=subprocess.DEVNULL,
+        # -E -s：不看 PYTHON* 環境、不加使用者 site；腳本目錄（快照）在 sys.path[0]，cwd（專案）不在
+        p = subprocess.run(['python3', '-E', '-s', tdb] + argv, cwd=root, stdin=subprocess.DEVNULL,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, env=_env())
     except subprocess.TimeoutExpired:
         raise WfError('Timeout', 'tabledb did not finish in %d s' % timeout)

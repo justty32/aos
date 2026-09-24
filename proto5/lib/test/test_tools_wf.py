@@ -121,8 +121,10 @@ class PackTests(unittest.TestCase):
         self.assertEqual(r['hits'][0], ('a.md', 2, '{{'))
         lint = _wf.lint(d, strict=True)
         self.assertFalse(lint['ok'])
+        self.assertEqual(lint['status'], 'fail')
         self.assertIn('residue=3', lint['total_line'])
         self.assertEqual(os.listdir(d), ['a.md'])
+        self.assertEqual(_wf.lint(d, strict=False)['status'], 'pass')
 
 
 class DocTests(WfCase):
@@ -212,6 +214,62 @@ class LintTests(WfCase):
         self.w('AGENTS.md', '# x\n')
         self.tool('wf_lint', {})
         self.assertFalse(os.path.exists(mark))
+
+
+    def break_linter(self, script):
+        """把這個假家裡那份快照的 wf-lint.sh 換成壞的（原始碼樹的快照不動）。"""
+        path = os.path.join(self.home, 'tools', 'wf', 'snapshot', 'tools', 'wf-lint.sh')
+        with open(path, 'w') as f:
+            f.write('#!/usr/bin/env bash\n' + script)
+
+    def test_checker_failure_is_an_error_not_a_fail(self):
+        """檢查器自己壞了（退出碼不是 0/1、或沒有 TOTAL 行）＝LintFailed 退 1，不是 FAIL 的成功文字。"""
+        self.w('a.md', '# a\n')
+        for script in ('echo "FATAL missing checks"; exit 2\n', 'echo half way\nexit 1\n',
+                       'kill -9 $$\n', 'echo "TOTAL broken=0"; exit 7\n'):
+            self.break_linter(script)
+            err = self.tool('wf_lint', {}, code=1)
+            self.assertEqual(err['error'], 'LintFailed', script)
+            self.assertIn('not a problem in the project files', err['message'])
+        self.break_linter('echo "TOTAL broken=0"; exit 0\n')
+        self.assertEqual(self.tool('wf_lint', {}).splitlines()[0], 'PASS')
+
+    def test_python_status_error(self):
+        import importlib.util
+        self.break_linter('exit 3\n')
+        pack = os.path.join(self.home, 'tools', 'wf')
+        spec = importlib.util.spec_from_file_location('_wf_broken', os.path.join(pack, '_wf.py'))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        res = mod.lint(self.ws)
+        self.assertEqual((res['status'], res['ok'], res['exit']), ('error', False, 3))
+
+    def test_hostile_environment_ignored(self):
+        """BASH_ENV、PYTHONPATH 裡的 sitecustomize、專案裡的 .py 都不會被快照的檢查器載入。"""
+        mark = self.p('pwned')
+        evil = os.path.join(self.home, 'evil')
+        os.makedirs(evil)
+        with open(os.path.join(evil, 'env.sh'), 'w') as f:
+            f.write('touch %s.bash\n' % mark)
+        for d in (evil, self.ws):
+            for mod in ('sitecustomize', 'usercustomize', 'tabledb_fmt', 'check_anchors'):
+                with open(os.path.join(d, mod + '.py'), 'w') as f:
+                    f.write('open(%r, "w").write("x")\n' % (mark + '.' + mod))
+        self.w('AGENTS.md', '# x\n')
+        self.w('t.json', json.dumps({'contract': 'wf-table/1', 'columns': ['a'], 'rows': [{'a': '1'}]}))
+        env = {'BASH_ENV': os.path.join(evil, 'env.sh'), 'ENV': os.path.join(evil, 'env.sh'),
+               'PYTHONPATH': evil, 'PYTHONSTARTUP': os.path.join(evil, 'sitecustomize.py')}
+        # 工具本身用 -E -s 起（它自己的環境由 aos／aos-jail 管）；這裡驗的是它叫的快照子行程
+        for name, args in (('wf_lint', {}), ('wf_table', {'file': 't.json', 'op': 'get', 'index': 0}),
+                           ('wf_init', {'flavor': [], 'path': 'p'})):
+            prog = os.path.join(self.home, 'tools', 'wf', name)
+            r = subprocess.run([sys.executable, '-E', '-s', prog], cwd=self.home, input=json.dumps(args),
+                               capture_output=True, text=True, timeout=60, env=dict(os.environ, **env))
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual([n for n in os.listdir(self.ws) if n.startswith('pwned')], [])
+        # 對照組：不清環境的話 PYTHONPATH 的 sitecustomize 會被載入（證明上面的測試有牙齒）
+        subprocess.run([sys.executable, '-c', 'pass'], env=dict(os.environ, **env), check=True)
+        self.assertTrue(os.path.exists(mark + '.sitecustomize'))
 
 
 class InitTests(WfCase):
@@ -328,6 +386,113 @@ class InitTests(WfCase):
         self.assertEqual(self.files(self.ws), self.files(ref))
         err = self.tool('wf_init', {'flavor': ['heartbeat'], 'non_invasive': 'wf'}, code=1)
         self.assertEqual(err['error'], 'AlreadyImported')
+
+
+    def forge(self, plan, name='.wf-staging-1-1'):
+        """在專案裡放一份偽造的 staging＋commit.json（模型的 bash 做得到）。"""
+        st = self.p(name)
+        os.makedirs(os.path.join(st, 'tree'))
+        with open(os.path.join(st, 'staging-payload'), 'w') as f:
+            f.write('payload\n')
+        with open(os.path.join(st, 'tree', 'ok.md'), 'w') as f:
+            f.write('ok\n')
+        with open(os.path.join(st, 'commit.json'), 'w') as f:
+            json.dump(plan, f)
+        return st
+
+    def test_forged_journal_refused(self):
+        """commit.json 是不可信輸入：越界路徑、絕對路徑、怪 backup、型別錯＝BadJournal，什麼都不寫。"""
+        outside = tempfile.mkdtemp(prefix='aos-wf-out-')
+        self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+        base = {'id': '1-1', 'files': ['ok.md'], 'dirs': [], 'backup': '.wf-backup-1-1'}
+        bad = [dict(base, files=['../staging-payload']), dict(base, files=['../../payload']),
+               dict(base, files=[os.path.join(outside, 'abs')]), dict(base, dirs=['../../made']),
+               dict(base, backup='../x'), dict(base, backup='.wf-backup-2-2'), dict(base, id='../1'),
+               dict(base, files='ok.md'), dict(base, files=['a/./b']), dict(base, files=['.wf-backup-1-1/x']),
+               ['not', 'an', 'object']]
+        for plan in bad:
+            st = self.forge(plan)
+            before = sorted(os.listdir(self.ws))
+            err = self.tool('wf_init', {'flavor': ['heartbeat']}, code=1)
+            self.assertEqual(err['error'], 'BadJournal', plan)
+            self.assertIn('ask the user', err['message'])
+            self.assertEqual(sorted(os.listdir(self.ws)), before, plan)       # 沒寫、沒刪
+            self.assertTrue(os.path.exists(os.path.join(st, 'staging-payload')))
+            self.assertFalse(os.path.exists(os.path.join(self.home, 'payload')))
+            self.assertFalse(os.path.exists(os.path.join(self.home, 'made')))
+            self.assertEqual(os.listdir(outside), [])
+            shutil.rmtree(st)
+        st = self.forge(base)
+        with open(os.path.join(st, 'commit.json'), 'w') as f:
+            f.write('{broken')
+        self.assertEqual(self.tool('wf_init', {'flavor': []}, code=1)['error'], 'BadJournal')
+
+    def test_forged_journal_source_outside_staging(self):
+        """tree/ 裡放連結指到別處：來源不在 staging 裡＝BadJournal，別處的檔不會被搬進專案。"""
+        outside = tempfile.mkdtemp(prefix='aos-wf-out-')
+        self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+        with open(os.path.join(outside, 'secret'), 'w') as f:
+            f.write('s\n')
+        st = self.forge({'id': '1-1', 'files': ['a/secret'], 'dirs': [], 'backup': '.wf-backup-1-1'})
+        os.symlink(outside, os.path.join(st, 'tree', 'a'))
+        err = self.tool('wf_init', {'flavor': []}, code=1)
+        self.assertEqual(err['error'], 'BadJournal')
+        self.assertIn('outside the staging area', err['message'])
+        self.assertTrue(os.path.exists(os.path.join(outside, 'secret')))
+        self.assertFalse(os.path.exists(self.p('a')))
+
+    def test_forged_journal_link_on_the_way(self):
+        """journal 合法、但專案裡途中是連結（或 backup 是連結）＝UnsafePath，staging 留著不刪。"""
+        outside = tempfile.mkdtemp(prefix='aos-wf-out-')
+        self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+        st = self.forge({'id': '1-1', 'files': ['sub/ok.md'], 'dirs': [], 'backup': '.wf-backup-1-1'})
+        os.makedirs(os.path.join(st, 'tree', 'sub'))
+        shutil.move(os.path.join(st, 'tree', 'ok.md'), os.path.join(st, 'tree', 'sub', 'ok.md'))
+        os.symlink(outside, self.p('sub'))
+        self.assertEqual(self.tool('wf_init', {'flavor': []}, code=1)['error'], 'UnsafePath')
+        self.assertTrue(os.path.isdir(st))
+        self.assertEqual(os.listdir(outside), [])
+        os.unlink(self.p('sub'))
+        os.makedirs(self.p('sub'))
+        with open(self.p('sub', 'ok.md'), 'w') as f:      # 要被蓋掉的檔 → 備份；backup 是連結就拒絕
+            f.write('mine')
+        os.symlink(outside, self.p('.wf-backup-1-1'))
+        self.assertEqual(self.tool('wf_init', {'flavor': []}, code=1)['error'], 'UnsafePath')
+        self.assertEqual(os.listdir(outside), [])
+        os.unlink(self.p('.wf-backup-1-1'))
+        out = self.tool('wf_init', {'flavor': ['heartbeat']})           # 合法的 journal 照樣收尾
+        self.assertIn('finished an interrupted import', out)
+        self.assertEqual(slurp(self.p('sub', 'ok.md')), 'ok\n')
+        self.assertEqual(slurp(self.p('.wf-backup-1-1', 'sub', 'ok.md')), 'mine')
+
+    def test_second_wf_init_gets_busy(self):
+        """兩個 wf_init 同時跑：第二個立刻 Busy、不碰第一個的 staging；第一個被砍後重跑成功。"""
+        mark = os.path.join(self.home, 'mark')
+        env = dict(os.environ, AOS_WF_TEST_PAUSE='init', AOS_WF_TEST_MARK=mark)
+        proc = subprocess.Popen([os.path.join(self.home, 'tools', 'wf', 'wf_init')], cwd=self.home,
+                                stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, env=env,
+                                start_new_session=True)
+        proc.stdin.write(json.dumps({'flavor': ['heartbeat'], 'non_invasive': 'wf'}).encode())
+        proc.stdin.close()
+        try:
+            deadline = time.time() + 30
+            while not os.path.exists(mark):
+                self.assertIsNone(proc.poll())
+                self.assertLess(time.time(), deadline)
+                time.sleep(0.005)
+            staging = [n for n in os.listdir(self.ws) if n.startswith('.wf-staging-')]
+            t0 = time.monotonic()
+            err = self.tool('wf_init', {'flavor': ['heartbeat'], 'non_invasive': 'wf'}, code=1)
+            self.assertLess(time.monotonic() - t0, 5)
+            self.assertEqual(err['error'], 'Busy')
+            self.assertIn('another wf_init is running', err['message'])
+            self.assertEqual([n for n in os.listdir(self.ws) if n.startswith('.wf-staging-')], staging)
+        finally:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.wait()
+        out = self.tool('wf_init', {'flavor': ['heartbeat'], 'non_invasive': 'wf'})
+        self.assertIn('imported workflows', out)
+        self.assert_heartbeat_import(self.ws)
 
 
 class TableTests(WfCase):
