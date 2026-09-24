@@ -21,10 +21,8 @@ POLL_SECONDS = .2
 def print_message(message, *, as_json=False):
     if as_json:
         print(json.dumps(message, ensure_ascii=False))
-    elif not message.get('content') and message.get('tool_calls'):
-        print('(tool_calls: %s)' % ', '.join(c['function']['name'] for c in message['tool_calls']))
     else:
-        print(message.get('content', ''))
+        print(render.reply_text(message))
     sys.stdout.flush()
 
 
@@ -98,13 +96,13 @@ def last(agent_dir, *, count=1, calls=None, as_json=False):
 
 def _warn_processing(base, data, history, message):
     """fix-r5（§1.5）：這一輪還沒走完就講，免得把中途那句當答案。"""
-    busy = (bool(message.get('tool_calls')) or history[-1] is not message
+    busy = (bool(render.calls_of(message)) or history[-1] is not message
             or data.get('state') not in (None, 'idle')
             or data.get('batch') is not None or data.get('intake') or data.get('pending_inputs'))
     if not busy:
         return
-    if message.get('tool_calls'):
-        names = ', '.join(c['function']['name'] for c in message['tool_calls'])
+    if render.calls_of(message):
+        names = render.tool_names(message)
         report('warn', '還在處理中（tool_calls: %s）：最後的回話還沒出來；要等就 aos-agent listen --wait --target %s'
                % (names, base))
     else:
@@ -214,12 +212,13 @@ def follow(info, *, as_json=False, env=None, calls=None):
             if history is not None:
                 if len(history) < seen:
                     seen = len(history)
-                names = render.call_names(history, len(history)) if calls else {}
+                names = render.call_names(history, seen) if calls else {}
                 for message in history[seen:]:
                     if not isinstance(message, dict):
                         continue
                     if calls and not as_json:
                         print_lines(render.event_lines(message, names, calls))
+                        render.note_calls(names, message)
                     elif message.get('role') == 'assistant' or (calls and message.get('role') == 'tool'):
                         print_message(message, as_json=as_json)
                 seen = len(history)

@@ -69,19 +69,37 @@ def _contents(path):
 
 
 def intake_times(base, inputs):
-    """輸入封存（<原檔名>.<ns>-<pid>.done）照消費 id 分組：[(ns, 那次收的 user 內容…)]，照時間排。"""
+    """輸入封存（<原檔名>.<ns>-<pid>.done）照完整消費 id 分組：[(ns, 那次收的 user 內容…)]，照時間排。
+
+    同一次收件裡照 input 路徑的順序、再照原檔名排（跟 intake 收的順序一樣）；只讀普通檔（不跟 symlink、不開 FIFO）。
+    """
     groups = {}
-    for folder, name in _done_dirs(base, inputs):
+    for order, (folder, name) in enumerate(_done_dirs(base, inputs)):
         try:
-            entries = sorted(folder.iterdir())
+            entries = list(folder.iterdir())
         except OSError:
             continue
         for entry in entries:
             match = DONE_NAME.search(entry.name)
-            if not match or (name is not None and entry.name[:match.start()] != name):
+            original = entry.name[:match.start()] if match else None
+            if not match or (name is not None and original != name):
                 continue
-            groups.setdefault(int(match.group(1)), []).extend(_contents(entry))
-    return sorted(groups.items())
+            try:
+                if entry.is_symlink() or not entry.is_file():
+                    continue
+            except OSError:
+                continue
+            key = (int(match.group(1)), int(match.group(2)))
+            groups.setdefault(key, []).append((order, original, entry))
+    return [(key[0], [c for _, _, entry in sorted(files) for c in _contents(entry)])
+            for key, files in sorted(groups.items())]
+
+
+def _stamp(ns):
+    try:
+        return datetime.fromtimestamp(ns / 1e9).strftime('%m-%d %H:%M:%S')
+    except (OverflowError, OSError, ValueError):
+        return None  # 檔名裡的數字不合理：這輪不印時間
 
 
 def round_times(history, base, inputs):
@@ -94,7 +112,9 @@ def round_times(history, base, inputs):
     for number in sorted(openers):
         for k in range(j, len(groups)):
             if groups[k][1] and groups[k][1][0] == openers[number]:
-                result[number] = datetime.fromtimestamp(groups[k][0] / 1e9).strftime('%m-%d %H:%M:%S')
+                stamp = _stamp(groups[k][0])
+                if stamp:
+                    result[number] = stamp
                 j = k + 1
                 break
     return result
@@ -111,21 +131,58 @@ def _cut(text, limit):
     return text if len(text) <= limit else text[:limit] + '…'
 
 
+def _flat(value):
+    """任何值變成不含換行的字串：字串原樣、別的印 JSON；LF／CR 寫成 \\n／\\r。"""
+    if not isinstance(value, str):
+        try:
+            value = json.dumps(value, ensure_ascii=False)
+        except (TypeError, ValueError):
+            value = repr(value)
+    return value.replace('\r', '\\r').replace('\n', '\\n')
+
+
 def _value(value):
-    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
-    return _cut(text.replace('\n', '\\n'), SHORT_VALUE)
+    return _cut(_flat(value), SHORT_VALUE)
+
+
+def _function(call):
+    function = call.get('function') if isinstance(call, dict) else None
+    return function if isinstance(function, dict) else {}
+
+
+def call_name(call):
+    """工具名（形狀怪的寫 ?），一定不含換行。"""
+    name = _function(call).get('name')
+    return _flat(name) if isinstance(name, str) and name else '?'
+
+
+def calls_of(message):
+    """一則 assistant 的 tool_calls（不是陣列當沒有）。"""
+    value = message.get('tool_calls') if isinstance(message, dict) else None
+    return value if isinstance(value, list) else []
+
+
+def tool_names(message):
+    return ', '.join(call_name(c) for c in calls_of(message))
+
+
+def _text(value):
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False) if value is not None else ''
 
 
 def call_line(call):
     """--show-calls 的一行：[呼叫 名 k=v …]，值長的截短。"""
-    function = call.get('function') or {}
-    name, raw = function.get('name', '?'), function.get('arguments', '')
+    name, raw = call_name(call), _function(call).get('arguments', '')
+    if not isinstance(raw, str):
+        raw = _text(raw)
     try:
         args = json.loads(raw) if raw.strip() else {}
-    except (ValueError, AttributeError):
-        return '[呼叫 %s 參數不是 JSON：%s]' % (name, _value(str(raw)))
+    except ValueError:
+        return '[呼叫 %s 參數不是 JSON：%s]' % (name, _value(raw))
     if isinstance(args, dict):
-        text = ' '.join('%s=%s' % (k, _value(v)) for k, v in args.items())
+        text = ' '.join('%s=%s' % (_flat(k), _value(v)) for k, v in args.items())
     else:
         text = _value(args)
     return '[呼叫 %s%s]' % (name, ' ' + _cut(text, SHORT_ARGS) if text else '')
@@ -133,8 +190,7 @@ def call_line(call):
 
 def result_line(name, content):
     """--show-calls 的一行：[結果 名：第一行]，多行就註明共幾行。"""
-    text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
-    lines = text.splitlines()
+    lines = _text(content).splitlines()
     first = next((l.strip() for l in lines if l.strip()), '')
     if not first:
         return '[結果 %s：（空）]' % name
@@ -156,52 +212,60 @@ def _block(text):
 
 
 def call_full(call):
-    function = call.get('function') or {}
-    raw = function.get('arguments', '')
+    raw = _function(call).get('arguments', '')
     try:
         text = json.dumps(json.loads(raw), ensure_ascii=False, indent=2)
     except (ValueError, TypeError):
-        text = str(raw)
-    return ['[呼叫 %s id=%s]' % (function.get('name', '?'), call.get('id', '?'))] + _block(text)
+        text = _text(raw)
+    call_id = call.get('id', '?') if isinstance(call, dict) else '?'
+    return ['[呼叫 %s id=%s]' % (call_name(call), _flat(call_id))] + _block(text)
 
 
 def result_full(name, call_id, content):
-    text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
-    return ['[結果 %s id=%s %d 行 %d 字]' % (name, call_id, len(text.splitlines()), len(text))] + _block(text)
+    text = _text(content)
+    return ['[結果 %s id=%s %d 行 %d 字]' % (name, _flat(call_id), len(text.splitlines()), len(text))] + _block(text)
 
 
 def reply_text(message):
     """沒開 --show-calls 時一則回話的印法：content 原樣；只有 tool_calls 時印 (tool_calls: 名…)。"""
-    if not message.get('content') and message.get('tool_calls'):
-        return '(tool_calls: %s)' % ', '.join(c['function']['name'] for c in message['tool_calls'])
-    return message.get('content') or ''
+    if not message.get('content') and calls_of(message):
+        return '(tool_calls: %s)' % tool_names(message)
+    return _text(message.get('content'))
+
+
+def note_calls(names, message):
+    """看到一則 assistant 就更新 tool_call_id → 工具名；後面同 id 的呼叫蓋掉前面的。"""
+    if isinstance(message, dict) and message.get('role') == 'assistant':
+        for call in calls_of(message):
+            if isinstance(call, dict) and isinstance(call.get('id'), str):
+                names[call['id']] = call_name(call)
 
 
 def call_names(history, end):
-    """tool_call_id → 工具名（看 end 以前所有 assistant 的 tool_calls）。"""
+    """tool_call_id → 工具名：只看 end 以前，所以結果對到的是它之前最近的那個呼叫。"""
     names = {}
     for message in history[:end]:
-        if isinstance(message, dict) and message.get('role') == 'assistant':
-            for call in message.get('tool_calls') or []:
-                names[call.get('id')] = (call.get('function') or {}).get('name', '?')
+        note_calls(names, message)
     return names
 
 
 def event_lines(message, names, calls):
     """一格記憶的印法（calls＝'short'／'full'／None）；user 不印。"""
+    if not isinstance(message, dict):
+        return []
     role = message.get('role')
     if role == 'assistant':
         if not calls:
             return [reply_text(message)]
-        lines = [message['content']] if message.get('content') else []
-        if not message.get('tool_calls') and not lines:
+        lines = [_text(message['content'])] if message.get('content') else []
+        if not calls_of(message) and not lines:
             lines = ['']
-        for call in message.get('tool_calls') or []:
+        for call in calls_of(message):
             lines.extend([call_line(call)] if calls == 'short' else call_full(call))
         return lines
     if role == 'tool' and calls:
         call_id = message.get('tool_call_id')
-        name = names.get(call_id, '?')
+        name = names.get(call_id, '?') if isinstance(call_id, str) else '?'
         return [result_line(name, message.get('content'))] if calls == 'short' else \
             result_full(name, call_id, message.get('content'))
     return []
@@ -210,10 +274,14 @@ def event_lines(message, names, calls):
 def render(history, indexes, *, calls=None, headers=True, times=None):
     """把記憶裡這些格印成行：換輪時先一行標頭（headers），user 不印。"""
     numbers, _ = rounds(history)
-    names = call_names(history, len(history))
-    out, shown = [], None
-    for i in indexes:
+    indexes = list(indexes)
+    wanted, names, out, shown = set(indexes), {}, [], None
+    for i in range(max(indexes, default=-1) + 1):
+        if i not in wanted:
+            note_calls(names, history[i])
+            continue
         lines = event_lines(history[i], names, calls)
+        note_calls(names, history[i])
         if not lines:
             continue
         if headers and numbers[i] != shown:
