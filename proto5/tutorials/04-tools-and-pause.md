@@ -125,6 +125,23 @@ aos-agent status --target $W/bob | head -1
 `continue` 印「已解除暫停，等下一次成功」；這時 `health` 也是這句。回話出來後才變回 `health ok`，舊錯另列一行、開頭標「（已恢復）」。
 好幾個 agent 一起倒時，一次救全部用 `aos-agent continue --all`（[05](05-many-agents.md)）。
 
+## 6. 想當 coding agent 用
+
+不用自己寫工具：內建 `base` 工具包一次裝七支（read／write／edit／bash／grep／find／ls，仿 pi），裝了就能讀寫檔案、跑指令：
+
+```sh
+aos-agent tools add base --target $W/bob
+```
+
+在某個專案裡工作就加 `--root`（工具的路徑會關在這個資料夾裡，擋掉走出去）：
+
+```sh
+aos-agent tools add base --target $W/bob --root ~/proj
+```
+
+裝完不用重 `start`，下一格就生效。這時人格通常也要跟著換成 coding agent 那套（改 `$W/bob/prompts/system.json`），
+不然模型不知道自己有這些工具能用。每支工具的參數、錯誤格式、工作根目錄怎麼算見 [proto5/tools/README.md](../tools/README.md)。
+
 ## 底下在幹嘛
 
 - 模型要用工具時，agent 把每個工具呼叫寫成一份 inst，往 kernel `add --once` 到 `default` 池（`info.json` 的 `tool_pool`），下一格收結果、寫進記憶再問模型。（[工具檔格式](../spec/agent/info.md)、[act 怎麼跑工具](../spec/aos-agent/send.md)）

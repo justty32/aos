@@ -63,6 +63,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-agent listen [--last｜--wait｜--follow]` | 看回話：最後一則／等下一則新的／一直印 | [03](tutorials/03-first-agent.md) |
 | `aos-agent status` | 第一行 `health`，再來在哪一格、在等什麼、這次的錯 | [03](tutorials/03-first-agent.md) |
 | `aos-agent pause`／`continue [--all]` | 手動暫停／解除手動暫停與連敗暫停（`--all`＝kernel 登記的全部） | [04](tutorials/04-tools-and-pause.md)、[05](tutorials/05-many-agents.md) |
+| `aos-agent tools add base --target 家 [--root DIR]` | 裝內建工具包 base（read／write／edit／bash／grep／find／ls），`--root` 指工作根目錄 | [04](tutorials/04-tools-and-pause.md) |
 | `aos-kernel tick`、`aos-agent tick` | 走一格；kernel 自己會叫，人不用打 | — |
 | `aos-llm call`、`aos-cpu`、`aos-exec` | 問一次模型／cpu 主人程式／照 inst 跑一次程式；都是別的指令在叫 | — |
 
@@ -86,7 +87,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | [spec/kernel/](spec/kernel/README.md) | kernel：替登記的工作挑空 cpu 派下去、收結果、決定要不要再跑；每次只跑一格 `aos-kernel tick`，格接格排程 | 2026-09-23 定稿；實作 [`lib/aos_kernel.py`](lib/aos_kernel.py)（`aos-kernel`；09-24 拆成 `aos_kernel_*.py` 幾支） |
 | [spec/daemon/](spec/daemon/README.md) | daemon：所有 cpu 的父行程，只管孩子的啟動、重拉、停止；家也照 cpu 範式長 | 2026-09-23 定稿；實作 [`lib/aos_daemon.py`](lib/aos_daemon.py)（`aos-daemon`） |
 | [spec/agent/](spec/agent/README.md) | 一個 agent 就是一個資料夾：info.json 記人格、記憶、工具與排程設定；state.json 記三格進度、批次與恢復紀錄 | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent_home.py`](lib/aos_agent_home.py)＋[`lib/aos_agent_info.py`](lib/aos_agent_info.py) |
-| [spec/aos-agent/](spec/aos-agent/README.md) | `aos-agent tick／start／stop [--target DIR]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`listen`／`status`／`pause`／`continue`／`check` 在 §1（09-24 試玩 r2 補；fix-r4 改 `--target`、`listen`、`pause`、tick 鎖；advice-r1 加 `check`） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
+| [spec/aos-agent/](spec/aos-agent/README.md) | `aos-agent tick／start／stop [--target DIR]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`listen`／`status`／`pause`／`continue`／`check`／`tools add` 在 §1（09-24 試玩 r2 補；fix-r4 改 `--target`、`listen`、`pause`、tick 鎖；advice-r1 加 `check`；tools-base 加 `tools add`（tools.md §1.8）） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
 | [spec/aos-llm/](spec/aos-llm/README.md) | `aos-llm call [AGENT_DIR]`（09-24 fix-r4 由 `aos-llm-call` 改名）：讀 agent 家與 `AOS_LLM_CONFIG`、組請求、打一次 HTTP、印模型回的 message | 2026-09-24 定稿第 2 版；實作 [`lib/aos_llm_call.py`](lib/aos_llm_call.py) |
 
 ## 程式
@@ -97,8 +98,9 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 二十九支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 33 個測試檔、1153 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 三十二支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 38 個測試檔、1316 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
+| [tools/](tools/README.md) | `aos-agent tools add` 裝的工具包：內建 `base`（read／write／edit／bash／grep／find／ls，仿 pi） | 09-24 tools-base；每支工具怎麼用、錯誤長怎樣見 [tools/README.md](tools/README.md) |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。
 
