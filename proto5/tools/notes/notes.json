@@ -18,5 +18,30 @@
       }
     },
     "_meta": {"argv": ["tools/notes/note"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "recall",
+      "description": "Find old text in your chat memory and compacted archives; all words must match. Returns file, message number, snippet.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string", "description": "words, case-insensitive"},
+          "limit": {"type": "integer", "description": "default 5, max 20"}
+        },
+        "required": ["query"]
+      }
+    },
+    "_meta": {"argv": ["tools/notes/recall"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "context",
+      "description": "Size of your chat memory: messages per role, estimated tokens, the three largest.",
+      "parameters": {"type": "object", "properties": {}}
+    },
+    "_meta": {"argv": ["tools/notes/context"]}
   }
 ]

@@ -1,4 +1,4 @@
-"""note 工具共用：讀 arguments、找筆記檔、flock 讀改寫、統一的錯誤格式（跟 tools/base/_common.py 同風格，
+"""note／recall／context 工具共用：讀 arguments、找筆記檔、flock 讀改寫、統一的錯誤格式（跟 tools/base/_common.py 同風格，
 但這支自己獨立一份——notes 不 import base，見 proto5/tools/README.md）。
 
 約定：
@@ -9,6 +9,7 @@
 - 存檔格式是 wf-table/1（見 workflows/common/data-files.md）：
   {"contract": "wf-table/1", "source": "", "extracted": "YYYY-MM-DD",
    "columns": ["key", "text", "tags", "at"], "rows": [{"key", "text", "tags": "a,b", "at": ISO 時間}]}。
+- recall／context 的記憶資料夾見 mem_dir()（只讀，不拿鎖）。
 - 成功：純文字印到 stdout、退 0。失敗：stdout 最後一行印 JSON {"ok": false, "error": 代號, "message": 白話}、退 1。
 """
 import contextlib
@@ -95,7 +96,7 @@ def now_iso():
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def _config_file():
+def _config_file(key='file'):
     cfg = os.path.join(HERE, 'config.json')
     if not os.path.exists(cfg):
         return None
@@ -106,11 +107,11 @@ def _config_file():
         fail('ConfigInvalid', 'cannot read %s: %s' % (cfg, e))
     if not isinstance(data, dict):
         fail('ConfigInvalid', '%s must be a JSON object' % cfg)
-    value = data.get('file')
+    value = data.get(key)
     if value is None:
         return None
     if not isinstance(value, str) or not value:
-        fail('ConfigInvalid', '%s: "file" must be a non-empty string' % cfg)
+        fail('ConfigInvalid', '%s: "%s" must be a non-empty string' % (cfg, key))
     return value
 
 
@@ -133,6 +134,27 @@ def notes_path():
                  'aos-agent access set notes <folder> --rw' % JAIL_NOTES)
         value = JAIL_NOTES + '/notes.json'
     return os.path.abspath(os.path.expanduser(value or DEFAULT_FILE))
+
+
+JAIL_MEM = '/work/mem'
+DEFAULT_MEM = 'prompts'
+
+
+def mem_dir():
+    """算記憶資料夾（history.json 與 archive/ 所在）的絕對路徑：recall、context 用，只讀不寫。
+
+    AOS_MEM_DIR 優先，否則 config.json 的 "mem"，否則：關牢＝/work/mem（aos-team init 給 notes: true 的成員
+    內建唯讀掛自己家的 prompts/），不關牢＝prompts（相對 cwd＝agent 家）。
+    """
+    value = os.environ.get('AOS_MEM_DIR') or _config_file('mem')
+    if value is not None and os.environ.get('AOS_TOOL_ROOT') and not os.path.isabs(os.path.expanduser(value)):
+        fail('ConfigInvalid', 'mem folder %r is relative; inside the jail it must be /work/<mount>' % value)
+    if value is None and os.environ.get('AOS_TOOL_ROOT'):
+        if not os.path.isdir(JAIL_MEM):
+            fail('ConfigInvalid', 'no memory folder mounted at %s; ask the user to rerun aos-team init '
+                 '(or: aos-agent access set mem <home>/prompts --ro)' % JAIL_MEM)
+        value = JAIL_MEM
+    return os.path.abspath(os.path.expanduser(value or DEFAULT_MEM))
 
 
 def default_table():

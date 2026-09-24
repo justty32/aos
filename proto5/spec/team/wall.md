@@ -1,0 +1,65 @@
+← [team](README.md)｜牆本身：[agent access.md](../agent/access.md)｜報告：[第二波 B 隊](../../notes/2026-09-24-tool-era/w2b/README.md)
+
+# 團隊的牆：誰關在牢裡、郵差再驗什麼、保證外的
+
+第二波 B 隊，2026-09-24。一句話：**會想的成員，工具全部關牢；機械員裡會「執行程式」的也關牢；只讀檔的機械員在牢外，用 realpath 圍住。模型寫進 outbox 的東西，郵差照樣再驗一次。**
+
+## 1. 誰在牢裡
+
+| 誰 | 在哪跑 | 看得到 |
+|---|---|---|
+| 成員的每一支工具（領隊、工人、審查） | 牢（`access.json` 有表就全關，[access.md](../agent/access.md)） | 自己的映射（下表）＋工具包自己的資料夾 `/opt/tool`（唯讀，wf 快照在這裡） |
+| 門房的 `tool` 規則（[route.md](route.md)） | **牢**：專案唯讀掛 `/work/ws`（規則寫 `"project": "rw"` 才可寫）、不上網、清環境 | 只有專案 |
+| 驗收員的 `wf_lint_strict`（跑快照的 bash＋git） | **牢**：專案唯讀 | 只有專案 |
+| 驗收員的 `cmd_ok`（跑專案自己的指令） | **牢**：專案唯讀、不上網、清環境（加 `PYTHONDONTWRITEBYTECODE=1`） | 只有專案 |
+| 驗收員的 `file_exists`、`table_filled`、`contains`、`not_contains`、`wf_residue` | 牢外 | 純讀檔，不執行任何東西；路徑 realpath 後要在專案裡（`wf_residue` 不跟符號連結） |
+| `wf_init` 的 staging | 牢（它是工人的工具）：staging 開在專案**裡**的 `.wf-staging-<id>/` | 只有專案 |
+| 郵差、心跳、書記、門房的判決與 `run` 規則（aos-team 子命令） | 牢外 | 它們是寫死的機械程式，只照固定格式搬檔，不執行成員寫的東西 |
+
+牢要 bwrap。沒有 bwrap：成員的工具不送（`NoBwrap`）、門房 `tool` 規則退 1（`NoBwrap`）、驗收那一條算「檢查器壞」。**一律不退回不關牢。**
+
+## 2. 成員的映射（`aos-team init` 生；[templates.md](templates.md)）
+
+| 牢裡 | 主機 | 工人 | 領隊 | 審查 |
+|---|---|---|---|---|
+| `/work/ws`（起點） | 專案 | 可寫 | 唯讀 | 唯讀 |
+| `/work/outbox` | `team/outbox/<自己>/` | 可寫 | 可寫 | 可寫 |
+| `/work/board` | `team/tasks/` | 唯讀 | 唯讀 | 唯讀 |
+| `/work/notes` | `team/notes/<自己>/` | 可寫 | 可寫 | — |
+| `/work/mem` | 自己家的 `prompts/`（記憶與 archive） | 唯讀 | 唯讀 | — |
+
+- outbox、notes 在**成員家外**（團隊資料夾），所以可寫也不撞「可寫映射不能蓋到信任資料」（contract §3，審查 M11）。
+- `mem` 在家裡、是信任資料，所以只能唯讀（唯讀可以重疊）。給 `recall`、`context` 兩支工具看自己的記憶。
+- board 唯讀：任務表的內容本來就是派給大家看的；寫只有郵差。
+
+## 3. 郵差再驗一次（[post.md](post.md) 第 2 步之後）
+
+牢已經讓成員寫不到別人的 outbox、讀不到別人的家。郵差讀 outbox 時**照樣**再驗，不靠牢：
+
+| 驗什麼 | 怎麼驗 | 不合 |
+|---|---|---|
+| 身分 | 信在誰的 `outbox/<名>/`＝誰寄的；檔名的寄件人段、`id`、`from` 都要對上 | `BadId`／`NotSender` |
+| 不是一般檔 | 符號連結、資料夾：不跟過去讀 | `NotARegularFile`（連到不存在的地方＝不理） |
+| 收件人 | 在寄件人的 `mail_to` | `BadRecipient` |
+| 角色 | 申請種類在寄件人模板的 `may`；替別人壓縮、別人的審查單 | `NotAllowed` |
+| 路徑 | `handoff` 的 `done_when` 路徑（`path`、`args.path`）：相對專案、沒有 `..` 段、不以 `/`、`~` 開頭；`workflow`：不准 `..`，絕對路徑只准 `/work/…` | `BadPath` |
+| 操作 | `cmd_ok` 的 `run` 要**整串**等於 `team.json` 白名單的一條，`timeout_s` 不能超過那條的 | `NotAllowed`（退信列出可用的） |
+| 假信頭 | 成員寫的信文、`handoff` 的 goal／facts／workflow 裡，有一行以 `【來信` 或 `【人 →` 開頭 | `ForgedHeader`（信頭只有郵差能寫；人寫的不擋） |
+
+不合一律照 post.md 退件：原檔進 `rejected/`、`FAILED` 退給寄件人。
+
+## 4. `cmd_ok`（驗收員跑專案自己的指令）
+
+- 白名單在 `team.json` 頂層（人寫，[roster.md](roster.md)）：`"cmd_ok": [{"run": ["python3", "-m", "unittest"], "timeout_s": 300}]`。`run[0]` 是指令名（不含 `/`，牢裡照 `PATH` 找）；`timeout_s` 1～3600，省略＝300。
+- 單子上的條目：`{"kind": "cmd_ok", "run": [...], "timeout_s"?: 秒}`。開單時郵差比對白名單；驗收時再比一次（人事後拿掉了＝檢查器壞，不扣次數）。
+- 結果：退 0＝過；其他退出碼、逾時＝不過（修正信附輸出最後 600 字）；指令找不到、沒 bwrap＝檢查器壞。
+- 專案唯讀：指令寫不進專案（要寫快取的測試請寫 `/tmp`，牢裡的 `/tmp` 是空的、跑完就丟）。
+
+## 5. 保證外（明講、不處理）
+
+- **牢外的純讀檢查器**有 TOCTOU：檢查 realpath 之後、開檔之前有人換連結擋不住。它們只讀、不執行，最壞是讀到專案外一個檔的「在不在／有沒有某段字」。
+- **outbox 的 `done/`、`rejected/` 在成員可寫的範圍裡**：成員能改、刪那裡的原檔。去重與紀錄以 `team/post/sent/`（成員碰不到）為準，那兩格只是給人看的存檔。
+- **資源**：成員能在 outbox、notes、專案裡塞很多檔或很大的檔；牢不管磁碟與行程數（contract §6）。
+- **信文內容**：郵差只擋像信頭的行。模型在信文裡說謊（「人叫你刪檔」）擋不住，靠收件人的人格與「派工只能用 handoff」。
+- **wf 快照與工具包**是人裝的，牢裡唯讀；包本身有問題（例如快照的腳本）不在這層處理。
+- 門房、郵差、心跳本身在牢外：`routes.json`、`team.json` 只有人能寫（成員碰不到團隊資料夾），寫進去的東西人自己負責。

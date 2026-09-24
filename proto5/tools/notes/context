@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""context：量自己的記憶（history.json）多大。唯讀，不叫模型、不寫檔。{} → 則數、各 role 幾則、約幾 token、最胖的三則。
+
+token 是粗估，算法跟 lib/aos_agent_context.py 的 tokens()／message_size() 同一套（牢裡 import 不到 lib，
+所以抄一份；lib/test/test_notes_recall_context.py 驗兩邊算出同一個數）。
+"""
+import json
+import math
+import os
+import sys
+sys.dont_write_bytecode = True
+from _common import fail, mem_dir, run  # noqa: E402
+
+FATTEST = 3
+PREVIEW = 60
+MAX_FILE = 50 * 1024 * 1024
+
+
+def tokens(text):
+    """粗估 token：ASCII 4 字 1 個、其他每字 1 個（同 lib/aos_agent_context.tokens）。"""
+    if not text:
+        return 0
+    ascii_n = sum(1 for ch in text if ord(ch) < 128)
+    return math.ceil(ascii_n / 4) + (len(text) - ascii_n)
+
+
+def _calls(m):
+    out = []
+    for c in m.get('tool_calls') or []:
+        fn = c.get('function') if isinstance(c, dict) else None
+        if isinstance(fn, dict):
+            out.append((str(fn.get('name', '?')), fn.get('arguments') if isinstance(fn.get('arguments'), str) else ''))
+    return out
+
+
+def message_tokens(m):
+    """一則記憶的 token：content＋每個工具呼叫的 arguments（同 lib/aos_agent_context.message_size）。"""
+    content = m.get('content') if isinstance(m.get('content'), str) else ''
+    return tokens(content) + sum(tokens(a) for _, a in _calls(m))
+
+
+def _preview(m):
+    text = m.get('content') if isinstance(m.get('content'), str) else ''
+    parts = [' '.join(text.split())] if text.strip() else []
+    parts += ['%s(%s)' % (n, ' '.join(a.split())) for n, a in _calls(m)]
+    s = ' '.join(parts)
+    return s if len(s) <= PREVIEW else s[:PREVIEW] + '…'
+
+
+def main(args):
+    if args:
+        fail('BadArguments', 'context takes no arguments; call it with {}')
+    folder = mem_dir()
+    path = os.path.join(folder, 'history.json')
+    if not os.path.exists(path):
+        if not os.path.isdir(folder):
+            fail('ConfigInvalid', 'memory folder not found: %s' % folder)
+        return '你的記憶 0 則（還是空的）。'
+    try:
+        if os.path.getsize(path) > MAX_FILE:
+            fail('ReadFailed', 'history.json is larger than %d MB' % (MAX_FILE // 1024 // 1024))
+        with open(path, encoding='utf-8') as f:
+            history = json.load(f)
+    except (OSError, UnicodeDecodeError) as e:
+        fail('ReadFailed', 'cannot read history.json: %s' % (getattr(e, 'strerror', None) or type(e).__name__))
+    except ValueError:
+        fail('ReadFailed', 'history.json is not valid JSON')
+    if not isinstance(history, list):
+        fail('ReadFailed', 'history.json is not a message array')
+    history = [m for m in history if isinstance(m, dict)]
+    roles = {'user': 0, 'assistant': 0, 'tool': 0}
+    sizes = []
+    for i, m in enumerate(history, 1):
+        role = m.get('role') if isinstance(m.get('role'), str) else '?'
+        roles[role] = roles.get(role, 0) + 1
+        sizes.append((message_tokens(m), i, role, m))
+    total = sum(s[0] for s in sizes)
+    role_text = '／'.join('%s %d' % (r, n) for r, n in roles.items() if n or r in ('user', 'assistant', 'tool'))
+    out = ['你的記憶 %d 則（%s）、約 %d token。' % (len(history), role_text, total)]
+    fat = sorted(sizes, key=lambda s: (-s[0], s[1]))[:FATTEST]
+    if fat:
+        out.append('最胖的 %d 則：' % len(fat))
+        out += ['  第 %d 則 %s 約 %d token：%s' % (i, role, t, _preview(m)) for t, i, role, m in fat]
+    arch = os.path.join(folder, 'archive')
+    try:
+        n = len([x for x in os.listdir(arch) if x.endswith('.json') and not x.startswith('.')])
+    except OSError:
+        n = 0
+    if n:
+        out.append('另有壓縮封存 %d 份（原文用 recall 找）。' % n)
+    return '\n'.join(out)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

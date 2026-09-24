@@ -9,7 +9,7 @@
 | [`base/`](base/) | pi coding agent 那一組 read、write、edit、bash、grep、find、ls，裝了就能叫 agent 寫程式、跑程式、改程式（grep 有 `rg` 就用，沒有退回 `grep`） | 本檔下方〈七個工具〉 |
 | [`files/`](files/README.md) | `json_edit`、`md_section`：按 JSON Pointer 改 JSON 的一格、按標題改 md 的一節 | [files README](files/README.md) |
 | [`wf/`](wf/README.md) | `wf_doc`、`wf_init`、`wf_fill`、`wf_lint`、`wf_residue`、`wf_table`：把 workflows 手冊導入專案、照事實表填佔位、檢查導得乾不乾淨、讀寫資料表 | [wf README](wf/README.md) |
-| [`notes/`](notes/) | `note`：長期筆記（跟對話記憶分開），add／find／get／rm，存 `wf-table/1` 的 `notes.json` | [spec/agent/](../spec/agent/README.md)、[aos-agent notes](../spec/aos-agent/cli-memory.md) |
+| [`notes/`](notes/) | `note`：長期筆記（跟對話記憶分開），add／find／get／rm，存 `wf-table/1` 的 `notes.json`；`recall`：在自己的記憶與壓縮封存 `archive/` 找原文（純字串）；`context`：自己的記憶幾則、約幾 token、最胖三則。後兩支唯讀，關牢時讀 `/work/mem` | [spec/agent/](../spec/agent/README.md)、[aos-agent notes](../spec/aos-agent/cli-memory.md) |
 | [`team/`](team/) | `team_say`：往自己的 `team/outbox/<名>/` 寫一封信，郵差之後投遞 | [spec/team/mail.md](../spec/team/mail.md) |
 | [`task/`](task/README.md) | `handoff`、`board`、`review_result`、`ask_human`、`compact_me`：給團隊成員（領隊、工人、審查）用，派工、看任務表、審查、問人、縮自己的記憶 | [task README](task/README.md) |
 

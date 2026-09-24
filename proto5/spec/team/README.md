@@ -30,6 +30,7 @@
 | [post.md](post.md) | 郵差兼書記 `aos-team post`：kernel 反覆叫，每次走一輪（投信、收驗收結果、看停滯與期限、書記同步 SESSION-LOG／WAIT_USER），不叫模型 |
 | [verify.md](verify.md) | 驗收員 `aos-team verify`：照任務單 `done_when` 跑固定的檢查器，每條回過／不過／檢查器壞 |
 | [beat.md](beat.md) | 心跳 `aos-team beat`、`aos-team routine`：kernel 反覆叫（預設 60 秒一輪），照 `team/routines.json` 算誰到期、以開單方式派出 |
+| [wall.md](wall.md) | 團隊的牆（第二波 B 隊）：誰關在牢裡（成員工具、門房 `tool`、驗收的 lint 與 `cmd_ok`）、成員的映射、郵差再驗什麼、`cmd_ok` 白名單、保證外的 |
 | [score.md](score.md) | 六軸彙整 `aos-team score`：把六軸表（axes.md §4 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型 |
 | [examples/](examples/) | 每種檔一份範例；`python3 lib/aos_team_format.py 檔…` 驗得過 |
 

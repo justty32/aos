@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""recall：在自己的記憶檔（history.json）與壓縮封存（archive/*.json）裡找原文。純字串比對，不叫模型、不寫檔。
+
+{"query": "…", "limit": 5}：空白分詞、不分大小寫、每個詞都要出現在同一則裡。
+回每段一行：哪個檔、第幾則（從 1 數，跟記憶裡「原文 archive/<sha>.json 第 i～j 則」同一套）、role、截一段。
+找的順序：現在的記憶先，再 archive（新的在前）；同樣內容（role＋全文一樣）只回第一次看到的——
+新的 archive 與現在的記憶常常重疊。讀不到／壞掉的檔另列一行（不當成沒命中）。
+"""
+import json
+import os
+import sys
+sys.dont_write_bytecode = True
+from _common import arg, fail, mem_dir, run  # noqa: E402
+
+MAX_QUERY = 200
+DEFAULT_LIMIT = 5
+MAX_LIMIT = 20
+SNIPPET = 300          # 每段最多幾個字元
+BEFORE = 80            # 命中點前面留多少
+MAX_OUT = 4000         # 命中段落合計最多幾個字元（超過就停、叫它多給幾個詞）
+MAX_FILE = 20 * 1024 * 1024
+ALLOWED = {'query', 'limit'}
+
+
+def _text(m):
+    """一則記憶可找的字：content＋每個工具呼叫的「名字(參數)」，空白壓成一格。"""
+    parts = [m.get('content') if isinstance(m.get('content'), str) else '']
+    for c in m.get('tool_calls') or []:
+        fn = c.get('function') if isinstance(c, dict) else None
+        if isinstance(fn, dict):
+            parts.append('%s(%s)' % (fn.get('name', '?'), fn.get('arguments', '')))
+    return ' '.join(' '.join(p.split()) for p in parts if p)
+
+
+def _snippet(text, low, words):
+    """以最早命中的詞為準，前留 BEFORE 字、總長不超過 SNIPPET；截掉的那頭用 … 標。"""
+    at = min(low.find(w) for w in words)
+    start = max(0, at - BEFORE)
+    end = min(len(text), start + SNIPPET)
+    start = max(0, min(start, end - SNIPPET))
+    cut = text[start:end]
+    if start > 0:
+        cut = '…' + cut[1:]
+    if end < len(text):
+        cut = cut[:-1] + '…'
+    return cut
+
+
+def _files(folder):
+    """回 [(顯示名, 絕對路徑)]：history.json 先，再 archive/*.json（新的在前）。"""
+    out = []
+    hist = os.path.join(folder, 'history.json')
+    if os.path.exists(hist):
+        out.append(('history.json', hist))
+    arch = os.path.join(folder, 'archive')
+    if os.path.isdir(arch):
+        names = []
+        for n in os.listdir(arch):
+            if n.endswith('.json') and not n.startswith('.'):
+                try:
+                    names.append((-os.stat(os.path.join(arch, n)).st_mtime, n))
+                except OSError:
+                    names.append((0, n))
+        out += [('archive/' + n, os.path.join(arch, n)) for _, n in sorted(names)]
+    return out
+
+
+def _load(path):
+    """回 (記憶陣列, None) 或 (None, 為什麼讀不了)。"""
+    try:
+        if os.path.getsize(path) > MAX_FILE:
+            return None, 'larger than %d MB' % (MAX_FILE // 1024 // 1024)
+        with open(path, encoding='utf-8') as f:
+            value = json.load(f)
+    except (OSError, UnicodeDecodeError) as e:
+        return None, 'cannot read: %s' % (getattr(e, 'strerror', None) or type(e).__name__)
+    except ValueError:
+        return None, 'not valid JSON'
+    if not isinstance(value, list):
+        return None, 'not a message array'
+    return value, None
+
+
+def main(args):
+    extra = sorted(set(args) - ALLOWED)
+    if extra:
+        fail('BadArguments', 'unknown argument: %s' % ', '.join(extra))
+    query = arg(args, 'query', str, required=True)
+    words = query.lower().split()
+    if not words or len(query) > MAX_QUERY:
+        fail('BadArguments', 'query must be 1..%d chars with at least one word' % MAX_QUERY)
+    limit = arg(args, 'limit', int, DEFAULT_LIMIT)
+    if not (1 <= limit <= MAX_LIMIT):
+        fail('BadArguments', 'limit must be 1..%d' % MAX_LIMIT)
+    folder = mem_dir()
+    if not os.path.isdir(folder):
+        fail('ConfigInvalid', 'memory folder not found: %s' % folder)
+    files = _files(folder)
+    hits, broken, seen, size, cut, searched = [], [], set(), 0, False, 0
+    for label, path in files:
+        if len(hits) >= limit or cut:
+            break
+        history, why = _load(path)
+        if history is None:
+            broken.append('%s: %s' % (label, why))
+            continue
+        searched += 1
+        for i, m in enumerate(history, 1):
+            if not isinstance(m, dict):
+                continue
+            text = _text(m)
+            low = text.lower()
+            if any(w not in low for w in words):
+                continue
+            role = m.get('role') if isinstance(m.get('role'), str) else '?'
+            if (role, text) in seen:
+                continue
+            seen.add((role, text))
+            line = '%s 第 %d 則 %s: %s' % (label, i, role, _snippet(text, low, words))
+            if hits and size + len(line) > MAX_OUT:
+                cut = True
+                break
+            hits.append(line)
+            size += len(line)
+            if len(hits) >= limit:
+                break
+    out = list(hits)
+    if cut:
+        out.append('(more hits cut at %d chars; add words to narrow)' % MAX_OUT)
+    elif len(hits) >= limit:
+        out.append('(stopped at limit %d; there may be more)' % limit)
+    if not hits:
+        out.append('No match for %r in %d file(s).' % (query, searched))
+    out += ['unreadable %s' % b for b in broken]
+    return '\n'.join(out)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

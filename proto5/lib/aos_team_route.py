@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
@@ -121,8 +122,17 @@ def _put(lay, obj):
     return obj['id']
 
 
-def run_pack_tool(team_dir, roster, spec, args):
-    """跑 proto5/tools/<包>/<包>.json 裡的一支；回退出碼（輸出原樣印）。"""
+def jail_argv(project, prog_argv, write=False):
+    """門房的 tool 規則也關牢（第二波 B 隊）：只掛專案到 /work/ws（預設唯讀）、不上網、清環境。
+    用跟自己同一份 proto5 的 aos-jail 絕對路徑，不靠 PATH。"""
+    import aos_agent_access
+    return [aos_agent_access.JAIL, '--mount' if write else '--mount-ro', 'ws=%s' % project,
+            '--chdir', 'ws', '--net', 'off', '--', *prog_argv]
+
+
+def run_pack_tool(team_dir, roster, spec, args, write=False):
+    """跑 proto5/tools/<包>/<包>.json 裡的一支，**關在牢裡**：只看得到專案（/work/ws，write＝False 時唯讀）；
+    回退出碼（輸出原樣印）。沒有 bwrap＝NoBwrap，不退回不關牢。"""
     pack, name = spec.split('/', 1)
     folder = PACKAGES / pack
     tools_file = folder / (pack + '.json')
@@ -141,10 +151,15 @@ def run_pack_tool(team_dir, roster, spec, args):
         argv[0] = str(folder / argv[0][len(prefix):])
     elif '/' in argv[0] and not os.path.isabs(argv[0]):
         raise TeamError('NotFound', '%s 的 argv[0] %s 不在 tools/%s/ 底下' % (tools_file, argv[0], pack))
-    env = dict(os.environ, AOS_TOOL_ROOT=str(project_dir(team_dir, roster)))
+    if shutil.which('bwrap') is None:
+        raise TeamError('NoBwrap', '門房的 tool 規則要關在牢裡跑，這台找不到 bwrap（bubblewrap）；'
+                                   'Arch/Manjaro: sudo pacman -S bubblewrap，Debian/Ubuntu: sudo apt install bubblewrap')
+    project = project_dir(team_dir, roster)
+    if not project.is_dir():
+        raise TeamError('NotFound', '專案資料夾 %s 不在（team.json 的 project）' % project)
     try:
-        r = subprocess.run(argv, input=json.dumps(args or {}, ensure_ascii=False), capture_output=True, text=True,
-                           cwd=str(team_dir), env=env, timeout=TOOL_TIMEOUT)
+        r = subprocess.run(jail_argv(str(project), argv, write), input=json.dumps(args or {}, ensure_ascii=False),
+                           capture_output=True, text=True, cwd=str(team_dir), timeout=TOOL_TIMEOUT)
     except subprocess.TimeoutExpired:
         raise TeamError('Timeout', '%s 跑了 %d 秒沒完，砍掉了' % (spec, TOOL_TIMEOUT))
     except OSError as e:
@@ -178,7 +193,7 @@ def ask(team_dir, text):
             if run[0] != rule['run'][0] or run[0] in ROUTE_RUN_FORBIDDEN:
                 raise TeamError('BadRoute', '規則 %s 的子命令 %r 不能跑' % (rule['name'], run[0]))
             return resolve(run[0])(str(lay.root), run[1:])
-        return run_pack_tool(lay.root, roster, rule['tool'], rule.get('args'))
+        return run_pack_tool(lay.root, roster, rule['tool'], rule.get('args'), rule.get('project') == 'rw')
     if result == 'handoff':
         req = dict(fill(rule['handoff'], groups))
         req.update(id=new_id(HUMAN), kind='handoff', at=now_iso(roster.get('tz')))

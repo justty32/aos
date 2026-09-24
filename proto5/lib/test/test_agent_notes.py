@@ -424,7 +424,7 @@ class ToolsAddNotesCase(unittest.TestCase):
         self.assertIn('installed notes', result.stdout)
         self.assertIn('note', result.stdout)
         tools = read_json(self.bob / 'tools/notes.json')
-        self.assertEqual([t['function']['name'] for t in tools], ['note'])
+        self.assertEqual([t['function']['name'] for t in tools], ['note', 'recall', 'context'])
         self.assertTrue(os.access(self.bob / 'tools/notes/note', os.X_OK))
         # init 的家 tools 已經是整個 tools/ 資料夾（涵蓋 tools/notes.json），info.json 不必再改
         # （跟 test_agent_tools.py 的 test_install_into_init_home 一樣）。

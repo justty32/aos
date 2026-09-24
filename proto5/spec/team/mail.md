@@ -58,7 +58,7 @@
 | `answer` | 只有人 | `q`、`text` | 投回發問者（ask.md） |
 | `compact` | 模板 may 有它的（領隊、工人；`compact_me` 工具）、人 | `member`?（只有人能替別人寄）、`keep_rounds`?、`max_tokens`?、`reason`? | 投進那個成員家的 `compact-req/`，閒著時 tick 縮記憶（[compact-more.md §5](../agent/compact-more.md)） |
 
-`done_when` 每條：`{"kind": "file_exists", "path": …}`、`{"kind": "table_filled", "path": …, 其他參數…}`、`{"kind": "check", "name": 檢查器名, "args": {…}?}`、`{"kind": "judge", "text": 要審查員判的一句}`。前三種是驗收員（第 2 隊）跑的固定檢查器，`judge` 給審查員。
+`done_when` 每條：`{"kind": "file_exists", "path": …}`、`{"kind": "table_filled", "path": …, 其他參數…}`、`{"kind": "check", "name": 檢查器名, "args": {…}?}`、`{"kind": "cmd_ok", "run": [指令…], "timeout_s": 秒?}`（第二波，要在 `team.json` 白名單裡）、`{"kind": "judge", "text": 要審查員判的一句}`。前四種是驗收員跑的，`judge` 給審查員。郵差收申請時另外驗路徑與操作（[wall.md §3](wall.md)）。
 
 **處理函式的約定**：`handler(lay, 名冊, 申請) → 後續動作清單`；不接受就丟 `TeamError(代號, 白話)`，郵差把原檔搬進 `outbox/<名>/rejected/`、退一封 `FAILED` 給寄件人（白話照抄）。**同一份申請再叫一次要回同一份動作、不多做**。權限（模板的 `may`）由 `aos_team_requests.handle()` 先查。
 別隊加種類：在 `KINDS` 加一行 `'kind': '模組:函式'`，欄位自己驗。

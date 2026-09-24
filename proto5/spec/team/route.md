@@ -30,7 +30,7 @@
 | `do` | 欄位 | 做什麼 |
 |---|---|---|
 | `tool` | `run`：aos-team 子命令與參數（例 `["task", "ls"]`、`["wait", "ls"]`） | 在同一個行程跑那個子命令，輸出原樣印給人；**不寫任何成員的 `input/`** |
-| `tool` | `tool`：`"<包>/<工具>"`（`proto5/tools/<包>/<包>.json` 裡的一支）、`args`：物件 | 照工具檔的 `_meta.argv` 跑那支程式，stdin 給 `args`、`AOS_TOOL_ROOT`＝專案資料夾、cwd＝團隊資料夾、60 秒逾時；輸出原樣印。只跑 `proto5/tools/` 裡的包；**不關牢**，而 `base/bash` 也在包裡——所以 routes.json 等於有主機執行權，只有人能寫（模型改不到團隊資料夾） |
+| `tool` | `tool`：`"<包>/<工具>"`（`proto5/tools/<包>/<包>.json` 裡的一支）、`args`：物件、`project`?：`ro`（預設）／`rw` | 照工具檔的 `_meta.argv` 跑那支程式，**關在牢裡**（第二波 B 隊，[wall.md](wall.md)）：只看得到專案（`/work/ws`，起點；預設唯讀，寫 `"project": "rw"` 才可寫）、不上網、清環境；stdin 給 `args`、60 秒逾時；輸出原樣印。只跑 `proto5/tools/` 裡的包。沒有 bwrap＝退 1（`NoBwrap`），不退回不關牢 |
 | `handoff` | `handoff`：同 handoff 申請的欄位（mail.md） | 往 `team/outbox/human/` 放一份 handoff 申請（開單人是 human）；郵差開單、派出 |
 
 ## 例句：全過才准存

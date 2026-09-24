@@ -64,13 +64,16 @@ members/worker-1/
  "mounts": {"ws": "../../../p",
             "outbox": "../../team/outbox/worker-1",
             "board": {"$opt": "ro", "$val": "../../team/tasks"},
-            "notes": "../../team/notes/worker-1"},
+            "notes": "../../team/notes/worker-1",
+            "mem": {"$opt": "ro", "$val": "prompts"}},
  "cwd": "ws", "net": false}
 ```
 
 - 路徑寫成**相對成員的家**（整個團隊資料夾搬走還能用）；模板的 `mounts` 在 proto5 裡，寫絕對路徑。
-- 領隊、審查的 `ws` 是 `{"$opt": "ro", …}`；審查沒有 `notes`。
-- `outbox`、`notes` 是 init 內建的掛點（保留名，名冊與模板的 `mounts` 用不了），只指自己那格，所以不受下一條限制。
+- 領隊、審查的 `ws` 是 `{"$opt": "ro", …}`；審查沒有 `notes`、`mem`。
+- `mem`＝自己家的 `prompts/`，**唯讀**（notes 包的 `recall`、`context` 在牢裡讀 `/work/mem`）；它跟信任資料重疊，唯讀才准（[agent-access contract §3](../../notes/2026-09-24-agent-access/contract.md)）。
+- `outbox`、`notes`、`mem` 是 init 內建的掛點（保留名，名冊與模板的 `mounts` 用不了），只指自己那格，所以不受下一條限制。
+- 已生的舊家重跑 `aos-team init`：模板 `notes: true` 而 `access.json` 缺 `notes` 或 `mem`＝只補缺的那格（印「access.json 補掛 …」），其他掛載不動。
 - 不在團隊裡（`coder`）：`{"mounts": {"ws": "workspace"}, "cwd": "ws", "net": false}`。
 - **一定有 `access.json`**：工具一律關牢，不靠「沒 access.json 也能跑」。
 - 名冊或模板**多掛的可寫資料夾**不准碰團隊控制資料：`team.json`、`team/`（別人的 outbox、任務表、問題）、`members/`（所有人的家）、proto5 本身——一個包著另一個也算，`AccessUnsafe`；要看就掛唯讀。

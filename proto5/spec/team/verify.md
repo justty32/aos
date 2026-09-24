@@ -2,7 +2,7 @@
 
 # 驗收員：`aos-team verify`
 
-照任務單的 `done_when` 跑**固定的檢查器**，每條回「過／不過／檢查器壞」。不叫模型；不執行專案裡的任何檔；沒有「跑任意指令」這種條目。
+照任務單的 `done_when` 跑**固定的檢查器**，每條回「過／不過／檢查器壞」。不叫模型；不執行專案裡的檔（例外：`cmd_ok`）。會執行程式的關牢、專案唯讀（[wall.md](wall.md)）。
 程式：[`lib/aos_team_verify.py`](../../lib/aos_team_verify.py)。第 2 隊，2026-09-24 第 1 版。
 
 - 郵差收到 DONE 時**提交成一次性工作**（[post.md](post.md)），下一輪收結果檔；
@@ -27,6 +27,7 @@
 | `{"kind": "file_exists", "path"}` | — | 路徑在（檔或資料夾） |
 | `{"kind": "table_filled", "path", "column"?, "columns"?, "heading"?}` | `column`（一欄）或 `columns`（陣列），都沒給＝全部欄；`heading`：Markdown 挑哪個標題底下的第一張表 | 每一列那幾欄都非空；0 列＝不過。`.json` 要是 `wf-table/1`（`contract`、`columns`、`rows`）或物件陣列；`.csv` 第一列是欄名；其他當 Markdown。表壞了、找不到表或欄、欄名空的或重名＝不過；`column` 寫法不對＝檢查器壞 |
 | `{"kind": "check", "name", "args"?}` | 看檢查器 | 看檢查器 |
+| `{"kind": "cmd_ok", "run", "timeout_s"?}` | `run` 要整串等於 `team.json` 的 `cmd_ok` 白名單一條，`timeout_s` 不超過它的 | 牢裡退 0；其他或逾時＝不過；不在白名單、跑不起來＝檢查器壞（wall.md §4） |
 
 檢查器（`CHECKS` 登記表，`名字 → 模組:函式`）：
 
@@ -35,7 +36,7 @@
 | `contains` | `path`、`text` | 檔裡有這段字 |
 | `not_contains` | `path`、`text` | 檔裡沒有 |
 | `wf_residue` | — | 專案所有 `.md` 的 `{{`、〔導入判斷〕、〔模板說明〕都是 0；有讀不到的 `.md`＝不過（不當成 0） |
-| `wf_lint_strict` | — | wf 工具包**自帶快照**的 `wf-lint.sh --strict` 退 0；檢查器本身壞了（退出碼不是 0／1、沒印 TOTAL、逾時）＝檢查器壞 |
+| `wf_lint_strict` | — | wf 工具包**自帶快照**的 `wf-lint.sh --strict` 退 0（牢裡跑，`tools/wf/_jail_lint`）；檢查器本身壞了（退出碼不是 0／1、沒印 TOTAL、逾時、沒 bwrap）＝檢查器壞 |
 
 後兩支叫第 3 隊的 `tools/wf/_wf.py`（`residue`、`lint`），跑的是工具包裡的快照，不是專案裡那份。
 別隊加檢查器：`CHECKS` 加一行；函式 `fn(專案資料夾: Path, args: dict) → (過了沒, 一句白話)`，隊員的東西不合丟 `NotMet`（＝不過），沒辦法判丟 `CheckError`（＝檢查器壞）；函式自己的例外也算那一條檢查器壞。
