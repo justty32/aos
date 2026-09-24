@@ -52,7 +52,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1498 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1512 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -376,10 +376,10 @@ halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1498 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1512 條；repo 根目錄
 ```
 
-共 45 個測試檔、1498 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 46 個測試檔、1512 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -402,10 +402,11 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_tools_base_bash.py](test/test_tools_base_bash.py) | 11 | （tools-base）bash：輸出合併、cwd、退出碼、逾時、截斷、背景行程收掉、stdin 空 |
 | [test_tools_base_fix.py](test/test_tools_base_fix.py) | 29 | （tools-base astra 後）暫存檔與符號連結、NUL／surrogate、read 大檔與 FIFO、edit 上限與 CRLF、grep 設定檔／逾時／stderr 死鎖／超長行（假 rg）、find 讀不到的資料夾、bash 被 TERM、tools add 版本連結／修復／清殘渣／併發／BadName |
 | [test_agent_tick.py](test/test_agent_tick.py) | 118 | waits、三格、批次收送、錯誤與 start／stop |
-| [test_agent_access.py](test/test_agent_access.py) | 53 | （access-impl）access.json 解析好／壞（位置、行列）、指示詞、`~`、`info.access` 指別處、重疊（self 只能 ro、家裡控制夾、symlink、共用工具夾與程式、`$ref` 到的檔、輸入與門）、`ensure_default`；送件：快照存 state、inst 長相、`_meta.cwd` 只管牢外、壞表／重疊／沒 bwrap 那件不送、`_jail:false`、崩潰重送用舊快照、think 批沒快照、state 形狀；`access` 各子命令與用法錯；check／status；（astra 必修）aos 程式與符號連結本身算信任資料、換名的 `$env` 金鑰與 inst 落盤、set 用 access 的 `$ref`、rm 比解好的 cwd、候選驗證、明寫不在、state 形狀、`/opt/tool` 蓋到家；check 標 EnvUnsafe、給模型的擋下訊息 |
+| [test_agent_access.py](test/test_agent_access.py) | 57 | （access-impl）access.json 解析好／壞（位置、行列）、指示詞、`~`、`info.access` 指別處、重疊（self 只能 ro、家裡控制夾、symlink、共用工具夾與程式、`$ref` 到的檔、輸入與門）、`ensure_default`；送件：快照存 state、inst 長相、`_meta.cwd` 只管牢外、壞表／重疊／沒 bwrap 那件不送、`_jail:false`、崩潰重送用舊快照、think 批沒快照、state 形狀；`access` 各子命令與用法錯；check／status；（astra 必修）aos 程式與符號連結本身算信任資料、換名的 `$env` 金鑰與 inst 落盤、set 用 access 的 `$ref`、rm 比解好的 cwd、候選驗證、明寫不在、state 形狀、`/opt/tool` 蓋到家；check 標 EnvUnsafe、給模型的擋下訊息 |
 | [test_agent_tools_manage.py](test/test_agent_tools_manage.py) | 31 | （access-impl A1）`tools` 元素 `$opt`（`as`／`only`）改名與只挑、原地引用資料夾／`.json` 檔、裝包合併選項、改名撞名、`llm_call` 看得到新名；`tools ls`（文字／`--json`／`_jail` 欄）／`add`／`rm`／`alias`／`unalias`：用法錯、併發改寫都落地、`info.json` 縮排、明寫的 access 檔不在是錯、預設不在不是錯、裝包時講牢裡的工作根目錄、`.admin.lock` 串行化 tools／access 寫入 |
 | [test_jail.py](test/test_jail.py) | 13 | （access-impl）`build_argv`／`parse_args` 單元、沒 bwrap 退 126、用法錯 2；**真的跑 bwrap**（沒有就 skip）：`../amy`、絕對路徑、symlink 讀不到、環境乾淨、net off／on 連自己開的 port、唯讀 mount、`/opt/tool` 與 base read、aos-agent 包的 inst 經真 aos-exec 跑；base 的 `AOS_TOOL_ROOT` |
 | [test_access_more.py](test/test_access_more.py) | 7 | （access-impl B 隊補測）一批兩件工具共用同一份快照（中途改 access.json 不影響第二件）、壞表整批每件都跑不起來、下一批才用新表（批 1 settle 後換 access.json）、access rm／cwd／net 在 JSON 壞掉時拒絕且檔案不動、AccessUnsafe 的既有檔仍可用 `access rm` 修、`check` 的 bad 訊息指得到哪一格、牢裡看不到 `AOS_LLM_CONFIG` |
+| [test_access_round2.py](test/test_access_round2.py) | 10 | （access round2）**真的跑 bwrap**：檔案工具碰得到整個 /work（`../ref`、`/work/ref` 讀得到、ls／find／grep 看得到每個 mount）、寫唯讀掛點與直接寫 /work 回 `ReadOnly`、/work 以外仍 `OutsideRoot`；不用 bwrap：`AOS_TOOL_FENCE` 要包住起點才算數、非牢的 EROFS 訊息不提 access.json |
 | [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
 | [test_daemon.py](test/test_daemon.py) | 27 | 真 daemon／cpu、spawn 冪等、重拉、三階停機、flock、崩潰接手 |
 | [test_daemon_cli.py](test/test_daemon_cli.py) | 10 | boot／halt、家的三種來源與錯誤行來源、裸 aos-daemon 退 2、halt 等待退出 |
