@@ -234,6 +234,14 @@ class EscapeTests(unittest.TestCase):
         self.post_once()
         self.assertEqual(self.record(name[:-5])['code'], 'NotARegularFile')
         # 連到別人的家（絕對路徑）：郵差連看都不看（不是一般檔），也不會投給誰
+        # 絕對路徑連到主機上真的存在的一般檔（別人的家）：一樣退件
+        name3 = '%d-9-worker-1.json' % time.time_ns()
+        target = self.lay.member('lead') / 'state.json'
+        self.assertTrue(target.is_file())
+        code, out = self.bash('worker-1', 'ln -s %s /work/outbox/%s && echo linked' % (target, name3))
+        self.assertIn('linked', out)
+        self.post_once()
+        self.assertEqual(self.record(name3[:-5])['code'], 'NotARegularFile')
         other = self.lay.member('lead') / 'input'
         name2 = '%d-8-worker-1.json' % time.time_ns()
         code, out = self.bash('worker-1', 'ln -s %s/whatever.json /work/outbox/%s' % (other, name2))
@@ -249,7 +257,13 @@ class EscapeTests(unittest.TestCase):
         self.assertIn('No such file', out)
 
     def test_15_env_and_net(self):
+        os.environ['OPENAI_API_KEY'] = 'sk-fake-escape'           # 先真的放一個，免得空測
+        os.environ['AOS_DAEMON_HOME'] = '/tmp/fake-daemon-home'
+        self.addCleanup(os.environ.pop, 'OPENAI_API_KEY', None)
+        self.addCleanup(os.environ.pop, 'AOS_DAEMON_HOME', None)
         code, out = self.bash('worker-1', 'env')
+        self.assertNotIn('sk-fake-escape', out)
+        self.assertNotIn('fake-daemon-home', out)
         for word in ('AOS_KERNEL_HOME', 'AOS_DAEMON_HOME', 'OPENAI_API_KEY', 'SSH_AUTH_SOCK'):
             self.assertNotIn(word + '=', out)
         code, out = self.bash('worker-1', 'python3 -c "import socket; socket.create_connection((\'127.0.0.1\', 4000), 2)"')
@@ -281,6 +295,17 @@ class EscapeTests(unittest.TestCase):
                 if n != 'README.md':
                     full = self.root / 'p' / n
                     shutil.rmtree(full) if full.is_dir() and not full.is_symlink() else full.unlink()
+
+    def test_19_symlink_in_project_to_other_home(self):
+        """experiment.md 的 ws/sneaky → 別人的家：read 回 OutsideRoot、bash 讀到的連結在牢裡是懸空的。"""
+        link = self.root / 'p' / 'sneaky'
+        link.symlink_to(self.lay.member('lead'))
+        self.addCleanup(link.unlink)
+        code, out = self.tool('worker-1', 'read', {'path': 'sneaky/prompts/system.json'})
+        self.assertEqual(last_json(out).get('error'), 'OutsideRoot', out)
+        code, out = self.bash('worker-1', 'cat sneaky/prompts/system.json; ls sneaky/')
+        self.assertIn('No such file', out)
+        self.assertNotIn('"content"', out)
 
     def test_18_reviewer_and_lead_cannot_write_project(self):
         for member in ('lead', 'reviewer'):

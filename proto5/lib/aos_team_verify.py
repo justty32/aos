@@ -36,6 +36,7 @@ WORDS = {PASS: '過', FAIL: '不過', ERROR: '檢查器壞'}
 PROTO = Path(__file__).resolve().parent.parent
 JAIL_LINT = PROTO / 'tools' / 'wf' / '_jail_lint'
 OUTPUT_TAIL = 600                     # cmd_ok 的輸出最後留幾個字元給修正信
+KEEP_BYTES = 64 * 1024                # cmd_ok 讀輸出時牢外最多留多少位元組（邊讀邊丟前面的）
 
 CHECKS = {
     'contains': 'aos_team_verify:check_contains',
@@ -259,17 +260,46 @@ def check_wf_residue(project, args):
     return res['total'] == 0, text
 
 
-def jail_run(project, prog_argv, stdin_text, timeout, setenv=()):
-    """把一支程式關進牢跑：專案**唯讀**掛 /work/ws（起點）、不上網、清環境（aos-jail）。回 CompletedProcess；
-    逾時丟 subprocess.TimeoutExpired。沒 bwrap＝CheckError（檢查器壞），不退回不關牢。"""
+def jail_argv(project, prog_argv, setenv=()):
+    """關牢的 argv：專案**唯讀**掛 /work/ws（起點）、不上網、清環境（aos-jail）。沒 bwrap＝CheckError，不退回不關牢。"""
     import aos_agent_access
     if shutil.which('bwrap') is None:
         raise CheckError('這條要關在牢裡跑，這台找不到 bwrap（bubblewrap）')
     argv = [aos_agent_access.JAIL, '--mount-ro', 'ws=%s' % os.path.realpath(project), '--chdir', 'ws', '--net', 'off']
     for kv in setenv:
         argv += ['--setenv', kv]
-    return subprocess.run(argv + ['--', *prog_argv], input=stdin_text, capture_output=True, text=True,
+    return argv + ['--', *prog_argv]
+
+
+def jail_run(project, prog_argv, stdin_text, timeout, setenv=()):
+    """關牢跑一支程式，回 CompletedProcess；逾時丟 subprocess.TimeoutExpired。"""
+    return subprocess.run(jail_argv(project, prog_argv, setenv), input=stdin_text, capture_output=True, text=True,
                           timeout=timeout, errors='replace')
+
+
+def run_tail(argv, timeout, keep=KEEP_BYTES):
+    """跑 argv（stdin 空、stdout＋stderr 併一條），邊讀邊只留最後 keep 位元組（輸出再大牢外記憶體也不漲）。
+    回 (退出碼或 None＝逾時被砍, 尾端文字)。逾時砍的是 aos-jail＝bwrap 本身，牢裡的行程跟著死（--die-with-parent）。"""
+    import threading
+    proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    buf = bytearray()
+
+    def pump():
+        for chunk in iter(lambda: proc.stdout.read(8192), b''):
+            buf.extend(chunk)
+            if len(buf) > keep:
+                del buf[:len(buf) - keep]
+    reader = threading.Thread(target=pump, daemon=True)
+    reader.start()
+    try:
+        code = proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        code = None
+    reader.join(5)
+    proc.stdout.close()
+    return code, bytes(buf).decode('utf-8', 'replace')
 
 
 def check_wf_lint_strict(project, args):
@@ -304,17 +334,22 @@ def check_cmd_ok(project, item, roster):
                          % json.dumps(item.get('run'), ensure_ascii=False))
     timeout = item.get('timeout_s', entry['timeout_s'])
     shown = ' '.join(item['run'])
+    # 先在同一種牢裡確認指令找得到、牢開得起來（這一步只跑 sh 的 command -v，不跑專案的東西）。
+    # 之後只看退出碼：不去解析專案程式自己印的 stderr（它能假冒 bwrap 的錯誤訊息；astra w2b M1）
     try:
-        r = jail_run(project, item['run'], '', timeout, setenv=('PYTHONDONTWRITEBYTECODE=1',))
+        probe = jail_run(project, ['sh', '-c', 'command -v -- "$1"', 'sh', item['run'][0]], '', 30)
     except subprocess.TimeoutExpired:
-        return False, '「%s」跑超過 %d 秒，砍掉了' % (shown, timeout)
-    out = ((r.stdout or '') + (r.stderr or '')).strip()
-    tail = out[-OUTPUT_TAIL:]
-    if r.returncode == 0:
+        raise CheckError('「%s」：牢開不起來（確認指令在不在的那一步超過 30 秒）' % shown)
+    if probe.returncode != 0 or not probe.stdout.strip():
+        raise CheckError('「%s」在牢裡跑不起來：找不到指令 %s，或牢開不起來（退 %d）：%s'
+                         % (shown, item['run'][0], probe.returncode, (probe.stderr or '').strip()[-300:]))
+    code, out = run_tail(jail_argv(project, item['run'], ('PYTHONDONTWRITEBYTECODE=1',)), timeout)
+    tail = out.strip()[-OUTPUT_TAIL:]
+    if code is None:
+        return False, '「%s」跑超過 %d 秒，砍掉了%s' % (shown, timeout, '；最後的輸出：' + tail if tail else '')
+    if code == 0:
         return True, '「%s」退 0' % shown
-    if not r.stdout and (r.stderr or '').startswith(('bwrap: execvp', 'bwrap: ', 'aos-jail:')):
-        raise CheckError('「%s」在牢裡跑不起來（退 %d）：%s' % (shown, r.returncode, tail[-300:]))
-    return False, '「%s」退 %d：%s' % (shown, r.returncode, tail)
+    return False, '「%s」退 %d：%s' % (shown, code, tail)
 
 
 def checker(name):
