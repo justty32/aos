@@ -120,17 +120,30 @@ class DeliverTests(TeamCase):
         self.assertEqual(self.inbox('worker-1'), [])
         self.assertIn('郵差正在跑', self.lines[-1])
 
-    def test_already_delivered_checks(self):
-        home = self.lay.member('worker-1')
-        inbox = home / 'input'
-        self.assertFalse(post.already_delivered(home, inbox, 'mail-x.json'))
-        (inbox / 'done').mkdir()
-        (inbox / 'done' / 'mail-x.json.1-2.done').write_text('{}')
-        self.assertTrue(post.already_delivered(home, inbox, 'mail-x.json'))
-        (home / 'state.json').write_text(json.dumps({'intake': {'files': [{'src': str(inbox / 'mail-y.json'),
-                                                                           'dst': 'z'}]}}))
-        self.assertTrue(post.already_delivered(home, inbox, 'mail-y.json'))
-        self.assertFalse(post.already_delivered(home, inbox, 'mail-z.json'))
+    def test_symlinked_done_folder_is_not_followed(self):
+        """outbox 是模型寫得到的：rejected 被換成指到別人家的連結，郵差也不會搬過去蓋東西（astra M1）。"""
+        victim = self.lay.member('lead') / 'state.json'
+        before = victim.read_text()
+        box = self.lay.outbox('worker-1')
+        (box / 'rejected').rmdir()
+        (box / 'rejected').symlink_to(self.lay.member('lead'))
+        bad = self.new_id('worker-1')
+        (box / 'state.json').write_text('{}')            # 名字不對的檔：會被退件、搬進 rejected
+        (box / (bad + '.json')).write_text('{壞')
+        self.post()
+        self.assertEqual(victim.read_text(), before)
+        self.assertTrue((box / 'rejected').is_dir() and not (box / 'rejected').is_symlink())
+        self.assertTrue((box / 'rejected' / (bad + '.json')).exists())
+        self.assertTrue((box / 'rejected' / 'state.json').exists())
+        self.assertTrue(any(p.name.startswith('rejected.bad-') for p in box.iterdir()))
+
+    def test_symlinked_letter_not_read(self):
+        box = self.lay.outbox('worker-1')
+        lid = self.new_id('worker-1')
+        (box / (lid + '.json')).symlink_to(self.lay.member('lead') / 'state.json')
+        self.post()
+        self.assertEqual(self.record(lid)['code'], 'NotARegularFile')
+        self.assertTrue((box / 'rejected' / (lid + '.json')).is_symlink())
 
 
 class TaskFlowTests(TeamCase):
@@ -213,8 +226,7 @@ class TaskFlowTests(TeamCase):
         self.assertEqual(self.human_mail()[-1]['status'], 'DONE')
         self.assertTrue((self.lay.team / 'post' / 'jobs-done' / 'v-t-0001-r1-a1').is_dir())
 
-    def test_kernel_submit_crash_recovery(self):
-        """崩在「放單、記下已交」之間：kernel 收了＝不重放；沒收到＝用同一個單名重放（不多一次）。"""
+    def kernel_job(self):
         kernel = self.tmp / 'K'
         (kernel / 'requests').mkdir(parents=True)
         (kernel / 'responses').mkdir()
@@ -223,30 +235,94 @@ class TaskFlowTests(TeamCase):
         env = dict(os.environ, AOS_KERNEL_HOME=str(kernel))
         self.post(submit=None, env=env)
         jobdir = self.lay.team / 'post' / 'jobs' / 'v-t-0001-r1-a1'
+        return kernel, env, jobdir
+
+    def test_kernel_submit_crash_recovery(self):
+        """崩在「記要起、真的放單」之間：kernel 收了＝不重放；沒收到＝用同一個單名重放（不多一次）。"""
+        kernel, env, jobdir = self.kernel_job()
         job = json.loads((jobdir / 'job.json').read_text())
-        self.assertEqual((job['mode'], job['status'], job['tries']), ('kernel', 'submitted', 1))
-        req = kernel / 'requests' / job['request']
+        run = job['runs'][0]
+        self.assertEqual((run['mode'], run['state'], run['n']), ('kernel', 'running', 1))
+        tag = post.team_tag(self.team)
+        self.assertEqual(run['proc'], 'v-t-0001-r1-a1-%s-1' % tag)       # 帶團隊識別：別隊的 t-0001 不撞名
+        req = kernel / 'requests' / run['request']
         body = json.loads(req.read_text())
-        self.assertEqual((body['method'], body['params']['once'], body['params']['name']),
-                         ('add', True, 'v-t-0001-r1-a1-1'))
-        job['status'] = 'submitting'                       # 假裝崩在記下之前
+        self.assertEqual((body['method'], body['params']['once'], body['params']['name']), ('add', True, run['proc']))
+        run['state'] = 'starting'                          # 假裝崩在記下之前
         fmt.write_json(jobdir / 'job.json', job)
         self.post(submit=None, env=env)
         job = json.loads((jobdir / 'job.json').read_text())
-        self.assertEqual((job['status'], job['tries']), ('submitted', 1))
+        self.assertEqual([r['state'] for r in job['runs']], ['running'])
         req.unlink()                                       # kernel 沒收到（原單不見、也沒回音、帳本沒有）
-        job['status'] = 'submitting'
+        job['runs'][0]['state'] = 'starting'
         fmt.write_json(jobdir / 'job.json', job)
         self.post(submit=None, env=env)
         job = json.loads((jobdir / 'job.json').read_text())
-        self.assertEqual((job['status'], job['tries']), ('submitted', 1))
+        self.assertEqual(len(job['runs']), 1)
         self.assertTrue(req.exists())
-        (kernel / 'responses' / job['request']).write_text('{}')   # 回音到了、結果也在 → 收、ack
+        (kernel / 'responses' / run['request']).write_text('{}')   # 回音到了、結果也在 → 收、ack
         self.job_result('v-t-0001-r1-a1', True)
         self.post(submit=None, env=env)
         self.assertEqual(self.ticket()['status'], 'done')
         acks = [json.loads(p.read_text()) for p in (kernel / 'requests').glob('ack-*.json')]
-        self.assertEqual([a['params']['name'] for a in acks], [job['request']])
+        self.assertEqual([a['params']['name'] for a in acks], [run['request']])
+
+    def test_retry_each_run_acked_separately(self):
+        """第 1 次沒結果（回音到了）→ 簽收那一次、交第 2 次；第 2 次結果先到、回音還沒到＝等回音才收尾（ack 綁在那一次）。"""
+        kernel, env, jobdir = self.kernel_job()
+        job = json.loads((jobdir / 'job.json').read_text())
+        r1 = job['runs'][0]
+        (kernel / 'requests' / r1['request']).unlink()
+        (kernel / 'responses' / r1['request']).write_text('{}')
+        self.post(submit=None, env=env)
+        job = json.loads((jobdir / 'job.json').read_text())
+        self.assertEqual([r['state'] for r in job['runs']], ['ended', 'running'])
+        r2 = job['runs'][1]
+        self.assertNotEqual(r1['request'], r2['request'])
+        (kernel / 'requests' / r2['request']).unlink()
+        self.job_result('v-t-0001-r1-a1', True, run=2)
+        state = kernel / 'state.json'
+        state.write_text(json.dumps({'procs': {r2['proc']: {'status': 'running'}}}))
+        self.post(submit=None, env=env)
+        self.assertEqual(self.ticket()['status'], 'done')
+        self.assertTrue(jobdir.exists())                   # 第 2 次的回音還沒到：不收尾
+        job = json.loads((jobdir / 'job.json').read_text())
+        self.assertEqual([r['acked'] for r in job['runs']], [True, False])
+        (kernel / 'responses' / r2['request']).write_text('{}')
+        self.post(submit=None, env=env)
+        self.assertFalse(jobdir.exists())
+        acks = sorted(json.loads(p.read_text())['params']['name'] for p in (kernel / 'requests').glob('ack-*.json'))
+        self.assertEqual(acks, sorted([r1['request'], r2['request']]))
+
+    def test_bad_result_not_trusted(self):
+        """結果檔的單號／rev／attempt 對不上、pass 不是布林：不收（改名 .bad），換下一次執行。"""
+        self.open_ticket()
+        self.done()
+        self.post()
+        self.job_result('v-t-0001-r1-a1', True, task='t-9999')
+        self.post()
+        self.assertEqual(self.ticket()['status'], 'verifying')
+        jobdir = self.lay.team / 'post' / 'jobs' / 'v-t-0001-r1-a1'
+        self.assertTrue((jobdir / 'result-1.json.bad').exists())
+        self.assertEqual(len(self.submitted), 2)
+        self.job_result('v-t-0001-r1-a1', 1, run=2)
+        self.post()
+        self.assertTrue((jobdir / 'result-2.json.bad').exists())
+        self.job_result('v-t-0001-r1-a1', True, run=3)
+        self.post()
+        self.assertEqual(self.ticket()['status'], 'done')
+
+    def test_complete_job_moved_after_crash(self):
+        self.open_ticket()
+        self.done()
+        self.post()
+        jobdir = self.lay.team / 'post' / 'jobs' / 'v-t-0001-r1-a1'
+        job = json.loads((jobdir / 'job.json').read_text())
+        job['complete'] = True                             # 崩在「記完成、搬走」之間
+        fmt.write_json(jobdir / 'job.json', job)
+        self.post()
+        self.assertFalse(jobdir.exists())
+        self.assertTrue((self.lay.team / 'post' / 'jobs-done' / 'v-t-0001-r1-a1').is_dir())
 
     def test_real_verify_command_result_is_collected(self):
         """真的跑 aos-team verify（就像 kernel 會跑的那一行），郵差下一輪收。"""
@@ -449,45 +525,50 @@ class ClerkTests(TeamCase):
         (self.project / 'SESSION-LOG.md').write_text(SESSION, encoding='utf-8')
         (self.project / 'WAIT_USER.md').write_text(WAIT, encoding='utf-8')
 
-    def section(self, name, heading):
+    def block(self, name):
+        """書記區塊裡的行（不含兩行標記）。"""
         text = (self.project / name).read_text(encoding='utf-8')
-        body = text.split(heading, 1)[1].split('\n## ', 1)[0]
-        return [ln for ln in body.split('\n') if ln.strip()]
+        body = text.split(post.BLOCK_BEGIN + '\n', 1)[1].split('\n' + post.BLOCK_END, 1)[0]
+        return body.split('\n')
 
     def test_session_log_follows_tickets(self):
         self.handoff()
         self.post()
-        lines = self.section('SESSION-LOG.md', '## 最新進度')
+        lines = self.block('SESSION-LOG.md')
         self.assertEqual(len(lines), 1)
         self.assertTrue(lines[0].startswith('- [t-0001 IMPORT.md] 已投、還沒收（worker-1，第 1/3 次）'), lines[0])
-        self.assertIn('| 工作流 | session-log |', (self.project / 'SESSION-LOG.md').read_text())
-        self.letter('human', 'worker-1', 'REQUEST', '停', reply_to=None)
+        text = (self.project / 'SESSION-LOG.md').read_text()
+        self.assertNotIn('（目前無）\n' + post.BLOCK_BEGIN, text)       # 原本那行（目前無）被區塊換掉
+        self.assertTrue(text.startswith(SESSION.split('（目前無）')[0]))     # 區塊外逐字不動
+        self.assertTrue(text.endswith(SESSION.split('（目前無）')[1]))
         self.request('human', 'cancel', task='t-0001')
         self.post()
-        self.assertEqual(self.section('SESSION-LOG.md', '## 最新進度'), ['（目前無）'])
-        self.assertEqual((self.project / 'SESSION-LOG.md').read_text(), SESSION)
+        self.assertEqual(self.block('SESSION-LOG.md'), ['（目前無）'])
 
     def test_wait_user_follows_questions(self):
-        self.request('worker-1', 'ask', question='用哪個分支？', options=['main', '開分支'])
+        self.request('worker-1', 'ask', question='用哪個分支？\n# 不是標題', options=['main', '開分支'])
         self.post()
-        lines = self.section('WAIT_USER.md', '## 待使用者項')
+        lines = self.block('WAIT_USER.md')
         self.assertEqual(len(lines), 1)
-        self.assertIn('[q-0001] worker-1 問：用哪個分支？（選項：main / 開分支） → aos-team answer q-0001', lines[0])
+        self.assertIn('[q-0001] worker-1 問：用哪個分支？ # 不是標題（選項：main / 開分支） → aos-team answer q-0001',
+                      lines[0])
         self.request('human', 'answer', q='q-0001', text='main')
         self.post()
-        self.assertEqual((self.project / 'WAIT_USER.md').read_text(), WAIT)
+        self.assertEqual(self.block('WAIT_USER.md'), ['（目前無）'])
 
-    def test_human_lines_kept_and_no_rewrite_when_same(self):
-        text = SESSION.replace('（目前無）', '- [dev] 人自己寫的 → 下一步')
+    def test_human_text_outside_block_untouched(self):
+        """人寫的段落、空行、長得像書記的行，都在區塊外逐字留著（astra M9）。"""
+        human = '- [dev] 人自己寫的 → 下一步\n\n- [t-0009 x] 人抄的舊單\n\n第二段'
+        text = SESSION.replace('（目前無）', human)
         (self.project / 'SESSION-LOG.md').write_text(text, encoding='utf-8')
         self.handoff()
         self.post()
-        lines = self.section('SESSION-LOG.md', '## 最新進度')
-        self.assertEqual(lines[0], '- [dev] 人自己寫的 → 下一步')
-        self.assertTrue(lines[1].startswith('- [t-0001 '))
+        out = (self.project / 'SESSION-LOG.md').read_text()
+        self.assertIn(human, out)
+        self.assertTrue(self.block('SESSION-LOG.md')[0].startswith('- [t-0001 '))
         before = os.stat(self.project / 'SESSION-LOG.md').st_mtime_ns
-        self.lines.clear()
-        self.post(**{})
+        self.letter('lead', 'worker-1', 'PROGRESS')          # 單子沒變：不重寫
+        self.post()
         self.assertEqual(os.stat(self.project / 'SESSION-LOG.md').st_mtime_ns, before)
 
     def test_no_file_no_write(self):
@@ -503,12 +584,15 @@ class ClerkTests(TeamCase):
         self.post()
         self.assertIn('- [t-0001 ', (self.project / 'wf' / 'SESSION-LOG.md').read_text())
 
-    def test_update_section_adds_heading_when_missing(self):
+    def test_update_section_heading_missing_and_code_fence(self):
         p = self.project / 'x.md'
-        p.write_text('# 標題\n\n一段\n')
+        p.write_text('# 標題\n\n```\n## 最新進度\n```\n一段\n')
         self.assertTrue(post.update_section(p, '## 最新進度', ['- [t-0001 x] a']))
-        self.assertEqual(p.read_text(), '# 標題\n\n一段\n\n## 最新進度\n\n- [t-0001 x] a\n')
+        self.assertEqual(p.read_text(), '# 標題\n\n```\n## 最新進度\n```\n一段\n\n## 最新進度\n\n%s\n- [t-0001 x] a\n%s\n'
+                         % (post.BLOCK_BEGIN, post.BLOCK_END))
         self.assertFalse(post.update_section(p, '## 最新進度', ['- [t-0001 x] a']))
+        self.assertTrue(post.update_section(p, '## 最新進度', []))
+        self.assertIn('%s\n（目前無）\n%s' % (post.BLOCK_BEGIN, post.BLOCK_END), p.read_text())
 
 
 class MailCommandTests(TeamCase):

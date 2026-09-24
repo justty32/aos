@@ -149,10 +149,13 @@ class TeamCase(unittest.TestCase):
     def record(self, rid):
         return json.loads((self.lay.post_sent / (rid + '.json')).read_text(encoding='utf-8'))
 
-    def job_result(self, jid, passed, results=None):
+    def job_result(self, jid, passed, results=None, run=1, **over):
+        """假裝驗收員跑完第 run 次執行：寫 jobs/<jid>/result-<run>.json（身分照 jid：v-<單號>-r<rev>-a<attempt>）。"""
         d = self.lay.team / 'post' / 'jobs' / jid
-        res = {'task': jid.split('-r')[0][2:], 'pass': passed,
+        head, rev, attempt = jid[2:].rsplit('-r', 1)[0], *map(int, jid.rsplit('-r', 1)[1].split('-a'))
+        res = {'task': head, 'rev': rev, 'attempt': attempt, 'pass': passed,
                'results': results if results is not None else
                [{'i': 0, 'kind': 'file_exists', 'result': 'pass' if passed else 'fail', 'pass': passed,
                  'why': 'AGENTS.md %s' % ('在' if passed else '不在')}]}
-        fmt.write_json(d / 'result.json', res)
+        res.update(over)
+        fmt.write_json(d / ('result-%d.json' % run), res)

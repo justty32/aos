@@ -124,7 +124,7 @@ class CrashWindowTests(TeamCase):
         self.assertEqual(self.jobs(), ['v-t-0001-r1-a1'])
         job = json.loads((self.lay.team / 'post' / ('jobs' if (self.lay.team / 'post' / 'jobs' / 'v-t-0001-r1-a1').exists()
                                                   else 'jobs-done') / 'v-t-0001-r1-a1' / 'job.json').read_text())
-        self.assertEqual(job['tries'], 1)
+        self.assertEqual([r['n'] for r in job['runs']], [1])
 
     def test_ten_kills_in_a_row_still_one_delivery(self):
         """穩定：同一封信在每個窗口各崩一次，最後只投一封、紀錄完整。"""

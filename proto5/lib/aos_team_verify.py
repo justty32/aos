@@ -40,11 +40,14 @@ class CheckError(Exception):
 # ------------------------------------------------------------------ 路徑 ----
 
 def inside(project, rel):
-    """rel 相對 project；解開符號連結後要在 project 裡，否則 CheckError。回絕對路徑（不查在不在）。"""
+    """rel 相對 project（絕對路徑、~ 不收）；解開符號連結後要在 project 裡，否則 CheckError。回絕對路徑（不查在不在）。
+    這是防手滑：檢查之後、開檔之前有人換連結擋不住（驗收員在牢外跑，這一版的信任前提見 plan.md 第一波）。"""
     if not isinstance(rel, str) or not rel or '\0' in rel:
         raise CheckError('path 要是非空字串')
+    if os.path.isabs(rel) or rel.startswith('~'):
+        raise CheckError('%s 要寫成相對專案資料夾的路徑' % rel)
     root = os.path.realpath(project)
-    full = os.path.realpath(os.path.join(root, os.path.expanduser(rel)))
+    full = os.path.realpath(os.path.join(root, rel))
     if full != root and not full.startswith(root.rstrip(os.sep) + os.sep):
         raise CheckError('%s 在專案資料夾外（%s）' % (rel, root))
     return Path(full)
@@ -109,16 +112,30 @@ def _cells(line):
 
 
 def _columns(item, available):
+    """要檢查哪幾欄：欄名要非空、不重複；指定的要在；最後至少一欄（0 欄不能算填滿）。"""
+    available = list(available)
+    if any(not isinstance(c, str) or not c.strip() for c in available):
+        raise CheckError('表頭有空的欄名')
+    dup = sorted({c for c in available if available.count(c) > 1})
     want = item.get('columns', item.get('column'))
     if want is None:
-        return list(available)
-    want = [want] if isinstance(want, str) else want
-    if not isinstance(want, list) or not want or not all(isinstance(c, str) for c in want):
-        raise CheckError('column／columns 要是欄名或欄名陣列')
-    missing = [c for c in want if c not in available]
-    if missing:
-        raise CheckError('找不到欄 %s（有：%s）' % ('、'.join(missing), '、'.join(available) or '無'))
-    return want
+        if dup:
+            raise CheckError('表頭有重複的欄名：%s' % '、'.join(dup))
+        cols = available
+    else:
+        want = [want] if isinstance(want, str) else want
+        if not isinstance(want, list) or not want or not all(isinstance(c, str) and c for c in want):
+            raise CheckError('column／columns 要是欄名或欄名陣列')
+        missing = [c for c in want if c not in available]
+        if missing:
+            raise CheckError('找不到欄 %s（有：%s）' % ('、'.join(missing), '、'.join(available) or '無'))
+        bad = [c for c in want if c in dup]
+        if bad:
+            raise CheckError('欄名 %s 在表頭出現不只一次，分不出是哪一欄' % '、'.join(bad))
+        cols = list(dict.fromkeys(want))
+    if not cols:
+        raise CheckError('表沒有欄（0 欄不能算填滿）')
+    return cols
 
 
 def check_table_filled(project, item):
@@ -130,18 +147,28 @@ def check_table_filled(project, item):
             data = json.loads(text)
         except ValueError as e:
             raise CheckError('%s 不是合法 JSON：%s' % (rel, e))
-        rows = data.get('rows') if isinstance(data, dict) else data
+        if isinstance(data, dict):
+            if data.get('contract') != 'wf-table/1':
+                raise CheckError('%s 的 contract 要是 wf-table/1（收到 %r）' % (rel, data.get('contract')))
+            rows, available = data.get('rows'), data.get('columns')
+            if not isinstance(available, list):
+                raise CheckError('%s 缺 columns（wf-table/1 的欄位順序）' % rel)
+        else:
+            rows = data
+            available = list(dict.fromkeys(k for r in rows for k in r)) if isinstance(rows, list) and \
+                all(isinstance(r, dict) for r in rows) else []
         if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
-            raise CheckError('%s 要是 wf-table/1（{"rows": [物件…]}）或物件陣列' % rel)
-        available = data.get('columns') if isinstance(data, dict) and isinstance(data.get('columns'), list) \
-            else list(dict.fromkeys(k for r in rows for k in r))
+            raise CheckError('%s 要是 wf-table/1（{"contract", "columns", "rows": [物件…]}）或物件陣列' % rel)
         cols = _columns(item, available)
         cells = [(n, c, r.get(c)) for n, r in enumerate(rows) for c in cols]
     elif rel.endswith('.csv'):
-        reader = csv.DictReader(io.StringIO(text))
-        rows = list(reader)
-        cols = _columns(item, reader.fieldnames or [])
-        cells = [(n, c, r.get(c)) for n, r in enumerate(rows) for c in cols]
+        table = list(csv.reader(io.StringIO(text)))
+        if not table:
+            raise CheckError('%s 是空的（連表頭都沒有）' % rel)
+        header, rows = table[0], table[1:]
+        cols = _columns(item, header)
+        idx = {c: header.index(c) for c in cols}
+        cells = [(n, c, r[idx[c]] if idx[c] < len(r) else '') for n, r in enumerate(rows) for c in cols]
     else:
         tables = _md_tables(text)
         heading = item.get('heading')

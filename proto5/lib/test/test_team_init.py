@@ -71,7 +71,7 @@ class InitTests(unittest.TestCase):
             self.assertTrue(lay.outbox(name).is_dir())
         lead = read_json(lay.member('lead') / 'info.json')
         names = [e['$opt']['only'] for e in lead['tools']]
-        self.assertEqual(names, [['handoff', 'board', 'ask_human'], ['read', 'grep', 'find', 'ls']])
+        self.assertEqual(names, [['handoff', 'board', 'ask_human'], ['team_say'], ['read', 'grep', 'find', 'ls']])   # team 包（第 2 隊）已在
         self.assertTrue(lay.outbox('human').is_dir())
         self.assertEqual(read_json(self.team / 'team.json'), ROSTER)
 
@@ -435,6 +435,13 @@ class TeamIntegrationTests(KernelCase):
         self.team('start')
         rows = json.loads(self.team('ls', '--json').stdout)
         self.assertTrue(all(x['health'] == 'ok' for x in rows), rows)
+        # start 也登記了真郵差、心跳（第 2 隊）；這條測試用自己的假郵差一步一步走，先把真的撤掉免得搶信
+        import contextlib
+        import aos_team_beat
+        import aos_team_post
+        with open(os.devnull, 'w') as null, contextlib.redirect_stdout(null):
+            aos_team_post.stop(self.teamdir, env=dict(os.environ, **self.env))
+            aos_team_beat.stop(self.teamdir, env=dict(os.environ, **self.env))
 
         # 人（假門房落穿）→ 領隊：board、handoff（牢裡寫 /work/outbox）
         letter = {'id': fmt.new_id('human'), 'from': 'human', 'to': 'lead', 'status': 'REQUEST', 'reply_to': None,
@@ -482,9 +489,9 @@ class TeamIntegrationTests(KernelCase):
         for body in self.requests:
             who = next(k for k in SCRIPTS if k in body['messages'][0]['content'])
             tools[who] = {t['function']['name'] for t in body['tools']}
-        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'read', 'grep', 'find', 'ls'})
+        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'team_say', 'read', 'grep', 'find', 'ls'})
         self.assertEqual(tools['審查員 reviewer'], {'board', 'review_result', 'read', 'grep', 'find', 'ls'})
-        self.assertTrue({'write', 'bash', 'board', 'ask_human'} <= tools['工人 worker-1'])
+        self.assertTrue({'write', 'bash', 'board', 'ask_human', 'team_say'} <= tools['工人 worker-1'])
         self.assertNotIn('handoff', tools['工人 worker-1'])
         self.team('stop')
         wait_for(lambda: all(x['health'] == 'unregistered' for x in json.loads(self.team('ls', '--json').stdout)),
