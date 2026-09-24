@@ -31,9 +31,9 @@ sed -e "s|@JOB@|$J|g" -e "s|@WS@|$WS|g" claude-job.json > $J/inst.json
 | `--max-turns 8` | help 沒列，但真跑確認認得；一張單子最多來回幾輪 |
 | `--max-budget-usd 0.50` | **訂閱登入下也有效**（09-24 真跑）：超過就 `is_error: true`、`subtype: error_max_budget_usd`、退 1。它是呼叫完才算，擋不住第一次呼叫 |
 | `--safe-mode` | 不讀使用者自己的 CLAUDE.md、記憶、skill、hook、MCP；登入照常 |
-| `--restricted` | 拿掉 Bash 等會跑程式的工具與 WebFetch，檔案工具只能碰工作資料夾，也不讀使用者／專案的設定檔。**不要**再用 `--tools` 把執行工具加回來（會把這道牆拆掉）。09-24 審查後加，真跑確認照常回話 |
-| `--permission-mode acceptEdits --permission-prompts none` | 會問人的動作一律被拒（沒人按「允許」）；`acceptEdits` 准它改工作資料夾裡的檔。光靠這兩個**擋不住**唯讀指令與部分檔案指令，所以才要上一行 `--restricted` |
-| 想讓它跑測試？ | 得拿掉 `--restricted` 再加 `--allowedTools "Bash(make test)"`。**這等於准它跑工作區裡的任意程式**：它能先改 Makefile 或測試，再跑「被允許的」`make test`。只在你信得過工作區內容、又能接受「牢外、改到工作區以外也擋不住」時才這樣做 |
+| `--permission-mode acceptEdits --permission-prompts none` | 會問人的動作一律被拒（沒人按「允許」）；`acceptEdits` 准它改工作資料夾裡的檔。光靠這兩個**擋不住**唯讀指令與部分檔案指令 |
+| （沒有 `--restricted`） | 使用者 09-24 裁決：範本**預設不帶** `--restricted`，claude 能跑工作區裡的程式（Bash 等，例如跑測試）。牆（bwrap 牢）做好前，這等於在你的機器上裸跑 shell——只在信得過工作區內容時放單 |
+| 想更保守？ | 自己在單子的 argv 加一個 `--restricted`：拿掉 Bash 等會跑程式的工具與 WebFetch，檔案工具只能碰工作資料夾，也不讀使用者／專案的設定檔。例：`["claude", "-p", …, "--safe-mode", "--restricted", "--permission-mode", "acceptEdits", "--permission-prompts", "none"]`。**不要**再用 `--tools` 把執行工具加回來（會把這道牆拆掉） |
 | `--disallowedTools "Bash(git push:*)"` | 多一道；但換個寫法就繞過，真正的牆是上一行（不准跑指令）與以後的牢 |
 | codex `-s read-only` | 它跑的指令只能讀。**放在 `fork` 前面也有效**（09-24 真跑：每次都照這次給的，不跟上一次） |
 | codex `-m gpt-6-astra` | 這台只有 astra 能用 |
