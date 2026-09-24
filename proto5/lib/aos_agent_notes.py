@@ -52,16 +52,29 @@ def _jail_real(base, value):
     return os.path.join(mount['path'], rest) if rest else mount['path']
 
 
+def _jailed(base):
+    """note 這支會不會關牢：家裡有 access.json，而且 info 裡叫 note 的工具沒寫 _jail: false。"""
+    _, state = acc.access_lookup(base)
+    if state != 'present':
+        return False
+    try:
+        import aos_agent_info
+        tools = aos_agent_info.load(base)['tools_raw']
+    except (AgentError, OSError, ValueError):
+        return True
+    return not any(t['function']['name'] == 'note' and t.get('_jail', True) is False for t in tools)
+
+
 def notes_file(base):
     """算筆記檔絕對路徑（不保證存在）。"""
     base = os.path.abspath(base)
     value = _config_file(base)
+    jailed = _jailed(base)
     if value is None:
-        # 跟 note 工具同一條規則：家裡有 access.json（工具關牢）＝牢裡的 /work/notes/notes.json
-        _, state = acc.access_lookup(base)
-        if state == 'present':
-            return _jail_real(base, '/work/notes/notes.json')
-        return os.path.join(base, DEFAULT_FILE)
+        # 跟 note 工具同一條規則：note 關牢（家裡有 access.json、那支沒寫 _jail: false）＝牢裡的 /work/notes/notes.json
+        return _jail_real(base, '/work/notes/notes.json') if jailed else os.path.join(base, DEFAULT_FILE)
+    if jailed and not (value.startswith('/work/') or os.path.isabs(os.path.expanduser(value))):
+        raise AgentError('ConfigInvalid', 'note 工具關在牢裡，config.json 的 file 要寫 /work/<名>/…（現在是相對路徑 %r）' % value)
     if value == '/work' or value.startswith('/work/'):
         return _jail_real(base, value)
     if os.path.isabs(os.path.expanduser(value)):

@@ -3,7 +3,7 @@
 寫的人只有一個：持 .tick.lock 的那一方（tick 本身，或拿了同一把鎖的 aos-agent compact）。
 追加一行＝一次 write（O_APPEND）；寫不進去只丟掉這一行，不讓 tick 失敗（量測不能拖垮主流程）。
 **至少一次**：事件都在「提交那一步」之前寫，崩了重做會再寫一次同一行（同 ev＋id），讀的人用 dedupe() 去重；
-所以永遠不會「做了沒記」，只可能「記了兩次」。
+所以行程崩潰不會「做了沒記」，只可能「記了兩次」。例外：寫檔本身失敗（log/ 不能寫、磁碟滿）那一行就丟了。
 """
 import datetime
 import json
@@ -24,9 +24,13 @@ def append_line(path, record):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         data = (json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n').encode('utf-8')
-        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_CLOEXEC, 0o644)
+        fd = os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_CLOEXEC, 0o644)
         try:
-            os.write(fd, data)
+            end = os.lseek(fd, 0, os.SEEK_END)
+            if end and os.pread(fd, 1, end - 1) != b'\n':
+                data = b'\n' + data          # 上一行寫到一半（短寫、崩潰）：先換行，別把這行黏上去
+            while data:
+                data = data[os.write(fd, data):]
         finally:
             os.close(fd)
         return True
@@ -42,7 +46,9 @@ def emit(base, ev, ident, **fields):
 
 
 def batch_id(batch):
-    """一批的身分：工作名去掉最後的 -<序號>；整批都在本地結束（沒工作名）＝None。"""
+    """一批的身分：建批時存的 batch.id；改版前的批沒有，就從工作名去掉最後的 -<序號>（都沒有＝None）。"""
+    if isinstance(batch.get('id'), str):
+        return batch['id']
     for call in batch['calls']:
         if call.get('name'):
             return call['name'].rsplit('-', 1)[0]

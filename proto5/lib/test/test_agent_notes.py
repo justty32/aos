@@ -371,6 +371,44 @@ class AgentNotesLibCase(unittest.TestCase):
 
 # ======================================================= aos-agent tools add notes ====
 
+class JailedPathRulesCase(unittest.TestCase):
+    """astra M6：關牢時工具與人看的是同一個檔；相對路徑兩邊都拒絕；_jail: false 照家裡算。"""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp(prefix='aos-notes-jail-'))
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.shelf = self.root / 'shelf'
+        self.shelf.mkdir()
+        self.tool = {'type': 'function', 'function': {'name': 'note'}, '_meta': {'argv': ['tools/notes/note']}}
+        self.home = make_home(self.root / 'amy', {'tools': ['t.json']})
+        (self.home / 't.json').write_text(json.dumps([self.tool]))
+        (self.home / 'access.json').write_text(json.dumps({'_metainfo': {'_type': 'agent_access', '_version': 1},
+                                                           'mounts': {'notes': str(self.shelf)}}))
+
+    def test_default_maps_mount(self):
+        self.assertEqual(notes_lib.notes_file(self.home), str(self.shelf / 'notes.json'))
+
+    def test_relative_config_rejected_both_sides(self):
+        (self.home / 'tools/notes').mkdir(parents=True)
+        (self.home / 'tools/notes/config.json').write_text('{"file": "notes/notes.json"}')
+        with self.assertRaises(AgentError) as cm:
+            notes_lib.notes_file(self.home)
+        self.assertEqual(cm.exception.code, 'ConfigInvalid')
+        pack = self.root / 'pack'
+        shutil.copytree(PACKAGE, pack)
+        (pack / 'config.json').write_text('{"file": "notes/notes.json"}')
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', AOS_TOOL_ROOT='/work/ws')
+        env.pop('AOS_NOTES_FILE', None)
+        p = subprocess.run([PY, str(pack / 'note')], input='{"op": "find", "query": "x"}', cwd=self.home,
+                           capture_output=True, text=True, env=env, timeout=10)
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual(json.loads(p.stdout.strip().splitlines()[-1])['error'], 'ConfigInvalid')
+
+    def test_unjailed_tool_uses_home(self):
+        (self.home / 't.json').write_text(json.dumps([dict(self.tool, _jail=False)]))
+        self.assertEqual(notes_lib.notes_file(self.home), str(self.home / 'notes/notes.json'))
+
+
 class ToolsAddNotesCase(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix='aos-tools-add-notes-'))

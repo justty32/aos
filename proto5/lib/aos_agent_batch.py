@@ -60,7 +60,8 @@ def make_batch(run, kernel):
                           'tool_call_id': item['id'], 'tool': tool,
                           'done': None if found else {'content': '沒有這個工具：' + tool},
                           'acked': not found})
-    run.st['batch'] = {'kind': kind, 'kernel': kernel, 'base_len': len(history),
+    # id：批的身分（事件紀錄用；整批都在本地結束、沒有工作名時也有，spec/agent/events.md）
+    run.st['batch'] = {'kind': kind, 'id': identity, 'kernel': kernel, 'base_len': len(history),
                        'sent': False, 'calls': calls}
     if kind == 'act':
         # access.md：一批只解一次，同批每件、崩潰重送都用這份快照
