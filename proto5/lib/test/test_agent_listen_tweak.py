@@ -3,10 +3,12 @@ from datetime import datetime
 import io
 import json
 import os
+import queue
 from pathlib import Path
 import signal
 import subprocess
 import sys
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -208,38 +210,153 @@ class ListenTweakTests(unittest.TestCase):
         self.assertEqual((code, output),
                          (0, '── 第 2 輪 ──\n[呼叫 date]\n[結果 date：2026-09-24 14:03:12]\n現在 14:03\n'))
 
-    def test_follow_show_calls_live(self):
-        """真的開一支 --follow --show-calls：叫工具那一刻就印呼叫行，不等輪完。"""
-        self.history(HISTORY[:2])
-        proc = subprocess.Popen([sys.executable, str(CLI), 'listen', '--follow', '--show-calls',
-                                 '--target', str(self.base)],
+    def start_follow(self, *flags):
+        """開一支真的 --follow；讀 stdout 的執行緒把每行丟進佇列。
+
+        先握手：一直往記憶補 ping 回話，直到它印出第一個 ping（代表它已經記下起點、開始看），
+        再把 ping 讀乾淨；之後每次讀都有期限，不會無限卡住（astra 必修 7）。
+        """
+        proc = subprocess.Popen([sys.executable, str(CLI), 'listen', '--follow', *flags, '--target', str(self.base)],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                 env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'))
-        self.addCleanup(lambda: proc.poll() is None and proc.kill())
-        time.sleep(.5)
-        self.history(HISTORY[:4])  # 只叫了工具，還沒結果
-        first = proc.stdout.readline()
-        self.assertEqual(first, '[呼叫 date]\n')
-        self.history(HISTORY[:6])
-        self.assertEqual(proc.stdout.readline(), '[結果 date：2026-09-24 14:03:12]\n')
-        self.assertEqual(proc.stdout.readline(), '現在 14:03\n')
+
+        def cleanup():
+            if proc.poll() is None:
+                proc.kill()
+            proc.communicate(timeout=10)
+        self.addCleanup(cleanup)
+        lines = queue.Queue()
+        threading.Thread(target=lambda: [lines.put(l) for l in proc.stdout], daemon=True).start()
+        history = list(HISTORY[:2])
+        deadline = time.monotonic() + 15
+        while True:
+            self.assertLess(time.monotonic(), deadline, '--follow 15 秒內沒開始看')
+            history.append(reply('ping'))
+            self.history(history)
+            try:
+                self.assertEqual(lines.get(timeout=.5), 'ping\n')
+                break
+            except queue.Empty:
+                pass
+        time.sleep(.6)  # 讓它把這一輪看到的 ping 都印完
+        while not lines.empty():
+            self.assertEqual(lines.get(), 'ping\n')
+        return proc, lines, history
+
+    def next_line(self, lines):
+        return lines.get(timeout=10)
+
+    def stop_follow(self, proc):
         proc.send_signal(signal.SIGINT)
-        _, err = proc.communicate(timeout=5)
+        _, err = proc.communicate(timeout=10)
         self.assertEqual(proc.returncode, 0, err)
+
+    def test_follow_show_calls_live(self):
+        """真的開一支 --follow --show-calls：叫工具那一刻就印呼叫行，不等輪完。"""
+        proc, lines, history = self.start_follow('--show-calls')
+        self.history(history + HISTORY[2:4])  # 只叫了工具，還沒結果
+        self.assertEqual(self.next_line(lines), '[呼叫 date]\n')
+        self.history(history + HISTORY[2:6])
+        self.assertEqual(self.next_line(lines), '[結果 date：2026-09-24 14:03:12]\n')
+        self.assertEqual(self.next_line(lines), '現在 14:03\n')
+        self.stop_follow(proc)
+        self.assertTrue(lines.empty())
 
     def test_follow_plain_unchanged(self):
         """沒開 --show-calls 的 --follow 照舊：工具結果不印、只叫工具那則印 (tool_calls: …)。"""
-        self.history(HISTORY[:2])
-        proc = subprocess.Popen([sys.executable, str(CLI), 'listen', '--follow', '--target', str(self.base)],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'))
-        self.addCleanup(lambda: proc.poll() is None and proc.kill())
-        time.sleep(.5)
-        self.history(HISTORY[:6])
-        time.sleep(.5)
-        proc.send_signal(signal.SIGINT)
-        out, err = proc.communicate(timeout=5)
-        self.assertEqual((proc.returncode, out), (0, '(tool_calls: date)\n現在 14:03\n'), err)
+        proc, lines, history = self.start_follow()
+        self.history(history + HISTORY[2:6])
+        self.assertEqual(self.next_line(lines), '(tool_calls: date)\n')
+        self.assertEqual(self.next_line(lines), '現在 14:03\n')
+        self.stop_follow(proc)
+        self.assertTrue(lines.empty())
+
+    # astra 必修 1～6 ----------------------------------------------------------
+
+    def test_result_named_by_nearest_earlier_call(self):
+        # 規範只禁同一則裡 id 重複；不同輪同 id 合法
+        self.history([said('一'), asked(call('same', 'read')), result('same', 'old'), reply('a'),
+                      said('二'), asked(call('same', 'write')), result('same', 'new'), reply('b')])
+        _, output = self.listen('--last', '2', '--show-calls')
+        self.assertIn('[結果 read：old]', output)
+        self.assertIn('[結果 write：new]', output)
+        self.assertEqual(render.render(self.read(self.base / 'prompts/history.json'), [2], calls='short',
+                                       headers=False), ['[結果 read：old]'])
+
+    def test_fallback_odd_history_does_not_crash(self):
+        (self.base / 'info.json').write_text('{')  # 讀驗失敗，改讀 prompts/history.json（不驗）
+        odd = [said('u'), None, 7, {'role': 'assistant', 'content': None, 'tool_calls': [None, {'function': 3}]},
+               {'role': 'assistant', 'content': None, 'tool_calls': 'x'},
+               {'role': 'assistant', 'content': None,
+                'tool_calls': [{'id': 1, 'function': {'name': 'n', 'arguments': {'a': 1}}}]},
+               {'role': 'tool', 'tool_call_id': ['x'], 'content': {'k': 1}},
+               {'role': 'assistant', 'content': ['不是字串']}]
+        self.history(odd)
+        for flags in (('--last',), ('--last', '5'), ('--last', '5', '--show-calls'),
+                      ('--last', '5', '--show-calls-full'), ('--last', '5', '--show-calls', '--json')):
+            with self.subTest(flags=flags):
+                code, output = self.listen(*flags)
+                self.assertEqual(code, 0, self.err.getvalue())
+                self.assertNotIn('Traceback', self.err.getvalue())
+        _, output = self.listen('--last', '5', '--show-calls')
+        self.assertIn('[呼叫 ?]', output)
+        self.assertIn('[呼叫 n a=1]', output)
+        self.assertIn('[結果 ?：{"k": 1}]', output)
+        self.assertIn('["不是字串"]', output)
+
+    def test_last_huge_number_is_all(self):
+        self.history()
+        code, output = self.listen('--last', '9' * 5000)
+        self.assertEqual(code, 0)
+        self.assertEqual(output.count('──') // 2, 3)
+        self.assertEqual(self.listen('--last', '0' * 30)[0], 2)
+        self.assertEqual(self.listen('--last', '007')[1].count('輪'), 3)
+
+    def put_done(self, name, value):
+        self.put(self.base / 'input/done' / name, value)
+
+    def test_intake_groups_by_full_id_and_original_name(self):
+        self.history([said('甲'), said('乙'), reply('r1'), said('丙'), reply('r2')])
+        self.put(self.base / 'state.json', {'input': 'input'})
+        ns = 1790000000 * 10**9
+        # 同 ns 不同 pid＝兩次收件
+        self.put_done('a.json.%d-1.done' % ns, said('丙'))
+        # 同一次收件：原檔名 a.json 在 a.json-2.json 前面（加上後綴後字典序反過來）
+        self.put_done('a.json.%d-2.done' % (ns - 10**9), said('甲'))
+        self.put_done('a.json-2.json.%d-2.done' % (ns - 10**9), said('乙'))
+        times = render.round_times(self.read(self.base / 'prompts/history.json'), self.base, ['input'])
+        self.assertEqual(set(times), {1, 2})
+        self.assertEqual(times[1], datetime.fromtimestamp(1789999999).strftime('%m-%d %H:%M:%S'))
+
+    def test_absurd_archive_stamp_skipped(self):
+        self.history()
+        self.put(self.base / 'state.json', {'input': 'input'})
+        self.put_done('x.json.%d-1.done' % 10**30, said('幾點'))
+        code, output = self.listen('--last', '3')
+        self.assertEqual(code, 0)
+        self.assertIn('── 第 2 輪 ──\n', output)
+
+    def test_archive_skips_symlink_and_fifo(self):
+        self.history()
+        self.put(self.base / 'state.json', {'input': 'input'})
+        done = self.base / 'input/done'
+        done.mkdir(parents=True)
+        os.mkfifo(done / 'f.json.1790000000000000000-1.done')
+        target = self.root / 'outside.json'
+        self.put(target, said('幾點'))
+        (done / 's.json.1790000000000000000-2.done').symlink_to(target)
+        code, output = self.listen('--last', '3')  # FIFO 若被開會卡住
+        self.assertEqual(code, 0)
+        self.assertIn('── 第 2 輪 ──\n', output)
+
+    def test_call_line_is_one_line(self):
+        weird = {'id': 'c', 'type': 'function',
+                 'function': {'name': 'a\nb', 'arguments': json.dumps({'k\nx': 'v\r\nw', 'n': [1, '\n']})}}
+        line = render.call_line(weird)
+        self.assertNotIn('\n', line)
+        self.assertNotIn('\r', line)
+        self.assertEqual(line, '[呼叫 a\\nb k\\nx=v\\r\\nw n=[1, "\\n"]]')
+        self.assertEqual(len(render.call_full(weird)[0].splitlines()), 1)
 
     # 印法小件 -----------------------------------------------------------------
 

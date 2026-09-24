@@ -385,7 +385,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_agent_fix_cli.py](test/test_agent_fix_cli.py) | 13 | start／stop 印行、stop 不讀 info、KernelMismatch、listen --last |
 | [test_agent_fix_r4.py](test/test_agent_fix_r4.py) | 24 | （fix-r4）--target 與錯誤來源、listen 三態（--follow 真程序）、pause／continue／status 兩種暫停、tick 鎖真的兩個程序、舊 tick.json |
 | [test_agent_fix_r5.py](test/test_agent_fix_r5.py) | 25 | （fix-r5）status 第一行重試中／恢復中、continue 兩階段與 --all、舊錯短版、listen --last 中間句與時間、已登記 start 退 0、沒登記的 say、--wait 先看 kernel／bad、NotAnAgent 講哪種家、init --force |
-| [test_agent_listen_tweak.py](test/test_agent_listen_tweak.py) | 20 | （09-24 listen 微調）不給看法＝用法錯、`--last N`（N＝1 照舊、超過現有、非整數）、輪次標頭與收話時間、`--show-calls`／`--show-calls-full`（含截斷）、`--wait`／`--follow` 真程序即時印呼叫行 |
+| [test_agent_listen_tweak.py](test/test_agent_listen_tweak.py) | 27 | （09-24 listen 微調）不給看法＝用法錯、`--last N`（N＝1 照舊、超過現有、非整數）、輪次標頭與收話時間、`--show-calls`／`--show-calls-full`（含截斷）、`--wait`／`--follow` 真程序即時印呼叫行（先握手、每次讀有期限）；astra 必修：同 id 跨輪、怪形狀記憶不當掉、超大 N、封存分組與排序、怪時間戳、symlink／FIFO、呼叫行一定一行 |
 | [test_agent_daily.py](test/test_agent_daily.py) | 26 | init／say（含 --wait）／status／continue、stop 用 tick.json、listen 退回讀記憶與門關警告、help、用法錯 |
 | [test_agent_status_r3.py](test/test_agent_status_r3.py) | 20 | status 的 health、這次原因／已恢復、連敗次數、-v、--json 新鍵；say 沒登記警告與 --wait 立刻退 |
 | [test_agent_daily_edges.py](test/test_agent_daily_edges.py) | 11 | say --wait 的等待條件、暫態壞檔、逾時與連敗提前結束 |

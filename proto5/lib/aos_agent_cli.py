@@ -26,7 +26,7 @@ LISTEN_EPILOG = ('三種看法選一種，都不給＝用法錯：\n'
                  '  aos-agent listen --last          最後一則回話\n'
                  '  aos-agent listen --last 5        最後五則，每輪前面一行「── 第 R 輪 · 收話 時間 ──」\n'
                  '  aos-agent listen --last 3 --show-calls   連同叫了哪些工具、結果第一行\n'
-                 '  aos-agent listen --follow --show-calls-full   一直印，工具參數與回傳全印')
+                 '  aos-agent listen --follow --show-calls-full   一直印，工具參數與回傳也印（各最多 %d 字）' % FULL_LIMIT)
 
 
 class Parser(argparse.ArgumentParser):
@@ -106,9 +106,10 @@ def _listen_count(ap, args):
         ap.error('listen 要選一種看法：' + LISTEN_MODES + '；例：aos-agent listen --last')
     if args.last is None:
         return 1
-    if not re.fullmatch(r'[0-9]+', args.last) or int(args.last) < 1:
-        ap.error('--last 後面要是正整數（不帶數字＝1）：%s' % args.last)
-    return int(args.last)
+    digits = args.last.lstrip('0') if re.fullmatch(r'[0-9]+', args.last) else ''
+    if not digits:
+        ap.error('--last 後面要是正整數（不帶數字＝1）：%s' % args.last[:40])
+    return int(digits) if len(digits) <= 9 else 10 ** 9  # 再大也只是「全部」，不必真的換算
 
 
 def _is_number(value):
