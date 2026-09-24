@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""handoff：領隊派一件事（寫一份 kind=handoff 申請；郵差開單並派出去）。"""
+import sys
+
+from _team import arg, fail, only_keys, run, send
+
+KEYS = ('assignee', 'workflow', 'goal', 'facts', 'done_when', 'max_attempts', 'deadline_minutes')
+KINDS = {'file_exists': 'path', 'table_filled': 'path', 'check': 'name', 'judge': 'text'}
+
+
+def main(args, cfg):
+    only_keys(args, KEYS)
+    who = arg(args, 'assignee', str, required=True)
+    if who == cfg['member']:
+        fail('BadArguments', 'you cannot hand off to yourself')
+    if who not in cfg.get('members', []) or who not in cfg.get('mail_to', []):
+        workers = [m for m in cfg.get('mail_to', []) if m in cfg.get('members', [])]
+        fail('BadArguments', 'assignee %r is not one of your team mates: %s' % (who, ', '.join(workers) or '(none)'))
+    body = {'assignee': who, 'workflow': arg(args, 'workflow', str, required=True),
+            'goal': arg(args, 'goal', str, required=True)}
+    done = arg(args, 'done_when', list, required=True)
+    if not done:
+        fail('BadArguments', 'done_when needs at least one item')
+    for i, it in enumerate(done):
+        if not isinstance(it, dict) or it.get('kind') not in KINDS:
+            fail('BadArguments', 'done_when[%d].kind must be one of %s' % (i, ', '.join(KINDS)))
+        key = KINDS[it['kind']]
+        if not isinstance(it.get(key), str) or not it[key].strip():
+            fail('BadArguments', 'done_when[%d] (%s) needs a non-empty "%s"' % (i, it['kind'], key))
+    body['done_when'] = done
+    facts = arg(args, 'facts', str)
+    if facts is not None:
+        body['facts'] = facts
+    tries = arg(args, 'max_attempts', int)
+    if tries is not None:
+        if not 1 <= tries <= 10:
+            fail('BadArguments', 'max_attempts must be 1..10')
+        body['max_attempts'] = tries
+    minutes = arg(args, 'deadline_minutes', int)
+    if minutes is not None:
+        if not 1 <= minutes <= 10080:
+            fail('BadArguments', 'deadline_minutes must be 1..10080')
+        body['deadline_minutes'] = minutes
+    rid = send(cfg, 'handoff', body)
+    return ('queued handoff %s -> %s. The postman opens the task and sends it; you will get mail when it is '
+            'done, blocked or failed. Nothing to wait for: end this turn.' % (rid, who))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

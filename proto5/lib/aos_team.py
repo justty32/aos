@@ -1,0 +1,240 @@
+"""aos-team init／start／stop／ls／rm（spec/team/cli.md、roster.md、templates.md）：建隊、列隊、拆隊。
+
+init 照 team.json 建團隊資料夾與每個成員的家（模板）；重跑只補新成員、補完沒生完的、更新工具包的團隊設定。
+start／stop 對每個成員叫 aos-agent 的 start／stop（同一個函式），有郵差、心跳模組就一起。
+不叫模型。
+"""
+import argparse
+import importlib
+import json
+import os
+from pathlib import Path
+import shutil
+import sys
+import time
+
+import aos_agent
+import aos_agent_init
+from aos_agent_home import AgentError
+from aos_team_format import (HUMAN, TERMINAL, Layout, TeamError, json_files, load_roster, project_dir,
+                             read_json, short_time, validate_roster, write_json)
+
+HOOKS = ('aos_team_post', 'aos_team_beat')   # 第 2 隊：有 start(team)／stop(team) 就叫
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        raise TeamError('Usage', '%s\n%s' % (message, self.format_usage().strip()))
+
+
+def _parser(name, text):
+    return Parser(prog='aos-team ' + name, description=text)
+
+
+def member_context(lay, roster, name):
+    m = roster['members'][name]
+    return {'name': name, 'team_dir': str(lay.root), 'project': str(project_dir(lay.root, roster)),
+            'mail_to': m['mail_to'], 'members': list(roster['members']), 'tz': roster.get('tz'),
+            'model': m['model'], 'mounts': m['mounts'], 'tools': m['tools']}
+
+
+def _inside(child, parent):
+    child, parent = os.path.realpath(child), os.path.realpath(parent)
+    return child == parent or child.startswith(parent.rstrip(os.sep) + os.sep)
+
+
+# ------------------------------------------------------------------ init ----
+
+def cmd_init(team_dir, argv):
+    ap = _parser('init', '照 team.json 建團隊資料夾與每個成員的家；重跑只補新成員')
+    ap.add_argument('--config', help='名冊檔；會抄成 <團隊>/team.json（團隊裡已經有 team.json 就不用給）')
+    args = ap.parse_args(argv)
+    lay = Layout(team_dir)
+    lay.root.mkdir(parents=True, exist_ok=True)
+    if args.config:
+        src = Path(os.path.abspath(os.path.expanduser(args.config)))
+        obj = read_json(src)
+        validate_roster(obj, str(src))
+        if lay.roster.exists() and src != lay.roster:
+            if read_json(lay.roster) != obj:
+                raise TeamError('AlreadyExists', '%s 已經在、內容不一樣；要改就直接編輯它再跑 aos-team init（不用 --config）'
+                                % lay.roster)
+        elif src != lay.roster:
+            write_json(lay.roster, obj, indent=2)
+    elif not lay.roster.exists():
+        raise TeamError('NotFound', '%s 沒有 team.json；第一次請給 --config 名冊檔（範例：proto5/spec/team/examples/team.json）'
+                        % lay.root)
+    roster = load_roster(lay.root)
+    project = project_dir(lay.root, roster)
+    if not project.is_dir():
+        raise TeamError('NotFound', '專案資料夾 %s 不存在（team.json 的 project，相對 %s）；先 mkdir -p %s'
+                        % (project, lay.root, project))
+    if _inside(lay.root, project) or _inside(project, lay.root):
+        raise TeamError('BadProject', '團隊資料夾 %s 跟專案 %s 不能一個包著另一個（工人把專案掛成可寫，會蓋到成員的家）'
+                        % (lay.root, project))
+    for d in lay.skeleton(roster['members']):
+        d.mkdir(parents=True, exist_ok=True)
+    failed = 0
+    for name in roster['members']:
+        try:
+            lines = aos_agent_init.init_from_template(lay.member(name), roster['members'][name]['template'],
+                                                      member=member_context(lay, roster, name))
+            for line in lines:
+                print('%s: %s' % (name, line))
+        except (AgentError, TeamError) as e:
+            failed += 1
+            print('%s: 失敗 %s: %s' % (name, e.code, e.msg), file=sys.stderr)
+    stray = [p.name for p in lay.members.iterdir()
+             if p.is_dir() and not p.name.startswith('.') and p.name not in roster['members']]
+    if stray:
+        print('注意：members/ 裡有名冊沒有的家：%s（aos-team 不管它們）' % '、'.join(sorted(stray)), file=sys.stderr)
+    if failed:
+        return 1
+    print('團隊在 %s：%d 個成員。下一步：export AOS_KERNEL_HOME=… 後 aos-team start --target %s'
+          % (lay.root, len(roster['members']), lay.root))
+    return 0
+
+
+# ------------------------------------------------------------ start／stop ----
+
+def _hooks(action, lay):
+    code = 0
+    for module in HOOKS:
+        try:
+            mod = importlib.import_module(module)
+        except ModuleNotFoundError as e:
+            if e.name == module:
+                continue
+            raise
+        fn = getattr(mod, action, None)
+        if fn is not None:
+            code = max(code, fn(str(lay.root)) or 0)
+    return code
+
+
+def _each(team_dir, argv, action):
+    ap = _parser(action, '全部成員向 kernel %s' % ('登記' if action == 'start' else '撤銷登記'))
+    ap.parse_args(argv)
+    lay = Layout(team_dir)
+    roster = load_roster(lay.root)
+    code = 0
+    for name in roster['members']:
+        home = lay.member(name)
+        if not (home / 'info.json').exists():
+            print('%s: 還沒有家（先 aos-team init）' % name, file=sys.stderr)
+            code = 1
+            continue
+        sys.stdout.write('%s: ' % name)
+        sys.stdout.flush()
+        rc = getattr(aos_agent, action)(str(home))
+        if rc:
+            print()
+        code = max(code, 1 if rc else 0)
+    return max(code, _hooks(action, lay))
+
+
+def cmd_start(team_dir, argv):
+    return _each(team_dir, argv, 'start')
+
+
+def cmd_stop(team_dir, argv):
+    return _each(team_dir, argv, 'stop')
+
+
+# -------------------------------------------------------------------- ls ----
+
+def _last_sent(lay, name):
+    """這個成員最後寄出的一封（outbox 頂層與 done/，id 開頭是 epoch ns，照檔名排就是照時間）。"""
+    files = json_files(lay.outbox(name)) + json_files(lay.outbox(name) / 'done')
+    for path in sorted(files, key=lambda p: p.name, reverse=True):
+        try:
+            obj = read_json(path)
+        except TeamError:
+            continue
+        if isinstance(obj, dict):
+            what = obj.get('kind') or obj.get('status')
+            to = obj.get('to') or obj.get('assignee') or ''
+            return '%s %s%s' % (short_time(obj.get('at')), what, ' → ' + to if to else '')
+    return None
+
+
+def _health(home):
+    import aos_agent_status
+    try:
+        return aos_agent_status.collect(str(home))['health']['code']
+    except Exception as e:  # ls 只是看，不因為一個成員讀不到就整個失敗
+        return 'unknown(%s)' % type(e).__name__
+
+
+def rows(team_dir):
+    import aos_team_task
+    lay = Layout(team_dir)
+    roster = load_roster(lay.root)
+    tickets = aos_team_task.all_tickets(lay)
+    out = []
+    for name, m in roster['members'].items():
+        home = lay.member(name)
+        mine = [t['id'] for t in tickets if t['assignee'] == name and t['status'] not in TERMINAL]
+        out.append({'name': name, 'template': m['template'], 'home': str(home),
+                    'health': _health(home) if (home / 'info.json').exists() else 'no-home',
+                    'tasks': mine, 'last_sent': _last_sent(lay, name)})
+    return out
+
+
+def cmd_ls(team_dir, argv):
+    ap = _parser('ls', '一行一個成員：模板、health、手上的單、最後寄出的一封')
+    ap.add_argument('--json', action='store_true')
+    args = ap.parse_args(argv)
+    data = rows(team_dir)
+    if args.json:
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        return 0
+    width = max(len(r['name']) for r in data)
+    for r in data:
+        print('%s  %-8s %-12s 單：%-14s 最後寄出：%s' % (r['name'].ljust(width), r['template'], r['health'],
+                                                  ','.join(r['tasks']) or '-', r['last_sent'] or '-'))
+    return 0
+
+
+# -------------------------------------------------------------------- rm ----
+
+def cmd_rm(team_dir, argv):
+    ap = _parser('rm', '拿掉一個成員：家搬進 members/.removed/、名冊刪那列（也從別人的 mail_to 拿掉）；不刪檔')
+    ap.add_argument('name')
+    args = ap.parse_args(argv)
+    lay = Layout(team_dir)
+    roster = load_roster(lay.root)
+    name = args.name
+    if name not in roster['members']:
+        raise TeamError('NotFound', '%s 不在名冊裡（有：%s）' % (name, '、'.join(roster['members'])))
+    if len(roster['members']) == 1:
+        raise TeamError('Usage', '%s 是最後一個成員；要拆整個團隊就 aos-team stop 後自己搬走資料夾' % name)
+    home = lay.member(name)
+    import aos_agent_status
+    if home.exists():
+        k = aos_agent_status.kernel_status(str(home), os.environ)
+        if not aos_agent_status.unregistered(k):
+            raise TeamError('StillRunning', '%s 還登記在 kernel（%s）；先 aos-agent stop --target %s 或 aos-team stop'
+                            % (name, k['home'], home))
+    raw = read_json(lay.roster)
+    del raw['members'][name]
+    for other in raw['members'].values():
+        if isinstance(other.get('mail_to'), list) and name in other['mail_to']:
+            other['mail_to'] = [x for x in other['mail_to'] if x != name]
+    validate_roster(raw, str(lay.roster))
+    if home.exists():
+        dest = lay.members / '.removed' / ('%s-%d' % (name, time.time_ns()))
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(home), str(dest))
+        print('%s 的家搬到 %s' % (name, dest))
+    write_json(lay.roster, raw, indent=2)
+    print('team.json 拿掉了 %s（也從別人的 mail_to 拿掉）；已裝的工具設定要更新就重跑 aos-team init' % name)
+    import aos_team_task
+    left = [t['id'] for t in aos_team_task.all_tickets(lay) if t['assignee'] == name and t['status'] not in TERMINAL]
+    if left:
+        print('注意：%s 手上還有沒結束的單 %s；用 aos-team task reassign 或 cancel' % (name, '、'.join(left)),
+              file=sys.stderr)
+    return 0
+
+
+__all__ = ['cmd_init', 'cmd_start', 'cmd_stop', 'cmd_ls', 'cmd_rm', 'member_context', 'HUMAN']
