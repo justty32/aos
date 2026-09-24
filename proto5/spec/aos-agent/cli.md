@@ -15,6 +15,7 @@ aos-agent status   [--target DIR] [--json] [-v]
 aos-agent pause    [--target DIR]
 aos-agent continue [--target DIR | --all]
 aos-agent check    [--target DIR] [--probe]    # （09-24 advice-r1）start 之前先查一遍，§1.7
+aos-agent tools add NAME|DIR [--target DIR] [--root DIR] [--force]     # §1.8（09-24 tools-base 補）
 aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 ```
 

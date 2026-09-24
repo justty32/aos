@@ -16,7 +16,8 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'status': '印 agent 現在的狀態、在等什麼、最近的錯',
          'pause': '手動暫停：還登記著，但每格什麼都不做',
          'continue': '解除手動暫停與連敗暫停',
-         'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）'}
+         'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）',
+         'tools': '裝工具包：tools add NAME|DIR（內建 base＝read／write／edit／bash／grep／find／ls）'}
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
 
 
@@ -51,6 +52,12 @@ def _parser():
             sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令、舊錯原文與 stuck 原行')
         if name == 'init':
             sub.add_argument('--force', action='store_true', help='資料夾裡已有別的東西也照樣生（info.json 已在仍拒絕）')
+        if name == 'tools':
+            sub.usage = 'aos-agent tools add NAME|DIR [--target DIR] [--root DIR] [--force]'
+            sub.add_argument('action', choices=['add'], help='目前只有 add')
+            sub.add_argument('package', metavar='NAME|DIR', help='內建工具包名字（proto5/tools/ 下），或工具包資料夾（含 /）')
+            sub.add_argument('--root', metavar='DIR', help='工作根目錄（寫進工具包的 config.json；base 沒給＝agent 家的 workspace/）')
+            sub.add_argument('--force', action='store_true', help='已經裝過也重裝（保留原本的 config.json，除非給了 --root）')
         if name == 'continue':
             sub.add_argument('--all', action='store_true',
                              help='解開 AOS_KERNEL_HOME 帳本裡所有登記的 agent（不能跟 --target 一起給）')
@@ -136,6 +143,9 @@ def main(argv=None):
         if args.command in ('pause', 'continue'):
             from aos_agent_pause import pause, resume
             return pause(target) if args.command == 'pause' else resume(target)
+        if args.command == 'tools':
+            from aos_agent_tools import add
+            return add(target, args.package, root=args.root, force=args.force)
         if args.command == 'init':
             from aos_agent_init import init
             return init(target, force=args.force)

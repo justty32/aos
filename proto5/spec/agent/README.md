@@ -20,7 +20,7 @@
 ## 6. 這份沒管的
 
 程式做什麼：走一格、登記＝[aos-agent.md](../aos-agent/README.md)；問模型＝[aos-llm.md](../aos-llm/README.md)。
-（09-24 試玩 r2 補）`init`（單一內建預設）、`say`、`status`、`continue` 已有（[aos-agent.md §1.1～§1.4](../aos-agent/cli.md)）；（09-24 fix-r4 補）`listen`、`pause` 也有了（§1.5、§1.6）；`init --template`、`tools`／`llms` 子命令、一個 agent 一顆專屬 cpu：這輪不做，
+（09-24 試玩 r2 補）`init`（單一內建預設）、`say`、`status`、`continue` 已有（[aos-agent.md §1.1～§1.4](../aos-agent/cli.md)）；（09-24 fix-r4 補）`listen`、`pause` 也有了（§1.5、§1.6）；（09-24 tools-base 補）`tools add` 也有了（§1.8）；`init --template`、`tools` 其他子命令與 `llms`、一個 agent 一顆專屬 cpu：這輪不做，
 使用者的構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)、[thinking/2026-09-23.md](../../../thinking/2026-09-23.md)。
 記憶太長；明確的 `fail` 狀態（等使用者拍板，見 [WAIT_USER A.14(d)](../../../wf/WAIT_USER.md)）。
 **日常 CLI 是最小版**：家用 `aos-agent init` 建或手動建，話用 `say` 投、`listen`／`say --wait` 看回話（09-24 試玩 r2 補；fix-r4 `last` 改 `listen`）（aos-agent.md §1、§13）。

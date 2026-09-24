@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""bash：在工作根目錄跑一句 bash；有逾時（預設 120 秒、上限 600 秒），輸出過大只留結尾。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+import signal  # noqa: E402
+import subprocess  # noqa: E402
+import threading  # noqa: E402
+from _common import run, arg, fail, truncate_tail, MAX_BYTES  # noqa: E402
+
+DEFAULT_TIMEOUT = 120
+MAX_TIMEOUT = 600
+MAX_LINES = 2000
+
+
+def main(args, root):
+    command = arg(args, 'command', str, required=True)
+    timeout = arg(args, 'timeout', int, DEFAULT_TIMEOUT)
+    if not command.strip():
+        fail('BadArguments', 'command must not be empty')
+    if not 1 <= timeout <= MAX_TIMEOUT:
+        fail('BadArguments', 'timeout must be 1..%d seconds' % MAX_TIMEOUT)
+    shell = '/bin/bash' if os.path.exists('/bin/bash') else '/bin/sh'
+    try:
+        p = subprocess.Popen([shell, '-c', command], cwd=root, stdin=subprocess.DEVNULL,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
+    except OSError as e:
+        fail('SpawnFailed', 'cannot start %s: %s' % (shell, e.strerror or e))
+    tail = Tail()
+    reader = threading.Thread(target=tail.drain, args=(p.stdout,), daemon=True)
+    reader.start()
+    timed_out = False
+    try:
+        code = p.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        code = _kill(p)
+    _reap_group(p.pid)
+    # 逃出群組（setsid）的孫行程還握著 pipe 時，不等它：拿到多少算多少。
+    reader.join(timeout=2)
+    text, total_bytes, total_lines = tail.result()
+    shown, cut = truncate_tail(text, MAX_LINES)
+    if cut or len(shown.encode('utf-8')) < total_bytes:
+        shown = ('[output truncated: %d lines / %d bytes total, showing only the end (last %d lines or %d KB); '
+                 'redirect to a file and use read or grep to see the rest]\n'
+                 % (total_lines, total_bytes, MAX_LINES, MAX_BYTES // 1024)) + shown
+    if timed_out:
+        fail('Timeout', 'command timed out after %d s and was killed' % timeout, output=shown, timeout=timeout)
+    if code != 0:
+        fail('ExitCode', 'command exited with code %d' % code, output=shown, exit_code=code)
+    return shown if shown else '(no output)'
+
+
+class Tail:
+    """邊讀邊丟：只留最後 KEEP 位元組，另外數總位元組與行數（`yes` 跑兩分鐘也不會撐爆記憶體）。"""
+    KEEP = 4 * MAX_BYTES
+
+    def __init__(self):
+        self.buf, self.total, self.newlines, self.last = bytearray(), 0, 0, b''
+        self.lock = threading.Lock()
+
+    def drain(self, stream):
+        try:
+            for chunk in iter(lambda: stream.read1(65536), b''):
+                with self.lock:
+                    self.total += len(chunk)
+                    self.newlines += chunk.count(b'\n')
+                    self.last = chunk[-1:]
+                    self.buf += chunk
+                    if len(self.buf) > 2 * self.KEEP:
+                        del self.buf[:-self.KEEP]
+        except (OSError, ValueError):
+            pass
+
+    def result(self):
+        with self.lock:
+            data = bytes(self.buf[-self.KEEP:])
+            lines = self.newlines + (1 if self.total and self.last != b'\n' else 0)
+            return data.decode('utf-8', 'replace'), self.total, lines
+
+
+def _kill(p):
+    """先 TERM 整個行程群組，2 秒不走再 KILL；回退出碼。"""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(p.pid, sig)
+        except OSError:
+            pass
+        try:
+            return p.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            continue
+    return p.wait()
+
+
+def _reap_group(pgid):
+    """shell 走了、群組裡還留著背景孩子：一起收掉，免得它們活過這次工具呼叫。"""
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except OSError:
+        pass
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

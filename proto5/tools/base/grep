@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""grep：搜檔案內容，印 路徑:行號:內容。有 ripgrep 用 rg，沒有退回 grep -r。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+import shutil  # noqa: E402
+import signal  # noqa: E402
+import subprocess  # noqa: E402
+import time  # noqa: E402
+from _common import run, arg, resolve, rel, fail, MAX_BYTES  # noqa: E402
+
+DEFAULT_LIMIT = 200
+MAX_LIMIT = 2000
+MAX_LINE = 500
+TIMEOUT = 30
+
+
+def command(pattern, target, glob, ignore_case, literal, context):
+    rg = os.environ.get('AOS_TOOLS_RG', 'rg')  # 測試用：設成不存在的名字＝強制退回 grep
+    if shutil.which(rg):
+        argv = [rg, '--line-number', '--with-filename', '--no-heading', '--color=never']
+        argv += ['-i'] if ignore_case else []
+        argv += ['-F'] if literal else []
+        argv += ['-C', str(context)] if context else []
+        argv += ['--glob', glob] if glob else []
+        return argv + ['-e', pattern, '--', target], 'rg'
+    argv = ['grep', '-r', '-n', '-H', '-I', '--color=never', '--exclude-dir=.git']
+    argv += ['-i'] if ignore_case else []
+    argv += ['-F'] if literal else ['-E']
+    argv += ['-C', str(context)] if context else []
+    argv += ['--include=' + glob] if glob else []
+    return argv + ['-e', pattern, '--', target], 'grep'
+
+
+def main(args, root):
+    pattern = arg(args, 'pattern', str, required=True)
+    path = arg(args, 'path', str, '.')
+    glob = arg(args, 'glob', str)
+    ignore_case = arg(args, 'ignore_case', bool, False)
+    literal = arg(args, 'literal', bool, False)
+    context = arg(args, 'context', int, 0)
+    limit = arg(args, 'limit', int, DEFAULT_LIMIT)
+    if pattern == '':
+        fail('BadArguments', 'pattern must not be empty')
+    if not 0 <= context <= 20:
+        fail('BadArguments', 'context must be 0..20')
+    if not 1 <= limit <= MAX_LIMIT:
+        fail('BadArguments', 'limit must be 1..%d' % MAX_LIMIT)
+    target = rel(root, resolve(root, path))
+    argv, engine = command(pattern, target, glob, ignore_case, literal, context)
+    try:
+        p = subprocess.Popen(argv, cwd=root, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, start_new_session=True)
+    except OSError as e:
+        fail('SpawnFailed', 'cannot start %s: %s' % (engine, e.strerror or e))
+    lines, size, stopped, deadline = [], 0, None, time.monotonic() + TIMEOUT
+    for raw in p.stdout:
+        line = raw.decode('utf-8', 'replace').rstrip('\n')
+        if line.startswith('./'):
+            line = line[2:]
+        if len(line) > MAX_LINE:
+            line = line[:MAX_LINE] + '… [line truncated]'
+        size += len(line.encode('utf-8')) + 1
+        if len(lines) >= limit or size > MAX_BYTES:
+            stopped = 'limit=%d lines' % limit if len(lines) >= limit else 'output limit %d KB' % (MAX_BYTES // 1024)
+            break
+        if time.monotonic() > deadline:
+            stopped = 'time limit %d s' % TIMEOUT
+            break
+        lines.append(line)
+    if stopped:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except OSError:
+            pass
+    err = p.stderr.read().decode('utf-8', 'replace').strip()
+    code = p.wait()
+    if not stopped and code not in (0, 1) and not lines:
+        fail('SearchFailed', '%s failed (exit %d): %s' % (engine, code, err[-500:]), engine=engine)
+    if not lines:
+        return 'No matches found for %r in %s' % (pattern, target)
+    text = '\n'.join(lines)
+    if stopped:
+        text += '\n[stopped at %s; narrow the pattern, path or glob to see more]' % stopped
+    elif code not in (0, 1) and err:
+        text += '\n[%s reported errors: %s]' % (engine, err.splitlines()[0][:300])
+    return text
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

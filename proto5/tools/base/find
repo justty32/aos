@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""find：用 glob 找檔名。pattern 不含 / 就比對檔名（任何深度），含 / 就比對相對路徑（** 跨資料夾）。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+import re  # noqa: E402
+from _common import run, arg, resolve, rel, fail  # noqa: E402
+
+DEFAULT_LIMIT = 1000
+MAX_LIMIT = 5000
+SKIP_DIRS = {'.git'}
+
+
+def glob_regex(pattern):
+    """glob → regex：** 跨資料夾、* 與 ? 不跨 /、[...] 照抄。"""
+    out, i, n = [], 0, len(pattern)
+    while i < n:
+        c = pattern[i]
+        if pattern.startswith('**/', i):
+            out.append('(?:.*/)?')
+            i += 3
+        elif pattern.startswith('**', i):
+            out.append('.*')
+            i += 2
+        elif c == '*':
+            out.append('[^/]*')
+            i += 1
+        elif c == '?':
+            out.append('[^/]')
+            i += 1
+        elif c == '[':
+            j = pattern.find(']', i + 2 if pattern[i + 1:i + 2] in ('!', ']') else i + 1)
+            if j == -1:
+                out.append(re.escape(c))
+                i += 1
+            else:
+                body = pattern[i + 1:j]
+                out.append('[' + ('^' + body[1:] if body.startswith('!') else body).replace('\\', '\\\\') + ']')
+                i = j + 1
+        else:
+            out.append(re.escape(c))
+            i += 1
+    return re.compile(''.join(out) + r'\Z')
+
+
+def main(args, root):
+    pattern = arg(args, 'pattern', str, required=True)
+    path = arg(args, 'path', str, '.')
+    limit = arg(args, 'limit', int, DEFAULT_LIMIT)
+    if pattern == '':
+        fail('BadArguments', 'pattern must not be empty')
+    if not 1 <= limit <= MAX_LIMIT:
+        fail('BadArguments', 'limit must be 1..%d' % MAX_LIMIT)
+    base = resolve(root, path)
+    if not os.path.isdir(base):
+        fail('NotADirectory', '%s is not a directory' % path)
+    try:
+        regex = glob_regex(pattern.lstrip('/'))
+    except re.error as e:
+        fail('BadArguments', 'bad glob pattern: %s' % e)
+    by_path = '/' in pattern
+    found, more = [], False
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
+        here = os.path.relpath(dirpath, base)
+        for name, is_dir in [(d, True) for d in dirnames] + [(f, False) for f in sorted(filenames)]:
+            sub = name if here == '.' else here + '/' + name
+            if regex.match(sub if by_path else name):
+                if len(found) >= limit:
+                    more = True
+                    break
+                found.append(rel(root, os.path.join(dirpath, name)) + ('/' if is_dir else ''))
+        if more:
+            break
+    if not found:
+        return 'No files found matching %r in %s' % (pattern, rel(root, base))
+    found.sort()
+    text = '\n'.join(found)
+    if more:
+        text += '\n[stopped at limit=%d; narrow the pattern or path]' % limit
+    return text
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))
