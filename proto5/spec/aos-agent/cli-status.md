@@ -5,7 +5,7 @@
 唯讀、不要 `AOS_KERNEL_HOME`、壞了什麼都照樣印（它是診斷工具）。家不是 agent 家＝`NotAnAgent` 退 1，其餘退 0。每項一行：
 
 （09-24 試玩 r3 補）**第一行 `health <一句>`** 說現在正不正常，先中先印：K 知道且 [kernel 健康](../kernel/README.md)不是 ok＝`kernel 家有問題：<kernel 那句>`（停機中＝`kernel 停機中（…）`）；沒登記＝`沒登記（aos-agent start --target <dir>）`；
-（09-24 fix-r4 補）手動暫停＝`手動暫停（aos-agent continue --target <dir>）`，同時也在連敗暫停就寫 `手動暫停＋連敗暫停（修好原因後 aos-agent continue --target <dir>）`；連敗暫停門還沒開＝`連敗暫停（aos-agent continue --target <dir>）`；K 帳本那筆 `bad`＝`kernel 判壞了（看 <dir>/log/agent.err）`；（09-24 fix-r5 補，下面三種都不再印 `ok`）kernel 健康是 `recovering`＝`恢復中（<名字> cpu dead，daemon 重拉中）`；連敗未滿 3 次（`errors` 1、2）＝`重試中（連敗 N/3）`；`continue` 解了連敗暫停、還沒等到一次成功（家裡有 `resumed`，見 §1.4）＝`已解除暫停，等下一次成功`；info／state 讀不到＝`家的設定讀不到（看下面 info／state 行）`；其他＝`ok`。
+（09-24 fix-r4 補）手動暫停＝`手動暫停（aos-agent continue --target <dir>）`，同時也在連敗暫停就寫 `手動暫停＋連敗暫停（修好原因後 aos-agent continue --target <dir>）`；連敗暫停門還沒開＝`連敗暫停（aos-agent continue --target <dir>）`；K 帳本那筆 `bad`＝`kernel 判壞了（看 <dir>/log/agent.err）`；（09-24 fix-r5 補，下面三種都不再印 `ok`）kernel 健康是 `recovering`＝`恢復中（<kernel health 那句，例如「池 P 少 N 顆」或「搬池中：池 P」）`；連敗未滿 3 次（`errors` 1、2）＝`重試中（連敗 N/3）`；`continue` 解了連敗暫停、還沒等到一次成功（家裡有 `resumed`，見 §1.4）＝`已解除暫停，等下一次成功`；info／state 讀不到＝`家的設定讀不到（看下面 info／state 行）`；其他＝`ok`。
 （09-24 fix-r5 補）所以 kernel 那邊只有 `recovering` 不歸進「kernel 家有問題」：cpu 死了 daemon 會自己重拉，排在暫停、`bad` 之後。
 
 | 行 | 印什麼 |

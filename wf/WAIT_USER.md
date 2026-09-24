@@ -38,7 +38,7 @@
 16. **問模型的 endpoint 壞掉要不要做自動換手**（原 backlog `llm-cpu-fallback`）：現在一個模型代號在 llm.json 只認一個 endpoint、不重試；要支援就要把 `models` 表一個代號改成一串。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
 17. **kernel 排隊要不要加期限**（原 backlog `kiss-holes` 第 2 條的 kernel 那半）：`queue` 裡等派工的行程沒有期限，只有 `timeout_ms` 管跑的時間；agent 那半（半批沒送完永遠等）已有手動 escape（stop 後把 `batch` 設 `null`）。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
 18. **once 工作綁在 `tick_ms` 的延遲算不算要處理**（原 backlog `review-leftovers` R11）：kernel 一格派、下一格才收，一次問答最快也要等一格；09-23 已判「算不算要做要人判」，agent 重寫沒碰這塊。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
-19. **proto5-2 規範草稿要拍的六題**（C 隊照草稿的預設在做，翻案要回這裡改；[proto5-2/README.md](../proto5-2/README.md) 的「要使用者拍的」一節第 4～9 條；前三條規模題 09-24 使用者說先不動，見下 C 段）：`cpu rm NAME` 的 `NAME`＝`P/<i>`、永久退休那個號，對不對；既有池的 `cpu add --env` 草稿直接拒絕，對不對；縮小要不要有 `--now`（現在一律等被收的那顆把手上工作做完）；拉不起來的號卡住的工作要不要訂「放棄」協定；daemon `halt` 後再 `boot` 要不要自動把池拉回來（草稿選「要」）；退休的 cpu 家永不刪，要不要清理指令。
+19. **proto5-2 規範草稿要拍的六題**（C 隊照草稿的預設在做，翻案要回這裡改；答案現存於 [proto5 納入報告](../proto5/notes/2026-09-24-fold-in/README.md)「沒做的」一節指到的九題表（proto5-2/notes/2026-09-24-impl/decisions.md 的 Q4～Q9），對應現行 proto5 規範見 [kernel/cli-cpu.md](../proto5/spec/kernel/cli-cpu.md)；前三條規模題 09-24 使用者說先不動，見下 C 段）：`cpu rm NAME` 的 `NAME`＝`P/<i>`、永久退休那個號，對不對；既有池的 `cpu add --env` 草稿直接拒絕，對不對；縮小要不要有 `--now`（現在一律等被收的那顆把手上工作做完）；拉不起來的號卡住的工作要不要訂「放棄」協定；daemon `halt` 後再 `boot` 要不要自動把池拉回來（草稿選「要」）；退休的 cpu 家永不刪，要不要清理指令。
 20. **kernel C-7／C-8 崩潰窗口測試挖出的兩件**（[kernel-crash](../proto5/notes/2026-09-24-kernel-crash/README.md)）：(a) 出貨中被 KILL、cpu 已讀掉 stop 並退出後，下一格會照「EEXIST 當已放」重送一份同名 stop 到它家，下次 boot 這顆 cpu 起來就退 0、再下一格才拉起——astra 認為算重複投遞該修，隊長沒修因為會改規範行為（與 A.14(a) 跨代 stop 同一件事）；(b) kernel 拿到 daemon 的 spawn 回音、還沒記帳就崩潰，那則回音永遠沒人 ack，留在 `D/responses/`（只多一個檔，排程不受影響），修法要動 kernel↔daemon 對話。
 21. **09-24 四份提案／調查的預設已照做**（使用者 09-24 說「你說的都 OK」，即下列各題的**預設**答案；翻案就回這條）：
     - **agent-access 提案 H**（[報告](../proto5/notes/2026-09-24-agent-access/README.md) §7，共 6 題）：①沒 bwrap 的機器一律拒跑 ②`self` 唯讀 ③牢裡預設無網路 ④改名寫法 `tools` 元素 `{"$opt":{"as":{原名:新名}}}` ⑤映射表放 agent 家的 `access.json` ⑥改表下一批生效、正在跑的不收回。
@@ -52,6 +52,13 @@
 26. **O 隊 cli-agents 階 0**（[報告](../proto5/notes/2026-09-24-cli-agents/stage0.md)，2026-09-24 裁決）：claude 範本預設**不帶** `--restricted`（能跑程式；使用者選的不是預設選項）；其他四題照預設——範本放 `proto5/templates/`、K2 家 `check` 報沒 llm 池先忽略、codex 登入檔用符號連結、上限 0.5 美元／8 輪／30 分。
 27. **L 隊權限牆「要你拍的」五題**（[報告](../proto5/notes/2026-09-24-access-impl/README.md) 尾節，2026-09-24 裁決；L2 隊正在做前四點）：①檔案工具的根從只看 `cwd` 改成整個 `/work`（原做法：只看起點資料夾） ②換起點不自動塞系統訊息，要模型知道就教程提醒 `say` 一句（照現況） ③`access set` 的相對路徑照打指令時殼的目前資料夾算，不照 `--target` 算（照現況） ④有工具的家卻沒有 `access.json` 改成**拒跑**（原做法：不關牢只 warn） ⑤`tools rm` 從整支資料夾拿掉一支時，改寫成 `only` 列出其餘、接受現況（之後新工具要自己加）。
 28. **C 隊 proto5-2 池式實作五題（代裁，非使用者親自拍板，使用者未反對，2026-09-24）**：調度者照 C 隊自己的預設答的——退休號只增不減；`handoff` 補「也等 draining 0」；池刪除後舊單建回來記保證外；`aos-daemon ls` 印 `running 2（含 restarting 1）`；`cpu add` 後一兩秒 `ls` 顯示「下一格確認」接受。翻案就回這條。
+29. **晚二後合併鏈四案（2026-09-24）**：
+    - **L2**（[round2.md](../proto5/notes/2026-09-24-access-impl/round2.md) 第 4 點補的一條）：`init` 自動寫最小權限表（只掛 `workspace/`、無網路）→ 保留。
+    - **T3**（[報告](../proto5/notes/2026-09-24-tool-era/t3/README.md) §「要使用者拍的」共 6 題）：`aos-directives` 兼 system prompt 編輯器與 `$env`／`$ref` 解析器、一支指令 → 是；`md_section` 清單項目只收 `- [工作流] 狀態 → 下一步` → 維持嚴格；`wf_init` 備份留在專案裡 → 是。調度者代裁三條：牢外碰 `$env`／`$fmt` 的家檔案工具拒寫；`wf_residue` 照 IMPORT.md 掃全部 md（跟 wf-lint 數字可能不同）；wf 包每次裝約 0.9 MB 接受。
+    - **T1**（[報告](../proto5/notes/2026-09-24-tool-era/t1/README.md) §「要你拍的」共 5 題）：門房跑工具不關牢，第二波再接 aos-jail → 是；`aos-team rm` 預設只搬到已拆資料夾，**加 `--purge` 旗標才真刪**（使用者選非預設，已追加落地 `dba8cbe`）。調度者代裁三條：同一 kernel 兩隊不能同名成員（文件寫明）、`answer` 不在選項照收多印提醒、改名冊重跑 init 只更新工具設定。
+    - **S**（[fold-in 報告](../proto5/notes/2026-09-24-fold-in/README.md)「要你拍的」，代裁四條照預設）：`aos-kernel ls` 預設只列有事的行程、`--procs` 看全部；`ls --json` 第 2 版拿掉 `cpus[]`；`init --config` 舊 cpus 格式報錯不轉；`aos-daemon kill` 的 `killed 0` 字眼先不動。
+    翻案就回這條。
+30. **T4「記憶與紀錄」要你拍的六題**（[報告](../proto5/notes/2026-09-24-tool-era-memory.md) §8，尚未裁決，先照現況跑）：①自動壓縮預設開不開、`init`／團隊模板要不要預設寫 `compact.max_tokens`（多少合適）；②說明行用 `user` 角色會不會讓模型誤以為是人說的，可以接受嗎；③封存行要不要多加一句「這段你已經看不到，問到就說不記得」（人格／規則層的事）；④`archive` 要不要自動清（現在全留，靠 `compact --prune-archive` 手動）；⑤`failed` 任務算不算「沒做完」（現在算沒結束，因為能 `reassign`）；⑥事件檔 `events.jsonl` 要不要設輪替上限（例如 30 天）。
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
@@ -61,7 +68,7 @@
 
 放這裡是為了**別再拿它們去煩你**，不是待辦：
 
-- **proto5-2 規模三題**（kernel 帳本仍整份讀寫、aos-agent 每格偷看整份帳本、一顆 cpu＝一支 Python 程序）——09-24 使用者說「規模這塊先不動」；什麼時候會被迫要答：proto5-2 要實作，或 cpu 上千顆時。→ [proto5-2/README.md](../proto5-2/README.md) 的「要使用者拍的」1～3
+- **proto5-2 規模三題**（kernel 帳本仍整份讀寫、aos-agent 每格偷看整份帳本、一顆 cpu＝一支 Python 程序）——09-24 使用者說「規模這塊先不動」；什麼時候會被迫要答：proto5-2 要實作，或 cpu 上千顆時。→ [proto5 納入報告](../proto5/notes/2026-09-24-fold-in/README.md)「沒做的」一節（proto5-2/notes/2026-09-24-impl/decisions.md 的 Q1～Q3）
   - **多一條同類的**：閒著的 agent 每格還是被叫醒看一眼（J 隊 priority-and-shared-cpu 挖到，見 [報告](../proto5/notes/2026-09-24-priority-and-shared-cpu/README.md) §「要使用者拍的」題 2-3）；K 隊正在提案「等模型的 agent 不空轉」，做完再一起拍。
 
 - **pi 當介面層**（2026-08-30「先擱置」）——接法與代價在 [pi-interface](../core/agent/docs/pi-interface.md)，要投資時從那裡起。

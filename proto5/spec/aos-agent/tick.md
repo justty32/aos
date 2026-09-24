@@ -16,14 +16,14 @@
 
 ## 2.1 同時兩個 `tick`（09-24 fix-r4 補）
 
-**kernel 自己不會同時派兩格**：反覆行程派出去時就從 `queue` 拿掉、`status=running`，要等那顆 cpu 的回音收回來、判完（[kernel.md §3 第 6、8 步，§4](../kernel/tick.md)）才回 `queue`；
+**kernel 自己不會同時派兩格**：反覆行程派出去時就從 `ready` 拿掉、`status=running`，要等那顆 cpu 的回音收回來、判完（[kernel.md §3 第 6、8 步，§4](../kernel/tick.md)）才回 `ready`；
 所以前一格 `aos-agent tick` 還沒退出，同一個 kernel 下一格、下下格都不會再派它——不管池裡有幾顆 cpu。`stop`（`rm`）正在跑的那格只標 `discard`、行程紀錄留著，
 回音到之前同名 `add` 一律 `AlreadyExists`，所以「stop 完馬上 start」也不會疊出第二格。kernel 的格本身也只在那一顆 kernel cpu 上排隊，一次一格（kernel.md §7）。
 
 **會疊的來源**（都在 kernel 的保證外）：
 1. 人手動打 `aos-agent tick`，剛好 kernel 派的那格也在跑。
 2. 同一個家用兩個名字登記（手動 `aos-kernel add` 那份 `tick.json`），或登記進兩個不同的 K。
-3. cpu 被 KILL、它跑的 tick 還活著（[cpu.md §5.3](../cpu/stop.md) 的保證外）：kernel 收到 `Interrupted` 就把行程排回 queue、再派一格，舊的那格還在跑。
+3. cpu 被 KILL、它跑的 tick 還活著（[cpu.md §5.3](../cpu/stop.md) 的保證外）：kernel 收到 `Interrupted` 就把行程排回 `ready`、再派一格，舊的那格還在跑。
 4. kernel 的 `timeout_ms` 不是 0 而 tick 剛好超時被砍、子行程沒死乾淨（同上，保證外）。
 
 **沒有鎖時會怎樣**：兩格讀到同一份 `state.json`，各自以為輪到自己——例如都在 `think` 就各建一批、各放一次單（模型被問兩次），誰後寫 state 誰贏，

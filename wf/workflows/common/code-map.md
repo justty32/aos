@@ -120,6 +120,10 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_agent_tools_edit` | `aos-agent tools ls／rm／alias／unalias` 與共用 info 編輯 |
 | `aos_agent_access` | 權限牆（access.json）讀驗與快照 |
 | `aos_agent_access_cli` | `aos-agent access ls／set／rm／cwd／net` |
+| `aos_agent_events` | 事件紀錄：`log/events.jsonl` 追加與去重讀取，`aos-llm call` 的 `log/usage.jsonl` |
+| `aos_agent_context` | 送給模型的東西多大：`aos-agent context` 與 `talk /context` 共用的字數／token 粗估 |
+| `aos_agent_compact` | 機械壓縮記憶：`aos-agent compact`、tick idle 自動壓縮、compact 申請、`history --archive` |
+| `aos_agent_notes` | `aos-agent notes ls／show`：讀 `tools/notes/` 寫的 `wf-table/1` 筆記檔 |
 | `aos_jail` | `aos-jail`：組 bwrap 參數並 exec |
 | `aos_json_cli` | `aos-json`：人用的 JSON Pointer 改檔（get／set／del／append／merge），`--check-directives` 先驗才寫 |
 | `aos_team_format` | 團隊共用格式（資料夾佈局、`team.json`、信、申請、任務單、問題讀驗）與共用 id／時間／寫檔 |
