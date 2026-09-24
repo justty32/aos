@@ -85,6 +85,8 @@ def render_review(sub, parent):
     lines = ['審查單 %s：替 %s（rev%d，第 %d 次）判下面幾條；機械檢查已經過了。'
              % (sub['id'], parent['id'], sub['review_of']['rev'], sub['review_of']['attempt']),
              '任務目標：%s' % parent['goal']]
+    if parent.get('facts'):
+        lines.append('事實（開單人給的，例如改之前的原文）：%s' % parent['facts'])
     lines += ['  %d. %s' % (i, it['text']) for i, it in enumerate(sub['done_when'])]
     lines.append('用 review_result 逐條回：{"task": "%s", "items": [{"i": 0, "pass": true, "why": "一句理由"}, …]}；'
                  '每一條都要回。回完這一輪就結束。' % sub['id'])

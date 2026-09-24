@@ -20,7 +20,7 @@
 ## 規則
 
 - `pattern`：Python 正規式，跟**整句**比（`fullmatch`，前後空白先去掉）。不是找關鍵字。
-- 具名群組（`(?P<名>…)`）都要有值才算命中；`handoff` 裡字串的 `{名}` 換成群組的值（只換名字對得上的）。
+- 具名群組（`(?P<名>…)`）都要有值才算命中；`handoff` 與 `run` 裡字串的 `{名}` 換成群組的值（只換名字對得上的；`run` 那種 2026-09-24 收尾隊加，例：`每 2m 數一次 md 檔` → `routine add … --every 2m`）。
 - **命中兩條以上**或**句子含否定詞**（`negations`，沒寫用上面那六個）＝不自己做、**落穿給領隊**（「不要導入 heartbeat」不能觸發導入）。
 - 沒命中＝落穿：原話當一封 `REQUEST` 從 `human` 寄給領隊（名冊第一個 `template: lead` 的成員；沒有領隊＝退 1、說清楚）。
 - 每次結果記一行進 `team/route.log`：`{"at", "text", "result": "tool"|"handoff"|"lead"|"none", "route": 名或 null, "why"}`（`none`＝該落穿但隊裡沒有領隊，退 1、代號 `NoLead`）。

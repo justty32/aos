@@ -122,6 +122,19 @@ class AskTests(Base):
         self.assertEqual(self.log()[-1]['result'], 'tool')
         self.assertEqual(self.log()[-1]['route'], 'tasks')
 
+    def test_tool_run_fills_groups(self):
+        """T5：tool 規則的 run 也換 {群組名}：「每 2m 數一次 md 檔」＝寄一份 routine add 申請，--every 是 2m。"""
+        code, out, _ = self.call(route.cmd_ask, '每 2m 數一次 md 檔')
+        self.assertEqual(code, 0, out)
+        files = self.human_outbox()
+        self.assertEqual(len(files), 1)
+        kind, req = fmt.read_outbox_file(files[0], fmt.load_roster(self.team))
+        self.assertEqual((req['kind'], req['op'], req['name'], req['every'], req['to']),
+                         ('routine', 'add', 'count-md', '2m', 'worker-1'))
+        self.assertEqual(req['done_when'], [{'kind': 'file_exists', 'path': 'notes/md-count.txt'}])
+        self.assertEqual(self.inputs(), [])
+        self.assertEqual(self.log()[-1]['route'], 'count-md')
+
     def test_handoff_request_is_valid(self):
         code, out, _ = self.call(route.cmd_ask, '把', 'workflows', '導入', 'p，照', 'facts.json')
         self.assertEqual(code, 0, out)
@@ -130,7 +143,7 @@ class AskTests(Base):
         self.assertEqual(len(files), 1)
         kind, req = fmt.read_outbox_file(files[0], fmt.load_roster(self.team))
         self.assertEqual((kind, req['kind'], req['assignee'], req['facts']), ('request', 'handoff', 'worker-1', 'facts.json'))
-        self.assertIn('導入 p', req['goal'])
+        self.assertIn('人說的是 p）', req['goal'])
         self.assertEqual(self.inputs(), [])
         self.assertEqual(self.log()[-1]['result'], 'handoff')
 

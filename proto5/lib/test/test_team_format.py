@@ -72,7 +72,7 @@ class ExampleTests(Base):
         for name in ('lead', 'worker', 'reviewer', 'coder'):
             folder, tpl = fmt.load_template(name)
             self.assertTrue((folder / tpl['system']).is_file(), name)
-        self.assertEqual(fmt.template_may('lead'), ('handoff', 'cancel', 'reassign', 'ask'))
+        self.assertEqual(fmt.template_may('lead'), ('handoff', 'cancel', 'reassign', 'ask', 'compact'))
         self.err('NoSuchTemplate', fmt.load_template, 'nope')
 
 

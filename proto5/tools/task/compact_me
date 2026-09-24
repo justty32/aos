@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""compact_me：申請壓縮自己的記憶（寫一份 kind=compact 申請；spec/agent/compact-more.md §5）。
+
+只能縮自己（不收 member）；郵差把申請投進自己家的 compact-req/，下一次閒著時 tick 縮。範圍同 aos_agent_compact：
+keep_rounds 0～1000、max_tokens 100～10^8、reason 500 字內；郵差會再驗一次。
+"""
+import sys
+
+from _team import arg, fail, only_keys, run, send
+
+
+def main(args, cfg):
+    only_keys(args, ('reason', 'keep_rounds', 'max_tokens'))
+    body = {}
+    for key, lo, hi in (('keep_rounds', 0, 1000), ('max_tokens', 100, 10 ** 8)):
+        value = arg(args, key, int)
+        if value is not None:
+            if not lo <= value <= hi:
+                fail('BadArguments', '%s must be %d..%d' % (key, lo, hi))
+            body[key] = value
+    reason = arg(args, 'reason', str)
+    if reason is not None:
+        if len(reason) > 500:
+            fail('BadArguments', 'reason is too long (max 500 chars)')
+        body['reason'] = reason
+    rid = send(cfg, 'compact', body)
+    return ('queued compact request %s. Old rounds become a short summary the next time you are idle. '
+            'End this turn.' % rid)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

@@ -61,7 +61,7 @@
 只看 `sent`／`working`、`waiting_on` 是 null 的單（blocked、waiting_user、驗收或審查中、結束的都不報）：
 
 - **健康不是 ok**（`aos_agent_status.collect` 的 health：retrying、paused、bad、kernel 壞、沒登記…）**連續** 60 秒以上（代碼換來換去也算同一段，回到 ok 才重算）；
-- 否則**超過 `limits.stale_minutes` 沒進展**：最後進展＝單子最後一次變動、成員記憶檔最後一次寫、事件紀錄（成員家 `log/events.jsonl`；`team/events/<名>.jsonl` 有也看）最後一次寫，取最晚。
+- 否則**超過 `limits.stale_minutes` 沒進展**：最後進展＝單子最後一次變動、成員記憶檔最後一次寫、事件紀錄（成員家 `log/events.jsonl`）最後一次寫，取最晚。
 
 → 寄一封 `PROGRESS`「觀察到停滯：…」給每個領隊（負責人自己是領隊就不寄給自己）與人。**同一次只報一次**：通知的紀錄 id 由「單號、rev、attempt、哪一種、從什麼時候起」算出來，紀錄在＝報過了；有了新進展又停住＝新的一次。
 只報看到的事，不替負責人說 BLOCKED。

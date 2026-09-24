@@ -711,7 +711,7 @@ class Post:
                 history = home / h
         except (OSError, ValueError, AttributeError):
             pass
-        for p in (history, home / 'log' / 'events.jsonl', self.lay.events(m)):
+        for p in (history, self.lay.events(m)):
             mt = _mtime(p)
             if mt is not None:
                 stamps.append(datetime.datetime.fromtimestamp(mt, datetime.timezone.utc))

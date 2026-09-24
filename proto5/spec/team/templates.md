@@ -19,12 +19,14 @@ templates/worker/
  "system": "system.md",
  "team": true,
  "project": "rw",
- "may": ["ask"],
+ "notes": true,
+ "may": ["ask", "compact"],
  "llm": {"model": "default", "timeout_ms": 125000},
  "tick": {"interval_ms": 1000},
  "tools": [{"pack": "base"},
-           {"pack": "task", "only": ["board", "ask_human"], "team": true},
-           {"pack": "team", "only": ["team_say"], "team": true, "optional": true}],
+           {"pack": "task", "only": ["board", "ask_human", "compact_me"], "team": true},
+           {"pack": "team", "only": ["team_say"], "team": true, "optional": true},
+           {"pack": "notes"}],
  "mounts": {}}
 ```
 
@@ -34,7 +36,8 @@ templates/worker/
 | `system` | 人格檔，相對模板資料夾 |
 | `team` | true＝只能在團隊裡用（要名冊的資料：名字、能寄給誰）；單獨 `init --template` 會拒絕 |
 | `project` | 專案掛進牢的方式：`rw`／`ro`；不在團隊裡＝家裡的 `workspace/`（可寫） |
-| `may` | 這種成員能寄哪幾種申請（mail.md）；郵差照這個擋 |
+| `notes` | true＝多掛 `notes` → `team/notes/<名>/`（可寫，只有自己那格；init 建資料夾），給 `notes` 包的 `note` 工具（牢裡預設寫 `/work/notes/notes.json`）。只給團隊模板；內建的領隊、工人有，審查沒有 |
+| `may` | 這種成員能寄哪幾種申請（mail.md）；郵差照這個擋。領隊、工人有 `compact`（`compact_me` 工具縮自己的記憶） |
 | `llm` | 寫進 `info.json` 的 `llm`（`model` 會被名冊的 `model` 蓋掉）；池固定 `llm` |
 | `tick` | `info.json` 的 `tick.interval_ms` |
 | `tools` | 依序裝的工具包：`pack`（`proto5/tools/<名>/`）、`only`（只裝這幾支）、`team`（true＝裝完寫團隊設定，下面）、`optional`（true＝那個包還不在就跳過、印一行） |
@@ -59,12 +62,14 @@ members/worker-1/
 {"_metainfo": {"_type": "agent_access", "_version": 1},
  "mounts": {"ws": "../../../p",
             "outbox": "../../team/outbox/worker-1",
-            "board": {"$opt": "ro", "$val": "../../team/tasks"}},
+            "board": {"$opt": "ro", "$val": "../../team/tasks"},
+            "notes": "../../team/notes/worker-1"},
  "cwd": "ws", "net": false}
 ```
 
 - 路徑寫成**相對成員的家**（整個團隊資料夾搬走還能用）；模板的 `mounts` 在 proto5 裡，寫絕對路徑。
-- 領隊、審查的 `ws` 是 `{"$opt": "ro", …}`。
+- 領隊、審查的 `ws` 是 `{"$opt": "ro", …}`；審查沒有 `notes`。
+- `outbox`、`notes` 是 init 內建的掛點（保留名，名冊與模板的 `mounts` 用不了），只指自己那格，所以不受下一條限制。
 - 不在團隊裡（`coder`）：`{"mounts": {"ws": "workspace"}, "cwd": "ws", "net": false}`。
 - **一定有 `access.json`**：工具一律關牢，不靠「沒 access.json 也能跑」。
 - 名冊或模板**多掛的可寫資料夾**不准碰團隊控制資料：`team.json`、`team/`（別人的 outbox、任務表、問題）、`members/`（所有人的家）、proto5 本身——一個包著另一個也算，`AccessUnsafe`；要看就掛唯讀。
@@ -81,5 +86,6 @@ members/worker-1/
 ```
 
 - `outbox`、`board` 是**工具看到的路徑**（牢裡）；單元測試可以改成主機上的絕對路徑。
-- 這份是名冊的**快照**，給工具擋手誤；改了名冊要重跑 `aos-team init`（已在的成員會更新這份設定、補裝新加的包，**不動人格、記憶、access.json**；人格裡的 {mail_to} 要自己改或 `aos-team rm` 後重生）。真正的把關在郵差。
+- 這份是名冊的**快照**，給工具擋手誤；改了名冊要重跑 `aos-team init`（已在的成員會更新這份設定、補裝新加的包，**不動人格、記憶、access.json**；人格裡的 {mail_to} 要自己改或 `aos-team rm` 後重生）。
+  access.json 唯一的例外：模板 `notes: true` 而 access.json 還沒有 `notes` 掛載（notes 之前生的舊家）＝補這一格、建資料夾、印「補掛 notes」；其他掛載不動，`notes` 已被人改指別處也不動。真正的把關在郵差。
 - 工具寫信、寫申請：`<outbox>/<id>.json`，id＝`<epoch ns>-<pid>-<member>`，暫存檔（`.` 開頭）＋rename（mail.md）。

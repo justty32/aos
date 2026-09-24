@@ -37,7 +37,7 @@
 | `template` | 字串 | 是 | 模板名（`proto5/templates/<名>/`）或含 `/` 的模板資料夾路徑（templates.md） |
 | `model` | 字串或 null | 否 | `llm.json` 裡的模型代號；沒寫＝模板的 `llm.model`，再沒有＝`default` |
 | `mail_to` | 名字陣列 | 否（`[]`） | 能寄信給誰：其他成員名或 `human`；不能寫自己、不能寫名冊外的 |
-| `mounts` | 物件 | 否 | 多掛進牢的資料夾：名字 → 路徑字串或 `{"$opt": "ro", "$val": 路徑}`；相對路徑從團隊資料夾算。`ws`／`outbox`／`board` 是保留名 |
+| `mounts` | 物件 | 否 | 多掛進牢的資料夾：名字 → 路徑字串或 `{"$opt": "ro", "$val": 路徑}`；相對路徑從團隊資料夾算。`ws`／`outbox`／`board`／`notes` 是保留名 |
 | `tools` | 陣列 | 否 | 多裝的工具包（格式同模板的 `tools` 元素，templates.md） |
 
 - 名字 `[a-z][a-z0-9_-]{0,31}`，不能是 `human`、`post`。

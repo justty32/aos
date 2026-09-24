@@ -171,7 +171,8 @@ def ask(team_dir, text):
         _log(lay, text, 'tool', rule, why)
         if 'run' in rule:
             from aos_team_cli import resolve
-            return resolve(rule['run'][0])(str(lay.root), list(rule['run'][1:]))
+            run = fill(list(rule['run']), groups)    # {群組名} 換成值（例：routine add 的 --every {every}）
+            return resolve(run[0])(str(lay.root), run[1:])
         return run_pack_tool(lay.root, roster, rule['tool'], rule.get('args'))
     if result == 'handoff':
         req = dict(fill(rule['handoff'], groups))

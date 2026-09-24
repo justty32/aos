@@ -56,7 +56,7 @@ class InitTests(unittest.TestCase):
             self.assertEqual(read_json(home / 'state.json'), {'input': 'input/'})
             self.assertTrue((home / 'input').is_dir())
             access = read_json(home / 'access.json')
-            self.assertEqual(set(access['mounts']), {'ws', 'outbox', 'board'})
+            self.assertEqual(set(access['mounts']), {'ws', 'outbox', 'board'} | ({'notes'} if tpl != 'reviewer' else set()))
             self.assertEqual(access['cwd'], 'ws')
             self.assertFalse(access['net'])
             table = aos_agent_access.load(str(home))              # 解得開、沒蓋到信任資料
@@ -70,8 +70,9 @@ class InitTests(unittest.TestCase):
             self.assertTrue(read_json(home / '.aos-template.json')['complete'])
             self.assertTrue(lay.outbox(name).is_dir())
         lead = read_json(lay.member('lead') / 'info.json')
-        names = [e['$opt']['only'] for e in lead['tools']]
-        self.assertEqual(names, [['handoff', 'board', 'ask_human'], ['team_say'], ['read', 'grep', 'find', 'ls']])   # team 包（第 2 隊）已在
+        names = [e['$opt']['only'] if isinstance(e, dict) else e for e in lead['tools']]
+        self.assertEqual(names, [['handoff', 'board', 'ask_human', 'compact_me'], ['team_say'], 'tools/notes.json',
+                                 ['read', 'grep', 'find', 'ls']])   # team 包（第 2 隊）已在
         self.assertTrue(lay.outbox('human').is_dir())
         self.assertEqual(read_json(self.team / 'team.json'), ROSTER)
 
@@ -289,8 +290,8 @@ class ToolUnitTests(unittest.TestCase):
     def test_descriptions_are_short(self):
         tools = json.loads((TOOLS / 'task.json').read_text(encoding='utf-8'))
         sizes = {t['function']['name']: len(json.dumps(t['function'], ensure_ascii=False)) for t in tools}
-        self.assertEqual(set(sizes), {'handoff', 'board', 'review_result', 'ask_human'})
-        self.assertLess(sum(sizes.values()), 2600, sizes)            # 約 650 token；單支都 < 300 token
+        self.assertEqual(set(sizes), {'handoff', 'board', 'review_result', 'ask_human', 'compact_me'})
+        self.assertLess(sum(sizes.values()), 2700, sizes)            # 約 670 token；單支都 < 300 token
         self.assertTrue(all(v < 1200 for v in sizes.values()), sizes)
 
 
@@ -489,9 +490,10 @@ class TeamIntegrationTests(KernelCase):
         for body in self.requests:
             who = next(k for k in SCRIPTS if k in body['messages'][0]['content'])
             tools[who] = {t['function']['name'] for t in body['tools']}
-        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'team_say', 'read', 'grep', 'find', 'ls'})
+        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'team_say', 'note',
+                                             'read', 'grep', 'find', 'ls'})
         self.assertEqual(tools['審查員 reviewer'], {'board', 'review_result', 'read', 'grep', 'find', 'ls'})
-        self.assertTrue({'write', 'bash', 'board', 'ask_human', 'team_say'} <= tools['工人 worker-1'])
+        self.assertTrue({'write', 'bash', 'board', 'ask_human', 'compact_me', 'team_say', 'note'} <= tools['工人 worker-1'])
         self.assertNotIn('handoff', tools['工人 worker-1'])
         self.team('stop')
         wait_for(lambda: all(x['health'] == 'unregistered' for x in json.loads(self.team('ls', '--json').stdout)),

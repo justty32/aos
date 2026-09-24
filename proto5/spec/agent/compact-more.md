@@ -6,7 +6,7 @@
 
 ## 5. 申請（模型只能寄申請）
 
-走 [spec/team/mail.md〈申請〉](../team/mail.md)：`kind: "compact"`，登記在 `aos_team_requests.KINDS`（`aos_agent_compact:on_request`）。寄件人模板的 `may` 要有 `compact`。
+走 [spec/team/mail.md〈申請〉](../team/mail.md)：`kind: "compact"`，登記在 `aos_team_requests.KINDS`（`aos_agent_compact:on_request`）。寄件人模板的 `may` 要有 `compact`（內建領隊、工人有）；模型用 task 包的 `compact_me` 工具寄（只縮自己，不收 `member`）。
 
 | 欄位 | 意思 |
 |---|---|

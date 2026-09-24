@@ -24,17 +24,35 @@
       "tests": {"hit": ["看一下例行", "列心跳排程", "看定時工作"], "miss": ["加一條例行", "心跳停了嗎"]}
     },
     {
+      "name": "count-md",
+      "pattern": "每 ?(?P<every>[1-9][0-9]*[mhd]) ?數一次 ?md ?檔",
+      "do": "tool",
+      "run": ["routine", "add", "count-md", "--every", "{every}", "--to", "worker-1",
+              "--goal", "數專案裡有幾個 .md 檔（不含 .git），只把數字寫進 notes/md-count.txt（整檔覆蓋）",
+              "--done-file", "notes/md-count.txt"],
+      "tests": {"hit": ["每 2m 數一次 md 檔", "每1h數一次md檔"], "miss": ["數一次 md 檔", "每 2m 數一次 md 檔給我看看"]}
+    },
+    {
       "name": "import",
       "pattern": "把 workflows 導入 (?P<project>\\S+)，照 (?P<facts>\\S+)",
       "do": "handoff",
       "handoff": {
         "assignee": "worker-1",
         "workflow": "IMPORT.md",
-        "goal": "把 workflows 的 heartbeat 包導入 {project}，照 {facts} 填事實",
+        "goal": "把 workflows 的 heartbeat 包導入專案（就是你的起點資料夾；人說的是 {project}），先用 wf_init 導入，再照專案裡的 {facts} 填 wf_residue 列出的殘留；事實表沒有的用 ask_human 問，不要猜",
         "facts": "{facts}",
         "done_when": [
           {"kind": "check", "name": "wf_residue"},
-          {"kind": "check", "name": "wf_lint_strict"}
+          {"kind": "check", "name": "wf_lint_strict"},
+          {"kind": "file_exists", "path": "AGENTS.md"},
+          {"kind": "file_exists", "path": "workflows/tick.md"},
+          {"kind": "file_exists", "path": "workflows/routines.md"},
+          {"kind": "file_exists", "path": "workflows/schedule.md"},
+          {"kind": "check", "name": "contains", "args": {"path": "WORKFLOWS.md", "text": "(workflows/tick.md)"}},
+          {"kind": "check", "name": "contains", "args": {"path": "WORKFLOWS.md", "text": "(workflows/routines.md)"}},
+          {"kind": "check", "name": "contains", "args": {"path": "WORKFLOWS.md", "text": "(workflows/schedule.md)"}},
+          {"kind": "check", "name": "contains", "args": {"path": "AGENTS.md", "text": "試跑用的空專案"}},
+          {"kind": "check", "name": "contains", "args": {"path": "workflows/common/user.md", "text": "Asia/Taipei"}}
         ]
       },
       "tests": {

@@ -4,13 +4,15 @@
   "system": "system.md",
   "team": true,
   "project": "rw",
-  "may": ["ask"],
+  "notes": true,
+  "may": ["ask", "compact"],
   "llm": {"model": "default", "timeout_ms": 125000},
   "tick": {"interval_ms": 1000},
   "tools": [
     {"pack": "base"},
-    {"pack": "task", "only": ["board", "ask_human"], "team": true},
+    {"pack": "task", "only": ["board", "ask_human", "compact_me"], "team": true},
     {"pack": "team", "only": ["team_say"], "team": true, "optional": true},
+    {"pack": "notes"},
     {"pack": "wf", "optional": true},
     {"pack": "files", "optional": true}
   ],

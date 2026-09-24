@@ -4,12 +4,14 @@
   "system": "system.md",
   "team": true,
   "project": "ro",
-  "may": ["handoff", "cancel", "reassign", "ask"],
+  "notes": true,
+  "may": ["handoff", "cancel", "reassign", "ask", "compact"],
   "llm": {"model": "default", "timeout_ms": 125000},
   "tick": {"interval_ms": 1000},
   "tools": [
-    {"pack": "task", "only": ["handoff", "board", "ask_human"], "team": true},
+    {"pack": "task", "only": ["handoff", "board", "ask_human", "compact_me"], "team": true},
     {"pack": "team", "only": ["team_say"], "team": true, "optional": true},
+    {"pack": "notes"},
     {"pack": "base", "only": ["read", "grep", "find", "ls"]}
   ],
   "mounts": {}
