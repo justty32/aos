@@ -3,6 +3,7 @@
 # 成員模板
 
 `proto5/templates/<名>/`：一個資料夾生一種成員的家。內建 `lead`（領隊）、`worker`（工人）、`reviewer`（審查）三種給團隊用，`coder`（base 工具、不在團隊裡）給單獨的 agent 用。
+（第二波 A 隊）另有 `importer`（導入工人）：只做「把 workflows 手冊導入專案」，只裝 base 的 read／edit／ls、wf 的 wf_doc／wf_init／wf_fill／wf_residue／wf_lint、ask_human、team_say 共 10 支，工具表約 5,600 字元（worker 20 支約 12,700）；沒有 notes、compact。要用就在名冊加一列（例 `"importer-1": {"template": "importer", "mail_to": ["lead", "human"]}`），門房的導入規則 `assignee` 改成它。
 `aos-team init` 對名冊每一列叫 `aos_agent_init.init_from_template()`；`aos-agent init --template 名` 的旗標由第 4 隊接（同一個函式）。
 
 ```text

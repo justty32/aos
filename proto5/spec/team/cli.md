@@ -18,10 +18,10 @@ aos-team <子命令> [參數…] [--target 團隊資料夾]
 | `ls [--json]` | 一行一個成員：模板、health、手上的單、最後一封信 | 1 |
 | `rm NAME` | 拿掉一個成員：要先 stop；先記 `members/.removing-<名>.json`，再把家搬進 `members/.removed/`、名冊刪那列（不刪檔）；崩了重跑 rm 接著做，init 看到這個檔會拒跑。加 `--purge` 才真的刪掉家（先搬再刪，刪不回來） | 1 |
 | `ask "一句話"` | 交給門房（route.md）：命中就直接做、沒命中投給領隊 | 1 |
-| `route test [--file F]`／`route save F` | 跑門房規則的例句；save 全過才存 | 1 |
+| `route test [--file F]`／`route save F`／`route try "一句話" [--file F]` | 跑門房規則的例句；save 全過才存；try 印這句話會怎麼判（命中哪條、會跑什麼或開什麼單、落穿給誰），不跑、不開單、不寄信、不寫 route.log（第二波 A 隊） | 1 |
 | `task ls [--all] [--json]`／`task show ID`／`task cancel ID [--reason …]`／`task reassign ID NAME` | 看任務表；取消、改派（寄申請給郵差） | 1 |
 | `wait ls [--json]`／`answer Q "…"` | 看等人回答的問題；回答一題（寄申請給郵差） | 1 |
-| `mail [--follow]`、`post` | 一封信一行；郵差走一次（kernel 反覆叫） | 2 |
+| `mail [--task t-0001] [--follow]`、`post` | 一封信一行，等人回答的題目也一題一行（`lead → 人  ASK  q-0001`，答完那行先顯示答案）；`--task` 連落穿給領隊、開出這張單的那封人寫的信一起列（挑法同 score 的起點）；郵差走一次（kernel 反覆叫）。mail 第二波 A 隊搬到 `lib/aos_team_mail.py` | 2 |
 | `verify ID`、`routine ls/add/rm`、`beat` | 驗收；心跳排程；心跳走一次 | 2 |
 | `score` | 六軸自動彙整 | 5 |
 

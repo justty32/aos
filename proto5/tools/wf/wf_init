@@ -41,8 +41,8 @@ def main(args, root):
             out.append('%d existing files were replaced; the old copies are in %s'
                        % (res['backed'], res['backup']))
     out.append(_wf.residue_text(_wf.residue(full)))
-    out.append('next: fill every {{...}} with project facts (ask if unknown), decide each 〔導入判斷〕, '
-               'delete 〔模板說明〕 blocks, then run wf_lint (see wf_doc IMPORT.md)')
+    out.append('next: fill every {{...}} with project facts (wf_fill does it from a facts file; ask if unknown), '
+               'decide each 〔導入判斷〕, delete 〔模板說明〕 blocks, then run wf_lint (see wf_doc IMPORT.md)')
     return '\n'.join(out)
 
 

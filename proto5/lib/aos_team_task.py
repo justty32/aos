@@ -74,7 +74,8 @@ def render_handoff(t):
              ] + (['這張單是心跳（定時器）照例行派的，不是人或領隊當下派的。'] if t['opened_by'] == BEAT else []) + [
              '沒有指定工作流，照目標與事實做' if flow in NO_FLOW else '照這份工作流做：%s' % flow,
              '事實：%s' % (t.get('facts') or '無')]
-    lines.append('驗收（你回 DONE 之後自動跑，機械的不用你自己宣稱）：')
+    lines.append('驗收（你回 DONE 之後驗收員自動逐條查；「檔案在」「含某段字」不用你先 read 確認，'
+                 '有同名工具的檢查器（例如 wf_residue、wf_lint）可以先自己跑）：')
     lines += ['  %d. %s' % (i, describe_item(it)) for i, it in enumerate(t['done_when'])]
     lines.append('做完用 team_say 回 DONE 給 %s，reply_to "%s"、rev %d；卡住回 BLOCKED 說原因；'
                  '要人決定用 ask_human。回完這一輪就結束，不用等。' % (reply, t['id'], t['rev']))

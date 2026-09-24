@@ -1,0 +1,17 @@
+{
+  "_metainfo": {"_type": "aos_team_template", "_version": 1},
+  "description": "導入工人：只做「把 workflows 手冊導入專案」這一種事（wf 工具＋最少的讀改檔），工具表約一半",
+  "system": "system.md",
+  "team": true,
+  "project": "rw",
+  "may": ["ask"],
+  "llm": {"model": "default", "timeout_ms": 125000},
+  "tick": {"interval_ms": 1000},
+  "tools": [
+    {"pack": "base", "only": ["read", "edit", "ls"]},
+    {"pack": "wf", "only": ["wf_doc", "wf_init", "wf_fill", "wf_residue", "wf_lint"]},
+    {"pack": "task", "only": ["ask_human"], "team": true},
+    {"pack": "team", "only": ["team_say"], "team": true}
+  ],
+  "mounts": {}
+}

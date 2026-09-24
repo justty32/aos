@@ -66,7 +66,7 @@ aos-team ls --target $W/myteam
 
 `init` 每個成員印幾行（生了家、裝了哪些工具包），最後一行 `團隊在 …/myteam：3 個成員`。
 `route save` 先跑每條規則的例句，全過才存：`5 條規則，0 條沒過`、`存好了：…/team/routes.json`。
-`start` 印 `lead: started agent-lead` 等五行（三個成員＋郵差＋心跳）。`ls`：
+`start` 印 `lead: started agent-lead` 等五行（三個成員＋`郵差: started team-post-…`、`心跳: started team-beat-…`）。`ls`：
 
 ```text
 lead      lead     ok           單：-              最後寄出：-
@@ -158,7 +158,7 @@ aos-team ask "看一下單子"
 ```
 
 印 `沒有進行中的任務單（--all 連結束的一起看）`：這句對上 `routes.json` 的 `tasks` 規則，門房直接跑 `aos-team task ls`，**沒有任何 agent 被叫醒**。
-規則是整句比對，不是找關鍵字：「列任務給 bob 看」對不上；句子裡有否定詞（「不要看單子」）也一律落穿給領隊：領隊可能用 `team_say` 回你一封信（`aos-team mail` 看得到），也可能反問你——反問不是信，要 `aos-team wait ls` 看題目、`aos-team answer q-0001 "…"` 回答。每次判了什麼記在 `$W/myteam/team/route.log`。
+規則是整句比對，不是找關鍵字：「列任務給 bob 看」對不上；句子裡有否定詞（「不要看單子」）也一律落穿給領隊：領隊可能用 `team_say` 回你一封信（`aos-team mail` 看得到），也可能反問你——反問不是信，但 `aos-team mail` 也會列一行 `lead → 人  ASK  q-0001`；`aos-team wait ls` 看題目、`aos-team answer q-0001 "…"` 回答。每次判了什麼記在 `$W/myteam/team/route.log`。
 `routes.json` 裡還有「看一下例行」（列心跳的例行）、「每 2m 數一次 md 檔」（登記一條例行，心跳每 2 分鐘派給工人）、「把 workflows 導入 …，照 …」（直接開單給工人，領隊不經手），規則怎麼寫見 [route.md](../spec/team/route.md)。
 
 ## 7. 這件事花了多少
@@ -184,7 +184,9 @@ aos-team stop
 - agent 沒事時會停車（不佔 cpu），信投進它的 `input/` 就被叫醒。
 - 資料夾怎麼長、誰寫哪個檔：[layout.md](../spec/team/layout.md)。
 
-`route test` 只跑規則檔裡自帶的例句（`--file F` 換一個規則檔），不能拿一句話來試；想知道一句話會不會命中，看 `routes.json` 的 `pattern` 或直接 `ask`。
+`route test` 只跑規則檔裡自帶的例句（`--file F` 換一個規則檔）。想知道一句話會不會命中：`aos-team route try "看一下單子"`，印它會命中哪條、會跑什麼或開什麼單、落穿給誰，**什麼都不做**（不跑、不開單、不寄信、不寫 route.log）。
+
+想給工人一支自己寫的 Python 函式當工具（第二波 A 隊）：`aos-agent tools wrap-py mytools.py --out $W`（有型別註解的函式才收，印一張收／拒收表）→ `aos-agent tools test $W/mytools`（自動試正例、型別錯、缺參數，關在牢裡跑）→ `aos-agent tools add $W/mytools --target $W/myteam/members/worker-1`。工具關在牢裡、只碰得到專案，派工信直接叫它用那支工具就好。細節見 [tools-dev.md](../spec/aos-agent/tools-dev.md)。
 
 ## 常見錯誤
 

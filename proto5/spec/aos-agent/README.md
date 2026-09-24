@@ -48,6 +48,7 @@
 | [tools.md](tools.md) | §1.8 `tools add` 裝工具包（內建 `base`：read／write／edit／bash／grep／find／ls）與工作根目錄（09-24 tools-base 補）；原地引用資料夾／`.json` 檔、`--as`／`--only`（access-impl） |
 | [access.md](access.md) | 權限牆：act 批建批時解 `access.json` 存快照、送件包 `aos-jail`、`access ls／set／rm／cwd／net`（09-24 access-impl） |
 | [tools-manage.md](tools-manage.md) | §1.8 續 `tools ls [--json]`／`rm`／`alias`／`unalias`：只改 `info.tools`、不刪檔（09-24 access-impl） |
+| [tools-dev.md](tools-dev.md) | （09-24 第二波 A 隊）造工具：`tools new`（骨架）、`tools test`（照工具檔描述自動跑案例，預設關牢）、`tools wrap-py`（Python 函式 → 工具包、拒收表）；三個都不需要 agent 家 |
 | [tools-files.md](tools-files.md) | （09-24 第 3 隊補）`aos-json`（人用的 JSON Pointer 改檔）、`aos-directives`（人格按標題分節編輯，並解／驗一份 aos JSON 檔的指示詞） |
 | [tick.md](tick.md) | §2 一次 `tick` 的順序；§2.1 同時兩個 `tick`；§12 `tick` 的退出碼與 stderr |
 | [gate.md](gate.md) | §3 門；§4 `batch` 是 `null` 時照 `state` 走 |

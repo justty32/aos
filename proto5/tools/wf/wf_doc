@@ -11,8 +11,9 @@ MAX_LIMIT = 2000
 # T5 真跑：模型找不到手冊裡的 wf-init.sh，就照快照的 template/ 一檔一檔手抄（51 次模型、220 萬 token）。
 # 手冊的指令在這個包裡都有對應的工具，讀手冊時先講清楚。
 IMPORT_NOTE = ('[wf tools: the scripts below are already wrapped as tools - step 1 wf-init.sh = wf_init '
-               '(no bash, no copying files by hand); steps 2-4 grep = wf_residue (gives file:line); '
-               'step 5 wf-lint.sh = wf_lint. Fill placeholders with edit.]\n\n')
+               '(no bash, no copying files by hand); steps 2-4: if there is a facts file, call wf_fill first '
+               '(fills {{...}} from it, deletes 〔模板說明〕, lists what is left), then edit the rest; '
+               'grep = wf_residue (gives file:line); step 5 wf-lint.sh = wf_lint.]\n\n')
 
 
 def main(args, _root):

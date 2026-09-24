@@ -19,7 +19,7 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'pause': '手動暫停：還登記著，但每格什麼都不做',
          'continue': '解除手動暫停與連敗暫停',
          'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）',
-         'tools': '工具管理：tools ls／add／rm／alias／unalias（內建包 base＝read／write／edit／bash／grep／find／ls）',
+         'tools': '工具管理：tools ls／add／rm／alias／unalias；造工具：new／test／wrap-py（內建包 base＝read／write／edit／bash／grep／find／ls）',
          'access': '權限牆：access ls／set／rm／cwd／net（工具關進牢裡看得到哪些資料夾）',
          # 第 4 隊（記憶與紀錄）：spec/aos-agent/cli-memory.md
          'context': '送給模型的東西多大：人格、記憶、工具的字數與 token 粗估（--by-round 每輪一行）',
@@ -36,7 +36,13 @@ ACCESS_EPILOG = ('用法：\n'
                  '  aos-agent access net on|off [--target DIR]\n'
                  'PATH 照目前資料夾轉成絕對路徑寫進 access.json；工具在牢裡看到 /work/NAME。改完下一批工具生效，不用重 start。')
 TOOLS_ARGS = {'ls': (), 'add': ('NAME|DIR|FILE.json',), 'rm': ('NAME',), 'alias': ('NAME', 'NEW'),
-              'unalias': ('NEW',)}
+              'unalias': ('NEW',), 'new': ('NAME',), 'test': ('NAME|DIR',), 'wrap-py': ('FILE.py',)}
+TOOLS_DEV = ('new', 'test', 'wrap-py')   # 造工具的三個（spec/aos-agent/tools-dev.md）：不需要 agent 家
+# 選項 → 給哪幾個動作（其他動作給了＝用法錯 2）
+TOOLS_OPTS = (('--root', 'root', ('add',)), ('--force', 'force', ('add', 'new', 'wrap-py')),
+              ('--as', 'as_', ('add',)), ('--only', 'only', ('add', 'wrap-py')), ('--json', 'json', ('ls', 'test')),
+              ('--out', 'out', ('new', 'wrap-py')), ('--name', 'name', ('wrap-py',)), ('--args', 'tool_args', ('test',)),
+              ('--case', 'case', ('test',)), ('--no-jail', 'no_jail', ('test',)), ('--tool', 'tool', ('test',)))
 TOOLS_EPILOG = ('用法：\n'
                 '  aos-agent tools ls      [--target DIR] [--json]\n'
                 '  aos-agent tools add     NAME|DIR|FILE.json [--target DIR] [--as NEW | --as OLD=NEW[,OLD=NEW…]]'
@@ -44,6 +50,10 @@ TOOLS_EPILOG = ('用法：\n'
                 '  aos-agent tools rm      NAME [--target DIR]      # 只改 info.json，不刪檔\n'
                 '  aos-agent tools alias   NAME NEW [--target DIR]\n'
                 '  aos-agent tools unalias NEW [--target DIR]\n'
+                '  aos-agent tools new     NAME [--out DIR] [--force]          # 生工具包骨架\n'
+                '  aos-agent tools test    NAME|DIR [--tool T] [--args JSON] [--case FILE] [--no-jail] [--json]\n'
+                '  aos-agent tools wrap-py FILE.py [--only f,g] [--name PACK] [--out DIR] [--force]\n'
+                'new／test／wrap-py 不需要 agent 家（不收 --target）；test 預設關在牢裡跑（有 bwrap 時）。\n'
                 'add 的對象：不含 / 的名字＝內建工具包；含 <資料夾名>.json 的資料夾＝工具包（複製進 tools/）；\n'
                 '其他資料夾或 .json 檔＝原地引用（不複製，info.tools 加一條）。改完下一批工具生效，不用重 start。')
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
@@ -132,15 +142,22 @@ def _parser():
             sub.add_argument('--json', action='store_true', help='ls：印機器格式')
         if name == 'tools':
             sub.formatter_class = argparse.RawDescriptionHelpFormatter
-            sub.usage = 'aos-agent tools {ls,add,rm,alias,unalias} [ARG…] [--target DIR] [選項]'
+            sub.usage = 'aos-agent tools {ls,add,rm,alias,unalias,new,test,wrap-py} [ARG…] [--target DIR] [選項]'
             sub.epilog = TOOLS_EPILOG
             sub.add_argument('action', choices=list(TOOLS_ARGS), help='要做什麼（見下面用法）')
             sub.add_argument('args', nargs='*', metavar='ARG')
+            sub.add_argument('--out', metavar='DIR', help='new／wrap-py：生在哪個資料夾底下（省略＝目前資料夾）')
+            sub.add_argument('--name', metavar='PACK', help='wrap-py：工具包名字（省略＝檔名去掉 .py）')
+            sub.add_argument('--args', dest='tool_args', metavar='JSON', help='test：只用這組 arguments 跑一次，原樣印輸出')
+            sub.add_argument('--case', metavar='FILE', help='test：固定案例檔（省略＝包裡的 cases.json）')
+            sub.add_argument('--no-jail', action='store_true', help='test：不關牢，直接在這台機器上跑')
+            sub.add_argument('--tool', metavar='T', help='test：只測包裡這一支')
             sub.add_argument('--root', metavar='DIR', help='add 裝包：工作根目錄（寫進工具包的 config.json；base 沒給＝agent 家的 workspace/）')
-            sub.add_argument('--force', action='store_true', help='add 裝包：已經裝過也重裝（保留原本的 config.json，除非給了 --root）')
+            sub.add_argument('--force', action='store_true', help='add 裝包：已經裝過也重裝（保留原本的 config.json，除非給了 --root）；'
+                             'new／wrap-py：資料夾已在也蓋掉')
             sub.add_argument('--as', dest='as_', metavar='NEW|OLD=NEW[,…]', help='add：改名（恰好一支時可只給新名）')
-            sub.add_argument('--only', metavar='a,b', help='add：只挑這幾支（原名）')
-            sub.add_argument('--json', action='store_true', help='ls：印穩定的機器格式')
+            sub.add_argument('--only', metavar='a,b', help='add：只挑這幾支（原名）；wrap-py：只包這幾個函式')
+            sub.add_argument('--json', action='store_true', help='ls／test：印穩定的機器格式')
         if name == 'access':
             sub.formatter_class = argparse.RawDescriptionHelpFormatter
             sub.usage = 'aos-agent access {ls,set,rm,cwd,net} [ARG…] [--target DIR] [選項]'
@@ -203,13 +220,14 @@ def _tools_usage(ap, args):
         ap.error('tools %s 要 %s' % (args.action, ' '.join(want) if want else '不帶參數'))
     if any(not a for a in args.args):
         ap.error('tools %s 的參數不可為空' % args.action)
-    if args.action != 'add':
-        extra = [f for f, v in (('--root', args.root), ('--force', args.force), ('--as', args.as_),
-                                ('--only', args.only)) if v is not None and v is not False]
-        if extra:
-            ap.error('%s 只給 tools add' % '、'.join(extra))
-    if args.json and args.action != 'ls':
-        ap.error('--json 只給 tools ls')
+    for flag, attr, actions in TOOLS_OPTS:
+        value = getattr(args, attr)
+        if value is not None and value is not False and args.action not in actions:
+            ap.error('%s 只給 tools %s' % (flag, '／'.join(actions)))
+        if isinstance(value, str) and not value and attr in ('out', 'name', 'tool_args', 'case', 'tool'):
+            ap.error('%s 不可為空' % flag)
+    if args.action in TOOLS_DEV:
+        _tools_dev_usage(ap, args)
     as_arg = only = None
     if args.as_ is not None:
         if '=' not in args.as_:
@@ -227,9 +245,31 @@ def _tools_usage(ap, args):
     return as_arg, only
 
 
+def _tools_dev_usage(ap, args):
+    """new／test／wrap-py 多的用法驗：不收 --target；--args 要是 JSON、不跟 --case 一起給。"""
+    if args.target is not None:
+        ap.error('tools %s 不需要 agent 家，不收 --target' % args.action)
+    if args.tool_args is not None:
+        if args.case is not None:
+            ap.error('--args 只跑一次、不跑案例，不跟 --case 一起給')
+        try:
+            import json
+            json.loads(args.tool_args)
+        except ValueError as exc:
+            ap.error('--args 要是 JSON：%s' % exc)
+
+
 def _tools(target, args, opts):
     import aos_agent_tools_edit as edit
     a = args.args
+    if args.action in TOOLS_DEV:
+        import aos_agent_tools_dev as dev
+        if args.action == 'new':
+            return dev.new(a[0], out=args.out, force=args.force)
+        if args.action == 'wrap-py':
+            return dev.wrap_py(a[0], only=opts[1], name=args.name, out=args.out, force=args.force)
+        return dev.test(a[0], args=args.tool_args, case_file=args.case, no_jail=args.no_jail,
+                        as_json=args.json, tool=args.tool)
     if args.action == 'add':
         from aos_agent_tools import add
         return add(target, a[0], root=args.root, force=args.force, as_arg=opts[0], only=opts[1])
@@ -339,7 +379,8 @@ def main(argv=None):
         if args.command == 'continue' and args.all:
             from aos_agent_pause import resume_all
             return resume_all()
-        if args.command not in ('init', 'tick', 'stop'):
+        dev = args.command == 'tools' and args.action in TOOLS_DEV
+        if args.command not in ('init', 'tick', 'stop') and not dev:
             from aos_agent import _other_home
             if not os.path.exists(os.path.join(base, 'info.json')):
                 raise AgentError('NotAnAgent', '%s 沒有 info.json' % base)
