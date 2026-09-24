@@ -2,7 +2,7 @@
 
 # fuse-host：aos 寄生在一個 FUSE 行程裡
 
-← [top-to-bottom/01-top](top-to-bottom/01-top.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [top-to-bottom/01-top](top-to-bottom/01-top.md)｜[ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 前情：最初動機見 [fuse-host-why](fuse-host-why.md)。
 

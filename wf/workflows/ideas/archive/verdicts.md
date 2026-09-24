@@ -2,7 +2,7 @@
 
 # 拷問總表：已裁決、仍開著、欠帳
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 **要重新拷問 aos 的人先讀這份。** 到目前為止已經打過十輪，涵蓋格式／原語／CPU 類比／
 交接協定／前作對照／機器形狀。這份把散在各檔的**裁決**收成一張表，目的只有一個：
@@ -83,7 +83,7 @@
    > **2026-09-01 複核**：新的 `core/loop`／`core/wire` 裡**連 `$ref` 都不存在了**
    > （`wire::Inst` 只剩 `id`／`argv`／`env`／`cwd`／`stdin`／`timeout_ms`），所以這條約束
    > 是無條件的。**已寫進規範**（2026-09-01）：
-   > [dispatch/proto/PROTOCOL.md §5](../dispatch/proto/PROTOCOL.md#5-一回合)。
+   > [dispatch/proto/PROTOCOL.md §5](../../dispatch/proto/PROTOCOL.md#5-一回合)。
 4. **四階段管線沒被命名** — fetch(claim)／decode(resolve)／execute／writeback(exit)。
    照這條線 **decode 目前卡在錯的一層**，而 **writeback 只有單筆、沒有整批**。
 5. **外層契約會反噬基石** — 一旦外層有型別與回傳值，inst 可能退化成啟動器。使用者**還沒
@@ -103,7 +103,7 @@
    與 `aos deliver [folder] -- <argv...>`（id 由 `make_delivery_id()` 產）。
    > 原條目那句「都沒進 C ABI」也一併過期——**C ABI 整個不存在了**，`aggregate` 現在是
    > `core/loop` 的 C++ 函式。
-   > **仍缺**：[T5 那份規格](../experiments/t5-agent-loop/subcommand-specs.md)五支裡的
+   > **仍缺**：[T5 那份規格](../../experiments/t5-agent-loop/subcommand-specs.md)五支裡的
    > `aos recover` 與 `aos status --json`（`aos agent step`／`emit-context` 由
    > `core/agent` 另解）。`deliver` 撞名直接覆蓋這個新缺陷見 D 區。
 9. **沒有控制介面** — **部分閉合（2026-09-01 驗證）**。
@@ -141,7 +141,7 @@
 13. **`path` 是 symbol、handle 才是 capability** — 這條**推不到上層**：namespace 必須在
     `fork` 之後、`execve` 之前建，只有 exec 層碰得到。與「安全交給別人」的裁決有出入。
 14. **`deliver` 的碰撞規則沒定**（2026-09-01 新開）— **這是中斷語意的前置**。撞名無聲覆蓋
-    本來只是實作缺陷（D2、[gotchas](../common/gotchas.md)），但在
+    本來只是實作缺陷（D2、[gotchas](../../common/gotchas.md)），但在
     [interrupts §八](assembly-and-chains/interrupts.md) 這條線上升格為**語意問題**：鏈自投的後繼
     與外部中斷**寫同一格**，現在是 last-writer-wins、無警告——「中斷蓋掉跳轉」與「跳轉蓋掉
     中斷」都會無聲發生，而哪個該贏沒人定過。要回答：同 id 再投是覆蓋／拒絕／排隊？外部
@@ -160,7 +160,7 @@
 
 ## D. 已驗證的實作缺陷（跟設計問題分開）
 
-可查版本在 [common/gotchas](../common/gotchas.md)。**2026-09-01 逐條用程式碼複核過**：
+可查版本在 [common/gotchas](../../common/gotchas.md)。**2026-09-01 逐條用程式碼複核過**：
 下面這批原本都指向 `core/inst/src/`，那個目錄已經不存在，所以分成兩段——舊條目怎麼結，
 新現場（`core/loop/src/`）實際上長什麼樣。**缺陷不一定是消失，很多只是搬家。**
 
@@ -185,7 +185,7 @@
 - **`aos deliver <file.json>` 撞名直接覆蓋、不查重**（2026-09-01 實測）：id 取檔名 stem
   （`deliver_cli.cpp:49`），`deliver()` 只是 `write_atomic` 到 `inbox/<id>.json`
   （`deliver.cpp:16`）。連投兩份同名的，第一份**還沒被跑掉就消失**，exit 0、無警告。
-  → [gotchas](../common/gotchas.md)
+  → [gotchas](../../common/gotchas.md)
 - **loop 開始看回傳值了，但仍不分支**：`collect_failures()` 把 exit 0 與 exit 75
   （`waiting-llm` 回壓）當成功、其餘記成 `InstFailure` 印到 stderr，`aos run` 有失敗就回
   1（`turn.cpp:83`）。**觀測有了，控制流沒有**——不重試、不停、不改節奏，所以 B2 原封
@@ -199,14 +199,14 @@
 2. ~~**補 `deliver`**（B8）~~ — **已完工**（2026-09-01 驗證；`aos deliver`／`aos stop` 都
    上了）。**接手的是 B9 剩的那半**：`aos status --json`／`aos recover`／暫停。
 3. ~~**把「一個回合內沒有資料流」寫進規範**（B3）~~ — **已完工**（2026-09-01）：寫進
-   [PROTOCOL §5](../dispatch/proto/PROTOCOL.md#5-一回合)。
+   [PROTOCOL §5](../../dispatch/proto/PROTOCOL.md#5-一回合)。
 
 ## 拷問之外還開著的東西
 
 這份只收拷問產生的裁決。**其他 open 狀態不在這裡**：手上的 in-flight 看
-[SESSION-LOG](../../SESSION-LOG.md)（含 T5 實測沒全過的驗收、規格與實作三處對不上），
-等使用者親自做的看 [WAIT_USER](../../WAIT_USER.md)，研討會累積的問題看
-[workshop/OPEN-QUESTIONS](../workshop/OPEN-QUESTIONS.md)。
+[SESSION-LOG](../../../SESSION-LOG.md)（含 T5 實測沒全過的驗收、規格與實作三處對不上），
+等使用者親自做的看 [WAIT_USER](../../../WAIT_USER.md)，研討會累積的問題看
+[workshop/OPEN-QUESTIONS](../../workshop/OPEN-QUESTIONS.md)。
 
 **拷問已停打（十輪）。** 停打時剩的四項存貨（序列化、外層契約 B5、LLM CPU 形狀、
-匯聚 lib-vs-inst）與實作排程都在 **[roadmap](../roadmap.md)**——邊實作邊裁，裁了記回這裡。
+匯聚 lib-vs-inst）與實作排程都在 **[roadmap](../../roadmap.md)**——邊實作邊裁，裁了記回這裡。

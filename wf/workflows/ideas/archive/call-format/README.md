@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 對 inst-POSIX 呼叫格式的拷問 — 導航
-← [ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 aos 的核心本質是三層：**一個簡單的通用呼叫格式＋它的標準實現**、**該格式的序列化
 標準**，然後在此之上才是「檔案系統作為 CPU process」（loop、`inst.json` 版面——那些

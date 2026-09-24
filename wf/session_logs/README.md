@@ -2,11 +2,13 @@
 
 [SESSION-LOG](../SESSION-LOG.md)｜[INDEX](../INDEX.md)
 
-[SESSION-LOG](../SESSION-LOG.md) 只放 open、≤ 4096 bytes；舊條目全文逐字搬到這裡按月份分檔（2026-09-23 tidy）。還有 open 的，SESSION-LOG 留一行精簡列連回來。
+[SESSION-LOG](../SESSION-LOG.md) 只放 open、≤ 4096 bytes；舊條目全文逐字搬到這裡按月份分檔（2026-09-23 tidy；09-24 條 2026-09-24 tidy 搬）。還有 open 的，SESSION-LOG 留一行精簡列連回來。
 
 <!-- wf-nav -->
 | 日期 | 主題 | 全文 |
 |------|------|------|
+| 2026-09-24 | proto5 重架構收線、agent 線定稿實作、試玩 r1～r4、cpu 動態增減六點定案 | [2026-09](2026-09.md#2026-09-24) |
+| 2026-09-23 | proto5 重架構 daemon→kernel→cpu：三份新規範四輪審查、實作 | [2026-09](2026-09.md#2026-09-23) |
 | 2026-09-22 | aos-agent 落地、四份調查、proto5.1 一條龍、程式回流 proto5 | [2026-09](2026-09.md#2026-09-22) |
 | 2026-09-21 | proto5 開場：inst-posix／directives、aos-exec、aos-llm-ask、agent 規範 | [2026-09](2026-09.md#2026-09-21) |
 | 2026-09-09 | proto4-3 aos-exec／run／daemon／ctl、kernel 原型（含 09-10） | [2026-09](2026-09.md#2026-09-09) |

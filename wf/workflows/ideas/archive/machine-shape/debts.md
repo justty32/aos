@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 裁決的欠帳：兩顆 CPU 的記憶體模型、git 與暫態
-← [machine-shape](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [machine-shape](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 這兩條的性質跟其他拷問不同：**它們是使用者已下的裁決兩兩相乘產生的**，單看每個裁決都
 沒問題。所以它們不是待辦清單，是**已經產生的欠帳**。

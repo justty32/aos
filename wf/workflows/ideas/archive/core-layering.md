@@ -2,7 +2,7 @@
 
 # aos/core 的專案分層構想
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 `core/` 底下該切成哪幾個小專案、每個功能該落在第幾圈。這是**開發架構**，不是回合制
 模型本身——模型看 [turn-based-folder](turn-based-folder.md)，這裡談那個模型該怎麼分家。
@@ -74,7 +74,7 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
   `aos_instruction_timeout_ms`／`aos_instruction_set_timeout_ms`）。**使用者已拍板：
   `timeout_ms` 確實要移出最核心**，改由 loop 層管。動到的是**已釋出的 C ABI**，不是
   單純搬程式碼——落地時 C++ 型別、format 的 encode/decode、C ABI 鏡像宣告與
-  `static_assert` 要同一個 commit 一起改（見 [conventions](../common/conventions.md)）。
+  `static_assert` 要同一個 commit 一起改（見 [conventions](../../common/conventions.md)）。
 
 ## 我挖到的邊緣狀況（待使用者判斷）
 
@@ -154,7 +154,7 @@ deliver 之類的東西，**除非真的很核心，不然不繼續套在 loop �
 「`timeout_ms` 移出最內圈」一致——不是我倒推的。
 
 **順手結清一項存貨**：判準把**彙整**判進 core（時點在回合外，inst 摸不到），
-[roadmap](../roadmap.md) 停打時剩的四項存貨之一「匯聚 lib-vs-inst」
+[roadmap](../../roadmap.md) 停打時剩的四項存貨之一「匯聚 lib-vs-inst」
 因此有了答案的一半：**它在 core 裡**，剩下的只有「怎麼跟 loop 接」。
 
 ### 三、結論二：八條指令對 core 的新增需求只有一項

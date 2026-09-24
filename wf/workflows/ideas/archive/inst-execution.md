@@ -2,7 +2,7 @@
 
 # inst 執行策略構想
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 ## 父行程環境繼承開關
 

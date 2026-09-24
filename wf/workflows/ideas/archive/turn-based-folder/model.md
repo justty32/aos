@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 回合制模型本體：核心理想與抽象 CPU
-← [turn-based-folder](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [turn-based-folder](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 ## 核心理想（基礎模型已定）
 

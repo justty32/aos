@@ -2,7 +2,7 @@
 
 # C 語言線：函數、堆疊框與串（§十四–§十九）
 
-← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 **使用者的提問（2026-09-01 口述）**：**C 語言和彙編的區別是啥，如何對應到 inst serie。**
 

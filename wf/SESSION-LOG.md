@@ -12,9 +12,8 @@
 
 ## 最新進度
 
-- **2026-09-24（家裡 Manjaro）：proto5 重架構收線→agent 線定稿實作→試玩 r1～r4 四輪**——細節見 git log 與 [rearch notes](../proto5/notes/2026-09-23-rearch/README.md)、[play](../proto5/notes/play/README.md)。今日已推 main：fix-r3、3.12 實跑、daemon 崩潰窗口測試、r4 試玩。**使用者打遊戲中不碰 LM Studio／ollama，走 LiteLLM；每 commit 直接 push。****open**：① **fix-r4** 十三條 CLI 改版 worktree 跑中，收線後核署名、ff-merge、推。② **fix-r5**（r4 兩份共同痛點八條）待 fix-r4 合完再開。③ **cpu 動態增減＋daemon 按池宣告式（使用者 09-24 拍板，spec 拆檔後與 fix-r5 一起開，動 kernel.md／daemon.md 骨幹）**：kernel 將來上千上萬顆 cpu、多池，init 綁死 cpu 表不對。定案：(a) kernel 的 cpu 表改成**池表**（池名、daemon 家、daemon 端池名、要幾顆、envs），不列每顆；cpu 種類由池 envs 定（llm 池帶 `AOS_LLM_CONFIG`），入池 cpu 繼承。(b) **宣告式**：kernel 只告訴 daemon「池 P 要 N 顆」，daemon 補到 N、死了重拉（節流）、多了收；kernel 不記 pid，只看池摘要。(c) **daemon 內部也按池管孩子**，一個 daemon 可帶多個池（「一池一 daemon」非強制）；指令全帶 `--pool`：`boot／halt`、`ls [--pool P]`（數活／忙／dead／重拉中，`--pool` 才展開）、`scale --pool P --count N`、`kill --pool P NAME`。孩子表不整份重寫 state.json，改一顆一檔或記差異；kill 階梯批次做。(d) `aos-kernel cpu add [--target K] --pool P [--count N] [--env K=V]`／`cpu rm`／`cpu ls` 即改池數字、看池摘要；`ls` 也按池摘要。(e) `init --config` 只剩 kernel 參數＋池定義，cpu 可空。(f) 每格成本從 O(cpu 數) 變 O(有事 cpu 數)（例如 cpu 回音時往 kernel 家丟通知檔）。④ **spec 拆檔重構**：`proto5/spec/` 過大待拆，fix-r4 合完才開，拆完才開 fix-r5。⑤ 崩潰窗口 C-7／C-8 還沒補。⑥ [WAIT_USER](WAIT_USER.md) A.14＋A.15。⑦ `tools`／`init --template` 還沒做。
-
-- 09-22：① backlog 八件 ② 09-21 ④⑤ 仍在 [→](session_logs/2026-09.md#2026-09-22)
+- 09-24：① fix-r5（r4 兩份報告共同痛點八條，[r4 astra](../proto5/notes/play/2026-09-24-r4-astra.md)／[Opus](../proto5/notes/play/2026-09-24-r4-opus.md)）等 spec 拆檔完再開 ② cpu 動態增減＋daemon 按池宣告式，使用者已拍六點 (a)～(f)，跟 fix-r5 一起開 ③ spec 拆檔（另隊） ④ 崩潰窗口 C-7／C-8 沒補 ⑤ [WAIT_USER](WAIT_USER.md) A.14～A.18 ⑥ `tools`／`init --template` 沒做；使用者打遊戲時不碰 LM Studio／ollama、走 LiteLLM；每 commit 直接推 [→](session_logs/2026-09.md#2026-09-24)
+- 09-22：09-21 ④⑤ 仍在（① backlog 已於 09-24 清光） [→](session_logs/2026-09.md#2026-09-22)
 - 09-21：④ aos-inst 兩題 ⑤ thinking/ 草案 ④ WSL 沒 lms／jq [→](session_logs/2026-09.md#2026-09-21)
 - 09-13：① 試玩 r1 修 ② LLM cpu 下一段 ③ 提醒 compact [→](session_logs/2026-09.md#2026-09-13)
 - 09-09：① kernel v1 缺項等使用者 [→](session_logs/2026-09.md#2026-09-09)

@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 第五輪：回饋路徑、失敗語意、協定完整性
-← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 打的是**這個系統能不能察覺自己正在壞掉**。前四條讀 `core/inst/src/handoff.cpp` 驗證過。
 

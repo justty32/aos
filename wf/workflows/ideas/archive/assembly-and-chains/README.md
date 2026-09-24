@@ -2,7 +2,7 @@
 
 # 彙編語言與指令鏈 — 導航
 
-← [ideas](../README.md)｜上游 [game-process-model](../game-process-model.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [ideas](../README.md)｜上游 [game-process-model](../game-process-model.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 使用者口述（**2026-09-01**）的第四個心智模型，與 [game-process-model](../game-process-model.md)
 同源（都在回答**機器怎麼跑**），但問的是更上面一格：**在這台機器上，一段「程式」是什麼形狀，

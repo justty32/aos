@@ -2,7 +2,7 @@
 
 # 鏈＝行程：CPS、三層與 `series.json`（§九–§十三）
 
-← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 ## 第二部分 · 我的觀察（主 session，不是裁決，使用者可否決）
 

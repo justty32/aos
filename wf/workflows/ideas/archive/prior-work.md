@@ -2,7 +2,7 @@
 
 # 前作對照：`simple_tools/docs` 的 agent-world 設計 vs aos 模型
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 **這批來源不在本 repo 裡。** 它們在 aos 的上一層 `simple_tools/` 底下：
 

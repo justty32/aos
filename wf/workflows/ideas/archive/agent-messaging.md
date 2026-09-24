@@ -2,7 +2,7 @@
 
 # agent 間的訊息傳遞與錯誤累積
 
-← [ideas](README.md)｜[LLM CPU](llm-cpu.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[LLM CPU](llm-cpu.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 大量 agent 合作時，訊息在 agent 之間層層轉手，每一手都可能失真。這一頁記的是**這個
 失真為什麼特別難處理**，以及目前想到的幾條對策方向。還沒有拍板的機制設計。
@@ -59,7 +59,7 @@ LLM 審核本身也會出錯，所以單一個審核者不夠。做法類似量�
 
 aos 現有的分層剛好對上第 3 條：
 
-- [`inst`](../common/code-map.md) 那層執行 POSIX 指令，是**確定性**的——這層本來就是
+- [`inst`](../../common/code-map.md) 那層執行 POSIX 指令，是**確定性**的——這層本來就是
   「固化」的形狀。要固化一件工作，等於是把它從 LLM 那顆 CPU 搬回 `inst` 這顆。
 - [`aos llm exec`](llm-cpu.md) 那顆 LLM CPU 是**機率性**的，錯誤率就在這裡。
 - 所以「哪些工作該固化」在 aos 裡有具體形式：**該由哪顆 CPU 執行**。
@@ -68,7 +68,7 @@ aos 現有的分層剛好對上第 3 條：
 
 - 第 2 條的驗證開銷會直接吃掉 LLM 資源，屬於 [llm-cpu](llm-cpu.md)「排程器的責任」
   那一節的問題——有限的 LLM 容量要怎麼在「做事」與「驗證」之間分配。
-- 第 1 條的人類審核在本 repo 已經有一條現成的軸：[WAIT_USER](../../WAIT_USER.md)。
+- 第 1 條的人類審核在本 repo 已經有一條現成的軸：[WAIT_USER](../../../WAIT_USER.md)。
 
 ## 開放問題（尚未拍板）
 

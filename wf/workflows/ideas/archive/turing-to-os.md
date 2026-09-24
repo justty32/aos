@@ -2,7 +2,7 @@
 
 # 從圖靈完備到作業系統——aos 的根基論證
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 使用者口述的**上游理論底**（2026-09-01）：為什麼 agent loop 可以被當成 CPU，以及為什麼
 在它之上要蓋的東西叫「作業系統」。其他構想檔講的是這台機器**長什麼樣**，這篇講的是
@@ -195,4 +195,4 @@ loop 裡，不是 OS 裡）；`G01`–`G03` 是 OS 的，跟 L1 一起還。第�
 - [program-form](program-form.md)——在 aos 上寫程式的形式（`G20` 的實質內容）
 - [game-process-model](game-process-model.md)——一次 exec ＝ 一格 `_process(delta)`；含 cache 類比
 - [theses-review](theses-review.md)——同日三方複審：分支在 LLM
-- [workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的（第 10 點壓在第四節）
+- [workshop／lisp-in-aos](../../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的（第 10 點壓在第四節）

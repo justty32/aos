@@ -70,9 +70,9 @@
 
 ---
 
-**這節從哪來**：[core/loop](../../../../core/loop/README.md)、
-[core/exec](../../../../core/exec/README.md)、[core/agent](../../../../core/agent/README.md)、
-[core/README](../../../../core/README.md)（子命令表）、
+**這節從哪來**：[core/loop](../../../../../core/loop/README.md)、
+[core/exec](../../../../../core/exec/README.md)、[core/agent](../../../../../core/agent/README.md)、
+[core/README](../../../../../core/README.md)（子命令表）、
 [program-form](../program-form.md)（`aos chat` 是四格最齊的入口、在源碼目錄裡 build）、
 [machine-shape/layout-and-spec](../machine-shape/layout-and-spec.md)（ownership table）、
 [play-watchlist](../play-watchlist.md)（agent 住錯位置）。

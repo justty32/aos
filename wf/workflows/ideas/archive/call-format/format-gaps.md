@@ -1,11 +1,11 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 第一輪：格式與序列化的缺口
-← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 問的是**這份記錄格式與它的序列化標準**夠不夠好。依「有多威脅到『通用呼叫格式』這個
-宣稱」排序。依據是實際 schema（[`core/inst/docs/format.md`](../../../../docs/archive/aos-folder.md)、
-[`exec.md`](../../../../docs/archive/aos-folder.md)、`core/inst/include/aos/inst.hpp:53`）。
+宣稱」排序。依據是實際 schema（[`core/inst/docs/format.md`](../../../../../docs/archive/aos-folder.md)、
+[`exec.md`](../../../../../docs/archive/aos-folder.md)、`core/inst/include/aos/inst.hpp:53`）。
 
 ## 真的會痛的
 

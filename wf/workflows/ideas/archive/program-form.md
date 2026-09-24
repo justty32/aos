@@ -2,7 +2,7 @@
 
 # 在 aos 上寫程式的形式：檔案是 atom，資料夾是 list
 
-← [ideas](README.md)｜上游 [turing-to-os](turing-to-os.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜上游 [turing-to-os](turing-to-os.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 **使用者原話（2026-09-01）**：「關於在這個 aos 上寫程式這塊，其實就是類似 lisp，只是 lisp
 的原語是 atom。但 aos 的程式載體就是資料夾，原語就是檔案。所以囉，要寫 aos 的程式，那個
@@ -26,7 +26,7 @@
 
 ## 這一步把同像性搬了家
 
-workshop 那場（[lisp-in-aos](../workshop/records/lisp-in-aos.md) 第 10 點）否定過「JSON
+workshop 那場（[lisp-in-aos](../../workshop/records/lisp-in-aos.md) 第 10 點）否定過「JSON
 陣列＝S-expression」，結論是**同像性來自 macro 與 eval 讀同一種 form，不是來自長得像括號**。
 
 本條主張的不是那件事。它說 **S-expression 是資料夾樹本身**，JSON 只是檔案的內容格式之一
@@ -75,7 +75,7 @@ workshop 那場（[lisp-in-aos](../workshop/records/lisp-in-aos.md) 第 10 點�
    `xxx`，穩態（quoted）的留著不動（見下方
    [使用者回應（2026-09-03）](#使用者回應2026-09-03求值才是重點穩態與暫態)）。
 4. **quote 從哪裡來。** 已知現有機制**不能**直接當 lisp 的 quote 用
-   （[pre-agent-loop-core R1](../workshop/records/pre-agent-loop-core/r1.md)）。資料夾模型
+   （[pre-agent-loop-core R1](../../workshop/records/pre-agent-loop-core/r1.md)）。資料夾模型
    下，quote 是什麼形狀？
    **2026-09-03 使用者回應：quote ＝穩態／暫態的那條界**——「可以很簡單地用有沒有
    `(quote (...))` 來理解」（見下方
@@ -428,7 +428,7 @@ lisp（檔案／資料夾），這條講的是**寫的方式**也是——不是
 - [cpu-to-os-gaps.json](cpu-to-os-gaps.json)——`G20`（方便人寫程式）、`G24`（同像性）、`G07`（程式與行程的分界）、`G14`（程式的可命名性）
 - [usability-target](usability-target.md)——順手判準：在 shell 打 `aos xxx` 要有 pi coding agent 的效果（REPL 那節量的就是它）
 - [call-format](call-format.md)——CLI 呼叫＝Lisp 呼叫的序列化（argv 是 list、旗標是 keyword）
-- [workshop／lisp-in-aos](../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的
+- [workshop／lisp-in-aos](../../workshop/records/lisp-in-aos.md)——同像性在 JSON 上不是免費的
 - [assembly-and-chains／lisp-reconciliation](assembly-and-chains/lisp-reconciliation.md)——三層套回 C 線的身分對照表（源碼／series／inst）
 - [assembly-and-chains／series](assembly-and-chains/series.md)、[interrupts](assembly-and-chains/interrupts.md)、[c-language](assembly-and-chains/c-language.md)——`series.json`＝資料夾的 car、pending 投遞位＝PC、臨時資料夾＝堆疊框
 - [machine-shape/layout-and-spec](machine-shape/layout-and-spec.md)——ownership table：哪條路徑歸機器、哪條歸世界

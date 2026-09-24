@@ -2,7 +2,7 @@
 
 # play-watchlist：概念主幹已齊，玩的時候看這四條橋
 
-← [nested-eval-sugar](nested-eval-sugar.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [nested-eval-sugar](nested-eval-sugar.md)｜[ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 2026-09-03 使用者問「idea 到這邊，該有的 concept 都差不多有概論了，還缺啥嗎？」——AI 回答
 **主幹已齊，剩下的四條缺口全在「兩層之間那座橋」上**（`.aos` 內的機器層 vs 資料夾樹的行程

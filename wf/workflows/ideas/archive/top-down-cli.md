@@ -2,7 +2,7 @@
 
 # 從上到下：使用者要的指令面（`aos pu` 與 `aos agent`）
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 **記錄日期**：2026-08-30。**這篇的角度跟其他構想相反。** 其餘篇章都是由下往上推
 （inst 是什麼 → loop 是什麼 → 資料夾是什麼），這篇是使用者某天改用**由上往下**思考的

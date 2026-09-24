@@ -2,7 +2,7 @@
 
 # top-to-bottom：「資料夾＝list」這一整套，從最上到最下
 
-← [ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)｜裁決總表 [verdicts](../verdicts.md)
+← [ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)｜裁決總表 [verdicts](../verdicts.md)
 
 **使用者原話（2026-09-03）**：
 

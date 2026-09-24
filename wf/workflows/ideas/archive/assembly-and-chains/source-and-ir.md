@@ -2,7 +2,7 @@
 
 # 新 json 是什麼檔：源碼、IR，與「全塔 json」（§二十二–§二十六）
 
-← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 [compile-pipeline](compile-pipeline.md) 定出了「寫 → 編譯 → 執行」三段，但**最上游那份
 「新 json」到底是什麼檔**還沒答。這一篇是同日（2026-09-01）把它答完的過程——
@@ -46,7 +46,7 @@
 
 > **開放小岔路（記著，不急）**：lisp 樹落到檔案上，用**真 sexp 文字**還是 **json 編碼的
 > 樹**？直覺是**源碼用 sexp、IR 用 json**，格式細節後定。
-> workshop [lisp-in-aos](../../workshop/records/lisp-in-aos.md) 否定的「json 陣列＝S 運算式」
+> workshop [lisp-in-aos](../../../workshop/records/lisp-in-aos.md) 否定的「json 陣列＝S 運算式」
 > 講的是**同像性**層面，**當樹的載體無妨**。
 
 ### 二十四、使用者：「全部都可以是 lisp」

@@ -2,7 +2,7 @@
 
 # contacts — agent 通訊錄（名字 → 資料夾）
 
-← [tools/README](README.md)｜裁決來源 [nested-worlds](../nested-worlds.md)｜原型 [wf inbox README](../../inbox/README.md)
+← [tools/README](README.md)｜裁決來源 [nested-worlds](../nested-worlds.md)｜原型 [wf inbox README](../../../inbox/README.md)
 
 **它不是登記表、不是白名單。** 就是 wf inbox 那種 ROSTER：誰、住哪個資料夾（＝往哪投遞）、負責什麼。
 權威永遠是對方資料夾自己（`.aos/agents/<name>/` 存不存在）；通訊錄只是省一趟路的快取，可以過期。

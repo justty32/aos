@@ -2,7 +2,7 @@
 
 # 這台機器的形狀：指令的地位、loop 的職權、資料夾與規範
 
-← [ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 使用者**迫切想確定**的三件事：`inst` 作為 CPU 指令的地位、稍微外圈的 loop、以及承載整套
 體系的資料夾結構／所需程式／規範。這一組逐項拷問這三塊。

@@ -1,7 +1,7 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 第三輪：CPU 類比撐得住多少
-← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 第一輪打格式、第二輪打原語，這一輪打**「更高層次的 CPU 指令」這個類比本身**——照真實
 CPU 的標準去驗，缺了哪幾件。

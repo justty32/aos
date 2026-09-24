@@ -1,12 +1,12 @@
 > 封存 2026-09-05，由 wf/workflows/ideas/README.md（新版構想集）取代
 
 # 第四輪：交接協定的實作缺陷，與世界／歷史／控制流的邊界
-← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [call-format](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 前三輪打格式、原語、CPU 類比。這一輪打**交接協定**（投遞／彙整／取件）與**世界邊界**。
 前三條是讀 `core/inst/src/handoff.cpp` **驗證過的實作缺陷**，不是推論；後五條是設計點。
 
-> 實作缺陷的可查版本記在 [common/gotchas](../../common/gotchas.md)；這裡留的是它們對
+> 實作缺陷的可查版本記在 [common/gotchas](../../../common/gotchas.md)；這裡留的是它們對
 > **設計**的意義。
 
 ## 一、`.runi` 不是一把鎖（實作缺陷，已認）

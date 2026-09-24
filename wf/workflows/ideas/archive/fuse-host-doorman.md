@@ -2,7 +2,7 @@
 
 # fuse-host-doorman：門房還是廚師
 
-← [top-to-bottom/01-top](top-to-bottom/01-top.md)｜[fuse-host](fuse-host.md)｜[ideas](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [top-to-bottom/01-top](top-to-bottom/01-top.md)｜[fuse-host](fuse-host.md)｜[ideas](README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 **本檔是 [fuse-host](fuse-host.md) 的續篇**——那份已經接近檔案大小上限，使用者接著追問
 的這一節另開一檔。**本檔無裁決**，全部是 AI 觀察，使用者可以否決。

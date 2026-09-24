@@ -2,7 +2,7 @@
 
 # lisp 三層套回彙編／C 線：身分對照（§二十七–§三十）
 
-← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
+← [assembly-and-chains](README.md)｜[ideas](../README.md)｜[WORKFLOWS](../../../../WORKFLOWS.md)
 
 **使用者的提問（2026-09-03，玩系統時）**：
 

@@ -2,7 +2,7 @@
 
 # 遊戲 `_process(delta)` 模型：一次 exec 就是一格 tick
 
-← [ideas](README.md)｜上游 [turing-to-os](turing-to-os.md)｜[WORKFLOWS](../../WORKFLOWS.md)
+← [ideas](README.md)｜上游 [turing-to-os](turing-to-os.md)｜[WORKFLOWS](../../../WORKFLOWS.md)
 
 使用者口述（**2026-09-01**）的第三個心智模型。[turing-to-os](turing-to-os.md) 講**憑什麼是
 CPU**、[program-form](program-form.md) 講**程式長什麼形**，這篇講**它怎麼跑**。同日他還
