@@ -358,7 +358,7 @@ class Cli(FakeCase):
         self.assertEqual((remover.returncode, out.strip()), (0, "bob"), err)
         r = self.run_cli("ls", "--target", self.K)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("pool default", r.stdout)
+        self.assertIn("default  want", r.stdout)
         r = self.run_cli("ls", "--target", self.K, "--json")
         self.assertEqual(r.returncode, 0, r.stderr)
 

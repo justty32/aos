@@ -188,9 +188,16 @@ def _already(kernel, params):
     try:
         state = ledger(kernel)
         proc = state['procs'].get(params['name'])
-        slots = state.get('cpus') if isinstance(state.get('cpus'), dict) else {}
-        discarded = any(isinstance(s, dict) and s.get('proc') == params['name'] and s.get('discard')
-                        for s in slots.values())
+        # kernel-ledger.md §2（proto5-2）：忙的格子搬進 busy（key P/<i>），on[NAME] 反查行程在哪格；
+        # 判「上次 stop 那格還在跑」看那格的 discard。on 沒有就掃 busy 兜底（帳本可能剛好卡在中間狀態）。
+        busy = state.get('busy') if isinstance(state.get('busy'), dict) else {}
+        on = state.get('on') if isinstance(state.get('on'), dict) else {}
+        slot = on.get(params['name'])
+        if isinstance(slot, str) and isinstance(busy.get(slot), dict):
+            discarded = bool(busy[slot].get('discard'))
+        else:
+            discarded = any(isinstance(s, dict) and s.get('proc') == params['name'] and s.get('discard')
+                            for s in busy.values())
     except (AgentError, aos_home.HomeError, OSError, ValueError):
         return '帳本讀不到，確認不了是不是同一個家'
     if not isinstance(proc, dict):
