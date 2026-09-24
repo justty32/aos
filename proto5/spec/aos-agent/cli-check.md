@@ -20,15 +20,15 @@ aos-agent check [--target DIR] [--probe]
 - `AOS_KERNEL_HOME` 有設、`tick.json` 也在，但它記的 K 跟 `AOS_KERNEL_HOME` 逐字不同、或讀不到字串 K（檔壞了、沒有 `envs.AOS_KERNEL_HOME`／`AOS_K`、值不是字串）＝多一行 `bad  kernel`（判法跟 `start` 一樣）：`start` 會回 `KernelMismatch`，要換 K 先 `stop` 再刪 `tick.json`；K 的項目照 `AOS_KERNEL_HOME` 那個查。
 - 沒設 `AOS_KERNEL_HOME`，`tick.json` 在但讀不到絕對路徑 K＝`bad  kernel: 找不到 K：沒設 AOS_KERNEL_HOME，<家>/tick.json 也讀不到合法的絕對路徑 K；…`；兩個都沒有＝`bad  kernel: 找不到 K：沒設 AOS_KERNEL_HOME，也沒有 tick.json（沒 start 過）；export AOS_KERNEL_HOME=<kernel 家的絕對路徑> 再跑`。這兩種 K 的項目全部略過。
 
-daemon 家：`AOS_DAEMON_HOME`，沒設就用 K 的 `info.json` 記的 `daemon`（上次 boot 寫的），再沒有才是目前資料夾（跟 `aos-kernel check` 不同：這裡沒有 `--daemon-target`，也通常不在 daemon 家裡跑）。
+daemon 家：跟 `aos-kernel check` 一樣從 K 的池表拿（每池的 `daemon`，沒寫用 info 頂層的），逐池查；解不出＝`bad daemon`，不退回 `AOS_DAEMON_HOME` 或目前資料夾。PATH 看 kernel 池的 daemon；池 envs 的 `$env` 照拉那池的 daemon 的環境解（2026-09-24 池式納入改）。這裡沒有 `--daemon-target`。
 
 ## 查什麼、印什麼
 
 每項一行 `ok`／`warn`／`bad`，格式跟 `aos-kernel check` 一樣（`%-4s <項目>: <一句>`）。順序：
 
 1. `kernel`（上面）。
-2. **整段 kernel 的檢查**，跟 `aos-kernel check --target K` 同一份（[kernel §6 check](../kernel/cli-ops.md)）：`info`、`dirs`、`daemon`、`cpus`、`path`、`pools`、`llm/<池>`。K 的 `info.json` 讀不到＝`bad  info: …（K＝<路徑>，取自 …）`，後面的 kernel 項目不印。
-3. **這個 agent 家**（原本 `--agent` 那幾項，內容不變）：`agent`（info 讀驗）、`agent/tick.pool`、`agent/llm.pool`、`agent/tool_pool`（三格都要是 K 的 `pools` 的 key、不是 `kernel`，不是＝bad；那池 `count` 0＝warn，會一直排隊；llm 項只查這個 agent 的 `llm.pool` 那池；2026-09-24 池式納入改）、`agent/llm.model`（代號在不在 llm 項讀到的模型表）、`agent/tool/<名字>`（`_meta.argv[0]` 找不找得到、有沒有執行位；有 `/` 的相對路徑從家算，沒有 `/` 的照 daemon 的 PATH 找；寫成指示詞＝warn）。
+2. **整段 kernel 的檢查**，跟 `aos-kernel check --target K` 同一份（[kernel §6 check](../kernel/cli-ops.md)）：`info`、`dirs`、`daemon`、`cpus`、`path`、`pools`（`llm/<池>` 不在這段逐池查，改在第 3 步只查這個 agent 的 `llm.pool` 那池）。K 的 `info.json` 讀不到＝`bad  info: …（K＝<路徑>，取自 …）`，後面的 kernel 項目不印。
+3. **這個 agent 家**（原本 `--agent` 那幾項，內容不變）：`agent`（info 讀驗）、`agent/tick.pool`、`agent/llm.pool`、`agent/tool_pool`（三格都要是 K 的 `pools` 的 key、不是 `kernel`，不是＝bad；那池 `count` 0＝warn，會一直排隊；2026-09-24 池式納入改）、`llm/<llm.pool>`（只查這一池，印在三個池項之後）、`agent/llm.model`（代號在不在 llm 項讀到的模型表）、`agent/tool/<名字>`（`_meta.argv[0]` 找不找得到、有沒有執行位；有 `/` 的相對路徑從家算，沒有 `/` 的照 daemon 的 PATH 找；寫成指示詞＝warn）。
    K 讀不到時池與模型沒法查：印一行 `warn agent/pools: K 讀不到，池與模型代號沒查；先修好上面的 kernel 項`，工具照查。agent 的 info 讀不到＝`bad  agent: <代號>: …`，後面的 agent 項不印。
 4. （09-24 access-impl，round2 改 bad）**權限牆**（[access.md](access.md)）：
    - 沒 access 檔：家裡有要關牢的工具（沒寫 `_jail: false`）＝`bad  access: 沒有 access.json：<前 5 支名字> 這 N 支工具都不會跑（NoAccess）。先建一份：mkdir -p … && aos-agent access set ws … --cwd --target …`；工具全部 `_jail: false` 或沒工具就不印；以下略過。
