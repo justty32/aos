@@ -26,6 +26,7 @@ COMMANDS = {
     'post': ('aos_team_post', 'cmd_post', 2, '郵差走一次（kernel 反覆叫它）'),
     'verify': ('aos_team_verify', 'cmd_verify', 2, '對一張單跑固定檢查器'),
     'routine': ('aos_team_beat', 'cmd_routine', 2, 'routine ls／add／rm：心跳排程'),
+    'lock': ('aos_team_lock', 'cmd_lock', 3, 'lock ls／acquire／release：短期獨佔鎖（第二波 C 隊）'),
     'beat': ('aos_team_beat', 'cmd_beat', 2, '心跳走一次（kernel 反覆叫它）'),
     'score': ('aos_team_score', 'cmd_score', 5, '六軸能量的部分自動彙整'),
 }

@@ -297,6 +297,24 @@ class KernelCheck(unittest.TestCase):
         local.chmod(0o644)
         self.assertIn('bad  agent/tool/relative', self.run_agent_check(agent, code=1))
 
+    def test_agent_tool_pool(self):
+        """T-pool（priority-and-shared-cpu 提案）：工具的 _pool 查法跟 agent/tool_pool 一樣（存在、非 kernel、count>0）。"""
+        self.info['pools']['gpu'] = {'count': 1}
+        self.info['pools']['empty'] = {'count': 0}
+        self.save()
+        agent = self.agent(tools=['tools.json'])
+
+        def tool(name, pool):
+            return {'type': 'function', 'function': {'name': name}, '_meta': {'argv': ['aos-exec']},
+                   '_jail': False, '_pool': pool}
+        self.put(agent / 'tools.json', [tool('ongpu', 'gpu'), tool('onempty', 'empty'), tool('onmissing', 'ghost'),
+                                       tool('onkernel', 'kernel')])
+        text = self.run_agent_check(agent, code=1)
+        self.assertIn('ok   agent/tool/ongpu/_pool: 池 gpu 存在（count 1）', text)
+        self.assertIn('warn agent/tool/onempty/_pool: 池 empty 的 count 是 0，工具會一直排隊', text)
+        self.assertIn('bad  agent/tool/onmissing/_pool: 池 ghost 不在 pools', text)
+        self.assertIn('bad  agent/tool/onkernel/_pool: 池 kernel 是 kernel 池，不能派工作', text)
+
     def test_agent_tool_directive_warns(self):
         agent = self.agent(tools=['tools.json'])
         self.put(agent / 'tools.json', [{'type': 'function', 'function': {'name': 'dynamic'},

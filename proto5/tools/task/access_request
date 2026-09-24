@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""access_request：申請多掛一個資料夾或開網路（T-access-req，catalog.md）。
+
+模型自己改不到 access.json——這裡只是把申請包成一題問人（走 T-ask 的待辦：人 aos-team wait ls／answer）。
+人同意之後，要由人自己跑 aos-agent access set（或 access net on）才真的生效；這支工具不會自動改表。
+"""
+import sys
+
+from _team import arg, fail, only_keys, run, send
+
+MODES = ('ro', 'rw')
+
+
+def main(args, cfg):
+    only_keys(args, ('name', 'path_hint', 'mode', 'why'))
+    name = arg(args, 'name', str, required=True)
+    path_hint = arg(args, 'path_hint', str, required=True)
+    mode = arg(args, 'mode', str, required=True)
+    if mode not in MODES:
+        fail('BadArguments', 'mode must be "ro" or "rw"')
+    why = arg(args, 'why', str, required=True)
+    if len(why) > 1000:
+        fail('BadArguments', 'why is too long (max 1000 chars)')
+    question = ('%s 想申請多掛一個資料夾：name=%s path_hint=%s mode=%s（理由：%s）。'
+               '同意的話麻煩你自己跑：aos-agent access set %s <實際路徑> %s --target <%s 的家>（模型自己改不到 access.json）。'
+               % (cfg['member'], name, path_hint, mode, why, name, ('--ro' if mode == 'ro' else '--rw'), cfg['member']))
+    rid = send(cfg, 'ask', {'question': question, 'options': ['同意', '不同意']})
+    return 'queued access request %s. The answer arrives as new mail. End this turn.' % rid
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

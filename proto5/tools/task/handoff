@@ -6,6 +6,16 @@ from _team import arg, fail, only_keys, run, send
 
 KEYS = ('assignee', 'workflow', 'goal', 'facts', 'done_when', 'max_attempts', 'deadline_minutes')
 KINDS = {'file_exists': 'path', 'table_filled': 'path', 'check': 'name', 'cmd_ok': 'run', 'judge': 'text'}
+# G（09-24 W2C，t5/README.md §8）：兩輪試玩，領隊派「把 X.md 改寫得更白話」這類單都忘記放 wf_lint_strict。
+# 選在這裡（handoff 這一層）機械補、不改門房規則：門房／routes.json 是 A 隊地盤（T-route），這裡改動範圍最小、
+# 不管請求是不是經過門房都補得到（領隊自己開單、心跳照例行開單一樣有效）。判法很土：goal／facts／workflow
+# 合起來的文字裡同時有 .md 與一個改寫用詞，就當作是「改 workflows 文件類」單子。
+LINT_TRIGGER_WORDS = ('白話', '改寫', '更好懂', '更易讀', '講白話')
+
+
+def _wants_auto_lint(body):
+    text = ' '.join(str(body.get(k) or '') for k in ('goal', 'facts', 'workflow'))
+    return '.md' in text and any(w in text for w in LINT_TRIGGER_WORDS)
 
 
 def main(args, cfg):
@@ -46,9 +56,16 @@ def main(args, cfg):
         if not 1 <= minutes <= 10080:
             fail('BadArguments', 'deadline_minutes must be 1..10080')
         body['deadline_minutes'] = minutes
+    auto_lint = False
+    if _wants_auto_lint(body) and not any(isinstance(d, dict) and d.get('kind') == 'check'
+                                          and d.get('name') == 'wf_lint_strict' for d in body['done_when']):
+        body['done_when'] = body['done_when'] + [{'kind': 'check', 'name': 'wf_lint_strict'}]
+        auto_lint = True
     rid = send(cfg, 'handoff', body)
-    return ('queued handoff %s -> %s. The postman opens the task and sends it; you will get mail when it is '
-            'done, blocked or failed. Nothing to wait for: end this turn.' % (rid, who))
+    note = ' (this looks like a wording rewrite of a workflows doc, so wf_lint_strict was auto-added to done_when.)' \
+        if auto_lint else ''
+    return ('queued handoff %s -> %s.%s The postman opens the task and sends it; you will get mail when it is '
+            'done, blocked or failed. Nothing to wait for: end this turn.' % (rid, who, note))
 
 
 if __name__ == '__main__':

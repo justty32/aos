@@ -350,8 +350,9 @@ class TaskFlowTests(TeamCase):
         self.assertEqual((sub['assignee'], sub['status']), ('reviewer', 'sent'))
         self.assertIn('審查單 t-0001.r1', self.mails('reviewer')[0][1])
         self.pick_up('reviewer')
+        # judge 在父單 done_when 排第 1、第 2（0 是 file_exists）：子單保留原編號（09-24 W2C 修）
         self.request('reviewer', 'review_result', task='t-0001.r1',
-                     items=[{'i': 0, 'pass': True, 'why': '意思一樣'}, {'i': 1, 'pass': True, 'why': '白話'}])
+                     items=[{'i': 1, 'pass': True, 'why': '意思一樣'}, {'i': 2, 'pass': True, 'why': '白話'}])
         self.post()
         self.assertEqual(self.ticket()['status'], 'done')
         self.assertEqual(self.ticket('t-0001.r1')['status'], 'done')

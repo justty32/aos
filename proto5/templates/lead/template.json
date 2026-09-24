@@ -5,11 +5,11 @@
   "team": true,
   "project": "ro",
   "notes": true,
-  "may": ["handoff", "cancel", "reassign", "ask", "compact"],
+  "may": ["handoff", "cancel", "reassign", "ask", "compact", "routine"],
   "llm": {"model": "default", "timeout_ms": 125000},
   "tick": {"interval_ms": 1000},
   "tools": [
-    {"pack": "task", "only": ["handoff", "board", "ask_human", "compact_me"], "team": true},
+    {"pack": "task", "only": ["handoff", "board", "ask_human", "compact_me", "routine_propose"], "team": true},
     {"pack": "team", "only": ["team_say"], "team": true, "optional": true},
     {"pack": "notes"},
     {"pack": "base", "only": ["read", "grep", "find", "ls"]}

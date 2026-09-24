@@ -298,6 +298,16 @@ class AgentHomeTest(unittest.TestCase):
         t["_timeout_ms"] = 0
         self.assertEqual(home.read_tools([self.write("tools.json", [t])]), [t])
 
+    def test_tool_pool(self):
+        """T-pool（priority-and-shared-cpu 提案）：_pool 可省、非空字串。"""
+        for value in ("", 1, True, False, []):
+            t = tool()
+            t["_pool"] = value
+            self.invalid_tool([t])
+        t = tool()
+        t["_pool"] = "gpu"
+        self.assertEqual(home.read_tools([self.write("tools.json", [t])]), [t])
+
     def test_tool_duplicate_across_files(self):
         self.error("ToolInvalid", home.read_tools, [self.write("a.json", [tool()]), self.write("b.json", [tool()])])
 

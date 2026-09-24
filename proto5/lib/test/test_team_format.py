@@ -72,7 +72,7 @@ class ExampleTests(Base):
         for name in ('lead', 'worker', 'reviewer', 'coder'):
             folder, tpl = fmt.load_template(name)
             self.assertTrue((folder / tpl['system']).is_file(), name)
-        self.assertEqual(fmt.template_may('lead'), ('handoff', 'cancel', 'reassign', 'ask', 'compact'))
+        self.assertEqual(fmt.template_may('lead'), ('handoff', 'cancel', 'reassign', 'ask', 'compact', 'routine'))
         self.err('NoSuchTemplate', fmt.load_template, 'nope')
 
 
@@ -282,8 +282,9 @@ class TaskTests(Base):
         self.assertEqual((sub['assignee'], sub['parent'], sub['status']), ('reviewer', 't-0001', 'queued'))
         self.assertEqual(sub['review_of']['indices'], [3])
         self.assertIn('review_result', self.post.letters[-1]['text'])
+        # 09-24 W2C 修：i 用父單原編號（這裡是 3，同上面 indices），不是子單 0 起算的位置
         rr = {'id': fmt.new_id('reviewer'), 'from': 'reviewer', 'kind': 'review_result', 'at': fmt.now_iso(),
-              'task': 't-0001.r1', 'items': [{'i': 0, 'pass': True, 'why': '意思一樣'}]}
+              'task': 't-0001.r1', 'items': [{'i': 3, 'pass': True, 'why': '意思一樣'}]}
         eff = requests.handle(self.lay, self.roster, rr)
         self.post.run(eff, rr['id'])
         self.assertEqual(self.t('t-0001.r1')['status'], 'done')
@@ -387,14 +388,15 @@ class TaskTests(Base):
         self.post.run(task.step(self.lay, 't-0001', {'type': 'verified', 'src': 'v', 'pass': True, 'rev': 1,
                                                      'attempt': 1}))
         base = {'from': 'reviewer', 'kind': 'review_result', 'at': fmt.now_iso(), 'task': 't-0001.r1'}
+        # judge 在 request-handoff.json 的 done_when 排第 3（0 起算）：i 要用這個原編號（09-24 W2C 修）
         req = dict(base, id=fmt.new_id('reviewer'), items=[{'i': 1, 'pass': True, 'why': 'x'}])
         self.err('BadItems', requests.handle, self.lay, self.roster, req)
-        req = dict(base, id=fmt.new_id('reviewer'), items=[{'i': 0, 'pass': False, 'why': '意思變了'}])
+        req = dict(base, id=fmt.new_id('reviewer'), items=[{'i': 3, 'pass': False, 'why': '意思變了'}])
         self.post.run(requests.handle(self.lay, self.roster, req))
         t = self.t()
         self.assertEqual((t['status'], t['attempt']), ('queued', 2))
         self.assertIn('意思變了', self.post.letters[-1]['text'])
-        req = dict(base, id=fmt.new_id('reviewer'), items=[{'i': 0, 'pass': True, 'why': 'x'}])
+        req = dict(base, id=fmt.new_id('reviewer'), items=[{'i': 3, 'pass': True, 'why': 'x'}])
         self.err('Closed', requests.handle, self.lay, self.roster, req)
         # 審查子單回 DONE 信只記下
         self.report('DONE', by='reviewer', tid='t-0001.r1')

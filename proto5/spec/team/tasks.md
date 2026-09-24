@@ -71,5 +71,6 @@ queued（等郵差投）→ sent（投進負責人 input/）→ working（信被
 
 ## 審查子單
 
-父單進 reviewing 時開 `t-0001.r1`：負責人＝名冊裡第一個 `template: reviewer` 的成員，`opened_by: post`，`done_when`＝父單的 judge 條目（照原順序重新編號），`review_of: {"task", "rev", "attempt", "indices": [父單裡的原編號]}`。
-審查員用 `review_result` 逐條回（每條都要）→ 子單 done、父單收到 `reviewed`（`items` 換回父單的原編號）。父單已經改派或取消時，子單照樣 done，父單記 `ignored:reviewed`。
+父單進 reviewing 時開 `t-0001.r1`：負責人＝名冊裡第一個 `template: reviewer` 的成員，`opened_by: post`，`done_when`＝父單的 judge 條目（**保留原順序，不重新編號**），`review_of: {"task", "rev", "attempt", "indices": [父單裡的原編號]}`。
+（09-24 W2C 修：子單的條目對外一律用父單的原編號——`render_review` 派給審查員看的文字、`board show` 顯示、審查員用 `review_result` 交回的 `i`，三處都是 `review_of.indices` 裡的值，不是子單 `done_when` 陣列裡 0..n 的位置。此前三者不一致，審查員要自己心算對照，兩輪試玩都踩到。）
+審查員用 `review_result` 逐條回（每條都要，`i` 用原編號）→ 子單 done、父單收到 `reviewed`（`items` 就是這些原編號，不用再換）。父單已經改派或取消時，子單照樣 done，父單記 `ignored:reviewed`。

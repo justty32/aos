@@ -73,5 +73,7 @@
   讀驗 info 時不解 `_meta`；送件時才解，解不過只算那一個 call 跑不起來（aos-agent.md §5.3）。
 - `_timeout_ms`：可省，非負整數（bool 不算），沒寫＝60000；這就是 kernel `add` 的 `timeout_ms`。
 - （09-24 access-impl）`_jail`：可省，只收 `true`／`false`（別的＝`ToolInvalid`）；`false`＝這支不關牢（[access.md](access.md)）。
+- （09-24 T-pool，[priority-and-shared-cpu 提案](../../notes/2026-09-24-priority-and-shared-cpu/README.md)）`_pool`：可省，非空字串；寫了這支工具的工作就派去那個池，不寫才是 `tool_pool`（§3.2）。
+  給「好幾個 agent 共用一支工具、一顆卡」用（例：一張 GPU）；池要不要存在、`count` 夠不夠是送件那一刻（`aos-agent send.md §5.2`）與 `check` 才查，讀 info 時不查。
 - （09-24 access-impl）`tools` 元素的 `as` 改過名的，`function.name` 就是新名字；讀出來每條另帶內部鍵 `_source`（[§3.4](tools-opt.md)）。
 - 送模型前每個元素的 `_` 開頭 key 全拿掉。

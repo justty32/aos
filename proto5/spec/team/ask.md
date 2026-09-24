@@ -37,3 +37,16 @@
 - `aos-team wait ls [--json]`：一題一行 `q-0003  worker-1 問：…  選項：main / 開分支（預設 main）  [t-0001]`；沒有就印「沒有在等你回答的問題」。
 - `aos-team answer q-0003 "文字"`：先讀那題（不在、已答＝退 1、說原因），再往 `team/outbox/human/` 放一份 answer 申請，印「已交給郵差」。有 `options` 而答案不在裡面照樣收（人可以講別的），多印一行提醒。
 - talk 裡的 `/answer` 之後由 talk 那隊接。
+
+## 借用：`access_request`、`persona_propose`（第二波 C 隊）
+
+T-access-req、T-persona 這兩種申請**不另開新的 kind**，直接借用 `kind: ask`——模型自己改不到 `access.json`（B 隊地盤）
+或人格（信任資料），批准與否本來就要走問人這條路，沒必要多開一種 kind 只為了同一件事。
+
+- `access_request` 工具：把 `{name, path_hint, mode, why}` 組成一句 `question`，選項固定 `["同意", "不同意"]`。
+- `persona_propose` 工具：把 `{text, why}` 組成一句 `question`，選項固定 `["同意", "不同意"]`。
+
+兩者都**不會自動生效**：`aos-team answer` 只是把人的答案投回發問者，問句裡已經寫好人同意後要自己跑哪個指令
+（`aos-agent access set`／`aos-agent persona append`——[persona.md](../agent/persona.md)）。這支工具本身不碰
+`access.json`、不碰 prompts，郵差也不會照答案自動改表——「模型自己改不到」不是靠郵差把關，是這條路本來就沒有
+自動寫入這一步。
