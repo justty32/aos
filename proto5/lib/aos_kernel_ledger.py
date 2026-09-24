@@ -1,27 +1,139 @@
-"""kernel 的帳本、syscall 與出貨箱。"""
+"""kernel 的帳本第 2 版（kernel-ledger.md）：排隊（ready／delayed 堆積、懶刪）、syscall、出貨箱。
+
+帳本仍是一份 state.json、一次原子寫；一格最多寫四次（提交點 1～4），寫入由 engine 決定，這裡的函式只改記憶體。
+"""
+import collections
 import hashlib
+import heapq
 import os
 from pathlib import Path
+import time
 
 import aos_home
-from aos_kernel_info import KernelError, _bad, _body_error, _idle, _name, _put
+from aos_kernel_info import (
+    KCPU, KERNEL_POOL, KernelError, _bad, _body_error, _name, _put, is_member, split_key,
+)
+
 
 class KernelLedger:
-    def __init__(self, home, info, state, seq):
-        self.home, self.info, self.state, self.seq = Path(home).absolute(), info, state, seq
+    def __init__(self, home, info, state, seq, now=None):
+        self.home, self.info, self.seq = Path(home).absolute(), info, seq
+        self.now = time.time() if now is None else now
+        self.state = state
+        for key, default in (("busy", {}), ("on", {}), ("recent", []), ("ready", {}), ("delayed", []),
+                             ("stale", {}), ("pools", {}), ("sends", []), ("acks", []), ("replies", []),
+                             ("deletes", []), ("procs", {})):
+            state.setdefault(key, default)
+        state.setdefault("halting", False)
+        # ready 在記憶體裡當 deque 用（從頭拿不搬整條）；存檔時轉回陣列。
+        state["ready"] = {p: collections.deque(q) for p, q in state["ready"].items()}
         self.events = []
 
+    # ---- 存檔 ----
+    def snapshot(self):
+        out = dict(self.state)
+        out["ready"] = {p: [list(x) for x in q] for p, q in self.state["ready"].items()}
+        return out
+
     def save(self):
-        aos_home.write_state(self.home, self.state)
+        aos_home.write_state(self.home, self.snapshot())
 
-    def cpu_home(self, name):
-        return self.home / "cpus" / name
+    # ---- 路徑 ----
+    def pool_dir(self, pool):
+        return self.home / "pools" / pool
 
-    def effective_cpus(self):
-        cpus = {c: v for c, v in self.info["cpus"].items() if v["pool"] != "kernel" and c != self.state["kcpu"]}
-        cpus[self.state["kcpu"]] = self.info["cpus"].get(self.state["kcpu"], {"pool": "kernel"})
-        return cpus
+    def cpu_home(self, key):
+        """key 是 'P/<i>'（kcpu 就是 kernel/0）。"""
+        pool, i = split_key(key)
+        return self.pool_dir(pool) / "cpus" / str(i)
 
+    # ---- 排隊（kernel-ledger §2：排隊的格帶 request，懶刪） ----
+    def _valid(self, name, request, not_before=None):
+        proc = self.state["procs"].get(name)
+        if proc is None or proc["status"] != "queued" or proc["request"] != request:
+            return False
+        return not_before is None or proc["not_before"] == not_before
+
+    def enqueue(self, name):
+        proc = self.state["procs"][name]
+        if proc["not_before"] <= self.now:
+            self.state["ready"].setdefault(proc["pool"], collections.deque()).append([name, proc["request"]])
+        else:
+            heapq.heappush(self.state["delayed"], [proc["not_before"], name, proc["request"]])
+
+    def _stale_dropped(self, pool):
+        stale = self.state["stale"]
+        if stale.get(pool, 0) > 0:
+            stale[pool] -= 1
+            if stale[pool] == 0:
+                del stale[pool]
+
+    def mark_stale(self, pool):
+        """一個排隊中的行程被拿掉（懶刪）：記舊格數；超過活格數就整條壓縮（攤還 O(1)）。"""
+        stale = self.state["stale"]
+        stale[pool] = stale.get(pool, 0) + 1
+        length = len(self.state["ready"].get(pool, ())) + len(self.state["delayed"])
+        if stale[pool] * 2 > length:
+            self.compact(pool)
+
+    def compact(self, pool):
+        queue = self.state["ready"].get(pool)
+        if queue is not None:
+            self.state["ready"][pool] = collections.deque(e for e in queue if self._valid(e[0], e[1]))
+        self.state["delayed"] = [e for e in self.state["delayed"] if self._valid(e[1], e[2], e[0])]
+        heapq.heapify(self.state["delayed"])
+        self.state["stale"].pop(pool, None)
+
+    def promote_delayed(self):
+        """第 8 步之 1：堆頂到期就彈出、接到它池的 ready 尾巴。"""
+        delayed = self.state["delayed"]
+        while delayed and delayed[0][0] <= self.now:
+            not_before, name, request = heapq.heappop(delayed)
+            if not self._valid(name, request, not_before):
+                proc = self.state["procs"].get(name)
+                self._stale_dropped(proc["pool"] if proc else None)
+                continue
+            pool = self.state["procs"][name]["pool"]
+            self.state["ready"].setdefault(pool, collections.deque()).append([name, request])
+
+    def pop_ready(self, pool):
+        """從池的 ready 頭拿下一個有效格；舊格丟掉。沒有回 None。"""
+        queue = self.state["ready"].get(pool)
+        while queue:
+            name, request = queue.popleft()
+            if self._valid(name, request):
+                return name
+            self._stale_dropped(pool)
+        return None
+
+    # ---- 忙的 cpu ----
+    def release(self, key):
+        """那顆 cpu 結清：busy、on 拿掉；可派就放回 free 尾巴，縮小中就 draining 減 1（kernel-tick 第 6 步）。"""
+        slot = self.state["busy"].pop(key, None)
+        if slot is not None and self.state["on"].get(slot["proc"]) == key:
+            del self.state["on"][slot["proc"]]
+        pool, i = split_key(key)
+        entry = self.state["pools"].get(pool)
+        if entry is None or pool == KERNEL_POOL:
+            return
+        want = entry["want"] or {"count": 0, "skip": []}
+        pending = entry["pending"] or entry["sent"]
+        sent = entry["sent"]
+        in_w = is_member(i, want["count"], want["skip"])
+        if (in_w and is_member(i, sent["count"], sent["skip"]) and is_member(i, pending["count"], pending["skip"])
+                and not entry["dirty"]):
+            entry["free"].append(i)
+        elif not in_w:
+            if entry["draining"] > 0:
+                entry["draining"] -= 1
+                if entry["draining"] == 0:
+                    entry["dirty"] = True
+
+    def work_exists(self, key, req):
+        home = self.cpu_home(key)
+        return (home / "requests" / req).exists(), (home / "responses" / req).exists()
+
+    # ---- syscall（proto5 §2，判定不變；寫帳本改由提交點 3 一起寫） ----
     def _reply(self, pending, body):
         if pending is not None:
             self.state["replies"].append({"name": pending["name"], "id": pending["id"], "body": body})
@@ -47,14 +159,18 @@ class KernelLedger:
             if key in p and not check(p[key]):
                 _bad("%s 型別不合" % key, ["params", key])
         pool = p.get("pool", "default")
-        if pool == "kernel" or pool not in {c["pool"] for c in self.info["cpus"].values()}:
+        if pool == KERNEL_POOL or pool not in self.info["pools"]:
             _bad("pool 必須是現有的工作池", ["params", "pool"])
         numeric = [int(n) for n in self.state["procs"] if n.isascii() and n.isdecimal()]
         name = p.get("name", str(max(numeric, default=-1) + 1))
         if name in self.state["procs"]:
             raise KernelError("AlreadyExists", "行程已存在：%s" % name)
+        once = p.get("once", False)
+        if once and self.state["phase"] != "running":
+            # kernel-tick 第 9 步：stopping 之後新 add 的 once 當場回 Stopping。
+            raise KernelError("Stopping", "kernel 正在停機")
         proc = {"request": env.name, "target": p["target"], "dir_target": p.get("dir_target", ".aos/inst.json"),
-                "once": p.get("once", False), "pool": pool,
+                "once": once, "pool": pool,
                 "interval_ms": p.get("interval_ms", self.info["interval_ms"]),
                 "timeout_ms": p.get("timeout_ms", self.info["timeout_ms"]), "status": "queued",
                 "runs": 0, "fails": 0, "not_before": 0, "pending": None}
@@ -63,7 +179,7 @@ class KernelLedger:
         if proc["once"] and not env.notify:
             proc["pending"] = {"name": env.name, "id": env.id}
         self.state["procs"][name] = proc
-        self.state["queue"].append(name)
+        self.enqueue(name)
         return None if proc["once"] else {"result": {"name": name}}
 
     def remove(self, name):
@@ -73,18 +189,17 @@ class KernelLedger:
         if proc["once"]:
             self._cancel_pending(proc, "Removed")
         keep = False
-        for c, slot in self.state["cpus"].items():
-            if slot["proc"] != name or slot["req"] is None:
-                continue
-            req = slot["req"]
-            if ((self.cpu_home(c) / "requests" / req).exists() or
-                    (self.cpu_home(c) / "responses" / req).exists()):
+        key = self.state["on"].get(name)
+        slot = self.state["busy"].get(key) if key else None
+        if proc["status"] == "running" and slot is not None and slot["proc"] == name:
+            if any(self.work_exists(key, slot["req"])):
                 slot["discard"], keep = True, True
             else:
-                slot.update(_idle())
-        self.state["queue"] = [n for n in self.state["queue"] if n != name]
+                self.release(key)
         if not keep:
             del self.state["procs"][name]
+            if proc["status"] == "queued":
+                self.mark_stale(proc["pool"])
         return {"result": {"name": name}}
 
     def apply_syscall(self, env):
@@ -113,28 +228,53 @@ class KernelLedger:
         if body is not None and not env.notify:
             self._reply({"name": env.name, "id": env.id}, body)
         self.state["deletes"].append(env.name)
-        self.save()
 
+    def start_stopping(self):
+        """stop：phase 改 stopping，當場掃一次 ready／delayed 把 once 拿掉、各回 Stopping（O(排隊數)，只這一次）。"""
+        if self.state["phase"] != "running":
+            return
+        self.state["phase"] = "stopping"
+        procs = self.state["procs"]
+        def drop(name, request, not_before=None):
+            if not self._valid(name, request, not_before):
+                return True
+            proc = procs[name]
+            if proc["once"]:
+                self._cancel_pending(proc, "Stopping")
+                del procs[name]
+                return True
+            return False
+        for pool, queue in self.state["ready"].items():
+            self.state["ready"][pool] = collections.deque(e for e in queue if not drop(e[0], e[1]))
+        self.state["delayed"] = [e for e in self.state["delayed"] if not drop(e[1], e[2], e[0])]
+        heapq.heapify(self.state["delayed"])
+        self.state["stale"] = {}
+
+    # ---- 出貨（kernel-ledger §3：全部做完才一次寫帳本） ----
     def flush_outboxes(self):
-        for box in ("acks", "replies", "stops", "deletes"):
-            while self.state[box]:
-                item = self.state[box][0]
-                if box == "acks":
-                    digest = hashlib.sha256(item["name"].encode()).hexdigest()[:16]
-                    name = "ack-%s-%s-%s-%s.json" % (self.state["chain"], self.seq, Path(item["home"]).name, digest)
-                    _put(item["home"], name, {"jsonrpc": "2.0", "method": "ack", "params": {"name": item["name"]}})
-                elif box == "replies":
-                    response = {"jsonrpc": "2.0", "id": item["id"], **item["body"]}
-                    try:
-                        aos_home.link_json(self.home / "responses" / item["name"], response)
-                    except aos_home.RequestExists:
-                        pass
-                elif box == "stops":
-                    _put(self.cpu_home(item), "stop-%s.json" % self.state["chain"], {"jsonrpc": "2.0", "method": "stop"})
-                else:
-                    (self.home / "requests" / item).unlink(missing_ok=True)
-                self.state[box].pop(0)
-                self.save()
+        """四箱全做一遍；回「有沒有做事」讓呼叫者決定要不要寫帳本。"""
+        did = False
+        for item in self.state["acks"]:
+            digest = hashlib.sha256(item["name"].encode()).hexdigest()[:16]
+            name = "ack-%s-%s-%s-%s.json" % (self.state["chain"], self.seq, Path(item["home"]).name, digest)
+            _put(item["home"], name, {"jsonrpc": "2.0", "method": "ack", "params": {"name": item["name"]}})
+        for item in self.state["replies"]:
+            response = {"jsonrpc": "2.0", "id": item["id"], **item["body"]}
+            try:
+                aos_home.link_json(self.home / "responses" / item["name"], response)
+            except aos_home.RequestExists:
+                pass
+        for item in self.state["deletes"]:
+            (self.home / "requests" / item).unlink(missing_ok=True)
+        for item in self.state["sends"]:
+            # 回音已在＝對方處理過了（崩在放完、清帳前），不再放同名單。
+            if not (Path(item["home"]) / "responses" / item["name"]).exists():
+                _put(item["home"], item["name"], item["body"])
+        for box in ("acks", "replies", "deletes", "sends"):
+            if self.state[box]:
+                did = True
+                self.state[box] = []
+        return did
 
     def tick_request(self, seq):
         name = "k-%s-%d.json" % (self.state["chain"], seq)
@@ -143,14 +283,13 @@ class KernelLedger:
             "timeout_ms": 0}}
 
     def ack_ticks(self):
-        home = self.cpu_home(self.state["kcpu"])
-        retained = self.state["cpus"].get(self.state["kcpu"], {}).get("req")
+        home = self.cpu_home(KCPU)
         for path in sorted((home / "responses").glob("*.json")):
-            if path.name == retained or (home / "requests" / path.name).exists():
+            if (home / "requests" / path.name).exists():
                 continue
             response = aos_home.read_json(path)
             if "error" in response or response.get("result", {}).get("code", 0) != 0:
                 self.events.append({"event": "tick_error", "request": path.name, "response": response})
             digest = hashlib.sha256(path.name.encode()).hexdigest()[:16]
-            name = "ack-%s-%d-%s-%s.json" % (self.state["chain"], self.seq, self.state["kcpu"], digest)
+            name = "ack-%s-%d-%s-%s.json" % (self.state["chain"], self.seq, "0", digest)
             _put(home, name, {"jsonrpc": "2.0", "method": "ack", "params": {"name": path.name}})
