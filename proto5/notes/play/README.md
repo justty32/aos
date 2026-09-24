@@ -8,4 +8,4 @@
 |---|---|---|---|---|
 | r1 | 2026-09-24 | proto5 重架構後全套：daemon→kernel、真 agent 一整圈、故意弄壞、第二個工具 | [astra](2026-09-24-r1-astra.md)、[Opus](2026-09-24-r1-opus.md)、[任務書](2026-09-24-r1-task.md) | astra 3/4/3/4/2、Opus 2/3/4/4/2 |
 | r1 修正 | 2026-09-24 | 兩份報告的十條（A 文件＋小程式、B 碰設計）全做：十分鐘上手、check、init --env、stop 等停好、錯誤附路徑、agent stop 不讀 info、last、done/ | [fix-r1](fix-r1.md) | — |
-| r2 | 2026-09-24 | fix-r1 之後：照 README 上手、只看規範架兩個 agent 共用 llm cpu、六類故障（含 daemon kill -9 重開）、自製工具 | [astra](2026-09-24-r2-astra.md)、[Opus](2026-09-24-r2-opus.md)、[任務書](2026-09-24-r2-task.md) | astra 4/3/3/4/2、Opus（待） |
+| r2 | 2026-09-24 | fix-r1 之後：照 README 上手、只看規範架兩個 agent 共用 llm cpu、六類故障（含 daemon kill -9 重開）、自製工具 | [astra](2026-09-24-r2-astra.md)、[Opus](2026-09-24-r2-opus.md)、[任務書](2026-09-24-r2-task.md) | astra 4/3/3/4/2、Opus 4/3/3/4/3 |
