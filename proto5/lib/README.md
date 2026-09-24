@@ -1,4 +1,4 @@
-# proto5/lib — 二十一支 Python 模組
+# proto5/lib — 二十六支 Python 模組
 
 ← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu.md)、[daemon.md](../spec/daemon.md)、[kernel.md](../spec/kernel.md)
 
@@ -18,7 +18,12 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm-call` 問模�
 | [`aos_client.py`](aos_client.py) | 取名、放單、先查原單再等回音、讀與 ack | [cpu.md](../spec/cpu.md) §3、§6.3 |
 | [`aos_exec_cpu.py`](aos_exec_cpu.py) | 長命 exec cpu：go／stop、逐件執行、訊號與對帳；入口 `aos-cpu` | [cpu.md](../spec/cpu.md) |
 | [`aos_daemon.py`](aos_daemon.py) | flock、spawn 登記與 go、非零重拉、kill／stop 階梯；入口 `aos-daemon` | [daemon.md](../spec/daemon.md) |
-| [`aos_kernel.py`](aos_kernel.py) | 帳本與四出貨箱、分池派工、once／反覆、boot 換鏈、stop 等停好；入口 `aos-kernel` | [kernel.md](../spec/kernel.md) |
+| [`aos_kernel.py`](aos_kernel.py) | 入口與匯出層：把下面五支的公開名字（含舊的底線名字）重新匯出；`aos-kernel` 從這裡取 `main` | [kernel.md](../spec/kernel.md) |
+| [`aos_kernel_info.py`](aos_kernel_info.py) | info 讀驗、`init`、初始帳本 `new_state`、反覆工作判定 `classify`、共用錯誤與放單小工具 | [kernel.md](../spec/kernel.md) §1、§4 |
+| [`aos_kernel_ledger.py`](aos_kernel_ledger.py) | `KernelLedger`：帳本、syscall（add／rm）、四出貨箱重放、接 tick 鏈與 ack | [kernel.md](../spec/kernel.md) §2、§3 |
+| [`aos_kernel_engine.py`](aos_kernel_engine.py) | `Kernel`：收回音、補 cpu、分池派工、停機與一格十步 `step`；模組函式 `tick` | [kernel.md](../spec/kernel.md) §3 |
+| [`aos_kernel_boot.py`](aos_kernel_boot.py) | `boot` 交接換鏈、`status` 偷看、`stop` 等停好 | [kernel.md](../spec/kernel.md) §6 |
+| [`aos_kernel_cli.py`](aos_kernel_cli.py) | `aos-kernel` 參數解析、add／rm 交件、`ls` 文字摘要與 `main` | [kernel.md](../spec/kernel.md) §6 |
 | [`aos_kernel_check.py`](aos_kernel_check.py) | `aos-kernel check`：啟動前唯讀檢查 info、K 家必要目錄、daemon、cpu 在不在孩子表（daemon 重開提示 boot）、PATH、池、llm 設定與（可選）agent | [kernel.md](../spec/kernel.md) §6 |
 | [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（`_metainfo`、人格／記憶／工具、message 驗證）與 aos-llm-call 的六格 loader，帶原文件與位置解欄位 | [agent.md](../spec/agent.md) §2～§3、§5；[aos-llm-call.md](../spec/aos-llm-call.md) §3 |
 | [`aos_llm_call.py`](aos_llm_call.py) | 問模型一次：讀驗 `AOS_LLM_CONFIG` 的 llm.json、組 body、HTTP、正規化並驗 message；入口 `aos-llm-call` | [aos-llm-call.md](../spec/aos-llm-call.md) |
