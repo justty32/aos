@@ -26,6 +26,7 @@
 | `members` | 物件 | 是 | 名字 → 成員（下表）；至少一個 |
 | `limits.stale_minutes` | 整數 | 否（10） | 書記看停滯的門檻（第 2 隊用） |
 | `limits.max_members` | 整數 | 否（6） | 成員數上限；超過＝整份不收 |
+| `post.interval_s` | 整數 | 否（5） | 郵差多久巡一次信箱（秒，1～3600；第 2 隊 2026-09-24 追加）；改了要 `aos-team stop`、`start` |
 
 頂層其他鍵＝`FormatInvalid`（抓 `member`、`limit` 這類手誤）。
 

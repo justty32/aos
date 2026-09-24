@@ -2,25 +2,27 @@
 
 # 郵差兼書記：`aos-team post`
 
-一支機械程式，kernel 反覆叫（`aos-team start` 登記，預設 1 秒一輪），**不叫模型**。
+一支機械程式，kernel 反覆叫（`aos-team start` 登記），**不叫模型**。
+**多久一輪**：`team.json` 的 `"post": {"interval_s": 5}`（1～3600，沒寫＝5 秒，2026-09-24 使用者裁）；改了要 `aos-team stop` 再 `start` 才生效。
+成本（實測）：閒著一輪約 0.035 cpu 秒 → 5 秒一輪＝閒著每小時約 **25 cpu 秒**（1 秒約 125 秒）；信最多晚 5 秒到。
 程式：[`lib/aos_team_post.py`](../../lib/aos_team_post.py)。第 2 隊，2026-09-24 第 1 版。
 
 ## 一輪做什麼（照順序）
 
 1. **接著做上一輪沒做完的**：`team/post/open/<紀錄 id>`（空檔）＝那份紀錄還有動作沒勾、或投給成員的信還沒被收走。
 2. **收驗收結果**：`team/post/jobs/<工作 id>/result.json` 出現了＝叫 `aos_team_task.step(…, verified)`，照回的動作做。
-3. **收 outbox**：`team/outbox/<名>/*.json`（每個成員與 human）＋`team/post/outbox/*.json`（心跳寫的，`from` 是 `post`）。照 id 裡的時間排。
+3. **收 outbox**：`team/outbox/<名>/*.json`（每個成員、`human`、心跳 `beat`）＋`team/post/outbox/*.json`（機械員以 `post` 名義寄的信，現在沒人用）。照 id 裡的時間排。
 4. **看停滯與期限**（每 30 秒一次，見下）。
 5. **書記**：任務單或問題資料夾有變，就重寫專案的 `SESSION-LOG.md`／`WAIT_USER.md` 那一節。
 
-同一時間只有一個郵差：`team/post/.lock`（flock，拿不到＝印一行略過、退 0）。
+同一時間只有一個郵差：`team/post/.lock`（拿不到＝略過、退 0）。
 
 ## 一封信怎麼投（每步都可重跑）
 
 1. `post/sent/<id>.json` 已在＝處理過了，跳到 4。
-2. 讀驗（`aos_team_format.read_outbox_file`；符號連結或不是一般檔＝`NotARegularFile`，不跟過去讀）；不合＝**退件**：寫紀錄（`kind: rejected`、`code`、`message`）、原檔搬進 `outbox/<名>/rejected/`、寄一封 `FAILED` 給那一格的主人（不是成員也不是 human 的格子＝寄給人），內文是代號＋白話＋原檔搬到哪。
-3. 叫 `on_letter`（回報、恢復）→ **投**：收件人是成員＝`members/<名>/input/mail-<id>.json`（`aos_agent_say.drop_new`，不覆蓋）；是 human＝`team/human/<id>.json`（信＋`header` 那一行）。
-   投之前先查「是不是已經投過了」（`aos_team_format.already_delivered`）：`input/mail-<id>.json` 還在、`input/done/mail-<id>.json.*.done` 在、或收件人 `state.json` 的 `intake.files`／`consuming` 有它——有一個就不投。
+2. 讀驗（`aos_team_format.read_outbox_file`；符號連結或不是一般檔＝`NotARegularFile`，不跟過去讀）；不合＝**退件**：寫紀錄（`kind: rejected`、`code`、`message`）、原檔搬進 `outbox/<名>/rejected/`、寄一封 `FAILED` 給那一格的主人（不明的格子＝寄給人），內文是代號＋白話。
+3. 叫 `on_letter`（回報、恢復）→ **投**：收件人是成員＝`members/<名>/input/mail-<id>.json`（`aos_agent_say.drop_new`，不覆蓋）；是 human＝`team/human/<id>.json`（信＋`header` 那一行）；是 `beat`＝**不投**，只寫投遞紀錄（`where: null`）。
+   投之前先查「是不是已經投過了」：還在 input、已收進 `input/done/`、或停在收件人 `state.json` 的 intake——有一個就不投。
    → 先放 `open/` 標記、再寫紀錄（含全部後續動作，每件 `done: false`）。
 4. 原檔搬進 `outbox/<名>/done/`（退件＝`rejected/`）。outbox 是模型寫得到的：用資料夾的 fd 搬、不跟符號連結；`done`／`rejected` 被換成連結或檔＝先改名成 `<名>.bad-<ns>`、再建真的資料夾。
 5. 逐件做後續動作，**做一件勾一件**（勾之前崩了＝重做同一件；每一件都冪等）。
@@ -44,15 +46,15 @@
 {"_metainfo": {"_type": "aos_team_post_record", "_version": 1},
  "id": "1790000000123456789-4242-worker-1", "kind": "letter", "recorded_at": "2026-09-25T10:00:01+08:00",
  "where": "…/members/lead/input/mail-1790000000123456789-4242-worker-1.json",
- "watch_pickup": true, "picked_up_at": "2026-09-25T10:00:03+08:00",
+ "watch_pickup": true, "picked_up_at": "…",
  "from": "worker-1", "to": "lead", "status": "DONE", "reply_to": "t-0001", "rev": 1, "text": "…", "at": "…",
  "effects": [{"do": "verify", "task": "t-0001", "rev": 1, "attempt": 1,
               "id": "1790000000123456789-4242-worker-1.e0", "done": true, "result": "v-t-0001-r1-a1"}],
  "complete": true}
 ```
 
-`kind`：`letter`（信，含郵差生的；派工信多 `dispatch`）、`request`（申請；多 `request_kind`）、`rejected`（多 `code`、`message`）、`notice`（郵差自己起的：停滯 `stall.<單號>.<雜湊>`、期限 `expire.<單號>.<雜湊>`）。
-`aos-team mail` 讀的就是這些；不另寫 mail.log。清舊紀錄這一版沒做。
+`kind`：`letter`（信，含郵差生的；派工信多 `dispatch`）、`request`（申請；多 `request_kind`）、`rejected`（多 `code`、`message`）、`notice`（停滯 `stall.…`、期限 `expire.…`）。
+`aos-team mail` 讀的就是這些。
 
 ## 看停滯（每 30 秒一次）
 
@@ -87,8 +89,8 @@
 | 指令 | 做什麼 |
 |---|---|
 | `aos-team post [--quiet]` | 走一輪，一件事一行（`投遞`、`申請`、`退件`、`驗收`、`停滯`、`書記`）；`--quiet` 給 kernel |
-| `aos-team mail [--last N] [--to 名] [--from 名] [--task 單號] [--full] [--json] [--follow]` | 一封信一行：`09-25 10:03  worker-1 → lead  DONE  t-0001 rev1  ✓收  導入完成…`；退件一行 `退件  <誰> 的 <檔>：<代號> <白話>` |
-| `aos-team start`／`stop`（第 1 隊） | 會叫 `aos_team_post.start(團隊資料夾)`：登記 kernel 反覆工作 `team-post-<資料夾名>-<團隊識別>`（同名已在、而且就是這個團隊的 inst＝already started；別的團隊的＝退 1），inst 在 `team/post/post.inst.json`、stderr 在 `team/post/post.err` |
+| `aos-team mail [--last N] [--to 名] [--from 名] [--task 單號] [--full] [--json] [--follow]` | 一封信一行（誰寄誰、狀態、單號、收了沒、內文開頭）；退件也一行 |
+| `aos-team start`／`stop`（第 1 隊） | 會叫 `aos_team_post.start(團隊資料夾)`：登記 kernel 反覆工作 `team-post-<資料夾名>-<團隊識別>`（同名已在且是這個團隊的＝already started）；stderr 在 `team/post/post.err` |
 
 退出碼：0＝走完一輪（個別檔的問題寫 stderr、留著下一輪再試）；1＝名冊讀不到這種整輪做不了的。
 測試用：環境變數 `AOS_TEAM_POST_CRASH=<點>` 在那個點 SIGKILL 自己（`delivered`、`recorded`、`moved`、`effect`、`job-submitted`、`beat-dispatch`）。

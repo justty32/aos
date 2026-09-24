@@ -12,7 +12,9 @@
 | `team/routines.json` | **郵差**（申請 `kind: routine` 的處理函式 `on_routine`） | 例行的定義，`wf-table/1` |
 | `team/beat.json` | **心跳** | 每條例行處理到哪一次、在途的那一次、上次結果 |
 
-人不直接改 `routines.json`：用 `aos-team routine add/rm`（往 `team/outbox/human/` 放一份申請，郵差下一輪寫）。模型要加也是寄申請，而且要人批准（下面）。
+人不直接改 `routines.json`：用 `aos-team routine add/rm`（往 `team/outbox/human/` 放一份申請，郵差下一輪寫）。
+
+**心跳有自己的身分 `beat`**（2026-09-24 使用者裁）：保留名（跟 `human`、`post` 一樣不能當成員名、不能當派工的負責人）；自己的寄件格 `team/outbox/beat/`；只能寄 `handoff`、`cancel` 兩種申請（不能替人答題、不能加例行）；寄的信信頭寫「心跳（定時器）」。成員都能回信給 `beat`（`team_say` 一定收這個名字），郵差只記下、不投。模型要加也是寄申請，而且要人批准（下面）。
 
 ```json
 {"contract": "wf-table/1", "source": null,
@@ -57,11 +59,12 @@
    - 其他＝在途，**不重派**。
 2. **沒有在途**：算「現在以前最近的一次到期」；比 `handled` 新就派這一次。中間漏掉的（`handled` 之後、這一次之前）**不補**，漏了 2 次以上寄一封報告「到 … 為止有 N 次沒跑，只補最近一次」。
 
-**派出**＝先把在途寫進 `beat.json`，再往 `team/outbox/human/` 放一份 `handoff` 申請（寄件人 human：例行是人登記或人批准的）：
-id＝`<那一次的 epoch 秒×10⁹＋第幾次>-<「名字｜登記它的申請 id」的 crc32>-human`，重跑算出來一樣、不覆蓋；刪掉再重加同名的是新的一條，不會沿用舊單；`goal` 前面加 `〔例行 名字 @ 09-25 10:00〕`，`workflow` 沒寫＝`無`。
-郵差開單、派給 `to`；單子完成時照任務單的規則通知開單人（human）。
+**派出**＝先把在途寫進 `beat.json`，再往 `team/outbox/beat/` 放一份 `handoff` 申請（寄件人 `beat`；授權來源仍是「人登記或人批准」這一列）：
+id＝`<那一次的 epoch 秒×10⁹＋第幾次>-<「名字｜登記它的申請 id」的 crc32>-beat`，重跑算出來一樣、不覆蓋；刪掉再重加同名的是新的一條，不會沿用舊單；`goal` 前面加 `〔例行 名字 @ 09-25 10:00〕`，`workflow` 沒寫＝`無`。
+郵差開單、派給 `to`；單子的開單人是 `beat`，派工信多一行「這張單是心跳（定時器）照例行派的」，叫負責人做完回 DONE 給 `beat`。
+**做完不寄信給人**（2026-09-24 使用者裁）：只有異常才寄——單子 failed（驗收三次沒過、負責人回 FAILED）、逾時（`timeout_minutes` 到）、檢查器壞（[verify.md](verify.md)）、重派用完、漏跑。卡住（BLOCKED）時等的是人。
 
-**報告**（漏跑、失敗）：先記進 `beat.json` 那條的 `reports`（跟「放棄這一次」「派出」同一次寫），再寫進 `team/post/outbox/`（一封給每個領隊、一封給人，`from: post`、`PROGRESS`；id 由事件與這條例行算出來、不覆蓋），全寫好才從 `reports` 拿掉；崩在中間下一輪照寄。郵差投。
+**報告**（漏跑、失敗）：先記進 `beat.json` 那條的 `reports`（跟「放棄這一次」「派出」同一次寫），再寫進 `team/outbox/beat/`（一封給每個領隊、一封給人，`from: beat`、`PROGRESS`；id＝`<crc>-<crc>-beat`，由事件、這條例行、收件人算出來、不覆蓋），全寫好才從 `reports` 拿掉；崩在中間下一輪照寄。郵差投。
 
 ## 指令
 
