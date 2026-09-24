@@ -10,6 +10,7 @@
 | [progress.md](progress.md) | 定案（兩隊共同約定）與分段進度 |
 | [real-run.md](real-run.md) | 真跑兩輪的完整畫面（deepseek-chat） |
 | [review-task.md](review-task.md)／[review-astra.md](review-astra.md) | astra 唯讀審查 |
+| [round2.md](round2.md)（＋[review2-task.md](review2-task.md)／[review2-astra.md](review2-astra.md)） | 第二輪：照使用者五題裁決改、真跑、astra 第二審 |
 
 ## 做了什麼
 
@@ -110,3 +111,11 @@ env 只有 8 個名字：沒有 OPENAI_API_KEY、AOS_KERNEL_HOME、AOS_LLM_CONFI
 | 3 | `access set` 的路徑照你的殼的目前資料夾算，不照 `--target` 算（真跑踩到一次，錯誤訊息有印出算出來的絕對路徑） | 照殼算（跟一般 CLI 一樣） |
 | 4 | 有工具的家卻沒有 access.json（例如只有 init 的 `date` 工具） | 不關牢，`check` 印一行 warn |
 | 5 | `tools rm` 從「整個資料夾」那條拿掉一支，會改寫成 `only` 列出其餘的；之後放進資料夾的新工具要自己加 | 照這樣（會印提醒） |
+
+### 2026-09-24 使用者裁決（第二輪照做，見 [round2.md](round2.md)）
+
+1. 檔案工具的根改成整個 `/work`，唯讀掛點寫入回 `ReadOnly`——已改。
+2. 換起點／改表不自動塞系統訊息，文件教「記得 `aos-agent say`」——已補文件。
+3. `access set` 相對路徑照殼算，文件提醒寫絕對路徑或 `~`——已補文件。
+4. 有工具卻沒 access.json 就拒跑（`NoAccess`，教那行指令），`check` 改 bad，`init` 直接生預設表——已改。
+5. `tools rm` 改寫成 `only` 照舊——不改。
