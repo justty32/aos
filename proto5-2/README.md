@@ -30,14 +30,7 @@ daemon 要帶上萬個孩子，指令會變多，但一律按池管。六點定�
 | kernel 的 syscall、回音判定、鏈 | [proto5/spec/kernel.md](../proto5/spec/kernel/README.md) §2、§4、§7 |
 | daemon 怎麼拉一個孩子（`go` 握手、process group） | [proto5/spec/daemon.md](../proto5/spec/daemon/README.md) §2 |
 
-**「不變」那幾份裡仍有幾句要跟著換**（審查 R16；落地時改 proto5 那邊的字，現在先記在這）：
-- kernel.md §2：`add` 的 `pool` 要是 `info.pools` 的 key（不是 `info.cpus`）、不是 `kernel`。
-- kernel.md §6：health／check 的目錄檢查改查 `pools/`（不是 `cpus/`），細節在 [spec/kernel-cli.md](spec/kernel-cli.md)。
-- agent.md §3：`llm.pool`／`tool_pool`／`tick.pool` 的合法性改成「是 `info.pools` 的 key」。
-- aos-agent.md §6.1：`kind=aos` 時指的 cpu.log 路徑改成 `<K>/pools/<池>/cpus/*/cpu.log`；§1.3 共用的 kernel health 照 kernel-cli 的新判定。
-- aos-llm-call.md §1：「envs 只在第一次建家時抄」改成「改池的 `envs.json`，之後拉的 cpu 生效；要全池換用 `aos-daemon kill --all`」。
-- cpu.md §5.4：kernel 不再往每顆 cpu 放 stop（[spec/handoff.md §3](spec/handoff.md)）；§6.1 第 3 步 fd 1 可以是 `/dev/null`（[spec/daemon-reconcile.md §5](spec/daemon-reconcile.md)）。
-- aos-agent.md §5、§10、§11 依賴的只有 `procs`／`replies` 與兩個退出碼設定，帳本第 2 版都保留，**不用改**（astra 核對過）。
+**「不變」那幾份裡仍有幾句要跟著換**（審查 R16；proto5 那邊的字不動，逐句記在 [spec/proto5-diffs.md](spec/proto5-diffs.md)）。
 
 fix-r4 正在落地的慣例這裡直接沿用：三支指令的家一律 `--target`（省略找 `AOS_DAEMON_HOME`／`AOS_KERNEL_HOME` 再 `./`）；
 daemon 是 `boot／halt`，kernel 停機是 `halt`；agent 的 `say --wait`、`listen`、`pause／continue`；`aos-llm call`。

@@ -516,6 +516,34 @@ aos_home.write_state = crash_state
                 self.assertEqual(self.read(effect), "once\n")
                 self.stop()
 
+    def test_without_notify_field_behaves_like_before(self):
+        # setUp 的 info.json 沒有 notify 欄位；跟 proto5 原樣一致。
+        self.start()
+        self.post("one", params={"target": self.job()})
+        self.assertEqual(self.response("one")["result"]["code"], 0)
+        self.wait(lambda: self.state()["runs"] == 1)
+        self.stop()
+
+    def test_relocate_handles_fd1_dev_null(self):
+        # daemon-reconcile §5：daemon 給 cpu 的 fd 1 可能是 /dev/null，不是 pipe。
+        log = open(os.path.join(self.d, "cpu.log"), "ab")
+        self.addCleanup(log.close)
+        p = subprocess.Popen([PY, CPU, self.d], stdin=subprocess.PIPE,
+                             stdout=subprocess.DEVNULL, stderr=log, start_new_session=True)
+        self.p = p
+        def cleanup():
+            if p.poll() is None:
+                p.kill()
+            p.wait(timeout=5)
+            if p.stdin is not None:
+                p.stdin.close()
+        self.addCleanup(cleanup)
+        self.control("go")
+        self.wait(lambda: self.exists("state.json") and self.state().get("pid") == p.pid)
+        self.post(params={"target": self.job()})
+        self.assertEqual(self.response()["result"]["code"], 0)
+        self.stop()
+
     def test_legal_go_ids_and_bad_lines(self):
         for ident in ("id", 1, 1.5, None):
             with self.subTest(ident=ident):
@@ -530,3 +558,118 @@ aos_home.write_state = crash_state
                 self.wait(lambda: self.exists("state.json") and self.state()["pid"] == self.p.pid)
                 self.stop()
                 self.assertEqual(self.read("cpu.log").count("BadControl") - before, len(bad))
+
+
+class TestExecCpuNotify(CpuCase):
+    """cpu-notify.md：info.json 的 notify 欄位、迴圈通知、啟動補丟。"""
+
+    def setUp(self):
+        super().setUp()
+        self.notify_dir = os.path.join(self.d, "notify")
+        os.makedirs(self.notify_dir)
+
+    def with_notify(self, notify=None, poll_ms=5, **extra):
+        obj = {"_metainfo": {"_type": "exec_cpu", "_version": 1}, "poll_ms": poll_ms}
+        obj["notify"] = self.notify_dir if notify is None else notify
+        obj.update(extra)
+        self.inst(obj, "info.json")
+
+    def notify_path(self, name, home=None):
+        home = os.path.abspath(self.d) if home is None else home
+        digest = aos_exec_cpu._notify_digest(home, name)
+        return os.path.join(self.notify_dir, "resp-%s.json" % digest)
+
+    def read_notify(self, path):
+        return self.read(os.path.relpath(path, self.d))
+
+    def test_notify_digest_matches_sha256_prefix(self):
+        import hashlib
+        home, name = "/abs/K/pools/default/cpus/3", "k-1-2-default-3.json"
+        expected = hashlib.sha256(("%s\n%s" % (home, name)).encode("utf-8")).hexdigest()[:16]
+        self.assertEqual(aos_exec_cpu._notify_digest(home, name), expected)
+
+    def test_notify_sent_after_response_with_correct_digest_and_content(self):
+        self.with_notify()
+        self.start()
+        self.post("one", params={"target": self.job()})
+        self.response("one")
+        home = os.path.abspath(self.d)
+        path = self.notify_path("one.json", home)
+        self.wait(lambda: os.path.exists(path))
+        obj = json.loads(self.read_notify(path))
+        self.assertEqual(obj, {"jsonrpc": "2.0", "method": "responded",
+                                "params": {"home": home, "name": "one.json"}})
+        self.stop()
+
+    def test_notify_sent_after_request_removed(self):
+        self.with_notify()
+        marker = os.path.join(self.d, "order-check")
+        bootstrap = """
+original = aos_exec_cpu._send_notify
+def wrapped(notify_dir, home, name):
+    gone = not os.path.exists(os.path.join(home, "requests", name))
+    Path(%r).write_text("gone" if gone else "still-there")
+    return original(notify_dir, home, name)
+aos_exec_cpu._send_notify = wrapped
+""" % marker
+        self.start(bootstrap=bootstrap)
+        self.post(params={"target": self.job()})
+        self.response()
+        self.wait(lambda: self.exists("order-check"))
+        self.assertEqual(self.read("order-check"), "gone")
+        self.stop()
+
+    def test_send_notify_repeat_is_eexist_success(self):
+        home = os.path.abspath(self.d)
+        aos_exec_cpu._send_notify(self.notify_dir, home, "x.json")
+        path = self.notify_path("x.json", home)
+        self.assertTrue(os.path.exists(path))
+        before = self.read_notify(path)
+        aos_exec_cpu._send_notify(self.notify_dir, home, "x.json")  # 補丟第二次
+        self.assertEqual(self.read_notify(path), before)
+
+    def test_missing_notify_dir_only_logs_stderr_and_continues(self):
+        self.with_notify(notify=os.path.join(self.d, "does-not-exist"))
+        self.start()
+        self.post("one", params={"target": self.job()})
+        self.assertEqual(self.response("one")["result"]["code"], 0)
+        self.wait(lambda: "NotifyFailed" in self.read("cpu.log"))
+        self.post("two", params={"target": self.job()})
+        self.assertEqual(self.response("two")["result"]["code"], 0)
+        self.stop()
+
+    def test_boot_backfill_sends_notify_for_preexisting_responses(self):
+        self.with_notify()
+        aos_home.ensure_queue(self.d)
+        home = os.path.abspath(self.d)
+        for name in ("alpha.json", "beta.json"):
+            aos_home.write_json(os.path.join(self.d, "responses", name),
+                                {"jsonrpc": "2.0", "id": name, "result": {"code": 0}})
+        self.start()
+        for name in ("alpha.json", "beta.json"):
+            path = self.notify_path(name, home)
+            self.wait(lambda p=path: os.path.exists(p))
+            obj = json.loads(self.read_notify(path))
+            self.assertEqual(obj["params"], {"home": home, "name": name})
+        self.stop()
+
+    def test_notification_class_request_is_not_notified(self):
+        self.with_notify()
+        self.start()
+        self.post("note", params={"target": self.job()}, notify=True)
+        self.wait(lambda: not self.exists("requests/note.json"))
+        path = self.notify_path("note.json")
+        time.sleep(0.1)  # 給補丟一點時間，確認真的沒丟
+        self.assertFalse(os.path.exists(path))
+        self.stop()
+
+    def test_notify_must_be_absolute_path(self):
+        for value in ("relative/path", 3, True, None, [], "", "~/x"):
+            with self.subTest(value=value):
+                self.inst({"_metainfo": {"_type": "exec_cpu", "_version": 1}, "notify": value},
+                          "info.json")
+                result = subprocess.run([PY, CPU, self.d], stdin=subprocess.DEVNULL,
+                                        capture_output=True, timeout=4)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertTrue(result.stderr.startswith(b"aos-cpu: FieldTypeMismatch:"),
+                                result.stderr)
