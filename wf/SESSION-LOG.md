@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **2026-09-24（家裡 Manjaro）：proto5 重架構收線→agent 線定稿實作→試玩 r1～r4 四輪**——細節見 git log 與 [rearch notes](../proto5/notes/2026-09-23-rearch/README.md)、[play](../proto5/notes/play/README.md)。今日已推 main 多筆（fix-r3、3.12 實跑、daemon 崩潰窗口測試、r4 試玩）。**使用者打遊戲中不碰 LM Studio／ollama，走 LiteLLM；每 commit 直接 push。****open**：① **fix-r4** 十三條 CLI 改版在 worktree 跑中，收線後核署名、ff-merge、推。② **fix-r5**（r4 兩份共同痛點八條）待 fix-r4 合完再開。③ **spec 拆檔重構**：`proto5/spec/` 過大待拆，等 fix-r4 合完才開，拆完才開 fix-r5。④ 崩潰窗口 C-7／C-8 還沒補。⑤ [WAIT_USER](WAIT_USER.md) A.14＋A.15。⑥ `tools`／`init --template` 還沒做。
+- **2026-09-24（家裡 Manjaro）：proto5 重架構收線→agent 線定稿實作→試玩 r1～r4 四輪**——細節見 git log 與 [rearch notes](../proto5/notes/2026-09-23-rearch/README.md)、[play](../proto5/notes/play/README.md)。今日已推 main 多筆（fix-r3、3.12 實跑、daemon 崩潰窗口測試、r4 試玩）。**使用者打遊戲中不碰 LM Studio／ollama，走 LiteLLM；每 commit 直接 push。****open**：① **fix-r4** 十三條 CLI 改版在 worktree 跑中，收線後核署名、ff-merge、推。② **fix-r5**（r4 兩份共同痛點八條）待 fix-r4 合完再開。③ **cpu 動態增減（使用者 09-24 拍板，spec 拆檔後與 fix-r5 一起開）**：kernel 將來上千上萬顆 cpu、很多池，init 綁死 cpu 表不對。介面定案：`aos-kernel cpu add [--target K] --pool P [--count N] [--name X] [--env K=V]`（kernel 每格重讀 info，下一格叫 daemon 拉起，不用 boot）、`cpu rm NAME|--pool P --count N`（先收孩子再拿掉表）、`cpu ls` 與 `ls` 預設按池摘要（幾顆／忙／dead），`--pool P` 才展開；envs 掛在池上、入池的 cpu 繼承；`init --config` 只剩 kernel 參數＋池定義，cpu 可空。**一個池一個 daemon**（daemon.md、kernel.md 的 cpu 表要記池→daemon 家）。每格成本要從 O(cpu 數) 變 O(有事的 cpu 數)（例如 cpu 回音時往 kernel 家丟通知檔）。④ **spec 拆檔重構**：`proto5/spec/` 過大待拆，等 fix-r4 合完才開，拆完才開 fix-r5。⑤ 崩潰窗口 C-7／C-8 還沒補。⑥ [WAIT_USER](WAIT_USER.md) A.14＋A.15。⑦ `tools`／`init --template` 還沒做。
 
 - 09-22：① backlog 八件 ② 09-21 ④⑤ 仍在 [→](session_logs/2026-09.md#2026-09-22)
 - 09-21：④ aos-inst 兩題 ⑤ thinking/ 草案 ④ WSL 沒 lms／jq [→](session_logs/2026-09.md#2026-09-21)
