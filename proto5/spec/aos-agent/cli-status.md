@@ -10,7 +10,7 @@
 
 | 行 | 印什麼 |
 |---|---|
-| `agent` | 家的絕對路徑；info 讀驗錯另一行 `info bad：<代號>: <白話>` |
+| `agent` | 家的絕對路徑；info 讀驗錯另一行 `info bad：<代號>: <白話>`；（access-impl）[access 檔](access.md)壞了另一行 `access bad：<代號>: <白話>…` |
 | `state` | `state`、`errors`；（09-24 試玩 r3 補）連敗暫停中不印會誤導的 `errors 0`，改印 `連敗暫停中（已連敗 3 次）`；（09-24 fix-r4 補）手動暫停中行尾加 `手動暫停中（<paused 檔的時間>）`，兩種同時就兩段都印；state.json 讀驗錯＝`state bad：…`，後面靠 state 的行略過（手動暫停照樣在 health 行看得到） |
 | `batch` | 沒有＝`-`；有＝kind、送出幾個／共幾個（`sent:false` 時寫送件中）、收回幾個 |
 | `wait` | 每道門一行：路徑、到了沒；連敗暫停的門（agent 家的 `continue-*.json`）附 `（連敗暫停，aos-agent continue）`；（09-24 試玩 r3 改）完整 `touch <絕對路徑>` 只在 `-v`／`--verbose` 與 `--json` 出現 |
@@ -19,7 +19,7 @@
 短版（09-24 fix-r5 補）：去掉開頭的 `aos-agent: `、舊格式 stuck 行的 `touch <路徑> 繼續` 改寫成 `修好原因後 aos-agent continue --target <dir>`、批次名（`aw-<資料夾名>-<數字>-<數字>…`）縮成 `aw-…`、超過 120 字截斷並加 `…（-v 看全文）`；`-v` 印原文，`--json` 的 `last_error` 也是原文。`-v` 另印一行 `stuck` 原文 |
 | `kernel` | K 帳本裡 `agent-<資料夾名>` 那筆的 status／runs／fails；K 取 `AOS_KERNEL_HOME`，沒設就用 `tick.json` 記的，都沒有＝（09-24 試玩 r3 改）`kernel 從沒 start 過（沒設 AOS_KERNEL_HOME、也沒 tick.json）；aos-agent start --target <dir>`；帳本讀不到、沒登記各有一句 |
 
-`--json` 印一行 JSON，同樣的資訊（鍵：`dir`、`info_error`、`state_error`、`state`、`errors`、`batch`、`waits`、`pending_inputs`、`intake`、`last_error`、`kernel`）。
+`--json` 印一行 JSON，同樣的資訊（鍵：`dir`、`info_error`、`state_error`、`access_error`、`state`、`errors`、`batch`、`waits`、`pending_inputs`、`intake`、`last_error`、`kernel`）。
 （09-24 試玩 r3 補）另有 `health`（`{code, message}`，code：`ok`／`kernel`／`unregistered`／`manual_paused`（09-24 fix-r4 補）／`paused`／`bad`／`config`）、`current_error`（上表 error 欄的原因，沒有＝null）、`streak`（連敗次數，暫停中＝3）、`paused`（**連敗**暫停）、`last_error_time`（ISO 時間或 null）；`last_error` 照舊是最後一行。
 （09-24 fix-r4 補）`manual_paused`（布林）、`manual_paused_since`（`paused` 檔的修改時間，ISO，沒暫停＝null）。
 （09-24 fix-r5 補）`resumed`（布林）、`resumed_since`（`resumed` 檔的修改時間，ISO，沒有＝null）；health 的 code 多三個：`recovering`、`retrying`、`resuming`。

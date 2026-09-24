@@ -19,8 +19,27 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'pause': '手動暫停：還登記著，但每格什麼都不做',
          'continue': '解除手動暫停與連敗暫停',
          'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）',
-         'tools': '裝工具包：tools add NAME|DIR（內建 base＝read／write／edit／bash／grep／find／ls）'}
+         'tools': '工具管理：tools ls／add／rm／alias／unalias（內建包 base＝read／write／edit／bash／grep／find／ls）',
+         'access': '權限牆：access ls／set／rm／cwd／net（工具關進牢裡看得到哪些資料夾）'}
 TALK_WAIT_SECONDS = 120
+ACCESS_EPILOG = ('用法：\n'
+                 '  aos-agent access ls  [--target DIR] [--json]\n'
+                 '  aos-agent access set NAME PATH [--ro | --rw] [--cwd] [--target DIR]\n'
+                 '  aos-agent access rm  NAME [--target DIR]\n'
+                 '  aos-agent access cwd NAME [--target DIR]\n'
+                 '  aos-agent access net on|off [--target DIR]\n'
+                 'PATH 照目前資料夾轉成絕對路徑寫進 access.json；工具在牢裡看到 /work/NAME。改完下一批工具生效，不用重 start。')
+TOOLS_ARGS = {'ls': (), 'add': ('NAME|DIR|FILE.json',), 'rm': ('NAME',), 'alias': ('NAME', 'NEW'),
+              'unalias': ('NEW',)}
+TOOLS_EPILOG = ('用法：\n'
+                '  aos-agent tools ls      [--target DIR] [--json]\n'
+                '  aos-agent tools add     NAME|DIR|FILE.json [--target DIR] [--as NEW | --as OLD=NEW[,OLD=NEW…]]'
+                ' [--only a,b] [--root DIR] [--force]\n'
+                '  aos-agent tools rm      NAME [--target DIR]      # 只改 info.json，不刪檔\n'
+                '  aos-agent tools alias   NAME NEW [--target DIR]\n'
+                '  aos-agent tools unalias NEW [--target DIR]\n'
+                'add 的對象：不含 / 的名字＝內建工具包；含 <資料夾名>.json 的資料夾＝工具包（複製進 tools/）；\n'
+                '其他資料夾或 .json 檔＝原地引用（不複製，info.tools 加一條）。改完下一批工具生效，不用重 start。')
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
 FULL_LIMIT = 4000  # 跟 aos_agent_listen_render.FULL_LIMIT 一致（-h 不為了一個數字載入印法模組）
 LISTEN_MODES = '--last [N]（最後 N 則）、--wait [秒]（等下一則）、--follow（一直印）'
@@ -83,11 +102,26 @@ def _parser():
         if name == 'init':
             sub.add_argument('--force', action='store_true', help='資料夾裡已有別的東西也照樣生（info.json 已在仍拒絕）')
         if name == 'tools':
-            sub.usage = 'aos-agent tools add NAME|DIR [--target DIR] [--root DIR] [--force]'
-            sub.add_argument('action', choices=['add'], help='目前只有 add')
-            sub.add_argument('package', metavar='NAME|DIR', help='內建工具包名字（proto5/tools/ 下），或工具包資料夾（含 /）')
-            sub.add_argument('--root', metavar='DIR', help='工作根目錄（寫進工具包的 config.json；base 沒給＝agent 家的 workspace/）')
-            sub.add_argument('--force', action='store_true', help='已經裝過也重裝（保留原本的 config.json，除非給了 --root）')
+            sub.formatter_class = argparse.RawDescriptionHelpFormatter
+            sub.usage = 'aos-agent tools {ls,add,rm,alias,unalias} [ARG…] [--target DIR] [選項]'
+            sub.epilog = TOOLS_EPILOG
+            sub.add_argument('action', choices=list(TOOLS_ARGS), help='要做什麼（見下面用法）')
+            sub.add_argument('args', nargs='*', metavar='ARG')
+            sub.add_argument('--root', metavar='DIR', help='add 裝包：工作根目錄（寫進工具包的 config.json；base 沒給＝agent 家的 workspace/）')
+            sub.add_argument('--force', action='store_true', help='add 裝包：已經裝過也重裝（保留原本的 config.json，除非給了 --root）')
+            sub.add_argument('--as', dest='as_', metavar='NEW|OLD=NEW[,…]', help='add：改名（恰好一支時可只給新名）')
+            sub.add_argument('--only', metavar='a,b', help='add：只挑這幾支（原名）')
+            sub.add_argument('--json', action='store_true', help='ls：印穩定的機器格式')
+        if name == 'access':
+            sub.formatter_class = argparse.RawDescriptionHelpFormatter
+            sub.usage = 'aos-agent access {ls,set,rm,cwd,net} [ARG…] [--target DIR] [選項]'
+            sub.epilog = ACCESS_EPILOG
+            sub.add_argument('action', choices=['ls', 'set', 'rm', 'cwd', 'net'], help='要做什麼（見下面用法）')
+            sub.add_argument('args', nargs='*', metavar='ARG')
+            sub.add_argument('--ro', action='store_true', help='set：唯讀掛')
+            sub.add_argument('--rw', action='store_true', help='set：可寫掛（跟信任資料重疊會拒絕）')
+            sub.add_argument('--cwd', action='store_true', help='set：同時把牢裡起點設成它')
+            sub.add_argument('--json', action='store_true', help='ls：印機器格式')
         if name == 'continue':
             sub.add_argument('--all', action='store_true',
                              help='解開 AOS_KERNEL_HOME 帳本裡所有登記的 agent（不能跟 --target 一起給）')
@@ -124,6 +158,57 @@ def _listen_count(ap, args):
     return int(digits) if len(digits) <= 9 else 10 ** 9  # 再大也只是「全部」，不必真的換算
 
 
+def _names(ap, flag, value):
+    names = value.split(',')
+    if not all(names):
+        ap.error('%s 的名字不可為空：%r' % (flag, value))
+    if len(set(names)) != len(names):
+        ap.error('%s 的名字重複了：%r' % (flag, value))
+    return names
+
+
+def _tools_usage(ap, args):
+    """tools 子命令的用法驗（退 2）：參數個數、選項只給對的動作、--as／--only 的寫法。"""
+    want = TOOLS_ARGS[args.action]
+    if len(args.args) != len(want):
+        ap.error('tools %s 要 %s' % (args.action, ' '.join(want) if want else '不帶參數'))
+    if any(not a for a in args.args):
+        ap.error('tools %s 的參數不可為空' % args.action)
+    if args.action != 'add':
+        extra = [f for f, v in (('--root', args.root), ('--force', args.force), ('--as', args.as_),
+                                ('--only', args.only)) if v is not None and v is not False]
+        if extra:
+            ap.error('%s 只給 tools add' % '、'.join(extra))
+    if args.json and args.action != 'ls':
+        ap.error('--json 只給 tools ls')
+    as_arg = only = None
+    if args.as_ is not None:
+        if '=' not in args.as_:
+            if not args.as_ or ',' in args.as_:
+                ap.error('--as 要是一個新名字，或 OLD=NEW[,OLD=NEW…]：%r' % args.as_)
+            as_arg = ('one', args.as_)
+        else:
+            pairs = [p.split('=', 1) for p in args.as_.split(',')]
+            if any(len(p) != 2 or not p[0] or not p[1] for p in pairs):
+                ap.error('--as 的每一段都要是 OLD=NEW：%r' % args.as_)
+            _names(ap, '--as', ','.join(p[0] for p in pairs))
+            as_arg = ('map', dict(pairs))
+    if args.only is not None:
+        only = _names(ap, '--only', args.only)
+    return as_arg, only
+
+
+def _tools(target, args, opts):
+    import aos_agent_tools_edit as edit
+    a = args.args
+    if args.action == 'add':
+        from aos_agent_tools import add
+        return add(target, a[0], root=args.root, force=args.force, as_arg=opts[0], only=opts[1])
+    if args.action == 'ls':
+        return edit.ls(target, as_json=args.json)
+    return {'rm': edit.rm, 'alias': edit.alias, 'unalias': edit.unalias}[args.action](target, *a)
+
+
 def _is_number(value):
     try:
         float(value)
@@ -155,6 +240,13 @@ def main(argv=None):
             ap.error('continue --all 要 AOS_KERNEL_HOME（kernel 家的絕對路徑）')
     if args.command == 'listen':
         count = _listen_count(ap, args)
+    if args.command == 'tools':
+        tools_opts = _tools_usage(ap, args)
+    if args.command == 'access':
+        from aos_agent_access_cli import usage_problem
+        problem = usage_problem(args.action, args.args, ro=args.ro, rw=args.rw, cwd=args.cwd, as_json=args.json)
+        if problem:
+            ap.error(problem)
     wait = getattr(args, 'wait', None)
     timeout = _seconds(ap, wait) if wait is not None else WAIT_SECONDS * 1000
     if args.command == 'talk':
@@ -196,8 +288,11 @@ def main(argv=None):
             from aos_agent_pause import pause, resume
             return pause(target) if args.command == 'pause' else resume(target)
         if args.command == 'tools':
-            from aos_agent_tools import add
-            return add(target, args.package, root=args.root, force=args.force)
+            return _tools(target, args, tools_opts)
+        if args.command == 'access':
+            from aos_agent_access_cli import main as access_main
+            return access_main(target, args.action, args.args, ro=args.ro, rw=args.rw, cwd=args.cwd,
+                               as_json=args.json)
         if args.command == 'init':
             from aos_agent_init import init
             return init(target, force=args.force)

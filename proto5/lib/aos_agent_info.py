@@ -84,6 +84,24 @@ def pairs(value, where):
         require(absolute(item.get('src')) and absolute(item.get('dst')), where)
 
 
+def check_access(access):
+    """batch.access（spec/agent/state.md §4.3）：null、{"error": 字串}、或解好的快照；舊 state 沒這鍵＝null。"""
+    if access is None:
+        return
+    obj(access, 'batch.access')
+    if 'error' in access:
+        require(set(access) == {'error'} and isinstance(access['error'], str), 'batch.access.error')
+        return
+    require(set(access) == {'mounts', 'cwd', 'net'} and type(access['net']) is bool, 'batch.access')
+    mounts = access['mounts']
+    obj(mounts, 'batch.access.mounts')
+    for name, m in mounts.items():
+        obj(m, 'batch.access.mounts[]')
+        require(work_name(name) and absolute(m.get('path')) and type(m.get('ro')) is bool,
+                'batch.access.mounts[]')
+    require(access['cwd'] is None or access['cwd'] in mounts, 'batch.access.cwd')
+
+
 def check_batch(batch):
     if batch is None:
         return
@@ -96,6 +114,7 @@ def check_batch(batch):
     calls = batch.get('calls')
     require(isinstance(calls, list), 'batch.calls')
     require(kind != 'think' or len(calls) == 1, 'think.calls')
+    check_access(batch.get('access'))
     for call in calls:
         obj(call, 'call')
         require('name' in call and (call['name'] is None or work_name(call['name'])), 'call.name')

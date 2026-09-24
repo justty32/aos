@@ -18,6 +18,7 @@ aos-agent tools add base --target $W/bob --force          # 重裝（保留原�
 （agent 同一批工具可能平行跑，「先寫再跑」這種有先後的，叫它一次一個最穩。）
 
 **工作根目錄**：`<家>/tools/base/config.json` 的 `root`（相對 agent 家；沒寫＝`workspace`）。改了下一次叫工具就生效。
+環境變數 `AOS_TOOL_ROOT` 有值時以它為準、不看 `config.json`：agent 家有 `access.json`（工具關進牢裡）時，`aos-jail` 會設成牢裡的起點（例如 `/work/ws`），錯誤訊息印的也是這個牢裡路徑（[aos-jail](../spec/aos-exec/aos-jail.md)）。
 read／write／edit／grep／find／ls 碰不到根目錄以外（`../`、絕對路徑、符號連結指出去都算，回 `OutsideRoot`）；**bash 關不住**，只是從根目錄開始跑。
 這是防模型手滑、不是沙盒（有別的行程同時在換路徑時擋不完全；反正 bash 什麼都碰得到）。
 

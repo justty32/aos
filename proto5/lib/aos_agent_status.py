@@ -195,19 +195,25 @@ def collect(agent_dir, env=None):
     """各區獨立診斷；只有不是 agent 家才拒絕。"""
     env = os.environ if env is None else env
     base = os.path.abspath(agent_dir)
-    result = dict(dir=base, info_error=None, state_error=None, state=None, errors=None,
+    result = dict(dir=base, info_error=None, state_error=None, access_error=None, state=None, errors=None,
                   batch=None, waits=[], pending_inputs=[], intake=False, last_error=None,
                   kernel=kernel_status(base, env))
     since = manual_paused(base)
     result.update(manual_paused=since is not None, manual_paused_since=_iso(since))
     since = resumed_since(base)
     result.update(resumed=since is not None, resumed_since=_iso(since))
+    info = None
     try:
-        aos_agent_info.load(base, env=env)
+        info = aos_agent_info.load(base, env=env)
     except (AgentError, OSError) as exc:
         if getattr(exc, 'code', None) == 'NotAnAgent':
             raise
         result['info_error'] = str(exc)
+    try:
+        import aos_agent_access
+        aos_agent_access.load(base, env=env, info=info)
+    except (AgentError, OSError) as exc:
+        result['access_error'] = str(exc)
     try:
         st = aos_agent_info.load_state(base, env=env)
         result.update(state=st['state'], errors=st['errors'], intake=st['intake'] is not None)
@@ -233,6 +239,8 @@ def show(data, *, as_json=False, verbose=False):
     print('agent  ' + data['dir'])
     if data['info_error']:
         print('info  bad：' + ' '.join(data['info_error'].split()))
+    if data.get('access_error'):
+        print('access bad：%s（下一批工具會跑不起來；aos-agent access ls 看全表）' % ' '.join(data['access_error'].split()))
     if data['state_error']:
         print('state bad：' + ' '.join(data['state_error'].split()))
     else:

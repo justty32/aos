@@ -1,13 +1,18 @@
 """aos-agent.md §5～§7：建批、送件、收回、結清。"""
+import os
 from pathlib import Path
+import shutil
 
 import aos_home
 import aos_inst
+import aos_agent_access
 from aos_agent_home import AgentError
 from aos_agent_results import act_done, model_message, think_done
 from aos_agent_runtime import RESUMED, history_prefix, ledger, report, unique_id
 
 META = {'_type': 'posix', '_version': 1}
+NO_BWRAP = ('NoBwrap: 找不到 bwrap（bubblewrap），工具關不進牢裡；'
+            'Arch/Manjaro: sudo pacman -S bubblewrap，Debian/Ubuntu: sudo apt install bubblewrap')
 
 
 def tool_map(run):
@@ -31,6 +36,9 @@ def make_batch(run, kernel):
                           'acked': not found})
     run.st['batch'] = {'kind': kind, 'kernel': kernel, 'base_len': len(history),
                        'sent': False, 'calls': calls}
+    if kind == 'act':
+        # access.md：一批只解一次，同批每件、崩潰重送都用這份快照
+        run.st['batch']['access'] = aos_agent_access.snapshot(run.base, run.env, run.info, run.st)
     run.save('state.batch')
 
 
@@ -44,7 +52,23 @@ def already_posted(kernel, name):
     return (kernel / 'responses' / (name + '.json')).exists()
 
 
-def tool_inst(meta, base, name, env):
+def jail_argv(decoded, access):
+    """把解好的 argv 包成 aos-jail（spec/aos-agent/access.md）；_meta.envs 改成 --setenv。"""
+    prog = decoded['argv'][0]
+    if '/' in prog:
+        prog = os.path.join(decoded['cwd'], prog)
+    flags = []
+    for mount, m in access['mounts'].items():
+        flags += ['--mount-ro' if m['ro'] else '--mount', '%s=%s' % (mount, m['path'])]
+    if access['cwd'] is not None:
+        flags += ['--chdir', access['cwd']]
+    flags += ['--net', 'on' if access['net'] else 'off']
+    for key, value in decoded['envs'].items():
+        flags += ['--setenv', '%s=%s' % (key, value)]
+    return ['aos-jail', *flags, '--', prog, *decoded['argv'][1:]]
+
+
+def tool_inst(meta, base, name, env, access=None):
     decoded = aos_inst.load_obj(meta, str(base), env=env)
     inst = {'_metainfo': dict(META), 'argv': decoded['argv'], 'cwd': decoded['cwd']}
     if decoded['cwd_mkdir']:
@@ -53,6 +77,9 @@ def tool_inst(meta, base, name, env):
         inst['envs'] = {'$opt': 'clear', '$val': decoded['envs']}
     elif decoded['envs']:
         inst['envs'] = decoded['envs']
+    if access is not None:
+        inst['argv'] = jail_argv(decoded, access)
+        inst.pop('envs', None)
     for field in ('stderr', 'exit'):
         stream = decoded[field]
         special = next((key for key in ('inherit', 'merge') if stream.get(key)), None)
@@ -72,8 +99,20 @@ def think_inst(base, name):
             'stderr': {'$opt': ['append', 'mkdir'], '$val': str(base / 'log' / 'llm.err')}}
 
 
+def jail_problem(access, tool, env):
+    """這支要關牢但關不起來 → 白話（照 send §5.3 記成跑不起來）；不用關或關得起來＝None。"""
+    if access is None or tool.get('_jail', True) is False:
+        return None
+    if 'error' in access:
+        return access['error']
+    if shutil.which('bwrap', path=env.get('PATH', os.defpath)) is None:
+        return NO_BWRAP
+    return None
+
+
 def send(run):
     batch, tools = run.st['batch'], tool_map(run)
+    access = batch.get('access')
     for i, call in enumerate(batch['calls']):
         name = call['name']
         if name is None or call['done'] is not None:
@@ -88,8 +127,13 @@ def send(run):
                 if tool is None:
                     call.update(done={'content': '沒有這個工具：' + call['tool']}, acked=True)
                     continue
+                problem = jail_problem(access, tool, run.env)
+                if problem is not None:
+                    call.update(done={'content': '工具 %s 跑不起來：%s' % (call['tool'], problem)}, acked=True)
+                    continue
+                jailed = access if access is not None and tool.get('_jail', True) is not False else None
                 try:
-                    inst = tool_inst(tool['_meta'], run.base, name, run.env)
+                    inst = tool_inst(tool['_meta'], run.base, name, run.env, access=jailed)
                 except aos_inst.InstError as exc:
                     call.update(done={'content': '工具 %s 跑不起來：%s' % (call['tool'], exc)}, acked=True)
                     continue

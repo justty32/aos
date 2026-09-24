@@ -24,3 +24,4 @@ inst.json 的格式與執行語意在 [inst-posix.md](../inst-posix/README.md)�
 | [usage.md](usage.md) | 用法；三種目標：`xxx` 是什麼決定怎麼跑；旗標 |
 | [exit.md](exit.md) | 退出碼：自己的失敗跟子程式的碼分開；125 與 2 時 stderr 印什麼 |
 | [api.md](api.md) | 給程式用：`run_target()`；例子 |
+| [aos-jail.md](aos-jail.md) | 另一支小指令 `aos-jail`：照參數把程式關進 bwrap 跑（09-24 access-impl，aos-agent 送件包牢用） |

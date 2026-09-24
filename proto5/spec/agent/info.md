@@ -19,7 +19,7 @@
 | `_metainfo` | 物件 | 必填 | `_type` 只認 `llm_agent`（不合＝`NotAnAgent`）、`_version` 只認整數 1（bool 不算；不合＝`UnsupportedVersion`）；缺欄位＝`MetainfoInvalid` |
 | `system` | 檔案路徑 | `prompts/system.json` | 人格檔（§3.1）；檔不存在＝空字串 |
 | `history` | 檔案路徑 | `prompts/history.json` | 記憶檔（§3.2）；檔不存在＝`[]`；aos-agent 整份原子重寫這個檔 |
-| `tools` | 路徑陣列 | `[]` | 工具檔（§3.3），照順序合併；列到的檔或資料夾一定要在 |
+| `tools` | 路徑陣列 | `[]` | 工具檔（§3.3），照順序合併；列到的檔或資料夾一定要在；元素可寫成 `$opt` 選項物件改名或只挑幾支（[§3.4](tools-opt.md)） |
 | `llm.model` | 非空字串 | 必填 | 模型**代號**；真名、endpoint、金鑰在 llm cpu 那邊的 llm.json（[aos-llm.md §2](../aos-llm/config.md)） |
 | `llm.params` | 物件 | `{}` | 組 body 用的模型參數 |
 | `llm.pool` | 字串 | `llm` | 問模型的工作派去哪個池；K 的 `info.cpus` 裡要有這個池的 cpu，否則 kernel 退件 |
@@ -27,8 +27,9 @@
 | `tool_pool` | 字串 | `default` | 工具的工作派去哪個池 |
 | `tick.pool` | 字串 | `default` | `aos-agent start` 登記反覆行程用的池 |
 | `tick.interval_ms` | 非負整數 | 沒寫＝不帶，用 kernel 的預設 | 同上，多久跑一格 |
+| `access` | 路徑字串（可用指示詞） | `access.json` | 權限牆檔（[§3.5](access.md)），相對 agent 家；檔不在＝工具不關牢，但**明寫了**卻不在＝`AccessInvalid`（09-24 access-impl） |
 
-- 整數欄一律不收 bool。型別不對＝`FieldTypeMismatch`（明寫 `null` 也不合法）；`llm` 缺或 `llm.model` 缺＝`LlmInvalid`。沒有欄位吃 `$opt`。
+- 整數欄一律不收 bool。型別不對＝`FieldTypeMismatch`（明寫 `null` 也不合法）；`llm` 缺或 `llm.model` 缺＝`LlmInvalid`。只有 `tools` 的元素吃 `$opt`（[§3.4](tools-opt.md)，09-24 access-impl）；其他位置寫 `$opt`＝`UnknownOption`。
 - 讀驗時只解路徑、驗型別，不看 K、不看 llm 池存不存在——真的送件時 kernel 才回。
 
 ## 3.1 人格
@@ -71,4 +72,6 @@
   之後 `stderr`／`exit`、`$ref` 以解出來的 `cwd` 為中心。`argv` 的元素不當路徑改寫（`argv[0]` 照 PATH 找）。
   讀驗 info 時不解 `_meta`；送件時才解，解不過只算那一個 call 跑不起來（aos-agent.md §5.3）。
 - `_timeout_ms`：可省，非負整數（bool 不算），沒寫＝60000；這就是 kernel `add` 的 `timeout_ms`。
+- （09-24 access-impl）`_jail`：可省，只收 `true`／`false`（別的＝`ToolInvalid`）；`false`＝這支不關牢（[access.md](access.md)）。
+- （09-24 access-impl）`tools` 元素的 `as` 改過名的，`function.name` 就是新名字；讀出來每條另帶內部鍵 `_source`（[§3.4](tools-opt.md)）。
 - 送模型前每個元素的 `_` 開頭 key 全拿掉。

@@ -30,8 +30,16 @@ daemon 家：`AOS_DAEMON_HOME`，沒設就用 K 的 `info.json` 記的 `daemon`�
 2. **整段 kernel 的檢查**，跟 `aos-kernel check --target K` 同一份（[kernel §6 check](../kernel/cli-ops.md)）：`info`、`dirs`、`daemon`、`cpus`、`path`、`pools`、`llm/<cpu>`。K 的 `info.json` 讀不到＝`bad  info: …（K＝<路徑>，取自 …）`，後面的 kernel 項目不印。
 3. **這個 agent 家**（原本 `--agent` 那幾項，內容不變）：`agent`（info 讀驗）、`agent/tick.pool`、`agent/llm.pool`（池在不在 K 的 cpu 表）、`agent/llm.model`（代號在不在 llm 項讀到的模型表）、`agent/tool/<名字>`（`_meta.argv[0]` 找不找得到、有沒有執行位；有 `/` 的相對路徑從家算，沒有 `/` 的照 daemon 的 PATH 找；寫成指示詞＝warn）。
    K 讀不到時池與模型沒法查：印一行 `warn agent/pools: K 讀不到，池與模型代號沒查；先修好上面的 kernel 項`，工具照查。agent 的 info 讀不到＝`bad  agent: <代號>: …`，後面的 agent 項不印。
-4. `--probe` 才有：`probe/<代號>`，跟 `aos-kernel check --probe` 同一套（llm.json 裡每個 endpoint＋model＋api_key 只打一次）。
-5. 最後一行總結：有 `bad`＝`有 bad，照上面的提示修好再 aos-agent start`；沒有＝`設定檢查通過；未測模型連線（--probe 會測）`，有 `--probe` 時是 `設定檢查通過；模型連線也測過`。
+4. （09-24 access-impl）**權限牆**（[access.md](access.md)）：
+   - 沒 access 檔：家裡有工具＝`warn access: 沒有 access.json：工具不關牢…`（教一行 `access set`），沒工具就不印；以下略過。
+   - `access`：解得開、名字、路徑存在、`cwd`、重疊（同送件那一套）＝`ok  access: <檔> 讀驗通過：N 個 mount、起點 …、net …`；不合＝`bad  access: <代號>: …`。`info.json` 明寫 `access` 卻指到不在的檔也是 bad。
+   - `access/<名>`：mount 頂層有 socket／FIFO＝warn（牢裡連得到，唯讀也擋不住）。
+   - `access/bwrap`：跑一次固定、無副作用的 bwrap（跟 aos-jail 同一組參數、不掛任何 mount、程式是 `true`）；找不到＝`bad … NoBwrap: …安裝指令`，開不起來＝bad 帶 bwrap 的訊息。
+   - `access/aos-jail`：工具池 PATH（同 `agent/tool/*` 用的那份）找不到 `aos-jail`＝bad。
+   - `agent/tool/<名字>` 追加：`_jail: false`＝warn（這支不關牢）；`argv[0]` 不含 `/`、而且在 PATH 找到的實體不在 `/usr/` 下（或找不到）＝warn（牢裡只有 `/usr`，可能找不到）。
+   靜態查不完的（牢裡的直譯器、動態函式庫）不查。
+5. `--probe` 才有：`probe/<代號>`，跟 `aos-kernel check --probe` 同一套（llm.json 裡每個 endpoint＋model＋api_key 只打一次）。
+6. 最後一行總結：有 `bad`＝`有 bad，照上面的提示修好再 aos-agent start`；沒有＝`設定檢查通過；未測模型連線（--probe 會測）`，有 `--probe` 時是 `設定檢查通過；模型連線也測過`。
 
 `check` 不看登記狀態、暫停與錯誤紀錄——那是 `status`（§1.3）。
 

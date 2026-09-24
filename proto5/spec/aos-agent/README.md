@@ -27,8 +27,8 @@
 - kernel `stop`：還在排隊的 once 回 `Stopping`（think 下次重問、工具告訴模型「沒跑」），在跑的照常跑完；
   agent 自己的那格在 stopping 時不會被派，當批留到下次 boot 之後收（kernel 跨 boot 保留 `procs`／`replies`）。
 - 放單崩在 `link` 之後、刪 `.tmp` 之前：`K/requests/` 留一個 `.` 開頭 `.tmp` 結尾的殘檔；主人只收 `.json`，不會誤收；**沒人自動清**（保證外），人在都停著時刪。
-- **日常 CLI 是最小版**（09-24 試玩 r2 補）：`init`（單一內建預設）、`say`、`status`、`continue` 有了（§1.1～§1.4）；（09-24 fix-r4 補）`listen`、`pause`（§1.5、§1.6）；（09-24 fix-r5 補）`continue --all`、`init --force`（§1.4、§1.1）；（09-24 advice-r1 補）`check`（§1.7）；（09-24 tools-base 補）`tools add`（§1.8）；（09-24 talk 補）`talk`（§1.9）。
-  **這份沒管的**：`init --template`／`--config`（template 從哪來使用者還沒定）、`tools ls`／`remove`／`enable`／`disable` 與 `llms` 子命令、專屬 cpu、`say` 投到 `input` 第一條以外的地方；構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)。記憶太長也沒管。
+- **日常 CLI 是最小版**（09-24 試玩 r2 補）：`init`（單一內建預設）、`say`、`status`、`continue` 有了（§1.1～§1.4）；（09-24 fix-r4 補）`listen`、`pause`（§1.5、§1.6）；（09-24 fix-r5 補）`continue --all`、`init --force`（§1.4、§1.1）；（09-24 advice-r1 補）`check`（§1.7）；（09-24 tools-base 補）`tools add`（§1.8）；（09-24 talk 補）`talk`（§1.9）；（09-24 access-impl 補）`tools ls`／`rm`／`alias`／`unalias`（§1.8 續）、`access`（[access.md](access.md)）。
+  **這份沒管的**：`init --template`／`--config`（template 從哪來使用者還沒定）、`tools enable`／`disable` 與 `llms` 子命令、專屬 cpu、`say` 投到 `input` 第一條以外的地方；構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)。記憶太長也沒管。
 
 ## 各節
 
@@ -44,7 +44,9 @@
 | [cli-status.md](cli-status.md) | §1.3 `status` 現在怎樣了；§1.4 `continue` 解除暫停；§1.6 `pause` 手動暫停 |
 | [cli-talk-repl.md](cli-talk-repl.md) | §1.9 `talk`：來回對話的極簡 REPL、slash 指令（09-24 talk 補） |
 | [cli-check.md](cli-check.md) | §1.7 `check`：start 之前先查一遍（K 自己找、`--probe`；09-24 advice-r1 從 `aos-kernel check --agent` 搬來） |
-| [tools.md](tools.md) | §1.8 `tools add` 裝工具包（內建 `base`：read／write／edit／bash／grep／find／ls）與工作根目錄（09-24 tools-base 補） |
+| [tools.md](tools.md) | §1.8 `tools add` 裝工具包（內建 `base`：read／write／edit／bash／grep／find／ls）與工作根目錄（09-24 tools-base 補）；原地引用資料夾／`.json` 檔、`--as`／`--only`（access-impl） |
+| [access.md](access.md) | 權限牆：act 批建批時解 `access.json` 存快照、送件包 `aos-jail`、`access ls／set／rm／cwd／net`（09-24 access-impl） |
+| [tools-manage.md](tools-manage.md) | §1.8 續 `tools ls [--json]`／`rm`／`alias`／`unalias`：只改 `info.tools`、不刪檔（09-24 access-impl） |
 | [tick.md](tick.md) | §2 一次 `tick` 的順序；§2.1 同時兩個 `tick`；§12 `tick` 的退出碼與 stderr |
 | [gate.md](gate.md) | §3 門；§4 `batch` 是 `null` 時照 `state` 走 |
 | [send.md](send.md) | §5 送出一批：§5.1 建批、§5.2 送件、§5.3 act（工具的 inst）、§5.4 think（問模型的 inst） |

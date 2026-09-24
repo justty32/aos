@@ -8,7 +8,8 @@ import json
 import os
 from pathlib import Path
 
-from aos_directives import Context, DirectiveError, Document, is_directive, resolve_located
+from aos_directives import (Context, DirectiveError, Document, is_directive, is_option_object,
+                            resolve_located)
 
 
 class AgentError(Exception):
@@ -175,44 +176,60 @@ def strip_private(tool):
     return {k: v for k, v in tool.items() if not k.startswith("_")}
 
 
+def _check_tool(t, where):
+    """驗一個工具元素（agent.md §3.3）；不合＝ToolInvalid。"""
+    if not isinstance(t, dict) or t.get("type") != "function":
+        raise AgentError("ToolInvalid", where + "工具必須是 type 為 function 的物件")
+    fn, meta = t.get("function"), t.get("_meta")
+    if not isinstance(fn, dict) or not _nonempty(fn.get("name")):
+        raise AgentError("ToolInvalid", where + "工具 function 必須有非空字串 name")
+    for key, typ in (("description", str), ("parameters", dict)):
+        if key in fn and not isinstance(fn[key], typ):
+            raise AgentError("ToolInvalid", where + "工具 function.%s 型別不對" % key)
+    if not isinstance(meta, dict) or any(k in meta for k in ("stdin", "stdout")):
+        raise AgentError("ToolInvalid", where + "工具 _meta 必須是物件，且不能寫 stdin／stdout")
+    timeout = t.get("_timeout_ms", 60000)
+    if type(timeout) is not int or timeout < 0:
+        raise AgentError("ToolInvalid", where + "工具 _timeout_ms 必須是非負整數（bool 不算）")
+    if "_jail" in t and type(t["_jail"]) is not bool:
+        raise AgentError("ToolInvalid", where + "工具 _jail 只收 true／false")
+
+
+def _tool_file(path, files=None):
+    """讀一個工具檔並逐條驗；files 是試算用的「假裝已經在磁碟上」的檔 {絕對路徑: 內容}。"""
+    path = os.path.abspath(path)
+    values = files[path] if files and path in files else _read_json(path)
+    if not isinstance(values, list):
+        raise AgentError("ToolInvalid", "%s 的工具頂層必須是陣列" % path)
+    for i, t in enumerate(values):
+        _check_tool(t, "%s 第 %d 個元素：" % (path, i))
+    return path, values
+
+
 def read_tools(paths):
     """合併已展開的工具檔路徑；內容錯一律 ToolInvalid，不解 _meta。"""
     merged, seen = [], {}
     for path in paths:
-        path = os.path.abspath(path)
-        values = _read_json(path)
-        if not isinstance(values, list):
-            raise AgentError("ToolInvalid", "%s 的工具頂層必須是陣列" % path)
+        path, values = _tool_file(path)
         for i, t in enumerate(values):
-            where = "%s 第 %d 個元素：" % (path, i)
-            if not isinstance(t, dict) or t.get("type") != "function":
-                raise AgentError("ToolInvalid", where + "工具必須是 type 為 function 的物件")
-            fn, meta = t.get("function"), t.get("_meta")
-            if not isinstance(fn, dict) or not _nonempty(fn.get("name")):
-                raise AgentError("ToolInvalid", where + "工具 function 必須有非空字串 name")
-            for key, typ in (("description", str), ("parameters", dict)):
-                if key in fn and not isinstance(fn[key], typ):
-                    raise AgentError("ToolInvalid", where + "工具 function.%s 型別不對" % key)
-            if not isinstance(meta, dict) or any(k in meta for k in ("stdin", "stdout")):
-                raise AgentError("ToolInvalid", where + "工具 _meta 必須是物件，且不能寫 stdin／stdout")
-            timeout = t.get("_timeout_ms", 60000)
-            if type(timeout) is not int or timeout < 0:
-                raise AgentError("ToolInvalid", where + "工具 _timeout_ms 必須是非負整數（bool 不算）")
-            if fn["name"] in seen:
+            if t["function"]["name"] in seen:
                 raise AgentError("ToolInvalid", "合併後工具同名：%s（%s、%s 第 %d 個）" %
-                                 (fn["name"], seen[fn["name"]], path, i))
-            seen[fn["name"]] = "%s 第 %d 個" % (path, i)
+                                 (t["function"]["name"], seen[t["function"]["name"]], path, i))
+            seen[t["function"]["name"]] = "%s 第 %d 個" % (path, i)
             merged.append(t)
     return merged
 
 
-def _expand_tools(paths):
+def _expand_tools(paths, files=None):
+    """資料夾＝裡面的 *.json（不含 *.done），照檔名排序；files 裡落在該資料夾的假檔一併算進去。"""
     out = []
     for path in paths:
         try:
             if Path(path).is_dir():
-                out.extend(str(p) for p in sorted(Path(path).iterdir(), key=lambda p: p.name)
-                           if p.name.endswith(".json") and not p.name.endswith(".done") and p.is_file())
+                found = {str(p) for p in Path(path).iterdir()
+                         if p.name.endswith(".json") and not p.name.endswith(".done") and p.is_file()}
+                found.update(f for f in (files or ()) if os.path.dirname(f) == os.path.abspath(path))
+                out.extend(sorted(found, key=lambda p: os.path.basename(p)))
             else:
                 out.append(path)
         except OSError as e:
@@ -220,10 +237,117 @@ def _expand_tools(paths):
     return out
 
 
-def load_llm_view(agent_dir, env=None):
-    """只解驗模型輸入六格；回絕對路徑、原始內容與送模型用的工具表。"""
+TOOL_OPT_KEYS = ("as", "only")
+
+
+def tool_option(opt, has_val, where):
+    """驗 tools 元素的 $opt（agent.md §3.4），回 (as 或 None, only 或 None)。"""
+    if not isinstance(opt, dict):
+        raise AgentError("FieldTypeMismatch", "%s 的 $opt 要是物件（鍵只有 as、only），不是 %r" % (where, opt))
+    extra = [k for k in opt if k not in TOOL_OPT_KEYS]
+    if extra:
+        raise AgentError("UnknownOption", "%s 的 $opt 不認得 %s；tools 元素只有 as、only"
+                         % (where, "、".join(map(repr, extra))))
+    if not opt:
+        raise AgentError("OptionConflict", "%s 的 $opt 是空物件：as、only 至少要寫一個" % where)
+    if not has_val:
+        raise AgentError("OptionConflict", "%s 的選項物件缺了 $val（工具檔或資料夾路徑）" % where)
+    as_map, only = opt.get("as"), opt.get("only")
+    if "as" in opt and not (isinstance(as_map, dict) and as_map and all(_nonempty(v) for v in as_map.values())):
+        raise AgentError("FieldTypeMismatch", "%s 的 $opt.as 要是非空物件 {原名: 新名}，新名是非空字串" % where)
+    if "only" in opt:
+        if not (isinstance(only, list) and only and all(_nonempty(n) for n in only)):
+            raise AgentError("FieldTypeMismatch", "%s 的 $opt.only 要是非空的原名字串陣列" % where)
+        dup = sorted({n for n in only if only.count(n) > 1})
+        if dup:
+            raise AgentError("FieldTypeMismatch", "%s 的 $opt.only 重複了 %s" % (where, "、".join(dup)))
+    return as_map, only
+
+
+def tool_entries(doc, ctx, base):
+    """info.tools 解成 [{"entry": i, "path": 絕對路徑, "as": dict|None, "only": list|None}]。
+
+    元素是路徑字串、指示詞（解完是路徑字串）或選項物件 {"$opt": {...}, "$val": 路徑}；
+    選項物件只認直接寫在元素位置的（§3.4），別處遇到 $opt 照舊 UnknownOption。
+    """
+    if "tools" not in doc.root:
+        return []
+    cctx = _ContentContext(doc, base_dir=ctx.base_dir, env=ctx.env)
+    out = []
+    try:
+        loc = resolve_located(doc.root["tools"], cctx, ["tools"])
+        if not isinstance(loc.value, list):
+            raise AgentError("FieldTypeMismatch", "tools 必須是路徑陣列")
+        for i, raw in enumerate(loc.value):
+            pos = loc.position + [str(i)]
+            as_map = only = None
+            if is_option_object(raw):
+                as_map, only = tool_option(raw["$opt"], "$val" in raw, "tools 第 %d 個元素" % i)
+                value = _deep(raw["$val"], loc.ctx, pos + ["$val"])
+            else:
+                value = _deep(raw, loc.ctx, pos)
+            if not isinstance(value, str):
+                raise AgentError("FieldTypeMismatch", "tools 必須是路徑字串陣列（第 %d 個不是）" % i)
+            out.append({"entry": i, "path": os.path.abspath(os.path.join(base, value)),
+                        "as": as_map, "only": only})
+    except DirectiveError as e:
+        raise AgentError(e.code, e.msg) from e
+    return out
+
+
+def _where(src):
+    return "%s 第 %d 個（原名 %s）" % (src["file"], src["index"], src["name"])
+
+
+def read_tool_entries(entries, files=None):
+    """照 tool_entries 的結果讀工具：only 先挑、as 再改名，每條帶 _source。回 (工具檔路徑, 工具)。"""
+    paths, merged, seen = [], [], {}
+    for e in entries:
+        where = "tools 第 %d 個元素（%s）" % (e["entry"], e["path"])
+        found = []
+        for f in _expand_tools([e["path"]], files):
+            f, values = _tool_file(f, files)
+            if f not in paths:
+                paths.append(f)
+            found.extend((f, i, t) for i, t in enumerate(values))
+        names = [t["function"]["name"] for _, _, t in found]
+        if e["only"] is not None:
+            missing = [n for n in e["only"] if n not in names]
+            if missing:
+                raise AgentError("ToolInvalid", "%s：only 寫了 %s，裡面沒有這支（有：%s）"
+                                 % (where, "、".join(missing), "、".join(names) or "（無）"))
+            found = [x for x in found if x[2]["function"]["name"] in e["only"]]
+        as_map = e["as"] or {}
+        chosen = [t["function"]["name"] for _, _, t in found]
+        missing = [n for n in as_map if n not in chosen]
+        if missing:
+            raise AgentError("ToolInvalid", "%s：as 寫了 %s，%s沒有這支（有：%s）"
+                             % (where, "、".join(missing), "only 挑完後" if e["only"] else "裡面",
+                                "、".join(chosen) or "（無）"))
+        for f, i, t in found:
+            orig = t["function"]["name"]
+            new = as_map.get(orig, orig)
+            src = {"file": f, "index": i, "name": orig, "entry": e["entry"]}
+            if new in seen:
+                other = seen[new]
+                if new != orig or other["name"] != new:
+                    raise AgentError("ToolInvalid", "改名後工具同名：%s（%s、%s）；是 as 改名造成的"
+                                     % (new, _where(other), _where(src)))
+                raise AgentError("ToolInvalid", "合併後工具同名：%s（%s 第 %d 個、%s 第 %d 個）"
+                                 % (new, other["file"], other["index"], f, i))
+            seen[new] = src
+            tool = dict(t, function=dict(t["function"], name=new), _source=src)
+            merged.append(tool)
+    return paths, merged
+
+
+def load_llm_view(agent_dir, env=None, *, doc=None, files=None):
+    """只解驗模型輸入六格；回絕對路徑、原始內容與送模型用的工具表。
+
+    doc／files 給試算用：doc 是改過、還沒寫回的 info.json，files 是還沒寫到磁碟的工具檔。
+    """
     base = os.path.abspath(agent_dir)
-    doc = read_info_doc(base)
+    doc = read_info_doc(base) if doc is None else doc
     obj, ctx = doc.root, Context(doc, base_dir=base, env=env)
     check_metainfo(resolve_field(doc, ctx, ["_metainfo"]) if "_metainfo" in obj else None)
     out = {"dir": base}
@@ -234,11 +358,7 @@ def load_llm_view(agent_dir, env=None):
             raise AgentError("FieldTypeMismatch", "%s 必須是路徑字串" % key)
         path = os.path.abspath(os.path.join(base, value))
         out[key + "_path"], out[key] = path, reader(path)
-    paths = resolve_field(doc, ctx, ["tools"]) if "tools" in obj else []
-    if not isinstance(paths, list) or any(not isinstance(p, str) for p in paths):
-        raise AgentError("FieldTypeMismatch", "tools 必須是路徑字串陣列")
-    out["tool_paths"] = _expand_tools([os.path.abspath(os.path.join(base, p)) for p in paths])
-    out["tools_raw"] = read_tools(out["tool_paths"])
+    out["tool_paths"], out["tools_raw"] = read_tool_entries(tool_entries(doc, ctx, base), files)
     out["tools"] = [strip_private(t) for t in out["tools_raw"]]
     if "llm" not in obj:
         raise AgentError("LlmInvalid", "info.json 缺了 llm")

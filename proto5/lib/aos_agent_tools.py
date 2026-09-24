@@ -1,10 +1,11 @@
-"""aos-agent tools add（aos-agent.md §1.8）：把一個工具包裝進 agent 家的 tools/。
+"""aos-agent tools add（aos-agent/tools.md）：裝一個工具包，或原地引用一個工具檔／資料夾。
 
 工具包＝一個資料夾 <名>/，裡面有 <名>.json（agent.md §3.3 的工具陣列）和工具程式。
 裝＝程式複製到 <家>/tools/.<名>-<版>/，符號連結 <家>/tools/<名> 原子地換過去，
-工具檔最後寫到 <家>/tools/<名>.json；info.tools 沒涵蓋就補一條。整段持著 info.json 的 flock。
+工具檔最後寫到 <家>/tools/<名>.json；info.tools 沒涵蓋就補一條。原地引用＝只在 info.tools 加一條。
+--as／--only 寫成 tools 元素的 $opt（agent.md §3.4）。整段持著 info.json 的 flock，寫之前整份試算。
 """
-import fcntl
+import copy
 import json
 import os
 import re
@@ -14,8 +15,10 @@ import time
 from pathlib import Path
 
 import aos_home
-from aos_agent_home import (AgentError, Context, load_llm_view, read_info_doc, read_tools,
-                            resolve_field)
+from aos_agent_home import (AgentError, Context, _expand_tools, load_llm_view, read_info_doc,
+                            read_tools, tool_entries)
+from aos_agent_tools_edit import (DONE, commit, editable_tools, info_lock, make_entry, rel, simulate,
+                                  split_entry)
 
 PACKAGES = Path(__file__).resolve().parent.parent / 'tools'
 NAME = re.compile(r'[A-Za-z0-9_][A-Za-z0-9_-]*\Z')
@@ -24,65 +27,154 @@ NAME = re.compile(r'[A-Za-z0-9_][A-Za-z0-9_-]*\Z')
 def find_package(spec):
     """名字（不含 /）→ proto5/tools/<名>/；含 / → 那個資料夾。回 (名, 資料夾, 工具檔)。"""
     if not spec:
-        raise AgentError('Usage', 'tools add 需要工具包名字或資料夾')
-    folder = Path(os.path.abspath(spec)) if '/' in spec else PACKAGES / spec
+        raise AgentError('Usage', 'tools add 需要工具包名字、資料夾或 .json 工具檔')
+    folder = Path(os.path.abspath(os.path.expanduser(spec))) if '/' in spec else PACKAGES / spec
     name = folder.name
     if not NAME.match(name):
-        raise AgentError('BadName', '工具包名字 %r 只能用英數、底線、連字號（不能以 . 開頭、不能含 .）' % name)
+        hint = '；當成工具檔的話：找不到 %s' % os.path.abspath(os.path.expanduser(spec)) if spec.endswith('.json') else ''
+        raise AgentError('BadName', '工具包名字 %r 只能用英數、底線、連字號（不能以 . 開頭、不能含 .）%s' % (name, hint))
     if not folder.is_dir():
         known = sorted(p.name for p in PACKAGES.iterdir() if p.is_dir()) if PACKAGES.is_dir() else []
-        raise AgentError('NotFound', '找不到工具包 %s（%s）；內建的有：%s'
-                         % (spec, folder, '、'.join(known) or '（無）'))
+        hint = '；要引用目前資料夾下的資料夾請寫 ./%s' % spec if '/' not in spec and os.path.isdir(spec) else ''
+        raise AgentError('NotFound', '找不到工具包 %s（%s）；內建的有：%s%s'
+                         % (spec, folder, '、'.join(known) or '（無）', hint))
     tools_file = folder / (name + '.json')
     if not tools_file.is_file():
         raise AgentError('NotFound', '%s 不是工具包：裡面沒有 %s.json' % (folder, name))
     return name, folder, tools_file
 
 
-def _covered(base, entries, tools_json):
-    """info.tools 解出來的某一條是 tools/<名>.json 本身，或是它所在的資料夾。"""
-    for entry in entries:
-        p = os.path.abspath(os.path.join(base, entry))
-        if p == str(tools_json) or p == str(tools_json.parent):
-            return True
-    return False
+def classify(spec):
+    """tools add 的對象：('package', 名, 資料夾, 工具檔) 或 ('ref', 絕對路徑)。
+
+    .json 結尾的現有檔案＝單一工具檔（原地引用；檔不在就照工具包名字驗，會是 BadName）；不含 /＝內建工具包；含 / 的資料夾有 <名>.json＝工具包，
+    否則＝原地引用整個資料夾（裡面至少要有一個 *.json）。
+    """
+    if spec and spec.endswith('.json') and os.path.isfile(os.path.expanduser(spec)):
+        return ('ref', os.path.abspath(os.path.expanduser(spec)))
+    if not spec or '/' not in spec:
+        return ('package',) + find_package(spec)
+    folder = Path(os.path.abspath(os.path.expanduser(spec)))
+    if (folder / (folder.name + '.json')).is_file() or not folder.is_dir():
+        return ('package',) + find_package(spec)
+    if not _expand_tools([str(folder)]):
+        raise AgentError('NotFound', '%s 不是工具包（裡面沒有 %s.json），也沒有可引用的 *.json 工具檔'
+                         % (folder, folder.name))
+    return ('ref', str(folder))
 
 
-def add(agent_dir, spec, root=None, force=False):
+def _options(names, where, as_arg, only):
+    """--as／--only → (as, only)。as_arg：None、('one', 新名) 或 ('map', {原名: 新名})。"""
+    if only is not None:
+        missing = [n for n in only if n not in names]
+        if missing:
+            raise AgentError('ToolInvalid', '%s：--only 寫了 %s，裡面沒有這支（有：%s）'
+                             % (where, '、'.join(missing), '、'.join(names) or '（無）'))
+    chosen = [n for n in names if only is None or n in only]
+    if as_arg is None:
+        return {}, only
+    if as_arg[0] == 'map':
+        return dict(as_arg[1]), only
+    if len(chosen) != 1:
+        raise AgentError('Usage', '%s 有 %d 支工具（%s）；--as 只給新名字時結果要恰好一支，'
+                         '改寫成 --as OLD=NEW[,OLD=NEW…] 或先用 --only 挑一支'
+                         % (where, len(chosen), '、'.join(chosen) or '（無）'))
+    return {chosen[0]: as_arg[1]}, only
+
+
+def _cover(entries, target, names):
+    """info.tools 哪一條已經讀到 target：同一個路徑，或它所在的資料夾（那條有 only 時要挑到其中至少一支）。"""
+    for e in entries:
+        if e['path'] == target:
+            return e
+        if e['path'] == os.path.dirname(target) and (e['only'] is None or any(n in e['only'] for n in names)):
+            return e
+    return None
+
+
+def _entries(base):
+    doc = read_info_doc(base)
+    return doc, tool_entries(doc, Context(doc, base_dir=str(base)), str(base))
+
+
+def add(agent_dir, spec, root=None, force=False, as_arg=None, only=None):
     base = Path(os.path.abspath(agent_dir))
-    with open(base / 'info.json', 'rb') as lock:           # 同一個家同時只裝一個（不寫任何檔）
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        return _add(base, spec, root, force)
+    with info_lock(base):                                 # 同一個家同時只改一個（tools 與 access 共用）
+        return _add(base, spec, root, force, as_arg, only)
 
 
-def _add(base, spec, root, force):
-    # 1. 驗（照 §1.7 的順序）：家 → 工具包 → --root → 裝過沒 → 同名 → info.tools 補得補不了
+def _add_ref(base, view, target, as_arg, only):
+    """原地引用一個工具檔或資料夾：不複製，info.tools 加一條（家裡的寫相對家、家外的寫絕對）。"""
+    files = _expand_tools([target])
+    names = [t['function']['name'] for f in files for t in read_tools([f])]
+    doc, entries = _entries(base)
+    cover = _cover(entries, target, names)
+    if cover is not None:
+        raise AgentError('AlreadyExists', '%s 已經在 info.tools 第 %d 條（%s）；改名用 tools alias、拿掉用 tools rm'
+                         % (target, cover['entry'], cover['path']))
+    editable_tools(doc, '請自己把 "%s" 加進 tools' % rel(base, target))
+    as_map, only = _options(names, target, as_arg, only)
+    entry = make_entry(rel(base, target), as_map, only)
+    root = copy.deepcopy(doc.root)
+    root.setdefault('tools', []).append(entry)
+    new_view = commit(base, root)
+    got = [t['function']['name'] for t in new_view['tools_raw'] if t['_source']['entry'] == len(root['tools']) - 1]
+    print('referenced %s（原地引用、不複製；%d 個工具：%s）' % (target, len(got), '、'.join(got)))
+    print('info.json 的 tools 補了 %s' % json.dumps(entry, ensure_ascii=False))
+    print(DONE)
+    return 0
+
+
+def _add(base, spec, root, force, as_arg, only):
+    # 1. 驗（照 §1.8 的順序）：家 → 對象 → --root → 裝過沒 → 同名 → info.tools 補得補不了 → 整份試算
     view = load_llm_view(base)
-    name, folder, tools_file = find_package(spec)
+    kind = classify(spec)
+    if kind[0] == 'ref':
+        if root is not None or force:
+            raise AgentError('Usage', '--root／--force 只給裝包用；%s 是原地引用（不複製）' % kind[1])
+        return _add_ref(base, view, kind[1], as_arg, only)
+    name, folder, tools_file = kind[1:]
     manifest = json.loads(tools_file.read_text(encoding='utf-8'))   # 驗過的就是要寫的那份
     new_tools = read_tools([str(tools_file)])
+    names = [t['function']['name'] for t in new_tools]
     if root is not None:
         root = os.path.abspath(os.path.expanduser(root))
         if not os.path.isdir(root):
             raise AgentError('NotFound', '--root %s 不是存在的資料夾' % root)
     tools_dir = base / 'tools'
     link, dest_json = tools_dir / name, tools_dir / (name + '.json')
-    doc = read_info_doc(base)
-    entries = resolve_field(doc, Context(doc, base_dir=str(base)), ['tools']) if 'tools' in doc.root else []
-    need_entry = not _covered(base, entries, dest_json)
+    doc, entries = _entries(base)
+    cover = _cover(entries, str(dest_json), names)
+    need_entry = cover is None
     if not force and dest_json.exists() and not need_entry:
         raise AgentError('AlreadyExists', '%s 已經裝過 %s（重裝加 --force；config.json 會保留）' % (base, name))
-    replaced = os.path.abspath(dest_json)
-    existing = {t['function']['name']: p for p in view['tool_paths'] if os.path.abspath(p) != replaced
-                for t in read_tools([p])}
-    clash = [t['function']['name'] for t in new_tools if t['function']['name'] in existing]
-    if clash:
-        raise AgentError('ToolInvalid', '工具同名：%s（已在 %s）；先把舊的拿掉或改名'
-                         % ('、'.join(clash), '、'.join(sorted({existing[n] for n in clash}))))
-    if need_entry and not (isinstance(doc.root.get('tools', []), list)
-                           and all(isinstance(e, str) for e in doc.root.get('tools', []))):
-        raise AgentError('FieldTypeMismatch', 'info.json 的 tools 不是字面陣列，沒辦法自動補；'
-                         '請自己把 "tools/%s.json" 加進 tools' % name)
+    as_map, only = _options(names, str(tools_file), as_arg, only)
+    has_opts = bool(as_map) or only is not None
+    if not has_opts:
+        existing = {t['function']['name']: t['_source']['file'] for t in view['tools_raw']
+                    if t['_source']['file'] != str(dest_json)}
+        clash = [n for n in names if n in existing]
+        if clash:
+            raise AgentError('ToolInvalid', '工具同名：%s（已在 %s）；先把舊的拿掉或改名'
+                             % ('、'.join(clash), '、'.join(sorted({existing[n] for n in clash}))))
+    info_root = None
+    if need_entry or has_opts:
+        editable_tools(doc, '請自己把 "tools/%s.json" 加進 tools' % name)
+        info_root = copy.deepcopy(doc.root)
+        entries_list = info_root.setdefault('tools', [])
+        if need_entry:
+            entries_list.append(make_entry('tools/%s.json' % name, as_map, only))
+        elif cover['path'] == str(dest_json):             # 那條就是這個工具檔：選項整個換成這次給的
+            entries_list[cover['entry']] = make_entry(split_entry(entries_list[cover['entry']])[0], as_map, only)
+        else:                                             # 那條是整個資料夾：as 併進去、only 補上其他檔的
+            val, old_as, old_only = split_entry(entries_list[cover['entry']])
+            old_as.update(as_map)
+            if only is not None:
+                others = [t['_source']['name'] for t in view['tools_raw']
+                          if t['_source']['entry'] == cover['entry'] and t['_source']['file'] != str(dest_json)]
+                old_only = others + only
+            entries_list[cover['entry']] = make_entry(val, old_as, old_only)
+    simulate(base, doc.root if info_root is None else info_root, files={str(dest_json): manifest})
 
     # 2. 新版本放進 tools/.<名>-<版>/（先 .tmp 再 rename），config.json 照 --root 或沿用舊的
     tools_dir.mkdir(exist_ok=True)
@@ -107,9 +199,8 @@ def _add(base, spec, root, force):
 
     # 4. 工具檔最後寫；5. info.tools 補一條
     aos_home.write_json(dest_json, manifest)
-    if need_entry:
-        doc.root.setdefault('tools', []).append('tools/%s.json' % name)
-        aos_home.write_json(base / 'info.json', doc.root)
+    if info_root is not None:
+        commit(base, info_root, files={str(dest_json): manifest})
 
     # 6. 清掉舊版本與之前崩潰留下的殘渣（不是現在連結指的那個）
     ours = re.compile(r'\.%s-\d+(\.tmp|\.old|\.link-\d+)?\Z' % re.escape(name))
@@ -118,16 +209,22 @@ def _add(base, spec, root, force):
             shutil.rmtree(stale, ignore_errors=True) if stale.is_dir() and not stale.is_symlink() \
                 else stale.unlink(missing_ok=True)
 
-    names = [t['function']['name'] for t in new_tools]
+    names = ['%s→%s' % (n, as_map[n]) if n in as_map else n for n in names if only is None or n in only]
     print('installed %s → %s（%d 個工具：%s）' % (name, dest_json, len(names), '、'.join(names)))
-    if need_entry:
-        print('info.json 的 tools 補了 "tools/%s.json"' % name)
+    if info_root is not None:
+        changed = info_root['tools'][-1] if need_entry else info_root['tools'][cover['entry']]
+        print('info.json 的 tools %s %s' % ('補了' if need_entry else '第 %d 條改成' % cover['entry'],
+                                           json.dumps(changed, ensure_ascii=False)))
     if work_root:
         print('工作根目錄：%s（改 %s 的 root）' % (work_root, link / 'config.json'))
         real_home, real_root = os.path.realpath(base), os.path.realpath(work_root)
         if real_home == real_root or real_home.startswith(real_root.rstrip(os.sep) + os.sep):
             print('注意：工作根目錄包含 agent 家，模型改得到自己的 info.json、記憶與 state.json', file=sys.stderr)
-    print('下一格就生效，不用重 start')
+    from aos_agent_access import ensure_default           # A2 的模組；延遲載入
+    note = ensure_default(base, root if root is not None else 'workspace')
+    if note:
+        print(note)
+    print(DONE)
     return 0
 
 

@@ -2,7 +2,8 @@
 
 約定（proto5/tools/README.md）：
 - cwd＝agent 家（aos-agent 預設）；arguments 從 stdin 來（JSON 字串）。
-- 工作根目錄＝本資料夾 config.json 的 "root"；相對路徑相對 agent 家（＝cwd）；沒寫＝workspace。
+- 工作根目錄＝環境變數 AOS_TOOL_ROOT（關牢時由 aos-jail 給）；沒有才看本資料夾 config.json 的 "root"；
+  相對路徑相對 agent 家（＝cwd）；沒寫＝workspace。
 - 成功：純文字印到 stdout、退 0。
 - 失敗：stdout 最後一行印一個 JSON {"ok": false, "error": 代號, "message": 白話, …}、退 1。
   帶輸出的失敗（bash 退出碼非 0、逾時）先原樣印輸出，JSON 放最後一行。
@@ -69,7 +70,14 @@ def config_path():
 
 
 def work_root():
-    """config.json 的 root（相對＝相對 cwd，也就是 agent 家）；沒檔或沒欄＝workspace。不存在＝RootMissing。"""
+    """環境變數 AOS_TOOL_ROOT 有值就用它（關牢時 aos-jail 給 /work/<cwd>，不看 config.json）；
+    否則 config.json 的 root（相對＝相對 cwd，也就是 agent 家）；沒檔或沒欄＝workspace。不存在＝RootMissing。"""
+    env_root = os.environ.get('AOS_TOOL_ROOT')
+    if env_root:
+        root = os.path.realpath(env_root)
+        if not os.path.isdir(root):
+            fail('RootMissing', 'project directory (work root) %s does not exist (from AOS_TOOL_ROOT)' % env_root)
+        return root
     root = 'workspace'
     cfg = config_path()
     if os.path.exists(cfg):
