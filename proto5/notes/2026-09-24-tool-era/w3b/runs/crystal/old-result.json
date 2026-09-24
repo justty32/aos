@@ -1,0 +1,202 @@
+{
+ "per_team": {
+  "/home/lorkhan/tmp/t5-play/myteam": {
+   "lines": 4,
+   "by_result": {
+    "lead": 2,
+    "tool": 2
+   },
+   "fallthrough": {
+    "nomatch": 1,
+    "negation": 1
+   },
+   "classes": [
+    {
+     "skeleton": "在專案建一個{檔名}，第一行寫「{引號內文}」，第二行寫一句自我介紹",
+     "count": 1,
+     "with_ticket": 1,
+     "same_kind": true
+    }
+   ],
+   "linked": [
+    "matched",
+    "matched"
+   ],
+   "candidates": [],
+   "skipped": [],
+   "dropped": []
+  },
+  "/home/lorkhan/tmp/t5-tut/myteam": {
+   "lines": 3,
+   "by_result": {
+    "lead": 2,
+    "tool": 1
+   },
+   "fallthrough": {
+    "nomatch": 1,
+    "negation": 1
+   },
+   "classes": [
+    {
+     "skeleton": "在專案建一個{檔名}，第一行寫「{引號內文}」，第二行寫一句自我介紹",
+     "count": 1,
+     "with_ticket": 1,
+     "same_kind": true
+    }
+   ],
+   "linked": [
+    "matched",
+    "matched"
+   ],
+   "candidates": [],
+   "skipped": [],
+   "dropped": []
+  },
+  "/home/lorkhan/tmp/wf-try/team": {
+   "lines": 1,
+   "by_result": {
+    "tool": 1
+   },
+   "fallthrough": {},
+   "classes": [],
+   "linked": [],
+   "candidates": [],
+   "skipped": [],
+   "dropped": []
+  },
+  "/home/lorkhan/tmp/w2a-try/team": {
+   "lines": 1,
+   "by_result": {
+    "handoff": 1
+   },
+   "fallthrough": {},
+   "classes": [],
+   "linked": [],
+   "candidates": [],
+   "skipped": [],
+   "dropped": []
+  },
+  "/home/lorkhan/tmp/wf-try-b/team": {
+   "lines": 1,
+   "by_result": {
+    "lead": 1
+   },
+   "fallthrough": {
+    "nomatch": 1
+   },
+   "classes": [
+    {
+     "skeleton": "把p的{檔名}開頭那段說明改寫得更白話，意思不能變",
+     "count": 1,
+     "with_ticket": 1,
+     "same_kind": true
+    }
+   ],
+   "linked": [
+    "matched"
+   ],
+   "candidates": [],
+   "skipped": [],
+   "dropped": []
+  }
+ },
+ "merged": {
+  "lines": 10,
+  "by_result": {
+   "lead": 5,
+   "tool": 4,
+   "handoff": 1
+  },
+  "fallthrough": {
+   "nomatch": 3,
+   "negation": 2
+  },
+  "classes": [
+   {
+    "skeleton": "在專案建一個{檔名}，第一行寫「{引號內文}」，第二行寫一句自我介紹",
+    "count": 2,
+    "with_ticket": 2,
+    "same_kind": true
+   },
+   {
+    "skeleton": "把p的{檔名}開頭那段說明改寫得更白話，意思不能變",
+    "count": 1,
+    "with_ticket": 1,
+    "same_kind": true
+   }
+  ],
+  "linked": [
+   "matched",
+   "matched",
+   "matched",
+   "matched",
+   "matched"
+  ],
+  "candidates": [
+   "crystal-1"
+  ],
+  "skipped": [],
+  "dropped": [],
+  "fallthrough_detail": [
+   {
+    "text": "在專案建一個 hello.md，第一行寫「# 你好」，第二行寫一句自我介紹",
+    "reason": "nomatch",
+    "linked": "matched",
+    "tickets": [
+     {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "file_exists",
+       "judge"
+      ]
+     }
+    ]
+   },
+   {
+    "text": "不要看單子",
+    "reason": "negation",
+    "linked": "matched",
+    "tickets": []
+   },
+   {
+    "text": "在專案建一個 hello.md，第一行寫「# 你好」，第二行寫一句自我介紹",
+    "reason": "nomatch",
+    "linked": "matched",
+    "tickets": [
+     {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "file_exists",
+       "judge"
+      ]
+     }
+    ]
+   },
+   {
+    "text": "不要看單子",
+    "reason": "negation",
+    "linked": "matched",
+    "tickets": []
+   },
+   {
+    "text": "把 p 的 WORKFLOWS.md 開頭那段說明改寫得更白話，意思不能變",
+    "reason": "nomatch",
+    "linked": "matched",
+    "tickets": [
+     {
+      "assignee": "worker-1",
+      "workflow": "無",
+      "done_when": [
+       "check:contains",
+       "judge"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}
