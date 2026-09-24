@@ -1,7 +1,11 @@
-"""kernel 的設定讀驗、初始帳本、行程判定與共用工具。"""
+"""kernel 的池表讀驗（info.json 第 2 版）、成員公式、初始帳本、行程判定與共用工具。
+
+規範：proto5-2/spec/kernel-info.md、kernel-cli.md 的 init、kernel-ledger.md。
+"""
 import copy
 import os
 from pathlib import Path
+import re
 import time
 
 import aos_home
@@ -10,6 +14,12 @@ from aos_directives import Context, DirectiveError, Document, parse_options, res
 CLI = Path(__file__).resolve().parents[1] / "cli" / "aos-kernel"
 CPU_CLI = CLI.with_name("aos-cpu")
 DEFAULTS = {"tick_ms": 1000, "interval_ms": 1000, "timeout_ms": 0, "done_exit": 100, "bad_after": 10}
+SWEEP = 32
+CPU_DEFAULTS = {"poll_ms": 200, "timeout_ms": 0}
+KERNEL_POOL = "kernel"
+KCPU = "kernel/0"
+MAX_COUNT = 1000000
+_POOL_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 
 
 class KernelError(aos_home.HomeError):
@@ -27,9 +37,67 @@ def _name(value):
     return isinstance(value, str) and value not in ("", ".", "..") and "/" not in value and "\0" not in value
 
 
+def pool_name_ok(value):
+    """kernel-info §5：1～64 bytes、只用 A-Z a-z 0-9 _ . -、不是 . 或 ..（也就不含 { } # /）。"""
+    return isinstance(value, str) and value not in (".", "..") and _POOL_RE.fullmatch(value) is not None
+
+
+def _int(value):
+    return type(value) is int
+
+
 def _bad(msg, position):
     raise KernelError("FieldTypeMismatch", msg, -32602, position)
 
+
+# ---- 成員公式（kernel-info §3） ----
+
+def members(count, skip):
+    """M(count, skip)：不在 skip 裡的最小 count 個非負整數（遞增）。"""
+    skip, out, i = set(skip), [], 0
+    while len(out) < count:
+        if i not in skip:
+            out.append(i)
+        i += 1
+    return out
+
+
+def is_member(i, count, skip):
+    """i ∈ M(count, skip)？O(len(skip))，不展開整個集合。"""
+    if i < 0 or i in skip:
+        return False
+    return i - sum(1 for s in skip if s < i) < count
+
+
+def encode(numbers):
+    """任一組非負整數 → (count, skip)：最大號以下的空洞全放進 skip。"""
+    numbers = set(numbers)
+    if not numbers:
+        return 0, []
+    top = max(numbers)
+    return len(numbers), [i for i in range(top) if i not in numbers]
+
+
+def member_set(spec):
+    """帳本裡 {"count", "skip"} 那種小格 → 成員集合；None 當空集合。"""
+    return set() if spec is None else set(members(spec["count"], spec["skip"]))
+
+
+def cpu_key(pool, i):
+    return "%s/%d" % (pool, i)
+
+
+def split_key(key):
+    """'P/<i>' → (P, i)；i 必須是不帶前導 0 的十進位，不合回 None。"""
+    pool, sep, num = key.rpartition("/")
+    if not sep or not pool_name_ok(pool) or not num.isascii() or not num.isdecimal():
+        return None
+    if num != str(int(num)):
+        return None
+    return pool, int(num)
+
+
+# ---- info 讀驗 ----
 
 def load_info(home):
     home = Path(home).absolute()
@@ -37,11 +105,15 @@ def load_info(home):
 
 
 def _parse_info(home, raw):
-    path = home / "info.json"
+    path = Path(home) / "info.json"
     if not isinstance(raw, dict) or any(k.startswith("$") for k in raw):
         _bad("info 頂層必須是字面物件", [])
+    mi = raw.get("_metainfo")
+    if isinstance(mi, dict) and mi.get("_type") == "kernel" and _int(mi.get("_version")) and mi["_version"] == 1:
+        raise KernelError("InfoVersion", "info.json 是 proto5 的第 1 版（cpus 表）；請照 proto5-2 spec/kernel-info.md 改寫成第 2 版的 pools 表")
+
     def expand(value, ctx, position, field=()):
-        if len(field) == 3 and field[0] == "cpus" and field[2] == "envs":
+        if len(field) == 3 and field[0] == "pools" and field[2] == "envs":
             return copy.deepcopy(value)
         loc = resolve_located(value, ctx, position)
         value = parse_options(loc.value, loc.position, {})[1]
@@ -57,108 +129,147 @@ def _parse_info(home, raw):
     return _validate_info(info)
 
 
+def _abs_path(value):
+    return isinstance(value, str) and value != "" and "\0" not in value and os.path.isabs(value)
+
+
+def _validate_pool(name, config, top_daemon):
+    pos = ["pools", name]
+    if not pool_name_ok(name):
+        _bad("池名不合法（1～64 字、只用 A-Z a-z 0-9 _ . -）：%r" % name, pos)
+    if not isinstance(config, dict):
+        _bad("池的設定必須是物件", pos)
+    if "count" not in config:
+        _bad("count 必填", pos + ["count"])
+    count = config["count"]
+    if not _int(count) or count < 0 or count > MAX_COUNT:
+        _bad("count 必須是 0～%d 的整數" % MAX_COUNT, pos + ["count"])
+    skip = config.setdefault("skip", [])
+    if (not isinstance(skip, list) or any(not _int(s) or s < 0 for s in skip)
+            or len(set(skip)) != len(skip)):
+        _bad("skip 必須是不重複的非負整數陣列", pos + ["skip"])
+    if "daemon" in config and not _abs_path(config["daemon"]):
+        _bad("daemon 必須是絕對路徑", pos + ["daemon"])
+    if not pool_name_ok(config.setdefault("dpool", name)):
+        _bad("dpool 不合法（同池名規則）", pos + ["dpool"])
+    envs = config.setdefault("envs", {})
+    if not isinstance(envs, dict):
+        _bad("envs 必須是物件", pos + ["envs"])
+    if name == KERNEL_POOL and (count != 1 or skip):
+        _bad("kernel 池的 count 只能是 1、skip 只能是空的", pos)
+    return config.get("daemon", top_daemon)
+
+
 def _validate_info(info):
     mi = info.get("_metainfo")
     if (not isinstance(mi, dict) or mi.get("_type") != "kernel" or
-            type(mi.get("_version")) is not int or mi["_version"] != 1):
-        raise KernelError("NotAHome", "不是 kernel 第 1 版的家")
-    cpus = info.get("cpus")
-    if not isinstance(cpus, dict):
-        _bad("cpus 必須是物件", ["cpus"])
-    for name, config in cpus.items():
-        if not _name(name) or not isinstance(config, dict):
-            _bad("cpu 名稱或設定不合法", ["cpus", name])
-        if not isinstance(config.setdefault("pool", "default"), str):
-            _bad("pool 必須是字串", ["cpus", name, "pool"])
-        if "envs" in config and not isinstance(config["envs"], dict):
-            _bad("envs 必須是物件", ["cpus", name, "envs"])
-    if sum(c["pool"] == "kernel" for c in cpus.values()) != 1:
-        _bad("恰好一顆 cpu 的 pool 必須是 kernel", ["cpus"])
+            not _int(mi.get("_version")) or mi["_version"] != 2):
+        raise KernelError("NotAHome", "不是 kernel 第 2 版的家（_metainfo 要是 {\"_type\": \"kernel\", \"_version\": 2}）")
+    if "daemon" in info and not _abs_path(info["daemon"]):
+        _bad("daemon 必須是絕對路徑", ["daemon"])
+    pools = info.get("pools")
+    if not isinstance(pools, dict):
+        _bad("pools 必須是物件", ["pools"])
+    pools.setdefault(KERNEL_POOL, {"count": 1})
+    seen = {}
+    for name, config in pools.items():
+        daemon = _validate_pool(name, config, info.get("daemon"))
+        key = (daemon, config["dpool"])
+        if key in seen:
+            _bad("同一個 daemon 底下兩個池的 dpool 撞名：%s 與 %s" % (seen[key], name), ["pools", name, "dpool"])
+        seen[key] = name
+    cpu = info.setdefault("cpu", {})
+    if not isinstance(cpu, dict):
+        _bad("cpu 必須是物件", ["cpu"])
+    for key, default in CPU_DEFAULTS.items():
+        value = cpu.setdefault(key, default)
+        if not _int(value) or value < (1 if key == "poll_ms" else 0):
+            _bad("cpu.%s 必須是%s整數" % (key, "正" if key == "poll_ms" else "非負"), ["cpu", key])
     for key, default in DEFAULTS.items():
         value = info.setdefault(key, default)
-        if type(value) is not int or value < 0 or (key == "done_exit" and value > 255):
+        if not _int(value) or value < 0 or (key == "done_exit" and value > 255):
             _bad("%s 必須是合法非負整數" % key, [key])
-    if "daemon" in info and (not isinstance(info["daemon"], str) or
-                              not os.path.isabs(info["daemon"]) or "\0" in info["daemon"]):
-        _bad("daemon 必須是絕對路徑", ["daemon"])
+    sweep = info.setdefault("sweep", SWEEP)
+    if not _int(sweep) or sweep < 1:
+        _bad("sweep 必須是正整數", ["sweep"])
     return info
 
 
-CONFIG_EXAMPLE = ('{"cpus": {"0": {}, "llm": {"pool": "llm", '
+def pool_location(info, pool):
+    """池 P 在 info 裡的位置 (daemon 或 None, dpool)；池不在 info 回 None。"""
+    config = info["pools"].get(pool)
+    if config is None:
+        return None
+    return config.get("daemon", info.get("daemon")), config["dpool"]
+
+
+def work_pools(info):
+    return [p for p in info["pools"] if p != KERNEL_POOL]
+
+
+# ---- init（kernel-cli init） ----
+
+CONFIG_EXAMPLE = ('{"pools": {"default": {"count": 2}, "llm": {"count": 1, '
                   '"envs": {"AOS_LLM_CONFIG": "/abs/llm.json"}}}}')
 
 
-_NO_CONFIG = object()
-
-
-def info_from_config(config, home=None):
-    """init --config（09-24 fix-r4）：設定檔就是 info.json 要寫的那幾格；補 _metainfo、預設值與 k。
-
-    要不要補 k 看**解完指示詞**的 pool：沒補能過讀驗就不補；否則補 k 再驗。回（寫檔用的 info，已驗）。
-    """
+def info_from_config(config, home=None, daemon=None, env=None):
+    """init：config 只放 kernel 參數＋池；補 _metainfo、kernel 池、預設值、daemon。回（已驗的）要寫的 info。"""
     home = Path(home or ".").absolute()
+    env = os.environ if env is None else env
+    if config is None:
+        config = {}
     if not isinstance(config, dict) or any(k.startswith("$") for k in config):
         _bad("--config 的頂層必須是字面物件（JSON null、陣列、字串都不行）", [])
-    if "daemon" in config:
-        _bad("--config 不能寫 daemon（那格是 boot 寫的）", ["daemon"])
-    cpus = config.get("cpus")
-    if not isinstance(cpus, dict) or not cpus or any(k.startswith("$") for k in cpus):
-        _bad("--config 要有 cpus（字面物件，至少一顆；補 k 要改它，所以 cpus 本身不能是指示詞），例："
-             + CONFIG_EXAMPLE, ["cpus"])
-    def build(cpus):
-        info = {"_metainfo": copy.deepcopy(config.get("_metainfo", {"_type": "kernel", "_version": 1})),
-                "cpus": copy.deepcopy(cpus)}
-        for key, default in DEFAULTS.items():
-            info[key] = copy.deepcopy(config.get(key, default))
-        for key, value in config.items():
-            info.setdefault(key, copy.deepcopy(value))
-        return info
-    info = build(cpus)
-    try:
-        _parse_info(home, copy.deepcopy(info))
-        return info
-    except KernelError as first:
-        if first.code != "FieldTypeMismatch" or first.position != ["cpus"]:
-            raise
-        if "k" in cpus:
-            # 解完仍沒有 kernel 池（或多於一顆），又不能補 k：照原錯誤報。
-            raise KernelError("FieldTypeMismatch", first.msg + "（沒有 pool 是 kernel 的 cpu 時會自動補 k，"
-                              "但 k 已被別的池用；請把一顆標成 {\"pool\": \"kernel\"}）", -32602, ["cpus", "k"]) from first
-    info = build({"k": {"pool": "kernel"}, **cpus})
+    info = copy.deepcopy(config)
+    info.setdefault("_metainfo", {"_type": "kernel", "_version": 2})
+    pools = info.setdefault("pools", {})
+    if not isinstance(pools, dict) or any(k.startswith("$") for k in pools):
+        _bad("pools 必須是字面物件（補 kernel 池要改它），例：" + CONFIG_EXAMPLE, ["pools"])
+    pools.setdefault(KERNEL_POOL, {"count": 1})
+    for key, value in DEFAULTS.items():
+        info.setdefault(key, value)
+    if daemon:
+        info["daemon"] = os.path.abspath(os.path.expanduser(daemon))
+    elif "daemon" not in info and env.get("AOS_DAEMON_HOME"):
+        info["daemon"] = os.path.abspath(os.path.expanduser(env["AOS_DAEMON_HOME"]))
     _parse_info(home, copy.deepcopy(info))
     return info
 
 
-def init(home, cpus=None, config=_NO_CONFIG):
+def init(home, config=None, daemon=None):
     home = Path(home).absolute()
     if (home / "info.json").exists():
         raise KernelError("AlreadyExists", "拒絕覆蓋既有的家：%s" % home)
-    if config is not _NO_CONFIG:
-        info = info_from_config(config, home)
-    else:
-        info = {"_metainfo": {"_type": "kernel", "_version": 1},
-                "cpus": cpus if cpus is not None else {"k": {"pool": "kernel"}, "0": {}, "1": {}, "2": {}}, **DEFAULTS}
-        _parse_info(home, copy.deepcopy(info))
+    info = info_from_config(config, home, daemon)
     home.mkdir(parents=True, exist_ok=True)
     aos_home.ensure_queue(home)
-    (home / "cpus").mkdir(exist_ok=True)
+    (home / "pools").mkdir(exist_ok=True)
     aos_home.write_json(home / "info.json", info)
     return str(home)
 
 
-def _idle():
-    return {"req": None, "proc": None, "discard": False}
+# ---- 帳本 ----
+
+def new_state(chain, cli):
+    return {"chain": chain, "kcpu": KCPU, "cli": str(cli), "last_seq": 0, "phase": "running", "halting": False,
+            "pools": {}, "busy": {}, "on": {}, "recent": [], "ready": {}, "delayed": [], "stale": {},
+            "procs": {}, "acks": [], "replies": [], "deletes": [], "sends": []}
 
 
-def new_state(info, chain, kcpu, cli):
-    return {"chain": chain, "kcpu": kcpu, "cli": str(cli), "last_seq": 0, "phase": "running",
-            "cpus": {c: _idle() for c, config in info["cpus"].items()
-                     if c != kcpu and config.get("pool", "default") != "kernel"},
-            "queue": [], "procs": {}, "acks": [], "replies": [], "stops": [], "deletes": []}
+def new_pool(daemon, dpool):
+    """帳本裡新池的一格（kernel-pools §2 第 0 步）。want＝None 表示還沒處理過 info。"""
+    return {"daemon": daemon, "dpool": dpool, "want": None, "sent": {"count": 0, "skip": []}, "pending": None,
+            "free": [], "draining": 0, "dirty": True, "redeclare": True,
+            "envs_digest": None, "error": None, "retry_at": None}
+
+
+def chain_epoch(chain):
+    return int(str(chain).split("-", 1)[0])
 
 
 def classify(proc, response, info, now=None):
-    """§4 反覆行程判定表；不動輸入，回新的行程紀錄。"""
+    """proto5 §4 反覆行程判定表；不動輸入，回新的行程紀錄。"""
     proc = copy.deepcopy(proc)
     result = response.get("result", {})
     if result.get("stopped") is True:
@@ -193,3 +304,12 @@ def _put(home, name, obj):
 
 def _body_error(code, msg):
     return {"error": {"code": -32000, "message": msg, "data": {"code": code}}}
+
+
+def error_code(response):
+    """回音的錯誤碼：看 data.code，沒有就用 str(code)（D-3）。"""
+    error = response.get("error") or {}
+    data = error.get("data")
+    if isinstance(data, dict) and isinstance(data.get("code"), str):
+        return data["code"]
+    return str(error.get("code"))
