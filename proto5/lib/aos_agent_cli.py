@@ -376,12 +376,11 @@ def main(argv=None):
             return memory[args.command](target, args)
         if args.command == 'init':
             if args.template is not None:
-                # 第 1 隊寫 aos_agent_init.init_from_template()；還沒合進來就說還沒做
-                import aos_agent_init
-                fn = getattr(aos_agent_init, 'init_from_template', None)
-                if fn is None:
-                    raise AgentError('NotImplemented', 'init --template 還沒做（第 1 隊的 init_from_template）')
-                return fn(target, args.template, force=args.force)
+                # 第 1 隊的 init_from_template（spec/team/templates.md）；團隊專用的模板（team: true）它會拒絕
+                from aos_agent_init import init_from_template
+                for line in init_from_template(target, args.template, force=args.force):
+                    print(line)
+                return 0
             from aos_agent_init import init
             return init(target, force=args.force)
         import aos_agent
