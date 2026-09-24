@@ -53,7 +53,7 @@ log：aos-agent: NoAccess: 工具 date 沒送：家裡沒有 access.json（有�
 
 ## 數字
 
-- 全測：1470 → 在分支上 1484；rebase 到 main（f74cc06，多了 T1 隊的測試）之後是 **46 個檔、1512 條，全部通過**。
+- 全測：1470 → 在分支上 1484；rebase 到 main（436690d，多了 T1、T3 隊的測試）之後是 **49 個檔、1593 條，全部通過**。T3 的 `tools/files`、`tools/wf` 各帶一份 base `_common.py` 副本，已同步成新版。
 - 新測試檔 `test_access_round2.py` 有 10 條，其中 6 條真的跑 bwrap。`test_agent_access.py` 從 53 條變 57 條。另外改了 7 個測試檔的假設（上面第 4 點）。
 
 ## astra 審查（gpt-6-astra，唯讀，審到 9b7ca32）
