@@ -245,7 +245,7 @@ agent-bob/
 程式做什麼：走一格、登記＝[aos-agent.md](aos-agent.md)；問模型＝[aos-llm-call.md](aos-llm-call.md)。
 （09-24 試玩 r2 補）`init`（單一內建預設）、`say`、`status`、`continue` 已有（[aos-agent.md §1.1～§1.4](aos-agent.md)）；`init --template`、`pause`、`tools`／`llms` 子命令、一個 agent 一顆專屬 cpu：這輪不做，
 使用者的構想在 [thinking/aos-agent.md](../../thinking/aos-agent.md)、[thinking/2026-09-23.md](../../thinking/2026-09-23.md)。
-記憶太長；明確的 `fail` 狀態（[backlog/agent-fail-state.md](../backlog/agent-fail-state.md)）。
+記憶太長；明確的 `fail` 狀態（等使用者拍板，見 [WAIT_USER A.14(d)](../../wf/WAIT_USER.md)）。
 **日常 CLI 是最小版**：家用 `aos-agent init` 建或手動建，話用 `say` 投、`last`／`say --wait` 看回話（09-24 試玩 r2 補）（aos-agent.md §1、§13）。
 
 ## 7. 已拍板的前提（使用者定的，不重問）
