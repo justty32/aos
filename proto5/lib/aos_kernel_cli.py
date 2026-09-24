@@ -222,6 +222,8 @@ def _run(args, trailing):
         if not path.is_file():
             raise KernelError("NotFound", "回音不存在：%s" % path)
         aos_client.ack(args.home, name)
+        # 試玩 one-boot 卡點 1：什麼都不印、檔還在，新手以為沒成功。
+        print("acked %s（ack 已放進 K/requests/，下一格 tick 刪掉回音）" % name)
         return 0
     return _cli_request(args, trailing)
 

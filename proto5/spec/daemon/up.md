@@ -37,6 +37,12 @@ K 的找法跟 `aos-kernel` 一樣：`--target K`，其次 `AOS_KERNEL_HOME`，�
 4. 否則每個用到的 daemon：還有**別的 kernel 登記著**、或還有池（`D/pools/` 底下有資料夾）＝不停，印
    `daemon <D> 沒停：還有 別的 kernel：…；池：…（要停就 aos-daemon halt --target <D>）`；沒有＝`aos-daemon halt`。退 0。
 
+（試玩 one-boot 追加）`aos down` 自己印摘要，分得出這次做了什麼：
+- kernel 一行，照 `aos-kernel halt` 自己回報的結果印：`kernel <K> 剛停`／`本來就停了`／`沒 boot 過`／
+  `沒在跑：帳本還寫 running，但替它開 tick 的 daemon 不在（上次沒停好就崩了）；…下次 aos up 會接上`／`沒在跑：…daemon 沒登記替它開 tick…`
+  （後兩種 `aos down` 不去改帳本）。
+- 每個 daemon 一行：`daemon <D> 剛停`／`本來就沒在跑`／`留著（--keep-daemon）`／`沒停：還有 …`。
+
 第 2 步等不到時：撤登記的單還在 daemon 家沒處理；那個 daemon 如果在第 4 步被停掉，登記檔會留著、單也留在 `D/requests/`。
 下次開 daemon 會先照登記開一格、再處理那張撤登記單——kernel 已經 `stopped`，那格只出貨、退 0，不會派工。沒有害處。
 

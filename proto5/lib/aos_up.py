@@ -118,6 +118,9 @@ def _others(daemon, home):
 
 
 def down(home, wait_ms=30000, keep_daemon=False):
+    """印自己的摘要（試玩 one-boot 卡點 5）：kernel 剛停／本來就停了／沒在跑但帳本沒停好；每個 daemon 剛停／本來就沒在跑／沒停。"""
+    import contextlib
+    import io
     home = Path(home).absolute()
     info = load_info(home)
     daemons = _daemons(info)
@@ -130,19 +133,31 @@ def down(home, wait_ms=30000, keep_daemon=False):
         daemons = list(dict.fromkeys([state["ticker"], *daemons]))
     daemons = list(dict.fromkeys([*daemons, *(e.get("daemon") for e in (state.get("pools") or {}).values()
                                               if isinstance(e, dict) and e.get("daemon"))]))
-    code = aos_kernel_boot.stop(home, wait_ms)
+    report = []
+    with contextlib.redirect_stdout(io.StringIO()):
+        code = aos_kernel_boot.stop(home, wait_ms, report=report)
     if code:
         return code
+    phase = (state or {}).get("phase")
+    # 照 stop 自己回報的結果印（不是停之前先偷看一次：兩次之間狀態可能變了，astra 第二輪必修 2）。
+    print({"none": "kernel %s 沒 boot 過" % home,
+           "already": "kernel %s 本來就停了" % home,
+           "dead": "kernel %s 沒在跑：帳本還寫 %s，但替它開 tick 的 daemon 不在（上次沒停好就崩了）；"
+                   "池的宣告留在 daemon 家，下次 aos up 會接上" % (home, phase),
+           "unregistered": "kernel %s 沒在跑：帳本還寫 %s，但 daemon 沒登記替它開 tick；下次 aos up 會接上" % (home, phase),
+           "stopped": "kernel %s 剛停" % home}.get(report[-1] if report else "", "kernel %s 停了" % home))
     ticker = daemons[0]
     deadline = time.monotonic() + min(wait_ms, 5000) / 1000
     while aos_daemon.is_alive(ticker) and aos_daemon_ticks.peek(ticker, home) is not None:
         if time.monotonic() >= deadline:
             break                                     # 撤登記的單還沒被處理：照樣往下（daemon 停了下次也不會開）
         time.sleep(.01)
-    if keep_daemon:
-        return 0
     for daemon in daemons:
         if not aos_daemon.is_alive(daemon):
+            print("daemon %s 本來就沒在跑" % daemon)
+            continue
+        if keep_daemon:
+            print("daemon %s 留著（--keep-daemon）" % daemon)
             continue
         kernels, pools = _others(daemon, home)
         if kernels or pools:
@@ -150,7 +165,11 @@ def down(home, wait_ms=30000, keep_daemon=False):
                 daemon, "；".join(filter(None, ["別的 kernel：" + "、".join(kernels) if kernels else "",
                                                  "池：" + "、".join(pools) if pools else ""])), daemon))
             continue
-        aos_daemon.stop(daemon, wait_ms)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            aos_daemon.stop(daemon, wait_ms)
+        # aos_daemon.stop 自己再看一次活不活：這中間 daemon 自己不見了就印 not running。
+        print("daemon %s %s" % (daemon, "本來就沒在跑" if "not running" in out.getvalue() else "剛停"))
     return 0
 
 

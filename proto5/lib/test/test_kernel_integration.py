@@ -182,7 +182,7 @@ class KernelIntegration(KernelCase):
         self.assertIn(name, result.stdout)
         self.assertEqual(read_json(response[0])["result"]["code"], 0)
         ack = self.good_cli("ack", self.home, self.home / "responses" / name)
-        self.assertEqual(ack.stdout, "")
+        self.assertTrue(ack.stdout.startswith("acked "), ack.stdout)   # 試玩 one-boot：ack 印一行
         wait_for(lambda: not response[0].exists())
         self.kernel_stop()
 

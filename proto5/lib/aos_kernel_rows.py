@@ -113,6 +113,9 @@ def row_line(home, info, row, width=0):
         part = "池不見了（跑 aos-kernel boot --target %s）" % home
     elif summary is None:
         part = "沒有這池"
+    elif not row["daemon_alive"]:
+        # 試玩 one-boot 卡點 3：daemon 不在時摘要是它死前寫的，別印得像還有幾顆在跑。
+        part = "不明（daemon 沒在跑；摘要是舊的，最後記 running %s）" % summary.get("running", 0)
     else:
         # restarting 是 running 的子集，寫進 running 那格（使用者代裁，09-24）；--json 照舊兩欄分開。
         restarting = summary.get("restarting", 0)
@@ -133,7 +136,7 @@ def row_line(home, info, row, width=0):
         else:
             # run.md 碰到的問題 1：daemon 早就拉齊了、只是帳本還沒收回音，等一格就好，不是卡住。
             tails.append("宣告已送出，下一格確認")
-    elif row["daemon"] is not None and not row["daemon_alive"]:
+    elif row["daemon"] is not None and not row["daemon_alive"] and summary is None:
         tails.append("daemon 沒在跑")
     if row["moving"]:
         tails.append("搬池中（舊位置收完才換到 %s %s）" % tuple(row["new_location"]))

@@ -231,8 +231,11 @@ def _read(home):
     return aos_kernel_store.read(home, {})
 
 
-def stop(home, wait_ms=30000, no_wait=False):
+def stop(home, wait_ms=30000, no_wait=False, report=None):
+    """report 給一個 list 的話，附上這次的結果：none（沒 boot 過）／already（本來就停好）／
+    dead（帳本沒停好、開 tick 的 daemon 不在）／unregistered（daemon 在但沒登記這個 K）／stopped（這次停好的）。"""
     home = Path(home).absolute()
+    report = [] if report is None else report
     def post():
         _put(home, "stop-" + aos_client.new_name("cli"), {"jsonrpc": "2.0", "method": "stop"})
     if no_wait:
@@ -240,15 +243,22 @@ def stop(home, wait_ms=30000, no_wait=False):
         return 0
     state = _read(home)
     if not state:
+        report.append("none")
         print("stopped")
         return 0
     if _halted(state):
+        report.append("already")
         print("stopped")
         return 0
     if state.get("phase") != "stopped":
         ticker = state.get("ticker")
         # one-boot：沒有 daemon 替它開 tick（daemon 不在、或沒登記）＝沒在跑，放了 stop 也沒人收。
-        if not ticker or not aos_daemon.is_alive(ticker) or aos_daemon_ticks.peek(ticker, home) is None:
+        if not ticker or not aos_daemon.is_alive(ticker):
+            report.append("dead")
+            print("not running")
+            return 0
+        if aos_daemon_ticks.peek(ticker, home) is None:
+            report.append("unregistered")
             print("not running")
             return 0
         post()
@@ -256,6 +266,7 @@ def stop(home, wait_ms=30000, no_wait=False):
     while True:
         state = _read(home)
         if _halted(state):
+            report.append("stopped")
             print("stopped")
             return 0
         if time.monotonic() >= deadline:
