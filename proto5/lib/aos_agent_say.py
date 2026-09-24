@@ -16,7 +16,8 @@ INPUT_WAIT_SECONDS = 10
 UNREGISTERED_NOTE = '已投入，start 後會處理，不要再說一次：aos-agent start --target '
 
 
-def deliver(base, value, text):
+def deliver(base, value, text, *, with_inode=False):
+    """原子投遞；with_inode（talk 用）＝多回投出去那個檔的 inode，好認出「原路徑上的是不是我那份」。"""
     target = Path(os.path.abspath(os.path.join(base, value)))
     directory = value.endswith('/') or target.is_dir()
     if directory:
@@ -29,6 +30,7 @@ def deliver(base, value, text):
                                          prefix='.say-', suffix='.json.tmp', delete=False) as out:
             temp = Path(out.name)
             json.dump({'role': 'user', 'content': text}, out, ensure_ascii=False)
+        inode = os.stat(temp).st_ino
         if directory:
             os.rename(temp, target)
         else:
@@ -44,8 +46,11 @@ def deliver(base, value, text):
                     time.sleep(min(.2, remaining))
     finally:
         if temp is not None:
-            temp.unlink(missing_ok=True)
-    return target
+            try:
+                temp.unlink(missing_ok=True)
+            except OSError:
+                pass  # 已經投成功了，清暫存檔失敗不該把投遞報成失敗
+    return (target, inode) if with_inode else target
 
 
 def _warn_paused(base, env):
