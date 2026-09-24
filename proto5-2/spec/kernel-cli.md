@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜池表：[kernel-info](kernel-info.md)｜boot：[handoff](handoff.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §6 的 `init`、`stop`、`ls`、`check` 的池相關部分**；
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §6 的 `init`、`stop`、`ls`、`check` 的池相關部分**；
 > `add`／`rm`／`ack`／`tick` 行為不變，只是家改用 `--target`（fix-r4 的慣例）。
 
 ```sh

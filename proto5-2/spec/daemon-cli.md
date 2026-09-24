@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜協定：[protocol](protocol.md)｜存檔：[daemon-home](daemon-home.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon.md) §6 的命令列**，並推翻 §7、§9 第 7 條「沒有 ls、沒有 ctl」。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon/README.md) §6 的命令列**，並推翻 §7、§9 第 7 條「沒有 ls、沒有 ctl」。
 
 ```sh
 aos-daemon boot  [--target D]                                     # 開 daemon（照 fix-r4）

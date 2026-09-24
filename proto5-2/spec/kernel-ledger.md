@@ -2,9 +2,9 @@
 
 ← [spec 導航](README.md)｜每格怎麼用：[kernel-tick](kernel-tick.md)｜池的欄位：[kernel-pools](kernel-pools.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §1.2**：`cpus`（每顆一格）換成 `pools`＋`busy`，`queue` 拆成 `ready`＋`delayed`，拿掉 `stops`、加 `sends`、`on`。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §1.2**：`cpus`（每顆一格）換成 `pools`＋`busy`，`queue` 拆成 `ready`＋`delayed`，拿掉 `stops`、加 `sends`、`on`。
 > 也**取代 §2**「每則 syscall 一次帳本寫入」與 §3 第 4 步「每放完一筆寫帳本」（§3）。
-> `procs` 的形狀與意思**完全不變**——[aos-agent.md §10](../../proto5/spec/aos-agent.md) 偷看它判斷「工作還在不在 cpu 上」。
+> `procs` 的形狀與意思**完全不變**——[aos-agent.md §10](../../proto5/spec/aos-agent/pause-clean.md) 偷看它判斷「工作還在不在 cpu 上」。
 
 仍是**唯一的帳本、一次原子寫**。帳本裡跟 cpu 有關的只記**忙的**，閒的只記號碼，不再每顆一個物件。
 

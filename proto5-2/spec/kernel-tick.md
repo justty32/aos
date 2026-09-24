@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜帳本：[kernel-ledger](kernel-ledger.md)｜通知從哪來：[cpu-notify](cpu-notify.md)｜池：[kernel-pools](kernel-pools.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §3**（第 1～3 步不變，第 4～10 步改寫）；§4 回音怎麼判、§2 syscall **不變**。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §3**（第 1～3 步不變，第 4～10 步改寫）；§4 回音怎麼判、§2 syscall **不變**。
 
 一句話：**每格只碰「有事的」cpu**——有通知的、上一格剛派的、輪到巡檢的那幾顆；派工從每池的閒號堆疊直接拿，不掃每一顆找閒的。
 

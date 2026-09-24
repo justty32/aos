@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜池表：[kernel-info](kernel-info.md)｜送給 daemon 的單：[protocol](protocol.md)｜在第幾步：[kernel-tick](kernel-tick.md) 第 7 步
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §1.1 末「改 info 之後」那段與 §3 第 7 步**。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §1.1 末「改 info 之後」那段與 §3 第 7 步**。
 
 一句話：**info 說要幾顆，kernel 算出「要哪幾號」，把這組號碼整份告訴 daemon（宣告式）；要收的號先等它手上那件做完再收。**
 kernel 不記 pid、不問哪顆活著，只記 daemon 確認過的號碼（`sent`）。
@@ -51,7 +51,7 @@ daemon 確認過（S）、在途的單沒有要拿掉它（Q）、info 還要它
 ## 3. 為什麼「先做完再收」
 
 縮小時如果直接叫 daemon 收，那顆 cpu 可能手上有一件、或 `requests/` 裡剛被放了一件還沒開始：
-- 溫和停會讓它做完手上那件，但**不會**做還沒開始的（[cpu.md §5.1](../../proto5/spec/cpu.md)），那張單就留在一個不會再有主人的家裡，
+- 溫和停會讓它做完手上那件，但**不會**做還沒開始的（[cpu.md §5.1](../../proto5/spec/cpu/stop.md)），那張單就留在一個不會再有主人的家裡，
   那個行程永遠卡在 `running`。
 - kernel 是外人，不能自己去刪那張單（規則一）。
 

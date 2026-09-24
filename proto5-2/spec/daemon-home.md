@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜怎麼對帳：[daemon-reconcile](daemon-reconcile.md)｜指令：[daemon-cli](daemon-cli.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon.md) §1.1、§1.2**（孩子表搬出 `state.json`，改成一池一個資料夾、一顆一個小檔）。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon/README.md) §1.1、§1.2**（孩子表搬出 `state.json`，改成一池一個資料夾、一顆一個小檔）。
 > 家的位置（`--target`，省略找 `AOS_DAEMON_HOME` 再 `./`，照 fix-r4）、`.daemon.lock`、flock 探測活不活都不變。
 
 為什麼改：proto5 每次有孩子生或死就整份重寫 `state.json`。上萬個孩子時那份有幾 MB，一秒死幾顆就要重寫幾次。

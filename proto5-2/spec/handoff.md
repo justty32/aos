@@ -2,8 +2,8 @@
 
 ← [spec 導航](README.md)｜kernel 池怎麼增減：[kernel-pools](kernel-pools.md)｜daemon 對帳：[daemon-reconcile](daemon-reconcile.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §6 boot 五步、§3 第 9 步的 `stops`**，
-> 以及 [proto5/spec/daemon.md](../../proto5/spec/daemon.md) §6.1 第 5 步「孩子表從空開始」與 §5 末「daemon 重啟過 kernel 要重 boot」。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §6 boot 五步、§3 第 9 步的 `stops`**，
+> 以及 [proto5/spec/daemon.md](../../proto5/spec/daemon/README.md) §6.1 第 5 步「孩子表從空開始」與 §5 末「daemon 重啟過 kernel 要重 boot」。
 
 ## 1. `aos-kernel boot`
 
@@ -62,7 +62,7 @@ boot 一開始就產生新 chain id；它送的單都帶 `decl`＝[新 chain 的
 4. `aos-kernel halt` CLI 等的是：`phase=stopped`，而且這個 kernel 的**每個池**在 daemon 那邊都消失（`summary.json` 不在）或 `count 0`、`running 0`、`killing 0`。
    只看 `running 0` 不夠——宣告還是 N、孩子都在等重拉時也是 0。
 - 不再往每顆 cpu 放 `stop-` 檔（proto5 的 `stops` 拿掉）：上萬顆就是上萬個檔；縮到 0 讓 daemon 用批次階梯收，一池一張單。
-  [cpu.md §5.4](../../proto5/spec/cpu.md)「kernel 往每顆 cpu 放 stop」這句因此作廢。
+  [cpu.md §5.4](../../proto5/spec/cpu/stop.md)「kernel 往每顆 cpu 放 stop」這句因此作廢。
 
 **daemon `halt`**：批次階梯收全部孩子，`pool.json` 留著（[daemon-reconcile §7](daemon-reconcile.md)）。
 順序仍建議先 kernel、後 daemon：先 kernel 的話池都是 0、已消失，daemon 停完下次開也不會拉任何東西，等 `aos-kernel boot` 重新宣告。

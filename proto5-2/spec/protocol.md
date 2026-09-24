@@ -2,8 +2,8 @@
 
 ← [spec 導航](README.md)｜kernel 怎麼用：[kernel-pools](kernel-pools.md)｜daemon 怎麼做：[daemon-reconcile](daemon-reconcile.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon.md) §3 的 method 表**與 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §5。
-> 走法不變：往 `D/requests/` 放 JSON-RPC 單，回音在 `D/responses/` 同名，收的人讀完放 ack（[cpu.md §3](../../proto5/spec/cpu.md)）。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon/README.md) §3 的 method 表**與 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §5。
+> 走法不變：往 `D/requests/` 放 JSON-RPC 單，回音在 `D/responses/` 同名，收的人讀完放 ack（[cpu.md §3](../../proto5/spec/cpu/messages.md)）。
 
 | method | 誰用 | 一句話 |
 |---|---|---|

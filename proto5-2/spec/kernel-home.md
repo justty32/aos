@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜池表：[kernel-info](kernel-info.md)｜帳本：[kernel-ledger](kernel-ledger.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §1 的目錄圖與「建家」段落**；家的規則一、主人／外人的分法不變。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §1 的目錄圖與「建家」段落**；家的規則一、主人／外人的分法不變。
 
 ## 1. 目錄
 
@@ -28,14 +28,14 @@ K/
  "envs": {"$ref": "../../envs.json"}}
 ```
 
-`.json` 目標的 base 是檔所在的資料夾（[aos-exec](../../proto5/spec/aos-exec.md)），所以放在 `cpus/<i>/inst.json` 時，
+`.json` 目標的 base 是檔所在的資料夾（[aos-exec](../../proto5/spec/aos-exec/README.md)），所以放在 `cpus/<i>/inst.json` 時，
 `.`、`cpu.log` 都是那顆自己的家，`../../envs.json` 是池的環境檔。**每顆的 inst.json 內容一模一樣**，就是 `pools/<P>/inst.json` 的複本。
 `argv[0]` 是 kernel 建模板時找到的 `aos-cpu` 絕對路徑（同 proto5 的做法）。
 
-好處：改池的 `envs` 只要重寫一份 `envs.json`；daemon 每次拉（含重拉）都重讀 target（[daemon.md §2](../../proto5/spec/daemon.md)，不變），
+好處：改池的 `envs` 只要重寫一份 `envs.json`；daemon 每次拉（含重拉）都重讀 target（[daemon.md §2](../../proto5/spec/daemon/spawn.md)，不變），
 所以**之後拉起來的 cpu** 就帶新環境。已經活著的不會變——要全池換新就 `aos-daemon kill --pool <dpool> --all`（[daemon-cli](daemon-cli.md)）。
 
-`envs` 整格用 `$ref` 取進來是 [inst-posix](../../proto5/spec/inst-posix.md) 本來就允許的（先解再驗，`envs` 的 `clear` 選項照認）。
+`envs` 整格用 `$ref` 取進來是 [inst-posix](../../proto5/spec/inst-posix/README.md) 本來就允許的（先解再驗，`envs` 的 `clear` 選項照認）。
 `$ref` 找檔的中心是解出來的 `cwd`（inst-posix §3.1）——這裡就是那顆 cpu 的家，所以 `../../envs.json` 指到池的環境檔；
 `envs.json` 裡再有 `$ref`，中心仍是那顆的家，不是池目錄。`$ref:""` 指的是 `envs.json` 自己那份文件。（審查 R14）
 
@@ -69,4 +69,4 @@ kernel 池那顆**不帶 `notify`**（它跑的是 tick，回音由 tick 自己�
 
 - `K/` 的主人仍是「當下正在跑的那一格 tick」；`K/pools/<P>/envs.json`、`inst.json` 也是 kernel 的東西，只有 tick 與 boot 寫。
 - `K/pools/<P>/cpus/<i>/` 各是另一個家，主人是那顆 `aos-cpu`；kernel 只在家缺東西時補，已經在的一律不改（同 proto5）。
-- cpu 往 `K/requests/` 丟通知，是外人被允許的那一種動作（放一則 request，[cpu.md §1](../../proto5/spec/cpu.md) 規則一）。
+- cpu 往 `K/requests/` 丟通知，是外人被允許的那一種動作（放一則 request，[cpu.md §1](../../proto5/spec/cpu/layout.md) 規則一）。
