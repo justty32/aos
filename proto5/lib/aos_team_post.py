@@ -1061,46 +1061,6 @@ def mail_line(rec, tz, full=False):
     return '%s  %s → %s  %s%s%s  %s' % (when, sender, to, rec.get('status'), ref, got, text)
 
 
-def cmd_mail(team_dir, argv):
-    p = argparse.ArgumentParser(prog='aos-team mail', description='一封信一行（郵差的投遞紀錄），照時間排')
-    p.add_argument('--last', type=int, default=30, help='只看最後幾封（預設 30；0＝全部）')
-    p.add_argument('--to', help='只看寄給誰的（human＝人）')
-    p.add_argument('--from', dest='sender', help='只看誰寄的')
-    p.add_argument('--task', help='只看回某張單的（t-0001）')
-    p.add_argument('--full', action='store_true', help='印全文')
-    p.add_argument('--json', action='store_true', help='一行一個 JSON 紀錄')
-    p.add_argument('--follow', action='store_true', help='印完繼續等新的（Ctrl-C 停）')
-    args = p.parse_args(argv)
-    lay = Layout(team_dir)
-    tz = fmt.load_roster(team_dir).get('tz')
-
-    def pick(recs):
-        return [r for r in recs if (not args.to or r.get('to') == args.to)
-                and (not args.sender or r.get('from') == args.sender)
-                and (not args.task or str(r.get('reply_to', '')).split('.r')[0] == args.task)]
-
-    def show(recs):
-        for r in recs:
-            print(json.dumps(r, ensure_ascii=False) if args.json else mail_line(r, tz, args.full), flush=True)
-
-    recs = pick(load_records(lay))
-    if not recs and not args.follow:
-        print('還沒有信（郵差沒投過任何一封）')
-        return 0
-    show(recs[-args.last:] if args.last else recs)
-    if not args.follow:
-        return 0
-    seen = {r['id'] for r in recs}
-    try:
-        while True:
-            time.sleep(1)
-            new = [r for r in pick(load_records(lay)) if r['id'] not in seen]
-            seen.update(r['id'] for r in new)
-            show(new)
-    except KeyboardInterrupt:
-        return 0
-
-
 # ------------------------------------------------------ kernel 登記 ----
 
 def proc_name(team_dir, what):
