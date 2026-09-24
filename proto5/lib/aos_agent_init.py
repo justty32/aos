@@ -178,7 +178,8 @@ def _system_text(folder, tpl, name, member):
 def team_config(member):
     """team: true 的工具包裝完寫進 config.json 的鍵（牢裡看到的路徑）。"""
     return {'member': member['name'], 'mail_to': list(member['mail_to']), 'members': list(member['members']),
-            'outbox': '/work/outbox', 'board': '/work/board', 'tz': member.get('tz')}
+            'outbox': '/work/outbox', 'board': '/work/board', 'tz': member.get('tz'),
+            'spawn_templates': list(member.get('spawn_templates', []))}   # 第三波 W3-1：spawn_member 擋手誤用
 
 
 def _write_team_config(base, pack, member):

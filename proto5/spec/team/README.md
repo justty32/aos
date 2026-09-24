@@ -25,6 +25,8 @@
 | [tasks.md](tasks.md) | 任務單（交接書）：欄位、十個狀態、事件、後續動作、審查子單、冪等 |
 | [ask.md](ask.md) | 問人：`ask_human` → `team/wait-user/q-NNNN.json` → `aos-team answer` → 投回發問者；`access_request`／`persona_propose` 也是包成一題問人（見該檔） |
 | [lock.md](lock.md) | 短期獨佔鎖：`lock` 工具（acquire／release／ls，都是非同步）、`team/locks/<名>.json`、逾時自動放（第二波 C 隊） |
+| [spawn.md](spawn.md) | 生新成員（第三波 W3-1）：`spawn_member` 申請 → 郵差照名冊檢查（`spawn.templates` 白名單、人數、mail_to 與權限不超過申請者）→ 「[成員]」題 → 人 `aos-team spawn approve` 才生家、登記、改名冊；一律平的 |
+| [toolsmith.md](toolsmith.md) | 模型造工具（第三波 W3-1）：`tool_draft` → 郵差用申請內容生包、牢裡 `tools test` → 沒過退信、過了「[工具]」題 → 人 `aos-team tool approve` 才 `tools add` |
 | [templates.md](templates.md) | 成員模板 `proto5/templates/<名>/`：人格、工具包、`access.json`、工具包的 `config.json` |
 | [route.md](route.md) | 門房 `team/routes.json`：整句句型、命中兩條或有否定詞就落穿給領隊、例句全過才准存 |
 | [cli.md](cli.md) | `aos-team` 子命令一覽、哪一隊做、共同慣例（`--target`、退出碼） |
@@ -54,4 +56,5 @@ python3 proto5/lib/aos_team_format.py proto5/spec/team/examples/*.json   # 每�
 | `wf_*`、`json_edit`、`md_section`（工人的工具；wf 快照唯讀掛成 `/work/wf`） | 第 3 隊 | `proto5/tools/wf/`、`proto5/tools/files/` |
 | 事件紀錄、`context`、`compact`、`note`、`aos-agent init --template` 的旗標 | 第 4 隊 | `lib/aos_agent_*.py` |
 | README／索引彙整、`aos-team score`、`compact_me`（task 包第五支）、模板 `notes: true`、成員模板人格定稿、`route.md` 的 routes 例子、教程 08（一支小團隊） | 收尾隊（第 5 隊） | `lib/aos_team_score.py`、`proto5/tools/task/compact_me`、`proto5/templates/`、`proto5/tutorials/08-team.md` |
+| **第三波 W3-1（模型生成員／造工具）**：`spawn_member`／`tool_draft` 工具、`kind: spawn`／`tool_draft` 的郵差處理、`aos-team spawn`／`tool`、名冊 `spawn` 鍵 | 第三波 W3-1 | `lib/aos_team_spawn.py`、`aos_team_toolsmith.py`、`tools/task/`、[w3a 報告](../../notes/2026-09-24-tool-era/w3a/README.md) |
 | **第二波 C 隊（申請類）**：`lock`／`access_request`／`persona_propose`／`routine_propose` 工具、`aos-team lock`、審查子單編號跟父單一致、領隊改寫類單子自動補 `wf_lint_strict`、工具檔 `_pool`（走 `tool_pool` 選池那一段，[T-pool](../../notes/2026-09-24-priority-and-shared-cpu/README.md)） | 第二波 C 隊 | `lib/aos_team_lock.py`、`aos_team_requests.py`、`aos_team_ask.py`、`aos_agent_persona.py`、`tools/task/`、[w2c 報告](../../notes/2026-09-24-tool-era/w2c/README.md) |

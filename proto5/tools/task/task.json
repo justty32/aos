@@ -170,5 +170,43 @@
       }
     },
     "_meta": {"argv": ["tools/task/routine_propose"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "spawn_member",
+      "description": "Ask the user to add a new team mate from a built-in template (flat roster, talks only via the postman). The answer arrives as new mail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "template": {"type": "string", "description": "Template name, e.g. worker"},
+          "name": {"type": "string", "description": "New member name, e.g. worker-2"},
+          "reason": {"type": "string"},
+          "mail_to": {"type": "array", "items": {"type": "string"}, "description": "Who it may mail (default: you and human)"}
+        },
+        "required": ["template", "name", "reason"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/spawn_member"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "tool_draft",
+      "description": "Draft a new Python tool for yourself. code must define main(args, root) (root = work dir) returning text; args arrive already checked against parameters. It is tested in a sandbox: failures come back as mail, a pass waits for the user to install it.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "description": "[a-z][a-z0-9_]*"},
+          "description": {"type": "string", "description": "One short English sentence"},
+          "parameters": {"type": "object", "description": "JSON Schema object of the arguments"},
+          "code": {"type": "string"},
+          "lang": {"type": "string", "enum": ["py"]},
+          "cases": {"type": "array", "items": {"type": "object"}, "description": "1-5 examples, at least one expect \"ok\": {args, expect: \"ok\" or error code, contains?, files?: {path: text}}"}
+        },
+        "required": ["name", "description", "parameters", "code", "cases"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/tool_draft"]}
   }
 ]

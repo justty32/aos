@@ -36,7 +36,8 @@ def member_context(lay, roster, name):
     m = roster['members'][name]
     return {'name': name, 'team_dir': str(lay.root), 'project': str(project_dir(lay.root, roster)),
             'mail_to': m['mail_to'], 'members': list(roster['members']), 'tz': roster.get('tz'),
-            'model': m['model'], 'mounts': m['mounts'], 'tools': m['tools']}
+            'model': m['model'], 'mounts': m['mounts'], 'tools': m['tools'],
+            'spawn_templates': roster.get('spawn', {}).get('templates', [])}
 
 
 def _inside(child, parent):
