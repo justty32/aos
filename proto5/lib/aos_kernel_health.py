@@ -21,7 +21,7 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
     home = Path(os.path.abspath(home))
     try:
         from aos_kernel_boot import status
-        from aos_kernel_cpu import _Alive, pool_rows
+        from aos_kernel_rows import _Alive, pool_rows
         if info is None:
             info = load_info(home)
         boot = "aos-kernel boot --target %s" % home

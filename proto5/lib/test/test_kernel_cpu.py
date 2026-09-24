@@ -11,6 +11,7 @@ from unittest.mock import patch
 import aos_home
 import aos_kernel as kernel
 import aos_kernel_cpu
+import aos_kernel_rows
 from _kernel_fake import FakeCase
 
 
@@ -334,21 +335,21 @@ class CpuLineWording(unittest.TestCase):
     """cpu_line() 是純文字排版；直接餵假 item，不用拉真假 daemon（run.md 碰到的問題 1／3）。"""
 
     def test_pending_declared_relabelled_to_plain_words(self):
-        line = aos_kernel_cpu.cpu_line({"cpu": "default/0", "status": "待宣告", "proc": None,
+        line = aos_kernel_rows.cpu_line({"cpu": "default/0", "status": "待宣告", "proc": None,
                                         "daemon": None, "declared": False})
         self.assertEqual(line, "default/0  等 daemon 確認  daemon -")
 
     def test_collecting_with_no_kid_record_reads_as_in_progress_not_pending(self):
-        line = aos_kernel_cpu.cpu_line({"cpu": "default/0", "status": "收掉中", "proc": None,
+        line = aos_kernel_rows.cpu_line({"cpu": "default/0", "status": "收掉中", "proc": None,
                                         "daemon": None, "declared": True})
         self.assertEqual(line, "default/0  收掉中  daemon 在收")
 
     def test_busy_with_no_kid_record_is_unchanged(self):
-        line = aos_kernel_cpu.cpu_line({"cpu": "default/1", "status": "busy", "proc": "job",
+        line = aos_kernel_rows.cpu_line({"cpu": "default/1", "status": "busy", "proc": "job",
                                         "daemon": None, "declared": True})
         self.assertEqual(line, "default/1  busy job  daemon pending")
 
     def test_idle_with_kid_record_is_unchanged(self):
-        line = aos_kernel_cpu.cpu_line({"cpu": "default/1", "status": "idle", "proc": None,
+        line = aos_kernel_rows.cpu_line({"cpu": "default/1", "status": "idle", "proc": None,
                                         "daemon": {"state": "running", "gen": 2, "pid": 5}, "declared": True})
         self.assertEqual(line, "default/1  idle  daemon running gen 2")

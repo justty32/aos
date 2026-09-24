@@ -123,7 +123,7 @@ class Checks:
 
     def cpus(self, home, info, alive):
         """帳本 phase 是 running／stopping 時，看各池摘要（同 ls 的 health 判定）；daemon 沒活的池略過。"""
-        from aos_kernel_cpu import _Alive, pool_rows
+        from aos_kernel_rows import _Alive, pool_rows
         state = aos_home.read_state(home, {})
         if state.get('phase') not in ('running', 'stopping') or not state.get('pools'):
             return

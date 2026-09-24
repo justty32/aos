@@ -14,7 +14,8 @@ import signal
 import subprocess
 import sys
 
-import aos_exec
+from aos_exec_run import DEFAULT_DIR_TARGET
+from aos_exec_spawn import Spawned, SpawnError, spawn_target
 import aos_home
 
 POOL_RE = re.compile(r"[A-Za-z0-9_.-]{1,64}")
@@ -84,7 +85,7 @@ class Kid:
         self.gen = self.exits = self.streak = 0
         self.state = "pending"
         self.has_file = False
-        self.handle = None                 # aos_exec.Spawned；只有 running／killing 有
+        self.handle = None                 # Spawned；只有 running／killing 有
         self.started = None                # 這一代拉起來的 monotonic
         self.restarting = False            # 死過、重拉後還沒活滿 stable_ms
         self.queued = False                # 在池的「可以拉」佇列裡
@@ -273,7 +274,7 @@ def read_pool_json(path):
           (decl["count"] == 0 or isinstance(decl.get("target"), str)))
     if not ok:
         raise aos_home.HomeError("ReadFailed", "pool.json 形狀不對：%s" % path)
-    decl.setdefault("dir_target", aos_exec.DEFAULT_DIR_TARGET)
+    decl.setdefault("dir_target", DEFAULT_DIR_TARGET)
     return decl
 
 
@@ -287,34 +288,14 @@ def _launch(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=Non
                              stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=ferr,
                              bufsize=0)
     except (OSError, ValueError) as e:
-        raise aos_exec.SpawnError("SpawnFailed", "無法啟動子程式：%s" % e)
+        raise SpawnError("SpawnFailed", "無法啟動子程式：%s" % e)
     os.set_blocking(p.stdin.fileno(), False)
-    return aos_exec.Spawned(p, exit_path, exit_append)
+    return Spawned(p, exit_path, exit_append)
 
 
-def spawn_child(target, dir_target=aos_exec.DEFAULT_DIR_TARGET):
-    """同 aos_exec.spawn_target（每次重讀目標、同樣的讀驗與 SpawnFailed），只差 fd 1 的接法。"""
-    p = os.path.abspath(target)
-    if os.path.isdir(p):
-        inst_path, base = os.path.join(p, dir_target), p
-        if not os.path.isfile(inst_path):
-            raise aos_exec.SpawnError("SpawnFailed", "資料夾 %s 裡沒有 %s" % (p, dir_target))
-    elif p.endswith(".json"):
-        inst_path, base = p, os.path.dirname(p)
-    else:
-        if not os.path.exists(p):
-            raise aos_exec.SpawnError("SpawnFailed", "找不到 %s" % target)
-        return _launch([p], os.path.dirname(p), dict(os.environ), None, None, None, 0, "")
-    inst = aos_exec._load_control_inst(inst_path, base)
-    diagnostic = io.StringIO()
-    try:
-        with contextlib.redirect_stderr(diagnostic):
-            result = aos_exec._execute_inst(inst, 0, launcher=_launch)
-    except ValueError as e:
-        raise aos_exec.SpawnError("SpawnFailed", "FieldTypeMismatch: 無法執行 inst：%s" % e)
-    if not isinstance(result, aos_exec.Spawned):
-        raise aos_exec.SpawnError("SpawnFailed", diagnostic.getvalue().strip())
-    return result
+def spawn_child(target, dir_target=DEFAULT_DIR_TARGET):
+    """同 aos_exec_spawn.spawn_target（每次重讀目標、同樣的讀驗與 SpawnFailed），只差 fd 1 的接法。"""
+    return spawn_target(target, dir_target, launcher=_launch)
 
 
 def exit_code(status):

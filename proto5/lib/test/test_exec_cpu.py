@@ -44,7 +44,7 @@ class CpuCase(Base):
         command = [PY, CPU, self.d]
         if bootstrap is not None:
             setup = "import sys, os, time\nfrom pathlib import Path\n" + \
-                    "sys.path.insert(0, %r)\nimport aos_exec, aos_exec_cpu, aos_home\n" % LIB
+                    "sys.path.insert(0, %r)\nimport aos_exec, aos_exec_cpu, aos_exec_run, aos_home\n" % LIB
             command = [PY, "-c", setup + bootstrap + "\nsys.exit(aos_exec_cpu.main([%r]))" % self.d]
         p = subprocess.Popen(command, stdin=subprocess.PIPE if pipe else subprocess.DEVNULL,
                              stdout=subprocess.PIPE, stderr=log, start_new_session=True)
@@ -212,7 +212,7 @@ class TestExecCpu(CpuCase):
         bootstrap = """
 from types import SimpleNamespace
 clock = Path(%r)
-aos_exec.time = SimpleNamespace(monotonic=lambda: float(clock.read_text()), sleep=time.sleep)
+aos_exec.time = aos_exec_run.time = SimpleNamespace(monotonic=lambda: float(clock.read_text()), sleep=time.sleep)
 """ % os.path.join(self.d, "clock")
         self.write("clock", "10")
         self.start(bootstrap=bootstrap)

@@ -37,7 +37,7 @@ def ls_data(home, snapshot, pool=None):
 
     pool：只看這池（procs 只留這池的，pools 只留這池並多一份 cpus 逐顆表）；池不在 info 也不在帳本＝NotFound。
     """
-    from aos_kernel_cpu import _Alive, cpu_rows, pool_rows
+    from aos_kernel_rows import _Alive, cpu_rows, pool_rows
     home = os.path.abspath(home)
     info = load_info(home)
     code, message = health(home, snapshot=snapshot, info=info)
@@ -139,7 +139,7 @@ def _table(header, rows, right=()):
 
 
 def render(data, verbose=False, procs=False):
-    from aos_kernel_cpu import cpu_line, pool_lines
+    from aos_kernel_rows import cpu_line, pool_lines
     k, counts = data["kernel"], data["counts"]
     phase = k["phase"] or "沒 boot 過"
     lines = ["health " + data["health"]["message"],
