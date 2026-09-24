@@ -12,8 +12,20 @@ from aos_agent_results import act_done, model_message, think_done
 from aos_agent_runtime import RESUMED, history_prefix, ledger, report, unique_id
 
 META = {'_type': 'posix', '_version': 1}
-NO_BWRAP = ('NoBwrap: 找不到 bwrap（bubblewrap），工具關不進牢裡；'
-            'Arch/Manjaro: sudo pacman -S bubblewrap，Debian/Ubuntu: sudo apt install bubblewrap')
+# 權限牆擋下的那件，給模型看的話（它讀得懂、不會以為要自己修；細節留給人在 check／status 看）
+JAIL_WHY = {
+    'EnvUnsafe': '這支工具的設定有安全問題（會把金鑰類環境變數帶進牢裡）',
+    'NoBwrap': '這台機器沒有裝關牢要用的 bwrap',
+}
+JAIL_WHY_ACCESS = '這個 agent 的權限設定（access.json）有問題'
+
+
+def jail_message(tool, code, base):
+    """工具被權限牆擋下時寫進記憶的 tool 訊息。"""
+    why = JAIL_WHY.get(code, JAIL_WHY_ACCESS)
+    return ('工具 %s 沒有執行：%s，被 aos 擋下（%s）。這不是你能修的，也不要改用別的工具繞過；'
+            '請告訴使用者：「工具 %s 被 aos 權限牆擋下（%s），請跑 aos-agent check --target %s 看細節」。'
+            % (tool, why, code, tool, code, base))
 
 
 def tool_map(run):
@@ -87,18 +99,47 @@ class _WatchEnv(dict):
         return super().__getitem__(key)
 
 
+def _env_cells(value, pos, out):
+    """_meta 字面上每個 {"$env": 名} 的位置（envs.FOO、argv.1、envs.X.$fmt.k…）。"""
+    if isinstance(value, dict):
+        if isinstance(value.get('$env'), str):
+            out.setdefault(value['$env'], []).append('.'.join(pos) or '（整份 _meta）')
+        for k, v in value.items():
+            _env_cells(v, pos + [str(k)], out)
+    elif isinstance(value, list):
+        for i, v in enumerate(value):
+            _env_cells(v, pos + [str(i)], out)
+
+
+def secret_env_reads(meta, base, env):
+    """關牢的工具 _meta 用 $env 讀了哪些敏感名字：[(名字, 位置)]。送件與 check 共用這一個判定。
+
+    真的照解析器走一遍（經 $ref／$fmt 讀到的也算），位置從 _meta 字面上找；找不到＝經 $ref 讀的。
+    """
+    watch = _WatchEnv(os.environ if env is None else env)
+    try:
+        aos_inst.load_obj(meta, str(base), env=watch)
+    except aos_inst.InstError:
+        pass
+    cells = {}
+    _env_cells(meta, [], cells)
+    names = sorted({k for k in watch.read if isinstance(k, str) and secret_name(k)})
+    return [(n, '、'.join(cells.get(n, ['（經 $ref 讀到，_meta 字面上沒有）']))) for n in names]
+
+
+def env_unsafe_detail(reads):
+    return '；'.join('_meta 的 %s 用 $env 讀了 %s' % (where, name) for name, where in reads) + \
+        '（名字像金鑰或 AOS_*，關牢的工具不給）'
+
+
 def tool_inst(meta, base, name, env, access=None):
     if access is not None:
         # 關牢的工具：_meta 任何一格用 $env 讀敏感名字（AOS_*、像金鑰的、SSH_AUTH_SOCK）＝整件不跑，
         # 不論解出來放到哪個名字或 argv（值一寫進 inst 就落盤了）。
-        env = _WatchEnv(os.environ if env is None else env)
-        decoded = aos_inst.load_obj(meta, str(base), env=env)
-        bad = sorted({k for k in env.read if isinstance(k, str) and secret_name(k)})
-        if bad:
-            raise aos_inst.InstError('EnvUnsafe', '_meta 用 $env 讀了 %s（名字像金鑰或 AOS_*），關牢的工具不給；'
-                                     '拿掉那一格' % '、'.join(bad))
-    else:
-        decoded = aos_inst.load_obj(meta, str(base), env=env)
+        reads = secret_env_reads(meta, base, env)
+        if reads:
+            raise aos_inst.InstError('EnvUnsafe', env_unsafe_detail(reads))
+    decoded = aos_inst.load_obj(meta, str(base), env=env)
     inst = {'_metainfo': dict(META), 'argv': decoded['argv'], 'cwd': decoded['cwd']}
     if decoded['cwd_mkdir']:
         inst['cwd'] = {'$opt': 'mkdir', '$val': decoded['cwd']}
@@ -129,13 +170,13 @@ def think_inst(base, name):
 
 
 def jail_problem(access, tool, env):
-    """這支要關牢但關不起來 → 白話（照 send §5.3 記成跑不起來）；不用關或關得起來＝None。"""
+    """這支要關牢但關不起來 → 錯誤代號（照 send §5.3 記成沒執行）；不用關或關得起來＝None。"""
     if access is None or tool.get('_jail', True) is False:
         return None
     if 'error' in access:
-        return access['error']
+        return access['error'].split(':', 1)[0]            # 代號；細節在 status／check
     if shutil.which('bwrap', path=env.get('PATH', os.defpath)) is None:
-        return NO_BWRAP
+        return 'NoBwrap'
     return None
 
 
@@ -158,13 +199,15 @@ def send(run):
                     continue
                 problem = jail_problem(access, tool, run.env)
                 if problem is not None:
-                    call.update(done={'content': '工具 %s 跑不起來：%s' % (call['tool'], problem)}, acked=True)
+                    call.update(done={'content': jail_message(call['tool'], problem, run.base)}, acked=True)
                     continue
                 jailed = access if access is not None and tool.get('_jail', True) is not False else None
                 try:
                     inst = tool_inst(tool['_meta'], run.base, name, run.env, access=jailed)
                 except aos_inst.InstError as exc:
-                    call.update(done={'content': '工具 %s 跑不起來：%s' % (call['tool'], exc)}, acked=True)
+                    content = (jail_message(call['tool'], exc.code, run.base) if exc.code == 'EnvUnsafe'
+                               else '工具 %s 跑不起來：%s' % (call['tool'], exc))
+                    call.update(done={'content': content}, acked=True)
                     continue
                 history, length = run.info['history'], batch['base_len']
                 if length == 0 or len(history) < length:

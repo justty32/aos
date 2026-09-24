@@ -9,6 +9,7 @@ import stat
 import subprocess
 
 import aos_agent_access
+import aos_agent_batch
 import aos_inst
 import aos_agent_info
 import aos_jail
@@ -134,6 +135,11 @@ def access_checks(checks, base, env):
         if tool.get('_jail', True) is False:
             checks.report('warn', item, '_jail: false：這支不關牢，碰得到你碰得到的所有檔')
             continue
+        reads = aos_agent_batch.secret_env_reads(tool.get('_meta'), base, env)   # 跟送件同一個判定
+        if reads:
+            checks.report('bad', item, 'EnvUnsafe: %s；關牢後這支每次都會被擋下不跑。拿掉那一格；'
+                          '工具真的要金鑰就讓它讀唯讀掛進來的檔，別走環境變數'
+                          % aos_agent_batch.env_unsafe_detail(reads))
         argv = tool['_meta'].get('argv') if isinstance(tool.get('_meta'), dict) else None
         if not isinstance(argv, list) or not argv or not isinstance(argv[0], str):
             continue
