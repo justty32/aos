@@ -30,7 +30,7 @@ def talk(n):
 
 
 def fake_ask(mode='good', calls=None):
-    """假的 ask：good＝只留關鍵詞（一定比原文短）；long＝原文抄兩遍；lose＝丟掉檔名；fail＝EngineFailed。"""
+    """假的 ask：good＝只留關鍵詞（一定比原文短）；long＝原文抄兩遍；lose＝丟掉行數 40；fail＝EngineFailed。"""
     def ask(system, user, *, alias=None, env=None, max_tokens=None):
         if calls is not None:
             calls.append({'system': system, 'user': user, 'alias': alias, 'max_tokens': max_tokens})
@@ -42,7 +42,7 @@ def fake_ask(mode='good', calls=None):
         text = {'good': '使用者問了幾個問題；關鍵：' + ' '.join(words),
                 'fence': '```\n使用者問了幾個問題；關鍵：' + ' '.join(words) + '\n```',
                 'long': user + '\n' + user,
-                'lose': '使用者問了幾個問題；關鍵：' + ' '.join(w for w in words if w != 'long0.txt'),
+                'lose': '使用者問了幾個問題；關鍵：' + ' '.join(w for w in words if w != '40'),
                 'aos': '[aos 已封存] ' + ' '.join(words)}[mode]
         return {'text': text, 'usage': {'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120},
                 'ms': 7, 'alias': alias, 'model': 'real-small'}
@@ -57,13 +57,31 @@ class KeywordTests(unittest.TestCase):
         self.assertEqual(compact_api.keywords(body), ['long.txt', '3', 'b.py', '40', '7', '1'])
 
     def test_check_summary(self):
-        body = ['第 1 輪', '  使用者：讀 long.txt 告訴我幾行，還有 3 件事', '  結果 read（40 行）：', '    ' + 'x' * 200]
-        self.assertIsNone(compact_api.check_summary(body, '使用者叫我讀 long.txt（40 行），有 3 件事。'))
-        self.assertIn('丟了關鍵詞：40', compact_api.check_summary(body, '讀了 long.txt 有 3 件事，400 行'))
-        self.assertIn('丟了關鍵詞：long.txt', compact_api.check_summary(body, '讀了檔（40 行），3 件事'))
-        self.assertIn('沒有比原摘要短', compact_api.check_summary(body, '\n'.join(body) + ' long.txt 40 3'))
+        body = ['第 1 輪', '  使用者：讀 long.txt 告訴我幾行，還有 3 件事', '  呼叫 read {"path": "/w/b.py"}',
+                '  結果 read（40 行）：', '    ' + 'x' * 300]
+        self.assertIsNone(compact_api.check_summary(body, '讀了 b.py（40 行）。'))
+        self.assertIn('丟了關鍵詞：40', compact_api.check_summary(body, '讀了 b.py，400 行'))
+        self.assertIn('丟了關鍵詞：40', compact_api.check_summary(body, '讀了 b.py，40.5 行'))   # 完整的數才算
+        self.assertIn('丟了關鍵詞：b.py', compact_api.check_summary(body, '讀了檔（40 行）'))
+        self.assertIn('沒有比原摘要短', compact_api.check_summary(body, '\n'.join(body) + ' b.py 40'))
         self.assertIn('空的', compact_api.check_summary(body, '  '))
-        self.assertIn('[aos', compact_api.check_summary(body, '[aos 已封存 long.txt 40 3'))
+        self.assertIn('[aos', compact_api.check_summary(body, '[aos 已封存 b.py 40'))
+
+    def test_has_whole_numbers(self):
+        for text, ok in (('40 行', True), ('共40行', True), ('40.5', False), ('4.40', False), ('400', False),
+                         ('結尾 40。', True)):
+            self.assertEqual(compact_api._has(text, '40'), ok, text)
+
+    def test_user_lines_kept_verbatim(self):
+        """astra M6：「芒果」被模型改成「蘋果」——原話那行原樣在新摘要裡，模型改不到。"""
+        body = ['第 1 輪', '  使用者：記住：我最喜歡的水果是芒果。', '  回話：記住了。' + '好' * 100,
+                '第 2 輪', '  使用者：讀 a.txt', '  工具：read（3 行）', '  回話：3 行']
+        text = '使用者最喜歡蘋果；讀了 a.txt（3 行）'
+        self.assertIsNone(compact_api.check_summary(body, text))       # 檢查擋不住改寫，所以原話不給模型改
+        new = compact_api.compose(body, text)
+        self.assertEqual(new[:3], [compact_api.KEPT_HEAD, '第 1 輪 使用者：記住：我最喜歡的水果是芒果。',
+                                   '第 2 輪 使用者：讀 a.txt'])
+        self.assertEqual(new[3:], [compact_api.CONDENSED_HEAD, text])
 
     def test_clean_strips_fence(self):
         self.assertEqual(compact_api._clean('```text\n一句話\n```'), '一句話')
@@ -112,18 +130,21 @@ class SummarizeTests(MemoryBase):
         nl, ol = new['content'].split('\n'), old['content'].split('\n')
         self.assertEqual(nl[0], ol[0].replace('，下面是機械摘要：', '，下面是模型濃縮的摘要：'))   # 開頭：封幾輪幾則照舊
         self.assertEqual(nl[-1], ol[-1])                                                     # 結尾那句照舊
-        self.assertTrue(nl[1].startswith('使用者問了幾個問題'))
+        self.assertEqual(nl[1], compact_api.KEPT_HEAD)
+        users = [l.strip() for l in ol if l.strip().startswith('使用者：')]
+        self.assertEqual([l.split(' ', 3)[-1] for l in nl[2:2 + len(users)]], users)   # 原話原樣
+        self.assertEqual(nl[2 + len(users)], compact_api.CONDENSED_HEAD)
+        self.assertTrue(nl[3 + len(users)].startswith('使用者問了幾個問題'))
         self.assertLess(len(new['content']), len(old['content']))
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]['alias'], 'small')                    # 預設＝agent 自己的 llm.model
         self.assertEqual(calls[0]['user'], '\n'.join(ol[1:-1]))           # 只送中間
         # 其他訊息跟機械版一樣
         self.assertEqual([m for m in history if m is not new and m != new], [m for m in mech if m != old])
-        self.assertIn('--summarize：1 段封存摘要，用了模型版 1 段', out)
+        self.assertIn('--summarize：1 段封存摘要，送了 1 段、用了模型版 1 段', out)
         ev = self.events()[-1]
         self.assertEqual(ev['ev'], 'compact')
-        self.assertEqual((ev['summarize']['segments'], ev['summarize']['used'], ev['summarize']['prompt_tokens']),
-                         (1, 1, 100))
+        self.assertEqual([ev['summarize'][k] for k in ('planned', 'sent', 'used', 'prompt_tokens')], [1, 1, 1, 100])
         self.assertEqual(ev['after']['tokens'], context_api.history_tokens(history))
         [row] = self.usage()
         self.assertEqual((row['batch'], row['alias'], row['model'], row['usage']['prompt_tokens']),
@@ -156,8 +177,8 @@ class SummarizeTests(MemoryBase):
         self.assertEqual(len(self.usage()), 1)                  # 模型有回就記用量
 
     def test_lost_keyword_falls_back(self):
-        ev, _ = self.fallback_case('lose', '丟了關鍵詞：long0.txt')
-        self.assertEqual(ev['summarize']['fallback'], ['第 1 段：丟了關鍵詞：long0.txt'])
+        ev, _ = self.fallback_case('lose', '丟了關鍵詞：40')
+        self.assertEqual(ev['summarize']['fallback'], ['第 1 段：丟了關鍵詞：40'])
 
     def test_aos_marker_falls_back(self):
         self.fallback_case('aos', '[aos')
@@ -186,16 +207,33 @@ class SummarizeTests(MemoryBase):
             return {'text': next(answers), 'usage': None, 'ms': 1, 'alias': 'small', 'model': 'm'}
         with patch.object(aos_llm_ask, 'ask', ask):
             out, rep = compact_api.make_summarizer(self.base, {}, 'small')([], after, 'abc')
-        self.assertEqual((rep['segments'], rep['used']), (2, 1))
-        self.assertTrue(out[0]['content'].split('\n')[1].startswith('短短的'))
+        self.assertEqual((rep['planned'], rep['sent'], rep['used']), (2, 2, 1))
+        self.assertTrue(out[0]['content'].split('\n')[-2].startswith('短短的'))
         self.assertEqual(out[2], other)
         self.assertEqual(rep['fallback'][0][:5], '第 2 段')
+
+    def test_answered_error_still_recorded(self):
+        """astra S2：HTTP 2xx 但 message 驗不過（ask 丟錯、例外上帶用量）也照記；預定／實送／採用分開。"""
+        [seg] = self.sealed(self.mechanical())
+        after = [seg, {'role': 'assistant', 'content': '中間'},
+                 dict(seg, content=seg['content'].replace('第 1 輪', '第 9 輪'))]
+
+        def ask(system, user, **kw):
+            exc = AgentError('EngineFailed', '模型回覆不合規：role')
+            exc.answered, exc.usage, exc.ms, exc.alias, exc.model = True, {'prompt_tokens': 42}, 5, 'small', 'm'
+            raise exc
+        with patch.object(aos_llm_ask, 'ask', ask):
+            out, rep = compact_api.make_summarizer(self.base, {}, 'small')([], after, 'abc')
+        self.assertEqual(out, after)
+        self.assertEqual([rep[k] for k in ('planned', 'sent', 'used', 'prompt_tokens')], [2, 1, 0, 42])
+        [row] = self.usage()
+        self.assertEqual((row['batch'], row['usage']), ('compact-summarize-abc', {'prompt_tokens': 42}))
 
     def test_old_digests_not_resent(self):
         """記憶裡本來就有的封存摘要不再送模型（只濃縮這次生的）。"""
         h = self.mechanical()
         out, rep = compact_api.make_summarizer(self.base, {}, 'small')(h, h, 'abc')
-        self.assertEqual((rep['segments'], out), (0, h))
+        self.assertEqual((rep['planned'], rep['sent'], out), (0, 0, h))
 
     def test_dry_run_calls_nothing_writes_nothing(self):
         before = tree(self.base)

@@ -33,6 +33,7 @@
 | [beat.md](beat.md) | 心跳 `aos-team beat`、`aos-team routine`：kernel 反覆叫（預設 60 秒一輪），照 `team/routines.json` 算誰到期、以開單方式派出 |
 | [wall.md](wall.md) | 團隊的牆（第二波 B 隊）：誰關在牢裡（成員工具、門房 `tool`、驗收的 lint 與 `cmd_ok`）、成員的映射、郵差再驗什麼、`cmd_ok` 白名單、保證外的 |
 | [crystal.md](crystal.md) | （第三波 W3-2）固化建議 `aos-team crystal`：落穿句型怎麼歸類、「同一種單」、機械候選規則與回測、提案檔怎麼批、`--suggest-with-llm` |
+| [crystal-checks.md](crystal-checks.md) | （第三波 W3-2 審查後）crystal 候選的機械檢查：整份例句全過、次數從歷史算、內建反例（`../`、`/etc/passwd`、`-rf`、黏兩件事）、舊 log 配信可信度 |
 | [score.md](score.md) | 六軸彙整 `aos-team score`：把六軸表（axes.md §4 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型 |
 | [examples/](examples/) | 每種檔一份範例；`python3 lib/aos_team_format.py 檔…` 驗得過 |
 

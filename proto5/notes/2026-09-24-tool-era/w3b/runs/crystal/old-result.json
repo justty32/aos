@@ -22,6 +22,10 @@
     "matched",
     "matched"
    ],
+   "confidence": [
+    "medium",
+    "medium"
+   ],
    "candidates": [],
    "skipped": [],
    "dropped": []
@@ -48,6 +52,10 @@
     "matched",
     "matched"
    ],
+   "confidence": [
+    "medium",
+    "medium"
+   ],
    "candidates": [],
    "skipped": [],
    "dropped": []
@@ -60,6 +68,7 @@
    "fallthrough": {},
    "classes": [],
    "linked": [],
+   "confidence": [],
    "candidates": [],
    "skipped": [],
    "dropped": []
@@ -72,6 +81,7 @@
    "fallthrough": {},
    "classes": [],
    "linked": [],
+   "confidence": [],
    "candidates": [],
    "skipped": [],
    "dropped": []
@@ -94,6 +104,9 @@
    ],
    "linked": [
     "matched"
+   ],
+   "confidence": [
+    "medium"
    ],
    "candidates": [],
    "skipped": [],
@@ -131,6 +144,13 @@
    "matched",
    "matched",
    "matched"
+  ],
+  "confidence": [
+   "medium",
+   "medium",
+   "medium",
+   "medium",
+   "medium"
   ],
   "candidates": [
    "crystal-1"

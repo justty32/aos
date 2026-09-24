@@ -65,7 +65,8 @@ TOOLS_EPILOG = ('用法：\n'
                 '  aos-agent tools wrap-cli CMD [--name PACK] [--out DIR] [--force] [--help-file F]\n'
                 '                          [--describe-with-llm [--model ALIAS] | --spec FILE]   # 把一支指令包成工具\n'
                 'new／test／wrap-py／wrap-cli 不需要 agent 家（不收 --target）；test 預設關在牢裡跑（有 bwrap 時）。\n'
-                '--describe-with-llm 只寫提案檔、不產包；人看過再用 --describe／--spec 產包（要 AOS_LLM_CONFIG）。\n'
+                '--describe-with-llm 叫模型一次（只有這一步要 AOS_LLM_CONFIG），只寫提案檔、不產包；\n'
+                '人看過再用 --describe／--spec 產包（不叫模型、不需要 AOS_LLM_CONFIG）。\n'
                 'add 的對象：不含 / 的名字＝內建工具包；含 <資料夾名>.json 的資料夾＝工具包（複製進 tools/）；\n'
                 '其他資料夾或 .json 檔＝原地引用（不複製，info.tools 加一條）。改完下一批工具生效，不用重 start。')
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
@@ -169,7 +170,7 @@ def _parser():
             sub.add_argument('--name', metavar='PACK', help='wrap-py／wrap-cli：工具包名字（省略＝檔名去掉 .py／指令名）')
             sub.add_argument('--help-file', metavar='F', help='wrap-cli：help 文字從這個檔讀（省略＝跑 CMD --help）')
             sub.add_argument('--describe-with-llm', action='store_true',
-                             help='wrap-py：請模型補沒 docstring 的描述；wrap-cli：請模型讀 help 出參數表。只寫提案檔，不產包')
+                             help='wrap-py：請模型補沒 docstring 的描述；wrap-cli：請模型讀 help 出參數表。只寫提案檔，不產包（要 AOS_LLM_CONFIG）')
             sub.add_argument('--model', metavar='ALIAS', help='--describe-with-llm 用 llm.json 的哪個代號（省略＝default）')
             sub.add_argument('--describe', metavar='FILE', help='wrap-py：照人看過的描述提案檔補描述再產包')
             sub.add_argument('--spec', metavar='FILE', help='wrap-cli：照人看過的參數表產包（不叫模型）')

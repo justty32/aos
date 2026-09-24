@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 HERE = Path(__file__).resolve().parent
@@ -592,7 +593,7 @@ class LlmWrapCliTests(Temp):
         self.assertEqual(prop['help_sha256'], w._sha(help_text('weird_free.txt')))
         self.assertEqual(prop['usage']['total_tokens'], 15)
         self.assertIn('丟掉  第 4 格（made_up）（旗標 --made-up 在原文裡找不到）', out)
-        self.assertIn('看過沒問題：aos-agent tools wrap-cli %s --spec ./dd.wrapcli.json' % (FIX / 'echoargs.py'), out)
+        self.assertIn('aos-agent tools wrap-cli %s --spec ./dd.wrapcli.json --name dd' % (FIX / 'echoargs.py'), out)
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]['alias'], 'fast')
         self.assertIn('--keep=first|last', calls[0]['user'])
@@ -722,6 +723,158 @@ class DescribeTests(Temp):
         r = self.agent('tools', 'wrap-py', OPAQUE, '--name', 'opq', '--only', 'proc', '--describe',
                        'opq.describe.json', code=0)
         self.assertIn('提案裡的 proc2 這次沒包', r.stdout)
+
+
+# ------------------------------------------------------------------ astra 審查（M1、M7、M8、M9、S1、S5） ----
+
+ITEMS_SRC = ('import argparse, json\np = argparse.ArgumentParser()\n'
+             'p.add_argument("--items", nargs="*")\np.add_argument("--delete", action="store_true")\n'
+             'p.add_argument("--name")\np.add_argument("--pair", nargs=2)\np.add_argument("-s")\n'
+             'print(json.dumps(vars(p.parse_args()), sort_keys=True))\n')
+
+
+class ReviewTests(Temp):
+    def last_error(self, r):
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def test_m1_dash_values_cannot_become_flags(self):
+        (self.d / 'it.py').write_text(ITEMS_SRC)
+        self.agent('tools', 'wrap-cli', self.d / 'it.py', code=0)
+        r = self.run_tool('it', {'items': ['--delete']}, code=1)       # 審查反例：以前變成 delete=True
+        self.assertEqual(self.last_error(r)['error'], 'BadArguments')
+        self.assertIn('starts with "-"', self.last_error(r)['message'])
+        r = self.run_tool('it', {'pair': ['a', '-b']}, code=1)
+        self.assertEqual(self.last_error(r)['error'], 'BadArguments')
+        r = self.run_tool('it', {'s': '-x'}, code=1)                   # 只有短旗標：沒有安全寫法
+        self.assertEqual(self.last_error(r)['error'], 'BadArguments')
+        got = json.loads(self.run_tool('it', {'name': '--delete'}, code=0).stdout.splitlines()[0])
+        self.assertEqual((got['name'], got['delete']), ('--delete', False))   # argparse 長旗標用 --name=值
+
+    def test_m1_help_mode(self):
+        self.agent('tools', 'wrap-cli', FIX / 'echoargs.py', '--help-file', FIX / 'weird_free.txt', '--name', 'dd',
+                   code=0)
+        got = json.loads(self.run_tool('dd', {'sep': '-x'}, code=0).stdout.splitlines()[0])
+        self.assertEqual(got, ['--sep=-x'])                             # help 寫了 --sep=：安全
+        self.agent('tools', 'wrap-cli', FIX / 'echoargs.py', '--help-file', FIX / 'weird_angle.txt', '--name', 'img',
+                   code=0)
+        r = self.run_tool('img', {'input': 'a', 'o': '-q'}, code=1)
+        self.assertEqual(self.last_error(r)['error'], 'BadArguments')
+        r = self.run_tool('img', {'input': 'a', 'resize': '-1x2'}, code=1)
+        self.assertEqual(self.last_error(r)['error'], 'BadArguments')
+
+    def test_m7_nargs_length_and_schema(self):
+        (self.d / 'it.py').write_text(ITEMS_SRC)
+        self.agent('tools', 'wrap-cli', self.d / 'it.py', code=0)
+        r = self.run_tool('it', {'pair': ['a']}, code=1)
+        self.assertIn('exactly 2 items', self.last_error(r)['message'])
+        got = json.loads(self.run_tool('it', {'pair': ['a', 'b']}, code=0).stdout.splitlines()[0])
+        self.assertEqual(got['pair'], ['a', 'b'])
+        prop = json.loads((self.d / 'it' / 'it.json').read_text())[0]['function']['parameters']['properties']['pair']
+        self.assertEqual((prop['minItems'], prop['maxItems']), (2, 2))
+
+    def test_m7_rejected_shapes(self):
+        src = ('import argparse\np = argparse.ArgumentParser()\n'
+               'p.add_argument("--kv", action="append", nargs=2)\n'
+               'p.add_argument("a", nargs="?")\np.add_argument("b", nargs="?")\n'
+               'p.add_argument("--plus", nargs="+")\n')
+        parsed = w.read_argparse(src, 'x.py')
+        rows = {r[1]: r for r in parsed['rows']}
+        self.assertIn('append 搭配 nargs 不支援', rows['--kv'][2])
+        params, dropped = w.check_params(parsed['params'], src)
+        self.assertEqual([p['name'] for p in params], ['a', 'plus'])
+        self.assertIn('前面已有可變長度的位置參數 a', dropped[0][1])
+        (self.d / 'x.py').write_text(src + 'print(1)\n')
+        self.agent('tools', 'wrap-cli', self.d / 'x.py', code=0)
+        r = self.run_tool('x', {'plus': []}, code=1)
+        self.assertIn('at least 1 item', self.last_error(r)['message'])
+        # 人改的參數表也擋：兩個選填位置參數、亂寫 nargs
+        spec = {'name': 'p', 'flags': [], 'kind': 'positional', 'type': 'string', 'array': True, 'nargs': 'x'}
+        self.assertIn('nargs', w.check_params([spec], '')[1][0][1])
+
+    def test_m8_help_env_is_minimal(self):
+        script = self.d / 'envhelp'
+        script.write_text('#!/usr/bin/env python3\nimport os, sys\n'
+                          'print("usage: envhelp [-a]\\n  -a   all\\n" + " ".join(sorted(os.environ)))\n'
+                          'print("LC_ALL=" + os.environ.get("LC_ALL", ""), "SECRET=" + os.environ.get("MY_SECRET_KEY", ""))\n')
+        script.chmod(0o755)
+        os.environ['MY_SECRET_KEY'] = 'hunter2'
+        self.addCleanup(os.environ.pop, 'MY_SECRET_KEY', None)
+        text = w.run_help(w.resolve_cmd(str(script)))
+        self.assertIn('LC_ALL=C', text)
+        self.assertNotIn('hunter2', text)
+        self.assertNotIn('MY_SECRET_KEY', text)
+
+    def test_m8_help_is_bounded(self):
+        # 主行程印完就走，另開 session 的孫子握著 stdout 睡 60 秒：最多再收 2 秒就回
+        script = self.d / 'holder'
+        script.write_text('#!/usr/bin/env python3\nimport os, sys, time\nprint("usage: holder [-a]", flush=True)\n'
+                          'if os.fork() == 0:\n    os.setsid()\n    time.sleep(60)\n')
+        script.chmod(0o755)
+        t0 = time.monotonic()
+        self.assertIn('usage: holder', w.run_help(w.resolve_cmd(str(script))))
+        self.assertLess(time.monotonic() - t0, 8)
+        # 自己睡著不走、輸出很大：到上限就砍、HelpFailed
+        slow = self.d / 'slow'
+        slow.write_text('#!/usr/bin/env python3\nimport sys, time\nsys.stdout.write("x" * 3000000)\n'
+                        'sys.stdout.flush()\ntime.sleep(60)\n')
+        slow.chmod(0o755)
+        old = w.HELP_TIMEOUT
+        w.HELP_TIMEOUT = 1
+        self.addCleanup(setattr, w, 'HELP_TIMEOUT', old)
+        t0 = time.monotonic()
+        with self.assertRaises(AgentError) as cm:
+            w.run_help(w.resolve_cmd(str(slow)))
+        self.assertEqual(cm.exception.code, 'HelpFailed')
+        self.assertLess(time.monotonic() - t0, 10)
+
+    def test_m9_spec_top_level_fields(self):
+        self.agent('tools', 'wrap-cli', FIX / 'echoargs.py', '--help-file', FIX / 'weird_free.txt', '--name', 'dd',
+                   code=0)
+        good = json.loads((self.d / 'dd' / 'wrapcli.json').read_text())
+        for key, value, why in (('command', None, 'command'), ('description', 5, 'description'),
+                                ('description', 'a\x1bb', 'description'), ('timeout', None, 'timeout'),
+                                ('timeout', '9', 'timeout'), ('timeout', 0, 'timeout'), ('timeout', 10 ** 6, 'timeout'),
+                                ('timeout', True, 'timeout'), ('params', {}, 'params'), ('mode', 'x', 'mode'),
+                                ('help_sha256', 1, 'help_sha256'), ('help_file', 3, 'help_file')):
+            with self.subTest(key=key, value=value):
+                bad = dict(good, **{key: value})
+                (self.d / 'bad.json').write_text(json.dumps(bad))
+                r = self.agent('tools', 'wrap-cli', FIX / 'echoargs.py', '--spec', self.d / 'bad.json', '--name', 'x',
+                               code=1)
+                self.assertIn('SpecInvalid', r.stderr)
+                self.assertIn(why, r.stderr)
+                self.assertNotIn('Traceback', r.stderr + r.stdout)
+
+    def test_s1_control_characters(self):
+        text = 'usage: t [--a]\n  --a   x\n'
+        for bad in ('ok\x1b[31m', 'nul\x00', 'c1\x9b'):
+            with self.subTest(bad=bad):
+                _, dropped = w.check_params([{'name': 'a', 'flags': ['--a'], 'kind': 'flag', 'help': bad}], text)
+                self.assertIn('控制字元', dropped[0][1])
+        _, dropped = w.check_params([{'name': 'a', 'flags': ['--a'], 'kind': 'option', 'type': 'string',
+                                      'choices': ['x\x1b']}], text)
+        self.assertIn('控制字元', dropped[0][1])
+        result = dev.analyze(OPAQUE.read_text(encoding='utf-8'), str(OPAQUE))
+        ok, dropped = dev.check_describe({'proc': {'description': 'Count\x1b]0;pwn\x07 lines',
+                                                   'params': {'path': 'file\x00'}}}, result)
+        self.assertEqual(ok, {})
+        self.assertEqual([d[1] for d in dropped], ['描述含控制字元（ESC、NUL…）', '說明含控制字元（ESC、NUL…）'])
+        desc, _, dropped, _ = w.llm_table('t', 'help', text, ask=fake_ask({'description': 'bad\x1b', 'params': []}))
+        self.assertIsNone(desc)
+        self.assertEqual(dropped[0][0], 'description')
+
+    def test_s5_apply_line_quoted(self):
+        spaced = self.d / 'my dir'
+        spaced.mkdir()
+        shutil.copy(FIX / 'echoargs.py', spaced / 'echo args.py')
+        _, out = self.quiet(w.wrap_cli, str(spaced / 'echo args.py'), name='ea', out=str(spaced),
+                            help_file=str(FIX / 'weird_free.txt'), describe_with_llm=True, ask=fake_ask(FREE_REPLY))
+        line = out.strip().splitlines()[-1]
+        self.assertIn("wrap-cli '%s' --spec" % (spaced / 'echo args.py'), line)
+        self.assertIn('--name ea', line)
+        self.assertIn("--out '%s'" % spaced, line)
+        r = self.agent('tools', '-h', code=0)
+        self.assertIn('只有這一步要 AOS_LLM_CONFIG', r.stdout)
 
 
 # ------------------------------------------------------------------ CLI：用法與假端點 ----

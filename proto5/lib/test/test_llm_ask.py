@@ -57,14 +57,16 @@ class AskTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.base = Path(tmp.name)
         self.bodies = []
+        self.reply = None
         test = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self):
                 n = int(self.headers['Content-Length'])
                 test.bodies.append(json.loads(self.rfile.read(n)))
-                out = json.dumps({'choices': [{'message': {'role': 'assistant', 'content': '```json\n{"k": 1}\n```'}}],
-                                  'usage': {'prompt_tokens': 7, 'completion_tokens': 3}}).encode()
+                out = json.dumps(test.reply or {
+                    'choices': [{'message': {'role': 'assistant', 'content': '```json\n{"k": 1}\n```'}}],
+                    'usage': {'prompt_tokens': 7, 'completion_tokens': 3}}).encode()
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(out)))
@@ -107,6 +109,17 @@ class AskTest(unittest.TestCase):
         with self.assertRaises(AgentError) as cm:
             ask.ask('a', 'b', env=self.env)
         self.assertEqual(cm.exception.code, 'EngineFailed')
+        self.assertFalse(cm.exception.answered)            # 沒拿到 2xx：沒有用量可記
+        self.assertIsNone(cm.exception.usage)
+
+    def test_bad_message_keeps_usage(self):
+        """astra S2：2xx 帶 usage、但 message 驗不過——例外上帶著用量，呼叫端照樣記。"""
+        self.reply = {'choices': [{'message': {'role': 'user', 'content': 'x'}}], 'usage': {'prompt_tokens': 5}}
+        with self.assertRaises(AgentError) as cm:
+            ask.ask('a', 'b', env=self.env)
+        self.assertEqual(cm.exception.code, 'EngineFailed')
+        e = cm.exception
+        self.assertEqual((e.answered, e.usage, e.alias, e.model), (True, {'prompt_tokens': 5}, 'default', 'm1'))
 
 
 class ContextSkipsSummarizeTest(unittest.TestCase):

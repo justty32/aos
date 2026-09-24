@@ -17,6 +17,7 @@ from pathlib import Path
 import re
 import shutil
 import selectors
+import shlex
 import signal
 import stat
 import subprocess
@@ -803,6 +804,7 @@ def wrap_py(file, only=None, name=None, out=None, force=False, describe=None):
 
 DESCRIBE_TYPE = 'aos_wrap_py_describe'
 DESCRIBE_MAX = 200                                       # 描述、參數說明最多幾個字
+CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]')   # 控制字元（ESC、NUL…）：一律不收（審查 S1）
 DESCRIBE_SYSTEM = ('You write short descriptions for Python functions that an AI agent will call as tools. '
                    'Read the code to see what each function really does. Reply with one JSON object only.')
 
@@ -842,6 +844,8 @@ def check_describe(data, result):
                 dropped.append((fname, '已有 docstring，不覆蓋'))
             elif not text:
                 dropped.append((fname, '描述是空的或不是字串'))
+            elif CONTROL.search(text):
+                dropped.append((fname, '描述含控制字元（ESC、NUL…）'))
             elif len(text) > DESCRIBE_MAX:
                 dropped.append((fname, '描述 %d 字，超過 %d' % (len(text), DESCRIBE_MAX)))
             else:
@@ -860,6 +864,8 @@ def check_describe(data, result):
                 dropped.append((label, '已有說明，不覆蓋'))
             elif not text:
                 dropped.append((label, '說明是空的或不是字串'))
+            elif CONTROL.search(text):
+                dropped.append((label, '說明含控制字元（ESC、NUL…）'))
             elif len(text) > DESCRIBE_MAX:
                 dropped.append((label, '說明 %d 字，超過 %d' % (len(text), DESCRIBE_MAX)))
             else:
@@ -916,9 +922,10 @@ def describe_with_llm(file, only=None, name=None, out=None, force=False, model=N
     _print_describe(result, ok, dropped)
     print(aos_llm_ask.usage_line(got), file=sys.stderr)
     print('提案寫在 %s（%d 支有提案、%d 條丟掉；還沒產包）' % (target, len(ok), len(dropped)))
-    extra = ''.join(' %s %s' % (k, v) for k, v in (('--only', ','.join(only) if only else None), ('--name', name),
-                                                   ('--out', out)) if v)
-    print('看過沒問題（可以先改提案檔）：aos-agent tools wrap-py %s --describe %s%s' % (file, _shown(target), extra))
+    extra = ''.join(' %s %s' % (k, shlex.quote(v)) for k, v in (('--only', ','.join(only) if only else None),
+                                                                ('--name', name), ('--out', out)) if v)
+    print('看過沒問題（可以先改提案檔；這一步不叫模型）：aos-agent tools wrap-py %s --describe %s%s'
+          % (shlex.quote(file), shlex.quote(_shown(target)), extra))
     return 0
 
 

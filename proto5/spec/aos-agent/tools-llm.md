@@ -22,9 +22,9 @@ aos-agent tools wrap-py  FILE.py [既有選項] [--describe-with-llm [--model AL
 
 **問什麼**：收了的函式裡，沒 docstring 的要描述、沒說明的參數要說明；一個檔**一次呼叫**，送那些函式的原始碼。全都有＝`NothingToDescribe`（不叫模型）。
 
-**模型回** `{函式名: {"description", "params": {參數: 說明}}}`。機械檢查：只收這次收了的函式與它的參數名；非空、壓成一行後 ≤ 200 字；**已有 docstring 的描述、已有說明的參數不覆蓋**（丟掉並列出）。
+**模型回** `{函式名: {"description", "params": {參數: 說明}}}`。機械檢查：只收這次收了的函式與它的參數名；非空、壓成一行後 ≤ 200 字、不含控制字元（ESC、NUL…，審查 S1）；**已有 docstring 的描述、已有說明的參數不覆蓋**（丟掉並列出）。
 
-**提案** `<out>/<PACK>.describe.json`：`{"_type": "aos_wrap_py_describe", "_version": 1, "source", "sha256"（原檔）, "generated", "model", "alias", "usage", "ms", "functions", "dropped"}`。印表「函式｜現在的描述（沒 docstring＝函式名）｜模型提的」＋參數說明，最後一行 `aos-agent tools wrap-py FILE --describe <提案檔>`（原本帶的 `--only`／`--name`／`--out` 照抄）。
+**提案** `<out>/<PACK>.describe.json`：`{"_type": "aos_wrap_py_describe", "_version": 1, "source", "sha256"（原檔）, "generated", "model", "alias", "usage", "ms", "functions", "dropped"}`。印表「函式｜現在的描述（沒 docstring＝函式名）｜模型提的」＋參數說明，最後一行 `aos-agent tools wrap-py FILE --describe <提案檔>`（原本帶的 `--only`／`--name`／`--out` 照抄；路徑都做 shell quoting）。
 
 **`--describe FILE`**：`_type` 不對或任何一條不過檢查＝`DescribeInvalid`；原檔 sha256 不同＝`SourceChanged`；提案裡這次沒收（`--only` 沒點名）的函式略過並警告。補好後照一般 wrap-py 產包，`wrap.json` 多 `describe: {file, sha256, functions}`。
 

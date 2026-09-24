@@ -247,8 +247,9 @@ class MechanicalTests(Base):
     def test_backtest_flags_stealing_from_existing_rule(self):
         # 有一條舊規則接住「把 z.md 改名成 zz.md」；新候選也吃得到它＝命中兩條、改落穿＝疑似誤觸
         obj = json.loads(EXAMPLE_ROUTES.read_text(encoding='utf-8'))
-        obj['routes'].append({'name': 'zz', 'pattern': '把 z\\.md 改名成 zz\\.md', 'do': 'tool', 'run': ['task', 'ls'],
-                              'tests': {'hit': ['把 z.md 改名成 zz.md'], 'miss': ['把 z.md 改名成 z2.md']}})
+        # zz 的例句（看 z）不會被候選吃到，所以整份例句仍全過；但 log 裡被 zz 接住的那句會被搶
+        obj['routes'].append({'name': 'zz', 'pattern': '把 z\\.md 改名成 zz\\.md|看 z', 'do': 'tool', 'run': ['task', 'ls'],
+                              'tests': {'hit': ['看 z'], 'miss': ['把 z.md 改名成 z2.md']}})
         fmt.write_json(self.lay.routes, obj)
         self.three_renames()
         self.log_tool('把 z.md 改名成 zz.md', 'zz')
@@ -256,6 +257,28 @@ class MechanicalTests(Base):
         # 候選自己的例句仍全過（不含 z 那句），但回測標出它搶了 zz 的句子
         c = res['candidates'][0]
         self.assertEqual([(e['text'], e['misfire']) for e in c['backtest']['eats']], [('把 z.md 改名成 zz.md', True)])
+
+    def test_candidate_breaking_existing_rule_examples_dropped(self):
+        # 審查 M3：舊規則 zz 的 hit「把 z.md 改名成 zz.md」會被候選一起吃到＝命中兩條＝舊規則例句不過 → 候選不收
+        obj = json.loads(EXAMPLE_ROUTES.read_text(encoding='utf-8'))
+        obj['routes'].append({'name': 'zz', 'pattern': '把 z\\.md 改名成 zz\\.md', 'do': 'tool', 'run': ['task', 'ls'],
+                              'tests': {'hit': ['把 z.md 改名成 zz.md'], 'miss': ['把 z.md 改名成 z2.md']}})
+        fmt.write_json(self.lay.routes, obj)
+        self.three_renames()
+        res = crystal.crystal(str(self.team), out=str(self.root / 'p.json'))
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('加了它之後 zz 的例句不過', res['dropped'][0]['why'])
+        self.assertIsNone(res['proposal'])
+
+    def test_existing_rules_already_failing_blocks_all(self):
+        obj = json.loads(EXAMPLE_ROUTES.read_text(encoding='utf-8'))
+        obj['routes'].append({'name': 'bad', 'pattern': 'x', 'do': 'tool', 'run': ['task', 'ls'],
+                              'tests': {'hit': ['y'], 'miss': ['z']}})
+        fmt.write_json(self.lay.routes, obj)
+        self.three_renames()
+        res = crystal.crystal(str(self.team), out=str(self.root / 'p.json'))
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('本來就沒全過', res['dropped'][0]['why'])
 
     def test_candidate_dropped_when_examples_fail(self):
         # 現有規則已經吃「把 X 改名成 Y」→ 候選的 hit 會命中兩條 → 例句不過 → 不寫進提案
@@ -292,6 +315,142 @@ class MechanicalTests(Base):
         self.assertIn('沒有候選規則', out)
 
 
+class OutPathTests(Base):
+    """審查 M2：提案不准寫到生效中的 routes.json；預設不覆蓋、預設檔名唯一。"""
+    def test_refuses_routes_json_and_aliases(self):
+        self.three_renames()
+        before = self.lay.routes.read_bytes()
+        link = self.root / 'alias.json'
+        link.symlink_to(self.lay.routes)
+        hard = self.root / 'hard.json'
+        import os
+        os.link(self.lay.routes, hard)
+        for out in (self.lay.routes, self.team / 'team' / '.' / 'routes.json', self.team / 'x' / '..' / 'team' / 'routes.json',
+                    link, hard):
+            with self.assertRaises(fmt.TeamError) as e:
+                crystal.crystal(str(self.team), out=str(out), force=True)
+            self.assertEqual(e.exception.code, 'Refused', out)
+        self.assertEqual(self.lay.routes.read_bytes(), before)
+
+    def test_no_overwrite_without_force(self):
+        self.three_renames()
+        out = self.root / 'p.json'
+        out.write_text('{}', encoding='utf-8')
+        with self.assertRaises(fmt.TeamError) as e:
+            crystal.crystal(str(self.team), out=str(out))
+        self.assertEqual(e.exception.code, 'AlreadyExists')
+        self.assertEqual(out.read_text(encoding='utf-8'), '{}')
+        code, _, _ = self.call('--out', str(out), '--force')
+        self.assertEqual(code, 0)
+        self.assertIn('crystal', json.loads(out.read_text(encoding='utf-8'))['_metainfo'])
+
+    def test_default_names_unique(self):
+        self.three_renames()
+        a = crystal.crystal(str(self.team))['proposal']
+        b = crystal.crystal(str(self.team))['proposal']
+        self.assertNotEqual(a, b)
+        self.assertEqual(len(list((self.lay.team / 'crystal').glob('proposal-*.json'))), 2)
+
+
+class AmbiguityTests(Base):
+    """審查 S3：配信有歧義的只列、不拿來產候選，可信度標出來。"""
+    def test_old_log_same_text_twice_in_window_is_low(self):
+        # 同一句說兩次、舊 log 沒 letter、兩封信都在 120 秒內 → 兩行都配不準
+        self.minute = 5
+        for sec in (0, 30):
+            lid = '17900000000%08d-1-human' % (90 + sec)
+            with open(self.lay.route_log, 'a', encoding='utf-8') as f:
+                f.write(json.dumps({'at': self.at(sec), 'text': RENAME[0], 'result': 'lead', 'route': None,
+                                    'why': '沒有規則命中'}, ensure_ascii=False) + '\n')
+            fmt.write_json(self.lay.post_sent / (lid + '.json'),
+                           {'id': lid, 'kind': 'letter', 'recorded_at': self.at(sec), 'from': 'human', 'to': 'lead',
+                            'status': 'REQUEST', 'text': RENAME[0], 'at': self.at(sec)})
+        res = crystal.crystal(str(self.team))
+        self.assertEqual([f['confidence'] for f in res['fallthrough']], ['low', 'low'])
+        self.assertIn('配不準', res['fallthrough'][0]['doubt'])
+        self.assertEqual(res['classes'][0]['doubtful'], 2)
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('歧義', res['skipped'][0]['why'])
+
+    def test_queued_letters_ticket_attribution_is_low(self):
+        # 兩封信排在一起（第一封還沒被收走、第二封就寄了），之後只開一張單 → 分不清哪封開的
+        self.rename(RENAME[0], 'a.md', 'alpha.md')
+        self.minute += 1
+        first = '17900000000%08d-1-human' % 77
+        second = '17900000000%08d-1-human' % 78
+        for lid, text, sec in ((first, '專案裡有哪些檔？', 0), (second, RENAME[1], 5)):
+            with open(self.lay.route_log, 'a', encoding='utf-8') as f:
+                f.write(json.dumps({'at': self.at(sec), 'text': text, 'result': 'lead', 'route': None,
+                                    'why': '沒有規則命中', 'letter': lid}, ensure_ascii=False) + '\n')
+            fmt.write_json(self.lay.post_sent / (lid + '.json'),
+                           {'id': lid, 'kind': 'letter', 'recorded_at': self.at(sec), 'from': 'human', 'to': 'lead',
+                            'status': 'REQUEST', 'text': text, 'at': self.at(sec), 'picked_up_at': self.at(10)})
+        t = json.loads(EXAMPLE_TASK.read_text(encoding='utf-8'))
+        t.update(id='t-0077', request='x-2-lead', opened_by='lead', assignee='worker-1', workflow='無',
+                 goal='把專案裡的 b.md 改名成 beta.md，內容不動', status='sent',
+                 done_when=[{'kind': 'file_exists', 'path': 'beta.md'},
+                            {'kind': 'check', 'name': 'contains', 'args': {'path': 'beta.md', 'text': '#'}}],
+                 created_at=self.at(20), updated_at=self.at(20), deadline=self.at(50))
+        t['history'] = [dict(t['history'][0], at=self.at(20), src='x-2-lead')]
+        fmt.write_json(self.lay.tasks / 't-0077.json', t)
+        res = crystal.crystal(str(self.team))
+        conf = {f['text']: f['confidence'] for f in res['fallthrough']}
+        self.assertEqual(conf[RENAME[0]], 'high')
+        self.assertEqual(conf[RENAME[1]], 'low')
+        self.assertEqual(res['candidates'], [])      # 能用的只剩 1 句 < --min 2
+
+    def test_sequential_letters_not_ambiguous(self):
+        self.three_renames()
+        res = crystal.crystal(str(self.team), out=str(self.root / 'p.json'))
+        self.assertEqual({f['confidence'] for f in res['fallthrough']}, {'high'})
+
+
+class ProbeTests(unittest.TestCase):
+    """審查 M5：內建反例。"""
+    def rule(self, pattern, hits, path='{b}'):
+        return {'name': 'r', 'pattern': pattern, 'do': 'handoff',
+                'handoff': {'assignee': 'worker-1', 'workflow': '無', 'goal': 'g',
+                            'done_when': [{'kind': 'file_exists', 'path': path}]},
+                'tests': {'hit': hits, 'miss': ['x']}}
+
+    def test_loose_model_patterns_eaten(self):
+        loose = self.rule('把 (?P<a>\\S+\\.md) 改名成 (?P<b>\\S+\\.md)', ['把 a.md 改名成 b.md'])
+        whys = [w for _, w in crystal.probe_rule(loose)]
+        self.assertTrue(any('../x.md' in w for w in whys))
+        self.assertTrue(any('/etc/passwd' in w for w in whys) is False)   # \.md 結尾擋掉了 /etc/passwd
+        self.assertTrue(any('-rf.md' in w for w in whys))
+        self.assertTrue(any('然後刪掉' in w for w in whys))
+        noext = self.rule('數 (?P<a>\\S+\\.md) 有幾行，寫進 (?P<b>\\S+)', ['數 a.md 有幾行，寫進 n.txt'])
+        whys = [w for _, w in crystal.probe_rule(noext)]
+        self.assertIn('群組 b 換成 noext', whys)
+        self.assertIn('群組 b 換成 /etc/passwd', whys)
+
+    def test_mechanical_patterns_pass(self):
+        for text in RENAME + ['數 poem.md 有幾行，寫進 poem-lines.txt', '把 e.md 的第 2 行刪掉']:
+            r = self.rule(crystal.make_pattern(text), [text], path='x')
+            self.assertEqual(crystal.probe_rule(r), [], text)
+
+    def test_quote_group_used_as_path_is_probed(self):
+        text = '在專案建一個 x.md，內容寫「你好」'
+        pat = crystal.make_pattern(text)
+        self.assertEqual(crystal.probe_rule(self.rule(pat, [text], path='{f1}')), [])     # 引號當內文：不測
+        eaten = crystal.probe_rule(self.rule(pat, [text], path='{q1}'))                  # 引號群組當路徑用：吃到反例
+        self.assertTrue(any('/etc/passwd' in t for t, _ in eaten))
+        eaten = crystal.probe_rule(self.rule(pat, ['在專案建一個 x.md，內容寫「docs/a.md」'], path='{f1}'))
+        self.assertTrue(eaten)                                                           # 值像路徑也測
+
+
+
+class QuotePathTests(Base):
+    def test_mechanical_quote_group_used_as_path_dropped(self):
+        # 領隊把引號裡的值當檔名用（done_when 的 path）→ 機械候選的 q 群組變成路徑用途 → 吃得到 /etc/passwd → 丟
+        for name in ('docs/a.md', 'docs/b.md'):
+            self.say('建一個「%s」' % name, goal='建 %s' % name, done=[{'kind': 'file_exists', 'path': name}])
+        res = crystal.crystal(str(self.team))
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('吃到內建反例', res['dropped'][0]['why'])
+
+
 def fake_asker(rules, text=None):
     calls = []
 
@@ -304,7 +463,8 @@ def fake_asker(rules, text=None):
     return ask
 
 
-GOOD = {'name': 'rename', 'pattern': '把\\s*(?P<a>[\\w.-]+\\.md)\\s*改名成\\s*(?P<b>[\\w.-]+\\.md)', 'do': 'handoff',
+SAFE = '[A-Za-z0-9_][A-Za-z0-9_.-]*\\.md'
+GOOD = {'name': 'rename', 'pattern': '把\\s*(?P<a>%s)\\s*改名成\\s*(?P<b>%s)' % (SAFE, SAFE), 'do': 'handoff',
         'handoff': {'assignee': 'worker-1', 'workflow': '無', 'goal': '把 {a} 改名成 {b}',
                     'done_when': [{'kind': 'file_exists', 'path': '{b}'}]},
         'tests': {'hit': RENAME, 'miss': ['把 a.md 複製成 b.md']}}
@@ -337,9 +497,9 @@ class LlmTests(Base):
         why = {d['name']: d['why'] for d in res['dropped']}
         self.assertIn('編不過', why['llm-broken'])
         self.assertIn('do=handoff', why['tool'])
-        self.assertIn('真的落穿過的不到', why['llm-fake'])
+        self.assertIn('例句沒全過', why['llm-fake'])      # 跟 rename 同一個 pattern：歷史次數夠，但兩條互搶
         self.assertIn('{zzz}', why['llm-badh'])
-        self.assertIn('例句沒全過', why['llm-wide'])
+        self.assertIn('不一致', why['llm-wide'])      # (.+) 也吃到沒開單的「專案裡有哪些檔？」
         self.assertEqual(res['llm']['usage'], {'prompt_tokens': 100, 'completion_tokens': 50})
         self.assertEqual(res['source'], 'llm')
         obj = json.loads((self.root / 'llm.json').read_text(encoding='utf-8'))
@@ -347,14 +507,52 @@ class LlmTests(Base):
 
     def test_misfire_in_backtest_dropped(self):
         self.three_renames()
-        self.say('把 x.md 複製成 y.md', ticket=False)
+        self.log_tool('把 x.md 複製成 y.md', 'tasks')        # 原本別條規則接住的句子，被它搶走
         loose = copy.deepcopy(GOOD)
-        loose['pattern'] = '把\\s*(?P<a>[\\w.-]+\\.md)\\s*(改名|複製)成\\s*(?P<b>[\\w.-]+\\.md)'
+        loose['pattern'] = '把\\s*(?P<a>%s)\\s*(改名|複製)成\\s*(?P<b>%s)' % (SAFE, SAFE)
         loose['tests']['miss'] = ['把 a.md 刪掉']
         res, _ = self.run_llm([loose])
         self.assertEqual(res['candidates'], [])
         self.assertIn('回測誤觸別類', res['dropped'][0]['why'])
         self.assertIsNone(res['proposal'])
+
+    def test_count_from_history_not_model_hits(self):
+        # 審查 M4：歷史只有一句（沒單），模型把它重複兩次當 hit → 不收
+        self.say(RENAME[0], ticket=False)
+        r = copy.deepcopy(GOOD)
+        r['tests']['hit'] = [RENAME[0], RENAME[0]]
+        res, _ = self.run_llm([r])
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('只有 1 句', res['dropped'][0]['why'])
+
+    def test_needs_tickets_and_same_kind(self):
+        self.rename(RENAME[0], 'a.md', 'alpha.md')
+        self.say(RENAME[1], ticket=False)
+        res, _ = self.run_llm([GOOD])
+        self.assertIn('不一致', res['dropped'][0]['why'])
+
+    def test_assignee_workflow_must_match_history(self):
+        self.three_renames()
+        for key, val in (('assignee', 'lead'), ('workflow', 'IMPORT.md')):
+            r = copy.deepcopy(GOOD)
+            r['handoff'][key] = val
+            res, _ = self.run_llm([r])
+            self.assertEqual(res['candidates'], [], key)
+            self.assertIn('負責人／工作流', res['dropped'][0]['why'])
+
+    def test_group_needs_distinct_sentences(self):
+        for _ in range(2):
+            self.rename(RENAME[0], 'a.md', 'alpha.md')
+        res, _ = self.run_llm([GOOD])
+        self.assertIn('只有 1 種寫法', res['dropped'][0]['why'])
+
+    def test_loose_model_rule_dropped_by_probes(self):
+        self.three_renames()
+        loose = copy.deepcopy(GOOD)
+        loose['pattern'] = '把\\s*(?P<a>\\S+\\.md)\\s*改名成\\s*(?P<b>\\S+\\.md)'
+        res, _ = self.run_llm([loose])
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('吃到內建反例', res['dropped'][0]['why'])
 
     def test_llm_failure_is_team_error(self):
         self.three_renames()
