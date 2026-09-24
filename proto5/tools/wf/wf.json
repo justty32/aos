@@ -1,0 +1,88 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "wf_doc",
+      "description": "Read the bundled workflows manual (read-only). No path lists it; start with IMPORT.md.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "File or folder inside the manual"},
+          "offset": {"type": "integer", "minimum": 1},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 2000}
+        }
+      }
+    },
+    "_meta": {"argv": ["tools/wf/wf_doc"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "wf_init",
+      "description": "Import workflows into a project (runs wf-init safely; rerun the same call if it was interrupted). Returns leftover placeholders to fill.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "flavor": {"type": "array", "items": {"type": "string"}, "description": "e.g. [\"heartbeat\"]"},
+          "non_invasive": {"type": "string", "description": "Subfolder for the files, e.g. \"wf\"; omit for standard layout"},
+          "path": {"type": "string", "description": "Project folder (default .)"}
+        },
+        "required": ["flavor"]
+      }
+    },
+    "_meta": {"argv": ["tools/wf/wf_init"]},
+    "_timeout_ms": 180000
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "wf_lint",
+      "description": "Check the project's workflow docs with the bundled wf-lint. Returns PASS/FAIL, the TOTAL line and up to 50 problems.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "strict": {"type": "boolean", "description": "Also fail on residue/oversize (default true)"},
+          "path": {"type": "string", "description": "Project folder (default .)"}
+        }
+      }
+    },
+    "_meta": {"argv": ["tools/wf/wf_lint"]},
+    "_timeout_ms": 180000
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "wf_residue",
+      "description": "Count leftover {{, 〔導入判斷〕 and 〔模板說明〕 in the project's .md files, with file:line.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "Project folder (default .)"}
+        }
+      }
+    },
+    "_meta": {"argv": ["tools/wf/wf_residue"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "wf_table",
+      "description": "Read or change a wf-table/1 data file (.json/.csv) row by row. Rows are 0-based; returns JSON.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file": {"type": "string"},
+          "op": {"type": "string", "enum": ["info", "get", "find", "grep", "add", "update", "delete", "columns", "slice", "links", "check", "resolve", "fmt"]},
+          "index": {"type": "integer", "minimum": 0},
+          "fields": {"type": "object", "description": "column -> value (find/add/update)"},
+          "regex": {"type": "string"},
+          "start": {"type": "integer", "minimum": 0},
+          "end": {"type": "integer", "minimum": 0},
+          "column": {"type": "string"}
+        },
+        "required": ["file", "op"]
+      }
+    },
+    "_meta": {"argv": ["tools/wf/wf_table"]}
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "_comment": "Claude Code settings.json 格式的範例片段：每次提示前跑一次 inbox_read.sh，自動印未讀信。手動合併進你的 settings.json，並把命令換成專案根的絕對路徑。其他 agent 工具照自家 hook 機制改寫同一件事。",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<專案根絕對路徑>/tools/inbox_read.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

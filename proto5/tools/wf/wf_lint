@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""wf_lint：用快照裡自帶的 wf-lint.sh 檢查專案（不跑專案裡那份）；回 PASS/FAIL、TOTAL 行、前 50 條問題，全文存 .wf-lint.log。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+from _common import run, arg, resolve, rel, fail  # noqa: E402
+import _wf  # noqa: E402
+
+SHOW = 50
+
+
+def main(args, root):
+    path = arg(args, 'path', str, '.')
+    strict = arg(args, 'strict', bool, True)
+    full = resolve(root, path or '.')
+    if not os.path.isdir(full):
+        fail('NotADirectory', '%s is not a directory; give the project folder' % path)
+    log = os.path.join(full, '.wf-lint.log')
+    try:
+        res = _wf.lint(full, strict=strict, log_path=log)
+    except _wf.WfError as e:
+        fail(e.code, e.message, **e.extra)
+    except OSError as e:
+        fail('WriteFailed', 'cannot write %s: %s' % (rel(root, log), e.strerror or e))
+    out = ['PASS' if res['ok'] else 'FAIL (exit %d)' % res['exit'], res['total_line'] or '(no TOTAL line)']
+    out += res['summaries'][:5]
+    out += res['problems'][:SHOW]
+    if len(res['problems']) > SHOW:
+        out.append('... %d more problems' % (len(res['problems']) - SHOW))
+    out.append('full output: %s' % rel(root, log))
+    return '\n'.join(out)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

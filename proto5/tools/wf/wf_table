@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""wf_table：用快照的 tabledb.py 讀寫 wf-table/1 資料檔（.json/.csv），原樣回 JSON。不開放 open。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+from _common import run, arg, resolve, rel, fail  # noqa: E402
+import _wf  # noqa: E402
+
+NEED_INDEX = ('get', 'delete', 'update', 'resolve')
+NEED_FIELDS = ('find', 'add', 'update')
+
+
+def main(args, root):
+    path = arg(args, 'file', str, required=True)
+    op = arg(args, 'op', str, required=True)
+    if op not in _wf.TABLE_OPS:
+        fail('BadArguments', 'op must be one of: %s' % ', '.join(_wf.TABLE_OPS))
+    index = arg(args, 'index', int)
+    regex = arg(args, 'regex', str)
+    column = arg(args, 'column', str)
+    start = arg(args, 'start', int)
+    end = arg(args, 'end', int)
+    fields = args.get('fields')
+    if op in NEED_INDEX and index is None:
+        fail('BadArguments', 'op %s needs "index" (0-based row number)' % op)
+    if index is not None and index < 0:
+        fail('BadArguments', 'index must be >= 0')
+    if op == 'grep' and not regex:
+        fail('BadArguments', 'op grep needs "regex"')
+    if op == 'slice' and (start is None or end is None or start < 0 or end < start):
+        fail('BadArguments', 'op slice needs "start" and "end" (0-based, end exclusive, end >= start)')
+    if op in NEED_FIELDS:
+        if not isinstance(fields, dict) or not fields:
+            fail('BadArguments', 'op %s needs "fields": an object of column -> string value' % op)
+        for k, v in fields.items():
+            if not k or '=' in k or '\0' in k or not isinstance(v, str) or '\0' in v:
+                fail('BadArguments', 'fields: column names must be non-empty without "=", values must be strings')
+    full = resolve(root, path)
+    if not os.path.isfile(full):
+        fail('NotFound', '%s is not a file' % path)
+    if not full.endswith(('.json', '.csv')):
+        fail('BadArguments', '%s is not a .json or .csv data file' % path)
+    try:
+        code, out, err = _wf.table(root, rel(root, full), op, index=index, fields=fields, regex=regex,
+                                   start=start, end=end, column=column)
+    except _wf.WfError as e:
+        fail(e.code, e.message, **e.extra)
+    if code == 1 and op in ('check', 'fmt') and out.strip():
+        return out.rstrip('\n') + '\n(%s found problems: exit 1)' % op
+    if code != 0:
+        lines = (err or out).strip().splitlines()
+        last = lines[-1] if lines else 'no output'
+        fail('TableFailed', 'tabledb %s failed (exit %d): %s' % (op, code, last[:500]))
+    return out if out.strip() else '(no output)'
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

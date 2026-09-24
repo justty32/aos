@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""wf_init：在專案裡的 .wf-staging-<id>/ 跑快照的 wf-init.sh，成功才一個個搬進專案（AGENTS.md 最後搬）。
+中途被砍：重跑同一行就好（有 commit.json 的往前做完，沒有的丟掉重來）。回做了什麼＋殘留清單。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+import re  # noqa: E402
+from _common import run, arg, resolve, rel, fail  # noqa: E402
+import _wf  # noqa: E402
+
+SUBDIR = re.compile(r'[A-Za-z0-9_][A-Za-z0-9_.-]*\Z')
+
+
+def main(args, root):
+    path = arg(args, 'path', str, '.')
+    flavor = args.get('flavor', [])
+    if isinstance(flavor, str):
+        flavor = [flavor]
+    if not isinstance(flavor, list) or not all(isinstance(f, str) and f for f in flavor):
+        fail('BadArguments', 'flavor must be a list of flavor names, e.g. ["heartbeat"]; available: %s'
+             % ', '.join(_wf.flavors()))
+    non_inv = args.get('non_invasive')
+    if non_inv is not None and (not isinstance(non_inv, str) or not SUBDIR.match(non_inv)):
+        fail('BadArguments', 'non_invasive must be a folder name like "wf", or null for the standard layout')
+    full = resolve(root, path or '.', must_exist=False)
+    if os.path.exists(full) and not os.path.isdir(full):
+        fail('NotADirectory', '%s is not a directory; give the project folder' % path)
+    try:
+        res = _wf.init(full, flavor, non_inv)
+    except _wf.WfError as e:
+        fail(e.code, e.message, **e.extra)
+    except OSError as e:
+        fail('WriteFailed', 'wf_init hit an OS error: %s; run the same call again to finish or roll back'
+             % (e.strerror or e))
+    out = list(res['notes'])
+    if not res['resumed']:
+        out.append('imported workflows (flavor: %s, layout: %s) into %s: %d files'
+                   % (','.join(flavor) or 'kernel only', 'non-invasive ' + non_inv if non_inv else 'standard',
+                      rel(root, full), res['moved']))
+        if res.get('backup'):
+            out.append('%d existing files were replaced; the old copies are in %s'
+                       % (res['backed'], res['backup']))
+    out.append(_wf.residue_text(_wf.residue(full)))
+    out.append('next: fill every {{...}} with project facts (ask if unknown), decide each 〔導入判斷〕, '
+               'delete 〔模板說明〕 blocks, then run wf_lint (see wf_doc IMPORT.md)')
+    return '\n'.join(out)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""wf_residue：數專案 .md 裡的 {{、〔導入判斷〕、〔模板說明〕（照 IMPORT.md 的 grep）；讀不到的檔另列。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+from _common import run, arg, resolve, fail  # noqa: E402
+import _wf  # noqa: E402
+
+
+def main(args, root):
+    path = arg(args, 'path', str, '.')
+    full = resolve(root, path or '.')
+    if not os.path.isdir(full):
+        fail('NotADirectory', '%s is not a directory; give the project folder' % path)
+    return _wf.residue_text(_wf.residue(full))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

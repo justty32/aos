@@ -1,0 +1,2 @@
+- 開場也 `ls inbox/*.md`：有信就先讀（信件軸，見 [workflows/inbox/](workflows/inbox/README.md)）。
+- 要開 agent 團隊、決定各層派哪級模型 → 先看 [workflows/team-model.md](workflows/team-model.md)。
