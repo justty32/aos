@@ -10,8 +10,9 @@ aos-kernel cpu add [--target K] --pool P [--count N] [--env KEY=VALUE]... [--dae
 aos-kernel cpu rm  [--target K] (P/<i> | --pool P --count N)
 aos-kernel cpu ls  [--target K] [--pool P] [--json]
 aos-kernel ls    [--target K] [--pool P] [--procs] [--json] [-v] # 偷看、不放單（cli-ls.md）
-aos-kernel add   INST [--target K] [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--wait-ms N] [-- ARG...]
+aos-kernel add   INST [--target K] [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--park-ms N] [--wait-ms N] [-- ARG...]
 aos-kernel rm    NAME [--target K]
+aos-kernel wake  NAME [--target K]                              # （09-24 停車）叫醒停著的行程（syscall.md 的 wake）
 aos-kernel ack   NAME [--target K]                              # 替 K/responses/NAME 放 ack
 aos-kernel check [--target K] [--daemon-target D] [--probe]     # 啟動前檢查；agent 的在 aos-agent check
 aos-kernel tick  [--target K] --chain C --seq N                 # 一格；正常只有鏈自己會叫

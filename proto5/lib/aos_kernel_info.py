@@ -15,6 +15,9 @@ CLI = Path(__file__).resolve().parents[1] / "cli" / "aos-kernel"
 CPU_CLI = CLI.with_name("aos-cpu")
 DEFAULTS = {"tick_ms": 1000, "interval_ms": 1000, "timeout_ms": 0, "done_exit": 100, "bad_after": 10}
 SWEEP = 32
+PARK_MS = 300000   # 09-24 停車：info 沒寫 park_ms 的預設（init 不寫進 info）
+PARK_EXIT = 102    # 反覆行程退這個碼＝停車（kernel/echo.md）
+FEATURES = ["park"]  # 帳本 features：aos-agent start 靠它確認這個 kernel 認得 102（kernel/ledger.md）
 CPU_DEFAULTS = {"poll_ms": 200, "timeout_ms": 0}
 KERNEL_POOL = "kernel"
 KCPU = "kernel/0"
@@ -189,6 +192,9 @@ def _validate_info(info):
         value = info.setdefault(key, default)
         if not _int(value) or value < 0 or (key == "done_exit" and value > 255):
             _bad("%s 必須是合法非負整數" % key, [key])
+    park = info.setdefault("park_ms", PARK_MS)
+    if not _int(park) or park < 0:
+        _bad("park_ms 必須是非負整數", ["park_ms"])
     sweep = info.setdefault("sweep", SWEEP)
     if not _int(sweep) or sweep < 1:
         _bad("sweep 必須是正整數", ["sweep"])
@@ -253,7 +259,7 @@ def init(home, config=None, daemon=None):
 def new_state(chain, cli):
     return {"chain": chain, "kcpu": KCPU, "cli": str(cli), "last_seq": 0, "phase": "running", "halting": False,
             "pools": {}, "busy": {}, "on": {}, "recent": [], "ready": {}, "delayed": [], "stale": {},
-            "procs": {}, "acks": [], "replies": [], "deletes": [], "sends": []}
+            "procs": {}, "acks": [], "replies": [], "deletes": [], "sends": [], "features": list(FEATURES)}
 
 
 def new_pool(daemon, dpool):
@@ -268,8 +274,14 @@ def chain_epoch(chain):
 
 
 def classify(proc, response, info, now=None):
-    """proto5 §4 反覆行程判定表；不動輸入，回新的行程紀錄。"""
+    """proto5 §4 反覆行程判定表；不動輸入，回新的行程紀錄。
+
+    09-24 停車：102＝停車（not_before 推到 park_ms 後、記 parked）；這格跑著時被叫醒過（woken）就當 101。woken 判完一律清掉。
+    """
     proc = copy.deepcopy(proc)
+    woken = proc.pop("woken", False)
+    proc.pop("parked", None)
+    park = False
     result = response.get("result", {})
     if result.get("stopped") is True:
         proc["status"] = "queued"
@@ -285,12 +297,18 @@ def classify(proc, response, info, now=None):
             return proc
         elif result.get("code") in (0, 101):
             proc["fails"] = 0
+        elif result.get("code") == PARK_EXIT:
+            proc["fails"] = 0
+            park = not woken
         else:
             proc["fails"] += 1
     if info["bad_after"] != 0 and proc["fails"] >= info["bad_after"]:
         proc["status"] = "bad"
     else:
-        proc.update(status="queued", not_before=(time.time() if now is None else now) + proc["interval_ms"] / 1000)
+        delay = proc.get("park_ms", info.get("park_ms", PARK_MS)) if park else proc["interval_ms"]
+        proc.update(status="queued", not_before=(time.time() if now is None else now) + delay / 1000)
+        if park:
+            proc["parked"] = True
     return proc
 
 

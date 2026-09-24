@@ -90,7 +90,7 @@ class AgentTickTests(unittest.TestCase):
         return patch.object(agent, '_hook', hook)
 
     def test_idle_empty(self):
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertFalse((self.base / 'state.json').exists())
 
     def test_idle_input(self):
@@ -110,7 +110,8 @@ class AgentTickTests(unittest.TestCase):
         req = self.read(self.k / 'requests' / (name + '.json'))
         self.assertEqual(req['id'], name)
         self.assertEqual(req['params'], {'name': name, 'target': str(self.base / 'work' / (name + '.inst.json')),
-                                         'once': True, 'pool': 'llm', 'timeout_ms': 125000})
+                                         'once': True, 'pool': 'llm', 'timeout_ms': 125000,
+                                         'wake': 'agent-bob'})  # 09-24 停車
         inst = self.read(self.base / 'work' / (name + '.inst.json'))
         self.assertEqual(inst, batch_api.think_inst(self.base, name))
         aos_inst.load_obj(inst, str(self.base))
@@ -155,7 +156,7 @@ class AgentTickTests(unittest.TestCase):
     def test_gate_consume_file(self):
         self.put(self.base / 'state.json', {'waits': {'$opt': 'consume', '$val': 'go.json'}})
         self.put(self.base / 'go.json', {})
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertEqual(self.state()['waits'], [])
         self.assertEqual(self.state()['consuming'], [])
         self.assertRegex(next((self.base / 'done').glob('go.json.*.done')).name, r'go.json.\d+-\d+.done')
@@ -164,7 +165,7 @@ class AgentTickTests(unittest.TestCase):
         self.put(self.base / 'state.json', {'waits': {'$opt': 'consume', '$val': 'signals'}})
         for name in ('b.json', 'a.json', 'keep.done'):
             self.put(self.base / 'signals' / name, {})
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertEqual(len(list((self.base / 'signals/done').glob('*.done'))), 2)
         self.assertFalse(list((self.base / 'signals').glob('*.json')))
 
@@ -178,7 +179,7 @@ class AgentTickTests(unittest.TestCase):
         src, dst = self.base / 'go', self.base / 'go.id.done'
         self.put(src, '新'); self.put(dst, '舊')
         self.put(self.base / 'state.json', {'consuming': [{'src': str(src), 'dst': str(dst)}]})
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertEqual(self.read(src), '新')
         self.assertEqual(self.read(dst), '舊')
         self.assertEqual(self.state()['consuming'], [])
@@ -191,7 +192,7 @@ class AgentTickTests(unittest.TestCase):
         self.assertEqual(self.state()['waits'], [])
         self.assertTrue(self.state()['consuming'])
         self.assertTrue((self.base / 'go').exists())
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertFalse((self.base / 'go').exists())
 
     def test_sent_false_recovery(self):
@@ -264,12 +265,12 @@ class AgentTickTests(unittest.TestCase):
         name = self.prepare()
         self.respond(name); self.output(name)
         self.put(self.k / 'requests' / (name + '.json'), {})
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertIsNone(self.state()['batch']['calls'][0]['done'])
 
     def test_collect_no_response(self):
         self.prepare()
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
 
     def test_collect_bad_json_preserves_state(self):
         name = self.prepare()
@@ -390,13 +391,13 @@ class AgentTickTests(unittest.TestCase):
 
     def test_intake_empty_array(self):
         self.put(self.base / 'input.json', [])
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 0)  # 09-24 停車（astra 必修 2）：清了空 intake＝寫了東西，退 0
         self.assertIsNone(self.state()['intake'])
 
     def test_intake_missing_both_skips(self):
         self.put(self.base / 'state.json', {'intake': {'id': 'x', 'base_len': 0,
                  'files': [{'src': str(self.base / 'gone'), 'dst': str(self.base / 'gone.x.done')}]}})
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 0)  # 09-24 停車（astra 必修 2）：清了空 intake＝寫了東西，退 0
         self.assertIsNone(self.state()['intake'])
 
     def test_intake_new_same_name_preserved(self):
@@ -593,7 +594,7 @@ class AgentTickTests(unittest.TestCase):
     def test_tick_unknown_fields_not_resolved(self):
         self.info['tick'] = {'unused': {'$env': 'MISSING'}}
         self.put(self.base / 'info.json', self.info)
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
 
 
 def posting_case(where):
@@ -740,7 +741,7 @@ def sweep_case(mode):
             (self.k / 'state.json').unlink()
         elif mode == 'broken':
             (self.k / 'state.json').write_text('{')
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車
         self.assertEqual(bool(self.state()['sweep']), mode != 'clear')
         self.assertEqual(len(list((self.base / 'work').iterdir())), 0 if mode == 'clear' else 3)
     return test

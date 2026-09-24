@@ -16,7 +16,7 @@
 | 現在是 | 情況 | 做什麼 | 退出碼 |
 |---|---|---|---|
 | `idle` | `intake` 非 null，或 `input` 有東西 | 收輸入（§8），state 改 `think` | 0 |
-| `idle` | 都沒有 | 不動 | 101 |
+| `idle` | 都沒有 | 不動 | 102（09-24 停車） |
 | `think` | — | 建一批 think、送出（§5） | 0 |
 | `act` | 記憶尾巴是帶非空 `tool_calls` 的 `assistant` | 建一批 act、送出（§5） | 0 |
 | `act` | 其他 | 沒東西可跑：state 改 `think` | 0 |

@@ -93,7 +93,7 @@ class AgentIntegrationTests(KernelCase):
 
     def tick(self):
         code = aos_agent.tick(self.base, self.env)
-        self.assertIn(code, (0, 101))
+        self.assertIn(code, (0, 101, 102))  # 102：09-24 停車
         return code
 
     def finished(self):
@@ -122,7 +122,7 @@ class AgentIntegrationTests(KernelCase):
     def test_manual_round_trip(self):
         """手動 tick 走完 idle→think→act→think→idle 並清空回音與工作檔。"""
         self.setup_running(pools=self.pools)
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
         self.write(self.base / 'input.json', '開始')
         states = ['idle']
         def step():

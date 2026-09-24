@@ -182,6 +182,7 @@ class Kernel(PoolsMixin, KernelLedger):
                 key = cpu_key(pool, i)
                 req = "k-%s-%d-%s-%d.json" % (self.state["chain"], self.seq, pool, i)
                 self.state["procs"][name]["status"] = "running"
+                self.state["procs"][name].pop("parked", None)  # 09-24 停車：派出去就不算停著（park_ms 到了自己醒的）
                 self.state["busy"][key] = {"req": req, "proc": name, "discard": False}
                 self.state["on"][name] = key
                 self.state["recent"].append(key)

@@ -55,6 +55,7 @@
 | [2026-09-24-daemon-split-review/](2026-09-24-daemon-split-review/README.md) | **審查**（沒改程式與規範）：「daemon 要 sudo 才能切使用者，所以跟 kernel 分開」站不住——不用 root 也能切（subuid 實驗）、root daemon 反而更危險；分開剩「生死與排程別互相拖累」；建議現在不動，proto5-2 重寫 kernel 時做「開機合一、家不合一」；權限預設 bwrap、daemon 永不 root；兩派 memo＋反駁、astra 兩份、5 題待拍 |
 | [2026-09-24-access-impl/](2026-09-24-access-impl/README.md) | **實作**（照 agent-access 提案）：權限牆＋工具管理 CLI——`access.json` 寫 agent 的工具看得到哪些資料夾，aos-agent 送工具時自動用 `aos-jail`（bwrap）關牢；`tools ls/add/rm/alias/unalias`、`access ls/set/rm/cwd/net`；deepseek-chat 真跑兩輪都過；astra 必修 8 條全修；測試 1343→1447（rebase 後 1470） |
 | [2026-09-24-fold-in/](2026-09-24-fold-in/README.md) | **納入**：proto5-2（池式 daemon／kernel）搬進 proto5 取代舊的 daemon／kernel，agent 線保留 proto5 的；規範照 proto5-diffs 換句並搬新章節；`aos-exec`、`aos_kernel_cpu` 拆檔、tidy；proto5-2 只留 spec／notes 當歷史；astra 必修 3 條全修；測試合併後 1597，rebase 後 1723 |
+| [2026-09-24-idle-wait-impl/](2026-09-24-idle-wait-impl/README.md) | **實作**（照 proto5-2 idle-wait 提案方案 (b)）：agent 沒事退 102 停車，回音出貨時 kernel 叫醒、`say` 投 `wake` 叫醒，保底 `park_ms` 5 分鐘；閒著 60 秒 kernel 派 agent 從 28 格降到 0 格；kill -9 在「放好回音、存帳本前」重跑驗過；astra 必修 2 條全修；測試 1999→2044 |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 

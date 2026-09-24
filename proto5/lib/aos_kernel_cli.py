@@ -77,6 +77,7 @@ def _parser():
     subs = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
     descriptions = {"init": "建立 kernel 家（照 --config 寫 info.json）", "boot": "交接並啟動 kernel 池與 tick 鏈",
                     "cpu": None, "tick": "執行一格排程（鏈自己會叫）", "add": "登記工作", "rm": "移除行程",
+                    "wake": "叫醒停車中的行程（下一格就能派）",
                     "ls": "顯示健康、按池摘要與行程", "halt": "要求 kernel 停機並等停好", "ack": "確認已收回音",
                     "check": "啟動前檢查 kernel 的設定與執行環境（agent 的用 aos-agent check）"}
     for command, description in descriptions.items():
@@ -87,7 +88,7 @@ def _parser():
                             formatter_class=argparse.RawDescriptionHelpFormatter)
         if command == "add":
             p.add_argument("inst", metavar="INST", help="要執行的目標（inst.json、資料夾或普通檔）；-- ARG... 傳入目標參數")
-        elif command in ("rm", "ack"):
+        elif command in ("rm", "ack", "wake"):
             p.add_argument("name", help="回音檔名或路徑" if command == "ack" else "行程名稱")
         p.add_argument("--target", metavar="K", help=TARGET_HELP)
         if command == "init":
@@ -119,7 +120,8 @@ def _parser():
                                    ("dir-target", "資料夾內的 inst 路徑")):
                 p.add_argument("--" + key, help=help_text)
             for key, help_text in (("interval-ms", "反覆執行間隔（毫秒）"),
-                                   ("timeout-ms", "工作逾時（毫秒）"), ("wait-ms", "等待回音上限（毫秒）")):
+                                   ("timeout-ms", "工作逾時（毫秒）"), ("park-ms", "退 102 停車後最晚多久再派（毫秒）"),
+                                   ("wait-ms", "等待回音上限（毫秒）")):
                 p.add_argument("--" + key, type=int, help=help_text)
             p.add_argument("--once", action="store_true", help="只執行一次；--wait-ms 可等回音")
     return parser
@@ -128,9 +130,9 @@ def _parser():
 def _cli_request(args, trailing):
     home = Path(args.home).absolute()
     name = aos_client.new_name("cli")
-    params = {"name": args.name} if args.command == "rm" else {"target": os.path.abspath(args.inst), "once": args.once}
+    params = {"name": args.name} if args.command in ("rm", "wake") else {"target": os.path.abspath(args.inst), "once": args.once}
     if args.command == "add":
-        for key in ("name", "pool", "dir_target", "interval_ms", "timeout_ms"):
+        for key in ("name", "pool", "dir_target", "interval_ms", "timeout_ms", "park_ms"):
             value = getattr(args, key)
             if value is not None:
                 params[key] = value
@@ -242,7 +244,7 @@ def main(argv=None):
             raise CLIUsage("只有 add 能帶 -- ARG...")
         if args.target == "":
             raise CLIUsage("--target 不可為空")
-        for key in ("wait_ms", "interval_ms", "timeout_ms", "seq"):
+        for key in ("wait_ms", "interval_ms", "timeout_ms", "park_ms", "seq"):
             value = getattr(args, key, None)
             if value is not None and value < (1 if key == "seq" else 0):
                 raise CLIUsage("%s 不在合法範圍" % key)

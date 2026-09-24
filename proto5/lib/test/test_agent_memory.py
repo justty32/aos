@@ -626,14 +626,14 @@ class AutoCompactTests(MemoryBase):
         self.put(self.base / 'info.json', dict(self.info, compact={'max_tokens': 500, 'keep_rounds': 1}))
 
     def test_tick_auto_compacts_under_same_lock(self):
-        """驗收⑦：tick（持著 .tick.lock）在 idle 直接叫壓縮，不另拿鎖、不死鎖；下一格沒事退 101。"""
+        """驗收⑦：tick（持著 .tick.lock）在 idle 直接叫壓縮，不另拿鎖、不死鎖；下一格沒事退 102（停車）。"""
         self.assertEqual(self.tick(), 0)
         history = self.history()
         self.assertLessEqual(context_api.history_tokens(history), 500)
         compact_api.check_pairs(history)
         ev = self.events()[-1]
         self.assertEqual((ev['ev'], ev['auto'], ev['reason']), ('compact', True, 'auto'))
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
 
     def test_tick_auto_in_subprocess_no_deadlock(self):
         proc = subprocess.run([sys.executable, os.path.join(os.path.dirname(LIB), 'cli', 'aos-agent'), 'tick',
@@ -646,14 +646,14 @@ class AutoCompactTests(MemoryBase):
         for value in (False, {'max_tokens': 0}, {'max_tokens': 500, 'auto': False}):
             with self.subTest(value=value):
                 self.put(self.base / 'info.json', dict(self.info, compact=value))
-                self.assertEqual(self.tick(), 101)
+                self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入、沒壓縮
                 self.assertEqual(self.history(), self.original)
 
     def test_auto_default_on_32000(self):
         """使用者裁決：沒寫 compact＝自動壓縮開、上限 32000 token。"""
         self.put(self.base / 'info.json', self.info)
         self.assertEqual(compact_api.config(self.base), {'max_tokens': 32000, 'keep_rounds': 3, 'auto': True})
-        self.assertEqual(self.tick(), 101)                        # 還沒超過 32000：不動
+        self.assertEqual(self.tick(), 102)                        # 還沒超過 32000：不動；idle 沒輸入＝停車（09-24）
         self.assertEqual(self.history(), self.original)
         big = rounds(40, fat=4000)                                  # 約 40×2×1000 token
         self.history(big)
@@ -670,8 +670,8 @@ class AutoCompactTests(MemoryBase):
     def test_auto_skip_when_cannot_shrink(self):
         self.put(self.base / 'info.json', dict(self.info, compact={'max_tokens': 100, 'keep_rounds': 5}))
         with patch.object(compact_api, 'plan', wraps=compact_api.plan) as spy:
-            self.assertEqual(self.tick(), 101)
-            self.assertEqual(self.tick(), 101)
+            self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
+            self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
         self.assertEqual(spy.call_count, 1)                       # 第二格看 log/compact-skip 就不重算
         self.assertEqual(self.history(), self.original)
 
@@ -689,7 +689,7 @@ class AutoCompactTests(MemoryBase):
         self.put(home / 'info.json', dict(self.info, compact={'max_tokens': 100, 'keep_rounds': 1}))
         self.put(home / 'prompts/history.json', h)
         self.base = home
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
         self.assertEqual(self.history(), h)
         self.put(task, {'status': 'done'})
         self.assertEqual(self.tick(), 0)
@@ -700,8 +700,8 @@ class AutoCompactTests(MemoryBase):
         del h[-4]
         self.history(h)
         self.put(self.base / 'info.json', dict(self.info, compact={'max_tokens': 100, 'keep_rounds': 1}))
-        self.assertEqual(self.tick(), 101)
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
         self.assertEqual(self.err.getvalue().count('自動壓縮沒做'), 1)
         self.assertEqual(self.events()[-1]['ev'], 'compact_fail')
 
@@ -720,7 +720,7 @@ class AutoCompactTests(MemoryBase):
         self.assertTrue((self.base / 'compact-req/r1.json').exists())        # 原檔不搬（郵差靠它去重）
         self.assertTrue((self.base / 'compact-req/done/r1.json').exists())   # 收據
         self.assertIn('申請 r1（w1）：太長', self.events()[-1]['reason'])
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
 
     def test_request_crash_before_move_reruns_as_noop(self):
         self.put(self.base / 'info.json', self.info)
@@ -737,7 +737,7 @@ class AutoCompactTests(MemoryBase):
         self.assertEqual(self.history(), once)
         self.assertTrue((self.base / 'compact-req/done/r1.json').exists())
         self.assertEqual([e['ev'] for e in self.events()].count('compact'), 1)
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：idle 沒輸入
 
 
 class RequestHandlerTests(unittest.TestCase):

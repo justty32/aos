@@ -68,6 +68,7 @@ def ls_data(home, snapshot, pool=None):
             "status": status, "runs": _count(proc.get("runs")), "fails": _count(proc.get("fails")),
             "pending": bool(proc.get("pending")), "target": target,
             "mark": {"code": mark[0], "text": mark[1]} if mark else None,
+            "parked": status == "queued" and proc.get("parked") is True,  # 09-24 停車
             "look": stderr_hint(target) if status == "bad" and target else None})
     # 帳本第 2 版沒有單一的 queue：排隊中的＝status queued 的行程（照帳本 procs 的順序）。
     queue = [p["name"] for p in procs if p["status"] == "queued"]
@@ -94,7 +95,8 @@ def ls_data(home, snapshot, pool=None):
                              "idle": sum(r["idle"] or 0 for r in work),
                              "draining": sum(r["draining"] or 0 for r in work)},
                    "procs": {"total": len(procs), "repeat": sum(not p["once"] for p in procs),
-                             "once": sum(p["once"] for p in procs), "status": by_status},
+                             "once": sum(p["once"] for p in procs), "status": by_status,
+                             "parked": sum(p["parked"] for p in procs)},
                    "queue": len(queue)}}
 
 
@@ -168,6 +170,8 @@ def render(data, verbose=False, procs=False):
     if p["total"]:
         head += "（反覆 %d、once %d）：%s" % (p["repeat"], p["once"], "、".join(
             "%s %d" % (status, n) for status, n in sorted(p["status"].items(), key=lambda kv: str(kv[0]))))
+    if p["parked"]:
+        head += "；停車 %d" % p["parked"]  # 09-24 停車：退 102 在等回音／輸入的
     lines.append(head)
     # 池式（proto5-2 納入）：上萬個行程時不逐個印；預設只列有事的（bad、暫停／重試中），--procs 才全列。
     shown = [proc for proc in data["procs"] if procs or proc["status"] == "bad" or proc["mark"]]

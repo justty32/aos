@@ -17,7 +17,7 @@
 | `input` | `input` 指到、還沒收的檔數與路徑；`intake` 做到一半另一行 |
 | `error` | （09-24 試玩 r3 改）**這次卡住的原因**：連敗暫停中＝導致暫停的那行 `engine:`（agent.err 裡最後一個 `stuck:` 之前最近的一行，去掉前綴），下一行 `已連敗 3 次，等 aos-agent continue --target <dir>`；還在連敗沒到 3 次＝最近的 `engine:` 行＋`已連敗 N 次（3 次會暫停）`；K 帳本那筆 `fails` > 0 或 `bad`＝agent.err 最後一行；都不是＝`（無）`，agent.err 有內容就另印 `last-error  （已恢復） <MM-DD HH:MM:SS>  <最後一行的短版>`（時間是 agent.err 的修改時間；09-24 fix-r5 改：標記移到最前面；家裡有 `resumed` 時標記改成 `（已解除暫停，等下一次成功）`）。
 短版（09-24 fix-r5 補）：去掉開頭的 `aos-agent: `、舊格式 stuck 行的 `touch <路徑> 繼續` 改寫成 `修好原因後 aos-agent continue --target <dir>`、批次名（`aw-<資料夾名>-<數字>-<數字>…`）縮成 `aw-…`、超過 120 字截斷並加 `…（-v 看全文）`；`-v` 印原文，`--json` 的 `last_error` 也是原文。`-v` 另印一行 `stuck` 原文 |
-| `kernel` | K 帳本裡 `agent-<資料夾名>` 那筆的 status／runs／fails；K 取 `AOS_KERNEL_HOME`，沒設就用 `tick.json` 記的，都沒有＝（09-24 試玩 r3 改）`kernel 從沒 start 過（沒設 AOS_KERNEL_HOME、也沒 tick.json）；aos-agent start --target <dir>`；帳本讀不到、沒登記各有一句 |
+| `kernel` | K 帳本裡 `agent-<資料夾名>` 那筆的 status／runs／fails（09-24 停車：`queued` 而帳本記 `parked` 時印 `queued（停車：等回音或輸入，最晚 park_ms 自己醒）`）；K 取 `AOS_KERNEL_HOME`，沒設就用 `tick.json` 記的，都沒有＝（09-24 試玩 r3 改）`kernel 從沒 start 過（沒設 AOS_KERNEL_HOME、也沒 tick.json）；aos-agent start --target <dir>`；帳本讀不到、沒登記各有一句 |
 
 `--json` 印一行 JSON，同樣的資訊（鍵：`dir`、`info_error`、`state_error`、`access_error`、`state`、`errors`、`batch`、`waits`、`pending_inputs`、`intake`、`last_error`、`kernel`）。
 （09-24 試玩 r3 補）另有 `health`（`{code, message}`，code：`ok`／`kernel`／`unregistered`／`manual_paused`（09-24 fix-r4 補）／`paused`／`bad`／`config`）、`current_error`（上表 error 欄的原因，沒有＝null）、`streak`（連敗次數，暫停中＝3）、`paused`（**連敗**暫停）、`last_error_time`（ISO 時間或 null）；`last_error` 照舊是最後一行。

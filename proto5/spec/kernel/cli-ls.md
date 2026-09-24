@@ -32,7 +32,7 @@ queue   1：agent-amy
 - `pool` 標題：工作池數（不含 kernel 池）、要幾顆（`want` 總和）、忙、閒，有收掉中的再加 `、收掉中 D`。
   下面每池一行（縮排 2 格，格式＝[`cpu ls`](cli-cpu.md) 的池行，含尾註；kernel 池也一行、排第一）。
   `--pool P` 時那池下面再縮排 4 格、一顆一行（格式＝`cpu ls --pool`）。
-- `proc` 標題：總數、反覆／once 各幾個、各 `status` 幾個（照字母排）。沒行程＝只印 `proc    0 個`。
+- `proc` 標題：總數、反覆／once 各幾個、各 `status` 幾個（照字母排）。（09-24 停車）有停著的（`parked`）再加 `；停車 N`。沒行程＝只印 `proc    0 個`。
   下面是對齊表（行程、種類 反覆／once、狀態、runs、fails、回音（`pending` 有東西印 `等`）、備註（agent 的暫停／重試標記：`連敗暫停中`、`手動暫停中`、
   `手動暫停中＋連敗暫停中`、`重試中（連敗 N/3）`、`已解除暫停，等下一次成功`））。
   **預設只列 `bad` 與有暫停／重試標記的行程**，其餘印一行 `（其餘 N 個沒事的沒列；--procs 全列）`；`--procs` 全列（上萬個時很長）。
@@ -73,8 +73,8 @@ stdout 只有**一個 JSON 物件加一個換行**；警告與錯誤一律走 st
 | `health` | `code`（[health.md](health.md) 那幾個字串）、`message`（跟文字版第一行 `health ` 後面一字不差） |
 | `kernel` | 同第 1 版：`home`（K 絕對路徑）；`chain`／`phase`／`last_seq`（沒帳本＝`null`）；`daemon{home, alive}`（kernel 池的 daemon，flock 探測）；`cpu{name, current, requests}`（`name`＝帳本 `kcpu`；`current`＝正在跑的那則檔名或 `null`；`requests` int）；`settings` 固定五鍵（省略的已補預設） |
 | `pools` | 物件，池名 → 那池一格（含 kernel 池），欄位同 `cpu ls --json` 的池格：`want`（info 的 count，info 已拿掉＝0）、`sent`／`idle`／`draining`（帳本沒這格＝`null`；kernel 池的 `idle`／`draining` 也是 `null`）、`busy`（帳本沒這格＝`0`，kernel 池＝`null`）、`daemon`、`dpool`、`daemon_alive`、`summary`（daemon 的摘要原樣或 `null`）、`declared`（帳本有這格）、`removing`（info 已拿掉）、`moving`、`new_location`、`phase`、`pending`（在途 scale 單或 `null`）、`error`（`{code, message}` 或 `null`）、`waiting`（收掉中那幾顆手上的行程名）、`gone`（摘要不在但 `sent` 不空）。`--pool` 時那格多 `cpus` 陣列，每格 `cpu`（`P/<i>`）、`status`、`proc`、`daemon`（`{state, gen, pid}` 或 `null`）、`declared` |
-| `procs[]` | 同第 1 版：帳本 `procs` 的順序；`name`；`once`（bool）；`pool`（不是字串＝`null`）；`status`（不是字串＝`"unknown"`）；`runs`、`fails`（不是整數＝0）；`pending`（bool）；`target`（或 `null`）；`mark`（`{code, text}`，code 是 `paused`／`manual_paused`／`both_paused`／`retrying`／`resuming`，沒有＝`null`）；`look`（`bad` 時要看的檔，否則 `null`）。`--pool` 只留那池的；**不受 `--procs` 影響，一律全列** |
+| `procs[]` | 同第 1 版：帳本 `procs` 的順序；`name`；`once`（bool）；`pool`（不是字串＝`null`）；`status`（不是字串＝`"unknown"`）；`runs`、`fails`（不是整數＝0）；`pending`（bool）；`target`（或 `null`）；`mark`（`{code, text}`，code 是 `paused`／`manual_paused`／`both_paused`／`retrying`／`resuming`，沒有＝`null`）；`look`（`bad` 時要看的檔，否則 `null`）；（09-24 停車，加鍵）`parked`（bool，退 102 停著）。`--pool` 只留那池的；**不受 `--procs` 影響，一律全列** |
 | `queue` | 排隊中的行程名（`status` 是 `queued`） |
-| `counts` | `pools{total, want, sent, busy, idle, draining}`（**只算工作池**）；`procs{total, repeat, once, status}`（同第 1 版）；`queue`（個數） |
+| `counts` | `pools{total, want, sent, busy, idle, draining}`（**只算工作池**）；`procs{total, repeat, once, status, parked}`（同第 1 版；`parked` 是 09-24 停車加的鍵）；`queue`（個數） |
 
 第 1 版的 `cpus[]`、`counts.cpus` 拿掉（daemon 已沒有孩子表，改看池）。要原始帳本就直接讀 `K/state.json`（§1.2）。

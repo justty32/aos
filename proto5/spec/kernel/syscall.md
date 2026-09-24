@@ -4,9 +4,10 @@
 
 | method | params | 回音 |
 |---|---|---|
-| `add` | `target` 必填（絕對路徑）；`dir_target`／`args` 可省（同範式 §4.1；`args` 沒給就不要放這個鍵）；`name` 可省（省＝數字名最大值加 1）；`once`（預設 false）；`pool`（預設 `default`，必須是 `info.pools` 的 key、且不是 `kernel` 池；2026-09-24 池式納入改）；`interval_ms`／`timeout_ms`（預設照 info） | **反覆**行程：`{"name": NAME}`。**`once`**：回音等到那一次跑完才寫，內容就是那次的 exec 回音（`result` 或 `error` 原樣）；交件者等 `K/responses/<自己的檔名>.json` 一個檔、讀完放 ack |
+| `add` | `target` 必填（絕對路徑）；`dir_target`／`args` 可省（同範式 §4.1；`args` 沒給就不要放這個鍵）；`name` 可省（省＝數字名最大值加 1）；`once`（預設 false）；`pool`（預設 `default`，必須是 `info.pools` 的 key、且不是 `kernel` 池；2026-09-24 池式納入改）；`interval_ms`／`timeout_ms`（預設照 info）；（09-24 停車）`park_ms`（預設照 info，[§4](echo.md) 的 102 那列）、`wake`（要叫醒的反覆行程名，見下） | **反覆**行程：`{"name": NAME}`。**`once`**：回音等到那一次跑完才寫，內容就是那次的 exec 回音（`result` 或 `error` 原樣）；交件者等 `K/responses/<自己的檔名>.json` 一個檔、讀完放 ack |
 | `rm` | `name` | `{"name": NAME}`；不在＝`-32000`／`NotFound`。細節見下 |
 | `stop` | notification | `phase` 改 `stopping`（§3 第 9 步）；收完在途後把每個池縮到 0（[§6 停機](boot.md)）。daemon 本身不停，由人停 |
+| `wake` | （09-24 停車）`name` | `{"name": NAME}`；不在＝`-32000`／`NotFound`。照下面「叫醒一個行程」做。多半當 notification 放（`aos-agent say` 就是），不回音 |
 | `ack` | 範式 §3.3 | kernel 是一個家，別人收了 `K/responses/` 的回音要放 ack，處理方式照範式（刪回音、刪 ack 檔） |
 
 沒有 `ls` syscall：看狀態就偷看 `K/state.json`（§6 的 `ls` 就是這樣做，鏈斷了也看得到）。
@@ -28,3 +29,11 @@ params 形狀或 pool 不合回 `-32602`。kernel 不解指示詞、不驗 inst�
   行程紀錄留著（回音到了才拿掉，同名 add 在那之前都 `AlreadyExists`）；原單不在再看回音，**在** → 同上；
   兩個都不在 → 上一格記了沒放，直接取消：那格 `busy`、`on` 拿掉、號碼放回、行程拿掉。
 - **`once` 不管在途還是取消，`rm` 當下就把 pending 的 add 回 `Removed`**、`pending` 清掉；之後那顆 cpu 的回音只是被 discard 掉。
+
+**（09-24 停車）`add` 的 `wake`**：合法名稱就記下，不管那個行程現在在不在、是哪一代——`stop` 再 `start` 的新一代會接手舊批（[aos-agent §11](../aos-agent/register.md)），舊批回來叫它才對；多叫一格無害。
+這張 add 的**最後一則回音不管怎麼來都帶著** `wake`：`once` 記在 `pending` 裡，跑完、失敗、`Removed`、`Stopping` 都從 `pending` 帶進 `replies`；收單當場就回的（反覆 add 的 `{"name"}`、各種退件）直接帶進 `replies`。
+出貨時（§3 第 4、10 步）回音檔放好（EEXIST 當已放）就叫醒，跟「把這筆從 `replies` 拿掉」同一次存帳本。舊 kernel 看不懂 `wake` 會忽略，不退件。
+
+**叫醒一個行程**（`wake` 單與出貨共用）：行程不在、`once`、`status` 是 `bad`／`done`、或它正跑的那格標了 `discard` → 什麼都不做。否則：
+`running` → 記 `woken: true`（跑完退 102 也照 101 排，[§4](echo.md)）；`queued` 而 `not_before` 還沒到 → `not_before`＝現在、接到它池的 `ready` 尾（`delayed` 裡那格變舊格，照 [§1.2](ledger.md) 攤還）、`parked` 拿掉；
+`queued` 而 `not_before` 已到 → 什麼都不做（免得 `ready` 疊兩格）。叫醒只代表「最早下一次派工就能派」，池滿照樣排隊。

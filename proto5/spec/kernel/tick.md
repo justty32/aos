@@ -19,9 +19,10 @@ cpu 那邊的順序是「先發回音、再刪原單」（範式 §6.3），這�
    然後**寫帳本** `last_seq=N`。**先放後記**：這格之後崩了，下一格照跑。崩在放檔之前＝鏈斷，`ls` 看得出（§6），人重新 boot。
 3. 睡 `tick_ms`（實際週期＝睡＋這格做事的時間）。
 4. **出貨**：`acks`／`replies`／`deletes`／`sends` 全部做一遍（`link`，EEXIST 當已放；刪檔 ENOENT 當已刪），**做完一次寫帳本**拿掉。
+   （09-24 停車）帶 `wake` 的回音，檔放好（或 EEXIST）就照 [§2 叫醒](syscall.md)，叫醒的結果跟拿掉出貨項同一次寫帳本；崩在中間下一格重做，叫醒重做無害。
    順手把 kernel cpu 的 `responses/` 全部 ack 掉——唯一不進帳本的出貨（都是舊 tick 的回音；`code≠0` 的記 log 一行）。
 5. **讀 `K/requests/`**，列一次目錄，照檔名前綴分：`ack-`（範式 §3.3）、`stop-`（改 `phase`；檔名進 `deletes`）、`resp-`（回音通知，進第 6 步）、
-   其他是 syscall（`add`／`rm`，照 §2 判；`rm` 一個 `running` 的行程用 `on` 找到那顆 cpu）。`.tmp` 結尾的略過。
+   其他是 syscall（`add`／`rm`／`wake`（09-24 停車），照 §2 判；`rm` 一個 `running` 的行程用 `on` 找到那顆 cpu）。`.tmp` 結尾的略過。
    列目錄的成本是**目錄裡所有項目數**（含堆著沒處理的、`.tmp` 殘檔），不只是這格新來的。
 6. **收回音**。要查的 cpu＝下面三組的聯集：
    - `resp-` 通知指到的：通知的 `params.home` 換成 `P/<i>`（家路徑在 `K/pools/P/cpus/<i>`；字面比不上再用 realpath 比，K 經過 symlink 也認）；

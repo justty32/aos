@@ -248,7 +248,8 @@ def send(run):
             pool = run.info['llm']['pool'] if think else run.info['tool_pool']
             timeout = run.info['llm']['timeout_ms'] if think else (tool or {}).get('_timeout_ms', 60000)
             run.submit(batch['kernel'], name + '.json', 'add',
-                       {'target': str(path), 'name': name, 'once': True, 'pool': pool, 'timeout_ms': timeout})
+                       {'target': str(path), 'name': name, 'once': True, 'pool': pool, 'timeout_ms': timeout,
+                        'wake': 'agent-' + run.base.name})  # 09-24 停車：回音出貨時 kernel 叫醒我
     batch['sent'] = True
     events.batch_start(run)  # 至少一次：在提交 sent 之前記（spec/agent/events.md）
     run.save('state.sent')
