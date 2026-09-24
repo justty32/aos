@@ -45,6 +45,13 @@
     - **one-program 調查 I**（[報告](../proto5-2/notes/2026-09-24-one-program/README.md) §6，共 5 題）：①規模題現在不動架構，只做「查一筆行程」正式入口 ②「合一」＝`aos up`／`aos down` 包起來、程式不合 ③proto5-2 的 kernel 帳本換 sqlite、cpu 家與信箱仍是檔案 ④kernel 帳本可單獨放寬「不用四樣檔」 ⑤工具結果不明不規定「重跑無害」、照現在回報給 agent。
     - **priority-and-shared-cpu 提案 J**（[報告](../proto5/notes/2026-09-24-priority-and-shared-cpu/README.md)，共 6 題）：優先級①只做到 aos 這層、模型伺服器看端點 ②先用 (c) 專屬池（零改動） ③多級優先 (a) 先不要；共用 cpu ①指 (v) 某支工具給多個 agent 排隊共用 ②工具檔加 `_pool` 一欄可以 ③閒著的 agent 每格被叫醒列進 proto5-2 規模題，這版不做。
     - **tools-base 六題**（[報告](../proto5/notes/2026-09-24-tools-base.md) 尾節「要使用者拍的」，共 6 題，維持現況＝預設）：①工作根目錄維持 `config.json` 的 `root`（`<家>/workspace/`） ②bash 暫不加白名單／沙盒 ③結束時收掉背景行程（要長駐另設計） ④給模型的描述維持英文 ⑤跟 pi 還差的能力（多段 edit、長行續讀、bash 存檔、read 圖片）先不補 ⑥`init --tools base`／`tools ls`／`tools remove` 先不做。
+22. **N 隊 cli-agents 提案五題**（[報告](../proto5/notes/2026-09-24-cli-agents/README.md)，2026-09-24 裁決，全部照預設）：①一般用 cpu 池方案 ②第一版牢外靠保守旗標、跳過權限旗標只准牢裡 ③花錢的池另開一個 kernel 家（claude 一個、codex 一個） ④接續對話從上次成功分岔 ⑤不讓它們讀 `~/.claude`／`CLAUDE.md`／codex 設定。
+23. **P 隊 daemon-split-review**（[報告](../proto5/notes/2026-09-24-daemon-split-review/README.md)，2026-09-24 裁決）：撤「daemon 要 sudo 切使用者」這條理由並寫進 daemon 規範（已做，7e60aa8）；daemon／kernel 分法現在不動，proto5-2 重寫 kernel（帳本換 sqlite）時順路做「開機合一、家不合一」；隔離第一版只有工具進牢、CLI agent 先不進；現在不配 subuid。
+24. **K 隊「等模型的 agent 不空轉」提案**（[報告](../proto5-2/notes/2026-09-24-idle-wait/README.md)，2026-09-24 裁決）：方案選 (b) 停車＋喚醒（退出碼 102），閒置沒輸入的也停車，第二步加 kernel 喚醒指令；`park_ms` 300 秒；`start` 拒絕 `done_exit 102` 的 kernel 照預設。
+25. **M 隊工具大開發計畫**（[報告](../proto5/notes/2026-09-24-tool-era/README.md)，2026-09-24 裁決）：加第六軸「邊界」；隊形三 agent＋四機械幫手；第一波等 L 牆合上再開（已合，T1／T3 已開）；及格線照 `plan.md`。
+26. **O 隊 cli-agents 階 0**（[報告](../proto5/notes/2026-09-24-cli-agents/stage0.md)，2026-09-24 裁決）：claude 範本預設**不帶** `--restricted`（能跑程式；使用者選的不是預設選項）；其他四題照預設——範本放 `proto5/templates/`、K2 家 `check` 報沒 llm 池先忽略、codex 登入檔用符號連結、上限 0.5 美元／8 輪／30 分。
+27. **L 隊權限牆「要你拍的」五題**（[報告](../proto5/notes/2026-09-24-access-impl/README.md) 尾節，2026-09-24 裁決；L2 隊正在做前四點）：①檔案工具的根從只看 `cwd` 改成整個 `/work`（原做法：只看起點資料夾） ②換起點不自動塞系統訊息，要模型知道就教程提醒 `say` 一句（照現況） ③`access set` 的相對路徑照打指令時殼的目前資料夾算，不照 `--target` 算（照現況） ④有工具的家卻沒有 `access.json` 改成**拒跑**（原做法：不關牢只 warn） ⑤`tools rm` 從整支資料夾拿掉一支時，改寫成 `only` 列出其餘、接受現況（之後新工具要自己加）。
+28. **C 隊 proto5-2 池式實作五題（代裁，非使用者親自拍板，使用者未反對，2026-09-24）**：調度者照 C 隊自己的預設答的——退休號只增不減；`handoff` 補「也等 draining 0」；池刪除後舊單建回來記保證外；`aos-daemon ls` 印 `running 2（含 restarting 1）`；`cpu add` 後一兩秒 `ls` 顯示「下一格確認」接受。翻案就回這條。
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
