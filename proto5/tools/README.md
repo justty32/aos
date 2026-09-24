@@ -17,10 +17,10 @@ aos-agent tools add base --target $W/bob --force          # 重裝（保留原�
 人格記得改成 coding agent，例如 `prompts/system.json`：`{"content": "你是 coding agent。用工具實際動手，不要只描述要做什麼。一次只叫一個工具，看到結果再決定下一步。"}`
 （agent 同一批工具可能平行跑，「先寫再跑」這種有先後的，叫它一次一個最穩。）
 
-**工作根目錄**：`<家>/tools/base/config.json` 的 `root`（相對 agent 家；沒寫＝`workspace`）。改了下一次叫工具就生效。
-環境變數 `AOS_TOOL_ROOT` 有值時以它為準、不看 `config.json`：agent 家有 `access.json`（工具關進牢裡）時，`aos-jail` 會設成牢裡的起點（例如 `/work/ws`），錯誤訊息印的也是這個牢裡路徑（[aos-jail](../spec/aos-exec/aos-jail.md)）。
-read／write／edit／grep／find／ls 碰不到根目錄以外（`../`、絕對路徑、符號連結指出去都算，回 `OutsideRoot`）；**bash 關不住**，只是從根目錄開始跑。
-這是防模型手滑、不是沙盒（有別的行程同時在換路徑時擋不完全；反正 bash 什麼都碰得到）。
+**工作根目錄**：預設在 `<家>/tools/base/config.json` 的 `root`（相對 agent 家；沒寫＝`workspace`）。改了下一次叫工具就生效。
+**這只在家裡沒有 `access.json`（不關牢）時有效**：agent 家有 `access.json` 時（現在 `tools add base` 第一次裝就會自動建一份，見[教程 04b](../tutorials/04b-access-and-tool-admin.md)），工具被 `aos-jail` 關進沙盒跑，牢裡的環境變數 `AOS_TOOL_ROOT` 一定被設成牢裡的起點（例如 `/work/ws`），base 工具看到這個環境變數就直接用、**不看 `config.json` 的 `root`**，錯誤訊息印的也是這個牢裡路徑（[aos-jail](../spec/aos-exec/aos-jail.md)）。
+read／write／edit／grep／find／ls 碰不到根目錄以外（`../`、絕對路徑、符號連結指出去都算，回 `OutsideRoot`）——這一條檢查是防模型手滑、不是沙盒（有別的行程同時在換路徑時擋不完全）。
+**bash**：家裡有 `access.json` 時真的被關在牢裡，出不去（除非那支自己 `_jail: false`，[04b](../tutorials/04b-access-and-tool-admin.md)）；沒有 `access.json` 的舊家，bash 還是關不住，只是從根目錄開始跑，一樣碰得到根目錄以外。
 
 裝好的樣子：`tools/base.json`（工具檔）＋`tools/base`（符號連結）→`tools/.base-<版>/`（程式與 `config.json`）。重裝是換連結，原子的。
 
@@ -80,6 +80,11 @@ hello/
 
 `aos-agent tools add ./hello --target $W/bob`（含 `/` 就當資料夾路徑）。放進 `proto5/tools/` 底下的，就能只寫名字。
 `_meta.argv[0]` 寫 `tools/<名>/<程式>`：工具的 cwd 是 agent 家，這個相對路徑才對得上。要設定就在資料夾放 `config.json` 自己讀（重裝會保留）。
+
+**關進牢裡也要找得到程式**：家裡有 `access.json` 時牢裡的 PATH 只有 `/usr/local/bin:/usr/bin:/bin`。`argv[0]` 含 `/`（像上面的 `tools/hello/run`）`aos-jail` 會把它的資料夾唯讀掛進牢裡再執行，照樣找得到；**`argv[0]` 不含 `/`（像 `date`）就只能在牢裡這幾個 `/usr` 路徑下找**，自己寫的工具幾乎不會裝在那裡，所以自己的工具 `argv[0]` 一定要含 `/`。
+真的要讓某支工具不關牢（例如它就是要碰家以外的東西），在那支工具元素頂層加 `"_jail": false`（跟 `_meta`、`_timeout_ms` 同層）——這等於讓那支碰得到你碰得到的所有檔，`aos-agent check` 會對它印警告，平常不建議用。
+
+**只有一支工具、或想讓幾個 agent 共用同一份**：不用裝包（複製一份進 `tools/`），`tools add` 給一個單一 `.json` 檔、或一個資料夾（裡面沒有跟資料夾同名的 `<名>.json`）就會**原地引用**：不複製，`info.json` 只記一條路徑，改原始檔案下一批就生效。`--as`、`--only` 怎麼配著用見[教程 04b](../tutorials/04b-access-and-tool-admin.md)。
 
 ## 測試
 

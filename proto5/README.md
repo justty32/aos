@@ -65,8 +65,10 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-agent status` | 第一行 `health`，再來在哪一格、在等什麼、這次的錯 | [03](tutorials/03-first-agent.md) |
 | `aos-agent pause`／`continue [--all]` | 手動暫停／解除手動暫停與連敗暫停（`--all`＝kernel 登記的全部） | [04](tutorials/04-tools-and-pause.md)、[05](tutorials/05-many-agents.md) |
 | `aos-agent tools add base --target 家 [--root DIR]` | 裝內建工具包 base（read／write／edit／bash／grep／find／ls），`--root` 指工作根目錄 | [04](tutorials/04-tools-and-pause.md) |
+| `aos-agent tools ls/add/rm/alias/unalias [--target 家]` | 看有哪些工具／裝或原地引用一個工具檔或資料夾／拿掉一支（不刪檔）／改名 | [04b](tutorials/04b-access-and-tool-admin.md) |
+| `aos-agent access ls/set/rm/cwd/net [--target 家]` | 看／改工具被關進的牢（`access.json`）：掛哪些資料夾、起點、能不能連網 | [04b](tutorials/04b-access-and-tool-admin.md) |
 | `aos-kernel tick`、`aos-agent tick` | 走一格；kernel 自己會叫，人不用打 | — |
-| `aos-llm call`、`aos-cpu`、`aos-exec` | 問一次模型／cpu 主人程式／照 inst 跑一次程式；都是別的指令在叫 | — |
+| `aos-llm call`、`aos-cpu`、`aos-exec`、`aos-jail` | 問一次模型／cpu 主人程式／照 inst 跑一次程式／把一支程式關進沙盒跑；都是別的指令在叫，`aos-jail` 是 `aos-agent` 送件時自動用，平常不用自己叫 | — |
 
 ## 去哪讀
 

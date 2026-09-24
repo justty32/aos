@@ -1,4 +1,4 @@
-← [教程索引](README.md)｜上一篇 [03 第一個 agent](03-first-agent.md)｜下一篇 [05 管一大堆 agent](05-many-agents.md)
+← [教程索引](README.md)｜上一篇 [03 第一個 agent](03-first-agent.md)｜下一篇 [04b 權限牆與工具管理](04b-access-and-tool-admin.md)
 
 # 04 給 agent 加工具、暫停它、救回它
 
@@ -143,6 +143,9 @@ aos-agent tools add base --target $W/bob --root ~/proj
 
 裝完不用重 `start`，下一格就生效。這時人格通常也要跟著換成 coding agent 那套（改 `$W/bob/prompts/system.json`），
 不然模型不知道自己有這些工具能用。每支工具的參數、錯誤格式、工作根目錄怎麼算見 [proto5/tools/README.md](../tools/README.md)。
+
+家裡第一次沒有 `access.json` 時，`tools add base` 會順手建一份、只准工具碰 workspace（印出 `寫了 …/access.json：工具會關在牢裡…`）；
+之後每個工具呼叫都被關進一個沙盒（bwrap），只看得到這份表准的資料夾。這份牢是什麼、怎麼開放更多資料夾、怎麼手改，下一篇 [04b](04b-access-and-tool-admin.md) 細講。
 
 ## 底下在幹嘛
 

@@ -1,4 +1,4 @@
-← [教程索引](README.md)｜上一篇 [04 加工具、暫停](04-tools-and-pause.md)
+← [教程索引](README.md)｜上一篇 [04b 權限牆與工具管理](04b-access-and-tool-admin.md)
 
 # 05 管一大堆 agent
 
