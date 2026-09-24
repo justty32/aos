@@ -1,0 +1,10 @@
+== 1a: setpriv --reuid 1234 id（沒 root）
+setpriv: setresuid failed: Operation not permitted
+exit=127
+== 1b: runuser -u nobody id（沒 root）
+runuser: may not be used by non-root users
+exit=1
+== 1c: systemd-run --user 想換人（DynamicUser=／User=）
+Failed to start transient service unit: Unit run-p1137888-i1137889.service has a bad unit file setting.
+exit=1
+exit=216

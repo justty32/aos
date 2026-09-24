@@ -1,0 +1,5 @@
+直接 /bin/true: 194 us/次
+unshare -U -r: 344 us/次
+bwrap --unshare-user --uid（整台唯讀）: 723 us/次
+bwrap --unshare-all 只掛 /usr: 1189 us/次
+unshare --map-auto（呼叫 newuidmap）＋setpriv: 1426 us/次
