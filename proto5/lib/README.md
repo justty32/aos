@@ -43,7 +43,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1138 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1153 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -367,10 +367,10 @@ halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1138 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1153 條；repo 根目錄
 ```
 
-共 32 個測試檔、1138 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 33 個測試檔、1153 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
