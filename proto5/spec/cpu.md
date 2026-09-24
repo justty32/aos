@@ -2,7 +2,7 @@
 
 ← [proto5 README](../README.md)｜跑一次：[aos-exec.md](aos-exec.md)｜inst 長相：[inst-posix.md](inst-posix.md)｜上層：[kernel](kernel.md)、[daemon](daemon.md)
 
-> 第 1 版，2026-09-23 定稿；已實作（[`aos_home.py`](../lib/aos_home.py)、[`aos_client.py`](../lib/aos_client.py)、[`aos_exec_cpu.py`](../lib/aos_exec_cpu.py)，入口 `aos-cpu`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列；已實作（[`aos_home.py`](../lib/aos_home.py)、[`aos_client.py`](../lib/aos_client.py)、[`aos_exec_cpu.py`](../lib/aos_exec_cpu.py)，入口 `aos-cpu`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**一顆 exec cpu 是一個資料夾加一個主人行程：逐件把 `requests/` 裡的工作 request 照 `aos-exec`
 跑一次，回音寫到 `responses/` 同名檔；反覆、排程都是 kernel 的事，cpu 只做一次。**
@@ -263,8 +263,10 @@ notification，**檔名必須以 `stop-` 開頭**（主人只掃前綴）。細�
 ## 6. 主人的一生
 
 ```text
-aos-cpu DIR
+aos-cpu [DIR]      # （09-24 fix-r4 改）DIR 可省略，省略＝.（目前資料夾）
 ```
+
+DIR（或省略時的目前資料夾）必須是存在的資料夾，不是＝用法錯 2。
 
 ### 6.1 啟動
 
@@ -316,7 +318,7 @@ aos-cpu DIR
 下一任開機看到「原單在、回音不在」就補 `Interrupted`——結果丟了但不會重跑、不會失單。
 磁碟一直壞就會一直退 1、一直被 daemon 重拉（[daemon §4](daemon.md)），這是接受的。
 
-沒有父行程也能跑（終端直接 `aos-cpu DIR`）。沒有「自己反覆跑同一份 inst」的模式——要反覆是 kernel 的事。
+沒有父行程也能跑（終端直接 `aos-cpu [DIR]`）。沒有「自己反覆跑同一份 inst」的模式——要反覆是 kernel 的事。
 
 ## 7. 退出碼與 stderr
 
@@ -376,3 +378,4 @@ cpu 的環境就是工作的環境（llm cpu＝環境裡有 `llm-http` 的普通
 > 舊的 run／daemon／kernel／cpu-queue 八份已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）；llm-cpu／tool-cpu 四份等 agent 重寫落地再刪。
 > 已拍板的前提在 §9，我自己選的在 §10。
 > 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> 2026-09-24 fix-r4：§6 `aos-cpu [DIR]` 的 DIR 可省略（＝目前資料夾）。

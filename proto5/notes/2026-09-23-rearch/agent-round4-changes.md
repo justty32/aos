@@ -1,6 +1,6 @@
 # agent 線規範第 4 輪：補 3 條並定稿
 
-← [README](README.md)｜審查：[review-agent3-report.md](review-agent3-report.md)｜上一輪：[agent-round3-changes.md](agent-round3-changes.md)｜改後：[agent.md](../../spec/agent.md)（A）、[aos-agent.md](../../spec/aos-agent.md)（G）、[aos-llm-call.md](../../spec/aos-llm-call.md)（L）
+← [README](README.md)｜審查：[review-agent3-report.md](review-agent3-report.md)｜上一輪：[agent-round3-changes.md](agent-round3-changes.md)｜改後：[agent.md](../../spec/agent.md)（A）、[aos-agent.md](../../spec/aos-agent.md)（G）、[aos-llm-call.md](../../spec/aos-llm.md)（L）
 
 2026-09-24。照第 3 輪審查 D 節的 3 條必改修正，另把 C-4 寫成一條實作提醒。三份標頭改成「第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；程式未跟」。
 

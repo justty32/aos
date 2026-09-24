@@ -1,6 +1,6 @@
 # agent 線規範第 2 輪：改了什麼
 
-← [README](README.md)｜審查：[review-agent1-report.md](review-agent1-report.md)｜改後：[agent.md](../../spec/agent.md)（A）、[aos-agent.md](../../spec/aos-agent.md)（G）、[aos-llm-call.md](../../spec/aos-llm-call.md)（L）
+← [README](README.md)｜審查：[review-agent1-report.md](review-agent1-report.md)｜改後：[agent.md](../../spec/agent.md)（A）、[aos-agent.md](../../spec/aos-agent.md)（G）、[aos-llm-call.md](../../spec/aos-llm.md)（L）
 
 2026-09-24。依「定稿前必改」12 條，以及使用者當天拍板的三件事修改。三份仍是草稿，程式還沒跟上。
 
