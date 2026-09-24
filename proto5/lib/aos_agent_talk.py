@@ -7,7 +7,6 @@
 import contextlib
 import json
 import os
-import re
 import signal
 import sys
 import threading
@@ -16,7 +15,7 @@ import time
 import aos_agent_info
 from aos_agent_home import AgentError, read_history
 from aos_agent_listen import _stopped
-from aos_agent_results import UNKNOWN
+from aos_agent_listen_render import call_line, call_names, note_calls, result_line
 from aos_agent_runtime import report
 from aos_agent_say import deliver
 from aos_agent_status import collect, show
@@ -26,8 +25,6 @@ HISTORY_DEFAULT = 10
 CONTEXT_RECENT = 3
 PREVIEW = 80
 MAX_WAIT_SECONDS = 7 * 24 * 3600
-# §6.2 aos-agent 自己寫的工具失敗字串：「工具 <名> 逾時／失敗／無法執行／沒跑…」
-TOOL_FAIL = re.compile(r'工具 \S+ (逾時|失敗|無法執行|沒跑)')
 
 HELP = [
     ('/status [-v]', '狀態一行；-v 印整段 aos-agent status'),
@@ -85,33 +82,6 @@ def no_interrupt():
         raise KeyboardInterrupt
 
 
-def call_line(call):
-    """[呼叫 名 k=v …]：參數是 JSON 物件就攤開（字串原樣、換行寫成 \\n），不是就原樣；超過 80 字截斷。"""
-    fn = call.get('function', {})
-    raw = fn.get('arguments', '')
-    try:
-        args = json.loads(raw) if raw else {}
-    except ValueError:
-        args = None
-    if isinstance(args, dict):
-        text = ' '.join('%s=%s' % (k, v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
-                        for k, v in args.items())
-    else:
-        text = raw
-    text = _cut(text.replace('\r', '\\r').replace('\n', '\\n'))
-    return '[呼叫 %s%s]' % (fn.get('name', '?'), ' ' + text if text else '')
-
-
-def result_line(message):
-    """[結果 ok N 行]；aos-agent 寫的失敗字串（§6.2）＝[結果 失敗 <第一行>]、結果不明另一種。"""
-    content = message.get('content') or ''
-    if content == UNKNOWN:
-        return '[結果 不明：工具可能跑了也可能沒有]'
-    if TOOL_FAIL.match(content):
-        return '[結果 失敗 %s]' % content.splitlines()[0]
-    return '[結果 ok %d 行]' % len(content.splitlines()) if content else '[結果 ok 空]'
-
-
 class Pending:
     """逾時／卡住還沒回的那一句。"""
 
@@ -137,6 +107,9 @@ class Talk:
         self.pending = None
         self.tty = _isatty(sys.stdin) and _isatty(sys.stderr)  # 等待提示只在兩邊都是終端時印
         self.waiting_shown = False
+        # tool_call_id → 工具名，跟 listen 共用（aos_agent_listen_render.note_calls／call_names）；
+        # 先用已有的記憶做種，之後每看到一則 assistant 就更新。
+        self.tool_names = call_names(self.info['history'], self.shown)
 
     # ---- 讀記憶、補印 -------------------------------------------------
 
@@ -150,6 +123,7 @@ class Talk:
         for message in history[self.shown:]:
             role = message.get('role')
             if role == 'assistant':
+                note_calls(self.tool_names, message)  # 先記 id→名，結果可能緊接著就到
                 if message.get('content'):
                     self._clear_waiting()
                     _out(message['content'])
@@ -159,7 +133,8 @@ class Talk:
                         _out(call_line(call))
             elif role == 'tool' and self.show_calls:
                 self._clear_waiting()
-                _out(result_line(message))
+                name = self.tool_names.get(message.get('tool_call_id'), '?')
+                _out(result_line(name, message.get('content')))
         self.shown = len(history)
 
     def check(self):
@@ -324,14 +299,15 @@ class Talk:
         _out('tools  %d 個，%d 字：%s' % (len(tools), tool_chars, ', '.join(tools) or '-'))
         _out('合計約 %d 字，每次問模型整份送出（記憶不會自動截短）' % (len(info['system']) + chars + tool_chars))
         if history:
+            names = call_names(history, len(history))
             _out('最近 %d 則：' % min(count, len(history)))
             for m in history[-count:]:
-                _out('  ' + _cut(self._brief(m)))
+                _out('  ' + _cut(self._brief(m, names)))
 
-    def _brief(self, m, full=False):
+    def _brief(self, m, names, full=False):
         """一則一行：user／assistant 帶角色，工具結果印成 [結果 …]；full＝內容不折行不截。"""
         if m.get('role') == 'tool':
-            return result_line(m)
+            return result_line(names.get(m.get('tool_call_id'), '?'), m.get('content'))
         text = m.get('content') or ''
         parts = [text if full else ' '.join(text.split())] if text else []
         parts += [call_line(c) for c in m.get('tool_calls') or []]
@@ -343,8 +319,9 @@ class Talk:
         if not history:
             _out('（記憶是空的）')
             return
+        names = call_names(history, len(history))
         for m in history[-count:]:
-            _out(self._brief(m, full=True))
+            _out(self._brief(m, names, full=True))
 
     def cmd_tools(self, rest):
         tools = aos_agent_info.load(self.base, env=self.env)['tools']
