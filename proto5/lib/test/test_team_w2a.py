@@ -47,7 +47,7 @@ class RouteTryTests(TeamCase):
 
     def test_handoff_rule(self):
         code, out = self.try_('把 workflows 導入 p，照 facts.json')
-        self.assertIn('命中 import → 開單給 worker-1（領隊不經手）', out)
+        self.assertIn('命中 import → 開單給 importer-1（領隊不經手）', out)
         self.assertIn('事實 facts.json', out)
         self.assert_nothing_done()
 

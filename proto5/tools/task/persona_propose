@@ -23,7 +23,7 @@ def main(args, cfg):
     question = ('%s 提議修改自己的人格，加一句：「%s」%s。同意的話麻煩你自己跑：'
                'aos-agent persona append --target <%s 的家> %s（模型自己改不到 prompts/system.json）。'
                % (cfg['member'], text, ('（理由：%s）' % why) if why else '', cfg['member'], shlex.quote(text)))
-    rid = send(cfg, 'ask', {'question': question, 'options': ['同意', '不同意']})
+    rid = send(cfg, 'ask', {'question': question, 'options': ['同意', '不同意'], 'tag': 'persona'})
     return 'queued persona proposal %s. The answer arrives as new mail. End this turn.' % rid
 
 

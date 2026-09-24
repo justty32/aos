@@ -421,6 +421,9 @@ def _handoff_body(obj, where):
         _int(obj['deadline_minutes'], where + '.deadline_minutes', 1, 7 * 24 * 60)
 
 
+ASK_TAGS = ('access', 'persona')   # 借用 kind=ask 的申請種類（09-24 W2C）：aos-team wait ls 靠它挑前綴，不猜字串
+
+
 def _ask_body(obj, where):
     _str(obj.get('question'), where + '.question', limit=4000)
     opts = obj.get('options')
@@ -431,6 +434,9 @@ def _ask_body(obj, where):
     if default is not None and opts is not None and default not in opts:
         bad(where + '.default', '%r 不在 options 裡' % default)
     _opt_str(obj.get('reply_to'), where + '.reply_to')
+    tag = obj.get('tag')
+    if tag is not None and tag not in ASK_TAGS:
+        bad(where + '.tag', '要是 %s 之一' % '／'.join(ASK_TAGS))
 
 
 def _answer_body(obj, where):
@@ -478,7 +484,7 @@ def _review_body(obj, where):
 REQUEST_KINDS = {
     'handoff': (('assignee', 'workflow', 'goal', 'facts', 'done_when', 'max_attempts', 'deadline_minutes'),
                 _handoff_body),
-    'ask': (('question', 'options', 'default', 'reply_to'), _ask_body),
+    'ask': (('question', 'options', 'default', 'reply_to', 'tag'), _ask_body),
     'answer': (('q', 'text'), _answer_body),
     'cancel': (('task', 'reason'), _cancel_body),
     'reassign': (('task', 'assignee'), _reassign_body),

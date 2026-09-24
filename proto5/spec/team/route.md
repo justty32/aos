@@ -12,7 +12,7 @@
    "tests": {"hit": ["列任務", "看一下單子"], "miss": ["列任務給 bob 看", "把任務刪掉"]}},
   {"name": "import", "pattern": "把 workflows 導入 (?P<project>\\S+)，照 (?P<facts>\\S+)",
    "do": "handoff",
-   "handoff": {"assignee": "worker-1", "workflow": "IMPORT.md", "goal": "把 workflows 導入 {project}",
+   "handoff": {"assignee": "importer-1", "workflow": "IMPORT.md", "goal": "把 workflows 導入 {project}",
                "facts": "{facts}", "done_when": [{"kind": "check", "name": "wf_residue"}]},
    "tests": {"hit": ["把 workflows 導入 p，照 facts.json"], "miss": ["把 workflows 導入 p"]}}]}
 ```

@@ -148,6 +148,24 @@ class WaitAnswerTests(Base):
         self.err('NoSuchQuestion', ask_cli.cmd_answer, 'q-0009', 'x')
         self.err('Usage', ask_cli.cmd_answer, 'q-0001')
 
+    def test_wait_ls_shows_tag_prefix(self):
+        """借用 kind=ask 的 access_request／persona_propose：wait ls 靠 tag 印 [權限]／[人格] 前綴，一般問題不加
+        （09-24 W2C 待拍題，2026-09-24 已裁決要加）。"""
+        req = json.loads((EXAMPLES / 'request-ask.json').read_text(encoding='utf-8'))
+        req['reply_to'] = None
+        requests.handle(self.lay, self.roster, req)                              # 一般問題，沒有 tag
+        req2 = dict(req, id='1790000000200000001-4242-worker-1', tag='access', reply_to=None,
+                   question='想申請多掛一個資料夾')
+        requests.handle(self.lay, self.roster, req2)
+        req3 = dict(req, id='1790000000200000002-4242-worker-1', tag='persona', reply_to=None,
+                   question='想改自己的人格')
+        requests.handle(self.lay, self.roster, req3)
+        out = self.call(ask_cli.cmd_wait, 'ls')[1]
+        lines = out.splitlines()
+        self.assertTrue(any(l.startswith('q-0001  worker-1 問：') for l in lines))
+        self.assertTrue(any(l.startswith('[權限] q-0002  worker-1 問：想申請多掛一個資料夾') for l in lines))
+        self.assertTrue(any(l.startswith('[人格] q-0003  worker-1 問：想改自己的人格') for l in lines))
+
     def test_cli_end_to_end(self):
         self.ask()
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', AOS_TEAM_HOME=str(self.team))
