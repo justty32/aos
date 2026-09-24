@@ -49,6 +49,7 @@
 | [2026-09-24-listen-tweak.md](2026-09-24-listen-tweak.md) | `aos-agent listen` 微調：`--last [N]`（不給看法＝用法錯）、每輪標頭帶收話時間、`--show-calls`／`--show-calls-full`；真跑輸出、astra 必修 7 條全修（[任務書](2026-09-24-listen-tweak-review-task.md)／[報告](2026-09-24-listen-tweak-review-astra.md)）、README 該改的句子 |
 | [2026-09-24-agent-access/](2026-09-24-agent-access/README.md) | **提案**（沒改程式與規範）：agent 工具能碰哪些資料夾、workspace 別名、共用工具改名、環境變數——指示詞寫映射（`access.json`）＋bwrap 當牆；含小實驗、astra 審查、6 題待拍 |
 | [2026-09-24-talk.md](2026-09-24-talk.md) | 使用者要的極簡 REPL：`aos-agent talk`（`--wait`、`--show-calls`、`/status` `/context` `/history` 等 slash）；送出前記位置，不踩 `listen --wait` 的坑；真跑畫面；astra 必修 12 條修 11 條，README 舊 `check --agent` 交給拆 README 那隊（[任務書](2026-09-24-talk-review-task.md)、[審查](2026-09-24-talk-review-astra.md)） |
+| [2026-09-24-priority-and-shared-cpu/](2026-09-24-priority-and-shared-cpu/README.md) | 提案（不改程式）：agent 優先級——現在先到先派、建議先用專屬池（零改動）、嫌浪費再讓 cpu 服務多池；共用 cpu——其實已全部共用，缺的是工具檔 `_pool`（某支工具走某個池）；astra 審查 |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 
