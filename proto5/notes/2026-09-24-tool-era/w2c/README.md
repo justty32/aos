@@ -2,7 +2,7 @@
 
 # 第二波 C 隊（申請類）報告（2026-09-24）
 
-**一句話**：T-lock／T-access-req／T-persona／T-pool 四個工具都做完、都真跑過一次（模型寄申請→人 answer→生效）；順手修了審查子單編號跟父單對不起來的 bug，領隊改寫類的單子會機械補 `wf_lint_strict`。測試 80 檔 2210 條（+33），全綠。基底：main `eacfcc2`（one-boot 之後）。
+**一句話**：T-lock／T-access-req／T-persona／T-pool 四個工具都做完、都真跑過一次（模型寄申請→人 answer→生效）；順手修了審查子單編號跟父單對不起來的 bug，領隊改寫類的單子會機械補 `wf_lint_strict`；astra 唯讀審查必修 8 條全修。測試 86 檔 2370 條，全綠。開發基底：main `eacfcc2`（one-boot 之後）；收尾前 rebase 過第二波 A／B 隊與交接書更新，最終基底 `b6c9dfe`。
 
 ## 1. 做了什麼
 
@@ -92,6 +92,6 @@ astra（gpt-6-astra）唯讀審查：必修 8 條、建議 4 條，**必修全�
 
 ## 8. 數字
 
-- **測試**：80 個測試檔、2210 條（+33，第一波收尾隊合進 main 時是 78 檔 2177 條）；`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test`，全綠。
-  - 這隊新增：`test_team_lock.py` 15 條、`test_agent_persona.py` 10 條、既有檔加的（`test_agent_home.py`、`test_agent_tick.py`、`test_kernel_check.py`、`test_team_init.py`）共 8 條。
-- **改動範圍**：`git diff 12d67d4 HEAD -- proto5` 共 49 個檔（8 新、41 改）。
+- **測試**：86 個測試檔、2370 條（開始時是第一波收尾隊的 78 檔 2177 條；中途第二波 A／B 隊各自合進 main，收尾前 rebase 到 main `b6c9dfe` 時是 84 檔 2330 條）；`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test`，全綠。
+  - 這隊新增：`test_team_lock.py` 17 條（含 astra 審查補的 2 條）、`test_agent_persona.py` 12 條（含 astra 補的 2 條）、`test_team_init.py`／`test_team_task_cli.py`／`test_agent_home.py`／`test_agent_tick.py`／`test_kernel_check.py`／`test_team_format.py` 各加幾條（新工具、`_pool`、審查編號、G 的假陽性／假陰性、`may`）。
+- **改動範圍**：`git diff b6c9dfe HEAD -- proto5` 共 53 個檔（11 新、42 改，含兩輪 rebase 衝突手工合併）。
