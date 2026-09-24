@@ -14,5 +14,6 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | review4-task.md／review4-report.md | 第四輪：措辭、易用性（人／agent／實作者各走一遍）、未來（W／X／U／F）；尾巴有「定稿前必改」13 條 |
 | impl-task.md | 派 astra（bypass）照三份規範實作 lib／cli／測試的任務書（四段） |
 | review-agent1-task.md／review-agent1-report.md | agent 線三份草稿（aos-llm-call／agent／aos-agent）第一輪審查：結論「還不能定稿」，必改 12 條（waits 兼工作索引、批次紀錄、記憶／ack／state 恢復…） |
+| lmstudio-run.md＋lmstudio/ | 2026-09-24 用本機 LM Studio（gemma-4-e4b）真跑新架構一條龍：daemon→kernel（k／0／llm）→once 問模型 6 秒回音、反覆行程 done、停機 0.3 秒、重跑通；`lmstudio/run.sh` 可重跑；撞到 8 條（daemon 沒停機 CLI、kernel 沒 ack 子命令、init 不能帶 cpu 表、kernel.log 空格也寫…） |
 
 舊規範已於 2026-09-24 換掉（副本在 proto5.1/spec/）。

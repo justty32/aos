@@ -1,0 +1,16 @@
+{
+  "_metainfo": {"_type": "kernel", "_version": 1},
+  "cpus": {
+    "k": {"pool": "kernel"},
+    "0": {},
+    "llm": {"pool": "llm",
+            "envs": {"PATH": {"$fmt": {"$val": "@LMDIR@:${p}", "p": {"$env": "PATH"}}},
+                     "LLM_BASE": "http://localhost:1234/v1",
+                     "LLM_MODEL": "@MODEL@"}}
+  },
+  "tick_ms": 200,
+  "interval_ms": 1000,
+  "timeout_ms": 0,
+  "done_exit": 100,
+  "bad_after": 10
+}
