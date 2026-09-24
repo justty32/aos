@@ -49,7 +49,7 @@ aos-kernel add $W/jobs/hello.json --once
 cli-1790234138076379672-775576.json /home/you/aos-try/K/responses/cli-1790234138076379672-775576.json
 ```
 
-過一兩秒回音就在那個檔裡（`cat` 它）。看完要替它「簽收」，不然回音一直留在 `K/responses/`：
+過幾秒（等 kernel 走到下一格）回音就在那個檔裡（`cat` 它）。看完要替它「簽收」，不然回音一直留在 `K/responses/`：
 
 ```sh
 aos-kernel ack cli-1790234138076379672-775576.json     # 換成你看到的單名
@@ -71,10 +71,11 @@ cat $W/jobs/count.txt
 
 `add` 印 `count`（行程名）。每 0.5 秒跑一次，第 3 次退出碼 100＝「我做完了」。你會看到：
 
-<!-- TODO A隊合併後補實際輸出（aos-kernel ls 改成對齊表格） -->
 ```text
-proc count  repeat  done  runs 3  fails 0  pending -
+  count  反覆  done     3      0  -
 ```
+
+那是 `ls` 行程表裡的一行，欄位依序是：行程、種類、狀態、runs（跑了幾次）、fails（連續失敗幾次）、回音。
 
 `count.txt` 裡三行 `tick`。沒帶 `--interval-ms` 就用 `K/info.json` 的 `interval_ms`（預設 1000）。
 
@@ -89,10 +90,11 @@ sleep 20
 aos-kernel ls | grep boom
 ```
 
-連續失敗 10 次就被「退件」，不再排它，那行尾巴告訴你去哪看：
+連續失敗 10 次就被「退件」，不再排它，表下另起一行告訴你去哪看：
 
 ```text
-proc boom  repeat  bad  runs 10  fails 10  pending -  看 /home/you/aos-try/jobs/boom.err
+  boom   反覆  bad     10     10  -
+  boom 壞了，看 /home/you/aos-try/jobs/boom.err
 ```
 
 ## 6. 撤掉

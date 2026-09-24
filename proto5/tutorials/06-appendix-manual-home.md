@@ -28,7 +28,7 @@ EOF
 aos-agent check --target $W/amy
 ```
 
-<!-- TODO A隊合併後補實際輸出（aos-agent check 新指令） -->
+最後一行 `設定檢查通過；未測模型連線（--probe 會測）` 就對了（中間各行跟 [03 第 2 步](03-first-agent.md#2-檢查)一樣）。
 `info.json` 沒寫的都有預設：人格 `prompts/system.json`、記憶 `prompts/history.json`、問模型派 `llm` 池、工具與走格派 `default` 池。
 
 ## 2. 登記、投話、看回話

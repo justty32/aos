@@ -25,11 +25,10 @@ json.dump(info, open(path + ".tmp", "w"), ensure_ascii=False)
 os.replace(path + ".tmp", path)
 EOF
 sleep 3
-aos-kernel ls | grep -c '^cpu'
+aos-kernel ls | grep '^cpu'
 ```
 
-<!-- TODO A隊合併後補實際輸出（aos-kernel ls 改成對齊表格；上面的 grep 也要跟著改） -->
-數到 8 行 cpu（`k`、`0`～`5`、`llm`）就好了。新的一顆要加 `envs`（例如第二顆 llm cpu）就照 [01](01-daemon-kernel.md) 的 `llm` 那顆寫。
+看到 `cpu     8 顆：忙 0、閒 7、kernel 1`（`k`、`0`～`5`、`llm`）就好了。新的一顆要加 `envs`（例如第二顆 llm cpu）就照 [01](01-daemon-kernel.md) 的 `llm` 那顆寫。
 （先寫暫存檔再 `mv` 過去，是為了別讓 kernel 讀到寫到一半的檔。）
 
 ## 2. 一次生一批、各給人格
@@ -43,7 +42,7 @@ for a in alice carol dave; do echo "== $a"; aos-agent check --target $W/$a | gre
 for a in alice carol dave; do aos-agent start --target $W/$a; done
 ```
 
-`check` 那行只印不是 `ok` 的，什麼都沒印就是全過。<!-- TODO A隊合併後補實際輸出（aos-agent check 新指令） -->
+`check` 那行只印不是 `ok` 的，每個只剩最後一行「設定檢查通過；未測模型連線（--probe 會測）」就是全過。
 `start` 各印 `started agent-alice` 等。要各自不同的工具，就照 [04](04-tools-and-pause.md) 放進各自的 `tools/`。
 
 ## 3. 一次對一批說話、收回話
@@ -92,19 +91,30 @@ for a in alice carol dave; do echo "$a: $(aos-agent status --target $W/$a | head
 aos-kernel ls
 ```
 
-<!-- TODO A隊合併後補實際輸出（aos-kernel ls 改成對齊表格） -->
 ```text
 health ok
-…
-cpu 0  pool default  busy agent-alice (k-…-11-0.json)  running
-cpu 1  pool default  busy agent-dave (k-…-11-1.json)  running
-cpu 2  pool default  busy agent-bob (k-…-11-2.json)  running
-cpu 3  pool default  busy agent-carol (k-…-11-3.json)  running
-…
-proc agent-alice  repeat  running  runs 119  fails 0  pending -
-proc agent-carol  repeat  queued  runs 119  fails 0  pending -
-queue agent-carol
+kernel  running  seq 143  daemon alive  tick 1000ms
+  kcpu k  正在跑一格  requests 2
+cpu     8 顆：忙 2、閒 5、kernel 1
+  池       cpu  工作  行程         daemon
+  kernel   k    tick  -            running
+  default  0    忙    agent-alice  running
+           1    忙    agent-dave   running
+           2    閒    -            running
+           3    閒    -            running
+           4    閒    -            running
+           5    閒    -            running
+  llm      llm  閒    -            running
+proc    4 個（反覆 4、once 0）：queued 2、running 2
+  行程         種類  狀態     runs  fails  回音  備註
+  agent-bob    反覆  queued     36      0  -
+  agent-alice  反覆  running     5      0  -
+  agent-carol  反覆  queued      5      0  -
+  agent-dave   反覆  running     4      0  -
+queue   2：agent-bob agent-carol
 ```
+
+（bob 是 03、04 留下來的；04 最後 stop 過的話就不會出現。）
 
 `queue` 裡的是在等下一次輪到它（每格之間隔 1 秒，本來就會排一下），不一定是 cpu 不夠；`queue` 一直很長、cpu 行全是 `busy` 才是該加 cpu。
 
@@ -119,7 +129,7 @@ kernel 沒事時才講 **agent**，這三個階段依序出現：
 | `agent 暫停中：agent-alice（連敗）、agent-bob（手動）（… aos-agent continue --all）` | 有人停手了：連敗暫停或手動 `pause` | 修好原因，`continue`（一個）或 `continue --all`（全部） |
 | `已解除暫停，等下一次成功：agent-bob` | 剛 `continue`，還沒問成功過 | 等；下一次問成功就變 `ok` |
 
-每個 agent 那行 `proc agent-…` 的尾巴也標同樣的字（`連敗暫停中`、`手動暫停中`、`重試中（連敗 N/3）`）。
+行程表的「備註」欄也標同樣的字（`連敗暫停中`、`手動暫停中`、`重試中（連敗 N/3）`、`已解除暫停，等下一次成功`）。
 
 ## 6. 共用的模型設定壞了：一次救全部
 

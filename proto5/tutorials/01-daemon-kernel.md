@@ -95,19 +95,23 @@ aos-kernel ls
 
 你會看到 `booted 4 cpus`（`k` 也算一顆），然後：
 
-<!-- TODO A隊合併後補實際輸出（aos-kernel ls 改成對齊表格） -->
 ```text
 health ok
-chain 1790234113937385146-775239  phase running  last_seq 0  daemon alive
-kernel cpu k  current k-1790234113937385146-775239-1.json  requests 1
-cpu k  pool kernel  idle  running
-cpu 0  pool default  idle  running
-cpu 1  pool default  idle  running
-cpu llm  pool llm  idle  running
-queue -
+kernel  running  seq 0  daemon alive  tick 1000ms
+  kcpu k  正在跑一格  requests 1
+cpu     4 顆：忙 0、閒 3、kernel 1
+  池       cpu  工作  行程  daemon
+  kernel   k    tick  -     running
+  default  0    閒    -     running
+           1    閒    -     running
+  llm      llm  閒    -     running
+proc    0 個
+queue   -
 ```
 
-**第一行 `health` 最要緊**：`ok` 就是正常；不是 `ok` 就照括號裡的指令做。`aos-kernel ls --json` 印原始 JSON（給程式讀）。
+**第一行 `health` 最要緊**：`ok` 就是正常；不是 `ok` 就照括號裡的指令做。
+下面依序是 kernel（`seq` 是走到第幾格）、按池分組的 cpu 表、登記的工作（行程）表、排隊的名單。
+`aos-kernel ls -v` 多印 `K`、`D` 的完整路徑與不截短的名字；`aos-kernel ls --json` 印欄位固定的 JSON，給程式讀（[ls 規範](../spec/kernel/cli-ls.md)）。
 
 ## 7. 關機（順序：kernel → daemon）
 

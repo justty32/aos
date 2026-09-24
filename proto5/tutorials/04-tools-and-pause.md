@@ -46,8 +46,7 @@ aos-agent check --target $W/bob
 aos-agent say "請用 add 工具算 1234 加 4321，只回數字。" --target $W/bob --wait
 ```
 
-<!-- TODO A隊合併後補實際輸出（aos-agent check 新指令；應多一行 ok agent/tool/add） -->
-`check` 會多一行 `ok … tool/add: 可執行 tools/bin/add`。`say --wait` 約 15 秒印 `5555`。**不用重新 start**：放進 `tools/` 下一格就生效。
+`check` 會多一行 `ok   agent/tool/add: 可執行 tools/bin/add`。`say --wait` 約 15 秒印 `5555`。**不用重新 start**：放進 `tools/` 下一格就生效。
 
 - `argv[0]` 含 `/`＝**相對 agent 家**的路徑，要有執行位；不含 `/`（像 `date`）就照 cpu 的 PATH 找。
 - 工具跑的時候目前資料夾是 agent 家；最多跑 60 秒（`_meta` 裡寫 `"_timeout_ms"` 可改）。
@@ -61,8 +60,15 @@ aos-agent say "請用 add 工具算 1 加 1。" --target $W/bob --wait 90
 chmod +x $W/bob/tools/bin/add
 ```
 
-<!-- TODO A隊合併後補實際輸出（aos-agent check 新指令） -->
-`check` 那行變 `bad`：`找不到可執行的 tools/bin/add；請修正工具路徑、執行權限或 PATH`。
+`check` 那行變 `bad`，最後一行也跟著變：
+
+```text
+bad  agent/tool/add: 找不到可執行的 tools/bin/add；請修正工具路徑、執行權限或 PATH
+ok   agent/tool/date: 可執行 date
+有 bad，照上面的提示修好再 aos-agent start
+```
+
+（它已經登記著，修好就生效，不用真的重 start。）
 agent 照樣會回話，模型看得到失敗原因，例如：「工具 add 執行失敗（exit 126，無法執行）…」。
 
 工具失敗是**給模型看的結果**，不算 agent 自己的錯：`log/agent.err` 不會有這一行，`status` 也照樣 `ok`。
@@ -131,7 +137,7 @@ aos-agent status --target $W/bob | head -1
 | 看到 | 原因與怎麼辦 |
 |---|---|
 | `check` 說工具 `bad` | 路徑錯、沒執行位、或不含 `/` 的名字不在 cpu 的 PATH。照提示修，下一格生效 |
-| 工具 JSON 寫壞，`aos-kernel ls` 那行 `bad  看 …/log/agent.err` | 設定讀驗錯連續失敗。照 `agent.err` 修好，`aos-agent stop` 再 `start` |
+| 工具 JSON 寫壞，`aos-kernel ls` 行程表裡它的狀態是 `bad`、表下一行「agent-bob 壞了，看 …/log/agent.err」 | 設定讀驗錯連續失敗。照 `agent.err` 修好，`aos-agent stop` 再 `start` |
 | 模型說「工具失敗 exit 127」 | 找不到程式：`#!` 那行、或 `argv[0]` 沒 `/` 又不在 PATH |
 | `continue` 之後又連敗暫停 | 原因沒修好。先 `aos-kernel check --probe` 確認端點通 |
 
