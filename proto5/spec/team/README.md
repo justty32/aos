@@ -27,6 +27,10 @@
 | [templates.md](templates.md) | 成員模板 `proto5/templates/<名>/`：人格、工具包、`access.json`、工具包的 `config.json` |
 | [route.md](route.md) | 門房 `team/routes.json`：整句句型、命中兩條或有否定詞就落穿給領隊、例句全過才准存 |
 | [cli.md](cli.md) | `aos-team` 子命令一覽、哪一隊做、共同慣例（`--target`、退出碼） |
+| [post.md](post.md) | 郵差兼書記 `aos-team post`：kernel 反覆叫，每次走一輪（投信、收驗收結果、看停滯與期限、書記同步 SESSION-LOG／WAIT_USER），不叫模型 |
+| [verify.md](verify.md) | 驗收員 `aos-team verify`：照任務單 `done_when` 跑固定的檢查器，每條回過／不過／檢查器壞 |
+| [beat.md](beat.md) | 心跳 `aos-team beat`、`aos-team routine`：kernel 反覆叫（預設 60 秒一輪），照 `team/routines.json` 算誰到期、以開單方式派出 |
+| [score.md](score.md) | 六軸彙整 `aos-team score`：把六軸表（axes.md §4 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型 |
 | [examples/](examples/) | 每種檔一份範例；`python3 lib/aos_team_format.py 檔…` 驗得過 |
 
 ## 最小驗證程式
@@ -45,3 +49,4 @@ python3 proto5/lib/aos_team_format.py proto5/spec/team/examples/*.json   # 每�
 | `team_say` 工具、郵差兼書記（投信、呼叫處理函式、做後續動作、SESSION-LOG／WAIT_USER、看停滯）、驗收員、心跳、`aos-team mail／post／verify／routine／beat` | 第 2 隊 | `proto5/tools/team/`、`lib/aos_team_post.py`、`aos_team_verify.py`、`aos_team_beat.py` |
 | `wf_*`、`json_edit`、`md_section`（工人的工具；wf 快照唯讀掛成 `/work/wf`） | 第 3 隊 | `proto5/tools/wf/`、`proto5/tools/files/` |
 | 事件紀錄、`context`、`compact`、`note`、`aos-agent init --template` 的旗標 | 第 4 隊 | `lib/aos_agent_*.py` |
+| README／索引彙整、`aos-team score`、`compact_me`（task 包第五支）、模板 `notes: true`、成員模板人格定稿、`route.md` 的 routes 例子、教程 08（一支小團隊） | 收尾隊（第 5 隊） | `lib/aos_team_score.py`、`proto5/tools/task/compact_me`、`proto5/templates/`、`proto5/tutorials/08-team.md` |
