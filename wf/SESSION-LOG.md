@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- 09-24：① fix-r5（r4 兩份報告共同痛點八條，[r4 astra](../proto5/notes/play/2026-09-24-r4-astra.md)／[Opus](../proto5/notes/play/2026-09-24-r4-opus.md)）等 spec 拆檔完再開 ② cpu 動態增減＋daemon 按池宣告式，使用者已拍六點 (a)～(f)，跟 fix-r5 一起開，規範草稿已在 proto5-2/（09-24 合進 main，astra 審 28 條已修），九題等拍→WAIT_USER A.19 ③ spec 拆檔（另隊） ④ 崩潰窗口 C-7／C-8 沒補 ⑤ [WAIT_USER](WAIT_USER.md) A.14～A.18 ⑥ `tools`／`init --template` 沒做；使用者打遊戲時不碰 LM Studio／ollama、走 LiteLLM；每 commit 直接推 [→](session_logs/2026-09.md#2026-09-24)
+- 09-24：已推 main（一句帶過，細節見 git log／session_logs）：fix-r4（13 條 CLI 改版）、tidy、spec 拆檔（九份→86 小檔，[spec 導航](../proto5/spec/README.md)）、proto5-2 規範草稿、kernel C-7／C-8 崩潰窗口測試（程式不用改）、fix-r5（r4 八條，1153 條綠）。open：① **試玩 r5 還沒開**（fix-r5 之後，Opus＋astra 只拿 README 玩，LiteLLM deepseek-chat；任務書照 [r4 任務書](../proto5/notes/play/2026-09-24-r4-task.md) 改；重點驗新指令 `--target`／`listen`／`pause`／`continue --all`／`check --probe`／health 三階段）② proto5-2 池表／宣告式 daemon：規範草稿在 proto5-2/，使用者 09-24 說規模三題先不動（A.19 的 1～3），其餘六題仍等拍，未實作 ③ [WAIT_USER](WAIT_USER.md) A.14、A.15、A.19（六題）、A.20（新）④ `tools`／`init --template` 還沒做 ⑤ fix-r5 沒做的三小件（路徑 shell quoting、`--wait`／`--follow` 沒印回話時間、不帶 `--wait` 的 `say` 在 K 壞時不警告）⑥ 使用者打遊戲中：不碰 LM Studio／ollama，真跑走 LiteLLM localhost:4000 `deepseek-chat`；agent 無上限；每 commit 直接 push；頂層只派隊＋ff-merge＋push，其他一律派 agent。[→](session_logs/2026-09.md#2026-09-24)
 - 09-22：09-21 ④⑤ 仍在（① backlog 已於 09-24 清光） [→](session_logs/2026-09.md#2026-09-22)
 - 09-21：④ aos-inst 兩題 ⑤ thinking/ 草案 ④ WSL 沒 lms／jq [→](session_logs/2026-09.md#2026-09-21)
 - 09-13：① 試玩 r1 修 ② LLM cpu 下一段 ③ 提醒 compact [→](session_logs/2026-09.md#2026-09-13)
