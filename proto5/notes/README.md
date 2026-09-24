@@ -42,6 +42,7 @@
 | [play/](play/README.md) | 試玩 r1～r4 與 fix-r1～r4（每輪兩份報告＋任務書、五條標準分數） |
 | [2026-09-24-tidy/](2026-09-24-tidy/README.md) | 整理 wf／proto5 notes：SESSION-LOG 搬檔、本索引、壞連結 |
 | [2026-09-24-spec-split/](2026-09-24-spec-split/README.md) | spec 九份拆成資料夾＋小檔（逐字搬、≤ 8 KB），指進 spec 的連結全改、astra 抽查 |
+| [2026-09-24-kernel-crash/](2026-09-24-kernel-crash/README.md) | kernel 崩潰窗口 C-7／C-8 測試（15 條，真 KILL）：都照規範收斂，產品程式沒改；stop 箱重放會留同名 stop（同 B-10，待拍） |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 
