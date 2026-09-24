@@ -1,58 +1,76 @@
-# proto5/lib — 三十八支 Python 模組
+# proto5/lib — 四十七支 Python 模組
 
-← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu/README.md)、[daemon.md](../spec/daemon/README.md)、[kernel.md](../spec/kernel/README.md)
+← [proto5 README](../README.md)｜規範：[cpu](../spec/cpu/README.md)、[daemon](../spec/daemon/README.md)、[kernel](../spec/kernel/README.md)、[aos-agent](../spec/aos-agent/README.md)
 
-Python 3.12 以上、只用標準庫（3.12.13 與 3.14.7 都實跑全綠，見 [notes/2026-09-24-py312-run.md](../notes/2026-09-24-py312-run.md)）。底層 `aos_directives` → `aos_inst` → `aos_exec`；新架構由
-`aos_home` 共用檔案範式、`aos_client` 交件，`aos_exec_cpu` 跑一次、`aos_daemon` 管孩子，
-`aos_kernel` 用一格接一格的 tick 排程。`aos_run` 與 `aos-daemon-ctl` 已移除。
+Python 3.12 以上、只用標準庫（3.12.13 與 3.14.7 都實跑全綠，見 [notes/2026-09-24-py312-run.md](../notes/2026-09-24-py312-run.md)）。
+由下往上：`aos_directives` → `aos_inst` → `aos_exec`（跑一次）；`aos_home` 共用檔案範式、`aos_client` 交件；
+`aos_exec_cpu` 是長命的 cpu、`aos_daemon` 按池管孩子、`aos_kernel` 用一格接一格的 tick 排程；agent 線（`aos_agent*`）
+把模型與工具都交給 exec cpu 跑。
 
-agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模型一次，
-`aos-agent tick／start／stop／init／say／listen／status／pause／continue` 走格、登記排程、看回話與日常操作；模型與工具都交給 exec cpu，舊 llm／tool cpu 已移除。
-（09-24 fix-r4）三支指令的家一律 `--target`：`aos_home.resolve_target()` 照「`--target` → 環境變數（`AOS_DAEMON_HOME`／`AOS_KERNEL_HOME`）→ 目前資料夾」找，`target_note()` 產生錯誤行尾巴「用了哪個家、取自哪裡」。
+09-24 起 daemon／kernel 是 proto5-2 的**池式**版本（納入 commit 08dac8a）：daemon 手上是「每池要哪幾號」的宣告、
+kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指令的家一律 `--target`：`aos_home.resolve_target()`
+照「`--target` → 環境變數（`AOS_DAEMON_HOME`／`AOS_KERNEL_HOME`）→ 目前資料夾」找。
 
-| 檔 | 職責 | 規範／狀態 |
-|---|---|---|
-| [`aos_directives.py`](aos_directives.py) | 指示詞解析的純函式庫，不知道 inst | [directives.md](../spec/directives/README.md) |
-| [`aos_inst.py`](aos_inst.py) | inst.json 的讀、驗、解，回執行用 dict | [inst-posix.md](../spec/inst-posix/README.md) §1～§5 |
-| [`aos_exec.py`](aos_exec.py) | 同步 `run_target`／`run_inst`、完整旗標 `run_target_full`、daemon 用 `spawn_target` | [aos-exec.md](../spec/aos-exec/README.md)、[inst-posix.md](../spec/inst-posix/README.md) §6 |
-| [`aos_home.py`](aos_home.py) | JSON-RPC 信封、原子放單與狀態、ack／stop、開機對帳；三支指令共用的 `--target` 找家（fix-r4） | [cpu.md](../spec/cpu/README.md) §2、§3、§6 |
-| [`aos_client.py`](aos_client.py) | 取名、放單、先查原單再等回音、讀與 ack | [cpu.md](../spec/cpu/README.md) §3、§6.3 |
-| [`aos_exec_cpu.py`](aos_exec_cpu.py) | 長命 exec cpu：go／stop、逐件執行、訊號與對帳；入口 `aos-cpu` | [cpu.md](../spec/cpu/README.md) |
-| [`aos_daemon.py`](aos_daemon.py) | flock、spawn 登記與 go、非零重拉、kill／stop 階梯；入口 `aos-daemon boot／halt` | [daemon.md](../spec/daemon/README.md) |
-| [`aos_kernel.py`](aos_kernel.py) | 入口與匯出層：把下面五支的公開名字（含舊的底線名字）重新匯出；`aos-kernel` 從這裡取 `main` | [kernel.md](../spec/kernel/README.md) |
-| [`aos_kernel_info.py`](aos_kernel_info.py) | info 讀驗、`init`、初始帳本 `new_state`、反覆工作判定 `classify`、共用錯誤與放單小工具 | [kernel.md](../spec/kernel/README.md) §1、§4 |
-| [`aos_kernel_ledger.py`](aos_kernel_ledger.py) | `KernelLedger`：帳本、syscall（add／rm）、四出貨箱重放、接 tick 鏈與 ack | [kernel.md](../spec/kernel/README.md) §2、§3 |
-| [`aos_kernel_engine.py`](aos_kernel_engine.py) | `Kernel`：收回音、補 cpu、分池派工、停機與一格十步 `step`；模組函式 `tick` | [kernel.md](../spec/kernel/README.md) §3 |
-| [`aos_kernel_boot.py`](aos_kernel_boot.py) | `boot` 交接換鏈、`status` 偷看、`halt` 等停好（函式名仍是 `stop`） | [kernel.md](../spec/kernel/README.md) §6 |
-| [`aos_kernel_cli.py`](aos_kernel_cli.py) | `aos-kernel` 參數解析、add／rm 交件、`ls` 接線與 `main`；（advice-r1）`check --agent` 變用法錯、指到 `aos-agent check` | [kernel.md](../spec/kernel/README.md) §6 |
-| [`aos_kernel_ls.py`](aos_kernel_ls.py) | （advice-r1）`ls_data()` 收成穩定的 `aos_kernel_ls` 第 1 版資料（就是 `--json`），`render()` 排成按池分組的對齊表（中文算 2 格、長名砍中間、`-v` 才印路徑）；`stderr_hint()` 給 bad 行程指路 | [kernel/cli-ls.md](../spec/kernel/cli-ls.md) |
-| [`aos_kernel_health.py`](aos_kernel_health.py) | `health(home)`：kernel 整體健康一句話（ok／缺目錄／停機中／daemon 沒活／cpu missing／恢復中（fix-r5）／tick 停住／讀不到），不丟例外；`ls` 與 `aos-agent status` 共用。`agent_marks()`／`agents_health()`（fix-r5）給 `ls` 標 agent 的暫停／重試 | [kernel.md](../spec/kernel/README.md) §6 |
-| [`aos_kernel_check.py`](aos_kernel_check.py) | `aos-kernel check`：啟動前唯讀檢查 info、K 家必要目錄、daemon、cpu 在不在孩子表（daemon 重開提示 boot）、PATH、池、llm 設定；`--probe`（fix-r5）真的打一次 endpoint（`probe_endpoint()`），結尾印總結行。（advice-r1）拆出 `kernel_checks()`／`finish()` 給 `aos-agent check` 共用，`Checks.agent()` 只由它呼叫 | [kernel.md](../spec/kernel/README.md) §6 |
-| [`aos_agent_check.py`](aos_agent_check.py) | （advice-r1）`aos-agent check`：`find_kernel()` 由 `AOS_KERNEL_HOME`→`tick.json` 找 K，整段跑 kernel 檢查再查 agent 家（池、模型代號、工具），`--probe` 同一套；（access-impl）`access_checks()` 查 access 檔、`bwrap_probe()` 跑一次無副作用的 bwrap、aos-jail 在不在、`_jail:false` 與牢裡找不到程式的 warn、會 `EnvUnsafe` 的工具＝bad、mount 頂層的 socket／FIFO | [aos-agent/cli-check.md](../spec/aos-agent/cli-check.md) |
-| [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（`_metainfo`、人格／記憶／工具、message 驗證）與 `aos-llm call` 的六格 loader，帶原文件與位置解欄位；（09-24 access-impl）`tool_entries()`／`read_tool_entries()` 解 `tools` 元素的 `$opt`（`as`／`only`），每條工具帶 `_source`、驗 `_jail`；`load_llm_view(doc=, files=)` 給寫入指令試算 | [agent.md](../spec/agent/README.md) §2～§3、§5、[§3.4](../spec/agent/tools-opt.md)；[aos-llm.md](../spec/aos-llm/README.md) §3 |
-| [`aos_llm_call.py`](aos_llm_call.py) | 問模型一次：讀驗 `AOS_LLM_CONFIG` 的 llm.json、組 body、HTTP、正規化並驗 message；入口 `aos-llm call`（fix-r4 由 `aos-llm-call` 改名） | [aos-llm.md](../spec/aos-llm/README.md) |
-| [`aos_agent_info.py`](aos_agent_info.py) | 完整 info 設定、state 進度與恢復紀錄讀驗，並原子寫回 state；（access-impl）`check_access()` 驗 `batch.access` 快照形狀 | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
-| [`aos_agent.py`](aos_agent.py) | tick 三格流程（第 0 步拿 `.tick.lock`、看手動暫停）、批次派工與 kernel 排程登記（stop 不讀 info、沒 `AOS_KERNEL_HOME` 用 tick.json 記的；舊版 tick.json 在 start 改寫）；`main` 轉給 aos_agent_cli | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) §2、§2.1、§11 |
-| [`aos_agent_cli.py`](aos_agent_cli.py) | （fix-r4）九個子命令（advice-r1 加 `check`，十個）的 argparse（access-impl：`tools ls/add/rm/alias/unalias` 的參數個數與 `--as`／`--only` 寫法先驗、退 2）、`--target`、`--wait [秒]`（預設 300）、listen 三態互斥、NotAnAgent 附家的來源；（access-impl）`access ls/set/rm/cwd/net` 的參數在看家之前先驗、退 2 | [aos-agent.md](../spec/aos-agent/README.md) §1 |
-| [`aos_agent_listen.py`](aos_agent_listen.py) | （fix-r4，原 aos_agent_last）`listen --last [N]`（09-24 listen 微調加 N；info 壞了退回讀 `prompts/history.json`、門關著或手動暫停時警告）、（fix-r5）還沒講完時警告「還在處理中」並在 stderr 附時間；`--wait`（`wait_reply()`，say --wait 共用；fix-r5 起 kernel 家有問題與 bad 也立刻退）、`--follow` | [aos-agent.md](../spec/aos-agent/README.md) §1.5 |
-| [`aos_agent_listen_render.py`](aos_agent_listen_render.py) | （09-24 listen 微調）listen 的印法：挑最後 N 則回話（`pick`）、輪次標頭與收話時間（從輸入封存檔名的消費 id 對回）、`--show-calls` 簡化行／`--show-calls-full` 完整參數與回傳（4000 字截斷） | [aos-agent.md](../spec/aos-agent/README.md) §1.5 |
-| [`aos_agent_status.py`](aos_agent_status.py) | `aos-agent status`（`collect()` 收集 health（含手動暫停）、state／batch／門／未收輸入、這次卡住的原因與已恢復的舊錯、K 帳本那筆，文字、`-v` 或 `--json`）；`tick_binding()` 讀 tick.json 記的 K（認舊鍵）；（fix-r5）`brief()` 給 kernel ls 的一句標記、`short_error()` 舊錯短版；（access-impl）access 檔壞了多一行 `access bad`、`--json` 的 `access_error` | [aos-agent.md](../spec/aos-agent/README.md) §1.3 |
-| [`aos_agent_pause.py`](aos_agent_pause.py) | （fix-r4）`pause` 放 `paused` 檔；`continue` 刪它並 touch 連敗暫停門，（fix-r5）解了連敗就放 `resumed`；`resume_all()` 是 `continue --all`；都不拿 tick 鎖、不寫 state | [aos-agent.md](../spec/aos-agent/README.md) §1.4、§1.6 |
-| [`aos_agent_say.py`](aos_agent_say.py) | `aos-agent say`：原子投一則 user 訊息到 `input` 第一條，沒登記或暫停中 stderr 警告（fix-r5：沒登記時 stdout 另說「已投入…不要再說一次」）；`--wait` 走 `wait_reply()`，逾時退 101，kernel 家有問題／沒登記／手動暫停／連敗暫停／bad 立刻退 101 | [aos-agent.md](../spec/aos-agent/README.md) §1.2 |
-| [`aos_agent_talk.py`](aos_agent_talk.py) | （09-24 talk）`aos-agent talk`：讀一行→投檔→等這句的回話（送出前記 H0，判法同 say --wait）→印；「印到哪」邊到邊印不重印、晚到的下次 Enter 補印；`--show-calls` 印 `[呼叫 …]`／`[結果 …]`；slash 指令 `/status` `/context` `/history` `/tools` `/wait` `/pause` `/continue` `/help` `/quit`；Ctrl-C／EOF 退 0 | [aos-agent.md](../spec/aos-agent/README.md) §1.9 |
-| [`aos_agent_init.py`](aos_agent_init.py) | `aos-agent init`：寫死的單一預設家（info／人格／date 工具／`input/`），info 最後寫、已有就拒絕；（fix-r5）非空的非 agent 資料夾要 `force` | [aos-agent.md](../spec/aos-agent/README.md) §1.1 |
-| [`aos_agent_tools.py`](aos_agent_tools.py) | （09-24 tools-base）`aos-agent tools add`：找工具包（名字＝`proto5/tools/<名>/`、含 `/`＝資料夾）、驗、同名檢查、程式複製到 `tools/<名>/`、`--root` 寫 `config.json`、工具檔最後寫、`info.tools` 沒涵蓋就補；（access-impl）原地引用資料夾／`.json` 檔、`--as`／`--only`、寫前整份試算、裝包時叫 `aos_agent_access.ensure_default` | [aos-agent/tools.md](../spec/aos-agent/tools.md) §1.8 |
-| [`aos_agent_tools_edit.py`](aos_agent_tools_edit.py) | （09-24 access-impl）`tools ls [--json]`／`rm`／`alias`／`unalias`；與 add 共用的 `info_lock()`（管理鎖 `<家>/.admin.lock` 的 flock，access CLI 也用）、`write_info()`（縮排 2）、`access_state()`（明寫的 access 檔不在＝錯）、字面 `tools` 檢查、`simulate()`／`commit()` 試算後整份重寫 | [aos-agent/tools-manage.md](../spec/aos-agent/tools-manage.md) |
-| [`aos_agent_batch.py`](aos_agent_batch.py) | 批次建立、inst 產生、kernel 交件、收回音與 ack、結清；（access-impl）act 批建批時存 `batch.access` 快照、`jail_argv()` 把工具包成 `aos-jail …`、`jail_problem()` 壞表／沒 bwrap 那件記成跑不起來；aos-jail 用絕對路徑；`secret_env_reads()`（check 共用）判關牢工具的 `_meta` 用 `$env` 讀敏感名字＝`EnvUnsafe`、敏感輸出名字寫 inst 前就丟；權限牆擋下的那件由 `jail_message()` 寫給模型看（只講被擋、叫它轉告使用者跑 check） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md)、[aos-agent/access.md](../spec/aos-agent/access.md) |
-| [`aos_agent_access.py`](aos_agent_access.py) | （09-24 access-impl）權限牆讀驗：`access_path()`／`configured_path()` 找檔（`info.access` 欄或 `access.json`）、`parse()` 解指示詞與 `~`、realpath、驗格式（錯帶檔路徑與 `mounts.ws` 位置）、`trusted()` 算信任資料（含 `$ref` 到的檔、這份 proto5 的 `cli/`／`lib/`；每項用 `path_chain()` 連途中的符號連結本身一起收）、`access_lookup()` 分辨檔在／預設不在／明寫不在、`check_overlap()`、`load()`／`snapshot()` 回快照；`ensure_default()` 給 `tools add` 建預設檔 | [agent/access.md](../spec/agent/access.md) |
-| [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | （09-24 access-impl）`aos-agent access ls [--json]／set／rm／cwd／net`：跟 tools 共用 `info_lock()`、唯一 .tmp＋rename、壞檔拒寫、落盤前整份驗候選（跟送件同一套信任集合）、重疊自動 ro 或拒絕、印改完的表 | [aos-agent/access.md](../spec/aos-agent/access.md) §3 |
-| [`aos_jail.py`](aos_jail.py) | （09-24 access-impl）`aos-jail`：`parse_args()`、純函式 `build_argv()` 組 bwrap（`/usr` 唯讀、`/etc` 少數檔、`/work/<名>`、`/opt/tool`、清環境、丟金鑰名）、`exec` bwrap；入口 `cli/aos-jail` | [aos-exec/aos-jail.md](../spec/aos-exec/aos-jail.md) |
-| [`aos_agent_inputs.py`](aos_agent_inputs.py) | waits 門、輸入讀驗與 intake／consuming 的恢復流程；封存到來源資料夾的 `done/` | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
-| [`aos_agent_results.py`](aos_agent_results.py) | 模型與工具結果判定、失敗分類與輸出轉換；失敗訊息附 llm.err／cpu.log 路徑與 126／127 的 argv[0] | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
-| [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
+一檔一行（新增模組照這個格式插一行）：
+
+| 檔 | 職責 |
+|---|---|
+| [`aos_directives.py`](aos_directives.py) | 指示詞（`$env`／`$fmt`／`$ref`／`$opt`）解析的純函式庫，不知道 inst |
+| [`aos_inst.py`](aos_inst.py) | inst.json 的讀、驗、解，回執行用的 dict |
+| [`aos_exec.py`](aos_exec.py) | 執行一次的上層：三種目標的解讀（`run_target`／`run_target_full`／`run_inst`）與 `aos-exec` 命令列 |
+| [`aos_exec_run.py`](aos_exec_run.py) | 執行一次的底層：前置檢查、開串流、起子行程、等待／逾時／強停整組、寫 exit 檔 |
+| [`aos_exec_spawn.py`](aos_exec_spawn.py) | daemon 的非同步入口 `spawn_target`：讀目標、開控制 pipe、交出孩子（`launcher` 決定 fd 0／1 怎麼接） |
+| [`aos_home.py`](aos_home.py) | JSON-RPC 信封、原子放單與狀態、ack／stop、開機對帳、`--target` 找家 |
+| [`aos_client.py`](aos_client.py) | 交件者：取名、放單、先查原單再等回音、讀與 ack |
+| [`aos_exec_cpu.py`](aos_exec_cpu.py) | 長命 exec cpu（`aos-cpu`）：go／stop、逐件執行、訊號與對帳、回完音往 kernel 家丟 `notify` 通知 |
+| [`aos_daemon.py`](aos_daemon.py) | daemon 的家、info 讀驗、`is_alive`、給 kernel 讀的 `pool_summary`／`pool_summary_state`／`pool_kid`、`run`（boot）與 `stop`（halt） |
+| [`aos_daemon_pools.py`](aos_daemon_pools.py) | 池的資料形狀（`pool.json`／`kids/<i>.json`／`summary.json`）、檔案動作、拉孩子（只留 fd 0 一條 pipe） |
+| [`aos_daemon_loop.py`](aos_daemon_loop.py) | daemon 的一圈：收屍、狀態機、退避、節流、fd 預算、批次停機階梯 |
+| [`aos_daemon_rpc.py`](aos_daemon_rpc.py) | daemon 收的單 `scale`／`kill`／`ls` 怎麼驗、怎麼判（同步做完才回） |
+| [`aos_daemon_cli.py`](aos_daemon_cli.py) | `aos-daemon boot／halt／ls／scale／kill` 命令列 |
+| [`aos_kernel.py`](aos_kernel.py) | kernel 入口（`aos-kernel` 取 `main`）＋小匯出層（只留測試真的從這裡拿的名字） |
+| [`aos_kernel_info.py`](aos_kernel_info.py) | 池表讀驗（info.json 第 2 版）、成員公式、`init`、初始帳本、反覆工作判定 `classify`、共用錯誤 |
+| [`aos_kernel_ledger.py`](aos_kernel_ledger.py) | `KernelLedger` 帳本第 2 版：排隊、syscall、busy／on、四個出貨箱重放 |
+| [`aos_kernel_engine.py`](aos_kernel_engine.py) | `Kernel` 一格十步（只碰有事的 cpu）與模組函式 `tick` |
+| [`aos_kernel_pools.py`](aos_kernel_pools.py) | kernel 這邊怎麼增減 cpu（每格第 7 步：收 scale 回音、重算、送單、寫 envs／模板、搬池） |
+| [`aos_kernel_boot.py`](aos_kernel_boot.py) | `boot` 交接換鏈、`status` 偷看、`stop`（halt）等停好 |
+| [`aos_kernel_cpu.py`](aos_kernel_cpu.py) | `aos-kernel cpu add／rm／ls`：只改 `K/info.json` 的池表（鎖、指示詞原樣保留） |
+| [`aos_kernel_rows.py`](aos_kernel_rows.py) | 按池摘要（每池一格／一行）與一顆一行的資料與排版，`cpu ls` 與 `ls` 共用 |
+| [`aos_kernel_health.py`](aos_kernel_health.py) | `health(home)` 一句話健康判定（看每池摘要、不逐顆查）與 agent 暫停／重試標記 |
+| [`aos_kernel_ls.py`](aos_kernel_ls.py) | `aos-kernel ls`：`ls_data()` 收成穩定資料（就是 `--json`），`render()` 排成對齊表 |
+| [`aos_kernel_check.py`](aos_kernel_check.py) | `aos-kernel check`：啟動前唯讀檢查；`kernel_checks()`／`finish()` 給 `aos-agent check` 共用 |
+| [`aos_kernel_cli.py`](aos_kernel_cli.py) | `aos-kernel` 參數解析與 `main` |
+| [`aos_llm_call.py`](aos_llm_call.py) | `aos-llm call`：讀驗 llm.json、組 body、HTTP、正規化並驗 message |
+| [`aos_agent.py`](aos_agent.py) | agent 的 tick 三格流程、批次派工與 kernel 排程登記；`main` 轉給 aos_agent_cli |
+| [`aos_agent_cli.py`](aos_agent_cli.py) | `aos-agent` 各子命令的 argparse 與分派 |
+| [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（人格／記憶／工具、message）與 `aos-llm call` 的六格 loader |
+| [`aos_agent_info.py`](aos_agent_info.py) | agent 的 info 設定、state 進度與恢復紀錄讀驗，原子寫回 state |
+| [`aos_agent_batch.py`](aos_agent_batch.py) | 批次建立、inst 產生（含 aos-jail 包裝）、kernel 交件、收回音、結清 |
+| [`aos_agent_inputs.py`](aos_agent_inputs.py) | waits 門、輸入讀驗與 intake／consuming 的恢復流程 |
+| [`aos_agent_results.py`](aos_agent_results.py) | 模型與工具結果判定、失敗分類與輸出轉換 |
+| [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、tick 鎖、交件與測試掛鉤 |
+| [`aos_agent_init.py`](aos_agent_init.py) | `aos-agent init`：寫死的單一預設家 |
+| [`aos_agent_say.py`](aos_agent_say.py) | `aos-agent say`：原子投一則訊息，可等回話 |
+| [`aos_agent_listen.py`](aos_agent_listen.py) | `aos-agent listen --last／--wait／--follow` |
+| [`aos_agent_listen_render.py`](aos_agent_listen_render.py) | listen 的印法：挑最後 N 則、輪次標頭、工具呼叫行 |
+| [`aos_agent_talk.py`](aos_agent_talk.py) | `aos-agent talk`：讀一行、投遞、等這一輪回話、印，slash 指令 |
+| [`aos_agent_status.py`](aos_agent_status.py) | `aos-agent status`：收集診斷並印文字／`-v`／`--json` |
+| [`aos_agent_pause.py`](aos_agent_pause.py) | `aos-agent pause`／`continue` |
+| [`aos_agent_check.py`](aos_agent_check.py) | `aos-agent check`：找 K、跑 kernel 檢查、再查 agent 家、工具與權限牆 |
+| [`aos_agent_tools.py`](aos_agent_tools.py) | `aos-agent tools add`：裝工具包或原地引用工具檔／資料夾 |
+| [`aos_agent_tools_edit.py`](aos_agent_tools_edit.py) | `aos-agent tools ls／rm／alias／unalias` 與共用的 info 編輯（管理鎖、試算後整份重寫） |
+| [`aos_agent_access.py`](aos_agent_access.py) | 權限牆（access.json）讀驗、信任資料、重疊檢查、快照 |
+| [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
+| [`aos_jail.py`](aos_jail.py) | `aos-jail`：組 bwrap 參數並 exec（工具關進牢裡跑） |
+
+命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
+`aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、
+`aos-jail`→`aos_jail.main`、`aos-llm`→`aos_llm_call.main`。
+
+超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1593 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1597 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -224,10 +242,13 @@ metainfo   {"_type": "posix", "_version": 1}
   把 `resolve_located` 回來的 ctx／位置帶進去，所以 `$ref:""`／相對 `$at` 在被引用的檔裡也對得上。
 - 路徑欄給空字串＝沒寫；`append`／`mkdir` 的 `$val` 是空字串＝`OptionConflict`。
 
-## aos_exec — 執行者
+## aos_exec — 執行者（三支：aos_exec／aos_exec_run／aos_exec_spawn）
 
-`aos_exec.py` 是 [inst-posix.md 第 6 節](../spec/inst-posix/exec.md) 的實作＋命令列（[aos-exec.md](../spec/aos-exec/README.md)）。
-舊同步 API 保持原回傳形狀：
+[inst-posix.md 第 6 節](../spec/inst-posix/exec.md) 的實作＋命令列（[aos-exec.md](../spec/aos-exec/README.md)）。
+09-24 拆成三支、行為不變：`aos_exec.py` 是上層（三種目標怎麼解讀、`run_target`／`run_target_full`／`run_inst`、`main`）；
+`aos_exec_run.py` 是底層（前置檢查與串流 `_execute_inst`、起子行程與等待 `_spawn`／`_wait_full`、`terminate`、
+寫 exit 檔 `_finish`，以及常數 `DEFAULT_DIR_TARGET`／`GRACE`／`CHILD`／`AOS`／`USAGE`，`aos_exec` 照樣匯出這些常數）；
+`aos_exec_spawn.py` 是 daemon 的非同步入口。舊同步 API 保持原回傳形狀：
 
 ```python
 import aos_exec
@@ -260,12 +281,14 @@ args=None, on_target=None, *, on_poll=None, poll_ms=20) -> TargetResult`：三�
 `on_poll(popen)` 定期讀控制狀態，回真值要求強停；逾時與強停只處理工作的 process group。
 `.timed_out` 是實際期限旗標，即使 TERM 後退出 0 仍為真；已退出的孩子不標 `.stopped`。
 
-`spawn_target(xxx, dir_target=".aos/inst.json") -> Spawned`：給 daemon 的非同步入口，回
-`.process`（Popen），stdin／stdout 是控制 pipe；四端 CLOEXEC、`close_fds=True`，孩子獨立 pgid、
-與 daemon 同 session。inst 顯式寫 stdin／stdout 即拒絕；stderr、cwd、envs、exit 沿用 inst。
-登記、送 go、輪詢及收屍由 daemon 負責；收屍後 `Spawned.finish(code=None)` 寫 exit、回 `(code, kind)`。
-起不了 Popen 丟 `SpawnError(code, msg)`，不登記假 pid；與同步 126／127 的差異見 [實作發現](../notes/2026-09-23-rearch/impl-findings.md)。
-目標不存在（含非 `.json`）、資料夾缺 dir_target 也是 `SpawnFailed`（09-24 起，同步入口仍是 Usage）。
+`aos_exec_spawn.spawn_target(xxx, dir_target=".aos/inst.json", launcher=None) -> Spawned`：給 daemon 的非同步入口。
+`launcher` 省略時 `.process`（Popen）的 stdin／stdout 是兩條控制 pipe；daemon 的池式孩子傳
+`aos_daemon_pools._launch`（只留 fd 0、fd 1 接 `/dev/null`），`aos_daemon_pools.spawn_child()` 就是這樣叫它。
+四端 CLOEXEC、`close_fds=True`，孩子獨立 pgid、與 daemon 同 session。inst 顯式寫 stdin／stdout 即拒絕；
+stderr、cwd、envs、exit 沿用 inst。登記、送 go、輪詢及收屍由 daemon 負責；收屍後 `Spawned.finish(code=None)`
+寫 exit、回 `(code, kind)`。起不了 Popen 丟 `SpawnError(code, msg)`，不登記假 pid；與同步 126／127 的差異見
+[實作發現](../notes/2026-09-23-rearch/impl-findings.md)。目標不存在（含非 `.json`）、資料夾缺 dir_target 也是
+`SpawnFailed`（同步入口仍是 Usage）。
 
 ## aos_home — 共用家與信封
 
@@ -311,6 +334,7 @@ result 含 code／kind／timed_out／stopped／ms；Usage 映射 -32602，kind=a
 pipe stop／EOF、stop- 檔與第一次訊號溫和停；再次訊號強停工作 group，回音照寫。
 控制行要是合法信封（jsonrpc 2.0、字串 method、合法 id，stop 不可帶 id）才算數，否則忽略並在 stderr 記 BadControl。
 正常停退 0、主人讀寫錯退 1、CLI 用法錯退 2。
+回完音若 info 有 `notify`（kernel 家的絕對路徑），往那裡丟一張 `resp-` 通知讓 kernel 下一格就收；開機補丟上一任沒丟到的（[spec/cpu/notify.md](../spec/cpu/notify.md)）。
 
 ## aos_agent_home — agent 家共用內容讀驗
 
@@ -339,96 +363,157 @@ pipe stop／EOF、stop- 檔與第一次訊號溫和停；再次訊號強停工�
 拆分模組：`aos_agent_batch` 建批、送件與收尾；`aos_agent_inputs` 處理門與輸入消費；
 `aos_agent_results` 判定模型／工具結果；`aos_agent_runtime` 集中持久化、恢復清理與測試掛鉤。
 
-## aos_daemon — 長命孩子管理者
+## aos_daemon — 池的主人（五支：aos_daemon／pools／loop／rpc／cli）
 
-`daemon_home(value=None)` 依參數／`AOS_DAEMON_HOME`／目前資料夾找家（fix-r4 拿掉 `~/.aos-daemon`）；
-`run(home)`（別名 `serve`）是前景主迴圈，`main(argv=None)` 包 CLI `aos-daemon boot [--target D]` 與 `aos-daemon halt [--target D] [--wait-ms N]`（裸 `aos-daemon` 退 2）。
-`stop(home, wait_ms=30000)`：daemon 不活就不放檔、印 not running；活的放 stop notification、以 flock 等它退出，逾時 DaemonError(Timeout)。
-`read_state(home)` 偷看孩子表，`is_alive(home)` 以非阻塞共享 flock 探測主人，不靠 pid 猜。
+09-24 由 proto5-2 納入：daemon 手上不再是一顆一顆孩子的 `spawn／kill`，而是一份「每池要哪幾號」的
+宣告（`pool.json`），每圈把孩子往宣告靠（死了自己拉、多了自己收）。規範在 [spec/daemon/](../spec/daemon/README.md)。
 
-客戶用 `aos_client.call` 送 `spawn {name,target,dir_target?,restart?}` 或 `kill {name}`；
-stop 是檔名以 stop- 開頭的 notification。daemon 寫孩子表之後才送 go、再回 spawn 回音；
-同名同 target 冪等並更新 restart，不同 target 回 NameTaken。非零且未被主動停的孩子按固定延遲重讀目標再拉。
-停機各孩子並行走 pipe stop → TERM 給孩子 → KILL 給整組，EPIPE 提前進下一階。
-啟動先收掉舊表記錄的孩子，再對帳自己的 current；不收養上一任孩子。
+`aos_daemon.py`：`daemon_home(value=None)` 依 `--target／AOS_DAEMON_HOME／` 目前資料夾找家；`run(home)`
+是前景主迴圈（開機先整批殺掉上一任的孩子、kids 檔改成 pending、照 `pool.json` 節流拉回來；舊版 proto5 家
+的 `children` 表也照殺）；`stop(home, wait_ms=30000)` 是 `halt`：不活就不放單、印 `not running`，活的放
+stop notification、flock 等退出。`is_alive(home)` 非阻塞共享 flock 探測。給 kernel 讀的小函式：
+`pool_summary(home, dpool)`（讀 `summary.json`，不在或壞了回 `None`；顯示用）、`pool_summary_state(home, dpool)`
+（回 gone／ok／unknown，只有 gone 才算池已拿掉；交接用）、`pool_kid(home, dpool, i)`（讀 `kids/<i>.json`）。
+`main` 轉給 aos_daemon_cli。
 
-## aos_kernel — 帳本、分池與 tick 鏈
+`aos_daemon_pools.py`：池與一顆一檔的形狀（`pool.json`／`kids/<i>.json`／`summary.json`）、
+`valid_pool_name()`（1～64 bytes、只用 `A-Za-z0-9_.-`）、`peek(path)`（讀一個 JSON 物件，讀不到回 `None`）、
+`spawn_child()`（叫 `aos_exec_spawn.spawn_target`，`launcher` 換成只留 fd 0 一條控制 pipe、fd 1 接 `/dev/null`）。
 
-`init(home, cpus=None, config=None)` 建家（CLI 是 `init --config FILE`：`info_from_config()` 把設定檔變成 info、沒 kernel 池自動加 k，成功印 `initialized <K>`；lib 的 cpus 省略＝k＋0／1／2），info.json 已在才拒絕、半成品補齊；`load_info(home)` 每格讀驗設定，cpu.envs 原樣留給 inst。
-`boot(home, daemon=None, wait_ms=30000)` 驗 daemon、收舊 kernel cpu、換 chain、保留在途與出貨、拉 cpu、放第 1 格。
-`tick(home, chain, seq)` 跑一格；`status(home)` 偷看帳本、daemon 孩子與 kernel cpu 的 current／requests。
-`new_state(info, chain, kcpu, cli)` 建初始帳本；`classify(proc, response, info, now=None)` 純判定反覆工作結果。
+`aos_daemon_loop.py`：`Daemon` 的一圈——`waitpid(-1)` 收屍；dead／failed 的到期、活滿 `stable_ms` 取消
+重拉標記、批次階梯的下一段，全部放在同一個按時間排的堆積；可以拉的號每池一條佇列，只有佇列不空的池參加
+輪流（`spawn_per_sec` 節流，`max_children` 是 fd 預算）；每圈只碰有事的池。
 
-`Kernel` 包每格操作：syscall 一次記帳、`deletes` 去重、收回音、派工、四出貨箱重放與停機。
-只接鏈先放後記；派工與 ack／replies／stops／deletes 都先記後做。收回音先查原單，兩者都沒有才補放原名。
-once 把 exec 的 result／error 原樣回給 add；rm 立即讓未回覆的 once add 收到 Removed，
-rm 自身回 name，正在跑的行程保留 discard 到收完。
-反覆工作按 done_exit／bad_after 判定；pool 只派同池，kernel 池專用。
+`aos_daemon_rpc.py`：`Requests.scale {pool,count,skip?,inst?,home?,decl?,owner?}`（池不在要給 `inst`
+樣板；`owner` 是別人的池要 `--force` 才能改）、`kill {pool, names|all}`、`ls`，一律同步做完才回。
+`stop／ack` 走既有的 `aos_home.scan_controls`。
 
-cpu 家「缺的補齊」：資料夾、info、inst 各自不在才寫，已在不覆蓋。沒有事件的格不寫 kernel.log。
+`aos_daemon_cli.py`：`aos-daemon boot／halt／ls／scale／kill`，家一律 `--target`。`ls` 只偷看檔案、
+不放單（daemon 沒在跑也看得到最後的摘要，第一行講 daemon 有沒有在跑）；給 `--pool` 才一顆一行；
+`running` 那格寫成 `2（含 restarting 1）`（restarting 是 running 的子集，0 就只印 `2`；`--json` 照舊兩欄）；
+`scale／kill` 放單等回音（10 秒）。
 
-CLI（fix-r4）：每個子命令都用 `--target K`（省略找 `AOS_KERNEL_HOME` 再目前資料夾，退 1 的錯誤行附來源）：`aos-kernel init --config FILE／boot [--daemon-target D]／tick／add INST／rm NAME／ack NAME／ls [--json] [-v]／halt [--wait-ms N] [--no-wait]／check [--daemon-target D] [--probe]`（`--daemon-target` 重複＝用法錯；advice-r1 起 `--agent` 一律用法錯、指到 `aos-agent check`），各有 `-h`，完整參數見 [kernel.md §6](../spec/kernel/cli.md)。
-`ls` 預設印文字摘要（第一行 `health`：ok 或哪裡壞、該打什麼指令；advice-r1 起 cpu 按池分組、行程成表、queue 一行；bad 行程附「壞了，看 <stderr 路徑>」），`--json` 印欄位穩定的 `aos_kernel_ls` 第 1 版物件（advice-r1，欄位表在 [kernel/cli-ls.md](../spec/kernel/cli-ls.md)）；`ack NAME` 替 once 不等的人收回音。
-反覆 add 等回音印 NAME；once 預設印 request 與回音路徑，帶 `--wait-ms` 才等。
-CLI 收到回音代 ack，JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成敗。
-halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才印 `stopped`；鏈沒在跑印 `not running` 不放單；`--no-wait` 只放單。
+## aos_kernel — 池表、帳本第 2 版與 tick 鏈（十二支：aos_kernel＋info／ledger／engine／pools／boot／cpu／rows／health／ls／check／cli）
+
+09-24 由 proto5-2 納入：kernel 不再逐顆記 cpu，而是「池 P 要 N 顆」的宣告；一格只碰有事的
+cpu（收到通知的、上一格剛派的、輪到巡檢的），派工從閒號堆疊直接拿。規範在 [spec/kernel/](../spec/kernel/README.md)。
+
+`aos_kernel.py`：入口（`cli/aos-kernel` 取 `main`）＋小匯出層，只留測試真的從這裡拿的名字
+（`CLI`、`KernelError`、`classify`、`init`、`load_info`、`members`、`new_pool`、`new_state`、`Kernel`、`tick`、
+`boot`、`status`、`main`）；其餘請直接 import 各模組。
+
+`aos_kernel_info.py`：池表讀驗（`info.json` 第 2 版：`pools.P.count／skip／envs／daemon／dpool`）、
+成員公式（`count` 顆扣掉 `skip` 那幾號）、`init(home, config=None, daemon=None)`（CLI 是 `init --config FILE`：
+沒給就只建 `kernel` 池 `{"count": 1}`，成功印 `initialized <K>`）、`new_state()` 建初始帳本、
+`classify()` 判定反覆工作結果。
+
+`aos_kernel_ledger.py`：`KernelLedger` 帳本第 2 版——`ready／delayed` 堆積排隊（懶刪）、`busy`／`on`
+記誰在哪格忙、`pools` 每格記 `want／sent／dirty／redeclare` 等、`sends／acks／replies／deletes` 四個
+出貨箱，一格最多寫四次（提交點 1～4）。
+
+`aos_kernel_engine.py`：`Kernel`（`PoolsMixin` ＋ `KernelLedger`）一格十步：讀通知、收回音、（第 7 步）交給
+`aos_kernel_pools` 對池做事、派工、四出貨箱重放、停機。模組函式 `tick(home, chain, seq)` 跑一格。
+
+`aos_kernel_pools.py`：kernel 這邊怎麼增減 cpu——每格第 7 步：收 scale 回音 → info 變了沒 → `dirty`
+才重算 → 送下一張 scale 單 → 重寫 `envs.json`／池模板 `inst.json` → 搬池／池消失，只碰有變化的池。
+
+`aos_kernel_boot.py`：`boot(home, wait_ms=30000)`——交接：驗每個池解得出 daemon、把「帳本裡的 kernel 池」
+與「info 的 kernel 池」各縮到 0、寫新帳本（新 chain、`pools` 全部標 `dirty` 待第一格整份重送）、建家與模板、
+拉 kernel 池 1 顆、放第 1 格。`status(home)` 偷看帳本＋各池 daemon 摘要；`stop(home, wait_ms)` 是 `halt`：
+每個工作池先縮到 0，全部回成功才縮 kernel 池，等 daemon 那邊全部消失才印 `stopped`。
+
+`aos_kernel_cpu.py`：`cpu_add()`／`cpu_rm()`／`cpu_ls()`——只改 `K/info.json` 的池表：拿
+`K/.info.lock` 獨占鎖（等 10 秒）→ 讀 → 改 → 驗 → 唯一 `.tmp` → rename；不放任何單、不用 `boot`，
+kernel 在跑的話下一格就照新數字做。指示詞（`$env`…）原樣保留，不是字面值就退 1、不寫。
+
+`aos_kernel_rows.py`：`pool_rows()`／`pool_row()` 每池一格 dict（`--json` 讀的就是它）、`row_line()`／`pool_lines()`
+一池一行（`running` 那格同 daemon ls，restarting 寫進括號）、`cpu_rows()`／`cpu_line()` 一顆一行（逐顆讀 kids 檔）；
+`cpu ls`、`aos-kernel ls`、health、check 共用。
+
+`aos_kernel_health.py`：`health(home)` 先中先印：缺目錄 → 停機中 → daemon 沒在跑 → kernel cpu 不在
+→ tick 停住 → 某池出錯／池不見了 → 搬池中或池少幾顆（`recovering`）→ ok；只看每池的 `summary.json`。
+`agent_marks()`／`agents_health()` 給 `ls` 標 agent 的暫停／重試。
+
+`aos_kernel_ls.py`：`ls_data()` 收成 `aos_kernel_ls` 第 2 版資料（就是 `--json`，欄位表在
+[kernel/cli-ls.md](../spec/kernel/cli-ls.md)），`render()` 排成對齊表（第一行 health、按池摘要、行程）；
+`stderr_hint()` 給 bad 行程指路。
+
+`aos_kernel_check.py`：啟動前唯讀檢查（info、K 家目錄、daemon、PATH、池表、llm 設定；`--probe` 真的打一次
+endpoint）；`kernel_checks()`／`finish()` 給 `aos-agent check` 共用。
+
+CLI（`aos_kernel_cli.py`）：每個子命令都用 `--target K`（省略找 `AOS_KERNEL_HOME` 再目前資料夾，
+退 1 的錯誤行附來源）：`aos-kernel init --config FILE [--daemon D]／boot [--wait-ms N]／cpu add／rm／ls／tick／
+add INST／rm NAME／ack NAME／ls [--pool P] [--procs] [--json] [-v]／halt [--wait-ms N] [--no-wait]／
+check [--daemon-target D] [--probe]`（`--agent` 一律用法錯、指到 `aos-agent check`），各有 `-h`。
+反覆 add 等回音印 NAME；once 預設印 request 與回音路徑，帶 `--wait-ms` 才等；CLI 收到回音代 ack，
+JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成敗。
 
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1593 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1597 條；repo 根目錄
 ```
 
-共 49 個測試檔、1593 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
-真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
+共 52 個測試檔、1597 條（09-24 拆檔＋tidy 後實跑，約 100～130 秒）；涵蓋底層執行、daemon／kernel 按池行為、
+agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
+崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
-| 檔 | 條數 | 驗證內容 |
-|---|---:|---|
-| [test_agent_crash.py](test/test_agent_crash.py) | 23 | 持久化邊界崩潰與重啟恢復 |
-| [test_agent_home.py](test/test_agent_home.py) | 66 | 共用內容六格、人格／記憶／工具與訊息讀驗 |
-| [test_agent_info.py](test/test_agent_info.py) | 95 | 完整設定、排程欄位、state 與恢復紀錄讀驗 |
-| [test_agent_fix_cli.py](test/test_agent_fix_cli.py) | 13 | start／stop 印行、stop 不讀 info、KernelMismatch、listen --last |
-| [test_agent_fix_r4.py](test/test_agent_fix_r4.py) | 24 | （fix-r4）--target 與錯誤來源、listen 三態（--follow 真程序）、pause／continue／status 兩種暫停、tick 鎖真的兩個程序、舊 tick.json |
-| [test_agent_fix_r5.py](test/test_agent_fix_r5.py) | 25 | （fix-r5）status 第一行重試中／恢復中、continue 兩階段與 --all、舊錯短版、listen --last 中間句與時間、已登記 start 退 0、沒登記的 say、--wait 先看 kernel／bad、NotAnAgent 講哪種家、init --force |
-| [test_agent_listen_tweak.py](test/test_agent_listen_tweak.py) | 27 | （09-24 listen 微調）不給看法＝用法錯、`--last N`（N＝1 照舊、超過現有、非整數）、輪次標頭與收話時間、`--show-calls`／`--show-calls-full`（含截斷）、`--wait`／`--follow` 真程序即時印呼叫行（先握手、每次讀有期限）；astra 必修：同 id 跨輪、怪形狀記憶不當掉、超大 N、封存分組與排序、怪時間戳、symlink／FIFO、呼叫行一定一行 |
-| [test_agent_talk.py](test/test_agent_talk.py) | 23 | （talk）管線餵 stdin：一句問答、`--show-calls`、回話在開始等之前就到也印、不重印、`/status` 一行與未知 slash 不送、`//` 送字面、`/context`／`/history`／`/tools`／`/help`、`/pause`／`/continue`、逾時後空行補印晚到的、沒登記的進入 health 與立刻回提示符、Ctrl-C 退 0、用法錯、真進程管線 EOF |
-| [test_agent_daily.py](test/test_agent_daily.py) | 26 | init／say（含 --wait）／status／continue、stop 用 tick.json、listen 退回讀記憶與門關警告、help、用法錯 |
-| [test_agent_status_r3.py](test/test_agent_status_r3.py) | 20 | status 的 health、這次原因／已恢復、連敗次數、-v、--json 新鍵；say 沒登記警告與 --wait 立刻退 |
-| [test_agent_daily_edges.py](test/test_agent_daily_edges.py) | 11 | say --wait 的等待條件、暫態壞檔、逾時與連敗提前結束 |
-| [test_agent_fix_storage.py](test/test_agent_fix_storage.py) | 13 | done/ 封存、舊式紀錄相容、錯誤訊息的 log 路徑、126／127、ToolInvalid 位置 |
-| [test_agent_integration.py](test/test_agent_integration.py) | 6 | 真 daemon／kernel／exec cpu 的 agent 整合 |
-| [test_agent_tools.py](test/test_agent_tools.py) | 14 | （tools-base）`tools add`：init 的家、手動家補 info、`--force` 保留 config、`--root`、同名、壞工具包、自訂工具包；真 daemon／kernel／agent＋假模型照劇本 write→bash→edit→bash |
-| [test_tools_base.py](test/test_tools_base.py) | 85 | （tools-base）base 工具包：共用參數／config／OutsideRoot（含符號連結）、read／write／edit／grep（rg 與退回 grep）／find／ls、base.json 形狀 |
-| [test_tools_base_bash.py](test/test_tools_base_bash.py) | 11 | （tools-base）bash：輸出合併、cwd、退出碼、逾時、截斷、背景行程收掉、stdin 空 |
-| [test_tools_base_fix.py](test/test_tools_base_fix.py) | 29 | （tools-base astra 後）暫存檔與符號連結、NUL／surrogate、read 大檔與 FIFO、edit 上限與 CRLF、grep 設定檔／逾時／stderr 死鎖／超長行（假 rg）、find 讀不到的資料夾、bash 被 TERM、tools add 版本連結／修復／清殘渣／併發／BadName |
-| [test_agent_tick.py](test/test_agent_tick.py) | 118 | waits、三格、批次收送、錯誤與 start／stop |
-| [test_agent_access.py](test/test_agent_access.py) | 57 | （access-impl）access.json 解析好／壞（位置、行列）、指示詞、`~`、`info.access` 指別處、重疊（self 只能 ro、家裡控制夾、symlink、共用工具夾與程式、`$ref` 到的檔、輸入與門）、`ensure_default`；送件：快照存 state、inst 長相、`_meta.cwd` 只管牢外、壞表／重疊／沒 bwrap 那件不送、`_jail:false`、崩潰重送用舊快照、think 批沒快照、state 形狀；`access` 各子命令與用法錯；check／status；（astra 必修）aos 程式與符號連結本身算信任資料、換名的 `$env` 金鑰與 inst 落盤、set 用 access 的 `$ref`、rm 比解好的 cwd、候選驗證、明寫不在、state 形狀、`/opt/tool` 蓋到家；check 標 EnvUnsafe、給模型的擋下訊息 |
-| [test_agent_tools_manage.py](test/test_agent_tools_manage.py) | 31 | （access-impl A1）`tools` 元素 `$opt`（`as`／`only`）改名與只挑、原地引用資料夾／`.json` 檔、裝包合併選項、改名撞名、`llm_call` 看得到新名；`tools ls`（文字／`--json`／`_jail` 欄）／`add`／`rm`／`alias`／`unalias`：用法錯、併發改寫都落地、`info.json` 縮排、明寫的 access 檔不在是錯、預設不在不是錯、裝包時講牢裡的工作根目錄、`.admin.lock` 串行化 tools／access 寫入 |
-| [test_jail.py](test/test_jail.py) | 13 | （access-impl）`build_argv`／`parse_args` 單元、沒 bwrap 退 126、用法錯 2；**真的跑 bwrap**（沒有就 skip）：`../amy`、絕對路徑、symlink 讀不到、環境乾淨、net off／on 連自己開的 port、唯讀 mount、`/opt/tool` 與 base read、aos-agent 包的 inst 經真 aos-exec 跑；base 的 `AOS_TOOL_ROOT` |
-| [test_access_more.py](test/test_access_more.py) | 7 | （access-impl B 隊補測）一批兩件工具共用同一份快照（中途改 access.json 不影響第二件）、壞表整批每件都跑不起來、下一批才用新表（批 1 settle 後換 access.json）、access rm／cwd／net 在 JSON 壞掉時拒絕且檔案不動、AccessUnsafe 的既有檔仍可用 `access rm` 修、`check` 的 bad 訊息指得到哪一格、牢裡看不到 `AOS_LLM_CONFIG` |
-| [test_access_round2.py](test/test_access_round2.py) | 10 | （access round2）**真的跑 bwrap**：檔案工具碰得到整個 /work（`../ref`、`/work/ref` 讀得到、ls／find／grep 看得到每個 mount）、寫唯讀掛點與直接寫 /work 回 `ReadOnly`、/work 以外仍 `OutsideRoot`；不用 bwrap：`AOS_TOOL_FENCE` 要包住起點才算數、非牢的 EROFS 訊息不提 access.json |
-| [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
-| [test_daemon.py](test/test_daemon.py) | 27 | 真 daemon／cpu、spawn 冪等、重拉、三階停機、flock、崩潰接手 |
-| [test_daemon_cli.py](test/test_daemon_cli.py) | 10 | boot／halt、家的三種來源與錯誤行來源、裸 aos-daemon 退 2、halt 等待退出 |
-| [test_daemon_crash.py](test/test_daemon_crash.py) | 11 | 握手中段（fork 後／寫表後／go 後／回音後）與接手中（TERM 後／KILL 後／死透後／對帳中／對帳後）真 SIGKILL，下一任收斂；subreaper hub＋測試 driver 閘門 |
-| [test_kernel_crash.py](test/test_kernel_crash.py) | 15 | kernel 一格在 log 前（C-7）、派工逐顆與四張出貨箱逐箱（C-8）真 SIGKILL，下一格／boot 收斂：不重派、不重算、無鬼回音；測試啟動器當 kernel cli |
-| [test_directives.py](test/test_directives.py) | 101 | 指示詞、引用、選項與錯誤 |
-| [test_exec.py](test/test_exec.py) | 94 | 保留三種目標、串流、env、退出碼及舊 API |
-| [test_exec_cpu.py](test/test_exec_cpu.py) | 31 | 真 cpu 握手、EOF、訊號、stop、Interrupted、timeout、工作串流 |
-| [test_exec_full.py](test/test_exec_full.py) | 14 | 三類 timed_out、強停、TERM 後退 0、相容性 |
-| [test_exec_spawn.py](test/test_exec_spawn.py) | 20 | daemon pipe、pgid／session、顯式串流拒絕、exit 與啟動失敗 |
-| [test_home.py](test/test_home.py) | 27 | 三類信封、原子放單、ack、五列對帳與 info |
-| [test_inst.py](test/test_inst.py) | 139 | inst 讀驗、指示詞位置、欄位與選項 |
-| [test_kernel.py](test/test_kernel.py) | 29 | 判定表、syscall 去重、rm／once、pool、設定 |
-| [test_kernel_check.py](test/test_kernel_check.py) | 30 | check 各項 ok／warn／bad、daemon 的 /proc 環境、agent 項（advice-r1 起經 `aos-agent check` 跑）、--daemon-target 三種來源與 info.daemon 不同的 warn、K 家目錄、daemon 重開後 cpu 不在 |
-| [test_kernel_cli.py](test/test_kernel_cli.py) | 37 | --target 三種來源與錯誤行來源、init --config（壞設定不建家、自動加 k、拒 daemon）／ack／ls（含 bad 提示、第一行 health、advice-r1 的表與 --json）／halt 等停好／check 旗標重複、舊 --agent 指到新指令 |
-| [test_advice_r1.py](test/test_advice_r1.py) | 24 | （advice-r1）`aos-agent check`：K 從 AOS_KERNEL_HOME／tick.json、找不到、相對路徑、KernelMismatch（含 tick.json 壞掉，跟 start 同判）、K 壞了仍查 agent、NotAnAgent、預設目前資料夾、--probe ok／bad；`ls --json` 欄位集合、值、stdout 純 JSON、退出碼、daemon 沒活 child=null、proc 缺鍵／null 正規化、broken 退 1、look 指 target；文字表對齊、按池原值分組、長名砍中間、-v |
-| [test_kernel_health.py](test/test_kernel_health.py) | 19 | health 各情形與優先序、stall、帳本壞不丟例外、ls 第一行與 --json |
-| [test_kernel_fix_r5.py](test/test_kernel_fix_r5.py) | 13 | （fix-r5）check --probe（本機 HTTP 假端點：models／退回一句話／port 錯）與總結行、ls 的恢復中／daemon 沒活的 cpu 行／agent 標記、真 daemon：boot 印 `booted 3 cpus`、kill -9 llm cpu 看到恢復中 |
-| [test_kernel_integration.py](test/test_kernel_integration.py) | 15 | 真 daemon＋cpu、反覆／once、halt、重 boot、pool、Interrupted |
-| [test_kernel_recovery.py](test/test_kernel_recovery.py) | 21 | 出貨重放、先記未放、鏈與 boot 交接、ack 唯一性 |
-| [test_llm_call.py](test/test_llm_call.py) | 47 | 模型表、組 body、HTTP 與 message 正規化；`aos-llm call`、裸 `aos-llm` 退 2 |
-| [test_rearch_e2e.py](test/test_rearch_e2e.py) | 1 | k／0／llm、envs PATH 的假 llm-http、once 輸出、done_exit、完整停機 |
+| 檔 | 驗證內容 |
+|---|---|
+| [test_directives.py](test/test_directives.py) | 指示詞、引用、選項與錯誤 |
+| [test_inst.py](test/test_inst.py) | inst 讀驗、指示詞位置、欄位與選項 |
+| [test_exec.py](test/test_exec.py) | 三種目標、串流、env、退出碼、逾時及舊 API（`run_target`／`run_inst`／`main`） |
+| [test_exec_full.py](test/test_exec_full.py) | `run_target_full`：三類 timed_out、強停、TERM 後退 0、相容性 |
+| [test_exec_spawn.py](test/test_exec_spawn.py) | `aos_exec_spawn.spawn_target`：控制 pipe、pgid／session、顯式串流拒絕、exit 與啟動失敗 |
+| [test_exec_cpu.py](test/test_exec_cpu.py) | 真 cpu：握手、EOF、訊號、stop、Interrupted、timeout、工作串流、`notify` 通知與開機補丟 |
+| [test_home.py](test/test_home.py) | 三類信封、原子放單、ack、五列對帳與 info |
+| [test_client.py](test/test_client.py) | 取名、先查原單、逾時、端到端與 ack |
+| [test_daemon.py](test/test_daemon.py) | 真 daemon 按池、宣告式：scale、補／收／重拉、退避、節流、fd 預算、kill、halt、重開 |
+| [test_daemon_cli.py](test/test_daemon_cli.py) | `aos-daemon` 命令列：boot／halt（家的三種來源、flock 探測、逾時）與 ls／scale／kill |
+| [test_daemon_crash.py](test/test_daemon_crash.py) | daemon 崩潰窗口（按池版）：閘門卡住真 daemon、真 SIGKILL、下一任接手 |
+| [test_daemon_fix.py](test/test_daemon_fix.py) | astra 審查 daemon 側定點：`pool_summary_state` 三態、摘要寫／刪失敗重試、每圈只碰有事的池 |
+| [test_kernel.py](test/test_kernel.py) | kernel 判定、syscall、收回音與派工（帳本第 2 版）；不開外部行程 |
+| [test_kernel_pools.py](test/test_kernel_pools.py) | info 第 2 版讀驗、成員公式、`init --config`、家與模板（不需要 daemon） |
+| [test_kernel_tick2.py](test/test_kernel_tick2.py) | 一格十步：池的長大／縮小、scale 回音、通知三路、排隊懶刪、提交點、搬池、停機縮池（假 daemon） |
+| [test_kernel_halt2.py](test/test_kernel_halt2.py) | 搬池、池從 info 消失、停機縮池與 halt 等待（假 daemon） |
+| [test_kernel_boot2.py](test/test_kernel_boot2.py) | kernel boot 交接與崩潰窗口（某一步丟 Crash，下一格／下一次 boot 照常跑） |
+| [test_kernel_cpu.py](test/test_kernel_cpu.py) | `aos-kernel cpu add／rm／ls`：只改 info、鎖、指示詞保留、按池摘要與一顆一行的字眼 |
+| [test_kernel_check.py](test/test_kernel_check.py) | `aos-kernel check` 各項 ok／warn／bad（假家、flock、手寫 summary.json） |
+| [test_kernel_cli.py](test/test_kernel_cli.py) | kernel 命令列：`--target` 來源、`init`、help、`ack`、`ls` 的摘要與表、halt、舊 `--agent` 指到新指令 |
+| [test_kernel_health.py](test/test_kernel_health.py) | health 優先序、錯誤邊界、`ls` 第一行與 `--json` |
+| [test_kernel_crash.py](test/test_kernel_crash.py) | 閘門卡住真 tick、真 SIGKILL、下一格（或 boot）接手：不重派、不重算、無鬼回音 |
+| [test_kernel_fix_r5.py](test/test_kernel_fix_r5.py) | （fix-r5）check `--probe` 與總結行、ls 的恢復中與 agent 標記、真 daemon 的 boot 印行 |
+| [test_kernel_fix_astra.py](test/test_kernel_fix_astra.py) | astra 審查 kernel 側必修定點：boot 等待中舊 tick 又提交、draining 中拒 boot、摘要讀不到要等、壞通知 |
+| [test_kernel_integration.py](test/test_kernel_integration.py) | 真 daemon＋cpu：反覆／once、halt、重 boot、pool、Interrupted |
+| [test_kernel_recovery.py](test/test_kernel_recovery.py) | 出貨重放、先記未放、鏈與 boot 交接、ack 唯一性 |
+| [test_p52_e2e.py](test/test_p52_e2e.py) | 真 daemon＋真 aos-cpu＋真 tick 鏈的端到端（加減 cpu、忙的做完才收、崩潰退避、halt→boot） |
+| [test_rearch_e2e.py](test/test_rearch_e2e.py) | k／0／llm、envs PATH 的假 llm-http、once 輸出、done_exit、完整停機 |
+| [test_advice_r1.py](test/test_advice_r1.py) | （advice-r1）`aos-agent check` 找 K 與各情形、`aos-kernel ls --json` 欄位與文字表 |
+| [test_llm_call.py](test/test_llm_call.py) | 模型表、組 body、HTTP 與 message 正規化；`aos-llm call`、裸 `aos-llm` 退 2 |
+| [test_agent_home.py](test/test_agent_home.py) | 共用內容六格、人格／記憶／工具與訊息讀驗 |
+| [test_agent_info.py](test/test_agent_info.py) | 完整設定、排程欄位、state 與恢復紀錄讀驗 |
+| [test_agent_tick.py](test/test_agent_tick.py) | waits、三格、批次收送、錯誤與 start／stop |
+| [test_agent_crash.py](test/test_agent_crash.py) | 持久化邊界崩潰與重啟恢復 |
+| [test_agent_fix_cli.py](test/test_agent_fix_cli.py) | start／stop 印行、stop 不讀 info、KernelMismatch、listen --last |
+| [test_agent_fix_r4.py](test/test_agent_fix_r4.py) | （fix-r4）`--target` 與錯誤來源、listen 三態、pause／continue／status、tick 鎖、舊 tick.json |
+| [test_agent_fix_r5.py](test/test_agent_fix_r5.py) | （fix-r5）status 重試中／恢復中、continue 兩階段與 --all、say／--wait 各情形、init --force |
+| [test_agent_fix_storage.py](test/test_agent_fix_storage.py) | done/ 封存、舊式紀錄相容、錯誤訊息的 log 路徑、126／127、ToolInvalid 位置 |
+| [test_agent_daily.py](test/test_agent_daily.py) | init／say／status／continue、stop 用 tick.json、listen 退回讀記憶、help、用法錯 |
+| [test_agent_daily_edges.py](test/test_agent_daily_edges.py) | say --wait 的等待條件、暫態壞檔、逾時與連敗提前結束 |
+| [test_agent_status_r3.py](test/test_agent_status_r3.py) | status 的 health、這次原因／已恢復、連敗次數、-v、--json 新鍵 |
+| [test_agent_listen_tweak.py](test/test_agent_listen_tweak.py) | listen `--last N`、輪次標頭與收話時間、`--show-calls`／`--show-calls-full`、即時呼叫行 |
+| [test_agent_talk.py](test/test_agent_talk.py) | `aos-agent talk`：一句問答、不重印、slash 指令、逾時補印、Ctrl-C／EOF |
+| [test_agent_integration.py](test/test_agent_integration.py) | 真 daemon／kernel／exec cpu 的 agent 整合（池表） |
+| [test_agent_tools.py](test/test_agent_tools.py) | `tools add` 各情形，真 daemon／kernel／agent＋假模型照劇本用工具 |
+| [test_agent_tools_manage.py](test/test_agent_tools_manage.py) | `tools` 元素 `$opt`（as／only）、`tools ls／rm／alias／unalias`、管理鎖串行化 |
+| [test_agent_access.py](test/test_agent_access.py) | 權限牆 access.json 讀驗、重疊、送件快照、`access` 子命令、check／status |
+| [test_access_more.py](test/test_access_more.py) | 權限牆補測：一批共用快照、壞表整批跑不起來、下一批才用新表、壞 JSON 拒寫 |
+| [test_jail.py](test/test_jail.py) | `aos-jail` 單元與真 bwrap（沒有就 skip）：路徑、環境、網路、唯讀 mount、經真 aos-exec 跑 |
+| [test_tools_base.py](test/test_tools_base.py) | base 工具包：共用參數／config／OutsideRoot、read／write／edit／grep／find／ls |
+| [test_tools_base_bash.py](test/test_tools_base_bash.py) | base 的 bash：輸出合併、cwd、退出碼、逾時、截斷、背景行程收掉 |
+| [test_tools_base_fix.py](test/test_tools_base_fix.py) | base 工具包 astra 後修正：暫存檔與符號連結、大檔、CRLF、grep 各種退路、tools add 併發 |
 
-共用工具：[\_util.py](test/_util.py)（既有底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
-（控制協議孩子、輪詢、孤兒隔離 driver）、[\_kernel_util.py](test/_kernel_util.py)（真 daemon／kernel 測試家與清理）。
+共用工具（不是測試檔）：[\_util.py](test/_util.py)（底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
+（控制協議孩子、輪詢、孤兒隔離 driver、`read_json`／`wait_for`）、[\_kernel_util.py](test/_kernel_util.py)
+（真 daemon／kernel 測試家，`aos-kernel init --config` 建、`pools=` 傳池表）、[\_kernel_fake.py](test/_kernel_fake.py)
+（假 daemon：只處理 `D/requests/` 的 scale 與 ack、手寫 summary.json，不拉任何 cpu）。
