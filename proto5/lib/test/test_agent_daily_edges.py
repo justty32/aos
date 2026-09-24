@@ -28,7 +28,8 @@ class DailyEdgeTests(unittest.TestCase):
             self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
             self.assertEqual(agent.main(['listen']), 0)
             (self.base / 'info.json').unlink()
-            self.assertEqual(agent.main(['init']), 0)
+            self.assertEqual(agent.main(['init']), 1)  # fix-r5：非空的非 agent 資料夾要 --force
+            self.assertEqual(agent.main(['init', '--force']), 0)
 
     def test_help_all_commands(self):
         with patch('sys.stdout', new_callable=io.StringIO) as out, self.assertRaises(SystemExit) as cm:

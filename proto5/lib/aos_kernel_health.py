@@ -39,6 +39,10 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
         missing = [name for name in names if not children.get(name) or children[name]['state'] == 'missing']
         if missing:
             return 'cpus', 'cpu missing：%s（跑 %s）' % ('、'.join(missing), boot)
+        # fix-r5：孩子死了、daemon 等著重拉——不是 ok，但會自己好。
+        dead = [name for name in names if children[name]['state'] == 'dead']
+        if dead:
+            return 'recovering', '恢復中（%s cpu dead，daemon 重拉中）' % '、'.join(dead)
         if snapshot.get('phase') == 'running':
             age = (time.time() if now is None else now) - (home / 'state.json').stat().st_mtime
             if age > max(10, 10 * info.get('tick_ms', DEFAULTS['tick_ms']) / 1000):
@@ -47,3 +51,34 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
     except (aos_home.HomeError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         reason = ' '.join(str(exc).splitlines())
         return 'broken', 'kernel 家讀不到：%s（跑 aos-kernel check --target %s）' % (reason, home)
+
+
+def agent_marks(snapshot):
+    """fix-r5：帳本裡每個 agent 的暫停／重試標記 {行程名: (code, 標記)}；讀不到的略過（ls 用）。"""
+    from aos_agent_status import brief  # 延後 import：aos_agent_status 也 import 本模組
+    marks = {}
+    for name, proc in (snapshot.get('procs') or {}).items():
+        if not name.startswith('agent-') or not isinstance(proc, dict) or proc.get('once'):
+            continue
+        target = proc.get('target')
+        if not isinstance(target, str) or Path(target).name != 'tick.json':
+            continue
+        mark = brief(Path(target).parent)
+        if mark is not None:
+            marks[name] = mark
+    return marks
+
+
+def agents_health(marks):
+    """kernel 本身 ok 時，ls 第一行再看 agent：暫停 → 重試中 → 等下一次成功；都沒有回 None。"""
+    paused = ['%s（%s）' % (n, '連敗' if code == 'paused' else '手動' if code == 'manual_paused' else '手動＋連敗')
+              for n, (code, _) in marks.items() if code in ('paused', 'manual_paused', 'both_paused')]
+    if paused:
+        return 'agents_paused', 'agent 暫停中：%s（修好原因後 aos-agent continue --all）' % '、'.join(paused)
+    retrying = [n + text.removeprefix('重試中') for n, (code, text) in marks.items() if code == 'retrying']
+    if retrying:
+        return 'retrying', '重試中：' + '、'.join(retrying)
+    resuming = [n for n, (code, _) in marks.items() if code == 'resuming']
+    if resuming:
+        return 'resuming', '已解除暫停，等下一次成功：' + '、'.join(resuming)
+    return None

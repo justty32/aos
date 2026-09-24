@@ -204,13 +204,13 @@ class AgentIntegrationTests(KernelCase):
         self.assertNotIn('agent-bob', self.state().get('procs', {}))
 
     def test_duplicate_start_already_exists(self):
-        """重複 start 由真 kernel 回 AlreadyExists，CLI 退 1。"""
+        """重複 start：真 kernel 回 AlreadyExists，但就是這個家、正常登記著＝already started、退 0（fix-r5）。"""
         self.setup_running(cpus=self.cpus)
         first = self.agent_cli('start')
         self.assertEqual(first.returncode, 0, first.stderr)
         second = self.agent_cli('start')
-        self.assertEqual(second.returncode, 1)
-        self.assertIn('AlreadyExists', second.stderr)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(second.stdout, 'already started agent-bob\n')
         result = self.agent_cli('stop')
         self.assertEqual(result.returncode, 0, result.stderr)
         wait_for(lambda: 'agent-bob' not in self.state().get('procs', {}))

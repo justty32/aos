@@ -172,7 +172,7 @@ class KernelCLI(KernelCase):
         text = self.good_cli('ls', self.home).stdout
         self.assertIn('chain -  phase -  last_seq -  daemon dead', text)
         self.assertIn('kernel cpu -  current -  requests 0', text)
-        self.assertIn('cpu llm  pool llm  idle  missing', text)
+        self.assertIn('cpu llm  pool llm  idle  dead（daemon 沒在跑）', text)  # fix-r5
 
     def test_ack_once_response_by_filename_or_path(self):
         self.setup_running()
@@ -353,10 +353,10 @@ class KernelCLI(KernelCase):
         from unittest.mock import patch
         with patch('aos_kernel_check.check', return_value=0) as check:
             self.assertEqual(kernel.main(['check', '--target', str(self.home), '--agent', 'A', '--daemon-target', 'D']), 0)
-        check.assert_called_once_with(str(self.home), 'A', 'D', note=check.call_args.kwargs['note'])
+        check.assert_called_once_with(str(self.home), 'A', 'D', note=check.call_args.kwargs['note'], probe=False)
 
     def test_check_omitted_options_pass_none(self):
         from unittest.mock import patch
         with patch('aos_kernel_check.check', return_value=0) as check:
             self.assertEqual(kernel.main(['check', '--target', str(self.home)]), 0)
-        check.assert_called_once_with(str(self.home), None, None, note=check.call_args.kwargs['note'])
+        check.assert_called_once_with(str(self.home), None, None, note=check.call_args.kwargs['note'], probe=False)

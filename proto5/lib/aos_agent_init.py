@@ -6,10 +6,17 @@ import aos_home
 from aos_agent_home import AgentError
 
 
-def init(agent_dir):
+def init(agent_dir, force=False):
     base = Path(os.path.abspath(agent_dir))
     if os.path.lexists(base / 'info.json'):
         raise AgentError('AlreadyExists', '%s 已經是 agent 家（拒絕覆蓋）' % (base / 'info.json'))
+    # fix-r5（aos-agent.md §1.1）：非空、又不是 agent 家的資料夾，要 --force 才生。
+    if not force and base.is_dir():
+        names = sorted(p.name for p in base.iterdir())
+        if names:
+            shown = '、'.join(names[:5]) + ('…等 %d 個' % len(names) if len(names) > 5 else '')
+            raise AgentError('NotEmpty', '%s 不是空資料夾，也不是 agent 家（已有 %s）；確定要生在這裡就加 --force'
+                             % (base, shown))
     for name in ('prompts', 'tools', 'input', 'log'):
         (base / name).mkdir(parents=True, exist_ok=True)
     aos_home.write_json(base / 'prompts/system.json',

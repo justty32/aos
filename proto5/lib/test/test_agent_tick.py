@@ -435,7 +435,7 @@ class AgentTickTests(unittest.TestCase):
         self.assertEqual(self.tick(), 0)
         self.assertEqual(self.state()['errors'], 0)
         self.assertEqual(self.state()['waits'], [{'$opt': 'consume', '$val': 'continue-aw-bob-123-77.json'}])
-        self.assertIn('aos-agent: stuck: 問模型連敗 3 次，touch %s 繼續' % (self.base / 'continue-aw-bob-123-77.json'), self.err.getvalue())
+        self.assertIn('aos-agent: stuck: 問模型連敗 3 次，修好原因後 aos-agent continue --target %s\n' % self.base, self.err.getvalue())
         self.assertEqual(self.tick(), 101)
 
     def test_continue_name_each_batch_unique(self):
@@ -532,7 +532,7 @@ class AgentTickTests(unittest.TestCase):
     def test_kernel_error_ack_and_one_line(self):
         rc, _ = self.register(error={'code': -32000, 'message': '已經\n登記', 'data': {'code': 'AlreadyExists'}})
         self.assertEqual(rc, 1)
-        self.assertEqual(self.err.getvalue(), 'aos-agent: AlreadyExists: 已經 登記\n')
+        self.assertEqual(self.err.getvalue(), 'aos-agent: AlreadyExists: 已經 登記；帳本裡沒這筆（可能剛被 stop），等一下再 start\n')
 
     def test_main_argparse_error(self):
         with self.assertRaises(SystemExit) as exc:

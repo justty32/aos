@@ -24,6 +24,9 @@ def check_metainfo(value):
     if not isinstance(value, dict) or any(k not in value for k in ("_type", "_version")):
         raise AgentError("MetainfoInvalid", "_metainfo 要是物件，且必填 _type 與 _version")
     if value["_type"] != "llm_agent":
+        kind = value["_type"]
+        if isinstance(kind, str) and kind:
+            raise AgentError("NotAnAgent", "這是 %s 家，不是 agent 家（_metainfo._type 只認 llm_agent）" % kind)
         raise AgentError("NotAnAgent", "_metainfo._type 只認 llm_agent")
     if type(value["_version"]) is not int or value["_version"] != 1:
         raise AgentError("UnsupportedVersion", "_metainfo._version 只認整數 1")

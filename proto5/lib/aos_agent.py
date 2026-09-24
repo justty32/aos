@@ -29,7 +29,8 @@ def _other_home(base):
         kind = meta.get('_type') if isinstance(meta, dict) else None
     except (aos_home.HomeError, AttributeError):
         return False
-    return isinstance(kind, str) and kind != 'llm_agent'
+    # fix-r5：回那個 _type（真值），讓 NotAnAgent 能說「這是 kernel 家」。
+    return kind if isinstance(kind, str) and kind != 'llm_agent' else False
 
 
 def _environment(env):
@@ -164,7 +165,14 @@ def _register(agent_dir, env, starting, note=''):
         if isinstance(response, dict) and isinstance(response.get('error'), dict):
             from aos_agent_results import error_code
             error = response['error']
-            raise AgentError(str(error_code(error)), error.get('message', 'kernel 退件'))
+            code, message = str(error_code(error)), error.get('message', 'kernel 退件')
+            if starting and code == 'AlreadyExists':
+                already = _already(kernel, params)
+                if already is None:
+                    print('already started ' + params['name'])
+                    return 0
+                message = '%s；%s' % (message, already)
+            raise AgentError(code, message)
         if (not isinstance(response, dict) or not isinstance(response.get('result'), dict)
                 or not isinstance(response['result'].get('name'), str)):
             raise AgentError('ReadFailed', 'kernel 回音缺少 result.name')
@@ -172,6 +180,28 @@ def _register(agent_dir, env, starting, note=''):
         return 0
     except (AgentError, aos_home.HomeError, OSError) as exc:
         return _error(exc, note)
+
+
+def _already(kernel, params):
+    """start 撞 AlreadyExists（aos-agent.md §11，fix-r5）：就是這個家、正常登記著＝None（退 0）；否則回補充說明。"""
+    from aos_agent_runtime import ledger
+    try:
+        state = ledger(kernel)
+        proc = state['procs'].get(params['name'])
+        slots = state.get('cpus') if isinstance(state.get('cpus'), dict) else {}
+        discarded = any(isinstance(s, dict) and s.get('proc') == params['name'] and s.get('discard')
+                        for s in slots.values())
+    except (AgentError, aos_home.HomeError, OSError, ValueError):
+        return '帳本讀不到，確認不了是不是同一個家'
+    if not isinstance(proc, dict):
+        return '帳本裡沒這筆（可能剛被 stop），等一下再 start'
+    if proc.get('target') != params['target']:
+        return '同名行程是 %s，改資料夾名' % proc.get('target')
+    if discarded:
+        return '上次 stop 的那格還在跑，等它跑完再 start'
+    if proc.get('status') == 'bad':
+        return '已登記但被判 bad，看 log/agent.err 修好後 stop 再 start'
+    return None
 
 
 def start(agent_dir, env=None, note=''):

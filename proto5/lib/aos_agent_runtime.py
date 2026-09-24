@@ -12,6 +12,7 @@ from aos_agent_info import write_state
 
 
 PAUSED = 'paused'
+RESUMED = 'resumed'  # fix-r5：continue 解了連敗暫停、還沒等到一次成功（aos-agent.md §1.4）
 LOCK = '.tick.lock'
 KERNEL_ENV = 'AOS_KERNEL_HOME'
 
@@ -24,6 +25,14 @@ def manual_paused(base):
     """手動暫停＝家裡有 paused 檔（aos-agent.md §1.6）；回修改時間（epoch 秒）或 None。"""
     try:
         return os.stat(Path(base) / PAUSED).st_mtime
+    except OSError:
+        return None
+
+
+def resumed_since(base):
+    """continue 放的 resumed 檔的修改時間（epoch 秒）或 None（aos-agent.md §1.4）。"""
+    try:
+        return os.stat(Path(base) / RESUMED).st_mtime
     except OSError:
         return None
 

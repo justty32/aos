@@ -3,12 +3,15 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import re
 
 import aos_agent_info
 import aos_home
 import aos_kernel_health
 from aos_agent_home import AgentError
-from aos_agent_runtime import KERNEL_ENV, files, ledger, manual_paused
+from aos_agent_runtime import KERNEL_ENV, files, ledger, manual_paused, resumed_since
+
+SHORT_LIMIT = 120
 
 
 def tick_binding(base):
@@ -86,11 +89,14 @@ def unregistered(kernel):
 
 def agent_health(data):
     k, base = data['kernel'], data['dir']
+    recovering = None
     if k['home'] is not None:
         code, message = aos_kernel_health.health(k['home'])
         if code == 'stopped':
             return dict(code='kernel', message='kernel ' + message)
-        if code != 'ok':
+        if code == 'recovering':
+            recovering = message  # fix-r5：會自己好，排在暫停、bad 之後
+        elif code != 'ok':
             return dict(code='kernel', message='kernel 家有問題：' + message)
     if unregistered(k):
         return dict(code='unregistered', message='沒登記（aos-agent start --target %s）' % base)
@@ -103,6 +109,12 @@ def agent_health(data):
         return dict(code='paused', message='連敗暫停（aos-agent continue --target %s）' % base)
     if isinstance(k['proc'], dict) and k['proc'].get('status') == 'bad':
         return dict(code='bad', message='kernel 判壞了（看 %s/log/agent.err）' % base)
+    if recovering is not None:
+        return dict(code='recovering', message=recovering)
+    if data['streak'] and not data['state_error']:
+        return dict(code='retrying', message='重試中（連敗 %s/3）' % data['streak'])
+    if data['resumed']:
+        return dict(code='resuming', message='已解除暫停，等下一次成功')
     if data['info_error'] or data['state_error']:
         return dict(code='config', message='家的設定讀不到（看下面 info／state 行）')
     return dict(code='ok', message='ok')
@@ -137,6 +149,48 @@ def error_details(data):
     return lines[stuck] if stuck is not None else None
 
 
+def brief(agent_dir, env=None):
+    """fix-r5：給 aos-kernel ls 的一句標記 (code, 文字)；沒什麼好標、或不是 agent 家＝None。
+
+    只讀 paused、resumed、state.json（errors 與沒到的門），不讀記憶、不問 kernel、不拿鎖。
+    """
+    base = os.path.abspath(agent_dir)
+    try:
+        meta = aos_home.read_json(Path(base) / 'info.json').get('_metainfo')
+        kind = meta.get('_type') if isinstance(meta, dict) else None
+        if isinstance(kind, str) and kind != 'llm_agent':
+            return None
+    except (aos_home.HomeError, AttributeError):
+        return None
+    manual = manual_paused(base) is not None
+    try:
+        st = aos_agent_info.load_state(base, env=os.environ if env is None else env)
+    except (AgentError, OSError, ValueError):
+        return ('manual_paused', '手動暫停中') if manual else None
+    stuck = any(w['pause'] and not w['arrived'] for w in waits(base, st))
+    if manual and stuck:
+        return 'both_paused', '手動暫停中＋連敗暫停中'
+    if stuck:
+        return 'paused', '連敗暫停中'
+    if manual:
+        return 'manual_paused', '手動暫停中'
+    if st['errors']:
+        return 'retrying', '重試中（連敗 %s/3）' % st['errors']
+    if resumed_since(base) is not None:
+        return 'resuming', '已解除暫停，等下一次成功'
+    return None
+
+
+def short_error(line, base):
+    """一般 status 的舊錯短版（aos-agent.md §1.3）：原文留給 -v／--json。"""
+    text = line.removeprefix('aos-agent: ')
+    text = re.sub(r'touch \S+ 繼續', '修好原因後 aos-agent continue --target ' + base, text)
+    text = re.sub(r'\baw-[^\s/]*?-\d+-\d+(?:-\d+)?', 'aw-…', text)
+    if len(text) > SHORT_LIMIT:
+        text = text[:SHORT_LIMIT] + '…（-v 看全文）'
+    return text
+
+
 def collect(agent_dir, env=None):
     """各區獨立診斷；只有不是 agent 家才拒絕。"""
     env = os.environ if env is None else env
@@ -146,6 +200,8 @@ def collect(agent_dir, env=None):
                   kernel=kernel_status(base, env))
     since = manual_paused(base)
     result.update(manual_paused=since is not None, manual_paused_since=_iso(since))
+    since = resumed_since(base)
+    result.update(resumed=since is not None, resumed_since=_iso(since))
     try:
         aos_agent_info.load(base, env=env)
     except (AgentError, OSError) as exc:
@@ -201,7 +257,7 @@ def show(data, *, as_json=False, verbose=False):
             print('intake 收到一半（下一格會接著做）')
     current = data['current_error']
     if current and data['paused'] and not verbose and current.startswith('aos-agent: stuck:'):
-        current = current.split('touch ', 1)[0] + 'aos-agent continue --target ' + data['dir']
+        current = short_error(current, data['dir'])  # 舊格式的 touch 也改寫成 continue
     print('error  ' + (current or '（無）'))
     if data['paused']:
         print('       已連敗 3 次，等 aos-agent continue --target ' + data['dir'])
@@ -214,7 +270,9 @@ def show(data, *, as_json=False, verbose=False):
         print('       已連敗 %s 次（3 次會暫停）' % data['streak'])
     elif data['last_error'] and not data['current_error']:
         stamp = datetime.fromisoformat(data['last_error_time']).strftime('%m-%d %H:%M:%S')
-        print('last-error  %s  %s（已恢復）' % (stamp, data['last_error']))
+        label = '（已解除暫停，等下一次成功）' if data['resumed'] else '（已恢復）'
+        text = data['last_error'] if verbose else short_error(data['last_error'], data['dir'])
+        print('last-error  %s %s  %s' % (label, stamp, text))
     k = data['kernel']
     if k['home'] is None:
         print('kernel 從沒 start 過（沒設 %s、也沒 tick.json）；aos-agent start --target %s'

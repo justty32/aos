@@ -36,9 +36,64 @@ def _literal(value, env):
     return None, False
 
 
+PROBE_LIMIT_MS = 10000
+
+
+def probe_endpoint(entry):
+    """fix-r5：對一個模型設定打一次最小請求；回 (level, 一句話)。
+
+    先 GET <endpoint>/models；404／405 再退回 POST chat/completions 一句話（max_tokens 1）。
+    """
+    import json
+    import urllib.error
+    import urllib.request
+    base = entry['endpoint'].rstrip('/')
+    timeout = min(entry.get('timeout_ms', 120000), PROBE_LIMIT_MS) / 1000
+    headers = {'Accept': 'application/json'}
+    if entry.get('api_key'):
+        headers['Authorization'] = 'Bearer ' + entry['api_key']
+
+    def hide(text):
+        text = ' '.join(str(text).split())[:200]
+        return text.replace(entry['api_key'], '[已隱藏]') if entry.get('api_key') else text
+
+    def fetch(url, body=None):
+        data = None if body is None else json.dumps(body).encode('utf-8')
+        extra = {} if body is None else {'Content-Type': 'application/json'}
+        request = urllib.request.Request(url, data=data, headers={**headers, **extra},
+                                         method='GET' if body is None else 'POST')
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read()
+
+    where = '（endpoint %s，模型 %s）' % (entry['endpoint'], entry['model'])
+    try:
+        try:
+            raw = fetch(base + '/models')
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (404, 405):
+                raise
+            exc.close()
+            fetch(base + '/chat/completions', {'model': entry['model'], 'max_tokens': 1,
+                                               'messages': [{'role': 'user', 'content': 'hi'}]})
+            return 'ok', '模型回了一句話' + where
+        try:
+            listed = {m.get('id') for m in json.loads(raw).get('data', []) if isinstance(m, dict)}
+        except (ValueError, AttributeError, TypeError):
+            return 'ok', 'endpoint 通' + where
+        if listed and entry['model'] not in listed:
+            return 'warn', 'endpoint 通，但模型清單裡沒有 %s%s' % (entry['model'], where)
+        return 'ok', 'endpoint 通，模型清單裡有 %s%s' % (entry['model'], where)
+    except urllib.error.HTTPError as exc:
+        return 'bad', 'HTTP %d%s' % (exc.code, where)
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        reason = getattr(exc, 'reason', exc)
+        return 'bad', '連不上：%s%s；改 llm.json 的 endpoint' % (hide(reason), where)
+
+
 class Checks:
     def __init__(self):
         self.bad = False
+        self.configs = []   # fix-r5：--probe 要打的 (代號, 模型設定)
 
     def report(self, level, item, message):
         self.bad |= level == 'bad'
@@ -116,7 +171,18 @@ class Checks:
             return set()
         models = set(cfg['models'])
         self.report('ok', item, '模型代號：' + (', '.join(sorted(models)) or '（空）'))
+        self.configs.extend(cfg['models'].items())
         return models
+
+    def probe(self):
+        seen = set()
+        for alias, entry in self.configs:
+            key = (entry['endpoint'], entry['model'], entry.get('api_key'))
+            if key in seen:
+                continue
+            seen.add(key)
+            level, message = probe_endpoint(entry)
+            self.report(level, 'probe/' + alias, message)
 
     def agent(self, directory, pools, models, env):
         try:
@@ -150,7 +216,7 @@ class Checks:
                         '可執行 %s' % command if exists else '找不到可執行的 %s；請修正工具路徑、執行權限或 PATH' % command)
 
 
-def check(home, agent=None, daemon=None, note=''):
+def check(home, agent=None, daemon=None, note='', probe=False):
     # 延後 import，讓 kernel CLI 僅需接線，不形成模組初始化循環。
     from aos_kernel import load_info
     home = Path(home).absolute()
@@ -195,4 +261,9 @@ def check(home, agent=None, daemon=None, note=''):
             models.update(checks.llm(name, effective, env))
     if agent is not None:
         checks.agent(agent, pools, models, env)
+    if probe:
+        checks.probe()
+    # fix-r5（kernel.md §6 check）：講清楚這次保證到哪裡。
+    print('有 bad，照上面的提示修好再 boot' if checks.bad else
+          '設定檢查通過；模型連線也測過' if probe else '設定檢查通過；未測模型連線（--probe 會測）')
     return int(checks.bad)
