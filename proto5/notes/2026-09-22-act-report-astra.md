@@ -20,40 +20,40 @@
 
 | 版本 | 工具長什麼樣、誰跑 | 同步／非同步與等待 | 逾時、失敗、輸出 | 已知限制／踩坑與來源 |
 |---|---|---|---|---|
-| **proto2** | `tools.json` 選工具包；包的 `run()` 是 Python 函式。自訂 `tools[]` 則是一句 shell command，參數 JSON 走 stdin。 | **一個 `act` 串行跑完全部 calls**，最後一次把整批 tool 訊息寫入 history。普通工具同步；`jobs`／`think`／`branch` 另有收據與背景工作機制。 | 包內例外包成 `{error:…}` 回模型。自訂 shell 同步 `subprocess.run`，合併 stdout／stderr，**沒有統一 timeout，也沒有把 returncode 統一編進結果**。`fs.sh` 自己有期限，見下表。 | 不是通用 thread／process pool。工具已做完、整批 history 尚未寫入時崩潰，可能重做。來源：[aos-agent:302](/home/guanyu/projs/aos/proto2/aos-agent:302)、[aos-agent:324](/home/guanyu/projs/aos/proto2/aos-agent:324)、[aos_agent.py:234](/home/guanyu/projs/aos/proto2/aos_agent.py:234)。 |
-| **proto3** | 記憶體中的世界、agent、LLM queue；尚未接 proto2 工具包。 | LLM `ask` 先回 request id，clock 判 `wait-for`、結果透過信箱送回。Janet kernel 可每世界一個協作式 fiber。**agent 的 `act` 只是輸出回話，沒有模型工具執行器。** | LLM engine 是同步函式／假引擎；捕錯成結果，agent 記錯後回 idle。等待有 timeout，但不是 POSIX 工具 timeout。 | 不可拿這版證明真實工具已經非同步化。CL variant 雖每鐘有 thread，tick 求值受全域 mutex 串行保護。來源：[agent.janet:29](/home/guanyu/projs/aos/proto3/src/agent.janet:29)、[llm.janet:7](/home/guanyu/projs/aos/proto3/src/llm.janet:7)、[kernel.janet:38](/home/guanyu/projs/aos/proto3/src/kernel.janet:38)、[CL kernel:59](/home/guanyu/projs/aos/proto3/variant-cl/src/kernel.lisp:59)。 |
-| **proto3-1** | 同樣是記憶體原型；世界改成可求值的 form。 | 等待變成純資料描述，例如 `[:llm-result id]`，搭配下一步 continuation。**仍未有真正的工具執行器。** | LLM queue、假引擎、結果信；timeout 回 idle。 | 演進重點是把等待／續跑表示成資料，不是新增背景工具能力。來源：[agent.janet:15](/home/guanyu/projs/aos/proto3-1/src/agent.janet:15)、[llm.janet:8](/home/guanyu/projs/aos/proto3-1/src/llm.janet:8)、[README:52](/home/guanyu/projs/aos/proto3-1/README.md:52)。 |
-| **proto3-2** | `tools` 是「名字 → Janet 函式」的 table；模型回覆是簡化的 `{:tool 名 :args …}`。 | `think` 直接呼叫 engine；`act` **直接同步呼叫一支工具函式**。 | 找不到工具回文字；沒有工具 timeout、worker 或持久化收據。 | 檔頭明說之後接 LLM 世界才改非同步；clock／kernel／main 尚是空殼或偽碼。来源：[agent.janet:11](/home/guanyu/projs/aos/proto3-2/src/agent.janet:11)、[agent.janet:27](/home/guanyu/projs/aos/proto3-2/src/agent.janet:27)、[README:1](/home/guanyu/projs/aos/proto3-2/README.md:1)。 |
-| **proto4-2** | 尚非 agent 工具層；`aos-cpu` 反覆執行 inst 描述的 POSIX 程式。 | 一顆 cpu 是一支常駐 Linux process；每次 `Popen` 後 `communicate()`，**等 child 結束才下一回合**。 | inst 的 `timeout_ms` 與整顆 cpu 的總期限取較早者；TERM group → 等 2 秒 → KILL。結果存 `last.json`／`runs.jsonl`，不是 tool 訊息。 | CPU 的最早形狀就容許格內阻塞；沒有自動切成可續跑步驟。來源：[aos_cpu.py:102](/home/guanyu/projs/aos/proto4-2/aos_cpu.py:102)、[aos_cpu.py:128](/home/guanyu/projs/aos/proto4-2/aos_cpu.py:128)、[aos_cpu.py:210](/home/guanyu/projs/aos/proto4-2/aos_cpu.py:210)。 |
-| **proto4-3** | `aos-exec` 跑一次；`aos-run` 反覆跑；kernel 把行程 inst 排上 cpu。不是模型工具 adapter。 | `run_target()` 同步等 child。kernel 透過換 cpu 的 inst 檔决定**下一次**執行誰。 | 每次 timeout 預設 0＝不限；另可設整體硬期限。退出碼／kind 交給上層，沒有自動轉成 tool 訊息。 | quantum 是完成次數，不是格內搶佔期限；換檔不殺當次。來源：[aos_run.py:41](/home/guanyu/projs/aos/proto4-3/aos_run.py:41)、[kernel.md:114](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:114)、[kernel.md:188](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:188)。 |
-| **proto4-4** | `aos-step` 每次跑一個 Janet 頂層 form；`aos/call` 包 POSIX 執行，Janet image 保存環境。 | form 裡的 `call`／直接 `aos/llm` 是同步。另可 `llm-submit` → 宣告 `wait-for` → 退出，下一次到檔才執行下一個 form。 | 格內失敗不推進；等待檔本身沒有 timeout。做完回 100、未到檔回 101。沒有自動產生模型 tool 訊息。 | 一個 form 仍可能做很久。「一格一個 form」不等於「一格很短」。image／pc／state 各自原子寫，但整組不是交易。來源：[step.janet:99](/home/guanyu/projs/aos/proto4-4/src/step.janet:99)、[step.janet:140](/home/guanyu/projs/aos/proto4-4/src/step.janet:140)、[aos.janet:195](/home/guanyu/projs/aos/proto4-4/src/aos.janet:195)。 |
-| **proto4-5** | LLM 分兩層：同步 `aos-llm call`；排程器 `llm-cpu`，可獨立掛 cpu，也可作 kernel module。 | dispatcher tick 收件／排隊／派**背景 worker 子進程**，不等 HTTP；worker 同步問模型、寫結果檔。 | HTTP timeout；scheduler 另在期限＋5 秒後判 worker timeout。worker 死且無結果 → `worker_died`，**不自動重送**。失敗也產生 result。 | 有 request id＋內容 hash 冪等；但不是 exactly-once 執行協議，仍有 spawn／記 pid 交界。来源：[llm_cpu_tick.py:72](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:72)、[llm_cpu_tick.py:192](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:192)、[llm_cpu_worker.py:37](/home/guanyu/projs/aos/proto4-5/llm_cpu_worker.py:37)。 |
-| **proto4-6** | JSON：每元素一份 inst；Python：每個公開 step 函式；Lua：return 表中的每個函式。 | 格內執行同步。`llm_submit` 回結果檔路徑，`wait_for` 宣告等待；後續未到檔就退 101，不跑下一格。 | JSON child 非零停原 pc；Python 函式成功且 state 能序列化才落盤。等待檔無 timeout；一般 call 可傳 timeout。沒有模型 tool 訊息 adapter。 | 最初等檔回 0，kernel 看不出在等；後來改 101 才能提早讓 cpu。来源：[step_common.py:74](/home/guanyu/projs/aos/proto4-6/step_common.py:74)、[aos_step_json.py:90](/home/guanyu/projs/aos/proto4-6/aos_step_json.py:90)、[aos_step_py.py:137](/home/guanyu/projs/aos/proto4-6/aos_step_py.py:137)、[演化 §23.8](/home/guanyu/projs/aos/proto4/notes/23-step-json-python.md:72)。 |
-| **proto4-7** | `tools/<名>/tool.json` 宣告 schema；`tools/<名>/run` 真正執行。agent 經 `aos_py.call` → `aos-exec` 跑它。 | **`act` 一格串行跑完全部 calls**。LLM 才有 ask／wait 分格，工具沒有背景等待。 | 每工具 **60 秒**；成功 stdout；非零 `[exit N]`＋stderr 前 500 字＋stdout；整段預設截到 **8000 字元**。每 call 都回 tool 訊息。 | 壞 arguments JSON 不執行、回錯誤；不存在／啟動失敗也回 tool。全部跑完才保存，崩潰可重跑整批。來源：[agent_tools.py:105](/home/guanyu/projs/aos/proto4-7/agent_tools.py:105)、[state_machine.py:200](/home/guanyu/projs/aos/proto4-7/state_machine.py:200)。 |
-| **proto5 規範＋目前工作樹** | 工具檔為 OpenAI tools 陣列，每元素 `_meta` 是 posix inst；import `aos_inst`／`aos_exec` 執行。 | **`act` 一格串行跑完全部 calls**。目前 `think` 也直接同步問模型；改 llm cpu 仍是規劃事項。 | arguments 字串原樣進 stdin；stdout 整段回來；目前 **工具不限時、沒有輸出截斷**。不存在／inst 壞／非零均變 tool 訊息，agent 正常回 0。 | 新增記憶尾巴自癒，能處理「history 已寫、state 未寫」，不能防止「工具做了、history 未寫」的重複副作用。來源：[規範:41](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:41)、[實作:159](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:159)、[實作:230](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:230)、[llm cpu 任務書:3](/home/guanyu/projs/aos/proto5/notes/2026-09-22-llm-cpu-plan-task.md:3)。 |
+| **proto2** | `tools.json` 選工具包；包的 `run()` 是 Python 函式。自訂 `tools[]` 則是一句 shell command，參數 JSON 走 stdin。 | **一個 `act` 串行跑完全部 calls**，最後一次把整批 tool 訊息寫入 history。普通工具同步；`jobs`／`think`／`branch` 另有收據與背景工作機制。 | 包內例外包成 `{error:…}` 回模型。自訂 shell 同步 `subprocess.run`，合併 stdout／stderr，**沒有統一 timeout，也沒有把 returncode 統一編進結果**。`fs.sh` 自己有期限，見下表。 | 不是通用 thread／process pool。工具已做完、整批 history 尚未寫入時崩潰，可能重做。來源：[aos-agent:302](../../proto2/aos-agent:302)、[aos-agent:324](../../proto2/aos-agent:324)、[aos_agent.py:234](../../proto2/aos_agent.py:234)。 |
+| **proto3** | 記憶體中的世界、agent、LLM queue；尚未接 proto2 工具包。 | LLM `ask` 先回 request id，clock 判 `wait-for`、結果透過信箱送回。Janet kernel 可每世界一個協作式 fiber。**agent 的 `act` 只是輸出回話，沒有模型工具執行器。** | LLM engine 是同步函式／假引擎；捕錯成結果，agent 記錯後回 idle。等待有 timeout，但不是 POSIX 工具 timeout。 | 不可拿這版證明真實工具已經非同步化。CL variant 雖每鐘有 thread，tick 求值受全域 mutex 串行保護。來源：[agent.janet:29](../../proto3/src/agent.janet:29)、[llm.janet:7](../../proto3/src/llm.janet:7)、[kernel.janet:38](../../proto3/src/kernel.janet:38)、[CL kernel:59](../../proto3/variant-cl/src/kernel.lisp:59)。 |
+| **proto3-1** | 同樣是記憶體原型；世界改成可求值的 form。 | 等待變成純資料描述，例如 `[:llm-result id]`，搭配下一步 continuation。**仍未有真正的工具執行器。** | LLM queue、假引擎、結果信；timeout 回 idle。 | 演進重點是把等待／續跑表示成資料，不是新增背景工具能力。來源：[agent.janet:15](../../proto3-1/src/agent.janet:15)、[llm.janet:8](../../proto3-1/src/llm.janet:8)、[README:52](../../proto3-1/README.md:52)。 |
+| **proto3-2** | `tools` 是「名字 → Janet 函式」的 table；模型回覆是簡化的 `{:tool 名 :args …}`。 | `think` 直接呼叫 engine；`act` **直接同步呼叫一支工具函式**。 | 找不到工具回文字；沒有工具 timeout、worker 或持久化收據。 | 檔頭明說之後接 LLM 世界才改非同步；clock／kernel／main 尚是空殼或偽碼。来源：[agent.janet:11](../../proto3-2/src/agent.janet:11)、[agent.janet:27](../../proto3-2/src/agent.janet:27)、[README:1](../../proto3-2/README.md:1)。 |
+| **proto4-2** | 尚非 agent 工具層；`aos-cpu` 反覆執行 inst 描述的 POSIX 程式。 | 一顆 cpu 是一支常駐 Linux process；每次 `Popen` 後 `communicate()`，**等 child 結束才下一回合**。 | inst 的 `timeout_ms` 與整顆 cpu 的總期限取較早者；TERM group → 等 2 秒 → KILL。結果存 `last.json`／`runs.jsonl`，不是 tool 訊息。 | CPU 的最早形狀就容許格內阻塞；沒有自動切成可續跑步驟。來源：[aos_cpu.py:102](../../proto4-2/aos_cpu.py:102)、[aos_cpu.py:128](../../proto4-2/aos_cpu.py:128)、[aos_cpu.py:210](../../proto4-2/aos_cpu.py:210)。 |
+| **proto4-3** | `aos-exec` 跑一次；`aos-run` 反覆跑；kernel 把行程 inst 排上 cpu。不是模型工具 adapter。 | `run_target()` 同步等 child。kernel 透過換 cpu 的 inst 檔决定**下一次**執行誰。 | 每次 timeout 預設 0＝不限；另可設整體硬期限。退出碼／kind 交給上層，沒有自動轉成 tool 訊息。 | quantum 是完成次數，不是格內搶佔期限；換檔不殺當次。來源：[aos_run.py:41](../../proto4-3/aos_run.py:41)、[kernel.md:114](../../proto4-3/docs/kernel.md:114)、[kernel.md:188](../../proto4-3/docs/kernel.md:188)。 |
+| **proto4-4** | `aos-step` 每次跑一個 Janet 頂層 form；`aos/call` 包 POSIX 執行，Janet image 保存環境。 | form 裡的 `call`／直接 `aos/llm` 是同步。另可 `llm-submit` → 宣告 `wait-for` → 退出，下一次到檔才執行下一個 form。 | 格內失敗不推進；等待檔本身沒有 timeout。做完回 100、未到檔回 101。沒有自動產生模型 tool 訊息。 | 一個 form 仍可能做很久。「一格一個 form」不等於「一格很短」。image／pc／state 各自原子寫，但整組不是交易。來源：[step.janet:99](../../proto4-4/src/step.janet:99)、[step.janet:140](../../proto4-4/src/step.janet:140)、[aos.janet:195](../../proto4-4/src/aos.janet:195)。 |
+| **proto4-5** | LLM 分兩層：同步 `aos-llm call`；排程器 `llm-cpu`，可獨立掛 cpu，也可作 kernel module。 | dispatcher tick 收件／排隊／派**背景 worker 子進程**，不等 HTTP；worker 同步問模型、寫結果檔。 | HTTP timeout；scheduler 另在期限＋5 秒後判 worker timeout。worker 死且無結果 → `worker_died`，**不自動重送**。失敗也產生 result。 | 有 request id＋內容 hash 冪等；但不是 exactly-once 執行協議，仍有 spawn／記 pid 交界。来源：[llm_cpu_tick.py:72](../../proto4-5/llm_cpu_tick.py:72)、[llm_cpu_tick.py:192](../../proto4-5/llm_cpu_tick.py:192)、[llm_cpu_worker.py:37](../../proto4-5/llm_cpu_worker.py:37)。 |
+| **proto4-6** | JSON：每元素一份 inst；Python：每個公開 step 函式；Lua：return 表中的每個函式。 | 格內執行同步。`llm_submit` 回結果檔路徑，`wait_for` 宣告等待；後續未到檔就退 101，不跑下一格。 | JSON child 非零停原 pc；Python 函式成功且 state 能序列化才落盤。等待檔無 timeout；一般 call 可傳 timeout。沒有模型 tool 訊息 adapter。 | 最初等檔回 0，kernel 看不出在等；後來改 101 才能提早讓 cpu。来源：[step_common.py:74](../../proto4-6/step_common.py:74)、[aos_step_json.py:90](../../proto4-6/aos_step_json.py:90)、[aos_step_py.py:137](../../proto4-6/aos_step_py.py:137)、[演化 §23.8](../../proto4/notes/23-step-json-python.md:72)。 |
+| **proto4-7** | `tools/<名>/tool.json` 宣告 schema；`tools/<名>/run` 真正執行。agent 經 `aos_py.call` → `aos-exec` 跑它。 | **`act` 一格串行跑完全部 calls**。LLM 才有 ask／wait 分格，工具沒有背景等待。 | 每工具 **60 秒**；成功 stdout；非零 `[exit N]`＋stderr 前 500 字＋stdout；整段預設截到 **8000 字元**。每 call 都回 tool 訊息。 | 壞 arguments JSON 不執行、回錯誤；不存在／啟動失敗也回 tool。全部跑完才保存，崩潰可重跑整批。來源：[agent_tools.py:105](../../proto4-7/agent_tools.py:105)、[state_machine.py:200](../../proto4-7/state_machine.py:200)。 |
+| **proto5 規範＋目前工作樹** | 工具檔為 OpenAI tools 陣列，每元素 `_meta` 是 posix inst；import `aos_inst`／`aos_exec` 執行。 | **`act` 一格串行跑完全部 calls**。目前 `think` 也直接同步問模型；改 llm cpu 仍是規劃事項。 | arguments 字串原樣進 stdin；stdout 整段回來；目前 **工具不限時、沒有輸出截斷**。不存在／inst 壞／非零均變 tool 訊息，agent 正常回 0。 | 新增記憶尾巴自癒，能處理「history 已寫、state 未寫」，不能防止「工具做了、history 未寫」的重複副作用。來源：[規範:41](../spec/aos-agent.md:41)、[實作:159](../lib/aos_agent.py:159)、[實作:230](../lib/aos_agent.py:230)、[llm cpu 任務書:3](2026-09-22-llm-cpu-plan-task.md:3)。 |
 
 proto2 的兩條工具路徑值得獨立看，因為它已實際做過接近 D 的行為：
 
 | proto2 路徑 | 啟動時 | 完成時 | 期限／限制 |
 |---|---|---|---|
-| **普通 `fs.sh`** | 同步 `Popen`＋`communicate`，占住當次 `act`。 | 真實 exit、stdout、stderr 組成正常 tool 結果。 | 預設 60 秒，最多 120 秒；逾時 KILL process group。工具描述明說超過一分鐘改 `run_long`。[fs.py:204](/home/guanyu/projs/aos/proto2/packs/fs.py:204) |
-| **`jobs.run_long`** | 建獨立 job 資料夾、登記 daemon clock；立即回 `{ok,name,id,path}`，成為這次 call 的 tool 訊息，並設定 sleeping。 | job 寫結果；agent 後續 tick 收割，成功 hook 回一句「長工作完成」，包成新的 **user 訊息**。 | shell `timeout 3600`＋pending 牆鐘 3600 秒；開鐘失敗則撤掉 pending、回失敗。[jobs.py:69](/home/guanyu/projs/aos/proto2/packs/jobs.py:69)、[jobs.py:166](/home/guanyu/projs/aos/proto2/packs/jobs.py:166) |
-| **`think`** | 丟旁線 LLM request，當格回收據；agent 可睡。 | `on_result` 累積步驟；未結束可再送下一請求，結束才回喚醒文字。 | 包自己有步數／token／時間等限制；不是 thread 裡維持整條思考鏈。[think.py:296](/home/guanyu/projs/aos/proto2/packs/think.py:296) |
-| **`branch`** | 一次送多筆旁線 LLM request，立即回收據。 | 各自收結果，全齊後提示 join；實際並行度由 LLM engine 容量控制。 | 每筆 pending 有期限；不是 agent 內部 pool。[branch.py:195](/home/guanyu/projs/aos/proto2/packs/branch.py:195) |
-| **一般測試工具** | `studio`／`pyshop` 仍可同步跑測試。 | 結果直接作 tool 回覆。 | 例如 studio 測試期限 60 秒。**歷史上並沒有把所有「可能很久」的工具都改成 async。**[studio.py:239](/home/guanyu/projs/aos/proto2/packs/studio.py:239) |
+| **普通 `fs.sh`** | 同步 `Popen`＋`communicate`，占住當次 `act`。 | 真實 exit、stdout、stderr 組成正常 tool 結果。 | 預設 60 秒，最多 120 秒；逾時 KILL process group。工具描述明說超過一分鐘改 `run_long`。[fs.py:204](../../proto2/packs/fs.py:204) |
+| **`jobs.run_long`** | 建獨立 job 資料夾、登記 daemon clock；立即回 `{ok,name,id,path}`，成為這次 call 的 tool 訊息，並設定 sleeping。 | job 寫結果；agent 後續 tick 收割，成功 hook 回一句「長工作完成」，包成新的 **user 訊息**。 | shell `timeout 3600`＋pending 牆鐘 3600 秒；開鐘失敗則撤掉 pending、回失敗。[jobs.py:69](../../proto2/packs/jobs.py:69)、[jobs.py:166](../../proto2/packs/jobs.py:166) |
+| **`think`** | 丟旁線 LLM request，當格回收據；agent 可睡。 | `on_result` 累積步驟；未結束可再送下一請求，結束才回喚醒文字。 | 包自己有步數／token／時間等限制；不是 thread 裡維持整條思考鏈。[think.py:296](../../proto2/packs/think.py:296) |
+| **`branch`** | 一次送多筆旁線 LLM request，立即回收據。 | 各自收結果，全齊後提示 join；實際並行度由 LLM engine 容量控制。 | 每筆 pending 有期限；不是 agent 內部 pool。[branch.py:195](../../proto2/packs/branch.py:195) |
+| **一般測試工具** | `studio`／`pyshop` 仍可同步跑測試。 | 結果直接作 tool 回覆。 | 例如 studio 測試期限 60 秒。**歷史上並沒有把所有「可能很久」的工具都改成 async。**[studio.py:239](../../proto2/packs/studio.py:239) |
 
-proto2 的 async 完成不是無條件追加 user 訊息：共用層先存 side result，再呼叫所屬 pack 的 `on_result`；**hook 有回文字才注入 user 訊息**。失敗通常清 sleeping、對外回錯，但不一定把錯誤再餵回主模型。這是已有實作的邊界。[aos_agent.py:1257](/home/guanyu/projs/aos/proto2/aos_agent.py:1257)
+proto2 的 async 完成不是無條件追加 user 訊息：共用層先存 side result，再呼叫所屬 pack 的 `on_result`；**hook 有回文字才注入 user 訊息**。失敗通常清 sleeping、對外回錯，但不一定把錯誤再餵回主模型。這是已有實作的邊界。[aos_agent.py:1257](../../proto2/aos_agent.py:1257)
 
 實際 notes 留下的教訓：
 
 | 記錄 | 與本題的關係 |
 |---|---|
-| proto2 前幾局死在「回 idle 後沒人叫醒」、睡眠互等、模型錯誤後停住；等待格又誤算動作上限。 | 把工作丟出去之後，還要有完整的**結果抵達 → 喚醒 → 繼續工作**路徑；背景執行本身只解一半。[lessons:7](/home/guanyu/projs/aos/proto2/notes/2026-09-07-lessons.md:7) |
-| proto2 多進程共用檔，8 進程預期 160 筆；無鎖只剩 23 筆且 JSON 壞掉。 | 增加 pool／worker 會把共用狀態的寫入所有權變成實際問題。[lessons:37](/home/guanyu/projs/aos/proto2/notes/2026-09-07-lessons.md:37) |
-| proto4-6 等待最初回 0，後改 101。 | 「不執行下一格」與「通知 kernel 讓位」原本是兩個不同步驟。[§23.7–23.8](/home/guanyu/projs/aos/proto4/notes/23-step-json-python.md:59) |
-| `llm_submit` 即使不帶 `--wait`，仍須等 kernel 的 syscall 接單回音。 | submit 並不是完全零等待；它只是不等模型完成。[§23.7 落地記錄:70](/home/guanyu/projs/aos/proto4/notes/23-step-json-python.md:70) |
-| proto4-7 真跑先遇到 LLM 層漏傳 `tools`，再遇 schema 不合而 HTTP 400、連錯進 stuck。 | 執行器正常也不代表模型工具鏈完整。記錄中的約 20 秒是整條對話，不是 `ls` 工具本身耗時。[§24.5](/home/guanyu/projs/aos/proto4/notes/24-agent.md:56) |
-| 舊筆記已指出 `act` 藏著同步等待，並提出沿用 `llm_submit`＋`wait_for` 的想法。 | **那段標的是作者分析，不是使用者已拍板。**[§25.3:83](/home/guanyu/projs/aos/proto4/notes/24-agent.md:83) |
+| proto2 前幾局死在「回 idle 後沒人叫醒」、睡眠互等、模型錯誤後停住；等待格又誤算動作上限。 | 把工作丟出去之後，還要有完整的**結果抵達 → 喚醒 → 繼續工作**路徑；背景執行本身只解一半。[lessons:7](../../proto2/notes/2026-09-07-lessons.md:7) |
+| proto2 多進程共用檔，8 進程預期 160 筆；無鎖只剩 23 筆且 JSON 壞掉。 | 增加 pool／worker 會把共用狀態的寫入所有權變成實際問題。[lessons:37](../../proto2/notes/2026-09-07-lessons.md:37) |
+| proto4-6 等待最初回 0，後改 101。 | 「不執行下一格」與「通知 kernel 讓位」原本是兩個不同步驟。[§23.7–23.8](../../proto4/notes/23-step-json-python.md:59) |
+| `llm_submit` 即使不帶 `--wait`，仍須等 kernel 的 syscall 接單回音。 | submit 並不是完全零等待；它只是不等模型完成。[§23.7 落地記錄:70](../../proto4/notes/23-step-json-python.md:70) |
+| proto4-7 真跑先遇到 LLM 層漏傳 `tools`，再遇 schema 不合而 HTTP 400、連錯進 stuck。 | 執行器正常也不代表模型工具鏈完整。記錄中的約 20 秒是整條對話，不是 `ls` 工具本身耗時。[§24.5](../../proto4/notes/24-agent.md:56) |
+| 舊筆記已指出 `act` 藏著同步等待，並提出沿用 `llm_submit`＋`wait_for` 的想法。 | **那段標的是作者分析，不是使用者已拍板。**[§25.3:83](../../proto4/notes/24-agent.md:83) |
 
 ---
 
@@ -73,7 +73,7 @@ proto2 的 async 完成不是無條件追加 user 訊息：共用層先存 side 
 | **`wait_for`** | step 執行器自己的「等待某檔存在」記錄。 | kernel 不知道它在等哪個檔；kernel 只看到 101。 |
 | **module** | kernel 載入的 Python 檔，直接呼叫其 hook。 | module 不是自動隔離的另一顆 cpu；hook 若阻塞，會拖住 kernel tick。 |
 
-依據：[kernel 文件:6](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:6)、[run_loop:41](/home/guanyu/projs/aos/proto4-3/aos_run.py:41)、[tick:41](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:41)、[schedule:26](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:26)、[module:53](/home/guanyu/projs/aos/proto4-3/aos_kernel_module.py:53)。
+依據：[kernel 文件:6](../../proto4-3/docs/kernel.md:6)、[run_loop:41](../../proto4-3/aos_run.py:41)、[tick:41](../../proto4-3/aos_kernel_tick.py:41)、[schedule:26](../../proto4-3/aos_kernel_schedule.py:26)、[module:53](../../proto4-3/aos_kernel_module.py:53)。
 
 具體接法如下：
 
@@ -101,7 +101,7 @@ agent／step
 | **獨立 llm-cpu 行程掛普通 cpu** | 有一顆 cpu 反覆叫 dispatcher tick。 |
 | **llm 排程器作 kernel module** | dispatcher tick 直接在 kernel tick 內跑；**真正耗時的是另外開的 worker**，不是一定額外占一顆 aos cpu。 |
 
-LLM module 能保持 kernel 短，是因為它派出 worker 後返回，並非「module」這個機制自動保證非阻塞。[llm_cpu_tick.py:192](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:192)
+LLM module 能保持 kernel 短，是因為它派出 worker 後返回，並非「module」這個機制自動保證非阻塞。[llm_cpu_tick.py:192](../../proto4-5/llm_cpu_tick.py:192)
 
 `wait_for` 與 101 的順序也要分清：
 
@@ -111,7 +111,7 @@ LLM module 能保持 kernel 短，是因為它派出 worker 後返回，並非�
 | 下一次執行，檔還沒到 | 增加 checks，回 101，不執行下一格。 |
 | 檔到了 | 清 waiting，**同一次呼叫繼續下一格**；那一格自行讀結果。 |
 
-這套沒有等待 timeout、沒有主動檔案事件喚醒，仍靠輪詢。[step_common.py:74](/home/guanyu/projs/aos/proto4-6/step_common.py:74)、[step_common.py:102](/home/guanyu/projs/aos/proto4-6/step_common.py:102)
+這套沒有等待 timeout、沒有主動檔案事件喚醒，仍靠輪詢。[step_common.py:74](../../proto4-6/step_common.py:74)、[step_common.py:102](../../proto4-6/step_common.py:102)
 
 「一個行程阻塞」的影響：
 
@@ -127,7 +127,7 @@ LLM module 能保持 kernel 短，是因為它派出 worker 後返回，並非�
 
 > 單顆 cpu 一次只執行一個 child，**不等於同一個邏輯行程絕不會跨 cpu 重疊執行**。
 
-daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻止換檔。若 cpu0 已完成足夠 runs、又開始舊行程下一格，kernel 此時依先前 runs 換人，會立刻把舊行程排回 queue；cpu1 可能接走它，而 cpu0 的舊 child 尚未結束。這會碰到 agent「同一資料夾不要同時跑兩份、沒有鎖」的前提。[daemon 狀態:75](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:75)、[poll_cpus:81](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:81)、[換人與回佇列:111](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:111)
+daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻止換檔。若 cpu0 已完成足夠 runs、又開始舊行程下一格，kernel 此時依先前 runs 換人，會立刻把舊行程排回 queue；cpu1 可能接走它，而 cpu0 的舊 child 尚未結束。這會碰到 agent「同一資料夾不要同時跑兩份、沒有鎖」的前提。[daemon 狀態:75](../../proto4-3/aos_daemon_entry.py:75)、[poll_cpus:81](../../proto4-3/aos_kernel_tick.py:81)、[換人與回佇列:111](../../proto4-3/aos_kernel_schedule.py:111)
 
 這是沿用舊 kernel 時需要看見的限制，不能用「排程器已有」帶過。
 
@@ -135,18 +135,18 @@ daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻
 
 | 來源 | 原話 | 能確認的意思 |
 |---|---|---|
-| [thinking/aos-agent.md:13](/home/guanyu/projs/aos/thinking/aos-agent.md:13) | 「跟aos kernel說，unregister這個資料夾。」「跟pause不一樣，pause那個，是仍registering，但狀態機不動。」 | stop 與 pause 不同。 |
-| [thinking/aos-agent.md:17](/home/guanyu/projs/aos/thinking/aos-agent.md:17) | 「daemon的cpu仍然會持續執行，但是agent的狀態機不會前進。」 | agent 暫停不等於停掉 cpu。 |
+| [thinking/aos-agent.md:13](../../thinking/aos-agent.md:13) | 「跟aos kernel說，unregister這個資料夾。」「跟pause不一樣，pause那個，是仍registering，但狀態機不動。」 | stop 與 pause 不同。 |
+| [thinking/aos-agent.md:17](../../thinking/aos-agent.md:17) | 「daemon的cpu仍然會持續執行，但是agent的狀態機不會前進。」 | agent 暫停不等於停掉 cpu。 |
 | 同上，19 行 | 「交給外部cpu跑的東西，回來的結果也是會存，但agent不會反應」 | 外部工作與 agent 反應可以有不同生命週期。 |
 | 同上，20 行 | 「shell跑的東西，會跑完，但agent不會反應」 | pause 的方向是暫停狀態機反應，並未要求砍掉手上 shell。 |
-| [thinking/aos-user.md:14](/home/guanyu/projs/aos/thinking/aos-user.md:14) | 「持續監看(每秒poll一次)本地agent資料夾的回覆檔，那個檔案有新東西，就顯示到畫面上。」 | 人端 listen 採輪詢；不是工具執行方式的決定。 |
+| [thinking/aos-user.md:14](../../thinking/aos-user.md:14) | 「持續監看(每秒poll一次)本地agent資料夾的回覆檔，那個檔案有新東西，就顯示到畫面上。」 | 人端 listen 採輪詢；不是工具執行方式的決定。 |
 
 `thinking/` 四份檔已掃過；沒有找到直接選定 thread、async 工具或阻塞期限的文字。`aos-tools.md` 只有標題。
 
 另外兩段歷史原話提供背景，但不能擴張成此次決定：
 
-- daemon 實作時，你曾確認：「**就是子進程，這樣省事。反正 import 之後還是得開 thread 跑，那樣反而失去了讓 linux 管理進程的方便性。**」這是在選 daemon 如何承載 `aos-run`，不是對所有工具一律禁用 thread。[原文:131](/home/guanyu/projs/aos/proto4/notes/11-15-exec-run-daemon.md:131)
-- LLM cpu 的定義：「**收到很多個 llm 呼叫請求，然後做排序，分發給不同 endpoint 那樣，整圈推論工具執行那是 agent 的事情。**」這支持排程層與 agent 層分工，但尚未決定 tool cpu。[原文:5](/home/guanyu/projs/aos/proto4/notes/22-llm-cpu.md:5)
+- daemon 實作時，你曾確認：「**就是子進程，這樣省事。反正 import 之後還是得開 thread 跑，那樣反而失去了讓 linux 管理進程的方便性。**」這是在選 daemon 如何承載 `aos-run`，不是對所有工具一律禁用 thread。[原文:131](../../proto4/notes/11-15-exec-run-daemon.md:131)
+- LLM cpu 的定義：「**收到很多個 llm 呼叫請求，然後做排序，分發給不同 endpoint 那樣，整圈推論工具執行那是 agent 的事情。**」這支持排程層與 agent 層分工，但尚未決定 tool cpu。[原文:5](../../proto4/notes/22-llm-cpu.md:5)
 
 ---
 
@@ -165,7 +165,7 @@ daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻
 | `run_target` | 同步執行；`on_spawn(Popen)`／結束後 `on_spawn(None)`；可 timeout。 | `on_spawn` 是持有 child、供控制用的鉤子，**不是非同步 API**。 |
 | 新 `run_inst` | 記憶體 inst＋stdin 字串→`code,kind,stdout`；也是同步。 | 目前沒有公開 `on_spawn` 參數，agent 呼叫沒有傳 timeout。 |
 
-來源：[agent.md:75](/home/guanyu/projs/aos/proto5/spec/agent.md:75)、[aos-agent.md:22](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:22)、[工具格式:82](../../proto5.1/spec/aos-llm-ask.md)、[run_target:45](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:45)、[run_inst:87](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:87)。
+來源：[agent.md:75](../spec/agent.md:75)、[aos-agent.md:22](../spec/aos-agent.md:22)、[工具格式:82](../../proto5.1/spec/aos-llm-ask.md)、[run_target:45](../lib/aos_exec.py:45)、[run_inst:87](../lib/aos_exec.py:87)。
 
 `waits` 的五個選項各自只做這些事：
 
@@ -177,7 +177,7 @@ daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻
 | `any` | **同一條**裡任一個路徑到達即可。 |
 | `all` | 預設；同一條裡全部路徑到達。 |
 
-多條 waits 要全部清空，整道門才開。**如果結果還要讀，該條不能先 consume，否則門先把它 rename 掉，收結果的程式便找不到原路徑。**[agent.md:110](/home/guanyu/projs/aos/proto5/spec/agent.md:110)
+多條 waits 要全部清空，整道門才開。**如果結果還要讀，該條不能先 consume，否則門先把它 rename 掉，收結果的程式便找不到原路徑。**[agent.md:110](../spec/agent.md:110)
 
 OpenAI 的 function-calling 文件示例是：保存 assistant 的 calls，逐 call 用相同 `tool_call_id` 回 tool 訊息，再送下一次請求。它描述的是訊息配對，沒有要求本機必須用同一個 thread 同步執行。[官方 Function calling](https://developers.openai.com/api/docs/guides/function-calling)
 
@@ -202,7 +202,7 @@ OpenAI 的 function-calling 文件示例是：保存 assistant 的 calls，逐 c
 
 此外，**目前工具本來就是子進程**：import `aos_exec` 只是省掉一層 `aos-exec` CLI，不是把 shell 工具搬進 Python 主進程。再說「開子進程」本身並沒有回答要不要同步等待。
 
-目前新實作的 `_tool_result` 使用 `contextlib.redirect_stderr` 捕捉執行器錯誤；它改的是 process 內共用的 `sys.stderr`。若把這個函式原封不動丟進多個 thread，錯誤擷取就有互相干擾的風險，不能只在外面包一個 pool。[aos_agent.py:173](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:173)
+目前新實作的 `_tool_result` 使用 `contextlib.redirect_stderr` 捕捉執行器錯誤；它改的是 process 內共用的 `sys.stderr`。若把這個函式原封不動丟進多個 thread，錯誤擷取就有互相干擾的風險，不能只在外面包一個 pool。[aos_agent.py:173](../lib/aos_agent.py:173)
 
 五個方案如何處理中途崩潰、逾時：
 
@@ -225,9 +225,9 @@ OpenAI 的 function-calling 文件示例是：保存 assistant 的 calls，逐 c
 | **多個 worker 寫同一 `input.json`** | 原子 replace 只防半檔，仍可互相覆蓋。 | 例如一工作一訊息檔；即使如此，跨檔接收去重仍需處理。 |
 | **工具副作用完成，結果未落盤** | A～E 都可能不知道到底做成沒有。 | 工具端冪等鍵、查詢已完成狀態，或回報「結果不明」；不能只憑重試宣稱 exactly-once。 |
 
-這些推論直接來自目前 `act` 最後才寫 history，以及 input／consume／state 的寫入順序。[aos_agent.py:144](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:144)、[aos_agent.py:191](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:191)
+這些推論直接來自目前 `act` 最後才寫 history，以及 input／consume／state 的寫入順序。[aos_agent.py:144](../lib/aos_agent.py:144)、[aos_agent.py:191](../lib/aos_agent.py:191)
 
-逾時還有一個 process group 邊界：`run_target`／`run_inst` 開工具時使用 `start_new_session=True`，其 timeout 砍的是**那個工具自己的 group**。若外層 kernel timeout 只砍 agent 那一組，不能假設已另開 session 的工具也一定跟著消失。這正是「工具 timeout」與「整格 timeout」不能混為一談的理由。[aos_exec.py:218](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:218)
+逾時還有一個 process group 邊界：`run_target`／`run_inst` 開工具時使用 `start_new_session=True`，其 timeout 砍的是**那個工具自己的 group**。若外層 kernel timeout 只砍 agent 那一組，不能假設已另開 session 的工具也一定跟著消失。這正是「工具 timeout」與「整格 timeout」不能混為一談的理由。[aos_exec.py:218](../lib/aos_exec.py:218)
 
 實作會牽動哪些檔案：
 
@@ -244,7 +244,7 @@ metadata 有一個現成邊界：
 - 工具元素送模型前，只會移除 **`_` 開頭的頂層 key**。直接加裸的 `"async"`，目前會原樣送 API。
 - `_meta` 現在是一份 inst，未知 inst 頂層 key 會忽略。把 `"timeout_ms"` 或 `"cpu"` 塞進去，**不代表現有執行器會採用它**。
 
-所以 E 不是只加標籤，還要正式定义誰讀、誰驗、是否送模型。[strip_private:84](/home/guanyu/projs/aos/proto5/lib/aos_agent_info.py:84)、[inst 未知欄位規則:56](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:56)
+所以 E 不是只加標籤，還要正式定义誰讀、誰驗、是否送模型。[strip_private:84](../lib/aos_agent_info.py:84)、[inst 未知欄位規則:56](../spec/inst-posix.md:56)
 
 與 llm cpu 能共用多少：
 
@@ -257,9 +257,9 @@ metadata 有一個現成邊界：
 | result payload | 可共用外層狀態 | LLM 回 assistant／usage；工具回 code／kind／stdout／錯誤資訊。 |
 | 結果如何進對話 | **屬 agent，不能交 transport 決定** | think 接 assistant；B 接 tool；D 接後續 user。 |
 
-proto4-5 已提供可參考的 request→running→done、results、hash 與 `worker_died` 做法，但不是 proto5 已定的共用協議。舊版也有 spawn 成功、pid 尚未寫入時的窗口，不能整份搬過來就算完成恢復設計。[request hash:21](/home/guanyu/projs/aos/proto4-5/llm_cpu_request.py:21)、[dispatch:200](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:200)
+proto4-5 已提供可參考的 request→running→done、results、hash 與 `worker_died` 做法，但不是 proto5 已定的共用協議。舊版也有 spawn 成功、pid 尚未寫入時的窗口，不能整份搬過來就算完成恢復設計。[request hash:21](../../proto4-5/llm_cpu_request.py:21)、[dispatch:200](../../proto4-5/llm_cpu_tick.py:200)
 
-還有一項搬到 tool cpu 後會變的語意：目前 `$env` 讀 agent 執行環境，inst 路徑以 agent base／解析後 cwd 為中心。若改由 worker 才解 inst，不能無意間改讀 worker 的環境或 cpu 家目錄；要決定送的是**原始 inst＋解析上下文**，還是**已解析的執行內容**。[inst 路徑:89](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:89)、[load_obj:91](/home/guanyu/projs/aos/proto5/lib/aos_inst.py:91)
+還有一項搬到 tool cpu 後會變的語意：目前 `$env` 讀 agent 執行環境，inst 路徑以 agent base／解析後 cwd 為中心。若改由 worker 才解 inst，不能無意間改讀 worker 的環境或 cpu 家目錄；要決定送的是**原始 inst＋解析上下文**，還是**已解析的執行內容**。[inst 路徑:89](../spec/inst-posix.md:89)、[load_obj:91](../lib/aos_inst.py:91)
 
 ---
 

@@ -2,7 +2,7 @@
 
 # 任務：照三份新規範重寫 proto5 的 cpu／daemon／kernel（Python 3.12，只用標準庫）
 
-repo `/home/guanyu/projs/aos`。先讀：
+repo `../../..`。先讀：
 - 規範（**唯一的真理，照它寫；不要改 `proto5/spec/*.md`**）：`proto5/spec/cpu.md`、`proto5/spec/kernel.md`、`proto5/spec/daemon.md`。
   底層不變：`proto5/spec/aos-exec.md`、`inst-posix.md`、`directives.md`。
 - 現有程式：`proto5/lib/`（12 支）、`proto5/cli/`（9 個薄入口）、`proto5/lib/test/`（13 個測試檔，`_util.py` 是共用工具；

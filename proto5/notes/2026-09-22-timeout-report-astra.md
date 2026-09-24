@@ -9,29 +9,29 @@
 
 | 環節 | 有沒有限時／預設／在哪定 | 到了怎樣、殺不殺 | 狀態怎麼變 | 依據 |
 |---|---|---|---|---|
-| **inst.json 本身** | **沒有** `timeout_ms`。只有七個執行欄位；未知頂層 key 忽略 | 寫 `"timeout_ms": 1000` 不會啟用限時 | 不適用 | [inst 格式](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:56)、[解析實作](/home/guanyu/projs/aos/proto5/lib/aos_inst.py:103) |
-| **aos-exec 子程式** | 有可選限時：CLI `--timeout-ms`、library 參數；**預設 0＝不限** | 到期 TERM 整個工作 group；最多等 **2 秒**，必要時 KILL；另補殺殘留 group | 回實際 child 結束碼；有指定 `exit` 檔就寫入。exec 不懂 agent state | [旗標規格](/home/guanyu/projs/aos/proto5/spec/exec.md:42)、[_spawn](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:210) |
+| **inst.json 本身** | **沒有** `timeout_ms`。只有七個執行欄位；未知頂層 key 忽略 | 寫 `"timeout_ms": 1000` 不會啟用限時 | 不適用 | [inst 格式](../spec/inst-posix.md:56)、[解析實作](../lib/aos_inst.py:103) |
+| **aos-exec 子程式** | 有可選限時：CLI `--timeout-ms`、library 參數；**預設 0＝不限** | 到期 TERM 整個工作 group；最多等 **2 秒**，必要時 KILL；另補殺殘留 group | 回實際 child 結束碼；有指定 `exit` 檔就寫入。exec 不懂 agent state | [旗標規格](../spec/exec.md:42)、[_spawn](../lib/aos_exec.py:210) |
 | **aos-llm-ask HTTP** | **有，預設 120000 ms**；`info.json.engine.timeout_ms`，必須正整數，不能用 0 表示無限 | urllib/socket 逾時→`EngineFailed`；CLI 退 **3**。關閉本地連線，**沒有取消遠端推論的協定** | aos-llm-ask 不改記憶、不讀寫 state、不重試 | [engine 規格](../../proto5.1/spec/aos-llm-ask.md)、[call](../../proto5.1/lib/aos_llm_ask.py) |
-| **idle 一格** | **沒有整格限時**。讀設定、記憶及 input 都沒有獨立期限 | 正常沒輸入就立刻退 101；讀寫卡住則沒有 watchdog | 有輸入：接記憶、input rename `.done`、轉 `think`；無輸入：留 `idle` | [格的規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:36)、[step](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:191) |
-| **think 一格** | **沒有整格限時**；只有內部 HTTP 的上述 timeout | HTTP 能判到的失敗會返回；其他讀寫、DNS、慢速完整回應等不能以 120 秒總期限概括 | 成功有 calls→`act`；無 calls→`idle`；引擎失敗→留 `think`，退 **0** | [規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:45)、[實作](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:215) |
-| **act 一格** | **沒有整格限時**；所有 tool calls 在一格內**依序跑完** | 某個工具不回，後面工具與記憶寫回都等著 | 全部結果接成 `tool` 訊息後→`think`。中途不回就沒有這次 state 寫回 | [規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:48)、[實作](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:230) |
-| **工具跑太久** | **沒有**。agent 呼叫 `run_inst(inst, arguments)`，未傳 timeout；library 預設 **0** | **不砍，跑多久等多久**。工具自身另設的限時不算 agent 的保證 | 工具若自行失敗，非零退出碼包成 `tool` 訊息；不回則停在該次 act | [工具呼叫](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:159)、[run_inst 預設](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:87) |
-| **工具檔 `_meta`** | **沒有逾時欄位的契約**；目前就是一份 posix inst | 加 `_meta.timeout_ms` 也不會生效：工具讀驗未賦予語意，inst 解析忽略它 | 不適用 | [工具檔規格](../../proto5.1/spec/aos-llm-ask.md)、[工具讀驗](/home/guanyu/projs/aos/proto5/lib/aos_agent_info.py:325) |
-| **`waits` 門** | **沒有期限、沒有最大檢查次數**。`mtime`／`since` 只判檔案是否更新 | 每次劃掉已到條目；有剩→101。沒有到期分支，也不殺產生結果的工作 | state 原樣保留；只更新 waits。可以跨無限多次呼叫一直101 | [等待規格](/home/guanyu/projs/aos/proto5/spec/agent.md:110)、[_gate](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:98) |
-| **引擎失敗重試** | **沒有連敗上限、沒有退避、没有總期限** | 每次 stderr 一行，退0；外部下一次叫它就再問 | 一直留 `think`，記憶不動；沒有 retry／stuck 狀態或錯誤計數 | [規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:46)、[實作](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:219) |
-| **整個「走一格」呼叫** | **沒有**。CLI 只收 dir，沒有 timeout 旗標；step 沒有整體計時器 | 沒有人在整格到期時中止它。外部執行器可以另外包限時，但不是目前 agent 契約 | 沒有「整格逾時後」的狀態轉換規格 | [CLI](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:246)、[延後決定事項](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:73) |
+| **idle 一格** | **沒有整格限時**。讀設定、記憶及 input 都沒有獨立期限 | 正常沒輸入就立刻退 101；讀寫卡住則沒有 watchdog | 有輸入：接記憶、input rename `.done`、轉 `think`；無輸入：留 `idle` | [格的規格](../spec/aos-agent.md:36)、[step](../lib/aos_agent.py:191) |
+| **think 一格** | **沒有整格限時**；只有內部 HTTP 的上述 timeout | HTTP 能判到的失敗會返回；其他讀寫、DNS、慢速完整回應等不能以 120 秒總期限概括 | 成功有 calls→`act`；無 calls→`idle`；引擎失敗→留 `think`，退 **0** | [規格](../spec/aos-agent.md:45)、[實作](../lib/aos_agent.py:215) |
+| **act 一格** | **沒有整格限時**；所有 tool calls 在一格內**依序跑完** | 某個工具不回，後面工具與記憶寫回都等著 | 全部結果接成 `tool` 訊息後→`think`。中途不回就沒有這次 state 寫回 | [規格](../spec/aos-agent.md:48)、[實作](../lib/aos_agent.py:230) |
+| **工具跑太久** | **沒有**。agent 呼叫 `run_inst(inst, arguments)`，未傳 timeout；library 預設 **0** | **不砍，跑多久等多久**。工具自身另設的限時不算 agent 的保證 | 工具若自行失敗，非零退出碼包成 `tool` 訊息；不回則停在該次 act | [工具呼叫](../lib/aos_agent.py:159)、[run_inst 預設](../lib/aos_exec.py:87) |
+| **工具檔 `_meta`** | **沒有逾時欄位的契約**；目前就是一份 posix inst | 加 `_meta.timeout_ms` 也不會生效：工具讀驗未賦予語意，inst 解析忽略它 | 不適用 | [工具檔規格](../../proto5.1/spec/aos-llm-ask.md)、[工具讀驗](../lib/aos_agent_info.py:325) |
+| **`waits` 門** | **沒有期限、沒有最大檢查次數**。`mtime`／`since` 只判檔案是否更新 | 每次劃掉已到條目；有剩→101。沒有到期分支，也不殺產生結果的工作 | state 原樣保留；只更新 waits。可以跨無限多次呼叫一直101 | [等待規格](../spec/agent.md:110)、[_gate](../lib/aos_agent.py:98) |
+| **引擎失敗重試** | **沒有連敗上限、沒有退避、没有總期限** | 每次 stderr 一行，退0；外部下一次叫它就再問 | 一直留 `think`，記憶不動；沒有 retry／stuck 狀態或錯誤計數 | [規格](../spec/aos-agent.md:46)、[實作](../lib/aos_agent.py:219) |
+| **整個「走一格」呼叫** | **沒有**。CLI 只收 dir，沒有 timeout 旗標；step 沒有整體計時器 | 沒有人在整格到期時中止它。外部執行器可以另外包限時，但不是目前 agent 契約 | 沒有「整格逾時後」的狀態轉換規格 | [CLI](../lib/aos_agent.py:246)、[延後決定事項](../spec/aos-agent.md:73) |
 
 規格 §5 明文保留的是：
 
 > 「工具跑太久要不要砍（現在不砍，跑多久等多久）、引擎連續失敗幾次要停、`waits` 等太久要怎樣——之後再定。」  
-> — [aos-agent.md:77](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:77)
+> — [aos-agent.md:77](../spec/aos-agent.md:77)
 
 **為什麼 timeout 不在 inst 裡？**
 
 proto5 的七欄規格沿用「inst 描述怎麼執行，執行者決定願意等多久」的分工。明確理由寫在前代：
 
 > 「時限不是指令的事，是『反覆執行 inst.json 的傢伙』的事。」  
-> — [proto4-3/README.md:11](/home/guanyu/projs/aos/proto4-3/README.md:11)
+> — [proto4-3/README.md:11](../../proto4-3/README.md:11)
 
 因此，「工具有自己的建議時限」與「把 timeout 重新放回通用 inst」是兩個不同決策，不必綁在一起。
 
@@ -60,9 +60,9 @@ proto5 的七欄規格沿用「inst 描述怎麼執行，執行者決定願意�
 | 「砍group就是砍所有後代」 | 只保證向**該 group**發訊號；另開 session/group 的後代不在裡面 |
 | 「被外層砍掉agent，工具自然跟著死」 | **不能保證**。工具由 `_spawn(start_new_session=True)` 另開group，且目前 agent 沒有轉送終止訊號／清理工具的 handler |
 
-來源：[spawn／計時／回碼](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:218)、[group 清理](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:259)。
+來源：[spawn／計時／回碼](../lib/aos_exec.py:218)、[group 清理](../lib/aos_exec.py:259)。
 
-另外，proto5 工具 stdout 以 `communicate()` 全量收進記憶體，**沒有輸出上限**；HTTP body 也整份讀取。限時與輸出容量是兩個不同問題。[exec](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:230)、[HTTP](../../proto5.1/lib/aos_llm_ask.py)
+另外，proto5 工具 stdout 以 `communicate()` 全量收進記憶體，**沒有輸出上限**；HTTP body 也整份讀取。限時與輸出容量是兩個不同問題。[exec](../lib/aos_exec.py:230)、[HTTP](../../proto5.1/lib/aos_llm_ask.py)
 
 **2．歷代怎麼做**
 
@@ -76,48 +76,48 @@ proto5 的七欄規格沿用「inst 描述怎麼執行，執行者決定願意�
 | **proto4-6** | `wait_for` **沒有上限**；since/checks只是記錄。`bad_after`在kernel，預設10 | 沒檔就101；檔到才清waiting、記history、繼續 | 等待無上限；101不算bad | 有等待計數不代表有期限；bad_after救不了永遠等檔 |
 | **proto4-7** | 每工具60秒；給模型的輸出預設8000字元；模型等待600次檢查；20次idle後重送；每題60次ask | 工具錯誤→tool訊息→ask；模型錯誤→idle；errors≥5設`stuck:true`、通知人 | 同題累積5次錯停；新信清帳。沒有獨立retry state | 每工具60秒不是act總上限；等待逾時不撤LLM舊單；README稱連錯，但成功未清errors；輸出是事後截斷 |
 
-主要實作入口：[proto2 agent](/home/guanyu/projs/aos/proto2/aos-agent:18)、[4-3 run](/home/guanyu/projs/aos/proto4-3/aos_run.py:72)、[4-5 scheduler](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:72)、[4-6 waiting](/home/guanyu/projs/aos/proto4-6/step_common.py:74)、[4-7 state machine](/home/guanyu/projs/aos/proto4-7/state_machine.py:78)。
+主要實作入口：[proto2 agent](../../proto2/aos-agent:18)、[4-3 run](../../proto4-3/aos_run.py:72)、[4-5 scheduler](../../proto4-5/llm_cpu_tick.py:72)、[4-6 waiting](../../proto4-6/step_common.py:74)、[4-7 state machine](../../proto4-7/state_machine.py:78)。
 
 **proto4-3：誰量、誰砍、砍完去哪**
 
 | 問題 | 查到的事實 | 來源 |
 |---|---|---|
-| aos-run每格誰量？ | run把timeout傳给同進程的exec library，由exec等待／終止child；沒有第二套每格watchdog | [run:82](/home/guanyu/projs/aos/proto4-3/aos_run.py:82) |
-| 整體run壽命怎麼算？ | `--time-limit-ms`預設0；有效每格限時＝`min(每格限時, 剩餘整體時間)`，未設每格限時則用剩餘時間。到期run記`stop time_limit`，退出0 | [run:126](/home/guanyu/projs/aos/proto4-3/aos_run.py:126)、[停止回碼](/home/guanyu/projs/aos/proto4-3/aos_run.py:113) |
-| timeout後會停run嗎？ | 預設不會，照間隔繼續。`--stop-on-error`只針對`kind=aos`，timeout屬child，不在其中 | [run:95](/home/guanyu/projs/aos/proto4-3/aos_run.py:95) |
-| kernel有沒有量一格跑多久？ | **沒有 elapsed watchdog**。quantum預設5，算runs差值；`since`沒有用來判逾時。換inst／rm不殺當次 | [schedule:26](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:26)、[kernel限制](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:188) |
-| 143／137怎麼處理？ | 當一般child非零，增加bad_runs；預設10後inst搬`procs/bad/`、cpu換idle、記log。**不修改agent的state，不製造模型訊息** | [bad計數](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:75)、[退件](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:150) |
-| bad_after有什麼限制？ | daemon只提供最後一筆退出碼，中間多次runs以最後碼推算；換人時bad_runs不保存。因此不能視為精確、跨排程的10次重試上限 | [觀察結果](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:40)、[換人新紀錄](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:133) |
-| 101會變bad嗎？ | 不會。101標waiting，有人排隊就讓出cpu；等待次數無上限 | [waiting與排除碼](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:68) |
-| kernel自己會卡嗎？ | module hook直接在kernel進程執行，只有例外捕捉，無每hook限時；kernel自己那顆cpu也吃boot傳入的timeout，預設仍0 | [module](/home/guanyu/projs/aos/proto4-3/aos_kernel_module.py:53)、[boot](/home/guanyu/projs/aos/proto4-3/aos_kernel_boot.py:37) |
-| 自癒到底修什麼？ | daemon表缺cpu就重新add；runs歸零後重設計數。**不是診斷活著但卡死的工作** | [poll_cpus](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:69) |
+| aos-run每格誰量？ | run把timeout傳给同進程的exec library，由exec等待／終止child；沒有第二套每格watchdog | [run:82](../../proto4-3/aos_run.py:82) |
+| 整體run壽命怎麼算？ | `--time-limit-ms`預設0；有效每格限時＝`min(每格限時, 剩餘整體時間)`，未設每格限時則用剩餘時間。到期run記`stop time_limit`，退出0 | [run:126](../../proto4-3/aos_run.py:126)、[停止回碼](../../proto4-3/aos_run.py:113) |
+| timeout後會停run嗎？ | 預設不會，照間隔繼續。`--stop-on-error`只針對`kind=aos`，timeout屬child，不在其中 | [run:95](../../proto4-3/aos_run.py:95) |
+| kernel有沒有量一格跑多久？ | **沒有 elapsed watchdog**。quantum預設5，算runs差值；`since`沒有用來判逾時。換inst／rm不殺當次 | [schedule:26](../../proto4-3/aos_kernel_schedule.py:26)、[kernel限制](../../proto4-3/docs/kernel.md:188) |
+| 143／137怎麼處理？ | 當一般child非零，增加bad_runs；預設10後inst搬`procs/bad/`、cpu換idle、記log。**不修改agent的state，不製造模型訊息** | [bad計數](../../proto4-3/aos_kernel_schedule.py:75)、[退件](../../proto4-3/aos_kernel_schedule.py:150) |
+| bad_after有什麼限制？ | daemon只提供最後一筆退出碼，中間多次runs以最後碼推算；換人時bad_runs不保存。因此不能視為精確、跨排程的10次重試上限 | [觀察結果](../../proto4-3/aos_kernel_schedule.py:40)、[換人新紀錄](../../proto4-3/aos_kernel_schedule.py:133) |
+| 101會變bad嗎？ | 不會。101標waiting，有人排隊就讓出cpu；等待次數無上限 | [waiting與排除碼](../../proto4-3/aos_kernel_schedule.py:68) |
+| kernel自己會卡嗎？ | module hook直接在kernel進程執行，只有例外捕捉，無每hook限時；kernel自己那顆cpu也吃boot傳入的timeout，預設仍0 | [module](../../proto4-3/aos_kernel_module.py:53)、[boot](../../proto4-3/aos_kernel_boot.py:37) |
+| 自癒到底修什麼？ | daemon表缺cpu就重新add；runs歸零後重設計數。**不是診斷活著但卡死的工作** | [poll_cpus](../../proto4-3/aos_kernel_tick.py:69) |
 
 daemon與控制指令另外一層：
 
 | 情況 | 限時與結果 | 來源 |
 |---|---|---|
-| 正常running的子工作卡住 | **沒有watchdog** | [Entry狀態與advance](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:132) |
-| rm／restart | TERM aos-run，進stopping／restarting；5秒仍活就KILL aos-run group。`--force`另於0.2秒後送第二次TERM，由run handler殺正在跑的工作group | [Entry停止](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:118)、[run訊號处理](/home/guanyu/projs/aos/proto4-3/aos_run_status.py:18) |
-| shutdown | CONT＋TERM所有run，等5秒後補KILL；另有每child最多2秒wait、讀線程join，所以不是整體嚴格5秒 | [lifecycle](/home/guanyu/projs/aos/proto4-3/aos_daemon_lifecycle.py:40) |
-| pause | 等ready且非running才STOP；pause_pending無期限。若run被STOP，負責timeout的人也停住，工作限時可能失效 | [Entry](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:136)、[README明載](/home/guanyu/projs/aos/proto4-3/README.md:134) |
-| daemon-ctl等回覆 | 等回執最多10秒；部分動作再等狀態最多10秒。到時CLI退1，**不撤單、不撤銷已受理動作** | [ctl](/home/guanyu/projs/aos/proto4-3/aos_daemon_ctl.py:108) |
-| kernel rm等回覆 | 最多`max(3秒, 3×interval)`；到時退1，**未撤pending syscall** | [syscall](/home/guanyu/projs/aos/proto4-3/aos_kernel_syscall.py:53) |
+| 正常running的子工作卡住 | **沒有watchdog** | [Entry狀態與advance](../../proto4-3/aos_daemon_entry.py:132) |
+| rm／restart | TERM aos-run，進stopping／restarting；5秒仍活就KILL aos-run group。`--force`另於0.2秒後送第二次TERM，由run handler殺正在跑的工作group | [Entry停止](../../proto4-3/aos_daemon_entry.py:118)、[run訊號处理](../../proto4-3/aos_run_status.py:18) |
+| shutdown | CONT＋TERM所有run，等5秒後補KILL；另有每child最多2秒wait、讀線程join，所以不是整體嚴格5秒 | [lifecycle](../../proto4-3/aos_daemon_lifecycle.py:40) |
+| pause | 等ready且非running才STOP；pause_pending無期限。若run被STOP，負責timeout的人也停住，工作限時可能失效 | [Entry](../../proto4-3/aos_daemon_entry.py:136)、[README明載](../../proto4-3/README.md:134) |
+| daemon-ctl等回覆 | 等回執最多10秒；部分動作再等狀態最多10秒。到時CLI退1，**不撤單、不撤銷已受理動作** | [ctl](../../proto4-3/aos_daemon_ctl.py:108) |
+| kernel rm等回覆 | 最多`max(3秒, 3×interval)`；到時退1，**未撤pending syscall** | [syscall](../../proto4-3/aos_kernel_syscall.py:53) |
 
 兩個清理缺口是**源碼推論**：
 
-1. daemon啟動run開一個session，exec啟動工作又開另一個session。daemon的5秒fallback只殺run那個group，可能留下工作group。[daemon spawn](/home/guanyu/projs/aos/proto4-3/aos_daemon.py:68)、[Entry kill](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:160)
-2. 舊exec最後補殺時重新 `getpgid(child.pid)`；leader已被wait回收，可能查不到而吞掉錯誤。proto5工作樹已改為直接 `killpg(p.pid)`，修掉這個查詢窗口，但仍只涵蓋同group後代。[舊版](/home/guanyu/projs/aos/proto4-3/aos_exec.py:201)、[proto5](/home/guanyu/projs/aos/proto5/lib/aos_exec.py:259)
+1. daemon啟動run開一個session，exec啟動工作又開另一個session。daemon的5秒fallback只殺run那個group，可能留下工作group。[daemon spawn](../../proto4-3/aos_daemon.py:68)、[Entry kill](../../proto4-3/aos_daemon_entry.py:160)
+2. 舊exec最後補殺時重新 `getpgid(child.pid)`；leader已被wait回收，可能查不到而吞掉錯誤。proto5工作樹已改為直接 `killpg(p.pid)`，修掉這個查詢窗口，但仍只涵蓋同group後代。[舊版](../../proto4-3/aos_exec.py:201)、[proto5](../lib/aos_exec.py:259)
 
 **proto4-5：排隊、HTTP、worker、`--wait`是四件不同的事**
 
 | 層 | 精確事實 |
 |---|---|
-| HTTP值來源 | `request.timeout_ms`優先，其次endpoint，最後預設300000ms；沒有自動retry loop。[aos_llm:116](/home/guanyu/projs/aos/proto4-5/aos_llm.py:116) |
-| preflight | 預設先查`/models`，再chat；**兩次各拿完整T**。preflight失敗可記note後繼續chat，因此call總耗時可能超過T。[aos_llm:125](/home/guanyu/projs/aos/proto4-5/aos_llm.py:125) |
-| queue | 沒有expiry；容量滿就留著。priority高先跑，同優先看mtime；低優先可一直被插隊。`started`在dispatch才寫。[dispatch](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:192) |
-| worker watchdog | 從dispatch起算T+5000ms，下一次tick檢查才觸發。只TERM **PID**，沒KILL、沒確認退出，就寫timeout結果、搬done。[finish_running](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:98) |
-| watchdog結果 | HTTP timeout標`retryable:true`；scheduler製造的timeout結果沿用預設`false`。兩條失敗路徑語意不一致。[HTTP](/home/guanyu/projs/aos/proto4-5/aos_llm.py:164)、[scheduler error](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:15) |
-| worker晚到 | worker仍可寫同一結果檔；若TERM未讓它停，可能覆蓋watchdog結果、帳面已釋放容量但工作仍活著。**源碼推論**。[worker寫檔](/home/guanyu/projs/aos/proto4-5/llm_cpu_worker.py:49) |
+| HTTP值來源 | `request.timeout_ms`優先，其次endpoint，最後預設300000ms；沒有自動retry loop。[aos_llm:116](../../proto4-5/aos_llm.py:116) |
+| preflight | 預設先查`/models`，再chat；**兩次各拿完整T**。preflight失敗可記note後繼續chat，因此call總耗時可能超過T。[aos_llm:125](../../proto4-5/aos_llm.py:125) |
+| queue | 沒有expiry；容量滿就留著。priority高先跑，同優先看mtime；低優先可一直被插隊。`started`在dispatch才寫。[dispatch](../../proto4-5/llm_cpu_tick.py:192) |
+| worker watchdog | 從dispatch起算T+5000ms，下一次tick檢查才觸發。只TERM **PID**，沒KILL、沒確認退出，就寫timeout結果、搬done。[finish_running](../../proto4-5/llm_cpu_tick.py:98) |
+| watchdog結果 | HTTP timeout標`retryable:true`；scheduler製造的timeout結果沿用預設`false`。兩條失敗路徑語意不一致。[HTTP](../../proto4-5/aos_llm.py:164)、[scheduler error](../../proto4-5/llm_cpu_tick.py:15) |
+| worker晚到 | worker仍可寫同一結果檔；若TERM未讓它停，可能覆蓋watchdog結果、帳面已釋放容量但工作仍活著。**源碼推論**。[worker寫檔](../../proto4-5/llm_cpu_worker.py:49) |
 
 題目中的「`--wait`逾時撤單」必須分清楚：
 
@@ -128,7 +128,7 @@ daemon與控制指令另外一層：
 | proto4-5 **`--wait SECS`等結果** | **不撤**。只停止等待、退1、印結果將出現的位置 |
 | proto4-5 **明確`llm rm`** | running時TERM group等1秒，再KILL group等1秒；成功才刪queue／running／done／result。沒有留下cancelled結果供等待者收取 |
 
-來源：[收單回執處理](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:154)、[結果wait](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:174)、[明確remove](/home/guanyu/projs/aos/proto4-5/llm_cpu_manage.py:85)。
+來源：[收單回執處理](../../proto4-5/llm_cpu_module.py:154)、[結果wait](../../proto4-5/llm_cpu_module.py:174)、[明確remove](../../proto4-5/llm_cpu_manage.py:85)。
 
 所以「不等了」「單子確定沒送出」「已送出的工作被取消」不能用同一句「逾時撤單」表示。
 
@@ -136,37 +136,37 @@ daemon與控制指令另外一層：
 
 | 機制 | 事實與限制 | 來源 |
 |---|---|---|
-| 4-6 `wait_for` | 存`for/since/after_pc/checks`；since只顯示、checks只增加。檔不存在永遠等，101不計bad_after | [step_common](/home/guanyu/projs/aos/proto4-6/step_common.py:74) |
-| 4-7工具60秒 | 每個call各自60秒；同一act逐個執行，整格可以遠超過60秒 | [agent_tools](/home/guanyu/projs/aos/proto4-7/agent_tools.py:105)、[do_act](/home/guanyu/projs/aos/proto4-7/state_machine.py:217) |
-| 工具輸出8000字元 | 完整capture之後才截斷；**不是執行中的byte／記憶體上限**。錯誤stderr另取前500字元 | [截斷](/home/guanyu/projs/aos/proto4-7/agent_tools.py:122)、[預設設定](/home/guanyu/projs/aos/proto4-7/state_machine.py:32) |
-| 重複工具限時 | 預設sh腳本自己又包`timeout 60 sh -c`，與外層60秒重疊，誰先觸發可能影響結果碼 | [預設sh](/home/guanyu/projs/aos/proto4-7/aos_user_cli.py:35) |
-| 模型600次檢查 | 第599次仍101，第600次記錯回idle；不是600秒；**不撤原LLM單** | [do_wait](/home/guanyu/projs/aos/proto4-7/state_machine.py:172) |
-| retry | 沒有獨立retry state。idle且對話尾是user/tool、未stuck，20次idle檢查後再ask | [do_idle](/home/guanyu/projs/aos/proto4-7/state_machine.py:94) |
-| stuck | errors≥5設`stuck:true`，state仍idle，outbox通知人。**成功沒有清errors，實際是同題累積5錯**；新信才清帳 | [記錯](/home/guanyu/projs/aos/proto4-7/state_machine.py:78)、[成功路徑](/home/guanyu/projs/aos/proto4-7/state_machine.py:184) |
-| 每題60步 | 只在ask增加step，第61次不送模型。wait／idle檢查不扣；不是所有「走一格」都計數 | [do_ask](/home/guanyu/projs/aos/proto4-7/state_machine.py:119) |
+| 4-6 `wait_for` | 存`for/since/after_pc/checks`；since只顯示、checks只增加。檔不存在永遠等，101不計bad_after | [step_common](../../proto4-6/step_common.py:74) |
+| 4-7工具60秒 | 每個call各自60秒；同一act逐個執行，整格可以遠超過60秒 | [agent_tools](../../proto4-7/agent_tools.py:105)、[do_act](../../proto4-7/state_machine.py:217) |
+| 工具輸出8000字元 | 完整capture之後才截斷；**不是執行中的byte／記憶體上限**。錯誤stderr另取前500字元 | [截斷](../../proto4-7/agent_tools.py:122)、[預設設定](../../proto4-7/state_machine.py:32) |
+| 重複工具限時 | 預設sh腳本自己又包`timeout 60 sh -c`，與外層60秒重疊，誰先觸發可能影響結果碼 | [預設sh](../../proto4-7/aos_user_cli.py:35) |
+| 模型600次檢查 | 第599次仍101，第600次記錯回idle；不是600秒；**不撤原LLM單** | [do_wait](../../proto4-7/state_machine.py:172) |
+| retry | 沒有獨立retry state。idle且對話尾是user/tool、未stuck，20次idle檢查後再ask | [do_idle](../../proto4-7/state_machine.py:94) |
+| stuck | errors≥5設`stuck:true`，state仍idle，outbox通知人。**成功沒有清errors，實際是同題累積5錯**；新信才清帳 | [記錯](../../proto4-7/state_machine.py:78)、[成功路徑](../../proto4-7/state_machine.py:184) |
+| 每題60步 | 只在ask增加step，第61次不送模型。wait／idle檢查不扣；不是所有「走一格」都計數 | [do_ask](../../proto4-7/state_machine.py:119) |
 
-「模型出錯回idle要根治→retry／stuck」的來源在 **proto2**；4-7把這套濃縮成idle上的欄位，而非增加狀態。[proto2 README](/home/guanyu/projs/aos/proto2/README.md:46)、[移植筆記](/home/guanyu/projs/aos/proto4/notes/agent/legacy-harvest.md:40)
+「模型出錯回idle要根治→retry／stuck」的來源在 **proto2**；4-7把這套濃縮成idle上的欄位，而非增加狀態。[proto2 README](../../proto2/README.md:46)、[移植筆記](../../proto4/notes/agent/legacy-harvest.md:40)
 
 **proto2：散落在各層的關卡**
 
 | 類別 | 值與到期動作 | 重要邊界／來源 |
 |---|---|---|
-| exec／loop | **沒有單次牆鐘限時**；loop的steps只限格數、interval是格間隔 | 一格卡住整顆loop就卡住。[exec](/home/guanyu/projs/aos/proto2/aos-exec:26)、[loop](/home/guanyu/projs/aos/proto2/aos-loop:57) |
-| kernel自癒 | running且PID活就略過；只有死亡才重開，重開失敗之後每格再試，**無上限** | 活PID卡死抓不到。[監督](/home/guanyu/projs/aos/proto2/aos-daemon-kernel:492)、[重開](/home/guanyu/projs/aos/proto2/aos-daemon-kernel:436) |
-| kernel收工／daemon等待 | 收工TERM clock groups，0.3秒後KILL；daemon CLI預設等10秒，逾時原請求仍留著 | 關機清理不是平時watchdog。[收工](/home/guanyu/projs/aos/proto2/aos-daemon-kernel:518)、[CLI](/home/guanyu/projs/aos/proto2/aos-daemon:111) |
-| agent主線等LLM | 請求在queue/running：1800格；不在：60格；缺鐘立即記錯；到期→retry，通知聊天端 | **不撤原單**；1800／60共用waited，請求消失不會從0重新等60格。[do_wait](/home/guanyu/projs/aos/proto2/aos-agent:223) |
-| agent連敗 | 間隔20格重送，第5錯→stuck，等新信；新信／成功清帳 | 缺choices的分支在驗證前先清帳，每次歸1，實際到不了5錯。[retry](/home/guanyu/projs/aos/proto2/aos-agent:196)、[清帳漏洞](/home/guanyu/projs/aos/proto2/aos-agent:260) |
-| 協定重送／每題上限 | 壞文字tool call救不回，只額外重送1次；每題動作預設60，超過進limit_pause問人 | 等待、睡眠不算動作格；皆非單格timeout。[協定](/home/guanyu/projs/aos/proto2/aos-agent:274)、[題目上限](/home/guanyu/projs/aos/proto2/aos-agent:460) |
-| `fs.sh` | 預設60秒，可設到120秒；到期直接KILL group；回timeout錯誤，stdout/stderr各保尾1500字元 | 有工具時限不代表整格有時限。[fs](/home/guanyu/projs/aos/proto2/packs/fs.py:204) |
-| 自製工具／toolsmith | **沒有timeout** | 同步shell可卡整格；自製工具回完整輸出。[run_custom](/home/guanyu/projs/aos/proto2/aos_agent.py:234)、[toolsmith](/home/guanyu/projs/aos/proto2/packs/toolsmith.py:163) |
-| pyshop／studio測試 | 60秒；TimeoutExpired→失敗，截短輸出 | 使用subprocess timeout，沒有專門killpg清整樹。[pyshop](/home/guanyu/projs/aos/proto2/packs/pyshop.py:212)、[studio](/home/guanyu/projs/aos/proto2/packs/studio.py:240) |
-| 旁線／等信 | 預設600秒；記since_ts，agent後续收件時判到期；寫timeout結果、清pending／sleeping、hook可喚醒主線 | **不撤running、不殺worker**；不是獨立timer，agent沒再收件就不會處理到期。[send](/home/guanyu/projs/aos/proto2/aos_agent.py:1193)、[collect](/home/guanyu/projs/aos/proto2/aos_agent.py:1257) |
-| 旁線cancel | 刪原路徑request、清pending、寫cancelled結果 | 已搬到running的worker不會被殺。[cancel](/home/guanyu/projs/aos/proto2/aos_agent.py:1316) |
-| `run_long` | 命令包`timeout 3600`；旁線也等3600秒；命令exit124解成timeout | 沒有`-k`第二道KILL；兩個3600秒起算不同，會競賽。[jobs](/home/guanyu/projs/aos/proto2/packs/jobs.py:25) |
-| 共用鎖 | 預設10秒monotonic等待flock，超時報錯 | 只限等鎖，未限制持鎖工作總長。[lock](/home/guanyu/projs/aos/proto2/aos_agent.py:491) |
-| HTTP | TCP probe10秒，之後真正urllib請求300秒；失敗產生LLM error結果，由agent决定重試 | probe不是實際HTTP連線共用的10秒connect deadline。[HTTP](/home/guanyu/projs/aos/proto2/aos-llm:1552) |
-| priority.deadline | 到期提高排程優先權，aging最多加300分 | **不是過期撤單，也不是執行期限**。[priority](/home/guanyu/projs/aos/proto2/aos-llm:160) |
-| CLI引擎 | Claude CLI300秒subprocess timeout；Codex CLI300秒總期限，TERM group後3秒KILL | Claude路徑沒專門group清理；兩條不等價。[Claude](/home/guanyu/projs/aos/proto2/aos-llm:1095)、[Codex](/home/guanyu/projs/aos/proto2/aos-llm:1322) |
+| exec／loop | **沒有單次牆鐘限時**；loop的steps只限格數、interval是格間隔 | 一格卡住整顆loop就卡住。[exec](../../proto2/aos-exec:26)、[loop](../../proto2/aos-loop:57) |
+| kernel自癒 | running且PID活就略過；只有死亡才重開，重開失敗之後每格再試，**無上限** | 活PID卡死抓不到。[監督](../../proto2/aos-daemon-kernel:492)、[重開](../../proto2/aos-daemon-kernel:436) |
+| kernel收工／daemon等待 | 收工TERM clock groups，0.3秒後KILL；daemon CLI預設等10秒，逾時原請求仍留著 | 關機清理不是平時watchdog。[收工](../../proto2/aos-daemon-kernel:518)、[CLI](../../proto2/aos-daemon:111) |
+| agent主線等LLM | 請求在queue/running：1800格；不在：60格；缺鐘立即記錯；到期→retry，通知聊天端 | **不撤原單**；1800／60共用waited，請求消失不會從0重新等60格。[do_wait](../../proto2/aos-agent:223) |
+| agent連敗 | 間隔20格重送，第5錯→stuck，等新信；新信／成功清帳 | 缺choices的分支在驗證前先清帳，每次歸1，實際到不了5錯。[retry](../../proto2/aos-agent:196)、[清帳漏洞](../../proto2/aos-agent:260) |
+| 協定重送／每題上限 | 壞文字tool call救不回，只額外重送1次；每題動作預設60，超過進limit_pause問人 | 等待、睡眠不算動作格；皆非單格timeout。[協定](../../proto2/aos-agent:274)、[題目上限](../../proto2/aos-agent:460) |
+| `fs.sh` | 預設60秒，可設到120秒；到期直接KILL group；回timeout錯誤，stdout/stderr各保尾1500字元 | 有工具時限不代表整格有時限。[fs](../../proto2/packs/fs.py:204) |
+| 自製工具／toolsmith | **沒有timeout** | 同步shell可卡整格；自製工具回完整輸出。[run_custom](../../proto2/aos_agent.py:234)、[toolsmith](../../proto2/packs/toolsmith.py:163) |
+| pyshop／studio測試 | 60秒；TimeoutExpired→失敗，截短輸出 | 使用subprocess timeout，沒有專門killpg清整樹。[pyshop](../../proto2/packs/pyshop.py:212)、[studio](../../proto2/packs/studio.py:240) |
+| 旁線／等信 | 預設600秒；記since_ts，agent後续收件時判到期；寫timeout結果、清pending／sleeping、hook可喚醒主線 | **不撤running、不殺worker**；不是獨立timer，agent沒再收件就不會處理到期。[send](../../proto2/aos_agent.py:1193)、[collect](../../proto2/aos_agent.py:1257) |
+| 旁線cancel | 刪原路徑request、清pending、寫cancelled結果 | 已搬到running的worker不會被殺。[cancel](../../proto2/aos_agent.py:1316) |
+| `run_long` | 命令包`timeout 3600`；旁線也等3600秒；命令exit124解成timeout | 沒有`-k`第二道KILL；兩個3600秒起算不同，會競賽。[jobs](../../proto2/packs/jobs.py:25) |
+| 共用鎖 | 預設10秒monotonic等待flock，超時報錯 | 只限等鎖，未限制持鎖工作總長。[lock](../../proto2/aos_agent.py:491) |
+| HTTP | TCP probe10秒，之後真正urllib請求300秒；失敗產生LLM error結果，由agent决定重試 | probe不是實際HTTP連線共用的10秒connect deadline。[HTTP](../../proto2/aos-llm:1552) |
+| priority.deadline | 到期提高排程優先權，aging最多加300分 | **不是過期撤單，也不是執行期限**。[priority](../../proto2/aos-llm:160) |
+| CLI引擎 | Claude CLI300秒subprocess timeout；Codex CLI300秒總期限，TERM group後3秒KILL | Claude路徑沒專門group清理；兩條不等價。[Claude](../../proto2/aos-llm:1095)、[Codex](../../proto2/aos-llm:1322) |
 
 **歷史踩坑與使用者原話**
 
@@ -174,19 +174,19 @@ daemon與控制指令另外一層：
 
 | 坑 | 當時處理／對本題的意義 | 來源 |
 |---|---|---|
-| 七人共用兩路引擎，排隊超60格便放棄重送，舊請求仍在燒 | 改「請求仍排隊／執行中就等」，實際上限1800格；等待不扣每題動作格 | [journey:33](/home/guanyu/projs/aos/proto2/notes/2026-09-07-studio-journey.md:33) |
-| PM等chief回信，chief等PM補額度，互等死結 | 睡著的人也要被未讀信叫醒；單有timeout未必能判斷業務死結 | [journey:39](/home/guanyu/projs/aos/proto2/notes/2026-09-07-studio-journey.md:39) |
-| 凍住300格再喊，sales反覆回「撥不出來」 | 通知太吵；額度抬高後也不該再等300格，後改每10格嘗試自動撥款 | [studio-4:34](/home/guanyu/projs/aos/proto2/notes/play/2026-09-07-studio-4.md:34)、[journey:155](/home/guanyu/projs/aos/proto2/notes/2026-09-07-studio-journey.md:155) |
-| 模型失敗回idle，未回覆的話永遠不再送 | retry／stuck與dangling safety net處理的是「誰再喚醒」，不只是幾秒timeout | [lessons:7](/home/guanyu/projs/aos/proto2/notes/2026-09-07-lessons.md:7) |
-| 任務做到一半idle | 45格提醒、最多3次；再不動改報主管 | [studio:802](/home/guanyu/projs/aos/proto2/packs/studio.py:802) |
-| idle55分鐘，ticks還一直增加 | 「進程活著」「tick有增加」都不等於任務有進度 | [studio-3](/home/guanyu/projs/aos/proto2/notes/play/2026-09-07-studio-3.md:7) |
-| 旁線120格期限隨排程速度失真 | 改600秒牆鐘時間；文件部分仍留120格，需看程式 | [simplify-2](/home/guanyu/projs/aos/proto2/notes/play/2026-09-07-simplify-2.md:5) |
+| 七人共用兩路引擎，排隊超60格便放棄重送，舊請求仍在燒 | 改「請求仍排隊／執行中就等」，實際上限1800格；等待不扣每題動作格 | [journey:33](../../proto2/notes/2026-09-07-studio-journey.md:33) |
+| PM等chief回信，chief等PM補額度，互等死結 | 睡著的人也要被未讀信叫醒；單有timeout未必能判斷業務死結 | [journey:39](../../proto2/notes/2026-09-07-studio-journey.md:39) |
+| 凍住300格再喊，sales反覆回「撥不出來」 | 通知太吵；額度抬高後也不該再等300格，後改每10格嘗試自動撥款 | [studio-4:34](../../proto2/notes/play/2026-09-07-studio-4.md:34)、[journey:155](../../proto2/notes/2026-09-07-studio-journey.md:155) |
+| 模型失敗回idle，未回覆的話永遠不再送 | retry／stuck與dangling safety net處理的是「誰再喚醒」，不只是幾秒timeout | [lessons:7](../../proto2/notes/2026-09-07-lessons.md:7) |
+| 任務做到一半idle | 45格提醒、最多3次；再不動改報主管 | [studio:802](../../proto2/packs/studio.py:802) |
+| idle55分鐘，ticks還一直增加 | 「進程活著」「tick有增加」都不等於任務有進度 | [studio-3](../../proto2/notes/play/2026-09-07-studio-3.md:7) |
+| 旁線120格期限隨排程速度失真 | 改600秒牆鐘時間；文件部分仍留120格，需看程式 | [simplify-2](../../proto2/notes/play/2026-09-07-simplify-2.md:5) |
 
 `thinking/`目前四份檔案已讀完，**沒有「逾時／限時／超時／卡住／timeout／deadline」的原話**。最接近的是pause：
 
 > 「交給外部cpu跑的東西，回來的結果也是會存，但agent不會反應」  
 > 「shell跑的東西，會跑完，但agent不會反應」  
-> — [thinking/aos-agent.md:17](/home/guanyu/projs/aos/thinking/aos-agent.md:17)
+> — [thinking/aos-agent.md:17](../../thinking/aos-agent.md:17)
 
 這描述的是**暫停狀態機、不取消外部工作**。
 
@@ -194,10 +194,10 @@ daemon與控制指令另外一層：
 
 | 原話 | 出處 |
 |---|---|
-| 「基本上agent的每一歩都是建議盡可能短小，否則可能會影響fps，也就是每次tick的時間。」 | [world-clock-agent:11](/home/guanyu/projs/aos/proto2/notes/2026-09-06-world-clock-agent.md:11) |
-| 「某些操作要跑很久，那通常會將該操作弄成新的世界，請求daemon另開一個時鐘去處理」；另提直接fork可能「逃離daemon的管束」 | [同檔:15](/home/guanyu/projs/aos/proto2/notes/2026-09-06-world-clock-agent.md:15) |
-| 「原本預期中很快就好的操作卡很久，通常情況下就是乖乖阻塞停在他那邊」；接著提出逾時後另fork繼續tick的構想，並說「再想想吧」 | [同檔:19](/home/guanyu/projs/aos/proto2/notes/2026-09-06-world-clock-agent.md:19) |
-| 「至於LLM，通常agent會將相關請求丟到某個資料夾，讓那個資料夾的時鐘處理。」 | [同檔:19](/home/guanyu/projs/aos/proto2/notes/2026-09-06-world-clock-agent.md:19) |
+| 「基本上agent的每一歩都是建議盡可能短小，否則可能會影響fps，也就是每次tick的時間。」 | [world-clock-agent:11](../../proto2/notes/2026-09-06-world-clock-agent.md:11) |
+| 「某些操作要跑很久，那通常會將該操作弄成新的世界，請求daemon另開一個時鐘去處理」；另提直接fork可能「逃離daemon的管束」 | [同檔:15](../../proto2/notes/2026-09-06-world-clock-agent.md:15) |
+| 「原本預期中很快就好的操作卡很久，通常情況下就是乖乖阻塞停在他那邊」；接著提出逾時後另fork繼續tick的構想，並說「再想想吧」 | [同檔:19](../../proto2/notes/2026-09-06-world-clock-agent.md:19) |
+| 「至於LLM，通常agent會將相關請求丟到某個資料夾，讓那個資料夾的時鐘處理。」 | [同檔:19](../../proto2/notes/2026-09-06-world-clock-agent.md:19) |
 
 這些支持「短格、長工作由別的執行者負責」的方向，但**沒有拍板具體timeout值或到期處置**。
 
@@ -261,7 +261,7 @@ daemon與控制指令另外一層：
 | **kernel自癒** | 能補cpu、重開進程，不應把「剛被timeout停住」立即當成缺cpu而無限重啟 |
 | **晚到結果** | timeout／cancel後必須按request id辨認，不得覆寫已結算的終態，也不得混進新一題 |
 
-來源基礎：[gate順序](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:191)、[input與consume規格](/home/guanyu/projs/aos/proto5/spec/agent.md:96)、[自癒與寫回規格](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:51)。
+來源基礎：[gate順序](../lib/aos_agent.py:191)、[input與consume規格](../spec/agent.md:96)、[自癒與寫回規格](../spec/aos-agent.md:51)。
 
 尤其`act`目前是：
 

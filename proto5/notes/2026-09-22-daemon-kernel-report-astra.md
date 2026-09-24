@@ -58,7 +58,7 @@ aos-run xxx
 
 資料夾存在但裡面沒有指令檔，**沒有在 loop 外拒絕**；每次 `run_target()` 會回 `(2,"usage")`，預設仍一直重試。
 
-來源：[aos_run.py:155](/home/guanyu/projs/aos/proto4-3/aos_run.py:155)、[aos_exec.py:62](/home/guanyu/projs/aos/proto4-3/aos_exec.py:62)。
+來源：[aos_run.py:155](../../proto4-3/aos_run.py:155)、[aos_exec.py:62](../../proto4-3/aos_exec.py:62)。
 
 **1.2 每一格實際做什麼**
 
@@ -81,7 +81,7 @@ aos-run xxx
 
 「整體時限」實作是縮短本次 subprocess timeout，**不是涵蓋所有讀檔、解析、開串流與清理的絕對截止保證**；TERM 後還可能等 2 秒才 KILL。
 
-來源：[aos_run.py:65](/home/guanyu/projs/aos/proto4-3/aos_run.py:65)、[aos_run.py:126](/home/guanyu/projs/aos/proto4-3/aos_run.py:126)、[aos_exec.py:181](/home/guanyu/projs/aos/proto4-3/aos_exec.py:181)。
+來源：[aos_run.py:65](../../proto4-3/aos_run.py:65)、[aos_run.py:126](../../proto4-3/aos_run.py:126)、[aos_exec.py:181](../../proto4-3/aos_exec.py:181)。
 
 **1.3 退出碼：本次執行與 aos-run 本身分開**
 
@@ -106,7 +106,7 @@ aos-run xxx
 - 同次命中多個停止條件，以前表所列順序決定 reason。
 - 未捕捉的 Python 例外不屬於上述正常退出協議。
 
-來源：[aos_run.py:88](/home/guanyu/projs/aos/proto4-3/aos_run.py:88)、[aos_run.py:113](/home/guanyu/projs/aos/proto4-3/aos_run.py:113)、[aos_exec.py:226](/home/guanyu/projs/aos/proto4-3/aos_exec.py:226)。
+來源：[aos_run.py:88](../../proto4-3/aos_run.py:88)、[aos_run.py:113](../../proto4-3/aos_run.py:113)、[aos_exec.py:226](../../proto4-3/aos_exec.py:226)。
 
 **1.4 訊號**
 
@@ -121,7 +121,7 @@ aos-run xxx
 
 嚴格說，強制退出使用的是 `_State.signum`，而它會被**每一次後續訊號**更新；不是另外保存「首次觸發 forced 的訊號」。
 
-來源：[aos_run_status.py:8](/home/guanyu/projs/aos/proto4-3/aos_run_status.py:8)、[aos_run_status.py:59](/home/guanyu/projs/aos/proto4-3/aos_run_status.py:59)。
+來源：[aos_run_status.py:8](../../proto4-3/aos_run_status.py:8)、[aos_run_status.py:59](../../proto4-3/aos_run_status.py:59)。
 
 **1.5 狀態檔與事件格式**
 
@@ -144,9 +144,9 @@ aos-run xxx
 
 事件用 `os.write()`，OSError 被忽略；没有非阻塞設定、重送、回執或落盤。結束時會關掉該 fd。
 
-來源：[aos_run_status.py:32](/home/guanyu/projs/aos/proto4-3/aos_run_status.py:32)、[aos_exec.py:242](/home/guanyu/projs/aos/proto4-3/aos_exec.py:242)。
+來源：[aos_run_status.py:32](../../proto4-3/aos_run_status.py:32)、[aos_exec.py:242](../../proto4-3/aos_exec.py:242)。
 
-既有測試覆蓋：執行次數、間隔兩算法、timeout、整體時限、訊號、argv 分隔符、事件順序與 `stop-on-error`。見 [test_run.py:58](/home/guanyu/projs/aos/proto4-3/test/test_run.py:58)、[test_run_status.py:36](/home/guanyu/projs/aos/proto4-3/test/test_run_status.py:36)。
+既有測試覆蓋：執行次數、間隔兩算法、timeout、整體時限、訊號、argv 分隔符、事件順序與 `stop-on-error`。見 [test_run.py:58](../../proto4-3/test/test_run.py:58)、[test_run_status.py:36](../../proto4-3/test/test_run_status.py:36)。
 
 ---
 
@@ -165,7 +165,7 @@ aos-run xxx
 | PID 身分 | 不確認該 PID 是不是同一支 daemon，不核對開始時間 |
 | 鎖 | 沒有家目錄鎖或原子 PID 排他建立 |
 
-來源：[aos_home.py:20](/home/guanyu/projs/aos/proto4-3/aos_home.py:20)、[aos-daemon:36](/home/guanyu/projs/aos/proto4-3/aos-daemon:36)。
+來源：[aos_home.py:20](../../proto4-3/aos_home.py:20)、[aos-daemon:36](../../proto4-3/aos-daemon:36)。
 
 **2.2 家目錄完整清單**
 
@@ -193,7 +193,7 @@ ctl 請求檔名為：
 
 同一 PID 在同一毫秒投多張可能同名；不是 UUID 或排他建立。
 
-來源：[aos_home.py:28](/home/guanyu/projs/aos/proto4-3/aos_home.py:28)、[aos_home.py:59](/home/guanyu/projs/aos/proto4-3/aos_home.py:59)、[aos_daemon_req.py:56](/home/guanyu/projs/aos/proto4-3/aos_daemon_req.py:56)、[aos_daemon_lifecycle.py:19](/home/guanyu/projs/aos/proto4-3/aos_daemon_lifecycle.py:19)。
+來源：[aos_home.py:28](../../proto4-3/aos_home.py:28)、[aos_home.py:59](../../proto4-3/aos_home.py:59)、[aos_daemon_req.py:56](../../proto4-3/aos_daemon_req.py:56)、[aos_daemon_lifecycle.py:19](../../proto4-3/aos_daemon_lifecycle.py:19)。
 
 **2.3 `H/state.json` 全欄位**
 
@@ -236,7 +236,7 @@ ctl 請求檔名為：
 | `thread`、`sthread` | stderr／status 讀取 thread |
 | `key` | table key |
 
-來源：[aos_daemon_entry.py:67](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:67)、[aos_daemon_entry.py:94](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:94)、[aos_daemon_lifecycle.py:15](/home/guanyu/projs/aos/proto4-3/aos_daemon_lifecycle.py:15)。
+來源：[aos_daemon_entry.py:67](../../proto4-3/aos_daemon_entry.py:67)、[aos_daemon_entry.py:94](../../proto4-3/aos_daemon_entry.py:94)、[aos_daemon_lifecycle.py:15](../../proto4-3/aos_daemon_lifecycle.py:15)。
 
 **2.4 key 與接受的目標**
 
@@ -251,7 +251,7 @@ ctl 請求檔名為：
 | 指令檔更新 | aos-run 下一次重新讀取 |
 | symlink 改指向 | entry 的既有 key 不會自動跟著變；aos-run 仍沿 target 路徑讀。之後用該 symlink 查表會重新算 realpath |
 
-來源：[aos_daemon_entry.py:40](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:40)、[aos_daemon.py:51](/home/guanyu/projs/aos/proto4-3/aos_daemon.py:51)。
+來源：[aos_daemon_entry.py:40](../../proto4-3/aos_daemon_entry.py:40)、[aos_daemon.py:51](../../proto4-3/aos_daemon.py:51)。
 
 **2.5 請求檔協議**
 
@@ -301,7 +301,7 @@ ctl 請求檔名為：
 
 **done 代表該請求已處理／受理，不表示非同步狀態轉換已完成。** 沒有 `done:true`、完成時間、請求 ID 欄位或重試次數欄位；檔名就是關聯依據。
 
-來源：[aos_daemon_req.py:28](/home/guanyu/projs/aos/proto4-3/aos_daemon_req.py:28)、[aos_daemon_req.py:56](/home/guanyu/projs/aos/proto4-3/aos_daemon_req.py:56)。
+來源：[aos_daemon_req.py:28](../../proto4-3/aos_daemon_req.py:28)、[aos_daemon_req.py:56](../../proto4-3/aos_daemon_req.py:56)。
 
 **2.6 五態與停止／重啟**
 
@@ -327,7 +327,7 @@ ctl 請求檔名為：
 
 pause 只停 aos-run，沒有停 inst 子程式的 process group。若 SIGSTOP 剛好落在新一次開始後，子程式仍可繼續跑，但 aos-run 暫時不能收結果或執行 timeout 邏輯。
 
-來源：[aos_daemon.py:84](/home/guanyu/projs/aos/proto4-3/aos_daemon.py:84)、[aos_daemon_entry.py:118](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:118)。
+來源：[aos_daemon.py:84](../../proto4-3/aos_daemon.py:84)、[aos_daemon_entry.py:118](../../proto4-3/aos_daemon_entry.py:118)。
 
 **2.7 啟動、每輪、正常停止、崩潰**
 
@@ -358,7 +358,7 @@ daemon
 
 因此 daemon 五秒後的 `killpg(aos-run)` **不保證殺到 inst 子程式群組**。`rm --force` 的第二發 TERM 若被 aos-run handler 收到，則是 aos-run 主動 KILL 它記住的 child group；兩者不是同一條清理路徑。
 
-來源：[aos_daemon_lifecycle.py:19](/home/guanyu/projs/aos/proto4-3/aos_daemon_lifecycle.py:19)、[aos_daemon.py:185](/home/guanyu/projs/aos/proto4-3/aos_daemon.py:185)、[aos_daemon_entry.py:166](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:166)、[aos_exec.py:190](/home/guanyu/projs/aos/proto4-3/aos_exec.py:190)。
+來源：[aos_daemon_lifecycle.py:19](../../proto4-3/aos_daemon_lifecycle.py:19)、[aos_daemon.py:185](../../proto4-3/aos_daemon.py:185)、[aos_daemon_entry.py:166](../../proto4-3/aos_daemon_entry.py:166)、[aos_exec.py:190](../../proto4-3/aos_exec.py:190)。
 
 | 崩潰後項目 | 現況 |
 |---|---|
@@ -421,7 +421,7 @@ ctl 可在任何位置抽出第一個 `--home H` 或 `--home=H`。
 | 超時 | 不撤 daemon request，不取消已受理動作 |
 | `--stderr REL` 經 ctl 傳入 | 相對於 daemon／aos-run 繼承的 cwd；不是 ctl 的 cwd，也不是 H 或 inst cwd |
 
-來源：[aos_daemon_ctl.py:44](/home/guanyu/projs/aos/proto4-3/aos_daemon_ctl.py:44)、[aos_daemon_ctl.py:118](/home/guanyu/projs/aos/proto4-3/aos_daemon_ctl.py:118)、[aos_daemon_ctl.py:167](/home/guanyu/projs/aos/proto4-3/aos_daemon_ctl.py:167)。
+來源：[aos_daemon_ctl.py:44](../../proto4-3/aos_daemon_ctl.py:44)、[aos_daemon_ctl.py:118](../../proto4-3/aos_daemon_ctl.py:118)、[aos_daemon_ctl.py:167](../../proto4-3/aos_daemon_ctl.py:167)。
 
 **2.9 錯誤代號**
 
@@ -441,7 +441,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 | ctl daemon 不活／等不到 | stderr 訊息，退出 1 |
 | inst 解析失敗 | 不變成 daemon request 錯誤；透過 aos-run 的 `last_kind=aos,last_exit=125` 與 log 觀察 |
 
-既有測試確認 key、十二個 entry 欄位、五態、force、restart、CLI 生命周期與正常停止清理。**沒有建立崩潰復原、請求交易、PID 重用或跨 session 子孫清理保證。** 見 [test_daemon.py:74](/home/guanyu/projs/aos/proto4-3/test/test_daemon.py:74)、[test_daemon_ops.py:14](/home/guanyu/projs/aos/proto4-3/test/test_daemon_ops.py:14)、[test_daemon_cli.py:98](/home/guanyu/projs/aos/proto4-3/test/test_daemon_cli.py:98)。
+既有測試確認 key、十二個 entry 欄位、五態、force、restart、CLI 生命周期與正常停止清理。**沒有建立崩潰復原、請求交易、PID 重用或跨 session 子孫清理保證。** 見 [test_daemon.py:74](../../proto4-3/test/test_daemon.py:74)、[test_daemon_ops.py:14](../../proto4-3/test/test_daemon_ops.py:14)、[test_daemon_cli.py:98](../../proto4-3/test/test_daemon_cli.py:98)。
 
 ---
 
@@ -472,7 +472,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 - 未知 module 命令若連 K 都不是有效家，先回 1，而不是最後的未知命令 2。
 - tick/init 等仍有未捕捉的 filesystem／資料形狀例外；不能把表中的正常處理分支理解成完整防炸保證。
 
-來源：[aos_kernel.py:151](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:151)、[aos_kernel.py:198](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:198)、[aos_kernel_init.py:24](/home/guanyu/projs/aos/proto4-3/aos_kernel_init.py:24)、[aos_kernel_tick.py:140](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:140)。
+來源：[aos_kernel.py:151](../../proto4-3/aos_kernel.py:151)、[aos_kernel.py:198](../../proto4-3/aos_kernel.py:198)、[aos_kernel_init.py:24](../../proto4-3/aos_kernel_init.py:24)、[aos_kernel_tick.py:140](../../proto4-3/aos_kernel_tick.py:140)。
 
 **3.2 家目錄逐檔**
 
@@ -499,7 +499,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 
 核心 JSON writer 是同一支 `aos_home.write_json()`，因此只有 rename 發佈，沒有 fsync 交易。
 
-來源：[aos_kernel.py:61](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:61)、[aos_kernel_init.py:43](/home/guanyu/projs/aos/proto4-3/aos_kernel_init.py:43)、[aos_kernel_schedule.py:94](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:94)。
+來源：[aos_kernel.py:61](../../proto4-3/aos_kernel.py:61)、[aos_kernel_init.py:43](../../proto4-3/aos_kernel_init.py:43)、[aos_kernel_schedule.py:94](../../proto4-3/aos_kernel_schedule.py:94)。
 
 **3.3 `config.json` 全欄位**
 
@@ -524,7 +524,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 - 每次 tick 重新讀 config；已存在 daemon CPU 不會因此更新 aos-run 的 flags。
 - 修改 `ncpu` 沒有完整熱拔除流程：縮小時不主動刪除額外 CPU 或 daemon entries。
 
-來源：[aos_kernel.py:86](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:86)、[aos_kernel_init.py:27](/home/guanyu/projs/aos/proto4-3/aos_kernel_init.py:27)、[aos_kernel_boot.py:37](/home/guanyu/projs/aos/proto4-3/aos_kernel_boot.py:37)。
+來源：[aos_kernel.py:86](../../proto4-3/aos_kernel.py:86)、[aos_kernel_init.py:27](../../proto4-3/aos_kernel_init.py:27)、[aos_kernel_boot.py:37](../../proto4-3/aos_kernel_boot.py:37)。
 
 **3.4 inst 檔的欄位與 kernel 額外限制**
 
@@ -544,7 +544,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 
 相對 stream／exit／`$ref` 路徑由 aos-exec 以解析後 cwd 為中心處理。kernel 沒有替它們全部轉成絕對路徑。
 
-來源：[aos_inst.py:92](/home/guanyu/projs/aos/proto4-3/aos_inst.py:92)、[aos_kernel_add.py:86](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:86)、[aos_kernel_tick.py:104](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:104)。
+來源：[aos_inst.py:92](../../proto4-3/aos_inst.py:92)、[aos_kernel_add.py:86](../../proto4-3/aos_kernel_add.py:86)、[aos_kernel_tick.py:104](../../proto4-3/aos_kernel_tick.py:104)。
 
 **3.5 `state.json` 與一個行程的完整欄位**
 
@@ -574,7 +574,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 
 狀態讀取只清理頂層容器，**不驗 `cpus` 每個 cur 的完整形狀**。壞 cur 可能讓 scheduler 或 status 丟例外。未知頂層欄位不由 `KHome.state()` 保留。
 
-來源：[aos_kernel.py:102](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:102)、[aos_kernel_schedule.py:26](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:26)、[aos_kernel_schedule.py:94](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:94)。
+來源：[aos_kernel.py:102](../../proto4-3/aos_kernel.py:102)、[aos_kernel_schedule.py:26](../../proto4-3/aos_kernel_schedule.py:26)、[aos_kernel_schedule.py:94](../../proto4-3/aos_kernel_schedule.py:94)。
 
 **3.6 行程狀態與檔案轉換**
 
@@ -612,7 +612,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 | add 最後驗證 | 寫 `procs/.<name>.json.tmp` → `aos_inst.load()` → 清舊紀錄 → replace 正式 procs 檔 |
 | add 的 state | 不直接修改 queue/state；下一 tick 才收進表 |
 
-来源：[aos_kernel_init.py:24](/home/guanyu/projs/aos/proto4-3/aos_kernel_init.py:24)、[aos_kernel_boot.py:11](/home/guanyu/projs/aos/proto4-3/aos_kernel_boot.py:11)、[aos_kernel_add.py:46](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:46)。
+来源：[aos_kernel_init.py:24](../../proto4-3/aos_kernel_init.py:24)、[aos_kernel_boot.py:11](../../proto4-3/aos_kernel_boot.py:11)、[aos_kernel_add.py:46](../../proto4-3/aos_kernel_add.py:46)。
 
 **3.8 一格 tick 的完整順序**
 
@@ -633,7 +633,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 
 queue 基本檢查：可讀 JSON 物件、raw 有 argv、raw 有 cwd、cwd 是字串，再呼叫完整 inst validator。**沒有要求 cwd 必須為絕對路徑，也沒有在這階段執行 aos-exec 的所有 filesystem 前置檢查。**
 
-來源：[aos_kernel_tick.py:41](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:41)、[aos_kernel_tick.py:69](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:69)、[aos_kernel_tick.py:104](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:104)。
+來源：[aos_kernel_tick.py:41](../../proto4-3/aos_kernel_tick.py:41)、[aos_kernel_tick.py:69](../../proto4-3/aos_kernel_tick.py:69)、[aos_kernel_tick.py:104](../../proto4-3/aos_kernel_tick.py:104)。
 
 **3.9 FIFO 與選下一個行程**
 
@@ -653,7 +653,7 @@ queue 基本檢查：可讀 JSON 物件、raw 有 argv、raw 有 cwd、cwd 是�
 | 換人失敗 | 保留原排程或嘗試撤銷 hard-link，寫 note |
 | 計數保存 | waiting 計數跨 swap 保存；bad_runs/bad_exit/aos_ticks **不跨 swap 保存** |
 
-來源：[aos_kernel.py:56](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:56)、[aos_kernel_schedule.py:9](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:9)、[aos_kernel_schedule.py:111](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:111)。
+來源：[aos_kernel.py:56](../../proto4-3/aos_kernel.py:56)、[aos_kernel_schedule.py:9](../../proto4-3/aos_kernel_schedule.py:9)、[aos_kernel_schedule.py:111](../../proto4-3/aos_kernel_schedule.py:111)。
 
 **3.10 退出碼判定的精確順序**
 
@@ -702,7 +702,7 @@ new_runs = max(0, daemon.runs - cur.seen_runs)
 | runner 重啟辨識 | 只看 runs 是否倒退，沒有比對 daemon entry PID 或 generation |
 | 退件原因 | 寫在 kernel.log；bad 指令檔沒有追加 error 欄位 |
 
-來源：[aos_kernel_schedule.py:26](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:26)、[aos_kernel_schedule.py:75](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:75)。
+來源：[aos_kernel_schedule.py:26](../../proto4-3/aos_kernel_schedule.py:26)、[aos_kernel_schedule.py:75](../../proto4-3/aos_kernel_schedule.py:75)。
 
 **3.11 換檔、執行中工作與崩潰**
 
@@ -721,7 +721,7 @@ new_runs = max(0, daemon.runs - cur.seen_runs)
 | 多個 tick 同時跑 | 沒有鎖 |
 | 檔案與 state | hard-link／replace／save state 是不同步驟，沒有跨檔交易或通用 crash recovery |
 
-來源：[aos_kernel_schedule.py:111](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:111)、[aos_kernel_schedule.py:158](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:158)、[aos_kernel_syscall.py:136](/home/guanyu/projs/aos/proto4-3/aos_kernel_syscall.py:136)。
+來源：[aos_kernel_schedule.py:111](../../proto4-3/aos_kernel_schedule.py:111)、[aos_kernel_schedule.py:158](../../proto4-3/aos_kernel_schedule.py:158)、[aos_kernel_syscall.py:136](../../proto4-3/aos_kernel_syscall.py:136)。
 
 **3.12 內建 syscall：rm**
 
@@ -765,7 +765,7 @@ rm 查找順序：
 
 壞 JSON、非物件、缺 op、未知 op、rm 缺 pid，都會嘗試寫負回音再刪原單。**沒有把原單搬到 done；done 是另造的回應。**
 
-來源：[aos_kernel_syscall.py:18](/home/guanyu/projs/aos/proto4-3/aos_kernel_syscall.py:18)、[aos_kernel_syscall.py:72](/home/guanyu/projs/aos/proto4-3/aos_kernel_syscall.py:72)、[aos_kernel_syscall.py:136](/home/guanyu/projs/aos/proto4-3/aos_kernel_syscall.py:136)。
+來源：[aos_kernel_syscall.py:18](../../proto4-3/aos_kernel_syscall.py:18)、[aos_kernel_syscall.py:72](../../proto4-3/aos_kernel_syscall.py:72)、[aos_kernel_syscall.py:136](../../proto4-3/aos_kernel_syscall.py:136)。
 
 **3.13 module 機制**
 
@@ -793,7 +793,7 @@ rm 查找順序：
 
 module 可以改動傳入的 state；核心不對 module 的副作用做回滾。
 
-來源：[aos_kernel_module.py:16](/home/guanyu/projs/aos/proto4-3/aos_kernel_module.py:16)、[aos_kernel.py:171](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:171)、[aos_kernel_status.py:92](/home/guanyu/projs/aos/proto4-3/aos_kernel_status.py:92)。
+來源：[aos_kernel_module.py:16](../../proto4-3/aos_kernel_module.py:16)、[aos_kernel.py:171](../../proto4-3/aos_kernel.py:171)、[aos_kernel_status.py:92](../../proto4-3/aos_kernel_status.py:92)。
 
 **3.14 `ls` 的輸出來源**
 
@@ -817,7 +817,7 @@ module 可以改動傳入的 state；核心不對 module 的副作用做回滾�
 
 `ls` 不推 tick、不修 queue、不補 CPU；daemon dead 或 module status 出錯，正常仍可退出 0。
 
-來源：[aos_kernel_status.py:9](/home/guanyu/projs/aos/proto4-3/aos_kernel_status.py:9)。
+來源：[aos_kernel_status.py:9](../../proto4-3/aos_kernel_status.py:9)。
 
 **3.15 LLM module：kernel 實際接到的介面**
 
@@ -855,7 +855,7 @@ ID 通過 submit 時須符合 `[A-Za-z0-9._-]+`，不能為 `.`、`..` 或 `.tmp
 
 module handle 先讀 endpoints、驗請求，再做同名檢查與 submit。**handle 不先 ensure LLM 家；kernel 順序又是 syscall 在 module.tick 前，因此首個 tick 尚未建家時，預先放入的 llm syscall 可先失敗，之後才建家。**
 
-來源：[llm_cpu_module.py:13](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:13)、[llm_cpu_module.py:37](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:37)、[llm_cpu_request.py:15](/home/guanyu/projs/aos/proto4-5/llm_cpu_request.py:15)。
+來源：[llm_cpu_module.py:13](../../proto4-5/llm_cpu_module.py:13)、[llm_cpu_module.py:37](../../proto4-5/llm_cpu_module.py:37)、[llm_cpu_request.py:15](../../proto4-5/llm_cpu_request.py:15)。
 
 **LLM CLI 與 `--wait`**
 
@@ -888,7 +888,7 @@ aos-kernel llm rm K NAME
 
 第一期撤單不是交易式取消：kernel 可能已讀 request 但尚未刪原檔；CLI 判斷只是檔案是否還存在。
 
-來源：[llm_cpu_module.py:98](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:98)、[llm_cpu_module.py:174](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:174)、[llm_cpu_module.py:233](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:233)、[llm_cpu_manage.py:85](/home/guanyu/projs/aos/proto4-5/llm_cpu_manage.py:85)。
+來源：[llm_cpu_module.py:98](../../proto4-5/llm_cpu_module.py:98)、[llm_cpu_module.py:174](../../proto4-5/llm_cpu_module.py:174)、[llm_cpu_module.py:233](../../proto4-5/llm_cpu_module.py:233)、[llm_cpu_manage.py:85](../../proto4-5/llm_cpu_manage.py:85)。
 
 **3.16 `K/llm/` 檔案與完整欄位**
 
@@ -908,7 +908,7 @@ aos-kernel llm rm K NAME
 
 LLM `atomic_json()` 會 fsync **檔案**後 replace，但沒有 fsync 父目錄。其 syscall 發佈包了兩層暫存，會先經 `<ticket>.json.tmp.tmp`，再到 `.tmp`，最後正式 `.json`。
 
-來源：[llm_cpu_home.py:15](/home/guanyu/projs/aos/proto4-5/llm_cpu_home.py:15)、[llm_cpu_home.py:43](/home/guanyu/projs/aos/proto4-5/llm_cpu_home.py:43)、[llm_cpu_module.py:218](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:218)。
+來源：[llm_cpu_home.py:15](../../proto4-5/llm_cpu_home.py:15)、[llm_cpu_home.py:43](../../proto4-5/llm_cpu_home.py:43)、[llm_cpu_module.py:218](../../proto4-5/llm_cpu_module.py:218)。
 
 `endpoints.json`：
 
@@ -956,7 +956,7 @@ LLM request：
 
 同名查找順序：requests → running → results → done。內容同指紋視為既有同單；不同則拒絕。CLI 命中同單可直接成功或等既有 result，無須 kernel 活著。
 
-來源：[llm_cpu_home.py:115](/home/guanyu/projs/aos/proto4-5/llm_cpu_home.py:115)、[llm_cpu_request.py:21](/home/guanyu/projs/aos/proto4-5/llm_cpu_request.py:21)、[llm_cpu_tick.py:110](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:110)、[aos_llm.py:89](/home/guanyu/projs/aos/proto4-5/aos_llm.py:89)。
+來源：[llm_cpu_home.py:115](../../proto4-5/llm_cpu_home.py:115)、[llm_cpu_request.py:21](../../proto4-5/llm_cpu_request.py:21)、[llm_cpu_tick.py:110](../../proto4-5/llm_cpu_tick.py:110)、[aos_llm.py:89](../../proto4-5/aos_llm.py:89)。
 
 result 全欄位：
 
@@ -990,7 +990,7 @@ result 全欄位：
 
 `raw` 的供應商資料不是 kernel 定義的固定 schema；agent 用到其中的 `choices[0].message`，包含可能的 `tool_calls`。
 
-來源：[aos_llm.py:24](/home/guanyu/projs/aos/proto4-5/aos_llm.py:24)、[aos_llm.py:186](/home/guanyu/projs/aos/proto4-5/aos_llm.py:186)、[llm_cpu_tick.py:15](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:15)、[llm_cpu_worker.py:37](/home/guanyu/projs/aos/proto4-5/llm_cpu_worker.py:37)。
+來源：[aos_llm.py:24](../../proto4-5/aos_llm.py:24)、[aos_llm.py:186](../../proto4-5/aos_llm.py:186)、[llm_cpu_tick.py:15](../../proto4-5/llm_cpu_tick.py:15)、[llm_cpu_worker.py:37](../../proto4-5/llm_cpu_worker.py:37)。
 
 其他 JSON：
 
@@ -1030,7 +1030,7 @@ usage 由 worker 寫結果後 append；scheduler 自己退的壞單、spawn 失�
 
 worker 不透過 daemon add，也不占用 `K/cpus/n.json` 的一個普通行程槽。kernel tick 結束後它仍可繼續。沒有通用「daemon stop 就收掉所有 LLM worker」的路徑。
 
-來源：[llm_cpu_tick.py:72](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:72)、[llm_cpu_tick.py:192](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:192)、[llm_cpu_tick.py:231](/home/guanyu/projs/aos/proto4-5/llm_cpu_tick.py:231)。
+來源：[llm_cpu_tick.py:72](../../proto4-5/llm_cpu_tick.py:72)、[llm_cpu_tick.py:192](../../proto4-5/llm_cpu_tick.py:192)、[llm_cpu_tick.py:231](../../proto4-5/llm_cpu_tick.py:231)。
 
 **3.18 kernel 必須支撑的既有使用事實**
 
@@ -1051,7 +1051,7 @@ worker 不透過 daemon add，也不占用 `K/cpus/n.json` 的一個普通行程
 
 這些是現有程式的依賴；**沒有要求 kernel 知道 agent 的四格、信箱、工具或 messages 格式**。
 
-來源：[proto4-5/README.md:101](/home/guanyu/projs/aos/proto4-5/README.md:101)、[proto4-7/README.md:57](/home/guanyu/projs/aos/proto4-7/README.md:57)、[state_machine.py:94](/home/guanyu/projs/aos/proto4-7/state_machine.py:94)、[state_machine.py:172](/home/guanyu/projs/aos/proto4-7/state_machine.py:172)、[aos_py.py:150](/home/guanyu/projs/aos/proto4-6/aos_py.py:150)。
+來源：[proto4-5/README.md:101](../../proto4-5/README.md:101)、[proto4-7/README.md:57](../../proto4-7/README.md:57)、[state_machine.py:94](../../proto4-7/state_machine.py:94)、[state_machine.py:172](../../proto4-7/state_machine.py:172)、[aos_py.py:150](../../proto4-6/aos_py.py:150)。
 
 **3.19 錯誤代號**
 
@@ -1080,7 +1080,7 @@ kernel 核心自己的 CLI／syscall **沒有統一具名 error code**，多為�
 | `ReferencePointerInvalid` | pointer 語法／位置不合法 |
 | `ReferenceCycle` | 同一解析鏈重遇相同文件及位置 |
 
-來源：[aos_inst.py:76](/home/guanyu/projs/aos/proto4-3/aos_inst.py:76)、[aos_inst_resolve.py:27](/home/guanyu/projs/aos/proto4-3/aos_inst_resolve.py:27)。
+來源：[aos_inst.py:76](../../proto4-3/aos_inst.py:76)、[aos_inst_resolve.py:27](../../proto4-3/aos_inst_resolve.py:27)。
 
 LLM result 的 `error.kind`：
 
@@ -1105,12 +1105,12 @@ HTTP 429／5xx、一般連線與 HTTP timeout 可標 retryable=true；這個欄�
 
 | 測試 | 已有斷言 |
 |---|---|
-| [test_kernel_init.py:19](/home/guanyu/projs/aos/proto4-3/test/test_kernel_init.py:19) | init 檔案／預設、拒絕重灌、add 正規化／配名、queue 退件、syscall 回音 |
-| [test_kernel_exit.py:18](/home/guanyu/projs/aos/proto4-3/test/test_kernel_exit.py:18) | waiting 保留／讓位、bad_after、runs 倒退清計數、特殊碼清連敗 |
-| [test_kernel_daemon.py:14](/home/guanyu/projs/aos/proto4-3/test/test_kernel_daemon.py:14) | boot flags、done、125 退件、FIFO 輪替、CPU 補回、換檔不留空窗 |
-| [test_kernel_fix_r6.py:50](/home/guanyu/projs/aos/proto4-3/test/test_kernel_fix_r6.py:50) | 清 done/bad、同名重排、daemon 狀態文案、欄寬 |
-| [test_module.py:51](/home/guanyu/projs/aos/proto4-3/test/test_module.py:51) | module 路徑、tick/status/cli/syscall、缺 module 不打死 tick |
-| [proto4-5/test/test_module.py:198](/home/guanyu/projs/aos/proto4-5/test/test_module.py:198) | LLM 等回單撤單、結果超時、同名同指紋、既有 result 等待 |
+| [test_kernel_init.py:19](../../proto4-3/test/test_kernel_init.py:19) | init 檔案／預設、拒絕重灌、add 正規化／配名、queue 退件、syscall 回音 |
+| [test_kernel_exit.py:18](../../proto4-3/test/test_kernel_exit.py:18) | waiting 保留／讓位、bad_after、runs 倒退清計數、特殊碼清連敗 |
+| [test_kernel_daemon.py:14](../../proto4-3/test/test_kernel_daemon.py:14) | boot flags、done、125 退件、FIFO 輪替、CPU 補回、換檔不留空窗 |
+| [test_kernel_fix_r6.py:50](../../proto4-3/test/test_kernel_fix_r6.py:50) | 清 done/bad、同名重排、daemon 狀態文案、欄寬 |
+| [test_module.py:51](../../proto4-3/test/test_module.py:51) | module 路徑、tick/status/cli/syscall、缺 module 不打死 tick |
+| [proto4-5/test/test_module.py:198](../../proto4-5/test/test_module.py:198) | LLM 等回單撤單、結果超時、同名同指紋、既有 result 等待 |
 
 測試沒有把「最新快照推算」變成完整事件歷史，也沒有提供跨 swap 連敗保存、單行程不重疊執行或 crash transaction 的保證。
 
@@ -1122,23 +1122,23 @@ HTTP 429／5xx、一般連線與 HTTP timeout 可標 retryable=true；這個欄�
 
 | 文件說法與位置 | 程式現在做什麼 | 程式位置 |
 |---|---|---|
-| README 說 add 多寫欄位「會被擋」。[README:67](/home/guanyu/projs/aos/proto4-3/README.md:67) | 普通未知頂層 key 已忽略；docs/kernel 已改成忽略 | [aos_inst.py:92](/home/guanyu/projs/aos/proto4-3/aos_inst.py:92)、[docs/kernel.md:93](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:93) |
-| README 說 aos-run 整合 daemon 是之後的事。[README:112](/home/guanyu/projs/aos/proto4-3/README.md:112) | daemon 已直接啟動 aos-run 並讀 status pipe | [aos_daemon.py:66](/home/guanyu/projs/aos/proto4-3/aos_daemon.py:66) |
-| README 說 exit 父目錄不會 mkdir。[README:117](/home/guanyu/projs/aos/proto4-3/README.md:117) | exit 支援 `$opt:"mkdir"`；只有未開選項才不建 | [aos_exec.py:121](/home/guanyu/projs/aos/proto4-3/aos_exec.py:121) |
-| README 範例 add `my-proc.json` 沒指定名，下一行 rm `my-proc`。[README:54](/home/guanyu/projs/aos/proto4-3/README.md:54) | 自動名是數字，首次通常1，不是來源 stem | [aos_kernel_add.py:106](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:106) |
-| README 測試數寫243。[README:31](/home/guanyu/projs/aos/proto4-3/README.md:31) | 本輪靜態數 `test_*.py` 有322個 `test_*` 函式定義；不是本輪通過數 | `proto4-3/test/` AST 靜態統計 |
-| daemon 文件說主迴圈不等人。[daemon.md:62](/home/guanyu/projs/aos/proto4-3/docs/daemon.md:62) | reap 對每筆兩 thread 各 join 最多1秒；檔案操作也是同步 | [aos_daemon.py:195](/home/guanyu/projs/aos/proto4-3/aos_daemon.py:195)、[aos_daemon_entry.py:172](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:172) |
-| state「每0.5秒」，ls 最多看到0.5秒前。[daemon.md:133](/home/guanyu/projs/aos/proto4-3/docs/daemon.md:133)、[daemon.md:170](/home/guanyu/projs/aos/proto4-3/docs/daemon.md:170) | 0.5是每輪後的存檔門檻；輪間另睡0.2，工作時間也會延遲；沒有0.5秒最大陳舊保證 | [aos_daemon_lifecycle.py:29](/home/guanyu/projs/aos/proto4-3/aos_daemon_lifecycle.py:29) |
-| request 處理後「搬到 done」。[daemon.md:103](/home/guanyu/projs/aos/proto4-3/docs/daemon.md:103) | 先 remove 原單，再另寫回應；存在失單窗口 | [aos_daemon_req.py:75](/home/guanyu/projs/aos/proto4-3/aos_daemon_req.py:75) |
-| ctl 等 rm/restart/pause 到位「才印結果」。[daemon.md:174](/home/guanyu/projs/aos/proto4-3/docs/daemon.md:174) | 先印原始 ok/result，再等到位，之後另印完成文字 | [aos_daemon_ctl.py:133](/home/guanyu/projs/aos/proto4-3/aos_daemon_ctl.py:133) |
-| daemon 收工／五秒強殺的文字容易涵蓋整個工作樹。[daemon.md:57](/home/guanyu/projs/aos/proto4-3/docs/daemon.md:57)、[daemon.md:121](/home/guanyu/projs/aos/proto4-3/docs/daemon.md:121) | KILL 的是 aos-run group；inst 在另一 session/group，不能據此保證整棵子孫清掉 | [aos_daemon_entry.py:166](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:166)、[aos_exec.py:190](/home/guanyu/projs/aos/proto4-3/aos_exec.py:190) |
-| run 文件把 time-limit 稱硬時限。[run.md:81](/home/guanyu/projs/aos/proto4-3/docs/run.md:81) | 透過縮短 subprocess timeout，未涵蓋所有同步前置處理時間，且有TERM grace | [aos_run.py:126](/home/guanyu/projs/aos/proto4-3/aos_run.py:126)、[aos_exec.py:201](/home/guanyu/projs/aos/proto4-3/aos_exec.py:201) |
-| kernel tick「一律0」。[kernel.md:57](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:57) | 有參數2、非家1；未捕捉例外也可異常退出 | [aos_kernel_tick.py:140](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:140) |
-| queue 的 cwd「一定要寫死」，理由是搬到 CPU 不可改中心。[kernel.md:111](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:111) | 只驗 key 存在且 raw 是字串，接受相對 cwd；搬移後 base 可由 procs 變 cpus | [aos_kernel_tick.py:115](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:115) |
-| 完成後換 idle，再看 quantum。[kernel.md:115](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:115) | `_finish()` 後立即 return，當輪不再排該 CPU | [aos_kernel_schedule.py:42](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:42) |
-| 「v1 的行程不會自己結束」。[kernel.md:127](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:127) | 現在已有 done_exit 與 bad 退件 | [aos_kernel_schedule.py:42](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:42) |
-| module CLI 只有第一個參數會當 K。[kernel.md:84](/home/guanyu/projs/aos/proto4-3/docs/kernel.md:84) | 搜尋前兩個參數，所以可 `llm ls K`、`llm rm K NAME` | [aos_kernel.py:175](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:175) |
-| config 的 ncpu 至少1等條件列為欄位限制。[files.md:43](/home/guanyu/projs/aos/proto4-3/docs/files.md:43) | 這些限制只在 init CLI；直接讀 config 不重驗範圍，bool也接受 | [aos_kernel.py:93](/home/guanyu/projs/aos/proto4-3/aos_kernel.py:93) |
+| README 說 add 多寫欄位「會被擋」。[README:67](../../proto4-3/README.md:67) | 普通未知頂層 key 已忽略；docs/kernel 已改成忽略 | [aos_inst.py:92](../../proto4-3/aos_inst.py:92)、[docs/kernel.md:93](../../proto4-3/docs/kernel.md:93) |
+| README 說 aos-run 整合 daemon 是之後的事。[README:112](../../proto4-3/README.md:112) | daemon 已直接啟動 aos-run 並讀 status pipe | [aos_daemon.py:66](../../proto4-3/aos_daemon.py:66) |
+| README 說 exit 父目錄不會 mkdir。[README:117](../../proto4-3/README.md:117) | exit 支援 `$opt:"mkdir"`；只有未開選項才不建 | [aos_exec.py:121](../../proto4-3/aos_exec.py:121) |
+| README 範例 add `my-proc.json` 沒指定名，下一行 rm `my-proc`。[README:54](../../proto4-3/README.md:54) | 自動名是數字，首次通常1，不是來源 stem | [aos_kernel_add.py:106](../../proto4-3/aos_kernel_add.py:106) |
+| README 測試數寫243。[README:31](../../proto4-3/README.md:31) | 本輪靜態數 `test_*.py` 有322個 `test_*` 函式定義；不是本輪通過數 | `proto4-3/test/` AST 靜態統計 |
+| daemon 文件說主迴圈不等人。[daemon.md:62](../../proto4-3/docs/daemon.md:62) | reap 對每筆兩 thread 各 join 最多1秒；檔案操作也是同步 | [aos_daemon.py:195](../../proto4-3/aos_daemon.py:195)、[aos_daemon_entry.py:172](../../proto4-3/aos_daemon_entry.py:172) |
+| state「每0.5秒」，ls 最多看到0.5秒前。[daemon.md:133](../../proto4-3/docs/daemon.md:133)、[daemon.md:170](../../proto4-3/docs/daemon.md:170) | 0.5是每輪後的存檔門檻；輪間另睡0.2，工作時間也會延遲；沒有0.5秒最大陳舊保證 | [aos_daemon_lifecycle.py:29](../../proto4-3/aos_daemon_lifecycle.py:29) |
+| request 處理後「搬到 done」。[daemon.md:103](../../proto4-3/docs/daemon.md:103) | 先 remove 原單，再另寫回應；存在失單窗口 | [aos_daemon_req.py:75](../../proto4-3/aos_daemon_req.py:75) |
+| ctl 等 rm/restart/pause 到位「才印結果」。[daemon.md:174](../../proto4-3/docs/daemon.md:174) | 先印原始 ok/result，再等到位，之後另印完成文字 | [aos_daemon_ctl.py:133](../../proto4-3/aos_daemon_ctl.py:133) |
+| daemon 收工／五秒強殺的文字容易涵蓋整個工作樹。[daemon.md:57](../../proto4-3/docs/daemon.md:57)、[daemon.md:121](../../proto4-3/docs/daemon.md:121) | KILL 的是 aos-run group；inst 在另一 session/group，不能據此保證整棵子孫清掉 | [aos_daemon_entry.py:166](../../proto4-3/aos_daemon_entry.py:166)、[aos_exec.py:190](../../proto4-3/aos_exec.py:190) |
+| run 文件把 time-limit 稱硬時限。[run.md:81](../../proto4-3/docs/run.md:81) | 透過縮短 subprocess timeout，未涵蓋所有同步前置處理時間，且有TERM grace | [aos_run.py:126](../../proto4-3/aos_run.py:126)、[aos_exec.py:201](../../proto4-3/aos_exec.py:201) |
+| kernel tick「一律0」。[kernel.md:57](../../proto4-3/docs/kernel.md:57) | 有參數2、非家1；未捕捉例外也可異常退出 | [aos_kernel_tick.py:140](../../proto4-3/aos_kernel_tick.py:140) |
+| queue 的 cwd「一定要寫死」，理由是搬到 CPU 不可改中心。[kernel.md:111](../../proto4-3/docs/kernel.md:111) | 只驗 key 存在且 raw 是字串，接受相對 cwd；搬移後 base 可由 procs 變 cpus | [aos_kernel_tick.py:115](../../proto4-3/aos_kernel_tick.py:115) |
+| 完成後換 idle，再看 quantum。[kernel.md:115](../../proto4-3/docs/kernel.md:115) | `_finish()` 後立即 return，當輪不再排該 CPU | [aos_kernel_schedule.py:42](../../proto4-3/aos_kernel_schedule.py:42) |
+| 「v1 的行程不會自己結束」。[kernel.md:127](../../proto4-3/docs/kernel.md:127) | 現在已有 done_exit 與 bad 退件 | [aos_kernel_schedule.py:42](../../proto4-3/aos_kernel_schedule.py:42) |
+| module CLI 只有第一個參數會當 K。[kernel.md:84](../../proto4-3/docs/kernel.md:84) | 搜尋前兩個參數，所以可 `llm ls K`、`llm rm K NAME` | [aos_kernel.py:175](../../proto4-3/aos_kernel.py:175) |
+| config 的 ncpu 至少1等條件列為欄位限制。[files.md:43](../../proto4-3/docs/files.md:43) | 這些限制只在 init CLI；直接讀 config 不重驗範圍，bool也接受 | [aos_kernel.py:93](../../proto4-3/aos_kernel.py:93) |
 
 「七個動作」是七個 table 方法；加上 `stop` 後，**外部請求 op 有八個**。若寫請求協議，不能只列七種。
 
@@ -1146,38 +1146,38 @@ HTTP 429／5xx、一般連線與 HTTP timeout 可標 retryable=true；這個欄�
 
 | 文件概述 | 必須一併記錄的程式事實 | 位置 |
 |---|---|---|
-| 連續非零 N 次退件 | 不同非零碼仍累加；差額 runs 全算成最新碼；swap 會丟失一般連敗計數 | [schedule.py:75](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:75)、[schedule.py:133](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:133) |
-| 連續125退件 | 指 kind=aos 的連續 tick 觀察；預設下 child 125 不退件；同快照可計兩次 | [schedule.py:51](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:51) |
-| CPU 在 daemon 表上即可使用 | 未檢 entry.state、alive、ready；stopping/paused/陳舊快照也可被排程 | [tick.py:81](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:81) |
-| CPU 缺少會補 add | add 成功當輪仍不排，下一 tick 才重新觀察 | [tick.py:85](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:85) |
-| boot 重複無害 | 只對快照 state=running/paused 直接成功；pause_pending/stopping/restarting 不在此分支 | [boot.py:31](/home/guanyu/projs/aos/proto4-3/aos_kernel_boot.py:31) |
-| 原子換 CPU 檔 | 只保證單檔替換，不保證 invocation 歸屬、行程不重疊或跨檔 crash recovery | [schedule.py:111](/home/guanyu/projs/aos/proto4-3/aos_kernel_schedule.py:111) |
-| rm 等 kernel 回覆 | CLI 超時不撤單，之後仍可能刪除 | [syscall.py:53](/home/guanyu/projs/aos/proto4-3/aos_kernel_syscall.py:53) |
-| module 錯誤隔離 | 同 process 捕捉例外，沒有副作用回滾或資源隔離 | [module.py:16](/home/guanyu/projs/aos/proto4-3/aos_kernel_module.py:16) |
+| 連續非零 N 次退件 | 不同非零碼仍累加；差額 runs 全算成最新碼；swap 會丟失一般連敗計數 | [schedule.py:75](../../proto4-3/aos_kernel_schedule.py:75)、[schedule.py:133](../../proto4-3/aos_kernel_schedule.py:133) |
+| 連續125退件 | 指 kind=aos 的連續 tick 觀察；預設下 child 125 不退件；同快照可計兩次 | [schedule.py:51](../../proto4-3/aos_kernel_schedule.py:51) |
+| CPU 在 daemon 表上即可使用 | 未檢 entry.state、alive、ready；stopping/paused/陳舊快照也可被排程 | [tick.py:81](../../proto4-3/aos_kernel_tick.py:81) |
+| CPU 缺少會補 add | add 成功當輪仍不排，下一 tick 才重新觀察 | [tick.py:85](../../proto4-3/aos_kernel_tick.py:85) |
+| boot 重複無害 | 只對快照 state=running/paused 直接成功；pause_pending/stopping/restarting 不在此分支 | [boot.py:31](../../proto4-3/aos_kernel_boot.py:31) |
+| 原子換 CPU 檔 | 只保證單檔替換，不保證 invocation 歸屬、行程不重疊或跨檔 crash recovery | [schedule.py:111](../../proto4-3/aos_kernel_schedule.py:111) |
+| rm 等 kernel 回覆 | CLI 超時不撤單，之後仍可能刪除 | [syscall.py:53](../../proto4-3/aos_kernel_syscall.py:53) |
+| module 錯誤隔離 | 同 process 捕捉例外，沒有副作用回滾或資源隔離 | [module.py:16](../../proto4-3/aos_kernel_module.py:16) |
 
 proto4-5 相鄰文件還有兩處與 kernel 接口有關的落差：
 
 | 文件 | 實作 |
 |---|---|
-| [README:118](/home/guanyu/projs/aos/proto4-5/README.md:118) 說 kernel 沒活著就撤單、不排隊 | CLI 沒有直接活性檢查；先投單並等回音，超時才依原檔是否存在嘗試撤單。[module.py:148](/home/guanyu/projs/aos/proto4-5/llm_cpu_module.py:148) |
-| [README:116](/home/guanyu/projs/aos/proto4-5/README.md:116)／CLI 文字說「下一回合處理」 | syscall handle 與 module.tick 在同一 kernel tick 順序執行，新接受請求可在**同格**被 dispatch。[kernel_tick.py:50](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:50) |
-| [README:181](/home/guanyu/projs/aos/proto4-5/README.md:181) 說沒有取消 | 已有 `llm rm` 直接終止 running worker 並刪四處資料；但沒有通用取消 syscall／交易式取消。[manage.py:107](/home/guanyu/projs/aos/proto4-5/llm_cpu_manage.py:107) |
+| [README:118](../../proto4-5/README.md:118) 說 kernel 沒活著就撤單、不排隊 | CLI 沒有直接活性檢查；先投單並等回音，超時才依原檔是否存在嘗試撤單。[module.py:148](../../proto4-5/llm_cpu_module.py:148) |
+| [README:116](../../proto4-5/README.md:116)／CLI 文字說「下一回合處理」 | syscall handle 與 module.tick 在同一 kernel tick 順序執行，新接受請求可在**同格**被 dispatch。[kernel_tick.py:50](../../proto4-3/aos_kernel_tick.py:50) |
+| [README:181](../../proto4-5/README.md:181) 說沒有取消 | 已有 `llm rm` 直接終止 running worker 並刪四處資料；但沒有通用取消 syscall／交易式取消。[manage.py:107](../../proto4-5/llm_cpu_manage.py:107) |
 
 **4.3 proto4-3 與 proto5 `exec.md`／`inst-posix.md` 的實質差異**
 
-先保留文件自身的成熟度：proto5 的 [README:13](/home/guanyu/projs/aos/proto5/README.md:13) 將 inst-posix 標為定稿；[exec.md:7](/home/guanyu/projs/aos/proto5/spec/exec.md:7) 明寫命令列尚未逐條拍板。因此下表區分「定稿格式差異」與「目前 exec 文件差異」。
+先保留文件自身的成熟度：proto5 的 [README:13](../README.md:13) 將 inst-posix 標為定稿；[exec.md:7](../spec/exec.md:7) 明寫命令列尚未逐條拍板。因此下表區分「定稿格式差異」與「目前 exec 文件差異」。
 
 | 項目 | proto5 文件 | proto4-3 現碼 | 影響／來源 |
 |---|---|---|---|
-| 省略 aos-exec 目標 | `xxx` 省略＝`.`。[exec.md:22](/home/guanyu/projs/aos/proto5/spec/exec.md:22) | `aos-exec` 的 xxx 必填；缺少退出2 | [aos_exec.py:270](/home/guanyu/projs/aos/proto4-3/aos_exec.py:270)。這是 exec CLI 文件差異；不代表 aos-run 也應省略目標 |
-| `_metainfo:null` | 有寫時必須是物件。[inst-posix.md:36](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:36) | `obj.get()` 取得 None，再直接套 posix v1 預設 | [aos_inst.py:100](/home/guanyu/projs/aos/proto4-3/aos_inst.py:100)、[aos_inst.py:142](/home/guanyu/projs/aos/proto4-3/aos_inst.py:142)。本輪記憶體檢查確認接受 |
-| `$ref` 字串內 `#位置` | inst 文件明示 `#` 前空＝本文件，完整語法交 directives。[inst-posix.md:179](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:179) | 整個 `$ref` 字串都當檔名，`#` 不切開 | [aos_inst_resolve.py:231](/home/guanyu/projs/aos/proto4-3/aos_inst_resolve.py:231)。`x.json#/a` 會找檔名含 `#` 的路徑 |
-| 外部 `$ref` 的相對位置 | proto5 以被引檔根作目前位置，允許 `./a`。[directives.md:128](/home/guanyu/projs/aos/proto5/spec/directives.md:128) | 只有 `$ref:""` 才准相對 `$at`；指外部檔的 `./a` 拒絕 | [aos_inst_resolve.py:248](/home/guanyu/projs/aos/proto4-3/aos_inst_resolve.py:248)、[aos_inst_resolve.py:281](/home/guanyu/projs/aos/proto4-3/aos_inst_resolve.py:281) |
-| `$at:null` | 有寫必須字串，否則 DirectiveValueTypeMismatch。[directives.md:124](/home/guanyu/projs/aos/proto5/spec/directives.md:124) | `.get("$at")` 得 None，當省略，取整份 | [aos_inst_resolve.py:103](/home/guanyu/projs/aos/proto4-3/aos_inst_resolve.py:103)、[aos_inst_resolve.py:274](/home/guanyu/projs/aos/proto4-3/aos_inst_resolve.py:274) |
-| `$fmt` 內位置 | 原始 JSON 實體路徑，含 `$fmt` 這層。[inst-posix.md:181](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:181) | 變數用 `ctx.down(name)`，模板用 `ctx.down("$val")`，少 `$fmt` 層 | [aos_inst_resolve.py:202](/home/guanyu/projs/aos/proto4-3/aos_inst_resolve.py:202)。本輪確認 fmt 兄弟變數相對 ref 可因此 PointerInvalid |
-| cwd mkdir 時序 | 先建 cwd，再以它為中心解其他欄位。[inst-posix.md:231](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:231) | `aos_inst.load()` 先解全部欄位，回到 `_run_inst()` 才 makedirs | [aos_inst.py:102](/home/guanyu/projs/aos/proto4-3/aos_inst.py:102)、[aos_exec.py:116](/home/guanyu/projs/aos/proto4-3/aos_exec.py:116)。讀／驗失敗時 cwd 尚未建立 |
-| `kind=aos` 一律等於沒跑 | proto5 exec 說 aos 是根本沒跑，125不寫exit。[exec.md:59](/home/guanyu/projs/aos/proto5/spec/exec.md:59)、[exec.md:63](/home/guanyu/projs/aos/proto5/spec/exec.md:63) | child 已完成後，exit 寫入或 fsync 失敗仍轉 `(1,"aos")`→125 | [aos_exec.py:226](/home/guanyu/projs/aos/proto4-3/aos_exec.py:226)。125不能絕對推論沒有子程式副作用；exit也可能已部分寫入 |
-| timeout 收整個 group | 規範要求先TERM、2秒後必要時KILL整群。[inst-posix.md:246](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:246) | KILL 時用 `os.getpgid(p.pid)`；若直接 child 已被 wait 回收，可能取不到原 pgid | [aos_exec.py:203](/home/guanyu/projs/aos/proto4-3/aos_exec.py:203)、[aos_exec.py:218](/home/guanyu/projs/aos/proto4-3/aos_exec.py:218)。不能把最後補 KILL 的程式碼當作對仍活孫程序的完整保證；本輪為靜態判讀 |
+| 省略 aos-exec 目標 | `xxx` 省略＝`.`。[exec.md:22](../spec/exec.md:22) | `aos-exec` 的 xxx 必填；缺少退出2 | [aos_exec.py:270](../../proto4-3/aos_exec.py:270)。這是 exec CLI 文件差異；不代表 aos-run 也應省略目標 |
+| `_metainfo:null` | 有寫時必須是物件。[inst-posix.md:36](../spec/inst-posix.md:36) | `obj.get()` 取得 None，再直接套 posix v1 預設 | [aos_inst.py:100](../../proto4-3/aos_inst.py:100)、[aos_inst.py:142](../../proto4-3/aos_inst.py:142)。本輪記憶體檢查確認接受 |
+| `$ref` 字串內 `#位置` | inst 文件明示 `#` 前空＝本文件，完整語法交 directives。[inst-posix.md:179](../spec/inst-posix.md:179) | 整個 `$ref` 字串都當檔名，`#` 不切開 | [aos_inst_resolve.py:231](../../proto4-3/aos_inst_resolve.py:231)。`x.json#/a` 會找檔名含 `#` 的路徑 |
+| 外部 `$ref` 的相對位置 | proto5 以被引檔根作目前位置，允許 `./a`。[directives.md:128](../spec/directives.md:128) | 只有 `$ref:""` 才准相對 `$at`；指外部檔的 `./a` 拒絕 | [aos_inst_resolve.py:248](../../proto4-3/aos_inst_resolve.py:248)、[aos_inst_resolve.py:281](../../proto4-3/aos_inst_resolve.py:281) |
+| `$at:null` | 有寫必須字串，否則 DirectiveValueTypeMismatch。[directives.md:124](../spec/directives.md:124) | `.get("$at")` 得 None，當省略，取整份 | [aos_inst_resolve.py:103](../../proto4-3/aos_inst_resolve.py:103)、[aos_inst_resolve.py:274](../../proto4-3/aos_inst_resolve.py:274) |
+| `$fmt` 內位置 | 原始 JSON 實體路徑，含 `$fmt` 這層。[inst-posix.md:181](../spec/inst-posix.md:181) | 變數用 `ctx.down(name)`，模板用 `ctx.down("$val")`，少 `$fmt` 層 | [aos_inst_resolve.py:202](../../proto4-3/aos_inst_resolve.py:202)。本輪確認 fmt 兄弟變數相對 ref 可因此 PointerInvalid |
+| cwd mkdir 時序 | 先建 cwd，再以它為中心解其他欄位。[inst-posix.md:231](../spec/inst-posix.md:231) | `aos_inst.load()` 先解全部欄位，回到 `_run_inst()` 才 makedirs | [aos_inst.py:102](../../proto4-3/aos_inst.py:102)、[aos_exec.py:116](../../proto4-3/aos_exec.py:116)。讀／驗失敗時 cwd 尚未建立 |
+| `kind=aos` 一律等於沒跑 | proto5 exec 說 aos 是根本沒跑，125不寫exit。[exec.md:59](../spec/exec.md:59)、[exec.md:63](../spec/exec.md:63) | child 已完成後，exit 寫入或 fsync 失敗仍轉 `(1,"aos")`→125 | [aos_exec.py:226](../../proto4-3/aos_exec.py:226)。125不能絕對推論沒有子程式副作用；exit也可能已部分寫入 |
+| timeout 收整個 group | 規範要求先TERM、2秒後必要時KILL整群。[inst-posix.md:246](../spec/inst-posix.md:246) | KILL 時用 `os.getpgid(p.pid)`；若直接 child 已被 wait 回收，可能取不到原 pgid | [aos_exec.py:203](../../proto4-3/aos_exec.py:203)、[aos_exec.py:218](../../proto4-3/aos_exec.py:218)。不能把最後補 KILL 的程式碼當作對仍活孫程序的完整保證；本輪為靜態判讀 |
 
 其中 `$ref #位置` 與 `$fmt` 實體位置，正是 proto4-3 README 所說未跟上的 K／L，**不是 README 錯報已凍結的範圍**。
 
@@ -1187,22 +1187,22 @@ proto4-5 相鄰文件還有兩處與 kernel 接口有關的落差：
 
 | proto5 合法格式／執行語意 | proto4-3 kernel 限制 | 位置 |
 |---|---|---|
-| 頂層整份可為 `$ref` 等指示詞 | add raw 檢查要直接有可用 argv；queue raw 也要 argv/cwd，尚未解就拒絕 | [aos_kernel_add.py:83](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:83)、[aos_kernel_tick.py:113](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:113) |
-| cwd 可為指示詞 | add／queue 要 raw 字串 | [aos_kernel_add.py:87](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:87)、[aos_kernel_tick.py:119](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:119) |
-| cwd 可為 `$opt:mkdir`，允許目錄尚不存在 | add 先因非字串拒絕；字串不存在也拒絕；手放 queue 同樣不接受 cwd 選項物件 | [aos_kernel_add.py:88](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:88) |
-| argv 整包可由 `$ref` 得到 | add 要 raw list | [aos_kernel_add.py:96](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:96) |
+| 頂層整份可為 `$ref` 等指示詞 | add raw 檢查要直接有可用 argv；queue raw 也要 argv/cwd，尚未解就拒絕 | [aos_kernel_add.py:83](../../proto4-3/aos_kernel_add.py:83)、[aos_kernel_tick.py:113](../../proto4-3/aos_kernel_tick.py:113) |
+| cwd 可為指示詞 | add／queue 要 raw 字串 | [aos_kernel_add.py:87](../../proto4-3/aos_kernel_add.py:87)、[aos_kernel_tick.py:119](../../proto4-3/aos_kernel_tick.py:119) |
+| cwd 可為 `$opt:mkdir`，允許目錄尚不存在 | add 先因非字串拒絕；字串不存在也拒絕；手放 queue 同樣不接受 cwd 選項物件 | [aos_kernel_add.py:88](../../proto4-3/aos_kernel_add.py:88) |
+| argv 整包可由 `$ref` 得到 | add 要 raw list | [aos_kernel_add.py:96](../../proto4-3/aos_kernel_add.py:96) |
 | argv[0] 可由 `$env/$fmt/$ref` 得到 | add 要 raw argv[0] 是字串 | 同上 |
-| 缺 cwd 使用 inst base | add 會補絕對 cwd；手放 procs 缺 cwd 直接退件 | [aos_kernel_add.py:86](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:86)、[aos_kernel_tick.py:117](/home/guanyu/projs/aos/proto4-3/aos_kernel_tick.py:117) |
-| `argv[0]` 指不存在路徑，在執行時成 child127 | add 對含 `/` 的不存在 argv[0] 事先拒絕，根本不進 queue | [aos_kernel_add.py:103](/home/guanyu/projs/aos/proto4-3/aos_kernel_add.py:103) |
-| 普通檔案是 aos-exec 合法目標 | daemon add 只收 `.json`；kernel add 讀的是 JSON 內容 | [aos_daemon_entry.py:50](/home/guanyu/projs/aos/proto4-3/aos_daemon_entry.py:50) |
+| 缺 cwd 使用 inst base | add 會補絕對 cwd；手放 procs 缺 cwd 直接退件 | [aos_kernel_add.py:86](../../proto4-3/aos_kernel_add.py:86)、[aos_kernel_tick.py:117](../../proto4-3/aos_kernel_tick.py:117) |
+| `argv[0]` 指不存在路徑，在執行時成 child127 | add 對含 `/` 的不存在 argv[0] 事先拒絕，根本不進 queue | [aos_kernel_add.py:103](../../proto4-3/aos_kernel_add.py:103) |
+| 普通檔案是 aos-exec 合法目標 | daemon add 只收 `.json`；kernel add 讀的是 JSON 內容 | [aos_daemon_entry.py:50](../../proto4-3/aos_daemon_entry.py:50) |
 
-proto5 的依據為 [inst-posix.md:79](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:79)、[inst-posix.md:176](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:176)、[inst-posix.md:244](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:244)。
+proto5 的依據為 [inst-posix.md:79](../spec/inst-posix.md:79)、[inst-posix.md:176](../spec/inst-posix.md:176)、[inst-posix.md:244](../spec/inst-posix.md:244)。
 
 **4.5 不構成衝突的邊界**
 
 | 項目 | 事實 |
 |---|---|
-| 100＝完成、101＝等待 | proto5 明確把它們留給 kernel／程式約定，不屬 inst 格式。[inst-posix.md:253](/home/guanyu/projs/aos/proto5/spec/inst-posix.md:253) |
+| 100＝完成、101＝等待 | proto5 明確把它們留給 kernel／程式約定，不屬 inst 格式。[inst-posix.md:253](../spec/inst-posix.md:253) |
 | 126／127 算 child，kernel 可累計一般失敗 | 與 proto5 的執行器語意相容 |
 | daemon／kernel 的 config、state、request JSON 不解指示詞 | 它們目前只是直接 `json.load()`；不能把 inst 的指示詞允許位置直接外推成所有控制 JSON 的既有能力 |
 | daemon `ok/result` 與 kernel `ok/msg` | 是兩套現在不同的檔案協議，不是同一 schema 的別名 |

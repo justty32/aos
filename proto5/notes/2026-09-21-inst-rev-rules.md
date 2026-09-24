@@ -1,8 +1,8 @@
 # inst.json posix v1 ＋ 指示詞——使用者 2026-09-21 逐輪拍板的修訂（任務書副本；正式規範在 ../spec/）
 
-目前規範：/home/guanyu/projs/aos/proto5/spec/inst-posix.md
-目前程式：/home/guanyu/projs/aos/proto4-3/aos_inst.py、aos_inst_resolve.py、aos_exec.py
-使用手冊：/home/guanyu/projs/aos/proto4-3/docs/exec.md
+目前規範：../spec/inst-posix.md
+目前程式：../../proto4-3/aos_inst.py、aos_inst_resolve.py、aos_exec.py
+使用手冊：../../proto4-3/docs/exec.md
 
 仍然是 posix `_version` 1（v1 還沒對外凍結，直接改 v1）。
 
@@ -72,7 +72,7 @@
 
 舊的 `stderr_merge` 欄位併進 `stderr.merge`。凡是 import `aos_inst.load()` 的地方
 （aos_exec.py、測試、proto4-4／4-5／4-6／4-7 如果有用到）都要跟著改——先 grep：
-`grep -rn "aos_inst\|stderr_merge\|envs_clear\|\"\$envs\"" --include=*.py --include=*.json --include=*.md --include=*.sh /home/guanyu/projs/aos --exclude-dir=build --exclude-dir=.git`
+`grep -rn "aos_inst\|stderr_merge\|envs_clear\|\"\$envs\"" --include=*.py --include=*.json --include=*.md --include=*.sh ../.. --exclude-dir=build --exclude-dir=.git`
 
 ## E. 舊寫法要遷移
 

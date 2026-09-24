@@ -10,7 +10,7 @@
 
 ### W-1｜kernel 的「一句話」先講實作，沒有先講用途
 
-**在哪：** [kernel 開頭](/home/guanyu/projs/aos/proto5/spec/kernel.md:8)。
+**在哪：** [kernel 開頭](../../spec/kernel.md:8)。
 
 **原句／問題：**「kernel 不是長命行程……像尾遞迴一樣接下去。」讀者先學接鏈，卻還不知道 kernel 替自己做什麼。「尾遞迴」又增加一個不必要的比喻。
 
@@ -22,7 +22,7 @@
 
 ### W-2｜名詞表沒有照初讀順序，kernel 表尤其像把正文先講一遍
 
-**在哪：** 三份 §0：[cpu](/home/guanyu/projs/aos/proto5/spec/cpu.md:15)、[kernel](/home/guanyu/projs/aos/proto5/spec/kernel.md:17)、[daemon](/home/guanyu/projs/aos/proto5/spec/daemon.md:14)。
+**在哪：** 三份 §0：[cpu](../../spec/cpu.md:15)、[kernel](../../spec/kernel.md:17)、[daemon](../../spec/daemon.md:14)。
 
 | 文件 | 缺漏／未用／順序 |
 |---|---|
@@ -41,7 +41,7 @@ kernel §0 說「偷看」見 cpu §0，實際定義在 cpu §1，是一處導�
 
 ### W-3｜角色稱呼需要對照，不宜全部硬改成同一個詞
 
-**在哪：** [cpu 交件者／收件者](/home/guanyu/projs/aos/proto5/spec/cpu.md:49)、[kernel「欠客戶的回音」](/home/guanyu/projs/aos/proto5/spec/kernel.md:34)、[daemon 孩子](/home/guanyu/projs/aos/proto5/spec/daemon.md:20)。
+**在哪：** [cpu 交件者／收件者](../../spec/cpu.md:49)、[kernel「欠客戶的回音」](../../spec/kernel.md:34)、[daemon 孩子](../../spec/daemon.md:20)。
 
 **問題：**「交件者／收件者／客戶」常指同一支程式；「孩子／cpu／主人」則是同一支程式的不同關係，不能當同義詞全面替換。
 
@@ -55,7 +55,7 @@ kernel §0 說「偷看」見 cpu §0，實際定義在 cpu §1，是一處導�
 
 ### W-4｜「出貨」包含刪檔，定義卻只說放檔
 
-**在哪：** [kernel 出貨箱](/home/guanyu/projs/aos/proto5/spec/kernel.md:34)。
+**在哪：** [kernel 出貨箱](../../spec/kernel.md:34)。
 
 **原句／問題：**「先記進帳本、再放檔、放完清掉。」但 `deletes` 做的是刪原單，第一次讀到這裡得重新理解「出貨」。
 
@@ -69,13 +69,13 @@ kernel §0 說「偷看」見 cpu §0，實際定義在 cpu §1，是一處導�
 
 | 在哪／原句 | 建議直接改成 |
 |---|---|
-| [cpu §2](/home/guanyu/projs/aos/proto5/spec/cpu.md:78)：「整份解指示詞，中心是 C」 | 「讀取 `info.json` 時先展開指示詞；其中相對檔案引用以 cpu 家 C 為起點，再驗證欄位型別。」 |
-| [kernel 帳本](/home/guanyu/projs/aos/proto5/spec/kernel.md:141)：「tick 只認帳本這兩格，不看 info」 | 「kernel cpu 名稱與執行入口取自帳本的 `kcpu`、`cli`；其他設定仍每格重讀 `info.json`。」 |
-| [kernel once](/home/guanyu/projs/aos/proto5/spec/kernel.md:243)：「把回音原樣……當成 pending 那則 add 的回音」 | 「複製 cpu 回音的 `result` 或 `error` 內容，外層 `id` 使用原 add 的 id，檔名使用原 add 的檔名。」 |
+| [cpu §2](../../spec/cpu.md:78)：「整份解指示詞，中心是 C」 | 「讀取 `info.json` 時先展開指示詞；其中相對檔案引用以 cpu 家 C 為起點，再驗證欄位型別。」 |
+| [kernel 帳本](../../spec/kernel.md:141)：「tick 只認帳本這兩格，不看 info」 | 「kernel cpu 名稱與執行入口取自帳本的 `kcpu`、`cli`；其他設定仍每格重讀 `info.json`。」 |
+| [kernel once](../../spec/kernel.md:243)：「把回音原樣……當成 pending 那則 add 的回音」 | 「複製 cpu 回音的 `result` 或 `error` 內容，外層 `id` 使用原 add 的 id，檔名使用原 add 的檔名。」 |
 
 ### W-6｜重拉責任的主詞寫反
 
-**在哪：** [kernel 第 7 步](/home/guanyu/projs/aos/proto5/spec/kernel.md:222)。
+**在哪：** [kernel 第 7 步](../../spec/kernel.md:222)。
 
 **原句：**「死了的 daemon 自己會重拉，這裡不用管。」
 
@@ -87,7 +87,7 @@ kernel §0 說「偷看」見 cpu §0，實際定義在 cpu §1，是一處導�
 
 ### X-1｜LLM 環境範例的 `$fmt` 寫法不合法
 
-**在哪：** [kernel info 範例](/home/guanyu/projs/aos/proto5/spec/kernel.md:86)，對照 [directives §3.1](/home/guanyu/projs/aos/proto5/spec/directives.md:59)。
+**在哪：** [kernel info 範例](../../spec/kernel.md:86)，對照 [directives §3.1](../../spec/directives.md:59)。
 
 **問題：** 現文把 `$fmt` 的值寫成字串；被引用的規範明定必須是物件，舊寫法會得到 `DirectiveValueTypeMismatch`。
 
@@ -106,7 +106,7 @@ kernel §0 說「偷看」見 cpu §0，實際定義在 cpu §1，是一處導�
 
 ### X-2｜排程公式混用秒與毫秒，也蓋掉了強停例外
 
-**在哪：** [kernel 欄位定義](/home/guanyu/projs/aos/proto5/spec/kernel.md:146)、[判定表與公式](/home/guanyu/projs/aos/proto5/spec/kernel.md:250)。
+**在哪：** [kernel 欄位定義](../../spec/kernel.md:146)、[判定表與公式](../../spec/kernel.md:250)。
 
 **問題：** `not_before` 是 epoch 秒，公式卻是 `now + interval_ms`；表格說 `stopped:true` 保留 `not_before`，通則又一律更新。
 
@@ -116,7 +116,7 @@ kernel §0 說「偷看」見 cpu §0，實際定義在 cpu §1，是一處導�
 
 ### X-3｜`SpawnFailed` 與底層錯誤搶同一個 `data.code`
 
-**在哪：** [daemon 啟動失敗](/home/guanyu/projs/aos/proto5/spec/daemon.md:127)，對照 [cpu 錯誤格式](/home/guanyu/projs/aos/proto5/spec/cpu.md:121)。
+**在哪：** [daemon 啟動失敗](../../spec/daemon.md:127)，對照 [cpu 錯誤格式](../../spec/cpu.md:121)。
 
 **原句／問題：**「回 `-32000`／`SpawnFailed`，`data.code` 是 aos-exec 的代號。」同一格不能同時是 `SpawnFailed` 和 `ReadFailed`。
 
@@ -130,7 +130,7 @@ cpu 的「aos 自己的錯誤一律 `-32000`」也應加限定，因為下表的
 
 ### X-4｜kernel 對「何時放檔」有兩組過度概括
 
-**在哪：** [開頭](/home/guanyu/projs/aos/proto5/spec/kernel.md:13)、[十步前言](/home/guanyu/projs/aos/proto5/spec/kernel.md:197)、[第 4 步](/home/guanyu/projs/aos/proto5/spec/kernel.md:207)。
+**在哪：** [開頭](../../spec/kernel.md:13)、[十步前言](../../spec/kernel.md:197)、[第 4 步](../../spec/kernel.md:207)。
 
 **問題一：**「除了接鏈，其他檔都是先記進帳本再放出去」漏掉不進帳本的 tick ack。
 
@@ -146,7 +146,7 @@ cpu 的「aos 自己的錯誤一律 `-32000`」也應加限定，因為下表的
 
 ### X-5｜「每則 syscall 都有兩筆出貨」不適用 once、ack、stop
 
-**在哪：** [kernel syscall 統一流程](/home/guanyu/projs/aos/proto5/spec/kernel.md:177)。
+**在哪：** [kernel syscall 統一流程](../../spec/kernel.md:177)。
 
 **原句／問題：** 每則 syscall 都把「回音進 replies、原單名進 deletes」一起記帳；但 once 延後回，notification 不回。
 
@@ -158,7 +158,7 @@ cpu 的「aos 自己的錯誤一律 `-32000`」也應加限定，因為下表的
 
 ### X-6｜「所有 request 都是 aos-exec」與管理方法矛盾
 
-**在哪：** [cpu 已拍板前提](/home/guanyu/projs/aos/proto5/spec/cpu.md:322)。
+**在哪：** [cpu 已拍板前提](../../spec/cpu.md:322)。
 
 **建議改成：**
 
@@ -166,7 +166,7 @@ cpu 的「aos 自己的錯誤一律 `-32000`」也應加限定，因為下表的
 
 ### X-7｜名詞表省略條件，與正文產生不同規則
 
-**在哪：** [kernel `Interrupted`／`stopped`](/home/guanyu/projs/aos/proto5/spec/kernel.md:56)、[daemon restart／spawn](/home/guanyu/projs/aos/proto5/spec/daemon.md:24)。
+**在哪：** [kernel `Interrupted`／`stopped`](../../spec/kernel.md:56)、[daemon restart／spawn](../../spec/daemon.md:24)。
 
 **問題／直接替換句：**
 
@@ -190,7 +190,7 @@ cpu 的「aos 自己的錯誤一律 `-32000`」也應加限定，因為下表的
 
 ### X-8｜接手舊孩子的等待時間，有 5 秒與 10 秒兩種讀法
 
-**在哪：** [daemon 啟動第 3 步](/home/guanyu/projs/aos/proto5/spec/daemon.md:201)，對照 [正常停機階梯](/home/guanyu/projs/aos/proto5/spec/daemon.md:173)。
+**在哪：** [daemon 啟動第 3 步](../../spec/daemon.md:201)，對照 [正常停機階梯](../../spec/daemon.md:173)。
 
 **問題：**「走 §5 階梯，從 TERM 開始」表示之後等 `kill_wait_ms`，預設 5 秒；下一句卻指定等兩段總和，預設 10 秒。
 
@@ -211,12 +211,12 @@ cpu 的「aos 自己的錯誤一律 `-32000`」也應加限定，因為下表的
 出事時：斷鏈查 `ls` 的 kernel cpu `current`、待處理 request 與 `last_seq`，再依規範重新 boot；cpu 一直死查 `D/state.json` 的 `exits`／`last_exit` 及該 cpu 的 log；工作一直退件則有下面 U-4 的資訊缺口。
 
 - **U-1｜缺完整啟停範例，stop 的完成界線尤其重要。**  
-  [kernel CLI](/home/guanyu/projs/aos/proto5/spec/kernel.md:304)只承諾 stop 放單成功，[daemon](/home/guanyu/projs/aos/proto5/spec/daemon.md:182)卻要求先停 kernel。建議補：
+  [kernel CLI](../../spec/kernel.md:304)只承諾 stop 放單成功，[daemon](../../spec/daemon.md:182)卻要求先停 kernel。建議補：
 
   > `aos-kernel stop K` 成功只表示已送出要求；接著用 `ls` 等到 `phase=stopped`，並確認 daemon 孩子表裡這個 kernel 的 cpu 都已消失，再停 daemon。
 
 - **U-2｜LLM 環境有兩個修改位置，沒有一段說明何時用哪個。**  
-  [kernel 初始化規則](/home/guanyu/projs/aos/proto5/spec/kernel.md:75)已定「既有家不重寫」，但操作後果不醒目。建議補：
+  [kernel 初始化規則](../../spec/kernel.md:75)已定「既有家不重寫」，但操作後果不醒目。建議補：
 
   > `info.cpus.<c>.envs` 只用於第一次建家。家已存在時，要改環境請先停 kernel、等 cpu 全部退出，再改 `cpus/<c>/inst.json`，最後 boot；只改 info 或對仍活著的 cpu 再 boot，不會更新環境。
 
@@ -225,12 +225,12 @@ cpu 的「aos 自己的錯誤一律 `-32000`」也應加限定，因為下表的
   > inst 裡的 `$env` 讀的是啟動它的 daemon 的環境；在另一個終端 export，不會改到已啟動的 daemon。
 
 - **U-3｜常見的單一工作設定，CLI 要人退回手寫 RPC。**  
-  [add RPC](/home/guanyu/projs/aos/proto5/spec/kernel.md:168)支援 `args`、`dir_target`、`interval_ms`、`timeout_ms`，[CLI](/home/guanyu/projs/aos/proto5/spec/kernel.md:280)沒有對應旗標。不是一定要加，但至少寫：
+  [add RPC](../../spec/kernel.md:168)支援 `args`、`dir_target`、`interval_ms`、`timeout_ms`，[CLI](../../spec/kernel.md:280)沒有對應旗標。不是一定要加，但至少寫：
 
   > 本版 add CLI 只提供上列旗標；要覆寫單一行程的 `args`、`dir_target`、`interval_ms` 或 `timeout_ms`，請依 §2 直接送 add request。
 
 - **U-4｜退件能看見次數，不保證找得到原因。**  
-  [行程紀錄](/home/guanyu/projs/aos/proto5/spec/kernel.md:146)沒有最後結果，cpu 回音收完會 ack；[kernel.log](/home/guanyu/projs/aos/proto5/spec/kernel.md:234)卻未定必記內容。建議補最小診斷要求：
+  [行程紀錄](../../spec/kernel.md:146)沒有最後結果，cpu 回音收完會 ack；[kernel.log](../../spec/kernel.md:234)卻未定必記內容。建議補最小診斷要求：
 
   > 每次工作失敗，`kernel.log` 至少記錄行程名、cpu 名、request 檔名，以及回音的 `error` 或 `result`；進入 `bad` 時另記退件門檻。子程式詳細錯誤由工作 inst 的 `stderr` 檔保留。
 
@@ -265,12 +265,12 @@ agent 不刪 K 裡的 request／response；自己的輸入、inst、答案與錯
 失敗有兩層：`Removed`／`Stopping`／`Interrupted` 是 RPC error；`kind:"aos",code:1`、子程式非零退出、`timed_out:true`、`stopped:true` 則可能出現在 result。**有 result 不等於工作成功。**
 
 - **U-5｜「收到回音」容易被誤認為「拿到模型答案」。**  
-  [cpu stdout 規則](/home/guanyu/projs/aos/proto5/spec/cpu.md:189)與 kernel once 需要放在同一個最小範例。建議補：
+  [cpu stdout 規則](../../spec/cpu.md:189)與 kernel once 需要放在同一個最小範例。建議補：
 
   > once 的回音只報執行狀態，不含模型答案或工具 stdout。需要輸出時，在工作 inst 指定 stdout 檔；收到成功的執行回音後，再讀該檔。輸入與答案格式由被呼叫的程式定義。
 
 - **U-6｜CLI 的 ack、逾時及退出碼責任未寫齊。**  
-  [kernel CLI](/home/guanyu/projs/aos/proto5/spec/kernel.md:304)沒有明說：等到回音是否自動 ack、等不到之後去哪收、拿到 RPC error 時退幾。建議補定：
+  [kernel CLI](../../spec/kernel.md:304)沒有明說：等到回音是否自動 ack、等不到之後去哪收、拿到 RPC error 時退幾。建議補定：
 
   > CLI 成功輸出已收到的回音或名稱後，代送 ack。未等待或等待逾時時，印出完整回音路徑，由呼叫者之後讀取與 ack；逾時不取消工作。JSON-RPC error 印代號與訊息、退 1；exec result 印完整內容，工作成敗由內容判讀。
 
@@ -281,18 +281,18 @@ agent 不刪 K 裡的 request／response；自己的輸入、inst、答案與錯
 照規範，實作者可以依序建立共用檔案送收／錯誤格式、cpu 執行迴圈、daemon 孩子表與停機階梯、kernel 帳本與十步流程。主要演算法已有落點；仍不能直接照抄的部分集中在前述矛盾、第一次沒有 state 的情況，以及 CLI 行為。這些比再增加復原解說更值得補。
 
 - **U-7｜初始值與幾個介面規則尚未閉合。**  
-  [kernel init／boot](/home/guanyu/projs/aos/proto5/spec/kernel.md:277)只說建預設 info，boot 又要求帳本其餘欄位「照舊」；第一次沒有舊帳本怎麼辦未定。至少補：
+  [kernel init／boot](../../spec/kernel.md:277)只說建預設 info，boot 又要求帳本其餘欄位「照舊」；第一次沒有舊帳本怎麼辦未定。至少補：
 
   > 第一次 boot 沒有 state 時，建立空的行程表、工作 cpu 表、佇列與四張出貨箱；其餘欄位依新鏈設定初始化。
 
   cpu 同理補「沒有舊 state 時，視為 `current:null`、`runs:0`」。此外還需明定 request 檔名與 `ack.params.name` 的合法範圍、前綴與 method 不符如何處理，以及 cpu `runs` 是否包含被拒絕的請求。
 
 - **U-8｜tick 不限時，應直接寫出欄位值。**  
-  [kernel](/home/guanyu/projs/aos/proto5/spec/kernel.md:202)寫「沒有 timeout」，但 [cpu](/home/guanyu/projs/aos/proto5/spec/cpu.md:158)省略欄位會套預設。建議改：
+  [kernel](../../spec/kernel.md:202)寫「沒有 timeout」，但 [cpu](../../spec/cpu.md:158)省略欄位會套預設。建議改：
 
   > tick request 一律明寫 `timeout_ms:0`，不套用 kernel cpu 的預設逾時。
 
-  [cpu `timed_out`](/home/guanyu/projs/aos/proto5/spec/cpu.md:185)也仍明列底層 API 待補；這是已知未完成契約，定稿不能只留「之後一起加」。
+  [cpu `timed_out`](../../spec/cpu.md:185)也仍明列底層 API 待補；這是已知未完成契約，定稿不能只留「之後一起加」。
 
 - **U-9｜73 KB 可以瘦身，但應砍重複說明。**  
   可移到決策筆記的是三份末尾「已拍板／我自己選的」中重述正文的部分、名詞表裡的演算法說明，以及重複的設計理由。「等你確認」若仍保留，至少標明哪些條款尚未生效。欄位預設、錯誤形狀、判定優先序、必要操作順序應保留。
@@ -304,7 +304,7 @@ agent 不刪 K 裡的 request／response；自己的輸入、inst、答案與錯
 JSON-RPC 的固定 `jsonrpc:"2.0"` 對 Python 負擔很小，不值得另造簡版。**真正不 KISS 的是每位使用者都手寫唯一名、暫存檔、link、等待、兩層錯誤判斷與 ack。** 三檔在協議層可以接受，應提供一份可直接沿用的客戶端範例，把這些固定步驟包起來。
 
 - **U-10｜go 對直接終端執行沒問題，對包裝程式容易意外。**  
-  [cpu 啟動規則](/home/guanyu/projs/aos/proto5/spec/cpu.md:256)已明定終端不等 go；但 Python `stdin=PIPE` 會切進控制協議。建議補：
+  [cpu 啟動規則](../../spec/cpu.md:256)已明定終端不等 go；但 Python `stdin=PIPE` 會切進控制協議。建議補：
 
   > 終端直接執行 `aos-cpu C` 不需要 go。普通獨立啟動可讓 stdin 繼承終端或接 `/dev/null`；指定 `stdin=PIPE` 就代表使用控制協議，父行程必須送 go 並持續持有管線。
 
