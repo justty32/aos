@@ -16,10 +16,12 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 
 from aos_agent_home import AgentError
 from aos_agent_tools import NAME
@@ -37,6 +39,9 @@ HELP_CAP = 256 * 1024           # help 文字最多收多少位元組
 LLM_CAP = 12000                 # 送模型的 help 文字最多幾個字
 HELP_MAX = 200                  # 參數說明、工具描述最多幾個字
 RUN_TIMEOUT = 50                # 產的 run 跑指令的逾時（秒），比 aos-agent 預設的 _timeout_ms 60 秒短
+MAX_TIMEOUT = 600               # 參數表 timeout 的上限（秒）
+MAX_NARGS = 100
+CONTROL = dev.CONTROL           # 控制字元（ESC、NUL…）：描述與說明裡一律不收（審查 S1）
 FIXED = ('run', 'wrapcli.json', '_common.py', 'config.json', 'README.md')
 SPEC_TYPE = 'aos_wrap_cli'
 
@@ -90,30 +95,31 @@ def read_help_file(path):
 
 
 def run_help(info):
-    """跑 `CMD --help`：不經 shell、stdin 關、LC_ALL=C、10 秒逾時（到了砍整個群組）。stdout 空就拿 stderr。"""
+    """跑 `CMD --help`（這一步真的會執行 CMD）：不經 shell、stdin 關、最小環境（PATH、LANG／LC_ALL=C、HOME＝拋棄式資料夾，
+    不繼承金鑰）、cwd＝那個拋棄式資料夾。輸出邊讀邊丟（各只留 HELP_CAP），10 秒到了砍整個群組；主行程結束後
+    管子被另開 session 的子孫握著也最多再收 2 秒（tools_dev.pump）。stdout 空就拿 stderr。"""
     if info['kind'] == 'file':
         argv = ['python3', str(info['path'])] if info['py'] else [str(info['path'])]
     else:
         argv = [info['name']]
     argv.append('--help')
+    home = tempfile.mkdtemp(prefix='aos-wrapcli-help-')
+    env = {'PATH': os.environ.get('PATH') or '/usr/bin:/bin', 'LANG': 'C', 'LC_ALL': 'C', 'HOME': home}
     try:
-        p = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             env=dict(os.environ, LC_ALL='C'), start_new_session=True)
-    except OSError as e:
-        raise AgentError('HelpFailed', '跑不起來 %s：%s' % (' '.join(argv), e.strerror or e))
-    try:
-        out, err = p.communicate(timeout=HELP_TIMEOUT)
-    except subprocess.TimeoutExpired:
         try:
-            os.killpg(p.pid, signal.SIGKILL)
-        except OSError:
-            pass
-        p.communicate()
+            p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 env=env, cwd=home, start_new_session=True)
+        except OSError as e:
+            raise AgentError('HelpFailed', '跑不起來 %s：%s' % (' '.join(argv), e.strerror or e))
+        code, out, err, timed_out, _, _ = dev.pump(p, b'', HELP_TIMEOUT, HELP_CAP)
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+    if timed_out:
         raise AgentError('HelpFailed', '%s 跑了 %d 秒還沒結束，砍掉了；改用 --help-file' % (' '.join(argv), HELP_TIMEOUT))
     text = out if out.strip() else err
     if not text.strip():
-        raise AgentError('HelpFailed', '%s 什麼都沒印（退出碼 %d）；改用 --help-file' % (' '.join(argv), p.returncode))
-    return clean_help(text[:HELP_CAP].decode('utf-8', 'replace'))
+        raise AgentError('HelpFailed', '%s 什麼都沒印（退出碼 %s）；改用 --help-file' % (' '.join(argv), code))
+    return clean_help(text.decode('utf-8', 'replace'))
 
 
 # ------------------------------------------------------------------ 機械版：argparse ----
@@ -321,9 +327,13 @@ def _add_argument(call, owner):
         if action == 'append':
             if positional:
                 return None, '位置參數不能 action=append', None
+            if nargs is not None:
+                return None, 'action=append 搭配 nargs 不支援（每次要一組值，argv 表示不了）', None
             param.update(array=True, multi='repeat')
         elif many:
-            param.update(array=True, multi='once')
+            param.update(array=True, nargs=nargs)
+            if not positional:
+                param['multi'] = 'once'
         if positional:
             param['required'] = nargs not in ('?', '*')
         if 'choices' in kw:
@@ -813,6 +823,7 @@ def check_params(raw, evidence):
     if not isinstance(raw, list):
         return [], [('params', 'params 要是陣列')]
     ok, dropped, names, flags_seen = [], [], set(), set()
+    variable = None                                       # 前面可變長度（選填或陣列）的位置參數
     for i, p in enumerate(raw):
         label = '第 %d 格' % (i + 1)
         if not isinstance(p, dict):
@@ -821,6 +832,10 @@ def check_params(raw, evidence):
         name = p.get('name')
         label = '%s（%s）' % (label, name) if isinstance(name, str) else label
         why = _check_one(p, evidence, names, flags_seen)
+        is_var = p.get('kind') == 'positional' and (not p.get('required') or p.get('array'))
+        if not why and is_var and variable:
+            why = ('前面已有可變長度的位置參數 %s（選填或陣列），再一個就分不清值給誰（跳過前面的也會被配錯）'
+                   % variable)
         if why:
             dropped.append((label, why))
             continue
@@ -841,6 +856,10 @@ def check_params(raw, evidence):
             q['default'] = p['default']
         line = p.get('line') if isinstance(p.get('line'), int) and not isinstance(p.get('line'), bool) else None
         q['line'] = line if line is not None else (_line_of(q['flags'][0], evidence) if q['flags'] else None)
+        if p.get('nargs') is not None:
+            q['nargs'] = p['nargs']
+        if is_var:
+            variable = name
         names.add(name)
         flags_seen.update(q['flags'])
         ok.append(q)
@@ -894,6 +913,16 @@ def _check_one(p, evidence, names, flags_seen):
             return 'choices 要是跟型別一致的清單（≤ 100 個）'
     if 'help' in p and p['help'] is not None and not isinstance(p['help'], str):
         return 'help 要是字串'
+    if CONTROL.search(str(p.get('help') or '')) or any(isinstance(c, str) and CONTROL.search(c)
+                                                       for c in (choices or [])):
+        return 'help 或 choices 含控制字元（ESC、NUL…）'
+    nargs = p.get('nargs')
+    if nargs is not None:
+        if nargs in ('+', '*') or (isinstance(nargs, int) and not isinstance(nargs, bool) and 1 <= nargs <= MAX_NARGS):
+            if not p.get('array') or kind not in ('option', 'positional'):
+                return 'nargs 只給陣列的 option／positional'
+        else:
+            return 'nargs 只收 +、*、1～%d' % MAX_NARGS
     return None
 
 
@@ -931,6 +960,9 @@ def llm_table(cmd, mode, evidence, alias=None, ask=None):
         raise AgentError('BadModelOutput', '模型回的 JSON 沒有 params 陣列')
     params, dropped = check_params(data['params'], evidence)
     desc = data.get('description')
+    if isinstance(desc, str) and CONTROL.search(desc):
+        dropped.append(('description', '含控制字元（ESC、NUL…），不收'))
+        desc = None
     desc = ' '.join(desc.split())[:HELP_MAX] if isinstance(desc, str) and desc.strip() else None
     return desc, params, dropped, got
 
@@ -986,9 +1018,25 @@ def flag(p):
     return longs[0] if longs else p['flags'][0]
 
 
+UNSAFE = 'value %r of argument "%s" starts with "-" and cannot be passed safely to this command (it would be read as a flag)'
+
+
+def bind(p, value, mode):
+    """帶值選項的一個值 → argv 片段。- 開頭的值：寫成 --opt=值 才不會被當成別的旗標，
+    這要指令認得 = 寫法（argparse 的長旗標、help 寫了 --opt=）；做不到就 BadArguments。"""
+    f = flag(p)
+    if p.get('joiner') == '=':
+        return [f + '=' + value]
+    if value.startswith('-'):
+        if f.startswith('--') and mode == 'argparse':
+            return [f + '=' + value]
+        fail('BadArguments', UNSAFE % (value, p['name']))
+    return [f, value]
+
+
 def build(info, args):
     """arguments → argv（不含指令本身）：開關、帶值選項照參數表順序，位置參數最後；
-    位置參數有 - 開頭的值就先放一個 --。"""
+    位置參數有 - 開頭的值就先放一個 --；帶值選項的 - 開頭值見 bind()。"""
     known = {p['name'] for p in info['params']}
     extra = sorted(k for k in args if k not in known)
     if extra:
@@ -1018,16 +1066,24 @@ def build(info, args):
             if not isinstance(value, list):
                 fail('BadArguments', '%s must be an array' % where)
             values = [text(check(v, p, '%s[%d]' % (where, i))) for i, v in enumerate(value)]
+            n = p.get('nargs')
+            if isinstance(n, int) and len(values) != n:
+                fail('BadArguments', '%s must have exactly %d items' % (where, n))
+            if n == '+' and not values:
+                fail('BadArguments', '%s must have at least 1 item' % where)
         else:
             values = [text(check(value, p, where))]
         if kind == 'positional':
             pos += values
         elif p.get('array') and p.get('multi') == 'once':
+            for v in values:                          # 一個旗標接好幾個值：- 開頭的沒有安全寫法
+                if v.startswith('-'):
+                    fail('BadArguments', UNSAFE % (v, name))
             if values:
                 argv += [flag(p)] + values
         else:
             for v in values:
-                argv += [flag(p) + '=' + v] if p.get('joiner') == '=' else [flag(p), v]
+                argv += bind(p, v, info.get('mode'))
     if any(v.startswith('-') for v in pos):
         argv.append('--')
     return argv + pos
@@ -1119,6 +1175,10 @@ def tool_entry(pack, spec):
             if p.get('choices'):
                 base['enum'] = list(p['choices'])
             prop = {'type': 'array', 'items': base} if p.get('array') else base
+            if isinstance(p.get('nargs'), int):
+                prop.update(minItems=p['nargs'], maxItems=p['nargs'])
+            elif p.get('nargs') == '+':
+                prop['minItems'] = 1
         prop['description'] = _param_desc(p)
         props[p['name']] = prop
         if p.get('required'):
@@ -1240,10 +1300,34 @@ def load_spec(path):
         raise AgentError('NotFound', '找不到 --spec %s' % p)
     except (OSError, ValueError, UnicodeError) as e:
         raise AgentError('SpecInvalid', '讀不了 --spec %s：%s' % (p, e))
-    if not isinstance(data, dict) or data.get('_type') != SPEC_TYPE or data.get('_version') != 1 \
-            or not isinstance(data.get('params'), list) or data.get('mode') not in ('help', 'argparse'):
-        raise AgentError('SpecInvalid', '%s 不是 wrap-cli 參數表（要 _type %s、_version 1、mode、params）' % (p, SPEC_TYPE))
+    if not isinstance(data, dict) or data.get('_type') != SPEC_TYPE or data.get('_version') != 1:
+        raise AgentError('SpecInvalid', '%s 不是 wrap-cli 參數表（要 _type %s、_version 1）' % (p, SPEC_TYPE))
+    bad = spec_problems(data)
+    if bad:
+        raise AgentError('SpecInvalid', '%s 的頂層欄位不對：%s' % (p, '；'.join(bad)))
     return data, p
+
+
+def spec_problems(data):
+    """參數表頂層欄位一次驗完（審查 M9）：回問題清單，空＝沒問題。"""
+    bad = []
+    if not isinstance(data.get('command'), str) or not data['command']:
+        bad.append('command 要是非空字串')
+    if data.get('mode') not in ('help', 'argparse'):
+        bad.append('mode 要是 help 或 argparse')
+    if not isinstance(data.get('help_sha256'), str):
+        bad.append('help_sha256 要是字串')
+    if data.get('help_file') is not None and (not isinstance(data['help_file'], str) or not data['help_file']):
+        bad.append('help_file 要是非空字串或 null')
+    desc = data.get('description')
+    if desc is not None and (not isinstance(desc, str) or len(desc) > 1000 or CONTROL.search(desc)):
+        bad.append('description 要是字串或 null（≤ 1000 字、不含控制字元）')
+    if not isinstance(data.get('params'), list):
+        bad.append('params 要是陣列')
+    t = data.get('timeout', RUN_TIMEOUT)
+    if not isinstance(t, int) or isinstance(t, bool) or not 1 <= t <= MAX_TIMEOUT:
+        bad.append('timeout 要是 1～%d 的整數（秒）' % MAX_TIMEOUT)
+    return bad
 
 
 def _same_cmd(a, b):
@@ -1303,8 +1387,9 @@ def wrap_cli(cmd, name=None, out=None, force=False, help_file=None, describe_wit
         print(aos_llm_ask.usage_line(got), file=sys.stderr)
         dev.write_json_file(target, proposal, force)
         print('提案寫在 %s（%d 格收、%d 格丟掉；還沒產包）' % (target, len(params), len(dropped)))
-        print('看過沒問題：aos-agent tools wrap-cli %s --spec %s%s' % (
-            cmd, dev._shown(target), ' --out %s' % out if out else ''))
+        print('看過沒問題（可以先改提案檔；這一步不叫模型）：aos-agent tools wrap-cli %s --spec %s --name %s%s' % (
+            shlex.quote(cmd), shlex.quote(dev._shown(target)), shlex.quote(pack),
+            ' --out %s' % shlex.quote(out) if out else ''))
         return 0
     parsed = read_argparse(evidence, command) if mode == 'argparse' else parse_help(evidence)
     params, dropped = check_params(parsed['params'], evidence)   # 機械版照理全過；沒過的也列出來

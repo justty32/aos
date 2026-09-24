@@ -23,6 +23,7 @@ def brief(res):
             'classes': [{'skeleton': c['skeleton'], 'count': c['count'], 'with_ticket': c['with_ticket'],
                          'same_kind': c['same_kind']} for c in res['classes']],
             'linked': [f['linked'] for f in res['fallthrough']],
+            'confidence': [f['confidence'] for f in res['fallthrough']],
             'candidates': [c['rule']['name'] for c in res['candidates']], 'skipped': res['skipped'],
             'dropped': res['dropped']}
 

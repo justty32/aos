@@ -47,7 +47,7 @@ tools  8 個，5267 字，約 1326 token：read, write, edit, bash, grep, find, 
 - 不是 idle、`batch` 不是 `null`、`intake` 做到一半＝`NotIdle` 退 1、不動檔；記憶縮完 `tool_calls` 對不上＝`HistoryInvalid` 退 1、不動檔。
 - `--json`：結果物件（`before`、`after`、`rounds`、`over`、`sha`、`archive`…，不含新記憶本身）。
 - `--prune-archive 天數`：刪 archive 裡超過天數、**而且現在的記憶沒有提到檔名**的；不跟別的選項一起給。
-- `--summarize [--model ALIAS]`（第三波 W3-2）：機械版照算，這次新生的封存摘要中間那段再叫模型濃縮；過不了機械檢查（比原文短、檔名與數字都還在）那段就用機械摘要，模型出錯整次退回機械版、照樣壓縮。要 `AOS_LLM_CONFIG`（沒設＝`ConfigInvalid` 退 1、不動檔）；模型代號預設 `llm.model`。多印一行「--summarize：N 段…用了模型版 k 段；模型 …：prompt P、completion C token，X ms」。跟 `--dry-run` 一起給時不叫模型。`--model` 沒有 `--summarize`＝用法錯。細節 [agent/compact-summarize.md](../agent/compact-summarize.md)。
+- `--summarize [--model ALIAS]`（第三波 W3-2）：機械版照算，這次新生的封存摘要中間那段再叫模型濃縮（使用者原話原樣留，只濃縮工具與回話）；過不了機械檢查（比原文短、檔名與數字都還在）那段就用機械摘要，模型出錯整次退回機械版、照樣壓縮。要 `AOS_LLM_CONFIG`（沒設＝`ConfigInvalid` 退 1、不動檔）；模型代號預設 `llm.model`。多印一行「--summarize：N 段封存摘要，送了 m 段、用了模型版 k 段；模型 …：prompt P、completion C token，X ms」。跟 `--dry-run` 一起給時不叫模型。`--model` 沒有 `--summarize`＝用法錯。細節 [agent/compact-summarize.md](../agent/compact-summarize.md)。
 
 ## `events`：事件與用量
 

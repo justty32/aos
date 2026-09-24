@@ -2308,190 +2308,44 @@
   }
  ],
  "min": 2,
- "source": "mechanical",
- "candidates": [
+ "source": "llm",
+ "candidates": [],
+ "skipped": [],
+ "dropped": [
   {
-   "rule": {
-    "name": "crystal-1",
-    "pattern": "在專案建一個\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*，內容寫\\s*「\\s*(?P<q1>[^」]+)\\s*」",
-    "do": "handoff",
-    "handoff": {
-     "assignee": "worker-1",
-     "workflow": "無",
-     "goal": "在專案根目錄建立 {f1}，內容為「{q1}」（原話：內容寫「{q1}」，意思不能變）。",
-     "done_when": [
-      {
-       "kind": "file_exists",
-       "path": "{f1}"
-      },
-      {
-       "kind": "check",
-       "name": "contains",
-       "args": {
-        "path": "{f1}",
-        "text": "{q1}"
-       }
-      },
-      {
-       "kind": "judge",
-       "text": "{f1} 的內容是否就是「{q1}」，沒有多餘文字、標點或改寫，原意未變。"
-      }
-     ],
-     "max_attempts": 3
-    },
-    "tests": {
-     "hit": [
-      "在專案建一個 hello.md，內容寫「你好世界」",
-      "在專案建一個 todo.md，內容寫「買牛奶」",
-      "在專案建一個 idea.md，內容寫「做一個小遊戲」",
-      "在專案建一個 memo.md，內容寫「明天開會」"
-     ],
-     "miss": [
-      "把 a.md 改名成 alpha.md",
-      "數 poem.md 有幾行，寫進 poem-lines.txt",
-      "把 e.md 的第 2 行刪掉",
-      "不要在專案建一個 hello.md，內容寫「你好世界」"
-     ]
-    }
-   },
-   "backtest": {
-    "checked": 16,
-    "eats": []
-   }
+   "name": "llm-create-md",
+   "why": "吃到內建反例：「在專案建一個 ../x.md，內容寫「你好世界」」（群組 file 換成 ../x.md）、「在專案建一個 a/../../x.md，內容寫「你好世界」」（群組 file 換成 a/../../x.md）、「在專案建一個 ~/x.md，內容寫「你好世界」」（群組 file 換成 ~/x.md）…共 20 句"
   },
   {
-   "rule": {
-    "name": "crystal-2",
-    "pattern": "把\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*改名成\\s*(?P<f2>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})",
-    "do": "handoff",
-    "handoff": {
-     "assignee": "worker-1",
-     "workflow": "無",
-     "goal": "把專案根目錄的 {f1} 改名成 {f2}：改名後專案裡看得到 {f2}、看不到 {f1}，內容與改名前一模一樣（原話：把 {f1} 改名成 {f2}，意思不能變）。",
-     "done_when": [
-      {
-       "kind": "file_exists",
-       "path": "{f2}"
-      },
-      {
-       "kind": "check",
-       "name": "wf_residue",
-       "args": {
-        "path": "{f1}"
-       }
-      }
-     ],
-     "max_attempts": 3
-    },
-    "tests": {
-     "hit": [
-      "把 a.md 改名成 alpha.md",
-      "把 b.md 改名成 beta.md",
-      "把 c.md 改名成 gamma.md",
-      "把 d.md 改名成 delta.md"
-     ],
-     "miss": [
-      "在專案建一個 hello.md，內容寫「你好世界」",
-      "數 poem.md 有幾行，寫進 poem-lines.txt",
-      "把 e.md 的第 2 行刪掉",
-      "不要把 a.md 改名成 alpha.md"
-     ]
-    }
-   },
-   "backtest": {
-    "checked": 16,
-    "eats": []
-   }
+   "name": "llm-rename-md",
+   "why": "吃到內建反例：「把 ../x.md 改名成 alpha.md」（群組 old 換成 ../x.md）、「把 a/../../x.md 改名成 alpha.md」（群組 old 換成 a/../../x.md）、「把 ~/x.md 改名成 alpha.md」（群組 old 換成 ~/x.md）…共 40 句"
   },
   {
-   "rule": {
-    "name": "crystal-3",
-    "pattern": "數\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*有幾行，寫進\\s*(?P<f2>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})",
-    "do": "handoff",
-    "handoff": {
-     "assignee": "worker-1",
-     "workflow": "無",
-     "goal": "數專案根目錄 {f1} 有幾行，把這個行數寫進新檔 {f2}（原話：數 {f1} 有幾行，寫進 {f2}）。{f2} 內容要是那個行數數字。",
-     "done_when": [
-      {
-       "kind": "file_exists",
-       "path": "{f2}"
-      },
-      {
-       "kind": "judge",
-       "text": "{f2} 裡的數字是否等於 {f1} 的實際行數（不多不少、沒有其他多餘文字）。"
-      }
-     ],
-     "max_attempts": 3
-    },
-    "tests": {
-     "hit": [
-      "數 poem.md 有幾行，寫進 poem-lines.txt",
-      "數 story.md 有幾行，寫進 story-lines.txt",
-      "數 list.md 有幾行，寫進 count.txt",
-      "數 notes.md 有幾行，寫進 n.txt"
-     ],
-     "miss": [
-      "在專案建一個 hello.md，內容寫「你好世界」",
-      "把 a.md 改名成 alpha.md",
-      "把 e.md 的第 2 行刪掉",
-      "不要數 poem.md 有幾行，寫進 poem-lines.txt"
-     ]
-    }
-   },
-   "backtest": {
-    "checked": 16,
-    "eats": []
-   }
+   "name": "llm-count-lines",
+   "why": "吃到內建反例：「數 ../x.md 有幾行，寫進 poem-lines.txt」（群組 src 換成 ../x.md）、「數 a/../../x.md 有幾行，寫進 poem-lines.txt」（群組 src 換成 a/../../x.md）、「數 ~/x.md 有幾行，寫進 poem-lines.txt」（群組 src 換成 ~/x.md）…共 48 句"
   },
   {
-   "rule": {
-    "name": "crystal-4",
-    "pattern": "把\\s*(?P<f1>(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.[A-Za-z0-9]{1,8})\\s*的第\\s*(?P<n1>[0-9]+)\\s*行刪掉",
-    "do": "handoff",
-    "handoff": {
-     "assignee": "worker-1",
-     "workflow": "無",
-     "goal": "把專案根目錄 {f1} 的第 {n1} 行刪掉，其餘每一行原文照留、順序不變（原話：把 {f1} 的第 {n1} 行刪掉）。做完後 {f1} 的行數比原本少 1 行，且原本第 1 行仍是第 1 行，原本第 3 行以後的各行原封不動。",
-     "done_when": [
-      {
-       "kind": "check",
-       "name": "contains",
-       "args": {
-        "path": "{f1}",
-        "text": "e"
-       }
-      },
-      {
-       "kind": "judge",
-       "text": "比對改前改後：原第 {n1} 行是否已被刪掉，且原本第 1 行與第 3 行以後的每一行是否原封不動、順序未變、內容未改寫。改前原文見 facts。"
-      }
-     ],
-     "max_attempts": 3
-    },
-    "tests": {
-     "hit": [
-      "把 e.md 的第 2 行刪掉",
-      "把 f.md 的第 3 行刪掉",
-      "把 g.md 的第 1 行刪掉",
-      "把 h.md 的第 4 行刪掉"
-     ],
-     "miss": [
-      "在專案建一個 hello.md，內容寫「你好世界」",
-      "把 a.md 改名成 alpha.md",
-      "數 poem.md 有幾行，寫進 poem-lines.txt",
-      "不要把 e.md 的第 2 行刪掉"
-     ]
-    }
-   },
-   "backtest": {
-    "checked": 16,
-    "eats": []
-   }
+   "name": "llm-delete-line",
+   "why": "吃到內建反例：「把 ../x.md 的第 2 行刪掉」（群組 file 換成 ../x.md）、「把 a/../../x.md 的第 2 行刪掉」（群組 file 換成 a/../../x.md）、「把 ~/x.md 的第 2 行刪掉」（群組 file 換成 ~/x.md）…共 20 句"
   }
  ],
- "skipped": [],
- "dropped": [],
- "proposal": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/notes/2026-09-24-tool-era/w3b/runs/crystal/out/mech.json",
- "llm": null
+ "proposal": null,
+ "llm": {
+  "usage": {
+   "completion_tokens": 1153,
+   "prompt_tokens": 4238,
+   "total_tokens": 5391,
+   "prompt_tokens_details": {
+    "cached_tokens": 4096
+   },
+   "prompt_cache_hit_tokens": 4096,
+   "prompt_cache_miss_tokens": 142
+  },
+  "ms": 3684,
+  "alias": "default",
+  "model": "deepseek-chat",
+  "error": null,
+  "raw_count": 4,
+  "note": "重篩：模型回的規則取自當初那次，沒有重叫"
+ }
 }

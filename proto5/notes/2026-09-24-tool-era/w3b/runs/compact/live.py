@@ -2,7 +2,7 @@
 """第三波 W3-2 compact：機械版 vs --summarize 真跑對照（重建第一波 T4 那套，notes/2026-09-24-tool-era-memory.md §3）。
 
 用法（repo 根目錄）：
-  python3 proto5/notes/2026-09-24-tool-era/w3b/runs/compact/live.py [次數=5] [資料夾=~/tmp/w3b-compact]
+  python3 proto5/notes/2026-09-24-tool-era/w3b/runs/compact/live.py [次數=5] [資料夾=~/tmp/w3b-compact] [mech,sum] [檔名尾巴，例 -m6]
 真跑一律 LiteLLM http://localhost:4000/v1 的 deepseek-chat（不碰 LM Studio／ollama）。
 一套 daemon＋kernel；每一次都用全新的 agent 家（init＋tools add base），跑完 stop，最後 aos down。
 每次：①read 40 行的 long.txt ②記住芒果 ③④⑤三段長自我介紹 → compact（keep 1、上限＝「①②都封存」的最大值）
@@ -21,6 +21,9 @@ REPO = HERE.parents[5]
 CLI = REPO / 'proto5' / 'cli'
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 W = Path(os.path.expanduser(sys.argv[2] if len(sys.argv) > 2 else '~/tmp/w3b-compact'))
+MODES = tuple(sys.argv[3].split(',')) if len(sys.argv) > 3 else ('mech', 'sum')
+TAG = sys.argv[4] if len(sys.argv) > 4 else ''
+DIGESTS = HERE / ('digests' + TAG)
 ENV = dict(os.environ, PATH='%s:%s' % (CLI, os.environ['PATH']), AOS_DAEMON_HOME=str(W / 'D'),
            AOS_KERNEL_HOME=str(W / 'K'), AOS_LLM_CONFIG=str(W / 'llm.json'), PYTHONDONTWRITEBYTECODE='1')
 
@@ -127,8 +130,8 @@ def one(mode, i):
         row['after_tokens'] = after['history']['tokens']
         hist = json.loads((home / 'prompts' / 'history.json').read_text(encoding='utf-8'))
         sealed = [m['content'] for m in hist if m['role'] == 'user' and m['content'].startswith('[aos 已封存')]
-        (HERE / 'digests').mkdir(exist_ok=True)
-        (HERE / 'digests' / ('%s-%d.txt' % (mode, i))).write_text('\n\n'.join(sealed), encoding='utf-8')
+        DIGESTS.mkdir(exist_ok=True)
+        (DIGESTS / ('%s-%d.txt' % (mode, i))).write_text('\n\n'.join(sealed), encoding='utf-8')
         row['digest_bytes'] = [len(s.encode('utf-8')) for s in sealed]
         if mode == 'sum':   # 同一份原文的機械版摘要（純函式重算），好對照模型有沒有編東西
             sys.path.insert(0, str(REPO / 'proto5' / 'lib'))
@@ -136,7 +139,7 @@ def one(mode, i):
             archive = sorted((home / 'prompts' / 'archive').glob('*.json'))[0]
             mech = aos_agent_compact.plan(json.loads(archive.read_text(encoding='utf-8')), keep_rounds=1,
                                           max_tokens=limit, archive=os.path.relpath(archive, home))['history']
-            (HERE / 'digests' / ('%s-%d.mech.txt' % (mode, i))).write_text(
+            (DIGESTS / ('%s-%d.mech.txt' % (mode, i))).write_text(
                 '\n\n'.join(m['content'] for m in mech if m['content'].startswith('[aos 已封存')), encoding='utf-8')
         n = len(usage_rows(home))
         row['q_lines'] = say(home, Q_LINES)
@@ -161,10 +164,10 @@ def main():
     if not (W / 'K').exists():
         sh('aos-kernel', 'init', '--config', str(W / 'kernel.json'))
     sh('aos', 'up')
-    out = HERE / 'results.jsonl'
+    out = HERE / ('results%s.jsonl' % TAG)
     try:
         for i in range(1, N + 1):
-            for mode in ('mech', 'sum'):
+            for mode in MODES:
                 row = one(mode, i)
                 with out.open('a', encoding='utf-8') as f:
                     f.write(json.dumps(row, ensure_ascii=False) + '\n')

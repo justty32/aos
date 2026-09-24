@@ -7,8 +7,8 @@
 這是 ai_core §3.6「固化引擎」的最小版：**只提、不自動生效**（審查 S3）。
 
 ```
-aos-team crystal [--min N] [--json] [--out FILE]
-aos-team crystal --suggest-with-llm [--model ALIAS] [--min N] [--json] [--out FILE]
+aos-team crystal [--min N] [--json] [--out FILE [--force]]
+aos-team crystal --suggest-with-llm [--model ALIAS] [--min N] [--json] [--out FILE [--force]]
 ```
 
 ## 讀什麼
@@ -21,6 +21,7 @@ aos-team crystal --suggest-with-llm [--model ALIAS] [--min N] [--json] [--out FI
 舊 log 沒這格＝拿原文一樣、時間差 120 秒內、還沒被別行用掉的那封信（最近的）。
 信 → 單用 `aos-team score` 同一個函式（[score.md〈起點〉](score.md)：這位領隊上一張單開單之後、這張開單之前的最後一封）。
 所以一句話讓領隊開兩張以上的單，只算第一張；對不上信或單的，只列句子。
+每句落穿標**可信度**（`high`／`medium`／`low`／`none`）；**有歧義（`low`）的只列、不拿來產候選**（astra 審查 S3，[crystal-checks.md](crystal-checks.md)）。
 
 ## 印什麼（機械版，預設）
 
@@ -30,7 +31,7 @@ aos-team crystal --suggest-with-llm [--model ALIAS] [--min N] [--json] [--out FI
    **領隊每次都開同一種單**的標出來。
 3. **候選規則**與回測（下面），最後印提案檔路徑與「怎麼批」。
 
-`--json` 印同一份資料（`stats`、`fallthrough`、`classes`、`candidates`（含回測）、`skipped`、`dropped`、`proposal`、`llm`）。
+`--json` 印同一份資料。
 
 ### 句型怎麼歸類（決定性）
 
@@ -66,17 +67,18 @@ aos-team crystal --suggest-with-llm [--model ALIAS] [--min N] [--json] [--out FI
 **機械檢查**（不過的不寫進提案，列在「丟掉」並說原因）：
 
 1. handoff 裡的 `{名}` 都是 pattern 的群組；每句 hit 填好之後是合法的開單申請（跟 `ask` 真的開單同一套驗）。
-2. 一條一條照順序加進「現有規則＋已收的候選」，**例句全過**（`run_tests`，跟 `route test` 同一套）才收；兩條候選互相搶句子時先來的留下。
+2. 一條一條照順序加進「現有規則＋已收的候選」，**整份**（現有規則的例句也算）例句全過（`run_tests`，跟 `route test` 同一套）才收；兩條候選互相搶句子時先來的留下；寫檔前整份再跑一次。
+3. **內建反例**吃到的丟掉（越界路徑、選項樣、追加指令…）。
+（2、3 是 astra 審查 M3、M5 補的，細節 [crystal-checks.md](crystal-checks.md)。）
 
 ### 回測
 
-每條候選拿 route.log 裡**不是它例句的舊句子**（所有結果都算，含門房接住的）跑一次 `decide`，列它**新吃到**的句子：
-判給了它，或原本是別條規則接住、現在因為它命中兩條而改落穿（「搶走」）。
-吃到的句子骨架不是它自己那類、或是搶走的＝**疑似誤觸**，標出來（機械版只標、照樣寫進提案，人批時看）。
+每條候選拿 route.log 裡不是它例句的舊句子跑 `decide`，列它新吃到的句子，吃到別類或搶走別條規則的＝**疑似誤觸**（機械版標出來、照樣寫進提案；模型版丟掉）。細節 [crystal-checks.md](crystal-checks.md)。
 
 ## 提案檔
 
-**完整的規則檔**：現有 `team/routes.json`（沒有就只有候選）＋收下的候選，寫到 `--out`（預設 `team/crystal/proposal-<時間>.json`，整檔原子寫）。
+**完整的規則檔**：現有 `team/routes.json`（沒有就只有候選）＋收下的候選，寫到 `--out`（預設 `team/crystal/proposal-<時間>-<奈秒>-<pid>.json`，整檔原子寫）。
+`--out` 不准是 `team/routes.json`（別名、符號連結、硬連結都算：退 1 `Refused`）；檔已經在＝不覆蓋、退 1 `AlreadyExists`，加 `--force` 才蓋（astra 審查 M2）。
 候選的名字記在 `_metainfo.crystal.candidates`（另有 `source`：`mechanical`／`llm`、`made_at`、`note`）。
 沒有候選＝不寫檔，印「沒有候選規則」。**`team/routes.json` 一個字都不動。**
 
@@ -97,9 +99,10 @@ aos-team route save 提案檔
 
 1. 只收 `do: handoff`（`tool` 會直接跑指令，模型提的不收）；名字加 `llm-` 前綴。
 2. 形狀對、pattern 編得過（`validate_routes`）。
-3. `tests.hit` 裡**真的落穿過的句子**至少 `--min` 句（不收模型自己編的例句撐場面）。
-4. 同機械版第 1、2 條（群組對得上、填好合法、例句全過）。
-5. 回測**有疑似誤觸就丟**（模型的 pattern 比較會放寬）；它自己那類＝它的 hit 裡真的落穿句的骨架。
+3. **次數與單子從歷史算**，不數模型給的 hit：它的 pattern 在 route.log 吃得到的「沒命中」落穿句（可信度 `low` 不算）≥ `--min` 句，
+   有群組的還要 ≥ `--min` 種寫法；那些句子每句都對到單、單都是同一種，而且負責人、工作流跟模型寫的一樣（astra 審查 M4）。
+4. 同機械版第 1～3 條（群組對得上、填好合法、整份例句全過、內建反例）。
+5. 回測**有疑似誤觸就丟**。
 
 印出多一行：用了多少 token、幾毫秒、模型回了幾條。一樣只寫提案檔、人批。
 模型回的不是 JSON＝沒有候選、印「讀不懂」，退 0。
@@ -107,4 +110,5 @@ aos-team route save 提案檔
 ## 退出碼
 
 成功（不管有沒有候選）退 0；`--min` < 1、`--model` 沒配 `--suggest-with-llm`＝用法錯；團隊資料夾沒有 `team/`＝`NotFound`；
-叫模型失敗照 `aos-llm call` 的代號（`EngineFailed`、`Timeout`…）退 1。
+叫模型失敗照 `aos-llm call` 的代號（`EngineFailed`、`Timeout`…）退 1；`--out` 的問題見〈提案檔〉；
+寫檔前整份例句沒全過（不該發生）＝`RoutesFailed`、不寫檔。

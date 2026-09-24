@@ -550,60 +550,55 @@
   ]
  },
  {
-  "file": "out/llm-2.json",
-  "candidates": [
-   "llm-create-md",
-   "llm-rename-md",
-   "llm-count-lines",
-   "llm-delete-line"
-  ],
-  "pos": "11/12",
+  "file": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/spec/team/examples/routes.json",
+  "candidates": [],
+  "pos": "0/12",
   "neg_misfire": "0/8",
   "rows": [
    {
     "set": "pos",
     "type": "create",
     "text": "在專案建一個 plan.md，內容寫「第一步」",
-    "result": "handoff",
-    "rule": "llm-create-md",
-    "why": "命中 llm-create-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "create",
     "text": "在專案建一個 x1.md，內容寫「hello」",
-    "result": "handoff",
-    "rule": "llm-create-md",
-    "why": "命中 llm-create-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "create",
     "text": "在專案建一個 diary.md，內容寫「今天下雨」",
-    "result": "handoff",
-    "rule": "llm-create-md",
-    "why": "命中 llm-create-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "rename",
     "text": "把 old.md 改名成 new.md",
-    "result": "handoff",
-    "rule": "llm-rename-md",
-    "why": "命中 llm-rename-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "rename",
     "text": "把 docs/draft.md 改名成 docs/final.md",
-    "result": "handoff",
-    "rule": "llm-rename-md",
-    "why": "命中 llm-rename-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
@@ -618,55 +613,55 @@
     "set": "pos",
     "type": "count",
     "text": "數 book.md 有幾行，寫進 book.txt",
-    "result": "handoff",
-    "rule": "llm-count-lines",
-    "why": "命中 llm-count-lines",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "count",
     "text": "數 a1.md 有幾行，寫進 out.txt",
-    "result": "handoff",
-    "rule": "llm-count-lines",
-    "why": "命中 llm-count-lines",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "count",
     "text": "數 log.md 有幾行，寫進 lines.txt",
-    "result": "handoff",
-    "rule": "llm-count-lines",
-    "why": "命中 llm-count-lines",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "delline",
     "text": "把 k.md 的第 5 行刪掉",
-    "result": "handoff",
-    "rule": "llm-delete-line",
-    "why": "命中 llm-delete-line",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "delline",
     "text": "把 m.md 的第 10 行刪掉",
-    "result": "handoff",
-    "rule": "llm-delete-line",
-    "why": "命中 llm-delete-line",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "delline",
     "text": "把 z.md 的第 1 行刪掉",
-    "result": "handoff",
-    "rule": "llm-delete-line",
-    "why": "命中 llm-delete-line",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "neg",
@@ -735,60 +730,55 @@
   ]
  },
  {
-  "file": "out/llm-3.json",
-  "candidates": [
-   "llm-create-md",
-   "llm-rename-md",
-   "llm-count-lines",
-   "llm-delete-line"
-  ],
-  "pos": "11/12",
+  "file": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/spec/team/examples/routes.json",
+  "candidates": [],
+  "pos": "0/12",
   "neg_misfire": "0/8",
   "rows": [
    {
     "set": "pos",
     "type": "create",
     "text": "在專案建一個 plan.md，內容寫「第一步」",
-    "result": "handoff",
-    "rule": "llm-create-md",
-    "why": "命中 llm-create-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "create",
     "text": "在專案建一個 x1.md，內容寫「hello」",
-    "result": "handoff",
-    "rule": "llm-create-md",
-    "why": "命中 llm-create-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "create",
     "text": "在專案建一個 diary.md，內容寫「今天下雨」",
-    "result": "handoff",
-    "rule": "llm-create-md",
-    "why": "命中 llm-create-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "rename",
     "text": "把 old.md 改名成 new.md",
-    "result": "handoff",
-    "rule": "llm-rename-md",
-    "why": "命中 llm-rename-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "rename",
     "text": "把 docs/draft.md 改名成 docs/final.md",
-    "result": "handoff",
-    "rule": "llm-rename-md",
-    "why": "命中 llm-rename-md",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
@@ -803,55 +793,235 @@
     "set": "pos",
     "type": "count",
     "text": "數 book.md 有幾行，寫進 book.txt",
-    "result": "handoff",
-    "rule": "llm-count-lines",
-    "why": "命中 llm-count-lines",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "count",
     "text": "數 a1.md 有幾行，寫進 out.txt",
-    "result": "handoff",
-    "rule": "llm-count-lines",
-    "why": "命中 llm-count-lines",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "count",
     "text": "數 log.md 有幾行，寫進 lines.txt",
-    "result": "handoff",
-    "rule": "llm-count-lines",
-    "why": "命中 llm-count-lines",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "delline",
     "text": "把 k.md 的第 5 行刪掉",
-    "result": "handoff",
-    "rule": "llm-delete-line",
-    "why": "命中 llm-delete-line",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "delline",
     "text": "把 m.md 的第 10 行刪掉",
-    "result": "handoff",
-    "rule": "llm-delete-line",
-    "why": "命中 llm-delete-line",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "pos",
     "type": "delline",
     "text": "把 z.md 的第 1 行刪掉",
-    "result": "handoff",
-    "rule": "llm-delete-line",
-    "why": "命中 llm-delete-line",
-    "ok": true
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "neg",
+    "text": "不要把 old.md 改名成 new.md",
+    "result": "lead",
+    "rule": null,
+    "why": "含否定詞「不要」",
+    "misfire": false
+   },
+   {
+    "set": "neg",
+    "text": "別在專案建一個 plan.md，內容寫「第一步」",
+    "result": "lead",
+    "rule": null,
+    "why": "含否定詞「別」",
+    "misfire": false
+   },
+   {
+    "set": "neg",
+    "text": "把 old.md 複製成 new.md",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "misfire": false
+   },
+   {
+    "set": "neg",
+    "text": "數 book.md 有幾個字，寫進 book.txt",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "misfire": false
+   },
+   {
+    "set": "neg",
+    "text": "把 k.md 的第 5 行改成「hi」",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "misfire": false
+   },
+   {
+    "set": "neg",
+    "text": "在專案建一個資料夾 docs",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "misfire": false
+   },
+   {
+    "set": "neg",
+    "text": "看一下 plan.md",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "misfire": false
+   },
+   {
+    "set": "neg",
+    "text": "把 old.md 改名成 new.md，然後刪掉 x.md",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "misfire": false
+   }
+  ]
+ },
+ {
+  "file": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/spec/team/examples/routes.json",
+  "candidates": [],
+  "pos": "0/12",
+  "neg_misfire": "0/8",
+  "rows": [
+   {
+    "set": "pos",
+    "type": "create",
+    "text": "在專案建一個 plan.md，內容寫「第一步」",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "create",
+    "text": "在專案建一個 x1.md，內容寫「hello」",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "create",
+    "text": "在專案建一個 diary.md，內容寫「今天下雨」",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "rename",
+    "text": "把 old.md 改名成 new.md",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "rename",
+    "text": "把 docs/draft.md 改名成 docs/final.md",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "rename",
+    "text": "把x.md改名成y.md",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "count",
+    "text": "數 book.md 有幾行，寫進 book.txt",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "count",
+    "text": "數 a1.md 有幾行，寫進 out.txt",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "count",
+    "text": "數 log.md 有幾行，寫進 lines.txt",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "delline",
+    "text": "把 k.md 的第 5 行刪掉",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "delline",
+    "text": "把 m.md 的第 10 行刪掉",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
+   },
+   {
+    "set": "pos",
+    "type": "delline",
+    "text": "把 z.md 的第 1 行刪掉",
+    "result": "lead",
+    "rule": null,
+    "why": "沒有規則命中",
+    "ok": false
    },
    {
     "set": "neg",

@@ -8,10 +8,10 @@
 |---|---|---|---|
 | A `tools wrap-cli` | 74 個參數找對 72、型別對 69 | 找對 72、型別對 71（3 次一樣） | **不值得**：只多對 4 格，還弄丟 2 格 |
 | B wrap-py 補描述 | 名字看不出用途時選對工具 3/6 | 6/6 | **值得**：每件事多 26% token，換到答對 |
-| C `compact --summarize` | 答對 9/10 | 答對 10/10 | **勉強**：每問省 283 token（−12.5%），第 3～4 問回本；答對率差距樣本太小 |
-| D `aos-team crystal` | 新句子接住 12/12、誤觸 0/8、刁鑽句 0/8 | 11/12、0/8、7/8 | **不值得**：花 5.5k token 換到更鬆、更差的規則 |
+| C `compact --summarize` | 答對 9/10 | 答對 10/10 | **勉強**：每問省 283 token（−12.5%），第 3～4 問回本（審查 M6 前量的，之後沒重量）；答對率差距樣本太小 |
+| D `aos-team crystal` | 新句子接住 12/12、誤觸 0/8、刁鑽句 0/8 | 11/12、0/8、7/8（審查後加反例重篩：4 條全丟） | **不值得**：花 5.5k token 換到更鬆、更差的規則 |
 
-基底：main `d6603b9`（開工時 `5984233`，收尾前 rebase）。測試 90 檔 2490 條全綠（§8）。
+基底：main `d6603b9`（開工時 `5984233`，收尾前 rebase）。審查前全套 90 檔 2490 條全綠；審查修完只跑相關檔（§9），沒做完的在 §10。
 隊員分工：A＋B、C、D 各派一位 Opus 隊員（各做程式、規範、測試、真跑）。隊長寫共用的 `aos_llm_ask`，把 crystal 候選收窄，另外寫報告、做審查。
 
 ## 1. 做了什麼
@@ -175,11 +175,36 @@
   - 跑完都 `aos down`，資料夾在 `~/tmp/w3b-{wrap,compact,crystal}/`。
 - **astra 審查**：見 [回報](review-astra.md)，必修怎麼修的在 §9。
 
-## 9. astra 審查
+## 9. astra 審查：必修 9 修 9（建議 5 做 4）
 
-（審查完補）
+審查只看核心改動（`git diff d6603b9`）。修完只跑了相關測試檔，**全套沒在修完後重跑**（使用者要關機）：wrap-cli 71、compact 濃縮 23、crystal 39、llm_ask 15、tools_dev 56、記憶 64、門房 16、context 19，全綠。
 
-## 10. README／索引加了的列
+| # | 問題 | 怎麼修 |
+|---|---|---|
+| M1 | wrap-cli 產的 `run`：陣列值 `["--delete"]` 會變成別的旗標 | `bind()`：`-` 開頭的值只准寫成 `--x=值`（help 有 `=` 或 argparse 長旗標）；其他一律 `BadArguments` |
+| M2 | crystal `--out team/routes.json` 會直接蓋掉正式規則 | 拒絕指到 routes.json（含別名、realpath）；提案不覆蓋既有檔；預設檔名唯一 |
+| M3 | 候選會讓既有規則的例句失敗 | 每加一條、寫檔前都整份 `run_tests` 全過 |
+| M4 | 模型候選的次數靠模型給的 hit 算 | 次數從歷史落穿句算；負責人、工作流要跟歷史的單一致 |
+| M5 | 模型 pattern 吃 `../`、`/etc/passwd`、黏兩件事 | 內建一組固定反例去測，吃到就丟（規範 [crystal-checks.md](../../../spec/team/crystal-checks.md)）。**重篩舊的 3 次模型候選：4 條全丟**，機械 4 條照收、數字不變 |
+| M6 | compact 摘要「芒果」改成「蘋果」仍過檢查 | 「使用者：…」那幾行機械原樣保留，模型只濃縮工具與回話；數字要完整比對（40.5 不算 40）；規範寫明「檢查不保證事實正確」 |
+| M7 | argparse `nargs=2`、`append`、兩個選填位置參數組錯 argv | nargs 存進參數表、驗長度；`append`＋nargs 拒收；可變長度的位置參數最多一個 |
+| M8 | `CMD --help` 的 10 秒上限不完整、繼承金鑰 | 有上限的串流讀、逾時砍群組、排空再 2 秒；環境只給 PATH、`LC_ALL=C`、拋棄式 HOME |
+| M9 | 人改壞的 `--spec` 會噴 TypeError | 讀入時一次驗完頂層欄位，壞的全列出、`SpecInvalid` |
+
+建議：S1 控制字元一律丟、S2 用量「HTTP 2xx 就記」＋事件分預定／實送／採用段數、S3 舊 log 配信標可信度（有歧義不產候選）、S5 套用指令補 `--name` 與 quoting——都做了。S4（`parse_json` 太寬）**沒做，留下一輪**：呼叫端都會再驗形狀。
+
+**審查後的數字變化**：
+- crystal 模型版重篩後 0 條可用，結論（不值得）更確定。
+- compact 濃縮因為 M6 會比表上略長，省 token 與回本的數字**沒有重量**。重跑被關機中斷，留下一輪。
+
+## 10. 沒做的、下一輪從哪接
+
+1. **修完審查後全套測試**：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test`（修之前是 90 檔 2490 條全綠；隊員中途看到過 crystal 紅 3 條，是它還在改的時候，最後相關檔全綠）。
+2. **compact `--summarize` 在 M6 之後重量 5 次**：`python3 proto5/notes/2026-09-24-tool-era/w3b/runs/compact/live.py 5 ~/tmp/w3b-compact/m6 sum -m6`，更新 §4 的省 token／回本。
+3. **S4**：`aos_llm_ask.parse_json` 拒絕 NaN、重複 key、不是物件或陣列的值。
+4. astra 沒複審修法。
+
+## 11. README／索引加了的列
 
 - proto5 README：指令表加 `tools wrap-cli`、`aos-team crystal`；wrap-py、compact 兩列補模型旗標；lib 那列的測試數。
 - lib README：`aos_llm_ask`、`aos_agent_tools_wrapcli`、`aos_team_crystal` 三個模組；`tools_dev`、`compact`、`route` 三列補一句；四個測試檔；總數改成 90 檔 2490 條。

@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 
 import aos_team_format as fmt
 from aos_team_format import HUMAN, Layout, TeamError
@@ -136,9 +137,18 @@ def ticket_kind(t):
     return {'assignee': t.get('assignee'), 'workflow': t.get('workflow'), 'done_when': sorted(items)}
 
 
+def _picked(r):
+    import aos_team_score
+    return aos_team_score.when(r.get('picked_up_at'))
+
+
 def link_letters(lay, rows):
     """每一行落穿的 log → 那封信的 id（有 letter 格直接用；沒有就用原文＋時間對投遞紀錄）；
-    再用 aos-team score 的 lead_letter 反查每張領隊開的單是哪封信開出來的。回 (sent, {信 id: [單…]})。"""
+    再用 aos-team score 的 lead_letter 反查每張領隊開的單是哪封信開出來的。
+    有歧義的記下來（審查 S3，這些不拿來產候選）：
+    - 舊 log 配信：時間窗內同文的信不只一封；
+    - 信 → 單：這張單的時間窗裡還有別封人寫給這位領隊的信，而且那封在被選中的這封寄出時還沒被收走（排在一起）。
+    回 (sent, {信 id: [單…]}, {信 id: 歧義說明})。"""
     import aos_team_post
     import aos_team_score
     import aos_team_task
@@ -148,30 +158,44 @@ def link_letters(lay, rows):
     except TeamError:
         leads = []
     tasks = {t['id']: t for t in aos_team_task.all_tickets(lay)}
-    by_letter = {}
+    human = [r for r in aos_team_score.human_letters(sent) if r.get('status') == 'REQUEST' and r.get('to') in leads]
+    by_letter, unsure = {}, {}
     for t in tasks.values():
         if t.get('parent'):
             continue
         ltr = aos_team_score.lead_letter(t, sent, leads, tasks)
-        if ltr is not None:
-            by_letter.setdefault(ltr['id'], []).append(t)
+        if ltr is None:
+            continue
+        by_letter.setdefault(ltr['id'], []).append(t)
+        opened, by = aos_team_score.task_open(t), t.get('opened_by')
+        prev = [o for o in (aos_team_score.task_open(x) for x in tasks.values()
+                            if x is not t and x.get('opened_by') == by and not x.get('parent')) if o and o < opened]
+        after = max(prev) if prev else None
+        chosen_at = aos_team_score.when(ltr['at'])
+        for r in human:
+            at = aos_team_score.when(r['at'])
+            if r['id'] == ltr['id'] or r.get('to') != by or at > opened or (after is not None and at <= after):
+                continue
+            if _picked(r) is None or _picked(r) >= chosen_at:
+                unsure[ltr['id']] = '開 %s 之前領隊手上同時有別封信（%s），分不清是哪封開的單' % (t['id'], r['id'])
     used = set(r['letter'] for r in rows if isinstance(r.get('letter'), str))
-    human = [r for r in aos_team_score.human_letters(sent) if r.get('status') == 'REQUEST' and r.get('to') in leads]
     for row in rows:
         if row['result'] != 'lead' or isinstance(row.get('letter'), str):
             continue
         at = aos_team_score.when(row.get('at'))
-        best = None
+        near = []
         for r in human:
             if r['id'] in used or r.get('text') != row['text'] or at is None:
                 continue
             gap = abs((aos_team_score.when(r['at']) - at).total_seconds())
-            if gap <= MATCH_SECONDS and (best is None or gap < best[0]):
-                best = (gap, r['id'])
-        if best:
-            row['_letter'] = best[1]
-            used.add(best[1])
-    return sent, by_letter
+            if gap <= MATCH_SECONDS:
+                near.append((gap, r['id']))
+        if len(near) == 1:
+            row['_letter'] = near[0][1]
+            used.add(near[0][1])
+        elif near:
+            row['_ambiguous'] = '舊 log 沒有 letter 格，%d 秒內同文的信有 %d 封，配不準' % (MATCH_SECONDS, len(near))
+    return sent, by_letter, unsure
 
 
 # ------------------------------------------------------------------ 統計 ----
@@ -179,7 +203,7 @@ def link_letters(lay, rows):
 def collect(team_dir):
     lay = Layout(team_dir)
     rows, bad = _jsonl(lay.route_log)
-    sent, by_letter = link_letters(lay, rows)
+    sent, by_letter, unsure = link_letters(lay, rows)
     stats = {'lines': len(rows), 'bad_lines': bad, 'by_result': {}, 'by_rule': {}, 'fallthrough': {}}
     falls = []
     for row in rows:
@@ -191,8 +215,13 @@ def collect(team_dir):
             stats['fallthrough'][why] = stats['fallthrough'].get(why, 0) + 1
             letter = row.get('letter') if isinstance(row.get('letter'), str) else row.get('_letter')
             tickets = by_letter.get(letter, []) if letter else []
-            falls.append({'at': row.get('at'), 'text': row['text'], 'reason': why, 'letter': letter,
-                          'linked': 'log' if isinstance(row.get('letter'), str) else ('matched' if letter else None),
+            linked = 'log' if isinstance(row.get('letter'), str) else ('matched' if letter else None)
+            doubt = row.get('_ambiguous') or (unsure.get(letter) if letter else None)
+            falls.append({'at': row.get('at'), 'text': row['text'], 'reason': why, 'letter': letter, 'linked': linked,
+                          # 可信度（審查 S3）：high＝log 有 letter 格；medium＝舊 log 靠原文＋時間配到唯一一封；
+                          # low＝有歧義（不拿來產候選）；none＝對不上信
+                          'confidence': 'low' if doubt else {'log': 'high', 'matched': 'medium'}.get(linked, 'none'),
+                          'doubt': doubt,
                           'tickets': [{'id': t['id'], 'assignee': t.get('assignee'), 'workflow': t.get('workflow'),
                                        'goal': t.get('goal'), 'facts': t.get('facts'),
                                        'done_when': t.get('done_when'), 'max_attempts': t.get('max_attempts'),
@@ -210,9 +239,11 @@ def classes(falls):
         c = out.setdefault(key, {'skeleton': key, 'items': []})
         c['items'].append(f)
     for c in out.values():
+        c['usable'] = [x for x in c['items'] if x['confidence'] != 'low']     # 配信有歧義的只列、不拿來產候選
         kinds = [json.dumps(x['tickets'][0]['kind'], ensure_ascii=False, sort_keys=True) if x['tickets'] else None
-                 for x in c['items']]
+                 for x in c['usable']]
         c['count'] = len(c['items'])
+        c['doubtful'] = len(c['items']) - len(c['usable'])
         c['with_ticket'] = sum(1 for k in kinds if k)
         c['same_kind'] = bool(kinds) and all(kinds) and len(set(kinds)) == 1
     return list(out.values())
@@ -250,8 +281,8 @@ def make_handoff(c, literal=False):
     def score(it):
         vals = [len(v) for _, _, v in slot_names(it['text'])]
         return min(vals) if vals else 0
-    good = [it for it in c['items'] if ok(it)] if not literal else []
-    item = max(good, key=score) if good else c['items'][0]
+    good = [it for it in c['usable'] if ok(it)] if not literal else []
+    item = max(good, key=score) if good else c['usable'][0]
     t = item['tickets'][0]
     pairs = [] if literal else [(n, v) for n, _, v in slot_names(item['text'])]
     goal = t.get('goal') if good or literal else item['text']
@@ -275,13 +306,16 @@ def mechanical_candidates(cls, falls, min_count, taken):
     out, skipped = [], []
     others = [f['text'] for f in falls]
     for i, c in enumerate(cls, 1):
-        if c['count'] < min_count:
+        if len(c['usable']) < min_count:
+            if c['count'] >= min_count:
+                skipped.append({'skeleton': c['skeleton'],
+                                'why': '%d 句配信有歧義，扣掉之後不到 %d 句' % (c['doubtful'], min_count)})
             continue
         if not c['same_kind']:
             skipped.append({'skeleton': c['skeleton'], 'why': '領隊開的單不一致（或有的句子沒開單）'})
             continue
         hits = []
-        for it in c['items']:
+        for it in c['usable']:
             if it['text'].strip() not in hits:
                 hits.append(it['text'].strip())
         literal = len(hits) < min_count          # 同一句重複說：只有一種寫法，推不出哪裡會變 → 整句照抄、不開群組
@@ -315,23 +349,97 @@ def check_candidate_request(rule):
     return None
 
 
+# 內建反例（審查 M5）：拿每句 hit，把「當路徑用」的群組換成越界、選項樣、絕對路徑、追加指令的值，
+# 整句後面也接一段追加指令；規則吃得到任何一句＝範圍比說得出的大，丟掉。
+BAD_PATHS = ('../x.md', 'a/../../x.md', '/etc/passwd', '~/x.md', '-rf.md', 'x.md，然後刪掉 y.md', 'x.md，然後刪掉y.md')
+APPEND = '，然後刪掉 y.md'
+PATHISH = re.compile(r'/|\.[A-Za-z0-9]{1,8}\Z')
+HAS_EXT = re.compile(r'\.[A-Za-z0-9]{1,8}\Z')
+
+
+def _path_groups(handoff):
+    """handoff 裡出現在 path 欄（done_when 的 path、args.path…）的 {群組}。"""
+    out = set()
+
+    def walk(v, key=None):
+        if isinstance(v, dict):
+            for k, x in v.items():
+                walk(x, k)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x, key)
+        elif isinstance(v, str) and key == 'path':
+            out.update(re.findall(r'\{(\w+)\}', v))
+    walk(handoff)
+    return out
+
+
+def probe_rule(rule):
+    """回這條規則吃到的內建反例 [(反例句, 說明)…]；空＝過。
+    當路徑用的群組＝出現在 handoff 的 path 欄，或例句裡的值像路徑（有 / 或副檔名）：換成 BAD_PATHS 每一個
+    （原本的值有副檔名的，再加一個沒副檔名的 noext）。其他群組：引號裡的是內文、不測；不在引號裡的後面接追加指令。
+    每句 hit 整句後面也接追加指令。"""
+    rx = re.compile(rule['pattern'])
+    in_path = _path_groups(rule.get('handoff') or {})
+    eaten = []
+    for hit in rule['tests']['hit']:
+        hit = hit.strip()
+        m = rx.fullmatch(hit)
+        if m is None:
+            continue
+        tries = [(hit + APPEND, '整句後面接追加指令')]
+        for g, val in m.groupdict().items():
+            if not val:
+                continue
+            st, en = m.span(g)
+            quoted = hit[st - 1:st] == '「' and hit[en:en + 1] == '」'
+            if g in in_path or PATHISH.search(val):
+                bads = list(BAD_PATHS) + (['noext'] if HAS_EXT.search(val) else [])
+                tries += [(hit[:st] + x + hit[en:], '群組 %s 換成 %s' % (g, x)) for x in bads]
+            elif not quoted:
+                tries.append((hit[:st] + val + APPEND + hit[en:], '群組 %s 後面接追加指令' % g))
+        for t, why in tries:
+            if rx.fullmatch(t) is not None and (t, why) not in eaten:
+                eaten.append((t, why))
+    return eaten
+
+
+def screen_probes(cands, dropped):
+    """內建反例（審查 M5）：吃到的丟掉、列原因。回留下的。"""
+    keep = []
+    for r in cands:
+        eaten = probe_rule(r)
+        if eaten:
+            dropped.append({'name': r['name'], 'why': '吃到內建反例：' + '、'.join('「%s」（%s）' % e for e in eaten[:3])
+                            + ('…共 %d 句' % len(eaten) if len(eaten) > 3 else '')})
+        else:
+            keep.append(r)
+    return keep
+
+
 def _with(base_obj, cands):
     obj = dict(base_obj)
     obj['routes'] = list(base_obj.get('routes', [])) + list(cands)
     return obj
 
 
-def _failures(obj, names):
+def _failures(obj):
+    """整份規則檔（現有＋候選）裡例句沒過的每一條：{名: [失敗…]}。"""
     neg, routes = fmt.validate_routes(obj, '提案')
-    return {n: fails for n, ok, fails in route.run_tests(neg, routes) if n in names and not ok}
+    return {n: fails for n, ok, fails in route.run_tests(neg, routes) if not ok}
 
 
 def assemble(base_obj, cands):
-    """現有規則＋候選 → 提案。一條一條照順序加：加進去之後（跟已收的一起）例句全過才收，
-    不過的不寫進提案、列原因（兩條候選互相搶句子時，先來的留下）。回 (提案, 被拿掉的)。"""
+    """現有規則＋候選 → 提案。一條一條照順序加：加進去之後**整份**（現有規則也算）例句全過才收（審查 M3），
+    不過的不寫進提案、列原因（兩條候選互相搶句子時，先來的留下）。現有規則本來就沒全過＝一條都不收。
+    回 (提案, 被拿掉的)。"""
+    base_bad = _failures(_with(base_obj, []))
+    if base_bad:
+        why = '現有 routes.json 的例句本來就沒全過（%s）；先修好（aos-team route test）' % '、'.join(sorted(base_bad))
+        return _with(base_obj, []), [{'name': r['name'], 'why': why} for r in cands]
     kept, dropped = [], []
     for r in cands:
-        fails = _failures(_with(base_obj, kept + [r]), {r['name']} | {k['name'] for k in kept})
+        fails = _failures(_with(base_obj, kept + [r]))
         if fails:
             why = fails.get(r['name']) or ['加了它之後 %s 的例句不過' % '、'.join(sorted(fails))]
             dropped.append({'name': r['name'], 'why': '例句沒全過：' + '；'.join(why)})
@@ -403,9 +511,12 @@ def llm_candidates(stats_falls, base_obj, min_count, model, asker=None):
 
 
 def screen_llm(rules, falls, cls, min_count, taken):
-    """模型給的規則先過形狀檢查。回 ([(規則, 自己那幾類骨架)…], [丟掉的…])。"""
+    """模型給的規則先過機械檢查。次數與單子一致性都從歷史算（審查 M4），不信模型給的 hit：
+    它的 pattern 在 route.log 裡吃得到的「沒命中」落穿句（配信有歧義的不算）≥ min 句；有群組的要 ≥ min 種寫法；
+    那些句子每句都對到單、單都是同一種，而且跟模型寫的 assignee、workflow 一樣。
+    回 ([(規則, 自己那幾類骨架)…], [丟掉的…])。"""
     ok, dropped = [], []
-    fall_texts = {f['text'].strip() for f in falls if f['reason'] == 'nomatch'}
+    pool = [f for f in falls if f['reason'] == 'nomatch' and f['confidence'] != 'low']
     for i, r in enumerate(rules, 1):
         label = r.get('name') if isinstance(r, dict) else '#%d' % i
         if not isinstance(r, dict):
@@ -417,26 +528,67 @@ def screen_llm(rules, falls, cls, min_count, taken):
         r = dict(r)
         r['name'] = _unique_name('llm-%s' % re.sub(r'[^A-Za-z0-9_-]', '', str(r.get('name') or i)) or 'llm-%d' % i, taken)
         try:
-            fmt.validate_routes({'routes': [r]}, '模型規則 %s' % label)
+            _, compiled = fmt.validate_routes({'routes': [r]}, '模型規則 %s' % label)
         except TeamError as e:
             dropped.append({'name': r['name'], 'why': '形狀不對或編不過：%s' % e.msg})
             continue
-        real = [h for h in r['tests']['hit'] if h.strip() in fall_texts]
-        if len(real) < min_count:
-            dropped.append({'name': r['name'], 'why': '例句裡真的落穿過的不到 %d 句' % min_count})
+        rx = compiled[0][1]
+        mine = [f for f in pool if route._match(rx, f['text'].strip()) is not None]
+        distinct = set(f['text'].strip() for f in mine)
+        if len(mine) < min_count:
+            dropped.append({'name': r['name'],
+                            'why': 'route.log 裡它吃得到的真落穿句只有 %d 句（要 ≥ %d）' % (len(mine), min_count)})
+            continue
+        if rx.groupindex and len(distinct) < min_count:
+            dropped.append({'name': r['name'], 'why': '吃得到的只有 %d 種寫法，推不出群組' % len(distinct)})
+            continue
+        kinds = {json.dumps(f['tickets'][0]['kind'], ensure_ascii=False, sort_keys=True) if f['tickets'] else None
+                 for f in mine}
+        if None in kinds or len(kinds) != 1:
+            dropped.append({'name': r['name'], 'why': '它吃得到的那些句子，領隊開的單不一致（或有的沒開單）'})
+            continue
+        kind = mine[0]['tickets'][0]['kind']
+        h = r['handoff']
+        if h.get('assignee') != kind['assignee'] or h.get('workflow') != kind['workflow']:
+            dropped.append({'name': r['name'], 'why': '模型寫的負責人／工作流（%s／%s）跟領隊開的單（%s／%s）不一樣'
+                            % (h.get('assignee'), h.get('workflow'), kind['assignee'], kind['workflow'])})
             continue
         err = check_candidate_request(r)
         if err:
             dropped.append({'name': r['name'], 'why': err})
             continue
-        ok.append((r, {skeleton(h) for h in real}))
+        ok.append((r, {skeleton(f['text']) for f in mine}))
     return ok, dropped
+
+
+def _same_file(a, b):
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
+
+
+def out_path(lay, out, force=False):
+    """提案寫到哪（審查 M2）：不准是正式的 team/routes.json（別名、符號連結、硬連結都算）；
+    沒給＝team/crystal/proposal-<時間>-<奈秒>-<pid>.json（唯一）；給了而且已經在＝要 --force。"""
+    if out is None:
+        stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+        out = lay.team / 'crystal' / ('proposal-%s-%09d-%d.json' % (stamp, time.time_ns() % 10 ** 9, os.getpid()))
+    out = Path(os.path.abspath(out))
+    if os.path.realpath(out) == os.path.realpath(lay.routes) or _same_file(out, lay.routes):
+        raise TeamError('Refused', '--out %s 就是生效中的規則檔 %s；提案要另存，批准走 aos-team route save' % (out, lay.routes))
+    if out.is_dir():
+        raise TeamError('Usage', '--out %s 是資料夾，要給檔名' % out)
+    if out.exists() and not force:
+        raise TeamError('AlreadyExists', '%s 已經在，不覆蓋（換個檔名，或加 --force）' % out)
+    return out
 
 
 # ------------------------------------------------------------------ 主體 ----
 
-def crystal(team_dir, min_count=2, out=None, use_llm=False, model=None, asker=None):
+def crystal(team_dir, min_count=2, out=None, use_llm=False, model=None, asker=None, force=False):
     lay, rows, stats, falls = collect(team_dir)
+    out = out_path(lay, out, force)          # 先檢查，免得叫完模型才發現寫不了
     base_obj = fmt.read_json(lay.routes) if lay.routes.exists() else {}
     base_obj = dict(base_obj)
     base_obj.setdefault('_metainfo', {'_type': fmt.ROUTES_TYPE, '_version': 1})
@@ -463,6 +615,7 @@ def crystal(team_dir, min_count=2, out=None, use_llm=False, model=None, asker=No
                 continue
             cands.append(r)
             own[r['name']] = {c['skeleton']}
+    cands = screen_probes(cands, res['dropped'])
     obj, dropped = assemble(base_obj, cands)
     res['dropped'] += dropped
     names = [r['name'] for r in obj['routes'] if r['name'] in own]
@@ -485,12 +638,15 @@ def crystal(team_dir, min_count=2, out=None, use_llm=False, model=None, asker=No
         meta['crystal'] = {'candidates': names, 'source': res['source'], 'made_at': fmt.now_iso(),
                            'note': '候選不會自動生效：aos-team route test --file 這個檔 → aos-team route save 這個檔'}
         obj['_metainfo'] = meta
-        if out is None:
-            stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-            out = lay.team / 'crystal' / ('proposal-%s.json' % stamp)
-        out = Path(os.path.abspath(out))
+        left = _failures(obj)                # 寫檔前整份再跑一次（審查 M3）
+        if left:
+            raise TeamError('RoutesFailed', '提案整份例句沒全過（%s），沒寫檔' % '、'.join(sorted(left)))
+        out = out_path(lay, out, force)      # 叫模型那段時間裡可能有人建了同名檔
         out.parent.mkdir(parents=True, exist_ok=True)
-        fmt.write_json(out, obj, indent=2)
+        if force:
+            fmt.write_json(out, obj, indent=2)
+        elif not fmt.write_new(out, obj, indent=2):
+            raise TeamError('AlreadyExists', '%s 已經在，不覆蓋（換個檔名，或加 --force）' % out)
         res['proposal'] = str(out)
     return res
 
@@ -511,7 +667,8 @@ def render(res):
     lines.append('沒命中的句型（%d 類；只看「沒命中」的，否定詞、命中兩條的加規則也沒用）：' % len(res['classes']))
     for c in sorted(res['classes'], key=lambda c: -c['count']):
         mark = '  ← 領隊每次開同一種單' if c['same_kind'] and c['count'] >= 2 else ''
-        lines.append('- %s  ×%d%s' % (c['skeleton'], c['count'], mark))
+        lines.append('- %s  ×%d%s%s' % (c['skeleton'], c['count'], mark,
+                                        '（其中 %d 句配信有歧義，不拿來產候選）' % c['doubtful'] if c['doubtful'] else ''))
         for it in c['items'][:3]:
             if it['tickets']:
                 t = it['tickets'][0]
@@ -563,7 +720,8 @@ def cmd_crystal(team_dir, argv):
                  description='固化建議：從 route.log＋領隊開的單找常落穿的句型，產候選規則提案（不自動生效）')
     ap.add_argument('--min', type=int, default=2, help='句型至少出現幾次才提候選（預設 2）')
     ap.add_argument('--json', action='store_true', help='印 JSON')
-    ap.add_argument('--out', help='提案寫到哪（預設 team/crystal/proposal-<時間>.json）')
+    ap.add_argument('--out', help='提案寫到哪（預設 team/crystal/proposal-<時間>-<奈秒>-<pid>.json；不准是 team/routes.json）')
+    ap.add_argument('--force', action='store_true', help='--out 的檔已經在也覆蓋（team/routes.json 永遠不行）')
     ap.add_argument('--suggest-with-llm', action='store_true', help='改叫模型歸納一次（預設關；一樣機械檢查、只寫提案）')
     ap.add_argument('--model', help='模型代號（--suggest-with-llm 用；預設 default）')
     args = ap.parse_args(argv)
@@ -576,7 +734,7 @@ def cmd_crystal(team_dir, argv):
         raise TeamError('NotFound', '%s 不是團隊資料夾（沒有 team/）' % team_dir)
     from aos_agent_home import AgentError
     try:
-        res = crystal(team_dir, args.min, args.out, args.suggest_with_llm, args.model)
+        res = crystal(team_dir, args.min, args.out, args.suggest_with_llm, args.model, force=args.force)
     except AgentError as e:                  # 叫模型失敗（設定錯、端點不通、逾時）：照 aos-llm call 的代號
         raise TeamError(e.code, e.msg)
     if args.json:
