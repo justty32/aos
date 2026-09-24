@@ -1,6 +1,6 @@
 ← [kernel](README.md)｜[spec 總導航](../README.md)
 
-# 6. 命令列（續）：add／halt／check／ls／ack
+# 6. 命令列（續）：add／halt／check／ls 的 health 行／ack
 
 **add**：TARGET 轉絕對路徑放單（kernel 不解指示詞，指示詞是跑的時候 aos-exec 以它自己的規則解——`.json`
 是檔所在資料夾、資料夾目標是資料夾本身）；旗標一對一對到 §2 的 params，`-- ARG...` 對到 `args`。
@@ -19,26 +19,21 @@
 （09-24 試玩 r1 補）**check** 啟動前檢查，每項一行 `ok`／`warn`／`bad`，有 `bad` 退 1：`info` 讀驗；`daemon` 活不活（沒開＝warn）；`path`——`aos-exec`、`aos-cpu`、`aos-kernel`、`aos-agent`、`aos-llm`
 在 daemon 的 PATH 找不找得到（讀得到 `/proc/<daemon pid>/environ` 就用它，否則用目前 shell 的並註明）；`pools`——沒有 `llm` 池＝bad；
 `llm`——llm 池每顆 cpu 的有效 envs（`cpus/<c>/inst.json` 在就用它）有沒有 `AOS_LLM_CONFIG`、檔在不在、llm.json 讀驗過不過、有哪些模型代號。
-（09-24 fix-r4 改）daemon 家：`--daemon-target D`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾（跟 daemon 自己一樣，不再優先看 info 的 `daemon`）；info 的 `daemon`（boot 寫的）在而且跟這次的 D 不同，`daemon` 項多一行 `warn`，說 info 記的是哪個。`--agent DIR` 再查那個 agent：info 讀驗、`tick.pool`／`llm.pool` 在不在、`llm.model` 在不在模型表、工具 `argv[0]` 找不找得到。
-（09-24 試玩 r2 補）另外兩項：`dirs`——K 家的 `requests/`、`responses/`、`cpus/` 在不在（§1 的目錄圖；`cpus/<name>/` 不查，boot 會補），缺＝bad，手建的家要 `mkdir -p` 補；`cpus`——帳本在、`phase` 是 `running`／`stopping`、daemon 活著，而 info 的 cpu 或帳本的 `kcpu` 有不在 daemon 孩子表的＝bad：`daemon 重開過／cpu 不在（…）：執行 aos-kernel boot --target <K> --daemon-target <D>`（沒帳本、已 `stopped`、daemon 沒活就不印這項）。`--agent`、`--daemon-target` 各只能給一次，重複＝用法錯 2（要查多個 agent 分開跑）。check 預設只驗設定，**不連 endpoint**：全綠不代表模型連得上。
+（09-24 fix-r4 改）daemon 家：`--daemon-target D`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾（跟 daemon 自己一樣，不再優先看 info 的 `daemon`）；info 的 `daemon`（boot 寫的）在而且跟這次的 D 不同，`daemon` 項多一行 `warn`，說 info 記的是哪個。（09-24 advice-r1 改）**agent 不在這裡查了**：原本的 `--agent DIR` 搬到 [`aos-agent check`](../aos-agent/cli-check.md)（K 由 `AOS_KERNEL_HOME` 或 agent 家的 `tick.json` 找，先跑這整份 kernel 檢查再查 agent）。`aos-kernel check` 給 `--agent`（帶不帶值、給幾次都一樣）＝用法錯 2，stderr 一行 `aos-kernel: Usage: --agent 搬走了：agent 的檢查改用 aos-agent check --target <DIR> [--probe]（K 由 AOS_KERNEL_HOME 或 agent 家的 tick.json 找）`；`-h` 不列 `--agent`。
+（09-24 試玩 r2 補）另外兩項：`dirs`——K 家的 `requests/`、`responses/`、`cpus/` 在不在（§1 的目錄圖；`cpus/<name>/` 不查，boot 會補），缺＝bad，手建的家要 `mkdir -p` 補；`cpus`——帳本在、`phase` 是 `running`／`stopping`、daemon 活著，而 info 的 cpu 或帳本的 `kcpu` 有不在 daemon 孩子表的＝bad：`daemon 重開過／cpu 不在（…）：執行 aos-kernel boot --target <K> --daemon-target <D>`（沒帳本、已 `stopped`、daemon 沒活就不印這項）。`--daemon-target` 只能給一次，重複＝用法錯 2。check 預設只驗設定，**不連 endpoint**：全綠不代表模型連得上。
 （09-24 fix-r5 補）所以最後印一行總結：沒 `bad` 時是 `設定檢查通過；未測模型連線（--probe 會測）`，有 `bad` 時是 `有 bad，照上面的提示修好再 boot`。
 **`--probe`**（09-24 fix-r5 補）：llm 項讀驗過的每份 llm.json，每個模型代號（endpoint＋model＋api_key 一樣的只打一次）打一次最小請求，每個一行 `probe/<代號>`：
 先 `GET <endpoint>/models`（有 `api_key` 就帶 `Authorization`），2xx＝ok（回的清單讀得懂又沒有這個 `model` 就改 warn「endpoint 通，但模型清單裡沒有 <model>」）；回 404／405（有些端點不給清單）就改 `POST <endpoint>/chat/completions` 一句話（`max_tokens: 1`），2xx＝ok；
 連不上、逾時、其他 HTTP 錯＝bad，寫原因與 endpoint（金鑰遮掉）。每個請求最多等 `min(timeout_ms, 10 秒)`。有 `--probe` 時總結行改成 `設定檢查通過；模型連線也測過`。
 
-**ls** 印帳本的摘要（chain、phase、每顆 cpu 的 req／proc、queue、每個行程的 status／runs／fails）、daemon 孩子表的
-alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份——鏈斷了（`current` null、`requests/` 空、
-`last_seq` 不動）就看得出來。
-（09-24 補）預設印給人看的文字摘要：一行總覽（chain、phase、last_seq、daemon 活不活）、kernel cpu 一行、
-每顆 cpu 一行（名、pool、閒／忙哪個行程、daemon 孩子狀態）、每個行程一行（名、once／反覆、status、runs／fails、pending）、queue 一行；
-`--json` 才印原始 JSON。
+**ls**：（09-24 advice-r1 改）表格的長相、`-v` 與 `--json` 的欄位搬到 [cli-ls.md](cli-ls.md)；這裡只留第一行 health 的判定。
 （09-24 試玩 r3 補，取代 r2 的尾巴 `hint` 行）文字摘要**第一行** `health <一句>` 說整體正不正常，把「停住」跟「正常忙碌」分開；先中先印：
-缺 `requests/`／`responses/`／`cpus/`＝`K 家缺目錄：…（跑 aos-kernel check --target <K>）`；`phase` 是 `stopped` 或從沒 boot＝`停機中（aos-kernel boot --target <K> --daemon-target <D>）`；daemon 沒活＝`daemon 沒在跑：<D>（先 aos-daemon boot --target <D>，再 aos-kernel boot …）`；info 或帳本的 cpu 不在 daemon 孩子表／`missing`＝`cpu missing：<名字>（跑 aos-kernel boot …）`；（09-24 fix-r5 補）daemon 孩子表裡有這些 cpu、但 `state` 是 `dead`（死了、daemon 等著重拉）＝`恢復中（<名字> cpu dead，daemon 重拉中）`；`phase` 是 `running` 但 `state.json` 超過 max(10 秒, 10 格) 沒更新＝`tick 停住：N 秒沒前進（跑 aos-kernel check --target <K>）`；其他＝`ok`。帳本或 info 讀不到＝`kernel 家讀不到：…`（這時 `ls` 照舊退 1）。`--json` 在最外層多一個 `health: {code, message}`（code：`ok`／`dirs`／`stopped`／`daemon`／`cpus`／`recovering`（fix-r5）／`stall`／`broken`）。同一套判定在 `lib/aos_kernel_health.py`，`aos-agent status` 也用它。
+缺 `requests/`／`responses/`／`cpus/`＝`K 家缺目錄：…（跑 aos-kernel check --target <K>）`；`phase` 是 `stopped` 或從沒 boot＝`停機中（aos-kernel boot --target <K> --daemon-target <D>）`；daemon 沒活＝`daemon 沒在跑：<D>（先 aos-daemon boot --target <D>，再 aos-kernel boot …）`；info 或帳本的 cpu 不在 daemon 孩子表／`missing`＝`cpu missing：<名字>（跑 aos-kernel boot …）`；（09-24 fix-r5 補）daemon 孩子表裡有這些 cpu、但 `state` 是 `dead`（死了、daemon 等著重拉）＝`恢復中（<名字> cpu dead，daemon 重拉中）`；`phase` 是 `running` 但 `state.json` 超過 max(10 秒, 10 格) 沒更新＝`tick 停住：N 秒沒前進（跑 aos-kernel check --target <K>）`；其他＝`ok`。帳本或 info 讀不到＝`kernel 家讀不到：…`（這時 `ls` 照舊退 1）。`--json` 的 `health: {code, message}` 是同一句（code：`ok`／`dirs`／`stopped`／`daemon`／`cpus`／`recovering`（fix-r5）／`stall`／`broken`，再加下面 agent 的三個；schema 見 [cli-ls.md](cli-ls.md)）。同一套判定在 `lib/aos_kernel_health.py`，`aos-agent status` 也用它。
 （09-24 fix-r5 補）**agent 的暫停也上第一行**：上面判完是 `ok` 時，`ls` 再看帳本裡的 agent（名字 `agent-` 開頭、不是 once、target 是某個家的 `tick.json`；讀那個家的 `paused`、`resumed`、`state.json` 的 `errors` 與沒到的 `continue-*.json` 門，不讀記憶、不拿鎖）：
 有暫停的＝`agent 暫停中：agent-bob（連敗）、agent-amy（手動）（修好原因後 aos-agent continue --all）`（code `agents_paused`）；否則有連敗 1、2 次的＝`重試中：agent-bob（連敗 1/3）`（code `retrying`）；否則有 `resumed` 的＝`已解除暫停，等下一次成功：agent-bob`（code `resuming`）。這幾個 code 只在 `ls`，`aos-agent status` 不用（它有自己的一套，§1.3）。
-每個 agent 的行程行尾也標：`連敗暫停中`／`手動暫停中`／`重試中（連敗 N/3）`／`已解除暫停，等下一次成功`（`bad` 的 `看 <路徑>` 照舊在最後）。
-（09-24 fix-r5 補）**daemon 沒在跑時** cpu 行不印孩子表裡留下的 `running`（daemon 被 KILL 時那份表不會更新），改印 `dead（daemon 沒在跑）`。
-（09-24 試玩 r1 補）`bad` 的行程行尾附 `看 <路徑>`：target 的 inst 有字面 `stderr` 就指它（agent 就是 `<agent>/log/agent.err`），否則指 target。
+每個 agent 的行程也標：`連敗暫停中`／`手動暫停中`／`重試中（連敗 N/3）`／`已解除暫停，等下一次成功`（advice-r1 起在 proc 表的 `備註` 欄）。
+（09-24 fix-r5 補）**daemon 沒在跑時** cpu 不印孩子表裡留下的 `running`（daemon 被 KILL 時那份表不會更新；advice-r1 起整欄印 `-`，見 [cli-ls.md](cli-ls.md)）。
+（09-24 試玩 r1 補）`bad` 的行程附 `看 <路徑>`：target 的 inst 有字面 `stderr` 就指它（agent 就是 `<agent>/log/agent.err`），否則指 target（advice-r1 起在 proc 表下面另起一行）。
 
 （09-24 補）**ack**：`aos-kernel ack NAME [--target K]` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。
 給 `add --once` 不等的人用。
