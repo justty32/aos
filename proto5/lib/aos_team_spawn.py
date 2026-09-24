@@ -26,7 +26,7 @@ FIELDS = ('template', 'name', 'reason', 'mail_to')
 # 新成員的模板可以有、申請者自己卻沒有的申請種類：都只碰自己的東西，或本來就要人批
 SAFE_MAY = ('ask', 'compact', 'lock', 'review_result', 'tool_draft')
 APPROVE = ('批准', '同意', '好', '可以', 'yes', 'y', 'ok', 'approve')   # 跟 aos_team_beat.APPROVE 同一張
-PREFIX = '[成員]'
+PREFIX = '[成員]'   # wait ls 由題目的 tag（member）印這個前綴；題目文字本身不帶
 
 
 class Parser(argparse.ArgumentParser):
@@ -137,10 +137,10 @@ def on_spawn(lay, roster, req):
     d.mkdir(parents=True, exist_ok=True)
     sid = next_number(d, 's-')
     ask = {'id': req['id'] + '.q', 'from': req['from'], 'kind': 'ask', 'at': now, 'reply_to': None,
-           'options': ['批准', '不要'],
-           'question': '%s %s 想生一個新成員 %s（模板 %s，mail_to：%s）。理由：%s。'
+           'options': ['批准', '不要'], 'tag': 'member',
+           'question': '%s 想生一個新成員 %s（模板 %s，mail_to：%s）。理由：%s。'
                        '批准就跑 aos-team spawn approve %s（生家、登記、改名冊、回覆它）；不要就 aos-team answer %s 不要'
-                       % (PREFIX, req['from'], req['name'], req['template'], '、'.join(mail_to), req['reason'].strip(),
+                       % (req['from'], req['name'], req['template'], '、'.join(mail_to), req['reason'].strip(),
                           '{q}', '{q}')}
     qid = next_number(lay.wait_user, 'q-')
     ask['question'] = ask['question'].replace('{q}', qid)
