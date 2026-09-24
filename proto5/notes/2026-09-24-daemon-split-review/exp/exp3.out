@@ -1,0 +1,35 @@
+-- 裡面的對應表（裡面 uid → 外面 uid → 幾個）
+         0       1000          1
+         1     100000      65536
+total 0
+drwx------ 2 1001 1001 60  9月 24 17:05 homeA
+drwx------ 2 1002 1002 60  9月 24 17:05 homeB
+== 3p: A 的孩子（uid 1001）走原路徑進自己的家（祖先資料夾是 lorkhan 的 700）
+cat: $SCRATCH/e3/homeA/secret: Permission denied
+exit=1
+== 3a: A 的孩子讀自己的家（經 /mnt）
+uid=1001 gid=1001(lorkhan) groups=1001(lorkhan)
+secret-A
+exit=0
+== 3b: A 的孩子讀 B 的家
+cat: /mnt/homeB/secret: Permission denied
+exit=1
+== 3c: A 的孩子想再切成 1002 或 0
+setpriv: setresuid failed: Operation not permitted
+exit=127
+setpriv: setresuid failed: Operation not permitted
+exit=127
+== 3d: A 的孩子讀 lorkhan 的 HOME（裡面看是 uid 0 的 700）
+ls: cannot open directory '/home/lorkhan': Permission denied
+exit=2
+== 3e: 從外面（lorkhan 本人、不在 namespace 裡）看這兩個家
+total 0
+drwx------ 2 101000 101000 60  9月 24 17:05 homeA
+drwx------ 2 101001 101001 60  9月 24 17:05 homeB
+cat: $SCRATCH/e3/homeA/secret: Permission denied
+exit=1
+== 3f: 外面的 lorkhan 直接刪
+rm: cannot remove '$SCRATCH/e3/homeA': Permission denied
+homeA 還在（刪不掉）
+-- 進 namespace 清理
+cleanup exit=0

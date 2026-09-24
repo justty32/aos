@@ -1,0 +1,18 @@
+== 2a: bwrap --unshare-user --uid 2001 --gid 2001，整台 / 唯讀掛進去，讀 homeB
+uid=2001 gid=2001 groups=2001,65534(nobody)
+secret-B
+2001:2001 $SCRATCH/e2/homeB/secret
+exit=0
+== 2b: unshare -U --map-user=2001 --map-group=2001，讀 homeB
+uid=2001 gid=2001 groups=2001,65534(nobody)
+secret-B
+2001:2001 $SCRATCH/e2/homeB/secret
+exit=0
+== 2c: 單一對應下還能不能再切成第二個 uid（setpriv --reuid 2002）
+setpriv: setresuid failed: Invalid argument
+exit=127
+== 2d: bwrap 只掛 homeA（換 uid 無關，靠的是『沒掛』）讀 homeB
+uid=2001 gid=2001 groups=2001,65534
+secret-A
+cat: $SCRATCH/e2/homeB/secret: No such file or directory
+exit=1
