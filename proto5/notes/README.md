@@ -56,6 +56,7 @@
 | [2026-09-24-access-impl/](2026-09-24-access-impl/README.md) | **實作**（照 agent-access 提案）：權限牆＋工具管理 CLI——`access.json` 寫 agent 的工具看得到哪些資料夾，aos-agent 送工具時自動用 `aos-jail`（bwrap）關牢；`tools ls/add/rm/alias/unalias`、`access ls/set/rm/cwd/net`；deepseek-chat 真跑兩輪都過；astra 必修 8 條全修；測試 1343→1447（rebase 後 1470） |
 | [2026-09-24-fold-in/](2026-09-24-fold-in/README.md) | **納入**：proto5-2（池式 daemon／kernel）搬進 proto5 取代舊的 daemon／kernel，agent 線保留 proto5 的；規範照 proto5-diffs 換句並搬新章節；`aos-exec`、`aos_kernel_cpu` 拆檔、tidy；proto5-2 只留 spec／notes 當歷史；astra 必修 3 條全修；測試合併後 1597，rebase 後 1723 |
 | [2026-09-24-idle-wait-impl/](2026-09-24-idle-wait-impl/README.md) | **實作**（照 proto5-2 idle-wait 提案方案 (b)）：agent 沒事退 102 停車，回音出貨時 kernel 叫醒、`say` 投 `wake` 叫醒，保底 `park_ms` 5 分鐘；閒著 60 秒 kernel 派 agent 從 28 格降到 0 格；kill -9 在「放好回音、存帳本前」重跑驗過；astra 必修 2 條全修；測試 1999→2044 |
+| [2026-09-24-one-boot/](2026-09-24-one-boot/README.md) | **實作**（使用者 09-24 拍板）：開機合一、家不合一——一條 `aos up`／`aos down`；kernel cpu、tick 鏈、開機交接拿掉，daemon 定時或有新單時替 kernel 開一格 tick（同時一格＋`K/.tick.lock`）；kernel 帳本換 `K/ledger.sqlite`（只寫變了的列、一筆交易）；`aos-kernel proc --json`；`ls --json` 第 3 版；投單到回音 0.5→0.04 秒；astra 必修 5 條全修；測試 2068→2106 |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 
