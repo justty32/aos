@@ -6,6 +6,7 @@
 > 2026-09-23 定稿並已實作：[`aos_home.py`](../lib/aos_home.py)、[`aos_client.py`](../lib/aos_client.py)、[`aos_exec_cpu.py`](../lib/aos_exec_cpu.py)（入口 `aos-cpu`）。
 > 舊的 run／daemon／kernel／cpu-queue 八份已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）；llm-cpu／tool-cpu 四份等 agent 重寫落地再刪。
 > 已拍板的前提在 §9，我自己選的在 §10。
+> 2026-09-24 實作補記：依實作審查回寫，見 [notes/2026-09-23-rearch/impl-review-report.md](../notes/2026-09-23-rearch/impl-review-report.md)；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。
 
 一句話：**一顆 exec cpu 是一個資料夾加一個主人行程：逐件把 `requests/` 裡的工作 request 照 `aos-exec`
 跑一次，回音寫到 `responses/` 同名檔；反覆、排程都是 kernel 的事，cpu 只做一次。**
@@ -151,7 +152,7 @@ notification，**檔名必須以 `ack-` 開頭**（主人只掃前綴）。主�
 ### 4.1 `aos-exec`：params 就是 aos-exec 的命令列
 
 request 的意思是「像命令列 `aos-exec TARGET --dir-target R --timeout-ms N --stderr S -- ARGS`
-那樣跑一次」，params 的欄位一對一照 [aos-exec](aos-exec.md) 的 `run_target()`：
+那樣跑一次」，params 的欄位一對一照 [aos-exec](aos-exec.md) 的 `run_target_full()`：
 
 ```json
 {"jsonrpc":"2.0","id":"agent-1790000000000000000-77","method":"aos-exec",
@@ -188,10 +189,13 @@ result：
 
 | 鍵 | 意思 |
 |---|---|
-| `code`、`kind` | 就是 `run_target()` 回的 `(code, kind)`：`child`＝子程式真的跑了一次（`code` 是它的退出碼，找不到程式 127、沒執行權 126、逾時 143／137 都算 child）；`aos`＝aos-exec 自己失敗、那次根本沒跑（`code` 是 1，跟 API 一樣、不換算成 125） |
-| `timed_out` | 真的撞到 `timeout_ms`（真實旗標，不從 143／137 猜）。**aos-exec 的 `run_target()` 三種目標都必須回這格**——現行程式沒有，是實作時要補的函式庫契約，[aos-exec.md](aos-exec.md) 定稿一起改 |
+| `code`、`kind` | 就是 `run_target_full()` 回的 `code`、`kind`：`child`＝子程式真的跑了一次（`code` 是它的退出碼，找不到程式 127、沒執行權 126、逾時 143／137 都算 child）；`aos`＝aos-exec 自己失敗、那次根本沒跑（`code` 是 1，跟 API 一樣、不換算成 125） |
+| `timed_out` | 真的撞到 `timeout_ms`（真實旗標，不從 143／137 猜）。aos-exec 的 `run_target_full()` 三種目標都回這格 |
 | `stopped` | 是被強制停砍掉的（§5.2）；子程式在強制停到達**之前**就自己結束的，`stopped` 是 false、結果算數 |
 | `ms` | 耗時 |
+
+（09-24 補）`run_target_full()` 對三種目標回傳 `code`、`kind`、`timed_out`、`stopped`、`ms`，cpu 用的就是這個入口；
+舊的 `run_target()` 保留回 `(code, kind)` 的相容契約，給還沒遷移的呼叫者。
 
 **`kind=aos` 是 result 不是 error**：params 合法、只是那份 inst 讀不到／壞掉／前置檢查沒過。
 stdout 不在 result 裡——要輸出就在 inst 裡寫 `stdout`。
@@ -207,6 +211,8 @@ notification，**檔名必須以 `stop-` 開頭**（主人只掃前綴）。細�
 
 幾個邊角：request 檔名必須是 `.json` 結尾的單一檔名（不含 `/`、NUL）；`ack-`／`stop-` 開頭但 `method` 不是
 `ack`／`stop` 的，照三類表處理（有 id 回 -32600、沒 id 只刪）；`state.runs` 只數真的跑過 aos-exec 的，壞單不算。
+（09-24 補）`ack-`／`stop-` 檔必須是相應 method 的 notification；帶 id 時回 `-32600`，不執行控制動作。
+合法 notification 的 method／params 錯誤只刪原單、不回音。
 
 ## 5. 停下來
 
@@ -230,6 +236,9 @@ notification，**檔名必須以 `stop-` 開頭**（主人只掃前綴）。細�
 4. 寫 `state.json`（current=null），退出碼 0。
 
 閒著時收到就直接 3、4。所以「溫和停」最慢等一件工作；工作有 `timeout_ms` 就有上限、沒有就沒有。
+
+（09-24 補）控制 pipe 的一行要算數，得是物件、`jsonrpc` 為 `"2.0"`、`method` 是字串；有 `id` 鍵的話型別要合法（字串、數字、null）；
+`stop` 不能帶 `id`（必須是 notification）。`go` 帶合法 id 容忍放行。不合的整行忽略，cpu 的 stderr 記一行 `BadControl`。
 
 ### 5.2 強制停：第二次訊號
 
@@ -352,3 +361,12 @@ cpu 的環境就是工作的環境（llm cpu＝環境裡有 `llm-http` 的普通
 8. **上一任死掉的單回 `Interrupted`**，語意「結果不明」，收件者自己決定要不要重送。
 9. **訊號：第一次＝溫和停、第二次＝砍子程式那組並回 `stopped:true`**；KILL 主人交給開機對帳。
 10. **`_type` 叫 `exec_cpu`**、程式叫 `aos-cpu`；aos-run 這個名字退休。
+
+## 實作補記（2026-09-24）
+
+依 [實作審查報告](../notes/2026-09-23-rearch/impl-review-report.md) 回寫；修正輪紀錄見 [impl-fix-round1.md](../notes/2026-09-23-rearch/impl-fix-round1.md)。不改上面的節號，只把句子補進原節：
+
+- §4.1：`run_target()` 改稱 `run_target_full()`（審查 A-5、B-1），舊入口保留相容。
+- §4.3：`ack-`／`stop-` 帶 id 回 `-32600`（B-4）。
+- §5.1：控制 pipe 驗信封（A-2）；`go` 帶合法 id 放行是隊長裁決。
+- 主人被 KILL 後另一 session 的子程式仍可能活著（§5.3 已列保證外），kernel 那邊的後果見 [kernel §6](kernel.md) boot 第 2 步的補句（B-12）。
