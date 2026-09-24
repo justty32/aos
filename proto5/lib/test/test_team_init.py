@@ -158,6 +158,17 @@ class InitTests(unittest.TestCase):
         r = team_cli('rm', 'nobody', '--target', self.team)
         self.assertEqual(r.returncode, 1)
 
+    def test_rm_purge_deletes_home(self):
+        self.init('--config', self.src)
+        r = team_cli('rm', 'worker-1', '--purge', '--target', self.team, env={'AOS_KERNEL_HOME': ''})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('已刪除（--purge）', r.stdout)
+        self.assertFalse((self.team / 'members/worker-1').exists())
+        removed = self.team / 'members/.removed'
+        self.assertEqual(list(removed.iterdir()) if removed.exists() else [], [])    # 沒留在已拆資料夾
+        self.assertNotIn('worker-1', read_json(self.team / 'team.json')['members'])
+        self.assertEqual(list((self.team / 'members').glob('.removing-*')), [])
+
     def test_ls_without_kernel(self):
         self.init('--config', self.src)
         r = team_cli('ls', '--json', '--target', self.team, env={'AOS_KERNEL_HOME': ''})

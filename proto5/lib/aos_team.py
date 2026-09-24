@@ -207,14 +207,19 @@ def cmd_ls(team_dir, argv):
 # -------------------------------------------------------------------- rm ----
 
 def cmd_rm(team_dir, argv):
-    ap = _parser('rm', '拿掉一個成員：家搬進 members/.removed/、名冊刪那列（也從別人的 mail_to 拿掉）；不刪檔')
+    ap = _parser('rm', '拿掉一個成員：家搬進 members/.removed/（已拆）、名冊刪那列（也從別人的 mail_to 拿掉）；'
+                       '預設不刪檔，加 --purge 才真的刪掉那個家')
     ap.add_argument('name')
+    ap.add_argument('--purge', action='store_true', help='真的刪掉家（不搬進 members/.removed/，刪了救不回來）')
     args = ap.parse_args(argv)
     lay = Layout(team_dir)
     name = args.name
     intent = lay.members / ('.removing-%s.json' % name)
     if intent.exists():                                   # 上次搬了家、還沒改名冊就崩了：照紀錄做完
-        return _finish_rm(lay, name, read_json(intent), intent)
+        plan = read_json(intent)
+        if args.purge:
+            plan['purge'] = True
+        return _finish_rm(lay, name, plan, intent)
     roster = load_roster(lay.root)
     if name not in roster['members']:
         raise TeamError('NotFound', '%s 不在名冊裡（有：%s）' % (name, '、'.join(roster['members'])))
@@ -228,7 +233,7 @@ def cmd_rm(team_dir, argv):
             raise TeamError('StillRunning', '%s 還登記在 kernel（%s）；先 aos-agent stop --target %s 或 aos-team stop'
                             % (name, k['home'], home))
     dest = lay.members / '.removed' / ('%s-%d' % (name, time.time_ns()))
-    plan = {'name': name, 'dest': str(dest)}
+    plan = {'name': name, 'dest': str(dest), 'purge': bool(args.purge)}
     write_json(intent, plan)                              # 先記下要做什麼，崩了 rm／init 都看得到
     return _finish_rm(lay, name, plan, intent)
 
@@ -247,6 +252,9 @@ def _finish_rm(lay, name, plan, intent):
                 other['mail_to'] = [x for x in other['mail_to'] if x != name]
         validate_roster(raw, str(lay.roster))
         write_json(lay.roster, raw, indent=2)
+    if plan.get('purge') and dest.exists():            # 先搬再刪：搬是原子的，刪到一半崩了重跑 rm 會接著刪
+        shutil.rmtree(dest)
+        print('%s 的家已刪除（--purge）' % name)
     intent.unlink(missing_ok=True)
     print('team.json 拿掉了 %s（也從別人的 mail_to 拿掉）；已裝的工具設定要更新就重跑 aos-team init' % name)
     import aos_team_task
