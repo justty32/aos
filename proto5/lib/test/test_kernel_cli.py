@@ -96,7 +96,7 @@ class KernelCLI(KernelCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         result = self.raw_cli('ls', env=env, cwd=self.home)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('chain -', result.stdout)
+        self.assertIn('kernel  沒 boot 過', result.stdout)
         missing = self.root / 'nope'
         for args, extra, cwd, source in [
                 (('--target', missing), {}, self.root, '取自 --target）'),
@@ -146,8 +146,11 @@ class KernelCLI(KernelCase):
     def test_ls_json_matches_status_without_ledger(self):
         self.initialize()
         actual = json.loads(self.good_cli('ls', self.home, '--json').stdout)
-        self.assertEqual(actual.pop("health")["code"], "stopped")
-        self.assertEqual(actual, kernel.status(self.home))
+        self.assertEqual(actual["health"]["code"], "stopped")
+        self.assertEqual(actual["_metainfo"], {"_type": "aos_kernel_ls", "_version": 1})
+        self.assertEqual([c["name"] for c in actual["cpus"]], list(self.info["cpus"]))
+        self.assertEqual((actual["procs"], actual["queue"]), ([], []))
+        self.assertIsNone(actual["kernel"]["phase"])
 
     def test_ls_summary_includes_cpus_and_procs(self):
         self.setup_running()
@@ -158,21 +161,33 @@ class KernelCLI(KernelCase):
         with contextlib.redirect_stdout(output):
             self.assertEqual(kernel.main(['ls', '--target', str(self.home), '--json']), 0)
         actual = json.loads(output.getvalue())
-        self.assertEqual(actual.pop("health")["code"], "stopped")
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual["health"]["code"], "stopped")
+        visible = next(p for p in actual["procs"] if p["name"] == "visible")
+        self.assertEqual({k: visible[k] for k in ("once", "status", "runs", "fails")},
+                         {k: expected["procs"]["visible"][k] for k in ("once", "status", "runs", "fails")})
+        self.assertEqual(actual["kernel"]["last_seq"], expected["last_seq"])
         summary = self.good_cli('ls', self.home).stdout
         self.assertFalse(summary.startswith('{'))
+        rows = {line.split()[0]: line for line in summary.splitlines() if line.startswith('  ')}
+        self.assertIn('  池 ', summary)
         for name in self.info['cpus']:
-            self.assertIn('cpu ' + name + '  pool ', summary)
-        self.assertIn('proc visible  repeat ', summary)
+            self.assertTrue(any(line.split()[:2] in (['kernel', name], ['llm', name], ['default', name], [name])
+                                or (len(line.split()) > 1 and line.split()[1] == name)
+                                for line in summary.splitlines() if line.startswith('  ')), name)
+        self.assertIn('visible', rows)
+        self.assertIn('反覆', rows['visible'])
         self.assertIn('queue ', summary)
 
     def test_ls_summary_without_ledger(self):
         self.initialize()
         text = self.good_cli('ls', self.home).stdout
-        self.assertIn('chain -  phase -  last_seq -  daemon dead', text)
-        self.assertIn('kernel cpu -  current -  requests 0', text)
-        self.assertIn('cpu llm  pool llm  idle  dead（daemon 沒在跑）', text)  # fix-r5
+        self.assertIn('kernel  沒 boot 過  seq -  daemon dead', text)
+        self.assertIn('  kcpu -  沒在跑  requests 0', text)
+        self.assertIn('（daemon 沒在跑，孩子狀態不明）', text)  # fix-r5：不印孩子表的舊狀態
+        row = next(line for line in text.splitlines() if line.split()[:2] == ['llm', 'llm'])
+        self.assertEqual(row.split()[2:], ['閒', '-', '-'])
+        self.assertIn('proc    0 個', text)
+        self.assertIn('queue   -', text)
 
     def test_ack_once_response_by_filename_or_path(self):
         self.setup_running()
@@ -188,10 +203,12 @@ class KernelCLI(KernelCase):
         self.kernel_stop()
 
     def test_new_help_and_usage(self):
-        for command, flags in [('init', ['--config']), ('halt', ['--wait-ms', '--no-wait']), ('check', ['--agent', '--daemon-target'])]:
+        for command, flags in [('init', ['--config']), ('halt', ['--wait-ms', '--no-wait']), ('check', ['--daemon-target', '--probe']), ('ls', ['--json', '--verbose'])]:
             text = self.good_cli(command, '-h').stdout
             for flag in flags:
                 self.assertIn(flag, text)
+            if command == 'check':
+                self.assertNotIn('--agent', text)  # advice-r1：搬到 aos-agent check
         for args in [('halt', '--wait-ms', '-1'), ('check', '--unknown'), ('stop',), ('check', '--daemon', 'D')]:
             self.assertEqual(self.cli(args[0], self.home, *args[1:]).returncode, 2)
 
@@ -274,8 +291,11 @@ class KernelCLI(KernelCase):
             proc = dict(target=str(target), once=False, status='bad', runs=3, fails=3, pending=None)
             self.write(self.home / 'state.json', {'procs': {'agent': proc}})
             text = self.good_cli('ls', self.home).stdout
-            self.assertIn('  看 %s\n' % (agent / 'log/agent.err'), text)
-            self.assertEqual(json.loads(self.good_cli('ls', self.home, '--json').stdout)['procs']['agent'], proc)
+            self.assertIn('  agent 壞了，看 %s\n' % (agent / 'log/agent.err'), text)
+            data = json.loads(self.good_cli('ls', self.home, '--json').stdout)
+            self.assertEqual(data['procs'][0]['look'], str(agent / 'log/agent.err'))
+            self.assertEqual({k: data['procs'][0][k] for k in ('target', 'once', 'status', 'runs', 'fails')},
+                             {k: proc[k] for k in ('target', 'once', 'status', 'runs', 'fails')})
 
     def test_bad_summary_stderr_fallbacks(self):
         target = self.root / 'inst.json'
@@ -300,13 +320,14 @@ class KernelCLI(KernelCase):
     def test_ls_missing_cpu_hint_and_json_unchanged(self):
         self.fake_daemon_snapshot()
         text = self.good_cli('ls', self.home).stdout
-        self.assertIn('cpu k  pool kernel  idle  missing', text)
+        row = next(line for line in text.splitlines() if line.split()[:2] == ['kernel', 'k'])
+        self.assertEqual(row.split()[2:], ['tick', '-', 'missing'])
         self.assertEqual(text.splitlines()[0],
                          'health 停機中（aos-kernel boot --target %s --daemon-target %s）' %
                          (self.home, self.daemon))
         actual = json.loads(self.good_cli('ls', self.home, '--json').stdout)
-        self.assertEqual(actual.pop("health")["code"], "stopped")
-        self.assertEqual(actual, kernel.status(self.home))
+        self.assertEqual(actual["health"]["code"], "stopped")
+        self.assertEqual({c["name"]: c["child"] for c in actual["cpus"]}, dict.fromkeys(self.info["cpus"], "missing"))
 
     def test_ls_all_cpus_present_has_no_hint(self):
         self.fake_daemon_snapshot(missing=False)
@@ -335,12 +356,15 @@ class KernelCLI(KernelCase):
             self.assertEqual(kernel.main(['ls', '--target', os.path.relpath(self.home)]), 0)
         self.assertIn('aos-kernel boot --target %s --daemon-target %s' % (self.home, self.daemon), out.getvalue())
 
-    def test_check_repeated_agent_is_usage_error(self):
-        result = self.cli('check', self.home, '--agent', 'A', '--agent=B')
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(result.stdout, '')
-        self.assertEqual(result.stderr,
-                         'aos-kernel: Usage: --agent 只能給一次；要查多個請分開跑 check\n')
+    def test_check_old_agent_flag_points_to_aos_agent_check(self):
+        for extra in (('--agent', 'A'), ('--agent', 'A', '--agent=B'), ('--agent',)):
+            with self.subTest(extra=extra):
+                result = self.cli('check', self.home, *extra)
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout, '')
+                self.assertEqual(len(result.stderr.splitlines()), 1)
+                self.assertIn('aos-kernel: Usage: --agent 搬走了：agent 的檢查改用 aos-agent check --target %s'
+                              % ('DIR' if len(extra) == 1 else 'A'), result.stderr)
 
     def test_check_repeated_daemon_is_usage_error(self):
         result = self.cli('check', self.home, '--daemon-target=A', '--daemon-target', 'B')
@@ -352,11 +376,11 @@ class KernelCLI(KernelCase):
     def test_check_single_options_pass_scalar_values(self):
         from unittest.mock import patch
         with patch('aos_kernel_check.check', return_value=0) as check:
-            self.assertEqual(kernel.main(['check', '--target', str(self.home), '--agent', 'A', '--daemon-target', 'D']), 0)
-        check.assert_called_once_with(str(self.home), 'A', 'D', note=check.call_args.kwargs['note'], probe=False)
+            self.assertEqual(kernel.main(['check', '--target', str(self.home), '--daemon-target', 'D']), 0)
+        check.assert_called_once_with(str(self.home), 'D', note=check.call_args.kwargs['note'], probe=False)
 
     def test_check_omitted_options_pass_none(self):
         from unittest.mock import patch
         with patch('aos_kernel_check.check', return_value=0) as check:
             self.assertEqual(kernel.main(['check', '--target', str(self.home)]), 0)
-        check.assert_called_once_with(str(self.home), None, None, note=check.call_args.kwargs['note'], probe=False)
+        check.assert_called_once_with(str(self.home), None, note=check.call_args.kwargs['note'], probe=False)

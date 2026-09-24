@@ -55,6 +55,17 @@ class KernelCheck(unittest.TestCase):
         self.assertEqual(err.getvalue(), '')
         return out.getvalue()
 
+    def run_agent_check(self, agent, *args, code=0):
+        """advice-r1：agent 的檢查搬到 aos-agent check；K 由 AOS_KERNEL_HOME 給。"""
+        import aos_agent_cli
+        out, err = io.StringIO(), io.StringIO()
+        with patch.dict(os.environ, {'AOS_KERNEL_HOME': str(self.home)}), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            result = aos_agent_cli.main(['check', '--target', str(agent), *map(str, args)])
+        self.assertEqual(result, code, out.getvalue() + err.getvalue())
+        self.assertEqual(err.getvalue(), '')
+        return out.getvalue()
+
     def lock_daemon(self, pid=None):
         lock = (self.daemon / '.daemon.lock').open('w')
         self.addCleanup(lock.close)
@@ -193,19 +204,19 @@ class KernelCheck(unittest.TestCase):
         self.assertIn('bad  llm/llm:', self.run_check(code=1))
 
     def test_agent_valid_pools_and_model(self):
-        text = self.run_check('--agent', self.agent())
+        text = self.run_agent_check(self.agent())
         for item in ('agent', 'agent/tick.pool', 'agent/llm.pool', 'agent/llm.model'):
             self.assertIn('ok   %s:' % item, text)
 
     def test_agent_invalid_info_reports_code(self):
         agent = self.agent()
         self.put(agent / 'info.json', {})
-        text = self.run_check('--agent', agent, code=1)
+        text = self.run_agent_check(agent, code=1)
         self.assertIn('bad  agent: MetainfoInvalid:', text)
 
     def test_agent_unknown_pools_and_model(self):
         agent = self.agent(tick={'pool': 'absent'}, llm={'pool': 'missing', 'model': 'unknown'})
-        text = self.run_check('--agent', agent, code=1)
+        text = self.run_agent_check(agent, code=1)
         for item in ('agent/tick.pool', 'agent/llm.pool', 'agent/llm.model'):
             self.assertIn('bad  %s:' % item, text)
 
@@ -217,12 +228,12 @@ class KernelCheck(unittest.TestCase):
             return {'type': 'function', 'function': {'name': name}, '_meta': {'argv': [cmd]}}
         self.put(agent / 'tools.json', [tool('relative', './tool'), tool('absolute', str(local)),
                                        tool('path', 'aos-exec')])
-        text = self.run_check('--agent', agent)
+        text = self.run_agent_check(agent)
         for name in ('relative', 'absolute', 'path'):
             self.assertIn('ok   agent/tool/' + name, text)
         local.chmod(0o644)
         self.put(agent / 'tools.json', [tool('relative', './tool'), tool('missing', 'missing-executable')])
-        text = self.run_check('--agent', agent, code=1)
+        text = self.run_agent_check(agent, code=1)
         for name in ('relative', 'missing'):
             self.assertIn('bad  agent/tool/' + name, text)
 
@@ -230,7 +241,7 @@ class KernelCheck(unittest.TestCase):
         agent = self.agent(tools=['tools.json'])
         self.put(agent / 'tools.json', [{'type': 'function', 'function': {'name': 'dynamic'},
                                        '_meta': {'argv': [{'$env': 'TOOL'}]}}])
-        self.assertIn('warn agent/tool/dynamic:', self.run_check('--agent', agent))
+        self.assertIn('warn agent/tool/dynamic:', self.run_agent_check(agent))
 
     def test_required_dirs_present_without_cpu_homes(self):
         self.assertEqual(list((self.home / 'cpus').iterdir()), [])

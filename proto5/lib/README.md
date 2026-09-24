@@ -1,4 +1,4 @@
-# proto5/lib — 二十九支 Python 模組
+# proto5/lib — 三十一支 Python 模組
 
 ← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu/README.md)、[daemon.md](../spec/daemon/README.md)、[kernel.md](../spec/kernel/README.md)
 
@@ -24,14 +24,16 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_kernel_ledger.py`](aos_kernel_ledger.py) | `KernelLedger`：帳本、syscall（add／rm）、四出貨箱重放、接 tick 鏈與 ack | [kernel.md](../spec/kernel/README.md) §2、§3 |
 | [`aos_kernel_engine.py`](aos_kernel_engine.py) | `Kernel`：收回音、補 cpu、分池派工、停機與一格十步 `step`；模組函式 `tick` | [kernel.md](../spec/kernel/README.md) §3 |
 | [`aos_kernel_boot.py`](aos_kernel_boot.py) | `boot` 交接換鏈、`status` 偷看、`halt` 等停好（函式名仍是 `stop`） | [kernel.md](../spec/kernel/README.md) §6 |
-| [`aos_kernel_cli.py`](aos_kernel_cli.py) | `aos-kernel` 參數解析、add／rm 交件、`ls` 文字摘要（第一行 health）與 `main` | [kernel.md](../spec/kernel/README.md) §6 |
+| [`aos_kernel_cli.py`](aos_kernel_cli.py) | `aos-kernel` 參數解析、add／rm 交件、`ls` 接線與 `main`；（advice-r1）`check --agent` 變用法錯、指到 `aos-agent check` | [kernel.md](../spec/kernel/README.md) §6 |
+| [`aos_kernel_ls.py`](aos_kernel_ls.py) | （advice-r1）`ls_data()` 收成穩定的 `aos_kernel_ls` 第 1 版資料（就是 `--json`），`render()` 排成按池分組的對齊表（中文算 2 格、長名砍中間、`-v` 才印路徑）；`stderr_hint()` 給 bad 行程指路 | [kernel/cli-ls.md](../spec/kernel/cli-ls.md) |
 | [`aos_kernel_health.py`](aos_kernel_health.py) | `health(home)`：kernel 整體健康一句話（ok／缺目錄／停機中／daemon 沒活／cpu missing／恢復中（fix-r5）／tick 停住／讀不到），不丟例外；`ls` 與 `aos-agent status` 共用。`agent_marks()`／`agents_health()`（fix-r5）給 `ls` 標 agent 的暫停／重試 | [kernel.md](../spec/kernel/README.md) §6 |
-| [`aos_kernel_check.py`](aos_kernel_check.py) | `aos-kernel check`：啟動前唯讀檢查 info、K 家必要目錄、daemon、cpu 在不在孩子表（daemon 重開提示 boot）、PATH、池、llm 設定與（可選）agent；`--probe`（fix-r5）真的打一次 endpoint（`probe_endpoint()`），結尾印總結行 | [kernel.md](../spec/kernel/README.md) §6 |
+| [`aos_kernel_check.py`](aos_kernel_check.py) | `aos-kernel check`：啟動前唯讀檢查 info、K 家必要目錄、daemon、cpu 在不在孩子表（daemon 重開提示 boot）、PATH、池、llm 設定；`--probe`（fix-r5）真的打一次 endpoint（`probe_endpoint()`），結尾印總結行。（advice-r1）拆出 `kernel_checks()`／`finish()` 給 `aos-agent check` 共用，`Checks.agent()` 只由它呼叫 | [kernel.md](../spec/kernel/README.md) §6 |
+| [`aos_agent_check.py`](aos_agent_check.py) | （advice-r1）`aos-agent check`：`find_kernel()` 由 `AOS_KERNEL_HOME`→`tick.json` 找 K，整段跑 kernel 檢查再查 agent 家（池、模型代號、工具），`--probe` 同一套 | [aos-agent/cli-check.md](../spec/aos-agent/cli-check.md) |
 | [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（`_metainfo`、人格／記憶／工具、message 驗證）與 `aos-llm call` 的六格 loader，帶原文件與位置解欄位 | [agent.md](../spec/agent/README.md) §2～§3、§5；[aos-llm.md](../spec/aos-llm/README.md) §3 |
 | [`aos_llm_call.py`](aos_llm_call.py) | 問模型一次：讀驗 `AOS_LLM_CONFIG` 的 llm.json、組 body、HTTP、正規化並驗 message；入口 `aos-llm call`（fix-r4 由 `aos-llm-call` 改名） | [aos-llm.md](../spec/aos-llm/README.md) |
 | [`aos_agent_info.py`](aos_agent_info.py) | 完整 info 設定、state 進度與恢復紀錄讀驗，並原子寫回 state | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 | [`aos_agent.py`](aos_agent.py) | tick 三格流程（第 0 步拿 `.tick.lock`、看手動暫停）、批次派工與 kernel 排程登記（stop 不讀 info、沒 `AOS_KERNEL_HOME` 用 tick.json 記的；舊版 tick.json 在 start 改寫）；`main` 轉給 aos_agent_cli | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) §2、§2.1、§11 |
-| [`aos_agent_cli.py`](aos_agent_cli.py) | （fix-r4）九個子命令的 argparse、`--target`、`--wait [秒]`（預設 300）、listen 三態互斥、NotAnAgent 附家的來源 | [aos-agent.md](../spec/aos-agent/README.md) §1 |
+| [`aos_agent_cli.py`](aos_agent_cli.py) | （fix-r4）九個子命令（advice-r1 加 `check`，十個）的 argparse、`--target`、`--wait [秒]`（預設 300）、listen 三態互斥、NotAnAgent 附家的來源 | [aos-agent.md](../spec/aos-agent/README.md) §1 |
 | [`aos_agent_listen.py`](aos_agent_listen.py) | （fix-r4，原 aos_agent_last）`listen --last`（info 壞了退回讀 `prompts/history.json`、門關著或手動暫停時警告）、（fix-r5）還沒講完時警告「還在處理中」並在 stderr 附時間；`--wait`（`wait_reply()`，say --wait 共用；fix-r5 起 kernel 家有問題與 bad 也立刻退）、`--follow` | [aos-agent.md](../spec/aos-agent/README.md) §1.5 |
 | [`aos_agent_status.py`](aos_agent_status.py) | `aos-agent status`（`collect()` 收集 health（含手動暫停）、state／batch／門／未收輸入、這次卡住的原因與已恢復的舊錯、K 帳本那筆，文字、`-v` 或 `--json`）；`tick_binding()` 讀 tick.json 記的 K（認舊鍵）；（fix-r5）`brief()` 給 kernel ls 的一句標記、`short_error()` 舊錯短版 | [aos-agent.md](../spec/aos-agent/README.md) §1.3 |
 | [`aos_agent_pause.py`](aos_agent_pause.py) | （fix-r4）`pause` 放 `paused` 檔；`continue` 刪它並 touch 連敗暫停門，（fix-r5）解了連敗就放 `resumed`；`resume_all()` 是 `continue --all`；都不拿 tick 鎖、不寫 state | [aos-agent.md](../spec/aos-agent/README.md) §1.4、§1.6 |
@@ -43,7 +45,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1153 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1171 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -358,7 +360,7 @@ rm 自身回 name，正在跑的行程保留 discard 到收完。
 
 cpu 家「缺的補齊」：資料夾、info、inst 各自不在才寫，已在不覆蓋。沒有事件的格不寫 kernel.log。
 
-CLI（fix-r4）：每個子命令都用 `--target K`（省略找 `AOS_KERNEL_HOME` 再目前資料夾，退 1 的錯誤行附來源）：`aos-kernel init --config FILE／boot [--daemon-target D]／tick／add INST／rm NAME／ack NAME／ls [--json]／halt [--wait-ms N] [--no-wait]／check [--agent DIR] [--daemon-target D]`（`--agent`／`--daemon-target` 重複＝用法錯），各有 `-h`，完整參數見 [kernel.md §6](../spec/kernel/cli.md)。
+CLI（fix-r4）：每個子命令都用 `--target K`（省略找 `AOS_KERNEL_HOME` 再目前資料夾，退 1 的錯誤行附來源）：`aos-kernel init --config FILE／boot [--daemon-target D]／tick／add INST／rm NAME／ack NAME／ls [--json] [-v]／halt [--wait-ms N] [--no-wait]／check [--daemon-target D] [--probe]`（`--daemon-target` 重複＝用法錯；advice-r1 起 `--agent` 一律用法錯、指到 `aos-agent check`），各有 `-h`，完整參數見 [kernel.md §6](../spec/kernel/cli.md)。
 `ls` 預設印文字摘要（第一行 `health`：ok 或哪裡壞、該打什麼指令；cpu、行程、queue 各一行；bad 行程附「看 <stderr 路徑>」），`--json` 印 `status()` 加 `health`；`ack NAME` 替 once 不等的人收回音。
 反覆 add 等回音印 NAME；once 預設印 request 與回音路徑，帶 `--wait-ms` 才等。
 CLI 收到回音代 ack，JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成敗。
@@ -367,10 +369,10 @@ halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1153 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1171 條；repo 根目錄
 ```
 
-共 33 個測試檔、1153 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 34 個測試檔、1171 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -400,8 +402,9 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_home.py](test/test_home.py) | 27 | 三類信封、原子放單、ack、五列對帳與 info |
 | [test_inst.py](test/test_inst.py) | 139 | inst 讀驗、指示詞位置、欄位與選項 |
 | [test_kernel.py](test/test_kernel.py) | 29 | 判定表、syscall 去重、rm／once、pool、設定 |
-| [test_kernel_check.py](test/test_kernel_check.py) | 30 | check 各項 ok／warn／bad、daemon 的 /proc 環境、--agent、--daemon-target 三種來源與 info.daemon 不同的 warn、K 家目錄、daemon 重開後 cpu 不在 |
-| [test_kernel_cli.py](test/test_kernel_cli.py) | 37 | --target 三種來源與錯誤行來源、init --config（壞設定不建家、自動加 k、拒 daemon）／ack／ls（含 bad 提示、第一行 health）／halt 等停好／check 旗標重複 CLI |
+| [test_kernel_check.py](test/test_kernel_check.py) | 30 | check 各項 ok／warn／bad、daemon 的 /proc 環境、agent 項（advice-r1 起經 `aos-agent check` 跑）、--daemon-target 三種來源與 info.daemon 不同的 warn、K 家目錄、daemon 重開後 cpu 不在 |
+| [test_kernel_cli.py](test/test_kernel_cli.py) | 37 | --target 三種來源與錯誤行來源、init --config（壞設定不建家、自動加 k、拒 daemon）／ack／ls（含 bad 提示、第一行 health、advice-r1 的表與 --json）／halt 等停好／check 旗標重複、舊 --agent 指到新指令 |
+| [test_advice_r1.py](test/test_advice_r1.py) | 18 | （advice-r1）`aos-agent check`：K 從 AOS_KERNEL_HOME／tick.json、找不到、相對路徑、KernelMismatch、K 壞了仍查 agent、NotAnAgent、預設目前資料夾、--probe ok／bad；`ls --json` 欄位集合、值、stdout 純 JSON、退出碼、daemon 沒活 child=null；文字表對齊、長名砍中間、-v |
 | [test_kernel_health.py](test/test_kernel_health.py) | 19 | health 各情形與優先序、stall、帳本壞不丟例外、ls 第一行與 --json |
 | [test_kernel_fix_r5.py](test/test_kernel_fix_r5.py) | 13 | （fix-r5）check --probe（本機 HTTP 假端點：models／退回一句話／port 錯）與總結行、ls 的恢復中／daemon 沒活的 cpu 行／agent 標記、真 daemon：boot 印 `booted 3 cpus`、kill -9 llm cpu 看到恢復中 |
 | [test_kernel_integration.py](test/test_kernel_integration.py) | 15 | 真 daemon＋cpu、反覆／once、halt、重 boot、pool、Interrupted |

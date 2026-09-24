@@ -15,7 +15,8 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'listen': '看回話：--last 最後一則（預設）、--wait 等下一則、--follow 一直印',
          'status': '印 agent 現在的狀態、在等什麼、最近的錯',
          'pause': '手動暫停：還登記著，但每格什麼都不做',
-         'continue': '解除手動暫停與連敗暫停'}
+         'continue': '解除手動暫停與連敗暫停',
+         'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）'}
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
 
 
@@ -53,6 +54,9 @@ def _parser():
         if name == 'continue':
             sub.add_argument('--all', action='store_true',
                              help='解開 AOS_KERNEL_HOME 帳本裡所有登記的 agent（不能跟 --target 一起給）')
+        if name == 'check':
+            sub.add_argument('--probe', action='store_true',
+                             help='真的對 llm.json 的每個 endpoint 打一次最小請求')
         if name in ('listen', 'status'):
             sub.add_argument('--json', action='store_true')
     return ap
@@ -126,6 +130,9 @@ def main(argv=None):
         if args.command == 'status':
             from aos_agent_status import status
             return status(target, as_json=args.json, verbose=args.verbose)
+        if args.command == 'check':
+            from aos_agent_check import check
+            return check(target, probe=args.probe)
         if args.command in ('pause', 'continue'):
             from aos_agent_pause import pause, resume
             return pause(target) if args.command == 'pause' else resume(target)

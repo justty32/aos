@@ -178,8 +178,10 @@ class HealthAndLsTests(KernelCase):
         self.alive.return_value = False
         text = self.ls()
         self.assertTrue(text.startswith('health daemon 沒在跑'))
-        self.assertNotIn('  running', text)
-        self.assertIn('dead（daemon 沒在跑）', text)
+        rows = [line for line in text.splitlines() if line.split()[:2] in (['kernel', 'k'], ['default', '0'], ['llm', 'llm'])]
+        self.assertEqual(len(rows), 3, text)
+        self.assertTrue(all(row.split()[-1] == '-' for row in rows), text)
+        self.assertIn('（daemon 沒在跑，孩子狀態不明）', text)
 
     def agent(self, name, state=None, paused=False):
         home = self.root / name
@@ -202,13 +204,16 @@ class HealthAndLsTests(KernelCase):
         text = self.ls()
         self.assertTrue(text.startswith('health agent 暫停中：agent-bob（連敗）、agent-amy（手動）'
                                         '（修好原因後 aos-agent continue --all）\n'), text)
-        rows = {line.split()[1]: line for line in text.splitlines() if line.startswith('proc ')}
+        rows = {line.split()[0]: line for line in text.splitlines() if line.startswith('  agent-')}
         self.assertTrue(rows['agent-bob'].endswith('連敗暫停中'))
         self.assertTrue(rows['agent-amy'].endswith('手動暫停中'))
         self.assertTrue(rows['agent-cat'].endswith('重試中（連敗 2/3）'))
-        self.assertTrue(rows['agent-dan'].endswith('pending -'))
+        self.assertEqual(rows['agent-dan'].split()[1:], ['反覆', 'idle', '1', '0', '-'])
         data = json.loads(aos_kernel_cli._summary(self.home, kernel.status(self.home), as_json=True))
         self.assertEqual(data['health']['code'], 'agents_paused')
+        marks = {p['name']: p['mark'] for p in data['procs']}
+        self.assertEqual(marks['agent-bob'], {'code': 'paused', 'text': '連敗暫停中'})
+        self.assertIsNone(marks['agent-dan'])
 
     def test_retrying_and_resuming_first_line(self):
         self.agent('cat', {'errors': 1})
