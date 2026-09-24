@@ -24,5 +24,6 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | review-agent4-task.md／review-agent4-report.md | 2026-09-24 astra 快驗第 4 輪：3 條全解、無新矛盾；結論「三份整組可當照它實作的定稿」（前提：單一驅動者、被 state 引用的封存檔不清） |
 | impl-fix-round1.md | 2026-09-24 T5 修正第 1 輪：daemon 缺檔 SpawnFailed、控制 pipe 驗信封、cpu 家半成品恢復；新 CLI `aos-daemon stop`、`aos-kernel ack`／`init --cpu`／`ls` 摘要／`-h`、kernel.log 空格不寫；補 C-1／4／5／6 測試、修 D-1～7 flaky（917 條）；三份規範補句＋檔尾〈實作補記〉；跳過 C-2／3／7／8；要使用者拍 3 條 |
 | agent-impl-findings.md | 2026-09-24 T9 照 agent 線三份定稿規範實作（aos-llm-call、aos-agent tick／start／stop、換掉舊 llm／tool cpu）時的歧義與實作選擇、要使用者拍的 |
+| lmstudio-agent-run.md＋lmstudio/agent-run.sh | 2026-09-24 T9 用本機 LM Studio（gemma-4-e4b）真跑 agent 一整圈：`aos-agent start` → 投 input → idle→think→act（`date` 工具）→think→idle 6.8／5.8 秒（兩次，第二次沿用家）→ stop → 停機 0.5 秒、pgrep 空；撞到 0 條 |
 
 舊規範已於 2026-09-24 換掉（副本在 proto5.1/spec/）。
