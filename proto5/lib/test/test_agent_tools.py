@@ -43,7 +43,7 @@ class ToolsAddTests(unittest.TestCase):
         out = self.add('base').stdout
         self.assertIn('installed base', out)
         self.assertIn('read、write、edit、bash、grep、find、ls', out)
-        self.assertIn('下一格就生效', out)
+        self.assertIn('下一批工具生效，不用重 start', out)  # 09-24 access-impl 改句
         self.assertEqual(self.info(), before)
         tools = read_json(self.bob / 'tools/base.json')
         self.assertEqual([t['function']['name'] for t in tools], NAMES)

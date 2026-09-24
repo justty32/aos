@@ -50,7 +50,7 @@ class DailyTests(unittest.TestCase):
 
     def test_status_json(self):
         data = json.loads(self.cli('status', '--target', str(self.base), '--json')[1])
-        self.assertEqual(set(data), {'dir', 'info_error', 'state_error', 'state', 'errors',
+        self.assertEqual(set(data), {'dir', 'info_error', 'state_error', 'access_error', 'state', 'errors',
                                     'batch', 'waits', 'pending_inputs', 'intake', 'last_error', 'kernel',
                                     'health', 'current_error', 'streak', 'paused', 'last_error_time',
                                     'manual_paused', 'manual_paused_since', 'resumed', 'resumed_since'})

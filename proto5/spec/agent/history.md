@@ -9,3 +9,5 @@
 > 調度者裁決移到檔尾（09-24 試玩 r2 搬），已拍板的前提在 §7。
 > 2026-09-24 fix-r4：`AOS_K` 改名 `AOS_KERNEL_HOME`；家裡多兩個程式寫的檔 `.tick.lock`（tick 鎖）、`paused`（手動暫停）；問模型的指令改名 `aos-llm call`。
 > 2026-09-24 fix-r5：家裡多一個程式寫的檔 `resumed`（`continue` 解了連敗暫停、還沒等到一次成功；§1）。
+> 2026-09-24 access-impl（A1）：`tools` 元素可寫 `$opt` 選項物件（`as` 改名、`only` 挑幾支），`info.md` 的「沒有欄位吃 `$opt`」改成「只有 `tools` 的元素吃」；新 §3.4 [tools-opt.md](tools-opt.md)；§3.3 加 `_jail`（只收 bool）與 `_source`。
+> 2026-09-24 access-impl（A2）：新 §3.5 [access.md](access.md)（`access.json` 格式、信任資料、`self` 只能 ro）；`info.json` 加 `access` 欄；`state.batch` 加 `access` 快照；家裡多一個人寫的 `access.json`；錯誤代號加 `AccessInvalid`／`AccessUnsafe`／`NoBwrap`。

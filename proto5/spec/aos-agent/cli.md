@@ -15,8 +15,17 @@ aos-agent status   [--target DIR] [--json] [-v]
 aos-agent pause    [--target DIR]
 aos-agent continue [--target DIR | --all]
 aos-agent check    [--target DIR] [--probe]    # （09-24 advice-r1）start 之前先查一遍，§1.7
-aos-agent tools add NAME|DIR [--target DIR] [--root DIR] [--force]     # §1.8（09-24 tools-base 補）
+aos-agent tools ls      [--target DIR] [--json]                                    # §1.8 續（09-24 access-impl）
+aos-agent tools add     NAME|DIR|FILE.json [--target DIR] [--as NEW | --as OLD=NEW[,…]] [--only a,b] [--root DIR] [--force]   # §1.8（09-24 tools-base 補，access-impl 補 --as／--only）
+aos-agent tools rm      NAME [--target DIR]                                         # §1.8 續：只改 info.json，不刪檔
+aos-agent tools alias   NAME NEW [--target DIR]                                     # §1.8 續
+aos-agent tools unalias NEW [--target DIR]                                          # §1.8 續
 aos-agent talk     [--target DIR] [--wait 秒] [--show-calls]   # （09-24 talk）來回對話，§1.9
+aos-agent access ls  [--target DIR] [--json]                                        # 權限牆（09-24 access-impl，access.md §3）
+aos-agent access set NAME PATH [--ro | --rw] [--cwd] [--target DIR]                 # 同上
+aos-agent access rm  NAME [--target DIR]                                            # 同上
+aos-agent access cwd NAME [--target DIR]                                            # 同上
+aos-agent access net on|off [--target DIR]                                          # 同上
 aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 ```
 
@@ -25,7 +34,7 @@ aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 `continue --all`（§1.4）跟 `--target` 互斥（兩個都給＝用法錯 2），要 `AOS_KERNEL_HOME`（沒設＝用法錯 2）。
 `tick`／`start` 都要 `AOS_KERNEL_HOME`：沒設或不是絕對路徑＝用法錯 2；
 （09-24 試玩 r2 補）`stop` 沒設 `AOS_KERNEL_HOME` 就用 `tick.json` 記的（§11，字面絕對路徑才算），兩個都沒有＝用法錯 2。其他子命令不要 `AOS_KERNEL_HOME`（`say`／`status`／`listen` 有設就拿來看登記狀態；（advice-r1）`check` 有設就查那個 K，沒設看 `tick.json`，都沒有是一行 `bad`、不是用法錯，§1.7）。
-`--json` 只給 `listen`、`status`，給別的＝用法錯 2；`--probe` 只給 `check`。（09-24 listen 微調）`listen` 三種看法一定要給一種，`--last [N]`、`--show-calls*` 見 §1.5。`talk` 也有 `--show-calls`（簡化版，見 §1.9），`talk --wait` 一定要帶秒數、省略整個旗標＝120 秒（§1.9）。`--wait` 的秒數：省略＝**300 秒**；給了要是 0～604800（7 天）的數字（可帶小數），不是＝用法錯 2。
+`--json` 只給 `listen`、`status`、`tools ls`、`access ls`（09-24 access-impl），給別的＝用法錯 2；`--probe` 只給 `check`。（09-24 listen 微調）`listen` 三種看法一定要給一種，`--last [N]`、`--show-calls*` 見 §1.5。`talk` 也有 `--show-calls`（簡化版，見 §1.9），`talk --wait` 一定要帶秒數、省略整個旗標＝120 秒（§1.9）。`--wait` 的秒數：省略＝**300 秒**；給了要是 0～604800（7 天）的數字（可帶小數），不是＝用法錯 2。
 
 ## 1.1 `init`：生一個最小可跑的家（09-24 試玩 r2 補）
 
