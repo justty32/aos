@@ -26,7 +26,7 @@ Python 3.12 以上、只用標準庫。底層 `aos_directives` → `aos_inst` �
 | [`aos_home.py`](aos_home.py) | JSON-RPC 信封、原子放單與狀態、ack／stop、開機對帳、`--target` 找家（跟 proto5 一字不改——這隊規定只准加函式，沒加） | [cpu.md](../../proto5/spec/cpu/README.md) §2、§3、§6 |
 | [`aos_client.py`](aos_client.py) | 取名、放單、先查原單再等回音、讀與 ack（跟 proto5 一字不改） | [cpu.md](../../proto5/spec/cpu/README.md) §3、§6.3 |
 | [`aos_exec_cpu.py`](aos_exec_cpu.py) | 長命 exec cpu：go／stop、逐件執行、訊號與對帳；入口 `aos-cpu`；**proto5-2 新加**回完音往 `notify` 指的 kernel 家丟通知、開機補丟 | [cpu.md](../../proto5/spec/cpu/README.md)、[cpu-notify.md](../spec/cpu-notify.md) |
-| [`aos_daemon.py`](aos_daemon.py) | **proto5-2 重寫**：家、info 讀驗、`is_alive`、給 kernel 讀的 `pool_summary(D, dpool)`／`pool_kid(D, dpool, i)`、啟動（`run`）與 `halt`（`stop`） | [daemon-home.md](../spec/daemon-home.md) |
+| [`aos_daemon.py`](aos_daemon.py) | **proto5-2 重寫**：家、info 讀驗、`is_alive`、給 kernel 讀的 `pool_summary(D, dpool)`／`pool_kid(D, dpool, i)`／**proto5-2 新增** `pool_summary_state(D, dpool)`（回 gone／ok／unknown；只有 gone 才算池已拿掉）、啟動（`run`）與 `halt`（`stop`） | [daemon-home.md](../spec/daemon-home.md) |
 | [`aos_daemon_pools.py`](aos_daemon_pools.py) | **proto5-2 新增**：池的資料形狀（`pool.json`／`kids/<i>.json`／`summary.json`）、檔案動作、拉孩子（只留 fd 0 一條 pipe、fd 1 接 `/dev/null`） | [daemon-home.md](../spec/daemon-home.md) §2～§4、[daemon-reconcile.md](../spec/daemon-reconcile.md) §5 |
 | [`aos_daemon_loop.py`](aos_daemon_loop.py) | **proto5-2 新增**：一圈怎麼走——收屍、狀態機、退避、節流、fd 預算、批次階梯、停機 | [daemon-reconcile.md](../spec/daemon-reconcile.md) §1～§7 |
 | [`aos_daemon_rpc.py`](aos_daemon_rpc.py) | **proto5-2 新增**：`scale／kill／ls` 的驗與判；`stop／ack` 走 `aos_home.scan_controls` | [protocol.md](../spec/protocol.md) §1～§3 |
@@ -57,7 +57,7 @@ Python 3.12 以上、只用標準庫。底層 `aos_directives` → `aos_inst` �
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；`tick_lock()`、`manual_paused()`（跟 proto5 一字不改） | [agent.md](../../proto5/spec/agent/README.md)、[aos-agent.md](../../proto5/spec/aos-agent/README.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5-2/lib python3 -m unittest discover -s proto5-2/lib/test  # 1247 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5-2/lib python3 -m unittest discover -s proto5-2/lib/test  # 1277 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -426,10 +426,10 @@ check [--agent DIR] [--daemon-target D] [--probe]`，各有 `-h`，完整參數�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5-2/lib python3 -m unittest discover -s proto5-2/lib/test  # 1247 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5-2/lib python3 -m unittest discover -s proto5-2/lib/test  # 1277 條；repo 根目錄
 ```
 
-共 39 個測試檔、1247 條（proto5 是 33 檔、1153 條；多的 6 檔都是池表／帳本第 2 版新加的）；
+共 41 個測試檔、1277 條（proto5 是 33 檔、1153 條；多的 8 檔都是池表／帳本第 2 版新加的）；
 涵蓋底層執行、daemon／kernel 按池行為、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 標「proto5-2 改」的檔內容跟著池表重寫，條數不能直接跟 proto5 版本比。
@@ -451,18 +451,20 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5-2/lib python3 -m unittest discover -
 | [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
 | [test_daemon.py](test/test_daemon.py) | 28 | **proto5-2 改**：真 daemon 按池、宣告式——scale、補／收／重拉、退避、節流、fd 預算、kill、halt、重開 |
 | [test_daemon_cli.py](test/test_daemon_cli.py) | 13 | **proto5-2 改**：`aos-daemon` 的 CLI——boot／halt（家的三種來源、flock 探測、逾時契約）與新的 ls／scale／kill |
-| [test_daemon_crash.py](test/test_daemon_crash.py) | 6 | **proto5-2 改**：daemon 崩潰窗口（按池版）——閘門卡住真 daemon、真 SIGKILL、下一任接手；subreaper hub＋測試 driver 閘門 |
+| [test_daemon_crash.py](test/test_daemon_crash.py) | 10 | **proto5-2 改**：daemon 崩潰窗口（按池版）——閘門卡住真 daemon、真 SIGKILL、下一任接手；subreaper hub＋測試 driver 閘門；astra 修正後多 4 條窗口（scale 回音、摘要已刪、killing 又被加回、fork 後 kid 檔前崩） |
+| [test_daemon_fix.py](test/test_daemon_fix.py) | 10 | **proto5-2 新增**：astra P5／P6／P9 的 daemon 側定點——`pool_summary_state` 三態（gone／ok／unknown）、摘要寫／刪失敗後自己收斂重試、每圈只碰有事的池 |
 | [test_kernel.py](test/test_kernel.py) | 31 | **proto5-2 改**：kernel 判定、syscall、收回音與派工，帳本改第 2 版（`pools`＋`busy`＋`on`、`ready／delayed`）；不開外部行程 |
 | [test_kernel_pools.py](test/test_kernel_pools.py) | 18 | **proto5-2 新增**：info 第 2 版讀驗、成員公式、`init --config`、家與模板（不需要 daemon） |
 | [test_kernel_tick2.py](test/test_kernel_tick2.py) | 21 | **proto5-2 新增**：一格十步——池的長大／縮小、scale 回音、通知三路、排隊懶刪、提交點、搬池、停機縮池；全部用假 daemon（`_kernel_fake`） |
 | [test_kernel_halt2.py](test/test_kernel_halt2.py) | 8 | **proto5-2 新增**：搬池、池從 info 消失、停機縮池與 halt 等待；假 daemon |
 | [test_kernel_boot2.py](test/test_kernel_boot2.py) | 18 | **proto5-2 新增**：kernel boot 交接（handoff §1）與崩潰窗口——「崩」＝某一步丟出 Crash，記憶體全丟、磁碟停在那一刻，下一格／下一次 boot 照常跑 |
-| [test_kernel_cpu.py](test/test_kernel_cpu.py) | 24 | **proto5-2 新增**：`cpu add／rm／ls`（kernel-cli.md）——只改 info、鎖、指示詞保留、按池摘要；假 daemon，不拉真行程 |
-| [test_kernel_check.py](test/test_kernel_check.py) | 23 | **proto5-2 改**：啟動前檢查（`check`）只用假家、flock 與手寫的 summary.json，不啟動 daemon |
+| [test_kernel_cpu.py](test/test_kernel_cpu.py) | 30 | **proto5-2 新增**：`cpu add／rm／ls`（kernel-cli.md）——只改 info、鎖、指示詞保留、按池摘要；假 daemon，不拉真行程 |
+| [test_kernel_check.py](test/test_kernel_check.py) | 24 | **proto5-2 改**：啟動前檢查（`check`）只用假家、flock 與手寫的 summary.json，不啟動 daemon |
 | [test_kernel_cli.py](test/test_kernel_cli.py) | 23 | **proto5-2 改**：kernel CLI——`--target`、`init`、help、`ack`、`ls` 的按池摘要與行程計數；假 daemon（`cpu` 子命令拆到 test_kernel_cpu.py） |
 | [test_kernel_health.py](test/test_kernel_health.py) | 22 | **proto5-2 改**：health 優先序（kernel-cli.md 的 `ls`）、錯誤邊界及 `ls` 第一行；假 daemon |
 | [test_kernel_crash.py](test/test_kernel_crash.py) | 16 | **proto5-2 改**（審查 C-7、C-8，多 C-9）：閘門卡住真 tick、真 SIGKILL、下一格（或 boot）接手；cpu 家改在 `K/pools/<P>/cpus/<i>` |
 | [test_kernel_fix_r5.py](test/test_kernel_fix_r5.py) | 15 | （fix-r5，proto5 搬過來）check --probe（本機 HTTP 假端點：models／退回一句話／port 錯）與總結行；真 daemon |
+| [test_kernel_fix_astra.py](test/test_kernel_fix_astra.py) | 9 | **proto5-2 新增**：astra 審查 kernel 側必修 P1～P4、P6、P7 的定點測試——boot 等待中舊 tick 又提交、draining 中拒 boot、舊鏈回音／錯誤不誤判、摘要讀不到時 boot／搬池／halt 要等、NUL 與超大數字通知不搞垮一格 |
 | [test_kernel_integration.py](test/test_kernel_integration.py) | 15 | 真 daemon＋cpu、反覆／once、halt、重 boot、pool、Interrupted（proto5-2 池表） |
 | [test_kernel_recovery.py](test/test_kernel_recovery.py) | 21 | 出貨重放、先記未放、鏈與 boot 交接、ack 唯一性 |
 | [test_p52_e2e.py](test/test_p52_e2e.py) | 9 | **proto5-2 新增**：真 daemon＋真 aos-cpu＋真 tick 鏈的端到端（kernel-pools、kernel-tick、handoff、cpu-notify、daemon-reconcile）；只有 kernel 池表由測試直接改 info（`cpu add` 的效果，CLI 另一隊） |

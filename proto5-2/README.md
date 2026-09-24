@@ -2,7 +2,7 @@
 
 ← [INDEX](../wf/INDEX.md)｜上一版 [proto5](../proto5/README.md)
 
-**狀態：已實作（第 1 版），2026-09-24**。程式在 [lib/](lib/README.md)＋[cli/](cli/)；測試 1247 條全綠（`cd proto5-2/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test`，約 74 秒）；實作筆記在 [notes/2026-09-24-impl/](notes/README.md)。
+**狀態：已實作（第 1 版），2026-09-24**。程式在 [lib/](lib/README.md)＋[cli/](cli/)；測試 1277 條全綠（`cd proto5-2/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test`，約 89 秒）；實作筆記在 [notes/2026-09-24-impl/](notes/README.md)。
 
 ## 這是什麼
 
