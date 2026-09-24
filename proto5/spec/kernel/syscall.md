@@ -4,19 +4,19 @@
 
 | method | params | 回音 |
 |---|---|---|
-| `add` | `target` 必填（絕對路徑）；`dir_target`／`args` 可省（同範式 §4.1；`args` 沒給就不要放這個鍵）；`name` 可省（省＝數字名最大值加 1）；`once`（預設 false）；`pool`（預設 `default`，必須是 `info.pools` 的 key、且不是 `kernel` 池；2026-09-24 池式納入改）；`interval_ms`／`timeout_ms`（預設照 info）；（09-24 停車）`park_ms`（預設照 info，[§4](echo.md) 的 102 那列）、`wake`（要叫醒的反覆行程名，見下） | **反覆**行程：`{"name": NAME}`。**`once`**：回音等到那一次跑完才寫，內容就是那次的 exec 回音（`result` 或 `error` 原樣）；交件者等 `K/responses/<自己的檔名>.json` 一個檔、讀完放 ack |
+| `add` | `target` 必填（絕對路徑）；`dir_target`／`args` 可省（同範式 §4.1；`args` 沒給就不要放這個鍵）；`name` 可省（省＝數字名最大值加 1）；`once`（預設 false）；`pool`（預設 `default`，必須是 `info.pools` 的 key、且不是保留名 `kernel`；2026-09-24 池式納入改）；`interval_ms`／`timeout_ms`（預設照 info）；（09-24 停車）`park_ms`（預設照 info，[§4](echo.md) 的 102 那列）、`wake`（要叫醒的反覆行程名，見下） | **反覆**行程：`{"name": NAME}`。**`once`**：回音等到那一次跑完才寫，內容就是那次的 exec 回音（`result` 或 `error` 原樣）；交件者等 `K/responses/<自己的檔名>.json` 一個檔、讀完放 ack |
 | `rm` | `name` | `{"name": NAME}`；不在＝`-32000`／`NotFound`。細節見下 |
-| `stop` | notification | `phase` 改 `stopping`（§3 第 9 步）；收完在途後把每個池縮到 0（[§6 停機](boot.md)）。daemon 本身不停，由人停 |
+| `stop` | notification | `phase` 改 `stopping`（§3 第 9 步）；收完在途後把每個池縮到 0，停好那格請 daemon 別再開 tick（[§6 停機](boot.md)）。daemon 本身不停，由人停（或 `aos down`） |
 | `wake` | （09-24 停車）`name` | `{"name": NAME}`；不在＝`-32000`／`NotFound`。照下面「叫醒一個行程」做。多半當 notification 放（`aos-agent say` 就是），不回音 |
 | `ack` | 範式 §3.3 | kernel 是一個家，別人收了 `K/responses/` 的回音要放 ack，處理方式照範式（刪回音、刪 ack 檔） |
 
-沒有 `ls` syscall：看狀態就偷看 `K/state.json`（§6 的 `ls` 就是這樣做，鏈斷了也看得到）。
+沒有 `ls` syscall：看狀態就直接讀帳本 `K/ledger.sqlite`（§6 的 `ls`、`proc` 就是這樣做，沒人開 tick 也看得到）。
 同名 `add`（不管 `status` 是什麼、含被 rm 但還在 cpu 上跑的）回 `-32000`／`AlreadyExists`；
 params 形狀或 pool 不合回 `-32602`。kernel 不解指示詞、不驗 inst、不看檔在不在——那些都是跑起來的回音。
 （09-24 補）省略 `name` 時只計 ASCII 十進位名稱：有數字名取最大值加一，沒有就從 `0` 開始。CLI 的 `--once` 沒給 `--name` 時仍用自己的 request 檔名（§6）。
 
 **每則 syscall 都是「先記帳、再出貨」**：收到 `add`／`rm` → 判定 → 把結果（行程紀錄、排隊格、pending）跟
-出貨待辦寫進帳本（池式納入後一格的判定合併在提交點 3 一次寫，[§1.2](ledger.md)）→ 出貨。待辦是：原單名進 `deletes`（一定有）；要馬上回的回音進 `replies`
+出貨待辦寫進帳本（池式納入後一格的判定合併在一個提交點一次寫，one-boot 叫提交點 B，[§1.2](ledger.md)）→ 出貨。待辦是：原單名進 `deletes`（一定有）；要馬上回的回音進 `replies`
 （反覆的 add、rm）；`once` 的 add 只記 `pending`，跑完或取消時才進 `replies`。`ack`／`stop` 照各自的規則，不產生回音。
 **`once` 的回音只報執行狀態**（code／kind／timed_out…），不含模型的答案或工具的輸出——要輸出就在工作 inst 裡
 指定 `stdout` 檔，收到成功的回音後再去讀那個檔。

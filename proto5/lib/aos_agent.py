@@ -118,14 +118,19 @@ def _compatible(kernel, env):
     if values['done_exit'] in (1, 101, PARK_EXIT):
         raise AgentError('KernelIncompatible', 'kernel 的 done_exit 與 agent 退出碼衝突')
     # 09-24 停車：舊 kernel 把 102 當失敗（十次就 bad）。帳本讀得到而沒有 park 能力＝不登記；還沒 boot（沒帳本、沒 chain）或讀不懂就不擋。
+    # 09-24 one-boot：帳本換成 K/ledger.sqlite；還是舊的 K/state.json＝舊 kernel（kernel cpu 那一版）寫的，先 aos up 換過再 start。
+    import aos_kernel_store
+    if aos_kernel_store.legacy(kernel):
+        raise AgentError('KernelIncompatible', 'K 的帳本還是舊的 state.json（sqlite 之前的 kernel）；'
+                         'aos up（或 aos-kernel boot）一次換成 sqlite 再 start')
     try:
-        ledger = aos_home.read_json(Path(kernel) / 'state.json')
+        ledger = aos_kernel_store.meta(kernel, 'chain', 'features')
     except aos_home.HomeError:
         return
-    features = ledger.get('features') if isinstance(ledger, dict) else None
-    if isinstance(ledger, dict) and 'chain' in ledger and not (isinstance(features, list) and 'park' in features):
+    features = ledger.get('features')
+    if 'chain' in ledger and not (isinstance(features, list) and 'park' in features):
         raise AgentError('KernelIncompatible', 'K 的帳本是不認得停車（退出碼 102）的舊 kernel 寫的；'
-                         '升級 kernel 後 aos-kernel boot 一次再 start')
+                         '升級 kernel 後 aos up（或 aos-kernel boot）一次再 start')
 
 
 def _tick_inst(run, kernel):
@@ -204,20 +209,12 @@ def _register(agent_dir, env, starting, note=''):
 
 def _already(kernel, params):
     """start 撞 AlreadyExists（aos-agent.md §11，fix-r5）：就是這個家、正常登記著＝None（退 0）；否則回補充說明。"""
-    from aos_agent_runtime import ledger
+    from aos_agent_runtime import kernel_proc
     try:
-        state = ledger(kernel)
-        proc = state['procs'].get(params['name'])
-        # kernel-ledger.md §2（proto5-2）：忙的格子搬進 busy（key P/<i>），on[NAME] 反查行程在哪格；
-        # 判「上次 stop 那格還在跑」看那格的 discard。on 沒有就掃 busy 兜底（帳本可能剛好卡在中間狀態）。
-        busy = state.get('busy') if isinstance(state.get('busy'), dict) else {}
-        on = state.get('on') if isinstance(state.get('on'), dict) else {}
-        slot = on.get(params['name'])
-        if isinstance(slot, str) and isinstance(busy.get(slot), dict):
-            discarded = bool(busy[slot].get('discard'))
-        else:
-            discarded = any(isinstance(s, dict) and s.get('proc') == params['name'] and s.get('discard')
-                            for s in busy.values())
+        # one-boot：查一筆行程走 aos-kernel proc 同一支 lib（K/ledger.sqlite）；discard＝上次 stop 的那格還在 cpu 上。
+        found = kernel_proc(kernel, params['name'])
+        proc = found['proc'] if found else None
+        discarded = bool(found and found['discard'])
     except (AgentError, aos_home.HomeError, OSError, ValueError):
         return '帳本讀不到，確認不了是不是同一個家'
     if not isinstance(proc, dict):

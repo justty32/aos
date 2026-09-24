@@ -39,9 +39,9 @@
 **查有沒有放過**（照這個順序，一步不能換）：
 
 1. `K/requests/N.json` 在 → 放過了（kernel 還沒收，或 kernel 已經 `stopped`、留到下次 boot 收）。
-2. 偷看 `K/state.json`：`procs` 有 `N`，或 `replies` 有一筆 `name` 是 `N.json` → 放過了（在排隊、在跑、或回音在出貨）。
+2. 查 K 帳本（2026-09-24 one-boot：`K/ledger.sqlite`，用跟 `aos-kernel proc` 同一支 lib）：`procs` 有 `N`，或 `replies` 有一筆 `name` 是 `N.json` → 放過了（在排隊、在跑、或回音在出貨）。
 3. `K/responses/N.json` 在 → 放過了。
-4. 都不在 → 沒放過。`K/state.json` 不在＝kernel 從沒 boot 過，當作第 2 步沒有；讀得到但壞掉＝退 1。
+4. 都不在 → 沒放過。K 沒有帳本＝kernel 從沒 boot 過，當作第 2 步沒有；帳本還是舊的 `K/state.json`、或讀得到但壞掉＝退 1。
 
 理由：kernel 先記帳（`procs`／`replies`）再刪原單、同一次寫把回音放進 `replies` 並拿掉 `procs`、先放回音檔再從 `replies` 拿掉（[kernel.md §2、§3](../kernel/syscall.md)），
 一件工作只往後走；回音只有 ack 才消失，而 `done` 是 null 的從沒 ack 過；boot 保留 `procs`／`replies`。不能照搬 cpu 的「原單回音都不在＝沒放」。

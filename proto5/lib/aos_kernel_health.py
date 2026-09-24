@@ -1,6 +1,7 @@
 """kernel 的唯讀健康摘要，供 CLI 與 agent 共用（kernel-cli.md 的 ls；其他照 proto5 §6 ls）。
 
-先中先印：缺目錄 → 停機中 → daemon 沒在跑 → kernel cpu 不在 → tick 停住 → 池出錯／池不見了 → 搬池中 → 池少幾顆 → ok。
+先中先印：缺目錄 → 舊帳本 → 停機中 → daemon 沒在跑 → 沒人開 tick → tick 連敗／停住 → 池出錯／池不見了 → 搬池中 → 池少幾顆 → ok。
+（2026-09-24 one-boot：kernel cpu 拿掉；「tick 停住」改看帳本的 last_tick_at，「沒人開 tick」看 daemon 的 kernels/ 登記。）
 工作池不逐顆查，只看每池 daemon 的 summary.json（O(池數)）。
 """
 import os
@@ -38,8 +39,10 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
             return 'dirs', 'K 家缺目錄：%s（跑 %s）' % ('、'.join(missing), check)
         if snapshot is None:
             snapshot = status(home)
+        if snapshot.get('legacy'):
+            return 'legacy', '帳本還是舊的 K/state.json（跑 aos up 或 %s，換成 sqlite）' % boot
         if snapshot.get('phase') == 'stopped' or not snapshot.get('chain'):
-            return 'stopped', '停機中（%s）' % boot
+            return 'stopped', '停機中（aos up 或 %s）' % boot
         pools = snapshot.get('pools') or {}
         known = {}
         daemon = snapshot.get('daemon') or {}
@@ -48,21 +51,25 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
         alive = _Alive(known)
         summaries = {p: e.get('summary') for p, e in pools.items()}
         rows = pool_rows(home, info, {**snapshot, 'pools': pools}, summaries=summaries, alive=alive)
-        kernel = rows.get(KERNEL_POOL)
-        kdaemon = (kernel or {}).get('daemon') or daemon.get('home')
+        kdaemon = daemon.get('home')
         if not kdaemon or not alive(kdaemon):
-            where = kdaemon or '（kernel 池解不出 daemon 家）'
-            return 'daemon', 'daemon 沒在跑：%s（先 aos-daemon boot --target %s；之後 health 還不是 ok 再 %s）' % (
+            where = kdaemon or '（解不出替 kernel 開 tick 的 daemon 家）'
+            return 'daemon', 'daemon 沒在跑：%s（aos up；或 aos-daemon boot --target %s 之後 health 還不是 ok 再 %s）' % (
                 where, where, boot)
         dead = list(dict.fromkeys(r['daemon'] for r in rows.values()
                                   if r['declared'] and r['daemon'] and not alive(r['daemon'])))
         if dead:
             return 'daemon', 'daemon 沒在跑：%s（先 aos-daemon boot --target %s）' % ('、'.join(dead), dead[0])
-        ksum = (kernel or {}).get('summary') or {}
-        if kernel is None or not kernel['declared'] or ksum.get('running', 0) == 0:
-            return 'cpus', 'kernel cpu 不在（daemon 沒在跑或還在拉；跑 %s）' % boot
+        ticker = snapshot.get('ticker')
+        if ticker is None:
+            return 'tick', 'daemon %s 沒在替這個 kernel 開 tick（跑 aos up 或 %s）' % (kdaemon, boot)
+        if isinstance(ticker, dict) and ticker.get('fails'):
+            # 停機中（stopping）也要看：tick 一直失敗的話 halt 會卡住。
+            return 'stall', 'tick 連敗 %s 次（最後退出 %s；看 daemon 的 stderr，例如 D/daemon.log；跑 %s）' % (
+                ticker['fails'], ticker.get('last_exit'), check)
         if snapshot.get('phase') == 'running':
-            age = (time.time() if now is None else now) - (home / 'state.json').stat().st_mtime
+            last = snapshot.get('last_tick_at')
+            age = (time.time() if now is None else now) - (last if isinstance(last, (int, float)) else 0)
             if age > max(10, 10 * info.get('tick_ms', DEFAULTS['tick_ms']) / 1000):
                 return 'stall', 'tick 停住：%d 秒沒前進（跑 %s）' % (age, check)
         work = [r for p, r in rows.items() if p != KERNEL_POOL and r['declared']]

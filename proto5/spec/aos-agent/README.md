@@ -4,7 +4,7 @@
 
 ← [proto5 README](../../README.md)｜資料夾：[agent.md](../agent/README.md)｜問模型：[aos-llm.md](../aos-llm/README.md)｜送件：[kernel.md §2](../kernel/syscall.md)、[cpu.md §3](../cpu/messages.md)
 
-> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列、fix-r5 改日常輸出（health 不再樂觀、continue 兩階段與 `--all`、listen 講中間句）、advice-r1 加 `check`（從 `aos-kernel check --agent` 搬來）、tools-base 加 `tools add`（§1.8）、talk 加 `talk`（§1.9）；已實作（`lib/aos_agent.py`＋`cli/aos-agent`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列、fix-r5 改日常輸出（health 不再樂觀、continue 兩階段與 `--all`、listen 講中間句）、advice-r1 加 `check`（從 `aos-kernel check --agent` 搬來）、tools-base 加 `tools add`（§1.8）、talk 加 `talk`（§1.9）、2026-09-24 one-boot 改用 `aos_kernel_store` 查 K 帳本（sqlite）；已實作（`lib/aos_agent.py`＋`cli/aos-agent`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**`aos-agent tick` 每次只送出或接回一批工作，更新記憶與進度後就退出；結果還沒到就保留進度，留給下一次。**
 問模型、跑工具都是往 kernel `add --once` 的普通工作；反覆叫 `tick` 是 kernel 的事——`aos-agent start` 把它登記成一個反覆行程。

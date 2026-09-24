@@ -9,7 +9,7 @@ import aos_client
 import aos_home
 from aos_kernel_boot import boot, status, stop
 from aos_kernel_engine import tick
-from aos_kernel_info import CONFIG_EXAMPLE, CLIUsage, KernelError, init, load_info
+from aos_kernel_info import CONFIG_EXAMPLE, CLIUsage, KernelError, init, load_info, work_pools
 from aos_kernel_ls import ls_data, render
 
 ENV = "AOS_KERNEL_HOME"
@@ -35,8 +35,8 @@ class _Parser(argparse.ArgumentParser):
 
 TARGET_HELP = "kernel 家（省略＝AOS_KERNEL_HOME，再沒有就目前資料夾）"
 DAEMON_HELP = "再多查一個 daemon 家（池表裡提到的 daemon 家一律會查）"
-INIT_EPILOG = ("--config 是一份 JSON，就是 info.json 要寫的那幾格：kernel 參數＋pools 池表，工作池可以一個都沒有"
-               "（kernel 池沒寫就補 {\"count\": 1}）。沒給 --config＝只有 kernel 池，之後用 aos-kernel cpu add 加池。例：\n  "
+INIT_EPILOG = ("--config 是一份 JSON，就是 info.json 要寫的那幾格：kernel 參數＋pools 池表，工作池可以一個都沒有。"
+               "沒給 --config＝一個工作池都沒有，之後用 aos-kernel cpu add 加池。例：\n  "
                + CONFIG_EXAMPLE)
 CPU_EPILOG = ("cpu add／rm 只改 K/info.json 的池表，不放單、不用 boot：kernel 在跑就下一格照新數字做，沒在跑就下次 boot 生效。\n"
               "例：\n  aos-kernel cpu add --pool default --count 4\n"
@@ -75,8 +75,10 @@ def _cpu_parser(subs):
 def _parser():
     parser = _Parser(prog="aos-kernel", description="管理 kernel 家、cpu 池與排程行程；K 一律用 --target 給")
     subs = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
-    descriptions = {"init": "建立 kernel 家（照 --config 寫 info.json）", "boot": "交接並啟動 kernel 池與 tick 鏈",
-                    "cpu": None, "tick": "執行一格排程（鏈自己會叫）", "add": "登記工作", "rm": "移除行程",
+    descriptions = {"init": "建立 kernel 家（照 --config 寫 info.json）",
+                    "boot": "寫帳本、向 daemon 登記開 tick（平常用 aos up；這個留給 debug）",
+                    "cpu": None, "tick": "執行一格排程（daemon 會定時開；人手跑給 debug）", "add": "登記工作", "rm": "移除行程",
+                    "proc": "查一筆行程（--json 給程式讀）",
                     "wake": "叫醒停車中的行程（下一格就能派）",
                     "ls": "顯示健康、按池摘要與行程", "halt": "要求 kernel 停機並等停好", "ack": "確認已收回音",
                     "check": "啟動前檢查 kernel 的設定與執行環境（agent 的用 aos-agent check）"}
@@ -88,7 +90,7 @@ def _parser():
                             formatter_class=argparse.RawDescriptionHelpFormatter)
         if command == "add":
             p.add_argument("inst", metavar="INST", help="要執行的目標（inst.json、資料夾或普通檔）；-- ARG... 傳入目標參數")
-        elif command in ("rm", "ack", "wake"):
+        elif command in ("rm", "ack", "wake", "proc"):
             p.add_argument("name", help="回音檔名或路徑" if command == "ack" else "行程名稱")
         p.add_argument("--target", metavar="K", help=TARGET_HELP)
         if command == "init":
@@ -113,8 +115,11 @@ def _parser():
         elif command == "boot":
             p.add_argument("--wait-ms", type=int, default=30000, help="交接等待上限（毫秒，預設 30000）")
         elif command == "tick":
-            p.add_argument("--chain", required=True, help="tick 所屬鏈 id")
-            p.add_argument("--seq", required=True, type=int, help="tick 序號（從 1 起）")
+            # one-boot：舊 kernel cpu 裡還排著的舊格會帶這兩個；帶了就是舊鏈殘格，退 0。
+            p.add_argument("--chain", help=argparse.SUPPRESS)
+            p.add_argument("--seq", type=int, help=argparse.SUPPRESS)
+        elif command == "proc":
+            p.add_argument("--json", action="store_true", help="印一個 JSON 物件（欄位穩定，見 spec kernel/cli-ops.md）")
         elif command == "add":
             for key, help_text in (("name", "行程名稱"), ("pool", "工作池（省略＝default；池要先 aos-kernel cpu add）"),
                                    ("dir-target", "資料夾內的 inst 路徑")):
@@ -194,12 +199,15 @@ def _run(args, trailing):
         return stop(args.home, args.wait_ms, args.no_wait)
     if args.command == "boot":
         code = boot(args.home, args.wait_ms)
-        pools = load_info(args.home)["pools"]
-        # fix-r5：成功也講一聲
-        print("booted %d pools, %d cpus" % (len(pools), sum(p["count"] for p in pools.values())))
+        info = load_info(args.home)
+        pools = [info["pools"][p] for p in work_pools(info)]
+        # fix-r5：成功也講一聲（one-boot：只算工作池，沒有 kernel 池了）
+        print("booted %d pools, %d cpus" % (len(pools), sum(p["count"] for p in pools)))
         return code
     if args.command == "tick":
         return tick(args.home, args.chain, args.seq)
+    if args.command == "proc":
+        return _proc(args.home, args.name, args.json)
     if args.command == "ls":
         if args.pool == "":
             raise CLIUsage("--pool 不可為空")
@@ -216,6 +224,30 @@ def _run(args, trailing):
         aos_client.ack(args.home, name)
         return 0
     return _cli_request(args, trailing)
+
+
+def _proc(home, name, as_json):
+    """one-boot：查一筆行程的正式入口（O(1)，不整份讀帳本）。沒這個行程退 1。"""
+    import aos_kernel_store
+    if aos_kernel_store.legacy(home):
+        raise KernelError("LedgerVersion", "帳本還是舊的 K/state.json；先 aos up（或 aos-kernel boot）換成 sqlite")
+    found = aos_kernel_store.proc(home, name)
+    data = {"_metainfo": {"_type": "aos_kernel_proc", "_version": 1}, "name": name, "found": found is not None,
+            "proc": found["proc"] if found else None, "cpu": found["cpu"] if found else None,
+            "discard": found["discard"] if found else False}
+    if as_json:
+        print(json.dumps(data, ensure_ascii=False))
+    elif found:
+        proc = found["proc"]
+        print("%s  %s  %s  runs %s  fails %s%s" % (
+            name, "once" if proc.get("once") else "反覆", proc.get("status"), proc.get("runs"), proc.get("fails"),
+            "  在 %s%s" % (found["cpu"], "（已 rm，跑完就丟）" if found["discard"] else "") if found["cpu"] else ""))
+        print("  target %s" % proc.get("target"))
+    if not found:
+        if not as_json:
+            sys.stderr.write("aos-kernel: NotFound: 沒有這個行程：%s\n" % name)
+        return 1
+    return 0
 
 
 def _run_cpu(args):

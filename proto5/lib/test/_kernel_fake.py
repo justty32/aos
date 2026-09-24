@@ -87,6 +87,11 @@ class FakeDaemon:
                     obj = json.loads(path.read_text(encoding="utf-8"))
                 except (OSError, ValueError):
                     continue
+                if "id" not in obj and obj.get("method") == "tick":   # 撤登記是 notification：做、不回音
+                    self._tick(None, obj.get("params") or {})
+                    path.unlink(missing_ok=True)
+                    self.seen.append((name, obj.get("params")))
+                    continue
                 if name.startswith("ack-"):
                     (self.home / "responses" / obj["params"]["name"]).unlink(missing_ok=True)
                     path.unlink(missing_ok=True)
@@ -109,6 +114,8 @@ class FakeDaemon:
 
     def _scale(self, obj):
         rid, p = obj.get("id"), obj.get("params") or {}
+        if obj.get("method") == "tick":           # one-boot：kernel boot 來登記開 tick（假 daemon 不真的開）
+            return self._tick(rid, obj.get("params") or {})
         if obj.get("method") != "scale":
             return aos_home.error_response(rid, -32601, "不認得 method")
         dpool = p.get("pool")
@@ -146,6 +153,18 @@ class FakeDaemon:
                 "running": count, "restarting": 0, "pending": 0, "dead": 0, "failed": 0,
                 "killing": 0, "draining": 0 if count else 1, "updated": time.time()})
         return aos_home.result_response(rid, {"pool": dpool, "count": count, "ver": ver})
+
+    def _tick(self, rid, p):
+        import aos_daemon_ticks
+        path = aos_daemon_ticks.reg_path(self.home, p.get("home", ""))
+        if p.get("off"):
+            path.unlink(missing_ok=True)
+            return aos_home.result_response(rid, {"home": p.get("home"), "off": True})
+        if self.stopping:
+            return self._error(rid, "Stopping")
+        path.parent.mkdir(exist_ok=True)
+        aos_home.write_json(path, {k: p.get(k) for k in ("home", "cli", "every_ms", "timeout_ms")})
+        return aos_home.result_response(rid, {"home": p.get("home"), "id": path.stem})
 
     # ---- 背景跑 ----
     def start(self, poll=.002):
@@ -216,7 +235,12 @@ class FakeCase(unittest.TestCase):
         aos_home.write_json(self.K / "info.json", info)
 
     def state(self):
-        return aos_home.read_state(self.K)
+        import aos_kernel_store
+        return aos_kernel_store.read(self.K, {})
+
+    def put_state(self, state):
+        import aos_kernel_store
+        aos_kernel_store.write(self.K, state)
 
     def boot(self, wait_ms=5000):
         self.fake.start()
@@ -229,8 +253,7 @@ class FakeCase(unittest.TestCase):
     def tick(self, process=True):
         """跑一格（直接呼叫 tick），然後讓假 daemon 處理一輪。"""
         self.seq += 1
-        state = self.state()
-        code = aos_kernel_engine.tick(self.K, state["chain"], self.seq)
+        code = aos_kernel_engine.tick(self.K)
         self.assertEqual(code, 0)
         if process:
             self.fake.process()

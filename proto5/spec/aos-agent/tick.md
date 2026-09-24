@@ -18,7 +18,7 @@
 
 **kernel 自己不會同時派兩格**：反覆行程派出去時就從 `ready` 拿掉、`status=running`，要等那顆 cpu 的回音收回來、判完（[kernel.md §3 第 6、8 步，§4](../kernel/tick.md)）才回 `ready`；
 所以前一格 `aos-agent tick` 還沒退出，同一個 kernel 下一格、下下格都不會再派它——不管池裡有幾顆 cpu。`stop`（`rm`）正在跑的那格只標 `discard`、行程紀錄留著，
-回音到之前同名 `add` 一律 `AlreadyExists`，所以「stop 完馬上 start」也不會疊出第二格。kernel 的格本身也只在那一顆 kernel cpu 上排隊，一次一格（kernel.md §7）。
+回音到之前同名 `add` 一律 `AlreadyExists`，所以「stop 完馬上 start」也不會疊出第二格。kernel 的格本身也同時只准一格（daemon 只開一格、再加 `K/.tick.lock`，[kernel §7](../kernel/no-overlap.md)；2026-09-24 one-boot 改，以前靠那一顆 kernel cpu）。
 
 **會疊的來源**（都在 kernel 的保證外）：
 1. 人手動打 `aos-agent tick`，剛好 kernel 派的那格也在跑。

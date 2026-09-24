@@ -7,7 +7,9 @@
   `settings` 蓋在頂層（`tick_ms`、`bad_after`、`done_exit`、`daemon`、`cpu`…）；預設
   `tick_ms 5`、`interval_ms 5`、`bad_after 3`、`cpu.poll_ms 5`、`daemon`＝這個測試的 D。
   池寫法例：`{"default": {"count": 2}, "llm": {"count": 1, "envs": {"AOS_LLM_CONFIG": "/abs/llm.json"}}}`。
-- `boot()` 只跑 `aos-kernel boot --target K`（daemon 從 info 拿，`--daemon-target` 拿掉），等新鏈第 1 格。
+- `boot()` 只跑 `aos-kernel boot --target K`（daemon 從 info 拿，`--daemon-target` 拿掉），等 daemon 開的第 1 格。
+- （09-24 one-boot）沒有 kernel 池了：`init` 不再補 kernel 池；帳本是 `K/ledger.sqlite`，`state()` 讀它（同第 2 版的 dict 形狀，
+  `on` 從 busy 反推）；`put_state(dict)` 整份換掉帳本。
 - daemon 的 info 是第 2 版鍵：`DAEMON_INFO`（重拉起點 50 ms、上限 400 ms、poll 5 ms、每秒可拉 1000 顆）。
 - daemon 的孩子不再在 `D/state.json`：改用下面幾個 helper（底下只呼叫 `aos_daemon.pool_summary`／`pool_kid`）。
 
@@ -40,6 +42,7 @@ import unittest
 import aos_client
 import aos_daemon
 import aos_home
+import aos_kernel_store
 from _daemon_util import read_json, wait_for
 
 CLI = Path(__file__).resolve().parents[2] / "cli"
@@ -192,7 +195,13 @@ class KernelCase(unittest.TestCase):
         return self.boot()
 
     def state(self):
-        return read_json(self.home / "state.json", {})
+        try:
+            return aos_kernel_store.read(self.home, {})
+        except aos_home.HomeError:
+            return {}
+
+    def put_state(self, state):
+        aos_kernel_store.write(self.home, state)
 
     def dstate(self):
         return read_json(self.daemon / "state.json", {})

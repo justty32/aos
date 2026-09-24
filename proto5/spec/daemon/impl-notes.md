@@ -18,3 +18,8 @@
 §3 `TooMany` 上限取小（D-52）、沒 `decl` 不擋（D-53）、池不在 count>0 沒 target＝-32602（D-54）、kill 到 dead／failed（D-59）；
 §4 fd 1 接 /dev/null 的做法（D-50）、`restarting` 怎麼算（D-60）、`waitpid(-1)` 與 Popen 共處（D-65）、每圈只看有事的池（D-68）；
 §5 halt 時的 kids 檔（D-58）；§6.1 開機只殺 running／killing 的 pid（D-56）；§6.3 CLI 的細節（D-61、D-62、D-126）；刪池後忘掉 decl（D-69，保證外）。
+
+## one-boot（2026-09-24，P 隊）
+
+新增 [§10](ticks.md)、[§11](up.md)（計畫在 [plan.md](../../notes/2026-09-24-one-boot/plan.md)）。實作時定下、已寫進本資料夾的細節：
+`tick` 撤登記在 `stopping` 期間照收、給了 `id` 也回音；重登記連敗歸零；`ls` method 的 `kernels` 是以 id 為鍵的物件（多 `running`），CLI `ls --json` 的是陣列（偷看檔）；tick 開不起來（`OSError`）也算一次失敗、`last_exit` 是 null；逾時 KILL 的 `last_exit` 是 137；登記後、daemon 開機時都馬上開第一格。

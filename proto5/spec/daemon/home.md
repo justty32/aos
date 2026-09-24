@@ -2,7 +2,7 @@
 
 # 1. 家
 
-（2026-09-24 proto5-2 池式納入：孩子表搬出 `state.json`，改成一池一個資料夾、一顆一個小檔，見 [§1.2](pools.md)。）
+（2026-09-24 proto5-2 池式納入：孩子表搬出 `state.json`，改成一池一個資料夾、一顆一個小檔，見 [§1.2](pools.md)。2026-09-24 one-boot：多 `kernels/`、`aos up` 開的 daemon 有 `daemon.log`。）
 為什麼改：第 1 版每次有孩子生或死就整份重寫 `state.json`。上萬個孩子時那份有幾 MB，一秒死幾顆就要重寫幾次。
 
 ```text
@@ -14,12 +14,14 @@ D/
   pools/<pool>/pool.json          宣告（誰的、要哪幾號、樣板）；收到 scale 才寫
   pools/<pool>/kids/<i>.json      一顆一檔；只在那顆變了才寫
   pools/<pool>/summary.json       摘要（各狀態幾顆）；有變才寫，一圈最多一次
+  kernels/<id>.json               替哪個 kernel 開 tick（登記）；登記、失敗、恢復時才寫（§10）
+  daemon.log                      daemon 的 stdout／stderr；只有用 aos up 開的才有（§11）
 ```
 
 家由 `--target`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾決定（`boot`／`halt`／`ls`／`scale`／`kill` 同一套找法）。主人是 `aos-daemon` 這個行程；
-外人只能放 request、放 ack；`pools/` 底下的檔與 `state.json` 隨便偷看（kernel 就是偷看 `summary.json` 來知道池裡活了幾顆）。
+外人只能放 request、放 ack；`pools/`、`kernels/` 底下的檔與 `state.json` 隨便偷看（kernel 就是偷看 `summary.json` 來知道池裡活了幾顆、偷看 `kernels/` 來知道有沒有人替它開 tick）。
 孩子的家不在這裡——孩子的家是它自己的目標說了算（kernel 的 cpu 在 `K/pools/<P>/cpus/<i>/`）。
-家裡沒有 `daemon.log`：daemon 的 stderr 跟著啟動它的終端走，要留檔就自己重導（例如 `aos-daemon boot --target D 2>>daemon.log &`）。
+`daemon.log`：用 `aos up` 開的 daemon，stdout、stderr 都附加到 `D/daemon.log`（[§11](up.md)）；daemon 開的 tick 的 stderr 也跟著進來。自己用 `aos-daemon boot` 開的，stderr 跟著啟動它的終端走，要留檔就自己重導（例如 `aos-daemon boot --target D 2>>D/daemon.log &`）。
 
 **池名的範圍是整個 daemon**：兩個 kernel 共用一個 daemon，池名（kernel 那邊的 `dpool`）就不能撞；撞了是 `NameTaken`（§3）。
 
@@ -70,6 +72,7 @@ daemon 永遠以一般使用者跑，不用 root、不 sudo、不切使用者；
 - `pool.json`：宣告，重開後照用。寫一半不會發生（rename）。
 - `kids/`：只拿來在**重開時找上一任的孩子**殺掉（§6.1）。重開後全部重寫。
 - `summary.json`：從記憶體算出來的，重開後重算。
+- `kernels/`：登記，重開後照用（§10）。寫一半不會發生（rename）；壞的那檔略過、stderr 記一行。
 
-所以任何一個檔慢一拍都沒關係：真正的狀態是「daemon 記憶體＋`pool.json`」，其餘是給外人看的影子。
+所以任何一個檔慢一拍都沒關係：真正的狀態是「daemon 記憶體＋`pool.json`＋`kernels/`」，其餘是給外人看的影子。
 重拉的倒數、階梯走到哪一段這種**執行中的東西**只在記憶體，daemon 崩了就沒了，也不需要。

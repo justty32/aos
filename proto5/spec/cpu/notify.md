@@ -6,7 +6,7 @@
 
 為什麼要動 cpu：使用者 09-24 定「cpu 有回音時往 kernel 家丟一個通知檔，kernel 只掃那個目錄」（[kernel §9](../kernel/README.md) 第 f 點）。
 cpu 只知道自己的家，要它通知別人，得在它的設定裡寫「通知丟到哪」：`info.json` 的 `notify`（[§2](layout.md)）。
-kernel 建工作 cpu 的家時寫成 `K/requests`（[kernel §1](../kernel/home.md)）；kernel 池那顆不寫。
+kernel 建工作 cpu 的家時寫成 `K/requests`（[kernel §1](../kernel/home.md)）。（第 2 版的 kernel 池那顆不寫；2026-09-24 one-boot 起沒有那顆了。）通知一丟進 `K/requests/`，daemon 看到新檔就馬上替 kernel 開一格（[daemon §10](../daemon/ticks.md)）。
 
 ### 通知長怎樣
 

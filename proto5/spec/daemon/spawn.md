@@ -29,4 +29,4 @@
 第 1 版是「`spawn` 回錯、不登記」；現在沒有人等回音，失敗記在 kids 檔與摘要的 `failed`。
 
 **誰能當孩子**：只有遵守範式 §6.1 控制 pipe 契約的程式（等 `go`、認 `stop`、EOF 就溫和停）——現在就是 `aos-cpu`。
-一般工作程式不是 daemon 的孩子，是 exec cpu 跑的。
+一般工作程式不是 daemon 的孩子，是 exec cpu 跑的。（2026-09-24 one-boot：daemon 替 kernel 開的 `aos-kernel tick` 是另一回事——直接開、不接 pipe、不寫 kids 檔、不走階梯，見 [§10](ticks.md)。）

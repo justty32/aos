@@ -5,10 +5,12 @@
 ← [proto5 README](../../README.md)｜範式：[cpu.md](../cpu/README.md)｜客戶：[kernel](../kernel/README.md)｜跑一次：[aos-exec.md](../aos-exec/README.md)
 
 > 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列；**2026-09-24 proto5-2 池式納入**：按池管、宣告式、`spawn` 換成 `scale`、有 `ls`／`kill`、退避與節流、批次階梯。
+> **2026-09-24 one-boot**：daemon 也替 kernel 定時開 tick（新 method `tick`、登記存 `kernels/`，[§10](ticks.md)）；一條指令開機停機 `aos up`／`aos down`（[§11](up.md)）；`ls` 多印 kernel。
 > 已實作（[`aos_daemon.py`](../../lib/aos_daemon.py) 與 `aos_daemon_*.py`，入口 `aos-daemon`）。沿革在 [history.md](history.md)。
 
 一句話：**daemon 只管 cpu 行程的生死——啟動、重拉、停止，也就是當爸爸。** 它手上是一份「每池要哪幾號」的宣告（誰送來的 `scale` 單），
-每一圈把實際的孩子往宣告靠：少了補、多了收、死了等一下再拉。它不認識 kernel、不看孩子在做什麼、不轉發任何工作。
+每一圈把實際的孩子往宣告靠：少了補、多了收、死了等一下再拉。它不看孩子在做什麼、不轉發任何工作。
+另外它替登記過的 kernel **定時開一格 `aos-kernel tick`**（[§10](ticks.md)）：只認得 kernel 家在哪、多久開一格，不讀 kernel 家的內容。
 它自己的家也照 [cpu 範式](../cpu/README.md)長：`info`／`state`／`requests`／`responses`，訊息是 JSON-RPC。
 
 ---
@@ -21,6 +23,11 @@ daemon 永遠以一般使用者跑，不用 root、不 sudo、不切使用者；
 「daemon 要 sudo 切使用者所以跟 kernel 分開」這條理由（見 [daemon-split-review](../../notes/2026-09-24-daemon-split-review/README.md)）。
 **2026-09-24 使用者定的池式**：宣告式（kernel 只說「P 要 N 顆」，daemon 補、重拉（節流）、收）；daemon 內部按池管、可帶多池；指令全帶 `--pool`；
 孩子表不整份重寫；階梯批次做。（第 1 版的「`spawn` 有 `restart:true`」因此拿掉。）
+
+**2026-09-24 P 審查（daemon-split-review）後使用者改的**（[審查報告](../../notes/2026-09-24-daemon-split-review/README.md)、[one-boot 報告](../../notes/2026-09-24-one-boot/README.md)）：開機合一、家不合一。
+- 原本「daemon 不認識 kernel」→ 改成「**daemon 只認得 kernel 的家在哪、多久開一格；不讀 kernel 家任何檔案的內容；不用 root**」（[§10](ticks.md)）。
+- 原本「kernel 在 kernel cpu 上一格接一格（tick 鏈）」→ 改成「**daemon 定時或有新單時開一格 `aos-kernel tick`，同時只准一格**」（[§10](ticks.md)、[kernel §7](../kernel/no-overlap.md)）。
+- 家還是分開的：daemon 的家照 cpu 範式；kernel 的家只有帳本放寬成 sqlite（[kernel §1.2](../kernel/ledger.md)）。開機、停機各一條指令 `aos up`／`aos down`（[§11](up.md)）。
 
 ## 7. 這份沒管的
 
@@ -35,14 +42,16 @@ daemon 永遠以一般使用者跑，不用 root、不 sudo、不切使用者；
 | 檔 | 內容 |
 |---|---|
 | [terms.md](terms.md) | §0 名詞（白話） |
-| [home.md](home.md) | §1 家；§1.1 `info.json`；§1.3 `state.json`；崩了會怎樣 |
+| [home.md](home.md) | §1 家（含 `kernels/`、`daemon.log`）；§1.1 `info.json`；§1.3 `state.json`；崩了會怎樣 |
 | [pools.md](pools.md) | §1.2 池：`pool.json`（宣告）、`kids/<i>.json`（一顆一檔）、`summary.json`（摘要）、池怎麼拿掉 |
 | [spawn.md](spawn.md) | §2 孩子怎麼拉：fd 0 一條 pipe、`go` 握手、拉不起來 |
-| [methods.md](methods.md) | §3 `D/requests/` 認的 method：`scale`、`kill`、`ls`、`stop`、`ack` |
-| [loop.md](loop.md) | §4 一圈：狀態圖、按池對帳、退避、令牌桶、開檔數 |
+| [methods.md](methods.md) | §3 `D/requests/` 認的 method：`scale`、`kill`、`ls`、`tick`、`stop`、`ack` |
+| [loop.md](loop.md) | §4 一圈：狀態圖、按池對帳、開 tick、退避、令牌桶、開檔數 |
 | [shutdown.md](shutdown.md) | §5 停機與階梯：批次做、`halt` 後 `pool.json` 留著、跟 kernel 停機的順序 |
 | [lifecycle.md](lifecycle.md) | §6 主人的一生：用法總表、`halt`；§6.1 啟動（照 `pool.json` 拉回來）；§6.2 退出碼 |
-| [cli.md](cli.md) | §6.3 `ls`（`running N（含 restarting M）`）、`scale`、`kill` |
+| [cli.md](cli.md) | §6.3 `ls`（`running N（含 restarting M）`、登記的 kernel）、`scale`、`kill` |
 | [choices.md](choices.md) | §9 我自己選的（等使用者確認） |
+| [ticks.md](ticks.md) | §10 替 kernel 開 tick：登記檔、何時開、退出碼、退避、逾時、停機、被 kill -9、`ls`（2026-09-24 one-boot） |
+| [up.md](up.md) | §11 `aos up`／`aos down`：一條指令開機、停機（2026-09-24 one-boot） |
 | [impl-notes.md](impl-notes.md) | 實作補記（2026-09-24） |
 | [history.md](history.md) | 沿革 |

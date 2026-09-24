@@ -9,7 +9,7 @@ import aos_home
 import aos_llm_call
 from aos_agent_home import AgentError
 from aos_kernel_health import _expected
-from aos_kernel_info import KERNEL_POOL, load_info, pool_location
+from aos_kernel_info import KERNEL_POOL, load_info, pool_location, ticker_daemon, work_pools
 
 COMMANDS = ('aos-exec', 'aos-cpu', 'aos-kernel', 'aos-agent', 'aos-llm')
 DIRS = ('requests', 'responses', 'pools')
@@ -126,7 +126,22 @@ class Checks:
     def cpus(self, home, info, alive):
         """帳本 phase 是 running／stopping 時，看各池摘要（同 ls 的 health 判定）；daemon 沒活的池略過。"""
         from aos_kernel_rows import _Alive, pool_rows
-        state = aos_home.read_state(home, {})
+        import aos_kernel_store
+        if aos_kernel_store.legacy(home):
+            self.report('warn', 'ledger', '帳本還是舊的 K/state.json；aos up（或 aos-kernel boot）會換成 sqlite')
+            return
+        state = aos_kernel_store.read(home, {})
+        if state.get('phase') in ('running', 'stopping'):
+            import aos_daemon_ticks
+            ticker = state.get('ticker')
+            reg = aos_daemon_ticks.peek(ticker, home) if ticker else None
+            if ticker and alive.get(ticker, aos_daemon.is_alive(ticker)) and reg is None:
+                self.report('bad', 'tick', 'daemon %s 沒在替這個 kernel 開 tick：執行 aos up 或 aos-kernel boot --target %s' % (ticker, home))
+            elif reg is not None and reg.get('fails'):
+                self.report('warn', 'tick', 'tick 連敗 %s 次（最後退出 %s）；看 daemon 的 stderr（例如 D/daemon.log）' % (
+                    reg['fails'], reg.get('last_exit')))
+            elif reg is not None:
+                self.report('ok', 'tick', 'daemon %s 每 %s ms 開一格 tick' % (ticker, reg.get('every_ms')))
         if state.get('phase') not in ('running', 'stopping') or not state.get('pools'):
             return
         rows = pool_rows(home, info, state, alive=_Alive(alive))
@@ -137,12 +152,7 @@ class Checks:
                 continue
             seen += 1
             summary = row['summary'] or {}
-            if pool == KERNEL_POOL:
-                if summary.get('running', 0) == 0:
-                    problems.append('kernel cpu 不在（daemon 重開過或還在拉）')
-                else:
-                    fine.append('kernel 1')
-            elif row['error']:
+            if row['error']:
                 problems.append('池 %s：%s（%s）' % (pool, row['error'].get('code'), row['error'].get('message') or '-'))
             elif row['gone']:
                 problems.append('池 %s：池不見了' % pool)
@@ -293,13 +303,18 @@ def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
     checks.dirs(home)
     # daemon 項：池表裡提到的每個 daemon 家都查；--daemon-target 再多查一個。
     homes = {}
-    for pool in info['pools']:
+    for pool in work_pools(info):
         location = pool_location(info, pool)
         if location[0] is None:
             checks.report('bad', 'daemon', '池 %s 解不出 daemon 家（boot 會報 NoDaemon）；在 info.json 寫 daemon'
                           '（頂層或該池），或重新 init --daemon D' % pool)
         else:
             homes.setdefault(location[0], []).append(pool)
+    ticker = ticker_daemon(info)
+    if ticker is None:
+        checks.report('bad', 'daemon', '解不出替 kernel 開 tick 的 daemon 家；在 info.json 頂層寫 daemon，或重新 init --daemon D')
+    else:
+        homes.setdefault(ticker, [])
     if daemon is not None:
         daemon = os.path.abspath(os.path.expanduser(daemon))
         homes.setdefault(daemon, [])
@@ -309,7 +324,9 @@ def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
             alive[home_d] = aos_daemon.is_alive(home_d)
         except OSError:
             alive[home_d] = False
-        if not pools:
+        if not pools and home_d == ticker:
+            where = '（替 kernel 開 tick；池表沒用到）'
+        elif not pools:
             where = '（--daemon-target，池表沒用到）'
         elif alive[home_d]:
             # run.md 碰到的問題 5：`pools` 是 kernel 設定的池表，不是 daemon 那邊真的有的池；daemon 剛開、
@@ -333,13 +350,15 @@ def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
                       'daemon 活著：%s%s' % (home_d, where) if alive[home_d] else
                       'daemon 沒在跑：%s%s；先開 daemon：aos-daemon boot --target %s' % (home_d, where, home_d))
     checks.cpus(home, info, alive)
-    # PATH 看哪個 daemon：--daemon-target 優先，否則 kernel 池的 daemon。
-    kernel_daemon = pool_location(info, KERNEL_POOL)[0]
+    # PATH 看哪個 daemon：--daemon-target 優先，否則替 kernel 開 tick 的 daemon（one-boot）。
+    kernel_daemon = ticker_daemon(info)
     env_daemon = daemon or kernel_daemon
     env, note = daemon_environment(env_daemon, bool(env_daemon) and alive.get(env_daemon, False))
     checks.path(env.get('PATH', os.defpath), note)
-    pools = info['pools']
-    checks.report('ok', 'pools', '池：' + '、'.join('%s %d' % (p, c['count']) for p, c in pools.items()))
+    pools = {p: info['pools'][p] for p in work_pools(info)}
+    if KERNEL_POOL in info['pools']:
+        checks.report('warn', 'pools', 'info 還有 kernel 池（舊版留下的）：one-boot 起 kernel 沒有自己的 cpu，這格會被略過，可以刪掉')
+    checks.report('ok', 'pools', '池：' + ('、'.join('%s %d' % (p, c['count']) for p, c in pools.items()) or '還沒有工作池'))
     effective = {}
     for pool, config in pools.items():
         value = checks.envs(home, pool, config)

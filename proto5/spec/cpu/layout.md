@@ -21,7 +21,7 @@ C/
 
 **名字不重用**：一個家裡，request 的檔名一旦用過（放過、做過、回音 ack 掉了）就**不能再給另一件工作用**。
 `link` 只擋「當下同名」，擋不了「刪掉後再用同名」；再用同名會讓遲到的 ack 刪錯回音、舊回音被當成新結果。
-慣例 `<交件者名>-<epoch ns>-<交件者 pid>`；kernel 另有帶鏈 id 的取名法（[kernel §1.3](../kernel/names.md)）。
+慣例 `<交件者名>-<epoch ns>-<交件者 pid>`；kernel 另有帶 boot 編號（`chain`）的取名法（[kernel §1.3](../kernel/names.md)）。
 唯一性是交件者的責任，cpu 不查歷史。
 
 # 2. `info.json` 與 `state.json`

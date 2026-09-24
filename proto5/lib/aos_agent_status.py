@@ -9,7 +9,7 @@ import aos_agent_info
 import aos_home
 import aos_kernel_health
 from aos_agent_home import AgentError
-from aos_agent_runtime import KERNEL_ENV, files, ledger, manual_paused, resumed_since
+from aos_agent_runtime import KERNEL_ENV, files, kernel_proc, manual_paused, resumed_since
 
 SHORT_LIMIT = 120
 
@@ -69,7 +69,8 @@ def kernel_status(base, env):
         result['note'] = '（沒設 %s）' % KERNEL_ENV
         return result
     try:
-        result['proc'] = ledger(home)['procs'].get(result['name'])
+        found = kernel_proc(home, result['name'])
+        result['proc'] = found['proc'] if found else None
         if result['proc'] is None:
             result['note'] = '沒登記（aos-agent start --target %s）' % base
         elif not isinstance(result['proc'], dict):

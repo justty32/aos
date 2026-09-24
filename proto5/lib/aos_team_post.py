@@ -28,6 +28,7 @@ import subprocess
 import sys
 import time
 
+import aos_kernel_store
 import aos_team_ask
 import aos_team_format as fmt
 from aos_team_format import BEAT, HUMAN, POST, TeamError, Layout
@@ -479,7 +480,7 @@ class Post:
         if (k / 'requests' / run['request']).exists() or (k / 'responses' / run['request']).exists():
             return True
         try:
-            procs = json.loads((k / 'state.json').read_text(encoding='utf-8')).get('procs') or {}
+            procs = aos_kernel_store.peek_procs(k)  # one-boot（P 隊）：帳本換成 K/ledger.sqlite
         except (OSError, ValueError, AttributeError):
             return False
         return run['proc'] in procs
@@ -1053,7 +1054,7 @@ def register(team_dir, what, argv, interval_ms, env=None):
         code = (res['error'].get('data') or {}).get('code')
         if code == 'AlreadyExists':
             try:
-                proc = (json.loads((Path(kernel) / 'state.json').read_text(encoding='utf-8')).get('procs') or {}).get(name)
+                proc = (aos_kernel_store.peek_proc(kernel, name) or {}).get('proc')  # one-boot（P 隊）：K/ledger.sqlite
             except (OSError, ValueError, AttributeError):
                 proc = None
             if isinstance(proc, dict) and proc.get('target') == str(inst) and proc.get('status') != 'bad':

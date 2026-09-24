@@ -2,14 +2,15 @@
 
 # 3. method（`D/requests/`）
 
-（2026-09-24 proto5-2 池式納入：拿掉 `spawn`，加 `scale`／`ls`，`kill` 改按池。）走法：往 `D/requests/` 放 JSON-RPC 單，回音在 `D/responses/` 同名，
+（2026-09-24 proto5-2 池式納入：拿掉 `spawn`，加 `scale`／`ls`，`kill` 改按池。2026-09-24 one-boot：加 `tick`，`ls` 多 `kernels`。）走法：往 `D/requests/` 放 JSON-RPC 單，回音在 `D/responses/` 同名，
 收的人讀完放 ack（[cpu §3](../cpu/messages.md)）。回音、原單、ack 的處理照範式 §6.3；daemon 自己崩在中間，重啟照範式 §6.2 對帳（`current` 那格就是為這個）。
 
 | method | 誰用 | 一句話 |
 |---|---|---|
 | `scale` | kernel、`aos-daemon scale` | 宣告「池 P 要這幾號」；池不在就建 |
 | `kill` | 人（`aos-daemon kill`） | 把某幾顆砍掉重來 |
-| `ls` | 其他程式 | 回池的摘要；人跟 kernel 平常直接偷看檔案 |
+| `ls` | 其他程式 | 回池的摘要（與登記的 kernel）；人跟 kernel 平常直接偷看檔案 |
+| `tick` | kernel（boot 登記、停好那格撤登記） | 請 daemon 替這個 kernel 家定時開 tick，或別再開（[§10](ticks.md)） |
 | `stop` | `aos-daemon halt` | 整個 daemon 停機（notification，檔名前綴 `stop-`；§5） |
 | `ack` | 所有收回音的人 | 同範式 §3.3 |
 
@@ -69,5 +70,28 @@ result：`{"killed": ["3"], "skipped": {"5": "pending"}}`。`running` 的開始�
 
 ## `ls`
 
-params `{}` 或 `{"pool": P}`。沒給 pool：`{"pools": {P: 摘要}}`；給了：`{"pool": P, "summary": 摘要, "children": {"<i>": 孩子檔的內容＋"busy"}}`。
+params `{}` 或 `{"pool": P}`。沒給 pool：`{"pools": {P: 摘要}, "kernels": {<id>: 登記}}`（`kernels` 是 one-boot 加的：每個登記的 kernel 一格，內容＝[§10](ticks.md) 的登記檔再加 `running`（bool，現在有沒有一格在跑））；給了：`{"pool": P, "summary": 摘要, "children": {"<i>": 孩子檔的內容＋"busy"}}`。
 摘要與孩子檔的格式在 [§1.2](pools.md)。帶 pool 的回音可能很大（上萬顆約 1 MB），是給人偶爾用的。
+
+## `tick`
+
+（2026-09-24 one-boot 新增。daemon 那邊怎麼開見 [§10](ticks.md)。）
+
+```json
+{"jsonrpc": "2.0", "id": "k-1790000000000000000-4242-boot-tick", "method": "tick",
+ "params": {"home": "/abs/K", "cli": "/abs/proto5/cli/aos-kernel", "every_ms": 1000, "timeout_ms": 60000}}
+```
+
+| 鍵 | 型別 | 必填 | 意思 |
+|---|---|---|---|
+| `home` | 絕對路徑 | 是 | kernel 家（K）。daemon 用它的 SHA-256 前 16 字元當登記檔名 |
+| `cli` | 絕對路徑 | 登記時是 | 用哪支 `aos-kernel` 開 |
+| `every_ms` | 非負整數 | 否（預設 1000） | 多久開一格（kernel boot 帶 info 的 `tick_ms`） |
+| `timeout_ms` | 非負整數 | 否（預設 60000） | 一格最多跑多久，0＝不限（kernel boot 帶 info 的 `tick_timeout_ms`） |
+| `off` | bool | 否（預設 false） | true＝撤登記；這時只看 `home` |
+
+- 形狀不合（`home`／`cli` 不是絕對路徑、數字不是非負整數、`off` 不是 bool）＝`-32602`。
+- **登記**：daemon 在 `stopping`＝`-32000`／`Stopping`。否則寫 `D/kernels/<id>.json`（寫不進去＝回錯、不登記）、回 `{"home": K, "id": <id>}`，然後**馬上開一格**。
+  已經登記過＝更新 `cli`／`every_ms`／`timeout_ms`、連敗歸零、馬上開一格。
+- **撤登記**（`off: true`）：刪登記檔、不再開新的格（正在跑的那格照樣收屍）；沒登記過也算成功。`stopping` 期間照收。
+  kernel 停好那格送的是 notification（沒有 `id`、不回音）；給了 `id` 就回 `{"home": K, "off": true}`。

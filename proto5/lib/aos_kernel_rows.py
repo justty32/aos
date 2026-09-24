@@ -33,7 +33,8 @@ def _summary(daemon, dpool):
 def pool_rows(home, info, state, only=None, summaries=None, alive=None):
     """每池一格 dict（info 的池＋帳本裡還在的池）；summaries 可給 {池: summary} 省得重讀。"""
     alive = alive or _Alive()
-    names = list(dict.fromkeys([KERNEL_POOL, *info["pools"], *(state.get("pools") or {})]))
+    # one-boot：沒有 kernel 池了（舊 info／帳本留下的 kernel 這格略過）。
+    names = [p for p in dict.fromkeys([*info["pools"], *(state.get("pools") or {})]) if p != KERNEL_POOL]
     rows = {}
     for pool in names:
         if only is not None and pool != only:

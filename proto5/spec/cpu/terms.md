@@ -6,7 +6,7 @@
 
 | 詞 | 意思 |
 |---|---|
-| 家 | 一個 cpu 的資料夾（下面的 `C/`）。kernel 的家 `K/`、daemon 的家 `D/` 也是家；`K/pools/kernel/cpus/0/` 是 kernel 專用那顆 cpu 的家，跟 `K/` 是兩個家 |
+| 家 | 一個 cpu 的資料夾（下面的 `C/`）。kernel 的家 `K/`、daemon 的家 `D/` 也是家；`K/pools/<P>/cpus/<i>/` 是一顆工作 cpu 的家，跟 `K/` 是兩個家（2026-09-24 one-boot 起沒有 kernel 專用的那顆 cpu） |
 | 主人（行程） | 管這個家的執行與狀態的那支行程：exec cpu 的主人就是 `aos-cpu C`。啟動前人寫 `info.json` 是初始化，不算主人的事 |
 | 外人 | 主人以外的行程：kernel、agent、人用 shell |
 | 交件者／收件者 | 交件者＝送出 request 的那個程式；它同時就是那則回音的收件者。本文統一叫交件者 |

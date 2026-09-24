@@ -10,7 +10,8 @@
    start 端只需要這兩格用到的 `$env`。這兩格解不開或型別錯＝那個代號、退 1。
    `tick` 會回 0／101／102／1，所以 `done_exit` 是 1、101 或 102（09-24 停車加）＝`KernelIncompatible`、退 1、不登記（kernel 判回音時先比 `done_exit`，
    撞到就會把 agent 當成「做完了」永久停排）。`done_exit` 是 0（關掉）或其他值都行。`bad_after` 是 0＝關掉退件，agent 一直退 1 也不會被標 `bad`，照登記。
-   （09-24 停車）再看 K 認不認得停車：`K/state.json` 讀得到、有 `chain`（真的 boot 過）、而 `features` 裡沒有 `"park"`＝`KernelIncompatible`（舊 kernel 把 102 當失敗，十次就 `bad`）、退 1，訊息叫人升級 kernel 後 boot 一次再 start；帳本不在（還沒 boot 過）或讀不懂就不擋。
+   （09-24 停車）再看 K 認不認得停車：K 帳本讀得到、有 `chain`（真的 boot 過）、而 `features` 裡沒有 `"park"`＝`KernelIncompatible`（舊 kernel 把 102 當失敗，十次就 `bad`）、退 1，訊息叫人升級 kernel 後 `aos up`（或 boot）一次再 start；帳本不在（還沒 boot 過）或讀不懂就不擋。
+   （2026-09-24 one-boot）帳本是 `K/ledger.sqlite`，用跟 `aos-kernel proc` 同一支 lib（`lib/aos_kernel_store.py`）讀 `chain`、`features` 兩個鍵。K 還是舊的 `K/state.json`（沒有 `ledger.sqlite`）＝`KernelIncompatible`、退 1，訊息叫人先 `aos up`（或 boot）一次換成 sqlite 再 start。
    這只在 start 當下查；之後人改 K 的 info，要自己重查。
 3. `tick.json` 不在就寫一份；在就讀它記的 K（`envs.AOS_KERNEL_HOME`）：是字面字串且等於現在的 `AOS_KERNEL_HOME` 才照用，否則（不同、不是字串、檔讀不懂）＝`KernelMismatch`、退 1，
    stderr 說「tick.json 綁在另一個 K，要換就刪掉 tick.json 再 start」。寫出來的長這樣（09-24 fix-r4 改：`--target`、`AOS_KERNEL_HOME`）：
@@ -42,7 +43,7 @@ start／stop 的 request 檔名是 `aa-<資料夾名>-<epoch ns>-<pid>.json`（i
 `aos-agent: ReadFailed: 等回音逾時，回音會出現在 <K>/responses/<檔名>，讀完自己放 ack（cpu.md §3.3）`、退 1——
 操作可能已經生效，不會撤回；那則回音 agent 之後不會再管。
 
-（09-24 fix-r5 補）**已登記退 0**：`start` 收到 `AlreadyExists` 時再讀一次 K 帳本：`procs.agent-<資料夾名>` 在、`target` 就是這個家的 `tick.json`、帳本 `cpus` 裡沒有它標 `discard` 的那格（被 `rm` 了、還在跑）、`status` 不是 `bad`＝印 `already started agent-<資料夾名>`、退 0（每天開機腳本 `set -e` 不會斷）。
+（09-24 fix-r5 補）**已登記退 0**：`start` 收到 `AlreadyExists` 時再查一次 K 帳本那一筆（2026-09-24 one-boot：用 `aos-kernel proc` 同一支 lib，只讀那一列）：`procs.agent-<資料夾名>` 在、`target` 就是這個家的 `tick.json`、它正在跑的那格沒標 `discard`（被 `rm` 了、還在跑）、`status` 不是 `bad`＝印 `already started agent-<資料夾名>`、退 0（每天開機腳本 `set -e` 不會斷）。
 其他 `AlreadyExists`（上次 stop 的那格還在跑＝`discard` 那格；被判 `bad`；同名但別的家）照舊退 1，訊息各補一句：`discard`＝「上次 stop 的那格還在跑，等它跑完再 start」、`bad`＝「已登記但被判 bad，看 log/agent.err 修好後 stop 再 start」、別的家＝「同名行程是 <那個 target>，改資料夾名」。
 
 退出碼：0＝kernel 回了 `{"name"}`，或（fix-r5）已登記；1＝`KernelIncompatible`、`KernelMismatch`、kernel 回 `error`（`AlreadyExists`：已登記或上次 stop 的那格還在跑；

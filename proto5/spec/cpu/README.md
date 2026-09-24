@@ -4,7 +4,7 @@
 
 ← [proto5 README](../../README.md)｜跑一次：[aos-exec.md](../aos-exec/README.md)｜inst 長相：[inst-posix.md](../inst-posix/README.md)｜上層：[kernel](../kernel/README.md)、[daemon](../daemon/README.md)
 
-> 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列、proto5-2 池式納入加 `notify` 通知（§6.4）；已實作（[`aos_home.py`](../../lib/aos_home.py)、[`aos_client.py`](../../lib/aos_client.py)、[`aos_exec_cpu.py`](../../lib/aos_exec_cpu.py)，入口 `aos-cpu`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列、proto5-2 池式納入加 `notify` 通知（§6.4）、one-boot 只改幾句提到 kernel cpu 的話（cpu 本身沒變）；已實作（[`aos_home.py`](../../lib/aos_home.py)、[`aos_client.py`](../../lib/aos_client.py)、[`aos_exec_cpu.py`](../../lib/aos_exec_cpu.py)，入口 `aos-cpu`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**一顆 exec cpu 是一個資料夾加一個主人行程：逐件把 `requests/` 裡的工作 request 照 `aos-exec`
 跑一次，回音寫到 `responses/` 同名檔；反覆、排程都是 kernel 的事，cpu 只做一次。**

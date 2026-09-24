@@ -12,7 +12,9 @@ from pathlib import Path
 import time
 
 import aos_daemon
+import aos_daemon_ticks
 import aos_home
+import aos_kernel_store
 from aos_kernel_info import (
     KERNEL_POOL, CLIUsage, KernelError, _parse_info, load_info, members, pool_name_ok, split_key,
 )
@@ -87,16 +89,14 @@ def _set_count(config, count, skip):
 
 
 def kernel_running(home):
-    """kernel 現在會不會照新數字做：帳本 phase running、kernel 池的 daemon 活著、它那邊的 kernel 池有一顆在跑。"""
+    """kernel 現在會不會照新數字做：帳本 phase running、替它開 tick 的 daemon 活著而且登記著它（one-boot）。"""
     try:
-        state = aos_home.read_state(home, {})
-        entry = (state.get("pools") or {}).get(KERNEL_POOL)
-        if state.get("phase") != "running" or not state.get("chain") or not entry:
+        state = aos_kernel_store.meta(home, "phase", "chain", "ticker")
+        if state.get("phase") != "running" or not state.get("chain") or not state.get("ticker"):
             return False
-        if not aos_daemon.is_alive(entry["daemon"]):
+        if not aos_daemon.is_alive(state["ticker"]):
             return False
-        summary = aos_daemon.pool_summary(entry["daemon"], entry["dpool"])
-        return bool(summary) and summary.get("running", 0) > 0
+        return aos_daemon_ticks.peek(state["ticker"], home) is not None
     except (aos_home.HomeError, OSError, KeyError, TypeError, AttributeError):
         return False
 
@@ -105,7 +105,7 @@ def _check_pool_arg(pool):
     if not pool_name_ok(pool):
         raise CLIUsage("池名不合法（1～64 字、只用 A-Z a-z 0-9 _ . -）：%r" % pool)
     if pool == KERNEL_POOL:
-        raise CLIUsage("kernel 池永遠 1 顆，不能 cpu add／rm")
+        raise CLIUsage("kernel 是保留名（one-boot 起 kernel 沒有自己的池），不能 cpu add／rm")
 
 
 def _parse_envs(values):
@@ -201,7 +201,7 @@ def cpu_rm(home, name=None, pool=None, count=None):
 def cpu_ls(home, pool=None, as_json=False):
     home = Path(home).absolute()
     info = load_info(home)
-    state = aos_home.read_state(home, {})
+    state = aos_kernel_store.read(home, None) or aos_home.read_state(home, {})
     rows = pool_rows(home, info, state, only=pool)
     if pool is not None and not rows:
         raise KernelError("NotFound", "沒有這個池：%s（info 與帳本都沒有）" % pool)
