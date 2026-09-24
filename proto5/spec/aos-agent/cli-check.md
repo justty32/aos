@@ -30,8 +30,8 @@ daemon 家：`AOS_DAEMON_HOME`，沒設就用 K 的 `info.json` 記的 `daemon`�
 2. **整段 kernel 的檢查**，跟 `aos-kernel check --target K` 同一份（[kernel §6 check](../kernel/cli-ops.md)）：`info`、`dirs`、`daemon`、`cpus`、`path`、`pools`、`llm/<cpu>`。K 的 `info.json` 讀不到＝`bad  info: …（K＝<路徑>，取自 …）`，後面的 kernel 項目不印。
 3. **這個 agent 家**（原本 `--agent` 那幾項，內容不變）：`agent`（info 讀驗）、`agent/tick.pool`、`agent/llm.pool`（池在不在 K 的 cpu 表）、`agent/llm.model`（代號在不在 llm 項讀到的模型表）、`agent/tool/<名字>`（`_meta.argv[0]` 找不找得到、有沒有執行位；有 `/` 的相對路徑從家算，沒有 `/` 的照 daemon 的 PATH 找；寫成指示詞＝warn）。
    K 讀不到時池與模型沒法查：印一行 `warn agent/pools: K 讀不到，池與模型代號沒查；先修好上面的 kernel 項`，工具照查。agent 的 info 讀不到＝`bad  agent: <代號>: …`，後面的 agent 項不印。
-4. （09-24 access-impl）**權限牆**（[access.md](access.md)）：
-   - 沒 access 檔：家裡有工具＝`warn access: 沒有 access.json：工具不關牢…`（教一行 `access set`），沒工具就不印；以下略過。
+4. （09-24 access-impl，round2 改 bad）**權限牆**（[access.md](access.md)）：
+   - 沒 access 檔：家裡有要關牢的工具（沒寫 `_jail: false`）＝`bad  access: 沒有 access.json：<前 5 支名字> 這 N 支工具都不會跑（NoAccess）。先建一份：mkdir -p … && aos-agent access set ws … --cwd --target …`；工具全部 `_jail: false` 或沒工具就不印；以下略過。
    - `access`：解得開、名字、路徑存在、`cwd`、重疊（同送件那一套）＝`ok  access: <檔> 讀驗通過：N 個 mount、起點 …、net …`；不合＝`bad  access: <代號>: …`。`info.json` 明寫 `access` 卻指到不在的檔也是 bad。
    - `access/<名>`：mount 頂層有 socket／FIFO＝warn（牢裡連得到，唯讀也擋不住）。
    - `access/bwrap`：跑一次固定、無副作用的 bwrap（跟 aos-jail 同一組參數、不掛任何 mount、程式是 `true`）；找不到＝`bad … NoBwrap: …安裝指令`，開不起來＝bad 帶 bwrap 的訊息。

@@ -27,7 +27,7 @@
 | `tool_pool` | 字串 | `default` | 工具的工作派去哪個池 |
 | `tick.pool` | 字串 | `default` | `aos-agent start` 登記反覆行程用的池 |
 | `tick.interval_ms` | 非負整數 | 沒寫＝不帶，用 kernel 的預設 | 同上，多久跑一格 |
-| `access` | 路徑字串（可用指示詞） | `access.json` | 權限牆檔（[§3.5](access.md)），相對 agent 家；檔不在＝工具不關牢，但**明寫了**卻不在＝`AccessInvalid`（09-24 access-impl） |
+| `access` | 路徑字串（可用指示詞） | `access.json` | 權限牆檔（[§3.5](access.md)），相對 agent 家；檔不在＝要關牢的工具都不送（`NoAccess`），但**明寫了**卻不在＝`AccessInvalid`（09-24 access round2） |
 
 - 整數欄一律不收 bool。型別不對＝`FieldTypeMismatch`（明寫 `null` 也不合法）；`llm` 缺或 `llm.model` 缺＝`LlmInvalid`。只有 `tools` 的元素吃 `$opt`（[§3.4](tools-opt.md)，09-24 access-impl）；其他位置寫 `$opt`＝`UnknownOption`。
 - 讀驗時只解路徑、驗型別，不看 K、不看 llm 池存不存在——真的送件時 kernel 才回。

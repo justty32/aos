@@ -40,7 +40,7 @@
 - 每條工具的 `function.name` 是**改後的名字**；`aos-agent`（送件找工具）、`aos-llm call`（組 body）、`check` 用同一份讀法（`lib/aos_agent_home.py` 的 `load_llm_view`），看到同一個名字。記憶裡記的也是新名字。
 - 每條工具多一個內部鍵 `_source`：`{"file": 工具檔絕對路徑, "index": 檔裡第幾個（從 0）, "name": 原名, "entry": info.tools 第幾個元素}`。
   跟所有 `_` 開頭的鍵一樣**不送模型**（§3.3 最後一條）。工具檔本身不改。
-- `_jail`（工具元素頂層，跟 `_timeout_ms` 同層）：可省，只收 `true`／`false`（別的＝`ToolInvalid`）；`false`＝這支不關牢。關牢是什麼見 [access.md](access.md)。
+- `_jail`（工具元素頂層，跟 `_timeout_ms` 同層）：可省，只收 `true`／`false`（別的＝`ToolInvalid`）；`false`＝這支不關牢，家裡沒有 `access.json` 也照樣送；沒寫或 `true`＝要關牢，家裡沒有 `access.json` 時這支直接不送（`NoAccess`）。關牢是什麼見 [access.md](access.md)。
 
 ## 誰會改這個陣列
 

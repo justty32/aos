@@ -58,9 +58,9 @@ aos-agent tools add NAME|DIR|FILE.json [--target DIR] [--as NEW | --as OLD=NEW[,
 6. 刪掉這個包的舊版本與之前崩潰留下的殘渣：`tools/` 下名字是 `.<名>-<數字>`（可帶 `.tmp`、`.old`、`.link-<pid>`）、又不是現在連結指的那個。別的包的不碰。
 
 崩在半路：重跑一次同一行指令就好（第 1 步的「修復」＋第 6 步的清殘渣）。
-7. （09-24 access-impl）家裡還沒有 access 檔（[agent/access.md](../agent/access.md)）就建一份預設：`{"mounts": {"ws": <工作根目錄>}, "cwd": "ws", "net": false}`，工作根目錄＝`--root` 的絕對路徑或 `workspace`；印出來。已有就不動。原地引用不建。
+7. （09-24 access-impl）家裡還沒有 access 檔（[agent/access.md](../agent/access.md)）就建一份預設：`{"mounts": {"ws": <工作根目錄>}, "cwd": "ws", "net": false}`，工作根目錄＝`--root` 的絕對路徑或 `workspace`；印出來。**已有就不動、也不印那兩行**（09-24 access round2：`init` 生的家一律已經有 access.json）。原地引用不建。
 
-成功印：`installed <名> → <工具檔>（N 個工具：…；改名的寫 `原→新`）`；改了 info 再一行（補了什麼或第幾條改成什麼）；有工作根目錄再一行（沒 access 檔＝路徑與改哪個檔；有＝牢裡的 `/work/<cwd>` 對到哪、看 `access ls`，另一行說 `config.json` 的 root 只在不關牢時用）；建了 access 檔再兩行；最後「下一批工具生效，不用重 start」。退 0。
+成功印：`installed <名> → <工具檔>（N 個工具：…；改名的寫 `原→新`）`；改了 info 再一行（補了什麼或第幾條改成什麼）；家裡還沒有 access 檔才建一份、多印兩行（上面第 7 點）；有工作根目錄再一行（沒 access 檔＝路徑與改哪個檔；有＝牢裡的 `/work/<cwd>` 對到哪、看 `access ls`，另一行說 `config.json` 的 root 只在不關牢時用；（09-24 access round2）access 檔早就在、又給了 `--root X`、但表的起點沒對到 X 時再多一行：`要讓工具在 X 工作：aos-agent access set <cwd名> X --target <家>`）；最後「下一批工具生效，不用重 start」。退 0。
 原地引用印：`referenced <路徑>（原地引用、不複製；N 個工具：…）`、`info.json 的 tools 補了 …`、最後同一句。
 工作根目錄包含 agent 家（例如 `--root` 給了家的上層；兩邊都解開符號連結再比）時 stderr 多一行注意：模型改得到自己的 `info.json`、記憶與 `state.json`。
 

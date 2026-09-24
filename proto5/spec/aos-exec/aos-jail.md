@@ -29,6 +29,7 @@ aos-jail [--mount NAME=PATH]… [--mount-ro NAME=PATH]… [--chdir NAME] [--net 
 - `--proc /proc`（新的，只看得到牢裡的行程）、`--dev /dev`（最小）、`--tmpfs /tmp`（空的）。
 - `/etc` **不整份掛**，只 `--ro-bind-try`：`ld.so.cache`、`passwd`、`group`、`nsswitch.conf`、`localtime`、`hosts`；`--net on` 再加 `resolv.conf`、`ssl/`、`ca-certificates/`。
 - `/work`（空資料夾）與每個 `/work/<NAME>`；PROG 含 `/` 時的 `/opt/tool`。
+- 全部掛完之後，整個牢的根（**含 `/work` 本身**）用 bwrap 自己的 `--remount-ro /` 轉成唯讀：寫得進去的只剩可寫 mount（`--mount` 掛的那些）跟 `/tmp`。直接在 `/work` 底下建檔（不在任何掛進去的資料夾裡）一樣是唯讀，會看到 `Read-only file system`。
 - 其他（家目錄、agent 家、kernel 家、金鑰檔）一律看不到——**例外是 `/opt/tool`**：PROG 所在的整個資料夾都看得到，程式放在 agent 家根目錄就等於把整個家唯讀給它（`aos-agent check` 會 warn）。stdin／stdout／stderr 是呼叫者開好的 fd，原樣帶進去。
 
 ## 環境
@@ -39,6 +40,7 @@ aos-jail [--mount NAME=PATH]… [--mount-ro NAME=PATH]… [--chdir NAME] [--net 
 - `LANG`、`LC_ALL`、`TZ`、`TERM`：aos-jail 自己的環境有才帶；
 - `--setenv` 給的（可以蓋掉 PATH、HOME）；
 - `AOS_TOOL_ROOT=/work/<chdir>`（沒 `--chdir`＝`/work`），最後設、蓋不掉。base 工具包靠它找工作根目錄，錯誤訊息印的也是這個牢裡路徑（[tools README](../../tools/README.md)）。
+- `AOS_TOOL_FENCE=/work`，同樣最後設、蓋不掉：base 工具包用它決定碰得到的範圍——不只是起點那一個 mount，而是整個 `/work`（見上面〈牢裡有什麼〉），細節在 [tools README](../../tools/README.md)。
 
 `--setenv` 的名字是 `AOS_*`、或含 `KEY`／`TOKEN`／`SECRET`／`PASSWORD`／`CREDENTIAL`（不分大小寫）、或是 `SSH_AUTH_SOCK`＝**一律丟掉**，stderr 印一行 `aos-jail: 丟掉環境變數 <名>…`（工具的 stderr 寫 `merge` 時這行會進結果）。
 

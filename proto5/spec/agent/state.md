@@ -67,7 +67,7 @@
 | `calls[].tool_call_id`、`tool` | 字串 | 只有 `act` 有：對應 assistant 的 `tool_calls[i].id` 與 `function.name` |
 | `calls[].done` | 物件或 `null` | 這個 call 的結果，已讀驗完、持久了；`null`＝還沒收 |
 | `calls[].acked` | 布林 | 回音已 ack（或本來就沒有回音） |
-| `access` | `null`、`{"error": 字串}` 或物件 | 只有 `act` 有（09-24 access-impl）：建批那一刻解好的權限牆快照（[§3.5](access.md)），同批每件、重送都用它。物件＝`{"mounts": {名: {"path": 絕對路徑, "ro": 布林}}, "cwd": 名或 null, "net": 布林}`，名照 `[a-z0-9_-]+`、`cwd` 要在 `mounts` 裡；`null`＝沒 access 檔（不關牢）；`error`＝壞表（這批要關牢的工具都跑不起來）。沒這個鍵（舊版寫的）＝`null`；形狀不合＝`FieldTypeMismatch` |
+| `access` | `null`、`{"error": 字串}` 或物件 | 只有 `act` 有（09-24 access-impl）：建批那一刻解好的權限牆快照（[§3.5](access.md)），同批每件、重送都用它。物件＝`{"mounts": {名: {"path": 絕對路徑, "ro": 布林}}, "cwd": 名或 null, "net": 布林}`，名照 `[a-z0-9_-]+`、`cwd` 要在 `mounts` 裡；`null`＝沒 access 檔（要關牢的工具不送，`NoAccess`）；`error`＝壞表（這批要關牢的工具都跑不起來）。沒這個鍵（舊版寫的）＝`null`；形狀不合＝`FieldTypeMismatch` |
 
 `done` 的形狀：`act` 是 `{"content": 給模型看的字串}`；`think` 是 `{"ok": true}`（答案留在 `work/<名>.out`）
 或 `{"fail": 白話原因, "count": 布林}`（`count` 說算不算一次連敗）。怎麼算在 aos-agent.md §6。

@@ -4,20 +4,21 @@
 
 **目標**：搞懂 `access.json`（工具被關進的牢）怎麼看、怎麼改，包含用文字編輯器直接改；再學會 `tools ls／add／rm／alias／unalias` 這組管理指令。
 
-**前提**：做完 [04](04-tools-and-pause.md)，bob 已裝了 `base` 工具包，家裡因此有一份 `access.json`。這篇繼續用同一個 bob。
+**前提**：做完 [03](03-first-agent.md)，`aos-agent init` 就已經幫 bob 生了一份 `access.json`；做完 [04](04-tools-and-pause.md)，bob 又裝了 `base` 工具包。這篇繼續用同一個 bob。
 
 ## 1. 限制 agent 能碰什麼
 
-`access.json` 放在 `<家>/access.json`，決定這個家的工具被關進的沙盒（`bwrap`）看得到哪些資料夾、能不能連網、起點在哪。**檔不存在＝不關牢**（照舊碰得到你碰得到的所有檔）；**有這個檔＝這個家的工具一律關牢**（除了自己說 `_jail: false` 的那支，下面會講）。
+`access.json` 放在 `<家>/access.json`，決定這個家的工具被關進的沙盒（`bwrap`）看得到哪些資料夾、能不能連網、起點在哪。**有這個檔＝這個家的工具一律關牢**（除了自己說 `_jail: false` 的那支，下面會講）；**沒有這個檔時，要關牢的工具一律不送**（`NoAccess`），不再像以前那樣退回「不關牢」。
 
-`tools add base` 第一次裝、家裡還沒有這個檔時會順手建一份、只准工具寫 workspace：
+`aos-agent init` 生家時就順手建好一份，只准工具寫 `workspace`：
 
 ```text
-寫了 /home/you/aos-try/bob/access.json：工具會關在牢裡，只看得到 /work/ws（＝workspace，可寫）、起點 /work/ws、不能上網。
-要改：aos-agent access set NAME PATH [--ro]、access net on、access ls 看全表
-關牢：工具的工作根目錄＝牢裡的 /work/ws（對到 …/bob/workspace）；看 aos-agent access ls
-（…/bob/tools/base/config.json 的 root＝…/bob/workspace 只在不關牢時用）
+initialized /home/you/aos-try/bob
+access.json：工具關在牢裡，只看得到 /work/ws（＝workspace，可寫）、不能上網；改：aos-agent access ls／set
+llm.model 是代號 "default"：llm.json（…）要有 default 這個代號
 ```
+
+`tools add base` 裝的時候看到家裡已經有這份表，就不會重印一次；只有給了 `--root X` 而表的起點沒對到 `X` 時，才多印一行教你 `access set` 改表（見 [tools add](../spec/aos-agent/tools.md)）。
 
 用 `access ls` 看目前的表（JSON 長什麼樣見第 2 節）：
 
@@ -34,13 +35,13 @@ bwrap: ok
 檔：/home/you/aos-try/bob/access.json
 ```
 
-`access set NAME PATH` 加一個 mount（`PATH` 照你殼目前的資料夾轉成絕對路徑寫進檔）：
+`access set NAME PATH` 加一個 mount（`PATH` 照你**殼目前的資料夾**轉成絕對路徑寫進檔，不是照 `--target`——要指 bob 家裡的資料夾，就寫絕對路徑或 `~` 開頭，別靠殼剛好在哪裡）：
 
 ```sh
 aos-agent access set ref ~/docs --target $W/bob
 ```
 
-表裡多一行 `ref   rw    在    /home/you/docs`，結尾多印一行 `下一批工具生效，不用重 start`。想連網：`access net on`。換起點：`access cwd ref`。拿掉一個 mount：`access rm NAME`——但**正被當 `cwd` 用的那個不能 rm**（`aos-agent access rm ws` 會印 `AccessInvalid: ws 是目前的起點（cwd），先 aos-agent access cwd 別的名字 再 rm`），要先 `access cwd 換別的`。
+表裡多一行 `ref   ro    在    /home/you/docs`（碰到信任資料自動改唯讀，下面會講）；`../ref/x.txt` 或 `/work/ref/x.txt` 兩種寫法工具都讀得到——**碰得到的範圍是整個 `/work`，不只是起點那一個 mount**。想連網：`access net on`。換起點：`access cwd ref`。拿掉一個 mount：`access rm NAME`——但**正被當 `cwd` 用的那個不能 rm**。**換完起點或改完表，記得 `aos-agent say` 跟模型說一聲**，不然它會以為自己弄壞了。
 
 ### `self`（整個家）只能唯讀
 
@@ -54,19 +55,47 @@ aos-agent access set self . --target $W/bob
 self 可寫、但包含 /home/you/aos-try/bob/info.json（家裡的 info.json），所以設成唯讀（ro）
 ```
 
-（表裡多一行 `self  ro  在  …/bob`。）硬要 `--rw` 會直接拒絕、什麼都不寫（`AccessUnsafe: self 可寫、但包含 …info.json（家裡的 info.json）；改 --ro 或換資料夾（沒寫）`）。信任資料也含 `aos` 自己的指令與程式庫，見 [agent access.md](../spec/agent/access.md#信任資料工具永遠寫不到)。
+硬要 `--rw` 會直接拒絕、什麼都不寫（`AccessUnsafe`）。信任資料也含 `aos` 自己的指令與程式庫，見 [agent access.md](../spec/agent/access.md#信任資料工具永遠寫不到)。
+
+### 掛兩個資料夾：一個可寫、一個唯讀
+
+```sh
+aos-agent access set ws workspace --cwd --target $W/bob     # 起點，可寫
+aos-agent access set ref ~/docs --ro --target $W/bob        # 第二個，唯讀
+```
+
+工具起點在 `/work/ws`，照樣讀得到 `../ref/笔记.txt`；但寫 `../ref/新檔.txt` 會退：
+
+```text
+{"ok": false, "error": "ReadOnly",
+ "message": "cannot write ../ref/新檔.txt: that folder is read-only … Writable folders: /work/ws."}
+```
+
+直接寫在 `/work` 底下（不在任何掛進去的資料夾裡）也是同一個代號。
 
 改完 `access.json`，**下一批工具呼叫才吃得到新表，不用重 `start`**；要馬上擋先 `aos-agent pause`。需要系統裝了 `bubblewrap`，沒裝工具直接跑不起來，`access ls`、`check` 會提醒照 `sudo pacman -S bubblewrap` 裝。
 
 ### 工具跑不起來的幾種情形
 
-- **`_jail: false`**：工具檔某元素頂層加這格，那支就不關牢，`tools ls` 印 `no`，`check` 多印一行 `warn agent/tool/bash: _jail: false：這支不關牢，碰得到你碰得到的所有檔`。平常不建議這樣用（等於開後門）。
-- **`$env` 讀到金鑰**：`_meta` 若用 `$env` 讀名字像金鑰或 `AOS_*` 的變數，關牢的工具整支不給跑，退 `EnvUnsafe`（值一寫進送件內容就落盤了，不管放進哪一格）；拿掉那一格才會恢復正常。
-- **`info.json` 明寫的 access 檔不在**：跟「沒寫 `access` 欄」不同，算設定錯不是「不關牢」：`access ls` 印「壞了：AccessInvalid…」退 1，`tools ls` 關牢欄整批印 `錯`（`8 個工具；關牢設定有錯…：AccessInvalid: info.json 的 access 指到 …access-missing.json，但檔不在`）。先 `access set` 建一份，或改對 `access` 欄。
+- **沒有 `access.json`**：家裡要關牢的工具卻沒表，送件時整批不送（`NoAccess`），`tools ls` 關牢欄印 `-`、`check` 印 `bad`，都教同一行指令：`mkdir -p <家>/workspace && aos-agent access set ws <家>/workspace --cwd --target <家>`。
+- **`_jail: false`**：工具檔某元素頂層加這格，那支就不關牢，`tools ls` 印 `no`，`check` 多印一行警告。平常不建議這樣用（等於開後門）。
+- **`$env` 讀到金鑰**：`_meta` 若用 `$env` 讀名字像金鑰或 `AOS_*` 的變數，關牢的工具整支不給跑，退 `EnvUnsafe`；拿掉那一格才會恢復正常。
+- **`info.json` 明寫的 access 檔不在**：跟「沒寫 `access` 欄」不同，算設定錯：`access ls` 印「壞了：AccessInvalid…」退 1。先 `access set` 建一份，或改對 `access` 欄。
+
+### 舊家升級（09-24 以前 `init` 的家）
+
+以前 `init` 的家沒有 `access.json`，現在會被 `NoAccess` 擋下：
+
+```sh
+mkdir -p $W/bob/workspace && aos-agent access set ws $W/bob/workspace --cwd --target $W/bob
+aos-agent check --target $W/bob   # 確認 access 那行 ok
+```
+
+不想關牢的某一支工具，才在它的元素頂層寫 `"_jail": false`（不建議）。
 
 ## 2. 用文字編輯器改 access.json
 
-指令背後改的就是這份 JSON，直接用編輯器開也完全可以——存檔一律縮排 2 格（`info.json` 也是，從一開始就縮排好），方便手改後用 diff 看差異。完整例子：
+指令背後改的就是這份 JSON，直接用編輯器開也完全可以——存檔一律縮排 2 格，方便手改後用 diff 看差異。完整例子：
 
 ```json
 {"_metainfo": {"_type": "agent_access", "_version": 1},
@@ -92,11 +121,11 @@ self 可寫、但包含 /home/you/aos-try/bob/info.json（家裡的 info.json）
 bad  access: AccessInvalid: access 檔 /home/you/aos-try/bob/access.json 的 network：不認得的鍵（只認 mounts／cwd／net／_metainfo）
 ```
 
-檔壞的時候，`access` 系列寫入動作（`set`／`rm`／`cwd`／`net`）一律拒絕（同一則 `AccessInvalid` 多加一句「access 檔壞了，先手修好再用 access 指令」），不會蓋掉你手寫的東西；改回對的內容，`check`、`access ls` 就都恢復乾淨。
+檔壞的時候，`access` 系列寫入動作（`set`／`rm`／`cwd`／`net`）一律拒絕，不會蓋掉你手寫的東西；改回對的內容，`check`、`access ls` 就都恢復乾淨。
 
 ## 3. 管理工具
 
-`tools ls`／`rm`／`alias`／`unalias` 看現況、拿掉某支、改名——**都只改 `info.json` 的 `tools` 欄，不動工具檔**。
+`tools ls`／`rm`／`alias`／`unalias` 看現況、拿掉某支、改名——**都只改 `info.json` 的 `tools` 欄，不動工具檔**。（`access set` 的 PATH 一樣照打指令那一刻殼的目前資料夾算，跟第 1 節同一條規矩。）
 
 ### `tools ls`
 
@@ -109,7 +138,7 @@ date   -     tools/date.json  jail  default
 8 個工具；關牢照 /home/you/aos-try/bob/access.json
 ```
 
-「原名」欄沒改名印 `-`；「關牢」欄 `jail`＝會關、`no`＝那支 `_jail: false`、`-`＝沒有 access 檔、`錯`＝access 設定壞了（見上）。
+「原名」欄沒改名印 `-`；「關牢」欄 `jail`＝會關、`no`＝那支 `_jail: false`、`-`＝**沒有 access.json，要關牢的都不會送**（`NoAccess`）、`錯`＝access 設定壞了（見上）。
 
 ### `tools add` 引用一個現成的檔或資料夾（不裝包）
 
@@ -135,28 +164,29 @@ aos-agent tools rm date --target $W/bob
 
 ```text
 拿掉 date：info.tools 第 0 條改成只挑（原名）read、write、edit、bash、grep、find、ls
-注意：這條是整個資料夾，之後放進去的新工具要加進 only（或 tools add）才會出現
 檔還在 …/tools/date.json（第 0 個，原名 date）；沒刪任何檔
 下一批工具生效，不用重 start
 ```
 
 ### `tools alias`／`unalias`：換模型看到的名字
 
-`aos-agent tools alias bash exec --target $W/bob` 印 `bash 改叫 exec（原名 bash；info.tools 第 0 條）`；`aos-agent tools unalias exec --target $W/bob` 印 `exec 改回原名 bash（info.tools 第 0 條）`（若那一條除了 `as` 沒有別的選項，`unalias` 到只剩原名時會連 `$opt` 一起收回成純路徑字串）。兩者都會再印一行 `下一批工具生效，不用重 start`。`NAME` 可以是現在的名字，也可以是原名。
+`aos-agent tools alias bash exec --target $W/bob` 印 `bash 改叫 exec（原名 bash；info.tools 第 0 條）`；`unalias exec` 改回原名。`NAME` 可以是現在的名字，也可以是原名。兩者都會再印一行 `下一批工具生效，不用重 start`。
 
-這些指令背後改的是 `info.tools` 陣列裡的元素，一樣可直接手改（`{"$opt": {"as": {...}, "only": [...]}, "$val": "路徑"}`，先 `only` 篩、再 `as` 改名），完整寫法見 [agent tools-opt.md](../spec/agent/tools-opt.md)。
+這些指令背後改的是 `info.tools` 陣列裡的元素，一樣可直接手改（`{"$opt": {"as": {...}, "only": [...]}, "$val": "路徑"}`），完整寫法見 [agent tools-opt.md](../spec/agent/tools-opt.md)。
 
 ## 底下在幹嘛
 
 - act 批在建批那一刻把 `access.json` 解一次存成快照，同一批每件、崩了重送都用它——「下一批生效」是真的照批次算。
-- 送件時工具被包成 `aos-jail --mount … --chdir … --net … -- 原本的程式`；`aos-agent` 一律用絕對路徑呼叫自己這份 `aos-jail`，不查 `PATH`（免得替身混進去）（[aos-agent access.md](../spec/aos-agent/access.md)、[aos-jail.md](../spec/aos-exec/aos-jail.md)）。
-- `tools`／`access` 的寫入指令共用同一把鎖 `<家>/.admin.lock`（不是 `info.json`，因為它會整份被換掉），兩邊不會同時改半份。
+- 送件時工具被包成 `aos-jail --mount … --chdir … --net … -- 原本的程式`，掛完之後整個牢的根（含 `/work` 本身）再轉唯讀；`aos-agent` 一律用絕對路徑呼叫自己這份 `aos-jail`，不查 `PATH`（[aos-agent access.md](../spec/aos-agent/access.md)、[aos-jail.md](../spec/aos-exec/aos-jail.md)）。
+- `tools`／`access` 的寫入指令共用同一把鎖 `<家>/.admin.lock`，兩邊不會同時改半份。
 - 「信任資料」永遠查不到可寫，手動 `access set` 也會被自動改唯讀或直接拒絕。
 
 ## 常見錯誤
 
 | 看到 | 原因與怎麼辦 |
 |---|---|
+| 工具沒執行，代號 `NoAccess` | 家裡沒有 `access.json`；`mkdir -p <家>/workspace && aos-agent access set ws <家>/workspace --cwd --target <家>` |
+| write／edit 說 `ReadOnly` | 寫到唯讀掛點，或直接寫在 `/work` 底下；訊息列出目前哪些資料夾可寫 |
 | `access set` 說 `AccessUnsafe` | PATH 跟信任資料重疊、又給了 `--rw`；改 `--ro` 或換資料夾 |
 | `access rm NAME` 說「是目前的起點」 | 那名字正被 `cwd` 用；先 `access cwd 換別的` 再 rm |
 | `check`／`access ls` 印 `bad`／「壞了：AccessInvalid」 | 格式錯，或明寫的 access 檔不在（見第 1 節） |

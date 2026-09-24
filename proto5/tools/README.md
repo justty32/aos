@@ -18,9 +18,10 @@ aos-agent tools add base --target $W/bob --force          # 重裝（保留原�
 （agent 同一批工具可能平行跑，「先寫再跑」這種有先後的，叫它一次一個最穩。）
 
 **工作根目錄**：預設在 `<家>/tools/base/config.json` 的 `root`（相對 agent 家；沒寫＝`workspace`）。改了下一次叫工具就生效。
-**這只在家裡沒有 `access.json`（不關牢）時有效**：agent 家有 `access.json` 時（現在 `tools add base` 第一次裝就會自動建一份，見[教程 04b](../tutorials/04b-access-and-tool-admin.md)），工具被 `aos-jail` 關進沙盒跑，牢裡的環境變數 `AOS_TOOL_ROOT` 一定被設成牢裡的起點（例如 `/work/ws`），base 工具看到這個環境變數就直接用、**不看 `config.json` 的 `root`**，錯誤訊息印的也是這個牢裡路徑（[aos-jail](../spec/aos-exec/aos-jail.md)）。
-read／write／edit／grep／find／ls 碰不到根目錄以外（`../`、絕對路徑、符號連結指出去都算，回 `OutsideRoot`）——這一條檢查是防模型手滑、不是沙盒（有別的行程同時在換路徑時擋不完全）。
-**bash**：家裡有 `access.json` 時真的被關在牢裡，出不去（除非那支自己 `_jail: false`，[04b](../tutorials/04b-access-and-tool-admin.md)）；沒有 `access.json` 的舊家，bash 還是關不住，只是從根目錄開始跑，一樣碰得到根目錄以外。
+**這只在這支工具不關牢（`_jail: false`）時有效**：agent 家一律要有 `access.json`（`aos-agent init` 現在就會生一份，或 `tools add base` 第一次裝時自動建，見[教程 04b](../tutorials/04b-access-and-tool-admin.md)），要關牢的工具被 `aos-jail` 關進沙盒跑，牢裡的環境變數 `AOS_TOOL_ROOT` 一定被設成牢裡的起點（例如 `/work/ws`），base 工具看到這個環境變數就直接用、**不看 `config.json` 的 `root`**，錯誤訊息印的也是這個牢裡路徑（[aos-jail](../spec/aos-exec/aos-jail.md)）。
+**碰得到的範圍不只是起點**：關牢時 aos-jail 還會多給一個環境變數 `AOS_TOOL_FENCE=/work`，read／write／edit／ls／grep／find 因此看得到 `access.json` 掛進 `/work` 的**所有**資料夾，不限起點那一個——例如起點是 `/work/ws`，`access.json` 另外唯讀掛了 `ref`，工具照樣讀得到 `../ref/x.txt` 或 `/work/ref/x.txt`。
+read／write／edit／grep／find／ls 碰不到這個範圍以外（`../`、絕對路徑、符號連結指出去都算，回 `OutsideRoot`）——這一條檢查是防模型手滑、不是沙盒（有別的行程同時在換路徑時擋不完全）。唯讀掛的資料夾、或整個牢的根 `/work` 本身（掛完之後也被轉成唯讀）寫不進去，write／edit 回 `ReadOnly`，訊息裡會列出目前有哪些資料夾可寫。
+**bash**：家裡有要關牢的工具時真的被關在牢裡，出不去，牢的根（含 `/work` 本身）也唯讀，只有可寫 mount 跟 `/tmp` 寫得進去（除非那支自己 `_jail: false`，[04b](../tutorials/04b-access-and-tool-admin.md)）；**沒有 `access.json` 的舊家**：要關牢的工具（沒寫 `_jail: false` 的那些）直接不送（`NoAccess`），不會像以前那樣退回「不關、碰得到所有檔」。
 
 裝好的樣子：`tools/base.json`（工具檔）＋`tools/base`（符號連結）→`tools/.base-<版>/`（程式與 `config.json`）。重裝是換連結，原子的。
 
@@ -54,7 +55,8 @@ bash 的 `ExitCode`／`Timeout` 先原樣印輸出，JSON 在最後一行（多�
 |---|---|
 | `BadArguments` | arguments 不是 JSON 物件、缺必填、型別不對、數字超出範圍、字串含 NUL 或編不成 UTF-8、`old_string` 空或跟 `new_string` 一樣 |
 | `NotFound` | 路徑不存在 |
-| `OutsideRoot` | 路徑（解開符號連結後）在工作根目錄外 |
+| `OutsideRoot` | 路徑（解開符號連結後）在碰得到的範圍外——不關牢時是工作根目錄，關牢時是整個 `/work`（`access.json` 掛進來的所有資料夾） |
+| `ReadOnly` | 只有關牢時會遇到：write／edit 寫到唯讀掛的資料夾，或直接寫在 `/work` 底下、不在任何掛進去的資料夾裡；訊息列出目前哪些資料夾可寫 |
 | `IsADirectory`／`NotADirectory` | read／write／edit 給了資料夾；ls／find 給了檔 |
 | `BinaryFile` | read 讀到前 8 KB 含 NUL 的檔；edit 讀到不是 UTF-8 的檔 |
 | `NotARegularFile`／`FileTooLarge` | read／edit 給了 FIFO、裝置等；edit 的檔超過 10 MB |

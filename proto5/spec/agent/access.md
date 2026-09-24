@@ -9,7 +9,22 @@
  "net": false}
 ```
 
-**有這個檔＝這個家的工具一律關牢**（`_jail: false` 的那支除外，[§3.3](info.md)）；**檔不存在＝不關牢**，照舊在 agent 家跑、碰得到跑它的人碰得到的所有檔。
+**有這個檔＝這個家的工具一律關牢**（`_jail: false` 的那支除外，[§3.3](info.md)）；**檔不存在時，要關牢的工具一律不送**（`NoAccess`，[aos-agent access.md §2](../aos-agent/access.md)），只有明寫 `_jail: false` 的那支照舊送、不包牢。
+
+## 工具碰得到的範圍
+
+關牢時，`_meta.argv[0]` 指到的 base 那組檔案工具（read／write／edit／ls／grep／find）不是只看得到起點（`cwd`）那一個 mount，而是整個 `/work`——`access.json` 掛進來的所有資料夾都碰得到（`../ref`、`/work/ref` 這種寫法都行）；`bash` 本來就是這樣，這樣兩邊才一致。掛完之後整個牢的根（含 `/work` 本身）會被轉成唯讀，只有可寫 mount 跟 `/tmp` 寫得進去：寫唯讀掛點、或直接寫在 `/work` 底下（不在任何 mount 資料夾裡）都退 `ReadOnly`。細節與訊息見 [tools README](../../tools/README.md)、[aos-jail.md](../aos-exec/aos-jail.md)。
+
+## 舊家升級
+
+09-24 以前 `init` 的家（已經裝了 `date` 或其他工具，但沒有 `access.json`）現在會被 `NoAccess` 擋下：這種家要關牢的工具送件時一律不送。補救：
+
+```sh
+mkdir -p ~/…/bob/workspace && aos-agent access set ws ~/…/bob/workspace --cwd --target ~/…/bob
+aos-agent check --target ~/…/bob   # 確認 access 那行 ok
+```
+
+不想關牢的某一支工具，才在它的元素頂層寫 `"_jail": false`（不建議，等於開後門）。
 
 ## 位置
 
@@ -58,6 +73,7 @@
 
 - aos-agent 在**建 act 批那一刻**解一次、存成快照（[state.md §4.3](state.md) 的 `batch.access`），同批每件、崩了重送都用它。所以改表＝**下一批**生效，不用重 start。
 - **正在跑的工具不會被收回權限。** 要馬上撤：`aos-agent pause`（不再送新批）；還在排隊的用 `aos-kernel rm <工作名>` 取消；已經在跑的 `rm` 只丟回音、不殺行程——只能等它跑完（`_timeout_ms` 到了 kernel 會砍）或手動 kill。`aos-agent stop` 也不停已送出的工具。
+- **換了起點或改了表，aos 不會自動告訴模型。** 換完記得 `aos-agent say` 跟它說一聲，不然模型會以為自己弄壞了（明明沒動過，工具卻突然碰不到原本碰得到的地方）。
 
 ## 擋不住的（明講、不處理）
 

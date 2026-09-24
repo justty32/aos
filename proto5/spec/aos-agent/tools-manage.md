@@ -15,6 +15,7 @@ aos-agent tools unalias NEW [--target DIR]
 ## 共通
 
 - 家照 §1（`--target`，省略＝目前資料夾）。參數個數不對、參數是空字串、`--root`／`--force`／`--as`／`--only` 給了 add 以外、`--json` 給了 ls 以外＝用法錯 2。
+- 提醒：`access set` 的 PATH 是照**打指令那一刻殼的目前資料夾**算，不是照 `--target`；細節、家裡沒有 access.json 時要先怎麼建，見 [access.md](access.md)。
 - 先把整個家讀驗一次（跟 `aos-llm call` 同一份讀法）；讀不過照那個代號退 1。
 - 寫入的三個（`rm`、`alias`、`unalias`）：
   1. 持管理鎖 `<家>/.admin.lock` 的 flock（不存在就建、從不 rename；跟 `tools add`、`access` 的寫入指令同一把），讀、驗、寫整段都在鎖內。
@@ -34,10 +35,10 @@ aos-agent tools unalias NEW [--target DIR]
 | 名字 | 模型看到的名字 |
 | 原名 | 改過名才印原名，沒改印 `-` |
 | 來源檔 | 工具檔路徑（在家裡的相對家，家外的絕對） |
-| 關牢 | `jail`＝會關；`no`＝這支 `_jail: false`；`-`＝沒寫 `access` 欄、預設的 `access.json` 也不在（全部不關）；`錯`＝`info.json` 明寫的 access 檔不在、或 `access` 欄壞了（送件時要關牢的工具都跑不起來） |
+| 關牢 | `jail`＝會關；`no`＝這支 `_jail: false`；`-`＝沒有 access 檔（要關牢的都不送，`NoAccess`）；`錯`＝`info.json` 明寫的 access 檔不在、或 `access` 欄壞了（送件時要關牢的工具都跑不起來） |
 | 池 | `info.tool_pool`（沒寫＝`default`） |
 
-最後一行 `N 個工具；關牢照 <access 檔>`、`…；沒有 access 檔：工具不關牢`，或 `…；關牢設定有錯…：<代號: 白話>`（仍退 0）。沒有工具印一句怎麼裝。
+最後一行 `N 個工具；關牢照 <access 檔>`、`…；沒有 access 檔：要關牢的工具不會送（NoAccess），先 aos-agent access set`，或 `…；關牢設定有錯…：<代號: 白話>`（仍退 0）。沒有工具印一句怎麼裝。
 
 `--json`（穩定格式，第 1 版）：
 
