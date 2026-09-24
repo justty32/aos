@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- 09-24：① fix-r5（r4 兩份報告共同痛點八條，[r4 astra](../proto5/notes/play/2026-09-24-r4-astra.md)／[Opus](../proto5/notes/play/2026-09-24-r4-opus.md)）等 spec 拆檔完再開 ② cpu 動態增減＋daemon 按池宣告式，使用者已拍六點 (a)～(f)，跟 fix-r5 一起開 ③ spec 拆檔（另隊） ④ 崩潰窗口 C-7／C-8 沒補 ⑤ [WAIT_USER](WAIT_USER.md) A.14～A.18 ⑥ `tools`／`init --template` 沒做；使用者打遊戲時不碰 LM Studio／ollama、走 LiteLLM；每 commit 直接推 [→](session_logs/2026-09.md#2026-09-24)
+- 09-24：① fix-r5（r4 兩份報告共同痛點八條，[r4 astra](../proto5/notes/play/2026-09-24-r4-astra.md)／[Opus](../proto5/notes/play/2026-09-24-r4-opus.md)）等 spec 拆檔完再開 ② cpu 動態增減＋daemon 按池宣告式，使用者已拍六點 (a)～(f)，跟 fix-r5 一起開，規範草稿已在 proto5-2/（09-24 合進 main，astra 審 28 條已修），九題等拍→WAIT_USER A.19 ③ spec 拆檔（另隊） ④ 崩潰窗口 C-7／C-8 沒補 ⑤ [WAIT_USER](WAIT_USER.md) A.14～A.18 ⑥ `tools`／`init --template` 沒做；使用者打遊戲時不碰 LM Studio／ollama、走 LiteLLM；每 commit 直接推 [→](session_logs/2026-09.md#2026-09-24)
 - 09-22：09-21 ④⑤ 仍在（① backlog 已於 09-24 清光） [→](session_logs/2026-09.md#2026-09-22)
 - 09-21：④ aos-inst 兩題 ⑤ thinking/ 草案 ④ WSL 沒 lms／jq [→](session_logs/2026-09.md#2026-09-21)
 - 09-13：① 試玩 r1 修 ② LLM cpu 下一段 ③ 提醒 compact [→](session_logs/2026-09.md#2026-09-13)
