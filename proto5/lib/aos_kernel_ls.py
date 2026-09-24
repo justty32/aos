@@ -149,15 +149,20 @@ def render(data, verbose=False, procs=False):
     from aos_kernel_rows import cpu_line, pool_lines
     k, counts = data["kernel"], data["counts"]
     phase = k["phase"] or "沒 boot 過"
+    if k["phase"] in ("running", "stopping") and not k["daemon"]["alive"]:
+        # 試玩 one-boot 卡點 3：帳本寫 running，但 daemon 不在就沒人開 tick，別讓人以為還在跑。
+        phase = "%s（帳本這樣寫；daemon 不在，其實沒在跑）" % k["phase"]
     lines = ["health " + data["health"]["message"],
              "kernel  %s  seq %s  daemon %s  tick %sms" % (
                  phase, "-" if k["last_seq"] is None else k["last_seq"],
                  "alive" if k["daemon"]["alive"] else "dead", k["settings"]["tick_ms"])]
     tick = k["tick"]
-    if tick["registered"]:
+    if not k["daemon"]["alive"]:
+        text = "  tick 沒人開（daemon 沒在跑；aos up）"
+    elif tick["registered"]:
         ago = "-" if tick["last_at"] is None else "%d 秒前" % max(0, time.time() - tick["last_at"])
         text = "  tick 由 daemon 開：上一格 %s%s" % (ago, "、連敗 %d" % tick["fails"] if tick["fails"] else "")
-    else:
+    if k["daemon"]["alive"] and not tick["registered"]:
         text = "  tick 沒人開（daemon 沒登記這個 kernel；aos up）"
     if verbose:
         lines += ["  K       " + k["home"], "  D       " + (k["daemon"]["home"] or "-"),

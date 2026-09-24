@@ -55,6 +55,9 @@ cli-1790252468048533194-1716878.json /home/you/aos-try/K/responses/cli-179025246
 aos-kernel ack cli-1790252468048533194-1716878.json     # 換成你看到的單名
 ```
 
+印 `acked cli-…json（ack 已放進 K/requests/，下一格 tick 刪掉回音）`。簽收是「放一張 ack 單」，真的刪檔是 kernel 下一格做的，
+所以馬上 `ls $W/K/responses/` 檔可能還在，一兩秒內就不見。
+
 帶 `--wait-ms` 等到的回音，指令已經替你簽收了。
 
 ## 4. 反覆跑，直到它自己說做完

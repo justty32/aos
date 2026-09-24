@@ -42,6 +42,10 @@ queue   1：agent-amy
 - **長的東西不進主表**：行程名超過 24 格寬就砍中間（留頭和尾，中間 `…`）；K、D、chain、每個行程的 target 都只在 `-v`。對齊時中日韓字算 2 格。
 - `-v`：kernel 行下面多 `K`、`D`、`chain` 三行，再接 tick 那行；表裡的名字不截；列出來的行程下多一行 `  <名字>  target <路徑>`；queue 全列。
 
+**daemon 沒在跑時**（試玩 one-boot 追加）：帳本與 daemon 的摘要都是它死前的樣子，文字版不把它們印得像還活著——
+kernel 行的 phase 寫成 `running（帳本這樣寫；daemon 不在，其實沒在跑）`，tick 行寫 `tick 沒人開（daemon 沒在跑；aos up）`，
+那個 daemon 的池行把摘要換成 `不明（daemon 沒在跑；摘要是舊的，最後記 running N）`。`--json` 照舊原樣給（看 `kernel.daemon.alive`、`pools.P.daemon_alive` 自己判）。
+
 ## `--json`
 
 格式（`aos_kernel_ls` 第 3 版，one-boot 升版）在 [cli-ls-json.md](cli-ls-json.md)。

@@ -87,6 +87,16 @@ def pool_summary_state(home, dpool):
     return ("ok", value) if isinstance(value, dict) else ("unknown", None)
 
 
+def pool_owner(home, dpool):
+    """給 kernel check：D/pools/<dpool>/pool.json 記的 owner（哪個 kernel 家宣告的）；池不在、讀不到回 None。
+    pool.json 在 daemon 停著時也還在，所以 daemon 沒開也看得到（試玩 one-boot 卡點 2）。"""
+    if not pools.valid_pool_name(dpool):
+        return None
+    decl = pools.peek(pools.pool_dir(home, dpool) / "pool.json")
+    owner = decl.get("owner") if decl else None
+    return owner if isinstance(owner, str) else None
+
+
 def pool_kid(home, dpool, i):
     """給 kernel：讀 D/pools/<dpool>/kids/<i>.json；不在（還沒拉過）或壞了回 None。"""
     if not pools.valid_pool_name(dpool):
@@ -217,6 +227,10 @@ def run(home):
         for sig in (signal.SIGTERM, signal.SIGINT):
             handlers[sig] = signal.signal(sig, on_signal)
         handlers[signal.SIGPIPE] = signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+        crashed = type(old_state.get("pid")) is int and old_state["pid"] > 0
+        pools.log("Boot", "%s 開機 pid %d%s" % (
+            time.strftime("%Y-%m-%d %H:%M:%S"), os.getpid(),
+            "（上一任 pid %d 沒正常停，先收它留下的 %d 顆孩子）" % (old_state["pid"], len(pids)) if crashed else ""))
         _previous_children(pids, info)
         aos_home.reconcile(home, old_state.get("current"))
         owner.adopt(decls, old_kids)
@@ -226,6 +240,7 @@ def run(home):
             time.sleep(owner.sleep_s())
         owner.state["pid"] = 0
         owner.save()
+        pools.log("Stopped", "%s 正常停機 pid %d" % (time.strftime("%Y-%m-%d %H:%M:%S"), os.getpid()))
         return 0
     finally:
         if owner is not None:

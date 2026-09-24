@@ -13,7 +13,7 @@
 拿到 JSON-RPC `error` 印代號與 message、退 1；拿到 exec 的 `result` 整段印出來、退 0——**工作本身成不成功看內容**
 （`kind`、`code`、`timed_out`、`stopped`），不看退出碼。
 
-**ack**：`aos-kernel ack NAME [--target K]` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。
+**ack**：`aos-kernel ack NAME [--target K]` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。放了印一行 `acked NAME（ack 已放進 K/requests/，下一格 tick 刪掉回音）`（試玩 one-boot 追加：以前什麼都不印，新手以為沒成功）。
 給 `add --once` 不等的人用。
 
 **halt** 預設等停好（機制見 [§6 停機](boot.md)）：
@@ -29,6 +29,7 @@
 - `info`：讀驗（第 2 版池表）。`dirs`：`requests/`、`responses/`、`pools/` 在不在，缺＝bad（手建的家要 `mkdir -p` 補）。
 - `daemon`：池表裡提到的每個 daemon 家、還有開 tick 的那個（頂層 `daemon`），都查活不活（沒開＝warn）；池或開 tick 的解不出 daemon＝bad（boot 會 `NoDaemon`）；
   活著時分開印「kernel 設定的池：…」與「daemon 目前有：…」（沒有就寫「還沒有」）。`--daemon-target D`（只能給一次，重複＝用法錯 2）再多查一個 daemon 家。
+- `pools/<池>`：（試玩 one-boot 追加）那池在它的 daemon 那邊的名字（`dpool`）已經有 `pool.json`、而 `owner` 不是這個 K＝bad，提示在 info 那池寫不撞的 `dpool`（不然 `aos up` 會報 `NameTaken`）。daemon 沒開也查得到（`pool.json` 留著）。
 - `ledger`：（one-boot）帳本還是舊的 `K/state.json`＝warn（`aos up` 或 boot 會換成 sqlite），這時不印 `tick`、`cpus`。
 - `tick`：（one-boot）帳本 `phase` 是 `running`／`stopping` 時看開 tick 的 daemon：活著卻沒登記這個 kernel＝bad（`aos up` 或 boot）；登記著但連敗＝warn（看 daemon 的 stderr，例如 `D/daemon.log`）；正常＝ok `daemon D 每 N ms 開一格 tick`。
 - `cpus`：帳本在、`phase` 是 `running`／`stopping`、daemon 活著的已宣告池，看摘要（同 [health](health.md)：工作池少顆＝warn）。一個都沒有就不印。

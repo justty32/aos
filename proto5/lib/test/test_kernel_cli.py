@@ -294,7 +294,9 @@ class Misc(CLICase):
         for use_path in (False, True):
             name = 'r-%s.json' % use_path
             aos_home.write_json(self.K / 'responses' / name, {'result': {}})
-            self.assertEqual(self.main('ack', self.K / 'responses' / name if use_path else name), ('', ''))
+            out, err = self.main('ack', self.K / 'responses' / name if use_path else name)
+            self.assertEqual(err, '')
+            self.assertTrue(out.startswith('acked %s（' % name), out)   # 試玩 one-boot：ack 印一行
             acks = [aos_home.read_json(p) for p in (self.K / 'requests').glob('ack-*.json')]
             self.assertIn(name, [a['params']['name'] for a in acks])
 

@@ -124,7 +124,9 @@ queue   -
 aos down
 ```
 
-印兩行 `stopped`：第一行是 kernel 停好了（每個池都縮到 0、cpu 都退出了），第二行是 daemon 也停了。約 3 秒。
+印兩行：`kernel …/K 剛停`（每個池都縮到 0、cpu 都退出了）、`daemon …/D 剛停`。約 3 秒。
+再打一次 `aos down` 會印 `本來就停了`、`本來就沒在跑`，什麼都沒做。
+想確認真的全停了：`aos-daemon ls` 第一行是 `daemon not running`。（別用 `pgrep -f aos` 驗：repo 路徑本身就有 `aos`，別的 session 的 daemon 也會被算進去；要用 pgrep 就篩自己的 `$W`：`pgrep -af "$W"`。）
 有 agent 在跑的話，先 `aos-agent stop` 每一個（[03](03-first-agent.md)）；忘了也沒關係，下次開機它們還登記著。
 
 `aos down` 之後 `aos-kernel ls` 第一行是 `health 停機中（aos up 或 …）`。
@@ -152,6 +154,9 @@ aos up
 - **kernel 不是一直開著的程式**。它每次只跑「一格」`aos-kernel tick`：替排隊的工作挑空的 cpu 派下去、收結果、照池表跟 daemon 講要幾顆，然後退出。
   daemon 一格接一格地開，就成了排程。它所有的記憶都在 `K/ledger.sqlite`（帳本）。（[kernel 名詞](../spec/kernel/terms.md)、[boot 做什麼](../spec/kernel/boot.md)）
 - llm 池的 cpu 跟一般 cpu 是同一支程式，差別只在環境多了 `AOS_LLM_CONFIG`；問模型的工作都排到 `llm` 池。（[池表 info.json](../spec/kernel/info.md)、[llm.json 格式](../spec/aos-llm/config.md)）
+- **daemon 被 kill -9（或當掉）**：它的 cpu 不會跟著死，手上那件照做（這是刻意的：孩子不綁爸爸的命）。這時 `aos-kernel ls` 的 kernel 行寫
+  `running（帳本這樣寫；daemon 不在，其實沒在跑）`、池那行寫 `不明（daemon 沒在跑…）`。下一次 `aos up` 開的新 daemon **先把上一任留下的 cpu 收掉、等它們死透，才拉新的**，
+  所以不會有同一個 cpu 家兩個主人；被打斷的那件回「被停掉」（`stopped`）或 `Interrupted`，不會自己重派；agent 問模型那種會自己重送，平常看不出來。`D/daemon.log` 會留一行 `Boot: … 上一任 pid N 沒正常停…`。（[daemon §6.1](../spec/daemon/lifecycle.md)）
 - **環境**：daemon 拉的 cpu、cpu 跑的工作，都繼承 `aos up` 開 daemon 那一刻的環境（`aos up` 會自己在 PATH 前面補上 `proto5/cli`）。之後再 `export` 沒用，要 `aos down` 再 `aos up`。
 
 ## 常見錯誤

@@ -54,6 +54,17 @@ daemon 開了之後再 `export` 不會影響它；PATH 漏了就停掉 daemon �
 kernel 的 tick 照 `kernels/` 的登記接著開，**不用重 boot**（2026-09-24 one-boot 改；第 2 版是「kernel cpu 的鏈多半自己接得上」）。
 `aos-kernel ls` 的 health 不是 ok 時，`aos up` 一次就好。
 
+**daemon 被 kill -9 之後、下一任開之前**（試玩 one-boot 追加，刻意的）：孩子（cpu）不綁 daemon 的命，照樣活著、把手上那件做完或等 stop；
+這段時間沒人開 tick、沒人重拉。下一任開機第 3 步先把它們 TERM／KILL 掉、**等死透才拉新的**，所以同一個 cpu 家不會同時有兩個主人；
+上一任手上那件：舊 cpu 收到 TERM 會先停掉它、照常寫回音（`stopped: true`）；沒來得及寫的，新主人開機對帳回 `Interrupted`。kernel 照常收：
+once 的把回音原樣交給交件者（不重派；agent 自己決定要不要重送），反覆的 `stopped` 照間隔再排、`Interrupted` 算一次失敗（連敗到 `bad_after` 就停）。這段「沒爸爸」的時間多長不在保證內（要等人或 `aos up` 開下一任）。
+
+開機、正常停機各在 stderr 留一行（`aos up` 開的 daemon，stderr 在 `D/daemon.log`）：
+`aos-daemon: Boot: <時間> 開機 pid N`（上一任沒正常停——`state.json` 的 pid 不是 0——再加 `（上一任 pid M 沒正常停，先收它留下的 K 顆孩子）`）、
+`aos-daemon: Stopped: <時間> 正常停機 pid N`（`state.json` 的 pid 寫成 0 之後才印）。被 kill -9 那一刻留不下字，下一任的 Boot 行替它記。
+「沒正常停」是**依 `state.json` 裡有效的舊 pid 推定**的：`state.json` 壞掉（不是 JSON）daemon 根本開不起來（`ReadFailed`），pid 缺或型別不對就當正常；
+開機途中、第一次存檔前又崩，這一任不會被記到。
+
 ## 6.2 退出碼與 stderr
 
 | 碼 | 什麼時候 |

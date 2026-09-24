@@ -346,6 +346,15 @@ def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
                 '、'.join(pools), '、'.join(current) if current else '還沒有')
         else:
             where = '（池 %s）' % '、'.join(pools)
+        # 試玩 one-boot 卡點 2：池名（dpool）在這個 daemon 已經是別的 kernel 的，aos up 才會報 NameTaken；這裡先講。
+        for pool in pools:
+            dpool = pool_location(info, pool)[1]
+            owner = aos_daemon.pool_owner(home_d, dpool)
+            # daemon 的 scale 是直接比 owner 字串（kernel 送的是 K 的絕對路徑）；這裡照樣比，才不會一個說撞、一個說沒撞（astra 第二輪必修 1）。
+            if owner is not None and owner != str(home):
+                checks.report('bad', 'pools/' + pool,
+                              '池 %s 在 daemon %s 那邊叫 %s，已經是 %s 的（aos up 會報 NameTaken）；'
+                              '在 %s/info.json 那池寫一個不撞的 "dpool"' % (pool, home_d, dpool, owner, home))
         checks.report('ok' if alive[home_d] else 'warn', 'daemon',
                       'daemon 活著：%s%s' % (home_d, where) if alive[home_d] else
                       'daemon 沒在跑：%s%s；aos up 會開它（只開 daemon：aos-daemon boot --target %s）' % (home_d, where, home_d))

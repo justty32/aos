@@ -77,7 +77,8 @@ aos up --target $W/K4
 - **`requests/`、`responses/`、`pools/` 要自己建**（`init` 會建）。`check` 的 `dirs` 會說缺哪個（報 `bad`）。
 - **`daemon` 要寫**：手寫的家不會自動填 `AOS_DAEMON_HOME`，沒寫 `aos up` 報 `NoDaemon`。這個 daemon 同時替 kernel 走格。
 - **`dpool` 是池在 daemon 那邊的名字**，省略＝池名。這裡跟 01 的 `K` 共用同一個 daemon，`K` 已經有 `default` 這個池，所以要換個名字。
-  撞名的話 `aos up` 第二行印 `health 池 default：NameTaken（池 default 已是 …/K 的）`、退 1。`aos down --target $W/K4` 收掉，補 `dpool` 再 `aos up`。
+  撞名的話 `check` 就會報 `bad pools/default: 池 default 在 daemon … 那邊叫 default，已經是 …/K 的（aos up 會報 NameTaken）…`。
+  沒看 `check` 直接 `aos up` 的話，第二行印 `health 池 default：NameTaken（池 default 已是 …/K 的）`、退 1；`aos down --target $W/K4` 收掉，補 `dpool` 再 `aos up`。
 - **池名 `kernel` 不能用**（保留名）。舊的教程會寫一個 `kernel` 池給 kernel 自己用，現在不用了：kernel 走格改由 daemon 負責。
 
 開機之後家長這樣（kernel 自己補齊，你不用寫）：
