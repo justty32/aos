@@ -65,3 +65,22 @@ once 的時間幾乎全是模型；排程加的延遲在 tick_ms 200 下約 0.2 
 1. daemon 要不要補一個停機的 CLI（例如 `aos-daemon stop [--home D]`），還是維持「手放檔／kill」？
 2. `aos-kernel` 要不要補 `ack`（給 once 不等的交件者），以及 `init` 要不要能帶 cpu 表（至少能加一顆 `llm` 池）？
 3. `kernel.log` 空格要不要不寫、或要不要輪替？
+
+## ⑦ 2026-09-24 第二次（T5 新 CLI 後）
+
+T7 驗證線，原樣重跑 `lmstudio/run.sh`（程式、腳本不改），確認 T5 補的新 CLI 在真環境沒壞。LM Studio 原本就開著、`google/gemma-4-e4b` 已載入，直接用。
+
+**兩次整條龍**：都綠、退出碼 0，跑完 pgrep 空。
+- 第一次：once 放單→回音 6.61 秒（cpu 記 6324 ms）；整條龍 12.99 秒；停機 0.34 秒。
+- 第二次（boot 接手上一代的家）：once 放單→回音 7.34 秒（cpu 記 7087 ms）；整條龍 13.65 秒；停機 0.22 秒。
+- 兩次模型回答一致：「行程是指作業系統中，一個正在執行、並佔用系統資源的程式實體。」
+
+**四個新指令，另開一套家（D3/K3）單試，OK：**
+1. `aos-kernel -h`：印出 `{init,boot,tick,add,rm,ls,stop,ack}` 八個子命令＋一行說明，退出碼 0。不再是舊的「Usage: the following arguments are required…」。
+2. `aos-kernel ls K`（摘要）：印 chain／kernel cpu／每顆 cpu／proc／queue 各一行，人可讀，不再是整行原始 JSON；`ls K --json` 印結構化 JSON（含 `phase`/`cpus`/`procs`/`daemon` 等欄位）。兩種都 OK。
+3. `aos-kernel init K2 --cpu k:kernel --cpu w:llm`：`K2/info.json` 的 `cpus` 正確變成 `{"k":{"pool":"kernel"},"w":{"pool":"llm"}}`，不再是固定的 `k/0/1/2`。
+4. `add ... --once`（不帶 `--wait-ms`）：印出 `<request名> <回音路徑>` 立即退 0；`cat` 回音檔看到 `{"jsonrpc":"2.0","id":...,"result":{...}}`；`aos-kernel ack K <回音檔名>` 退出碼 0，但回音檔要等**下一格 tick** 才真的從 `K/responses/` 消失（非 bug，跟舊 findings ⑤-8 一致的節奏）。
+
+**壞掉的地方**：無。
+
+**其他**：`pgrep -fa 'aos-cpu|aos-daemon|aos-kernel'`（排除 `zsh -c`／`pgrep` 行）全程空。只跑在 scratchpad `t7/`，未動 `proto5/lib`／`cli`／`spec`，未 commit。
