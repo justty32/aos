@@ -4,7 +4,7 @@
 
 ← [proto5 README](../../README.md)｜資料夾：[agent.md](../agent/README.md)｜問模型：[aos-llm.md](../aos-llm/README.md)｜送件：[kernel.md §2](../kernel/syscall.md)、[cpu.md §3](../cpu/messages.md)
 
-> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列、fix-r5 改日常輸出（health 不再樂觀、continue 兩階段與 `--all`、listen 講中間句）；已實作（`lib/aos_agent.py`＋`cli/aos-agent`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列、fix-r5 改日常輸出（health 不再樂觀、continue 兩階段與 `--all`、listen 講中間句）、advice-r1 加 `check`（從 `aos-kernel check --agent` 搬來）；已實作（`lib/aos_agent.py`＋`cli/aos-agent`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**`aos-agent tick` 每次只送出或接回一批工作，更新記憶與進度後就退出；結果還沒到就保留進度，留給下一次。**
 問模型、跑工具都是往 kernel `add --once` 的普通工作；反覆叫 `tick` 是 kernel 的事——`aos-agent start` 把它登記成一個反覆行程。
@@ -27,7 +27,7 @@
 - kernel `stop`：還在排隊的 once 回 `Stopping`（think 下次重問、工具告訴模型「沒跑」），在跑的照常跑完；
   agent 自己的那格在 stopping 時不會被派，當批留到下次 boot 之後收（kernel 跨 boot 保留 `procs`／`replies`）。
 - 放單崩在 `link` 之後、刪 `.tmp` 之前：`K/requests/` 留一個 `.` 開頭 `.tmp` 結尾的殘檔；主人只收 `.json`，不會誤收；**沒人自動清**（保證外），人在都停著時刪。
-- **日常 CLI 是最小版**（09-24 試玩 r2 補）：`init`（單一內建預設）、`say`、`status`、`continue` 有了（§1.1～§1.4）；（09-24 fix-r4 補）`listen`、`pause`（§1.5、§1.6）；（09-24 fix-r5 補）`continue --all`、`init --force`（§1.4、§1.1）。
+- **日常 CLI 是最小版**（09-24 試玩 r2 補）：`init`（單一內建預設）、`say`、`status`、`continue` 有了（§1.1～§1.4）；（09-24 fix-r4 補）`listen`、`pause`（§1.5、§1.6）；（09-24 fix-r5 補）`continue --all`、`init --force`（§1.4、§1.1）；（09-24 advice-r1 補）`check`（§1.7）。
   **這份沒管的**：`init --template`／`--config`（template 從哪來使用者還沒定）、`tools`／`llms` 子命令、專屬 cpu、`say` 投到 `input` 第一條以外的地方；構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)。記憶太長也沒管。
 
 ## 各節
@@ -41,6 +41,7 @@
 | [cli.md](cli.md) | §1 用法總表；§1.1 `init` 生一個最小可跑的家 |
 | [cli-talk.md](cli-talk.md) | §1.2 `say` 投一則話；§1.5 `listen` 看回話 |
 | [cli-status.md](cli-status.md) | §1.3 `status` 現在怎樣了；§1.4 `continue` 解除暫停；§1.6 `pause` 手動暫停 |
+| [cli-check.md](cli-check.md) | §1.7 `check`：start 之前先查一遍（K 自己找、`--probe`；09-24 advice-r1 從 `aos-kernel check --agent` 搬來） |
 | [tick.md](tick.md) | §2 一次 `tick` 的順序；§2.1 同時兩個 `tick`；§12 `tick` 的退出碼與 stderr |
 | [gate.md](gate.md) | §3 門；§4 `batch` 是 `null` 時照 `state` 走 |
 | [send.md](send.md) | §5 送出一批：§5.1 建批、§5.2 送件、§5.3 act（工具的 inst）、§5.4 think（問模型的 inst） |

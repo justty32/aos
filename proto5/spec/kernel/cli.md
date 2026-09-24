@@ -9,9 +9,9 @@ aos-kernel tick  [--target K] --chain C --seq N   # 一格；正常只有鏈自�
 aos-kernel add   INST [--target K] [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--wait-ms N] [-- ARG...]
 aos-kernel rm    NAME [--target K]
 aos-kernel ack   NAME [--target K]              # （09-24 補）替 K/responses/NAME 放 ack
-aos-kernel ls    [--target K] [--json]          # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看
+aos-kernel ls    [--target K] [--json] [-v]     # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看（09-24 advice-r1：對齊的表、-v、穩定的 --json，見 cli-ls.md）
 aos-kernel halt  [--target K] [--wait-ms N] [--no-wait]   # （09-24 試玩 r1 補；fix-r4 從 stop 改名）預設等停好
-aos-kernel check [--target K] [--agent DIR] [--daemon-target D] [--probe]   # （09-24 試玩 r1 補）啟動前檢查；--probe 真的打一次模型 endpoint（09-24 fix-r5 補）
+aos-kernel check [--target K] [--daemon-target D] [--probe]   # （09-24 試玩 r1 補）啟動前檢查；--probe 真的打一次模型 endpoint（09-24 fix-r5 補）；（advice-r1）--agent 搬到 aos-agent check
 aos-kernel -h ／ aos-kernel <子命令> -h    # （09-24 補）用法
 ```
 
