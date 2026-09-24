@@ -57,8 +57,8 @@ class LiveTeamTests(KernelCase):
                         'model': 'local-test', 'timeout_ms': 3000}}})
         path = str(CLI) + os.pathsep + os.environ.get('PATH', '/usr/bin:/bin')
         self.env = dict(os.environ, AOS_KERNEL_HOME=str(self.home), PATH=path, PYTHONDONTWRITEBYTECODE='1')
-        self.cpus = {'k': {'pool': 'kernel'}, '0': {'envs': {'PATH': path}}, '1': {'envs': {'PATH': path}},
-                     'llm': {'pool': 'llm', 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
+        self.pools = {'default': {'count': 2, 'envs': {'PATH': path}},
+                      'llm': {'count': 1, 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
         self.team = self.root / 'team'
         self.project = self.root / 'p'
         self.project.mkdir()
@@ -130,7 +130,7 @@ class LiveTeamTests(KernelCase):
 
     def test_letter_from_outbox_to_memory(self):
         """一封信：lead 的 outbox → 郵差（kernel 反覆工作）→ worker-1 的 input → 記憶；紀錄標成已收。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         self.make_worker()
         self.start_post()
         lid = '%d-%d-lead' % (1790000000000000001, 4242)
@@ -151,7 +151,7 @@ class LiveTeamTests(KernelCase):
     @unittest.skipUnless(HAS_BWRAP, '這台沒有 bwrap')
     def test_handoff_team_say_verify_by_kernel_done(self):
         """整圈：handoff → 工人在牢裡 team_say DONE → 驗收是 kernel 一次性工作 → done，領隊與人收到完成。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         (self.project / 'AGENTS.md').write_text('# p\n', encoding='utf-8')
         self.make_worker(with_team_say=True)
         self.start_post()
@@ -186,7 +186,7 @@ class LiveTeamTests(KernelCase):
     def test_real_init_start_whole_team(self):
         """在 aos-team init 生出來的家上：aos-team start（連郵差、心跳一起登記）→ 人寄 handoff →
         工人在牢裡 team_say DONE → 驗收（kernel 一次性工作）→ done → 領隊記憶裡有完成信 → aos-team mail 看得到整串。"""
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         shutil.rmtree(self.team)
         (self.project / 'AGENTS.md').write_text('# p\n', encoding='utf-8')
         src = self.root / 'roster.json'
@@ -215,12 +215,20 @@ class LiveTeamTests(KernelCase):
             'id': rid, 'from': 'human', 'kind': 'handoff', 'at': fmt.now_iso(), 'assignee': 'worker-1',
             'workflow': '無', 'goal': '確認 AGENTS.md 在', 'done_when': [{'kind': 'file_exists', 'path': 'AGENTS.md'}]})
         wait_for(lambda: read_json(self.lay.task('t-0001'), {}).get('status') == 'done', timeout=60)
-        wait_for(lambda: any('t-0001 完成' in str(m.get('content'))
-                             for m in read_json(self.lay.member('lead') / 'prompts/history.json', [])), timeout=60)
+        lead = self.lay.member('lead')
+        try:
+            wait_for(lambda: any('· DONE · t-0001' in str(m.get('content'))       # 工人牢裡 team_say 寄的那封
+                                 for m in read_json(lead / 'prompts/history.json', [])), timeout=60)
+        except AssertionError:
+            err = (lead / 'log/agent.err').read_text() if (lead / 'log/agent.err').exists() else ''
+            self.fail('領隊記憶裡沒有工人的 DONE：input=%s history=%s err=%s' % (
+                sorted(p.name for p in (lead / 'input').iterdir()),
+                read_json(lead / 'prompts/history.json', [])[-3:], err[-800:]))
         mail = team('mail')
         self.assertIn('post → worker-1  REQUEST  t-0001 rev1', mail)
         self.assertIn('worker-1 → lead  DONE  t-0001 rev1', mail)
-        self.assertIn('post → 人  DONE  t-0001 rev1', mail)
+        self.assertIn('post → 人  DONE  t-0001 rev1', mail)             # 開單人是人：完成信給人
+        self.assertTrue(any('t-0001 完成' in json.loads(p.read_text())['text'] for p in self.lay.human_inbox.glob('*.json')))
         out = team('stop')
         self.assertIn('stopped team-post-team-', out)
 
