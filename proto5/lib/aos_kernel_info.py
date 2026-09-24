@@ -110,7 +110,7 @@ def _parse_info(home, raw):
         _bad("info 頂層必須是字面物件", [])
     mi = raw.get("_metainfo")
     if isinstance(mi, dict) and mi.get("_type") == "kernel" and _int(mi.get("_version")) and mi["_version"] == 1:
-        raise KernelError("InfoVersion", "info.json 是 proto5 的第 1 版（cpus 表）；請照 proto5-2 spec/kernel-info.md 改寫成第 2 版的 pools 表")
+        raise KernelError("InfoVersion", "info.json 是 proto5 的第 1 版（cpus 表）；請照 proto5/spec/kernel/info.md 改寫成第 2 版的 pools 表")
 
     def expand(value, ctx, position, field=()):
         if len(field) == 3 and field[0] == "pools" and field[2] == "envs":
@@ -217,6 +217,9 @@ def info_from_config(config, home=None, daemon=None, env=None):
         config = {}
     if not isinstance(config, dict) or any(k.startswith("$") for k in config):
         _bad("--config 的頂層必須是字面物件（JSON null、陣列、字串都不行）", [])
+    if "cpus" in config:
+        # 納入後文件組實測：舊格式 {"cpus": …} 會被默默忽略、只剩 kernel 池；改成明講。
+        _bad("cpus 是 proto5 舊格式（逐顆列 cpu）；改寫成 pools 池表，例：" + CONFIG_EXAMPLE, ["cpus"])
     info = copy.deepcopy(config)
     info.setdefault("_metainfo", {"_type": "kernel", "_version": 2})
     pools = info.setdefault("pools", {})
