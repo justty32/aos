@@ -10,67 +10,20 @@ import aos_daemon
 import aos_home
 from aos_kernel_boot import boot, status, stop
 from aos_kernel_engine import tick
-from aos_kernel_health import agent_marks, agents_health, health
 from aos_kernel_info import CONFIG_EXAMPLE, CLIUsage, KernelError, init, load_info
+from aos_kernel_ls import ls_data, render, stderr_hint
 
 ENV = "AOS_KERNEL_HOME"
 DAEMON_ENV = "AOS_DAEMON_HOME"
 
 
-def _stderr_hint(target):
-    path = Path(target)
-    try:
-        raw = aos_home.read_json(path) if path.suffix == ".json" else None
-    except (aos_home.HomeError, OSError, ValueError):
-        return str(path)
-    value = raw.get("stderr") if isinstance(raw, dict) else None
-    if isinstance(value, dict) and "$opt" in value:
-        value = value.get("$val")
-    if isinstance(value, str):
-        return os.path.abspath(path.parent / value)
-    return "%s 的 stderr 設定" % target
+_stderr_hint = stderr_hint  # 舊名字，aos_kernel 與測試還在用
 
 
-def _summary(home, snapshot, as_json=False):
-    info = load_info(home)
-    code, message = health(home, snapshot=snapshot, info=info)
-    marks = agent_marks(snapshot)
-    if code == "ok":
-        # fix-r5：kernel 正常時再看 agent 的暫停／重試，別印一個樂觀的 ok。
-        code, message = agents_health(marks) or (code, message)
-    if as_json:
-        return json.dumps({**snapshot, "health": {"code": code, "message": message}}, ensure_ascii=False)
-    kcpu = snapshot["kernel_cpu"]
-    daemon = snapshot["daemon"]
-    lines = ["health " + message, "chain %s  phase %s  last_seq %s  daemon %s" % (
-        snapshot["chain"] or "-", snapshot["phase"] or "-",
-        snapshot["last_seq"] if snapshot["last_seq"] is not None else "-",
-        "alive" if daemon["alive"] else "dead"),
-        "kernel cpu %s  current %s  requests %s" % (
-            kcpu["name"] or "-", (kcpu["current"] or {}).get("name", "-"), kcpu["requests"])]
-    slots = snapshot["cpus"] or {}
-    names = dict.fromkeys([*info["cpus"], *slots])
-    if kcpu["name"]:
-        names[kcpu["name"]] = None
-    for name in names:
-        slot = slots.get(name, {})
-        busy = "busy %s (%s)" % (slot.get("proc"), slot["req"]) if slot.get("req") else "idle"
-        child = daemon["children"].get(name)
-        child_status = child["state"] if child else "missing"
-        if not daemon["alive"]:
-            child_status = "dead（daemon 沒在跑）"  # fix-r5：daemon 被 KILL 時孩子表不會更新
-        pool = info["cpus"].get(name, {}).get("pool", "-")
-        lines.append("cpu %s  pool %s  %s  %s" % (name, pool, busy, child_status))
-    for name, proc in (snapshot["procs"] or {}).items():
-        lines.append("proc %s  %s  %s  runs %s  fails %s  pending %s" % (
-            name, "once" if proc["once"] else "repeat", proc["status"], proc["runs"], proc["fails"],
-            "有" if proc["pending"] else "-") +
-            ("  " + marks[name][1] if name in marks else "") +
-            ("  看 " + _stderr_hint(proc["target"]) if proc["status"] == "bad" else ""))
-    lines.append("queue %s" % (" ".join(snapshot["queue"] or []) or "-"))
-    return "\n".join(lines)
-
-
+def _summary(home, snapshot, as_json=False, verbose=False):
+    """ls 的輸出（advice-r1）：--json 是 ls_data() 那份穩定 schema，文字版是對齊的表。"""
+    data = ls_data(home, snapshot)
+    return json.dumps(data, ensure_ascii=False) if as_json else render(data, verbose=verbose)
 
 
 class _Parser(argparse.ArgumentParser):
@@ -95,7 +48,7 @@ def _parser():
     descriptions = {"init": "建立 kernel 家（照 --config 寫 info.json）", "boot": "交接並啟動 cpu 與 tick 鏈",
                     "tick": "執行一格排程（鏈自己會叫）", "add": "登記工作", "rm": "移除行程",
                     "ls": "顯示狀態摘要", "halt": "要求 kernel 停機並等停好", "ack": "確認已收回音",
-                    "check": "啟動前檢查設定與執行環境"}
+                    "check": "啟動前檢查 kernel 的設定與執行環境（agent 的用 aos-agent check）"}
     for command, description in descriptions.items():
         p = subs.add_parser(command, help=description, description=description,
                             formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -109,14 +62,16 @@ def _parser():
             p.epilog = INIT_EPILOG
             p.add_argument("--config", metavar="FILE", help="info 設定檔（JSON）；必填")
         elif command == "check":
-            p.add_argument("--agent", action="append", help="一併檢查 agent 家")
+            # advice-r1：agent 的檢查搬到 aos-agent check；舊旗標只為了給清楚的錯誤訊息。
+            p.add_argument("--agent", action="append", nargs="?", const="DIR", help=argparse.SUPPRESS)
             p.add_argument("--daemon-target", action="append", metavar="D", help=DAEMON_HELP)
             p.add_argument("--probe", action="store_true", help="真的對 llm.json 的每個 endpoint 打一次最小請求")
         elif command == "halt":
             p.add_argument("--wait-ms", type=int, default=30000, help="停機等待上限（毫秒，預設 30000）")
             p.add_argument("--no-wait", action="store_true", help="只放 stop 單，不等待、不輸出")
         elif command == "ls":
-            p.add_argument("--json", action="store_true", help="輸出完整狀態 JSON")
+            p.add_argument("--json", action="store_true", help="印一個 JSON 物件（欄位穩定，見 spec kernel/cli-ls.md）")
+            p.add_argument("-v", "--verbose", action="store_true", help="多印 K、D、chain、行程全名與 target")
         elif command == "boot":
             p.add_argument("--daemon-target", metavar="D", help=DAEMON_HELP)
             p.add_argument("--wait-ms", type=int, default=30000, help="交接等待上限（毫秒，預設 30000）")
@@ -178,14 +133,17 @@ def _run(args, trailing):
         return 0
     if args.command == "check":
         from aos_kernel_check import check
-        for key in ("agent", "daemon_target"):
+        if args.agent is not None:
+            raise CLIUsage("--agent 搬走了：agent 的檢查改用 aos-agent check --target %s [--probe]"
+                           "（K 由 AOS_KERNEL_HOME 或 agent 家的 tick.json 找）" % args.agent[0])
+        for key in ("daemon_target",):
             values = getattr(args, key)
             if values is not None and len(values) > 1:
                 raise CLIUsage("--%s 只能給一次；要查多個請分開跑 check" % key.replace("_", "-"))
             setattr(args, key, values[0] if values else None)
         if args.daemon_target == "":
             raise CLIUsage("--daemon-target 不可為空")
-        return check(args.home, args.agent, args.daemon_target, note=args.note, probe=args.probe)
+        return check(args.home, args.daemon_target, note=args.note, probe=args.probe)
     if args.command == "halt":
         return stop(args.home, args.wait_ms, args.no_wait)
     if args.command == "boot":
@@ -198,7 +156,7 @@ def _run(args, trailing):
         return tick(args.home, args.chain, args.seq)
     if args.command == "ls":
         snapshot = status(args.home)
-        print(_summary(args.home, snapshot, as_json=args.json))
+        print(_summary(args.home, snapshot, as_json=args.json, verbose=args.verbose))
         return 0
     if args.command == "ack":
         name = Path(args.name).name

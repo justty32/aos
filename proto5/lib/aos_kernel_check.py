@@ -189,21 +189,25 @@ class Checks:
             self.report(level, 'probe/' + alias, message)
 
     def agent(self, directory, pools, models, env):
+        """advice-r1：由 aos-agent check 呼叫；pools 是 None＝K 讀不到，池與模型不查。"""
         try:
             info = aos_agent_info.load(directory, env=env)
         except ERRORS as exc:
             self.report('bad', 'agent', '%s；請修正 agent 家 %s' % (exc, directory))
             return
         self.report('ok', 'agent', 'agent 設定讀驗通過')
-        for field in ('tick', 'llm'):
-            pool = info[field]['pool']
-            exists = pool in pools
-            self.report('ok' if exists else 'bad', 'agent/' + field + '.pool',
-                        '池 %s 存在' % pool if exists else '池 %s 不存在；請修改 agent info 或補 cpu 池' % pool)
-        model = info['llm']['model']
-        exists = model in models
-        self.report('ok' if exists else 'bad', 'agent/llm.model',
-                    '模型 %s 存在' % model if exists else '模型 %s 不在 llm 設定；請修正模型代號或 llm.json' % model)
+        if pools is None:
+            self.report('warn', 'agent/pools', 'K 讀不到，池與模型代號沒查；先修好上面的 kernel 項')
+        else:
+            for field in ('tick', 'llm'):
+                pool = info[field]['pool']
+                exists = pool in pools
+                self.report('ok' if exists else 'bad', 'agent/' + field + '.pool',
+                            '池 %s 存在' % pool if exists else '池 %s 不存在；請修改 agent info 或補 cpu 池' % pool)
+            model = info['llm']['model']
+            exists = model in models
+            self.report('ok' if exists else 'bad', 'agent/llm.model',
+                        '模型 %s 存在' % model if exists else '模型 %s 不在 llm 設定；請修正模型代號或 llm.json' % model)
         for tool in info['tools_raw']:
             item = 'agent/tool/' + tool['function']['name']
             argv = tool['_meta'].get('argv')
@@ -220,18 +224,24 @@ class Checks:
                         '可執行 %s' % command if exists else '找不到可執行的 %s；請修正工具路徑、執行權限或 PATH' % command)
 
 
-def check(home, agent=None, daemon=None, note='', probe=False):
+def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
+    """kernel 那一段；回 (pools, models, env)，info 讀不到回 (None, set(), shell env)。
+
+    recorded_daemon（aos-agent check 用）：沒給 D 時先看 AOS_DAEMON_HOME，再看 info 記的 daemon（boot 寫的）。
+    """
     # 延後 import，讓 kernel CLI 僅需接線，不形成模組初始化循環。
     from aos_kernel import load_info
     home = Path(home).absolute()
-    checks = Checks()
     try:
         info = load_info(home)
     except ERRORS as exc:
         checks.report('bad', 'info', '%s；請修正 %s/info.json%s' % (exc, home, note))
-        return 1
+        return None, set(), dict(os.environ)
     checks.report('ok', 'info', 'kernel 設定讀驗通過')
     checks.dirs(home)
+    recorded = info.get('daemon')
+    if daemon is None and recorded_daemon and not os.environ.get('AOS_DAEMON_HOME') and isinstance(recorded, str):
+        daemon = recorded
     daemon = str(aos_daemon.daemon_home(daemon))
     try:
         alive = aos_daemon.is_alive(daemon)
@@ -240,10 +250,10 @@ def check(home, agent=None, daemon=None, note='', probe=False):
     checks.report('ok' if alive else 'warn', 'daemon',
                   'daemon 活著：%s' % daemon if alive else
                   'daemon 沒在跑；先開 daemon：aos-daemon boot --target %s' % daemon)
-    recorded = info.get('daemon')
     if recorded and os.path.abspath(recorded) != daemon:
-        checks.report('warn', 'daemon', 'info.json 記的 daemon 是 %s（上次 boot 寫的），這次查的是 %s；'
-                      '要查那個就加 --daemon-target %s' % (recorded, daemon, recorded))
+        how = ('要查那個就改 AOS_DAEMON_HOME' if recorded_daemon else '要查那個就加 --daemon-target %s' % recorded)
+        checks.report('warn', 'daemon', 'info.json 記的 daemon 是 %s（上次 boot 寫的），這次查的是 %s；%s'
+                      % (recorded, daemon, how))
     if alive:
         checks.cpus(home, info, daemon)
     env, note = daemon_environment(daemon, alive)
@@ -263,11 +273,22 @@ def check(home, agent=None, daemon=None, note='', probe=False):
             checks.path(effective['PATH'], '（cpu envs 的 PATH）', 'path/' + name)
         if config['pool'] == 'llm':
             models.update(checks.llm(name, effective, env))
-    if agent is not None:
-        checks.agent(agent, pools, models, env)
+    return pools, models, env
+
+
+def finish(checks, probe, then='boot'):
     if probe:
         checks.probe()
     # fix-r5（kernel.md §6 check）：講清楚這次保證到哪裡。
-    print('有 bad，照上面的提示修好再 boot' if checks.bad else
+    print('有 bad，照上面的提示修好再 ' + then if checks.bad else
           '設定檢查通過；模型連線也測過' if probe else '設定檢查通過；未測模型連線（--probe 會測）')
     return int(checks.bad)
+
+
+def check(home, daemon=None, note='', probe=False):
+    """aos-kernel check：只驗 kernel（advice-r1 起 agent 搬到 aos-agent check）。"""
+    checks = Checks()
+    pools, _, _ = kernel_checks(checks, home, daemon, note)
+    if pools is None:
+        return 1
+    return finish(checks, probe)

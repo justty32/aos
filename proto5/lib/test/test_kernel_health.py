@@ -133,8 +133,10 @@ class KernelHealth(KernelCase):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(kernel.main(['ls', '--target', str(self.home), '--json']), 0)
         actual = json.loads(out.getvalue())
-        self.assertEqual(actual.pop('health'), {'code': 'ok', 'message': 'ok'})
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual['health'], {'code': 'ok', 'message': 'ok'})
+        self.assertEqual((actual['kernel']['chain'], actual['kernel']['phase'], actual['kernel']['last_seq']),
+                         (expected['chain'], expected['phase'], expected['last_seq']))
+        self.assertEqual(actual['queue'], expected['queue'])
 
     def test_ls_broken_ledger_retains_failure(self):
         (self.home / 'state.json').write_text('{')

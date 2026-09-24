@@ -169,7 +169,7 @@ class KernelIntegration(KernelCase):
         wait_for(lambda: not list((self.home / "requests").glob("*.json")))
         before = []
         result = self.good_cli("ls", self.home)
-        for text in ("chain", "phase", "visible", "runs", "fails", "alive", "current"):
+        for text in ("kernel  running", "seq", "visible", "runs", "fails", "alive", "kcpu"):
             self.assertIn(text, result.stdout)
         self.assertEqual(list((self.home / "requests").glob("*.json")), before)
         error = self.cli("rm", self.home, "does-not-exist")
