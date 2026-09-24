@@ -191,6 +191,24 @@ class JsonEditTests(FilesCase):
         self.ok('json_edit', dict(req, expect_sha=j['sha']))
         self.assertEqual(json.loads(self.get('a.json')), {'l': [1, 1]})
 
+    def test_concurrent_writers_do_not_overwrite(self):
+        """兩個寫者拿同一個 sha 同時送：鎖內重讀再比，只有一個成功，另一個 Conflict（審查 M2）。"""
+        self.put('a.json', '{"l": []}')
+        sha = self.sha_of(self.ok('json_edit', {'path': 'a.json'}))
+        exe = os.path.join(self.home, 'tools', 'files', 'json_edit')
+        env = {k: v for k, v in os.environ.items() if k != 'AOS_TOOL_ROOT'}
+        procs = [subprocess.Popen([exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.home, env=env,
+                                  text=True) for _ in range(6)]
+        for i, p in enumerate(procs):
+            p.stdin.write(json.dumps({'path': 'a.json', 'op': 'append', 'pointer': '/l', 'value': i,
+                                      'expect_sha': sha}))
+            p.stdin.close()
+        codes = [p.wait(timeout=20) for p in procs]
+        for p in procs:
+            p.stdout.close()
+        self.assertEqual(codes.count(0), 1, codes)
+        self.assertEqual(len(json.loads(self.get('a.json'))['l']), 1)
+
     def test_same_set_twice_is_no_change(self):
         self.put('a.json', '{"a": 1}')
         before = os.stat(os.path.join(self.ws, 'a.json')).st_ino
@@ -269,6 +287,23 @@ class TrustTests(FilesCase):
         self.err('json_edit', {'path': 'workspace/alias.json', 'op': 'set', 'pointer': '/x', 'value': 1},
                  'TrustedData')
 
+    def test_indirect_settings(self):
+        """system 用 $ref 指到別檔裡的路徑字串、記憶是字面路徑但內容再 $ref：解出來的目標都擋（審查 M1）。"""
+        self.put('paths.json', '{"system": "workspace/real-persona.json"}')
+        self.put('real-persona.json', '{"content": "p"}')
+        self.put('mem.json', '{"$ref": "workspace/mem2.json"}')
+        self.put('mem2.json', '[]')
+        self.agent_home(system={'$ref': 'workspace/paths.json#/system'}, history='workspace/mem.json')
+        for path in ('workspace/real-persona.json', 'workspace/paths.json', 'workspace/mem2.json'):
+            self.err('json_edit', {'path': path, 'op': 'set', 'pointer': '/x', 'value': 1}, 'TrustedData')
+
+    def test_unresolvable_settings_fail_closed(self):
+        self.put('free.json', '{"a": 1}')
+        self.agent_home(system={'$env': 'PERSONA_PATH'})
+        j = self.err('json_edit', {'path': 'workspace/free.json', 'op': 'set', 'pointer': '/a', 'value': 2},
+                     'TrustedData')
+        self.assertIn('system', j['message'])
+
     def test_hardlink_to_persona(self):
         self.agent_home()
         os.link(os.path.join(self.home, 'prompts', 'system.json'), os.path.join(self.ws, 'hl.json'))
@@ -339,23 +374,28 @@ class MdSectionTests(FilesCase):
         j = self.err('md_section', {'path': 'd.md', 'op': 'append_item', 'heading': 'Status',
                                     'text': '- no arrow'}, 'BadItem')
         self.assertIn('→', j['message'])
+        self.err('md_section', {'path': 'd.md', 'op': 'append_item', 'heading': 'Next', 'text': '- plain'},
+                 'BadItem')      # 空節也照格式驗
         self.ok('md_section', {'path': 'd.md', 'op': 'append_item', 'heading': 'Status',
                                'text': '- [b] wait → ask'})
         self.assertIn('- [a] doing → next\n- [b] wait → ask\n\n### Sub', self.get('d.md'))
 
     def test_append_item_into_empty_section(self):
-        self.ok('md_section', {'path': 'd.md', 'op': 'append_item', 'heading': 'Title', 'text': '- one'})
-        self.assertIn('# Title\n\ntext\n\n- one\n\n## Status', self.get('d.md'))
+        self.ok('md_section', {'path': 'd.md', 'op': 'append_item', 'heading': 'Title', 'text': '- [w] a → b'})
+        self.assertIn('# Title\n\ntext\n\n- [w] a → b\n\n## Status', self.get('d.md'))
         self.put('e.md', '# E\n## F\n')
-        self.ok('md_section', {'path': 'e.md', 'op': 'append_item', 'heading': 'E', 'text': '- x'})
-        self.assertEqual(self.get('e.md'), '# E\n- x\n\n## F\n')
+        self.ok('md_section', {'path': 'e.md', 'op': 'append_item', 'heading': 'E', 'text': '- [w] x → y'})
+        self.assertEqual(self.get('e.md'), '# E\n- [w] x → y\n\n## F\n')
 
     def test_remove_item(self):
-        self.put('r.md', '## L\n\n- a\n- b\n- a\n')
-        self.err('md_section', {'path': 'r.md', 'op': 'remove_item', 'heading': 'L', 'text': '- a'}, 'NotUnique')
-        self.err('md_section', {'path': 'r.md', 'op': 'remove_item', 'heading': 'L', 'text': 'zz'}, 'NoMatch')
-        self.ok('md_section', {'path': 'r.md', 'op': 'remove_item', 'heading': 'L', 'text': 'b'})
-        self.assertEqual(self.get('r.md'), '## L\n\n- a\n- a\n')
+        a, b = '- [w] a → n', '- [w] b → n'
+        self.put('r.md', '## L\n\n%s\n%s\n%s\n' % (a, b, a))
+        self.err('md_section', {'path': 'r.md', 'op': 'remove_item', 'heading': 'L', 'text': a}, 'NotUnique')
+        self.err('md_section', {'path': 'r.md', 'op': 'remove_item', 'heading': 'L', 'text': '- [w] z → n'},
+                 'NoMatch')
+        self.err('md_section', {'path': 'r.md', 'op': 'remove_item', 'heading': 'L', 'text': 'zz'}, 'BadItem')
+        self.ok('md_section', {'path': 'r.md', 'op': 'remove_item', 'heading': 'L', 'text': b[2:]})
+        self.assertEqual(self.get('r.md'), '## L\n\n%s\n%s\n' % (a, a))
 
     def test_crlf_kept(self):
         self.put('c.md', '# A\r\n\r\nx\r\n\r\n# B\r\ny\r\n')
@@ -368,14 +408,15 @@ class MdSectionTests(FilesCase):
         self.put('d.md', self.DOC + 'more\n')
         self.err('md_section', {'path': 'd.md', 'op': 'delete', 'heading': 'Next', 'expect_sha': sha}, 'Conflict')
         self.put('SESSION-LOG.md', '# S\n')
-        self.err('md_section', {'path': 'SESSION-LOG.md', 'op': 'append_item', 'heading': 'S', 'text': '- x'},
-                 'Protected')
+        self.err('md_section', {'path': 'SESSION-LOG.md', 'op': 'append_item', 'heading': 'S',
+                                'text': '- [w] x → y'}, 'Protected')
         self.ok('md_section', {'path': 'SESSION-LOG.md', 'heading': 'S'})      # 讀可以
         self.err('md_section', {'path': 'd.md', 'op': 'get'}, 'BadArguments')
         self.err('md_section', {'path': 'd.md', 'op': 'replace', 'heading': 'Next'}, 'BadArguments')
         self.err('md_section', {'path': 'd.md', 'op': 'zap', 'heading': 'Next'}, 'BadArguments')
         self.config({'root': 'workspace', 'protected': []})
-        self.ok('md_section', {'path': 'SESSION-LOG.md', 'op': 'append_item', 'heading': 'S', 'text': '- x'})
+        self.ok('md_section', {'path': 'SESSION-LOG.md', 'op': 'append_item', 'heading': 'S',
+                               'text': '- [w] x → y'})
 
 
 class InstallTests(unittest.TestCase):

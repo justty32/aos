@@ -16,6 +16,7 @@ aos-agent tools add files --target $W/bob     # 工作根目錄跟 base 一樣�
 ## 怎麼用才不會蓋掉別人的改動
 
 `get`（md_section 的 `list` 也是）結尾一行 `sha=…`。寫的時候帶 `expect_sha`：檔在這之間被改過就回 `Conflict`（附現在的 sha），什麼都不寫——重讀、在新內容上重做。
+讀、比 sha、改、寫整段持**檔案所在資料夾的 flock**（json_edit、md_section、aos-json 共用；等 10 秒拿不到＝`Busy`），兩個寫者不會都比對通過再互蓋。base 的 `write`／`edit` 不拿這把鎖。
 同一個請求（同一個 `expect_sha`）重送兩次，第二次一定是 `Conflict`，所以 `append` 這種不冪等的動作也不會多做一次。`set` 成跟原本一樣的值＝`no change`、不寫檔。
 
 ## 規則
@@ -25,7 +26,7 @@ aos-agent tools add files --target $W/bob     # 工作根目錄跟 base 一樣�
   `set` 的 `pointer` 是 `""` 而檔不在＝建新檔（父資料夾自動建）。`merge`＝JSON merge patch（RFC 7396）：值是 `null` 的鍵刪掉。
 - **md_section**：一節＝標題那行到下一個同級或更高級標題之前（含子節）；程式碼區塊裡的 `#` 不算標題。
   `replace` 換本文、標題留著；`delete` 連子節一起刪。標題不只一個＝`NotUnique`（附行號；加上 `#` 指定級數）。
-  `append_item`／`remove_item` 只看這一節自己的清單（不含子節）：`text` 要是一行、`- ` 開頭；這節原有的項目**都是** `- [工作流] 狀態 → 下一步` 格式時，新項目也要照這個格式，否則 `BadItem`。
+  `append_item`／`remove_item` 只看這一節自己的清單（不含子節）：`text` 一律要是一行 `- [工作流] 狀態 → 下一步`（catalog T-md 的格式；空節也一樣），否則 `BadItem`。一般的條列請用 `replace`。
 - 檔案上限 10 MB；輸出超過 50 KB 截斷。寫檔一律同資料夾暫存檔＋rename，被 KILL 在半路只會留下一個 `.檔名.*.aos-tmp`、原檔完整，重跑同一行就好。
 
 ## 碰不到的東西
@@ -33,7 +34,8 @@ aos-agent tools add files --target $W/bob     # 工作根目錄跟 base 一樣�
 - 路徑關在工作根目錄裡（`OutsideRoot`），跟 base 同一份 `_common.py`（逐字複製；base 那份改了，測試 `test_common_is_base_copy` 會紅，照它的訊息再複製一次）。
 - **保護檔名**：`config.json` 的 `protected`（預設 `SESSION-LOG.md`、`WAIT_USER.md`，團隊裡是書記在寫）＝寫入回 `Protected`，讀可以。
 - **信任資料**（沒關牢時）：工具的 cwd 是 agent 家，照家裡 `info.json` 的**實際設定**算出人格、記憶、access 檔、工具檔與工具程式、`$ref` 引用到的檔（一路追下去）、家裡固定的 `info.json`／`state.json`／`tools/`／`prompts/`…，目標落在裡面（或是它們的硬連結）＝`TrustedData`，不看檔名。
-  關牢時不另外擋：權限牆本來就不准可寫的資料夾蓋到信任資料，牢裡寫不到。用 `$env`／`$fmt` 拼出來的路徑算不到——這條是防手滑，真正的邊界是牆。
+  `system`／`history`／`access`／`tools` 用 `$ref` 指到別檔裡的路徑也會跟過去解；用了 `$env`／`$fmt`／`$at`、`$ref` 讀不到或超過 10 層＝算不出來，**沒關牢時整個拒寫**（`TrustedData`，寧可擋）。
+  關牢時不另外擋：權限牆本來就不准可寫的資料夾蓋到信任資料，牢裡寫不到。檢查跟寫之間有別的行程在換路徑時擋不完全——這條是防手滑，真正的邊界是牆。
 
 ## 錯誤代號
 
@@ -47,6 +49,7 @@ aos-agent tools add files --target $W/bob     # 工作根目錄跟 base 一樣�
 | `Conflict` | `expect_sha` 對不上（附 `sha`） | 能：重讀再做 |
 | `HeadingNotFound` | 沒這個標題（列出有哪些） | 能 |
 | `BadItem` | `append_item` 的 text 不是一行 `- ` 開頭，或不合這節的格式 | 能 |
+| `Busy` | 同資料夾另一個編輯 10 秒還沒做完 | 能：稍後再試 |
 | `Protected`／`TrustedData` | 保護檔名／agent 的信任資料 | 不能：訊息叫它轉告 |
 
 ## 測試

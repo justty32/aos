@@ -71,14 +71,55 @@ def _raw_refs(value, out):
             _raw_refs(v, out)
 
 
-def _val(entry):
-    if isinstance(entry, dict) and '$opt' in entry:
-        entry = entry.get('$val')
-    return entry if isinstance(entry, str) and entry else None
+UNKNOWN = ''    # trusted() 裡的特殊鍵：有設定算不出來（$env／$fmt／$at、$ref 讀不到、太深）
+
+
+class _Unknown(Exception):
+    pass
+
+
+def _walk(value, pointer):
+    if pointer == '':
+        return value
+    if not pointer.startswith('/'):
+        raise _Unknown()
+    for tok in pointer[1:].split('/'):
+        tok = tok.replace('~1', '/').replace('~0', '~')
+        if isinstance(value, dict) and tok in value:
+            value = value[tok]
+        elif isinstance(value, list) and tok.isdigit() and int(tok) < len(value):
+            value = value[int(tok)]
+        else:
+            raise _Unknown()
+    return value
+
+
+def _resolve(value, home, doc_path, depth=0):
+    """把一格設定解成字面值：字串、陣列（逐個解）、$opt 取 $val、$ref（相對家）跟過去。
+    其他指示詞（$env／$fmt）、$at、讀不到、超過 10 層＝_Unknown（寧可擋）。"""
+    if depth > MAX_REF_DEPTH:
+        raise _Unknown()
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return [_resolve(v, home, doc_path, depth) for v in value]
+    if isinstance(value, dict):
+        if '$opt' in value:
+            return _resolve(value.get('$val'), home, doc_path, depth)
+        if '$ref' in value and '$at' not in value and isinstance(value['$ref'], str):
+            name, _, pointer = value['$ref'].partition('#')
+            path = os.path.join(home, os.path.expanduser(name)) if name else doc_path
+            doc = _load(path)
+            if doc is None:
+                raise _Unknown()
+            return _resolve(_walk(doc, pointer), home, path, depth + 1)
+        if not any(isinstance(k, str) and k.startswith('$') for k in value):
+            return value
+    raise _Unknown()
 
 
 def trusted(home):
-    """{位置: 說明}；家裡沒有 info.json＝空（不是 agent 家）。"""
+    """{位置: 說明}；家裡沒有 info.json＝空（不是 agent 家）。有設定算不出來＝多一個鍵 UNKNOWN。"""
     home = os.path.abspath(home)
     info_path = os.path.join(home, 'info.json')
     if not os.path.isfile(info_path):
@@ -89,35 +130,49 @@ def trusted(home):
         for q in path_chain(os.path.join(base, os.path.expanduser(p))):
             out.setdefault(q, label)
 
+    def unknown(what):
+        out.setdefault(UNKNOWN, what)
+
     for name in HOME_FIXED:
         add(name, "the agent's " + name)
     json_files = [(info_path, 0)]
     info = _load(info_path)
-    if isinstance(info, dict):
-        defaults = {'system': 'prompts/system.json', 'history': 'prompts/history.json', 'access': 'access.json'}
-        for key, label in (('system', 'persona file'), ('history', 'memory file'), ('access', 'access file')):
-            p = _val(info.get(key)) if key in info else defaults[key]
-            if p:
-                add(p, label)
-                if key == 'access':
-                    json_files.append((os.path.join(home, p), 0))
-        tools = info.get('tools')
-        for entry in tools if isinstance(tools, list) else []:
-            p = _val(entry)
-            if not p:
-                continue
-            full = os.path.join(home, os.path.expanduser(p))
-            add(full, 'tool file')
-            files = sorted(glob.glob(os.path.join(full, '*.json'))) if os.path.isdir(full) else [full]
-            for tf in files:
-                add(tf, 'tool file')
-                json_files.append((tf, 0))
-                _programs(home, _load(tf), add)
+    if not isinstance(info, dict):
+        unknown('info.json (unreadable)')
+        info = {}
+    defaults = {'system': 'prompts/system.json', 'history': 'prompts/history.json', 'access': 'access.json'}
+    for key, label in (('system', 'persona file'), ('history', 'memory file'), ('access', 'access file')):
+        try:
+            p = _resolve(info[key], home, info_path) if key in info else defaults[key]
+        except _Unknown:
+            unknown('info.json "%s"' % key)
+            continue
+        if isinstance(p, str) and p:
+            add(p, label)
+            json_files.append((os.path.join(home, os.path.expanduser(p)), 0))
+    try:
+        tools = _resolve(info.get('tools', []), home, info_path)
+    except _Unknown:
+        unknown('info.json "tools"')
+        tools = []
+    for p in tools if isinstance(tools, list) else []:
+        if not isinstance(p, str) or not p:
+            continue
+        full = os.path.join(home, os.path.expanduser(p))
+        add(full, 'tool file')
+        files = sorted(glob.glob(os.path.join(full, '*.json'))) if os.path.isdir(full) else [full]
+        for tf in files:
+            add(tf, 'tool file')
+            json_files.append((tf, 0))
+            _programs(home, _load(tf), add)
     seen = set()
     while json_files:
         path, depth = json_files.pop()
         real = os.path.realpath(path)
-        if real in seen or depth > MAX_REF_DEPTH:
+        if real in seen:
+            continue
+        if depth > MAX_REF_DEPTH:
+            unknown('$ref chain deeper than %d' % MAX_REF_DEPTH)
             continue
         seen.add(real)
         refs = []
@@ -133,6 +188,7 @@ def trusted(home):
             if isinstance(p, str) and p:
                 add(p, 'input file')
     return out
+
 
 
 def _programs(home, tools, add):
@@ -158,6 +214,9 @@ def blocked(full, home=None, env=None):
     if env.get('AOS_TOOL_ROOT'):
         return None
     trust = trusted(home or os.getcwd())
+    if UNKNOWN in trust:
+        return ('settings, which this tool cannot fully work out (%s uses $env/$fmt or an unreadable $ref), so '
+                'it refuses every write while not jailed' % trust.pop(UNKNOWN))
     for q in path_chain(full):
         for t, label in trust.items():
             if _under(q, t):

@@ -127,6 +127,15 @@ class PersonaTests(CliCase):
         self.assertIn('FieldTypeMismatch', self.d('set', '0', '--text', 'x', code=1).stderr)
         self.assertIn('NotAnAgent', self.cli('aos-directives', 'ls', '--target', 'nobody', code=1).stderr)
 
+    def test_file_errors_are_one_line(self):
+        """不存在的家、寫不進的 export 目的地：一行錯、退 1、沒有 Traceback（審查 M6）。"""
+        for args in (['set', '0', '--text', 'x', '--target', 'nobody'], ['export', '--out', 'no/such/dir/p.md',
+                                                                         '--target', 'amy']):
+            err = self.cli('aos-directives', *args, code=1).stderr
+            self.assertNotIn('Traceback', err)
+            self.assertEqual(len(err.strip().splitlines()), 1, err)
+        self.assertFalse(os.path.exists(self.path('nobody')))
+
     def test_usage(self):
         self.d('set', '語氣', code=2)
         self.d('set', '語氣', '--text', 'a', '--file', 'b', code=2)
@@ -178,6 +187,12 @@ class AosJsonTests(CliCase):
         self.cli('aos-json', 'zap', code=2)
         self.assertIn('PointerNotFound', self.cli('aos-json', 'get', 'c.json', '/b', code=1).stderr)
         self.assertIn('NotFound', self.cli('aos-json', 'get', 'none.json', code=1).stderr)
+
+    def test_write_error_is_one_line(self):
+        self.put('f', 'x')
+        err = self.cli('aos-json', 'set', 'f/x.json', '', '1', code=1).stderr
+        self.assertNotIn('Traceback', err)
+        self.assertTrue(err.startswith('aos-json: '), err)
 
     def test_check_directives(self):
         self.put('i.json', '{"cwd": "."}')

@@ -2,9 +2,12 @@
 
 根目錄、錯誤格式、路徑關在根目錄裡：一律用 _common.py（跟 base 同一份，不另外算根）。
 """
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
+import time
 
 from _common import HERE, fail, open_regular, write_atomic, rel
 import _trust
@@ -12,6 +15,30 @@ import _trust
 MAX_FILE = 10 * 1024 * 1024
 SHA_LEN = 16
 DEFAULT_PROTECTED = ('SESSION-LOG.md', 'WAIT_USER.md')
+
+
+@contextlib.contextmanager
+def locked(full, wait=10.0):
+    """寫的人之間互斥：flock 檔案所在的資料夾（資料夾不會被 rename，檔會）。
+    讀、比 expect_sha、改、寫整段都在鎖內，兩個人不會都比對通過再互蓋（審查 M2）。等 wait 秒拿不到＝Busy。
+    只有走這套的寫者（json_edit、md_section、aos-json）互斥；base 的 write／edit 不拿這把。"""
+    parent = os.path.dirname(full)
+    os.makedirs(parent, exist_ok=True)
+    fd = os.open(parent, os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0) | getattr(os, 'O_CLOEXEC', 0))
+    try:
+        deadline = time.monotonic() + wait
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() > deadline:
+                    fail('Busy', 'another edit of a file in %s is still running; try again in a moment'
+                         % os.path.basename(parent))
+                time.sleep(0.05)
+        yield
+    finally:
+        os.close(fd)
 
 
 def sha(data):
