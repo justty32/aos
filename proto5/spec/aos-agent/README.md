@@ -4,7 +4,7 @@
 
 ← [proto5 README](../../README.md)｜資料夾：[agent.md](../agent/README.md)｜問模型：[aos-llm.md](../aos-llm/README.md)｜送件：[kernel.md §2](../kernel/syscall.md)、[cpu.md §3](../cpu/messages.md)
 
-> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列；已實作（`lib/aos_agent.py`＋`cli/aos-agent`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 2 版，2026-09-24 定稿，同日 fix-r4 改命令列、fix-r5 改日常輸出（health 不再樂觀、continue 兩階段與 `--all`、listen 講中間句）；已實作（`lib/aos_agent.py`＋`cli/aos-agent`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**`aos-agent tick` 每次只送出或接回一批工作，更新記憶與進度後就退出；結果還沒到就保留進度，留給下一次。**
 問模型、跑工具都是往 kernel `add --once` 的普通工作；反覆叫 `tick` 是 kernel 的事——`aos-agent start` 把它登記成一個反覆行程。
@@ -27,7 +27,7 @@
 - kernel `stop`：還在排隊的 once 回 `Stopping`（think 下次重問、工具告訴模型「沒跑」），在跑的照常跑完；
   agent 自己的那格在 stopping 時不會被派，當批留到下次 boot 之後收（kernel 跨 boot 保留 `procs`／`replies`）。
 - 放單崩在 `link` 之後、刪 `.tmp` 之前：`K/requests/` 留一個 `.` 開頭 `.tmp` 結尾的殘檔；主人只收 `.json`，不會誤收；**沒人自動清**（保證外），人在都停著時刪。
-- **日常 CLI 是最小版**（09-24 試玩 r2 補）：`init`（單一內建預設）、`say`、`status`、`continue` 有了（§1.1～§1.4）；（09-24 fix-r4 補）`listen`、`pause`（§1.5、§1.6）。
+- **日常 CLI 是最小版**（09-24 試玩 r2 補）：`init`（單一內建預設）、`say`、`status`、`continue` 有了（§1.1～§1.4）；（09-24 fix-r4 補）`listen`、`pause`（§1.5、§1.6）；（09-24 fix-r5 補）`continue --all`、`init --force`（§1.4、§1.1）。
   **這份沒管的**：`init --template`／`--config`（template 從哪來使用者還沒定）、`tools`／`llms` 子命令、專屬 cpu、`say` 投到 `input` 第一條以外的地方；構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)。記憶太長也沒管。
 
 ## 各節

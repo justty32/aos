@@ -9,3 +9,4 @@
 > 已拍板的前提在 §9，我自己選的在 §10。
 > 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../../notes/2026-09-23-rearch/README.md)）
 > 2026-09-24 fix-r4：§6 命令列全改 `--target K`（省略找 `AOS_KERNEL_HOME`→目前資料夾，錯誤行講來源）、`stop` 改名 `halt`、`init` 改讀 `--config FILE`、`--daemon` 改名 `--daemon-target`；§3 tick 的 args 同步。
+> 2026-09-24 fix-r5（試玩 r4 兩份報告的共同痛點）：boot 成功印 `booted <N> cpus`；check 加 `--probe`、結尾印總結行；ls 的 health 多 `恢復中`（cpu dead、daemon 重拉中），kernel 正常時再看 agent 的暫停／重試，行程行尾標出來；daemon 沒在跑時 cpu 行印 `dead（daemon 沒在跑）`（§6）。

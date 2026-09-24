@@ -21,7 +21,7 @@
    **第一次 boot 沒有帳本**＝這些全部從空的開始（`cpus` 照 info 列工作 cpu、`req` 都 null）。
 4. 每顆 cpu：家缺什麼補什麼（info、inst，`envs` 照 info；已在的不覆蓋，§1.1 末）；`spawn` 全部、等回音（c 剛被收掉，這裡拉回來；
    其他活著的同名同 target 就回 pid、不動）。
-5. `link` 第 1 格 `k-<chain>-1.json` 到 `cpus/<c>/requests/`。退 0。
+5. `link` 第 1 格 `k-<chain>-1.json` 到 `cpus/<c>/requests/`。印一行 `booted <N> cpus`（N＝info 的 cpu 數，含 kernel cpu；09-24 fix-r5 補，之前成功時什麼都不印）、退 0。
 
 再 boot 一次＝重做第 2 步的交接再開新鏈；舊鏈殘格帶著舊 chain 自滅。
 **daemon 重啟過**（孩子表被清空）也要 boot——kernel cpu 死了沒人會放第 1 格，「每格補拉」補的是工作 cpu。

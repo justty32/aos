@@ -4,7 +4,7 @@
 
 ← [proto5 README](../../README.md)｜範式：[cpu.md](../cpu/README.md)｜跑一次：[aos-exec.md](../aos-exec/README.md)｜下層：[daemon](../daemon/README.md)
 
-> 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列；已實作（[`aos_kernel.py`](../../lib/aos_kernel.py)，入口 `aos-kernel`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列、fix-r5 改日常輸出（boot 印一行、check `--probe`、ls 的恢復中與 agent 暫停）；已實作（[`aos_kernel.py`](../../lib/aos_kernel.py)，入口 `aos-kernel`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**kernel 替登記好的工作（行程）挑一顆空著的 cpu 派下去、收回執行結果、決定要不要再跑。**
 它不是長命行程：每次只跑一格 `aos-kernel tick`，格的開頭先把下一格放進一顆專用 exec cpu 的 `requests/`，

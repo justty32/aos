@@ -8,3 +8,4 @@
 > **已實作**（2026-09-24，T9）：`lib/aos_agent_info.py`／`aos_agent_home.py`（讀驗），實作發現見 agent-impl-findings。
 > 調度者裁決移到檔尾（09-24 試玩 r2 搬），已拍板的前提在 §7。
 > 2026-09-24 fix-r4：`AOS_K` 改名 `AOS_KERNEL_HOME`；家裡多兩個程式寫的檔 `.tick.lock`（tick 鎖）、`paused`（手動暫停）；問模型的指令改名 `aos-llm call`。
+> 2026-09-24 fix-r5：家裡多一個程式寫的檔 `resumed`（`continue` 解了連敗暫停、還沒等到一次成功；§1）。
