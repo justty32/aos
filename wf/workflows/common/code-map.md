@@ -127,6 +127,10 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_team_task` | 任務單（交接書）與狀態機，只有郵差寫，同一 `src` 重跑冪等 |
 | `aos_team_ask` | 問人：成員 `ask_human` 建問題檔，人用 `aos-team answer` 投回答案 |
 | `aos_team_cli` | `aos-team` 子命令分派表（模組、函式、哪一隊做、一句話） |
+| `aos_team` | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
+| `aos_team_ask_cli` | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
+| `aos_team_route` | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型 |
+| `aos_team_task_cli` | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
 
 ---
 

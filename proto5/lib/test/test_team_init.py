@@ -346,8 +346,9 @@ class TeamIntegrationTests(KernelCase):
         patcher = unittest.mock.patch.dict(os.environ, {'PATH': path})   # daemon 也要找得到 aos-* 指令
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.cpus = {'k': {'pool': 'kernel'}, '0': {'envs': {'PATH': path}}, '1': {'envs': {'PATH': path}},
-                     'llm': {'pool': 'llm', 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
+        # 池式（proto5-2 納入）：info 是池表；default 兩顆、llm 一顆，kernel 池不用寫。
+        self.pools = {'default': {'count': 2, 'envs': {'PATH': path}},
+                      'llm': {'count': 1, 'envs': {'PATH': path, 'AOS_LLM_CONFIG': str(config)}}}
         self.addCleanup(self.orderly_stop)
 
     def close_server(self):
@@ -403,7 +404,7 @@ class TeamIntegrationTests(KernelCase):
     def test_team_in_jail_end_to_end(self):
         if shutil.which('bwrap') is None:
             self.skipTest('沒有 bwrap')
-        self.setup_running(cpus=self.cpus)
+        self.setup_running(pools=self.pools)
         (self.root / 'p').mkdir()
         self.teamdir = self.root / 'team'
         src = self.root / 'roster.json'
