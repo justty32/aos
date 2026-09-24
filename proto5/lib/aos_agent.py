@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-agent tick／start／stop；按規範持久化，再執行可重做的副作用。"""
+"""aos-agent tick／start／stop／last；按規範持久化，再執行可重做的副作用。"""
 import argparse
 import os
 from pathlib import Path
@@ -102,7 +102,20 @@ def _tick_inst(run, kernel):
 def _register(agent_dir, env, starting):
     try:
         env, kernel = _environment(env)
-        info = aos_agent_info.load(agent_dir, env=env)
+        if starting:
+            info = aos_agent_info.load(agent_dir, env=env)
+        else:
+            base = Path(os.path.abspath(agent_dir))
+            if not base.is_dir():
+                raise AgentError('NotAnAgent', '%s 不是存在的資料夾' % base)
+            try:
+                raw = aos_home.read_json(base / 'tick.json')
+                bound = raw.get('envs', {}).get('AOS_K') if isinstance(raw, dict) else None
+            except (aos_home.HomeError, AttributeError):
+                bound = None
+            if isinstance(bound, str) and bound != kernel:
+                raise AgentError('KernelMismatch', '%s 綁在 %s' % (base / 'tick.json', bound))
+            info = {'dir': str(base)}
         run = Runtime(info, None, env, _hook)
         params = {'name': 'agent-' + run.base.name}
         if starting:
@@ -127,6 +140,7 @@ def _register(agent_dir, env, starting):
         if (not isinstance(response, dict) or not isinstance(response.get('result'), dict)
                 or not isinstance(response['result'].get('name'), str)):
             raise AgentError('ReadFailed', 'kernel 回音缺少 result.name')
+        print(('started ' if starting else 'stopped ') + params['name'])
         return 0
     except (AgentError, aos_home.HomeError, OSError) as exc:
         return _error(exc)
@@ -142,9 +156,18 @@ def stop(agent_dir, env=None):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog='aos-agent')
-    ap.add_argument('command', choices=('tick', 'start', 'stop'))
+    ap.add_argument('command', choices=('tick', 'start', 'stop', 'last'))
     ap.add_argument('agent_dir', nargs='?', default='.')
+    ap.add_argument('--json', action='store_true')
     args = ap.parse_args(argv)
+    if args.json and args.command != 'last':
+        ap.error('--json 只適用 last')
+    if args.command == 'last':
+        from aos_agent_last import last
+        try:
+            return last(args.agent_dir, as_json=args.json)
+        except (AgentError, aos_home.HomeError, OSError) as exc:
+            return _error(exc)
     return {'tick': tick, 'start': start, 'stop': stop}[args.command](args.agent_dir)
 
 

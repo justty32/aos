@@ -174,28 +174,31 @@ def strip_private(tool):
 
 def read_tools(paths):
     """合併已展開的工具檔路徑；內容錯一律 ToolInvalid，不解 _meta。"""
-    merged, seen = [], set()
+    merged, seen = [], {}
     for path in paths:
+        path = os.path.abspath(path)
         values = _read_json(path)
         if not isinstance(values, list):
             raise AgentError("ToolInvalid", "%s 的工具頂層必須是陣列" % path)
-        for t in values:
+        for i, t in enumerate(values):
+            where = "%s 第 %d 個元素：" % (path, i)
             if not isinstance(t, dict) or t.get("type") != "function":
-                raise AgentError("ToolInvalid", "工具必須是 type 為 function 的物件")
+                raise AgentError("ToolInvalid", where + "工具必須是 type 為 function 的物件")
             fn, meta = t.get("function"), t.get("_meta")
             if not isinstance(fn, dict) or not _nonempty(fn.get("name")):
-                raise AgentError("ToolInvalid", "工具 function 必須有非空字串 name")
+                raise AgentError("ToolInvalid", where + "工具 function 必須有非空字串 name")
             for key, typ in (("description", str), ("parameters", dict)):
                 if key in fn and not isinstance(fn[key], typ):
-                    raise AgentError("ToolInvalid", "工具 function.%s 型別不對" % key)
+                    raise AgentError("ToolInvalid", where + "工具 function.%s 型別不對" % key)
             if not isinstance(meta, dict) or any(k in meta for k in ("stdin", "stdout")):
-                raise AgentError("ToolInvalid", "工具 _meta 必須是物件，且不能寫 stdin／stdout")
+                raise AgentError("ToolInvalid", where + "工具 _meta 必須是物件，且不能寫 stdin／stdout")
             timeout = t.get("_timeout_ms", 60000)
             if type(timeout) is not int or timeout < 0:
-                raise AgentError("ToolInvalid", "工具 _timeout_ms 必須是非負整數（bool 不算）")
+                raise AgentError("ToolInvalid", where + "工具 _timeout_ms 必須是非負整數（bool 不算）")
             if fn["name"] in seen:
-                raise AgentError("ToolInvalid", "合併後工具同名：%s" % fn["name"])
-            seen.add(fn["name"])
+                raise AgentError("ToolInvalid", "合併後工具同名：%s（%s、%s 第 %d 個）" %
+                                 (fn["name"], seen[fn["name"]], path, i))
+            seen[fn["name"]] = "%s 第 %d 個" % (path, i)
             merged.append(t)
     return merged
 

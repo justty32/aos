@@ -1,4 +1,4 @@
-# proto5/lib — 十六支 Python 模組
+# proto5/lib — 十八支 Python 模組
 
 ← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu.md)、[daemon.md](../spec/daemon.md)、[kernel.md](../spec/kernel.md)
 
@@ -7,7 +7,7 @@ Python 3.12、只用標準庫。底層 `aos_directives` → `aos_inst` → `aos_
 `aos_kernel` 用一格接一格的 tick 排程。`aos_run` 與 `aos-daemon-ctl` 已移除。
 
 agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm-call` 問模型一次，
-`aos-agent tick／start／stop` 走格與登記排程；模型與工具都交給 exec cpu，舊 llm／tool cpu 已移除。
+`aos-agent tick／start／stop／last` 走格、登記排程與看回話；模型與工具都交給 exec cpu，舊 llm／tool cpu 已移除。
 
 | 檔 | 職責 | 規範／狀態 |
 |---|---|---|
@@ -18,18 +18,20 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm-call` 問模�
 | [`aos_client.py`](aos_client.py) | 取名、放單、先查原單再等回音、讀與 ack | [cpu.md](../spec/cpu.md) §3、§6.3 |
 | [`aos_exec_cpu.py`](aos_exec_cpu.py) | 長命 exec cpu：go／stop、逐件執行、訊號與對帳；入口 `aos-cpu` | [cpu.md](../spec/cpu.md) |
 | [`aos_daemon.py`](aos_daemon.py) | flock、spawn 登記與 go、非零重拉、kill／stop 階梯；入口 `aos-daemon` | [daemon.md](../spec/daemon.md) |
-| [`aos_kernel.py`](aos_kernel.py) | 帳本與四出貨箱、分池派工、once／反覆、boot 換鏈；入口 `aos-kernel` | [kernel.md](../spec/kernel.md) |
+| [`aos_kernel.py`](aos_kernel.py) | 帳本與四出貨箱、分池派工、once／反覆、boot 換鏈、stop 等停好；入口 `aos-kernel` | [kernel.md](../spec/kernel.md) |
+| [`aos_kernel_check.py`](aos_kernel_check.py) | `aos-kernel check`：啟動前唯讀檢查 info、daemon、PATH、池、llm 設定與（可選）agent | [kernel.md](../spec/kernel.md) §6 |
 | [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（`_metainfo`、人格／記憶／工具、message 驗證）與 aos-llm-call 的六格 loader，帶原文件與位置解欄位 | [agent.md](../spec/agent.md) §2～§3、§5；[aos-llm-call.md](../spec/aos-llm-call.md) §3 |
 | [`aos_llm_call.py`](aos_llm_call.py) | 問模型一次：讀驗 `AOS_LLM_CONFIG` 的 llm.json、組 body、HTTP、正規化並驗 message；入口 `aos-llm-call` | [aos-llm-call.md](../spec/aos-llm-call.md) |
 | [`aos_agent_info.py`](aos_agent_info.py) | 完整 info 設定、state 進度與恢復紀錄讀驗，並原子寫回 state | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
-| [`aos_agent.py`](aos_agent.py) | tick／start／stop 入口；三格流程、批次派工與 kernel 排程登記 | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
+| [`aos_agent.py`](aos_agent.py) | tick／start／stop／last 入口；三格流程、批次派工與 kernel 排程登記（stop 不讀 info） | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
+| [`aos_agent_last.py`](aos_agent_last.py) | `aos-agent last`：印記憶裡最後一則 assistant | [aos-agent.md](../spec/aos-agent.md) §1 |
 | [`aos_agent_batch.py`](aos_agent_batch.py) | 批次建立、inst 產生、kernel 交件、收回音與 ack、結清 | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
-| [`aos_agent_inputs.py`](aos_agent_inputs.py) | waits 門、輸入讀驗與 intake／consuming 的恢復流程 | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
-| [`aos_agent_results.py`](aos_agent_results.py) | 模型與工具結果判定、失敗分類與輸出轉換 | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
+| [`aos_agent_inputs.py`](aos_agent_inputs.py) | waits 門、輸入讀驗與 intake／consuming 的恢復流程；封存到來源資料夾的 `done/` | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
+| [`aos_agent_results.py`](aos_agent_results.py) | 模型與工具結果判定、失敗分類與輸出轉換；失敗訊息附 llm.err／cpu.log 路徑與 126／127 的 argv[0] | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤 | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 900 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 959 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -329,7 +331,7 @@ stop 是檔名以 stop- 開頭的 notification。daemon 寫孩子表之後才送
 
 ## aos_kernel — 帳本、分池與 tick 鏈
 
-`init(home, cpus=None)` 建家（cpus 省略＝k＋0／1／2），info.json 已在才拒絕、半成品補齊；`load_info(home)` 每格讀驗設定，cpu.envs 原樣留給 inst。
+`init(home, cpus=None)` 建家（CLI 另有 `--env NAME:KEY=VALUE` 寫字面 envs、成功印 `initialized <K>`）（cpus 省略＝k＋0／1／2），info.json 已在才拒絕、半成品補齊；`load_info(home)` 每格讀驗設定，cpu.envs 原樣留給 inst。
 `boot(home, daemon=None, wait_ms=30000)` 驗 daemon、收舊 kernel cpu、換 chain、保留在途與出貨、拉 cpu、放第 1 格。
 `tick(home, chain, seq)` 跑一格；`status(home)` 偷看帳本、daemon 孩子與 kernel cpu 的 current／requests。
 `new_state(info, chain, kcpu, cli)` 建初始帳本；`classify(proc, response, info, now=None)` 純判定反覆工作結果。
@@ -342,19 +344,19 @@ rm 自身回 name，正在跑的行程保留 discard 到收完。
 
 cpu 家「缺的補齊」：資料夾、info、inst 各自不在才寫，已在不覆蓋。沒有事件的格不寫 kernel.log。
 
-CLI：`aos-kernel init [--cpu NAME[:POOL]]…／boot／tick／add／rm／ack／ls [--json]／stop`，各有 `-h`，完整參數見 [kernel.md §6](../spec/kernel.md)。
-`ls` 預設印文字摘要（cpu、行程、queue 各一行），`--json` 印 `status()` 原樣；`ack K NAME` 替 once 不等的人收回音。
+CLI：`aos-kernel init [--cpu NAME[:POOL]]… [--env NAME:KEY=VALUE]…／boot／tick／add／rm／ack／ls [--json]／stop [--wait-ms N] [--no-wait]／check [--agent DIR] [--daemon D]`，各有 `-h`，完整參數見 [kernel.md §6](../spec/kernel.md)。
+`ls` 預設印文字摘要（cpu、行程、queue 各一行；bad 行程附「看 <stderr 路徑>」），`--json` 印 `status()` 原樣；`ack K NAME` 替 once 不等的人收回音。
 反覆 add 等回音印 NAME；once 預設印 request 與回音路徑，帶 `--wait-ms` 才等。
 CLI 收到回音代 ack，JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成敗。
-stop 只確認放單；看 ls 的 phase=stopped 與此 kernel 的 cpu 都從 daemon 表消失後再停 daemon。
+stop 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才印 `stopped`；鏈沒在跑印 `not running` 不放單；`--no-wait` 只放單。
 
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 900 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 959 條；repo 根目錄
 ```
 
-共 21 個測試檔、900 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 24 個測試檔、959 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -362,7 +364,9 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_agent_crash.py](test/test_agent_crash.py) | 23 | 持久化邊界崩潰與重啟恢復 |
 | [test_agent_home.py](test/test_agent_home.py) | 66 | 共用內容六格、人格／記憶／工具與訊息讀驗 |
 | [test_agent_info.py](test/test_agent_info.py) | 95 | 完整設定、排程欄位、state 與恢復紀錄讀驗 |
-| [test_agent_integration.py](test/test_agent_integration.py) | 5 | 真 daemon／kernel／exec cpu 的 agent 整合 |
+| [test_agent_fix_cli.py](test/test_agent_fix_cli.py) | 13 | start／stop 印行、stop 不讀 info、KernelMismatch、last |
+| [test_agent_fix_storage.py](test/test_agent_fix_storage.py) | 13 | done/ 封存、舊式紀錄相容、錯誤訊息的 log 路徑、126／127、ToolInvalid 位置 |
+| [test_agent_integration.py](test/test_agent_integration.py) | 6 | 真 daemon／kernel／exec cpu 的 agent 整合 |
 | [test_agent_tick.py](test/test_agent_tick.py) | 118 | waits、三格、批次收送、錯誤與 start／stop |
 | [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
 | [test_daemon.py](test/test_daemon.py) | 27 | 真 daemon／cpu、spawn 冪等、重拉、三階停機、flock、崩潰接手 |
@@ -375,7 +379,8 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_home.py](test/test_home.py) | 27 | 三類信封、原子放單、ack、五列對帳與 info |
 | [test_inst.py](test/test_inst.py) | 139 | inst 讀驗、指示詞位置、欄位與選項 |
 | [test_kernel.py](test/test_kernel.py) | 29 | 判定表、syscall 去重、rm／once、pool、設定 |
-| [test_kernel_cli.py](test/test_kernel_cli.py) | 10 | init／ack／ls CLI |
+| [test_kernel_check.py](test/test_kernel_check.py) | 19 | check 各項 ok／warn／bad、daemon 的 /proc 環境、--agent、--daemon |
+| [test_kernel_cli.py](test/test_kernel_cli.py) | 23 | init（含 --env）／ack／ls（含 bad 提示）／stop 等停好 CLI |
 | [test_kernel_integration.py](test/test_kernel_integration.py) | 15 | 真 daemon＋cpu、反覆／once、stop、重 boot、pool、Interrupted |
 | [test_kernel_recovery.py](test/test_kernel_recovery.py) | 21 | 出貨重放、先記未放、鏈與 boot 交接、ack 唯一性 |
 | [test_llm_call.py](test/test_llm_call.py) | 45 | 模型表、組 body、HTTP 與 message 正規化 |

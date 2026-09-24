@@ -82,6 +82,7 @@ class Runtime:
         for pair in pairs:
             src, dst = Path(pair['src']), Path(pair['dst'])
             if not dst.exists() and src.exists():
+                dst.parent.mkdir(exist_ok=True)
                 os.rename(src, dst)
                 self.hook('consume.move')
 
