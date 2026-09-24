@@ -19,11 +19,11 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'pause': '手動暫停：還登記著，但每格什麼都不做',
          'continue': '解除手動暫停與連敗暫停',
          'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）',
-         'tools': '工具管理：tools ls／add／rm／alias／unalias；造工具：new／test／wrap-py（內建包 base＝read／write／edit／bash／grep／find／ls）',
+         'tools': '工具管理：tools ls／add／rm／alias／unalias；造工具：new／test／wrap-py／wrap-cli（內建包 base＝read／write／edit／bash／grep／find／ls）',
          'access': '權限牆：access ls／set／rm／cwd／net（工具關進牢裡看得到哪些資料夾）',
          # 第 4 隊（記憶與紀錄）：spec/aos-agent/cli-memory.md
          'context': '送給模型的東西多大：人格、記憶、工具的字數與 token 粗估（--by-round 每輪一行）',
-         'compact': '機械壓縮記憶（不叫模型）：舊的輪只留原話與最後回話，原文存進 prompts/archive/',
+         'compact': '機械壓縮記憶（預設不叫模型）：舊的輪只留原話與最後回話，原文存進 prompts/archive/；--summarize 讓模型濃縮封存摘要',
          'events': '事件紀錄：每批起訖與成敗、收件、壓縮（--usage 看模型回報的 token 用量）',
          'history': '看壓縮前的原文：history --archive [SHA] [--grep 字]',
          'notes': '長期筆記：notes ls｜notes show KEY',
@@ -38,13 +38,19 @@ ACCESS_EPILOG = ('用法：\n'
                  '  aos-agent access net on|off [--target DIR]\n'
                  'PATH 照目前資料夾轉成絕對路徑寫進 access.json；工具在牢裡看到 /work/NAME。改完下一批工具生效，不用重 start。')
 TOOLS_ARGS = {'ls': (), 'add': ('NAME|DIR|FILE.json',), 'rm': ('NAME',), 'alias': ('NAME', 'NEW'),
-              'unalias': ('NEW',), 'new': ('NAME',), 'test': ('NAME|DIR',), 'wrap-py': ('FILE.py',)}
-TOOLS_DEV = ('new', 'test', 'wrap-py')   # 造工具的三個（spec/aos-agent/tools-dev.md）：不需要 agent 家
+              'unalias': ('NEW',), 'new': ('NAME',), 'test': ('NAME|DIR',), 'wrap-py': ('FILE.py',),
+              'wrap-cli': ('CMD',)}
+TOOLS_DEV = ('new', 'test', 'wrap-py', 'wrap-cli')   # 造工具的（spec/aos-agent/tools-dev.md、tools-llm.md）：不需要 agent 家
 # 選項 → 給哪幾個動作（其他動作給了＝用法錯 2）
-TOOLS_OPTS = (('--root', 'root', ('add',)), ('--force', 'force', ('add', 'new', 'wrap-py')),
+TOOLS_OPTS = (('--root', 'root', ('add',)), ('--force', 'force', ('add', 'new', 'wrap-py', 'wrap-cli')),
               ('--as', 'as_', ('add',)), ('--only', 'only', ('add', 'wrap-py')), ('--json', 'json', ('ls', 'test')),
-              ('--out', 'out', ('new', 'wrap-py')), ('--name', 'name', ('wrap-py',)), ('--args', 'tool_args', ('test',)),
-              ('--case', 'case', ('test',)), ('--no-jail', 'no_jail', ('test',)), ('--tool', 'tool', ('test',)))
+              ('--out', 'out', ('new', 'wrap-py', 'wrap-cli')), ('--name', 'name', ('wrap-py', 'wrap-cli')),
+              ('--args', 'tool_args', ('test',)),
+              ('--case', 'case', ('test',)), ('--no-jail', 'no_jail', ('test',)), ('--tool', 'tool', ('test',)),
+              # 第三波 W3-2（spec/aos-agent/tools-llm.md）
+              ('--describe-with-llm', 'describe_with_llm', ('wrap-py', 'wrap-cli')),
+              ('--model', 'model', ('wrap-py', 'wrap-cli')), ('--describe', 'describe', ('wrap-py',)),
+              ('--spec', 'spec', ('wrap-cli',)), ('--help-file', 'help_file', ('wrap-cli',)))
 TOOLS_EPILOG = ('用法：\n'
                 '  aos-agent tools ls      [--target DIR] [--json]\n'
                 '  aos-agent tools add     NAME|DIR|FILE.json [--target DIR] [--as NEW | --as OLD=NEW[,OLD=NEW…]]'
@@ -55,7 +61,11 @@ TOOLS_EPILOG = ('用法：\n'
                 '  aos-agent tools new     NAME [--out DIR] [--force]          # 生工具包骨架\n'
                 '  aos-agent tools test    NAME|DIR [--tool T] [--args JSON] [--case FILE] [--no-jail] [--json]\n'
                 '  aos-agent tools wrap-py FILE.py [--only f,g] [--name PACK] [--out DIR] [--force]\n'
-                'new／test／wrap-py 不需要 agent 家（不收 --target）；test 預設關在牢裡跑（有 bwrap 時）。\n'
+                '                          [--describe-with-llm [--model ALIAS] | --describe FILE]\n'
+                '  aos-agent tools wrap-cli CMD [--name PACK] [--out DIR] [--force] [--help-file F]\n'
+                '                          [--describe-with-llm [--model ALIAS] | --spec FILE]   # 把一支指令包成工具\n'
+                'new／test／wrap-py／wrap-cli 不需要 agent 家（不收 --target）；test 預設關在牢裡跑（有 bwrap 時）。\n'
+                '--describe-with-llm 只寫提案檔、不產包；人看過再用 --describe／--spec 產包（要 AOS_LLM_CONFIG）。\n'
                 'add 的對象：不含 / 的名字＝內建工具包；含 <資料夾名>.json 的資料夾＝工具包（複製進 tools/）；\n'
                 '其他資料夾或 .json 檔＝原地引用（不複製，info.tools 加一條）。改完下一批工具生效，不用重 start。')
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
@@ -128,6 +138,9 @@ def _parser():
             sub.add_argument('--max-tokens', metavar='X', help='縮完還超過 X token 就把最舊的輪整輪封存（預設 info.compact.max_tokens）')
             sub.add_argument('--dry-run', action='store_true', help='只印會變成怎樣，不寫任何檔')
             sub.add_argument('--prune-archive', metavar='天數', help='改做清理：刪超過這麼多天、記憶裡沒提到的 archive')
+            sub.add_argument('--summarize', action='store_true',
+                             help='封存摘要的中間那段再叫模型濃縮（要 AOS_LLM_CONFIG；過不了機械檢查就用機械摘要）')
+            sub.add_argument('--model', metavar='ALIAS', help='--summarize 用哪個模型代號（預設這個 agent 的 llm.model）')
             sub.add_argument('--json', action='store_true', help='印機器格式')
         if name == 'events':
             sub.add_argument('--last', metavar='N', default='20', help='最後幾則（預設 20；0＝全部）')
@@ -148,12 +161,18 @@ def _parser():
             sub.add_argument('--json', action='store_true', help='show：印機器格式')
         if name == 'tools':
             sub.formatter_class = argparse.RawDescriptionHelpFormatter
-            sub.usage = 'aos-agent tools {ls,add,rm,alias,unalias,new,test,wrap-py} [ARG…] [--target DIR] [選項]'
+            sub.usage = 'aos-agent tools {ls,add,rm,alias,unalias,new,test,wrap-py,wrap-cli} [ARG…] [--target DIR] [選項]'
             sub.epilog = TOOLS_EPILOG
             sub.add_argument('action', choices=list(TOOLS_ARGS), help='要做什麼（見下面用法）')
             sub.add_argument('args', nargs='*', metavar='ARG')
-            sub.add_argument('--out', metavar='DIR', help='new／wrap-py：生在哪個資料夾底下（省略＝目前資料夾）')
-            sub.add_argument('--name', metavar='PACK', help='wrap-py：工具包名字（省略＝檔名去掉 .py）')
+            sub.add_argument('--out', metavar='DIR', help='new／wrap-py／wrap-cli：生在哪個資料夾底下（省略＝目前資料夾）')
+            sub.add_argument('--name', metavar='PACK', help='wrap-py／wrap-cli：工具包名字（省略＝檔名去掉 .py／指令名）')
+            sub.add_argument('--help-file', metavar='F', help='wrap-cli：help 文字從這個檔讀（省略＝跑 CMD --help）')
+            sub.add_argument('--describe-with-llm', action='store_true',
+                             help='wrap-py：請模型補沒 docstring 的描述；wrap-cli：請模型讀 help 出參數表。只寫提案檔，不產包')
+            sub.add_argument('--model', metavar='ALIAS', help='--describe-with-llm 用 llm.json 的哪個代號（省略＝default）')
+            sub.add_argument('--describe', metavar='FILE', help='wrap-py：照人看過的描述提案檔補描述再產包')
+            sub.add_argument('--spec', metavar='FILE', help='wrap-cli：照人看過的參數表產包（不叫模型）')
             sub.add_argument('--args', dest='tool_args', metavar='JSON', help='test：只用這組 arguments 跑一次，原樣印輸出')
             sub.add_argument('--case', metavar='FILE', help='test：固定案例檔（省略＝包裡的 cases.json）')
             sub.add_argument('--no-jail', action='store_true', help='test：不關牢，直接在這台機器上跑')
@@ -230,7 +249,8 @@ def _tools_usage(ap, args):
         value = getattr(args, attr)
         if value is not None and value is not False and args.action not in actions:
             ap.error('%s 只給 tools %s' % (flag, '／'.join(actions)))
-        if isinstance(value, str) and not value and attr in ('out', 'name', 'tool_args', 'case', 'tool'):
+        if isinstance(value, str) and not value and attr in ('out', 'name', 'tool_args', 'case', 'tool', 'model',
+                                                             'describe', 'spec', 'help_file'):
             ap.error('%s 不可為空' % flag)
     if args.action in TOOLS_DEV:
         _tools_dev_usage(ap, args)
@@ -255,6 +275,10 @@ def _tools_dev_usage(ap, args):
     """new／test／wrap-py 多的用法驗：不收 --target；--args 要是 JSON、不跟 --case 一起給。"""
     if args.target is not None:
         ap.error('tools %s 不需要 agent 家，不收 --target' % args.action)
+    if args.model is not None and not args.describe_with_llm:
+        ap.error('--model 只跟 --describe-with-llm 一起給')
+    if args.describe_with_llm and (args.describe is not None or args.spec is not None):
+        ap.error('--describe-with-llm 只寫提案檔；照提案產包（--describe／--spec）是另一次、不叫模型')
     if args.tool_args is not None:
         if args.case is not None:
             ap.error('--args 只跑一次、不跑案例，不跟 --case 一起給')
@@ -273,7 +297,15 @@ def _tools(target, args, opts):
         if args.action == 'new':
             return dev.new(a[0], out=args.out, force=args.force)
         if args.action == 'wrap-py':
-            return dev.wrap_py(a[0], only=opts[1], name=args.name, out=args.out, force=args.force)
+            if args.describe_with_llm:
+                return dev.describe_with_llm(a[0], only=opts[1], name=args.name, out=args.out, force=args.force,
+                                             model=args.model)
+            return dev.wrap_py(a[0], only=opts[1], name=args.name, out=args.out, force=args.force,
+                               describe=args.describe)
+        if args.action == 'wrap-cli':
+            from aos_agent_tools_wrapcli import wrap_cli
+            return wrap_cli(a[0], name=args.name, out=args.out, force=args.force, help_file=args.help_file,
+                            describe_with_llm=args.describe_with_llm, model=args.model, spec=args.spec)
         return dev.test(a[0], args=args.tool_args, case_file=args.case, no_jail=args.no_jail,
                         as_json=args.json, tool=args.tool)
     if args.action == 'add':
@@ -298,13 +330,17 @@ def _memory_usage(ap, args):
     if cmd == 'compact':
         keep, limit = _count(ap, '--keep-rounds', args.keep_rounds), _count(ap, '--max-tokens', args.max_tokens, 100)
         days = _count(ap, '--prune-archive', args.prune_archive)
-        if days is not None and (keep is not None or limit is not None or args.dry_run or args.json):
+        if days is not None and (keep is not None or limit is not None or args.dry_run or args.json
+                                 or args.summarize or args.model is not None):
             ap.error('--prune-archive 不跟別的選項一起給')
+        if args.model is not None and not args.summarize:
+            ap.error('--model 只跟 --summarize 一起給')
         if days is not None:
             from aos_agent_compact import prune
             return {cmd: lambda t, a: prune(t, days)}
         from aos_agent_compact import compact
-        return {cmd: lambda t, a: compact(t, keep_rounds=keep, max_tokens=limit, dry_run=a.dry_run, as_json=a.json)}
+        return {cmd: lambda t, a: compact(t, keep_rounds=keep, max_tokens=limit, dry_run=a.dry_run, as_json=a.json,
+                                          summarize=a.summarize, model=a.model)}
     if cmd == 'events':
         last = _count(ap, '--last', args.last)
         from aos_agent_events import show

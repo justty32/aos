@@ -1,4 +1,4 @@
-← [aos-agent](README.md)｜[spec 總導航](../README.md)｜實作：[lib/aos_agent_tools_dev.py](../../lib/aos_agent_tools_dev.py)｜來源：[catalog E](../../notes/2026-09-24-tool-era/catalog.md)
+← [aos-agent](README.md)｜[spec](../README.md)｜實作：[tools_dev](../../lib/aos_agent_tools_dev.py)｜來源：[catalog E](../../notes/2026-09-24-tool-era/catalog.md)｜[續](tools-llm.md)
 
 # 1.8（續）`tools new`／`test`／`wrap-py`（09-24 tool-era 第二波）
 

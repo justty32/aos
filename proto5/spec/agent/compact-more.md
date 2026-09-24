@@ -25,3 +25,4 @@ tick 看到 `compact-req/*.json` 裡 `compact-req/done/` 還沒有同名收據�
 - **封存的輪模型只看得到摘要**：09-24 第一版封存只剩一行，真跑問「剛才 long.txt 幾行」模型答錯（40 答 21）；改成 8 KB 摘要＋「看不到了」那句之後的數字見報告。摘要以外的細節要回頭找原文：模型用 notes 包的 `recall`（二波，團隊成員在牢裡讀 `/work/mem`），人用 `history --archive --grep`。
 - 手改記憶與縮同時：縮拿了 tick 鎖，但手改的人不一定拿（[tick.md §2.1](../aos-agent/tick.md) 末那句同樣適用）；讀到的 bytes 與讀驗時不同就 `HistoryChanged`、不寫。
 - token 是粗估，比端點的真數字少 15～30%；上限要留餘裕。
+- 人跑的 `compact --summarize` 讓模型濃縮封存摘要（第三波 W3-2）：見 [compact-summarize.md](compact-summarize.md)；tick 自動與申請不叫模型。

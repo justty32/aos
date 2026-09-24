@@ -1,0 +1,11 @@
+usage: tarx [-cvxz] [-C dir] [-f archive] [-b blocksize] file ...
+       tarx -t [-v] [-f archive]
+
+  -c   create a new archive
+  -x   extract files
+  -v   verbose
+  -z   filter through gzip
+  -t   list contents
+  -C dir        change to dir before doing anything
+  -f archive    read or write the archive at this path
+  -b blocksize  block size in 512-byte records
