@@ -498,7 +498,7 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2265 條；repo 根目錄
 ```
 
-共 81 個測試檔、2265 條（第二波 A 隊在 main 12d67d4 之上實跑，約 175 秒，全綠；test_team_beat 偶發紅一條、單跑過，P 隊在修）；涵蓋底層執行、daemon／kernel 按池行為、
+共 81 個測試檔、2265 條（第二波 A 隊在 main eacfcc2 之上實跑，約 175 秒，全綠；test_team_beat 偶發紅一條、單跑過，P 隊在修）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
