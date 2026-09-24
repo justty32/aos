@@ -97,18 +97,17 @@ class AgentFixStorageTests(unittest.TestCase):
                 self.assertEqual(self.failure(code=1), 'aos-llm call exit 1，看 %s' % path)
 
     def test_llm_aos_pool_cpu_paths_use_batch_kernel(self):
-        self.put(self.k / 'info.json', {'cpus': {'l1': {'pool': 'llm'}, 'l2': {'pool': 'llm'}, 'x': {}}})
+        self.put(self.k / 'info.json', {'pools': {'llm': {'count': 2}, 'default': {'count': 1}}})
         self.env['AOS_KERNEL_HOME'] = str(self.root / 'otherK')
         fail = self.failure(kind='aos', code=125)
-        self.assertIn(str(self.k / 'cpus/l1/cpu.log'), fail)
-        self.assertIn(str(self.k / 'cpus/l2/cpu.log'), fail)
-        self.assertNotIn('/cpus/x/', fail)
+        self.assertIn(str(self.k / 'pools/llm/cpus/*/cpu.log'), fail)
+        self.assertNotIn('/pools/default/', fail)
         self.assertNotIn('/otherK/', fail)
 
     def test_llm_aos_cpu_fallback(self):
-        for raw in ('{}', '{', '[]', '{"cpus": []}'):
+        for raw in ('{}', '{', '[]', '{"pools": []}', '{"pools": {"default": {}}}'):
             (self.k / 'info.json').write_text(raw)
-            self.assertIn(str(self.k / 'cpus/*/cpu.log'), self.failure(kind='aos', code=125))
+            self.assertIn(str(self.k / 'pools/*/cpus/*/cpu.log'), self.failure(kind='aos', code=125))
 
     def test_tool_exec_failure_argv_and_cwd(self):
         for code in (126, 127):

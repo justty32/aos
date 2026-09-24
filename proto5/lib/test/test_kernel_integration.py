@@ -1,10 +1,18 @@
-"""kernel.md 的真 daemon＋exec cpu 整合：鏈、派工、回收、CLI 與交接。"""
+"""真 daemon＋exec cpu 整合：鏈、派工、回收、CLI 與交接（proto5-2：池表、宣告式 daemon、handoff）。
+
+proto5 版搬過來時改了什麼：
+- 孩子不再看 `D/state.json` 的 `children`，改看 daemon 的池摘要／kids 檔（_kernel_util 的 summary／kid）。
+- `boot --daemon-target` 拿掉（daemon 從 info 拿）；boot 拒絕時帳本不動（info 本來就有 daemon，proto5 的「不寫進 info」那句作廢）。
+- NameTaken：proto5 是別人 spawn 了同名孩子；proto5-2 是別人（CLI）先佔了 daemon 那邊叫 `kernel` 的池（protocol §1 第 3 步）。
+- 「boot 換一顆工作 cpu 當 kernel cpu」作廢：kernel 池固定 `kernel/0`，不能拿工作 cpu 升格（kernel-info §2）。
+  改成 proto5-2 對應的「boot 把 kernel 池搬到新 dpool」：舊池縮 0 收乾淨、新池拉起，工作池在跑的那件不受影響。
+- 停機不再往 cpu 放 stop-：`stops` 箱換成 `sends`，停完 daemon 那邊每池消失（handoff §3）。
+"""
 import json
 import os
 from pathlib import Path
 import signal
 import subprocess
-import time
 
 import aos_client
 import aos_home
@@ -26,30 +34,37 @@ class KernelIntegration(KernelCase):
         self.kernel_stop()
         self.daemon_stop()
         self.assertEqual(self.state()["phase"], "stopped")
-        self.assertEqual(self.dstate()["children"], {})
+        self.assertEqual(list((self.daemon / "pools").iterdir()), [])
 
     def test_repeat_boot_replaces_kernel_cpu_and_old_chain_tick_self_destructs(self):
         self.setup_running()
+        self.wait_running("kernel", 1)
+        self.wait_running("default", 1)
         old = self.state()
-        old_pid = self.dstate()["children"]["k"]["pid"]
-        inst = (self.home / "cpus" / "0" / "inst.json").read_bytes()
-        info = (self.home / "cpus" / "0" / "info.json").read_bytes()
+        old_pid = self.kid_pid("kernel", 0)
+        worker = self.kid_pid("default", 0)
+        cpu = self.cpu_home("default", 0)
+        inst = (cpu / "inst.json").read_bytes()
+        info = (cpu / "info.json").read_bytes()
         self.boot()
         new = self.state()
         self.assertNotEqual(new["chain"], old["chain"])
-        self.assertNotEqual(self.dstate()["children"]["k"]["pid"], old_pid)
-        self.assertEqual((self.home / "cpus" / "0" / "inst.json").read_bytes(), inst)
-        self.assertEqual((self.home / "cpus" / "0" / "info.json").read_bytes(), info)
+        self.wait_running("kernel", 1)
+        self.assertNotEqual(self.kid_pid("kernel", 0), old_pid)
+        self.assertEqual(self.kid_pid("default", 0), worker)             # 工作池重宣告同一份，不重拉
+        self.assertEqual((cpu / "inst.json").read_bytes(), inst)
+        self.assertEqual((cpu / "info.json").read_bytes(), info)
         self.good_cli("tick", self.home, "--chain", old["chain"], "--seq", "999")
         self.assertNotEqual(self.state()["last_seq"], 999)
-        self.assertFalse((self.home / "cpus" / "k" / "requests" / ("k-%s-1000.json" % old["chain"])).exists())
+        self.assertFalse((self.cpu_home("kernel", 0) / "requests" / ("k-%s-1000.json" % old["chain"])).exists())
         self.kernel_stop()
 
-    def test_llm_pool_and_envs_copy_to_new_home(self):
+    def test_llm_pool_envs_file_reaches_new_cpu(self):
         envs = {"POOL_TEST": "llm-only", "PATH": {"$env": "PATH"}}
-        self.setup_running(cpus={"k": {"pool": "kernel"}, "0": {}, "llm": {"pool": "llm", "envs": envs}})
-        inst = read_json(self.home / "cpus" / "llm" / "inst.json")
-        self.assertEqual(inst["envs"], envs)
+        self.setup_running({"default": {"count": 1}, "llm": {"count": 1, "envs": envs}})
+        self.assertEqual(read_json(self.home / "pools" / "llm" / "envs.json"), envs)   # 原樣寫、不解
+        inst = read_json(self.cpu_home("llm", 0) / "inst.json")
+        self.assertEqual(inst["envs"], {"$ref": "../../envs.json"})
         output = self.root / "pool-output.json"
         target = self.job("import json,os; print(json.dumps({'parent':os.getppid(),'env':os.getenv('POOL_TEST')}))",
                           stdout=str(output))
@@ -57,7 +72,7 @@ class KernelIntegration(KernelCase):
         self.assertEqual(response["result"]["code"], 0)
         answer = read_json(output)
         self.assertEqual(answer["env"], "llm-only")
-        self.assertEqual(answer["parent"], self.dstate()["children"]["llm"]["pid"])
+        self.assertEqual(answer["parent"], self.kid_pid("llm", 0))
         self.kernel_stop()
 
     def test_killed_busy_cpu_recovers_interrupted_once(self):
@@ -72,13 +87,13 @@ class KernelIntegration(KernelCase):
         wait_for(lambda: marker.exists() and marker.read_text())
         worker = int(marker.read_text())
         self.groups.add(worker)
-        cpu_pid = self.dstate()["children"]["0"]["pid"]
+        cpu_pid = self.kid_pid("default", 0)
         os.kill(cpu_pid, signal.SIGKILL)
         response = aos_client.wait_response(self.home, request, timeout_ms=6000, poll_ms=5)
         self.assertEqual(response["error"]["data"]["code"], "Interrupted")
         aos_client.ack(self.home, request)
         self.assertNotIn("interrupted", self.state()["procs"])
-        self.assertNotEqual(self.dstate()["children"]["0"]["pid"], cpu_pid)
+        wait_for(lambda: self.kid_pid("default", 0) not in (None, cpu_pid))
         os.killpg(worker, signal.SIGKILL)
         os.waitpid(worker, 0)
         self.groups.remove(worker)
@@ -116,14 +131,14 @@ class KernelIntegration(KernelCase):
                 self.assertGreaterEqual(ms, 0)
                 self.assertEqual(response, {"result": {"code": code, "kind": kind,
                                  "timed_out": False, "stopped": False, "ms": ms}})
+        self.assertTrue(all(e["cpu"] == "default/0" for e in events if e["event"] == "response"))
         self.kernel_stop()
 
     def test_info_reload_tick_timing_and_add_defaults_are_immutable(self):
         self.setup_running(interval_ms=500)
         target = self.job()
         self.add(target, "old")
-        self.info.update(tick_ms=120, interval_ms=0)
-        self.write(self.home / "info.json", self.info)
+        self.set_info(tick_ms=120, interval_ms=0)
         self.add(target, "new")
         self.assertEqual(self.state()["procs"]["old"]["interval_ms"], 500)
         self.assertEqual(self.state()["procs"]["new"]["interval_ms"], 0)
@@ -165,13 +180,14 @@ class KernelIntegration(KernelCase):
 
     def test_ls_is_read_only_and_cli_errors(self):
         self.setup_running()
-        self.add(self.job(), "visible")
+        self.add(self.job(), "visible", interval_ms=600000)
+        wait_for(lambda: self.state()["procs"]["visible"]["runs"] == 1)
         wait_for(lambda: not list((self.home / "requests").glob("*.json")))
-        before = []
-        result = self.good_cli("ls", self.home)
-        for text in ("kernel  running", "seq", "visible", "runs", "fails", "alive", "kcpu"):
+        result = self.good_cli("ls", self.home, "--procs")
+        for text in ("health", "default", "visible", "kernel  running", "seq", "runs", "fails", "alive", "kcpu"):
             self.assertIn(text, result.stdout)
-        self.assertEqual(list((self.home / "requests").glob("*.json")), before)
+        self.assertEqual(list((self.home / "requests").glob("*.json")), [])
+        self.assertEqual(list((self.daemon / "requests").glob("*.json")), [])
         error = self.cli("rm", self.home, "does-not-exist")
         self.assertEqual(error.returncode, 1)
         self.assertIn("NotFound", error.stderr)
@@ -180,24 +196,33 @@ class KernelIntegration(KernelCase):
 
     def test_boot_rejects_absent_daemon_using_lock_not_stale_pid(self):
         self.initialize()
-        self.write(self.daemon / "state.json", {"pid": os.getpid(), "children": {}})
-        result = self.cli("boot", self.home, "--daemon-target", self.daemon)
+        self.write(self.daemon / "state.json", {"pid": os.getpid(), "stopping": False, "current": None})
+        before = (self.home / "info.json").read_bytes()
+        result = self.cli("boot", self.home)
         self.assertEqual(result.returncode, 1)
+        self.assertIn("NotRunning", result.stderr)
         self.assertFalse((self.home / "state.json").exists())
-        self.assertNotIn("daemon", read_json(self.home / "info.json"))
+        self.assertEqual((self.home / "info.json").read_bytes(), before)
+        self.assertFalse((self.daemon / "requests").exists() and list((self.daemon / "requests").iterdir()))
 
     def test_boot_name_taken_leaves_existing_chain_and_info_intact(self):
+        """daemon 那邊叫 kernel 的池已被別人（CLI）佔了：boot 第 2 步收到 NameTaken、退 1，帳本不寫。"""
         self.initialize()
         self.start_daemon()
-        target = self.job("import sys; sys.stdin.readline(); sys.stdin.read()")
-        response = aos_client.call(self.daemon, "spawn", {"name": "k", "target": target}, timeout_ms=3000, poll_ms=5)
+        folder = self.root / "cli-pool"
+        folder.mkdir()
+        self.write(folder / "0.json", {"argv": [PY, "-c", "import sys; sys.stdin.read()"]})
+        response = aos_client.call(self.daemon, "scale", {"pool": "kernel", "owner": "cli", "count": 1,
+                                                          "target": str(folder / "{name}.json")},
+                                   timeout_ms=3000, poll_ms=5)
         self.assertIn("result", response)
         before = (self.home / "info.json").read_bytes()
-        result = self.cli("boot", self.home, "--daemon-target", self.daemon)
+        result = self.cli("boot", self.home)
         self.assertEqual(result.returncode, 1)
         self.assertIn("NameTaken", result.stderr)
         self.assertEqual((self.home / "info.json").read_bytes(), before)
         self.assertFalse((self.home / "state.json").exists())
+        self.assertEqual(read_json(self.daemon / "pools" / "kernel" / "pool.json")["owner"], "cli")
 
     def test_boot_preserves_inflight_once_pending_and_worker_cpu(self):
         self.setup_running()
@@ -209,22 +234,22 @@ class KernelIntegration(KernelCase):
                                                        "once": True, "timeout_ms": 5000})
         wait_for(lambda: marker.exists())
         state = self.state()
-        old_req = state["cpus"]["0"]["req"]
+        old_req = state["busy"]["default/0"]["req"]
         pending = state["procs"]["inflight"]["pending"]
-        old_pid = self.dstate()["children"]["0"]["pid"]
+        old_pid = self.kid_pid("default", 0)
         self.boot()
         state = self.state()
-        self.assertEqual(state["cpus"]["0"]["req"], old_req)
+        self.assertEqual(state["busy"]["default/0"]["req"], old_req)
         self.assertEqual(state["procs"]["inflight"]["pending"], pending)
-        self.assertEqual(self.dstate()["children"]["0"]["pid"], old_pid)
+        self.assertEqual(self.kid_pid("default", 0), old_pid)
         gate.touch()
         response = aos_client.wait_response(self.home, request, timeout_ms=5000, poll_ms=5)
         self.assertEqual(response["result"]["code"], 0)
         aos_client.ack(self.home, request)
-        wait_for(lambda: not (self.home / "cpus" / "0" / "responses" / old_req).exists())
+        wait_for(lambda: not (self.cpu_home("default", 0) / "responses" / old_req).exists())
         self.kernel_stop()
 
-    def test_stop_replies_to_queued_once_and_finishes_running_once_before_cpu_stop(self):
+    def test_stop_replies_to_queued_once_and_finishes_running_once_before_shrinking(self):
         self.setup_running()
         gate, marker = self.root / "release", self.root / "started"
         source = "import os,time; open(%r,'w').close()\nwhile not os.path.exists(%r): time.sleep(.005)" % (str(marker), str(gate))
@@ -238,61 +263,44 @@ class KernelIntegration(KernelCase):
         self.assertEqual(rejected["error"]["data"]["code"], "Stopping")
         self.assertEqual(self.state()["phase"], "stopping")
         self.assertFalse((self.home / "responses" / running).exists())
+        self.assertEqual(self.summary("default")["count"], 1)               # 忙的那池還沒縮
         aos_client.ack(self.home, queued)
         gate.touch()
         response = aos_client.wait_response(self.home, running, timeout_ms=5000, poll_ms=5)
         self.assertEqual(response["result"]["code"], 0)
         aos_client.ack(self.home, running)
         wait_for(lambda: self.state().get("phase") == "stopped")
-        wait_for(lambda: not self.dstate().get("children"))
-        for box in ("acks", "replies", "stops", "deletes"):
-            self.assertEqual(self.state()[box], [])
+        for pool in ("kernel", "default", "llm"):
+            self.wait_gone(pool)
+        for box in ("acks", "replies", "sends", "deletes"):
+            wait_for(lambda: self.state()[box] == [])
 
-    def test_boot_switches_kernel_cpu_and_collects_its_inflight_work(self):
-        config = read_json(self.daemon / "info.json")
-        config.update(stop_wait_ms=1000, kill_wait_ms=1000)
-        self.write(self.daemon / "info.json", config)
+    def test_boot_moves_kernel_pool_and_collects_inflight_work(self):
+        """boot 時 info 的 kernel 池換了 dpool：舊池縮 0、收乾淨，新池拉起；工作池在跑的那件照收（handoff §1 第 2 步）。"""
         self.setup_running()
         marker, gate = self.root / "started", self.root / "release"
         source = "import os,time; open(%r,'w').close()\nwhile not os.path.exists(%r): time.sleep(.005)" % (str(marker), str(gate))
-        request = aos_client.submit(self.home, "add", {"name": "promoted-once", "target": self.job(source),
+        request = aos_client.submit(self.home, "add", {"name": "held-once", "target": self.job(source),
                                                        "once": True, "timeout_ms": 5000})
         wait_for(lambda: marker.exists())
         old_state = self.state()
-        old_req = old_state["cpus"]["0"]["req"]
-        old_children = self.dstate()["children"]
-        old_k, old_zero = old_children["k"]["pid"], old_children["0"]["pid"]
-        self.info["cpus"]["k"]["pool"] = "default"
-        self.info["cpus"]["0"]["pool"] = "kernel"
-        self.write(self.home / "info.json", self.info)
-        boot = subprocess.Popen([PY, str(CLI / "aos-kernel"), "boot", "--target", str(self.home),
-                                 "--daemon-target", str(self.daemon)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                stdin=subprocess.DEVNULL, text=True)
-        def cleanup_boot():
-            if boot.poll() is None:
-                boot.kill()
-            boot.wait(timeout=4)
-            boot.stdout.close()
-            boot.stderr.close()
-        self.addCleanup(cleanup_boot)
-        wait_for(lambda: self.dstate().get("children", {}).get("0", {}).get("state") == "killing")
-        # 舊 kernel 已交接完才會停原工作 cpu；此刻放行，回音留在即將升格的家。
+        old_k = self.kid_pid("kernel", 0)
+        worker = self.kid_pid("default", 0)
+        self.set_pool("kernel", dpool="kernel-2")
+        self.boot()
+        state = self.state()
+        self.assertNotEqual(state["chain"], old_state["chain"])
+        self.assertEqual(state["pools"]["kernel"]["dpool"], "kernel-2")
+        self.assertIsNone(read_json(self.daemon / "pools" / "kernel" / "summary.json"))
+        self.wait_running("kernel", 1)                                     # dpool kernel-2
         with self.assertRaises(ProcessLookupError):
             os.kill(old_k, 0)
+        self.assertEqual(self.kid_pid("default", 0), worker)
         gate.touch()
-        stdout, stderr = boot.communicate(timeout=8)
-        self.assertEqual(boot.returncode, 0, stderr)
         response = aos_client.wait_response(self.home, request, timeout_ms=5000, poll_ms=5)
         self.assertEqual(response["result"]["code"], 0)
         aos_client.ack(self.home, request)
-        wait_for(lambda: self.state()["last_seq"] >= 2 and "0" not in self.state()["cpus"])
-        state = self.state()
-        self.assertEqual(state["kcpu"], "0")
-        self.assertNotEqual(state["chain"], old_state["chain"])
-        with self.assertRaises(ProcessLookupError):
-            os.kill(old_zero, 0)
-        self.assertNotIn("promoted-once", state["procs"])
-        wait_for(lambda: not (self.home / "cpus" / "0" / "responses" / old_req).exists())
-        result = self.call("add", {"name": "after-switch", "target": self.job(name="after"), "once": True})
+        self.assertNotIn("held-once", self.state()["procs"])
+        result = self.call("add", {"name": "after-move", "target": self.job(name="after"), "once": True})
         self.assertEqual(result["result"]["code"], 0)
         self.kernel_stop()
