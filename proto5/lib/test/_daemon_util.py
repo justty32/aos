@@ -114,3 +114,31 @@ finally:
     while children and time.monotonic()<until:
         reap(); time.sleep(.005)
 '''
+
+# 僅測試 driver 注入時鐘；每圈完成後公布快照，測試才推下一個期限。
+CLOCK_DRIVER = r'''
+import json, sys, time
+from pathlib import Path
+from types import SimpleNamespace
+sys.path.insert(0, sys.argv[1])
+import aos_daemon, aos_home
+home, clock, snapshot, signals = map(Path, sys.argv[2:])
+aos_daemon.time = SimpleNamespace(monotonic=lambda: json.loads(clock.read_text()),
+                                 time=time.time, sleep=time.sleep)
+step = aos_daemon.Daemon.step
+send = aos_daemon._signal_pid
+def signal_pid(pid, sig, group=False):
+    with signals.open('a') as stream:
+        stream.write(json.dumps([pid, int(sig), group, aos_daemon.time.monotonic()])+'\n')
+    send(pid, sig, group)
+aos_daemon._signal_pid = signal_pid
+def observed_step(owner):
+    now = aos_daemon.time.monotonic()
+    result = step(owner)
+    aos_home.write_json(snapshot, {'clock': now, 'stages': {name: [stage, None if deadline == float('inf') else deadline]
+                                             for name, (stage, deadline) in owner.stages.items()},
+                                  'restarts': owner.restarts, 'children': owner.children})
+    return result
+aos_daemon.Daemon.step = observed_step
+sys.exit(aos_daemon.run(home))
+'''

@@ -110,12 +110,12 @@ def spawn_target(xxx, dir_target=DEFAULT_DIR_TARGET):
     if os.path.isdir(p):
         target, base = os.path.join(p, dir_target), p
         if not os.path.isfile(target):
-            raise SpawnError("Usage", "資料夾 %s 裡沒有 %s" % (p, dir_target))
+            raise SpawnError("SpawnFailed", "資料夾 %s 裡沒有 %s" % (p, dir_target))
     elif p.endswith(".json"):
         target, base = p, os.path.dirname(p)
     else:
         if not os.path.exists(p):
-            raise SpawnError("Usage", "找不到 %s" % xxx)
+            raise SpawnError("SpawnFailed", "找不到 %s" % xxx)
         return _spawn_control([p], os.path.dirname(p), dict(os.environ), None,
                               None, None, 0, "")
     inst = _load_control_inst(target, base)

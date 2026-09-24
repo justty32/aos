@@ -38,10 +38,15 @@ class CpuCase(Base):
             except ProcessLookupError:
                 pass
 
-    def start(self, pipe=True, go=True, ready=True):
+    def start(self, pipe=True, go=True, ready=True, bootstrap=None):
         log = open(os.path.join(self.d, "cpu.log"), "ab")
         self.addCleanup(log.close)
-        p = subprocess.Popen([PY, CPU, self.d], stdin=subprocess.PIPE if pipe else subprocess.DEVNULL,
+        command = [PY, CPU, self.d]
+        if bootstrap is not None:
+            setup = "import sys, os, time\nfrom pathlib import Path\n" + \
+                    "sys.path.insert(0, %r)\nimport aos_exec, aos_exec_cpu, aos_home\n" % LIB
+            command = [PY, "-c", setup + bootstrap + "\nsys.exit(aos_exec_cpu.main([%r]))" % self.d]
+        p = subprocess.Popen(command, stdin=subprocess.PIPE if pipe else subprocess.DEVNULL,
                              stdout=subprocess.PIPE, stderr=log, start_new_session=True)
         self.p = p
         def cleanup():
@@ -203,9 +208,19 @@ class TestExecCpu(CpuCase):
         self.assertIn("inst-error", self.read("cpu.log"))
 
     def test_timeout_true_even_child_exits_zero_on_term(self):
-        self.start()
-        source = "import signal,time,sys; signal.signal(signal.SIGTERM,lambda *a:sys.exit(0)); time.sleep(30)"
+        # Freeze only exec's monotonic clock until the handler is installed.
+        bootstrap = """
+from types import SimpleNamespace
+clock = Path(%r)
+aos_exec.time = SimpleNamespace(monotonic=lambda: float(clock.read_text()), sleep=time.sleep)
+""" % os.path.join(self.d, "clock")
+        self.write("clock", "10")
+        self.start(bootstrap=bootstrap)
+        source = "import signal,time,sys; signal.signal(signal.SIGTERM,lambda *a:(open('term-sent','w').close(),sys.exit(0))); open('ready','w').close(); time.sleep(30)"
         self.post(params={"target": self.job(source), "timeout_ms": 150})
+        self.wait(lambda: self.exists("ready"))
+        aos_home.write_json(os.path.join(self.d, "clock"), 10.151)
+        self.wait(lambda: self.exists("term-sent"))
         result = self.response()["result"]
         self.assertTrue(result["timed_out"])
         self.assertFalse(result["stopped"])
@@ -230,21 +245,37 @@ class TestExecCpu(CpuCase):
         self.assertTrue(self.exists("requests/z-next.json"))
 
     def test_two_signals_force_stop(self):
-        self.start()
-        self.sleeping()
-        def switches():
-            with open("/proc/%d/status" % self.p.pid) as source:
-                return int(next(line.split(":")[1] for line in source if line.startswith("voluntary_ctxt_switches:")))
-        before = switches()
+        self.start(bootstrap=self.signal_observer())
+        source = """
+import os, signal, time
+if os.fork() == 0:
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    open('descendant.pid', 'w').write(str(os.getpid()))
+    while True: time.sleep(.01)
+open('worker.pid', 'w').write(str(os.getpid()))
+while True: time.sleep(.01)
+"""
+        self.post(params={"target": self.job(source)})
+        self.wait(lambda: self.exists("worker.pid") and self.read("worker.pid"))
+        self.workers.append(int(self.read("worker.pid")))
+        self.wait(lambda: self.exists("descendant.pid") and self.read("descendant.pid"))
+        descendant = int(self.read("descendant.pid"))
         self.p.send_signal(signal.SIGTERM)
-        # 真正經過幾轮等待／poll，讓第一次訊號被主人處理，再送第二次。
-        self.wait(lambda: switches() >= before + 3)
+        self.wait(lambda: self.exists("first-signal"))
         self.p.send_signal(signal.SIGINT)
         result = self.response()["result"]
         self.assertTrue(result["stopped"])
         self.assertFalse(result["timed_out"])
         self.assertEqual(result["code"], 143)
-        self.assertEqual(self.p.wait(timeout=4), 0)
+        self.assertEqual(self.p.wait(timeout=6), 0)
+        def dead():
+            try:
+                os.kill(descendant, 0)
+                with open("/proc/%d/stat" % descendant) as stream:
+                    return stream.read().rsplit(")", 1)[1].split()[0] == "Z"
+            except (ProcessLookupError, FileNotFoundError):
+                return True
+        self.wait(dead)  # Before cleanup_workers can mask a missing group KILL.
 
     def test_killed_cpu_restart_publishes_interrupted(self):
         first = self.start()
@@ -358,3 +389,140 @@ class TestExecCpu(CpuCase):
         self.assertTrue(control.stopping)
         control._signal(signal.SIGTERM, None)
         self.assertTrue(control.poll())
+
+    def test_bad_go_id_does_not_touch_home(self):
+        os.unlink(os.path.join(self.d, "info.json"))
+        self.start(go=False, ready=False)
+        self.p.stdin.write(b'{"jsonrpc":"2.0","method":"go","id":{}}\n')
+        self.p.stdin.close()
+        self.assertEqual(self.p.wait(timeout=6), 0)
+        self.assertFalse(self.exists("requests"))
+        self.assertFalse(self.exists("state.json"))
+        self.assertIn("aos-cpu: BadControl:", self.read("cpu.log"))
+
+    def bad_stop(self, ident):
+        self.start()
+        self.p.stdin.write((json.dumps({"jsonrpc": "2.0", "method": "stop", "id": ident}) + "\n").encode())
+        self.p.stdin.flush()
+        self.wait(lambda: "BadControl" in self.read("cpu.log"))
+        self.post(params={"target": self.job()})
+        self.assertEqual(self.response()["result"]["code"], 0)
+        self.stop()
+
+    def test_stop_with_valid_id_is_ignored(self):
+        self.bad_stop("request-id")
+
+    def test_stop_with_object_id_is_ignored(self):
+        self.bad_stop({})
+
+    def test_control_envelope_validation(self):
+        for value in ([], {}, {"jsonrpc": "1.0", "method": "go"},
+                      {"jsonrpc": "2.0", "method": 1},
+                      {"jsonrpc": "2.0", "method": "go", "id": True}):
+            with self.subTest(value=value):
+                self.assertIsNotNone(aos_exec_cpu._control_error(value))
+        for ident in ("id", 1, 1.5, None):
+            self.assertIsNone(aos_exec_cpu._control_error({"jsonrpc": "2.0", "method": "go", "id": ident}))
+        self.assertIsNotNone(aos_exec_cpu._control_error({"jsonrpc": "2.0", "method": "stop", "id": None}))
+
+    def signal_observer(self):
+        return """
+original_poll = aos_exec_cpu.Control.poll
+marker = Path(%r)
+def observed_poll(control, process=None):
+    result = original_poll(control, process)
+    if control.stopping and not control.force:
+        marker.touch()
+    if control.force:
+        marker.with_name("second-signal").touch()
+    return result
+aos_exec_cpu.Control.poll = observed_poll
+""" % os.path.join(self.d, "first-signal")
+
+    def test_exit_before_second_signal_keeps_result(self):
+        bootstrap = self.signal_observer() + """
+observed = aos_exec_cpu.Control.poll
+home = Path(%r)
+def gated_poll(control, process=None):
+    result = observed(control, process)
+    if control.stopping and not control.force and process is not None:
+        process.wait(timeout=6)
+        (home / 'job-exited').touch()
+        until = time.monotonic() + 6
+        while not (home / 'release-result').exists():
+            if time.monotonic() >= until: raise RuntimeError('result gate timed out')
+            time.sleep(.005)
+        return observed(control, process)
+    return result
+aos_exec_cpu.Control.poll = gated_poll
+""" % self.d
+        self.start(bootstrap=bootstrap)
+        source = "import os,time; open('ready','w').close()\nwhile not os.path.exists('release-job'): time.sleep(.005)\nraise SystemExit(7)"
+        self.post(params={"target": self.job(source)})
+        self.wait(lambda: self.exists("ready"))
+        self.p.send_signal(signal.SIGTERM)
+        self.wait(lambda: self.exists("first-signal"))
+        self.write("release-job", "")
+        self.wait(lambda: self.exists("job-exited"))
+        self.assertFalse(self.exists("responses/one.json"))
+        self.p.send_signal(signal.SIGINT)
+        self.write("release-result", "")
+        result = self.response()["result"]
+        self.assertTrue(self.exists("second-signal"))
+        self.assertEqual(result["code"], 7)
+        self.assertFalse(result["stopped"])
+        self.assertFalse(result["timed_out"])
+        self.assertEqual(self.p.wait(timeout=6), 0)
+
+    def test_completion_and_reconciliation_crash_windows_do_not_rerun(self):
+        # Real crashes in both normal completion and the subsequent reconciliation.
+        for after_unlink in (False, True):
+            with self.subTest(after_unlink=after_unlink):
+                name = "after" if after_unlink else "before"
+                aos_home.ensure_queue(self.d)
+                effect = name + ".effect"
+                self.post(name, params={"target": self.job("open(%r,'a').write('once\\n')" % effect)})
+                inject = """
+request = Path(%r)
+original_unlink = os.unlink
+def crash_unlink(path, *args, **kwargs):
+    if Path(path) == request:
+        if %r: original_unlink(path, *args, **kwargs)
+        os._exit(73)
+    return original_unlink(path, *args, **kwargs)
+os.unlink = crash_unlink
+""" % (os.path.join(self.d, "requests", name + ".json"), after_unlink)
+                self.start(ready=False, bootstrap=inject)
+                self.assertEqual(self.p.wait(timeout=6), 73)
+                saved = self.read("responses/" + name + ".json")
+                self.assertEqual(self.state()["current"]["name"], name + ".json")
+                self.assertEqual(self.exists("requests/" + name + ".json"), not after_unlink)
+                # Crash recovery itself: before request deletion, or before clearing current.
+                if after_unlink:
+                    inject = """
+def crash_state(home, state):
+    os._exit(74)
+aos_home.write_state = crash_state
+"""
+                self.start(ready=False, bootstrap=inject)
+                self.assertEqual(self.p.wait(timeout=6), 74 if after_unlink else 73)
+                self.start()
+                self.assertEqual(self.response(name), json.loads(saved))
+                self.assertIsNone(self.state()["current"])
+                self.assertEqual(self.read(effect), "once\n")
+                self.stop()
+
+    def test_legal_go_ids_and_bad_lines(self):
+        for ident in ("id", 1, 1.5, None):
+            with self.subTest(ident=ident):
+                self.start(go=False, ready=False)
+                bad = [b'[]', b'{', b'{"jsonrpc":"2.0","method":1}',
+                       b'{"jsonrpc":"2.0","method":"go","id":true}',
+                       b'{"jsonrpc":"2.0","method":"go","id":NaN}']
+                before = self.read("cpu.log").count("BadControl")
+                self.p.stdin.write(b"\n".join(bad) + b"\n" +
+                                   (json.dumps({"jsonrpc": "2.0", "method": "go", "id": ident}) + "\n").encode())
+                self.p.stdin.flush()
+                self.wait(lambda: self.exists("state.json") and self.state()["pid"] == self.p.pid)
+                self.stop()
+                self.assertEqual(self.read("cpu.log").count("BadControl") - before, len(bad))

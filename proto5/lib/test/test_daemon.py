@@ -17,7 +17,7 @@ import aos_daemon
 CLI = Path(__file__).resolve().parents[2] / "cli"
 PY = sys.executable
 
-from _daemon_util import CHILD, wait_for, read_json
+from _daemon_util import CHILD, CLOCK_DRIVER, wait_for, read_json
 
 
 class DaemonTest(unittest.TestCase):
@@ -47,10 +47,16 @@ class DaemonTest(unittest.TestCase):
             except ProcessLookupError:
                 pass
 
-    def start(self, ready=True):
+    def start(self, ready=True, controlled=False):
         log = open(self.root / "daemon.log", "ab")
         self.addCleanup(log.close)
-        proc = subprocess.Popen([PY, str(CLI / "aos-daemon"), "--home", str(self.home)],
+        command = [PY, str(CLI / "aos-daemon"), "--home", str(self.home)]
+        if controlled:
+            self.write(self.root / "clock.json", 10)
+            command = [PY, "-c", CLOCK_DRIVER, str(CLI.parent / "lib"), str(self.home),
+                       str(self.root / "clock.json"), str(self.root / "clock-state.json"),
+                       str(self.root / "signals.jsonl")]
+        proc = subprocess.Popen(command,
                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                 stderr=log, start_new_session=True)
         self.proc = proc
@@ -68,6 +74,21 @@ class DaemonTest(unittest.TestCase):
             wait_for(lambda: self.state().get("pid") == proc.pid)
         return proc
 
+    def clock_state(self):
+        return read_json(self.root / "clock-state.json", {})
+
+    def advance(self, value):
+        self.write(self.root / "clock.json", value)
+        return wait_for(lambda: self.clock_state().get("clock") == value and self.clock_state())
+
+    def stage(self, name="child", stage="stop"):
+        return wait_for(lambda: self.clock_state().get("stages", {}).get(name, [None])[0] == stage
+                        and self.clock_state()["stages"][name])
+
+    def signals(self):
+        path = self.root / "signals.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+
     def state(self):
         return read_json(self.home / "state.json", {})
 
@@ -81,7 +102,7 @@ class DaemonTest(unittest.TestCase):
         return str(target), ready
 
     def call(self, method, params=None, **kwargs):
-        return aos_client.call(self.home, method, params, timeout_ms=4000, poll_ms=5, **kwargs)
+        return aos_client.call(self.home, method, params, timeout_ms=6000, poll_ms=5, **kwargs)
 
     def spawn(self, target, name="child", restart=False):
         response = self.call("spawn", {"name": name, "target": target, "restart": restart})
@@ -128,18 +149,21 @@ class DaemonTest(unittest.TestCase):
     def test_nonzero_restart_and_target_reread(self):
         self.info["restart_delay_ms"] = 200
         self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
         target, ready = self.target("exit7")
         original = self.spawn(target, restart=True)
         wait_for(lambda: self.children().get("child", {}).get("state") == "dead")
         dead = self.children()["child"]
         self.assertEqual(dead["last_exit"], 7)
+        wait_for(lambda: self.clock_state().get("restarts", {}).get("child"))
+        self.advance(10.199)
+        self.assertEqual(self.children()["child"]["state"], "dead")
         self.target("normal")
+        self.advance(10.201)
         new = wait_for(lambda: self.children().get("child", {}).get("pid") != original and
                        self.children().get("child", {}).get("state") == "running" and self.children()["child"])
         self.groups.add(new["pid"])
         self.assertEqual(new["exits"], 1)
-        self.assertGreaterEqual(new["since"] - dead["since"], .18)
         self.stop()
 
     def test_zero_exit_not_restarted(self):
@@ -163,7 +187,7 @@ class DaemonTest(unittest.TestCase):
     def test_kill_dead_cancels_restart(self):
         self.info["restart_delay_ms"] = 1000
         self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
         target, _ = self.target("exit3")
         pid = self.spawn(target, restart=True)
         wait_for(lambda: self.children().get("child", {}).get("state") == "dead")
@@ -172,28 +196,29 @@ class DaemonTest(unittest.TestCase):
         self.stop()
 
     def test_spawn_dead_restarts_immediately(self):
-        self.info["restart_delay_ms"] = 1000
-        self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
         target, _ = self.target("exit3")
         first = self.spawn(target, restart=True)
-        wait_for(lambda: self.children().get("child", {}).get("state") == "dead")
+        wait_for(lambda: self.clock_state().get("restarts", {}).get("child"))
         self.target("normal")
-        before = time.monotonic()
         self.assertNotEqual(self.spawn(target, restart=True), first)
-        self.assertLess(time.monotonic() - before, .8)
+        self.assertEqual(read_json(self.root / "clock.json"), 10)
         self.stop()
 
     def test_spawn_killing_rejected_and_kill_idempotent(self):
-        self.info.update(stop_wait_ms=200, kill_wait_ms=100)
-        self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
         target, ready = self.target("kill")
         pid = self.spawn(target)
-        wait_for(lambda: ready.exists())
+        wait_for(ready.exists)
         self.call("kill", {"name": "child"})
+        deadline = self.stage()
         self.assertEqual(self.call("spawn", {"name": "child", "target": target})["error"]["data"]["code"], "Killing")
         self.assertEqual(self.call("kill", {"name": "child"})["result"]["pid"], pid)
+        self.advance(10.01)
+        self.assertEqual(self.stage(), deadline)
+        self.advance(11)
+        self.stage(stage="term")
+        self.advance(12)
         wait_for(lambda: not self.children())
         self.stop()
 
@@ -206,39 +231,54 @@ class DaemonTest(unittest.TestCase):
         self.assertFalse(Path(str(ready) + ".term").exists())
 
     def test_stop_term_stage(self):
-        self.start()
+        self.start(controlled=True)
         target, ready = self.target("term")
-        self.spawn(target)
-        wait_for(lambda: ready.exists())
-        before = time.monotonic()
-        self.stop()
-        sent = float(Path(str(ready) + ".term").read_text())
-        self.assertGreaterEqual(sent - before, .06)
+        pid = self.spawn(target)
+        wait_for(ready.exists)
+        aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
+        self.stage()
+        self.advance(10.079)
+        self.assertEqual(self.signals(), [])
+        self.advance(10.081)
+        self.assertEqual(self.proc.wait(timeout=6), 0)
+        self.assertEqual(self.signals(), [[pid, signal.SIGTERM, False, 10.081]])
 
     def test_stop_kill_stage_and_children_parallel(self):
-        self.info.update(stop_wait_ms=160, kill_wait_ms=160)
-        self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
+        pids = set()
         for i in range(4):
             target, ready = self.target("kill", "child%d" % i)
-            self.spawn(target, "child%d" % i)
-            wait_for(lambda: ready.exists())
-        before = time.monotonic()
-        self.stop()
-        elapsed = time.monotonic() - before
-        self.assertGreaterEqual(elapsed, .28)
-        self.assertLess(elapsed, .9)  # 若逐顆等待會至少 1.28 秒
+            pids.add(self.spawn(target, "child%d" % i))
+            wait_for(ready.exists)
+        aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
+        for i in range(4):
+            self.assertEqual(self.stage("child%d" % i), ["stop", 10.08])
+        self.advance(10.079)
+        self.assertEqual(self.signals(), [])
+        self.advance(10.081)
+        for i in range(4):
+            self.assertEqual(self.stage("child%d" % i, "term"), ["term", 10.161])
+        self.assertEqual({tuple(row[:3]) for row in self.signals()},
+                         {(pid, signal.SIGTERM, False) for pid in pids})
+        self.advance(10.162)
+        self.assertEqual(self.proc.wait(timeout=6), 0)
+        self.assertEqual({tuple(row[:3]) for row in self.signals()[4:]},
+                         {(pid, signal.SIGKILL, True) for pid in pids})
+        self.assertEqual(self.children(), {})
 
     def test_epipe_skips_stop_wait(self):
         self.info.update(stop_wait_ms=1500, kill_wait_ms=60)
         self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
         target, ready = self.target("epipe")
-        self.spawn(target)
-        wait_for(lambda: ready.exists())
-        before = time.monotonic()
-        self.stop()
-        self.assertLess(time.monotonic() - before, 1)
+        pid = self.spawn(target)
+        wait_for(ready.exists)
+        aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
+        self.assertEqual(self.stage(stage="term"), ["term", 10.06])
+        self.assertEqual(self.signals(), [[pid, signal.SIGTERM, False, 10]])
+        self.advance(10.061)
+        self.assertEqual(self.proc.wait(timeout=6), 0)
+        self.assertEqual(self.signals()[-1], [pid, signal.SIGKILL, True, 10.061])
 
     def test_lock_refuses_second_daemon_and_shared_probe(self):
         self.assertFalse(aos_daemon.is_alive(self.home))
@@ -350,18 +390,19 @@ class DaemonTest(unittest.TestCase):
         self.assertEqual(list(cpu.iterdir()), [])
 
     def test_stopping_rejects_spawn_and_kill_remains_available(self):
-        self.info.update(stop_wait_ms=300, kill_wait_ms=100)
-        self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
         target, ready = self.target("kill")
         self.spawn(target)
-        wait_for(lambda: ready.exists())
+        wait_for(ready.exists)
         aos_home.post_request(self.home, aos_client.new_name("stop"), {"jsonrpc": "2.0", "method": "stop"})
-        wait_for(lambda: self.state().get("stopping"))
+        self.stage()
         error = self.call("spawn", {"name": "new", "target": target})["error"]
         self.assertEqual(error["data"]["code"], "Stopping")
         self.assertIn("result", self.call("kill", {"name": "child"}))
-        self.assertEqual(self.proc.wait(timeout=4), 0)
+        self.advance(11)
+        self.stage(stage="term")
+        self.advance(12)
+        self.assertEqual(self.proc.wait(timeout=6), 0)
 
     def test_stop_deadline_is_per_child_and_repeat_kill_does_not_reset(self):
         owner = aos_daemon.Daemon(self.home, self.info)
@@ -407,14 +448,17 @@ class DaemonTest(unittest.TestCase):
     def test_restart_target_missing_then_restored_retries(self):
         self.info["restart_delay_ms"] = 150
         self.write(self.home / "info.json", self.info)
-        self.start()
+        self.start(controlled=True)
         target, _ = self.target("exit9")
         old = self.spawn(target, restart=True)
         wait_for(lambda: self.children().get("child", {}).get("state") == "dead")
+        wait_for(lambda: self.clock_state().get("restarts", {}).get("child"))
         Path(target).unlink()
+        self.advance(10.151)
         wait_for(lambda: "SpawnFailed" in (self.root / "daemon.log").read_text())
         self.assertEqual(self.children()["child"]["state"], "dead")
         self.target("normal")
+        self.advance(10.302)
         new = wait_for(lambda: self.children().get("child", {}).get("pid") != old and
                        self.children().get("child", {}).get("state") == "running" and self.children()["child"])
         self.groups.add(new["pid"])
@@ -441,3 +485,18 @@ class DaemonTest(unittest.TestCase):
             self.assertEqual(aos_daemon.daemon_home(str(self.root / "explicit")), str(self.root / "explicit"))
         with mock.patch.dict(os.environ, {"HOME": str(self.root)}, clear=True):
             self.assertEqual(aos_daemon.daemon_home(), str(self.root / ".aos-daemon"))
+
+    def test_missing_plain_target_is_spawn_failed(self):
+        self.start()
+        error = self.call("spawn", {"name": "missing", "target": str(self.root / "absent")})["error"]
+        self.assertEqual((error["code"], error["data"]["code"]), (-32000, "SpawnFailed"))
+        self.assertEqual(self.children(), {})
+        self.stop()
+
+    def test_directory_missing_dir_target_is_spawn_failed(self):
+        self.start()
+        error = self.call("spawn", {"name": "missing", "target": str(self.root),
+                                    "dir_target": "absent.json"})["error"]
+        self.assertEqual((error["code"], error["data"]["code"]), (-32000, "SpawnFailed"))
+        self.assertEqual(self.children(), {})
+        self.stop()

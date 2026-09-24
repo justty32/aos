@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 import time
+from unittest import mock
 
 import aos_exec
 from _util import Base
@@ -155,9 +156,9 @@ class SpawnTargetTests(Base):
         self.bad(os.path.join(self.d, "missing.json"), "SpawnFailed")
         self.bad(self.write("bad.json", "{"), "SpawnFailed")
 
-    def test_usage_target(self):
-        self.bad(os.path.join(self.d, "missing"), "Usage")
-        self.bad(self.d, "Usage")
+    def test_missing_target_is_spawn_failed(self):
+        self.bad(os.path.join(self.d, "missing"), "SpawnFailed")
+        self.bad(self.d, "SpawnFailed")
 
     def test_missing_program_no_exit_written(self):
         target = self.inst({"argv": ["/no-such-daemon-child"], "exit": "status"}, "inst.json")
@@ -177,3 +178,8 @@ class SpawnTargetTests(Base):
         self.wait(lambda: first.process.poll() is not None)
         self.assertIsNone(second.process.poll())
         self.assertEqual(first.finish(), (0, "child"))
+
+    def test_unreadable_inst_is_spawn_failed(self):
+        target = self.job("pass")
+        with mock.patch("builtins.open", side_effect=PermissionError("unreadable target")):
+            self.bad(target, "SpawnFailed")

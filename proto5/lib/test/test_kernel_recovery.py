@@ -1,11 +1,17 @@
 """kernel.md §2、§3、§6 的崩潰窗口：直接準備持久帳本／檔案，再跑一格補齊。"""
 import copy
+import json
+import os
+import signal
+
 from pathlib import Path
 from unittest.mock import patch
 
+import aos_client
 import aos_home as home
 import aos_kernel as kernel
 from test_kernel import CLI, KernelCase
+from _kernel_util import KernelCase as LiveKernelCase, wait_for
 
 
 class Crash(Exception):
@@ -222,3 +228,128 @@ class RecoveryTests(KernelCase):
         for key in ("cpus", "queue", "procs", "acks", "replies", "deletes"):
             self.assertEqual(after[key], before[key])
         self.assertEqual(old_inst.read_bytes(), old_bytes)
+
+    def test_empty_ticks_do_not_log_but_dispatch_does(self):
+        for seq in range(7, 11):
+            self.load_engine(seq)
+            self.step()
+        log = self.k / 'kernel.log'
+        self.assertFalse(log.exists())
+        self.proc()
+        self.step()
+        rows = [json.loads(line) for line in log.read_text().splitlines()]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['events'][0]['event'], 'dispatch')
+
+    def test_reloaded_tick_ms_controls_sleep(self):
+        self.raw['tick_ms'] = 120
+        home.write_json(self.k / 'info.json', self.raw)
+        with patch.object(kernel.time, 'sleep') as sleep, patch.object(kernel.Kernel, 'ensure_cpus'):
+            kernel.tick(self.k, self.state['chain'], 7)
+        sleep.assert_called_once_with(.12)
+
+    def test_init_recovers_partial_home_without_overwriting(self):
+        fresh = self.root / 'partial'
+        fresh.mkdir()
+        (fresh / 'requests').mkdir()
+        sentinel = fresh / 'requests' / 'keep.txt'
+        sentinel.write_text('keep')
+        kernel.init(fresh)
+        self.assertEqual(kernel.load_info(fresh)['cpus']['k']['pool'], 'kernel')
+        for name in ('requests', 'responses', 'cpus'):
+            self.assertTrue((fresh / name).is_dir())
+        self.assertEqual(sentinel.read_text(), 'keep')
+        with self.assertRaises(kernel.KernelError) as caught:
+            kernel.init(fresh)
+        self.assertEqual(caught.exception.code, 'AlreadyExists')
+
+
+
+class LiveRecoveryTests(LiveKernelCase):
+    def recover_creation(self, failed_file):
+        self.initialize(cpus={'k': {'pool': 'kernel'}, '0': {}})
+        self.start_daemon()
+        original = home.write_json
+        cpu = self.home / 'cpus' / '0'
+        def fail(path, obj):
+            if Path(path) == cpu / failed_file:
+                raise Crash()
+            return original(path, obj)
+        with patch.object(home, 'write_json', side_effect=fail):
+            with self.assertRaises(Crash):
+                kernel.boot(self.home, self.daemon)
+        self.assertTrue(cpu.is_dir())
+        self.assertEqual((cpu / 'info.json').exists(), failed_file == 'inst.json')
+        self.assertFalse((cpu / 'inst.json').exists())
+        before = (cpu / 'info.json').read_bytes() if failed_file == 'inst.json' else None
+        self.boot()
+        if before is not None:
+            self.assertEqual((cpu / 'info.json').read_bytes(), before)
+        for name in ('requests', 'responses'):
+            self.assertTrue((cpu / name).is_dir())
+        self.assertTrue((cpu / 'inst.json').is_file())
+        self.assertTrue(self.dstate()['children']['0']['alive'])
+        response = self.call('add', {'target': self.job(), 'once': True})
+        self.assertEqual(response['result']['code'], 0)
+        self.kernel_stop()
+
+    def test_boot_recovers_crash_after_cpu_mkdir(self):
+        self.recover_creation('info.json')
+
+    def test_boot_recovers_crash_after_cpu_info(self):
+        self.recover_creation('inst.json')
+
+    def test_boot_preserves_complete_cpu_custom_inst_and_info(self):
+        self.initialize()
+        info = kernel.load_info(self.home)
+        engine = kernel.Kernel(self.home, info, kernel.new_state(info, 'prepare', 'k', kernel.CLI), 0)
+        engine._create_cpu('0', {})
+        cpu = self.home / 'cpus' / '0'
+        inst = home.read_json(cpu / 'inst.json')
+        inst['envs'] = {'CUSTOM': 'human-edit'}
+        self.write(cpu / 'inst.json', inst)
+        settings = home.read_json(cpu / 'info.json')
+        settings['poll_ms'] = 7
+        self.write(cpu / 'info.json', settings)
+        before = {name: (cpu / name).read_bytes() for name in ('info.json', 'inst.json')}
+        self.start_daemon()
+        self.boot()
+        self.boot()
+        self.assertEqual({name: (cpu / name).read_bytes() for name in before}, before)
+        self.kernel_stop()
+
+    def test_known_boundary_b10_shipped_stop_survives_boot_and_stalls_chain(self):
+        """已知邊界 B-10：boot 清 stops 帳本，已出貨的舊 stop 仍使新 kcpu 退出。"""
+        self.initialize(cpus={'k': {'pool': 'kernel'}, '0': {}})
+        self.start_daemon()
+        info = kernel.load_info(self.home)
+        state = kernel.new_state(info, 'old-chain', 'k', kernel.CLI)
+        engine = kernel.Kernel(self.home, info, state, 0)
+        engine._create_cpu('k', {})
+        cpu = self.home / 'cpus' / 'k'
+        spawned = aos_client.call(self.daemon, 'spawn',
+                                  {'name': 'k', 'target': str(cpu / 'inst.json'), 'restart': True},
+                                  timeout_ms=5000, poll_ms=5)
+        pid = spawned['result']['pid']
+        os.kill(pid, signal.SIGSTOP)
+        wait_for(lambda: '\nState:\tT' in Path('/proc/%d/status' % pid).read_text())
+        state['stops'] = ['k']
+        engine.save()
+        engine.flush_outboxes()
+        stop = cpu / 'requests' / 'stop-old-chain.json'
+        self.assertTrue(stop.exists())
+        aos_client.call(self.daemon, 'kill', {'name': 'k'}, timeout_ms=5000, poll_ms=5)
+        wait_for(lambda: 'k' not in self.dstate()['children'])
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
+        self.assertTrue(stop.exists())
+        state['stops'] = ['k']  # 另有尚未出貨的帳本待辦；boot 只清掉這一層。
+        engine.save()
+        self.good_cli('boot', self.home, '--daemon', self.daemon)
+        wait_for(lambda: 'k' not in self.dstate()['children'])
+        self.assertFalse(stop.exists())
+        current = self.state()
+        self.assertEqual(current['stops'], [])
+        self.assertEqual(current['last_seq'], 0)
+        self.assertEqual(current['phase'], 'running')
+        self.assertTrue((cpu / 'requests' / ('k-%s-1.json' % current['chain'])).exists())
