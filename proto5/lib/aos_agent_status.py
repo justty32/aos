@@ -1,10 +1,12 @@
 """日常診斷與解除連敗門；只讀狀態，不推進回合。"""
+from datetime import datetime
 import json
 import os
 from pathlib import Path
 
 import aos_agent_info
 import aos_home
+import aos_kernel_health
 from aos_agent_home import AgentError
 from aos_agent_runtime import files, ledger
 
@@ -63,6 +65,60 @@ def kernel_status(base, env):
     return result
 
 
+def unregistered(kernel):
+    """帳本讀不到時保持未知，不把暫態讀取失敗當成撤銷登記。"""
+    return kernel['home'] is None or (kernel['proc'] is None
+                                     and kernel['note'].startswith('沒登記'))
+
+
+def agent_health(data):
+    k, base = data['kernel'], data['dir']
+    if k['home'] is not None:
+        code, message = aos_kernel_health.health(k['home'])
+        if code == 'stopped':
+            return dict(code='kernel', message='kernel ' + message)
+        if code != 'ok':
+            return dict(code='kernel', message='kernel 家有問題：' + message)
+    if unregistered(k):
+        return dict(code='unregistered', message='沒登記（aos-agent start %s）' % base)
+    if data['paused']:
+        return dict(code='paused', message='連敗暫停（aos-agent continue %s）' % base)
+    if isinstance(k['proc'], dict) and k['proc'].get('status') == 'bad':
+        return dict(code='bad', message='kernel 判壞了（看 %s/log/agent.err）' % base)
+    if data['info_error'] or data['state_error']:
+        return dict(code='config', message='家的設定讀不到（看下面 info／state 行）')
+    return dict(code='ok', message='ok')
+
+
+def error_details(data):
+    data.update(current_error=None, last_error_time=None, streak=data['errors'] or 0,
+                paused=any(pause_path(data['dir'], p, w['consume']) and not arrived(data['dir'], p)
+                           for w in data['waits'] for p in w['paths']))
+    if data['paused']:
+        data['streak'] = 3
+    lines = []
+    try:
+        with (Path(data['dir']) / 'log/agent.err').open(encoding='utf-8', errors='replace') as log:
+            lines = [s.strip() for s in log if s.strip()]
+            if lines:
+                data['last_error_time'] = datetime.fromtimestamp(os.fstat(log.fileno()).st_mtime).astimezone().isoformat()
+        data['last_error'] = lines[-1][:300] if lines else None
+    except OSError:
+        pass
+    stuck = next((i for i in reversed(range(len(lines)))
+                  if lines[i].startswith('aos-agent: stuck:')), None)
+    if data['streak']:
+        candidates = lines[:stuck] if data['paused'] and stuck is not None else lines
+        engine = next((s.removeprefix('aos-agent: engine: ')
+                       for s in reversed(candidates) if s.startswith('aos-agent: engine: ')), None)
+        data['current_error'] = engine or (lines[stuck] if data['paused'] and stuck is not None else None)
+    else:
+        proc = data['kernel']['proc']
+        if isinstance(proc, dict) and (proc.get('fails', 0) > 0 or proc.get('status') == 'bad'):
+            data['current_error'] = data['last_error']
+    return lines[stuck] if stuck is not None else None
+
+
 def collect(agent_dir, env=None):
     """各區獨立診斷；只有不是 agent 家才拒絕。"""
     env = os.environ if env is None else env
@@ -88,25 +144,24 @@ def collect(agent_dir, env=None):
                                   done_n=sum(c['done'] is not None for c in batch['calls']))
     except (AgentError, OSError, ValueError) as exc:
         result['state_error'] = str(exc)
-    try:
-        lines = (Path(base) / 'log/agent.err').read_text(encoding='utf-8', errors='replace').splitlines()
-        result['last_error'] = next((s.strip()[:300] for s in reversed(lines) if s.strip()), None)
-    except OSError:
-        pass
+    error_details(result)
+    result['health'] = agent_health(result)
     return result
 
 
-def show(data, *, as_json=False):
+def show(data, *, as_json=False, verbose=False):
     if as_json:
         print(json.dumps(data, ensure_ascii=False))
         return
+    print('health ' + data['health']['message'])
     print('agent  ' + data['dir'])
     if data['info_error']:
         print('info  bad：' + ' '.join(data['info_error'].split()))
     if data['state_error']:
         print('state bad：' + ' '.join(data['state_error'].split()))
     else:
-        print('state  %s  errors %s' % (data['state'], data['errors']))
+        print('state  %s  %s' % (data['state'], '連敗暫停中（已連敗 3 次）' if data['paused']
+                                  else 'errors %s' % data['errors']))
         b = data['batch']
         print('batch  ' + ('%s  送出 %s／%s  收回 %s%s' %
               (b['kind'], b['sent_n'], b['total'], b['done_n'], '' if b['sent'] else '  送件中') if b else '-'))
@@ -114,15 +169,34 @@ def show(data, *, as_json=False):
             for path in w['paths']:
                 note = '已到，下一格會開' if arrived(data['dir'], path) else '沒到'
                 if pause_path(data['dir'], path, w['consume']):
-                    note += '（連敗暫停）：touch ' + path
+                    note += '（連敗暫停，aos-agent continue）'
+                    if verbose:
+                        note += '：touch ' + path
                 print('wait   %s %s' % (path, note))
         pending = data['pending_inputs']
         print('input  ' + ('%s 個檔還沒收：%s' % (len(pending), ' '.join(pending)) if pending else '-'))
         if data['intake']:
             print('intake 收到一半（下一格會接著做）')
-    print('error  ' + (data['last_error'] or '-'))
+    current = data['current_error']
+    if current and data['paused'] and not verbose and current.startswith('aos-agent: stuck:'):
+        current = current.split('touch ', 1)[0] + 'aos-agent continue ' + data['dir']
+    print('error  ' + (current or '（無）'))
+    if data['paused']:
+        print('       已連敗 3 次，等 aos-agent continue ' + data['dir'])
+        if verbose:
+            detail = dict(data)
+            stuck = error_details(detail)
+            if stuck:
+                print('stuck  ' + stuck)
+    elif data['streak']:
+        print('       已連敗 %s 次（3 次會暫停）' % data['streak'])
+    elif data['last_error'] and not data['current_error']:
+        stamp = datetime.fromisoformat(data['last_error_time']).strftime('%m-%d %H:%M:%S')
+        print('last-error  %s  %s（已恢復）' % (stamp, data['last_error']))
     k = data['kernel']
-    if isinstance(k['proc'], dict):
+    if k['home'] is None:
+        print('kernel 從沒 start 過（沒設 AOS_K、也沒 tick.json）；aos-agent start ' + data['dir'])
+    elif isinstance(k['proc'], dict):
         p = k['proc']
         print('kernel %s  %s  runs %s  fails %s  %s' %
               (k['name'], p.get('status', '?'), p.get('runs', 0), p.get('fails', 0), k['note']))
@@ -131,8 +205,8 @@ def show(data, *, as_json=False):
         print('kernel %s %s' % (label, ' '.join(k['note'].split())))
 
 
-def status(agent_dir, *, as_json=False, env=None):
-    show(collect(agent_dir, env), as_json=as_json)
+def status(agent_dir, *, as_json=False, verbose=False, env=None):
+    show(collect(agent_dir, env), as_json=as_json, verbose=verbose)
     return 0
 
 

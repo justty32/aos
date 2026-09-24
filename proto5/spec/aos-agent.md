@@ -1,10 +1,8 @@
-# aos-agent：走一格、登記、取消登記（第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）
+# aos-agent：走一格、登記、取消登記
 
 ← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜問模型：[aos-llm-call.md](aos-llm-call.md)｜送件：[kernel.md §2](kernel.md)、[cpu.md §3](cpu.md)
 
-> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 E／D／B／C 改成第 3 輪；照 第 3 輪審查 D 節補 3 條（第 4 輪）後定稿。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
-> **已實作**（2026-09-24，T9）：`lib/aos_agent.py`＋`cli/aos-agent`，實作發現見 agent-impl-findings。
-> 調度者裁決移到檔尾（09-24 試玩 r2 搬），已拍板的前提在 §14。
+> 第 2 版，2026-09-24 定稿；已實作（`lib/aos_agent.py`＋`cli/aos-agent`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**`aos-agent tick` 每次只送出或接回一批工作，更新記憶與進度後就退出；結果還沒到就保留進度，留給下一次。**
 問模型、跑工具都是往 kernel `add --once` 的普通工作；反覆叫 `tick` 是 kernel 的事——`aos-agent start` 把它登記成一個反覆行程。
@@ -92,27 +90,33 @@ aos-agent -h ／ aos-agent <子命令> -h                        # （09-24 試�
 - 投遞點是單一檔：暫存檔 `link` 到那個名字，不蓋掉還沒被收的檔；EEXIST＝上一則還沒收，每 200 ms 重試、最多 10 秒，還在＝`InputBusy`、退 1。
 
 沒 `--wait`：印 `said -> <投遞的絕對路徑>`、退 0。不要 `AOS_K`：它只放檔、讀檔，agent 沒登記也放得進去（只是沒人收）。
+（09-24 試玩 r3 補）沒登記（K 取 `AOS_K`、沒設就用 `tick.json` 記的；兩個都沒有、或 K 帳本裡沒有 `agent-<資料夾名>`）時照樣投、照樣退 0，但 stderr 多一行 `aos-agent: warn: 目前沒登記、沒人處理：aos-agent start <dir>`；帳本讀不到就不警告。
+例子：`cd <家> && aos-agent say "現在幾點？" --wait`、`aos-agent say ~/agents/amy "現在幾點？" --wait --timeout-ms 60000`（`say -h` 也印這兩行）。
 
 **`--wait`**：投之前記下記憶長度 H0；之後每 200 ms 重讀 `state.json` 與記憶（讀到一半壞掉就下一輪再讀），直到三件同時成立：
 投的檔已不在原路徑；`state` 是 `idle` 且 `batch`、`intake` 都是 null；記憶第 H0 則以後有一則 `content` 等於 TEXT 的 user、它之後有 assistant、最後一則是 assistant。
 成立就照 `last` 的格式印那則回話、退 0。`--timeout-ms` 預設 300000，只能搭 `--wait`（否則用法錯 2）；逾時 stderr `aos-agent: Timeout: …`、stdout 印 `status`、退 101。
 等的途中出現連敗暫停的門（§9）＝不等到逾時：stderr `aos-agent: stuck: …`、stdout 印 `status`、退 101。
+（09-24 試玩 r3 補）沒登記（判法同上；包括等到一半被 `stop`）也不等：stderr `aos-agent: unregistered: 目前沒登記、沒人處理：aos-agent start <dir>`、stdout 印 `status`、退 101。沒登記先於連敗暫停與逾時判。
 
 ### 1.3 `status`：現在怎樣了（09-24 試玩 r2 補）
 
 唯讀、不要 `AOS_K`、壞了什麼都照樣印（它是診斷工具）。`dir` 不是 agent 家＝`NotAnAgent` 退 1，其餘退 0。每項一行：
 
+（09-24 試玩 r3 補）**第一行 `health <一句>`** 說現在正不正常，先中先印：K 知道且 [kernel 健康](kernel.md)不是 ok＝`kernel 家有問題：<kernel 那句>`（停機中＝`kernel 停機中（…）`）；沒登記＝`沒登記（aos-agent start <dir>）`；連敗暫停門還沒開＝`連敗暫停（aos-agent continue <dir>）`；K 帳本那筆 `bad`＝`kernel 判壞了（看 <dir>/log/agent.err）`；info／state 讀不到＝`家的設定讀不到（看下面 info／state 行）`；其他＝`ok`。
+
 | 行 | 印什麼 |
 |---|---|
 | `agent` | 家的絕對路徑；info 讀驗錯另一行 `info bad：<代號>: <白話>` |
-| `state` | `state`、`errors`；state.json 讀驗錯＝`state bad：…`，後面靠 state 的行略過 |
+| `state` | `state`、`errors`；（09-24 試玩 r3 補）連敗暫停中不印會誤導的 `errors 0`，改印 `連敗暫停中（已連敗 3 次）`；state.json 讀驗錯＝`state bad：…`，後面靠 state 的行略過 |
 | `batch` | 沒有＝`-`；有＝kind、送出幾個／共幾個（`sent:false` 時寫送件中）、收回幾個 |
-| `wait` | 每道門一行：路徑、到了沒；連敗暫停的門（agent 家的 `continue-*.json`）附完整 `touch <絕對路徑>` 指令 |
+| `wait` | 每道門一行：路徑、到了沒；連敗暫停的門（agent 家的 `continue-*.json`）附 `（連敗暫停，aos-agent continue）`；（09-24 試玩 r3 改）完整 `touch <絕對路徑>` 只在 `-v`／`--verbose` 與 `--json` 出現 |
 | `input` | `input` 指到、還沒收的檔數與路徑；`intake` 做到一半另一行 |
-| `error` | `log/agent.err` 最後一個非空行（最多 300 字），沒有＝`-` |
-| `kernel` | K 帳本裡 `agent-<資料夾名>` 那筆的 status／runs／fails；K 取 `AOS_K`，沒設就用 `tick.json` 記的，都沒有＝`（沒設 AOS_K）`；帳本讀不到、沒登記各有一句 |
+| `error` | （09-24 試玩 r3 改）**這次卡住的原因**：連敗暫停中＝導致暫停的那行 `engine:`（agent.err 裡最後一個 `stuck:` 之前最近的一行，去掉前綴），下一行 `已連敗 3 次，等 aos-agent continue <dir>`；還在連敗沒到 3 次＝最近的 `engine:` 行＋`已連敗 N 次（3 次會暫停）`；K 帳本那筆 `fails` > 0 或 `bad`＝agent.err 最後一行；都不是＝`（無）`，agent.err 有內容就另印 `last-error  <MM-DD HH:MM:SS>  <最後一行>（已恢復）`（時間是 agent.err 的修改時間）。`-v` 另印一行 `stuck` 原文 |
+| `kernel` | K 帳本裡 `agent-<資料夾名>` 那筆的 status／runs／fails；K 取 `AOS_K`，沒設就用 `tick.json` 記的，都沒有＝（09-24 試玩 r3 改）`kernel 從沒 start 過（沒設 AOS_K、也沒 tick.json）；aos-agent start <dir>`；帳本讀不到、沒登記各有一句 |
 
 `--json` 印一行 JSON，同樣的資訊（鍵：`dir`、`info_error`、`state_error`、`state`、`errors`、`batch`、`waits`、`pending_inputs`、`intake`、`last_error`、`kernel`）。
+（09-24 試玩 r3 補）另有 `health`（`{code, message}`，code：`ok`／`kernel`／`unregistered`／`paused`／`bad`／`config`）、`current_error`（上表 error 欄的原因，沒有＝null）、`streak`（連敗次數，暫停中＝3）、`paused`、`last_error_time`（ISO 時間或 null）；`last_error` 照舊是最後一行。
 
 ### 1.4 `continue`：解除連敗暫停（09-24 試玩 r2 補）
 
@@ -409,3 +413,11 @@ kernel 行程名只看資料夾名，不同位置的兩個同名資料夾會撞 
 6. 壞模型輸出、`Removed`、`Interrupted`、逾時、非 0 都算一次連敗；`Stopping` 與 `stopped:true` 不算、下次重問。
 7. 連敗暫停的訊號檔每次不同名：`continue-<批 id>.json`（第 3 輪；不用分新舊訊號）。
 8. 工具 `kind=aos` 給模型固定一句話、指向 cpu.log，不把診斷塞進結果。
+
+## 沿革
+
+原標題：`aos-agent：走一格、登記、取消登記（第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）`
+
+> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 E／D／B／C 改成第 3 輪；照 第 3 輪審查 D 節補 3 條（第 4 輪）後定稿。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> **已實作**（2026-09-24，T9）：`lib/aos_agent.py`＋`cli/aos-agent`，實作發現見 agent-impl-findings。
+> 調度者裁決移到檔尾（09-24 試玩 r2 搬），已拍板的前提在 §14。

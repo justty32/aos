@@ -1,11 +1,8 @@
-# kernel：排程也是一格一格的 aos-exec（第 1 版，2026-09-23 定稿）
+# kernel：排程也是一格一格的 aos-exec
 
 ← [proto5 README](../README.md)｜範式：[cpu.md](cpu.md)｜跑一次：[aos-exec.md](aos-exec.md)｜下層：[daemon](daemon.md)
 
-> 2026-09-23 重架構第二份；同日照 astra 三輪審查改過（K／X／R、K2／X2／R2、K3／X3／R3）。
-> 2026-09-23 定稿並已實作：[`aos_kernel.py`](../lib/aos_kernel.py)（入口 `aos-kernel`）。舊 kernel-home.md／aos-kernel.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
-> 已拍板的前提在 §9，我自己選的在 §10。
-> 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> 第 1 版，2026-09-23 定稿；已實作（[`aos_kernel.py`](../lib/aos_kernel.py)，入口 `aos-kernel`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**kernel 替登記好的工作（行程）挑一顆空著的 cpu 派下去、收回執行結果、決定要不要再跑。**
 它不是長命行程：每次只跑一格 `aos-kernel tick`，格的開頭先把下一格放進一顆專用 exec cpu 的 `requests/`，
@@ -367,7 +364,8 @@ alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份—
 （09-24 補）預設印給人看的文字摘要：一行總覽（chain、phase、last_seq、daemon 活不活）、kernel cpu 一行、
 每顆 cpu 一行（名、pool、閒／忙哪個行程、daemon 孩子狀態）、每個行程一行（名、once／反覆、status、runs／fails、pending）、queue 一行；
 `--json` 才印原始 JSON。
-（09-24 試玩 r2 補）文字摘要在 `phase` 不是 `stopped` 時，daemon 活著但有 cpu 是 `missing`＝尾巴加一行 `hint daemon 重開過／cpu 不在：執行 aos-kernel boot <K> --daemon <D>`；daemon 沒活＝`hint daemon 沒在跑：先開 daemon，再 aos-kernel boot <K> --daemon <D>`。
+（09-24 試玩 r3 補，取代 r2 的尾巴 `hint` 行）文字摘要**第一行** `health <一句>` 說整體正不正常，把「停住」跟「正常忙碌」分開；先中先印：
+缺 `requests/`／`responses/`／`cpus/`＝`K 家缺目錄：…（跑 aos-kernel check <K>）`；`phase` 是 `stopped` 或從沒 boot＝`停機中（aos-kernel boot <K> --daemon <D>）`；daemon 沒活＝`daemon 沒在跑：<D>（先 aos-daemon --home <D>，再 aos-kernel boot …）`；info 或帳本的 cpu 不在 daemon 孩子表／`missing`＝`cpu missing：<名字>（跑 aos-kernel boot …）`；`phase` 是 `running` 但 `state.json` 超過 max(10 秒, 10 格) 沒更新＝`tick 停住：N 秒沒前進（跑 aos-kernel check <K>）`；其他＝`ok`。帳本或 info 讀不到＝`kernel 家讀不到：…`（這時 `ls` 照舊退 1）。`--json` 在最外層多一個 `health: {code, message}`（code：`ok`／`dirs`／`stopped`／`daemon`／`cpus`／`stall`／`broken`）。同一套判定在 `lib/aos_kernel_health.py`，`aos-agent status` 也用它。
 （09-24 試玩 r1 補）`bad` 的行程行尾附 `看 <路徑>`：target 的 inst 有字面 `stderr` 就指它（agent 就是 `<agent>/log/agent.err`），否則指 target。
 
 （09-24 補）**ack**：`aos-kernel ack K NAME` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。
@@ -425,3 +423,12 @@ add 拒絕到它跑完；stop 分 stopping／stopped 兩段，在途與 once 的
 - §3 第 10 步：空格不寫 log（真跑 ⑤-4）；log 不保證涵蓋崩潰中途（B-11）。
 - §6：init `--cpu`、`ack`、`ls` 摘要／`--json`、`-h`（真跑 ⑤-2、3、5）；boot 第 2 步交接兩顆 kcpu（A-4、B-6）與硬砍例外（B-12）；
   第 3 步只丟未出貨的 stops（B-10）；第 4 步補齊家（C-1）。
+
+## 沿革
+
+原標題：`kernel：排程也是一格一格的 aos-exec（第 1 版，2026-09-23 定稿）`
+
+> 2026-09-23 重架構第二份；同日照 astra 三輪審查改過（K／X／R、K2／X2／R2、K3／X3／R3）。
+> 2026-09-23 定稿並已實作：[`aos_kernel.py`](../lib/aos_kernel.py)（入口 `aos-kernel`）。舊 kernel-home.md／aos-kernel.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
+> 已拍板的前提在 §9，我自己選的在 §10。
+> 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）

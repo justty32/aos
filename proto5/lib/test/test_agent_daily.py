@@ -51,14 +51,15 @@ class DailyTests(unittest.TestCase):
     def test_status_json(self):
         data = json.loads(self.cli('status', str(self.base), '--json')[1])
         self.assertEqual(set(data), {'dir', 'info_error', 'state_error', 'state', 'errors',
-                                    'batch', 'waits', 'pending_inputs', 'intake', 'last_error', 'kernel'})
+                                    'batch', 'waits', 'pending_inputs', 'intake', 'last_error', 'kernel',
+                                    'health', 'current_error', 'streak', 'paused', 'last_error_time'})
         self.assertEqual(data['state'], 'idle')
         self.assertIsNone(data['kernel']['home'])
         self.assertIn('沒設 AOS_K', data['kernel']['note'])
 
     def test_status_wait_text_and_arrival(self):
         path = self.pause()
-        self.assertIn('touch ' + str(path), self.cli('status', str(self.base))[1])
+        self.assertIn('（連敗暫停，aos-agent continue）', self.cli('status', str(self.base))[1])
         path.touch()
         self.assertIn('已到，下一格會開', self.cli('status', str(self.base))[1])
         self.assertEqual(status.collect(self.base, {})['waits'][0],
@@ -197,8 +198,7 @@ class DailyTests(unittest.TestCase):
         thread = threading.Thread(target=fake)
         thread.start()
         try:
-            self.assertEqual(self.cli('say', str(self.base), '你好', '--wait', '--timeout-ms', '2000'),
-                             (0, '(tool_calls: sh)\n'))
+            self.assertEqual(self.cli('say', str(self.base), '你好', '--wait', '--timeout-ms', '2000')[0], 101)
         finally:
             thread.join(3)
         self.assertFalse(errors)
@@ -209,14 +209,14 @@ class DailyTests(unittest.TestCase):
         code, output = self.cli('say', str(self.base), '你好', '--wait', '--timeout-ms', '1')
         self.assertEqual(code, 101)
         self.assertIn('agent  ', output)
-        self.assertIn('Timeout: 等了 1 ms', self.err.getvalue())
+        self.assertIn('unregistered: 目前沒登記', self.err.getvalue())
 
     def test_say_wait_stuck(self):
         self.pause()
         code, output = self.cli('say', str(self.base), '你好', '--wait', '--timeout-ms', '300000')
         self.assertEqual(code, 101)
-        self.assertIn('touch ', output)
-        self.assertIn('stuck:', self.err.getvalue())
+        self.assertIn('（連敗暫停，aos-agent continue）', output)
+        self.assertIn('unregistered:', self.err.getvalue())
 
     def test_usage(self):
         for args in [('say',), ('say', ''), ('say', 'a', 'b', 'c'), ('say', 'x', '--timeout-ms', '2'),

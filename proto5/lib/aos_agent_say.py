@@ -9,7 +9,7 @@ import aos_agent_info
 from aos_agent_home import AgentError, read_history
 from aos_agent_last import print_message
 from aos_agent_runtime import report, unique_id
-from aos_agent_status import arrived, collect, pause_path, show
+from aos_agent_status import collect, kernel_status, show, unregistered
 
 INPUT_WAIT_SECONDS = 10
 
@@ -55,14 +55,19 @@ def say(agent_dir, text, *, wait=False, timeout_ms=300000, env=None):
     target = deliver(info['dir'], state['input'][0], text)
     if not wait:
         print('said -> ' + str(target))
+        if unregistered(kernel_status(info['dir'], os.environ if env is None else env)):
+            report('warn', '目前沒登記、沒人處理：aos-agent start ' + info['dir'])
         return 0
     deadline = time.monotonic() + timeout_ms / 1000
     while True:
         data = None
         try:
             data = collect(agent_dir, env)
-            if any(pause_path(info['dir'], p, w['consume']) and not arrived(info['dir'], p)
-                   for w in data['waits'] for p in w['paths']):
+            if unregistered(data['kernel']):
+                report('unregistered', '目前沒登記、沒人處理：aos-agent start ' + info['dir'])
+                show(data)
+                return 101
+            if data['paused']:
                 report('stuck', '問模型連敗暫停了，修好後 aos-agent continue ' + info['dir'])
                 show(data)
                 return 101

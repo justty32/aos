@@ -51,9 +51,9 @@ class DailyEdgeTests(unittest.TestCase):
                 self.put(self.base / 'prompts/history.json',
                          [{'role': 'user', 'content': '你好'}, fixture.MESSAGE])
         with patch.object(say.time, 'sleep', side_effect=advance), patch('sys.stdout', new_callable=io.StringIO) as out:
-            self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=1000, env={}), 0)
-        self.assertEqual(out.getvalue(), '完成\n')
-        self.assertEqual(len(loops), 3)
+            self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=1000, env={}), 101)
+        self.assertTrue(out.getvalue().startswith('health 沒登記'))
+        self.assertEqual(len(loops), 0)
 
     def test_wait_requires_every_completion_condition(self):
         user = {'role': 'user', 'content': '你好'}
@@ -92,7 +92,7 @@ class DailyEdgeTests(unittest.TestCase):
         self.put(self.base / 'state.json', {'waits': [{'$opt': 'consume', '$val': ['continue-ok.json', 'external']}]})
         with patch('sys.stdout', new_callable=io.StringIO):
             self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=0, env={}), 101)
-        self.assertIn('Timeout:', self.err.getvalue())
+        self.assertIn('unregistered:', self.err.getvalue())
         self.assertNotIn('stuck:', self.err.getvalue())
 
     def test_input_directive_and_existing_directory(self):

@@ -1,24 +1,12 @@
-# aos-llm-call：問模型一次（程式規範，第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）
+# aos-llm-call：問模型一次（程式規範）
 
 ← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜誰叫它：[aos-agent.md](aos-agent.md)｜它跑在哪：[cpu.md §4.1](cpu.md)、[kernel.md §1.1](kernel.md)
 
-> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 改成第 3 輪；第 3 輪審查 判可定稿，第 4 輪只補一條實作提醒。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
-> **已實作**（2026-09-24，T9）：`lib/aos_llm_call.py`＋`cli/aos-llm-call`，實作發現見 agent-impl-findings。
-> 這份把兩件事合成一支普通程式。調度者裁決在下一節，已拍板的前提在 §9。
+> 第 2 版，2026-09-24 定稿；已實作（`lib/aos_llm_call.py`＋`cli/aos-llm-call`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**`aos-llm-call AGENT_DIR` 讀 agent 的模型輸入與這顆 cpu 的模型表，呼叫一次模型，把一則 assistant message 印成一行 JSON。**
 它不寫記憶、不碰 `state.json`、不跑工具，跑完就走。它是 kernel 排給 llm 池某顆 cpu 的一份普通工作；
 模型表、金鑰、`aos-llm-call` 自己在哪，全是那顆 cpu 的環境給的（「cpu 的環境＝工作的環境」）。
-
-## 調度者裁決（第 2～3 輪，實作層級）
-
-1. llm.json 的 `_metainfo` 必填，`_type` 叫 `llm_config`、`_version` 只認整數 1。
-2. 設定錯的代號用新的 `ConfigInvalid`（不是沿用舊名；舊 llm-cpu 叫 `EngineInvalid`）；讀檔、JSON、指示詞錯用各自原本的代號。
-3. **執行時讀** agent 家：人格、記憶、工具、`info.llm` 在這支程式跑起來那一刻讀，不是 aos-agent 送件那一刻。
-4. 模型回的 message 在印之前就照 [agent.md §3.2](agent.md) 驗；不合＝`EngineFailed`，不印。
-5. 印之前的正規化只做兩件、順序固定：先拿掉空的 `tool_calls`，再把「`content` 是 null 又沒 `tool_calls`」補成 `""`。
-6. `api_key` 空字串＝不帶 `Authorization`，跟 null／沒寫一樣。
-7. （第 3 輪）讀 agent 的 `info.json` **只解驗用得到的六格**（§3），其他格原樣不碰——agent 那邊只在自己 cpu 成立的 `$env` 不會讓這裡失敗。
 
 ## 0. 名詞（白話）
 
@@ -58,10 +46,12 @@ llm.json 本身可以隨時改，下一次問就生效（每次跑都重讀）�
 
 ## 2. llm.json
 
+（09-24 試玩 r3 改）例子用 LiteLLM；任何 OpenAI 相容端點都行。
+
 ```json
 {"_metainfo": {"_type": "llm_config", "_version": 1},
- "models": {"small": {"endpoint": "http://127.0.0.1:1234/v1", "model": "qwen/qwen3-1.7b",
-                      "api_key": {"$env": "LMSTUDIO_KEY"}, "timeout_ms": 120000}}}
+ "models": {"small": {"endpoint": "http://localhost:4000/v1", "model": "deepseek-chat",
+                      "api_key": {"$env": "LITELLM_KEY"}, "timeout_ms": 120000}}}
 ```
 
 - 整份解指示詞，中心是 llm.json 所在的資料夾；`$env` 讀的是 aos-llm-call 自己的環境（＝那顆 cpu 的環境）。頂層整份不能是指示詞。
@@ -153,3 +143,21 @@ msg  = aos_llm_call.call(agent_dir)                    # 讀 AOS_LLM_CONFIG、�
 2. **agent 先進現有的池**：問模型派往 `info.llm.pool` 那個現有的池，不給 agent 開專屬 cpu。
 3. **llm.json 放 llm cpu 那邊**（cpu 的環境＝工作的環境）：模型表（endpoint／真名／api_key／timeout_ms）跟 aos-llm-call 同住，
    靠那顆 cpu 的 `envs` 設 `AOS_LLM_CONFIG=/abs/llm.json` 找到；agent 的 `info.llm` 只剩 `model`、`params`、`pool`、`timeout_ms`。
+
+## 調度者裁決（第 2～3 輪，實作層級）
+
+1. llm.json 的 `_metainfo` 必填，`_type` 叫 `llm_config`、`_version` 只認整數 1。
+2. 設定錯的代號用新的 `ConfigInvalid`（不是沿用舊名；舊 llm-cpu 叫 `EngineInvalid`）；讀檔、JSON、指示詞錯用各自原本的代號。
+3. **執行時讀** agent 家：人格、記憶、工具、`info.llm` 在這支程式跑起來那一刻讀，不是 aos-agent 送件那一刻。
+4. 模型回的 message 在印之前就照 [agent.md §3.2](agent.md) 驗；不合＝`EngineFailed`，不印。
+5. 印之前的正規化只做兩件、順序固定：先拿掉空的 `tool_calls`，再把「`content` 是 null 又沒 `tool_calls`」補成 `""`。
+6. `api_key` 空字串＝不帶 `Authorization`，跟 null／沒寫一樣。
+7. （第 3 輪）讀 agent 的 `info.json` **只解驗用得到的六格**（§3），其他格原樣不碰——agent 那邊只在自己 cpu 成立的 `$env` 不會讓這裡失敗。
+
+## 沿革
+
+原標題：`aos-llm-call：問模型一次（程式規範，第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）`
+
+> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 改成第 3 輪；第 3 輪審查 判可定稿，第 4 輪只補一條實作提醒。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> **已實作**（2026-09-24，T9）：`lib/aos_llm_call.py`＋`cli/aos-llm-call`，實作發現見 agent-impl-findings。
+> 這份把兩件事合成一支普通程式。調度者裁決在檔尾（09-24 試玩 r3 搬），已拍板的前提在 §9。

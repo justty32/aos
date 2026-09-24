@@ -10,6 +10,7 @@ import aos_daemon
 import aos_home
 from aos_kernel_boot import boot, status, stop
 from aos_kernel_engine import tick
+from aos_kernel_health import health
 from aos_kernel_info import CLIUsage, KernelError, _name, init, load_info
 
 def _cpu_options(values, envs=()):
@@ -54,11 +55,14 @@ def _stderr_hint(target):
     return "%s 的 stderr 設定" % target
 
 
-def _summary(home, snapshot):
+def _summary(home, snapshot, as_json=False):
     info = load_info(home)
+    code, message = health(home, snapshot=snapshot, info=info)
+    if as_json:
+        return json.dumps({**snapshot, "health": {"code": code, "message": message}}, ensure_ascii=False)
     kcpu = snapshot["kernel_cpu"]
     daemon = snapshot["daemon"]
-    lines = ["chain %s  phase %s  last_seq %s  daemon %s" % (
+    lines = ["health " + message, "chain %s  phase %s  last_seq %s  daemon %s" % (
         snapshot["chain"] or "-", snapshot["phase"] or "-",
         snapshot["last_seq"] if snapshot["last_seq"] is not None else "-",
         "alive" if daemon["alive"] else "dead"),
@@ -81,14 +85,6 @@ def _summary(home, snapshot):
             "有" if proc["pending"] else "-") +
             ("  看 " + _stderr_hint(proc["target"]) if proc["status"] == "bad" else ""))
     lines.append("queue %s" % (" ".join(snapshot["queue"] or []) or "-"))
-    home = os.path.abspath(home)
-    daemon_home = info.get("daemon", aos_daemon.daemon_home())
-    if not daemon["alive"] and snapshot["phase"] not in (None, "stopped"):
-        lines.append("hint daemon 沒在跑：先開 daemon（aos-daemon --home %s），再 aos-kernel boot %s --daemon %s" %
-                     (daemon_home, home, daemon_home))
-    elif snapshot["phase"] != "stopped" and any(
-            not daemon["children"].get(name) or daemon["children"][name]["state"] == "missing" for name in names):
-        lines.append("hint daemon 重開過／cpu 不在：執行 aos-kernel boot %s --daemon %s" % (home, daemon_home))
     return "\n".join(lines)
 
 
@@ -205,7 +201,7 @@ def main(argv=None):
             return tick(args.home, args.chain, args.seq)
         if args.command == "ls":
             snapshot = status(args.home)
-            print(json.dumps(snapshot, ensure_ascii=False) if args.json else _summary(args.home, snapshot))
+            print(_summary(args.home, snapshot, as_json=args.json))
             return 0
         if args.command == "ack":
             name = Path(args.name).name

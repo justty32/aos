@@ -1,10 +1,8 @@
-# agent 資料夾規範（第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）
+# agent 資料夾規範
 
 ← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-agent.md](aos-agent.md)（走一格、登記）、[aos-llm-call.md](aos-llm-call.md)（問模型）｜排程：[kernel.md](kernel.md)
 
-> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 E／D／B／C 改成第 3 輪；照 第 3 輪審查 D 節補 3 條（第 4 輪）後定稿。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
-> **已實作**（2026-09-24，T9）：`lib/aos_agent_info.py`／`aos_agent_home.py`（讀驗），實作發現見 agent-impl-findings。
-> 調度者裁決移到檔尾（09-24 試玩 r2 搬），已拍板的前提在 §7。
+> 第 2 版，2026-09-24 定稿；已實作（`lib/aos_agent_info.py`／`aos_agent_home.py`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**agent 資料夾保存設定、對話記憶與跨次執行的進度，讓 aos-agent 每次被叫都能接著做。**
 `info.json` 說它是誰、記憶在哪、有哪些工具、用哪個模型代號；`state.json` 記走到哪、輸入從哪來、
@@ -267,3 +265,11 @@ agent-bob/
 6. 程式自己寫的 `state` 各格（除了 `input`）必須是字面值，不吃指示詞。
 7. 記憶的 message 驗證寫死在 §3.2，aos-llm-call 與 aos-agent 共用同一套。
 8. （第 3 輪）**每次消費一個身分**：輸入與 consume 的檔先 rename 到唯一的封存名 `<原名>.<消費 id>.done`、再讀；state 記的是「原路徑→封存名」對，恢復只認封存名，不再碰原路徑上可能新投遞的檔（§4.4）。
+
+## 沿革
+
+原標題：`agent 資料夾規範（第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）`
+
+> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 E／D／B／C 改成第 3 輪；照 第 3 輪審查 D 節補 3 條（第 4 輪）後定稿。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> **已實作**（2026-09-24，T9）：`lib/aos_agent_info.py`／`aos_agent_home.py`（讀驗），實作發現見 agent-impl-findings。
+> 調度者裁決移到檔尾（09-24 試玩 r2 搬），已拍板的前提在 §7。

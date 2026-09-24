@@ -178,11 +178,17 @@ def main(argv=None):
     for name, help_text in helps.items():
         sub = commands.add_parser(name, help=help_text)
         if name == 'say':
+            sub.formatter_class = argparse.RawDescriptionHelpFormatter
+            sub.description = '投一則 user 訊息：say TEXT（目前的家），或 say dir TEXT（指定家）。'
+            sub.epilog = ('例子：\n  cd 家 && aos-agent say "現在幾點？" --wait\n'
+                          '  aos-agent say ~/agents/amy "現在幾點？" --wait --timeout-ms 60000')
             sub.add_argument('values', nargs='+', metavar='[dir] TEXT')
             sub.add_argument('--wait', action='store_true')
-            sub.add_argument('--timeout-ms', type=int)
+            sub.add_argument('--timeout-ms', type=int, help='預設 300000（5 分鐘），只能搭 --wait')
         else:
             sub.add_argument('agent_dir', nargs='?', default='.')
+        if name == 'status':
+            sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令與 stuck 原行')
         if name in ('last', 'status'):
             sub.add_argument('--json', action='store_true')
     args = ap.parse_args(argv)
@@ -200,7 +206,7 @@ def main(argv=None):
             return last(args.agent_dir, as_json=args.json)
         if args.command == 'status':
             from aos_agent_status import status
-            return status(args.agent_dir, as_json=args.json)
+            return status(args.agent_dir, as_json=args.json, verbose=args.verbose)
         if args.command == 'continue':
             from aos_agent_status import resume
             return resume(args.agent_dir)
