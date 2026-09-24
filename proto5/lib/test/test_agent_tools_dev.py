@@ -27,7 +27,7 @@ from aos_agent_home import AgentError  # noqa: E402
 
 JAIL_OK = dev.jail_ready()[0]
 ACCEPTED = ['echo', 'double', 'half', 'negate', 'join_words', 'total', 'pick', 'maybe', 'scale', 'legacy',
-            'stats', 'boom', 'not_json', 'no_doc', 'count_words', 'outer']
+            'stats', 'boom', 'interrupt', 'quit_now', 'not_json', 'no_doc', 'count_words', 'outer']
 REJECTED = {'no_annotation': '參數 a 沒有型別註解',
             'star_args': '有 *items',
             'star_kwargs': '有 **options',
@@ -235,8 +235,10 @@ class WrapCliTests(Temp):
 
     def test_wrapped_package_passes_tools_test(self):
         self.wrap()
-        out = self.agent('tools', 'test', './wrap_fixture', '--no-jail', code=0).stdout
-        self.assertTrue(out.startswith('沒關牢（給了 --no-jail）'), out[:80])
+        r = self.agent('tools', 'test', './wrap_fixture', '--no-jail', code=0)
+        out = r.stdout
+        self.assertTrue(r.stderr.startswith('沒關牢（給了 --no-jail）'), r.stderr[:80])
+        self.assertIn('在拋棄式的假 agent 家裡跑（沒關牢）', out.splitlines()[0])
         self.assertIn('PASS  wrap_fixture  import', out)
         self.assertIn('PASS  count_words  ok', out)
         self.assertTrue(out.rstrip().endswith('條，0 條沒過'), out[-200:])
@@ -569,6 +571,170 @@ class TestCmdTests(Temp):
         r = self.agent('tools', 'test', './words', '--args', '{"path": "."}', code=1)
         self.assertIn('/work/ws', r.stdout)
 
+
+# ------------------------------------------------------------------ astra 審查 M1～M7 ----
+
+class ReviewFixTests(Temp):
+    def pack(self, name, program, timeout_ms=None, cases=None):
+        """一支工具的包：run＝program（sh），參數隨便收。"""
+        pack = self.d / name
+        pack.mkdir()
+        tool = {'type': 'function', 'function': {'name': name, 'description': 'T.',
+                                                 'parameters': {'type': 'object', 'properties': {}}},
+                '_meta': {'argv': ['tools/%s/run' % name]}}
+        if timeout_ms is not None:
+            tool['_timeout_ms'] = timeout_ms
+        (pack / (name + '.json')).write_text(json.dumps([tool]))
+        (pack / 'run').write_text(program)
+        os.chmod(pack / 'run', 0o755)
+        if cases is not None:
+            (pack / 'cases.json').write_text(json.dumps(cases))
+        return './' + name
+
+    def test_m1_case_files_do_not_follow_symlinks(self):
+        """前一條案例讓工具在 workspace 放指向外面的符號連結，後一條的 files 不能沿著它寫出去。"""
+        outside = self.d / 'outside'
+        outside.mkdir()
+        (outside / 't.txt').write_text('keep')
+        prog = ('#!/bin/sh\ncd workspace || exit 3\n'
+                'ln -sfn %s link\nln -sf %s/t.txt f.txt\necho ok\n' % (outside, outside))
+        cases = [{'name': 'plant', 'tool': 'sl', 'args': {}, 'expect': 'ok'},
+                 {'name': 'via-dir', 'tool': 'sl', 'args': {}, 'expect': 'ok', 'files': {'link/pwned.txt': 'x'}},
+                 {'name': 'via-file', 'tool': 'sl', 'args': {}, 'expect': 'ok', 'files': {'f.txt': 'x'}},
+                 {'name': 'plain', 'tool': 'sl', 'args': {}, 'expect': 'ok', 'files': {'sub/dir/ok.txt': 'x'}}]
+        out = self.agent('tools', 'test', self.pack('sl', prog, cases=cases), '--no-jail', code=1).stdout
+        self.assertIn('PASS  sl  plant', out)
+        self.assertIn('FAIL  sl  via-dir', out)
+        self.assertIn('FAIL  sl  via-file', out)
+        self.assertIn('寫不進去', out)
+        self.assertIn('PASS  sl  plain', out)
+        self.assertEqual(sorted(p.name for p in outside.iterdir()), ['t.txt'])
+        self.assertEqual((outside / 't.txt').read_text(), 'keep')
+
+    def test_m1_hard_link_refused(self):
+        home = self.d / 'h'
+        (home / 'workspace').mkdir(parents=True)
+        (self.d / 'secret').write_text('keep')
+        os.link(self.d / 'secret', home / 'workspace' / 'x.txt')
+        with self.assertRaises(OSError):
+            dev.Runner(home, False).write_file('x.txt', 'pwned')
+        self.assertEqual((self.d / 'secret').read_text(), 'keep')
+
+    def test_m2_failed_rename_keeps_old_package(self):
+        from unittest import mock
+        dev.publish(self.d, 'p', {'a.txt': ('old', False)})
+        real = os.rename
+
+        def flaky(src, dst):
+            if Path(src).name.startswith('.p.new-'):
+                raise OSError(28, 'No space left on device')
+            return real(src, dst)
+        with mock.patch.object(dev.os, 'rename', side_effect=flaky):
+            with self.assertRaises(OSError):
+                dev.publish(self.d, 'p', {'a.txt': ('new', False)}, force=True)
+        self.assertEqual((self.d / 'p' / 'a.txt').read_text(), 'old')
+        self.assertEqual(self.leftovers(), [])
+
+    def test_m2_recover_leftovers(self):
+        dead = 999999999                                   # 比 pid_max 大，一定不是活的行程
+        (self.d / ('.p.old-%d-1' % dead)).mkdir()
+        (self.d / ('.p.old-%d-1' % dead) / 'a.txt').write_text('old')
+        (self.d / ('.p.new-%d-abc' % dead)).mkdir()
+        (self.d / ('.p.new-%d-live' % os.getpid())).mkdir()   # 活著的行程的不碰
+        notes = dev.recover(self.d, 'p')
+        self.assertEqual((self.d / 'p' / 'a.txt').read_text(), 'old')   # 正式包不在：備份改回來
+        self.assertEqual(self.leftovers(), ['.p.new-%d-live' % os.getpid()])
+        self.assertEqual(len(notes), 2)
+        (self.d / ('.p.old-%d-2' % dead)).mkdir()
+        dev.recover(self.d, 'p')                            # 正式包在：備份刪掉
+        self.assertEqual(self.leftovers(), ['.p.new-%d-live' % os.getpid()])
+
+    def test_m3_reserved_names(self):
+        for name in ('config', 'cases'):
+            with self.subTest(name=name):
+                err = self.agent('tools', 'new', name, code=1).stderr
+                self.assertIn('aos-agent: BadName', err)
+                self.assertFalse((self.d / name).exists())
+        for extra in (['--name', 'wrap'], ['--name', 'config']):
+            with self.subTest(extra=extra):
+                self.assertIn('aos-agent: BadName', self.wrap(*extra, code=1).stderr)
+        shutil.copy(FIXTURE, self.d / 'wrap.py')              # 預設包名 wrap
+        self.assertIn('aos-agent: BadName', self.agent('tools', 'wrap-py', 'wrap.py', code=1).stderr)
+        self.assertFalse((self.d / 'wrap').exists())
+        with self.assertRaises(AgentError):
+            dev.package_files('x', [('a', '1', False), ('a', '2', False)])
+
+    def test_m4_output_capped(self):
+        prog = '#!/bin/sh\nhead -c 3000000 /dev/zero | tr "\\0" "a"\necho\necho tail-marker\n'
+        r = self.agent('tools', 'test', self.pack('big', prog), '--no-jail', '--args', '{}', code=0)
+        self.assertLessEqual(len(r.stdout.encode()), dev.OUTPUT_CAP)
+        self.assertTrue(r.stdout.endswith('tail-marker\n'))
+        self.assertIn('前面丟了', r.stderr)
+
+    def test_m4_timeout_and_held_pipe_do_not_hang(self):
+        import time
+        start = time.monotonic()
+        out = self.agent('tools', 'test', self.pack('slow', '#!/bin/sh\nsleep 30\n', timeout_ms=1000),
+                         '--no-jail', '--args', '{}', code=1).stderr
+        self.assertIn('逾時被砍', out)
+        self.assertLess(time.monotonic() - start, 15)
+        start = time.monotonic()                            # 另開 session 的子孫握著 stdout：主行程結束後不等它
+        r = self.agent('tools', 'test', self.pack('bg', '#!/bin/sh\nsetsid sleep 8 &\necho ok\n'),
+                       '--no-jail', '--args', '{}', code=0)
+        self.assertEqual(r.stdout, 'ok\n')
+        self.assertLess(time.monotonic() - start, 7)
+
+    def test_m4_pump_unit(self):
+        proc = subprocess.Popen(['sh', '-c', 'cat; printf 0123456789'], stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+        code, out, err, timed_out, dropped, stuck = dev.pump(proc, b'x' * 200000, 10, cap=4)
+        self.assertEqual((code, out, timed_out, dropped, stuck), (0, b'6789', False, 200006, None))
+
+    def test_m5_notice_before_running(self):
+        """沒關牢的提示在工具跑完之前就到 stderr。"""
+        import select
+        spec = self.pack('hang', '#!/bin/sh\nsleep 4\n', timeout_ms=4000)
+        proc = subprocess.Popen([sys.executable, str(CLI), 'tools', 'test', spec, '--no-jail', '--args', '{}'],
+                                cwd=self.d, env=env(), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True)
+        try:
+            ready, _, _ = select.select([proc.stderr], [], [], 3)
+            self.assertTrue(ready)
+            self.assertIsNone(proc.poll())                  # 工具還在跑
+            self.assertTrue(proc.stderr.readline().startswith('沒關牢（給了 --no-jail）'))
+        finally:
+            proc.kill()
+            proc.communicate()
+        doc = json.loads(self.agent('tools', 'test', self.pack('q', '#!/bin/sh\necho ok\n'), '--no-jail', '--json',
+                                    '--args', '{}', code=0).stdout)
+        self.assertIn('--no-jail', doc['jail_note'])
+
+    def test_m6_block_definitions_rejected(self):
+        src = ('import sys\nif False:\n    def never(x: int) -> int:\n        return x\n'
+               'try:\n    def maybe_(x: int) -> int:\n        return x\nexcept Exception:\n    pass\n'
+               'for _ in range(1):\n    def looped(x: int) -> int:\n        return x\n'
+               'def real(x: int) -> int:\n    return x\n')
+        r = dev.analyze(src)
+        rows = {n: (st, why) for n, st, why, _ in r['rows']}
+        self.assertEqual(list(r['functions']), ['real'])
+        self.assertEqual(rows['never'], ('reject', '不是頂層（在頂層的 if 區塊裡，import 後不一定有這支）'))
+        self.assertIn('try 區塊', rows['maybe_'][1])
+        self.assertIn('for 區塊', rows['looped'][1])
+        with self.assertRaises(AgentError):
+            dev.analyze(src, only=['never'])
+
+    def test_only_skips_nested(self):
+        r = dev.analyze(FIXTURE.read_text(encoding='utf-8'), only=['echo'])
+        self.assertEqual({n: st for n, st, _, _ in r['rows']}['inner'], 'skip')
+
+    def test_m7_base_exceptions_become_json(self):
+        self.wrap('--only', 'interrupt,quit_now', '--name', 'bx')
+        for fn, args, cls in (('interrupt', {'n': 3}, 'KeyboardInterrupt'), ('quit_now', {'code': 4}, 'SystemExit')):
+            with self.subTest(fn=fn):
+                r = self.agent('tools', 'test', './bx', '--no-jail', '--tool', fn, '--args', json.dumps(args), code=1)
+                last = json.loads(r.stdout.splitlines()[-1])
+                self.assertEqual((last['error'], last['exception']), ('PythonError', cls))
+                self.assertNotIn('Traceback', r.stdout + r.stderr)
 
 # ------------------------------------------------------------------ 用法錯 ----
 

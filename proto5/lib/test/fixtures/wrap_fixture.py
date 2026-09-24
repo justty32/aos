@@ -90,6 +90,16 @@ def boom(message: str) -> str:
     raise ValueError(message)
 
 
+def interrupt(n: int) -> int:
+    """Raise KeyboardInterrupt (a BaseException, not an Exception)."""
+    raise KeyboardInterrupt('stop %d' % n)
+
+
+def quit_now(code: int) -> int:
+    """Call sys.exit (SystemExit)."""
+    raise SystemExit(code)
+
+
 def not_json(n: int) -> object:
     """Return something json.dumps cannot handle."""
     return {n, n + 1}

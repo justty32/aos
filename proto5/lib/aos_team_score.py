@@ -218,15 +218,25 @@ def task_start(t, sent, leads, tasks):
             if r.get('kind') == 'request' and r.get('id') == t.get('request') and when(r.get('at')):
                 return min(when(r['at']), opened), '人寄出開單申請'
         return opened, '開單'
-    if by in leads:
-        prev = [o for o in (task_open(x) for x in tasks.values()
-                            if x is not t and x.get('opened_by') == by and not x.get('parent')) if o and o < opened]
-        after = max(prev) if prev else None
-        cands = [when(r['at']) for r in human_letters(sent) if r.get('to') == by and r.get('status') == 'REQUEST'
-                 and when(r['at']) <= opened and (after is None or when(r['at']) > after)]
-        if cands:
-            return max(cands), '人寄給 %s 的信' % by
+    r = lead_letter(t, sent, leads, tasks)
+    if r is not None:
+        return when(r['at']), '人寄給 %s 的信' % by
     return opened, '開單'
+
+
+def lead_letter(t, sent, leads, tasks):
+    """領隊開的單：落穿給這位領隊、開出這張單的那封人寫的 REQUEST（投遞紀錄）；不是領隊開的或找不到＝None。
+    挑法見 task_start；aos-team mail --task 也用這一份（w2a，astra M11）。"""
+    opened = task_open(t)
+    by = t.get('opened_by')
+    if opened is None or by not in leads:
+        return None
+    prev = [o for o in (task_open(x) for x in tasks.values()
+                        if x is not t and x.get('opened_by') == by and not x.get('parent')) if o and o < opened]
+    after = max(prev) if prev else None
+    cands = [r for r in human_letters(sent) if r.get('to') == by and r.get('status') == 'REQUEST'
+             and when(r['at']) <= opened and (after is None or when(r['at']) > after)]
+    return max(cands, key=lambda r: when(r['at'])) if cands else None
 
 
 def segments(t, states, hi=None):

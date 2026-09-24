@@ -18,10 +18,16 @@ from aos_team_post import load_records, mail_line
 
 
 def _at(rec):
-    t = fmt.parse_iso(rec.get('recorded_at') or '')
-    if t is None:
-        return datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
-    return t if t.tzinfo else t.replace(tzinfo=datetime.timezone.utc)
+    """排序用時間：跟 score 同一套正規化（沒時區的當本機；astra M12）。"""
+    import aos_team_score
+    t = aos_team_score.when(rec.get('recorded_at'))
+    return t if t is not None else datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+
+
+def _key(rec):
+    """--follow 看過沒：題目連狀態一起算，答完會再印一次（astra S3）。"""
+    q = rec.get('q') or {}
+    return rec['kind'], rec['id'], q.get('status'), q.get('answer')
 
 
 def question_records(lay):
@@ -53,28 +59,19 @@ def _cut(text, limit):
 
 
 def fallthrough_letter(lay, tid, letters):
-    """領隊開的單：落穿給領隊、開出這張單的那封人寫的信（沒有＝None）。挑法同 score 的起點。"""
+    """領隊開的單：落穿給領隊、開出這張單的那封人寫的信（沒有＝None）。
+    跟 aos-team score 的起點同一個函式（aos_team_score.lead_letter；astra M11）。"""
+    import aos_team_score
     import aos_team_task
     try:
         tasks = {t['id']: t for t in aos_team_task.all_tickets(lay)}
+        leads = fmt.members_by_template(fmt.load_roster(lay.root), 'lead')
     except Exception:
         return None
     t = tasks.get(tid)
-    if not t or t.get('parent') or t.get('opened_by') in (HUMAN, fmt.POST, fmt.BEAT):
+    if not t or t.get('parent'):
         return None
-    lead = t['opened_by']
-    opened = fmt.parse_iso(t.get('created_at') or '')
-    if opened is None:
-        return None
-    prev = [fmt.parse_iso(x.get('created_at') or '') for x in tasks.values()
-            if x is not t and x.get('opened_by') == lead and not x.get('parent')]
-    prev = [p for p in prev if p is not None and p < opened]
-    after = max(prev) if prev else None
-    cands = [r for r in letters if r.get('kind') == 'letter' and r.get('from') == HUMAN and r.get('to') == lead
-             and r.get('status') == 'REQUEST' and not r.get('reply_to')
-             and fmt.parse_iso(r.get('at') or '') is not None
-             and fmt.parse_iso(r['at']) <= opened and (after is None or fmt.parse_iso(r['at']) > after)]
-    return max(cands, key=lambda r: fmt.parse_iso(r['at'])) if cands else None
+    return aos_team_score.lead_letter(t, letters, leads, tasks)
 
 
 def cmd_mail(team_dir, argv):
@@ -125,12 +122,12 @@ def cmd_mail(team_dir, argv):
     show(recs[-args.last:] if args.last else recs)
     if not args.follow:
         return 0
-    seen = {(r['kind'], r['id']) for r in recs}
+    seen = {_key(r) for r in recs}
     try:
         while True:
             time.sleep(1)
-            new = [r for r in load() if (r['kind'], r['id']) not in seen]
-            seen.update((r['kind'], r['id']) for r in new)
+            new = [r for r in load() if _key(r) not in seen]
+            seen.update(_key(r) for r in new)
             show(new)
     except KeyboardInterrupt:
         return 0

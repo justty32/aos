@@ -37,7 +37,7 @@
     "type": "function",
     "function": {
       "name": "wf_fill",
-      "description": "After wf_init: fill {{...}} from a facts JSON file (only exact matches, never guesses) and delete 〔模板說明〕 blocks. Lists what is left and why.",
+      "description": "After wf_init: fill {{...}} from a facts JSON file (only unambiguous name matches, never guesses) and delete 〔模板說明〕 blocks. Lists what is left and why.",
       "parameters": {
         "type": "object",
         "properties": {

@@ -200,6 +200,37 @@ class MatchRuleTests(unittest.TestCase):
         self.assertIn('〔導入判斷〕要不要保留', new)            # 不是範例：不動
         self.assertIn('〔導入判斷〕這是範例但認不出範圍', new)    # 認不出範圍：不動
 
+    def test_examples_count_limits_what_is_deleted(self):
+        """astra M8：「下面 N 段」只刪緊接的 N 個小節；沒寫段數或不夠 N 個就不動。"""
+        text = ('## 區\n\n> 〔導入判斷〕下面一段是範例 → 刪。\n\n### 範例\n- x\n#### 更深\n- y\n\n'
+                '### 正式資料\n- 留著\n\n## 下一節\n')
+        new, st, _, _ = self.fill(text, {'x': '1'}, examples=True)
+        self.assertEqual(st['examples'], 1)
+        self.assertNotIn('### 範例', new)
+        self.assertNotIn('更深', new)
+        self.assertIn('### 正式資料\n- 留著', new)
+        for bad in ('## 區\n\n> 〔導入判斷〕下面是範例 → 刪。\n\n### 範例\n- x\n',           # 沒寫段數
+                    '## 區\n\n> 〔導入判斷〕下面三段是範例 → 刪。\n\n### 一\n\n### 二\n\n## 別的\n'):  # 不夠 3 個
+            new, st, _, _ = self.fill(bad, {'x': '1'}, examples=True)
+            self.assertEqual((new, st['examples']), (bad, 0))
+
+    def test_template_row_needs_exactly_one_placeholder(self):
+        """astra M9：第一格有兩個佔位（或佔位外還有字）不算範本列。"""
+        self.assertFalse(_fill.is_template_row('| {{甲}} {{乙}} | 真資料 |'))
+        self.assertFalse(_fill.is_template_row('| 前 {{甲}} | x |'))
+        self.assertTrue(_fill.is_template_row('| `{{甲}}` | x |'))
+        new, st, _, _ = self.fill('| {{甲}} {{乙}} | 真資料 |\n', {'x': '1'}, rows=True)
+        self.assertEqual(st['rows'], 0)
+
+    def test_single_char_exact_and_ambiguity_stops(self):
+        """astra M10：一個字完全一樣也填；不只一條像它時不再拿第一格去猜。"""
+        new, _, _, _ = self.fill('{{甲}}\n', {'甲': '正確'})
+        self.assertEqual(new, '正確\n')
+        facts = {'開始日期': 'a', '結束日期': 'b', '時間': 'c'}
+        new, _, _, reasons = self.fill('| 時間 | {{日期}} |\n', facts)
+        self.assertEqual(new, '| 時間 | {{日期}} |\n')
+        self.assertIn('more than one fact', reasons['{{日期}}'])
+
     def test_load_facts_non_text(self):
         facts, skipped = _fill.load_facts(None, {'a': ['x', 'y'], 'b': {'c': 1}, 'd': True, 'e': 3})
         self.assertEqual(facts, {'a': 'x、y', 'e': '3'})
