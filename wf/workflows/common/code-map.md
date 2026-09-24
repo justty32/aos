@@ -55,7 +55,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | [core/agent/README.md](../../../core/agent/README.md) | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見下方 `core/agent` 節 | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
 | [core/tick/README.md](../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
 | [proto4-3/docs/files.md](../../../proto4-3/docs/files.md) | `proto4-3/` 作業系統層原型的逐檔表；inst 指示詞、run 訊號狀態與 daemon lifecycle 已各自拆檔 | 要改 aos-exec／aos-run／aos-daemon／aos-kernel 原型 |
-| [proto5/README.md](../../../proto5/README.md) | `proto5/` Python 3.12 原型（09-24 起 daemon／kernel 是 proto5-2 納入的池式版本）；逐模組一句見下方 [proto5/lib 模組](#proto5lib-模組)，API 細節見 [lib/README.md](../../../proto5/lib/README.md)；命令列薄殼在 `proto5/cli/`（aos-exec／aos-cpu／aos-daemon／aos-kernel／aos-agent／aos-jail／aos-llm），三支主人指令的家一律 `--target` | 要改 proto5 的指示詞、inst／exec、JSON-RPC 家與交件、cpu 執行、daemon 池、kernel 池表／帳本／tick 鏈，或 agent 家讀驗、aos-llm call、aos-agent 各子命令 |
+| [proto5/README.md](../../../proto5/README.md) | `proto5/` Python 3.12 原型（09-24 起 daemon／kernel 是 proto5-2 納入的池式版本）；逐模組一句見下方 [proto5/lib 模組](#proto5lib-模組)，API 細節見 [lib/README.md](../../../proto5/lib/README.md)；命令列薄殼在 `proto5/cli/`（aos-exec／aos-cpu／aos-daemon／aos-kernel／aos-agent／aos-jail／aos-llm／aos-directives／aos-json／aos-team），三支主人指令的家一律 `--target` | 要改 proto5 的指示詞、inst／exec、JSON-RPC 家與交件、cpu 執行、daemon 池、kernel 池表／帳本／tick 鏈，或 agent 家讀驗、aos-llm call、aos-agent 各子命令、aos-team 團隊分派 |
 | [proto5.1/README.md](../../../proto5.1/README.md) | `proto5.1/` 實驗場：proto5 的複本，照 23 題建議先實作——`lib/` 多了 `aos_cpu.py`（共用佇列）、`aos_llm_cpu.py`、`aos_tool_cpu.py`、`aos_run.py`、`aos_daemon.py`、`aos_kernel.py`；`spec/` 多了 cpu-queue／llm-cpu／tool-cpu／aos-*-cpu／aos-run／daemon-home／aos-daemon／kernel-home／aos-kernel；`notes/findings.md`（35 條）與 `findings-brief.md` | 要看「建議實作起來撞到什麼」、或要把 proto5.1 的東西回流 proto5 |
 | [proto4-5/README.md](../../../proto4-5/README.md) | `proto4-5/` LLM 排程原型；`llm_cpu_request.py` 管請求 ID／位置／指紋，`llm_cpu_manage.py` 直接查／刪 `K/llm/` 的 queued、running、done | 要改請求對帳或原型的 `aos-kernel llm ls／rm` |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
@@ -74,6 +74,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | 模組 | 職責 |
 |------|------|
 | `aos_directives` | 指示詞（`$env`／`$fmt`／`$ref`／`$opt`）解析的純函式庫 |
+| `aos_directives_edit` | `aos-directives`：人格分節編輯（ls／show／set／add／rm／export／import／versions／revert）＋指示詞 resolve／check |
 | `aos_inst` | inst.json 的讀、驗、解 |
 | `aos_exec` | 執行一次的上層：三種目標的解讀（`run_target`／`run_target_full`／`run_inst`）與 `aos-exec` 命令列 |
 | `aos_exec_run` | 執行一次的底層：前置檢查、開串流、起子行程、等待／逾時／強停整組、寫 exit 檔 |
@@ -120,6 +121,12 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_agent_access` | 權限牆（access.json）讀驗與快照 |
 | `aos_agent_access_cli` | `aos-agent access ls／set／rm／cwd／net` |
 | `aos_jail` | `aos-jail`：組 bwrap 參數並 exec |
+| `aos_json_cli` | `aos-json`：人用的 JSON Pointer 改檔（get／set／del／append／merge），`--check-directives` 先驗才寫 |
+| `aos_team_format` | 團隊共用格式（資料夾佈局、`team.json`、信、申請、任務單、問題讀驗）與共用 id／時間／寫檔 |
+| `aos_team_requests` | 申請登記表：`kind → 處理函式`，郵差讀 outbox 帶 kind 的檔就叫 `handle()` |
+| `aos_team_task` | 任務單（交接書）與狀態機，只有郵差寫，同一 `src` 重跑冪等 |
+| `aos_team_ask` | 問人：成員 `ask_human` 建問題檔，人用 `aos-team answer` 投回答案 |
+| `aos_team_cli` | `aos-team` 子命令分派表（模組、函式、哪一隊做、一句話） |
 
 ---
 
