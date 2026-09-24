@@ -190,7 +190,8 @@ class LiveTeamTests(KernelCase):
         shutil.rmtree(self.team)
         (self.project / 'AGENTS.md').write_text('# p\n', encoding='utf-8')
         src = self.root / 'roster.json'
-        src.write_text(json.dumps(ROSTER), encoding='utf-8')
+        # 郵差預設 5 秒一輪（team.json 的 post.interval_s）；測試要快，自己設 1 秒
+        src.write_text(json.dumps(dict(ROSTER, post={'interval_s': 1})), encoding='utf-8')
         env = dict(self.env)
 
         def team(*args):

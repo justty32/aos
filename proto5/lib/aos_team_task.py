@@ -10,7 +10,7 @@ import copy
 import datetime
 from pathlib import Path
 
-from aos_team_format import (HUMAN, POST, TASK_ID, TASK_TYPE, TERMINAL, TeamError, Layout, check_name,
+from aos_team_format import (BEAT, HUMAN, POST, TASK_ID, TASK_TYPE, TERMINAL, TeamError, Layout, check_name,
                              json_files, members_by_template, next_number, now_iso, parse_iso, read_json,
                              validate_ticket, write_json)
 
@@ -71,6 +71,7 @@ def render_handoff(t):
     reply = t['opened_by'] if t['opened_by'] not in (POST,) else HUMAN
     flow = t['workflow'].strip()
     lines = ['任務 %s（rev%d，第 %d/%d 次）：%s' % (t['id'], t['rev'], t['attempt'], t['max_attempts'], t['goal']),
+             ] + (['這張單是心跳（定時器）照例行派的，不是人或領隊當下派的。'] if t['opened_by'] == BEAT else []) + [
              '沒有指定工作流，照目標與事實做' if flow in NO_FLOW else '照這份工作流做：%s' % flow,
              '事實：%s' % (t.get('facts') or '無')]
     lines.append('驗收（你回 DONE 之後自動跑，機械的不用你自己宣稱）：')
@@ -123,6 +124,10 @@ def _notify(t, status, text, skip=()):
     out = []
     for who in (t['opened_by'], HUMAN):
         who = HUMAN if who == POST else who
+        if who == BEAT:
+            continue                      # 心跳自己看單子，不用寄給它
+        if t['opened_by'] == BEAT and who == HUMAN and status == 'DONE':
+            continue                      # 例行做完不吵人（2026-09-24 使用者裁）：只有失敗、逾時、檢查器壞才寄
         if who in skip or any(e['to'] == who for e in out):
             continue
         out.append(letter(who, status, t, text))
@@ -206,7 +211,7 @@ def apply(t, ev, now=None):
                 move('done', waiting_on=None)
                 effects += _notify(t, 'DONE', '%s 完成：%s' % (t['id'], t['goal']))
         elif status == 'BLOCKED' and st in ('sent', 'working', 'waiting_user'):
-            move('blocked', ev.get('note'), waiting_on=t['opened_by'] if t['opened_by'] != POST else HUMAN)
+            move('blocked', ev.get('note'), waiting_on=t['opened_by'] if t['opened_by'] not in (POST, BEAT) else HUMAN)
         elif status == 'NEEDS-USER' and st in ('sent', 'working', 'blocked'):
             move('waiting_user', ev.get('note'), waiting_on=HUMAN)
         elif status == 'FAILED':
@@ -339,7 +344,7 @@ def on_handoff(lay, roster, req):
         raise TeamError('BadAssignee', '%s 不在名冊裡' % assignee)
     if assignee == sender:
         raise TeamError('BadAssignee', '不能派給自己')
-    if sender != HUMAN and assignee not in roster['members'][sender]['mail_to']:
+    if sender not in (HUMAN, BEAT) and assignee not in roster['members'][sender]['mail_to']:
         raise TeamError('BadAssignee', '%s 不在 %s 的 mail_to 裡' % (assignee, sender))
     now = req.get('at') or now_iso(roster.get('tz'))
     lay.tasks.mkdir(parents=True, exist_ok=True)
