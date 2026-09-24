@@ -21,6 +21,9 @@
     route.log                 門房每次的結果，一行一個 JSON
     routines.json  schedule.json   心跳（第 2 隊）
     locks/<名>.json           短期獨佔鎖（lock.md；第二波 C 隊，只有郵差寫）
+    spawns/s-NNNN.json        生新成員的申請紀錄（spawn.md；第三波 W3-1，只有郵差寫）
+    tool-drafts/d-NNNN/       工具草稿：郵差生的包＋draft.json（toolsmith.md；第三波 W3-1，只有郵差寫）
+    outbox/<名>/tools-staging/<工具名>/   tool_draft 給模型自己看的副本（郵差不讀）
     notes/<名>/               長期筆記 notes.json（模板 notes: true 的成員才有；init 建）
 ```
 
@@ -37,6 +40,7 @@
 | `outbox/<名>/done/`、`rejected/`、`post/sent/`、`human/`、成員的 `input/mail-*.json` | 郵差 | — |
 | `team/tasks/*.json`、`team/wait-user/*.json` | 郵差（叫 `aos_team_task`／`aos_team_ask` 的處理函式） | 模型寄申請；人用 `aos-team task …`、`answer`（也是寄申請） |
 | `team/locks/*.json` | 郵差（叫 `aos_team_lock.on_lock`，第二波 C 隊） | 模型、人都寄 `kind: lock` 申請（`lock` 工具、`aos-team lock acquire／release`） |
+| `team/spawns/*.json`、`team/tool-drafts/` | 郵差（`aos_team_spawn.on_spawn`、`aos_team_toolsmith.on_tool_draft`，第三波 W3-1） | 模型寄 `spawn`／`tool_draft` 申請；人 `aos-team spawn approve`／`tool approve` 只讀它們，改的是名冊與成員的家 |
 | 專案的 `SESSION-LOG.md`、`WAIT_USER.md` | 書記（郵差同一支） | — |
 | `team.json`、`routes.json` | 人（文字編輯器）；`aos-team init`、`rm`、`route save` | 模型不能改 |
 | 成員的家（`info.json`、人格、記憶、工具、`access.json`） | 人、`aos-agent` 指令；`aos-team init` 第一次生 | 模型改不到（信任資料，[agent access.md](../agent/access.md)） |

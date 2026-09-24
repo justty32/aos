@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""tool_draft：寫一支工具草稿（T-toolsmith，第三波 W3-1；spec/team/toolsmith.md）。
+
+寫兩個地方：自己 outbox 底下的 tools-staging/<名>/（draft.py＋tool.json，給自己之後看、改）；
+和一份 kind: tool_draft 申請（整份草稿在申請裡，郵差只認這份，不讀 staging）。
+郵差在牢裡跑 aos-agent tools test：沒過＝退一封 FAILED 附沒過的幾條；過了＝開一題「[工具]」問人，
+人 aos-team tool approve 才裝進你的工具表，然後回一封信給你。這支工具自己不測、不裝。
+"""
+import ast
+import json
+import os
+import re
+import sys
+import tempfile
+
+from _team import arg, fail, only_keys, run, send
+
+NAME = re.compile(r'[a-z][a-z0-9_]{0,39}\Z')
+
+
+def _write(path, text):
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix='.draft.', suffix='.tmp')
+    with os.fdopen(fd, 'w', encoding='utf-8') as f:
+        f.write(text)
+    os.rename(tmp, path)
+
+
+def main(args, cfg):
+    only_keys(args, ('name', 'description', 'parameters', 'code', 'lang', 'cases'))
+    name = arg(args, 'name', str, required=True)
+    if not NAME.match(name):
+        fail('BadArguments', 'name must match [a-z][a-z0-9_]{0,39}')
+    desc = arg(args, 'description', str, required=True)
+    params = arg(args, 'parameters', dict, required=True)
+    code = arg(args, 'code', str, required=True)
+    if arg(args, 'lang', str, 'py') != 'py':
+        fail('BadArguments', 'lang must be "py"')
+    cases = arg(args, 'cases', list, required=True)
+    if not any(isinstance(c, dict) and c.get('expect') == 'ok' for c in cases):
+        fail('BadArguments', 'cases needs at least one example with expect "ok" (best with contains)')
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as e:
+        fail('BadArguments', 'code has a syntax error on line %s: %s' % (e.lineno, e.msg))
+    if not any(isinstance(n, ast.FunctionDef) and n.name == 'main' and len(n.args.args) == 2 for n in tree.body):
+        fail('BadArguments', 'code must define a top-level def main(args, root)')
+    outbox = cfg.get('outbox')
+    if not isinstance(outbox, str) or not os.path.isdir(outbox):
+        fail('NoOutbox', 'outbox %s is not mounted; ask the user to run aos-agent check' % outbox)
+    staging = os.path.join(outbox, 'tools-staging', name)
+    try:
+        os.makedirs(staging, exist_ok=True)
+        _write(os.path.join(staging, 'draft.py'), code)
+        _write(os.path.join(staging, 'tool.json'), json.dumps(
+            {'name': name, 'description': desc, 'parameters': params, 'cases': cases}, ensure_ascii=False, indent=2))
+    except OSError as e:
+        fail('WriteFailed', 'cannot write staging copy: %s' % e)
+    body = {'name': name, 'description': desc, 'parameters': params, 'code': code, 'lang': 'py', 'cases': cases}
+    rid = send(cfg, 'tool_draft', body)
+    return ('queued tool draft %s (%s). The postman tests it in a sandbox; failures come back as mail, '
+            'a pass goes to the user for install. End this turn.' % (name, rid))
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

@@ -25,6 +25,8 @@ aos-team <子命令> [參數…] [--target 團隊資料夾]
 | `verify ID`、`routine ls/add/rm`、`beat` | 驗收；心跳排程；心跳走一次 | 2 |
 | `score` | 六軸自動彙整 | 5 |
 | `crystal [--min N] [--json] [--out FILE] [--suggest-with-llm [--model A]]` | 固化建議：從常落穿給領隊的句型產候選規則提案，不自動生效（[crystal.md](crystal.md)） | 第三波 W3-2 |
+| `spawn ls [--json]`／`spawn approve Q` | 成員申請生的新成員；批准＝再驗、改名冊、生家、登記、回覆（[spawn.md](spawn.md)） | 三波 W3-1 |
+| `tool ls [--json]`／`tool approve Q` | 成員寫的工具草稿與牢裡測試結果；批准＝核 sha256、`tools add` 到寫的人的家、回覆（[toolsmith.md](toolsmith.md)） | 三波 W3-1 |
 
 ## start 的掛勾
 

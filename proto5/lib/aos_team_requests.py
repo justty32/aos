@@ -21,6 +21,8 @@ KINDS = {
     'routine': 'aos_team_beat:on_routine',       # 第 2 隊（spec/team/beat.md〈申請〉）
     'reverify': 'aos_team_post:on_reverify',     # 第 2 隊：檢查器修好後重交驗收（spec/team/verify.md）
     'lock': 'aos_team_lock:on_lock',             # 第二波 C 隊：T-lock（spec/team/lock.md）
+    'spawn': 'aos_team_spawn:on_spawn',          # 第三波 W3-1：T-spawn（spec/team/spawn.md）
+    'tool_draft': 'aos_team_toolsmith:on_tool_draft',   # 第三波 W3-1：T-toolsmith（spec/team/toolsmith.md）
 }
 
 

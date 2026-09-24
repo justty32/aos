@@ -73,7 +73,7 @@ class InitTests(unittest.TestCase):
             self.assertTrue(lay.outbox(name).is_dir())
         lead = read_json(lay.member('lead') / 'info.json')
         names = [e['$opt']['only'] if isinstance(e, dict) else e for e in lead['tools']]
-        self.assertEqual(names, [['handoff', 'board', 'ask_human', 'compact_me', 'routine_propose'], ['team_say'],
+        self.assertEqual(names, [['handoff', 'board', 'ask_human', 'compact_me', 'routine_propose', 'spawn_member'], ['team_say'],
                                  'tools/notes.json', ['read', 'grep', 'find', 'ls']])   # team 包（第 2 隊）已在
         self.assertTrue(lay.outbox('human').is_dir())
         self.assertEqual(read_json(self.team / 'team.json'), ROSTER)
@@ -395,10 +395,12 @@ class ToolUnitTests(unittest.TestCase):
         tools = json.loads((TOOLS / 'task.json').read_text(encoding='utf-8'))
         sizes = {t['function']['name']: len(json.dumps(t['function'], ensure_ascii=False)) for t in tools}
         self.assertEqual(set(sizes), {'handoff', 'board', 'review_result', 'ask_human', 'compact_me',
-                                      'lock', 'access_request', 'persona_propose', 'routine_propose'})
+                                      'lock', 'access_request', 'persona_propose', 'routine_propose',
+                                      'spawn_member', 'tool_draft'})
         # 09-24 W2C 加 4 支申請類工具：整包（9 支全裝）比第一波大，但沒有哪個成員一次全裝——
         # lead／worker 的 template.json 各自只 only 挑幾支（見 templates/*/template.json）。
-        self.assertLess(sum(sizes.values()), 5500, sizes)            # 約 1370 token；單支都 < 300 token 起跳
+        # 第三波 W3-1 再加 spawn_member（領隊）、tool_draft（工人）兩支：整包約 6500 字元，一樣沒人全裝。
+        self.assertLess(sum(sizes.values()), 7000, sizes)            # 約 1750 token；單支都 < 300 token 起跳
         self.assertTrue(all(v < 1200 for v in sizes.values()), sizes)
 
 
@@ -598,7 +600,7 @@ class TeamIntegrationTests(KernelCase):
         for body in self.requests:
             who = next(k for k in SCRIPTS if k in body['messages'][0]['content'])
             tools[who] = {t['function']['name'] for t in body['tools']}
-        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'routine_propose',
+        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'routine_propose', 'spawn_member',
                                              'team_say', 'note', 'recall', 'context', 'read', 'grep', 'find', 'ls'})
         self.assertEqual(tools['審查員 reviewer'], {'board', 'review_result', 'read', 'grep', 'find', 'ls'})
         self.assertTrue({'write', 'bash', 'board', 'ask_human', 'compact_me', 'team_say', 'note', 'recall', 'context'} <= tools['工人 worker-1'])

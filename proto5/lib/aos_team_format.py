@@ -259,7 +259,7 @@ def _unknown(obj, allowed, where):
 # ------------------------------------------------------------------ 名冊 ----
 
 MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools')
-ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok')
+ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok', 'spawn')
 
 
 def validate_roster(obj, where='team.json'):
@@ -270,7 +270,8 @@ def validate_roster(obj, where='team.json'):
     out = {'project': _str(obj.get('project'), where + '.project'),
            'tz': _opt_str(obj.get('tz'), where + '.tz'),
            'members': {}, 'limits': dict(LIMIT_DEFAULTS), 'post': dict(POST_DEFAULTS),
-           'cmd_ok': _cmd_whitelist(obj.get('cmd_ok', []), where + '.cmd_ok')}
+           'cmd_ok': _cmd_whitelist(obj.get('cmd_ok', []), where + '.cmd_ok'),
+           'spawn': _spawn_cfg(obj.get('spawn', {}), where + '.spawn')}
     post = _obj(obj.get('post', {}), where + '.post')
     _unknown(post, tuple(POST_DEFAULTS), where + '.post')
     if 'interval_s' in post:
@@ -358,6 +359,17 @@ def validate_cmd(run, where):
     if '/' in run[0] or run[0].startswith('-'):
         bad(where, '第一格要是指令名（不含 /、不以 - 開頭），例 python3、make；在牢裡照 PATH 找')
     return list(run)
+
+
+def _spawn_cfg(value, where):
+    """team.json 的 spawn（第三波 W3-1，spawn.md）：{"templates": [模板名…]}＝成員能申請生哪幾種新成員；
+    沒寫＝[]（不准生）。只收內建模板名（不含 /）：自訂模板的資料夾可能在模型改得到的地方。"""
+    _obj(value, where)
+    _unknown(value, ('templates',), where)
+    names = value.get('templates', [])
+    if not isinstance(names, list) or not all(isinstance(x, str) and NAME.match(x) for x in names):
+        bad(where + '.templates', '要是內建模板名的陣列（小寫英數、底線、連字號，不含 /）')
+    return {'templates': list(dict.fromkeys(names))}
 
 
 def _cmd_whitelist(value, where):
