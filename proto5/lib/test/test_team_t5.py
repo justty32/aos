@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-import aos_agent_status
+import aos_kernel_store
 import aos_team
 import aos_team_post
 import aos_team_task as task
@@ -38,7 +38,7 @@ class MachineLinesTests(unittest.TestCase):
 
     def lines(self, procs, env=None):
         env = {'AOS_KERNEL_HOME': '/k'} if env is None else env
-        with mock.patch.object(aos_agent_status, 'ledger', return_value={'procs': procs}):
+        with mock.patch.object(aos_kernel_store, 'procs', return_value=procs):
             return aos_team.machine_lines(str(self.team), env)
 
     def test_ok_bad_missing(self):
@@ -55,9 +55,65 @@ class MachineLinesTests(unittest.TestCase):
         self.assertEqual(self.lines({}, env={}), ['郵差、心跳：沒設 AOS_KERNEL_HOME，看不到'])
 
     def test_ledger_unreadable_does_not_raise(self):
-        with mock.patch.object(aos_agent_status, 'ledger', side_effect=OSError('x')):
+        with mock.patch.object(aos_kernel_store, 'procs', side_effect=OSError('x')):
             out = aos_team.machine_lines(str(self.team), {'AOS_KERNEL_HOME': '/k'})
         self.assertIn('帳本讀不到', out[0])
+
+
+class RouteRunGuardTests(unittest.TestCase):
+    """astra M1：門房 run 的第一格不能用群組；群組的值不能變成選項。"""
+
+    def routes(self, run, pattern):
+        return {'routes': [{'name': 'x', 'pattern': pattern, 'do': 'tool', 'run': run,
+                            'tests': {'hit': ['執行 ls'], 'miss': ['別的']}}]}
+
+    def test_group_in_subcommand_rejected(self):
+        import aos_team_format as fmt
+        with self.assertRaises(fmt.TeamError) as cm:
+            fmt.validate_routes(self.routes(['{cmd}'], '執行 (?P<cmd>\\w+)'), 'routes.json')
+        self.assertIn('第一格', str(cm.exception))
+
+    def test_group_value_as_option_rejected(self):
+        import json
+        import aos_team_format as fmt
+        import aos_team_route as route
+        team = Path(tempfile.mkdtemp(prefix='aos-team-t5r-'))
+        self.addCleanup(shutil.rmtree, team, ignore_errors=True)
+        (team / 'p').mkdir()
+        t = team / 'team'
+        t.mkdir()
+        (t / 'team.json').write_text(json.dumps({'project': '../p', 'members': {
+            'lead': {'template': 'lead', 'mail_to': ['human']}}}), encoding='utf-8')
+        lay = fmt.Layout(t)
+        lay.routes.parent.mkdir(parents=True, exist_ok=True)
+        lay.routes.write_text(json.dumps({'routes': [{'name': 'x', 'pattern': '看 (?P<w>\\S+)', 'do': 'tool',
+                                                      'run': ['task', 'show', '{w}'],
+                                                      'tests': {'hit': ['看 t-0001'], 'miss': ['別的']}}]}),
+                              encoding='utf-8')
+        with self.assertRaises(fmt.TeamError) as cm:
+            route.ask(str(t), '看 --all')
+        self.assertEqual(cm.exception.code, 'BadRoute')
+
+
+class NotesLandingTests(unittest.TestCase):
+    """astra M3：內建 notes 掛點途中有符號連結（例如指到任務表）就拒絕。"""
+
+    def test_symlink_rejected(self):
+        import aos_agent_init
+        from aos_agent_home import AgentError
+        team = Path(tempfile.mkdtemp(prefix='aos-team-t5n-'))
+        self.addCleanup(shutil.rmtree, team, ignore_errors=True)
+        (team / 'team' / 'tasks').mkdir(parents=True)
+        (team / 'team' / 'notes').mkdir()
+        os.symlink('../tasks', team / 'team' / 'notes' / 'worker-1')
+        member = {'team_dir': str(team), 'name': 'worker-1'}
+        with self.assertRaises(AgentError) as cm:
+            aos_agent_init._check_notes_dir(member)
+        self.assertEqual(cm.exception.code, 'AccessUnsafe')
+        os.unlink(team / 'team' / 'notes' / 'worker-1')
+        aos_agent_init._check_notes_dir(member)          # 不在：可以（init 會建）
+        (team / 'team' / 'notes' / 'worker-1').mkdir()
+        aos_agent_init._check_notes_dir(member)          # 普通資料夾：可以
 
 
 class PersonaTests(unittest.TestCase):

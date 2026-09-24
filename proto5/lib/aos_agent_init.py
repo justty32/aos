@@ -76,6 +76,7 @@ def _access(base, tpl, folder, member):
         mounts['outbox'] = _rel(os.path.join(team, 'team', 'outbox', member['name']), base)
         mounts['board'] = {'$opt': 'ro', '$val': _rel(os.path.join(team, 'team', 'tasks'), base)}
         if tpl.get('notes'):
+            _check_notes_dir(member)
             mounts['notes'] = _rel(_notes_dir(member), base)
     for name, value in tpl.get('mounts', {}).items():
         mounts[name] = _mount_value(value, folder, base, True)
@@ -108,12 +109,29 @@ def _notes_dir(member):
     return os.path.join(member['team_dir'], 'team', 'notes', member['name'])
 
 
+def _check_notes_dir(member):
+    """內建 notes 掛點的實際落點要就是 team/notes/<名>/：途中（team、notes、<名>）不准是符號連結，
+    解開後也要在原位（astra T5 M1：事先放一個 team/notes/worker-1 → ../tasks，會把任務表掛成可寫）。"""
+    team = os.path.realpath(member['team_dir'])
+    want = os.path.join(team, 'team', 'notes', member['name'])
+    cur = team
+    for part in ('team', 'notes', member['name']):
+        cur = os.path.join(cur, part)
+        if os.path.islink(cur):
+            raise AgentError('AccessUnsafe', '筆記資料夾途中的 %s 是符號連結；內建 notes 掛點只准是真的資料夾 %s'
+                             % (cur, want))
+    if os.path.exists(want) and (not os.path.isdir(want) or os.path.realpath(want) != want):
+        raise AgentError('AccessUnsafe', '筆記資料夾 %s 不是普通資料夾' % want)
+
+
 def _ensure_notes(base, tpl, member, lines):
     """模板 notes: true：建 team/notes/<名>/；已生的舊家 access.json 沒有 notes 掛載就補這一格（只補這格，
     其他掛載不動；notes 已被人改指別處也不動）。不補的話重跑 init 裝上的 note 工具在牢裡找不到 /work/notes。"""
     if member is None or not tpl.get('notes'):
         return
+    _check_notes_dir(member)
     os.makedirs(_notes_dir(member), exist_ok=True)
+    _check_notes_dir(member)
     path = base / 'access.json'
     if not path.is_file():
         return                                            # 新生的家：_access 已經寫了

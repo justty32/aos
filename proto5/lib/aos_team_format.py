@@ -717,6 +717,7 @@ def load_template(name):
 
 ROUTE_KEYS = ('name', 'pattern', 'do', 'run', 'tool', 'args', 'handoff', 'tests')
 DEFAULT_NEGATIONS = ('不要', '別', '取消', '不用', '勿', '不准')
+ROUTE_RUN_FORBIDDEN = ('ask', 'init', 'rm', 'start', 'stop')   # 門房的 run 不能跑這幾個子命令
 
 
 def validate_routes(obj, where='routes.json'):
@@ -750,8 +751,10 @@ def validate_routes(obj, where='routes.json'):
             if 'run' in r and (not isinstance(r['run'], list) or not r['run']
                                or not all(isinstance(x, str) for x in r['run'])):
                 bad(w + '.run', '要是非空字串陣列，例 ["task", "ls"]')
-            if 'run' in r and r['run'][0] in ('ask', 'init', 'rm', 'start', 'stop'):
+            if 'run' in r and r['run'][0] in ROUTE_RUN_FORBIDDEN:
                 bad(w + '.run', '門房不能跑 aos-team %s' % r['run'][0])
+            if 'run' in r and re.search(r'\{\w+\}', r['run'][0]):
+                bad(w + '.run', '第一格（子命令）不能用 {群組}：子命令要寫死')
             if 'tool' in r and not re.match(r'[A-Za-z0-9_-]+/[A-Za-z0-9_-]+\Z', str(r['tool'])):
                 bad(w + '.tool', '要寫成 "包/工具"')
             if 'args' in r:

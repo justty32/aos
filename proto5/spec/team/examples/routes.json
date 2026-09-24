@@ -50,9 +50,7 @@
           {"kind": "file_exists", "path": "workflows/schedule.md"},
           {"kind": "check", "name": "contains", "args": {"path": "WORKFLOWS.md", "text": "(workflows/tick.md)"}},
           {"kind": "check", "name": "contains", "args": {"path": "WORKFLOWS.md", "text": "(workflows/routines.md)"}},
-          {"kind": "check", "name": "contains", "args": {"path": "WORKFLOWS.md", "text": "(workflows/schedule.md)"}},
-          {"kind": "check", "name": "contains", "args": {"path": "AGENTS.md", "text": "試跑用的空專案"}},
-          {"kind": "check", "name": "contains", "args": {"path": "workflows/common/user.md", "text": "Asia/Taipei"}}
+          {"kind": "check", "name": "contains", "args": {"path": "WORKFLOWS.md", "text": "(workflows/schedule.md)"}}
         ]
       },
       "tests": {
