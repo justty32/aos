@@ -5,7 +5,6 @@
 回話與 slash 指令的輸出走 stdout；提示符、等待提示、逾時、卡住的原因走 stderr。
 """
 import contextlib
-import json
 import os
 import signal
 import sys
@@ -281,37 +280,15 @@ class Talk:
                                             '%d 個沒收' % pending if pending else '-', waiting))
 
     def cmd_context(self, rest):
+        # 算法與 aos-agent context 同一份（aos_agent_context.lines）
+        from aos_agent_context import lines
         count = self._number(rest, CONTEXT_RECENT)
-        info = aos_agent_info.load(self.base, env=self.env)
-        history = info['history']
-        roles = {}
-        chars = 0
-        for m in history:
-            roles[m['role']] = roles.get(m['role'], 0) + 1
-            chars += len(m.get('content') or '')
-            chars += sum(len(c['function']['arguments']) for c in m.get('tool_calls') or [])
-        tools = [t['function']['name'] for t in info['tools']]
-        tool_chars = len(json.dumps(info['tools'], ensure_ascii=False)) if tools else 0
-        _out('model  %s（池 %s）' % (info['model'], info['llm']['pool']))
-        _out('system %d 字' % len(info['system']))
-        _out('history %d 則，%d 字（user %d／assistant %d／tool %d）' % (
-            len(history), chars, roles.get('user', 0), roles.get('assistant', 0), roles.get('tool', 0)))
-        _out('tools  %d 個，%d 字：%s' % (len(tools), tool_chars, ', '.join(tools) or '-'))
-        _out('合計約 %d 字，每次問模型整份送出（記憶不會自動截短）' % (len(info['system']) + chars + tool_chars))
-        if history:
-            names = call_names(history, len(history))
-            _out('最近 %d 則：' % min(count, len(history)))
-            for m in history[-count:]:
-                _out('  ' + _cut(self._brief(m, names)))
+        for line in lines(aos_agent_info.load(self.base, env=self.env), recent=count):
+            _out(line)
 
     def _brief(self, m, names, full=False):
-        """一則一行：user／assistant 帶角色，工具結果印成 [結果 …]；full＝內容不折行不截。"""
-        if m.get('role') == 'tool':
-            return result_line(names.get(m.get('tool_call_id'), '?'), m.get('content'))
-        text = m.get('content') or ''
-        parts = [text if full else ' '.join(text.split())] if text else []
-        parts += [call_line(c) for c in m.get('tool_calls') or []]
-        return '%s: %s' % (m.get('role'), ' '.join(parts))
+        from aos_agent_context import brief
+        return brief(m, names, full)
 
     def cmd_history(self, rest):
         count = self._number(rest, HISTORY_DEFAULT)

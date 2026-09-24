@@ -72,6 +72,11 @@ def tick(agent_dir, env=None, note=''):
         if st['batch'] is not None:
             return collect(run)
         if st['state'] == 'idle':
+            # spec/agent/compact.md：自動壓縮在同一把 tick 鎖裡做（不另拿鎖）；做了事這格就到這裡
+            if st['intake'] is None:
+                import aos_agent_compact
+                if aos_agent_compact.auto(run):
+                    return 0
             return intake(run)
         history = info['history']
         if st['state'] == 'act' and not (history and history[-1]['role'] == 'assistant'

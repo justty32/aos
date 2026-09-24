@@ -20,7 +20,13 @@ HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登�
          'continue': '解除手動暫停與連敗暫停',
          'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）',
          'tools': '工具管理：tools ls／add／rm／alias／unalias（內建包 base＝read／write／edit／bash／grep／find／ls）',
-         'access': '權限牆：access ls／set／rm／cwd／net（工具關進牢裡看得到哪些資料夾）'}
+         'access': '權限牆：access ls／set／rm／cwd／net（工具關進牢裡看得到哪些資料夾）',
+         # 第 4 隊（記憶與紀錄）：spec/aos-agent/cli-memory.md
+         'context': '送給模型的東西多大：人格、記憶、工具的字數與 token 粗估（--by-round 每輪一行）',
+         'compact': '機械壓縮記憶（不叫模型）：舊的輪只留原話與最後回話，原文存進 prompts/archive/',
+         'events': '事件紀錄：每批起訖與成敗、收件、壓縮（--usage 看模型回報的 token 用量）',
+         'history': '看壓縮前的原文：history --archive [SHA] [--grep 字]',
+         'notes': '長期筆記：notes ls｜notes show KEY'}
 TALK_WAIT_SECONDS = 120
 ACCESS_EPILOG = ('用法：\n'
                  '  aos-agent access ls  [--target DIR] [--json]\n'
@@ -101,6 +107,29 @@ def _parser():
             sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令、舊錯原文與 stuck 原行')
         if name == 'init':
             sub.add_argument('--force', action='store_true', help='資料夾裡已有別的東西也照樣生（info.json 已在仍拒絕）')
+            sub.add_argument('--template', metavar='NAME', help='照 proto5/templates/NAME/ 生（第 1 隊的 init_from_template）')
+        if name == 'context':
+            sub.add_argument('--by-round', action='store_true', help='每輪一行：則數、字數、token、最胖的工具結果')
+            sub.add_argument('--json', action='store_true', help='印機器格式')
+        if name == 'compact':
+            sub.add_argument('--keep-rounds', metavar='N', help='最後 N 輪原樣留（預設 info.compact.keep_rounds，再沒有＝3）')
+            sub.add_argument('--max-tokens', metavar='X', help='縮完還超過 X token 就把最舊的輪整輪封存（預設 info.compact.max_tokens）')
+            sub.add_argument('--dry-run', action='store_true', help='只印會變成怎樣，不寫任何檔')
+            sub.add_argument('--prune-archive', metavar='天數', help='改做清理：刪超過這麼多天、記憶裡沒提到的 archive')
+            sub.add_argument('--json', action='store_true', help='印機器格式')
+        if name == 'events':
+            sub.add_argument('--last', metavar='N', default='20', help='最後幾則（預設 20；0＝全部）')
+            sub.add_argument('--usage', action='store_true', help='改看 log/usage.jsonl（aos-llm call 記的 token 用量）')
+            sub.add_argument('--json', action='store_true', help='印機器格式')
+        if name == 'history':
+            sub.add_argument('--archive', action='store_true', help='看 compact 存下的原文（現在只有這一種看法，要給）')
+            sub.add_argument('sha', nargs='?', metavar='SHA', help='只看這一份（開頭幾個字就行）')
+            sub.add_argument('--grep', metavar='字', help='在 archive 裡找這個字（不分大小寫）')
+            sub.add_argument('--json', action='store_true', help='印機器格式')
+        if name == 'notes':
+            sub.add_argument('action', choices=['ls', 'show'], help='ls 列全部；show KEY 看一則')
+            sub.add_argument('args', nargs='*', metavar='KEY')
+            sub.add_argument('--json', action='store_true', help='ls：印機器格式')
         if name == 'tools':
             sub.formatter_class = argparse.RawDescriptionHelpFormatter
             sub.usage = 'aos-agent tools {ls,add,rm,alias,unalias} [ARG…] [--target DIR] [選項]'
@@ -209,6 +238,55 @@ def _tools(target, args, opts):
     return {'rm': edit.rm, 'alias': edit.alias, 'unalias': edit.unalias}[args.action](target, *a)
 
 
+def _count(ap, flag, value, lo=0):
+    if value is None:
+        return None
+    if not re.fullmatch(r'[0-9]{1,9}', value) or int(value) < lo:
+        ap.error('%s 要是 %d 以上的整數：%s' % (flag, lo, value[:40]))
+    return int(value)
+
+
+def _memory_usage(ap, args):
+    """第 4 隊的五個子命令：先驗用法（退 2），回 {子命令: fn(target, args)}。"""
+    cmd = args.command
+    if cmd == 'compact':
+        keep, limit = _count(ap, '--keep-rounds', args.keep_rounds), _count(ap, '--max-tokens', args.max_tokens, 100)
+        days = _count(ap, '--prune-archive', args.prune_archive)
+        if days is not None and (keep is not None or limit is not None or args.dry_run or args.json):
+            ap.error('--prune-archive 不跟別的選項一起給')
+        if days is not None:
+            from aos_agent_compact import prune
+            return {cmd: lambda t, a: prune(t, days)}
+        from aos_agent_compact import compact
+        return {cmd: lambda t, a: compact(t, keep_rounds=keep, max_tokens=limit, dry_run=a.dry_run, as_json=a.json)}
+    if cmd == 'events':
+        last = _count(ap, '--last', args.last)
+        from aos_agent_events import show
+        return {cmd: lambda t, a: show(t, last=last, as_json=a.json, usage=a.usage)}
+    if cmd == 'history':
+        if not args.archive:
+            ap.error('history 現在只有 --archive 一種看法（對話記憶用 aos-agent listen --last N 或 talk 的 /history）')
+        from aos_agent_compact import archive_main
+        return {cmd: lambda t, a: archive_main(t, sha=a.sha, grep=a.grep, as_json=a.json)}
+    if cmd == 'context':
+        from aos_agent_context import main as context_main
+        return {cmd: lambda t, a: context_main(t, as_json=a.json, by_rounds=a.by_round)}
+    if cmd == 'notes':
+        want = 1 if args.action == 'show' else 0
+        if len(args.args) != want:
+            ap.error('notes %s %s' % (args.action, '要一個 KEY' if want else '不帶參數'))
+        if args.json and args.action != 'ls':
+            ap.error('--json 只給 notes ls')
+
+        def notes(t, a):
+            from aos_agent_notes import main as notes_main
+            return notes_main(t, a.action, a.args, as_json=a.json)
+        return {cmd: notes}
+    if cmd == 'init' and args.template is not None and not args.template:
+        ap.error('--template 不可為空')
+    return {}
+
+
 def _is_number(value):
     try:
         float(value)
@@ -247,6 +325,7 @@ def main(argv=None):
         problem = usage_problem(args.action, args.args, ro=args.ro, rw=args.rw, cwd=args.cwd, as_json=args.json)
         if problem:
             ap.error(problem)
+    memory = _memory_usage(ap, args)
     wait = getattr(args, 'wait', None)
     timeout = _seconds(ap, wait) if wait is not None else WAIT_SECONDS * 1000
     if args.command == 'talk':
@@ -293,7 +372,16 @@ def main(argv=None):
             from aos_agent_access_cli import main as access_main
             return access_main(target, args.action, args.args, ro=args.ro, rw=args.rw, cwd=args.cwd,
                                as_json=args.json)
+        if args.command in memory:
+            return memory[args.command](target, args)
         if args.command == 'init':
+            if args.template is not None:
+                # 第 1 隊寫 aos_agent_init.init_from_template()；還沒合進來就說還沒做
+                import aos_agent_init
+                fn = getattr(aos_agent_init, 'init_from_template', None)
+                if fn is None:
+                    raise AgentError('NotImplemented', 'init --template 還沒做（第 1 隊的 init_from_template）')
+                return fn(target, args.template, force=args.force)
             from aos_agent_init import init
             return init(target, force=args.force)
         import aos_agent
