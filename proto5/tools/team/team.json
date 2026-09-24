@@ -1,0 +1,21 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "team_say",
+      "description": "Send a letter to a teammate or the human. Not for assigning work (use handoff). After sending, end your turn; replies arrive as new input.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {"type": "string", "description": "Recipient name"},
+          "status": {"type": "string", "enum": ["REQUEST", "DONE", "BLOCKED", "NEEDS-USER", "FAILED", "PROGRESS"]},
+          "reply_to": {"type": "string", "description": "Task id (t-0001) or letter id you answer"},
+          "rev": {"type": "integer", "description": "The task's rev, when replying to a task", "minimum": 1},
+          "text": {"type": "string", "description": "Message body"}
+        },
+        "required": ["to", "status", "text"]
+      }
+    },
+    "_meta": {"argv": ["tools/team/team_say"]}
+  }
+]
