@@ -1,0 +1,9 @@
+{"_metainfo": {"_type": "posix", "_version": 1},
+ "argv": ["claude", "-p", "--output-format", "json", "--model", "sonnet",
+          "--max-turns", "8", "--max-budget-usd", "0.50", "--safe-mode",
+          "--permission-mode", "acceptEdits", "--permission-prompts", "none",
+          "--disallowedTools", "Bash(git push:*)"],
+ "cwd": "@WS@",
+ "stdin": "@JOB@/task.md",
+ "stdout": {"$opt": "mkdir", "$val": "@JOB@/out/result.json"},
+ "stderr": {"$opt": ["append", "mkdir"], "$val": "@JOB@/out/err.log"}}

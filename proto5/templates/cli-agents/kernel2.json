@@ -1,0 +1,10 @@
+{"cpus": {"k2":  {"pool": "kernel"},
+          "cc":  {"pool": "claude",
+                  "envs": {"$opt": "clear", "$val": {"PATH": {"$env": "PATH"}, "HOME": {"$env": "HOME"}, "LANG": "C.UTF-8"}}},
+          "cx0": {"pool": "codex",
+                  "envs": {"$opt": "clear", "$val": {"PATH": {"$env": "PATH"}, "HOME": {"$env": "HOME"}, "LANG": "C.UTF-8",
+                                                     "CODEX_HOME": "@W@/codex-home"}}},
+          "cx1": {"pool": "codex",
+                  "envs": {"$opt": "clear", "$val": {"PATH": {"$env": "PATH"}, "HOME": {"$env": "HOME"}, "LANG": "C.UTF-8",
+                                                     "CODEX_HOME": "@W@/codex-home"}}}},
+ "timeout_ms": 1800000}

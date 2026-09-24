@@ -1,0 +1,7 @@
+{"_metainfo": {"_type": "posix", "_version": 1},
+ "argv": ["codex", "exec", "--json", "-m", "gpt-6-astra", "-s", "read-only", "--skip-git-repo-check",
+          "-C", "@WS@", "-o", "@JOB@/out/answer.md", "fork", "@SESSION@", "-"],
+ "cwd": "@WS@",
+ "stdin": "@JOB@/task.md",
+ "stdout": {"$opt": "mkdir", "$val": "@JOB@/out/events.jsonl"},
+ "stderr": {"$opt": ["append", "mkdir"], "$val": "@JOB@/out/err.log"}}

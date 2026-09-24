@@ -91,6 +91,7 @@ kernel、daemon、aos-exec、aos-agent、aos-llm **都不動**。
 | [others.md](others.md) | 另外四個角色：工具、大腦、純模型後端、反過來 |
 | [cost-safety.md](cost-safety.md) | 錢花在哪、誰能叫、牢裡牢外、危險動作 |
 | [cli-facts.md](cli-facts.md) | 兩支 CLI 的版本與非互動旗標（只查 help） |
+| [stage0.md](stage0.md) | **階 0 做完的報告**（09-24）：範本在 [templates/cli-agents](../../templates/cli-agents/README.md)、[教程 07](../../tutorials/07-cli-agents.md)、真跑驗證、一條龍腳本 [stage0-run.sh](stage0-run.sh)、審查 [review2-task](review2-task.md)／[review2-astra](review2-astra.md) |
 | [review-task.md](review-task.md)／[review-astra.md](review-astra.md) | astra 唯讀審查（必修 11 條已改進，見下） |
 
 ## 審查改了什麼
