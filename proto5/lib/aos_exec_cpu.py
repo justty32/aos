@@ -1,6 +1,6 @@
 """exec cpu 的主人：逐件執行、控制 pipe 與開機對帳。
 
-照 ../spec/cpu.md §4～§7；共用信封與檔案交接由 aos_home 處理，
+照 ../spec/cpu/ §4～§7；共用信封與檔案交接由 aos_home 處理，
 目標的三種解讀與執行一律交給 aos_exec.run_target_full。
 """
 import fcntl

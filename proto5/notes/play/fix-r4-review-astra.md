@@ -57,7 +57,7 @@
 **可以之後**
 
 - [lib/README.md:296](../../lib/README.md) 仍寫 `aos-cpu DIR`，應改 `[DIR]` 並註明 cwd。現有寫法可跑，但漏了本輪新增行為。
-- [daemon.md:227](../../spec/daemon.md) 與第 50 行仍稱 daemon 鎖是「整個系統唯一的一把鎖」，已與 agent tick 鎖矛盾，應限縮措辭。
+- [daemon.md:227](../../spec/daemon/README.md) 與第 50 行仍稱 daemon 鎖是「整個系統唯一的一把鎖」，已與 agent tick 鎖矛盾，應限縮措辭。
 - `-h` 的 usage 仍顯示 `say [TEXT ...]`、`init [--config FILE]`，但實際要求恰好一段 TEXT、config 必填。說明內文有補，usage 仍應同步。
 - 舊字串未完全清零：正文有改名註記，`aos-agent.md:472` 還保留舊位置參數形狀；`aos_agent_status.py:20` 則是真的讀取舊 `AOS_K` 鍵。後者已有規範及測試，是明寫的相容行為；不能把它算成「所有出現處已改完」。
 

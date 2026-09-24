@@ -1,6 +1,6 @@
 # daemon 崩潰窗口測試 C-2／C-3（2026-09-24）
 
-← [notes 索引](../README.md)｜[proto5 README](../../README.md)｜規範：[daemon.md](../../spec/daemon.md) §2、§6.1｜題目出處：[impl-review-report.md](../2026-09-23-rearch/impl-review-report.md) C 節｜上一輪：[impl-fix-round1.md](../2026-09-23-rearch/impl-fix-round1.md)（跳過 C-2／3）
+← [notes 索引](../README.md)｜[proto5 README](../../README.md)｜規範：[daemon.md](../../spec/daemon/README.md) §2、§6.1｜題目出處：[impl-review-report.md](../2026-09-23-rearch/impl-review-report.md) C 節｜上一輪：[impl-fix-round1.md](../2026-09-23-rearch/impl-fix-round1.md)（跳過 C-2／3）
 
 **結論：兩個窗口 daemon 都照規範收斂，產品程式一行沒改。** 新測試 [test_daemon_crash.py](../../lib/test/test_daemon_crash.py) 共 11 條，
 單獨連跑 20 次 20 次全過，四份平行（加壓）再跑 20 次也全過；全套 1016 → **1027 條全綠**；跑完沒有殘留行程。
@@ -80,4 +80,4 @@ for i in $(seq 20); do PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s
 
 - 測試：[lib/test/test_daemon_crash.py](../../lib/test/test_daemon_crash.py)（HUB、GATED 兩段 driver 都在檔頭）
 - 審查任務書／回報：[review-task.md](review-task.md)、[review-report.md](review-report.md)（codex gpt-6-astra，唯讀；回報的四條測試漏洞已照改）
-- 文件同步：[lib README](../../lib/README.md) 測試表加一列、總數；[proto5 README](../../README.md) 總數；[daemon.md](../../spec/daemon.md) 檔尾〈實作補記〉一句
+- 文件同步：[lib README](../../lib/README.md) 測試表加一列、總數；[proto5 README](../../README.md) 總數；[daemon.md](../../spec/daemon/README.md) 檔尾〈實作補記〉一句

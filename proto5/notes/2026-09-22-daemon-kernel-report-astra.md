@@ -1165,19 +1165,19 @@ proto4-5 相鄰文件還有兩處與 kernel 接口有關的落差：
 
 **4.3 proto4-3 與 proto5 `exec.md`／`inst-posix.md` 的實質差異**
 
-先保留文件自身的成熟度：proto5 的 [README:13](../README.md) 將 inst-posix 標為定稿；[exec.md:7](../spec/exec.md:7) 明寫命令列尚未逐條拍板。因此下表區分「定稿格式差異」與「目前 exec 文件差異」。
+先保留文件自身的成熟度：proto5 的 [README:13](../README.md) 將 inst-posix 標為定稿；[exec.md:7](../spec/aos-exec/README.md) 明寫命令列尚未逐條拍板。因此下表區分「定稿格式差異」與「目前 exec 文件差異」。
 
 | 項目 | proto5 文件 | proto4-3 現碼 | 影響／來源 |
 |---|---|---|---|
-| 省略 aos-exec 目標 | `xxx` 省略＝`.`。[exec.md:22](../spec/exec.md:22) | `aos-exec` 的 xxx 必填；缺少退出2 | [aos_exec.py:270](../../proto4-3/aos_exec.py)。這是 exec CLI 文件差異；不代表 aos-run 也應省略目標 |
-| `_metainfo:null` | 有寫時必須是物件。[inst-posix.md:36](../spec/inst-posix.md:36) | `obj.get()` 取得 None，再直接套 posix v1 預設 | [aos_inst.py:100](../../proto4-3/aos_inst.py)、[aos_inst.py:142](../../proto4-3/aos_inst.py)。本輪記憶體檢查確認接受 |
-| `$ref` 字串內 `#位置` | inst 文件明示 `#` 前空＝本文件，完整語法交 directives。[inst-posix.md:179](../spec/inst-posix.md:179) | 整個 `$ref` 字串都當檔名，`#` 不切開 | [aos_inst_resolve.py:231](../../proto4-3/aos_inst_resolve.py)。`x.json#/a` 會找檔名含 `#` 的路徑 |
-| 外部 `$ref` 的相對位置 | proto5 以被引檔根作目前位置，允許 `./a`。[directives.md:128](../spec/directives.md:128) | 只有 `$ref:""` 才准相對 `$at`；指外部檔的 `./a` 拒絕 | [aos_inst_resolve.py:248](../../proto4-3/aos_inst_resolve.py)、[aos_inst_resolve.py:281](../../proto4-3/aos_inst_resolve.py) |
-| `$at:null` | 有寫必須字串，否則 DirectiveValueTypeMismatch。[directives.md:124](../spec/directives.md:124) | `.get("$at")` 得 None，當省略，取整份 | [aos_inst_resolve.py:103](../../proto4-3/aos_inst_resolve.py)、[aos_inst_resolve.py:274](../../proto4-3/aos_inst_resolve.py) |
-| `$fmt` 內位置 | 原始 JSON 實體路徑，含 `$fmt` 這層。[inst-posix.md:181](../spec/inst-posix.md:181) | 變數用 `ctx.down(name)`，模板用 `ctx.down("$val")`，少 `$fmt` 層 | [aos_inst_resolve.py:202](../../proto4-3/aos_inst_resolve.py)。本輪確認 fmt 兄弟變數相對 ref 可因此 PointerInvalid |
-| cwd mkdir 時序 | 先建 cwd，再以它為中心解其他欄位。[inst-posix.md:231](../spec/inst-posix.md:231) | `aos_inst.load()` 先解全部欄位，回到 `_run_inst()` 才 makedirs | [aos_inst.py:102](../../proto4-3/aos_inst.py)、[aos_exec.py:116](../../proto4-3/aos_exec.py)。讀／驗失敗時 cwd 尚未建立 |
-| `kind=aos` 一律等於沒跑 | proto5 exec 說 aos 是根本沒跑，125不寫exit。[exec.md:59](../spec/exec.md:59)、[exec.md:63](../spec/exec.md:63) | child 已完成後，exit 寫入或 fsync 失敗仍轉 `(1,"aos")`→125 | [aos_exec.py:226](../../proto4-3/aos_exec.py)。125不能絕對推論沒有子程式副作用；exit也可能已部分寫入 |
-| timeout 收整個 group | 規範要求先TERM、2秒後必要時KILL整群。[inst-posix.md:246](../spec/inst-posix.md:246) | KILL 時用 `os.getpgid(p.pid)`；若直接 child 已被 wait 回收，可能取不到原 pgid | [aos_exec.py:203](../../proto4-3/aos_exec.py)、[aos_exec.py:218](../../proto4-3/aos_exec.py)。不能把最後補 KILL 的程式碼當作對仍活孫程序的完整保證；本輪為靜態判讀 |
+| 省略 aos-exec 目標 | `xxx` 省略＝`.`。[exec.md:22](../spec/aos-exec/usage.md) | `aos-exec` 的 xxx 必填；缺少退出2 | [aos_exec.py:270](../../proto4-3/aos_exec.py)。這是 exec CLI 文件差異；不代表 aos-run 也應省略目標 |
+| `_metainfo:null` | 有寫時必須是物件。[inst-posix.md:36](../spec/inst-posix/metainfo.md) | `obj.get()` 取得 None，再直接套 posix v1 預設 | [aos_inst.py:100](../../proto4-3/aos_inst.py)、[aos_inst.py:142](../../proto4-3/aos_inst.py)。本輪記憶體檢查確認接受 |
+| `$ref` 字串內 `#位置` | inst 文件明示 `#` 前空＝本文件，完整語法交 directives。[inst-posix.md:179](../spec/inst-posix/directives.md) | 整個 `$ref` 字串都當檔名，`#` 不切開 | [aos_inst_resolve.py:231](../../proto4-3/aos_inst_resolve.py)。`x.json#/a` 會找檔名含 `#` 的路徑 |
+| 外部 `$ref` 的相對位置 | proto5 以被引檔根作目前位置，允許 `./a`。[directives.md:128](../spec/directives/ref.md) | 只有 `$ref:""` 才准相對 `$at`；指外部檔的 `./a` 拒絕 | [aos_inst_resolve.py:248](../../proto4-3/aos_inst_resolve.py)、[aos_inst_resolve.py:281](../../proto4-3/aos_inst_resolve.py) |
+| `$at:null` | 有寫必須字串，否則 DirectiveValueTypeMismatch。[directives.md:124](../spec/directives/ref.md) | `.get("$at")` 得 None，當省略，取整份 | [aos_inst_resolve.py:103](../../proto4-3/aos_inst_resolve.py)、[aos_inst_resolve.py:274](../../proto4-3/aos_inst_resolve.py) |
+| `$fmt` 內位置 | 原始 JSON 實體路徑，含 `$fmt` 這層。[inst-posix.md:181](../spec/inst-posix/directives.md) | 變數用 `ctx.down(name)`，模板用 `ctx.down("$val")`，少 `$fmt` 層 | [aos_inst_resolve.py:202](../../proto4-3/aos_inst_resolve.py)。本輪確認 fmt 兄弟變數相對 ref 可因此 PointerInvalid |
+| cwd mkdir 時序 | 先建 cwd，再以它為中心解其他欄位。[inst-posix.md:231](../spec/inst-posix/exec.md) | `aos_inst.load()` 先解全部欄位，回到 `_run_inst()` 才 makedirs | [aos_inst.py:102](../../proto4-3/aos_inst.py)、[aos_exec.py:116](../../proto4-3/aos_exec.py)。讀／驗失敗時 cwd 尚未建立 |
+| `kind=aos` 一律等於沒跑 | proto5 exec 說 aos 是根本沒跑，125不寫exit。[exec.md:59](../spec/aos-exec/exit.md)、[exec.md:63](../spec/aos-exec/exit.md) | child 已完成後，exit 寫入或 fsync 失敗仍轉 `(1,"aos")`→125 | [aos_exec.py:226](../../proto4-3/aos_exec.py)。125不能絕對推論沒有子程式副作用；exit也可能已部分寫入 |
+| timeout 收整個 group | 規範要求先TERM、2秒後必要時KILL整群。[inst-posix.md:246](../spec/inst-posix/exec.md) | KILL 時用 `os.getpgid(p.pid)`；若直接 child 已被 wait 回收，可能取不到原 pgid | [aos_exec.py:203](../../proto4-3/aos_exec.py)、[aos_exec.py:218](../../proto4-3/aos_exec.py)。不能把最後補 KILL 的程式碼當作對仍活孫程序的完整保證；本輪為靜態判讀 |
 
 其中 `$ref #位置` 與 `$fmt` 實體位置，正是 proto4-3 README 所說未跟上的 K／L，**不是 README 錯報已凍結的範圍**。
 
@@ -1196,13 +1196,13 @@ proto4-5 相鄰文件還有兩處與 kernel 接口有關的落差：
 | `argv[0]` 指不存在路徑，在執行時成 child127 | add 對含 `/` 的不存在 argv[0] 事先拒絕，根本不進 queue | [aos_kernel_add.py:103](../../proto4-3/aos_kernel_add.py) |
 | 普通檔案是 aos-exec 合法目標 | daemon add 只收 `.json`；kernel add 讀的是 JSON 內容 | [aos_daemon_entry.py:50](../../proto4-3/aos_daemon_entry.py) |
 
-proto5 的依據為 [inst-posix.md:79](../spec/inst-posix.md:79)、[inst-posix.md:176](../spec/inst-posix.md:176)、[inst-posix.md:244](../spec/inst-posix.md:244)。
+proto5 的依據為 [inst-posix.md:79](../spec/inst-posix/fields.md)、[inst-posix.md:176](../spec/inst-posix/directives.md)、[inst-posix.md:244](../spec/inst-posix/exec.md)。
 
 **4.5 不構成衝突的邊界**
 
 | 項目 | 事實 |
 |---|---|
-| 100＝完成、101＝等待 | proto5 明確把它們留給 kernel／程式約定，不屬 inst 格式。[inst-posix.md:253](../spec/inst-posix.md:253) |
+| 100＝完成、101＝等待 | proto5 明確把它們留給 kernel／程式約定，不屬 inst 格式。[inst-posix.md:253](../spec/inst-posix/README.md) |
 | 126／127 算 child，kernel 可累計一般失敗 | 與 proto5 的執行器語意相容 |
 | daemon／kernel 的 config、state、request JSON 不解指示詞 | 它們目前只是直接 `json.load()`；不能把 inst 的指示詞允許位置直接外推成所有控制 JSON 的既有能力 |
 | daemon `ok/result` 與 kernel `ok/msg` | 是兩套現在不同的檔案協議，不是同一 schema 的別名 |

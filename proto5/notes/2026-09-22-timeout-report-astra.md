@@ -9,22 +9,22 @@
 
 | 環節 | 有沒有限時／預設／在哪定 | 到了怎樣、殺不殺 | 狀態怎麼變 | 依據 |
 |---|---|---|---|---|
-| **inst.json 本身** | **沒有** `timeout_ms`。只有七個執行欄位；未知頂層 key 忽略 | 寫 `"timeout_ms": 1000` 不會啟用限時 | 不適用 | [inst 格式](../spec/inst-posix.md:56)、[解析實作:103](../lib/aos_inst.py) |
-| **aos-exec 子程式** | 有可選限時：CLI `--timeout-ms`、library 參數；**預設 0＝不限** | 到期 TERM 整個工作 group；最多等 **2 秒**，必要時 KILL；另補殺殘留 group | 回實際 child 結束碼；有指定 `exit` 檔就寫入。exec 不懂 agent state | [旗標規格](../spec/exec.md:42)、[_spawn:210](../lib/aos_exec.py) |
+| **inst.json 本身** | **沒有** `timeout_ms`。只有七個執行欄位；未知頂層 key 忽略 | 寫 `"timeout_ms": 1000` 不會啟用限時 | 不適用 | [inst 格式](../spec/inst-posix/fields.md)、[解析實作:103](../lib/aos_inst.py) |
+| **aos-exec 子程式** | 有可選限時：CLI `--timeout-ms`、library 參數；**預設 0＝不限** | 到期 TERM 整個工作 group；最多等 **2 秒**，必要時 KILL；另補殺殘留 group | 回實際 child 結束碼；有指定 `exit` 檔就寫入。exec 不懂 agent state | [旗標規格](../spec/aos-exec/usage.md)、[_spawn:210](../lib/aos_exec.py) |
 | **aos-llm-ask HTTP** | **有，預設 120000 ms**；`info.json.engine.timeout_ms`，必須正整數，不能用 0 表示無限 | urllib/socket 逾時→`EngineFailed`；CLI 退 **3**。關閉本地連線，**沒有取消遠端推論的協定** | aos-llm-ask 不改記憶、不讀寫 state、不重試 | [engine 規格](../../proto5.1/spec/aos-llm-ask.md)、[call](../../proto5.1/lib/aos_llm_ask.py) |
-| **idle 一格** | **沒有整格限時**。讀設定、記憶及 input 都沒有獨立期限 | 正常沒輸入就立刻退 101；讀寫卡住則沒有 watchdog | 有輸入：接記憶、input rename `.done`、轉 `think`；無輸入：留 `idle` | [格的規格](../spec/aos-agent.md:36)、[step:191](../lib/aos_agent.py) |
-| **think 一格** | **沒有整格限時**；只有內部 HTTP 的上述 timeout | HTTP 能判到的失敗會返回；其他讀寫、DNS、慢速完整回應等不能以 120 秒總期限概括 | 成功有 calls→`act`；無 calls→`idle`；引擎失敗→留 `think`，退 **0** | [規格](../spec/aos-agent.md:45)、[實作:215](../lib/aos_agent.py) |
-| **act 一格** | **沒有整格限時**；所有 tool calls 在一格內**依序跑完** | 某個工具不回，後面工具與記憶寫回都等著 | 全部結果接成 `tool` 訊息後→`think`。中途不回就沒有這次 state 寫回 | [規格](../spec/aos-agent.md:48)、[實作:230](../lib/aos_agent.py) |
+| **idle 一格** | **沒有整格限時**。讀設定、記憶及 input 都沒有獨立期限 | 正常沒輸入就立刻退 101；讀寫卡住則沒有 watchdog | 有輸入：接記憶、input rename `.done`、轉 `think`；無輸入：留 `idle` | [格的規格](../spec/aos-agent/README.md)、[step:191](../lib/aos_agent.py) |
+| **think 一格** | **沒有整格限時**；只有內部 HTTP 的上述 timeout | HTTP 能判到的失敗會返回；其他讀寫、DNS、慢速完整回應等不能以 120 秒總期限概括 | 成功有 calls→`act`；無 calls→`idle`；引擎失敗→留 `think`，退 **0** | [規格](../spec/aos-agent/README.md)、[實作:215](../lib/aos_agent.py) |
+| **act 一格** | **沒有整格限時**；所有 tool calls 在一格內**依序跑完** | 某個工具不回，後面工具與記憶寫回都等著 | 全部結果接成 `tool` 訊息後→`think`。中途不回就沒有這次 state 寫回 | [規格](../spec/aos-agent/README.md)、[實作:230](../lib/aos_agent.py) |
 | **工具跑太久** | **沒有**。agent 呼叫 `run_inst(inst, arguments)`，未傳 timeout；library 預設 **0** | **不砍，跑多久等多久**。工具自身另設的限時不算 agent 的保證 | 工具若自行失敗，非零退出碼包成 `tool` 訊息；不回則停在該次 act | [工具呼叫:159](../lib/aos_agent.py)、[run_inst 預設:87](../lib/aos_exec.py) |
 | **工具檔 `_meta`** | **沒有逾時欄位的契約**；目前就是一份 posix inst | 加 `_meta.timeout_ms` 也不會生效：工具讀驗未賦予語意，inst 解析忽略它 | 不適用 | [工具檔規格](../../proto5.1/spec/aos-llm-ask.md)、[工具讀驗:325](../lib/aos_agent_info.py) |
-| **`waits` 門** | **沒有期限、沒有最大檢查次數**。`mtime`／`since` 只判檔案是否更新 | 每次劃掉已到條目；有剩→101。沒有到期分支，也不殺產生結果的工作 | state 原樣保留；只更新 waits。可以跨無限多次呼叫一直101 | [等待規格](../spec/agent.md:110)、[_gate:98](../lib/aos_agent.py) |
-| **引擎失敗重試** | **沒有連敗上限、沒有退避、没有總期限** | 每次 stderr 一行，退0；外部下一次叫它就再問 | 一直留 `think`，記憶不動；沒有 retry／stuck 狀態或錯誤計數 | [規格](../spec/aos-agent.md:46)、[實作:219](../lib/aos_agent.py) |
-| **整個「走一格」呼叫** | **沒有**。CLI 只收 dir，沒有 timeout 旗標；step 沒有整體計時器 | 沒有人在整格到期時中止它。外部執行器可以另外包限時，但不是目前 agent 契約 | 沒有「整格逾時後」的狀態轉換規格 | [CLI:246](../lib/aos_agent.py)、[延後決定事項](../spec/aos-agent.md:73) |
+| **`waits` 門** | **沒有期限、沒有最大檢查次數**。`mtime`／`since` 只判檔案是否更新 | 每次劃掉已到條目；有剩→101。沒有到期分支，也不殺產生結果的工作 | state 原樣保留；只更新 waits。可以跨無限多次呼叫一直101 | [等待規格](../spec/agent/README.md)、[_gate:98](../lib/aos_agent.py) |
+| **引擎失敗重試** | **沒有連敗上限、沒有退避、没有總期限** | 每次 stderr 一行，退0；外部下一次叫它就再問 | 一直留 `think`，記憶不動；沒有 retry／stuck 狀態或錯誤計數 | [規格](../spec/aos-agent/README.md)、[實作:219](../lib/aos_agent.py) |
+| **整個「走一格」呼叫** | **沒有**。CLI 只收 dir，沒有 timeout 旗標；step 沒有整體計時器 | 沒有人在整格到期時中止它。外部執行器可以另外包限時，但不是目前 agent 契約 | 沒有「整格逾時後」的狀態轉換規格 | [CLI:246](../lib/aos_agent.py)、[延後決定事項](../spec/aos-agent/README.md) |
 
 規格 §5 明文保留的是：
 
 > 「工具跑太久要不要砍（現在不砍，跑多久等多久）、引擎連續失敗幾次要停、`waits` 等太久要怎樣——之後再定。」  
-> — [aos-agent.md:77](../spec/aos-agent.md:77)
+> — [aos-agent.md:77](../spec/aos-agent/README.md)
 
 **為什麼 timeout 不在 inst 裡？**
 
@@ -261,7 +261,7 @@ daemon與控制指令另外一層：
 | **kernel自癒** | 能補cpu、重開進程，不應把「剛被timeout停住」立即當成缺cpu而無限重啟 |
 | **晚到結果** | timeout／cancel後必須按request id辨認，不得覆寫已結算的終態，也不得混進新一題 |
 
-來源基礎：[gate順序:191](../lib/aos_agent.py)、[input與consume規格](../spec/agent.md:96)、[自癒與寫回規格](../spec/aos-agent.md:51)。
+來源基礎：[gate順序:191](../lib/aos_agent.py)、[input與consume規格](../spec/agent/README.md)、[自癒與寫回規格](../spec/aos-agent/README.md)。
 
 尤其`act`目前是：
 
