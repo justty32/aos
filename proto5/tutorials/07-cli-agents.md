@@ -5,8 +5,9 @@
 **目標**：不寫任何新程式，把 `claude`（Claude Code）和 `codex` 兩支 CLI 當成「一種普通的 cpu」來用：
 開一個專門放它們的 kernel 家，丟一張 codex 唯讀審查單、一張 claude 單，收結果，再學會「接著聊」和「取消」。
 
-**前提**：做完 [01](01-daemon-kernel.md) 第 1～6 步（daemon 開著，`. $HOME/aos-try/env.sh` 過）；`claude` 和 `codex` 都已經在這台機器登入過、在 PATH 裡。
-**這篇會花你自己的訂閱額度**：每張單子都是一次真的 claude／codex 對話。照抄的話 codex 1 次、claude 2 次，都很小。
+**前提**：做完 [01](01-daemon-kernel.md) 第 1～6 步（daemon 開著）；新終端先 `cd` 回 **repo 根目錄**再 `. $HOME/aos-try/env.sh`（下面的 `$PWD` 指的是 repo）。
+`claude` 和 `codex` 都已經在這台機器登入過（有 `~/.codex/auth.json`）、而且**開 daemon 那時**的 PATH 找得到它們。路徑只用英數與 `/ . _ -`（範本用 `sed` 換字，`&`、`|`、引號、空白會弄壞）。
+**這篇會花你自己的訂閱額度**：每張單子都是一次真的 claude／codex 對話。照抄的話 codex 1 次（它會自己讀好幾個檔，一次約十幾萬 input token）、claude 2 次（只回 ok）。
 
 ## 0. 先講清楚：三個洞
 
@@ -16,7 +17,7 @@
    一次塞十張單子進 kernel，它就照跑十張；前一張失敗了後面的也不會停。唯一的煞車是池的大小（claude 池只有 1 顆＝同時最多 1 張）、每張的逾時、和 claude 的 `--max-budget-usd`。
 2. **能往 kernel 放單子的程式，都能開 claude 單子**。kernel 不問是誰放的：任何能寫 `K2/requests/` 的程式——包括 agent 的 bash 工具——都能放一張 `--pool claude` 的單，而且單子裡的 argv 寫什麼都行。
    另開一個 kernel 家只是**分開管理**，不是上鎖。別讓 agent 知道 K2 在哪；要讓 agent 叫它們，得等以後的「受信任入口＋牢」。
-3. **取消不乾淨，只能砍整顆 cpu**。`aos-kernel rm` 馬上回「已移除」，但那顆 cpu 上的 claude 照跑、照改檔。要真的停只能叫 daemon 砍那顆 cpu（第 6 步），約 5 秒後才砍下去，而且砍完 kernel 會馬上再拉一顆新的。
+3. **取消不乾淨，只能砍整顆 cpu**。`aos-kernel rm` 之後，那張單子的回音馬上變成「已移除」，但那顆 cpu 上的 claude 照跑、照改檔。要停只能叫 daemon 砍那顆 cpu（第 6 步）：它先請 cpu 溫和停、5 秒後才砍那張單子的程式那一組，自己脫離那一組的子孫砍不到；砍完 kernel 會馬上再拉一顆新的。
 
 ## 1. 開第二個 kernel 家 K2
 
@@ -33,7 +34,7 @@ aos-kernel ls --target $W/K2
 你會看到 `booted 4 cpus`，`ls` 的 cpu 表是 `kernel k2`、`claude cc`、`codex cx0 cx1`。
 
 - **kernel 池那顆叫 `k2`，不能叫 `k`**：`K` 已經有一顆 `k` 掛在同一個 daemon 上，同名會被 daemon 拒絕（`NameTaken`）。其他 cpu 名也不能跟 `K` 的撞。
-- 範本讓這幾顆 cpu **從空環境開始**，只帶 `PATH`、`HOME`、`LANG`（codex 再多 `CODEX_HOME`）：環境裡剛好有 API 金鑰也帶不進去（免得改走付費 API）。
+- 範本讓 `cc`、`cx0`、`cx1` 三顆 **從空環境開始**，只帶 `PATH`、`HOME`、`LANG`（codex 再多 `CODEX_HOME`）：環境裡剛好有 API 金鑰也帶不進去（免得改走付費 API）。你要靠代理（`HTTPS_PROXY`）之類才連得上網，就在 `$W/kernel2.json` 那幾顆的 `$val` 裡逐項補回，再 `init`。
 - `aos-kernel check --target $W/K2` 會報 `bad pools: llm 池沒有 cpu`：K2 本來就不放 llm cpu，這條忽略。
 
 ## 2. codex 專用的設定資料夾
@@ -45,14 +46,15 @@ mkdir -p $W/codex-home
 ln -s $HOME/.codex/auth.json $W/codex-home/auth.json
 ```
 
-用**符號連結**，不要複製：登入過一陣子會換新的憑證，複製一份的話兩邊可能有一邊失效。claude 這邊不用另開資料夾，單子範本裡的 `--safe-mode` 讓它不讀你的 CLAUDE.md、記憶、skill 和 hook。
+用**符號連結**，不要複製：登入過一陣子會換新的憑證，複製一份的話兩邊可能有一邊失效。（連結也不是萬無一失：codex 換憑證時若是「寫新檔再改名」，連結會變成一般檔。偶爾 `ls -l $W/codex-home/auth.json` 看它還是不是 `->`。）
+這只隔開你家目錄那份設定；工作區自己的 `AGENTS.md` 它照讀。claude 這邊不用另開資料夾，單子範本裡的 `--safe-mode` 讓它不讀你的 CLAUDE.md、記憶、skill 和 hook。
 
 ## 3. 丟一張 codex 唯讀審查單
 
 每張單子一個資料夾，放任務書 `task.md` 和 `inst.json`；結果寫在它底下的 `out/`。
 
 ```sh
-J=$W/jobs/review-ls; mkdir -p $J
+J=$W/cli-jobs/review-ls; mkdir -p $J
 echo '唯讀審查 proto5/tools/base/ls，找真的會出錯的地方，每條一句附行號，≤800 字。' > $J/task.md
 sed -e "s|@JOB@|$J|g" -e "s|@WS@|$PWD|g" $T/codex-review.json > $J/inst.json
 aos-kernel add $J/inst.json --target $W/K2 --once --pool codex --timeout-ms 600000
@@ -73,32 +75,34 @@ cat $J/out/answer.md
 ```
 
 回音長這樣：`{"code": 0, "kind": "child", "timed_out": false, "stopped": false, "ms": 55918}`。
-**`code` 0 還不算成功**：再看 `$J/out/events.jsonl` 裡有沒有 `"type":"turn.completed"`（失敗是 `turn.failed`）。答案在 `out/answer.md`。
+**成功要兩層都過**：回音的 `kind` 是 `child`、`code` 0、`timed_out` 和 `stopped` 都是 `false`；再看 `$J/out/events.jsonl` 有 `"type":"turn.completed"`、沒有 `turn.failed`。答案在 `out/answer.md`。
 
 ## 4. 丟一張 claude 單
 
 ```sh
-J=$W/jobs/c1; mkdir -p $J $W/ws
+J=$W/cli-jobs/c1; mkdir -p $J $W/cli-ws
 echo '只回 ok 兩個字，不要用任何工具。' > $J/task.md
-sed -e "s|@JOB@|$J|g" -e "s|@WS@|$W/ws|g" $T/claude-job.json > $J/inst.json
+sed -e "s|@JOB@|$J|g" -e "s|@WS@|$W/cli-ws|g" $T/claude-job.json > $J/inst.json
 aos-kernel add $J/inst.json --target $W/K2 --once --pool claude --timeout-ms 300000 --wait-ms 330000
 cat $J/out/result.json
 ```
 
 `result.json` 是一個 JSON，要看的欄位：`is_error`（`false` 才算成功）、`result`（它的回答）、`session_id`（接著聊要用）、`total_cost_usd`（照定價算的花費，訂閱也會印）。
 
-範本的旗標都是保守的：只准改 `@WS@` 裡的檔、**不准跑任何指令**（沒人按「允許」就一律拒絕）、最多 8 輪、超過 0.5 美元就停（訂閱登入也有效；它是呼叫完才算，所以擋不住第一次呼叫）。
-要它跑測試，得在 argv 裡加 `--allowedTools "Bash(make test)"` 這樣一條一條列。「跳過權限」那類旗標**不要加**，牢做好之前都不用。
+範本的旗標都是保守的：`--restricted` 拿掉會跑程式的工具（Bash 等），檔案工具只能碰 `@WS@`；會問人的動作沒人回答就一律拒絕；最多 8 輪；超過 0.5 美元就停（訂閱登入也有效；它是呼叫完才算，所以擋不住第一次呼叫）。
+要它跑測試得拿掉 `--restricted`、加 `--allowedTools "Bash(make test)"`——**這等於准它跑工作區裡的任意程式**（它可以先改 Makefile 再跑），只在你信得過工作區時這樣做。「跳過權限」那類旗標**不要加**，牢做好之前都不用。
 
 ## 5. 接著聊：從上一次成功的那次分岔
 
 每次都從**上一次成功的**對話分岔一條新的（fork），失敗、逾時、被砍的那次不算：
 
+「成功」照第 3 步的兩層：回音 `kind` child、`code` 0、沒逾時沒被停，**而且** `result.json` 的 `is_error` 是 `false`、`subtype` 是 `success`。
+
 ```sh
-S=0c31125f-…     # c1 的 result.json 裡、is_error 是 false 的那個 session_id
-J=$W/jobs/c2; mkdir -p $J
+S=0c31125f-…     # c1 的 result.json 裡的 session_id（c1 兩層都過）
+J=$W/cli-jobs/c2; mkdir -p $J
 echo '剛才你回了什麼？只回那兩個字。' > $J/task.md
-sed -e "s|@JOB@|$J|g" -e "s|@WS@|$W/ws|g" -e "s|@SESSION@|$S|g" $T/claude-next.json > $J/inst.json
+sed -e "s|@JOB@|$J|g" -e "s|@WS@|$W/cli-ws|g" -e "s|@SESSION@|$S|g" $T/claude-next.json > $J/inst.json
 aos-kernel add $J/inst.json --target $W/K2 --once --pool claude --timeout-ms 300000 --wait-ms 330000
 ```
 
@@ -110,13 +114,13 @@ aos-kernel add $J/inst.json --target $W/K2 --once --pool claude --timeout-ms 300
 先試免費的：在 claude 池放一張 `sleep 77`，再撤掉它。
 
 ```sh
-mkdir -p $W/jobs/s; echo '{"argv": ["sleep", "77"]}' > $W/jobs/s/inst.json
-aos-kernel add $W/jobs/s/inst.json --target $W/K2 --once --pool claude --name s1
+mkdir -p $W/cli-jobs/s; echo '{"argv": ["sleep", "77"]}' > $W/cli-jobs/s/inst.json
+aos-kernel add $W/cli-jobs/s/inst.json --target $W/K2 --once --pool claude --name s1
 sleep 3; aos-kernel rm s1 --target $W/K2
 pgrep -a -f "^sleep 77"
 ```
 
-`rm` 印 `s1`，回音是 `Removed`，但 `pgrep` 還看得到 `sleep 77`——**它還在跑**（換成 claude 就是還在花錢、還在改檔）。要真的停，叫 daemon 砍那顆 cpu：
+`rm` 自己印 `s1`；當初 `add` 那張單的回音（`K2/responses/cli-….json`）變成 `Removed`。但 `pgrep` 還看得到 `sleep 77`——**它還在跑**（換成 claude 就是還在花錢、還在改檔）。要真的停，叫 daemon 砍那顆 cpu：
 
 ```sh
 D=$AOS_DAEMON_HOME
@@ -124,7 +128,7 @@ printf '{"jsonrpc":"2.0","id":"kill-cc","method":"kill","params":{"name":"cc"}}\
 ln $D/requests/.kill-cc.tmp $D/requests/kill-cc.json; rm $D/requests/.kill-cc.tmp
 ```
 
-約 5 秒後 `sleep 77` 才不見（daemon 先請 cpu 溫和停，等 5 秒才硬砍），之後 kernel 馬上再拉一顆新的 `cc`。
+daemon 的回音只代表「收到、開始停」，不代表已經停了。它先請 cpu 溫和停，5 秒後對 cpu 送 TERM、cpu 再砍那張單子的程式那一組（還不死再過 5 秒 KILL）。用 `pgrep` 確認：這次約 5 秒後 `sleep 77` 才不見；程式自己脫離那一組的子孫砍不到，要另外查。之後 kernel 馬上再拉一顆新的 `cc`。
 回音在 `$D/responses/kill-cc.json`（`{"result": {"pid": …}}`）；不簽收也只是留著一個檔，要簽就往 `$D/requests/` 放一張 `ack-kill-cc.json`，內容 `{"jsonrpc":"2.0","method":"ack","params":{"name":"kill-cc.json"}}`（放法同上，先寫 `.tmp` 再 `ln`）。
 **小心砍錯**：從你查到「單子在 cc 上」到真的砍下去之間，它可能已經跑完、換跑下一張了。
 
@@ -152,4 +156,5 @@ ln $D/requests/.kill-cc.tmp $D/requests/kill-cc.json; rm $D/requests/.kill-cc.tm
 aos-kernel halt --target $W/K2
 ```
 
-K 和 daemon 照 [01 第 7 步](01-daemon-kernel.md#7-關機順序kernel--daemon)關。整個重來：`rm -rf $W/K2 $W/jobs $W/codex-home`。
+印 `stopped` 才算停好（報 `Timeout` 就是還有單子在跑，先別刪）。K 和 daemon 照 [01 第 7 步](01-daemon-kernel.md#7-關機順序kernel--daemon)關。
+整個重來：確認停好後 `rm -rf $W/K2 $W/cli-jobs $W/codex-home $W/cli-ws $W/kernel2.json`——只刪這篇建的，`$W` 裡其他教程的東西別動。

@@ -1,6 +1,6 @@
 {"_metainfo": {"_type": "posix", "_version": 1},
  "argv": ["claude", "-p", "--output-format", "json", "--model", "sonnet",
-          "--max-turns", "8", "--max-budget-usd", "0.50", "--safe-mode",
+          "--max-turns", "8", "--max-budget-usd", "0.50", "--safe-mode", "--restricted",
           "--permission-mode", "acceptEdits", "--permission-prompts", "none",
           "--resume", "@SESSION@", "--fork-session",
           "--disallowedTools", "Bash(git push:*)"],
