@@ -12,7 +12,7 @@ from aos_kernel_info import (
     CLI, KCPU, KERNEL_POOL, KernelError, _put, chain_epoch, error_code, load_info, members,
     new_pool, new_state, pool_location,
 )
-from aos_kernel_pools import pool_summary, scale_request
+from aos_kernel_pools import pool_summary, pool_summary_state, scale_request
 
 
 def _ledger_version_check(state):
@@ -29,16 +29,29 @@ def _call(daemon, name, body, wait_ms):
     return response, (error_code(response) if "error" in response else None)
 
 
-def _gone_or_idle(daemon, dpool, need_count_zero=False, need_draining=False):
-    summary = pool_summary(daemon, dpool)
-    if summary is None:
+def _gone_or_idle(daemon, dpool):
+    """boot 與 halt 共用：那池 summary 確定不在（gone），或 count 0、running 0、killing 0、draining 0。
+    summary 在但讀不到（unknown）一律當還在（astra P6）。draining 也要 0：handoff §1.2 字面只列
+    running／killing，但同段要「沒有任何一格在跑」，縮 0 後還在收的孩子算 draining（astra P2、D-5）。"""
+    state, summary = pool_summary_state(daemon, dpool)
+    if state == "gone":
         return True
-    ok = summary.get("running", 0) == 0 and summary.get("killing", 0) == 0
-    if need_count_zero:
-        ok = ok and summary.get("count", 0) == 0
-    if need_draining:
-        ok = ok and summary.get("draining", 0) == 0
-    return ok
+    if state != "ok":
+        return False
+    return all(summary.get(k, 0) == 0 for k in ("count", "running", "killing", "draining"))
+
+
+def _why_busy(targets):
+    """等不到時給人看的原因。"""
+    out = []
+    for daemon, dpool in targets:
+        state, summary = pool_summary_state(daemon, dpool)
+        if state == "unknown":
+            out.append("%s %s 的 summary.json 在但讀不到" % (daemon, dpool))
+        elif state == "ok" and not _gone_or_idle(daemon, dpool):
+            out.append("%s %s：%s" % (daemon, dpool, "、".join(
+                "%s %s" % (k, summary.get(k, 0)) for k in ("count", "running", "killing", "draining"))))
+    return "；".join(out)
 
 
 def boot(home, wait_ms=30000):
@@ -80,10 +93,14 @@ def boot(home, wait_ms=30000):
     while not all(_gone_or_idle(d, p) for d, p in targets):
         if time.monotonic() >= deadline:
             _ack_now(acks, chain)
-            raise KernelError("AlreadyRunning", "舊 kernel cpu 還沒收乾淨（縮到 0 的單已送、不撤回）；等一下再 boot")
+            raise KernelError("AlreadyRunning", "舊 kernel cpu 還沒收乾淨（縮到 0 的單已送、不撤回；%s）；等一下再 boot"
+                              % _why_busy(targets))
         time.sleep(.005)
-    # 3. 寫帳本
-    state = old if old else new_state(chain, cli)
+    # 3. 寫帳本：舊主人確認退出後重讀（astra P1）；交接前的 old 只拿來找舊 kernel 池，
+    #    等待期間舊 tick 可能又提交過（新登記的行程、結清的工作），不能拿舊快照蓋掉。
+    state = aos_home.read_state(home, {})
+    _ledger_version_check(state)
+    state = state if state else new_state(chain, cli)
     state.update(chain=chain, kcpu=KCPU, cli=str(cli), last_seq=0, phase="running", halting=False)
     for key, default in (("busy", {}), ("on", {}), ("ready", {}), ("delayed", []), ("stale", {}), ("procs", {}),
                          ("acks", []), ("replies", []), ("deletes", []), ("sends", []), ("pools", {})):
@@ -93,7 +110,7 @@ def boot(home, wait_ms=30000):
     for pool, entry in list(state["pools"].items()):
         if pool == KERNEL_POOL:
             continue
-        entry.update(dirty=True, redeclare=True, retry_at=None)
+        entry.update(dirty=True, redeclare=True, boot_redeclare=True, retry_at=None)  # 整份重送（astra P3）
     kernel_daemon, kernel_dpool = locations[KERNEL_POOL]
     state["pools"][KERNEL_POOL] = {"daemon": kernel_daemon, "dpool": kernel_dpool,
                                    "sent": {"count": 0, "skip": []}, "pending": None}
@@ -164,7 +181,7 @@ def _halted(state):
     if state.get("phase") != "stopped":
         return False
     seen = {(e["daemon"], e["dpool"]) for e in (state.get("pools") or {}).values()}
-    return all(_gone_or_idle(d, p, need_count_zero=True, need_draining=True) for d, p in seen)
+    return all(_gone_or_idle(d, p) for d, p in seen)
 
 
 def stop(home, wait_ms=30000, no_wait=False):
@@ -184,8 +201,10 @@ def stop(home, wait_ms=30000, no_wait=False):
         return 0
     if state.get("phase") != "stopped":
         kernel = (state.get("pools") or {}).get(KERNEL_POOL)
-        summary = pool_summary(kernel["daemon"], kernel["dpool"]) if kernel else None
-        if kernel is None or not aos_daemon.is_alive(kernel["daemon"]) or summary is None or summary.get("count", 0) == 0:
+        # summary 讀不到（unknown）當還在跑：照放 stop、照等（astra P6）。
+        known, summary = pool_summary_state(kernel["daemon"], kernel["dpool"]) if kernel else ("gone", None)
+        if (kernel is None or not aos_daemon.is_alive(kernel["daemon"]) or known == "gone"
+                or (known == "ok" and summary.get("count", 0) == 0)):
             print("not running")
             return 0
         post()
@@ -196,6 +215,8 @@ def stop(home, wait_ms=30000, no_wait=False):
             print("stopped")
             return 0
         if time.monotonic() >= deadline:
+            why = _why_busy({(e["daemon"], e["dpool"]) for e in (state.get("pools") or {}).values()})
             raise KernelError("Timeout", "等了 %d ms 還沒停好（stop 已放、不撤回）。若卡在縮池，daemon 那邊會留下非 0 的宣告，"
-                              "這時停 daemon 的話下次開 daemon 會把那些池拉回來；先用 aos-kernel ls --target %s 看原因" % (wait_ms, home))
+                              "這時停 daemon 的話下次開 daemon 會把那些池拉回來；先用 aos-kernel ls --target %s 看原因%s"
+                              % (wait_ms, home, "（%s）" % why if why else ""))
         time.sleep(.005)

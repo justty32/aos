@@ -30,8 +30,19 @@ def template():
 
 
 def pool_summary(daemon, dpool):
-    """daemon 隊提供的 aos_daemon.pool_summary（不在或壞了回 None）。"""
+    """daemon 隊提供的 aos_daemon.pool_summary（不在或壞了回 None）；只給顯示用（ls、health）。"""
     return aos_daemon.pool_summary(daemon, dpool)
+
+
+def pool_summary_state(daemon, dpool):
+    """交接用（搬池 retire、boot、halt）：回 ("gone", None)／("ok", 摘要)／("unknown", None)。
+    只有 gone（summary.json 確定不在）才算池已拿掉；unknown（在但讀不到、壞 JSON…）一律當還在（astra P6）。"""
+    return aos_daemon.pool_summary_state(daemon, dpool)
+
+
+def chain_request(chain, name):
+    """這張 scale 單是不是這條鏈送的（k-<chain>-<seq>-scale-… 或 k-<chain>-boot-…）。"""
+    return name.startswith("k-%s-" % chain)
 
 
 def scale_request(name, home, pool, entry, count, skip, decl):
@@ -94,6 +105,10 @@ class PoolsMixin:
             self.events.append({"event": "pool_new", "pool": pool, "daemon": loc[0], "dpool": loc[1]})
         retiring = loc is None or (entry["daemon"], entry["dpool"]) != tuple(loc)
         self.collect_scale(pool, entry)
+        if retiring and self.abandon(pool, entry, loc):
+            if loc is not None and loc[0] is not None:
+                self.pool_step(pool)  # 新位置本格就宣告
+            return
         if retiring or self.state.get("halting"):
             want = {"count": 0, "skip": []}
         else:
@@ -141,9 +156,18 @@ class PoolsMixin:
             code = None if "error" not in response else error_code(response)
         else:
             response, code = None, "Interrupted"  # 兩個檔都不在、也不在 sends：當 Interrupted
+        old_chain = entry.get("boot_redeclare") and not chain_request(self.state["chain"], name)
         if code is None:
+            entry["acquired"] = True  # astra P4：daemon 確認過這個位置
+        if old_chain:
+            # astra P3：boot 要求的整份重送還沒做完，舊鏈的回音照收、ack，但不清重送、舊錯誤不記成 error。
+            if code is None:
+                entry["sent"] = {"count": pending["count"], "skip": list(pending["skip"])}
+            entry["redeclare"] = True
+        elif code is None:
             entry["sent"] = {"count": pending["count"], "skip": list(pending["skip"])}
             entry["redeclare"] = False
+            entry["boot_redeclare"] = False
             entry["error"] = None
             entry["retry_at"] = None
         elif code in ("Interrupted", "Stale"):
@@ -189,6 +213,24 @@ class PoolsMixin:
         entry["redeclare"] = False
         self.events.append({"event": "scale_send", "pool": pool, "request": name, "count": count, "skip": skip})
 
+    def abandon(self, pool, entry, loc):
+        """astra P4：舊位置 daemon 從沒確認過（沒成功過、sent 空）、沒 busy、沒 pending＝我們在那邊什麼都沒有；
+        直接放棄、換新位置（或忘掉），不送縮 0、不等別人的 summary 消失。回 True＝放棄了。"""
+        if entry.get("acquired", True) or entry["pending"] is not None or entry["sent"]["count"] != 0:
+            return False
+        prefix = pool + "/"
+        if any(k.startswith(prefix) for k in self.state["busy"]):
+            return False
+        self.events.append({"event": "pool_abandon", "pool": pool, "daemon": entry["daemon"], "dpool": entry["dpool"]})
+        self._replace(pool, loc)
+        return True
+
+    def _replace(self, pool, loc):
+        if loc is None or loc[0] is None:
+            del self.state["pools"][pool]
+        else:
+            self.state["pools"][pool] = new_pool(*loc)
+
     def retire(self, pool, entry, loc):
         """kernel-pools §2 第 5 步：舊位置縮到 0、收完、舊池的 summary.json 消失，才忘掉或換新位置。"""
         if entry["pending"] is not None or entry["sent"]["count"] != 0 or entry["redeclare"] or entry["dirty"]:
@@ -196,13 +238,14 @@ class PoolsMixin:
         prefix = pool + "/"
         if any(k.startswith(prefix) for k in self.state["busy"]):
             return
-        if pool_summary(entry["daemon"], entry["dpool"]) is not None:
+        state, _ = pool_summary_state(entry["daemon"], entry["dpool"])
+        if state != "gone":
+            if state == "unknown":  # astra P6：讀不到不算消失
+                self.events.append({"event": "pool_summary_unknown", "pool": pool, "daemon": entry["daemon"],
+                                    "dpool": entry["dpool"]})
             return
         self.events.append({"event": "pool_gone", "pool": pool, "daemon": entry["daemon"], "dpool": entry["dpool"]})
-        if loc is None or loc[0] is None:
-            del self.state["pools"][pool]
-        else:
-            self.state["pools"][pool] = new_pool(*loc)
+        self._replace(pool, loc)
 
     def pools_quiet(self):
         """停機縮池（kernel-tick 第 9 步）：每個工作池都確認縮到 0、沒在途、不用再送。"""

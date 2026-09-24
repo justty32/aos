@@ -116,17 +116,43 @@ def cats(kid):
 
 
 class Pool:
-    """一池：宣告、成員集合、每號一個 Kid、各狀態計數（跟著轉移加減，不重數）。"""
+    """一池：宣告、成員集合、每號一個 Kid、各狀態計數（跟著轉移加減，不重數）。
 
-    def __init__(self, home, decl):
+    todo＝(要重算的池, 要發布的池) 兩個有序字典（當有序集合用），由 daemon 持有；
+    dirty／changed 一設 True 就把自己登記進去，daemon 每圈只看登記過的池（review P9）。"""
+
+    def __init__(self, home, decl, todo=None):
         self.home, self.name, self.decl = Path(home), decl["pool"], decl
+        self.todo = todo
         self.members = set()
         self.kids = {}
         self.counts = dict.fromkeys(COUNTERS, 0)
         self.ready = collections.deque()   # 可以拉的號（先進先出）
+        self._dirty = self._changed = False
         self.dirty = True                  # 成員要重算
         self.changed = True                # summary 要重寫
         self.in_rotation = False
+        self.failing = False               # summary 正在寫失敗（一段連續失敗只印第一次）
+
+    @property
+    def dirty(self):
+        return self._dirty
+
+    @dirty.setter
+    def dirty(self, value):
+        self._dirty = bool(value)
+        if value and self.todo is not None:
+            self.todo[0][self] = None
+
+    @property
+    def changed(self):
+        return self._changed
+
+    @changed.setter
+    def changed(self, value):
+        self._changed = bool(value)
+        if value and self.todo is not None:
+            self.todo[1][self] = None
 
     @property
     def count(self):
@@ -188,11 +214,18 @@ class Pool:
             kid.has_file = False
 
     def write_summary(self, now):
+        """寫成功才清 changed（review P5）；失敗留著、回 False，由呼叫端下一圈再試。
+        一段連續失敗只印第一次（訊息裡有隨機暫存檔名，不能拿訊息比），成功後再失敗才會再印。"""
         try:
             aos_home.write_json(pool_dir(self.home, self.name) / "summary.json", self.summary(now))
         except aos_home.HomeError as exc:
-            log(exc.code, exc.msg)
-        self.changed = False
+            if not self.failing:
+                log(exc.code, exc.msg + "（之後每圈重試，成功前不再印）")
+            self.failing = True
+            return False
+        self.failing = False
+        self._changed = False
+        return True
 
 
 def write_pool_json(home, decl):
@@ -204,18 +237,28 @@ def write_pool_json(home, decl):
     aos_home.write_json(path / "pool.json", decl)
 
 
-def remove_pool(home, name):
-    """count 0 收完：先刪 summary.json（kernel 看它不在＝池已拿掉），再刪 pool.json，最後整個資料夾。"""
+def remove_pool(home, name, quiet=False):
+    """count 0 收完：先刪 summary.json（kernel 看它不在＝池已拿掉），再刪 pool.json，最後整個資料夾。
+    照順序、前一步沒成功就不做下一步；回 True＝整個拿掉了，False＝沒拿掉（呼叫端記成待刪、下一圈再試，
+    review P5）。quiet＝已經印過（待刪重試中），不再印。"""
     path = pool_dir(home, name)
     try:
         for leaf in ("summary.json", "pool.json"):
             try:
                 os.unlink(path / leaf)
-            except FileNotFoundError:
+            except (FileNotFoundError, NotADirectoryError):
                 pass
-        shutil.rmtree(path, ignore_errors=True)
+        try:
+            shutil.rmtree(path)
+        except (FileNotFoundError, NotADirectoryError):
+            pass
+        if os.path.lexists(path):
+            raise OSError("資料夾還在")
     except OSError as exc:
-        log("WriteFailed", "拿不掉池 %s：%s" % (path, exc))
+        if not quiet:
+            log("WriteFailed", "拿不掉池 %s：%s（之後每圈重試，成功前不再印）" % (path, exc))
+        return False
+    return True
 
 
 def read_pool_json(path):

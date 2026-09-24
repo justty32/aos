@@ -289,7 +289,26 @@ def check(home, agent=None, daemon=None, note='', probe=False):
             alive[home_d] = aos_daemon.is_alive(home_d)
         except OSError:
             alive[home_d] = False
-        where = '（池 %s）' % '、'.join(pools) if pools else '（--daemon-target，池表沒用到）'
+        if not pools:
+            where = '（--daemon-target，池表沒用到）'
+        elif alive[home_d]:
+            # run.md 碰到的問題 5：`pools` 是 kernel 設定的池表，不是 daemon 那邊真的有的池；daemon 剛開、
+            # 還沒拿到任何一張 scale 單時兩者對不上，「daemon 活著（池 …）」會被讀成「daemon 已經有這些池」。
+            # 只逐一查 kernel 設定的池（team-rules 的約定：只准用 pool_summary／pool_kid／is_alive），
+            # 分清楚「設定了什麼」跟「daemon 現在真的有什麼」。
+            current = []
+            for pool in pools:
+                dpool = pool_location(info, pool)[1]
+                try:
+                    has = aos_daemon.pool_summary(home_d, dpool) is not None
+                except OSError:
+                    has = False
+                if has:
+                    current.append(pool)
+            where = '（kernel 設定的池：%s；daemon 目前有：%s）' % (
+                '、'.join(pools), '、'.join(current) if current else '還沒有')
+        else:
+            where = '（池 %s）' % '、'.join(pools)
         checks.report('ok' if alive[home_d] else 'warn', 'daemon',
                       'daemon 活著：%s%s' % (home_d, where) if alive[home_d] else
                       'daemon 沒在跑：%s%s；先開 daemon：aos-daemon boot --target %s' % (home_d, where, home_d))

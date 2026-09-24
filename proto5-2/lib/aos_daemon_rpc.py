@@ -136,7 +136,7 @@ class Requests:
             except aos_home.HomeError as exc:
                 raise DaemonError(exc.code, exc.msg) from exc
         if pool is None:
-            pool = self.pools[name] = pools.Pool(self.home, decl)
+            pool = self.pools[name] = self.new_pool(decl)
         retarget = old is not None and (old.get("target"), old.get("dir_target")) != \
             (decl.get("target"), decl.get("dir_target"))
         pool.decl, pool.changed = decl, True
