@@ -6,7 +6,7 @@
 > 2026-09-23 定稿並已實作：[`aos_home.py`](../lib/aos_home.py)、[`aos_client.py`](../lib/aos_client.py)、[`aos_exec_cpu.py`](../lib/aos_exec_cpu.py)（入口 `aos-cpu`）。
 > 舊的 run／daemon／kernel／cpu-queue 八份已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）；llm-cpu／tool-cpu 四份等 agent 重寫落地再刪。
 > 已拍板的前提在 §9，我自己選的在 §10。
-> 2026-09-24 實作補記：依實作審查回寫，見 [notes/2026-09-23-rearch/impl-review-report.md](../notes/2026-09-23-rearch/impl-review-report.md)；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。
+> 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
 
 一句話：**一顆 exec cpu 是一個資料夾加一個主人行程：逐件把 `requests/` 裡的工作 request 照 `aos-exec`
 跑一次，回音寫到 `responses/` 同名檔；反覆、排程都是 kernel 的事，cpu 只做一次。**

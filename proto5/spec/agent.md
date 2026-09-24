@@ -2,24 +2,32 @@
 
 ← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-agent.md](aos-agent.md)（走一格、登記）、[aos-llm-call.md](aos-llm-call.md)（問模型）｜排程：[kernel.md](kernel.md)
 
-> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) E／D／B／C 改成第 3 輪；照 [第 3 輪審查](../notes/2026-09-23-rearch/review-agent3-report.md) D 節補 3 條（第 4 輪）後定稿。
-> **已實作**（2026-09-24，T9）：`lib/aos_agent_info.py`／`aos_agent_home.py`（讀驗），實作發現見 [agent-impl-findings](../notes/2026-09-23-rearch/agent-impl-findings.md)。
-> 調度者裁決在下一節，已拍板的前提在 §7。
+> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 E／D／B／C 改成第 3 輪；照 第 3 輪審查 D 節補 3 條（第 4 輪）後定稿。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> **已實作**（2026-09-24，T9）：`lib/aos_agent_info.py`／`aos_agent_home.py`（讀驗），實作發現見 agent-impl-findings。
+> 調度者裁決移到檔尾（09-24 試玩 r2 搬），已拍板的前提在 §7。
 
 一句話：**agent 資料夾保存設定、對話記憶與跨次執行的進度，讓 aos-agent 每次被叫都能接著做。**
 `info.json` 說它是誰、記憶在哪、有哪些工具、用哪個模型代號；`state.json` 記走到哪、輸入從哪來、
 外人加的門，以及「手上這一批送出去的工作」（`batch`）。
 
-## 調度者裁決（第 2～3 輪，實作層級）
+## 使用者只需要懂的（09-24 試玩 r2 補）
 
-1. 在途工作的身分只記在 `state.batch`（§4.3），`waits` 只剩外人的門；aos-agent 不再往 `waits` 加自己的條目。
-2. `info.kernel`、`info.llm.config` 拿掉：K 由 `AOS_K` 給、送件時記進 `batch.kernel`；模型表在 llm cpu 那邊。
-3. 新增 `info.tick`（`pool`、`interval_ms`）給 `aos-agent start` 登記用。
-4. 四個工作資料夾併成一個 `work/`，檔名 `<工作名>.inst.json`／`.in`／`.out`，清檔一條規則。
-5. `waits` 的選項只剩 `consume`；`exists`、`all` 可寫但就是預設（陣列＝全到才算）。
-6. 程式自己寫的 `state` 各格（除了 `input`）必須是字面值，不吃指示詞。
-7. 記憶的 message 驗證寫死在 §3.2，aos-llm-call 與 aos-agent 共用同一套。
-8. （第 3 輪）**每次消費一個身分**：輸入與 consume 的檔先 rename 到唯一的封存名 `<原名>.<消費 id>.done`、再讀；state 記的是「原路徑→封存名」對，恢復只認封存名，不再碰原路徑上可能新投遞的檔（§4.4）。
+`aos-agent init` 生的家（[aos-agent.md §1.1](aos-agent.md)）長這樣，人會碰的只有前四樣：
+
+| 東西 | 是什麼 | 常改的 |
+|---|---|---|
+| `info.json` | 設定（§3） | `llm.model`＝模型**代號**（真名、endpoint 在 llm cpu 那邊的 llm.json）；`llm.timeout_ms`＝一次問模型最多跑多久（外圈，要比 llm.json 的 HTTP 逾時大）；`tools`＝工具檔或資料夾；`tick.interval_ms`＝多久走一格 |
+| `prompts/system.json` | 人格：`{"content": "…"}` | 內容 |
+| `tools/*.json` | 工具（§3.3）：OpenAI `tools` 陣列，每個元素多一格 `_meta`（跑什麼） | 見下 |
+| `input/`（或 `input.json`） | 輸入：放一個檔＝一則話；用 `aos-agent say` 投就不用管格式 | — |
+| `prompts/history.json` | 記憶，程式寫 | 別在它跑的時候改 |
+| `state.json`、`work/`、`done/`、`log/` | 程式的進度、工作區、收過的輸入、錯誤紀錄 | 出事看 `log/agent.err`、`log/llm.err` |
+
+**工具**：一支程式，**stdin 收模型給的 arguments（JSON 字串原樣）、stdout 印的東西原樣給模型看**。`_meta.argv[0]` 含 `/` 就是相對 agent 家的路徑（要有執行位），
+不含 `/` 就照 cpu 的 PATH 找；cwd 預設是 agent 家；`_timeout_ms` 預設 60000。改完工具檔下一格就生效，壞了 `log/agent.err` 會指出哪個檔第幾個元素。
+
+卡住、壞掉、怎麼恢復，看 [aos-agent.md 的「使用者只需要懂的」](aos-agent.md)。
+下面 §2 以後的指示詞規則、§4.3 `batch`、§4.4 恢復紀錄是程式自己用的，日常不用讀。
 
 ## 0. 名詞（白話）
 
@@ -133,7 +141,7 @@ agent-bob/
 ```
 
 - 每個元素必須：是物件；`type` 等於 `"function"`；`function` 是物件；`function.name` 是非空字串；`function.description` 有寫就要是字串、`function.parameters` 有寫就要是物件；
-  `_meta` 是物件；`_timeout_ms` 有寫就要是非負整數（bool 不算）。頂層不是陣列、任一條不合、合併後同名——**工具檔的錯一律 `ToolInvalid`**（不用 `FieldTypeMismatch`）。
+  `_meta` 是物件；`_timeout_ms` 有寫就要是非負整數（bool 不算）。頂層不是陣列、任一條不合、合併後同名——**工具檔的錯一律 `ToolInvalid`**（不用 `FieldTypeMismatch`；（09-24 試玩 r2 補）檔讀不到或根本不是 JSON 則是更前面的 `ReadFailed`／`JsonSyntax`）。
   （09-24 試玩 r1 補）訊息帶檔的絕對路徑與第幾個元素（從 0 起）；同名則列出兩邊的檔與位置。
   其他 key 原樣送給模型（`_` 開頭的除外），不驗。
 - `_meta` 是一份 posix inst（[inst-posix](inst-posix.md)，`_metainfo` 可省），**不能寫 `stdin`／`stdout`**（寫了＝`ToolInvalid`）：
@@ -237,10 +245,10 @@ agent-bob/
 ## 6. 這份沒管的
 
 程式做什麼：走一格、登記＝[aos-agent.md](aos-agent.md)；問模型＝[aos-llm-call.md](aos-llm-call.md)。
-`aos-agent init <template>`、`pause`／`continue`、`tools`／`llms` 子命令、`say`、一個 agent 一顆專屬 cpu：這輪不做，
+（09-24 試玩 r2 補）`init`（單一內建預設）、`say`、`status`、`continue` 已有（[aos-agent.md §1.1～§1.4](aos-agent.md)）；`init --template`、`pause`、`tools`／`llms` 子命令、一個 agent 一顆專屬 cpu：這輪不做，
 使用者的構想在 [thinking/aos-agent.md](../../thinking/aos-agent.md)、[thinking/2026-09-23.md](../../thinking/2026-09-23.md)。
 記憶太長；明確的 `fail` 狀態（[backlog/agent-fail-state.md](../backlog/agent-fail-state.md)）。
-**日常 CLI 還沒完**：照這三份做完，家要人手動建；回話用 `aos-agent last` 看（09-24 試玩 r1 補）（aos-agent.md §1、§13）。
+**日常 CLI 是最小版**：家用 `aos-agent init` 建或手動建，話用 `say` 投、`last`／`say --wait` 看回話（09-24 試玩 r2 補）（aos-agent.md §1、§13）。
 
 ## 7. 已拍板的前提（使用者定的，不重問）
 
@@ -248,3 +256,14 @@ agent-bob/
    取捨：最快也要等一格 tick 才跑得到；同一批的工具可能平行跑，有先後依賴的要合成一個工具或拆成兩輪讓模型分次叫。
 2. **agent 先進現有的池**：登記＝`aos-kernel add` 一個反覆行程（aos-agent.md §11），池與間隔從 `info.tick` 拿；K 由 `AOS_K` 給。
 3. **llm.json 放 llm cpu 那邊**（cpu 的環境＝工作的環境）：agent 的 `info.llm` 只剩 `model`、`params`、`pool`、`timeout_ms`。
+
+## 調度者裁決（第 2～3 輪，實作層級）
+
+1. 在途工作的身分只記在 `state.batch`（§4.3），`waits` 只剩外人的門；aos-agent 不再往 `waits` 加自己的條目。
+2. `info.kernel`、`info.llm.config` 拿掉：K 由 `AOS_K` 給、送件時記進 `batch.kernel`；模型表在 llm cpu 那邊。
+3. 新增 `info.tick`（`pool`、`interval_ms`）給 `aos-agent start` 登記用。
+4. 四個工作資料夾併成一個 `work/`，檔名 `<工作名>.inst.json`／`.in`／`.out`，清檔一條規則。
+5. `waits` 的選項只剩 `consume`；`exists`、`all` 可寫但就是預設（陣列＝全到才算）。
+6. 程式自己寫的 `state` 各格（除了 `input`）必須是字面值，不吃指示詞。
+7. 記憶的 message 驗證寫死在 §3.2，aos-llm-call 與 aos-agent 共用同一套。
+8. （第 3 輪）**每次消費一個身分**：輸入與 consume 的檔先 rename 到唯一的封存名 `<原名>.<消費 id>.done`、再讀；state 記的是「原路徑→封存名」對，恢復只認封存名，不再碰原路徑上可能新投遞的檔（§4.4）。
