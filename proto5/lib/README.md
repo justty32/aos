@@ -390,6 +390,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_daemon.py](test/test_daemon.py) | 27 | 真 daemon／cpu、spawn 冪等、重拉、三階停機、flock、崩潰接手 |
 | [test_daemon_cli.py](test/test_daemon_cli.py) | 10 | boot／halt、家的三種來源與錯誤行來源、裸 aos-daemon 退 2、halt 等待退出 |
 | [test_daemon_crash.py](test/test_daemon_crash.py) | 11 | 握手中段（fork 後／寫表後／go 後／回音後）與接手中（TERM 後／KILL 後／死透後／對帳中／對帳後）真 SIGKILL，下一任收斂；subreaper hub＋測試 driver 閘門 |
+| [test_kernel_crash.py](test/test_kernel_crash.py) | 15 | kernel 一格在 log 前（C-7）、派工逐顆與四張出貨箱逐箱（C-8）真 SIGKILL，下一格／boot 收斂：不重派、不重算、無鬼回音；測試啟動器當 kernel cli |
 | [test_directives.py](test/test_directives.py) | 101 | 指示詞、引用、選項與錯誤 |
 | [test_exec.py](test/test_exec.py) | 94 | 保留三種目標、串流、env、退出碼及舊 API |
 | [test_exec_cpu.py](test/test_exec_cpu.py) | 31 | 真 cpu 握手、EOF、訊號、stop、Interrupted、timeout、工作串流 |
