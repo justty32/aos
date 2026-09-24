@@ -9,11 +9,11 @@ pi coding agent 那一組 read、write、edit、bash、grep、find、ls，裝了
 
 ```sh
 aos-agent tools add base --target $W/bob                  # 工作根目錄＝$W/bob/workspace/（自動建）
-aos-agent tools add base --target $W/bob --root ~/proj    # 讓它在 ~/proj 裡工作
+aos-agent tools add base --target $W/bob --root ~/proj    # 只改 config.json；關牢時照 access.json，要改牢裡起點：aos-agent access set ws ~/proj --target $W/bob
 aos-agent tools add base --target $W/bob --force          # 重裝（保留原本的 config.json）
 ```
 
-裝完下一格就生效，不用重 `start`。`aos-kernel check --agent $W/bob` 會逐一列出 `agent/tool/read: 可執行 tools/base/read` 等七行。
+裝完下一格就生效，不用重 `start`。`aos-agent check --target $W/bob` 會逐一列出 `agent/tool/read: 可執行 tools/base/read` 等七行。
 人格記得改成 coding agent，例如 `prompts/system.json`：`{"content": "你是 coding agent。用工具實際動手，不要只描述要做什麼。一次只叫一個工具，看到結果再決定下一步。"}`
 （agent 同一批工具可能平行跑，「先寫再跑」這種有先後的，叫它一次一個最穩。）
 
@@ -56,7 +56,7 @@ bash 的 `ExitCode`／`Timeout` 先原樣印輸出，JSON 在最後一行（多�
 | `BadArguments` | arguments 不是 JSON 物件、缺必填、型別不對、數字超出範圍、字串含 NUL 或編不成 UTF-8、`old_string` 空或跟 `new_string` 一樣 |
 | `NotFound` | 路徑不存在 |
 | `OutsideRoot` | 路徑（解開符號連結後）在碰得到的範圍外——不關牢時是工作根目錄，關牢時是整個 `/work`（`access.json` 掛進來的所有資料夾） |
-| `ReadOnly` | 只有關牢時會遇到：write／edit 寫到唯讀掛的資料夾，或直接寫在 `/work` 底下、不在任何掛進去的資料夾裡；訊息列出目前哪些資料夾可寫 |
+| `ReadOnly` | write／edit 寫到唯讀的地方：關牢時是唯讀掛的資料夾（多半是 access.json 設的），或直接寫在 `/work` 底下、不在任何掛進去的資料夾裡，訊息列出目前哪些資料夾可寫；不關牢時是主機上本來就唯讀的檔案系統 |
 | `IsADirectory`／`NotADirectory` | read／write／edit 給了資料夾；ls／find 給了檔 |
 | `BinaryFile` | read 讀到前 8 KB 含 NUL 的檔；edit 讀到不是 UTF-8 的檔 |
 | `NotARegularFile`／`FileTooLarge` | read／edit 給了 FIFO、裝置等；edit 的檔超過 10 MB |

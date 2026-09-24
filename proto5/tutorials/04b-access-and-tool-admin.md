@@ -48,7 +48,7 @@ aos-agent access set ref ~/docs --target $W/bob
 想讓工具看得到 agent 自己的家，掛的時候會自動被壓成唯讀，因為家裡有「工具永遠寫不到」的東西：
 
 ```sh
-aos-agent access set self . --target $W/bob
+aos-agent access set self "$W/bob" --target $W/bob
 ```
 
 ```text
@@ -91,6 +91,7 @@ mkdir -p $W/bob/workspace && aos-agent access set ws $W/bob/workspace --cwd --ta
 aos-agent check --target $W/bob   # 確認 access 那行 ok
 ```
 
+舊家裝過的 `base` 是程式副本，更新 aos 不會跟著換；要讓 read 等工具也看得到整個 `/work`，重裝一次：`aos-agent tools add base --force --target $W/bob`。
 不想關牢的某一支工具，才在它的元素頂層寫 `"_jail": false`（不建議）。
 
 ## 2. 用文字編輯器改 access.json

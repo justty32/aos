@@ -8,6 +8,7 @@
 import copy
 import json
 import os
+import shlex
 import re
 import shutil
 import sys
@@ -228,7 +229,7 @@ def _add(base, spec, root, force, as_arg, only):
         if root is not None and cwd and os.path.realpath(mapped or '') != os.path.realpath(work_root):
             # access.json 早就在（例如 init 生的）：--root 不會改牢裡看到的；教一行改表
             print('要讓工具在 %s 工作：aos-agent access set %s %s --target %s'
-                  % (work_root, cwd, work_root, base))
+                  % (work_root, cwd, shlex.quote(str(work_root)), shlex.quote(str(base))))
     elif work_root:
         print('工作根目錄：%s（改 %s 的 root）' % (work_root, link / 'config.json'))
     if work_root:

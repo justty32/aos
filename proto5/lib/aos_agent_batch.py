@@ -1,5 +1,6 @@
 """aos-agent.md §5～§7：建批、送件、收回、結清。"""
 import os
+import shlex
 from pathlib import Path
 import shutil
 
@@ -22,8 +23,8 @@ JAIL_WHY_ACCESS = '這個 agent 的權限設定（access.json）有問題'
 
 def no_access_fix(base):
     """家裡沒 access.json 時教的那行：只給工具家裡的 workspace（絕對路徑，不怕殼在哪個資料夾）。"""
-    ws = os.path.join(str(base), 'workspace')
-    return 'mkdir -p %s && aos-agent access set ws %s --cwd --target %s' % (ws, ws, base)
+    ws, home = shlex.quote(os.path.join(str(base), 'workspace')), shlex.quote(str(base))
+    return 'mkdir -p %s && aos-agent access set ws %s --cwd --target %s' % (ws, ws, home)
 
 
 def jail_message(tool, code, base):
@@ -206,19 +207,22 @@ def send(run):
         path = run.base / 'work' / (name + '.inst.json')
         think = batch['kind'] == 'think'
         tool = tools.get(call.get('tool'))
+        posted = already_posted(batch['kernel'], name)
+        if not think and tool is not None and not posted:
+            # inst 已在（崩在寫 inst 與送出之間、或舊版寫的未包牢 inst）也要先過這關，不能因檔在就略過（astra r2 #1）
+            problem = jail_problem(access, tool, run.env)
+            if problem is not None:
+                call.update(done={'content': jail_message(call['tool'], problem, run.base)}, acked=True)
+                if problem == 'NoAccess':
+                    report('NoAccess', '工具 %s 沒送：家裡沒有 access.json（有工具的家要先設定工具能碰哪些資料夾）；'
+                           '跑：%s' % (call['tool'], no_access_fix(run.base)))
+                continue
         if not path.exists():
             if think:
                 inst = think_inst(run.base, name)
             else:
                 if tool is None:
                     call.update(done={'content': '沒有這個工具：' + call['tool']}, acked=True)
-                    continue
-                problem = jail_problem(access, tool, run.env)
-                if problem is not None:
-                    call.update(done={'content': jail_message(call['tool'], problem, run.base)}, acked=True)
-                    if problem == 'NoAccess':
-                        report('NoAccess', '工具 %s 沒送：家裡沒有 access.json（有工具的家要先設定工具能碰哪些資料夾）；'
-                               '跑：%s' % (call['tool'], no_access_fix(run.base)))
                     continue
                 jailed = access if tool.get('_jail', True) is not False else None
                 try:
@@ -236,7 +240,7 @@ def send(run):
                     raise AgentError('HistoryChanged', '送工具時 tool_calls 已改變')
                 run.text(run.base / 'work' / (name + '.in'), source[i]['function']['arguments'])
             run.write(path, inst, 'work.inst')
-        if not already_posted(batch['kernel'], name):
+        if not posted:
             pool = run.info['llm']['pool'] if think else run.info['tool_pool']
             timeout = run.info['llm']['timeout_ms'] if think else (tool or {}).get('_timeout_ms', 60000)
             run.submit(batch['kernel'], name + '.json', 'add',

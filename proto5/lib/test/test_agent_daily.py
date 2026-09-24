@@ -44,6 +44,8 @@ class DailyTests(unittest.TestCase):
                          {'_metainfo': {'_type': 'agent_access', '_version': 1},
                           'mounts': {'ws': 'workspace'}, 'cwd': 'ws', 'net': False})
         self.assertTrue((base / 'workspace').is_dir())
+        import aos_agent_access
+        self.assertEqual(aos_agent_access.load(base)['mounts']['ws']['ro'], False)   # 真的過得了權限檢查
         self.assertEqual(info.load_state(base)['input'], ['input'])
         self.assertEqual(info.load(base)['tools'][0]['function']['name'], 'date')
         self.assertTrue((base / 'log').is_dir())

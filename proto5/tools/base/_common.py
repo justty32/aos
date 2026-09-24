@@ -212,8 +212,10 @@ def write_error(e, path, full):
         if top and (len(first) < 2 or not os.path.isdir(os.path.join(top, first[0]))):
             fail('ReadOnly', 'cannot write %s: files cannot be created directly in %s, only inside one of '
                  'the folders in it.%s' % (path, top, where), path=path)
-        fail('ReadOnly', 'cannot write %s: that folder is read-only (mounted read-only by the user in '
-             'access.json).%s If you really need to change it, ask the user.' % (path, where), path=path)
+        why = ('that folder is on a read-only mount (usually mounted read-only by the user in access.json)'
+               if top else 'the file system there is read-only')
+        fail('ReadOnly', 'cannot write %s: %s.%s If you really need to change it, ask the user.'
+             % (path, why, where), path=path)
     fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
 
 

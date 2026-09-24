@@ -258,6 +258,36 @@ class SendTests(SendBase):
         self.assertIn('aos-agent: NoAccess: 工具 sh 沒送', self.err.getvalue())
         self.assertIn(fix, self.err.getvalue())
 
+    def test_existing_unposted_inst_is_refused_too(self):
+        """astra r2 #1：舊版沒表時寫好、還沒送出的未包牢 inst，升級後重送也要先過 NoAccess，不因檔在就送。"""
+        self.tool({'argv': ['tools/bin/sh-tool', '-v']}, _jail=False)
+        batch = self.tick()
+        name = batch['calls'][0]['name']
+        inst = self.base / 'work' / (name + '.inst.json')
+        self.assertTrue(inst.exists())
+        for f in (self.k / 'requests').iterdir():         # 當成「寫好 inst、還沒送出就崩了」
+            f.unlink()
+        self.tool({'argv': ['tools/bin/sh-tool', '-v']})   # 升級後這支要關牢
+        st = self.read(self.base / 'state.json')
+        st['batch']['sent'] = False
+        st['batch'].pop('access', None)                    # 舊版 state 沒這個鍵＝null
+        self.put(self.base / 'state.json', st)
+        self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+        self.assertFalse(list((self.k / 'requests').iterdir()))
+        self.assertIn('aos-agent: NoAccess: 工具 sh 沒送', self.err.getvalue())
+        batch = self.read(self.base / 'state.json')['batch']
+        self.assertIn('（NoAccess）', batch['calls'][0]['done']['content'])
+
+    def test_fix_line_quotes_paths(self):
+        """astra r2 #3：家的路徑有空白或特殊字元，教的那行照樣能直接貼上。"""
+        import shlex
+        base = Path('/tmp/my home/a$b')
+        line = batch_api.no_access_fix(base)
+        words = shlex.split(line.split(' && ')[1])
+        self.assertEqual(words, ['aos-agent', 'access', 'set', 'ws', str(base / 'workspace'), '--cwd',
+                                 '--target', str(base)])
+        self.assertEqual(shlex.split(line.split(' && ')[0]), ['mkdir', '-p', str(base / 'workspace')])
+
     def test_no_access_file_unjailed_tool_keeps_old_inst(self):
         """_jail: false 的那支沒有表也照舊送、inst 不包牢。"""
         self.tool({'argv': ['tools/bin/sh-tool', '-v'], 'envs': {'FOO': 'bar'}}, _jail=False)
@@ -494,7 +524,9 @@ class CheckStatusTests(CheckBase):
         self.put(self.base / 'tools/t.json', [{'type': 'function', 'function': {'name': 'sh'},
                                                '_meta': {'argv': ['sh']}, '_jail': False}])
         self.put(self.base / 'info.json', dict(self.info, tools=['tools/t.json']))
-        self.assertNotIn('access:', self.check())
+        out = self.check()
+        self.assertNotIn('access:', out)
+        self.assertIn('warn agent/tool/sh: _jail: false', out)      # 缺表那條提早返回之前也要警告（astra r2 #2）
 
     def test_bad_access_and_no_bwrap(self):
         self.access({'mounts': {'ws': 'nope'}})
