@@ -144,7 +144,7 @@ aos-kernel check --agent $W/bob
 aos-agent say "請用 add 工具算 1234 加 4321，只回數字。" --target $W/bob --wait
 ```
 
-工具壞了（JSON 寫錯、沒執行位）`check --agent` 會指出來；跑起來失敗時模型看得到 `exit 126／127` 的說明（寫進記憶裡那則 tool 訊息，`listen --follow` 或看 `prompts/history.json`）。**`log/agent.err` 不會有這一行**：工具失敗是給模型看的結果，不算 agent 自己的錯（09-24 fix-r5 對回實際行為）。完整格式在 [agent.md §3.3](spec/agent/info.md)。做完回第 5 段停機。
+工具壞了（JSON 寫錯、沒執行位）`check --agent` 會指出來；跑起來失敗時模型看得到 `exit 126／127` 的說明（寫進記憶裡那則 tool 訊息，看 `prompts/history.json`；`listen` 只印 assistant 的話）。**`log/agent.err` 不會有這一行**：工具失敗是給模型看的結果，不算 agent 自己的錯（09-24 fix-r5 對回實際行為）。完整格式在 [agent.md §3.3](spec/agent/info.md)。做完回第 5 段停機。
 
 **附：不用 `init` 的手動做法。** 家就是一個資料夾，`init` 只是替你寫好這三份。這種家的輸入投 `input.json`，要原子地投：先寫暫存檔再 `mv`。
 
@@ -200,7 +200,7 @@ aos-agent stop --target $W/amy
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 二十九支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 32 個測試檔、1133 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 二十九支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 32 個測試檔、1138 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。

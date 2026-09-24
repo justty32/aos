@@ -29,7 +29,7 @@
 （09-24 fix-r4 補）先解手動暫停：家裡有 `paused` 就刪掉、印 `continued: 解除手動暫停`。然後解連敗暫停：
 讀 state，找 `waits` 裡帶 `consume`、指到 agent 家 `continue-*.json`、檔還不在的門（§9 加的那種），逐一建那個檔（空檔），每個印 `continued: touched <絕對路徑>`、退 0；
 下一格 tick 開門、搬進 `done/`。檔已在（touch 過、還沒被收）＝印「已經 touch 過，等下一格 tick」、退 0；兩種都沒有＝印 `沒有在暫停`、退 0。
-（09-24 fix-r5 補）**兩階段**：有解到連敗暫停（建了檔，或檔已在）就在家裡放 `resumed`（寫一行 `resumed at <ISO 時間>`，`.tmp` 再 rename），最後印一行 `已解除暫停，等下一次成功（aos-agent status --target <dir> 看）`；
+（09-24 fix-r5 補）**兩階段**：要建門檔之前先在家裡放 `resumed`（先放再建：門開之前 tick 不會重問，所以成功結清刪 `resumed` 一定在這之後，不會被蓋回去；門檔已在＝上次 continue 已放過，不再放）（寫一行 `resumed at <ISO 時間>`，`.tmp` 再 rename），最後印一行 `已解除暫停，等下一次成功（aos-agent status --target <dir> 看）`；
 `status` 在 `resumed` 還在時標「已解除暫停，等下一次成功」。下一次 think **成功**結清時 tick 刪掉 `resumed`（§7），這之後才標「已恢復」。只解手動暫停不放 `resumed`（手動暫停不是失敗）。
 
 **`continue --all`**（09-24 fix-r5 補）：llm.json 是 kernel 的 llm cpu 共用的，一壞所有正在說話的 agent 會一起連敗暫停，這個一次救回。

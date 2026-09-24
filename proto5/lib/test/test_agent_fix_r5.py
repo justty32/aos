@@ -327,6 +327,41 @@ class FixR5Tests(unittest.TestCase):
         empty.mkdir()
         self.assertEqual(self.cli('init', '--target', str(empty))[0], 0)
 
+    # astra 審查挑的 ------------------------------------------------------------
+
+    def test_resumed_written_before_door(self):
+        self.stuck()
+        import aos_agent_pause
+        seen = []
+        real = aos_agent_pause._mark
+        def spy(base, name):
+            seen.append((name, (self.base / 'continue-test.json').exists()))
+            real(base, name)
+        with patch.object(aos_agent_pause, '_mark', spy):
+            self.cli('continue', '--target', str(self.base))
+            self.cli('continue', '--target', str(self.base))  # 門已在：不再放 resumed
+        self.assertEqual(seen, [('resumed', False)])
+
+    def test_verbose_and_json_keep_full_old_error(self):
+        self.registered()
+        log = self.base / 'log/agent.err'
+        log.parent.mkdir(exist_ok=True)
+        log.write_text('aos-agent: engine: ' + 'z' * 400 + 'END\n')
+        with self.health():
+            _, plain = self.cli('status', '--target', str(self.base))
+            _, verbose = self.cli('status', '--target', str(self.base), '-v')
+            _, raw = self.cli('status', '--target', str(self.base), '--json')
+        self.assertNotIn('END', plain)
+        self.assertIn('（-v 看全文）', plain)
+        self.assertIn('END', verbose)
+        self.assertTrue(json.loads(raw)['last_error'].endswith('END'))
+
+    def test_idle_tool_calls_still_warns(self):
+        self.put(self.base / 'prompts/history.json', [{'role': 'user', 'content': '算'}, fixture.ASSISTANT])
+        self.put(self.base / 'state.json', {'state': 'idle'})
+        self.listen_last()
+        self.assertIn('還在處理中（tool_calls: sh）', self.err.getvalue())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -77,7 +77,7 @@ class DailyTests(unittest.TestCase):
         data = status.collect(self.base, {})
         self.assertEqual(data['batch'], dict(kind='think', sent=False, total=1, sent_n=1, done_n=0))
         self.assertTrue(data['intake'])
-        self.assertEqual(len(data['last_error']), 300)
+        self.assertEqual(len(data['last_error']), 350)  # fix-r5：收原文，一般輸出才縮短
         output = self.cli('status', '--target', str(self.base))[1]
         for word in ('送件中', '收到一半', '1 個檔還沒收'):
             self.assertIn(word, output)

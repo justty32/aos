@@ -86,13 +86,42 @@ class ProbeTests(KernelCase):
         method, path, body = server.seen[-1]
         self.assertEqual((method, path, body['max_tokens'], body['model']), ('POST', '/v1/chat/completions', 1, 'm'))
 
-    def test_closed_port_is_bad_and_hides_key(self):
+    def test_closed_port_is_bad(self):
         endpoint = 'http://127.0.0.1:%d/v1' % free_port()
         level, message = aos_kernel_check.probe_endpoint({'endpoint': endpoint, 'model': 'm', 'api_key': 'sk-secret'})
         self.assertEqual(level, 'bad')
         self.assertIn('連不上', message)
         self.assertIn(endpoint, message)
         self.assertNotIn('sk-secret', message)
+
+    def test_empty_model_list_warns(self):
+        """astra 審查：空清單也算「清單裡沒有」。"""
+        server = self.serve({'data': []})
+        level, message = aos_kernel_check.probe_endpoint({'endpoint': server.url, 'model': 'm'})
+        self.assertEqual(level, 'warn')
+        self.assertIn('模型清單裡沒有 m', message)
+
+    def test_incomplete_read_is_bad(self):
+        """astra 審查：回覆宣告 100 bytes 卻只傳一半，要轉成 bad，不噴例外。"""
+        class Short(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header('Content-Length', '100')
+                self.end_headers()
+                self.wfile.write(b'{"data"')
+                self.wfile.flush()
+                self.close_connection = True
+
+        httpd = http.server.HTTPServer(('127.0.0.1', 0), Short)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+        level, message = aos_kernel_check.probe_endpoint(
+            {'endpoint': 'http://127.0.0.1:%d/v1' % httpd.server_address[1], 'model': 'm'})
+        self.assertEqual(level, 'bad', message)
 
     def check_cli(self, *extra, endpoint):
         if (self.home / 'info.json').exists():
