@@ -50,13 +50,13 @@ D/
   info.json           身分與設定；人寫的
   state.json          孩子表；daemon 寫的
   requests/ responses/
-  daemon.log          daemon 自己的 stderr
   .daemon.lock        整個系統唯一的一把鎖（§6.1）
 ```
 
 家由 `--home`，其次 `AOS_DAEMON_HOME`，再其次 `~/.aos-daemon` 決定。主人是 `aos-daemon` 這個行程；
 外人只能放 request、放 ack，`state.json` 隨便偷看（kernel 就是偷看它來知道孩子活不活）。
 孩子的家不在這裡——孩子的家是它自己的目標說了算（kernel 的 cpu 在 `K/cpus/<name>/`）。
+（09-24 試玩 r1 補）家裡沒有 `daemon.log`：daemon 的 stderr 跟著啟動它的終端走，要留檔就自己重導（例如 `aos-daemon --home D 2>>daemon.log &`）。
 
 **`name` 的範圍是整個 daemon**：兩個 kernel 想共用一個 daemon，cpu 名就不能撞（撞了是 `NameTaken`，§3）。
 
@@ -209,6 +209,17 @@ aos-daemon -h ／ aos-daemon stop -h
 `--wait-ms` 預設 30000，逾時 stderr `Timeout`、退 1（stop 已放、不撤回）。
 
 ### 6.1 啟動
+
+（09-24 試玩 r1 補）**開之前先想好環境**：daemon 拉的每顆 cpu、cpu 跑的每件工作都繼承 daemon 啟動那一刻的環境。
+所以 PATH 要先含 `proto5/cli`（`aos-cpu`、`aos-exec`、`aos-kernel`、`aos-agent`、`aos-llm-call` 都靠 PATH 找）再開 daemon：
+
+```sh
+export PATH=/abs/repo/proto5/cli:$PATH
+aos-daemon --home D 2>>daemon.log &      # 前景程式，放背景或另開終端
+aos-kernel check K --daemon D             # boot 前檢查 PATH、池、llm 設定（kernel.md §6）
+```
+
+daemon 開了之後再 `export` 不會影響它；PATH 漏了就停掉 daemon 重開。
 
 1. 建家（缺的目錄）、讀驗或寫預設 `info.json`；忽略 `SIGPIPE`。
 2. 拿 `.daemon.lock` 的獨占 flock（持到退出）。拿不到＝同家已有一支 daemon 在跑 → `AlreadyRunning`、退 1。

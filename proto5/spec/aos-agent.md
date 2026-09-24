@@ -38,9 +38,12 @@
 aos-agent tick  [dir]
 aos-agent start [dir]
 aos-agent stop  [dir]
+aos-agent last  [dir] [--json]
 ```
 
-`dir` 留空＝`.`，必須是 agent 家（`NotAnAgent`）。三個子命令都要 `AOS_K`：沒設或不是絕對路徑＝用法錯 2。沒有別的旗標。
+`dir` 留空＝`.`，必須是 agent 家（`NotAnAgent`）。`tick`／`start`／`stop` 都要 `AOS_K`：沒設或不是絕對路徑＝用法錯 2。沒有別的旗標。
+（09-24 試玩 r1 補）**`last`** 不要 `AOS_K`：讀驗 info 後找記憶裡最後一則 `role: assistant`，印它的 `content`（只有 `tool_calls` 時印 `(tool_calls: 名1, 名2)`）；
+`--json` 印整則一行 JSON。一則都沒有＝`NotFound`、退 1；info 讀驗錯照 §12 退 1。
 
 ## 2. 一次 `tick` 的順序
 
@@ -57,7 +60,7 @@ aos-agent stop  [dir]
 
 1. 逐條解（中心 agent 家）、逐條看到了沒（[agent.md §4.2](agent.md)）。解不開＝讀驗錯，退 1。
 2. 有到了的：取一個新的消費 id，**一次寫** `state.json`——到了的條目從 `waits` 劃掉（按索引），其中開 `consume` 的，把要搬的檔（資料夾就是當下裡面所有 `*.json`）
-   以 `{"src": 絕對路徑, "dst": "<src>.<消費 id>.done"}` 加進 `consuming`。然後照第 2 節第 2 步搬、清 `consuming`。
+   以 `{"src": 絕對路徑, "dst": 封存名}` 加進 `consuming`（封存名見 [agent.md §4.1](agent.md)：`<src 所在資料夾>/done/<src 檔名>.<消費 id>.done`（09-24 試玩 r1 補））。然後照第 2 節第 2 步搬、清 `consuming`。
 3. 表還有剩＝退 101（有劃掉的已經寫回，進度留著）；表空了＝往下走。
 
 崩在「劃掉」之後、搬完之前：`consuming` 裡有記，下次第 2 步補做，不會又被同一道門關住；已經搬過的（`dst` 在）不會再去動原路徑上新放的同名檔。
@@ -172,8 +175,8 @@ ack 的形狀：`K/requests/ack-<epoch ns>-<pid>-<i>.json`（i 是 call 的序�
 | `result`、`kind=child`、`code=0`、`timed_out=false`、`stopped=false` | 讀 `work/N.out`：去掉結尾換行後要恰好是一個 JSON 物件，照 [agent.md §3.2](agent.md) 驗成模型回的 assistant → `{"ok": true}`；不合 → `{"fail": "MessageInvalid: …", "count": true}` |
 | `result.stopped=true` | `{"fail": "被強制停", "count": false}` |
 | `result.timed_out=true` | `{"fail": "逾時（T ms）", "count": true}` |
-| `result.kind=aos` | `{"fail": "aos-llm-call 沒跑起來（kind=aos），看 llm 池 cpu 的 cpu.log", "count": true}` |
-| `result`、`code≠0` | `{"fail": "aos-llm-call exit <code>，看 log/llm.err", "count": true}` |
+| `result.kind=aos` | `{"fail": "aos-llm-call 沒跑起來（kind=aos），看 <K>/cpus/<llm 池的 cpu>/cpu.log", "count": true}`（09-24 試玩 r1 補）：列出完整路徑，找不到池裡的 cpu 就寫 `<K>/cpus/*/cpu.log` |
+| `result`、`code≠0` | `{"fail": "aos-llm-call exit <code>，看 <agent 絕對路徑>/log/llm.err：<llm.err 最後一行>", "count": true}`（09-24 試玩 r1 補）：最後一行取非空的、最多 300 字；讀不到就只給路徑。逾時那列也附同樣的路徑與最後一行 |
 | `error.data.code=Stopping` | `{"fail": "kernel 停機時取消，沒跑", "count": false}` |
 | `error.data.code=Interrupted`／`Removed` | `{"fail": "結果不明（Interrupted／Removed）", "count": true}` |
 | 其他 `error` | `{"fail": "kernel 退件：<data.code，沒有就 code>", "count": true}` |
@@ -188,7 +191,7 @@ ack 的形狀：`K/requests/ack-<epoch ns>-<pid>-<i>.json`（i 是 call 的序�
 | `result.stopped=true` | 固定 `{"ok": false, "error": "結果不明：工具可能已經跑了，也可能沒有"}` 的 JSON 字串 |
 | `result.timed_out=true` | 「工具 <名> 逾時（T ms）：」＋輸出 |
 | `result.kind=aos` | 「工具 <名> 無法執行（kind=aos），詳情在跑它那顆 cpu 的 cpu.log」 |
-| `result`、`code≠0` | 「工具 <名> 失敗（exit <code>）：」＋輸出 |
+| `result`、`code≠0` | 「工具 <名> 失敗（exit <code>）：」＋輸出。（09-24 試玩 r1 補）127／126 補一句：「exit 127：找不到程式 argv[0]=…」／「exit 126：不能執行 argv[0]=…」（argv[0] 從 `work/N.inst.json` 讀；相對路徑再補一句相對哪個 cwd、不含 `/` 的照 cpu 的 PATH 找） |
 | `error.data.code=Interrupted`／`Removed` | 同 `stopped` 那列的固定字串（可能已經跑了） |
 | `error.data.code=Stopping` | 「工具 <名> 沒跑：kernel 停機時取消」 |
 | 其他 `error` | 「工具 <名> 沒跑：kernel 退件（<data.code，沒有就 code>）」 |
@@ -219,7 +222,7 @@ ack 的形狀：`K/requests/ack-<epoch ns>-<pid>-<i>.json`（i 是 call 的序�
 ## 8. idle：收輸入
 
 1. `intake` 是 null：列出 `input` 指到、現在存在的檔（[agent.md §4.1](agent.md)）。一個都沒有＝退 101。
-   有 → 取新的消費 id，**寫 state**：`intake = {"id", "base_len": 現在記憶長度, "files": [{"src", "dst": "<src>.<id>.done"}…]}`。這一步還沒讀內容。
+   有 → 取新的消費 id，**寫 state**：`intake = {"id", "base_len": 現在記憶長度, "files": [{"src", "dst": 封存名}…]}`（封存名 `<src 所在資料夾>/done/<src 檔名>.<id>.done`（09-24 試玩 r1 補））。這一步還沒讀內容。
 2. 逐對搬（[agent.md §4.4](agent.md)：`dst` 在＝搬過了、不碰 `src`；`dst` 不在 `src` 在＝rename；都不在＝那份被人拿走了，讀的時候跳過）。
 3. 從每個 `dst` 讀訊息、照 agent.md §3.2 驗。壞檔＝退 1，**已寫的 `intake` 與已搬的檔都留著**。人要處理：就地改好那個 `dst`；
    或照 [agent.md §4.4](agent.md) 放棄那一對（先 stop、在 state 裡拿掉那一對、才動 `dst`）——只刪 `dst` 不改 state，下次會去搬原路徑上的新檔。全部略過＝沒輸入：寫 `intake: null`、退 101。
@@ -232,7 +235,7 @@ ack 的形狀：`K/requests/ack-<epoch ns>-<pid>-<i>.json`（i 是 call 的序�
 ## 9. 連敗暫停
 
 §7 那次寫把 `errors` 加到 3 時：同一次寫改成 `errors: 0`、`waits` 表尾加 `{"$opt": "consume", "$val": "continue-<B>.json"}`（B＝這批的批 id，所以每次暫停的訊號檔名都不同，不會有舊檔先在），
-stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch continue-<B>.json 繼續`。人也可以直接看 `state.json` 的 `waits` 找到檔名。
+stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch <agent 絕對路徑>/continue-<B>.json 繼續`（09-24 試玩 r1 補）。人也可以直接看 `state.json` 的 `waits` 找到檔名。
 本次退 0，之後門沒開就 101。設定讀驗、I/O 錯、`HistoryChanged` 不算連敗（它們退 1，由 kernel 的 `bad_after` 管）；工具失敗也不算（那是給模型看的結果）。
 
 ## 10. 清工作檔
@@ -274,7 +277,10 @@ stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch continue-<B>.json
 
    `interval_ms` 沒寫就不帶（用 kernel 的預設）；不帶 `timeout_ms`、不帶 `--once`。收到回音就 ack。
 
-**`aos-agent stop [dir]`**：讀驗 info 後，等於 `aos-kernel rm "$AOS_K" agent-<資料夾名>`，等回音最多 10 秒、ack。不查 tick.json、不查 done_exit。
+**`aos-agent stop [dir]`**：（09-24 試玩 r1 補）**不讀 info**（設定壞了也停得掉）：`dir` 是資料夾就行；只讀 `tick.json`——它的 `envs.AOS_K` 是字面字串且不等於現在的 `AOS_K`＝`KernelMismatch`、退 1，
+讀不懂或不在就不管。然後等於 `aos-kernel rm "$AOS_K" agent-<資料夾名>`，等回音最多 10 秒、ack。不查 done_exit。
+
+（09-24 試玩 r1 補）成功時 stdout 印一行：start 印 `started agent-<資料夾名>`、stop 印 `stopped agent-<資料夾名>`（stop 只是撤銷排程，正在跑的那格照樣跑完，見下）。
 
 start／stop 的 request 檔名是 `aa-<資料夾名>-<epoch ns>-<pid>.json`（id 同名去掉 `.json`）。**等回音逾時**：stderr 印一行
 `aos-agent: ReadFailed: 等回音逾時，回音會出現在 <K>/responses/<檔名>，讀完自己放 ack（cpu.md §3.3）`、退 1——
@@ -309,7 +315,7 @@ kernel 行程名只看資料夾名，不同位置的兩個同名資料夾會撞 
 - kernel `stop`：還在排隊的 once 回 `Stopping`（think 下次重問、工具告訴模型「沒跑」），在跑的照常跑完；
   agent 自己的那格在 stopping 時不會被派，當批留到下次 boot 之後收（kernel 跨 boot 保留 `procs`／`replies`）。
 - 放單崩在 `link` 之後、刪 `.tmp` 之前：`K/requests/` 留一個 `.` 開頭 `.tmp` 結尾的殘檔；主人只收 `.json`，不會誤收；**沒人自動清**（保證外），人在都停著時刪。
-- **日常 CLI 還沒完**：三份做完能走的只有「手動建家 → `start` → 往 `input` 放檔 → 問模型／跑工具 → 回 `idle`」，回話要自己看記憶檔。
+- **日常 CLI 還沒完**：三份做完能走的只有「手動建家 → `start` → 往 `input` 放檔 → 問模型／跑工具 → 回 `idle`」，回話用 `aos-agent last` 看（09-24 試玩 r1 補）。
   `init <template>`、`say`、`pause`／`continue`、`tools`／`llms`、`state`、專屬 cpu 都還沒有（構想在 [thinking/aos-agent.md](../../thinking/aos-agent.md)）；記憶太長也沒管。
 
 ## 14. 已拍板的前提（使用者定的，不重問）
