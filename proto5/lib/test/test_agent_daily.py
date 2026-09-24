@@ -236,18 +236,18 @@ class DailyTests(unittest.TestCase):
         (self.base / 'info.json').write_text('{')
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
         self.pause()
-        self.assertEqual(self.cli('listen', '--target', str(self.base)), (0, '完成\n'))
+        self.assertEqual(self.cli('listen', '--last', '--target', str(self.base)), (0, '完成\n'))
         self.assertIn('改讀 prompts/history.json', self.err.getvalue())
         self.assertIn('連敗暫停中', self.err.getvalue())
 
     def test_last_external_gate(self):
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
         self.state(waits='outside.json')
-        self.assertEqual(self.cli('listen', '--target', str(self.base)), (0, '完成\n'))
+        self.assertEqual(self.cli('listen', '--last', '--target', str(self.base)), (0, '完成\n'))
         self.assertIn('門關著（在等 %s）' % (self.base / 'outside.json'), self.err.getvalue())
 
     def test_last_missing_info(self):
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
         (self.base / 'info.json').unlink()
-        self.assertEqual(self.cli('listen', '--target', str(self.base))[0], 1)
+        self.assertEqual(self.cli('listen', '--last', '--target', str(self.base))[0], 1)
         self.assertIn('NotAnAgent', self.err.getvalue())

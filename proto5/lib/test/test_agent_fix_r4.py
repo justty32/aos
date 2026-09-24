@@ -51,7 +51,7 @@ class FixR4Tests(unittest.TestCase):
         self.addCleanup(os.chdir, old)
         self.assertEqual(self.cli('status')[0], 1)
         self.assertIn('取自 目前資料夾（沒給 --target）', self.err.getvalue())
-        self.assertEqual(self.cli('listen', '--target', str(self.root / 'nope'))[0], 1)
+        self.assertEqual(self.cli('listen', '--last', '--target', str(self.root / 'nope'))[0], 1)
         self.assertIn('取自 --target', self.err.getvalue())
         self.assertIn('NotAnAgent', self.err.getvalue())
 
@@ -60,7 +60,8 @@ class FixR4Tests(unittest.TestCase):
             for command in ('status', 'pause', 'continue', 'listen'):
                 with self.subTest(command=command):
                     self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
-                    self.assertEqual(agent.main([command, '--target', str(self.base)]), 0)
+                    extra = ['--last'] if command == 'listen' else []  # listen 微調：看法要給
+                    self.assertEqual(agent.main([command, '--target', str(self.base), *extra]), 0)
 
     def test_say_wait_word_is_text(self):
         code, _ = self.cli('say', '--wait', '你好', '--target', str(self.base))
@@ -69,9 +70,9 @@ class FixR4Tests(unittest.TestCase):
 
     # listen ---------------------------------------------------------------
 
-    def test_listen_default_is_last(self):
+    def test_listen_last_bare_is_one(self):
+        # 09-24 listen 微調：不給看法改成用法錯（test_listen_tweak 驗），--last 不帶數字＝1。
         self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
-        self.assertEqual(self.cli('listen', '--target', str(self.base)), (0, '完成\n'))
         self.assertEqual(self.cli('listen', '--target', str(self.base), '--last'), (0, '完成\n'))
 
     def test_listen_wait_prints_next_reply(self):

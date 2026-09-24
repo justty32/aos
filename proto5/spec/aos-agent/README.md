@@ -39,7 +39,8 @@
 | [essentials.md](essentials.md) | 使用者只需要懂的：日常會用到的子命令 |
 | [terms.md](terms.md) | §0 名詞（白話） |
 | [cli.md](cli.md) | §1 用法總表；§1.1 `init` 生一個最小可跑的家 |
-| [cli-talk.md](cli-talk.md) | §1.2 `say` 投一則話；§1.5 `listen` 看回話 |
+| [cli-talk.md](cli-talk.md) | §1.2 `say` 投一則話 |
+| [cli-listen.md](cli-listen.md) | §1.5 `listen` 看回話：`--last [N]`、`--wait`、`--follow`、輪次標頭、`--show-calls*` |
 | [cli-status.md](cli-status.md) | §1.3 `status` 現在怎樣了；§1.4 `continue` 解除暫停；§1.6 `pause` 手動暫停 |
 | [cli-check.md](cli-check.md) | §1.7 `check`：start 之前先查一遍（K 自己找、`--probe`；09-24 advice-r1 從 `aos-kernel check --agent` 搬來） |
 | [tools.md](tools.md) | §1.8 `tools add` 裝工具包（內建 `base`：read／write／edit／bash／grep／find／ls）與工作根目錄（09-24 tools-base 補） |

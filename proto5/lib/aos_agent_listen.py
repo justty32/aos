@@ -1,6 +1,6 @@
-"""看回話（aos-agent.md §1.5）：--last 印最後一則、--wait 等下一則、--follow 一直印。
+"""看回話（aos-agent.md §1.5）：--last [N] 印最後 N 則、--wait 等下一則、--follow 一直印。
 
-say --wait 也用這裡的 wait_reply，同一套等法只有一份。
+say --wait 也用這裡的 wait_reply，同一套等法只有一份。印法（輪次標頭、工具呼叫行）在 aos_agent_listen_render。
 """
 from datetime import datetime
 import json
@@ -10,6 +10,7 @@ import sys
 import time
 
 import aos_agent_info
+import aos_agent_listen_render as render
 from aos_agent_home import AgentError, _read_json, read_history
 from aos_agent_runtime import files, report
 from aos_agent_status import collect, pause_path, show, unregistered, waits
@@ -27,7 +28,20 @@ def print_message(message, *, as_json=False):
     sys.stdout.flush()
 
 
-def last(agent_dir, *, as_json=False):
+def print_lines(lines):
+    for line in lines:
+        print(line)
+    sys.stdout.flush()
+
+
+def _inputs(base):
+    try:
+        return aos_agent_info.load_state(base)['input']
+    except (AgentError, OSError, ValueError, KeyError):
+        return []
+
+
+def last(agent_dir, *, count=1, calls=None, as_json=False):
     base = Path(os.path.abspath(agent_dir))
     try:
         info = aos_agent_info.load(base)
@@ -43,9 +57,10 @@ def last(agent_dir, *, as_json=False):
                 raise original
         except AgentError:
             raise original
-    message = next((m for m in reversed(history) if isinstance(m, dict) and m.get('role') == 'assistant'), None)
-    if message is None:
+    picked, start, total = render.pick(history, count)
+    if not picked:
         raise AgentError('NotFound', '記憶裡還沒有 assistant 的回話')
+    message = history[picked[-1]]
     warned = False
     try:
         try:
@@ -67,7 +82,17 @@ def last(agent_dir, *, as_json=False):
     except (AgentError, OSError, ValueError, KeyError):
         pass
     _report_time(history_path, history, message)
-    print_message(message, as_json=as_json)
+    if total < count:
+        report('note', '記憶裡只有 %d 則回話，全印' % total)
+    if calls:
+        _print_span(history, range(start, len(history)), base, calls, as_json)
+    elif as_json or count == 1:
+        # 只要一則、不看工具：跟以前一樣只印回話本身（方便 $(…)）；--json 每則一行、不加標頭。
+        for i in picked:
+            print_message(history[i], as_json=as_json)
+    else:
+        times = render.round_times(history, base, _inputs(base))
+        print_lines(render.render(history, picked, times=times))
     return 0
 
 
@@ -113,7 +138,7 @@ def _stopped(data, base):
     return None
 
 
-def wait_reply(info, h0, timeout_ms, env=None, *, dropped=None, text=None, as_json=False):
+def wait_reply(info, h0, timeout_ms, env=None, *, dropped=None, text=None, as_json=False, calls=None):
     """等這一輪走完、第 h0 則以後出現新的 assistant 回話；say --wait 另給投的檔與 TEXT。"""
     base = info['dir']
     deadline = time.monotonic() + timeout_ms / 1000
@@ -137,7 +162,10 @@ def wait_reply(info, h0, timeout_ms, env=None, *, dropped=None, text=None, as_js
                     and len(history) > h0 and history[-1]['role'] == 'assistant'
                     and (text is None or any(m['role'] == 'user' and m['content'] == text
                                              for m in history[h0:-1]))):
-                print_message(history[-1], as_json=as_json)
+                if calls:
+                    _print_span(history, range(h0, len(history)), base, calls, as_json)
+                else:
+                    print_message(history[-1], as_json=as_json)
                 return 0
         except (AgentError, OSError, ValueError):
             pass  # 寫到一半或暫時讀不到，留待下一輪。
@@ -160,8 +188,22 @@ def _seconds(timeout_ms):
     return int(value) if value == int(value) else value
 
 
-def follow(info, *, as_json=False, env=None):
-    """每多一則 assistant 就印一則，直到 Ctrl-C；不因暫停或沒登記退出。"""
+def _print_span(history, indexes, base, calls, as_json):
+    """--show-calls：這段的工具呼叫與結果連同回話一起印（有輪次標頭）；--json 每格一行、user 不印。"""
+    if as_json:
+        for i in indexes:
+            if isinstance(history[i], dict) and history[i].get('role') != 'user':
+                print_message(history[i], as_json=True)
+        return
+    times = render.round_times(history, base, _inputs(base))
+    print_lines(render.render(history, indexes, calls=calls, times=times))
+
+
+def follow(info, *, as_json=False, env=None, calls=None):
+    """每多一則 assistant 就印一則，直到 Ctrl-C；不因暫停或沒登記退出。
+
+    --show-calls／--show-calls-full：工具結果（role tool）也即時印，叫工具那則印成呼叫行。
+    """
     seen = len(info['history'])
     try:
         while True:
@@ -172,8 +214,13 @@ def follow(info, *, as_json=False, env=None):
             if history is not None:
                 if len(history) < seen:
                     seen = len(history)
+                names = render.call_names(history, len(history)) if calls else {}
                 for message in history[seen:]:
-                    if message.get('role') == 'assistant':
+                    if not isinstance(message, dict):
+                        continue
+                    if calls and not as_json:
+                        print_lines(render.event_lines(message, names, calls))
+                    elif message.get('role') == 'assistant' or (calls and message.get('role') == 'tool'):
                         print_message(message, as_json=as_json)
                 seen = len(history)
             time.sleep(POLL_SECONDS)
@@ -181,10 +228,11 @@ def follow(info, *, as_json=False, env=None):
         return 0
 
 
-def listen(agent_dir, mode='last', *, timeout_ms=300000, as_json=False, env=None):
+def listen(agent_dir, mode='last', *, count=1, calls=None, timeout_ms=300000, as_json=False, env=None):
+    """calls：None＝只看回話、'short'＝--show-calls、'full'＝--show-calls-full。"""
     if mode == 'last':
-        return last(agent_dir, as_json=as_json)
+        return last(agent_dir, count=count, calls=calls, as_json=as_json)
     info = aos_agent_info.load(agent_dir, env=env)
     if mode == 'follow':
-        return follow(info, as_json=as_json, env=env)
-    return wait_reply(info, len(info['history']), timeout_ms, env, as_json=as_json)
+        return follow(info, as_json=as_json, env=env, calls=calls)
+    return wait_reply(info, len(info['history']), timeout_ms, env, as_json=as_json, calls=calls)
