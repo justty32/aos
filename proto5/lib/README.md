@@ -40,7 +40,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm-call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤 | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1055 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1066 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -364,10 +364,10 @@ stop 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1055 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1066 條；repo 根目錄
 ```
 
-共 28 個測試檔、1055 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 29 個測試檔、1066 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -385,6 +385,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
 | [test_daemon.py](test/test_daemon.py) | 27 | 真 daemon／cpu、spawn 冪等、重拉、三階停機、flock、崩潰接手 |
 | [test_daemon_cli.py](test/test_daemon_cli.py) | 7 | stop 命令與等待退出 |
+| [test_daemon_crash.py](test/test_daemon_crash.py) | 11 | 握手中段（fork 後／寫表後／go 後／回音後）與接手中（TERM 後／KILL 後／死透後／對帳中／對帳後）真 SIGKILL，下一任收斂；subreaper hub＋測試 driver 閘門 |
 | [test_directives.py](test/test_directives.py) | 101 | 指示詞、引用、選項與錯誤 |
 | [test_exec.py](test/test_exec.py) | 94 | 保留三種目標、串流、env、退出碼及舊 API |
 | [test_exec_cpu.py](test/test_exec_cpu.py) | 31 | 真 cpu 握手、EOF、訊號、stop、Interrupted、timeout、工作串流 |
