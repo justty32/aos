@@ -6,6 +6,7 @@
 逾時 SIGTERM → GRACE 秒 → SIGKILL、exit 檔十進位＋換行並 fsync 檔與父目錄。
 """
 import os
+import select
 import signal
 import subprocess
 import sys
@@ -165,8 +166,37 @@ def _spawn(argv, cwd, env, fin, fout, ferr, timeout_ms, exit_path, on_spawn=None
     return _finish(code if code >= 0 else 128 + (-code), exit_path, None, exit_append)
 
 
+def _pidfd(p):
+    """子行程的 pidfd（Linux 5.3＋）：它一結束就可讀，等的人不必睡滿一個 poll。拿不到回 None（改用睡）。
+    子行程還沒收屍，pid 不會被別人重用，所以這時開的 pidfd 一定指它。"""
+    try:
+        return os.pidfd_open(p.pid)
+    except (AttributeError, OSError):
+        return None
+
+
+def _nap(fd, pause):
+    """睡 pause 秒；有 pidfd 就在子行程結束那一刻醒（09-24 tick-gap：以前平均多睡半個 poll_ms）。"""
+    if fd is None:
+        time.sleep(pause)
+        return
+    try:
+        select.select([fd], [], [], pause)
+    except (OSError, ValueError):
+        time.sleep(pause)
+
+
 def _wait_full(p, timeout_ms, details):
     """cpu 專用等待：取消／逾時都只處理一個 pgid，控制回呼不中斷。"""
+    fd = _pidfd(p)
+    try:
+        _wait_loop(p, timeout_ms, details, fd)
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
+def _wait_loop(p, timeout_ms, details, fd):
     deadline = time.monotonic() + timeout_ms / 1000 if timeout_ms else None
     until = None
     while True:
@@ -195,7 +225,7 @@ def _wait_full(p, timeout_ms, details):
         limit = until if until is not None else deadline
         if limit is not None:
             pause = min(pause, max(0, limit - time.monotonic()))
-        time.sleep(pause)
+        _nap(fd if until is None else None, pause)
 
 
 def terminate(p):

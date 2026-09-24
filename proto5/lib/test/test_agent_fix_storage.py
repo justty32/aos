@@ -18,7 +18,7 @@ class AgentFixStorageTests(unittest.TestCase):
                     self.assertTrue((self.base / 'done').is_dir())
                 self.put(self.base / 'state.json', {})
                 self.put(self.base / 'input.json', '新訊息')
-                self.assertEqual(self.tick(), 0)
+                self.assertEqual(self.tick(), 103)
                 self.assertEqual(len(list((self.base / 'done').glob('input.json.*.done'))), 1 + existing)
                 self.assertFalse((self.base / 'input.json').exists())
 
@@ -28,7 +28,7 @@ class AgentFixStorageTests(unittest.TestCase):
             self.put(self.base / directory / 'done/old.json', '不收')
             self.put(self.base / directory / 'sub.json/hidden.json', '不收')
         self.put(self.base / 'state.json', {'input': ['inbox', 'other']})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         for directory in ('inbox', 'other'):
             self.assertEqual(len(list((self.base / directory / 'done').glob('a.json.*.done'))), 1)
         self.assertEqual([m['content'] for m in self.read(self.base / 'prompts/history.json')], ['inbox', 'other'])
@@ -43,7 +43,7 @@ class AgentFixStorageTests(unittest.TestCase):
         self.assertIn('修好原因後 aos-agent continue --target %s' % self.base, self.err.getvalue())  # fix-r5：不再叫人 touch
         self.assertNotIn('/', signal)
         (self.base / signal).touch()
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         self.assertEqual(len(list((self.base / 'done').glob(signal + '.*.done'))), 1)
 
     def test_legacy_intake_move_and_read(self):
@@ -51,7 +51,7 @@ class AgentFixStorageTests(unittest.TestCase):
         self.put(src, '舊格式恢復')
         self.put(self.base / 'state.json', {'intake': {'id': 'old', 'base_len': 0,
                  'files': [{'src': str(src), 'dst': str(dst)}]}})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertTrue(dst.exists())
         self.assertFalse((self.base / 'done').exists())
         self.assertEqual(self.read(self.base / 'prompts/history.json')[0]['content'], '舊格式恢復')

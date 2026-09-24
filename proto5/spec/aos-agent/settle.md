@@ -17,6 +17,6 @@
 | think、`count: false` | 不動 | `errors` 不動；`state` 留 `think`（下一格重問）；`batch: null`；`sweep` 加這批 |
 | act | 前 L 則＋每筆 call 一則 `{"role": "tool", "tool_call_id": …, "content": done.content}`（照 `calls` 順序） | `state: think`；`batch: null`；`sweep` 加這批有名字的 |
 
-連敗計數跟「這批結清了」在同一次寫裡，所以不會漏算、也不會重算。退 0。
+連敗計數跟「這批結清了」在同一次寫裡，所以不會漏算、也不會重算。成功（act 結清、或 think 問到了）退 **103**（09-24 tick-gap：下一步馬上能做，kernel 馬上再排）；問模型失敗退 0（等 `interval_ms` 當退避）。
 （09-24 fix-r5 補）think `{"ok": true}` 那次寫完 state 之後，家裡有 `resumed`（§1.4 `continue` 放的）就刪掉（ENOENT＝已刪）：`status` 從這一刻起才把舊錯標「已恢復」。崩在寫 state 之後、刪之前＝`resumed` 留著，下一次成功再刪（只是多標一陣子「等下一次成功」）。
 同一則 assistant 叫多個工具，只保證接回的順序，**不保證執行順序**（可能派到不同 cpu 平行跑）。

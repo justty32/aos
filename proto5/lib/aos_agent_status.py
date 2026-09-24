@@ -97,7 +97,8 @@ def agent_health(data):
             return dict(code='kernel', message='kernel ' + message)
         if code == 'recovering':
             recovering = message  # fix-r5：會自己好，排在暫停、bad 之後
-        elif code != 'ok':
+        elif code not in ('ok', 'bad'):
+            # 09-24 tick-gap：'bad'＝別的反覆工作被判 bad，不是 kernel 家壞了；這個 agent 自己 bad 在下面另判。
             return dict(code='kernel', message='kernel 家有問題：' + message)
     if unregistered(k):
         return dict(code='unregistered', message='沒登記（aos-agent start --target %s）' % base)

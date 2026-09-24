@@ -9,7 +9,7 @@
 3. 對每筆 `done` 是 null 的 call：`K/requests/N.json` 在＝還沒；不在再看 `K/responses/N.json`：不在＝還沒（還在 kernel 裡）；
    在＝讀（JSON 壞＝退 1、不動任何東西），照 §6.1／§6.2 算出 `done`——要讀 `work/N.out` 的在這一步讀，讀驗不過照表記成失敗，**不留到結清才發現**。
 4. 這次有新算出的 → **寫 state**（這幾筆 `done`，`acked` 仍 false）→ 逐則 ack → **寫 state**（`acked: true`）。
-5. 全部 `done` 非 null 且 `acked` → 結清（§7）。否則：這次有寫東西退 0，什麼都沒到退 102（09-24 停車；以前是 101）。
+5. 全部 `done` 非 null 且 `acked` → 結清（§7）。否則：這次收到了一部分、還有在途的退 102（09-24 tick-gap：其餘的都帶 `wake`，停車等叫醒；以前退 0 等 `interval_ms`）；只差 ack（或只補了 ack）退 0；什麼都沒到退 102（09-24 停車；以前是 101）。
 
 ack 的形狀：`K/requests/ack-<epoch ns>-<pid>-<i>.json`（i 是 call 的序號；每則新取名、用 link 放，EEXIST 就換個 ns 再放），內容
 `{"jsonrpc":"2.0","method":"ack","params":{"name":"N.json"}}`。多送一次無害（回音已不在＝kernel 當成功）。

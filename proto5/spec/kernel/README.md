@@ -53,7 +53,7 @@ agent 那份要接的：怎麼用 `add --once` 問模型／跑工具、輸入檔
 | [terms.md](terms.md) | §0 名詞：行程、tick、tick 鎖、帳本、池、宣告、巡檢等白話解釋 |
 | [home.md](home.md) | §1 家的目錄圖、池模板、cpu 的家怎麼建、家不刪 |
 | [info.md](info.md) | §1.1 `info.json` 池表：欄位、成員編號 `count`＋`skip`、改了什麼時候生效、讀驗邊界 |
-| [ledger.md](ledger.md) | §1.2 `K/ledger.sqlite` 帳本第 3 版：表、舊格判法；一格最多存三次（提交點 A／B／C） |
+| [ledger.md](ledger.md) | §1.2 `K/ledger.sqlite` 帳本第 3 版：表、舊格判法；一格最多存三次（提交點 A／B／C；叫醒後再派多一次 D） |
 | [ledger-keys.md](ledger-keys.md) | §1.2（續）帳本讀進記憶體後的例子與每個鍵的意思（one-boot 拆出） |
 | [names.md](names.md) | §1.3 kernel 自己取的檔名 |
 | [syscall.md](syscall.md) | §2 syscall：`K/requests/` 認的 method 與 params |

@@ -48,11 +48,12 @@ DIR（或省略時的目前資料夾）必須是存在的資料夾，不是＝�
 取 requests/ 第一份非 ack-／stop- 的 X
   (1) 寫 state.current={name,id,notify}
   (2) 跑（run_target）；跑的期間每 poll_ms 看一次控制 pipe 與訊號旗標，只記、不動手（強制停除外）
+      （09-24 tick-gap：等子行程時用 pidfd，子行程一結束就醒，不睡滿 poll_ms；拿不到 pidfd 的系統照舊睡）
   (3) 原子寫 responses/X（notification 跳過）
   (4) 刪 requests/X
   (4.5) 有 notify：放通知（§6.4；失敗只記 stderr 一行 NotifyFailed，不退出、不重試）
   (5) 寫 state.current=null、runs+1
-沒單就睡 poll_ms
+沒單就睡 poll_ms（09-24 tick-gap：或門鈴響就醒，§6.5）
 ```
 
 **(3) 在 (4) 前**是開機對帳那張表的根據：回音一定先於原單消失。收件者查「做完了沒」也要照這個

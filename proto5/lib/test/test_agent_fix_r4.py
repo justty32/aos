@@ -155,7 +155,7 @@ class FixR4Tests(unittest.TestCase):
         self.assertEqual(after, before)
         self.assertEqual(self.cli('pause', '--target', str(self.base))[1], '已經暫停了（aos-agent continue --target %s 解除）\n' % self.base)
         self.assertEqual(self.cli('continue', '--target', str(self.base)), (0, 'continued: 解除手動暫停\n'))
-        self.assertEqual(agent.tick(self.base, self.env), 0)
+        self.assertEqual(agent.tick(self.base, self.env), 103)
         self.assertEqual(self.read(self.base / 'state.json')['state'], 'think')
 
     def test_pause_needs_agent_and_works_with_broken_info(self):
@@ -228,7 +228,7 @@ class FixR4Tests(unittest.TestCase):
         with open(history, 'w') as fifo:  # 放第一個走
             fifo.write('[]')
         out, err = first.communicate(timeout=10)
-        self.assertEqual(first.returncode, 0, err)
+        self.assertEqual(first.returncode, 103, err)  # 09-24 tick-gap：收完輸入＝馬上能問模型
         self.assertEqual(self.read(self.base / 'state.json')['state'], 'think')
         third = subprocess.run([sys.executable, str(CLI), 'tick', '--target', str(self.base)],
                                capture_output=True, text=True, env=self.proc_env(), timeout=10)
@@ -251,7 +251,7 @@ class FixR4Tests(unittest.TestCase):
         self.assertIn('另一個 tick 正在跑（pid 4242）', self.err.getvalue())
         self.assertFalse((self.base / 'state.json').exists())
         holder.communicate('', timeout=5)
-        self.assertEqual(agent.tick(self.base, self.env), 0)
+        self.assertEqual(agent.tick(self.base, self.env), 103)
 
     def test_tick_no_lock_file_for_non_agent(self):
         self.assertEqual(agent.tick(self.root, self.env), 1)
@@ -271,7 +271,7 @@ class FixR4Tests(unittest.TestCase):
         self.put(self.base / 'input.json', 'hi')
         with patch('aos_agent_runtime.os.ftruncate', side_effect=OSError(28, 'No space left')):
             self.assertEqual(agent.tick(self.base, self.env), 1)
-        self.assertEqual(agent.tick(self.base, self.env), 0)
+        self.assertEqual(agent.tick(self.base, self.env), 103)
         self.assertNotIn('busy', self.err.getvalue())
 
     def test_tick_not_agent_names_source(self):

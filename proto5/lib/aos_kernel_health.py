@@ -81,6 +81,11 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
                 broken.append('池 %s：池不見了（跑 %s）' % (r['pool'], boot))
         if broken:
             return 'pools', '；'.join(broken)
+        bad = bad_procs(snapshot)
+        if bad:
+            # 09-24 tick-gap：反覆工作連錯被判 bad＝停了、不會自己好，第一行就要說（以前還是 ok）。
+            return 'bad', '反覆工作 %d 個 bad：%s（kernel 不再派它；看 aos-kernel ls 的 look 欄，修好後 rm 再 add 或重跑登記它的指令）' % (
+                len(bad), '、'.join(bad[:5]) + ('…' if len(bad) > 5 else ''))
         if snapshot.get('phase') != 'running':
             return 'ok', 'ok'   # 停機收尾中：池本來就在縮，不報少顆
         moving = [r for r in work if r['moving']]
@@ -102,6 +107,12 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
     except (aos_home.HomeError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         reason = ' '.join(str(exc).splitlines())
         return 'broken', 'kernel 家讀不到：%s（跑 aos-kernel check --target %s）' % (reason, home)
+
+
+def bad_procs(snapshot):
+    """帳本裡被判 bad 的反覆行程名（照帳本順序）。"""
+    return [name for name, proc in (snapshot.get('procs') or {}).items()
+            if isinstance(proc, dict) and proc.get('status') == 'bad']
 
 
 def agent_marks(snapshot):

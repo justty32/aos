@@ -34,7 +34,7 @@
    （09-24 停車）`wake` 是 agent 自己的 kernel 行程名：這件的回音出貨時 kernel 就叫醒它（[kernel §2](../kernel/syscall.md)），所以它可以在等的時候退 102 停車。
    think 的池＝`info.llm.pool`、T＝`info.llm.timeout_ms`；act 的池＝**那個工具的 `_pool`**（[info.md §3.3](../agent/info.md)），沒寫才是 `info.tool_pool`；T＝那個工具的 `_timeout_ms`。
    `link` 回 EEXIST＝已經放過（只有自己前一次崩了才會），當成功。其他放檔錯誤＝退 1（`io`），`sent` 仍是 false，下次重做。
-3. **寫 state**：`sent: true`，加上第 1 步本地結束的那幾筆。退 0。
+3. **寫 state**：`sent: true`，加上第 1 步本地結束的那幾筆。（09-24 tick-gap）還有在途的＝退 **102** 停車（每件都帶 `wake`，回音到了 kernel 叫醒它）；整批都在本地結束＝退 **103**（馬上結清）；這批有「上一格就送過」的（崩在送出與寫 `sent` 之間，它的叫醒可能早用掉了）＝照舊退 0。
 
 **查有沒有放過**（照這個順序，一步不能換）：
 

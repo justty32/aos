@@ -4,7 +4,7 @@
 
 | method | params | 回音 |
 |---|---|---|
-| `add` | `target` 必填（絕對路徑）；`dir_target`／`args` 可省（同範式 §4.1；`args` 沒給就不要放這個鍵）；`name` 可省（省＝數字名最大值加 1）；`once`（預設 false）；`pool`（預設 `default`，必須是 `info.pools` 的 key、且不是保留名 `kernel`；2026-09-24 池式納入改）；`interval_ms`／`timeout_ms`（預設照 info）；（09-24 停車）`park_ms`（預設照 info，[§4](echo.md) 的 102 那列）、`wake`（要叫醒的反覆行程名，見下） | **反覆**行程：`{"name": NAME}`。**`once`**：回音等到那一次跑完才寫，內容就是那次的 exec 回音（`result` 或 `error` 原樣）；交件者等 `K/responses/<自己的檔名>.json` 一個檔、讀完放 ack |
+| `add` | `target` 必填（絕對路徑）；`dir_target`／`args` 可省（同範式 §4.1；`args` 沒給就不要放這個鍵）；`name` 可省（省＝數字名最大值加 1）；`once`（預設 false）；`pool`（預設 `default`，必須是 `info.pools` 的 key、且不是保留名 `kernel`；2026-09-24 池式納入改）；`interval_ms`／`timeout_ms`（預設照 info）；（09-24 停車）`park_ms`（預設照 info，[§4](echo.md) 的 102 那列）、`wake`（要叫醒的反覆行程名，見下）；（09-24 tick-gap）`on_bad`（壞了寄通知，見下；只給反覆行程） | **反覆**行程：`{"name": NAME}`。**`once`**：回音等到那一次跑完才寫，內容就是那次的 exec 回音（`result` 或 `error` 原樣）；交件者等 `K/responses/<自己的檔名>.json` 一個檔、讀完放 ack |
 | `rm` | `name` | `{"name": NAME}`；不在＝`-32000`／`NotFound`。細節見下 |
 | `stop` | notification | `phase` 改 `stopping`（§3 第 9 步）；收完在途後把每個池縮到 0，停好那格請 daemon 別再開 tick（[§6 停機](boot.md)）。daemon 本身不停，由人停（或 `aos down`） |
 | `wake` | （09-24 停車）`name` | `{"name": NAME}`；不在＝`-32000`／`NotFound`。照下面「叫醒一個行程」做。多半當 notification 放（`aos-agent say` 就是），不回音 |
@@ -35,5 +35,19 @@ params 形狀或 pool 不合回 `-32602`。kernel 不解指示詞、不驗 inst�
 出貨時（§3 第 4、10 步）回音檔放好（EEXIST 當已放）就叫醒，跟「把這筆從 `replies` 拿掉」同一次存帳本。舊 kernel 看不懂 `wake` 會忽略，不退件。
 
 **叫醒一個行程**（`wake` 單與出貨共用）：行程不在、`once`、`status` 是 `bad`／`done`、或它正跑的那格標了 `discard` → 什麼都不做。否則：
-`running` → 記 `woken: true`（跑完退 102 也照 101 排，[§4](echo.md)）；`queued` 而 `not_before` 還沒到 → `not_before`＝現在、接到它池的 `ready` 尾（`delayed` 裡那格變舊格，照 [§1.2](ledger.md) 攤還）、`parked` 拿掉；
+`running` → 記 `woken: true`（跑完退 0／101／102 都馬上再排，[§4](echo.md)；09-24 tick-gap 以前是「102 當 101」）；`queued` 而 `not_before` 還沒到 → `not_before`＝現在、接到它池的 `ready` 尾（`delayed` 裡那格變舊格，照 [§1.2](ledger.md) 攤還）、`parked` 拿掉；
 `queued` 而 `not_before` 已到 → 什麼都不做（免得 `ready` 疊兩格）。叫醒只代表「最早下一次派工就能派」，池滿照樣排隊。
+
+**（09-24 tick-gap）`add` 的 `on_bad`：壞了寄一封通知**。反覆工作連錯 `bad_after` 次被判 `bad` 之後，kernel 不再派它；以前只寫 `kernel.log`、`ls` 列出來，沒人會知道（T5 真跑：郵差停了十幾分鐘）。
+登記時帶 `on_bad`，判 `bad` 那格就往一個資料夾放一封信（跟團隊郵差投信同一招：放檔，要的話再叫醒收件的 agent）：
+
+| 鍵 | 必填 | 意思 |
+|---|---|---|
+| `dir` | 是 | 絕對路徑，信放這裡（人的收件匣、某個 agent 家的 `input/`…）。kernel 不建這個資料夾 |
+| `body` | 否 | 信的內容，任意 JSON（序列化後 ≤ 64 KB）。字串、或物件第一層的字串值裡的 `{id}` `{proc}` `{fails}` `{at}` `{look}` 換成這次的值（檔名去掉 `.json`、行程名、連錯次數、本機時間 ISO 8601、要看的 stderr 檔——同 `ls` 的 look）。沒給＝一句白話字串（agent 的 `input/` 也吃） |
+| `wake` | 否 | 放好信之後叫醒這個反覆行程（收件的 agent），同「叫醒一個行程」 |
+
+- 帶在 `once` 的 add 上＝退件（`FieldTypeMismatch`，once 不會被判 bad）；形狀不對同樣退件。
+- 檔名 `bad-<行程名>-<chain>-<序號>.json`。判 `bad` 的那格把這封排進帳本的 `letters` 出貨箱（跟判定同一次存，提交點 B），出貨時放（`link`，EEXIST 當已放）、再叫醒。
+- **寄不出去不擋 kernel**：資料夾不在、沒權限，記一行 `kernel.log`（`bad_letter_failed`）、丟掉這封，這格照常退 0。寄出去了也記一行（`bad_letter`）。
+- 命令列：`aos-kernel add … --on-bad DIR [--on-bad-wake NAME]`（body 用預設那句）。團隊的 `aos-team start` 登記郵差、心跳時預設帶 `on_bad`，寄給人（`team/human/`，一封團隊信的形狀、`from: kernel`、`status: FAILED`）。

@@ -151,14 +151,14 @@ class EventTests(MemoryBase):
     def test_think_cycle_records_start_end(self):
         """驗收②：一批 think 記起訖與成敗；收件記一筆。"""
         self.put(self.base / 'input.json', '你好')
-        self.assertEqual(self.tick(), 0)                       # intake
-        self.assertEqual(self.tick(), 0)                       # 建批送出
+        self.assertEqual(self.tick(), 103)                       # intake
+        self.assertEqual(self.tick(), 102)                       # 建批送出
         name = self.state()['batch']['calls'][0]['name']
         inst = self.read(self.base / 'work' / (name + '.inst.json'))
         self.assertEqual(inst['envs'], {'AOS_LLM_BATCH': name.rsplit('-', 1)[0]})
         self.respond(name, dict(fixture.RESULT, ms=1234))
         self.output(name)
-        self.assertEqual(self.tick(), 0)                       # 收回結清
+        self.assertEqual(self.tick(), 103)                       # 收回結清
         evs = self.events()
         self.assertEqual([e['ev'] for e in evs], ['intake', 'think_start', 'think_end'])
         self.assertEqual(evs[0]['files'], ['input.json'])
@@ -185,11 +185,11 @@ class EventTests(MemoryBase):
         self.prepare('act')
         self.free_tool()
         self.put(self.base / 'state.json', {'state': 'act'})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         name = self.state()['batch']['calls'][0]['name']
         self.respond(name, dict(fixture.RESULT, ms=7))
         (self.base / 'work' / (name + '.out')).write_text('ok')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         start, end = self.events()
         self.assertEqual((start['ev'], start['tools']), ('act_start', ['sh']))
         self.assertEqual((end['ev'], end['ok'], end['calls']), ('act_end', True, [{'tool': 'sh', 'ok': True, 'ms': 7}]))
@@ -261,7 +261,7 @@ class EventTests(MemoryBase):
     def test_unwritable_log_does_not_break_tick(self):
         (self.base / 'log').write_text('不是資料夾')
         self.put(self.base / 'input.json', '你好')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['state'], 'think')
 
     def test_events_cli(self):
@@ -663,7 +663,7 @@ class AutoCompactTests(MemoryBase):
 
     def test_auto_waits_for_pending_input(self):
         self.put(self.base / 'input.json', '新的一句')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['state'], 'think')          # 先收輸入
         self.assertEqual(self.history()[:-1], self.original)
 
@@ -708,7 +708,7 @@ class AutoCompactTests(MemoryBase):
     def test_bad_config_does_not_break_tick(self):
         self.put(self.base / 'info.json', dict(self.info, compact={'max_tokens': 'x'}))
         self.put(self.base / 'input.json', '你好')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['state'], 'think')
 
     def test_request_consumed_by_tick(self):

@@ -20,6 +20,7 @@
 | `stall` | `phase` 是 `running` 或 `stopping`，daemon 登記的連敗次數 > 0 | `tick 連敗 N 次（最後退出 X；看 daemon 的 stderr，例如 D/daemon.log；跑 aos-kernel check …）` |
 | `stall` | `phase` 是 `running`（`stopping` 不判），帳本 `last_tick_at` 超過 max(10 秒, 10×`tick_ms`) 沒前進 | `tick 停住：N 秒沒前進（跑 aos-kernel check --target <K>）` |
 | `pools` | 某工作池 `error` 不是 null、或摘要不在但 `sent` 不空（正在縮到 0 的不算） | `池 P：<代號>（<message>）`／`池 P：池不見了（跑 aos-kernel boot …）`；多池用「；」接 |
+| `bad` | （09-24 tick-gap）帳本裡有反覆行程被判 `bad`（停了、不會自己好） | `反覆工作 N 個 bad：名字、…（kernel 不再派它；看 aos-kernel ls 的 look 欄，修好後 rm 再 add 或重跑登記它的指令）`；最多列 5 個名字 |
 | — | 上面都沒中、`phase` 是 `stopping`（停機收尾中，池本來就在縮） | `ok` |
 | `recovering` | 有池在搬 | `搬池中：池 P（舊位置 <D> <dpool> 收完才換）` |
 | `recovering` | 某工作池摘要 `running` 少於 `sent` 的成員數（縮小的 scale 單在途時改比 `pending` 的 count，取較小的；`cpu rm` 剛下不報少顆） | `池 P 少 N 顆（daemon 在補；看 aos-daemon ls --target <D> --pool <dpool>）`——**會自己好，不是停住** |
@@ -36,3 +37,6 @@
 - 「cpu missing」「恢復中（cpu dead）」拿掉——daemon 沒有孩子表了。工作池少了是 `recovering`（warn），不逐顆列名字。（第 2 版看 kernel 池摘要的 `cpus`，one-boot 拿掉，換成 `tick`。）
 - 新增 `pools`（池出錯、池不見了）。
 - daemon 沒在跑的提示改成「aos up；或先 aos-daemon boot，之後 health 還不是 ok 再 aos-kernel boot」：daemon 重開後池會自己拉回來、照登記接著開 tick（[§6 boot](boot.md)）。
+
+（09-24 tick-gap）`bad` 以前不上第一行（還是 `ok`），T5 真跑郵差壞了十幾分鐘沒人發現。`aos up` 最後一行印的也是這句（但不因此退 1：kernel 本身沒壞）。
+`aos-agent status` 把 `bad` 當 `ok` 看（是別的反覆工作壞了，不是 kernel 家壞了；這個 agent 自己 bad 另有一行）。

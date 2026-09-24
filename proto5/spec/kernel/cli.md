@@ -10,7 +10,7 @@ aos-kernel cpu add [--target K] --pool P [--count N] [--env KEY=VALUE]... [--dae
 aos-kernel cpu rm  [--target K] (P/<i> | --pool P --count N)
 aos-kernel cpu ls  [--target K] [--pool P] [--json]
 aos-kernel ls    [--target K] [--pool P] [--procs] [--json] [-v] # 偷看、不放單（cli-ls.md）
-aos-kernel add   INST [--target K] [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--park-ms N] [--wait-ms N] [-- ARG...]
+aos-kernel add   INST [--target K] [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--park-ms N] [--on-bad DIR [--on-bad-wake NAME]] [--wait-ms N] [-- ARG...]
 aos-kernel rm    NAME [--target K]
 aos-kernel proc  NAME [--target K] [--json]                     # （one-boot）查一筆行程，給程式讀帳本（下面 proc）
 aos-kernel wake  NAME [--target K]                              # （09-24 停車）叫醒停著的行程（syscall.md 的 wake）

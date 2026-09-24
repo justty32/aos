@@ -12,7 +12,7 @@ aos-kernel tick [--target K]
 派工從每池的閒號堆疊直接拿，不掃每一顆找閒的；**不再每格偷看 daemon**，cpu 死了由 daemon 自己照宣告補。
 
 cpu 那邊的順序是「先發回音、再刪原單」（範式 §6.3），這裡查檔一律**先查原單、再查回音**，才不會看錯。
-帳本什麼時候存見 [§1.2 的三個提交點](ledger.md)。
+帳本什麼時候存見 [§1.2 的提交點](ledger.md)（A／B／C，09-24 tick-gap 加 D）。
 
 1. **讀、拿鎖**：帶了舊版的 `--chain`／`--seq`（舊 kernel cpu 裡還排著的舊格才會帶）→ 退 0、什麼都不做。
    讀 info；帳本還是舊的 `K/state.json`＝`LedgerVersion`、退 1；沒有帳本＝`NotBooted`、退 1（要先 `aos up` 或 boot）。
@@ -20,7 +20,7 @@ cpu 那邊的順序是「先發回音、再刪原單」（範式 §6.3），這�
    拿到了就設鬧鐘 2×`tick_timeout_ms`（0＝不設）：daemon 過了 `tick_timeout_ms` 會先砍它；鬧鐘只給 daemon 被殺後留下的孤兒 tick 用，讓它不會永遠卡著（被 SIGALRM 結束）。再讀帳本。
 2. 這格的序號 N＝帳本 `last_seq`＋1（記在記憶體，跟提交點 A 或 B 一起存）。`phase=stopped` → 只出貨（有出貨就存帳本）、退 0。
 3. （第 2 版的「放下一格」「睡 `tick_ms`」都拿掉了：兩格之間隔多久由 daemon 管，[daemon §10](../daemon/ticks.md)。）
-4. **出貨**：`acks`／`replies`／`deletes`／`sends` 全部做一遍（`link`，EEXIST 當已放；刪檔 ENOENT 當已刪），**做完存一次帳本**拿掉（提交點 A）。
+4. **出貨**：`letters`（09-24 tick-gap，壞了的通知信，寄不出去只記 log）／`acks`／`replies`／`deletes`／`sends` 全部做一遍（`link`，EEXIST 當已放；刪檔 ENOENT 當已刪），**做完存一次帳本**拿掉（提交點 A）。
    （09-24 停車）帶 `wake` 的回音，檔放好（或 EEXIST）就照 [§2 叫醒](syscall.md)，叫醒的結果跟拿掉出貨項同一次存帳本；崩在中間下一格重做，叫醒重做無害。
 5. **讀 `K/requests/`**，列一次目錄，照檔名前綴分：`ack-`（範式 §3.3）、`stop-`（改 `phase`；檔名進 `deletes`）、`resp-`（回音通知，進第 6 步）、
    其他是 syscall（`add`／`rm`／`wake`（09-24 停車），照 §2 判；`rm` 一個 `running` 的行程用 `on` 找到那顆 cpu）。`.tmp` 結尾的略過。
@@ -43,12 +43,13 @@ cpu 那邊的順序是「先發回音、再刪原單」（範式 §6.3），這�
    2. 每個池：`ready` 不空、`free` 不空 → 兩邊各拿一個配對：行程 `status=running`、`busy[P/i]`＝`{req: k-<chain>-<N>-<P>-<i>.json, proc, discard:false}`、`on[NAME]`、號碼進 `recent`。一直做到其中一邊空。
       拿到的格若是舊格（[§1.2](ledger.md) 的判法），丟掉再拿下一個。
    3. 派完進提交點 B，之後逐一放檔（`aos-exec`，params 照行程紀錄：`target`／`dir_target`／`args`（有才放）／`timeout_ms`）。**先記後放**，所以永遠不會同一行程派兩顆；崩在中間＝下一格靠 `recent` 補放。
+      （09-24 tick-gap）每放一張就**按那顆 cpu 的門鈴**（[cpu §6.5](../cpu/notify.md)），它不用等下一次輪詢；按不到當沒事。
    回 queue（§4）的行程：`not_before` 已到的接 `ready` 尾巴，沒到的推進 `delayed` 堆積。
 9. **停機**（`phase=stopping`）：剛進入時把 `ready`／`delayed` 裡的 `once` 全部拿掉、各回 `-32000`／`Stopping`（進 `replies`；只掃這一次，之後新 add 的 once 當場回 `Stopping`）。
    `busy` 空、出貨箱空、沒有 `pending`（`procs` 的與池的都算）→ 帳本記 `halting: true` 進「縮池」：之後第 7 步把每個工作池的 W 當空集合（等於每池排一張 `count: 0` 的 scale 單），
    **等它們全部回成功**才 `phase=stopped`，同一次提交在 `sends` 排一張 `tick {home: K, off: true}` notification 給帳本 `ticker` 那個 daemon（撤登記，請它別再開 tick）。詳見 [§6 停機](boot.md)。
    不再往每顆 cpu 放 `stop-` 檔（第 1 版的 `stops` 拿掉）。`stopped` 之後再來的 syscall／ack 留在 `K/requests/`，下次 boot 的第 1 格會收。
-10. **出貨**（同第 4 步）、**存帳本**（提交點 C）、有事件才 append `kernel.log`、退 0。`kernel.log` 每格記：派了誰去哪顆（行程名、`P/<i>`、request 檔名）、
+10. **出貨**（同第 4 步）、**存帳本**（提交點 C）；（09-24 tick-gap）出貨時帶 `wake` 的回音把停著的行程推進了 `ready` → **同一格再派一次**（第 8 步，提交點 D，只放新派的）；有事件才 append `kernel.log`、退 0。`kernel.log` 每格記：派了誰去哪顆（行程名、`P/<i>`、request 檔名）、
     收到的每則回音（`result` 或 `error` 整段）、退件時的門檻、池的事件（`scale_send`、`scale_echo`、`pool_new`、`pool_envs`、`pool_gone`、`bad_notify`、`halting`、`stopped`…）。
     沒有事件的格**不寫**。kernel.log 在出貨、寫帳本之後才 append，所以**不保證涵蓋崩潰中途已結帳的回音**。
 

@@ -1068,6 +1068,18 @@ def proc_name(team_dir, what):
     return 'team-%s-%s-%s' % (what, base, team_tag(team_dir))
 
 
+def bad_notice(lay, what):
+    """09-24 tick-gap（P2 隊）：郵差／心跳連錯被 kernel 判 bad 時，kernel 直接往人的收件匣放一封信（不經郵差：壞的可能就是它）。
+    {id}{proc}{fails}{at}{look} 由 kernel 當下填（spec/kernel/syscall.md 的 on_bad）。"""
+    label = {'post': '郵差', 'beat': '心跳'}.get(what, what)
+    lay.human_inbox.mkdir(parents=True, exist_ok=True)
+    return {'dir': str(lay.human_inbox),
+            'body': {'id': '{id}', 'from': 'kernel', 'to': HUMAN, 'status': 'FAILED', 'reply_to': None, 'rev': None,
+                     'text': '%s（kernel 反覆工作 {proc}）連錯 {fails} 次，被 kernel 判 bad、停了（{at}）。'
+                             '看 {look}；修好後 aos-team stop 再 aos-team start。' % label,
+                     'at': '{at}', 'header': '【kernel 通知 · %s停了 · {at}】' % label}}
+
+
 def register(team_dir, what, argv, interval_ms, env=None):
     """把郵差／心跳登記成 kernel 的反覆工作（等於 aos-kernel add inst --name … --interval-ms …）。"""
     import aos_client
@@ -1086,7 +1098,7 @@ def register(team_dir, what, argv, interval_ms, env=None):
                           'stderr': {'$opt': ['append', 'mkdir'], '$val': str(folder / ('%s.err' % what))}},
                    indent=2)
     name = proc_name(team_dir, what)
-    params = {'target': str(inst), 'name': name}
+    params = {'target': str(inst), 'name': name, 'on_bad': bad_notice(lay, what)}  # 09-24 tick-gap：壞了寄給人
     if interval_ms:
         params['interval_ms'] = interval_ms
     res = aos_client.call(kernel, 'add', params, client='team', timeout_ms=10000)

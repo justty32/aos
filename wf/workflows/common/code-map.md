@@ -97,7 +97,8 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_kernel_boot` | `boot`（寫帳本、向 daemon 登記開 tick）、`status`、halt 等停好 |
 | `aos_kernel_cpu` | `aos-kernel cpu add／rm／ls`：只改 `K/info.json` 的池表 |
 | `aos_kernel_rows` | 按池摘要與一顆一行的資料與排版（`cpu ls`、`ls`、health、check 共用） |
-| `aos_kernel_health` | `health()` 一句話健康判定與 agent 暫停／重試標記 |
+| `aos_kernel_health` | `health()` 一句話健康判定與 agent 暫停／重試標記；（09-24 tick-gap）有反覆工作 bad 就報 `bad` |
+| `aos_hops` | （09-24 tick-gap）`AOS_HOPS` 設了才記的每一跳時間戳；`report` 把一個 agent 的牆上時間切成一跳一跳 |
 | `aos_kernel_ls` | `aos-kernel ls`：穩定資料（`--json`）與對齊表 |
 | `aos_kernel_check` | `aos-kernel check` 啟動前唯讀檢查（`aos-agent check` 共用前半） |
 | `aos_kernel_cli` | `aos-kernel` 參數解析與 `main` |

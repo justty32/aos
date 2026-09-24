@@ -44,8 +44,9 @@ class TwoCallBatchTests(fixture.Home):
                            {'id': 'c2', 'type': 'function', 'function': {'name': 'sh2', 'arguments': '{}'}}]}])
         self.put(self.base / 'state.json', {'state': 'act'})
 
-    def tick(self, **which):
-        self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+    def tick(self, rc=102):
+        # 09-24 tick-gap：送出去等回音＝102（停車）；整批在本地擋下（壞表）＝103
+        self.assertEqual(agent.tick(self.base, self.env), rc, self.err.getvalue())
         return self.read(self.base / 'state.json')['batch']
 
     def test_second_call_in_batch_unaffected_by_mid_batch_edit(self):
@@ -73,7 +74,7 @@ class TwoCallBatchTests(fixture.Home):
     def test_bad_table_marks_every_call_in_the_batch(self):
         """壞表那批：每一件都「跑不起來」、訊息各自講哪裡壞，一件都不送給 kernel。"""
         self.access({'mounts': {'ws': 'nope'}})
-        batch = self.tick()
+        batch = self.tick(103)
         self.assertEqual(len(batch['calls']), 2)
         for call, name in zip(batch['calls'], ('sh1', 'sh2')):
             self.assertTrue(call['acked'])
@@ -111,7 +112,7 @@ class NextBatchSnapshotTests(fixture.Home):
         self.access({'mounts': {'ws': 'workspace'}, 'cwd': 'ws'})
         self.put(self.base / 'state.json', {'state': 'act'})
         with patch.object(batch_api.shutil, 'which', return_value='/usr/bin/bwrap'):
-            self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+            self.assertEqual(agent.tick(self.base, self.env), 102, self.err.getvalue())
         state = self.read(self.base / 'state.json')
         name = state['batch']['calls'][0]['name']
         old_inst = self.read(self.base / 'work' / (name + '.inst.json'))
@@ -119,7 +120,7 @@ class NextBatchSnapshotTests(fixture.Home):
 
         # 批 1 真的跑完（收回音、settle）：state 回 think、batch 清空。
         self.respond(name)
-        self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+        self.assertEqual(agent.tick(self.base, self.env), 103, self.err.getvalue())
         state = self.read(self.base / 'state.json')
         self.assertIsNone(state['batch'])
         self.assertEqual(state['state'], 'think')
@@ -134,7 +135,7 @@ class NextBatchSnapshotTests(fixture.Home):
         (self.root / 'B').mkdir()
         self.access({'mounts': {'ws': '../B'}})
         with patch.object(batch_api.shutil, 'which', return_value='/usr/bin/bwrap'):
-            self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+            self.assertEqual(agent.tick(self.base, self.env), 102, self.err.getvalue())
         state2 = self.read(self.base / 'state.json')
         name2 = state2['batch']['calls'][0]['name']
         self.assertNotEqual(name, name2)
