@@ -170,7 +170,7 @@ class AgentIntegrationTests(KernelCase):
         name = self.astate()['batch']['calls'][0]['name']
         wait_for(lambda: self.state().get('procs', {}).get(name, {}).get('status') == 'queued')
         self.assertEqual(self.requests, [])
-        self.good_cli('stop', self.home)
+        self.good_cli('stop', self.home, '--no-wait')
         wait_for(lambda: self.state().get('phase') in ('stopping', 'stopped'))
         release.touch()
         wait_for(lambda: self.state().get('phase') == 'stopped', timeout=8)
@@ -214,3 +214,25 @@ class AgentIntegrationTests(KernelCase):
         result = self.agent_cli('stop')
         self.assertEqual(result.returncode, 0, result.stderr)
         wait_for(lambda: 'agent-bob' not in self.state().get('procs', {}))
+
+    def test_stop_unregisters_with_broken_or_missing_info(self):
+        self.setup_running(cpus=self.cpus)
+        for mode in ('llm', 'tools', 'missing', 'folder_only'):
+            with self.subTest(mode=mode):
+                self.write(self.base / 'info.json', self.agent_info)
+                self.write(self.base / 'tools.json', [])
+                self.assertEqual(self.agent_cli('start').returncode, 0)
+                if mode == 'llm':
+                    info = copy.deepcopy(self.agent_info)
+                    del info['llm']
+                    self.write(self.base / 'info.json', info)
+                elif mode == 'tools':
+                    (self.base / 'tools.json').write_text('{')
+                else:
+                    (self.base / 'info.json').unlink()
+                    if mode == 'folder_only':
+                        (self.base / 'tick.json').unlink()
+                result = self.agent_cli('stop')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, 'stopped agent-bob\n')
+                wait_for(lambda: 'agent-bob' not in self.state().get('procs', {}))

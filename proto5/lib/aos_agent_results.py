@@ -1,5 +1,7 @@
 """aos-agent.md §6 的兩張表：依序取第一個命中的結果。"""
 import json
+import os
+from pathlib import Path
 
 from aos_agent_home import AgentError, check_message
 
@@ -39,7 +41,49 @@ def success(result):
             and not result['timed_out'] and not result['stopped'])
 
 
-def think_done(response, path, timeout):
+def llm_log(path):
+    log = path.absolute().parent.parent / 'log' / 'llm.err'
+    try:
+        lines = [line.strip() for line in log.read_text(encoding='utf-8', errors='replace').splitlines()
+                 if line.strip()]
+    except OSError:
+        lines = []
+    return str(log) + ('：' + lines[-1][:300] if lines else '')
+
+
+def cpu_logs(kernel, pool):
+    base = Path(kernel)
+    try:
+        raw = json.loads((base / 'info.json').read_text(encoding='utf-8'))
+        cpus = raw.get('cpus', {})
+        names = [name for name, cpu in cpus.items() if isinstance(cpu, dict)
+                 and cpu.get('pool', 'default') == pool]
+    except (OSError, ValueError, AttributeError):
+        names = []
+    return '、'.join(str(base / 'cpus' / name / 'cpu.log') for name in names or ['*'])
+
+
+def exec_failure(path, code):
+    argv0, cwd = '?', '?'
+    try:
+        inst = json.loads(path.with_suffix('.inst.json').read_text(encoding='utf-8'))
+        argv = inst.get('argv')
+        if isinstance(argv, list) and argv and isinstance(argv[0], str):
+            argv0 = argv[0]
+        cwd = inst.get('cwd', '?')
+        if isinstance(cwd, dict):
+            cwd = cwd.get('$val', '?')
+    except (OSError, ValueError, AttributeError):
+        pass
+    reason = ('找不到程式 argv[0]=%s' if code == 127 else
+              '不能執行 argv[0]=%s，看有沒有執行權限、是不是可執行檔') % argv0
+    detail = 'exit %s：%s' % (code, reason)
+    if argv0 != '?' and not os.path.isabs(argv0):
+        detail += '（相對 cwd %s；不含 / 的照跑它那顆 cpu 的 PATH 找）' % cwd
+    return detail
+
+
+def think_done(response, path, timeout, *, kernel, pool):
     result, code = response_parts(response)
     count = True
     if result is not None:
@@ -52,11 +96,11 @@ def think_done(response, path, timeout):
         if result['stopped']:
             fail, count = '被強制停', False
         elif result['timed_out']:
-            fail = '逾時（%s ms）' % timeout
+            fail = '逾時（%s ms），看 %s' % (timeout, llm_log(path))
         elif result['kind'] == 'aos':
-            fail = 'aos-llm-call 沒跑起來（kind=aos），看 llm 池 cpu 的 cpu.log'
+            fail = 'aos-llm-call 沒跑起來（kind=aos），看 ' + cpu_logs(kernel, pool)
         else:
-            fail = 'aos-llm-call exit %s，看 log/llm.err' % result['code']
+            fail = 'aos-llm-call exit %s，看 %s' % (result['code'], llm_log(path))
     elif code == 'Stopping':
         fail, count = 'kernel 停機時取消，沒跑', False
     elif code in ('Interrupted', 'Removed'):
@@ -84,6 +128,8 @@ def act_done(response, path, tool, timeout):
             content = '工具 %s 逾時（%s ms）：%s' % (tool, timeout, output())
         elif result['kind'] == 'aos':
             content = '工具 %s 無法執行（kind=aos），詳情在跑它那顆 cpu 的 cpu.log' % tool
+        elif result['code'] in (126, 127):
+            content = '工具 %s 失敗（%s）：%s' % (tool, exec_failure(path, result['code']), output())
         else:
             content = '工具 %s 失敗（exit %s）：%s' % (tool, result['code'], output())
     elif code in ('Interrupted', 'Removed'):

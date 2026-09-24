@@ -535,9 +535,9 @@ def status(home):
                        "requests": len(list((cpu_home / "requests").glob("*.json"))) if cpu_home else 0}}
 
 
-def _cpu_options(values):
+def _cpu_options(values, envs=()):
     if values is None:
-        return None
+        values = ["k:kernel", "0", "1", "2"]
     cpus = {}
     for value in values:
         name, separator, pool = value.partition(":")
@@ -551,7 +551,69 @@ def _cpu_options(values):
         cpus = {"k": {"pool": "kernel"}, **cpus}
     elif kernels > 1:
         raise CLIUsage("恰好一顆 cpu 的 pool 必須是 kernel")
+    for entry in envs:
+        name, colon, assignment = entry.partition(":")
+        key, equal, value = assignment.partition("=")
+        if not colon or name not in cpus or not equal or not key:
+            raise CLIUsage("--env 必須是既有 cpu 的 NAME:KEY=VALUE")
+        target = cpus[name].setdefault("envs", {})
+        if key in target:
+            raise CLIUsage("--env 同一顆 cpu 的 KEY 重複：%s:%s" % (name, key))
+        target[key] = value
     return cpus
+
+
+def stop(home, wait_ms=30000, no_wait=False):
+    home = Path(home).absolute()
+    def post():
+        _put(home, "stop-" + aos_client.new_name("cli"), {"jsonrpc": "2.0", "method": "stop"})
+    if no_wait:
+        post()
+        return 0
+    state = aos_home.read_state(home, {})
+    if not state:
+        print("stopped")
+        return 0
+    info = load_info(home)
+    daemon = info.get("daemon", aos_daemon.daemon_home())
+    def children(ledger):
+        names = {*ledger.get("cpus", {}), *info["cpus"], ledger.get("kcpu")}
+        # 與 boot 一樣比對絕對 target；同名但屬於別家的孩子不算。
+        base = str(home / "cpus") + os.sep
+        return {name: child for name, child in aos_daemon.read_state(daemon)["children"].items()
+                if name in names and child["target"].startswith(base)
+                and os.path.abspath(child["target"]).startswith(base)}
+    owned = children(state)
+    if state.get("phase") == "stopped" and not owned:
+        print("stopped")
+        return 0
+    if not aos_daemon.is_alive(daemon) or state.get("kcpu") not in owned:
+        print("not running")
+        return 0
+    post()
+    deadline = time.monotonic() + wait_ms / 1000
+    while True:
+        state = aos_home.read_state(home)
+        if state.get("phase") == "stopped" and not children(state):
+            print("stopped")
+            return 0
+        if time.monotonic() >= deadline:
+            raise KernelError("Timeout", "等了 %d ms 還沒停好（stop 已放、不撤回），用 aos-kernel ls 看" % wait_ms)
+        time.sleep(.005)
+
+
+def _stderr_hint(target):
+    path = Path(target)
+    try:
+        raw = aos_home.read_json(path) if path.suffix == ".json" else None
+    except (aos_home.HomeError, OSError, ValueError):
+        return str(path)
+    value = raw.get("stderr") if isinstance(raw, dict) else None
+    if isinstance(value, dict) and "$opt" in value:
+        value = value.get("$val")
+    if isinstance(value, str):
+        return os.path.abspath(path.parent / value)
+    return "%s 的 stderr 設定" % target
 
 
 def _summary(home, snapshot):
@@ -578,7 +640,8 @@ def _summary(home, snapshot):
     for name, proc in (snapshot["procs"] or {}).items():
         lines.append("proc %s  %s  %s  runs %s  fails %s  pending %s" % (
             name, "once" if proc["once"] else "repeat", proc["status"], proc["runs"], proc["fails"],
-            "有" if proc["pending"] else "-"))
+            "有" if proc["pending"] else "-") +
+            ("  看 " + _stderr_hint(proc["target"]) if proc["status"] == "bad" else ""))
     lines.append("queue %s" % (" ".join(snapshot["queue"] or []) or "-"))
     return "\n".join(lines)
 
@@ -593,12 +656,20 @@ def _parser():
     subs = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
     descriptions = {"init": "建立 kernel 家", "boot": "交接並啟動 cpu 與 tick 鏈",
                     "tick": "執行一格排程", "add": "登記工作", "rm": "移除行程",
-                    "ls": "顯示狀態摘要", "stop": "要求 kernel 停機", "ack": "確認已收回音"}
+                    "ls": "顯示狀態摘要", "stop": "要求 kernel 停機", "ack": "確認已收回音",
+                    "check": "啟動前檢查設定與執行環境"}
     for command, description in descriptions.items():
         p = subs.add_parser(command, help=description, description=description)
         p.add_argument("home", help="kernel 家路徑")
         if command == "init":
             p.add_argument("--cpu", action="append", metavar="NAME[:POOL]", help="cpu 名稱與選用池；可重複")
+            p.add_argument("--env", action="append", default=[], metavar="NAME:KEY=VALUE", help="cpu 的字面環境變數；可重複")
+        elif command == "check":
+            p.add_argument("--agent", help="一併檢查 agent 家")
+            p.add_argument("--daemon", help="daemon 家（預設 info.daemon，boot 前是 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
+        elif command == "stop":
+            p.add_argument("--wait-ms", type=int, default=30000, help="停機等待上限（毫秒，預設 30000）")
+            p.add_argument("--no-wait", action="store_true", help="只放 stop 單，不等待、不輸出")
         elif command == "ls":
             p.add_argument("--json", action="store_true", help="輸出完整狀態 JSON")
         elif command == "boot":
@@ -623,9 +694,6 @@ def _parser():
 def _cli_request(args, trailing):
     home = Path(args.home).absolute()
     name = aos_client.new_name("cli")
-    if args.command == "stop":
-        _put(home, "stop-" + name, {"jsonrpc": "2.0", "method": "stop"})
-        return 0
     params = {"name": args.name} if args.command == "rm" else {"target": os.path.abspath(args.target), "once": args.once}
     if args.command == "add":
         for key in ("name", "pool", "dir_target", "interval_ms", "timeout_ms"):
@@ -673,8 +741,13 @@ def main(argv=None):
             if value is not None and value < (1 if key == "seq" else 0):
                 raise CLIUsage("%s 不在合法範圍" % key)
         if args.command == "init":
-            init(args.home, _cpu_options(args.cpu))
+            print("initialized " + init(args.home, _cpu_options(args.cpu, args.env)))
             return 0
+        if args.command == "check":
+            from aos_kernel_check import check
+            return check(args.home, args.agent, args.daemon)
+        if args.command == "stop":
+            return stop(args.home, args.wait_ms, args.no_wait)
         if args.command == "boot":
             return boot(args.home, args.daemon, args.wait_ms)
         if args.command == "tick":

@@ -6,7 +6,8 @@ from aos_agent_runtime import files, unique_id
 
 
 def archived(paths, identity):
-    return [{'src': path, 'dst': '%s.%s.done' % (path, identity)} for path in dict.fromkeys(paths)]
+    return [{'src': path, 'dst': str(Path(path).parent / 'done' / ('%s.%s.done' % (Path(path).name, identity)))}
+            for path in dict.fromkeys(paths)]
 
 
 def finish_consuming(run):

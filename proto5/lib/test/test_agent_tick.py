@@ -98,7 +98,7 @@ class AgentTickTests(unittest.TestCase):
         self.assertEqual(self.tick(), 0)
         self.assertEqual(self.state()['state'], 'think')
         self.assertEqual(self.read(self.base / 'prompts/history.json'), [{'role': 'user', 'content': '你好'}])
-        self.assertEqual(len(list(self.base.glob('input.json.*.done'))), 1)
+        self.assertEqual(len(list((self.base / 'done').glob('input.json.*.done'))), 1)
 
     def test_think_build_and_inst(self):
         self.put(self.base / 'state.json', {'state': 'think'})
@@ -158,14 +158,14 @@ class AgentTickTests(unittest.TestCase):
         self.assertEqual(self.tick(), 101)
         self.assertEqual(self.state()['waits'], [])
         self.assertEqual(self.state()['consuming'], [])
-        self.assertRegex(next(self.base.glob('go.json.*.done')).name, r'go.json.\d+-\d+.done')
+        self.assertRegex(next((self.base / 'done').glob('go.json.*.done')).name, r'go.json.\d+-\d+.done')
 
     def test_gate_consume_directory(self):
         self.put(self.base / 'state.json', {'waits': {'$opt': 'consume', '$val': 'signals'}})
         for name in ('b.json', 'a.json', 'keep.done'):
             self.put(self.base / 'signals' / name, {})
         self.assertEqual(self.tick(), 101)
-        self.assertEqual(len(list((self.base / 'signals').glob('*.done'))), 3)
+        self.assertEqual(len(list((self.base / 'signals/done').glob('*.done'))), 2)
         self.assertFalse(list((self.base / 'signals').glob('*.json')))
 
     def test_gate_array_requires_all(self):
@@ -435,7 +435,7 @@ class AgentTickTests(unittest.TestCase):
         self.assertEqual(self.tick(), 0)
         self.assertEqual(self.state()['errors'], 0)
         self.assertEqual(self.state()['waits'], [{'$opt': 'consume', '$val': 'continue-aw-bob-123-77.json'}])
-        self.assertIn('aos-agent: stuck: 問模型連敗 3 次，touch continue-aw-bob-123-77.json 繼續', self.err.getvalue())
+        self.assertIn('aos-agent: stuck: 問模型連敗 3 次，touch %s 繼續' % (self.base / 'continue-aw-bob-123-77.json'), self.err.getvalue())
         self.assertEqual(self.tick(), 101)
 
     def test_continue_name_each_batch_unique(self):
@@ -521,7 +521,7 @@ class AgentTickTests(unittest.TestCase):
 
     def test_stop_request(self):
         self.put(self.k / 'info.json', {'done_exit': 1})
-        self.put(self.base / 'tick.json', {'envs': {'AOS_K': '/other'}})
+        self.put(self.base / 'tick.json', {'envs': self.env})
         rc, request = self.register(False)
         self.assertEqual(rc, 0)
         self.assertEqual(request['method'], 'rm')
@@ -640,7 +640,13 @@ def result_case(kind, change, code, expected):
         with self.crash_at('state.done'), self.assertRaises(Crash):
             self.tick()
         done = self.state()['batch']['calls'][0]['done']
-        self.assertEqual(done, expected)
+        wanted = copy.deepcopy(expected)
+        if kind == 'think' and 'fail' in wanted:
+            wanted['fail'] = wanted['fail'].replace('log/llm.err', str(self.base / 'log/llm.err'))
+            wanted['fail'] = wanted['fail'].replace('llm 池 cpu 的 cpu.log', str(self.k / 'cpus/*/cpu.log'))
+            if wanted['fail'] == '逾時（125000 ms）':
+                wanted['fail'] += '，看 ' + str(self.base / 'log/llm.err')
+        self.assertEqual(done, wanted)
         self.assertFalse(self.state()['batch']['calls'][0]['acked'])
         self.assertFalse(list((self.k / 'requests').glob('ack-*')))
     return test

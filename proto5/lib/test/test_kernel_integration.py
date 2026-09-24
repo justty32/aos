@@ -233,7 +233,7 @@ class KernelIntegration(KernelCase):
         wait_for(lambda: marker.exists())
         queued = aos_client.submit(self.home, "add", {"target": self.job(name="queued"), "name": "queued", "once": True})
         wait_for(lambda: self.state().get("procs", {}).get("queued", {}).get("status") == "queued")
-        self.good_cli("stop", self.home)
+        self.good_cli("stop", self.home, "--no-wait")
         rejected = aos_client.wait_response(self.home, queued, timeout_ms=5000, poll_ms=5)
         self.assertEqual(rejected["error"]["data"]["code"], "Stopping")
         self.assertEqual(self.state()["phase"], "stopping")

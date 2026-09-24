@@ -92,3 +92,122 @@ class KernelCLI(KernelCase):
                 self.assertEqual((result.stdout, result.stderr), ('', ''))
                 wait_for(lambda: not response.exists())
         self.kernel_stop()
+
+    def test_init_envs_and_success_line(self):
+        result = self.good_cli('init', self.home, '--cpu', '0', '--cpu', '1',
+                               '--cpu', 'llm:llm', '--env', 'llm:AOS_LLM_CONFIG=/abs/llm.json',
+                               '--env', 'k:EMPTY=', '--env', '0:RAW= a=b:$X ')
+        self.assertEqual(result.stdout, 'initialized %s\n' % self.home.absolute())
+        cpus = read_json(self.home / 'info.json')['cpus']
+        self.assertEqual(cpus['llm'], {'pool': 'llm', 'envs': {'AOS_LLM_CONFIG': '/abs/llm.json'}})
+        self.assertEqual(cpus['k']['envs'], {'EMPTY': ''})
+        self.assertEqual(cpus['0']['envs'], {'RAW': ' a=b:$X '})
+
+    def test_init_default_cpu_envs(self):
+        self.good_cli('init', self.home, '--env', '2:X=y', '--env', 'k:X=z')
+        self.assertEqual(read_json(self.home / 'info.json')['cpus']['2']['envs'], {'X': 'y'})
+
+    def test_init_invalid_envs_no_writes(self):
+        for envs in [('absent:X=y',), ('0:=x',), ('0:X',), ('X=y',), ('0:X=1', '0:X=2')]:
+            with self.subTest(envs=envs):
+                args = [part for value in envs for part in ('--env', value)]
+                result = self.cli('init', self.home, *args)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertFalse(self.home.exists())
+
+    def test_new_help_and_usage(self):
+        for command, flags in [('init', ['--env']), ('stop', ['--wait-ms', '--no-wait']), ('check', ['--agent'])]:
+            text = self.good_cli(command, '-h').stdout
+            for flag in flags:
+                self.assertIn(flag, text)
+        for args in [('stop', '--wait-ms', '-1'), ('check', '--unknown')]:
+            self.assertEqual(self.cli(args[0], self.home, *args[1:]).returncode, 2)
+
+    def test_stop_without_ledger_posts_nothing(self):
+        self.initialize()
+        self.assertEqual(self.good_cli('stop', self.home).stdout, 'stopped\n')
+        self.assertEqual(list((self.home / 'requests').iterdir()), [])
+
+    def test_stop_no_wait_posts_without_info_or_ledger(self):
+        (self.home / "requests").mkdir(parents=True)
+        result = self.good_cli('stop', self.home, '--no-wait')
+        self.assertEqual((result.stdout, result.stderr), ('', ''))
+        files = list((self.home / 'requests').glob('stop-*.json'))
+        self.assertEqual(len(files), 1)
+        self.assertEqual(read_json(files[0])['method'], 'stop')
+
+    def test_stop_dead_daemon_and_missing_kernel_cpu_do_not_post(self):
+        from unittest.mock import patch
+        self.initialize(daemon=str(self.daemon))
+        self.write(self.home / 'state.json', {'phase': 'running', 'cpus': {}, 'kcpu': 'k'})
+        for alive in (False, True):
+            with patch.object(kernel.aos_daemon, 'is_alive', return_value=alive), contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(kernel.stop(self.home), 0)
+            self.assertEqual(out.getvalue(), 'not running\n')
+            self.assertEqual(list((self.home / 'requests').iterdir()), [])
+
+    def test_stop_ignores_other_kernel_same_names(self):
+        self.initialize(daemon=str(self.daemon))
+        self.write(self.home / 'state.json', {'phase': 'stopped', 'cpus': {'0': {}}, 'kcpu': 'k'})
+        self.write(self.daemon / 'state.json', {'children': {
+            'k': {'target': str(self.root / 'other/cpus/k/inst.json')},
+            '0': {'target': str(self.home / 'cpus-other/0/inst.json')}}})
+        self.assertEqual(self.good_cli('stop', self.home).stdout, 'stopped\n')
+        self.assertEqual(list((self.home / 'requests').iterdir()), [])
+
+    def test_stop_waits_for_removed_and_ledger_only_cpus(self):
+        from unittest.mock import patch
+        self.initialize(daemon=str(self.daemon))
+        state = {'phase': 'stopping', 'cpus': {'old': {}}, 'kcpu': 'k'}
+        self.write(self.home / 'state.json', state)
+        owned = {name: {'target': str(self.home / 'cpus' / name / 'inst.json')} for name in ('k', 'old')}
+        self.write(self.daemon / 'state.json', {'children': owned})
+        calls = []
+        def advance(_):
+            calls.append(1)
+            state['phase'] = 'stopped'
+            self.write(self.home / 'state.json', state)
+            owned.pop('k' if len(calls) == 1 else 'old')
+            self.write(self.daemon / 'state.json', {'children': owned})
+        with patch.object(kernel.aos_daemon, 'is_alive', return_value=True), \
+                patch.object(kernel.time, 'sleep', side_effect=advance), contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(kernel.stop(self.home), 0)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(out.getvalue(), 'stopped\n')
+
+    def test_stop_timeout_retains_posted_request(self):
+        from unittest.mock import patch
+        self.initialize(daemon=str(self.daemon))
+        self.write(self.home / 'state.json', {'phase': 'running', 'cpus': {}, 'kcpu': 'k'})
+        self.write(self.daemon / 'state.json', {'children': {'k': {'target': str(self.home / 'cpus/k/inst.json')}}})
+        with patch.object(kernel.aos_daemon, 'is_alive', return_value=True), contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(kernel.main(['stop', str(self.home), '--wait-ms', '0']), 1)
+        self.assertEqual(err.getvalue(), 'aos-kernel: Timeout: 等了 0 ms 還沒停好（stop 已放、不撤回），用 aos-kernel ls 看\n')
+        self.assertEqual(len(list((self.home / 'requests').glob('stop-*.json'))), 1)
+
+    def test_stop_real_daemon_returns_after_children_disappear(self):
+        self.setup_running()
+        self.assertEqual(self.good_cli('stop', self.home).stdout, 'stopped\n')
+        self.assertEqual(self.state()['phase'], 'stopped')
+        self.assertEqual(self.dstate()['children'], {})
+        self.assertEqual(self.good_cli('stop', self.home).stdout, 'stopped\n')
+
+    def test_bad_agent_summary_points_to_stderr_and_json_unchanged(self):
+        self.initialize()
+        agent = self.root / 'agent'
+        agent.mkdir()
+        target = agent / 'tick.json'
+        for stderr in ('log/agent.err', {'$opt': 'append', '$val': 'log/agent.err'}):
+            self.write(target, {'argv': ['aos-agent', 'tick', str(agent)], 'stderr': stderr})
+            proc = dict(target=str(target), once=False, status='bad', runs=3, fails=3, pending=None)
+            self.write(self.home / 'state.json', {'procs': {'agent': proc}})
+            text = self.good_cli('ls', self.home).stdout
+            self.assertIn('  看 %s\n' % (agent / 'log/agent.err'), text)
+            self.assertEqual(json.loads(self.good_cli('ls', self.home, '--json').stdout)['procs']['agent'], proc)
+
+    def test_bad_summary_stderr_fallbacks(self):
+        target = self.root / 'inst.json'
+        self.assertEqual(kernel._stderr_hint(str(target)), str(target))
+        for value in ({'$env': 'ERR'}, {'$opt': 'append', '$val': {'$env': 'ERR'}}, None):
+            self.write(target, {'stderr': value})
+            self.assertEqual(kernel._stderr_hint(str(target)), str(target) + ' 的 stderr 設定')

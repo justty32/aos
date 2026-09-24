@@ -143,7 +143,8 @@ def collect(run):
         response = aos_home.read_json(path)
         output = run.base / 'work' / (name + '.out')
         if batch['kind'] == 'think':
-            call['done'] = think_done(response, output, run.info['llm']['timeout_ms'])
+            call['done'] = think_done(response, output, run.info['llm']['timeout_ms'],
+                                      kernel=batch['kernel'], pool=run.info['llm']['pool'])
         else:
             timeout = tools.get(call['tool'], {}).get('_timeout_ms', 60000)
             call['done'] = act_done(response, output, call['tool'], timeout)
@@ -189,7 +190,7 @@ def settle(run):
                 st['errors'] = 0
                 signal = 'continue-%s.json' % calls[0]['name'].rsplit('-', 1)[0]
                 st['waits'].append({'$opt': 'consume', '$val': signal})
-                stuck = '問模型連敗 3 次，touch %s 繼續' % signal
+                stuck = '問模型連敗 3 次，touch %s 繼續' % (run.base / signal)
     st['sweep'].extend({'kernel': batch['kernel'], 'name': c['name']} for c in calls if c['name'] is not None)
     st['batch'] = None
     run.save('state.settled')
