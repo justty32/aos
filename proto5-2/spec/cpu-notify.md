@@ -1,8 +1,8 @@
 # cpu 回完音丟一張通知（`notify`）
 
-← [spec 導航](README.md)｜kernel 怎麼收：[kernel-tick](kernel-tick.md) 第 5、6 步｜範式本體：[proto5/spec/cpu.md](../../proto5/spec/cpu.md)
+← [spec 導航](README.md)｜kernel 怎麼收：[kernel-tick](kernel-tick.md) 第 5、6 步｜範式本體：[proto5/spec/cpu.md](../../proto5/spec/cpu/README.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**補充 [proto5/spec/cpu.md](../../proto5/spec/cpu.md) §2（多一個 info 欄位）、§6.1（啟動多一步）、§6.3（迴圈多一步）**。
+> 第 1 版，2026-09-24 草稿；未實作。**補充 [proto5/spec/cpu.md](../../proto5/spec/cpu/README.md) §2（多一個 info 欄位）、§6.1（啟動多一步）、§6.3（迴圈多一步）**。
 > cpu.md 其他部分不變。沒寫 `notify` 的 cpu 行為跟 proto5 一模一樣。
 
 為什麼要動 cpu：使用者定的第 f 點是「cpu 有回音時往 kernel 家丟一個通知檔，kernel 只掃那個目錄」。

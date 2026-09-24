@@ -34,10 +34,10 @@
 
 ## 連結
 
-- repo 裡指進舊九份的 markdown 連結改了 **380 處（27 檔）**：proto5/README 16、lib/README 46、proto5/notes 307、wf/session_logs 10、proto4-3/docs/exec.md 1。另 lib docstring 明寫 `spec/xxx.md` 路徑的 7 處改成 `spec/xxx/`；像「kernel.md §3」這種不帶路徑的節號引用沒動（節號照舊，README 查得到）。
+- repo 裡指進舊九份的 markdown 連結改了 **415 處（41 檔）**：proto5/README 16、lib/README 46、proto5/notes 307、wf/session_logs 10、proto4-3/docs/exec.md 1、proto5-2（收線前 rebase 才進 main 的草稿規範）35。另 lib docstring 明寫 `spec/xxx.md` 路徑的 7 處改成 `spec/xxx/`；像「kernel.md §3」這種不帶路徑的節號引用沒動（節號照舊，README 查得到）。
 - 改法：帶 `#錨點`→錨點所在小檔；連結字帶 `§n`／「第 n 節」→該節所在檔；帶 `:行號`（舊審查報告，行號是當時版本的）→用 `git blame`（跳過幾個純改路徑的 commit）找寫下那行時的規範版本，看那行落在哪一節、再用節標題對到新檔；當時的節現在已不存在（例如第 1 版 aos-agent 的「3. 走一格到底做什麼」）的 29 處→資料夾 README。舊名 `exec.md`、`aos-llm-call.md` 的連結一併指到 aos-exec／aos-llm。絕對路徑連結改成相對路徑。
 - 規範檔之間的連結在拆的時候一起改（不算在 380 內）。
-- 檢查：全 repo（不含 `.claude/worktrees/`）指進 `proto5/spec/` 的連結 745 條，檔不在或錨點不在的 **0**。`wf-lint proto5 thinking wf` 的 BROKEN 從 836 降到 559（剩下的是 `lib/x.py:123` 這類跟 spec 無關的行號連結，不在本次範圍）。
+- 檢查：全 repo（不含 `.claude/worktrees/`）指進 `proto5/spec/` 的連結 782 條，檔不在或錨點不在的 **0**。`wf-lint proto5 thinking wf` 的 BROKEN 從 836 降到 559（剩下的是 `lib/x.py:123` 這類跟 spec 無關的行號連結，不在本次範圍）。
 - rebase 到 main 時，另一隊的 notes tidy（0235aed）改過其中 8 份筆記：衝突檔一律取 main 的版本、再重跑同一支改連結腳本。tidy 隊留給本隊的 [spec-links.tsv](../2026-09-24-tidy/spec-links.tsv) 是他們的資料檔，沒動；表裡列的連結已全部改好。
 
 ## astra 抽查

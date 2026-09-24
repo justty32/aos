@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜家的長相：[kernel-home](kernel-home.md)｜池怎麼增減：[kernel-pools](kernel-pools.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel.md) §1.1**（`cpus` 表整張換成 `pools` 表）。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/kernel.md](../../proto5/spec/kernel/README.md) §1.1**（`cpus` 表整張換成 `pools` 表）。
 
 一句話：**kernel 不再一顆一顆列 cpu，只列池**——池叫什麼、交給哪個 daemon、在 daemon 那邊叫什麼、要幾顆、帶什麼環境。
 cpu 是哪一種（一般、問模型的…）由池的 `envs` 決定，進這個池的每一顆都一樣。
@@ -52,7 +52,7 @@ cpu 是哪一種（一般、問模型的…）由池的 `envs` 決定，進這�
 
 為什麼用編號、不讓 daemon 自己取名：
 - kernel 不用問 daemon 就知道池裡有哪幾顆，派工時直接往那顆的家放單；daemon 只要照同一條公式拉。
-- 縮小時一律先收最大的號；再長回來會用回同一個家——同一個家換下一任主人，剩下的單由 [cpu 範式 §6.2](../../proto5/spec/cpu.md) 的開機對帳處理，本來就支援。
+- 縮小時一律先收最大的號；再長回來會用回同一個家——同一個家換下一任主人，剩下的單由 [cpu 範式 §6.2](../../proto5/spec/cpu/lifecycle.md) 的開機對帳處理，本來就支援。
 - **任何一組編號都寫得成 `count`＋`skip`**：把集合最大號以下的空洞全放進 `skip` 就是了。所以 kernel 跟 daemon 之間只傳這兩格（[protocol](protocol.md)）。
 
 **`skip` 用在哪**：某一顆的家壞了、想讓它永久退休。`aos-kernel cpu rm P/1` 就是把 1 放進 `skip`、`count` 減 1——

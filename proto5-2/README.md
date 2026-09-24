@@ -22,13 +22,13 @@ daemon 要帶上萬個孩子，指令會變多，但一律按池管。六點定�
 
 | 不變 | 連到 |
 |---|---|
-| cpu 範式與 exec cpu（**只多一個 `notify` 欄位**，見 [spec/cpu-notify.md](spec/cpu-notify.md)） | [proto5/spec/cpu.md](../proto5/spec/cpu.md) |
-| agent 資料夾 | [proto5/spec/agent.md](../proto5/spec/agent.md) |
-| `aos-agent` | [proto5/spec/aos-agent.md](../proto5/spec/aos-agent.md) |
-| 問模型（`aos-llm call`） | [proto5/spec/aos-llm-call.md](../proto5/spec/aos-llm-call.md) |
-| `aos-exec`、inst、指示詞 | [aos-exec.md](../proto5/spec/aos-exec.md)、[inst-posix.md](../proto5/spec/inst-posix.md)、[directives.md](../proto5/spec/directives.md) |
-| kernel 的 syscall、回音判定、鏈 | [proto5/spec/kernel.md](../proto5/spec/kernel.md) §2、§4、§7 |
-| daemon 怎麼拉一個孩子（`go` 握手、process group） | [proto5/spec/daemon.md](../proto5/spec/daemon.md) §2 |
+| cpu 範式與 exec cpu（**只多一個 `notify` 欄位**，見 [spec/cpu-notify.md](spec/cpu-notify.md)） | [proto5/spec/cpu.md](../proto5/spec/cpu/README.md) |
+| agent 資料夾 | [proto5/spec/agent.md](../proto5/spec/agent/README.md) |
+| `aos-agent` | [proto5/spec/aos-agent.md](../proto5/spec/aos-agent/README.md) |
+| 問模型（`aos-llm call`） | [proto5/spec/aos-llm-call.md](../proto5/spec/aos-llm/README.md) |
+| `aos-exec`、inst、指示詞 | [aos-exec.md](../proto5/spec/aos-exec/README.md)、[inst-posix.md](../proto5/spec/inst-posix/README.md)、[directives.md](../proto5/spec/directives/README.md) |
+| kernel 的 syscall、回音判定、鏈 | [proto5/spec/kernel.md](../proto5/spec/kernel/README.md) §2、§4、§7 |
+| daemon 怎麼拉一個孩子（`go` 握手、process group） | [proto5/spec/daemon.md](../proto5/spec/daemon/README.md) §2 |
 
 **「不變」那幾份裡仍有幾句要跟著換**（審查 R16；落地時改 proto5 那邊的字，現在先記在這）：
 - kernel.md §2：`add` 的 `pool` 要是 `info.pools` 的 key（不是 `info.cpus`）、不是 `kernel`。

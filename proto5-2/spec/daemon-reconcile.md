@@ -2,7 +2,7 @@
 
 ← [spec 導航](README.md)｜存檔：[daemon-home](daemon-home.md)｜收到的單：[protocol](protocol.md)
 
-> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon.md) §4（一圈）、§5 的停機階梯寫法、§9 第 1、2 條（退 0 不重拉、固定間隔無退避）**。
+> 第 1 版，2026-09-24 草稿；未實作。**取代 [proto5/spec/daemon.md](../../proto5/spec/daemon/README.md) §4（一圈）、§5 的停機階梯寫法、§9 第 1、2 條（退 0 不重拉、固定間隔無退避）**。
 > 孩子怎麼拉（§2 的 fork、`go` 握手、process group、每次重讀 target）不變，只有 pipe 少一條（§5）。
 
 一句話：**daemon 手上是一份「每池要哪幾號」的宣告；每一圈把實際的孩子往宣告靠——少了補、多了收、死了等一下再拉。**
@@ -79,7 +79,7 @@ proto5 每個孩子兩條 pipe（四個端點在 daemon 手上，關掉孩子那
   到了 fd 預算就先不拉，等舊的收完（審查 R24）。
 - 行程數上限（`ulimit -u`）、記憶體不在 daemon 的檢查範圍：fork 失敗就是 `SpawnFailed`，照 §3 退避。
 
-**補充 [cpu.md §6.1](../../proto5/spec/cpu.md) 第 3 步**：父行程給的 fd 1 可以是 `/dev/null`，不一定是 pipe。cpu 照樣把它搬到高位（不會往那裡寫），
+**補充 [cpu.md §6.1](../../proto5/spec/cpu/lifecycle.md) 第 3 步**：父行程給的 fd 1 可以是 `/dev/null`，不一定是 pipe。cpu 照樣把它搬到高位（不會往那裡寫），
 工作的 stdout 照舊接到 fd 2（`cpu.log`）或照 inst 寫的。現行 `aos_exec_cpu.py` 的 `Control.relocate()` 就是這樣做的，不用改程式（審查 R28）。
 
 ## 6. 停機階梯：一批一批做

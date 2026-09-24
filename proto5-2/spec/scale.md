@@ -19,7 +19,7 @@
 
 | 哪裡 | 多大 | 為什麼先接受 |
 |---|---|---|
-| **kernel 帳本整份讀、整份寫**（每格讀一次、寫最多四次；閒著的一萬顆也要讀一遍 `free`） | 跟 `procs`＋`busy`＋`free`＋`skip` 成比例；1 萬顆全忙約 3 MB | 拆帳本會動到 [aos-agent.md §10](../../proto5/spec/aos-agent.md) 偷看 `procs` 的做法（那份不改）；先量再說 |
+| **kernel 帳本整份讀、整份寫**（每格讀一次、寫最多四次；閒著的一萬顆也要讀一遍 `free`） | 跟 `procs`＋`busy`＋`free`＋`skip` 成比例；1 萬顆全忙約 3 MB | 拆帳本會動到 [aos-agent.md §10](../../proto5/spec/aos-agent/pause-clean.md) 偷看 `procs` 的做法（那份不改）；先量再說 |
 | 池的集合重算 | O(池大小) | 只在 info 的數字變了、在途單結清、縮小中的號**全部**做完時（不是每做完一顆） |
 | kernel boot | 建家「缺的補齊」、重建 `free`、`recent`＝全部忙的 | 只在 boot |
 | daemon 啟動 | 讀全部 `kids/`、殺上一任的孩子、把全部成員排進 `pending` | 只在啟動；拉回來受 `spawn_per_sec` 節流 |
