@@ -7,7 +7,7 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 
 ## 十分鐘上手（09-24 試玩 r1 補）
 
-從 repo 根目錄照抄，一段一段貼進 bash／zsh。需要 Python 3.12+；第 4 段起要一個 OpenAI 相容的模型端點——任何一個都行，例：LiteLLM 的 `http://localhost:4000/v1`／`deepseek-chat`（換別的就改 `llm.json` 的 `endpoint`、`model`，要金鑰加 `api_key`）。
+從 repo 根目錄照抄，一段一段貼進 bash／zsh。需要 Python 3.12 以上（3.12 與 3.14 實測過）；第 4 段起要一個 OpenAI 相容的模型端點——任何一個都行，例：LiteLLM 的 `http://localhost:4000/v1`／`deepseek-chat`（換別的就改 `llm.json` 的 `endpoint`、`model`，要金鑰加 `api_key`）。
 工作目錄 `W` 隨你放；重來一次先 `rm -rf $W`。
 
 **1. PATH 與 daemon。** PATH 一定要**先**含 `proto5/cli` 才開 daemon——daemon 拉的 cpu、cpu 跑的工作都繼承 daemon 開起來那一刻的環境，
@@ -173,7 +173,7 @@ aos-agent stop $W/amy
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 二十七支標準庫 Python 3.12 模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 28 個測試檔、1055 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 二十七支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 28 個測試檔、1055 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm-call`、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。

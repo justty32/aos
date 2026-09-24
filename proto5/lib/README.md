@@ -2,7 +2,7 @@
 
 ← [proto5 README](../README.md)｜新架構：[cpu.md](../spec/cpu.md)、[daemon.md](../spec/daemon.md)、[kernel.md](../spec/kernel.md)
 
-Python 3.12、只用標準庫。底層 `aos_directives` → `aos_inst` → `aos_exec`；新架構由
+Python 3.12 以上、只用標準庫（3.12.13 與 3.14.7 都實跑全綠，見 [notes/2026-09-24-py312-run.md](../notes/2026-09-24-py312-run.md)）。底層 `aos_directives` → `aos_inst` → `aos_exec`；新架構由
 `aos_home` 共用檔案範式、`aos_client` 交件，`aos_exec_cpu` 跑一次、`aos_daemon` 管孩子，
 `aos_kernel` 用一格接一格的 tick 排程。`aos_run` 與 `aos-daemon-ctl` 已移除。
 
