@@ -116,6 +116,8 @@ def last_usage(base):
             prompt = row['usage']['prompt_tokens']
         except (ValueError, KeyError, TypeError):
             continue
+        if str(row.get('batch') or '').startswith('compact-summarize'):
+            continue    # compact --summarize 那一問不是送給這個 agent 的記憶（第三波 W3-2）
         if type(prompt) is int:
             return {'prompt': prompt, 'at': str(row.get('at', '?'))[:19].replace('T', ' ')}
     return None
