@@ -87,7 +87,8 @@ class TalkTests(unittest.TestCase):
         self.answer(ASKS, RESULT, REPLY)
         code, out = self.run_talk('現在幾點？\n', '--wait', '3', '--show-calls')
         self.assertEqual(code, 0)
-        self.assertEqual(out.splitlines(), ['[呼叫 date fmt=%H]', '[結果 ok 1 行]', '現在 12 點'])
+        # 字樣跟 aos_agent_listen_render 共用：[呼叫 名 k=v]、[結果 名：第一行]
+        self.assertEqual(out.splitlines(), ['[呼叫 date fmt=%H]', '[結果 date：12:00:00]', '現在 12 點'])
 
     def test_reply_before_wait_starts_is_not_lost(self):
         """不能踩的坑：回話在開始等之前就到了，也要印出來（H0 在送出前記）。"""
@@ -143,7 +144,7 @@ class TalkTests(unittest.TestCase):
         self.assertIn('history 4 則，', out)
         self.assertIn('（user 1／assistant 2／tool 1）', out)
         self.assertIn('tools  1 個', out)
-        self.assertIn('  [結果 ok 1 行]', out)
+        self.assertIn('  [結果 date：12:00:00]', out)
         self.assertIn('assistant: 現在 12 點', out)
         self.assertIn('date  看時間', out)
         self.assertIn('/quit', out)
@@ -199,12 +200,11 @@ class TalkTests(unittest.TestCase):
         self.assertEqual(self.run_talk('', env={})[0], 1)
 
     def test_result_line(self):
-        self.assertEqual(talk.result_line({'content': '工具 date 失敗（exit 1）：壞  掉\n了'}),
-                         '[結果 失敗 工具 date 失敗（exit 1）：壞  掉]')  # 第一行原樣
-        self.assertEqual(talk.result_line({'content': ''}), '[結果 ok 空]')
-        self.assertEqual(talk.result_line({'content': '工具箱裡有 3 樣\n'}), '[結果 ok 1 行]')
-        from aos_agent_results import UNKNOWN
-        self.assertIn('不明', talk.result_line({'content': UNKNOWN}))
+        """talk 的 call_line／result_line 就是 aos_agent_listen_render 那兩個（09-24 talk 微調：跟 listen 對齊字樣）。"""
+        self.assertEqual(talk.result_line('date', '工具 date 失敗（exit 1）：壞  掉\n了'),
+                         '[結果 date 2 行：工具 date 失敗（exit 1）：壞  掉]')  # 第一行原樣，多行附行數
+        self.assertEqual(talk.result_line('date', ''), '[結果 date：（空）]')
+        self.assertEqual(talk.result_line('date', '工具箱裡有 3 樣\n'), '[結果 date：工具箱裡有 3 樣]')
         self.assertEqual(talk.call_line({'function': {'name': 'read', 'arguments': '{"path": "hello.py"}'}}),
                          '[呼叫 read path=hello.py]')
         self.assertEqual(talk.call_line({'function': {'name': 'echo', 'arguments': '{"text": "a  b\\nc"}'}}),
