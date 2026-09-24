@@ -225,7 +225,8 @@ class KernelCheck(unittest.TestCase):
         local = agent / 'tool'
         self.executable(local)
         def tool(name, cmd):
-            return {'type': 'function', 'function': {'name': name}, '_meta': {'argv': [cmd]}}
+            # 測的是 argv[0] 找不找得到；_jail: false 免得沒 access.json 的 bad（09-24 裁決 4）混進來
+            return {'type': 'function', 'function': {'name': name}, '_meta': {'argv': [cmd]}, '_jail': False}
         self.put(agent / 'tools.json', [tool('relative', './tool'), tool('absolute', str(local)),
                                        tool('path', 'aos-exec')])
         text = self.run_agent_check(agent)
@@ -240,7 +241,7 @@ class KernelCheck(unittest.TestCase):
     def test_agent_tool_directive_warns(self):
         agent = self.agent(tools=['tools.json'])
         self.put(agent / 'tools.json', [{'type': 'function', 'function': {'name': 'dynamic'},
-                                       '_meta': {'argv': [{'$env': 'TOOL'}]}}])
+                                       '_meta': {'argv': [{'$env': 'TOOL'}]}, '_jail': False}])
         self.assertIn('warn agent/tool/dynamic:', self.run_agent_check(agent))
 
     def test_required_dirs_present_without_cpu_homes(self):

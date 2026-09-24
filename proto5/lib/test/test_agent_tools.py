@@ -84,8 +84,11 @@ class ToolsAddTests(unittest.TestCase):
         result = run_agent('tools', 'add', 'base', '--target', self.bob, '--root', 'proj', cwd=self.root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(read_json(self.bob / 'tools/base/config.json'), {'root': str(project)})
-        self.assertFalse((self.bob / 'workspace').exists())
         self.assertEqual(result.stderr, '')
+        # bob 是 init 生的，已有 access.json（ws＝workspace）：--root 不改表，但教一行怎麼改
+        self.assertEqual(read_json(self.bob / 'access.json')['mounts'], {'ws': 'workspace'})
+        self.assertIn('要讓工具在 %s 工作：aos-agent access set ws %s --target %s' % (project, project, self.bob),
+                      result.stdout)
 
     def test_root_missing_refused(self):
         err = self.add('base', '--root', str(self.root / 'nope'), code=1).stderr

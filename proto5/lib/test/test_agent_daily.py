@@ -36,8 +36,14 @@ class DailyTests(unittest.TestCase):
         base = self.root / 'nested/new'
         code, output = self.cli('init', '--target', str(base))
         self.assertEqual(code, 0)
-        self.assertEqual(len(output.splitlines()), 2)
+        self.assertEqual(len(output.splitlines()), 3)
+        self.assertIn('access.json', output)
         self.assertEqual(info.load(base)['model'], 'default')
+        # 09-24 裁決 4：有工具的家一定要有 access.json；init 生的 date 也關牢、只看得到 workspace
+        self.assertEqual(json.loads((base / 'access.json').read_text()),
+                         {'_metainfo': {'_type': 'agent_access', '_version': 1},
+                          'mounts': {'ws': 'workspace'}, 'cwd': 'ws', 'net': False})
+        self.assertTrue((base / 'workspace').is_dir())
         self.assertEqual(info.load_state(base)['input'], ['input'])
         self.assertEqual(info.load(base)['tools'][0]['function']['name'], 'date')
         self.assertTrue((base / 'log').is_dir())

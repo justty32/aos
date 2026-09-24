@@ -109,6 +109,9 @@ def build_argv(opts, environ=None, bwrap='bwrap'):
     argv += ['--dir', '/work']
     for name, path, ro in opts['mounts']:
         argv += ['--ro-bind' if ro else '--bind', path, '/work/' + name]
+    # 牢的根（含 /work 本身）改唯讀：寫得進去的只有可寫 mount 與 /tmp，
+    # 免得工具把檔寫在 /work/x 這種牢一收就消失的地方還以為寫好了
+    argv += ['--remount-ro', '/']
     start = '/work/' + opts['chdir'] if opts['chdir'] else '/work'
     argv += ['--chdir', start, '--clearenv']
     env = {'PATH': BASE_PATH, 'HOME': '/tmp'}
@@ -119,7 +122,8 @@ def build_argv(opts, environ=None, bwrap='bwrap'):
             dropped.append(key)
         else:
             env[key] = value
-    env['AOS_TOOL_ROOT'] = start
+    env['AOS_TOOL_ROOT'] = start          # 相對路徑從這裡算（base 工具的起點）
+    env['AOS_TOOL_FENCE'] = '/work'       # 檔案工具碰得到的範圍：掛進來的全部
     for key, value in env.items():
         argv += ['--setenv', key, value]
     return argv + ['--', prog] + list(opts['args']), dropped

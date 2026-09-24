@@ -20,8 +20,19 @@ JAIL_WHY = {
 JAIL_WHY_ACCESS = '這個 agent 的權限設定（access.json）有問題'
 
 
+def no_access_fix(base):
+    """家裡沒 access.json 時教的那行：只給工具家裡的 workspace（絕對路徑，不怕殼在哪個資料夾）。"""
+    ws = os.path.join(str(base), 'workspace')
+    return 'mkdir -p %s && aos-agent access set ws %s --cwd --target %s' % (ws, ws, base)
+
+
 def jail_message(tool, code, base):
     """工具被權限牆擋下時寫進記憶的 tool 訊息。"""
+    if code == 'NoAccess':
+        return ('工具 %s 沒有執行：這個 agent 還沒設定工具能碰哪些資料夾（沒有 access.json），被 aos 擋下（NoAccess）。'
+                '這不是你能修的，也不要改用別的工具繞過；請告訴使用者：「工具 %s 沒有 access.json 不能跑，'
+                '請先跑 %s，再叫我一次」。'
+                % (tool, tool, no_access_fix(base)))
     why = JAIL_WHY.get(code, JAIL_WHY_ACCESS)
     return ('工具 %s 沒有執行：%s，被 aos 擋下（%s）。這不是你能修的，也不要改用別的工具繞過；'
             '請告訴使用者：「工具 %s 被 aos 權限牆擋下（%s），請跑 aos-agent check --target %s 看細節」。'
@@ -170,9 +181,14 @@ def think_inst(base, name):
 
 
 def jail_problem(access, tool, env):
-    """這支要關牢但關不起來 → 錯誤代號（照 send §5.3 記成沒執行）；不用關或關得起來＝None。"""
-    if access is None or tool.get('_jail', True) is False:
+    """這支要關牢但關不起來 → 錯誤代號（照 send §5.3 記成沒執行）；不用關或關得起來＝None。
+
+    沒 access 檔（快照 None）＝NoAccess：有工具的家一定要有表，不關牢就不送（09-24 使用者裁決 4）。
+    """
+    if tool.get('_jail', True) is False:
         return None
+    if access is None:
+        return 'NoAccess'
     if 'error' in access:
         return access['error'].split(':', 1)[0]            # 代號；細節在 status／check
     if shutil.which('bwrap', path=env.get('PATH', os.defpath)) is None:
@@ -200,8 +216,11 @@ def send(run):
                 problem = jail_problem(access, tool, run.env)
                 if problem is not None:
                     call.update(done={'content': jail_message(call['tool'], problem, run.base)}, acked=True)
+                    if problem == 'NoAccess':
+                        report('NoAccess', '工具 %s 沒送：家裡沒有 access.json（有工具的家要先設定工具能碰哪些資料夾）；'
+                               '跑：%s' % (call['tool'], no_access_fix(run.base)))
                     continue
-                jailed = access if access is not None and tool.get('_jail', True) is not False else None
+                jailed = access if tool.get('_jail', True) is not False else None
                 try:
                     inst = tool_inst(tool['_meta'], run.base, name, run.env, access=jailed)
                 except aos_inst.InstError as exc:

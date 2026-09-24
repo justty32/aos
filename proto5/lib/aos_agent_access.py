@@ -62,7 +62,7 @@ def access_path(base, env=None):
 
 
 def access_lookup(base, env=None):
-    """回 (路徑, 狀態)：'present'＝檔在；'absent'＝沒寫 access 欄、預設檔不在（不關牢）；
+    """回 (路徑, 狀態)：'present'＝檔在；'absent'＝沒寫 access 欄、預設檔不在（要關牢的工具不送，NoAccess）；
     'missing'＝info.json 明寫的 access 檔不在（AccessInvalid，不是「不關牢」）。"""
     path, explicit = _locate(base, env)
     if path.exists():

@@ -140,6 +140,7 @@ class AgentCrashTests(unittest.TestCase):
         if invalid:
             tool = copy.deepcopy(fixture.TOOL)
             tool['_meta'] = {'argv': {'$env': 'DOES_NOT_EXIST'}}
+            tool['_jail'] = False       # 測 _meta 解不開；沒 access.json 時要關牢的會先被 NoAccess 擋
             self.put(self.base / 'tools.json', [tool])
         else:
             self.put(self.base / 'tools.json', [])

@@ -2,7 +2,7 @@
 """edit：精確字串取代。old_string 必須剛好出現一次（或 replace_all=true）。"""
 import sys
 sys.dont_write_bytecode = True
-from _common import run, arg, resolve, rel, fail, write_atomic, open_regular  # noqa: E402
+from _common import run, arg, resolve, rel, fail, write_atomic, write_error, open_regular  # noqa: E402
 
 MAX_FILE = 10 * 1024 * 1024
 
@@ -40,7 +40,7 @@ def main(args, root):
     try:
         write_atomic(root, full, result, path)
     except OSError as e:
-        fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
+        write_error(e, path, full)
     n = len(starts) if replace_all else 1
     return 'edited %s: replaced %d occurrence%s (first at line %d)' % (
         rel(root, full), n, '' if n == 1 else 's', line)

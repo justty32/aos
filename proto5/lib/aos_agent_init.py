@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 
+import aos_agent_access
 import aos_home
 from aos_agent_home import AgentError
 
@@ -26,12 +27,17 @@ def init(agent_dir, force=False):
                                        'parameters': {'type': 'object', 'properties': {}}},
         '_meta': {'argv': ['date', '+%Y-%m-%d %H:%M:%S']}}])
     aos_home.write_json(base / 'state.json', {'input': 'input'})
+    # 有工具的家一定要有 access.json（沒有＝工具不送，NoAccess）：date 也關牢，只看得到 workspace/
+    (base / 'workspace').mkdir(exist_ok=True)
+    aos_agent_access.write_access(base / aos_agent_access.DEFAULT_NAME, {
+        '_metainfo': dict(aos_agent_access.METAINFO), 'mounts': {'ws': 'workspace'}, 'cwd': 'ws', 'net': False})
     aos_home.write_json(base / 'info.json', indent=2, obj={
         '_metainfo': {'_type': 'llm_agent', '_version': 1}, 'system': 'prompts/system.json',
         'history': 'prompts/history.json', 'tools': ['tools'],
         'llm': {'model': 'default', 'pool': 'llm', 'timeout_ms': 125000},
         'tool_pool': 'default', 'tick': {'pool': 'default', 'interval_ms': 1000}})
     print('initialized ' + str(base))
+    print('access.json：工具關在牢裡，只看得到 /work/ws（＝workspace，可寫）、不能上網；改：aos-agent access ls／set')
     print('llm.model 是代號 "default"：llm.json（kernel 的 llm cpu 用 AOS_LLM_CONFIG 指的那份，'
           '見 proto5/README.md 第 2 段）要有 default 這個代號')
     return 0

@@ -3,7 +3,7 @@
 import sys
 sys.dont_write_bytecode = True
 import os  # noqa: E402
-from _common import run, arg, resolve, rel, fail, write_atomic  # noqa: E402
+from _common import run, arg, resolve, rel, fail, write_atomic, write_error  # noqa: E402
 
 
 def main(args, root):
@@ -17,7 +17,7 @@ def main(args, root):
         os.makedirs(os.path.dirname(full), exist_ok=True)
         write_atomic(root, full, content, path)
     except OSError as e:
-        fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
+        write_error(e, path, full)
     return '%s %s (%d bytes)' % ('overwrote' if existed else 'created', rel(root, full),
                                  len(content.encode('utf-8')))
 
