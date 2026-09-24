@@ -1,8 +1,8 @@
 ← [教程索引](README.md)｜接在 [03 第一個 agent](03-first-agent.md) 之後讀
 
-# 06 附錄：不用 init，手寫一個 agent 家
+# 06 附錄：不用 init，手寫一個 agent 家（和 kernel 家）
 
-**目標**：看清楚 agent 家其實就是一個資料夾加三份檔；`init` 只是替你寫好它們。
+**目標**：看清楚 agent 家其實就是一個資料夾加三份檔；`init` 只是替你寫好它們。kernel 家也一樣，只是一份池表（第 4 節）。
 
 **前提**：kernel 開著（[01](01-daemon-kernel.md)）。新終端先 `. $HOME/aos-try/env.sh`。
 
@@ -50,6 +50,42 @@ aos-agent listen --target $W/amy --last
 ```sh
 aos-agent stop --target $W/amy
 ```
+
+## 4. 手寫一個 kernel 家：一份池表
+
+kernel 家的 `info.json`（第 2 版）只列池：每池要幾顆、交給哪個 daemon、在 daemon 那邊叫什麼、帶什麼環境。最小的樣子：
+
+```sh
+mkdir -p $W/K4/requests $W/K4/responses
+cat > $W/K4/info.json <<EOF
+{"_metainfo": {"_type": "kernel", "_version": 2},
+ "daemon": "$AOS_DAEMON_HOME",
+ "pools": {"kernel":  {"count": 1, "dpool": "k4-kernel"},
+           "default": {"count": 1, "dpool": "k4-default"}}}
+EOF
+aos-kernel check --target $W/K4
+aos-kernel boot --target $W/K4
+```
+
+`check` 全 `ok` 再 `boot`，印 `booted 2 pools, 2 cpus`。要注意的三件事：
+
+- **`requests/`、`responses/` 要自己建**（`init` 會建）。`check` 的 `dirs` 會說缺哪個；缺了照樣 boot 得起來，但 `add`、`halt` 都會 `WriteFailed`。
+- **`daemon` 要寫**：手寫的家不會自動填 `AOS_DAEMON_HOME`，沒寫 boot 報 `NoDaemon`。
+- **`dpool` 是池在 daemon 那邊的名字**，省略＝池名。這裡跟 01 的 `K` 共用同一個 daemon，`K` 已經有 `kernel`、`default` 兩個池，所以要換個名字；撞名 boot 報 `NameTaken`。
+
+boot 之後家長這樣（kernel 自己補齊，你不用寫）：
+
+```text
+K4/info.json                   你寫的池表；aos-kernel cpu add／rm 也是改它
+K4/state.json                  帳本
+K4/pools/default/envs.json     這池的環境（照 info 的 envs 寫）
+K4/pools/default/inst.json     這池每顆 cpu 的模板：跑 aos-cpu、環境取 ../../envs.json
+K4/pools/default/cpus/0/       第 0 號 cpu 的家：info.json、inst.json、requests/、responses/、cpu.log
+K4/pools/kernel/cpus/0/        kernel 池那一顆，跑一格一格的 tick
+```
+
+其他欄位（`tick_ms`、`interval_ms`、`skip`、每池各自的 `daemon`…）都有預設，見 [池表 info.json](../spec/kernel/info.md)、[家的長相](../spec/kernel/home.md)。
+收工：`aos-kernel halt --target $W/K4`。
 
 ## 底下在幹嘛
 

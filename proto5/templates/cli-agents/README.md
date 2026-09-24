@@ -9,7 +9,7 @@
 
 | 檔 | 是什麼 | 要換的字 |
 |---|---|---|
-| [kernel2.json](kernel2.json) | 花錢的 kernel 家 K2：`k2`（kernel 池）、`cc`（claude 池 1 顆）、`cx0`／`cx1`（codex 池 2 顆） | `@W@`＝工作目錄 |
+| [kernel2.json](kernel2.json) | 花錢的 kernel 家 K2 的池表：`kernel` 池（在 daemon 那邊叫 `k2-kernel`，免得跟 K 的撞名）、`claude` 池 1 顆、`codex` 池 2 顆 | `@W@`＝工作目錄 |
 | [claude-job.json](claude-job.json) | 一張新的 `claude -p` 單子 | `@JOB@`＝這張單子的資料夾、`@WS@`＝讓它工作的資料夾 |
 | [claude-next.json](claude-next.json) | 接著聊：從**上一次成功的**那次分岔（`--resume <id> --fork-session`） | 同上＋`@SESSION@` |
 | [codex-review.json](codex-review.json) | 一張 `codex exec` 唯讀審查單 | `@JOB@`、`@WS@` |
@@ -37,8 +37,8 @@ sed -e "s|@JOB@|$J|g" -e "s|@WS@|$WS|g" claude-job.json > $J/inst.json
 | `--disallowedTools "Bash(git push:*)"` | 多一道；但換個寫法就繞過，真正的牆是上一行（不准跑指令）與以後的牢 |
 | codex `-s read-only` | 它跑的指令只能讀。**放在 `fork` 前面也有效**（09-24 真跑：每次都照這次給的，不跟上一次） |
 | codex `-m gpt-6-astra` | 這台只有 astra 能用 |
-| codex `CODEX_HOME`（在 kernel2.json 的 cpu 環境裡） | 專用設定資料夾，裡面只放一個指向 `~/.codex/auth.json` 的**符號連結**；不讀使用者家裡的 `config.toml`（那份預設 `danger-full-access`）與 `AGENTS.md`。**只隔開使用者家那份**：工作區自己的 `AGENTS.md`、專案與系統層的設定照讀。連結有風險：codex 若用「寫新檔再改名」換新憑證，連結會變成一般檔、兩份從此分家。**別放在 `/tmp` 底下**：codex 會警告不建輔助程式 |
-| 三顆工作 cpu 的環境 `$opt: clear`（`k2` 不清） | 只留 `PATH`、`HOME`、`LANG`（codex 再加 `CODEX_HOME`）：擋掉剛好在環境裡的 `ANTHROPIC_API_KEY`／`OPENAI_API_KEY`（免得改走付費 API），也擋掉從 Claude Code 裡開 daemon 時帶進來的 `CLAUDECODE`、`CLAUDE_CODE_*`。代價：代理（`HTTPS_PROXY`）、自訂憑證路徑之類也一起清掉，你的環境要靠它們才連得上，就在 `$val` 裡逐項補回 |
+| codex `CODEX_HOME`（在 kernel2.json 的 codex 池 `envs` 裡） | 專用設定資料夾，裡面只放一個指向 `~/.codex/auth.json` 的**符號連結**；不讀使用者家裡的 `config.toml`（那份預設 `danger-full-access`）與 `AGENTS.md`。**只隔開使用者家那份**：工作區自己的 `AGENTS.md`、專案與系統層的設定照讀。連結有風險：codex 若用「寫新檔再改名」換新憑證，連結會變成一般檔、兩份從此分家。**別放在 `/tmp` 底下**：codex 會警告不建輔助程式 |
+| claude、codex 兩池的環境 `$opt: clear`（kernel 池不清） | 只留 `PATH`、`HOME`、`LANG`（codex 再加 `CODEX_HOME`）：擋掉剛好在環境裡的 `ANTHROPIC_API_KEY`／`OPENAI_API_KEY`（免得改走付費 API），也擋掉從 Claude Code 裡開 daemon 時帶進來的 `CLAUDECODE`、`CLAUDE_CODE_*`。代價：代理（`HTTPS_PROXY`）、自訂憑證路徑之類也一起清掉，你的環境要靠它們才連得上，就在 `$val` 裡逐項補回 |
 
 ## 結果在哪、成功怎麼判
 

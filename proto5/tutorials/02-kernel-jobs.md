@@ -29,8 +29,8 @@ cat $W/jobs/hello.out
 你會看到（約 1～2 秒）：
 
 ```text
-{"code": 0, "kind": "child", "timed_out": false, "stopped": false, "ms": 20}
-15:15:36
+{"code": 0, "kind": "child", "timed_out": false, "stopped": false, "ms": 200}
+17:59:34
 ```
 
 **第一行是「執行狀態」，不含程式的輸出**：`date` 印的東西在 inst 指的 `hello.out` 裡。
@@ -46,13 +46,13 @@ aos-kernel add $W/jobs/hello.json --once
 你會看到單名和回音會出現的位置，指令馬上退 0：
 
 ```text
-cli-1790234138076379672-775576.json /home/you/aos-try/K/responses/cli-1790234138076379672-775576.json
+cli-1790243975791616474-1277717.json /home/you/aos-try/K/responses/cli-1790243975791616474-1277717.json
 ```
 
 過幾秒（等 kernel 走到下一格）回音就在那個檔裡（`cat` 它）。看完要替它「簽收」，不然回音一直留在 `K/responses/`：
 
 ```sh
-aos-kernel ack cli-1790234138076379672-775576.json     # 換成你看到的單名
+aos-kernel ack cli-1790243975791616474-1277717.json     # 換成你看到的單名
 ```
 
 帶 `--wait-ms` 等到的回音，指令已經替你簽收了。
@@ -65,7 +65,7 @@ cat > $W/jobs/count.json <<'EOF'
 EOF
 aos-kernel add $W/jobs/count.json --name count --interval-ms 500
 sleep 8
-aos-kernel ls | grep count
+aos-kernel ls --procs | grep count
 cat $W/jobs/count.txt
 ```
 
@@ -75,7 +75,8 @@ cat $W/jobs/count.txt
   count  反覆  done     3      0  -
 ```
 
-那是 `ls` 行程表裡的一行，欄位依序是：行程、種類、狀態、runs（跑了幾次）、fails（連續失敗幾次）、回音。
+那是行程表裡的一行，欄位依序是：行程、種類、狀態、runs（跑了幾次）、fails（連續失敗幾次）、回音。
+`aos-kernel ls` 預設只列出事的行程（`bad`、暫停、重試中），其他只算數量、寫一句「其餘 N 個沒事的沒列」；`--procs` 才每個都列。
 
 `count.txt` 裡三行 `tick`。沒帶 `--interval-ms` 就用 `K/info.json` 的 `interval_ms`（預設 1000）。
 
@@ -90,7 +91,7 @@ sleep 20
 aos-kernel ls | grep boom
 ```
 
-連續失敗 10 次就被「退件」，不再排它，表下另起一行告訴你去哪看：
+連續失敗 10 次就被「退件」，不再排它。`bad` 的不用 `--procs` 也會列出來，表下另起一行告訴你去哪看：
 
 ```text
   boom   反覆  bad     10     10  -
@@ -109,7 +110,7 @@ aos-kernel rm count
 ## 底下在幹嘛
 
 - `aos-kernel add` 只是往 `K/requests/` 放一張單（kernel 的 syscall）。下一格 tick 讀到它，記進帳本 `K/state.json`、排進佇列。（[syscall](../spec/kernel/syscall.md)）
-- 每一格，kernel 從佇列挑輪得到的工作，找一顆**同池**又閒著的 cpu（沒寫 `--pool` 就是 `default`），把單放進那顆 cpu 的 `requests/`；
+- 每一格，kernel 從佇列挑輪得到的工作，找一顆**同池**又閒著的 cpu（沒寫 `--pool` 就是 `default`），把單放進那顆 cpu 的 `requests/`（`K/pools/<池>/cpus/<號>/requests/`）；
   cpu 照 inst 跑一次程式、回音寫進自己的 `responses/`；下一格 kernel 收回音、判定、簽收。（[一格做什麼](../spec/kernel/tick.md)）
 - **判定**（[回音怎麼判](../spec/kernel/echo.md)）：once 的回音原樣轉給當初 `add` 的人（放在 `K/responses/`）；反覆的退出碼 100＝完成，
   0 或 101（「還在等，不算錯」）算成功、失敗計數歸零；其他非 0、逾時、跑不起來都算一次失敗，連續 10 次＝`bad`。`100` 和 `10` 在 `K/info.json` 的 `done_exit`、`bad_after` 改。
@@ -123,7 +124,7 @@ aos-kernel rm count
 | 回音 `"code": 127` | `argv[0]` 找不到。它照 **daemon 開起來時的 PATH** 找，不是你現在這個終端的 |
 | 找不到 `hello.out` | `stdout` 的相對路徑是相對 **inst.json 所在的資料夾**，不是你的目前資料夾 |
 | `add --once` 不帶 `--wait-ms`，`K/responses/` 越堆越多 | 看完用 `aos-kernel ack <單名>` 簽收 |
-| 行程一直 `queued` 不跑 | 那個池沒有 cpu（`--pool` 寫錯），或 cpu 全忙；`aos-kernel ls` 看 cpu 行 |
+| 行程一直 `queued` 不跑 | 那個池沒有 cpu（`--pool` 寫錯，或池是 0 顆），或 cpu 全忙；`aos-kernel ls` 看 `pool` 下面那池的 `idle`，不夠就 `aos-kernel cpu add`（[05](05-many-agents.md)） |
 | `add` 同名被拒 | 同名行程還在（含 `done`／`bad`），先 `rm` |
 
 ## 收工

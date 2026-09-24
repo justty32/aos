@@ -39,16 +39,19 @@ ok   kernel: K＝/home/you/aos-try/K（取自 AOS_KERNEL_HOME）
 ok   info: kernel 設定讀驗通過
 …（跟 01 第 5 步一樣的 kernel 項目）
 ok   agent: agent 設定讀驗通過
-ok   agent/tick.pool: 池 default 存在
-ok   agent/llm.pool: 池 llm 存在
+ok   agent/tick.pool: 池 default 存在（count 2）
+ok   agent/llm.pool: 池 llm 存在（count 1）
+ok   agent/tool_pool: 池 default 存在（count 2）
+ok   llm/llm: 模型代號：default
 ok   agent/llm.model: 模型 default 存在
 ok   agent/tool/date: 可執行 date
+warn access: 沒有 access.json：工具不關牢（碰得到你碰得到的所有檔）；要關：aos-agent access set ws workspace --cwd --target /home/you/aos-try/bob
 ok   probe/default: endpoint 通，模型清單裡有 deepseek-chat（endpoint http://localhost:4000/v1，模型 deepseek-chat）
 設定檢查通過；模型連線也測過
 ```
 
-它查：設定讀不讀得懂、它要的池（`default`、`llm`）kernel 有沒有、模型代號在不在 `llm.json`、工具找不找得到；`--probe` 真的問一次模型端點。
-有 `bad` 就照提示修，最後一行會說「修好再 aos-agent start」。K 從 `AOS_KERNEL_HOME` 找（沒設就用上次 `start` 記在家裡的）。（[check 規範](../spec/aos-agent/cli-check.md)）
+它查：設定讀不讀得懂、它要的三個池（走格 `tick.pool`、問模型 `llm.pool`、跑工具 `tool_pool`）在 kernel 的池表裡有沒有、模型代號在不在 `llm.json`、工具找不找得到；`--probe` 真的問一次模型端點。
+`warn access` 是提醒工具還沒關牢，[04b](04b-access-and-tool-admin.md) 再教；有 `bad` 就照提示修，最後一行會說「修好再 aos-agent start」。K 從 `AOS_KERNEL_HOME` 找（沒設就用上次 `start` 記在家裡的）。（[check 規範](../spec/aos-agent/cli-check.md)）
 
 ## 3. 登記、說一句、等回話
 
@@ -146,7 +149,7 @@ aos-agent stop --target $W/bob
 ## 底下在幹嘛
 
 - **agent 就是一個資料夾**，沒有常駐程式。`start` 替你 `aos-kernel add` 一份叫 `agent-bob` 的反覆工作，
-  內容是「跑一次 `aos-agent tick`」，每秒一次，派到 `default` 池。所以 `aos-kernel ls` 會看到 `proc agent-bob`。（[登記](../spec/aos-agent/register.md)）
+  內容是「跑一次 `aos-agent tick`」，每秒一次，派到 `default` 池。所以 `aos-kernel ls --procs` 的行程表會有一行 `agent-bob`。（[登記](../spec/aos-agent/register.md)）
 - 每走一格只做一小步然後退出，進度記在 `state.json`：**idle** 收輸入 → **think** 問模型 → 模型要用工具就 **act** 跑工具 → 再 think → 回到 idle。
   問模型和跑工具都不是它自己做的：它往 kernel `add --once` 兩種工作——問模型那件派到 `llm` 池、跑 `aos-llm call`；工具派到 `default` 池。
   下一格再去收結果。（[一格做什麼](../spec/aos-agent/tick.md)）
