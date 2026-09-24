@@ -179,11 +179,12 @@ aos-team stop
 
 ## 底下在幹嘛
 
-- `route test` 只跑規則檔裡自帶的例句（`--file F` 換一個規則檔），不能拿一句話來試；想知道一句話會不會命中，看 `routes.json` 的 `pattern` 或直接 `ask`。
 - `init` 照模板替每個成員生一個 agent 家（`$W/myteam/members/<名>/`），人格裡的 `{name}`、`{mail_to}` 換成實際值，工具包照模板裝；每個家都有 `access.json`，工具關在牢裡跑：專案掛成 `/work/ws`（工人可寫，領隊、審查唯讀）、自己的寄件格 `/work/outbox`、任務表 `/work/board`（唯讀）。
 - 模型能做的只有「往自己的寄件格放一個檔」：`team_say` 寄信、`handoff` 派工、`review_result` 回審查、`ask_human` 問你。開單、改單子狀態、投信、交驗收，全是郵差照規則做。郵差預設 5 秒巡一次（`team.json` 的 `post.interval_s`）。
 - agent 沒事時會停車（不佔 cpu），信投進它的 `input/` 就被叫醒。
 - 資料夾怎麼長、誰寫哪個檔：[layout.md](../spec/team/layout.md)。
+
+`route test` 只跑規則檔裡自帶的例句（`--file F` 換一個規則檔），不能拿一句話來試；想知道一句話會不會命中，看 `routes.json` 的 `pattern` 或直接 `ask`。
 
 ## 常見錯誤
 

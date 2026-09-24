@@ -1,4 +1,4 @@
-# proto5/lib — 六十七支 Python 模組
+# proto5/lib — 七十支 Python 模組
 
 ← [proto5 README](../README.md)｜規範：[cpu](../spec/cpu/README.md)、[daemon](../spec/daemon/README.md)、[kernel](../spec/kernel/README.md)、[aos-agent](../spec/aos-agent/README.md)
 
@@ -94,7 +94,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2122 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2177 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -493,10 +493,10 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2122 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2177 條；repo 根目錄
 ```
 
-共 75 個測試檔、2122 條（收尾隊 T5 實跑，約 136 秒；1 條紅：`test_descriptions_are_short`，`tools/task/` 加 `compact_me` 後五支工具描述合計 2737 字元、超過 2700 的門檻，留給隊長對——不是這份索引的事，程式沒改）；涵蓋底層執行、daemon／kernel 按池行為、
+共 78 個測試檔、2177 條（收尾隊 T5 在 main 8d7355f 之上實跑，約 165 秒，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
