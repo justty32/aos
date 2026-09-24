@@ -61,8 +61,8 @@ class FileExistsTests(Base):
         self.assertFalse(ok)
         self.assertIn('missing.txt', why)
 
-    def test_relative_escape_is_error_not_fail(self):
-        with self.assertRaises(verify.CheckError):
+    def test_relative_escape_is_fail_not_broken(self):
+        with self.assertRaises(verify.NotMet):
             verify.check_file_exists(self.project, {'path': '../x'})
 
     def test_absolute_outside_is_error_not_fail(self):
@@ -71,12 +71,12 @@ class FileExistsTests(Base):
         with self.assertRaises(verify.CheckError):
             verify.check_file_exists(self.project, {'path': str(outside)})
 
-    def test_symlink_to_outside_is_error_not_fail(self):
+    def test_symlink_to_outside_is_fail_not_broken(self):
         outside = self.root / 'secret.txt'
         outside.write_text('secret', encoding='utf-8')
         link = self.project / 'link.txt'
         os.symlink(outside, link)
-        with self.assertRaises(verify.CheckError):
+        with self.assertRaises(verify.NotMet):
             verify.check_file_exists(self.project, {'path': 'link.txt'})
 
 
@@ -111,10 +111,10 @@ class TableFilledJsonTests(Base):
         self.assertFalse(ok)
         self.assertIn('a', why)
 
-    def test_unknown_column_is_error(self):
+    def test_unknown_column_is_fail(self):
         data = {'contract': 'wf-table/1', 'columns': ['a', 'b'], 'rows': [{'a': '1', 'b': '2'}]}
         self.write('table.json', json.dumps(data, ensure_ascii=False))
-        with self.assertRaises(verify.CheckError) as cm:
+        with self.assertRaises(verify.NotMet) as cm:
             verify.check_table_filled(self.project, {'path': 'table.json', 'column': 'c'})
         self.assertIn('c', str(cm.exception))
         self.assertIn('a', str(cm.exception))
@@ -163,10 +163,10 @@ class TableFilledMarkdownTests(Base):
         ok, why = verify.check_table_filled(self.project, {'path': 't.md', 'heading': 'B'})
         self.assertFalse(ok)
 
-    def test_table_not_found_is_error(self):
+    def test_table_not_found_is_fail(self):
         text = '# A\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n'
         self.write('t.md', text)
-        with self.assertRaises(verify.CheckError) as cm:
+        with self.assertRaises(verify.NotMet) as cm:
             verify.check_table_filled(self.project, {'path': 't.md', 'heading': 'Z'})
         self.assertIn('Z', str(cm.exception))
 
@@ -183,8 +183,8 @@ class ContainsTests(Base):
         self.assertFalse(ok)
         self.assertIn('沒有', why)
 
-    def test_contains_missing_file_is_error(self):
-        with self.assertRaises(verify.CheckError):
+    def test_contains_missing_file_is_fail(self):
+        with self.assertRaises(verify.NotMet):
             verify.check_contains(self.project, {'path': 'nope.txt', 'text': 'x'})
 
     def test_contains_missing_text_arg_is_error(self):

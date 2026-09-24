@@ -3,7 +3,8 @@
 - 唯一資料來源 team/routines.json（wf-table/1），**只有郵差寫**（申請 kind=routine 的處理函式 on_routine）；
   人用 `aos-team routine add/rm`（寄申請）、模型寄 routine 申請要先過問人（人答「批准」才生效）。
 - 心跳自己的狀態 team/beat.json（只有心跳寫）：每條例行上次處理到哪一次、在途的那一次。
-- 每一次到期有自己的時刻；派出去＝一份 handoff 申請（寄件人 human：例行是人登記或人批准的），郵差開單派給執行者。
+- 每一次到期有自己的時刻；派出去＝一份 handoff 申請，寄件人是心跳自己（`beat`，放在 team/outbox/beat/），郵差開單派給執行者；
+  單子的開單人是 beat，信頭寫「心跳（定時器）」。做完不寄信給人，只有失敗、逾時、檢查器壞才寄（2026-09-24 使用者裁）。
   在途不重派；單子 done 才算「上次執行」；failed／cancelled 照 retries 重派，用完報領隊。
 - 漏跑（心跳停了好幾次）：只補最近一次，寄一封 PROGRESS 告訴領隊與人漏了幾次。
 不叫模型。
@@ -20,7 +21,7 @@ import zlib
 
 import aos_team_ask
 import aos_team_format as fmt
-from aos_team_format import HUMAN, POST, TeamError, Layout
+from aos_team_format import BEAT, HUMAN, TeamError, Layout
 import aos_team_task
 
 ROUTINE_COLUMNS = ('name', 'every', 'daily', 'once', 'tz', 'to', 'workflow', 'goal', 'done_when', 'timeout_minutes',
@@ -274,7 +275,7 @@ class Beat:
         self.clock = clock or (lambda: datetime.datetime.now(datetime.timezone.utc))
         self.out = out if out is not None else print
         self.state_path = self.lay.team / 'beat.json'
-        self.sys_outbox = self.lay.team / 'post' / 'outbox'
+        self.box = self.lay.outbox(BEAT)
 
     def run(self):
         self.lay.team.mkdir(parents=True, exist_ok=True)
@@ -332,7 +333,7 @@ class Beat:
     def request_id(self, row, occ, attempt):
         """派工申請的 id：那一次的時刻＋第幾次＋這條例行（名字＋登記它的申請），重跑算出來一樣；刪掉重加是新的一條。"""
         ident = '%s|%s' % (row['name'], row.get('request'))
-        return '%d-%d-%s' % (int(occ.timestamp()) * 10 ** 9 + attempt, zlib.crc32(ident.encode()) % 10 ** 9, HUMAN)
+        return '%d-%d-%s' % (int(occ.timestamp()) * 10 ** 9 + attempt, zlib.crc32(ident.encode()) % 10 ** 9, BEAT)
 
     def dispatch(self, row, st, occ, attempt):
         """先記在途、再寫申請（不覆蓋）：崩在中間，下一輪看到在途但沒申請檔就補寫同一份。"""
@@ -346,9 +347,9 @@ class Beat:
                                                   attempt, row['to']))
 
     def write_request(self, row, inflight):
-        outbox = self.lay.outbox(HUMAN)
+        outbox = self.box
         outbox.mkdir(parents=True, exist_ok=True)
-        req = {'id': inflight['request'], 'from': HUMAN, 'kind': 'handoff',
+        req = {'id': inflight['request'], 'from': BEAT, 'kind': 'handoff',
                'at': self.now.isoformat(timespec='seconds'), 'assignee': row['to'],
                'workflow': row.get('workflow') or '無',
                'goal': '〔例行 %s @ %s〕%s' % (row['name'], fmt.short_time(inflight['occ'], self.tz), row['goal']),
@@ -362,7 +363,7 @@ class Beat:
         t = aos_team_task.find_by_request(self.lay, rid)
         if t is not None:
             return 'ticket', t
-        box = self.lay.outbox(HUMAN)
+        box = self.box
         if (box / 'rejected' / (rid + '.json')).exists():
             return 'rejected', None
         if (box / (rid + '.json')).exists() or (box / 'done' / (rid + '.json')).exists():
@@ -408,18 +409,20 @@ class Beat:
             st['reports'].append({'tag': tag, 'text': text})
 
     def flush_reports(self, row, st):
-        """寄待寄的報告（給每個領隊與人）：寫進郵差的 team/post/outbox/（from post），郵差投。
-        id 由事件與這條例行算出來、不覆蓋，重寄不會多一封；全部寫好才從待寄拿掉。"""
+        """寄待寄的報告（給每個領隊與人）：心跳自己的信，寫進 team/outbox/beat/（from beat），郵差投。
+        id 由事件、這條例行、收件人算出來（照 outbox 的 <數字>-<數字>-beat 格式）、不覆蓋，重寄不會多一封；
+        全部寫好才從待寄拿掉。"""
         if not st.get('reports'):
             return
-        self.sys_outbox.mkdir(parents=True, exist_ok=True)
-        ident = '%08x' % zlib.crc32(('%s|%s' % (row['name'], row.get('request'))).encode())
+        self.box.mkdir(parents=True, exist_ok=True)
+        ident = '%s|%s' % (row['name'], row.get('request'))
         for r in st['reports']:
             for to in fmt.members_by_template(self.roster, 'lead') + [HUMAN]:
-                lid = 'beat-%s-%s-%s-%s' % (row['name'], ident, r['tag'], to)
-                letter = {'id': lid, 'from': POST, 'to': to, 'status': 'PROGRESS', 'reply_to': None, 'rev': None,
+                lid = '%d-%d-%s' % (zlib.crc32(('%s|%s' % (ident, r['tag'])).encode()),
+                                    zlib.crc32(to.encode()) % 10 ** 9, BEAT)
+                letter = {'id': lid, 'from': BEAT, 'to': to, 'status': 'PROGRESS', 'reply_to': None, 'rev': None,
                           'text': r['text'], 'at': self.now.isoformat(timespec='seconds')}
-                fmt.write_new(self.sys_outbox / (lid + '.json'), letter)
+                fmt.write_new(self.box / (lid + '.json'), letter)
             self.out(r['text'])
         st['reports'] = []
         self.save()

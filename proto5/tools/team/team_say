@@ -61,7 +61,7 @@ def check_args(args, cfg):
     if extra:
         fail('BadArguments', 'unknown argument(s) %s; allowed: %s' % (', '.join(extra), ', '.join(KEYS)))
     to, status = args.get('to'), args.get('status')
-    allowed = cfg['mail_to']
+    allowed = list(cfg['mail_to']) + ([] if 'beat' in cfg['mail_to'] else ['beat'])   # 心跳派的例行單回給 beat
     if not isinstance(to, str) or to not in allowed:
         fail('BadArguments', '"to" must be one of: %s (got %r)' % (', '.join(allowed) or '(nobody)', to))
     if status not in STATUSES:

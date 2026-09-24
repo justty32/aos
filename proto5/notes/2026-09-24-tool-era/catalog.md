@@ -59,7 +59,7 @@ LLM：不叫。依賴：`team.json`。六軸：L5 S5 R5 F5 H5 B4。難度：小�
 
 ### T-post
 
-**郵差＋書記**（一支機械程式，kernel 反覆工作，例 1 秒一次）。給：系統；人看 `aos-team mail`。
+**郵差＋書記**（一支機械程式，kernel 反覆工作，間隔寫在 `team.json` 的 `post.interval_s`，預設 5 秒（2026-09-24 裁））。給：系統；人看 `aos-team mail`。
 
 **投遞一封信（每步都可重跑，審查 M2）**：
 1. 讀 `outbox/<名>/<id>.json`、驗格式與身分；不合＝投一封 `FAILED 退信` 給寄件人、原信搬進 `outbox/<名>/rejected/`。
@@ -140,10 +140,10 @@ LLM：不叫。六軸：L5 S5 R5 F5 H5 B4。難度：小。波：一。
 **心跳**（機械，kernel 反覆工作，例 60 秒）。給：系統；人 `aos-team routine ls/add/rm`。（審查 M8 重寫）
 
 - **唯一資料來源**：`team/routines.json`（`wf-table/1`）。導入後的 `routines.md`／`schedule.md` 改成指向它（workflows 的資料檔規矩本來就允許），`aos-team routine import` 把 md 表抄過來一次。模型要改只能寄申請。
-- **兩種時間**：`every`（間隔，例 `6h`）與 `daily`（每天幾點，例 `09:00`），另有一次性的 `at`（絕對時刻）。每列有 `tz`（沒寫＝團隊的時區）。
+- **兩種時間**：`every`（間隔，例 `6h`）與 `daily`（每天幾點，例 `09:00`），另有一次性的 `once`（絕對時刻；申請本身已有寄出時間那一欄，所以不跟它同名，2026-09-24 裁）。每列有 `tz`（沒寫＝團隊的時區）。
 - **每一次到期有 id**：`<項目>@<該次應跑時刻>`。派出去就記「在途」；**在途時不再派**；回 DONE 才改「上次執行」／刪一次性列；FAILED 或超過 `timeout` 算這次失敗，照 `retries` 重派，用完就報領隊。
 - **漏跑**：開機時發現錯過好幾次，**只補最近一次**，並寄一封 PROGRESS 告訴領隊漏了幾次（不自己判斷要不要全補）。
-- **授權**：只有人用 `aos-team routine add` 加的列（`added_by: human`）會自動跑；模型提出的列要先過 T-ask，人答應才生效（workflows：使用者親自登記的才算授權）。
+- **授權**：只有人用 `aos-team routine add` 加的列（`added_by: human`）會自動跑；模型提出的列要先過 T-ask，人答應才生效（workflows：使用者親自登記的才算授權）。派工用心跳自己的身分 `beat`（開單人是 beat、信頭寫「心跳（定時器）」）；例行做完不寄給人，只有失敗、逾時、檢查器壞才寄（2026-09-24 裁）。
 
 LLM：不叫。依賴：T-post、`aos-kernel add`。六軸：L5 S4 R4 F5 H5 B5。難度：中。波：一（可延後，第一個驗收例子用不到）。
 

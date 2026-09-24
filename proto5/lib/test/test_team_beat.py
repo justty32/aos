@@ -36,7 +36,7 @@ class BeatCase(TeamCase):
     def requests(self):
         """心跳寄給郵差的派工申請（outbox/human 與 done/ 裡 kind=handoff 的）。"""
         out = []
-        box = self.lay.outbox('human')
+        box = self.lay.outbox('beat')
         for p in list(box.glob('*.json')) + list((box / 'done').glob('*.json')):
             obj = json.loads(p.read_text())
             if obj.get('kind') == 'handoff':

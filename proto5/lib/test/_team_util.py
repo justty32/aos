@@ -152,7 +152,9 @@ class TeamCase(unittest.TestCase):
     def job_result(self, jid, passed, results=None, run=1, **over):
         """假裝驗收員跑完第 run 次執行：寫 jobs/<jid>/result-<run>.json（身分照 jid：v-<單號>-r<rev>-a<attempt>）。"""
         d = self.lay.team / 'post' / 'jobs' / jid
-        head, rev, attempt = jid[2:].rsplit('-r', 1)[0], *map(int, jid.rsplit('-r', 1)[1].split('-a'))
+        import re
+        m = re.match(r'v-(t-[0-9]+(?:\.r[0-9]+)?)-r([0-9]+)-a([0-9]+)(?:-x[0-9a-f]+)?\Z', jid)
+        head, rev, attempt = m.group(1), int(m.group(2)), int(m.group(3))
         res = {'task': head, 'rev': rev, 'attempt': attempt, 'pass': passed,
                'results': results if results is not None else
                [{'i': 0, 'kind': 'file_exists', 'result': 'pass' if passed else 'fail', 'pass': passed,

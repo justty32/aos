@@ -30,7 +30,7 @@ import time
 
 import aos_team_ask
 import aos_team_format as fmt
-from aos_team_format import HUMAN, POST, TeamError, Layout
+from aos_team_format import BEAT, HUMAN, POST, TeamError, Layout
 import aos_team_requests
 import aos_team_task
 
@@ -233,7 +233,7 @@ class Post:
                           'at': self.now_iso()}
                 return [], self.send(letter, src=e['id'].rsplit('.e', 1)[0], dispatch=e.get('dispatch')), None
             if kind == 'verify':
-                return [], self.submit_verify(e['task'], e['rev'], e['attempt'], e['id']), None
+                return [], self.submit_verify(e['task'], e['rev'], e['attempt'], e['id'], e.get('again')), None
             if kind == 'open_review':
                 return aos_team_task.open_review(self.lay, self.roster, e['task'], e['id'], e['rev'], e['attempt']), None, None
             if kind == 'step':
@@ -249,6 +249,8 @@ class Post:
     def deliver(self, letter):
         """投一封信；回投到的路徑。已經投過（還在 input、已收進 done/、停在 intake）就不再投。"""
         to = letter['to']
+        if to == BEAT:
+            return None                   # 心跳不收信（它看任務單）：只留投遞紀錄，aos-team mail 看得到
         if to == HUMAN:
             self.lay.human_inbox.mkdir(parents=True, exist_ok=True)
             path = self.lay.human_inbox / (letter['id'] + '.json')
@@ -333,7 +335,7 @@ class Post:
                 kind, obj = 'letter', self.read_system_letter(path)
             else:
                 kind, obj = fmt.read_outbox_file(path, self.roster)
-            if kind == 'letter' and obj['to'] != HUMAN and not self.lay.member(obj['to']).is_dir():
+            if kind == 'letter' and obj['to'] not in (HUMAN, BEAT) and not self.lay.member(obj['to']).is_dir():
                 raise TeamError('NoHome', '收件人 %s 的家還沒建（aos-team init）' % obj['to'])
             if kind == 'request':
                 try:
@@ -399,9 +401,12 @@ class Post:
     def save_job(self, job):
         fmt.write_json(self.job_dir(job['id']) / 'job.json', job)
 
-    def submit_verify(self, tid, rev, attempt, src):
-        """動作 verify：建一份驗收工作並提交第 1 次執行（不在這裡同步跑）。同一個 rev／attempt 只建一次。"""
+    def submit_verify(self, tid, rev, attempt, src, again=None):
+        """動作 verify：建一份驗收工作並提交第 1 次執行（不在這裡同步跑）。同一個 rev／attempt 只建一次；
+        again＝人修好檢查器後的 reverify 申請 id：同一個 rev／attempt 另建一份（id 多一段），不算新的一次交件。"""
         jid = 'v-%s-r%d-a%d' % (tid, rev, attempt)
+        if again:
+            jid += '-x' + hashlib.sha1(again.encode()).hexdigest()[:8]
         d = self.job_dir(jid)
         if d.exists() or (self.jobs_done / jid).exists():
             return jid
@@ -526,7 +531,9 @@ class Post:
                 elif got is not None:
                     res, run['state'] = got, 'ended'
                     break
-            if res is not None:
+            if res is not None and res.get('broken'):
+                self.checker_broken(job, [r for r in res['results'] if r.get('result') == 'error'])
+            elif res is not None:
                 ev = {'type': 'verified', 'src': 'verify:%s' % job['id'], 'pass': res['pass'],
                       'results': res['results'], 'rev': job['rev'], 'attempt': job['attempt']}
                 effects = aos_team_task.step(self.lay, job['task'], ev)
@@ -548,13 +555,8 @@ class Post:
                     self.warn('驗收工作 %s 沒結果（%s），再交一次' % (job['id'], job['runs'][-1].get('why')))
                     self.launch(job)
                     return
-                job.update(status='broken')
-                add_effects(job, [{'do': 'letter', 'to': HUMAN, 'status': 'BLOCKED', 'reply_to': job['task'],
-                                   'rev': job['rev'],
-                                   'text': '%s 的驗收跑了 %d 次都沒結果（最後一次：%s；看 %s/err-*.log）。單子停在 verifying，'
-                                           '要重來用 aos-team task reassign 或 cancel。'
-                                           % (job['task'], len(job['runs']), job['runs'][-1].get('why'), d)}])
-                self.save_job(job)
+                self.checker_broken(job, [{'i': '-', 'why': '驗收跑了 %d 次都沒結果（最後一次：%s；看 %s/err-*.log）'
+                                                  % (len(job['runs']), job['runs'][-1].get('why'), d)}])
         self.advance(job, save=self.save_job)
         if not all(e['done'] for e in job['effects']):
             return
@@ -563,6 +565,17 @@ class Post:
         job['complete'] = True
         self.save_job(job)
         os.replace(d, self.jobs_done / job['id'])
+
+    def checker_broken(self, job, errors):
+        """檢查器壞了（不是隊員沒過）：不送 verified、不扣次數；寄 BLOCKED 給人，單子停在 verifying 等人修。"""
+        lines = '\n'.join('  %s. %s' % (r.get('i', '?'), r.get('why')) for r in errors)
+        job.update(status='broken')
+        add_effects(job, [{'do': 'letter', 'to': HUMAN, 'status': 'BLOCKED', 'reply_to': job['task'], 'rev': job['rev'],
+                           'text': '%s 的驗收：檢查器壞了（不是隊員交的東西沒過，不扣次數）。單子停在 verifying 等你修：\n%s\n'
+                                   '修好後：aos-team verify %s --again（重交同一次驗收）；不修就 aos-team task cancel／reassign。'
+                                   % (job['task'], lines, job['task'])}])
+        self.save_job(job)
+        self.say('驗收 %s rev%d 第 %d 次：檢查器壞了，寄給人' % (job['task'], job['rev'], job['attempt']))
 
     def run_gone(self, run):
         """還在跑的那次執行結束了沒（沒寫結果）：回原因或 None。逾時的另開行程會被整組砍掉。"""
@@ -745,7 +758,28 @@ def check_result(res, job):
         return 'results 每條要有整數 i 與 true／false 的 pass'
     if res['pass'] != all(r['pass'] for r in items):
         return 'pass 跟逐條結果對不上'
+    if 'broken' in res and (not isinstance(res['broken'], bool)
+                            or res['broken'] != any(r.get('result') == 'error' for r in items)):
+        return 'broken 要是 true／false，而且等於「有一條檢查器壞」'
     return None
+
+
+def on_reverify(lay, roster, req):
+    """申請 kind=reverify（只有人）：檢查器修好了，替停在 verifying 的單重交同一次驗收（不扣次數）。
+    冪等：同一份申請回同一份動作；郵差照申請 id 另建一份工作（同一份申請只建一次）。"""
+    import aos_team_format as f
+    if req['from'] != HUMAN:
+        raise TeamError('NotAllowed', '只有人能要求重交驗收')
+    extra = sorted(set(req) - set(f.REQUEST_COMMON) - {'task'})
+    if extra:
+        f.bad('request', '不認得的欄位 %s（reverify 只收 task）' % '、'.join(extra))
+    tid = req.get('task')
+    if not isinstance(tid, str) or not f.TASK_ID.match(tid):
+        f.bad('request.task', '%r 不是任務單號' % (tid,))
+    t = aos_team_task.load(lay, tid)
+    if t['status'] != 'verifying':
+        raise TeamError('NotVerifying', '%s 現在是 %s，不是停在 verifying' % (tid, t['status']))
+    return [{'do': 'verify', 'task': tid, 'rev': t['rev'], 'attempt': t['attempt'], 'again': req['id']}]
 
 
 def archive(path, sub):
@@ -1007,8 +1041,11 @@ def unregister(team_dir, what, env=None):
     return 0
 
 
-def start(team_dir, env=None, interval_ms=1000):
-    """aos-team start 的掛勾（spec/team/cli.md）：郵差每 interval_ms 走一輪。"""
+def start(team_dir, env=None, interval_ms=None):
+    """aos-team start 的掛勾（spec/team/cli.md）：郵差每 team.json 的 post.interval_s 秒（預設 5）走一輪。
+    改了間隔要 aos-team stop 再 start 才生效（kernel 登記的是當時的間隔）。"""
+    if interval_ms is None:
+        interval_ms = fmt.load_roster(team_dir)['post']['interval_s'] * 1000
     return register(team_dir, 'post', ['post', '--quiet'], interval_ms, env)
 
 

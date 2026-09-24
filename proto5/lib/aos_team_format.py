@@ -21,8 +21,10 @@ TEMPLATE_TYPE = 'aos_team_template'
 ROUTES_TYPE = 'aos_team_routes'
 
 NAME = re.compile(r'[a-z][a-z0-9_-]{0,31}\Z')
-HUMAN, POST = 'human', 'post'
-RESERVED = (HUMAN, POST)
+HUMAN, POST, BEAT = 'human', 'post', 'beat'
+RESERVED = (HUMAN, POST, BEAT)
+BEAT_MAY = ('handoff', 'cancel')          # 心跳（定時器）能寄的申請：派例行、撤掉自己派的
+SENDER_LABEL = {HUMAN: '人', BEAT: '心跳（定時器）'}
 STATUSES = ('REQUEST', 'DONE', 'BLOCKED', 'NEEDS-USER', 'FAILED', 'PROGRESS')
 # outbox 裡的檔：<epoch ns>-<pid>-<寄件人>.json；系統（郵差）自己生的信可在後面加 .後綴（例 .e0）
 OUTBOX_ID = re.compile(r'[0-9]{1,20}-[0-9]{1,10}-([a-z][a-z0-9_-]{0,31})\Z')
@@ -32,6 +34,7 @@ QUESTION_ID = re.compile(r'q-[0-9]{4,}\Z')
 TEXT_LIMIT = 20000
 DONE_KINDS = ('file_exists', 'table_filled', 'check', 'judge')
 LIMIT_DEFAULTS = {'stale_minutes': 10, 'max_members': 6}
+POST_DEFAULTS = {'interval_s': 5}       # 郵差多久巡一次信箱（秒；2026-09-24 使用者裁：預設 5）
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / 'templates'
 
 
@@ -87,7 +90,7 @@ class Layout:
     def skeleton(self, names):
         """init 要建的資料夾（不含成員的家）。"""
         dirs = [self.members, self.post_sent, self.tasks, self.wait_user, self.human_inbox]
-        for n in list(names) + [HUMAN]:
+        for n in list(names) + [HUMAN, BEAT]:
             dirs += [self.outbox(n), self.outbox(n) / 'done', self.outbox(n) / 'rejected']
         return dirs
 
@@ -243,7 +246,7 @@ def _unknown(obj, allowed, where):
 # ------------------------------------------------------------------ 名冊 ----
 
 MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools')
-ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits')
+ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post')
 
 
 def validate_roster(obj, where='team.json'):
@@ -253,7 +256,11 @@ def validate_roster(obj, where='team.json'):
     _metainfo(obj, ROSTER_TYPE, where)
     out = {'project': _str(obj.get('project'), where + '.project'),
            'tz': _opt_str(obj.get('tz'), where + '.tz'),
-           'members': {}, 'limits': dict(LIMIT_DEFAULTS)}
+           'members': {}, 'limits': dict(LIMIT_DEFAULTS), 'post': dict(POST_DEFAULTS)}
+    post = _obj(obj.get('post', {}), where + '.post')
+    _unknown(post, tuple(POST_DEFAULTS), where + '.post')
+    if 'interval_s' in post:
+        out['post']['interval_s'] = _int(post['interval_s'], where + '.post.interval_s', 1, 3600)
     members = _obj(obj.get('members'), where + '.members')
     if not members:
         bad(where + '.members', '至少要有一個成員')
@@ -272,8 +279,8 @@ def validate_roster(obj, where='team.json'):
         if not isinstance(mail_to, list) or not all(isinstance(x, str) for x in mail_to):
             bad(w + '.mail_to', '要是名字的陣列')
         for x in mail_to:
-            if x != HUMAN and x not in members:
-                bad(w + '.mail_to', '%s 不在名冊裡（也不是 human）' % x)
+            if x not in (HUMAN, BEAT) and x not in members:
+                bad(w + '.mail_to', '%s 不在名冊裡（也不是 human、beat）' % x)
             if x == name:
                 bad(w + '.mail_to', '不能寄給自己')
         mounts = _mounts(m.get('mounts', {}), w + '.mounts')
@@ -461,7 +468,7 @@ def read_outbox_file(path, roster):
     path = Path(path)
     sender = path.parent.name
     where = str(path)
-    if sender != HUMAN and sender not in roster['members']:
+    if sender not in (HUMAN, BEAT) and sender not in roster['members']:
         bad(where, '寄件人 %s 不在名冊裡' % sender, 'NotSender')
     stem = path.name[:-5] if path.name.endswith('.json') else path.name
     m = OUTBOX_ID.match(stem)
@@ -478,7 +485,12 @@ def read_outbox_file(path, roster):
         return 'request', obj
     validate_letter(obj, where)
     to = obj['to']
-    if sender == HUMAN:
+    if to == BEAT and sender in roster['members']:
+        pass                              # 誰都能回信給心跳（它派的例行單回報 DONE 用；郵差只記下、不投）
+    elif sender == BEAT:
+        if to != HUMAN and to not in roster['members']:
+            bad(where + '.to', '%s 不在名冊裡' % to, 'BadRecipient')
+    elif sender == HUMAN:
         if to not in roster['members']:
             bad(where + '.to', '%s 不在名冊裡' % to, 'BadRecipient')
     elif to not in roster['members'][sender]['mail_to']:
@@ -499,7 +511,7 @@ def render_header(letter, tz=None):
     ref = ''
     if reply:
         ref = ' · %s%s' % (reply, ' rev%d' % letter['rev'] if letter.get('rev') else '')
-    sender = '人' if letter.get('from') == HUMAN else letter.get('from')
+    sender = SENDER_LABEL.get(letter.get('from'), letter.get('from'))
     return '【來信 %s → %s · %s%s · %s】' % (sender, letter['to'], letter['status'], ref, when)
 
 
@@ -619,6 +631,8 @@ def may_send(roster, sender, kind):
     """寄件人能不能寄這種申請：human 什麼都能；成員看自己模板的 may。"""
     if sender == HUMAN:
         return True
+    if sender == BEAT:
+        return kind in BEAT_MAY
     m = roster['members'].get(sender)
     return m is not None and kind in template_may(m['template'])
 
@@ -738,6 +752,9 @@ def validate_routes(obj, where='routes.json'):
         elif do == 'handoff':
             h = _obj(r.get('handoff'), w + '.handoff')
             _unknown(h, REQUEST_KINDS['handoff'][0], w + '.handoff')
+            who = h.get('assignee')
+            if isinstance(who, str) and '{' not in who:    # 寫死的負責人：保留名（human、post、beat）不能收單
+                check_name(who, w + '.handoff.assignee')
         else:
             bad(w + '.do', '要是 tool 或 handoff')
         tests = _obj(r.get('tests'), w + '.tests')

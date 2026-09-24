@@ -17,6 +17,13 @@
       "tests": {"hit": ["有什麼等我回答的", "哪些在等我決定"], "miss": ["等我回來再說"]}
     },
     {
+      "name": "routines",
+      "pattern": "(列|看)(一下)?(例行|心跳|定時)(工作|排程)?",
+      "do": "tool",
+      "run": ["routine", "ls"],
+      "tests": {"hit": ["看一下例行", "列心跳排程", "看定時工作"], "miss": ["加一條例行", "心跳停了嗎"]}
+    },
+    {
       "name": "import",
       "pattern": "把 workflows 導入 (?P<project>\\S+)，照 (?P<facts>\\S+)",
       "do": "handoff",
