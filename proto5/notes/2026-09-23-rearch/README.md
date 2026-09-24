@@ -17,5 +17,6 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | lmstudio-run.md＋lmstudio/ | 2026-09-24 用本機 LM Studio（gemma-4-e4b）真跑新架構一條龍：daemon→kernel（k／0／llm）→once 問模型 6 秒回音、反覆行程 done、停機 0.3 秒、重跑通；`lmstudio/run.sh` 可重跑；撞到 8 條（daemon 沒停機 CLI、kernel 沒 ack 子命令、init 不能帶 cpu 表、kernel.log 空格也寫…） |
 | impl-review-task.md／impl-review-report.md | 2026-09-24 astra（唯讀）審實作是否照三份規範：A 偏差 5 條（daemon 缺檔回 Usage、控制 pipe 沒驗信封、ack 名加 digest／boot 交接兩顆 kcpu 要回寫規範）、B 12 條 impl-findings 逐條裁（7 條規範補寫、1 條改程式、4 條照現況）、C 測試沒蓋到的崩潰窗口 8 條（cpu 家初始化半成品最急）、D 測試 flaky 7 條 |
 | agent-round2-changes.md | 2026-09-24 agent 線三份第 2 輪（Opus）：12 條必改全落（`state.batch` 當批紀錄、`waits` 只當外部門、四種取消分清、`aw-` 前綴、內外兩層逾時…）＋使用者三件裁決（同步工具全拿掉、`aos-agent start`＝進現有池、llm.json 放 llm cpu 家由 `AOS_LLM_CONFIG` 指）；調度者裁決 21 條、要使用者拍 3 條；C-1～C-10 時序自走 10 通 |
+| review-agent2-task.md／review-agent2-report.md | 2026-09-24 astra 審 agent 線第 2 輪：12 條 7 解 5 部分、還不能定稿；新洞 8 條（擋：同名輸入檔再投遞會被吞；要修：空 envs 的 clear 被省略、llm cpu 整份解 info 撞 $env、done_exit 與 tick 退出碼相撞）；下層引用核對通過；實作者還得猜 8 處；定稿前必改 5 條 |
 
 舊規範已於 2026-09-24 換掉（副本在 proto5.1/spec/）。
