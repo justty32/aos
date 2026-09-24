@@ -35,15 +35,12 @@
 12. **proto2 工作室：dev 的對話史**——haiku 一輪 10k 漲到 20k，一個任務 21 輪 325k。要不要每個任務開新對話史（做完就清、只留任務說明＋檔案清單）？→ 同上
 13. **preset 的 `max_per_member`**——100k 對 claude-cli 太低（4d 手動抬到 500k）。改成 300k？還是照引擎不同給不同值？
 
+14. **proto5 重架構收線後的六題**（都不卡實作，agent 重寫照現況做）：(a) 跨代 stop——已送進 cpu 家的舊 stop 在 boot 後仍有效、新 kernel cpu 可能一開機就停，要不要讓 boot 去刪 cpu 家裡舊 chain 的 stop 檔（違反「不由外人刪 cpu 家的檔」）？(b) `kernel.log` 要不要輪替／限大小？(c) 硬砍 kernel cpu 時另一組的 tick 子程式可能還活著，要不要補 kill-tree？(d) agent 連敗暫停要不要改成明確 `fail` 狀態（[backlog](../proto5/backlog/agent-fail-state.md)）？(e) 將來 `pause`：門關了還收不收結果？(f) agent 要不要在 info 記自己屬於哪個 K（現在只在 tick.json 與 batch.kernel）？→ [impl-fix-round1](../proto5/notes/2026-09-23-rearch/impl-fix-round1.md)、[agent-round2-changes](../proto5/notes/2026-09-23-rearch/agent-round2-changes.md)
+
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
-8. **真模型的 T5 實測還沒跑通**（**2026-08-30 補**：新原型已用 LM Studio 跑通，這條大概可以收掉，等你確認）：當時三條路全斷——codex 被沙盒擋、Claude OAuth 過期、
-   WSL 沒裝 pi。→ [t5-agent-loop](workflows/experiments/t5-agent-loop.md)
-   > **這條可能已經不必等你了，但要你確認兩件事**：(a) SESSION-LOG 記的建置環境是
-   > WSL ＋ `/mnt/c`，而現在這台是 Manjaro、repo 在 `~/repo`，那些筆記可能已過期；
-   > (b) 你手上有本機 LM Studio（`localhost:1234`）——**如果它可以當那顆「真模型」，
-   > 我自己就跑得動，不用等帳號。**
+（目前沒有。）
 
 ### C. 你已明說先不決定的（不催，只記「什麼時候會被迫要答」）
 
