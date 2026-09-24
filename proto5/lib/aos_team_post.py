@@ -336,6 +336,7 @@ class Post:
                 kind, obj = 'letter', self.read_system_letter(path)
             else:
                 kind, obj = fmt.read_outbox_file(path, self.roster)
+                recheck(self.roster, sender, kind, obj)
             if kind == 'letter' and obj['to'] not in (HUMAN, BEAT) and not self.lay.member(obj['to']).is_dir():
                 raise TeamError('NoHome', '收件人 %s 的家還沒建（aos-team init）' % obj['to'])
             if kind == 'request':
@@ -824,6 +825,68 @@ def on_reverify(lay, roster, req):
             if busy:
                 raise TeamError('Busy', '%s 這一次的驗收（%s）還在跑，等它回來再說' % (tid, d.name))
     return [{'do': 'verify', 'task': tid, 'rev': t['rev'], 'attempt': t['attempt'], 'again': req['id']}]
+
+
+# ---------------------------------------------------------- 再驗一次 ----
+# 第二波 B 隊：工具在牢裡已經擋過一層（寫不到別人的 outbox、讀不到別人的家），郵差讀申請時照樣再驗：
+# 身分（信在誰的 outbox＝誰寄的，read_outbox_file）、角色（模板的 may，aos_team_requests.handle）、
+# 以及這裡的路徑與操作——條目路徑不准跳出專案、不准指到團隊資料夾或別人的家、cmd_ok 要在人寫的白名單裡、
+# 成員寫的字不准假冒信頭（收件人看到的第一行【來信 …】只有郵差能寫）。
+
+HEADER_LIKE = re.compile(r'^\s*【\s*(來信|人\s*→)', re.M)
+
+
+def _bad_path(where, value, why):
+    raise TeamError('BadPath', '%s 的路徑 %r %s；條目路徑一律寫成相對專案資料夾、不含 ..' % (where, value, why))
+
+
+def check_rel_path(where, value):
+    """條目裡的檔案路徑：相對專案、不含 .. 段、不以 ~ 開頭、不含 NUL。"""
+    if not isinstance(value, str) or not value or '\0' in value:
+        _bad_path(where, value, '不是非空字串')
+    if value.startswith(('/', '~')):
+        _bad_path(where, value, '是絕對路徑或 ~ 開頭（在專案外，可能指到別人的家）')
+    if '..' in value.replace('\\', '/').split('/'):
+        _bad_path(where, value, '有 .. 段（可能跳出專案）')
+
+
+def check_workflow(where, value):
+    """工作流入口：可以是檔名、相對路徑、牢裡的 /work/… 或「無」；不准 .. 段、不准牢外的絕對路徑與 ~。"""
+    if value.startswith('~') or (value.startswith('/') and not value.startswith('/work/')):
+        _bad_path(where, value, '指到牢外（成員只看得到 /work/…）')
+    if '..' in value.replace('\\', '/').split('/'):
+        _bad_path(where, value, '有 .. 段（可能跳出專案）')
+
+
+def check_text(where, value):
+    if isinstance(value, str) and HEADER_LIKE.search(value):
+        raise TeamError('ForgedHeader', '%s 裡有像信頭的一行（【來信 …】或【人 → …】）；信頭只有郵差能寫，'
+                                        '引用別人的信請改寫成「lead 說：…」' % where)
+
+
+def recheck(roster, sender, kind, obj):
+    """成員／人寫進 outbox 的信與申請，格式驗過之後再驗一次路徑與操作（身分與 may 另有地方驗）。"""
+    if kind == 'letter':
+        if sender != HUMAN:
+            check_text('信的 text', obj.get('text'))
+        return
+    if obj.get('kind') != 'handoff':
+        return
+    if sender != HUMAN:
+        for key in ('goal', 'facts', 'workflow'):
+            check_text('handoff 的 ' + key, obj.get(key))
+    check_workflow('handoff 的 workflow', obj['workflow'])
+    for i, it in enumerate(obj['done_when']):
+        w = 'done_when[%d]' % i
+        if it['kind'] in ('file_exists', 'table_filled'):
+            check_rel_path(w, it['path'])
+        elif it['kind'] == 'check' and isinstance(it.get('args'), dict) and 'path' in it['args']:
+            check_rel_path(w + '.args', it['args']['path'])
+        elif it['kind'] == 'cmd_ok' and fmt.cmd_allowed(roster, it) is None:
+            allowed = '；'.join('%s（≤%d 秒）' % (json.dumps(e['run'], ensure_ascii=False), e['timeout_s'])
+                               for e in roster.get('cmd_ok', [])) or '（team.json 沒有 cmd_ok 白名單：這隊不跑指令）'
+            raise TeamError('NotAllowed', '%s 的 cmd_ok %s 不在 team.json 的白名單（或 timeout_s 超過）；可用的：%s'
+                            % (w, json.dumps(it.get('run'), ensure_ascii=False), allowed))
 
 
 def archive(path, sub):

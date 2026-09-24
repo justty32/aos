@@ -177,6 +177,31 @@ aos-team stop
 
 印三個成員 `stopped agent-…` 和郵差、心跳各一行。家、信、單子都還在資料夾裡；再 `aos-team start` 就接著用。
 
+## 9. 牢：每個成員碰得到什麼
+
+```sh
+aos-agent access ls --target $W/myteam/members/worker-1
+```
+
+印一張表（路徑是你機器上的）：
+
+```text
+名字    權限  存在  路徑
+ws      rw    在    …/proj
+outbox  rw    在    …/myteam/team/outbox/worker-1
+board   ro    在    …/myteam/team/tasks
+notes   rw    在    …/myteam/team/notes/worker-1
+mem     ro    在    …/myteam/members/worker-1/prompts
+cwd: /work/ws
+net: off
+bwrap: ok
+```
+
+工人的工具只看得到這五個資料夾（牢裡叫 `/work/ws`、`/work/outbox`…）：專案可寫、自己的寄件格和筆記可寫、任務表和自己的記憶唯讀。別人的家、`team.json`、別人的寄件格、主機的 `/tmp`、網路都碰不到。領隊、審查的 `ws` 是 `ro`；審查沒有 `notes`、`mem`。
+就算模型硬寫出一封冒名的信（`from` 寫別人、信文裡假造一行【來信 …】），郵差也會退件：`aos-team mail` 會多一行退件，原檔在 `team/outbox/<名>/rejected/`。
+
+要讓驗收員跑專案自己的測試：在 `team.json` 頂層加白名單（人寫；領隊只能從裡面挑），例如 `"cmd_ok": [{"run": ["python3", "-m", "unittest"], "timeout_s": 300}]`。驗收員在牢裡跑、專案唯讀、退 0 才算過。細節見 [wall.md](../spec/team/wall.md)。
+
 ## 底下在幹嘛
 
 - `init` 照模板替每個成員生一個 agent 家（`$W/myteam/members/<名>/`），人格裡的 `{name}`、`{mail_to}` 換成實際值，工具包照模板裝；每個家都有 `access.json`，工具關在牢裡跑：專案掛成 `/work/ws`（工人可寫，領隊、審查唯讀）、自己的寄件格 `/work/outbox`、任務表 `/work/board`（唯讀）。

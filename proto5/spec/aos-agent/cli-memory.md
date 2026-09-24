@@ -68,4 +68,5 @@ tools  8 個，5267 字，約 1326 token：read, write, edit, bash, grep, find, 
 
 - `notes ls`：一行一筆 `key  [tags]  時間  前 60 字`；`--json` 印整張 `rows`。`notes show KEY`：全文，沒有＝`NotFound`。
 - 筆記檔在哪（工具與人同一條規則）：工具包的 `tools/notes/config.json` 的 `file`（相對＝agent 家；寫 `/work/<名>/…` 就照 `access.json` 換成主機路徑）；沒寫＝家裡有 `access.json`（工具關牢）時是牢裡的 `/work/notes/notes.json`（要先 `aos-agent access set notes <資料夾> --rw`，沒掛＝工具回 `ConfigInvalid` 並說怎麼掛），沒有 `access.json` 時是家裡的 `notes/notes.json`。
+- 同包的 `recall`（找記憶與 `archive/` 的原文）、`context`（記憶幾則、約幾 token）只讀記憶資料夾：`AOS_MEM_DIR`＞`config.json` 的 `mem`＞關牢時 `/work/mem`（`aos-team init` 給 `notes: true` 的成員內建唯讀掛自己家的 `prompts/`；自己生的家要 `aos-agent access set mem <家>/prompts --ro`）＞不關牢時家裡的 `prompts/`。token 粗估跟 `aos-agent context` 同一套算法。
 - 工具另外認環境變數 `AOS_NOTES_FILE`（最優先）；人這邊看不到工具的環境，所以團隊模板請用 `config.json` 的 `file`，不要用環境變數。

@@ -182,6 +182,7 @@ class AskTests(Base):
         self.assertIn('route test', cm.exception.msg)
         self.assertEqual(self.human_outbox(), [])
 
+    @unittest.skipUnless(shutil.which('bwrap'), '這台沒有 bwrap')
     def test_pack_tool(self):
         packs = self.root / 'packs'
         (packs / 'fake').mkdir(parents=True)
@@ -189,7 +190,8 @@ class AskTests(Base):
             'type': 'function', 'function': {'name': 'echo', 'parameters': {'type': 'object'}},
             '_meta': {'argv': ['tools/fake/run']}}]))
         run = packs / 'fake' / 'run'
-        run.write_text('#!/bin/sh\necho "root=$AOS_TOOL_ROOT cwd=$(pwd)"\ncat\necho\nexit 3\n')
+        run.write_text('#!/bin/sh\necho "root=$AOS_TOOL_ROOT cwd=$(pwd) key=${SECRET_KEY:-none}"\ncat\necho\n'
+                       'ls /work\ntouch /work/ws/x 2>/dev/null && echo wrote || echo ro\nexit 3\n')
         run.chmod(0o755)
         old = route.PACKAGES
         route.PACKAGES = packs
@@ -198,12 +200,22 @@ class AskTests(Base):
         del r['run']
         self.set_routes([r])
         obj = json.loads(self.lay.routes.read_text())
+        os.environ['SECRET_KEY'] = 'leak'
+        self.addCleanup(os.environ.pop, 'SECRET_KEY', None)
         code, out, _ = self.call(route.cmd_ask, 'lint')
         self.assertEqual(code, 3)
-        self.assertIn('root=%s' % (self.root / 'p').resolve(), out)
-        self.assertIn('cwd=%s' % self.team, out)
+        # 第二波 B：關在牢裡跑——起點是 /work/ws（＝專案）、看不到團隊資料夾、預設唯讀、環境清掉
+        self.assertIn('root=/work/ws cwd=/work/ws key=none', out)
         self.assertIn('{"strict": true}', out)
+        self.assertEqual(out.split('\n')[2:4], ['ws', 'ro'])
+        self.assertFalse((self.root / 'p' / 'x').exists())
         self.assertEqual(self.inputs(), [])
+        obj['routes'][0]['project'] = 'rw'                     # 人明寫 rw 才可寫
+        self.lay.routes.write_text(json.dumps(obj))
+        code, out, _ = self.call(route.cmd_ask, 'lint')
+        self.assertIn('wrote', out)
+        self.assertTrue((self.root / 'p' / 'x').exists())
+        del obj['routes'][0]['project']
         # 找不到那支
         obj['routes'][0]['tool'] = 'fake/nope'
         self.lay.routes.write_text(json.dumps(obj))

@@ -32,7 +32,9 @@ ANY_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._~-]{0,127}\Z')
 TASK_ID = re.compile(r't-[0-9]{4,}(\.r[0-9]+)?\Z')
 QUESTION_ID = re.compile(r'q-[0-9]{4,}\Z')
 TEXT_LIMIT = 20000
-DONE_KINDS = ('file_exists', 'table_filled', 'check', 'judge')
+DONE_KINDS = ('file_exists', 'table_filled', 'check', 'cmd_ok', 'judge')
+CMD_TIMEOUT_MAX = 3600                   # cmd_ok 的 timeout_s 上限（秒；第二波 B 隊）
+CMD_TIMEOUT_DEFAULT = 300
 LIMIT_DEFAULTS = {'stale_minutes': 10, 'max_members': 6}
 POST_DEFAULTS = {'interval_s': 5}       # 郵差多久巡一次信箱（秒；2026-09-24 使用者裁：預設 5）
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / 'templates'
@@ -248,7 +250,7 @@ def _unknown(obj, allowed, where):
 # ------------------------------------------------------------------ 名冊 ----
 
 MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools')
-ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post')
+ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok')
 
 
 def validate_roster(obj, where='team.json'):
@@ -258,7 +260,8 @@ def validate_roster(obj, where='team.json'):
     _metainfo(obj, ROSTER_TYPE, where)
     out = {'project': _str(obj.get('project'), where + '.project'),
            'tz': _opt_str(obj.get('tz'), where + '.tz'),
-           'members': {}, 'limits': dict(LIMIT_DEFAULTS), 'post': dict(POST_DEFAULTS)}
+           'members': {}, 'limits': dict(LIMIT_DEFAULTS), 'post': dict(POST_DEFAULTS),
+           'cmd_ok': _cmd_whitelist(obj.get('cmd_ok', []), where + '.cmd_ok')}
     post = _obj(obj.get('post', {}), where + '.post')
     _unknown(post, tuple(POST_DEFAULTS), where + '.post')
     if 'interval_s' in post:
@@ -339,6 +342,39 @@ def validate_letter(obj, where='letter'):
     return obj
 
 
+def validate_cmd(run, where):
+    """cmd_ok 的指令：非空字串陣列；第一格是指令名（不含 /，在牢裡照 PATH 找），每格不含 NUL。"""
+    if not isinstance(run, list) or not run or not all(isinstance(x, str) and x and '\0' not in x for x in run):
+        bad(where, '要是非空字串陣列，例 ["python3", "-m", "unittest"]')
+    if '/' in run[0] or run[0].startswith('-'):
+        bad(where, '第一格要是指令名（不含 /、不以 - 開頭），例 python3、make；在牢裡照 PATH 找')
+    return list(run)
+
+
+def _cmd_whitelist(value, where):
+    """team.json 的 cmd_ok：人寫的白名單 [{"run": [...], "timeout_s": 秒}]；單子上的 cmd_ok 要對得上其中一條。"""
+    if not isinstance(value, list):
+        bad(where, '要是陣列 [{"run": [...], "timeout_s": 秒}]')
+    out = []
+    for i, e in enumerate(value):
+        w = '%s[%d]' % (where, i)
+        _obj(e, w)
+        _unknown(e, ('run', 'timeout_s'), w)
+        run = validate_cmd(e.get('run'), w + '.run')
+        t = _int(e.get('timeout_s', CMD_TIMEOUT_DEFAULT), w + '.timeout_s', 1, CMD_TIMEOUT_MAX)
+        out.append({'run': run, 'timeout_s': t})
+    return out
+
+
+def cmd_allowed(roster, item):
+    """單子上的 cmd_ok 條目對得上名冊白名單的哪一條：回那一條；對不上＝None。
+    run 要整串一樣；單子上的 timeout_s（沒寫＝白名單那條的）不能超過白名單的。"""
+    for e in roster.get('cmd_ok', []):
+        if e['run'] == item.get('run') and item.get('timeout_s', e['timeout_s']) <= e['timeout_s']:
+            return e
+    return None
+
+
 def validate_done_when(items, where='done_when'):
     if not isinstance(items, list) or not items:
         bad(where, '要是非空陣列')
@@ -354,6 +390,11 @@ def validate_done_when(items, where='done_when'):
             _str(it.get('name'), w + '.name')
             if 'args' in it:
                 _obj(it['args'], w + '.args')
+        elif kind == 'cmd_ok':
+            _unknown(it, ('kind', 'run', 'timeout_s'), w)
+            validate_cmd(it.get('run'), w + '.run')
+            if 'timeout_s' in it:
+                _int(it['timeout_s'], w + '.timeout_s', 1, CMD_TIMEOUT_MAX)
         else:
             _str(it.get('text'), w + '.text', limit=2000)
     return items
@@ -644,14 +685,14 @@ def may_send(roster, sender, kind):
 TEMPLATE_KEYS = ('_metainfo', 'description', 'system', 'team', 'project', 'notes', 'may', 'llm', 'tick', 'tools',
                  'mounts')
 TOOL_ENTRY_KEYS = ('pack', 'only', 'team', 'optional')
-RESERVED_MOUNTS = ('ws', 'outbox', 'board', 'notes')   # notes：模板 notes: true 時 init 內建掛自己那格
+RESERVED_MOUNTS = ('ws', 'outbox', 'board', 'notes', 'mem')   # notes、mem：模板 notes: true 時 init 內建掛
 
 
 def _mounts(mounts, where):
     _obj(mounts, where)
     for mk, mv in mounts.items():
         if not re.match(r'[a-z0-9_-]+\Z', mk) or mk in RESERVED_MOUNTS:
-            bad(where, '名字 %r 不行（[a-z0-9_-]+，且 ws／outbox／board／notes 是保留的）' % mk)
+            bad(where, '名字 %r 不行（[a-z0-9_-]+，且 ws／outbox／board／notes／mem 是保留的）' % mk)
         if not (isinstance(mv, str) and mv) and not (
                 isinstance(mv, dict) and set(mv) == {'$opt', '$val'} and mv['$opt'] == 'ro'
                 and isinstance(mv['$val'], str) and mv['$val']):
@@ -715,7 +756,7 @@ def load_template(name):
     return folder, validate_template(read_json(path), str(path))
 
 
-ROUTE_KEYS = ('name', 'pattern', 'do', 'run', 'tool', 'args', 'handoff', 'tests')
+ROUTE_KEYS = ('name', 'pattern', 'do', 'run', 'tool', 'args', 'project', 'handoff', 'tests')
 DEFAULT_NEGATIONS = ('不要', '別', '取消', '不用', '勿', '不准')
 ROUTE_RUN_FORBIDDEN = ('ask', 'init', 'rm', 'start', 'stop')   # 門房的 run 不能跑這幾個子命令
 
@@ -759,6 +800,8 @@ def validate_routes(obj, where='routes.json'):
                 bad(w + '.tool', '要寫成 "包/工具"')
             if 'args' in r:
                 _obj(r['args'], w + '.args')
+            if 'project' in r and ('tool' not in r or r['project'] not in ('ro', 'rw')):
+                bad(w + '.project', '只給 tool 規則用：ro（預設，專案唯讀掛進牢）或 rw')
         elif do == 'handoff':
             h = _obj(r.get('handoff'), w + '.handoff')
             _unknown(h, REQUEST_KINDS['handoff'][0], w + '.handoff')

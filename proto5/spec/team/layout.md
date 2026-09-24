@@ -52,7 +52,8 @@
 | `/work/outbox` | `team/outbox/<自己>/` | 全部 | 可寫（寄信、寄申請都寫這裡） |
 | `/work/board` | `team/tasks/` | 全部 | 唯讀（`board` 工具看任務表） |
 | `/work/notes` | `team/notes/<自己>/` | 模板 `notes: true`（領隊、工人） | 可寫（`note` 工具寫 `notes.json`） |
+| `/work/mem` | 自己家的 `prompts/`（記憶 `history.json`、壓縮封存 `archive/`） | 模板 `notes: true`（領隊、工人） | 唯讀（`recall` 找原文、`context` 量記憶） |
 | `/work/<其他>` | 名冊或模板多掛的（例：第 3 隊的 `wf` 快照） | 看設定 | 看設定 |
 
-`ws`、`outbox`、`board`、`notes` 四個名字是保留的。成員在團隊資料夾裡可寫的只有自己的 outbox 與 notes 兩格。工具程式在 `/opt/tool`（工具包自己的資料夾，唯讀），工具包的 `config.json` 在那裡。
+`ws`、`outbox`、`board`、`notes`、`mem` 五個名字是保留的。`mem` 掛的是資料夾不是檔：tick 用暫存檔＋改名換掉 `history.json`，掛檔會一直看到舊的那份。成員在團隊資料夾裡可寫的只有自己的 outbox 與 notes 兩格。工具程式在 `/opt/tool`（工具包自己的資料夾，唯讀），工具包的 `config.json` 在那裡。
 另一隊 L2 正在改「檔案工具的根＝整個 `/work`」：改完後 `read`、`ls` 也看得到 `/work/board`，不影響這裡的約定。

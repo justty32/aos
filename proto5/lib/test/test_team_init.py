@@ -56,7 +56,7 @@ class InitTests(unittest.TestCase):
             self.assertEqual(read_json(home / 'state.json'), {'input': 'input/'})
             self.assertTrue((home / 'input').is_dir())
             access = read_json(home / 'access.json')
-            self.assertEqual(set(access['mounts']), {'ws', 'outbox', 'board'} | ({'notes'} if tpl != 'reviewer' else set()))
+            self.assertEqual(set(access['mounts']), {'ws', 'outbox', 'board'} | ({'notes', 'mem'} if tpl != 'reviewer' else set()))
             self.assertEqual(access['cwd'], 'ws')
             self.assertFalse(access['net'])
             table = aos_agent_access.load(str(home))              # 解得開、沒蓋到信任資料
@@ -490,10 +490,10 @@ class TeamIntegrationTests(KernelCase):
         for body in self.requests:
             who = next(k for k in SCRIPTS if k in body['messages'][0]['content'])
             tools[who] = {t['function']['name'] for t in body['tools']}
-        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'team_say', 'note',
+        self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'team_say', 'note', 'recall', 'context',
                                              'read', 'grep', 'find', 'ls'})
         self.assertEqual(tools['審查員 reviewer'], {'board', 'review_result', 'read', 'grep', 'find', 'ls'})
-        self.assertTrue({'write', 'bash', 'board', 'ask_human', 'compact_me', 'team_say', 'note'} <= tools['工人 worker-1'])
+        self.assertTrue({'write', 'bash', 'board', 'ask_human', 'compact_me', 'team_say', 'note', 'recall', 'context'} <= tools['工人 worker-1'])
         self.assertNotIn('handoff', tools['工人 worker-1'])
         self.team('stop')
         wait_for(lambda: all(x['health'] == 'unregistered' for x in json.loads(self.team('ls', '--json').stdout)),

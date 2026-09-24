@@ -13,8 +13,8 @@
           "facts": {"type": "string", "description": "Facts file or short facts"},
           "done_when": {
             "type": "array",
-            "description": "Checks after DONE: file_exists{path}, table_filled{path}, check{name,args} (contains/not_contains{path,text}, wf_residue, wf_lint_strict), judge{text} (reviewer)",
-            "items": {"type": "object", "properties": {"kind": {"type": "string", "enum": ["file_exists", "table_filled", "check", "judge"]}}, "required": ["kind"]}
+            "description": "After DONE: file_exists{path}, table_filled{path}, check{name,args} (contains/not_contains{path,text}, wf_residue, wf_lint_strict), cmd_ok{run}, judge{text} (reviewer)",
+            "items": {"type": "object", "properties": {"kind": {"type": "string", "enum": ["file_exists", "table_filled", "check", "cmd_ok", "judge"]}}, "required": ["kind"]}
           },
           "max_attempts": {"type": "integer", "minimum": 1, "maximum": 10},
           "deadline_minutes": {"type": "integer", "minimum": 1}

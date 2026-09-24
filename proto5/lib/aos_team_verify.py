@@ -5,7 +5,10 @@
 - 檢查器壞（error）＝沒辦法判：檢查器載不到、跑不完、本身故障、done_when 寫錯（不認得的名字、缺參數、絕對路徑）
   → 整份結果 broken，不扣隊員次數，郵差寄信給人，單子停在 verifying 等人修好再 `aos-team verify ID --again`。
 
-- 只跑這裡登記的檢查器（CHECKS）；不執行專案裡的任何檔、沒有「跑任意指令」這種條目。
+- 只跑這裡登記的檢查器（CHECKS）；不執行專案裡的任何檔，唯一例外是 cmd_ok：
+  跑名冊 team.json 的 cmd_ok 白名單裡的一條指令，**關在牢裡**（專案唯讀掛 /work/ws、不上網、清環境），退出碼 0＝過。
+- 會執行程式的檢查器（wf_lint_strict 跑快照的 bash＋git、cmd_ok）一律經 aos-jail 關牢；純讀檔的
+  （file_exists、table_filled、contains、wf_residue）在牢外讀，靠 realpath 圍在專案裡（第二波 B 隊，見 verify.md〈牢〉）。
 - 路徑一律相對專案資料夾（team.json 的 project），解開符號連結後在專案外＝檢查失敗。
 - `judge` 條目不歸這裡（審查員判），結果裡不列。
 - 郵差把它當 kernel 一次性工作提交（aos-team verify ID --rev R --attempt A --out 檔），結果寫檔、郵差下一輪收；
@@ -21,6 +24,8 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
 
 from aos_team_format import TeamError, Layout, load_roster, now_iso, project_dir, write_json
@@ -29,6 +34,8 @@ import aos_team_task
 PASS, FAIL, ERROR = 'pass', 'fail', 'error'
 WORDS = {PASS: '過', FAIL: '不過', ERROR: '檢查器壞'}
 PROTO = Path(__file__).resolve().parent.parent
+JAIL_LINT = PROTO / 'tools' / 'wf' / '_jail_lint'
+OUTPUT_TAIL = 600                     # cmd_ok 的輸出最後留幾個字元給修正信
 
 CHECKS = {
     'contains': 'aos_team_verify:check_contains',
@@ -252,18 +259,62 @@ def check_wf_residue(project, args):
     return res['total'] == 0, text
 
 
+def jail_run(project, prog_argv, stdin_text, timeout, setenv=()):
+    """把一支程式關進牢跑：專案**唯讀**掛 /work/ws（起點）、不上網、清環境（aos-jail）。回 CompletedProcess；
+    逾時丟 subprocess.TimeoutExpired。沒 bwrap＝CheckError（檢查器壞），不退回不關牢。"""
+    import aos_agent_access
+    if shutil.which('bwrap') is None:
+        raise CheckError('這條要關在牢裡跑，這台找不到 bwrap（bubblewrap）')
+    argv = [aos_agent_access.JAIL, '--mount-ro', 'ws=%s' % os.path.realpath(project), '--chdir', 'ws', '--net', 'off']
+    for kv in setenv:
+        argv += ['--setenv', kv]
+    return subprocess.run(argv + ['--', *prog_argv], input=stdin_text, capture_output=True, text=True,
+                          timeout=timeout, errors='replace')
+
+
 def check_wf_lint_strict(project, args):
-    """跑 wf 工具包快照裡的 wf-lint.sh --strict（不是專案裡那份）：pass／fail；檢查器本身壞了＝檢查失敗。"""
+    """跑 wf 工具包快照裡的 wf-lint.sh --strict（不是專案裡那份），**關在牢裡**（它會跑 bash 與 git）：
+    pass／fail；檢查器本身壞了＝檢查失敗。"""
     wf = _wf()
     try:
-        res = wf.lint(str(project), strict=True)
-    except wf.WfError as e:
-        raise CheckError('wf-lint 跑不完：%s' % e.message)
+        r = jail_run(project, [str(JAIL_LINT)], json.dumps({'strict': True}), wf.LINT_TIMEOUT + 30)
+    except subprocess.TimeoutExpired:
+        raise CheckError('wf-lint 跑不完（牢裡超過 %d 秒）' % (wf.LINT_TIMEOUT + 30))
+    try:
+        res = json.loads(r.stdout.strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        raise CheckError('wf-lint 在牢裡沒回結果（退 %d）：%s' % (r.returncode, (r.stderr or r.stdout)[-300:]))
+    if 'error' in res:
+        raise CheckError('wf-lint 跑不完：%s' % res.get('message'))
     total = res['total_line'] or '（沒印 TOTAL）'
     if res['status'] == 'error':
         raise CheckError('wf-lint 本身故障（退 %d）：%s' % (res['exit'], total))
     first = '；前幾條：%s' % '／'.join(res['problems'][:3]) if res['problems'] else ''
     return res['status'] == 'pass', ('%s%s' % (total, first))[:600]
+
+
+def check_cmd_ok(project, item, roster):
+    """cmd_ok：跑專案自己的指令（例：測試），關在牢裡；退 0＝過、其他＝不過（附輸出最後一段）、逾時＝不過。
+    白名單在名冊 team.json 的 cmd_ok（人寫）；單子上寫的 run 與 timeout_s 要對得上其中一條（開單時郵差驗過，
+    這裡再驗一次：人事後拿掉了就不跑＝檢查器壞）。"""
+    import aos_team_format
+    entry = aos_team_format.cmd_allowed(roster, item)
+    if entry is None:
+        raise CheckError('指令 %s 不在 team.json 的 cmd_ok 白名單（或 timeout_s 超過白名單的）；人加進白名單再 --again'
+                         % json.dumps(item.get('run'), ensure_ascii=False))
+    timeout = item.get('timeout_s', entry['timeout_s'])
+    shown = ' '.join(item['run'])
+    try:
+        r = jail_run(project, item['run'], '', timeout, setenv=('PYTHONDONTWRITEBYTECODE=1',))
+    except subprocess.TimeoutExpired:
+        return False, '「%s」跑超過 %d 秒，砍掉了' % (shown, timeout)
+    out = ((r.stdout or '') + (r.stderr or '')).strip()
+    tail = out[-OUTPUT_TAIL:]
+    if r.returncode == 0:
+        return True, '「%s」退 0' % shown
+    if not r.stdout and (r.stderr or '').startswith(('bwrap: execvp', 'bwrap: ', 'aos-jail:')):
+        raise CheckError('「%s」在牢裡跑不起來（退 %d）：%s' % (shown, r.returncode, tail[-300:]))
+    return False, '「%s」退 %d：%s' % (shown, r.returncode, tail)
 
 
 def checker(name):
@@ -277,8 +328,10 @@ def checker(name):
         raise CheckError('檢查器 %s 載不到（%s：%s）' % (name, spec, e))
 
 
-def run_item(project, item):
+def run_item(project, item, roster=None):
     kind = item['kind']
+    if kind == 'cmd_ok':
+        return check_cmd_ok(project, item, roster or {})
     if kind == 'file_exists':
         return check_file_exists(project, item)
     if kind == 'table_filled':
@@ -288,14 +341,14 @@ def run_item(project, item):
     raise CheckError('不認得的條目種類 %r' % kind)
 
 
-def run_items(project, done_when):
+def run_items(project, done_when, roster=None):
     """每條機械條目一筆 {i, kind, result, pass, why}；judge 不列。"""
     out = []
     for i, item in enumerate(done_when):
         if item.get('kind') == aos_team_task.JUDGE:
             continue
         try:
-            ok, why = run_item(project, item)
+            ok, why = run_item(project, item, roster)
             result = PASS if ok else FAIL
         except NotMet as e:
             result, why = FAIL, str(e)
@@ -320,7 +373,7 @@ def verify(team_dir, tid, rev=None, attempt=None, roster=None):
     project = project_dir(team_dir, roster)
     if not project.is_dir():
         raise TeamError('NotFound', '專案資料夾 %s 不在（team.json 的 project）' % project)
-    results = run_items(project, t['done_when'])
+    results = run_items(project, t['done_when'], roster)
     return {'task': t['id'], 'rev': t['rev'] if rev is None else rev,
             'attempt': t['attempt'] if attempt is None else attempt,
             'pass': all(r['pass'] for r in results), 'broken': any(r['result'] == ERROR for r in results),

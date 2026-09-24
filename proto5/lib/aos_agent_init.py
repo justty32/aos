@@ -78,6 +78,11 @@ def _access(base, tpl, folder, member):
         if tpl.get('notes'):
             _check_notes_dir(member)
             mounts['notes'] = _rel(_notes_dir(member), base)
+            mounts['mem'] = dict(MEM_MOUNT)
+    for where, extra in (('模板', tpl.get('mounts', {})), ('名冊', (member or {}).get('mounts', {}))):
+        if 'mem' in extra:
+            # 保留名的主檢查在 aos_team_format.RESERVED_MOUNTS；這裡再擋一次，免得蓋掉內建的唯讀 mem
+            raise AgentError('FormatInvalid', '%s的 mounts 不能用 mem（保留名：init 內建掛自己的 prompts/，唯讀）' % where)
     for name, value in tpl.get('mounts', {}).items():
         mounts[name] = _mount_value(value, folder, base, True)
     for name, value in (member or {}).get('mounts', {}).items():
@@ -89,12 +94,12 @@ def _access(base, tpl, folder, member):
 
 def _guard_team(base, mounts, member):
     """多掛的可寫資料夾不准碰團隊的控制資料：team.json、team/（別人的 outbox、任務表、問題）、members/（所有人的家）、
-    proto5 自己（模板、工具包、程式）。自己的 outbox、notes 是內建掛點（保留名，名冊與模板用不了），不在這裡查。只查可寫的；唯讀照 access.md 的規則。"""
+    proto5 自己（模板、工具包、程式）。自己的 outbox、notes、mem 是內建掛點（保留名，名冊與模板用不了），不在這裡查。只查可寫的；唯讀照 access.md 的規則。"""
     team = os.path.realpath(member['team_dir'])
     guarded = [os.path.join(team, 'team.json'), os.path.join(team, 'team'), os.path.join(team, 'members'),
                os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))]
     for name, value in mounts.items():
-        if name in ('ws', 'outbox', 'board', 'notes') or isinstance(value, dict):
+        if name in ('ws', 'outbox', 'board', 'notes', 'mem') or isinstance(value, dict):
             continue
         real = os.path.realpath(os.path.join(base, os.path.expanduser(value)))
         for g in guarded:
@@ -102,6 +107,11 @@ def _guard_team(base, mounts, member):
             if real == g or real.startswith(g.rstrip(os.sep) + os.sep) or g.startswith(real.rstrip(os.sep) + os.sep):
                 raise AgentError('AccessUnsafe', '多掛的 %s（%s）可寫，但碰到團隊控制資料 %s；改成唯讀 '
                                  '{"$opt": "ro", "$val": …} 或換一個資料夾' % (name, real, g))
+
+
+# 模板 notes: true 的成員多掛自己家的 prompts/（唯讀）＝牢裡 /work/mem：recall 找 archive/、context 量 history.json。
+# 掛資料夾不掛檔：tick 用暫存檔＋rename 換 history.json，掛檔會一直看到舊的那份。唯讀可以跟信任資料重疊（contract §3）。
+MEM_MOUNT = {'$opt': 'ro', '$val': 'prompts'}
 
 
 def _notes_dir(member):
@@ -125,8 +135,8 @@ def _check_notes_dir(member):
 
 
 def _ensure_notes(base, tpl, member, lines):
-    """模板 notes: true：建 team/notes/<名>/；已生的舊家 access.json 沒有 notes 掛載就補這一格（只補這格，
-    其他掛載不動；notes 已被人改指別處也不動）。不補的話重跑 init 裝上的 note 工具在牢裡找不到 /work/notes。"""
+    """模板 notes: true：建 team/notes/<名>/；已生的舊家 access.json 沒有 notes／mem 掛載就補那一格（只補缺的，
+    其他掛載不動；已被人改指別處也不動）。不補的話重跑 init 裝上的 note／recall／context 在牢裡找不到 /work/notes、/work/mem。"""
     if member is None or not tpl.get('notes'):
         return
     _check_notes_dir(member)
@@ -141,10 +151,18 @@ def _ensure_notes(base, tpl, member, lines):
     except aos_home.HomeError:
         return                                            # 壞掉的交給最後的 aos_agent_access.load 報
     mounts = doc.get('mounts') if isinstance(doc, dict) else None
-    if isinstance(mounts, dict) and 'notes' not in mounts:
+    if not isinstance(mounts, dict):
+        return
+    added = []
+    if 'notes' not in mounts:
         mounts['notes'] = _rel(_notes_dir(member), base)
+        added.append('access.json 補掛 notes（→ team/notes/%s/）' % member['name'])
+    if 'mem' not in mounts:
+        mounts['mem'] = dict(MEM_MOUNT)
+        added.append('access.json 補掛 mem（→ prompts/，唯讀）')
+    if added:
         aos_agent_access.write_access(path, doc)
-        lines.append('access.json 補掛 notes（→ team/notes/%s/）' % member['name'])
+        lines.extend(added)
 
 
 def _system_text(folder, tpl, name, member):
@@ -219,7 +237,7 @@ def init_from_template(agent_dir, template, *, name=None, member=None, force=Fal
     "model", "mounts"（相對團隊資料夾）, "tools"（多裝的包）}。
     家已在：有 .aos-template.json 且 complete=false＝上次生到一半，補完；complete=true 且是團隊成員＝只更新
     工具包的團隊設定與補裝新加的包（不動人格、記憶、access.json；唯一例外：模板 notes: true 而 access.json
-    還沒有 notes 掛載＝補那一格）；其他＝AlreadyExists。
+    還沒有 notes／mem 掛載＝補那一格）；其他＝AlreadyExists。
     """
     from aos_team_format import TeamError, load_template
     try:

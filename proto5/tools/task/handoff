@@ -5,7 +5,7 @@ import sys
 from _team import arg, fail, only_keys, run, send
 
 KEYS = ('assignee', 'workflow', 'goal', 'facts', 'done_when', 'max_attempts', 'deadline_minutes')
-KINDS = {'file_exists': 'path', 'table_filled': 'path', 'check': 'name', 'judge': 'text'}
+KINDS = {'file_exists': 'path', 'table_filled': 'path', 'check': 'name', 'cmd_ok': 'run', 'judge': 'text'}
 
 
 def main(args, cfg):
@@ -25,6 +25,11 @@ def main(args, cfg):
         if not isinstance(it, dict) or it.get('kind') not in KINDS:
             fail('BadArguments', 'done_when[%d].kind must be one of %s' % (i, ', '.join(KINDS)))
         key = KINDS[it['kind']]
+        if key == 'run':            # cmd_ok：指令陣列；在不在 team.json 的白名單由郵差驗（不在＝退件、列出可用的）
+            if not isinstance(it.get('run'), list) or not it['run'] or \
+                    not all(isinstance(x, str) and x for x in it['run']):
+                fail('BadArguments', 'done_when[%d] (cmd_ok) needs "run": a non-empty array of strings' % i)
+            continue
         if not isinstance(it.get(key), str) or not it[key].strip():
             fail('BadArguments', 'done_when[%d] (%s) needs a non-empty "%s"' % (i, it['kind'], key))
     body['done_when'] = done

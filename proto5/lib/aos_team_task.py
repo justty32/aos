@@ -63,6 +63,9 @@ def describe_item(it):
         return '表格填滿：%s%s' % (it['path'], ' %s' % extra if extra else '')
     if kind == 'check':
         return '檢查器 %s%s' % (it['name'], ' %s' % it['args'] if it.get('args') else '')
+    if kind == 'cmd_ok':
+        return '指令退 0（驗收員在牢裡跑，專案唯讀）：%s%s' % (' '.join(it['run']),
+                                                     '（%d 秒內）' % it['timeout_s'] if 'timeout_s' in it else '')
     return '（審查員判）%s' % it['text']
 
 

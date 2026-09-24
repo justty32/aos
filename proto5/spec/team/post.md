@@ -29,6 +29,7 @@
 6. 投給成員的信：之後每輪看 `input/mail-<id>.json` 還在不在，不在了＝收件人收走了，記 `picked_up_at`。
    動作都勾了、也收走了＝紀錄 `complete: true`、拿掉標記。
 
+讀驗之後再驗一次路徑、操作與假信頭（`BadPath`、`NotAllowed`、`ForgedHeader`，[wall.md §3](wall.md)）。
 申請一樣：讀驗 → `aos_team_requests.handle`（權限＋處理函式）→ 紀錄（`kind: request`）→ 搬 → 做動作。處理函式丟 `TeamError`＝退件（同上）。
 
 **郵差自己生的信**（後續動作、退信、停滯通知）：id＝`<紀錄 id>.e<第幾個動作>`，重跑算出來一樣；投法同上、也有自己的紀錄，所以不會重投。
