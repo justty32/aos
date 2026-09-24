@@ -47,6 +47,7 @@
 | [2026-09-24-tutorials.md](2026-09-24-tutorials.md) | 同輪 B 隊：README 的上手教程拆成 [tutorials/](../tutorials/README.md) 五篇＋附錄（`llm.json`／`AOS_LLM_CONFIG` 在 01 一次設好），README 瘦身；六篇＋五分鐘照抄實跑全過；九條文件／行為不符 |
 | [2026-09-24-tools-base.md](2026-09-24-tools-base.md) | base 工具包（仿 pi 的 read／write／edit／bash／grep／find／ls）＋`aos-agent tools add`；deepseek 實跑 write→bash→edit→bash；astra 必修 7 全修（[任務書](2026-09-24-tools-base-review-task.md)、[審查](2026-09-24-tools-base-review-astra.md)） |
 | [2026-09-24-listen-tweak.md](2026-09-24-listen-tweak.md) | `aos-agent listen` 微調：`--last [N]`（不給看法＝用法錯）、每輪標頭帶收話時間、`--show-calls`／`--show-calls-full`；真跑輸出、astra 必修 7 條全修（[任務書](2026-09-24-listen-tweak-review-task.md)／[報告](2026-09-24-listen-tweak-review-astra.md)）、README 該改的句子 |
+| [2026-09-24-agent-access/](2026-09-24-agent-access/README.md) | **提案**（沒改程式與規範）：agent 工具能碰哪些資料夾、workspace 別名、共用工具改名、環境變數——指示詞寫映射（`access.json`）＋bwrap 當牆；含小實驗、astra 審查、6 題待拍 |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 
