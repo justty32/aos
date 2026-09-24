@@ -1,8 +1,8 @@
-# agent 資料夾規範（第 2 版草稿（第 3 輪））
+# agent 資料夾規範（第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；程式未跟）
 
 ← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-agent.md](aos-agent.md)（走一格、登記）、[aos-llm-call.md](aos-llm-call.md)（問模型）｜排程：[kernel.md](kernel.md)
 
-> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) E／D／B／C 改成第 3 輪。
+> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) E／D／B／C 改成第 3 輪；照 [第 3 輪審查](../notes/2026-09-23-rearch/review-agent3-report.md) D 節補 3 條（第 4 輪）後定稿。
 > **程式還沒照這份改**：現行 `aos_agent_info.py`／`aos_agent.py` 仍是舊架構。
 > 調度者裁決在下一節，已拍板的前提在 §7。
 
@@ -172,7 +172,8 @@ agent-bob/
 指到的每個檔：字串→一則 user 訊息；一則訊息物件→原樣；訊息陣列→原樣一串（都照 §3.2 驗）。檔不存在或空陣列＝沒輸入。
 收法：先把檔 rename 到唯一封存名 `<原名>.<消費 id>.done`、**再從封存名讀**（aos-agent.md §8）。所以原路徑一空出來，寫輸入的人就可以再投一份同名檔，
 不會被上一次的恢復吞掉。仍要遵守的一條：**不要蓋掉還沒被收的檔**（原路徑還在就是還沒收）——蓋掉的那份本來就讀不到。
-封存檔 agent 不清，人自己清。
+封存檔 agent 不清，人自己清——但**還被 `state.json` 的 `intake`／`consuming` 引用的封存檔不准清、不准搬**（它是「這次已經搬過」的憑據，清了恢復會把原路徑上的新檔當成舊的搬走）；
+等那筆引用解除（`intake` 回 null、`consuming` 清空）之後才能清。
 
 ### 4.2 `waits`
 
@@ -218,7 +219,9 @@ agent-bob/
 - `intake`：`{"id": 消費 id, "base_len": 整數, "files": [{"src": 原路徑, "dst": 封存名}…]}`，都是絕對路徑。idle 收輸入時先記這筆、再搬檔、
   再從 `dst` 讀、再寫記憶；崩了下次照這筆做完（aos-agent.md §8）。
 - `consuming`：`[{"src": 原路徑, "dst": 封存名}…]`。門的 `consume` 條目到了，先在同一次寫裡把它從 `waits` 劃掉、把這些對記到這裡，再搬（aos-agent.md §3）。
-- 搬的規則（兩處共用）：`dst` 已在＝搬過了，**不碰 `src`**（那可能是新投的另一份）；`dst` 不在、`src` 在＝rename；兩個都不在＝那份檔被人拿走了，略過。
+- 搬的規則（兩處共用）：`dst` 已在＝搬過了，**不碰 `src`**（那可能是新投的另一份）；`dst` 不在、`src` 在＝rename；兩個都不在＝略過。
+  這條規則成立的前提：**被引用中的 `dst` 沒人動**（§4.1）。要放棄某一對（例如壞輸入），得先 `aos-agent stop`、等行程消失，**在 `state.json` 裡把那一對從 `intake.files`／`consuming` 拿掉**，
+  之後才能動那個 `dst`；只刪 `dst` 不改 state，恢復會回頭去搬 `src`（aos-agent.md §8）。
 - `sweep`：`[{"kernel": K, "name": 工作名}…]`。批結清時把這批的工作名放進來；確定那件工作在 K 裡結束了才刪它的 `work/` 檔（aos-agent.md §10）。
 
 ## 5. 錯誤代號
