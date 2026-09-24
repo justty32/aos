@@ -20,7 +20,7 @@
 
 - **人工修復與 kernel 停止契約相容。** 新規要求等行程消失，不把收到 rm 回音當成已停妥；符合 [aos-agent.md:286](/home/lorkhan/repo/simple_tools/aos/proto5/spec/aos-agent.md:286) 與 [kernel.md:264](/home/lorkhan/repo/simple_tools/aos/proto5/spec/kernel.md:264) 的在跑工作收尾、丟棄回音語意。也沒有授權人工刪 cpu／kernel 回音，未衝撞 cpu 的 ack 契約。
 - **局部解析與 kernel 整份解析不衝突。** 前者是 start 的相容性預檢，後者是 kernel 自己載入設定；兩格預設及判定仍符合 [kernel.md:107](/home/lorkhan/repo/simple_tools/aos/proto5/spec/kernel.md:107)、[kernel.md:277](/home/lorkhan/repo/simple_tools/aos/proto5/spec/kernel.md:277)。
-- **六格 loader 補記與三份契約一致。** [aos-llm-call.md:90](/home/lorkhan/repo/simple_tools/aos/proto5/spec/aos-llm-call.md:90) 保留原文件及位置，沒有擴大載入範圍。
+- **六格 loader 補記與三份契約一致。** [aos-llm-call.md:90](/home/lorkhan/repo/simple_tools/aos/proto5/spec/aos-llm.md:90) 保留原文件及位置，沒有擴大載入範圍。
 - **局部失敗文字可一致解讀。** [aos-agent.md:156](/home/lorkhan/repo/simple_tools/aos/proto5/spec/aos-agent.md:156) 的「不動任何東西」指該回音讀驗失敗後不繼續處理；§10 清理時 K 帳本讀不到仍依特例跳過。新版 §12 不要求回滾先前寫入，也不取消這些局部規則。
 
 **C. 可以：在明訂的單一驅動者與封存憑據保護前提下，三份整組可作為「照它實作」的定稿。**

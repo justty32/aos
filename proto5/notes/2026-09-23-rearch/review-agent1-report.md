@@ -44,7 +44,7 @@
 
 > 工具 inst 的 base 是 agent 家；cwd 及其他欄位依 inst-posix §3.1 解析。agent 補入的 stdin／stdout 使用工作區的絕對路徑；argv 的一般參數不擅自當成路徑改寫。
 
-另一個缺口是 [think 的 timeout 來源](../../spec/aos-agent.md:72)：agent 要讀 llm.json 的 timeout，但 [llm.json 會整份展開](../../spec/aos-llm-call.md:30)，API key 可能只存在 llm 工作 cpu。若共用完整 loader，agent 送件前就可能因缺金鑰失敗。須定義 agent 可取得 timeout 的來源／解析方式，不能假設兩個池環境相同。
+另一個缺口是 [think 的 timeout 來源](../../spec/aos-agent.md:72)：agent 要讀 llm.json 的 timeout，但 [llm.json 會整份展開](../../spec/aos-llm.md:30)，API key 可能只存在 llm 工作 cpu。若共用完整 loader，agent 送件前就可能因缺金鑰失敗。須定義 agent 可取得 timeout 的來源／解析方式，不能假設兩個池環境相同。
 
 **X-5｜「孤兒回音到 boot 才清」沒有下層依據。〔要修〕**
 
@@ -205,13 +205,13 @@ pool 的「派去 llm 那顆」改成「派往 pool 標籤相符的工作 cpu」
 
 **R-4｜llm.json 與 message 驗證還不足以直接實作。**
 
-[llm 設定](../../spec/aos-llm-call.md:25) 有 `_metainfo` 範例，卻沒寫是否必填、如何驗；`api_key` 沒完整型別；正整數也應明說 bool 不算。`ConfigInvalid` 並非舊 llm-cpu 設定錯誤的原名，舊文用的是 `EngineInvalid`。
+[llm 設定](../../spec/aos-llm.md:25) 有 `_metainfo` 範例，卻沒寫是否必填、如何驗；`api_key` 沒完整型別；正整數也應明說 bool 不算。`ConfigInvalid` 並非舊 llm-cpu 設定錯誤的原名，舊文用的是 `EngineInvalid`。
 
 建議至少補：
 
 > api_key 可省、null 或字串；timeout_ms 為正整數，bool 不算。明訂 llm_config 的身分與版本驗證，以及設定讀取、JSON 語法、指示詞錯誤各用何種代號。
 
-[模型輸出](../../spec/aos-llm-call.md:51) 也不能只檢查 message 存在：
+[模型輸出](../../spec/aos-llm.md:51) 也不能只檢查 message 存在：
 
 > 成功輸出必須是 role=assistant 的訊息；有 tool_calls 時，逐項驗證 id、type、function.name 與字串 arguments，並定義空陣列與重複 id 的處理。
 

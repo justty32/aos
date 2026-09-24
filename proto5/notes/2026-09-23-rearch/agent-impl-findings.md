@@ -1,6 +1,6 @@
 # agent 線實作（T9）：實作發現
 
-← [rearch README](README.md)｜規範：[agent.md](../../spec/agent.md)、[aos-agent.md](../../spec/aos-agent.md)、[aos-llm-call.md](../../spec/aos-llm-call.md)
+← [rearch README](README.md)｜規範：[agent.md](../../spec/agent.md)、[aos-agent.md](../../spec/aos-agent.md)、[aos-llm-call.md](../../spec/aos-llm.md)
 
 2026-09-24。照三份定稿規範重寫 agent 線時碰到的歧義與實作層級的選擇；本次未修改 `spec/*.md`。方向性的列在最後「要使用者拍的」。
 

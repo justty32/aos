@@ -20,7 +20,7 @@ aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 ```
 
 `xxx` **留空＝`.`**：就是「跑我現在所在的這個資料夾」（`aos-exec` ＝ `aos-exec .` ＝ 跑
-`./.aos/inst.json`）。
+`./.aos/inst.json`）。（09-24 fix-r4 確認：`xxx` 本來就可省略，跟 `aos-cpu [DIR]`、`aos-llm call [AGENT_DIR]` 一致，行為不變。）
 
 ## 三種目標：`xxx` 是什麼決定怎麼跑
 

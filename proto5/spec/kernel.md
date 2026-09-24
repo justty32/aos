@@ -2,7 +2,7 @@
 
 ← [proto5 README](../README.md)｜範式：[cpu.md](cpu.md)｜跑一次：[aos-exec.md](aos-exec.md)｜下層：[daemon](daemon.md)
 
-> 第 1 版，2026-09-23 定稿；已實作（[`aos_kernel.py`](../lib/aos_kernel.py)，入口 `aos-kernel`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列；已實作（[`aos_kernel.py`](../lib/aos_kernel.py)，入口 `aos-kernel`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**kernel 替登記好的工作（行程）挑一顆空著的 cpu 派下去、收回執行結果、決定要不要再跑。**
 它不是長命行程：每次只跑一格 `aos-kernel tick`，格的開頭先把下一格放進一顆專用 exec cpu 的 `requests/`，
@@ -26,7 +26,7 @@
 | 反覆行程 | `once: false` 的行程：跑完回佇列，隔 `interval_ms` 再跑一次，直到完成或被退件 |
 | `once` | 只跑一次的行程：那次跑完把結果直接交給當初 `add` 的人，行程跟著消失 |
 | 長命行程 | 開著就不退、一直待命的程式（daemon、cpu 的主人都是）。kernel **不是**：它每次只活一格的時間，記憶全放在 `K/state.json` 裡 |
-| tick（一格） | kernel 的一次心跳：跑一次 `aos-kernel tick K --chain C --seq N`，把 §3 那十步做完就退出。「格」就是一次 tick |
+| tick（一格） | kernel 的一次心跳：跑一次 `aos-kernel tick --target K --chain C --seq N`，把 §3 那十步做完就退出。「格」就是一次 tick |
 | kernel cpu（`kcpu`） | 專門拿來排 tick 的那一顆 exec cpu，boot 時從 `info.cpus` 裡 pool 標 `kernel` 的挑出來、名字釘進帳本；一般工作不准進去。要換得重 boot |
 | 池（`pool`） | 給 cpu 貼的一個字串標籤；行程也標一個，只會被派到標籤相同的 cpu 上（例如打模型的工作都排去 `llm` 那顆） |
 | 鏈／接鏈 | 一格排下一格、一格接一格串成的那一串 tick。接鏈＝這格開頭就把下一格的 request 放進 kernel cpu 的 `requests/` |
@@ -107,12 +107,12 @@ kernel 對它們也是外人，**只在家不存在時**替它們建家、寫 `i
 整份解指示詞，中心是 K，不提供 `$opt`（`envs` 那格例外：它是要抄進 inst 的，原樣留著不解）。
 **頂層必須是字面物件**（頂層整份 `$ref` ＝ `FieldTypeMismatch`），不然 boot 寫進去的 `daemon` 會被引用吃掉。
 boot 把整份驗完才動任何東西（§6）。「專門打 LLM 的 cpu 只開一顆」就是開一顆 `{"pool":"llm","envs":…}`、
-把 `aos-llm-call` 那種行程標 `pool: "llm"`。要幾顆就寫幾顆，佔著沒關係。
+把 `aos-llm call` 那種行程標 `pool: "llm"`。要幾顆就寫幾顆，佔著沒關係。
 改 info 之後：tick 每格重讀；多出來的 cpu 下格會拉，被拿掉的 cpu 若帳本裡還有 `req`，照樣收完那則才忘掉它；
 池裡沒有 cpu 的行程就一直排隊，不算錯，`ls` 看得出。**kernel 池那顆例外**：帳本裡釘死的 `kcpu` 才算數，
 改 info 不會換，要換就重 boot。
 
-**要改一顆已經存在的 cpu 的環境**：`envs` 只在第一次建家時抄進去；之後得 `aos-kernel stop`、等那顆 cpu 退出
+**要改一顆已經存在的 cpu 的環境**：`envs` 只在第一次建家時抄進去；之後得 `aos-kernel halt`、等那顆 cpu 退出
 （`D/state.json` 裡消失），改 `K/cpus/<c>/inst.json`，再 boot。只改 info、或對還活著的 cpu 重 boot，環境都不會變。
 那份 inst 裡的 `$env` 讀的是**daemon 的環境**（是 daemon 在拉它）；在別的終端 `export` 不會影響已經在跑的 daemon。
 
@@ -205,7 +205,7 @@ params 形狀或 pool 不合回 `-32602`。kernel 不解指示詞、不驗 inst�
 ## 3. 一格 tick 做什麼
 
 ```sh
-aos-kernel tick K --chain C --seq N
+aos-kernel tick --target K --chain C --seq N
 ```
 
 每一步標了 **讀**／**寫帳本**／**放檔**；「崩在這裡」的後果寫在步驟後面。cpu 那邊的順序是
@@ -216,7 +216,7 @@ aos-kernel tick K --chain C --seq N
 1. **讀** info、帳本。`--chain` ≠ `chain` → 舊鏈的殘格：退 0、什麼都不做。
 2. `phase=stopped` → 出貨（第 4 步的方式，含 `stops`）、不接鏈、退 0。否則**放檔**：把下一格 `link` 到
    `cpus/<kcpu>/requests/k-<chain>-<N+1>.json`（`aos-exec`：`target`＝帳本的 `cli`，是普通檔，
-   `args`＝`["tick", K 的絕對路徑, "--chain", C, "--seq", "N+1"]`，全是字串；**明寫 `timeout_ms: 0`**，不吃 cpu 的預設）。EEXIST＝上一格已放過
+   `args`＝`["tick", "--target", K 的絕對路徑, "--chain", C, "--seq", "N+1"]`（09-24 fix-r4 改），全是字串；**明寫 `timeout_ms: 0`**，不吃 cpu 的預設）。EEXIST＝上一格已放過
    （它崩在放檔之後、寫帳本之前，這格被重跑）——只有第 N 格會放第 N+1 格，所以 EEXIST 不會是別人。
    然後**寫帳本** `last_seq=N`。**先放後記**：這格之後崩了，下一格照跑。崩在放檔之前＝鏈斷，daemon 的
    `restart` 救不了（cpu 沒死、是沒單），`ls` 看得出（§6），人重新 boot。
@@ -295,24 +295,39 @@ kernel 對 daemon 只做兩件事：`spawn`（每格第 7 步）、`kill`（只�
 ## 6. 命令列
 
 ```sh
-aos-kernel init K [--cpu NAME[:POOL]]... [--env NAME:KEY=VALUE]...   # 建家、預設 info（cpus: k＋0、1、2）；拒絕覆蓋（09-24 補 --cpu；試玩 r1 補 --env）
-aos-kernel boot K [--daemon D] [--wait-ms N]   # 見下；不跑整格
-aos-kernel tick K --chain C --seq N   # 一格；正常只有鏈自己會叫
-aos-kernel add K TARGET [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--wait-ms N] [-- ARG...]
-aos-kernel rm K NAME
-aos-kernel ack K NAME                 # （09-24 補）替 K/responses/NAME 放 ack
-aos-kernel ls K [--json]              # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看
-aos-kernel stop K [--wait-ms N] [--no-wait]   # （09-24 試玩 r1 補）預設等停好
-aos-kernel check K [--agent DIR] [--daemon D]   # （09-24 試玩 r1 補）啟動前檢查
+aos-kernel init  [--target K] --config FILE      # 建家，info 照 FILE 寫；拒絕覆蓋（09-24 fix-r4 改：--cpu／--env 拿掉）
+aos-kernel boot  [--target K] [--daemon-target D] [--wait-ms N]   # 見下；不跑整格
+aos-kernel tick  [--target K] --chain C --seq N   # 一格；正常只有鏈自己會叫
+aos-kernel add   INST [--target K] [--name NAME] [--once] [--pool P] [--dir-target R] [--interval-ms N] [--timeout-ms N] [--wait-ms N] [-- ARG...]
+aos-kernel rm    NAME [--target K]
+aos-kernel ack   NAME [--target K]              # （09-24 補）替 K/responses/NAME 放 ack
+aos-kernel ls    [--target K] [--json]          # 偷看 K/state.json、D/state.json、kernel cpu 的 state.json 與 requests/；不放單，鏈斷了也能看
+aos-kernel halt  [--target K] [--wait-ms N] [--no-wait]   # （09-24 試玩 r1 補；fix-r4 從 stop 改名）預設等停好
+aos-kernel check [--target K] [--agent DIR] [--daemon-target D]   # （09-24 試玩 r1 補）啟動前檢查
 aos-kernel -h ／ aos-kernel <子命令> -h    # （09-24 補）用法
 ```
 
-（09-24 補）**init `--cpu`** 可重複，`NAME` 或 `NAME:POOL`（POOL 省略＝default）。省略整個旗標＝預設表。
-沒有任何一顆標 `:kernel` 就自動加 `k`（pool kernel）；`k` 被別的池佔了、兩顆以上 kernel、重名、不合法檔名＝用法錯。
-`K/info.json` 已在才拒絕；K 資料夾在但沒有 info（上次建到一半）就補齊。
-（09-24 試玩 r1 補）**init `--env NAME:KEY=VALUE`** 可重複：把字面字串 `KEY: VALUE` 放進 `cpus.NAME.envs`（NAME 要是這次 cpu 表裡的；沒 `=`、KEY 空、同顆同 KEY 重複＝用法錯）。
-一次建出 llm 池：`aos-kernel init K --cpu 0 --cpu 1 --cpu llm:llm --env llm:AOS_LLM_CONFIG=/abs/llm.json`。要指示詞形式的 envs 照舊改 info.json。
-成功印一行 `initialized <K 絕對路徑>`。
+（09-24 fix-r4 改）**K 一律用 `--target K` 給**，沒有位置參數。省略時找環境變數 `AOS_KERNEL_HOME`，再沒有就用目前資料夾；
+`--target ""`＝用法錯 2。退 1 的錯誤行尾巴附 `（K＝<絕對路徑>，取自 --target｜AOS_KERNEL_HOME｜目前資料夾（沒給 --target、也沒設 AOS_KERNEL_HOME））`，
+講清楚這次用了哪個 K、從哪來。**`--daemon-target D`**（boot、check）省略時跟 daemon 自己一樣：`AOS_DAEMON_HOME`，再沒有就目前資料夾（[daemon §1](daemon.md)）。
+`add` 的位置參數 `INST` 是要跑的目標（§2 的 `target`），跟 `--target`（kernel 家）是兩回事。
+（09-24 fix-r4 改）舊版的 `aos-kernel stop` 改名 `halt`；kernel 的 syscall method 仍叫 `stop`（§2），不變。
+改版前 boot 的鏈，下一格的 args 還是舊的位置參數格式、新版跑不起來（`ls` 會看到 `tick 停住`）：換版後重 `boot` 一次。
+
+（09-24 fix-r4 改）**init `--config FILE`**：FILE 是一份 JSON，**就是 info.json 要寫的那幾格**（§1.1）：
+`cpus` 必填（每顆 `pool`、`envs` 照 §1.1）；`tick_ms`／`interval_ms`／`timeout_ms`／`done_exit`／`bad_after` 可省（省＝預設）；
+`_metainfo` 可省，有寫就必須是 kernel 第 1 版；寫了 `daemon`＝`FieldTypeMismatch`（那格是 boot 寫的）；其他不認得的鍵照 §1.1 原樣抄、不管。
+沒有任何一顆 pool 是 `kernel` 就自動加 `k`（pool kernel）；`k` 已被別的池佔了＝`FieldTypeMismatch`。
+寫之前用跟 info 同一套讀驗（中心 K）驗過：FILE 讀不到、不是 JSON、頂層不是字面物件、驗不過＝退 1、**什麼都不建**。
+**`--config` 沒給＝用法錯 2**（訊息講要給什麼、附最小例子；不去猜 `./kernel.json`）。`K/info.json` 已在才拒絕；K 資料夾在但沒有 info（上次建到一半）就補齊。
+最小例子（一顆一般 cpu＋一顆 llm cpu；kernel 池的 `k` 自動加）：
+
+```json
+{"cpus": {"0": {}, "1": {},
+          "llm": {"pool": "llm", "envs": {"AOS_LLM_CONFIG": "/abs/llm.json"}}}}
+```
+
+`aos-kernel init --target K --config kernel.json`。成功印一行 `initialized <K 絕對路徑>`。
 
 **boot** 只做「交接、拉起來、放第 1 格」，K 的帳本從此只在 kernel cpu 上被改。**兩個 boot 不能同時跑**——
 這是給人的規矩，不在保證內（沒有 boot 鎖）。步驟：
@@ -347,16 +362,16 @@ aos-kernel -h ／ aos-kernel <子命令> -h    # （09-24 補）用法
 拿到 JSON-RPC `error` 印代號與 message、退 1；拿到 exec 的 `result` 整段印出來、退 0——**工作本身成不成功看內容**
 （`kind`、`code`、`timed_out`、`stopped`），不看退出碼。
 
-**stop**（09-24 試玩 r1 補）預設等停好：沒帳本或已經 `phase=stopped` 且孩子表沒有這個 kernel 的 cpu＝印 `stopped`；daemon 不活或 kernel cpu 不在孩子表（鏈沒在跑）＝**不放單**
+**halt**（09-24 試玩 r1 補；fix-r4 從 `stop` 改名，行為不變）預設等停好：沒帳本或已經 `phase=stopped` 且孩子表沒有這個 kernel 的 cpu＝印 `stopped`；daemon 不活或 kernel cpu 不在孩子表（鏈沒在跑）＝**不放單**
 （放了下次 boot 一開機就停）、印 `not running`；其餘放 stop 單，等到 `phase=stopped` 且 `D/state.json` 裡這個 kernel 的 cpu（target 在 `K/cpus/` 底下的）都不見了才印 `stopped`、退 0。
 等超過 `--wait-ms`（預設 30000）＝`Timeout`、退 1（單已放、不撤回，用 `ls` 看）。`--no-wait` 是舊行為：只放單、不印、退 0，之後自己用 `ls` 等。
 停好之後才去停 daemon。其餘等回音最多 10 秒。
 
-（09-24 試玩 r1 補）**check** 啟動前檢查，每項一行 `ok`／`warn`／`bad`，有 `bad` 退 1：`info` 讀驗；`daemon` 活不活（沒開＝warn）；`path`——`aos-exec`、`aos-cpu`、`aos-kernel`、`aos-agent`、`aos-llm-call`
+（09-24 試玩 r1 補）**check** 啟動前檢查，每項一行 `ok`／`warn`／`bad`，有 `bad` 退 1：`info` 讀驗；`daemon` 活不活（沒開＝warn）；`path`——`aos-exec`、`aos-cpu`、`aos-kernel`、`aos-agent`、`aos-llm`
 在 daemon 的 PATH 找不找得到（讀得到 `/proc/<daemon pid>/environ` 就用它，否則用目前 shell 的並註明）；`pools`——沒有 `llm` 池＝bad；
 `llm`——llm 池每顆 cpu 的有效 envs（`cpus/<c>/inst.json` 在就用它）有沒有 `AOS_LLM_CONFIG`、檔在不在、llm.json 讀驗過不過、有哪些模型代號。
-daemon 家預設 info 的 `daemon`（boot 前還沒寫，就是 `AOS_DAEMON_HOME`／`~/.aos-daemon`），`--daemon D` 可指定。`--agent DIR` 再查那個 agent：info 讀驗、`tick.pool`／`llm.pool` 在不在、`llm.model` 在不在模型表、工具 `argv[0]` 找不找得到。D 預設 `AOS_DAEMON_HOME`，再預設 `~/.aos-daemon`。
-（09-24 試玩 r2 補）另外兩項：`dirs`——K 家的 `requests/`、`responses/`、`cpus/` 在不在（§1 的目錄圖；`cpus/<name>/` 不查，boot 會補），缺＝bad，手建的家要 `mkdir -p` 補；`cpus`——帳本在、`phase` 是 `running`／`stopping`、daemon 活著，而 info 的 cpu 或帳本的 `kcpu` 有不在 daemon 孩子表的＝bad：`daemon 重開過／cpu 不在（…）：執行 aos-kernel boot <K> --daemon <D>`（沒帳本、已 `stopped`、daemon 沒活就不印這項）。`--agent`、`--daemon` 各只能給一次，重複＝用法錯 2（要查多個 agent 分開跑）。check 只驗設定，**不連 endpoint**：全綠不代表模型連得上。
+（09-24 fix-r4 改）daemon 家：`--daemon-target D`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾（跟 daemon 自己一樣，不再優先看 info 的 `daemon`）；info 的 `daemon`（boot 寫的）在而且跟這次的 D 不同，`daemon` 項多一行 `warn`，說 info 記的是哪個。`--agent DIR` 再查那個 agent：info 讀驗、`tick.pool`／`llm.pool` 在不在、`llm.model` 在不在模型表、工具 `argv[0]` 找不找得到。
+（09-24 試玩 r2 補）另外兩項：`dirs`——K 家的 `requests/`、`responses/`、`cpus/` 在不在（§1 的目錄圖；`cpus/<name>/` 不查，boot 會補），缺＝bad，手建的家要 `mkdir -p` 補；`cpus`——帳本在、`phase` 是 `running`／`stopping`、daemon 活著，而 info 的 cpu 或帳本的 `kcpu` 有不在 daemon 孩子表的＝bad：`daemon 重開過／cpu 不在（…）：執行 aos-kernel boot --target <K> --daemon-target <D>`（沒帳本、已 `stopped`、daemon 沒活就不印這項）。`--agent`、`--daemon-target` 各只能給一次，重複＝用法錯 2（要查多個 agent 分開跑）。check 只驗設定，**不連 endpoint**：全綠不代表模型連得上。
 
 **ls** 印帳本的摘要（chain、phase、每顆 cpu 的 req／proc、queue、每個行程的 status／runs／fails）、daemon 孩子表的
 alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份——鏈斷了（`current` null、`requests/` 空、
@@ -365,10 +380,10 @@ alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份—
 每顆 cpu 一行（名、pool、閒／忙哪個行程、daemon 孩子狀態）、每個行程一行（名、once／反覆、status、runs／fails、pending）、queue 一行；
 `--json` 才印原始 JSON。
 （09-24 試玩 r3 補，取代 r2 的尾巴 `hint` 行）文字摘要**第一行** `health <一句>` 說整體正不正常，把「停住」跟「正常忙碌」分開；先中先印：
-缺 `requests/`／`responses/`／`cpus/`＝`K 家缺目錄：…（跑 aos-kernel check <K>）`；`phase` 是 `stopped` 或從沒 boot＝`停機中（aos-kernel boot <K> --daemon <D>）`；daemon 沒活＝`daemon 沒在跑：<D>（先 aos-daemon --home <D>，再 aos-kernel boot …）`；info 或帳本的 cpu 不在 daemon 孩子表／`missing`＝`cpu missing：<名字>（跑 aos-kernel boot …）`；`phase` 是 `running` 但 `state.json` 超過 max(10 秒, 10 格) 沒更新＝`tick 停住：N 秒沒前進（跑 aos-kernel check <K>）`；其他＝`ok`。帳本或 info 讀不到＝`kernel 家讀不到：…`（這時 `ls` 照舊退 1）。`--json` 在最外層多一個 `health: {code, message}`（code：`ok`／`dirs`／`stopped`／`daemon`／`cpus`／`stall`／`broken`）。同一套判定在 `lib/aos_kernel_health.py`，`aos-agent status` 也用它。
+缺 `requests/`／`responses/`／`cpus/`＝`K 家缺目錄：…（跑 aos-kernel check --target <K>）`；`phase` 是 `stopped` 或從沒 boot＝`停機中（aos-kernel boot --target <K> --daemon-target <D>）`；daemon 沒活＝`daemon 沒在跑：<D>（先 aos-daemon boot --target <D>，再 aos-kernel boot …）`；info 或帳本的 cpu 不在 daemon 孩子表／`missing`＝`cpu missing：<名字>（跑 aos-kernel boot …）`；`phase` 是 `running` 但 `state.json` 超過 max(10 秒, 10 格) 沒更新＝`tick 停住：N 秒沒前進（跑 aos-kernel check --target <K>）`；其他＝`ok`。帳本或 info 讀不到＝`kernel 家讀不到：…`（這時 `ls` 照舊退 1）。`--json` 在最外層多一個 `health: {code, message}`（code：`ok`／`dirs`／`stopped`／`daemon`／`cpus`／`stall`／`broken`）。同一套判定在 `lib/aos_kernel_health.py`，`aos-agent status` 也用它。
 （09-24 試玩 r1 補）`bad` 的行程行尾附 `看 <路徑>`：target 的 inst 有字面 `stderr` 就指它（agent 就是 `<agent>/log/agent.err`），否則指 target。
 
-（09-24 補）**ack**：`aos-kernel ack K NAME` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。
+（09-24 補）**ack**：`aos-kernel ack NAME [--target K]` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。
 給 `add --once` 不等的人用。
 
 退出碼：0 成功；1 讀驗／daemon／I/O 錯，stderr 一行 `aos-kernel: <代號>: <白話>`；2 用法錯。
@@ -386,7 +401,7 @@ alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份—
 
 適用範圍同範式 §8（同一台 POSIX 機器）。daemon 的 method 完整形狀、`restart`、daemon 自己怎麼停（[daemon](daemon.md)）。
 agent 那份要接的：怎麼用 `add --once` 問模型／跑工具、輸入檔跟答案檔放哪、誰清——kernel 只交執行結果，不交內容。
-`aos-llm-call` 這支程式（之後）。實作時值得順手做一支小函式庫（取名、放單、等回音、ack 包成一個呼叫），不然每個交件者都要自己寫這五步。
+`aos-llm call` 這支程式（[aos-llm.md](aos-llm.md)）。實作時值得順手做一支小函式庫（取名、放單、等回音、ack 包成一個呼叫），不然每個交件者都要自己寫這五步。
 
 ## 9. 已拍板的前提（使用者定的，不重問）
 
@@ -432,3 +447,4 @@ add 拒絕到它跑完；stop 分 stopping／stopped 兩段，在途與 once 的
 > 2026-09-23 定稿並已實作：[`aos_kernel.py`](../lib/aos_kernel.py)（入口 `aos-kernel`）。舊 kernel-home.md／aos-kernel.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
 > 已拍板的前提在 §9，我自己選的在 §10。
 > 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> 2026-09-24 fix-r4：§6 命令列全改 `--target K`（省略找 `AOS_KERNEL_HOME`→目前資料夾，錯誤行講來源）、`stop` 改名 `halt`、`init` 改讀 `--config FILE`、`--daemon` 改名 `--daemon-target`；§3 tick 的 args 同步。

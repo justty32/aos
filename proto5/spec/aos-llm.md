@@ -1,12 +1,12 @@
-# aos-llm-call：問模型一次（程式規範）
+# aos-llm：問模型（程式規範）
 
 ← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜誰叫它：[aos-agent.md](aos-agent.md)｜它跑在哪：[cpu.md §4.1](cpu.md)、[kernel.md §1.1](kernel.md)
 
-> 第 2 版，2026-09-24 定稿；已實作（`lib/aos_llm_call.py`＋`cli/aos-llm-call`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 2 版，2026-09-24 定稿，2026-09-24 fix-r4 改命令列（`aos-llm-call` 改成 `aos-llm call`）；已實作（`lib/aos_llm_call.py`＋`cli/aos-llm`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
-一句話：**`aos-llm-call AGENT_DIR` 讀 agent 的模型輸入與這顆 cpu 的模型表，呼叫一次模型，把一則 assistant message 印成一行 JSON。**
+一句話：**`aos-llm call AGENT_DIR` 讀 agent 的模型輸入與這顆 cpu 的模型表，呼叫一次模型，把一則 assistant message 印成一行 JSON。**
 它不寫記憶、不碰 `state.json`、不跑工具，跑完就走。它是 kernel 排給 llm 池某顆 cpu 的一份普通工作；
-模型表、金鑰、`aos-llm-call` 自己在哪，全是那顆 cpu 的環境給的（「cpu 的環境＝工作的環境」）。
+模型表、金鑰、`aos-llm call` 自己在哪，全是那顆 cpu 的環境給的（「cpu 的環境＝工作的環境」）。
 
 ## 0. 名詞（白話）
 
@@ -19,17 +19,18 @@
 ## 1. 用法與環境
 
 ```
-aos-llm-call [AGENT_DIR]
+aos-llm call [AGENT_DIR]    # （09-24 fix-r4 改）舊的 aos-llm-call 拿掉；之後 llm 相關的子命令都掛在 aos-llm 底下
+aos-llm -h ／ aos-llm call -h
 ```
 
-`AGENT_DIR` 留空＝`.`；必須是 agent 家（[agent.md §1](agent.md)）。沒有別的旗標。
+`AGENT_DIR` 留空＝`.`（目前資料夾）；必須是 agent 家（[agent.md §1](agent.md)）。沒有別的旗標。裸 `aos-llm`（沒子命令）＝用法錯 2（09-24 fix-r4 補）。
 
 要的環境（都由那顆 llm cpu 給，[kernel.md §1.1](kernel.md) 的 `info.cpus.<c>.envs` 會抄進它的 inst）：
 
 | 變數 | 用途 | 沒有時 |
 |---|---|---|
 | `AOS_LLM_CONFIG` | llm.json 的**絕對路徑** | 沒設、空字串、不是絕對路徑＝`ConfigInvalid`，退 1 |
-| `PATH` | 找得到 `aos-llm-call` 本身（工作 inst 的 `argv[0]` 就寫這個名字） | 那件工作是 exit 127 |
+| `PATH` | 找得到 `aos-llm` 本身（工作 inst 的 `argv` 寫 `["aos-llm", "call", <agent 家>]`） | 那件工作是 exit 127 |
 | 金鑰變數 | llm.json 裡 `$env` 讀的 | `EnvironmentVariableMissing`，退 1 |
 
 K 的 info 例子：
@@ -54,7 +55,7 @@ llm.json 本身可以隨時改，下一次問就生效（每次跑都重讀）�
                       "api_key": {"$env": "LITELLM_KEY"}, "timeout_ms": 120000}}}
 ```
 
-- 整份解指示詞，中心是 llm.json 所在的資料夾；`$env` 讀的是 aos-llm-call 自己的環境（＝那顆 cpu 的環境）。頂層整份不能是指示詞。
+- 整份解指示詞，中心是 llm.json 所在的資料夾；`$env` 讀的是 aos-llm call 自己的環境（＝那顆 cpu 的環境）。頂層整份不能是指示詞。
 - 讀不到＝`ReadFailed`；不是 JSON＝`JsonSyntax`；頂層不是物件＝`NotAnObject`；指示詞錯照 [directives.md §6](directives.md)。
 
 | 鍵 | 型別 | 沒寫時 | 不合 |
@@ -105,9 +106,9 @@ llm.json 本身可以隨時改，下一次問就生效（每次跑都重讀）�
 | 結果 | stdout | stderr | 退出碼 |
 |---|---|---|---|
 | 成功 | 那個 message 物件，**一行** JSON（`ensure_ascii=False`，結尾一個換行） | 無 | 0 |
-| HTTP 逾時 | 無 | `aos-llm-call: Timeout: <白話>` | 1 |
-| 連不上、非 2xx、不是 JSON、缺 message、message 驗不過 | 無 | `aos-llm-call: EngineFailed: <白話>`（非 2xx 附狀態碼與回應開頭一段） | 1 |
-| 設定、agent 家、代號讀驗錯 | 無 | `aos-llm-call: <代號>: <白話>` | 1 |
+| HTTP 逾時 | 無 | `aos-llm: Timeout: <白話>` | 1 |
+| 連不上、非 2xx、不是 JSON、缺 message、message 驗不過 | 無 | `aos-llm: EngineFailed: <白話>`（非 2xx 附狀態碼與回應開頭一段） | 1 |
+| 設定、agent 家、代號讀驗錯 | 無 | `aos-llm: <代號>: <白話>` | 1 |
 | 用法錯 | 無 | argparse | 2 |
 
 （09-24 試玩 r2 補）`Timeout` 與 `EngineFailed` 的白話尾巴都附 `（endpoint <endpoint>，模型 <代號>→<真名>）`，不印 `api_key`。
@@ -118,10 +119,10 @@ stdout 只會有這一行，所以工作 inst 把 stdout 指到一個檔，agent
 
 | 逾時 | 設在哪 | 管什麼 | 撞到時 agent 看到 |
 |---|---|---|---|
-| 內圈：HTTP | llm.json 那筆的 `timeout_ms`（預設 120000） | aos-llm-call 等模型回話多久 | 回音 `kind=child`、`code=1`；原因在 `log/llm.err` 的 `Timeout` 行 |
+| 內圈：HTTP | llm.json 那筆的 `timeout_ms`（預設 120000） | aos-llm call 等模型回話多久 | 回音 `kind=child`、`code=1`；原因在 `log/llm.err` 的 `Timeout` 行 |
 | 外圈：工作 | agent 的 `info.llm.timeout_ms`（預設 125000），就是 kernel `add` 的 `timeout_ms` | 這件工作在 cpu 上整個跑多久（含讀檔、組 body、HTTP），到了 cpu 砍整組 | 回音 `timed_out=true` |
 
-外圈設得比內圈大一點，正常是內圈先到、aos-llm-call 自己乾淨地退 1；外圈只是保險（例如 DNS 卡住）。兩者都不含在 kernel 排隊的時間。
+外圈設得比內圈大一點，正常是內圈先到、aos-llm call 自己乾淨地退 1；外圈只是保險（例如 DNS 卡住）。兩者都不含在 kernel 排隊的時間。
 agent 看不到 llm.json（它在 llm cpu 那邊、金鑰也只在那邊），所以外圈只能由 agent 自己的 `info.llm.timeout_ms` 給，兩邊要人自己配好。
 兩種逾時對 agent 都是「問模型失敗一次」（[aos-agent.md §6.1](aos-agent.md)）。
 
@@ -141,7 +142,7 @@ msg  = aos_llm_call.call(agent_dir)                    # 讀 AOS_LLM_CONFIG、�
 
 1. **沒有同步工具**：問模型是往 kernel `add --once` 的普通工作，這支程式就是那件工作的 `argv[0]`。取捨：最快也要等一格 tick。
 2. **agent 先進現有的池**：問模型派往 `info.llm.pool` 那個現有的池，不給 agent 開專屬 cpu。
-3. **llm.json 放 llm cpu 那邊**（cpu 的環境＝工作的環境）：模型表（endpoint／真名／api_key／timeout_ms）跟 aos-llm-call 同住，
+3. **llm.json 放 llm cpu 那邊**（cpu 的環境＝工作的環境）：模型表（endpoint／真名／api_key／timeout_ms）跟 aos-llm call 同住，
    靠那顆 cpu 的 `envs` 設 `AOS_LLM_CONFIG=/abs/llm.json` 找到；agent 的 `info.llm` 只剩 `model`、`params`、`pool`、`timeout_ms`。
 
 ## 調度者裁決（第 2～3 輪，實作層級）
@@ -161,3 +162,4 @@ msg  = aos_llm_call.call(agent_dir)                    # 讀 AOS_LLM_CONFIG、�
 > 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 改成第 3 輪；第 3 輪審查 判可定稿，第 4 輪只補一條實作提醒。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
 > **已實作**（2026-09-24，T9）：`lib/aos_llm_call.py`＋`cli/aos-llm-call`，實作發現見 agent-impl-findings。
 > 這份把兩件事合成一支普通程式。調度者裁決在檔尾（09-24 試玩 r3 搬），已拍板的前提在 §9。
+> 2026-09-24 fix-r4：入口 `aos-llm-call` 改成 `aos-llm call`（新入口 `cli/aos-llm`，stderr 前綴 `aos-llm: `），規範檔名 aos-llm-call.md 改成 aos-llm.md。

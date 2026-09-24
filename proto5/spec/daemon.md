@@ -2,7 +2,7 @@
 
 ← [proto5 README](../README.md)｜範式：[cpu.md](cpu.md)｜客戶：[kernel](kernel.md)｜跑一次：[aos-exec.md](aos-exec.md)
 
-> 第 1 版，2026-09-23 定稿；已實作（[`aos_daemon.py`](../lib/aos_daemon.py)，入口 `aos-daemon`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
+> 第 1 版，2026-09-23 定稿，2026-09-24 fix-r4 改命令列；已實作（[`aos_daemon.py`](../lib/aos_daemon.py)，入口 `aos-daemon`）。輪次、審查與實作沿革在檔尾〈沿革〉（09-24 試玩 r3 搬）。
 
 一句話：**daemon 只管 cpu 行程的生死——啟動、重拉、停止，也就是當爸爸。誰叫它把一個 aos-exec 目標拉起來當孩子，
 它就拉；孩子死了看要不要再拉；要停就照階梯把孩子都停掉。** 它不認識 kernel、不看孩子在做什麼、不轉發任何工作。
@@ -50,10 +50,10 @@ D/
   .daemon.lock        整個系統唯一的一把鎖（§6.1）
 ```
 
-家由 `--home`，其次 `AOS_DAEMON_HOME`，再其次 `~/.aos-daemon` 決定。主人是 `aos-daemon` 這個行程；
+家由 `--target`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾決定（09-24 fix-r4 改：`--home` 與 `~/.aos-daemon` 預設拿掉；`boot`／`halt` 同一套找法，kernel 的 `--daemon-target` 省略時也一樣）。主人是 `aos-daemon` 這個行程；
 外人只能放 request、放 ack，`state.json` 隨便偷看（kernel 就是偷看它來知道孩子活不活）。
 孩子的家不在這裡——孩子的家是它自己的目標說了算（kernel 的 cpu 在 `K/cpus/<name>/`）。
-（09-24 試玩 r1 補）家裡沒有 `daemon.log`：daemon 的 stderr 跟著啟動它的終端走，要留檔就自己重導（例如 `aos-daemon --home D 2>>daemon.log &`）。
+（09-24 試玩 r1 補）家裡沒有 `daemon.log`：daemon 的 stderr 跟著啟動它的終端走，要留檔就自己重導（例如 `aos-daemon boot --target D 2>>daemon.log &`）。
 
 **`name` 的範圍是整個 daemon**：兩個 kernel 想共用一個 daemon，cpu 名就不能撞（撞了是 `NameTaken`，§3）。
 
@@ -191,29 +191,33 @@ params 形狀不合＝`-32602`。回音、原單、ack 的處理照範式 §6.3�
 cpu 在階梯裡停——溫和停的那些手上那件做完、回音有寫，kernel 下次 boot 照常收；被 TERM／KILL 的那些
 才會是 `stopped:true` 或 `Interrupted`——能用，但不乾淨。**順序是先 kernel、後 daemon**，這是給人的慣例，daemon 不強制。
 **daemon 重啟過（孩子表清空）之後，kernel 要重新 boot**——沒人會替它放第 1 格。
-kernel 改綁另一個 daemon（`boot --daemon D2`）：**不支援交接**，舊 daemon 的孩子還在它那邊；要換就先把舊的停掉。
+kernel 改綁另一個 daemon（`aos-kernel boot --daemon-target D2`）：**不支援交接**，舊 daemon 的孩子還在它那邊；要換就先把舊的停掉。
 
 ## 6. 主人的一生
 
 ```text
-aos-daemon [--home D]                       # 跑 daemon
-aos-daemon stop [--home D] [--wait-ms N]    # （09-24 補）放 stop、等它退出
-aos-daemon -h ／ aos-daemon stop -h
+aos-daemon boot [--target D]                  # （09-24 fix-r4 改）跑 daemon（前景程式）
+aos-daemon halt [--target D] [--wait-ms N]    # （09-24 fix-r4 改名，原 stop）放 stop、等它退出
+aos-daemon -h ／ aos-daemon boot -h ／ aos-daemon halt -h
 ```
 
-（09-24 補）`stop`：先用 flock 探測 daemon 活不活——**不活就不放檔**（放了會讓下一任一開機就停）、印 `not running`、退 0；
+（09-24 fix-r4 改）裸 `aos-daemon`（沒子命令）不再直接跑 daemon：stderr 印用法、退 2。`boot`／`halt` 的 D 一樣找：
+`--target D`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾；`--target ""`＝用法錯 2。退 1 的錯誤行尾巴附
+`（D＝<絕對路徑>，取自 --target｜AOS_DAEMON_HOME｜目前資料夾（…））`，講清楚這次用了哪個家。
+
+（09-24 補）`halt`（原 `stop`）：先用 flock 探測 daemon 活不活——**不活就不放檔**（放了會讓下一任一開機就停）、印 `not running`、退 0；
 活的就照範式 §3.1 往 `D/requests/` 放一則 `stop-*.json` notification，等到 flock 探測不到它、印 `stopped`、退 0。
 `--wait-ms` 預設 30000，逾時 stderr `Timeout`、退 1（stop 已放、不撤回）。
 
 ### 6.1 啟動
 
 （09-24 試玩 r1 補）**開之前先想好環境**：daemon 拉的每顆 cpu、cpu 跑的每件工作都繼承 daemon 啟動那一刻的環境。
-所以 PATH 要先含 `proto5/cli`（`aos-cpu`、`aos-exec`、`aos-kernel`、`aos-agent`、`aos-llm-call` 都靠 PATH 找）再開 daemon：
+所以 PATH 要先含 `proto5/cli`（`aos-cpu`、`aos-exec`、`aos-kernel`、`aos-agent`、`aos-llm` 都靠 PATH 找）再開 daemon：
 
 ```sh
 export PATH=/abs/repo/proto5/cli:$PATH
-aos-daemon --home D 2>>daemon.log &      # 前景程式，放背景或另開終端
-aos-kernel check K --daemon D             # boot 前檢查 PATH、池、llm 設定（kernel.md §6）
+aos-daemon boot --target D 2>>daemon.log &              # 前景程式，放背景或另開終端
+aos-kernel check --target K --daemon-target D           # boot 前檢查 PATH、池、llm 設定（kernel.md §6）
 ```
 
 daemon 開了之後再 `export` 不會影響它；PATH 漏了就停掉 daemon 重開。
@@ -247,7 +251,7 @@ daemon 開了之後再 `export` 不會影響它；PATH 漏了就停掉 daemon �
 
 適用範圍同範式 §8（同一台 POSIX 機器；fork／waitpid／flock／訊號都是 POSIX 的）。孩子在做什麼（kernel／cpu 範式）；誰該被拉、幾顆（kernel 的 `info.cpus`）；多機（以後 socket）。
 沒有 `aos-daemon-ctl`：客戶端就是往 `D/requests/` 放檔，kernel 的 boot／tick 已經在做；人要看就 `cat D/state.json`，
-要停就放一份 `stop-*.json` 或 Ctrl-C（09-24 補：或 `aos-daemon stop`，§6）。
+要停就放一份 `stop-*.json` 或 Ctrl-C（09-24 補：或 `aos-daemon halt`，§6）。
 
 ## 8. 已拍板的前提（使用者定的，不重問）
 
@@ -292,3 +296,4 @@ daemon 是所有 cpu 的父行程、最單純；IPC 用 pipe，只管生死；`s
 > 2026-09-23 定稿並已實作：[`aos_daemon.py`](../lib/aos_daemon.py)（入口 `aos-daemon`）。舊 daemon-home.md／aos-daemon.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
 > 已拍板的前提在 §8，我自己選的在 §9。
 > 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> 2026-09-24 fix-r4：§6 命令列改成 `aos-daemon boot`／`halt [--target D]`（裸 `aos-daemon` 退 2、`--home` 拿掉），家的預設從 `~/.aos-daemon` 改成 `AOS_DAEMON_HOME`→目前資料夾。
