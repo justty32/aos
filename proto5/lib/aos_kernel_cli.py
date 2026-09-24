@@ -23,6 +23,8 @@ _stderr_hint = stderr_hint  # 舊名字，aos_kernel 與測試還在用
 def _summary(home, snapshot, as_json=False, verbose=False):
     """ls 的輸出（advice-r1）：--json 是 ls_data() 那份穩定 schema，文字版是對齊的表。"""
     data = ls_data(home, snapshot)
+    if data["health"]["code"] == "broken":  # astra 必修 5：讀不到就退 1、stdout 空（cli-ls.md）
+        raise KernelError("ReadFailed", data["health"]["message"])
     return json.dumps(data, ensure_ascii=False) if as_json else render(data, verbose=verbose)
 
 

@@ -14,6 +14,7 @@ from aos_kernel_info import DEFAULTS, load_info
 META = {"_type": "aos_kernel_ls", "_version": 1}
 NAME_WIDTH = 24   # 主表行程名最多幾格寬，超過截斷（-v 印全名）
 QUEUE_SHOW = 8    # queue 行最多列幾個名字
+SETTINGS = ("tick_ms", "interval_ms", "timeout_ms", "done_exit", "bad_after")  # v1 固定這五個
 
 
 def stderr_hint(target):
@@ -29,7 +30,7 @@ def stderr_hint(target):
         value = value.get("$val")
     if isinstance(value, str):
         return os.path.abspath(path.parent / value)
-    return "%s 的 stderr 設定" % target
+    return str(path)  # advice-r1（astra 必修 4）：沒有字面 stderr 就指 target 本身
 
 
 def ls_data(home, snapshot):
@@ -60,12 +61,16 @@ def ls_data(home, snapshot):
     procs = []
     for name, proc in (snapshot["procs"] or {}).items():
         mark = marks.get(name)
+        proc = proc if isinstance(proc, dict) else {}
+        # astra 必修 2、3：帳本缺鍵或型別不對時正規化成 cli-ls.md 表上寫的型別，不原樣透傳。
+        status = proc.get("status") if isinstance(proc.get("status"), str) else "unknown"
+        target = proc.get("target") if isinstance(proc.get("target"), str) else None
         procs.append({
-            "name": name, "once": bool(proc.get("once")), "pool": proc.get("pool"),
-            "status": proc.get("status"), "runs": proc.get("runs", 0), "fails": proc.get("fails", 0),
-            "pending": bool(proc.get("pending")), "target": proc.get("target"),
+            "name": name, "once": bool(proc.get("once")), "pool": _text(proc.get("pool")),
+            "status": status, "runs": _count(proc.get("runs")), "fails": _count(proc.get("fails")),
+            "pending": bool(proc.get("pending")), "target": target,
             "mark": {"code": mark[0], "text": mark[1]} if mark else None,
-            "look": stderr_hint(proc["target"]) if proc.get("status") == "bad" and proc.get("target") else None})
+            "look": stderr_hint(target) if status == "bad" and target else None})
     queue = list(snapshot["queue"] or [])
     by_status = {}
     for proc in procs:
@@ -83,12 +88,20 @@ def ls_data(home, snapshot):
                        "alive": bool(daemon["alive"])},
             "cpu": {"name": kcpu["name"], "current": current.get("name") if isinstance(current, dict) else None,
                     "requests": kcpu["requests"]},
-            "settings": {key: info.get(key, value) for key, value in DEFAULTS.items()}},
+            "settings": {key: info.get(key, DEFAULTS[key]) for key in SETTINGS}},
         "cpus": cpus, "procs": procs, "queue": queue,
         "counts": {"cpus": {"total": len(work), "busy": busy, "idle": len(work) - busy},
                    "procs": {"total": len(procs), "repeat": sum(not p["once"] for p in procs),
                              "once": sum(p["once"] for p in procs), "status": by_status},
                    "queue": len(queue)}}
+
+
+def _text(value):
+    return value if isinstance(value, str) else None
+
+
+def _count(value):
+    return value if type(value) is int else 0
 
 
 def _width(text):
@@ -123,6 +136,11 @@ def _table(header, rows, right=()):
     return lines
 
 
+def _pool_label(pool):
+    """null＝info 裡沒有這顆（`?`）；空字串印成 `""`，跟字面 `-` 分開。"""
+    return "?" if pool is None else '""' if pool == "" else pool
+
+
 def render(data, verbose=False):
     k, counts = data["kernel"], data["counts"]
     phase = k["phase"] or "沒 boot 過"
@@ -144,13 +162,13 @@ def render(data, verbose=False):
     if not k["daemon"]["alive"]:
         head += "（daemon 沒在跑，孩子狀態不明）"
     lines.append(head)
-    order = list(dict.fromkeys(cpu["pool"] or "-" for cpu in data["cpus"]))
+    order = list(dict.fromkeys(cpu["pool"] for cpu in data["cpus"]))  # 用原值分組（astra 必修 6）
     rows = []
     for pool in order:
-        for i, cpu in enumerate(x for x in data["cpus"] if (x["pool"] or "-") == pool):
+        for i, cpu in enumerate(x for x in data["cpus"] if x["pool"] == pool):
             work = "tick" if cpu["kernel"] else ("忙" + ("（rm）" if cpu["discard"] else "")) if cpu["busy"] else "閒"
             proc = cpu["proc"] or "-"
-            rows.append([pool if i == 0 else "", cpu["name"], work,
+            rows.append([_pool_label(pool) if i == 0 else "", cpu["name"], work,
                          proc if verbose else _cut(proc, NAME_WIDTH), cpu["child"] or "-"])
     if rows:
         lines += _table(["池", "cpu", "工作", "行程", "daemon"], rows)

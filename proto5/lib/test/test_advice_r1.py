@@ -157,6 +157,21 @@ class AgentCheck(Homes):
         self.assertIn('bad  probe/small: 連不上', out)
         self.assertEqual(out.splitlines()[-1], '有 bad，照上面的提示修好再 aos-agent start')
 
+    def test_tick_json_unreadable_matches_start(self):
+        """astra 必修 1：tick.json 在但讀不到字串 K，跟 start 一樣算 KernelMismatch。"""
+        tick = self.agent / 'tick.json'
+        for content in ('{', '{}', '{"envs": {}}', '{"envs": {"AOS_KERNEL_HOME": null}}'):
+            with self.subTest(content=content):
+                tick.write_text(content)
+                out, _ = self.agent_check(code=1, env={'AOS_KERNEL_HOME': str(self.home)})
+                self.assertIn('讀不到合法的 K', out)
+                self.assertIn('KernelMismatch', out)
+                out, _ = self.agent_check(code=1)
+                self.assertIn('bad  kernel: 找不到 K：沒設 AOS_KERNEL_HOME，%s 也讀不到合法的絕對路徑 K' % tick, out)
+        tick.write_text(json.dumps({'envs': {'AOS_K': str(self.home)}}))  # fix-r4 前的舊鍵也認
+        out, _ = self.agent_check()
+        self.assertIn('（取自 tick.json）', out)
+
     def test_help_and_usage(self):
         result = subprocess.run([sys.executable, str(CLI / 'aos-agent'), '-h'], capture_output=True, text=True)
         self.assertIn('check', result.stdout)
@@ -285,6 +300,59 @@ class LsJson(Homes):
         self.assertIn('  D       %s' % self.daemon, text)
         self.assertIn('  chain   17-1', text)
         self.assertIn('target %s' % (self.agent / 'tick.json'), text)
+
+    def test_proc_fields_normalized(self):
+        """astra 必修 2、3：缺鍵／null／錯型別照 cli-ls.md 的型別輸出，status 統計不會撞鍵。"""
+        ledger = aos_home.read_json(self.home / 'state.json')
+        ledger['procs'] = {'a': {}, 'b': {'status': None, 'runs': None, 'pool': 3},
+                           'c': {'status': 'null', 'target': 'rel', 'fails': 'x'}}
+        ledger['queue'] = []
+        ledger['cpus']['0'] = {'req': None, 'proc': None, 'discard': False}
+        self.put(self.home / 'state.json', ledger)
+        out, _ = self.ls('--json')
+        data = json.loads(out)
+        self.assertEqual(out.count('"null": '), 1)
+        procs = {p['name']: p for p in data['procs']}
+        self.assertEqual({k: procs['a'][k] for k in ('pool', 'status', 'runs', 'fails', 'target')},
+                         {'pool': None, 'status': 'unknown', 'runs': 0, 'fails': 0, 'target': None})
+        self.assertEqual((procs['b']['status'], procs['b']['runs'], procs['b']['pool']), ('unknown', 0, None))
+        self.assertEqual(procs['c']['fails'], 0)
+        self.assertEqual(data['counts']['procs']['status'], {'unknown': 2, 'null': 1})
+        self.assertIn('null 1、unknown 2', self.ls()[0])
+
+    def test_look_without_literal_stderr_is_target(self):
+        """astra 必修 4。"""
+        self.put(self.agent / 'tick.json', {'stderr': {'$env': 'ERR'}})
+        data = json.loads(self.ls('--json')[0])
+        self.assertEqual(next(p for p in data['procs'] if p['name'] == 'broken')['look'], str(self.agent / 'tick.json'))
+
+    def test_broken_health_exits_one(self):
+        """astra 必修 5：status() 讀完後帳本才消失，health 判 broken，也要退 1、stdout 空。"""
+        real = aos_kernel_cli.status
+        def vanish(home):
+            snapshot = real(home)
+            (self.home / 'state.json').unlink()
+            return snapshot
+        with patch('aos_kernel_cli.status', vanish):
+            out, err = self.ls('--json', code=1)
+        self.assertEqual(out, '')
+        self.assertTrue(err.startswith('aos-kernel: ReadFailed: kernel 家讀不到'), err)
+
+    def test_pools_grouped_by_raw_value(self):
+        """astra 必修 6：空字串池、字面 - 池、info 沒有的 cpu 不併成一組。"""
+        info = aos_home.read_json(self.home / 'info.json')
+        info['cpus'].update({'a': {'pool': ''}, 'b': {'pool': '-'}})
+        self.put(self.home / 'info.json', info)
+        ledger = aos_home.read_json(self.home / 'state.json')
+        ledger['cpus']['ghost'] = {'req': None, 'proc': None, 'discard': False}
+        self.put(self.home / 'state.json', ledger)
+        text = self.ls()[0]
+        heads = {line.split()[1]: line.split()[0] for line in text.splitlines()
+                 if line.startswith('  ') and len(line.split()) > 2 and line.split()[1] in ('a', 'b', 'ghost')}
+        self.assertEqual(heads, {'a': '""', 'b': '-', 'ghost': '?'})
+
+    def test_json_ignores_verbose(self):
+        self.assertEqual(self.ls('--json')[0], self.ls('--json', '-v')[0])
 
     def test_cut_keeps_head_and_tail(self):
         cut = aos_kernel_ls._cut(self.LONG, 24)

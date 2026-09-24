@@ -17,8 +17,8 @@ aos-agent check [--target DIR] [--probe]
 
 - 找到：`ok   kernel: K＝<絕對路徑>（取自 AOS_KERNEL_HOME｜tick.json）`。
 - `AOS_KERNEL_HOME` 不是絕對路徑＝`bad  kernel`（`start` 也會拒絕），K 的項目全部略過。
-- 兩個都有但 `tick.json` 記的跟 `AOS_KERNEL_HOME` 逐字不同＝多一行 `bad  kernel`：`start` 會回 `KernelMismatch`，要換 K 先 `stop` 再刪 `tick.json`；K 的項目照 `AOS_KERNEL_HOME` 那個查。
-- 兩個都沒有＝`bad  kernel: 找不到 K：…；export AOS_KERNEL_HOME=<kernel 家的絕對路徑> 再跑`，K 的項目全部略過。
+- `AOS_KERNEL_HOME` 有設、`tick.json` 也在，但它記的 K 跟 `AOS_KERNEL_HOME` 逐字不同、或讀不到字串 K（檔壞了、沒有 `envs.AOS_KERNEL_HOME`／`AOS_K`、值不是字串）＝多一行 `bad  kernel`（判法跟 `start` 一樣）：`start` 會回 `KernelMismatch`，要換 K 先 `stop` 再刪 `tick.json`；K 的項目照 `AOS_KERNEL_HOME` 那個查。
+- 沒設 `AOS_KERNEL_HOME`，`tick.json` 在但讀不到絕對路徑 K＝`bad  kernel: 找不到 K：沒設 AOS_KERNEL_HOME，<家>/tick.json 也讀不到合法的絕對路徑 K；…`；兩個都沒有＝`bad  kernel: 找不到 K：沒設 AOS_KERNEL_HOME，也沒有 tick.json（沒 start 過）；export AOS_KERNEL_HOME=<kernel 家的絕對路徑> 再跑`。這兩種 K 的項目全部略過。
 
 daemon 家：`AOS_DAEMON_HOME`，沒設就用 K 的 `info.json` 記的 `daemon`（上次 boot 寫的），再沒有才是目前資料夾（跟 `aos-kernel check` 不同：這裡沒有 `--daemon-target`，也通常不在 daemon 家裡跑）。
 

@@ -302,7 +302,7 @@ class KernelCLI(KernelCase):
         self.assertEqual(kernel._stderr_hint(str(target)), str(target))
         for value in ({'$env': 'ERR'}, {'$opt': 'append', '$val': {'$env': 'ERR'}}, None):
             self.write(target, {'stderr': value})
-            self.assertEqual(kernel._stderr_hint(str(target)), str(target) + ' 的 stderr 設定')
+            self.assertEqual(kernel._stderr_hint(str(target)), str(target))  # advice-r1：沒有字面 stderr 就指 target
 
     def fake_daemon_snapshot(self, phase='running', alive=True, missing=True):
         import fcntl
