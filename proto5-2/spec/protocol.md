@@ -32,18 +32,24 @@
 | `target` | 絕對路徑樣板 | 池不在時是 | 第 i 號孩子的 aos-exec 目標；`{name}` 恰好出現一次，換成號碼 |
 | `dir_target` | 字串 | 否 | 同 proto5 `spawn` |
 | `home` | 絕對路徑樣板 | 否 | 第 i 號 cpu 的家；只給 `ls` 數「忙」用（偷看那家的 `state.json` 的 `current`） |
+| `decl` | 兩個非負整數的陣列 | 否 | 送件者的宣告序號，照字典序比大小。kernel 用 [chain 的 epoch ns, 格序號]（boot 用 0）。CLI 不給 |
 
 **daemon 怎麼處理**（一律同步、做完才回）：
-1. 形狀不合（`count` 不是非負整數、`skip` 有重複或負數、樣板沒有 `{name}` 或不只一個、不是絕對路徑）＝`-32602`。
+1. 形狀不合（`count` 不是非負整數、`skip` 有重複或負數、樣板沒有 `{name}` 或不只一個、不是絕對路徑、池名不合 [kernel-info §5](kernel-info.md) 的規則）＝`-32602`。
 2. daemon 在 `stopping`＝`-32000`／`Stopping`。
 3. 池已在、`owner` 不同＝`-32000`／`NameTaken`（`message` 說現在的 owner）。
-4. 成員數超過 daemon 能管的（[daemon-home §1](daemon-home.md) 的 `max_children`，全 daemon 合計）＝`-32000`／`TooMany`，什麼都不改。
-5. 寫 `D/pools/<pool>/pool.json`（新宣告；`target`／`home`／`dir_target` 有給就換新的）→ 回音 → 刪原單。
+4. **過期**：池已在、有給 `decl`、而且比 `pool.json` 記的 `decl` **小**＝`-32000`／`Stale`，什麼都不改（相等＝同一張重送，照常做）。
+   擋的是「舊鏈放進來還沒處理的單，在新鏈的單之後才被處理」：`scale A → scale B → 重放 A` 會把 B 蓋掉（審查 R6）。
+5. **池不在、`count` 是 0**：什麼都不建，直接回成功（`ver` 0）。所以 boot 可以放心先送「縮到 0」（審查 R2）。
+6. 成員數超過 daemon 能管的（[daemon-home §1](daemon-home.md) 的 `max_children`，全 daemon 合計**宣告**數）＝`-32000`／`TooMany`，什麼都不改。
+   實際能同時活幾支另由 fd 預算管（[daemon-reconcile §5](daemon-reconcile.md)）。
+7. 寫 `D/pools/<pool>/pool.json`（新宣告、`decl`；`target`／`home`／`dir_target` 有給就換新的）→ 回音 → 刪原單。
    實際拉、收孩子是之後迴圈的事（節流），**回音只代表「收到宣告了」**，不代表 cpu 活了。
 
 result：`{"pool": "k1-llm", "count": 3, "ver": 7}`。`ver` 是這池第幾版宣告，每次成員真的變了才加 1；同一份宣告重送不加（冪等）。
 
-**`count: 0`**：成員清空。全部孩子收完之後 daemon 把整個池拿掉（`pool.json` 連資料夾刪掉），池名就空出來，別的 owner 可以用。
+**`count: 0`**：成員清空。全部孩子收完之後 daemon 把整個池拿掉（先刪 `summary.json`，再刪 `pool.json` 與資料夾），池名就空出來，別的 owner 可以用。
+kernel 把「`summary.json` 不在」當成「池已完全拿掉」（搬池、halt 都靠它）。
 
 **換 `target` 不重拉**：活著的孩子照舊，之後（重）拉的才用新樣板。
 

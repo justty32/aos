@@ -35,6 +35,7 @@ D/
 | `spawn_per_sec` | 50 | 整個 daemon 每秒最多拉幾顆（含新拉、重拉） |
 | `max_children` | 20000 | 所有池的成員加總上限；實際上限再取 `開檔上限 − 64`（[daemon-reconcile §5](daemon-reconcile.md)） |
 
+讀驗：`spawn_per_sec`、`max_children` 正整數；`restart_max_ms` ≥ `restart_delay_ms`；其餘非負整數（`poll_ms` 正整數）。bool 不算整數。不合＝`FieldTypeMismatch`、退 1。
 `_version` 1 的 info（proto5）照樣讀，缺的用預設——daemon 的 info 只多了鍵，沒改舊鍵的意思。
 
 ## 2. `pool.json`：宣告
@@ -57,8 +58,8 @@ D/
 
 | 鍵 | 意思 |
 |---|---|
-| `pid` | 現在（或最後一次）那支的 PID |
-| `gen` | 第幾代：每拉一次加 1。人看得出「這號被重拉過」 |
+| `pid` | 現在（或最後一次）那支的 PID；從沒拉成功過＝null（`since` 也是 null） |
+| `gen` | 第幾代：每次**拉成功**加 1，從 1 起。daemon 重開不歸零（kids 檔留著，[handoff §2](handoff.md)）；那號被移出宣告、檔刪掉之後再加回來才從 1 重算 |
 | `state` | `running`／`dead`（死了、在等重拉）／`failed`（拉不起來，`SpawnFailed`，在等再試）／`killing`（走階梯中） |
 | `since` | 這一代拉起來的 epoch 秒 |
 | `exits`／`last_exit` | 死過幾次、上次的退出碼（同 proto5） |
@@ -73,13 +74,14 @@ D/
 
 ```json
 {"pool": "k1-default", "owner": "/abs/K", "count": 8, "ver": 5,
- "running": 7, "restarting": 1, "pending": 0, "dead": 1, "failed": 0, "killing": 0,
+ "running": 7, "restarting": 1, "pending": 0, "dead": 1, "failed": 0, "killing": 0, "draining": 0,
  "updated": 1790000000.5}
 ```
 
-- `running`：活著的；`restarting` 是其中「死過、重拉後還沒活過 `stable_ms`」的那些（**包含在 `running` 裡**）。
-- `pending`：宣告裡有、還沒拉過（節流排隊中）。`dead`、`failed`、`killing` 同上表。
-- 成員數 ＝ running＋pending＋dead＋failed；`killing` 是正要收掉的（可能是成員＝砍掉重來，也可能不是＝縮小）。
+- `running`：活著的；`restarting` 是其中「死過、重拉後還沒活過 `stable_ms`」的那些（**包含在 `running` 裡，不另外算**）。
+- `pending`：宣告裡有、現在沒有孩子（還沒拉過，或 kill 之後等重拉）。`dead`、`failed` 同上表。
+- `killing` 是成員、正在砍掉重來的；`draining` 是已經移出宣告、正在收的（摘要多一格 `draining`，審查 R23）。
+- **成員數 ＝ running＋pending＋dead＋failed＋killing**；`draining` 不算成員。
 - **沒有「忙」**：daemon 不知道孩子在做什麼。`ls` 要數忙的才去偷看每顆家的 `state.json`（O(活著的數量)，[daemon-cli](daemon-cli.md)）。
 
 kernel 的 `ls`、`cpu ls` 讀這份，不讀 `kids/`。

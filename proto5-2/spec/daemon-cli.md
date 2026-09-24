@@ -34,16 +34,16 @@ aos-daemon -h ／ aos-daemon <子命令> -h
 
 ```text
 daemon running  pid 100  pools 3  children 10011
-k1-kernel   owner /abs/K  want 1      running 1      busy 1     restarting 0  pending 0  dead 0  failed 0  killing 0
-k1-default  owner /abs/K  want 10000  running 9990   busy 8123  restarting 3  pending 7  dead 3  failed 0  killing 0
-k1-llm      owner /abs/K  want 2      running 2      busy 0     restarting 0  pending 0  dead 0  failed 0  killing 0
+k1-kernel   owner /abs/K  want 1      running 1      busy 1     restarting 0  pending 0  dead 0  failed 0  killing 0  draining 0
+k1-default  owner /abs/K  want 10000  running 9990   busy 8123  restarting 3  pending 7  dead 3  failed 0  killing 0  draining 0
+k1-llm      owner /abs/K  want 2      running 2      busy 0     restarting 0  pending 0  dead 0  failed 0  killing 0  draining 0
 ```
 
 - `busy`＝活著的孩子裡，家（宣告的 `home` 樣板）的 `state.json` 有 `current` 的。**要逐顆偷看**，是 O(活著的數量)；
   池沒給 `home` 就印 `busy -`。加 `--no-busy` 可以跳過（上萬顆時省一點）。
-- 這就是使用者要的「按狀態數活／忙／dead／重拉中」：活＝`running`、忙＝`busy`、dead＝`dead`、重拉中＝`restarting`（外加 `pending`／`failed`／`killing`）。
+- 這就是使用者要的「按狀態數活／忙／dead／重拉中」：活＝`running`、忙＝`busy`、dead＝`dead`、重拉中＝`restarting`（外加 `pending`／`failed`／`killing`／`draining`）。`restarting` 包含在 `running` 裡，四個數字不是互斥分類；`dead`＝死了在等重拉，`restarting`＝已經重拉、還沒穩（審查 R23）。
 
-給了 `--pool P`：先印那池的摘要行，再一顆一行（讀 `kids/*.json`，O(池大小)）：
+給了 `--pool P`：先印那池的摘要行，再一顆一行（宣告的成員逐號列，有 kids 檔的讀檔、沒有的印 `pending`；再列不是成員但還在收的 `draining`。O(池大小)）：
 
 ```text
 0     running  pid 2345  gen 3  busy   exits 2  streak 0  since 09:12:03

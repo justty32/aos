@@ -35,8 +35,9 @@ K/
 好處：改池的 `envs` 只要重寫一份 `envs.json`；daemon 每次拉（含重拉）都重讀 target（[daemon.md §2](../../proto5/spec/daemon.md)，不變），
 所以**之後拉起來的 cpu** 就帶新環境。已經活著的不會變——要全池換新就 `aos-daemon kill --pool <dpool> --all`（[daemon-cli](daemon-cli.md)）。
 
-> 實作先驗一件事：`envs` 整格用 `$ref` 取進來、而那份檔裡有 `$opt`（例如 PATH 的 `merge`）時，`aos_inst` 要照樣認得。
-> 認不得就退回 proto5 的做法：每顆 inst 直接抄一份 envs——代價是改 envs 要重寫全池 N 份，這時 `envs` 改成「只影響之後建的家」。
+`envs` 整格用 `$ref` 取進來是 [inst-posix](../../proto5/spec/inst-posix.md) 本來就允許的（先解再驗，`envs` 的 `clear` 選項照認）。
+`$ref` 找檔的中心是解出來的 `cwd`（inst-posix §3.1）——這裡就是那顆 cpu 的家，所以 `../../envs.json` 指到池的環境檔；
+`envs.json` 裡再有 `$ref`，中心仍是那顆的家，不是池目錄。`$ref:""` 指的是 `envs.json` 自己那份文件。（審查 R14）
 
 ## 3. cpu 的家怎麼建
 

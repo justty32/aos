@@ -11,11 +11,11 @@
 | (a) | cpu 表改池表：池名、daemon 家、daemon 那邊的池名、要幾顆、envs；種類由池 envs 定 | [kernel-info](kernel-info.md) |
 | (b) | 宣告式：kernel 只說「P 要 N 顆」，daemon 補、重拉（節流）、收；kernel 不記 pid、只看摘要 | [protocol](protocol.md)、[daemon-reconcile](daemon-reconcile.md)、[kernel-pools](kernel-pools.md) |
 | (c) | daemon 內部按池管、可帶多池；指令全帶 `--pool`；孩子表不整份重寫；階梯批次 | [daemon-home](daemon-home.md)、[daemon-cli](daemon-cli.md)、[daemon-reconcile §6](daemon-reconcile.md) |
-| (d) | `cpu add／rm／ls` 就是改池數字、看池摘要；`ls` 按池；下一格生效不用 boot | [kernel-cli](kernel-cli.md) |
-| (e) | `init --config` 只剩 kernel 參數＋池定義，cpu 可空 | [kernel-cli](kernel-cli.md) `init` |
-| (f) | 每格 O(有事的 cpu)：回音丟通知檔、派工不掃每顆 | [kernel-tick](kernel-tick.md)、[cpu-notify](cpu-notify.md) |
+| (d) | `cpu add／rm／ls` 就是改池數字、看池摘要；`ls` 按池；下一格生效不用 boot | [kernel-cli](kernel-cli.md)。`cpu rm NAME` 的 NAME＝`P/<i>`、永久退休，以及既有池不收 `--env`，是我補的解讀（要使用者拍） |
+| (e) | `init --config` 只剩 kernel 參數＋池定義，cpu 可空 | [kernel-cli](kernel-cli.md) `init`（工作池可空；kernel 那顆永遠在） |
+| (f) | 每格 O(有事的 cpu)：回音丟通知檔、派工不掃每顆 | **部分做到**：逐顆查檔、逐顆找閒的都拿掉了；帳本仍整份讀寫，是 O(N)（[scale §2](scale.md)，要使用者拍）。[kernel-tick](kernel-tick.md)、[cpu-notify](cpu-notify.md) |
 
-## 2. 我自己選的（沒翻案就照這樣）
+## 2. 我自己選的（沒翻案就照這樣；19～22 是審查後加的）
 
 1. **成員用編號**（`count`＋`skip` → 最小的幾個非負整數），不讓 daemon 取名。kernel 不用問就知道有哪幾顆；任何集合都寫得成這兩格。
    替代：daemon 取名、用事件告訴 kernel 誰起來了——要多一條「事件」協定與它的崩潰窗口。
@@ -36,6 +36,10 @@
 16. **池的 owner 是 kernel 家的絕對路徑**；別的 owner 用同一個 daemon 池名＝`NameTaken`；池縮到 0 且收完就從 daemon 消失、名字空出來。
 17. **`aos-daemon scale` 預設不准動有 owner 的池**，`--force` 救急用。
 18. **工作池 cpu 的 `poll_ms` 預設 200**（kernel 池那顆 20）。
+19. **scale 帶 `decl`（送件者序號）**，daemon 擋掉比現有舊的單（`Stale`）；boot 與 `Interrupted` 之後一律整份重送宣告（`redeclare`）。
+20. **排隊格帶 `request`、懶刪**；`delayed` 用堆積；帳本加 `on` 反查。
+21. **kernel halt 先等工作池縮到 0 都確認，才停 kernel 池**；halt CLI 看池消失或宣告 0，不只看 running 0。
+22. **info 的寫入由 `K/.info.lock` 串起來**（CLI 之間）。
 
 ## 3. 沿用 proto5 不變的
 

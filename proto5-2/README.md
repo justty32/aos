@@ -30,6 +30,15 @@ daemon 要帶上萬個孩子，指令會變多，但一律按池管。六點定�
 | kernel 的 syscall、回音判定、鏈 | [proto5/spec/kernel.md](../proto5/spec/kernel.md) §2、§4、§7 |
 | daemon 怎麼拉一個孩子（`go` 握手、process group） | [proto5/spec/daemon.md](../proto5/spec/daemon.md) §2 |
 
+**「不變」那幾份裡仍有幾句要跟著換**（審查 R16；落地時改 proto5 那邊的字，現在先記在這）：
+- kernel.md §2：`add` 的 `pool` 要是 `info.pools` 的 key（不是 `info.cpus`）、不是 `kernel`。
+- kernel.md §6：health／check 的目錄檢查改查 `pools/`（不是 `cpus/`），細節在 [spec/kernel-cli.md](spec/kernel-cli.md)。
+- agent.md §3：`llm.pool`／`tool_pool`／`tick.pool` 的合法性改成「是 `info.pools` 的 key」。
+- aos-agent.md §6.1：`kind=aos` 時指的 cpu.log 路徑改成 `<K>/pools/<池>/cpus/*/cpu.log`；§1.3 共用的 kernel health 照 kernel-cli 的新判定。
+- aos-llm-call.md §1：「envs 只在第一次建家時抄」改成「改池的 `envs.json`，之後拉的 cpu 生效；要全池換用 `aos-daemon kill --all`」。
+- cpu.md §5.4：kernel 不再往每顆 cpu 放 stop（[spec/handoff.md §3](spec/handoff.md)）；§6.1 第 3 步 fd 1 可以是 `/dev/null`（[spec/daemon-reconcile.md §5](spec/daemon-reconcile.md)）。
+- aos-agent.md §5、§10、§11 依賴的只有 `procs`／`replies` 與兩個退出碼設定，帳本第 2 版都保留，**不用改**（astra 核對過）。
+
 fix-r4 正在落地的慣例這裡直接沿用：三支指令的家一律 `--target`（省略找 `AOS_DAEMON_HOME`／`AOS_KERNEL_HOME` 再 `./`）；
 daemon 是 `boot／halt`，kernel 停機是 `halt`；agent 的 `say --wait`、`listen`、`pause／continue`；`aos-llm call`。
 
@@ -55,8 +64,17 @@ daemon 是 `boot／halt`，kernel 停機是 `halt`；agent 的 `say --wait`、`l
 
 ## 筆記
 
-- [notes/](notes/)：審查任務書與回報。
+- [notes/2026-09-24-spec-review-astra-task.md](notes/2026-09-24-spec-review-astra-task.md)／[report](notes/2026-09-24-spec-review-astra-report.md)：astra 唯讀審一輪，挑出 28 條（R1～R28），全部已改進規範（改法標在各檔「審查 Rn」處）；三題轉成下面的要使用者拍的。
 
 ## 要使用者拍的
 
-（審查後補齊，見下一節之後的更新。）
+1. **kernel 帳本仍是整份讀寫，要不要接受？** 這一版做到「不逐顆查檔、不逐顆找閒的」，但每格仍要讀、寫一份跟 cpu 數成比例的 `K/state.json`（上萬顆約數 MB）。
+   要做到 (f) 的全部，得把帳本拆開——而 aos-agent 現在直接偷看 `K/state.json` 的 `procs`，拆了就要一起改 aos-agent（[spec/scale.md §2](spec/scale.md)）。
+2. **aos-agent 每格偷看整份帳本**：上萬個 agent 時是全系統最大的負擔（[spec/scale.md §3](spec/scale.md) 第 4 點）。要不要讓 kernel 另外維護「一行程一個小檔」，agent 改看它？（要改 aos-agent.md）
+3. **一顆 cpu＝一支 Python 行程**：1 萬顆約 100～200 GB 記憶體，而且每顆每 0.2 秒掃一次資料夾。「開一顆 cpu 很便宜」以現在的 `aos-cpu` 不成立。要不要改（一支行程管多個家、換語言），還是先以千顆為目標？
+4. **`cpu rm NAME` 的意思**：草稿定成 `NAME`＝`P/<i>`、**永久退休那個號**（寫進 `skip`，之後擴池也不再用它）。如果你的意思只是「這次收掉哪一顆」，要改。
+5. **既有池的 `cpu add --env`**：草稿直接拒絕（改環境請編 info）。要不要允許「改池環境、之後拉的 cpu 繼承」？活著的要不要一起重拉？
+6. **縮小要不要有 `--now`**：現在一律等被收的那顆把手上的工作做完；沒設 timeout 的工作可能等很久（[spec/kernel-pools.md §3](spec/kernel-pools.md)）。
+7. **拉不起來的號卡住的工作**：家壞了、cpu 永遠起不來時，派給它的那件只能靠把家修好來解開。要不要訂一個「確認沒人會跑這張單就放棄它」的協定？
+8. **daemon `halt` 後再 `boot` 要不要自動把池拉回來**：草稿選「要」（宣告留在 `pool.json`），所以 daemon 重開後通常不用 `aos-kernel boot`；代價是想「乾淨重來」得先讓 kernel 把池縮到 0。
+9. **退休的 cpu 家要不要有清理指令**：家從不刪，磁碟上的家數＝池曾經到過的最大號（[spec/kernel-home.md §4](spec/kernel-home.md)）。
