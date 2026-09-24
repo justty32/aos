@@ -30,7 +30,7 @@
 | **proto4-5** | LLM 分兩層：同步 `aos-llm call`；排程器 `llm-cpu`，可獨立掛 cpu，也可作 kernel module。 | dispatcher tick 收件／排隊／派**背景 worker 子進程**，不等 HTTP；worker 同步問模型、寫結果檔。 | HTTP timeout；scheduler 另在期限＋5 秒後判 worker timeout。worker 死且無結果 → `worker_died`，**不自動重送**。失敗也產生 result。 | 有 request id＋內容 hash 冪等；但不是 exactly-once 執行協議，仍有 spawn／記 pid 交界。来源：[llm_cpu_tick.py:72](../../proto4-5/llm_cpu_tick.py)、[llm_cpu_tick.py:192](../../proto4-5/llm_cpu_tick.py)、[llm_cpu_worker.py:37](../../proto4-5/llm_cpu_worker.py)。 |
 | **proto4-6** | JSON：每元素一份 inst；Python：每個公開 step 函式；Lua：return 表中的每個函式。 | 格內執行同步。`llm_submit` 回結果檔路徑，`wait_for` 宣告等待；後續未到檔就退 101，不跑下一格。 | JSON child 非零停原 pc；Python 函式成功且 state 能序列化才落盤。等待檔無 timeout；一般 call 可傳 timeout。沒有模型 tool 訊息 adapter。 | 最初等檔回 0，kernel 看不出在等；後來改 101 才能提早讓 cpu。来源：[step_common.py:74](../../proto4-6/step_common.py)、[aos_step_json.py:90](../../proto4-6/aos_step_json.py)、[aos_step_py.py:137](../../proto4-6/aos_step_py.py)、[演化 §23.8:72](../../proto4/notes/23-step-json-python.md)。 |
 | **proto4-7** | `tools/<名>/tool.json` 宣告 schema；`tools/<名>/run` 真正執行。agent 經 `aos_py.call` → `aos-exec` 跑它。 | **`act` 一格串行跑完全部 calls**。LLM 才有 ask／wait 分格，工具沒有背景等待。 | 每工具 **60 秒**；成功 stdout；非零 `[exit N]`＋stderr 前 500 字＋stdout；整段預設截到 **8000 字元**。每 call 都回 tool 訊息。 | 壞 arguments JSON 不執行、回錯誤；不存在／啟動失敗也回 tool。全部跑完才保存，崩潰可重跑整批。來源：[agent_tools.py:105](../../proto4-7/agent_tools.py)、[state_machine.py:200](../../proto4-7/state_machine.py)。 |
-| **proto5 規範＋目前工作樹** | 工具檔為 OpenAI tools 陣列，每元素 `_meta` 是 posix inst；import `aos_inst`／`aos_exec` 執行。 | **`act` 一格串行跑完全部 calls**。目前 `think` 也直接同步問模型；改 llm cpu 仍是規劃事項。 | arguments 字串原樣進 stdin；stdout 整段回來；目前 **工具不限時、沒有輸出截斷**。不存在／inst 壞／非零均變 tool 訊息，agent 正常回 0。 | 新增記憶尾巴自癒，能處理「history 已寫、state 未寫」，不能防止「工具做了、history 未寫」的重複副作用。來源：[規範:41](../spec/aos-agent.md:41)、[實作:159](../lib/aos_agent.py)、[實作:230](../lib/aos_agent.py)、[llm cpu 任務書:3](2026-09-22-llm-cpu-plan-task.md)。 |
+| **proto5 規範＋目前工作樹** | 工具檔為 OpenAI tools 陣列，每元素 `_meta` 是 posix inst；import `aos_inst`／`aos_exec` 執行。 | **`act` 一格串行跑完全部 calls**。目前 `think` 也直接同步問模型；改 llm cpu 仍是規劃事項。 | arguments 字串原樣進 stdin；stdout 整段回來；目前 **工具不限時、沒有輸出截斷**。不存在／inst 壞／非零均變 tool 訊息，agent 正常回 0。 | 新增記憶尾巴自癒，能處理「history 已寫、state 未寫」，不能防止「工具做了、history 未寫」的重複副作用。來源：[規範:41](../spec/aos-agent/README.md)、[實作:159](../lib/aos_agent.py)、[實作:230](../lib/aos_agent.py)、[llm cpu 任務書:3](2026-09-22-llm-cpu-plan-task.md)。 |
 
 proto2 的兩條工具路徑值得獨立看，因為它已實際做過接近 D 的行為：
 
@@ -165,7 +165,7 @@ daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻
 | `run_target` | 同步執行；`on_spawn(Popen)`／結束後 `on_spawn(None)`；可 timeout。 | `on_spawn` 是持有 child、供控制用的鉤子，**不是非同步 API**。 |
 | 新 `run_inst` | 記憶體 inst＋stdin 字串→`code,kind,stdout`；也是同步。 | 目前沒有公開 `on_spawn` 參數，agent 呼叫沒有傳 timeout。 |
 
-來源：[agent.md:75](../spec/agent.md:75)、[aos-agent.md:22](../spec/aos-agent.md:22)、[工具格式:82](../../proto5.1/spec/aos-llm-ask.md)、[run_target:45](../lib/aos_exec.py)、[run_inst:87](../lib/aos_exec.py)。
+來源：[agent.md:75](../spec/agent/state.md)、[aos-agent.md:22](../spec/aos-agent/README.md)、[工具格式:82](../../proto5.1/spec/aos-llm-ask.md)、[run_target:45](../lib/aos_exec.py)、[run_inst:87](../lib/aos_exec.py)。
 
 `waits` 的五個選項各自只做這些事：
 
@@ -177,7 +177,7 @@ daemon 有 `running` 欄位，但 kernel 的 `poll_cpus`／排程沒有用它阻
 | `any` | **同一條**裡任一個路徑到達即可。 |
 | `all` | 預設；同一條裡全部路徑到達。 |
 
-多條 waits 要全部清空，整道門才開。**如果結果還要讀，該條不能先 consume，否則門先把它 rename 掉，收結果的程式便找不到原路徑。**[agent.md:110](../spec/agent.md:110)
+多條 waits 要全部清空，整道門才開。**如果結果還要讀，該條不能先 consume，否則門先把它 rename 掉，收結果的程式便找不到原路徑。**[agent.md:110](../spec/agent/README.md)
 
 OpenAI 的 function-calling 文件示例是：保存 assistant 的 calls，逐 call 用相同 `tool_call_id` 回 tool 訊息，再送下一次請求。它描述的是訊息配對，沒有要求本機必須用同一個 thread 同步執行。[官方 Function calling](https://developers.openai.com/api/docs/guides/function-calling)
 
@@ -244,7 +244,7 @@ metadata 有一個現成邊界：
 - 工具元素送模型前，只會移除 **`_` 開頭的頂層 key**。直接加裸的 `"async"`，目前會原樣送 API。
 - `_meta` 現在是一份 inst，未知 inst 頂層 key 會忽略。把 `"timeout_ms"` 或 `"cpu"` 塞進去，**不代表現有執行器會採用它**。
 
-所以 E 不是只加標籤，還要正式定义誰讀、誰驗、是否送模型。[strip_private:84](../lib/aos_agent_info.py)、[inst 未知欄位規則:56](../spec/inst-posix.md:56)
+所以 E 不是只加標籤，還要正式定义誰讀、誰驗、是否送模型。[strip_private:84](../lib/aos_agent_info.py)、[inst 未知欄位規則:56](../spec/inst-posix/fields.md)
 
 與 llm cpu 能共用多少：
 
@@ -259,7 +259,7 @@ metadata 有一個現成邊界：
 
 proto4-5 已提供可參考的 request→running→done、results、hash 與 `worker_died` 做法，但不是 proto5 已定的共用協議。舊版也有 spawn 成功、pid 尚未寫入時的窗口，不能整份搬過來就算完成恢復設計。[request hash:21](../../proto4-5/llm_cpu_request.py)、[dispatch:200](../../proto4-5/llm_cpu_tick.py)
 
-還有一項搬到 tool cpu 後會變的語意：目前 `$env` 讀 agent 執行環境，inst 路徑以 agent base／解析後 cwd 為中心。若改由 worker 才解 inst，不能無意間改讀 worker 的環境或 cpu 家目錄；要決定送的是**原始 inst＋解析上下文**，還是**已解析的執行內容**。[inst 路徑:89](../spec/inst-posix.md:89)、[load_obj:91](../lib/aos_inst.py)
+還有一項搬到 tool cpu 後會變的語意：目前 `$env` 讀 agent 執行環境，inst 路徑以 agent base／解析後 cwd 為中心。若改由 worker 才解 inst，不能無意間改讀 worker 的環境或 cpu 家目錄；要決定送的是**原始 inst＋解析上下文**，還是**已解析的執行內容**。[inst 路徑:89](../spec/inst-posix/fields.md)、[load_obj:91](../lib/aos_inst.py)
 
 ---
 

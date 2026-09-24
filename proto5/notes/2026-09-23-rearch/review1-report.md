@@ -9,123 +9,123 @@ kernel 的接鏈、派工、收件都有跨檔崩潰窗口；`boot` 更繞過專
 
 ### CPU
 
-**C-1｜在哪：[cpu §6，第 1–2 步](../../spec/cpu.md:208)／問題：先把對帳依據清掉。**  
+**C-1｜在哪：[cpu §6，第 1–2 步](../../spec/cpu/lifecycle.md)／問題：先把對帳依據清掉。**  
 第 1 步寫 `current=null`，第 2 步才讀 `state.current`。照文字執行，上一任留下的工作會失去身分，原 request 可能重新執行。  
 **建議：**先讀取並對帳舊 state，再發布新主人的初始狀態；對帳完成前不得清掉舊 current。**嚴重度：擋。**
 
-**C-2｜在哪：[cpu §6，第 2–3 步](../../spec/cpu.md:209)／問題：兩檔皆無不代表回音沒發出去。**  
+**C-2｜在哪：[cpu §6，第 2–3 步](../../spec/cpu/lifecycle.md)／問題：兩檔皆無不代表回音沒發出去。**  
 時序可以是：刪 request → 發成功回音 → 收件者讀完刪 response → 主人尚未清 current 就崩潰。重啟會憑空再補 `Interrupted`，所以「沒有猜的空間」「收件者拿走後不再碰」均不成立。  
 **建議：**補持久完成記錄或收件確認規則，讓「尚未發布」與「已被消費」可區分；單純交換刪檔與寫檔順序不夠。**嚴重度：擋。**
 
-**C-3｜在哪：[cpu §4.3](../../spec/cpu.md:150)、[§6](../../spec/cpu.md:209)／問題：存在沒列出的第四種組合。**  
+**C-3｜在哪：[cpu §4.3](../../spec/cpu/methods.md)、[§6](../../spec/cpu/lifecycle.md)／問題：存在沒列出的第四種組合。**  
 正常完成是「刪 request → 寫 response」，壞單和開機補 `Interrupted` 卻是「寫 response → 刪 request」。兩步間崩潰就會兩檔都在：先判 request 會覆寫既有回音，先判 response 而什麼都不做又會留下可重跑的原單。  
 **建議：**統一正常、錯誤、恢復的完成規則，列出四種組合與判定優先序；恢復程序再次崩潰也必須能重入。**嚴重度：擋。**
 
-**C-4｜在哪：[cpu §3、§6](../../spec/cpu.md:86)／問題：刪 request 後，原 JSON-RPC 身分無從恢復。**  
+**C-4｜在哪：[cpu §3、§6](../../spec/cpu/messages.md)／問題：刪 request 後，原 JSON-RPC 身分無從恢復。**  
 `id` 可以不同於檔名，但 state 只存 `current` 檔名。原單刪掉後，補 `Interrupted` 時既不知道原 id，也不知道原單是不是不得回音的 notification。  
 **建議：**認領時持久保存原 id、是否有 id，以及恢復所需資料，不由檔名猜協議身分。**嚴重度：要修。**
 
-**C-5｜在哪：[cpu §5.1–5.2](../../spec/cpu.md:170)／問題：四個停止來源沒有接成同一個狀態機。**  
+**C-5｜在哪：[cpu §5.1–5.2](../../spec/cpu/stop.md)／問題：四個停止來源沒有接成同一個狀態機。**  
 只在取下一件前查看來源，長工作執行中便可能尚未讀到 pipe／檔案 stop；之後收到 TERM，到底是第一次溫和停，還是已在停機途中的強制停，沒有答案。檔案 stop 不靠檔名辨識，也須說清是否先掃完整個佇列。  
 **建議：**明訂執行中如何接收並記住停止要求，以及後續訊號的升級規則；Python handler 可設旗標，再由執行監控處理。同種標準訊號可能合併，措辭應是「已處理第一次後，再處理到訊號」，不能保證快速連送兩次必然計兩次。**嚴重度：要修。** [Python signal](https://docs.python.org/3/library/signal.html)、[Linux signal(7)](https://man7.org/linux/man-pages/man7/signal.7.html)
 
-**C-6｜在哪：[cpu §0、§5.1](../../spec/cpu.md:28)／問題：EOF 不等於父行程死亡。**  
+**C-6｜在哪：[cpu §0、§5.1](../../spec/cpu/terms.md)／問題：EOF 不等於父行程死亡。**  
 EOF 表示所有寫端都已關閉且緩衝資料讀完；父可以活著但關閉管線，父死後也可能有其他行程留著寫端，導致永遠沒有 EOF。  
 **建議：**改成「控制連線 EOF 視同 stop」，並明定父行程獨占寫端、不必要的繼承副本必須關閉。**嚴重度：要修。** [Linux pipe(7)](https://man7.org/linux/man-pages/man7/pipe.7.html)
 
-**C-7｜在哪：[cpu §6–7](../../spec/cpu.md:214)／問題：回音寫不出去，不能再用回音回報。**  
+**C-7｜在哪：[cpu §6–7](../../spec/cpu/lifecycle.md)／問題：回音寫不出去，不能再用回音回報。**  
 刪 request 後，發布 response 遇到 ENOSPC／EACCES，規範沒有定義保留哪些資料、主人是否退出；§7 卻說 request 處理中的錯誤都回 response、不影響退出碼。  
 **建議：**把發布失敗列為主人層級的 I/O 失敗，定義保留恢復資料、停止接新單與退出碼；不要讓「壞單也回音」涵蓋無法發布的情形。**嚴重度：要修。**
 
-**C-8｜在哪：[cpu §0、§3.1](../../spec/cpu.md:24)／問題：奈秒時間戳不保證名稱唯一。**  
+**C-8｜在哪：[cpu §0、§3.1](../../spec/cpu/terms.md)／問題：奈秒時間戳不保證名稱唯一。**  
 `time.time_ns()` 可能因時鐘解析度、同時交件或回撥而重複；request 已刪之後，`link` 也擋不住歷史名稱重用。  
 **建議：**改稱「時間戳」，唯一性由交件者識別搭配計數或隨機值保證；EEXIST 只保證當下不覆蓋。**嚴重度：要修。** [Python time](https://docs.python.org/3/library/time.html#time.time_ns)
 
 ### Kernel
 
-**K-1｜在哪：[kernel §3，第 1–2 步](../../spec/kernel.md:102)／問題：先接鏈仍然會斷鏈。**  
+**K-1｜在哪：[kernel §3，第 1–2 步](../../spec/kernel/tick.md)／問題：先接鏈仍然會斷鏈。**  
 發布 `k-(N+1)` 後、寫入 `state.next=N+1` 前崩潰，下一格會因磁碟上的 next 仍是 N，被守門判成舊鏈丟掉。反過來先存 next，也會留下尚未發布後繼的窗口。  
 **建議：**定義可恢復的接鏈提交狀態與補鏈責任者；不能只靠兩次獨立寫入保證「這格崩了，下一格照跑」。**嚴重度：擋。**
 
-**K-2｜在哪：[kernel §3 第 5 步、§6–7](../../spec/kernel.md:160)／問題：boot 繞過序列化，`--seq` 不是互斥。**  
+**K-2｜在哪：[kernel §3 第 5 步、§6–7](../../spec/kernel/tick.md)／問題：boot 繞過序列化，`--seq` 不是互斥。**  
 首次 boot 的 tick 0 已排入 tick 1，再啟動 kernel cpu；tick 1 此時就能執行，與尚未完成第 6–9 步的 tick 0 同時改 K。重複 boot 還會撞上已通過守門的舊 tick；重設序號也會重用 `k-1` 等名稱。  
 **建議：**所有修改排程狀態的 tick，包括第一格，都經同一執行序列；boot 另定鏈世代與交接程序。失敗 boot 保留哪個 daemon 綁定、哪條鏈，也須一併定義。**嚴重度：擋。**
 
-**K-3｜在哪：[kernel §1.2、§3 第 7–8 步](../../spec/kernel.md:60)／問題：缺少 request 對行程的映射。**  
+**K-3｜在哪：[kernel §1.2、§3 第 7–8 步](../../spec/kernel/ledger.md)／問題：缺少 request 對行程的映射。**  
 派工後只記 `req="k-N-cpu"`，NAME 從 queue 拿掉，其他欄位也沒記它在哪顆 cpu。下一格收到回音，無從知道該更新哪個行程、讀哪份政策、轉交哪個 once。  
 **建議：**在途記錄至少保存 request、NAME、行程世代；回音、計數與 rm 全部依這筆綁定處理。**嚴重度：擋。**
 
-**K-4｜在哪：[kernel §3，第 7–9 步](../../spec/kernel.md:114)／問題：收件會永久失單，派件會重派。**  
+**K-4｜在哪：[kernel §3，第 7–9 步](../../spec/kernel/tick.md)／問題：收件會永久失單，派件會重派。**  
 讀刪 response 後、存 state 前崩潰，磁碟上的 req 永遠等一份已消失的回音；發布工作後、存 state 前崩潰，磁碟上仍是 req=null、行程仍在 queue，下格可用新名稱重派，甚至派到別顆 CPU。搬 done／bad、刪 once 行程與存 state 之間也缺恢復規則。  
 **建議：**先持久記錄待送／待收身分與處理進度，再做可重複的發布及清理；修正「不會重派」「計數是準的」兩項保證。**嚴重度：擋。**
 
-**K-5｜在哪：[kernel §3 第 5 步、§5](../../spec/kernel.md:109)／問題：spawn 結果未知可能產生同家兩個主人。**  
+**K-5｜在哪：[kernel §3 第 5 步、§5](../../spec/kernel/tick.md)／問題：spawn 結果未知可能產生同家兩個主人。**  
 daemon 已 spawn，但回覆逾時，或 kernel 收到 child id 後尚未存 state 就崩潰。下格不知道該孩子身分，而 `ls` 只有 id／pid／alive，不能按 cpu 家找回；重送 spawn 就可能重複啟動。  
 **建議：**在此先寫出必要的 daemon 邊界契約：spawn 可按穩定身分重試，或能按 cpu 家對帳；逾時代表結果未知，不代表沒有啟動。**嚴重度：擋。**
 
-**K-6｜在哪：[kernel §3 第 5 步、§5、§8](../../spec/kernel.md:154)／問題：kernel cpu 不能靠已停掉的鏈重生自己。**  
+**K-6｜在哪：[kernel §3 第 5 步、§5、§8](../../spec/kernel/tick.md)／問題：kernel cpu 不能靠已停掉的鏈重生自己。**  
 kernel cpu 死了，下一格留在 requests，卻沒有 tick 能執行第 5 步拉起它。若死時 tick 還活著，它又可能成為仍在修改 K 的孤兒。  
 **建議：**指定鏈外恢復者與舊 tick 的交接條件，或明訂這種情形需手動 boot；不能說它與工作 CPU 的恢復完全相同。**嚴重度：擋。**
 
-**K-7｜在哪：[kernel §2、§3 第 6 步、§4](../../spec/kernel.md:87)／問題：once 的接受與延後回音缺少完整生命週期。**  
+**K-7｜在哪：[kernel §2、§3 第 6 步、§4](../../spec/kernel/syscall.md)／問題：once 的接受與延後回音缺少完整生命週期。**  
 原 add 留著，下格重掃可能回 AlreadyExists；先刪，pending 尚未保存就崩潰則失單。pending 只存檔名，也不足以保存不同於檔名的 JSON-RPC id。一般 add／rm 的副作用、回覆與原單刪除順序同樣沒有交代。  
 **建議：**明訂已接受請求的持久記錄、重掃判斷、原 id 與結果轉交狀態；once 完成與 rm 只能提交其中一種終局回音。**嚴重度：擋。**
 
-**K-8｜在哪：[kernel §2 rm、§4](../../spec/kernel.md:88)／問題：rm 後同名重加，舊回音可能污染新行程。**  
+**K-8｜在哪：[kernel §2 rm、§4](../../spec/kernel/syscall.md)／問題：rm 後同名重加，舊回音可能污染新行程。**  
 X 正在跑 → rm X → add 新 X → 舊 X 完成。只有 NAME 無法區分兩代，舊回音可能增加新 X 的計數，甚至刪掉新 once；新 X 也可能先在另一顆 CPU 跑起來。  
 **建議：**保留被 rm 那代的在途記錄與丟棄標記，並明訂名稱重用與不同世代重疊的規則。**嚴重度：要修。**
 
-**K-9｜在哪：[kernel §2 stop、§3](../../spec/kernel.md:90)／問題：停止後仍可能派工，而且沒有收尾者。**  
+**K-9｜在哪：[kernel §2 stop、§3](../../spec/kernel/syscall.md)／問題：停止後仍可能派工，而且沒有收尾者。**  
 第 6 步向 CPU 放 stop，第 8 步卻仍派新工；工作 CPU 完成當前工作時，kernel cpu 可能已退出，once 結果便無人轉交。下一格即使執行，也因 stopped 直接退出。  
 **建議：**分開「停止新派工」與「完成收尾」，明訂在途工作、once 回音和排隊工作的去向；若留待下次 boot，須明講等待者會停在哪裡。**嚴重度：要修。**
 
-**K-10｜在哪：[kernel §3、§8 第 1 點](../../spec/kernel.md:184)／問題：stop 不保證最多等一個 interval。**  
+**K-10｜在哪：[kernel §3、§8 第 1 點](../../spec/kernel/tick.md)／問題：stop 不保證最多等一個 interval。**  
 tick 睡完還要等 daemon `ls`，可能再等多次 spawn，每次可達五秒，之後才讀 syscall；daemon 一直出錯時，甚至每格都到不了 stop。  
 **建議：**在可能阻塞或失敗的 daemon 操作之前處理停止要求，或撤掉目前的延遲上限承諾。**嚴重度：要修。**
 
-**K-11｜在哪：[kernel §4](../../spec/kernel.md:126)／問題：判定表無法唯一決定計數與退件。**  
+**K-11｜在哪：[kernel §4](../../spec/kernel/echo.md)／問題：判定表無法唯一決定計數與退件。**  
 開頭 runs 加一，stopped 又說計數不動；error 加 fails 卻沒檢查 bad_after；非 aos 結果未必清 aos，會把不連續的兩次算成連續；stopped 要回 queue，但 once 又說任何结果都轉交並刪除。  
 **建議：**先分 once／反覆，再列結果判定優先序及每個計數的完整更新，將退件門檻套到所有一般失敗。**嚴重度：要修。**
 
-**K-12｜在哪：[kernel §6](../../spec/kernel.md:170)／問題：CLI 承諾拿不到的資料。**  
+**K-12｜在哪：[kernel §6](../../spec/kernel/cli.md)／問題：CLI 承諾拿不到的資料。**  
 once 預設不等卻印 name，但省略 name 時是 kernel 分配，唯一回音又要等工作完成；stop 是 notification，卻被列入送件後等回音的客戶端。`--wait-ms` 也未列在用法。  
 **建議：**不等模式由客戶端預先指定名稱或印送件識別；stop 明訂只確認送件成功，並補齊等待旗標。**嚴重度：要修。**
 
-**K-13｜在哪：[kernel §1.1、§2](../../spec/kernel.md:47)／問題：池的合法性不足以保證可排程。**  
+**K-13｜在哪：[kernel §1.1、§2](../../spec/kernel/home.md)／問題：池的合法性不足以保證可排程。**  
 「有一顆 kernel 池」沒排除兩顆，後文卻依賴唯一一顆；一般 add 可指定 `pool:"kernel"` 或不存在的池，once 會無限等。  
 **建議：**明訂恰好一顆 kernel cpu，拒絕一般行程使用保留池；不存在的池要拒絕，或明定為等待配置的狀態。**嚴重度：要修。**
 
 ### 跨文件與底層契約
 
-**X-1｜在哪：[cpu §4.1](../../spec/cpu.md:128)、[kernel §3](../../spec/kernel.md:104)／問題：預設 tick 本身不合法。**  
+**X-1｜在哪：[cpu §4.1](../../spec/cpu/methods.md)、[kernel §3](../../spec/kernel/tick.md)／問題：預設 tick 本身不合法。**  
 CPU request 的 timeout 只准正整數，但 kernel 明寫 tick `timeout_ms:0`，一般行程預設也是 0；aos-exec 則明定 0＝不限。  
 **建議：**統一為非負整數、bool 不算、0＝不限。**嚴重度：擋。**
 
-**X-2｜在哪：[cpu §4.1](../../spec/cpu.md:128)、[kernel §3 第 8 步](../../spec/kernel.md:117)／問題：並列 timeout 尚未形成可執行的解析契約。**  
+**X-2｜在哪：[cpu §4.1](../../spec/cpu/methods.md)、[kernel §3 第 8 步](../../spec/kernel/tick.md)／問題：並列 timeout 尚未形成可執行的解析契約。**  
 `{"$ref":"job.json","timeout_ms":5000}` 會依 directives 忽略 `$ref` 旁的 timeout；「整份解完才讀」因此丟掉 kernel 指定的上限。另外 `$env` 只產生字串，不能直接通過整數驗證；`load_obj` 本身也不解析 timeout。  
 **建議：**CPU 另行保存、解析 timeout，寫清來源優先序與解析 context；inst 仍照既定欄位順序解析，不能通用遞迴展開整份 JSON，否則會改掉未知欄位忽略、`_metainfo` 和 `$opt` 的語意。**嚴重度：擋。**
 
-**X-3｜在哪：[cpu §4.1](../../spec/cpu.md:123)、[inst-posix §3.1](../../spec/inst-posix.md:94)／問題：`base=C` 不等於所有中心固定 C。**  
+**X-3｜在哪：[cpu §4.1](../../spec/cpu/methods.md)、[inst-posix §3.1](../../spec/inst-posix/fields.md)／問題：`base=C` 不等於所有中心固定 C。**  
 現有 `load_obj({"cwd":"sub","stdout":"out",…}, base=C)` 得到 `C/sub/out`；解完 cwd 後，其他 `$ref` 也以 cwd 為中心。這和「相對路徑／$ref 的中心一律是 CPU 家」不同。  
 **建議：**保留已定的 CPU 中心方向，但明列 CPU 宿主的解析差異與適配方式，不能同時聲稱直接 `load_obj(params, base=C)` 就與 inst 完全相同。**嚴重度：要修。**
 
-**X-4｜在哪：[cpu §4.1](../../spec/cpu.md:125)、[load_obj:91](../../lib/aos_inst.py)／問題：`$ref:""` 的根不是整個 request。**  
+**X-4｜在哪：[cpu §4.1](../../spec/cpu/methods.md)、[load_obj:91](../../lib/aos_inst.py)／問題：`$ref:""` 的根不是整個 request。**  
 `load_obj(params, …)` 的文件根是 params，故 `/argv/0` 有效、`/params/argv/0` 無效；進入外部 `$ref` 後，目前文件還會切換成被引用的文件。  
 **建議：**改寫成「最初文件是 params，之後依 directives 跟隨目前文件」；若真的要 request 根，必須另傳文件與位置 context。**嚴重度：要修。**
 
-**X-5｜在哪：[cpu §4.1 result](../../spec/cpu.md:141)、[aos-exec 退出碼](../../spec/aos-exec.md:53)／問題：找不到程式的分類改了。**  
+**X-5｜在哪：[cpu §4.1 result](../../spec/cpu/methods.md)、[aos-exec 退出碼](../../spec/aos-exec/exit.md)／問題：找不到程式的分類改了。**  
 CPU 把 executable 找不到列為 kind=aos；底層明定是 child／127，沒執行權是 child／126，exit 檔照寫。這會使 kernel 從一般失敗變成「連續兩次 aos 就退件」。  
 **建議：**沿用底層分類，並明定 result 中 aos 的 code 是 API 的 1，還是正規化後的 125。**嚴重度：要修。**
 
-**X-6｜在哪：[cpu §3、§4.1](../../spec/cpu.md:80)、inst-posix §3.3／§6／問題：工作串流會撞控制 pipe。**  
+**X-6｜在哪：[cpu §3、§4.1](../../spec/cpu/messages.md)、inst-posix §3.3／§6／問題：工作串流會撞控制 pipe。**  
 合法的 stdin inherit 會讓工作與 CPU 競讀 fd 0，可能吃掉 stop；stdout inherit，包括 stderr merge，會把一般輸出灌入控制回程。  
 **建議：**CPU 啟動時將控制 pipe 轉到私有、不傳給工作的 fd，另定工作可繼承的標準串流；不能只靠 `close_fds=True`，它保留標準 fd。**嚴重度：要修。** [Python subprocess](https://docs.python.org/3/library/subprocess.html)
 
-**X-7｜在哪：[cpu §3、§4.3、§6](../../spec/cpu.md:82)／問題：合法 notification 被要求回音。**  
+**X-7｜在哪：[cpu §3、§4.3、§6](../../spec/cpu/messages.md)／問題：合法 notification 被要求回音。**  
 未知 method 的合法 notification 仍不得回覆，§4.3 卻一律寫 response；§6 正常／Interrupted 回音也漏掉這個分支。此外未完整定義 method、id 型別驗證。  
 **建議：**區分壞信封與合法 notification：前者按 JSON-RPC 回錯，後者即使 method／params 錯也不回；補 method 必須字串、id 的合法型別，且 `id:null` 不是省略 id。**嚴重度：要修。** [JSON-RPC 2.0](https://www.jsonrpc.org/specification)
 
-**X-8｜在哪：[kernel §1.1、§6](../../spec/kernel.md:53)、directives §1／問題：boot 綁 daemon 會被頂層 `$ref` 吃掉。**  
+**X-8｜在哪：[kernel §1.1、§6](../../spec/kernel/home.md)、directives §1／問題：boot 綁 daemon 會被頂層 `$ref` 吃掉。**  
 若 info 是 `{"$ref":"base.json"}`，boot 只在外層加 `daemon:D2`，整份解析仍忽略它，繼續用引用內的 D1。舊 findings #49 已專門修過這件事。  
 **建議：**保留外層 daemon 綁定的明確優先規則，或明訂 boot 如何重寫配置及其固化效果。**嚴重度：要修。**
 

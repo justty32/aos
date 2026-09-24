@@ -1,7 +1,7 @@
 """inst.json（posix 第 1 版）的讀、驗、解——「格式」這一層，跟「怎麼跑」分開（跑在 aos_exec.py）。
 
-規範是 ../spec/inst-posix.md，指示詞（`$env`／`$fmt`／`$ref`／`$opt`）的機制全部交給
-aos_directives.py（規範 ../spec/directives.md），這個檔只做 inst 這個宿主自己的事：
+規範是 ../spec/inst-posix/，指示詞（`$env`／`$fmt`／`$ref`／`$opt`）的機制全部交給
+aos_directives.py（規範 ../spec/directives/），這個檔只做 inst 這個宿主自己的事：
 
 - 讀檔、驗 `_metainfo`（沒寫＝posix v1；它的值不解指示詞）。
 - 七個欄位照這個順序解：頂層整份 → `cwd` → `argv` → `envs` → `stdin`／`stdout`／`stderr`／`exit`。

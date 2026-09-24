@@ -3,14 +3,14 @@
 
     aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 
-`xxx` 是什麼決定怎麼跑（命令列說明在 ../spec/aos-exec.md）：
+`xxx` 是什麼決定怎麼跑（命令列說明在 ../spec/aos-exec/）：
 
     普通檔案（副檔名不是 .json）  直接執行它，stdin/stdout/stderr 繼承 aos-exec 的
     .json 檔                     讀進來當 inst.json 解析、執行（不存在＝125，見下）
     資料夾                       執行 xxx/<--dir-target>（預設 .aos/inst.json）
 
 inst.json 怎麼讀、怎麼驗在 aos_inst.py；「照一份 inst 跑一次」是什麼意思照
-../spec/inst-posix.md 第 6 節做：驗完才跑、mkdir／append／inherit／merge、環境清空或疊加、
+../spec/inst-posix/ 第 6 節做：驗完才跑、mkdir／append／inherit／merge、環境清空或疊加、
 新 process group、逾時 SIGTERM → 2 秒 → SIGKILL、exit 檔十進位＋換行並 fsync 檔與父目錄。
 
 「反覆執行」不是這支程式的事，時限也只是命令列旗標——之後的 aos-run 會直接

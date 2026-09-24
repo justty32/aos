@@ -16,4 +16,4 @@
 
 **確認／建議**
 - 九個閘門位置符合目前路徑，模組替換有效；但 `go_sent` 精確而言是 `_send()` 返回，未普遍保證寫入成功。state 使用暫存檔＋replace，SIGKILL 不會留下半份正式 JSON。[test_daemon_crash.py:112](../../lib/test/test_daemon_crash.py#L112)、[aos_daemon.py:138](../../lib/aos_daemon.py#L138)、[aos_home.py:118](../../lib/aos_home.py#L118)
-- **規範確實矛盾。** 我以 §6.1 的明確啟動流程為準：跨代清表、不收養；未完成請求對帳為 `Interrupted`，客戶另送 spawn 得新 PID。§2「崩潰後重送回原 PID」應修正為同一任仍持有 running 表項時的冪等性。[daemon.md:117](../../spec/daemon.md)、[同檔:228](../../spec/daemon.md)
+- **規範確實矛盾。** 我以 §6.1 的明確啟動流程為準：跨代清表、不收養；未完成請求對帳為 `Interrupted`，客戶另送 spawn 得新 PID。§2「崩潰後重送回原 PID」應修正為同一任仍持有 running 表項時的冪等性。[daemon.md:117](../../spec/daemon/README.md)、[同檔:228](../../spec/daemon/README.md)

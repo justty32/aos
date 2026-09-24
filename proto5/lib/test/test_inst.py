@@ -1,4 +1,4 @@
-"""aos_inst.load()：讀、驗、解——照 spec/inst-posix.md。全部在這個進程裡跑，不開子進程。
+"""aos_inst.load()：讀、驗、解——照 spec/inst-posix/。全部在這個進程裡跑，不開子進程。
 
 分幾群：七個欄位與預設值、_metainfo、選項物件的形狀、$ref／$at、$fmt、$env、拒絕的代號、
 指示詞優先序。案例大多從 proto4-3 的 test_fields／test_opts／test_ref／test_fmt／test_env／

@@ -1,6 +1,6 @@
 # agent 線規範第 3 輪：改了什麼
 
-← [README](README.md)｜審查：[review-agent2-report.md](review-agent2-report.md)｜上一輪：[agent-round2-changes.md](agent-round2-changes.md)｜改後：[agent.md](../../spec/agent.md)（A）、[aos-agent.md](../../spec/aos-agent.md)（G）、[aos-llm-call.md](../../spec/aos-llm.md)（L）
+← [README](README.md)｜審查：[review-agent2-report.md](review-agent2-report.md)｜上一輪：[agent-round2-changes.md](agent-round2-changes.md)｜改後：[agent.md](../../spec/agent/README.md)（A）、[aos-agent.md](../../spec/aos-agent/README.md)（G）、[aos-llm-call.md](../../spec/aos-llm/README.md)（L）
 
 2026-09-24。照第 2 輪審查的 E（定稿前必改）、D（實作者還得猜）、B-6～B-8、C-1～C-3 修改，另補上一輪留下的 `.tmp` 殘檔問題。三份仍是草稿，程式還沒跟上。
 第 2 輪 changes 表裡 C-6、C-8 原本寫「通」，已改成「沒通」並指到這份。

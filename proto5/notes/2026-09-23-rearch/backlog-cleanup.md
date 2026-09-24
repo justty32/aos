@@ -2,7 +2,7 @@
 
 ← [本輪 README](README.md)｜backlog 索引：`backlog/README.md`（資料夾已於 09-24 拿掉，見 [2026-09-24-backlog-cleanup](../2026-09-24-backlog-cleanup.md)）
 
-新規範：[cpu.md](../../spec/cpu.md)、[kernel.md](../../spec/kernel.md)、[daemon.md](../../spec/daemon.md)。一件一列：檔名（或檔內條目）、原問題、結論、對到哪節。
+新規範：[cpu.md](../../spec/cpu/README.md)、[kernel.md](../../spec/kernel/README.md)、[daemon.md](../../spec/daemon/README.md)。一件一列：檔名（或檔內條目）、原問題、結論、對到哪節。
 
 ## 刪掉的（整個檔）
 

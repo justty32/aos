@@ -4,7 +4,7 @@
 
 ## 要做什麼
 
-照 [spec/aos-agent.md](../spec/aos-agent.md)（程式規範）＋ [spec/agent.md](../spec/agent.md)（資料夾、`state.json`
+照 [spec/aos-agent.md](../spec/aos-agent/README.md)（程式規範）＋ [spec/agent.md](../spec/agent/README.md)（資料夾、`state.json`
 三格、`waits` 五個選項、錯誤代號）寫程式。讀驗 `info.json` 那塊已有 `aos_agent_info`、問模型已有 `aos_llm_ask`，
 **都直接 import、不改它們的既有行為**。規範是老大；對不上的地方**不改規範**，寫進回報。
 

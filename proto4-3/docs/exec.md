@@ -30,7 +30,7 @@ argv 元素。環境就是繼承的、沒有 exit 檔、沒有重導向。它沒
 只能是**一個 JSON 物件**，七個欄位，只有 `argv` 必填；**沒寫在表上的頂層 key 一律忽略**
 （2026-09-21 起；以前是拒絕，`UnknownKey` 這個代號已經沒了）。頂層另外允許一個可選的
 `_metainfo`，見下方說明。這是 posix v1 格式，規範本文在
-[proto5/spec/inst-posix.md](../../proto5/spec/inst-posix.md)。
+[proto5/spec/inst-posix.md](../../proto5/spec/inst-posix/README.md)。
 
 ```json
 {

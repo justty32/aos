@@ -4,7 +4,7 @@
 
 ## 要做什麼
 
-照 [spec/aos-llm-ask.md](../../proto5.1/spec/aos-llm-ask.md)（程式規範）＋ [spec/agent.md](../spec/agent.md)（資料夾與各檔形狀、
+照 [spec/aos-llm-ask.md](../../proto5.1/spec/aos-llm-ask.md)（程式規範）＋ [spec/agent.md](../spec/agent/README.md)（資料夾與各檔形狀、
 讀驗規則、錯誤代號）寫程式。規範是老大；對不上的地方**不改規範**，寫進回報。
 
 | 檔 | 職責 |

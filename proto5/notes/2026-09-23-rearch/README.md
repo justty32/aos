@@ -1,6 +1,6 @@
 # 2026-09-23 重架構：daemon→kernel→cpu 這條線的規範重寫
 
-← [notes 索引](../README.md)｜[proto5 README](../../README.md)｜新規範：[spec/cpu.md](../../spec/cpu.md)、[spec/kernel.md](../../spec/kernel.md)、[spec/daemon.md](../../spec/daemon.md)
+← [notes 索引](../README.md)｜[proto5 README](../../README.md)｜新規範：[spec/cpu.md](../../spec/cpu/README.md)、[spec/kernel.md](../../spec/kernel/README.md)、[spec/daemon.md](../../spec/daemon/README.md)
 
 使用者當天拍板的方向（都寫在各規範的「已拍板的前提」一節）：cpu 範式（一個家一個主人、info／state／requests／responses）、
 規則一軟性、cpu 聽命執行不自己迴圈、pipe 只管生死、JSON-RPC 2.0、所有 request 都是 aos-exec（llm／tool cpu 變成程式）、
