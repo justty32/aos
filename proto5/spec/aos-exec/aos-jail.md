@@ -29,7 +29,7 @@ aos-jail [--mount NAME=PATH]… [--mount-ro NAME=PATH]… [--chdir NAME] [--net 
 - `--proc /proc`（新的，只看得到牢裡的行程）、`--dev /dev`（最小）、`--tmpfs /tmp`（空的）。
 - `/etc` **不整份掛**，只 `--ro-bind-try`：`ld.so.cache`、`passwd`、`group`、`nsswitch.conf`、`localtime`、`hosts`；`--net on` 再加 `resolv.conf`、`ssl/`、`ca-certificates/`。
 - `/work`（空資料夾）與每個 `/work/<NAME>`；PROG 含 `/` 時的 `/opt/tool`。
-- 其他（家目錄、agent 家、kernel 家、金鑰檔）一律看不到。stdin／stdout／stderr 是呼叫者開好的 fd，原樣帶進去。
+- 其他（家目錄、agent 家、kernel 家、金鑰檔）一律看不到——**例外是 `/opt/tool`**：PROG 所在的整個資料夾都看得到，程式放在 agent 家根目錄就等於把整個家唯讀給它（`aos-agent check` 會 warn）。stdin／stdout／stderr 是呼叫者開好的 fd，原樣帶進去。
 
 ## 環境
 

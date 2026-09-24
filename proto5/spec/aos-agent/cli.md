@@ -50,5 +50,5 @@ aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 | `state.json` | `{"input": "input"}`：輸入從 `input/` 資料夾收，`say` 每則取唯一檔名 |
 | `input/`、`log/` | 空資料夾 |
 
-每個檔 `.tmp` 再 rename，**`info.json` 最後寫**（中途崩了不會半套被當成 agent 家）。成功印兩行：`initialized <dir 絕對路徑>`，
+每個檔 `.tmp` 再 rename，**`info.json` 最後寫**（中途崩了不會半套被當成 agent 家；（09-24 access-impl）`info.json` 縮排 2、不跳脫中文，方便手改）。成功印兩行：`initialized <dir 絕對路徑>`，
 和一行提醒：llm.json 不歸 agent 家，它在 kernel 的 llm cpu 用 `AOS_LLM_CONFIG` 指的位置，裡面要有 `default` 這個代號。退 0。

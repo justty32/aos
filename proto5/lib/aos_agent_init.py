@@ -26,7 +26,7 @@ def init(agent_dir, force=False):
                                        'parameters': {'type': 'object', 'properties': {}}},
         '_meta': {'argv': ['date', '+%Y-%m-%d %H:%M:%S']}}])
     aos_home.write_json(base / 'state.json', {'input': 'input'})
-    aos_home.write_json(base / 'info.json', {
+    aos_home.write_json(base / 'info.json', indent=2, obj={
         '_metainfo': {'_type': 'llm_agent', '_version': 1}, 'system': 'prompts/system.json',
         'history': 'prompts/history.json', 'tools': ['tools'],
         'llm': {'model': 'default', 'pool': 'llm', 'timeout_ms': 125000},

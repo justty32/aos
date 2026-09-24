@@ -35,8 +35,8 @@ daemon 家：`AOS_DAEMON_HOME`，沒設就用 K 的 `info.json` 記的 `daemon`�
    - `access`：解得開、名字、路徑存在、`cwd`、重疊（同送件那一套）＝`ok  access: <檔> 讀驗通過：N 個 mount、起點 …、net …`；不合＝`bad  access: <代號>: …`。`info.json` 明寫 `access` 卻指到不在的檔也是 bad。
    - `access/<名>`：mount 頂層有 socket／FIFO＝warn（牢裡連得到，唯讀也擋不住）。
    - `access/bwrap`：跑一次固定、無副作用的 bwrap（跟 aos-jail 同一組參數、不掛任何 mount、程式是 `true`）；找不到＝`bad … NoBwrap: …安裝指令`，開不起來＝bad 帶 bwrap 的訊息。
-   - `access/aos-jail`：工具池 PATH（同 `agent/tool/*` 用的那份）找不到 `aos-jail`＝bad。
-   - `agent/tool/<名字>` 追加：`_jail: false`＝warn（這支不關牢）；`argv[0]` 不含 `/`、而且在 PATH 找到的實體不在 `/usr/` 下（或找不到）＝warn（牢裡只有 `/usr`，可能找不到）。
+   - `access/aos-jail`：送件用的 `<這份 proto5>/cli/aos-jail`（絕對路徑，不看 PATH）不在或沒執行位＝bad。
+   - `agent/tool/<名字>` 追加：`_jail: false`＝warn（這支不關牢）；`argv[0]` 不含 `/`、而且在 PATH 找到的實體不在 `/usr/` 下（或找不到）＝warn（牢裡只有 `/usr`，可能找不到）；`argv[0]` 含 `/` 時，程式所在的資料夾（整個唯讀掛到 `/opt/tool`）是 agent 家、蓋到 agent 家、或裝著程式以外的信任資料＝warn。
    靜態查不完的（牢裡的直譯器、動態函式庫）不查。
 5. `--probe` 才有：`probe/<代號>`，跟 `aos-kernel check --probe` 同一套（llm.json 裡每個 endpoint＋model＋api_key 只打一次）。
 6. 最後一行總結：有 `bad`＝`有 bad，照上面的提示修好再 aos-agent start`；沒有＝`設定檢查通過；未測模型連線（--probe 會測）`，有 `--probe` 時是 `設定檢查通過；模型連線也測過`。

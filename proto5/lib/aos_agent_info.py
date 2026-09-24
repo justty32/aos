@@ -95,11 +95,14 @@ def check_access(access):
     require(set(access) == {'mounts', 'cwd', 'net'} and type(access['net']) is bool, 'batch.access')
     mounts = access['mounts']
     obj(mounts, 'batch.access.mounts')
+    from aos_agent_access import NAME   # 名字規則跟 access.json 同一條
     for name, m in mounts.items():
-        obj(m, 'batch.access.mounts[]')
-        require(work_name(name) and absolute(m.get('path')) and type(m.get('ro')) is bool,
-                'batch.access.mounts[]')
-    require(access['cwd'] is None or access['cwd'] in mounts, 'batch.access.cwd')
+        where = 'batch.access.mounts.%s' % name
+        require(bool(NAME.match(name)), where)
+        obj(m, where)
+        require(absolute(m.get('path')) and type(m.get('ro')) is bool, where)
+    cwd = access['cwd']
+    require(cwd is None or (isinstance(cwd, str) and cwd in mounts), 'batch.access.cwd')
 
 
 def check_batch(batch):

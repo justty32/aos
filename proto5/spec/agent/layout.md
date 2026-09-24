@@ -8,6 +8,7 @@ agent-bob/
   state.json     程式寫的進度（§4）；檔不在＝全預設
   tick.json      aos-agent start 寫的：kernel 反覆跑的那份 inst（aos-agent.md §11）
   .tick.lock     tick 整格持著的 flock（aos-agent.md §2.1）；內容是持有者 pid，不刪（09-24 fix-r4 補）
+  .admin.lock    管理鎖：tools／access 的寫入指令持著的 flock（空檔、不刪；tick 不拿）（09-24 access-impl 補）
   paused         有這個檔＝手動暫停，tick 什麼都不做（aos-agent.md §1.6）；pause 建、continue 刪（09-24 fix-r4 補）
   access.json    人寫的：工具關進牢裡看得到哪些資料夾（§3.5）；沒有＝工具不關牢（09-24 access-impl 補）
   resumed        有這個檔＝continue 解了連敗暫停、還沒等到一次成功（aos-agent.md §1.4）；continue 建、think 成功結清時 tick 刪（09-24 fix-r5 補）

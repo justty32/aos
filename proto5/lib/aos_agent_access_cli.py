@@ -3,7 +3,6 @@
 寫入一律持 info.json 的 flock（跟 tools add 同一把）、.tmp＋rename；access 檔解不開（格式錯）就拒絕寫、
 不蓋掉手寫的東西。AccessUnsafe（重疊）的表仍可以用這些指令修。
 """
-import fcntl
 import json
 import os
 import shutil
@@ -42,10 +41,12 @@ def bwrap_ok():
 def describe(base):
     """ls 的資料：{"file", "exists", "mounts", "cwd", "net", "bwrap", "error"}。"""
     base = os.path.abspath(base)
-    path = acc.configured_path(base)
-    data = {'file': str(path), 'exists': path.exists(), 'mounts': {}, 'cwd': None, 'net': False,
+    path, state = acc.access_lookup(base)
+    data = {'file': str(path), 'exists': state == 'present', 'mounts': {}, 'cwd': None, 'net': False,
             'bwrap': bwrap_ok(), 'error': None}
-    if not data['exists']:
+    if state == 'missing':
+        data['error'] = 'AccessInvalid: info.json 的 access 指到 %s，但檔不在（工具會跑不起來）' % path
+    if state != 'present':
         return data
     try:
         table, _ = acc.parse(path, base, lenient=True)
@@ -67,7 +68,7 @@ def _pad(text, width):
 
 def render(data):
     lines = []
-    if not data['exists']:
+    if not data['exists'] and not data['error']:
         lines.append('沒有 access.json：工具不關牢（照舊在 agent 家跑，碰得到你碰得到的所有檔）。')
         lines.append('要關：aos-agent access set ws workspace --cwd（工作資料夾掛成 /work/ws、起點設在那）')
     elif data['mounts'] or not data['error']:
@@ -107,22 +108,31 @@ def _raw_table(base, path):
     return raw, table
 
 
+def _judge(base, path, raw):
+    """候選內容 → (解好的表, 可寫又重疊的 {名: 白話})；信任集合跟送件同一套（含 access 自己 $ref 的檔）。"""
+    table, refs = acc.parse(path, str(base), lenient=True, doc=acc.Document(path, raw))
+    trust = acc.trusted(str(base), extra=[str(path), *refs])
+    return table, acc.unsafe_mounts(table, trust)
+
+
 def change(base, action, args, ro=False, rw=False, cwd=False):
+    from aos_agent_tools_edit import info_lock           # tools 與 access 共用同一把鎖（A1）
     base = Path(os.path.abspath(base))
-    with open(base / 'info.json', 'rb') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with info_lock(base):                                 # 讀、驗、寫、印都在鎖裡
         notes = _change(base, action, args, ro, rw, cwd)
-    for note in notes:
-        print(note)
-    data = describe(base)
-    print(render(data))
+        for note in notes:
+            print(note)
+        print(render(describe(base)))
     print(LAST)
     return 0
 
 
 def _change(base, action, args, ro, rw, cwd):
-    path = acc.configured_path(base)
+    path, state = acc.access_lookup(base)
+    if state == 'missing' and action != 'set':
+        raise AgentError('AccessInvalid', 'info.json 的 access 指到 %s，但檔不在；先 access set 建一份，或改 info.json' % path)
     raw, table = _raw_table(base, path)
+    before = _judge(base, path, raw)[1] if table is not None else {}
     mounts = raw.setdefault('mounts', {})
     notes = []
     if action == 'set':
@@ -134,7 +144,8 @@ def _change(base, action, args, ro, rw, cwd):
         if name in mounts and _is_directive_value(mounts[name]):
             notes.append('mounts.%s 原本是指示詞 %s，換成字面路徑' % (name, json.dumps(mounts[name], ensure_ascii=False)))
         mode = 'ro' if ro else 'rw' if rw else None
-        why = acc.overlap(os.path.realpath(target), acc.trusted(str(base), extra=[str(path)]))
+        mounts[name] = target                                  # 先當可寫試算，看會不會重疊
+        why = _judge(base, path, raw)[1].get(name)
         if mode is None and old is not None:
             mode = 'ro' if old['ro'] else 'rw'
             if mode == 'rw' and why:
@@ -153,13 +164,23 @@ def _change(base, action, args, ro, rw, cwd):
         if action in ('rm', 'cwd') and name not in mounts:
             raise AgentError('NotFound', 'access 檔 %s 沒有 %s（有：%s）' % (path, name, '、'.join(mounts) or '沒有'))
         if action == 'rm':
-            if raw.get('cwd') == name:
+            if table is not None and table['cwd'] == name:     # 比解好的 cwd（原值可能是指示詞）
                 raise AgentError('AccessInvalid', '%s 是目前的起點（cwd），先 aos-agent access cwd 別的名字 再 rm' % name)
             del mounts[name]
         elif action == 'cwd':
             raw['cwd'] = name
         else:
             raw['net'] = name == 'on'
+    # 落盤前把候選內容整份再驗一次：格式錯、或多出新的「可寫又重疊」＝不寫、退 1。
+    # 原本就重疊的那幾格不擋（好讓人用指令一步步修）。
+    try:
+        _, after = _judge(base, path, raw)
+    except AgentError as exc:
+        raise AgentError(exc.code, '%s（沒寫）' % exc.msg) from exc
+    new = {n: w for n, w in after.items() if n not in before or (action == 'set' and n == args[0])}
+    if new:
+        n, w = next(iter(new.items()))
+        raise AgentError('AccessUnsafe', '%s %s；改 --ro 或換資料夾（沒寫）' % (n, w))
     acc.write_access(path, raw)
     return notes
 

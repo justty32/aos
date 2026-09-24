@@ -6,6 +6,7 @@ import shutil
 import aos_home
 import aos_inst
 import aos_agent_access
+from aos_jail import secret_name
 from aos_agent_home import AgentError
 from aos_agent_results import act_done, model_message, think_done
 from aos_agent_runtime import RESUMED, history_prefix, ledger, report, unique_id
@@ -64,12 +65,40 @@ def jail_argv(decoded, access):
         flags += ['--chdir', access['cwd']]
     flags += ['--net', 'on' if access['net'] else 'off']
     for key, value in decoded['envs'].items():
-        flags += ['--setenv', '%s=%s' % (key, value)]
-    return ['aos-jail', *flags, '--', prog, *decoded['argv'][1:]]
+        if not secret_name(key):            # 敏感名字在寫進 inst 之前就丟（aos-jail 端還有第二層）
+            flags += ['--setenv', '%s=%s' % (key, value)]
+    # 用跟自己同一份 proto5 的 aos-jail 絕對路徑，不靠 PATH（PATH 可能指到可寫位置的替身）
+    return [aos_agent_access.JAIL, *flags, '--', prog, *decoded['argv'][1:]]
+
+
+class _WatchEnv(dict):
+    """解 _meta 時記下 $env 讀了哪些名字（含查無的）。"""
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.read = []
+
+    def __contains__(self, key):
+        self.read.append(key)
+        return super().__contains__(key)
+
+    def __getitem__(self, key):
+        self.read.append(key)
+        return super().__getitem__(key)
 
 
 def tool_inst(meta, base, name, env, access=None):
-    decoded = aos_inst.load_obj(meta, str(base), env=env)
+    if access is not None:
+        # 關牢的工具：_meta 任何一格用 $env 讀敏感名字（AOS_*、像金鑰的、SSH_AUTH_SOCK）＝整件不跑，
+        # 不論解出來放到哪個名字或 argv（值一寫進 inst 就落盤了）。
+        env = _WatchEnv(os.environ if env is None else env)
+        decoded = aos_inst.load_obj(meta, str(base), env=env)
+        bad = sorted({k for k in env.read if isinstance(k, str) and secret_name(k)})
+        if bad:
+            raise aos_inst.InstError('EnvUnsafe', '_meta 用 $env 讀了 %s（名字像金鑰或 AOS_*），關牢的工具不給；'
+                                     '拿掉那一格' % '、'.join(bad))
+    else:
+        decoded = aos_inst.load_obj(meta, str(base), env=env)
     inst = {'_metainfo': dict(META), 'argv': decoded['argv'], 'cwd': decoded['cwd']}
     if decoded['cwd_mkdir']:
         inst['cwd'] = {'$opt': 'mkdir', '$val': decoded['cwd']}

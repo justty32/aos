@@ -62,8 +62,8 @@
 `work/N.in` 的內容是 `function.arguments` 字串原樣（UTF-8），不驗是不是 JSON。
 `_meta` 的 `$env` 讀的是跑 aos-agent 那顆 cpu 的環境；工具要用自己那顆 cpu 的環境，就別寫 `$env`、也別 `clear`（不 clear 就整包繼承）。
 
-（09-24 access-impl）**有 access 快照時**（不是 `null`、工具沒寫 `_jail: false`）上表的 `argv` 與 `envs` 改寫：`argv` 包成 `["aos-jail", …旗標…, "--", 程式, …]`、`_meta.envs` 改成 `--setenv`、外層不帶 `envs`，其餘欄照上表；
-快照是 `error` 或找不到 `bwrap`＝這件照第 1 步「解不過」的路記成跑不起來、不送。牢裡不繼承 cpu 的環境（上一段的「整包繼承」只對不關牢的工具成立）。細節與例子在 [access.md §2](access.md)。
+（09-24 access-impl）**有 access 快照時**（不是 `null`、工具沒寫 `_jail: false`）上表的 `argv` 與 `envs` 改寫：`argv` 包成 `["<這份 proto5>/cli/aos-jail", …旗標…, "--", 程式, …]`（絕對路徑）、`_meta.envs` 改成 `--setenv`（敏感名字先丟）、外層不帶 `envs`，其餘欄照上表；
+快照是 `error`、找不到 `bwrap`、或 `_meta` 用 `$env` 讀了敏感名字（`EnvUnsafe`）＝這件照第 1 步「解不過」的路記成跑不起來、不送。牢裡不繼承 cpu 的環境（上一段的「整包繼承」只對不關牢的工具成立）。細節與例子在 [access.md §2](access.md)。
 
 ## 5.4 think：問模型的 inst
 
