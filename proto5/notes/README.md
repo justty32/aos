@@ -53,6 +53,7 @@
 | [2026-09-24-cli-agents/](2026-09-24-cli-agents/README.md) | **提案**（沒改程式與規範、沒真跑）：Claude Code／Codex 兩支 CLI 納進 kernel／daemon／inst——主方案是「池＋inst 範本＋`aos-cli` 包裝」，不寫新種 cpu；十五個用法、另外四個角色、花錢與權限、astra 必修 11 全改、5 題待拍；＋[stage0.md](2026-09-24-cli-agents/stage0.md)：階 0 做出來（範本、教程 07、四條真跑驗證（牢那條跳過）、一條龍腳本） |
 | [2026-09-24-tool-era/](2026-09-24-tool-era/README.md) | **規劃**（沒改程式與規範）：工具大開發時代——ai_core 九軸對到使用者五句＋「邊界」的評分表、`~/repo/workflows` 化成團隊（三個 agent＋四個機械員）、29 個工具清單、三波開發計畫與任務書骨架；astra 審查 |
 | [2026-09-24-daemon-split-review/](2026-09-24-daemon-split-review/README.md) | **審查**（沒改程式與規範）：「daemon 要 sudo 才能切使用者，所以跟 kernel 分開」站不住——不用 root 也能切（subuid 實驗）、root daemon 反而更危險；分開剩「生死與排程別互相拖累」；建議現在不動，proto5-2 重寫 kernel 時做「開機合一、家不合一」；權限預設 bwrap、daemon 永不 root；兩派 memo＋反駁、astra 兩份、5 題待拍 |
+| [2026-09-24-access-impl/](2026-09-24-access-impl/README.md) | **實作**（照 agent-access 提案）：權限牆＋工具管理 CLI——`access.json` 寫 agent 的工具看得到哪些資料夾，aos-agent 送工具時自動用 `aos-jail`（bwrap）關牢；`tools ls/add/rm/alias/unalias`、`access ls/set/rm/cwd/net`；deepseek-chat 真跑兩輪都過；astra 必修 8 條全修；測試 1343→1447（rebase 後 1470） |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 

@@ -8,10 +8,11 @@
 |---|---|---|---|
 | A1 | tools 元素 `$opt`（as／only）＋`tools ls/add/rm/alias/unalias` | Opus | 完成（d4a9797） |
 | A2 | `access.json` 解析＋信任資料重疊＋`aos-jail`＋送件包牢＋check／status＋`access` CLI＋base `AOS_TOOL_ROOT` | Opus | 完成（d4a9797），全測 1343→1419 |
-| B | 補測試（任務書第 5 項清單） | Sonnet | 進行中 |
-| C | 教程／README／tools README | Sonnet | 進行中 |
-| D | 真跑（LiteLLM deepseek-chat）→ `real-run.md` | Opus | 進行中 |
-| E | astra 審查（任務書 fb33360）＋必修 | codex＋Opus | 審查中 |
+| B | 補測試（任務書第 5 項清單） | Sonnet | 完成（+7 條） |
+| C | 教程 04b／README／tools README | Sonnet | 完成；C2 修正後對回 |
+| D | 真跑（LiteLLM deepseek-chat）→ `real-run.md` | Opus | 完成，兩輪都過 |
+| E | astra 審查＋必修 | codex＋Opus | 必修 8／8 修完；複跑發現 2 條也修 |
+| F | 報告 [README.md](README.md)、rebase 到 main ce8f25c | 隊長＋Sonnet | 完成，全測 1470 OK |
 
 隊長煙霧測試記下的待修（跟 astra 必修一起修）：`tools add base` 在有 access 檔時仍印「改 config.json 的 root」會誤導；`info.json` 被 CLI 改寫成一行，文字編輯器不好改（改成縮排 2）。
 | F | 報告 | — | 未開始 |
