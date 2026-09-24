@@ -2,7 +2,7 @@
 
 # proto5 規範總導航
 
-九份規範，一份一個資料夾；每個資料夾的 `README.md` 是入口（一句定位、已拍板的前提、各節一覽），內容依原本的 § 節拆成小檔，節號照舊，文中「§3」「§1.1」這類引用去該資料夾的 README 查在哪個檔。
+十份規範，一份一個資料夾；每個資料夾的 `README.md` 是入口（一句定位、已拍板的前提、各節一覽），內容依原本的 § 節拆成小檔，節號照舊，文中「§3」「§1.1」這類引用去該資料夾的 README 查在哪個檔。
 
 | 主題 | 一句話 |
 |---|---|
@@ -15,3 +15,4 @@
 | [agent](agent/README.md) | agent 資料夾：設定、對話記憶與跨次進度 |
 | [aos-agent](aos-agent/README.md) | `aos-agent`：走一格、登記、取消登記，以及 init／say／status／listen 等日常指令 |
 | [aos-llm](aos-llm/README.md) | `aos-llm call`：讀 agent 的模型輸入與 cpu 的模型表，問一次模型 |
+| [team](team/README.md) | 一支 agent 團隊：團隊資料夾、名冊、信與申請、任務單狀態機、問人、成員模板、門房、`aos-team`（09-24 工具大開發時代第一波） |

@@ -1,0 +1,3 @@
+{"id": "1790000000200000000-4242-worker-1", "from": "worker-1", "kind": "ask", "at": "2026-09-25T10:02:00+08:00",
+ "question": "facts.json 沒寫分支慣例，要用 main 還是開分支？", "options": ["main", "開分支"], "default": "main",
+ "reply_to": "t-0001"}

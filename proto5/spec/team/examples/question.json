@@ -1,0 +1,18 @@
+{
+  "_metainfo": {"_type": "aos_team_question", "_version": 1},
+  "id": "q-0001",
+  "request": "1790000000200000000-4242-worker-1",
+  "from": "worker-1",
+  "question": "facts.json 沒寫分支慣例，要用 main 還是開分支？",
+  "options": ["main", "開分支"],
+  "default": "main",
+  "reply_to": "t-0001",
+  "asked_at": "2026-09-25T10:02:01+08:00",
+  "status": "open",
+  "answer": null,
+  "answered_at": null,
+  "answer_request": null,
+  "effects": [{"do": "step", "task": "t-0001",
+               "event": {"type": "needs_user", "src": "1790000000200000000-4242-worker-1", "by": "worker-1",
+                         "q": "q-0001", "at": "2026-09-25T10:02:01+08:00"}}]
+}
