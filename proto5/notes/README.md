@@ -41,6 +41,7 @@
 | [2026-09-24-fix-abs-links.md](2026-09-24-fix-abs-links.md) | 另一台機器的絕對路徑改成相對路徑（16 檔、828 處） |
 | [play/](play/README.md) | 試玩 r1～r4 與 fix-r1～r4（每輪兩份報告＋任務書、五條標準分數） |
 | [2026-09-24-tidy/](2026-09-24-tidy/README.md) | 整理 wf／proto5 notes：SESSION-LOG 搬檔、本索引、壞連結 |
+| [2026-09-24-spec-split/](2026-09-24-spec-split/README.md) | spec 九份拆成資料夾＋小檔（逐字搬、≤ 8 KB），指進 spec 的連結全改、astra 抽查 |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 
