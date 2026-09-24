@@ -1,4 +1,4 @@
-# proto5/lib — 五十四支 Python 模組
+# proto5/lib — 五十八支 Python 模組
 
 ← [proto5 README](../README.md)｜規範：[cpu](../spec/cpu/README.md)、[daemon](../spec/daemon/README.md)、[kernel](../spec/kernel/README.md)、[aos-agent](../spec/aos-agent/README.md)
 
@@ -69,6 +69,10 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_task.py`](aos_team_task.py) | 任務單（交接書）與狀態機：只有郵差寫，處理函式改單子並回「後續動作」清單；同一 `src` 重跑冪等 |
 | [`aos_team_ask.py`](aos_team_ask.py) | 問人：成員 `ask_human` 寄 `kind=ask` 建問題檔，人用 `aos-team answer` 把答案投回發問者 |
 | [`aos_team_cli.py`](aos_team_cli.py) | `aos-team` 的分派表：子命令 →（模組、函式、哪一隊做、一句話），還沒做的印「還沒做（第 N 隊）」退 1 |
+| [`aos_team.py`](aos_team.py) | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
+| [`aos_team_ask_cli.py`](aos_team_ask_cli.py) | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
+| [`aos_team_route.py`](aos_team_route.py) | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型 |
+| [`aos_team_task_cli.py`](aos_team_task_cli.py) | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
 `aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、
@@ -78,7 +82,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1724 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1771 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -459,10 +463,10 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1724 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1771 條；repo 根目錄
 ```
 
-共 57 個測試檔、1724 條（09-24 拆檔＋tidy 後實跑，約 100～130 秒）；涵蓋底層執行、daemon／kernel 按池行為、
+共 61 個測試檔、1771 條（09-24 拆檔＋tidy 後實跑，約 100～130 秒）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
@@ -525,6 +529,10 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_tools_files.py](test/test_tools_files.py) | `proto5/tools/files/`：json_edit、md_section 兩支工具；files／wf 的 `_common.py` 跟 base 逐字一樣；描述字數；`tools add files` 裝得起來 |
 | [test_tools_wf.py](test/test_tools_wf.py) | `proto5/tools/wf/`：workflows 工具包（wf_doc／wf_init／wf_lint／wf_residue／wf_table）；wf_init 兩個崩潰窗口真 SIGKILL 重跑收得回來 |
 | [test_team_format.py](test/test_team_format.py) | 工具大開發時代 T1 第 0 步：團隊共用格式（spec/team/）、任務狀態機、問人、申請登記表、`aos-team` 分派 |
+| [test_team_init.py](test/test_team_init.py) | 第 1 隊：aos-team init／start／stop／ls／rm、模板生家、task 工具包 |
+| [test_team_review_fix.py](test/test_team_review_fix.py) | 第 1 隊 astra 必修回歸：審查重播、逾期通知、問題綁單、init 崩潰窗口、rm 中斷、換模板 |
+| [test_team_route.py](test/test_team_route.py) | 第 1 隊門房：整句句型、落穿、例句全過才准存 |
+| [test_team_task_cli.py](test/test_team_task_cli.py) | 第 1 隊人用指令：task ls／show／cancel／reassign、wait ls、answer |
 
 共用工具（不是測試檔）：[\_util.py](test/_util.py)（底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
 （控制協議孩子、輪詢、孤兒隔離 driver、`read_json`／`wait_for`）、[\_kernel_util.py](test/_kernel_util.py)
