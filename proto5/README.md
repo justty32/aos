@@ -87,7 +87,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-json get／set／del／append／merge` | 人用的 JSON Pointer 改檔；`--expect-sha` 防互蓋、`--check-directives` 先過指示詞才寫 | [spec/aos-agent/tools-files.md](spec/aos-agent/tools-files.md) |
 | `aos-directives ls／show／set／add／rm／export／import／versions／revert／resolve／check` | 人格（system prompt）按標題分節編輯、存版本可還原；另可解／驗一份 aos JSON 檔的指示詞 | [spec/aos-agent/tools-files.md](spec/aos-agent/tools-files.md) |
 | `aos-team init [--config FILE]／start／stop／ls／rm` | 照名冊建團隊資料夾與每個成員的家（模板）、替成員向 kernel 登記／撤銷、列隊（health、手上的單、最後一封信）、拆隊 | [spec/team/](spec/team/README.md) |
-| `aos-team ask "一句話"`／`route test／save` | 門房：整句句型比對，命中就不叫模型直接做；沒命中、命中兩條或有否定詞就落穿給領隊 | [spec/team/route.md](spec/team/route.md) |
+| `aos-team ask "一句話"`／`route test [--file F]`／`route save F` | 門房：整句句型比對，命中就不叫模型直接做；沒命中、命中兩條或有否定詞就落穿給領隊 | [spec/team/route.md](spec/team/route.md) |
 | `aos-team task ls／show／cancel／reassign` | 人看任務單；取消、改派都是寄申請給郵差 | [spec/team/tasks.md](spec/team/tasks.md) |
 | `aos-team wait ls`／`answer Q "…"` | 人看等他回答的問題、回答一題（寄申請給郵差） | [spec/team/ask.md](spec/team/ask.md) |
 | `aos-team mail [--follow]` | 一封信一行，看團隊的信件往來 | [spec/team/mail.md](spec/team/mail.md) |
