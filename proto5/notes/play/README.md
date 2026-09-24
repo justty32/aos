@@ -6,4 +6,4 @@
 
 | 輪 | 日期 | 玩什麼 | 報告 | 分數（①②③④⑤） |
 |---|---|---|---|---|
-| r1 | 2026-09-24 | proto5 重架構後全套：daemon→kernel、真 agent 一整圈、故意弄壞、第二個工具 | [astra](2026-09-24-r1-astra.md)、[Opus](2026-09-24-r1-opus.md)、[任務書](2026-09-24-r1-task.md) | astra 3/4/3/4/2、Opus（待） |
+| r1 | 2026-09-24 | proto5 重架構後全套：daemon→kernel、真 agent 一整圈、故意弄壞、第二個工具 | [astra](2026-09-24-r1-astra.md)、[Opus](2026-09-24-r1-opus.md)、[任務書](2026-09-24-r1-task.md) | astra 3/4/3/4/2、Opus 2/3/4/4/2 |
