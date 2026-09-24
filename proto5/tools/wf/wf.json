@@ -36,6 +36,25 @@
   {
     "type": "function",
     "function": {
+      "name": "wf_fill",
+      "description": "After wf_init: fill {{...}} from a facts JSON file (only exact matches, never guesses) and delete 〔模板說明〕 blocks. Lists what is left and why.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "facts": {"type": "string", "description": "Facts JSON file (default facts.json)"},
+          "values": {"type": "object", "description": "Extra facts, fact -> value"},
+          "drop_examples": {"type": "boolean", "description": "Delete template example rows/sections"},
+          "drop_template_rows": {"type": "boolean", "description": "Delete table rows whose first cell is a placeholder"},
+          "dry_run": {"type": "boolean"},
+          "path": {"type": "string", "description": "Project folder (default .)"}
+        }
+      }
+    },
+    "_meta": {"argv": ["tools/wf/wf_fill"]}
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "wf_lint",
       "description": "Check the project's workflow docs with the bundled wf-lint. Returns PASS/FAIL, the TOTAL line and up to 50 problems.",
       "parameters": {

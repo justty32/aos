@@ -20,6 +20,7 @@ from aos_team_format import (HUMAN, TERMINAL, Layout, TeamError, json_files, loa
                              read_json, short_time, template_dir, validate_roster, write_json)
 
 HOOKS = ('aos_team_post', 'aos_team_beat')   # 第 2 隊：有 start(team)／stop(team) 就叫
+HOOK_LABELS = {'aos_team_post': '郵差', 'aos_team_beat': '心跳'}   # w2a：start／stop 那兩行開頭標誰
 
 
 class Parser(argparse.ArgumentParser):
@@ -117,7 +118,12 @@ def _hooks(action, lay):
             raise
         fn = getattr(mod, action, None)
         if fn is not None:
-            code = max(code, fn(str(lay.root)) or 0)
+            sys.stdout.write('%s: ' % HOOK_LABELS.get(module, module))   # w2a：標出這行是郵差還是心跳
+            sys.stdout.flush()
+            rc = fn(str(lay.root)) or 0
+            if rc:
+                print()
+            code = max(code, rc)
     return code
 
 

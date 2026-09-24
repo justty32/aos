@@ -210,12 +210,56 @@ def cmd_ask(team_dir, argv):
     return ask(team_dir, ' '.join(args.text))
 
 
+def try_text(team_dir, text, path=None):
+    """route try（w2a）：這句話會被怎麼判——只印，不跑工具、不開單、不寄信、不寫 route.log。"""
+    lay = Layout(team_dir)
+    text = text.strip()
+    if not text:
+        raise TeamError('Usage', '要給一句話：aos-team route try "一句話"')
+    path = Path(os.path.abspath(path)) if path else lay.routes
+    if path != lay.routes and not path.exists():
+        raise TeamError('NotFound', '%s 不存在' % path)
+    neg, routes = load_routes(path)
+    result, rule, groups, why = decide(text, neg, routes)
+    print('規則檔：%s（%d 條）' % (path, len(routes)) if path.exists() else '規則檔：%s 還沒有（全部落穿）' % path)
+    if groups:
+        print('抓到：%s' % '、'.join('%s=%s' % kv for kv in groups.items()))
+    if result == 'tool':
+        if 'run' in rule:
+            print('%s → 門房直接跑：aos-team %s（不叫任何 agent）' % (why, ' '.join(fill(list(rule['run']), groups))))
+        else:
+            print('%s → 門房直接跑工具 %s，參數 %s（不叫任何 agent）'
+                  % (why, rule['tool'], json.dumps(rule.get('args') or {}, ensure_ascii=False)))
+    elif result == 'handoff':
+        req = fill(rule['handoff'], groups)
+        print('%s → 開單給 %s（領隊不經手）：%s' % (why, req.get('assignee'), req.get('goal')))
+        print('  驗收 %d 條、工作流 %s、事實 %s' % (len(req.get('done_when') or []), req.get('workflow'),
+                                             req.get('facts') or '無'))
+    else:
+        try:
+            leads = members_by_template(load_roster(team_dir), 'lead')
+        except TeamError:
+            leads = []
+        print('%s → 交給領隊%s（模型會想一次以上）' % (why, ' ' + leads[0] if leads else '（隊裡沒有領隊：會失敗）'))
+    bad = [n for n, ok, _ in run_tests(neg, routes) if not ok]
+    if bad:
+        print('注意：%s 的例句沒全過（%s），真的 ask 會退 1；跑 aos-team route test 看細節' % (path, '、'.join(bad)))
+    print('（只是試，什麼都沒做）')
+    return 0
+
+
 def cmd_route(team_dir, argv):
-    ap = _Parser(prog='aos-team route', description='route test [--file F]：跑例句；route save F：全過才存')
-    ap.add_argument('action', choices=('test', 'save'))
-    ap.add_argument('file', nargs='?')
+    ap = _Parser(prog='aos-team route',
+                 description='route test [--file F]：跑例句；route save F：全過才存；route try "一句話" [--file F]：看會怎麼判、不真的做')
+    ap.add_argument('action', choices=('test', 'save', 'try'))
+    ap.add_argument('file', nargs='*', metavar='FILE|一句話')
     ap.add_argument('--file', dest='file_opt')
     args = ap.parse_args(argv)
+    if args.action == 'try':
+        return try_text(team_dir, ' '.join(args.file), args.file_opt)
+    if len(args.file) > 1:
+        raise TeamError('Usage', 'route %s 最多一個檔案' % args.action)
+    args.file = args.file[0] if args.file else None
     lay = Layout(team_dir)
     path = args.file_opt or args.file
     if args.action == 'save' and not path:

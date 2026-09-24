@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""wf_fill：照事實表機械填專案 .md 裡的 {{…}}、刪〔模板說明〕；（選）刪範例區塊、範本列。
+對不上的不猜，列出來（附原因）給模型。規則在 _fill.py 開頭。持專案鎖（跟 wf_init 同一把）。"""
+import sys
+sys.dont_write_bytecode = True
+import os  # noqa: E402
+from _common import run, arg, resolve, fail, write_atomic, ToolError  # noqa: E402
+import _wf  # noqa: E402
+import _fill  # noqa: E402
+
+LIST_LIMIT = 40
+
+
+def main(args, root):
+    path = arg(args, 'path', str, '.')
+    facts_path = arg(args, 'facts', str, None)
+    values = args.get('values')
+    if values is not None and not isinstance(values, dict):
+        fail('BadArguments', 'values must be an object {"fact": "value", ...}')
+    flags = {k: arg(args, k, bool, d) for k, d in (('drop_examples', False),
+                                                    ('drop_template_rows', False), ('dry_run', False))}
+    project = resolve(root, path or '.')
+    if not os.path.isdir(project):
+        fail('NotADirectory', '%s is not a directory; give the project folder' % path)
+    if facts_path is None:     # 沒給＝專案裡的 facts.json；不在又沒給 values＝NotFound
+        default = os.path.join(os.path.relpath(project, root), 'facts.json')
+        if values is None or os.path.exists(os.path.join(project, 'facts.json')):
+            facts_path = default
+    facts_full = resolve(root, facts_path) if facts_path is not None else None
+    try:
+        facts, skipped = _fill.load_facts(facts_full, values)
+    except _fill.FillError as e:
+        fail(e.code, e.message)
+    if not facts:
+        fail('BadArguments', 'no usable facts (the facts file and values are empty)')
+
+    def write(full, text, relp):
+        try:
+            write_atomic(root, full, text, relp)
+        except ToolError:
+            raise
+        except OSError as e:
+            from _common import write_error
+            write_error(e, relp, full)
+
+    try:
+        fd = _wf._lock(project)
+    except _wf.WfError:
+        fail('Busy', 'wf_init or wf_fill is running on this project; call again when it is done')
+    try:
+        res = _fill.fill(project, facts, notes=True, examples=flags['drop_examples'],
+                         template_rows=flags['drop_template_rows'], dry_run=flags['dry_run'], write=write)
+    finally:
+        os.close(fd)
+    left, marks = _fill.leftovers(res['texts'], res['reasons'])
+    t = res['total']
+    out = ['%s%d placeholders filled in %d files; removed %d 〔模板說明〕 blocks, %d example blocks, %d template rows'
+           % ('(dry run, nothing written) ' if flags['dry_run'] else '', t['filled'], len(res['files']),
+              t['notes'], t['examples'], t['rows'])]
+    if res['used']:
+        out.append('filled (fact = value -> where):')
+        for k, where in res['used'].items():
+            val = _fill.value_of(facts, k)
+            out.append('  %s = %s -> %s' % (k, ' '.join(val.split())[:60], ', '.join(where[:6])
+                                           + (' +%d' % (len(where) - 6) if len(where) > 6 else '')))
+    if left:
+        out.append('placeholders left (%d) - fill with edit, or ask_human if only the user knows:' % len(left))
+        out += ['  %s:%d %s - %s' % x for x in left[:LIST_LIMIT]]
+    if marks:
+        out.append('markers left (%d):' % len(marks))
+        out += ['  %s:%d %s' % x for x in marks[:LIST_LIMIT]]
+    if len(left) > LIST_LIMIT or len(marks) > LIST_LIMIT:
+        out.append('  ... more not shown; wf_residue lists all')
+    unused = [k for k in facts if k not in res['used']]
+    if unused:
+        out.append('facts not used (they may tell you what to do with the rest):')
+        out += ['  %s = %s' % (k, ' '.join(facts[k].split())[:80]) for k in unused]
+    if skipped:
+        out.append('facts skipped (not text): %s' % ', '.join(skipped))
+    hints = []
+    if any('template row' in x[3] for x in left):
+        hints.append('drop_template_rows:true deletes table rows whose first cell is a placeholder')
+    if any('〔導入判斷〕' in x[2] and '範例' in x[2] for x in marks) or any('〔導入判斷〕' in x[2] for x in marks):
+        hints.append('drop_examples:true deletes the template example rows/sections marked by 〔導入判斷〕 about 範例')
+    if hints:
+        out.append('options: ' + '; '.join(hints))
+    if not left and not marks:
+        out.append('nothing left; run wf_lint to check')
+    return '\n'.join(out)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

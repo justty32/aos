@@ -64,6 +64,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_check.py`](aos_agent_check.py) | `aos-agent check`：找 K、跑 kernel 檢查、再查 agent 家、工具與權限牆 |
 | [`aos_agent_tools.py`](aos_agent_tools.py) | `aos-agent tools add`：裝工具包或原地引用工具檔／資料夾 |
 | [`aos_agent_tools_edit.py`](aos_agent_tools_edit.py) | `aos-agent tools ls／rm／alias／unalias` 與共用的 info 編輯（管理鎖、試算後整份重寫） |
+| [`aos_agent_tools_dev.py`](aos_agent_tools_dev.py) | （第二波 A 隊，spec/aos-agent/tools-dev.md）造工具：`tools new`（骨架）、`tools test`（照工具檔描述自動跑正例／型別錯／缺參數＋`cases.json`，預設用 aos-jail 關牢）、`tools wrap-py`（`ast` 靜態讀 Python 檔、有註解的函式包成工具包、拒收表）；不需要 agent 家、不叫模型 |
 | [`aos_agent_access.py`](aos_agent_access.py) | 權限牆（access.json）讀驗、信任資料、重疊檢查、快照 |
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
 | [`aos_agent_events.py`](aos_agent_events.py) | 事件紀錄（tool-era T4，spec/agent/events.md）：agent 家 `log/events.jsonl` 一行一事件（收件、每批起訖、壓縮），`aos-llm call` 的 `log/usage.jsonl` token 用量；只有持 `.tick.lock` 的一方寫，至少一次＋去重，滿了自動輪換 |
@@ -79,7 +80,8 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_cli.py`](aos_team_cli.py) | `aos-team` 的分派表：子命令 →（模組、函式、哪一隊做、一句話），還沒做的印「還沒做（第 N 隊）」退 1 |
 | [`aos_team.py`](aos_team.py) | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
 | [`aos_team_ask_cli.py`](aos_team_ask_cli.py) | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
-| [`aos_team_route.py`](aos_team_route.py) | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型 |
+| [`aos_team_route.py`](aos_team_route.py) | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型；`route try` 只印判決、什麼都不做（第二波 A 隊） |
+| [`aos_team_mail.py`](aos_team_mail.py) | `aos-team mail`（第二波 A 隊從 `aos_team_post.cmd_mail` 接手，讀法與一行印法仍用郵差那份）：多列等人回答的題目（`ASK q-0001`，答完先顯示答案）；`--task` 連落穿給領隊的那封一起列 |
 | [`aos_team_task_cli.py`](aos_team_task_cli.py) | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
 | [`aos_team_post.py`](aos_team_post.py) | 郵差兼書記（tool-era T2，spec/team/post.md）：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER；崩在任何一步重跑同一行都收得回來，不叫模型 |
 | [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡 |
@@ -578,6 +580,9 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_rulings.py](test/test_team_rulings.py) | 第 2 隊追加：使用者五題裁決（郵差間隔可設定、心跳用自己的身分派工、一次性例行叫 `once`、檢查器壞≠沒過、例行完成不寄 DONE 擾人） |
 | [test_team_score.py](test/test_team_score.py) | T5 收尾 `aos-team score`（score.md）：手造一支小團隊的紀錄，驗六軸計數、門檻、範圍、去重、輪換、`--runs`、`--json`、壞行 |
 | [test_team_t5.py](test/test_team_t5.py) | T5 收尾的小改動：審查單帶事實、`aos-team ls` 列郵差與心跳、模板人格的變數與關鍵句 |
+| [test_team_w2a.py](test/test_team_w2a.py) | 第二波 A 隊團隊這邊：`route try` 不留痕跡、`mail` 列題目與落穿信、`start` 那兩行標郵差／心跳、`importer` 模板的工具與工具表大小 |
+| [test_tools_wf_fill.py](test/test_tools_wf_fill.py) | 第二波 A 隊 `wf_fill`：真的 wf_init 導入後填到 wf_lint PASS、dry_run 不寫、再跑不動、名字對應規則（同義詞、包含、不只一條不填、範本列）、今天日期照時區、範例只刪認得出的 |
+| [test_agent_tools_dev.py](test/test_agent_tools_dev.py) | 第二波 A 隊 `tools new／test／wrap-py`：fixture（[fixtures/wrap_fixture.py](test/fixtures/wrap_fixture.py)）拒收表逐條、產的包 test 全過、裝進家後 check 過且關牢、run 的型別驗證、PythonError 不帶 Traceback、壞包報 FAIL |
 
 共用工具（不是測試檔）：[\_util.py](test/_util.py)（底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
 （控制協議孩子、輪詢、孤兒隔離 driver、`read_json`／`wait_for`）、[\_kernel_util.py](test/_kernel_util.py)

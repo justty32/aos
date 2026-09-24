@@ -1,4 +1,4 @@
-"""proto5/tools/wf/：workflows 工具包（wf_doc、wf_init、wf_lint、wf_residue、wf_table）。
+"""proto5/tools/wf/：workflows 工具包（wf_doc、wf_init、wf_lint、wf_residue、wf_table；wf_fill 另在 test_tools_wf_fill.py）。
 
 跟 test_tools_base.py 一樣：把整包（含 snapshot/）複製進假 agent 家、當子行程跑，驗
 stdin JSON 進、stdout 文字或最後一行 JSON 錯誤出。wf_init 另測兩個崩潰窗口（wf-init 跑到一半、
@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PROTO5 = os.path.dirname(os.path.dirname(HERE))
 PACK = os.path.join(PROTO5, 'tools', 'wf')
 CLI = os.path.join(PROTO5, 'cli')
-NAMES = ['wf_doc', 'wf_init', 'wf_lint', 'wf_residue', 'wf_table']
+NAMES = ['wf_doc', 'wf_init', 'wf_fill', 'wf_lint', 'wf_residue', 'wf_table']
 
 
 def jload(path):
@@ -81,7 +81,7 @@ class PackTests(unittest.TestCase):
         self.assertEqual(jload(os.path.join(PACK, 'config.json')), {'root': 'workspace'})
 
     def test_description_budget(self):
-        """五支的 description＋參數 description 合計 ≤ 1500 字元（兩包合計 < 3000 的一半）。"""
+        """六支（w2a 加 wf_fill）的 description＋參數 description 合計 ≤ 1500 字元（兩包合計 < 3000 的一半）。"""
         tools = jload(os.path.join(PACK, 'wf.json'))
         total = 0
         for t in tools:

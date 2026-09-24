@@ -41,4 +41,5 @@
 - `miss` 的每一句：不能命中這一條。
 
 `aos-team route test [--file F]` 全跑、逐條印 PASS／FAIL，全過退 0（沒給 `--file`＝測 `team/routes.json`，不在＝`NotFound`）；`aos-team route save F` 先跑同一套，全過才原子地換成 `team/routes.json`。
+（第二波 A 隊）`aos-team route try "一句話" [--file F]`：拿一句話試，印判決（命中哪條、抓到的群組、`tool` 會跑的完整指令、`handoff` 會派給誰與目標、落穿的原因與哪位領隊）＋「只是試，什麼都沒做」；不跑工具、不開單、不寄信、不寫 `route.log`；規則檔例句沒全過時多印一行提醒（真的 `ask` 會退 1）。退 0；`--file` 給的檔不在＝`NotFound`，沒給話＝用法錯。
 人直接用文字編輯器改 `routes.json` 也行：`aos-team ask` 每次都先跑一遍例句，**沒全過就退 1（`RoutesFailed`）、叫你跑 `route test`**，不會拿壞規則去判。

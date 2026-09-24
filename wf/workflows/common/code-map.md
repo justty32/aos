@@ -122,6 +122,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_agent_check` | `aos-agent check`（kernel 檢查＋agent 家、工具、權限牆） |
 | `aos_agent_tools` | `aos-agent tools add` |
 | `aos_agent_tools_edit` | `aos-agent tools ls／rm／alias／unalias` 與共用 info 編輯 |
+| `aos_agent_tools_dev` | `aos-agent tools new／test／wrap-py`：造工具（骨架、照描述自動跑案例、Python 函式包成工具包），不需要 agent 家 |
 | `aos_agent_access` | 權限牆（access.json）讀驗與快照 |
 | `aos_agent_access_cli` | `aos-agent access ls／set／rm／cwd／net` |
 | `aos_agent_events` | 事件紀錄：`log/events.jsonl` 追加與去重讀取，`aos-llm call` 的 `log/usage.jsonl` |
@@ -137,7 +138,8 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_team_cli` | `aos-team` 子命令分派表（模組、函式、哪一隊做、一句話） |
 | `aos_team` | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
 | `aos_team_ask_cli` | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
-| `aos_team_route` | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型 |
+| `aos_team_route` | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型；`route try` 只印判決 |
+| `aos_team_mail` | `aos-team mail`：一信一行＋等人回答的題目、`--task` 連落穿給領隊的那封 |
 | `aos_team_task_cli` | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
 | `aos_team_post` | 郵差兼書記：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER |
 | `aos_team_verify` | 驗收員：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞 |

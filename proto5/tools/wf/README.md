@@ -2,7 +2,7 @@
 
 ← [tools README](../README.md)｜規格：[catalog T-wf](../../notes/2026-09-24-tool-era/catalog.md#t-wf)
 
-讓 agent 把 workflows（`~/repo/workflows`）那套手冊導入專案、檢查導得乾不乾淨。五支都**不叫模型**，只跑本包自帶的**固定版本快照**（`snapshot/`），不跑專案裡的程式。
+讓 agent 把 workflows（`~/repo/workflows`）那套手冊導入專案、檢查導得乾不乾淨。六支都**不叫模型**，只跑本包自帶的**固定版本快照**（`snapshot/`），不跑專案裡的程式。
 
 ## 裝
 
@@ -13,17 +13,32 @@ aos-agent tools add wf --target $W/bob --root ~/proj    # 專案在別處
 
 根目錄跟 base 同一套（`_common.py` 是 base 那份的逐字副本）：關牢看 `AOS_TOOL_ROOT`，不關牢看本包 `config.json` 的 `root`。關牢時整包（含快照）唯讀掛在 `/opt/tool`，照樣能跑。
 
-## 五支
+## 六支
 
 | 工具 | 一句話 | 參數 |
 |---|---|---|
 | `wf_doc` | 唯讀讀快照裡的手冊；不給路徑＝列目錄；讀不到快照外 | `path`、`offset`、`limit` |
 | `wf_init` | 導入 workflows（先在 staging 做，見下）；回導入幾個檔＋殘留清單 | `flavor`*（例 `["heartbeat"]`）、`non_invasive`（例 `"wf"`；省略＝標準佈局）、`path` |
+| `wf_fill` | （第二波 A 隊）照事實表機械填 `{{…}}`、刪〔模板說明〕；（選）刪範例區塊、範本列；對不上的不猜，列出來附原因（見下） | `facts`（事實 JSON 檔，省略＝專案的 `facts.json`）、`values`（多給的事實）、`drop_examples`、`drop_template_rows`、`dry_run`、`path` |
 | `wf_lint` | 用**快照裡的** `wf-lint.sh` 檢查；回 `PASS`／`FAIL (exit N)`、`TOTAL`、`SUMMARY`、前 50 條問題；全文存 `<專案>/.wf-lint.log` | `strict`（預設 true）、`path` |
 | `wf_residue` | 數所有 `.md` 裡的 `{{`、〔導入判斷〕、〔模板說明〕，列 `檔:行`；讀不到的另列 `UNREADABLE`、不當 0 | `path` |
 | `wf_table` | 用快照的 `tabledb.py` 讀寫 `wf-table/1` 資料檔，原樣回 JSON（不開放 `open`） | `file`*、`op`*、`index`、`fields`、`regex`、`start`、`end`、`column` |
 
-描述五支合計 777 字元；`wf_init`、`wf_lint` 的 `_timeout_ms`＝180000。
+描述六支合計 1093 字元（加 wf_fill 之前五支 777）；`wf_init`、`wf_lint` 的 `_timeout_ms`＝180000。
+
+## wf_fill：照事實表填，不猜
+
+規則寫死在 [`_fill.py`](_fill.py) 開頭，改了要改測試（[`test_tools_wf_fill.py`](../../lib/test/test_tools_wf_fill.py)）：
+
+- **佔位的名字**＝`{{ }}` 裡去掉例子那段（「，如…」「，例…」「例：…」「；…」「：…」之後都不算）；表格列另外拿第一格的字當第二個名字。
+- **跟事實表的鍵比**，一層一層來：一樣 → 同義詞表（例如「一句話描述」＝「專案一句話」、「測試 / build / lint 指令」＝「驗證指令」）→ 一邊包含另一邊（至少兩個字）。每一層**恰好一條**才填；兩條以上＝不填，列「more than one fact looks like it」。
+- **範本列**（第一格整格是佔位，例如 INDEX 的 `{{src/ 或主要產出目錄}}`）：整列都不填；`drop_template_rows` 才整列刪。
+- 事實值是「今天…」或 `today`：換成今天的日期（照事實表的時區）。
+- 〔模板說明〕一律刪（整段引用，IMPORT.md 第 4 步）。
+- `drop_examples`：講「範例」的〔導入判斷〕，認得出範圍的才刪——上方表格第一格是「（範例）」的列，或底下「下面…」指的 `###` 小節（到下一個同級以上標題）——連同那段判斷一起刪。認不出的不動、列出來。
+- 輸出：填了哪幾條（事實＝值 → 檔:行）、還剩哪些佔位（附原因）、還剩哪些〔…〕、**沒用到的事實**（常常就是「剩下的怎麼辦」的答案）、可以加的選項。
+- 跟 `wf_init` 同一把專案鎖（拿不到＝`Busy`）；每個檔暫存檔＋rename；再跑一次什麼都不動。
+- heartbeat 包＋T5 的 `facts.json`：一次 `wf_fill {"drop_examples": true, "drop_template_rows": true}` 就殘留 0、`wf_lint` PASS（填 16 個、刪 5 段說明、3 段範例、2 列範本列）。
 `wf_residue` 照 IMPORT.md 的 grep 掃所有 `.md`（只跳過 `.git`、`.wf-staging-*`、`.wf-backup-*`）；wf-lint 另外跳過 `archive/`、`inbox/` 等，有封存區時兩邊數字會不同。
 
 ## wf_init：砍了重跑同一行就好
@@ -61,7 +76,7 @@ Done when 例：`residue(p)['total'] == 0 and not residue(p)['unreadable'] and l
 
 | 代號 | 什麼時候 |
 |---|---|
-| `BadArguments` | 型別不對、flavor 不存在（列出有哪些）、`non_invasive` 不是單純資料夾名、table 缺 `index`／`fields`、不是 .json／.csv |
+| `BadArguments` | 型別不對、flavor 不存在（列出有哪些）、`non_invasive` 不是單純資料夾名、table 缺 `index`／`fields`、不是 .json／.csv；wf_fill 的事實檔不是 JSON 物件、`values` 不是物件、沒有可用的事實 |
 | `OutsideRoot`／`NotFound`／`NotADirectory` | 出了根目錄（`wf_doc`：出了快照）；路徑不在；不是資料夾 |
 | `AlreadyImported`／`Busy` | 已導入過；另一個 wf_init 正在跑（等它結束再叫） |
 | `BadJournal`／`UnsafePath` | staging 的 `commit.json` 壞了或被改；要寫或備份的路徑途中是符號連結。都沒動，請人處理 |
