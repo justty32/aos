@@ -211,3 +211,19 @@ pgrep: （空）
 **我代裁的**：第 4 件判刻意、不改程式（理由：daemon 死、孩子不跟著死是當初「崩了互不拖累」的設計；接手時已經先收舊的再拉新的，不會兩個主人）；`--json` 在 daemon 不在時不改（給程式的欄位不動，程式自己看 `alive`）；`aos down` 碰到崩過的 K 不去改帳本（改帳本要 tick 跑、daemon 不在沒人跑，下次 `aos up` 會接上）。
 
 **測試數**：main `699399d` 74 檔 2106 條 → 75 檔 2115 條全綠（新增 `test_play_one_boot.py` 9 條）。
+
+## 追加二：偶發測試（T5 回報）
+
+`test_kernel_recovery::test_first_boot_initializes_missing_ledger_and_writes_raw_envs` 全套跑時偶發紅一次（`answered` 0 != 1）。
+**原因在測試，不是程式**：boot 把「登記」的回音 ack 掉之後才回來，但假 daemon 的背景執行緒要等 `fake.stop()` 才停；機器忙的時候，它在這中間多跑一圈，把 ack 和回音都處理掉了，測試卻斷言「回音還在、ack 還沒處理」。
+**改測試**：先讓假 daemon 把剩下的處理完，再驗「登記單處理過、回音與 ack 都清乾淨」，跟時序無關。產品程式沒動。
+
+負載下（背景同時跑 `test_agent_tick`、`test_kernel_crash`、`test_exec*`）各跑 20 次：`test_kernel_recovery` 20/20、`test_one_boot` 20/20、`test_daemon` 20/20，沒有別條偶發。
+
+## 下一輪（T5 報告給 P 隊的兩件，這次不修）
+
+1. **每輪「問模型 → 跑工具」約六成時間花在格與格之間**（T5 例子 1：一件 170 秒裡約 106 秒不在模型也不在工具）。
+   我的想法：一輪要走 agent 一格 → kernel 一格 → llm cpu 撿單 → kernel 一格叫醒 → agent 一格……每一跳都有「cpu 每 200 ms 才看一次資料夾（`cpu.poll_ms`）」加「起一支 Python（agent tick、aos-exec、kernel tick 各一次）」。
+   先量每一跳花多少（kernel.log 已有派工與回音，agent 那邊補時間戳），再從便宜的下手：kernel 放派工單後順手叫醒那顆 cpu（像 `resp-` 通知反過來），或把 `poll_ms` 調回 20 看 CPU 代價；再來才是 agent 一格裡多走幾步、少起 Python。
+2. **反覆工作連錯 `bad_after` 次變 `bad` 之後沒人知道**。現在只寫進 `kernel.log`、`ls` 列出來，health 還是 `ok`。
+   我的想法：分兩步。先讓 `aos-kernel ls` 第一行在有 `bad` 行程時不是 `ok`（例如 `procs：N 個 bad（…）`），`aos up` 也會印到；再讓 `add` 可以帶一個「壞了通知誰」（丟一張檔進某個 agent 家的 `input/`，跟郵差同一招），kernel 在判 `bad` 那格出貨時放。第二步要不要做給使用者拍。

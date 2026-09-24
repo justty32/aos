@@ -224,10 +224,13 @@ class RecoveryTests(KernelCase):
         import aos_daemon_ticks
         reg = aos_daemon_ticks.peek(fake.home, fresh)
         self.assertEqual(reg, {"home": str(fresh), "cli": str(kernel.CLI.resolve()), "every_ms": 1000, "timeout_ms": 60000})
-        answered = [p.name for p in (fake.home / "responses").glob("*.json")]
-        self.assertEqual(len(answered), 1)                                  # 登記的回音已 ack（假 daemon 還沒處理）
-        acks = [home.read_json(p)["params"]["name"] for p in (fake.home / "requests").glob("ack-*.json")]
-        self.assertEqual(acks, answered)
+        # 登記的回音 boot 已經 ack 了。假 daemon 的背景執行緒在 boot 回來、fake.stop() 之前可能已經把 ack 處理掉
+        # （機器忙時才會碰到，以前這裡斷言「回音還在、ack 還沒處理」＝偶發失敗）。所以先讓它把剩下的處理完，
+        # 再驗「登記單有處理過、回音與 ack 都清乾淨」——跟時序無關。
+        fake.process()
+        self.assertTrue([n for n, params in fake.seen if n.endswith("-boot-tick.json")])
+        self.assertEqual(list((fake.home / "responses").glob("*.json")), [])
+        self.assertEqual(list((fake.home / "requests").glob("*.json")), [])
 
     def test_boot_preserves_inflight_and_outboxes_but_discards_scale_sends(self):
         fake = FakeDaemon(self.d)
