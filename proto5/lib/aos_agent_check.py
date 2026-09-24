@@ -9,6 +9,7 @@ import stat
 import subprocess
 
 import aos_agent_access
+import aos_inst
 import aos_agent_info
 import aos_jail
 import aos_kernel_check
@@ -98,12 +99,11 @@ def access_checks(checks, base, env):
         info = None
     tools = info['tools_raw'] if info else []
     try:
-        path = aos_agent_access.access_path(base, env=env)
-        explicit = 'access' in aos_agent_access.read_info_doc(base).root
+        path, state = aos_agent_access.access_lookup(base, env=env)
     except AgentError as exc:
         checks.report('bad', 'access', '%s；看 info.json 的 access 欄' % exc)
         return
-    if path is None and not explicit:
+    if state == 'absent':
         if tools:
             checks.report('warn', 'access', '沒有 access.json：工具不關牢（碰得到你碰得到的所有檔）；'
                           '要關：aos-agent access set ws workspace --cwd --target %s' % base)
@@ -124,19 +124,45 @@ def access_checks(checks, base, env):
                               % '、'.join(odd[:5]))
     ok, message = bwrap_probe(env)
     checks.report('ok' if ok else 'bad', 'access/bwrap', message)
-    jail = shutil.which('aos-jail', path=env.get('PATH', os.defpath))
-    checks.report('ok' if jail else 'bad', 'access/aos-jail',
-                  '找得到 %s' % jail if jail else '找不到 aos-jail；開 daemon 前 export PATH=<proto5>/cli:$PATH')
+    jail = aos_agent_access.JAIL
+    usable = os.path.isfile(jail) and os.access(jail, os.X_OK)
+    checks.report('ok' if usable else 'bad', 'access/aos-jail',
+                  '送件用 %s（絕對路徑，不看 PATH）' % jail if usable else '%s 不在或沒有執行位' % jail)
+    trust = None
     for tool in tools:
         item = 'agent/tool/' + tool['function']['name']
         if tool.get('_jail', True) is False:
             checks.report('warn', item, '_jail: false：這支不關牢，碰得到你碰得到的所有檔')
             continue
         argv = tool['_meta'].get('argv') if isinstance(tool.get('_meta'), dict) else None
-        if not isinstance(argv, list) or not argv or not isinstance(argv[0], str) or '/' in argv[0]:
+        if not isinstance(argv, list) or not argv or not isinstance(argv[0], str):
+            continue
+        if '/' in argv[0]:
+            # 程式所在的整個資料夾會唯讀掛到 /opt/tool：蓋到 agent 家或信任資料＝牢裡讀得到
+            try:
+                decoded = aos_inst.load_obj(tool['_meta'], base, env=env)
+            except aos_inst.InstError:
+                continue
+            folder = os.path.dirname(os.path.realpath(os.path.join(decoded['cwd'], decoded['argv'][0])))
+            if trust is None:
+                trust = aos_agent_access.trusted(base, env=env, info=info)
+            hit = _exposed(folder, base, trust)
+            if hit:
+                checks.report('warn', item, '程式資料夾 %s 會整個唯讀掛到 /opt/tool，牢裡讀得到 %s；'
+                              '把程式放進只有程式的資料夾' % (folder, hit))
             continue
         found = shutil.which(argv[0], path=env.get('PATH', os.defpath))
         real = os.path.realpath(found) if found else None
         if real is None or not real.startswith('/usr/'):
             checks.report('warn', item, '%s 不在 /usr 下（%s）：牢裡只有 /usr，可能找不到；寫絕對路徑或裝到 /usr'
                           % (argv[0], real or '找不到'))
+
+
+def _exposed(folder, base, trust):
+    """掛到 /opt/tool 的程式資料夾蓋到的東西：agent 家本身，或資料夾裡的信任資料（工具程式自己除外）。"""
+    home = os.path.realpath(base)
+    inside = folder.rstrip('/') + '/'
+    if folder == home or home.startswith(inside):
+        return home
+    return next((t for t, label in trust.items()
+                 if t.startswith(inside) and not label.startswith('工具程式')), None)

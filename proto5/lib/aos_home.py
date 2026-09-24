@@ -99,14 +99,14 @@ def read_json(path):
         raise HomeError("ReadFailed", "讀不到 JSON %s：%s" % (path, exc)) from exc
 
 
-def _write_temp(path, obj):
-    """暫存檔與目的檔同資料夾；失敗也不留下半份。"""
+def _write_temp(path, obj, indent=None):
+    """暫存檔與目的檔同資料夾、名字帶檔名與 pid（再加亂數，不會撞）；失敗也不留下半份。"""
     temp = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", prefix=".",
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", prefix=".%s.%d." % (path.name, os.getpid()),
                                          suffix=".tmp", dir=path.parent, delete=False) as out:
             temp = out.name
-            json.dump(obj, out, ensure_ascii=False, allow_nan=False)
+            json.dump(obj, out, ensure_ascii=False, allow_nan=False, indent=indent)
             out.write("\n")
         return temp
     except BaseException:
@@ -115,11 +115,12 @@ def _write_temp(path, obj):
         raise
 
 
-def write_json(path, obj):
+def write_json(path, obj, indent=None):
+    """整份原子重寫；indent 給人會手改的檔用（例如 agent 的 info.json 用 2）。"""
     path = Path(path)
     temp = None
     try:
-        temp = _write_temp(path, obj)
+        temp = _write_temp(path, obj, indent)
         os.replace(temp, path)
     except (OSError, ValueError, TypeError) as exc:
         raise HomeError("WriteFailed", "寫不進 %s：%s" % (path, exc)) from exc

@@ -7,6 +7,7 @@
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 import aos_inst
@@ -20,6 +21,10 @@ TOP_KEYS = ('_metainfo', 'mounts', 'cwd', 'net')
 MOUNT_OPTIONS = {'ro': {'val': 'required'}}
 NAME = re.compile(r'[a-z0-9_-]+\Z')
 # 家裡固定的信任資料（家本身不算，所以 家/workspace 可寫）
+# aos 自己在牢外執行的程式（aos-jail 與它 import 的模組）：可寫 mount 蓋到就能在關牢之前動手腳
+LIB_DIR = os.path.realpath(os.path.dirname(os.path.abspath(__file__)))
+CLI_DIR = os.path.realpath(os.path.join(LIB_DIR, '..', 'cli'))
+JAIL = os.path.join(CLI_DIR, 'aos-jail')
 HOME_TRUSTED = ('info.json', 'state.json', 'tick.json', '.tick.lock', 'paused', 'resumed',
                 'work', 'log', 'tools', 'prompts')
 
@@ -56,6 +61,15 @@ def access_path(base, env=None):
     return path if path.exists() else None
 
 
+def access_lookup(base, env=None):
+    """回 (路徑, 狀態)：'present'＝檔在；'absent'＝沒寫 access 欄、預設檔不在（不關牢）；
+    'missing'＝info.json 明寫的 access 檔不在（AccessInvalid，不是「不關牢」）。"""
+    path, explicit = _locate(base, env)
+    if path.exists():
+        return path, 'present'
+    return path, 'missing' if explicit else 'absent'
+
+
 # ---------------------------------------------------------------- 寫 ----
 
 def ensure_default(base, ws_path):
@@ -80,7 +94,7 @@ def ensure_default(base, ws_path):
 def write_access(path, obj):
     """.tmp＋rename；縮排 2、不跳脫中文。"""
     path = Path(path)
-    tmp = path.with_name('.%s.tmp' % path.name)
+    tmp = path.with_name('.%s.%d.%d.tmp' % (path.name, os.getpid(), time.time_ns()))
     try:
         with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(obj, f, indent=2, ensure_ascii=False)
@@ -172,13 +186,14 @@ def real_mount(base, value):
     return os.path.realpath(os.path.join(str(base), os.path.expanduser(value)))
 
 
-def parse(path, base, env=None, lenient=False):
+def parse(path, base, env=None, lenient=False, doc=None):
     """解 access 檔 → (表, $ref 到的檔集合)。表＝{"mounts": {名: {"path", "ro"}}, "cwd", "net"}。
 
     lenient：mount 路徑不存在不算錯（給 access ls 與 access 寫入指令用，好讓人修）。
+    doc：已在記憶體裡的候選內容（寫入前驗證用）；沒給就讀檔。
     """
     base = os.path.abspath(base)
-    doc = read_doc(path)
+    doc = read_doc(path) if doc is None else doc
     root = doc.root
     if not isinstance(root, dict) or is_directive(root):
         raise _bad(path, '頂層', '要是字面物件')
@@ -277,18 +292,71 @@ def _info_entries(base, env):
     return ctx.files, listed
 
 
+def path_chain(path, limit=40):
+    """一個路徑要保護的所有位置：途中每一個符號連結本身（它的上層已解開）＋最終 realpath。
+
+    只保護 realpath 不夠：連結放在可寫的地方，工具可以把連結換成別的檔（astra #2）。
+    """
+    found = []
+    cur, todo, hops = '/', os.path.abspath(path).split('/')[1:], 0
+    while todo:
+        name = todo.pop(0)
+        if name in ('', '.'):
+            continue
+        if name == '..':
+            cur = os.path.dirname(cur)
+            continue
+        nxt = os.path.join(cur, name)
+        if hops < limit and os.path.islink(nxt):
+            hops += 1
+            found.append(nxt)
+            try:
+                target = os.readlink(nxt)
+            except OSError:
+                cur = nxt
+                continue
+            if target.startswith('/'):
+                cur = '/'
+            todo = target.split('/') + todo
+            continue
+        cur = nxt
+    found.append(os.path.realpath(path))
+    return found
+
+
+def _raw_file_refs(path):
+    """一份 JSON 檔裡字面寫的 $ref 檔名；讀不到就空。"""
+    try:
+        with open(path, encoding='utf-8') as f:
+            value = json.load(f)
+    except (OSError, ValueError):
+        return []
+    out = []
+    _raw_refs(value, out)
+    return out
+
+
 def trusted(base, env=None, info=None, st=None, extra=()):
-    """信任集合 T：{realpath: 說明}。info／st 沒給就自己盡量讀（讀不到只用家裡的固定清單）。"""
+    """信任集合 T：{位置: 說明}。位置含途中的符號連結本身與最終 realpath（path_chain）。
+
+    info／st 沒給就自己盡量讀（讀不到只用家裡的固定清單）。extra＝access 檔與它 $ref 到的檔。
+    """
     base = os.path.abspath(base)
     out = {}
 
     def add(p, label):
-        out.setdefault(os.path.realpath(os.path.join(base, p)), label)
+        for q in path_chain(os.path.join(base, p)):
+            out.setdefault(q, label)
 
     for name in HOME_TRUSTED:
         add(name, '家裡的 ' + name)
+    add(CLI_DIR, 'aos 的指令（aos-jail 在這裡、牢外執行）')
+    add(LIB_DIR, 'aos 的程式庫（aos-jail 與 aos-agent 在牢外 import）')
     for p in extra:
         add(p, 'access 設定')
+    for p in [os.path.join(base, 'info.json'), *extra]:
+        for r in _raw_file_refs(p):
+            add(r, 'access／info.json 引用的檔')
     if st is None:
         try:
             import aos_agent_info
@@ -337,8 +405,9 @@ def _tool_program(base, env, tool, add):
         if decoded:
             add(os.path.join(decoded['cwd'], r), '工具 _meta 引用的檔')
     if decoded and decoded['argv'] and '/' in decoded['argv'][0]:
-        prog = os.path.realpath(os.path.join(decoded['cwd'], decoded['argv'][0]))
-        add(os.path.dirname(prog), '工具程式所在的資料夾')
+        prog = os.path.join(decoded['cwd'], decoded['argv'][0])
+        add(prog, '工具程式')
+        add(os.path.dirname(os.path.realpath(prog)), '工具程式所在的資料夾')
 
 
 def _under(child, parent):
@@ -355,11 +424,19 @@ def overlap(mount_path, trust):
     return None
 
 
-def check_overlap(path, table, trust):
+def unsafe_mounts(table, trust):
+    """{可寫又重疊的 mount 名: 白話}。"""
+    out = {}
     for name, m in table['mounts'].items():
-        if m['ro']:
-            continue
-        why = overlap(m['path'], trust)
+        if not m['ro']:
+            why = overlap(m['path'], trust)
+            if why:
+                out[name] = why
+    return out
+
+
+def check_overlap(path, table, trust):
+    for name, why in unsafe_mounts(table, trust).items():
         if why:
             raise AgentError('AccessUnsafe', 'access 檔 %s 的 mounts.%s %s；改成唯讀 '
                              '（{"$opt": "ro", "$val": …} 或 aos-agent access set %s PATH --ro）或換一個資料夾'
@@ -371,10 +448,10 @@ def check_overlap(path, table, trust):
 def load(base, env=None, info=None, st=None):
     """沒 access 檔＝None；好＝快照表；壞＝raise AgentError。"""
     base = os.path.abspath(base)
-    path, explicit = _locate(base, env)
-    if not path.exists():
-        if explicit:
-            raise AgentError('AccessInvalid', 'info.json 的 access 指到 %s，但檔不在' % path)
+    path, state = access_lookup(base, env)
+    if state == 'missing':
+        raise AgentError('AccessInvalid', 'info.json 的 access 指到 %s，但檔不在' % path)
+    if state == 'absent':
         return None
     table, refs = parse(path, base, env)
     check_overlap(path, table, trusted(base, env, info, st, extra=[str(path), *refs]))

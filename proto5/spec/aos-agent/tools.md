@@ -38,8 +38,7 @@ aos-agent tools add NAME|DIR|FILE.json [--target DIR] [--as NEW | --as OLD=NEW[,
 
 ## 裝＝做哪幾件事（照順序）
 
-整段持著 `<家>/info.json` 的 flock（只讀不寫；`tools`／`access` 的寫入指令共用這一把），同一個家同時兩個會排隊、不會互相蓋掉 `info.tools`。（09-24 astra 審查後改）
-（09-24 access-impl）`info.json` 會被 rename 整份換掉：拿到鎖後發現檔已換過，就放掉、改鎖新的那份。
+整段持著**管理鎖** `<家>/.admin.lock` 的 flock（astra 審查後改；access-impl #4 起不再鎖會被 rename 的 `info.json`），同一個家同時兩個會排隊。細節見 [tools-manage.md](tools-manage.md)。
 
 1. 驗，照這個順序，第一個不過的就報：家要讀驗得過（`NotAnAgent` 等照 §1；家裡已有的工具檔也要驗得過）→ 工具包：名字只能英數、`_`、`-`（`BadName`）、
    資料夾要在（`NotFound`，訊息列出內建有哪些）、`<名>.json` 照 agent.md §3.3 驗（`ToolInvalid`）→ `--root` 給了就要是存在的資料夾（`NotFound`）→
@@ -61,7 +60,7 @@ aos-agent tools add NAME|DIR|FILE.json [--target DIR] [--as NEW | --as OLD=NEW[,
 崩在半路：重跑一次同一行指令就好（第 1 步的「修復」＋第 6 步的清殘渣）。
 7. （09-24 access-impl）家裡還沒有 access 檔（[agent/access.md](../agent/access.md)）就建一份預設：`{"mounts": {"ws": <工作根目錄>}, "cwd": "ws", "net": false}`，工作根目錄＝`--root` 的絕對路徑或 `workspace`；印出來。已有就不動。原地引用不建。
 
-成功印：`installed <名> → <工具檔>（N 個工具：…；改名的寫 `原→新`）`；改了 info 再一行（補了什麼或第幾條改成什麼）；有工作根目錄再一行（絕對路徑、改哪個檔）；建了 access 檔再兩行；最後「下一批工具生效，不用重 start」。退 0。
+成功印：`installed <名> → <工具檔>（N 個工具：…；改名的寫 `原→新`）`；改了 info 再一行（補了什麼或第幾條改成什麼）；有工作根目錄再一行（沒 access 檔＝路徑與改哪個檔；有＝牢裡的 `/work/<cwd>` 對到哪、看 `access ls`，另一行說 `config.json` 的 root 只在不關牢時用）；建了 access 檔再兩行；最後「下一批工具生效，不用重 start」。退 0。
 原地引用印：`referenced <路徑>（原地引用、不複製；N 個工具：…）`、`info.json 的 tools 補了 …`、最後同一句。
 工作根目錄包含 agent 家（例如 `--root` 給了家的上層；兩邊都解開符號連結再比）時 stderr 多一行注意：模型改得到自己的 `info.json`、記憶與 `state.json`。
 

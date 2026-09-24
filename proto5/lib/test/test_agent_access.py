@@ -24,7 +24,7 @@ from aos_agent_home import AgentError
 
 TOOL_CALL = {'id': 'c1', 'type': 'function', 'function': {'name': 'sh', 'arguments': '{"x": 1}'}}
 ASSISTANT = {'role': 'assistant', 'content': None, 'tool_calls': [TOOL_CALL]}
-HAS_BWRAP = shutil.which('bwrap') is not None
+HAS_BWRAP = aos_agent_check.bwrap_probe(os.environ)[0]      # 跟 test_jail 一樣：真的開得起來才算
 
 
 class Home(unittest.TestCase):
@@ -191,7 +191,7 @@ class OverlapTests(Home):
         self.access({'mounts': {'u': '../util-tools'}})
         self.assertIn('x.json', self.error('AccessUnsafe'))
         self.access({'mounts': {'u': '../util-tools/bin'}})
-        self.assertIn('工具程式所在的資料夾', self.error('AccessUnsafe'))
+        self.assertIn('工具程式', self.error('AccessUnsafe'))
         self.access({'mounts': {'u': {'$opt': 'ro', '$val': '../util-tools'}}})
         self.assertTrue(self.load()['mounts']['u']['ro'])
 
@@ -214,7 +214,7 @@ class OverlapTests(Home):
         self.assertIn('輸入檔', self.error('AccessUnsafe'))
 
 
-class SendTests(Home):
+class SendBase(Home):
     """act 批：快照存 state、inst 包 aos-jail、壞表／沒 bwrap 那件不送、_jail:false 照舊。"""
 
     def setUp(self):
@@ -239,6 +239,8 @@ class SendTests(Home):
     def inst(self, batch):
         return self.read(self.base / 'work' / (batch['calls'][0]['name'] + '.inst.json'))
 
+
+class SendTests(SendBase):
     def test_no_access_file_keeps_old_inst(self):
         batch = self.tick()
         self.assertIsNone(batch['access'])
@@ -256,7 +258,7 @@ class SendTests(Home):
                                            'cwd': 'ws', 'net': False})
         inst = self.inst(batch)
         name = batch['calls'][0]['name']
-        self.assertEqual(inst['argv'], ['aos-jail', '--mount', 'ws=' + ws, '--mount-ro', 'ref=%s/tools' % self.base,
+        self.assertEqual(inst['argv'], [acc.JAIL, '--mount', 'ws=' + ws, '--mount-ro', 'ref=%s/tools' % self.base,
                                         '--chdir', 'ws', '--net', 'off', '--setenv', 'FOO=bar', '--',
                                         str(self.base / 'tools/bin/sh-tool'), '-v'])
         self.assertNotIn('envs', inst)
@@ -346,7 +348,7 @@ class SendTests(Home):
                 info_api.check_batch(dict(base, access=value))
 
 
-class CliTests(Home):
+class CliBase(Home):
     def cli(self, *args, code=0):
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -360,6 +362,8 @@ class CliTests(Home):
     def raw(self):
         return self.read(self.base / 'access.json')
 
+
+class CliTests(CliBase):
     def test_ls_without_file(self):
         out = self.cli('ls')
         self.assertIn('沒有 access.json', out)
@@ -438,7 +442,7 @@ class CliTests(Home):
                 self.assertIn('Usage', self.cli(*args, code=2))
 
 
-class CheckStatusTests(Home):
+class CheckBase(Home):
     def check(self, env=None):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
@@ -446,6 +450,8 @@ class CheckStatusTests(Home):
                                           env or self.env)
         return out.getvalue()
 
+
+class CheckStatusTests(CheckBase):
     def test_warn_without_access_when_tools(self):
         self.assertEqual(self.check(), '')
         self.put(self.base / 'tools/t.json', [{'type': 'function', 'function': {'name': 'sh'}, '_meta': {'argv': ['sh']}}])
@@ -458,7 +464,7 @@ class CheckStatusTests(Home):
             out = self.check()
         self.assertIn('bad  access: AccessInvalid', out)
         self.assertIn('bad  access/bwrap: NoBwrap', out)
-        self.assertIn('bad  access/aos-jail', out)
+        self.assertIn('ok   access/aos-jail: 送件用 ' + acc.JAIL, out)
 
     @unittest.skipUnless(HAS_BWRAP, '這台沒有 bwrap')
     def test_good_access_bwrap_probe_and_tool_warns(self):
@@ -485,6 +491,166 @@ class CheckStatusTests(Home):
         self.assertIn('access bad：AccessInvalid', out.getvalue())
         self.access({'mounts': {'ws': 'workspace'}})
         self.assertIsNone(aos_agent_status.collect(self.base, self.env)['access_error'])
+
+
+class ReviewFixTests(Home):
+    """astra 審查必修：aos 自己的程式、符號連結本身、環境變數、access 指令驗候選、明寫不在、state 形狀。"""
+
+    def setUp(self):
+        super().setUp()
+        self.err = io.StringIO()
+        self.addCleanup(patch.stopall)
+        patch('sys.stderr', self.err).start()
+
+    def test_aos_programs_are_trusted(self):
+        self.access({'mounts': {'repo': acc.CLI_DIR}})
+        self.assertIn('aos 的指令', self.error('AccessUnsafe'))
+        self.access({'mounts': {'lib': acc.LIB_DIR}})
+        self.assertIn('aos 的程式庫', self.error('AccessUnsafe'))
+        self.access({'mounts': {'lib': {'$opt': 'ro', '$val': acc.LIB_DIR}}})
+        self.assertTrue(self.load()['mounts']['lib']['ro'])
+
+    def test_path_chain_keeps_links(self):
+        (self.root / 'real').mkdir()
+        (self.root / 'real' / 'f').write_text('x')
+        (self.root / 'l1').symlink_to('real')
+        (self.root / 'l2').symlink_to(self.root / 'l1')
+        self.assertEqual(acc.path_chain(self.root / 'l2' / 'f'),
+                         [str(self.root / 'l2'), str(self.root / 'l1'), str(self.root / 'real' / 'f')])
+
+    def test_symlinked_tool_file_in_writable_folder(self):
+        self.put(self.root / 'outside' / 'tool.json', [{'type': 'function', 'function': {'name': 'sh'},
+                                                         '_meta': {'argv': ['sh']}}])
+        (self.base / 'workspace' / 'tool.json').symlink_to(self.root / 'outside' / 'tool.json')
+        self.put(self.base / 'info.json', dict(self.info, tools=['workspace/tool.json']))
+        self.access({'mounts': {'ws': 'workspace'}})
+        text = self.error('AccessUnsafe')
+        self.assertIn(str(self.base / 'workspace' / 'tool.json'), text)
+
+    def test_access_lookup_states(self):
+        self.assertEqual(acc.access_lookup(self.base), (self.base / 'access.json', 'absent'))
+        self.access({})
+        self.assertEqual(acc.access_lookup(self.base)[1], 'present')
+        self.put(self.base / 'info.json', dict(self.info, access='gone.json'))
+        self.assertEqual(acc.access_lookup(self.base), (self.base / 'gone.json', 'missing'))
+
+    def test_state_access_shape_errors_are_field_type(self):
+        base = {'kind': 'act', 'kernel': '/K', 'base_len': 1, 'sent': True, 'calls': []}
+        for value, where in (({'mounts': {'ws': {'path': '/w', 'ro': False}}, 'cwd': [], 'net': False}, 'batch.access.cwd'),
+                             ({'mounts': {'ws': {'path': '/w', 'ro': False}}, 'cwd': {}, 'net': False}, 'batch.access.cwd'),
+                             ({'mounts': {'WS': {'path': '/w', 'ro': False}}, 'cwd': None, 'net': False},
+                              'batch.access.mounts.WS')):
+            with self.subTest(value=value), self.assertRaises(AgentError) as cm:
+                info_api.check_batch(dict(base, access=value))
+            self.assertEqual(cm.exception.code, 'FieldTypeMismatch')
+            self.assertIn(where, str(cm.exception))
+
+
+class EnvTests(SendBase):
+    """jailed 工具的 _meta.envs：敏感來源整件不跑、敏感名字在寫 inst 前就丟，inst 落盤不帶值。"""
+
+    def jailed(self, meta, env_extra):
+        self.tool(meta)
+        self.access({'mounts': {'ws': 'workspace'}})
+        self.env.update(env_extra)
+        with patch.object(batch_api.shutil, 'which', return_value='/usr/bin/bwrap'):
+            return self.tick()
+
+    def on_disk(self):
+        return ''.join(p.read_text(errors='replace') for p in (self.base / 'work').glob('*')
+                       ) if (self.base / 'work').exists() else ''
+
+    def test_renamed_secret_env_is_refused(self):
+        base_env = dict(self.env)
+        for key in ('OPENAI_API_KEY', 'AOS_KERNEL_HOME', 'AOS_LLM_CONFIG', 'SSH_AUTH_SOCK', 'db_password'):
+            with self.subTest(key=key):
+                shutil.rmtree(self.base / 'work', ignore_errors=True)
+                self.env = dict(base_env)
+                value = str(self.k) if key == 'AOS_KERNEL_HOME' else 'sk-secret-value'
+                batch = self.jailed({'argv': ['tools/bin/sh-tool'], 'envs': {'FOO': {'$env': key}}},
+                                    {key: value})
+                call = batch['calls'][0]
+                self.assertIn('跑不起來：EnvUnsafe: ', call['done']['content'])
+                self.assertIn(key, call['done']['content'])
+                self.assertNotIn(value, self.on_disk())
+                self.assertFalse(list((self.k / 'requests').iterdir()))
+
+    def test_secret_env_in_argv_or_fmt_is_refused(self):
+        batch = self.jailed({'argv': ['tools/bin/sh-tool', {'$fmt': {'$val': 'k=${k}', 'k': {'$env': 'MY_TOKEN'}}}]},
+                            {'MY_TOKEN': 'tok-value'})
+        self.assertIn('EnvUnsafe', batch['calls'][0]['done']['content'])
+        self.assertNotIn('tok-value', self.on_disk())
+
+    def test_sensitive_names_dropped_before_inst(self):
+        batch = self.jailed({'argv': ['tools/bin/sh-tool'],
+                             'envs': {'GITHUB_TOKEN': 'literal-tok', 'OK_VAR': {'$env': 'PLAIN'}}},
+                            {'PLAIN': 'plain-value'})
+        argv = self.inst(batch)['argv']
+        self.assertIn('--setenv', argv)
+        self.assertIn('OK_VAR=plain-value', argv)
+        self.assertNotIn('literal-tok', self.on_disk())
+
+    def test_unjailed_tool_keeps_env(self):
+        self.tool({'argv': ['tools/bin/sh-tool'], 'envs': {'FOO': {'$env': 'OPENAI_API_KEY'}}}, _jail=False)
+        self.access({'mounts': {'ws': 'workspace'}})
+        self.env['OPENAI_API_KEY'] = 'sk-x'
+        batch = self.tick()
+        self.assertEqual(self.inst(batch)['envs'], {'FOO': 'sk-x'})
+
+
+class CliReviewTests(CliBase):
+    def test_set_uses_refs_of_access_file(self):
+        shared = self.root / 'shared'
+        self.put(shared / 'path.json', {'ws': str(self.base / 'workspace')})
+        self.access({'mounts': {'ws': {'$ref': '../shared/path.json#/ws'}}, 'cwd': 'ws'})
+        before = self.raw()
+        self.assertIn('AccessUnsafe', self.cli('set', 'ref', shared, '--rw', code=1))
+        self.assertEqual(self.raw(), before)
+        self.assertIn('所以設成唯讀', self.cli('set', 'ref', shared))
+        self.assertEqual(self.raw()['mounts']['ref'], {'$opt': 'ro', '$val': str(shared)})
+
+    def test_rm_compares_resolved_cwd(self):
+        (self.root / 'B').mkdir()
+        self.access({'mounts': {'ws': 'workspace', 'b': str(self.root / 'B')}, 'cwd': {'$env': 'START'}})
+        with patch.dict(os.environ, {'START': 'ws'}):
+            before = self.raw()
+            self.assertIn('目前的起點', self.cli('rm', 'ws', code=1))
+            self.assertEqual(self.raw(), before)
+            self.cli('rm', 'b')
+            self.assertEqual(list(self.raw()['mounts']), ['ws'])
+
+    def test_candidate_revalidated_before_write(self):
+        (self.root / 'B').mkdir()
+        # cwd 用 $ref 指到 mounts 裡的另一格名字：rm 那格後候選壞掉（cwd 不在 mounts）＝不寫
+        self.put(self.base / 'start.json', {'n': 'b'})
+        self.access({'mounts': {'ws': 'workspace', 'b': str(self.root / 'B')},
+                     'cwd': {'$ref': 'start.json#/n'}})
+        before = self.raw()
+        self.cli('rm', 'b', code=1)
+        self.assertEqual(self.raw(), before)
+
+    def test_ls_explicit_missing_is_error(self):
+        self.put(self.base / 'info.json', dict(self.info, access='gone.json'))
+        out = self.cli('ls', code=1)
+        self.assertIn('AccessInvalid', out)
+        self.assertNotIn('工具不關牢', out)
+        self.assertIn('檔不在', json.loads(self.cli('ls', '--json', code=1))['error'])
+        self.cli('net', 'on', code=1)
+        self.cli('set', 'ws', self.base / 'workspace', '--cwd')
+        self.assertTrue((self.base / 'gone.json').exists())
+
+
+class OptToolTests(CheckBase):
+    def test_program_folder_covering_home_warns(self):
+        self.put(self.base / 'mytool', '#!/bin/sh\n')
+        os.chmod(self.base / 'mytool', 0o755)
+        self.put(self.base / 'tools/t.json', [{'type': 'function', 'function': {'name': 'mine'},
+                                               '_meta': {'argv': ['./mytool']}}])
+        self.put(self.base / 'info.json', dict(self.info, tools=['tools/t.json']))
+        self.access({'mounts': {'ws': 'workspace'}, 'cwd': 'ws'})
+        with patch.object(aos_agent_check, 'bwrap_probe', return_value=(True, 'ok')):
+            out = self.check()
+        self.assertIn('warn agent/tool/mine: 程式資料夾 %s 會整個唯讀掛到 /opt/tool' % self.base, out)
 
 
 if __name__ == '__main__':

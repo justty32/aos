@@ -303,5 +303,78 @@ class ToolsCliTests(Base):
         self.assertEqual(self.info()['tools'][0]['$opt']['as'], {n: n.upper() for n in names})
 
 
+
+class AstraFixTests(Base):
+    """09-24 access-impl astra #4、#7 與隊長煙霧測試的修正。"""
+
+    def test_ls_explicit_access_missing_is_error(self):
+        info = self.info()
+        info['access'] = 'missing.json'
+        self.write(self.amy / 'info.json', info)
+        lines = self.cli('ls').stdout.splitlines()
+        self.assertEqual([line.split()[3] for line in lines[1:3]], ['錯', '錯'])
+        self.assertIn('missing.json', lines[-1])
+        self.assertIn('AccessInvalid', lines[-1])
+        data = json.loads(self.cli('ls', '--json').stdout)
+        self.assertIsNone(data['access'])
+        self.assertIn('missing.json', data['access_error'])
+        self.assertEqual([t['jail'] for t in data['tools']], [None, None])
+
+    def test_default_access_missing_is_not_error(self):
+        data = json.loads(self.cli('ls', '--json').stdout)
+        self.assertIsNone(data['access_error'])
+        self.assertIn('沒有 access 檔', self.cli('ls').stdout)
+
+    def test_info_written_indented(self):
+        self.cli('alias', 'read', 'cat')
+        text = (self.amy / 'info.json').read_text(encoding='utf-8')
+        self.assertTrue(text.startswith('{\n  "'), text[:20])
+        bob = self.root / 'bob'
+        self.assertEqual(run_agent('init', '--target', bob).returncode, 0)
+        self.assertTrue((bob / 'info.json').read_text(encoding='utf-8').startswith('{\n  "'))
+        self.assertEqual(sorted(p.name for p in self.amy.iterdir() if p.name.endswith('.tmp')), [])
+
+    def test_add_package_with_access_explains_jail_root(self):
+        pkg = self.root / 'hello'
+        self.write(pkg / 'hello.json', [tool('hello')])
+        self.write(pkg / 'config.json', {'root': 'somewhere'})
+        out = self.cli('add', pkg).stdout
+        self.assertIn('關牢：工具的工作根目錄＝牢裡的 /work/ws（對到 %s）' % (self.amy / 'workspace'), out)
+        self.assertIn('只在不關牢時用', out)
+        self.assertNotIn('（改 ', out)
+
+    def test_lock_file_serialises_tools_and_access_writers(self):
+        """測試自己先拿 .admin.lock 當 barrier：tools 與 access 兩個寫者都要排隊，放開後兩邊都生效。"""
+        from aos_agent_tools_edit import LOCK_NAME, info_lock
+        (self.amy / 'workspace').mkdir()
+        (self.root / 'data').mkdir()
+        self.write(self.amy / 'access.json', {'mounts': {'ws': 'workspace'}, 'cwd': 'ws', 'net': False})
+        before = (self.amy / 'info.json').read_bytes()
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+        agent = [PY, str(CLI / 'aos-agent')]
+        with info_lock(self.amy):
+            procs = [subprocess.Popen(agent + ['tools', 'alias', 'read', 'cat', '--target', str(self.amy)], env=env,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True),
+                     subprocess.Popen(agent + ['access', 'set', 'data', str(self.root / 'data'), '--target', str(self.amy)],
+                                      env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)]
+            try:
+                for p in procs:
+                    with self.assertRaises(subprocess.TimeoutExpired):
+                        p.wait(timeout=1.5)           # 兩個寫者都卡在鎖上
+                self.assertEqual((self.amy / 'info.json').read_bytes(), before)
+                self.assertEqual(read_json(self.amy / 'access.json')['mounts'], {'ws': 'workspace'})
+            except BaseException:
+                for p in procs:
+                    p.kill()
+                    p.communicate()
+                raise
+        for p in procs:
+            out, err = p.communicate(timeout=30)
+            self.assertEqual(p.returncode, 0, out + err)
+        self.assertTrue((self.amy / LOCK_NAME).is_file())
+        self.assertEqual(self.info()['tools'], [{'$opt': {'as': {'read': 'cat'}}, '$val': 'tools/mine.json'}])
+        self.assertEqual(read_json(self.amy / 'access.json')['mounts']['data'], str(self.root / 'data'))
+
+
 if __name__ == '__main__':
     unittest.main()

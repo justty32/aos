@@ -17,10 +17,11 @@ aos-agent tools unalias NEW [--target DIR]
 - 家照 §1（`--target`，省略＝目前資料夾）。參數個數不對、參數是空字串、`--root`／`--force`／`--as`／`--only` 給了 add 以外、`--json` 給了 ls 以外＝用法錯 2。
 - 先把整個家讀驗一次（跟 `aos-llm call` 同一份讀法）；讀不過照那個代號退 1。
 - 寫入的三個（`rm`、`alias`、`unalias`）：
-  1. 持 `<家>/info.json` 的 flock（跟 `tools add`、`access` 的寫入指令同一把；檔被換過就重拿，見 tools.md）。
+  1. 持管理鎖 `<家>/.admin.lock` 的 flock（不存在就建、從不 rename；跟 `tools add`、`access` 的寫入指令同一把），讀、驗、寫整段都在鎖內。
+     這把鎖只讓**管理指令之間**互斥：`tick`、`say`、`status` 等不拿（tick 讀 `info.json` 永遠看到完整的舊版或新版，因為是整份 rename）。
   2. `info.tools` 要是字面陣列、元素是路徑字串或字面 `$opt` 物件（`$val` 是字面字串）；不是＝`FieldTypeMismatch`，請人直接編 `info.json`。
   3. 在記憶體裡改一份，**整份試算**（照 agent §3.3／§3.4 重讀全部工具）；不過（例如改名撞名＝`ToolInvalid`）就退 1、什麼都不寫。
-  4. `.tmp`＋rename 整份重寫 `info.json`（格式同 `aos_home.write_json`：一行、不跳脫中文，保留其他鍵）。
+  4. `.tmp`＋rename 整份重寫 `info.json`：縮排 2、不跳脫中文（方便人用文字編輯器改；`init` 寫的也一樣），保留其他鍵。`.tmp` 名字帶檔名、pid 與亂數，不會跟別人撞。
   5. 印做了什麼，最後一行「下一批工具生效，不用重 start」。退 0。
 - NAME 是**模型看到的名字**（改過名的就是新名）。找不到＝`NotFound`，訊息列出現有的名字；給的是某支的原名會提示它現在叫什麼。
 
@@ -33,20 +34,21 @@ aos-agent tools unalias NEW [--target DIR]
 | 名字 | 模型看到的名字 |
 | 原名 | 改過名才印原名，沒改印 `-` |
 | 來源檔 | 工具檔路徑（在家裡的相對家，家外的絕對） |
-| 關牢 | `jail`＝會關；`no`＝這支 `_jail: false`；`-`＝家裡沒有 access 檔（全部不關）；`?`＝access 設定讀不到（stderr 一行 warn） |
+| 關牢 | `jail`＝會關；`no`＝這支 `_jail: false`；`-`＝沒寫 `access` 欄、預設的 `access.json` 也不在（全部不關）；`錯`＝`info.json` 明寫的 access 檔不在、或 `access` 欄壞了（送件時要關牢的工具都跑不起來） |
 | 池 | `info.tool_pool`（沒寫＝`default`） |
 
-最後一行 `N 個工具；關牢照 <access 檔>` 或 `…；沒有 access 檔：工具不關牢`。沒有工具印一句怎麼裝。
+最後一行 `N 個工具；關牢照 <access 檔>`、`…；沒有 access 檔：工具不關牢`，或 `…；關牢設定有錯…：<代號: 白話>`（仍退 0）。沒有工具印一句怎麼裝。
 
 `--json`（穩定格式，第 1 版）：
 
 ```json
 {"_type": "aos_agent_tools_ls", "_version": 1, "dir": "家的絕對路徑", "access": "access 檔絕對路徑或 null",
+ "access_error": "代號: 白話 或 null",
  "tools": [{"name": "edit-a", "original": "bash-edit-a", "file": "工具檔絕對路徑", "index": 0,
             "entry": 1, "jail": true, "pool": "default"}]}
 ```
 
-`index`＝工具檔裡第幾個（從 0）、`entry`＝`info.tools` 第幾個元素；`jail` 是 `true`／`false`／`null`（沒有 access 檔或讀不到）。之後只加鍵、不改既有鍵的意思。
+`index`＝工具檔裡第幾個（從 0）、`entry`＝`info.tools` 第幾個元素；`jail` 是 `true`／`false`／`null`（沒有 access 檔，或 `access_error` 不是 null）。之後只加鍵、不改既有鍵的意思。
 
 ## `tools rm NAME`
 

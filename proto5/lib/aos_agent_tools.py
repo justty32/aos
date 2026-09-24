@@ -215,17 +215,38 @@ def _add(base, spec, root, force, as_arg, only):
         changed = info_root['tools'][-1] if need_entry else info_root['tools'][cover['entry']]
         print('info.json 的 tools %s %s' % ('補了' if need_entry else '第 %d 條改成' % cover['entry'],
                                            json.dumps(changed, ensure_ascii=False)))
-    if work_root:
-        print('工作根目錄：%s（改 %s 的 root）' % (work_root, link / 'config.json'))
-        real_home, real_root = os.path.realpath(base), os.path.realpath(work_root)
-        if real_home == real_root or real_home.startswith(real_root.rstrip(os.sep) + os.sep):
-            print('注意：工作根目錄包含 agent 家，模型改得到自己的 info.json、記憶與 state.json', file=sys.stderr)
-    from aos_agent_access import ensure_default           # A2 的模組；延遲載入
+    from aos_agent_access import access_path, ensure_default   # A2 的模組；延遲載入
     note = ensure_default(base, root if root is not None else 'workspace')
     if note:
         print(note)
+    jailed = access_path(base)
+    if jailed and work_root:                              # 工具包有工作根目錄才講（config.json 的 root）
+        cwd, mapped = _jail_cwd(base, jailed)
+        print('關牢：工具的工作根目錄＝牢裡的 /work/%s%s；看 aos-agent access ls'
+              % (cwd or '', '（對到 %s）' % mapped if mapped else ''))
+        print('（%s 的 root＝%s 只在不關牢時用）' % (link / 'config.json', work_root))
+    elif work_root:
+        print('工作根目錄：%s（改 %s 的 root）' % (work_root, link / 'config.json'))
+    if work_root:
+        real_home, real_root = os.path.realpath(base), os.path.realpath(work_root)
+        if real_home == real_root or real_home.startswith(real_root.rstrip(os.sep) + os.sep):
+            print('注意：工作根目錄包含 agent 家，%s' % ('access 裡把它掛成可寫會被拒（AccessUnsafe）' if jailed
+                  else '模型改得到自己的 info.json、記憶與 state.json'), file=sys.stderr)
     print(DONE)
     return 0
+
+
+def _jail_cwd(base, path):
+    """盡量讀出 access 檔的 cwd 名字與它對到的路徑（只認字面字串）；讀不出來回 (None, None)。"""
+    try:
+        obj = json.loads(Path(path).read_text(encoding='utf-8'))
+        cwd = obj.get('cwd')
+        value = obj.get('mounts', {}).get(cwd) if isinstance(cwd, str) else None
+    except (OSError, ValueError, AttributeError):
+        return None, None
+    if not isinstance(value, str):
+        return cwd if isinstance(cwd, str) else None, None
+    return cwd, os.path.abspath(os.path.join(base, os.path.expanduser(value)))
 
 
 def _work_root(base, dest):

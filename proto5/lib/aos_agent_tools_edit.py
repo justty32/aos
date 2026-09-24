@@ -1,6 +1,6 @@
 """aos-agent tools ls／rm／alias／unalias（aos-agent/tools-manage.md），與 tools add 共用的 info.tools 編輯。
 
-改 info.tools 一律：持 info.json 的 flock → 讀驗整個家 → 改記憶體裡的一份 → 整份試算
+改 info.tools 一律：持 <家>/.admin.lock 的 flock → 讀驗整個家 → 改記憶體裡的一份 → 整份試算
 （load_llm_view(doc=…)，壞了就不寫）→ .tmp＋rename 整份重寫 info.json。不刪任何工具檔。
 """
 import contextlib
@@ -9,7 +9,6 @@ import fcntl
 import json
 import os
 from pathlib import Path
-import sys
 import unicodedata
 
 import aos_home
@@ -18,28 +17,28 @@ from aos_agent_home import AgentError, Context, Document, load_llm_view, read_in
 DONE = '下一批工具生效，不用重 start'
 
 
+LOCK_NAME = '.admin.lock'
+INFO_INDENT = 2
+
+
 @contextlib.contextmanager
 def info_lock(base):
-    """持 <家>/info.json 的 flock（tools 與 access 的寫入指令共用這一把）。
+    """持 <家>/.admin.lock 的獨占 flock：管理指令（tools、access 的寫入）之間互斥。
 
-    info.json 會被 rename 整份換掉：拿到鎖後若檔已不是同一份，就放掉重拿新的那份，
-    免得排在舊檔上的人跟新來的人同時動手。
+    鎖檔不會被 rename（info.json 會），所以排隊的人跟後來的人一定搶同一把；不存在就建。
+    整個「讀、驗、寫」交易都在鎖內。tick 等執行路徑不拿這把。
     """
-    path = Path(base) / 'info.json'
-    while True:
-        lock = open(path, 'rb')
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        try:
-            same = os.fstat(lock.fileno()).st_ino == os.stat(path).st_ino
-        except FileNotFoundError:
-            same = False
-        if same:
-            break
-        lock.close()
+    lock = open(Path(base) / LOCK_NAME, 'a')
     try:
+        fcntl.flock(lock, fcntl.LOCK_EX)
         yield
     finally:
         lock.close()
+
+
+def write_info(base, root):
+    """整份原子重寫 info.json：縮排 2、不跳脫中文（方便人手改）。"""
+    aos_home.write_json(Path(base) / 'info.json', root, indent=INFO_INDENT)
 
 
 def _literal_opt(e):
@@ -80,9 +79,9 @@ def simulate(base, root, files=None):
 
 
 def commit(base, root, files=None):
-    """試算過才整份重寫 info.json（縮排照 aos_home.write_json）。"""
+    """試算過才整份重寫 info.json（write_info：縮排 2）。"""
     view = simulate(base, root, files)
-    aos_home.write_json(Path(base) / 'info.json', root)
+    write_info(base, root)
     return view
 
 
@@ -92,9 +91,22 @@ def rel(base, path):
     return os.path.relpath(path, base) if path.startswith(base.rstrip(os.sep) + os.sep) else path
 
 
-def _access_path(base):
-    from aos_agent_access import access_path   # A2 的模組；延遲載入
-    return access_path(base)
+def access_state(base):
+    """回 (access 檔路徑或 None, 錯誤白話或 None)。
+
+    沒明寫 access 欄、預設的 access.json 不在＝(None, None)，工具不關牢；
+    info.json 明寫的 access 檔不在、或 access 欄本身壞了＝錯誤（送件時也會是 AccessInvalid）。
+    """
+    from aos_agent_access import configured_path   # A2 的模組；延遲載入
+    try:
+        path = configured_path(base)
+    except AgentError as e:
+        return None, str(e)
+    if path.exists():
+        return path, None
+    if 'access' in read_info_doc(base).root:
+        return None, 'AccessInvalid: info.json 的 access 指到 %s，但檔不在' % path
+    return None, None
 
 
 def _find(view, name, *, originals=False):
@@ -129,11 +141,7 @@ def ls(agent_dir, as_json=False):
     view = load_llm_view(base)
     doc = read_info_doc(base)
     pool = resolve_field(doc, Context(doc, base_dir=base), ['tool_pool']) if 'tool_pool' in doc.root else 'default'
-    access, access_error = None, None
-    try:
-        access = _access_path(base)
-    except AgentError as e:
-        access_error = str(e)
+    access, access_error = access_state(base)
     rows = []
     for t in view['tools_raw']:
         src = t['_source']
@@ -142,19 +150,19 @@ def ls(agent_dir, as_json=False):
                      'index': src['index'], 'entry': src['entry'], 'jail': jail, 'pool': pool})
     if as_json:
         print(json.dumps({'_type': 'aos_agent_tools_ls', '_version': 1, 'dir': base,
-                          'access': None if access is None else str(access), 'tools': rows},
+                          'access': None if access is None else str(access),
+                          'access_error': access_error, 'tools': rows},
                          ensure_ascii=False, indent=2))
         return 0
-    if access_error:
-        print('warn: 讀不到 access 設定，關牢欄印 ?：%s' % access_error, file=sys.stderr)
     if not rows:
         print('沒有工具（info.json 的 tools 是空的）；裝內建的：aos-agent tools add base')
         return 0
-    mark = {True: 'jail', False: 'no', None: '?' if access_error else '-'}
+    mark = {True: 'jail', False: 'no', None: '錯' if access_error else '-'}
     _table([('名字', '原名', '來源檔', '關牢', '池')] +
            [(r['name'], r['original'] if r['original'] != r['name'] else '-',
              rel(base, r['file']), mark[r['jail']], str(r['pool'])) for r in rows])
-    where = ('關牢照 %s' % access) if access else '沒有 access 檔：工具不關牢'
+    where = (('關牢設定有錯（關牢欄印「錯」，這批要關牢的工具都跑不起來）：%s' % access_error) if access_error
+             else ('關牢照 %s' % access) if access else '沒有 access 檔：工具不關牢')
     print('%d 個工具；%s' % (len(rows), where))
     return 0
 
