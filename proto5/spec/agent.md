@@ -44,6 +44,7 @@ agent-bob/
   tools/         慣例：工具檔
   input.json     慣例：輸入（§4.1）
   work/          aos-agent 的工作區：<工作名>.inst.json、.in、.out
+  done/          收過的輸入與 consume 過的門檔（§4.1）（09-24 試玩 r1 補）
   log/           llm.err、agent.err，以及工具自己指定的
 ```
 
@@ -133,6 +134,7 @@ agent-bob/
 
 - 每個元素必須：是物件；`type` 等於 `"function"`；`function` 是物件；`function.name` 是非空字串；`function.description` 有寫就要是字串、`function.parameters` 有寫就要是物件；
   `_meta` 是物件；`_timeout_ms` 有寫就要是非負整數（bool 不算）。頂層不是陣列、任一條不合、合併後同名——**工具檔的錯一律 `ToolInvalid`**（不用 `FieldTypeMismatch`）。
+  （09-24 試玩 r1 補）訊息帶檔的絕對路徑與第幾個元素（從 0 起）；同名則列出兩邊的檔與位置。
   其他 key 原樣送給模型（`_` 開頭的除外），不驗。
 - `_meta` 是一份 posix inst（[inst-posix](inst-posix.md)，`_metainfo` 可省），**不能寫 `stdin`／`stdout`**（寫了＝`ToolInvalid`）：
   arguments 走 stdin、結果走 stdout，由 aos-agent 接管。`stderr` 寫 `merge` 可以（跟著 stdout 進結果）。
@@ -170,9 +172,9 @@ agent-bob/
 ### 4.1 `input`
 
 指到的每個檔：字串→一則 user 訊息；一則訊息物件→原樣；訊息陣列→原樣一串（都照 §3.2 驗）。檔不存在或空陣列＝沒輸入。
-收法：先把檔 rename 到唯一封存名 `<原名>.<消費 id>.done`、**再從封存名讀**（aos-agent.md §8）。所以原路徑一空出來，寫輸入的人就可以再投一份同名檔，
+收法：先把檔 rename 到唯一封存名 `<原檔所在資料夾>/done/<原檔名>.<消費 id>.done`（09-24 試玩 r1 補）（`done/` 不在就先建；慣例輸入在 agent 家，所以就是 agent 家的 `done/`；同資料夾 rename、不跨檔案系統）、**再從封存名讀**（aos-agent.md §8）。所以原路徑一空出來，寫輸入的人就可以再投一份同名檔，
 不會被上一次的恢復吞掉。仍要遵守的一條：**不要蓋掉還沒被收的檔**（原路徑還在就是還沒收）——蓋掉的那份本來就讀不到。
-封存檔 agent 不清，人自己清——但**還被 `state.json` 的 `intake`／`consuming` 引用的封存檔不准清、不准搬**（它是「這次已經搬過」的憑據，清了恢復會把原路徑上的新檔當成舊的搬走）；
+封存檔（`done/` 裡）agent 不清，人自己清——但**還被 `state.json` 的 `intake`／`consuming` 引用的封存檔不准清、不准搬**（它是「這次已經搬過」的憑據，清了恢復會把原路徑上的新檔當成舊的搬走）；
 等那筆引用解除（`intake` 回 null、`consuming` 清空）之後才能清。
 
 ### 4.2 `waits`
@@ -187,7 +189,7 @@ agent-bob/
 
 - 原始 JSON 裡是字面單條或字面陣列；讀進來一律當條目列表，程式寫回一律寫陣列。沒寫或 `[]`＝沒有門。
 - 一條＝路徑字串，或選項物件 `{"$opt": 名字|[名字…], "$val": 路徑|[路徑…]}`（`$opt` 必寫：只有 `$val` 的物件在指示詞機制裡是 `UnknownDirective`）；`$val` 可再是指示詞，解完要是字串或非空字串陣列，否則 `FieldTypeMismatch`。
-- 選項：`consume`（到了之後 rename 到唯一封存名 `<原名>.<消費 id>.done`）；`exists`、`all` 是預設、寫了也一樣；其他名字＝`UnknownOption`、重複＝`UnknownOption`。
+- 選項：`consume`（到了之後 rename 到唯一封存名，規則同 §4.1：`<原檔所在資料夾>/done/<原檔名>.<消費 id>.done`（09-24 試玩 r1 補））；`exists`、`all` 是預設、寫了也一樣；其他名字＝`UnknownOption`、重複＝`UnknownOption`。
 - 「到了」：檔存在；資料夾裡有任何 `*.json`（`.done` 不算）。`$val` 是陣列＝全部到了才算這條到了。
 - `consume` 指到資料夾＝到了那一刻把裡面所有 `*.json` 各自 rename 到自己的封存名。
 - 加門的人要確定那個檔**現在不在**，不然門一加就開（agent 不替人分辨新舊訊號）。
@@ -215,7 +217,8 @@ agent-bob/
 
 ### 4.4 `intake`、`consuming`、`sweep`
 
-- **消費 id**：`<epoch ns>-<pid>`，每次收輸入、每次門劃掉 consume 條目各取一個新的；封存名 `<原名>.<消費 id>.done` 因此永不重複。
+- **消費 id**：`<epoch ns>-<pid>`，每次收輸入、每次門劃掉 consume 條目各取一個新的；封存名 `<原檔所在資料夾>/done/<原檔名>.<消費 id>.done`（09-24 試玩 r1 補）因此永不重複。
+  state 裡記的是當時算好的 `dst`，改版前寫下的舊式同資料夾封存名照原樣搬、讀。
 - `intake`：`{"id": 消費 id, "base_len": 整數, "files": [{"src": 原路徑, "dst": 封存名}…]}`，都是絕對路徑。idle 收輸入時先記這筆、再搬檔、
   再從 `dst` 讀、再寫記憶；崩了下次照這筆做完（aos-agent.md §8）。
 - `consuming`：`[{"src": 原路徑, "dst": 封存名}…]`。門的 `consume` 條目到了，先在同一次寫裡把它從 `waits` 劃掉、把這些對記到這裡，再搬（aos-agent.md §3）。
@@ -237,7 +240,7 @@ agent-bob/
 `aos-agent init <template>`、`pause`／`continue`、`tools`／`llms` 子命令、`say`、一個 agent 一顆專屬 cpu：這輪不做，
 使用者的構想在 [thinking/aos-agent.md](../../thinking/aos-agent.md)、[thinking/2026-09-23.md](../../thinking/2026-09-23.md)。
 記憶太長；明確的 `fail` 狀態（[backlog/agent-fail-state.md](../backlog/agent-fail-state.md)）。
-**日常 CLI 還沒完**：照這三份做完，家要人手動建、回話要自己看記憶檔（aos-agent.md §13）。
+**日常 CLI 還沒完**：照這三份做完，家要人手動建；回話用 `aos-agent last` 看（09-24 試玩 r1 補）（aos-agent.md §1、§13）。
 
 ## 7. 已拍板的前提（使用者定的，不重問）
 
