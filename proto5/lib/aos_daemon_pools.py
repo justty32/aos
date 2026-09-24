@@ -52,6 +52,15 @@ def kid_path(home, name, i):
     return pool_dir(home, name) / "kids" / ("%d.json" % i)
 
 
+def peek(path):
+    """讀一個 JSON 物件檔；不在、讀不到、壞了或不是物件都回 None（顯示與開機掃描用）。"""
+    try:
+        value = aos_home.read_json(path)
+    except aos_home.HomeError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def log(code, msg):
     sys.stderr.write("aos-daemon: %s: %s\n" % (code, str(msg).replace("\n", " ")))
 

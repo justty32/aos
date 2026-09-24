@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import aos_home
 import aos_kernel as kernel
+import aos_kernel_ls
 from _kernel_fake import FakeCase
 
 CLI = Path(__file__).resolve().parents[2] / "cli" / "aos-kernel"
@@ -241,12 +242,12 @@ class Ls(CLICase):
 
     def test_bad_summary_stderr_fallbacks(self):
         target = self.root / 'inst.json'
-        self.assertEqual(kernel._stderr_hint(str(target)), str(target))
+        self.assertEqual(aos_kernel_ls.stderr_hint(str(target)), str(target))
         for value in ({'$env': 'ERR'}, {'$opt': 'append', '$val': {'$env': 'ERR'}}, None):
             aos_home.write_json(target, {'stderr': value})
-            self.assertEqual(kernel._stderr_hint(str(target)), str(target))  # advice-r1：沒有字面 stderr 就指 target
+            self.assertEqual(aos_kernel_ls.stderr_hint(str(target)), str(target))  # advice-r1：沒有字面 stderr 就指 target
         aos_home.write_json(target, {'stderr': {'$opt': 'append', '$val': 'a.log'}})
-        self.assertEqual(kernel._stderr_hint(str(target)), str(self.root / 'a.log'))
+        self.assertEqual(aos_kernel_ls.stderr_hint(str(target)), str(self.root / 'a.log'))
 
 
 class Misc(CLICase):

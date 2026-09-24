@@ -55,7 +55,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | [core/agent/README.md](../../../core/agent/README.md) | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見下方 `core/agent` 節 | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
 | [core/tick/README.md](../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
 | [proto4-3/docs/files.md](../../../proto4-3/docs/files.md) | `proto4-3/` 作業系統層原型的逐檔表；inst 指示詞、run 訊號狀態與 daemon lifecycle 已各自拆檔 | 要改 aos-exec／aos-run／aos-daemon／aos-kernel 原型 |
-| [proto5/README.md](../../../proto5/README.md) | `proto5/` Python 3.12 原型；完整模組／API 導航見 [lib/README.md](../../../proto5/lib/README.md)。底層 directives／inst／exec；新 home／client／exec_cpu／daemon／kernel 按 cpu／daemon／kernel 三份規範運作，CLI 為 aos-exec／aos-cpu／aos-daemon（boot／halt）／aos-kernel（`aos_kernel.py` 只當匯出層，實作拆成 `aos_kernel_info／ledger／engine／boot／cli.py` 五支；含 ack、ls 摘要（第一行 health＝`aos_kernel_health.py`，agent status 共用；資料與對齊表在 `aos_kernel_ls.py`，`-v`／`--json` 同源）、halt 等停好、check 啟動前檢查＝`aos_kernel_check.py`，只查 K 家（目錄、daemon 重開提示 boot、`--probe` 打 endpoint）——（advice-r1）不再查 agent，agent 那半（池、模型代號、工具）併進 kernel 檢查後另查 agent 家在 `aos_agent_check.py`（`aos-agent check [--target] [--probe]`）；init 讀 `--config`）；三支指令的家一律 `--target`（`aos_home.resolve_target`）；agent 線已接上 kernel：aos-llm call（問模型一次，`aos_llm_call.py`）、aos-agent tick／start／stop／init／say／listen／status／pause／continue／check／talk／tools add（`aos_agent*.py`；listen 的印法另在 `aos_agent_listen_render.py`，talk REPL 在 `aos_agent_talk.py`，`tools add` 在 `aos_agent_tools.py`；命令列在 `aos_agent_cli.py`，listen／say／status／pause＋continue（含 `--all`）各一檔，tick 鎖與手動暫停在 `aos_agent_runtime.py`，崩潰窗口與真 daemon 整合測試在 `lib/test/test_agent_*.py`）；舊 llm／tool cpu 已移除；權限牆（L 隊）：`access.json` 讀驗在 `aos_agent_access.py`，CLI `access ls/set/rm/cwd/net` 在 `aos_agent_access_cli.py`，`tools add/rm/alias/unalias` 改寫在 `aos_agent_tools_edit.py`，bwrap 牢在 `aos_jail.py`＋`cli/aos-jail`（送工具時自動接前面），`aos_agent_check.py` 多了「抓會被擋的工具」 | 要改 proto5 的指示詞、inst／exec、JSON-RPC 家與交件、cpu 執行、daemon 孩子管理、kernel 帳本／出貨箱／tick 鏈，或 agent 家讀驗、aos-llm call、aos-agent 的批次／恢復 |
+| [proto5/README.md](../../../proto5/README.md) | `proto5/` Python 3.12 原型（09-24 起 daemon／kernel 是 proto5-2 納入的池式版本）；逐模組一句見下方 [proto5/lib 模組](#proto5lib-模組)，API 細節見 [lib/README.md](../../../proto5/lib/README.md)；命令列薄殼在 `proto5/cli/`（aos-exec／aos-cpu／aos-daemon／aos-kernel／aos-agent／aos-jail／aos-llm），三支主人指令的家一律 `--target` | 要改 proto5 的指示詞、inst／exec、JSON-RPC 家與交件、cpu 執行、daemon 池、kernel 池表／帳本／tick 鏈，或 agent 家讀驗、aos-llm call、aos-agent 各子命令 |
 | [proto5.1/README.md](../../../proto5.1/README.md) | `proto5.1/` 實驗場：proto5 的複本，照 23 題建議先實作——`lib/` 多了 `aos_cpu.py`（共用佇列）、`aos_llm_cpu.py`、`aos_tool_cpu.py`、`aos_run.py`、`aos_daemon.py`、`aos_kernel.py`；`spec/` 多了 cpu-queue／llm-cpu／tool-cpu／aos-*-cpu／aos-run／daemon-home／aos-daemon／kernel-home／aos-kernel；`notes/findings.md`（35 條）與 `findings-brief.md` | 要看「建議實作起來撞到什麼」、或要把 proto5.1 的東西回流 proto5 |
 | [proto4-5/README.md](../../../proto4-5/README.md) | `proto4-5/` LLM 排程原型；`llm_cpu_request.py` 管請求 ID／位置／指紋，`llm_cpu_manage.py` 直接查／刪 `K/llm/` 的 queued、running、done | 要改請求對帳或原型的 `aos-kernel llm ls／rm` |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
@@ -64,6 +64,62 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 檔案在 `common/`／`app/`／`cmake/` 底下或是建置設定檔（含新增小專案要加的那行 `add_subdirectory()`）→ `code-map/build.md`。
 `core/exec`、`core/wire`、`core/loop`、`core/tick` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊；`core/tool` 的逐檔表格暫收在本檔。
 未來多一個小專案，就在 `code-map/` 多一冊，並在上面這張表加一列。**這一步跟程式碼改動同一個 commit**（AGENTS.md 的「改了程式碼就要同步 code map」）。
+
+---
+
+## proto5/lib 模組
+
+一檔一句（跟 [proto5/lib/README.md](../../../proto5/lib/README.md) 的模組表同步；新增模組兩邊各插一行）：
+
+| 模組 | 職責 |
+|------|------|
+| `aos_directives` | 指示詞（`$env`／`$fmt`／`$ref`／`$opt`）解析的純函式庫 |
+| `aos_inst` | inst.json 的讀、驗、解 |
+| `aos_exec` | 執行一次的上層：三種目標的解讀（`run_target`／`run_target_full`／`run_inst`）與 `aos-exec` 命令列 |
+| `aos_exec_run` | 執行一次的底層：前置檢查、開串流、起子行程、等待／逾時／強停整組、寫 exit 檔 |
+| `aos_exec_spawn` | daemon 的非同步入口 `spawn_target`（`launcher` 決定 fd 0／1 怎麼接） |
+| `aos_home` | JSON-RPC 信封、原子放單與狀態、ack／stop、開機對帳、`--target` 找家 |
+| `aos_client` | 交件者：取名、放單、等回音、ack |
+| `aos_exec_cpu` | 長命 exec cpu（`aos-cpu`）：逐件執行、訊號與對帳、回完音丟 `notify` 通知 |
+| `aos_daemon` | daemon 的家、info、`is_alive`、給 kernel 讀的池摘要／kids 檔、boot（`run`）與 halt（`stop`） |
+| `aos_daemon_pools` | 池的資料形狀（pool.json／kids／summary.json）、檔案動作、拉孩子 |
+| `aos_daemon_loop` | daemon 的一圈：收屍、狀態機、退避、節流、fd 預算、批次停機階梯 |
+| `aos_daemon_rpc` | daemon 收的單 `scale`／`kill`／`ls` 怎麼驗、怎麼判 |
+| `aos_daemon_cli` | `aos-daemon boot／halt／ls／scale／kill` 命令列 |
+| `aos_kernel` | kernel 入口（`main`）＋只留測試在用的小匯出層 |
+| `aos_kernel_info` | 池表讀驗（info 第 2 版）、成員公式、`init`、初始帳本、`classify`、共用錯誤 |
+| `aos_kernel_ledger` | `KernelLedger` 帳本第 2 版：排隊、syscall、busy／on、四個出貨箱 |
+| `aos_kernel_engine` | `Kernel` 一格十步與 `tick` |
+| `aos_kernel_pools` | kernel 這邊怎麼增減 cpu（每格第 7 步：scale 回音、重算、送單、搬池） |
+| `aos_kernel_boot` | `boot` 交接換鏈、`status`、halt 等停好 |
+| `aos_kernel_cpu` | `aos-kernel cpu add／rm／ls`：只改 `K/info.json` 的池表 |
+| `aos_kernel_rows` | 按池摘要與一顆一行的資料與排版（`cpu ls`、`ls`、health、check 共用） |
+| `aos_kernel_health` | `health()` 一句話健康判定與 agent 暫停／重試標記 |
+| `aos_kernel_ls` | `aos-kernel ls`：穩定資料（`--json`）與對齊表 |
+| `aos_kernel_check` | `aos-kernel check` 啟動前唯讀檢查（`aos-agent check` 共用前半） |
+| `aos_kernel_cli` | `aos-kernel` 參數解析與 `main` |
+| `aos_llm_call` | `aos-llm call`：問模型一次 |
+| `aos_agent` | agent 的 tick 三格、批次派工、kernel 排程登記 |
+| `aos_agent_cli` | `aos-agent` 各子命令的 argparse 與分派 |
+| `aos_agent_home` | agent 家的內容讀驗與 `aos-llm call` 的六格 loader |
+| `aos_agent_info` | agent 的 info 設定與 state 讀驗、寫回 |
+| `aos_agent_batch` | 批次建立、inst 產生（含 aos-jail 包裝）、交件、結清 |
+| `aos_agent_inputs` | waits 門與輸入消費的恢復流程 |
+| `aos_agent_results` | 模型與工具結果判定、失敗分類 |
+| `aos_agent_runtime` | 持久化、恢復清理、tick 鎖、測試掛鉤 |
+| `aos_agent_init` | `aos-agent init` |
+| `aos_agent_say` | `aos-agent say` |
+| `aos_agent_listen` | `aos-agent listen` |
+| `aos_agent_listen_render` | listen 的印法 |
+| `aos_agent_talk` | `aos-agent talk` 來回對話 |
+| `aos_agent_status` | `aos-agent status` |
+| `aos_agent_pause` | `aos-agent pause`／`continue` |
+| `aos_agent_check` | `aos-agent check`（kernel 檢查＋agent 家、工具、權限牆） |
+| `aos_agent_tools` | `aos-agent tools add` |
+| `aos_agent_tools_edit` | `aos-agent tools ls／rm／alias／unalias` 與共用 info 編輯 |
+| `aos_agent_access` | 權限牆（access.json）讀驗與快照 |
+| `aos_agent_access_cli` | `aos-agent access ls／set／rm／cwd／net` |
+| `aos_jail` | `aos-jail`：組 bwrap 參數並 exec |
 
 ---
 

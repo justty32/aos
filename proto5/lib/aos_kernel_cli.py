@@ -10,13 +10,9 @@ import aos_home
 from aos_kernel_boot import boot, status, stop
 from aos_kernel_engine import tick
 from aos_kernel_info import CONFIG_EXAMPLE, CLIUsage, KernelError, init, load_info
-from aos_kernel_ls import ls_data, render, stderr_hint
+from aos_kernel_ls import ls_data, render
 
 ENV = "AOS_KERNEL_HOME"
-DAEMON_ENV = "AOS_DAEMON_HOME"
-
-
-_stderr_hint = stderr_hint  # 舊名字，aos_kernel 與測試還在用
 
 
 def _summary(home, snapshot, as_json=False, verbose=False, pool=None, procs=False):

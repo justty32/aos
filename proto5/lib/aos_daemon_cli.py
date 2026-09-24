@@ -24,14 +24,6 @@ class CliError(aos_home.HomeError):
     pass
 
 
-def _peek(path):
-    try:
-        value = aos_home.read_json(path)
-    except aos_home.HomeError:
-        return None
-    return value if isinstance(value, dict) else None
-
-
 def _kid_files(home, name):
     """{號: kids 檔內容}；O(這池的檔數)。"""
     found = {}
@@ -40,7 +32,7 @@ def _kid_files(home, name):
         for leaf in kid_dir.iterdir():
             stem = leaf.name[:-5] if leaf.name.endswith(".json") else ""
             if pools.NAME_RE.fullmatch(stem):
-                record = _peek(leaf)
+                record = pools.peek(leaf)
                 if record is not None:
                     found[int(stem)] = record
     return found
@@ -53,7 +45,7 @@ def _busy(decl, i, record, want):
 
 
 def _pool_view(home, name, want_busy):
-    decl, summary = _peek(pools.pool_dir(home, name) / "pool.json"), _peek(pools.pool_dir(home, name) / "summary.json")
+    decl, summary = pools.peek(pools.pool_dir(home, name) / "pool.json"), pools.peek(pools.pool_dir(home, name) / "summary.json")
     if summary is None and decl is None:
         return None
     view = dict(summary) if summary is not None else {
@@ -181,7 +173,7 @@ def _call(home, method, params):
 
 def scale(home, pool, count, skip=None, inst=None, cpu_home=None, force=False):
     home = str(home)
-    old = _peek(pools.pool_dir(home, pool) / "pool.json")
+    old = pools.peek(pools.pool_dir(home, pool) / "pool.json")
     owner = "cli"
     if old is not None:
         owner = old.get("owner")
@@ -295,7 +287,7 @@ def main(argv=None):
         if options.command == "ls":
             return ls(home, options.pool, options.json, not options.no_busy)
         if options.command == "scale":
-            old = _peek(pools.pool_dir(home, options.pool) / "pool.json")
+            old = pools.peek(pools.pool_dir(home, options.pool) / "pool.json")
             if old is None and options.count > 0 and options.inst is None:
                 subs["scale"].print_usage(sys.stderr)
                 sys.stderr.write("aos-daemon scale: error: 池 %s 不在，要給 --inst\n" % options.pool)

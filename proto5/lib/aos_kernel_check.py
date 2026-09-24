@@ -8,7 +8,7 @@ import aos_daemon
 import aos_home
 import aos_llm_call
 from aos_agent_home import AgentError
-from aos_kernel_info import KERNEL_POOL, pool_location
+from aos_kernel_info import KERNEL_POOL, load_info, pool_location
 
 COMMANDS = ('aos-exec', 'aos-cpu', 'aos-kernel', 'aos-agent', 'aos-llm')
 DIRS = ('requests', 'responses', 'pools')
@@ -280,8 +280,6 @@ def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
     池式下改當「agent 模式」：llm 項不逐池查，只在 checks.agent() 查那個 agent 的 llm 池（kernel-cli check）。
     """
     for_agent = recorded_daemon
-    # 延後 import，讓 kernel CLI 僅需接線，不形成模組初始化循環。
-    from aos_kernel import load_info
     home = Path(home).absolute()
     checks.home = home
     try:

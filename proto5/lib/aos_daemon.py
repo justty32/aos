@@ -23,7 +23,7 @@ from aos_daemon_rpc import DaemonError
 from aos_directives import Context, DirectiveError, Document, parse_options, resolve_located
 
 Daemon = aos_daemon_loop.Daemon
-_signal_pid, _pid_exists, _log = pools.signal_pid, pools.pid_exists, pools.log
+_signal_pid, _pid_exists = pools.signal_pid, pools.pid_exists
 
 INFO_DEFAULTS = {"poll_ms": 20, "restart_delay_ms": 1000, "restart_max_ms": 60000, "stable_ms": 10000,
                  "spawn_per_sec": 50, "max_children": 20000, "stop_wait_ms": 5000, "kill_wait_ms": 5000}
@@ -59,19 +59,11 @@ def read_state(home):
     return state
 
 
-def _peek(path):
-    try:
-        value = aos_home.read_json(path)
-    except aos_home.HomeError:
-        return None
-    return value if isinstance(value, dict) else None
-
-
 def pool_summary(home, dpool):
     """給 kernel：讀 D/pools/<dpool>/summary.json；不在或壞了回 None（不在＝池已完全拿掉）。"""
     if not pools.valid_pool_name(dpool):
         return None
-    return _peek(pools.pool_dir(home, dpool) / "summary.json")
+    return pools.peek(pools.pool_dir(home, dpool) / "summary.json")
 
 
 def pool_summary_state(home, dpool):
@@ -103,7 +95,7 @@ def pool_kid(home, dpool, i):
         i = int(i)
     except (TypeError, ValueError):
         return None
-    return _peek(pools.kid_path(home, dpool, i)) if i >= 0 else None
+    return pools.peek(pools.kid_path(home, dpool, i)) if i >= 0 else None
 
 
 def load_info(home):
@@ -190,7 +182,7 @@ def _scan_pools(home):
             stem = leaf.name[:-5] if leaf.name.endswith(".json") else None
             if stem is None or not pools.NAME_RE.fullmatch(stem):
                 continue
-            record = _peek(leaf)
+            record = pools.peek(leaf)
             kids.append((path.name, int(stem), leaf, record))
             if (record is not None and record.get("state") in ("running", "killing") and
                     type(record.get("pid")) is int and record["pid"] > 0):
@@ -240,9 +232,6 @@ def run(home):
         for sig, previous in handlers.items():
             signal.signal(sig, previous)
         os.close(lock)
-
-
-serve = run
 
 
 def stop(home, wait_ms=30000):

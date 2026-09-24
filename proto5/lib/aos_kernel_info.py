@@ -203,10 +203,6 @@ def pool_location(info, pool):
     return config.get("daemon", info.get("daemon")), config["dpool"]
 
 
-def work_pools(info):
-    return [p for p in info["pools"] if p != KERNEL_POOL]
-
-
 # ---- init（kernel-cli init） ----
 
 CONFIG_EXAMPLE = ('{"pools": {"default": {"count": 2}, "llm": {"count": 1, '
