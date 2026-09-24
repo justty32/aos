@@ -287,8 +287,11 @@ def show(data, *, as_json=False, verbose=False):
               % (KERNEL_ENV, data['dir']))
     elif isinstance(k['proc'], dict):
         p = k['proc']
+        status = p.get('status', '?')
+        if status == 'queued' and p.get('parked') is True:
+            status = 'queued（停車：等回音或輸入，最晚 park_ms 自己醒）'  # 09-24 停車
         print('kernel %s  %s  runs %s  fails %s  %s' %
-              (k['name'], p.get('status', '?'), p.get('runs', 0), p.get('fails', 0), k['note']))
+              (k['name'], status, p.get('runs', 0), p.get('fails', 0), k['note']))
     else:
         label = k['home'] if '帳本讀不到' in k['note'] else k['name'] if k['home'] else ''
         print('kernel %s %s' % (label, ' '.join(k['note'].split())))

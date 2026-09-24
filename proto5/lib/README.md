@@ -52,6 +52,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、tick 鎖、交件與測試掛鉤 |
 | [`aos_agent_init.py`](aos_agent_init.py) | `aos-agent init`：寫死的單一預設家 |
 | [`aos_agent_say.py`](aos_agent_say.py) | `aos-agent say`：原子投一則訊息，可等回話 |
+| [`aos_agent_wake.py`](aos_agent_wake.py) | （09-24 停車）投完輸入後往 K 放 `wake` 單，叫醒停車（退 102）的 agent；say／talk／drop_new 共用 |
 | [`aos_agent_listen.py`](aos_agent_listen.py) | `aos-agent listen --last／--wait／--follow` |
 | [`aos_agent_listen_render.py`](aos_agent_listen_render.py) | listen 的印法：挑最後 N 則、輪次標頭、工具呼叫行 |
 | [`aos_agent_talk.py`](aos_agent_talk.py) | `aos-agent talk`：讀一行、投遞、等這一輪回話、印，slash 指令 |
@@ -82,7 +83,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1771 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2044 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -463,10 +464,10 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1771 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2044 條；repo 根目錄
 ```
 
-共 61 個測試檔、1771 條（09-24 拆檔＋tidy 後實跑，約 100～130 秒）；涵蓋底層執行、daemon／kernel 按池行為、
+共 71 個測試檔、2044 條（09-24 停車＋喚醒 rebase 到 4c42288 後實跑，約 160 秒）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
@@ -495,6 +496,8 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_kernel_cli.py](test/test_kernel_cli.py) | kernel 命令列：`--target` 來源、`init`、help、`ack`、`ls` 的摘要與表、halt、舊 `--agent` 指到新指令 |
 | [test_kernel_health.py](test/test_kernel_health.py) | health 優先序、錯誤邊界、`ls` 第一行與 `--json` |
 | [test_kernel_crash.py](test/test_kernel_crash.py) | 閘門卡住真 tick、真 SIGKILL、下一格（或 boot）接手：不重派、不重算、無鬼回音 |
+| [test_park_wake.py](test/test_park_wake.py) | （09-24 停車）102 停車、出貨叫醒、`wake` syscall／CLI、新一代接手舊批、discard、ls 的 parked、崩潰窗口（Crash）；agent 的退出碼、送單帶 wake、start 相容、say／drop_new 投 wake |
+| [test_park_crash.py](test/test_park_crash.py) | （09-24 停車）真 SIGKILL：放好回音檔後／放檔前被砍，下一格照樣叫醒、回音只放成功一次 |
 | [test_kernel_fix_r5.py](test/test_kernel_fix_r5.py) | （fix-r5）check `--probe` 與總結行、ls 的恢復中與 agent 標記、真 daemon 的 boot 印行 |
 | [test_kernel_fix_astra.py](test/test_kernel_fix_astra.py) | astra 審查 kernel 側必修定點：boot 等待中舊 tick 又提交、draining 中拒 boot、摘要讀不到要等、壞通知 |
 | [test_kernel_integration.py](test/test_kernel_integration.py) | 真 daemon＋cpu：反覆／once、halt、重 boot、pool、Interrupted |

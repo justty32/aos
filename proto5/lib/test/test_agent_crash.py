@@ -192,7 +192,7 @@ class AgentCrashTests(unittest.TestCase):
         self.assertEqual(self.state()['waits'], [])
         if replace:
             self.put(self.base / 'go', 'B')
-        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.tick(), 102)  # 09-24 停車：門開了、idle 沒輸入
         self.assertEqual(self.read(Path(pair['dst'])), 'A')
         self.assertEqual(self.state()['consuming'], [])
         if replace:

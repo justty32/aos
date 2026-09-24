@@ -10,6 +10,7 @@ from aos_agent_home import AgentError
 from aos_agent_listen import wait_reply
 from aos_agent_runtime import manual_paused, report, unique_id
 from aos_agent_status import collect, kernel_status, unregistered
+from aos_agent_wake import wake
 
 INPUT_WAIT_SECONDS = 10
 # fix-r5（aos-agent.md §1.2）：話已經投了，再說一次就會進記憶兩次。
@@ -50,6 +51,7 @@ def deliver(base, value, text, *, with_inode=False):
                 temp.unlink(missing_ok=True)
             except OSError:
                 pass  # 已經投成功了，清暫存檔失敗不該把投遞報成失敗
+    wake(base)  # 09-24 停車：輸入放好之後才叫醒 idle 停著的 agent；崩在這之前靠 park_ms
     return (target, inode) if with_inode else target
 
 
@@ -68,9 +70,13 @@ def drop_new(directory, name, message):
             json.dump(body, out, ensure_ascii=False)
         try:
             os.link(temp, directory / name)
+            made = True
         except FileExistsError:
-            return False
-        return True
+            made = False
+        if (directory.parent / 'tick.json').exists():
+            # 09-24 停車：投進 agent 家（input/、compact-req/）的叫醒它；同名已在也叫（前一次可能崩在投好、叫之前）
+            wake(directory.parent)
+        return made
     finally:
         try:
             os.unlink(temp)

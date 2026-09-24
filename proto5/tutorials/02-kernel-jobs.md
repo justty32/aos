@@ -113,7 +113,7 @@ aos-kernel rm count
 - 每一格，kernel 從佇列挑輪得到的工作，找一顆**同池**又閒著的 cpu（沒寫 `--pool` 就是 `default`），把單放進那顆 cpu 的 `requests/`（`K/pools/<池>/cpus/<號>/requests/`）；
   cpu 照 inst 跑一次程式、回音寫進自己的 `responses/`；下一格 kernel 收回音、判定、簽收。（[一格做什麼](../spec/kernel/tick.md)）
 - **判定**（[回音怎麼判](../spec/kernel/echo.md)）：once 的回音原樣轉給當初 `add` 的人（放在 `K/responses/`）；反覆的退出碼 100＝完成，
-  0 或 101（「還在等，不算錯」）算成功、失敗計數歸零；其他非 0、逾時、跑不起來都算一次失敗，連續 10 次＝`bad`。`100` 和 `10` 在 `K/info.json` 的 `done_exit`、`bad_after` 改。
+  0 或 101（「還在等，不算錯」）算成功、失敗計數歸零；102＝「停車」，也不算錯，但下次要等 `park_ms`（預設 5 分鐘）或被叫醒（`aos-kernel wake NAME`，agent 的回音到了或有人 `say` 會自動叫）；其他非 0、逾時、跑不起來都算一次失敗，連續 10 次＝`bad`。`100` 和 `10` 在 `K/info.json` 的 `done_exit`、`bad_after` 改。
 - 所以最快也要等一格（`tick_ms`，預設 1 秒）才輪得到；工作之間彼此不等，同池有幾顆閒 cpu 就能同時跑幾件。
 - inst.json 還能寫 `cwd`、`envs`、`stdin`、`exit`、逾時等，見 [inst-posix 規範](../spec/inst-posix/README.md)；`add` 的全部旗標見 [kernel 命令列](../spec/kernel/cli.md)。
 

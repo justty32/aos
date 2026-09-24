@@ -9,6 +9,7 @@
 - 投遞點是資料夾：寫 `<資料夾>/say-<epoch ns>-<pid>.json`（同資料夾 `.` 開頭 `.tmp` 結尾的暫存檔再 rename；資料夾不在就建）。
 - 投遞點是單一檔：暫存檔 `link` 到那個名字，不蓋掉還沒被收的檔；EEXIST＝上一則還沒收，每 200 ms 重試、最多 10 秒，還在＝`InputBusy`、退 1。
 
+（09-24 停車）投好之後往 K（`tick.json` 記的，沒有就 `AOS_KERNEL_HOME`）放一張 `wake` notification（`aa-<資料夾名>-wake-<ns>-<pid>.json`，`{"method": "wake", "params": {"name": "agent-<資料夾名>"}}`），叫醒停著的 agent；找不到 K、放不進去都不算錯（最晚 `park_ms` 會自己醒）。talk 投話走同一個函式。
 沒 `--wait`：印 `said -> <投遞的絕對路徑>`、退 0。不要 `AOS_KERNEL_HOME`：它只放檔、讀檔，agent 沒登記也放得進去（只是沒人收）。
 （09-24 試玩 r3 補）沒登記（K 取 `AOS_KERNEL_HOME`、沒設就用 `tick.json` 記的；兩個都沒有、或 K 帳本裡沒有 `agent-<資料夾名>`）時照樣投、照樣退 0，但 stderr 多一行 `aos-agent: warn: 目前沒登記、沒人處理：aos-agent start --target <dir>`；帳本讀不到就不警告。
 （09-24 fix-r5 補）沒登記時 stdout 在 `said -> …` 下面再印一行 `已投入，start 後會處理，不要再說一次：aos-agent start --target <dir>`——話已經在 `input` 裡，start 之後會收，再說一次就會進記憶兩次。

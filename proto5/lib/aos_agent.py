@@ -13,6 +13,7 @@ from aos_agent_runtime import KERNEL_ENV, Runtime, manual_paused, report, tick_l
 from aos_directives import Context, Document, is_directive
 
 WAIT_TIMEOUT_MS = 10000
+PARK_EXIT = 102  # 09-24 停車：批在途什麼都沒到、idle 沒輸入（aos-agent tick.md §12）
 
 
 def _hook(step_name):
@@ -70,14 +71,14 @@ def tick(agent_dir, env=None, note=''):
         if not gate(run):
             return 101
         if st['batch'] is not None:
-            return collect(run)
+            return _park(collect(run))
         if st['state'] == 'idle':
             # spec/agent/compact.md：自動壓縮在同一把 tick 鎖裡做（不另拿鎖）；做了事這格就到這裡
             if st['intake'] is None:
                 import aos_agent_compact
                 if aos_agent_compact.auto(run):
                     return 0
-            return intake(run)
+            return _park(intake(run))
         history = info['history']
         if st['state'] == 'act' and not (history and history[-1]['role'] == 'assistant'
                                         and history[-1].get('tool_calls')):
@@ -91,6 +92,11 @@ def tick(agent_dir, env=None, note=''):
     finally:
         if lock is not None:
             os.close(lock)
+
+
+def _park(code):
+    """collect／intake 的 101（什麼都沒到、沒輸入）改退 102 停車；門關著、鎖被佔的 101 不經過這裡。"""
+    return PARK_EXIT if code == 101 else code
 
 
 def _compatible(kernel, env):
@@ -109,8 +115,17 @@ def _compatible(kernel, env):
         if type(value) is not int or value < 0 or (key == 'done_exit' and value > 255):
             raise AgentError('FieldTypeMismatch', '%s 必須是規定範圍的整數' % key)
         values[key] = value
-    if values['done_exit'] in (1, 101):
+    if values['done_exit'] in (1, 101, PARK_EXIT):
         raise AgentError('KernelIncompatible', 'kernel 的 done_exit 與 agent 退出碼衝突')
+    # 09-24 停車：舊 kernel 把 102 當失敗（十次就 bad）。帳本讀得到而沒有 park 能力＝不登記；還沒 boot（沒帳本、沒 chain）或讀不懂就不擋。
+    try:
+        ledger = aos_home.read_json(Path(kernel) / 'state.json')
+    except aos_home.HomeError:
+        return
+    features = ledger.get('features') if isinstance(ledger, dict) else None
+    if isinstance(ledger, dict) and 'chain' in ledger and not (isinstance(features, list) and 'park' in features):
+        raise AgentError('KernelIncompatible', 'K 的帳本是不認得停車（退出碼 102）的舊 kernel 寫的；'
+                         '升級 kernel 後 aos-kernel boot 一次再 start')
 
 
 def _tick_inst(run, kernel):

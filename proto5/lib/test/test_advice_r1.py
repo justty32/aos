@@ -193,7 +193,7 @@ TOP = {'_metainfo', 'health', 'kernel', 'pools', 'procs', 'queue', 'counts'}
 KERNEL = {'home', 'chain', 'phase', 'last_seq', 'daemon', 'cpu', 'settings'}
 POOL = {'pool', 'want', 'daemon', 'dpool', 'daemon_alive', 'summary', 'declared', 'removing', 'moving',
         'new_location', 'phase', 'sent', 'busy', 'idle', 'draining', 'pending', 'error', 'waiting', 'gone'}
-PROC = {'name', 'once', 'pool', 'status', 'runs', 'fails', 'pending', 'target', 'mark', 'look'}
+PROC = {'name', 'once', 'pool', 'status', 'runs', 'fails', 'pending', 'target', 'mark', 'look', 'parked'}  # parked：09-24 停車加鍵
 
 
 class LsJson(Homes):
@@ -249,7 +249,7 @@ class LsJson(Homes):
         self.assertEqual(set(data['kernel']['settings']), {'tick_ms', 'interval_ms', 'timeout_ms', 'done_exit', 'bad_after'})
         self.assertEqual(set(data['counts']), {'pools', 'procs', 'queue'})
         self.assertEqual(set(data['counts']['pools']), {'total', 'want', 'sent', 'busy', 'idle', 'draining'})
-        self.assertEqual(set(data['counts']['procs']), {'total', 'repeat', 'once', 'status'})
+        self.assertEqual(set(data['counts']['procs']), {'total', 'repeat', 'once', 'status', 'parked'})
         self.assertEqual(list(data['pools']), ['kernel', 'default', 'llm'])
         for row in data['pools'].values():
             self.assertEqual(set(row), POOL)
@@ -271,7 +271,7 @@ class LsJson(Homes):
         self.assertEqual(default['summary']['running'], 1)
         self.assertEqual(data['counts']['pools'], {'total': 2, 'want': 2, 'sent': 2, 'busy': 1, 'idle': 1, 'draining': 0})
         self.assertEqual(data['counts']['procs'], {'total': 3, 'repeat': 2, 'once': 1,
-                                                   'status': {'queued': 1, 'running': 1, 'bad': 1}})
+                                                   'status': {'queued': 1, 'running': 1, 'bad': 1}, 'parked': 0})
         self.assertEqual((data['queue'], data['counts']['queue']), (['agent-amy'], 1))
         procs = {p['name']: p for p in data['procs']}
         self.assertTrue(procs[self.LONG]['pending'])

@@ -11,7 +11,7 @@ import time
 
 import aos_home
 from aos_kernel_info import (
-    KCPU, KERNEL_POOL, KernelError, _bad, _body_error, _name, _put, is_member, split_key,
+    FEATURES, KCPU, KERNEL_POOL, PARK_MS, KernelError, _bad, _body_error, _name, _put, is_member, split_key,
 )
 
 
@@ -25,6 +25,9 @@ class KernelLedger:
                              ("deletes", []), ("procs", {})):
             state.setdefault(key, default)
         state.setdefault("halting", False)
+        # 09-24 停車：舊帳本升上來時補能力標記（下一次存檔就寫進去；aos-agent start 看它）。
+        features = state.setdefault("features", [])
+        features.extend(f for f in FEATURES if f not in features)
         # ready 在記憶體裡當 deque 用（從頭拿不搬整條）；存檔時轉回陣列。
         state["ready"] = {p: collections.deque(q) for p, q in state["ready"].items()}
         self.events = []
@@ -136,13 +139,43 @@ class KernelLedger:
     # ---- syscall（proto5 §2，判定不變；寫帳本改由提交點 3 一起寫） ----
     def _reply(self, pending, body):
         if pending is not None:
-            self.state["replies"].append({"name": pending["name"], "id": pending["id"], "body": body})
+            item = {"name": pending["name"], "id": pending["id"], "body": body}
+            if pending.get("wake") is not None:  # 09-24 停車：這張 add 的最後一則回音帶著要叫醒誰
+                item["wake"] = pending["wake"]
+            self.state["replies"].append(item)
+
+    def _wake_of(self, params):
+        """add 的 wake（合法名稱才記）。不比代數：stop／start 後的新一代會接手舊批（aos-agent register.md），叫它才對（astra 必修 1）。"""
+        name = params.get("wake") if isinstance(params, dict) else None
+        return {"wake": name} if _name(name) else {}
+
+    def wake(self, name):
+        """叫醒一個行程（kernel/syscall.md「叫醒一個行程」）；回做了什麼（None＝什麼都沒做）。只改記憶體。"""
+        proc = self.state["procs"].get(name)
+        if proc is None or proc["once"] or proc["status"] not in ("running", "queued"):
+            return None
+        if proc["status"] == "running":
+            slot = self.state["busy"].get(self.state["on"].get(name))
+            if slot is not None and slot["discard"]:
+                return None
+            proc["woken"] = True
+            how = "woken"
+        elif proc["not_before"] > self.now:
+            proc["not_before"] = self.now
+            proc.pop("parked", None)
+            self.state["ready"].setdefault(proc["pool"], collections.deque()).append([name, proc["request"]])
+            self.mark_stale(proc["pool"])  # delayed 裡那格時間對不上了，變舊格
+            how = "ready"
+        else:
+            return None
+        self.events.append({"event": "wake", "proc": name, "how": how})
+        return how
 
     def _cancel_pending(self, proc, code):
         self._reply(proc.get("pending"), _body_error(code, "行程已移除" if code == "Removed" else "kernel 正在停機"))
         proc["pending"] = None
 
-    def _add(self, env):
+    def _add(self, env, wake=None):
         p = env.params
         if not isinstance(p, dict):
             _bad("params 必須是物件", ["params"])
@@ -152,6 +185,7 @@ class KernelLedger:
                   "pool": lambda v: isinstance(v, str),
                   "interval_ms": lambda v: type(v) is int and v >= 0,
                   "timeout_ms": lambda v: type(v) is int and v >= 0,
+                  "park_ms": lambda v: type(v) is int and v >= 0, "wake": _name,
                   "args": lambda v: isinstance(v, list) and all(isinstance(x, str) and "\0" not in x for x in v)}
         if "target" not in p:
             _bad("target 必填", ["params", "target"])
@@ -172,12 +206,13 @@ class KernelLedger:
         proc = {"request": env.name, "target": p["target"], "dir_target": p.get("dir_target", ".aos/inst.json"),
                 "once": once, "pool": pool,
                 "interval_ms": p.get("interval_ms", self.info["interval_ms"]),
-                "timeout_ms": p.get("timeout_ms", self.info["timeout_ms"]), "status": "queued",
+                "timeout_ms": p.get("timeout_ms", self.info["timeout_ms"]),
+                "park_ms": p.get("park_ms", self.info.get("park_ms", PARK_MS)), "status": "queued",
                 "runs": 0, "fails": 0, "not_before": 0, "pending": None}
         if "args" in p:
             proc["args"] = p["args"]
         if proc["once"] and not env.notify:
-            proc["pending"] = {"name": env.name, "id": env.id}
+            proc["pending"] = {"name": env.name, "id": env.id, **(wake or {})}
         self.state["procs"][name] = proc
         self.enqueue(name)
         return None if proc["once"] else {"result": {"name": name}}
@@ -205,17 +240,25 @@ class KernelLedger:
     def apply_syscall(self, env):
         if env.name in self.state["deletes"]:
             return
-        body = None
+        body, wake = None, {}
         if env.error is not None:
             body = {"error": env.error["error"]}
         else:
             try:
                 if env.method == "add":
-                    body = self._add(env)
+                    wake = self._wake_of(env.params)
+                    body = self._add(env, wake)
                 elif env.method == "rm":
                     if not isinstance(env.params, dict) or not _name(env.params.get("name")):
                         _bad("rm.name 必須是合法名稱", ["params", "name"])
                     body = self.remove(env.params["name"])
+                elif env.method == "wake":
+                    if not isinstance(env.params, dict) or not _name(env.params.get("name")):
+                        _bad("wake.name 必須是合法名稱", ["params", "name"])
+                    if env.params["name"] not in self.state["procs"]:
+                        raise KernelError("NotFound", "沒有這個行程：%s" % env.params["name"])
+                    self.wake(env.params["name"])
+                    body = {"result": {"name": env.params["name"]}}
                 else:
                     raise KernelError("MethodNotFound", "不認得 method：%s" % env.method, -32601)
             except KernelError as exc:
@@ -226,7 +269,7 @@ class KernelLedger:
                         error["data"]["position"] = exc.position
                 body = {"error": error}
         if body is not None and not env.notify:
-            self._reply({"name": env.name, "id": env.id}, body)
+            self._reply({"name": env.name, "id": env.id, **wake}, body)
         self.state["deletes"].append(env.name)
 
     def start_stopping(self):
@@ -264,6 +307,9 @@ class KernelLedger:
                 aos_home.link_json(self.home / "responses" / item["name"], response)
             except aos_home.RequestExists:
                 pass
+            if item.get("wake") is not None:
+                # 09-24 停車：回音檔放好之後才叫醒；叫醒的結果跟「拿掉這筆」同一次存帳本（呼叫者存）。
+                self.wake(item["wake"])
         for item in self.state["deletes"]:
             (self.home / "requests" / item).unlink(missing_ok=True)
         for item in self.state["sends"]:

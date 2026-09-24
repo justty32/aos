@@ -59,7 +59,7 @@ def intake(run):
     if not messages:
         st['intake'] = None
         run.save('state.intake_empty')
-        return 101
+        return 0  # 09-24 停車（astra 必修 2）：寫了 state，下一格重看輸入與壓縮，不在這裡停車
     run.history(record['base_len'], messages)
     import aos_agent_events
     aos_agent_events.intake(run, record, len(messages))  # 至少一次：在提交之前記
