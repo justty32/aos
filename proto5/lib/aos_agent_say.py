@@ -38,7 +38,7 @@ def deliver(base, value, text):
                 except FileExistsError:
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
-                        raise AgentError('InputBusy', '%s 還沒被收（agent 沒在跑？看 aos-agent status）' % target)
+                        raise AgentError('InputBusy', '%s 還沒被收（agent 沒在跑？看 aos-agent status --target %s）' % (target, base))
                     time.sleep(min(.2, remaining))
     finally:
         if temp is not None:

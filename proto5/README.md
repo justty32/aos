@@ -114,8 +114,8 @@ aos-kernel ls                          # 第一行 health ok 就是正常
 
 - 昨天照第 5 段停過 agent 才要 `start`；沒停就關機的，登記還留在 kernel 帳本，`start` 會回 `AlreadyExists`——那代表已登記，不用管。
 - `aos-kernel ls` 第一行 `health` 分得出「停住」跟「正常忙碌」：`ok`、`daemon 沒在跑`、`K 家缺目錄（跑 aos-kernel check）`、`cpu missing（跑 boot）`、`tick 停住`、`停機中`。不是 `ok` 就照括號裡的指令做。
-- 三種壞法各一個指令：daemon 掛了 → 重開 daemon＋`boot`；kernel 家壞了（`health` 說缺目錄或停住）→ `aos-kernel check` 照提示修；agent 暫停 → 修好原因後 `aos-agent continue`。
-- （09-24 fix-r4）從舊版升上來的：先 `aos-kernel halt`、`aos-daemon halt`，換版後照這段重開；舊鏈排好的下一格是舊指令格式，不重 `boot` 會停住。agent 家的舊 `tick.json` 在 `start` 時自動改寫。
+- 三種壞法各一個指令：daemon 掛了 → 重開 daemon＋`boot`；kernel 家壞了（`health` 說缺目錄或停住）→ `aos-kernel check` 照提示修；agent 暫停 → 修好原因後 `aos-agent continue --target $W/bob`。
+- （09-24 fix-r4）從舊版升上來的：**換版前**用舊版的指令停（`aos-kernel stop $W/K`、`aos-daemon stop --home $W/D`，舊版還沒有 `halt`），換版後照這段重開；舊鏈排好的下一格是舊指令格式，不重 `boot` 會停住。agent 家的舊 `tick.json` 在 `start` 時自動改寫。
 
 **6. 自己寫一支工具。**（09-24 試玩 r2 補）工具就是一支程式：**stdin 收模型給的 arguments（JSON 字串）、stdout 印的東西原樣給模型看**。
 `_meta.argv[0]` 含 `/` 就是**相對 agent 家**的路徑、要有執行位；工具的 cwd 也是 agent 家。放進 `tools/` 下一格就生效，不用重 start。
@@ -194,7 +194,7 @@ aos-agent stop --target $W/amy
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 二十九支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 30 個測試檔、1094 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 二十九支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 30 個測試檔、1100 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。

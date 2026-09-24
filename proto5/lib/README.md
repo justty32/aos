@@ -43,7 +43,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1094 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1100 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -293,7 +293,7 @@ acknowledge=True)` 完成取名、放單、等回音、讀、放 ack，回完整
 
 ## aos_exec_cpu — exec cpu 的主人
 
-`run(home)`／`main(argv=None)`；CLI：`aos-cpu DIR`。stdin 是 pipe 時先等 JSON-RPC go，
+`run(home)`／`main(argv=None)`；CLI：`aos-cpu [DIR]`（fix-r4：省略＝目前資料夾）。stdin 是 pipe 時先等 JSON-RPC go，
 EOF 先到則不碰家；啟動後控制 fd 搬高位並設 CLOEXEC，工作 stdin 接 /dev/null、stdout 接 cpu 的 stderr。
 stdin 不是 pipe 時直接啟動。info 身分是 `exec_cpu`。
 
@@ -367,10 +367,10 @@ halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1094 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1100 條；repo 根目錄
 ```
 
-共 30 個測試檔、1094 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 30 個測試檔、1100 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -379,7 +379,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_agent_home.py](test/test_agent_home.py) | 66 | 共用內容六格、人格／記憶／工具與訊息讀驗 |
 | [test_agent_info.py](test/test_agent_info.py) | 95 | 完整設定、排程欄位、state 與恢復紀錄讀驗 |
 | [test_agent_fix_cli.py](test/test_agent_fix_cli.py) | 13 | start／stop 印行、stop 不讀 info、KernelMismatch、listen --last |
-| [test_agent_fix_r4.py](test/test_agent_fix_r4.py) | 20 | （fix-r4）--target 與錯誤來源、listen 三態（--follow 真程序）、pause／continue／status 兩種暫停、tick 鎖真的兩個程序、舊 tick.json |
+| [test_agent_fix_r4.py](test/test_agent_fix_r4.py) | 24 | （fix-r4）--target 與錯誤來源、listen 三態（--follow 真程序）、pause／continue／status 兩種暫停、tick 鎖真的兩個程序、舊 tick.json |
 | [test_agent_daily.py](test/test_agent_daily.py) | 26 | init／say（含 --wait）／status／continue、stop 用 tick.json、listen 退回讀記憶與門關警告、help、用法錯 |
 | [test_agent_status_r3.py](test/test_agent_status_r3.py) | 20 | status 的 health、這次原因／已恢復、連敗次數、-v、--json 新鍵；say 沒登記警告與 --wait 立刻退 |
 | [test_agent_daily_edges.py](test/test_agent_daily_edges.py) | 11 | say --wait 的等待條件、暫態壞檔、逾時與連敗提前結束 |
@@ -399,7 +399,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_inst.py](test/test_inst.py) | 139 | inst 讀驗、指示詞位置、欄位與選項 |
 | [test_kernel.py](test/test_kernel.py) | 29 | 判定表、syscall 去重、rm／once、pool、設定 |
 | [test_kernel_check.py](test/test_kernel_check.py) | 30 | check 各項 ok／warn／bad、daemon 的 /proc 環境、--agent、--daemon-target 三種來源與 info.daemon 不同的 warn、K 家目錄、daemon 重開後 cpu 不在 |
-| [test_kernel_cli.py](test/test_kernel_cli.py) | 35 | --target 三種來源與錯誤行來源、init --config（壞設定不建家、自動加 k、拒 daemon）／ack／ls（含 bad 提示、第一行 health）／halt 等停好／check 旗標重複 CLI |
+| [test_kernel_cli.py](test/test_kernel_cli.py) | 37 | --target 三種來源與錯誤行來源、init --config（壞設定不建家、自動加 k、拒 daemon）／ack／ls（含 bad 提示、第一行 health）／halt 等停好／check 旗標重複 CLI |
 | [test_kernel_health.py](test/test_kernel_health.py) | 19 | health 各情形與優先序、stall、帳本壞不丟例外、ls 第一行與 --json |
 | [test_kernel_integration.py](test/test_kernel_integration.py) | 15 | 真 daemon＋cpu、反覆／once、halt、重 boot、pool、Interrupted |
 | [test_kernel_recovery.py](test/test_kernel_recovery.py) | 21 | 出貨重放、先記未放、鏈與 boot 交接、ack 唯一性 |

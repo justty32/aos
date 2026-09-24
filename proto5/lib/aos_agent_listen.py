@@ -53,9 +53,9 @@ def last(agent_dir, *, as_json=False):
         closed = [(p, w) for w in data['waits'] for p in w['paths'] if not files(base, p)]
         if closed:
             path, entry = closed[0]
-            note = ('連敗暫停中，aos-agent continue 解除' if pause_path(base, path, entry['consume'])
-                    else '門關著（在等 %s）' % path)
-            report('warn', note + '，這則回話可能是舊的；看 aos-agent status')
+            note = ('連敗暫停中，aos-agent continue --target %s 解除' % base
+                    if pause_path(base, path, entry['consume']) else '門關著（在等 %s）' % path)
+            report('warn', note + '，這則回話可能是舊的；看 aos-agent status --target %s' % base)
     except (AgentError, OSError, ValueError):
         pass
     print_message(message, as_json=as_json)

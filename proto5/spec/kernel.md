@@ -318,7 +318,7 @@ aos-kernel -h ／ aos-kernel <子命令> -h    # （09-24 補）用法
 `cpus` 必填（每顆 `pool`、`envs` 照 §1.1）；`tick_ms`／`interval_ms`／`timeout_ms`／`done_exit`／`bad_after` 可省（省＝預設）；
 `_metainfo` 可省，有寫就必須是 kernel 第 1 版；寫了 `daemon`＝`FieldTypeMismatch`（那格是 boot 寫的）；其他不認得的鍵照 §1.1 原樣抄、不管。
 沒有任何一顆 pool 是 `kernel` 就自動加 `k`（pool kernel）；`k` 已被別的池佔了＝`FieldTypeMismatch`。
-寫之前用跟 info 同一套讀驗（中心 K）驗過：FILE 讀不到、不是 JSON、頂層不是字面物件、驗不過＝退 1、**什麼都不建**。
+寫之前用跟 info 同一套讀驗（中心 K）驗過：FILE 讀不到、不是 JSON、頂層不是字面物件（含 JSON `null`）、驗不過＝退 1、**什麼都不建**。要不要補 `k` 看的是**解完指示詞**的 pool（`pool` 寫 `$env` 也照解）；`cpus` 本身要是字面物件（補 `k` 要改它）。
 **`--config` 沒給＝用法錯 2**（訊息講要給什麼、附最小例子；不去猜 `./kernel.json`）。`K/info.json` 已在才拒絕；K 資料夾在但沒有 info（上次建到一半）就補齊。
 最小例子（一顆一般 cpu＋一顆 llm cpu；kernel 池的 `k` 自動加）：
 

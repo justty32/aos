@@ -37,7 +37,17 @@ class DailyEdgeTests(unittest.TestCase):
         for word in ('tick', 'start', 'stop', 'listen', 'init', 'say', 'status', 'pause', 'continue', '解除手動暫停與連敗暫停'):
             self.assertIn(word, out.getvalue())
 
+    def registered(self):
+        """fix-r4（astra 審查）：先登記、kernel 健康，等待條件的反例才會真的走到「等」而不是「沒登記」。"""
+        self.put(self.base / 'tick.json', {'envs': self.env})
+        self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'fails': 0}}, 'replies': []})
+        health = patch('aos_kernel_health.health', return_value=('ok', 'ok'))
+        health.start()
+        self.addCleanup(health.stop)
+
     def test_wait_retries_partial_state_and_history(self):
+        self.registered()
+        self.put(self.base / 'input.json', {'role': 'user', 'content': '舊的'})
         loops = []
         def advance(_):
             loops.append(True)
@@ -51,12 +61,16 @@ class DailyEdgeTests(unittest.TestCase):
             else:
                 self.put(self.base / 'prompts/history.json',
                          [{'role': 'user', 'content': '你好'}, fixture.MESSAGE])
-        with patch.object(say.time, 'sleep', side_effect=advance), patch('sys.stdout', new_callable=io.StringIO) as out:
-            self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=1000, env={}), 101)
-        self.assertTrue(out.getvalue().startswith('health 沒登記'))
-        self.assertEqual(len(loops), 0)
+        def deliver(base, value, text):
+            return self.base / 'input.json'
+        with patch.object(say.time, 'sleep', side_effect=advance), patch.object(say, 'deliver', side_effect=deliver), \
+                patch('sys.stdout', new_callable=io.StringIO) as out:
+            self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=5000, env={}), 0)
+        self.assertEqual(out.getvalue(), '完成\n')
+        self.assertEqual(len(loops), 3)
 
     def test_wait_requires_every_completion_condition(self):
+        self.registered()
         user = {'role': 'user', 'content': '你好'}
         cases = [({'state': 'think'}, [user, fixture.MESSAGE], True),
                  ({'intake': {'id': 'x', 'base_len': 0, 'files': []}}, [user, fixture.MESSAGE], True),
@@ -78,15 +92,29 @@ class DailyEdgeTests(unittest.TestCase):
                     self.put(self.base / 'state.json', state)
                     self.put(self.base / 'prompts/history.json', history)
                     return target
+                self.err.truncate(0), self.err.seek(0)
                 with patch.object(say, 'deliver', side_effect=posted), patch('sys.stdout', new_callable=io.StringIO):
                     self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=0, env={}), 101)
+                self.assertIn('Timeout:', self.err.getvalue())
+                self.assertNotIn('unregistered', self.err.getvalue())
+        # 對照組：條件全齊就成功，證明上面每一例是被那一個條件擋住。
+        consumed_state, history = {}, [user, fixture.MESSAGE]
+        def complete(*args):
+            self.put(self.base / 'state.json', consumed_state)
+            self.put(self.base / 'prompts/history.json', history)
+            return self.base / 'input.json'
+        self.put(self.base / 'prompts/history.json', [])
+        with patch.object(say, 'deliver', side_effect=complete), patch('sys.stdout', new_callable=io.StringIO):
+            self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=0, env={}), 0)
 
     def test_wait_does_not_match_user_before_initial_length(self):
+        self.registered()
         self.put(self.base / 'prompts/history.json', [{'role': 'user', 'content': '你好'}, fixture.MESSAGE])
         def posted(*args):
             return self.base / 'already-consumed.json'
         with patch.object(say, 'deliver', side_effect=posted), patch('sys.stdout', new_callable=io.StringIO):
             self.assertEqual(say.say(self.base, '你好', wait=True, timeout_ms=0, env={}), 101)
+        self.assertIn('Timeout:', self.err.getvalue())
 
     def test_wait_arrived_pause_with_other_closed_gate_is_timeout(self):
         self.put(self.base / 'continue-ok.json', {})

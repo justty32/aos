@@ -47,7 +47,7 @@ D/
   info.json           身分與設定；人寫的
   state.json          孩子表；daemon 寫的
   requests/ responses/
-  .daemon.lock        整個系統唯一的一把鎖（§6.1）
+  .daemon.lock        daemon 家唯一的一把鎖（§6.1；09-24 fix-r4 後 agent 家另有 tick 鎖，見 aos-agent.md §2.1）
 ```
 
 家由 `--target`，其次 `AOS_DAEMON_HOME`，再其次目前資料夾決定（09-24 fix-r4 改：`--home` 與 `~/.aos-daemon` 預設拿掉；`boot`／`halt` 同一套找法，kernel 的 `--daemon-target` 省略時也一樣）。主人是 `aos-daemon` 這個行程；
@@ -224,7 +224,7 @@ daemon 開了之後再 `export` 不會影響它；PATH 漏了就停掉 daemon �
 
 1. 建家（缺的目錄）、讀驗或寫預設 `info.json`；忽略 `SIGPIPE`。
 2. 拿 `.daemon.lock` 的獨占 flock（持到退出）。拿不到＝同家已有一支 daemon 在跑 → `AlreadyRunning`、退 1。
-   這是整個系統唯一的一把鎖：它綁的是 daemon 行程的壽命（行程死鎖就消失），不是跨檔交易，
+   這是 daemon 這一層唯一的一把鎖（09-24 fix-r4 改措辭：agent 家另有同樣做法的 tick 鎖）：它綁的是 daemon 行程的壽命（行程死鎖就消失），不是跨檔交易，
    所以沒有「鎖沒人解」的問題；外人也靠它探測 daemon 活不活（§1）。
 3. **等上一任的孩子死透**：讀舊 `state.json`，對每個記錄的 pid 用 `kill(pid, 0)` 看還在不在——在的
    就送 TERM、等 **`stop_wait_ms`＋`kill_wait_ms`**、還在就 KILL 整組，直到全部不在（這是接手專用的等法，

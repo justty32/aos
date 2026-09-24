@@ -60,7 +60,7 @@ class DailyTests(unittest.TestCase):
 
     def test_status_wait_text_and_arrival(self):
         path = self.pause()
-        self.assertIn('（連敗暫停，aos-agent continue）', self.cli('status', '--target', str(self.base))[1])
+        self.assertIn('（連敗暫停，aos-agent continue --target %s）' % self.base, self.cli('status', '--target', str(self.base))[1])
         path.touch()
         self.assertIn('已到，下一格會開', self.cli('status', '--target', str(self.base))[1])
         self.assertEqual(status.collect(self.base, {})['waits'][0],
@@ -216,7 +216,7 @@ class DailyTests(unittest.TestCase):
         self.pause()
         code, output = self.cli('say', '--target', str(self.base), '你好', '--wait', '300')
         self.assertEqual(code, 101)
-        self.assertIn('（連敗暫停，aos-agent continue）', output)
+        self.assertIn('（連敗暫停，aos-agent continue --target %s）' % self.base, output)
         self.assertIn('unregistered:', self.err.getvalue())
 
     def test_usage(self):

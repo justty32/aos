@@ -171,7 +171,7 @@ class KernelCheck(unittest.TestCase):
         inst = self.home / 'cpus/llm/inst.json'
         self.put(inst, {'envs': {'AOS_LLM_CONFIG': str(self.config), 'PATH': str(self.bin)}})
         text = self.run_check()
-        self.assertIn('inst.json 已建，改 info 不生效，要 aos-kernel halt 後改 inst.json', text)
+        self.assertIn('inst.json 已建，改 info 不生效，要 aos-kernel halt --target %s 後改 ' % self.home, text)
         self.assertIn('ok   path/llm:', text)
         self.assertIn('ok   llm/llm:', text)
         self.put(inst, {'envs': {'AOS_LLM_CONFIG': str(self.config), 'PATH': '/missing'}})
