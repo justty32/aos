@@ -15,6 +15,7 @@ from unittest.mock import patch
 import aos_agent as agent
 import aos_agent_access as acc
 import aos_agent_batch as batch_api
+import aos_kernel_store
 import aos_agent_check
 import aos_agent_cli
 import aos_agent_info as info_api
@@ -42,7 +43,7 @@ class Home(unittest.TestCase):
         self.info = {'_metainfo': {'_type': 'llm_agent', '_version': 1}, 'llm': {'model': 'small'}}
         self.put(self.base / 'info.json', self.info)
         self.put(self.k / 'info.json', {})
-        self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})
 
     def put(self, path, value):
         path = Path(path)

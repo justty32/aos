@@ -21,7 +21,23 @@ class KernelHealth(FakeCase):
         self.boot_hint = 'aos-kernel boot --target %s' % self.K
 
     def now(self):
-        return (self.K / 'state.json').stat().st_mtime
+        return self.state()['last_tick_at']
+
+    def break_ledger(self, raw):
+        for leftover in ('ledger.sqlite-wal', 'ledger.sqlite-shm'):
+            (self.K / leftover).unlink(missing_ok=True)
+        (self.K / 'ledger.sqlite').write_bytes(raw)
+
+    def reg(self, **fields):
+        """改假 daemon 那邊的 D/kernels/<id>.json（替這個 K 開 tick 的登記）；off=True＝撤登記。"""
+        import aos_daemon_ticks
+        path = aos_daemon_ticks.reg_path(self.D, self.K.absolute())
+        if fields.get('off'):
+            path.unlink()
+            return
+        data = aos_home.read_json(path)
+        data.update(fields)
+        aos_home.write_json(path, data)
 
     def summary(self, dpool, **fields):
         path = self.fake.home / 'pools' / dpool / 'summary.json'
@@ -35,7 +51,7 @@ class KernelHealth(FakeCase):
     def test_missing_dirs_precede_stopped(self):
         state = self.state()
         state['phase'] = 'stopped'
-        aos_home.write_state(self.K, state)
+        self.put_state(state)
         (self.K / 'requests').rmdir()
         self.assertEqual(health(self.K), ('dirs', 'K 家缺目錄：%s/requests/（跑 aos-kernel check --target %s）' %
                                           (self.K, self.K)))
@@ -50,15 +66,26 @@ class KernelHealth(FakeCase):
     def test_never_booted_and_stopped_precede_dead_daemon(self):
         state = self.state()
         state['phase'] = 'stopped'
+        self.put_state(state)
+        self.fake.set_alive(False)
+        self.assertEqual(health(self.K), ('stopped', '停機中（aos up 或 %s）' % self.boot_hint))
+        for name in ('ledger.sqlite', 'ledger.sqlite-wal', 'ledger.sqlite-shm'):
+            (self.K / name).unlink(missing_ok=True)
+        self.assertEqual(health(self.K)[0], 'stopped')
+
+    def test_legacy_ledger_precedes_everything_but_dirs(self):
+        """one-boot：還是第 2 版 K/state.json（沒換過 sqlite）＝legacy，排在停機、daemon 之前。"""
+        state = self.state()
+        state['phase'] = 'stopped'
+        for name in ('ledger.sqlite', 'ledger.sqlite-wal', 'ledger.sqlite-shm'):
+            (self.K / name).unlink(missing_ok=True)
         aos_home.write_state(self.K, state)
         self.fake.set_alive(False)
-        self.assertEqual(health(self.K), ('stopped', '停機中（%s）' % self.boot_hint))
-        (self.K / 'state.json').unlink()
-        self.assertEqual(health(self.K)[0], 'stopped')
+        self.assertEqual(health(self.K), ('legacy', '帳本還是舊的 K/state.json（跑 aos up 或 %s，換成 sqlite）' % self.boot_hint))
 
     def test_dead_daemon(self):
         self.fake.set_alive(False)
-        self.assertEqual(health(self.K), ('daemon', 'daemon 沒在跑：%s（先 aos-daemon boot --target %s；之後 health 還不是 ok 再 %s）'
+        self.assertEqual(health(self.K), ('daemon', 'daemon 沒在跑：%s（aos up；或 aos-daemon boot --target %s 之後 health 還不是 ok 再 %s）'
                                           % (self.D, self.D, self.boot_hint)))
 
     def test_work_pool_daemon_dead(self):
@@ -74,12 +101,22 @@ class KernelHealth(FakeCase):
         self.assertEqual(health(self.K, now=self.now()),
                          ('daemon', 'daemon 沒在跑：%s（先 aos-daemon boot --target %s）' % (other.home, other.home)))
 
-    def test_kernel_cpu_missing_precedes_stall(self):
-        self.summary('kernel', running=0, pending=1)
+    def test_tick_not_registered_precedes_stall(self):
+        """one-boot：daemon 在跑但沒登記替這個 kernel 開 tick＝tick（取代以前的 cpus「kernel cpu 不在」）。"""
+        self.reg(off=True)
         self.assertEqual(health(self.K, now=self.now() + 100),
-                         ('cpus', 'kernel cpu 不在（daemon 沒在跑或還在拉；跑 %s）' % self.boot_hint))
-        self.fake.gone('kernel')
-        self.assertEqual(health(self.K)[0], 'cpus')
+                         ('tick', 'daemon %s 沒在替這個 kernel 開 tick（跑 aos up 或 %s）' % (self.D, self.boot_hint)))
+
+    def test_tick_fails_is_stall_even_when_fresh(self):
+        self.reg(fails=3, last_exit=1)
+        message = 'tick 連敗 3 次（最後退出 1；看 daemon 的 stderr，例如 D/daemon.log；跑 aos-kernel check --target %s）' % self.K
+        self.assertEqual(health(self.K, now=self.now()), ('stall', message))
+        self.stop_kernel()
+        self.tick(process=False)
+        self.assertEqual(self.state()['phase'], 'stopping')
+        self.assertEqual(health(self.K, now=self.now()), ('stall', message))   # 停機中也看（halt 會卡住）
+        self.reg(fails=0)
+        self.assertEqual(health(self.K, now=self.now())[0], 'ok')
 
     def test_stall_and_threshold(self):
         self.assertEqual(health(self.K, now=self.now() + 11),
@@ -129,8 +166,8 @@ class KernelHealth(FakeCase):
         self.assertEqual(health(self.K, now=self.now() + 100), ('ok', 'ok'))
 
     def test_broken_ledger(self):
-        for raw in ('{', '[]', '\xff'):
-            (self.K / 'state.json').write_bytes(raw.encode('latin1'))
+        for raw in ('{', '[]', '\xff' * 200):
+            self.break_ledger(raw.encode('latin1'))
             code, message = health(self.K)
             self.assertEqual(code, 'broken')
             self.assertTrue(message.startswith('kernel 家讀不到：'))
@@ -173,13 +210,16 @@ class KernelHealth(FakeCase):
         actual = json.loads(out.getvalue())
         self.assertEqual(actual['health'], {'code': 'ok', 'message': 'ok'})
         expected = kernel.status(self.K)
-        self.assertEqual(actual['_metainfo'], {'_type': 'aos_kernel_ls', '_version': 2})
+        self.assertEqual(actual['_metainfo'], {'_type': 'aos_kernel_ls', '_version': 3})
+        self.assertNotIn('cpu', actual['kernel'])
+        self.assertEqual(actual['kernel']['tick']['registered'], True)
+        self.assertNotIn('kernel', actual['pools'])
         self.assertEqual((actual['kernel']['chain'], actual['kernel']['phase'], actual['kernel']['last_seq']),
                          (expected['chain'], expected['phase'], expected['last_seq']))
         self.assertEqual(sorted(actual['pools']), sorted(set(expected['pools']) | set(load_info(self.K)['pools'])))
 
     def test_ls_broken_ledger_retains_failure(self):
-        (self.K / 'state.json').write_text('{')
+        self.break_ledger(b'{')
         for flags in ([], ['--json']):
             with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(kernel.main(['ls', '--target', str(self.K), *flags]), 1)

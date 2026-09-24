@@ -43,7 +43,7 @@ boot 一開始就產生新的 boot 編號（`chain`）；它送的單都帶 `dec
 | 崩在 | 狀態 | 怎麼辦 |
 |---|---|---|
 | 第 2 步之後、第 4 步的交易提交之前 | 帳本沒變（交易整筆沒發生）；舊版時舊 kernel 池可能已縮到 0 | 再跑一次 boot（或 `aos up`；第 3 步縮到 0 是冪等的） |
-| 第 4 步提交之後、舊 `state.json` 改名之前 | sqlite 帳本已在，舊的 `state.json` 也還在 | 沒事：有 `ledger.sqlite` 就只認它，舊的 `state.json` 沒人讀了（可以手動改名） |
+| 第 4 步提交之後、舊 `state.json` 改名之前 | sqlite 帳本已在，舊的 `state.json` 也還在 | **只要 `state.json` 還在就算舊帳本**：tick／agent 拒絕（`LedgerVersion`），health 報 `legacy`；再跑一次 boot（或 `aos up`）會拿 `state.json` 整份重匯、蓋掉 sqlite 裡的半成品，再改名。不能只看 `ledger.sqlite` 在不在就當匯入完成（astra 必修 5） |
 | 第 4 步之後、第 5 步登記之前 | 帳本是新的，daemon 沒登記這個 kernel，沒人開 tick | `ls` 的 health 報 `tick`（daemon 沒在替這個 kernel 開 tick）；再跑一次 boot 或 `aos up` |
 | 第 5 步 daemon 收了單、boot 還沒讀回音 | daemon 已登記、開始開 tick | 沒事；回音留在 `D/responses/` 沒人 ack（無害） |
 

@@ -7,7 +7,7 @@
 ## 這次改了什麼
 
 使用者 2026-09-24 拍板：daemon 與 kernel「開機合一、家不合一」，kernel 帳本換 sqlite。
-- 計畫：`proto5/notes/2026-09-24-one-boot/plan.md`。改動：`git diff 10a89fc...HEAD -- proto5`（基底之後的全部 commit；若基底不同，用 `git log --oneline -8` 找到 P 隊第一個 commit 的前一個）。
+- 計畫：`proto5/notes/2026-09-24-one-boot/plan.md`。改動：`git diff c56044d..HEAD -- proto5 wf`（c56044d 是 P 隊開工時的 main；測試檔還在另兩組手上遷移中，未提交的測試改動不用看）。
 - 程式：新檔 `proto5/lib/aos_kernel_store.py`（sqlite 帳本）、`aos_daemon_ticks.py`（daemon 替 kernel 開 tick）、`aos_up.py`＋`cli/aos`（aos up／down）；改 `aos_kernel_engine.py`、`aos_kernel_ledger.py`、`aos_kernel_boot.py`、`aos_kernel_info.py`、`aos_kernel_health.py`、`aos_kernel_ls.py`、`aos_kernel_cli.py`、`aos_kernel_check.py`、`aos_kernel_cpu.py`、`aos_kernel_rows.py`、`aos_daemon_loop.py`、`aos_daemon_rpc.py`、`aos_daemon.py`、`aos_daemon_cli.py`、`aos_agent*.py`（改用 store 查帳本）、`aos_team_post.py`（兩行）。
 - 規範：`proto5/spec/kernel/`、`proto5/spec/daemon/`（新 `ticks.md`、`up.md`）、`proto5/spec/cpu/`、`proto5/spec/aos-agent/` 相關句子。
 - 測試：`proto5/lib/test/test_one_boot.py`（新）與遷移過的舊測試。

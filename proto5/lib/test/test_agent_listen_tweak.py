@@ -17,6 +17,7 @@ import aos_agent as agent
 import aos_agent_listen as listen_api
 import aos_agent_listen_render as render
 import test_agent_tick as fixture
+import aos_kernel_store
 
 CLI = Path(__file__).resolve().parents[2] / 'cli' / 'aos-agent'
 
@@ -199,7 +200,7 @@ class ListenTweakTests(unittest.TestCase):
 
     def test_wait_show_calls_prints_round(self):
         self.put(self.base / 'tick.json', {'envs': self.env})
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'fails': 0}}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': {'status': 'idle', 'fails': 0}}, 'replies': []})
         self.history(HISTORY[:2])
 
         def advance(_):

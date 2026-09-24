@@ -23,6 +23,8 @@ def pid_alive(pid):
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
+    except PermissionError:
+        pass
     try:
         return Path("/proc/%d/stat" % pid).read_text().rsplit(")", 1)[1].split()[0] != "Z"
     except OSError:
@@ -263,3 +265,55 @@ class Legacy(OneBootCase):
         self.assertEqual(state["procs"]["keep"]["runs"], 3)
         self.assertNotIn("kcpu", state)
         self.assertEqual(state["ticker"], str(self.daemon))
+
+
+
+class AstraFixes(OneBootCase):
+    def test_percent_in_path_does_not_alias_another_home(self):
+        """astra 必修 2：路徑裡字面的 %2F 不能被 sqlite 解成 /，開到別的家的帳本。"""
+        odd = self.root / "x%2Fy"
+        plain = self.root / "x" / "y"
+        odd.mkdir()
+        plain.mkdir(parents=True)
+        aos_kernel_store.write(odd, {"procs": {"p": {"status": "queued"}}, "replies": []})
+        self.assertTrue((odd / "ledger.sqlite").is_file())
+        self.assertFalse((plain / "ledger.sqlite").exists())
+        self.assertIsNotNone(aos_kernel_store.proc(odd, "p"))
+
+    def test_stopped_kernel_resends_untick_while_still_registered(self):
+        """astra 必修 3：撤登記單被 daemon 崩潰對帳丟掉、kernel 已停好：之後被開的格看到登記還在就再送一張。"""
+        self.setup_running()
+        self.kernel_stop()
+        wait_for(lambda: self.registration() is None)
+        # 模擬「撤登記單被丟掉」：登記檔放回去（daemon 記憶體裡已撤，只剩檔）
+        path = aos_daemon_ticks.reg_path(self.daemon, self.home)
+        aos_home.write_json(path, {"home": str(self.home), "cli": str(CLI / "aos-kernel"), "every_ms": 5,
+                                   "timeout_ms": 60000})
+        result = self.cli("tick", self.home)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        wait_for(lambda: not path.exists())                     # daemon 收到新的撤登記單、刪掉登記檔
+
+    def test_reregister_while_old_tick_running_keeps_one_at_a_time(self):
+        """astra 必修 4：撤登記後那格還在跑就重登記，daemon 沿用那格、收屍後才開下一格。"""
+        self.initialize()
+        self.start_daemon(self.hang_env("held"))
+        self.boot()
+        self.submit_add("held")
+        pid = self.hung_pid()
+        aos_home.post_request(self.daemon, aos_client.new_name("off"),
+                              {"jsonrpc": "2.0", "method": "tick", "params": {"home": str(self.home), "off": True}})
+        wait_for(lambda: self.registration() is None)
+        params = {"home": str(self.home), "cli": str(CLI / "aos-kernel"), "every_ms": 5, "timeout_ms": 60000}
+        self.assertIn("result", aos_client.call(self.daemon, "tick", params, timeout_ms=5000, poll_ms=5))
+        time.sleep(.5)
+        me = b"tick\x00--target\x00" + str(self.home).encode()
+        ticks = []
+        for entry in os.listdir("/proc"):
+            if entry.isdigit() and pid_alive(int(entry)):
+                try:
+                    if me in Path("/proc/%s/cmdline" % entry).read_bytes():
+                        ticks.append(int(entry))
+                except OSError:
+                    pass
+        self.assertEqual(ticks, [pid])                          # 只有卡住的那格，沒有另開一格
+        os.kill(pid, signal.SIGKILL)

@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import aos_agent as agent
 import test_agent_tick as fixture
+import aos_kernel_store
 
 
 class AgentCrashTests(unittest.TestCase):
@@ -93,7 +94,7 @@ class AgentCrashTests(unittest.TestCase):
             ledger['replies'] = [{'name': name + '.json'}]
         elif location == 'responses':
             self.respond(name)
-        self.put(self.k / 'state.json', ledger)
+        aos_kernel_store.write(self.k, ledger)
         if change_kernel:
             self.env['AOS_KERNEL_HOME'] = str(self.root / 'other-K')
         with patch.object(agent.aos_client, 'submit', wraps=agent.aos_client.submit) as submit:
@@ -130,7 +131,7 @@ class AgentCrashTests(unittest.TestCase):
         st = self.state()
         st['batch']['sent'] = False
         self.put(self.base / 'state.json', st)
-        self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})
         self.assertEqual(self.tick(), 0)
         self.assertTrue((self.k / 'requests' / (name + '.json')).exists())
         self.assertFalse((self.root / 'other-K').exists())
@@ -171,7 +172,7 @@ class AgentCrashTests(unittest.TestCase):
         paths = [self.base / 'work' / (name + s) for s in ('.in', '.out', '.inst.json')]
         for path in paths:
             self.put(path, '仍在跑')
-        self.put(self.k / 'state.json', {'procs': {name: {'discard': True}}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {name: {'discard': True}}, 'replies': []})
         self.assertEqual(self.tick(), 0)
         st = self.state()
         st['waits'] = ['hold']
@@ -179,7 +180,7 @@ class AgentCrashTests(unittest.TestCase):
         self.assertEqual(self.tick(), 101)
         self.assertEqual(self.state()['sweep'], [{'kernel': str(self.k), 'name': name}])
         self.assertTrue(all(p.exists() for p in paths))
-        self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})
         self.assertEqual(self.tick(), 101)
         self.assertEqual(self.state()['sweep'], [])
         self.assertFalse(any(p.exists() for p in paths))

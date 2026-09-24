@@ -99,13 +99,17 @@ def _boot_locked(home, info, cli, ticker, locations, legacy, wait_ms):
     store = aos_kernel_store.Store(home, create=True)
     try:
         if legacy:
-            # 整份換掉 sqlite 裡可能有的半成品（上次匯入崩在提交或改名之前）。
+            # 3. 舊版（kernel cpu 時代）：先只從舊帳本找舊 kernel 池、縮到 0、等 daemon 收乾淨——舊程式的 tick 沒有
+            #    .tick.lock，等待期間它還可能提交 state.json；停妥之後才重讀、整份匯入（astra 必修 1）。
+            #    整份換掉 sqlite 裡可能有的半成品（上次匯入崩在提交或改名之前）。
+            old = aos_home.read_state(home, {})
+            acks = _retire_kernel_pool(home, (old.get("pools") or {}).get(KERNEL_POOL), chain, decl, wait_ms)
             state = aos_home.read_state(home, {})
+            _ledger_version_check(state)
             store.orig = aos_kernel_store._rows(store.conn)[1]
         else:
             state = store.load()
-        # 3. 舊版（kernel cpu 時代）帳本的 kernel 池：縮到 0、等 daemon 收乾淨，才寫新帳本。
-        acks = _retire_kernel_pool(home, (state.get("pools") or {}).get(KERNEL_POOL), chain, decl, wait_ms)
+            acks = _retire_kernel_pool(home, (state.get("pools") or {}).get(KERNEL_POOL), chain, decl, wait_ms)
         # 4. 寫帳本（一筆交易）
         if not state.get("chain") and not state.get("procs"):
             state = new_state(chain, cli)

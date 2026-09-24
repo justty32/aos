@@ -66,7 +66,8 @@ class InfoRead(unittest.TestCase):
 
     def test_defaults(self):
         info = self.parse(v2(pools={"default": {"count": 2}, "llm": {"count": 1, "envs": {"A": "b"}}}))
-        self.assertEqual(info["pools"]["kernel"], {"count": 1, "skip": [], "dpool": "kernel", "envs": {}})
+        self.assertNotIn("kernel", info["pools"])            # one-boot：不再補 kernel 池
+        self.assertEqual(info["tick_timeout_ms"], 60000)
         self.assertEqual(info["pools"]["default"]["dpool"], "default")
         self.assertEqual(info["pools"]["llm"]["envs"], {"A": "b"})
         self.assertEqual(info["cpu"], {"poll_ms": 200, "timeout_ms": 0})
@@ -74,11 +75,16 @@ class InfoRead(unittest.TestCase):
         self.assertEqual(info["tick_ms"], 1000)
         self.assertEqual(ki.pool_location(info, "llm"), ("/abs/D", "llm"))
 
-    def test_kernel_pool_only_one(self):
-        self.bad(v2(pools={"kernel": {"count": 2}}))
-        self.bad(v2(pools={"kernel": {"count": 1, "skip": [0]}}))
-        self.bad(v2(pools={"kernel": {"count": 0}}))
-        self.parse(v2(pools={"kernel": {"count": 1, "dpool": "k1-kernel"}}))
+    def test_legacy_kernel_pool_tolerated(self):
+        """one-boot：舊 info 的 kernel 池讀得過（照一般池的形狀驗）、不算工作池；它寫的 daemon 當開 tick 的 daemon。"""
+        for config in ({"count": 2}, {"count": 1, "skip": [0]}, {"count": 0}, {"count": 1, "dpool": "k1-kernel"}):
+            info = self.parse(v2(pools={"kernel": config, "default": {"count": 1}}))
+            self.assertEqual(ki.work_pools(info), ["default"])
+            self.assertEqual(ki.ticker_daemon(info), "/abs/D")
+        info = self.parse(v2(pools={"kernel": {"count": 1, "daemon": "/abs/DK"}}))
+        self.assertEqual(ki.ticker_daemon(info), "/abs/DK")
+        self.bad(v2(pools={"kernel": {"count": -1}}))
+        self.bad(v2(tick_timeout_ms=-1))
 
     def test_dpool_clash(self):
         self.bad(v2(pools={"a": {"count": 1, "dpool": "x"}, "b": {"count": 1, "dpool": "x"}}))
@@ -117,8 +123,10 @@ class InfoRead(unittest.TestCase):
         self.assertEqual(info["pools"]["b"]["envs"], {"X": {"$env": "HOME"}})
 
     def test_daemon_optional_until_boot(self):
-        info = self.parse({"_metainfo": {"_type": "kernel", "_version": 2}, "pools": {}})
-        self.assertEqual(ki.pool_location(info, "kernel"), (None, "kernel"))
+        info = self.parse({"_metainfo": {"_type": "kernel", "_version": 2}, "pools": {"a": {"count": 1}}})
+        self.assertEqual(ki.pool_location(info, "a"), (None, "a"))
+        self.assertIsNone(ki.ticker_daemon(info))
+        self.assertIsNone(ki.pool_location(info, "kernel"))
 
 
 class Init(unittest.TestCase):
@@ -132,7 +140,8 @@ class Init(unittest.TestCase):
         ki.init(self.K)
         info = aos_home.read_json(self.K / "info.json")
         self.assertEqual(info["_metainfo"], {"_type": "kernel", "_version": 2})
-        self.assertEqual(info["pools"], {"kernel": {"count": 1}})
+        self.assertEqual(info["pools"], {})                  # one-boot：init 不再補 kernel 池
+        self.assertNotIn("tick_timeout_ms", info)            # 預設值不寫進 info
         for d in ("requests", "responses", "pools"):
             self.assertTrue((self.K / d).is_dir())
         self.assertEqual(list((self.K / "pools").iterdir()), [])
@@ -143,7 +152,7 @@ class Init(unittest.TestCase):
     def test_config_empty_pools_and_zero(self):
         ki.init(self.K, {"pools": {}, "tick_ms": 50})
         info = aos_home.read_json(self.K / "info.json")
-        self.assertEqual(info["pools"], {"kernel": {"count": 1}})
+        self.assertEqual(info["pools"], {})
         self.assertEqual(info["tick_ms"], 50)
         K2 = self.root / "K2"
         ki.init(K2, {"pools": {"default": {"count": 0}}})
@@ -169,7 +178,8 @@ class Init(unittest.TestCase):
 
     def test_bad_config_builds_nothing(self):
         for config in ([], "x", {"$ref": "a.json"}, {"pools": {"$ref": "p.json"}},
-                       {"pools": {"kernel": {"count": 2}}}, {"pools": {"a": {"count": "1"}}}):
+                       {"pools": {"kernel": {"count": 2}}}, {"pools": {"kernel": {"count": 1}}},
+                       {"pools": {"a": {"count": "1"}}}):
             with self.assertRaises(ki.KernelError):
                 ki.init(self.K, config)
             self.assertFalse(self.K.exists())
@@ -210,7 +220,8 @@ class Homes(FakeCase):
         cpu_cli = str((Path(ki.__file__).resolve().parents[1] / "cli" / "aos-cpu").resolve())
         tmpl = {"argv": [cpu_cli, "."], "cwd": ".", "stderr": {"$opt": "append", "$val": "cpu.log"},
                 "envs": {"$ref": "../../envs.json"}}
-        for pool, n in (("default", 2), ("llm", 1), ("empty", 0), ("kernel", 1)):
+        self.assertFalse((pools / "kernel").exists())          # one-boot：沒有 kernel 池的家
+        for pool, n in (("default", 2), ("llm", 1), ("empty", 0)):
             self.assertEqual(aos_home.read_json(pools / pool / "inst.json"), tmpl)
             self.assertEqual(sorted(p.name for p in (pools / pool / "cpus").iterdir()), [str(i) for i in range(n)])
             for i in range(n):
@@ -222,8 +233,6 @@ class Homes(FakeCase):
         self.assertEqual(aos_home.read_json(pools / "default" / "cpus" / "1" / "info.json"),
                          {"_metainfo": {"_type": "exec_cpu", "_version": 1}, "poll_ms": 150, "timeout_ms": 0,
                           "notify": str(self.K / "requests")})
-        self.assertEqual(aos_home.read_json(pools / "kernel" / "cpus" / "0" / "info.json"),
-                         {"_metainfo": {"_type": "exec_cpu", "_version": 1}, "poll_ms": 20, "timeout_ms": 0})
 
     def test_homes_fill_missing_never_overwrite_never_delete(self):
         self.init({"default": {"count": 2}})

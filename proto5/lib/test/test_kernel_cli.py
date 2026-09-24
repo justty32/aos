@@ -40,13 +40,13 @@ class CLICase(FakeCase):
 
 
 class Init(CLICase):
-    def test_init_without_config_has_only_kernel_pool(self):
+    def test_init_without_config_has_no_pools(self):
         env = {k: v for k, v in os.environ.items() if k != 'AOS_DAEMON_HOME'}
         with patch.dict(os.environ, env, clear=True):
             out, _ = self.main('init')
         self.assertEqual(out, 'initialized %s\n' % self.K)
         info = self.info()
-        self.assertEqual(info['pools'], {'kernel': {'count': 1}})
+        self.assertEqual(info['pools'], {})                  # one-boot：init 不再補 kernel 池
         self.assertNotIn('daemon', info)
         for name in ('requests', 'responses', 'pools'):
             self.assertTrue((self.K / name).is_dir())
@@ -56,7 +56,7 @@ class Init(CLICase):
         config = self.config({'pools': {'default': {'count': 2}}, 'tick_ms': 250, 'daemon': '/abs/Dc'})
         self.main('init', '--config', config)
         info = self.info()
-        self.assertEqual(info['pools'], {'default': {'count': 2}, 'kernel': {'count': 1}})
+        self.assertEqual(info['pools'], {'default': {'count': 2}})
         self.assertEqual((info['tick_ms'], info['daemon']), (250, '/abs/Dc'))
         self.assertEqual(info['_metainfo'], {'_type': 'kernel', '_version': 2})
         other = self.root / 'K2'
@@ -72,7 +72,8 @@ class Init(CLICase):
         self.assertTrue(err.startswith('aos-kernel: AlreadyExists: '), err)
 
     def test_init_bad_config_exit_1_without_writes(self):
-        cases = ['{', '[]', 'null', {'pools': []}, {'pools': {'kernel': {'count': 2}}}, {'pools': {'a/b': {'count': 1}}},
+        cases = ['{', '[]', 'null', {'pools': []}, {'pools': {'kernel': {'count': 2}}}, {'pools': {'kernel': {'count': 1}}},
+                 {'pools': {'a/b': {'count': 1}}},
                  {'pools': {'x': {}}}, {'pools': {}, 'tick_ms': -1}, {'pools': {}, 'daemon': 'relative'},
                  {'pools': {}, '_metainfo': {'_type': 'daemon', '_version': 1}},
                  {'cpus': {'0': {}}}]  # 納入：proto5 舊格式明確拒絕，不再默默只剩 kernel 池
@@ -172,19 +173,41 @@ class Ls(CLICase):
     def test_ls_without_ledger(self):
         self.init({'default': {'count': 2}})
         lines = self.main('ls')[0].splitlines()
-        self.assertEqual(lines[0], 'health 停機中（aos-kernel boot --target %s）' % self.K)
+        self.assertEqual(lines[0], 'health 停機中（aos up 或 aos-kernel boot --target %s）' % self.K)
         self.assertTrue(lines[1].startswith('kernel  沒 boot 過  seq -  daemon alive  tick '), lines[1])
-        self.assertEqual(lines[2], '  kcpu kernel/0  沒在跑  requests 0')
+        self.assertEqual(lines[2], '  tick 沒人開（daemon 沒登記這個 kernel；aos up）')   # one-boot：取代 kcpu 那行
         self.assertEqual(lines[3], 'pool    1 個工作池：要 2 顆、忙 0、閒 0')
-        self.assertTrue(lines[4].startswith('  kernel   want 1  sent -'), lines[4])
-        self.assertTrue(lines[5].startswith('  default  want 2  sent -'), lines[5])
-        self.assertEqual(lines[6:], ['proc    0 個', 'queue   -'])
+        self.assertTrue(lines[4].startswith('  default  want 2  sent -'), lines[4])
+        self.assertEqual(lines[5:], ['proc    0 個', 'queue   -'])
         # 納入審查 P2：沒宣告過的池，sent／idle／draining＝null、busy＝0（cli-ls.md 的 pools 欄）
         data = json.loads(self.main('ls', '--json')[0])
-        for pool in ('kernel', 'default'):
-            row = data['pools'][pool]
-            self.assertEqual((row['sent'], row['busy'], row['idle'], row['draining']), (None, 0, None, None), pool)
-        self.assertEqual((data['pools']['kernel']['want'], data['pools']['default']['want']), (1, 2))
+        self.assertEqual(data['_metainfo'], {'_type': 'aos_kernel_ls', '_version': 3})
+        self.assertEqual(list(data['pools']), ['default'])
+        row = data['pools']['default']
+        self.assertEqual((row['sent'], row['busy'], row['idle'], row['draining'], row['want']), (None, 0, None, None, 2))
+        self.assertNotIn('cpu', data['kernel'])
+        self.assertEqual(data['kernel']['tick'], {'registered': False, 'every_ms': None, 'fails': None,
+                                                  'last_exit': None, 'last_at': None})
+
+    def test_ls_tick_line_after_boot(self):
+        """one-boot：第二行下面那行講 tick 由誰開、上一格多久前、連敗；-v 沒有 kcpu 行。"""
+        import aos_daemon_ticks
+        self.running()
+        lines = self.main('ls')[0].splitlines()
+        self.assertRegex(lines[2], r'^  tick 由 daemon 開：上一格 \d+ 秒前$')
+        verbose = self.main('ls', '-v')[0]
+        self.assertNotIn('kcpu', verbose)
+        self.assertIn('  D       %s\n' % self.D, verbose)
+        data = json.loads(self.main('ls', '--json')[0])
+        tick = data['kernel']['tick']
+        self.assertEqual((tick['registered'], tick['every_ms']), (True, 0))
+        self.assertAlmostEqual(tick['last_at'], self.state()['last_tick_at'])
+        path = aos_daemon_ticks.reg_path(self.D, self.K.absolute())
+        aos_home.write_json(path, dict(aos_home.read_json(path), fails=2, last_exit=1))
+        lines = self.main('ls')[0].splitlines()
+        self.assertRegex(lines[2], r'^  tick 由 daemon 開：上一格 \d+ 秒前、連敗 2$')
+        tick = json.loads(self.main('ls', '--json')[0])['kernel']['tick']
+        self.assertEqual((tick['fails'], tick['last_exit']), (2, 1))
 
     def test_ls_pools_counts_and_bad(self):
         self.running()
@@ -195,19 +218,18 @@ class Ls(CLICase):
         state = self.state()
         state['procs']['b'].update(status='bad')
         state['procs']['z'] = dict(state['procs']['a'], status='done')
-        aos_home.write_state(self.K, state)
+        self.put_state(state)
         aos_home.write_json(self.root / 'work.json', {'argv': ['x'], 'stderr': 'log/err.txt'})
         lines = self.main('ls')[0].splitlines()
-        self.assertTrue(lines[4].startswith('  kernel '), lines[4])
-        self.assertTrue(lines[5].startswith('  default  want 2  sent 2  busy 2  idle 0  draining 0   daemon default: running 2'), lines[5])
-        self.assertTrue(lines[6].startswith('  llm      want 1  sent 1  busy 1  idle 0'), lines[6])
-        self.assertEqual(lines[7], 'proc    4 個（反覆 4、once 0）：bad 1、done 1、running 2')
-        self.assertEqual(lines[9].split(), ['b', '反覆', 'bad', '0', '0', '-'])
-        self.assertEqual(lines[10], '  （其餘 3 個沒事的沒列；--procs 全列）')
-        self.assertEqual(lines[11], '  b 壞了，看 %s' % (self.root / 'log/err.txt'))
-        self.assertEqual(lines[12], 'queue   -')
-        self.assertEqual(len(lines), 13)
-        procs = self.main('ls', '--procs')[0].splitlines()[9:13]
+        self.assertTrue(lines[4].startswith('  default  want 2  sent 2  busy 2  idle 0  draining 0   daemon default: running 2'), lines[4])
+        self.assertTrue(lines[5].startswith('  llm      want 1  sent 1  busy 1  idle 0'), lines[5])
+        self.assertEqual(lines[6], 'proc    4 個（反覆 4、once 0）：bad 1、done 1、running 2')
+        self.assertEqual(lines[8].split(), ['b', '反覆', 'bad', '0', '0', '-'])
+        self.assertEqual(lines[9], '  （其餘 3 個沒事的沒列；--procs 全列）')
+        self.assertEqual(lines[10], '  b 壞了，看 %s' % (self.root / 'log/err.txt'))
+        self.assertEqual(lines[11], 'queue   -')
+        self.assertEqual(len(lines), 12)
+        procs = self.main('ls', '--procs')[0].splitlines()[8:12]
         self.assertEqual([line.split()[0] for line in procs], ['a', 'b', 'c', 'z'])
 
     def test_ls_pool_filter(self):
@@ -247,7 +269,7 @@ class Ls(CLICase):
         self.ticks(2)
         lines = self.main('ls')[0].splitlines()
         self.assertEqual(lines[0], 'health 池 default：NameTaken（NameTaken）')
-        self.assertIn('daemon default: 錯誤 NameTaken（NameTaken）', lines[5])
+        self.assertIn('daemon default: 錯誤 NameTaken（NameTaken）', lines[4])
 
     def test_bad_summary_stderr_fallbacks(self):
         target = self.root / 'inst.json'
@@ -325,7 +347,7 @@ class Misc(CLICase):
         for stderr in ('log/agent.err', {'$opt': 'append', '$val': 'log/agent.err'}):
             aos_home.write_json(target, {'argv': ['aos-agent', 'tick', '--target', str(agent)], 'stderr': stderr})
             proc = dict(target=str(target), once=False, status='bad', runs=3, fails=3, pending=None)
-            aos_home.write_json(self.K / 'state.json', {'procs': {'agent': proc}})
+            self.put_state({'procs': {'agent': proc}})
             text = self.main('ls')[0]
             self.assertIn('  agent 壞了，看 %s\n' % (agent / 'log/agent.err'), text)
             data = json.loads(self.main('ls', '--json')[0])

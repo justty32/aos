@@ -7,6 +7,9 @@ proto5 版搬過來時改了什麼：
 - 「boot 換一顆工作 cpu 當 kernel cpu」作廢：kernel 池固定 `kernel/0`，不能拿工作 cpu 升格（kernel-info §2）。
   改成 proto5-2 對應的「boot 把 kernel 池搬到新 dpool」：舊池縮 0 收乾淨、新池拉起，工作池在跑的那件不受影響。
 - 停機不再往 cpu 放 stop-：`stops` 箱換成 `sends`，停完 daemon 那邊每池消失（handoff §3）。
+- 2026-09-24 one-boot：沒有 kernel 池／kernel cpu 了，daemon 照登記（D/kernels/<id>.json）開 tick。「重 boot 換掉 kernel cpu」
+  改成「重 boot 只重登記、工作 cpu 不重拉」；「boot 搬 kernel 池」改成「重 boot 帶新的 tick_ms 更新登記」；
+  「daemon 那邊 kernel 池被別人佔了」改成「boot 不碰 daemon 那邊叫 kernel 的池」。
 """
 import json
 import os
@@ -15,6 +18,7 @@ import signal
 import subprocess
 
 import aos_client
+import aos_daemon_ticks
 import aos_home
 from _kernel_util import KernelCase, CLI, PY, read_json, wait_for, isolated_test
 
@@ -36,12 +40,13 @@ class KernelIntegration(KernelCase):
         self.assertEqual(self.state()["phase"], "stopped")
         self.assertEqual(list((self.daemon / "pools").iterdir()), [])
 
-    def test_repeat_boot_replaces_kernel_cpu_and_old_chain_tick_self_destructs(self):
+    def reg(self):
+        return aos_daemon_ticks.peek(self.daemon, self.home)
+
+    def test_repeat_boot_reregisters_and_old_chain_tick_is_noop(self):
         self.setup_running()
-        self.wait_running("kernel", 1)
         self.wait_running("default", 1)
         old = self.state()
-        old_pid = self.kid_pid("kernel", 0)
         worker = self.kid_pid("default", 0)
         cpu = self.cpu_home("default", 0)
         inst = (cpu / "inst.json").read_bytes()
@@ -49,15 +54,17 @@ class KernelIntegration(KernelCase):
         self.boot()
         new = self.state()
         self.assertNotEqual(new["chain"], old["chain"])
-        self.wait_running("kernel", 1)
-        self.assertNotEqual(self.kid_pid("kernel", 0), old_pid)
+        self.assertEqual(len(list((self.daemon / "kernels").glob("*.json"))), 1)   # 同一個 K 只一份登記
+        self.assertEqual((self.reg()["home"], self.reg()["fails"]), (str(self.home), 0))
+        self.assertIsNone(self.summary("kernel"))                          # 沒有 kernel 池
         self.assertEqual(self.kid_pid("default", 0), worker)             # 工作池重宣告同一份，不重拉
         self.assertEqual((cpu / "inst.json").read_bytes(), inst)
         self.assertEqual((cpu / "info.json").read_bytes(), info)
-        self.good_cli("tick", self.home, "--chain", old["chain"], "--seq", "999")
+        self.good_cli("tick", self.home, "--chain", old["chain"], "--seq", "999")   # 舊 kernel cpu 裡還排著的舊格
         self.assertNotEqual(self.state()["last_seq"], 999)
-        self.assertFalse((self.cpu_home("kernel", 0) / "requests" / ("k-%s-1000.json" % old["chain"])).exists())
+        self.assertEqual(self.state()["chain"], new["chain"])
         self.kernel_stop()
+        wait_for(lambda: self.reg() is None)                              # 停好那格撤登記
 
     def test_llm_pool_envs_file_reaches_new_cpu(self):
         envs = {"POOL_TEST": "llm-only", "PATH": {"$env": "PATH"}}
@@ -142,7 +149,8 @@ class KernelIntegration(KernelCase):
         self.add(target, "new")
         self.assertEqual(self.state()["procs"]["old"]["interval_ms"], 500)
         self.assertEqual(self.state()["procs"]["new"]["interval_ms"], 0)
-        # 睡眠設定由 RecoveryTests 的受控 sleep 驗證；此處只驗新設定仍可接鏈。
+        # one-boot：tick_ms 是 daemon 開格的間隔，boot 時登記進去（重 boot 才換；見 test_reboot_updates_tick_registration…）；
+        # 此處只驗 info 改了之後 tick 照常前進。
         seq = self.state()["last_seq"]
         wait_for(lambda: self.state()["last_seq"] >= seq + 3)
         self.kernel_stop()
@@ -184,7 +192,7 @@ class KernelIntegration(KernelCase):
         wait_for(lambda: self.state()["procs"]["visible"]["runs"] == 1)
         wait_for(lambda: not list((self.home / "requests").glob("*.json")))
         result = self.good_cli("ls", self.home, "--procs")
-        for text in ("health", "default", "visible", "kernel  running", "seq", "runs", "fails", "alive", "kcpu"):
+        for text in ("health", "default", "visible", "kernel  running", "seq", "runs", "fails", "alive", "tick 由 daemon 開"):
             self.assertIn(text, result.stdout)
         self.assertEqual(list((self.home / "requests").glob("*.json")), [])
         self.assertEqual(list((self.daemon / "requests").glob("*.json")), [])
@@ -202,11 +210,12 @@ class KernelIntegration(KernelCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("NotRunning", result.stderr)
         self.assertFalse((self.home / "state.json").exists())
+        self.assertFalse((self.home / "ledger.sqlite").exists())
         self.assertEqual((self.home / "info.json").read_bytes(), before)
         self.assertFalse((self.daemon / "requests").exists() and list((self.daemon / "requests").iterdir()))
 
-    def test_boot_name_taken_leaves_existing_chain_and_info_intact(self):
-        """daemon 那邊叫 kernel 的池已被別人（CLI）佔了：boot 第 2 步收到 NameTaken、退 1，帳本不寫。"""
+    def test_boot_leaves_daemon_pool_named_kernel_alone(self):
+        """one-boot：daemon 那邊叫 kernel 的池被別人（CLI）佔著也不關 kernel 的事：boot 照過、不碰那池（以前會 NameTaken）。"""
         self.initialize()
         self.start_daemon()
         folder = self.root / "cli-pool"
@@ -216,13 +225,12 @@ class KernelIntegration(KernelCase):
                                                           "target": str(folder / "{name}.json")},
                                    timeout_ms=3000, poll_ms=5)
         self.assertIn("result", response)
-        before = (self.home / "info.json").read_bytes()
-        result = self.cli("boot", self.home)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("NameTaken", result.stderr)
-        self.assertEqual((self.home / "info.json").read_bytes(), before)
-        self.assertFalse((self.home / "state.json").exists())
+        self.boot()
         self.assertEqual(read_json(self.daemon / "pools" / "kernel" / "pool.json")["owner"], "cli")
+        self.assertEqual(read_json(self.daemon / "pools" / "kernel" / "pool.json")["count"], 1)
+        self.assertNotIn("kernel", self.state()["pools"])
+        self.kernel_stop()
+        self.assertEqual(read_json(self.daemon / "pools" / "kernel" / "pool.json")["count"], 1)
 
     def test_boot_preserves_inflight_once_pending_and_worker_cpu(self):
         self.setup_running()
@@ -270,13 +278,14 @@ class KernelIntegration(KernelCase):
         self.assertEqual(response["result"]["code"], 0)
         aos_client.ack(self.home, running)
         wait_for(lambda: self.state().get("phase") == "stopped")
-        for pool in ("kernel", "default", "llm"):
+        for pool in ("default", "llm"):
             self.wait_gone(pool)
+        wait_for(lambda: aos_daemon_ticks.peek(self.daemon, self.home) is None)   # 停好那格撤登記
         for box in ("acks", "replies", "sends", "deletes"):
             wait_for(lambda: self.state()[box] == [])
 
-    def test_boot_moves_kernel_pool_and_collects_inflight_work(self):
-        """boot 時 info 的 kernel 池換了 dpool：舊池縮 0、收乾淨，新池拉起；工作池在跑的那件照收（handoff §1 第 2 步）。"""
+    def test_reboot_updates_tick_registration_and_collects_inflight_work(self):
+        """info 的 tick_ms／tick_timeout_ms 改了再 boot：登記跟著換（連敗歸零）；工作池在跑的那件照收。"""
         self.setup_running()
         marker, gate = self.root / "started", self.root / "release"
         source = "import os,time; open(%r,'w').close()\nwhile not os.path.exists(%r): time.sleep(.005)" % (str(marker), str(gate))
@@ -284,23 +293,19 @@ class KernelIntegration(KernelCase):
                                                        "once": True, "timeout_ms": 5000})
         wait_for(lambda: marker.exists())
         old_state = self.state()
-        old_k = self.kid_pid("kernel", 0)
         worker = self.kid_pid("default", 0)
-        self.set_pool("kernel", dpool="kernel-2")
+        self.assertEqual((self.reg()["every_ms"], self.reg()["timeout_ms"]), (5, 60000))
+        self.set_info(tick_ms=20, tick_timeout_ms=30000)
         self.boot()
         state = self.state()
         self.assertNotEqual(state["chain"], old_state["chain"])
-        self.assertEqual(state["pools"]["kernel"]["dpool"], "kernel-2")
-        self.assertIsNone(read_json(self.daemon / "pools" / "kernel" / "summary.json"))
-        self.wait_running("kernel", 1)                                     # dpool kernel-2
-        with self.assertRaises(ProcessLookupError):
-            os.kill(old_k, 0)
+        self.assertEqual((self.reg()["every_ms"], self.reg()["timeout_ms"], self.reg()["fails"]), (20, 30000, 0))
         self.assertEqual(self.kid_pid("default", 0), worker)
         gate.touch()
         response = aos_client.wait_response(self.home, request, timeout_ms=5000, poll_ms=5)
         self.assertEqual(response["result"]["code"], 0)
         aos_client.ack(self.home, request)
         self.assertNotIn("held-once", self.state()["procs"])
-        result = self.call("add", {"name": "after-move", "target": self.job(name="after"), "once": True})
+        result = self.call("add", {"name": "after", "target": self.job(name="after"), "once": True})
         self.assertEqual(result["result"]["code"], 0)
         self.kernel_stop()

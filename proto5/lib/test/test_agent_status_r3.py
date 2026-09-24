@@ -10,6 +10,7 @@ import aos_agent as agent
 import aos_agent_say as say
 import aos_agent_status as status
 import test_agent_tick as fixture
+import aos_kernel_store
 
 
 class StatusR3Tests(unittest.TestCase):
@@ -18,7 +19,7 @@ class StatusR3Tests(unittest.TestCase):
 
     def registered(self, **values):
         self.put(self.base / 'tick.json', {'envs': self.env})
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': dict(status='idle', fails=0, **values)},
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': dict(status='idle', fails=0, **values)},
                                          'replies': []})
 
     def healthy(self):
@@ -106,12 +107,12 @@ class StatusR3Tests(unittest.TestCase):
                 self.assertIn('kernel 停機中' if code == 'stopped' else 'kernel 家有問題', data['health']['message'])
         with self.healthy():
             self.assertEqual(status.collect(self.base, {})['health']['code'], 'paused')
-            self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
+            aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})
             self.assertEqual(status.collect(self.base, {})['health']['code'], 'unregistered')
 
     def test_bad_and_config(self):
         self.registered()
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'bad', 'fails': 2}}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': {'status': 'bad', 'fails': 2}}, 'replies': []})
         self.log('tick failed\n')
         with self.healthy():
             data = status.collect(self.base, {})
@@ -124,7 +125,7 @@ class StatusR3Tests(unittest.TestCase):
 
     def test_tick_fails_are_current(self):
         self.registered()
-        self.put(self.k / 'state.json', {'procs': {'agent-bob': {'status': 'idle', 'fails': 1}}, 'replies': []})
+        aos_kernel_store.write(self.k, {'procs': {'agent-bob': {'status': 'idle', 'fails': 1}}, 'replies': []})
         self.log('tick failed\n')
         with self.healthy():
             self.assertIn('error  tick failed', self.cli('status', '--target', str(self.base))[1])
@@ -170,14 +171,14 @@ class StatusR3Tests(unittest.TestCase):
 
     def test_unreadable_ledger_does_not_warn(self):
         self.registered()
-        (self.k / 'state.json').write_text('{')
+        (self.k / 'ledger.sqlite').write_text('{')  # one-boot：帳本壞掉（不是 sqlite）
         self.assertEqual(self.cli('say', '--target', str(self.base), 'hello')[0], 0)
         self.assertNotIn('warn:', self.err.getvalue())
 
     def test_stop_during_wait(self):
         self.registered()
         def stopped(_):
-            self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
+            aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})
         with self.healthy(), patch.object(say.time, 'sleep', side_effect=stopped):
             self.assertEqual(self.cli('say', '--target', str(self.base), 'hello', '--wait')[0], 101)
         self.assertIn('unregistered:', self.err.getvalue())

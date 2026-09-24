@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import aos_client
+import aos_daemon_ticks
 from _kernel_util import KernelCase, PY, read_json, wait_for
 
 
@@ -23,9 +24,9 @@ print(json.dumps({"answer": "假模型回答：" + prompt.strip(), "args": sys.a
         executable.chmod(0o755)
         path_env = {"$fmt": {"$val": str(tools) + ":${old}", "old": {"$env": "PATH"}}}
         self.setup_running({"default": {"count": 1}, "llm": {"count": 1, "envs": {"PATH": path_env}}})
-        for pool in ("kernel", "default", "llm"):
+        for pool in ("default", "llm"):   # one-boot：沒有 kernel 池，tick 由 daemon 直接開
             self.wait_running(pool, 1)
-        cpu_pids = {pool: self.kid_pid(pool, 0) for pool in ("kernel", "default", "llm")}
+        cpu_pids = {pool: self.kid_pid(pool, 0) for pool in ("default", "llm")}
         daemon_pid = self.daemon_process.pid
 
         prompt = self.root / "question.txt"
@@ -73,9 +74,11 @@ raise SystemExit(100 if number == 3 else 0)
         self.assertEqual((process["runs"], process["fails"]), (3, 0))
         self.assertEqual(counter.read_text(), "3")
 
+        self.assertIsNotNone(aos_daemon_ticks.peek(str(self.daemon), self.home))  # 停之前 daemon 替它開 tick
         self.kernel_stop()
         self.assertEqual(self.state()["phase"], "stopped")
         self.assertEqual(list((self.daemon / "pools").iterdir()), [])
+        wait_for(lambda: aos_daemon_ticks.peek(str(self.daemon), self.home) is None)  # 停好那格撤了 tick 登記
         self.daemon_stop()
         all_pids = {*cpu_pids.values(), daemon_pid, answer["pid"],
                     *(int(pid) for pid in workers.read_text().splitlines())}

@@ -26,7 +26,8 @@ kernel 的家是唯一放寬 cpu 範式「四樣檔」的家：**只有帳本**�
 - 讀的人只讀、不寫，WAL 讓讀不擋寫：`aos-kernel ls`（整份）、`aos-kernel proc NAME`（`procs` 一列＋`busy` 按 `proc` 查一列，O(1)，[§6 proc](cli.md)）、aos-agent（同一支 lib `lib/aos_kernel_store.py`）。
   別的程式要看帳本，用 `aos-kernel proc --json`／`ls --json`，不要自己開 sqlite。
 - **舊的第 2 版 `K/state.json`**：boot 時整份匯入 sqlite、原檔改名 `state.json.v2-old`（[§6 boot](boot.md)）。還沒換過的家：tick 退 1（`LedgerVersion`），`ls` 的 health 是 `legacy`。
-  有 `ledger.sqlite` 就只認它，旁邊就算還有 `state.json` 也不看。第 1 版（`cpus` 表）照舊拒絕。
+  **只要 `state.json` 還在就算還沒換好**（匯入成功才改名；崩在建好 sqlite、還沒提交或還沒改名之間，下次 boot 整份重匯）。
+  boot 先把舊 kernel 池縮到 0、等舊的 tick 停妥，才重讀 `state.json` 匯入（舊程式的 tick 沒有 `.tick.lock`）。第 1 版（`cpus` 表）照舊拒絕。
 
 ### 每個鍵的意思
 
