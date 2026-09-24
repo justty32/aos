@@ -4,6 +4,7 @@
 目標的三種解讀與執行一律交給 aos_exec.run_target_full。
 """
 import fcntl
+import hashlib
 import os
 import signal
 import stat
@@ -165,6 +166,44 @@ def _execute(envelope, info, control):
     }), True
 
 
+def _validate_notify(info):
+    """cpu-notify §1：`notify` 沒寫就跳過；有寫必須是絕對路徑字串，否則照現有讀驗方式報錯。"""
+    if "notify" not in info:
+        return
+    value = info["notify"]
+    if not isinstance(value, str) or not os.path.isabs(value):
+        raise aos_home.HomeError("FieldTypeMismatch", "notify 必須是絕對路徑字串")
+
+
+def _notify_digest(home, name):
+    """cpu-notify §2：SHA-256(home 絕對路徑 + \\n + name) 前 16 個十六進位字元。"""
+    return hashlib.sha256(("%s\n%s" % (home, name)).encode("utf-8")).hexdigest()[:16]
+
+
+def _send_notify(notify_dir, home, name):
+    """放一張 `resp-<digest>.json` 通知（§3.1 放單同款）；EEXIST 當成功，其餘失敗只記 stderr 一行。"""
+    path = os.path.join(notify_dir, "resp-%s.json" % _notify_digest(home, name))
+    obj = {"jsonrpc": "2.0", "method": "responded", "params": {"home": home, "name": name}}
+    try:
+        aos_home.link_json(path, obj)
+    except aos_home.RequestExists:
+        pass                                   # 已經丟過同一則，當成功
+    except aos_home.HomeError as exc:
+        sys.stderr.write("aos-cpu: NotifyFailed: %s\n" % exc)
+
+
+def _notify_backfill(home, notify_dir):
+    """啟動：對 responses/ 裡每一份回音補丟一次通知（開機對帳之後、進迴圈之前）。"""
+    try:
+        names = sorted(os.listdir(os.path.join(home, "responses")))
+    except OSError as exc:
+        sys.stderr.write("aos-cpu: NotifyFailed: %s\n" % exc)
+        return
+    for name in names:
+        if name.endswith(".json"):             # 跳過放單留下的 .tmp 半成品
+            _send_notify(notify_dir, home, name)
+
+
 def run(home):
     """管理一個 exec_cpu 家直到停機；主人 I/O 失敗留 current 給下一任對帳。"""
     home = os.path.abspath(home)
@@ -175,6 +214,7 @@ def run(home):
         if not control.wait_go():
             return 0
         info = aos_home.load_info(home, "exec_cpu")
+        _validate_notify(info)
         aos_home.ensure_queue(home)
         control.relocate()
         os.chdir(home)
@@ -183,6 +223,8 @@ def run(home):
         state.update(pid=os.getpid(), current=None)
         state.setdefault("runs", 0)
         aos_home.write_state(home, state)
+        if "notify" in info:
+            _notify_backfill(home, info["notify"])
         while True:
             aos_home.scan_controls(home, control.stop)
             control.poll()
@@ -205,6 +247,8 @@ def run(home):
             if not envelope.notify:
                 aos_home.write_json(os.path.join(home, "responses", name), response)
             os.unlink(request)
+            if not envelope.notify and "notify" in info:
+                _send_notify(info["notify"], home, name)
             state["current"] = None
             state["runs"] += int(ran)
             aos_home.write_state(home, state)

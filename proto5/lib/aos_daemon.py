@@ -1,28 +1,33 @@
-"""所有 cpu 的父行程：daemon.md §1～§6 的握手、孩子表、重拉與停機。
+"""所有 cpu 的父行程（proto5-2）：按池、宣告式——手上是一份「每池要哪幾號」，每圈把孩子往宣告靠。
 
-工作 request 使用 aos_home 的信封與對帳；目標的讀驗與 fork 交給
-aos_exec.spawn_target，daemon 只在孩子表寫好後送 go。
+規範：spec/daemon-home.md（家）、daemon-reconcile.md（一圈）、protocol.md（單）、handoff.md §2（重開）、
+daemon-cli.md（指令）；沒寫的照 proto5/spec/daemon/。分檔：
+  aos_daemon.py        家、info 讀驗、活不活、給 kernel 的小函式、啟動（run）與 halt（stop）
+  aos_daemon_pools.py  池與一顆一檔的形狀、檔案動作、拉孩子
+  aos_daemon_loop.py   一圈：收屍、狀態機、退避、節流、fd 預算、批次階梯、停機
+  aos_daemon_rpc.py    scale／kill／ls 的驗與判
+  aos_daemon_cli.py    命令列（boot／halt／ls／scale／kill）
 """
-import argparse
-import contextlib
 import fcntl
-import io
-import json
 import os
 from pathlib import Path
+import resource
 import signal
-import sys
 import time
 
 import aos_client
-import aos_exec
+import aos_daemon_loop
+import aos_daemon_pools as pools
 import aos_home
+from aos_daemon_rpc import DaemonError
+from aos_directives import Context, DirectiveError, Document, parse_options, resolve_located
 
+Daemon = aos_daemon_loop.Daemon
+_signal_pid, _pid_exists, _log = pools.signal_pid, pools.pid_exists, pools.log
 
-class DaemonError(aos_home.HomeError):
-    def __init__(self, code, msg, rpc_code=-32000, position=None):
-        super().__init__(code, msg)
-        self.rpc_code, self.position = rpc_code, position
+INFO_DEFAULTS = {"poll_ms": 20, "restart_delay_ms": 1000, "restart_max_ms": 60000, "stable_ms": 10000,
+                 "spawn_per_sec": 50, "max_children": 20000, "stop_wait_ms": 5000, "kill_wait_ms": 5000}
+POSITIVE = ("poll_ms", "spawn_per_sec", "max_children")
 
 
 def daemon_home(value=None):
@@ -48,30 +53,113 @@ def is_alive(home):
 
 
 def read_state(home):
-    return aos_home.read_state(home, {"pid": 0, "stopping": False, "current": None, "children": {}})
+    """state.json 只剩 pid／stopping／current；舊版的 children 讀得到就照給（啟動時會殺掉、拿掉）。"""
+    state = aos_home.read_state(home, {"pid": 0, "stopping": False, "current": None})
+    state.setdefault("children", {})
+    return state
 
 
-def _signal_pid(pid, sig, group=False):
+def _peek(path):
     try:
-        (os.killpg if group else os.kill)(pid, sig)
-    except ProcessLookupError:
-        pass
+        value = aos_home.read_json(path)
+    except aos_home.HomeError:
+        return None
+    return value if isinstance(value, dict) else None
 
 
-def _pid_exists(pid):
+def pool_summary(home, dpool):
+    """給 kernel：讀 D/pools/<dpool>/summary.json；不在或壞了回 None（不在＝池已完全拿掉）。"""
+    if not pools.valid_pool_name(dpool):
+        return None
+    return _peek(pools.pool_dir(home, dpool) / "summary.json")
+
+
+def pool_summary_state(home, dpool):
+    """給交接用（review P6）：回 (狀態, 摘要)。
+    ("gone", None)＝summary.json 確定不存在（FileNotFoundError／NotADirectoryError，池資料夾不在也算；
+    名字本身不合法的池 daemon 永遠不會建，也算 gone）；("ok", dict)＝讀到物件；
+    ("unknown", None)＝檔在但讀不到、壞 JSON、不是物件、其他 OSError——呼叫端要等或報錯，不能放行。"""
+    if not pools.valid_pool_name(dpool):
+        return "gone", None
+    path = pools.pool_dir(home, dpool) / "summary.json"
     try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
+        text = path.read_bytes()
+    except (FileNotFoundError, NotADirectoryError):
+        return "gone", None
+    except OSError:
+        return "unknown", None
+    try:
+        value = aos_home._loads(text.decode("utf-8"))
+    except (ValueError, UnicodeError):
+        return "unknown", None
+    return ("ok", value) if isinstance(value, dict) else ("unknown", None)
 
 
-def _previous_children(state, info):
-    """接手沒有 pipe 的上一任孩子：TERM、等兩段、KILL、等 pid 消失。"""
-    pids = {child["pid"] for child in state.get("children", {}).values()
-            if type(child.get("pid")) is int and child["pid"] > 0}
+def pool_kid(home, dpool, i):
+    """給 kernel：讀 D/pools/<dpool>/kids/<i>.json；不在（還沒拉過）或壞了回 None。"""
+    if not pools.valid_pool_name(dpool):
+        return None
+    try:
+        i = int(i)
+    except (TypeError, ValueError):
+        return None
+    return _peek(pools.kid_path(home, dpool, i)) if i >= 0 else None
+
+
+def load_info(home):
+    """daemon-home §1：第 2 版的新鍵；第 1 版照讀、缺的用預設。展開指示詞同 aos_home.load_info。"""
+    home = Path(home).absolute()
+    path = home / "info.json"
+    try:
+        obj = aos_home.read_json(path)
+    except aos_home.HomeError as exc:
+        raise aos_home.HomeError("NotAHome", exc.msg) from exc
+
+    def expand(value, ctx, position):
+        loc = resolve_located(value, ctx, position)
+        value = parse_options(loc.value, loc.position, {})[1]
+        if isinstance(value, dict):
+            return {k: expand(v, loc.ctx, loc.position + [k]) for k, v in value.items()}
+        if isinstance(value, list):
+            return [expand(v, loc.ctx, loc.position + [str(i)]) for i, v in enumerate(value)]
+        return value
+
+    try:
+        obj = expand(obj, Context(Document(str(path), obj), base_dir=str(home)), [])
+    except DirectiveError as exc:
+        raise aos_home.HomeError(exc.code, exc.msg) from exc
+    mi = obj.get("_metainfo") if isinstance(obj, dict) else None
+    if (not isinstance(mi, dict) or mi.get("_type") != "daemon" or
+            type(mi.get("_version")) is not int or mi["_version"] not in (1, 2)):
+        raise aos_home.HomeError("NotAHome", "info 的身分必須是 daemon 第 1 或第 2 版")
+    if "restart_max_ms" not in obj and type(obj.get("restart_delay_ms")) is int:
+        obj["restart_max_ms"] = max(INFO_DEFAULTS["restart_max_ms"], obj["restart_delay_ms"])  # D-51
+    for key, default in INFO_DEFAULTS.items():
+        value = obj.setdefault(key, default)
+        minimum = 1 if key in POSITIVE else 0
+        if type(value) is not int or value < minimum:
+            raise DaemonError("FieldTypeMismatch", "%s 必須是%s整數" % (key, "正" if minimum else "非負"))
+    if obj["restart_max_ms"] < obj["restart_delay_ms"]:
+        raise DaemonError("FieldTypeMismatch", "restart_max_ms 必須 ≥ restart_delay_ms")
+    return obj
+
+
+def fd_budget(info):
+    """daemon-reconcile §5：軟上限調到硬上限；預算＝min(max_children, 開檔數 − 64)。"""
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft != hard:
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
+        except (ValueError, OSError):
+            pass
+        soft = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+    if soft == resource.RLIM_INFINITY:
+        return info["max_children"]
+    return max(0, min(info["max_children"], soft - 64))
+
+
+def _previous_children(pids, info):
+    """接手沒有 pipe 的上一任孩子（proto5 §6.1 第 3 步）：整批 TERM、等兩段、整批 KILL 整組、等 pid 消失。"""
     pids = {pid for pid in pids if _pid_exists(pid)}
     for pid in pids:
         _signal_pid(pid, signal.SIGTERM)
@@ -87,257 +175,36 @@ def _previous_children(state, info):
             time.sleep(info["poll_ms"] / 1000)
 
 
-class Daemon:
-    """一個活著的主人；執行中期限只放記憶體，state 只放持久身分。"""
-
-    def __init__(self, home, info, state=None):
-        self.home, self.info = Path(home), info
-        self.state = state if state is not None else {
-            "pid": os.getpid(), "stopping": False, "current": None, "children": {}}
-        self.procs = {}
-        self.stages = {}                     # name -> (stop / term / kill, deadline)
-        self.restarts = {}
-        self.pending = {}                    # 非阻塞寫暫時塞住的控制行
-        self.stop_requested = False
-
-    @property
-    def children(self):
-        return self.state["children"]
-
-    def save(self):
-        aos_home.write_state(self.home, self.state)
-
-    def _params(self, params, spawning=False):
-        def bad(key, msg):
-            raise DaemonError("FieldTypeMismatch", msg, -32602, ["params", key])
-        if not isinstance(params, dict):
-            raise DaemonError("FieldTypeMismatch", "params 必須是物件", -32602, ["params"])
-        name = params.get("name")
-        if not isinstance(name, str) or name in ("", ".", "..") or "/" in name or "\0" in name:
-            bad("name", "name 必須是合法單一檔名")
-        if not spawning:
-            return name
-        target, dir_target, restart = params.get("target"), params.get("dir_target", ".aos/inst.json"), params.get("restart", False)
-        if not isinstance(target, str) or "\0" in target or not os.path.isabs(target):
-            bad("target", "target 必須是絕對路徑")
-        if not isinstance(dir_target, str) or "\0" in dir_target:
-            bad("dir_target", "dir_target 必須是字串")
-        if type(restart) is not bool:
-            bad("restart", "restart 必須是布林")
-        return name, target, dir_target, restart
-
-    def _term(self, name):
-        _signal_pid(self.children[name]["pid"], signal.SIGTERM)
-        self.stages[name] = ("term", time.monotonic() + self.info["kill_wait_ms"] / 1000)
-        self.pending.pop(name, None)
-
-    def _send(self, name, method):
-        data = (json.dumps({"jsonrpc": "2.0", "method": method}) + "\n").encode()
-        self.pending[name] = data
-        self._flush(name)
-
-    def _flush(self, name):
-        try:
-            os.write(self.procs[name].process.stdin.fileno(), self.pending[name])
-        except BlockingIOError:
-            return
-        except BrokenPipeError:
-            self._term(name)                 # EPIPE 不等於死亡，直接升一階
-        else:
-            self.pending.pop(name, None)
-
-    def _launch(self, name, target, dir_target, restart, previous=None):
-        try:
-            handle = aos_exec.spawn_target(target, dir_target=dir_target)
-        except aos_exec.SpawnError as exc:
-            if exc.code == "Usage":
-                raise DaemonError("Usage", exc.msg, -32602, ["params", "target"]) from exc
-            raise DaemonError("SpawnFailed", exc.msg) from exc
-        self.procs[name] = handle            # save 失敗時 finally 也能關 pipe，孩子不會收到 go
-        self.children[name] = {"target": target, "dir_target": dir_target, "restart": restart,
-            "pid": handle.process.pid, "alive": True, "state": "running",
-            "exits": previous["exits"] if previous else 0,
-            "last_exit": previous["last_exit"] if previous else None, "since": time.time()}
-        self.restarts.pop(name, None)
-        self.save()                         # fork → 寫孩子表 → go
-        self._send(name, "go")
-        return {"pid": handle.process.pid}
-
-    def spawn(self, params):
-        name, target, dir_target, restart = self._params(params, True)
-        if self.state["stopping"]:
-            raise DaemonError("Stopping", "daemon 正在停機")
-        child = self.children.get(name)
-        if child is not None:
-            if (child["target"], child["dir_target"]) != (target, dir_target):
-                raise DaemonError("NameTaken", "名字已由另一個目標使用：%s" % name)
-            if child["state"] == "killing":
-                raise DaemonError("Killing", "孩子正在停止：%s" % name)
-            if child["state"] == "running":
-                if child["restart"] != restart:
-                    child["restart"] = restart
-                    self.save()
-                return {"pid": child["pid"]}
-        return self._launch(name, target, dir_target, restart, child)
-
-    def _start_stop(self, name):
-        self.children[name]["state"] = "killing"
-        self.save()
-        self.stages[name] = ("stop", time.monotonic() + self.info["stop_wait_ms"] / 1000)
-        self._send(name, "stop")
-
-    def kill(self, params):
-        name = self._params(params)
-        child = self.children.get(name)
-        if child is None:
-            raise DaemonError("NotFound", "沒有這個孩子：%s" % name)
-        result = {"pid": child["pid"]}
-        if child["state"] == "dead":
-            del self.children[name]
-            self.restarts.pop(name, None)
-            self.save()
-        elif child["state"] == "running":
-            self._start_stop(name)
-        return result
-
-    def request_stop(self):
-        if self.state["stopping"]:
-            return
-        self.state["stopping"] = True
-        self.save()
-        for name in list(self.children):
-            self.kill({"name": name})
-
-    def process_request(self, name):
-        path = self.home / "requests" / name
-        env = aos_home.read_request(path)
-        self.state["current"] = {"name": name, "id": env.id, "notify": env.notify}
-        self.save()
-        response = env.error
-        if response is None:
-            try:
-                if env.method == "spawn":
-                    result = self.spawn(env.params)
-                elif env.method == "kill":
-                    result = self.kill(env.params)
-                else:
-                    raise DaemonError("MethodNotFound", "不認得 method：%s" % env.method, -32601)
-                response = aos_home.result_response(env.id, result)
-            except DaemonError as exc:
-                data = None if exc.rpc_code == -32601 else {"code": exc.code}
-                if exc.position is not None:
-                    data["position"] = exc.position
-                response = aos_home.error_response(env.id, exc.rpc_code, exc.msg, data)
-        if not env.notify:
-            aos_home.write_json(self.home / "responses" / name, response)
-        path.unlink()
-        self.state["current"] = None
-        self.save()
-
-    def reap(self):
-        for name, handle in list(self.procs.items()):
-            raw_code = handle.process.poll()
-            if raw_code is None:
+def _scan_pools(home):
+    """讀每池的 pool.json（壞了整個不開，D-55）與每個 kids 檔；回（宣告們, 舊 kids, 舊孩子的 pid）。"""
+    decls, kids, pids = [], [], set()
+    for path in sorted(pools.pools_dir(home).iterdir()):
+        if not path.is_dir():
+            continue
+        if (path / "pool.json").exists():
+            decls.append(pools.read_pool_json(path / "pool.json"))
+        kid_dir = path / "kids"
+        if not kid_dir.is_dir():
+            continue
+        for leaf in sorted(kid_dir.iterdir()):
+            stem = leaf.name[:-5] if leaf.name.endswith(".json") else None
+            if stem is None or not pools.NAME_RE.fullmatch(stem):
                 continue
-            code = raw_code if raw_code >= 0 else 128 - raw_code
-            diagnostic = io.StringIO()
-            with contextlib.redirect_stderr(diagnostic):
-                _, kind = handle.finish(code)
-            if kind == "aos":
-                _log("WriteFailed", "孩子 %s 的 exit 檔收尾失敗（退出碼 %d）：%s" %
-                     (name, code, diagnostic.getvalue().strip()))
-            child = self.children[name]
-            child.update(alive=False, exits=child["exits"] + 1, last_exit=code)
-            self._close(name)
-            if child["restart"] and code != 0 and child["state"] == "running" and not self.state["stopping"]:
-                child["state"] = "dead"
-                self.restarts[name] = time.monotonic() + self.info["restart_delay_ms"] / 1000
-            else:
-                del self.children[name]
-            self.save()
-
-    def restart_due(self):
-        if self.stop_requested:
-            self.request_stop()
-        for name, deadline in list(self.restarts.items()):
-            if self.stop_requested and not self.state["stopping"]:
-                self.request_stop()
-            if name not in self.children:
-                continue
-            if self.state["stopping"]:
-                self.children.pop(name, None)
-                self.restarts.pop(name, None)
-                self.save()
-            elif time.monotonic() >= deadline:
-                child = self.children[name]
-                try:
-                    self._launch(name, child["target"], child["dir_target"], child["restart"], child)
-                except DaemonError as exc:
-                    _log(exc.code, exc.msg)
-                    self.restarts[name] = time.monotonic() + self.info["restart_delay_ms"] / 1000
-
-    def advance_stops(self):
-        for name, (stage, deadline) in list(self.stages.items()):
-            if self.procs[name].process.poll() is not None or time.monotonic() < deadline:
-                continue
-            if stage == "stop":
-                self._term(name)
-            elif stage == "term":
-                _signal_pid(self.children[name]["pid"], signal.SIGKILL, group=True)
-                self.stages[name] = ("kill", float("inf"))
-
-    def drain(self):
-        for name, handle in list(self.procs.items()):
-            if name in self.pending:
-                self._flush(name)
-            # 每圈限制讀量，會不停吐 stdout 的孩子也不能餓死其他孩子。
-            for _ in range(16):
-                try:
-                    if not os.read(handle.process.stdout.fileno(), 65536):
-                        break
-                except BlockingIOError:
-                    break
-
-    def _close(self, name):
-        handle = self.procs.pop(name)
-        handle.process.stdin.close()
-        handle.process.stdout.close()
-        self.stages.pop(name, None)
-        self.pending.pop(name, None)
-
-    def close(self):
-        for name in list(self.procs):
-            self._close(name)
-
-    def step(self):
-        if self.stop_requested:
-            self.request_stop()
-        aos_home.scan_controls(self.home, self.request_stop)
-        for name in aos_home.list_requests(self.home):
-            if self.stop_requested:
-                self.request_stop()
-            self.process_request(name)
-        self.drain()
-        self.reap()
-        self.restart_due()
-        self.advance_stops()
-        return self.state["stopping"] and not self.children
-
-
-def _log(code, msg):
-    sys.stderr.write("aos-daemon: %s: %s\n" % (code, str(msg).replace("\n", " ")))
+            record = _peek(leaf)
+            kids.append((path.name, int(stem), leaf, record))
+            if (record is not None and record.get("state") in ("running", "killing") and
+                    type(record.get("pid")) is int and record["pid"] > 0):
+                pids.add(record["pid"])
+    return decls, kids, pids
 
 
 def run(home):
     home = Path(home).absolute()
     home.mkdir(parents=True, exist_ok=True)
     if not (home / "info.json").exists():
-        aos_home.write_json(home / "info.json", {"_metainfo": {"_type": "daemon", "_version": 1},
-            "poll_ms": 20, "restart_delay_ms": 1000, "stop_wait_ms": 5000, "kill_wait_ms": 5000})
-    info = aos_home.load_info(home, "daemon")
-    for key, default in (("restart_delay_ms", 1000), ("stop_wait_ms", 5000), ("kill_wait_ms", 5000)):
-        if type(info.setdefault(key, default)) is not int or info[key] < 0:
-            raise DaemonError("FieldTypeMismatch", "%s 必須是非負整數" % key)
+        aos_home.write_json(home / "info.json", dict({"_metainfo": {"_type": "daemon", "_version": 2}},
+                                                     **INFO_DEFAULTS))
+    info = load_info(home)
     lock = os.open(home / ".daemon.lock", os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
     handlers = {}
     owner = None
@@ -347,18 +214,23 @@ def run(home):
         except BlockingIOError as exc:
             raise DaemonError("AlreadyRunning", "同家已有 daemon 在跑") from exc
         aos_home.ensure_queue(home)
+        pools.pools_dir(home).mkdir(exist_ok=True)
         old_state = read_state(home)
-        owner = Daemon(home, info)
+        decls, old_kids, pids = _scan_pools(home)
+        pids.update(child["pid"] for child in old_state["children"].values()      # 舊版 proto5 的家
+                    if isinstance(child, dict) and type(child.get("pid")) is int and child["pid"] > 0)
+        owner = Daemon(home, info, fd_budget(info))
         def on_signal(signum, frame):
             owner.stop_requested = True
         for sig in (signal.SIGTERM, signal.SIGINT):
             handlers[sig] = signal.signal(sig, on_signal)
         handlers[signal.SIGPIPE] = signal.signal(signal.SIGPIPE, signal.SIG_IGN)
-        _previous_children(old_state, info)
+        _previous_children(pids, info)
         aos_home.reconcile(home, old_state.get("current"))
-        owner.save()
+        owner.adopt(decls, old_kids)
+        owner.save()                                   # 舊孩子死透才公布新狀態（children 拿掉）
         while not owner.step():
-            time.sleep(info["poll_ms"] / 1000)
+            time.sleep(owner.sleep_s())
         owner.state["pid"] = 0
         owner.save()
         return 0
@@ -390,41 +262,11 @@ def stop(home, wait_ms=30000):
     return 0
 
 
-TARGET_HELP = "daemon 家（省略＝AOS_DAEMON_HOME，再沒有就目前資料夾）"
-
-
 def main(argv=None):
-    args = list(sys.argv[1:] if argv is None else argv)
-    parser = argparse.ArgumentParser(prog="aos-daemon", description="daemon：boot 跑起來（前景程式）、halt 送停機通知並等它退出")
-    commands = parser.add_subparsers(dest="command", metavar="{boot,halt}")
-    booting = commands.add_parser("boot", help="跑 daemon（前景程式，自己放背景）",
-                                  description="跑 daemon（前景程式，自己放背景）")
-    booting.add_argument("--target", metavar="D", help=TARGET_HELP)
-    halting = commands.add_parser("halt", help="停止 daemon 並等待退出", description="停止 daemon 並等待退出")
-    halting.add_argument("--target", metavar="D", help=TARGET_HELP)
-    halting.add_argument("--wait-ms", type=int, default=30000, metavar="N",
-                         help="等退出的上限，非負毫秒（預設 30000）")
-    try:
-        options = parser.parse_args(args)
-        if options.command is None:
-            parser.print_usage(sys.stderr)
-            parser.exit(2, "aos-daemon: error: 要給子命令：aos-daemon boot [--target D]／aos-daemon halt [--target D]\n")
-        if options.target == "":
-            parser.error("--target 不可為空")
-        if options.command == "halt" and options.wait_ms < 0:
-            halting.error("--wait-ms 必須是非負整數")
-    except SystemExit as exc:
-        return exc.code
-    home, source = aos_home.resolve_target(options.target, "AOS_DAEMON_HOME")
-    note = aos_home.target_note("D", home, source, "AOS_DAEMON_HOME")
-    try:
-        return stop(str(home), options.wait_ms) if options.command == "halt" else run(str(home))
-    except aos_home.HomeError as exc:
-        _log(exc.code, exc.msg + note)
-    except (OSError, ValueError, TypeError) as exc:
-        _log("IOFailed", str(exc) + note)
-    return 1
+    import aos_daemon_cli
+    return aos_daemon_cli.main(argv)
 
 
 if __name__ == "__main__":
+    import sys
     sys.exit(main())
