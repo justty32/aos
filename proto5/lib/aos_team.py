@@ -17,7 +17,7 @@ import aos_agent
 import aos_agent_init
 from aos_agent_home import AgentError
 from aos_team_format import (HUMAN, TERMINAL, Layout, TeamError, json_files, load_roster, project_dir,
-                             read_json, short_time, validate_roster, write_json)
+                             read_json, short_time, template_dir, validate_roster, write_json)
 
 HOOKS = ('aos_team_post', 'aos_team_beat')   # 第 2 隊：有 start(team)／stop(team) 就叫
 
@@ -72,6 +72,14 @@ def cmd_init(team_dir, argv):
     if _inside(lay.root, project) or _inside(project, lay.root):
         raise TeamError('BadProject', '團隊資料夾 %s 跟專案 %s 不能一個包著另一個（工人把專案掛成可寫，會蓋到成員的家）'
                         % (lay.root, project))
+    pending = sorted(lay.members.glob('.removing-*.json')) if lay.members.is_dir() else []
+    if pending:
+        raise TeamError('Pending', '上次 aos-team rm 沒做完（%s）；先再跑一次 aos-team rm %s'
+                        % (pending[0], pending[0].name[len('.removing-'):-5]))
+    for name, m in roster['members'].items():
+        if '/' in m['template'] and _inside(template_dir(m['template']), project):
+            raise TeamError('BadTemplate', '%s 的模板 %s 在專案裡面（工人改得到它的 may 與人格）；搬到專案外'
+                            % (name, m['template']))
     for d in lay.skeleton(roster['members']):
         d.mkdir(parents=True, exist_ok=True)
     failed = 0
@@ -203,8 +211,11 @@ def cmd_rm(team_dir, argv):
     ap.add_argument('name')
     args = ap.parse_args(argv)
     lay = Layout(team_dir)
-    roster = load_roster(lay.root)
     name = args.name
+    intent = lay.members / ('.removing-%s.json' % name)
+    if intent.exists():                                   # 上次搬了家、還沒改名冊就崩了：照紀錄做完
+        return _finish_rm(lay, name, read_json(intent), intent)
+    roster = load_roster(lay.root)
     if name not in roster['members']:
         raise TeamError('NotFound', '%s 不在名冊裡（有：%s）' % (name, '、'.join(roster['members'])))
     if len(roster['members']) == 1:
@@ -216,18 +227,27 @@ def cmd_rm(team_dir, argv):
         if not aos_agent_status.unregistered(k):
             raise TeamError('StillRunning', '%s 還登記在 kernel（%s）；先 aos-agent stop --target %s 或 aos-team stop'
                             % (name, k['home'], home))
-    raw = read_json(lay.roster)
-    del raw['members'][name]
-    for other in raw['members'].values():
-        if isinstance(other.get('mail_to'), list) and name in other['mail_to']:
-            other['mail_to'] = [x for x in other['mail_to'] if x != name]
-    validate_roster(raw, str(lay.roster))
-    if home.exists():
-        dest = lay.members / '.removed' / ('%s-%d' % (name, time.time_ns()))
+    dest = lay.members / '.removed' / ('%s-%d' % (name, time.time_ns()))
+    plan = {'name': name, 'dest': str(dest)}
+    write_json(intent, plan)                              # 先記下要做什麼，崩了 rm／init 都看得到
+    return _finish_rm(lay, name, plan, intent)
+
+
+def _finish_rm(lay, name, plan, intent):
+    home, dest = lay.member(name), Path(plan['dest'])
+    if home.exists() and not dest.exists():
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(home), str(dest))
         print('%s 的家搬到 %s' % (name, dest))
-    write_json(lay.roster, raw, indent=2)
+    raw = read_json(lay.roster)
+    if name in raw.get('members', {}):
+        del raw['members'][name]
+        for other in raw['members'].values():
+            if isinstance(other.get('mail_to'), list) and name in other['mail_to']:
+                other['mail_to'] = [x for x in other['mail_to'] if x != name]
+        validate_roster(raw, str(lay.roster))
+        write_json(lay.roster, raw, indent=2)
+    intent.unlink(missing_ok=True)
     print('team.json 拿掉了 %s（也從別人的 mail_to 拿掉）；已裝的工具設定要更新就重跑 aos-team init' % name)
     import aos_team_task
     left = [t['id'] for t in aos_team_task.all_tickets(lay) if t['assignee'] == name and t['status'] not in TERMINAL]

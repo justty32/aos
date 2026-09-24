@@ -38,16 +38,18 @@ queued（等郵差投）→ sent（投進負責人 input/）→ working（信被
 
 | 事件 | 誰觸發 | 條件 → 結果 |
 |---|---|---|
-| `delivered` | 郵差把給負責人的信投進 input（`letter_delivered`） | queued → sent |
-| `picked_up` | 那封信從 input 消失（`letter_picked_up`） | sent → working |
+| `delivered` | 郵差把**派工信**投進負責人 input（`letter_delivered(lay, 信, dispatch)`） | queued → sent；dispatch 的 rev、attempt 要等於目前的 |
+| `picked_up` | 那封派工信從 input 消失（`letter_picked_up`） | sent → working；同上 |
 | `report` | 負責人寄的、`reply_to`＝單號的信（`on_letter`） | **只有 `by`＝負責人、`rev`＝目前 rev 才算**，不然記 `ignored:report`、不改。DONE：有機械條目 → verifying＋`verify`；只有 judge → reviewing＋`open_review`；都沒有 → done。BLOCKED → blocked；NEEDS-USER → waiting_user；FAILED → failed（通知開單人與人）；PROGRESS／REQUEST 只記下。審查子單回 DONE 信只記下（要用 `review_result`） |
-| `resume` | 人或開單人寄給負責人的 REQUEST（`on_letter`）；人回答了跟這張單有關的問題 | blocked／waiting_user → working（那封信跟事件同時投出；回答信的 reply_to 是 q-，不會再有 picked_up，所以直接算 working） |
+| `resume` | 人或開單人寄給負責人的 REQUEST（`on_letter`）；人回答了跟這張單有關的問題 | blocked／waiting_user → working（那封信跟事件同時投出；回答信的 reply_to 是 q-，不會再有 picked_up，所以直接算 working）。回答帶 `q`、`rev`：單子要正在等**這一題**（`waiting_on`＝q-id）、rev 相同才恢復 |
 | `needs_user` | 負責人 `ask_human` 帶 `reply_to`＝單號 | sent／working／blocked → waiting_user |
-| `verified` | 驗收員結果（第 2 隊）：`{pass, results, rev, attempt}` | verifying 且 rev、attempt 對上：過 → reviewing（有 judge）或 done；不過 → 見下 |
+| `verified` | 驗收員結果（第 2 隊）：`{pass, results, rev, attempt}` | verifying 且 rev、attempt 對上：過 → reviewing（有 judge）或 done；不過 → 見下。`verified`／`reviewed`／`delivered`／`picked_up` **一定要帶整數 rev、attempt**，缺＝`BadEvent`（不當萬用） |
 | `reviewed` | 審查子單交回（`on_review_result` 回的 `step` 動作） | reviewing 且 rev、attempt 對上：全 PASS → done；有 FAIL → 見下 |
 | `cancel`／`reassign` | 人或開單人的申請 | 見 mail.md |
 | `no_reviewer` | `open_review` 找不到 reviewer | → blocked，等人 |
-| `expire` | 郵差看到過了 `deadline`（`check_deadlines`） | → failed，通知 |
+| `stale_review` | `open_review` 的動作過期了（父單已經改派、取消、不是那一次的 reviewing） | 只記 `ignored:stale_review`，不開子單 |
+| `review_failed` | 審查子單變 failed／cancelled（子單自己回的 `step` 動作） | 父單那一次的 reviewing → blocked，等人（改派重審或取消） |
+| `expire` | 過了 `deadline`：郵差用 `due_deadlines(lay)` 拿到 `(單號, 事件)`，**先記進自己的紀錄再 `step`** | → failed，通知；同一個事件重播回同一份通知（單子已 failed 也一樣） |
 
 **驗收或審查不過**：`attempt < max_attempts`＝attempt+1、回 queued、寄「REQUEST 修正 t-0001（第 n/3 次）＋逐條結果」給負責人；用完＝failed、寄 FAILED 給開單人與人。
 （workflows 的 FAILED＝終止，所以沒過不用 FAILED。）
@@ -56,14 +58,14 @@ queued（等郵差投）→ sent（投進負責人 input/）→ working（信被
 
 | 動作 | 郵差要做的 |
 |---|---|
-| `{"do": "letter", "to", "status", "reply_to", "rev", "text", "from"?}` | 寄一封信（`from` 沒寫＝`post`）；給負責人的那封投到了要叫 `letter_delivered` |
+| `{"do": "letter", "to", "status", "reply_to", "rev", "text", "from"?, "dispatch"?}` | 寄一封信（`from` 沒寫＝`post`）；有 `dispatch`（`{task, rev, attempt}`）＝派工信，投到與被收走時把它原樣交給 `letter_delivered`／`letter_picked_up` |
 | `{"do": "verify", "task", "rev", "attempt"}` | 提交一次性驗收工作（不在郵差裡同步跑）；結果回來用 `verified` 事件 |
-| `{"do": "open_review", "task", "rev", "attempt"}` | 叫 `open_review(lay, 名冊, 單號, src)`（src 用這個動作自己的 id），它會開子單並回派送動作 |
+| `{"do": "open_review", "task", "rev", "attempt"}` | 叫 `open_review(lay, 名冊, 單號, src, rev, attempt)`（src 用這個動作自己的固定 id），它會開子單並回派送動作；過期了回空 |
 | `{"do": "step", "task", "event"}` | 叫 `step(lay, task, event)`，再做它回的動作 |
 
 ## 冪等
 
-每個事件帶 `src`（觸發它的信、申請或工作的 id；`delivered`／`picked_up` 用 `delivered:<信 id>` 這種）。
+每個事件帶 `src`（觸發它的信、申請或工作的 id；`delivered`／`picked_up` 用 `delivered:<信 id>` 這種；逾期是 `expire:<單號>:<rev>:<期限>`）。
 `history` 裡已經有同一個 `src`＝**不改單子、回當初那份後續動作**。開單、開審查子單、問問題也一樣（看 `request`／`review_of`）。
 所以郵差可以「先叫處理函式 → 把回的動作記進投遞紀錄 → 逐件做」，崩在任何一步，重跑同一步結果一樣。
 

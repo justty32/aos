@@ -431,6 +431,8 @@ REQUEST_COMMON = ('id', 'from', 'kind', 'at')
 def validate_request(obj, where='request'):
     _obj(obj, where)
     kind = obj.get('kind')
+    if not isinstance(kind, str):
+        bad(where + '.kind', '要是字串', 'UnknownKind')
     if kind not in REQUEST_KINDS:
         from aos_team_requests import KINDS   # 別隊登記的 kind 也認
         if kind not in KINDS:
@@ -508,6 +510,37 @@ def mail_message(letter, tz=None):
 
 def mail_filename(letter_id):
     return 'mail-%s.json' % letter_id
+
+
+def already_delivered(member_home, filename):
+    """投之前查「這封是不是其實已經投過」（spec/team/mail.md〈去重〉）：回 None（沒投過）或說明在哪。
+
+    三處都算投過：還在 input/<檔名>；已被收走、封存在 input/done/<檔名>.<消費 id>.done；
+    收件人正在收（state.json 的 intake.files 或 consuming 的 src 是它）。
+    """
+    inbox = Path(member_home) / 'input'
+    if (inbox / filename).exists():
+        return 'input'
+    done = inbox / 'done'
+    try:
+        if any(p.name.startswith(filename + '.') and p.name.endswith('.done') for p in done.iterdir()):
+            return 'done'
+    except FileNotFoundError:
+        pass
+    try:
+        st = json.loads((Path(member_home) / 'state.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        st = {}
+    pairs = []
+    if isinstance(st, dict):
+        if isinstance(st.get('intake'), dict) and isinstance(st['intake'].get('files'), list):
+            pairs += st['intake']['files']
+        if isinstance(st.get('consuming'), list):
+            pairs += st['consuming']
+    for pair in pairs:
+        if isinstance(pair, dict) and isinstance(pair.get('src'), str) and os.path.basename(pair['src']) == filename:
+            return 'intake'
+    return None
 
 
 # -------------------------------------------------------------- 任務與問題 ----

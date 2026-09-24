@@ -5,7 +5,7 @@
 """
 import copy
 
-from aos_team_format import (HUMAN, QUESTION_TYPE, TASK_ID, TeamError, json_files, next_number, now_iso,
+from aos_team_format import (HUMAN, QUESTION_TYPE, TASK_ID, TERMINAL, TeamError, json_files, next_number, now_iso,
                              read_json, validate_question, write_json)
 
 
@@ -40,12 +40,18 @@ def on_ask(lay, roster, req):
     qid = next_number(lay.wait_user, 'q-')
     effects = []
     reply = req.get('reply_to')
+    task_rev = None
     if isinstance(reply, str) and TASK_ID.match(reply) and lay.task(reply).exists():
-        effects.append({'do': 'step', 'task': reply,
-                        'event': {'type': 'needs_user', 'src': req['id'], 'by': req['from'], 'q': qid, 'at': now}})
+        import aos_team_task
+        t = aos_team_task.load(lay, reply)
+        if t['assignee'] == req['from'] and t['status'] not in TERMINAL:   # 只有負責人問、單還沒結束才綁到單上
+            task_rev = t['rev']
+            effects.append({'do': 'step', 'task': reply,
+                            'event': {'type': 'needs_user', 'src': req['id'], 'by': req['from'], 'q': qid,
+                                      'rev': task_rev, 'at': now}})
     q = {'_metainfo': {'_type': QUESTION_TYPE, '_version': 1}, 'id': qid, 'request': req['id'],
          'from': req['from'], 'question': req['question'], 'options': req.get('options'),
-         'default': req.get('default'), 'reply_to': reply, 'asked_at': now, 'status': 'open',
+         'default': req.get('default'), 'reply_to': reply, 'task_rev': task_rev, 'asked_at': now, 'status': 'open',
          'answer': None, 'answered_at': None, 'answer_request': None, 'effects': effects}
     write_json(lay.question(qid), q, indent=2)
     return copy.deepcopy(effects)
@@ -68,10 +74,11 @@ def on_answer(lay, roster, req):
     effects = [{'do': 'letter', 'from': HUMAN, 'to': q['from'], 'status': 'DONE', 'reply_to': q['id'], 'rev': None,
                 'text': '問：%s\n答：%s' % (q['question'], text)}]
     reply = q.get('reply_to')
-    if isinstance(reply, str) and TASK_ID.match(reply) and lay.task(reply).exists():
+    if q.get('task_rev') is not None and isinstance(reply, str) and lay.task(reply).exists():
+        # 只恢復「還在等這一題、還是同一個 rev」的單（狀態機再核一次 waiting_on 與 rev）
         effects.append({'do': 'step', 'task': reply,
-                        'event': {'type': 'resume', 'src': req['id'], 'by': HUMAN, 'at': now,
-                                  'note': '%s 已回答' % q['id']}})
+                        'event': {'type': 'resume', 'src': req['id'], 'by': HUMAN, 'at': now, 'q': q['id'],
+                                  'rev': q['task_rev'], 'note': '%s 已回答' % q['id']}})
     q.update(status='answered', answer=text, answered_at=now, answer_request=req['id'],
              answer_effects=copy.deepcopy(effects))
     write_json(lay.question(q['id']), q, indent=2)
