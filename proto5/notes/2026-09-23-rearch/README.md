@@ -21,6 +21,7 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | agent-round3-changes.md | 2026-09-24 agent 線第 3 輪（Opus）：必改 5 條全落（每次消費一個身分 `<原名>.<消費 id>.done`、`continue-<批 id>.json`、clear 一律寫、llm loader 只解六欄、`start` 驗 K 的 done_exit／KernelIncompatible、system／history 限單檔）＋實作者還得猜的 8 處寫死（ToolInvalid／ConfigInvalid／UnsupportedVersion、正規化順序、KernelMismatch、`aa-` 前綴…）；round2 表 C-6／C-8 改「沒通」 |
 | review-agent3-task.md／review-agent3-report.md | 2026-09-24 astra 審 agent 線第 3 輪：E 5 條 4 解 1 部分、D／B／C 全解、四個消費時序都通；aos-llm-call.md 可定稿，agent.md／aos-agent.md 還差 3 條（被 state 引用的封存檔不可清、start 只解驗相容欄位、「讀驗錯什麼都不寫」限起始讀驗） |
 | agent-round4-changes.md | 2026-09-24 agent 線第 4 輪（Opus）：最後 3 條落（被 state 引用的封存檔不可清、start 只就地解驗 done_exit／bad_after、「什麼都不寫」限起始讀驗）；三份標頭改「第 2 版，2026-09-24 定稿；程式未跟」 |
+| review-agent4-task.md／review-agent4-report.md | 2026-09-24 astra 快驗第 4 輪：3 條全解、無新矛盾；結論「三份整組可當照它實作的定稿」（前提：單一驅動者、被 state 引用的封存檔不清） |
 | impl-fix-round1.md | 2026-09-24 T5 修正第 1 輪：daemon 缺檔 SpawnFailed、控制 pipe 驗信封、cpu 家半成品恢復；新 CLI `aos-daemon stop`、`aos-kernel ack`／`init --cpu`／`ls` 摘要／`-h`、kernel.log 空格不寫；補 C-1／4／5／6 測試、修 D-1～7 flaky（917 條）；三份規範補句＋檔尾〈實作補記〉；跳過 C-2／3／7／8；要使用者拍 3 條 |
 
 舊規範已於 2026-09-24 換掉（副本在 proto5.1/spec/）。
