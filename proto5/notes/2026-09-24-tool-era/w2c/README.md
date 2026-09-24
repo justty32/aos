@@ -14,7 +14,7 @@
 | D `_pool`（T-pool） | 工具檔加一欄 `_pool`：寫了就走那個池，沒寫照舊用 `tool_pool`。給「好幾個 agent 共用一支工具、一顆卡」用。照 [priority-and-shared-cpu 提案](../../2026-09-24-priority-and-shared-cpu/README.md)，kernel 派工、daemon 沒動 | `aos_agent_home.py`（驗）、`aos_agent_batch.py`（選池）、`aos_kernel_check.py`（查池）、[spec/agent/info.md §3.3](../../../spec/agent/info.md)、[spec/aos-agent/send.md §5.2](../../../spec/aos-agent/send.md) |
 | E `routine_propose` | T2 的 `on_routine` 郵差端本來就支援「成員提的例行開一題問人」，就是缺模型能叫的工具，補上 | `tools/task/routine_propose`、[spec/team/beat.md〈模型端〉](../../../spec/team/beat.md) |
 | F 審查子單編號 | 審查子單的條目對外一律用**父單的原編號**（`review_of.indices`），不是子單裡 0 起算的位置——`render_review` 給審查員看的文字、`board show`、`review_result` 交回的 `i` 三處以前不一致，t5 試玩兩輪都踩到 | `lib/aos_team_task.py`、`tools/task/board`、`tools/task/review_result`、[spec/team/tasks.md](../../../spec/team/tasks.md) |
-| G 自動補 `wf_lint_strict` | `handoff` 送件前，若 `goal／facts／workflow` 合起來同時有 `.md` 與一個改寫用詞（白話、改寫、更好懂、更易讀、講白話），且 `done_when` 還沒放 `wf_lint_strict` 就機械補一條。**代裁**：見 §4 | `tools/task/handoff`、[tools/task/README.md](../../../tools/task/README.md) 最後一段 |
+| G 自動補 `wf_lint_strict` | `handoff` 送件前，若 `goal`（astra 審查 S1 後改成只看這一欄）同時有 `.md` 與一個改寫用詞（白話、改寫、更好懂、更易讀、講白話）、沒有否定詞，且 `done_when` 還沒放 `wf_lint_strict` 就機械補一條。**代裁**：見 §4 | `tools/task/handoff`、[tools/task/README.md](../../../tools/task/README.md) 最後一段 |
 | 模板 | `lead`、`worker` 的 `may`、`tools.only`、`system.md` 各加新工具的用法一句話 | `templates/lead/`、`templates/worker/` |
 | H 真跑 | 見 §2 |  |
 | 審查 | astra 唯讀審一輪 | [任務書](review-task.md)／[回報](review-astra.md) |
