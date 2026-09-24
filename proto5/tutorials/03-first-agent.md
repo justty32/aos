@@ -12,7 +12,7 @@
 aos-agent init --target $W/bob
 ```
 
-你會看到 `initialized /home/you/aos-try/bob`，外加一行提醒：它的模型寫的是**代號** `default`，要在 `llm.json` 裡有（01 已經寫了）。
+你會看到三行：`initialized /home/you/aos-try/bob`；一行 `access.json` 的提醒（工具關在牢裡，只看得到 `/work/ws`＝`workspace`、不能上網）；再一行提醒它的模型寫的是**代號** `default`，要在 `llm.json` 裡有（01 已經寫了）。
 家裡長這樣：
 
 | 東西 | 是什麼 |
@@ -20,8 +20,9 @@ aos-agent init --target $W/bob
 | `info.json` | 設定：模型代號、工具在哪、多久走一格 |
 | `prompts/system.json` | 人格：`{"content": "你是繁體中文助理，回答簡短。…"}`，想改就改 |
 | `tools/date.json` | 一個現成的工具：查現在時間 |
+| `access.json` | 工具被關進的牢：一開始只准碰 `workspace/`、不能上網（[04b](04b-access-and-tool-admin.md)） |
 | `input/` | 別人對它說的話，一則一個檔（用 `say` 投就不用管格式） |
-| `state.json`、`log/` | 程式自己的進度與錯誤紀錄；出事看 `log/agent.err`、`log/llm.err` |
+| `state.json`、`log/`、`workspace/` | 程式自己的進度與錯誤紀錄（出事看 `log/agent.err`、`log/llm.err`）；`workspace/` 是工具唯一可寫的地方 |
 
 `--target` 省略＝目前資料夾，所以 `cd $W/bob` 之後下面的指令都能不寫 `--target`。
 

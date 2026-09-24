@@ -48,7 +48,9 @@ aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 | `prompts/system.json` | 一句人格（繁體中文助理，要時間就叫 `date`） |
 | `tools/date.json` | 一個 `date` 工具當範例（`_meta: {"argv": ["date", "+%Y-%m-%d %H:%M:%S"]}`） |
 | `state.json` | `{"input": "input"}`：輸入從 `input/` 資料夾收，`say` 每則取唯一檔名 |
-| `input/`、`log/` | 空資料夾 |
+| `access.json` | （09-24 access round2）有工具的家一定要有表，`init` 順手生一份預設：`{"mounts": {"ws": "workspace"}, "cwd": "ws", "net": false}`——連範例的 `date` 工具也關牢，只看得到 `workspace/` |
+| `input/`、`log/`、`workspace/` | 空資料夾 |
 
-每個檔 `.tmp` 再 rename，**`info.json` 最後寫**（中途崩了不會半套被當成 agent 家；（09-24 access-impl）`info.json` 縮排 2、不跳脫中文，方便手改）。成功印兩行：`initialized <dir 絕對路徑>`，
+每個檔 `.tmp` 再 rename，**`info.json` 最後寫**（中途崩了不會半套被當成 agent 家；（09-24 access-impl）`info.json` 縮排 2、不跳脫中文，方便手改）。成功印三行：`initialized <dir 絕對路徑>`、
+一行 access.json 的提醒（`access.json：工具關在牢裡，只看得到 /work/ws（＝workspace，可寫）、不能上網；改：aos-agent access ls／set`），
 和一行提醒：llm.json 不歸 agent 家，它在 kernel 的 llm cpu 用 `AOS_LLM_CONFIG` 指的位置，裡面要有 `default` 這個代號。退 0。

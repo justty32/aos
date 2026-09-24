@@ -144,8 +144,8 @@ aos-agent tools add base --target $W/bob --root ~/proj
 裝完不用重 `start`，下一格就生效。這時人格通常也要跟著換成 coding agent 那套（改 `$W/bob/prompts/system.json`），
 不然模型不知道自己有這些工具能用。每支工具的參數、錯誤格式、工作根目錄怎麼算見 [proto5/tools/README.md](../tools/README.md)。
 
-家裡第一次沒有 `access.json` 時，`tools add base` 會順手建一份、只准工具碰 workspace（印出 `寫了 …/access.json：工具會關在牢裡…`）；
-之後每個工具呼叫都被關進一個沙盒（bwrap），只看得到這份表准的資料夾。這份牢是什麼、怎麼開放更多資料夾、怎麼手改，下一篇 [04b](04b-access-and-tool-admin.md) 細講。
+bob 從 [03](03-first-agent.md) 的 `aos-agent init` 就已經有一份 `access.json`（只准碰 `workspace/`），所以 `tools add base` 這裡不會再重建一份；每個工具呼叫都被關進一個沙盒（bwrap），只看得到這份表准的資料夾。
+上面 `--root ~/proj` 那個例子只改了 `tools/base/config.json` 的 `root`，**不會自動讓牢裡看到 `~/proj`**——表的起點還是 `workspace`，所以會多印一行教你：`要讓工具在 ~/proj 工作：aos-agent access set ws ~/proj --target $W/bob`，照著跑一次才真的生效。這份牢是什麼、怎麼開放更多資料夾、怎麼手改，下一篇 [04b](04b-access-and-tool-admin.md) 細講。
 
 ## 底下在幹嘛
 

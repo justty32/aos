@@ -13,13 +13,14 @@ act 批在 §5.1 建批、寫 state 之前，照 [agent access.md](../agent/acce
 | 好 | `{"mounts": {名: {"path": 絕對路徑, "ro": bool}}, "cwd": 名或 null, "net": bool}` |
 
 - 同批每一件、崩了重送（§5.2 重跑）都用這份，**不重解**。所以一批裡不會混到新舊兩份表。
-- think 批沒有這個鍵。舊版寫下的 state 沒有這個鍵＝當 `null`（不關牢）。
+- think 批沒有這個鍵。舊版寫下的 state 沒有這個鍵＝當 `null`（跟沒 access 檔一樣：要關牢的工具不送）。
 
 ## 2. 送件包牢（§5.3 的補充）
 
-對每一件要送的工具 call（inst 還不在時），先看這支要不要關牢：快照不是 `null`、而且工具沒寫 `_jail: false`。
+對每一件要送的工具 call（inst 還不在時），先看這支要不要關牢：工具沒寫 `_jail: false`（沒寫或明寫 `true`）就要關。
 
-- 要關，但快照是 `error`（代號取 `error` 冒號前那段）、aos-agent 自己的 PATH 找不到 `bwrap`（`NoBwrap`）、或 `_meta` 讀了敏感環境變數（`EnvUnsafe`，下面）→ 這件記 `done`、`acked: true`，不送、不寫 inst。
+- **要關、但快照是 `null`（家裡沒有 access.json）→ `NoAccess`**（09-24 裁決 4）：有工具的家一定要先設定它能碰哪些資料夾；沒設就當這支還沒準備好，這件記 `done`、`acked: true`，不送、不寫 inst；同時 tick 的 stderr（log）印一行提醒。`_jail: false` 的工具沒表照舊送、不包牢。
+- 要關、快照不是 `null`，但快照是 `error`（代號取 `error` 冒號前那段）、aos-agent 自己的 PATH 找不到 `bwrap`（`NoBwrap`）、或 `_meta` 讀了敏感環境變數（`EnvUnsafe`，下面）→ 這件也記 `done`、`acked: true`，不送、不寫 inst。
 - **這種 `done.content` 是寫給模型看的**，不放細節（路徑、欄位、變數名），免得模型以為要自己修；細節留給人在 `check`／`status` 看：
 
   ```
@@ -29,6 +30,16 @@ act 批在 §5.1 建批、寫 state 之前，照 [agent access.md](../agent/acce
 
   `<原因>`：`EnvUnsafe`＝`這支工具的設定有安全問題（會把金鑰類環境變數帶進牢裡）`；`NoBwrap`＝`這台機器沒有裝關牢要用的 bwrap`；其他（`AccessInvalid`、`AccessUnsafe`、`JsonSyntax`…）＝`這個 agent 的權限設定（access.json）有問題`。
   （`_meta` 本身解不過照舊是 `工具 <名> 跑不起來：<代號>: <白話>`，跟權限牆無關。）
+
+  `NoAccess` 不套這個模板，`done.content` 直接是：
+
+  ```
+  工具 <名> 沒有執行：這個 agent 還沒設定工具能碰哪些資料夾（沒有 access.json），被 aos 擋下（NoAccess）。
+  這不是你能修的，也不要改用別的工具繞過；請告訴使用者：「工具 <名> 沒有 access.json 不能跑，請先跑
+  mkdir -p <家>/workspace && aos-agent access set ws <家>/workspace --cwd --target <家>，再叫我一次」。
+  ```
+
+  同時 tick 的 stderr（log）印一行：`aos-agent: NoAccess: 工具 <名> 沒送：家裡沒有 access.json（有工具的家要先設定工具能碰哪些資料夾）；跑：mkdir -p … && aos-agent access set ws … --cwd --target …`。
 - 要關、都好 → `_meta` 照 §5.3 解完，外層 inst 改成：
 
 ```json
@@ -62,14 +73,14 @@ aos-agent access net on|off [--target DIR]
 
 改的是 `info.json` 的 `access` 欄指的檔（沒寫＝`<家>/access.json`）。
 
-- **`ls`**：一行一個 mount：名字、`ro`／`rw`、存在否、解好的路徑；再印 `cwd: /work/<名>`（沒設＝`/work`）、`net`、`bwrap: ok|沒有…`、`檔：<路徑>`。檔壞了多一行 `壞了：<代號>: <白話>`、退 1（路徑不在時表照印，那一列「不在」）。`info.json` 明寫的 access 檔不在＝`壞了：AccessInvalid: …檔不在`、退 1（不說「不關牢」）；這時除了 `set`（會在那個位置建檔）其他寫入指令都拒絕。沒 access 檔印「沒有 access.json：工具不關牢…」並教一行 `aos-agent access set ws workspace --cwd`、退 0。`--json` 印 `{"file", "exists", "mounts": {名: {"path", "ro", "exists"}}, "cwd", "net", "bwrap", "error"}`。
-- **`set NAME PATH`**：PATH 照**殼的目前資料夾**轉成絕對路徑寫進檔（`~` 會展開）；要是存在的資料夾，否則 `NotFound` 退 1。檔不在就新建（帶 `_metainfo`、`net: false`）。
+- **`ls`**：一行一個 mount：名字、`ro`／`rw`、存在否、解好的路徑；再印 `cwd: /work/<名>`（沒設＝`/work`）、`net`、`bwrap: ok|沒有…`、`檔：<路徑>`。檔壞了多一行 `壞了：<代號>: <白話>`、退 1（路徑不在時表照印，那一列「不在」）。`info.json` 明寫的 access 檔不在＝`壞了：AccessInvalid: …檔不在`、退 1（不說「不關牢」）；這時除了 `set`（會在那個位置建檔）其他寫入指令都拒絕。沒 access 檔印兩行：`沒有 access.json：要關牢的工具都不會送（NoAccess），只有 _jail: false 的那支照跑。`、`先建一份：aos-agent access set ws <家>/workspace --cwd（工作資料夾掛成 /work/ws、起點設在那；PATH 照你殼的目前資料夾算，指家裡的就寫絕對路徑）`，退 0。`--json` 印 `{"file", "exists", "mounts": {名: {"path", "ro", "exists"}}, "cwd", "net", "bwrap", "error"}`。
+- **`set NAME PATH`**：PATH 照**殼的目前資料夾**轉成絕對路徑寫進檔（`~` 會展開），不是照 `--target`；要指 agent 家裡的資料夾，就寫絕對路徑或 `~` 開頭，別靠殼剛好在哪個資料夾。要是存在的資料夾，否則 `NotFound` 退 1。檔不在就新建（帶 `_metainfo`、`net: false`）。
   - 已有的名字沒給 `--ro／--rw`＝保留原模式；原本可寫、新路徑又碰到信任資料＝`AccessUnsafe` 退 1、不寫。
   - 新名字預設可寫；碰到信任資料就自動唯讀並印一句「…所以設成唯讀（ro）」。
   - 明給 `--rw` 又碰到信任資料＝`AccessUnsafe` 退 1、不寫。
   - 原值是指示詞＝換成字面路徑並印一句；`--cwd`＝同時把起點設成它；寫法：可寫＝路徑字串、唯讀＝`{"$opt": "ro", "$val": 路徑}`。
 - **`rm NAME`**：拿掉；是目前的 `cwd` 就拒絕（`AccessInvalid` 退 1：先 `access cwd 別的`）。沒這個名字＝`NotFound` 退 1。
-- **`cwd NAME`**：起點改成它（要在 mounts 裡）。**`net on|off`**：改 `net`。
+- **`cwd NAME`**：起點改成它（要在 mounts 裡）。改完記得 `aos-agent say` 跟模型說一聲，不然它會以為自己弄壞了（不然要等下一句它自己撞到才知道）。**`net on|off`**：改 `net`。
 - 寫入指令共同：讀、驗、寫、印整段持著跟 `tools` 指令共用的鎖（`aos_agent_tools_edit.info_lock`，鎖一個不會被 rename 的專用鎖檔）；`.tmp`（檔名帶 pid＋時間，不互撞）＋rename；
   重疊判斷用**跟送件同一套信任集合**（含 access 檔自己 `$ref` 到的檔）；**落盤前把改好的候選內容整份再驗一次**：格式錯（例如 `rm` 之後 `cwd` 解出來的名字不在了）或多出新的「可寫又重疊」＝不寫、退 1（原本就重疊的那幾格不擋，好讓人一步步修）；`rm` 比的是**解好的** `cwd`；JSON 縮排 2、不跳脫中文；保留檔裡原有的其他格。
   access 檔 JSON 壞或格式錯＝拒絕、退 1、印哪裡壞、不蓋掉手寫的東西（只有「路徑不在」「重疊」的檔還能用指令修）。
@@ -78,5 +89,5 @@ aos-agent access net on|off [--target DIR]
 
 ## 4. check、status、錯誤代號
 
-[`check`](cli-check.md) 多查 access 檔、bwrap、aos-jail、每支關牢工具（`EnvUnsafe`＝bad，其餘 warn）；[`status`](cli-status.md) 在 access 檔壞了時多一行 `access bad：…`（`--json` 的 `access_error`）。
-代號：`AccessInvalid`、`AccessUnsafe`、`NoBwrap`、`EnvUnsafe`（[agent errors.md](../agent/errors.md)）；指令另有 `NotFound`、`Usage`。
+[`check`](cli-check.md) 多查 access 檔、bwrap、aos-jail、每支關牢工具（`EnvUnsafe`＝bad，其餘 warn；沒 access.json 而且有要關牢的工具也是 bad，見下）；[`status`](cli-status.md) 在 access 檔壞了時多一行 `access bad：…`（`--json` 的 `access_error`）。
+代號：`AccessInvalid`、`AccessUnsafe`、`NoBwrap`、`EnvUnsafe`、`NoAccess`（[agent errors.md](../agent/errors.md)）；指令另有 `NotFound`、`Usage`。
