@@ -4,7 +4,8 @@
 約定：
 - cwd＝agent 家（沒關牢時）；arguments 從 stdin 來（JSON 字串）。
 - 筆記檔＝環境變數 AOS_NOTES_FILE（有設就優先）；否則本資料夾 config.json 的 "file"
-  （絕對路徑照用、相對路徑相對 cwd）；都沒有＝notes/notes.json（相對 cwd）。
+  （絕對路徑照用、相對路徑相對 cwd）；都沒有：關牢（有 AOS_TOOL_ROOT）＝/work/notes/notes.json，
+  不關牢＝notes/notes.json（相對 cwd＝agent 家）。
 - 存檔格式是 wf-table/1（見 workflows/common/data-files.md）：
   {"contract": "wf-table/1", "source": "", "extracted": "YYYY-MM-DD",
    "columns": ["key", "text", "tags", "at"], "rows": [{"key", "text", "tags": "a,b", "at": ISO 時間}]}。
@@ -113,10 +114,22 @@ def _config_file():
     return value
 
 
+JAIL_NOTES = '/work/notes'
+
+
 def notes_path():
-    """算筆記檔絕對路徑：AOS_NOTES_FILE 優先，否則 config.json 的 file，否則預設。"""
-    value = os.environ.get('AOS_NOTES_FILE') or _config_file() or DEFAULT_FILE
-    return os.path.abspath(os.path.expanduser(value))
+    """算筆記檔絕對路徑：AOS_NOTES_FILE 優先，否則 config.json 的 file，否則預設。
+
+    預設：關在牢裡（有 AOS_TOOL_ROOT）＝/work/notes/notes.json（要掛一個叫 notes 的可寫資料夾），
+    不關牢＝cwd（agent 家）的 notes/notes.json。人用的 aos-agent notes 照同一條規則找（lib/aos_agent_notes.py）。
+    """
+    value = os.environ.get('AOS_NOTES_FILE') or _config_file()
+    if value is None and os.environ.get('AOS_TOOL_ROOT'):
+        if not os.path.isdir(JAIL_NOTES):
+            fail('ConfigInvalid', 'no notes folder mounted at %s; ask the user to run: '
+                 'aos-agent access set notes <folder> --rw' % JAIL_NOTES)
+        value = JAIL_NOTES + '/notes.json'
+    return os.path.abspath(os.path.expanduser(value or DEFAULT_FILE))
 
 
 def default_table():

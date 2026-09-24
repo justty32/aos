@@ -47,8 +47,8 @@ def _jail_real(base, value):
     table, _ = acc.parse(path, base, lenient=True)
     mount = table['mounts'].get(name)
     if mount is None:
-        raise AgentError('ConfigInvalid', '筆記檔設成 %s，但 %s 的 mounts 沒有 %r'
-                         % (value, path, name))
+        raise AgentError('ConfigInvalid', '筆記檔在牢裡的 %s，但 %s 的 mounts 沒有 %r（掛一個：aos-agent access set %s <資料夾> --rw）'
+                         % (value, path, name, name))
     return os.path.join(mount['path'], rest) if rest else mount['path']
 
 
@@ -57,6 +57,10 @@ def notes_file(base):
     base = os.path.abspath(base)
     value = _config_file(base)
     if value is None:
+        # 跟 note 工具同一條規則：家裡有 access.json（工具關牢）＝牢裡的 /work/notes/notes.json
+        _, state = acc.access_lookup(base)
+        if state == 'present':
+            return _jail_real(base, '/work/notes/notes.json')
         return os.path.join(base, DEFAULT_FILE)
     if value == '/work' or value.startswith('/work/'):
         return _jail_real(base, value)

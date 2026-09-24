@@ -17,7 +17,10 @@ agent-bob/
   input.json     慣例：輸入（§4.1）
   work/          aos-agent 的工作區：<工作名>.inst.json、.in、.out
   done/          收過的輸入與 consume 過的門檔（§4.1）（09-24 試玩 r1 補）
-  log/           llm.err、agent.err，以及工具自己指定的
+  log/           llm.err、agent.err，以及工具自己指定的；（09-24 第 4 隊補）events.jsonl（tick 記的事件）、usage.jsonl（aos-llm call 記的 token 用量）、compact-skip（[events.md](events.md)、[compact.md](compact.md)）
+  prompts/archive/  （09-24 第 4 隊補）compact 存的壓縮前原文 `<sha>.json`（在記憶檔所在的資料夾底下）
+  compact-req/   （09-24 第 4 隊補）郵差投進來的 compact 申請；tick 縮完搬進 compact-req/done/
+  notes/         （09-24 第 4 隊補）不關牢時 note 工具的筆記檔 notes.json（關牢時在牢裡的 /work/notes）
 ```
 
 - 只有 `info.json`（且 `_metainfo._type` 是 `llm_agent`）是「這是 agent 家」的依據。

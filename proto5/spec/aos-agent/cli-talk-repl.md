@@ -54,7 +54,7 @@ stdin 是 tty 才印提示符 `> `（stdout 不是終端時提示符寫 stderr�
 | 指令 | 一句話 |
 |---|---|
 | `/status [-v]` | 一行：`health <…>  state <…>  batch <kind 收回／總數 或 ->  input <N 個沒收 或 ->`，還在等上一句就加 `還在等上一句`；state 讀不到＝`state ?  batch ?`；`-v` 印整段 `status -v` |
-| `/context [N]` | 現在每次問模型會送的東西（aos-llm §4：人格＋整份記憶＋工具）：模型代號與池、system 幾字、history 幾則幾字（user／assistant／tool 各幾則；字數算 `content` 與工具參數）、工具幾個幾字與名字、合計，最後列最近 N 則（預設 3，一則一行、整行 80 字截斷） |
+| `/context [N]` | 現在每次問模型會送的東西（aos-llm §4：人格＋整份記憶＋工具）：模型代號與池、system 幾字、history 幾則幾字（user／assistant／tool 各幾則；字數算 `content` 與工具參數）、工具幾個幾字與名字、合計，最後列最近 N 則（預設 3，一則一行、整行 80 字截斷）；＝[`context`](cli-memory.md) |
 | `/history [N]` | 記憶最後 N 則（預設 10）：`user: …`、`assistant: …`（全文，帶 `[呼叫 …]`）、工具結果印成 `[結果 …]` 那種短行 |
 | `/tools` | 工具一行一個：`<名>  <description 第一行>` |
 | `/wait [秒]` | 上一句逾時還沒回：照原來那句再等（秒數省略＝`--wait` 的值）；沒有在等的＝先補印晚到的、再印「（沒有在等的話）」 |

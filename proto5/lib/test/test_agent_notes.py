@@ -394,8 +394,13 @@ class ToolsAddNotesCase(unittest.TestCase):
 
     def test_installed_tool_runs_and_lib_reads_it(self):
         run_agent('tools', 'add', 'notes', '--target', self.bob)
+        # init 生的家有 access.json（工具關牢）：筆記在牢裡的 /work/notes，要掛一個 notes 資料夾；
+        # 這裡不真的進牢，用 AOS_NOTES_FILE 指到那個資料夾在主機上的真路徑，模擬牢裡看到的同一個檔。
+        shelf = self.bob.parent / 'shelf'
+        shelf.mkdir()
+        run_agent('access', 'set', 'notes', str(shelf), '--rw', '--target', self.bob)
         exe = self.bob / 'tools' / 'notes' / 'note'
-        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', AOS_NOTES_FILE=str(shelf / 'notes.json'))
         p = subprocess.run([str(exe)], input=json.dumps({'op': 'add', 'key': 'k1', 'text': 'from installed tool'}),
                            cwd=self.bob, capture_output=True, text=True, env=env, timeout=10)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
@@ -404,6 +409,22 @@ class ToolsAddNotesCase(unittest.TestCase):
             code = notes_lib.main(str(self.bob), 'show', ['k1'])
         self.assertEqual(code, 0)
         self.assertIn('from installed tool', buf.getvalue())
+
+    def test_jailed_default_needs_notes_mount(self):
+        run_agent('tools', 'add', 'notes', '--target', self.bob)
+        exe = self.bob / 'tools' / 'notes' / 'note'
+        if os.path.isdir('/work/notes'):
+            self.skipTest('這台機器真的有 /work/notes')
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', AOS_TOOL_ROOT='/work/ws')
+        env.pop('AOS_NOTES_FILE', None)
+        p = subprocess.run([str(exe)], input=json.dumps({'op': 'find', 'query': 'x'}), cwd=self.bob,
+                           capture_output=True, text=True, env=env, timeout=10)
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual(json.loads(p.stdout.strip().splitlines()[-1])['error'], 'ConfigInvalid')
+        self.assertIn('access set notes', p.stdout)
+        with self.assertRaises(AgentError) as cm:
+            notes_lib.main(str(self.bob), 'ls', [])
+        self.assertIn('access set notes', cm.exception.msg)
 
 
 if __name__ == '__main__':

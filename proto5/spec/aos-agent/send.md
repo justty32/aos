@@ -74,4 +74,6 @@
  "stderr": {"$opt": ["append", "mkdir"], "$val": "/abs/agent-bob/log/llm.err"}}
 ```
 
+（09-24 第 4 隊補）另有 `"envs": {"AOS_LLM_BATCH": "<批 id>"}`（工作名去掉最後的 `-0`）：`aos-llm call` 記 `log/usage.jsonl` 時帶上（[agent/events.md §2](../agent/events.md)）；只加不減，cpu 的環境照舊。
+
 `argv[0]` 靠 llm 池那顆 cpu 的 PATH 找；模型表與金鑰也在那顆 cpu 的環境（[aos-llm.md §1](../aos-llm/usage.md)）。（09-24 fix-r4 改：`aos-llm-call` 改成 `aos-llm call`）

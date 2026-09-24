@@ -100,6 +100,27 @@ def brief(m, names, full=False):
     return '%s: %s' % (m.get('role'), ' '.join(parts))
 
 
+def last_usage(base):
+    """log/usage.jsonl 最後一筆有 prompt_tokens 的：{"prompt", "at"}；沒有＝None。只讀檔尾一段。"""
+    path = os.path.join(base, 'log', 'usage.jsonl')
+    try:
+        with open(path, 'rb') as f:
+            f.seek(0, os.SEEK_END)
+            f.seek(max(0, f.tell() - 65536))
+            tail = f.read().decode('utf-8', 'replace').splitlines()
+    except OSError:
+        return None
+    for line in reversed(tail):
+        try:
+            row = json.loads(line)
+            prompt = row['usage']['prompt_tokens']
+        except (ValueError, KeyError, TypeError):
+            continue
+        if type(prompt) is int:
+            return {'prompt': prompt, 'at': str(row.get('at', '?'))[:19].replace('T', ' ')}
+    return None
+
+
 def lines(info, recent=RECENT):
     """人看的幾行（talk /context 與 aos-agent context 印的同一份）。"""
     m = measure(info)
@@ -112,6 +133,9 @@ def lines(info, recent=RECENT):
            'tools  %d 個，%d 字，約 %d token：%s' % (t['count'], t['chars'], t['tokens'], ', '.join(t['names']) or '-'),
            '合計約 %d 字、約 %d token，每次問模型整份送出（token 是粗估；記憶要縮用 aos-agent compact）' % (
                m['total']['chars'], m['total']['tokens'])]
+    real = last_usage(info['dir'])
+    if real is not None:
+        out.append('上一次問模型，端點回報 prompt %s token（log/usage.jsonl %s）' % (real['prompt'], real['at']))
     history = info['history']
     if history and recent:
         names = call_names(history, len(history))
@@ -139,6 +163,7 @@ def main(agent_dir, *, as_json=False, by_rounds=False, recent=RECENT, env=None):
     info = aos_agent_info.load(agent_dir, env=env)
     if as_json:
         value = measure(info)
+        value['last_usage'] = last_usage(info['dir'])
         if by_rounds:
             value['rounds'] = by_round(info['history'])
         print(json.dumps(value, ensure_ascii=False))
