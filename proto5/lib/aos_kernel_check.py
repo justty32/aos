@@ -51,6 +51,28 @@ class Checks:
                    if missing else '五支 CLI 都找得到')
         self.report('bad' if missing else 'ok', item, message + note)
 
+    def dirs(self, home):
+        missing = [str(home / name) + '/' for name in ('requests', 'responses', 'cpus')
+                   if not (home / name).is_dir()]
+        self.report('bad' if missing else 'ok', 'dirs',
+                    '缺 %s；手建的家請 mkdir -p 補上（aos-kernel init 會建）' % '、'.join(missing)
+                    if missing else 'requests/、responses/、cpus/ 都在')
+
+    def cpus(self, home, info, daemon):
+        state = aos_home.read_state(home, {})
+        if state.get('phase') not in ('running', 'stopping'):
+            return
+        names = dict.fromkeys([*info['cpus'], *([state['kcpu']] if state.get('kcpu') else [])])
+        base = str(home / 'cpus') + os.sep
+        # 與 stop 一致：同名但 target 屬於別家的孩子不算。
+        owned = {name for name, child in aos_daemon.read_state(daemon)['children'].items()
+                 if name in names and child['target'].startswith(base)
+                 and os.path.abspath(child['target']).startswith(base)}
+        missing = [name for name in names if name not in owned]
+        self.report('bad' if missing else 'ok', 'cpus',
+                    'daemon 重開過／cpu 不在（%s）：執行 aos-kernel boot %s --daemon %s' %
+                    (', '.join(missing), home, daemon) if missing else '帳本裡的 cpu 都在 daemon 孩子表')
+
     def envs(self, home, name, config):
         expected = config.get('envs', {})
         inst = home / 'cpus' / name / 'inst.json'
@@ -139,6 +161,7 @@ def check(home, agent=None, daemon=None):
         checks.report('bad', 'info', '%s；請修正 %s/info.json' % (exc, home))
         return 1
     checks.report('ok', 'info', 'kernel 設定讀驗通過')
+    checks.dirs(home)
     daemon = os.path.abspath(daemon) if daemon else info.get('daemon', aos_daemon.daemon_home())
     try:
         alive = aos_daemon.is_alive(daemon)
@@ -146,6 +169,8 @@ def check(home, agent=None, daemon=None):
         alive = False
     checks.report('ok' if alive else 'warn', 'daemon',
                   'daemon 活著：%s' % daemon if alive else 'daemon 沒在跑；先開 daemon：%s' % daemon)
+    if alive:
+        checks.cpus(home, info, daemon)
     env, note = daemon_environment(daemon, alive)
     checks.path(env.get('PATH', os.defpath), note)
     pools = {config['pool'] for config in info['cpus'].values()}
