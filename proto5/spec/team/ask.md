@@ -8,7 +8,7 @@
 成員 ask_human ──申請──▶ 郵差：建 team/wait-user/q-0003.json（open）；reply_to 是單號＝那張單 → waiting_user
 人 aos-team wait ls         看有哪些在等
 人 aos-team answer q-0003 "B" ──申請（outbox/human/）──▶ 郵差：投一封【人 → worker-1 · 回覆 q-0003】給發問者、
-                                                           問題 → answered；那張單 → sent（恢復）
+                                                           問題 → answered；那張單 → working（恢復）
 ```
 
 ## 問題檔 `team/wait-user/q-0003.json`（只有郵差寫）

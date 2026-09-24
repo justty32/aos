@@ -349,7 +349,7 @@ class TaskTests(Base):
         ltr = {'id': fmt.new_id('lead'), 'from': 'lead', 'to': 'worker-1', 'status': 'REQUEST', 'reply_to': 't-0001',
                'rev': 1, 'text': '事實補在 facts.json 了', 'at': fmt.now_iso()}
         task.on_letter(self.lay, self.roster, ltr)
-        self.assertEqual(self.t()['status'], 'sent')
+        self.assertEqual(self.t()['status'], 'working')
         req = {'id': fmt.new_id('worker-1'), 'from': 'worker-1', 'kind': 'cancel', 'at': fmt.now_iso(), 'task': 't-0001'}
         self.err('NotAllowed', requests.handle, self.lay, self.roster, req)
         req = {'id': fmt.new_id('human'), 'from': 'human', 'kind': 'cancel', 'at': fmt.now_iso(), 'task': 't-0001',
@@ -422,7 +422,7 @@ class AskTests(Base):
         self.assertEqual(post.letters[-1]['to'], 'worker-1')
         self.assertEqual(post.letters[-1]['reply_to'], 'q-0001')
         self.assertEqual(ask.open_questions(self.lay), [])
-        self.assertEqual(task.load(self.lay, 't-0001')['status'], 'sent')
+        self.assertEqual(task.load(self.lay, 't-0001')['status'], 'working')
         self.assertEqual(requests.handle(self.lay, self.roster, ans), eff)     # 同一份答覆重跑
         again = dict(ans, id=fmt.new_id('human'))
         self.err('Closed', requests.handle, self.lay, self.roster, again)

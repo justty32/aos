@@ -41,7 +41,7 @@ queued（等郵差投）→ sent（投進負責人 input/）→ working（信被
 | `delivered` | 郵差把給負責人的信投進 input（`letter_delivered`） | queued → sent |
 | `picked_up` | 那封信從 input 消失（`letter_picked_up`） | sent → working |
 | `report` | 負責人寄的、`reply_to`＝單號的信（`on_letter`） | **只有 `by`＝負責人、`rev`＝目前 rev 才算**，不然記 `ignored:report`、不改。DONE：有機械條目 → verifying＋`verify`；只有 judge → reviewing＋`open_review`；都沒有 → done。BLOCKED → blocked；NEEDS-USER → waiting_user；FAILED → failed（通知開單人與人）；PROGRESS／REQUEST 只記下。審查子單回 DONE 信只記下（要用 `review_result`） |
-| `resume` | 人或開單人寄給負責人的 REQUEST（`on_letter`）；人回答了跟這張單有關的問題 | blocked／waiting_user → sent |
+| `resume` | 人或開單人寄給負責人的 REQUEST（`on_letter`）；人回答了跟這張單有關的問題 | blocked／waiting_user → working（那封信跟事件同時投出；回答信的 reply_to 是 q-，不會再有 picked_up，所以直接算 working） |
 | `needs_user` | 負責人 `ask_human` 帶 `reply_to`＝單號 | sent／working／blocked → waiting_user |
 | `verified` | 驗收員結果（第 2 隊）：`{pass, results, rev, attempt}` | verifying 且 rev、attempt 對上：過 → reviewing（有 judge）或 done；不過 → 見下 |
 | `reviewed` | 審查子單交回（`on_review_result` 回的 `step` 動作） | reviewing 且 rev、attempt 對上：全 PASS → done；有 FAIL → 見下 |
