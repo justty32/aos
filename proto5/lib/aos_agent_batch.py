@@ -9,7 +9,8 @@ import aos_inst
 import aos_agent_access
 from aos_jail import secret_name
 from aos_agent_home import AgentError
-from aos_agent_results import act_done, model_message, think_done
+from aos_agent_results import act_done, model_message, response_parts, success, think_done
+import aos_agent_events as events
 from aos_agent_runtime import RESUMED, history_prefix, ledger, report, unique_id
 
 META = {'_type': 'posix', '_version': 1}
@@ -176,7 +177,9 @@ def tool_inst(meta, base, name, env, access=None):
 
 
 def think_inst(base, name):
+    # AOS_LLM_BATCH：aos-llm call 記 log/usage.jsonl 時帶的批 id（spec/agent/events.md）
     return {'_metainfo': dict(META), 'argv': ['aos-llm', 'call', str(base)], 'cwd': str(base),
+            'envs': {'AOS_LLM_BATCH': name.rsplit('-', 1)[0]},
             'stdout': {'$opt': 'mkdir', '$val': str(base / 'work' / (name + '.out'))},
             'stderr': {'$opt': ['append', 'mkdir'], '$val': str(base / 'log' / 'llm.err')}}
 
@@ -246,6 +249,7 @@ def send(run):
             run.submit(batch['kernel'], name + '.json', 'add',
                        {'target': str(path), 'name': name, 'once': True, 'pool': pool, 'timeout_ms': timeout})
     batch['sent'] = True
+    events.batch_start(run)  # 至少一次：在提交 sent 之前記（spec/agent/events.md）
     run.save('state.sent')
     return 0
 
@@ -287,6 +291,7 @@ def collect(run):
         else:
             timeout = tools.get(call['tool'], {}).get('_timeout_ms', 60000)
             call['done'] = act_done(response, output, call['tool'], timeout)
+        _measure(call, response)
         fresh = True
     if fresh:
         run.save('state.done')
@@ -294,6 +299,16 @@ def collect(run):
     if all(c['done'] is not None and c['acked'] for c in batch['calls']):
         return settle(run)
     return 0 if changed or fresh else 101
+
+
+def _measure(call, response):
+    """事件紀錄用（spec/agent/events.md）：kernel 回音的 ms（經過時間，不是 cpu 秒）、這件成不成。"""
+    try:
+        result, _ = response_parts(response)
+    except AgentError:
+        result = None
+    call['ms'] = result['ms'] if result is not None and type(result.get('ms')) is int else None
+    call['ok'] = result is not None and success(result)
 
 
 def settle(run):
@@ -331,6 +346,7 @@ def settle(run):
                 st['waits'].append({'$opt': 'consume', '$val': signal})
                 stuck = '問模型連敗 3 次，修好原因後 aos-agent continue --target %s' % run.base
     st['sweep'].extend({'kernel': batch['kernel'], 'name': c['name']} for c in calls if c['name'] is not None)
+    events.batch_end(run, messages)  # 至少一次：在提交結清之前記
     st['batch'] = None
     run.save('state.settled')
     if think and done.get('ok'):

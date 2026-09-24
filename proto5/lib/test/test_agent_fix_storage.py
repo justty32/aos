@@ -89,7 +89,7 @@ class AgentFixStorageTests(unittest.TestCase):
         for mode in ('missing', 'empty', 'unreadable'):
             with self.subTest(mode=mode):
                 if mode == 'empty':
-                    path.parent.mkdir()
+                    path.parent.mkdir(exist_ok=True)  # 事件紀錄（log/events.jsonl）可能已經建了 log/
                     path.write_text(' \n')
                 elif mode == 'unreadable':
                     path.unlink()

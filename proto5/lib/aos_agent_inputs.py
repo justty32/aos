@@ -61,6 +61,8 @@ def intake(run):
         run.save('state.intake_empty')
         return 101
     run.history(record['base_len'], messages)
+    import aos_agent_events
+    aos_agent_events.intake(run, record, len(messages))  # 至少一次：在提交之前記
     st.update(state='think', intake=None)
     run.save('state.intake_done')
     return 0

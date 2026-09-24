@@ -1,0 +1,22 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "note",
+      "description": "Long-term notes, not chat memory; call find to search. add upserts by key; find matches words/tags; get returns text; rm deletes.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["add", "find", "get", "rm"]},
+          "key": {"type": "string", "description": "max 80 chars (add/get/rm)"},
+          "text": {"type": "string", "description": "max 4000 chars (add)"},
+          "tags": {"type": "array", "items": {"type": "string"}, "description": "up to 10 (add/find)"},
+          "query": {"type": "string", "description": "search words (find)"},
+          "limit": {"type": "integer", "description": "default 20, max 100 (find)"}
+        },
+        "required": ["op"]
+      }
+    },
+    "_meta": {"argv": ["tools/notes/note"]}
+  }
+]

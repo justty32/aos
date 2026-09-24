@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""note：長期筆記（跟對話記憶分開），存成 wf-table/1 的 notes.json。op=add/find/get/rm。"""
+import sys
+sys.dont_write_bytecode = True
+from _common import arg, fail, locked, now_iso, notes_path, read_table, run, write_table  # noqa: E402
+
+MAX_KEY = 80
+MAX_TEXT = 4000
+MAX_TAG = 32
+MAX_TAGS = 10
+MAX_ROWS = 500
+DEFAULT_LIMIT = 20
+MAX_LIMIT = 100
+ALLOWED = {'add': {'op', 'key', 'text', 'tags'}, 'find': {'op', 'query', 'tags', 'limit'},
+          'get': {'op', 'key'}, 'rm': {'op', 'key'}}
+
+
+def _no_newline(s):
+    return '\n' not in s and '\r' not in s
+
+
+def _check_extra(args, op):
+    extra = sorted(set(args) - ALLOWED[op])
+    if extra:
+        fail('BadArguments', 'op=%s does not accept: %s' % (op, ', '.join(extra)))
+
+
+def _key(args):
+    key = arg(args, 'key', str, required=True)
+    if not (1 <= len(key) <= MAX_KEY) or not _no_newline(key):
+        fail('BadArguments', 'key must be 1..%d chars, no newline' % MAX_KEY)
+    return key
+
+
+def _tags(args):
+    tags = arg(args, 'tags', list, None)
+    if tags is None:
+        return None
+    if len(tags) > MAX_TAGS:
+        fail('BadArguments', 'tags: at most %d' % MAX_TAGS)
+    out = []
+    for t in tags:
+        if not isinstance(t, str) or not (1 <= len(t) <= MAX_TAG) or ',' in t or not _no_newline(t):
+            fail('BadArguments', 'each tag must be 1..%d chars, no comma or newline' % MAX_TAG)
+        out.append(t)
+    return out
+
+
+def op_add(args, path):
+    key = _key(args)
+    text = arg(args, 'text', str, required=True)
+    if not (1 <= len(text) <= MAX_TEXT):
+        fail('BadArguments', 'text must be 1..%d chars' % MAX_TEXT)
+    tags = _tags(args) or []
+    with locked(path):
+        table = read_table(path)
+        rows = table['rows']
+        existing = next((r for r in rows if r.get('key') == key), None)
+        row = {'key': key, 'text': text, 'tags': ','.join(tags), 'at': now_iso()}
+        if existing is not None:
+            existing.clear()
+            existing.update(row)
+            write_table(path, table)
+            return 'updated %s' % key
+        if len(rows) >= MAX_ROWS:
+            fail('Full', 'notes file already has %d rows (limit %d)' % (len(rows), MAX_ROWS))
+        rows.append(row)
+        write_table(path, table)
+        return 'added %s' % key
+
+
+def op_find(args, path):
+    query = arg(args, 'query', str, None)
+    tags = _tags(args)
+    limit = arg(args, 'limit', int, DEFAULT_LIMIT)
+    if not (1 <= limit <= MAX_LIMIT):
+        fail('BadArguments', 'limit must be 1..%d' % MAX_LIMIT)
+    if query is None and tags is None:
+        fail('BadArguments', 'find needs query and/or tags')
+    words = query.lower().split() if query else []
+    want_tags = tags or []
+    hits = []
+    for row in read_table(path)['rows']:
+        haystack = (row.get('key', '') + ' ' + row.get('text', '')).lower()
+        if any(w not in haystack for w in words):
+            continue
+        row_tags = [t for t in row.get('tags', '').split(',') if t]
+        if any(t not in row_tags for t in want_tags):
+            continue
+        hits.append(row)
+        if len(hits) >= limit:
+            break
+    if not hits:
+        return 'No matching notes.'
+    return '\n'.join('%s [%s]: %s' % (r.get('key', ''), r.get('tags', ''),
+                                      ' '.join(r.get('text', '').split())[:120]) for r in hits)
+
+
+def op_get(args, path):
+    key = _key(args)
+    row = next((r for r in read_table(path)['rows'] if r.get('key') == key), None)
+    if row is None:
+        fail('NotFound', 'no note with key %r' % key)
+    return '%s [%s] %s\n%s' % (row['key'], row.get('tags', ''), row.get('at', ''), row.get('text', ''))
+
+
+def op_rm(args, path):
+    key = _key(args)
+    with locked(path):
+        table = read_table(path)
+        rows = table['rows']
+        idx = next((i for i, r in enumerate(rows) if r.get('key') == key), None)
+        if idx is None:
+            fail('NotFound', 'no note with key %r' % key)
+        del rows[idx]
+        write_table(path, table)
+    return 'removed %s' % key
+
+
+OPS = {'add': op_add, 'find': op_find, 'get': op_get, 'rm': op_rm}
+
+
+def main(args):
+    op = arg(args, 'op', str, required=True)
+    if op not in OPS:
+        fail('BadArguments', 'op must be one of: add, find, get, rm')
+    _check_extra(args, op)
+    return OPS[op](args, notes_path())
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

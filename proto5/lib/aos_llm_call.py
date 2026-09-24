@@ -8,6 +8,7 @@ import json
 import os
 import socket
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -95,9 +96,9 @@ def _preview(raw):
     return " ".join(str(raw).split())[:300]
 
 
-def _post(body, entry, alias=None):
+def _post(body, entry, alias=None, seen=None):
     try:
-        return _post_http(body, entry)
+        return _post_http(body, entry) if seen is None else _post_http(body, entry, seen)
     except AgentError as exc:
         if exc.code not in ('EngineFailed', 'Timeout'):
             raise
@@ -108,7 +109,7 @@ def _post(body, entry, alias=None):
         raise AgentError(exc.code, message) from exc
 
 
-def _post_http(body, entry):
+def _post_http(body, entry, seen=None):
     url = entry["endpoint"].rstrip("/") + "/chat/completions"
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if entry.get("api_key"):
@@ -138,6 +139,8 @@ def _post_http(body, entry):
         obj = json.loads(raw)
     except (ValueError, UnicodeError) as e:
         raise AgentError("EngineFailed", "回應不是合法 JSON：%s" % _preview(raw)) from e
+    if seen is not None and isinstance(obj, dict):
+        seen["usage"] = obj.get("usage") if isinstance(obj.get("usage"), dict) else None
     choices = obj.get("choices") if isinstance(obj, dict) else None
     if not (isinstance(choices, list) and choices and isinstance(choices[0], dict)
             and isinstance(choices[0].get("message"), dict)):
@@ -155,7 +158,25 @@ def call(agent_dir, env=None):
     env = os.environ if env is None else env
     config = load_config(config_path(env), env=env)
     body, entry, alias = build_request(agent_dir, config, env=env, with_alias=True)
-    return _post(body, entry, alias)
+    seen, start = {}, time.monotonic()
+    try:
+        return _post(body, entry, alias, seen)
+    finally:
+        if "usage" in seen:
+            record_usage(agent_dir, env, alias, entry["model"], seen["usage"],
+                         int((time.monotonic() - start) * 1000))
+
+
+def record_usage(agent_dir, env, alias, model, usage, ms):
+    """HTTP 回了 2xx 的 JSON 物件就追加一行到 <家>/log/usage.jsonl（spec/agent/events.md）；寫不進去不影響這一問。
+
+    批 id 從 AOS_LLM_BATCH 拿（aos-agent 送 think 時放進工作 inst 的 envs）；手動跑的沒有＝null。
+    usage 是端點回的原樣（LiteLLM／OpenAI 的 prompt_tokens、completion_tokens、total_tokens…），沒回＝null。
+    """
+    from aos_agent_events import USAGE, append_line, now_iso
+    batch = env.get("AOS_LLM_BATCH") or None
+    append_line(os.path.join(os.path.abspath(agent_dir), USAGE),
+                {"at": now_iso(), "batch": batch, "alias": alias, "model": model, "ms": ms, "usage": usage})
 
 
 def main(argv=None):

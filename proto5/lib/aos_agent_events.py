@@ -1,0 +1,147 @@
+"""事件紀錄（spec/agent/events.md）：agent 家 log/events.jsonl，一行一事件。
+
+寫的人只有一個：持 .tick.lock 的那一方（tick 本身，或拿了同一把鎖的 aos-agent compact）。
+追加一行＝一次 write（O_APPEND）；寫不進去只丟掉這一行，不讓 tick 失敗（量測不能拖垮主流程）。
+**至少一次**：事件都在「提交那一步」之前寫，崩了重做會再寫一次同一行（同 ev＋id），讀的人用 dedupe() 去重；
+所以永遠不會「做了沒記」，只可能「記了兩次」。
+"""
+import datetime
+import json
+import os
+from pathlib import Path
+
+EVENTS = 'log/events.jsonl'
+USAGE = 'log/usage.jsonl'
+
+
+def now_iso():
+    return datetime.datetime.now().astimezone().isoformat(timespec='milliseconds')
+
+
+def append_line(path, record):
+    """追加一行 JSON；失敗回 False（不丟例外）。"""
+    try:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = (json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n').encode('utf-8')
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_CLOEXEC, 0o644)
+        try:
+            os.write(fd, data)
+        finally:
+            os.close(fd)
+        return True
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def emit(base, ev, ident, **fields):
+    """記一件事：{"at", "ev", "id", …}。ident 是去重用的身分（批 id、消費 id、壓縮前的 sha）。"""
+    record = {'at': now_iso(), 'ev': ev, 'id': ident}
+    record.update(fields)
+    return append_line(Path(base) / EVENTS, record)
+
+
+def batch_id(batch):
+    """一批的身分：工作名去掉最後的 -<序號>；整批都在本地結束（沒工作名）＝None。"""
+    for call in batch['calls']:
+        if call.get('name'):
+            return call['name'].rsplit('-', 1)[0]
+    return None
+
+
+def read(path):
+    """讀 jsonl：壞行（寫到一半、手改壞）跳過；檔不在＝空。"""
+    out = []
+    try:
+        with open(path, encoding='utf-8', errors='replace') as f:
+            for line in f:
+                try:
+                    value = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(value, dict):
+                    out.append(value)
+    except FileNotFoundError:
+        pass
+    return out
+
+
+def dedupe(events):
+    """同 ev＋id 只留第一筆（崩了重做寫的第二筆丟掉）；id 是 null 的不去重。"""
+    seen, out = set(), []
+    for e in events:
+        key = (e.get('ev'), e.get('id'))
+        if e.get('id') is not None:
+            if key in seen:
+                continue
+            seen.add(key)
+        out.append(e)
+    return out
+
+
+# ---- tick 的幾個點（aos_agent_batch／aos_agent_inputs 叫） --------------------
+
+def batch_start(run):
+    batch = run.st['batch']
+    fields = {'base_len': batch['base_len']}
+    if batch['kind'] == 'act':
+        fields['tools'] = [c['tool'] for c in batch['calls']]
+    emit(run.base, batch['kind'] + '_start', batch_id(batch), **fields)
+
+
+def batch_end(run, messages):
+    batch = run.st['batch']
+    calls = batch['calls']
+    if batch['kind'] == 'think':
+        done = calls[0]['done']
+        fields = {'ok': bool(done.get('ok')), 'ms': calls[0].get('ms')}
+        if not done.get('ok'):
+            fields.update(reason=done.get('fail'), count=done.get('count'))
+        elif messages:
+            fields['tool_calls'] = len(messages[0].get('tool_calls') or [])
+    else:
+        fields = {'calls': [{'tool': c['tool'], 'ok': bool(c.get('ok')), 'ms': c.get('ms')} for c in calls]}
+        fields['ok'] = all(c['ok'] for c in fields['calls'])
+    emit(run.base, batch['kind'] + '_end', batch_id(batch), **fields)
+
+
+def intake(run, record, count):
+    emit(run.base, 'intake', record['id'],
+         files=[os.path.basename(p['src']) for p in record['files'] if Path(p['dst']).exists()],
+         messages=count)
+
+
+# ---- 人看的 aos-agent events ---------------------------------------------------
+
+def _line(e):
+    rest = {k: v for k, v in e.items() if k not in ('at', 'ev', 'id')}
+    parts = ['%s=%s' % (k, v if isinstance(v, (str, int, float)) or v is None
+                        else json.dumps(v, ensure_ascii=False)) for k, v in rest.items()]
+    at = str(e.get('at', '?'))
+    return '%s  %-12s %s  %s' % (at[:23].replace('T', ' '), e.get('ev', '?'), e.get('id') or '-',
+                                ' '.join(parts))
+
+
+def show(agent_dir, *, last=20, as_json=False, usage=False):
+    """印最後 last 則（去重後）；usage＝改看 log/usage.jsonl。"""
+    base = Path(os.path.abspath(agent_dir))
+    rows = read(base / (USAGE if usage else EVENTS))
+    if not usage:
+        rows = dedupe(rows)
+    rows = rows[-last:] if last else rows
+    if as_json:
+        print(json.dumps(rows, ensure_ascii=False))
+        return 0
+    if not rows:
+        print('（還沒有%s）' % ('用量紀錄' if usage else '事件'))
+        return 0
+    for e in rows:
+        if usage:
+            u = e.get('usage') if isinstance(e.get('usage'), dict) else {}
+            print('%s  %s  %s→%s  prompt %s  completion %s  total %s  %s ms' % (
+                str(e.get('at', '?'))[:23].replace('T', ' '), e.get('batch') or '-', e.get('alias'),
+                e.get('model'), u.get('prompt_tokens', '?'), u.get('completion_tokens', '?'),
+                u.get('total_tokens', '?'), e.get('ms', '?')))
+        else:
+            print(_line(e))
+    return 0

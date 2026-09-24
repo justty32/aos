@@ -17,7 +17,8 @@ KINDS = {
     'review_result': 'aos_team_task:on_review_result',
     'ask': 'aos_team_ask:on_ask',
     'answer': 'aos_team_ask:on_answer',
-    # 第 2 隊：'routine': 'aos_team_beat:on_routine'；第 4 隊：'compact': 'aos_agent_compact:on_request' …
+    'compact': 'aos_agent_compact:on_request',   # 第 4 隊（spec/agent/compact.md〈申請〉）
+    # 第 2 隊：'routine': 'aos_team_beat:on_routine' …
 }
 
 
