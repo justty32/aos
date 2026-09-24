@@ -277,6 +277,23 @@ class KernelCheck(unittest.TestCase):
         self.put(agent / 'tools.json', [{'type': 'function', 'function': {'name': 'dynamic'},
                                        '_meta': {'argv': [{'$env': 'TOOL'}]}, '_jail': False}])
         self.assertIn('warn agent/tool/dynamic:', self.run_agent_check(agent))
+    def test_llm_envs_resolved_in_that_pools_daemon(self):
+        """納入審查 P1：池 envs 的 $env 照拉這池的 daemon 的環境解，不是 kernel 池的 daemon。"""
+        other = self.root / 'D2'
+        good = self.root / 'good.json'
+        self.put(good, {'_metainfo': {'_type': 'llm_config', '_version': 1},
+                        'models': {'small': {'endpoint': 'http://localhost:4000/v1', 'model': 'test'}}})
+        self.info['pools']['llm'] = {'count': 1, 'daemon': str(other),
+                                     'envs': {'AOS_LLM_CONFIG': {'$env': 'LLM_PATH'}}}
+        self.save()
+        envs = {str(self.daemon): {'PATH': str(self.bin), 'LLM_PATH': str(self.root / 'wrong.json')},
+                str(other): {'PATH': str(self.bin), 'LLM_PATH': str(good)}}
+        with patch('aos_kernel_check.daemon_environment', side_effect=lambda d, alive: (envs[d], '（假）')):
+            text = self.run_check()
+            self.assertIn('ok   llm/llm: 模型代號：small', text)
+            text = self.run_agent_check(self.agent())
+            self.assertIn('ok   agent/llm.model:', text)
+
     # ---- cpus（各池摘要） ----
     def test_cpus_all_present(self):
         self.lock_daemon(pid=999999999)

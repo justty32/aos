@@ -103,6 +103,7 @@ class Checks:
         self.home = None       # 納入：kernel_checks 填，agent 項的提示要用
         self.pools_effective = {}   # 納入：各池有效 envs（kernel_checks 填）
         self.pool_models = {}  # 納入：各池 llm.json 的模型代號（kernel_checks 填）
+        self.pool_envs = {}    # 納入審查 P1：各池用哪個 daemon 的環境解 $env（kernel_checks 填）
 
     def report(self, level, item, message):
         self.bad |= level == 'bad'
@@ -248,7 +249,7 @@ class Checks:
         pool = info['llm']['pool']
         if pool in pools and pool != KERNEL_POOL:
             if pool not in self.pool_models and self.pools_effective.get(pool) is not None:
-                self.pool_models[pool] = self.llm(pool, self.pools_effective[pool], env)
+                self.pool_models[pool] = self.llm(pool, self.pools_effective[pool], self.pool_envs.get(pool, env))
             models = self.pool_models.get(pool, set())
         model = info['llm']['model']
         exists = model in models
@@ -345,10 +346,18 @@ def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
         if isinstance(value, dict) and isinstance(value.get('PATH'), str):
             checks.path(value['PATH'], '（池 %s envs 的 PATH）' % pool, 'path/' + pool)
     checks.pools_effective = effective
+    # 納入審查 P1：池 envs 的 $env 要照「拉這池的那個 daemon」的環境解，不是一律用 kernel 池的 daemon。
+    by_daemon = {env_daemon: env}
+    for pool in pools:
+        pool_daemon = pool_location(info, pool)[0]
+        if pool_daemon not in by_daemon:
+            by_daemon[pool_daemon] = daemon_environment(
+                pool_daemon, bool(pool_daemon) and alive.get(pool_daemon, False))[0]
+        checks.pool_envs[pool] = by_daemon[pool_daemon]
     models = set()
     for pool, value in effective.items():
         if not for_agent and isinstance(value, dict) and 'AOS_LLM_CONFIG' in value:
-            checks.pool_models[pool] = checks.llm(pool, value, env)
+            checks.pool_models[pool] = checks.llm(pool, value, checks.pool_envs[pool])
             models.update(checks.pool_models[pool])
     return pools, models, env
 

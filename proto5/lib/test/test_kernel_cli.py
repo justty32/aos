@@ -176,6 +176,12 @@ class Ls(CLICase):
         self.assertTrue(lines[4].startswith('  kernel   want 1  sent -'), lines[4])
         self.assertTrue(lines[5].startswith('  default  want 2  sent -'), lines[5])
         self.assertEqual(lines[6:], ['proc    0 個', 'queue   -'])
+        # 納入審查 P2：沒宣告過的池，sent／idle／draining＝null、busy＝0（cli-ls.md 的 pools 欄）
+        data = json.loads(self.main('ls', '--json')[0])
+        for pool in ('kernel', 'default'):
+            row = data['pools'][pool]
+            self.assertEqual((row['sent'], row['busy'], row['idle'], row['draining']), (None, 0, None, None), pool)
+        self.assertEqual((data['pools']['kernel']['want'], data['pools']['default']['want']), (1, 2))
 
     def test_ls_pools_counts_and_bad(self):
         self.running()
