@@ -34,7 +34,8 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_info.py`](aos_agent_info.py) | 完整 info 設定、state 進度與恢復紀錄讀驗，並原子寫回 state | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 | [`aos_agent.py`](aos_agent.py) | tick 三格流程（第 0 步拿 `.tick.lock`、看手動暫停）、批次派工與 kernel 排程登記（stop 不讀 info、沒 `AOS_KERNEL_HOME` 用 tick.json 記的；舊版 tick.json 在 start 改寫）；`main` 轉給 aos_agent_cli | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) §2、§2.1、§11 |
 | [`aos_agent_cli.py`](aos_agent_cli.py) | （fix-r4）九個子命令（advice-r1 加 `check`，十個）的 argparse、`--target`、`--wait [秒]`（預設 300）、listen 三態互斥、NotAnAgent 附家的來源 | [aos-agent.md](../spec/aos-agent/README.md) §1 |
-| [`aos_agent_listen.py`](aos_agent_listen.py) | （fix-r4，原 aos_agent_last）`listen --last`（info 壞了退回讀 `prompts/history.json`、門關著或手動暫停時警告）、（fix-r5）還沒講完時警告「還在處理中」並在 stderr 附時間；`--wait`（`wait_reply()`，say --wait 共用；fix-r5 起 kernel 家有問題與 bad 也立刻退）、`--follow` | [aos-agent.md](../spec/aos-agent/README.md) §1.5 |
+| [`aos_agent_listen.py`](aos_agent_listen.py) | （fix-r4，原 aos_agent_last）`listen --last [N]`（09-24 listen 微調加 N；info 壞了退回讀 `prompts/history.json`、門關著或手動暫停時警告）、（fix-r5）還沒講完時警告「還在處理中」並在 stderr 附時間；`--wait`（`wait_reply()`，say --wait 共用；fix-r5 起 kernel 家有問題與 bad 也立刻退）、`--follow` | [aos-agent.md](../spec/aos-agent/README.md) §1.5 |
+| [`aos_agent_listen_render.py`](aos_agent_listen_render.py) | （09-24 listen 微調）listen 的印法：挑最後 N 則回話（`pick`）、輪次標頭與收話時間（從輸入封存檔名的消費 id 對回）、`--show-calls` 簡化行／`--show-calls-full` 完整參數與回傳（4000 字截斷） | [aos-agent.md](../spec/aos-agent/README.md) §1.5 |
 | [`aos_agent_status.py`](aos_agent_status.py) | `aos-agent status`（`collect()` 收集 health（含手動暫停）、state／batch／門／未收輸入、這次卡住的原因與已恢復的舊錯、K 帳本那筆，文字、`-v` 或 `--json`）；`tick_binding()` 讀 tick.json 記的 K（認舊鍵）；（fix-r5）`brief()` 給 kernel ls 的一句標記、`short_error()` 舊錯短版 | [aos-agent.md](../spec/aos-agent/README.md) §1.3 |
 | [`aos_agent_pause.py`](aos_agent_pause.py) | （fix-r4）`pause` 放 `paused` 檔；`continue` 刪它並 touch 連敗暫停門，（fix-r5）解了連敗就放 `resumed`；`resume_all()` 是 `continue --all`；都不拿 tick 鎖、不寫 state | [aos-agent.md](../spec/aos-agent/README.md) §1.4、§1.6 |
 | [`aos_agent_say.py`](aos_agent_say.py) | `aos-agent say`：原子投一則 user 訊息到 `input` 第一條，沒登記或暫停中 stderr 警告（fix-r5：沒登記時 stdout 另說「已投入…不要再說一次」）；`--wait` 走 `wait_reply()`，逾時退 101，kernel 家有問題／沒登記／手動暫停／連敗暫停／bad 立刻退 101 | [aos-agent.md](../spec/aos-agent/README.md) §1.2 |
@@ -328,7 +329,7 @@ pipe stop／EOF、stop- 檔與第一次訊號溫和停；再次訊號強停工�
 `start(agent_dir, env=None)` 建立／核對 tick.json，向 `AOS_KERNEL_HOME` 的 kernel 登記反覆工作；`stop(agent_dir, env=None)` 撤銷登記，兩者等回音並 ack。
 `main(argv=None)`（在 aos_agent_cli）提供九個子命令、家一律 `--target`；回傳 0（完成）、101（tick 等待或鎖被佔、say／listen --wait 逾時、沒登記或暫停）、1（執行／讀驗錯）、2（用法錯）。tick／start 的 `AOS_KERNEL_HOME` 必須是 kernel 家的絕對路徑；stop 沒設就用 tick.json 記的。
 
-日常 CLI（09-24 試玩 r2 補；fix-r4 改）：`aos_agent_init.init(dir)` 寫單一內建預設家；`aos_agent_say.say(dir, text, *, wait, timeout_ms)` 原子投遞並可等回話；`aos_agent_status.collect(dir, env)` 回診斷 dict、`status()` 印文字或 JSON；`aos_agent_pause.pause(dir)`／`resume(dir)` 是 `pause`／`continue`；`aos_agent_listen.listen(dir, mode)` 是 listen，`wait_reply()`／`print_message()` 給 listen 與 say 共用。
+日常 CLI（09-24 試玩 r2 補；fix-r4 改）：`aos_agent_init.init(dir)` 寫單一內建預設家；`aos_agent_say.say(dir, text, *, wait, timeout_ms)` 原子投遞並可等回話；`aos_agent_status.collect(dir, env)` 回診斷 dict、`status()` 印文字或 JSON；`aos_agent_pause.pause(dir)`／`resume(dir)` 是 `pause`／`continue`；`aos_agent_listen.listen(dir, mode, *, count, calls)` 是 listen（calls＝None／'short'／'full'，印法在 `aos_agent_listen_render`），`wait_reply()`／`print_message()` 給 listen 與 say 共用。
 
 拆分模組：`aos_agent_batch` 建批、送件與收尾；`aos_agent_inputs` 處理門與輸入消費；
 `aos_agent_results` 判定模型／工具結果；`aos_agent_runtime` 集中持久化、恢復清理與測試掛鉤。
@@ -384,6 +385,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_agent_fix_cli.py](test/test_agent_fix_cli.py) | 13 | start／stop 印行、stop 不讀 info、KernelMismatch、listen --last |
 | [test_agent_fix_r4.py](test/test_agent_fix_r4.py) | 24 | （fix-r4）--target 與錯誤來源、listen 三態（--follow 真程序）、pause／continue／status 兩種暫停、tick 鎖真的兩個程序、舊 tick.json |
 | [test_agent_fix_r5.py](test/test_agent_fix_r5.py) | 25 | （fix-r5）status 第一行重試中／恢復中、continue 兩階段與 --all、舊錯短版、listen --last 中間句與時間、已登記 start 退 0、沒登記的 say、--wait 先看 kernel／bad、NotAnAgent 講哪種家、init --force |
+| [test_agent_listen_tweak.py](test/test_agent_listen_tweak.py) | 20 | （09-24 listen 微調）不給看法＝用法錯、`--last N`（N＝1 照舊、超過現有、非整數）、輪次標頭與收話時間、`--show-calls`／`--show-calls-full`（含截斷）、`--wait`／`--follow` 真程序即時印呼叫行 |
 | [test_agent_daily.py](test/test_agent_daily.py) | 26 | init／say（含 --wait）／status／continue、stop 用 tick.json、listen 退回讀記憶與門關警告、help、用法錯 |
 | [test_agent_status_r3.py](test/test_agent_status_r3.py) | 20 | status 的 health、這次原因／已恢復、連敗次數、-v、--json 新鍵；say 沒登記警告與 --wait 立刻退 |
 | [test_agent_daily_edges.py](test/test_agent_daily_edges.py) | 11 | say --wait 的等待條件、暫態壞檔、逾時與連敗提前結束 |

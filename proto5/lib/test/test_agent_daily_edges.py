@@ -26,7 +26,7 @@ class DailyEdgeTests(unittest.TestCase):
             self.assertEqual(agent.main(['continue']), 0)
             self.assertEqual(agent.main(['say', '你好']), 0)
             self.put(self.base / 'prompts/history.json', [fixture.MESSAGE])
-            self.assertEqual(agent.main(['listen']), 0)
+            self.assertEqual(agent.main(['listen', '--last']), 0)
             (self.base / 'info.json').unlink()
             self.assertEqual(agent.main(['init']), 1)  # fix-r5：非空的非 agent 資料夾要 --force
             self.assertEqual(agent.main(['init', '--force']), 0)
@@ -150,7 +150,7 @@ class DailyEdgeTests(unittest.TestCase):
         (self.base / 'info.json').write_text('{')
         self.put(self.base / 'prompts/history.json', {})
         with patch('sys.stdout', new_callable=io.StringIO):
-            self.assertEqual(agent.main(['listen', '--target', str(self.base)]), 1)
+            self.assertEqual(agent.main(['listen', '--last', '--target', str(self.base)]), 1)
         self.assertIn('JsonSyntax', self.err.getvalue())
 
     def test_engine_error_redacts_echoed_key(self):

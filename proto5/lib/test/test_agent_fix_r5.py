@@ -146,7 +146,7 @@ class FixR5Tests(unittest.TestCase):
 
     def listen_last(self):
         self.err.truncate(0); self.err.seek(0)
-        return self.cli('listen', '--target', str(self.base))
+        return self.cli('listen', '--last', '--target', str(self.base))
 
     def test_listen_last_tool_calls_warns(self):
         self.put(self.base / 'prompts/history.json', [{'role': 'user', 'content': '算'}, fixture.ASSISTANT])

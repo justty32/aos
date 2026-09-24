@@ -10,7 +10,7 @@
 | `aos-agent check [--target DIR] [--probe]` | start 之前先查一遍：K 的設定（K 自己找）、池、模型代號、工具找不找得到；`--probe` 真的打一次模型（§1.7；09-24 advice-r1 從 `aos-kernel check --agent` 搬來） |
 | `aos-agent start`／`stop [--target DIR]` | 向 kernel 登記／撤銷（§11；要 `AOS_KERNEL_HOME`，stop 沒設就用 `tick.json` 記的）；已登記的 `start` 印 `already started`、退 0 |
 | `aos-agent say "文字" [--target DIR] [--wait [秒]]` | 投一則話；`--wait` 等到回話印出來（§1.2） |
-| `aos-agent listen [--target DIR] [--last｜--wait [秒]｜--follow]` | 看回話：最後一則／等下一則／一直印（§1.5） |
+| `aos-agent listen [--target DIR] --last [N]｜--wait [秒]｜--follow` | 看回話：最後 N 則／等下一則／一直印，三選一要給；加 `--show-calls` 連叫了哪些工具一起看（`--show-calls-full` 看完整參數與回傳）（§1.5） |
 | `aos-agent status [--target DIR]` | 現在在哪、在等什麼、最近的錯、kernel 那邊的狀態（§1.3） |
 | `aos-agent pause [--target DIR]` | 手動暫停：還登記著，但每格什麼都不做（§1.6） |
 | `aos-agent continue [--target DIR]` | 解除手動暫停與連敗暫停；先標「已解除暫停，等下一次成功」，真的成功了才標「已恢復」（§1.4） |

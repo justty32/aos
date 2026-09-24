@@ -15,7 +15,7 @@
 （09-24 fix-r4 補）**暫停中照收**：手動暫停（§1.6）時照樣投、退 0，stderr 多一行 `aos-agent: warn: 已暫停，continue 後才會處理：aos-agent continue --target <dir>`；連敗暫停時同樣照投，警告說「連敗暫停中，修好原因後 continue 才會處理」。話留在 `input` 裡，`continue` 之後下一格照常收。
 例子：`cd <家> && aos-agent say "現在幾點？" --wait`、`aos-agent say "現在幾點？" --target ~/agents/amy --wait 60`（`say -h` 也印這兩行，並寫明 `--wait` 不帶數字＝300 秒）。
 
-**`--wait [秒]`**：（09-24 fix-r4 改：舊的 `--timeout-ms` 拿掉）投之前記下記憶長度 H0，投完就走 §1.5 `listen --wait` 的**同一套等法**（程式裡是同一個函式），只多兩個條件：
+**`--wait [秒]`**：（09-24 fix-r4 改：舊的 `--timeout-ms` 拿掉）投之前記下記憶長度 H0，投完就走 [§1.5](cli-listen.md) `listen --wait` 的**同一套等法**（程式裡是同一個函式），只多兩個條件：
 投的檔已不在原路徑；記憶第 H0 則以後有一則 `content` 等於 TEXT 的 user、而且在最後那則 assistant 之前。
 等法本身：每 200 ms 重讀 `state.json` 與記憶（讀到一半壞掉就下一輪再讀），`state` 是 `idle` 且 `batch`、`intake` 都是 null、最後一則是 assistant 而且是第 H0 則以後的 → 照 `listen --last` 的格式印那則回話、退 0。
 逾時 stderr `aos-agent: Timeout: 等了 N 秒沒有新回話…`、stdout 印 `status`、退 101。
@@ -24,18 +24,4 @@
 （09-24 fix-r4 補）**手動暫停**＝`aos-agent: paused: 已手動暫停，continue 後才會處理：aos-agent continue --target <dir>`；**連敗暫停**（§9 的門）＝`aos-agent: stuck: …`；（09-24 fix-r5 補）K 帳本那筆 **`bad`**＝`aos-agent: bad: kernel 判壞了…`。
 `恢復中`（cpu dead、daemon 重拉中）與 `重試中`（連敗未滿 3 次）會自己好，照常等。
 
-## 1.5 `listen`：看回話（09-24 fix-r4 補，取代 `last`）
-
-三種模式互斥（給兩個以上＝用法錯 2），都不給＝`--last`。不要 `AOS_KERNEL_HOME`。「回話」＝記憶裡 `role: assistant` 的一則；印法：`content` 原樣，只有 `tool_calls` 時印 `(tool_calls: 名1, 名2)`；`--json` 改印整則一行 JSON。
-
-- **`--last`**（就是舊的 `last`）：讀驗 info 後找記憶裡最後一則 assistant 印出來、退 0。一則都沒有＝`NotFound`、退 1；info 讀驗錯照 §12 退 1。
-  （09-24 試玩 r2 補）info 讀驗錯時改讀 `<dir>/prompts/history.json`，stderr 一行 `aos-agent: warn: info.json 讀不了（<代號>），改讀 prompts/history.json`；那份也讀不了才退 1。
-  門關著（`waits` 有沒到的）時照印回話，stderr 多一行 `aos-agent: warn: 門關著…這則回話可能是舊的；看 aos-agent status`（連敗暫停就說用 `aos-agent continue` 解除）；手動暫停時同樣多一行 `已手動暫停…`。
-  （09-24 fix-r5 補）**還沒講完**：沒有上面那兩種警告、但這一輪還沒走完——印的那則帶 `tool_calls`（中途叫工具，可能還附一句「讓我查查」）、它後面還有別的訊息、`state` 不是 `idle`、有 `batch`／`intake`、或 `input` 有還沒收的檔——stderr 多一行
-  `aos-agent: warn: 還在處理中（tool_calls: 名1, 名2）：最後的回話還沒出來；要等就 aos-agent listen --wait --target <dir>`（不是 tool_calls 那種，括號寫 `新輸入還沒回`，並說「這則是上一輪的回話」）。
-  **回話附時間**：stderr 一行 `aos-agent: time: <MM-DD HH:MM:SS>`——記憶檔的修改時間；印的那則不是最後一則時後面加 `（記憶最後更新，這則更早）`。stdout 照舊只有回話本身（`--json` 也不加欄位）。
-- **`--wait [秒]`**：開始時記下記憶長度 H0，阻塞等**下一則新回話**：用 §1.2 那套等法（同一個函式）——這一輪走完（`idle`、沒 batch、沒 intake）且最後一則是第 H0 則以後的 assistant，就印那一則、退 0。
-  秒數省略＝300。逾時＝stderr `aos-agent: Timeout: 等了 N 秒沒有新回話…`、stdout 印 `status`、退 101；沒登記／手動暫停／連敗暫停（09-24 fix-r5 再加 kernel 家有問題、`bad`）＝跟 `say --wait` 一樣開始前就看、立刻退 101（listen 沒投話，不印「已投入」那行）。
-  中途要看的是「一整輪的結果」，所以模型先叫工具的那則（只有 `tool_calls`）不算，等到輪完才印最後那則。
-- **`--follow`**：從現在的記憶長度起，每 200 ms 看一次，**每多一則 assistant 就印一則**（含只有 `tool_calls` 的中間那則，印成 `(tool_calls: …)`），印完 flush，一直到 Ctrl-C（退 0）。
-  沒登記、暫停都不退出（它只是看著）；記憶被人改短就從新的長度重新算。info 讀驗錯＝退 1。
+（09-24 listen 微調）§1.5 `listen` 搬到 [cli-listen.md](cli-listen.md)。

@@ -2,6 +2,7 @@
 import argparse
 import os
 from pathlib import Path
+import re
 
 import aos_home
 from aos_agent_home import AgentError
@@ -12,13 +13,20 @@ MAX_WAIT_SECONDS = 7 * 24 * 3600
 HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登記這個 agent',
          'stop': '撤銷登記', 'init': '在資料夾生一個最小可跑的 agent 家',
          'say': '投一則 user 訊息（--wait 等回話）',
-         'listen': '看回話：--last 最後一則（預設）、--wait 等下一則、--follow 一直印',
+         'listen': '看回話：--last [N] 最後 N 則、--wait 等下一則、--follow 一直印（三選一，要給）',
          'status': '印 agent 現在的狀態、在等什麼、最近的錯',
          'pause': '手動暫停：還登記著，但每格什麼都不做',
          'continue': '解除手動暫停與連敗暫停',
          'check': '啟動前檢查：K 的設定＋這個 agent 家（--probe 真的打一次模型）',
          'tools': '裝工具包：tools add NAME|DIR（內建 base＝read／write／edit／bash／grep／find／ls）'}
 WAIT_HELP = '等幾秒；不帶數字＝%d 秒' % WAIT_SECONDS
+FULL_LIMIT = 4000  # 跟 aos_agent_listen_render.FULL_LIMIT 一致（-h 不為了一個數字載入印法模組）
+LISTEN_MODES = '--last [N]（最後 N 則）、--wait [秒]（等下一則）、--follow（一直印）'
+LISTEN_EPILOG = ('三種看法選一種，都不給＝用法錯：\n'
+                 '  aos-agent listen --last          最後一則回話\n'
+                 '  aos-agent listen --last 5        最後五則，每輪前面一行「── 第 R 輪 · 收話 時間 ──」\n'
+                 '  aos-agent listen --last 3 --show-calls   連同叫了哪些工具、結果第一行\n'
+                 '  aos-agent listen --follow --show-calls-full   一直印，工具參數與回傳全印')
 
 
 class Parser(argparse.ArgumentParser):
@@ -43,11 +51,21 @@ def _parser():
             sub.add_argument('text', nargs='*', metavar='TEXT')
             sub.add_argument('--wait', nargs='?', const='', metavar='秒', help=WAIT_HELP)
         elif name == 'listen':
+            sub.formatter_class = argparse.RawDescriptionHelpFormatter
+            sub.usage = ('aos-agent listen [--target DIR] (--last [N] | --wait [秒] | --follow)'
+                         ' [--show-calls | --show-calls-full] [--json]')
+            sub.epilog = LISTEN_EPILOG
             modes = sub.add_mutually_exclusive_group()
-            modes.add_argument('--last', action='store_true', help='印最後一則回話就退（預設）')
+            modes.add_argument('--last', nargs='?', const='1', metavar='N',
+                               help='印最後 N 則回話就退（不帶數字＝1）')
             modes.add_argument('--wait', nargs='?', const='', metavar='秒',
                                help='等下一則新回話，印出就退；' + WAIT_HELP)
             modes.add_argument('--follow', action='store_true', help='每一則新回話都印，直到 Ctrl-C')
+            shows = sub.add_mutually_exclusive_group()
+            shows.add_argument('--show-calls', action='store_true',
+                               help='連同工具呼叫一起印：一個呼叫一行 [呼叫 名 參數]、結果一行 [結果 名：第一行]')
+            shows.add_argument('--show-calls-full', action='store_true',
+                               help='連同工具呼叫一起印完整參數 JSON 與工具回傳（各超過 %d 字截斷並註明）' % FULL_LIMIT)
         if name == 'status':
             sub.add_argument('-v', '--verbose', action='store_true', help='顯示完整 touch 指令、舊錯原文與 stuck 原行')
         if name == 'init':
@@ -82,6 +100,17 @@ def _seconds(ap, value):
     return int(seconds * 1000)
 
 
+def _listen_count(ap, args):
+    """listen 沒給看法＝用法錯（09-24 listen 微調：--last 不再是預設）；--last N 要是正整數。"""
+    if args.last is None and args.wait is None and not args.follow:
+        ap.error('listen 要選一種看法：' + LISTEN_MODES + '；例：aos-agent listen --last')
+    if args.last is None:
+        return 1
+    if not re.fullmatch(r'[0-9]+', args.last) or int(args.last) < 1:
+        ap.error('--last 後面要是正整數（不帶數字＝1）：%s' % args.last)
+    return int(args.last)
+
+
 def _is_number(value):
     try:
         float(value)
@@ -111,6 +140,8 @@ def main(argv=None):
             ap.error('continue --all 不能跟 --target 一起給')
         if not os.path.isabs(os.environ.get('AOS_KERNEL_HOME') or ''):
             ap.error('continue --all 要 AOS_KERNEL_HOME（kernel 家的絕對路徑）')
+    if args.command == 'listen':
+        count = _listen_count(ap, args)
     wait = getattr(args, 'wait', None)
     timeout = _seconds(ap, wait) if wait is not None else WAIT_SECONDS * 1000
     try:
@@ -133,7 +164,8 @@ def main(argv=None):
         if args.command == 'listen':
             from aos_agent_listen import listen
             mode = 'wait' if wait is not None else 'follow' if args.follow else 'last'
-            return listen(target, mode, timeout_ms=timeout, as_json=args.json)
+            calls = 'full' if args.show_calls_full else 'short' if args.show_calls else None
+            return listen(target, mode, count=count, calls=calls, timeout_ms=timeout, as_json=args.json)
         if args.command == 'status':
             from aos_agent_status import status
             return status(target, as_json=args.json, verbose=args.verbose)

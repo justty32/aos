@@ -89,7 +89,7 @@ class AgentFixCliTests(unittest.TestCase):
         self.put(self.base / 'info.json', self.info)
         self.put(self.base / 'memory/custom.json', history)
         with patch.dict(os.environ, {}, clear=True), patch('sys.stdout', new_callable=io.StringIO) as out:
-            code = agent.main(['listen', '--target', str(self.base), *flags])
+            code = agent.main(['listen', '--target', str(self.base), '--last', *flags])
         return code, out.getvalue()
 
     def test_last_text(self):
