@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""aos-json 的命令列入口——薄薄一層，真東西在 ../lib/aos_json_cli.py。"""
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lib"))
+
+import aos_json_cli  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(aos_json_cli.main())

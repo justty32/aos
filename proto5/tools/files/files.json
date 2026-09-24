@@ -1,0 +1,40 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "json_edit",
+      "description": "Read or change one spot in a JSON file by JSON Pointer (e.g. /a/b/0), without text replace. get returns the value and a sha; pass that sha as expect_sha when writing so another writer's change is not lost. The file is rewritten only if the result is valid JSON.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "JSON file, relative to the project directory", "minLength": 1},
+          "op": {"type": "string", "enum": ["get", "set", "del", "append", "merge"], "description": "default get; append adds to an array; merge = JSON merge patch (null removes a key)"},
+          "pointer": {"type": "string", "description": "JSON Pointer; \"\" = whole document; \"-\" as last part of set = end of array"},
+          "value": {"description": "for set, append, merge"},
+          "expect_sha": {"type": "string", "description": "sha from your last get"}
+        },
+        "required": ["path"]
+      }
+    },
+    "_meta": {"argv": ["tools/files/json_edit"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "md_section",
+      "description": "Read or change one section of a Markdown file by its heading (the section runs to the next heading of the same or higher level). list shows headings; get returns the section and a sha to pass as expect_sha when writing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "Markdown file, relative to the project directory", "minLength": 1},
+          "op": {"type": "string", "enum": ["list", "get", "replace", "delete", "append_item", "remove_item"], "description": "default get; replace sets the body (heading kept)"},
+          "heading": {"type": "string", "description": "heading text, e.g. \"## Status\" (the #s are optional)"},
+          "text": {"type": "string", "description": "new body, or one list item line \"- ...\""},
+          "expect_sha": {"type": "string", "description": "sha from your last get"}
+        },
+        "required": ["path"]
+      }
+    },
+    "_meta": {"argv": ["tools/files/md_section"]}
+  }
+]
