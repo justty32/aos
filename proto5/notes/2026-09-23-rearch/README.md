@@ -23,5 +23,6 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | agent-round4-changes.md | 2026-09-24 agent 線第 4 輪（Opus）：最後 3 條落（被 state 引用的封存檔不可清、start 只就地解驗 done_exit／bad_after、「什麼都不寫」限起始讀驗）；三份標頭改「第 2 版，2026-09-24 定稿；程式未跟」 |
 | review-agent4-task.md／review-agent4-report.md | 2026-09-24 astra 快驗第 4 輪：3 條全解、無新矛盾；結論「三份整組可當照它實作的定稿」（前提：單一驅動者、被 state 引用的封存檔不清） |
 | impl-fix-round1.md | 2026-09-24 T5 修正第 1 輪：daemon 缺檔 SpawnFailed、控制 pipe 驗信封、cpu 家半成品恢復；新 CLI `aos-daemon stop`、`aos-kernel ack`／`init --cpu`／`ls` 摘要／`-h`、kernel.log 空格不寫；補 C-1／4／5／6 測試、修 D-1～7 flaky（917 條）；三份規範補句＋檔尾〈實作補記〉；跳過 C-2／3／7／8；要使用者拍 3 條 |
+| agent-impl-findings.md | 2026-09-24 T9 照 agent 線三份定稿規範實作（aos-llm-call、aos-agent tick／start／stop、換掉舊 llm／tool cpu）時的歧義與實作選擇、要使用者拍的 |
 
 舊規範已於 2026-09-24 換掉（副本在 proto5.1/spec/）。
