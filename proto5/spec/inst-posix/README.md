@@ -25,6 +25,8 @@
 
 ## 各節
 
+原文裡「檔尾〈沿革〉」「檔尾〈實作補記〉」「見下」這類方位詞是拆檔前的位置，拆後照下表找對應檔（`history.md`、`impl-notes.md`、`rulings.md` 等）。
+
 | 檔 | 內容 |
 |---|---|
 | [metainfo.md](metainfo.md) | §1 `_metainfo`：這份 inst 是哪一種、第幾版 |

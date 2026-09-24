@@ -25,6 +25,8 @@ daemon 是所有 cpu 的父行程、最單純；IPC 用 pipe，只管生死；`s
 
 ## 各節
 
+原文裡「檔尾〈沿革〉」「檔尾〈實作補記〉」「見下」這類方位詞是拆檔前的位置，拆後照下表找對應檔（`history.md`、`impl-notes.md`、`rulings.md` 等）。
+
 | 檔 | 內容 |
 |---|---|
 | [terms.md](terms.md) | §0 名詞（白話） |
