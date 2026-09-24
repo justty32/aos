@@ -1,12 +1,14 @@
 """aos-agent 的命令列（aos-agent.md §1）：家一律 --target DIR，省略＝目前資料夾。"""
 import argparse
 import os
+from pathlib import Path
 
 import aos_home
 from aos_agent_home import AgentError
 from aos_agent_runtime import report
 
 WAIT_SECONDS = 300
+MAX_WAIT_SECONDS = 7 * 24 * 3600
 HELPS = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登記這個 agent',
          'stop': '撤銷登記', 'init': '在資料夾生一個最小可跑的 agent 家',
          'say': '投一則 user 訊息（--wait 等回話）',
@@ -31,6 +33,7 @@ def _parser():
         sub.add_argument('--target', metavar='DIR', help='agent 家（省略＝目前資料夾）')
         if name == 'say':
             sub.formatter_class = argparse.RawDescriptionHelpFormatter
+            sub.usage = 'aos-agent say TEXT [--target DIR] [--wait [秒]]'
             sub.description = '投一則 user 訊息到 --target 的家（省略＝目前資料夾）。'
             sub.epilog = ('例子：\n  cd 家 && aos-agent say "現在幾點？" --wait\n'
                           '  aos-agent say "現在幾點？" --target ~/agents/amy --wait 60\n'
@@ -58,8 +61,8 @@ def _seconds(ap, value):
         seconds = float(value)
     except ValueError:
         ap.error('--wait 後面要是秒數（或不帶數字＝%d 秒）：%s' % (WAIT_SECONDS, value))
-    if seconds < 0 or seconds != seconds:
-        ap.error('--wait 的秒數不可為負數')
+    if not 0 <= seconds <= MAX_WAIT_SECONDS:  # 也擋掉 nan、inf、1e309
+        ap.error('--wait 的秒數要在 0～%d 之間：%s' % (MAX_WAIT_SECONDS, value))
     return int(seconds * 1000)
 
 
@@ -93,8 +96,12 @@ def main(argv=None):
         base = os.path.abspath(target)
         if args.command == 'stop' and not os.path.isdir(base):
             raise AgentError('NotAnAgent', '%s 不是存在的資料夾' % base)
-        if args.command not in ('init', 'tick', 'stop') and not os.path.exists(os.path.join(base, 'info.json')):
-            raise AgentError('NotAnAgent', '%s 沒有 info.json' % base)
+        if args.command not in ('init', 'tick', 'stop'):
+            from aos_agent import _other_home
+            if not os.path.exists(os.path.join(base, 'info.json')):
+                raise AgentError('NotAnAgent', '%s 沒有 info.json' % base)
+            if _other_home(Path(base)):
+                raise AgentError('NotAnAgent', '%s/info.json 不是 agent 家（_metainfo._type 不是 llm_agent）' % base)
         if args.command == 'say':
             from aos_agent_say import say
             return say(target, text[0], wait=wait is not None, timeout_ms=timeout)
@@ -113,7 +120,8 @@ def main(argv=None):
             return init(target)
         import aos_agent
         return {'tick': aos_agent.tick, 'start': aos_agent.start,
-                'stop': aos_agent.stop}[args.command](target)
+                'stop': aos_agent.stop}[args.command](target, note=aos_home.target_note(
+                    'agent 家', os.path.abspath(target), source))
     except (AgentError, aos_home.HomeError, OSError) as exc:
         if getattr(exc, 'code', None) == 'NotAnAgent':
             exc.msg = getattr(exc, 'msg', str(exc)) + aos_home.target_note(

@@ -254,6 +254,34 @@ class FixR4Tests(unittest.TestCase):
         self.assertEqual(agent.tick(self.root, self.env), 1)
         self.assertFalse((self.root / '.tick.lock').exists())
 
+    def test_tick_other_home_no_lock_no_pause(self):
+        """astra 審查：info.json 字面是別種家（例如 kernel）就不建鎖、不看 paused，直接 NotAnAgent。"""
+        self.put(self.root / 'kk/info.json', {'_metainfo': {'_type': 'kernel', '_version': 1}})
+        (self.root / 'kk/paused').write_text('x')
+        self.assertEqual(agent.tick(self.root / 'kk', self.env), 1)
+        self.assertIn('NotAnAgent', self.err.getvalue())
+        self.assertFalse((self.root / 'kk/.tick.lock').exists())
+        self.assertEqual(self.cli('pause', '--target', str(self.root / 'kk'))[0], 1)
+
+    def test_tick_lock_io_failure_closes_fd(self):
+        """astra 審查：鎖檔寫 pid 失敗時也要關 fd，同一行程下一次 tick 不會被自己擋住。"""
+        self.put(self.base / 'input.json', 'hi')
+        with patch('aos_agent_runtime.os.ftruncate', side_effect=OSError(28, 'No space left')):
+            self.assertEqual(agent.tick(self.base, self.env), 1)
+        self.assertEqual(agent.tick(self.base, self.env), 0)
+        self.assertNotIn('busy', self.err.getvalue())
+
+    def test_tick_not_agent_names_source(self):
+        with patch.dict(os.environ, {'AOS_KERNEL_HOME': str(self.k)}, clear=True):
+            self.assertEqual(agent.main(['tick', '--target', str(self.root)]), 1)
+        self.assertIn('取自 --target', self.err.getvalue())
+
+    def test_wait_seconds_bounds(self):
+        for value in ('inf', '1e309', 'nan', '604801'):
+            with self.subTest(value=value), self.assertRaises(SystemExit) as cm:
+                self.cli('listen', '--target', str(self.base), '--wait', value)
+            self.assertEqual(cm.exception.code, 2)
+
     # 舊版 tick.json（fix-r4 前：位置參數＋AOS_K）------------------------------
 
     def test_start_rewrites_legacy_tick(self):

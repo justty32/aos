@@ -98,6 +98,7 @@ def _parser():
             p.add_argument("name", help="回音檔名或路徑" if command == "ack" else "行程名稱")
         p.add_argument("--target", metavar="K", help=TARGET_HELP)
         if command == "init":
+            p.usage = "aos-kernel init [--target K] --config FILE"
             p.epilog = INIT_EPILOG
             p.add_argument("--config", metavar="FILE", help="info 設定檔（JSON）；必填")
         elif command == "check":
@@ -176,7 +177,7 @@ def _run(args, trailing):
             setattr(args, key, values[0] if values else None)
         if args.daemon_target == "":
             raise CLIUsage("--daemon-target 不可為空")
-        return check(args.home, args.agent, args.daemon_target)
+        return check(args.home, args.agent, args.daemon_target, note=args.note)
     if args.command == "halt":
         return stop(args.home, args.wait_ms, args.no_wait)
     if args.command == "boot":
@@ -218,7 +219,7 @@ def main(argv=None):
                 raise CLIUsage("%s 不在合法範圍" % key)
         home, source = aos_home.resolve_target(args.target, ENV)
         args.home = str(home)
-        note = aos_home.target_note("K", home, source, ENV)
+        note = args.note = aos_home.target_note("K", home, source, ENV)
         return _run(args, trailing)
     except aos_home.HomeError as exc:
         usage = isinstance(exc, CLIUsage)

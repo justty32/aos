@@ -19,6 +19,19 @@ def _hook(step_name):
     """持久化完成後的單一測試掛鉤；正式執行時不做任何事。"""
 
 
+def _other_home(base):
+    """info.json 字面寫著別種家（kernel、daemon…）就不是 agent 家：不建鎖檔、不看 paused，交給讀驗報 NotAnAgent。
+
+    讀不懂或 _type 是指示詞的，當作壞掉的 agent 設定照常拿鎖（壞設定也要能 pause）。
+    """
+    try:
+        meta = aos_home.read_json(base / 'info.json').get('_metainfo')
+        kind = meta.get('_type') if isinstance(meta, dict) else None
+    except (aos_home.HomeError, AttributeError):
+        return False
+    return isinstance(kind, str) and kind != 'llm_agent'
+
+
 def _environment(env):
     env = os.environ if env is None else env
     kernel = env.get(KERNEL_ENV)
@@ -27,18 +40,18 @@ def _environment(env):
     return env, kernel
 
 
-def _error(exc):
+def _error(exc, note=''):
     code = 'io' if isinstance(exc, OSError) or getattr(exc, 'code', '') == 'WriteFailed' else exc.code
-    report(code, getattr(exc, 'msg', str(exc)))
+    report(code, getattr(exc, 'msg', str(exc)) + (note if code == 'NotAnAgent' else ''))
     return 2 if code == 'Usage' else 1
 
 
-def tick(agent_dir, env=None):
+def tick(agent_dir, env=None, note=''):
     lock = None
     try:
         env, kernel = _environment(env)
         base = Path(os.path.abspath(agent_dir))
-        if (base / 'info.json').exists():
+        if (base / 'info.json').exists() and not _other_home(base):
             # aos-agent.md §2.1：同一個家同時只有一個 tick 做事；被佔就讓掉，不動任何檔。
             got, lock = tick_lock(base)
             if not got:
@@ -68,7 +81,7 @@ def tick(agent_dir, env=None):
         make_batch(run, kernel)
         return send(run)
     except (AgentError, aos_home.HomeError, OSError) as exc:
-        return _error(exc)
+        return _error(exc, note)
     finally:
         if lock is not None:
             os.close(lock)
@@ -111,7 +124,7 @@ def _tick_inst(run, kernel):
     return str(path)
 
 
-def _register(agent_dir, env, starting):
+def _register(agent_dir, env, starting, note=''):
     try:
         env = os.environ if env is None else env
         from aos_agent_status import tick_binding, tick_kernel
@@ -158,15 +171,15 @@ def _register(agent_dir, env, starting):
         print(('started ' if starting else 'stopped ') + params['name'])
         return 0
     except (AgentError, aos_home.HomeError, OSError) as exc:
-        return _error(exc)
+        return _error(exc, note)
 
 
-def start(agent_dir, env=None):
-    return _register(agent_dir, env, True)
+def start(agent_dir, env=None, note=''):
+    return _register(agent_dir, env, True, note)
 
 
-def stop(agent_dir, env=None):
-    return _register(agent_dir, env, False)
+def stop(agent_dir, env=None, note=''):
+    return _register(agent_dir, env, False, note)
 
 
 def main(argv=None):

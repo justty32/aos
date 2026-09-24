@@ -68,7 +68,7 @@ aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 `--target` 省略＝目前資料夾（agent 沒有對應的環境變數），必須是 agent 家（`NotAnAgent`；`init` 例外）；`NotAnAgent` 的訊息講清楚這次用的家是 `--target` 給的還是目前資料夾。
 `tick`／`start` 都要 `AOS_KERNEL_HOME`：沒設或不是絕對路徑＝用法錯 2；
 （09-24 試玩 r2 補）`stop` 沒設 `AOS_KERNEL_HOME` 就用 `tick.json` 記的（§11，字面絕對路徑才算），兩個都沒有＝用法錯 2。其他子命令不要 `AOS_KERNEL_HOME`（`say`／`status`／`listen` 有設就拿來看登記狀態）。
-`--json` 只給 `listen`、`status`，給別的＝用法錯 2。`--wait` 的秒數：省略＝**300 秒**；給了要是非負數字（可帶小數），不是＝用法錯 2。
+`--json` 只給 `listen`、`status`，給別的＝用法錯 2。`--wait` 的秒數：省略＝**300 秒**；給了要是 0～604800（7 天）的數字（可帶小數），不是＝用法錯 2。
 
 ### 1.1 `init`：生一個最小可跑的家（09-24 試玩 r2 補）
 
@@ -152,14 +152,14 @@ aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 家還登記在 kernel、kernel 照樣每格叫 `tick`，但 `tick` 看到家裡有 **`paused`** 這個檔就什麼都不做、直接退 0（§2 第 0 步）——不收輸入、不送批、不收回音、不清檔；
 在途的工作照跑，回音留在 K，`continue` 之後再收。
 
-`pause`：家要有 `info.json`（不讀驗內容，設定壞了也停得住；沒有＝`NotAnAgent`、退 1）；建 `paused`（寫一行 `paused at <ISO 時間>`，`.tmp` 再 rename），印 `paused <dir>（aos-agent continue --target <dir> 解除）`、退 0。
+`pause`：家要有 `info.json`（不讀驗內容，設定壞了也停得住；沒有、或字面寫著別種家＝`NotAnAgent`、退 1）；建 `paused`（寫一行 `paused at <ISO 時間>`，`.tmp` 再 rename），印 `paused <dir>（aos-agent continue --target <dir> 解除）`、退 0。
 已經有＝印 `已經暫停了`、退 0。不拿 tick 鎖、不寫 `state.json`：只放一個檔，所以不會跟正在跑的那格互相蓋掉；正在跑的那格照樣做完，下一格起才停。
 落地成一個檔而不是 `state.json` 的一格，是因為 `state.json` 只有 tick 寫（§13）；外人改它會跟正在跑的那格互相蓋掉。
 `paused` 不是 `.json`，所以就算 `input` 指到家本身也不會被當成輸入收走。
 
 ## 2. 一次 `tick` 的順序
 
-0. （09-24 fix-r4 補）`AOS_KERNEL_HOME` 沒設或不是絕對路徑＝退 2。家裡沒有 `info.json` 就直接到第 1 步（會是 `NotAnAgent`，不建鎖檔）。
+0. （09-24 fix-r4 補）`AOS_KERNEL_HOME` 沒設或不是絕對路徑＝退 2。家裡沒有 `info.json`，或 `info.json` 字面寫著別種家（`_metainfo._type` 是字串但不是 `llm_agent`，例如 kernel、daemon 的家）就直接到第 1 步（會是 `NotAnAgent`，不建鎖檔、不看 `paused`）；`info.json` 讀不懂的照常拿鎖（壞設定的家也要能暫停）。
    否則拿 **tick 鎖**（§2.1）：拿不到＝stderr `aos-agent: busy: 另一個 tick 正在跑（pid <N>），這格不做事`、**退 101**、不動任何檔。
    拿到了再看**手動暫停**：家裡有 `paused`＝什麼都不做、退 0（§1.6）。
 1. 讀驗 `info.json`、`state.json`、記憶、工具檔（[agent.md](agent.md)）。不過＝退 1，**什麼都不寫**（第 0 步的鎖檔除外）。

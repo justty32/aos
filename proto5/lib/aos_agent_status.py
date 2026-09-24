@@ -191,7 +191,7 @@ def show(data, *, as_json=False, verbose=False):
             for path in w['paths']:
                 note = '已到，下一格會開' if arrived(data['dir'], path) else '沒到'
                 if pause_path(data['dir'], path, w['consume']):
-                    note += '（連敗暫停，aos-agent continue）'
+                    note += '（連敗暫停，aos-agent continue --target %s）' % data['dir']
                     if verbose:
                         note += '：touch ' + path
                 print('wait   %s %s' % (path, note))

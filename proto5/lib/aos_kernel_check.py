@@ -88,7 +88,7 @@ class Checks:
                             '%s；請修正 %s' % (exc, inst))
                 return None
             if effective != expected:
-                self.report('warn', 'envs/' + name, 'inst.json 已建，改 info 不生效，要 aos-kernel halt 後改 inst.json')
+                self.report('warn', 'envs/' + name, 'inst.json 已建，改 info 不生效，要 aos-kernel halt --target %s 後改 %s' % (home, inst))
         return effective
 
     def llm(self, name, effective, env):
@@ -150,7 +150,7 @@ class Checks:
                         '可執行 %s' % command if exists else '找不到可執行的 %s；請修正工具路徑、執行權限或 PATH' % command)
 
 
-def check(home, agent=None, daemon=None):
+def check(home, agent=None, daemon=None, note=''):
     # 延後 import，讓 kernel CLI 僅需接線，不形成模組初始化循環。
     from aos_kernel import load_info
     home = Path(home).absolute()
@@ -158,7 +158,7 @@ def check(home, agent=None, daemon=None):
     try:
         info = load_info(home)
     except ERRORS as exc:
-        checks.report('bad', 'info', '%s；請修正 %s/info.json' % (exc, home))
+        checks.report('bad', 'info', '%s；請修正 %s/info.json%s' % (exc, home, note))
         return 1
     checks.report('ok', 'info', 'kernel 設定讀驗通過')
     checks.dirs(home)

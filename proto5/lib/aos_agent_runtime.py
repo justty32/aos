@@ -36,16 +36,24 @@ def tick_lock(base):
     import fcntl
     fd = os.open(Path(base) / LOCK, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o644)
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
         try:
-            holder = os.read(fd, 64).decode('ascii', 'replace').strip() or None
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            try:
+                holder = os.read(fd, 64).decode('ascii', 'replace').strip() or None
+            except OSError:
+                holder = None
+            os.close(fd)
+            return False, holder
+        os.ftruncate(fd, 0)
+        os.write(fd, b'%d\n' % os.getpid())
+    except BaseException:
+        # 還沒把 fd 交出去的任何失敗都在這裡關，免得同一行程下一次 tick 被自己留下的鎖擋住。
+        try:
+            os.close(fd)
         except OSError:
-            holder = None
-        os.close(fd)
-        return False, holder
-    os.ftruncate(fd, 0)
-    os.write(fd, b'%d\n' % os.getpid())
+            pass
+        raise
     return True, fd
 
 

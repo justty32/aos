@@ -55,6 +55,25 @@ class KernelCLI(KernelCase):
         self.assertTrue(result.stderr.startswith('aos-kernel: ReadFailed: '))
         self.assertFalse(self.home.exists())
 
+    def test_init_config_null_and_directive_pool(self):
+        """fix-r4（astra 審查）：JSON null 不能落回預設家；pool 用指示詞時照解完的值決定補不補 k。"""
+        import os
+        result = self.cli('init', self.home, '--config', self.init_config('null', 'null.json'))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertFalse(self.home.exists())
+        config = self.init_config({'cpus': {'s': {'pool': {'$env': 'AOSTEST_POOL'}}, '0': {}}}, 'dir.json')
+        result = self.raw_cli('init', '--target', self.home, '--config', config,
+                              env=dict(os.environ, AOSTEST_POOL='kernel'), cwd=self.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(list(read_json(self.home / 'info.json')['cpus']), ['s', '0'])
+
+    def test_check_bad_info_names_source(self):
+        import os
+        env = {k: v for k, v in os.environ.items() if k != 'AOS_KERNEL_HOME'}
+        result = self.raw_cli('check', env=env, cwd=self.root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('取自 目前資料夾', result.stdout + result.stderr)
+
     def test_init_config_daemon_rejected(self):
         path = self.init_config({'cpus': {'0': {}}, 'daemon': '/abs/D'})
         result = self.cli('init', self.home, '--config', path)
@@ -334,10 +353,10 @@ class KernelCLI(KernelCase):
         from unittest.mock import patch
         with patch('aos_kernel_check.check', return_value=0) as check:
             self.assertEqual(kernel.main(['check', '--target', str(self.home), '--agent', 'A', '--daemon-target', 'D']), 0)
-        check.assert_called_once_with(str(self.home), 'A', 'D')
+        check.assert_called_once_with(str(self.home), 'A', 'D', note=check.call_args.kwargs['note'])
 
     def test_check_omitted_options_pass_none(self):
         from unittest.mock import patch
         with patch('aos_kernel_check.check', return_value=0) as check:
             self.assertEqual(kernel.main(['check', '--target', str(self.home)]), 0)
-        check.assert_called_once_with(str(self.home), None, None)
+        check.assert_called_once_with(str(self.home), None, None, note=check.call_args.kwargs['note'])
