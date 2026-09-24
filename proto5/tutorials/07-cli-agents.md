@@ -5,8 +5,8 @@
 **目標**：不寫任何新程式，把 `claude`（Claude Code）和 `codex` 兩支 CLI 當成「一種普通的 cpu」來用：
 開一個專門放它們的 kernel 家，丟一張 codex 唯讀審查單、一張 claude 單，收結果，再學會「接著聊」和「取消」。
 
-**前提**：做完 [01](01-daemon-kernel.md) 第 1～6 步（daemon 開著）；新終端先 `cd` 回 **repo 根目錄**再 `. $HOME/aos-try/env.sh`（下面的 `$PWD` 指的是 repo）。
-`claude`、`codex` 都登入過（有 `~/.codex/auth.json`），**開 daemon 那時**的 PATH 找得到它們。路徑只用英數與 `/ . _ -`（範本用 `sed` 換字）。
+**前提**：做完 [01](01-daemon-kernel.md) 第 1～5 步（`aos up` 開著機）；新終端先 `cd` 回 **repo 根目錄**再 `. $HOME/aos-try/env.sh`（下面的 `$PWD` 指的是 repo）。
+`claude`、`codex` 都登入過（有 `~/.codex/auth.json`），**`aos up` 開 daemon 那時**的 PATH 找得到它們。路徑只用英數與 `/ . _ -`（範本用 `sed` 換字）。
 **這篇會花你自己的訂閱額度**：照抄的話 codex 1 次（約十幾萬 input token）、claude 2 次（只回 ok）。
 
 ## 0. 先講清楚：三個洞
@@ -27,13 +27,19 @@
 T=$PWD/proto5/templates/cli-agents
 sed "s|@W@|$W|g" $T/kernel2.json > $W/kernel2.json
 aos-kernel init --target $W/K2 --config $W/kernel2.json
-aos-kernel boot --target $W/K2
+aos up --target $W/K2
+sleep 2
 aos-kernel ls --target $W/K2
 ```
 
-你會看到 `booted 3 pools, 4 cpus`；`ls` 的池有三行：`kernel want 1 … daemon k2-kernel: running 1 …`、`claude want 1 …`、`codex want 2 …`。
+`aos up` 印 `up K=/home/you/aos-try/K2  daemon /home/you/aos-try/D（本來就在）  2 個池、3 顆 cpu` 和 `health ok`（daemon 是 01 開的那個）。`ls` 的池有兩行：
 
-- **kernel 池在 daemon 那邊叫 `k2-kernel`**（範本的 `"dpool"`）：`K` 已經用掉 daemon 裡 `kernel` 這個池名，同名會被拒（`NameTaken`）。其他池名也不能跟 `K` 的撞。
+```text
+  claude  want 1  sent 1  busy 0  idle 1  draining 0   daemon claude: running 1 pending 0 dead 0 failed 0
+  codex   want 2  sent 2  busy 0  idle 2  draining 0   daemon codex: running 2 pending 0 dead 0 failed 0
+```
+
+- **池名不能跟 `K` 的撞**：兩個 kernel 共用一個 daemon，daemon 那邊的池名（沒寫 `dpool` 就是池名）只能有一個主人。撞了 `aos up` 第二行會印 `health 池 …：NameTaken（…）`、退 1。
 - 範本讓 claude、codex 兩池 **從空環境開始**，只帶 `PATH`、`HOME`、`LANG`（codex 再多 `CODEX_HOME`）：環境裡的 API 金鑰帶不進去（免得改走付費 API）。要靠代理（`HTTPS_PROXY`）才上得了網，就在 `$W/kernel2.json` 那兩池的 `$val` 補回，再 `init`。
 - 多開幾顆照 [05](05-many-agents.md) 的 `cpu add --target $W/K2`；claude 池多開＝同時燒更多額度。
 
@@ -127,7 +133,7 @@ pgrep -a -f "^sleep 77"
 aos-daemon kill --pool claude 0
 ```
 
-印 `killed 0`（0 是號碼），只代表「開始停」：daemon 先請 cpu 溫和停，5 秒後送 TERM、cpu 再砍那張單子的程式那一組（不死再過 5 秒 KILL）。這次約 6 秒後 `pgrep` 才看不到；自己脫離那一組的子孫砍不到，要另外查。
+印 `killed 0`（0 是號碼），只代表「開始停」：daemon 先請 cpu 溫和停，5 秒後送 TERM、cpu 再砍那張單子的程式那一組（不死再過 5 秒 KILL）。這次約 5～6 秒後 `pgrep` 才看不到；自己脫離那一組的子孫砍不到，要另外查。
 砍完 daemon 馬上再拉一顆，`aos-daemon ls --pool claude` 看得到 `0  running … gen 2`（第 2 任）。
 **小心砍錯**：從你查到「在 `claude/0` 上」到砍下去之間，它可能已經跑完、換跑下一張了。
 
@@ -141,7 +147,8 @@ aos-daemon kill --pool claude 0
 
 | 看到 | 原因與怎麼辦 |
 |---|---|
-| `boot` 印 `NameTaken` | K2 的池在 daemon 那邊的名字跟 `K` 的撞了（最常見是 kernel 池沒寫 `dpool`）。`halt` K2、`rm -rf $W/K2`、在 `kernel2.json` 補 `dpool` 重來 |
+| `aos up --target $W/K2` 印 `health 池 …：NameTaken`、退 1 | K2 的池在 daemon 那邊的名字跟 `K` 的撞了。`aos down --target $W/K2`、`rm -rf $W/K2`、在 `kernel2.json` 那池補 `"dpool": "k2-…"` 重來 |
+| `init` 印 `FieldTypeMismatch: kernel 是保留名…` | 用了舊的 `kernel2.json`（有 `kernel` 池）。刪掉那一池再 `init`；範本已經改好了 |
 | 回音 `"code": 127` | daemon 開起來時的 PATH 找不到 `claude`／`codex`；開 daemon 前先 `export` 好 |
 | `ack` 印 `NotFound` | ack 要用 `add` 印的**單名**（`cli-….json`），不是 `--name` 給的名字 |
 | claude 的 `result.json` 是 `"subtype": "error_max_budget_usd"` | 超過 `--max-budget-usd`（回音 `code` 1）。調高範本的數字，或把任務切小 |
@@ -149,8 +156,9 @@ aos-daemon kill --pool claude 0
 ## 收工
 
 ```sh
-aos-kernel halt --target $W/K2
+aos down --target $W/K2
 ```
 
-印 `stopped` 才算停好；報 `Timeout` 是還有單子在跑（halt 只等 30 秒），等它跑完或照第 6 步砍 cpu，先別刪。K 和 daemon 照 [01 第 7 步](01-daemon-kernel.md#7-關機順序kernel--daemon)關。
+印 `stopped` 才算停好；再一行 `daemon … 沒停：還有 別的 kernel：…/K；池：default、llm（…）` 是對的——daemon 還要給 `K` 用。
+報 `Timeout` 是還有單子在跑（最多等 30 秒），等它跑完或照第 6 步砍 cpu，先別刪。K 和 daemon 照 [01 第 6 步](01-daemon-kernel.md#6-關機) `aos down` 一起關。
 整個重來：停好後 `rm -rf $W/K2 $W/cli-jobs $W/codex-home $W/cli-ws $W/kernel2.json`（只刪這篇建的）。

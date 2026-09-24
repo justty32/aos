@@ -1,5 +1,4 @@
-{"pools": {"kernel": {"count": 1, "dpool": "k2-kernel"},
-           "claude": {"count": 1,
+{"pools": {"claude": {"count": 1,
                       "envs": {"$opt": "clear", "$val": {"PATH": {"$env": "PATH"}, "HOME": {"$env": "HOME"}, "LANG": "C.UTF-8"}}},
            "codex":  {"count": 2,
                       "envs": {"$opt": "clear", "$val": {"PATH": {"$env": "PATH"}, "HOME": {"$env": "HOME"}, "LANG": "C.UTF-8",

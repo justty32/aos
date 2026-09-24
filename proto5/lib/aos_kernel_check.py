@@ -348,7 +348,7 @@ def kernel_checks(checks, home, daemon=None, note='', recorded_daemon=False):
             where = '（池 %s）' % '、'.join(pools)
         checks.report('ok' if alive[home_d] else 'warn', 'daemon',
                       'daemon 活著：%s%s' % (home_d, where) if alive[home_d] else
-                      'daemon 沒在跑：%s%s；先開 daemon：aos-daemon boot --target %s' % (home_d, where, home_d))
+                      'daemon 沒在跑：%s%s；aos up 會開它（只開 daemon：aos-daemon boot --target %s）' % (home_d, where, home_d))
     checks.cpus(home, info, alive)
     # PATH 看哪個 daemon：--daemon-target 優先，否則替 kernel 開 tick 的 daemon（one-boot）。
     kernel_daemon = ticker_daemon(info)

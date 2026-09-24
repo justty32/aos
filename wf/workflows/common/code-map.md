@@ -55,7 +55,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | [core/agent/README.md](../../../core/agent/README.md) | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見下方 `core/agent` 節 | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
 | [core/tick/README.md](../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
 | [proto4-3/docs/files.md](../../../proto4-3/docs/files.md) | `proto4-3/` 作業系統層原型的逐檔表；inst 指示詞、run 訊號狀態與 daemon lifecycle 已各自拆檔 | 要改 aos-exec／aos-run／aos-daemon／aos-kernel 原型 |
-| [proto5/README.md](../../../proto5/README.md) | `proto5/` Python 3.12 原型（09-24 起 daemon／kernel 是 proto5-2 納入的池式版本）；逐模組一句見下方 [proto5/lib 模組](#proto5lib-模組)，API 細節見 [lib/README.md](../../../proto5/lib/README.md)；命令列薄殼在 `proto5/cli/`（aos-exec／aos-cpu／aos-daemon／aos-kernel／aos-agent／aos-jail／aos-llm／aos-directives／aos-json／aos-team），三支主人指令的家一律 `--target` | 要改 proto5 的指示詞、inst／exec、JSON-RPC 家與交件、cpu 執行、daemon 池、kernel 池表／帳本／tick 鏈，或 agent 家讀驗、aos-llm call、aos-agent 各子命令、aos-team 團隊分派 |
+| [proto5/README.md](../../../proto5/README.md) | `proto5/` Python 3.12 原型（09-24 起 daemon／kernel 是 proto5-2 納入的池式版本）；逐模組一句見下方 [proto5/lib 模組](#proto5lib-模組)，API 細節見 [lib/README.md](../../../proto5/lib/README.md)；命令列薄殼在 `proto5/cli/`（aos（`aos up`／`aos down`）／aos-exec／aos-cpu／aos-daemon／aos-kernel／aos-agent／aos-jail／aos-llm／aos-directives／aos-json／aos-team），三支主人指令的家一律 `--target` | 要改 proto5 的指示詞、inst／exec、JSON-RPC 家與交件、cpu 執行、daemon 池、kernel 池表／sqlite 帳本／tick（09-24 one-boot 起由 daemon 開）、`aos up`／`down`，或 agent 家讀驗、aos-llm call、aos-agent 各子命令、aos-team 團隊分派 |
 | [proto5.1/README.md](../../../proto5.1/README.md) | `proto5.1/` 實驗場：proto5 的複本，照 23 題建議先實作——`lib/` 多了 `aos_cpu.py`（共用佇列）、`aos_llm_cpu.py`、`aos_tool_cpu.py`、`aos_run.py`、`aos_daemon.py`、`aos_kernel.py`；`spec/` 多了 cpu-queue／llm-cpu／tool-cpu／aos-*-cpu／aos-run／daemon-home／aos-daemon／kernel-home／aos-kernel；`notes/findings.md`（35 條）與 `findings-brief.md` | 要看「建議實作起來撞到什麼」、或要把 proto5.1 的東西回流 proto5 |
 | [proto4-5/README.md](../../../proto4-5/README.md) | `proto4-5/` LLM 排程原型；`llm_cpu_request.py` 管請求 ID／位置／指紋，`llm_cpu_manage.py` 直接查／刪 `K/llm/` 的 queued、running、done | 要改請求對帳或原型的 `aos-kernel llm ls／rm` |
 | [code-map/build.md](code-map/build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
@@ -85,20 +85,24 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_daemon` | daemon 的家、info、`is_alive`、給 kernel 讀的池摘要／kids 檔、boot（`run`）與 halt（`stop`） |
 | `aos_daemon_pools` | 池的資料形狀（pool.json／kids／summary.json）、檔案動作、拉孩子 |
 | `aos_daemon_loop` | daemon 的一圈：收屍、狀態機、退避、節流、fd 預算、批次停機階梯 |
-| `aos_daemon_rpc` | daemon 收的單 `scale`／`kill`／`ls` 怎麼驗、怎麼判 |
+| `aos_daemon_rpc` | daemon 收的單 `scale`／`kill`／`ls`／`tick` 怎麼驗、怎麼判 |
+| `aos_daemon_ticks` | （one-boot）daemon 替 kernel 開 tick：登記檔 `D/kernels/`、定時或 `K/requests/` 有新檔就開一格、同時一格、逾時 KILL、連敗退避 |
 | `aos_daemon_cli` | `aos-daemon boot／halt／ls／scale／kill` 命令列 |
 | `aos_kernel` | kernel 入口（`main`）＋只留測試在用的小匯出層 |
 | `aos_kernel_info` | 池表讀驗（info 第 2 版）、成員公式、`init`、初始帳本、`classify`、共用錯誤 |
-| `aos_kernel_ledger` | `KernelLedger` 帳本第 2 版：排隊、syscall、busy／on、四個出貨箱 |
+| `aos_kernel_ledger` | `KernelLedger` 帳本（記憶體裡第 2 版同形）：排隊、syscall、busy／on、四個出貨箱 |
+| `aos_kernel_store` | （one-boot）帳本第 3 版 `K/ledger.sqlite`：整份讀、只寫變了的列一筆交易、舊 `state.json` 匯入；`proc`／`peek_proc` 給 `aos-kernel proc`、agent、郵差讀 |
 | `aos_kernel_engine` | `Kernel` 一格十步與 `tick` |
 | `aos_kernel_pools` | kernel 這邊怎麼增減 cpu（每格第 7 步：scale 回音、重算、送單、搬池） |
-| `aos_kernel_boot` | `boot` 交接換鏈、`status`、halt 等停好 |
+| `aos_kernel_boot` | `boot`（寫帳本、向 daemon 登記開 tick）、`status`、halt 等停好 |
 | `aos_kernel_cpu` | `aos-kernel cpu add／rm／ls`：只改 `K/info.json` 的池表 |
 | `aos_kernel_rows` | 按池摘要與一顆一行的資料與排版（`cpu ls`、`ls`、health、check 共用） |
 | `aos_kernel_health` | `health()` 一句話健康判定與 agent 暫停／重試標記 |
 | `aos_kernel_ls` | `aos-kernel ls`：穩定資料（`--json`）與對齊表 |
 | `aos_kernel_check` | `aos-kernel check` 啟動前唯讀檢查（`aos-agent check` 共用前半） |
 | `aos_kernel_cli` | `aos-kernel` 參數解析與 `main` |
+| `aos_up` | （one-boot，入口 `cli/aos`）`aos up`：daemon 沒在跑就開→`aos-kernel boot`→等第一格；`aos down`：halt→沒人用的 daemon 一起停 |
+| `test/test_one_boot.py` | one-boot 的真 daemon＋真 tick 測試：交易中 kill -9 回滾、tick 逾時與連敗、新單觸發、同時一格、`aos up`／`down` 不留行程、舊帳本匯入 |
 | `aos_llm_call` | `aos-llm call`：問模型一次 |
 | `aos_agent` | agent 的 tick 三格、批次派工、kernel 排程登記 |
 | `aos_agent_cli` | `aos-agent` 各子命令的 argparse 與分派 |

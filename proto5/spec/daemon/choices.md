@@ -30,5 +30,5 @@
 24. **登記一個 kernel 一檔**（`kernels/<id>.json`，id＝K 路徑的 SHA-256 前 16 字元），只在登記、失敗、恢復時寫。
 25. **「有新單」只看 `K/requests/` 的修改時間**，變了才列目錄比檔名；不讀內容。
 26. **tick 退避沿用孩子的上限 `restart_max_ms`**，起點是 max(`every_ms`, 100)；**不自己放棄**。
-27. **停機時正在跑的 tick 給 `stop_wait_ms`＋`kill_wait_ms`**，然後整組 KILL；登記檔留著。
+27. **停機時正在跑的 tick 給 `stop_wait_ms`＋`kill_wait_ms`**，然後整組 KILL（不算這個 kernel 的失敗）；登記檔留著。
 28. **daemon 被 kill -9 留下的孤兒 tick 不殺**：靠 kernel 的 `K/.tick.lock` 與它自己的鬧鐘，新 daemon 開的格撞鎖退 75。

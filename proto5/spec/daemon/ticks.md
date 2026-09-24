@@ -55,7 +55,7 @@ daemon 不等它：開了就回去做別的，收屍時再看退出碼（[§4](l
 | 75 | `K/.tick.lock` 被佔：別的一格正在跑（人手跑的、上一任 daemon 留下的孤兒） | **不算失敗**；`every_ms` 後再試 |
 | 其他（含逾時被 KILL、開不起來） | 失敗 | 連敗 N 加 1、重寫登記檔、stderr 一行（見下）、退避 |
 
-失敗時 stderr：`aos-daemon: TickFailed: K=<K> 這格<原因>（連敗 N，W ms 後再試）`。原因是 `退出 <碼>`、`逾時（跑超過 <timeout_ms> ms）`、`停機時還沒跑完` 或 `開不起來：…`。
+失敗時 stderr：`aos-daemon: TickFailed: K=<K> 這格<原因>（連敗 N，W ms 後再試）`。原因是 `退出 <碼>`、`逾時（跑超過 <timeout_ms> ms）` 或 `開不起來：…`。
 
 **退避**：W＝min(max(`every_ms`, 100) × 2^(N−1), `restart_max_ms`)。例：`every_ms` 1000、預設上限 60000：1 秒、2 秒、4 秒…最多 60 秒。
 退避期間 `K/requests/` 來了新檔也**不開**。**daemon 不會自己放棄**：一直失敗就一直按上限重試，直到哪一格成功、或人重新 boot（重登記連敗歸零）。
@@ -63,13 +63,13 @@ daemon 不等它：開了就回去做別的，收屍時再看退出碼（[§4](l
 ## 逾時
 
 一格跑超過 `timeout_ms`（0＝不限）：daemon 對它那一組送 SIGKILL，算一次失敗。
-kernel 那邊也設了同樣長的鬧鐘（[kernel §3](../kernel/tick.md) 第 1 步），所以就算 daemon 不在了，卡住的那格也會自己死。
+kernel 那邊另設了 2×`timeout_ms` 的鬧鐘（[kernel §3](../kernel/tick.md) 第 1 步）：daemon 在的時候一定先砍；daemon 不在了，卡住的那格也會自己死。
 
 ## 停機
 
 daemon 收到 stop（[§5](shutdown.md)）：
 - 不再開新的格；新的登記回 `Stopping`（撤登記照收）。
-- 正在跑的那格給它 `stop_wait_ms`＋`kill_wait_ms` 自己跑完，再不退就整組 KILL（這也記一次失敗）。
+- 正在跑的那格給它 `stop_wait_ms`＋`kill_wait_ms` 自己跑完，再不退就整組 KILL。這**不算**這個 kernel 的失敗（連敗不加、登記檔不改）：是 daemon 自己要停，不是 kernel 壞了。
 - 等它收完屍 daemon 才退出。
 - **登記檔留著**：下次開 daemon 照開。不想要，就先讓 kernel 停好（它自己會撤登記；`aos down` 就是這樣做）。
 

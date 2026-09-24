@@ -36,7 +36,7 @@ cpu 是哪一種（一般、問模型的…）由池的 `envs` 決定，進這�
 | `pools.P.skip` | 非負整數陣列 | `[]` | 退休的 cpu 編號（見下「編號」） |
 | `cpu` | 物件 | 見右 | 工作池每顆 cpu 家的 `info.json` 設定：`poll_ms`（預設 **200**）、`timeout_ms`（預設 0）。kernel 建家時抄進去 |
 | `tick_ms` | 非負整數 | 1000 | daemon 多久開一格（從上一格開始算；[daemon §10](../daemon/ticks.md)）。`K/requests/` 有新檔時不等這個 |
-| `tick_timeout_ms` | 非負整數 | 60000 | （one-boot）一格最久跑多久：daemon 過了就整組 KILL、算一次失敗；tick 自己也設同樣長的鬧鐘。0＝不限。`init` 不寫進 info |
+| `tick_timeout_ms` | 非負整數 | 60000 | （one-boot）一格最久跑多久：daemon 過了就整組 KILL、算一次失敗；tick 自己另設 2 倍長的鬧鐘（daemon 先砍，鬧鐘只給孤兒 tick 用）。0＝不限。`init` 不寫進 info |
 | `interval_ms` | 非負整數 | 1000 | 行程 `interval_ms` 的預設 |
 | `timeout_ms` | 非負整數 | 0 | 行程 `timeout_ms` 的預設；tick 自己不限時 |
 | `done_exit` | 0～255 | 100 | 反覆行程回這個碼＝完成；0＝關掉 |
@@ -67,7 +67,7 @@ cpu 是哪一種（一般、問模型的…）由池的 `envs` 決定，進這�
 ## 改 info 什麼時候生效
 
 tick 每格重讀 info。池的 `count`／`skip`／`envs` 變了，**下一格**就照 [§3.1](pools.md) 處理，不用 boot。例外：
-- 開 tick 的 daemon（頂層 `daemon`）、`tick_ms`、`tick_timeout_ms` 要 boot（或 `aos up`）才換：boot 把它們登記給 daemon，daemon 照登記的開。（tick 自己的鬧鐘每格照 info 的 `tick_timeout_ms` 設。）
+- 開 tick 的 daemon（頂層 `daemon`）、`tick_ms`、`tick_timeout_ms` 要 boot（或 `aos up`）才換：boot 把它們登記給 daemon，daemon 照登記的開。（tick 自己的鬧鐘每格照 info 的 `tick_timeout_ms`×2 設。）
 - 池改 `daemon` 或 `dpool`（搬池）：tick 照帳本裡的舊位置先把舊池縮到 0，**等舊 daemon 把那池整個拿掉**（它的 `summary.json` 確定不在）才換新位置、開始宣告；
   在那之前 ls 印 `搬池中`。池從 info 刪掉又加回也一樣：帳本那格要等舊池消失才忘掉，加回來就接著用那格。
   這樣同一批 cpu 的家不會同時被兩個 daemon 的孩子當家。例外：那個位置**從沒被 daemon 確認過**（例如第一次宣告就撞 `NameTaken`），直接換新位置，不等舊池（實作 D-49）。

@@ -10,4 +10,4 @@
   行程死了（含 kill -9）鎖自己消失，不會卡住。boot 寫帳本時也拿這把（[§6 boot](boot.md)）；舊 kernel cpu 裡的舊格帶 `--chain` 就直接退 0。
 - 擋不住的：兩個 boot 同時跑（人的規矩）；人用手直接 `aos-cpu`／`aos-exec` 跑同一份 inst（規則一之外）；
   cpu 被 KILL 而子程式還活著（範式 §5.3，保證外）。
-- 一格跑太久：daemon 過了 `tick_timeout_ms` 就整組 KILL（算一次失敗），tick 自己也設同樣長的鬧鐘；鎖跟著行程消失，下一格照開。
+- 一格跑太久：daemon 過了 `tick_timeout_ms` 就整組 KILL（算一次失敗）；tick 自己另設 2×`tick_timeout_ms` 的鬧鐘，只給 daemon 被殺後的孤兒用；鎖跟著行程消失，下一格照開。
