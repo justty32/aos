@@ -46,6 +46,7 @@
 
 ## 5.4 誰負責發
 
-- **kernel**：往它管的每顆 cpu 放 `stop-*.json`（[kernel.md §3](../kernel/tick.md)），不發訊號。
+- **kernel**：（2026-09-24 池式納入改）不再往每顆 cpu 放 `stop-`；停機改成把每個工作池的宣告縮到 0，讓 daemon 用批次階梯收，一池一張單（[kernel §6 停機](../kernel/boot.md)）。
+  縮池也是「先等手上那件做完才收」（[kernel §3.1](../kernel/pools.md)）。
 - **daemon 停機**：對每個孩子的控制 pipe 寫 `stop`；等；逾時才走訊號（階梯在 [daemon §5](../daemon/shutdown.md)）。
 - **人**：終端裡 Ctrl-C 一次＝溫和、兩次＝強制。

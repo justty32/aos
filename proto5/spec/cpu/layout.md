@@ -21,7 +21,7 @@ C/
 
 **名字不重用**：一個家裡，request 的檔名一旦用過（放過、做過、回音 ack 掉了）就**不能再給另一件工作用**。
 `link` 只擋「當下同名」，擋不了「刪掉後再用同名」；再用同名會讓遲到的 ack 刪錯回音、舊回音被當成新結果。
-慣例 `<交件者名>-<epoch ns>-<交件者 pid>`；kernel 另有帶鏈 id 的取名法（[kernel §1.3](../kernel/ledger.md)）。
+慣例 `<交件者名>-<epoch ns>-<交件者 pid>`；kernel 另有帶鏈 id 的取名法（[kernel §1.3](../kernel/names.md)）。
 唯一性是交件者的責任，cpu 不查歷史。
 
 # 2. `info.json` 與 `state.json`
@@ -35,6 +35,7 @@ C/
 | `_metainfo` | 物件 | 必填 | `_type` 說主人是哪支程式（exec cpu＝`exec_cpu`、kernel＝`kernel`、daemon＝`daemon`）；`_version` 只認整數 1 |
 | `poll_ms` | 正整數 | 20 | 沒事時看一次 `requests/` 的間隔（不准 0，避免空轉） |
 | `timeout_ms` | 非負整數 | 0 | request 沒帶 `timeout_ms` 時的預設；0＝不限 |
+| `notify` | 絕對路徑（資料夾） | 沒這個鍵＝不通知 | 每則回音發出去之後，往這個資料夾放一張通知（[§6.4](notify.md)；2026-09-24 池式納入加）。鍵在但不是絕對路徑字串（含 `null`）＝`FieldTypeMismatch` |
 
 讀的時候先展開 [指示詞](../directives/README.md)（`$ref` 的相對路徑從 C 算起），再驗欄位型別；不提供 `$opt`。缺檔、身分不合＝`NotAHome`。
 

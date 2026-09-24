@@ -15,3 +15,4 @@
 > 2026-09-24 access-impl（A1）：`tools add` 能原地引用資料夾或單一 `.json` 檔、加 `--as`／`--only`（寫成 `tools` 元素的 `$opt`）；加 `tools ls [--json]`／`rm`／`alias`／`unalias`（[tools-manage.md](tools-manage.md)），都持 `info.json` flock、寫前整份試算；改完最後一行改成「下一批工具生效，不用重 start」。
 > 2026-09-24 access-impl（A2）：權限牆（[access.md](access.md)）：act 批建批時解 `access.json` 存 `batch.access` 快照、有表就把工具包成 `aos-jail …`（壞表、沒 bwrap＝那件跑不起來、不送）；加 `access ls／set／rm／cwd／net`；`check` 多查 access／bwrap／aos-jail 與牢裡找不找得到程式，`status` 多一行 `access bad`。
 > 2026-09-24 access-impl astra 修（A1）：tools／access 寫入改鎖不會被 rename 的 `<家>/.admin.lock`（tick 不拿）；CLI 與 `init` 寫的 `info.json` 改縮排 2；`tools ls` 遇到明寫卻不在的 access 檔印「錯」與 `access_error`；`tools add` 有 access 檔時改講牢裡的工作根目錄。
+> 2026-09-24 proto5-2 池式納入：只換三句——§6.1 `kind=aos` 的 cpu.log 路徑改 `K/pools/<池>/cpus/*/cpu.log`；§1.7 check 的池項改看 K 的 `pools`（tick.pool／llm.pool／tool_pool 三格、count 0＝warn）、`llm/<池>`。§1.3 status 的 health 判定換了（看池摘要，[kernel health](../kernel/health.md)），字不改。草稿在 proto5-2/spec。
