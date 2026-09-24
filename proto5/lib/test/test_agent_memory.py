@@ -225,6 +225,31 @@ class EventTests(MemoryBase):
         self.assertEqual(raw[0]['id'], raw[1]['id'])
         self.assertEqual(len(self.events()), 1)
 
+    def test_all_local_act_batch_has_id(self):
+        """astra M7：整批工具都不存在（沒有工作名）也有固定的批 id，崩了重做能去重。"""
+        self.put(self.base / 'prompts/history.json',
+                 [{'role': 'assistant', 'content': None, 'tool_calls': [call('c1', 'nope')]}])
+        self.put(self.base / 'state.json', {'state': 'act'})
+        real = events_api.batch_start
+
+        def boom(run):
+            real(run)
+            raise fixture.Crash('after event')
+        with patch.object(batch_api.events, 'batch_start', boom), self.assertRaises(fixture.Crash):
+            self.tick()
+        self.tick()
+        self.tick()
+        raw = self.events(dedupe=False)
+        self.assertEqual([e['ev'] for e in raw], ['act_start', 'act_start', 'act_end'])
+        self.assertTrue(raw[0]['id'] and raw[0]['id'] == raw[1]['id'] == raw[2]['id'])
+        self.assertEqual([e['ev'] for e in self.events()], ['act_start', 'act_end'])
+
+    def test_torn_line_not_glued(self):
+        (self.base / 'log').mkdir()
+        (self.base / 'log/events.jsonl').write_text('{"ev": "half')
+        events_api.emit(self.base, 'intake', 'x1')
+        self.assertEqual([e['ev'] for e in self.events()], ['intake'])
+
     def test_crash_before_event_not_lost(self):
         self.put(self.base / 'state.json', {'state': 'think'})
         with self.crash_at('request.post'), self.assertRaises(fixture.Crash):
@@ -404,6 +429,42 @@ class CompactTests(MemoryBase):
         code, out = self.compact('--keep-rounds', '1')
         self.assertIn('nothing to compact', out)
         self.assertEqual(self.history(), rounds(4, tools=1, fat=5))
+
+    def test_fixpoint_when_index_digits_shrink(self):
+        """astra M2：值不值得換不能看說明行裡的位置數字；前 28 輪很胖、後兩輪剛好在邊界，縮兩次要一樣。"""
+        h = []
+        for r in range(30):
+            fat = 1000 if r < 28 else 105
+            h += [{'role': 'user', 'content': 'q%d' % r}, {'role': 'assistant', 'content': None, 'tool_calls': [call('c%d' % r)]},
+                  {'role': 'tool', 'tool_call_id': 'c%d' % r, 'content': 'x' * fat}, {'role': 'assistant', 'content': 'a%d' % r}]
+        for fat in range(90, 130):
+            with self.subTest(fat=fat):
+                for r in (28, 29):
+                    h[r * 4 + 2]['content'] = 'x' * fat
+                first = compact_api.plan(h, keep_rounds=1, max_tokens=None, archive='prompts/archive/0123456789abcdef.json')
+                again = compact_api.plan(first['history'], keep_rounds=1, max_tokens=None,
+                                         archive='prompts/archive/fedcba9876543210.json')
+                self.assertFalse(again['changed'])
+
+    def test_seal_never_grows(self):
+        """astra M3：舊輪只有很短的問答，封存行比它們還大就不封。"""
+        h = [{'role': 'user', 'content': 'q%d' % r} if i == 0 else {'role': 'assistant', 'content': 'a'}
+             for r in range(3) for i in range(2)]
+        h += [{'role': 'user', 'content': 'last'}, {'role': 'assistant', 'content': 'y' * 1000}]
+        self.history(h)
+        before = context_api.history_tokens(h)
+        code, out = self.compact('--keep-rounds', '1', '--max-tokens', '100')
+        self.assertLessEqual(context_api.history_tokens(self.history()), before)
+        self.assertIn('還超過', out)
+
+    def test_task_re_next_to_cjk(self):
+        self.assertEqual(compact_api.TASK_RE.findall('請處理t-0001與t-0002.r1，不是 xt-0003'), ['t-0001', 't-0002.r1'])
+
+    def test_prune_busy(self):
+        fd = os.open(self.base / '.tick.lock', os.O_RDWR | os.O_CREAT)
+        self.addCleanup(os.close, fd)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        self.assertEqual(self.compact('--prune-archive', '0')[0], 101)
 
     def test_compress_keeps_round_without_final_reply(self):
         h = [{'role': 'user', 'content': 'q'}, {'role': 'assistant', 'content': None, 'tool_calls': [call('a')]},
@@ -600,6 +661,26 @@ class AutoCompactTests(MemoryBase):
         self.assertEqual(spy.call_count, 1)                       # 第二格看 log/compact-skip 就不重算
         self.assertEqual(self.history(), self.original)
 
+    def test_skip_rechecks_when_task_finishes(self):
+        """astra M5：記憶沒變、但擋著的任務做完了，就要重新看。"""
+        team = self.root / 'team'
+        home = team / 'members' / 'w1'
+        (team / 'team.json').parent.mkdir(parents=True)
+        (team / 'team.json').write_text('{}')
+        task = team / 'team' / 'tasks' / 't-0001.json'
+        self.put(task, {'status': 'working'})
+        h = rounds(3)
+        for i in (0, 6):
+            h[i]['content'] = '【來信 lead → w1 · REQUEST · t-0001 rev1】' + h[i]['content']
+        self.put(home / 'info.json', dict(self.info, compact={'max_tokens': 100, 'keep_rounds': 1}))
+        self.put(home / 'prompts/history.json', h)
+        self.base = home
+        self.assertEqual(self.tick(), 101)
+        self.assertEqual(self.history(), h)
+        self.put(task, {'status': 'done'})
+        self.assertEqual(self.tick(), 0)
+        self.assertLess(len(self.history()), len(h))
+
     def test_auto_skips_invalid_history_once(self):
         h = rounds(3)
         del h[-4]
@@ -618,13 +699,13 @@ class AutoCompactTests(MemoryBase):
 
     def test_request_consumed_by_tick(self):
         self.put(self.base / 'info.json', self.info)             # 沒開自動：只看申請
-        self.put(self.base / 'compact-req/r1.json', {'id': 'r1', 'from': 'w1', 'keep_rounds': 2})
+        self.put(self.base / 'compact-req/r1.json', {'id': 'r1', 'from': 'w1', 'keep_rounds': 2, 'reason': '太長'})
         self.assertEqual(self.tick(), 0)
         self.assertEqual(self.history()[-12:], self.original[-12:])
         self.assertLess(len(self.history()), len(self.original))
-        self.assertFalse((self.base / 'compact-req/r1.json').exists())
-        self.assertEqual(len(list((self.base / 'compact-req/done').glob('r1.json.*.done'))), 1)
-        self.assertIn('申請 r1（w1）', self.events()[-1]['reason'])
+        self.assertTrue((self.base / 'compact-req/r1.json').exists())        # 原檔不搬（郵差靠它去重）
+        self.assertTrue((self.base / 'compact-req/done/r1.json').exists())   # 收據
+        self.assertIn('申請 r1（w1）：太長', self.events()[-1]['reason'])
         self.assertEqual(self.tick(), 101)
 
     def test_request_crash_before_move_reruns_as_noop(self):
@@ -637,10 +718,10 @@ class AutoCompactTests(MemoryBase):
             self.tick()
         once = self.history()
         self.assertLess(len(once), len(self.original))
-        self.assertTrue((self.base / 'compact-req/r1.json').exists())
-        self.assertEqual(self.tick(), 0)                         # 重做：縮是空轉，申請搬走
+        self.assertFalse((self.base / 'compact-req/done/r1.json').exists())
+        self.assertEqual(self.tick(), 0)                         # 重做：縮是空轉，放收據
         self.assertEqual(self.history(), once)
-        self.assertFalse((self.base / 'compact-req/r1.json').exists())
+        self.assertTrue((self.base / 'compact-req/done/r1.json').exists())
         self.assertEqual([e['ev'] for e in self.events()].count('compact'), 1)
         self.assertEqual(self.tick(), 101)
 
@@ -672,12 +753,17 @@ class RequestHandlerTests(unittest.TestCase):
         self.assertIn('動過', path.read_text())
 
     def test_not_redropped_after_done(self):
-        from aos_agent_compact import on_request
-        folder = self.lay.member('w1') / 'compact-req' / 'done'
-        folder.mkdir(parents=True)
-        (folder / (self.req()['id'] + '.json.1-2.done')).write_text('{}')
+        """處理過（有收據）再叫一次：原檔還在，drop_new 不覆蓋；tick 也不會再處理（astra M4：沒有先查再投的窗口）。"""
+        from aos_agent_compact import on_request, _requests
+        home = self.lay.member('w1')
         on_request(self.lay, self.roster, self.req())
-        self.assertFalse((folder.parent / (self.req()['id'] + '.json')).exists())
+        path = home / 'compact-req' / (self.req()['id'] + '.json')
+        (home / 'compact-req' / 'done').mkdir()
+        (home / 'compact-req' / 'done' / path.name).write_bytes(path.read_bytes())
+        before = path.stat().st_mtime_ns
+        on_request(self.lay, self.roster, self.req())
+        self.assertEqual(path.stat().st_mtime_ns, before)
+        self.assertEqual(_requests(home), [])
 
     def test_rules(self):
         from aos_agent_compact import on_request

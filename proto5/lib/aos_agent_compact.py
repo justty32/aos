@@ -19,7 +19,7 @@ import aos_home
 from aos_agent_context import brief, history_tokens, message_size, rounds
 from aos_agent_home import AgentError, check_message
 from aos_agent_listen_render import call_names
-from aos_agent_runtime import LOCK, files, report, tick_lock, unique_id
+from aos_agent_runtime import LOCK, files, report, tick_lock
 
 DEFAULT_KEEP = 3
 MIN_TOKENS = 100
@@ -29,7 +29,8 @@ ARCHIVE = 'archive'            # 相對記憶檔所在的資料夾
 REQUESTS = 'compact-req'       # 郵差投進來的 compact 申請（agent 家裡）
 SKIP = 'log/compact-skip'      # 自動壓縮「這份記憶縮不動」的記號，免得每格重算
 FINISHED = ('done', 'cancelled')
-TASK_RE = re.compile(r'(?<![\w-])t-\d{4,}(?:\.r\d+)?(?![\w])')
+TASK_RE = re.compile(r'(?<![A-Za-z0-9_-])t-\d{4,}(?:\.r\d+)?(?![A-Za-z0-9_])')
+WIDE = 999999  # 算「值不值得換」時說明行裡的數字一律當 6 位（決定不能跟位置有關，astra M2）
 COMPRESSED = '[aos 已壓縮'
 SEALED = '[aos 已封存'
 
@@ -85,6 +86,25 @@ def task_status(base):
     return status
 
 
+def mentioned_tasks(history):
+    """記憶裡 user 訊息提到的單號（照出現順序、不重複）。"""
+    found = []
+    for m in history:
+        if m['role'] == 'user':
+            for tid in TASK_RE.findall(m.get('content') or ''):
+                if tid not in found:
+                    found.append(tid)
+    return found
+
+
+def task_snapshot(base, history):
+    """這份記憶提到的單號 → 狀態，一次讀好（plan 只看這份快照；不在團隊裡＝None）。"""
+    status = task_status(base)
+    if status is None:
+        return None
+    return {tid: status(tid) for tid in mentioned_tasks(history)}
+
+
 def open_tasks(history, span, status):
     """這一輪的 user 訊息提到、還沒結束的單號（讀不到的也算沒結束，寧可多留）。"""
     if status is None:
@@ -94,7 +114,8 @@ def open_tasks(history, span, status):
     for m in history[s:e]:
         if m['role'] == 'user':
             for tid in TASK_RE.findall(m.get('content') or ''):
-                if tid not in found and status(tid) not in FINISHED:
+                state = status.get(tid) if isinstance(status, dict) else status(tid)
+                if tid not in found and state not in FINISHED:
                     found.append(tid)
     return found
 
@@ -144,11 +165,14 @@ def _assemble(parts, archive):
         j = k
         while j + 1 < len(parts) and parts[j + 1]['action'] == 'seal':
             j += 1
-        count = parts[j]['to'] - p['from'] + 1
-        out.append({'role': 'user', 'content': '%s較早的 %d 輪（%d 則）；原文 %s 第 %d～%d 則]' % (
-            SEALED, j - k + 1, count, archive, p['from'], parts[j]['to'])})
+        out.append(_marker(j - k + 1, parts[j]['to'] - p['from'] + 1, archive, p['from'], parts[j]['to']))
         k = j + 1
     return out
+
+
+def _marker(n_rounds, count, archive, lo, hi):
+    return {'role': 'user', 'content': '%s較早的 %d 輪（%d 則）；原文 %s 第 %d～%d 則]' % (
+        SEALED, n_rounds, count, archive, lo, hi)}
 
 
 def plan(history, *, keep_rounds, max_tokens, archive, status=None):
@@ -177,10 +201,13 @@ def plan(history, *, keep_rounds, max_tokens, archive, status=None):
             if dropped:
                 hi = e - 1 if final is not None else e
                 called = _counts(dropped)
-                note = {'role': 'user', 'content': '%s %d 則：%s；原文 %s 第 %d～%d 則]' % (
+                text = '%s %d 則：%s；原文 %s 第 %d～%d 則]'
+                note = {'role': 'user', 'content': text % (
                     COMPRESSED, len(dropped), called or '沒叫工具', archive, k + 1, hi)}
-                # 換掉的比說明行還短就不換（縮不能讓記憶變長）
-                if history_tokens([note]) < history_tokens(dropped):
+                worst = {'role': 'user', 'content': text % (
+                    COMPRESSED, len(dropped), called or '沒叫工具', archive, WIDE, WIDE)}
+                # 換掉的比說明行還短就不換（縮不能讓記憶變長）；說明行照最長的位數估，重跑判斷一樣
+                if history_tokens([worst]) < history_tokens(dropped):
                     entry.update(action='compress', dropped=len(dropped),
                                  messages=users + [note] + ([final] if final is not None else []))
                 else:
@@ -189,13 +216,18 @@ def plan(history, *, keep_rounds, max_tokens, archive, status=None):
         parts.append(entry)
     out = _assemble(parts, archive)
     if max_tokens is not None:
-        # 從最舊的一輪起逐輪封存，每次照「真的組出來的」算（封存那一行本身也佔 token），直到不超過
+        # 從最舊的一輪起逐輪封存，直到不超過。每封一輪先估值不值得：接在前一段封存後面＝併進同一行（多付 0），
+        # 否則要多一行封存行（照最長位數估）；那輪本身比這個還小就不封（封存不能讓記憶變長，astra M3）
+        marker = history_tokens([_marker(1, 1, archive, WIDE, WIDE)])
+        prev_sealed = False
         for p in parts:
             if history_tokens(out) <= max_tokens:
                 break
-            if p.get('sealable'):
+            cost = 0 if prev_sealed else marker
+            if p.get('sealable') and history_tokens(p['messages']) > cost:
                 p['action'] = 'seal'
                 out = _assemble(parts, archive)
+            prev_sealed = p['action'] == 'seal'
     after = history_tokens(out)
     return {'history': out, 'changed': out != history,
             'rounds': [{x: p[x] for x in ('round', 'from', 'to', 'action', 'why', 'tasks', 'dropped') if x in p}
@@ -242,11 +274,13 @@ def apply(info, *, keep_rounds, max_tokens, auto=False, reason=None, dry_run=Fal
     sha = sha_of(raw) if raw is not None else None
     target = archive_dir(info) / ('%s.json' % sha)
     result = plan(history, keep_rounds=keep_rounds, max_tokens=max_tokens,
-                  archive=os.path.relpath(target, base), status=task_status(base))
+                  archive=os.path.relpath(target, base), status=task_snapshot(base, history))
     result.update(sha=sha, archive=str(target), keep_rounds=keep_rounds, max_tokens=max_tokens)
-    if not result['changed'] or dry_run:
+    if not result['changed']:
         return result
-    check_pairs(result['history'])
+    check_pairs(result['history'])   # dry-run 也驗：預覽過了正式就不會在這裡失敗
+    if dry_run:
+        return result
     if not target.exists() or sha_of(target.read_bytes()) != sha:
         _write_bytes(target, raw)
     _hook('compact.archive')
@@ -341,7 +375,14 @@ def prune(agent_dir, days, env=None):
     """刪超過 days 天、而且現在的記憶沒有提到的 archive（記憶裡的說明行還指著的一律留）。"""
     env = os.environ if env is None else env
     base = Path(os.path.abspath(agent_dir))
+    lock = None
     try:
+        # 跟 compact 互斥（astra M1）：不然可能刪掉「archive 寫了、記憶還沒換」那一份
+        got, lock = tick_lock(base)
+        if not got:
+            report('busy', '另一個 tick 正在跑（pid %s），這次不清、沒動檔' % (lock or '不明'))
+            lock = None
+            return 101
         info = aos_agent_info.load(base, env=env)
         folder = archive_dir(info)
         text = json.dumps(info['history'], ensure_ascii=False)
@@ -358,15 +399,19 @@ def prune(agent_dir, days, env=None):
     except (AgentError, aos_home.HomeError, OSError) as exc:
         from aos_agent import _error
         return _error(exc)
+    finally:
+        if lock is not None:
+            os.close(lock)
 
 
 # ---- tick idle：自動壓縮與申請 -------------------------------------------------
 
 def _requests(base):
+    """還沒處理的申請：compact-req/*.json 裡，done/ 沒有同名收據的。原檔永遠不搬（郵差看它在不在去重，astra M4）。"""
     folder = Path(base) / REQUESTS
     try:
         return sorted(p for p in folder.iterdir() if p.is_file() and p.name.endswith('.json')
-                      and not p.name.startswith('.'))
+                      and not p.name.startswith('.') and not (folder / 'done' / p.name).exists())
     except FileNotFoundError:
         return []
 
@@ -384,16 +429,20 @@ def _request_opts(paths, cfg):
             keep = req['keep_rounds']
         if type(req.get('max_tokens')) is int and MIN_TOKENS <= req['max_tokens'] <= MAX_TOKENS:
             limit = req['max_tokens']
-        reasons.append('申請 %s（%s）' % (req.get('id', p.stem), req.get('from', '?')))
+        why = req.get('reason') if isinstance(req.get('reason'), str) else ''
+        reasons.append('申請 %s（%s）%s' % (req.get('id', p.stem), req.get('from', '?'), '：' + why if why else ''))
     return keep, limit, reasons
 
 
 def _skip_key(info, keep, limit):
+    """記憶 sha＋選項＋提到的單號的狀態（任務做完了就該重新看，astra M5）。"""
     try:
         raw = Path(info['history_path']).read_bytes()
     except FileNotFoundError:
         raw = b''
-    return '%s %s %s' % (sha_of(raw), keep, limit)
+    history = json.loads(raw) if raw else []
+    tasks = task_snapshot(info['dir'], history) if isinstance(history, list) else None
+    return '%s %s %s %s' % (sha_of(raw), keep, limit, sha_of(json.dumps(tasks, sort_keys=True).encode()))
 
 
 def auto(run):
@@ -441,9 +490,8 @@ def auto(run):
         if not requests:
             _write_skip(base, _skip_key(info, keep, limit))
     for p in requests:
-        dst = p.parent / 'done' / ('%s.%s.done' % (p.name, unique_id()))
-        dst.parent.mkdir(exist_ok=True)
-        os.rename(p, dst)
+        (p.parent / 'done').mkdir(exist_ok=True)
+        _write_bytes(p.parent / 'done' / p.name, p.read_bytes())   # 收據＝原申請的副本
         _hook('compact.request')
     return changed or bool(requests)
 
@@ -489,10 +537,8 @@ def on_request(lay, roster, req):
         if not isinstance(req['reason'], str) or len(req['reason']) > 500:
             bad('request.reason', '要是 500 字以內的字串')
         body['reason'] = req['reason']
-    folder = lay.member(member) / REQUESTS
-    name = req['id'] + '.json'
-    if not any((folder / 'done').glob(name + '.*.done')):
-        drop_new(folder, name, body)
+    # 原檔 tick 不搬、只在 done/ 放收據，所以「同名已在」就是投過了（drop_new 不覆蓋）；沒有先查再投的窗口
+    drop_new(lay.member(member) / REQUESTS, req['id'] + '.json', body)
     return []
 
 

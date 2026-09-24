@@ -124,6 +124,9 @@ def notes_path():
     不關牢＝cwd（agent 家）的 notes/notes.json。人用的 aos-agent notes 照同一條規則找（lib/aos_agent_notes.py）。
     """
     value = os.environ.get('AOS_NOTES_FILE') or _config_file()
+    if value is not None and os.environ.get('AOS_TOOL_ROOT') and not os.path.isabs(os.path.expanduser(value)):
+        # 關牢時相對路徑會相對牢裡的起點，人看的 aos-agent notes 對不上（astra M6）：要寫 /work/<名>/…
+        fail('ConfigInvalid', 'notes file %r is relative; inside the jail it must be /work/<mount>/…' % value)
     if value is None and os.environ.get('AOS_TOOL_ROOT'):
         if not os.path.isdir(JAIL_NOTES):
             fail('ConfigInvalid', 'no notes folder mounted at %s; ask the user to run: '
