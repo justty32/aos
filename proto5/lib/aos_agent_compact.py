@@ -1,8 +1,9 @@
 """機械壓縮記憶（spec/agent/compact.md）：aos-agent compact、tick idle 的自動壓縮、compact 申請、history --archive。
 
-不叫模型。三個入口共用 apply()，**呼叫的人要已經持 .tick.lock**（人用的 compact 自己拿；tick 本來就持著，不再拿第二次）。
+機械版不叫模型。三個入口共用 apply()，**呼叫的人要已經持 .tick.lock**（人用的 compact 自己拿；tick 本來就持著，不再拿第二次）。
 每步可重跑：先寫 archive/<舊 sha>.json（已在就略過）→ 記事件 → 用暫存檔＋rename 換掉記憶檔。
 永遠不是「先搬走舊的」，所以崩在哪一步，記憶檔都是完整的舊版或新版；舊版重跑算出來的新版一樣。
+只有人跑的 `compact --summarize`（第三波 W3-2，spec/agent/compact-summarize.md）會叫模型，而且只換封存摘要的中間那段。
 """
 import collections
 import hashlib
@@ -350,8 +351,12 @@ def archive_dir(info):
     return Path(info['history_path']).parent / ARCHIVE
 
 
-def apply(info, *, keep_rounds, max_tokens, auto=False, reason=None, dry_run=False):
-    """算好、（不是 dry_run 就）寫 archive、記事件、換記憶。**呼叫的人要持 tick 鎖、確定 idle 且沒 batch／intake。**"""
+def apply(info, *, keep_rounds, max_tokens, auto=False, reason=None, dry_run=False, summarizer=None):
+    """算好、（不是 dry_run 就）寫 archive、記事件、換記憶。**呼叫的人要持 tick 鎖、確定 idle 且沒 batch／intake。**
+
+    summarizer（只有人跑的 compact --summarize 給）：fn(舊記憶, 機械版新記憶, sha) → (新記憶, 報告)，
+    在寫任何檔之前叫；tick 自動壓縮與申請一律不給，所以不叫模型。dry_run 時不叫。
+    """
     base = Path(info['dir'])
     path = Path(info['history_path'])
     try:
@@ -368,18 +373,191 @@ def apply(info, *, keep_rounds, max_tokens, auto=False, reason=None, dry_run=Fal
     result.update(sha=sha, archive=str(target), keep_rounds=keep_rounds, max_tokens=max_tokens)
     if not result['changed']:
         return result
+    if summarizer is not None and not dry_run:
+        # 第三波 W3-2：只換新記憶的內容；archive、事件、換檔的順序照舊，崩潰恢復規則不變
+        result['history'], result['summarize'] = summarizer(history, result['history'], sha)
+        result['after'] = {'count': len(result['history']), 'tokens': history_tokens(result['history'])}
+        result['over'] = max_tokens is not None and result['after']['tokens'] > max_tokens
     check_pairs(result['history'])   # dry-run 也驗：預覽過了正式就不會在這裡失敗
     if dry_run:
         return result
     if not target.exists() or sha_of(target.read_bytes()) != sha:
         _write_bytes(target, raw)
     _hook('compact.archive')
+    extra = {'summarize': _event_summary(result['summarize'])} if 'summarize' in result else {}
     events.emit(base, 'compact', sha, auto=auto, reason=reason, keep_rounds=keep_rounds, max_tokens=max_tokens,
                 before=result['before'], after=result['after'], over=result['over'],
-                archive=os.path.relpath(target, base))
+                archive=os.path.relpath(target, base), **extra)
     aos_home.write_json(path, result['history'])
     _hook('compact.history')
     return result
+
+
+# ---- --summarize：封存摘要叫模型濃縮（第三波 W3-2，spec/agent/compact-summarize.md） ------
+
+DIGEST_HEAD = '，下面是機械摘要：'
+SUMMARY_HEAD = '，下面是模型濃縮的摘要：'
+SUMMARY_BATCH = 'compact-summarize'       # usage.jsonl 的 batch：compact-summarize-<舊記憶 sha>
+SUMMARY_MAX_TOKENS = 1024                 # 模型最多回多少 token（摘要本來就 ≤ 8 KB）
+SUMMARY_SYSTEM = (
+    '你是記憶整理員。使用者會給你一段「對話的機械摘要」（幾輪對話：使用者原話、工具呼叫、結果行數與前幾行、回話）。'
+    '把它濃縮成幾句繁體中文，給同一個助理之後當作記憶讀。規則：\n'
+    '1. 所有數字照原樣用阿拉伯數字寫出來，尤其是「（N 行）」這種行數、使用者原話裡的數字。\n'
+    '2. 所有檔名原樣寫出來（例如 long.txt）。\n'
+    '3. 使用者交代要記住的事（喜好、名字、約定）一定要留，寫成「使用者說……」。\n'
+    '4. 工具讀到的內容只留結論，不抄原文；不要編造摘要裡沒有的事。\n'
+    '5. 只回摘要本文：不要前言、不要標題、不要 Markdown、不要 [aos 開頭的標記。一定要比原文短。')
+FILE_RE = re.compile(r'(?<![A-Za-z0-9_./-])[A-Za-z0-9_./-]*[A-Za-z0-9_-]\.[A-Za-z][A-Za-z0-9]{0,7}(?![A-Za-z0-9_])')
+LINES_RE = re.compile(r'（(\d+) 行）')
+NUMBER_RE = re.compile(r'\d+(?:\.\d+)?')
+
+
+def _split_digest(text):
+    """封存摘要 → (開頭那行, 中間幾行, 結尾那句)；不是有本體的摘要（只剩一行的那種）回 None。"""
+    lines = (text or '').split('\n')
+    if len(lines) < 3 or not lines[0].startswith(SEALED) or not lines[0].endswith(DIGEST_HEAD) \
+            or not lines[-1].startswith(FORGET_DIGEST):
+        return None
+    return lines[0], lines[1:-1], lines[-1]
+
+
+def _new_digests(before, after):
+    """新記憶裡這次才生的、有本體的封存摘要的位置（舊記憶本來就有的原樣留，不再送模型）。"""
+    old = {m.get('content') for m in before if _sealed_marker(m)}
+    return [i for i, m in enumerate(after)
+            if _sealed_marker(m) and m.get('content') not in old and _split_digest(m['content'])]
+
+
+def keywords(body):
+    """機械摘要本體（幾行）裡「濃縮後一定要還在」的詞：檔名、「（N 行）」的 N、使用者原話裡的數字。照出現順序、不重複。
+
+    檔名只看使用者原話與「呼叫」那幾行（結果的內容行常是一大串 ls 輸出，不強求），比對時只要檔名最後一段（不含資料夾）。
+    使用者原話被截斷（…結尾）時，緊貼著「…」的那個數字可能是半截，不算。
+    """
+    found = []
+
+    def add(word):
+        if word and word not in found:
+            found.append(word)
+    for line in body:
+        text = line.strip()
+        if text.startswith('使用者：') or text.startswith('呼叫 '):
+            for name in FILE_RE.findall(text):
+                add(name.rstrip('/').rsplit('/', 1)[-1])
+        for n in LINES_RE.findall(line):
+            add(n)
+        if text.startswith('使用者：'):
+            said = text[len('使用者：'):]
+            for m in NUMBER_RE.finditer(said):
+                if said.endswith('…') and m.end() == len(said) - 1:
+                    continue
+                add(m.group())
+    return found
+
+
+def _has(text, word):
+    if NUMBER_RE.fullmatch(word):
+        return re.search(r'(?<![\d.])%s(?![\d])' % re.escape(word), text) is not None
+    return word in text
+
+
+def check_summary(body, text):
+    """模型回的摘要過不過機械檢查：回 None＝過，否則回原因（一句白話）。"""
+    old = '\n'.join(body)
+    if not text.strip():
+        return '模型回的是空的'
+    if '[aos' in text:
+        return '模型回的含 [aos 開頭的標記'
+    a, b = len(text.encode('utf-8')), len(old.encode('utf-8'))
+    if a >= b:
+        return '沒有比原摘要短（%d ≥ %d bytes）' % (a, b)
+    lost = [w for w in keywords(body) if not _has(text, w)]
+    if lost:
+        return '丟了關鍵詞：%s' % '、'.join(lost[:8]) + ('…等 %d 個' % len(lost) if len(lost) > 8 else '')
+    return None
+
+
+def _clean(text):
+    """去掉模型常加的 ``` 圍欄與前後空行。"""
+    text = (text or '').strip()
+    fence = re.fullmatch(r'```[A-Za-z]*\n(.*?)\n?```', text, re.S)
+    return (fence.group(1) if fence else text).strip()
+
+
+def check_model(env, alias):
+    """--summarize 先查設定（AOS_LLM_CONFIG 與模型代號）；錯＝AgentError，壓縮不做。回代號。"""
+    import aos_llm_ask
+    import aos_llm_call
+    try:
+        config = aos_llm_call.load_config(aos_llm_call.config_path(env), env=env)
+    except AgentError as exc:
+        raise AgentError(exc.code, '%s；--summarize 要叫模型：export AOS_LLM_CONFIG=/絕對路徑/llm.json'
+                         '（跟 kernel 的 llm cpu 用同一份）' % exc.msg) from exc
+    return aos_llm_ask.pick(config, alias)[0]
+
+
+def make_summarizer(base, env, alias):
+    """回 apply() 用的 summarizer：新記憶裡這次生的每段封存摘要，中間那段送模型濃縮一次。
+
+    每段各自過 check_summary，不過＝那段用機械摘要；模型出錯（EngineFailed、Timeout…）＝整次退回機械版，照樣壓縮。
+    每次問模型都記進 <家>/log/usage.jsonl，batch＝compact-summarize-<舊記憶 sha>。
+    """
+    import aos_llm_ask
+    import aos_llm_call
+
+    def run(before, after, sha):
+        out = list(after)
+        rep = {'alias': alias, 'segments': 0, 'used': 0, 'fallback': [], 'error': None,
+               'prompt_tokens': 0, 'completion_tokens': 0, 'ms': 0}
+        spots = _new_digests(before, after)
+        rep['segments'] = len(spots)
+        usage_env = dict(env, AOS_LLM_BATCH='%s-%s' % (SUMMARY_BATCH, sha))
+        for n, i in enumerate(spots, 1):
+            head, body, tail = _split_digest(after[i]['content'])
+            try:
+                got = aos_llm_ask.ask(SUMMARY_SYSTEM, '\n'.join(body), alias=alias, env=env,
+                                      max_tokens=SUMMARY_MAX_TOKENS)
+            except AgentError as exc:
+                rep.update(error='%s：%s' % (exc.code, ' '.join(str(exc.msg).split())[:200]), used=0, fallback=[])
+                return list(after), rep          # 整次退回機械版，照樣壓縮
+            usage = got.get('usage') or {}
+            for k in ('prompt_tokens', 'completion_tokens'):
+                if type(usage.get(k)) is int:
+                    rep[k] += usage[k]
+            rep['ms'] += got.get('ms') or 0
+            try:
+                aos_llm_call.record_usage(base, usage_env, got.get('alias'), got.get('model'), got.get('usage'),
+                                          got.get('ms'))
+            except OSError:
+                pass
+            text = _clean(got.get('text'))
+            why = check_summary(body, text)
+            if why is not None:
+                rep['fallback'].append('第 %d 段：%s' % (n, why))
+                continue
+            out[i] = {'role': 'user', 'content': '\n'.join([head[:-len(DIGEST_HEAD)] + SUMMARY_HEAD, text, tail])}
+            rep['used'] += 1
+        return out, rep
+    return run
+
+
+def _event_summary(rep):
+    """事件 compact 多帶的一格（不放模型回的全文）。"""
+    return {k: rep[k] for k in ('alias', 'segments', 'used', 'fallback', 'error', 'prompt_tokens',
+                                'completion_tokens', 'ms') if k in rep}
+
+
+def summary_lines(rep):
+    if rep.get('dry_run'):
+        return ['--summarize：dry-run 不叫模型；正式跑會把 %d 段封存摘要送模型濃縮' % rep['segments']]
+    if not rep['segments']:
+        return ['--summarize：這次沒有新的封存摘要，沒叫模型']
+    head = '--summarize：%d 段封存摘要，用了模型版 %d 段' % (rep['segments'], rep['used'])
+    cost = '；模型 %s：prompt %d、completion %d token，%d ms' % (
+        rep['alias'], rep['prompt_tokens'], rep['completion_tokens'], rep['ms'])
+    if rep['error']:
+        return [head + cost, '  模型出錯，整次退回機械摘要（照樣壓縮了）：%s' % rep['error']]
+    return [head + cost] + ['  退回機械摘要：%s' % why for why in rep['fallback']]
 
 
 # ---- 人：aos-agent compact ---------------------------------------------------
@@ -415,13 +593,16 @@ def summary(result, dry_run):
             acts['compress'], acts['seal'], acts['keep'],
             sum(1 for r in result['rounds'] if r.get('why') == 'recent'),
             sum(1 for r in result['rounds'] if r.get('why') == 'task' and r['action'] == 'keep')))
+    if result.get('summarize'):
+        lines.extend(summary_lines(result['summarize']))
     if result['over']:
         lines.append('還超過 --max-tokens %d：剩下的是最近 %d 輪與沒做完的任務（約 %d token），不再縮；要更小就減 --keep-rounds'
                      % (result['max_tokens'], result['keep_rounds'], a['tokens']))
     return lines
 
 
-def compact(agent_dir, *, keep_rounds=None, max_tokens=None, dry_run=False, as_json=False, env=None):
+def compact(agent_dir, *, keep_rounds=None, max_tokens=None, dry_run=False, as_json=False, env=None,
+            summarize=False, model=None):
     env = os.environ if env is None else env
     base = Path(os.path.abspath(agent_dir))
     lock = None
@@ -446,7 +627,15 @@ def compact(agent_dir, *, keep_rounds=None, max_tokens=None, dry_run=False, as_j
         cfg = config(base)
         keep = cfg['keep_rounds'] if keep_rounds is None else keep_rounds
         limit = cfg['max_tokens'] if max_tokens is None else max_tokens
-        result = apply(info, keep_rounds=keep, max_tokens=limit, reason='aos-agent compact', dry_run=dry_run)
+        summarizer = None
+        if summarize:
+            alias = check_model(env, model or info['model'])   # 設定錯＝先退、什麼都不動（dry-run 也查）
+            if not dry_run:
+                summarizer = make_summarizer(base, env, alias)
+        result = apply(info, keep_rounds=keep, max_tokens=limit, reason='aos-agent compact', dry_run=dry_run,
+                       summarizer=summarizer)
+        if summarize and dry_run and result['changed']:
+            result['summarize'] = {'dry_run': True, 'segments': len(_new_digests(info['history'], result['history']))}
         if as_json:
             print(json.dumps({k: v for k, v in result.items() if k != 'history'}, ensure_ascii=False))
         else:

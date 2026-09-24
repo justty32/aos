@@ -1,0 +1,14 @@
+dedupe v2.1 -- remove duplicate lines
+
+dedupe reads FILE (or stdin) and prints each distinct line once.
+
+Flags:
+  --ignore-case: compare lines case-insensitively
+  --keep=first|last: which copy to keep (default first)
+  --min-count N: only print lines seen at least N times
+  --sep=STR   field separator
+  -n, --dry-run
+      do not write anything, just report how many would be removed
+
+Pass -z to use NUL as the line terminator (same as --zero).
+Example: dedupe --keep=last --min-count 2 words.txt

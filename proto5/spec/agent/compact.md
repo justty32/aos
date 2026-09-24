@@ -4,6 +4,7 @@
 
 （09-24 工具大開發時代第一波第 4 隊，T-compact）[info.md §3.2](info.md) 原本寫「記憶太長怎麼辦之後再說」——這份就是那個「之後」。
 **不叫模型**：舊的輪只留使用者原話與那輪最後的回話，中間的工具呼叫與結果換成一行說明；原文整份存進 archive，要看再翻。
+人跑的 `--summarize` 見 [compact-summarize.md](compact-summarize.md)（第三波 W3-2）。
 實作 [`lib/aos_agent_compact.py`](../../lib/aos_agent_compact.py)；命令列在 [cli-memory.md](../aos-agent/cli-memory.md)。
 
 ## 1. 什麼時候可以縮

@@ -492,7 +492,7 @@ def _function(node):
         warnings.append('%s 沒有 docstring（第一段），描述先用函式名' % node.name)
     elif not reasons:
         warnings += ['%s 的參數 %s 沒有說明' % (node.name, p['name']) for p in params if not docs.get(p['name'])]
-    sig = {'line': node.lineno, 'description': summary or node.name, 'params': params,
+    sig = {'line': node.lineno, 'description': summary or node.name, 'params': params, 'has_doc': bool(summary),
            'docs': {p['name']: docs[p['name']] for p in params if docs.get(p['name'])}}
     return sig, reasons, warnings
 
@@ -741,7 +741,7 @@ def _print_rows(result):
         print('警告：' + w)
 
 
-def wrap_py(file, only=None, name=None, out=None, force=False):
+def _read_py(file):
     src = Path(os.path.abspath(os.path.expanduser(file)))
     try:
         data = src.read_bytes()
@@ -753,12 +753,25 @@ def wrap_py(file, only=None, name=None, out=None, force=False):
         source = data.decode('utf-8')
     except UnicodeDecodeError:
         raise AgentError('ReadFailed', '%s 不是 UTF-8 文字檔' % src)
+    return src, data, source
+
+
+def _wrap_pack(src, name, out):
     pack = name if name is not None else _pack_name(src.stem)
     if not NAME.match(pack):
         raise AgentError('BadName', '工具包名字 %r 只能用英數、底線、連字號（不能以 . 或 - 開頭）' % pack)
     folder = _out_dir(out)
     package_files(pack, [(pack + '.json', '', False)] + [(f, '', False) for f in WRAP_FIXED])  # 先擋撞名（wrap、config）
+    return pack, folder
+
+
+def wrap_py(file, only=None, name=None, out=None, force=False, describe=None):
+    src, data, source = _read_py(file)
+    pack, folder = _wrap_pack(src, name, out)
     result = analyze(source, str(src), only)
+    applied = None
+    if describe is not None:                      # 第三波 W3-2：照人看過的描述提案補描述（spec/aos-agent/tools-llm.md）
+        applied = apply_describe(describe, result, hashlib.sha256(data).hexdigest())
     _print_rows(result)
     if not result['functions']:
         raise AgentError('NothingToWrap', '%s 沒有一支函式能包成工具（看上面的表：要頂層、非底線開頭、'
@@ -771,6 +784,8 @@ def wrap_py(file, only=None, name=None, out=None, force=False):
             'functions': {n: {'line': s['line'], 'params': s['params']} for n, s in result['functions'].items()},
             'rejected': [{'name': r[0], 'line': r[3], 'reason': r[2]} for r in result['rows'] if r[1] == 'reject'],
             'skipped': [{'name': r[0], 'line': r[3], 'reason': r[2]} for r in result['rows'] if r[1] == 'skip']}
+    if applied is not None:
+        info['describe'] = applied
     path = _shown(folder / pack)
     files = package_files(pack, [(pack + '.json', _dump(tools), False), ('run', WRAP_RUN, True),
                                  ('src/' + src.name, data, False), ('wrap.json', _dump(info), False),
@@ -782,6 +797,200 @@ def wrap_py(file, only=None, name=None, out=None, force=False):
     print('下一步：aos-agent tools test %s' % path)
     print('裝進家：aos-agent tools add %s --target 家' % path)
     return 0
+
+
+# ------------------------------------------------------------------ wrap-py：模型補描述（第三波 W3-2，spec/aos-agent/tools-llm.md） ----
+
+DESCRIBE_TYPE = 'aos_wrap_py_describe'
+DESCRIBE_MAX = 200                                       # 描述、參數說明最多幾個字
+DESCRIBE_SYSTEM = ('You write short descriptions for Python functions that an AI agent will call as tools. '
+                   'Read the code to see what each function really does. Reply with one JSON object only.')
+
+
+def _needs(result):
+    """收了的函式裡缺什麼：{函式: {'description': 缺描述?, 'params': [缺說明的參數]}}（什麼都不缺的不列）。"""
+    need = {}
+    for fname, sig in result['functions'].items():
+        miss = [p['name'] for p in sig['params'] if p['name'] not in sig['docs']]
+        if not sig.get('has_doc') or miss:
+            need[fname] = {'description': not sig.get('has_doc'), 'params': miss}
+    return need
+
+
+def _clean_text(value):
+    return ' '.join(value.split()) if isinstance(value, str) else None
+
+
+def check_describe(data, result):
+    """模型回的（或人改過的）描述 → (收的 {函式: {'description'?, 'params': {}}}, 丟掉的 [(標籤, 原因)])。
+    只收已知的函式與參數名；描述非空、≤ 200 字；已有 docstring／說明的不覆蓋。"""
+    if not isinstance(data, dict):
+        return {}, [('（整份）', '要是 {函式名: {"description", "params"}} 物件')]
+    functions, need = result['functions'], _needs(result)
+    ok, dropped = {}, []
+    for fname, entry in data.items():
+        if fname not in functions:
+            dropped.append((fname, '不認得的函式（這次收的只有 %s）' % ('、'.join(functions) or '（無）')))
+            continue
+        if not isinstance(entry, dict):
+            dropped.append((fname, '要是 {"description", "params"} 物件'))
+            continue
+        got = {'params': {}}
+        if entry.get('description') is not None:
+            text = _clean_text(entry['description'])
+            if fname not in need or not need[fname]['description']:
+                dropped.append((fname, '已有 docstring，不覆蓋'))
+            elif not text:
+                dropped.append((fname, '描述是空的或不是字串'))
+            elif len(text) > DESCRIBE_MAX:
+                dropped.append((fname, '描述 %d 字，超過 %d' % (len(text), DESCRIBE_MAX)))
+            else:
+                got['description'] = text
+        params = entry.get('params') or {}
+        if not isinstance(params, dict):
+            dropped.append((fname, 'params 要是 {參數: 說明}'))
+            params = {}
+        known = [p['name'] for p in functions[fname]['params']]
+        for pname, ptext in params.items():
+            label = '%s.%s' % (fname, pname)
+            text = _clean_text(ptext)
+            if pname not in known:
+                dropped.append((label, '%s 沒有這個參數（有：%s）' % (fname, '、'.join(known) or '（無）')))
+            elif pname in functions[fname]['docs']:
+                dropped.append((label, '已有說明，不覆蓋'))
+            elif not text:
+                dropped.append((label, '說明是空的或不是字串'))
+            elif len(text) > DESCRIBE_MAX:
+                dropped.append((label, '說明 %d 字，超過 %d' % (len(text), DESCRIBE_MAX)))
+            else:
+                got['params'][pname] = text
+        if 'description' in got or got['params']:
+            ok[fname] = got
+    return ok, dropped
+
+
+def describe_prompt(sources, need):
+    """sources＝{函式名: 原始碼}；need＝_needs() 的結果。"""
+    lines = []
+    for fname, what in need.items():
+        want = (['a "description"'] if what['description'] else []) + (
+            ['"params" for %s' % ', '.join(what['params'])] if what['params'] else [])
+        lines.append('- %s: %s' % (fname, ' and '.join(want)))
+    code = '\n\n'.join(sources.get(f) or '' for f in need)
+    return ('For the functions below, return {"<function name>": {"description": "<one sentence: what it does and '
+            'what it returns>", "params": {"<param>": "<what to pass>"}}}.\n'
+            'Only these functions and fields:\n%s\n'
+            'Each text: one short sentence, under %d characters. Describe what the code actually does, '
+            'not what the name suggests.\n\n```python\n%s\n```' % ('\n'.join(lines), DESCRIBE_MAX, code))
+
+
+def _function_sources(source):
+    tree = ast.parse(source)
+    return {n.name: ast.get_source_segment(source, n) for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+
+
+def describe_with_llm(file, only=None, name=None, out=None, force=False, model=None, ask=None):
+    """wrap-py --describe-with-llm：缺描述的函式一次打包問模型，寫提案檔 <out>/<PACK>.describe.json；不產包。"""
+    import aos_llm_ask
+    src, data, source = _read_py(file)
+    pack, folder = _wrap_pack(src, name, out)
+    result = analyze(source, str(src), only)
+    if not result['functions']:
+        _print_rows(result)
+        raise AgentError('NothingToWrap', '%s 沒有一支函式能包成工具；不問模型' % src)
+    need = _needs(result)
+    if not need:
+        raise AgentError('NothingToDescribe', '收的函式都有 docstring 與參數說明，不用問模型；直接 wrap-py 就好')
+    target = folder / (pack + '.describe.json')
+    if os.path.lexists(target) and not force:                # 問模型之前先擋，免得白花一次
+        raise AgentError('AlreadyExists', '%s 已經在了（要蓋掉加 --force）' % target)
+    ask = ask or aos_llm_ask.ask_json
+    reply, got = ask(DESCRIBE_SYSTEM, describe_prompt(_function_sources(source), need), alias=model)
+    ok, dropped = check_describe(reply, result)
+    proposal = {'_type': DESCRIBE_TYPE, '_version': 1, 'source': str(src), 'sha256': hashlib.sha256(data).hexdigest(),
+                'generated': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
+                'model': got.get('model'), 'alias': got.get('alias'), 'usage': got.get('usage'), 'ms': got.get('ms'),
+                'functions': ok, 'dropped': [{'item': a, 'reason': b} for a, b in dropped]}
+    write_json_file(target, proposal, force)
+    _print_describe(result, ok, dropped)
+    print(aos_llm_ask.usage_line(got), file=sys.stderr)
+    print('提案寫在 %s（%d 支有提案、%d 條丟掉；還沒產包）' % (target, len(ok), len(dropped)))
+    extra = ''.join(' %s %s' % (k, v) for k, v in (('--only', ','.join(only) if only else None), ('--name', name),
+                                                   ('--out', out)) if v)
+    print('看過沒問題（可以先改提案檔）：aos-agent tools wrap-py %s --describe %s%s' % (file, _shown(target), extra))
+    return 0
+
+
+def _print_describe(result, ok, dropped):
+    """函式｜現在的描述（機械版＝函式名）｜模型提的。"""
+    width = max([len(n) for n in result['functions']] + [4])
+    print('%-*s  %-30s  %s' % (width, '函式', '現在的描述', '模型提的'))
+    for fname, sig in result['functions'].items():
+        now = sig['description'] if sig.get('has_doc') else '%s（沒 docstring）' % fname
+        new = ok.get(fname, {})
+        fallback = '（有 docstring，不改）' if sig.get('has_doc') else '（沒提）'
+        print('%-*s  %-30s  %s' % (width, fname, now[:30], new.get('description', fallback)))
+        for pname, text in new.get('params', {}).items():
+            print('%-*s    參數 %s：%s' % (width, '', pname, text))
+    for label, why in dropped:
+        print('丟掉  %s（%s）' % (label, why))
+
+
+def write_json_file(target, value, force):
+    """寫一個 JSON 檔（暫存＋rename）；已在要 --force，符號連結或非一般檔一律不蓋。"""
+    if os.path.lexists(target) and not force:
+        raise AgentError('AlreadyExists', '%s 已經在了（要蓋掉加 --force）' % target)
+    if os.path.islink(target) or (os.path.lexists(target) and not target.is_file()):
+        raise AgentError('AlreadyExists', '%s 不是一般檔（或是符號連結），--force 也不蓋' % target)
+    fd, tmp = tempfile.mkstemp(dir=target.parent, prefix='.%s.' % target.name)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            f.write(_dump(value))
+        os.replace(tmp, target)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
+def apply_describe(path, result, sha):
+    """wrap-py --describe FILE：照提案補描述（改 result 裡的簽名）。原檔 sha 對不上＝SourceChanged；
+    提案有任何一條沒過機械檢查＝DescribeInvalid（人給的就要整份對）。回寫進 wrap.json 的紀錄。"""
+    p = Path(os.path.abspath(os.path.expanduser(path)))
+    try:
+        raw = p.read_bytes()
+        data = json.loads(raw.decode('utf-8'))
+    except FileNotFoundError:
+        raise AgentError('NotFound', '找不到 --describe %s' % p)
+    except (OSError, ValueError, UnicodeError) as e:
+        raise AgentError('DescribeInvalid', '讀不了 --describe %s：%s' % (p, e))
+    if not isinstance(data, dict) or data.get('_type') != DESCRIBE_TYPE or data.get('_version') != 1 \
+            or not isinstance(data.get('functions'), dict):
+        raise AgentError('DescribeInvalid', '%s 不是 wrap-py 描述提案（要 _type %s、_version 1、functions）'
+                         % (p, DESCRIBE_TYPE))
+    if data.get('sha256') != sha:
+        raise AgentError('SourceChanged', '原檔跟提案記的不一樣了（sha256 %s… ≠ %s…）；重新提案'
+                         % (sha[:12], str(data.get('sha256'))[:12]))
+    wanted = {k: v for k, v in data['functions'].items() if k in result['functions']}
+    skipped = [k for k in data['functions'] if k not in result['functions']]
+    ok, dropped = check_describe(wanted, result)
+    if dropped:
+        raise AgentError('DescribeInvalid', '提案有 %d 條沒過機械檢查：%s' % (
+            len(dropped), '；'.join('%s：%s' % d for d in dropped)))
+    done = set()
+    for fname, entry in ok.items():
+        sig = result['functions'][fname]
+        if 'description' in entry:
+            sig['description'] = entry['description']
+            sig['has_doc'] = True
+            done.add('%s 沒有 docstring（第一段），描述先用函式名' % fname)
+        sig['docs'].update(entry['params'])
+        done.update('%s 的參數 %s 沒有說明' % (fname, q) for q in entry['params'])
+    result['warnings'] = [w for w in result['warnings'] if w not in done]
+    for fname in skipped:
+        result['warnings'].append('提案裡的 %s 這次沒包（沒收或沒在 --only 裡），略過' % fname)
+    print('照 %s 補了 %d 支的描述' % (p, len(ok)))
+    return {'file': str(p), 'sha256': hashlib.sha256(raw).hexdigest(), 'functions': sorted(ok)}
 
 
 # ------------------------------------------------------------------ tools test ----

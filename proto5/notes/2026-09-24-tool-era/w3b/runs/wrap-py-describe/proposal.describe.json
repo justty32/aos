@@ -1,0 +1,66 @@
+{
+  "_type": "aos_wrap_py_describe",
+  "_version": 1,
+  "source": "/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a3ba1e31b95ea8155/proto5/lib/test/fixtures/wrapcli/opaque_funcs.py",
+  "sha256": "1ed35df042e43e9cf20f5925ebf191200e9e330beb88376c432a49cfa7f76d17",
+  "generated": "2026-09-24T23:22:52+08:00",
+  "model": "deepseek-chat",
+  "alias": "default",
+  "usage": {
+    "completion_tokens": 289,
+    "prompt_tokens": 390,
+    "total_tokens": 679,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 390
+  },
+  "functions": {
+    "proc": {
+      "params": {
+        "path": "path to the text file to count lines in"
+      },
+      "description": "Reads the file at the given path as UTF-8 text and returns the number of lines."
+    },
+    "proc2": {
+      "params": {
+        "path": "path to the text file to count words in"
+      },
+      "description": "Reads the file at the given path as UTF-8 text and returns the number of whitespace-separated words."
+    },
+    "proc3": {
+      "params": {
+        "path": "path to the file to measure in bytes"
+      },
+      "description": "Reads the file at the given path as raw bytes and returns the byte count."
+    },
+    "xf": {
+      "params": {
+        "text": "the string to reverse"
+      },
+      "description": "Returns the input text with its characters reversed."
+    },
+    "xf2": {
+      "params": {
+        "text": "the string whose words to capitalize"
+      },
+      "description": "Splits the text on whitespace, capitalizes each word, and returns them joined by single spaces."
+    },
+    "calc2": {
+      "params": {
+        "a": "first integer factor",
+        "b": "second integer factor"
+      },
+      "description": "Returns the product of the two integers."
+    },
+    "calc3": {
+      "params": {
+        "a": "first integer addend",
+        "b": "second integer addend"
+      },
+      "description": "Returns the sum of the two integers modulo 7."
+    }
+  },
+  "dropped": []
+}

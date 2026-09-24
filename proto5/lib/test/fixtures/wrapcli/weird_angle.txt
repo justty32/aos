@@ -1,0 +1,13 @@
+imgconv - convert images between formats
+
+Usage:
+  imgconv [options] <input> [<output>]
+
+Options:
+  -o <file>          write the result to <file> (default: stdout)
+  -q, --quality <n>  JPEG quality, 1-100
+  --format <fmt>     output format: png | jpg | webp
+  -s, --strip        remove metadata
+  --resize <WxH>     resize before converting, e.g. 800x600
+  -v                 verbose; repeat for more (-vv)
+  -h, --help         show this help

@@ -21,7 +21,7 @@ agent 家裡一行一個 JSON 物件，只追加。共同欄位：
 | `think_start`／`act_start` | 一批全部送出，提交 `sent: true` 之前 | `base_len`；act 另有 `tools`（每個 call 的工具名，照順序） |
 | `think_end` | 結清，提交 `batch: null` 之前 | `ok`、`ms`；失敗另有 `reason`（白話）、`count`（算不算一次連敗）；成功另有 `tool_calls`（模型這次叫了幾個工具） |
 | `act_end` | 同上 | `ok`（全部成功才 true）、`calls`：`[{"tool", "ok", "ms"}]`（沒送出去的那種——沒這個工具、被權限牆擋——`ok: false`、`ms: null`） |
-| `compact` | 壓縮寫完 archive、換記憶之前（[compact.md](compact.md)） | `auto`、`reason`、`keep_rounds`、`max_tokens`、`before`／`after`（`{count, tokens}`）、`over`、`archive` |
+| `compact` | 壓縮寫完 archive、換記憶之前（[compact.md](compact.md)） | `auto`、`reason`、`keep_rounds`、`max_tokens`、`before`／`after`（`{count, tokens}`）、`over`、`archive`；人跑 `--summarize` 時多 `summarize`（第三波 W3-2，[compact-summarize.md §6](compact-summarize.md)） |
 | `compact_fail` | 自動壓縮或申請做不成 | `auto`、`reason`、`error` |
 
 - `ms` 是 kernel 回音裡的**經過時間**，不是 cpu 秒；cpu 秒與記憶體這版不記（`null` 就是沒有）。
