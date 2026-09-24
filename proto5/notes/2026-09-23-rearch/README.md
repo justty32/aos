@@ -20,6 +20,7 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | review-agent2-task.md／review-agent2-report.md | 2026-09-24 astra 審 agent 線第 2 輪：12 條 7 解 5 部分、還不能定稿；新洞 8 條（擋：同名輸入檔再投遞會被吞；要修：空 envs 的 clear 被省略、llm cpu 整份解 info 撞 $env、done_exit 與 tick 退出碼相撞）；下層引用核對通過；實作者還得猜 8 處；定稿前必改 5 條 |
 | agent-round3-changes.md | 2026-09-24 agent 線第 3 輪（Opus）：必改 5 條全落（每次消費一個身分 `<原名>.<消費 id>.done`、`continue-<批 id>.json`、clear 一律寫、llm loader 只解六欄、`start` 驗 K 的 done_exit／KernelIncompatible、system／history 限單檔）＋實作者還得猜的 8 處寫死（ToolInvalid／ConfigInvalid／UnsupportedVersion、正規化順序、KernelMismatch、`aa-` 前綴…）；round2 表 C-6／C-8 改「沒通」 |
 | review-agent3-task.md／review-agent3-report.md | 2026-09-24 astra 審 agent 線第 3 輪：E 5 條 4 解 1 部分、D／B／C 全解、四個消費時序都通；aos-llm-call.md 可定稿，agent.md／aos-agent.md 還差 3 條（被 state 引用的封存檔不可清、start 只解驗相容欄位、「讀驗錯什麼都不寫」限起始讀驗） |
+| agent-round4-changes.md | 2026-09-24 agent 線第 4 輪（Opus）：最後 3 條落（被 state 引用的封存檔不可清、start 只就地解驗 done_exit／bad_after、「什麼都不寫」限起始讀驗）；三份標頭改「第 2 版，2026-09-24 定稿；程式未跟」 |
 | impl-fix-round1.md | 2026-09-24 T5 修正第 1 輪：daemon 缺檔 SpawnFailed、控制 pipe 驗信封、cpu 家半成品恢復；新 CLI `aos-daemon stop`、`aos-kernel ack`／`init --cpu`／`ls` 摘要／`-h`、kernel.log 空格不寫；補 C-1／4／5／6 測試、修 D-1～7 flaky（917 條）；三份規範補句＋檔尾〈實作補記〉；跳過 C-2／3／7／8；要使用者拍 3 條 |
 
 舊規範已於 2026-09-24 換掉（副本在 proto5.1/spec/）。

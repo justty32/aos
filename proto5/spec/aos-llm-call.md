@@ -1,8 +1,8 @@
-# aos-llm-call：問模型一次（程式規範，第 2 版草稿（第 3 輪））
+# aos-llm-call：問模型一次（程式規範，第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；程式未跟）
 
 ← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜誰叫它：[aos-agent.md](aos-agent.md)｜它跑在哪：[cpu.md §4.1](cpu.md)、[kernel.md §1.1](kernel.md)
 
-> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) 改成第 3 輪。
+> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) 改成第 3 輪；[第 3 輪審查](../notes/2026-09-23-rearch/review-agent3-report.md) 判可定稿，第 4 輪只補一條實作提醒。
 > **程式還沒照這份改**：現行 `aos_llm_ask.py`＋`aos_llm_cpu.py` 仍是舊版（組 body 跟打 HTTP 分兩支、中間隔一個 llm cpu 佇列）。
 > 這份把兩件事合成一支普通程式。調度者裁決在下一節，已拍板的前提在 §9。
 
@@ -87,6 +87,8 @@ llm.json 本身可以隨時改，下一次問就生效（每次跑都重讀）�
   規則照 [agent.md §3](agent.md)（中心 agent 家，`$env` 在這顆 cpu 的環境解）。`llm` 本身要是物件（先不解它，只取 `model`、`params` 兩格各自解）；
   其他格（`llm.pool`、`llm.timeout_ms`、`tool_pool`、`tick`、不認得的 key）**不解、不驗**，那是 aos-agent 的事。
   所以六格以外的 `$env` 只要 agent 那顆 cpu 有就行；六格裡的 `$env` 兩顆 cpu 都要有、而且同值（agent.md §2）。
+  **實作提醒**：挑欄位解時要帶著原 JSON 的文件與位置去解（例如解 `/llm/params` 就用整份文件、位置 `/llm/params`），不能先切出小物件再解——
+  不然 `$ref:""`（指自己這份檔）與相對 `$at`（`./`、`../`）會找錯地方（[directives.md §3.2](directives.md)）。
 - 人格、記憶、工具檔：原樣讀，照 agent.md §3.1～§3.3 驗。**不讀 `state.json`**。
 
 讀驗錯的代號照 [agent.md §5](agent.md)。
