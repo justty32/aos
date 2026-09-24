@@ -8,20 +8,24 @@
 ## 1. `aos-kernel boot`
 
 跟 proto5 一樣只做「交接、拉起來、放第 1 格」，不跑格；兩個 boot 同時跑仍是保證外。
+boot 一開始就產生新 chain id；它送的單都帶 `decl`＝[新 chain 的 epoch ns, 0]，**比舊鏈任何一張單都新**——
+舊鏈已經放進 daemon 家、還沒被處理的 scale 單，daemon 之後處理時會回 `Stale`、不生效（[protocol §1](protocol.md)，審查 R6）。
 
-1. **驗**（不改任何東西）：K 轉絕對路徑、`aos-kernel` realpath、info 第 2 版讀驗；池表提到的每個 daemon 家都要是 daemon 家、活著（flock 探測）。
-2. **交接 kernel 池**：要交接的是「帳本裡的 kernel 池」與「info 的 kernel 池」（`daemon`／`dpool` 去重，最多兩個）。對每一個：
-   送 `scale {count: 0}`、等回音（`NameTaken`＝別人的池，退 1）；再**等 daemon 的 `summary.json` 顯示 `running 0`、`killing 0`**（或整個池已被拿掉），
+1. **驗**（不改任何東西）：K 轉絕對路徑、`aos-kernel` realpath、info 第 2 版讀驗；每個池都解得出 daemon（`NoDaemon`），每個 daemon 家都活著（flock 探測）。
+2. **交接 kernel 池**：「帳本裡的 kernel 池」與「info 的 kernel 池」（`daemon`／`dpool` 去重，最多兩個）各送 `scale {count: 0}`、等回音
+   （池不在也算成功，[protocol §1](protocol.md)；`NameTaken`＝別人的池，退 1）；再**等 daemon 的 `summary.json` 不在、或 `running 0`、`killing 0`**，
    最多 `--wait-ms`（預設 30 秒），逾時＝`AlreadyRunning`、退 1（單不撤回，同 proto5）。
-   為什麼是「縮到 0」而不是 proto5 的 `kill`：宣告式下 kill＝砍掉重來，daemon 會馬上再拉一顆，那顆會去跑舊鏈排好的下一格，
+   帳本裡 kernel 池若有舊的 `pending`，它的回音在就讀掉、ack，`pending` 清掉。
+   為什麼是「縮到 0」而不是 proto5 的 `kill`：宣告式下 kill＝砍掉重來，daemon 馬上再拉一顆，它會去跑舊鏈排好的下一格，
    而新鏈還沒寫進帳本——兩格就可能同時在改帳本。縮到 0 才真的「沒有任何一格在跑、也不會再有」。
    （硬砍時另一個 process group 的 tick 子程式可能還活著，同 proto5 的保證外。）
-3. **寫帳本**：`chain` 新 id、`kcpu`、`cli`、`last_seq` 0、`phase` running。`procs`／`ready`／`delayed`／`busy`／`acks`／`replies`／`deletes`／`sends` **照舊**。
-   `pools` 每一格：`want` 設 null（逼第一格重算、把宣告整份重送給 daemon——這就是 boot 時的池對帳）；`free` 重建為 S ∩ W 減 `busy`（O(池大小)，只在 boot）；
-   `pending` 照舊（它的回音下一格照收）。`recent`＝`busy` 全部（新鏈第一格把每顆忙的都查一次，O(忙的數)）。
+3. **寫帳本**：`chain` 新 id、`kcpu`、`cli`、`last_seq` 0、`phase` running。`procs`／`ready`／`delayed`／`busy`／`on`／`acks`／`replies`／`deletes` 照舊；
+   **`sends` 裡的 scale 單全部丟掉**（ack 類照留；boot 自己會重送宣告）。
+   `pools` 每一格：`dirty`、`redeclare` 設 true（第一格重算並**整份重送**宣告——這就是 boot 時的池對帳，[kernel-pools §2](kernel-pools.md)）；
+   `pending` 照舊（回音下一格照收；被丟掉、沒放出去的那張下一格當 `Interrupted`）。`recent`＝`busy` 全部（新鏈第一格把每顆忙的都查一次）。
    第一次 boot 沒有帳本＝全部從空開始。
 4. **建家與模板**：每個池寫 `envs.json`、`inst.json` 模板；W 裡每一號「缺的補齊」（O(池大小)，只在 boot）。kernel 池 0 號的家也在這裡補。
-5. **拉 kernel 池**：送 `scale {count: 1}`（帶 `target` 樣板）、等回音。不等它活起來。
+5. **拉 kernel 池**：送 `scale {count: 1}`（帶 `target` 樣板）、等回音、ack。不等它活起來。
 6. `link` 第 1 格 `k-<chain>-1.json` 到 `K/pools/kernel/cpus/0/requests/`。退 0。
 
 新的 kernel cpu 會先做家裡剩下的單：舊鏈留下的殘格（帶舊 chain，自滅）、然後第 1 格。檔名照字典序，舊 chain 的 epoch 較小、排前面。
@@ -37,7 +41,8 @@
 啟動前幾步同 proto5 §6.1（建家、拿鎖、等上一任的孩子死透、對帳自己的 `current`），差在：
 
 - **找上一任的孩子**：讀每個 `pools/*/kids/*.json` 的 pid（O(孩子數)，只在啟動），用 proto5 §6.1 第 3 步的方法殺乾淨，**整批一起**送 TERM、一起等、一起 KILL。
-- 殺完把 `kids/` 清空、重算 `summary.json`。
+  舊版（proto5）的家：`state.json` 還有 `children` 的，那些 pid 一併殺掉，之後 `children` 拿掉（審查 R25）。
+- 殺完：每個 kids 檔改成 `pending`（`pid` null；`gen`、`exits` 照留，`streak` 歸 0），不是成員的刪掉；重算 `summary.json`。
 - **照 `pool.json` 把孩子拉回來**：每池的成員全部進 `pending`，照節流慢慢拉（[daemon-reconcile §4](daemon-reconcile.md)）。
   proto5 的「孩子表從空開始、等客戶再 spawn」**拿掉**。
 
@@ -49,18 +54,19 @@
 
 ## 3. 停機
 
-**kernel `halt`**：`phase=stopping` → 收完在途（同 proto5）→ `phase=stopped`，同一次寫帳本時對**每個池（含 kernel 池）**排一張 `count: 0` 的 scale 單進 `sends`，出貨。
+**kernel `halt`**（審查 R5）：
+1. `phase=stopping` → 收完在途（同 proto5）。
+2. 每個**工作池**排 `count: 0` 的 scale 單；照 kernel-pools §2 第 1 步收回音。回錯（例如 daemon 在 `Stopping`）就照規則重試，**一直停在這一步**，`ls` 印原因。
+3. 全部工作池都回成功 → `phase=stopped`，同一次提交排 kernel 池的 `count: 0`、出貨。正在跑的那一格被溫和停、跑完才退；
+   已排好的下一格留在家裡，下次 boot 換了 chain 自滅。kernel 池這張的回音留在 daemon 家，下次 boot 第 2 步讀掉。
+4. `aos-kernel halt` CLI 等的是：`phase=stopped`，而且這個 kernel 的**每個池**在 daemon 那邊都消失（`summary.json` 不在）或 `count 0`、`running 0`、`killing 0`。
+   只看 `running 0` 不夠——宣告還是 N、孩子都在等重拉時也是 0。
 - 不再往每顆 cpu 放 `stop-` 檔（proto5 的 `stops` 拿掉）：上萬顆就是上萬個檔；縮到 0 讓 daemon 用批次階梯收，一池一張單。
-- kernel 池縮到 0 時，正在跑的那一格是被溫和停的——它會跑完（包括把這些單出貨完）才退。已經排好的下一格留在家裡不會被跑，
-  下次 boot 換了 chain 它自滅（同 proto5）。
-- 崩在寫帳本之後、出貨之前：下一格若還跑得到，第 2 步 `stopped` 分支會出貨補放；跑不到（kernel cpu 已被收）就剩在 `sends`，
-  下次 boot 會照舊出貨——**這幾張縮到 0 的單在 boot 第 3 步前要丟掉**，不然 boot 剛拉起來的池又被縮回 0。
-  規則：boot 第 3 步把 `sends` 裡**所有 scale 單**丟掉（boot 自己會重送宣告），ack 類照留。
-- 這幾張單照常記進各池的 `pending`。停機後沒有格去收回音，回音就留在 daemon 家；下次 boot 後的第一格照 [kernel-pools §2](kernel-pools.md) 第 1 步收（成功＝`sent` 變空，接著重送 info 的宣告）。
-  被 boot 丟掉、沒放出去的那張：兩個檔都不在、也不在 `sends`，照同一步當 `Interrupted`、重算重送。kernel 池那張由 boot 第 2 步順手讀掉、ack（它自己的回音）。
+  [cpu.md §5.4](../../proto5/spec/cpu.md)「kernel 往每顆 cpu 放 stop」這句因此作廢。
 
 **daemon `halt`**：批次階梯收全部孩子，`pool.json` 留著（[daemon-reconcile §7](daemon-reconcile.md)）。
-順序仍建議先 kernel、後 daemon：先 kernel 的話池已經是 0，daemon 停完、下次開也不會拉任何東西，等 `aos-kernel boot` 重新宣告。
+順序仍建議先 kernel、後 daemon：先 kernel 的話池都是 0、已消失，daemon 停完下次開也不會拉任何東西，等 `aos-kernel boot` 重新宣告。
 反過來先停 daemon：下次開 daemon 會把所有池拉回來，kernel 的鏈多半接得上（§2）。兩種都能用。
+kernel `halt` 卡在第 2 步時才去停 daemon，會留下非 0 的宣告，下次開 daemon 會拉回來——`aos-kernel halt` 逾時的訊息要講這件事。
 
-**kernel 改綁另一個 daemon**：照 [kernel-info §4](kernel-info.md) 先縮到 0、再改。proto5 的「不支援交接」仍成立，只是現在有明確的做法。
+**kernel 改綁另一個 daemon**：照 [kernel-info §4](kernel-info.md) 的搬池流程；proto5 的「不支援交接」由那段取代。

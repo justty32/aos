@@ -10,7 +10,7 @@
 
 | 誰 | 每格／每圈的工作量 |
 |---|---|
-| kernel 一格 | O(syscall＋回音通知＋上一格派的＋`sweep`＋池數＋這格派的＋到期的＋出貨)，**加上寫帳本**（§2） |
+| kernel 一格 | O(`K/requests/` 項目數＋上一格派的＋`sweep`＋池數＋`skip` 長度＋這格派的×log＋丟掉的舊排隊格＋出貨)，**加上讀、寫整份帳本**（§2） |
 | daemon 一圈 | O(新單＋死掉的＋這圈拉的＋階梯到期的＋有變的池)；收屍用 `waitpid(-1)`，不逐顆問 |
 | kernel ↔ daemon | 只在池的數字變了（或 boot、halt）才有一張 scale 單，一池一張，跟池大小無關 |
 | 回音漏通知 | 最慢 ⌈忙的數 ÷ `sweep`⌉ 格被巡檢撿到（1 萬顆忙、`sweep` 32、一格 1 秒 ≈ 5 分鐘） |
@@ -19,12 +19,12 @@
 
 | 哪裡 | 多大 | 為什麼先接受 |
 |---|---|---|
-| **kernel 帳本整份寫**（一格最多四次） | 跟 `procs`＋`busy`＋`free` 成比例；1 萬顆全忙約 3 MB | 拆帳本會動到 [aos-agent.md §10](../../proto5/spec/aos-agent.md) 偷看 `procs` 的做法（那份不改）；先量再說 |
-| 池的集合重算 | O(池大小) | 只在 info 的數字變了、或縮小中的某號剛做完時 |
+| **kernel 帳本整份讀、整份寫**（每格讀一次、寫最多四次；閒著的一萬顆也要讀一遍 `free`） | 跟 `procs`＋`busy`＋`free`＋`skip` 成比例；1 萬顆全忙約 3 MB | 拆帳本會動到 [aos-agent.md §10](../../proto5/spec/aos-agent.md) 偷看 `procs` 的做法（那份不改）；先量再說 |
+| 池的集合重算 | O(池大小) | 只在 info 的數字變了、在途單結清、縮小中的號**全部**做完時（不是每做完一顆） |
 | kernel boot | 建家「缺的補齊」、重建 `free`、`recent`＝全部忙的 | 只在 boot |
 | daemon 啟動 | 讀全部 `kids/`、殺上一任的孩子、把全部成員排進 `pending` | 只在啟動；拉回來受 `spawn_per_sec` 節流 |
 | `ls --pool`、`cpu ls --pool`、`aos-daemon ls` 數忙 | O(池大小)，逐顆偷看 | 人偶爾打的指令，不在每格裡 |
-| scale 回音裡的 `skip` | 空洞多時很長 | 只有 `cpu rm P/<i>` 會造出空洞 |
+| `skip` 長度（在 info、帳本、scale 單、`pool.json` 裡） | 退休的號越多越長；每格比對 `want` 要 O(`skip` 長度) | 只有 `cpu rm P/<i>` 會加；CLI 寫入時丟掉超過最大成員號的項目 |
 
 ## 3. 不在程式裡、但上萬顆一定會撞到的
 
@@ -37,11 +37,11 @@
    可能的方向：kernel 另外維護 `K/procs/<N>` 這種一行程一個空檔，agent 改成看檔在不在（O(1)）。**要改 aos-agent.md，所以不在這份草稿裡動**。
 5. **kernel 一條鏈、一格一格跑**：一格的時間隨「有事的數量」變長；同一個反覆行程一格最多派一次。上萬個一秒一次的行程，一格要處理上萬則回音。
 6. **磁碟**：每顆一個家、一個 `cpu.log`（不輪替）；家不刪（[kernel-home §4](kernel-home.md)）。`kernel.log` 也不輪替。
-7. **`K/requests/` 一個資料夾**：kernel 落後時，通知檔會在這裡堆起來，列目錄變慢。通知檔名固定、同一則回音不會堆兩張，所以上限約等於忙的 cpu 數。
+7. **`K/requests/` 一個資料夾**：每格列目錄是 O(裡面的項目數)；kernel 落後時通知與 syscall 會堆起來。通知檔名固定、同一則回音不會堆兩張，所以通知數上限＝**還沒被 ack 的回音數**（cpu 開機補丟時也包括 kernel 已結帳、ack 還沒被 cpu 處理的，審查 R22），正常接近忙的 cpu 數。
 
 ## 4. 保證外（出事了要人處理）
 
-- 一顆號碼拉不起來（家壞了）而 kernel 已經派單給它：那件工作卡在 `running`。`cpu ls --pool P` 對得出來；處理：`cpu rm P/<i>` 讓它退休，再 `rm` 那個行程。
+- 一顆號碼拉不起來（家壞了）而 kernel 已經派單給它：那件工作卡在 `running`。`cpu ls --pool P` 對得出來；**只能把家修好**讓它起來對帳（`rm` 行程、`cpu rm` 都會等它，[kernel-pools §4](kernel-pools.md)，審查 R12）。
 - 縮小時被收的號手上那件沒設 `timeout_ms`：縮小一直等。處理：`aos-daemon kill --pool <dpool> <i>`。
 - 人用 `aos-daemon scale --force` 改 kernel 的池：兩邊的數字不一致，直到 kernel 下次送單。
 - 兩個 boot 同時跑、人手直接跑 `aos-cpu`（同 proto5）。

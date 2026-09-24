@@ -23,6 +23,7 @@ aos-kernel add／rm／ack／check／tick   # 同 proto5 §6，K 改 --target
 - `--config FILE`：一份 JSON，內容就是 [kernel-info](kernel-info.md) 的格式（`_metainfo` 可省，會補上）。
   **只放 kernel 參數＋池定義，cpu 可以一顆都沒有**（`pools` 可以是 `{}`，或每池 `count: 0`）。讀驗照 kernel-info §2；不過＝退 1、不建家。
 - 沒給 `--config`：預設 `{"pools": {"kernel": {"count": 1}}}`，其他全用預設。之後用 `cpu add` 加。
+  「cpu 可空」指的是**工作池**可以一顆都沒有；跑 tick 的那顆 kernel cpu 永遠在（審查 R1）。
 - `kernel` 池沒寫就補 `{"count": 1}`。
 - `daemon`：`--daemon D` 優先，否則 config 裡的，否則 `AOS_DAEMON_HOME`（轉絕對路徑），都沒有就不寫——boot 時才報 `NoDaemon`。
 - 建 `requests/`、`responses/`、`pools/`；不建任何 cpu 的家（boot／tick 建）。`K/info.json` 已在就拒絕（同 proto5）。
@@ -42,12 +43,14 @@ proto5 的 `--cpu`、`--env NAME:KEY=VALUE` 拿掉，改用 `cpu add`。
 
 ## `cpu rm`
 
+- `--count` 必須是正整數（0、負數＝用法錯 2）。`P` 是 `kernel`＝用法錯。
 - `cpu rm P/<i>`：那號必須是現在的成員（不是＝`NotFound`、退 1）。把 i 加進 `skip`、`count` 減 1（[kernel-info §3](kernel-info.md)）。
 - `cpu rm --pool P --count N`：`count` 減 N；N 大於現在的 `count`＝用法錯。收的是最大的那幾號。
 - 被收的號手上有工作的，會做完才真的收（[kernel-pools §3](kernel-pools.md)）。印 `pool P count A -> B`。
 
-**`cpu add／rm` 怎麼寫 info**：讀 → 改 → 寫 `.tmp` → rename 之前再讀一次原檔，跟一開始讀到的不同就重來（最多 3 次，再不行＝`Busy`、退 1）。
-這擋得住兩個 `cpu add` 撞在一起的多數情況，擋不住「剛好在比對與 rename 之間」有人改；人手改 info 與 CLI 同時跑是保證外。
+**`cpu add／rm` 怎麼寫 info**（審查 R11）：先拿 `K/.info.lock` 的獨占 flock（等最多 10 秒，拿不到＝`Busy`、退 1），
+鎖著做完「讀 → 改 → 驗 → 寫唯一的 `.tmp` → rename」，再放鎖。兩個 CLI 一定排隊，不會互蓋。
+tick 只讀 info、不拿這把鎖（rename 是原子的，讀到的一定是完整的一份）。人手改 info 不會拿鎖，跟 CLI 同時改是保證外。
 改完的 info 一樣要能過讀驗；過不了就不寫。info 裡的指示詞（`$env`…）會被保留原樣，CLI 只改 `pools.P.count`／`skip`／新池那一格。
 
 ## `cpu ls`
@@ -76,11 +79,13 @@ health 判定改的地方（其他同 proto5）：
 
 ## `halt`
 
-放 `stop` syscall（method 名沿用 proto5 的 `stop`；fix-r4 若改名就跟著）。預設等到 `phase=stopped` 且**這個 kernel 的每個池**在 daemon 的摘要都 `running 0`、`killing 0`，印 `stopped`。
+放 `stop` syscall（method 名沿用 proto5 的 `stop`；fix-r4 若改名就跟著）。預設等到 `phase=stopped` 且**這個 kernel 的每個池**在 daemon 那邊都已消失（`summary.json` 不在）或 `count 0`、`running 0`、`killing 0`、`draining 0`，印 `stopped`（只看 `running 0` 不夠，[handoff §3](handoff.md)）。
 停機時 kernel 把每個池（含 kernel 池）縮到 0（[handoff §3](handoff.md)），所以停完 daemon 那邊只剩空池、會自己消失。
 `not running`、`--no-wait`、逾時的處理同 proto5 的 `stop`。
 
 ## `check`
 
-`pools` 項改看池表：沒有 `llm` 池、或 `llm` 池 `count` 是 0＝bad。`llm` 項看 `pools.llm.envs`（家已建就看 `K/pools/llm/envs.json`）有沒有 `AOS_LLM_CONFIG`。
-`cpus` 項改看各池摘要（同上面 health）。`daemon` 項：池表裡提到的每個 daemon 家都查。其餘同 proto5。
+`pools` 項改看池表：列出每池 `count`；**不強制**有叫 `llm` 的池（agent 可以把 `llm.pool` 設成別的名字，純工具的 kernel 也合法；審查 R15）。
+`llm` 項：有 `--agent` 時看**那個 agent 的 `llm.pool`** 那池的 envs（`K/pools/<池>/envs.json` 在就讀它，否則讀 info）有沒有 `AOS_LLM_CONFIG`、檔在不在、模型代號在不在；
+沒 `--agent` 時對每個 envs 裡有 `AOS_LLM_CONFIG` 的池各查一次。`dirs` 項改查 `requests/`、`responses/`、`pools/`（proto5 查的 `cpus/` 不再有）。
+`cpus` 項改看各池摘要（同上面 health）。`--agent` 查 `tick.pool`／`llm.pool`／`tool_pool` 時改成「是 `pools` 的 key、不是 `kernel`」，`count` 是 0 印 warn（會一直排隊）。`daemon` 項：池表裡提到的每個 daemon 家都查。其餘同 proto5。

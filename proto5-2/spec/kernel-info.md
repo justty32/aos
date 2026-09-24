@@ -39,7 +39,7 @@ cpu 是哪一種（一般、問模型的…）由池的 `envs` 決定，進這�
 | `tick_ms`…`bad_after` | | | 同 proto5 §1.1 |
 | `sweep` | 正整數 | 32 | 每格巡檢幾顆忙的 cpu（[kernel-tick](kernel-tick.md) 第 6 步） |
 
-- **kernel 池**：池名固定叫 `kernel`；沒寫就當 `{"count": 1}`。`count` 只能是 1（別的＝`FieldTypeMismatch`）。
+- **kernel 池**：池名固定叫 `kernel`；沒寫就當 `{"count": 1}`。`count` 只能是 1、`skip` 只能是空的（別的＝`FieldTypeMismatch`），所以它永遠是 0 號。
   一般行程不准進這池（`add` 的 `pool: "kernel"`＝`-32602`，同 proto5）。
 - `cpu.poll_ms` 預設從 cpu 範式的 20 提高到 200：上萬顆每 20 ms 掃一次資料夾太吵。代價是派工延遲多最多 0.2 秒。
   kernel 池那顆照舊 20。
@@ -61,9 +61,22 @@ cpu 是哪一種（一般、問模型的…）由池的 `envs` 決定，進這�
 ## 4. 改 info 什麼時候生效
 
 tick 每格重讀 info（同 proto5）。池的 `count`／`skip`／`envs` 變了，**下一格**就照 [kernel-pools](kernel-pools.md) 處理，不用 boot。
-以下例外只在 boot 生效：
-- kernel 池的任何欄位（同 proto5 的 `kcpu` 釘死）。
-- 一個已經有 cpu 的池改 `daemon` 或 `dpool`：tick 不搬，ls 報 `PoolMoved`；要搬就先把 `count` 降到 0、等 `cpu ls` 看到那池 0 顆，再改。
+例外：
+- kernel 池的任何欄位只在 boot 生效（同 proto5 的 `kcpu` 釘死）。
+- 池改 `daemon` 或 `dpool`（搬池）：tick 照帳本裡的舊位置先把舊池縮到 0，**等舊 daemon 把那池整個拿掉**（它的 `summary.json` 消失）才換新位置、開始宣告；
+  在那之前 ls 印 `搬池中`。池從 info 刪掉又加回也一樣：帳本那格要等舊池消失才忘掉，加回來就接著用那格。
+  這樣同一批 cpu 的家不會同時被兩個 daemon 的孩子當家。（審查 R8）
 - `cpu` 那格只影響之後才建的家（建家是「缺的補齊、不覆蓋」，同 proto5 §1.1 末）。
+
+## 5. 讀驗邊界（審查 R27）
+
+| 項目 | 規則 | 錯了 |
+|---|---|---|
+| 池名、`dpool` | 1～64 bytes，只用 `A-Z a-z 0-9 _ . -`，不能是 `.`／`..`；不能含 `{`、`}`、`#`、`/` | `FieldTypeMismatch` |
+| cpu 全名 | `P/<i>`，`i` 是不帶前導 0 的十進位（`P/01` 不合法） | CLI 用法錯 2 |
+| `count` | 非負整數，bool 不算；上限 1000000 | `FieldTypeMismatch` |
+| `skip` | 非負整數、不重複；CLI 寫入時排好序。大於「目前最大成員號」的項目沒意義，CLI 寫入時拿掉 | `FieldTypeMismatch` |
+| `daemon` | 每個池都要解得出一個 daemon 家；init 時可以還沒有，**boot 才檢查**（`NoDaemon`） | boot 退 1 |
+| `cpu.poll_ms` | 正整數；`cpu.timeout_ms` 非負整數 | `FieldTypeMismatch` |
 
 `aos-kernel cpu add／rm` 就是改這份檔（[kernel-cli](kernel-cli.md)）；人手改也行。

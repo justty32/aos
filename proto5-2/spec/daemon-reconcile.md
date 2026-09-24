@@ -32,14 +32,20 @@
 1. 處理 requests/ 的 ack-、stop-（同 proto5）
 2. 處理其他單：scale、kill、ls（protocol）。scale 只改宣告、標這池「要對帳」
 3. 收屍：waitpid(-1, WNOHANG) 一直收到沒有——只碰死掉的那幾個，不逐顆問
+   **daemon 在 stopping → 不管原本什麼狀態，一律拿掉、不排回 pending**（先判這條，審查 R7）
    killing 的：還是成員 → pending（不加 streak）；不是 → 刪 kids 檔
-   running 的：還是成員 → dead，streak 照 §3 算，寫 kids 檔；daemon 在 stopping → 拿掉
+   running 的：還是成員 → dead，streak 照 §3 算，寫 kids 檔；不是成員不會發生（移出宣告的都先進 killing）
 4. 對帳（只對「要對帳」的池）：新加的號 → pending；拿掉的號 → 照 §1 收
-5. 拉：從「pending＋到期的 dead／failed」裡拿，最多拿到節流額度（§4），拉（proto5 §2 那套）
+5. 拉（stopping 時整步跳過）：從「pending＋到期的 dead／failed」裡拿，最多拿到節流額度（§4）與 fd 預算（§5），拉（proto5 §2 那套）
 6. 推進停機階梯（§6），只看到期的那批
 7. 有變的池重寫 summary.json
 8. 睡到 poll_ms 或下一個到期時間，取較短的
 ```
+
+**怎麼做到不掃全池**（審查 R21）：
+- 各狀態的**計數**跟著每次狀態轉移加減，summary 直接印計數，不重數。
+- 三種「時間到了要做事」——`dead`／`failed` 的 `next_at`、`running` 活滿 `stable_ms`（`restarting` 計數減 1）、階梯的下一段——都放進**同一個按時間排的佇列**，每圈只拿到期的。
+- 「可以拉的」每池一條佇列；只有佇列不空的池才參加輪流（§4），沒事的池不看。
 
 每一圈的成本只跟「這圈有事的」成比例：新單、死掉的、輪到拉的、階梯到期的。上萬個安靜的孩子不佔一圈的時間。
 
@@ -67,10 +73,14 @@ proto5 每個孩子兩條 pipe（四個端點在 daemon 手上，關掉孩子那
 
 - **只留 fd 0 那條**（daemon 寫、孩子讀 `go`／`stop`、看 EOF）；孩子的 fd 1 接 `/dev/null`。
   proto5 那條 fd 1 本來就「讀走就丟」，孩子不往上寫（daemon.md §2）。**取代 daemon.md §2「fd 0、fd 1 一律接成控制 pipe」**。
-- 啟動時把開檔數軟上限調到硬上限；實際能管的孩子數＝min(`max_children`, 開檔數 − 64)。scale 超過就回 `TooMany`（[protocol](protocol.md)）。
+- 啟動時把開檔數軟上限調到硬上限；fd 預算＝min(`max_children`, 開檔數 − 64)。
+  scale 的宣告數超過 `max_children` 就回 `TooMany`（[protocol](protocol.md)）；但宣告數沒超過不代表 fd 夠——
+  池 A 從一萬縮到 0、孩子還在 killing 時，池 B 宣告一萬是合法的。所以**每拉一顆前**再看「活著＋killing」的實際數量，
+  到了 fd 預算就先不拉，等舊的收完（審查 R24）。
 - 行程數上限（`ulimit -u`）、記憶體不在 daemon 的檢查範圍：fork 失敗就是 `SpawnFailed`，照 §3 退避。
 
-> 實作先驗：[cpu.md §6.1](../../proto5/spec/cpu.md) 第 3 步在「fd 0 是 pipe」時會把 fd 0／fd 1 都搬到高位；fd 1 是 `/dev/null` 時要確認 cpu 不會因此出錯（它從不寫那條）。
+**補充 [cpu.md §6.1](../../proto5/spec/cpu.md) 第 3 步**：父行程給的 fd 1 可以是 `/dev/null`，不一定是 pipe。cpu 照樣把它搬到高位（不會往那裡寫），
+工作的 stdout 照舊接到 fd 2（`cpu.log`）或照 inst 寫的。現行 `aos_exec_cpu.py` 的 `Control.relocate()` 就是這樣做的，不用改程式（審查 R28）。
 
 ## 6. 停機階梯：一批一批做
 
