@@ -40,3 +40,9 @@
 | [protocol.md](protocol.md) | JSON-RPC 方法 `scale`／`kill`／`ls` 的 params 與回音、拿掉 `spawn`、崩潰窗口表、檔名 | daemon.md §3、kernel.md §5 |
 | [handoff.md](handoff.md) | kernel boot 怎麼交接 kernel 池、daemon 重開怎麼把池拉回來、兩種停機 | kernel.md §6 boot、daemon.md §6.1 第 5 步 |
 | [cpu-notify.md](cpu-notify.md) | cpu 多一個 `notify` 欄位：回完音往 kernel 家丟 `resp-` 通知 | 補充 cpu.md §2、§6.1、§6.3 |
+
+## 跟 proto5 不變那幾份的差句
+
+| 檔 | 講什麼 |
+|---|---|
+| [proto5-diffs.md](proto5-diffs.md) | 「不變」表列那幾份裡，哪一句話落地時其實要換、換成什麼、依據哪一檔（proto5 那邊的字不動） |
