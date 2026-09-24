@@ -143,7 +143,7 @@ L 要到 4（2～5 次）還差「寄完信後那句回話」和「先讀事實�
 7. **mail 搬到新檔 `aos_team_mail.py`**，`aos_team_post.cmd_mail` 沒刪。`aos_team_post.py` 是 B 隊領地，我不改它；分派表改指新檔。舊函式現在沒人叫，B 隊可以順手刪。
 8. **mail 的 `--json` 多一種紀錄 `kind: "ask"`**（多帶 `question`、`answer`、`state`）。讀它的程式要略過不認得的 kind。
 9. **派工信的驗收那行改寫**（全部工人都會看到，不只 importer）：「檔案在」「含某段字」不用先 read 確認。這一步本來就是驗收員做的，寫明省模型輪次。
-10. **commit 結尾的署名**用 session 規定的那兩行（Claude Opus 5.5），不是任務書寫的 Fable 5.1：commit 是我（Opus）寫的，署名照實。
+10. 署名已照 repo 規定改為 Fable 5.1。
 11. 隊員代裁（細節在 [tools-dev.md](../../../spec/aos-agent/tools-dev.md)）：
     - `tools test` 多一個 `--tool T`（只測一支）；包裡有好幾支時，`--args` 一定要配它。
     - 三個造工具指令給 `--target` 算用法錯。
