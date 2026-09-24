@@ -185,7 +185,7 @@ class Talk:
                     if stop is not None:
                         self._clear_waiting()
                         report(*stop)
-                        _err('（已投入，不要再說一次；修好後會處理，回話會在你下次按 Enter 時印出）')
+                        _err('（已投入，不要再說一次；修好後 /wait 等回話，或按 Enter 看到了沒）')
                         return
                 except (AgentError, OSError, ValueError):
                     pass  # 寫到一半或暫時讀不到，下一輪再讀
