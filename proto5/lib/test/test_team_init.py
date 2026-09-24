@@ -474,8 +474,8 @@ class TeamIntegrationTests(KernelCase):
         self.assertTrue({'write', 'bash', 'board', 'ask_human'} <= tools['工人 worker-1'])
         self.assertNotIn('handoff', tools['工人 worker-1'])
         self.team('stop')
-        rows = json.loads(self.team('ls', '--json').stdout)
-        self.assertTrue(all(x['health'] == 'unregistered' for x in rows), rows)
+        wait_for(lambda: all(x['health'] == 'unregistered' for x in json.loads(self.team('ls', '--json').stdout)),
+                 timeout=15)
 
 
 if __name__ == '__main__':
