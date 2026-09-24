@@ -8,7 +8,7 @@
   members/<名>/               各成員的 agent 家（aos-team init 照模板生；input 一律是資料夾 input/）
   members/.removed/<名>-<ns>/ aos-team rm 搬走的家（不刪）
   team/
-    outbox/<名>/              成員寄出的信與申請（成員唯一可寫的團隊位置）；human 也有一格
+    outbox/<名>/              成員寄出的信與申請（成員唯一可寫的團隊位置）；human、beat（心跳）也各有一格
     outbox/<名>/done/         郵差處理完的原檔
     outbox/<名>/rejected/     格式、身分、權限不合被退的原檔
     human/                    寄給 human 的信（人的收件匣；aos-team mail 看）
@@ -22,7 +22,7 @@
     events/<名>.jsonl         事件紀錄（第 4 隊定；也可能放在成員家的 log/）
 ```
 
-- 名字：成員 `[a-z][a-z0-9_-]{0,31}`；`human`（人）、`post`（郵差自己生的信）是保留名，不能當成員。
+- 名字：成員 `[a-z][a-z0-9_-]{0,31}`；`human`（人）、`post`（郵差自己生的信）、`beat`（心跳，定時器；第 2 隊 2026-09-24 追加）是保留名，不能當成員。
 - kernel 用家的資料夾名登記（`agent-<名>`）：**同一個 kernel 上兩支團隊不能有同名成員**（第二支 start 會撞 `AlreadyExists`、說「同名行程是…」）。要跑兩支團隊就把成員名取得不一樣，或各用一個 kernel。
 - **團隊資料夾不要放在專案資料夾裡面**：工人把專案掛成可寫，會蓋到成員的家（信任資料）→ `AccessUnsafe`，那一批工具不跑。
 - 寫檔一律「暫存檔（`.` 開頭、`.tmp` 結尾）＋rename 或 link」。讀資料夾的程式只看不以 `.` 開頭的 `*.json`。
