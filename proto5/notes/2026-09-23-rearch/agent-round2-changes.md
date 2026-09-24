@@ -38,7 +38,7 @@
 
 ## C-1～C-10 時序自走
 
-我自己走一次，另派 subagent 獨立走一次，結論一致，10 條都通。
+我自己走一次，另派 subagent 獨立走一次，當時結論是 10 條都通；第 2 輪審查推翻了 C-6／C-8（下表已改）。
 
 | 窗口 | 下次怎麼認 | 結果 |
 |---|---|---|
@@ -47,9 +47,9 @@
 | C-3 放單後崩 | sent:false，重做時四步查，K 固定用 batch.kernel | 通 |
 | C-4 本地失敗沒紀錄 | 寫在 done；全部都是本地失敗就直接結清 | 通 |
 | C-5 Removed 就清檔 | 看帳本 procs，還在跑就留著 | 通 |
-| C-6 consume 半途崩 | 下次靠 `consuming` 補 rename | 通 |
+| C-6 consume 半途崩 | 下次靠 `consuming` 補 rename | **沒通**（同名訊號再投會被吞，第 2 輪審查 B-2；第 3 輪改成唯一封存名，見 [round3](agent-round3-changes.md)） |
 | C-7 連敗計數 | 跟 batch:null 在同一次寫 | 通 |
-| C-8 idle 收輸入 | 靠 intake 重做 | 通（寫輸入的人不能蓋掉還沒收的檔） |
+| C-8 idle 收輸入 | 靠 intake 重做 | **沒通**（同名輸入再投會被吞，B-2；第 3 輪修，見 [round3](agent-round3-changes.md)） |
 | C-9 stop／boot | 回 Stopping 就重問；boot 保留帳本；等回音不設上限 | 通 |
 | C-10 同一個家兩個驅動者 | 列為保證外；stop 後等 ls 看不到才改 | 通（只是約定） |
 

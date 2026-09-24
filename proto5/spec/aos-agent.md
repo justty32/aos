@@ -1,15 +1,15 @@
-# aos-agent：走一格、登記、取消登記（第 2 版草稿（第 2 輪））
+# aos-agent：走一格、登記、取消登記（第 2 版草稿（第 3 輪））
 
 ← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜問模型：[aos-llm-call.md](aos-llm-call.md)｜送件：[kernel.md §2](kernel.md)、[cpu.md §3](cpu.md)
 
-> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪。
+> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) E／D／B／C 改成第 3 輪。
 > **程式還沒照這份改**：現行 `aos_agent.py` 仍是舊架構（直接往 llm cpu／tool cpu 放單）。
 > 調度者裁決在下一節，已拍板的前提在 §14。
 
 一句話：**`aos-agent tick` 每次只送出或接回一批工作，更新記憶與進度後就退出；結果還沒到就保留進度，留給下一次。**
 問模型、跑工具都是往 kernel `add --once` 的普通工作；反覆叫 `tick` 是 kernel 的事——`aos-agent start` 把它登記成一個反覆行程。
 
-## 調度者裁決（第 2 輪，實作層級）
+## 調度者裁決（第 2～3 輪，實作層級）
 
 1. 送件前先把當批寫進 `state.batch`（`sent:false`），全送完才標 `sent:true`；崩了用 §5.2 的四步查「放過沒」，不盲目重送。
 2. 收回時先讀驗、把結果寫進 `done`，才 ack；記憶一律寫成「前 `base_len` 則＋這批」，重做不會重複接。
@@ -17,7 +17,7 @@
 4. 子命令化：`aos-agent tick|start|stop [dir]`；`tick.json` 由 `start` 寫，把 `AOS_K` 寫進它的 `envs`。
 5. 工作名 `aw-<資料夾名>-<epoch ns>-<pid>-<i>`，think 也帶 `-0`；前綴 `aw-` 避開 `ack-`／`stop-`。
 6. 壞模型輸出、`Removed`、`Interrupted`、逾時、非 0 都算一次連敗；`Stopping` 與 `stopped:true` 不算、下次重問。
-7. 連敗暫停沿用 `continue.json` 門；加門之前先把已經在的 `continue.json` rename 掉（舊訊號不算）。
+7. 連敗暫停的訊號檔**每次不同名**：`continue-<那批的批 id>.json`（第 3 輪改；不再沿用固定的 `continue.json`，就不用分新舊訊號）。
 8. 工具 `kind=aos` 給模型固定一句話、指向 cpu.log，不把診斷塞進結果。
 
 ## 0. 名詞（白話）
@@ -29,9 +29,7 @@
 | 當批 | `state.batch`：一次送出、一起收回的工作（[agent.md §4.3](agent.md)） |
 | 工作名 N | 一件工作的名字。**三種名字寫死**：kernel 行程名＝`N`；放進 `K/requests/` 的 request 檔名＝`N.json`（回音就出現在 `K/responses/N.json`）；ack 的 `params.name`＝`N.json`。`work/` 裡的檔是 `N.inst.json`、`N.in`、`N.out` |
 | 批 id B | `aw-<agent 資料夾名>-<epoch ns>-<pid>`；第 i 個 call 的工作名是 `B-<i>` |
-| 放單 | 往 `K/requests/N.json` 放一則 `add`（同目錄唯一 `.tmp` → `link` → 刪 `.tmp`，[cpu.md §3.1](cpu.md)） |
-| 回音 | `K/responses/N.json`：那件工作跑完的執行狀態（`result` 的 code／kind／timed_out／stopped，或 `error`）；答案與工具輸出在 `work/N.out` |
-| ack | 讀完回音、結果寫進 `done` 之後，往 `K/requests/` 放一則 notification，kernel 才刪回音（[cpu.md §3.3](cpu.md)） |
+| 放單／回音／ack | 放單＝往 `K/requests/N.json` 放 `add`（tmp＋`link`，[cpu.md §3.1](cpu.md)）；回音＝`K/responses/N.json` 的執行狀態，答案在 `work/N.out`；ack＝結果寫進 `done` 後放的 notification（[cpu.md §3.3](cpu.md)） |
 | K | kernel 家。只有 §5.1 建批那一刻讀 `AOS_K`（絕對路徑）記進 `batch.kernel`；之後送件（含崩了重送）、收回、ack、清檔一律用 `batch.kernel` |
 
 ## 1. 用法
@@ -47,7 +45,7 @@ aos-agent stop  [dir]
 ## 2. 一次 `tick` 的順序
 
 1. 讀驗 `info.json`、`state.json`、記憶、工具檔（[agent.md](agent.md)）。不過＝退 1，**什麼都不寫**。
-2. `consuming` 非空 → 逐個 rename `.done`（ENOENT＝已做）→ 寫 `consuming: []`。
+2. `consuming` 非空 → 逐對照 [agent.md §4.4](agent.md) 的搬法搬（`dst` 在就不碰 `src`）→ 寫 `consuming: []`。
 3. 清檔（§10），盡力做，K 的帳本讀不到就跳過。
 4. 看門（§3）。沒開＝退 101。
 5. `batch` 不是 `null` → 收回（§6），全收齊就接著結清（§7）。不管 `state` 是什麼，有批先收批。
@@ -58,11 +56,11 @@ aos-agent stop  [dir]
 ## 3. 門
 
 1. 逐條解（中心 agent 家）、逐條看到了沒（[agent.md §4.2](agent.md)）。解不開＝讀驗錯，退 1。
-2. 有到了的：**一次寫** `state.json`——到了的條目從 `waits` 劃掉（按索引），其中開 `consume` 的，把要 rename 的檔（資料夾就是當下裡面所有 `*.json`）
-   以絕對路徑加進 `consuming`。然後照第 2 節第 2 步做 rename、清 `consuming`。
+2. 有到了的：取一個新的消費 id，**一次寫** `state.json`——到了的條目從 `waits` 劃掉（按索引），其中開 `consume` 的，把要搬的檔（資料夾就是當下裡面所有 `*.json`）
+   以 `{"src": 絕對路徑, "dst": "<src>.<消費 id>.done"}` 加進 `consuming`。然後照第 2 節第 2 步搬、清 `consuming`。
 3. 表還有剩＝退 101（有劃掉的已經寫回，進度留著）；表空了＝往下走。
 
-崩在「劃掉」之後、rename 之前：`consuming` 裡有記，下次第 2 步補做，不會又被同一道門關住。
+崩在「劃掉」之後、搬完之前：`consuming` 裡有記，下次第 2 步補做，不會又被同一道門關住；已經搬過的（`dst` 在）不會再去動原路徑上新放的同名檔。
 人要它暫停：加一條指到不存在的檔（例如 `{"$opt":"consume","$val":"continue.json"}`）；要它繼續：touch 那個檔。
 門關著時當批也不收：回音留在 K，開門後再收。
 
@@ -116,10 +114,8 @@ aos-agent stop  [dir]
 3. `K/responses/N.json` 在 → 放過了。
 4. 都不在 → 沒放過。`K/state.json` 不在＝kernel 從沒 boot 過，當作第 2 步沒有；讀得到但壞掉＝退 1。
 
-成立的理由：kernel 收一則 add 是「先記帳（`procs` 或 `replies`）再刪原單」、結清是「同一次寫把回音放進 `replies`、拿掉 `procs`」、
-出貨是「先放回音檔再從 `replies` 拿掉」（[kernel.md §2、§3](kernel.md)）——一件工作只會往後走，所以照上面順序看，後一步看到的一定不比前一步舊。
-回音只有 ack 才消失，而 `done` 還是 null 的 call 從沒被 ack 過。boot 會保留 `procs`／`replies`，所以跨 boot 也成立。
-（不能照搬 cpu 的「原單回音都不在＝沒放」：kernel 的 once 是原單先消失、回音很久之後才出現。）
+理由：kernel 先記帳（`procs`／`replies`）再刪原單、同一次寫把回音放進 `replies` 並拿掉 `procs`、先放回音檔再從 `replies` 拿掉（[kernel.md §2、§3](kernel.md)），
+一件工作只往後走；回音只有 ack 才消失，而 `done` 是 null 的從沒 ack 過；boot 保留 `procs`／`replies`。不能照搬 cpu 的「原單回音都不在＝沒放」。
 
 ### 5.3 act：工具的 inst
 
@@ -131,7 +127,7 @@ aos-agent stop  [dir]
 | `_metainfo` | `{"_type": "posix", "_version": 1}` |
 | `argv` | 解好的字串陣列，不改寫 |
 | `cwd` | 絕對路徑；原本有 `mkdir` → `{"$opt": "mkdir", "$val": 絕對路徑}` |
-| `envs` | 解好的物件；原本有 `clear` → `{"$opt": "clear", "$val": {…}}`；空物件就不寫 |
+| `envs` | 原本有 `clear` → **一定寫** `{"$opt": "clear", "$val": {…}}`（`$val` 是空物件也照寫——那就是完全空的環境）；沒 `clear` → 解好的物件，只有這時空物件才能省略 |
 | `stderr`、`exit` | 沒寫就不寫；`inherit`／`merge` → `{"$opt": "inherit"}`／`{"$opt": "merge"}`；路徑 → 絕對路徑，帶 `append`／`mkdir` 時 → `{"$opt": [選項…], "$val": 絕對路徑}` |
 | `stdin` | `/abs/agent-bob/work/N.in` |
 | `stdout` | `{"$opt": "mkdir", "$val": "/abs/agent-bob/work/N.out"}` |
@@ -199,9 +195,8 @@ aos-agent 不會因為等太久就判「沒送」而重送。
 | `error.data.code=Stopping` | 「工具 <名> 沒跑：kernel 停機時取消」 |
 | 其他 `error` | 「工具 <名> 沒跑：kernel 退件（<data.code，沒有就 code>）」 |
 
-四種「停／取消」分清楚：`Stopping`＝還在排隊就被 kernel 停機取消，**確定沒跑**；`Removed`＝有人 `rm` 了這件，
-**可能正在跑**（kernel 當下就回，工作不一定停）；`Interrupted`＝cpu 的主人死在這件上，**結果不明**；
-`stopped:true`＝被強制停砍掉，**可能跑了一半**。只有 `Stopping` 能當「沒發生」；工作檔什麼時候能刪另看 §10，跟回音是哪一種無關。
+四種停：`Stopping`＝排隊時被停機取消，**確定沒跑**；`Removed`＝被 `rm`，**可能正在跑**；`Interrupted`＝cpu 主人死在這件上，**結果不明**；
+`stopped:true`＝被強制停砍，**可能跑一半**。只有 `Stopping` 算「沒發生」；刪檔另看 §10，跟是哪一種無關。
 
 ## 7. 結清
 
@@ -211,6 +206,7 @@ aos-agent 不會因為等太久就判「沒送」而重送。
 先檢查記憶跟當批對得上，不對＝`HistoryChanged`、退 1、不動（人改過記憶，要人處理）：
 記憶長度必須是 `base_len`（還沒接），或是 `base_len`＋這批要接的則數、而且尾巴逐則等於這批要接的訊息（上次接過、崩在寫 state 之前）；
 其他長度（例如人在途中加了訊息）一律 `HistoryChanged`，不悄悄截掉。act 另外要求第 `base_len` 則（從 1 算）是 assistant、它的 `tool_calls` 的 id 依序等於 `calls[].tool_call_id`。
+**檢查的範圍就這些**：前 `base_len` 則被人等長改寫不偵測、也不擋——寫回用的前綴就是這次讀到的那份，人的改動照樣保留。
 
 | 當批 | 寫記憶 | 然後**一次寫 state** |
 |---|---|---|
@@ -224,18 +220,20 @@ aos-agent 不會因為等太久就判「沒送」而重送。
 
 ## 8. idle：收輸入
 
-1. `intake` 是 null：照 [agent.md §4.1](agent.md) 讀 `input` 指到的檔（壞檔＝讀驗錯退 1）。沒輸入＝退 101。
-   有 → **寫 state**：`intake = {"base_len": 現在記憶長度, "files": [絕對路徑…], "messages": [讀到的訊息…]}`。
-2. 記憶寫成「前 `base_len` 則＋`intake.messages`」（長度檢查同 §7：只能是 `base_len`，或已接過的 `base_len`＋則數且尾巴相同；其他＝`HistoryChanged`）。
-3. `files` 逐個 rename 成 `<原名>.done`（ENOENT＝已做）。
-4. **寫 state**：`state: think`、`intake: null`。退 0。
+1. `intake` 是 null：列出 `input` 指到、現在存在的檔（[agent.md §4.1](agent.md)）。一個都沒有＝退 101。
+   有 → 取新的消費 id，**寫 state**：`intake = {"id", "base_len": 現在記憶長度, "files": [{"src", "dst": "<src>.<id>.done"}…]}`。這一步還沒讀內容。
+2. 逐對搬（[agent.md §4.4](agent.md)：`dst` 在＝搬過了、不碰 `src`；`dst` 不在 `src` 在＝rename；都不在＝那份被人拿走了，讀的時候跳過）。
+3. 從每個 `dst` 讀訊息、照 agent.md §3.2 驗（壞檔＝讀驗錯退 1，`intake` 留著；人修好那個 `dst` 或把它拿走後下次接著做）。全部略過＝沒輸入：寫 `intake: null`、退 101。
+4. 記憶寫成「前 `base_len` 則＋讀到的訊息」（長度檢查同 §7；其他＝`HistoryChanged`）。
+5. **寫 state**：`state: think`、`intake: null`。退 0。
 
-崩在 1 之後任何地方：下次看到 `intake` 就從第 2 步重做，同一份訊息不會接兩次、也不會因為輸入檔已被 rename 而漏掉。
+崩在 1 之後任何地方：下次看到 `intake` 從第 2 步重做。讀的永遠是封存名，內容不會變；同一份訊息不會接兩次；
+原路徑上新投的同名檔不會被這次恢復搬走或吞掉，留給下一次收。
 
 ## 9. 連敗暫停
 
-§7 那次寫把 `errors` 加到 3 時：同一次寫改成 `errors: 0`、`waits` 表尾加 `{"$opt": "consume", "$val": "continue.json"}`，
-stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch continue.json 繼續`。這次寫**之前**，若 `continue.json` 已經在，先 rename `.done`（那是舊訊號）。
+§7 那次寫把 `errors` 加到 3 時：同一次寫改成 `errors: 0`、`waits` 表尾加 `{"$opt": "consume", "$val": "continue-<B>.json"}`（B＝這批的批 id，所以每次暫停的訊號檔名都不同，不會有舊檔先在），
+stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch continue-<B>.json 繼續`。人也可以直接看 `state.json` 的 `waits` 找到檔名。
 本次退 0，之後門沒開就 101。設定讀驗、I/O 錯、`HistoryChanged` 不算連敗（它們退 1，由 kernel 的 `bad_after` 管）；工具失敗也不算（那是給模型看的結果）。
 
 ## 10. 清工作檔
@@ -252,7 +250,12 @@ stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch continue.json 繼
 **`aos-agent start [dir]`**：
 
 1. 讀驗 `info.json`（不過＝退 1）；K＝`AOS_K`。
-2. `tick.json` 不在就寫一份（在就照用，不改）：
+2. **查 K 的退出碼約定相不相容**：讀 `K/info.json`（照 [kernel.md §1.1](kernel.md) 解指示詞，中心 K；讀不到＝`NotAHome`、退 1）。
+   `tick` 會回 0／101／1，所以 `done_exit` 是 1 或 101 ＝`KernelIncompatible`、退 1、不登記（kernel 判回音時先比 `done_exit`，
+   撞到就會把 agent 當成「做完了」永久停排）。`done_exit` 是 0（關掉）或其他值都行。`bad_after` 是 0＝關掉退件，agent 一直退 1 也不會被標 `bad`，照登記。
+   這只在 start 當下查；之後人改 K 的 info，要自己重查。
+3. `tick.json` 不在就寫一份；在就讀它的 `envs.AOS_K`：是字面字串且等於現在的 `AOS_K` 才照用，否則（不同、不是字串、檔讀不懂）＝`KernelMismatch`、退 1，
+   stderr 說「tick.json 綁在另一個 K，要換就刪掉 tick.json 再 start」。寫出來的長這樣：
 
    ```json
    {"_metainfo": {"_type": "posix", "_version": 1},
@@ -261,8 +264,8 @@ stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch continue.json 繼
     "stderr": {"$opt": ["append", "mkdir"], "$val": "/abs/agent-bob/log/agent.err"}}
    ```
 
-   `.tmp` 再 rename 寫，所以「在」就是完整的。`aos-agent` 靠 `tick.pool` 那顆 cpu 的 PATH 找。要換 K 就刪掉 `tick.json` 再 start。
-3. 放單並等回音（最多 10 秒），等於替人打：
+   `.tmp` 再 rename 寫，所以「在」就是完整的。`aos-agent` 靠 `tick.pool` 那顆 cpu 的 PATH 找。
+4. 放單並等回音（最多 10 秒），等於替人打：
 
    ```sh
    aos-kernel add "$AOS_K" /abs/agent-bob/tick.json --name agent-<資料夾名> --pool <tick.pool> [--interval-ms <tick.interval_ms>]
@@ -270,15 +273,18 @@ stderr 一行 `aos-agent: stuck: 問模型連敗 3 次，touch continue.json 繼
 
    `interval_ms` 沒寫就不帶（用 kernel 的預設）；不帶 `timeout_ms`、不帶 `--once`。收到回音就 ack。
 
-**`aos-agent stop [dir]`**：等於 `aos-kernel rm "$AOS_K" agent-<資料夾名>`，等回音最多 10 秒、ack。
+**`aos-agent stop [dir]`**：讀驗 info 後，等於 `aos-kernel rm "$AOS_K" agent-<資料夾名>`，等回音最多 10 秒、ack。不查 tick.json、不查 done_exit。
 
-退出碼：0＝kernel 回了 `{"name"}`；1＝kernel 回 `error`（`AlreadyExists`：已經登記，或上次 stop 的那格還在跑；`-32602`：池不在 K 裡；
-`NotFound`）、讀驗錯、放檔錯、等回音逾時（`ReadFailed`；逾時不代表沒做）；stderr 一行 `aos-agent: <代號>: <白話>`；2＝用法錯。
+start／stop 的 request 檔名是 `aa-<資料夾名>-<epoch ns>-<pid>.json`（id 同名去掉 `.json`）。**等回音逾時**：stderr 印一行
+`aos-agent: ReadFailed: 等回音逾時，回音會出現在 <K>/responses/<檔名>，讀完自己放 ack（cpu.md §3.3）`、退 1——
+操作可能已經生效，不會撤回；那則回音 agent 之後不會再管。
+
+退出碼：0＝kernel 回了 `{"name"}`；1＝`KernelIncompatible`、`KernelMismatch`、kernel 回 `error`（`AlreadyExists`：已登記或上次 stop 的那格還在跑；
+`-32602`：池不在 K；`NotFound`）、讀驗錯、放檔錯、等回音逾時；stderr 一行 `aos-agent: <代號>: <白話>`；2＝用法錯。
 
 stop 之後：正在跑的那格會跑完（kernel 丟掉它的回音）；當批送出去的工作照跑，回音留在 K，下次 start 之後再收。
 kernel 行程名只看資料夾名，不同位置的兩個同名資料夾會撞 `AlreadyExists`（保證外，改資料夾名）。
-kernel 的退出碼約定：`tick` 只回 0／101／1，不會回 `done_exit`（100）；連續退 1 達 `bad_after` 次，kernel 會把這個 agent 標 `bad` 不再排。
-被標 `bad` 之後：看 `log/agent.err` 修好（例如記憶、輸入檔），再 `aos-agent stop`（`rm` 可以刪 `bad` 的行程）然後 `start`。
+`bad_after` 非 0 時，連續退 1 達那個次數 kernel 會把 agent 標 `bad` 不再排（是 0 就一直重跑）。被標 `bad` 後：看 `log/agent.err` 修好，再 `stop`（`rm` 刪得掉 `bad`）、`start`。
 
 ## 12. `tick` 的退出碼與 stderr
 
@@ -297,16 +303,16 @@ kernel 的退出碼約定：`tick` 只回 0／101／1，不會回 `done_exit`（
   外人改 `state.json`（例如加門）會跟正在跑的那格互相蓋掉——要改就先 `stop`，等 `aos-kernel ls` 看不到 `agent-<資料夾名>` 了再改。沒有鎖。
 - 人刪了 K 的檔、工作真的丟了：當批會一直等。要放棄就手動把 `batch` 改成 `null`（工作檔留著，自己清）。
 - **問模型讀的是執行當下的 agent 家**：aos-llm-call 跑起來才讀人格、記憶、工具（[aos-llm-call.md §3](aos-llm-call.md)）；
-  在途時人改了這些，會影響那一問。aos-agent 自己在 think 在途時不寫記憶。
+  在途時人改了這些，會影響那一問。aos-agent 只保證**當前還沒取消的** think 批在途時不寫記憶；被 `Removed` 的舊問可能在重問、記憶變長之後才讀家，
+  但它的回音 kernel 會丟掉、不會接進記憶（要連殘留也保證輸入不變，得等它的 `procs` 消失再重問，這版不做）。
 - kernel `stop`：還在排隊的 once 回 `Stopping`（think 下次重問、工具告訴模型「沒跑」），在跑的照常跑完；
   agent 自己的那格在 stopping 時不會被派，當批留到下次 boot 之後收（kernel 跨 boot 保留 `procs`／`replies`）。
-- 沒管的：`init <template>`、`pause`／`continue`、`tools`／`llms`、`say`、一個 agent 一顆專屬 cpu（使用者的構想在
-  [thinking/aos-agent.md](../../thinking/aos-agent.md)）；誰讀回話；記憶太長。
+- 放單崩在 `link` 之後、刪 `.tmp` 之前：`K/requests/` 留一個 `.` 開頭 `.tmp` 結尾的殘檔；主人只收 `.json`，不會誤收；**沒人自動清**（保證外），人在都停著時刪。
+- **日常 CLI 還沒完**：三份做完能走的只有「手動建家 → `start` → 往 `input` 放檔 → 問模型／跑工具 → 回 `idle`」，回話要自己看記憶檔。
+  `init <template>`、`say`、`pause`／`continue`、`tools`／`llms`、`state`、專屬 cpu 都還沒有（構想在 [thinking/aos-agent.md](../../thinking/aos-agent.md)）；記憶太長也沒管。
 
 ## 14. 已拍板的前提（使用者定的，不重問）
 
-1. **沒有同步工具**：問模型、跑工具都是往 kernel `add --once` 的普通工作，agent 只認識 kernel。
-   取捨：最快也要等一格 tick 才跑得到；同一批的工具可能平行跑，有先後依賴的要合成一個工具，或拆成兩輪讓模型分次叫。
-2. **agent 先進現有的池**：`start`＝替人 `aos-kernel add <K> <agent>/tick.json --name agent-<資料夾名>`（反覆行程，池與間隔從 `info.tick`）；
-   `stop`＝`rm` 那個名字；K 由 `AOS_K`（絕對路徑）給，沒設＝用法錯 2。
-3. **llm.json 放 llm cpu 那邊**：agent 只給模型代號；外圈逾時是 `info.llm.timeout_ms`，HTTP 逾時在 llm.json（[aos-llm-call.md §6](aos-llm-call.md)）。
+1. **沒有同步工具**：問與跑都是 kernel `add --once`。取捨：最快等一格 tick；同批工具可能平行，有先後依賴的合成一個工具或拆兩輪。
+2. **agent 先進現有的池**：`start`／`stop`＝替人 `aos-kernel add`／`rm` 反覆行程 `agent-<資料夾名>`；K 由 `AOS_K` 給，沒設＝用法錯 2。
+3. **llm.json 放 llm cpu 那邊**：agent 只給代號；外圈逾時 `info.llm.timeout_ms`、HTTP 逾時在 llm.json（[aos-llm-call.md §6](aos-llm-call.md)）。
