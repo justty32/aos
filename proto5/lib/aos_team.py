@@ -208,13 +208,13 @@ def cmd_ls(team_dir, argv):
 
 def machine_lines(team_dir, env):
     """郵差、心跳在 kernel 那邊的狀態（T5：真跑時郵差壞了，成員那幾行全是 ok、人看不出信為什麼不動）。"""
-    import aos_agent_status
+    import aos_kernel_store
     import aos_team_post
     home = env.get('AOS_KERNEL_HOME')
     if not home or not os.path.isabs(home):
         return ['郵差、心跳：沒設 AOS_KERNEL_HOME，看不到']
     try:
-        procs = aos_agent_status.ledger(home)['procs']
+        procs = aos_kernel_store.procs(home)               # one-boot 起帳本是 K/ledger.sqlite
     except Exception as exc:                              # 帳本讀不到：只少這兩行，不擋 ls
         return ['郵差、心跳：kernel 帳本讀不到（%s）' % exc]
     lay = Layout(team_dir)

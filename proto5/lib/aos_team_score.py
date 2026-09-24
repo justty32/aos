@@ -93,15 +93,17 @@ class Reader:
 
     def jsonl_all(self, path):
         """連輪換舊檔（<名>.1.jsonl …）一起讀，舊的在前。"""
-        olds, i = [], 1
-        while i <= 20 and events.rotated(path, i).exists():
-            olds.append(events.rotated(path, i))
-            i += 1
+        olds = [events.rotated(path, i) for i in range(1, 21) if events.rotated(path, i).exists()]   # 缺號也往下看
         return [row for p in reversed(olds) for row in self.jsonl(p)] + self.jsonl(path)
 
     def json_dir(self, folder):
         out = []
-        for path in fmt.json_files(folder):
+        try:
+            paths = fmt.json_files(folder)
+        except OSError:                                   # 資料夾讀不到（權限）：算一個跳過的檔
+            self.bad_files += 1
+            return out
+        for path in paths:
             try:
                 value = fmt.read_json(path)
             except TeamError:
@@ -120,7 +122,9 @@ def load_member_logs(lay, names, rd):
     for name in names:
         home = lay.member(name)
         rows = rd.jsonl_all(home / events.EVENTS)
-        evs[name] = events.dedupe([r for r in rows if isinstance(r.get('ev'), str)])
+        good = [r for r in rows if isinstance(r.get('ev'), str) and (r.get('id') is None or isinstance(r.get('id'), str))]
+        rd.bad_lines += len(rows) - len(good)             # ev 不是字串、id 不是字串或 null：壞行（去重要拿 id 當鍵）
+        evs[name] = events.dedupe(good)
         use[name] = rd.jsonl_all(home / events.USAGE)
     return evs, use
 
@@ -250,7 +254,8 @@ def done_when_count(t):
     for key, field in (('verify', 'results'), ('review', 'items')):
         runs = t.get(key) if isinstance(t.get(key), list) else []
         last = runs[-1] if runs and isinstance(runs[-1], dict) else None
-        for r in (last or {}).get(field) or []:
+        vals = (last or {}).get(field)
+        for r in vals if isinstance(vals, list) else []:
             if not isinstance(r, dict):
                 continue
             checked += 1
@@ -412,7 +417,9 @@ def collect(team_dir, tid=None, runs_file=None):
     by_sender, rejected = {}, 0
     scope_ids = {t['id'] for t in scope_tasks}
     for r in sent:
-        mine = str(r.get('reply_to') or '').split('.r')[0] in scope_ids    # 回這張單的信（含結束那一刻寄的完成信）
+        # 郵差在單子結束那一刻寄的終局通知（完成、失敗）常記在結束之後一點點：算這張單的；其他信照時間窗（score.md）
+        mine = (r.get('from') == 'post' and r.get('status') in ('DONE', 'FAILED')
+                and str(r.get('reply_to') or '').split('.r')[0] in scope_ids)
         if not mine and not in_window(r.get('at') or r.get('recorded_at'), wlo, whi):
             continue
         if r.get('kind') == 'letter':

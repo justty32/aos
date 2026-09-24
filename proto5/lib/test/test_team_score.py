@@ -178,6 +178,30 @@ class TaskScopeTest(ScoreCase):
         r = self.js('--task', 't-0001')
         self.assertEqual(r['letters']['by_sender']['post'], 3)
 
+    def test_later_non_terminal_letter_not_counted(self):
+        """astra M5：結束很久後回這張單的一般信（追問、補充）照時間窗，不算；只有郵差的終局通知例外。"""
+        self.sent('w9', **{'from': 'worker-1', 'to': 'lead', 'status': 'PROGRESS', 'reply_to': 't-0001', 'at': at(9000)})
+        self.sent('p7', **{'from': 'post', 'to': 'lead', 'status': 'REQUEST', 'reply_to': 't-0001', 'at': at(9000)})
+        r = self.js('--task', 't-0001')
+        self.assertEqual(r['letters']['by_sender'], {'human': 1, 'post': 1, 'worker-1': 1})
+
+    def test_bad_shapes_skipped_not_traceback(self):
+        """astra M2：id 不是字串的事件、verify.results 不是陣列的單，跳過計數，不丟例外。"""
+        self.ev('lead', [{'at': at(3), 'ev': 'think_end', 'id': [], 'ok': True, 'ms': 1}])
+        self.task('t-0003', 'done', [hist(0, 'opened', None, 'queued'), hist(5, 'verified', 'verifying', 'done')],
+                  created=0, verify=[{'results': 1}], review=[{'items': 'x'}])
+        code, out = self.run_score()
+        self.assertEqual(code, 0)
+        self.assertIn('跳過', out)
+        r = self.js('--task', 't-0003')
+        self.assertEqual(r['tasks'][0]['done_when']['checked'], 0)
+
+    def test_rotation_gap_still_read(self):
+        """.1 不在、.2 還在：照樣讀（astra S2）。"""
+        self.think('reviewer', 2, 'gap-b', file='events.2.jsonl')
+        r = self.js('--task', 't-0001')
+        self.assertEqual(r['axes']['L']['by_member']['reviewer'], 2)
+
     def test_json_keys(self):
         r = self.js('--task', 't-0001')
         self.assertEqual(set(r), {'scope', 'task', 'summary', 'axes', 'tasks', 'letters', 'skipped'})

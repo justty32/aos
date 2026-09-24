@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-from aos_team_format import (DEFAULT_NEGATIONS, HUMAN, Layout, TeamError, load_roster, members_by_template,
+from aos_team_format import (DEFAULT_NEGATIONS, ROUTE_RUN_FORBIDDEN, HUMAN, Layout, TeamError, load_roster, members_by_template,
                              new_id, now_iso, project_dir, read_json, validate_letter, validate_request,
                              validate_routes, write_json, write_new)
 
@@ -172,6 +172,11 @@ def ask(team_dir, text):
         if 'run' in rule:
             from aos_team_cli import resolve
             run = fill(list(rule['run']), groups)    # {群組名} 換成值（例：routine add 的 --every {every}）
+            for raw, val in zip(rule['run'], run):
+                if raw != val and val.startswith('-'):  # 群組的值不准變成選項（--target、--to…）
+                    raise TeamError('BadRoute', '規則 %s：群組的值 %r 以 - 開頭，不當參數用' % (rule['name'], val))
+            if run[0] != rule['run'][0] or run[0] in ROUTE_RUN_FORBIDDEN:
+                raise TeamError('BadRoute', '規則 %s 的子命令 %r 不能跑' % (rule['name'], run[0]))
             return resolve(run[0])(str(lay.root), run[1:])
         return run_pack_tool(lay.root, roster, rule['tool'], rule.get('args'))
     if result == 'handoff':
