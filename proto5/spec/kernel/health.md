@@ -20,7 +20,7 @@
 | `pools` | 某工作池 `error` 不是 null、或摘要不在但 `sent` 不空（正在縮到 0 的不算） | `池 P：<代號>（<message>）`／`池 P：池不見了（跑 aos-kernel boot …）`；多池用「；」接 |
 | — | 上面都沒中、`phase` 是 `stopping`（停機收尾中，池本來就在縮） | `ok` |
 | `recovering` | 有池在搬 | `搬池中：池 P（舊位置 <D> <dpool> 收完才換）` |
-| `recovering` | 某工作池摘要 `running` 少於 `sent` 的成員數 | `池 P 少 N 顆（daemon 在補；看 aos-daemon ls --target <D> --pool <dpool>）`——**會自己好，不是停住** |
+| `recovering` | 某工作池摘要 `running` 少於 `sent` 的成員數（縮小的 scale 單在途時改比 `pending` 的 count，取較小的；`cpu rm` 剛下不報少顆） | `池 P 少 N 顆（daemon 在補；看 aos-daemon ls --target <D> --pool <dpool>）`——**會自己好，不是停住** |
 | `ok` | 其他 | `ok` |
 | `broken` | 帳本或 info 讀不到 | `kernel 家讀不到：…`（這時 `ls` 退 1、stdout 空） |
 
