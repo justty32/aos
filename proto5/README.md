@@ -59,7 +59,7 @@ aos-kernel ls
 
 兩件要記的事：
 - **once 的回音不含 stdout**：`add --once` 印的 `{"code": 0, "kind": "child", …}` 只是執行狀態；`date` 印的東西在 inst 指的 `once.out` 裡。
-- **CLI 成功 ≠ 工作成功**：`aos-kernel add` 退 0 只代表 kernel 收了單、回了音；工作本身成不成看回音的 `kind`、`code`、`timed_out`、`stopped`。
+- **CLI 成功 ≠ 工作成功**：`aos-kernel add` 退 0 只代表 kernel 收了單、回了音（`add --once` 沒帶 `--wait-ms` 時連回音都不等：只印單名與回音路徑就退 0，回音之後自己去 `K/responses/` 看）；工作本身成不成看回音的 `kind`、`code`、`timed_out`、`stopped`。
   反覆工作回 100＝做完（`ls` 看到 `count … done  runs 3`）；連敗 10 次會被標 `bad`，`ls` 那行會附「看 <log 路徑>」。
 
 **4. 最小 agent：生家、登記、說一句、等回話。**（09-24 試玩 r2 改用 `init`＋`say --wait`）
@@ -97,7 +97,7 @@ aos-kernel halt
 aos-daemon halt
 ```
 
-三行各印 `stopped`。`aos-kernel halt` 會等到排程停、它的 cpu 都退出才回（要舊的「放完單就走」用 `--no-wait`）。
+第一行印 `stopped agent-bob`，後兩行各印 `stopped`。`aos-kernel halt` 會等到排程停、它的 cpu 都退出才回（要舊的「放完單就走」用 `--no-wait`）。
 **daemon 掛了**（09-24 試玩 r2 補）：cpu 全跟著死，重開 daemon（第 1 段那行）再 `aos-kernel boot`；`aos-kernel ls`／`check` 看到 cpu `missing` 也會提示這行。
 
 **每天重開機**（09-24 試玩 r3 補）。關機、登出或關掉終端後 daemon 和 cpu 都沒了，家（`D`、`K`、agent 家）還在，照這個順序開回來：
