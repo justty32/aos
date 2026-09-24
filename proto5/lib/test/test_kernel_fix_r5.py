@@ -260,6 +260,17 @@ class HealthAndLsTests(KernelCase):
         (home / 'resumed').write_text('x')
         self.assertTrue(self.ls().startswith('health 已解除暫停，等下一次成功：agent-eve\n'))
 
+    def test_shrinking_pool_is_not_short(self):
+        """納入真跑：cpu rm 剛下、縮小單在途時 daemon 已收完，不該報「少 N 顆」。"""
+        self.ledger['pools']['llm']['pending'] = {'count': 0, 'skip': [], 'decl': [1000, 1]}
+        self.write(self.home / 'state.json', self.ledger)
+        self.summary_file('llm', running=0, count=0)
+        self.assertEqual(health(self.home), ('ok', 'ok'))
+        self.summary_file('llm', running=0, dead=1)
+        self.ledger['pools']['llm']['pending'] = {'count': 1, 'skip': [], 'decl': [1000, 1]}
+        self.write(self.home / 'state.json', self.ledger)
+        self.assertEqual(health(self.home)[0], 'recovering')
+
     def test_kernel_problem_wins_over_agents(self):
         self.agent('bob', {'state': 'think', 'waits': [{'$opt': 'consume', '$val': 'continue-x.json'}]})
         self.summary_file('llm', running=0, dead=1)

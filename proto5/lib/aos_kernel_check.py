@@ -8,6 +8,7 @@ import aos_daemon
 import aos_home
 import aos_llm_call
 from aos_agent_home import AgentError
+from aos_kernel_health import _expected
 from aos_kernel_info import KERNEL_POOL, load_info, pool_location
 
 COMMANDS = ('aos-exec', 'aos-cpu', 'aos-kernel', 'aos-agent', 'aos-llm')
@@ -145,9 +146,9 @@ class Checks:
                 problems.append('池 %s：%s（%s）' % (pool, row['error'].get('code'), row['error'].get('message') or '-'))
             elif row['gone']:
                 problems.append('池 %s：池不見了' % pool)
-            elif row['sent'] and summary.get('running', 0) < row['sent']:
+            elif row['sent'] and summary.get('running', 0) < _expected(row):
                 warns.append('池 %s 少 %d 顆（daemon 在補；看 aos-daemon ls --target %s --pool %s）' % (
-                    pool, row['sent'] - summary.get('running', 0), row['daemon'], row['dpool']))
+                    pool, _expected(row) - summary.get('running', 0), row['daemon'], row['dpool']))
             else:
                 fine.append('%s %s' % (pool, summary.get('running', 0)))
         if problems:

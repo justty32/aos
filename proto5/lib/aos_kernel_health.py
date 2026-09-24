@@ -13,6 +13,13 @@ from aos_kernel_info import DEFAULTS, KERNEL_POOL, load_info
 DIRS = ("requests", "responses", "pools")
 
 
+def _expected(row):
+    """daemon 該有幾顆：sent；縮小的 scale 單還在途（cpu rm 剛下）時取較小的 pending，免得把「正在收」報成「少顆」。"""
+    pending = row.get('pending')
+    count = pending.get('count') if isinstance(pending, dict) else None
+    return min(row['sent'], count) if type(count) is int else row['sent']
+
+
 def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
     """回 (code, 一行中文)，讀驗失敗回 broken，不拋出家／I/O 錯誤。
 
@@ -78,7 +85,7 @@ def health(home, snapshot=None, info=None, now=None) -> tuple[str, str]:
             summary = r['summary']
             if summary is None or not r['sent']:
                 continue
-            lack = r['sent'] - summary.get('running', 0)
+            lack = _expected(r) - summary.get('running', 0)
             if lack > 0:
                 short.append('池 %s 少 %d 顆（daemon 在補；看 aos-daemon ls --target %s --pool %s）' % (
                     r['pool'], lack, r['daemon'], r['dpool']))
