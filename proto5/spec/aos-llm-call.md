@@ -1,9 +1,9 @@
-# aos-llm-call：問模型一次（程式規範，第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；程式未跟）
+# aos-llm-call：問模型一次（程式規範，第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）
 
 ← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜誰叫它：[aos-agent.md](aos-agent.md)｜它跑在哪：[cpu.md §4.1](cpu.md)、[kernel.md §1.1](kernel.md)
 
 > 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) 改成第 3 輪；[第 3 輪審查](../notes/2026-09-23-rearch/review-agent3-report.md) 判可定稿，第 4 輪只補一條實作提醒。
-> **程式還沒照這份改**：現行 `aos_llm_ask.py`＋`aos_llm_cpu.py` 仍是舊版（組 body 跟打 HTTP 分兩支、中間隔一個 llm cpu 佇列）。
+> **已實作**（2026-09-24，T9）：`lib/aos_llm_call.py`＋`cli/aos-llm-call`，實作發現見 [agent-impl-findings](../notes/2026-09-23-rearch/agent-impl-findings.md)。
 > 這份把兩件事合成一支普通程式。調度者裁決在下一節，已拍板的前提在 §9。
 
 一句話：**`aos-llm-call AGENT_DIR` 讀 agent 的模型輸入與這顆 cpu 的模型表，呼叫一次模型，把一則 assistant message 印成一行 JSON。**

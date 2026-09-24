@@ -1,9 +1,9 @@
-# agent 資料夾規範（第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；程式未跟）
+# agent 資料夾規範（第 2 版，2026-09-24 定稿（astra 三輪審查＋第 4 輪補 3 條）；已實作）
 
 ← [proto5 README](../README.md)｜指示詞：[directives.md](directives.md)｜用這個資料夾的程式：[aos-agent.md](aos-agent.md)（走一格、登記）、[aos-llm-call.md](aos-llm-call.md)（問模型）｜排程：[kernel.md](kernel.md)
 
 > 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) E／D／B／C 改成第 3 輪；照 [第 3 輪審查](../notes/2026-09-23-rearch/review-agent3-report.md) D 節補 3 條（第 4 輪）後定稿。
-> **程式還沒照這份改**：現行 `aos_agent_info.py`／`aos_agent.py` 仍是舊架構。
+> **已實作**（2026-09-24，T9）：`lib/aos_agent_info.py`／`aos_agent_home.py`（讀驗），實作發現見 [agent-impl-findings](../notes/2026-09-23-rearch/agent-impl-findings.md)。
 > 調度者裁決在下一節，已拍板的前提在 §7。
 
 一句話：**agent 資料夾保存設定、對話記憶與跨次執行的進度，讓 aos-agent 每次被叫都能接著做。**
