@@ -17,7 +17,9 @@ DEFAULTS = {"tick_ms": 1000, "interval_ms": 1000, "timeout_ms": 0, "done_exit": 
 SWEEP = 32
 PARK_MS = 300000   # 09-24 停車：info 沒寫 park_ms 的預設（init 不寫進 info）
 PARK_EXIT = 102    # 反覆行程退這個碼＝停車（kernel/echo.md）
-FEATURES = ["park"]  # 帳本 features：aos-agent start 靠它確認這個 kernel 認得 102（kernel/ledger.md）
+AGAIN_EXIT = 103   # 09-24 tick-gap：做了事、下一步馬上能做＝馬上再排（kernel/echo.md）
+# 帳本 features：aos-agent start 靠它確認這個 kernel 認得 102（park）、103（again）（kernel/ledger.md）
+FEATURES = ["park", "again"]
 TICK_TIMEOUT_MS = 60000  # one-boot：一格最久跑多久，daemon 逾時整組 KILL、tick 自己也設鬧鐘（init 不寫進 info）
 CPU_DEFAULTS = {"poll_ms": 200, "timeout_ms": 0}
 KERNEL_POOL = "kernel"   # 保留名：one-boot 起沒有 kernel 池了，但一般池仍不准叫這個名字（舊 info 寫了就略過）
@@ -288,12 +290,14 @@ def chain_epoch(chain):
 def classify(proc, response, info, now=None):
     """proto5 §4 反覆行程判定表；不動輸入，回新的行程紀錄。
 
-    09-24 停車：102＝停車（not_before 推到 park_ms 後、記 parked）；這格跑著時被叫醒過（woken）就當 101。woken 判完一律清掉。
+    09-24 停車：102＝停車（not_before 推到 park_ms 後、記 parked）。woken 判完一律清掉。
+    09-24 tick-gap：103＝做了事、馬上再排（not_before＝現在）；退 0／101／102 而這格跑著時被叫醒過（woken）也馬上再排
+    （以前當 101 等 interval_ms）。失敗的列照舊等 interval_ms，不因為被叫醒就連環重試。
     """
     proc = copy.deepcopy(proc)
     woken = proc.pop("woken", False)
     proc.pop("parked", None)
-    park = False
+    park = soon = False
     result = response.get("result", {})
     if result.get("stopped") is True:
         proc["status"] = "queued"
@@ -309,15 +313,19 @@ def classify(proc, response, info, now=None):
             return proc
         elif result.get("code") in (0, 101):
             proc["fails"] = 0
+            soon = woken
         elif result.get("code") == PARK_EXIT:
             proc["fails"] = 0
-            park = not woken
+            park, soon = not woken, woken
+        elif result.get("code") == AGAIN_EXIT:
+            proc["fails"] = 0
+            soon = True
         else:
             proc["fails"] += 1
     if info["bad_after"] != 0 and proc["fails"] >= info["bad_after"]:
         proc["status"] = "bad"
     else:
-        delay = proc.get("park_ms", info.get("park_ms", PARK_MS)) if park else proc["interval_ms"]
+        delay = proc.get("park_ms", info.get("park_ms", PARK_MS)) if park else 0 if soon else proc["interval_ms"]
         proc.update(status="queued", not_before=(time.time() if now is None else now) + delay / 1000)
         if park:
             proc["parked"] = True

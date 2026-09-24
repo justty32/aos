@@ -58,5 +58,5 @@
 | `halting` | 停機時「縮池」階段（§3 第 9 步） |
 | `procs.<NAME>` | 行程紀錄：`request`（當初那則 add 的檔名）、`target`／`dir_target`／`args`（沒給就沒這個鍵）／`once`／`pool`／`interval_ms`／`timeout_ms`（政策，add 之後不改）；`status`／`runs`／`fails`／`not_before`（下次最早可派的 epoch 秒）／`pending`（`once` 還沒回的那則 add：檔名＋id，（09-24 停車）帶 `wake` 的再加 `wake`）。（09-24 停車）`park_ms`（政策，add 時定）；`woken`（跑著時被叫醒過，判完清掉）；`parked`（上一格退 102 停著，給 `ls` 看；叫醒、派出去、或下一次判定清掉）——這三個舊帳本沒有，沒有＝info 預設／false |
 | `acks`／`replies`／`deletes` | 出貨箱：ack 給哪個家、哪個名；回音給 `K/responses/` 的檔名、id、內容（09-24 停車：可帶 `wake`，出貨時叫醒，§2）；哪些 syscall 原單該刪 |
-| `features` | （09-24 停車）這個 kernel 認得的能力，現在是 `["park"]`（認得退出碼 102 與 `wake`）。每格讀帳本時補上；`aos-agent start` 看它（[register](../aos-agent/register.md)） |
+| `features` | （09-24 停車）這個 kernel 認得的能力，現在是 `["park", "again"]`（認得退出碼 102 與 `wake`；09-24 tick-gap 加 `again`＝認得 103）。每格讀帳本時補上；`aos-agent start` 看它（[register](../aos-agent/register.md)） |
 | `sends` | 出貨箱：往**別人家的 `requests/`** 放一張單（`home`、檔名、內容）。scale 單、停好時撤登記的 `tick` 單走這裡 |

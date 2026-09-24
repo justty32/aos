@@ -232,9 +232,10 @@ class SendBase(Home):
                                                     '_meta': meta}, **extra)])
         self.put(self.base / 'info.json', dict(self.info, tools=['tools/t.json']))
 
-    def tick(self):
+    def tick(self, rc=102):
         self.put(self.base / 'state.json', {'state': 'act'})
-        self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+        # 09-24 tick-gap：送出去等回音＝102（停車）；整批都在本地擋下（權限牆、壞表）＝103 馬上再來結清
+        self.assertEqual(agent.tick(self.base, self.env), rc, self.err.getvalue())
         return self.read(self.base / 'state.json')['batch']
 
     def inst(self, batch):
@@ -244,7 +245,7 @@ class SendBase(Home):
 class SendTests(SendBase):
     def test_no_access_file_refuses(self):
         """09-24 裁決 4：沒 access.json＝要關牢的工具不送（NoAccess）；給模型的話含要跑的那行，log 也印。"""
-        batch = self.tick()
+        batch = self.tick(103)
         self.assertIsNone(batch['access'])
         call = batch['calls'][0]
         self.assertTrue(call['acked'])
@@ -273,7 +274,7 @@ class SendTests(SendBase):
         st['batch']['sent'] = False
         st['batch'].pop('access', None)                    # 舊版 state 沒這個鍵＝null
         self.put(self.base / 'state.json', st)
-        self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+        self.assertEqual(agent.tick(self.base, self.env), 103, self.err.getvalue())
         self.assertFalse(list((self.k / 'requests').iterdir()))
         self.assertIn('aos-agent: NoAccess: 工具 sh 沒送', self.err.getvalue())
         batch = self.read(self.base / 'state.json')['batch']
@@ -331,7 +332,7 @@ class SendTests(SendBase):
 
     def test_bad_table_that_batch_does_not_run(self):
         self.access({'mounts': {'ws': 'nope'}})
-        batch = self.tick()
+        batch = self.tick(103)
         self.assertTrue(batch['access']['error'].startswith('AccessInvalid: '))
         call = batch['calls'][0]
         self.assertTrue(call['acked'])
@@ -345,14 +346,14 @@ class SendTests(SendBase):
 
     def test_unsafe_table_that_batch_does_not_run(self):
         self.access({'mounts': {'self': '.'}})
-        batch = self.tick()
+        batch = self.tick(103)
         self.assertIn('AccessUnsafe', batch['calls'][0]['done']['content'])
         self.assertFalse(list((self.k / 'requests').iterdir()))
 
     def test_no_bwrap(self):
         self.access({'mounts': {'ws': 'workspace'}})
         with patch.object(batch_api.shutil, 'which', return_value=None):
-            batch = self.tick()
+            batch = self.tick(103)
         content = batch['calls'][0]['done']['content']
         self.assertTrue(content.startswith('工具 sh 沒有執行：這台機器沒有裝關牢要用的 bwrap'))
         self.assertIn('（NoBwrap）', content)
@@ -379,14 +380,14 @@ class SendTests(SendBase):
         (self.root / 'B').mkdir()
         self.access({'mounts': {'ws': '../B'}})                    # 批建好之後才改表
         with patch.object(batch_api.shutil, 'which', return_value='/usr/bin/bwrap'):
-            self.assertEqual(agent.tick(self.base, self.env), 0, self.err.getvalue())
+            self.assertEqual(agent.tick(self.base, self.env), 102, self.err.getvalue())
         batch = self.read(self.base / 'state.json')['batch']
         self.assertIn('ws=%s/workspace' % self.base, self.inst(batch)['argv'])
 
     def test_think_batch_has_no_access(self):
         self.access({'mounts': {'ws': 'workspace'}})
         self.put(self.base / 'state.json', {'state': 'think'})
-        self.assertEqual(agent.tick(self.base, self.env), 0)
+        self.assertEqual(agent.tick(self.base, self.env), 102)
         self.assertNotIn('access', self.read(self.base / 'state.json')['batch'])
 
     def test_state_access_shape(self):
@@ -620,12 +621,12 @@ class ReviewFixTests(Home):
 class EnvTests(SendBase):
     """jailed 工具的 _meta.envs：敏感來源整件不跑、敏感名字在寫 inst 前就丟，inst 落盤不帶值。"""
 
-    def jailed(self, meta, env_extra):
+    def jailed(self, meta, env_extra, rc=102):
         self.tool(meta)
         self.access({'mounts': {'ws': 'workspace'}})
         self.env.update(env_extra)
         with patch.object(batch_api.shutil, 'which', return_value='/usr/bin/bwrap'):
-            return self.tick()
+            return self.tick(rc)
 
     def on_disk(self):
         return ''.join(p.read_text(errors='replace') for p in (self.base / 'work').glob('*')
@@ -639,7 +640,7 @@ class EnvTests(SendBase):
                 self.env = dict(base_env)
                 value = str(self.k) if key == 'AOS_KERNEL_HOME' else 'sk-secret-value'
                 batch = self.jailed({'argv': ['tools/bin/sh-tool'], 'envs': {'FOO': {'$env': key}}},
-                                    {key: value})
+                                    {key: value}, 103)
                 call = batch['calls'][0]
                 content = call['done']['content']
                 self.assertIn('設定有安全問題（會把金鑰類環境變數帶進牢裡）', content)
@@ -651,7 +652,7 @@ class EnvTests(SendBase):
 
     def test_secret_env_in_argv_or_fmt_is_refused(self):
         batch = self.jailed({'argv': ['tools/bin/sh-tool', {'$fmt': {'$val': 'k=${k}', 'k': {'$env': 'MY_TOKEN'}}}]},
-                            {'MY_TOKEN': 'tok-value'})
+                            {'MY_TOKEN': 'tok-value'}, 103)
         self.assertIn('EnvUnsafe', batch['calls'][0]['done']['content'])
         self.assertNotIn('tok-value', self.on_disk())
 

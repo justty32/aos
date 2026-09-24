@@ -129,6 +129,8 @@ def _parser():
                                    ("wait-ms", "等待回音上限（毫秒）")):
                 p.add_argument("--" + key, type=int, help=help_text)
             p.add_argument("--once", action="store_true", help="只執行一次；--wait-ms 可等回音")
+            p.add_argument("--on-bad", metavar="DIR", help="連錯被判 bad 時往這個資料夾放一封通知（反覆行程才有）")
+            p.add_argument("--on-bad-wake", metavar="NAME", help="放完通知順便叫醒這個反覆行程（例如收件的 agent）")
     return parser
 
 
@@ -141,6 +143,10 @@ def _cli_request(args, trailing):
             value = getattr(args, key)
             if value is not None:
                 params[key] = value
+        if args.on_bad is not None:
+            params["on_bad"] = {"dir": os.path.abspath(args.on_bad)}
+            if args.on_bad_wake is not None:
+                params["on_bad"]["wake"] = args.on_bad_wake
         if args.once and "name" not in params:
             params["name"] = name
         if trailing is not None:

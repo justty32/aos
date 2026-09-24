@@ -226,38 +226,47 @@ def run(home):
         aos_home.write_state(home, state)
         if "notify" in info:
             _notify_backfill(home, info["notify"])
-        while True:
-            aos_home.scan_controls(home, control.stop)
-            control.poll()
-            if control.stopping:
-                # 收下工作期間到達的 stop；ack 也完成其可重做的兩步。
-                aos_home.scan_controls(home, control.stop)
-                state["current"] = None
-                aos_home.write_state(home, state)
-                return 0
-            names = aos_home.list_requests(home)
-            if not names:
-                time.sleep(info["poll_ms"] / 1000)
-                continue
-            name = names[0]
-            request = os.path.join(home, "requests", name)
-            envelope = aos_home.read_request(request)
-            aos_hops.mark("cpu", "pick", request=name, home=home)
-            state["current"] = {"name": name, "id": envelope.id, "notify": envelope.notify}
-            aos_home.write_state(home, state)
-            response, ran = _execute(envelope, info, control)
-            if not envelope.notify:
-                aos_home.write_json(os.path.join(home, "responses", name), response)
-            os.unlink(request)
-            if not envelope.notify and "notify" in info:
-                _send_notify(info["notify"], home, name)
-            state["current"] = None
-            state["runs"] += int(ran)
-            aos_home.write_state(home, state)
-            aos_hops.mark("cpu", "done", request=name, home=home)
+        bell = aos_home.Doorbell(home)   # 09-24 tick-gap：放單的人按門鈴就馬上醒（cpu.md §6.5）
+        try:
+            return _loop(home, info, state, control, bell)
+        finally:
+            bell.close()
     finally:
         os.chdir(previous_cwd)
         control.close()
+
+
+def _loop(home, info, state, control, bell):
+    """主迴圈（cpu.md §6.3）：控制檔 → 停機？ → 撿一件做完；沒單就睡 poll_ms 或等門鈴。"""
+    while True:
+        aos_home.scan_controls(home, control.stop)
+        control.poll()
+        if control.stopping:
+            # 收下工作期間到達的 stop；ack 也完成其可重做的兩步。
+            aos_home.scan_controls(home, control.stop)
+            state["current"] = None
+            aos_home.write_state(home, state)
+            return 0
+        names = aos_home.list_requests(home)
+        if not names:
+            bell.wait(info["poll_ms"] / 1000, control.fd if control.fd is not None and not control.eof else None)
+            continue
+        name = names[0]
+        request = os.path.join(home, "requests", name)
+        envelope = aos_home.read_request(request)
+        aos_hops.mark("cpu", "pick", request=name, home=home)
+        state["current"] = {"name": name, "id": envelope.id, "notify": envelope.notify}
+        aos_home.write_state(home, state)
+        response, ran = _execute(envelope, info, control)
+        if not envelope.notify:
+            aos_home.write_json(os.path.join(home, "responses", name), response)
+        os.unlink(request)
+        if not envelope.notify and "notify" in info:
+            _send_notify(info["notify"], home, name)
+        state["current"] = None
+        state["runs"] += int(ran)
+        aos_home.write_state(home, state)
+        aos_hops.mark("cpu", "done", request=name, home=home)
 
 
 def main(argv=None):

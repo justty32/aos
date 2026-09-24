@@ -4,7 +4,7 @@
 
 （2026-09-24 proto5-2 池式納入：`cpus`（每顆一格）換成 `pools`＋`busy`，`queue` 拆成 `ready`＋`delayed`，拿掉 `stops`、加 `sends`、`on`。）
 （**2026-09-24 one-boot**：帳本從 `K/state.json` 換成 sqlite 檔 `K/ledger.sqlite`，升第 3 版；拿掉 `kcpu`、`pools.kernel`；`on` 不再存；加 `ticker`、`last_tick_at`；
-一格最多存三次，每次一筆交易、只寫變了的列。使用者拍板，見 [§9](README.md)。）
+一格最多存三次，每次一筆交易、只寫變了的列。使用者拍板，見 [§9](README.md)。09-24 tick-gap 多一個只在「出貨時叫醒了停著的行程」才有的提交點 D，那種格最多四次。）
 `procs` 每筆的形狀與意思**完全不變**——[aos-agent §10](../aos-agent/pause-clean.md) 靠它判斷「工作還在不在 cpu 上」（改用同一支 lib 查，見下）。kernel 取的檔名見 [§1.3](names.md)。
 
 仍是**唯一的帳本**。帳本裡跟 cpu 有關的只記**忙的**，閒的只記號碼，不再每顆一個物件。
@@ -15,7 +15,7 @@ kernel 的家是唯一放寬 cpu 範式「四樣檔」的家：**只有帳本**�
 
 | 表 | 一列是什麼 | 欄 |
 |---|---|---|
-| `meta` | 一個小鍵 | `key`（主鍵）、`value`（JSON 文字）。鍵：`version`（固定 3）、`chain`、`cli`、`ticker`、`last_seq`、`last_tick_at`、`phase`、`halting`、`features`、`recent`、`stale`、`ready`、`delayed`、`acks`、`replies`、`deletes`、`sends` |
+| `meta` | 一個小鍵 | `key`（主鍵）、`value`（JSON 文字）。鍵：`version`（固定 3）、`chain`、`cli`、`ticker`、`last_seq`、`last_tick_at`、`phase`、`halting`、`features`、`recent`、`stale`、`ready`、`delayed`、`acks`、`replies`、`deletes`、`sends`、（09-24 tick-gap）`letters`（壞了的通知信，[§2](syscall.md) 的 `on_bad`） |
 | `procs` | 一個行程 | `name`（主鍵）、`status`、`pool`、`body`（整筆 JSON，就是下面 `procs.<NAME>` 那列的形狀） |
 | `pools` | 一個池 | `name`（主鍵）、`body`（下面 `pools.P` 的形狀） |
 | `busy` | 一顆忙的 cpu | `cpu`（主鍵，`P/<i>`）、`ord`（插入順序，巡檢輪轉靠它）、`proc`（有索引）、`body`（`{req, proc, discard}`） |
@@ -52,11 +52,13 @@ NAME 是非空檔名，不能是 `.`／`..`、含 `/` 或 NUL。kernel **不讀 
 | A | 第 4 步出貨完（有出貨才存） | 拿掉已出貨的項目；連同這格的 `last_seq` |
 | B | 第 5～9 步全部決定完（一定存） | syscall 結果、收回音判定、池的決定、派工記錄、停機判定，連同新增的出貨項目、`last_seq`、`last_tick_at` |
 | C | 第 10 步出貨完（有出貨才存） | 拿掉已出貨的項目 |
+| D | （09-24 tick-gap）C 出貨時帶 `wake` 的回音把停著的行程推進 `ready`，才有這一步 | 同一格再跑一次第 8 步派工：派工記錄。存完才放**這一輪新派的**單（前面放過的不重放） |
 
 每個提交點是**一筆 sqlite 交易**，只寫變了的列。
 - 出貨是「全部放完（或刪完）→ 一次存帳本拿掉」。中間崩了，下一格重放——`link` 的 EEXIST、刪檔的 ENOENT 都當成功，所以合併存不改正確性，只是崩了會多放幾次。
   scale 單重放前先看對方 `responses/` 有沒有同名回音，有就不再放（實作 D-25）。
-- 派工仍是「先記後放」：提交點 B 之後才放派工單。
+- 派工仍是「先記後放」：提交點 B（和 D）之後才放派工單。崩在 D 之後、放檔之前＝下一格靠 `recent` 補放，跟 B 一樣。
+- （09-24 tick-gap）D 為什麼要有：回音在第 10 步出貨時才叫醒 agent，以前要等 daemon 下一次開格（最多 `tick_ms`，實測每次約 1 秒）才派得出去。
 - syscall 仍是「先記後出貨」：判定進提交點 B，回音與刪原單在第 10 步出貨。崩在提交點 B 之前＝這格的判定全部沒發生，下一格重讀同樣的原單重判，冪等。
 
 帳本每格還是整份讀，大小跟 `procs`＋`busy`＋`free`＋`skip` 成比例；寫只寫變了的列（[§11](scale.md)）。

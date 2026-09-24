@@ -15,6 +15,7 @@ from aos_directives import Context, Document, is_directive
 
 WAIT_TIMEOUT_MS = 10000
 PARK_EXIT = 102  # 09-24 停車：批在途什麼都沒到、idle 沒輸入（aos-agent tick.md §12）
+AGAIN_EXIT = 103  # 09-24 tick-gap：做了事、下一步馬上能做（結清完要送下一批、收完輸入要問模型）
 
 
 def _hook(step_name):
@@ -96,7 +97,7 @@ def _tick(agent_dir, env=None, note=''):
                                         and history[-1].get('tool_calls')):
             st['state'] = 'think'
             run.save('state.act_empty')
-            return 0
+            return AGAIN_EXIT
         make_batch(run, kernel)
         return send(run)
     except (AgentError, aos_home.HomeError, OSError) as exc:
@@ -127,7 +128,7 @@ def _compatible(kernel, env):
         if type(value) is not int or value < 0 or (key == 'done_exit' and value > 255):
             raise AgentError('FieldTypeMismatch', '%s 必須是規定範圍的整數' % key)
         values[key] = value
-    if values['done_exit'] in (1, 101, PARK_EXIT):
+    if values['done_exit'] in (1, 101, PARK_EXIT, AGAIN_EXIT):
         raise AgentError('KernelIncompatible', 'kernel 的 done_exit 與 agent 退出碼衝突')
     # 09-24 停車：舊 kernel 把 102 當失敗（十次就 bad）。帳本讀得到而沒有 park 能力＝不登記；還沒 boot（沒帳本、沒 chain）或讀不懂就不擋。
     # 09-24 one-boot：帳本換成 K/ledger.sqlite；還是舊的 K/state.json＝舊 kernel（kernel cpu 那一版）寫的，先 aos up 換過再 start。
@@ -140,8 +141,8 @@ def _compatible(kernel, env):
     except aos_home.HomeError:
         return
     features = ledger.get('features')
-    if 'chain' in ledger and not (isinstance(features, list) and 'park' in features):
-        raise AgentError('KernelIncompatible', 'K 的帳本是不認得停車（退出碼 102）的舊 kernel 寫的；'
+    if 'chain' in ledger and not (isinstance(features, list) and 'park' in features and 'again' in features):
+        raise AgentError('KernelIncompatible', 'K 的帳本是不認得停車（退出碼 102）或馬上再排（103）的舊 kernel 寫的；'
                          '升級 kernel 後 aos up（或 aos-kernel boot）一次再 start')
 
 

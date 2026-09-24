@@ -15,6 +15,7 @@ import aos_agent_events as events
 from aos_agent_runtime import RESUMED, history_prefix, kernel_knows, report, unique_id
 
 META = {'_type': 'posix', '_version': 1}
+PARK_EXIT, AGAIN_EXIT = 102, 103  # aos-agent tick.md §12（跟 aos_agent.py 同值）
 # 權限牆擋下的那件，給模型看的話（它讀得懂、不會以為要自己修；細節留給人在 check／status 看）
 JAIL_WHY = {
     'EnvUnsafe': '這支工具的設定有安全問題（會把金鑰類環境變數帶進牢裡）',
@@ -203,6 +204,7 @@ def jail_problem(access, tool, env):
 
 def send(run):
     batch, tools = run.st['batch'], tool_map(run)
+    reposted = False             # 有沒有「上一格就送過」的（崩在送出與記 sent 之間）
     aos_hops.mark('agent', 'send', agent=run.base.name, kind=batch['kind'],
                   jobs=[c['name'] for c in batch['calls'] if c['name'] is not None and c['done'] is None])
     access = batch.get('access')
@@ -214,6 +216,7 @@ def send(run):
         think = batch['kind'] == 'think'
         tool = tools.get(call.get('tool'))
         posted = already_posted(batch['kernel'], name)
+        reposted = reposted or posted
         if not think and tool is not None and not posted:
             # inst 已在（崩在寫 inst 與送出之間、或舊版寫的未包牢 inst）也要先過這關，不能因檔在就略過（astra r2 #1）
             problem = jail_problem(access, tool, run.env)
@@ -255,7 +258,13 @@ def send(run):
     batch['sent'] = True
     events.batch_start(run)  # 至少一次：在提交 sent 之前記（spec/agent/events.md）
     run.save('state.sent')
-    return 0
+    # 09-24 tick-gap：這格送出去的每件都帶 wake，回音出貨時 kernel 會叫醒我 → 停車（102）；回音比我先到也不怕
+    # （kernel 記 woken、馬上再排）。整批都在本地結束（沒有要等的）→ 103 馬上再來結清。
+    # 有「上一格就送過」的（崩潰恢復）照舊退 0：它的叫醒可能早就用掉了，不能停車等。
+    if reposted:
+        return 0
+    waiting = any(c['name'] is not None and c['done'] is None for c in batch['calls'])
+    return PARK_EXIT if waiting else AGAIN_EXIT
 
 
 def acknowledge(run):
@@ -302,6 +311,8 @@ def collect(run):
         acknowledge(run)
     if all(c['done'] is not None and c['acked'] for c in batch['calls']):
         return settle(run)
+    if fresh and any(c['name'] is not None and c['done'] is None for c in batch['calls']):
+        return PARK_EXIT  # 09-24 tick-gap：收到一部分、其餘還在途（都帶 wake）→ 停車等叫醒，不等 interval_ms
     return 0 if changed or fresh else 101
 
 
@@ -360,4 +371,5 @@ def settle(run):
         report('engine', engine)
     if stuck is not None:
         report('stuck', stuck)
-    return 0
+    # 09-24 tick-gap：結清成功＝下一步（送工具、再問模型、看輸入）馬上能做 → 103；問模型失敗照舊 0（等 interval_ms 當退避）
+    return AGAIN_EXIT if (not think or done.get('ok')) else 0

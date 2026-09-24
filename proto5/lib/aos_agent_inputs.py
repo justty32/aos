@@ -65,4 +65,4 @@ def intake(run):
     aos_agent_events.intake(run, record, len(messages))  # 至少一次：在提交之前記
     st.update(state='think', intake=None)
     run.save('state.intake_done')
-    return 0
+    return 103  # 09-24 tick-gap：收完輸入馬上能問模型（AGAIN_EXIT，aos-agent tick.md §12）

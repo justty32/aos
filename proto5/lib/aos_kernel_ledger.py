@@ -1,11 +1,12 @@
 """kernel 的帳本（kernel/ledger.md）：排隊（ready／delayed 堆積、懶刪）、syscall、出貨箱。
 
 2026-09-24 one-boot：帳本換成 K/ledger.sqlite（aos_kernel_store）；記憶體裡仍是第 2 版同形的 dict。
-一格最多存三次（提交點：出貨完、決定完、出貨完），每次一筆交易、只寫變了的列；寫入由 engine 決定，這裡的函式只改記憶體。
+一格最多存三次（提交點：出貨完、決定完、出貨完；09-24 tick-gap：出貨時叫醒了誰就多一次 D＝再派完），每次一筆交易、只寫變了的列；寫入由 engine 決定，這裡的函式只改記憶體。
 """
 import collections
 import hashlib
 import heapq
+import json
 import os
 from pathlib import Path
 import time
@@ -26,7 +27,7 @@ class KernelLedger:
         self.state = state
         for key, default in (("busy", {}), ("on", {}), ("recent", []), ("ready", {}), ("delayed", []),
                              ("stale", {}), ("pools", {}), ("sends", []), ("acks", []), ("replies", []),
-                             ("deletes", []), ("procs", {})):
+                             ("deletes", []), ("letters", []), ("procs", {})):
             state.setdefault(key, default)
         state.setdefault("halting", False)
         # 09-24 停車：舊帳本升上來時補能力標記（下一次存檔就寫進去；aos-agent start 看它）。
@@ -35,6 +36,7 @@ class KernelLedger:
         # ready 在記憶體裡當 deque 用（從頭拿不搬整條）；存檔時轉回陣列。
         state["ready"] = {p: collections.deque(q) for p, q in state["ready"].items()}
         self.events = []
+        self.readied = False    # 09-24 tick-gap：叫醒把誰推進了 ready（出貨時叫醒的，同一格再派一次）
 
     # ---- 存檔 ----
     def snapshot(self):
@@ -173,6 +175,7 @@ class KernelLedger:
             proc.pop("parked", None)
             self.state["ready"].setdefault(proc["pool"], collections.deque()).append([name, proc["request"]])
             self.mark_stale(proc["pool"])  # delayed 裡那格時間對不上了，變舊格
+            self.readied = True
             how = "ready"
         else:
             return None
@@ -193,7 +196,7 @@ class KernelLedger:
                   "pool": lambda v: isinstance(v, str),
                   "interval_ms": lambda v: type(v) is int and v >= 0,
                   "timeout_ms": lambda v: type(v) is int and v >= 0,
-                  "park_ms": lambda v: type(v) is int and v >= 0, "wake": _name,
+                  "park_ms": lambda v: type(v) is int and v >= 0, "wake": _name, "on_bad": _on_bad,
                   "args": lambda v: isinstance(v, list) and all(isinstance(x, str) and "\0" not in x for x in v)}
         if "target" not in p:
             _bad("target 必填", ["params", "target"])
@@ -219,6 +222,10 @@ class KernelLedger:
                 "runs": 0, "fails": 0, "not_before": 0, "pending": None}
         if "args" in p:
             proc["args"] = p["args"]
+        if "on_bad" in p:
+            if once:
+                _bad("on_bad 只給反覆行程（once 不會被判 bad）", ["params", "on_bad"])
+            proc["on_bad"] = p["on_bad"]
         if proc["once"] and not env.notify:
             proc["pending"] = {"name": env.name, "id": env.id, **(wake or {})}
         self.state["procs"][name] = proc
@@ -302,9 +309,41 @@ class KernelLedger:
         self.state["stale"] = {}
 
     # ---- 出貨（kernel-ledger §3：全部做完才一次寫帳本） ----
+    def bad_letter(self, name, proc):
+        """09-24 tick-gap：反覆行程剛被判 bad、登記時帶了 on_bad → 排一封通知進 letters 出貨箱（跟判定同一次存帳本）。"""
+        on_bad = proc.get("on_bad")
+        if not isinstance(on_bad, dict):
+            return
+        from aos_kernel_ls import stderr_hint
+        stem = "bad-%s-%s-%d" % (name, self.state["chain"], self.seq)
+        values = {"id": stem, "proc": name, "fails": str(proc.get("fails")),
+                  "at": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(self.now)),
+                  "look": stderr_hint(proc["target"]) if isinstance(proc.get("target"), str) else "-"}
+        item = {"dir": on_bad["dir"], "name": stem + ".json", "body": fill_letter(on_bad.get("body", DEFAULT_BAD), values)}
+        if on_bad.get("wake") is not None:
+            item["wake"] = on_bad["wake"]
+        self.state["letters"].append(item)
+
+    def flush_letters(self):
+        """letters 出貨箱：放檔（EEXIST 當已放）→ 叫醒（有寫 wake 的）。放不進去（資料夾不在、沒權限）記一行 kernel.log、
+        丟掉這封，不讓這格退 1——通知只是盡力，kernel 不能因為通知寄不出去就停擺。"""
+        for item in self.state["letters"]:
+            try:
+                aos_home.link_json(Path(item["dir"]) / item["name"], item["body"])
+            except aos_home.RequestExists:
+                pass
+            except (aos_home.HomeError, OSError, ValueError, TypeError) as exc:
+                self.events.append({"event": "bad_letter_failed", "dir": item.get("dir"), "name": item.get("name"),
+                                    "error": str(exc)})
+                continue
+            self.events.append({"event": "bad_letter", "dir": item["dir"], "name": item["name"]})
+            if item.get("wake") is not None:
+                self.wake(item["wake"])
+
     def flush_outboxes(self):
-        """四箱全做一遍；回「有沒有做事」讓呼叫者決定要不要寫帳本。"""
+        """五箱全做一遍；回「有沒有做事」讓呼叫者決定要不要寫帳本。"""
         did = False
+        self.flush_letters()
         for item in self.state["acks"]:
             digest = hashlib.sha256(item["name"].encode()).hexdigest()[:16]
             name = "ack-%s-%s-%s-%s.json" % (self.state["chain"], self.seq, Path(item["home"]).name, digest)
@@ -325,8 +364,39 @@ class KernelLedger:
             # 回音已在＝對方處理過了（崩在放完、清帳前），不再放同名單。
             if not (Path(item["home"]) / "responses" / item["name"]).exists():
                 _put(item["home"], item["name"], item["body"])
-        for box in ("acks", "replies", "deletes", "sends"):
+        for box in ("acks", "replies", "deletes", "sends", "letters"):
             if self.state[box]:
                 did = True
                 self.state[box] = []
         return did
+
+
+DEFAULT_BAD = "反覆工作 {proc} 連錯 {fails} 次，kernel 判它 bad、不再派它（{at}）。看 {look}；修好後 aos-kernel rm {proc} 再 add（或重跑登記它的指令）。"
+
+
+def _on_bad(value):
+    """add 的 on_bad：{"dir": 絕對路徑, "body": 任意 JSON（可省）, "wake": 行程名（可省）}。"""
+    if not isinstance(value, dict) or set(value) - {"dir", "body", "wake"}:
+        return False
+    folder = value.get("dir")
+    if not (isinstance(folder, str) and "\0" not in folder and os.path.isabs(folder)):
+        return False
+    if "wake" in value and not _name(value["wake"]):
+        return False
+    try:
+        return len(json.dumps(value.get("body"), ensure_ascii=False)) <= 65536
+    except (TypeError, ValueError):
+        return False
+
+
+def fill_letter(body, values):
+    """通知信的內容：字串（或物件第一層的字串值）裡的 {id} {proc} {fails} {at} {look} 換成這次的值；別的原樣。"""
+    def one(text):
+        for key, value in values.items():
+            text = text.replace("{%s}" % key, value)
+        return text
+    if isinstance(body, str):
+        return one(body)
+    if isinstance(body, dict):
+        return {k: one(v) if isinstance(v, str) else v for k, v in body.items()}
+    return body

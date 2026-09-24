@@ -71,8 +71,14 @@ class StartCompatibility(LedgerCase):
         self.assertEqual(agent.start(self.base, self.env), 1)
         self.assertIn('KernelIncompatible', self.err.getvalue())
         self.assertEqual(self.posted(), [])
-        aos_kernel_store.write(self.k, dict(OLD, features=['park']))
-        agent._compatible(str(self.k), self.env)   # 有 park：過
+        # 09-24 tick-gap：要 park 和 again 都有，缺一個都擋
+        for partial in (['park'], ['again']):
+            aos_kernel_store.write(self.k, dict(OLD, features=partial))
+            with self.assertRaises(agent.AgentError) as ctx:
+                agent._compatible(str(self.k), self.env)
+            self.assertEqual(ctx.exception.code, 'KernelIncompatible')
+        aos_kernel_store.write(self.k, dict(OLD, features=['park', 'again']))
+        agent._compatible(str(self.k), self.env)   # park、again 都有：過
 
     def test_never_booted_not_blocked(self):
         agent._compatible(str(self.k), self.env)                    # 沒有任何帳本

@@ -93,7 +93,7 @@ class AgentIntegrationTests(KernelCase):
 
     def tick(self):
         code = aos_agent.tick(self.base, self.env)
-        self.assertIn(code, (0, 101, 102))  # 102：09-24 停車
+        self.assertIn(code, (0, 101, 102, 103))  # 102：09-24 停車；103：09-24 tick-gap 馬上再排
         return code
 
     def finished(self):

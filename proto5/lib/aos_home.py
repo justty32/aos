@@ -8,7 +8,11 @@ import json
 import math
 import os
 from pathlib import Path
+import select
+import stat
+import sys
 import tempfile
+import time
 
 from aos_directives import Context, DirectiveError, Document, parse_options, resolve_located
 
@@ -299,3 +303,78 @@ def target_note(label, path, source, env_var=None):
     if source == SOURCE_CWD:
         source = "目前資料夾（沒給 --target%s）" % ("、也沒設 " + env_var if env_var else "")
     return "（%s＝%s，取自 %s）" % (label, path, source)
+
+
+# ---- 門鈴（09-24 tick-gap；cpu.md §6.5）----
+# cpu 家裡的 `wake` 是一個具名管道（FIFO）。cpu 閒著時不是單純睡 poll_ms，而是「睡 poll_ms 或有人按門鈴」；
+# 放單的人（kernel 派工）放好單之後往裡面寫一個位元組，cpu 馬上醒來列 requests/。只是提早說一聲：
+# 按不到（cpu 沒在跑、FIFO 不在、管道滿了）一律當沒事，cpu 照舊每 poll_ms 看一次。
+WAKE = "wake"
+_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+
+
+class Doorbell:
+    """cpu 那一側：建（或沿用）FIFO，開讀端＋一個自己的寫端（沒有別的寫端時 select 才不會一直回 EOF）。"""
+
+    def __init__(self, home):
+        self.fds = None
+        path = os.path.join(home, WAKE)
+        try:
+            try:
+                os.mkfifo(path, 0o600)
+            except FileExistsError:
+                pass
+            flags = os.O_NONBLOCK | os.O_CLOEXEC | _NOFOLLOW
+            rfd = os.open(path, os.O_RDONLY | flags)
+            try:
+                if not stat.S_ISFIFO(os.fstat(rfd).st_mode):
+                    raise OSError("%s 不是 FIFO" % path)
+                wfd = os.open(path, os.O_WRONLY | flags)
+            except OSError:
+                os.close(rfd)
+                raise
+            self.fds = (rfd, wfd)
+        except OSError as exc:
+            sys.stderr.write("aos-cpu: NoDoorbell: 門鈴用不了，只靠輪詢：%s\n" % exc)
+
+    def wait(self, seconds, also=None):
+        """睡 seconds 秒或門鈴響；響了就把管道讀乾淨（幾聲都算一聲）。also：另一個可讀就醒的 fd（cpu 的控制 pipe，stop 不用等滿）。"""
+        watch = ([] if self.fds is None else [self.fds[0]]) + ([] if also is None else [also])
+        if not watch:
+            time.sleep(seconds)
+            return
+        try:
+            ready, _, _ = select.select(watch, [], [], seconds)
+        except (OSError, ValueError):
+            time.sleep(seconds)
+            return
+        if self.fds is not None and self.fds[0] in ready:
+            try:
+                while os.read(self.fds[0], 4096):
+                    pass
+            except OSError:
+                pass
+
+    def close(self):
+        if self.fds is not None:
+            for fd in self.fds:
+                os.close(fd)
+            self.fds = None
+
+
+def ring(home):
+    """放單的人那一側：往 cpu 家的門鈴寫一個位元組；回有沒有按到。
+    沒有讀端（cpu 沒在跑，ENXIO）、不在、不是 FIFO、管道滿（EAGAIN，反正已經有人按過）都當沒事。"""
+    try:
+        fd = os.open(os.path.join(home, WAKE), os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC | _NOFOLLOW)
+    except OSError:
+        return False
+    try:
+        if not stat.S_ISFIFO(os.fstat(fd).st_mode):
+            return False
+        os.write(fd, b"\n")
+        return True
+    except OSError:
+        return False
+    finally:
+        os.close(fd)

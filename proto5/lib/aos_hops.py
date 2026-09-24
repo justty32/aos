@@ -98,6 +98,8 @@ HOP_NAMES = {
     (C_DONE_A, K_RESP_AGENT + "，退 102）"): "⑰ cpu 回音 → kernel 開格（daemon 察覺通知＋起 kernel）",
     (K_RESP_AGENT + "，退 0）", K_AGENT): "⑱ agent 退 0（做了事）→ 等 interval_ms 才再派",
     (K_RESP_AGENT + "，退 101）", K_AGENT): "⑱ agent 退 101 → 等 interval_ms 才再派",
+    (K_RESP_AGENT + "，退 102）", K_AGENT): "⑱ agent 退 102、跑時已被叫醒 → 再派（改前照 101 等 interval_ms）",
+    (K_RESP_AGENT + "，退 103）", K_AGENT): "⑱ agent 退 103 → 馬上再派",
 }
 
 
@@ -153,7 +155,7 @@ def timeline(records, agent):
         elif who == "kernel":
             if ev == "begin":
                 ktick[r["pid"]] = r["t"]
-            elif ev == "req" and (mine(r.get("proc")) or r.get("wake") == proc):
+            elif ev == "req" and r.get("method") in ("add", "wake") and (mine(r.get("proc")) or r.get("wake") == proc):
                 evs.append(_Ev(ktick.get(r["pid"], r["t"]), K_READ, r))
             elif ev == "dispatch" and mine(r.get("proc")):
                 own = r.get("proc") == proc
@@ -269,7 +271,10 @@ def report(path, agent=None, as_json=False):
     names = [agent] if agent else agent_names(records)
     out = {}
     for name in names:
-        table, wall = hops(timeline(records, name))
+        evs = timeline(records, name)
+        if agent is None and not any(e.kind == A_SEND for e in evs):
+            continue                      # 沒送過單的 agent（團隊裡閒著的成員）不列
+        table, wall = hops(evs)
         out[name] = summarize(table, wall)
     if as_json:
         return json.dumps(out, ensure_ascii=False, indent=1)

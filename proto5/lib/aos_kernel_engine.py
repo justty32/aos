@@ -173,12 +173,14 @@ class Kernel(PoolsMixin, KernelLedger):
                     self.enqueue(name)
                 elif proc["status"] == "bad":
                     self.events.append({"event": "bad", "proc": name, "fails": proc["fails"], "bad_after": self.info["bad_after"]})
+                    self.bad_letter(name, proc)
             self.state["acks"].append({"home": str(self.cpu_home(key)), "name": slot["req"]})
             self.release(key)
 
     def _post_work(self, key, req, proc):
         params = {k: proc[k] for k in ("target", "dir_target", "args", "timeout_ms") if k in proc}
         _put(self.cpu_home(key), req, {"jsonrpc": "2.0", "id": req[:-5], "method": "aos-exec", "params": params})
+        aos_home.ring(self.cpu_home(key))   # 09-24 tick-gap：按門鈴，cpu 不用等下一次輪詢（cpu.md §6.5）
 
     # ---- 第 8 步：派工（只改記憶體；提交點 3 之後才放檔） ----
     def dispatch(self):
@@ -204,12 +206,24 @@ class Kernel(PoolsMixin, KernelLedger):
                 self.state["recent"].append(key)
                 self.events.append({"event": "dispatch", "proc": name, "cpu": key, "request": req})
 
-    def post_dispatched(self):
-        for key in self.state["recent"]:
+    def post_dispatched(self, keys=None):
+        for key in self.state["recent"] if keys is None else keys:
             slot = self.state["busy"].get(key)
             if slot is not None:
                 self._post_work(key, slot["req"], self.state["procs"][slot["proc"]])
                 aos_hops.mark("kernel", "dispatch", proc=slot["proc"], cpu=key, request=slot["req"])
+
+    def dispatch_woken(self):
+        """09-24 tick-gap：提交點 C 出貨時，帶 wake 的回音把停著的行程推進了 ready——同一格再派一次，
+        不等下一格（以前要等 daemon 下一次開格，最多 tick_ms）。跟第 8 步同一套：先記（提交點 D）後放；
+        只放這一輪新派的，前面已放過的不重放。崩在 D 之後、放檔之前＝下一格靠 recent 補放。"""
+        if not self.readied or self.state["phase"] != "running":
+            return
+        self.readied = False
+        before = len(self.state["recent"])
+        self.dispatch()
+        self.save()
+        self.post_dispatched(self.state["recent"][before:])
 
     # ---- 第 9 步：停機 ----
     def stopping(self):
@@ -217,7 +231,7 @@ class Kernel(PoolsMixin, KernelLedger):
         if st["phase"] != "stopping":
             return
         if not st["halting"]:
-            if (st["busy"] or any(st[k] for k in ("acks", "replies", "deletes", "sends")) or
+            if (st["busy"] or any(st[k] for k in ("acks", "replies", "deletes", "sends", "letters")) or
                     any(p["pending"] is not None for p in st["procs"].values()) or
                     any(e["pending"] is not None for p, e in st["pools"].items() if p != KERNEL_POOL)):
                 return
@@ -264,8 +278,10 @@ class Kernel(PoolsMixin, KernelLedger):
         self.state["last_tick_at"] = self.now
         self.save()                                   # 提交點 B：決定完（連同 last_seq、last_tick_at）
         self.post_dispatched()                        # 先記後放
+        self.readied = False
         if self.flush_outboxes():
             self.save()                               # 提交點 C：出貨完
+        self.dispatch_woken()                         # 提交點 D：出貨時叫醒的，同一格派出去
         if self.events:
             with (self.home / "kernel.log").open("a", encoding="utf-8") as out:
                 out.write(json.dumps({"chain": self.state["chain"], "seq": self.seq, "events": self.events}, ensure_ascii=False) + "\n")

@@ -7,6 +7,7 @@ C/
   info.json           身分與設定；人寫的（啟動前）
   state.json          主人寫的現況；原子替換
   requests/<n>.json   下一個指令；外人只能原子放進來
+  wake                （09-24 tick-gap）門鈴：具名管道（FIFO），cpu 開機時建；放完單的人可以往裡寫一個位元組叫醒它（§6.5）
   responses/<n>.json  回音，檔名照 request；收件者 ack 之後主人才刪
   cpu.log             主人的 stderr（由拉起它的人接）
 ```

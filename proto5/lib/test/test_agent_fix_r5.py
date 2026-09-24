@@ -90,7 +90,7 @@ class FixR5Tests(unittest.TestCase):
         self.assertTrue((self.base / 'resumed').exists())  # 還沒成功，照舊等
         name = self.prepare(done={'ok': True}, acked=True)
         self.output(name)
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertFalse((self.base / 'resumed').exists())
         with self.health():
             _, output = self.cli('status', '--target', str(self.base))

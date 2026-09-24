@@ -107,14 +107,14 @@ class AgentTickTests(unittest.TestCase):
 
     def test_idle_input(self):
         self.put(self.base / 'input.json', '你好')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['state'], 'think')
         self.assertEqual(self.read(self.base / 'prompts/history.json'), [{'role': 'user', 'content': '你好'}])
         self.assertEqual(len(list((self.base / 'done').glob('input.json.*.done'))), 1)
 
     def test_think_build_and_inst(self):
         self.put(self.base / 'state.json', {'state': 'think'})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         batch = self.state()['batch']
         name = batch['calls'][0]['name']
         self.assertRegex(name, r'^aw-bob-\d+-\d+-0$')
@@ -131,7 +131,7 @@ class AgentTickTests(unittest.TestCase):
     def test_act_valid_build(self):
         self.prepare('act')
         self.put(self.base / 'state.json', {'state': 'act'})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['batch']['calls'][0]['tool_call_id'], 'c1')
 
     def test_act_tool_pool_override(self):
@@ -141,24 +141,24 @@ class AgentTickTests(unittest.TestCase):
         self.put(self.base / 'tools.json', [dict(TOOL, _pool='gpu', _jail=False)])
         self.put(self.base / 'info.json', self.info)
         self.put(self.base / 'state.json', {'state': 'act'})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         [path] = list((self.k / 'requests').glob('*.json'))
         self.assertEqual(self.read(path)['params']['pool'], 'gpu')
 
     def test_act_missing_tool_local_done(self):
         self.put(self.base / 'prompts/history.json', [ASSISTANT])
         self.put(self.base / 'state.json', {'state': 'act'})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         call = self.state()['batch']['calls'][0]
         self.assertEqual(call, {'name': None, 'tool_call_id': 'c1', 'tool': 'sh',
                                 'done': {'content': '沒有這個工具：sh'}, 'acked': True})
         self.assertFalse(list((self.k / 'requests').iterdir()))
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['state'], 'think')
 
     def test_act_empty(self):
         self.put(self.base / 'state.json', {'state': 'act'})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['state'], 'think')
         self.assertIsNone(self.state()['batch'])
 
@@ -220,20 +220,20 @@ class AgentTickTests(unittest.TestCase):
 
     def test_sent_false_recovery(self):
         name = self.prepare(sent=False)
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         self.assertTrue((self.k / 'requests' / (name + '.json')).exists())
         self.assertTrue(self.state()['batch']['sent'])
 
     def test_post_eexist_success(self):
         self.prepare(sent=False)
         with patch('aos_client.submit', side_effect=aos_home.RequestExists('x')):
-            self.assertEqual(self.tick(), 0)
+            self.assertEqual(self.tick(), 102)
         self.assertTrue(self.state()['batch']['sent'])
 
     def test_batch_kernel_fixed(self):
         name = self.prepare(sent=False)
         self.env['AOS_KERNEL_HOME'] = str(self.root / 'other')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         self.assertTrue((self.k / 'requests' / (name + '.json')).exists())
         self.assertFalse((self.root / 'other').exists())
 
@@ -242,7 +242,7 @@ class AgentTickTests(unittest.TestCase):
         bad = copy.deepcopy(TOOL); bad['_meta'] = {'argv': [{'$env': 'MISSING'}]}
         bad['_jail'] = False            # 測的是 _meta 解不開；沒 access.json 時要關牢的會先被 NoAccess 擋
         self.put(self.base / 'tools.json', [bad])
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         call = self.state()['batch']['calls'][0]
         self.assertIn('EnvironmentVariableMissing', call['done']['content'])
         self.assertTrue(call['acked'])
@@ -256,7 +256,7 @@ class AgentTickTests(unittest.TestCase):
                              exit={'$opt': ['append', 'mkdir'], '$val': 'exit'})
         tool['_jail'] = False           # 測的是不包牢時 inst 的每一格（包牢的在 test_agent_access）
         self.put(self.base / 'tools.json', [tool])
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         raw = self.read(self.base / 'work' / (name + '.inst.json'))
         self.assertEqual(raw['cwd'], {'$opt': 'mkdir', '$val': str(self.base / 'sub')})
         self.assertEqual(raw['envs'], {'$opt': 'clear', '$val': {}})
@@ -313,7 +313,7 @@ class AgentTickTests(unittest.TestCase):
                 acks = list((self.k / 'requests').glob('ack-*'))
                 seen.append((step, st['done'], st['acked'], len(acks)))
         with patch.object(agent, '_hook', hook):
-            self.assertEqual(self.tick(), 0)
+            self.assertEqual(self.tick(), 103)
         self.assertEqual(seen, [('state.done', {'ok': True}, False, 0),
                                 ('ack.post', {'ok': True}, False, 1),
                                 ('state.acked', {'ok': True}, True, 1)])
@@ -325,7 +325,7 @@ class AgentTickTests(unittest.TestCase):
         name = self.prepare(sent=False, done={'fail': '停', 'count': False})
         seen = []
         with patch.object(agent, '_hook', seen.append):
-            self.assertEqual(self.tick(), 0)
+            self.assertEqual(self.tick(), 103)
         self.assertLess(seen.index('ack.post'), seen.index('state.sent'))
         self.assertTrue(self.state()['batch']['calls'][0]['acked'])
         self.assertEqual(self.read(next((self.k / 'requests').glob('ack-*')))['params']['name'], name + '.json')
@@ -347,7 +347,7 @@ class AgentTickTests(unittest.TestCase):
     def test_think_success_settles(self):
         name = self.prepare(errors=2)
         self.respond(name); self.output(name)
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         st = self.state()
         self.assertEqual((st['state'], st['errors'], st['batch']), ('idle', 0, None))
         self.assertEqual(st['sweep'], [{'kernel': str(self.k), 'name': name}])
@@ -355,7 +355,7 @@ class AgentTickTests(unittest.TestCase):
 
     def test_think_tools_enters_act(self):
         name = self.prepare(); self.respond(name); self.output(name, ASSISTANT)
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.state()['state'], 'act')
 
     def test_think_count_true(self):
@@ -380,7 +380,7 @@ class AgentTickTests(unittest.TestCase):
         st['batch']['calls'].append({'name': None, 'tool': 'sh', 'tool_call_id': 'c2',
                                     'done': {'content': '二'}, 'acked': True})
         self.put(self.base / 'state.json', st)
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         messages = self.read(self.base / 'prompts/history.json')
         self.assertEqual(messages[1:], [{'role': 'tool', 'tool_call_id': 'c1', 'content': '一'},
                                        {'role': 'tool', 'tool_call_id': 'c2', 'content': '二'}])
@@ -392,7 +392,7 @@ class AgentTickTests(unittest.TestCase):
             self.tick()
         first = (self.base / 'prompts/history.json').read_bytes()
         self.assertIsNotNone(self.state()['batch'])
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual((self.base / 'prompts/history.json').read_bytes(), first)
 
     def test_history_equal_length_prefix_edit_retained(self):
@@ -400,7 +400,7 @@ class AgentTickTests(unittest.TestCase):
         st = self.state(); st['batch']['base_len'] = 1; self.put(self.base / 'state.json', st)
         prefix = {'role': 'user', 'content': '人改的'}
         self.put(self.base / 'prompts/history.json', [prefix])
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.read(self.base / 'prompts/history.json'), [prefix, MESSAGE])
 
     def test_intake_bad_retained(self):
@@ -428,7 +428,7 @@ class AgentTickTests(unittest.TestCase):
         with self.crash_at('consume.move'), self.assertRaises(Crash):
             self.tick()
         self.put(self.base / 'input.json', '新')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.read(self.base / 'input.json'), '新')
         self.assertEqual(self.read(self.base / 'prompts/history.json'), [{'role': 'user', 'content': '舊'}])
 
@@ -437,7 +437,7 @@ class AgentTickTests(unittest.TestCase):
         with self.crash_at('history.write'), self.assertRaises(Crash):
             self.tick()
         first = self.read(self.base / 'prompts/history.json')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.read(self.base / 'prompts/history.json'), first)
 
     def test_intake_history_changed(self):
@@ -453,7 +453,7 @@ class AgentTickTests(unittest.TestCase):
         self.put(self.base / 'state.json', {'input': 'in'})
         self.put(self.base / 'in/b.json', '二'); self.put(self.base / 'in/a.json', '一')
         self.put(self.base / 'in/ignore.done', '忽略')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual([m['content'] for m in self.read(self.base / 'prompts/history.json')], ['一', '二'])
 
     def test_three_failures_gate(self):
@@ -468,7 +468,7 @@ class AgentTickTests(unittest.TestCase):
         signals = []
         for _ in range(2):
             self.put(self.base / 'state.json', {'state': 'think', 'errors': 2})
-            self.assertEqual(self.tick(), 0)
+            self.assertEqual(self.tick(), 102)
             name = self.state()['batch']['calls'][0]['name']
             self.respond(name, result=dict(RESULT, code=1))
             self.assertEqual(self.tick(), 0)
@@ -570,12 +570,12 @@ class AgentTickTests(unittest.TestCase):
         name = self.prepare('act'); self.respond(name)
         path = self.base / 'work' / (name + '.out'); path.parent.mkdir()
         path.write_bytes(b'a\r\nb\r\n')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.read(self.base / 'prompts/history.json')[-1]['content'], 'a\r\nb\r\n')
 
     def test_tool_output_missing_is_empty(self):
         name = self.prepare('act'); self.respond(name)
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.read(self.base / 'prompts/history.json')[-1]['content'], '')
 
     def test_start_missing_kernel_info(self):
@@ -602,7 +602,7 @@ class AgentTickTests(unittest.TestCase):
             self.tick()
         self.assertEqual(self.state()['batch']['calls'][0]['done'], {'ok': True})
         self.assertFalse(self.state()['batch']['calls'][0]['acked'])
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertIsNone(self.state()['batch'])
         self.assertEqual(len(list((self.k / 'requests').glob('ack-*'))), 2)
 
@@ -610,7 +610,7 @@ class AgentTickTests(unittest.TestCase):
         name = self.prepare(); self.respond(name); self.output(name)
         st = self.state(); st['state'] = 'idle'; self.put(self.base / 'state.json', st)
         self.put(self.base / 'input.json', '下次才收')
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertTrue((self.base / 'input.json').exists())
         self.assertEqual(self.read(self.base / 'prompts/history.json'), [MESSAGE])
 
@@ -640,7 +640,8 @@ def posting_case(where):
             # one-boot：procs 是表、不會「不是物件」；還是舊的 K/state.json（沒換 sqlite）＝讀不懂，一樣不准送。
             self.drop_ledger(); self.put(self.k / 'state.json', {'procs': {}, 'replies': []})
         with patch('aos_client.submit', wraps=agent.aos_client.submit) as submit:
-            self.assertEqual(self.tick(), 1 if where in ('broken', 'shape') else 0)
+            # 09-24 tick-gap：真的送出＝停車 102；上一格就送過（already_posted）＝0；帳本讀不懂＝1
+            self.assertEqual(self.tick(), 1 if where in ('broken', 'shape') else 102 if where in ('none', 'missing') else 0)
             self.assertEqual(submit.call_count, int(where in ('none', 'missing')))
         self.assertEqual(self.state()['batch']['sent'], where not in ('broken', 'shape'))
     return test

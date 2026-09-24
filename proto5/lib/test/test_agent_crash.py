@@ -34,7 +34,7 @@ class AgentCrashTests(unittest.TestCase):
         self.assertEqual(self.state()['batch'], batch)
         self.assertFalse(list((self.k / 'requests').glob('ack-*')))
         (self.base / 'go').touch()
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertIsNone(self.state()['batch'])
         self.assertEqual(self.history(), [fixture.MESSAGE])
 
@@ -55,7 +55,7 @@ class AgentCrashTests(unittest.TestCase):
             (self.k / 'responses' / (name + '.json')).unlink()
         history_path = self.base / 'prompts/history.json'
         original = history_path.read_bytes() if history_path.exists() else None
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.history(), [fixture.MESSAGE])
         self.assertIsNone(self.state()['batch'])
         if step == 'history.write':
@@ -98,7 +98,8 @@ class AgentCrashTests(unittest.TestCase):
         if change_kernel:
             self.env['AOS_KERNEL_HOME'] = str(self.root / 'other-K')
         with patch.object(agent.aos_client, 'submit', wraps=agent.aos_client.submit) as submit:
-            self.assertEqual(self.tick(), 0)
+            # 09-24 tick-gap：上一格就送過（already_posted）＝0；真的補送出去＝停車 102
+            self.assertEqual(self.tick(), 102 if location == 'absent' else 0)
             self.assertEqual(submit.call_count, int(location == 'absent'))
             if location == 'absent':
                 self.assertEqual(submit.call_args.args[0], str(self.k))
@@ -132,7 +133,7 @@ class AgentCrashTests(unittest.TestCase):
         st['batch']['sent'] = False
         self.put(self.base / 'state.json', st)
         aos_kernel_store.write(self.k, {'procs': {}, 'replies': []})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         self.assertTrue((self.k / 'requests' / (name + '.json')).exists())
         self.assertFalse((self.root / 'other-K').exists())
 
@@ -148,7 +149,7 @@ class AgentCrashTests(unittest.TestCase):
         self.put(self.base / 'state.json', {'state': 'act'})
         self.crash('state.batch')
         for _ in range(3):
-            self.assertEqual(self.tick(), 0)
+            self.assertEqual(self.tick(), 103)
             if self.state()['batch'] is None:
                 break
         self.assertIsNone(self.state()['batch'])
@@ -173,7 +174,7 @@ class AgentCrashTests(unittest.TestCase):
         for path in paths:
             self.put(path, '仍在跑')
         aos_kernel_store.write(self.k, {'procs': {name: {'discard': True}}, 'replies': []})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         st = self.state()
         st['waits'] = ['hold']
         self.put(self.base / 'state.json', st)
@@ -225,7 +226,9 @@ class AgentCrashTests(unittest.TestCase):
                 self.tick()
             self.assertEqual(self.state()['errors'], initial)
             self.assertIsNotNone(self.state()['batch'])
-        self.assertIn(self.tick(), (0, 101))
+        # 09-24 tick-gap：寫前崩＝這格才結清失敗（退 0）；寫後崩＝已結清，這格照 think 送新批（停車 102），
+        # 第三敗寫後崩則門已關（101）
+        self.assertEqual(self.tick(), (101 if initial == 2 else 102) if after else 0)
         st = self.state()
         self.assertEqual(st['errors'], (initial + 1) % 3)
         self.assertEqual(len(st['waits']), int(initial == 2))
@@ -257,7 +260,7 @@ class AgentCrashTests(unittest.TestCase):
             self.put(self.base / 'input.json', 'B')
         path = self.base / 'prompts/history.json'
         before = path.read_bytes() if path.exists() else None
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(self.history(), [{'role': 'user', 'content': 'A'}])
         self.assertIsNone(self.state()['intake'])
         if step == 'history.write':
@@ -267,7 +270,7 @@ class AgentCrashTests(unittest.TestCase):
             st = self.state()
             st['state'] = 'idle'
             self.put(self.base / 'state.json', st)
-            self.assertEqual(self.tick(), 0)
+            self.assertEqual(self.tick(), 103)
             self.assertEqual([m['content'] for m in self.history()], ['A', 'B'])
 
     def test_C8_intake_before_move(self):
@@ -290,13 +293,13 @@ class AgentCrashTests(unittest.TestCase):
         self.assertFalse(self.state()['batch']['calls'][0]['done']['count'])
         self.assertEqual(self.tick(), 0)
         self.assertEqual((self.state()['state'], self.state()['errors']), ('think', 1))
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         self.assertNotEqual(self.state()['batch']['calls'][0]['name'], name)
 
     def test_C9_tool_stopping_is_not_run(self):
         """C-9：工具 Stopping 接回確定沒跑的訊息。"""
         name = self.prepare('act')
         self.respond(name, error={'code': -32000, 'data': {'code': 'Stopping'}})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertIn('沒跑', self.history()[-1]['content'])
         self.assertEqual(self.state()['state'], 'think')

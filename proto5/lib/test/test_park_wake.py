@@ -128,14 +128,17 @@ class KernelPark(FakeCase):
         st = self.tick()
         self.assertEqual(st["procs"]["q"]["pending"]["wake"], "agent")
         self.respond(st["on"]["q"])
-        st = self.tick()  # 收 q → 第 10 步出貨放回音、叫醒
+        st = self.tick()  # 收 q → 第 10 步出貨放回音、叫醒 → 09-24 tick-gap 提交點 D：同一格就再派
         self.assertTrue((self.K / "responses" / q).exists())
         proc = st["procs"]["agent"]
         self.assertNotIn("parked", proc)
         self.assertLessEqual(proc["not_before"], time.time())
-        self.assertEqual([e[0] for e in st["ready"]["default"]], ["agent"])
+        self.assertEqual(proc["status"], "running")
+        self.assertIn("agent", st["on"])                  # 有空的 cpu：不用等下一格
+        self.assertEqual(st["ready"]["default"], [])       # 叫醒推進 ready、同格就派走了
         self.assertEqual(st["stale"].get("default"), 1)  # delayed 裡那格變舊格
         self.assertEqual(self.events("wake")[-1], {"event": "wake", "proc": "agent", "how": "ready"})
+        self.assertEqual(self.events("dispatch")[-1]["proc"], "agent")  # 叫醒之後的派工
         st = self.tick()
         self.assertIn("agent", st["on"])
         self.assertEqual(st["replies"], [])
@@ -350,11 +353,11 @@ class KernelPark(FakeCase):
 
     # ---- 能力標記、ls ----
     def test_features_in_new_and_upgraded_ledger(self):
-        self.assertEqual(self.state()["features"], ["park"])
+        self.assertEqual(self.state()["features"], ["park", "again"])  # 09-24 tick-gap：認得 103
         st = self.state()
         del st["features"]
         self.put_state(st)  # one-boot：帳本是 K/ledger.sqlite
-        self.assertEqual(self.tick()["features"], ["park"])
+        self.assertEqual(self.tick()["features"], ["park", "again"])
 
     def test_ls_shows_parked(self):
         self.park()
@@ -563,7 +566,7 @@ class AgentPark(unittest.TestCase):
 
     def test_send_carries_wake(self):
         self.put(self.base / "state.json", {"state": "think"})
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 102)
         req = next((self.k / "requests").glob("aw-bob-*.json"))
         self.assertEqual(json.loads(req.read_text())["params"]["wake"], "agent-bob")
 
@@ -579,6 +582,10 @@ class AgentPark(unittest.TestCase):
             agent._compatible(str(self.k), self.env)
         self.assertIn("102", ctx.exception.msg)
         aos_kernel_store.write(self.k, {"chain": "1-1", "features": ["park"], "procs": {}, "replies": []})
+        with self.assertRaises(agent.AgentError) as ctx:  # 09-24 tick-gap：只有 park、不認得 103＝擋
+            agent._compatible(str(self.k), self.env)
+        self.assertEqual(ctx.exception.code, "KernelIncompatible")
+        aos_kernel_store.write(self.k, {"chain": "1-1", "features": ["park", "again"], "procs": {}, "replies": []})
         agent._compatible(str(self.k), self.env)
         (self.k / "ledger.sqlite").unlink()  # 沒帳本＝沒 boot 過，不擋
         agent._compatible(str(self.k), self.env)
@@ -617,7 +624,7 @@ class AgentPark(unittest.TestCase):
             aos_agent_say.say(self.base, "晚安", env=self.env)
         self.assertTrue((self.base / "input.json").exists())
         self.assertEqual(self.wakes(), [])
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         history = json.loads((self.base / "prompts/history.json").read_text())
         self.assertEqual(history[-1], {"role": "user", "content": "晚安"})
         self.assertFalse((self.base / "input.json").exists())
@@ -628,7 +635,7 @@ class AgentPark(unittest.TestCase):
                  "files": [{"src": str(self.base / "gone"), "dst": str(self.base / "gone.x.done")}]}})
         self.put(self.base / "input.json", "新的一句")
         self.assertEqual(self.tick(), 0)
-        self.assertEqual(self.tick(), 0)
+        self.assertEqual(self.tick(), 103)
         self.assertEqual(json.loads((self.base / "state.json").read_text())["state"], "think")
 
     def test_status_shows_parked(self):

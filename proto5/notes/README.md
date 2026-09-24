@@ -63,6 +63,7 @@
 | [2026-09-24-fold-in/](2026-09-24-fold-in/README.md) | **納入**：proto5-2（池式 daemon／kernel）搬進 proto5 取代舊的 daemon／kernel，agent 線保留 proto5 的；規範照 proto5-diffs 換句並搬新章節；`aos-exec`、`aos_kernel_cpu` 拆檔、tidy；proto5-2 只留 spec／notes 當歷史；astra 必修 3 條全修；測試合併後 1597，rebase 後 1723 |
 | [2026-09-24-idle-wait-impl/](2026-09-24-idle-wait-impl/README.md) | **實作**（照 proto5-2 idle-wait 提案方案 (b)）：agent 沒事退 102 停車，回音出貨時 kernel 叫醒、`say` 投 `wake` 叫醒，保底 `park_ms` 5 分鐘；閒著 60 秒 kernel 派 agent 從 28 格降到 0 格；kill -9 在「放好回音、存帳本前」重跑驗過；astra 必修 2 條全修；測試 1999→2044 |
 | [2026-09-24-one-boot/](2026-09-24-one-boot/README.md) | **實作**（使用者 09-24 拍板）：開機合一、家不合一——一條 `aos up`／`aos down`；kernel cpu、tick 鏈、開機交接拿掉，daemon 定時或有新單時替 kernel 開一格 tick（同時一格＋`K/.tick.lock`）；kernel 帳本換 `K/ledger.sqlite`（只寫變了的列、一筆交易）；`aos-kernel proc --json`；`ls --json` 第 3 版；投單到回音 0.5→0.04 秒；astra 必修 5 條全修；測試 2068→2106 |
+| [2026-09-24-tick-gap/](2026-09-24-tick-gap/README.md) | **實作**（P2 隊）：先量每一跳（`AOS_HOPS`＋`aos_hops.py report`），再改四條：kernel 叫醒後同一格就派（提交點 D）、agent 退 103「馬上再來」、cpu 等子行程用 pidfd、kernel 派完按 cpu 門鈴；單 agent 一題 11.8→2.1 秒；反覆工作 bad 時 `ls` 第一行不印 ok、`add --on-bad` 寄信（團隊郵差／心跳預設寄給人）；`poll_ms` 量過維持 200；astra 沒審、團隊改後沒真跑（提早收） |
 
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 
