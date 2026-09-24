@@ -150,6 +150,13 @@ def _columns(item, available):
 def check_table_filled(project, item):
     """wf-table/1 的 .json、.csv 或 Markdown 表（可給 heading 挑哪一張）：指定欄（沒給＝全部欄）每列都非空。"""
     rel = item['path']
+    want = item.get('columns', item.get('column'))           # 條目寫錯（欄的寫法）：先驗，不看交付物
+    if want is not None:
+        want = [want] if isinstance(want, str) else want
+        if not isinstance(want, list) or not want or not all(isinstance(c, str) and c for c in want):
+            raise CheckError('column／columns 要是欄名或欄名陣列')
+    if item.get('heading') is not None and not isinstance(item['heading'], str):
+        raise CheckError('heading 要是字串')
     text = read_text(project, rel)
     if rel.endswith('.json'):
         try:
@@ -206,10 +213,12 @@ def _args(item):
 
 
 def check_contains(project, args):
-    text = read_text(project, args.get('path'))
     want = args.get('text')
     if not isinstance(want, str) or not want:
-        raise CheckError('contains 要 args.text（非空字串）')
+        raise CheckError('contains 要 args.text（非空字串）')      # 條目寫錯：先驗，不看交付物
+    if not isinstance(args.get('path'), str) or not args['path']:
+        raise CheckError('contains 要 args.path（非空字串）')
+    text = read_text(project, args['path'])
     return (want in text), '%s %s「%s」' % (args['path'], '有' if want in text else '沒有', want)
 
 

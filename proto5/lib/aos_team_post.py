@@ -417,6 +417,8 @@ class Post:
                'effects': [], 'complete': False}
         fmt.write_json(tmp / 'job.json', job)
         os.rename(tmp, d)
+        if again:                                  # 重驗的工作建好了才拿掉「等人修」標記（期限改看這份工作）
+            (self.base / 'checker-broken' / tid).unlink(missing_ok=True)
         self.launch(job)
         return jid
 
@@ -531,8 +533,8 @@ class Post:
                 elif got is not None:
                     res, run['state'] = got, 'ended'
                     break
-            if res is not None and res.get('broken'):
-                self.checker_broken(job, [r for r in res['results'] if r.get('result') == 'error'])
+            if res is not None and res['broken']:
+                self.checker_broken(job, [r for r in res['results'] if r['result'] == 'error'])
             elif res is not None:
                 ev = {'type': 'verified', 'src': 'verify:%s' % job['id'], 'pass': res['pass'],
                       'results': res['results'], 'rev': job['rev'], 'attempt': job['attempt']}
@@ -569,6 +571,18 @@ class Post:
     def checker_broken(self, job, errors):
         """檢查器壞了（不是隊員沒過）：不送 verified、不扣次數；寄 BLOCKED 給人，單子停在 verifying 等人修。"""
         lines = '\n'.join('  %s. %s' % (r.get('i', '?'), r.get('why')) for r in errors)
+        try:
+            t = aos_team_task.load(self.lay, job['task'])
+        except TeamError:
+            t = None
+        if t is None or (t['status'], t['rev'], t['attempt']) != ('verifying', job['rev'], job['attempt']):
+            job.update(status='broken', stale=True)  # 過期的結果（單子已改派、取消、別份驗收先回來）：只記、不寄
+            self.save_job(job)
+            self.say('驗收 %s rev%d 第 %d 次：檢查器壞了，但單子已經不在等這一次，不寄' % (job['task'], job['rev'], job['attempt']))
+            return
+        mark = self.base / 'checker-broken'
+        mark.mkdir(exist_ok=True)
+        (mark / job['task']).write_text('%d %d\n' % (job['rev'], job['attempt']))   # 看期限時略過它（等人修）
         job.update(status='broken')
         add_effects(job, [{'do': 'letter', 'to': HUMAN, 'status': 'BLOCKED', 'reply_to': job['task'], 'rev': job['rev'],
                            'text': '%s 的驗收：檢查器壞了（不是隊員交的東西沒過，不扣次數）。單子停在 verifying 等你修：\n%s\n'
@@ -625,6 +639,8 @@ class Post:
         if not force and last is not None and (now - last).total_seconds() < self.watch_every:
             return
         for tid, ev in aos_team_task.due_deadlines(self.lay, now.isoformat(timespec='seconds')):
+            if self.waiting_for_checker(tid):
+                continue                    # 檢查器壞了等人修（或人剛要求重驗）：不算隊員逾時
             self.notice('expire.%s.%s' % (tid, hashlib.sha1(ev['src'].encode()).hexdigest()[:10]),
                         [{'do': 'step', 'task': tid, 'event': ev}])
         tickets = aos_team_task.all_tickets(self.lay)
@@ -655,6 +671,23 @@ class Post:
                               self.roster['limits']['stale_minutes'], fmt.short_time(progress.isoformat(), self.tz)))
         state = {'last': now.isoformat(timespec='seconds'), 'health': seen}
         fmt.write_json(path, state)
+
+    def waiting_for_checker(self, tid):
+        """單子（目前這一次 rev／attempt、還在 verifying）在等人修檢查器（有標記），或人 --again 重驗的那份工作還在跑。"""
+        try:
+            t = aos_team_task.load(self.lay, tid)
+        except TeamError:
+            return False
+        if t['status'] != 'verifying':
+            return False
+        mark = self.base / 'checker-broken' / tid
+        try:
+            if mark.read_text().split() == [str(t['rev']), str(t['attempt'])]:
+                return True
+        except OSError:
+            pass
+        prefix = 'v-%s-r%d-a%d-x' % (tid, t['rev'], t['attempt'])
+        return any(d.name.startswith(prefix) for d in self.jobs.iterdir() if d.is_dir())
 
     def member_health(self, name):
         if self.health_fn is not None:
@@ -754,12 +787,12 @@ def check_result(res, job):
     items = res.get('results')
     if not isinstance(items, list) or not all(
             isinstance(r, dict) and isinstance(r.get('i'), int) and not isinstance(r.get('i'), bool)
-            and isinstance(r.get('pass'), bool) for r in items):
-        return 'results 每條要有整數 i 與 true／false 的 pass'
+            and isinstance(r.get('pass'), bool) and r.get('result') in ('pass', 'fail', 'error')
+            and r['pass'] == (r['result'] == 'pass') for r in items):
+        return 'results 每條要有整數 i、result（pass／fail／error）與跟它一致的 pass'
     if res['pass'] != all(r['pass'] for r in items):
         return 'pass 跟逐條結果對不上'
-    if 'broken' in res and (not isinstance(res['broken'], bool)
-                            or res['broken'] != any(r.get('result') == 'error' for r in items)):
+    if not isinstance(res.get('broken'), bool) or res['broken'] != any(r['result'] == 'error' for r in items):
         return 'broken 要是 true／false，而且等於「有一條檢查器壞」'
     return None
 
@@ -779,6 +812,16 @@ def on_reverify(lay, roster, req):
     t = aos_team_task.load(lay, tid)
     if t['status'] != 'verifying':
         raise TeamError('NotVerifying', '%s 現在是 %s，不是停在 verifying' % (tid, t['status']))
+    prefix = 'v-%s-r%d-a%d' % (tid, t['rev'], t['attempt'])
+    jobs = lay.team / 'post' / 'jobs'
+    for d in (jobs.iterdir() if jobs.is_dir() else []):
+        if d.name.startswith(prefix) and d.is_dir() and not d.name.endswith('-x' + hashlib.sha1(req['id'].encode()).hexdigest()[:8]):
+            try:
+                busy = fmt.read_json(d / 'job.json').get('status') == 'open'
+            except TeamError:
+                busy = True
+            if busy:
+                raise TeamError('Busy', '%s 這一次的驗收（%s）還在跑，等它回來再說' % (tid, d.name))
     return [{'do': 'verify', 'task': tid, 'rev': t['rev'], 'attempt': t['attempt'], 'again': req['id']}]
 
 
