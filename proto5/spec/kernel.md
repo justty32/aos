@@ -5,7 +5,7 @@
 > 2026-09-23 重架構第二份；同日照 astra 三輪審查改過（K／X／R、K2／X2／R2、K3／X3／R3）。
 > 2026-09-23 定稿並已實作：[`aos_kernel.py`](../lib/aos_kernel.py)（入口 `aos-kernel`）。舊 kernel-home.md／aos-kernel.md 已刪（副本在 [proto5.1/spec/](../../proto5.1/spec/)）。
 > 已拍板的前提在 §9，我自己選的在 §10。
-> 2026-09-24 實作補記：依實作審查回寫，見 [notes/2026-09-23-rearch/impl-review-report.md](../notes/2026-09-23-rearch/impl-review-report.md)；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。
+> 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
 
 一句話：**kernel 替登記好的工作（行程）挑一顆空著的 cpu 派下去、收回執行結果、決定要不要再跑。**
 它不是長命行程：每次只跑一格 `aos-kernel tick`，格的開頭先把下一格放進一顆專用 exec cpu 的 `requests/`，
@@ -359,6 +359,7 @@ aos-kernel -h ／ aos-kernel <子命令> -h    # （09-24 補）用法
 在 daemon 的 PATH 找不找得到（讀得到 `/proc/<daemon pid>/environ` 就用它，否則用目前 shell 的並註明）；`pools`——沒有 `llm` 池＝bad；
 `llm`——llm 池每顆 cpu 的有效 envs（`cpus/<c>/inst.json` 在就用它）有沒有 `AOS_LLM_CONFIG`、檔在不在、llm.json 讀驗過不過、有哪些模型代號。
 daemon 家預設 info 的 `daemon`（boot 前還沒寫，就是 `AOS_DAEMON_HOME`／`~/.aos-daemon`），`--daemon D` 可指定。`--agent DIR` 再查那個 agent：info 讀驗、`tick.pool`／`llm.pool` 在不在、`llm.model` 在不在模型表、工具 `argv[0]` 找不找得到。D 預設 `AOS_DAEMON_HOME`，再預設 `~/.aos-daemon`。
+（09-24 試玩 r2 補）另外兩項：`dirs`——K 家的 `requests/`、`responses/`、`cpus/` 在不在（§1 的目錄圖；`cpus/<name>/` 不查，boot 會補），缺＝bad，手建的家要 `mkdir -p` 補；`cpus`——帳本在、`phase` 是 `running`／`stopping`、daemon 活著，而 info 的 cpu 或帳本的 `kcpu` 有不在 daemon 孩子表的＝bad：`daemon 重開過／cpu 不在（…）：執行 aos-kernel boot <K> --daemon <D>`（沒帳本、已 `stopped`、daemon 沒活就不印這項）。`--agent`、`--daemon` 各只能給一次，重複＝用法錯 2（要查多個 agent 分開跑）。check 只驗設定，**不連 endpoint**：全綠不代表模型連得上。
 
 **ls** 印帳本的摘要（chain、phase、每顆 cpu 的 req／proc、queue、每個行程的 status／runs／fails）、daemon 孩子表的
 alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份——鏈斷了（`current` null、`requests/` 空、
@@ -366,6 +367,7 @@ alive、還有 kernel cpu 的 `state.current` 跟它 `requests/` 裡有幾份—
 （09-24 補）預設印給人看的文字摘要：一行總覽（chain、phase、last_seq、daemon 活不活）、kernel cpu 一行、
 每顆 cpu 一行（名、pool、閒／忙哪個行程、daemon 孩子狀態）、每個行程一行（名、once／反覆、status、runs／fails、pending）、queue 一行；
 `--json` 才印原始 JSON。
+（09-24 試玩 r2 補）文字摘要在 `phase` 不是 `stopped` 時，daemon 活著但有 cpu 是 `missing`＝尾巴加一行 `hint daemon 重開過／cpu 不在：執行 aos-kernel boot <K> --daemon <D>`；daemon 沒活＝`hint daemon 沒在跑：先開 daemon，再 aos-kernel boot <K> --daemon <D>`。
 （09-24 試玩 r1 補）`bad` 的行程行尾附 `看 <路徑>`：target 的 inst 有字面 `stderr` 就指它（agent 就是 `<agent>/log/agent.err`），否則指 target。
 
 （09-24 補）**ack**：`aos-kernel ack K NAME` 替 `K/responses/NAME` 放一則 ack（NAME 給檔名或路徑都行）；回音不在＝`NotFound`、退 1、不放檔。

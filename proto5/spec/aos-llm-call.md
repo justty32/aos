@@ -2,8 +2,8 @@
 
 ← [proto5 README](../README.md)｜資料夾：[agent.md](agent.md)｜誰叫它：[aos-agent.md](aos-agent.md)｜它跑在哪：[cpu.md §4.1](cpu.md)、[kernel.md §1.1](kernel.md)
 
-> 2026-09-23 草稿；2026-09-24 照 [審查報告](../notes/2026-09-23-rearch/review-agent1-report.md)「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 [第 2 輪審查](../notes/2026-09-23-rearch/review-agent2-report.md) 改成第 3 輪；[第 3 輪審查](../notes/2026-09-23-rearch/review-agent3-report.md) 判可定稿，第 4 輪只補一條實作提醒。
-> **已實作**（2026-09-24，T9）：`lib/aos_llm_call.py`＋`cli/aos-llm-call`，實作發現見 [agent-impl-findings](../notes/2026-09-23-rearch/agent-impl-findings.md)。
+> 2026-09-23 草稿；2026-09-24 照 審查報告「定稿前必改」與使用者三件裁決改成第 2 輪；同日照 第 2 輪審查 改成第 3 輪；第 3 輪審查 判可定稿，第 4 輪只補一條實作提醒。（審查與實作紀錄在 [rearch 筆記](../notes/2026-09-23-rearch/README.md)）
+> **已實作**（2026-09-24，T9）：`lib/aos_llm_call.py`＋`cli/aos-llm-call`，實作發現見 agent-impl-findings。
 > 這份把兩件事合成一支普通程式。調度者裁決在下一節，已拍板的前提在 §9。
 
 一句話：**`aos-llm-call AGENT_DIR` 讀 agent 的模型輸入與這顆 cpu 的模型表，呼叫一次模型，把一則 assistant message 印成一行 JSON。**
@@ -119,6 +119,8 @@ llm.json 本身可以隨時改，下一次問就生效（每次跑都重讀）�
 | 連不上、非 2xx、不是 JSON、缺 message、message 驗不過 | 無 | `aos-llm-call: EngineFailed: <白話>`（非 2xx 附狀態碼與回應開頭一段） | 1 |
 | 設定、agent 家、代號讀驗錯 | 無 | `aos-llm-call: <代號>: <白話>` | 1 |
 | 用法錯 | 無 | argparse | 2 |
+
+（09-24 試玩 r2 補）`Timeout` 與 `EngineFailed` 的白話尾巴都附 `（endpoint <endpoint>，模型 <代號>→<真名>）`，不印 `api_key`。
 
 stdout 只會有這一行，所以工作 inst 把 stdout 指到一個檔，agent 就能整份讀回來；失敗時 stdout 是空的，詳細原因在工作 inst 指定的 stderr 檔（aos-agent 用 `log/llm.err`）。
 

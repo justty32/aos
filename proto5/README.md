@@ -24,7 +24,7 @@ aos-daemon --home $W/D 2>>$W/daemon.log &
 ```sh
 cat > $W/llm.json <<'EOF'
 {"_metainfo": {"_type": "llm_config", "_version": 1},
- "models": {"small": {"endpoint": "http://127.0.0.1:1234/v1", "model": "google/gemma-4-e4b", "timeout_ms": 180000}}}
+ "models": {"default": {"endpoint": "http://127.0.0.1:1234/v1", "model": "google/gemma-4-e4b"}}}
 EOF
 aos-kernel init $W/K --cpu 0 --cpu 1 --cpu llm:llm --env llm:AOS_LLM_CONFIG=$W/llm.json
 aos-kernel check $W/K --daemon $W/D
@@ -52,37 +52,21 @@ aos-kernel ls $W/K
 - **CLI 成功 ≠ 工作成功**：`aos-kernel add` 退 0 只代表 kernel 收了單、回了音；工作本身成不成看回音的 `kind`、`code`、`timed_out`、`stopped`。
   反覆工作回 100＝做完（`ls` 看到 `count … done  runs 3`）；連敗 10 次會被標 `bad`，`ls` 那行會附「看 <log 路徑>」。
 
-**4. 最小 agent：人格、一個工具、登記、投輸入、看回話。**
+**4. 最小 agent：生家、登記、說一句、等回話。**（09-24 試玩 r2 改用 `init`＋`say --wait`）
 
 ```sh
-mkdir -p $W/bob/prompts $W/bob/tools
-cat > $W/bob/info.json <<'EOF'
-{"_metainfo": {"_type": "llm_agent", "_version": 1},
- "llm": {"model": "small", "timeout_ms": 190000},
- "tools": ["tools/base.json"],
- "tick": {"interval_ms": 500}}
-EOF
-cat > $W/bob/prompts/system.json <<'EOF'
-{"content": "你是繁體中文助理。要知道現在時間就呼叫 date 工具，拿到結果後用一句話回答。"}
-EOF
-cat > $W/bob/tools/base.json <<'EOF'
-[{"type": "function",
-  "function": {"name": "date", "description": "取得現在的本機日期與時間",
-               "parameters": {"type": "object", "properties": {}}},
-  "_meta": {"argv": ["date", "+%Y-%m-%d %H:%M:%S"]}}]
-EOF
+aos-agent init $W/bob
 aos-kernel check $W/K --agent $W/bob
 export AOS_K=$W/K
 aos-agent start $W/bob
-echo '"現在幾點？請用工具查。"' > $W/bob/input.tmp && mv $W/bob/input.tmp $W/bob/input.json
-sleep 20
-aos-agent last $W/bob
+aos-agent say $W/bob "現在幾點？請用工具查。" --wait
 ```
 
-`start` 印 `started agent-bob`。投進 `input.json` 後它自己走 idle→think（問模型）→act（跑 date）→think→idle，本機小模型大約 10 秒；
-`last` 還印 `(tool_calls: date)` 或舊回話就再等幾秒重打。收過的輸入搬進 `bob/done/`。出錯看 `bob/log/agent.err`（它會指到 `log/llm.err` 並附最後一行）。
+`init` 生出人格、一個 `date` 工具、`input/`、`log/`，`llm.model` 是代號 `default`（就是第 2 段 llm.json 裡那個）。`start` 印 `started agent-bob`。
+`say --wait` 把話投進 `bob/input/`，等它自己走完 idle→think（問模型）→act（跑 date）→think→idle，印出回話（本機小模型約 10 秒）；之後再看用 `aos-agent last $W/bob`。
+不順就 `aos-agent status $W/bob`：印出現在在哪一格、在等什麼、`log/agent.err` 最後一行、kernel 那邊的狀態。問模型連敗 3 次它會暫停，修好原因後 `aos-agent continue $W/bob`。
 
-**5. 停機（順序：agent → kernel → daemon）。**
+**5. 停機（順序：agent → kernel → daemon）。** 要接著做第 6 段就先跳過這段，最後再停。
 
 ```sh
 aos-agent stop $W/bob
@@ -91,7 +75,62 @@ aos-daemon stop --home $W/D
 ```
 
 三行各印 `stopped`。`aos-kernel stop` 會等到排程停、它的 cpu 都退出才回（要舊的「放完單就走」用 `--no-wait`）。
-每一步的細節在下表的規範：daemon → [daemon.md](spec/daemon.md)、kernel → [kernel.md](spec/kernel.md)、agent → [agent.md](spec/agent.md)／[aos-agent.md](spec/aos-agent.md)、模型設定 → [aos-llm-call.md](spec/aos-llm-call.md)。
+**daemon 掛了**（09-24 試玩 r2 補）：cpu 全跟著死，重開 daemon（第 1 段那行）再 `aos-kernel boot $W/K --daemon $W/D`；`aos-kernel ls`／`check` 看到 cpu `missing` 也會提示這行。
+
+**6. 自己寫一支工具。**（09-24 試玩 r2 補）工具就是一支程式：**stdin 收模型給的 arguments（JSON 字串）、stdout 印的東西原樣給模型看**。
+`_meta.argv[0]` 含 `/` 就是**相對 agent 家**的路徑、要有執行位；工具的 cwd 也是 agent 家。放進 `tools/` 下一格就生效，不用重 start。
+
+```sh
+mkdir -p $W/bob/tools/bin
+cat > $W/bob/tools/bin/add <<'EOF'
+#!/usr/bin/env python3
+import json, sys
+args = json.load(sys.stdin)
+print(args["a"] + args["b"])
+EOF
+chmod +x $W/bob/tools/bin/add
+cat > $W/bob/tools/add.json <<'EOF'
+[{"type": "function",
+  "function": {"name": "add", "description": "把兩個整數加起來",
+               "parameters": {"type": "object", "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+                              "required": ["a", "b"]}},
+  "_meta": {"argv": ["tools/bin/add"]}}]
+EOF
+aos-kernel check $W/K --agent $W/bob
+aos-agent say $W/bob "請用 add 工具算 1234 加 4321，只回數字。" --wait
+```
+
+工具壞了（JSON 寫錯、沒執行位）`check --agent` 會指出來；跑起來失敗時模型看得到 `exit 126／127` 的說明，`log/agent.err` 有詳情。完整格式在 [agent.md §3.3](spec/agent.md)。做完回第 5 段停機。
+
+**附：不用 `init` 的手動做法。** 家就是一個資料夾，`init` 只是替你寫好這三份。這種家的輸入投 `input.json`，要原子地投：先寫暫存檔再 `mv`。
+
+```sh
+mkdir -p $W/amy/prompts $W/amy/tools
+cat > $W/amy/info.json <<'EOF'
+{"_metainfo": {"_type": "llm_agent", "_version": 1},
+ "llm": {"model": "default", "timeout_ms": 190000},
+ "tools": ["tools/base.json"],
+ "tick": {"interval_ms": 500}}
+EOF
+cat > $W/amy/prompts/system.json <<'EOF'
+{"content": "你是繁體中文助理。要知道現在時間就呼叫 date 工具，拿到結果後用一句話回答。"}
+EOF
+cat > $W/amy/tools/base.json <<'EOF'
+[{"type": "function",
+  "function": {"name": "date", "description": "取得現在的本機日期與時間",
+               "parameters": {"type": "object", "properties": {}}},
+  "_meta": {"argv": ["date", "+%Y-%m-%d %H:%M:%S"]}}]
+EOF
+aos-agent start $W/amy
+echo '"現在幾點？請用工具查。"' > $W/amy/input.tmp && mv $W/amy/input.tmp $W/amy/input.json
+sleep 20
+aos-agent last $W/amy
+aos-agent stop $W/amy
+```
+
+收過的輸入搬進 `amy/done/`（`init` 的家是 `bob/input/done/`）。
+
+每一步的細節在下表的規範：daemon → [daemon.md](spec/daemon.md)、kernel → [kernel.md](spec/kernel.md)、agent → [agent.md](spec/agent.md)／[aos-agent.md](spec/aos-agent.md)（兩份開頭都有「使用者只需要懂的」）、模型設定 → [aos-llm-call.md](spec/aos-llm-call.md)。
 
 ## 規範
 
@@ -104,18 +143,18 @@ aos-daemon stop --home $W/D
 | [spec/kernel.md](spec/kernel.md) | kernel：替登記的工作挑空 cpu 派下去、收結果、決定要不要再跑；每次只跑一格 `aos-kernel tick`，格接格排程 | 2026-09-23 定稿；實作 [`lib/aos_kernel.py`](lib/aos_kernel.py)（`aos-kernel`） |
 | [spec/daemon.md](spec/daemon.md) | daemon：所有 cpu 的父行程，只管孩子的啟動、重拉、停止；家也照 cpu 範式長 | 2026-09-23 定稿；實作 [`lib/aos_daemon.py`](lib/aos_daemon.py)（`aos-daemon`） |
 | [spec/agent.md](spec/agent.md) | 一個 agent 就是一個資料夾：info.json 記人格、記憶、工具與排程設定；state.json 記三格進度、批次與恢復紀錄 | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent_home.py`](lib/aos_agent_home.py)＋[`lib/aos_agent_info.py`](lib/aos_agent_info.py) |
-| [spec/aos-agent.md](spec/aos-agent.md) | `aos-agent tick／start／stop [dir]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
+| [spec/aos-agent.md](spec/aos-agent.md) | `aos-agent tick／start／stop [dir]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`status`／`continue`／`last` 在 §1（09-24 試玩 r2 補） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
 | [spec/aos-llm-call.md](spec/aos-llm-call.md) | `aos-llm-call [AGENT_DIR]`：讀 agent 家與 `AOS_LLM_CONFIG`、組請求、打一次 HTTP、印模型回的 message | 2026-09-24 定稿第 2 版；實作 [`lib/aos_llm_call.py`](lib/aos_llm_call.py) |
 
 ## 程式
 
 2026-09-24：cpu／daemon／kernel 與 agent 線已接上新架構。`aos-llm-call` 問模型一次，
-`aos-agent tick／start／stop` 負責走格與 kernel 排程；模型與工具都透過 kernel 交給 exec cpu 執行。
-舊 llm／tool cpu 與 aos-llm-ask 已移除。實作中的規範歧義與限制記在 [impl-findings.md](notes/2026-09-23-rearch/impl-findings.md)。
+`aos-agent tick／start／stop／last／init／say／status／continue` 負責走格、kernel 排程與日常操作；模型與工具都透過 kernel 交給 exec cpu 執行。
+舊 llm／tool cpu 與 aos-llm-ask 已移除。審查與實作紀錄在 [rearch 筆記](notes/2026-09-23-rearch/README.md)。
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 十八支標準庫 Python 3.12 模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 24 個測試檔、959 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 二十一支標準庫 Python 3.12 模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 26 個測試檔、1016 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm-call`、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。
