@@ -2,7 +2,7 @@
 
 ← [proto5 README](../README.md)｜09-23 那輪：[backlog-cleanup](2026-09-23-rearch/backlog-cleanup.md)
 
-agent 線三份規範（[agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md)、[aos-llm-call.md](../spec/aos-llm-call.md)）09-24 定稿並實作後，`proto5/backlog/` 六個檔逐一判掉，資料夾拿掉。
+agent 線三份規範（[agent.md](../spec/agent.md)、[aos-agent.md](../spec/aos-agent.md)、[aos-llm.md](../spec/aos-llm.md)）09-24 定稿並實作後，`proto5/backlog/` 六個檔逐一判掉，資料夾拿掉。
 
 ## 新規範解掉的（刪檔）
 
