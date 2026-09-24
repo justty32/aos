@@ -16,7 +16,7 @@
 | 記憶 | `info.history` 指向的檔案 | proto4-7 固定 `messages.json` |
 | 已存在的實作 | 工作樹已有 `proto5/lib/aos_agent.py`、`proto5/cli/aos-agent`；`think` 第 220 行直接呼叫 `aos_llm_ask.call(...)` | README「程式還沒寫」已落後，不能据此認定只有規範 |
 
-來源：[proto5 agent 格式](/home/guanyu/projs/aos/proto5/spec/agent.md:15)、[三格規範](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:22)、[engine 與請求規範](/home/guanyu/projs/aos/proto5/spec/aos-llm-ask.md:117)、[函式庫說明](/home/guanyu/projs/aos/proto5/lib/README.md:243)、[現有同步 think](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:215)。
+來源：[proto5 agent 格式](/home/guanyu/projs/aos/proto5/spec/agent.md:15)、[三格規範](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:22)、[engine 與請求規範](../../proto5.1/spec/aos-llm-ask.md)、[函式庫說明](/home/guanyu/projs/aos/proto5/lib/README.md:243)、[現有同步 think](/home/guanyu/projs/aos/proto5/lib/aos_agent.py:215)。
 
 ---
 

@@ -32,7 +32,7 @@
 
 **X-3｜`load_obj()` 回傳物件不能直接寫成 inst。〔擋〕**
 
-[工具 inst 生成步驟](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:85) 說解成字面 inst 再寫檔，但 [舊工具格式](/home/guanyu/projs/aos/proto5/spec/tool-cpu.md:15) 已明示：它是內部結構，含串流的 `path/append/mkdir`、`cwd_mkdir`、`envs_clear`，不是原始 inst JSON。
+[工具 inst 生成步驟](/home/guanyu/projs/aos/proto5/spec/aos-agent.md:85) 說解成字面 inst 再寫檔，但 [舊工具格式](../../../proto5.1/spec/tool-cpu.md) 已明示：它是內部結構，含串流的 `path/append/mkdir`、`cwd_mkdir`、`envs_clear`，不是原始 inst JSON。
 
 直接 dump 會讓 aos-exec 拒絕串流物件；只抽 path 則丟掉選項。
 
@@ -159,7 +159,7 @@ aos-kernel add /abs/K /abs/agent-bob/tick.json --name agent-bob
 | **K-5** | 結果先讀驗、再劃門 | **必要，須保留。** 舊版明定模型／整批工具結果先驗，壞資料不消掉收件依據；新版先清 waits 才讀 stdout，失去此保證。 |
 | **K-6** | 記憶尾端自癒細則 | **不能只留「自癒」兩字。** 舊版有正規化結果與尾端相等、tool 筆數與 call id 順序吻合、errors 歸零及剩餘結果封存。新版須接手精確判定與 ack／清理，並補普通 assistant 分支。見 C-2。 |
 | **K-7** | 本地失敗結果保存 | **必要，漏接。** 舊版 `_meta` 解失敗也產生該 call 的結果，其他照送；新版跨格後沒有保存失敗原因的地方。見 C-4。 |
-| **K-8** | 舊 tool stdout 封裝 | **改檔案可行，解碼規則要搬。** 舊 [tool-cpu](/home/guanyu/projs/aos/proto5/spec/tool-cpu.md:35) 明定 UTF-8、非法位元組替換與逾時部分輸出；新版「整份文字」不足，還須定未建立輸出檔與讀取失敗如何區分。 |
+| **K-8** | 舊 tool stdout 封裝 | **改檔案可行，解碼規則要搬。** 舊 [tool-cpu](../../../proto5.1/spec/tool-cpu.md) 明定 UTF-8、非法位元組替換與逾時部分輸出；新版「整份文字」不足，還須定未建立輸出檔與讀取失敗如何區分。 |
 
 上述舊自癒依據在 `HEAD~1:proto5/spec/aos-agent.md` 的第 58–59、73–79 行。
 

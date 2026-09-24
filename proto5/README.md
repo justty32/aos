@@ -15,25 +15,20 @@ proto5 從**把規範寫下來**開始：proto4-x 一路長出來的格式與約
 | [spec/cpu.md](spec/cpu.md) | cpu 範式（一個家一個主人：`info`／`state`／`requests`／`responses`、JSON-RPC 信封、ack）與 exec cpu：逐件照 aos-exec 跑一次、回音寫 `responses/` | 2026-09-23 定稿；實作 [`lib/aos_home.py`](lib/aos_home.py)＋[`lib/aos_client.py`](lib/aos_client.py)＋[`lib/aos_exec_cpu.py`](lib/aos_exec_cpu.py)（`aos-cpu`） |
 | [spec/kernel.md](spec/kernel.md) | kernel：替登記的工作挑空 cpu 派下去、收結果、決定要不要再跑；每次只跑一格 `aos-kernel tick`，格接格排程 | 2026-09-23 定稿；實作 [`lib/aos_kernel.py`](lib/aos_kernel.py)（`aos-kernel`） |
 | [spec/daemon.md](spec/daemon.md) | daemon：所有 cpu 的父行程，只管孩子的啟動、重拉、停止；家也照 cpu 範式長 | 2026-09-23 定稿；實作 [`lib/aos_daemon.py`](lib/aos_daemon.py)（`aos-daemon`） |
-| [spec/agent.md](spec/agent.md) | 一個 agent 就是一個資料夾：`info.json` 說它是誰、記憶、工具、用哪個 kernel 與模型；`state.json` 記走到哪、輸入從哪來、在等哪些回音 | 2026-09-23 第 2 版草稿、程式未跟（現行 `aos_agent_info.py`／`aos_agent.py` 仍照第 1 版） |
-| [spec/aos-agent.md](spec/aos-agent.md) | `aos-agent [dir]`：先看 `waits` 門，門開了走一格（`idle` 收輸入、`think` 問模型、`act` 跑工具）；問跟跑都是往 kernel `add --once` 放單、等回音、ack | 2026-09-23 第 2 版草稿、程式未跟（現行 `aos_agent.py` 仍照第 1 版） |
-| [spec/aos-llm-call.md](spec/aos-llm-call.md) | `aos-llm-call AGENT_DIR`：讀 agent 家、組請求、打一次 HTTP、印模型回的 message；取代 aos-llm-ask＋llm cpu | 2026-09-23 草稿、程式未跟 |
-| [spec/aos-llm-ask.md](spec/aos-llm-ask.md) | 只剩兩件事：`build_request` 組不含 `model` 的 chat body（人格／記憶／工具檔）、`call(engine, body)` 給 llm cpu 打 HTTP；命令列只印 body | 2026-09-22 從 proto5.1 回流；實作 [`lib/aos_llm_ask.py`](lib/aos_llm_ask.py)。會被 [aos-llm-call.md](spec/aos-llm-call.md) 取代 |
-| [spec/llm-cpu.md](spec/llm-cpu.md) | **格式**：llm cpu 的 `models` 表（代號→endpoint／真名／api_key／timeout_ms，cpu 自己解 `$env`）、請求 `{"model","body","result"}`、結果 `message` | 舊架構；實作 [`lib/aos_llm_cpu.py`](lib/aos_llm_cpu.py)（仍在用）。等 agent 重寫落地後刪 |
-| [spec/aos-llm-cpu.md](spec/aos-llm-cpu.md) | **程式**：`aos-llm-cpu [dir]` 一次 tick 查代號填真名、同步問一件；退出碼 | 舊架構；實作 [`lib/aos_llm_cpu.py`](lib/aos_llm_cpu.py)（仍在用）。等 agent 重寫落地後刪 |
-| [spec/tool-cpu.md](spec/tool-cpu.md) | **格式**：tool cpu 的請求（解好的 inst＋stdin＋timeout_ms）、結果（code／stdout／timed_out）；已知失敗與結果不明（`Reaped`）怎麼分 | 舊架構；實作 [`lib/aos_tool_cpu.py`](lib/aos_tool_cpu.py)（仍在用）。等 agent 重寫落地後刪 |
-| [spec/aos-tool-cpu.md](spec/aos-tool-cpu.md) | **程式**：`aos-tool-cpu [dir]` 一次收屍再跑一個工具；退出碼 | 舊架構；實作 [`lib/aos_tool_cpu.py`](lib/aos_tool_cpu.py)（仍在用）。等 agent 重寫落地後刪 |
+| [spec/agent.md](spec/agent.md) | 一個 agent 就是一個資料夾：info.json 記人格、記憶、工具與排程設定；state.json 記三格進度、批次與恢復紀錄 | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent_home.py`](lib/aos_agent_home.py)＋[`lib/aos_agent_info.py`](lib/aos_agent_info.py) |
+| [spec/aos-agent.md](spec/aos-agent.md) | `aos-agent tick／start／stop [dir]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
+| [spec/aos-llm-call.md](spec/aos-llm-call.md) | `aos-llm-call [AGENT_DIR]`：讀 agent 家與 `AOS_LLM_CONFIG`、組請求、打一次 HTTP、印模型回的 message | 2026-09-24 定稿第 2 版；實作 [`lib/aos_llm_call.py`](lib/aos_llm_call.py) |
 
 ## 程式
 
-2026-09-23：cpu／daemon／kernel 已依 [cpu.md](spec/cpu.md)、[daemon.md](spec/daemon.md)、
-[kernel.md](spec/kernel.md) 重寫。agent 與舊 llm／tool cpu 保留原實作，尚未接上新架構；
-新 agent 規範另待實作。實作中的規範歧義與限制記在 [impl-findings.md](notes/2026-09-23-rearch/impl-findings.md)。
+2026-09-24：cpu／daemon／kernel 與 agent 線已接上新架構。`aos-llm-call` 問模型一次，
+`aos-agent tick／start／stop` 負責走格與 kernel 排程；模型與工具都透過 kernel 交給 exec cpu 執行。
+舊 llm／tool cpu 與 aos-llm-ask 已移除。實作中的規範歧義與限制記在 [impl-findings.md](notes/2026-09-23-rearch/impl-findings.md)。
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 十四支標準庫 Python 3.12 模組。底層 directives → inst → exec；新共用 home／client；exec_cpu 執行一次、daemon 管孩子、kernel 用 tick 鏈與帳本排程。六支舊 agent／llm／tool／cpu 模組保留。逐檔 API 與測試表見 lib README | 19 個測試檔、883 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
-| [cli/](cli/) | 八個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`，以及保留的 `aos-llm-ask`、`aos-agent`、`aos-llm-cpu`、`aos-tool-cpu`。`aos-run`／`aos-daemon-ctl` 已移除 | 新架構端到端使用真 daemon＋k／0／llm exec cpu，透過 envs PATH 找假 llm-http，驗 once 輸出、反覆 done_exit 與完整停機；舊 agent 尚未遷移 |
+| [lib/](lib/README.md) | 十六支標準庫 Python 3.12 模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組。逐檔 API 與測試表見 lib README | 21 個測試檔、900 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [cli/](cli/) | 六個薄入口：`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm-call`、`aos-agent` | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。
 
