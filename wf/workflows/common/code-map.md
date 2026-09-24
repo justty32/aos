@@ -139,6 +139,10 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | `aos_team_ask_cli` | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
 | `aos_team_route` | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型 |
 | `aos_team_task_cli` | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
+| `aos_team_post` | 郵差兼書記：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER |
+| `aos_team_verify` | 驗收員：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞 |
+| `aos_team_beat` | 心跳：`aos-team beat`／`routine`，照 `team/routines.json` 算誰到期、以開單方式派出 |
+| `aos_team_score` | `aos-team score`：把六軸表能自動量的部分讀紀錄填好，只讀不叫模型 |
 
 ---
 

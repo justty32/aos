@@ -78,13 +78,30 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-agent tools add base --target 家 [--root DIR]` | 裝內建工具包 base（read／write／edit／bash／grep／find／ls），`--root` 指工作根目錄 | [04](tutorials/04-tools-and-pause.md) |
 | `aos-agent tools ls/add/rm/alias/unalias [--target 家]` | 看有哪些工具／裝或原地引用一個工具檔或資料夾／拿掉一支（不刪檔）／改名 | [04b](tutorials/04b-access-and-tool-admin.md) |
 | `aos-agent access ls/set/rm/cwd/net [--target 家]` | 看／改工具被關進的牢（`access.json`）：掛哪些資料夾、起點、能不能連網 | [04b](tutorials/04b-access-and-tool-admin.md) |
+| `aos-agent context [--by-round] [--json]` | 送給模型的東西多大（人格、記憶、工具，token 粗估＋上一次端點回報的真數字）；`talk` 的 `/context` 同一份 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
+| `aos-agent compact [--keep-rounds N] [--max-tokens X] [--dry-run] [--prune-archive]` | 機械壓縮記憶，原文存 `prompts/archive/`；`info.json` 的 `compact` 開自動（預設開、上限 32000） | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
+| `aos-agent events [--last N] [--usage]` | 事件紀錄（每批起訖、成敗、毫秒）與 token 用量；滿了自動輪換 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
+| `aos-agent history --archive [SHA] [--grep 字]` | 看壓縮前封存的原文 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
+| `aos-agent notes ls／show KEY` | 看 `note` 工具寫的長期筆記 | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
+| `aos-agent init --template NAME` | 照團隊成員模板生家（人格、工具包、`access.json` 一起裝） | [spec/aos-agent/cli-memory.md](spec/aos-agent/cli-memory.md) |
+| `aos-json get／set／del／append／merge` | 人用的 JSON Pointer 改檔；`--expect-sha` 防互蓋、`--check-directives` 先過指示詞才寫 | [spec/aos-agent/tools-files.md](spec/aos-agent/tools-files.md) |
+| `aos-directives ls／show／set／add／rm／export／import／versions／revert／resolve／check` | 人格（system prompt）按標題分節編輯、存版本可還原；另可解／驗一份 aos JSON 檔的指示詞 | [spec/aos-agent/tools-files.md](spec/aos-agent/tools-files.md) |
+| `aos-team init [--config FILE]／start／stop／ls／rm` | 照名冊建團隊資料夾與每個成員的家（模板）、替成員向 kernel 登記／撤銷、列隊（health、手上的單、最後一封信）、拆隊 | [spec/team/](spec/team/README.md) |
+| `aos-team ask "一句話"`／`route test／save` | 門房：整句句型比對，命中就不叫模型直接做；沒命中、命中兩條或有否定詞就落穿給領隊 | [spec/team/route.md](spec/team/route.md) |
+| `aos-team task ls／show／cancel／reassign` | 人看任務單；取消、改派都是寄申請給郵差 | [spec/team/tasks.md](spec/team/tasks.md) |
+| `aos-team wait ls`／`answer Q "…"` | 人看等他回答的問題、回答一題（寄申請給郵差） | [spec/team/ask.md](spec/team/ask.md) |
+| `aos-team mail [--follow]` | 一封信一行，看團隊的信件往來 | [spec/team/mail.md](spec/team/mail.md) |
+| `aos-team post`（kernel 反覆叫）／`beat`（kernel 反覆叫，同上） | 郵差兼書記走一輪：投信、收驗收結果、看停滯、同步 SESSION-LOG／WAIT_USER；心跳走一輪：照 `routines.json` 算誰到期、以開單派出 | [spec/team/post.md](spec/team/post.md)、[beat.md](spec/team/beat.md) |
+| `aos-team verify t-0001 [--again]` | 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞三種；`--again` 給檢查器壞、人修好之後重交 | [spec/team/verify.md](spec/team/verify.md) |
+| `aos-team routine ls／add／rm` | 心跳的例行事務：新增、看、刪一條到期就派工的例行 | [spec/team/beat.md](spec/team/beat.md) |
+| `aos-team score` | 把六軸表（`axes.md` 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型、不寫檔 | [spec/team/score.md](spec/team/score.md) |
 | `aos-kernel tick`、`aos-agent tick` | 走一格；kernel 自己會叫，人不用打 | — |
 | `aos-cpu` | cpu 的主人程式：顧一個 cpu 家、照單跑程式；daemon 拉起來的每個孩子就是它，平常不用自己叫 | [01](tutorials/01-daemon-kernel.md) |
 | `aos-llm call`、`aos-exec`、`aos-jail` | 問一次模型／照 inst 跑一次程式／把一支程式關進沙盒跑；都是別的指令在叫，`aos-jail` 是 `aos-agent` 送件時自動用，平常不用自己叫 | — |
 
 ## 去哪讀
 
-- **[tutorials/](tutorials/README.md)**：五篇照抄就能跑的教程＋附錄，從開機到管一堆 agent；第 07 篇讓 Claude Code／Codex 當 cpu 跑單子。
+- **[tutorials/](tutorials/README.md)**：八篇照抄就能跑的教程（另有 04b、06 兩篇附錄），從開機到管一堆 agent；第 07 篇讓 Claude Code／Codex 當 cpu 跑單子，第 08 篇用名冊生一支小團隊。
 - **[spec/](spec/README.md)**：每個指令、每種檔案的規範（下表）；給使用者的精簡版是 [agent 家](spec/agent/essentials.md)、[aos-agent 指令](spec/aos-agent/essentials.md) 兩份「使用者只需要懂的」。
 - **[lib/](lib/README.md)**：程式模組與測試（下面「程式」）。
 - **[notes/](notes/README.md)**：任務書、審查、試玩紀錄（下面「筆記」）。
@@ -101,9 +118,10 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | [spec/cpu/](spec/cpu/README.md) | cpu 範式（一個家一個主人：`info`／`state`／`requests`／`responses`、JSON-RPC 信封、ack）與 exec cpu：逐件照 aos-exec 跑一次、回音寫 `responses/` | 2026-09-23 定稿；實作 [`lib/aos_home.py`](lib/aos_home.py)＋[`lib/aos_client.py`](lib/aos_client.py)＋[`lib/aos_exec_cpu.py`](lib/aos_exec_cpu.py)（`aos-cpu`） |
 | [spec/kernel/](spec/kernel/README.md) | kernel：替登記的工作挑空 cpu 派下去、收結果、決定要不要再跑；每次只跑一格 `aos-kernel tick`（09-24 one-boot 起由 daemon 開，帳本 `K/ledger.sqlite`），格接格排程。cpu 按池管（`info.json` 第 2 版池表，09-24 由 proto5-2 納入） | 2026-09-23 定稿；實作 [`lib/aos_kernel.py`](lib/aos_kernel.py)（`aos-kernel`；09-24 拆成 `aos_kernel_*.py` 幾支） |
 | [spec/daemon/](spec/daemon/README.md) | daemon：所有 cpu 的父行程，按池宣告管孩子的啟動、重拉（退避）、收掉；09-24 one-boot 起也替 kernel 定時開 tick；家也照 cpu 範式長；`aos up`／`aos down` 見 [up.md](spec/daemon/up.md) | 2026-09-23 定稿；實作 [`lib/aos_daemon.py`](lib/aos_daemon.py)（`aos-daemon`） |
-| [spec/agent/](spec/agent/README.md) | 一個 agent 就是一個資料夾：info.json 記人格、記憶、工具與排程設定；state.json 記三格進度、批次與恢復紀錄 | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent_home.py`](lib/aos_agent_home.py)＋[`lib/aos_agent_info.py`](lib/aos_agent_info.py) |
-| [spec/aos-agent/](spec/aos-agent/README.md) | `aos-agent tick／start／stop [--target DIR]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`listen`／`status`／`pause`／`continue`／`check`／`tools add`／`talk` 在 §1（09-24 試玩 r2 補；fix-r4 改 `--target`、`listen`、`pause`、tick 鎖；advice-r1 加 `check`；tools-base 加 `tools add`（tools.md §1.8）；talk 加 `talk`（cli-talk-repl.md §1.9）） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
+| [spec/agent/](spec/agent/README.md) | 一個 agent 就是一個資料夾：info.json 記人格、記憶、工具與排程設定；state.json 記三格進度、批次與恢復紀錄；（09-24 第 4 隊補）事件紀錄 [events.md](spec/agent/events.md)、記憶壓縮 [compact.md](spec/agent/compact.md) | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent_home.py`](lib/aos_agent_home.py)＋[`lib/aos_agent_info.py`](lib/aos_agent_info.py) |
+| [spec/aos-agent/](spec/aos-agent/README.md) | `aos-agent tick／start／stop [--target DIR]`：走一格／向 kernel 登記／撤銷排程；模型與工具都交 kernel `add --once`、收回音並 ack。日常的 `init`／`say`／`listen`／`status`／`pause`／`continue`／`check`／`tools add`／`talk` 在 §1（09-24 試玩 r2 補；fix-r4 改 `--target`、`listen`、`pause`、tick 鎖；advice-r1 加 `check`；tools-base 加 `tools add`（tools.md §1.8）；talk 加 `talk`（cli-talk-repl.md §1.9）；tool-era T3 補人用 JSON／人格編輯 [tools-files.md](spec/aos-agent/tools-files.md)；T4 補記憶 [cli-memory.md](spec/aos-agent/cli-memory.md)） | 2026-09-24 定稿第 2 版；實作 [`lib/aos_agent.py`](lib/aos_agent.py) 與拆分模組（見 [lib/](lib/README.md)） |
 | [spec/aos-llm/](spec/aos-llm/README.md) | `aos-llm call [AGENT_DIR]`（09-24 fix-r4 由 `aos-llm-call` 改名）：讀 agent 家與 `AOS_LLM_CONFIG`、組請求、打一次 HTTP、印模型回的 message | 2026-09-24 定稿第 2 版；實作 [`lib/aos_llm_call.py`](lib/aos_llm_call.py) |
+| [spec/team/](spec/team/README.md) | 一支 agent 團隊的資料夾、名冊、信、任務單與問人：三種會想的成員（領隊、工人、審查）＋四個機械員（門房、郵差兼書記、驗收員、心跳），機械員不問模型 | 2026-09-24 第 1 版；實作 [`lib/aos_team*.py`](lib/README.md)＋[`cli/aos-team`](cli/aos-team) |
 
 ## 程式
 
@@ -113,10 +131,11 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 
 | 位置 | 講什麼 | 現況 |
 |---|---|---|
-| [lib/](lib/README.md) | 五十八支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組；tool-era T3 補人用 aos-directives／aos-json，T1 補 aos-team。逐檔 API 與測試表見 lib README | 71 個測試檔、2044 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
+| [lib/](lib/README.md) | 六十七支標準庫 Python 3.12 以上模組。底層 directives → inst → exec；home／client 共用家與交件；exec_cpu 執行、daemon 管孩子、kernel 排程；agent 共用讀驗、批次、輸入、結果與恢復模組；tool-era T3 補人用 aos-directives／aos-json，T1 補 aos-team 骨架，T2 補郵差／驗收／心跳，T4 補記憶（events／context／compact／notes）。逐檔 API 與測試表見 lib README | 75 個測試檔、2122 條：`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test` |
 | [cli/](cli/) | 十一個薄入口：`aos`（09-24 one-boot，`aos up`／`aos down` 一條開機、一條停機）、`aos-exec`、`aos-cpu`、`aos-daemon`、`aos-kernel`、`aos-llm`（09-24 fix-r4 由 `aos-llm-call` 改名）、`aos-agent`、`aos-jail`（09-24 access-impl，aos-agent 自動用）、`aos-directives`／`aos-json`（09-24 tool-era T3，人用）、`aos-team`（09-24 tool-era T1，團隊分派） | agent 已接上 kernel；測試涵蓋崩潰窗口、真 daemon＋kernel＋exec cpu 整合與完整停機 |
+| [templates/](templates/) | `aos-agent init --template` 生家用的成員模板：`lead`／`worker`／`reviewer`／`coder` 四個（人格、工具包、`access.json` 一定附；`notes: true` 的多掛 `/work/notes`） | 09-24 tool-era T1；`init_from_template()` 在 [`lib/aos_agent_init.py`](lib/aos_agent_init.py) |
 | [templates/cli-agents/](templates/cli-agents/README.md) | Claude Code／Codex 當普通 cpu 的範本（階 0，不是程式）：另一個 kernel 家的設定、`claude -p` 與 `codex exec` 唯讀審查的單子、接著聊的分岔版 | 09-24 stage0；用法見[教程 07](tutorials/07-cli-agents.md) |
-| [tools/](tools/README.md) | `aos-agent tools add` 裝的工具包：內建 `base`（read／write／edit／bash／grep／find／ls，仿 pi） | 09-24 tools-base；每支工具怎麼用、錯誤長怎樣見 [tools/README.md](tools/README.md) |
+| [tools/](tools/README.md) | `aos-agent tools add` 裝的工具包，現在六包：`base`（read／write／edit／bash／grep／find／ls，仿 pi）、`files`（json_edit／md_section）、`wf`（wf_doc／wf_init／wf_lint／wf_residue／wf_table）、`notes`（長期筆記 `note`）、`team`（`team_say` 寄信）、`task`（`handoff`／`board`／`review_result`／`ask_human`／`compact_me`，給團隊成員用） | 09-24 tools-base；tool-era T1／T2／T3／T4 陸續補；每支工具怎麼用、錯誤長怎樣見 [tools/README.md](tools/README.md) |
 
 拍板過程的任務書副本在 [notes/2026-09-21-inst-rev-rules.md](notes/2026-09-21-inst-rev-rules.md)（A～L 節）。
 

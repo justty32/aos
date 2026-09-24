@@ -1,4 +1,4 @@
-# proto5/lib — 五十八支 Python 模組
+# proto5/lib — 六十七支 Python 模組
 
 ← [proto5 README](../README.md)｜規範：[cpu](../spec/cpu/README.md)、[daemon](../spec/daemon/README.md)、[kernel](../spec/kernel/README.md)、[aos-agent](../spec/aos-agent/README.md)
 
@@ -66,6 +66,10 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_tools_edit.py`](aos_agent_tools_edit.py) | `aos-agent tools ls／rm／alias／unalias` 與共用的 info 編輯（管理鎖、試算後整份重寫） |
 | [`aos_agent_access.py`](aos_agent_access.py) | 權限牆（access.json）讀驗、信任資料、重疊檢查、快照 |
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
+| [`aos_agent_events.py`](aos_agent_events.py) | 事件紀錄（tool-era T4，spec/agent/events.md）：agent 家 `log/events.jsonl` 一行一事件（收件、每批起訖、壓縮），`aos-llm call` 的 `log/usage.jsonl` token 用量；只有持 `.tick.lock` 的一方寫，至少一次＋去重，滿了自動輪換 |
+| [`aos_agent_context.py`](aos_agent_context.py) | `aos-agent context`（tool-era T4，cli-memory.md）：送給模型的東西多大，人格＋記憶＋工具的字數／token 粗估；跟 `talk` 的 `/context` 共用同一份算法 |
+| [`aos_agent_compact.py`](aos_agent_compact.py) | `aos-agent compact`（tool-era T4，spec/agent/compact.md）：機械壓縮記憶（封存＝8 KB 機械摘要），tick idle 時的自動壓縮、`compact` 申請、`history --archive`；不叫模型，每步可重跑 |
+| [`aos_agent_notes.py`](aos_agent_notes.py) | `aos-agent notes ls／show`（tool-era T4）：讀 `tools/notes/` 那支 `note` 工具寫的 `wf-table/1` 長期筆記檔，不叫模型 |
 | [`aos_jail.py`](aos_jail.py) | `aos-jail`：組 bwrap 參數並 exec（工具關進牢裡跑） |
 | [`aos_json_cli.py`](aos_json_cli.py) | `aos-json`（tool-era T3）：人用的 JSON Pointer 改檔（get／set／del／append／merge），照原檔縮排重寫、`--expect-sha` 防衝突，`--check-directives` 先過 aos_directives 才寫 |
 | [`aos_team_format.py`](aos_team_format.py) | 團隊共用格式（spec/team/）：資料夾佈局、名冊 `team.json`、信、申請、任務單、問題的讀驗，以及共用的 id／時間／寫檔 |
@@ -77,6 +81,10 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_ask_cli.py`](aos_team_ask_cli.py) | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
 | [`aos_team_route.py`](aos_team_route.py) | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型 |
 | [`aos_team_task_cli.py`](aos_team_task_cli.py) | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
+| [`aos_team_post.py`](aos_team_post.py) | 郵差兼書記（tool-era T2，spec/team/post.md）：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER；崩在任何一步重跑同一行都收得回來，不叫模型 |
+| [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡 |
+| [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
+| [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
 `aos`→`aos_up.main`、`aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、
@@ -86,7 +94,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2044 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2122 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -485,10 +493,10 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2044 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2122 條；repo 根目錄
 ```
 
-共 71 個測試檔、2044 條（09-24 停車＋喚醒 rebase 到 4c42288 後實跑，約 160 秒）；涵蓋底層執行、daemon／kernel 按池行為、
+共 75 個測試檔、2122 條（收尾隊 T5 實跑，約 136 秒；1 條紅：`test_descriptions_are_short`，`tools/task/` 加 `compact_me` 後五支工具描述合計 2737 字元、超過 2700 的門檻，留給隊長對——不是這份索引的事，程式沒改）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
@@ -539,6 +547,8 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_agent_daily.py](test/test_agent_daily.py) | init／say／status／continue、stop 用 tick.json、listen 退回讀記憶、help、用法錯 |
 | [test_agent_daily_edges.py](test/test_agent_daily_edges.py) | say --wait 的等待條件、暫態壞檔、逾時與連敗提前結束 |
 | [test_agent_status_r3.py](test/test_agent_status_r3.py) | status 的 health、這次原因／已恢復、連敗次數、-v、--json 新鍵 |
+| [test_agent_memory.py](test/test_agent_memory.py) | 第 4 隊（記憶與紀錄）：`context`、`events`、`usage`、`compact`（含 KILL 崩潰窗口、tick 鎖、自動壓縮、申請）、`history --archive` |
+| [test_agent_notes.py](test/test_agent_notes.py) | `tools/notes/` 的 `note` 工具（add／find／get／rm，wf-table/1 存檔）與 `aos_agent_notes.py`（`notes ls／show`，含 access.json 牢裡路徑換算） |
 | [test_agent_listen_tweak.py](test/test_agent_listen_tweak.py) | listen `--last N`、輪次標頭與收話時間、`--show-calls`／`--show-calls-full`、即時呼叫行 |
 | [test_agent_talk.py](test/test_agent_talk.py) | `aos-agent talk`：一句問答、不重印、slash 指令、逾時補印、Ctrl-C／EOF |
 | [test_agent_integration.py](test/test_agent_integration.py) | 真 daemon／kernel／exec cpu 的 agent 整合（池表） |
@@ -555,9 +565,19 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_tools_wf.py](test/test_tools_wf.py) | `proto5/tools/wf/`：workflows 工具包（wf_doc／wf_init／wf_lint／wf_residue／wf_table）；wf_init 兩個崩潰窗口真 SIGKILL 重跑收得回來 |
 | [test_team_format.py](test/test_team_format.py) | 工具大開發時代 T1 第 0 步：團隊共用格式（spec/team/）、任務狀態機、問人、申請登記表、`aos-team` 分派 |
 | [test_team_init.py](test/test_team_init.py) | 第 1 隊：aos-team init／start／stop／ls／rm、模板生家、task 工具包 |
+| [test_team_notes_compact.py](test/test_team_notes_compact.py) | T5 收尾：模板 `notes: true` 的筆記掛載（新家、舊家補掛、保留名）、`compact_me` 工具、郵差收 compact 申請、`Layout.events()` |
 | [test_team_review_fix.py](test/test_team_review_fix.py) | 第 1 隊 astra 必修回歸：審查重播、逾期通知、問題綁單、init 崩潰窗口、rm 中斷、換模板 |
 | [test_team_route.py](test/test_team_route.py) | 第 1 隊門房：整句句型、落穿、例句全過才准存 |
 | [test_team_task_cli.py](test/test_team_task_cli.py) | 第 1 隊人用指令：task ls／show／cancel／reassign、wait ls、answer |
+| [test_team_say.py](test/test_team_say.py) | 第 2 隊 `tools/team/team_say`（spec/team/mail.md）：寫一封信進自己的 outbox；`config.json` 讀取與參數驗證 |
+| [test_team_post.py](test/test_team_post.py) | 第 2 隊郵差兼書記（`aos_team_post`；post.md）：投遞、退件、任務單後續動作、驗收工作、審查、崩潰窗口、看停滯、書記 |
+| [test_team_post_crash.py](test/test_team_post_crash.py) | 第 2 隊郵差崩潰窗口：真 SIGKILL 在窗口裡（收件人重跑前把信收走），重跑不重投、不漏動作 |
+| [test_team_post_live.py](test/test_team_post_live.py) | 第 2 隊驗收⑧：真 daemon＋kernel，郵差當反覆工作跑，一封信到對方記憶；領隊 handoff → 工人（假模型）牢裡叫 `team_say` 回 DONE → 郵差把驗收當一次性工作提交 → done |
+| [test_team_verify.py](test/test_team_verify.py) | 第 2 隊驗收員（`aos_team_verify.py`）：固定檢查器（file_exists／table_filled／check）、judge 排除、CLI |
+| [test_team_beat.py](test/test_team_beat.py) | 第 2 隊心跳（`aos_team_beat`；beat.md）：到期派出、在途不重派、DONE 才更新、漏跑只補一次並報告、模型提的要人批 |
+| [test_team_rulings.py](test/test_team_rulings.py) | 第 2 隊追加：使用者五題裁決（郵差間隔可設定、心跳用自己的身分派工、一次性例行叫 `once`、檢查器壞≠沒過、例行完成不寄 DONE 擾人） |
+| [test_team_score.py](test/test_team_score.py) | T5 收尾 `aos-team score`（score.md）：手造一支小團隊的紀錄，驗六軸計數、門檻、範圍、去重、輪換、`--runs`、`--json`、壞行 |
+| [test_team_t5.py](test/test_team_t5.py) | T5 收尾的小改動：審查單帶事實、`aos-team ls` 列郵差與心跳、模板人格的變數與關鍵句 |
 
 共用工具（不是測試檔）：[\_util.py](test/_util.py)（底層／agent）、[\_daemon_util.py](test/_daemon_util.py)
 （控制協議孩子、輪詢、孤兒隔離 driver、`read_json`／`wait_for`）、[\_kernel_util.py](test/_kernel_util.py)

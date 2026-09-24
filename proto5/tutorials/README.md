@@ -15,6 +15,7 @@
 | 05 | [管一大堆 agent](05-many-agents.md) | cpu 開幾顆、`aos-kernel cpu add／rm／ls` 加減、一次操作一批、`aos-kernel ls` 看全局、health、`continue --all` |
 | 06 | [附錄：不用 init，手寫一個 agent 家（和 kernel 家）](06-appendix-manual-home.md) | agent 家就是一個資料夾加四份檔；kernel 家就是一份池表（`K/info.json`） |
 | 07 | [讓 Claude Code 和 Codex 當 cpu 跑單子](07-cli-agents.md) | 不寫程式：另開一個 kernel 家（claude 1 顆、codex 2 顆），丟唯讀審查單與 claude 單、接著聊、取消；**花你自己的訂閱額度**，先讀「三個洞」 |
+| 08 | [一支小團隊](08-team.md) | 用名冊生領隊、工人、審查三個成員，丟一件事、看信、看任務狀態，門房不叫模型直接接住一句話 |
 
 只想最快看到 agent 回話：[proto5 README 的「五分鐘」](../README.md#五分鐘看到-agent-回話)，那段是 01＋03 的濃縮。
 
