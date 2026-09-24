@@ -6,8 +6,8 @@ import os
 import time
 
 import aos_daemon_pools as pools
-import aos_exec
 import aos_home
+from aos_exec_run import DEFAULT_DIR_TARGET
 
 
 class DaemonError(aos_home.HomeError):
@@ -125,7 +125,7 @@ class Requests:
         if total > self.budget:                                        # 6
             raise DaemonError("TooMany", "全 daemon 宣告 %d 顆，超過上限 %d" % (total, self.budget))
         decl = dict(old) if old is not None else {
-            "pool": name, "owner": p["owner"], "ver": 0, "dir_target": aos_exec.DEFAULT_DIR_TARGET}
+            "pool": name, "owner": p["owner"], "ver": 0, "dir_target": DEFAULT_DIR_TARGET}
         decl.update({k: v for k, v in p.items() if k != "owner"})
         changed = old is None or (
             pools.members(old["count"], old["skip"]) != pools.members(p["count"], p["skip"]))

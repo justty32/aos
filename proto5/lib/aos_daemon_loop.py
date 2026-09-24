@@ -15,8 +15,9 @@ import time
 
 import aos_daemon_pools as pools
 import aos_daemon_rpc
-import aos_exec
 import aos_home
+from aos_exec_run import DEFAULT_DIR_TARGET
+from aos_exec_spawn import SpawnError
 
 Kid, Pool = pools.Kid, pools.Pool
 
@@ -242,8 +243,8 @@ class Daemon(aos_daemon_rpc.Requests):
         """proto5 §2 的 go 握手：fork → 寫 kids 檔（running）→ go。"""
         try:
             handle = pools.spawn_child(pool.target(kid.i), pool.decl.get("dir_target") or
-                                       aos_exec.DEFAULT_DIR_TARGET)
-        except aos_exec.SpawnError as exc:
+                                       DEFAULT_DIR_TARGET)
+        except SpawnError as exc:
             pools.log("SpawnFailed", "池 %s 的 %d 號拉不起來：%s" % (pool.name, kid.i, exc.msg))
             self.to_waiting(pool, kid, "failed", kid.streak + 1)
             return

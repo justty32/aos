@@ -6,13 +6,13 @@ import sys
 import time
 from unittest import mock
 
-import aos_exec
+import aos_exec_spawn
 from _util import Base
 
 
 class SpawnTargetTests(Base):
     def spawn(self, target, **kw):
-        child = aos_exec.spawn_target(target, **kw)
+        child = aos_exec_spawn.spawn_target(target, **kw)
         self.addCleanup(self.reap, child.process)
         return child
 
@@ -40,8 +40,8 @@ class SpawnTargetTests(Base):
         return self.inst(dict(argv=[sys.executable, "-c", body], **fields), "inst.json")
 
     def bad(self, target, code):
-        with self.assertRaises(aos_exec.SpawnError) as cm:
-            aos_exec.spawn_target(target)
+        with self.assertRaises(aos_exec_spawn.SpawnError) as cm:
+            aos_exec_spawn.spawn_target(target)
         self.assertEqual(cm.exception.code, code)
         self.assertTrue(cm.exception.msg)
 
