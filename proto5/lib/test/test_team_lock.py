@@ -113,6 +113,27 @@ class LockTests(unittest.TestCase):
         out = lock.on_lock(self.lay, self.roster, req('human', 'r1', op='ls'))
         self.assertEqual(out[0]['text'], '沒有任何鎖')
 
+    def test_forged_future_at_does_not_extend_expiry(self):
+        """astra 審查：req['at'] 不可信（模型能自己塞一份帶未來時刻的申請），expires_at 一律用郵差的時鐘算。"""
+        r = req('worker-1', 'r1', op='acquire', name='x', ttl_seconds=60, at='2099-01-01T00:00:00+08:00')
+        eff = lock.on_lock(self.lay, self.roster, r)
+        rec = fmt.read_json(self.lay.lock('x'))
+        self.assertNotIn('2099', rec['expires_at'])
+        self.assertNotIn('2099', rec['acquired_at'])
+        self.assertIn('取得鎖', eff[0]['text'])
+
+    def test_name_with_slash_and_unicode_does_not_need_subdirs(self):
+        """astra 審查 M2：docs/WORKFLOWS.md、中文名不用先建子目錄，ls 也列得到（平面檔名、原名存內容裡）。"""
+        lock.on_lock(self.lay, self.roster, req('worker-1', 'r1', op='acquire', name='docs/WORKFLOWS.md'))
+        lock.on_lock(self.lay, self.roster, req('worker-1', 'r2', op='acquire', name='共用設定'))
+        out = lock.on_lock(self.lay, self.roster, req('worker-2', 'r3', op='ls'))
+        self.assertIn('docs/WORKFLOWS.md', out[0]['text'])
+        self.assertIn('共用設定', out[0]['text'])
+        # 檔名本身是平面、固定長度的十六進位，不含 name 原文、不含 /
+        names = [p.name for p in self.lay.locks.iterdir()]
+        self.assertEqual(len(names), 2)
+        self.assertTrue(all(len(n) == len('0' * 64 + '.json') and '/' not in n for n in names), names)
+
     def test_bad_op_and_bad_name(self):
         self.err('FormatInvalid', lock.on_lock, self.lay, self.roster, req('worker-1', 'r1', op='bogus'))
         self.err('FormatInvalid', lock.on_lock, self.lay, self.roster, req('worker-1', 'r1', op='acquire', name='BAD NAME'))

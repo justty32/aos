@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
-"""access_request：申請多掛一個資料夾或開網路（T-access-req，catalog.md）。
+"""access_request：申請多掛一個資料夾（T-access-req，catalog.md）。
 
-模型自己改不到 access.json——這裡只是把申請包成一題問人（走 T-ask 的待辦：人 aos-team wait ls／answer）。
-人同意之後，要由人自己跑 aos-agent access set（或 access net on）才真的生效；這支工具不會自動改表。
+**只做資料夾**（09-24 astra 審查 M7 修：原本 description 跟這裡都寫「或開網路」，但 schema 逼填 name／path_hint／
+mode，根本填不出一個「純開網路」的申請，是空頭支票）；要開網路的需求請用 ask_human 問人，這版沒有專門的
+network 申請分支。模型自己改不到 access.json——這裡只是把申請包成一題問人（走 T-ask 的待辦：人 aos-team
+wait ls／answer）。人同意之後，要由人自己跑 aos-agent access set 才真的生效；這支工具不會自動改表。
 """
+import re
+import shlex
 import sys
 
 from _team import arg, fail, only_keys, run, send
 
 MODES = ('ro', 'rw')
+# 跟 aos_agent_access.NAME 同一條規則（lib 不能從工具包 import，這裡照抄）：小寫英數與底線／連字號；
+# 保留字跟 aos_team_format.RESERVED_MOUNTS 一致（09-24 astra 審查 M3：原本沒驗，建議指令裡塞了什麼都照印）。
+NAME = re.compile(r'[a-z0-9_-]+\Z')
+RESERVED = ('ws', 'outbox', 'board', 'notes')
 
 
 def main(args, cfg):
     only_keys(args, ('name', 'path_hint', 'mode', 'why'))
     name = arg(args, 'name', str, required=True)
+    if not NAME.match(name) or name in RESERVED:
+        fail('BadArguments', 'name must match [a-z0-9_-]+ and not be one of %s' % ', '.join(RESERVED))
     path_hint = arg(args, 'path_hint', str, required=True)
     mode = arg(args, 'mode', str, required=True)
     if mode not in MODES:
@@ -21,9 +31,12 @@ def main(args, cfg):
     why = arg(args, 'why', str, required=True)
     if len(why) > 1000:
         fail('BadArguments', 'why is too long (max 1000 chars)')
+    # 問句裡建議的指令是給人抄的：name（模型填的）要 shell-quote，免得人不看內容照抄就被夾帶指令執行
+    # （astra 審查找到：$(…) 這種字串原樣放進去會被殼層當替換算）。
     question = ('%s 想申請多掛一個資料夾：name=%s path_hint=%s mode=%s（理由：%s）。'
                '同意的話麻煩你自己跑：aos-agent access set %s <實際路徑> %s --target <%s 的家>（模型自己改不到 access.json）。'
-               % (cfg['member'], name, path_hint, mode, why, name, ('--ro' if mode == 'ro' else '--rw'), cfg['member']))
+               % (cfg['member'], name, path_hint, mode, why, shlex.quote(name),
+                  ('--ro' if mode == 'ro' else '--rw'), cfg['member']))
     rid = send(cfg, 'ask', {'question': question, 'options': ['同意', '不同意']})
     return 'queued access request %s. The answer arrives as new mail. End this turn.' % rid
 

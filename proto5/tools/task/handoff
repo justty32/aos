@@ -6,15 +6,28 @@ from _team import arg, fail, only_keys, run, send
 
 KEYS = ('assignee', 'workflow', 'goal', 'facts', 'done_when', 'max_attempts', 'deadline_minutes')
 KINDS = {'file_exists': 'path', 'table_filled': 'path', 'check': 'name', 'cmd_ok': 'run', 'judge': 'text'}
-# G（09-24 W2C，t5/README.md §8）：兩輪試玩，領隊派「把 X.md 改寫得更白話」這類單都忘記放 wf_lint_strict。
-# 選在這裡（handoff 這一層）機械補、不改門房規則：門房／routes.json 是 A 隊地盤（T-route），這裡改動範圍最小、
-# 不管請求是不是經過門房都補得到（領隊自己開單、心跳照例行開單一樣有效）。判法很土：goal／facts／workflow
-# 合起來的文字裡同時有 .md 與一個改寫用詞，就當作是「改 workflows 文件類」單子。
+# G（09-24 W2C，t5/README.md §8；09-24 astra 審查 M6 修正範圍宣稱）：兩輪試玩，領隊派「把 X.md 改寫得更白話」
+# 這類單都忘記放 wf_lint_strict。選在這裡（handoff 這一層）機械補、不改門房規則：門房／routes.json 是 A 隊地盤
+# （T-route），這裡改動範圍最小。**只涵蓋模型叫這支工具開的單**——領隊自己開單會補到；心跳照例行派工是
+# aos_team_beat.py 自己組 handoff 申請直接送 aos_team_requests.handle()，不經過這支工具，不會補到（心跳的例行
+# 本來就是人登記或人批准過的，這一版沒把 lint 邏輯複製過去，避免兩處判法各改各的、之後對不齊）。判法很土：
+# goal 的文字裡同時有 .md 與一個改寫用詞，就當作是「改 workflows 文件類」單子。
+# 09-24 astra 審查 S1：純關鍵字比對本來就有假陽性、假陰性，這裡收窄降低（不是根治）：
+# ①只看 goal，不看 facts／workflow——facts 常常是「參考 README.md」這種背景資料，不是要改的檔；workflow
+#   幾乎每次都是 IMPORT.md 這種 .md 入口檔，混進來等於每件事都判「有 .md」，這個欄位本身完全篩不掉什麼；
+#   原本兩個都混進來會把「改寫 app.py（facts 或 workflow 剛好提到／是 .md）」誤判成要補 md 的 lint；
+# ②goal 裡有否定詞（不要／別／不用／不准）一律不補——「不要把 README.md 改成更白話」這種明講「不要改」的單子，
+#   不該被機械補一條檢查改後結果。「不能」刻意不放進負詞表：t5 真跑的原句「改寫得更白話，意思不能變」就有這兩個字，
+#   講的是「意思」不能變、不是叫你別改寫，放進去會把最初那個真實案例也判成假陽性擋掉。
+# 英文措辭（Rewrite README.md）還是漏判，這版沒做語言判斷，留給使用者要不要翻案再議。
 LINT_TRIGGER_WORDS = ('白話', '改寫', '更好懂', '更易讀', '講白話')
+NEGATION_WORDS = ('不要', '別', '不用', '不准')
 
 
 def _wants_auto_lint(body):
-    text = ' '.join(str(body.get(k) or '') for k in ('goal', 'facts', 'workflow'))
+    text = str(body.get('goal') or '')
+    if any(w in text for w in NEGATION_WORDS):
+        return False
     return '.md' in text and any(w in text for w in LINT_TRIGGER_WORDS)
 
 

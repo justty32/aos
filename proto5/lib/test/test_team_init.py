@@ -243,6 +243,14 @@ class ToolUnitTests(unittest.TestCase):
                                     'done_when': [{'kind': 'file_exists', 'path': 'x'}]})
         self.assertNotIn('auto-added', out)
         self.assertEqual(self.sent()[2]['done_when'], [{'kind': 'file_exists', 'path': 'x'}])
+        # astra 審查 S1 修：facts 提到 .md 不算數（那多半是背景參考，不是要改的檔）
+        out = self.tool('handoff', {'assignee': 'worker-1', 'workflow': 'IMPORT.md', 'goal': '改寫 app.py',
+                                    'facts': '參考 README.md', 'done_when': [{'kind': 'file_exists', 'path': 'x'}]})
+        self.assertNotIn('auto-added', out)
+        # astra 審查 S1 修：goal 有否定詞就不補
+        out = self.tool('handoff', {'assignee': 'worker-1', 'workflow': 'IMPORT.md',
+                                    'goal': '不要把 README.md 改成更白話', 'done_when': [{'kind': 'judge', 'text': 'x'}]})
+        self.assertNotIn('auto-added', out)
 
     def test_handoff_refuses(self):
         e = self.tool('handoff', {'assignee': 'ghost', 'workflow': 'w', 'goal': 'g',
@@ -337,6 +345,17 @@ class ToolUnitTests(unittest.TestCase):
         e = self.tool('access_request', {'name': 'x', 'path_hint': 'y', 'mode': 'rwx', 'why': 'z'}, code=1)
         self.assertIn('mode', e['message'])
 
+    def test_access_request_rejects_bad_mount_name(self):
+        """astra 審查 M3：name 沒驗過就塞進建議指令；現在照 aos_agent_access.NAME 的規則擋（含殼層夾帶字元、保留字）。"""
+        self.config(member='worker-1')
+        for bad in ('$(id)', 'Has-Upper', 'has space', 'outbox', 'notes'):
+            e = self.tool('access_request', {'name': bad, 'path_hint': 'y', 'mode': 'ro', 'why': 'z'}, code=1)
+            self.assertEqual(e['error'], 'BadArguments', bad)
+        self.assertEqual(self.sent(), [])
+        out = self.tool('access_request', {'name': 'shared-notes', 'path_hint': 'y', 'mode': 'ro', 'why': 'z'})
+        self.assertIn('End this turn', out)
+        self.assertIn("access set shared-notes", self.sent()[0]['question'])
+
     def test_persona_propose(self):
         self.config(member='worker-1')
         out = self.tool('persona_propose', {'text': '遇到殘留一律先跑 wf_residue', 'why': '省一次來回'})
@@ -346,6 +365,14 @@ class ToolUnitTests(unittest.TestCase):
         self.assertEqual(req['kind'], 'ask')
         self.assertIn('殘留', req['question'])
         self.assertIn('persona append', req['question'])
+
+    def test_persona_propose_shell_quotes_the_suggested_command(self):
+        """astra 審查：text 裡的 $(…) 以前原樣塞進雙引號，人照抄就會被殼層當替換算；現在要單引號起來。"""
+        self.config(member='worker-1')
+        out = self.tool('persona_propose', {'text': 'Please preserve literal $(id)'})
+        self.assertIn('End this turn', out)
+        [req] = self.sent()
+        self.assertIn("persona append --target <worker-1 的家> 'Please preserve literal $(id)'", req['question'])
 
     def test_routine_propose(self):
         self.config(member='lead')

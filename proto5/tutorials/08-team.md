@@ -163,13 +163,12 @@ aos-team ask "看一下單子"
 
 ## 7. 申請：多掛資料夾、改人格、搶檔、加例行
 
-模型自己改不到信任資料（`access.json`、人格、`routines.json`），碰得到的只有寄一份**申請**——`aos-team wait ls`
-看得到、你 `answer` 准或拒；**答案本身不會自動生效**，准了之後你要自己跑對應的指令。四種：
+模型自己改不到信任資料（`access.json`、人格、`routines.json`），碰得到的只有寄一份**申請**。四種申請的「准了之後怎麼生效」**不是同一套**，分開講（09-24 astra 審查 M8）：
 
-- 工人想多掛一個資料夾：`access_request` → 你 `aos-team answer q-0004 "同意"` → 你自己 `aos-agent access set NAME PATH --ro --target $W/myteam/members/worker-1`。
-- 工人想改自己的人格：`persona_propose` → 同意後你自己 `aos-agent persona append --target $W/myteam/members/worker-1 "…"`（也能 `persona show`／`set`）。
-- 工人跟別的工人搶同一個檔：`lock`（`acquire`／`release`／`ls`）——這個**不用你批准**，拿不到立即退一封信說誰拿著、到期幾點；過期後誰都能重拿。人也能用 `aos-team lock ls／acquire／release` 插一腳。
-- 領隊想加一條重複做的事：`routine_propose` → 開一題問你「要讓心跳自動跑嗎？」→ `answer q-0005 "批准"` 之後心跳才會照時間派（`aos-team routine ls` 看得到「人批准了」）。
+- 工人想多掛一個資料夾：`access_request` → 開一題問你 → `aos-team wait ls` 看得到、你 `aos-team answer q-0004 "同意"` → **答案本身不會自動生效**，你要自己再跑一次 `aos-agent access set NAME PATH --ro --target $W/myteam/members/worker-1`。
+- 工人想改自己的人格：`persona_propose` → 同上，開一題問你 → 同意之後**你要自己再跑** `aos-agent persona append --target $W/myteam/members/worker-1 "…"`（也能 `persona show`／`set`）。
+- 工人跟別的工人搶同一個檔：`lock`（`acquire`／`release`／`ls`）——這個**不開題問你**，郵差直接處理：拿不到立即退一封信說誰拿著、到期幾點；過期後誰都能重拿。人也能用 `aos-team lock ls／acquire／release` 插一腳，一樣不用誰批准。
+- 領隊想加一條重複做的事：`routine_propose` → 開一題問你「要讓心跳自動跑嗎？」→ 你 `aos-team answer q-0005 "批准"` → **不用你再跑別的指令**：批准這個答案本身就讓心跳往後照時間派（`aos-team routine ls` 看得到「人批准了」）。
 
 細節：[ask.md〈借用〉](../spec/team/ask.md)、[lock.md](../spec/team/lock.md)、[persona.md](../spec/agent/persona.md)、[beat.md〈模型端〉](../spec/team/beat.md)。
 

@@ -2,30 +2,38 @@
 模型改不到——模型只能用 persona_propose 工具寄一份提案（走 T-ask 的待辦），人看過同意了才用這支指令真的寫進
 prompts/system.json。三個動作都不叫模型、不碰任何牢（persona 檔本來就只有 agent 自己的 runtime 讀，不經工具）。
 
-找人格檔：<家>/info.json 的 "system"（相對＝相對 agent 家）；沒有這個檔或沒寫 system＝<家>/prompts/system.json
-（跟 aos_agent_home 的預設一致）。
+找人格檔：<家>/info.json 的 "system"（跟 aos-llm、aos-agent 一樣解指示詞——可以是 `{"$env": …}`／`{"$ref": …}`
+這種，不能只當字面字串讀；09-24 astra 審查 M4：舊版直接 `info.get('system')`，遇到指示詞物件會誤判成沒設定、
+默默退回預設檔，跟 runtime 實際讀的檔不是同一份，寫了也沒用還印成功）；沒有這個檔或沒寫 system＝
+<家>/prompts/system.json（跟 aos_agent_home 的預設一致）。
 """
 import json
 import os
 
 import aos_home
-from aos_agent_home import AgentError
+from aos_agent_home import AgentError, read_info_doc, resolve_field
+from aos_directives import Context, DirectiveError
 
 DEFAULT_REL = os.path.join('prompts', 'system.json')
 
 
 def _system_path(base):
-    info_path = os.path.join(base, 'info.json')
-    if not os.path.isfile(info_path):
-        return os.path.join(base, DEFAULT_REL)
     try:
-        info = aos_home.read_json(info_path)
-    except (OSError, ValueError) as e:
-        raise AgentError('ReadFailed', 'cannot read %s: %s' % (info_path, e)) from e
-    rel = info.get('system') if isinstance(info, dict) else None
-    if not isinstance(rel, str) or not rel:
-        rel = DEFAULT_REL
-    return os.path.join(base, rel)
+        doc = read_info_doc(base)
+    except AgentError as e:
+        if e.code == 'NotAnAgent':      # 沒有 info.json：當還沒開過機，用預設路徑（show 印空字串）
+            return os.path.join(base, DEFAULT_REL)
+        raise
+    if 'system' not in doc.root:
+        return os.path.join(base, DEFAULT_REL)
+    ctx = Context(doc, base_dir=base, env=os.environ)
+    try:
+        value = resolve_field(doc, ctx, ['system'])
+    except (AgentError, DirectiveError) as e:
+        raise AgentError('FieldTypeMismatch', 'info.json 的 system 解不開：%s' % e) from e
+    if not isinstance(value, str) or not value:
+        raise AgentError('FieldTypeMismatch', 'info.json 的 system 解出來必須是非空路徑字串（現在是 %r）' % (value,))
+    return os.path.join(base, value)
 
 
 def _read(path):

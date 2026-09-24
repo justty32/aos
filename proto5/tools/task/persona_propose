@@ -4,6 +4,7 @@
 人格是信任資料，模型不能直接改——這裡只是把提案包成一題問人（走 T-ask 的待辦：人 aos-team wait ls／answer）。
 人同意之後，要由人自己跑 aos-agent persona append（或 set）才真的寫進 prompts；這支工具不會自動改人格。
 """
+import shlex
 import sys
 
 from _team import arg, fail, only_keys, run, send
@@ -17,9 +18,11 @@ def main(args, cfg):
     why = arg(args, 'why', str)
     if why is not None and len(why) > 1000:
         fail('BadArguments', 'why is too long (max 1000 chars)')
+    # 問句裡建議的指令是給人抄的：text（模型填的）要 shell-quote，免得人不看內容照抄就被夾帶指令執行
+    # （astra 審查找到：原本原樣塞進雙引號，text 裡的 $(…) 會被殼層當替換算）。
     question = ('%s 提議修改自己的人格，加一句：「%s」%s。同意的話麻煩你自己跑：'
-               'aos-agent persona append --target <%s 的家> "%s"（模型自己改不到 prompts/system.json）。'
-               % (cfg['member'], text, ('（理由：%s）' % why) if why else '', cfg['member'], text))
+               'aos-agent persona append --target <%s 的家> %s（模型自己改不到 prompts/system.json）。'
+               % (cfg['member'], text, ('（理由：%s）' % why) if why else '', cfg['member'], shlex.quote(text)))
     rid = send(cfg, 'ask', {'question': question, 'options': ['同意', '不同意']})
     return 'queued persona proposal %s. The answer arrives as new mail. End this turn.' % rid
 

@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import aos_agent_persona as persona  # noqa: E402
@@ -80,6 +81,21 @@ class PersonaLibTests(unittest.TestCase):
         self.out(persona.set_, str(home), '自訂路徑')
         self.assertTrue((home / 'prompts' / 'persona.json').is_file())
         self.assertFalse((home / 'prompts' / 'system.json').exists())
+
+    def test_resolves_directive_system_field(self):
+        """astra 審查 M4：system 是 {"$env": …} 這種指示詞物件，要解到跟 runtime 一樣的檔，不能誤判成沒設定。"""
+        home = make_home(self.root / 'agent3', system_rel={'$env': 'PERSONA_PATH'})
+        with unittest.mock.patch.dict(os.environ, {'PERSONA_PATH': 'prompts/from-env.json'}):
+            self.out(persona.set_, str(home), '解過指示詞')
+        self.assertTrue((home / 'prompts' / 'from-env.json').is_file())
+        self.assertFalse((home / 'prompts' / 'system.json').exists())
+
+    def test_invalid_system_directive_errors_instead_of_silent_default(self):
+        """astra 審查 M4：system 寫了但解不出非空字串，要報錯，不能默默退回預設檔。"""
+        home = make_home(self.root / 'agent4', system_rel={'$env': 'MISSING_PERSONA_PATH'})
+        with self.assertRaises(AgentError) as cm:
+            persona.show(str(home))
+        self.assertEqual(cm.exception.code, 'FieldTypeMismatch')
 
     def test_main_usage_errors(self):
         with self.assertRaises(AgentError) as cm:

@@ -89,6 +89,17 @@ class TaskCliTests(Base):
         self.err('NoSuchTask', task_cli.cmd_task, 'show', 't-0099')
         self.err('Usage', task_cli.cmd_task, 'fly')
 
+    def test_show_review_subtask_keeps_parent_numbering(self):
+        """astra 審查 M5：aos-team task show 對審查子單也要用父單的原編號（board、render_review 已修，這條之前漏了）。"""
+        self.open()
+        task.step(self.lay, 't-0001', {'type': 'delivered', 'src': 'd', 'rev': 1, 'attempt': 1})
+        task.step(self.lay, 't-0001', {'type': 'report', 'src': 'r', 'by': 'worker-1', 'rev': 1, 'status': 'DONE'})
+        task.step(self.lay, 't-0001', {'type': 'verified', 'src': 'v', 'pass': True, 'rev': 1, 'attempt': 1})
+        task.open_review(self.lay, self.roster, 't-0001', 'o', 1, 1)
+        code, out = self.call(task_cli.cmd_task, 'show', 't-0001.r1')
+        self.assertIn('3. （審查員判）', out)          # judge 在 request-handoff.json 的 done_when 排第 3
+        self.assertNotIn('0. （審查員判）', out)
+
     def test_cancel_and_reassign_are_requests(self):
         self.open()
         code, out = self.call(task_cli.cmd_task, 'cancel', 't-0001', '--reason', '不做了')
