@@ -9,3 +9,4 @@
 > 已拍板的前提在 §8，我自己選的在 §9。
 > 2026-09-24 實作補記：依實作審查回寫，見 impl-review-report.md；補進的句子標「（09-24 補）」，總表在檔尾〈實作補記〉。（審查與實作紀錄在 [rearch 筆記](../../notes/2026-09-23-rearch/README.md)）
 > 2026-09-24 fix-r4：§6 命令列改成 `aos-daemon boot`／`halt [--target D]`（裸 `aos-daemon` 退 2、`--home` 拿掉），家的預設從 `~/.aos-daemon` 改成 `AOS_DAEMON_HOME`→目前資料夾。
+> 2026-09-24 proto5-2 池式納入：§1 孩子表搬出 `state.json`、info 多退避與節流鍵；新增 §1.2 [pools.md](pools.md)（`pool.json`、kids 檔、摘要）；§2 只留 fd 0 一條 pipe、拿掉 `spawn`；§3 換成 `scale`／`kill`／`ls`；§4 改宣告式對帳、任何退出碼都重拉、退避、令牌桶、fd 預算；§5 批次階梯、`halt` 留 `pool.json`；§6.1 啟動照 `pool.json` 拉回來；新增 §6.3 [cli.md](cli.md)（`ls` 的 `running N（含 restarting M）`、`scale`、`kill`）；§8、§9 跟著改。草稿與審查在 proto5-2/spec、proto5-2/notes。

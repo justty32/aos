@@ -26,7 +26,7 @@ ack 的形狀：`K/requests/ack-<epoch ns>-<pid>-<i>.json`（i 是 call 的序�
 | `result`、`kind=child`、`code=0`、`timed_out=false`、`stopped=false` | 讀 `work/N.out`：去掉結尾換行後要恰好是一個 JSON 物件，照 [agent.md §3.2](../agent/info.md) 驗成模型回的 assistant → `{"ok": true}`；不合 → `{"fail": "MessageInvalid: …", "count": true}` |
 | `result.stopped=true` | `{"fail": "被強制停", "count": false}` |
 | `result.timed_out=true` | `{"fail": "逾時（T ms，是 info.llm.timeout_ms…；llm.err 在 <路徑>）", "count": true}`（09-24 試玩 r2 補）：寫明是 `info.llm.timeout_ms` 那格；**不附** llm.err 最後一行（被砍的那次通常沒寫新行，最後一行多半是舊的） |
-| `result.kind=aos` | `{"fail": "aos-llm call 沒跑起來（kind=aos），看 <K>/cpus/<llm 池的 cpu>/cpu.log", "count": true}`（09-24 試玩 r1 補）：列出完整路徑，找不到池裡的 cpu 就寫 `<K>/cpus/*/cpu.log` |
+| `result.kind=aos` | `{"fail": "aos-llm call 沒跑起來（kind=aos），看 <K>/pools/<池>/cpus/*/cpu.log", "count": true}`（09-24 試玩 r1 補；池式納入改）：池名取 agent 的 `llm.pool`，池不在 K 的 `info.pools` 就整段池名也寫 `*` |
 | `result`、`code≠0` | `{"fail": "aos-llm call exit <code>，看 <agent 絕對路徑>/log/llm.err：<llm.err 最後一行>", "count": true}`（09-24 試玩 r1 補）：最後一行取非空的、最多 300 字；讀不到就只給路徑 |
 | `error.data.code=Stopping` | `{"fail": "kernel 停機時取消，沒跑", "count": false}` |
 | `error.data.code=Interrupted`／`Removed` | `{"fail": "結果不明（Interrupted／Removed）", "count": true}` |

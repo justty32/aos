@@ -2,61 +2,74 @@
 
 # 1. 家
 
+（2026-09-24 proto5-2 池式納入：`K/cpus/<name>/` 改成 `K/pools/<P>/cpus/<i>/`，多了池模板與 `envs.json`。）池表見 [§1.1](info.md)，帳本見 [§1.2](ledger.md)。
+
 ```text
 K/
-  info.json                 身分、daemon 家、cpu 表、排程預設；人寫的
+  info.json                 池表（§1.1）；人寫，或 aos-kernel cpu add／rm 改
   state.json                帳本（§1.2）
-  requests/ responses/      syscall（範式 §3）
-  cpus/<name>/              每顆 cpu 的家（各自 info／state／requests／responses／inst.json）
-  kernel.log                每格 append
+  requests/                 syscall、ack、stop，加上 cpu 丟來的回音通知 resp-*（[cpu §6.4](../cpu/notify.md)）
+  responses/
+  pools/<P>/envs.json       這池的環境；kernel 照 info.pools.P.envs 寫
+  pools/<P>/inst.json       這池的 cpu 模板（見下）
+  pools/<P>/cpus/<i>/       一顆 cpu 的家：info.json、inst.json、state.json、requests/、responses/、cpu.log
+  kernel.log                有事件的格 append
+  .info.lock                cpu add／rm 改 info 時拿的鎖（§6 cpu）
 ```
 
-`K/` 的主人是「當下正在跑的那一格 tick」（鏈保證同時只有一格，§7）；外人只能往 `requests/` 放單、
-讀 `responses/` 然後放 `ack`；`state.json` 隨便偷看。`K/cpus/<name>/` 各是另一個家，主人是那顆 `aos-cpu`；
-kernel 對它們也是外人，**只在家不存在時**替它們建家、寫 `info.json` 與 `inst.json`（初始化，不算動別人的家）；
-已經有的一律不改寫，人可以自己編那顆的 `inst.json`（例如加環境變數，見 §1.1 `envs`）。
-沒有 `procs/` 資料夾：行程紀錄全在帳本裡。
+kernel 池那顆固定是 `K/pools/kernel/cpus/0/`。沒有 `procs/` 資料夾：行程紀錄全在帳本裡。
 
-## 1.1 `info.json`
+## 主人與外人
+
+- `K/` 的主人是「當下正在跑的那一格 tick」（鏈保證同時只有一格，§7）；外人只能往 `requests/` 放單、讀 `responses/` 然後放 `ack`；`state.json` 隨便偷看。
+- `K/pools/<P>/envs.json`、`inst.json` 也是 kernel 的東西，只有 tick 與 boot 寫。
+- `K/pools/<P>/cpus/<i>/` 各是另一個家，主人是那顆 `aos-cpu`；kernel 對它們也是外人，**只在家缺東西時補**（初始化，不算動別人的家），已經在的一律不改。
+- cpu 往 `K/requests/` 丟通知，是外人被允許的那一種動作（放一則 request，[cpu §1](../cpu/layout.md) 規則一）。
+
+## 池模板：每顆 cpu 的 `inst.json` 都一樣
 
 ```json
-{
-  "_metainfo": {"_type": "kernel", "_version": 1},
-  "daemon": "/abs/D",
-  "cpus": {"k": {"pool": "kernel"}, "0": {}, "1": {},
-           "llm": {"pool": "llm",
-                   "envs": {"PATH": {"$fmt": {"$val": "/abs/tools/llm:${p}", "p": {"$env": "PATH"}}},
-                            "LMSTUDIO_KEY": {"$env": "LMSTUDIO_KEY"}}}},
-  "tick_ms": 1000,
-  "interval_ms": 1000,
-  "timeout_ms": 0,
-  "done_exit": 100,
-  "bad_after": 10
-}
+{"argv": ["/abs/proto5/cli/aos-cpu", "."], "cwd": ".",
+ "stderr": {"$opt": "append", "$val": "cpu.log"},
+ "envs": {"$ref": "../../envs.json"}}
 ```
 
-| 鍵 | 型別 | 沒寫時 | 意思 |
-|---|---|---|---|
-| `daemon` | 絕對路徑 | boot 寫 | daemon 家；tick 靠它找 daemon |
-| `cpus` | 物件 | 必填 | key 是 cpu 名（也是 `cpus/<name>/` 的資料夾名、給 daemon 的孩子名）；值 `{"pool": 字串, "envs": 物件}`，`pool` 沒寫＝`"default"`，`envs` 可省。**恰好一顆** pool 是 `kernel`（少於或多於一顆＝`FieldTypeMismatch`），一般行程不准進這個池 |
-| `cpus.<c>.envs` | inst 的 `envs` 格 | 無 | kernel 建那顆的家時原樣抄進 `cpus/<c>/inst.json` 的 `envs`（含 `$opt` 選項）——這就是「這顆 cpu 帶什麼環境」（範式 §4.1）。家已經在就不管它 |
-| `tick_ms` | 非負整數 | 1000 | 一格睡多久（§3 第 3 步） |
-| `interval_ms` | 非負整數 | 1000 | 行程 `interval_ms` 的預設 |
-| `timeout_ms` | 非負整數 | 0 | 行程 `timeout_ms` 的預設；tick 自己不限時 |
-| `done_exit` | 0～255 | 100 | 反覆行程回這個碼＝完成；0＝關掉 |
-| `bad_after` | 非負整數 | 10 | 連續失敗幾次退件；0＝關掉 |
+`.json` 目標的 base 是檔所在的資料夾（[aos-exec](../aos-exec/README.md)），所以放在 `cpus/<i>/inst.json` 時，
+`.`、`cpu.log` 都是那顆自己的家，`../../envs.json` 是池的環境檔。**每顆的 inst.json 內容一模一樣**，就是 `pools/<P>/inst.json` 的複本。
+`argv[0]` 是 kernel 建模板時找到的 `aos-cpu` 絕對路徑。
 
-整份解指示詞，中心是 K，不提供 `$opt`（`envs` 那格例外：它是要抄進 inst 的，原樣留著不解）。
-**頂層必須是字面物件**（頂層整份 `$ref` ＝ `FieldTypeMismatch`），不然 boot 寫進去的 `daemon` 會被引用吃掉。
-boot 把整份驗完才動任何東西（§6）。「專門打 LLM 的 cpu 只開一顆」就是開一顆 `{"pool":"llm","envs":…}`、
-把 `aos-llm call` 那種行程標 `pool: "llm"`。要幾顆就寫幾顆，佔著沒關係。
-改 info 之後：tick 每格重讀；多出來的 cpu 下格會拉，被拿掉的 cpu 若帳本裡還有 `req`，照樣收完那則才忘掉它；
-池裡沒有 cpu 的行程就一直排隊，不算錯，`ls` 看得出。**kernel 池那顆例外**：帳本裡釘死的 `kcpu` 才算數，
-改 info 不會換，要換就重 boot。
-
-**要改一顆已經存在的 cpu 的環境**：`envs` 只在第一次建家時抄進去；之後得 `aos-kernel halt`、等那顆 cpu 退出
-（`D/state.json` 裡消失），改 `K/cpus/<c>/inst.json`，再 boot。只改 info、或對還活著的 cpu 重 boot，環境都不會變。
+好處：改池的 `envs` 只要重寫一份 `envs.json`；daemon 每次拉（含重拉）都重讀 target（[daemon §2](../daemon/spawn.md)），
+所以**之後拉起來的 cpu** 就帶新環境。已經活著的不會變——要全池換新就 `aos-daemon kill --pool <dpool> --all`（[daemon §6.3](../daemon/cli.md)）。
 那份 inst 裡的 `$env` 讀的是**daemon 的環境**（是 daemon 在拉它）；在別的終端 `export` 不會影響已經在跑的 daemon。
 
-（09-24 補）「建家」是**缺的補齊**：資料夾、`info.json`、`inst.json` 各自不在才寫，已經在的一律不覆蓋（含人手改過的 `envs`）。
-所以建到一半崩掉，下一格第 7 步或下次 boot 會補齊，不會卡住。
+`envs` 整格用 `$ref` 取進來是 [inst-posix](../inst-posix/README.md) 本來就允許的（先解再驗，`envs` 的 `clear` 選項照認）。
+`$ref` 找檔的中心是解出來的 `cwd`（inst-posix §3.1）——這裡就是那顆 cpu 的家，所以 `../../envs.json` 指到池的環境檔；
+`envs.json` 裡再有 `$ref`，中心仍是那顆的家，不是池目錄。`$ref:""` 指的是 `envs.json` 自己那份文件。
+
+## cpu 的家怎麼建
+
+「建家」＝**缺的補齊、不覆蓋**：`cpus/<i>/`、`requests/`、`responses/`、`info.json`、`inst.json` 各自不在才寫。
+建到一半崩掉，下一格或下次 boot 會補齊，不會卡住。
+
+一顆工作 cpu 的 `info.json`：
+
+```json
+{"_metainfo": {"_type": "exec_cpu", "_version": 1}, "poll_ms": 200, "timeout_ms": 0,
+ "notify": "/abs/K/requests"}
+```
+
+`poll_ms`／`timeout_ms` 照 info 的 `cpu` 格；`notify` 叫 cpu 回完音就往 kernel 家丟一張通知（[cpu §6.4](../cpu/notify.md)）。
+kernel 池那顆**不帶 `notify`**（它跑的是 tick，回音由 tick 自己收），`poll_ms` 20。
+
+什麼時候建：
+- tick 決定要長大時，只建**新加的那幾號**（[§3.1](pools.md)），O(新增數)。
+- boot 時把每個池的每一號都「缺的補齊」一次（O(池大小)，只在 boot）。
+
+模板與 `envs.json` 的寫法：kernel 在 boot、新池、「info 的 envs 變了」時重寫（`.tmp` 再 rename）；帳本記一個摘要（`envs_digest`）來判斷「變了沒」，每格不用讀檔比對。
+每顆 cpu 的 `inst.json` 只在缺時寫。
+
+## 家不刪
+
+縮小、`skip` 退休的 cpu，家留著：裡面可能還有沒 ack 的回音、`cpu.log` 要給人查。再長回來就用回同一個家。
+所以磁碟上的家數＝**這個池曾經到過的最大號＋1**。要清得人手動刪（先確定那號不在任何池的成員裡、daemon `ls` 看不到它）。
+這版不做清理指令（09-24 Q9 照草稿）。

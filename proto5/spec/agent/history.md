@@ -12,3 +12,4 @@
 > 2026-09-24 access-impl（A1）：`tools` 元素可寫 `$opt` 選項物件（`as` 改名、`only` 挑幾支），`info.md` 的「沒有欄位吃 `$opt`」改成「只有 `tools` 的元素吃」；新 §3.4 [tools-opt.md](tools-opt.md)；§3.3 加 `_jail`（只收 bool）與 `_source`。
 > 2026-09-24 access-impl（A2）：新 §3.5 [access.md](access.md)（`access.json` 格式、信任資料、`self` 只能 ro）；`info.json` 加 `access` 欄；`state.batch` 加 `access` 快照；家裡多一個人寫的 `access.json`；錯誤代號加 `AccessInvalid`／`AccessUnsafe`／`NoBwrap`。
 > 2026-09-24 access-impl astra 修（A1）：家裡多一個管理指令用的 `.admin.lock`（§1）。
+> 2026-09-24 proto5-2 池式納入：§3 `llm.pool` 的驗法改成「是 K 的 `info.pools` 的 key」（`tool_pool`、`tick.pool` 同）。草稿在 proto5-2/spec。

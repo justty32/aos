@@ -22,7 +22,7 @@ request 的意思是「像命令列 `aos-exec TARGET --dir-target R --timeout-ms
 
 **cpu 的環境就是工作的環境。** cpu 是被拉起來的一支行程，它帶著什麼——環境變數、PATH、跑它的身分與權限、
 cwd（＝它的家）——工作 inst 沒寫 `clear` 就整包繼承（aos-exec 的規則）；普通檔目標更是全部繼承。
-所以「llm cpu」不是另一種 cpu：是一顆普通 exec cpu，拉它的那份 inst（[kernel 替它寫的 `K/cpus/<c>/inst.json`](../kernel/README.md)）
+所以「llm cpu」不是另一種 cpu：是一顆普通 exec cpu，拉它的那份 inst（[kernel 替它寫的 `K/pools/<P>/cpus/<i>/inst.json`](../kernel/home.md)，`envs` 取自池的 `envs.json`）
 把 `llm-http` 所在目錄放進 PATH、把 API key 放進 `envs`；工作 inst 的 argv 直接寫 `llm-http` 就找得到。
 cpu 自己讀的是它自己的環境，不會替工作補任何東西。
 

@@ -22,7 +22,7 @@
 | `tools` | 路徑陣列 | `[]` | 工具檔（§3.3），照順序合併；列到的檔或資料夾一定要在；元素可寫成 `$opt` 選項物件改名或只挑幾支（[§3.4](tools-opt.md)） |
 | `llm.model` | 非空字串 | 必填 | 模型**代號**；真名、endpoint、金鑰在 llm cpu 那邊的 llm.json（[aos-llm.md §2](../aos-llm/config.md)） |
 | `llm.params` | 物件 | `{}` | 組 body 用的模型參數 |
-| `llm.pool` | 字串 | `llm` | 問模型的工作派去哪個池；K 的 `info.cpus` 裡要有這個池的 cpu，否則 kernel 退件 |
+| `llm.pool` | 字串 | `llm` | 問模型的工作派去哪個池；要是 K 的 `info.pools` 的 key（不是 `kernel` 池），否則 kernel 退件（`tool_pool`、`tick.pool` 同一條驗法；2026-09-24 池式納入改） |
 | `llm.timeout_ms` | 非負整數 | 125000 | 問模型那件工作的執行上限（kernel `add` 的 `timeout_ms`，0＝不限）；兩個逾時的分工見 [aos-llm.md §6](../aos-llm/timeouts.md) |
 | `tool_pool` | 字串 | `default` | 工具的工作派去哪個池 |
 | `tick.pool` | 字串 | `default` | `aos-agent start` 登記反覆行程用的池 |

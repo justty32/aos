@@ -17,10 +17,12 @@ DIR（或省略時的目前資料夾）必須是存在的資料夾，不是＝�
 3. 若 fd 0 是 pipe：把 fd 0／fd 1 **搬到高位 fd、標 close-on-exec** 當控制 pipe，然後 fd 0 接 `/dev/null`、
    fd 1 接 fd 2。這樣工作繼承串流時拿到的是 `/dev/null` 與 `cpu.log`，高位那兩個又因 close-on-exec 跟不
    進工作——工作既拿不到控制訊息、也握不住回程寫端（fork 到 exec 之間的那一瞬間有副本，exec 就沒了）。
+   （2026-09-24 池式納入補）父行程（daemon）給的 fd 1 現在本來就是 `/dev/null`、不一定是 pipe；cpu 照樣把它搬到高位（不會往那裡寫），程式不用改。
    fd 0 不是 pipe（人在終端跑、或 stdin 接 `/dev/null`）就沒有控制 pipe，只認檔案與訊號，也不等 `go`。
    用程式包 `aos-cpu` 的人注意：`stdin=PIPE` 就等於「我要用控制協議」，得送 `go`、還得一直握著那條 pipe。
 4. **先讀舊 `state.json` 做開機對帳（§6.2），對帳完才寫**新的 `state.json`（pid、current=null、runs 照舊）。
    沒有舊 `state.json`（第一次跑）＝當作 `current: null`、`runs: 0`。
+5. （2026-09-24 池式納入加）有 `notify`：對 `responses/` 裡每一份回音（檔名 `.json` 結尾的）補丟一次通知（[§6.4](notify.md)），然後進迴圈。
 
 ## 6.2 開機對帳
 
@@ -48,6 +50,7 @@ DIR（或省略時的目前資料夾）必須是存在的資料夾，不是＝�
   (2) 跑（run_target）；跑的期間每 poll_ms 看一次控制 pipe 與訊號旗標，只記、不動手（強制停除外）
   (3) 原子寫 responses/X（notification 跳過）
   (4) 刪 requests/X
+  (4.5) 有 notify：放通知（§6.4；失敗只記 stderr 一行 NotifyFailed，不退出、不重試）
   (5) 寫 state.current=null、runs+1
 沒單就睡 poll_ms
 ```

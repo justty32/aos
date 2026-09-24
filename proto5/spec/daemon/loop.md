@@ -1,23 +1,77 @@
 ← [daemon](README.md)｜[spec 總導航](../README.md)
 
-# 4. 一圈
+# 4. 一圈：按池對帳
+
+（2026-09-24 proto5-2 池式納入：改成宣告式；任何退出碼都重拉、有退避；全 daemon 節流；孩子只留一條 pipe。）
+
+一句話：**daemon 手上是一份「每池要哪幾號」的宣告；每一圈把實際的孩子往宣告靠——少了補、多了收、死了等一下再拉。**
+它不問 kernel、也不需要 kernel 每格來確認。孩子在做什麼、忙不忙，daemon 不知道也不記。
+
+## 一顆孩子的狀態
 
 ```text
-處理 requests/ 裡的 ack- 與 stop-（範式 §6.3 那套）
-處理其他 request（§3；spawn 是同步的：拉起來、登記、go、回音）
-收屍：對每個 alive 的孩子 waitpid(WNOHANG)；死了 → alive=false、exits+1、last_exit、關它的 pipe 端點、寫 state
-  restart=true 且 last_exit≠0 且 state 是 running（不是 killing）且 daemon 沒在 stopping → state=dead，記下「restart_delay_ms 之後再拉」
-  否則 → 從表裡拿掉（killing 的、退 0 的、restart=false 的、daemon 在 stopping 的）
-到期的 dead 孩子 → 再查一次 stopping（是就拿掉不拉）→ 再拉（重讀 target），成功 → running、寫 state；失敗 → log 一行、再等一輪 restart_delay_ms
-推進停機階梯（§5）
-睡 poll_ms
+         宣告加了這號                 輪到它（節流）、拉成功
+(不存在) ─────────────▶ pending ─────────────────────────▶ running
+                           ▲                                │  │
+                 kill／重拉等到了、拉成功 ◀── dead ◀── 死了（還是成員）│
+                           │                                  │
+                         failed ◀── 拉不起來（SpawnFailed）        │
+                                                              ▼
+                      不再是成員、或被 kill ─────────────▶ killing ──死透──▶ 還是成員：pending（kill＝重來）
+                                                                         不是成員：刪 kids 檔，消失
 ```
 
-**重拉只在「非 0 退出、而且沒被主動叫停」時**：退 0 是孩子自己決定要停（收到 kernel 的 `stop-*.json`、
-或 pipe EOF），daemon 不跟它作對；被訊號砍死（128+N）、崩掉、回 1 都算非 0。**`kill`／`stop` 一定贏過重拉**：
-標了 `killing`、或 daemon 在 `stopping`，死了就拿掉。重拉之間至少隔 `restart_delay_ms`，沒有上限、沒有退避——
-一直死就一直每秒拉一次，`exits` 看得出來，要不要管是人的事。
-（cpu 因為磁碟壞掉每次開機對帳都退 1，就是這種：一直拉、一直退，log 會一直長，這是接受的。）
+- `pending`、`dead`、`failed` 的號**不是成員了**（宣告縮小）：直接拿掉，不用走階梯。
+- `running` 的號不是成員了：進 `killing` 走階梯。
+- **任何退出碼都一樣**：成員死了就是 `dead`、等一下再拉。第 1 版的「退 0＝孩子自願停、不重拉」拿掉——宣告式下，要它停的唯一方法是把它移出宣告（或 daemon 停機）。
+- **孩子是不是原來那個**：daemon 只認自己 `fork` 出來的 pid、只收它們的屍；`kill(pid,0)` 只在啟動找上一任的孩子時用（§6.1）。
 
-孩子表是 daemon 的記憶，不是排程狀態：孩子在做什麼、忙不忙，daemon 不知道也不記。
-**孩子是不是原來那個**：daemon 只認自己 `fork` 出來的 pid、只 `waitpid` 它們；`kill(pid,0)` 只在啟動找上一任的孩子時用（§6.1）。
+## 一圈
+
+```text
+1. 處理 requests/ 的 ack-、stop-（範式 §6.3 那套）
+2. 處理其他單：scale、kill、ls（§3）。scale 只改宣告、標這池「要對帳」
+3. 收屍：waitpid(-1, WNOHANG) 一直收到沒有——只碰死掉的那幾個，不逐顆問
+   daemon 在 stopping → 不管原本什麼狀態，一律拿掉、不排回 pending（先判這條）
+   killing 的：還是成員 → pending（不加 streak）；不是 → 刪 kids 檔
+   running 的：還是成員 → dead，streak 照下面算，寫 kids 檔
+4. 對帳（只對「要對帳」的池）：新加的號 → pending；拿掉的號 → 照上面的狀態圖收
+5. 拉（stopping 時整步跳過）：從「pending＋到期的 dead／failed」裡拿，最多拿到節流額度與 fd 預算，拉（§2 那套）
+6. 推進停機階梯（§5），只看到期的那批
+7. 有變的池重寫 summary.json
+8. 睡到 poll_ms 或下一個到期時間，取較短的
+```
+
+**怎麼做到不掃全池**：
+- 各狀態的**計數**跟著每次狀態轉移加減，summary 直接印計數，不重數。
+- 三種「時間到了要做事」——`dead`／`failed` 的 `next_at`、`running` 活滿 `stable_ms`（`restarting` 計數減 1）、階梯的下一段——都放進**同一個按時間排的佇列**，每圈只拿到期的。
+- 「可以拉的」每池一條佇列；只有佇列不空的池才參加輪流，沒事的池不看。「要對帳」「要重寫摘要」的池各登記在一個集合裡，閒著時一圈的成本跟池數無關。
+
+每一圈的成本只跟「這圈有事的」成比例：新單、死掉的、輪到拉的、階梯到期的。上萬個安靜的孩子不佔一圈的時間。
+收屍用 `waitpid(-1)` 跟程式庫的子行程物件共處時，收完要把那個物件的退出碼補上，免得它再去等一個可能已被重用的 pid。
+
+## 重拉要等多久（節流一：每顆）
+
+```text
+等待 = min(restart_delay_ms × 2^(streak−1), restart_max_ms)
+```
+
+- 死的時候，這一代活超過 `stable_ms` → `streak` 先歸 0 再加 1（當第一次死）；否則 `streak` 加 1。
+- 預設：1 秒、2 秒、4 秒…最多 60 秒。一直崩的那顆會降到每分鐘試一次，而不是第 1 版的每秒一次。
+- `SpawnFailed`（target 讀不到、inst 壞掉、fork 失敗）一樣算：進 `failed`、`streak` 加 1、照同一條算式等。
+- `kill` 造成的死不加 `streak`、不用等（人叫的）。`restarting`＝拉起來那一刻 `streak` > 0，活滿 `stable_ms` 取消。
+
+## 同時拉幾顆（節流二：整個 daemon）
+
+- 令牌桶：每秒補 `spawn_per_sec` 個、最多存 `spawn_per_sec` 個；拉一顆用一個（成功失敗都算）。
+- 池之間輪流拿，一池一次拿一顆，免得一個大池長大時把別的池的重拉餓死。
+- 上萬顆的池從 0 長到 10000：預設 50 顆／秒，約 200 秒拉滿。kernel 那邊不用等，派到還沒起來的號單會在家裡等。
+- 全池一起死（例如 PATH 壞了）：第一輪最快也是 50 顆／秒，之後各自退避，不會變成每秒 fork 一萬次。
+
+## 管子與開檔數
+
+- 每個孩子**只留 fd 0 那條 pipe**（daemon 寫、孩子讀 `go`／`stop`、看 EOF）；孩子的 fd 1 接 `/dev/null`（[§2](spawn.md)）。上萬個孩子就是一萬個 fd，不是兩萬。
+- 啟動時把開檔數軟上限調到硬上限；fd 預算＝min(`max_children`, 開檔數 − 64)。
+  scale 的宣告數超過就回 `TooMany`（§3）；但宣告數沒超過不代表 fd 夠——池 A 從一萬縮到 0、孩子還在 killing 時，池 B 宣告一萬是合法的。
+  所以**每拉一顆前**再看「活著＋killing」的實際數量，到了 fd 預算就先不拉，等舊的收完。
+- 行程數上限（`ulimit -u`）、記憶體不在 daemon 的檢查範圍：fork 失敗就是 `SpawnFailed`，照上面退避。

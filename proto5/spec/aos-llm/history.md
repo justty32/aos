@@ -8,3 +8,4 @@
 > **已實作**（2026-09-24，T9）：`lib/aos_llm_call.py`＋`cli/aos-llm-call`，實作發現見 agent-impl-findings。
 > 這份把兩件事合成一支普通程式。調度者裁決在檔尾（09-24 試玩 r3 搬），已拍板的前提在 §9。
 > 2026-09-24 fix-r4：入口 `aos-llm-call` 改成 `aos-llm call`（新入口 `cli/aos-llm`，stderr 前綴 `aos-llm: `），規範檔名 aos-llm-call.md 改成 aos-llm.md。
+> 2026-09-24 proto5-2 池式納入：§1 的環境改由池的 `envs.json` 給、info 例子改成 `pools` 的一格、改環境改成「改池的 envs＋`aos-daemon kill --all`」。草稿在 proto5-2/spec。

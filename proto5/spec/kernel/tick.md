@@ -6,50 +6,51 @@
 aos-kernel tick --target K --chain C --seq N
 ```
 
-每一步標了 **讀**／**寫帳本**／**放檔**；「崩在這裡」的後果寫在步驟後面。cpu 那邊的順序是
-「先發回音、再刪原單」（範式 §6.3），這裡查檔一律**先查原單、再查回音**，才不會看錯。
-第 5～9 步新增的四類出貨待辦（ack／回音／stop／刪原單）不在當步做，統一在第 10 步；崩在中間下格第 4 步補。
-第 6 步補放、第 7 步 spawn、第 8 步派工不是出貨箱的東西，各在自己那步當場放。
+（2026-09-24 proto5-2 池式納入：第 4～10 步改寫。）一句話：**每格只碰「有事的」cpu**——有通知的、上一格剛派的、輪到巡檢的那幾顆；
+派工從每池的閒號堆疊直接拿，不掃每一顆找閒的；**不再每格偷看 daemon**，cpu 死了由 daemon 自己照宣告補。
+
+cpu 那邊的順序是「先發回音、再刪原單」（範式 §6.3），這裡查檔一律**先查原單、再查回音**，才不會看錯。
+帳本什麼時候寫見 [§1.2 的四個提交點](ledger.md)。
 
 1. **讀** info、帳本。`--chain` ≠ `chain` → 舊鏈的殘格：退 0、什麼都不做。
-2. `phase=stopped` → 出貨（第 4 步的方式，含 `stops`）、不接鏈、退 0。否則**放檔**：把下一格 `link` 到
-   `cpus/<kcpu>/requests/k-<chain>-<N+1>.json`（`aos-exec`：`target`＝帳本的 `cli`，是普通檔，
-   `args`＝`["tick", "--target", K 的絕對路徑, "--chain", C, "--seq", "N+1"]`（09-24 fix-r4 改），全是字串；**明寫 `timeout_ms: 0`**，不吃 cpu 的預設）。EEXIST＝上一格已放過
-   （它崩在放檔之後、寫帳本之前，這格被重跑）——只有第 N 格會放第 N+1 格，所以 EEXIST 不會是別人。
-   然後**寫帳本** `last_seq=N`。**先放後記**：這格之後崩了，下一格照跑。崩在放檔之前＝鏈斷，daemon 的
-   `restart` 救不了（cpu 沒死、是沒單），`ls` 看得出（§6），人重新 boot。
-3. 睡 `tick_ms`（下一格已在隊上，但 kernel cpu 正被這格佔著，睡完退出它才開始；實際週期＝睡＋這格做事的時間）。
-4. **出貨**：四張出貨箱每筆放檔（`link`，EEXIST 當已放；`deletes` 是刪檔，ENOENT 當已刪）、每放完一筆**寫帳本**拿掉。
-   順手把 kernel cpu 的 `responses/` 全部 ack 掉——這是唯一不進帳本的出貨（都是舊 tick 的回音；`code≠0` 的記 log 一行）。
-5. **讀** `requests/`，收 syscall（§2；`ack-` 照範式 §3.3、`stop-` 只改 `phase`）。放在 daemon 操作之前。
-6. **收回音**：每顆 `req` 非 null 的工作 cpu，先**讀** `cpus/<c>/requests/<req>` 在不在——
-   - 在：在途，跳過。
-   - 不在，再看 `cpus/<c>/responses/<req>`：**在** → 判定（§4），把結果（計數、status、queue、pending 的回音進
-     `replies`、這則的 ack 進 `acks`、`req`／`proc`／`discard` 清掉）**一次寫帳本**。崩在寫帳本之前＝下格重讀
-     同一份回音、重判一次，冪等（回音要 ack 才會消失，而 ack 在帳本之後才放）。
-   - 兩個都不在：從沒放出去（上格崩在寫帳本之後、放檔之前）→ **再放一次**（`link`，EEXIST 就當已在）。
-     這個推論成立是因為 cpu 只在回音發出之後才刪原單，而回音只有 kernel 放 ack 才消失、ack 又在帳本之後。
-7. **daemon**（§5）：偷看 `D/state.json` 的孩子表。對 info.cpus 裡每顆 c（含 `kcpu`）：
-   - 表裡有 c、`alive=true`、`target` 是 `K/cpus/<c>/inst.json` → 好。
-   - 表裡有 c 但 `target` **不是**我們的 → 別的 kernel 的孩子：stderr `NameTaken`、退 1，不派工。
-   - 表裡沒有 c、或 `alive=false` 且 `state` 不是 `dead`（不是在等重拉）→ 家不在就建（info、inst，`envs` 照 info），
-     `spawn`（`name`＝c、`restart:true`），等回音。`state=dead` 的讓 daemon 自己重拉。
-   cpu 非 0 死掉是 daemon 自動重拉，這裡不用管（daemon 自己重啟過則要人重 boot，§6）；重生那顆手上若有 `req`，它的開機對帳會回 `Interrupted`
-   （原單還沒開始的它照做，不是每件都 `Interrupted`），下格在第 6 步照常收。
-8. **派工**（`phase=running` 才做）：每顆 `req` 為 null 的工作 cpu，從 `queue` 頭找第一個 pool 相符且
-   `not_before` 已到的行程 → 從 queue 拿掉、`status=running`、`req`＝`k-<chain>-<N>-<c>.json`、`proc`＝NAME、
-   **寫帳本** → **放檔**（`aos-exec`，params 照行程紀錄：`target`／`dir_target`／`args`（有才放）／`timeout_ms`）。
-   崩在寫帳本之後、放檔之前＝第 6 步補放。**先記後放**，所以永遠不會同一行程派兩顆。
-9. **停機**（`phase=stopping`）：先把 `queued` 的 `once` 全部拿掉、各回 `-32000`／`Stopping`（進 `replies`）。
-   然後所有工作 cpu `req` 為 null、四張出貨箱空、沒有任何 `pending` → `stops`＝所有 cpu（含 `kcpu`）、
-   `phase=stopped`、**寫帳本** → 第 10 步出貨。kernel cpu 收到 stop 就不會再跑已排的下一格，那份殘格留著，
-   下次 boot 換了 chain 它會自滅。崩在寫帳本之後、放完之前＝下格（若還跑得到）第 2 步補放；跑不到
-   （kernel cpu 已停）就算了——boot 會把舊的 `stops` **丟掉**不重放（§6），因為那些 stop 是給上一代 cpu 的。
-   `stopped` 之後再來的 syscall／ack 沒人處理，留在 `K/requests/`，下次 boot 的第 1 格會收。
-10. **出貨**（同第 4 步）、**寫帳本**、append `kernel.log`、退 0。`kernel.log` 每格至少記：派了誰去哪顆（行程名、cpu、request 檔名）、
-    收到的每則回音（行程名、cpu、`result` 或 `error` 整段）、退件時的門檻——回音 ack 掉就沒了，這是事後查「為什麼退件」唯一的地方；
-    子程式自己的錯誤在工作 inst 的 `stderr` 檔。
-    （09-24 補）沒有任何事件的格（`events` 空）**不寫** `kernel.log`，免得空轉一天幾十萬行。
-    kernel.log 在出貨、寫帳本之後才 append，所以**不保證涵蓋崩潰中途已結帳的回音**——它不是完整的持久稽核紀錄。
+2. `phase=stopped` → 出貨、不接鏈、退 0。否則**放檔**：把下一格 `link` 到 `K/pools/kernel/cpus/0/requests/k-<chain>-<N+1>.json`
+   （`aos-exec`：`target`＝帳本的 `cli`，是普通檔，`args`＝`["tick", "--target", K 的絕對路徑, "--chain", C, "--seq", "N+1"]`，全是字串；
+   **明寫 `timeout_ms: 0`**，不吃 cpu 的預設）。EEXIST＝上一格已放過（只有第 N 格會放第 N+1 格）。
+   然後**寫帳本** `last_seq=N`。**先放後記**：這格之後崩了，下一格照跑。崩在放檔之前＝鏈斷，`ls` 看得出（§6），人重新 boot。
+3. 睡 `tick_ms`（實際週期＝睡＋這格做事的時間）。
+4. **出貨**：`acks`／`replies`／`deletes`／`sends` 全部做一遍（`link`，EEXIST 當已放；刪檔 ENOENT 當已刪），**做完一次寫帳本**拿掉。
+   順手把 kernel cpu 的 `responses/` 全部 ack 掉——唯一不進帳本的出貨（都是舊 tick 的回音；`code≠0` 的記 log 一行）。
+5. **讀 `K/requests/`**，列一次目錄，照檔名前綴分：`ack-`（範式 §3.3）、`stop-`（改 `phase`；檔名進 `deletes`）、`resp-`（回音通知，進第 6 步）、
+   其他是 syscall（`add`／`rm`，照 §2 判；`rm` 一個 `running` 的行程用 `on` 找到那顆 cpu）。`.tmp` 結尾的略過。
+   列目錄的成本是**目錄裡所有項目數**（含堆著沒處理的、`.tmp` 殘檔），不只是這格新來的。
+6. **收回音**。要查的 cpu＝下面三組的聯集：
+   - `resp-` 通知指到的：通知的 `params.home` 換成 `P/<i>`（家路徑在 `K/pools/P/cpus/<i>`；字面比不上再用 realpath 比，K 經過 symlink 也認）；
+     `params.name` 不等於那格 `busy.req` 的＝舊通知，只刪不查。
+     **壞通知**（不是 JSON、帶 `id`、method 不是 `responded`、`home` 不在 `K/pools/*/cpus/` 底下或解析出錯、`busy` 沒那格）：進 `deletes`、log 一行，**絕不讓這格退 1**。
+   - `recent`：上一格派出去的每一顆。
+   - **巡檢**：`busy` 的**前** `sweep` 顆；查完把它們搬到 `busy` 的尾巴（JSON 物件照插入順序，所以輪著查）。
+   每一顆照三種情況查：
+   - 原單 `cpus/<i>/requests/<req>` 在：在途，跳過。
+   - 原單不在、回音 `cpus/<i>/responses/<req>` 在：判定（§4），結果（計數、status、排隊、pending 的回音進 `replies`、這則的 ack 進 `acks`）進提交點 3。
+   - 兩個都不在：從沒放出去（上格崩在記帳之後、放檔之前）→ **再放一次**。`discard` 的就直接取消（拿掉行程、放回號碼）。
+   判完：`busy`、`on` 那格拿掉；這號符合 [§3.1](pools.md) 的可派條件就放回那池 `free` 的尾巴，
+   不符合（縮小中）就不放回、那池 `draining` 減 1（歸 0 設 `dirty`）。處理過的 `resp-` 通知檔名進 `deletes`。
+7. **池**：[§3.1](pools.md) 的每格步驟（收 scale 回音、info 變了沒、要不要送下一張 scale 單、envs 變了沒）。O(池數＋有變化的號碼)。
+8. **派工**（`phase=running` 才做）：
+   1. `delayed` 是堆積：堆頂到期就彈出、接到它池的 `ready` 尾巴，直到堆頂沒到期。每彈一個 O(log 排隊數)。
+   2. 每個池：`ready` 不空、`free` 不空 → 兩邊各拿一個配對：行程 `status=running`、`busy[P/i]`＝`{req: k-<chain>-<N>-<P>-<i>.json, proc, discard:false}`、`on[NAME]`、號碼進 `recent`。一直做到其中一邊空。
+      拿到的格若是舊格（[§1.2](ledger.md) 的判法），丟掉再拿下一個。
+   3. 派完進提交點 3，之後逐一放檔（`aos-exec`，params 照行程紀錄：`target`／`dir_target`／`args`（有才放）／`timeout_ms`）。**先記後放**，所以永遠不會同一行程派兩顆；崩在中間＝下一格靠 `recent` 補放。
+   回 queue（§4）的行程：`not_before` 已到的接 `ready` 尾巴，沒到的推進 `delayed` 堆積。
+9. **停機**（`phase=stopping`）：剛進入時把 `ready`／`delayed` 裡的 `once` 全部拿掉、各回 `-32000`／`Stopping`（進 `replies`；只掃這一次，之後新 add 的 once 當場回 `Stopping`）。
+   `busy` 空、出貨箱空、沒有 `pending`（`procs` 的與池的都算）→ 帳本記 `halting: true` 進「縮池」：之後第 7 步把每個工作池的 W 當空集合（等於每池排一張 `count: 0` 的 scale 單），
+   **等它們全部回成功**才 `phase=stopped`，同一次提交再排 kernel 池的 `count: 0`。詳見 [§6 停機](boot.md)。
+   不再往每顆 cpu 放 `stop-` 檔（第 1 版的 `stops` 拿掉）。`stopped` 之後再來的 syscall／ack 留在 `K/requests/`，下次 boot 的第 1 格會收。
+10. **出貨**（同第 4 步）、**寫帳本**、有事件才 append `kernel.log`、退 0。`kernel.log` 每格記：派了誰去哪顆（行程名、`P/<i>`、request 檔名）、
+    收到的每則回音（`result` 或 `error` 整段）、退件時的門檻、池的事件（`scale_send`、`scale_echo`、`pool_new`、`pool_envs`、`pool_gone`、`bad_notify`、`halting`、`stopped`…）。
+    沒有事件的格**不寫**。kernel.log 在出貨、寫帳本之後才 append，所以**不保證涵蓋崩潰中途已結帳的回音**。
 
-一格裡 daemon 或磁碟出錯：stderr 一行、退 1、可能只做了一半；帳本＋出貨箱讓下格接得上。
+一格出錯（磁碟、daemon 家不在…）：stderr 一行、退 1，帳本＋出貨箱讓下一格接上。
+
+**派到還沒起來的 cpu 沒關係**：單放在那顆的家裡，等 daemon 拉起來就做。只有 scale 單回成功的號才會被派（§3.1），所以不會派到 daemon 根本不打算拉的號。
+通知漏了誰補、每格的成本，見 [§11](scale.md)。

@@ -17,7 +17,7 @@ aos-llm -h ／ aos-llm call -h
 
 `AGENT_DIR` 留空＝`.`（目前資料夾）；必須是 agent 家（[agent.md §1](../agent/layout.md)）。沒有別的旗標。裸 `aos-llm`（沒子命令）＝用法錯 2（09-24 fix-r4 補）。
 
-要的環境（都由那顆 llm cpu 給，[kernel.md §1.1](../kernel/home.md) 的 `info.cpus.<c>.envs` 會抄進它的 inst）：
+要的環境（都由那顆 llm cpu 給：[kernel §1.1](../kernel/info.md) 的 `info.pools.<P>.envs` 寫進池的 `envs.json`，池裡每顆 cpu 的 inst 都引用它）：
 
 | 變數 | 用途 | 沒有時 |
 |---|---|---|
@@ -25,16 +25,16 @@ aos-llm -h ／ aos-llm call -h
 | `PATH` | 找得到 `aos-llm` 本身（工作 inst 的 `argv` 寫 `["aos-llm", "call", <agent 家>]`） | 那件工作是 exit 127 |
 | 金鑰變數 | llm.json 裡 `$env` 讀的 | `EnvironmentVariableMissing`，退 1 |
 
-K 的 info 例子：
+K 的 info 例子（`pools` 裡的一格）：
 
 ```json
-"llm": {"pool": "llm",
+"llm": {"count": 1,
         "envs": {"PATH": {"$fmt": {"$val": "/abs/proto5/cli:${p}", "p": {"$env": "PATH"}}},
                  "AOS_LLM_CONFIG": "/abs/llm-home/llm.json",
                  "LMSTUDIO_KEY": {"$env": "LMSTUDIO_KEY"}}}
 ```
 
-`envs` 只在那顆 cpu 第一次建家時抄進去；之後要改得照 kernel.md §1.1 的步驟（stop、改 `K/cpus/<c>/inst.json`、boot）。
+改池的 `envs`（改 info，kernel 下一格重寫 `K/pools/<P>/envs.json`），之後（重）拉的 cpu 生效；要讓活著的立刻換，用 `aos-daemon kill --pool <dpool> --all`（[daemon §6.3](../daemon/cli.md)）。（2026-09-24 池式納入改）
 llm.json 本身可以隨時改，下一次問就生效（每次跑都重讀）。
 
 # 7. 給程式用
