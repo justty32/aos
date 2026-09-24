@@ -16,6 +16,7 @@ from aos_team_format import (HUMAN, POST, TASK_ID, TASK_TYPE, TERMINAL, TeamErro
 
 JUDGE = 'judge'
 DEFAULT_ATTEMPTS = 3
+NO_FLOW = ('無', '-', 'none', '（無）')
 
 
 # ------------------------------------------------------------------ 讀寫 ----
@@ -68,8 +69,9 @@ def describe_item(it):
 def render_handoff(t):
     """派給負責人的那封 REQUEST 的內文。"""
     reply = t['opened_by'] if t['opened_by'] not in (POST,) else HUMAN
+    flow = t['workflow'].strip()
     lines = ['任務 %s（rev%d，第 %d/%d 次）：%s' % (t['id'], t['rev'], t['attempt'], t['max_attempts'], t['goal']),
-             '照這份工作流做：%s' % t['workflow'],
+             '沒有指定工作流，照目標與事實做' if flow in NO_FLOW else '照這份工作流做：%s' % flow,
              '事實：%s' % (t.get('facts') or '無')]
     lines.append('驗收（你回 DONE 之後自動跑，機械的不用你自己宣稱）：')
     lines += ['  %d. %s' % (i, describe_item(it)) for i, it in enumerate(t['done_when'])]
@@ -204,7 +206,7 @@ def apply(t, ev, now=None):
             ignore('不是負責人或狀態 %s' % st)
     elif typ == 'resume':
         if st in ('blocked', 'waiting_user'):
-            move('sent', ev.get('note'), waiting_on=None)
+            move('working', ev.get('note'), waiting_on=None)
         else:
             ignore('狀態 %s 不用恢復' % st)
     elif typ == 'verified':
@@ -402,7 +404,7 @@ def on_letter(lay, roster, ltr):
     """郵差每處理一封成員或人的信都叫一次：reply_to 是單號才有事。
 
     負責人寄的＝回報（DONE／BLOCKED／NEEDS-USER／FAILED／PROGRESS）；
-    開單人或人寄給負責人的 REQUEST＝恢復（blocked／waiting_user → sent）。
+    開單人或人寄給負責人的 REQUEST＝恢復（blocked／waiting_user → working）。
     """
     tid = ltr.get('reply_to')
     if not isinstance(tid, str) or not TASK_ID.match(tid) or not lay.task(tid).exists():

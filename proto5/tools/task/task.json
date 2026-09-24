@@ -8,7 +8,7 @@
         "type": "object",
         "properties": {
           "assignee": {"type": "string", "description": "Team mate name"},
-          "workflow": {"type": "string", "description": "Workflow entry file to follow"},
+          "workflow": {"type": "string", "description": "Workflow entry file to follow, or \"無\" if none"},
           "goal": {"type": "string", "description": "One sentence: what done looks like"},
           "facts": {"type": "string", "description": "Facts file or short facts"},
           "done_when": {

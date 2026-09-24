@@ -46,7 +46,7 @@
 
 | kind | 誰能寄 | 欄位 | 處理 |
 |---|---|---|---|
-| `handoff` | 模板 may 有它的（領隊）、人 | `assignee`、`workflow`、`goal`、`done_when`（非空）、`facts`?、`max_attempts`?（1～10，預設 3）、`deadline_minutes`? | 開任務單並派給負責人（tasks.md） |
+| `handoff` | 模板 may 有它的（領隊）、人 | `assignee`、`workflow`（入口檔；沒有寫「無」）、`goal`、`done_when`（非空）、`facts`?、`max_attempts`?（1～10，預設 3）、`deadline_minutes`? | 開任務單並派給負責人（tasks.md） |
 | `cancel` | 人、開單人 | `task`、`reason`? | 單子 → cancelled，通知負責人停下 |
 | `reassign` | 人、開單人 | `task`、`assignee` | rev+1、attempt 歸 1、換負責人、重派 |
 | `review_result` | 那張審查子單的負責人 | `task`（`t-0001.r1`）、`items`：`[{"i": 0, "pass": true, "why": "…"}]` 每條都要回 | 子單 done，父單收到 reviewed（tasks.md） |
