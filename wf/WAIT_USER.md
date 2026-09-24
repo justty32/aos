@@ -38,8 +38,13 @@
 16. **問模型的 endpoint 壞掉要不要做自動換手**（原 backlog `llm-cpu-fallback`）：現在一個模型代號在 llm.json 只認一個 endpoint、不重試；要支援就要把 `models` 表一個代號改成一串。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
 17. **kernel 排隊要不要加期限**（原 backlog `kiss-holes` 第 2 條的 kernel 那半）：`queue` 裡等派工的行程沒有期限，只有 `timeout_ms` 管跑的時間；agent 那半（半批沒送完永遠等）已有手動 escape（stop 後把 `batch` 設 `null`）。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
 18. **once 工作綁在 `tick_ms` 的延遲算不算要處理**（原 backlog `review-leftovers` R11）：kernel 一格派、下一格才收，一次問答最快也要等一格；09-23 已判「算不算要做要人判」，agent 重寫沒碰這塊。→ [cleanup 筆記](../proto5/notes/2026-09-24-backlog-cleanup.md)
-19. **proto5-2 規範草稿要拍的六題**（[proto5-2/README.md](../proto5-2/README.md) 的「要使用者拍的」一節第 4～9 條；前三條規模題 09-24 使用者說先不動，見下 C 段）：`cpu rm NAME` 的 `NAME`＝`P/<i>`、永久退休那個號，對不對；既有池的 `cpu add --env` 草稿直接拒絕，對不對；縮小要不要有 `--now`（現在一律等被收的那顆把手上工作做完）；拉不起來的號卡住的工作要不要訂「放棄」協定；daemon `halt` 後再 `boot` 要不要自動把池拉回來（草稿選「要」）；退休的 cpu 家永不刪，要不要清理指令。
+19. **proto5-2 規範草稿要拍的六題**（C 隊照草稿的預設在做，翻案要回這裡改；[proto5-2/README.md](../proto5-2/README.md) 的「要使用者拍的」一節第 4～9 條；前三條規模題 09-24 使用者說先不動，見下 C 段）：`cpu rm NAME` 的 `NAME`＝`P/<i>`、永久退休那個號，對不對；既有池的 `cpu add --env` 草稿直接拒絕，對不對；縮小要不要有 `--now`（現在一律等被收的那顆把手上工作做完）；拉不起來的號卡住的工作要不要訂「放棄」協定；daemon `halt` 後再 `boot` 要不要自動把池拉回來（草稿選「要」）；退休的 cpu 家永不刪，要不要清理指令。
 20. **kernel C-7／C-8 崩潰窗口測試挖出的兩件**（[kernel-crash](../proto5/notes/2026-09-24-kernel-crash/README.md)）：(a) 出貨中被 KILL、cpu 已讀掉 stop 並退出後，下一格會照「EEXIST 當已放」重送一份同名 stop 到它家，下次 boot 這顆 cpu 起來就退 0、再下一格才拉起——astra 認為算重複投遞該修，隊長沒修因為會改規範行為（與 A.14(a) 跨代 stop 同一件事）；(b) kernel 拿到 daemon 的 spawn 回音、還沒記帳就崩潰，那則回音永遠沒人 ack，留在 `D/responses/`（只多一個檔，排程不受影響），修法要動 kernel↔daemon 對話。
+21. **09-24 四份提案／調查的預設已照做**（使用者 09-24 說「你說的都 OK」，即下列各題的**預設**答案；翻案就回這條）：
+    - **agent-access 提案 H**（[報告](../proto5/notes/2026-09-24-agent-access/README.md) §7，共 6 題）：①沒 bwrap 的機器一律拒跑 ②`self` 唯讀 ③牢裡預設無網路 ④改名寫法 `tools` 元素 `{"$opt":{"as":{原名:新名}}}` ⑤映射表放 agent 家的 `access.json` ⑥改表下一批生效、正在跑的不收回。
+    - **one-program 調查 I**（[報告](../proto5-2/notes/2026-09-24-one-program/README.md) §6，共 5 題）：①規模題現在不動架構，只做「查一筆行程」正式入口 ②「合一」＝`aos up`／`aos down` 包起來、程式不合 ③proto5-2 的 kernel 帳本換 sqlite、cpu 家與信箱仍是檔案 ④kernel 帳本可單獨放寬「不用四樣檔」 ⑤工具結果不明不規定「重跑無害」、照現在回報給 agent。
+    - **priority-and-shared-cpu 提案 J**（[報告](../proto5/notes/2026-09-24-priority-and-shared-cpu/README.md)，共 6 題）：優先級①只做到 aos 這層、模型伺服器看端點 ②先用 (c) 專屬池（零改動） ③多級優先 (a) 先不要；共用 cpu ①指 (v) 某支工具給多個 agent 排隊共用 ②工具檔加 `_pool` 一欄可以 ③閒著的 agent 每格被叫醒列進 proto5-2 規模題，這版不做。
+    - **tools-base 六題**（[報告](../proto5/notes/2026-09-24-tools-base.md) 尾節「要使用者拍的」，共 6 題，維持現況＝預設）：①工作根目錄維持 `config.json` 的 `root`（`<家>/workspace/`） ②bash 暫不加白名單／沙盒 ③結束時收掉背景行程（要長駐另設計） ④給模型的描述維持英文 ⑤跟 pi 還差的能力（多段 edit、長行續讀、bash 存檔、read 圖片）先不補 ⑥`init --tools base`／`tools ls`／`tools remove` 先不做。
 
 ### B. 要你親自做的（環境／帳號，我跨不過去）
 
@@ -50,6 +55,7 @@
 放這裡是為了**別再拿它們去煩你**，不是待辦：
 
 - **proto5-2 規模三題**（kernel 帳本仍整份讀寫、aos-agent 每格偷看整份帳本、一顆 cpu＝一支 Python 程序）——09-24 使用者說「規模這塊先不動」；什麼時候會被迫要答：proto5-2 要實作，或 cpu 上千顆時。→ [proto5-2/README.md](../proto5-2/README.md) 的「要使用者拍的」1～3
+  - **多一條同類的**：閒著的 agent 每格還是被叫醒看一眼（J 隊 priority-and-shared-cpu 挖到，見 [報告](../proto5/notes/2026-09-24-priority-and-shared-cpu/README.md) §「要使用者拍的」題 2-3）；K 隊正在提案「等模型的 agent 不空轉」，做完再一起拍。
 
 - **pi 當介面層**（2026-08-30「先擱置」）——接法與代價在 [pi-interface](../core/agent/docs/pi-interface.md)，要投資時從那裡起。
 
