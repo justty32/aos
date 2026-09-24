@@ -2,11 +2,15 @@
 
 等法跟 say --wait 同一個判準（送出前記下記憶長度 H0、等 H0 以後的回話），但每輪不退出：
 印過的位置記在 shown，晚到的回話下次按 Enter 或送下一句時補印，不重印、不漏印。
-回話與 slash 指令的輸出走 stdout；等待提示、逾時、卡住的原因走 stderr。
+回話與 slash 指令的輸出走 stdout；提示符、等待提示、逾時、卡住的原因走 stderr。
 """
+import contextlib
 import json
 import os
+import re
+import signal
 import sys
+import threading
 import time
 
 import aos_agent_info
@@ -21,7 +25,9 @@ POLL_SECONDS = .2
 HISTORY_DEFAULT = 10
 CONTEXT_RECENT = 3
 PREVIEW = 80
-TOOL_FAIL = ('逾時', '失敗', '無法執行', '沒跑')
+MAX_WAIT_SECONDS = 7 * 24 * 3600
+# §6.2 aos-agent 自己寫的工具失敗字串：「工具 <名> 逾時／失敗／無法執行／沒跑…」
+TOOL_FAIL = re.compile(r'工具 \S+ (逾時|失敗|無法執行|沒跑)')
 
 HELP = [
     ('/status [-v]', '狀態一行；-v 印整段 aos-agent status'),
@@ -34,6 +40,7 @@ HELP = [
     ('/help', '這張表'),
     ('/quit', '離開（Ctrl-C、Ctrl-D 也一樣）'),
 ]
+NO_ARGS = ('tools', 'pause', 'continue', 'help', 'quit', 'exit')
 
 
 def _err(text):
@@ -46,8 +53,7 @@ def _out(text):
     sys.stdout.flush()
 
 
-def _one_line(text, limit=PREVIEW):
-    text = ' '.join(str(text).split())
+def _cut(text, limit=PREVIEW):
     return text if len(text) <= limit else text[:limit] + '…'
 
 
@@ -56,8 +62,31 @@ def _seconds(ms):
     return int(value) if value == int(value) else value
 
 
+def _isatty(stream):
+    try:
+        return stream.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+@contextlib.contextmanager
+def no_interrupt():
+    """短提交區：Ctrl-C 先記著，做完這一組才丟 KeyboardInterrupt（不留半截）。"""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    hit = []
+    old = signal.signal(signal.SIGINT, lambda *_: hit.append(True))
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, old)
+    if hit:
+        raise KeyboardInterrupt
+
+
 def call_line(call):
-    """[呼叫 名 k=v …]：參數是 JSON 物件就攤開，不是就原樣縮短。"""
+    """[呼叫 名 k=v …]：參數是 JSON 物件就攤開（字串原樣、換行寫成 \\n），不是就原樣；超過 80 字截斷。"""
     fn = call.get('function', {})
     raw = fn.get('arguments', '')
     try:
@@ -65,26 +94,36 @@ def call_line(call):
     except ValueError:
         args = None
     if isinstance(args, dict):
-        parts = ['%s=%s' % (k, v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
-                 for k, v in args.items()]
-        text = ' '.join(parts)
+        text = ' '.join('%s=%s' % (k, v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
+                        for k, v in args.items())
     else:
         text = raw
-    text = _one_line(text)
+    text = _cut(text.replace('\r', '\\r').replace('\n', '\\n'))
     return '[呼叫 %s%s]' % (fn.get('name', '?'), ' ' + text if text else '')
 
 
-def result_line(message, names):
-    """[結果 ok N 行]；aos-agent 寫的失敗字串（§6.2）改印 [結果 失敗 …]。"""
+def result_line(message):
+    """[結果 ok N 行]；aos-agent 寫的失敗字串（§6.2）＝[結果 失敗 <第一行>]、結果不明另一種。"""
     content = message.get('content') or ''
-    name = names.get(message.get('tool_call_id'))
-    if name and content.startswith('工具 %s ' % name) and any(
-            content.startswith('工具 %s %s' % (name, w)) for w in TOOL_FAIL):
-        return '[結果 失敗 %s]' % _one_line(content.splitlines()[0] if content else '')
     if content == UNKNOWN:
         return '[結果 不明：工具可能跑了也可能沒有]'
-    lines = len(content.splitlines())
-    return '[結果 ok %d 行]' % lines if content else '[結果 ok 空]'
+    if TOOL_FAIL.match(content):
+        return '[結果 失敗 %s]' % content.splitlines()[0]
+    return '[結果 ok %d 行]' % len(content.splitlines()) if content else '[結果 ok 空]'
+
+
+class Pending:
+    """逾時／卡住還沒回的那一句。"""
+
+    def __init__(self, h0, text, path, inode):
+        self.h0, self.text, self.path, self.inode = h0, text, path, inode
+
+    def gone(self):
+        """原路徑上已經不是我投的那份（被收走了；別人再投同名檔不算我的）。"""
+        try:
+            return os.stat(self.path).st_ino != self.inode
+        except FileNotFoundError:
+            return True
 
 
 class Talk:
@@ -95,9 +134,8 @@ class Talk:
         self.timeout_ms = timeout_ms
         self.show_calls = show_calls
         self.shown = len(self.info['history'])  # 記憶印到哪裡（不含）
-        self.names = {}  # tool_call_id → 工具名，給結果行判失敗
-        self.pending = None  # 逾時還沒回的那句：(H0, TEXT, 投遞路徑)
-        self.tty_err = _isatty(sys.stderr)
+        self.pending = None
+        self.tty = _isatty(sys.stdin) and _isatty(sys.stderr)  # 等待提示只在兩邊都是終端時印
         self.waiting_shown = False
 
     # ---- 讀記憶、補印 -------------------------------------------------
@@ -112,8 +150,6 @@ class Talk:
         for message in history[self.shown:]:
             role = message.get('role')
             if role == 'assistant':
-                for call in message.get('tool_calls') or []:
-                    self.names[call.get('id')] = call.get('function', {}).get('name')
                 if message.get('content'):
                     self._clear_waiting()
                     _out(message['content'])
@@ -123,31 +159,51 @@ class Talk:
                         _out(call_line(call))
             elif role == 'tool' and self.show_calls:
                 self._clear_waiting()
-                _out(result_line(message, self.names))
+                _out(result_line(message))
         self.shown = len(history)
 
-    def peek(self):
-        """不等：有晚到的就印；逾時那句這輪走完了就清掉。"""
+    def check(self):
+        """看一次：回 (data 或 None, 這句回完了沒)。先看檔、再看 state、最後讀記憶——
+
+        檔已不是我的、之後 state 是 idle 又沒 intake，代表我那句已經接進記憶而且那一輪走完了（§8 的順序），
+        之後讀到的記憶一定含我那句；所以同樣的字送兩次也不會拿前一句的回話充數。
+        """
+        pending = self.pending
+        gone = pending.gone() if pending is not None else False
+        data = None
         try:
-            history = self.history()
-            self.flush_new(history)
-            if self.pending is not None:
-                data = collect(self.base, self.env)
-                if self._done(data, history, *self.pending):
-                    self.pending = None
+            data = collect(self.base, self.env)
         except (AgentError, OSError, ValueError):
             pass
-
-    def _done(self, data, history, h0, text, dropped):
-        return (not dropped.exists() and not data['state_error'] and data['state'] == 'idle'
-                and data['batch'] is None and not data['intake'] and len(history) > h0
+        try:
+            history = self.history()
+        except (AgentError, OSError, ValueError):
+            return data, False  # 寫到一半或暫時讀不到，下一輪再讀；停止原因照看
+        self.flush_new(history)
+        if pending is None:
+            return data, False
+        if len(history) < pending.h0:
+            self.pending = None
+            self._clear_waiting()
+            _err('（記憶被改短了，追不到剛才那句；/history 看現在的記憶）')
+            return data, False
+        done = (gone and data is not None and not data['state_error'] and data['state'] == 'idle'
+                and data['batch'] is None and not data['intake'] and len(history) > pending.h0
                 and history[-1]['role'] == 'assistant'
-                and any(m['role'] == 'user' and m['content'] == text for m in history[h0:-1]))
+                and any(m['role'] == 'user' and m['content'] == pending.text
+                        for m in history[pending.h0:-1]))
+        if done:
+            self.pending = None
+        return data, done
+
+    def peek(self):
+        """不等：有晚到的就印；那句這一輪走完了就不再算在等。"""
+        self.check()
 
     # ---- 等待提示 -----------------------------------------------------
 
     def _show_waiting(self, seconds):
-        if self.tty_err:
+        if self.tty:
             sys.stderr.write('\r\033[K（等回話 %d 秒… Ctrl-C 離開）' % seconds)
             sys.stderr.flush()
             self.waiting_shown = True
@@ -162,33 +218,28 @@ class Talk:
 
     def say(self, text):
         state = aos_agent_info.load_state(self.base, env=self.env)
+        self.peek()  # 先把晚到的印掉，shown 才對
         h0 = len(self.history())
-        dropped = deliver(self.base, state['input'][0], text)
-        self.pending = (h0, text, dropped)
+        with no_interrupt():  # 投進去了就一定記成 pending，Ctrl-C 等這之後才生效
+            path, inode = deliver(self.base, state['input'][0], text, with_inode=True)
+            self.pending = Pending(h0, text, path, inode)
         self.wait(self.timeout_ms)
 
     def wait(self, timeout_ms):
         """等 pending 那句這一輪走完；中途的新訊息邊到邊印。"""
-        h0, text, dropped = self.pending
         start = time.monotonic()
         deadline = start + timeout_ms / 1000
         try:
-            while True:
-                try:
-                    history = self.history()
-                    self.flush_new(history)
-                    data = collect(self.base, self.env)
-                    if self._done(data, history, h0, text, dropped):
-                        self.pending = None
-                        return
-                    stop = _stopped(data, self.base)
-                    if stop is not None:
-                        self._clear_waiting()
-                        report(*stop)
-                        _err('（已投入，不要再說一次；修好後 /wait 等回話，或按 Enter 看到了沒）')
-                        return
-                except (AgentError, OSError, ValueError):
-                    pass  # 寫到一半或暫時讀不到，下一輪再讀
+            while self.pending is not None:
+                data, done = self.check()
+                if done:
+                    return
+                stop = _stopped(data, self.base) if data is not None else None
+                if stop is not None and self.pending is not None:
+                    self._clear_waiting()
+                    report(*stop)
+                    _err('（已投入，不要再說一次；修好後 /wait 等回話，或按 Enter 看到了沒）')
+                    return
                 now = time.monotonic()
                 if now >= deadline:
                     self._clear_waiting()
@@ -211,12 +262,14 @@ class Talk:
             'tools': self.cmd_tools, 'wait': self.cmd_wait, 'pause': self.cmd_pause,
             'continue': self.cmd_continue, 'help': self.cmd_help,
         }.get(word)
-        if word in ('quit', 'exit'):
-            return False
-        if handler is None:
+        if handler is None and word not in ('quit', 'exit'):
             _err('沒有這個指令，/help 看清單（要把 / 開頭的字送給模型就打兩個 //）')
             return True
         try:
+            if word in NO_ARGS and rest:
+                raise AgentError('Usage', '/%s 不收參數：%s' % (word, rest))
+            if handler is None:
+                return False
             handler(rest)
         except (AgentError, OSError, ValueError) as exc:
             report(getattr(exc, 'code', 'io'), getattr(exc, 'msg', str(exc)))
@@ -235,16 +288,16 @@ class Talk:
         _out('其他字直接送給模型；空行＝不送，只看有沒有晚到的回話；// 開頭＝把 / 開頭的字送出去')
 
     def cmd_status(self, rest):
+        if rest not in ('', '-v', '--verbose'):
+            raise AgentError('Usage', '/status 只收 -v')
         data = collect(self.base, self.env)
-        if rest in ('-v', '--verbose'):
+        if rest:
             show(data, verbose=True)
             return
-        if rest:
-            raise AgentError('Usage', '/status 只收 -v')
+        b = data['batch']
         if data['state_error']:
-            state = 'state 讀不到'
+            state = 'state ?  batch ?'
         else:
-            b = data['batch']
             state = 'state %s  batch %s' % (data['state'], '-' if b is None else '%s %s／%s' % (
                 b['kind'], b['done_n'], b['total']))
         pending = len(data['pending_inputs'])
@@ -262,31 +315,27 @@ class Talk:
             roles[m['role']] = roles.get(m['role'], 0) + 1
             chars += len(m.get('content') or '')
             chars += sum(len(c['function']['arguments']) for c in m.get('tool_calls') or [])
-        turns = roles.get('user', 0)  # 一則 user 算一輪
         tools = [t['function']['name'] for t in info['tools']]
         tool_chars = len(json.dumps(info['tools'], ensure_ascii=False)) if tools else 0
         _out('model  %s（池 %s）' % (info['model'], info['llm']['pool']))
         _out('system %d 字' % len(info['system']))
         _out('history %d 則，%d 字（user %d／assistant %d／tool %d）' % (
-            len(history), chars, turns, roles.get('assistant', 0), roles.get('tool', 0)))
+            len(history), chars, roles.get('user', 0), roles.get('assistant', 0), roles.get('tool', 0)))
         _out('tools  %d 個，%d 字：%s' % (len(tools), tool_chars, ', '.join(tools) or '-'))
         _out('合計約 %d 字，每次問模型整份送出（記憶不會自動截短）' % (len(info['system']) + chars + tool_chars))
         if history:
             _out('最近 %d 則：' % min(count, len(history)))
             for m in history[-count:]:
-                _out('  ' + self._brief(m))
+                _out('  ' + _cut(self._brief(m)))
 
     def _brief(self, m, full=False):
-        role = m.get('role')
-        if role == 'tool':
-            return result_line(m, self.names) if not full else '[結果] ' + (m.get('content') or '')
+        """一則一行：user／assistant 帶角色，工具結果印成 [結果 …]；full＝內容不折行不截。"""
+        if m.get('role') == 'tool':
+            return result_line(m)
         text = m.get('content') or ''
-        calls = m.get('tool_calls') or []
-        for call in calls:
-            self.names[call.get('id')] = call.get('function', {}).get('name')
-        parts = [text if full else _one_line(text)] if text else []
-        parts += [call_line(c) for c in calls]
-        return '%s: %s' % (role, ' '.join(parts))
+        parts = [text if full else ' '.join(text.split())] if text else []
+        parts += [call_line(c) for c in m.get('tool_calls') or []]
+        return '%s: %s' % (m.get('role'), ' '.join(parts))
 
     def cmd_history(self, rest):
         count = self._number(rest, HISTORY_DEFAULT)
@@ -294,12 +343,8 @@ class Talk:
         if not history:
             _out('（記憶是空的）')
             return
-        # 先把前面的工具名記起來，結果行才認得失敗字串
-        for m in history:
-            for call in m.get('tool_calls') or []:
-                self.names[call.get('id')] = call.get('function', {}).get('name')
         for m in history[-count:]:
-            _out(self._brief(m, full=m.get('role') != 'tool'))
+            _out(self._brief(m, full=True))
 
     def cmd_tools(self, rest):
         tools = aos_agent_info.load(self.base, env=self.env)['tools']
@@ -311,28 +356,30 @@ class Talk:
             _out('%s  %s' % (fn['name'], desc[0] if desc else ''))
 
     def cmd_wait(self, rest):
-        if self.pending is None:
-            self.peek()
-            _out('（沒有在等的話）')
-            return
+        timeout = self.timeout_ms
         if rest:
             try:
                 seconds = float(rest)
             except ValueError:
                 raise AgentError('Usage', '/wait 後面要是秒數：' + rest)
-            if not 0 <= seconds <= 7 * 24 * 3600:
-                raise AgentError('Usage', '/wait 的秒數要在 0～604800 之間：' + rest)
-            self.wait(int(seconds * 1000))
-        else:
-            self.wait(self.timeout_ms)
+            if not 0 <= seconds <= MAX_WAIT_SECONDS:  # 也擋掉 nan、inf
+                raise AgentError('Usage', '/wait 的秒數要在 0～%d 之間：%s' % (MAX_WAIT_SECONDS, rest))
+            timeout = int(seconds * 1000)
+        if self.pending is None:
+            self.peek()
+            _out('（沒有在等的話）')
+            return
+        self.wait(timeout)
 
     def cmd_pause(self, rest):
         from aos_agent_pause import pause
-        pause(self.base)
+        with no_interrupt():
+            pause(self.base)
 
     def cmd_continue(self, rest):
         from aos_agent_pause import resume
-        resume(self.base, self.env)
+        with no_interrupt():
+            resume(self.base, self.env)
 
     # ---- 主迴圈 -------------------------------------------------------
 
@@ -345,55 +392,71 @@ class Talk:
         if health['code'] not in ('ok', 'recovering', 'retrying', 'resuming'):
             _err('（照這樣說話會先投進去、等修好才處理）')
 
-    def run(self, prompt):
-        self.banner()
+    def read_line(self, prompt):
+        """提示符寫 stderr（stdout 只留對話）；stdout 也是終端時交給 input()，readline 才排得好。"""
+        if not prompt:
+            return input()
+        if _isatty(sys.stdout):
+            return input(prompt)
+        sys.stderr.write(prompt)
+        sys.stderr.flush()
+        return input()
+
+    def loop(self, prompt):
+        while True:
+            self.peek()
+            try:
+                line = self.read_line(prompt)
+            except EOFError:
+                if prompt:
+                    _err('')
+                return
+            text = line.strip()
+            if not text:
+                continue
+            if text.startswith('/') and not text.startswith('//'):
+                if not self.slash(text):
+                    return
+                continue
+            if text.startswith('//'):
+                text = text[1:]
+            try:
+                self.say(text)
+            except AgentError as exc:
+                report(exc.code, exc.msg)
+            except OSError as exc:
+                report('io', str(exc))
+
+    def farewell(self):
+        """離開前再看一次（晚到的補印）；還沒回才提醒。"""
+        if self.pending is None:
+            return
         try:
-            while True:
-                self.peek()
-                try:
-                    line = input(prompt)
-                except EOFError:
-                    if prompt:
-                        _err('')
-                    return 0
-                text = line.strip()
-                if not text:
-                    continue
-                if text.startswith('/') and not text.startswith('//'):
-                    if not self.slash(text):
-                        return 0
-                    continue
-                if text.startswith('//'):
-                    text = text[1:]
-                try:
-                    self.say(text)
-                except AgentError as exc:
-                    report(exc.code, exc.msg)
-                except OSError as exc:
-                    report('io', str(exc))
+            with no_interrupt():
+                self.check()
         except KeyboardInterrupt:
-            self._clear_waiting()
-            _err('')
-            return 0
-        finally:
-            if self.pending is not None:
-                _err('（上一句還沒回；話已投入，回話會進記憶，之後 aos-agent listen --last --target %s 看）' % self.base)
-
-
-def _isatty(stream):
-    try:
-        return stream.isatty()
-    except (AttributeError, ValueError):
-        return False
+            pass
+        if self.pending is not None:
+            _err('（上一句還沒回；話已投入，回話會進記憶，之後 aos-agent listen --last --target %s 看）' % self.base)
 
 
 def talk(agent_dir, *, timeout_ms=120000, show_calls=False, env=None):
-    session = Talk(agent_dir, timeout_ms, show_calls, env)
-    prompt = ''
-    if _isatty(sys.stdin):
-        try:
-            import readline  # noqa: F401  有就用：方向鍵、歷史
-        except ImportError:
-            pass
-        prompt = '> '
-    return session.run(prompt)
+    session = None
+    try:
+        session = Talk(agent_dir, timeout_ms, show_calls, env)
+        prompt = ''
+        if _isatty(sys.stdin):
+            try:
+                import readline  # noqa: F401  有就用：方向鍵、歷史
+            except ImportError:
+                pass
+            prompt = '> '
+        session.banner()
+        session.loop(prompt)
+    except KeyboardInterrupt:
+        if session is not None:
+            session._clear_waiting()
+        _err('')
+    if session is not None:
+        session.farewell()
+    return 0

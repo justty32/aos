@@ -93,13 +93,13 @@ class TalkTests(unittest.TestCase):
         """不能踩的坑：回話在開始等之前就到了，也要印出來（H0 在送出前記）。"""
         self.registered()
         real = aos_agent_say.deliver
-        def instant(base, value, text):
-            target = real(base, value, text)
+        def instant(base, value, text, **kw):
+            target, inode = real(base, value, text, **kw)
             target.unlink()
             (self.base / 'prompts').mkdir(exist_ok=True)
             aos_home.write_json(self.base / 'prompts/history.json',
                                 [{'role': 'user', 'content': text}, REPLY])
-            return target
+            return target, inode
         with patch('aos_agent_talk.deliver', instant):
             code, out = self.run_talk('嗨\n', '--wait', '2')
         self.assertEqual((code, out), (0, '現在 12 點\n'))
@@ -199,15 +199,103 @@ class TalkTests(unittest.TestCase):
         self.assertEqual(self.run_talk('', env={})[0], 1)
 
     def test_result_line(self):
-        names = {'x': 'date'}
-        self.assertEqual(talk.result_line({'tool_call_id': 'x', 'content': '工具 date 失敗（exit 1）：壞\n了'}, names),
-                         '[結果 失敗 工具 date 失敗（exit 1）：壞]')
-        self.assertEqual(talk.result_line({'tool_call_id': 'x', 'content': ''}, names), '[結果 ok 空]')
+        self.assertEqual(talk.result_line({'content': '工具 date 失敗（exit 1）：壞  掉\n了'}),
+                         '[結果 失敗 工具 date 失敗（exit 1）：壞  掉]')  # 第一行原樣
+        self.assertEqual(talk.result_line({'content': ''}), '[結果 ok 空]')
+        self.assertEqual(talk.result_line({'content': '工具箱裡有 3 樣\n'}), '[結果 ok 1 行]')
         from aos_agent_results import UNKNOWN
-        self.assertIn('不明', talk.result_line({'tool_call_id': 'x', 'content': UNKNOWN}, names))
+        self.assertIn('不明', talk.result_line({'content': UNKNOWN}))
         self.assertEqual(talk.call_line({'function': {'name': 'read', 'arguments': '{"path": "hello.py"}'}}),
                          '[呼叫 read path=hello.py]')
+        self.assertEqual(talk.call_line({'function': {'name': 'echo', 'arguments': '{"text": "a  b\\nc"}'}}),
+                         '[呼叫 echo text=a  b\\nc]')  # 字串空白原樣、換行寫成 \n
         self.assertEqual(talk.call_line({'function': {'name': 'date', 'arguments': ''}}), '[呼叫 date]')
+
+    # ---- astra 審查補的 ----------------------------------------------------
+
+    def test_same_text_twice_not_answered_by_first(self):
+        """必修 1：同一句送兩次，第一句的回話不能充當第二句的（第二句還在 input 裡）。"""
+        self.registered()
+        self.put(self.base / 'prompts/history.json', [])
+        session = talk.Talk(self.base, 100, False, self.env)
+        path, inode = aos_agent_say.deliver(str(self.base), 'input.json', '同一句', with_inode=True)
+        session.pending = talk.Pending(0, '同一句', path, inode)
+        # 第一句已經回完（記憶裡），但原路徑上還是第二句自己的檔
+        self.put(self.base / 'prompts/history.json', [{'role': 'user', 'content': '同一句'}, REPLY])
+        with patch('sys.stdout', new_callable=io.StringIO):
+            self.assertFalse(session.check()[1])
+            # 我的被收走、別人在同一路徑再投一份：inode 不同＝不是我的
+            path.unlink()
+            aos_home.write_json(path, {'role': 'user', 'content': '別人的'})
+            self.put(self.base / 'prompts/history.json',
+                     [{'role': 'user', 'content': '同一句'}, REPLY, {'role': 'user', 'content': '同一句'}, REPLY])
+            self.assertTrue(session.check()[1])
+
+    def test_stop_reason_even_if_history_broken(self):
+        """必修 7：記憶讀壞時照樣看得到暫停，不乾等到逾時。"""
+        self.registered()
+        session = talk.Talk(self.base, 5000, False, self.env)
+        (self.base / 'paused').write_text('x')
+        (self.base / 'prompts').mkdir()
+        (self.base / 'prompts/history.json').write_text('[')
+        session.pending = talk.Pending(0, 'x', self.base / 'input.json', -1)
+        started = time.monotonic()
+        session.wait(5000)
+        self.assertLess(time.monotonic() - started, 2)
+        self.assertIn('paused:', self.err.getvalue())
+
+    def test_history_shortened_drops_pending(self):
+        self.registered()
+        self.put(self.base / 'prompts/history.json', [REPLY] * 5)
+        session = talk.Talk(self.base, 100, False, self.env)
+        session.pending = talk.Pending(5, 'x', self.base / 'input.json', -1)
+        self.put(self.base / 'prompts/history.json', [REPLY])
+        with patch('sys.stdout', new_callable=io.StringIO):
+            session.check()
+        self.assertIsNone(session.pending)
+        self.assertIn('記憶被改短了', self.err.getvalue())
+
+    def test_ctrl_c_during_banner_exits_zero(self):
+        with patch('aos_agent_talk.Talk.banner', side_effect=KeyboardInterrupt):
+            code, out = self.run_talk('', env={})
+        self.assertEqual((code, out), (0, ''))
+
+    def test_slash_arguments_checked(self):
+        code, out = self.run_talk('/quit now\n/pause x\n/wait abc\n/continue --all\n/status x\n/history 0\n', env={})
+        self.assertEqual(code, 0)
+        self.assertEqual(self.err.getvalue().count('aos-agent: Usage:'), 6)
+        self.assertFalse((self.base / 'paused').exists())
+        self.assertEqual(out, '')
+
+    def test_farewell_prints_late_reply_instead_of_warning(self):
+        """必修 6：逾時後回話在打字時到了，離開前補印、不說「還沒回」。"""
+        self.registered()
+        errors = self.answer(REPLY, delay=.3)
+        stdin = _SlowInput(['慢\n', '/quit\n'], gap={1: .8})
+        with patch.dict(os.environ, self.env, clear=True), patch('sys.stdin', stdin), \
+                patch('sys.stdout', new_callable=io.StringIO) as out, \
+                patch('aos_agent_talk.Talk.peek'):  # 不讓提示符前的補印先做掉
+            agent.main(['talk', '--target', str(self.base), '--wait', '0.1'])
+        self.assertFalse(errors)
+        self.assertEqual(out.getvalue(), '現在 12 點\n')
+        self.assertNotIn('上一句還沒回', self.err.getvalue())
+
+    def test_prompt_goes_to_stderr_when_stdout_redirected(self):
+        stdin = io.StringIO('/tools\n')
+        stdin.isatty = lambda: True
+        with patch.dict(os.environ, {}, clear=True), patch('sys.stdin', stdin), \
+                patch('sys.stdout', new_callable=io.StringIO) as out:
+            code = agent.main(['talk', '--target', str(self.base)])
+        self.assertEqual(code, 0)
+        self.assertEqual(out.getvalue(), '（沒有工具）\n')
+        self.assertIn('> ', self.err.getvalue())
+
+    def test_context_line_cut(self):
+        self.put(self.base / 'prompts/history.json',
+                 [{'role': 'assistant', 'content': '長' * 70, 'tool_calls': [CALL]}])
+        code, out = self.run_talk('/context 1\n', env={})
+        line = [l for l in out.splitlines() if l.startswith('  assistant')][0]
+        self.assertEqual(len(line), 2 + 80 + 1)
 
 
 class _SlowInput(io.StringIO):
