@@ -15,4 +15,4 @@ kernel 也是一格一格的 exec、params＝aos-exec 的 argv、daemon spawn �
 | impl-task.md | 派 astra（bypass）照三份規範實作 lib／cli／測試的任務書（四段） |
 | review-agent1-task.md／review-agent1-report.md | agent 線三份草稿（aos-llm-call／agent／aos-agent）第一輪審查：結論「還不能定稿」，必改 12 條（waits 兼工作索引、批次紀錄、記憶／ack／state 恢復…） |
 
-舊的十份規範（run／daemon／kernel／cpu-queue／llm-cpu／tool-cpu）等新的定稿後一次換掉，README 規範表到時一起改。
+舊規範已於 2026-09-24 換掉（副本在 proto5.1/spec/）。

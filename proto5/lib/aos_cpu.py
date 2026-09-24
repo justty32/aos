@@ -1,6 +1,6 @@
 """共用 CPU 檔案佇列：讀驗身分、交件、認領、收屍、原子發布。
 
-執行 payload 由呼叫者提供；execute 期間不持鎖。規範：../spec/cpu-queue.md。
+執行 payload 由呼叫者提供；execute 期間不持鎖。規範：../../proto5.1/spec/cpu-queue.md。
 """
 from contextlib import contextmanager
 import fcntl

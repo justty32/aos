@@ -35,9 +35,8 @@ aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
   元素。環境就是繼承的、沒有 exit 檔、沒有重導向。它沒有執行位＝126。
 - **`.json` 或資料夾目標給了 `--`**（就算後面沒有元素）是用法錯（退出碼 2）：inst 目標的參數
   寫在 inst.json 的 `argv` 裡。
-- **一個以 `.json` 結尾但不存在的路徑不是用法錯**，是 aos-exec 自己失敗（125、`ReadFailed`）：
-  這樣之後的 daemon 才能先收下一份還沒出現的 inst.json，檔案一出現就自然跑起來。不存在的
-  **非** `.json` 路徑照舊是用法錯（2）。
+- **一個以 `.json` 結尾但不存在的路徑不是用法錯**，是 aos-exec 自己失敗（125、`ReadFailed`）。
+  不存在的**非** `.json` 路徑照舊是用法錯（2）。
 
 ## 旗標
 
@@ -52,7 +51,8 @@ aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 
 ## 退出碼：自己的失敗跟子程式的碼分開
 
-`run_target()` 回的是 **`(code, kind)`**，`kind` 說這個碼是誰的；命令列照 `kind` 換算成退出碼：
+`run_target()` 回的是 **`(code, kind)`**，`kind` 說這個碼是誰的；有沒有撞到逾時不從碼猜，要的話用
+`run_target_full()`（見下面「給程式用」）。命令列照 `kind` 換算成退出碼：
 
 | `kind` | 意思 | 命令列的退出碼 |
 |---|---|---|
@@ -96,13 +96,20 @@ aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 import aos_exec
 code, kind = aos_exec.run_target(xxx, dir_target=".aos/inst.json", timeout_ms=0,
                                  on_spawn=None, stderr=None, args=None)
+
+r = aos_exec.run_target_full(xxx, ...)   # 同樣的參數，另有 on_target、on_poll、poll_ms
+r.code, r.kind, r.timed_out, r.stopped, r.ms
 ```
 
-- `on_spawn`：子行程一開起來就用那個 `Popen` 叫它一次、收完屍再用 `None` 叫一次（給之後的
-  aos-run 砍正在跑的那個用；命令列用不到）。
+- `run_target()` 只回 `(code, kind)`，不帶 `timed_out`。要知道是不是真的撞到期限（子程式收到 TERM 後自己以 0
+  結束也算）、是不是被 `on_poll` 強停、跑了幾毫秒，用 `run_target_full()`：回 `code`／`kind`／`timed_out`／
+  `stopped`／`ms`。`on_poll(p)` 每 `poll_ms` 毫秒被叫一次，回真值＝強停（只 TERM 該 process group，寬限後 KILL）。
+
+- `on_spawn`：子行程一開起來就用那個 `Popen` 叫它一次、收完屍再用 `None` 叫一次（給呼叫者砍正在跑的那個用；
+  命令列用不到）。
 - `stderr`：同 `--stderr`（`None`＝照 inst.json、`"-"`＝繼承、字串＝路徑）。
 - `args`：同 `--`（`None`＝沒給、陣列＝有給，含空陣列）。只對普通檔案有效。
-- 反覆執行不是這支程式的事：aos-run 就是 import 它、反覆叫 `run_target()`。
+- 反覆執行不是這支程式的事，是 kernel 的事（[kernel.md](kernel.md)）。
 
 ## 例子
 
