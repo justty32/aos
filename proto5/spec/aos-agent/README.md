@@ -28,7 +28,7 @@
   agent 自己的那格在 stopping 時不會被派，當批留到下次 boot 之後收（kernel 跨 boot 保留 `procs`／`replies`）。
 - 放單崩在 `link` 之後、刪 `.tmp` 之前：`K/requests/` 留一個 `.` 開頭 `.tmp` 結尾的殘檔；主人只收 `.json`，不會誤收；**沒人自動清**（保證外），人在都停著時刪。
 - **日常 CLI 是最小版**（09-24 試玩 r2 補）：`init`（單一內建預設）、`say`、`status`、`continue` 有了（§1.1～§1.4）；（09-24 fix-r4 補）`listen`、`pause`（§1.5、§1.6）；（09-24 fix-r5 補）`continue --all`、`init --force`（§1.4、§1.1）；（09-24 advice-r1 補）`check`（§1.7）；（09-24 tools-base 補）`tools add`（§1.8）；（09-24 talk 補）`talk`（§1.9）；（09-24 access-impl 補）`tools ls`／`rm`／`alias`／`unalias`（§1.8 續）、`access`（[access.md](access.md)）。
-  **這份沒管的**：`init --template`／`--config`（template 從哪來使用者還沒定）、`tools enable`／`disable` 與 `llms` 子命令、專屬 cpu、`say` 投到 `input` 第一條以外的地方；構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)。記憶太長也沒管。
+  **這份沒管的**：`init --template`／`--config`（template 從哪來使用者還沒定）、`tools enable`／`disable` 與 `llms` 子命令、專屬 cpu、`say` 投到 `input` 第一條以外的地方；構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)。記憶太長也沒管（（09-24 第 4 隊補）機械壓縮有了：[cli-memory.md](cli-memory.md)）。
 
 ## 各節
 
@@ -42,6 +42,7 @@
 | [cli-talk.md](cli-talk.md) | §1.2 `say` 投一則話 |
 | [cli-listen.md](cli-listen.md) | §1.5 `listen` 看回話：`--last [N]`、`--wait`、`--follow`、輪次標頭、`--show-calls*` |
 | [cli-status.md](cli-status.md) | §1.3 `status` 現在怎樣了；§1.4 `continue` 解除暫停；§1.6 `pause` 手動暫停 |
+| [cli-memory.md](cli-memory.md) | （09-24 第 4 隊補）`context`、`compact`、`events`、`history --archive`、`notes`；`init --template` 旗標先留著 |
 | [cli-talk-repl.md](cli-talk-repl.md) | §1.9 `talk`：來回對話的極簡 REPL、slash 指令（09-24 talk 補） |
 | [cli-check.md](cli-check.md) | §1.7 `check`：start 之前先查一遍（K 自己找、`--probe`；09-24 advice-r1 從 `aos-kernel check --agent` 搬來） |
 | [tools.md](tools.md) | §1.8 `tools add` 裝工具包（內建 `base`：read／write／edit／bash／grep／find／ls）與工作根目錄（09-24 tools-base 補）；原地引用資料夾／`.json` 檔、`--as`／`--only`（access-impl） |

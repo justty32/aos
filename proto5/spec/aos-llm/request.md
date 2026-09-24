@@ -23,6 +23,8 @@
 
 # 5. HTTP、驗、輸出
 
+（09-24 第 4 隊補）拿到 2xx、本文是 JSON 物件時，另外追加一行到 `<AGENT_DIR>/log/usage.jsonl`（端點回的 `usage`、批 id 取自環境變數 `AOS_LLM_BATCH`；[agent/events.md §2](../agent/events.md)）；寫不進去不影響輸出與退出碼。這是 aos-llm 唯一寫的檔。
+
 `POST <endpoint 去掉結尾的 />/chat/completions`，JSON body；`api_key` 是非空字串才帶 `Authorization: Bearer <key>`。
 不串流、不重試；整次請求的上限＝llm.json 那筆的 `timeout_ms`。
 

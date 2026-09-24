@@ -26,6 +26,11 @@ aos-agent access set NAME PATH [--ro | --rw] [--cwd] [--target DIR]             
 aos-agent access rm  NAME [--target DIR]                                            # 同上
 aos-agent access cwd NAME [--target DIR]                                            # 同上
 aos-agent access net on|off [--target DIR]                                          # 同上
+aos-agent context [--target DIR] [--by-round] [--json]                             # （09-24 第 4 隊）cli-memory.md
+aos-agent compact [--target DIR] [--keep-rounds N] [--max-tokens X] [--dry-run] [--json] ｜ --prune-archive 天數   # 同上
+aos-agent events  [--target DIR] [--last N] [--usage] [--json]                    # 同上
+aos-agent history [--target DIR] --archive [SHA] [--grep 字] [--json]              # 同上
+aos-agent notes   [--target DIR] ls [--json] | show KEY                            # 同上
 aos-agent -h ／ aos-agent <子命令> -h        # 每個子命令一句話
 ```
 

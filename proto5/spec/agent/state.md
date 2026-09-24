@@ -69,6 +69,8 @@
 | `calls[].acked` | 布林 | 回音已 ack（或本來就沒有回音） |
 | `access` | `null`、`{"error": 字串}` 或物件 | 只有 `act` 有（09-24 access-impl）：建批那一刻解好的權限牆快照（[§3.5](access.md)），同批每件、重送都用它。物件＝`{"mounts": {名: {"path": 絕對路徑, "ro": 布林}}, "cwd": 名或 null, "net": 布林}`，名照 `[a-z0-9_-]+`、`cwd` 要在 `mounts` 裡；`null`＝沒 access 檔（要關牢的工具不送，`NoAccess`）；`error`＝壞表（這批要關牢的工具都跑不起來）。沒這個鍵（舊版寫的）＝`null`；形狀不合＝`FieldTypeMismatch` |
 
+（09-24 第 4 隊補）`calls[]` 另外可有 `ms`（kernel 回音的經過毫秒或 null）、`ok`（這件成不成）兩個鍵：收回時寫、結清時記進事件（[events.md](events.md)），讀驗不看。
+
 `done` 的形狀：`act` 是 `{"content": 給模型看的字串}`；`think` 是 `{"ok": true}`（答案留在 `work/<名>.out`）
 或 `{"fail": 白話原因, "count": 布林}`（`count` 說算不算一次連敗）。怎麼算在 aos-agent.md §6。
 

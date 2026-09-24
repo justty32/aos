@@ -177,8 +177,13 @@ class EventTests(MemoryBase):
         self.assertEqual((end['ev'], end['ok'], end['count']), ('think_end', False, True))
         self.assertIn('aos-llm call exit 1', end['reason'])
 
+    def free_tool(self):
+        """不關牢的 sh（沒 access.json 時要關牢的會被 NoAccess 擋在送件前，這裡測的是事件）。"""
+        self.put(self.base / 'tools.json', [dict(fixture.TOOL, _jail=False)])
+
     def test_act_cycle_calls(self):
         self.prepare('act')
+        self.free_tool()
         self.put(self.base / 'state.json', {'state': 'act'})
         self.assertEqual(self.tick(), 0)
         name = self.state()['batch']['calls'][0]['name']
@@ -193,7 +198,7 @@ class EventTests(MemoryBase):
         self.put(self.base / 'prompts/history.json',
                  [{'role': 'assistant', 'content': None, 'tool_calls': [call('c1', 'sh'), call('c2', 'nope')]}])
         self.info['tools'] = ['tools.json']
-        self.put(self.base / 'tools.json', [fixture.TOOL])
+        self.free_tool()
         self.put(self.base / 'info.json', self.info)
         self.put(self.base / 'state.json', {'state': 'act'})
         self.tick()
@@ -293,6 +298,8 @@ class UsageTests(MemoryBase):
         self.assertIsInstance(rows[0]['ms'], int)
         code, out = self.cli('events', '--usage', env={})
         self.assertIn('prompt 12  completion 3  total 15', out)
+        code, out = self.cli('context', env={})               # context 也順便印端點算的真數字
+        self.assertIn('端點回報 prompt 12 token', out)
 
     def test_usage_missing_and_bad_message_still_logged(self):
         env = self.serve({'choices': [{'message': {'role': 'user', 'content': 'x'}}]})
@@ -363,7 +370,7 @@ class CompactTests(MemoryBase):
         self.assertEqual(archives[0].read_bytes(), raw)
         self.assertEqual(history[-12:], self.original[-12:])                  # 最後 2 輪原樣
         self.assertEqual(history[:3], [self.original[0], history[1], self.original[5]])
-        self.assertTrue(history[1]['content'].startswith('[aos 已壓縮這一輪中間的 4 則：叫了 bash×1、read×1；原文在 prompts/archive/'))
+        self.assertTrue(history[1]['content'].startswith('[aos 已壓縮 4 則：bash×1、read×1；原文 prompts/archive/'))
         ev = self.events()[-1]
         self.assertEqual((ev['ev'], ev['auto'], ev['before']['count'], ev['after']['count']),
                          ('compact', False, 30, len(history)))
@@ -391,9 +398,16 @@ class CompactTests(MemoryBase):
         self.assertEqual(self.history(), once)
         self.assertEqual(len(list((self.base / 'prompts/archive').glob('*.json'))), 1)
 
+    def test_small_rounds_not_grown(self):
+        """換掉的比說明行還短就不換：縮不能讓記憶變長（真跑 date 工具時看到的）。"""
+        self.history(rounds(4, tools=1, fat=5))
+        code, out = self.compact('--keep-rounds', '1')
+        self.assertIn('nothing to compact', out)
+        self.assertEqual(self.history(), rounds(4, tools=1, fat=5))
+
     def test_compress_keeps_round_without_final_reply(self):
         h = [{'role': 'user', 'content': 'q'}, {'role': 'assistant', 'content': None, 'tool_calls': [call('a')]},
-             {'role': 'tool', 'tool_call_id': 'a', 'content': 'r'}, {'role': 'user', 'content': 'q2'},
+             {'role': 'tool', 'tool_call_id': 'a', 'content': 'r' * 500}, {'role': 'user', 'content': 'q2'},
              {'role': 'assistant', 'content': 'done'}]
         self.history(h)
         self.compact('--keep-rounds', '1')

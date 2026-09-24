@@ -145,7 +145,7 @@ def _assemble(parts, archive):
         while j + 1 < len(parts) and parts[j + 1]['action'] == 'seal':
             j += 1
         count = parts[j]['to'] - p['from'] + 1
-        out.append({'role': 'user', 'content': '%s較早的 %d 輪（%d 則）；原文在 %s 第 %d～%d 則（從 1 數）]' % (
+        out.append({'role': 'user', 'content': '%s較早的 %d 輪（%d 則）；原文 %s 第 %d～%d 則]' % (
             SEALED, j - k + 1, count, archive, p['from'], parts[j]['to'])})
         k = j + 1
     return out
@@ -177,10 +177,14 @@ def plan(history, *, keep_rounds, max_tokens, archive, status=None):
             if dropped:
                 hi = e - 1 if final is not None else e
                 called = _counts(dropped)
-                note = {'role': 'user', 'content': '%s這一輪中間的 %d 則：%s；原文在 %s 第 %d～%d 則（從 1 數）]' % (
-                    COMPRESSED, len(dropped), '叫了 ' + called if called else '沒有叫工具', archive, k + 1, hi)}
-                entry.update(action='compress', dropped=len(dropped),
-                             messages=users + [note] + ([final] if final is not None else []))
+                note = {'role': 'user', 'content': '%s %d 則：%s；原文 %s 第 %d～%d 則]' % (
+                    COMPRESSED, len(dropped), called or '沒叫工具', archive, k + 1, hi)}
+                # 換掉的比說明行還短就不換（縮不能讓記憶變長）
+                if history_tokens([note]) < history_tokens(dropped):
+                    entry.update(action='compress', dropped=len(dropped),
+                                 messages=users + [note] + ([final] if final is not None else []))
+                else:
+                    entry['why'] = 'small'
             entry['sealable'] = not (e - s == 1 and _sealed_marker(history[s]))
         parts.append(entry)
     out = _assemble(parts, archive)

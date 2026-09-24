@@ -24,10 +24,11 @@
 - 最後 `keep_rounds` 輪（預設 3）**原樣**。
 - **沒做完的任務不縮**：agent 家在 `<團隊>/members/<名>/`、團隊資料夾有 `team.json` 時，一輪裡 `user` 訊息（信頭）提到的單號 `t-0001`、`t-0001.r1`，只要 `team/tasks/<單號>.json` 的 `status` 不是 `done`／`cancelled`（包括讀不到），那一輪原樣留、也不封存。不在團隊裡就沒有這條。
 - 其他較早的輪：留開頭那段 `user` 原話、那輪最後一則回話（沒有 `tool_calls` 的 `assistant`；沒有就不留），中間全部換成一則 `user`：
-  `[aos 已壓縮這一輪中間的 4 則：叫了 read×2、bash×1；原文在 prompts/archive/<sha>.json 第 2～5 則（從 1 數）]`。
+  `[aos 已壓縮 4 則：read×2、bash×1；原文 prompts/archive/<sha>.json 第 2～5 則]`（則數從 1 數，指 archive 裡的位置）。
   說明行用 `user` 不用 `assistant`：放在回話裡模型會學著自己寫這種行。
+  **換掉的比說明行還短就不換**（token 粗估比）：只叫一次 `date` 那種輪縮了反而變長（09-24 真跑看到 129→199 token 才加的）。
 - `tool_calls` 與它的 `tool` 結果**永遠一起留或一起換掉**（整輪處理，拆開模型端會退 400）。縮完再驗一次：每則有 `tool_calls` 的 assistant 後面緊接著每個 id 的結果、沒有落單的結果，不過＝`HistoryInvalid`、不寫。
-- **還有上限**（`max_tokens`，token 照 [cli-memory.md](../aos-agent/cli-memory.md) 的粗估，只算記憶）：縮完還超過，就從最舊的一輪起整輪換成 `[aos 已封存較早的 3 輪（18 則）；原文在 … 第 1～18 則（從 1 數）]`（相連的併成一行），每封一輪就重算一次，直到不超過。
+- **還有上限**（`max_tokens`，token 照 [cli-memory.md](../aos-agent/cli-memory.md) 的粗估，只算記憶）：縮完還超過，就從最舊的一輪起整輪換成 `[aos 已封存較早的 3 輪（18 則）；原文 … 第 1～18 則]`（相連的併成一行），每封一輪就重算一次，直到不超過。
   最近 `keep_rounds` 輪、沒做完的任務、已經是封存行的不封；都封完還超過就停，印一行「還超過」，**不算失敗**（退 0）。
 - 同樣的記憶、同樣的選項、同樣的任務狀態，算出來一定一樣；縮過的再縮一次是空轉（「nothing to compact」）。
 
@@ -76,5 +77,6 @@ tick 看到 `compact-req/*.json` 就縮（多份一起算一次，選項以檔�
 ## 6. 保證外
 
 - 人在 `say --wait`／`talk` 等回話時剛好被縮（很窄：記下長度之後、那句被收之前）：記憶變短，它們會說「記憶被改短了」而不是印回話；回話照樣在記憶裡，`listen --last` 看得到。
+- **封存的輪模型就看不到了**：09-24 真跑，封存後問「剛才 long.txt 幾行」，模型沒說不知道、答了錯的數字（原本 40 答 21）。要回頭找原文是二波 T-recall（模型）或人 `history --archive --grep`。
 - 手改記憶與縮同時：縮拿了 tick 鎖，但手改的人不一定拿（[tick.md §2.1](../aos-agent/tick.md) 末那句同樣適用）；讀到的 bytes 與讀驗時不同就 `HistoryChanged`、不寫。
 - token 是粗估，跟模型端實際的數字會差；上限要留餘裕。

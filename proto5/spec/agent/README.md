@@ -22,7 +22,7 @@
 程式做什麼：走一格、登記＝[aos-agent.md](../aos-agent/README.md)；問模型＝[aos-llm.md](../aos-llm/README.md)。
 （09-24 試玩 r2 補）`init`（單一內建預設）、`say`、`status`、`continue` 已有（[aos-agent.md §1.1～§1.4](../aos-agent/cli.md)）；（09-24 fix-r4 補）`listen`、`pause` 也有了（§1.5、§1.6）；（09-24 tools-base 補）`tools add` 也有了（§1.8）；（09-24 access-impl 補）`tools ls／rm／alias／unalias` 也有了；`init --template`、`tools enable／disable` 與 `llms`、一個 agent 一顆專屬 cpu：這輪不做，
 使用者的構想在 [thinking/aos-agent.md](../../../thinking/aos-agent.md)、[thinking/2026-09-23.md](../../../thinking/2026-09-23.md)。
-記憶太長；明確的 `fail` 狀態（等使用者拍板，見 [WAIT_USER A.14(d)](../../../wf/WAIT_USER.md)）。
+記憶太長（（09-24 第 4 隊補）機械版有了：[compact.md](compact.md)；叫模型寫摘要的 `--summarize` 是第三波）；明確的 `fail` 狀態（等使用者拍板，見 [WAIT_USER A.14(d)](../../../wf/WAIT_USER.md)）。
 **日常 CLI 是最小版**：家用 `aos-agent init` 建或手動建，話用 `say` 投、`listen`／`say --wait` 看回話（09-24 試玩 r2 補；fix-r4 `last` 改 `listen`）（aos-agent.md §1、§13）。
 
 ## 各節
@@ -38,6 +38,8 @@
 | [info.md](info.md) | §3 `info.json`：§3.1 人格、§3.2 記憶與 message 驗證、§3.3 工具檔 |
 | [tools-opt.md](tools-opt.md) | §3.4 `tools` 元素的 `$opt`：`as` 改名、`only` 挑幾支、`_source`、`_jail`（09-24 access-impl） |
 | [access.md](access.md) | §3.5 `access.json`：工具關進牢裡看得到哪些資料夾、信任資料與重疊、生效時機、擋不住的（09-24 access-impl） |
+| [events.md](events.md) | （09-24 第 4 隊補）事件紀錄 `log/events.jsonl`（每批起訖與成敗、收件、壓縮）與 `log/usage.jsonl`（token 用量） |
+| [compact.md](compact.md) | （09-24 第 4 隊補）記憶的機械壓縮：什麼時候能縮、怎麼縮、每步可重跑、tick 自動、compact 申請 |
 | [state.md](state.md) | §4 `state.json`：§4.1 `input`、§4.2 `waits`、§4.3 `batch`、§4.4 `intake`／`consuming`／`sweep` |
 | [errors.md](errors.md) | §5 錯誤代號 |
 | [rulings.md](rulings.md) | 調度者裁決（第 2～3 輪，實作層級） |
