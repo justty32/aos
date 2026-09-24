@@ -26,6 +26,8 @@ def main(args, root):
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
     except OSError as e:
         fail('SpawnFailed', 'cannot start %s: %s' % (shell, e.strerror or e))
+    # 被外面（kernel 逾時、停機）用 TERM 砍時，順手收掉這句指令的行程群組。
+    signal.signal(signal.SIGTERM, lambda *_: (_reap_group(p.pid), os._exit(143)))
     tail = Tail()
     reader = threading.Thread(target=tail.drain, args=(p.stdout,), daemon=True)
     reader.start()
@@ -94,7 +96,7 @@ def _kill(p):
 
 
 def _reap_group(pgid):
-    """shell 走了、群組裡還留著背景孩子：一起收掉，免得它們活過這次工具呼叫。"""
+    """shell 走了、群組裡還留著背景孩子：一起收掉。用 setsid／自己另開群組的逃得掉（見 README）。"""
     try:
         os.killpg(pgid, signal.SIGKILL)
     except OSError:

@@ -46,7 +46,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1287 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1316 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -370,10 +370,10 @@ halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1287 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1316 條；repo 根目錄
 ```
 
-共 37 個測試檔、1287 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 38 個測試檔、1316 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -392,6 +392,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_agent_tools.py](test/test_agent_tools.py) | 14 | （tools-base）`tools add`：init 的家、手動家補 info、`--force` 保留 config、`--root`、同名、壞工具包、自訂工具包；真 daemon／kernel／agent＋假模型照劇本 write→bash→edit→bash |
 | [test_tools_base.py](test/test_tools_base.py) | 85 | （tools-base）base 工具包：共用參數／config／OutsideRoot（含符號連結）、read／write／edit／grep（rg 與退回 grep）／find／ls、base.json 形狀 |
 | [test_tools_base_bash.py](test/test_tools_base_bash.py) | 11 | （tools-base）bash：輸出合併、cwd、退出碼、逾時、截斷、背景行程收掉、stdin 空 |
+| [test_tools_base_fix.py](test/test_tools_base_fix.py) | 29 | （tools-base astra 後）暫存檔與符號連結、NUL／surrogate、read 大檔與 FIFO、edit 上限與 CRLF、grep 設定檔／逾時／stderr 死鎖／超長行（假 rg）、find 讀不到的資料夾、bash 被 TERM、tools add 版本連結／修復／清殘渣／併發／BadName |
 | [test_agent_tick.py](test/test_agent_tick.py) | 118 | waits、三格、批次收送、錯誤與 start／stop |
 | [test_client.py](test/test_client.py) | 12 | 取名、先查原單、逾時、端到端與 ack |
 | [test_daemon.py](test/test_daemon.py) | 27 | 真 daemon／cpu、spawn 冪等、重拉、三階停機、flock、崩潰接手 |

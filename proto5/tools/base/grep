@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
-"""grep：搜檔案內容，印 路徑:行號:內容。有 ripgrep 用 rg，沒有退回 grep -r。"""
+"""grep：搜檔案內容，印 路徑:行號:內容。有 ripgrep 用 rg，沒有退回 grep -r。
+
+兩條 pipe 各一條執行緒邊讀邊丟（行長、行數、stderr 都有上限），逾時跟有沒有輸出無關；
+不管怎麼結束都把搜尋行程的整個群組收掉。
+"""
 import sys
 sys.dont_write_bytecode = True
 import os  # noqa: E402
 import shutil  # noqa: E402
 import signal  # noqa: E402
 import subprocess  # noqa: E402
-import time  # noqa: E402
+import threading  # noqa: E402
 from _common import run, arg, resolve, rel, fail, MAX_BYTES  # noqa: E402
 
 DEFAULT_LIMIT = 200
 MAX_LIMIT = 2000
 MAX_LINE = 500
-TIMEOUT = 30
+TIMEOUT = int(os.environ.get('AOS_TOOLS_GREP_TIMEOUT', '30'))  # 測試可調短
 
 
 def command(pattern, target, glob, ignore_case, literal, context):
     rg = os.environ.get('AOS_TOOLS_RG', 'rg')  # 測試用：設成不存在的名字＝強制退回 grep
     if shutil.which(rg):
-        argv = [rg, '--line-number', '--with-filename', '--no-heading', '--color=never']
+        # --no-config：不吃 RIPGREP_CONFIG_PATH（裡面若有 --follow 就會沿符號連結走出根目錄）
+        argv = [rg, '--no-config', '--no-follow', '--line-number', '--with-filename', '--no-heading',
+                '--color=never']
         argv += ['-i'] if ignore_case else []
         argv += ['-F'] if literal else []
         argv += ['-C', str(context)] if context else []
@@ -30,6 +36,70 @@ def command(pattern, target, glob, ignore_case, literal, context):
     argv += ['-C', str(context)] if context else []
     argv += ['--include=' + glob] if glob else []
     return argv + ['-e', pattern, '--', target], 'grep'
+
+
+class Lines:
+    """stdout：切成行、每行最多留 MAX_LINE 字、最多收 limit 行或 MAX_BYTES，夠了就不再收（照樣排空）。"""
+
+    def __init__(self, limit):
+        self.limit, self.lines, self.size, self.full = limit, [], 0, None
+        self.partial, self.partial_cut = bytearray(), False
+        self.done = threading.Event()
+
+    def _add(self, raw, cut):
+        if self.full:
+            return
+        line = raw.decode('utf-8', 'replace')
+        if line.startswith('./'):
+            line = line[2:]
+        if cut or len(line) > MAX_LINE:
+            line = line[:MAX_LINE] + '… [line truncated]'
+        size = len(line.encode('utf-8')) + 1
+        if len(self.lines) >= self.limit:
+            self.full = 'limit=%d lines' % self.limit
+        elif self.size + size > MAX_BYTES:
+            self.full = 'output limit %d KB' % (MAX_BYTES // 1024)
+        else:
+            self.lines.append(line)
+            self.size += size
+        if self.full:
+            self.done.set()             # 收滿了：叫主執行緒提早收掉搜尋行程
+
+    def drain(self, stream):
+        try:
+            for chunk in iter(lambda: stream.read1(65536), b''):
+                parts = chunk.split(b'\n')
+                for i, part in enumerate(parts):
+                    last = i == len(parts) - 1
+                    room = MAX_LINE * 4 - len(self.partial)
+                    if room > 0:
+                        self.partial += part[:room]
+                    if len(part) > room:
+                        self.partial_cut = True
+                    if not last:
+                        self._add(bytes(self.partial), self.partial_cut)
+                        self.partial, self.partial_cut = bytearray(), False
+            if self.partial:
+                self._add(bytes(self.partial), self.partial_cut)
+        except (OSError, ValueError):
+            pass
+        finally:
+            self.done.set()
+
+
+def drain_tail(stream, box):
+    try:
+        for chunk in iter(lambda: stream.read1(65536), b''):
+            box[0] = (box[0] + chunk)[-2000:]
+    except (OSError, ValueError):
+        pass
+
+
+def kill_group(p):
+    try:
+        os.killpg(p.pid, signal.SIGKILL)
+    except OSError:
+        pass
 
 
 def main(args, root):
@@ -53,37 +123,38 @@ def main(args, root):
                              stderr=subprocess.PIPE, start_new_session=True)
     except OSError as e:
         fail('SpawnFailed', 'cannot start %s: %s' % (engine, e.strerror or e))
-    lines, size, stopped, deadline = [], 0, None, time.monotonic() + TIMEOUT
-    for raw in p.stdout:
-        line = raw.decode('utf-8', 'replace').rstrip('\n')
-        if line.startswith('./'):
-            line = line[2:]
-        if len(line) > MAX_LINE:
-            line = line[:MAX_LINE] + '… [line truncated]'
-        size += len(line.encode('utf-8')) + 1
-        if len(lines) >= limit or size > MAX_BYTES:
-            stopped = 'limit=%d lines' % limit if len(lines) >= limit else 'output limit %d KB' % (MAX_BYTES // 1024)
-            break
-        if time.monotonic() > deadline:
-            stopped = 'time limit %d s' % TIMEOUT
-            break
-        lines.append(line)
-    if stopped:
-        try:
-            os.killpg(p.pid, signal.SIGKILL)
-        except OSError:
-            pass
-    err = p.stderr.read().decode('utf-8', 'replace').strip()
-    code = p.wait()
+    # 被外面（kernel 逾時、停機）用 TERM 砍時，順手收掉搜尋行程。
+    signal.signal(signal.SIGTERM, lambda *_: (kill_group(p), os._exit(143)))
+    out, err = Lines(limit), [b'']
+    readers = [threading.Thread(target=out.drain, args=(p.stdout,), daemon=True),
+               threading.Thread(target=drain_tail, args=(p.stderr, err), daemon=True)]
+    for t in readers:
+        t.start()
+    finished = out.done.wait(TIMEOUT)
+    timed_out = not finished
+    try:
+        code = p.wait(timeout=0 if (timed_out or out.full) else TIMEOUT)
+    except subprocess.TimeoutExpired:
+        code = None
+    kill_group(p)
+    if code is None:
+        code = p.wait()
+    for t in readers:
+        t.join(timeout=2)
+    lines, stopped = list(out.lines), out.full
+    errtext = err[0].decode('utf-8', 'replace').strip()
+    text = '\n'.join(lines)
+    if timed_out:
+        fail('Timeout', 'search did not finish within %d s and was stopped; narrow the path or glob' % TIMEOUT,
+             output=text + ('\n' if text else '') + '[partial results: %d lines]' % len(lines))
     if not stopped and code not in (0, 1) and not lines:
-        fail('SearchFailed', '%s failed (exit %d): %s' % (engine, code, err[-500:]), engine=engine)
+        fail('SearchFailed', '%s failed (exit %d): %s' % (engine, code, errtext[-500:]), engine=engine)
     if not lines:
         return 'No matches found for %r in %s' % (pattern, target)
-    text = '\n'.join(lines)
     if stopped:
         text += '\n[stopped at %s; narrow the pattern, path or glob to see more]' % stopped
-    elif code not in (0, 1) and err:
-        text += '\n[%s reported errors: %s]' % (engine, err.splitlines()[0][:300])
+    elif code not in (0, 1) and errtext:
+        text += '\n[%s reported errors (some files were skipped): %s]' % (engine, errtext.splitlines()[0][:300])
     return text
 
 

@@ -1,55 +1,64 @@
 #!/usr/bin/env python3
-"""read：讀文字檔，可帶 offset／limit（行，從 1 起）。"""
+"""read：讀文字檔，可帶 offset／limit（行，從 1 起）。邊讀邊丟，大檔也只佔固定記憶體。"""
 import sys
 sys.dont_write_bytecode = True
-import os  # noqa: E402
-from _common import run, arg, resolve, fail, MAX_BYTES, MAX_LINE  # noqa: E402
+from _common import run, arg, resolve, fail, open_regular, MAX_BYTES, MAX_LINE  # noqa: E402
 
-DEFAULT_LIMIT = 2000
+MAX_LIMIT = 2000
+SNIFF = 8192
 
 
 def main(args, root):
     path = arg(args, 'path', str, required=True)
     offset = arg(args, 'offset', int, 1)
-    limit = arg(args, 'limit', int, DEFAULT_LIMIT)
+    limit = arg(args, 'limit', int, MAX_LIMIT)
     if offset < 1:
         fail('BadArguments', 'offset is 1-based and must be >= 1')
-    if limit < 1:
-        fail('BadArguments', 'limit must be >= 1')
+    if not 1 <= limit <= MAX_LIMIT:
+        fail('BadArguments', 'limit must be 1..%d' % MAX_LIMIT)
     full = resolve(root, path)
-    if os.path.isdir(full):
-        fail('IsADirectory', '%s is a directory; use ls' % path)
-    try:
-        with open(full, 'rb') as f:
-            data = f.read()
-    except OSError as e:
-        fail('ReadFailed', 'cannot read %s: %s' % (path, e.strerror or e))
-    if b'\0' in data[:8192]:
-        fail('BinaryFile', '%s looks like a binary file (%d bytes); not shown' % (path, len(data)))
-    lines = data.decode('utf-8', 'replace').splitlines(True)
-    total = len(lines)
+    with open_regular(root, full, path) as f:
+        head = f.peek(SNIFF)[:SNIFF] if hasattr(f, 'peek') else b''
+        if b'\0' in head:
+            fail('BinaryFile', '%s looks like a binary file (NUL byte in the first %d bytes); not shown'
+                 % (path, SNIFF))
+        out, size, total, cut_lines, full_stop = [], 0, 0, 0, False
+        cap = MAX_LINE * 4 + 1          # 一行最多讀這麼多位元組，剩下的丟掉
+        while True:
+            raw = f.readline(cap)
+            if not raw:
+                break
+            long_line = len(raw) == cap and not raw.endswith(b'\n')
+            while long_line:            # 把這一行剩下的讀完丟掉
+                rest = f.readline(65536)
+                if not rest or rest.endswith(b'\n'):
+                    break
+            total += 1
+            if total < offset or len(out) >= limit or full_stop:
+                continue
+            line = raw.decode('utf-8', 'replace')
+            if long_line or len(line.rstrip('\n')) > MAX_LINE:
+                line = line.rstrip('\n')[:MAX_LINE] + '… [line truncated]\n'
+                cut_lines += 1
+            b = len(line.encode('utf-8'))
+            if size + b > MAX_BYTES and out:
+                full_stop = True
+                continue
+            out.append(line)
+            size += b
     if total == 0:
         return '(empty file)'
     if offset > total:
         fail('BadArguments', 'offset %d is past the end of %s (%d lines)' % (offset, path, total))
-    out, size, cut_lines = [], 0, 0
-    for line in lines[offset - 1:offset - 1 + limit]:
-        if len(line) > MAX_LINE:
-            line = line[:MAX_LINE] + '… [line truncated]\n'
-            cut_lines += 1
-        b = len(line.encode('utf-8'))
-        if size + b > MAX_BYTES and out:
-            break
-        out.append(line)
-        size += b
     text = ''.join(out)
     notes = []
     last = offset + len(out) - 1
     if last < total:
-        why = 'output limit %d KB' % (MAX_BYTES // 1024) if len(out) < limit else 'limit=%d' % limit
+        why = 'output limit %d KB' % (MAX_BYTES // 1024) if full_stop else 'limit=%d' % limit
         notes.append('[showing lines %d-%d of %d (%s); use offset=%d to continue]' % (offset, last, total, why, last + 1))
     if cut_lines:
-        notes.append('[%d line(s) longer than %d chars were cut]' % (cut_lines, MAX_LINE))
+        notes.append('[%d line(s) longer than %d chars were cut; use bash (e.g. cut, fold) to see the rest]'
+                     % (cut_lines, MAX_LINE))
     if notes:
         text += ('' if text.endswith('\n') else '\n') + '\n'.join(notes)
     return text

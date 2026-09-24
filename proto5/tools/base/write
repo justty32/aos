@@ -15,7 +15,7 @@ def main(args, root):
     existed = os.path.exists(full)
     try:
         os.makedirs(os.path.dirname(full), exist_ok=True)
-        write_atomic(full, content)
+        write_atomic(root, full, content, path)
     except OSError as e:
         fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
     return '%s %s (%d bytes)' % ('overwrote' if existed else 'created', rel(root, full),

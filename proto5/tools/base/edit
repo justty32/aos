@@ -2,8 +2,9 @@
 """edit：精確字串取代。old_string 必須剛好出現一次（或 replace_all=true）。"""
 import sys
 sys.dont_write_bytecode = True
-import os  # noqa: E402
-from _common import run, arg, resolve, rel, fail, write_atomic  # noqa: E402
+from _common import run, arg, resolve, rel, fail, write_atomic, open_regular  # noqa: E402
+
+MAX_FILE = 10 * 1024 * 1024
 
 
 def main(args, root):
@@ -16,19 +17,19 @@ def main(args, root):
     if old == new:
         fail('BadArguments', 'old_string and new_string are identical; nothing to change')
     full = resolve(root, path)
-    if os.path.isdir(full):
-        fail('IsADirectory', '%s is a directory' % path)
+    with open_regular(root, full, path, max_bytes=MAX_FILE) as f:
+        data = f.read()
     try:
-        with open(full, encoding='utf-8', newline='') as f:
-            text = f.read()
+        text = data.decode('utf-8')
     except UnicodeDecodeError:
         fail('BinaryFile', '%s is not UTF-8 text' % path)
-    except OSError as e:
-        fail('ReadFailed', 'cannot read %s: %s' % (path, e.strerror or e))
     starts = _positions(text, old)
     if not starts:
+        hint = ''
+        if '\r\n' in text and '\n' in old and '\r\n' not in old:
+            hint = ' (note: this file uses CRLF line endings; include \\r\\n in multi-line old_string)'
         fail('NoMatch', 'old_string not found in %s; read the file and copy the text exactly '
-             '(including whitespace and indentation)' % path)
+             '(including whitespace and indentation)%s' % (path, hint))
     if len(starts) > 1 and not replace_all:
         lines = [str(text.count('\n', 0, i) + 1) for i in starts[:10]]
         fail('NotUnique', 'old_string occurs %d times in %s (lines %s); include more surrounding lines to '
@@ -37,7 +38,7 @@ def main(args, root):
     line = text.count('\n', 0, starts[0]) + 1
     result = text.replace(old, new) if replace_all else text.replace(old, new, 1)
     try:
-        write_atomic(full, result)
+        write_atomic(root, full, result, path)
     except OSError as e:
         fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
     n = len(starts) if replace_all else 1

@@ -52,7 +52,10 @@ class ToolsAddTests(unittest.TestCase):
         self.assertFalse((self.bob / 'tools/base/base.json').exists())
         self.assertTrue((self.bob / 'workspace').is_dir())
         self.assertEqual(read_json(self.bob / 'tools/base/config.json'), {'root': 'workspace'})
-        self.assertEqual([p.name for p in (self.bob / 'tools').iterdir() if p.name.startswith('.')], [])
+        hidden = [p.name for p in (self.bob / 'tools').iterdir() if p.name.startswith('.')]
+        self.assertEqual(len(hidden), 1)
+        self.assertTrue((self.bob / 'tools/base').is_symlink())
+        self.assertEqual(os.readlink(self.bob / 'tools/base'), hidden[0])
 
     def test_installed_tools_run_from_agent_home(self):
         """裝好的工具以 agent 家為 cwd 跑得起來，檔案落在 workspace/。"""

@@ -19,6 +19,9 @@ aos-agent tools add base --target $W/bob --force          # 重裝（保留原�
 
 **工作根目錄**：`<家>/tools/base/config.json` 的 `root`（相對 agent 家；沒寫＝`workspace`）。改了下一次叫工具就生效。
 read／write／edit／grep／find／ls 碰不到根目錄以外（`../`、絕對路徑、符號連結指出去都算，回 `OutsideRoot`）；**bash 關不住**，只是從根目錄開始跑。
+這是防模型手滑、不是沙盒（有別的行程同時在換路徑時擋不完全；反正 bash 什麼都碰得到）。
+
+裝好的樣子：`tools/base.json`（工具檔）＋`tools/base`（符號連結）→`tools/.base-<版>/`（程式與 `config.json`）。重裝是換連結，原子的。
 
 ## 七個工具
 
@@ -26,13 +29,13 @@ read／write／edit／grep／find／ls 碰不到根目錄以外（`../`、絕對
 
 | 工具 | 一句話 | 參數（* 必填） | 上限 |
 |---|---|---|---|
-| `read` | 讀文字檔 | `path`*、`offset`（第幾行起，從 1）、`limit`（幾行，預設 2000） | 2000 行或 50 KB；單行超過 2000 字切掉；結尾提示下一個 `offset` |
+| `read` | 讀文字檔 | `path`*、`offset`（第幾行起，從 1）、`limit`（幾行，預設與上限 2000） | 2000 行或 50 KB；單行超過 2000 字切掉；結尾提示下一個 `offset`；邊讀邊丟，大檔不吃記憶體；只收一般檔案 |
 | `write` | 建新檔或整個覆蓋 | `path`*、`content`* | 父資料夾自動建；已有的檔保留權限位；暫存檔再 rename |
-| `edit` | 精確字串取代 | `path`*、`old_string`*、`new_string`*、`replace_all` | `old_string` 要剛好出現一次（或 `replace_all`）；保留 CRLF、權限 |
-| `bash` | 在根目錄跑一句 bash | `command`*、`timeout`（秒，預設 120、上限 600） | stdout＋stderr 合併；只留最後 2000 行或 50 KB；stdin 是空的；結束時收掉它留下的背景行程 |
-| `grep` | 搜內容，印 `路徑:行號:內容` | `pattern`*、`path`、`glob`（如 `*.py`）、`ignore_case`、`literal`、`context`（0～20）、`limit`（預設 200 行） | 單行超過 500 字切掉；最多 30 秒；rg 會跳過 .gitignore 列的與二進位檔 |
-| `find` | 用 glob 找檔名 | `pattern`*、`path`、`limit`（預設 1000） | 不含 `/` 比對檔名（任何深度），含 `/` 比對相對路徑（`**` 跨資料夾）；資料夾結尾 `/`；跳過 `.git` |
-| `ls` | 列一個資料夾 | `path`、`limit`（預設 500） | 照名字排序、資料夾結尾 `/`、含 `.` 開頭的 |
+| `edit` | 精確字串取代 | `path`*、`old_string`*、`new_string`*、`replace_all` | `old_string` 要剛好出現一次（或 `replace_all`）；保留 CRLF、權限；檔案上限 10 MB；CRLF 檔用 LF 片段找不到時提示 |
+| `bash` | 在根目錄跑一句 bash | `command`*、`timeout`（秒，預設 120、上限 600） | stdout＋stderr 合併；邊讀邊丟、只留最後 2000 行或 50 KB；stdin 是空的；結束（或它自己被 TERM）時收掉同一行程群組的背景行程——`setsid`／`nohup` 另開群組的逃得掉 |
+| `grep` | 搜內容，印 `路徑:行號:內容` | `pattern`*、`path`、`glob`（如 `*.py`）、`ignore_case`、`literal`、`context`（0～20）、`limit`（預設 200、上限 2000 行） | 單行超過 500 字切掉；30 秒到了回 `Timeout`（附已找到的）；rg 帶 `--no-config --no-follow`、會跳過 .gitignore 列的、隱藏的與二進位檔；退回 `grep -E` 時 regex 語法較窄（沒有 `\d`）、不看 .gitignore |
+| `find` | 用 glob 找檔名 | `pattern`*、`path`、`limit`（預設 1000、上限 5000） | 不含 `/` 比對檔名（任何深度），含 `/` 比對相對路徑（`**` 跨資料夾）；資料夾結尾 `/`；跳過 `.git`；讀不到的資料夾在結尾加一行 warning |
+| `ls` | 列一個資料夾 | `path`、`limit`（預設 500、上限 5000） | 照名字排序、資料夾結尾 `/`、含 `.` 開頭的 |
 
 逾時（kernel 那層的 `_timeout_ms`）：bash 是 630000（比它自己的上限 600 秒多一點，讓它自己的 `Timeout` 先到），其他沿用預設 60000。
 
@@ -48,16 +51,18 @@ bash 的 `ExitCode`／`Timeout` 先原樣印輸出，JSON 在最後一行（多�
 
 | 代號 | 什麼時候 |
 |---|---|
-| `BadArguments` | arguments 不是 JSON 物件、缺必填、型別不對、數字超出範圍、`old_string` 空或跟 `new_string` 一樣 |
+| `BadArguments` | arguments 不是 JSON 物件、缺必填、型別不對、數字超出範圍、字串含 NUL 或編不成 UTF-8、`old_string` 空或跟 `new_string` 一樣 |
 | `NotFound` | 路徑不存在 |
 | `OutsideRoot` | 路徑（解開符號連結後）在工作根目錄外 |
 | `IsADirectory`／`NotADirectory` | read／write／edit 給了資料夾；ls／find 給了檔 |
-| `BinaryFile` | read 讀到含 NUL 的檔；edit 讀到不是 UTF-8 的檔 |
+| `BinaryFile` | read 讀到前 8 KB 含 NUL 的檔；edit 讀到不是 UTF-8 的檔 |
+| `NotARegularFile`／`FileTooLarge` | read／edit 給了 FIFO、裝置等；edit 的檔超過 10 MB |
 | `NoMatch`／`NotUnique` | edit 找不到 `old_string`／找到不只一個（附 `count` 與前 10 個行號） |
-| `ExitCode`／`Timeout` | bash 退出碼非 0（附 `exit_code`）／逾時被砍（附 `timeout`） |
+| `ExitCode`／`Timeout` | bash 退出碼非 0（附 `exit_code`）／bash 逾時被砍（附 `timeout`）、grep 30 秒沒搜完 |
 | `SearchFailed` | grep 本身出錯（例如壞的 regex） |
 | `ReadFailed`／`WriteFailed`／`SpawnFailed` | 權限、磁碟等作業系統錯誤 |
 | `RootMissing`／`ConfigInvalid` | 工作根目錄不存在／`config.json` 壞了 |
+| `InternalError` | 工具自己沒料到的例外（照樣是最後一行 JSON，不會噴 Traceback） |
 
 grep 沒找到、find 沒找到、ls 空資料夾都**不是**錯誤：退 0、印一句「No matches found…」之類。
 
@@ -77,6 +82,6 @@ hello/
 
 ## 測試
 
-- 七個工具的單元測試：[`lib/test/test_tools_base.py`](../lib/test/test_tools_base.py)（bash 另在 [`test_tools_base_bash.py`](../lib/test/test_tools_base_bash.py)）。
+- 七個工具的單元測試（astra 審查後的補強在 [`test_tools_base_fix.py`](../lib/test/test_tools_base_fix.py)）：[`lib/test/test_tools_base.py`](../lib/test/test_tools_base.py)（bash 另在 [`test_tools_base_bash.py`](../lib/test/test_tools_base_bash.py)）。
 - `tools add` 與真 daemon＋kernel＋agent 的往返（假模型照劇本叫 write→bash→edit→bash）：[`lib/test/test_agent_tools.py`](../lib/test/test_agent_tools.py)。
 - 真模型實跑（LiteLLM `deepseek-chat`）的紀錄在 [tools-base 報告](../notes/2026-09-24-tools-base.md)。
