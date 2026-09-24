@@ -89,6 +89,9 @@ class LlmCallTest(unittest.TestCase):
         with self.assertRaises(AgentError) as cm:
             fn(*args)
         self.assertEqual(cm.exception.code, code)
+        if code in ('EngineFailed', 'Timeout'):
+            entry = self.config['models']['small']
+            self.assertIn('（endpoint %s，模型 small→%s）' % (entry['endpoint'], entry['model']), cm.exception.msg)
         return cm.exception
 
     def config_error(self, code="ConfigInvalid"):

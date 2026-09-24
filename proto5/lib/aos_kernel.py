@@ -643,6 +643,14 @@ def _summary(home, snapshot):
             "有" if proc["pending"] else "-") +
             ("  看 " + _stderr_hint(proc["target"]) if proc["status"] == "bad" else ""))
     lines.append("queue %s" % (" ".join(snapshot["queue"] or []) or "-"))
+    home = os.path.abspath(home)
+    daemon_home = info.get("daemon", aos_daemon.daemon_home())
+    if not daemon["alive"] and snapshot["phase"] not in (None, "stopped"):
+        lines.append("hint daemon 沒在跑：先開 daemon（aos-daemon --home %s），再 aos-kernel boot %s --daemon %s" %
+                     (daemon_home, home, daemon_home))
+    elif snapshot["phase"] != "stopped" and any(
+            not daemon["children"].get(name) or daemon["children"][name]["state"] == "missing" for name in names):
+        lines.append("hint daemon 重開過／cpu 不在：執行 aos-kernel boot %s --daemon %s" % (home, daemon_home))
     return "\n".join(lines)
 
 
@@ -665,8 +673,8 @@ def _parser():
             p.add_argument("--cpu", action="append", metavar="NAME[:POOL]", help="cpu 名稱與選用池；可重複")
             p.add_argument("--env", action="append", default=[], metavar="NAME:KEY=VALUE", help="cpu 的字面環境變數；可重複")
         elif command == "check":
-            p.add_argument("--agent", help="一併檢查 agent 家")
-            p.add_argument("--daemon", help="daemon 家（預設 info.daemon，boot 前是 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
+            p.add_argument("--agent", action="append", help="一併檢查 agent 家")
+            p.add_argument("--daemon", action="append", help="daemon 家（預設 info.daemon，boot 前是 AOS_DAEMON_HOME 或 ~/.aos-daemon）")
         elif command == "stop":
             p.add_argument("--wait-ms", type=int, default=30000, help="停機等待上限（毫秒，預設 30000）")
             p.add_argument("--no-wait", action="store_true", help="只放 stop 單，不等待、不輸出")
@@ -745,6 +753,11 @@ def main(argv=None):
             return 0
         if args.command == "check":
             from aos_kernel_check import check
+            for key in ("agent", "daemon"):
+                values = getattr(args, key)
+                if values is not None and len(values) > 1:
+                    raise CLIUsage("--%s 只能給一次；要查多個 %s 請分開跑 check" % (key, key))
+                setattr(args, key, values[0] if values else None)
             return check(args.home, args.agent, args.daemon)
         if args.command == "stop":
             return stop(args.home, args.wait_ms, args.no_wait)

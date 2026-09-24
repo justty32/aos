@@ -101,6 +101,13 @@ def _tick_inst(run, kernel):
 
 def _register(agent_dir, env, starting):
     try:
+        env = os.environ if env is None else env
+        if not starting and not env.get('AOS_K'):
+            from aos_agent_status import tick_kernel
+            bound = tick_kernel(agent_dir)
+            if bound is None:
+                raise AgentError('Usage', '沒設 AOS_K，tick.json 也沒記')
+            env = dict(env, AOS_K=bound)
         env, kernel = _environment(env)
         if starting:
             info = aos_agent_info.load(agent_dir, env=env)
@@ -154,21 +161,55 @@ def stop(agent_dir, env=None):
     return _register(agent_dir, env, False)
 
 
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        report('Usage', message)
+        raise SystemExit(2)
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog='aos-agent')
-    ap.add_argument('command', choices=('tick', 'start', 'stop', 'last'))
-    ap.add_argument('agent_dir', nargs='?', default='.')
-    ap.add_argument('--json', action='store_true')
+    ap = Parser(prog='aos-agent')
+    commands = ap.add_subparsers(dest='command', required=True)
+    helps = {'tick': '走一格（kernel 反覆叫它）', 'start': '向 kernel 登記這個 agent',
+             'stop': '撤銷登記', 'last': '印最後一則 assistant 回話',
+             'init': '在資料夾生一個最小可跑的 agent 家',
+             'say': '投一則 user 訊息（--wait 等回話）',
+             'status': '印 agent 現在的狀態、在等什麼、最近的錯', 'continue': '解除連敗暫停'}
+    for name, help_text in helps.items():
+        sub = commands.add_parser(name, help=help_text)
+        if name == 'say':
+            sub.add_argument('values', nargs='+', metavar='[dir] TEXT')
+            sub.add_argument('--wait', action='store_true')
+            sub.add_argument('--timeout-ms', type=int)
+        else:
+            sub.add_argument('agent_dir', nargs='?', default='.')
+        if name in ('last', 'status'):
+            sub.add_argument('--json', action='store_true')
     args = ap.parse_args(argv)
-    if args.json and args.command != 'last':
-        ap.error('--json 只適用 last')
-    if args.command == 'last':
-        from aos_agent_last import last
-        try:
+    try:
+        if args.command == 'say':
+            if len(args.values) not in (1, 2) or not args.values[-1]:
+                ap.error('say 需要 TEXT，或 dir TEXT；TEXT 不可為空')
+            if args.timeout_ms is not None and (not args.wait or args.timeout_ms < 0):
+                ap.error('--timeout-ms 必須搭配 --wait，且不可為負數')
+            from aos_agent_say import say
+            return say(args.values[0] if len(args.values) == 2 else '.', args.values[-1],
+                       wait=args.wait, timeout_ms=300000 if args.timeout_ms is None else args.timeout_ms)
+        if args.command == 'last':
+            from aos_agent_last import last
             return last(args.agent_dir, as_json=args.json)
-        except (AgentError, aos_home.HomeError, OSError) as exc:
-            return _error(exc)
-    return {'tick': tick, 'start': start, 'stop': stop}[args.command](args.agent_dir)
+        if args.command == 'status':
+            from aos_agent_status import status
+            return status(args.agent_dir, as_json=args.json)
+        if args.command == 'continue':
+            from aos_agent_status import resume
+            return resume(args.agent_dir)
+        if args.command == 'init':
+            from aos_agent_init import init
+            return init(args.agent_dir)
+        return {'tick': tick, 'start': start, 'stop': stop}[args.command](args.agent_dir)
+    except (AgentError, aos_home.HomeError, OSError) as exc:
+        return _error(exc)
 
 
 if __name__ == '__main__':

@@ -211,3 +211,78 @@ class KernelCLI(KernelCase):
         for value in ({'$env': 'ERR'}, {'$opt': 'append', '$val': {'$env': 'ERR'}}, None):
             self.write(target, {'stderr': value})
             self.assertEqual(kernel._stderr_hint(str(target)), str(target) + ' 的 stderr 設定')
+
+    def fake_daemon_snapshot(self, phase='running', alive=True, missing=True):
+        import fcntl
+        self.initialize(daemon=str(self.daemon))
+        if alive:
+            lock = (self.daemon / '.daemon.lock').open('w')
+            self.addCleanup(lock.close)
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.write(self.home / 'state.json', {'phase': phase, 'kcpu': 'k'})
+        children = {} if missing else {
+            name: {'target': str(self.home / 'cpus' / name / 'inst.json'), 'state': 'alive'}
+            for name in self.info['cpus']}
+        self.write(self.daemon / 'state.json', {'children': children})
+
+    def test_ls_missing_cpu_hint_and_json_unchanged(self):
+        self.fake_daemon_snapshot()
+        text = self.good_cli('ls', self.home).stdout
+        self.assertIn('cpu k  pool kernel  idle  missing', text)
+        self.assertEqual(text.splitlines()[-1],
+                         'hint daemon 重開過／cpu 不在：執行 aos-kernel boot %s --daemon %s' %
+                         (self.home, self.daemon))
+        self.assertEqual(json.loads(self.good_cli('ls', self.home, '--json').stdout), kernel.status(self.home))
+
+    def test_ls_all_cpus_present_has_no_hint(self):
+        self.fake_daemon_snapshot(missing=False)
+        self.assertNotIn('hint ', self.good_cli('ls', self.home).stdout)
+
+    def test_ls_stopped_missing_cpus_has_no_restart_hint(self):
+        self.fake_daemon_snapshot(phase='stopped')
+        self.assertNotIn('hint ', self.good_cli('ls', self.home).stdout)
+
+    def test_ls_stopping_missing_cpus_has_restart_hint(self):
+        self.fake_daemon_snapshot(phase='stopping')
+        self.assertIn('hint daemon 重開過／cpu 不在：', self.good_cli('ls', self.home).stdout)
+
+    def test_ls_dead_daemon_hint(self):
+        self.fake_daemon_snapshot(alive=False)
+        self.assertEqual(self.good_cli('ls', self.home).stdout.splitlines()[-1],
+                         'hint daemon 沒在跑：先開 daemon（aos-daemon --home %s），再 aos-kernel boot %s --daemon %s' %
+                         (self.daemon, self.home, self.daemon))
+
+    def test_ls_hint_default_daemon_and_absolute_kernel(self):
+        import os
+        from unittest.mock import patch
+        self.initialize()
+        out = io.StringIO()
+        with patch.dict(os.environ, {'AOS_DAEMON_HOME': str(self.daemon)}), contextlib.redirect_stdout(out):
+            self.assertEqual(kernel.main(['ls', os.path.relpath(self.home)]), 0)
+        self.assertIn('aos-kernel boot %s --daemon %s' % (self.home, self.daemon), out.getvalue())
+
+    def test_check_repeated_agent_is_usage_error(self):
+        result = self.cli('check', self.home, '--agent', 'A', '--agent=B')
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, '')
+        self.assertEqual(result.stderr,
+                         'aos-kernel: Usage: --agent 只能給一次；要查多個 agent 請分開跑 check\n')
+
+    def test_check_repeated_daemon_is_usage_error(self):
+        result = self.cli('check', self.home, '--daemon=A', '--daemon', 'B')
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, '')
+        self.assertEqual(result.stderr,
+                         'aos-kernel: Usage: --daemon 只能給一次；要查多個 daemon 請分開跑 check\n')
+
+    def test_check_single_options_pass_scalar_values(self):
+        from unittest.mock import patch
+        with patch('aos_kernel_check.check', return_value=0) as check:
+            self.assertEqual(kernel.main(['check', str(self.home), '--agent', 'A', '--daemon', 'D']), 0)
+        check.assert_called_once_with(str(self.home), 'A', 'D')
+
+    def test_check_omitted_options_pass_none(self):
+        from unittest.mock import patch
+        with patch('aos_kernel_check.check', return_value=0) as check:
+            self.assertEqual(kernel.main(['check', str(self.home)]), 0)
+        check.assert_called_once_with(str(self.home), None, None)

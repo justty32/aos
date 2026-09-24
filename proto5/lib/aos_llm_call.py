@@ -62,7 +62,7 @@ def load_config(path, env=None):
     return cfg
 
 
-def build_request(agent_dir, config, env=None):
+def build_request(agent_dir, config, env=None, *, with_alias=False):
     """執行當下讀 agent 家，回 (請求 body, 已驗證的模型設定)。"""
     view = load_llm_view(agent_dir, env=env)
     if view["model"] not in config["models"]:
@@ -76,7 +76,7 @@ def build_request(agent_dir, config, env=None):
     body.update(model=entry["model"], messages=messages)
     if view["tools"]:
         body["tools"] = view["tools"]
-    return body, entry
+    return (body, entry, view["model"]) if with_alias else (body, entry)
 
 
 def normalize(msg):
@@ -95,7 +95,20 @@ def _preview(raw):
     return " ".join(str(raw).split())[:300]
 
 
-def _post(body, entry):
+def _post(body, entry, alias=None):
+    try:
+        return _post_http(body, entry)
+    except AgentError as exc:
+        if exc.code not in ('EngineFailed', 'Timeout'):
+            raise
+        message = exc.msg + '（endpoint %s，模型 %s→%s）' % (
+            entry['endpoint'], alias or body['model'], entry['model'])
+        if entry.get('api_key'):
+            message = message.replace(entry['api_key'], '[已隱藏]')
+        raise AgentError(exc.code, message) from exc
+
+
+def _post_http(body, entry):
     url = entry["endpoint"].rstrip("/") + "/chat/completions"
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if entry.get("api_key"):
@@ -141,8 +154,8 @@ def call(agent_dir, env=None):
     """讀模型表與 agent 家、問一次模型，回驗過的 assistant message。"""
     env = os.environ if env is None else env
     config = load_config(config_path(env), env=env)
-    body, entry = build_request(agent_dir, config, env=env)
-    return _post(body, entry)
+    body, entry, alias = build_request(agent_dir, config, env=env, with_alias=True)
+    return _post(body, entry, alias)
 
 
 def main(argv=None):

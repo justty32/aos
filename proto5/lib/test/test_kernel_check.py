@@ -230,3 +230,81 @@ class KernelCheck(unittest.TestCase):
         self.put(agent / 'tools.json', [{'type': 'function', 'function': {'name': 'dynamic'},
                                        '_meta': {'argv': [{'$env': 'TOOL'}]}}])
         self.assertIn('warn agent/tool/dynamic:', self.run_check('--agent', agent))
+
+    def test_required_dirs_present_without_cpu_homes(self):
+        self.assertEqual(list((self.home / 'cpus').iterdir()), [])
+        self.assertIn('ok   dirs: requests/、responses/、cpus/ 都在', self.run_check())
+
+    def test_required_dirs_missing(self):
+        for name in ('requests', 'responses', 'cpus'):
+            (self.home / name).rmdir()
+        text = self.run_check(code=1)
+        expected = '、'.join(str(self.home / name) + '/' for name in ('requests', 'responses', 'cpus'))
+        self.assertIn('bad  dirs: 缺 %s；手建的家請 mkdir -p 補上（aos-kernel init 會建）' % expected, text)
+        self.assertEqual(text.count('dirs:'), 1)
+
+    def test_required_dir_replaced_by_file(self):
+        (self.home / 'requests').rmdir()
+        (self.home / 'requests').write_text('不是資料夾')
+        self.assertIn('bad  dirs: 缺 %s/requests/' % self.home, self.run_check(code=1))
+
+    def cpu_ledger(self, phase='running', kcpu='k', children=None):
+        self.put(self.home / 'state.json', {'phase': phase, 'kcpu': kcpu})
+        self.put(self.daemon / 'state.json', {'pid': 999999999, 'children': children or {}})
+
+    def owned_children(self):
+        return {name: {'target': str(self.home / 'cpus' / name / 'inst.json')}
+                for name in self.info['cpus']}
+
+    def test_running_cpus_all_present(self):
+        self.lock_daemon(999999999)
+        self.cpu_ledger(children=self.owned_children())
+        self.assertIn('ok   cpus: 帳本裡的 cpu 都在 daemon 孩子表', self.run_check())
+
+    def test_restarted_daemon_missing_cpus_running_and_stopping(self):
+        self.lock_daemon(999999999)
+        for phase in ('running', 'stopping'):
+            with self.subTest(phase=phase):
+                self.cpu_ledger(phase)
+                self.assertIn('bad  cpus: daemon 重開過／cpu 不在（k, 0, llm）：執行 aos-kernel boot %s --daemon %s' %
+                              (self.home, self.daemon), self.run_check(code=1))
+
+    def test_ledger_kernel_cpu_not_in_info_is_checked(self):
+        self.lock_daemon(999999999)
+        children = self.owned_children()
+        self.cpu_ledger(kcpu='old', children=children)
+        self.assertIn('cpu 不在（old）', self.run_check(code=1))
+        children['old'] = {'target': str(self.home / 'cpus/old/inst.json')}
+        self.cpu_ledger(kcpu='old', children=children)
+        self.assertIn('ok   cpus:', self.run_check())
+
+    def test_same_named_foreign_child_is_missing(self):
+        self.lock_daemon(999999999)
+        for target in (self.root / 'other/cpus/k/inst.json', self.home / 'cpus-other/k/inst.json',
+                       self.home / 'cpus/../../other/inst.json'):
+            with self.subTest(target=target):
+                children = self.owned_children()
+                children['k']['target'] = str(target)
+                self.cpu_ledger(children=children)
+                self.assertIn('cpu 不在（k）', self.run_check(code=1))
+
+    def test_cpu_check_skipped_without_ledger_or_when_stopped(self):
+        self.lock_daemon(999999999)
+        self.assertNotIn('cpus:', self.run_check())
+        self.cpu_ledger('stopped')
+        self.assertNotIn('cpus:', self.run_check())
+
+    def test_cpu_check_skipped_when_daemon_dead(self):
+        self.cpu_ledger()
+        text = self.run_check()
+        self.assertIn('warn daemon:', text)
+        self.assertNotIn('cpus:', text)
+
+    def test_cpu_check_uses_daemon_override(self):
+        self.cpu_ledger()
+        other = self.root / 'D2'
+        other.mkdir()
+        self.daemon = other
+        self.lock_daemon(999999999)
+        self.cpu_ledger(children=self.owned_children())
+        self.assertIn('ok   cpus:', self.run_check('--daemon', other))

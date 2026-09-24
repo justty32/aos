@@ -82,7 +82,7 @@ class AgentFixStorageTests(unittest.TestCase):
         path = self.base / 'log/llm.err'
         path.parent.mkdir()
         path.write_text('連線失敗\n\n')
-        self.assertEqual(self.failure(timed_out=True), '逾時（125000 ms），看 %s：連線失敗' % path)
+        self.assertEqual(self.failure(timed_out=True), '逾時（125000 ms，是 info.llm.timeout_ms；要更久就改 agent 的 info.json；llm.err 在 %s）' % path)
 
     def test_llm_log_empty_missing_unreadable(self):
         path = self.base / 'log/llm.err'
