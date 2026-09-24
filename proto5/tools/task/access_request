@@ -37,7 +37,7 @@ def main(args, cfg):
                '同意的話麻煩你自己跑：aos-agent access set %s <實際路徑> %s --target <%s 的家>（模型自己改不到 access.json）。'
                % (cfg['member'], name, path_hint, mode, why, shlex.quote(name),
                   ('--ro' if mode == 'ro' else '--rw'), cfg['member']))
-    rid = send(cfg, 'ask', {'question': question, 'options': ['同意', '不同意']})
+    rid = send(cfg, 'ask', {'question': question, 'options': ['同意', '不同意'], 'tag': 'access'})
     return 'queued access request %s. The answer arrives as new mail. End this turn.' % rid
 
 

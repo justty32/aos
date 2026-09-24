@@ -37,7 +37,7 @@
       "pattern": "把 workflows 導入 (?P<project>\\S+)，照 (?P<facts>\\S+)",
       "do": "handoff",
       "handoff": {
-        "assignee": "worker-1",
+        "assignee": "importer-1",
         "workflow": "IMPORT.md",
         "goal": "把 workflows 的 heartbeat 包導入專案（就是你的起點資料夾；人說的是 {project}），先用 wf_init 導入，再用 wf_fill 照專案裡的 {facts} 填佔位，剩下的照它列的處理；事實表沒有的用 ask_human 問，不要猜",
         "facts": "{facts}",

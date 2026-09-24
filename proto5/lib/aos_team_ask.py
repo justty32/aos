@@ -52,7 +52,7 @@ def on_ask(lay, roster, req):
     q = {'_metainfo': {'_type': QUESTION_TYPE, '_version': 1}, 'id': qid, 'request': req['id'],
          'from': req['from'], 'question': req['question'], 'options': req.get('options'),
          'default': req.get('default'), 'reply_to': reply, 'task_rev': task_rev, 'asked_at': now, 'status': 'open',
-         'answer': None, 'answered_at': None, 'answer_request': None, 'effects': effects}
+         'tag': req.get('tag'), 'answer': None, 'answered_at': None, 'answer_request': None, 'effects': effects}
     write_json(lay.question(qid), q, indent=2)
     return copy.deepcopy(effects)
 
@@ -85,6 +85,11 @@ def on_answer(lay, roster, req):
     return effects
 
 
+# 借用 kind=ask 的申請種類 → aos-team wait ls 的固定前綴（09-24 W2C 待拍題，2026-09-24 已裁決要加）：
+# 從申請的 tag 欄位判斷，不猜問句字串；一般問題（沒有 tag）不加前綴。
+TAG_LABEL = {'access': '權限', 'persona': '人格'}
+
+
 def describe(q):
     opts = ''
     if q.get('options'):
@@ -92,4 +97,6 @@ def describe(q):
         if q.get('default'):
             opts += '（預設 %s）' % q['default']
     ref = '  [%s]' % q['reply_to'] if q.get('reply_to') else ''
-    return '%s  %s 問：%s%s%s' % (q['id'], q['from'], q['question'], opts, ref)
+    label = TAG_LABEL.get(q.get('tag'))
+    prefix = '[%s] ' % label if label else ''
+    return '%s%s  %s 問：%s%s%s' % (prefix, q['id'], q['from'], q['question'], opts, ref)

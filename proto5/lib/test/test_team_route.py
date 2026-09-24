@@ -142,7 +142,8 @@ class AskTests(Base):
         files = self.human_outbox()
         self.assertEqual(len(files), 1)
         kind, req = fmt.read_outbox_file(files[0], fmt.load_roster(self.team))
-        self.assertEqual((kind, req['kind'], req['assignee'], req['facts']), ('request', 'handoff', 'worker-1', 'facts.json'))
+        self.assertEqual((kind, req['kind'], req['assignee'], req['facts']),
+                         ('request', 'handoff', 'importer-1', 'facts.json'))
         self.assertIn('人說的是 p）', req['goal'])
         self.assertEqual(self.inputs(), [])
         self.assertEqual(self.log()[-1]['result'], 'handoff')

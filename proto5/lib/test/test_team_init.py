@@ -47,23 +47,25 @@ class InitTests(unittest.TestCase):
         self.assertEqual(r.returncode, code, r.stdout + r.stderr)
         return r
 
-    def test_init_three_members(self):
+    def test_init_four_members(self):
         r = self.init('--config', self.src)
-        self.assertIn('3 個成員', r.stdout)
+        self.assertIn('4 個成員', r.stdout)
         lay = fmt.Layout(self.team)
-        for name, tpl in (('lead', 'lead'), ('worker-1', 'worker'), ('reviewer', 'reviewer')):
+        for name, tpl in (('lead', 'lead'), ('worker-1', 'worker'), ('reviewer', 'reviewer'),
+                          ('importer-1', 'importer')):
             home = lay.member(name)
             self.assertEqual(read_json(home / 'state.json'), {'input': 'input/'})
             self.assertTrue((home / 'input').is_dir())
             access = read_json(home / 'access.json')
-            self.assertEqual(set(access['mounts']), {'ws', 'outbox', 'board'} | ({'notes', 'mem'} if tpl != 'reviewer' else set()))
+            self.assertEqual(set(access['mounts']),
+                             {'ws', 'outbox', 'board'} | ({'notes', 'mem'} if tpl in ('lead', 'worker') else set()))
             self.assertEqual(access['cwd'], 'ws')
             self.assertFalse(access['net'])
             table = aos_agent_access.load(str(home))              # 解得開、沒蓋到信任資料
             self.assertEqual(table['mounts']['outbox']['path'], str(lay.outbox(name)))
             self.assertFalse(table['mounts']['outbox']['ro'])
             self.assertTrue(table['mounts']['board']['ro'])
-            self.assertEqual(table['mounts']['ws']['ro'], tpl != 'worker')
+            self.assertEqual(table['mounts']['ws']['ro'], tpl not in ('worker', 'importer'))
             cfg = read_json(home / 'tools/task/config.json')
             self.assertEqual((cfg['member'], cfg['outbox'], cfg['board']), (name, '/work/outbox', '/work/board'))
             self.assertIn(name, read_json(home / 'prompts/system.json')['content'])
@@ -175,7 +177,7 @@ class InitTests(unittest.TestCase):
         r = team_cli('ls', '--json', '--target', self.team, env={'AOS_KERNEL_HOME': ''})
         self.assertEqual(r.returncode, 0, r.stderr)
         rows = json.loads(r.stdout)
-        self.assertEqual([x['name'] for x in rows], ['lead', 'worker-1', 'reviewer'])
+        self.assertEqual([x['name'] for x in rows], ['lead', 'worker-1', 'reviewer', 'importer-1'])
         self.assertTrue(all(x['health'] == 'unregistered' for x in rows), rows)
 
 
@@ -342,6 +344,7 @@ class ToolUnitTests(unittest.TestCase):
         self.assertIn('notes2', req['question'])
         self.assertIn('access set', req['question'])
         self.assertEqual(req['options'], ['同意', '不同意'])
+        self.assertEqual(req['tag'], 'access')     # aos-team wait ls 靠這個印 [權限] 前綴（09-24 已裁決）
         e = self.tool('access_request', {'name': 'x', 'path_hint': 'y', 'mode': 'rwx', 'why': 'z'}, code=1)
         self.assertIn('mode', e['message'])
 
@@ -365,6 +368,7 @@ class ToolUnitTests(unittest.TestCase):
         self.assertEqual(req['kind'], 'ask')
         self.assertIn('殘留', req['question'])
         self.assertIn('persona append', req['question'])
+        self.assertEqual(req['tag'], 'persona')    # aos-team wait ls 靠這個印 [人格] 前綴（09-24 已裁決）
 
     def test_persona_propose_shell_quotes_the_suggested_command(self):
         """astra 審查：text 裡的 $(…) 以前原樣塞進雙引號，人照抄就會被殼層當替換算；現在要單引號起來。"""

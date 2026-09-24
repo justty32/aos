@@ -8,9 +8,10 @@
   "project": "../p",
   "tz": "Asia/Taipei",
   "members": {
-    "lead":     {"template": "lead",     "mail_to": ["worker-1", "reviewer", "human"]},
-    "worker-1": {"template": "worker",   "mail_to": ["lead", "human"]},
-    "reviewer": {"template": "reviewer", "mail_to": ["lead", "human"]}
+    "lead":       {"template": "lead",     "mail_to": ["worker-1", "reviewer", "importer-1", "human"]},
+    "worker-1":   {"template": "worker",   "mail_to": ["lead", "human"]},
+    "reviewer":   {"template": "reviewer", "mail_to": ["lead", "human"]},
+    "importer-1": {"template": "importer", "mail_to": ["lead", "human"]}
   },
   "limits": {"stale_minutes": 10, "max_members": 6}
 }

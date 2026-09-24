@@ -418,6 +418,8 @@ class AskTests(Base):
         self.assertEqual(task.load(self.lay, 't-0001')['status'], 'waiting_user')
         self.assertEqual([x['id'] for x in ask.open_questions(self.lay)], ['q-0001'])
         self.assertIn('選項：main / 開分支（預設 main）', ask.describe(q))
+        self.assertIsNone(q.get('tag'))
+        self.assertTrue(ask.describe(q).startswith('q-0001'))   # 一般問題（沒有 tag）不加前綴
         bad = {'id': fmt.new_id('lead'), 'from': 'lead', 'kind': 'answer', 'at': 'x', 'q': 'q-0001', 'text': 'main'}
         self.err('NotAllowed', requests.handle, self.lay, self.roster, bad)
         ans = json.loads((EXAMPLES / 'request-answer.json').read_text(encoding='utf-8'))
@@ -432,6 +434,35 @@ class AskTests(Base):
         again = dict(ans, id=fmt.new_id('human'))
         self.err('Closed', requests.handle, self.lay, self.roster, again)
         self.err('NoSuchQuestion', requests.handle, self.lay, self.roster, dict(ans, id='z', q='q-0009'))
+
+    def test_ask_tag_prefix(self):
+        """借用 kind=ask 的 access_request／persona_propose 用 tag 分辨，wait ls 靠它印固定前綴（09-24 W2C 待拍
+        題，2026-09-24 已裁決要加）：前綴從 tag 欄位判斷，不猜問句字串。"""
+        base = {'from': 'worker-1', 'kind': 'ask', 'at': fmt.now_iso(), 'question': '同意嗎？',
+               'options': ['同意', '不同意']}
+
+        req = dict(base, id=fmt.new_id('worker-1'), tag='access')
+        fmt.validate_request(req)
+        requests.handle(self.lay, self.roster, req)
+        q = next(x for x in ask.all_questions(self.lay) if x['request'] == req['id'])
+        self.assertEqual(q['tag'], 'access')
+        self.assertTrue(ask.describe(q).startswith('[權限] %s' % q['id']))
+
+        req = dict(base, id=fmt.new_id('worker-1'), tag='persona')
+        fmt.validate_request(req)
+        requests.handle(self.lay, self.roster, req)
+        q = next(x for x in ask.all_questions(self.lay) if x['request'] == req['id'])
+        self.assertEqual(q['tag'], 'persona')
+        self.assertTrue(ask.describe(q).startswith('[人格] %s' % q['id']))
+
+        req = dict(base, id=fmt.new_id('worker-1'))         # 沒有 tag＝一般問題，不加前綴
+        fmt.validate_request(req)
+        requests.handle(self.lay, self.roster, req)
+        q = next(x for x in ask.all_questions(self.lay) if x['request'] == req['id'])
+        self.assertIsNone(q.get('tag'))
+        self.assertTrue(ask.describe(q).startswith(q['id']))
+
+        self.err('FormatInvalid', fmt.validate_request, dict(base, id=fmt.new_id('worker-1'), tag='bogus'))
 
 
 class CliTests(unittest.TestCase):

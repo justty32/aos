@@ -2,7 +2,7 @@
 
 # 08 一支小團隊：丟一件事、看信、看任務狀態
 
-**目標**：用一份名冊生三個成員（領隊、工人、審查），丟一句話給團隊，看它被誰接走、每一步誰做了什麼、單子走到哪；再看不叫模型的「門房」怎麼直接接住一句話。
+**目標**：用一份名冊生四個成員（領隊、工人、審查、導入工人），丟一句話給團隊，看它被誰接走、每一步誰做了什麼、單子走到哪；再看不叫模型的「門房」怎麼直接接住一句話。
 
 **前提**：照 [教程 01](01-daemon-kernel.md) 開機（`aos-kernel ls` 第一行 `health ok`）；新終端先 `. $HOME/aos-try/env.sh`（下面的 `$W` 就是它設的 `$HOME/aos-try`；走 README「五分鐘」那段開機的沒有這個檔，照教程 01 第 1 步建一個）。從 repo 根目錄貼指令。
 模型照教程 01 的 `llm.json`。整篇約 10 分鐘，模型大約被問 10～15 次。
@@ -20,13 +20,13 @@
                          要人判斷的條目 ──▶ 審查 reviewer（模型）逐條判 ──▶ 單子 done、郵差寄「完成」給你
 ```
 
-- **會想的只有三個 agent**：lead、worker-1、reviewer，每個都是一個普通的 agent 家（[教程 03](03-first-agent.md)）。
+- **會想的有四個 agent**：lead、worker-1、reviewer、importer-1，每個都是一個普通的 agent 家（[教程 03](03-first-agent.md)）。`importer-1` 是專門做「把 workflows 手冊導入專案」的導入工人（第二波 A 隊），這篇 demo（丟 hello.md）用不到它，只有門房接到「導入」句型才會直接派給它（見第 6 節）。
 - **門房、郵差、驗收員、心跳都是不叫模型的小程式**。郵差、心跳是 kernel 的反覆工作，`aos-team start` 會一起登記。
 - 成員彼此不直接碰：每個人只往自己的「寄件格」放信，郵差搬進收件人的 `input/`。沒有人會自動轉寄回話，一定要叫 `team_say`。
 
 ## 1. 加 cpu
 
-三個 agent 加郵差、心跳，`default` 池 3 顆比較順：
+四個 agent（`importer-1` 閒著會停車，不佔 cpu）加郵差、心跳，`default` 池 3 顆比較順：
 
 ```sh
 aos-kernel cpu add --pool default --count 1
@@ -45,14 +45,15 @@ cat > $W/team.json <<'EOF'
  "project": "../proj",
  "tz": "Asia/Taipei",
  "members": {
-   "lead":     {"template": "lead",     "mail_to": ["worker-1", "reviewer", "human"]},
-   "worker-1": {"template": "worker",   "mail_to": ["lead", "human"]},
-   "reviewer": {"template": "reviewer", "mail_to": ["lead", "human"]}}}
+   "lead":       {"template": "lead",     "mail_to": ["worker-1", "reviewer", "importer-1", "human"]},
+   "worker-1":   {"template": "worker",   "mail_to": ["lead", "human"]},
+   "reviewer":   {"template": "reviewer", "mail_to": ["lead", "human"]},
+   "importer-1": {"template": "importer", "mail_to": ["lead", "human"]}}}
 EOF
 ```
 
 - `project`：專案資料夾，**相對團隊資料夾**算。下一步名冊會被抄成 `$W/myteam/team.json`，所以 `../proj` 就是 `$W/proj`。
-- `template`：成員照哪個模板生（`proto5/templates/` 的 `lead` 領隊、`worker` 工人、`reviewer` 審查）。
+- `template`：成員照哪個模板生（`proto5/templates/` 的 `lead` 領隊、`worker` 工人、`reviewer` 審查、`importer` 導入工人）。
 - `mail_to`：這個成員能寄信給誰；`human` 就是你。
 
 ## 3. 生家、裝門房規則、開工
@@ -64,14 +65,15 @@ aos-team start --target $W/myteam
 aos-team ls --target $W/myteam
 ```
 
-`init` 每個成員印幾行（生了家、裝了哪些工具包），最後一行 `團隊在 …/myteam：3 個成員`。
+`init` 每個成員印幾行（生了家、裝了哪些工具包），最後一行 `團隊在 …/myteam：4 個成員`。
 `route save` 先跑每條規則的例句，全過才存：`5 條規則，0 條沒過`、`存好了：…/team/routes.json`。
-`start` 印 `lead: started agent-lead` 等五行（三個成員＋`郵差: started team-post-…`、`心跳: started team-beat-…`）。`ls`：
+`start` 印 `lead: started agent-lead` 等六行（四個成員＋`郵差: started team-post-…`、`心跳: started team-beat-…`）。`ls`：
 
 ```text
-lead      lead     ok           單：-              最後寄出：-
-worker-1  worker   ok           單：-              最後寄出：-
-reviewer  reviewer ok           單：-              最後寄出：-
+lead        lead     ok           單：-              最後寄出：-
+worker-1    worker   ok           單：-              最後寄出：-
+reviewer    reviewer ok           單：-              最後寄出：-
+importer-1  importer ok           單：-              最後寄出：-
 郵差  team-post-myteam-2e83ed4e  ok
 心跳  team-beat-myteam-2e83ed4e  ok
 ```
@@ -159,14 +161,14 @@ aos-team ask "看一下單子"
 
 印 `沒有進行中的任務單（--all 連結束的一起看）`：這句對上 `routes.json` 的 `tasks` 規則，門房直接跑 `aos-team task ls`，**沒有任何 agent 被叫醒**。
 規則是整句比對，不是找關鍵字：「列任務給 bob 看」對不上；句子裡有否定詞（「不要看單子」）也一律落穿給領隊：領隊可能用 `team_say` 回你一封信（`aos-team mail` 看得到），也可能反問你——反問不是信，但 `aos-team mail` 也會列一行 `lead → 人  ASK  q-0001`；`aos-team wait ls` 看題目、`aos-team answer q-0001 "…"` 回答。每次判了什麼記在 `$W/myteam/team/route.log`。
-`routes.json` 裡還有「看一下例行」（列心跳的例行）、「每 2m 數一次 md 檔」（登記一條例行，心跳每 2 分鐘派給工人）、「把 workflows 導入 …，照 …」（直接開單給工人，領隊不經手），規則怎麼寫見 [route.md](../spec/team/route.md)。
+`routes.json` 裡還有「看一下例行」（列心跳的例行）、「每 2m 數一次 md 檔」（登記一條例行，心跳每 2 分鐘派給工人）、「把 workflows 導入 …，照 …」（直接開單給導入工人 `importer-1`，領隊不經手），規則怎麼寫見 [route.md](../spec/team/route.md)。
 
 ## 7. 申請：多掛資料夾、改人格、搶檔、加例行
 
 模型自己改不到信任資料（`access.json`、人格、`routines.json`），碰得到的只有寄一份**申請**。四種申請的「准了之後怎麼生效」**不是同一套**，分開講（09-24 astra 審查 M8）：
 
-- 工人想多掛一個資料夾：`access_request` → 開一題問你 → `aos-team wait ls` 看得到、你 `aos-team answer q-0004 "同意"` → **答案本身不會自動生效**，你要自己再跑一次 `aos-agent access set NAME PATH --ro --target $W/myteam/members/worker-1`。
-- 工人想改自己的人格：`persona_propose` → 同上，開一題問你 → 同意之後**你要自己再跑** `aos-agent persona append --target $W/myteam/members/worker-1 "…"`（也能 `persona show`／`set`）。
+- 工人想多掛一個資料夾：`access_request` → 開一題問你 → `aos-team wait ls` 看得到（題目前面帶 `[權限]` 前綴，跟一般問題分開）、你 `aos-team answer q-0004 "同意"` → **答案本身不會自動生效**，你要自己再跑一次 `aos-agent access set NAME PATH --ro --target $W/myteam/members/worker-1`。
+- 工人想改自己的人格：`persona_propose` → 同上，開一題問你（`[人格]` 前綴）→ 同意之後**你要自己再跑** `aos-agent persona append --target $W/myteam/members/worker-1 "…"`（也能 `persona show`／`set`）。
 - 工人跟別的工人搶同一個檔：`lock`（`acquire`／`release`／`ls`）——這個**不開題問你**，郵差直接處理：拿不到立即退一封信說誰拿著、到期幾點；過期後誰都能重拿。人也能用 `aos-team lock ls／acquire／release` 插一腳，一樣不用誰批准。
 - 領隊想加一條重複做的事：`routine_propose` → 開一題問你「要讓心跳自動跑嗎？」→ 你 `aos-team answer q-0005 "批准"` → **不用你再跑別的指令**：批准這個答案本身就讓心跳往後照時間派（`aos-team routine ls` 看得到「人批准了」）。
 
@@ -186,7 +188,7 @@ aos-team score --task t-0001
 aos-team stop
 ```
 
-印三個成員 `stopped agent-…` 和郵差、心跳各一行。家、信、單子都還在資料夾裡；再 `aos-team start` 就接著用。
+印四個成員 `stopped agent-…` 和郵差、心跳各一行。家、信、單子都還在資料夾裡；再 `aos-team start` 就接著用。
 
 ## 9. 牢：每個成員碰得到什麼
 
