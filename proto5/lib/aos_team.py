@@ -98,8 +98,9 @@ def cmd_init(team_dir, argv):
         print('注意：members/ 裡有名冊沒有的家：%s（aos-team 不管它們）' % '、'.join(sorted(stray)), file=sys.stderr)
     if failed:
         return 1
-    print('團隊在 %s：%d 個成員。下一步：export AOS_KERNEL_HOME=… 後 aos-team start --target %s'
-          % (lay.root, len(roster['members']), lay.root))
+    need = '' if os.path.isabs(os.environ.get('AOS_KERNEL_HOME', '')) else 'export AOS_KERNEL_HOME=… 後 '
+    print('團隊在 %s：%d 個成員。下一步：%saos-team start --target %s'      # 試玩 r2：已設好就不叫人再 export
+          % (lay.root, len(roster['members']), need, lay.root))
     return 0
 
 

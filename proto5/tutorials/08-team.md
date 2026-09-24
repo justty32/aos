@@ -5,7 +5,7 @@
 **目標**：用一份名冊生三個成員（領隊、工人、審查），丟一句話給團隊，看它被誰接走、每一步誰做了什麼、單子走到哪；再看不叫模型的「門房」怎麼直接接住一句話。
 
 **前提**：照 [教程 01](01-daemon-kernel.md) 開機（`aos-kernel ls` 第一行 `health ok`）；新終端先 `. $HOME/aos-try/env.sh`（下面的 `$W` 就是它設的 `$HOME/aos-try`；走 README「五分鐘」那段開機的沒有這個檔，照教程 01 第 1 步建一個）。從 repo 根目錄貼指令。
-模型照教程 01 的 `llm.json`。整篇約 10 分鐘，模型大約被問 10 次。
+模型照教程 01 的 `llm.json`。整篇約 10 分鐘，模型大約被問 10～15 次。
 
 ## 0. 團隊長什麼樣
 
@@ -158,7 +158,7 @@ aos-team ask "看一下單子"
 ```
 
 印 `沒有進行中的任務單（--all 連結束的一起看）`：這句對上 `routes.json` 的 `tasks` 規則，門房直接跑 `aos-team task ls`，**沒有任何 agent 被叫醒**。
-規則是整句比對，不是找關鍵字：「列任務給 bob 看」對不上；句子裡有否定詞（「不要看單子」）也一律落穿給領隊，領隊會用 `team_say` 回你一封信（`aos-team mail` 看得到）。每次判了什麼記在 `$W/myteam/team/route.log`。
+規則是整句比對，不是找關鍵字：「列任務給 bob 看」對不上；句子裡有否定詞（「不要看單子」）也一律落穿給領隊：領隊可能用 `team_say` 回你一封信（`aos-team mail` 看得到），也可能反問你——反問不是信，要 `aos-team wait ls` 看題目、`aos-team answer q-0001 "…"` 回答。每次判了什麼記在 `$W/myteam/team/route.log`。
 `routes.json` 裡還有「看一下例行」（列心跳的例行）、「每 2m 數一次 md 檔」（登記一條例行，心跳每 2 分鐘派給工人）、「把 workflows 導入 …，照 …」（直接開單給工人，領隊不經手），規則怎麼寫見 [route.md](../spec/team/route.md)。
 
 ## 7. 這件事花了多少
@@ -179,6 +179,7 @@ aos-team stop
 
 ## 底下在幹嘛
 
+- `route test` 只跑規則檔裡自帶的例句（`--file F` 換一個規則檔），不能拿一句話來試；想知道一句話會不會命中，看 `routes.json` 的 `pattern` 或直接 `ask`。
 - `init` 照模板替每個成員生一個 agent 家（`$W/myteam/members/<名>/`），人格裡的 `{name}`、`{mail_to}` 換成實際值，工具包照模板裝；每個家都有 `access.json`，工具關在牢裡跑：專案掛成 `/work/ws`（工人可寫，領隊、審查唯讀）、自己的寄件格 `/work/outbox`、任務表 `/work/board`（唯讀）。
 - 模型能做的只有「往自己的寄件格放一個檔」：`team_say` 寄信、`handoff` 派工、`review_result` 回審查、`ask_human` 問你。開單、改單子狀態、投信、交驗收，全是郵差照規則做。郵差預設 5 秒巡一次（`team.json` 的 `post.interval_s`）。
 - agent 沒事時會停車（不佔 cpu），信投進它的 `input/` 就被叫醒。
