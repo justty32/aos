@@ -12,18 +12,25 @@ from aos_agent_status import tick_binding
 
 def find_kernel(base, env):
     """回 (K 或 None, 來源, 額外 bad 訊息或 None)。"""
-    raw = tick_binding(base)[0]
+    tick = os.path.join(base, 'tick.json')
+    exists = os.path.lexists(tick)
+    raw = tick_binding(base)[0] if exists else None
     bound = raw if isinstance(raw, str) and os.path.isabs(raw) else None
     value = env.get(KERNEL_ENV)
     if value:
         if not os.path.isabs(value):
             return None, KERNEL_ENV, '%s 不是絕對路徑：%s（start 也會拒絕）' % (KERNEL_ENV, value)
-        if raw is not None and raw != value:  # 跟 start 一樣逐字比（aos_agent._tick_inst）
-            return value, KERNEL_ENV, ('%s 是 %s，但 tick.json 綁在 %s；start 會拒絕（KernelMismatch），'
-                                       '要換 K 就先 aos-agent stop 再刪 tick.json' % (KERNEL_ENV, value, raw))
+        # 跟 start 一樣（aos_agent._tick_inst）：tick.json 在，就要讀得到字串而且逐字相同。
+        if exists and (not isinstance(raw, str) or raw != value):
+            where = '綁在 %s' % raw if isinstance(raw, str) else '讀不到合法的 K（壞了、或沒有 envs.%s）' % KERNEL_ENV
+            return value, KERNEL_ENV, ('%s 是 %s，但 %s %s；start 會拒絕（KernelMismatch），'
+                                       '要換 K 就先 aos-agent stop 再刪 tick.json' % (KERNEL_ENV, value, tick, where))
         return value, KERNEL_ENV, None
     if bound is not None:
         return bound, 'tick.json', None
+    if exists:
+        return None, None, ('找不到 K：沒設 %s，%s 也讀不到合法的絕對路徑 K；'
+                            'export %s=<kernel 家的絕對路徑> 再跑' % (KERNEL_ENV, tick, KERNEL_ENV))
     return None, None, ('找不到 K：沒設 %s，也沒有 tick.json（沒 start 過）；'
                         'export %s=<kernel 家的絕對路徑> 再跑' % (KERNEL_ENV, KERNEL_ENV))
 

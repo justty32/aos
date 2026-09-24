@@ -45,7 +45,7 @@ agent 線已依 2026-09-24 第 2 版規範接上 kernel：`aos-llm call` 問模�
 | [`aos_agent_runtime.py`](aos_agent_runtime.py) | 持久化操作、恢復清理、交件與測試掛鉤；tick 鎖 `tick_lock()`、`manual_paused()`（fix-r4） | [agent.md](../spec/agent/README.md)、[aos-agent.md](../spec/aos-agent/README.md) |
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1171 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1177 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -361,7 +361,7 @@ rm 自身回 name，正在跑的行程保留 discard 到收完。
 cpu 家「缺的補齊」：資料夾、info、inst 各自不在才寫，已在不覆蓋。沒有事件的格不寫 kernel.log。
 
 CLI（fix-r4）：每個子命令都用 `--target K`（省略找 `AOS_KERNEL_HOME` 再目前資料夾，退 1 的錯誤行附來源）：`aos-kernel init --config FILE／boot [--daemon-target D]／tick／add INST／rm NAME／ack NAME／ls [--json] [-v]／halt [--wait-ms N] [--no-wait]／check [--daemon-target D] [--probe]`（`--daemon-target` 重複＝用法錯；advice-r1 起 `--agent` 一律用法錯、指到 `aos-agent check`），各有 `-h`，完整參數見 [kernel.md §6](../spec/kernel/cli.md)。
-`ls` 預設印文字摘要（第一行 `health`：ok 或哪裡壞、該打什麼指令；cpu、行程、queue 各一行；bad 行程附「看 <stderr 路徑>」），`--json` 印 `status()` 加 `health`；`ack NAME` 替 once 不等的人收回音。
+`ls` 預設印文字摘要（第一行 `health`：ok 或哪裡壞、該打什麼指令；advice-r1 起 cpu 按池分組、行程成表、queue 一行；bad 行程附「壞了，看 <stderr 路徑>」），`--json` 印欄位穩定的 `aos_kernel_ls` 第 1 版物件（advice-r1，欄位表在 [kernel/cli-ls.md](../spec/kernel/cli-ls.md)）；`ack NAME` 替 once 不等的人收回音。
 反覆 add 等回音印 NAME；once 預設印 request 與回音路徑，帶 `--wait-ms` 才等。
 CLI 收到回音代 ack，JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成敗。
 halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才印 `stopped`；鏈沒在跑印 `not running` 不放單；`--no-wait` 只放單。
@@ -369,10 +369,10 @@ halt 預設等到 phase=stopped 且此 kernel 的 cpu 都從 daemon 表消失才
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1171 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 1177 條；repo 根目錄
 ```
 
-共 34 個測試檔、1171 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
+共 34 個測試檔、1177 條；涵蓋底層執行、daemon／kernel、agent 讀驗與走格、HTTP、崩潰恢復及整合。
 真子行程測試使用 tempdir、輪詢上限與清理回呼；崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。
 
 | 檔 | 條數 | 驗證內容 |
@@ -404,7 +404,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s 
 | [test_kernel.py](test/test_kernel.py) | 29 | 判定表、syscall 去重、rm／once、pool、設定 |
 | [test_kernel_check.py](test/test_kernel_check.py) | 30 | check 各項 ok／warn／bad、daemon 的 /proc 環境、agent 項（advice-r1 起經 `aos-agent check` 跑）、--daemon-target 三種來源與 info.daemon 不同的 warn、K 家目錄、daemon 重開後 cpu 不在 |
 | [test_kernel_cli.py](test/test_kernel_cli.py) | 37 | --target 三種來源與錯誤行來源、init --config（壞設定不建家、自動加 k、拒 daemon）／ack／ls（含 bad 提示、第一行 health、advice-r1 的表與 --json）／halt 等停好／check 旗標重複、舊 --agent 指到新指令 |
-| [test_advice_r1.py](test/test_advice_r1.py) | 18 | （advice-r1）`aos-agent check`：K 從 AOS_KERNEL_HOME／tick.json、找不到、相對路徑、KernelMismatch、K 壞了仍查 agent、NotAnAgent、預設目前資料夾、--probe ok／bad；`ls --json` 欄位集合、值、stdout 純 JSON、退出碼、daemon 沒活 child=null；文字表對齊、長名砍中間、-v |
+| [test_advice_r1.py](test/test_advice_r1.py) | 24 | （advice-r1）`aos-agent check`：K 從 AOS_KERNEL_HOME／tick.json、找不到、相對路徑、KernelMismatch（含 tick.json 壞掉，跟 start 同判）、K 壞了仍查 agent、NotAnAgent、預設目前資料夾、--probe ok／bad；`ls --json` 欄位集合、值、stdout 純 JSON、退出碼、daemon 沒活 child=null、proc 缺鍵／null 正規化、broken 退 1、look 指 target；文字表對齊、按池原值分組、長名砍中間、-v |
 | [test_kernel_health.py](test/test_kernel_health.py) | 19 | health 各情形與優先序、stall、帳本壞不丟例外、ls 第一行與 --json |
 | [test_kernel_fix_r5.py](test/test_kernel_fix_r5.py) | 13 | （fix-r5）check --probe（本機 HTTP 假端點：models／退回一句話／port 錯）與總結行、ls 的恢復中／daemon 沒活的 cpu 行／agent 標記、真 daemon：boot 印 `booted 3 cpus`、kill -9 llm cpu 看到恢復中 |
 | [test_kernel_integration.py](test/test_kernel_integration.py) | 15 | 真 daemon＋cpu、反覆／once、halt、重 boot、pool、Interrupted |
