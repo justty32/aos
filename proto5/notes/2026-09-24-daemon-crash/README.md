@@ -1,6 +1,6 @@
 # daemon 崩潰窗口測試 C-2／C-3（2026-09-24）
 
-← [proto5 README](../../README.md)｜規範：[daemon.md](../../spec/daemon.md) §2、§6.1｜題目出處：[impl-review-report.md](../2026-09-23-rearch/impl-review-report.md) C 節｜上一輪：[impl-fix-round1.md](../2026-09-23-rearch/impl-fix-round1.md)（跳過 C-2／3）
+← [notes 索引](../README.md)｜[proto5 README](../../README.md)｜規範：[daemon.md](../../spec/daemon.md) §2、§6.1｜題目出處：[impl-review-report.md](../2026-09-23-rearch/impl-review-report.md) C 節｜上一輪：[impl-fix-round1.md](../2026-09-23-rearch/impl-fix-round1.md)（跳過 C-2／3）
 
 **結論：兩個窗口 daemon 都照規範收斂，產品程式一行沒改。** 新測試 [test_daemon_crash.py](../../lib/test/test_daemon_crash.py) 共 11 條，
 單獨連跑 20 次 20 次全過，四份平行（加壓）再跑 20 次也全過；全套 1016 → **1027 條全綠**；跑完沒有殘留行程。

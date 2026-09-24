@@ -1,6 +1,6 @@
 # 試玩紀錄（play）
 
-← [proto5 README](../../README.md)｜前一輪原型的試玩在 [proto4/notes/play](../../../proto4/notes/play/README.md)
+← [notes 索引](../README.md)｜[proto5 README](../../README.md)｜前一輪原型的試玩在 [proto4/notes/play](../../../proto4/notes/play/README.md)
 
 每個段落收線後，開沒看過設計筆記的 agent 只拿 README 當新使用者玩，照五條標準打分（① 容易上手 ② 容易理解 ③ 複雜藏好 ④ 外層簡單但全面 ⑤ 少背）。一輪一列。
 
