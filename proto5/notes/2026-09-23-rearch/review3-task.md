@@ -2,7 +2,7 @@
 
 # 任務：第三輪審查（cpu.md、kernel.md 再次整份重寫；daemon.md 新加入）
 
-repo `/home/guanyu/projs/aos`。前兩輪報告在同一個資料夾：
+repo `../../..`。前兩輪報告在同一個資料夾：
 `/tmp/claude-1000/-home-guanyu-projs-aos/81cce3ef-1a8d-4b57-ad46-a919d4a09c78/scratchpad/review-cpu-kernel-report.md`（第一輪）、
 `.../review2-cpu-kernel-report.md`（第二輪，含 D 清單 18 題）。先讀第二輪。
 三份規範：`proto5/spec/cpu.md`、`proto5/spec/kernel.md`、`proto5/spec/daemon.md`。每份 §9（daemon 是 §8）是使用者已拍板的前提，不要質疑；§10（daemon §9）是撰寫者自己選的。

@@ -2,7 +2,7 @@
 
 # 任務：第二輪審查（cpu.md、kernel.md 已照第一輪意見重寫）
 
-repo `/home/guanyu/projs/aos`。第一輪報告在 `/tmp/claude-1000/-home-guanyu-projs-aos/81cce3ef-1a8d-4b57-ad46-a919d4a09c78/scratchpad/review-cpu-kernel-report.md`（C-1～8、K-1～13、X-1～8、R-1～10），先讀它。
+repo `../../..`。第一輪報告在 `/tmp/claude-1000/-home-guanyu-projs-aos/81cce3ef-1a8d-4b57-ad46-a919d4a09c78/scratchpad/review-cpu-kernel-report.md`（C-1～8、K-1～13、X-1～8、R-1～10），先讀它。
 兩份規範已整份重寫：`proto5/spec/cpu.md`、`proto5/spec/kernel.md`。每份的 §9 是使用者已拍板的前提（不要質疑），§10 是撰寫者自己選的。
 
 第一輪之後使用者又拍了四件（都是前提）：

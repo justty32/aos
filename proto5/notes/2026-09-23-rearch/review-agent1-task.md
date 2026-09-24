@@ -2,7 +2,7 @@
 
 # 任務：審查 agent 線三份規範草稿（第一輪）
 
-repo `/home/guanyu/projs/aos`。三份草稿（剛寫、還沒審過）：
+repo `../../..`。三份草稿（剛寫、還沒審過）：
 - `proto5/spec/aos-llm-call.md`（新）：一支程式，組 body＋打 HTTP＋stdout 印 message。
 - `proto5/spec/agent.md`（整份重寫）：agent 資料夾的 info.json／state.json。
 - `proto5/spec/aos-agent.md`（整份重寫）：`aos-agent [dir]` 走一格：think／act 都是「寫 inst → 往 kernel `add --once` → 等 `K/responses/<名>.json` → 讀 → ack」。

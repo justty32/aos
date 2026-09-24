@@ -2,7 +2,7 @@
 
 # 任務：第四輪審查——措辭與易用性，不是找競態
 
-repo `/home/guanyu/projs/aos`。三份規範：`proto5/spec/cpu.md`、`proto5/spec/kernel.md`、`proto5/spec/daemon.md`。
+repo `../../..`。三份規範：`proto5/spec/cpu.md`、`proto5/spec/kernel.md`、`proto5/spec/daemon.md`。
 前三輪報告在 `proto5/notes/2026-09-23-rearch/`（review1～3-report.md），機制層的洞已經修過三輪；使用者看過說「還不錯」。
 這一輪**不要再挖崩潰時序**（除非你看到明顯矛盾），目標是三件事：
 

@@ -2,7 +2,7 @@
 
 # 任務：審查兩份新規範草稿
 
-repo 是 aos（`/home/guanyu/projs/aos`），今天 2026-09-23 使用者正在重新架構 proto5 的 daemon→kernel→cpu 這條線。
+repo 是 aos（`../../..`），今天 2026-09-23 使用者正在重新架構 proto5 的 daemon→kernel→cpu 這條線。
 兩份新草稿：
 
 - `proto5/spec/cpu.md`——「cpu 範式」與 exec cpu：一個資料夾＋一個主人行程、info／state／requests／responses、JSON-RPC 2.0 信封走檔案與 pipe、只有一種被排程的 cpu（exec cpu，一則 request＝跑一份 inst 一次）、停下來的三級、開機對帳。
