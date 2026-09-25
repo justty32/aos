@@ -31,7 +31,7 @@
 | 名字 | 一句話 | 來源報告 |
 |---|---|---|
 | [company.md](company.md) | 當作開公司看：每個單位對到 aos 裡哪個團隊資料夾、哪個成員（真東西在 [examples/company/](../examples/company/README.md)） | 使用者拍板的組織骨架；09-25 組織設計落成 aos 團隊 |
-| [lessons.md](lessons.md) | 37 條經驗，開頭有照部門分組的索引（評分器規則、模型造工具的取捨、排程瓶頸會轉移…）；超過 300 行仍是單檔：`aos-team commons import` 照這一檔的「### N（部門）」一段一條匯入，拆檔要先改 `lib/aos_team_commons.py` | 見各條內的來源連結 |
+| [lessons.md](lessons.md) | 39 條經驗，開頭有照部門分組的索引（評分器規則、模型造工具的取捨、排程瓶頸會轉移…）；超過 300 行仍是單檔：`aos-team commons import` 照這一檔的「### N（部門）」一段一條匯入，拆檔要先改 `lib/aos_team_commons.py` | 見各條內的來源連結 |
 | [teams/](teams/README.md) | 團隊組織架構索引（arknights 隊已放強模型版團隊設定 `teams/arknights-strong.json`：有原文可查的資料整理隊，領隊 1、寫手 2、審查員 1，全用強模型） | arknights 第 2 段收尾，2026-09-25 |
 | [workflows/](workflows/README.md) | 工作流架構索引（arknights 隊已放 `workflows/lore-entry.md`：一個條目一張單的產線降級路線筆記） | arknights 第 2 段收尾，2026-09-25 |
 | [`proto5/tools/`](../tools/README.md) | 可複用工具包（`base`／`files`／`wf`／`notes`／`team`／`task` 六包，已有自己的 README） | 各工具包 README |
