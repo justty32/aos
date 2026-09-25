@@ -5,6 +5,6 @@
 | 子夾 | 做什麼 | 誰 |
 |---|---|---|
 | [eval/](eval/README.md) | 第 1 段：基準集 15 人＋評分器（機械／證據／評審／量測，一鍵 `eval.sh`） | 本隊 |
-| team/ | 第 2 段：強模型版團隊設定 | 另一隊 |
+| [team/](team/README.md) | 第 2 段：強模型版團隊設定與試跑（名冊、人格、門房、1 人＋1 批真跑、哪些步驟是機械／語感／強模型） | 另一隊 |
 
 程式：`proto5/examples/arknights/eval/`（評分器）、`proto5/examples/arknights/`（另一隊的團隊設定）。
