@@ -69,7 +69,9 @@ def rank(m, bal):
     - **這輪沒有成功結案（done＝0）的：品質、快、省、排名分全 0**（真跑 09-25：做壞的單照樣拿滿分品質）。
     - 品質＝記下的分數（原始品質 raw_quality，沒記＝0）× 成功率 × 審查係數（第 74、75 題，經理人 09-25 晚）：
       成功率＝成功張數 ÷ 董事下單張數（成功＋失敗，失敗含逾時）；審查係數＝score 記的 review_factor
-      （成功那幾張第幾次審查才過，照 params.review_factors 換算再平均；沒記＝1.0，那列 note 寫出來）。
+      （成功那幾張第幾次審查才過，照 params.review_factors 換算再平均；沒記＝1.0，那列 note 寫出來——
+      整份沒記〔review_factor 沒有〕、或 review_rounds 裡有幾張 None 都寫）。係數在 score 時算好存下，
+      改 review_factors 之後要重新 score 才生效。
     - 快：**只在成功張數最多的幾家之間比**董事等的秒數，最快那家 ÷ 自己 ×100；成功張數比較少的「快」＝0（第 74 題）。
     - 省：這一輪花的 token（這輪已花 − 上輪記下的已花），**只在成功的幾家之間比**，最省那家 ÷ 自己 ×100；成功但沒花＝100。
     - 只有一家成功：快、省都是滿分，那一列 note 寫「無對照」。
@@ -102,8 +104,11 @@ def rank(m, bal):
     cheap = [r['spent_tokens'] for r in ok if r['spent_tokens']]
     for r in rows:
         notes = []
+        rr = r['review_rounds'] if isinstance(r['review_rounds'], list) else []
         if r['done'] and r['review_factor'] is None:
             notes.append('沒有審查紀錄：審查係數當 1.0')
+        elif r['done'] and None in rr:                # score 時已當 1.0 平均進去；這裡要看得到（astra 審查建議 2）
+            notes.append('沒有審查紀錄：成功的 %d 張裡有 %d 張審查係數當 1.0' % (len(rr), rr.count(None)))
         if r['done'] and r['done'] < top:
             notes.append('快：成功 %d 張少於最多的 %d 張，不比快（0）' % (r['done'], top))
         if not (r['done'] == top and top and fast and r['seconds'] is not None):
