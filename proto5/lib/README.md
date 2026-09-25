@@ -98,7 +98,12 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_crystal.py`](aos_team_crystal.py) | （第三波 W3-2，spec/team/crystal.md）`aos-team crystal` 固化建議：落穿句型統計、機械候選規則＋回測，只寫提案檔；`--suggest-with-llm` 預設關 |
 | [`aos_team_mail.py`](aos_team_mail.py) | `aos-team mail`（第二波 A 隊從 `aos_team_post.cmd_mail` 接手，讀法與一行印法仍用郵差那份）：多列等人回答的題目（`ASK q-0001`，答完先顯示答案）；`--task` 連落穿給領隊的那封一起列 |
 | [`aos_team_task_cli.py`](aos_team_task_cli.py) | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
-| [`aos_team_post.py`](aos_team_post.py) | 郵差兼書記（tool-era T2，spec/team/post.md）：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER；崩在任何一步重跑同一行都收得回來，不叫模型 |
+| [`aos_team_post.py`](aos_team_post.py) | 郵差兼書記（tool-era T2，spec/team/post.md）：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER；崩在任何一步重跑同一行都收得回來，不叫模型。這支留 `Post` 本體（一輪、投遞紀錄、投遞、outbox）、指令與 kernel 登記 |
+| [`aos_team_post_base.py`](aos_team_post_base.py) | 郵差共用常數與小工具：紀錄型別、逾時與次數、崩潰測試點、時區、行程還在不在、動作編號、團隊識別、outbox 搬檔 |
+| [`aos_team_post_recheck.py`](aos_team_post_recheck.py) | 郵差的再驗一次：條目路徑不准跳出專案、工作流入口、`cmd_ok` 白名單、不准假冒信頭 |
+| [`aos_team_post_text.py`](aos_team_post_text.py) | 郵差的字：信的摘要與截斷、一行印法、書記改寫 SESSION-LOG／WAIT_USER 的受管區塊 |
+| [`aos_team_post_jobs.py`](aos_team_post_jobs.py) | 郵差的驗收工作：混入類別 `_PostJobs`（交驗收、起 kernel 工作、收結果）、結果檔格式檢查、申請 `reverify` |
+| [`aos_team_post_watch.py`](aos_team_post_watch.py) | 郵差的停滯與書記：混入類別 `_PostWatch`（停滯與期限、成員健康、通知、書記同步） |
 | [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡。第二波 B 隊：`wf_lint_strict` 與新條目 `cmd_ok`（team.json 白名單裡的專案指令）經 aos-jail 關牢、專案唯讀 |
 | [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
 | [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
