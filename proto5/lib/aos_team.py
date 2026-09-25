@@ -207,6 +207,10 @@ def cmd_ls(team_dir, argv):
     if args.json:
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return 0
+    import aos_team_cost
+    money = aos_team_cost.ls_line(os.environ, team_dir)      # 財務部：超預算時第一行就講（spec/team/cost.md）
+    if money:
+        print(money)
     width = max(len(r['name']) for r in data)
     for r in data:
         print('%s  %-8s %-12s 單：%-14s 最後寄出：%s' % (r['name'].ljust(width), r['template'], r['health'],

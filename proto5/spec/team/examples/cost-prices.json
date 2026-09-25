@@ -1,0 +1,26 @@
+{
+  "_note": "財務部價格表（spec/team/cost.md）：美元／每百萬 token，in＝prompt、out＝completion。全部是估的（2026-09-25）：claude 照 Anthropic 官方 API 牌價；gpt（chatgpt-*）與 deepseek 是照公開牌價量級猜的，實際走訂閱／餘額，錢數只拿來比大小。本機模型（lm-*、ollama-*）算 0。鍵可寫完整模型名或「前綴*」（最長的前綴贏）。改完不用重啟，下一次查帳就用新價（舊帳一起重算）。",
+  "families": {
+    "claude": ["claude-"],
+    "gpt": ["chatgpt-", "gpt-"],
+    "deepseek": ["deepseek-"],
+    "local": ["lm-", "ollama-"]
+  },
+  "models": {
+    "claude-fable-5*": {"in": 10.0, "out": 50.0},
+    "claude-opus-5*": {"in": 5.0, "out": 25.0},
+    "claude-opus-4*": {"in": 5.0, "out": 25.0},
+    "claude-sonnet-5*": {"in": 2.0, "out": 10.0},
+    "claude-sonnet-4*": {"in": 3.0, "out": 15.0},
+    "claude-haiku-4*": {"in": 1.0, "out": 5.0},
+    "chatgpt-gpt-6-astra*": {"in": 2.5, "out": 15.0},
+    "chatgpt-gpt-5*": {"in": 1.25, "out": 10.0},
+    "chatgpt-gpt-reserve*": {"in": 1.25, "out": 10.0},
+    "chatgpt-codex-auto-review*": {"in": 1.25, "out": 10.0},
+    "deepseek-chat": {"in": 0.27, "out": 1.1},
+    "deepseek-reasoner": {"in": 0.55, "out": 2.19},
+    "deepseek-v4-pro": {"in": 0.55, "out": 2.19},
+    "lm-*": {"in": 0, "out": 0},
+    "ollama-*": {"in": 0, "out": 0}
+  }
+}

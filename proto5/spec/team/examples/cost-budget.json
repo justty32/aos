@@ -1,0 +1,6 @@
+{
+  "_note": "全公司預算（$AOS_COST_HOME/budget.json；spec/team/cost.md）。董事 09-25 的額度：claude 一週額度的 10%（絕對數還沒給，先猜 10 美元等值）；deepseek 剩約 5 美元（從 09-25 起算）；gpt 這週剩的都能用（不設上限，額度由供應商擋）。",
+  "since": "week",
+  "claude": {"usd": 10.0},
+  "deepseek": {"usd": 5.0, "since": "2026-09-25"}
+}

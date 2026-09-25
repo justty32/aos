@@ -47,9 +47,20 @@ def ask(system, user, *, alias=None, env=None, max_tokens=None):
         exc.answered = 'usage' in seen
         exc.usage, exc.ms = seen.get('usage'), int((time.monotonic() - start) * 1000)
         exc.alias, exc.model = alias, entry['model']
+        if exc.answered:
+            _book(env, entry['model'], alias, exc.usage, exc.ms)
         raise
-    return {'text': msg.get('content') or '', 'usage': seen.get('usage'),
-            'ms': int((time.monotonic() - start) * 1000), 'alias': alias, 'model': entry['model']}
+    got = {'text': msg.get('content') or '', 'usage': seen.get('usage'),
+           'ms': int((time.monotonic() - start) * 1000), 'alias': alias, 'model': entry['model']}
+    _book(env, entry['model'], alias, got['usage'], got['ms'])
+    return got
+
+
+def _book(env, model, alias, usage, ms):
+    """財務部記帳（spec/team/cost.md）：來源＝AOS_COST_SOURCE（沒設＝ask），團隊／成員／單號由 AOS_COST_TEAM／MEMBER／TASK 帶。
+    沒設 AOS_COST_HOME 就不記；寫失敗不擋。"""
+    import aos_team_cost
+    aos_team_cost.record(env, model=model, alias=alias, usage=usage, ms=ms, source='ask')
 
 
 FENCE = re.compile(r'```[ \t]*(?:json|JSON|json5|javascript|js)?[ \t]*\r?\n(.*?)\r?\n?[ \t]*```', re.S)

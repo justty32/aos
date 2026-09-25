@@ -260,7 +260,7 @@ def _unknown(obj, allowed, where):
 # ------------------------------------------------------------------ 名冊 ----
 
 MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools', 'spawn')
-ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok', 'spawn')
+ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok', 'spawn', 'budget')
 
 
 def validate_roster(obj, where='team.json'):
@@ -275,6 +275,11 @@ def validate_roster(obj, where='team.json'):
            'spawn': _spawn_cfg(obj.get('spawn', {}), where + '.spawn')}
     post = _obj(obj.get('post', {}), where + '.post')
     _unknown(post, tuple(POST_DEFAULTS), where + '.post')
+    import aos_team_cost                      # 財務部（spec/team/cost.md）：預算形狀在那邊驗
+    try:
+        out['budget'] = aos_team_cost.check_budget(obj.get('budget'), where + '.budget')
+    except ValueError as e:
+        bad(where + '.budget', str(e))
     if 'interval_s' in post:
         out['post']['interval_s'] = _int(post['interval_s'], where + '.post.interval_s', 1, 3600)
     members = _obj(obj.get('members'), where + '.members')

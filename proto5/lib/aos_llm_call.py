@@ -167,8 +167,11 @@ def call(agent_dir, env=None):
     finally:
         aos_hops.mark("llm", "http_end", batch=batch)
         if "usage" in seen:
-            record_usage(agent_dir, env, alias, entry["model"], seen["usage"],
-                         int((time.monotonic() - start) * 1000))
+            ms = int((time.monotonic() - start) * 1000)
+            record_usage(agent_dir, env, alias, entry["model"], seen["usage"], ms)
+            import aos_team_cost          # 財務部記帳（spec/team/cost.md）：沒設 AOS_COST_HOME 就不記；寫失敗不擋
+            aos_team_cost.record(env, model=entry["model"], alias=alias, usage=seen["usage"], ms=ms,
+                                 source="think", agent_dir=agent_dir, batch=batch)
 
 
 def record_usage(agent_dir, env, alias, model, usage, ms):
