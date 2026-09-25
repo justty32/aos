@@ -5,7 +5,7 @@ from aos_team_format import TeamError
 
 def _review_rounds(teams, o):
     """製造總機單 o 那張部門單子的審查輪數（第 75 題，經理人 09-25 晚）：郵差開的審查子單結果記在單子的 `review`
-    （每次一筆 pass）。回第幾次審查才過（1、2、3…）；單子 failed＝'FAILED'；找不到單子或沒有審查紀錄＝None。"""
+    （每次一筆 pass、帶 at）。照 at 排好後回第幾次審查才過（1、2、3…）；單子 failed＝'FAILED'；找不到單子或沒有審查紀錄＝None。"""
     tdir = teams.get((o.get('to') or {}).get('team') or (o.get('to') or {}).get('dept'))
     if tdir is None or not o.get('task'):
         return None
@@ -15,8 +15,15 @@ def _review_rounds(teams, o):
         return None
     if ticket.get('status') == 'failed':
         return 'FAILED'
-    for i, r in enumerate(ticket.get('review') or [], 1):
-        if isinstance(r, dict) and r.get('pass'):
+    recs = [r for r in ticket.get('review') or [] if isinstance(r, dict)]
+    # 照每筆的時間排再數（astra 審查必修 2：紀錄亂序會把第二次過算成一次過）；有一筆沒時間就照原順序。
+    # 不看 attempt：機械驗收沒過也會加 attempt，不等於第幾次審查。
+    stamps = [fmt.parse_iso(r.get('at') or '') for r in recs]
+    if recs and all(stamps):
+        stamps = [x if x.tzinfo is not None else x.astimezone() for x in stamps]
+        recs = [r for _, _, r in sorted(zip(stamps, range(len(recs)), recs), key=lambda z: (z[0], z[1]))]
+    for i, r in enumerate(recs, 1):
+        if r.get('pass'):
             return i
     return None
 
