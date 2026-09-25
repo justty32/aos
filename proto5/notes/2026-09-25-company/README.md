@@ -161,3 +161,21 @@
 ## 9. 五家真跑
 
 經理人辦公室的執行員 15:19～16:35 照 [market-run](market-run/README.md) 的方法放大到五家（只差製造部寫手：deepseek-chat、gpt-5.5、gpt-6-astra、gpt-5.6-sol、claude-haiku-4.5），跑滿 3 輪、每輪 3 張「補人物」。deepseek 那家第 1 輪、haiku 那家第 3 輪花光倒閉；astra（第 1 名）、sol、gpt-5.5 營業中，沒到合併。途中修了一行：總裁寫「結論為：合格」被算成失敗（賞罰顛倒），`aos_market.py` 改認正則＋測試。建議製造部寫手預設換 gpt-6-astra。全紀錄與給董事的建議答案見 [market-run-5](market-run-5/README.md)；經驗見 [lessons](../../playbook/lessons.md) 33～35。
+
+## 10. 市場真跑後研發修正
+
+研發部照經理人裁定修 [market-run-5](market-run-5/README.md) §7 的第 1、4～8 條與 §8 的寫手建議；§7 第 2 條（成功率進分數）、第 3 條（品質分叫評審／審查輪數）要董事拍，沒動。純程式＋測試，沒叫模型。
+
+| # | 改了什麼 | 在哪 |
+|---|---|---|
+| §8 寫手 | 樣板製造部 `mfg-writer1` 從 gpt-5.5 換成 **gpt-6-astra**（五家真跑八張一次過、每張 132 萬 token）；README 註明實據。`playbook/teams/arknights-strong.json` 本來就是 astra，不用改 | `examples/company/teams/mfg/team.json`、README |
+| §7-8 | 樣板 `llm.json` 補 `gpt-5.6-sol`／`terra`／`luna`（LiteLLM `chatgpt-gpt-5.6-*`） | `examples/company/llm.json` |
+| §7-4 | `cmd_ok` 白名單一條可寫 `"pattern": true`：`run` 第 2 格以後的 `{名字}` 各認一格路徑段（不含 `/`、不是 `.`／`..`、不以 `-` 開頭），同名同值，其他字不能差；沒寫 `pattern` 照舊整串比。樣板製造部、品管部的六個人名各一條改成一條樣式（製造部另一條 `verify_split.py` 也改） | `lib/aos_team_format.py`（`cmd_allowed`）、spec wall §4／roster／verify／route |
+| §7-5 | 財務擋單改**退件**：郵差 `budget_hold` 回理由，照一般退件走（`rejected/`、`code: OverBudget`、FAILED「退件（OverBudget）：財務擋單：超支（…）」給寄件人）。總機寫的開單＝FAILED 進 human 收件匣、`reply_to`＝那份申請，總機照舊配回總機單、結成 failed、轉回總裁；總裁 SOP 本來就寫「任一部門回 FAILED：寄給董事」。NEEDS-USER 每天每種照寄一封。預算調高後要重新開單（不再自己走） | `lib/aos_team_post.py`、spec cost §4／company／market §5、playbook finance-ledger |
+| §7-6 | `score` 的董事單：**逾時＝失敗**（這一輪下的單 score 時沒結案，記 `timeout`；單號存 `market.json` 的 `timed_out`，之後補來的結案信不再算）；配對先看結案信 `reply_to` 指到的總機單，再照時間（先逾時的單不會搶走後面的結案信） | `lib/aos_market.py`（`board_from_company`、`_record_score`）、spec market §3 |
+| §7-7 | `ls` 餘額不印 `-0.0`；`bankrupt`／`close` 的「收回總池」只印 `total` 有設的那幾種（沒設 `total.usd` 不印美元；帳照記） | `lib/aos_market.py` |
+| §7-1 長遠版 | 成功判定**先看品管報告檔**：總裁結案信 `reply_to` 指到的品管總機單（沒有＝這段時間最後一張 done 的），照它任務單 `done_when` 找 `qa-reports/…`，第一個「結論：合格／不合格」；報告不合格而總裁說合格＝照報告算失敗。找不到報告才退回看結案信字面 | `lib/aos_market.py`（`_qa_verdict`） |
+
+**拿五家真跑的實例唯讀重算**（不帶 since，三輪合計）：c2 成 5 敗 4、c3 成 6 敗 3、c4 成 6 敗 3，跟報告各輪加總一致；倒閉的 c1 以前記「失敗 1」，現在 3 張全記失敗（2 張逾時＝被財務擋住的那兩張）；c5 成 2 敗 7（阿貴那張逾時）。
+
+測試：test_team_wall +1、test_team_cost 改 2 加 1、test_company +1、test_market +5（44 → 49）；全套 101 檔 2866 → 2874 條全綠（這次沒遇到 `--follow` 那 3 條偶發 error）。

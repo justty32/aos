@@ -308,40 +308,42 @@ class Post:
         self.budget = None                       # 這一輪的預算判斷（第一次碰到新 handoff／spawn 才算）
         for sender, path in self.outbox_files():
             try:
-                if self.budget_hold(sender, path):
-                    continue
-                self.process_file(sender, path)
+                self.process_file(sender, path, over=self.budget_hold(sender, path))
             except (TeamError, OSError, ValueError) as e:
                 self.warn('%s 處理不下去：%s（留著，下一輪再試）' % (path, e))
 
     def budget_hold(self, sender, path):
-        """財務部（spec/team/cost.md）：超預算時新的 handoff／spawn 申請先留在 outbox（預算調高後下一輪自己會走），
-        每天每種超額寄一封給 human。已處理過的（有紀錄）照走；沒設 AOS_COST_HOME＝不擋。"""
+        """財務部（spec/team/cost.md §4）：超預算時新的 handoff／spawn 申請**退件**——回傳退件理由（開頭
+        「財務擋單：超支」），process_file 照一般退件走：原檔進 rejected/、FAILED 退給寄件人（human 寄的＝總機單，
+        總機會把 FAILED 轉回下單的部門）。09-25 五家真跑 §7 第 5 條：以前是留在 outbox 等預算調高，
+        但發單的人（總裁）永遠收不到回音、董事的單永遠不結案。每天每種超額另寄一封 NEEDS-USER 給 human。
+        已處理過的（有紀錄）照走；沒設 AOS_COST_HOME＝不擋。不擋＝None。"""
         import aos_team_cost
         if sender == POST or aos_team_cost.home(self.env) is None:
-            return False
+            return None
         if self.load_rec(self.record_id(sender, path)) is not None:
-            return False
+            return None
         try:
             obj = fmt.read_json(path)
         except (TeamError, OSError, ValueError):
-            return False
+            return None
         if not isinstance(obj, dict) or obj.get('kind') not in aos_team_cost.HOLD_KINDS:
-            return False
+            return None
         if self.budget is None:
             self.budget = aos_team_cost.hold_reason(self.env, str(self.root)) or False
         if not self.budget:
-            return False
+            return None
         why, sig = self.budget
         day = self.now().strftime('%Y%m%d')
         rid = 'budget.%s.%s' % (day, hashlib.sha1(sig.encode()).hexdigest()[:12])
-        text = ('財務：超預算，郵差先不處理新的開單／生成員申請（留在 outbox，已在跑的單照常）：%s。'
-                '要繼續就調高預算（$AOS_COST_HOME/budget.json 或 team.json 的 budget），下一輪自己會走；'
+        text = ('財務：超預算，郵差把新的開單／生成員申請退件（FAILED 回給寄件人，已在跑的單照常）：%s。'
+                '要繼續就調高預算（$AOS_COST_HOME/budget.json 或 team.json 的 budget），再重新開單；'
                 'aos-team cost budget 看幾成。' % why)
         if self.notice(rid, [{'do': 'letter', 'to': HUMAN, 'status': 'NEEDS-USER', 'reply_to': None, 'rev': None,
                               'text': text}], reason=sig):
-            self.say('財務：超預算，%s 的 %s 申請先不處理：%s' % (sender, obj.get('kind'), why))
-        return True
+            self.say('財務：超預算，%s 的 %s 申請退件：%s' % (sender, obj.get('kind'), why))
+        return ('財務擋單：超支（%s）。這張%s申請沒有處理；預算調高後要做就重新開單。'
+                % (why, '開單' if obj.get('kind') == 'handoff' else '生成員'))
 
     def record_id(self, sender, path):
         stem = path.name[:-5]
@@ -352,11 +354,12 @@ class Post:
             ok = m and m.group(1) == sender
         return stem if ok else 'x-' + hashlib.sha1(('%s/%s' % (sender, path.name)).encode()).hexdigest()[:20]
 
-    def process_file(self, sender, path):
+    def process_file(self, sender, path, over=None):
+        """over：財務擋單的理由（budget_hold），有＝不處理、照一般退件走。"""
         rid = self.record_id(sender, path)
         rec = self.load_rec(rid)
         if rec is None:
-            rec = self.take(sender, path, rid)
+            rec = self.reject(sender, path, rid, 'OverBudget', over) if over else self.take(sender, path, rid)
         archive(path, 'rejected' if rec['kind'] == 'rejected' else 'done')
         crash('moved')
         self.finish(rec)

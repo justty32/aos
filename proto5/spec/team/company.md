@@ -60,7 +60,7 @@ kernel 反覆叫 `aos_company.py relay --company <公司>`（`up` 登記成 `com
 | 開單類的總機單，負責人自己寄的 DONE | `note` | 只記下、不轉：還沒驗收，等郵差驗完寄的那封 |
 | 其他（郵差、心跳寄的、沒標〔給〕的） | `board` | 不動，留給董事：`company.py mail` 列 |
 
-- **結案**：開單類（`via: handoff`）看郵差寄的 DONE／FAILED；窗口類（`desk`）只看**窗口本人**寄的 DONE／FAILED（同部門別人寄的照抄給下單的人，但不結案）；`tool` 當場結。單子 `status`：`open`／`running`（工具跑到一半）／`done`／`failed`，結案時記 `closed_at`（市場層照它算「這一輪結的單」）。
+- **結案**：開單類（`via: handoff`）看郵差寄的 DONE／FAILED（含**財務擋單**：部門郵差看到帳戶或預算超支，開單申請直接退件 FAILED「財務擋單：超支」、`reply_to`＝總機寫的那份申請，總機照上表 `reply` 轉回下單的人、單子結成 `failed`，總裁照 SOP 回董事；cost.md §4，09-25 五家真跑 §7 第 5 條）；窗口類（`desk`）只看**窗口本人**寄的 DONE／FAILED（同部門別人寄的照抄給下單的人，但不結案）；`tool` 當場結。單子 `status`：`open`／`running`（工具跑到一半）／`done`／`failed`，結案時記 `closed_at`（市場層照它算「這一輪結的單」）。
 - **董事直接下單**（`order --to 部門`）：一樣開總機單，`from.dept` 是 `board`；回覆不抄給誰，留在那個部門的收件匣給董事看（`mail` 會列）。
 - **寄件人一律 human**：從對方部門看，總機交辦的事就是「公司」交辦的，郵差照 human 的權限收（human 能寄給任何成員、能開單）。總機寫的每一份都先過 `validate_letter`／`validate_request`，郵差還會再驗一次。
 - **冪等**：每封信先記 `seen/<部門>/<信 id>.json`（判成什麼、要用的 id），再動作，做完標 `done`；總機單先記單號與要用的申請 id 再派。崩在中間重跑用同一個 id、`write_new` 不覆蓋，不會重派、不會重寄。

@@ -78,7 +78,8 @@ class Scores(Base):
         # 只有部門間的總機單、沒有董事的單＝這輪沒有成功結案（以前會算成 2 張、平均 900 秒）
         self.order('c1', 'o-0001', '2026-09-25T12:00:00+08:00', '2026-09-25T12:10:00+08:00', replies=2)
         self.order('c1', 'o-0002', '2026-09-25T12:00:00+08:00', '2026-09-25T12:20:00+08:00')
-        self.assertEqual(mk.board_from_company(self.tmp / 'c1'), {'done': 0, 'failed': 0, 'seconds': None, 'hops': None})
+        self.assertEqual(mk.board_from_company(self.tmp / 'c1'), {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [],
+                                                             'seconds': None, 'hops': None})
         self.board('c1', '2026-09-25T12:00:00+08:00', '2026-09-25T12:30:00+08:00')
         self.board('c1', '2026-09-25T13:00:00+08:00', '2026-09-25T13:10:00+08:00')
         self.board('c1', '2026-09-25T14:00:00+08:00', '2026-09-25T14:05:00+08:00', status='FAILED', qa=None)
@@ -192,6 +193,24 @@ class Pool(Base):
         self.assertLessEqual(bal['balance']['usd'], 0)
         ev = mk.load(self.mdir)['events'][-1]
         self.assertEqual((ev['kind'], ev['company']), ('bankrupt', 'c3'))
+
+    def test_bankrupt_and_ls_printing(self):
+        """五家真跑 §7 第 7 條：總池沒管美元（total 沒 usd）就不印「收回 usd」；ls 不印 -0.0。"""
+        self.spend('c3', 1000)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(mk.main(['--market', str(self.mdir), 'bankrupt']), 0)
+        line = buf.getvalue()
+        self.assertIn('收回總池 "（沒有剩）"', line)                     # 美元有剩但總池不管：不印
+        self.assertNotIn('usd', line.split('收回總池')[1].split('；')[0])
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(mk.main(['--market', str(self.mdir), 'ls']), 0)
+        self.assertNotIn('-0.0', buf.getvalue())
+        self.assertEqual(mk._no_neg_zero({'usd': -0.0, 'tokens': -5}), {'usd': 0.0, 'tokens': -5})
+        self.assertEqual(json.dumps(mk._no_neg_zero({'usd': -0.0})), '{"usd": 0.0}')
+        self.assertEqual(mk._pool_kinds({'usd': 1.0, 'tokens': 9}, {'tokens': 5}), {'tokens': 9})
+        self.assertEqual(mk._pool_kinds({'usd': 1.0}, {'usd': None}), {})
 
     def test_manager_close_recycles_unspent(self):
         before = self.pool()['money']['tokens']
@@ -606,6 +625,98 @@ class FormulaFix(Base):
             letter['text'] = text
             fmt.write_json(p, letter)
             self.assertEqual(mk.board_from_company(self.tmp / 'c1')['done'], done, text)
+
+    # 五家真跑 §7 第 1 條長遠版：看品管報告檔本身，結案信次之
+    def qa_setup(self, report, letter, qa_status='done'):
+        """c1：董事一張單 → 總裁發品管單（o-0001，task t-0001，報告 qa-reports/某人.md）→ 總裁結案信 reply_to 那封。"""
+        d = self.company('c1')
+        qa = co.team_dirs(d, co.load(d))['qa']
+        fmt.Layout(qa).tasks.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(fmt.Layout(qa).task('t-0001'), {'id': 't-0001', 'done_when': [
+            {'kind': 'file_exists', 'path': 'qa-reports/某人.md'},
+            {'kind': 'check', 'name': 'contains', 'args': {'path': 'qa-reports/某人.md', 'text': '結論：'}}]})
+        (self.proj / 'qa-reports').mkdir(exist_ok=True)
+        (self.proj / 'qa-reports' / '某人.md').write_text(report, encoding='utf-8')
+        hq = d / 'teams' / 'hq' / 'team'
+        for f in (hq / 'outbox' / 'human' / 'done', hq / 'human'):
+            f.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(hq / 'outbox' / 'human' / 'done' / '1-1-human.json', {
+            'id': '1-1-human', 'from': 'human', 'to': 'c1-hq-lead', 'status': 'REQUEST', 'reply_to': None,
+            'rev': None, 'text': '補人物 某人', 'at': '2026-09-25T15:00:00+08:00'})
+        folder = d / 'switchboard' / 'orders'
+        folder.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(folder / 'o-0001.json', {
+            'id': 'o-0001', 'at': '2026-09-25T15:03:00+08:00', 'status': qa_status,
+            'from': {'dept': 'hq', 'member': 'c1-hq-lead', 'letter': '2-1-c1-hq-lead'},
+            'to': {'dept': 'qa', 'team': 'qa', 'member': 'c1-qa-inspector'}, 'task': 't-0001', 'replies': []})
+        fmt.write_json(hq / 'human' / '3-1-c1-hq-lead.json', {
+            'id': '3-1-c1-hq-lead', 'from': 'c1-hq-lead', 'to': 'human', 'status': 'DONE',
+            'reply_to': '2-1-c1-hq-lead', 'rev': None, 'text': letter, 'at': '2026-09-25T15:05:00+08:00'})
+        return d
+
+    def test_success_reads_qa_report_first(self):
+        d = self.qa_setup('結論：合格\n抽三列都對', '某人做完了，品管說沒問題')     # 信沒抄結論：看報告
+        b = mk.board_from_company(d)
+        self.assertEqual((b['done'], b['failed'], b['seconds']), (1, 0, 300.0))
+        (self.proj / 'qa-reports' / '某人.md').write_text('結論：不合格\n第 2 列行號錯', encoding='utf-8')
+        fmt.write_json(d / 'teams' / 'hq' / 'team' / 'human' / '3-1-c1-hq-lead.json', dict(
+            fmt.read_json(d / 'teams' / 'hq' / 'team' / 'human' / '3-1-c1-hq-lead.json'), text='結論：合格'))
+        b = mk.board_from_company(d)                                         # 總裁轉述錯了：照報告算失敗
+        self.assertEqual((b['done'], b['failed']), (0, 1))
+        (self.proj / 'qa-reports' / '某人.md').write_text('結論為：合格', encoding='utf-8')
+        self.assertEqual(mk.board_from_company(d)['done'], 1)
+        (self.proj / 'qa-reports' / '某人.md').unlink()                       # 報告不在：退回看結案信
+        self.assertEqual(mk.board_from_company(d)['done'], 1)
+
+    def test_qa_report_pass_but_order_failed_is_failure(self):
+        d = self.qa_setup('結論：合格', '結論：合格', qa_status='failed')
+        self.assertEqual((mk.board_from_company(d)['done'], mk.board_from_company(d)['failed']), (0, 1))
+
+    # 五家真跑 §7 第 6 條：逾時沒結案＝失敗，只算一次；結案信照 reply_to 配回自己的單
+    def ask(self, name, aid, t0):
+        box = self.tmp / name / 'teams' / 'hq' / 'team' / 'outbox' / 'human' / 'done'
+        box.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(box / (aid + '.json'), {'id': aid, 'from': 'human', 'to': name + '-hq-lead',
+                                               'status': 'REQUEST', 'reply_to': None, 'rev': None,
+                                               'text': '補人物 某人', 'at': t0})
+
+    def test_timeout_counts_as_failed_once(self):
+        self.company('c1')
+        self.company('c2')
+        self.ask('c1', '9-1-human', '2026-09-25T15:00:00+08:00')
+        b = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual((b['done'], b['failed'], b['timeout'], b['timeout_ids']), (0, 1, 1, ['9-1-human']))
+        s = mk.record_score(self.mdir, 'c1', quality=0)
+        self.assertEqual((s['failed'], s['timeout']), (1, 1))
+        s = mk.record_score(self.mdir, 'c1', quality=0)                     # 同一輪重打分：照樣算
+        self.assertEqual(s['timeout'], 1)
+        mk.record_score(self.mdir, 'c2', quality=90, seconds=10)
+        mk.do_grant(self.mdir)
+        # 下一輪才補到結案信：上輪已算逾時，不再算（也不會配給別張單）
+        hq = self.tmp / 'c1' / 'teams' / 'hq' / 'team' / 'human'
+        hq.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(hq / '9-2-c1-hq-lead.json', {'id': '9-2-c1-hq-lead', 'from': 'c1-hq-lead', 'to': 'human',
+                                                    'status': 'DONE', 'reply_to': None, 'rev': None,
+                                                    'text': '結論：合格', 'at': mk.now()})
+        s = mk.record_score(self.mdir, 'c1', quality=0)
+        self.assertEqual((s['done'], s['failed'], s['timeout']), (0, 0, 0))
+
+    def test_close_pairs_by_reply_to_not_first_ask(self):
+        """先下的單還沒結案、後下的單先結案：結案信 reply_to 指到後一張單之後發的總機單，就配給後一張。"""
+        self.company('c1')
+        self.ask('c1', '1-1-human', '2026-09-25T15:00:00+08:00')
+        self.ask('c1', '2-1-human', '2026-09-25T15:10:00+08:00')
+        self.order('c1', 'o-0001', '2026-09-25T15:11:00+08:00', '2026-09-25T15:12:00+08:00', dept='qa')
+        o = fmt.read_json(self.tmp / 'c1' / 'switchboard' / 'orders' / 'o-0001.json')
+        o['from']['letter'] = '5-1-c1-hq-lead'
+        fmt.write_json(self.tmp / 'c1' / 'switchboard' / 'orders' / 'o-0001.json', o)
+        hq = self.tmp / 'c1' / 'teams' / 'hq' / 'team' / 'human'
+        hq.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(hq / '6-1-c1-hq-lead.json', {'id': '6-1-c1-hq-lead', 'from': 'c1-hq-lead', 'to': 'human',
+                                                    'status': 'DONE', 'reply_to': '5-1-c1-hq-lead', 'rev': None,
+                                                    'text': '結論：合格', 'at': '2026-09-25T15:13:00+08:00'})
+        b = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual((b['done'], b['seconds'], b['timeout_ids']), (1, 180.0, ['1-1-human']))
 
     # 1：沒有成功結案的，品質、快、省、總分都 0，撥 0
     def test_failed_company_scores_zero(self):

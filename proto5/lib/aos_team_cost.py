@@ -6,8 +6,8 @@
   **寫失敗絕不擋呼叫**：任何例外都吞掉。
 - 查帳：`aos-team cost [--by team|member|model|family|task] [--since 今天|本週|全部|YYYY-MM-DD] [--team] [--json]`。
   金額用**現在的**價格表重算（改了價格表，舊帳的估值跟著改）；價格表沒有的模型只記 token、不算錢，另印警告。
-- 預算：全公司 budget.json＋團隊 team.json 的 budget。超了：郵差不處理新的 handoff／spawn 申請（留在 outbox，
-  預算調高後下一輪自己會走），每天每種超額寄一封給 human；aos-team ls 第一行印超額。已在跑的單不砍。
+- 預算：全公司 budget.json＋團隊 team.json 的 budget。超了：郵差把新的 handoff／spawn 申請退件（FAILED「財務擋單：超支」
+  回寄件人；09-25 五家真跑前是留在 outbox），每天每種超額寄一封給 human；aos-team ls 第一行印超額。已在跑的單不砍。
 - 回填：`aos-team cost import 資料夾…` 把找得到的 members/<名>/log/usage*.jsonl 撈進帳本（重跑不重記）。
 """
 import argparse
@@ -22,7 +22,7 @@ import sys
 
 ENV = 'AOS_COST_HOME'
 LEDGER, PRICES, BUDGET, ACCOUNTS = 'ledger.jsonl', 'prices.json', 'budget.json', 'accounts.json'
-HOLD_KINDS = ('handoff', 'spawn')          # 超預算時郵差先不處理的申請（開新單、生新成員）
+HOLD_KINDS = ('handoff', 'spawn')          # 超預算時郵差退件的申請（開新單、生新成員）
 BY = ('family', 'model', 'team', 'member', 'task', 'source')
 LIMIT_KEYS = ('usd', 'tokens', 'since')
 
