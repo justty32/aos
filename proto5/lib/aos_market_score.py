@@ -136,6 +136,33 @@ def _qa_verdict(teams, o):
     return None
 
 
+def _mfg_for_asks(asks, pair, mfg, t):
+    """董事的單 → 它的製造總機單（astra 審查第 74、75 題必修 1：兩張單時間重疊時，以前取「那段時間最後一張」，
+    兩張單會配到同一張）。一張製造總機單只配一張董事的單：
+    董事的單照下單時間排，每張先拿它那段時間（下單到結案；沒結案＝到下一張董事的單之前）裡最早一張還沒配走的；
+    再把「下一張董事的單下之前」還沒配走的也收進來（同一張單總裁重發的），用收到的最後一張。
+    沒有重疊時跟以前一樣＝那段時間最後一張。回 {董事單號: 製造總機單}，配不到的不在裡面。"""
+    mfg = sorted(mfg, key=t)
+    used, out = set(), {}
+    for i, a in enumerate(asks):
+        t0, c = t(a), pair.get(a['id'])
+        t1 = t(c) if c is not None else None
+        nxt = t(asks[i + 1]) if i + 1 < len(asks) else None
+        mine = []
+        for j, o in enumerate(mfg):
+            if j in used or t(o) < t0 or (t1 is not None and t(o) > t1):
+                continue
+            if c is None and nxt is not None and t(o) >= nxt:
+                break                                  # 沒結案的單（逾時）只拿下一張單之前的，不搶後面的
+            if mine and nxt is not None and t(o) >= nxt:
+                break
+            mine.append(j)
+            used.add(j)
+        if mine:
+            out[a['id']] = mfg[mine[-1]]
+    return out
+
+
 def board_from_company(cdir, since=None, skip=()):
     """董事的單（company.py order → 前台部門）這一輪的結果（真跑 09-25 修正：快＝董事等的時間，不是部門間跳的平均）。
 
@@ -149,8 +176,9 @@ def board_from_company(cdir, since=None, skip=()):
     - **逾時＝失敗**：這一輪下的單（下單時間在 since 之後；沒 since＝全部）score 時還沒有結案信，算失敗一張
       （`timeout` 另記張數、`timeout_ids` 記單號）。skip：以前的輪已經算過逾時的單號，不再算（之後才來的結案信也不算）。
     - 「這一輪」看結案信的時間（上一輪 grant 之後）；跨輪完成的單算在結案那一輪。
-    - **審查輪數**（第 75 題）：成功那幾張，各取這段時間最後一張有單號的製造總機單，看那張部門單子第幾次審查才過
-      （_review_rounds）；照成功的順序記在 `reviews`（1、2、3…／'FAILED'／None＝沒紀錄）。
+    - **審查輪數**（第 75 題）：每張成功的單配一張有單號的製造總機單（_mfg_for_asks：一張製造總機單只配一張董事的單），
+      看那張部門單子第幾次審查才過（_review_rounds）；照成功的順序記在 `reviews`（1、2、3…／'FAILED'／None＝沒紀錄）。
+      配不到製造總機單的成功單記 None，`notes` 寫是哪張。
     回 {'done': 成功張數, 'failed': 失敗張數（含逾時）, 'timeout': 逾時張數, 'timeout_ids': [...],
         'seconds': 成功那幾張董事平均等幾秒（沒有＝None）, 'hops': 成功那幾張平均經過幾張總機單＋1（只記、不算分）,
         'reviews': 成功那幾張的審查輪數}。"""
@@ -198,6 +226,7 @@ def board_from_company(cdir, since=None, skip=()):
         if c is not None:
             pair[a['id']] = c
             used.add(c['id'])
+    mfg_of = _mfg_for_asks(asks, pair, [o for o in orders if (o.get('to') or {}).get('dept') == 'mfg' and o.get('task')], t)
     secs, hops = [], []
     for a in asks:
         if a['id'] in skip:
@@ -233,8 +262,11 @@ def board_from_company(cdir, since=None, skip=()):
             res['done'] += 1
             secs.append(max(0.0, (t1 - t0).total_seconds()))
             hops.append(len(inside) + 1)
-            mfg = [o for o in inside if (o.get('to') or {}).get('dept') == 'mfg' and o.get('task')]
-            res['reviews'].append(_review_rounds(teams, max(mfg, key=t)) if mfg else None)
+            o = mfg_of.get(a['id'])
+            res['reviews'].append(_review_rounds(teams, o) if o is not None else None)
+            if o is None:
+                res.setdefault('notes', []).append(
+                    '董事的單 %s：配不到製造總機單（這段時間沒有、或都被先下的單配走了），審查輪數記 None' % a['id'])
         else:
             res['failed'] += 1
     if secs:
@@ -278,6 +310,7 @@ def _record_score(mdir, name, quality, eval_path, seconds, hops, done):
     timed.update({k: cur for k in bd['timeout_ids']})
     if done is None:
         done = 1 if seconds is not None else bd['done']        # 經理人手給秒數＝他認定有一張成功
+    notes.extend(bd.get('notes') or [])
     rounds = bd['reviews']
     facs = [review_factor(r, m['params']['review_factors']) for r in rounds]
     if not rounds or None in facs:                   # 舊資料／手給的成功：沒審查紀錄的那幾張當一次過

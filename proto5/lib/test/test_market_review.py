@@ -59,6 +59,61 @@ class Formula(Base):
         self.assertEqual((row['raw_quality'], row['success_rate'], row['review_factor'], row['quality']),
                          (90, 1.0, 0.7, 63.0))
 
+    def test_overlapping_asks_each_get_own_mfg_order(self):
+        """astra 審查必修 1：董事兩張單時間重疊（A 10:00～10:05、B 10:02～10:06），各自的製造總機單不能共用。"""
+        self.company('c1')
+        self.board('c1', '2026-09-25T10:00:00+08:00', '2026-09-25T10:05:00+08:00')
+        self.board('c1', '2026-09-25T10:02:00+08:00', '2026-09-25T10:06:00+08:00')
+        self.mfg('c1', 't-0001', '2026-09-25T10:01:00+08:00', review=(True,))                  # A 一次過
+        self.mfg('c1', 't-0002', '2026-09-25T10:03:00+08:00', review=(False, False, True))     # B 第三次過
+        b = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual((b['done'], b['reviews']), (2, [1, 3]))
+        s = mk.record_score(self.mdir, 'c1', quality=100)
+        self.assertEqual(s['review_factor'], 0.7)                                       # (1.0＋0.4)／2
+        self.assertEqual([mk.review_factor(r, [1.0, 0.7, 0.4]) for r in s['review_rounds']], [1.0, 0.4])
+
+    def test_overlapping_both_orders_after_second_ask(self):
+        """兩張製造總機單都在 B 下單之後才發：照時間一對一，A 拿先的、B 拿後的。"""
+        self.company('c1')
+        self.board('c1', '2026-09-25T10:00:00+08:00', '2026-09-25T10:05:00+08:00')
+        self.board('c1', '2026-09-25T10:02:00+08:00', '2026-09-25T10:06:00+08:00')
+        self.mfg('c1', 't-0001', '2026-09-25T10:03:00+08:00', review=(True,))
+        self.mfg('c1', 't-0002', '2026-09-25T10:04:00+08:00', review=(False, True))
+        self.assertEqual(mk.board_from_company(self.tmp / 'c1')['reviews'], [1, 2])
+
+    def test_overlapping_one_order_short_gets_none_with_note(self):
+        """重疊的兩張只有一張製造總機單：先下的配走，另一張記 None、說明寫是哪張。"""
+        self.company('c1')
+        self.board('c1', '2026-09-25T10:00:00+08:00', '2026-09-25T10:05:00+08:00')
+        self.board('c1', '2026-09-25T10:02:00+08:00', '2026-09-25T10:06:00+08:00')
+        self.mfg('c1', 't-0001', '2026-09-25T10:03:00+08:00', review=(False, True))
+        b = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual(b['reviews'], [2, None])
+        self.assertTrue(any('2-1-human' in n and '配不到製造總機單' in n for n in b['notes']), b['notes'])
+        s = mk.record_score(self.mdir, 'c1', quality=100)
+        self.assertTrue(any('配不到製造總機單' in n for n in s['notes']), s['notes'])
+
+    def test_resent_order_same_ask_uses_last(self):
+        """沒有重疊：同一張董事的單總裁發了兩張製造總機單（重發），照舊用最後一張。"""
+        self.company('c1')
+        self.board('c1', '2026-09-25T10:00:00+08:00', '2026-09-25T10:09:00+08:00')
+        self.mfg('c1', 't-0001', '2026-09-25T10:01:00+08:00', status='failed', review=(False, False, False))
+        self.mfg('c1', 't-0002', '2026-09-25T10:05:00+08:00', review=(True,))
+        self.assertEqual(mk.board_from_company(self.tmp / 'c1')['reviews'], [1])
+
+    def test_timed_out_ask_does_not_take_later_order(self):
+        """沒結案的單（逾時）不搶後面那張單的製造總機單。"""
+        self.company('c1')
+        hq = self.tmp / 'c1' / 'teams' / 'hq' / 'team' / 'outbox' / 'human' / 'done'
+        hq.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(hq / '0-1-human.json', {'id': '0-1-human', 'from': 'human', 'to': 'c1-hq-lead',
+                                               'status': 'REQUEST', 'reply_to': None, 'rev': None, 'text': '補人物 甲',
+                                               'at': '2026-09-25T09:00:00+08:00'})
+        self.board('c1', '2026-09-25T10:00:00+08:00', '2026-09-25T10:05:00+08:00')
+        self.mfg('c1', 't-0001', '2026-09-25T10:01:00+08:00', review=(False, True))
+        b = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual((b['done'], b['timeout'], b['reviews']), (1, 1, [2]))
+
     def test_failed_ticket_is_zero(self):
         self.company('c1')
         self.one('c1', 10, status='failed', review=(False, False, False))      # 總裁照樣結案、品管也過
