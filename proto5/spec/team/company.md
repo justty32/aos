@@ -23,7 +23,8 @@ mfg 郵差開單 t-0001 → 寫手做 → 驗收員 → 審查員 → 郵差寄�
 <公司>/                    company.py 的 -C（或 AOS_COMPANY_HOME）
   company.json             部門、編制、上限（§2）；人寫
   llm.json  kernel.json    模型代號；kernel 池（up 照 company.json 的 pools 寫）
-  K/                       這家的 kernel（daemon 在 ../D，幾家共用一個）
+  K/                       這家的 kernel
+  D/                       這家的 daemon（company.json 的 daemon，預設 D；董事 09-25：一家一個 daemon＋kernel）
   teams/<部門>/            一般的 aos 團隊資料夾（team.json＋members/＋team/）
   config/<部門>.routes.json  門房規則的來源（up 時 route save）
   persona/*.md             公司層人格：up 時接在模板人格後面（每個家只接一次，記在 state/persona/<名>）
@@ -55,14 +56,17 @@ kernel 反覆叫 `aos_company.py relay --company <公司>`（`up` 登記成 `com
 | 成員寄的、text 第一行開頭 `〔給 X〕`（也認 `[給 X]`、`【給 X】`；X＝部門代號、title 或 alias） | `order` | 開總機單 `o-NNNN`；X 的團隊有門房規則且**第一行**命中 `handoff`＝往 X 的 `outbox/human/` 放開單申請（goal 前加「〔總機 o-NNNN，… 交辦〕」，第二行以後併進 `facts`）；命中 `tool`（`run` 那種）＝在總機這裡跑、輸出當回覆立刻寄回；沒命中＝寫一封 REQUEST 給 X 的窗口，信頭說「做完 team_say 回 human，reply_to 寫 o-NNNN」 |
 | 同上但 X 不存在／尚未成立／就是自己的團隊／後面沒字 | `bounce` | 退一封 FAILED 給寄件人（`〔總機退信〕…`） |
 | `reply_to` 對得上一張總機單：單號本身、總機寫的那份申請或信的 id、或一張任務單（`t-0001`／`t-0001.r1`，看單子的 `request` 是不是總機寫的那份） | `reply` | 抄一封給下單的人（寄件人 human、status 照原信、`reply_to`＝下單那封信的 id），開頭 `〔總機 o-NNNN 回覆：<部門> 部 <寄件人> → <狀態>（<單號>）〕` |
-| 窗口寄的、沒寫 `reply_to`，而它手上正好只有一張開著的總機單 | `reply` | 同上（模型常忘了寫 reply_to） |
+| 窗口寄的、**沒寫** `reply_to`，而它手上正好只有一張開著的總機單 | `reply` | 同上（模型常忘了寫 reply_to）。有寫但對不上＝不猜，留給董事 |
 | 開單類的總機單，負責人自己寄的 DONE | `note` | 只記下、不轉：還沒驗收，等郵差驗完寄的那封 |
 | 其他（郵差、心跳寄的、沒標〔給〕的） | `board` | 不動，留給董事：`company.py mail` 列 |
 
-- **結案**：開單類（`via: handoff`）看郵差寄的 DONE／FAILED；窗口類（`desk`）看窗口寄的 DONE／FAILED；`tool` 當場結。單子 `status`：`open`／`done`／`failed`。
+- **結案**：開單類（`via: handoff`）看郵差寄的 DONE／FAILED；窗口類（`desk`）只看**窗口本人**寄的 DONE／FAILED（同部門別人寄的照抄給下單的人，但不結案）；`tool` 當場結。單子 `status`：`open`／`running`（工具跑到一半）／`done`／`failed`，結案時記 `closed_at`（市場層照它算「這一輪結的單」）。
 - **董事直接下單**（`order --to 部門`）：一樣開總機單，`from.dept` 是 `board`；回覆不抄給誰，留在那個部門的收件匣給董事看（`mail` 會列）。
 - **寄件人一律 human**：從對方部門看，總機交辦的事就是「公司」交辦的，郵差照 human 的權限收（human 能寄給任何成員、能開單）。總機寫的每一份都先過 `validate_letter`／`validate_request`，郵差還會再驗一次。
 - **冪等**：每封信先記 `seen/<部門>/<信 id>.json`（判成什麼、要用的 id），再動作，做完標 `done`；總機單先記單號與要用的申請 id 再派。崩在中間重跑用同一個 id、`write_new` 不覆蓋，不會重派、不會重寄。
+  - 崩在「單寫好、單號還沒記回 seen」：重跑照來信（`from.letter`）找回同一張，不另開。
+  - 每輪最後**接續沒派完的單**：`via` 還是空的（董事單崩在派送前也算）＝再派一次。
+  - 門房的 `tool` 規則：先把單標 `running` 存好再跑；重跑看到 `running`＝上次跑到一半，**不自動重跑**（工具可能有副作用），標 `failed` 回報下單的人（回信已經寄出＝照回信補記）。
 - 總機**不叫模型、不改任何團隊的檔**：只寫 `switchboard/` 與各部門的 `outbox/human/`（那一格本來就是 human 的寄件格）。
 
 ## 4. 數人頭、數 cpu（`status`）
@@ -72,15 +76,15 @@ kernel 反覆叫 `aos_company.py relay --company <公司>`（`up` 登記成 `com
 - 印一行 `正式 N/10、cpu N/20、llm cpu N/5`，超過的標出來，`status` 退 1。
 - `up` 前先擋：正式員工超過 `limits.regular`、部門之間有同名成員 ＝ 不開。cpu 靠 `pools` 已經在 `company.json` 驗過（kernel 就只開那麼多顆，這是**硬擋**：多的工作排隊，不會多開）。
 - **上限只有一個來源**：`company.json` 的 `limits`。`up` 把它寫進這家的 HR 政策 `K/hr/policy.json`（`regular_max`／`cpu_max`／`llm_cpu_max`，其他欄原樣留），所以 HR 的擋點（`aos-team init`／`start`／生成員）與 `status` 用同一組數；財務 `budget.json` 的 `cpus` 只拿來印 cost 表，不擋。
-- 給 `aos-team` 的環境只帶這家的 `AOS_KERNEL_HOME`、`AOS_HR_HOME=<公司>/K/hr`，**不帶 `AOS_DAEMON_HOME`**：HR 數 cpu 會把同一個 daemon 上的每個 kernel 都算進來，幾家共用 daemon 就會互相擋；只有 `aos up／down`、`aos-kernel init／ls` 帶 daemon。
+- 給 `aos-team` 的環境帶這家的 `AOS_KERNEL_HOME`、`AOS_HR_HOME=<公司>/K/hr`。`AOS_DAEMON_HOME`：daemon 是這家自己的（在公司資料夾裡，預設 `<公司>/D`）＝照帶，HR 數 cpu 只數得到自己；company.json 寫成幾家共用（例 `"daemon": "../D"`）＝不帶，因為 HR 數 cpu 會把同一個 daemon 上的每個 kernel 都算進來、互相擋。`aos up／down`、`aos-kernel init／ls` 一律帶。
 
 ## 5. 指令
 
 | 指令 | 做什麼 |
 |---|---|
 | `new 資料夾 [--prefix c1-] [--project P] [--llm-cpu N] [--cpu N] [--from 樣板]` | 照樣板生一家（不蓋已有的 `company.json`）；`--llm-cpu` 同時把 llm 池縮到它以下 |
-| `up -C 公司` | 寫 `kernel.json` → `aos-kernel init`（第一次）→ `aos up` → 每個開著的部門 `aos-team init`、`route save`、接公司人格、`start` → 登記總機。設了 `AOS_COST_HOME` 會傳進兩個池（帳記得到這家） |
-| `down -C 公司` | 撤總機 → 每個部門 `aos-team stop` → `aos down`（daemon 沒別的 kernel 才關） |
+| `up -C 公司` | 寫 `kernel.json` → `aos-kernel init`（第一次）；**K 已經在＝把 `K/info.json` 兩池的顆數對到 `company.json` 的 `pools`**（`aos-kernel cpu add／rm`，對不上不開；市場層 `slots` 改的上限這時生效）→ `aos up` → 每個開著的部門 `aos-team init`、`route save`、接公司人格、`start` → 登記總機。設了 `AOS_COST_HOME` 會傳進兩個池（帳記得到這家；K 建好後再改 envs 要手編 `K/info.json`） |
+| `down -C 公司` | 撤總機（印「總機撤了」）→ 每個部門 `aos-team stop` → `aos down`（印 kernel、daemon 停了沒；自家 daemon 一起關）。任何一步沒停好＝退 1（市場層靠它決定能不能封存） |
 | `status -C 公司 [--json] [--no-kernel]` | 上限一行＋每部門成員數、單子（進行／全部）、等人答的題數＋最近的總機單＋董事收件匣封數 |
 | `order -C 公司 "一句話" [--to 部門]` | 董事下單：預設 `aos-team ask` 給前台部門；`--to` 直接開總機單給那個部門 |
 | `mail -C 公司` | 董事收件匣：各部門寄給 human、判成 `board` 的信，和董事自己下的總機單的回覆 |
@@ -91,6 +95,6 @@ kernel 反覆叫 `aos_company.py relay --company <公司>`（`up` 登記成 `com
 
 - **總機只認〔給 …〕與 reply_to**：模型把〔給 mfg〕寫在第二行、或回信寫錯 reply_to（又不只一張開著的單）＝那封留給董事。`mail` 看得到，董事可以用 `order --to` 補派。
 - 跨部門的**開單申請**只走對方的門房：想跨部門直接指定負責人、`done_when`，沒有這條路（要就在對方門房加規則，人批）。
-- 一家公司一個 kernel：上限是真的（池只有那麼多顆）；幾家共用一個 kernel 的話池是共用的，`status` 的 cpu 會算到別家——所以樣板一律一家一個 kernel，名字照樣加前綴（萬一共用也不撞名）。
+- 一家公司一個 kernel：上限是真的（池只有那麼多顆）；幾家共用一個 kernel 的話池是共用的，`status` 的 cpu 會算到別家——所以樣板一律一家一個 kernel、一個 daemon（`K/`、`D/` 都在公司資料夾裡，`down` 一起關；董事 09-25 授權「有需要的話，可以每公司一個 daemon 和 kernel」），名字照樣加前綴（萬一共用也不撞名）。
 - 部門的 `open` 只管 up 與總機；已經在跑的團隊改成 `false` 不會自己停（先 `aos-team stop`）。
 - 市場層（幾家公司競爭、按表現撥額度、倒閉、合併）見 [market.md](market.md)。
