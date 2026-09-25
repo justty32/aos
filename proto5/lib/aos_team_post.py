@@ -303,11 +303,43 @@ class Post:
         return sorted(found, key=key)
 
     def process_outboxes(self):
+        self.budget = None                       # 這一輪的預算判斷（第一次碰到新 handoff／spawn 才算）
         for sender, path in self.outbox_files():
             try:
+                if self.budget_hold(sender, path):
+                    continue
                 self.process_file(sender, path)
             except (TeamError, OSError, ValueError) as e:
                 self.warn('%s 處理不下去：%s（留著，下一輪再試）' % (path, e))
+
+    def budget_hold(self, sender, path):
+        """財務部（spec/team/cost.md）：超預算時新的 handoff／spawn 申請先留在 outbox（預算調高後下一輪自己會走），
+        每天每種超額寄一封給 human。已處理過的（有紀錄）照走；沒設 AOS_COST_HOME＝不擋。"""
+        import aos_team_cost
+        if sender == POST or aos_team_cost.home(self.env) is None:
+            return False
+        if self.load_rec(self.record_id(sender, path)) is not None:
+            return False
+        try:
+            obj = fmt.read_json(path)
+        except (TeamError, OSError, ValueError):
+            return False
+        if not isinstance(obj, dict) or obj.get('kind') not in aos_team_cost.HOLD_KINDS:
+            return False
+        if self.budget is None:
+            self.budget = aos_team_cost.hold_reason(self.env, str(self.root)) or False
+        if not self.budget:
+            return False
+        why, sig = self.budget
+        day = self.now().strftime('%Y%m%d')
+        rid = 'budget.%s.%s' % (day, hashlib.sha1(sig.encode()).hexdigest()[:12])
+        text = ('財務：超預算，郵差先不處理新的開單／生成員申請（留在 outbox，已在跑的單照常）：%s。'
+                '要繼續就調高預算（$AOS_COST_HOME/budget.json 或 team.json 的 budget），下一輪自己會走；'
+                'aos-team cost budget 看幾成。' % why)
+        if self.notice(rid, [{'do': 'letter', 'to': HUMAN, 'status': 'NEEDS-USER', 'reply_to': None, 'rev': None,
+                              'text': text}], reason=sig):
+            self.say('財務：超預算，%s 的 %s 申請先不處理：%s' % (sender, obj.get('kind'), why))
+        return True
 
     def record_id(self, sender, path):
         stem = path.name[:-5]

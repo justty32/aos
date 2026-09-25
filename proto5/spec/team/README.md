@@ -37,6 +37,7 @@
 | [crystal.md](crystal.md) | （第三波 W3-2）固化建議 `aos-team crystal`：落穿句型怎麼歸類、「同一種單」、機械候選規則與回測、提案檔怎麼批、`--suggest-with-llm` |
 | [crystal-checks.md](crystal-checks.md) | （第三波 W3-2 審查後）crystal 候選的機械檢查：整份例句全過、次數從歷史算、內建反例（`../`、`/etc/passwd`、`-rf`、黏兩件事）、舊 log 配信可信度 |
 | [score.md](score.md) | 六軸彙整 `aos-team score`：把六軸表（axes.md §4 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型 |
+| [cost.md](cost.md) | 財務部（09-25）：一台機器一本帳 `$AOS_COST_HOME/ledger.jsonl`（每次模型呼叫一筆，寫失敗不擋）、價格表、全公司與團隊預算；`aos-team cost [--by …]`／`cost budget`／`cost import`；超預算郵差不處理新開單／生成員、寄信給人、`ls` 第一行報 |
 | [examples/](examples/) | 每種檔一份範例；`python3 lib/aos_team_format.py 檔…` 驗得過 |
 
 ## 最小驗證程式
