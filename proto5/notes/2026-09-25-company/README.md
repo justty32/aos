@@ -17,6 +17,7 @@
 | 比喻落地 | [playbook/company.md](../../playbook/company.md) | 每一列補「aos 裡是哪個團隊資料夾／哪個成員」 |
 | 試玩 | [play/](play/README.md) | 新使用者只拿樣板 README：開一家、下一單（deepseek-chat，343 秒、126 次呼叫、451 萬 token，成功）、關機；市場層假資料走完 open→merge；五條標準 4／3／4／4／4 |
 | 審查 | [review-astra.md](review-astra.md) | codex（gpt-6-astra，唯讀）審公司樣板＋市場層：必修 15 條（撥款／合併非交易、封存與回收無鎖、CPU 名額可虛增等）、建議 6 條、可不拍 2 條 |
+| 市場真跑 | [market-run/](market-run/README.md) | 兩家（只差寫手 deepseek-chat／gpt-5.5）同時做「補人物 老木頭」：c1 DONE（401 秒、131 次、595 萬 token），c2 FAILED（審查 3 次沒過、45 次、90 萬 token）；走一輪 score→rank→bankrupt→grant：c1 58％、c2 42％；一家一個 daemon 真開機驗過；規則問題 7 條（品質分會顛倒、失敗照拿四成、沒打分也照發） |
 
 ### 設計的幾個決定（我代裁的，攤在這）
 
@@ -78,7 +79,7 @@
 
 ## 5. 留下一輪
 
-- **五家真的同跑**：這次只真跑一家；市場層全用假帳本測。要跑就照 [examples/company/README.md〈開幾家〉](../../examples/company/README.md#開幾家市場層)；每家要自己的專案副本。
+- **五家真的同跑**：兩家同跑做過一輪（[market-run](market-run/README.md)），五家還沒。要跑就照 [examples/company/README.md〈開幾家〉](../../examples/company/README.md#開幾家市場層)；每家要自己的專案副本。
 - 驗收加行尾空白檢查（製造部的單、品管的驗貨單都漏了）；品管驗貨單改跑整套 `mech_check`。
 - HR 部的擴編規則（積壓 ≥3、品管分 <80）接到總裁的 SOP；`status` 順便印 `aos-team hr cap` 的擴編理由；薪資表（worker 最低通過 deepseek-chat、lead 換 deepseek 不通過）拿來定各部門的模型——現在寫手還是 gpt-5.5，可以試降。
 - `market.py slots` 只改 `company.json`，kernel 開著時不會自己 `aos-kernel cpu add`（下次 `up` 會對齊 K 的池，見 §7）。
@@ -123,8 +124,8 @@
 
 **試玩員三件事**：①樣板 README 補換模型、`aos-team` 在哪、怎麼看結案、成本提醒、daemon 位置；②`new` 的 cpu 改成不含 llm（12/20）、`down` 後 `status` 印 `stopped`、`down` 印總機撤了沒與 daemon 停了沒；③`market.py` 每個子命令與參數都有 `--help`、覆寫負數擋、有結單沒花 token＝省 100、README 加假資料走完一輪的範例（在 scratchpad 照著跑過一次）。開辦費改 2500 萬 token（§4 第 14 題）。
 
-**董事 09-25「每公司一個 daemon 和 kernel」**：做了。`company.json` 的 `daemon` 預設改 `D`（`<公司>/D/`，原本 `../D` 幾家共用）；daemon 在公司資料夾裡時給 aos-team 的環境照帶 `AOS_DAEMON_HOME`（HR 只數得到自家），寫回 `../D` 共用就照舊不帶；`down` 的 `aos down` 會把自家 daemon 一起關。沒真開機驗（本輪不真跑）：下次真跑請看 `<公司>/D/` 有建起來、`down` 後 `ps` 乾淨。
+**董事 09-25「每公司一個 daemon 和 kernel」**：做了。`company.json` 的 `daemon` 預設改 `D`（`<公司>/D/`，原本 `../D` 幾家共用）；daemon 在公司資料夾裡時給 aos-team 的環境照帶 `AOS_DAEMON_HOME`（HR 只數得到自家），寫回 `../D` 共用就照舊不帶；`down` 的 `aos down` 會把自家 daemon 一起關。真開機驗過（[market-run §4](market-run/README.md#4-一家一個-daemon真開機驗過)）：`<公司>/D/` 各自建起來、HR 只數自家、`down` 後行程乾淨。
 
-**留給別的部門**：`playbook/workflows/market-round.md` 的步驟還是先 grant 再 bankrupt，要照 market.md §3 改成先 bankrupt（本隊不碰 playbook，交圖書館）。
+**留給別的部門**：`playbook/workflows/market-round.md` 的步驟順序已改成先 bankrupt 再 grant（market-run 那一輪順手改）。
 
 測試：test_market 14 → 34 條、test_company 24 → 35 條；全套 101 檔 2822 → 2853 條全綠。
