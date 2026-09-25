@@ -192,7 +192,7 @@ class NewCompanies(Tmp):
             self.assertTrue(co.env_for(d, cfg, daemon=True)['AOS_DAEMON_HOME'].endswith('/D'))
 
 
-class Relay(Tmp):
+class RelayBase(Tmp):
     def setUp(self):
         super().setUp()
         self.d, self.cfg = self.make('c1-')
@@ -223,6 +223,8 @@ class Relay(Tmp):
     def order(self, oid):
         return fmt.read_json(self.d / 'switchboard' / 'orders' / (oid + '.json'))
 
+
+class Relay(RelayBase):
     def test_order_hits_route_then_reply_comes_back(self):
         src = self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老財（只寫詞條）\n先看草稿')
         self.relay()
@@ -352,6 +354,149 @@ class Relay(Tmp):
             m = co.MARK.match(text)
             got = co.resolve_dept(self.cfg, m.group(1)) if m else None
             self.assertEqual(got, want, text)
+
+
+class RelayAstra(RelayBase):
+    """astra 唯讀審查（09-25）必修 6～8、建議 2、可不拍 2：每條重現→修好。"""
+
+    def orders(self):
+        return sorted((self.d / 'switchboard' / 'orders').glob('o-*.json'))
+
+    # 必修 6：有填但配不到的 reply_to 不套單一窗口單的 fallback
+    def test_wrong_reply_to_is_not_matched_by_fallback(self):
+        self.inbox('hq', 'c1-hq-lead', '〔給 rd〕幫忙看一下工具')
+        self.relay()
+        self.inbox('rd', 'c1-rd-smith', '這是別的事', 'DONE', 'o-0999')
+        self.relay()
+        self.assertEqual(self.outbox('hq'), [])                        # 沒抄給總裁
+        self.assertEqual(self.order('o-0001')['status'], 'open')
+        self.assertEqual([d for d, _ in co.Switchboard(self.d).board_letters()], ['rd'])   # 留給董事
+
+    # 必修 6：desk 單只有窗口本人能結
+    def test_desk_order_closed_only_by_desk_member(self):
+        self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補一批人物：老木頭、老薑')
+        self.relay()
+        self.assertEqual(self.order('o-0001')['to']['member'], 'c1-mfg-lead')
+        self.inbox('mfg', 'c1-mfg-writer1', '我這邊好了', 'DONE', 'o-0001')
+        self.relay()
+        self.assertEqual(len(self.outbox('hq')), 1)                    # 回覆照抄
+        self.assertEqual(self.order('o-0001')['status'], 'open')       # 但不結案
+        self.inbox('mfg', 'c1-mfg-lead', '整批好了', 'DONE', 'o-0001')
+        self.relay()
+        o = self.order('o-0001')
+        self.assertEqual(o['status'], 'done')
+        self.assertTrue(o['closed_at'])
+
+    # 必修 7：單寫好、單號還沒記回 seen 就崩＝不另開
+    def test_crash_after_order_written_does_not_orphan(self):
+        lid = self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老財（只寫詞條）')
+        real = co.Switchboard._save_seen
+        state = {'n': 0}
+
+        def crash_on_second(sb, dept, l, rec):
+            state['n'] += 1
+            if state['n'] == 2:                                       # 第 1 次＝classify 後；第 2 次＝記單號
+                raise RuntimeError('崩在記單號前')
+            return real(sb, dept, l, rec)
+        with mock.patch.object(co.Switchboard, '_save_seen', crash_on_second):
+            with self.assertRaises(RuntimeError):
+                self.relay()
+        self.assertEqual(len(self.orders()), 1)
+        self.relay()
+        self.assertEqual(len(self.orders()), 1)                        # 找回同一張，沒有孤兒
+        self.assertEqual(len(self.outbox('mfg')), 1)
+        self.assertEqual(self.order('o-0001')['from']['letter'], lid)
+
+    # 必修 7：董事單崩在派送前，relay 接著派
+    def test_board_order_crash_before_dispatch_resumed(self):
+        sb = co.Switchboard(self.d)
+        with mock.patch.object(co.Switchboard, 'dispatch', side_effect=RuntimeError('崩在派送前')):
+            with self.assertRaises(RuntimeError):
+                sb.board_order('qa', '驗貨 老財')
+        self.assertIsNone(self.order('o-0001')['via'])
+        self.relay()
+        o = self.order('o-0001')
+        self.assertEqual((o['via'], o['to']['member']), ('handoff', 'c1-qa-inspector'))
+        self.relay()
+        self.assertEqual(len(self.outbox('qa')), 1)                    # 不重寄
+
+    # 必修 8：門房工具跑完、存結果前崩＝不重跑，標 failed
+    def test_tool_not_rerun_after_crash(self):
+        import aos_team_cli
+        runs = []
+
+        def fake_resolve(_name):
+            def run(_tdir, _args):
+                runs.append(1)
+                print('ok')
+                return 0
+            return run
+        self.inbox('hq', 'c1-hq-lead', '〔給 qa〕看一下單子')
+        with mock.patch.object(aos_team_cli, 'resolve', fake_resolve), \
+                mock.patch.object(co.Switchboard, '_reply_to_origin', side_effect=RuntimeError('崩在回信前')):
+            with self.assertRaises(RuntimeError):
+                self.relay()
+        self.assertEqual(self.order('o-0001')['status'], 'running')
+        with mock.patch.object(aos_team_cli, 'resolve', fake_resolve):
+            self.relay()
+            self.relay()
+        self.assertEqual(len(runs), 1)                                 # 只跑過一次
+        o = self.order('o-0001')
+        self.assertEqual(o['status'], 'failed')
+        (kind, back), = self.outbox('hq')
+        self.assertEqual(back['status'], 'FAILED')
+        self.assertIn('不自動重跑', back['text'])
+
+    # 建議 2：兼任部門開著、宿主關了＝退信，不中斷整輪
+    def test_part_of_closed_host_bounces(self):
+        raw = fmt.read_json(self.d / 'company.json')
+        raw['departments']['rd']['open'] = False
+        host_of = [k for k, v in raw['departments'].items() if v.get('part_of') == 'rd']
+        if not host_of:
+            raw['departments']['sales'] = dict(raw['departments'].get('sales', {}), part_of='rd', open=True)
+            raw['departments']['sales'].pop('team', None)
+            host_of = ['sales']
+        else:
+            raw['departments'][host_of[0]]['open'] = True
+        fmt.write_json(self.d / 'company.json', raw, indent=2)
+        cfg = co.load(self.d)
+        self.assertIsNone(co.host_dept(cfg, host_of[0]))
+        self.inbox('hq', 'c1-hq-lead', '〔給 %s〕做點事' % host_of[0])
+        self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老財（只寫詞條）')
+        self.relay()
+        self.assertEqual(len(self.outbox('mfg')), 1)                   # 別的信照常處理
+        self.assertTrue(any('尚未成立' in l['text'] for _, l in self.outbox('hq')))
+
+    # 可不拍 2：〔給 …〕只認第一行
+    def test_mark_only_first_line(self):
+        self.assertIsNone(co.MARK.match('\n〔給 mfg〕補人物'))              # 第一行空的、標記在第二行
+        self.assertIsNotNone(co.MARK.match('  〔給 mfg〕補人物'))
+
+
+class KernelPoolSync(Tmp):
+    # 必修 13：K 已經在時 up 要把池對到 company.json
+    def test_sync_pools_to_company_json(self):
+        import aos_kernel_info
+        d, cfg = self.make('c1-')
+        aos_kernel_info.init(d / 'K', {'pools': {'default': {'count': 3}, 'llm': {'count': 2}}})
+        lines = co.sync_kernel_pools(d, cfg)
+        info = aos_kernel_info.load_info(d / 'K')
+        self.assertEqual((info['pools']['default']['count'], info['pools']['llm']['count']),
+                         (cfg['pools']['default'], cfg['pools']['llm']))
+        self.assertTrue(lines)
+        raw = fmt.read_json(d / 'company.json')
+        raw['pools']['llm'] = 1                                         # 上限降了：池也要收
+        fmt.write_json(d / 'company.json', raw, indent=2)
+        co.sync_kernel_pools(d, co.load(d))
+        self.assertEqual(aos_kernel_info.load_info(d / 'K')['pools']['llm']['count'], 1)
+        self.assertEqual(co.sync_kernel_pools(d, co.load(d)), [])       # 對齊了就不動
+
+    def test_down_reports_failure(self):
+        d, cfg = self.make('c1-')
+        (d / 'K').mkdir()
+        fail = mock.Mock(returncode=3, stdout='', stderr='stop 失敗')
+        with mock.patch.object(co, '_run', return_value=fail), mock.patch('aos_client.call', return_value={}):
+            self.assertEqual(co.down(d, out=lambda *_: None), 1)
 
 
 if __name__ == '__main__':
