@@ -604,6 +604,17 @@ class LlmTests(Base):
         self.assertEqual(res['candidates'], [])
         self.assertIn('routes 陣列', res['llm']['error'])
 
+    def test_review2_m4_regex_overflow_dropped(self):
+        # 複審 M4：重複次數大到溢位、括號巢狀太深：列進丟掉的原因，不噴例外；好的那條照收
+        self.three_renames()
+        huge = dict(GOOD, name='huge', pattern='a{99999999999999999999}')
+        deep = dict(GOOD, name='deep', pattern='(' * 1200 + 'a' + ')' * 1200)
+        res, _ = self.run_llm([huge, deep, GOOD])
+        self.assertEqual([c['rule']['name'] for c in res['candidates']], ['llm-rename'])
+        why = {d['name']: d['why'] for d in res['dropped']}
+        self.assertIn('編不過', why['llm-huge'])
+        self.assertIn('編不過', why['llm-deep'])
+
 
 if __name__ == '__main__':
     unittest.main()

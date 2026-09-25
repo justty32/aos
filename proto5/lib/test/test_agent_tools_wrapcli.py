@@ -803,6 +803,23 @@ class BrokenReplyTests(Temp):
                 self.assertIn(item, [d['item'] for d in prop['dropped']])
                 (self.d / 'opq.describe.json').unlink()
 
+    def test_review2_m1_truncated_outer_not_inner_example(self):
+        # 複審 M1：外層被截斷，不能撿裡面的 example 陣列當參數表
+        text = '{"example":[{"name":"zero","flags":["--zero"],"kind":"flag","type":"boolean"}],"params":'
+        self.assert_bad(self.wrapcli, text, 'dd.wrapcli.json')
+        self.assert_bad(self.wrapcli, '"[]"', 'dd.wrapcli.json')
+
+    def test_review2_m3_overflow_and_spec_infinity(self):
+        # 複審 M3：1e999 會變無限大；人給的 --spec 裡寫 Infinity 也要那格不收
+        self.assert_bad(self.wrapcli, '{"params": [{"name": "n", "flags": ["--n"], "kind": "option", '
+                                      '"type": "number", "choices": [1e999]}]}', 'dd.wrapcli.json')
+        cell = {'name': 'n', 'flags': ['--keep'], 'kind': 'option', 'type': 'number', 'choices': [float('inf')]}
+        params, dropped = w.check_params([cell, dict(cell, choices=None, default=float('nan'))],
+                                         help_text('weird_free.txt'))
+        self.assertEqual(params, [])
+        self.assertTrue(all('NaN／無限大' in why for _, why in dropped))
+
+
 
 # ------------------------------------------------------------------ astra 審查（M1、M7、M8、M9、S1、S5） ----
 
@@ -850,6 +867,22 @@ class ReviewTests(Temp):
         self.assertEqual(got['pair'], ['a', 'b'])
         prop = json.loads((self.d / 'it' / 'it.json').read_text())[0]['function']['parameters']['properties']['pair']
         self.assertEqual((prop['minItems'], prop['maxItems']), (2, 2))
+
+    def test_review2_m5_empty_star_array(self):
+        # 複審 M5：nargs='*' 明確給空陣列＝旗標照給（原程式拿到 []、不是 default）；後面有位置參數要先放 --
+        src = ('import argparse, json\np = argparse.ArgumentParser()\n'
+               'p.add_argument("--items", nargs="*", default=["original"])\np.add_argument("file", nargs="?")\n'
+               'print(json.dumps(vars(p.parse_args()), sort_keys=True))\n')
+        (self.d / 'st.py').write_text(src)
+        self.agent('tools', 'wrap-cli', self.d / 'st.py', code=0)
+        got = json.loads(self.run_tool('st', {'items': []}, code=0).stdout.splitlines()[0])
+        self.assertEqual(got, {'file': None, 'items': []})
+        got = json.loads(self.run_tool('st', {'items': [], 'file': 'f'}, code=0).stdout.splitlines()[0])
+        self.assertEqual(got, {'file': 'f', 'items': []})
+        got = json.loads(self.run_tool('st', {'file': 'f'}, code=0).stdout.splitlines()[0])
+        self.assertEqual(got, {'file': 'f', 'items': ['original']})          # 沒給＝原程式的 default
+        got = json.loads(self.run_tool('st', {'items': ['a'], 'file': 'f'}, code=0).stdout.splitlines()[0])
+        self.assertEqual(got, {'file': 'f', 'items': ['a']})
 
     def test_m7_rejected_shapes(self):
         src = ('import argparse\np = argparse.ArgumentParser()\n'

@@ -6,6 +6,7 @@
 回傳的 dict 帶 text、usage（端點原樣，沒回＝None）、ms、alias、model，呼叫的人自己決定記在哪。
 """
 import json
+import math
 import os
 import re
 import time
@@ -55,7 +56,8 @@ FENCE = re.compile(r'```[ \t]*(?:json|JSON|json5|javascript|js)?[ \t]*\r?\n(.*?)
 
 
 class _Suspicious(ValueError):
-    """JSON 語法對，但內容可疑（重複 key、NaN／Infinity）：整份不收，不再往下找別段（astra S4）。"""
+    """整份不收、不再往下找別段（astra S4／09-25 複審 M1、M3）：JSON 語法對但內容可疑
+    （重複 key、NaN／Infinity、數字大到變無限大），或整段（某個圍欄）完整解出來只是純量。"""
 
 
 def _pairs(items):
@@ -71,24 +73,49 @@ def _constant(name):
     raise _Suspicious('含 %s（不是標準 JSON）' % name)
 
 
-_DECODER = json.JSONDecoder(object_pairs_hook=_pairs, parse_constant=_constant)
+def _float(s):
+    v = float(s)
+    if not math.isfinite(v):
+        raise _Suspicious('數字 %s 太大（會變成無限大）' % s[:20])
+    return v
+
+
+_DECODER = json.JSONDecoder(object_pairs_hook=_pairs, parse_constant=_constant, parse_float=_float)
 
 
 def _load(t):
-    """整段解成物件或陣列；語法錯＝ValueError；純量（數字、字串、true…）也算解不開。"""
+    """整段解成物件或陣列；語法錯＝ValueError；整段完整解出來是純量（數字、字串、true…）＝_Suspicious。"""
     val, end = _DECODER.raw_decode(t)
     if t[end:].strip():
         raise ValueError('後面還有字')
     if not isinstance(val, (dict, list)):
-        raise ValueError('不是物件或陣列')
+        raise _Suspicious('整段只是一個 %s，不是物件或陣列' % type(val).__name__)
     return val
+
+
+def _top_level(text):
+    """文字裡「最外層」的 { 或 [ 起點：一個起點解不開，它裡面的就都不試（深度回到 0 才試下一個）；
+    深度 > 0 時 "…" 當字串，裡面的括號不算（09-25 複審 M1）。"""
+    depth, in_str, esc = 0, False, False
+    for i, ch in enumerate(text):
+        if in_str:
+            esc, in_str = (not esc and ch == '\\'), (esc or ch != '"')
+            continue
+        if ch == '"' and depth:
+            in_str = True
+        elif ch in '{[':
+            if depth == 0:
+                yield i
+            depth += 1
+        elif ch in '}]' and depth:
+            depth -= 1
 
 
 def parse_json(text):
     """從模型回的文字抽出 JSON 物件或陣列：先試整段，再試 ``` 區塊（開了沒收尾的也試），
-    再試第一個 { 或 [ 起能解開的那段（前後多的話不管）。
-    解不開、只有純量（數字、字串…）、有重複 key、有 NaN／Infinity＝AgentError('BadModelOutput')。
-    重複 key 與 NaN 一碰到就整份不收、不往後找別段，免得撿到裡面一小塊當答案（astra S4）。
+    再試最外層的 { 或 [ 起能解開的那段（前後多的話不管）。
+    解不開、整段只是純量（數字、字串…）、有重複 key、有 NaN／Infinity（含大到溢位的數字）＝AgentError('BadModelOutput')。
+    可疑的一碰到就整份不收；外層解不開也不往裡面撿一小塊當答案（astra S4、09-25 複審 M1、M3）。
     欄位對不對不在這裡管：呼叫端各自再驗形狀。"""
     text = (text or '').strip().lstrip('﻿').strip()
     tries = [text] + FENCE.findall(text)
@@ -102,14 +129,13 @@ def parse_json(text):
                 raise
             except ValueError:
                 pass
-        for i, ch in enumerate(text):
-            if ch in '{[':
-                try:
-                    return _DECODER.raw_decode(text[i:])[0]
-                except _Suspicious:
-                    raise
-                except ValueError:
-                    continue
+        for i in _top_level(text):
+            try:
+                return _DECODER.raw_decode(text[i:])[0]
+            except _Suspicious:
+                raise
+            except ValueError:
+                continue
     except _Suspicious as e:
         raise AgentError('BadModelOutput', '模型回的 JSON 不收：%s' % e)
     raise AgentError('BadModelOutput', '模型回的不是 JSON：%s' % ' '.join(text.split())[:200])

@@ -21,7 +21,10 @@ class ParseJsonTest(unittest.TestCase):
         self.assertEqual(ask.parse_json('結果是 {"x": "y"} 謝謝'), {'x': 'y'})
 
     def test_skips_broken_brace(self):
-        self.assertEqual(ask.parse_json('{壞掉 然後 {"ok": true}'), {'ok': True})
+        # 閉合的零星括號跳過；沒閉合的（外層壞掉）裡面不撿（09-25 複審 M1）
+        self.assertEqual(ask.parse_json('（例如 {壞掉}）然後 {"ok": true}'), {'ok': True})
+        with self.assertRaises(AgentError):
+            ask.parse_json('{壞掉 然後 {"ok": true}')
 
     def test_bad(self):
         with self.assertRaises(AgentError) as cm:
@@ -79,6 +82,19 @@ class ParseJsonGuardTest(unittest.TestCase):
 
     def test_truncated_object(self):
         self.bad('{"params": [{"name": "a"')
+
+    def test_review2_m1_no_inner_pick(self):
+        # 外層截斷：不能撿裡面的 example；整段是字串 "[]"：不是陣列；字串裡的括號不算
+        self.bad('{"example":[{"name":"zero","flags":["--zero"]}],"params":')
+        self.bad('"[]"')
+        self.bad('結果：{"note": "用 [1, 2] 表示", "params": ')
+        self.assertEqual(ask.parse_json('結果：{"note": "括號 } 在字串裡", "v": [1]}'),
+                         {'note': '括號 } 在字串裡', 'v': [1]})
+
+    def test_review2_m3_float_overflow(self):
+        self.assertIn('太大', self.bad('{"a": 1e999}'))
+        self.assertIn('太大', self.bad('說明 {"a": [-1e400]}'))
+        self.assertEqual(ask.parse_json('{"a": 1.5e10}'), {'a': 1.5e10})
 
 
 class PickTest(unittest.TestCase):

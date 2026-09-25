@@ -100,6 +100,16 @@ class KeywordTests(unittest.TestCase):
         two = '```\na\n```\n```\nb\n```'
         self.assertEqual(compact_api._clean(two), two)
 
+    def test_clean_review2_m2_meaningful_words_kept(self):
+        # 複審 M2：圍欄外的話有意思（不是固定客套話）就不刪，原樣交給檢查
+        text = '修改失敗，尚未寫入；以下只是檔名與行數：\n```\na.md 40\n```'
+        self.assertEqual(compact_api._clean(text), text)
+        self.assertEqual(compact_api._clean('這是摘要：\n```\n一句話\n```'), '一句話')
+        self.assertEqual(compact_api._clean("Here's the summary:\n```\none\n```\nHope this helps!"), 'one')
+        self.assertEqual(compact_api._clean('好的\n```\n一句話\n```\n以上'), '一句話')
+        odd = '好的\n```\n一句話\n```\n另外 b.txt 沒讀到'
+        self.assertEqual(compact_api._clean(odd), odd)
+
 
 class SummarizeTests(MemoryBase):
     LIMIT = '2300'
