@@ -89,7 +89,7 @@ aos-team cost account ls｜open 名 公司資料夾｜grant 名 [--usd X] [--tok
 ```
 
 - 預設 `--by family`、`--since 今天`、全公司；`--team` 只看 `--target` 那支團隊。
-- 表：第一行總結（從何時起、幾次、多少 token、估多少錢），接著一組一行（次數、prompt、completion、估美元），缺價警告，最後一行 `cpu：開著 N 個（忙 M）、其中 llm cpu K 個（上限 20／llm 5，由 HR 管）`（從 `aos-kernel ls --json` 的 `counts.pools.want`、`pools.llm.want` 拿；沒設 `AOS_KERNEL_HOME` 就說看不到）。上限預設是董事 09-25 定的新創規模 20／5；擴張時在 `budget.json` 寫 `"cpus": {"max": 200, "llm_max": 20}`。超過只在行尾標「← 超過上限」，真的擋是 HR 的事（名額、員工數都歸 HR）。
+- 表：第一行總結（從何時起、幾次、多少 token、估多少錢），接著一組一行（次數、prompt、completion、估美元），缺價警告，最後一行 `cpu：開著 N 個（忙 M）、其中 llm cpu K 個（上限 20／llm 5，由 HR 管）`（從 `aos-kernel ls --json` 的 `counts.pools.want`、`pools.llm.want` 拿；沒設 `AOS_KERNEL_HOME` 就說看不到）。上限預設是董事 09-25 定的新創規模 20／5；擴張時在 `budget.json` 寫 `"cpus": {"max": 200, "llm_max": 25}`（董事 09-25 14:20：llm cpu 總額 20→25）。超過只在行尾標「← 超過上限」，真的擋是 HR 的事（名額、員工數都歸 HR）。
 - `import`：每筆帶 `import_key`（檔的真實路徑＋那行內容的 sha1），重跑不重記；帳上已有同一次呼叫的即時紀錄（team、member、batch、prompt、completion 都同）也不記。`team` 取 `members/` 的上一層、`task` 不填（當時手上哪張單已經無從得知）。
 
 ## 6. 帳戶：一家公司一個（09-25 追加，給「五家公司互相競爭」用）

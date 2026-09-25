@@ -4,7 +4,7 @@
   "prefix": "",
   "stage": "startup",
   "limits": {"regular": 10, "cpu": 20, "llm_cpu": 5},
-  "limits_max": {"regular": 100, "cpu": 200, "llm_cpu": 20},
+  "limits_max": {"regular": 100, "cpu": 200, "llm_cpu": 25},
   "pools": {"default": 12, "llm": 5},
   "front": "hq",
   "project": "~/tmp/company-run/proj",

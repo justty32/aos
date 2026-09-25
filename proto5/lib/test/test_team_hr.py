@@ -90,7 +90,7 @@ class PolicyTests(HrCase):
     def test_stage_grown(self):
         (self.hr / 'policy.json').write_text(json.dumps({'stage': 'grown'}), encoding='utf-8')
         p = hr_mod.load_policy(self.hr)
-        self.assertEqual((p['regular_max'], p['cpu_max'], p['llm_cpu_max']), (100, 200, 20))
+        self.assertEqual((p['regular_max'], p['cpu_max'], p['llm_cpu_max']), (100, 200, 25))
 
     def test_stage_then_number_overrides(self):
         (self.hr / 'policy.json').write_text(json.dumps({'stage': 'grown', 'cpu_max': 50}), encoding='utf-8')

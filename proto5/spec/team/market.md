@@ -26,7 +26,7 @@
 | `merge_at` | 2 | 營業中剩幾家才准合併 |
 | `dept_order` | mfg、qa、rd、lib、hq | 合併時先收哪個部門的人 |
 | `total` | 空 | **董事給的總量** `{"usd", "tokens"}`：設了才有「總池」，撥款不能超過（§4） |
-| `machine` | 人頭 100、cpu 200、llm cpu 20 | 整台機器的名額：營業中各家 `limits` 加總不能超過 |
+| `machine` | 人頭 100、cpu 200、llm cpu 25 | 整台機器的名額：營業中各家 `limits` 加總不能超過（董事 09-25 14:20：llm cpu 20→25） |
 
 ## 3. 一輪
 
@@ -65,7 +65,7 @@
 - 名額撥給別家：`slots 名 --llm-cpu 1`（`limits.llm_cpu`、`pools.llm` +1）、`--cpu 1`（`limits.cpu`、`pools.default` +1）、`--regular 1`；**只收 ≥ 0**（名額只在公司收掉、確定停好時回總池，不能先降帳面上限把名額虛增回來）；不能超過那家的 `limits_max`。只改 `company.json`，kernel 開著要 `aos-kernel cpu add`，或下次 `up`（`up` 會把 K 的池對到 `company.json`）。
 - `pool` 印總池兩行。
 
-**五家同跑的 llm cpu**：機器頂 20，每家新創預設 5 → 五家要 25，第五家 `open` 會 `NoSlots`。樣板的做法是 `company.py new --llm-cpu 4`（五家各 4），這題留給董事拍（報告的問題清單）。
+**五家同跑的 llm cpu**：機器頂已提高到 25（董事 09-25 14:20 拍板，原 20 不夠五家滿編），每家新創預設 5 → 五家剛好 25，`open` 不用再降到 4。
 
 ## 5. 倒閉、合併的細節
 

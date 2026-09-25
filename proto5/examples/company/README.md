@@ -85,7 +85,7 @@ python3 company.py down   -C ~/tmp/company-run/c1
 
 ## 擴張到 100 人時長什麼樣
 
-上限 `limits_max`：正式 100、cpu 200、llm cpu 20。擴張的規則沿用 HR 部的兩條（積壓 ≥ 3 張、品管分 < 80 才加人），加法都是「名冊加一列」或「多開一支團隊」，不用新機制：
+上限 `limits_max`：正式 100、cpu 200、llm cpu 25（董事 09-25 14:20：五家滿編剛好 25，原 20 提高）。擴張的規則沿用 HR 部的兩條（積壓 ≥ 3 張、品管分 < 80 才加人），加法都是「名冊加一列」或「多開一支團隊」，不用新機制：
 
 | 部門 | 新創（現在） | 擴張到頂 |
 |---|---|---|
@@ -99,13 +99,13 @@ python3 company.py down   -C ~/tmp/company-run/c1
 | 財務部 | 純機械 | 仍是純機械＋會計 1（看帳、寫週報給董事） |
 | 其他 | — | 一條產線滿 40 人時拆成兩家公司（走 market 層），不在一家裡無限長 |
 
-cpu 的算法不變：一家一個 kernel，`pools` 開多少顆就是多少（多的工作排隊，不會超）。llm cpu 20 是整台機器的頂，**幾家同跑時要分**（見 market）。
+cpu 的算法不變：一家一個 kernel，`pools` 開多少顆就是多少（多的工作排隊，不會超）。llm cpu 25 是整台機器的頂，**幾家同跑時要分**（見 market）。
 
 ## 開幾家（市場層）
 
 `new` 帶不同前綴就能在同一台機器開好幾家（`c1-hq-lead`…`c5-hq-lead` 不撞名），每家自己一個資料夾、自己的 kernel、自己的上限、自己的 commons（`<公司>/teams/commons/`，**各家不互通**——競爭對手不共用經驗；要共用就在名冊寫 `"commons": {"dir": "~/tmp/company-run/commons"}`，這題留給董事）。
 
-- **五家同跑時每家 llm cpu 最多 4**（5×4＝20 是整台機器的頂）：`new --llm-cpu 4`。上限可調，市場層開戶時會擋總數。
+- **五家同跑時每家維持 llm cpu 5 就好**（5×5＝25，剛好是整台機器的頂；董事 09-25 14:20 拍板把總額從 20 提高到 25，不用再降到 4）：`new` 不用帶 `--llm-cpu`。上限可調，市場層開戶時仍會擋總數。
 - 經理人（Fable，aos 外）用 [market.py](market.py)：`open`（開戶＋開辦費）→ 每輪 `score`（品質）→ `rank`（品質 0.6、快 0.25、省 0.15 加權）→ `bankrupt`（花光倒閉）→ `grant`（照名次分這一輪的總額，可覆寫）→ 剩兩家 `merge`。
 - **這輪沒有成功結案的拿 0**：成功＝品管判合格、總裁寄了結案信（`score` 自己從董事的單與結案信數；「快」就是董事等了幾秒）。這輪一家都沒 `score`，`grant` 拒絕（「本輪無分數」），不會多發一輪；同分的均分。
 - **總池**：錢＝董事給的總量 − 各家已花 − 各家手上沒花的配額；名額＝機器上限 − 各家上限。倒閉／裁撤時沒花完的配額與它的名額全部回總池，經理人再撥（`grant`／`slots`）。只是歸零倒閉的，收回的通常只有名額。
@@ -114,7 +114,7 @@ cpu 的算法不變：一家一個 kernel，`pools` 開多少顆就是多少（�
 ```sh
 export AOS_COST_HOME=~/tmp/company-run/cost AOS_MARKET_HOME=~/tmp/company-run
 for i in 1 2 3 4 5; do
-  python3 company.py new ~/tmp/company-run/c$i --prefix c$i- --project ~/tmp/company-run/c$i/proj --llm-cpu 4
+  python3 company.py new ~/tmp/company-run/c$i --prefix c$i- --project ~/tmp/company-run/c$i/proj
   python3 market.py open c$i ~/tmp/company-run/c$i
 done
 python3 market.py pool          # 錢還剩多少、名額還剩多少
@@ -125,7 +125,7 @@ python3 market.py pool          # 錢還剩多少、名額還剩多少
 ```sh
 export AOS_COST_HOME=~/tmp/market-demo/cost AOS_MARKET_HOME=~/tmp/market-demo
 for i in 1 2 3; do
-  python3 company.py new ~/tmp/market-demo/m$i --prefix m$i- --llm-cpu 4
+  python3 company.py new ~/tmp/market-demo/m$i --prefix m$i-
   python3 market.py open m$i ~/tmp/market-demo/m$i
 done
 python3 market.py score m1 --quality 85 --seconds 300     # 這一輪的表現（grant 之後要重記）；假資料沒有真的單，

@@ -51,7 +51,7 @@ DEFAULT_PARAMS = {
     'merge_at': 2,                                               # 營業中的剩幾家就合併
     'dept_order': ['mfg', 'qa', 'rd', 'lib', 'hq'],               # 合併時先收哪個部門的人
     'total': {},                                                 # 董事給的總量 {"usd", "tokens"}；空＝不設總池（撥款不檢查）
-    'machine': {'regular': 100, 'cpu': 200, 'llm_cpu': 20},      # 整台機器的名額：各家 limits 加總不能超過
+    'machine': {'regular': 100, 'cpu': 200, 'llm_cpu': 25},      # 整台機器的名額：各家 limits 加總不能超過（董事 09-25 14:20：llm cpu 20→25）
 }
 DEPT_ORDER = DEFAULT_PARAMS['dept_order']
 

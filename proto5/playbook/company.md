@@ -36,4 +36,4 @@
 
 ## 新創 → 擴張
 
-新創：正式 7 人（總裁、製造 3、品管 1、研發 1、館員 1）、cpu 12／20、llm cpu 5／5（cpu 不含 llm，同 HR）。擴張到頂（正式 100、cpu 200、llm cpu 20）每部門長成什麼樣，見 [examples/company/README.md〈擴張到 100 時〉](../examples/company/README.md#擴張到-100-人時長什麼樣)。
+新創：正式 7 人（總裁、製造 3、品管 1、研發 1、館員 1）、cpu 12／20、llm cpu 5／5（cpu 不含 llm，同 HR）。擴張到頂（正式 100、cpu 200、llm cpu 25，董事 09-25 14:20 從 20 提高）每部門長成什麼樣，見 [examples/company/README.md〈擴張到 100 時〉](../examples/company/README.md#擴張到-100-人時長什麼樣)。

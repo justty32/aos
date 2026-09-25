@@ -28,7 +28,7 @@ from aos_team_format import (Layout, TeamError, load_roster, read_json, roster_l
 TIERS = ('程式', '笨', '中', '強')          # 由便宜到貴；「程式」＝這個位子已經不用模型
 STAGES = {                 # 董事 09-25：先當新創（小），擴張後才用大的；policy.json 寫 stage 選一組，寫了數字就蓋過
     'startup': {'regular_max': 10, 'cpu_max': 20, 'llm_cpu_max': 5},
-    'grown': {'regular_max': 100, 'cpu_max': 200, 'llm_cpu_max': 20},
+    'grown': {'regular_max': 100, 'cpu_max': 200, 'llm_cpu_max': 25},   # 董事 09-25 14:20：llm cpu 總額 20→25
 }
 DEFAULT_POLICY = {
     '_metainfo': {'_type': 'aos_hr_policy', '_version': 1},

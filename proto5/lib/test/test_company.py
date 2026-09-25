@@ -42,7 +42,7 @@ class Samples(unittest.TestCase):
     def test_company_json_valid_and_startup_caps(self):
         cfg = co.load(EXAMPLE)
         self.assertEqual(cfg['limits'], {'regular': 10, 'cpu': 20, 'llm_cpu': 5})
-        self.assertEqual(cfg['limits_max'], {'regular': 100, 'cpu': 200, 'llm_cpu': 20})
+        self.assertEqual(cfg['limits_max'], {'regular': 100, 'cpu': 200, 'llm_cpu': 25})
         self.assertLessEqual(cfg['pools']['default'], 20)
         self.assertLessEqual(cfg['pools']['llm'], 5)
         # 每個有團隊的部門，名冊的成員都用部門前綴
