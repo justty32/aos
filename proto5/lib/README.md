@@ -87,7 +87,13 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_persona.py`](aos_agent_persona.py) | `aos-agent persona show／set／append`（第二波 C 隊，spec/agent/persona.md）：人格是信任資料，模型只能用 `persona_propose` 提案，人批了才用這支寫進 `prompts/system.json`；不叫模型、不進牢 |
 | [`aos_jail.py`](aos_jail.py) | `aos-jail`：組 bwrap 參數並 exec（工具關進牢裡跑） |
 | [`aos_json_cli.py`](aos_json_cli.py) | `aos-json`（tool-era T3）：人用的 JSON Pointer 改檔（get／set／del／append／merge），照原檔縮排重寫、`--expect-sha` 防衝突，`--check-directives` 先過 aos_directives 才寫 |
-| [`aos_team_format.py`](aos_team_format.py) | 團隊共用格式（spec/team/）：資料夾佈局、名冊 `team.json`、信、申請、任務單、問題的讀驗，以及共用的 id／時間／寫檔 |
+| [`aos_team_format.py`](aos_team_format.py) | 團隊共用格式（spec/team/）：資料夾佈局、名冊 `team.json`、信、申請、任務單、問題的讀驗，以及共用的 id／時間／寫檔。入口＋匯出層（別的模組一律 `import aos_team_format as fmt`），自己只留命令列驗檔 |
+| [`aos_team_format_base.py`](aos_team_format_base.py) | 團隊格式的底：型別名與保留名、id 規則、上限與預設、`TeamError`／`bad`、資料夾佈局 `Layout`、欄位小驗證 |
+| [`aos_team_format_io.py`](aos_team_format_io.py) | 團隊格式的時間、id 與寫檔：現在時間、解析與短格式、新 id、原子寫／只准新建、讀 JSON、列 JSON 檔 |
+| [`aos_team_format_cmd.py`](aos_team_format_cmd.py) | 名冊裡人寫的設定片段：`cmd_ok` 指令與白名單（pattern、唯讀掛載）、對白名單、spawn 設定、mounts 與工具條目欄位 |
+| [`aos_team_format_roster.py`](aos_team_format_roster.py) | 名冊 `team.json`：讀驗、名冊鎖、讀名冊、專案資料夾、按模板列成員 |
+| [`aos_team_format_letter.py`](aos_team_format_letter.py) | 信、申請、任務單與問題的讀驗：信、`done_when`、各 kind 申請欄位、outbox 檔、信頭與投遞去重、下一個編號 |
+| [`aos_team_format_template.py`](aos_team_format_template.py) | 模板與門房規則：內建模板、模板 may 與 spawn 政策、誰能寄給誰、`template.json` 與 `routes.json` 讀驗 |
 | [`aos_team_requests.py`](aos_team_requests.py) | 申請登記表：`kind → 處理函式`，郵差讀到 outbox 裡帶 `kind` 的檔就叫 `handle()`；別隊新增 kind 在這裡加一行 |
 | [`aos_team_task.py`](aos_team_task.py) | 任務單（交接書）與狀態機：只有郵差寫，處理函式改單子並回「後續動作」清單；同一 `src` 重跑冪等 |
 | [`aos_team_ask.py`](aos_team_ask.py) | 問人：成員 `ask_human` 寄 `kind=ask` 建問題檔，人用 `aos-team answer` 把答案投回發問者 |
