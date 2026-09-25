@@ -16,7 +16,7 @@ import time
 import aos_agent
 import aos_agent_init
 from aos_agent_home import AgentError
-from aos_team_format import (HUMAN, spawn_policy, TERMINAL, Layout, TeamError, json_files, load_roster, project_dir,
+from aos_team_format import (HUMAN, roster_lock, spawn_policy, TERMINAL, Layout, TeamError, json_files, load_roster, project_dir,
                              read_json, short_time, template_dir, validate_roster, write_json)
 
 HOOKS = ('aos_team_post', 'aos_team_beat')   # 第 2 隊：有 start(team)／stop(team) 就叫
@@ -283,14 +283,15 @@ def _finish_rm(lay, name, plan, intent):
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(home), str(dest))
         print('%s 的家搬到 %s' % (name, dest))
-    raw = read_json(lay.roster)
-    if name in raw.get('members', {}):
-        del raw['members'][name]
-        for other in raw['members'].values():
-            if isinstance(other.get('mail_to'), list) and name in other['mail_to']:
-                other['mail_to'] = [x for x in other['mail_to'] if x != name]
-        validate_roster(raw, str(lay.roster))
-        write_json(lay.roster, raw, indent=2)
+    with roster_lock(lay):
+        raw = read_json(lay.roster)
+        if name in raw.get('members', {}):
+            del raw['members'][name]
+            for other in raw['members'].values():
+                if isinstance(other.get('mail_to'), list) and name in other['mail_to']:
+                    other['mail_to'] = [x for x in other['mail_to'] if x != name]
+            validate_roster(raw, str(lay.roster))
+            write_json(lay.roster, raw, indent=2)
     if plan.get('purge') and dest.exists():            # 先搬再刪：搬是原子的，刪到一半崩了重跑 rm 會接著刪
         shutil.rmtree(dest)
         print('%s 的家已刪除（--purge）' % name)

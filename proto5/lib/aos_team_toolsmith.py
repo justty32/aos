@@ -267,7 +267,7 @@ def run_test(pkg):
     try:
         r = subprocess.run([sys.executable, str(CLI_AGENT), 'tools', 'test', str(pkg), '--json'],
                            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=TEST_TIMEOUT_S,
-                           start_new_session=True)
+                           start_new_session=True, env=dict(os.environ, AOS_TOOLS_REQUIRE_JAIL='1'))
     except subprocess.TimeoutExpired:
         return {'passed': False, 'total': 0, 'failed': 0, 'rows': [],
                 'note': '整個測試超過 %d 秒被砍（多半是程式卡住）' % TEST_TIMEOUT_S}
@@ -277,6 +277,8 @@ def run_test(pkg):
         if not isinstance(res, dict) or res.get('_type') != 'aos_agent_tools_test':
             raise ValueError('not a test report')
     except (IndexError, ValueError):
+        if 'NoJail' in r.stdout + r.stderr:
+            raise TeamError('NoJail', 'tools test 第二次探測關不了牢，拒跑（沒在主機上跑模型寫的程式）；請人檢查 bwrap')
         tail = (r.stderr.strip().splitlines() or r.stdout.strip().splitlines() or ['（沒輸出）'])[-1]
         return {'passed': False, 'total': 0, 'failed': 0, 'rows': [], 'note': 'tools test 沒跑完：%s' % tail[:300]}
     if not res.get('jail'):

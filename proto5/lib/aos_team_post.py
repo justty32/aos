@@ -342,6 +342,8 @@ class Post:
             if kind == 'request':
                 try:
                     effects = aos_team_requests.handle(self.lay, self.roster, obj)
+                    if obj['kind'] == 'spawn':     # 不用人批的 spawn 當場改了名冊：同一輪後面的信要看新名冊（astra 09-25）
+                        self.roster = fmt.load_roster(self.root)
                 except TeamError:
                     raise
                 except Exception as e:     # 處理函式自己的 bug：退件，不要每輪卡在同一個檔

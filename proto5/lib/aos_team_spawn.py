@@ -22,7 +22,7 @@ import sys
 
 import aos_team_ask
 from aos_team_format import (HUMAN, RESERVED, Layout, TeamError, bad, check_name, json_files, load_roster,
-                             member_may, new_id, next_number, now_iso, read_json, spawn_policy, template_dir,
+                             member_may, new_id, next_number, now_iso, read_json, roster_lock, spawn_policy, template_dir,
                              template_may, validate_roster, write_json, write_new)
 
 SPAWN_TYPE = 'aos_team_spawn'
@@ -80,10 +80,13 @@ def _load_q(lay, qid):
 
 
 def state(lay, rec, roster=None):
-    """('pending'|'approved'|'done'|'denied'|'cancelled', 題目)。done＝名冊已經有這個成員。
-    不用人批的（q 是 None）：名冊有＝done，沒有＝approved（郵差生到一半；人可以 spawn approve s-NNNN 補做）。"""
+    """('pending'|'approved'|'done'|'denied'|'cancelled', 題目)。
+    done 看紀錄自己記的 status（生完、init 過了才記）——不看名冊有沒有這個名字：生完又被 rm 掉的不會變回
+    「還沒生」再佔名額，名冊寫了但 init 沒過的也不會被當成已生（astra 09-25）。
+    approved＝該生、還沒生完（不用人批的郵差生到一半／失敗，或人答了批准還沒跑 approve）；人可以 spawn approve 補做。
+    roster 參數留著給舊的呼叫法，不再用。"""
     q = None if rec.get('q') is None else _load_q(lay, rec['q'])
-    if roster is not None and rec['name'] in roster['members']:
+    if rec.get('status') == 'done':
         return 'done', q
     if rec.get('q') is None:
         return 'approved', None
@@ -119,7 +122,9 @@ def check(lay, roster, sender, template, name, mail_to, *, ignore=None):
         raise TeamError('BadTemplate', '找不到模板 %s' % template)
     if name in roster['members'] or name in RESERVED:
         raise TeamError('NameTaken', '名字 %s 已經有人用了' % name)
-    pending = [r for r in records(lay) if r['id'] != ignore and state(lay, r, roster)[0] in ('pending', 'approved')]
+    # 還沒辦完的（不算已經寫進名冊的：那些已經算在名冊人數裡）
+    pending = [r for r in records(lay) if r['id'] != ignore and r['name'] not in roster['members']
+               and state(lay, r)[0] in ('pending', 'approved')]
     if any(r['name'] == name for r in pending):
         raise TeamError('NameTaken', '名字 %s 已經有一份生成員申請還沒辦完' % name)
     limit = roster['limits']['max_members']
@@ -162,25 +167,26 @@ def realize(lay, rec, env, out=print):
     import aos_agent
     import aos_team
     team_dir = str(lay.root)
-    roster = load_roster(team_dir)
     name = rec['name']
-    if name not in roster['members']:
-        mail_to, policy = check(lay, roster, rec['from'], rec['template'], name, rec['mail_to'], ignore=rec['id'])
-        raw = read_json(lay.roster)
-        row = {'template': rec['template'], 'mail_to': mail_to}
-        inherit = inherit_spawn(roster, rec['template'], policy)
-        if inherit is not None:
-            row['spawn'] = inherit
-        raw['members'][name] = row
-        mine = raw['members'][rec['from']].setdefault('mail_to', [])
-        if name not in mine:
-            mine.append(name)
-        validate_roster(raw, str(lay.roster))
-        write_json(lay.roster, raw, indent=2)
-        out('team.json 加了 %s（模板 %s，mail_to：%s）；%s 的 mail_to 多了 %s'
-            % (name, rec['template'], '、'.join(mail_to), rec['from'], name))
+    with roster_lock(lay):                            # 讀→檢查→改→寫一口氣做完，不被 rm／另一份 approve 插隊
         roster = load_roster(team_dir)
-    elif roster['members'][name]['template'] != rec['template']:
+        if name not in roster['members']:
+            mail_to, policy = check(lay, roster, rec['from'], rec['template'], name, rec['mail_to'], ignore=rec['id'])
+            raw = read_json(lay.roster)
+            row = {'template': rec['template'], 'mail_to': mail_to}
+            inherit = inherit_spawn(roster, rec['template'], policy)
+            if inherit is not None:
+                row['spawn'] = inherit
+            raw['members'][name] = row
+            mine = raw['members'][rec['from']].setdefault('mail_to', [])
+            if name not in mine:
+                mine.append(name)
+            validate_roster(raw, str(lay.roster))
+            write_json(lay.roster, raw, indent=2)
+            out('team.json 加了 %s（模板 %s，mail_to：%s）；%s 的 mail_to 多了 %s'
+                % (name, rec['template'], '、'.join(mail_to), rec['from'], name))
+            roster = load_roster(team_dir)
+    if roster['members'][name]['template'] != rec['template']:
         raise TeamError('NameTaken', '名冊裡的 %s 是模板 %s，不是這份申請的 %s' % (name, roster['members'][name]['template'],
                                                                      rec['template']))
     buf = io.StringIO()
@@ -210,10 +216,17 @@ def done_text(rec, started):
 
 def on_spawn(lay, roster, req):
     """kind=spawn（郵差叫）：檢查 → 記紀錄 → 不用人批就當場生並回信；要人批就開一題問人。
-    冪等：同一份申請回同一份動作（生到一半崩了：紀錄在、effects 還是 null＝再生一次，每步都能重跑）。"""
+    冪等：同一份申請回同一份動作。生到一半崩了（紀錄在、effects 還是 null）：名冊還沒這個人而申請者現在被設成
+    要人批＝改開題問人（astra 09-25：不能靠崩一次繞過剛設的人批）；否則再生一次，每步都能重跑。"""
     for rec in records(lay):
         if rec.get('request') == req['id']:
+            if rec.get('effects') is None and rec.get('status') == 'done':   # 人已經 approve 補做、寄過 DONE
+                write_json(folder(lay) / (rec['id'] + '.json'), dict(rec, effects=[]), indent=2)
+                return []
             if rec.get('effects') is None:
+                policy = spawn_policy(roster, rec['from'])
+                if rec['name'] not in roster['members'] and policy is not None and policy['approve']:
+                    return _open_question(lay, roster, rec)
                 return _auto_finish(lay, roster, rec)
             return copy.deepcopy(rec['effects'])
     check_body(req)
@@ -224,27 +237,32 @@ def on_spawn(lay, roster, req):
     sid = next_number(d, 's-')
     rec = {'_metainfo': {'_type': SPAWN_TYPE, '_version': 1}, 'id': sid, 'request': req['id'], 'from': req['from'],
            'template': req['template'], 'name': req['name'], 'mail_to': mail_to, 'reason': req['reason'].strip(),
-           'q': None, 'at': now, 'effects': None}
+           'q': None, 'at': now, 'effects': None, 'status': None}
+    write_json(d / (sid + '.json'), rec, indent=2)      # 先記（effects: null＝辦到一半），崩了重來補做
     if not policy['approve']:
-        write_json(d / (sid + '.json'), rec, indent=2)      # 先記（effects: null＝生到一半），崩了重來補做
         return _auto_finish(lay, roster, rec)
-    ask = {'id': req['id'] + '.q', 'from': req['from'], 'kind': 'ask', 'at': now, 'reply_to': None,
+    return _open_question(lay, roster, rec)
+
+
+def _open_question(lay, roster, rec):
+    """要人批：開一題「[成員]」（tag member），題號記回紀錄。on_ask 冪等（看申請 id），重跑回同一題。"""
+    ask = {'id': rec['request'] + '.q', 'from': rec['from'], 'kind': 'ask', 'at': rec['at'], 'reply_to': None,
            'options': ['批准', '不要'], 'tag': 'member',
            'question': '%s 想生一個新成員 %s（模板 %s，mail_to：%s）。理由：%s。'
                        '批准就跑 aos-team spawn approve %s（生家、登記、改名冊、回覆它）；不要就 aos-team answer %s 不要'
-                       % (req['from'], req['name'], req['template'], '、'.join(mail_to), req['reason'].strip(),
+                       % (rec['from'], rec['name'], rec['template'], '、'.join(rec['mail_to']), rec['reason'],
                           '{q}', '{q}')}
-    qid = next_number(lay.wait_user, 'q-')
-    ask['question'] = ask['question'].replace('{q}', qid)
+    old = next((x['id'] for x in aos_team_ask.all_questions(lay) if x.get('request') == ask['id']), None)
+    ask['question'] = ask['question'].replace('{q}', old or next_number(lay.wait_user, 'q-'))
     effects = aos_team_ask.on_ask(lay, roster, ask)
-    rec['q'] = next(x['id'] for x in aos_team_ask.all_questions(lay) if x.get('request') == ask['id'])
-    rec['effects'] = effects
-    write_json(d / (sid + '.json'), rec, indent=2)
+    q = next(x['id'] for x in aos_team_ask.all_questions(lay) if x.get('request') == ask['id'])
+    rec = dict(rec, q=q, effects=effects)
+    write_json(folder(lay) / (rec['id'] + '.json'), rec, indent=2)
     return copy.deepcopy(effects)
 
 
 def _auto_finish(lay, roster, rec):
-    """不用人批：當場生，回兩封信（申請者 DONE／FAILED、人一封知會）。動作記回紀錄的 effects。"""
+    """不用人批：當場生，回兩封信（申請者 DONE／FAILED、人一封知會）。動作與結果（status done／failed）記回紀錄。"""
     lines = []
     try:
         started, _ = realize(lay, rec, os.environ, out=lines.append)
@@ -259,7 +277,7 @@ def _auto_finish(lay, roster, rec):
                 'text': text},
                {'do': 'letter', 'to': HUMAN, 'status': status, 'reply_to': rec['request'], 'rev': None,
                 'text': human}]
-    rec = dict(rec, effects=effects, log=lines)
+    rec = dict(rec, effects=effects, log=lines, status='done' if status == 'DONE' else 'failed')
     write_json(folder(lay) / (rec['id'] + '.json'), rec, indent=2)
     return copy.deepcopy(effects)
 
@@ -319,11 +337,24 @@ def approve(team_dir, ref, env=None):
     if st in ('denied', 'cancelled'):
         raise TeamError('Closed', '%s 已經%s（答案：%s）' % (rec['q'], '被你拒絕' if st == 'denied' else '取消',
                                                        (q or {}).get('answer')))
+    was = rec.get('status')
     started, roster = realize(lay, rec, env)
-    if q is None:
-        print('%s 不用人批（郵差生的）：補做完了；申請者的回信郵差寄' % rec['id'])
+    rec = dict(rec, status='done')
+    if q is None and was != 'done' and not rec.get('recovered'):
+        # 不用人批、郵差那次失敗（或崩了）而人補做成功：郵差之前寄的是 FAILED（或還沒寄），補一封 DONE（astra 09-25）
+        box = lay.team / 'post' / 'outbox'
+        box.mkdir(parents=True, exist_ok=True)
+        lid = new_id('post')
+        write_new(box / (lid + '.json'), {'id': lid, 'from': 'post', 'to': rec['from'], 'status': 'DONE',
+                                          'reply_to': rec['request'], 'rev': None, 'at': now_iso(roster.get('tz')),
+                                          'text': '人補做好了：' + done_text(rec, started)})
+        rec['recovered'] = lid
+        print('%s 補做完了；已交給郵差：DONE 信給 %s' % (rec['id'], rec['from']))
+    elif q is None:
+        print('%s 已經生好（郵差生的），沒事可做' % rec['id'])
     else:
         print(notify(lay, roster, rec, q, '批准：' + done_text(rec, started)))
+    write_json(folder(lay) / (rec['id'] + '.json'), rec, indent=2)
     return 1 if started is False else 0
 
 

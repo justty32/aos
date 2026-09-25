@@ -1364,6 +1364,9 @@ def _common_drift(folder):
     return None
 
 
+REQUIRE_JAIL_ENV = 'AOS_TOOLS_REQUIRE_JAIL'   # =1：tools test 關不了牢就拒跑，不退回主機直接跑
+
+
 def test(spec, args=None, case_file=None, no_jail=False, as_json=False, tool=None):
     name, folder, tools_file = find_package(spec)
     tools = read_tools([str(tools_file)])                 # 格式照 agent §3.3 驗；壞了＝ToolInvalid
@@ -1384,6 +1387,8 @@ def test(spec, args=None, case_file=None, no_jail=False, as_json=False, tool=Non
         jail, why = False, '給了 --no-jail'
     else:
         jail, why = jail_ready()
+    if not jail and os.environ.get(REQUIRE_JAIL_ENV) == '1':   # toolsmith 設的：關不了牢就一支都不跑（astra 09-25）
+        raise AgentError('NoJail', '要求一定關牢（%s=1），但關不了（%s）：一支都沒跑' % (REQUIRE_JAIL_ENV, why))
     note = None if jail else '沒關牢（%s）：工具直接在這台機器上跑，碰得到你碰得到的檔' % why
     if note:                                              # 跑任何程式之前就講（卡住或崩了也看得到）
         sys.stderr.write(note + '\n')

@@ -141,6 +141,19 @@ class NoJailTests(Team):
             msg = self.err('NoJail', smith.on_tool_draft, self.lay, self.roster, draft())
         self.assertIn('不在主機上直接跑', msg)
 
+    def test_second_jail_probe_fails_still_no_run(self):
+        # astra 09-25 必修：郵差探測過能關牢，tools test 裡第二次探測卻失敗——一定關牢模式下一支都不跑
+        import aos_agent_tools_dev as dev
+        from aos_agent_home import AgentError
+        import aos_agent_tools
+        pkg = aos_agent_tools.PACKAGES / 'task'
+        with mock.patch.dict(os.environ, {'AOS_TOOLS_REQUIRE_JAIL': '1'}), \
+                mock.patch.object(dev, 'jail_ready', return_value=(False, '第二次找不到 bwrap')), \
+                mock.patch.object(dev, 'Runner', side_effect=AssertionError('不該跑到任何程式')):
+            with self.assertRaises(AgentError) as cm:
+                dev.test(str(pkg), as_json=True)
+        self.assertEqual(cm.exception.code, 'NoJail', cm.exception.msg)
+
     def test_may_gate(self):
         self.err('NotAllowed', requests.handle, self.lay, self.roster, draft(sender='lead'))
 
