@@ -40,6 +40,8 @@
 | [score.md](score.md) | 六軸彙整 `aos-team score`：把六軸表（axes.md §4 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型 |
 | [cost.md](cost.md) | 財務部（09-25）：一台機器一本帳 `$AOS_COST_HOME/ledger.jsonl`（每次模型呼叫一筆，寫失敗不擋）、價格表、全公司與團隊預算；`aos-team cost [--by …]`／`cost budget`／`cost import`；超預算郵差不處理新開單／生成員、寄信給人、`ls` 第一行報 |
 | [hr.md](hr.md) | （HR 部 09-25）`aos-team hr`：薪資表 `K/hr/salary.json`（位子→等級→模型→最低通過→證據）、換模型試用 `hr trial`（複製團隊、跑任務集、可插評分指令、記 `trials.jsonl`）、調薪規則、名額（新創：正式員工 10 人、cpu 20／llm cpu 5；擴張後 100／200／20）、擴編規則、正式員工／臨時工（`employment`） |
+| [company.md](company.md) | （09-25 組織設計）公司：幾支團隊合成一間公司——`company.json`（部門、兼任、新創 10／20／5 上限）、一家一個 kernel、機械**總機**把成員寄給 human 的〔給 部門〕信搬成對方部門的開單或窗口信、回覆照 reply_to 抄回；`company.py new／up／down／status／order／mail／answer／relay` |
+| [market.md](market.md) | （09-25 組織設計）市場層：幾家公司競爭，經理人照品質／快／省排名撥額度（帳戶用 cost.md §6）、總池、倒閉／裁撤回收、名額撥款、剩兩家合併；`market.py` |
 | [examples/](examples/) | 每種檔一份範例；`python3 lib/aos_team_format.py 檔…` 驗得過 |
 
 ## 最小驗證程式
