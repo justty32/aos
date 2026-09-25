@@ -27,6 +27,13 @@ SKIP_PARTS = {
     "reference",
     "references",
     "vendor",
+    "snapshot",
+}
+# 跟 wf-lint.sh 的 list_owned_files 對齊：固定版本快照／評估／測試固定資料，兩段路徑才算，不下鑽。
+SKIP_SUFFIXES = {
+    ("eval", "golden"),
+    ("eval", "calib"),
+    ("test", "fixtures"),
 }
 
 
@@ -151,6 +158,7 @@ def markdown_files(root: Path) -> list[Path]:
             directory
             for directory in dirs
             if directory not in SKIP_PARTS
+            and (relative_parts + (directory,))[-2:] not in SKIP_SUFFIXES
             and relative_parts + (directory,) not in submodules
         ]
         markdown.extend(
