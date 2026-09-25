@@ -2,7 +2,7 @@
 """spawn_member：申請生一個新成員（T-spawn，第三波 W3-1；spec/team/spawn.md）。
 
 只寄一份 kind: spawn 申請；郵差照名冊檢查（模板白名單、人數上限、mail_to 與權限不超過自己），
-過了開一題「[成員]」問人，人 aos-team spawn approve 才真的生家、登記、改名冊，然後回一封信給你。
+過了就生家、登記、改名冊、回一封信給你（預設不用人批，09-25 翻案）；名冊設成要人批的，才開一題「[成員]」等人 aos-team spawn approve。
 新成員跟其他成員一樣是名冊的一列（平的），不是你的「小孩」；你們之間一樣只經郵差交流。
 這裡只擋手誤（名字格式、mail_to 超過自己的），真正的把關在郵差。
 """
@@ -39,7 +39,8 @@ def main(args, cfg):
             fail('BadArguments', 'mail_to can only list you or names in your mail_to (%s)' % ', '.join(sorted(mine)))
         body['mail_to'] = mail_to
     rid = send(cfg, 'spawn', body)
-    return 'queued spawn request %s for %s. The user decides; the answer arrives as new mail. End this turn.' % (rid, name)
+    who = 'The user decides' if cfg.get('spawn_approve') else 'The postman creates it if the checks pass'
+    return 'queued spawn request %s for %s. %s; the result arrives as new mail. End this turn.' % (rid, name, who)
 
 
 if __name__ == '__main__':

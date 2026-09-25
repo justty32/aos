@@ -258,7 +258,7 @@ def _unknown(obj, allowed, where):
 
 # ------------------------------------------------------------------ 名冊 ----
 
-MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools')
+MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools', 'spawn')
 ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok', 'spawn')
 
 
@@ -310,7 +310,8 @@ def validate_roster(obj, where='team.json'):
             'template': _str(m.get('template'), w + '.template'),
             'model': _opt_str(m.get('model'), w + '.model'),
             'mail_to': list(dict.fromkeys(mail_to)),
-            'mounts': dict(mounts), 'tools': list(tools)}
+            'mounts': dict(mounts), 'tools': list(tools),
+            'spawn': _member_spawn(m.get('spawn'), w + '.spawn')}
     return out
 
 
@@ -362,14 +363,48 @@ def validate_cmd(run, where):
 
 
 def _spawn_cfg(value, where):
-    """team.json 的 spawn（第三波 W3-1，spawn.md）：{"templates": [模板名…]}＝成員能申請生哪幾種新成員；
-    沒寫＝[]（不准生）。只收內建模板名（不含 /）：自訂模板的資料夾可能在模型改得到的地方。"""
+    """team.json 的 spawn（第三波 W3-1，spawn.md；09-25 使用者翻案：預設開、預設不用人批）：
+    {"templates": [模板名…], "approve": 布林}。templates 沒寫＝None＝內建模板都可以（builtin_templates）；
+    寫 [] ＝這隊不准生。approve 沒寫＝false＝郵差檢查過就直接生，不問人。只收內建模板名（不含 /）：
+    自訂模板的資料夾可能在模型改得到的地方。"""
     _obj(value, where)
-    _unknown(value, ('templates',), where)
-    names = value.get('templates', [])
+    _unknown(value, ('templates', 'approve'), where)
+    out = {'templates': _spawn_templates(value, where), 'approve': False}
+    if 'approve' in value:
+        if not isinstance(value['approve'], bool):
+            bad(where + '.approve', '要是 true 或 false')
+        out['approve'] = value['approve']
+    return out
+
+
+def _spawn_templates(value, where):
+    if 'templates' not in value:
+        return None
+    names = value['templates']
     if not isinstance(names, list) or not all(isinstance(x, str) and NAME.match(x) for x in names):
         bad(where + '.templates', '要是內建模板名的陣列（小寫英數、底線、連字號，不含 /）')
-    return {'templates': list(dict.fromkeys(names))}
+    return list(dict.fromkeys(names))
+
+
+def _member_spawn(value, where):
+    """成員層的 spawn（蓋過團隊層）：沒寫＝None（照模板 may 有沒有 spawn、團隊層的設定）；
+    true／false＝能不能生；物件 {"allow"?, "templates"?, "approve"?}＝逐項蓋過，allow 沒寫＝照模板 may。"""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return {'allow': value}
+    _obj(value, where)
+    _unknown(value, ('allow', 'templates', 'approve'), where)
+    out = {}
+    for k in ('allow', 'approve'):
+        if k in value:
+            if not isinstance(value[k], bool):
+                bad('%s.%s' % (where, k), '要是 true 或 false')
+            out[k] = value[k]
+    t = _spawn_templates(value, where)
+    if t is not None:
+        out['templates'] = t
+    return out
 
 
 def _cmd_whitelist(value, where):
@@ -698,14 +733,52 @@ def template_may(name):
     return tuple(x for x in may if isinstance(x, str)) if isinstance(may, list) else ()
 
 
+def builtin_templates():
+    """proto5/templates/ 底下有 template.json 的資料夾名（排序）。"""
+    try:
+        return sorted(p.name for p in TEMPLATES_DIR.iterdir() if NAME.match(p.name) and (p / 'template.json').is_file())
+    except OSError:
+        return []
+
+
+def spawn_policy(roster, name):
+    """成員 name 能不能生新成員（spawn.md〈誰能生〉）：None＝不能；否則 {"templates": [...], "approve": 布林}。
+    順序：成員層 spawn 蓋過團隊層 spawn 蓋過出廠值（模板 may 有沒有 spawn；templates 沒寫＝內建模板都可以；approve＝false）。"""
+    m = roster['members'].get(name)
+    if m is None:
+        return None
+    own = m.get('spawn') or {}
+    allow = own.get('allow')
+    if allow is None:
+        allow = 'spawn' in template_may(m['template'])
+    if not allow:
+        return None
+    team = roster.get('spawn') or {}
+    templates = own['templates'] if 'templates' in own else team.get('templates')
+    if templates is None:
+        templates = builtin_templates()
+    approve = own['approve'] if 'approve' in own else bool(team.get('approve', False))
+    return {'templates': list(templates), 'approve': approve}
+
+
+def member_may(roster, name):
+    """成員實際能寄的申請種類：模板 may，spawn 那格改看 spawn_policy（成員層可以開或關）。"""
+    m = roster['members'].get(name)
+    if m is None:
+        return ()
+    may = [k for k in template_may(m['template']) if k != 'spawn']
+    if spawn_policy(roster, name) is not None:
+        may.append('spawn')
+    return tuple(may)
+
+
 def may_send(roster, sender, kind):
-    """寄件人能不能寄這種申請：human 什麼都能；成員看自己模板的 may。"""
+    """寄件人能不能寄這種申請：human 什麼都能；成員看自己模板的 may（spawn 看名冊，member_may）。"""
     if sender == HUMAN:
         return True
     if sender == BEAT:
         return kind in BEAT_MAY
-    m = roster['members'].get(sender)
-    return m is not None and kind in template_may(m['template'])
+    return kind in member_may(roster, sender)
 
 
 # --------------------------------------------------------- 模板、門房規則 ----

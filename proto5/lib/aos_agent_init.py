@@ -179,7 +179,8 @@ def team_config(member):
     """team: true 的工具包裝完寫進 config.json 的鍵（牢裡看到的路徑）。"""
     return {'member': member['name'], 'mail_to': list(member['mail_to']), 'members': list(member['members']),
             'outbox': '/work/outbox', 'board': '/work/board', 'tz': member.get('tz'),
-            'spawn_templates': list(member.get('spawn_templates', []))}   # 第三波 W3-1：spawn_member 擋手誤用
+            'spawn_templates': list(member.get('spawn_templates', [])),   # 第三波 W3-1：spawn_member 擋手誤用
+            'spawn_approve': bool(member.get('spawn_approve', False))}
 
 
 def _write_team_config(base, pack, member):
@@ -231,6 +232,22 @@ def _install_tools(base, entries, member, lines):
             _write_team_config(base, pack, member)
 
 
+def _spawn_tool(entries, member):
+    """名冊逐成員開關生新成員（spawn.md〈誰能生〉）：能生就在 task 包的 only 補 spawn_member，不能生就拿掉。
+    只影響還沒裝的包（已裝的不重裝；改了開關要 aos-team rm 再 init 才換工具，工具裡的白名單快照每次 init 都更新）。"""
+    if member is None or 'spawn_ok' not in member:
+        return entries
+    out = []
+    for e in entries:
+        if e.get('pack') == 'task' and isinstance(e.get('only'), list):
+            only = [x for x in e['only'] if x != 'spawn_member']
+            if member['spawn_ok']:
+                only.append('spawn_member')
+            e = dict(e, only=only)
+        out.append(e)
+    return out
+
+
 def init_from_template(agent_dir, template, *, name=None, member=None, force=False):
     """照模板生一個 agent 家；回要印的幾行。
 
@@ -249,7 +266,7 @@ def init_from_template(agent_dir, template, *, name=None, member=None, force=Fal
     name = name or (member or {}).get('name') or base.name
     if tpl.get('team') and member is None:
         raise AgentError('Usage', '模板 %s 是團隊用的（要名冊），請用 aos-team init' % template)
-    entries = list(tpl.get('tools', [])) + list((member or {}).get('tools', []))
+    entries = _spawn_tool(list(tpl.get('tools', [])), member) + list((member or {}).get('tools', []))
     marker = base / MARKER
     lines = []
     try:
