@@ -314,29 +314,65 @@ def _read_letters(folder):
     return out
 
 
-def board_from_company(cdir, since=None):
+VERDICT = re.compile(r'結論[為是]?\s*[:：]\s*(不)?合格')
+
+
+def _qa_verdict(teams, o):
+    """品管總機單 o 的品管報告結論（五家真跑 §7 第 1 條長遠版：看報告檔本身，不看總裁的轉述）：
+    照那張單子的 done_when 找 qa-reports/ 底下的檔，第一個「結論：合格／不合格」（容「結論為：」）。
+    合格＝True、不合格＝False；找不到單子、檔或結論＝None（呼叫的人退回看結案信）。"""
+    tdir = teams.get((o.get('to') or {}).get('team') or (o.get('to') or {}).get('dept'))
+    if tdir is None or not o.get('task'):
+        return None
+    try:
+        ticket = fmt.read_json(fmt.Layout(tdir).task(o['task']))
+        proj = fmt.project_dir(tdir, fmt.load_roster(tdir))
+    except (TeamError, OSError, ValueError):
+        return None
+    for it in ticket.get('done_when') or []:
+        path = it.get('path') if isinstance(it, dict) and it.get('kind') == 'file_exists' else None
+        if not isinstance(path, str) or not path.startswith('qa-reports/') or '..' in path.split('/'):
+            continue
+        try:
+            text = (proj / path).read_text(encoding='utf-8', errors='replace')
+        except OSError:
+            continue
+        m = VERDICT.search(text)
+        if m:
+            return m.group(1) is None
+    return None
+
+
+def board_from_company(cdir, since=None, skip=()):
     """董事的單（company.py order → 前台部門）這一輪的結果（真跑 09-25 修正：快＝董事等的時間，不是部門間跳的平均）。
 
     - 董事的單：前台部門 human 寄件格（含郵差收走的 done/）裡 human 寄出的 REQUEST、沒有 reply_to、不是總機寫的。
     - 結案信：前台部門 human 收件格裡狀態 DONE／FAILED、第一行不是〔給 …〕的信（總裁寫給董事的）。
-      照時間先後配：每張單配它之後第一封還沒配走的結案信；還沒結案的單不算。
-    - **成功**＝結案信是 DONE、信裡寫了品管的「結論：合格」、且這段時間裡有結案（done）的品管總機單。其他結案＝失敗。
+    - 配對（五家真跑 §7 第 6 條）：結案信的 reply_to 若是總裁發某張總機單的那封信，就配給那張總機單之前最後一張
+      董事的單；其他照時間先後，每張還沒配的單配它之後第一封還沒配走的結案信。一張單只配第一封。
+    - **成功**＝結案信是 DONE，而且品管過了：優先看品管報告檔本身（_qa_verdict：總裁回的那張品管總機單、
+      沒有就這段時間最後一張結案的品管總機單，報告第一個結論是「合格」、那張總機單 done）；找不到報告檔才退回看
+      結案信寫了「結論：合格」＋這段時間有 done 的品管總機單。其他結案＝失敗。
+    - **逾時＝失敗**：這一輪下的單（下單時間在 since 之後；沒 since＝全部）score 時還沒有結案信，算失敗一張
+      （`timeout` 另記張數、`timeout_ids` 記單號）。skip：以前的輪已經算過逾時的單號，不再算（之後才來的結案信也不算）。
     - 「這一輪」看結案信的時間（上一輪 grant 之後）；跨輪完成的單算在結案那一輪。
-    回 {'done': 成功張數, 'failed': 失敗張數, 'seconds': 成功那幾張董事平均等幾秒（沒有＝None）,
-        'hops': 成功那幾張平均經過幾張總機單＋1（只記、不算分）}。"""
+    回 {'done': 成功張數, 'failed': 失敗張數（含逾時）, 'timeout': 逾時張數, 'timeout_ids': [...],
+        'seconds': 成功那幾張董事平均等幾秒（沒有＝None）, 'hops': 成功那幾張平均經過幾張總機單＋1（只記、不算分）}。"""
     cdir = Path(cdir)
     cfg = co.load(cdir)
     front = co.host_dept(cfg, cfg['front'])
-    tdir = co.team_dirs(cdir, cfg).get(front)
+    teams = co.team_dirs(cdir, cfg)
+    tdir = teams.get(front)
     t_since = _aware(fmt.parse_iso(since)) if since else None
     folder = cdir / 'switchboard' / 'orders'
     orders = [fmt.read_json(p) for p in fmt.json_files(folder)] if folder.is_dir() else []
     out_ids = {o.get('out_id') for o in orders}
-    res = {'done': 0, 'failed': 0, 'seconds': None, 'hops': None}
+    res = {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [], 'seconds': None, 'hops': None}
     if tdir is None:
         return res
     lay = fmt.Layout(tdir)
     box = lay.outbox(fmt.HUMAN)
+    skip = set(skip or ())
     asks = [x for x in _read_letters(box) + _read_letters(box / 'done')
             if x.get('from') == fmt.HUMAN and x.get('status') == 'REQUEST' and not x.get('reply_to')
             and 'kind' not in x and x.get('id') not in out_ids]
@@ -348,21 +384,56 @@ def board_from_company(cdir, since=None):
         return _aware(fmt.parse_iso(x.get('at') or ''))
     asks = sorted((a for a in asks if t(a)), key=t)
     closes = sorted((c for c in closes if t(c)), key=t)
-    secs, hops, used = [], [], set()
-    for a in asks:
-        t0 = t(a)
-        c = next((c for c in closes if c['id'] not in used and t(c) >= t0), None)
-        if c is None:
+    orders = [o for o in orders if t(o)]
+    by_letter = {(o.get('from') or {}).get('letter'): o for o in orders if (o.get('from') or {}).get('letter')}
+    pair, used = {}, set()
+    for c in closes:                                   # 先配 reply_to 指得到總機單的
+        o = by_letter.get(c.get('reply_to'))
+        if o is None:
             continue
-        used.add(c['id'])
+        a = next((a for a in reversed(asks) if t(a) <= t(o)), None)
+        if a is not None and a['id'] not in pair:
+            pair[a['id']] = c
+            used.add(c['id'])
+    for a in asks:                                     # 其他照時間
+        if a['id'] in pair:
+            continue
+        c = next((c for c in closes if c['id'] not in used and t(c) >= t(a)), None)
+        if c is not None:
+            pair[a['id']] = c
+            used.add(c['id'])
+    secs, hops = [], []
+    for a in asks:
+        if a['id'] in skip:
+            continue
+        t0, c = t(a), pair.get(a['id'])
+        if c is None:
+            if t_since is None or t0 >= t_since:
+                res['failed'] += 1
+                res['timeout'] += 1
+                res['timeout_ids'].append(a['id'])
+            continue
         t1 = t(c)
         if t_since is not None and t1 < t_since:
             continue
-        inside = [o for o in orders if _aware(fmt.parse_iso(o.get('at') or '')) and
-                  t0 <= _aware(fmt.parse_iso(o['at'])) <= t1]
-        qa_ok = any(o['to'].get('dept') == 'qa' and o.get('status') == 'done' for o in inside)
-        text = c.get('text') or ''
-        if c['status'] == 'DONE' and re.search(r'結論[為是]?\s*[:：]\s*合格', text) and qa_ok:   # 真跑 5 家：總裁寫「結論為：合格」
+        inside = [o for o in orders if t0 <= t(o) <= t1]
+        qa = [o for o in inside if (o.get('to') or {}).get('dept') == 'qa']
+        linked = by_letter.get(c.get('reply_to'))
+        cand = [linked] if linked is not None and (linked.get('to') or {}).get('dept') == 'qa' else \
+            sorted((o for o in qa if o.get('status') == 'done'), key=lambda o: o.get('closed_at') or o['at'], reverse=True)
+        verdict, qa_order = None, None
+        for o in cand:
+            verdict = _qa_verdict(teams, o)
+            if verdict is not None:
+                qa_order = o
+                break
+        if verdict is not None:
+            ok = c['status'] == 'DONE' and verdict and qa_order.get('status') == 'done'
+        else:                                          # 沒有報告檔可看：退回看結案信（真跑 5 家：總裁寫「結論為：合格」）
+            ok = (c['status'] == 'DONE' and bool(VERDICT.search(c.get('text') or ''))
+                  and not VERDICT.search(c.get('text') or '').group(1)
+                  and any(o.get('status') == 'done' for o in qa))
+        if ok:
             res['done'] += 1
             secs.append(max(0.0, (t1 - t0).total_seconds()))
             hops.append(len(inside) + 1)
@@ -397,15 +468,21 @@ def _record_score(mdir, name, quality, eval_path, seconds, hops, done):
     _finite(hops, 'hops', 0)
     _finite(done, 'done', 0)
     since = m['history'][-1]['at'] if m['history'] else None
+    cur = len(m['history']) + 1
+    # 以前的輪算過逾時的單：不再算（market.json 的 timed_out：{公司: {單號: 輪次}}；同一輪重打分會重算這一輪的）
+    timed = m.setdefault('timed_out', {}).setdefault(name, {})
     try:
-        bd = board_from_company(cdir, since)
+        bd = board_from_company(cdir, since, skip=[k for k, r in timed.items() if r < cur])
     except TeamError:
-        bd = {'done': 0, 'failed': 0, 'seconds': None, 'hops': None}
+        bd = {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [], 'seconds': None, 'hops': None}
+    for k in [k for k, r in timed.items() if r >= cur]:
+        del timed[k]
+    timed.update({k: cur for k in bd['timeout_ids']})
     if done is None:
         done = 1 if seconds is not None else bd['done']        # 經理人手給秒數＝他認定有一張成功
     s = {'quality': quality, 'seconds': seconds if seconds is not None else bd['seconds'],
          'hops': hops if hops is not None else bd['hops'], 'done': done, 'failed': bd['failed'],
-         'at': now(), 'source': src, 'round': len(m['history']) + 1}     # 分數綁輪次：grant 之後就不算了
+         'timeout': bd['timeout'], 'at': now(), 'source': src, 'round': cur}     # 分數綁輪次：grant 之後就不算了
     if notes:
         s['notes'] = notes
     m['scores'][name] = s
@@ -887,6 +964,19 @@ def _pairs(items, cast):
     return out
 
 
+def _no_neg_zero(d):
+    """印餘額用：浮點的 -0.0 印成 0.0（五家真跑 §7 第 7 條：倒閉後 ls 印 "usd": -0.0）。"""
+    if not isinstance(d, dict):
+        return d
+    return {k: (0.0 if isinstance(v, float) and v == 0 else v) for k, v in d.items()}
+
+
+def _pool_kinds(recycled, total):
+    """印「收回總池」用：只印總池有管的那幾種（params.total 有設的）；沒設 total.usd＝美元不印
+    （五家真跑 §7 第 7 條：總池不管美元，印「收回 usd 1.0」看起來像收回了什麼）。帳照樣記，只是不印。"""
+    return {k: v for k, v in (recycled or {}).items() if total.get(k) is not None}
+
+
 def _print_rank(rows):
     print('名次  公司    排名分   品質   快    省    成功 失敗  董事等秒  跳數  這輪花 token   餘額')
     for r in rows:
@@ -958,6 +1048,8 @@ def main(argv=None):
             print(json.dumps(s, ensure_ascii=False))
             for n in s.get('notes') or []:
                 print('說明：' + n)
+            if s.get('timeout'):
+                print('注意：%s 這輪有 %d 張董事的單還沒結案，算逾時失敗（之後才來的結案信不再算）' % (a.name, s['timeout']))
             if not s['done']:
                 print('注意：%s 這輪沒有成功結案（失敗 %d 張），排名時品質、快、省都算 0' % (a.name, s['failed']))
             return 0
@@ -977,7 +1069,7 @@ def main(argv=None):
             else:
                 for n, c in out.items():
                     acc = c['account'] or {}
-                    print('%-6s %-9s 餘額 %s  已花 %s  品質 %s' % (n, c['status'], json.dumps(acc.get('balance')),
+                    print('%-6s %-9s 餘額 %s  已花 %s  品質 %s' % (n, c['status'], json.dumps(_no_neg_zero(acc.get('balance'))),
                                                          json.dumps(acc.get('spent')), (c['score'] or {}).get('quality')))
             return 0
         if a.cmd == 'grant':
@@ -992,10 +1084,12 @@ def main(argv=None):
             return 0
         if a.cmd in ('bankrupt', 'close'):
             out = bankrupt(mdir, a.dry_run) if a.cmd == 'bankrupt' else [close(mdir, a.name, a.dry_run)]
+            total = load(mdir)['params'].get('total') or {}
             for o in out:
+                shown = _pool_kinds(o['recycled'], total)
                 print('%s %s：餘額 %s；收回總池 %s；名額回總池 %s；放出 %d 個名字；封存到 %s%s' % (
-                    o['name'], '倒閉' if o['reason'] == 'bankrupt' else '裁撤', json.dumps(o['balance']),
-                    json.dumps(o['recycled'] or '（沒有剩）', ensure_ascii=False), json.dumps(o['slots']),
+                    o['name'], '倒閉' if o['reason'] == 'bankrupt' else '裁撤', json.dumps(_no_neg_zero(o['balance'])),
+                    json.dumps(shown or '（沒有剩）', ensure_ascii=False), json.dumps(o['slots']),
                     len(o['freed']), o['archive'], '（只是試算）' if a.dry_run else ''))
             if not out:
                 print('沒有公司倒閉')

@@ -335,6 +335,19 @@ class Relay(RelayBase):
         self.assertEqual((o['status'], o['task']), ('done', 't-0001'))
         self.assertEqual(co.Switchboard(self.d).board_letters(), [])
 
+    def test_over_budget_reject_reaches_president(self):
+        """五家真跑 §7 第 5 條：部門郵差財務擋單＝退件，FAILED 寄 human、reply_to＝總機寫的申請 id
+        （郵差那一半在 test_team_cost）。總機要配回總機單、結成 failed、轉給發單的總裁。"""
+        src = self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老財（只寫詞條）')
+        self.relay()
+        [(_k, req)] = self.outbox('mfg')
+        self.inbox('mfg', 'post', '退件（OverBudget）：財務擋單：超支（帳戶 c1 餘額 tokens -5）。', 'FAILED', req['id'])
+        self.relay()
+        [(kind, letter)] = self.outbox('hq')
+        self.assertEqual((letter['to'], letter['status'], letter['reply_to']), ('c1-hq-lead', 'FAILED', src))
+        self.assertIn('財務擋單：超支', letter['text'])
+        self.assertEqual(self.order('o-0001')['status'], 'failed')
+
     def test_miss_goes_to_desk_and_reply_by_order_id(self):
         self.inbox('hq', 'c1-hq-lead', '〔給 研發部〕幫我做一支數字數的小工具')
         self.relay()

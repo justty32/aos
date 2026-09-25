@@ -265,14 +265,22 @@ class PostBudgetTest(TeamCase):
         self.post(env=self.env)
         self.assertEqual(len(self.inbox('worker-1')), 1)
 
-    def test_over_team_budget_holds_new_task_and_mails_human_once(self):
+    def test_over_team_budget_rejects_new_task_and_mails_human_once(self):
+        """09-25 五家真跑 §7 第 5 條：超預算的開單退件（FAILED 回寄件人），不再留在 outbox 讓發單的人乾等。"""
         self.set_team_budget({'deepseek': {'tokens': 1000}})
         self.spend(5000)
         self.spend(10 ** 9, team='/別的團隊')             # 別隊的帳不算進本隊
         rid = self.handoff()
         self.post(env=self.env)
         self.assertEqual(self.inbox('worker-1'), [])
-        self.assertTrue((self.lay.outbox('lead') / (rid + '.json')).exists())     # 留在 outbox
+        self.assertFalse((self.lay.outbox('lead') / (rid + '.json')).exists())
+        self.assertTrue((self.lay.outbox('lead') / 'rejected' / (rid + '.json')).exists())
+        rec = self.record(rid)
+        self.assertEqual((rec['kind'], rec['code']), ('rejected', 'OverBudget'))
+        [(_, back)] = self.mails('lead')                          # FAILED 退給寄件人
+        self.assertIn('FAILED', back)
+        self.assertIn('財務擋單：超支', back)
+        self.assertIn(rid, back)
         [mail] = self.human()
         letter = json.loads(mail.read_text(encoding='utf-8'))
         self.assertEqual(letter['status'], 'NEEDS-USER')
@@ -280,12 +288,34 @@ class PostBudgetTest(TeamCase):
         self.handoff()
         self.post(env=self.env)
         self.assertEqual(len(self.human()), 1)                  # 同一天同一種超額只寄一封
-        # 預算調高：下一輪兩張單都走
+        self.assertEqual(len(self.mails('lead')), 2)            # 每張被擋的單各一封 FAILED
+        # 預算調高：退掉的不會自己回來，重新開的單照走
         self.set_team_budget({'deepseek': {'tokens': 10 ** 7}})
         self.post(env=self.env)
-        self.assertEqual(len(self.inbox('worker-1')), 2)       # 兩張留著的單都派出去
-        tickets = sorted(p.name for p in self.lay.tasks.glob('t-*.json'))
-        self.assertEqual(len(tickets), 2)
+        self.assertEqual(self.inbox('worker-1'), [])
+        self.handoff()
+        self.post(env=self.env)
+        self.assertEqual(len(self.inbox('worker-1')), 1)
+        self.assertEqual(len(list(self.lay.tasks.glob('t-*.json'))), 1)
+
+    def test_over_budget_human_handoff_fails_back_to_human(self):
+        """人（公司的總機）開的單被擋：FAILED 進 human 收件匣，reply_to＝那張申請的 id，總機配得回總機單。"""
+        self.set_team_budget({'deepseek': {'tokens': 1000}})
+        self.spend(5000)
+        rid = self.new_id('human')
+        box = self.lay.outbox('human')
+        box.mkdir(parents=True, exist_ok=True)
+        (box / (rid + '.json')).write_text(json.dumps({
+            'id': rid, 'from': 'human', 'kind': 'handoff', 'at': self.now.isoformat(), 'assignee': 'worker-1',
+            'workflow': '無', 'goal': '補人物', 'done_when': [{'kind': 'file_exists', 'path': 'AGENTS.md'}]},
+            ensure_ascii=False), encoding='utf-8')
+        self.post(env=self.env)
+        failed = [x for x in self.human_mail() if x['status'] == 'FAILED']
+        self.assertEqual(len(failed), 1, self.human_mail())
+        self.assertEqual(failed[0]['reply_to'], rid)
+        self.assertEqual(failed[0]['from'], 'post')
+        self.assertIn('財務擋單：超支', failed[0]['text'])
+        self.assertEqual(self.inbox('worker-1'), [])
 
     def test_company_budget_and_letters_still_flow(self):
         (self.base / 'budget.json').write_text(json.dumps({'since': 'day', 'all': {'usd': 0.001}}), encoding='utf-8')
@@ -306,7 +336,11 @@ class PostBudgetTest(TeamCase):
         self.assertEqual(self.inbox('worker-1'), [])
         [mail] = self.human()
         self.assertIn('帳戶 acme', json.loads(mail.read_text(encoding='utf-8'))['text'])
+        [(_, back)] = self.mails('lead')
+        self.assertIn('財務擋單：超支', back)
+        self.assertIn('帳戶 acme', back)
         cost.account_grant(str(self.base), 'acme', tokens=10_000, note='經理人加碼')
+        self.handoff()                                            # 加碼後重新開單
         self.post(env=self.env)
         self.assertEqual(len(self.inbox('worker-1')), 1)
 
