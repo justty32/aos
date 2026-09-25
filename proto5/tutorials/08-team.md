@@ -187,14 +187,14 @@ aos-team score --task t-0001
 想知道全公司花了多少、給團隊設上限：先挑一個資料夾當帳本，放一份價格表，kernel 的 `llm`、`default` 兩個池都帶上它（`aos-kernel init` 之前改 kernel.json 的 `envs`，見 [cost.md §1](../spec/team/cost.md#1-帳本放哪)），自己的 shell 也 export：
 
 ```sh
-mkdir -p ~/.aos/cost && cp proto5/spec/team/examples/cost-prices.json ~/.aos/cost/prices.json
+mkdir -p ~/.aos/cost && cp proto5/spec/team/examples/cost/prices.json ~/.aos/cost/prices.json
 export AOS_COST_HOME=$HOME/.aos/cost
 aos-team cost                     # 今天各家族用了多少 token、估多少錢
 aos-team cost --by member --team  # 這支團隊，按成員
 aos-team cost --by task --since 本週
 ```
 
-要設上限，在 `team.json` 加一段（或全公司的 `~/.aos/cost/budget.json`，範本 [cost-budget.json](../spec/team/examples/cost-budget.json)）：
+要設上限，在 `team.json` 加一段（或全公司的 `~/.aos/cost/budget.json`，範本 [cost/budget.json](../spec/team/examples/cost/budget.json)）：
 
 ```json
 "budget": {"since": "day", "deepseek": {"tokens": 200000}}

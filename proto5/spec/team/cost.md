@@ -13,8 +13,9 @@
 | 檔 | 誰寫 | 內容 |
 |---|---|---|
 | `ledger.jsonl` | 程式（追加） | 一次模型呼叫一行（下表） |
-| `prices.json` | 人（文字編輯器） | 價格表（§3），範本 [examples/cost-prices.json](examples/cost-prices.json) |
-| `budget.json` | 人 | 全公司預算（§4），範本 [examples/cost-budget.json](examples/cost-budget.json) |
+| `prices.json` | 人（文字編輯器） | 價格表（§3），範本 [examples/cost/prices.json](examples/cost/prices.json) |
+| `budget.json` | 人 | 全公司預算（§4），範本 [examples/cost/budget.json](examples/cost/budget.json) |
+| `accounts.json` | 人或 `aos-team cost account` | 一家公司一個帳戶：配額、已花、餘額（§6） |
 
 為什麼不放 `K/` 或各團隊資料夾：額度是整間公司的（董事只有一個錢包），一台機器上可能有好幾個 kernel、好幾支團隊，還有不經團隊的呼叫（評審、結晶、工具描述）。放一本才加得出全公司的數；要看某隊就篩 `team` 欄。
 
@@ -63,7 +64,8 @@
 {"since": "week", "claude": {"usd": 10.0}, "gpt": {"tokens": 50000000}, "deepseek": {"usd": 5.0, "since": "2026-09-25"}, "all": {"usd": 30}}
 ```
 
-- 鍵是家族名或 `all`（全部家族加總）；值 `{"usd": 數字, "tokens": 整數}` 至少一個，可另加 `since` 蓋過外層。
+- `cpus`（只有 `budget.json` 用）：`{"max": 正整數, "llm_max": 正整數}`，只給 cost 表的 cpu 行當上限顯示（§5），不是花費預算。
+- 其他鍵是家族名或 `all`（全部家族加總）；值 `{"usd": 數字, "tokens": 整數}` 至少一個，可另加 `since` 蓋過外層。
 - `since`：`week`（本週一 0 點，預設）、`day`（今天 0 點）、`all`、`YYYY-MM-DD`（那天 0 點）。都是本機時區。
 - 團隊的只算 `team`＝這個團隊資料夾（真實路徑）的帳；全公司的算全部。
 - 名冊 `budget` 形狀錯＝`FormatInvalid`（`team.json.budget.deepseek.tokens 要是 ≥ 0 的整數`）；`budget.json` 壞了＝`aos-team cost budget` 報錯、`ls` 第一行說預算檔壞了，**郵差不擋**（壞檔不該讓全公司停工）。
@@ -83,12 +85,52 @@
 aos-team cost [--by family|model|team|member|task|source] [--since 今天|本週|全部|YYYY-MM-DD] [--team] [--json]
 aos-team cost budget [--json]          # 每條預算用了幾成；有超的退 1
 aos-team cost import 資料夾… [--dry-run]   # 回填：撈資料夾底下所有 members/<名>/log/usage*.jsonl
+aos-team cost account ls｜open 名 公司資料夾｜grant 名 [--usd X] [--tokens N]   # 一家公司一個帳戶（§6）
 ```
 
 - 預設 `--by family`、`--since 今天`、全公司；`--team` 只看 `--target` 那支團隊。
-- 表：第一行總結（從何時起、幾次、多少 token、估多少錢），接著一組一行（次數、prompt、completion、估美元），缺價警告，最後一行 `cpu：開著 N 個（忙 M）、其中 llm cpu K 個（上限 200／20，由 HR 管）`（從 `aos-kernel ls --json` 的 `counts.pools.want`、`pools.llm.want` 拿；沒設 `AOS_KERNEL_HOME` 就說看不到）。
+- 表：第一行總結（從何時起、幾次、多少 token、估多少錢），接著一組一行（次數、prompt、completion、估美元），缺價警告，最後一行 `cpu：開著 N 個（忙 M）、其中 llm cpu K 個（上限 20／llm 5，由 HR 管）`（從 `aos-kernel ls --json` 的 `counts.pools.want`、`pools.llm.want` 拿；沒設 `AOS_KERNEL_HOME` 就說看不到）。上限預設是董事 09-25 定的新創規模 20／5；擴張時在 `budget.json` 寫 `"cpus": {"max": 200, "llm_max": 20}`。超過只在行尾標「← 超過上限」，真的擋是 HR 的事（名額、員工數都歸 HR）。
 - `import`：每筆帶 `import_key`（檔的真實路徑＋那行內容的 sha1），重跑不重記；帳上已有同一次呼叫的即時紀錄（team、member、batch、prompt、completion 都同）也不記。`team` 取 `members/` 的上一層、`task` 不填（當時手上哪張單已經無從得知）。
 
-## 6. 看不到的
+## 6. 帳戶：一家公司一個（09-25 追加，給「五家公司互相競爭」用）
+
+董事要開幾家一樣的小公司競爭，經理人按表現撥額度，帳戶花到 0 就倒閉。`$AOS_COST_HOME/accounts.json`：
+
+```json
+{"accounts": {"acme": {"root": "/abs/companies/acme",
+                       "grants": [{"at": "2026-09-25T12:00:00+08:00", "usd": 1.0, "tokens": 2000000, "note": "開辦費"}]}}}
+```
+
+- **帳戶認資料夾**：`root`＝那家公司的資料夾，它的團隊都放在底下；帳本 `team` 欄落在 `root` 底下（或 `team` 欄就等於帳戶名——`aos_llm_ask` 的呼叫用 `AOS_COST_TEAM=acme` 帶）就算這家的。帳本本身不用改，所以開戶前的舊帳也算得進來。
+- **配額**＝`grants` 加總（`usd`、`tokens` 各自加；可以撥負的收回）；某一種從沒撥過＝不管那一種。
+- **已花**＝這家開戶以來所有帳（不分時段），金額用現在的價格表算。**餘額**＝配額 − 已花。
+- **倒閉**（`broke`）＝有撥過的那一種餘額 ≤ 0。倒閉的公司：郵差不處理它團隊的新開單／生成員（跟超預算同一條路，§4），寄信給 human，`ls` 第一行報；經理人再撥款就自動復活。
+- 總池（claude ≤ 董事一週額度 10%、gpt 這週剩的全部、deepseek 約 5 美元）照舊用 `budget.json` 的家族預算管；帳戶管「這一家分到多少」，兩層都會擋。
+- 寫 `accounts.json` 在 `.accounts.lock` 的 flock 裡做（經理人和程式可能同時撥款），暫存檔＋改名。人也可以直接用文字編輯器改。
+
+命令：
+
+```text
+aos-team cost account open acme /abs/companies/acme
+aos-team cost account grant acme --usd 1.0 --tokens 2000000 --note 開辦費
+aos-team cost account ls [--json]       # 每家：營業／倒閉、配額、已花、餘額；有倒閉的退 1
+```
+
+**給程式用的接口**（`lib/aos_team_cost.py`，組織設計總監的 market 層直接 import）：
+
+| 函式 | 做什麼 |
+|---|---|
+| `home(env)` | 帳本資料夾（`AOS_COST_HOME`），沒設＝None |
+| `account_open(base, 名, 公司資料夾)` | 開戶；已開同 root＝不變，root 不同＝`CostError('Conflict')` |
+| `account_grant(base, 名, usd=None, tokens=None, note='')` | 撥款（加配額），回那一筆 |
+| `balances(base)` | `{名: {"root", "quota": {"usd", "tokens"}, "spent": {…}, "balance": {…}, "calls", "broke"}}` |
+| `account_of(base, 團隊資料夾)` | 這支團隊歸哪個帳戶（root 最長的）；沒有＝None |
+| `record(env, model=…, usage=…, source=…, agent_dir=None)` | 記一筆（通常不用自己叫，兩個模型入口已經掛了） |
+| `budget_status(env, 團隊資料夾)` → `(各條, 超了的)` ／ `hold_reason(env, 團隊資料夾)` | 郵差用的「超了沒」：全公司家族預算、團隊預算、帳戶餘額三層一起看 |
+| `read_ledger(base)`、`summarize(rows, by, prices)`、`load_prices(base)` | 自己做報表 |
+
+錯誤一律 `CostError(code, msg)`（`Usage`、`NotFound`、`Conflict`、`AccountsInvalid`…）。
+
+## 7. 看不到的
 
 帳本只看得到**經 aos 程式呼叫 LiteLLM** 的用量。Claude Code、codex CLI 自己的用量（領隊、各隊 Opus／Fable、astra 審查）不經過這裡，記不到；LiteLLM 的 `/spend/logs` 要接資料庫才有（09-25 查過：`Database not connected`），目前沒得交叉核對。

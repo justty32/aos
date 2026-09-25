@@ -179,11 +179,21 @@ class ReportTest(CostHome):
         self.assertIn('deepseek', p.stdout)
         self.assertIn('警告：價格表', p.stdout)
         self.assertIn('chatgpt-gpt-6-astra', p.stdout)
-        self.assertIn('cpu：沒設 AOS_KERNEL_HOME', p.stdout)
+        self.assertIn('cpu：沒設 AOS_KERNEL_HOME，看不到（上限 20／llm 5', p.stdout)     # 新創規模預設
+
         p = subprocess.run([sys.executable, str(CLI_TEAM), 'cost', '--by', 'member', '--json', '--target', str(self.tmp)],
                            capture_output=True, text=True, env=e, timeout=30)
         data = json.loads(p.stdout)
         self.assertEqual({g['key'] for g in data['groups']}, {'lead', 'worker-1'})
+
+    def test_cpu_limits_from_budget(self):
+        self.assertEqual(cost.cpu_limits(self.env), {'max': 20, 'llm_max': 5})
+        (self.base / 'budget.json').write_text(json.dumps({'cpus': {'max': 200, 'llm_max': 20},
+                                                            'claude': {'usd': 1}}), encoding='utf-8')
+        self.assertEqual(cost.cpu_limits(self.env), {'max': 200, 'llm_max': 20})
+        self.assertIn('上限 200／llm 20', cost.cpu_line(self.env))
+        with self.assertRaises(ValueError):
+            cost.check_budget({'cpus': {'max': 0}}, 'b')
 
     def test_cli_without_home(self):
         e = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
@@ -287,6 +297,19 @@ class PostBudgetTest(TeamCase):
         self.assertEqual(list(self.lay.tasks.glob('t-*.json')), [])
         self.assertEqual(len(self.human()), 1)
 
+    def test_broke_account_holds(self):
+        cost.account_open(str(self.base), 'acme', str(self.tmp))
+        cost.account_grant(str(self.base), 'acme', tokens=100)
+        self.spend(500)
+        self.handoff()
+        self.post(env=self.env)
+        self.assertEqual(self.inbox('worker-1'), [])
+        [mail] = self.human()
+        self.assertIn('帳戶 acme', json.loads(mail.read_text(encoding='utf-8'))['text'])
+        cost.account_grant(str(self.base), 'acme', tokens=10_000, note='經理人加碼')
+        self.post(env=self.env)
+        self.assertEqual(len(self.inbox('worker-1')), 1)
+
     def test_no_cost_home_no_gate(self):
         self.set_team_budget({'deepseek': {'tokens': 0}})
         self.spend(5)
@@ -305,6 +328,52 @@ class PostBudgetTest(TeamCase):
         p = self.cli('cost', 'budget', env={'AOS_COST_HOME': str(self.base)})
         self.assertEqual(p.returncode, 1)
         self.assertIn('← 超了', p.stdout)
+
+
+class AccountTest(CostHome):
+    """五家公司互相競爭：一家一個帳戶，配額、已花、餘額、歸零（09-25 追加）。"""
+
+    def test_open_grant_balance_broke(self):
+        base = str(self.base)
+        acme = self.tmp / 'companies' / 'acme'
+        beta = self.tmp / 'companies' / 'acme-2'          # 名字是前綴也不能算進 acme
+        cost.account_open(base, 'acme', str(acme))
+        cost.account_open(base, 'acme', str(acme))        # 重開不變
+        with self.assertRaises(cost.CostError):
+            cost.account_open(base, 'acme', str(beta))
+        with self.assertRaises(cost.CostError):
+            cost.account_open(base, 'Acme!', str(acme))
+        cost.account_grant(base, 'acme', usd=1.0, tokens=1_000_000, note='開辦費')
+        cost.account_grant(base, 'acme', usd=0.5)
+        with self.assertRaises(cost.CostError):
+            cost.account_grant(base, 'nobody', usd=1)
+        self.put(model='deepseek-chat', team=os.path.realpath(acme / 'sales'), usage={'prompt_tokens': 500_000, 'completion_tokens': 0})
+        self.put(model='deepseek-chat', team=os.path.realpath(beta / 'x'), usage={'prompt_tokens': 9_000_000, 'completion_tokens': 0})
+        self.put(model='deepseek-chat', team='acme', usage={'prompt_tokens': 100, 'completion_tokens': 0})   # AOS_COST_TEAM=acme
+        b = cost.balances(base)['acme']
+        self.assertEqual(b['quota'], {'usd': 1.5, 'tokens': 1_000_000})
+        self.assertEqual(b['spent']['tokens'], 500_100)
+        self.assertAlmostEqual(b['balance']['usd'], 1.5 - 0.5001)
+        self.assertFalse(b['broke'])
+        self.put(model='deepseek-chat', team=os.path.realpath(acme / 'sales'), usage={'prompt_tokens': 600_000, 'completion_tokens': 0})
+        b = cost.balances(base)['acme']
+        self.assertTrue(b['broke'])                       # tokens 餘額 < 0
+        self.assertEqual(cost.account_of(base, str(acme / 'sales')), 'acme')
+        self.assertIsNone(cost.account_of(base, str(beta / 'x')))
+
+    def test_cli(self):
+        e = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', AOS_COST_HOME=str(self.base))
+        run = lambda *a: subprocess.run([sys.executable, str(CLI_TEAM), 'cost', 'account', *a, '--target', str(self.tmp)],
+                                        capture_output=True, text=True, env=e, timeout=30)
+        self.assertEqual(run('open', 'acme', str(self.tmp / 'acme')).returncode, 0)
+        self.assertEqual(run('grant', 'acme', '--usd', '0.01').returncode, 0)
+        p = run('ls')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('營業', p.stdout)
+        self.put(model='deepseek-chat', team=os.path.realpath(self.tmp / 'acme' / 't'), usage={'prompt_tokens': 20_000, 'completion_tokens': 0})
+        p = run('ls', '--json')
+        self.assertEqual(p.returncode, 1)
+        self.assertTrue(json.loads(p.stdout)['acme']['broke'])
 
 
 class ImportTest(CostHome):
