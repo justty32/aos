@@ -3,33 +3,33 @@
 以下共 7 項。全程未改檔、未跑模型、未開 daemon／kernel，也未連 localhost。兩組單元測試都因唯讀環境無法建立暫存目錄而停在 `setUp`；下述數字來自不寫檔的 `plan()` 重現。
 
 - **M1｜清 archive 沒拿鎖，可能刪掉壓縮正在引用的原文。**  
-  [aos_agent_compact.py:340](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/lib/aos_agent_compact.py:340)：`prune()` 與 `apply()` 沒有互斥。例如 compact 已寫 archive、尚未換 history，此時執行 `--prune-archive 0`，prune 讀到舊 history，判定新 archive 沒被引用而刪掉；compact 接著寫入指向不存在 archive 的說明行。  
+  [aos_agent_compact.py:340](../../lib/aos_agent_compact.py)：`prune()` 與 `apply()` 沒有互斥。例如 compact 已寫 archive、尚未換 history，此時執行 `--prune-archive 0`，prune 讀到舊 history，判定新 archive 沒被引用而刪掉；compact 接著寫入指向不存在 archive 的說明行。  
   **改法：** prune 也持 `.tick.lock`，拿鎖後才讀 history、列 archive、刪檔。
 
 - **M2｜`plan()` 不是不動點，破壞換完 history 後的恢復保證。**  
-  [aos_agent_compact.py:180](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/lib/aos_agent_compact.py:180)：是否壓縮取決於說明行長度，但說明行包含會隨壓縮改變的訊息索引。  
+  [aos_agent_compact.py:180](../../lib/aos_agent_compact.py)：是否壓縮取決於說明行長度，但說明行包含會隨壓縮改變的訊息索引。  
   **已重現：** 30 輪，每輪 `user → assistant(read) → tool → assistant`，前 28 輪工具結果各 1000 字、後兩輪各 105 字，`keep_rounds=1`、無上限。第一次第 29 輪因 `small` 保留；第二次索引位數縮短，又壓縮該輪，**7144 → 875 → 874 token**。所以在 `compact.history` 後崩潰，重跑可能再改記憶、再建 archive。  
   **改法：** 用與當前索引無關的固定成本決定是否值得替換，並補這個邊界測試；需一起驗證封存與無最後回話的輪。
 
 - **M3｜封存沒有「不能越縮越大」檢查。**  
-  [aos_agent_compact.py:192](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/lib/aos_agent_compact.py:192)：普通壓縮有比較 token，`seal` 卻直接換。  
+  [aos_agent_compact.py:192](../../lib/aos_agent_compact.py)：普通壓縮有比較 token，`seal` 卻直接換。  
   **已重現：** 舊輪只有 `q／a`，最近一輪回答是 1000 個 ASCII 字元；`keep_rounds=1, max_tokens=100`，記憶由 **253 增為 281 token**，還刪掉了原本很短的問答。  
   **改法：** 封存候選區段也比較替換前後成本；相連輪可合併評估，不值得換就保留並回報仍超限。
 
 - **M4｜compact 申請的去重有並行窗口。**  
-  [aos_agent_compact.py:494](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/lib/aos_agent_compact.py:494)：先查 `done/`，再 `drop_new()`，中間 tick 可以把原申請搬走。郵差重試若恰好先查到「尚未 done」，tick 隨後完成搬移，郵差便能重新投進同 id，讓已處理申請再執行。現有測試只涵蓋循序重投。  
+  [aos_agent_compact.py:494](../../lib/aos_agent_compact.py)：先查 `done/`，再 `drop_new()`，中間 tick 可以把原申請搬走。郵差重試若恰好先查到「尚未 done」，tick 隨後完成搬移，郵差便能重新投進同 id，讓已處理申請再執行。現有測試只涵蓋循序重投。  
   **改法：** 用投遞與消費共用的短鎖，或永久、原子建立的投遞憑據；補交錯執行測試。
 
 - **M5｜任務完成後，自動壓縮可能永遠沿用「不能縮」的舊判斷。**  
-  [aos_agent_compact.py:391](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/lib/aos_agent_compact.py:391)：skip key 只有記憶 sha、keep、limit，但能不能縮也取決於任務狀態。任務從 `working` 變 `done`，或原本讀不到的任務檔恢復，記憶沒變就仍被直接跳過。  
+  [aos_agent_compact.py:391](../../lib/aos_agent_compact.py)：skip key 只有記憶 sha、keep、limit，但能不能縮也取決於任務狀態。任務從 `working` 變 `done`，或原本讀不到的任務檔恢復，記憶沒變就仍被直接跳過。  
   **改法：** key 納入相關任務狀態快照，或在命中 skip 時重新檢查那些受保護任務。
 
 - **M6｜notes 的相對設定路徑，關牢後工具與人會看不同檔案。**  
-  [tools/notes/_common.py:126](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/tools/notes/_common.py:126) 與 [aos_agent_notes.py:55](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/lib/aos_agent_notes.py:55)：例如 `config.file="notes/notes.json"`，工具相對牢裡 cwd（例如 `/work/ws`），CLI 卻相對 agent 家。工具寫成功，人可能看到空表。另以「有 access.json」推定 note 一定關牢，也漏掉 `_jail:false`。  
+  [tools/notes/_common.py:126](../../tools/notes/_common.py) 與 [aos_agent_notes.py:55](../../lib/aos_agent_notes.py)：例如 `config.file="notes/notes.json"`，工具相對牢裡 cwd（例如 `/work/ws`），CLI 卻相對 agent 家。工具寫成功，人可能看到空表。另以「有 access.json」推定 note 一定關牢，也漏掉 `_jail:false`。  
   **改法：** 統一路徑契約；關牢時至少要求明確的 `/work/<mount>/…`，或由 CLI 正確映射工具 cwd。補實際路徑往返測試。
 
 - **M7｜全部工具都不存在的 act 批，崩潰重播無法去重。**  
-  [aos_agent_events.py:48](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-ac3476e4edc05ff47/proto5/lib/aos_agent_events.py:48)：這種批所有 `name=None`，`batch_id()` 回 `None`，而 `dedupe()` 刻意不去重 null。事件寫完、state 提交前崩潰，就會把同一批重算成多批，起訖也沒有可靠配對鍵。  
+  [aos_agent_events.py:48](../../lib/aos_agent_events.py)：這種批所有 `name=None`，`batch_id()` 回 `None`，而 `dedupe()` 刻意不去重 null。事件寫完、state 提交前崩潰，就會把同一批重算成多批，起訖也沒有可靠配對鍵。  
   **改法：** 建批時把已有的 `identity` 存進 batch，事件使用該固定 id，不從工作名反推。
 
 **建議**

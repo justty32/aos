@@ -88,6 +88,6 @@ write 1（自動建 `calc/`）→ edit 1（模型自己想到兩行一樣、把�
 
 ## README／教程該加的（這隊沒改 proto5/README.md）
 
-- 第 6 段「自己寫一支工具」前面加一段：「**想當 coding agent 用**：`aos-agent tools add base --target $W/bob`（要在某個專案裡工作就加 `--root ~/proj`），人格改成 coding agent，說一句『建 hello.py 印 hello 再跑它』。七個工具與錯誤見 [tools/README.md](tools/README.md)。」
+- 第 6 段「自己寫一支工具」前面加一段：「**想當 coding agent 用**：`aos-agent tools add base --target $W/bob`（要在某個專案裡工作就加 `--root ~/proj`），人格改成 coding agent，說一句『建 hello.py 印 hello 再跑它』。七個工具與錯誤見 [tools/README.md](../tools/README.md)。」
 - 「程式」表加一列：`[tools/](tools/README.md)｜工具包：base＝read／write／edit／bash／grep／find／ls｜tools add 裝`；lib 那列測試數字 1153 → 1292、33 → 37 檔、二十九支 → 三十支模組。
 - 規範表 aos-agent 那列補「`tools add`（§1.7）」。
