@@ -22,3 +22,10 @@ __pycache__/
 # proto 劇本跑出來的紀錄（每次 1 MB 級，不進版本）
 proto/play-logs/
 proto/play/home-*
+
+# wf/ 試驗沙盒的執行產物（mktemp 世界、agent 動態狀態）：repro/*.sh 會重生，不進版控
+wf/workflows/dispatch/trial/sandbox/**/repro-tmp.*/
+wf/workflows/dispatch/trial/sandbox/**/repro-A-01.*/
+wf/workflows/dispatch/trial/sandbox/**/.aos/agents/*/history.json
+wf/workflows/dispatch/trial/sandbox/**/.aos/agents/*/log.md
+wf/workflows/dispatch/trial/sandbox/**/.aos/agents/*/say/
