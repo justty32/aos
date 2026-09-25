@@ -101,6 +101,8 @@ def _guard_team(base, mounts, member):
     team = os.path.realpath(member['team_dir'])
     guarded = [os.path.join(team, 'team.json'), os.path.join(team, 'team'), os.path.join(team, 'members'),
                os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))]
+    if member.get('commons'):
+        guarded.append(member['commons'])             # astra 2：可寫的多掛不准碰到 commons（那裡只有圖書館員隊寫）
     for name, value in mounts.items():
         if name in ('ws', 'outbox', 'board', 'notes', 'mem') or isinstance(value, dict):
             continue

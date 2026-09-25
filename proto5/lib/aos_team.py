@@ -90,7 +90,7 @@ def cmd_init(team_dir, argv):
     import aos_team_commons
     if any(aos_team_commons.member_on(roster, n) for n in roster['members']) or aos_team_commons.librarians(roster):
         cdir = aos_team_commons.commons_dir(lay.root, roster)
-        if _inside(cdir, project) or _inside(cdir, lay.root):
+        if _inside(cdir, project) or _inside(project, cdir) or _inside(cdir, lay.root) or _inside(lay.root, cdir):
             raise TeamError('BadCommons', 'commons %s 不能在專案 %s 或團隊資料夾裡（工人改得到專案；團隊資料夾是控制資料）；'
                             '名冊 commons.dir 改到外面' % (cdir, project))
         aos_team_commons.Commons(cdir).ensure()

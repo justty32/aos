@@ -101,8 +101,17 @@ class Commons:
     def ensure(self):
         for sub in list(TYPES.values()) + ['inbox']:
             (self.root / sub).mkdir(parents=True, exist_ok=True)
-        if not self.index_path.exists():
-            self.save_index({'_metainfo': {'_type': INDEX_TYPE, '_version': 1}, 'entries': {}})
+        if not self.index_path.exists():               # astra 11：只建不蓋（別隊可能同時建好又入庫了）
+            empty = {'_metainfo': {'_type': INDEX_TYPE, '_version': 1}, 'entries': {}}
+            tmp = self.root / ('.index.%d.tmp' % os.getpid())
+            tmp.write_text(json.dumps(empty, indent=2) + '\n', encoding='utf-8')
+            try:
+                os.link(tmp, self.index_path)
+                (self.root / 'INDEX.md').write_text(render_index(empty), encoding='utf-8')
+            except FileExistsError:
+                pass
+            finally:
+                tmp.unlink(missing_ok=True)
         return self
 
     @contextlib.contextmanager
@@ -198,8 +207,8 @@ def check_rel(where, value):
     if not isinstance(value, str) or not value or value != value.strip() or value.startswith(('/', '~')) \
             or any(ord(ch) < 32 for ch in value) or any(seg in ('', '.', '..') for seg in value.split('/')):
         bad(where, '路徑 %r 要是相對路徑（不以 / ~ 開頭、不含 .. 或空段）' % (value,), 'BadPath')
-    if value == 'README.md':
-        bad(where, 'README.md 是條目自己的說明（由 body 生），附件不能叫這個名字', 'BadPath')
+    if value.split('/')[0] == 'README.md':          # astra 7：README.md/x 也不行（入庫時會撞條目的說明檔）
+        bad(where, 'README.md 是條目自己的說明（由 body 生），附件不能叫這個名字、也不能放在它底下', 'BadPath')
     return value
 
 
@@ -364,8 +373,15 @@ def search(idx, query='', tags=(), type_=None, limit=5):
 
 # ------------------------------------------------------------ 郵差：投稿端 ----
 
+def _team_name(lay):
+    """給人看的隊名（條目的「來自」）：團隊資料夾名。"""
+    return lay.root.name
+
+
 def _team_tag(lay):
-    return re.sub(r'[^a-z0-9_-]', '-', lay.root.name.lower())[:32] or 'team'
+    """投稿號、判決用的隊代號：名字＋資料夾實際路徑的雜湊前 6 碼（astra 9：Team-A／team-a、不同上層的同名隊不撞）。"""
+    name = re.sub(r'[^a-z0-9_-]', '-', lay.root.name.lower())[:24] or 'team'
+    return '%s-%s' % (name, hashlib.sha1(os.path.realpath(str(lay.root)).encode()).hexdigest()[:6])
 
 
 def _records(lay):
@@ -385,6 +401,11 @@ def on_contribute(lay, roster, req):
     if rec_path.exists():
         return read_json(rec_path).get('effects', [])
     c = Commons(commons_dir(lay.root, roster)).ensure()
+    published = c.inbox / cid / 'submission.json'
+    if published.exists():                               # astra 8：崩在發布之後、寫紀錄之前；照已發布的補紀錄，不再讀原附件
+        if read_json(published).get('request') != req['id']:
+            raise TeamError('AlreadyExists', '投稿號 %s 已被另一份投稿用了' % cid)
+        return _contribute_done(recs, rec_path, cid, req, sub)
     outbox = Path(os.path.realpath(lay.outbox(sender)))
     staging = c.inbox / ('.%s.tmp' % cid)
     shutil.rmtree(staging, ignore_errors=True)
@@ -407,17 +428,21 @@ def on_contribute(lay, roster, req):
             if os.stat(src).st_mode & 0o111:
                 os.chmod(dst, 0o755)
         meta = dict(sub, cid=cid, request=req['id'],
-                    source={'team': _team_tag(lay), 'member': sender, 'task': sub['task']}, at=req.get('at'))
+                    source={'team': _team_name(lay), 'member': sender, 'task': sub['task']}, at=req.get('at'))
         write_json(staging / 'submission.json', meta, indent=2)
         final = c.inbox / cid
         if not final.exists():
             os.replace(staging, final)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-    effects = [{'do': 'letter', 'to': sender, 'status': 'DONE', 'reply_to': req['id'], 'rev': None,
+    return _contribute_done(recs, rec_path, cid, req, sub)
+
+
+def _contribute_done(recs, rec_path, cid, req, sub):
+    effects = [{'do': 'letter', 'to': req['from'], 'status': 'DONE', 'reply_to': req['id'], 'rev': None,
                 'text': '投稿 %s（%s）送到圖書館了；入庫或退回會另寄一封信。' % (cid, sub['title'])}]
     recs.mkdir(parents=True, exist_ok=True)
-    write_json(rec_path, {'cid': cid, 'request': req['id'], 'from': sender, 'title': sub['title'],
+    write_json(rec_path, {'cid': cid, 'request': req['id'], 'from': req['from'], 'title': sub['title'],
                           'status': None, 'effects': effects}, indent=2)
     return effects
 
@@ -444,12 +469,17 @@ def pending_results(lay, roster):
         else:
             text = '投稿 %s 被退回（%s）：%s' % (rec['cid'], res.get('by'), res.get('reason'))
             status = 'FAILED'
+        # astra 4：這裡不記「已寄」；post_round 開好 notice（郵差的紀錄）之後才記，崩在中間下一輪重給、notice 靠 id 去重
         out.append(('commons.result.%s' % rec['cid'],
                     [{'do': 'letter', 'to': rec['from'], 'status': status, 'reply_to': rec['request'], 'rev': None,
-                      'text': text}]))
-        rec['status'] = res.get('status')
-        write_json(p, rec, indent=2)
+                      'text': text}], (p, res.get('status'))))
     return out
+
+
+def _mark_sent(p, status):
+    rec = read_json(p)
+    rec['status'] = status
+    write_json(p, rec, indent=2)
 
 
 # ------------------------------------------------------------ 郵差：圖書館員端 ----
@@ -498,7 +528,10 @@ def desk(lay, roster):
             if (folder / 'result.json').exists() or not (folder / 'submission.json').exists():
                 continue
             if not (folder / 'judge.json').exists():
-                verdict, detail = judge_one(c, folder)
+                try:
+                    verdict, detail = judge_one(c, folder)
+                except (OSError, ValueError, KeyError, TeamError):
+                    continue                              # astra 7：一份出錯不擋後面的；它下一輪再試
                 if verdict != 'ask':
                     continue
                 sub = read_json(folder / 'submission.json')
@@ -549,7 +582,10 @@ def on_commons_write(lay, roster, req):
             raise TeamError('AlreadyDone', '投稿 %s 已經有結果（%s）' % (cid, res.get('status')))
         if not (folder / 'judge.json').exists():
             raise TeamError('NotAsked', '投稿 %s 沒有要你判（機械就能判的不用模型）' % cid)
-        by = '%s/%s' % (_team_tag(lay), req['from'])
+        judge = read_json(folder / 'judge.json')           # astra 3：只有被指定的那一隊那一個圖書館員能判
+        if judge.get('team') != _team_tag(lay) or judge.get('to') != req['from']:
+            raise TeamError('NotAsked', '投稿 %s 是指定給 %s/%s 判的，不是你' % (cid, judge.get('team'), judge.get('to')))
+        by = '%s/%s' % (_team_name(lay), req['from'])
         if verdict == 'reject':
             text = '退回 %s：%s' % (cid, reason)
             effects = [{'do': 'letter', 'to': req['from'], 'status': 'DONE', 'reply_to': req['id'], 'rev': None,
@@ -559,7 +595,15 @@ def on_commons_write(lay, roster, req):
         raw = read_json(folder / 'submission.json')
         sub = check_fields(raw, 'submission')
         sums = check_files(folder / 'files', sub['files'])
-        eid = ingest(c, sub, raw.get('source') or {}, folder / 'files', sha=content_sha(sub, sums))
+        sha = content_sha(sub, sums)
+        same, _ = similar(c.load_index(), sub, sha)          # astra 6：兩份一樣的都在等判，先收的那份進館後第二份要擋
+        if same:
+            reason2 = 'Duplicate：等判的時候，一樣內容的 %s 已經入庫' % same
+            effects = [{'do': 'letter', 'to': req['from'], 'status': 'DONE', 'reply_to': req['id'], 'rev': None,
+                        'text': '沒入庫 %s：%s' % (cid, reason2)}]
+            _result(folder, 'rejected', 'machine', reason2, request=req['id'], effects=effects)
+            return effects
+        eid = ingest(c, sub, raw.get('source') or {}, folder / 'files', sha=sha)
         path = idx_path(c, eid)
         effects = [{'do': 'letter', 'to': req['from'], 'status': 'DONE', 'reply_to': req['id'], 'rev': None,
                     'text': '入庫 %s → %s（%s）' % (cid, path, eid)}]
@@ -570,12 +614,20 @@ def on_commons_write(lay, roster, req):
 def post_round(post):
     """郵差每輪（process_outboxes 之後）叫：圖書館員端 desk、投稿者端 pending_results；各開一份 notice（冪等）。"""
     roster = post.roster
-    try:
-        for rid, effects in desk(post.lay, roster) + pending_results(post.lay, roster):
-            if post.notice(rid, effects):
-                post.say('commons：%s' % rid)
-    except (TeamError, OSError, ValueError, KeyError) as e:
-        post.warn('commons 這輪做不下去：%s（下一輪再試）' % e)
+    for what, fn in (('圖書館', desk), ('回信', pending_results)):     # 兩半各自出錯各自略過
+        try:
+            items = fn(post.lay, roster)
+        except (TeamError, OSError, ValueError, KeyError) as e:
+            post.warn('commons %s這輪做不下去：%s（下一輪再試）' % (what, e))
+            continue
+        for item in items:
+            try:
+                if post.notice(item[0], item[1]):
+                    post.say('commons：%s' % item[0])
+                if len(item) > 2:
+                    _mark_sent(*item[2])          # notice 紀錄在了才記已寄
+            except (TeamError, OSError, ValueError, KeyError) as e:
+                post.warn('commons %s 這輪做不下去：%s（下一輪再試）' % (item[0], e))
 
 
 # ------------------------------------------------------------ 匯入 playbook ----
@@ -628,11 +680,15 @@ def import_dir(c, folder):
             sub = check_fields(it, 'import.%s' % it['slug'])
             sha = content_sha(sub, {})
             old = c.load_index()['entries'].get(sub['slug'])
-            if old is not None and old.get('sha256') == sha:
+            if old is not None and old.get('sha256') == sha and old.get('title') == sub['title'] \
+                    and old.get('tags') == sub['tags'] and old.get('fits') == sub['fits']:
                 same.append(sub['slug'])
                 continue
+            if old is not None and (old.get('from') or {}).get('team') != 'playbook':
+                raise TeamError('Conflict', 'commons 已有 %s，但不是從 playbook 匯入的（來自 %s）；先 rm 或改名再匯入'
+                                % (sub['slug'], (old.get('from') or {}).get('team')))   # astra 10：不刪別人的條目
             if old is not None:
-                remove(c, sub['slug'])
+                remove(c, sub['slug'])            # 換新：新版的檔已在 playbook，刪舊寫新都在同一把鎖裡
                 replaced.append(sub['slug'])
             else:
                 added.append(sub['slug'])

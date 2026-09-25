@@ -87,11 +87,12 @@ commons/
 | 一檔 ≤ 64 KB、總共 ≤ 256 KB | `TooLarge` |
 | **執行位只准給 `#!` 開頭的檔**（可執行檔以外不准有執行位） | `BadMode` |
 | 內容（種類＋body＋附件的 sha256）跟既有條目**完全一樣** | `Duplicate`（只換標題也算） |
-| 跟既有條目**像**：同 `slug`，或同種類且標題字重疊 ≥ 0.5（英數字詞＋中文單字） | 不退，**叫模型** |
+| 跟既有條目**像**：同 `slug`；或同種類，且標題字重疊（Jaccard）≥ 0.5，或「標題＋標籤＋適合」的關鍵字（英數字詞 ≥ 3 字去虛詞、中文兩字詞）交集／較小那邊 ≥ 0.5（09-25 真跑 r2 後加：換說法時標題重疊只剩 0.21） | 不退，**叫模型** |
 | 以上都沒事 | **直接入庫**（`by: machine`） |
 
 - 叫模型：寫 `inbox/<號>/judge.json`（給誰、像哪幾條、信文），寄一封 `REQUEST` 給圖書館員，信裡有新投稿與像的條目的路徑。每輪都重給這一封、郵差 notice 靠 id 去重（崩在寫 judge 與寄信之間也會補寄）。
-- 模型能做的只有 **`commons_verdict {"submission", "verdict": "accept"|"reject", "reason"}`** → `kind: commons_write`。郵差 `on_commons_write` 查：寄件人 `may` 有 `commons_write`、投稿在、**有 judge.json**（機械能判的不收判決＝`NotAsked`）、還沒結果（已有＝`AlreadyDone`；同一份申請重來回同一份動作）。accept＝照樣再跑一次機械檢查後入庫（`by: <隊>/<成員>`）；reject＝寫退回。
+- 模型能做的只有 **`commons_verdict {"submission", "verdict": "accept"|"reject", "reason"}`** → `kind: commons_write`。郵差 `on_commons_write` 查：寄件人 `may` 有 `commons_write`、投稿在、**有 judge.json 而且指定的就是這一隊這一個成員**（機械能判的、或指定給別人的＝`NotAsked`）、還沒結果（已有＝`AlreadyDone`；同一份申請重來回同一份動作）。accept＝照樣再跑一次機械檢查、**再比一次完全重複**（兩份一樣的同時在等判，先收的進館、後一份退 `Duplicate`）後入庫（`by: <隊>/<成員>`）；reject＝寫退回。
+- 隊代號（投稿號、`judge.json` 的 `team`）＝團隊資料夾名＋實際路徑雜湊前 6 碼，大小寫不同、不同上層的同名隊不會撞；條目「來自」印的是資料夾名。
 - **入庫**＝寫條目檔（先寫 `.tmp` 再改名）＋改 `index.json`＋重生 `INDEX.md`。只有圖書館員隊的郵差（和人的 CLI）做這件事；**各隊郵差只寫 `inbox/` 底下自己新開的資料夾**。
 - 結果寫在 `inbox/<號>/result.json`：`{"status": "accepted"|"rejected", "by", "reason", "at", "id"?, "path"?}`。投稿者那隊的郵差每輪看自己 `team/commons/*.json` 裡還沒結的，有結果就寄一封信給投稿者（入庫＝DONE 附 `/work/commons/<路徑>`；退回＝FAILED 附理由），記下已寄。
 
@@ -147,6 +148,8 @@ commons/
   - **「像」的判法很粗**：標題字重疊，會漏（標題換說法）也會誤叫（標題剛好用字一樣）；誤叫只是多花一次笨模型。
   - 多支圖書館員隊同時跑：用 `.lock` 排隊、`judge.json` 記是哪一隊在判，別隊不插手；但沒有「誰是主館」的設定。
   - `index.json` 被人改壞：`desk`／`search` 讀不到就那一輪不做，`reindex` 會說哪條壞。
+  - **抄附件的時間差**（astra 09-25 必修 1，留下一輪）：郵差查完路徑、再照路徑抄檔之間，成員若換掉檔或上層連結，可能抄到牢外的檔。要改成用資料夾描述符逐層開、不跟連結、同一個開好的檔檢查與讀。
+  - **入庫崩在一半**（astra 必修 5，留下一輪）：index 寫了、`result.json` 還沒寫時崩，機械重試會把它當「完全重複」退掉（館藏其實有了）；模型判決那條路重試會多入一份。要用投稿號記「固定條目 id＋做到哪一步」再接著做。
 
 ## 9. 六軸自評（[score.md](score.md)：L 模型用得少、S 穩、R 省、F 快、H 人好懂、B 邊界）
 

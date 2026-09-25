@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 import aos_agent_access
 import aos_team
@@ -489,6 +490,108 @@ class CliTests(Base):
         quiet(cm.cmd_commons, str(team), ['rm', 'by-hand'])
         self.assertEqual(self.commons.load_index()['entries'], {})
         self.assertFalse((self.commons.root / 'lessons' / 'by-hand.md').exists())
+
+
+class ReviewFixTests(Base):
+    """astra 09-25 唯讀審查必修（修了的那幾條）。"""
+
+    def setUp(self):
+        super().setUp()
+        self.lib = self.make_team('lib', LIB, init=False)
+        self.lay = fmt.Layout(self.lib)
+        self.rost = fmt.load_roster(self.lib)
+
+    def verdict(self, cid, sender='librarian', verdict='accept', lay=None, rost=None):
+        req = {'id': fmt.new_id(sender), 'from': sender, 'kind': 'commons_write', 'at': 'x',
+               'submission': cid, 'verdict': verdict, 'reason': 'r'}
+        return cm.on_commons_write(lay or self.lay, rost or self.rost, req)
+
+    def test_2_project_inside_commons_refused(self):
+        (self.commons.root / 'lessons').mkdir(parents=True, exist_ok=True)
+        with self.assertRaises(fmt.TeamError) as c:
+            self.make_team('ta', dict(TEAM_A, project='../commons/lessons'))
+        self.assertEqual(c.exception.code, 'BadCommons')
+
+    def test_2_writable_mount_on_commons_refused(self):
+        obj = json.loads(json.dumps(TEAM_A))
+        obj['members']['worker-a']['mounts'] = {'lib': '../commons'}
+        team = self.root / 'tx'
+        team.mkdir()
+        (team / 'team.json').write_text(json.dumps(obj), encoding='utf-8')
+        rc, out = quiet(aos_team.cmd_init, str(team), [])
+        self.assertNotEqual(rc, 0)
+
+    def test_3_only_the_named_librarian_judges(self):
+        cm.desk(self.lay, self.rost)
+        self.drop(lesson())
+        cm.desk(self.lay, self.rost)
+        self.drop(lesson(body='another angle'), cid='c-x--2')
+        self.assertEqual(len(cm.desk(self.lay, self.rost)), 1)
+        other = self.make_team('lib2', roster({'lib-b': {'template': 'librarian', 'mail_to': ['human']}}), init=False)
+        with self.assertRaises(fmt.TeamError) as c:
+            self.verdict('c-x--2', 'lib-b', lay=fmt.Layout(other), rost=fmt.load_roster(other))
+        self.assertEqual(c.exception.code, 'NotAsked')
+        self.verdict('c-x--2')
+        self.assertEqual(self.result(self.commons.inbox / 'c-x--2')['status'], 'accepted')
+
+    def test_4_result_marked_only_after_notice(self):
+        ta = self.make_team('ta', TEAM_A, init=False)
+        lay = fmt.Layout(ta)
+        req = dict(lesson(), id=fmt.new_id('worker-a'), **{'from': 'worker-a', 'kind': 'contribute', 'at': 'x'})
+        cm.on_contribute(lay, fmt.load_roster(ta), req)
+        cm.desk(self.lay, self.rost)
+        first = cm.pending_results(lay, fmt.load_roster(ta))
+        self.assertEqual(len(first), 1)
+        self.assertEqual(len(cm.pending_results(lay, fmt.load_roster(ta))), 1)   # 沒記已寄：崩了下一輪還會給
+        cm._mark_sent(*first[0][2])
+        self.assertEqual(cm.pending_results(lay, fmt.load_roster(ta)), [])
+
+    def test_6_two_identical_waiting_second_rejected(self):
+        self.drop(lesson())
+        cm.desk(self.lay, self.rost)
+        self.drop(lesson(body='same new body'), cid='c-x--2')
+        self.drop(lesson(body='same new body'), cid='c-x--3')
+        self.assertEqual(len(cm.desk(self.lay, self.rost)), 2)
+        self.verdict('c-x--2')
+        self.verdict('c-x--3')
+        self.assertIn('Duplicate', self.result(self.commons.inbox / 'c-x--3')['reason'])
+        self.assertEqual(len(self.commons.load_index()['entries']), 2)
+
+    def test_7_readme_subpath_rejected_and_not_blocking(self):
+        f = self.drop(lesson(type='tool', files=['README.md/x']), {'README.md/x': (b'x', 0o644)})
+        ok = self.drop(lesson(title='other thing entirely', body='zz'), cid='c-x--9')
+        cm.desk(self.lay, self.rost)
+        self.assertIn('BadPath', self.result(f)['reason'])
+        self.assertEqual(self.result(ok)['status'], 'accepted')
+
+    def test_9_team_tags_do_not_collide(self):
+        a = self.root / 'x1' / 'Team-A'
+        b = self.root / 'x2' / 'team-a'
+        a.mkdir(parents=True)
+        b.mkdir(parents=True)
+        self.assertNotEqual(cm._team_tag(fmt.Layout(a)), cm._team_tag(fmt.Layout(b)))
+
+    def test_10_import_does_not_delete_others(self):
+        pb = self.root / 'pb'
+        pb.mkdir()
+        (pb / 'lessons.md').write_text('## 條目\n\n### 1（研發部）first lesson\n\nbody\n', encoding='utf-8')
+        body = self.root / 'b.md'
+        body.write_text('hand made', encoding='utf-8')
+        quiet(cm.cmd_commons, str(self.lib), ['add', 'lesson', '--title', 't', '--fits', 'f', '--tags', 'x',
+                                             '--body-file', str(body), '--slug', 'playbook-lesson-1'])
+        with self.assertRaises(fmt.TeamError) as c:
+            cm.import_dir(self.commons, pb)
+        self.assertEqual(c.exception.code, 'Conflict')
+        self.assertIn('hand made', (self.commons.root / 'lessons' / 'playbook-lesson-1.md').read_text(encoding='utf-8'))
+
+    def test_11_ensure_never_overwrites_index(self):
+        self.drop(lesson())
+        cm.desk(self.lay, self.rost)
+        saved = self.commons.index_path.read_text(encoding='utf-8')
+        real_exists = Path.exists
+        with unittest.mock.patch.object(Path, 'exists', lambda p: False if p.name == 'index.json' else real_exists(p)):
+            cm.Commons(self.commons.root).ensure()        # 模擬「看的時候還沒有、寫的時候別人已經建好」
+        self.assertEqual(self.commons.index_path.read_text(encoding='utf-8'), saved)
 
 
 class ImportTests(Base):
