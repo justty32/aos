@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 import aos_company as co
 import aos_team_format as fmt
@@ -39,7 +40,7 @@ class Samples(unittest.TestCase):
         cfg = co.load(EXAMPLE)
         self.assertEqual(cfg['limits'], {'regular': 10, 'cpu': 20, 'llm_cpu': 5})
         self.assertEqual(cfg['limits_max'], {'regular': 100, 'cpu': 200, 'llm_cpu': 20})
-        self.assertLessEqual(sum(cfg['pools'].values()), 20)
+        self.assertLessEqual(cfg['pools']['default'], 20)
         self.assertLessEqual(cfg['pools']['llm'], 5)
         # 每個有團隊的部門，名冊的成員都用部門前綴
         for key, d in cfg['departments'].items():
@@ -73,7 +74,7 @@ class Validate(unittest.TestCase):
         with self.assertRaises(co.CompanyError) as e:
             co.validate(c)
         self.assertEqual(e.exception.code, 'OverLimit')
-        c['pools'] = {'default': 16, 'llm': 5}
+        c['pools'] = {'default': 21, 'llm': 5}
         with self.assertRaises(co.CompanyError):
             co.validate(c)
 
@@ -102,13 +103,13 @@ class Validate(unittest.TestCase):
 
 class Caps(unittest.TestCase):
     def test_cpu_from_ls(self):
-        self.assertEqual(co.cpu_from_ls(fake_ls(12, 5)), (17, 5))
+        self.assertEqual(co.cpu_from_ls(fake_ls(12, 5)), (12, 5))          # cpu 不含 llm 池（同 HR）
         self.assertEqual(co.cpu_from_ls({'pools': {'default': {'want': 3}}}), (3, 0))
         self.assertEqual(co.cpu_from_ls(None), (0, 0))
 
     def test_caps_line_and_over(self):
         lim = {'regular': 10, 'cpu': 20, 'llm_cpu': 5}
-        self.assertEqual(co.caps_line({'regular': 6, 'cpu': 17, 'llm_cpu': 5}, lim), '正式 6/10、cpu 17/20、llm cpu 5/5')
+        self.assertEqual(co.caps_line({'regular': 6, 'cpu': 12, 'llm_cpu': 5}, lim), '正式 6/10、cpu 12/20、llm cpu 5/5')
         self.assertEqual(co.over_caps({'regular': 11, 'cpu': 17, 'llm_cpu': 6}, lim), ['regular', 'llm_cpu'])
 
 
@@ -141,7 +142,7 @@ class NewCompanies(Tmp):
             d, cfg = self.make('c%d-' % i, llm_cpu=4)
             self.assertEqual(cfg['limits']['llm_cpu'], 4)
             self.assertLessEqual(cfg['pools']['llm'], 4)
-            self.assertLessEqual(sum(cfg['pools'].values()), cfg['limits']['cpu'])
+            self.assertLessEqual(cfg['pools']['default'], cfg['limits']['cpu'])
             got = co.all_member_names(d, cfg)
             self.assertTrue(all(n.startswith('c%d-' % i) for n in got))
             names += got
@@ -163,19 +164,32 @@ class NewCompanies(Tmp):
     def test_status_counts_without_kernel(self):
         d, cfg = self.make('c1-')
         s = co.status_data(d, cfg, ls=fake_ls(12, 5))
-        self.assertEqual(s['caps'], '正式 7/10、cpu 17/20、llm cpu 5/5')
+        self.assertEqual(s['caps'], '正式 7/10、cpu 12/20、llm cpu 5/5')
         self.assertEqual(s['over'], [])
-        # spawn 生的（team/spawns 記 done）算臨時工，不算人頭
+        # 名冊 employment: temp（spawn 生的一律這樣寫，HR hr.md §7）算臨時工，不算人頭
         mfg = co.team_dirs(d, cfg)['mfg']
         roster = fmt.read_json(mfg / 'team.json')
-        roster['members']['c1-mfg-temp1'] = {'template': 'worker', 'mail_to': ['c1-mfg-lead']}
+        roster['members']['c1-mfg-temp1'] = {'template': 'worker', 'mail_to': ['c1-mfg-lead'], 'employment': 'temp'}
         fmt.write_json(mfg / 'team.json', roster, indent=2)
-        (mfg / 'team' / 'spawns').mkdir(parents=True)
-        fmt.write_json(mfg / 'team' / 'spawns' / 's-0001.json', {'name': 'c1-mfg-temp1', 'status': 'done'})
-        s = co.status_data(d, cfg, ls=fake_ls(15, 6))
+        s = co.status_data(d, cfg, ls=fake_ls(21, 6))
         self.assertEqual(s['counts']['regular'], 7)
         self.assertEqual(s['temp'], 1)
         self.assertEqual(s['over'], ['cpu', 'llm_cpu'])
+
+    def test_hr_policy_follows_company_limits(self):
+        d, cfg = self.make('c1-', llm_cpu=4)
+        p = co.write_hr_policy(d, cfg)
+        import aos_team_hr
+        pol = aos_team_hr.load_policy(p.parent)
+        self.assertEqual((pol['regular_max'], pol['cpu_max'], pol['llm_cpu_max']), (10, 20, 4))
+
+    def test_team_env_has_no_daemon(self):
+        d, cfg = self.make('c1-')
+        with mock.patch.dict(os.environ, {'AOS_DAEMON_HOME': '/elsewhere/D', 'AOS_HR_HOME': '/elsewhere/hr'}):
+            e = co.env_for(d, cfg)
+            self.assertNotIn('AOS_DAEMON_HOME', e)                  # HR 數 cpu 不會數到同一個 daemon 上別家的 kernel
+            self.assertEqual(e['AOS_HR_HOME'], str(d / 'K' / 'hr'))
+            self.assertTrue(co.env_for(d, cfg, daemon=True)['AOS_DAEMON_HOME'].endswith('/D'))
 
 
 class Relay(Tmp):

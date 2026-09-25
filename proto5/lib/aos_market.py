@@ -305,13 +305,13 @@ def do_grant(mdir, usd_over=None, tok_over=None, dry_run=False, env=None):
 
 
 def grant_slots(mdir, name, regular=0, cpu=0, llm_cpu=0, env=None):
-    """從總池撥名額給一家：llm cpu 也是 cpu（撥 1 顆 llm cpu＝limits.cpu、limits.llm_cpu、pools.llm 各 +1）；
-    cpu＝limits.cpu、pools.default +1；人頭＝limits.regular +1。不能超過那家的 limits_max 與總池。
+    """從總池撥名額給一家：llm cpu＝limits.llm_cpu、pools.llm +1；cpu（不含 llm，同 HR 的算法）＝limits.cpu、
+    pools.default +1；人頭＝limits.regular +1。不能超過那家的 limits_max 與總池。
     kernel 開著的話池要 aos-kernel cpu add 才真的多開（這裡只改 company.json；下次 up 生效）。"""
     m = load(mdir)
     if name not in operating(m):
         raise MarketError('NotFound', '%s 不在營業' % name)
-    want = {'regular': regular, 'cpu': cpu + llm_cpu, 'llm_cpu': llm_cpu}
+    want = {'regular': regular, 'cpu': cpu, 'llm_cpu': llm_cpu}
     pool = pool_status(m, cost.balances(cost_base(env)))
     short = [k for k, v in want.items() if v > pool['slots'][k]]
     if short:
@@ -459,7 +459,8 @@ def apply_merge(mdir, a, b, plan, env=None, start=True):
         tdir = a_teams[mv['dept']]
         roster = fmt.read_json(tdir / 'team.json')
         b_mem = fmt.read_json(b_teams[mv['dept']] / 'team.json')['members'][mv['from']]
-        mem = {'template': b_mem['template'], 'mail_to': [x for x in [mv['lead'], 'human'] if x]}
+        mem = {'template': b_mem['template'], 'mail_to': [x for x in [mv['lead'], 'human'] if x],
+               'employment': mv['employment']}
         for k in ('model', 'mounts', 'tools'):
             if k in b_mem:
                 mem[k] = b_mem[k]
@@ -470,8 +471,7 @@ def apply_merge(mdir, a, b, plan, env=None, start=True):
         lim['max_members'] = max(lim.get('max_members', fmt.LIMIT_DEFAULTS['max_members']), len(roster['members']))
         fmt.validate_roster(roster, str(tdir / 'team.json'))
         fmt.write_json(tdir / 'team.json', roster, indent=2)
-        a_cfg_raw.setdefault('staff', {})[mv['to']] = {'dept': mv['dept'], 'employment': mv['employment'],
-                                                        'roles': ['併自 %s 的 %s' % (b, mv['from'])]}
+        a_cfg_raw.setdefault('staff', {})[mv['to']] = {'dept': mv['dept'], 'roles': ['併自 %s 的 %s' % (b, mv['from'])]}
         if src_notes.is_file():
             dst = fmt.Layout(tdir).notes(mv['to'])
             dst.mkdir(parents=True, exist_ok=True)

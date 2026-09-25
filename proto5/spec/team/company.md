@@ -38,10 +38,10 @@ mfg 郵差開單 t-0001 → 寫手做 → 驗收員 → 審查員 → 郵差寄�
 | `prefix` | 成員名前綴（`c1-`）；`new --prefix` 會把樣板每個成員名、`mail_to`、門房的 `assignee`、`staff`、`desk` 都加上。同一台機器開幾家就不撞名 |
 | `limits` | 這家的上限 `{"regular", "cpu", "llm_cpu"}`，新創預設 10／20／5 |
 | `limits_max` | 擴張到頂的上限，預設 100／200／20；`limits` 不能超過它 |
-| `pools` | kernel 兩池的顆數 `{"default", "llm"}`；`llm ≤ limits.llm_cpu`、兩池加總 `≤ limits.cpu`，超了整份不收（`OverLimit`） |
+| `pools` | kernel 兩池的顆數 `{"default", "llm"}`；`default ≤ limits.cpu`、`llm ≤ limits.llm_cpu`（**cpu 不含 llm 池**，跟 HR 部 hr.md §5 同一個算法），超了整份不收（`OverLimit`） |
 | `front` | 前台部門：董事 `order` 不帶 `--to` 時交給它的門房 |
 | `departments.<代號>` | 一個部門：`title`、`team`（自己一支團隊的資料夾）或 `part_of`（併在別的部門的團隊裡，新創期的兼任）、`desk`（跨部門的信沒命中門房時交給誰；沒寫＝第一個 lead，再沒有＝第一個成員）、`aliases`（〔給 …〕認的別名）、`open`（false＝尚未成立，up 不開、總機退信）、`state`／`serves`／`delivers`／`kpi`／`lib`（給人看的說明） |
-| `staff.<成員名>` | `employment`（`regular` 正式／`temp` 臨時）、`dept`、`roles`（兼任寫這裡）。沒列的成員：spawn 生的算臨時，其他算正式（同 HR 部 hr.md §7 的預設） |
+| `staff.<成員名>` | `dept`、`roles`（兼任寫這裡），給人看。**正式／臨時不寫這裡**：看名冊每個成員的 `employment`（HR 部 hr.md §7：人寫的預設 `regular`、spawn 生的 `temp`） |
 | `relay.interval_s` | 總機多久一輪（預設 5） |
 
 部門代號 `[a-z][a-z0-9]{0,11}`。其他鍵＝`FormatInvalid`。
@@ -67,10 +67,12 @@ kernel 反覆叫 `aos_company.py relay --company <公司>`（`up` 登記成 `com
 
 ## 4. 數人頭、數 cpu（`status`）
 
-- **正式員工**：開著的部門名冊裡的成員，扣掉臨時工（`staff` 寫 `temp` 的、或 `team/spawns/` 記 `done` 的）。
-- **cpu**：`aos-kernel ls --json` 的 `pools.*.want` 加總；**llm cpu**：`pools.llm.want`。kernel 沒開＝照 `company.json` 的 `pools` 算，並標 kernel down。
+- **正式員工**：開著的部門名冊裡 `employment: regular` 的成員（跟 HR 的 `count_regular` 同一個數法）。
+- **cpu**：`aos-kernel ls --json` 裡 llm 池以外的 `want` 加總；**llm cpu**：`pools.llm.want`（跟 HR 的 `count_cpus` 同一個算法：cpu 不含 llm）。kernel 沒開＝照 `company.json` 的 `pools` 算，並標 kernel down。
 - 印一行 `正式 N/10、cpu N/20、llm cpu N/5`，超過的標出來，`status` 退 1。
 - `up` 前先擋：正式員工超過 `limits.regular`、部門之間有同名成員 ＝ 不開。cpu 靠 `pools` 已經在 `company.json` 驗過（kernel 就只開那麼多顆，這是**硬擋**：多的工作排隊，不會多開）。
+- **上限只有一個來源**：`company.json` 的 `limits`。`up` 把它寫進這家的 HR 政策 `K/hr/policy.json`（`regular_max`／`cpu_max`／`llm_cpu_max`，其他欄原樣留），所以 HR 的擋點（`aos-team init`／`start`／生成員）與 `status` 用同一組數；財務 `budget.json` 的 `cpus` 只拿來印 cost 表，不擋。
+- 給 `aos-team` 的環境只帶這家的 `AOS_KERNEL_HOME`、`AOS_HR_HOME=<公司>/K/hr`，**不帶 `AOS_DAEMON_HOME`**：HR 數 cpu 會把同一個 daemon 上的每個 kernel 都算進來，幾家共用 daemon 就會互相擋；只有 `aos up／down`、`aos-kernel init／ls` 帶 daemon。
 
 ## 5. 指令
 

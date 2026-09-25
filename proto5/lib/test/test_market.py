@@ -191,7 +191,7 @@ class Pool(Base):
 
     def test_slots_grant_and_open_needs_slots(self):
         lim = mk.grant_slots(self.mdir, 'c1', llm_cpu=1)
-        self.assertEqual((lim['llm_cpu'], lim['cpu']), (6, 21))
+        self.assertEqual((lim['llm_cpu'], lim['cpu']), (6, 20))
         cfg = co.load(self.tmp / 'c1')
         self.assertEqual(cfg['pools']['llm'], 6)
         # 機器 llm cpu 20：c1 6＋c2 5＋c3 5＝16，第四家要 5 顆就不夠

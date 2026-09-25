@@ -21,7 +21,7 @@
 
 ## 組織圖（新創期：正式 ≤10、cpu ≤20、llm cpu ≤5）
 
-現在的編制：**正式 7 人**、還有 3 個名額可以擴編；cpu 17 顆（default 12＋llm 5）。十個名額不夠每部門都放人，所以兼任與「純機械部門」是常態，兼任寫在 `company.json` 的 `staff.*.roles`。
+現在的編制：**正式 7 人**、還有 3 個名額可以擴編；cpu 12／20（default 池；cpu 不含 llm，同 HR 的算法）、llm cpu 5／5。十個名額不夠每部門都放人，所以兼任與「純機械部門」是常態，兼任寫在 `company.json` 的 `staff.*.roles`；正式／臨時看名冊的 `employment`（HR 部）。
 
 | 部門 | 團隊資料夾 | 成員（名／模板／模型／類型） | 多掛 | 收什麼單 | 交什麼貨 | 對應的 lib／spec | KPI（機械量得到） | 狀態 |
 |---|---|---|---|---|---|---|---|---|
@@ -31,7 +31,7 @@
 | **製造部** mfg | [teams/mfg](teams/mfg/team.json) | `mfg-lead`／lead／gpt-5.5／正式（窗口，拆批次）；`mfg-writer1`／worker／gpt-5.5／正式；`mfg-reviewer`／reviewer／gpt-5.5／正式；忙時 `mfg-lead` 可 spawn worker（臨時工，不用批） | corpus 唯讀（寫手、審查） | `〔給 mfg〕補人物 X`（全套，動索引）／`補人物 X（只寫詞條）`（門房直接開單給寫手） | `lore/characters/X.md`＋證據檔，過驗收（機械 5～6 條）＋審查（judge） | [examples/arknights](../arknights/README.md)、[tasks.md](../../spec/team/tasks.md)、[verify.md](../../spec/team/verify.md) | 一次過率（attempt=1 的 done）、每單 token、每單秒數 | 有 |
 | **品管部** qa | [teams/qa](teams/qa/team.json) | `qa-inspector`／worker／deepseek-chat／正式；**評審**＝`eval.sh` 裡一次性的 claude-opus-5 呼叫（臨時工） | corpus 唯讀 | `〔給 qa〕驗貨 X`（門房直接開單） | `qa-reports/X.md`（`結論：合格／不合格`＋抽查 3 列）；批次時 `eval.sh` 分數 | [examples/arknights/eval](../arknights/eval/)、verify.md | 驗貨合格率；eval 機械層全過率、證據列 ok 率 | 有 |
 | **研發部** rd | [teams/rd](teams/rd/team.json) | `rd-smith`／worker／gpt-5.5／正式（工具匠） | — | `〔給 rd〕要一支工具…`（沒門房規則，信給窗口） | 工具草稿（人 `aos-team tool approve` 才裝） | [toolsmith.md](../../spec/team/toolsmith.md)、[tools/](../../tools/README.md) | 草稿牢裡測試通過率；被批准數 | 有 |
-| HR hr | 併在 hq | 機械：`company.py status` 數人頭與 cpu、`up` 前擋超額；`spawn`／`score`；決策＝總裁兼、改名冊＝董事 | — | `〔給 hr〕…`（落到總裁） | 名冊改動（人批）、臨時工 | [spawn.md](../../spec/team/spawn.md)、[score.md](../../spec/team/score.md)、HR 部 `hr.md`（施工中） | 正式 N/10、cpu N/20、llm cpu N/5 不超 | 兼任＋機械 |
+| HR hr | 併在 hq | 機械：名額由 HR 擋（`up` 把 `company.json` 的上限寫進這家的 `K/hr/policy.json`，`init`／`start`／生成員超了就擋）、`aos-team hr` 薪資表與試用、spawn 生臨時工；決策＝總裁兼、改名冊＝董事 | — | `〔給 hr〕…`（落到總裁） | 名冊改動（人批）、臨時工 | [hr.md](../../spec/team/hr.md)、[spawn.md](../../spec/team/spawn.md)、[score.md](../../spec/team/score.md) | 正式 N/10、cpu N/20、llm cpu N/5 不超（`company.py status` 與 `aos-team hr cap` 同一組數） | 兼任＋機械 |
 | 圖書館 lib | [teams/lib](teams/lib/team.json) | `lib-librarian`／librarian／deepseek-chat／正式（只判「像不像舊條目」，其餘郵差機械做） | commons 唯讀 | 各部門成員 `commons_submit` 的投稿（每個成員都自動有 `commons_search`／`commons_submit`） | 這家的 commons 條目（`teams/commons/`：各部門團隊的上一層，全公司共用一份；五家各一份，不互通） | [commons.md](../../spec/team/commons.md)、[examples/commons](../commons/README.md) | 機械審通過率、叫模型判的比例 | 有 |
 | 財務部 fin | —（純機械） | 沒有模型員工：帳本 `aos-team cost`＋公司帳戶 | — | — | 每部門／每單 token 與美元；超預算郵差停開新單 | [cost.md](../../spec/team/cost.md)、`lib/aos_team_cost.py` | 帳本覆蓋率、預算用了幾成 | 機械（設 `AOS_COST_HOME` 就記得到） |
 | 總務／資安 | — | 機械：`aos up／down`、kernel 池、牆（bwrap）、郵差再驗 | — | — | — | [wall.md](../../spec/team/wall.md) | kernel health | 有 |
@@ -61,7 +61,7 @@ python3 company.py new ~/tmp/company-run/c1 --prefix c1- --project ~/tmp/company
 export AOS_COST_HOME=~/tmp/company-run/cost          # 可省；設了帳就記得到這家
 python3 company.py up     -C ~/tmp/company-run/c1
 python3 company.py order  -C ~/tmp/company-run/c1 "補人物 老財"
-python3 company.py status -C ~/tmp/company-run/c1     # 正式 6/10、cpu 17/20、llm cpu 5/5＋各部門單子＋總機單
+python3 company.py status -C ~/tmp/company-run/c1     # 正式 7/10、cpu 12/20、llm cpu 5/5＋各部門單子＋總機單
 python3 company.py mail   -C ~/tmp/company-run/c1     # 董事收件匣
 python3 company.py down   -C ~/tmp/company-run/c1
 ```
