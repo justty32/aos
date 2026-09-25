@@ -2,6 +2,8 @@
 
 不開 kernel、不叫模型：團隊資料夾只建總機會碰的那幾格（team/human、outbox/human、tasks、routes.json）。
 """
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -183,13 +185,29 @@ class NewCompanies(Tmp):
         pol = aos_team_hr.load_policy(p.parent)
         self.assertEqual((pol['regular_max'], pol['cpu_max'], pol['llm_cpu_max']), (10, 20, 4))
 
-    def test_team_env_has_no_daemon(self):
+    def test_team_env_daemon(self):
         d, cfg = self.make('c1-')
         with mock.patch.dict(os.environ, {'AOS_DAEMON_HOME': '/elsewhere/D', 'AOS_HR_HOME': '/elsewhere/hr'}):
+            # 預設一家一個 daemon（<公司>/D，董事 09-25）：照帶，HR 只數得到自己
             e = co.env_for(d, cfg)
-            self.assertNotIn('AOS_DAEMON_HOME', e)                  # HR 數 cpu 不會數到同一個 daemon 上別家的 kernel
+            self.assertEqual(e['AOS_DAEMON_HOME'], str(d / 'D'))
             self.assertEqual(e['AOS_HR_HOME'], str(d / 'K' / 'hr'))
-            self.assertTrue(co.env_for(d, cfg, daemon=True)['AOS_DAEMON_HOME'].endswith('/D'))
+            # 幾家共用 daemon（../D）：給 aos-team 的環境不帶，HR 數 cpu 不會數到同一個 daemon 上別家的 kernel
+            shared = dict(cfg, daemon='../D')
+            self.assertNotIn('AOS_DAEMON_HOME', co.env_for(d, shared))
+            self.assertEqual(co.env_for(d, shared, daemon=True)['AOS_DAEMON_HOME'], str(self.tmp / 'D'))
+
+    def test_new_prints_cpu_without_llm(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            co.main(['new', str(self.tmp / 'c7'), '--prefix', 'c7-', '--project', str(self.proj)])
+        self.assertIn('cpu 12/20、llm cpu 5/5', buf.getvalue())      # 跟 status、HR 同一個算法
+
+    def test_status_says_stopped_after_down(self):
+        d, cfg = self.make('c1-')
+        ls = {'health': {'code': 'stopped', 'message': '停機中'}, 'pools': {'default': {'want': 12}, 'llm': {'want': 5}}}
+        self.assertTrue(co.status_data(d, cfg, ls=ls)['kernel'].startswith('stopped'))
+        self.assertEqual(co.status_data(d, cfg, ls=dict(ls, health={'code': 'ok', 'message': ''}))['kernel'], 'up')
 
 
 class RelayBase(Tmp):
