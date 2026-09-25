@@ -9,7 +9,7 @@
   "front": "hq",
   "project": "~/tmp/company-run/proj",
   "llm": "llm.json",
-  "daemon": "../D",
+  "daemon": "D",
   "relay": {"interval_s": 5},
   "departments": {
     "hq": {

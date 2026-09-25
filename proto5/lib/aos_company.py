@@ -157,7 +157,7 @@ def validate(obj, where='company.json'):
         bad(where + '.relay.interval_s', '1～3600 的整數')
     return {'name': obj.get('name', 'company'), 'prefix': prefix, 'stage': obj.get('stage', 'startup'),
             'limits': limits, 'limits_max': ceiling, 'pools': pools, 'front': front,
-            'project': obj.get('project'), 'llm': obj.get('llm', 'llm.json'), 'daemon': obj.get('daemon', '../D'),
+            'project': obj.get('project'), 'llm': obj.get('llm', 'llm.json'), 'daemon': obj.get('daemon', 'D'),
             'departments': out_d, 'staff': out_s, 'relay': {'interval_s': interval},
             'account': obj.get('account')}
 
@@ -646,18 +646,29 @@ def over_caps(counts, limits):
     return [k for k in LIMIT_KEYS if counts[k] > limits[k]]
 
 
+def daemon_dir(cdir, cfg):
+    return Path(os.path.abspath(Path(cdir) / cfg['daemon']))
+
+
+def own_daemon(cdir, cfg):
+    """daemon 在公司資料夾裡（預設 <公司>/D，董事 09-25：一家一個 daemon＋kernel）＝只有這家用。"""
+    c, d = str(Path(os.path.abspath(str(cdir)))), str(daemon_dir(cdir, cfg))
+    return d.startswith(c.rstrip('/') + '/')
+
+
 def env_for(cdir, cfg, daemon=False):
-    """給 aos-team 的環境：只帶這家的 kernel，**不帶 AOS_DAEMON_HOME**——HR 部數 cpu 時會把同一個 daemon 上
-    每個 kernel 都算進來（幾家共用 daemon 就會互相擋）；只有開關機、建 kernel 才要 daemon（daemon=True）。
-    HR 家＝這家 kernel 底下的 K/hr（不管外面設了什麼 AOS_HR_HOME）。"""
+    """給 aos-team 的環境：這家的 kernel、HR 家＝K/hr（不管外面設了什麼 AOS_HR_HOME）。
+    AOS_DAEMON_HOME：daemon 是這家自己的（在公司資料夾裡，預設）＝照帶，HR 數 cpu 只數得到自己；
+    幾家共用 daemon（company.json 寫 "daemon": "../D"）＝不帶，免得 HR 把別家的 kernel 也數進來互相擋。
+    開關機、建 kernel（daemon=True）一律帶。"""
     cdir = Path(cdir)
     e = dict(os.environ)
     e['PATH'] = '%s:%s' % (CLI, e.get('PATH', os.defpath))
     e['AOS_KERNEL_HOME'] = str(cdir / 'K')
     e['AOS_HR_HOME'] = str(cdir / 'K' / 'hr')
     e.pop('AOS_DAEMON_HOME', None)
-    if daemon:
-        e['AOS_DAEMON_HOME'] = str(Path(os.path.abspath(cdir / cfg['daemon'])))
+    if daemon or own_daemon(cdir, cfg):
+        e['AOS_DAEMON_HOME'] = str(daemon_dir(cdir, cfg))
     e['PYTHONDONTWRITEBYTECODE'] = '1'
     e.pop('AOS_TEAM_HOME', None)
     return e
@@ -684,7 +695,10 @@ def status_data(cdir, cfg=None, ls=None, use_kernel=True):
         ls = kernel_ls(cdir, cfg)
     if ls is not None:
         cpu, llm = cpu_from_ls(ls)
-        kernel = ls.get('health') if isinstance(ls.get('health'), str) else 'up'
+        h = ls.get('health')
+        code = h if isinstance(h, str) else (h or {}).get('code') if isinstance(h, dict) else None
+        # health 不是 ok＝照實說（down 之後是 stopped，不再印 up；試玩 09-25）
+        kernel = 'up' if code in (None, 'ok') else '%s（%s）' % (code, (h.get('message') if isinstance(h, dict) else '') or '')
     else:
         cpu, llm = cfg['pools']['default'], cfg['pools']['llm']
         kernel = 'down（cpu 照 company.json 的池算）'
@@ -886,7 +900,9 @@ def down(cdir, out=print):
     if not (cdir / 'K').is_dir():
         out('kernel 沒開過')
         return 0
-    aos_client.call(env['AOS_KERNEL_HOME'], 'rm', {'name': relay_proc_name(cdir)}, client='company', timeout_ms=10000)
+    res = aos_client.call(env['AOS_KERNEL_HOME'], 'rm', {'name': relay_proc_name(cdir)}, client='company', timeout_ms=10000)
+    out('總機撤了：%s' % relay_proc_name(cdir) if 'error' not in (res or {}) else
+        '總機沒撤到（%s；kernel 停了它也不會再跑）' % ((res.get('error') or {}).get('message') or res['error']))
     failed = []
     for dept, tdir in sorted(team_dirs(cdir, cfg).items()):
         if (Path(tdir) / 'members').is_dir():
@@ -895,6 +911,8 @@ def down(cdir, out=print):
                 failed.append('%s 部 aos-team stop 退 %d' % (dept, r.returncode))
             out('%s 部收工' % dept if r.returncode == 0 else '%s 部收工失敗（%d）' % (dept, r.returncode))
     r = _run([CLI / 'aos', 'down'], env_for(cdir, cfg, daemon=True), check=False, timeout=180)
+    for line in (r.stdout or '').strip().splitlines():
+        out(line)                                         # kernel 停了沒、daemon 停了沒（aos down 自己的摘要）
     if r.returncode != 0:
         failed.append('aos down 退 %d：%s' % (r.returncode, (r.stdout + r.stderr).strip()[-500:]))
     if failed:                      # 市場層靠這個退出碼決定能不能封存、放名額（astra 必修 4）
@@ -965,7 +983,7 @@ def main(argv=None, default_src=EXAMPLE):
             d = new(a.dir, a.src, a.prefix, a.project, a.llm_cpu, a.cpu, a.name)
             cfg = load(d)
             print('生好了 %s：%s；%s' % (d, '、'.join(all_member_names(d, cfg)), caps_line(
-                {'regular': len(headcount(d, cfg)[0]), 'cpu': sum(cfg['pools'].values()),
+                {'regular': len(headcount(d, cfg)[0]), 'cpu': cfg['pools']['default'],   # cpu 不含 llm（同 status、HR）
                  'llm_cpu': cfg['pools']['llm']}, cfg['limits'])))
             return 0
         if a.cmd == 'up':
