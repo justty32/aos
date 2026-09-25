@@ -10,13 +10,13 @@
 
 ## 建議
 
-- [aos_team_post_jobs.py:130](/home/lorkhan/repo/simple_tools/aos/proto5/lib/aos_team_post_jobs.py:130)、[同檔:234](/home/lorkhan/repo/simple_tools/aos/proto5/lib/aos_team_post_jobs.py:234)、[aos_team_post_watch.py:144](/home/lorkhan/repo/simple_tools/aos/proto5/lib/aos_team_post_watch.py:144)、[aos_team_task_machine.py:190](/home/lorkhan/repo/simple_tools/aos/proto5/lib/aos_team_task_machine.py:190)：母模組再匯出不會轉接子模組的 globals；patch 母模組的 `check_result`／`JOB_TIMEOUT`／`update_section`／`load` 已無法影響這些呼叫，宜說明新的 patch 位置；**repo 目前沒有這些 patch 用法**，故不列必修。
+- [aos_team_post_jobs.py](../../lib/aos_team_post_jobs.py)（行 130、同檔行 234）、[aos_team_post_watch.py](../../lib/aos_team_post_watch.py)（行 144）、[aos_team_task_machine.py](../../lib/aos_team_task_machine.py)（行 190）：母模組再匯出不會轉接子模組的 globals；patch 母模組的 `check_result`／`JOB_TIMEOUT`／`update_section`／`load` 已無法影響這些呼叫，宜說明新的 patch 位置；**repo 目前沒有這些 patch 用法**，故不列必修。
 
-- [aos_directives_edit_persona.py:11](/home/lorkhan/repo/simple_tools/aos/proto5/lib/aos_directives_edit_persona.py:11)、[aos_directives_edit.py:24](/home/lorkhan/repo/simple_tools/aos/proto5/lib/aos_directives_edit.py:24)：兩次插入相同 `proto5/tools/files` 路徑可去重；目前只增加一筆 `sys.path`，沒有改變解析優先序，`_mdsec` 也是同一個快取模組。
+- [aos_directives_edit_persona.py](../../lib/aos_directives_edit_persona.py)（行 11）、[aos_directives_edit.py](../../lib/aos_directives_edit.py)（行 24）：兩次插入相同 `proto5/tools/files` 路徑可去重；目前只增加一筆 `sys.path`，沒有改變解析優先序，`_mdsec` 也是同一個快取模組。
 
-- [docs/agent.md:69](/home/lorkhan/repo/simple_tools/aos/proto5/lib/docs/agent.md:69)：「九個子命令」沿襲舊文，實際 parser 有 **19 個**。
+- [docs/agent.md](../../lib/docs/agent.md)（行 69）：「九個子命令」沿襲舊文，實際 parser 有 **19 個**。
 
-- [docs/daemon.md:16](/home/lorkhan/repo/simple_tools/aos/proto5/lib/docs/daemon.md:16)：段落仍寫「五支」，漏算 `aos_daemon_ticks`；頁首與家族表的 **六支**才正確。
+- [docs/daemon.md](../../lib/docs/daemon.md)（行 16）：段落仍寫「五支」，漏算 `aos_daemon_ticks`；頁首與家族表的 **六支**才正確。
 
 ## 確認沒問題的項目
 
