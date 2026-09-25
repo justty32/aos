@@ -168,7 +168,7 @@
             "text": "證據檔每一列：寫的原文檔名＋行號打開後確實說了那件事、行號沒超過檔長；推論與原文明寫分開、原文沒說的有明講未知"
           }
         ],
-        "max_attempts": 2,
+        "max_attempts": 3,
         "deadline_minutes": 40
       },
       "tests": {
