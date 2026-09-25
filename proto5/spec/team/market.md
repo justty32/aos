@@ -53,7 +53,7 @@
   - **倒閉**（`bankrupt`，某一種餘額 ≤ 0）：歸零的那一種沒得收；另一種還有剩就收回。**只是歸零倒閉的，回收的通常只有名額。**
   - **裁撤**（`close 名`，經理人決定收掉一家還沒花光的）：兩種剩多少收多少。
   - `bankrupt`／`close` 都回傳並記進 `events`：`recycled`（收回多少錢）、`slots`（放出幾個名額）、`freed`（放出的成員名，前綴可以再用）。
-- 名額撥給別家：`slots 名 --llm-cpu 1`（llm cpu 也是 cpu：`limits.cpu`、`limits.llm_cpu`、`pools.llm` 各 +1）、`--cpu 1`（`limits.cpu`、`pools.default` +1）、`--regular 1`；不能超過那家的 `limits_max`。只改 `company.json`，kernel 開著要 `aos-kernel cpu add` 或下次 `up` 才真的多開。
+- 名額撥給別家：`slots 名 --llm-cpu 1`（`limits.llm_cpu`、`pools.llm` +1）、`--cpu 1`（`limits.cpu`、`pools.default` +1）、`--regular 1`；不能超過那家的 `limits_max`。只改 `company.json`，kernel 開著要 `aos-kernel cpu add` 或下次 `up` 才真的多開。
 - `pool` 印總池兩行。
 
 **五家同跑的 llm cpu**：機器頂 20，每家新創預設 5 → 五家要 25，第五家 `open` 會 `NoSlots`。樣板的做法是 `company.py new --llm-cpu 4`（五家各 4），這題留給董事拍（報告的問題清單）。
@@ -67,7 +67,7 @@
 
 1. 同部門的**經理（`template: lead`）只留併入方的**：被併方的經理裁掉（家跟著封存；筆記 `notes.json` 抄一份到併入方 `team/notes/_merged/<舊名>/` 備查）。
 2. 其餘成員照 `dept_order` 併進併入方**同一個部門的團隊**，改名 `<併入方前綴><原職位>-<被併方名>`（`c2-mfg-writer1` → `c1-mfg-writer1-c2`）；`mail_to` 是那部門的經理＋human，經理的 `mail_to` 也加上他。
-3. 併入方的正式名額（`limits.regular` − 現有正式）還有＝**正式**；滿了＝**臨時工**（`company.json` 的 `staff` 寫 `temp`，不算人頭）。被併方本來就是臨時工的仍是臨時工。
+3. 併入方的正式名額（`limits.regular` − 現有正式）還有＝**正式**；滿了＝**臨時工**（名冊那一列寫 `employment: temp`，不算人頭）。被併方本來就是臨時工的仍是臨時工。
 4. 併入方沒有那個部門的團隊＝那些人裁掉。
 5. **跨任務記憶帶過去**：`team/notes/<舊名>/notes.json` 抄到新名底下；對話紀錄（家的 `prompts/`）留在被併方的封存，不搬（家裡有絕對路徑）。
 6. 帳：被併方的餘額撥給併入方（併入方 +、被併方 −），被併方標 `merged`、停、封存；它的名額回總池。

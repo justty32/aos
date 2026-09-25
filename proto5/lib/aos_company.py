@@ -102,9 +102,8 @@ def validate(obj, where='company.json'):
     pools = {'default': pools.get('default', 10), 'llm': pools.get('llm', 5)}
     if pools['llm'] > limits['llm_cpu']:
         bad(where + '.pools.llm', 'llm 池 %d 顆超過 limits.llm_cpu=%d' % (pools['llm'], limits['llm_cpu']), 'OverLimit')
-    if pools['default'] + pools['llm'] > limits['cpu']:
-        bad(where + '.pools', '兩池加起來 %d 顆超過 limits.cpu=%d' % (pools['default'] + pools['llm'], limits['cpu']),
-            'OverLimit')
+    if pools['default'] > limits['cpu']:       # cpu 不含 llm 池（跟 HR 部 hr.md §5 同一個算法）
+        bad(where + '.pools.default', 'default 池 %d 顆超過 limits.cpu=%d' % (pools['default'], limits['cpu']), 'OverLimit')
     depts = obj.get('departments')
     if not isinstance(depts, dict) or not depts:
         bad(where + '.departments', '至少一個部門')
@@ -257,8 +256,8 @@ def new(dst, src=EXAMPLE, prefix='', project=None, llm_cpu=None, cpu=None, name=
             lim['cpu'] = cpu
         out['limits'] = lim
         pools = dict(base['pools'])
-        pools['llm'] = min(pools['llm'], lim['llm_cpu'])
-        pools['default'] = min(pools['default'], max(1, lim['cpu'] - pools['llm']))
+        pools['llm'] = max(1, min(pools['llm'], lim['llm_cpu']))
+        pools['default'] = max(1, min(pools['default'], lim['cpu']))
         out['pools'] = pools
     out['staff'] = {_prefixed(prefix, n): s for n, s in raw.get('staff', {}).items()}
     for d in out['departments'].values():
@@ -574,25 +573,16 @@ class Switchboard:
 # ------------------------------------------------------------------ 數人頭、數 cpu ----
 
 def headcount(cdir, cfg):
-    """正式／臨時：company.json staff 寫的為準；沒寫的，spawn 生的算臨時、其他算正式（HR 部 hr.md §7 的預設）。"""
+    """正式／臨時看名冊的 employment（HR 部 hr.md §7：人寫的預設 regular、spawn 生的 temp）；company.json 的 staff 只記兼任角色。"""
     regular, temp, rows = [], [], []
     for dept, tdir in sorted(team_dirs(cdir, cfg).items()):
         try:
             roster = fmt.load_roster(tdir)
         except TeamError:
             continue
-        spawned = set()
-        sp = Layout(tdir).team / 'spawns'
-        for p in fmt.json_files(sp) if sp.is_dir() else []:
-            try:
-                s = fmt.read_json(p)
-            except TeamError:
-                continue
-            if s.get('status') == 'done':
-                spawned.add(s.get('name'))
         for name, m in roster['members'].items():
             staff = cfg['staff'].get(name)
-            emp = staff['employment'] if staff else ('temp' if name in spawned else 'regular')
+            emp = m.get('employment', 'regular')
             (regular if emp == 'regular' else temp).append(name)
             rows.append({'dept': dept, 'name': name, 'template': m['template'], 'model': m['model'],
                          'employment': emp, 'roles': (staff or {}).get('roles', [])})
@@ -600,10 +590,11 @@ def headcount(cdir, cfg):
 
 
 def cpu_from_ls(ls):
-    """aos-kernel ls --json → (cpu 顆數, llm cpu 顆數)：每池的 want 加總；池名 llm 算 llm cpu。"""
+    """aos-kernel ls --json → (cpu 顆數, llm cpu 顆數)：llm 池以外的 want 加總、llm 池的 want。
+    跟 HR 部 count_cpus 同一個算法（cpu 不含 llm 池）。"""
     pools = (ls or {}).get('pools') or {}
-    total = sum(int(p.get('want') or 0) for p in pools.values())
     llm = int((pools.get('llm') or {}).get('want') or 0)
+    total = sum(int(p.get('want') or 0) for name, p in pools.items() if name != 'llm')
     return total, llm
 
 
@@ -616,12 +607,18 @@ def over_caps(counts, limits):
     return [k for k in LIMIT_KEYS if counts[k] > limits[k]]
 
 
-def env_for(cdir, cfg):
+def env_for(cdir, cfg, daemon=False):
+    """給 aos-team 的環境：只帶這家的 kernel，**不帶 AOS_DAEMON_HOME**——HR 部數 cpu 時會把同一個 daemon 上
+    每個 kernel 都算進來（幾家共用 daemon 就會互相擋）；只有開關機、建 kernel 才要 daemon（daemon=True）。
+    HR 家＝這家 kernel 底下的 K/hr（不管外面設了什麼 AOS_HR_HOME）。"""
     cdir = Path(cdir)
     e = dict(os.environ)
     e['PATH'] = '%s:%s' % (CLI, e.get('PATH', os.defpath))
     e['AOS_KERNEL_HOME'] = str(cdir / 'K')
-    e['AOS_DAEMON_HOME'] = str(Path(os.path.abspath(cdir / cfg['daemon'])))
+    e['AOS_HR_HOME'] = str(cdir / 'K' / 'hr')
+    e.pop('AOS_DAEMON_HOME', None)
+    if daemon:
+        e['AOS_DAEMON_HOME'] = str(Path(os.path.abspath(cdir / cfg['daemon'])))
     e['PYTHONDONTWRITEBYTECODE'] = '1'
     e.pop('AOS_TEAM_HOME', None)
     return e
@@ -630,7 +627,7 @@ def env_for(cdir, cfg):
 def kernel_ls(cdir, cfg):
     if not (Path(cdir) / 'K').is_dir():
         return None
-    r = subprocess.run([str(CLI / 'aos-kernel'), 'ls', '--json'], env=env_for(cdir, cfg), capture_output=True,
+    r = subprocess.run([str(CLI / 'aos-kernel'), 'ls', '--json'], env=env_for(cdir, cfg, daemon=True), capture_output=True,
                        text=True, timeout=60, stdin=subprocess.DEVNULL)
     if r.returncode != 0:
         return None
@@ -650,7 +647,7 @@ def status_data(cdir, cfg=None, ls=None, use_kernel=True):
         cpu, llm = cpu_from_ls(ls)
         kernel = ls.get('health') if isinstance(ls.get('health'), str) else 'up'
     else:
-        cpu, llm = cfg['pools']['default'] + cfg['pools']['llm'], cfg['pools']['llm']
+        cpu, llm = cfg['pools']['default'], cfg['pools']['llm']
         kernel = 'down（cpu 照 company.json 的池算）'
     counts = {'regular': len(regular), 'cpu': cpu, 'llm_cpu': llm}
     sb = Switchboard(cdir, cfg)
@@ -727,6 +724,7 @@ def up(cdir, out=print):
     if dup:
         raise CompanyError('NameTaken', '部門之間有同名成員：%s' % '、'.join(dup))
     env = env_for(cdir, cfg)
+    kenv = env_for(cdir, cfg, daemon=True)
     llm = cdir / cfg['llm']
     kcfg = {'pools': {'default': {'count': cfg['pools']['default']},
                       'llm': {'count': cfg['pools']['llm'], 'envs': {'AOS_LLM_CONFIG': str(llm)}}}}
@@ -735,8 +733,9 @@ def up(cdir, out=print):
             p.setdefault('envs', {})['AOS_COST_HOME'] = os.environ['AOS_COST_HOME']
     fmt.write_json(cdir / 'kernel.json', kcfg, indent=1)
     if not (cdir / 'K').exists():
-        _run([CLI / 'aos-kernel', 'init', '--config', cdir / 'kernel.json'], env)
-    _run([CLI / 'aos', 'up'], env, timeout=120)
+        _run([CLI / 'aos-kernel', 'init', '--config', cdir / 'kernel.json'], kenv)
+    _run([CLI / 'aos', 'up'], kenv, timeout=120)
+    write_hr_policy(cdir, cfg)
     out('kernel 開了：%s（default %d、llm %d 顆）' % (cdir / 'K', cfg['pools']['default'], cfg['pools']['llm']))
     for dept, tdir in sorted(team_dirs(cdir, cfg).items()):
         _run([CLI / 'aos-team', 'init', '--target', tdir], env)
@@ -750,6 +749,18 @@ def up(cdir, out=print):
         out('%s 部開工：%s' % (dept, '、'.join(roster['members'])))
     out(register_relay(cdir, cfg, env))
     return 0
+
+
+def write_hr_policy(cdir, cfg):
+    """這家的名額寫進這家的 HR 政策（K/hr/policy.json）：company.json 的 limits 是來源，HR 的擋點（init／start／spawn）
+    與 status 用同一組數。policy 其他欄位（margin、expand）原樣留著。"""
+    p = Path(cdir) / 'K' / 'hr' / 'policy.json'
+    raw = fmt.read_json(p) if p.is_file() else {'_metainfo': {'_type': 'aos_hr_policy', '_version': 1}}
+    raw.update({'stage': 'startup' if cfg['limits'] == STARTUP else 'grown', 'regular_max': cfg['limits']['regular'],
+                'cpu_max': cfg['limits']['cpu'], 'llm_cpu_max': cfg['limits']['llm_cpu']})
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fmt.write_json(p, raw, indent=2)
+    return p
 
 
 def _persona(cdir, cfg, dept, tdir, name, env):
@@ -806,7 +817,7 @@ def down(cdir, out=print):
         if (Path(tdir) / 'members').is_dir():
             _run([CLI / 'aos-team', 'stop', '--target', tdir], env, check=False)
             out('%s 部收工' % dept)
-    _run([CLI / 'aos', 'down'], env, check=False, timeout=180)
+    _run([CLI / 'aos', 'down'], env_for(cdir, cfg, daemon=True), check=False, timeout=180)
     out('kernel 關了')
     return 0
 

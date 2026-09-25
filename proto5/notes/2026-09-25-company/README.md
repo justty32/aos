@@ -21,12 +21,12 @@
 1. **跨團隊不開新通道**：現有規格一支團隊只認自己的 outbox，但「寄給 human」（落在 `team/human/`）與「human 寄出」（`outbox/human/`，能寄給任何成員、能開單）兩個口本來就有。總機只是在兩個口之間搬，所以郵差、牆、驗收一行都不用改；從對方部門看，總機交辦的事就是「公司（human）」交辦的。
 2. **一家一個 kernel**：kernel 的池寫死叫 `default`／`llm`，一個 kernel 裡沒辦法按公司分池；一家一個 kernel（共用一個 daemon），池的大小就是這家的 cpu／llm cpu 上限，是**硬上限**（多的工作排隊）。成員名照樣加公司前綴，萬一共用 kernel 也不撞名。
 3. **一律用內建模板＋公司人格**：門房落穿找的是 `template: lead` 的成員；arknights 樣板用自訂模板資料夾 `./templates/lead`，**落穿時找不到領隊**（`NoLead`）。所以公司的經理都用內建 `lead`，專案規矩用 `up` 時 `aos-agent persona append` 接上去（每個家只接一次）。
-4. **正式／臨時記在 `company.json` 的 `staff`**：HR 部的 `employment` 名冊鍵還沒併進 main；沒列的成員照 HR 的預設（spawn 生的＝臨時，其他＝正式）。
+4. **正式／臨時看名冊的 `employment`（HR 部）**，`company.json` 的 `staff` 只記兼任角色；**上限只有一個來源** `company.json` 的 `limits`，`up` 寫進這家的 HR 政策 `K/hr/policy.json`，HR 的擋點與 `status` 同一組數；**cpu 不含 llm 池**（照 HR 的算法）。給 `aos-team` 的環境不帶 `AOS_DAEMON_HOME`，免得幾家共用 daemon 時 HR 把別家的 kernel 也數進來互相擋。
 5. **總裁的 SOP**：補人物先派「只寫詞條」（不動索引、計數），製造 DONE 才派品管，品管 DONE 才回報董事；任一步 FAILED 直接報董事、不自己重派。
 6. **開單類的單，負責人自己說的 DONE 不轉**：要等郵差驗收＋審查完寄的那封，總裁才不會在還沒驗過時就叫品管。
 7. **commons 一家一份**（`<公司>/teams/commons/`，各部門團隊的上一層＝圖書館部的預設位置）：競爭的公司不共用經驗。
 
-## 2. 新創編制（正式 7／10、cpu 17／20、llm cpu 5／5）
+## 2. 新創編制（正式 7／10、cpu 12／20、llm cpu 5／5）
 
 | 部門 | 團隊 | 正式員工（模型） | 兼任／機械 |
 |---|---|---|---|
@@ -54,6 +54,7 @@
 
 - 總機延遲：每跳 ≤ 5 秒（輪詢間隔）；hops 報告裡時間幾乎都在「等模型」。
 - 第 2 次交件事後用品管的機械工具複查：證據 11／11 列原文對得上，機械 6／7（**詞條有兩處行尾空白，驗收與檢驗員都沒抓**）→ 市場層品質分（無評審）＝92.9。
+- HR 部併進來後又開關機一次（沒下單、沒叫模型）：五個部門（含剛開張的圖書館）照常 init／start，HR 沒擋；`company.py status` 與 `aos-team hr cap` 都印「正式 7／10、cpu 12／20、llm cpu 5／5」；這家的 commons 建在 `teams/commons/`。
 - **真跑抓到的 bug**（已修、已加測試）：郵差放進 `team/human/` 的信多一格 `header`，拿 `validate_letter` 驗會整封被當壞信略過——總機第一輪一封都沒處理。修法：驗之前拿掉 `header`。第 1 次跑的第一封是我手動補跑一輪總機才走下去的（o-0001 比信晚 1 分鐘開）。
 
 ## 4. 給董事的問題（一題一題）
@@ -70,12 +71,13 @@
 10. **董事的「補人物 X」預設要不要動索引與計數？** 現在總裁預設派「只寫詞條」（快、不和別的單搶索引）；要動索引得明說。
 11. **跨部門要不要開「直接指定負責人與驗收條件」的開單路？** 現在只能走對方門房的規則（命中才開單，沒命中寫信給窗口），想多一種單就在對方門房加規則。
 12. **倒閉的公司名額回總池後，經理人要自動撥給第一名，還是一律手動？** 現在手動（`market.py slots`）。
+13. **「cpu ≤ 20」算不算 llm 的 5 顆？** HR 部的擋點不算（default 池 20＋llm 池 5，最多 25 顆），財務部的 cost 表把兩池加起來印（「開著 17 個、其中 llm 5」）。公司樣板照 HR 的算法（它是真正擋的那一個），`status` 印 `cpu 12/20、llm cpu 5/5`。請拍一個，兩邊統一。
 
 ## 5. 留下一輪
 
 - **五家真的同跑**：這次只真跑一家；市場層全用假帳本測。要跑就照 [examples/company/README.md〈開幾家〉](../../examples/company/README.md#開幾家市場層)；每家要自己的專案副本。
 - 驗收加行尾空白檢查（製造部的單、品管的驗貨單都漏了）；品管驗貨單改跑整套 `mech_check`。
-- HR 部併進來後：`staff.employment` 改讀名冊的 `employment`；`status` 接 `aos-team hr cap`；擴編規則（積壓 ≥3、品管分 <80）接到總裁的 SOP。
+- HR 部的擴編規則（積壓 ≥3、品管分 <80）接到總裁的 SOP；`status` 順便印 `aos-team hr cap` 的擴編理由；薪資表（worker 最低通過 deepseek-chat、lead 換 deepseek 不通過）拿來定各部門的模型——現在寫手還是 gpt-5.5，可以試降。
 - `market.py slots` 只改 `company.json`，kernel 開著時不會自己 `aos-kernel cpu add`。
 - `quality_from_eval` 只認 arknights 評分器的格式。
 - 帳本價格表沒有 gpt-5.5、deepseek-chat 的價（只記 token）：財務部的 `prices.json` 要補，美元配額才有意義。
