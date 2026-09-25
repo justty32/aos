@@ -79,6 +79,9 @@ def _access(base, tpl, folder, member):
             _check_notes_dir(member)
             mounts['notes'] = _rel(_notes_dir(member), base)
             mounts['mem'] = dict(MEM_MOUNT)
+        if member.get('commons'):                         # 09-25：跨團隊公共資料夾，一律唯讀（spec/team/commons.md）
+            _make_commons(member['commons'])
+            mounts['commons'] = {'$opt': 'ro', '$val': _rel(member['commons'], base)}
     for where, extra in (('模板', tpl.get('mounts', {})), ('名冊', (member or {}).get('mounts', {}))):
         if 'mem' in extra:
             # 保留名的主檢查在 aos_team_format.RESERVED_MOUNTS；這裡再擋一次，免得蓋掉內建的唯讀 mem
@@ -165,6 +168,59 @@ def _ensure_notes(base, tpl, member, lines):
         lines.extend(added)
 
 
+def _ensure_commons(base, member, lines):
+    """已生的家：名冊開了 commons 而 access.json 沒掛＝補唯讀掛；關了而還掛著＝拿掉（只動 commons 這一格）。"""
+    if member is None or 'commons' not in member:
+        return
+    path = base / 'access.json'
+    if not path.is_file():
+        return
+    import aos_agent_access
+    try:
+        doc = aos_home.read_json(path)
+    except aos_home.HomeError:
+        return
+    mounts = doc.get('mounts') if isinstance(doc, dict) else None
+    if not isinstance(mounts, dict):
+        return
+    if member['commons']:
+        _make_commons(member['commons'])
+    want = {'$opt': 'ro', '$val': _rel(member['commons'], base)} if member['commons'] else None
+    if want is not None and mounts.get('commons') != want:
+        mounts['commons'] = want
+        lines.append('access.json 掛 commons（唯讀 → %s）' % member['commons'])
+    elif want is None and 'commons' in mounts:
+        del mounts['commons']
+        lines.append('access.json 拿掉 commons（名冊關了）')
+    else:
+        return
+    aos_agent_access.write_access(path, doc)
+
+
+def _make_commons(path):
+    """掛之前資料夾要在（aos-team init 已建；直接叫 init_from_template 的路也補）。"""
+    import aos_team_commons
+    aos_team_commons.Commons(path).ensure()
+
+
+COMMONS_TOOLS = ('commons_search', 'commons_submit')
+
+
+def _commons_tools(entries, member):
+    """名冊開了 commons：task 包的 only 補 commons_search、commons_submit；關了就拿掉（同 _spawn_tool，只影響還沒裝的包）。"""
+    if member is None or 'commons' not in member:
+        return entries
+    out = []
+    for e in entries:
+        if e.get('pack') == 'task' and isinstance(e.get('only'), list):
+            only = [x for x in e['only'] if x not in COMMONS_TOOLS]
+            if member['commons']:
+                only += list(COMMONS_TOOLS)
+            e = dict(e, only=only)
+        out.append(e)
+    return out
+
+
 def _system_text(folder, tpl, name, member):
     text = (folder / tpl['system']).read_text(encoding='utf-8')
     values = {'name': name,
@@ -180,7 +236,8 @@ def team_config(member):
     return {'member': member['name'], 'mail_to': list(member['mail_to']), 'members': list(member['members']),
             'outbox': '/work/outbox', 'board': '/work/board', 'tz': member.get('tz'),
             'spawn_templates': list(member.get('spawn_templates', [])),   # 第三波 W3-1：spawn_member 擋手誤用
-            'spawn_approve': bool(member.get('spawn_approve', False))}
+            'spawn_approve': bool(member.get('spawn_approve', False)),
+            'commons': '/work/commons' if member.get('commons') else None}   # 09-25 commons
 
 
 def _write_team_config(base, pack, member):
@@ -266,7 +323,8 @@ def init_from_template(agent_dir, template, *, name=None, member=None, force=Fal
     name = name or (member or {}).get('name') or base.name
     if tpl.get('team') and member is None:
         raise AgentError('Usage', '模板 %s 是團隊用的（要名冊），請用 aos-team init' % template)
-    entries = _spawn_tool(list(tpl.get('tools', [])), member) + list((member or {}).get('tools', []))
+    entries = _commons_tools(_spawn_tool(list(tpl.get('tools', [])), member), member) + \
+        list((member or {}).get('tools', []))
     marker = base / MARKER
     lines = []
     try:
@@ -303,6 +361,7 @@ def init_from_template(agent_dir, template, *, name=None, member=None, force=Fal
             'tick': {'pool': 'default', 'interval_ms': tpl.get('tick', {}).get('interval_ms', 1000)}})
         lines.append('生了 %s（模板 %s，模型代號 %s）' % (base, template, llm['model']))
     _ensure_notes(base, tpl, member, lines)
+    _ensure_commons(base, member, lines)
     _install_tools(base, entries, member, lines)
     import aos_agent_access
     aos_agent_access.load(str(base))                      # access.json 要解得開、不蓋到信任資料

@@ -131,7 +131,7 @@ class NotesMountTests(unittest.TestCase):
         info = read_json(self.lay.member('worker-1') / 'info.json')
         only = [e['$opt']['only'] for e in info['tools'] if isinstance(e, dict) and 'task.json' in e['$val']]
         self.assertEqual(only, [['board', 'ask_human', 'compact_me', 'lock', 'access_request', 'persona_propose',
-                                 'tool_draft']])
+                                 'tool_draft', 'commons_search', 'commons_submit']])   # 09-25 commons 預設開
 
     def test_rerun_on_old_home_adds_notes_mount_only(self):
         """已生的舊家（notes 前生的）：重跑 init 補 notes 那一格＋資料夾，其他掛載不動。"""

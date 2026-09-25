@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""commons_submit：把一條經驗（或名冊樣板、工作流、工具包）投到跨團隊公共資料夾（spec/team/commons.md）。
+
+你寫不到 /work/commons（唯讀）；這支只在自己 outbox 放一份 kind: contribute 申請。
+附件（type 不是 lesson 才能附）要先放在 /work/outbox/ 底下（例：/work/outbox/commons-staging/x/run.sh），files 寫相對 /work/outbox 的路徑。
+你們團隊的郵差把附件抄給圖書館；圖書館員（機械檢查，像既有條目才問模型）入庫或退回，結果是一封新信。
+這裡只擋手誤，真正的檢查在郵差與圖書館員。
+"""
+import os
+import re
+import sys
+
+from _team import arg, fail, only_keys, run, send
+
+TYPES = ('lesson', 'team', 'workflow', 'tool')
+
+
+def main(args, cfg):
+    only_keys(args, ('type', 'title', 'tags', 'fits', 'body', 'files', 'task', 'slug'))
+    if not cfg.get('commons'):
+        fail('NoCommons', 'commons is turned off for you (team.json commons: false)')
+    t = arg(args, 'type', str, required=True)
+    if t not in TYPES:
+        fail('BadArguments', 'type must be one of %s' % ', '.join(TYPES))
+    body = {'type': t}
+    for key, limit in (('title', 120), ('fits', 300), ('body', 16000)):
+        v = arg(args, key, str, required=True)
+        if len(v) > limit:
+            fail('BadArguments', '%s is too long (max %d chars)' % (key, limit))
+        body[key] = v
+    tags = arg(args, 'tags', list, required=True)
+    if not tags or len(tags) > 8 or not all(isinstance(x, str) and re.match(r'[^\s,/\\]{1,24}\Z', x) for x in tags):
+        fail('BadArguments', 'tags: 1..8 short words without spaces')
+    body['tags'] = tags
+    files = arg(args, 'files', list, default=[])
+    if files and t == 'lesson':
+        fail('BadArguments', 'a lesson is one file: put the text in body, no files')
+    outbox = cfg.get('outbox') or '/work/outbox'
+    for f in files:
+        if not isinstance(f, str) or f.startswith(('/', '~')) or '..' in f.split('/'):
+            fail('BadArguments', 'files must be paths relative to /work/outbox (no /, ~, ..): %r' % (f,))
+        if not os.path.isfile(os.path.join(outbox, f)):
+            fail('BadArguments', 'no file %s under /work/outbox' % f)
+    if files:
+        body['files'] = files
+    for key in ('task', 'slug'):
+        v = arg(args, key, str)
+        if v is not None:
+            body[key] = v
+    rid = send(cfg, 'contribute', body)
+    return 'queued contribution %s ("%s"). The librarian replies by mail. End this turn.' % (rid, body['title'])
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

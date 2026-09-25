@@ -33,8 +33,11 @@ def _parser(name, text):
 
 
 def member_context(lay, roster, name):
+    import aos_team_commons
     m = roster['members'][name]
-    return {'name': name, 'team_dir': str(lay.root), 'project': str(project_dir(lay.root, roster)),
+    on = aos_team_commons.member_on(roster, name)
+    return {'commons': str(aos_team_commons.commons_dir(lay.root, roster)) if on else None,
+            'name': name, 'team_dir': str(lay.root), 'project': str(project_dir(lay.root, roster)),
             'mail_to': m['mail_to'], 'members': list(roster['members']), 'tz': roster.get('tz'),
             'model': m['model'], 'mounts': m['mounts'], 'tools': m['tools'],
             'spawn_templates': (spawn_policy(roster, name) or {}).get('templates', []),
@@ -84,6 +87,13 @@ def cmd_init(team_dir, argv):
         if '/' in m['template'] and _inside(template_dir(m['template']), project):
             raise TeamError('BadTemplate', '%s 的模板 %s 在專案裡面（工人改得到它的 may 與人格）；搬到專案外'
                             % (name, m['template']))
+    import aos_team_commons
+    if any(aos_team_commons.member_on(roster, n) for n in roster['members']) or aos_team_commons.librarians(roster):
+        cdir = aos_team_commons.commons_dir(lay.root, roster)
+        if _inside(cdir, project) or _inside(cdir, lay.root):
+            raise TeamError('BadCommons', 'commons %s 不能在專案 %s 或團隊資料夾裡（工人改得到專案；團隊資料夾是控制資料）；'
+                            '名冊 commons.dir 改到外面' % (cdir, project))
+        aos_team_commons.Commons(cdir).ensure()
     for d in lay.skeleton(roster['members']):
         d.mkdir(parents=True, exist_ok=True)
     failed = 0

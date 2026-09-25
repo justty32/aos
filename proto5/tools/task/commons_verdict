@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""commons_verdict：圖書館員判一份投稿（spec/team/commons.md）。只有模板 may 有 commons_write 的成員裝。
+
+只在自己 outbox 放一份 kind: commons_write 申請 {"submission", "verdict": accept|reject, "reason"}；
+入庫（寫檔、更新索引）是郵差做，你不寫 commons。只有郵差寄信說「請判」的投稿才收。
+"""
+import re
+import sys
+
+from _team import arg, fail, only_keys, run, send
+
+
+def main(args, cfg):
+    only_keys(args, ('submission', 'verdict', 'reason'))
+    sub = arg(args, 'submission', str, required=True)
+    if not re.match(r'c-[A-Za-z0-9_.~-]+\Z', sub):
+        fail('BadArguments', 'submission must be the id from the mail, like c-team-a--123-4-worker-1')
+    verdict = arg(args, 'verdict', str, required=True)
+    if verdict not in ('accept', 'reject'):
+        fail('BadArguments', 'verdict must be accept or reject')
+    reason = arg(args, 'reason', str, required=True)
+    if len(reason) > 500:
+        fail('BadArguments', 'reason is too long (max 500 chars)')
+    rid = send(cfg, 'commons_write', {'submission': sub, 'verdict': verdict, 'reason': reason})
+    return 'queued verdict %s: %s %s. End this turn.' % (rid, verdict, sub)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

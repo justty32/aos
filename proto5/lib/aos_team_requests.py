@@ -23,6 +23,8 @@ KINDS = {
     'lock': 'aos_team_lock:on_lock',             # 第二波 C 隊：T-lock（spec/team/lock.md）
     'spawn': 'aos_team_spawn:on_spawn',          # 第三波 W3-1：T-spawn（spec/team/spawn.md）
     'tool_draft': 'aos_team_toolsmith:on_tool_draft',   # 第三波 W3-1：T-toolsmith（spec/team/toolsmith.md）
+    'contribute': 'aos_team_commons:on_contribute',     # 09-25 commons：投稿（spec/team/commons.md）
+    'commons_write': 'aos_team_commons:on_commons_write',   # 09-25 commons：圖書館員的判決
 }
 
 

@@ -133,6 +133,8 @@ class Post:
             self.resume_open()
             self.collect_jobs()
             self.process_outboxes()
+            import aos_team_commons            # 09-25 commons：圖書館員端審投稿、投稿端收結果（commons.md）
+            aos_team_commons.post_round(self)
             self.watch()
             self.clerk()
         return 0
