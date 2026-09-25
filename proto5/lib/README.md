@@ -47,7 +47,9 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_llm_call.py`](aos_llm_call.py) | `aos-llm call`：讀驗 llm.json、組 body、HTTP、正規化並驗 message |
 | [`aos_llm_ask.py`](aos_llm_ask.py) | （第三波 W3-2）不需要 agent 家的「多問一次模型」：`ask`／`ask_json`／`parse_json`，給工具的模型選項共用；temperature 0、不重試 |
 | [`aos_agent.py`](aos_agent.py) | agent 的 tick 三格流程、批次派工與 kernel 排程登記；`main` 轉給 aos_agent_cli |
-| [`aos_agent_cli.py`](aos_agent_cli.py) | `aos-agent` 各子命令的 argparse 與分派 |
+| [`aos_agent_cli.py`](aos_agent_cli.py) | `aos-agent` 各子命令的 argparse 與分派。這支留 `main`（先驗用法、再照子命令分派） |
+| [`aos_agent_cli_parser.py`](aos_agent_cli_parser.py) | `aos-agent` 的 argparse：子命令一句話、秒數上限、tools／access／listen 的用法說明與選項表、建 parser |
+| [`aos_agent_cli_args.py`](aos_agent_cli_args.py) | `aos-agent` 解析後的參數再驗（用法錯退 2）：`--wait` 秒數、listen 看法、tools 各動作參數與分派、memory 類參數 |
 | [`aos_agent_home.py`](aos_agent_home.py) | agent 家的內容讀驗（人格／記憶／工具、message）與 `aos-llm call` 的六格 loader |
 | [`aos_agent_info.py`](aos_agent_info.py) | agent 的 info 設定、state 進度與恢復紀錄讀驗，原子寫回 state |
 | [`aos_agent_batch.py`](aos_agent_batch.py) | 批次建立、inst 產生（含 aos-jail 包裝）、kernel 交件、收回音、結清 |
