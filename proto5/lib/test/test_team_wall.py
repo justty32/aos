@@ -67,6 +67,33 @@ class CmdOkFormatTests(unittest.TestCase):
         self.assertIsNone(fmt.cmd_allowed(r, {'run': ['make', 'test', '-j9']}))              # 整串要一樣
         self.assertIsNone(fmt.cmd_allowed(r, {'run': ['make']}))
 
+    def test_cmd_allowed_pattern(self):
+        """市場真跑 §7 第 4 條：pattern 白名單的 {名字} 換成一格路徑段；同名各格要一樣；其他字不能差。"""
+        r = self.roster([{'run': ['python3', 'scripts/c.py', 'lore/characters/{name}.md',
+                                  'lore/evidence/characters/{name}.md'], 'timeout_s': 60, 'pattern': True}])
+        self.assertTrue(r['cmd_ok'][0]['pattern'])
+
+        def ok(*args, **kw):
+            return fmt.cmd_allowed(r, dict({'run': ['python3', 'scripts/c.py'] + list(args)}, **kw)) is not None
+        self.assertTrue(ok('lore/characters/老鎮長.md', 'lore/evidence/characters/老鎮長.md'))
+        self.assertTrue(ok('lore/characters/老成的杜林人（雙月密錄）.md', 'lore/evidence/characters/老成的杜林人（雙月密錄）.md'))
+        self.assertFalse(ok('lore/characters/老鎮長.md', 'lore/evidence/characters/老隊長.md'))   # 同名要同值
+        self.assertFalse(ok('lore/characters/../x.md', 'lore/evidence/characters/../x.md'))       # 不能跨資料夾
+        self.assertFalse(ok('lore/characters/-x.md', 'lore/evidence/characters/-x.md'))
+        self.assertFalse(ok('lore/characters/a.md', 'lore/evidence/characters/a.md', 'extra'))
+        self.assertFalse(ok('lore/characters/a.txt', 'lore/evidence/characters/a.txt'))
+        self.assertFalse(ok('lore/characters/a.md', 'lore/evidence/characters/a.md', timeout_s=61))
+        self.assertFalse(fmt.cmd_allowed(r, {'run': ['sh', 'scripts/c.py', 'lore/characters/a.md',
+                                                     'lore/evidence/characters/a.md']}))
+        # 沒寫 pattern：{name} 就是字面
+        r2 = self.roster([{'run': ['make', '{name}']}])
+        self.assertIsNone(fmt.cmd_allowed(r2, {'run': ['make', 'x']}))
+        self.assertIsNotNone(fmt.cmd_allowed(r2, {'run': ['make', '{name}']}))
+        for bad in ([{'run': ['make', 'x'], 'pattern': True}], [{'run': ['{a}', 'x'], 'pattern': True}],
+                    [{'run': ['make', '{a}'], 'pattern': 'yes'}]):
+            with self.subTest(bad=bad), self.assertRaises(fmt.TeamError):
+                self.roster(bad)
+
 
 # -------------------------------------------------------------- 郵差再驗 ----
 

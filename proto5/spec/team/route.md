@@ -36,6 +36,8 @@
 
 `handoff` 規則可以多一格 `if_missing`（真跑 09-25 加）：`{"path": "aos-drafts/{name}/", "goal"?: "…", "facts"?: "…"}`。`path` 是專案裡的相對路徑（可用 `{群組}`；不准 `/`、`~` 開頭或 `..`）；**不在或是空資料夾**時，單子的 `goal`／`facts` 換成這裡寫的（沒寫 `facts`＝「無草稿、從原文起（<path> 不在或是空的）」）。門房（`aos-team ask`）與公司總機都照這條。用途：「補人物 X」寫死「讀 aos-drafts/X/ 的草稿」，草稿不在時寫手照樣從原文寫、總裁卻在結案信說「依草稿寫成」。
 
+`handoff` 的 `done_when` 裡有 `cmd_ok`、又用了 `{群組}`（例 `lore/characters/{name}.md`）時，`team.json` 白名單那條要寫 `"pattern": true`、同一個位置寫 `{name}`（[wall.md §4](wall.md)）；寫死人名的白名單只對那幾個人能開單，換個人郵差就 `NotAllowed` 退件（09-25 市場真跑 §7 第 4 條）。
+
 ## 例句：全過才准存
 
 每條規則要有 `tests.hit`（至少一句）與 `tests.miss`（至少一句）：

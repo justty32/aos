@@ -27,7 +27,7 @@
 | `members` | 物件 | 是 | 名字 → 成員（下表）；至少一個 |
 | `limits.stale_minutes` | 整數 | 否（10） | 書記看停滯的門檻（第 2 隊用） |
 | `limits.max_members` | 整數 | 否（6） | 成員數上限；超過＝整份不收 |
-| `cmd_ok` | 陣列 | 否（`[]`） | 驗收員能跑的專案指令白名單（第二波 B 隊，[wall.md §4](wall.md)）：`[{"run": ["python3", "-m", "unittest"], "timeout_s": 300}]`；`run[0]` 不含 `/`；`timeout_s` 1～3600，省略＝300；可省的 `mounts`（名字 → 絕對路徑，唯讀多掛，09-25 加）。空＝這隊不跑指令 |
+| `cmd_ok` | 陣列 | 否（`[]`） | 驗收員能跑的專案指令白名單（第二波 B 隊，[wall.md §4](wall.md)）：`[{"run": ["python3", "-m", "unittest"], "timeout_s": 300}]`；`run[0]` 不含 `/`；`timeout_s` 1～3600，省略＝300；可省的 `mounts`（名字 → 絕對路徑，唯讀多掛，09-25 加）、`pattern`（true＝`run` 裡的 `{名字}` 認一格路徑段，[wall.md §4](wall.md)，09-25 市場真跑後加）。空＝這隊不跑指令 |
 | `spawn.templates` | 陣列 | 否（內建全部） | 成員能申請生哪幾種新成員（內建模板名，不含 `/`）；**沒寫＝內建模板都可以，寫 `[]`＝這隊不准生**（09-25 翻案，[spawn.md](spawn.md)） |
 | `spawn.approve` | 布林 | 否（`false`） | 生新成員要不要人批；`false`＝郵差檢查過就直接生 |
 | `post.interval_s` | 整數 | 否（5） | 郵差多久巡一次信箱（秒，1～3600；第 2 隊 2026-09-24 追加）；改了要 `aos-team stop`、`start` |
