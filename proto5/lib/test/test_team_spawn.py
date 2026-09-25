@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 import aos_team
 import aos_team_ask as ask
@@ -27,7 +28,7 @@ ROSTER = {'_metainfo': {'_type': 'aos_team', '_version': 1}, 'project': '../p', 
           'members': {'lead': {'template': 'lead', 'mail_to': ['worker-1', 'human']},
                       'worker-1': {'template': 'worker', 'mail_to': ['lead', 'human']}},
           'limits': {'max_members': 4},
-          'spawn': {'templates': ['worker', 'importer', 'lead']}}
+          'spawn': {'templates': ['worker', 'importer', 'lead'], 'approve': True}}   # 舊測試＝要人批那條路
 
 
 def req(sender='lead', rid='r1', **over):
@@ -107,6 +108,9 @@ class OnSpawnTests(Base):
     # ------------------------------------------------ 逃逸：每條一個測試 ----
 
     def test_escape_mail_to_bigger_than_requester(self):
+        r = json.loads(json.dumps(ROSTER))
+        r['members']['worker-1']['spawn'] = True        # 人在名冊上讓這個工人也能生（成員層開）
+        (self.team / 'team.json').write_text(json.dumps(r), encoding='utf-8')
         msg = self.err('MailToExceeds', spawn.on_spawn, self.lay, self.roster,
                        req('worker-1', mail_to=['lead', 'human', 'worker-3']))
         self.assertIn('worker-3', msg)
@@ -165,19 +169,27 @@ class OnSpawnTests(Base):
         spawn.on_spawn(self.lay, self.roster, req(rid='r1'))
         self.err('NameTaken', spawn.on_spawn, self.lay, self.roster, req(rid='r2'))   # 同名在等人批
 
-    def test_no_spawn_config_means_nobody_can_spawn(self):
+    def test_empty_templates_means_nobody_can_spawn(self):
         r = json.loads(json.dumps(ROSTER))
-        del r['spawn']
+        r['spawn']['templates'] = []                   # 09-25 翻案後：要關就明寫 []
         (self.team / 'team.json').write_text(json.dumps(r), encoding='utf-8')
         msg = self.err('BadTemplate', spawn.on_spawn, self.lay, self.roster, req())
-        self.assertIn('不准成員生新成員', msg)
+        self.assertIn('是空的', msg)
 
     def test_roster_spawn_key_validated(self):
-        for bad in ({'templates': ['a/b']}, {'templates': 'worker'}, {'who': []}):
+        for bad in ({'templates': ['a/b']}, {'templates': 'worker'}, {'who': []}, {'approve': 'yes'}):
             r = dict(ROSTER, spawn=bad)
             with self.subTest(spawn=bad):
                 self.err('FormatInvalid', fmt.validate_roster, r)
-        self.assertEqual(fmt.validate_roster(dict(ROSTER))['spawn'], {'templates': ['worker', 'importer', 'lead']})
+        self.assertEqual(fmt.validate_roster(dict(ROSTER))['spawn'],
+                         {'templates': ['worker', 'importer', 'lead'], 'approve': True})
+        self.assertEqual(fmt.validate_roster({k: v for k, v in ROSTER.items() if k != 'spawn'})['spawn'],
+                         {'templates': None, 'approve': False})
+        for bad in ('yes', {'allow': 1}, {'templates': ['../x']}, {'who': True}):
+            r = json.loads(json.dumps(ROSTER))
+            r['members']['lead']['spawn'] = bad
+            with self.subTest(member_spawn=bad):
+                self.err('FormatInvalid', fmt.validate_roster, r)
 
 
 class ApproveTests(Base):
@@ -300,6 +312,168 @@ class ToolAndPostTests(Base):
         (box / (rid + '.json')).write_text(json.dumps(req('worker-1', rid, name='worker-9')), encoding='utf-8')
         self.post_once()
         self.assertTrue((box / 'rejected' / (rid + '.json')).exists())
+        self.assertEqual(self.open_questions(), [])
+
+
+ROSTER_DEFAULT = {k: v for k, v in ROSTER.items() if k != 'spawn'}   # 名冊沒寫 spawn＝09-25 翻案後的預設
+
+
+def with_member(roster, name, spawn_value):
+    r = json.loads(json.dumps(roster))
+    r['members'][name]['spawn'] = spawn_value
+    return r
+
+
+def task_tools(lay, name):
+    info = fmt.read_json(lay.member(name) / 'info.json')
+    return next(e['$opt']['only'] for e in info['tools'] if isinstance(e, dict) and 'board' in e['$opt'].get('only', []))
+
+
+class DefaultOnTests(Base):
+    """09-25 使用者翻案（WAIT_USER 39）：預設開、預設不用人批；每個成員能各自設（成員層蓋過團隊層）。"""
+    roster_obj = ROSTER_DEFAULT
+    real_homes = True
+
+    def setUp(self):
+        super().setUp()
+        patch = unittest.mock.patch.dict(os.environ, {}, clear=False)
+        patch.start()
+        self.addCleanup(patch.stop)
+        os.environ.pop('AOS_KERNEL_HOME', None)        # 郵差裡生：沒 kernel＝只生家、不登記
+
+    def set_roster(self, r):
+        (self.team / 'team.json').write_text(json.dumps(r, ensure_ascii=False), encoding='utf-8')
+
+    def test_default_on_no_approval_builds_member_at_once(self):
+        eff = requests.handle(self.lay, self.roster, req())
+        self.assertEqual([(e['to'], e['status']) for e in eff], [('lead', 'DONE'), ('human', 'DONE')])
+        self.assertIn('已經生好', eff[0]['text'])
+        self.assertEqual(self.open_questions(), [])                 # 不開 [成員] 題
+        r = self.roster
+        self.assertEqual(r['members']['worker-2']['mail_to'], ['lead', 'human'])
+        self.assertIn('worker-2', r['members']['lead']['mail_to'])
+        self.assertIsNone(r['members']['worker-2']['spawn'])        # 工人模板不能生：不寫
+        self.assertTrue((self.lay.member('worker-2') / 'info.json').is_file())
+        cfg = json.loads((self.lay.member('lead') / 'tools' / 'task' / 'config.json').read_text(encoding='utf-8'))
+        self.assertIn('worker-2', cfg['mail_to'])
+        self.assertIn('importer', cfg['spawn_templates'])           # templates 沒寫＝內建模板都可以
+        self.assertFalse(cfg['spawn_approve'])
+        rec = spawn.records(self.lay)[0]
+        self.assertIsNone(rec['q'])
+        rc, out = quiet(spawn.cmd_spawn, str(self.team), ['ls'])
+        self.assertIn('已生（不用人批）', out)
+
+    def test_default_on_idempotent(self):
+        a = spawn.on_spawn(self.lay, self.roster, req())
+        b = spawn.on_spawn(self.lay, self.roster, req())
+        self.assertEqual(a, b)
+        self.assertEqual(len(spawn.records(self.lay)), 1)
+
+    def test_crash_half_way_finishes_on_retry(self):
+        # 郵差記了紀錄（effects: null）就崩：同一份申請再來＝補生、回信，不再檢查名字撞到自己
+        spawn.on_spawn(self.lay, self.roster, req())
+        p = spawn.folder(self.lay) / 's-0001.json'
+        rec = fmt.read_json(p)
+        rec['effects'] = None
+        fmt.write_json(p, rec)
+        eff = spawn.on_spawn(self.lay, self.roster, req())
+        self.assertEqual(eff[0]['status'], 'DONE')
+
+    def test_member_off(self):
+        self.set_roster(with_member(ROSTER_DEFAULT, 'lead', False))
+        self.err('NotAllowed', requests.handle, self.lay, self.roster, req())
+        self.assertEqual(spawn.records(self.lay), [])
+        self.assertNotIn('spawn', fmt.member_may(self.roster, 'lead'))
+        # 重生家：工具裡看不到 spawn_member、白名單快照是空的
+        rc, out = quiet(aos_team.cmd_rm, str(self.team), ['lead'])
+        self.set_roster(with_member(ROSTER_DEFAULT, 'lead', False))
+        rc, out = quiet(aos_team.cmd_init, str(self.team), [])
+        self.assertEqual(rc, 0, out)
+        self.assertNotIn('spawn_member', task_tools(self.lay, 'lead'))
+        cfg = json.loads((self.lay.member('lead') / 'tools' / 'task' / 'config.json').read_text(encoding='utf-8'))
+        self.assertEqual(cfg['spawn_templates'], [])
+
+    def test_team_off_with_empty_list(self):
+        self.set_roster(dict(ROSTER_DEFAULT, spawn={'templates': []}))
+        self.err('BadTemplate', requests.handle, self.lay, self.roster, req())
+
+    def test_member_needs_approval(self):
+        self.set_roster(with_member(ROSTER_DEFAULT, 'lead', {'approve': True}))
+        eff = requests.handle(self.lay, self.roster, req())
+        self.assertEqual(eff, [])
+        qs = self.open_questions()
+        self.assertEqual([q['tag'] for q in qs], ['member'])
+        self.assertNotIn('worker-2', self.roster['members'])
+        rc, out = quiet(spawn.approve, str(self.team), qs[0]['id'], env=self.env)
+        self.assertEqual(rc, 0, out)
+        self.assertIn('worker-2', self.roster['members'])
+
+    def test_team_needs_approval_member_overrides_to_no(self):
+        r = dict(ROSTER_DEFAULT, spawn={'approve': True})
+        self.set_roster(with_member(r, 'lead', {'approve': False}))
+        eff = requests.handle(self.lay, self.roster, req())
+        self.assertEqual(eff[0]['status'], 'DONE')
+        self.assertEqual(self.open_questions(), [])
+
+    def test_member_turns_on_for_worker(self):
+        self.set_roster(with_member(ROSTER_DEFAULT, 'worker-1', {'allow': True, 'templates': ['worker']}))
+        quiet(aos_team.cmd_rm, str(self.team), ['worker-1'])
+        self.set_roster(with_member(ROSTER_DEFAULT, 'worker-1', {'allow': True, 'templates': ['worker']}))
+        rc, out = quiet(aos_team.cmd_init, str(self.team), [])
+        self.assertEqual(rc, 0, out)
+        self.assertIn('spawn_member', task_tools(self.lay, 'worker-1'))
+        eff = requests.handle(self.lay, self.roster, req('worker-1', name='worker-3', mail_to=['worker-1', 'lead']))
+        self.assertEqual(eff[0]['status'], 'DONE', eff)
+        self.err('BadTemplate', requests.handle, self.lay, self.roster, req('worker-1', 'r2', template='importer',
+                                                                            name='imp'))
+
+    # ------------------------------------------ 不用人批以後，牆還是關牢 ----
+
+    def test_wall_worker_cannot_spawn_bigger_template(self):
+        self.set_roster(with_member(ROSTER_DEFAULT, 'worker-1', True))
+        self.err('MayExceeds', requests.handle, self.lay, self.roster, req('worker-1', template='lead'))
+        self.assertNotIn('worker-2', self.roster['members'])
+
+    def test_wall_only_builtin_templates(self):
+        for bad in ('../../etc', '/tmp/evil', 'nope'):
+            with self.subTest(template=bad):
+                self.err('BadTemplate', requests.handle, self.lay, self.roster, req(template=bad, rid='r-' + bad[-3:]))
+        self.assertEqual(spawn.records(self.lay), [])
+
+    def test_wall_max_members_without_approval(self):
+        requests.handle(self.lay, self.roster, req('lead', 'r1', name='worker-2'))
+        requests.handle(self.lay, self.roster, req('lead', 'r2', name='worker-3'))
+        self.err('TooMany', requests.handle, self.lay, self.roster, req('lead', 'r3', name='worker-4'))
+        self.assertEqual(len(self.roster['members']), 4)
+
+    def test_wall_mail_to_not_bigger(self):
+        self.err('MailToExceeds', requests.handle, self.lay, self.roster, req(mail_to=['lead', 'reviewer']))
+
+    def test_child_inherits_stricter_setting(self):
+        # 申請者被設成「只能生 importer、要人批」：它生的 lead 不能比它寬
+        self.set_roster(with_member(ROSTER_DEFAULT, 'lead', {'templates': ['lead'], 'approve': True}))
+        requests.handle(self.lay, self.roster, req(template='lead', name='lead-2'))
+        q = self.open_questions()[0]['id']
+        quiet(spawn.approve, str(self.team), q, env=self.env)
+        self.assertEqual(self.roster['members']['lead-2']['spawn'], {'templates': ['lead'], 'approve': True})
+        self.assertEqual(fmt.spawn_policy(self.roster, 'lead-2'), {'templates': ['lead'], 'approve': True})
+
+    def test_child_follows_team_when_parent_is_default(self):
+        requests.handle(self.lay, self.roster, req(template='lead', name='lead-2'))
+        self.assertIsNone(self.roster['members']['lead-2']['spawn'])
+
+    def test_post_end_to_end(self):
+        tools = self.lay.member('lead') / 'tools' / 'task'
+        cfg = json.loads((tools / 'config.json').read_text(encoding='utf-8'))
+        cfg['outbox'] = str(self.lay.outbox('lead'))
+        (tools / 'config.json').write_text(json.dumps(cfg), encoding='utf-8')
+        r = subprocess.run([sys.executable, str(tools / 'spawn_member')], cwd=str(tools), capture_output=True, text=True,
+                           input=json.dumps({'template': 'worker', 'name': 'worker-2', 'reason': '三個專案'}), timeout=30)
+        self.assertIn('postman creates it', r.stdout)
+        for _ in range(2):
+            post.Post(self.team, out=lambda s: None, submit=lambda job, argv: {'mode': 'test'},
+                      health=lambda n: ('ok', 'ok'), watch_every=0).run()
+        self.assertIn('worker-2', self.roster['members'])
         self.assertEqual(self.open_questions(), [])
 
 

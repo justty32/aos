@@ -16,7 +16,7 @@ import time
 import aos_agent
 import aos_agent_init
 from aos_agent_home import AgentError
-from aos_team_format import (HUMAN, TERMINAL, Layout, TeamError, json_files, load_roster, project_dir,
+from aos_team_format import (HUMAN, spawn_policy, TERMINAL, Layout, TeamError, json_files, load_roster, project_dir,
                              read_json, short_time, template_dir, validate_roster, write_json)
 
 HOOKS = ('aos_team_post', 'aos_team_beat')   # 第 2 隊：有 start(team)／stop(team) 就叫
@@ -37,7 +37,9 @@ def member_context(lay, roster, name):
     return {'name': name, 'team_dir': str(lay.root), 'project': str(project_dir(lay.root, roster)),
             'mail_to': m['mail_to'], 'members': list(roster['members']), 'tz': roster.get('tz'),
             'model': m['model'], 'mounts': m['mounts'], 'tools': m['tools'],
-            'spawn_templates': roster.get('spawn', {}).get('templates', [])}
+            'spawn_templates': (spawn_policy(roster, name) or {}).get('templates', []),
+            'spawn_ok': spawn_policy(roster, name) is not None,
+            'spawn_approve': (spawn_policy(roster, name) or {}).get('approve', False)}
 
 
 def _inside(child, parent):

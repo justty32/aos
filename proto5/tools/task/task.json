@@ -175,7 +175,7 @@
     "type": "function",
     "function": {
       "name": "spawn_member",
-      "description": "Ask the user to add a new team mate from a built-in template (flat roster, talks only via the postman). The answer arrives as new mail.",
+      "description": "Add a new team mate from a built-in template (flat roster, talks only via the postman). The postman checks it (and asks the user if the team requires approval); the result arrives as new mail.",
       "parameters": {
         "type": "object",
         "properties": {

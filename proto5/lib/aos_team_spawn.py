@@ -1,25 +1,29 @@
-"""T-spawn（第三波 W3-1，catalog D 節；spec/team/spawn.md）：成員（領隊）申請生一個新成員，人批了才生。
+"""T-spawn（第三波 W3-1，catalog D 節；spec/team/spawn.md）：成員申請生一個新成員。
 
+09-25 使用者翻案（WAIT_USER 39）：**預設開、預設不用人批**，每個成員都能在名冊上各自設。
 一律平的：新成員就是名冊多一列，跟人手寫的成員一模一樣（沒有父子樹、沒有「小孩」資料夾），交流一律經郵差。
-- 郵差端 on_spawn（kind: spawn）：照名冊檢查 → 記 team/spawns/s-NNNN.json → 開一題「[成員] …」問人。不建家、不改名冊。
-- 人端 aos-team spawn approve q-NNNN：再驗一次 → 改名冊（新成員一列＋申請者的 mail_to 多這個名字）→
-  aos-team init（生家、更新大家工具的名冊快照）→ aos-agent start（登記 kernel）→ 回覆申請者。
-  不要就照舊 aos-team answer q-NNNN 不要。停掉／收掉：aos-agent stop ＋ aos-team rm（既有）。
-- 檢查（要全過才開題；approve 時再驗一次，名冊可能這中間被人改過）：
-  模板要在名冊 spawn.templates 白名單；人數（名冊＋還在等人批的）不超過 limits.max_members；
-  新成員的 mail_to 只能是申請者自己或申請者 mail_to 裡的；新成員模板的 may 不能超過申請者的 may（加上 SAFE_MAY）。
-不叫模型。team/spawns/ 只有郵差寫；名冊只有人（和人的指令）寫。
+- 郵差端 on_spawn（kind: spawn）：照名冊檢查 → 記 team/spawns/s-NNNN.json →
+  - 不用人批（預設）：當場生——改名冊（新成員一列＋申請者 mail_to 多這個名字）→ aos-team init → aos-agent start
+    （有 AOS_KERNEL_HOME 才做）→ 回信給申請者，另寄一封給人知會。
+  - 要人批（名冊 spawn.approve: true，團隊層或成員層）：開一題「[成員] …」問人；人 aos-team spawn approve q-NNNN 才生。
+- 檢查（要全過才生／開題；approve 時再驗一次，名冊可能這中間被人改過）：
+  申請者能生（format.spawn_policy：成員層 spawn 蓋過團隊層 spawn 蓋過模板 may）；模板在它能生的清單；
+  人數（名冊＋還沒生完的）不超過 limits.max_members；新成員的 mail_to 只能是申請者自己或申請者 mail_to 裡的；
+  新成員模板的 may 不能超過申請者的 may（加上 SAFE_MAY）；新成員生成員的設定不比申請者寬（inherit_spawn）。
+不叫模型。team/spawns/ 只有郵差寫；名冊只有人、人的指令、和郵差這條（不用人批時）寫。
 """
 import argparse
+import contextlib
 import copy
+import io
 import json
 import os
 import sys
 
 import aos_team_ask
 from aos_team_format import (HUMAN, RESERVED, Layout, TeamError, bad, check_name, json_files, load_roster,
-                             new_id, next_number, now_iso, read_json, template_dir, template_may,
-                             validate_roster, write_json, write_new)
+                             member_may, new_id, next_number, now_iso, read_json, spawn_policy, template_dir,
+                             template_may, validate_roster, write_json, write_new)
 
 SPAWN_TYPE = 'aos_team_spawn'
 FIELDS = ('template', 'name', 'reason', 'mail_to')
@@ -68,14 +72,23 @@ def records(lay):
     return out
 
 
-def state(lay, rec, roster=None):
-    """('pending'|'approved'|'done'|'denied'|'cancelled', 題目)。done＝名冊已經有這個成員。"""
+def _load_q(lay, qid):
     try:
-        q = aos_team_ask.load(lay, rec['q'])
+        return aos_team_ask.load(lay, qid)
     except TeamError:
-        return 'cancelled', None
+        return None
+
+
+def state(lay, rec, roster=None):
+    """('pending'|'approved'|'done'|'denied'|'cancelled', 題目)。done＝名冊已經有這個成員。
+    不用人批的（q 是 None）：名冊有＝done，沒有＝approved（郵差生到一半；人可以 spawn approve s-NNNN 補做）。"""
+    q = None if rec.get('q') is None else _load_q(lay, rec['q'])
     if roster is not None and rec['name'] in roster['members']:
         return 'done', q
+    if rec.get('q') is None:
+        return 'approved', None
+    if q is None:
+        return 'cancelled', None
     if q['status'] == 'open':
         return 'pending', q
     if q['status'] == 'answered':
@@ -89,23 +102,29 @@ def _approves(answer):
 
 
 def check(lay, roster, sender, template, name, mail_to, *, ignore=None):
-    """照名冊檢查一份生成員申請；不過丟 TeamError。回新成員的 mail_to。ignore＝檢查人數時不算這筆紀錄（approve 自己）。"""
-    allowed = roster.get('spawn', {}).get('templates', [])
-    if template not in allowed:
-        raise TeamError('BadTemplate', '模板 %r 不在 team.json 的 spawn.templates（可以生：%s）'
-                        % (template, '、'.join(allowed) or '（沒有：這隊不准成員生新成員，要人在 team.json 加 spawn.templates）'))
-    if not (template_dir(template) / 'template.json').is_file():
-        raise TeamError('BadTemplate', '找不到模板 %s' % template)
+    """照名冊檢查一份生成員申請；不過丟 TeamError。回 (新成員的 mail_to, 申請者的 spawn_policy)。
+    ignore＝檢查人數時不算這筆紀錄（approve 自己）。"""
     if sender not in roster['members']:
         raise TeamError('NotSender', '%s 不在名冊裡' % sender)
+    policy = spawn_policy(roster, sender)
+    if policy is None:
+        raise TeamError('NotAllowed', '%s 不能生新成員（team.json 的 members.%s.spawn 或它模板的 may 關掉了）'
+                        % (sender, sender))
+    allowed = policy['templates']
+    if template not in allowed:
+        raise TeamError('BadTemplate', '模板 %r 不在 %s 能生的清單（可以生：%s）'
+                        % (template, sender, '、'.join(allowed) or
+                           '（沒有：team.json 的 spawn.templates 或 members.%s.spawn.templates 是空的）' % sender))
+    if not (template_dir(template) / 'template.json').is_file():
+        raise TeamError('BadTemplate', '找不到模板 %s' % template)
     if name in roster['members'] or name in RESERVED:
         raise TeamError('NameTaken', '名字 %s 已經有人用了' % name)
     pending = [r for r in records(lay) if r['id'] != ignore and state(lay, r, roster)[0] in ('pending', 'approved')]
     if any(r['name'] == name for r in pending):
-        raise TeamError('NameTaken', '名字 %s 已經有一份生成員申請在等人批' % name)
+        raise TeamError('NameTaken', '名字 %s 已經有一份生成員申請還沒辦完' % name)
     limit = roster['limits']['max_members']
     if len(roster['members']) + len(pending) + 1 > limit:
-        raise TeamError('TooMany', '名冊 %d 人＋等人批 %d 人，再生就超過 limits.max_members=%d'
+        raise TeamError('TooMany', '名冊 %d 人＋還沒辦完的 %d 人，再生就超過 limits.max_members=%d'
                         % (len(roster['members']), len(pending), limit))
     mine = roster['members'][sender]['mail_to']
     if mail_to is None:
@@ -117,25 +136,98 @@ def check(lay, roster, sender, template, name, mail_to, *, ignore=None):
                         % (sender, '、'.join(mine) or '（空）', '、'.join(over)))
     if name in mail_to:
         raise TeamError('BadArguments', 'mail_to 不能寫新成員自己')
-    have = set(template_may(roster['members'][sender]['template'])) | set(SAFE_MAY)
+    have = set(member_may(roster, sender)) | set(SAFE_MAY)
     extra = [k for k in template_may(template) if k not in have]
     if extra:
         raise TeamError('MayExceeds', '模板 %s 能寄 %s，%s 自己不能；新成員的權限不能比申請者大'
                         % (template, '、'.join(extra), sender))
-    return mail_to
+    return mail_to, policy
+
+
+def inherit_spawn(roster, template, policy):
+    """新成員那一列要不要寫 spawn：模板本來就不能生＝不寫（關著）；申請者的設定跟「一個沒寫 spawn 的這種模板」
+    算出來一樣＝不寫（跟著團隊層）；不一樣＝照抄申請者的——新成員不會比申請者寬（例：申請者被設成要人批，
+    它生的也要人批；申請者只能生 importer，它生的 lead 也只能生 importer）。"""
+    if 'spawn' not in template_may(template):
+        return None
+    probe = dict(roster, members={'_': {'template': template, 'spawn': None}})
+    if spawn_policy(probe, '_') == policy:
+        return None
+    return {'templates': list(policy['templates']), 'approve': policy['approve']}
+
+
+def realize(lay, rec, env, out=print):
+    """真的生：改名冊（沒有才加）→ aos-team init → aos-agent start（有 AOS_KERNEL_HOME 才做）。每步都能重跑。
+    回 (登記了沒：True／False／None＝沒 kernel, 名冊)。out＝印一行的函式（郵差裡叫時收進清單，不印到郵差的輸出）。"""
+    import aos_agent
+    import aos_team
+    team_dir = str(lay.root)
+    roster = load_roster(team_dir)
+    name = rec['name']
+    if name not in roster['members']:
+        mail_to, policy = check(lay, roster, rec['from'], rec['template'], name, rec['mail_to'], ignore=rec['id'])
+        raw = read_json(lay.roster)
+        row = {'template': rec['template'], 'mail_to': mail_to}
+        inherit = inherit_spawn(roster, rec['template'], policy)
+        if inherit is not None:
+            row['spawn'] = inherit
+        raw['members'][name] = row
+        mine = raw['members'][rec['from']].setdefault('mail_to', [])
+        if name not in mine:
+            mine.append(name)
+        validate_roster(raw, str(lay.roster))
+        write_json(lay.roster, raw, indent=2)
+        out('team.json 加了 %s（模板 %s，mail_to：%s）；%s 的 mail_to 多了 %s'
+            % (name, rec['template'], '、'.join(mail_to), rec['from'], name))
+        roster = load_roster(team_dir)
+    elif roster['members'][name]['template'] != rec['template']:
+        raise TeamError('NameTaken', '名冊裡的 %s 是模板 %s，不是這份申請的 %s' % (name, roster['members'][name]['template'],
+                                                                     rec['template']))
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = aos_team.cmd_init(team_dir, [])          # 生家；別人工具裡的名冊快照（mail_to、members）一起更新
+    for line in buf.getvalue().splitlines():
+        out(line)
+    if rc:
+        raise TeamError('InitFailed', 'aos-team init 沒全過；修好再跑一次 aos-team spawn approve %s'
+                        % (rec.get('q') or rec['id']))
+    kernel = env.get('AOS_KERNEL_HOME')
+    if kernel and os.path.isabs(kernel):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            started = aos_agent.start(str(lay.member(name)), env=env) == 0
+        out('%s: %s' % (name, buf.getvalue().strip()))
+        return started, roster
+    out('沒設 AOS_KERNEL_HOME：%s 還沒登記，之後 aos-team start' % name)
+    return None, roster
+
+
+def done_text(rec, started):
+    how = {True: '、登記了', False: '，但登記失敗（等人 aos-team start）', None: '（還沒登記，等人 aos-team start）'}
+    return ('新成員 %s（模板 %s）已經生好%s；你的 mail_to 多了 %s，可以 handoff／team_say 給它'
+            % (rec['name'], rec['template'], how[started], rec['name']))
 
 
 def on_spawn(lay, roster, req):
-    """kind=spawn（郵差叫）：檢查 → 記紀錄 → 開一題問人。冪等：同一份申請回同一份動作。"""
+    """kind=spawn（郵差叫）：檢查 → 記紀錄 → 不用人批就當場生並回信；要人批就開一題問人。
+    冪等：同一份申請回同一份動作（生到一半崩了：紀錄在、effects 還是 null＝再生一次，每步都能重跑）。"""
     for rec in records(lay):
         if rec.get('request') == req['id']:
-            return copy.deepcopy(rec.get('effects', []))
+            if rec.get('effects') is None:
+                return _auto_finish(lay, roster, rec)
+            return copy.deepcopy(rec['effects'])
     check_body(req)
-    mail_to = check(lay, roster, req['from'], req['template'], req['name'], req.get('mail_to'))
+    mail_to, policy = check(lay, roster, req['from'], req['template'], req['name'], req.get('mail_to'))
     now = now_iso(roster.get('tz'))
     d = folder(lay)
     d.mkdir(parents=True, exist_ok=True)
     sid = next_number(d, 's-')
+    rec = {'_metainfo': {'_type': SPAWN_TYPE, '_version': 1}, 'id': sid, 'request': req['id'], 'from': req['from'],
+           'template': req['template'], 'name': req['name'], 'mail_to': mail_to, 'reason': req['reason'].strip(),
+           'q': None, 'at': now, 'effects': None}
+    if not policy['approve']:
+        write_json(d / (sid + '.json'), rec, indent=2)      # 先記（effects: null＝生到一半），崩了重來補做
+        return _auto_finish(lay, roster, rec)
     ask = {'id': req['id'] + '.q', 'from': req['from'], 'kind': 'ask', 'at': now, 'reply_to': None,
            'options': ['批准', '不要'], 'tag': 'member',
            'question': '%s 想生一個新成員 %s（模板 %s，mail_to：%s）。理由：%s。'
@@ -145,11 +237,30 @@ def on_spawn(lay, roster, req):
     qid = next_number(lay.wait_user, 'q-')
     ask['question'] = ask['question'].replace('{q}', qid)
     effects = aos_team_ask.on_ask(lay, roster, ask)
-    q = next(x['id'] for x in aos_team_ask.all_questions(lay) if x.get('request') == ask['id'])
-    rec = {'_metainfo': {'_type': SPAWN_TYPE, '_version': 1}, 'id': sid, 'request': req['id'], 'from': req['from'],
-           'template': req['template'], 'name': req['name'], 'mail_to': mail_to, 'reason': req['reason'].strip(),
-           'q': q, 'at': now, 'effects': effects}
+    rec['q'] = next(x['id'] for x in aos_team_ask.all_questions(lay) if x.get('request') == ask['id'])
+    rec['effects'] = effects
     write_json(d / (sid + '.json'), rec, indent=2)
+    return copy.deepcopy(effects)
+
+
+def _auto_finish(lay, roster, rec):
+    """不用人批：當場生，回兩封信（申請者 DONE／FAILED、人一封知會）。動作記回紀錄的 effects。"""
+    lines = []
+    try:
+        started, _ = realize(lay, rec, os.environ, out=lines.append)
+        status, text = 'DONE', done_text(rec, started)
+        human = ('%s 生了新成員 %s（模板 %s，不用人批）。理由：%s。不要它：aos-agent stop --target %s 再 aos-team rm %s'
+                 % (rec['from'], rec['name'], rec['template'], rec['reason'], lay.member(rec['name']), rec['name']))
+    except TeamError as e:
+        status, text = 'FAILED', '生 %s 沒成功（%s：%s）' % (rec['name'], e.code, e.msg)
+        human = ('%s 申請生 %s（不用人批），郵差生到一半失敗（%s：%s）。修好後 aos-team spawn approve %s 補做'
+                 % (rec['from'], rec['name'], e.code, e.msg, rec['id']))
+    effects = [{'do': 'letter', 'to': rec['from'], 'status': status, 'reply_to': rec['request'], 'rev': None,
+                'text': text},
+               {'do': 'letter', 'to': HUMAN, 'status': status, 'reply_to': rec['request'], 'rev': None,
+                'text': human}]
+    rec = dict(rec, effects=effects, log=lines)
+    write_json(folder(lay) / (rec['id'] + '.json'), rec, indent=2)
     return copy.deepcopy(effects)
 
 
@@ -199,8 +310,7 @@ def notify(lay, roster, rec, q, text):
 
 
 def approve(team_dir, ref, env=None):
-    import aos_agent
-    import aos_team
+    """人批（要人批的那種），或補做郵差生到一半的（不用人批的那種，s-NNNN）。"""
     env = os.environ if env is None else env
     lay = Layout(team_dir)
     roster = load_roster(team_dir)
@@ -209,50 +319,26 @@ def approve(team_dir, ref, env=None):
     if st in ('denied', 'cancelled'):
         raise TeamError('Closed', '%s 已經%s（答案：%s）' % (rec['q'], '被你拒絕' if st == 'denied' else '取消',
                                                        (q or {}).get('answer')))
-    name = rec['name']
-    if st != 'done':
-        mail_to = check(lay, roster, rec['from'], rec['template'], name, rec['mail_to'], ignore=rec['id'])
-        raw = read_json(lay.roster)
-        raw['members'][name] = {'template': rec['template'], 'mail_to': mail_to}
-        mine = raw['members'][rec['from']].setdefault('mail_to', [])
-        if name not in mine:
-            mine.append(name)
-        validate_roster(raw, str(lay.roster))
-        write_json(lay.roster, raw, indent=2)
-        print('team.json 加了 %s（模板 %s，mail_to：%s）；%s 的 mail_to 多了 %s'
-              % (name, rec['template'], '、'.join(mail_to), rec['from'], name))
-        roster = load_roster(team_dir)
-    elif roster['members'][name]['template'] != rec['template']:
-        raise TeamError('NameTaken', '名冊裡的 %s 是模板 %s，不是這份申請的 %s' % (name, roster['members'][name]['template'],
-                                                                     rec['template']))
-    rc = aos_team.cmd_init(team_dir, [])          # 生家；別人工具裡的名冊快照（mail_to、members）一起更新
-    if rc:
-        raise TeamError('InitFailed', 'aos-team init 沒全過（看上面）；修好再跑一次 aos-team spawn approve %s' % rec['q'])
-    started = False
-    kernel = env.get('AOS_KERNEL_HOME')
-    if kernel and os.path.isabs(kernel):
-        sys.stdout.write('%s: ' % name)
-        sys.stdout.flush()
-        started = aos_agent.start(str(lay.member(name)), env=env) == 0
+    started, roster = realize(lay, rec, env)
+    if q is None:
+        print('%s 不用人批（郵差生的）：補做完了；申請者的回信郵差寄' % rec['id'])
     else:
-        print('沒設 AOS_KERNEL_HOME：%s 還沒登記，之後 aos-team start' % name)
-    text = ('批准：新成員 %s（模板 %s）已經生好%s；你的 mail_to 多了 %s，可以 handoff／team_say 給它'
-            % (name, rec['template'], '、登記了' if started else '（還沒登記，等人 aos-team start）', name))
-    print(notify(lay, roster, rec, q, text))
-    return 0 if (started or not kernel) else 1
+        print(notify(lay, roster, rec, q, '批准：' + done_text(rec, started)))
+    return 1 if started is False else 0
 
 
 def describe(lay, rec, roster):
     st, _ = state(lay, rec, roster)
-    words = {'pending': '等你批', 'approved': '你答了批准、還沒生（aos-team spawn approve %s）' % rec['q'],
-             'done': '已生', 'denied': '你不要', 'cancelled': '題目不見了'}
-    return '%s  %s  %s 想生 %s（%s）  %s  理由：%s' % (rec['id'], rec['q'], rec['from'], rec['name'], rec['template'],
-                                                words[st], rec['reason'])
+    words = {'pending': '等你批', 'approved': '還沒生完（aos-team spawn approve %s）' % (rec.get('q') or rec['id']),
+             'done': '已生' + ('（不用人批）' if rec.get('q') is None else ''), 'denied': '你不要',
+             'cancelled': '題目不見了'}
+    return '%s  %s  %s 想生 %s（%s）  %s  理由：%s' % (rec['id'], rec.get('q') or '-', rec['from'], rec['name'],
+                                                rec['template'], words[st], rec['reason'])
 
 
 def cmd_spawn(team_dir, argv):
     ap = Parser(prog='aos-team spawn', description='spawn ls：成員申請生的新成員；'
-                                 'spawn approve q-NNNN：批准（生家、登記、改名冊、回覆申請者）')
+                                 'spawn approve q-NNNN|s-NNNN：批准要人批的，或補做郵差生到一半的')
     sub = ap.add_subparsers(dest='op', required=True)
     ls = sub.add_parser('ls')
     ls.add_argument('--json', action='store_true')
