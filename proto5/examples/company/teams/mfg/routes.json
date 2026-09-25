@@ -67,7 +67,7 @@
           },
           {
             "kind": "check",
-            "name": "contains",
+            "name": "last_line_contains",
             "args": {
               "path": "lore/characters/{name}.md",
               "text": "詳見："
@@ -83,11 +83,36 @@
           },
           {
             "kind": "check",
+            "name": "max_bytes",
+            "args": {
+              "path": "lore/evidence/characters/{name}.md",
+              "bytes": 5119
+            }
+          },
+          {
+            "kind": "check",
+            "name": "max_bytes",
+            "args": {
+              "path": "lore/evidence/characters/{name}",
+              "bytes": 5119,
+              "missing_ok": true
+            }
+          },
+          {
+            "kind": "check",
             "name": "contains",
             "args": {
               "path": "lore/characters/INDEX.md",
               "text": "[{name}]({name}.md)"
             }
+          },
+          {
+            "kind": "cmd_ok",
+            "run": [
+              "python3",
+              "scripts/check_links.py",
+              "lore"
+            ]
           },
           {
             "kind": "cmd_ok",
@@ -140,7 +165,7 @@
           },
           {
             "kind": "check",
-            "name": "contains",
+            "name": "last_line_contains",
             "args": {
               "path": "lore/characters/{name}.md",
               "text": "詳見："
@@ -152,6 +177,14 @@
             "args": {
               "path": "lore/characters/{name}.md",
               "text": "evidence/characters/{name}.md"
+            }
+          },
+          {
+            "kind": "check",
+            "name": "max_bytes",
+            "args": {
+              "path": "lore/evidence/characters/{name}.md",
+              "bytes": 5119
             }
           },
           {

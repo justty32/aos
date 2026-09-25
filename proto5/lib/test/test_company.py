@@ -163,7 +163,7 @@ class NewCompanies(Tmp):
     def test_status_counts_without_kernel(self):
         d, cfg = self.make('c1-')
         s = co.status_data(d, cfg, ls=fake_ls(12, 5))
-        self.assertEqual(s['caps'], '正式 6/10、cpu 17/20、llm cpu 5/5')
+        self.assertEqual(s['caps'], '正式 7/10、cpu 17/20、llm cpu 5/5')
         self.assertEqual(s['over'], [])
         # spawn 生的（team/spawns 記 done）算臨時工，不算人頭
         mfg = co.team_dirs(d, cfg)['mfg']
@@ -173,7 +173,7 @@ class NewCompanies(Tmp):
         (mfg / 'team' / 'spawns').mkdir(parents=True)
         fmt.write_json(mfg / 'team' / 'spawns' / 's-0001.json', {'name': 'c1-mfg-temp1', 'status': 'done'})
         s = co.status_data(d, cfg, ls=fake_ls(15, 6))
-        self.assertEqual(s['counts']['regular'], 6)
+        self.assertEqual(s['counts']['regular'], 7)
         self.assertEqual(s['temp'], 1)
         self.assertEqual(s['over'], ['cpu', 'llm_cpu'])
 
@@ -274,7 +274,7 @@ class Relay(Tmp):
 
     def test_bounces(self):
         self.inbox('hq', 'c1-hq-lead', '〔給 xyz〕做點什麼')
-        self.inbox('hq', 'c1-hq-lead', '〔給 lib〕收一條經驗')
+        self.inbox('hq', 'c1-hq-lead', '〔給 fin〕算一下帳')
         self.inbox('hq', 'c1-hq-lead', '〔給 hr〕加一個人')
         self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕')
         self.relay()
@@ -320,7 +320,7 @@ class Relay(Tmp):
         self.assertEqual([d for d, _ in co.Switchboard(self.d).board_letters()], ['qa'])
         self.assertEqual(self.order('o-0001')['status'], 'done')
         with self.assertRaises(co.CompanyError):
-            sb.board_order('lib', '收一條')
+            sb.board_order('fin', '算帳')
 
     def test_crash_between_record_and_action_does_not_duplicate(self):
         lid = self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老財（只寫詞條）')

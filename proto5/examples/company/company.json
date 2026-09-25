@@ -61,12 +61,12 @@
       "lib": "spec/team/spawn.md、score.md、（施工中）hr.md"
     },
     "lib": {
-      "title": "圖書館", "team": "teams/lib", "open": false, "aliases": ["圖書館員"],
-      "state": "尚未成立：等 commons（spec/team/commons.md、librarian 模板）併進 main 才開；現在由調度層的 playbook 代管",
+      "title": "圖書館", "team": "teams/lib", "aliases": ["圖書館員"], "desk": "lib-librarian",
+      "state": "有：館員一人（笨模型，只判投稿像不像舊條目；其餘郵差機械做）。這家的 commons 在 teams/commons/（各部門團隊的上一層，全公司共用）",
       "serves": "各部門 commons_submit 的投稿",
       "delivers": "commons 條目（機械審，像舊條目時才叫館員判）",
       "kpi": "投稿機械審通過率、叫模型判的比例",
-      "lib": "（施工中）spec/team/commons.md、playbook/"
+      "lib": "spec/team/commons.md、lib/aos_team_commons.py、examples/commons"
     },
     "fin": {
       "title": "財務部", "open": false, "aliases": ["財務"],
@@ -84,6 +84,6 @@
     "mfg-reviewer": {"dept": "mfg", "employment": "regular", "roles": ["審查"]},
     "qa-inspector": {"dept": "qa", "employment": "regular", "roles": ["檢驗員"]},
     "rd-smith": {"dept": "rd", "employment": "regular", "roles": ["工具匠"]},
-    "lib-librarian": {"dept": "lib", "employment": "regular", "roles": ["館員（未到職）"]}
+    "lib-librarian": {"dept": "lib", "employment": "regular", "roles": ["館員"]}
   }
 }
