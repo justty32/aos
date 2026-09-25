@@ -1,0 +1,26 @@
+{
+  "_metainfo": {
+    "_type": "aos_team",
+    "_version": 1
+  },
+  "project": "../p",
+  "tz": "Asia/Taipei",
+  "members": {
+    "lead": {
+      "template": "lead",
+      "model": "chatgpt-gpt-6-astra",
+      "mail_to": [
+        "worker-1",
+        "human"
+      ]
+    },
+    "worker-1": {
+      "template": "worker",
+      "model": "chatgpt-gpt-6-astra",
+      "mail_to": [
+        "lead",
+        "human"
+      ]
+    }
+  }
+}

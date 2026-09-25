@@ -1,0 +1,19 @@
+{
+  "_metainfo": {
+    "_type": "aos_hr_taskset",
+    "_version": 1
+  },
+  "name": "ex1-lead",
+  "note": "例子 1，但沒有門房規則：人那句話落穿給領隊，領隊自己寫單子派給 worker-1——試 lead 位子",
+  "project": "project",
+  "asks": [
+    "把 workflows 的 heartbeat 包導入專案，事實表在專案的 facts.json。派給 worker-1 做（workflow 寫 IMPORT.md、facts 寫 facts.json），要它先 wf_init 再 wf_fill 照事實填；done_when 至少要有 wf_residue、wf_lint_strict 兩個檢查器和 AGENTS.md、workflows/tick.md 兩個檔案在"
+  ],
+  "expect_tasks": 1,
+  "timeout_s": 900,
+  "answer": "事實表沒有的就照 facts.json 最接近的寫，不用再問",
+  "score_cmd": [
+    "python3",
+    "score.py"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "_metainfo": {
+    "_type": "aos_hr_taskset",
+    "_version": 1
+  },
+  "name": "ex1-worker",
+  "note": "例子 1（導入 heartbeat 包到空專案）；門房直接派給 worker-1，領隊不經手——試 worker 位子",
+  "project": "project",
+  "routes": "routes.json",
+  "asks": [
+    "把 workflows 導入 p，照 facts.json"
+  ],
+  "expect_tasks": 1,
+  "timeout_s": 900,
+  "answer": "事實表沒有的就照 facts.json 最接近的寫，不用再問",
+  "score_cmd": [
+    "python3",
+    "score.py"
+  ]
+}

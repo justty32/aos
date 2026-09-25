@@ -24,6 +24,7 @@ aos-team <子命令> [參數…] [--target 團隊資料夾]
 | `mail [--task t-0001] [--follow]`、`post` | 一封信一行，等人回答的題目也一題一行（`lead → 人  ASK  q-0001`，答完那行先顯示答案）；`--task` 連落穿給領隊、開出這張單的那封人寫的信一起列（挑法同 score 的起點）；郵差走一次（kernel 反覆叫）。`--json`：信照舊；題目一行 `{"kind": "ask", "id", "from", "to": "human", "status": "ASK", "reply_to", "recorded_at", "question", "answer", "state"}`（沒有 `text`），讀的程式照 `kind` 分。mail 第二波 A 隊搬到 `lib/aos_team_mail.py` | 2 |
 | `verify ID`、`routine ls/add/rm`、`beat` | 驗收；心跳排程；心跳走一次 | 2 |
 | `score` | 六軸自動彙整 | 5 |
+| `hr ls／set／trial／trials／salary／cap` | HR：成員的位子／模型／等級／最低通過、改模型或員工類型、換模型試用並照規則調薪、看紀錄、名額（[hr.md](hr.md)） | HR 09-25 |
 | `crystal [--min N] [--json] [--out FILE] [--suggest-with-llm [--model A]]` | 固化建議：從常落穿給領隊的句型產候選規則提案，不自動生效（[crystal.md](crystal.md)） | 第三波 W3-2 |
 | `spawn ls [--json]`／`spawn approve Q` | 成員申請生的新成員；批准＝再驗、改名冊、生家、登記、回覆（[spawn.md](spawn.md)） | 三波 W3-1 |
 | `tool ls [--json]`／`tool approve Q` | 成員寫的工具草稿與牢裡測試結果；批准＝核 sha256、`tools add` 到寫的人的家、回覆（[toolsmith.md](toolsmith.md)） | 三波 W3-1 |

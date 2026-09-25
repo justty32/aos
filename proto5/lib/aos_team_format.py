@@ -259,7 +259,8 @@ def _unknown(obj, allowed, where):
 
 # ------------------------------------------------------------------ 名冊 ----
 
-MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools', 'spawn', 'commons')
+MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools', 'spawn', 'commons', 'employment')
+EMPLOYMENT = ('regular', 'temp')   # HR 09-25（spec/team/hr.md）：正式員工／臨時工；沒寫＝regular
 ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok', 'spawn', 'budget', 'commons')
 
 
@@ -321,10 +322,17 @@ def validate_roster(obj, where='team.json'):
             'model': _opt_str(m.get('model'), w + '.model'),
             'mail_to': list(dict.fromkeys(mail_to)),
             'mounts': dict(mounts), 'tools': list(tools),
-            'spawn': _member_spawn(m.get('spawn'), w + '.spawn')}
+            'spawn': _member_spawn(m.get('spawn'), w + '.spawn'),
+            'employment': _employment(m.get('employment', 'regular'), w + '.employment')}
         if 'commons' in m:
             out['members'][name]['commons'] = m['commons']
     return out
+
+
+def _employment(v, where):
+    if v not in EMPLOYMENT:
+        bad(where, '要是 regular（正式員工）或 temp（臨時工），不是 %r' % (v,))
+    return v
 
 
 @contextlib.contextmanager

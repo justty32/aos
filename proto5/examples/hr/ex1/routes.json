@@ -1,0 +1,93 @@
+{
+  "_metainfo": {
+    "_type": "aos_team_routes",
+    "_version": 1
+  },
+  "routes": [
+    {
+      "name": "import",
+      "pattern": "把 workflows 導入 (?P<project>\\S+)，照 (?P<facts>\\S+)",
+      "do": "handoff",
+      "handoff": {
+        "assignee": "worker-1",
+        "workflow": "IMPORT.md",
+        "goal": "把 workflows 的 heartbeat 包導入專案（就是你的起點資料夾；人說的是 {project}），先用 wf_init 導入，再用 wf_fill 照專案裡的 {facts} 填佔位，剩下的照它列的處理；事實表沒有的用 ask_human 問，不要猜",
+        "facts": "{facts}",
+        "done_when": [
+          {
+            "kind": "check",
+            "name": "wf_residue"
+          },
+          {
+            "kind": "check",
+            "name": "wf_lint_strict"
+          },
+          {
+            "kind": "file_exists",
+            "path": "AGENTS.md"
+          },
+          {
+            "kind": "file_exists",
+            "path": "workflows/tick.md"
+          },
+          {
+            "kind": "file_exists",
+            "path": "workflows/routines.md"
+          },
+          {
+            "kind": "file_exists",
+            "path": "workflows/schedule.md"
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "WORKFLOWS.md",
+              "text": "(workflows/tick.md)"
+            }
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "WORKFLOWS.md",
+              "text": "(workflows/routines.md)"
+            }
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "WORKFLOWS.md",
+              "text": "(workflows/schedule.md)"
+            }
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "AGENTS.md",
+              "text": "試跑用的空專案"
+            }
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "workflows/common/user.md",
+              "text": "Asia/Taipei"
+            }
+          }
+        ]
+      },
+      "tests": {
+        "hit": [
+          "把 workflows 導入 p，照 facts.json"
+        ],
+        "miss": [
+          "把 workflows 導入 p"
+        ]
+      }
+    }
+  ]
+}

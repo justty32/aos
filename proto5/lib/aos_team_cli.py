@@ -32,6 +32,7 @@ COMMANDS = {
     'commons': ('aos_team_commons', 'cmd_commons', 3, 'commons ls／show／search／add／rm／reindex／desk：跨團隊公共資料夾（09-25）'),
     'beat': ('aos_team_beat', 'cmd_beat', 2, '心跳走一次（kernel 反覆叫它）'),
     'score': ('aos_team_score', 'cmd_score', 5, '六軸能量的部分自動彙整'),
+    'hr': ('aos_team_hr', 'cmd_hr', 3, 'hr ls／set／trial／trials／salary／cap：薪資表、換模型試用、調薪、人頭與 cpu 上限（HR 09-25）'),
     'crystal': ('aos_team_crystal', 'cmd_crystal', 3, '固化建議：從 route.log 找常落穿的句型，產候選規則提案給人批（不自動生效）'),
     'cost': ('aos_team_cost', 'cmd_cost', 6, '財務：token／估算美元（--by family|model|team|member|task）、cost budget 預算幾成、cost import 回填'),
 }
