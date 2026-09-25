@@ -46,7 +46,7 @@
 
 ## 5. 所以呢
 
-這輪仍直接影響 [OPEN-QUESTIONS 第 2 題](../../../../workshop/OPEN-QUESTIONS.md#2-近期-core-要回撤到哪裡)，但沒有替使用者把三選一改成唯一答案：
+這輪仍直接影響 [OPEN-QUESTIONS 第 2 題](../../../../workshop/OPEN-QUESTIONS/direction.md#2-近期-core-要回撤到哪裡)，但沒有替使用者把三選一改成唯一答案：
 
 - **只留最小 Deliver**：core 最小；賠掉共用 Publish、外部結果的 `unknown`／resolve，以及本輪已證實需要的收件歷史，這些仍得由上層或人各自補。
 - **保留 Publish → Deliver → Effect 三項**：得到共用的安全發布、投遞與外部結果記錄；賠掉的是 Deliver 不能再假定只是薄殼，還要決定收件證明和 ledger 放在 Deliver、aggregate 還是 core，Effect 也只能誠實停在 `unknown`，不能保證只做一次。
