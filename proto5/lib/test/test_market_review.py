@@ -144,6 +144,8 @@ class Formula(Base):
         s = mk.record_score(self.mdir, 'c1', quality=80)
         self.assertEqual((s['review_rounds'], s['review_factor']), ([None], 1.0))
         self.assertTrue(any('沒有審查紀錄' in n and '1.0' in n for n in s['notes']), s['notes'])
+        row = mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))[0]           # rank 那列也看得到（建議 2）
+        self.assertIn('沒有審查紀錄：成功的 1 張裡有 1 張審查係數當 1.0', row['note'])
         # 舊資料：分數裡根本沒有 review_factor 這一欄
         by = self.set_scores(c1={'quality': 80, 'done': 1, 'failed': 0, 'seconds': 60})
         self.assertEqual((by['c1']['quality'], by['c1']['review_factor']), (80.0, None))
@@ -191,6 +193,58 @@ class Formula(Base):
         # 只有一家、0 秒：無對照＝快 100
         by = self.set_scores(b={'quality': 100, 'done': 0, 'failed': 1, 'seconds': None, 'review_factor': None})
         self.assertEqual(by['a']['speed'], 100.0)
+
+    def test_config_review_factors_whole_path(self):
+        """astra 審查建議 5：market.json.params.review_factors 覆蓋 → score 換算 → rank 調品質；改了要重新 score 才生效。"""
+        self.company('c1')
+        self.one('c1', 10, review=(False, True))
+        self.one('c1', 11, review=(False, False, False, True))                 # 第 4 次過：清單不夠長＝用最後一個
+        m = mk.load(self.mdir)
+        m['params']['review_factors'] = [1.0, 0.5, 0.2]
+        mk.save(self.mdir, m)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(mk.main(['--market', str(self.mdir), 'score', 'c1', '--quality', '100']), 0)
+        s = mk.load(self.mdir)['scores']['c1']
+        self.assertEqual((s['review_rounds'], s['review_factor']), ([2, 4], 0.35))      # (0.5＋0.2)／2
+        row = mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))[0]
+        self.assertEqual(row['quality'], 35.0)
+        m = mk.load(self.mdir)
+        m['params']['review_factors'] = [1.0, 0.9]
+        mk.save(self.mdir, m)
+        self.assertEqual(mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))[0]['quality'], 35.0)  # 沒重新 score：不變
+        with contextlib.redirect_stdout(io.StringIO()):
+            mk.main(['--market', str(self.mdir), 'score', 'c1', '--quality', '100'])
+        self.assertEqual(mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))[0]['quality'], 90.0)
+
+    def test_bad_review_factors_clear_error(self):
+        """astra 審查建議 3：review_factors 空的、超出 0～1、不是數字 → 讀 market.json 就給看得懂的錯，不是 IndexError。"""
+        self.company('c1')
+        for bad, word in (([], '至少一個'), ([1.0, 1.5], '第 2 個'), ([1.0, -0.1], '第 2 個'), ([1.0, None], '第 2 個'),
+                          ([1.0, 'x'], '第 2 個'), (0.7, '至少一個')):
+            m = mk.load(self.mdir)
+            m['params']['review_factors'] = bad
+            mk.save(self.mdir, m)
+            with self.assertRaises(mk.MarketError) as cm:
+                mk.load(self.mdir)
+            self.assertIn('review_factors', str(cm.exception))
+            self.assertIn(word, str(cm.exception))
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                self.assertNotEqual(mk.main(['--market', str(self.mdir), 'score', 'c1', '--quality', '80']), 0)
+            self.assertIn('review_factors', err.getvalue())
+            fmt.write_json(self.mdir / 'market.json', dict(fmt.read_json(self.mdir / 'market.json'),
+                                                             params={}))              # 還原成預設
+
+    def test_rank_warns_partial_missing_review(self):
+        """astra 審查建議 2：成功兩張、一張沒審查紀錄（None）→ score 已當 1.0 平均進去，rank 那列也要寫出來。"""
+        self.company('c1')
+        self.one('c1', 10, review=(False, True))
+        self.board('c1', '2026-09-25T11:00:00+08:00', '2026-09-25T11:05:00+08:00')   # 沒有製造總機單
+        s = mk.record_score(self.mdir, 'c1', quality=100)
+        self.assertEqual((s['review_rounds'], s['review_factor']), ([2, None], 0.85))
+        row = mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))[0]
+        self.assertIn('沒有審查紀錄：成功的 2 張裡有 1 張審查係數當 1.0', row['note'])
 
     def test_score_cli_prints_factors(self):
         self.company('c1')

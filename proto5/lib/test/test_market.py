@@ -738,7 +738,8 @@ class FormulaFix(Base):
         mk.record_score(self.mdir, 'c2', quality=100)
         by = self.rows()
         self.assertEqual(by['c1']['cost'], 100.0)
-        self.assertEqual(by['c1'].get('note'), '省、快：無對照（這輪只有它成功）')
+        self.assertEqual(by['c1'].get('note'), '省、快：無對照（這輪只有它成功）'
+                                               '；沒有審查紀錄：成功的 1 張裡有 1 張審查係數當 1.0')   # 這份真跑資料沒有製造部單子
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             mk._print_rank(mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger))))
@@ -749,7 +750,7 @@ class FormulaFix(Base):
         self.spend('c3', 5954228 * 2)
         by = self.rows()
         self.assertEqual((by['c1']['cost'], by['c3']['cost']), (100.0, 50.0))
-        self.assertIsNone(by['c1'].get('note'))
+        self.assertNotIn('無對照', by['c1'].get('note') or '')
 
     # 2：沒人有分＝grant 拒絕（dry-run 也說）；同分均分
     def test_grant_refuses_without_scores(self):

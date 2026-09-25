@@ -80,6 +80,20 @@ def cost_base(env=None):
     return base
 
 
+def check_review_factors(v):
+    """params.review_factors（第 75 題）：第 1、2、3…次審查才過的係數，每個 0～1 的有限數字、至少一個；
+    審查次數比清單長＝用最後一個（例 [1, 0.7, 0.4] 第 5 次過＝0.4）。錯了在讀 market.json 時就說（astra 審查建議 3）。"""
+    if not isinstance(v, list) or not v:
+        raise MarketError('Usage', 'market.json 的 params.review_factors 要是至少一個數字的清單'
+                                   '（第 1、2、3…次審查才過的係數，例 [1.0, 0.7, 0.4]）：%r' % (v,))
+    for i, x in enumerate(v, 1):
+        where = 'market.json 的 params.review_factors 第 %d 個（第 %d 次審查才過的係數）' % (i, i)
+        if x is None:
+            raise MarketError('Usage', '%s 要是有限的數字：None' % where)
+        _finite(x, where, 0, 1)
+    return v
+
+
 def load(mdir):
     p = Path(mdir) / 'market.json'
     if not p.is_file():
@@ -89,6 +103,7 @@ def load(mdir):
     params = json.loads(json.dumps(DEFAULT_PARAMS))
     params.update(obj.get('params') or {})
     obj['params'] = params
+    check_review_factors(params['review_factors'])
     obj.setdefault('companies', {})
     obj.setdefault('scores', {})
     obj.setdefault('history', [])
