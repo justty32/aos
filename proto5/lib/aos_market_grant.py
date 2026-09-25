@@ -98,7 +98,7 @@ def rank(m, bal):
                      'scored': bool(s), 'note': None})
     ok = [r for r in rows if r['done']]
     top = max((r['done'] for r in ok), default=0)
-    fast = [r['seconds'] for r in ok if r['seconds'] and r['done'] == top]
+    fast = [r['seconds'] for r in ok if r['seconds'] is not None and r['done'] == top]   # 0 秒也算（astra 審查必修 3）
     cheap = [r['spent_tokens'] for r in ok if r['spent_tokens']]
     for r in rows:
         notes = []
@@ -106,8 +106,12 @@ def rank(m, bal):
             notes.append('沒有審查紀錄：審查係數當 1.0')
         if r['done'] and r['done'] < top:
             notes.append('快：成功 %d 張少於最多的 %d 張，不比快（0）' % (r['done'], top))
-        r['speed'] = round(100 * min(fast) / r['seconds'], 2) if r['done'] == top and top and fast and r['seconds'] \
-            else 0.0
+        if not (r['done'] == top and top and fast and r['seconds'] is not None):
+            r['speed'] = 0.0
+        elif r['seconds'] == 0:
+            r['speed'] = 100.0                 # 0 秒＝最快（以前當成沒秒數、快＝0）
+        else:
+            r['speed'] = round(100 * min(fast) / r['seconds'], 2)
         if not r['done']:
             r['cost'] = 0.0
         elif not r['spent_tokens']:

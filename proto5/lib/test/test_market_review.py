@@ -180,6 +180,18 @@ class Formula(Base):
         by = self.set_scores(c2={'quality': 100, 'done': 2, 'failed': 1, 'seconds': 100, 'review_factor': 1.0})
         self.assertEqual((by['c2']['speed'], by['c1']['speed'], by['c3']['speed']), (100.0, 33.33, 16.67))
 
+    def test_zero_seconds_is_fastest(self):
+        """astra 審查必修 3：0 秒以前被當成沒秒數（快＝0），最快的反而少拿款。"""
+        for n in ('a', 'b'):
+            self.company(n)
+        by = self.set_scores(a={'quality': 100, 'done': 1, 'failed': 0, 'seconds': 0, 'review_factor': 1.0},
+                             b={'quality': 100, 'done': 1, 'failed': 0, 'seconds': 1, 'review_factor': 1.0})
+        self.assertEqual((by['a']['speed'], by['b']['speed']), (100.0, 0.0))
+        self.assertEqual((by['a']['rank'], by['b']['rank']), (1, 2))
+        # 只有一家、0 秒：無對照＝快 100
+        by = self.set_scores(b={'quality': 100, 'done': 0, 'failed': 1, 'seconds': None, 'review_factor': None})
+        self.assertEqual(by['a']['speed'], 100.0)
+
     def test_score_cli_prints_factors(self):
         self.company('c1')
         self.one('c1', 10, review=(False, True))
