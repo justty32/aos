@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- 09-25：**已推 main**（細節見 [session_logs 09-25](session_logs/2026-09.md#2026-09-25)）：09-24 晚三隊尾巴收完——P2（tick-gap 排程優化真跑，例子 1 51～63→18～23 秒）、W3-2（多叫模型四工具收尾，`compact --summarize` 改判不值得、旗標留著預設關）、W3-1（spawn 39 翻案：預設開、預設不用人批、逐成員可設；toolsmith 對照 2＋2 次）。鏈 `60e4b81`→`8b86e03`（P2）→`0cfb325`（W3-2）→`f353297`（W3-1＋39 翻案），已推。四題裁決：WAIT_USER 38／39 已裁＋各一新題（compact 旗標留著預設關、`spawn.templates` 空＝全部內建模板）。模型：LiteLLM 沒開，三隊真跑改直連 DeepSeek 雲端 `deepseek-chat`。測試 **96 檔 2665 條全綠（約 4 分鐘）**，README／lib README 測試數已補上。**下一輪**：P2 量郵差／驗收員每一跳＋通知信真跑（弄壞郵差）；W3-2 astra S1 建議（help 上限測試計時）；W3-1 新手試玩＋spawn 再跑幾次看 token＋`tool_draft` 團隊層／成員層開關。[→](session_logs/2026-09.md#2026-09-25)
+- 09-25：**下午五包已收尾推 main**（財務、製造 arknights 第 2 段、圖書館 commons、品管、HR；WAIT_USER 40～58 新增待裁題）。測試 **99 檔 2784 條全綠**。**還在跑**：組織設計總監隊（`proto5/examples/company/`＋市場層），未併進 main。[→](session_logs/2026-09.md#2026-09-25)
 - 09-24：**已推 main**：重架構收線→tool-era 三波（第一波 T1/T3/L2/S/T4/T2/K2、P 隊 one-boot、T5 收尾、第二波 A/B/C 造工具＋牆接線＋申請類）全落地，試玩多輪過；A.21～A.39 逐條裁決／代裁。測試 94 檔 2605 條全綠。[→](session_logs/2026-09.md#2026-09-24)
 - 09-22：09-21 ④⑤ 仍在（① backlog 已於 09-24 清光） [→](session_logs/2026-09.md#2026-09-22)
 - 09-21：④ aos-inst 兩題 ⑤ thinking/ 草案 ④ WSL 沒 lms／jq [→](session_logs/2026-09.md#2026-09-21)
