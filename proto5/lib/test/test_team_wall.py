@@ -51,6 +51,14 @@ class CmdOkFormatTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(fmt.TeamError):
                 fmt.validate_done_when([bad])
 
+    def test_whitelist_mounts(self):
+        """09-25 arknights 隊：白名單一條可多掛唯讀資料夾（絕對路徑或 ~），名字不能是 ws。"""
+        r = self.roster([{'run': ['make'], 'mounts': {'corpus': '/data/c', 'home-c': '~/c'}}])
+        self.assertEqual(r['cmd_ok'][0]['mounts'], {'corpus': '/data/c', 'home-c': os.path.expanduser('~/c')})
+        for bad in ({'ws': '/x'}, {'Bad': '/x'}, {'c': 'rel/path'}, {'c': 3}, ['/x']):
+            with self.subTest(bad=bad), self.assertRaises(fmt.TeamError):
+                self.roster([{'run': ['make'], 'mounts': bad}])
+
     def test_cmd_allowed(self):
         r = self.roster([{'run': ['make', 'test'], 'timeout_s': 60}])
         self.assertIsNotNone(fmt.cmd_allowed(r, {'run': ['make', 'test']}))
@@ -192,6 +200,26 @@ class CmdOkRunTests(unittest.TestCase):
         self.assertIn('key=none', r['why'])                                   # 環境清掉
         self.assertNotIn('team secret', r['why'])
         self.assertIn('ws', r['why'])
+
+    def test_whitelist_mounts_visible_read_only(self):
+        """09-25 arknights 隊：專案裡的相對連結指到多掛的資料夾（/work/<名>），牢裡讀得到、寫不進去；沒寫 mounts 的條目看不到。"""
+        extra = self.d / 'corpus'
+        extra.mkdir()
+        (extra / 'a.txt').write_text('原文')
+        os.symlink('../corpus', self.p / 'corpus')            # 牢裡 /work/ws/corpus → /work/corpus
+        run = ['sh', '-c', 'cat corpus/a.txt && ! touch corpus/b.txt 2>/dev/null']
+        roster = fmt.validate_roster(dict(ROSTER, cmd_ok=[{'run': run, 'mounts': {'corpus': str(extra)}}]))
+        r = verify.run_items(self.p, [{'kind': 'cmd_ok', 'run': run}], roster)[0]
+        self.assertEqual(r['result'], 'pass', r)
+        self.assertFalse((extra / 'b.txt').exists())
+        roster = fmt.validate_roster(dict(ROSTER, cmd_ok=[{'run': run}]))
+        self.assertEqual(verify.run_items(self.p, [{'kind': 'cmd_ok', 'run': run}], roster)[0]['result'], 'fail')
+
+    def test_whitelist_mount_missing_is_checker_broken(self):
+        run = ['true']
+        roster = fmt.validate_roster(dict(ROSTER, cmd_ok=[{'run': run, 'mounts': {'c': str(self.d / 'nope')}}]))
+        r = verify.run_items(self.p, [{'kind': 'cmd_ok', 'run': run}], roster)[0]
+        self.assertEqual(r['result'], 'error', r)
 
     def test_program_cannot_fake_a_jail_error(self):
         """astra w2b M1：專案程式自己在 stderr 印「bwrap: …」退 1，照樣算不過（扣次數），不是檢查器壞。"""

@@ -73,7 +73,10 @@
         "scripts/check_links.py",
         "lore"
       ],
-      "timeout_s": 180
+      "timeout_s": 180,
+      "mounts": {
+        "arknights-corpus": "~/tmp/arknights-corpus"
+      }
     },
     {
       "run": [
