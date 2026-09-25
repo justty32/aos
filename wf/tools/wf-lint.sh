@@ -56,12 +56,14 @@ check_links() {
 }
 
 # archive/reference/vendor 與 .gitmodules 宣告的 submodule 不下鑽。
+# snapshot（固定版本快照，腳本生）、eval/golden、eval/calib、test/fixtures（評估／測試固定資料，複製自原文庫）也不下鑽。
 list_owned_files() {
   local root=${1%/} _ rel
   shift
   local -a prunes=(
     -path '*/.git' -o -path '*/.claude/worktrees' -o -path '*/node_modules' -o -path '*/__pycache__'
     -o -path '*/archive' -o -path '*/reference' -o -path '*/references' -o -path '*/vendor'
+    -o -path '*/snapshot' -o -path '*/eval/golden' -o -path '*/eval/calib' -o -path '*/test/fixtures'
   )
   while read -r _ rel; do
     [[ -n $rel ]] && prunes+=( -o -path "$root/${rel%/}" )
