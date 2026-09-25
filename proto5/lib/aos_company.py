@@ -40,7 +40,7 @@ TYPE = 'aos_company'
 ORDER_TYPE = 'aos_company_order'
 DEPT = re.compile(r'[a-z][a-z0-9]{0,11}\Z')
 # 第一行開頭的收件部門：〔給 mfg〕、[給 mfg]、【給 製造部】都認；部門寫 key、title 或 aliases 之一
-MARK = re.compile(r'\A\s*[〔\[【]\s*給\s*([^\s〕\]】]{1,24})\s*[〕\]】][ \t:：]*')
+MARK = re.compile(r'\A[ \t]*[〔\[【][ \t]*給[ \t]*([^\s〕\]】]{1,24})[ \t]*[〕\]】][ \t:：]*')
 PREFIX = re.compile(r'([a-z][a-z0-9]{0,7}-)?\Z')
 LIMIT_KEYS = ('regular', 'cpu', 'llm_cpu')
 STARTUP = {'regular': 10, 'cpu': 20, 'llm_cpu': 5}
@@ -172,7 +172,11 @@ def host_dept(cfg, dept):
     d = cfg['departments'].get(dept)
     if d is None or not d['open']:
         return None
-    return d['part_of'] or dept
+    host = d['part_of'] or dept
+    h = cfg['departments'].get(host)
+    if h is None or not h['open'] or h['team'] is None:      # 兼任部門開著、宿主部門關了＝也算沒成立
+        return None
+    return host
 
 
 def team_dirs(cdir, cfg):
@@ -330,14 +334,14 @@ class Switchboard:
     def save_order(self, o):
         fmt.write_json(self.order_path(o['id']), o, indent=1)
 
-    def new_order(self, src_dept, member, letter_id, dept, text):
+    def new_order(self, src_dept, member, letter_id, dept, text, out_id=None):
         self.orders.mkdir(parents=True, exist_ok=True)
         oid = fmt.next_number(self.orders, 'o-')
         host = host_dept(self.cfg, dept)
         o = {'_metainfo': {'_type': ORDER_TYPE, '_version': 1}, 'id': oid, 'at': self.now(),
              'from': {'dept': src_dept, 'member': member, 'letter': letter_id},
              'to': {'dept': dept, 'team': host, 'member': None}, 'text': text,
-             'via': None, 'route': None, 'out_id': fmt.new_id(HUMAN), 'task': None, 'status': 'open',
+             'via': None, 'route': None, 'out_id': out_id or fmt.new_id(HUMAN), 'task': None, 'status': 'open',
              'replies': [], 'result': None}
         self.save_order(o)
         return o
@@ -385,6 +389,9 @@ class Switchboard:
         elif result == 'tool' and 'run' in rule:
             from aos_team_cli import resolve
             run = route.fill(list(rule['run']), groups)
+            # 先記「要跑了」再跑：崩在跑完、存結果之前，重跑看到 running 就不再跑（工具可能有副作用，astra 必修 8）
+            o.update(via='tool', route=rule['name'], status='running')
+            self.save_order(o)
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 try:
@@ -393,7 +400,7 @@ class Switchboard:
                     code = 1
                     print('%s: %s' % (e.code, e.msg))
             o.update(via='tool', route=rule['name'], status='done' if code == 0 else 'failed',
-                     result=buf.getvalue()[-4000:])
+                     result=buf.getvalue()[-4000:], closed_at=self.now())
             self._reply_to_origin(o, 'DONE' if code == 0 else 'FAILED',
                                   '%s 部門房直接處理（規則 %s，退出 %d）：\n%s' % (dept, rule['name'], code, o['result']),
                                   o['out_id'])
@@ -432,7 +439,7 @@ class Switchboard:
                     if fmt.TASK_ID.match(r) and not o['task']:
                         o['task'] = base
                     return o
-        if letter.get('from') not in (POST, BEAT, HUMAN):
+        if not r and letter.get('from') not in (POST, BEAT, HUMAN):
             desk_open = [o for o in orders if o['status'] == 'open' and o['via'] == 'desk'
                          and o['to']['member'] == letter.get('from')]
             if len(desk_open) == 1:                  # 窗口回信沒寫 reply_to：它手上只有一張總機單就是那張
@@ -473,10 +480,13 @@ class Switchboard:
         if rec['action'] == 'order':
             oid = rec.get('order')
             if oid is None:
-                o = self.new_order(dept, letter['from'], letter['id'], rec['target'], rec['body'])
-                o['out_id'] = rec['out_id']
+                # 崩在「單寫好、單號還沒記回 seen」之間：照來信找回那張，不另開（astra 必修 7）
+                o = next((x for x in self.all_orders() if x['from'].get('dept') == dept
+                          and x['from'].get('letter') == letter['id']), None)
+                if o is None:
+                    o = self.new_order(dept, letter['from'], letter['id'], rec['target'], rec['body'],
+                                       out_id=rec['out_id'])
                 rec['order'] = o['id']
-                self.save_order(o)
                 self._save_seen(dept, letter['id'], rec)       # 單號先記下，崩了重來不會多開一張
             else:
                 o = fmt.read_json(self.order_path(oid))
@@ -492,8 +502,10 @@ class Switchboard:
             self._reply_to_origin(o, st, head + '\n' + letter['text'], rec['out_id'])
             if not any(x['letter'] == letter['id'] for x in o['replies']):
                 o['replies'].append({'letter': letter['id'], 'status': st, 'at': letter.get('at')})
-            if st in TERMINAL_STATUS and (o['via'] != 'handoff' or letter.get('from') == POST):
-                o['status'] = 'done' if st == 'DONE' else 'failed'
+            closer = POST if o['via'] == 'handoff' else o['to']['member'] if o['via'] == 'desk' else None
+            if st in TERMINAL_STATUS and o['status'] == 'open' and (closer is None or letter.get('from') == closer):
+                o['status'] = 'done' if st == 'DONE' else 'failed'     # desk 單只有窗口本人能結（astra 必修 6）
+                o['closed_at'] = self.now()
             self.save_order(o)
             self.log.append('總機 %s：%s 回 %s' % (o['id'], o['to']['team'], st))
         elif rec['action'] == 'bounce':
@@ -538,7 +550,34 @@ class Switchboard:
                         continue
                     rec['done'] = True
                     self._save_seen(dept, letter['id'], rec)
+            self.resume_orders()
         return self.log
+
+    def resume_orders(self):
+        """接續沒派完的單（astra 必修 7、8）：via 還是空的（董事單崩在派送前、或信的 seen 還沒走到）＝再派一次
+        （out_id 固定、write_new 不覆蓋，不會重寄）；tool 單停在 running＝上次跑到一半崩了，不確定做完沒，
+        **不自動重跑**，標 failed 回報下單的人。"""
+        for o in self.all_orders():
+            if o.get('status') == 'running' and o.get('via') == 'tool':
+                f = o['from']
+                sent = (Layout(self.teams[f['dept']]).outbox(HUMAN) / (o['out_id'] + '.json')
+                        if f['dept'] in self.teams else None)
+                if sent is not None and sent.is_file():      # 跑完、回信也寄了，只是單子沒存：照回信補記
+                    st = fmt.read_json(sent).get('status')
+                    o.update(status='done' if st == 'DONE' else 'failed', closed_at=self.now(),
+                             result=o.get('result') or '（結果見回信 %s）' % o['out_id'])
+                    self.save_order(o)
+                    continue
+                o.update(status='failed', closed_at=self.now(),
+                         result='總機上次跑這個工具時中斷，不確定有沒有做完；不自動重跑，請人看過再決定要不要重下單')
+                self._reply_to_origin(o, 'FAILED', '〔總機 %s〕%s' % (o['id'], o['result']), o['out_id'])
+                self.save_order(o)
+                self.log.append('總機 %s：工具中斷，標 failed' % o['id'])
+            elif o.get('via') is None and o.get('status') == 'open' and o['to'].get('team') in self.teams:
+                try:
+                    self.dispatch(o)
+                except TeamError as e:
+                    self.log.append('總機接續 %s 失敗：%s: %s' % (o['id'], e.code, e.msg))
 
     def board_order(self, dept, text):
         """董事直接下單給某部門（跳過總裁）：一樣開總機單，回覆留在那個部門的 human 收件匣。"""
@@ -734,6 +773,9 @@ def up(cdir, out=print):
     fmt.write_json(cdir / 'kernel.json', kcfg, indent=1)
     if not (cdir / 'K').exists():
         _run([CLI / 'aos-kernel', 'init', '--config', cdir / 'kernel.json'], kenv)
+    else:
+        for line in sync_kernel_pools(cdir, cfg):
+            out(line)
     _run([CLI / 'aos', 'up'], kenv, timeout=120)
     write_hr_policy(cdir, cfg)
     out('kernel 開了：%s（default %d、llm %d 顆）' % (cdir / 'K', cfg['pools']['default'], cfg['pools']['llm']))
@@ -749,6 +791,38 @@ def up(cdir, out=print):
         out('%s 部開工：%s' % (dept, '、'.join(roster['members'])))
     out(register_relay(cdir, cfg, env))
     return 0
+
+
+def sync_kernel_pools(cdir, cfg):
+    """K 已經在：把 K/info.json 兩池的顆數對到 company.json 的 pools（aos-kernel cpu add／rm），
+    再驗一次；對不上＝不開（astra 必修 13：市場層 slots 改了上限，下次 up 才真的生效）。回印出來的幾行。
+    池的 envs（AOS_COST_HOME 等）cpu add／rm 不改：K 建好後改 envs 要手編 K/info.json。"""
+    import aos_kernel_cpu
+    from aos_kernel_info import load_info
+    home = Path(cdir) / 'K'
+    want = {'default': cfg['pools']['default'], 'llm': cfg['pools']['llm']}
+    lines = []
+    try:
+        pools = (load_info(home).get('pools') or {})
+        for name, n in want.items():
+            cur = pools.get(name)
+            if cur is None:
+                env = ['AOS_LLM_CONFIG=%s' % (Path(cdir) / cfg['llm'])] if name == 'llm' else None
+                lines.append(aos_kernel_cpu.cpu_add(home, name, n, env))
+                continue
+            have = int(cur.get('count') or 0)
+            if n > have:
+                lines.append(aos_kernel_cpu.cpu_add(home, name, n - have))
+            elif n < have:
+                lines.append(aos_kernel_cpu.cpu_rm(home, pool=name, count=have - n))
+        got = {name: int(((load_info(home).get('pools') or {}).get(name) or {}).get('count') or 0) for name in want}
+    except TeamError:
+        raise
+    except Exception as e:           # kernel 那邊的錯（NotLiteral、Busy…）：包成公司的錯，不開
+        raise CompanyError('KernelSync', 'K/info.json 的池對不上 company.json：%s' % getattr(e, 'msg', e))
+    if got != want:
+        raise CompanyError('KernelSync', 'K/info.json 的池 %s 對不上 company.json 的 %s' % (got, want))
+    return lines
 
 
 def write_hr_policy(cdir, cfg):
@@ -813,11 +887,19 @@ def down(cdir, out=print):
         out('kernel 沒開過')
         return 0
     aos_client.call(env['AOS_KERNEL_HOME'], 'rm', {'name': relay_proc_name(cdir)}, client='company', timeout_ms=10000)
+    failed = []
     for dept, tdir in sorted(team_dirs(cdir, cfg).items()):
         if (Path(tdir) / 'members').is_dir():
-            _run([CLI / 'aos-team', 'stop', '--target', tdir], env, check=False)
-            out('%s 部收工' % dept)
-    _run([CLI / 'aos', 'down'], env_for(cdir, cfg, daemon=True), check=False, timeout=180)
+            r = _run([CLI / 'aos-team', 'stop', '--target', tdir], env, check=False)
+            if r.returncode != 0:
+                failed.append('%s 部 aos-team stop 退 %d' % (dept, r.returncode))
+            out('%s 部收工' % dept if r.returncode == 0 else '%s 部收工失敗（%d）' % (dept, r.returncode))
+    r = _run([CLI / 'aos', 'down'], env_for(cdir, cfg, daemon=True), check=False, timeout=180)
+    if r.returncode != 0:
+        failed.append('aos down 退 %d：%s' % (r.returncode, (r.stdout + r.stderr).strip()[-500:]))
+    if failed:                      # 市場層靠這個退出碼決定能不能封存、放名額（astra 必修 4）
+        out('沒停乾淨：' + '；'.join(failed))
+        return 1
     out('kernel 關了')
     return 0
 
