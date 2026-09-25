@@ -384,8 +384,9 @@ def _on_bad(value):
     if "wake" in value and not _name(value["wake"]):
         return False
     try:
-        return len(json.dumps(value.get("body"), ensure_ascii=False)) <= 65536
-    except (TypeError, ValueError):
+        # 09-25 astra 建議 S2：上限算 UTF-8 位元組（以前算字數，中文會超過 64 KB）
+        return len(json.dumps(value.get("body"), ensure_ascii=False).encode("utf-8")) <= 65536
+    except (TypeError, ValueError, UnicodeError):
         return False
 
 

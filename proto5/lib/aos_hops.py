@@ -11,6 +11,7 @@ cpu 撿到一件／做完一件、agent 一格的起訖與送出的工作、aos-
 """
 import json
 import os
+import stat
 import sys
 import time
 
@@ -49,13 +50,16 @@ def mark(who, ev, boot=False, **fields):
     if boot:
         record["boot"] = _boot_time()
     record.update(fields)
+    # 09-25 astra 必修 M2／M3：量測絕不能擋路。不阻塞地開（AOS_HOPS 指到 FIFO 也不會卡住），只寫普通檔；
+    # ensure_ascii 讓怪字（例如落單的 \ud800）變成跳脫字元，不會編碼失敗；任何例外都吞掉。
     try:
-        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_CLOEXEC, 0o644)
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_CLOEXEC | os.O_NONBLOCK, 0o644)
         try:
-            os.write(fd, (json.dumps(record, ensure_ascii=False) + "\n").encode())
+            if stat.S_ISREG(os.fstat(fd).st_mode):
+                os.write(fd, (json.dumps(record, ensure_ascii=True, default=str) + "\n").encode("ascii"))
         finally:
             os.close(fd)
-    except OSError:
+    except Exception:
         pass
 
 
