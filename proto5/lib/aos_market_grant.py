@@ -67,8 +67,10 @@ def rank(m, bal):
     """回一列一家（照排名分高到低）：quality、speed、cost 三項各 0～100，再加權。
 
     - **這輪沒有成功結案（done＝0）的：品質、快、省、排名分全 0**（真跑 09-25：做壞的單照樣拿滿分品質）。
-    - 品質：記下的分數（沒記＝0）。
-    - 快：成功的幾家比董事等的秒數，最快那家 ÷ 自己 ×100。
+    - 品質＝記下的分數（原始品質 raw_quality，沒記＝0）× 成功率 × 審查係數（第 74、75 題，經理人 09-25 晚）：
+      成功率＝成功張數 ÷ 董事下單張數（成功＋失敗，失敗含逾時）；審查係數＝score 記的 review_factor
+      （成功那幾張第幾次審查才過，照 params.review_factors 換算再平均；沒記＝1.0，那列 note 寫出來）。
+    - 快：**只在成功張數最多的幾家之間比**董事等的秒數，最快那家 ÷ 自己 ×100；成功張數比較少的「快」＝0（第 74 題）。
     - 省：這一輪花的 token（這輪已花 − 上輪記下的已花），**只在成功的幾家之間比**，最省那家 ÷ 自己 ×100；成功但沒花＝100。
     - 只有一家成功：快、省都是滿分，那一列 note 寫「無對照」。
     - 同分同名次（名次跳號，例 1、1、3）；列的順序同分再照品質、名字排，只為了印得穩定。
@@ -85,16 +87,27 @@ def rank(m, bal):
         spent_now = (b.get('spent') or {}).get('tokens') or 0
         spent = max(0, spent_now - (last_spent.get(name) or 0))
         done = s.get('done') or 0
-        rows.append({'name': name, 'quality': float(s.get('quality') or 0) if done else 0.0,
+        asked = done + (s.get('failed') or 0)
+        rate = round(done / asked, 4) if asked else 0.0
+        rf = s.get('review_factor')
+        rows.append({'name': name, 'quality': round(float(s.get('quality') or 0) * rate * (1.0 if rf is None else rf), 2)
+                     if done else 0.0, 'success_rate': rate, 'review_factor': rf, 'review_rounds': s.get('review_rounds'),
                      'raw_quality': s.get('quality'), 'seconds': s.get('seconds'),
                      'hops': s.get('hops'), 'done': done, 'failed': s.get('failed') or 0, 'spent_tokens': spent,
                      'spent_total': spent_now, 'balance': b.get('balance'), 'broke': b.get('broke', False),
                      'scored': bool(s), 'note': None})
     ok = [r for r in rows if r['done']]
-    fast = [r['seconds'] for r in ok if r['seconds']]
+    top = max((r['done'] for r in ok), default=0)
+    fast = [r['seconds'] for r in ok if r['seconds'] and r['done'] == top]
     cheap = [r['spent_tokens'] for r in ok if r['spent_tokens']]
     for r in rows:
-        r['speed'] = round(100 * min(fast) / r['seconds'], 2) if r['done'] and fast and r['seconds'] else 0.0
+        notes = []
+        if r['done'] and r['review_factor'] is None:
+            notes.append('沒有審查紀錄：審查係數當 1.0')
+        if r['done'] and r['done'] < top:
+            notes.append('快：成功 %d 張少於最多的 %d 張，不比快（0）' % (r['done'], top))
+        r['speed'] = round(100 * min(fast) / r['seconds'], 2) if r['done'] == top and top and fast and r['seconds'] \
+            else 0.0
         if not r['done']:
             r['cost'] = 0.0
         elif not r['spent_tokens']:
@@ -102,7 +115,8 @@ def rank(m, bal):
         else:
             r['cost'] = round(100 * min(cheap) / r['spent_tokens'], 2)
         if r['done'] and len(ok) == 1:
-            r['note'] = '省、快：無對照（這輪只有它成功）'
+            notes.insert(0, '省、快：無對照（這輪只有它成功）')
+        r['note'] = '；'.join(notes) or None
         r['score'] = round(w['quality'] * r['quality'] + w['speed'] * r['speed'] + w['cost'] * r['cost'], 2)
     rows.sort(key=lambda r: (-r['score'], -r['quality'], r['name']))
     for i, r in enumerate(rows, 1):

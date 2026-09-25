@@ -1,4 +1,4 @@
-# proto5/lib — 145 支 Python 模組
+# proto5/lib — 146 支 Python 模組
 
 ← [proto5 README](../README.md)｜規範：[cpu](../spec/cpu/README.md)、[daemon](../spec/daemon/README.md)、[kernel](../spec/kernel/README.md)、[aos-agent](../spec/aos-agent/README.md)
 
@@ -21,7 +21,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | kernel<a id="aos_kernel--池表sqlite-帳本與-tick十三支aos_kernelinfoledgerstoreenginepoolsbootcpurowshealthlscheckcli"></a> | 池表、sqlite 帳本與一格接一格的 tick：增減 cpu、boot／status、cpu 與 ls、健康、啟動前檢查、命令列 | 13 | [docs/kernel.md](docs/kernel.md) |
 | agent<a id="aos_agent_home--agent-家共用內容讀驗"></a><a id="aos_agent_info--設定與進度讀驗"></a><a id="aos_agent--走格與-kernel-排程"></a> | agent 的 tick 三格、家與設定讀驗、批次與恢復、日常 CLI（init／say／listen／talk／status…）、工具（裝、造、wrap）、權限牆、記憶壓縮 | 44 | [docs/agent.md](docs/agent.md) |
 | team | 團隊：共用格式、申請與任務單、郵差兼書記、驗收員、心跳、門房、固化建議、score、財務、HR、commons、lock／spawn／toolsmith | 54 | [docs/team.md](docs/team.md) |
-| 公司與市場 | 公司（`company.json`、生一家、機械總機、人頭與 cpu、開關機）與市場層（排名、撥額度、倒閉、合併） | 11 | [docs/company.md](docs/company.md) |
+| 公司與市場 | 公司（`company.json`、生一家、機械總機、人頭與 cpu、開關機）與市場層（排名、撥額度、倒閉、合併） | 12 | [docs/company.md](docs/company.md) |
 | 測試<a id="測試"></a> | 101 個測試檔、2874 條；每檔驗什麼、共用測試工具 | — | [docs/tests.md](docs/tests.md) |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、

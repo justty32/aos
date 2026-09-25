@@ -8,6 +8,7 @@ import aos_team_format as fmt
 from aos_team_format import TeamError
 
 from aos_market_book import _finite, load, market_lock, MarketError, now, save
+from aos_market_review import _review_rounds, review_factor
 
 LIB = Path(__file__).resolve().parent      # 跟 aos_market.LIB 同一個資料夾（proto5/lib）
 
@@ -148,8 +149,11 @@ def board_from_company(cdir, since=None, skip=()):
     - **逾時＝失敗**：這一輪下的單（下單時間在 since 之後；沒 since＝全部）score 時還沒有結案信，算失敗一張
       （`timeout` 另記張數、`timeout_ids` 記單號）。skip：以前的輪已經算過逾時的單號，不再算（之後才來的結案信也不算）。
     - 「這一輪」看結案信的時間（上一輪 grant 之後）；跨輪完成的單算在結案那一輪。
+    - **審查輪數**（第 75 題）：成功那幾張，各取這段時間最後一張有單號的製造總機單，看那張部門單子第幾次審查才過
+      （_review_rounds）；照成功的順序記在 `reviews`（1、2、3…／'FAILED'／None＝沒紀錄）。
     回 {'done': 成功張數, 'failed': 失敗張數（含逾時）, 'timeout': 逾時張數, 'timeout_ids': [...],
-        'seconds': 成功那幾張董事平均等幾秒（沒有＝None）, 'hops': 成功那幾張平均經過幾張總機單＋1（只記、不算分）}。"""
+        'seconds': 成功那幾張董事平均等幾秒（沒有＝None）, 'hops': 成功那幾張平均經過幾張總機單＋1（只記、不算分）,
+        'reviews': 成功那幾張的審查輪數}。"""
     cdir = Path(cdir)
     cfg = co.load(cdir)
     front = co.host_dept(cfg, cfg['front'])
@@ -159,7 +163,7 @@ def board_from_company(cdir, since=None, skip=()):
     folder = cdir / 'switchboard' / 'orders'
     orders = [fmt.read_json(p) for p in fmt.json_files(folder)] if folder.is_dir() else []
     out_ids = {o.get('out_id') for o in orders}
-    res = {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [], 'seconds': None, 'hops': None}
+    res = {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [], 'seconds': None, 'hops': None, 'reviews': []}
     if tdir is None:
         return res
     lay = fmt.Layout(tdir)
@@ -229,6 +233,8 @@ def board_from_company(cdir, since=None, skip=()):
             res['done'] += 1
             secs.append(max(0.0, (t1 - t0).total_seconds()))
             hops.append(len(inside) + 1)
+            mfg = [o for o in inside if (o.get('to') or {}).get('dept') == 'mfg' and o.get('task')]
+            res['reviews'].append(_review_rounds(teams, max(mfg, key=t)) if mfg else None)
         else:
             res['failed'] += 1
     if secs:
@@ -266,15 +272,22 @@ def _record_score(mdir, name, quality, eval_path, seconds, hops, done):
     try:
         bd = board_from_company(cdir, since, skip=[k for k, r in timed.items() if r < cur])
     except TeamError:
-        bd = {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [], 'seconds': None, 'hops': None}
+        bd = {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [], 'seconds': None, 'hops': None, 'reviews': []}
     for k in [k for k, r in timed.items() if r >= cur]:
         del timed[k]
     timed.update({k: cur for k in bd['timeout_ids']})
     if done is None:
         done = 1 if seconds is not None else bd['done']        # 經理人手給秒數＝他認定有一張成功
+    rounds = bd['reviews']
+    facs = [review_factor(r, m['params']['review_factors']) for r in rounds]
+    if not rounds or None in facs:                   # 舊資料／手給的成功：沒審查紀錄的那幾張當一次過
+        notes.append('%s：%s沒有審查紀錄，審查係數當 1.0' % (
+            name, '成功的單' if not rounds else '成功的 %d 張裡有 %d 張' % (len(rounds), facs.count(None))))
+    rf = round(sum(1.0 if f is None else f for f in facs) / len(facs), 4) if facs else None
     s = {'quality': quality, 'seconds': seconds if seconds is not None else bd['seconds'],
          'hops': hops if hops is not None else bd['hops'], 'done': done, 'failed': bd['failed'],
-         'timeout': bd['timeout'], 'at': now(), 'source': src, 'round': cur}     # 分數綁輪次：grant 之後就不算了
+         'timeout': bd['timeout'], 'review_rounds': rounds, 'review_factor': rf,
+         'at': now(), 'source': src, 'round': cur}     # 分數綁輪次：grant 之後就不算了
     if notes:
         s['notes'] = notes
     m['scores'][name] = s
