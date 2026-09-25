@@ -362,7 +362,7 @@ def board_from_company(cdir, since=None):
                   t0 <= _aware(fmt.parse_iso(o['at'])) <= t1]
         qa_ok = any(o['to'].get('dept') == 'qa' and o.get('status') == 'done' for o in inside)
         text = c.get('text') or ''
-        if c['status'] == 'DONE' and '結論：合格' in text and qa_ok:
+        if c['status'] == 'DONE' and re.search(r'結論[為是]?\s*[:：]\s*合格', text) and qa_ok:   # 真跑 5 家：總裁寫「結論為：合格」
             res['done'] += 1
             secs.append(max(0.0, (t1 - t0).total_seconds()))
             hops.append(len(inside) + 1)
