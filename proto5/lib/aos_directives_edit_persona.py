@@ -1,6 +1,5 @@
 """`aos-directives` 的人格檔與分節：prompts/system.json 讀寫與版本（.versions/、留最近 KEEP 份），Markdown 標題分節、挑節、換節內容。"""
 import os
-import sys
 import time
 from pathlib import Path
 
@@ -8,8 +7,7 @@ import aos_home
 from aos_agent_home import AgentError, read_info_doc, resolve_field
 from aos_directives import Context
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'tools' / 'files'))
-import _mdsec as M  # noqa: E402
+import _mdsec as M  # 母模組 aos_directives_edit 已把 tools/files 插進 sys.path
 
 
 VERSIONS_DIR = '.versions'

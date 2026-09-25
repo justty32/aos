@@ -13,7 +13,7 @@
 | [`aos_daemon_ticks.py`](../aos_daemon_ticks.py) | （09-24 one-boot）daemon 替 kernel 開 tick：`tick` 登記（`D/kernels/<id>.json`）、定時或 `K/requests/` 有新檔就開一格、同時一格、逾時整組 KILL、連敗退避不停 |
 | [`aos_daemon_cli.py`](../aos_daemon_cli.py) | `aos-daemon boot／halt／ls／scale／kill` 命令列 |
 
-## aos_daemon — 池的主人（五支：aos_daemon／pools／loop／rpc／cli）
+## aos_daemon — 池的主人（六支：aos_daemon／pools／loop／rpc／ticks／cli）
 
 09-24 由 proto5-2 納入：daemon 手上不再是一顆一顆孩子的 `spawn／kill`，而是一份「每池要哪幾號」的
 宣告（`pool.json`），每圈把孩子往宣告靠（死了自己拉、多了自己收）。規範在 [spec/daemon/](../../spec/daemon/README.md)。
