@@ -4,7 +4,7 @@
 
 **3.1 入口與資料夾**
 
-`aos-agent`、`aos-user` 都只有兩行 shell，分別 `exec python3` 到 `aos_agent_cli.py`、`aos_user_cli.py`。agent CLI 引入 `proto4-6/aos_py.py`，作為呼叫 aos-exec／kernel 的 helper。[agent 入口:1](../../../proto4-7/aos-agent)、[CLI import:9](../../../proto4-7/aos_agent_cli.py)
+`aos-agent`、`aos-user` 都只有兩行 shell，分別 `exec python3` 到 `aos_agent_cli.py`、`aos_user_cli.py`。agent CLI 引入 `proto4-6/aos_py.py`，作為呼叫 aos-exec／kernel 的 helper。[agent 入口:1](../../../../proto4-7/aos-agent)、[CLI import:9](../../../../proto4-7/aos_agent_cli.py)
 
 | 路徑 | 內容 | 主要讀寫者 |
 |---|---|---|
@@ -22,7 +22,7 @@
 | `inst.json` | 絕對 aos-agent 路徑、cwd=A、stderr=`err.txt` | new 建；kernel 執行 |
 | `err.txt` | agent stderr | 經 inst 執行時由 aos-exec 處理 |
 
-`new` 建 agent.json、空 messages、信箱、outbox、echo/sh 工具與 inst；**不預先建立 state.json**。state 不存在時由 agent 使用預設值。[建立 agent:52](../../../proto4-7/aos_user_cli.py)
+`new` 建 agent.json、空 messages、信箱、outbox、echo/sh 工具與 inst；**不預先建立 state.json**。state 不存在時由 agent 使用預設值。[建立 agent:52](../../../../proto4-7/aos_user_cli.py)
 
 **3.2 `agent.json`**
 
@@ -35,7 +35,7 @@
 | `tool_output_limit` | 正整數，排除 bool；預設 8000 | 工具結果字串截斷上限 |
 | `stop` | 僅 `is True` 觸發 | 直接退 100；此時略過 K 存在檢查及 state/messages 載入 |
 
-agent 只檢查 K 是目錄，不在這裡驗證 `config.json` 或 llm module 是否存在；更深的問題在 submit 時才顯現。[設定驗證:25](../../../proto4-7/state_machine.py)
+agent 只檢查 K 是目錄，不在這裡驗證 `config.json` 或 llm module 是否存在；更深的問題在 submit 時才顯現。[設定驗證:25](../../../../proto4-7/state_machine.py)
 
 **3.3 `state.json` 全欄位**
 
@@ -71,9 +71,9 @@ agent 只檢查 K 是目錄，不在這裡驗證 `config.json` 或 llm module �
 | `last_error` | string 或 null | 最近錯誤；wait 驗收成功時清 null |
 | `outbox_n` | int | 回話编号；寫信時另掃 outbox 最大编号，避免 reset 後覆蓋 |
 
-載入時是「預設 dict 加上檔案內容」。明確驗證只有 `state` 合法、`epoch` 是非負整數且不是 bool；其餘欄位沒有逐一嚴格驗型，未知 key 也會保留。[defaults／load_state:14](../../../proto4-7/state_machine.py)、[outbox 编號:11](../../../proto4-7/mailbox.py)
+載入時是「預設 dict 加上檔案內容」。明確驗證只有 `state` 合法、`epoch` 是非負整數且不是 bool；其餘欄位沒有逐一嚴格驗型，未知 key 也會保留。[defaults／load_state:14](../../../../proto4-7/state_machine.py)、[outbox 编號:11](../../../../proto4-7/mailbox.py)
 
-`--reset`：讀舊 state，寫全新 defaults，只有 epoch=舊值+1；不刪 messages、outbox、舊 LLM 請求或結果。舊 state 讀壞時 reset 也會失敗。[reset:26](../../../proto4-7/aos_agent_cli.py)
+`--reset`：讀舊 state，寫全新 defaults，只有 epoch=舊值+1；不刪 messages、outbox、舊 LLM 請求或結果。舊 state 讀壞時 reset 也會失敗。[reset:26](../../../../proto4-7/aos_agent_cli.py)
 
 **3.4 四格的实际狀態轉移**
 
@@ -95,7 +95,7 @@ agent 只檢查 K 是目錄，不在這裡驗證 `config.json` 或 llm module �
 | act，純文字 | 接 assistant、寫 outbox | idle，0 |
 | act，疑似文字 tool call 救不回 | 記模型錯誤，不把該 assistant 接入 messages | idle，0 |
 
-來源：[idle:94](../../../proto4-7/state_machine.py)、[ask:119](../../../proto4-7/state_machine.py)、[wait:172](../../../proto4-7/state_machine.py)、[act:200](../../../proto4-7/state_machine.py)。
+來源：[idle:94](../../../../proto4-7/state_machine.py)、[ask:119](../../../../proto4-7/state_machine.py)、[wait:172](../../../../proto4-7/state_machine.py)、[act:200](../../../../proto4-7/state_machine.py)。
 
 **3.5 `ask` 到底怎麼送出去**
 
@@ -116,7 +116,7 @@ agent 只檢查 K 是目錄，不在這裡驗證 `config.json` 或 llm module �
 | 13 | agent finally 恢復 cwd，刪除 helper request 檔 |
 | 14 | 將回傳路徑存入 `state.request`，state 改 wait，保存 |
 
-來源：[ask:119](../../../proto4-7/state_machine.py)、[llm_submit:150](../../../proto4-6/aos_py.py)、[aos_py.call:56](../../../proto4-6/aos_py.py)。
+來源：[ask:119](../../../../proto4-7/state_machine.py)、[llm_submit:150](../../../../proto4-6/aos_py.py)、[aos_py.call:56](../../../../proto4-6/aos_py.py)。
 
 此 request **沒有** agent 自填的 endpoint、priority、timeout、params、model、tool_choice；使用 llm-cpu default endpoint 與其 timeout。
 
@@ -135,7 +135,7 @@ agent 不直接寫 `K/llm/requests/`。它寫本地 helper 檔，呼叫 kernel C
 | assistant 沒有 truthy tool_calls，且 `str(result.text or "").strip()` 為空 | `empty_reply` |
 | 其餘 | 轉 act；此格**不寫 messages** |
 
-它只看結果檔，不讀 syscall 回單、不查 worker PID、不查 queued/running 狀態、不呼叫 `aos_py.wait_for()`，也不 sleep 等結果。[wait 原碼:153](../../../proto4-7/state_machine.py)
+它只看結果檔，不讀 syscall 回單、不查 worker PID、不查 queued/running 狀態、不呼叫 `aos_py.wait_for()`，也不 sleep 等結果。[wait 原碼:153](../../../../proto4-7/state_machine.py)
 
 600 是 **agent 實際被叫到 wait 且查不到檔的次數**，不是 600 秒，也不是 kernel tick 數。
 
@@ -149,7 +149,7 @@ agent 不直接寫 `K/llm/requests/`。它寫本地 helper 檔，呼叫 kernel C
 | 工具失敗／不存在／參數壞 | 仍是 tool message 的 content，下一輪交模型看 |
 | 正常回答 | 同時寫一封 outbox；清 request/checks，回 idle |
 
-有 calls 時，一格內按順序同步跑完所有 calls。最後 `_save()` **先重寫 messages，再重寫 state**。result 留在 K，不消費、不改名、不刪。[act／save:200](../../../proto4-7/state_machine.py)
+有 calls 時，一格內按順序同步跑完所有 calls。最後 `_save()` **先重寫 messages，再重寫 state**。result 留在 K，不消費、不改名、不刪。[act／save:200](../../../../proto4-7/state_machine.py)
 
 **3.8 錯誤、重試、逾時**
 
@@ -170,7 +170,7 @@ agent 不直接寫 `K/llm/requests/`。它寫本地 helper 檔，呼叫 kernel C
 | stop／reset | 不取消已送出的 LLM 工作 |
 | wait／act 讀壞結果檔 | 退 1；沒有轉成可重試的模型 errors |
 
-`_record_error()` 沒有清 `request`；錯誤後的 idle state 可能仍顯示上一個結果路徑。下一次成功 submit 才覆寫。[錯誤記錄:78](../../../proto4-7/state_machine.py)、[idle 重試條件:108](../../../proto4-7/state_machine.py)
+`_record_error()` 沒有清 `request`；錯誤後的 idle state 可能仍顯示上一個結果路徑。下一次成功 submit 才覆寫。[錯誤記錄:78](../../../../proto4-7/state_machine.py)、[idle 重試條件:108](../../../../proto4-7/state_machine.py)
 
 **3.9 崩在中間的實際保障與缺口**
 
@@ -189,7 +189,7 @@ agent 不直接寫 `K/llm/requests/`。它寫本地 helper 檔，呼叫 kernel C
 | helper 檔寫出後程序被硬殺 | finally 不一定執行，可能留下 `<name>.req.json` |
 | 多份 agent 同時跑 | 沒有鎖；state、messages、outbox、temp 檔可競爭 |
 
-proto4-7 的單檔 JSON 寫法是 `.tmp + os.replace`，沒有 fsync，也沒有跨檔 transaction。它與 proto5 文件中描述的 `think/act` 尾訊息自癒機制不能視為同一套保障。[原子寫 helper:15](../../../proto4-7/common.py)、[收信先搬 read:38](../../../proto4-7/mailbox.py)、[act 順序:217](../../../proto4-7/state_machine.py)
+proto4-7 的單檔 JSON 寫法是 `.tmp + os.replace`，沒有 fsync，也沒有跨檔 transaction。它與 proto5 文件中描述的 `think/act` 尾訊息自癒機制不能視為同一套保障。[原子寫 helper:15](../../../../proto4-7/common.py)、[收信先搬 read:38](../../../../proto4-7/mailbox.py)、[act 順序:217](../../../../proto4-7/state_machine.py)
 
 **3.10 工具怎麼跑**
 
@@ -212,9 +212,9 @@ proto4-7 的單檔 JSON 寫法是 `.tmp + os.replace`，沒有 fsync，也沒有
 | 截斷 | 前 `tool_output_limit` 個 Python 字元，加 `…（截斷）`；不是 bytes 上限 |
 | timeout | 經 aos-exec 對子行程 group TERM，2 秒後必要時 KILL |
 
-来源：[工具宣告與修復:14](../../../proto4-7/agent_tools.py)、[run_tool:105](../../../proto4-7/agent_tools.py)、[aos-exec timeout:32](../../../proto4-3/aos_exec.py)。
+来源：[工具宣告與修復:14](../../../../proto4-7/agent_tools.py)、[run_tool:105](../../../../proto4-7/agent_tools.py)、[aos-exec timeout:32](../../../../proto4-3/aos_exec.py)。
 
-**cwd 有一個重要細節**：通用工具是普通檔案目標，aos-exec 把 cwd 設為 run 所在的 `A/tools/<name>/`。內建 `sh/run` 自己算出 agent 根並 `cd`，所以它才是在 A 裡執行 shell。[普通檔案 cwd:88](../../../proto4-3/aos_exec.py)、[內建 sh:35](../../../proto4-7/aos_user_cli.py)
+**cwd 有一個重要細節**：通用工具是普通檔案目標，aos-exec 把 cwd 設為 run 所在的 `A/tools/<name>/`。內建 `sh/run` 自己算出 agent 根並 `cd`，所以它才是在 A 裡執行 shell。[普通檔案 cwd:88](../../../../proto4-3/aos_exec.py)、[內建 sh:35](../../../../proto4-7/aos_user_cli.py)
 
 文字 tool call 修復：
 
@@ -226,7 +226,7 @@ proto4-7 的單檔 JSON 寫法是 `.tmp + os.replace`，沒有 fsync，也沒有
 | 成功 | 只產生一個 call，ID=`call_<step>_1`；arguments 預設 `{}`，再 dumps |
 | 一般文字包含 JSON 但不符合開頭形狀 | 不嘗試修復 |
 
-它不是完整解析 XML／function 標籤，也不會從 `<function=foo>` 的標籤本身取工具名；仍要求 JSON object 裡有 `name`。[修復實作:43](../../../proto4-7/agent_tools.py)
+它不是完整解析 XML／function 標籤，也不會從 `<function=foo>` 的標籤本身取工具名；仍要求 JSON object 裡有 `name`。[修復實作:43](../../../../proto4-7/agent_tools.py)
 
 **3.11 aos-user、信件與退出碼**
 
@@ -246,7 +246,7 @@ proto4-7 的單檔 JSON 寫法是 `.tmp + os.replace`，沒有 fsync，也沒有
 | `talk` | 背景 thread listen --new；前景讀「你>」，送到 inbox |
 | listen/talk | 都不推進 agent、不替 kernel tick |
 
-來源：[mailbox:38](../../../proto4-7/mailbox.py)、[listen:110](../../../proto4-7/aos_user_cli.py)。
+來源：[mailbox:38](../../../../proto4-7/mailbox.py)、[listen:110](../../../../proto4-7/aos_user_cli.py)。
 
 | agent 退出碼 | 意義 |
 |---:|---|
@@ -256,7 +256,7 @@ proto4-7 的單檔 JSON 寫法是 `.tmp + os.replace`，沒有 fsync，也沒有
 | 1 | 已捕捉的 AgentError、ToolConfigError、OSError |
 | 2 | argparse 用法錯 |
 
-aos-user：正常 0；已捕捉的 AgentError／OSError／ValueError 為 1；argparse 用法錯 2。[agent CLI:18](../../../proto4-7/aos_agent_cli.py)、[user CLI:179](../../../proto4-7/aos_user_cli.py)
+aos-user：正常 0；已捕捉的 AgentError／OSError／ValueError 為 1；argparse 用法錯 2。[agent CLI:18](../../../../proto4-7/aos_agent_cli.py)、[user CLI:179](../../../../proto4-7/aos_user_cli.py)
 
 ---
 

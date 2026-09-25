@@ -15,17 +15,9 @@
 
 ## 2026-09-22：四份調查、23 題拍板、回流
 
-四個題目各有「任務書（有的沒有）→ astra 原報告 → 我的精簡總結＋待拍板」；四份一起看。
-
-| 題目 | 任務書 | astra 報告 | 精簡總結 |
-|---|---|---|---|
-| daemon／kernel | [daemon-kernel-spec-task](2026-09-22-daemon-kernel-spec-task.md) | [daemon-kernel-report-astra](2026-09-22-daemon-kernel-report-astra.md) | [daemon-kernel-summary](2026-09-22-daemon-kernel-summary.md) |
-| llm cpu | [llm-cpu-plan-task](2026-09-22-llm-cpu-plan-task.md) | [llm-cpu-report-astra](2026-09-22-llm-cpu-report-astra.md) | [llm-cpu-summary](2026-09-22-llm-cpu-summary.md) |
-| act 怎麼跑工具 | — | [act-report-astra](2026-09-22-act-report-astra.md) | [act-summary](2026-09-22-act-summary.md) |
-| 逾時 | — | [timeout-report-astra](2026-09-22-timeout-report-astra.md) | [timeout-summary](2026-09-22-timeout-summary.md) |
-
 | 檔 | 一句 |
 |---|---|
+| [2026-09-22-investigations/](2026-09-22-investigations/README.md) | **四份調查**：daemon／kernel、llm cpu、act 怎麼跑工具、逾時——各有任務書（有的沒有）→ astra 原報告（已按標題拆分檔）→ 我的精簡總結＋待拍板；四份一起看（子資料夾，自己有表） |
 | [2026-09-22-agent-task.md](2026-09-22-agent-task.md) | 任務書：aos-agent 第一版實作（waits 門＋idle／think／act） |
 | [2026-09-22-decisions.md](2026-09-22-decisions.md) | **23 題拍板紀錄**（使用者決策），proto5.1 第 4 段與之後的回流都照這份 |
 | [2026-09-22-backflow.md](2026-09-22-backflow.md) | proto5.1 規範回流 proto5：搬了什麼、跟舊版差在哪 |
@@ -85,8 +77,11 @@
 |---|---|
 | [2026-09-25-company/](2026-09-25-company/README.md) | 用 aos 團隊蓋一間新創公司：部門＝團隊資料夾、董事＝human、機械總機搬〔給 部門〕的信；`company.py`、`market.py`（排名撥額度、總池、倒閉、合併）；真跑 2 次（失敗 1、端到端成功 1：3 分 26 秒）；給董事 13 題 |
 
-## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
+## 收攏與超標的判斷（2026-09-25 整理）
 
-- 09-22 那四份 astra 報告帶了約 700 條指向 `spec/`、`lib/` 與舊 proto 的連結；搬一層資料夾就得全部改相對路徑，而 `spec/` 正在拆檔、那些連結另一隊也要改，兩邊一定撞。
-- [notes-brief/](../notes-brief/README.md) 的檔名跟 09-22 這批一對一，proto5.1 的筆記也連進來；搬了要跟著改的檔在別的領地。
-- 已經成串的（重架構、崩潰測試、試玩）本來就在子資料夾；剩下的散檔一天最多十幾份，靠本索引分組就夠。spec 拆完、要再整理時可以重新考慮。
+<a id="為什麼散檔沒收進子資料夾2026-09-24-tidy-判斷"></a>（09-24 tidy 當時「不收 09-22 散檔」的判斷已由下面第一條取代。）
+
+- **09-22 四份調查收進 [2026-09-22-investigations/](2026-09-22-investigations/README.md)**：09-24 那次不收是因為 `spec/` 正在拆檔、連結會撞；spec 拆完了，這次連 [notes-brief/](../notes-brief/README.md) 的「完整版」連結一起改。檔名沒改，跟 notes-brief 仍一對一。proto5.1 任務書裡寫的舊路徑是行內文字（當時的樣子），沒改。
+- **09-22 這批不封存**：調查做完、23 題拍板了，但它不是「被取代」——[decisions](2026-09-22-decisions.md) 與 notes-brief 都以它為事實出處，封存就得把這些連結全拿掉。
+- **09-24 的 talk／listen-tweak／advice-r1／tools-base（各三份）、tool-era-memory／tool-era-post 沒收**：每題只有「報告＋任務書＋審查」三份，剛好在「三四份」的門檻上；而且報告本檔被 `wf/session_logs/`、`wf/wait-user/` 連著，那兩處是封存式紀錄、這輪不改。
+- **超過 300 行但保留**：[2026-09-25-company/market-run-5/](2026-09-25-company/market-run-5/README.md)（一次五家真跑的時間序紀錄）、[2026-09-23-rearch/](2026-09-23-rearch/README.md) 的 review2／review4 報告（一輪審查一份，C2／W-1 這類條目編號是那輪修正的依據），都是連貫的單次紀錄，超得不多，拆了只多跳轉。[2026-09-24-tool-era/catalog.md](2026-09-24-tool-era/catalog.md)（383 行）有測試直接讀它的〈T-beat〉段，要拆得先改測試。

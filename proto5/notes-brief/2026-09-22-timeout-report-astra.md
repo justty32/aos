@@ -1,5 +1,5 @@
 # 逾時：astra 原始調查報告（2026-09-22）（精簡版）
-完整版：[../notes/2026-09-22-timeout-report-astra.md](../notes/2026-09-22-timeout-report-astra.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-timeout-report-astra.md](../notes/2026-09-22-investigations/2026-09-22-timeout-report-astra.md)
 
 ## 結論
 

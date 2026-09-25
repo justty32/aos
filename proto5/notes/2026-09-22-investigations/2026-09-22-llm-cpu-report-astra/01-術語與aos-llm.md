@@ -12,7 +12,7 @@
 | 記憶 | `info.history` 指向的檔案 | proto4-7 固定 `messages.json` |
 | 已存在的實作 | 工作樹已有 `proto5/lib/aos_agent.py`、`proto5/cli/aos-agent`；`think` 第 220 行直接呼叫 `aos_llm_ask.call(...)` | README「程式還沒寫」已落後，不能据此認定只有規範 |
 
-來源：[proto5 agent 格式](../../spec/agent/README.md)、[三格規範](../../spec/aos-agent/README.md)、[engine 與請求規範](../../../proto5.1/spec/aos-llm-ask.md)、[函式庫說明:243](../../lib/README.md)、[現有同步 think:215](../../lib/aos_agent.py)。
+來源：[proto5 agent 格式](../../../spec/agent/README.md)、[三格規範](../../../spec/aos-agent/README.md)、[engine 與請求規範](../../../../proto5.1/spec/aos-llm-ask.md)、[函式庫說明:243](../../../lib/README.md)、[現有同步 think:215](../../../lib/aos_agent.py)。
 
 ---
 
@@ -22,10 +22,10 @@
 
 | 檔案 | 實際職責 |
 |---|---|
-| [aos-llm:1](../../../proto4-5/aos-llm) | 薄入口，呼叫 `aos_llm.main()` |
-| [aos_llm.py:89](../../../proto4-5/aos_llm.py) | endpoint／request 驗證、HTTP、模型預檢、result 正規化 |
-| [aos_llm_cli.py:15](../../../proto4-5/aos_llm_cli.py) | endpoint 檔選取、REQ／OUT 檔案與 stdin/stdout、CLI 退出碼 |
-| [llm_cpu_worker.py:37](../../../proto4-5/llm_cpu_worker.py) | 第二層的使用者：直接 import `aos_llm.call()`，沒有再啟動 `aos-llm` CLI |
+| [aos-llm:1](../../../../proto4-5/aos-llm) | 薄入口，呼叫 `aos_llm.main()` |
+| [aos_llm.py:89](../../../../proto4-5/aos_llm.py) | endpoint／request 驗證、HTTP、模型預檢、result 正規化 |
+| [aos_llm_cli.py:15](../../../../proto4-5/aos_llm_cli.py) | endpoint 檔選取、REQ／OUT 檔案與 stdin/stdout、CLI 退出碼 |
+| [llm_cpu_worker.py:37](../../../../proto4-5/llm_cpu_worker.py) | 第二層的使用者：直接 import `aos_llm.call()`，沒有再啟動 `aos-llm` CLI |
 
 `aos_llm.call(endpoint, req)` 本身不讀寫請求／結果檔；它會讀取 API key 環境變數，並同步存取 HTTP。
 
@@ -77,7 +77,7 @@
 | `argv` | 沒有支援的執行語意 | 不會用來啟動 process endpoint | README 的 process 範例只是保留形狀，仍被拒絕 |
 | 其他欄位 | 沒有通用嚴格 schema | 不使用的欄位不會送給供應商 | 不使用的欄位保留在設定物件中 |
 
-來源：[第一層驗證:45](../../../proto4-5/aos_llm.py)、[CLI 選 endpoint:20](../../../proto4-5/aos_llm_cli.py)、[第二層載設定:149](../../../proto4-5/llm_cpu_home.py)、[第二層 endpoint 驗證:127](../../../proto4-5/llm_cpu_tick.py)。
+來源：[第一層驗證:45](../../../../proto4-5/aos_llm.py)、[CLI 選 endpoint:20](../../../../proto4-5/aos_llm_cli.py)、[第二層載設定:149](../../../../proto4-5/llm_cpu_home.py)、[第二層 endpoint 驗證:127](../../../../proto4-5/llm_cpu_tick.py)。
 
 API key 細節：
 
@@ -88,7 +88,7 @@ API key 細節：
 | 環境變數存在但值為空字串 | 仍組 `Authorization: Bearer `，沒有把空值視為缺 key |
 | module／worker 模式 | worker 繼承排程行程的環境；沒有從 agent 的請求 JSON 傳遞 API key |
 
-來源：[headers:73](../../../proto4-5/aos_llm.py)、[worker 啟動:209](../../../proto4-5/llm_cpu_tick.py)。
+來源：[headers:73](../../../../proto4-5/aos_llm.py)、[worker 啟動:209](../../../../proto4-5/llm_cpu_tick.py)。
 
 **1.3 命令列**
 
@@ -104,7 +104,7 @@ API key 細節：
 | `--timeout-ms N` | 正整數；覆寫 request 的 `timeout_ms`，因此也蓋過 endpoint |
 | `aos-llm models ENDPOINT` | GET `/models`，將取得的字串 id 一行一個印出 |
 
-單一 endpoint 檔加 `#name` 會被拒絕。OUT 不會自動建立父目錄。第一層沒有 `--wait`、排隊、`--dry-run` 或重試旗標。[CLI 實作:20](../../../proto4-5/aos_llm_cli.py)
+單一 endpoint 檔加 `#name` 會被拒絕。OUT 不會自動建立父目錄。第一層沒有 `--wait`、排隊、`--dry-run` 或重試旗標。[CLI 實作:20](../../../../proto4-5/aos_llm_cli.py)
 
 **1.4 請求欄位與 HTTP body**
 
@@ -138,7 +138,7 @@ API key 細節：
 - request 顯式給 `tools:[]` 時，會送出空陣列；第一層不把它省略。
 - 請求中的 `id`、`priority`、`timeout_ms`、`endpoint` 不會因為是頂層欄位而送進 body。
 
-來源：[請求驗證及 body 組裝:95](../../../proto4-5/aos_llm.py)。`params.messages` 覆蓋行為另以純記憶體 `_open` 替身確認，未連網。
+來源：[請求驗證及 body 組裝:95](../../../../proto4-5/aos_llm.py)。`params.messages` 覆蓋行為另以純記憶體 `_open` 替身確認，未連網。
 
 **1.5 HTTP 與 strict model**
 
@@ -155,7 +155,7 @@ API key 細節：
 | `strict_model:false` | 預檢與回覆 model 比對都略過 |
 | timeout | `/models` 與 chat 各自使用同一 timeout 值；不是兩次 HTTP 共用的一個總 deadline |
 
-`models()` 要求回應物件含 `data` 陣列；只收其中為物件且 `id` 是字串的項目，其他項目略過。[預檢與 POST:125](../../../proto4-5/aos_llm.py)、[models:204](../../../proto4-5/aos_llm.py)
+`models()` 要求回應物件含 `data` 陣列；只收其中為物件且 `id` 是字串的項目，其他項目略過。[預檢與 POST:125](../../../../proto4-5/aos_llm.py)、[models:204](../../../../proto4-5/aos_llm.py)
 
 **1.6 回應完整結構**
 
@@ -228,7 +228,7 @@ API key 細節：
 
 失敗 result 仍保留上述 envelope；`text`、`finish_reason` 為 null。`model_not_found` 的 `raw` 特別使用 `{"preflight": <models 原始回覆>}`。
 
-`tool_calls` **不提升到 result 頂層**，保留在 `raw.choices[0].message.tool_calls`。回覆有 `content:null` 與 tool calls 可以成功；若完全缺 `content`，第一層會回 `bad_response`。[usage／錯誤 envelope:11](../../../proto4-5/aos_llm.py)、[成功回覆擷取:174](../../../proto4-5/aos_llm.py)
+`tool_calls` **不提升到 result 頂層**，保留在 `raw.choices[0].message.tool_calls`。回覆有 `content:null` 與 tool calls 可以成功；若完全缺 `content`，第一層會回 `bad_response`。[usage／錯誤 envelope:11](../../../../proto4-5/aos_llm.py)、[成功回覆擷取:174](../../../../proto4-5/aos_llm.py)
 
 **1.7 錯誤與退出碼**
 
@@ -256,7 +256,7 @@ API key 細節：
 | `models` 設定／HTTP／回覆錯誤 | 1 | stderr 印錯誤 |
 | `models` ENDPOINT 檔解不開 | 2 | stderr 印錯誤 |
 
-第一層不因 `retryable:true` 自動重試。另外，函式不是對任意畸形回覆都保證回 result：例如非空非物件的 `prompt_tokens_details` 會讓 `_usage()` 拋 `AttributeError`；直接 CLI 沒有總括捕捉，第二層 worker 才會把這類例外包成 `internal`。此例外路徑已用純記憶體替身確認。[CLI 邊界:93](../../../proto4-5/aos_llm_cli.py)、[worker 例外封裝:37](../../../proto4-5/llm_cpu_worker.py)
+第一層不因 `retryable:true` 自動重試。另外，函式不是對任意畸形回覆都保證回 result：例如非空非物件的 `prompt_tokens_details` 會讓 `_usage()` 拋 `AttributeError`；直接 CLI 沒有總括捕捉，第二層 worker 才會把這類例外包成 `internal`。此例外路徑已用純記憶體替身確認。[CLI 邊界:93](../../../../proto4-5/aos_llm_cli.py)、[worker 例外封裝:37](../../../../proto4-5/llm_cpu_worker.py)
 
 ---
 

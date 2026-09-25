@@ -16,22 +16,22 @@
 | 10 | 原子寫 results，append usage，退出 |
 | 11 | 之後的 tick 才把 running request 移入 done |
 
-spawn 失敗會立即寫 `spawn` 錯誤 result、將 request 移入 done。worker 不負責把 request 移入 done。[dispatch:192](../../../proto4-5/llm_cpu_tick.py)、[worker:37](../../../proto4-5/llm_cpu_worker.py)
+spawn 失敗會立即寫 `spawn` 錯誤 result、將 request 移入 done。worker 不負責把 request 移入 done。[dispatch:192](../../../../proto4-5/llm_cpu_tick.py)、[worker:37](../../../../proto4-5/llm_cpu_worker.py)
 
 **2.7 收尾、逾時、重試與撤單**
 
 | 機制 | 判定／動作 | 所在檔 |
 |---|---|---|
-| 已有 result | 只判 `result_path.exists()`，不解析 result；request 移 done | [tick:72](../../../proto4-5/llm_cpu_tick.py) |
+| 已有 result | 只判 `result_path.exists()`，不解析 result；request 移 done | [tick:72](../../../../proto4-5/llm_cpu_tick.py) |
 | running metadata 壞 | 寫 `worker_died`，移 done | 同上 |
-| PID 不存在／無有效 PID | `os.kill(pid,0)` 判存活；沒有結果則 `worker_died`，移 done | [tick:51](../../../proto4-5/llm_cpu_tick.py) |
-| HTTP timeout | 第一層 urllib timeout；worker 寫 timeout result | [aos_llm:154](../../../proto4-5/aos_llm.py) |
-| scheduler hard timeout | `time.time()-started > timeout_ms+5000ms`；SIGTERM **單一 PID**，寫 timeout，移 done | [tick:98](../../../proto4-5/llm_cpu_tick.py) |
+| PID 不存在／無有效 PID | `os.kill(pid,0)` 判存活；沒有結果則 `worker_died`，移 done | [tick:51](../../../../proto4-5/llm_cpu_tick.py) |
+| HTTP timeout | 第一層 urllib timeout；worker 寫 timeout result | [aos_llm:154](../../../../proto4-5/aos_llm.py) |
+| scheduler hard timeout | `time.time()-started > timeout_ms+5000ms`；SIGTERM **單一 PID**，寫 timeout，移 done | [tick:98](../../../../proto4-5/llm_cpu_tick.py) |
 | hard timeout 的等待／升級 | 不等待退出，不升 SIGKILL | 同上 |
 | 自動重試 | 第一層、worker、scheduler 都沒有；不消費 `retryable` 來重送 | 上述呼叫鏈 |
-| `llm rm` 刪 queued | 直接刪 request/result 等同名檔 | [manage:107](../../../proto4-5/llm_cpu_manage.py) |
-| `llm rm` 刪 running | 先讀 PID；對 process group SIGTERM 等 1 秒，再 SIGKILL 等 1 秒 | [manage:85](../../../proto4-5/llm_cpu_manage.py) |
-| `llm rm` 清除範圍 | queued、running、done request、result 四处 | [manage:112](../../../proto4-5/llm_cpu_manage.py) |
+| `llm rm` 刪 queued | 直接刪 request/result 等同名檔 | [manage:107](../../../../proto4-5/llm_cpu_manage.py) |
+| `llm rm` 刪 running | 先讀 PID；對 process group SIGTERM 等 1 秒，再 SIGKILL 等 1 秒 | [manage:85](../../../../proto4-5/llm_cpu_manage.py) |
+| `llm rm` 清除範圍 | queued、running、done request、result 四处 | [manage:112](../../../../proto4-5/llm_cpu_manage.py) |
 | `llm rm` 保留項目 | worker log、usage、tick log、state snapshot 不同步清除 |
 | 遠端取消 | 沒有呼叫供應商 cancellation API；本地殺 worker 不等於撤回已抵達供應商的請求 |
 
@@ -41,7 +41,7 @@ spawn 失敗會立即寫 `spawn` 錯誤 result、將 request 移入 done。worke
 - HTTP 預檢和 chat 可以各耗一個 timeout，但 scheduler 的 hard timeout 從 worker 派工起算，只給一個 timeout 加 5 秒。
 - tick 判活只用 `kill(pid,0)`；管理指令的 `_alive()` 另讀 `/proc/<pid>/stat` 排除 zombie，兩處不相同。
 - 已有結果檔優先於 PID／timeout 檢查。
-- `llm rm` 遇到 running 記錄沒有可殺 PID 時退 1，保留檔案；既有測試有覆蓋。[管理測試:115](../../../proto4-5/test/test_module_manage.py)
+- `llm rm` 遇到 running 記錄沒有可殺 PID 時退 1，保留檔案；既有測試有覆蓋。[管理測試:115](../../../../proto4-5/test/test_module_manage.py)
 
 **2.8 同名／同內容的冪等範圍**
 
@@ -63,7 +63,7 @@ fingerprint 是：
 4. JSON 使用 `sort_keys=True`、UTF-8、緊湊 separators。
 5. 算 SHA-256。
 
-它會忽略物件 key 順序與序列化空白，**沒有補入 default endpoint、priority 等預設值做語意正規化**；也不把 endpoint 設定內容納入 fingerprint。[fingerprint 與搜尋次序:21](../../../proto4-5/llm_cpu_request.py)
+它會忽略物件 key 順序與序列化空白，**沒有補入 default endpoint、priority 等預設值做語意正規化**；也不把 endpoint 設定內容納入 fingerprint。[fingerprint 與搜尋次序:21](../../../../proto4-5/llm_cpu_request.py)
 
 **2.9 獨立行程模式與 kernel module 模式**
 
@@ -92,7 +92,7 @@ fingerprint 是：
 | module `handle()` | `(ok,msg)`，是收單結果，不是 LLM 結果 |
 | module CLI | 接單／成功結果 0；失敗／逾時 1；解析用法錯 2 |
 
-來源：[CLI:35](../../../proto4-5/llm_cpu.py)、[module hooks:37](../../../proto4-5/llm_cpu_module.py)。
+來源：[CLI:35](../../../../proto4-5/llm_cpu.py)、[module hooks:37](../../../../proto4-5/llm_cpu_module.py)。
 
 **2.10 `aos-kernel llm K req --wait` 的完整路徑**
 
@@ -129,7 +129,7 @@ syscall ticket：
 {"ok":true,"msg":"排進去了：id=hello；結果會在 ..."}
 ```
 
-不是模型 response。[module CLI:98](../../../proto4-5/llm_cpu_module.py)、[handle:37](../../../proto4-5/llm_cpu_module.py)
+不是模型 response。[module CLI:98](../../../../proto4-5/llm_cpu_module.py)、[handle:37](../../../../proto4-5/llm_cpu_module.py)
 
 | 等待階段 | 時限 | 逾時後 |
 |---|---|---|
@@ -138,7 +138,7 @@ syscall ticket：
 | `--wait 0` | 仍先讀一次 result | 有現成結果可成功；沒有則立即回逾時 |
 | 不帶 `--wait` | 仍然等 kernel 收件回音 | 不是寫完 syscall 就立刻退出 |
 
-`--wait` 不會幫 kernel 跑 tick。`--json` 輸出完整 result 後仍會另外印一行「結果檔：…」，所以 stdout **不是只有一個 JSON 文件**。預設只印 `result.text`；tool-call-only result 的 text=null 時會印空行。[等待實作:174](../../../proto4-5/llm_cpu_module.py)
+`--wait` 不會幫 kernel 跑 tick。`--json` 輸出完整 result 後仍會另外印一行「結果檔：…」，所以 stdout **不是只有一個 JSON 文件**。預設只印 `result.text`；tool-call-only result 的 text=null 時會印空行。[等待實作:174](../../../../proto4-5/llm_cpu_module.py)
 
 兩個時序邊界，由程式順序推導、現有測試未覆蓋：
 
@@ -147,7 +147,7 @@ syscall ticket：
 | 第一個 kernel tick 之前投 LLM syscall | kernel 先 handle syscall、後跑 module.tick 建家；handle 讀不到 endpoints，先回失敗，同一 tick 稍後才建好 `K/llm` |
 | 回音逾時撤單時，kernel 已讀入 ticket 但還沒刪原檔 | CLI 可能成功 unlink、印「沒送出去」；kernel 仍可用記憶體內的 ticket 完成排入 |
 
-來源：[kernel 先 syscall 後 module tick:48](../../../proto4-3/aos_kernel_tick.py)、[建家位置:21](../../../proto4-5/llm_cpu_module.py)、[撤單:154](../../../proto4-5/llm_cpu_module.py)、[syscall 未先 claim:86](../../../proto4-3/aos_kernel_syscall.py)。
+來源：[kernel 先 syscall 後 module tick:48](../../../../proto4-3/aos_kernel_tick.py)、[建家位置:21](../../../../proto4-5/llm_cpu_module.py)、[撤單:154](../../../../proto4-5/llm_cpu_module.py)、[syscall 未先 claim:86](../../../../proto4-3/aos_kernel_syscall.py)。
 
 **2.11 第二層的崩潰窗口**
 
@@ -160,7 +160,7 @@ syscall ticket：
 | hard timeout 發 SIGTERM 後 | scheduler 立即寫 timeout／移 done，沒有等待 worker 終止；若 worker 未終止，仍存在後續寫 result 的窗口 |
 | 兩個 tick 同時跑 | 沒有鎖，會競爭相同 request／temp／running 檔 |
 
-以上是可由寫入順序直接辨識的窗口，不是本次故障注入測試的結果。[dispatch 與 PID 寫回:200](../../../proto4-5/llm_cpu_tick.py)、[worker 寫入順序:54](../../../proto4-5/llm_cpu_worker.py)
+以上是可由寫入順序直接辨識的窗口，不是本次故障注入測試的結果。[dispatch 與 PID 寫回:200](../../../../proto4-5/llm_cpu_tick.py)、[worker 寫入順序:54](../../../../proto4-5/llm_cpu_worker.py)
 
 ---
 

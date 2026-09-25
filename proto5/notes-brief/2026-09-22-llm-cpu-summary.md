@@ -1,5 +1,5 @@
 # llm cpu：精簡總結與 proto5 方案（2026-09-22）（精簡版）
-完整版：[../notes/2026-09-22-llm-cpu-summary.md](../notes/2026-09-22-llm-cpu-summary.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-llm-cpu-summary.md](../notes/2026-09-22-investigations/2026-09-22-llm-cpu-summary.md)
 
 ## 結論
 

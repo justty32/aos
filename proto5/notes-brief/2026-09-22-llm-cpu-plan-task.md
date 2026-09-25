@@ -1,5 +1,5 @@
 # 任務書：llm cpu 預先規劃（2026-09-22）（精簡版）
-完整版：[../notes/2026-09-22-llm-cpu-plan-task.md](../notes/2026-09-22-llm-cpu-plan-task.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-llm-cpu-plan-task.md](../notes/2026-09-22-investigations/2026-09-22-llm-cpu-plan-task.md)
 
 ## 要做什麼、交什麼
 

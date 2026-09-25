@@ -6,13 +6,13 @@
 
 | 檔案 | 職責 |
 |---|---|
-| [llm_cpu.py:11](../../../proto4-5/llm_cpu.py) | `init`／`tick`／`submit`／`ls`／內部 `worker` CLI |
-| [llm_cpu_home.py:43](../../../proto4-5/llm_cpu_home.py) | 建家、原子 JSON、submit、endpoint 文件、獨立模式 ls |
-| [llm_cpu_request.py:15](../../../proto4-5/llm_cpu_request.py) | ID 驗證、請求指紋、查同名單所在位置 |
-| [llm_cpu_tick.py:231](../../../proto4-5/llm_cpu_tick.py) | 收尾、驗件、排序、容量、派工、snapshot／log |
-| [llm_cpu_worker.py:37](../../../proto4-5/llm_cpu_worker.py) | 在背景同步問模型、寫結果與 usage |
-| [llm_cpu_module.py:13](../../../proto4-5/llm_cpu_module.py) | 接 kernel 的四個 hook；syscall、兩段等待、module 摘要 |
-| [llm_cpu_manage.py:31](../../../proto4-5/llm_cpu_manage.py) | `aos-kernel llm ls/rm`，直接查檔／殺 worker／刪單 |
+| [llm_cpu.py:11](../../../../proto4-5/llm_cpu.py) | `init`／`tick`／`submit`／`ls`／內部 `worker` CLI |
+| [llm_cpu_home.py:43](../../../../proto4-5/llm_cpu_home.py) | 建家、原子 JSON、submit、endpoint 文件、獨立模式 ls |
+| [llm_cpu_request.py:15](../../../../proto4-5/llm_cpu_request.py) | ID 驗證、請求指紋、查同名單所在位置 |
+| [llm_cpu_tick.py:231](../../../../proto4-5/llm_cpu_tick.py) | 收尾、驗件、排序、容量、派工、snapshot／log |
+| [llm_cpu_worker.py:37](../../../../proto4-5/llm_cpu_worker.py) | 在背景同步問模型、寫結果與 usage |
+| [llm_cpu_module.py:13](../../../../proto4-5/llm_cpu_module.py) | 接 kernel 的四個 hook；syscall、兩段等待、module 摘要 |
+| [llm_cpu_manage.py:31](../../../../proto4-5/llm_cpu_manage.py) | `aos-kernel llm ls/rm`，直接查檔／殺 worker／刪單 |
 
 **2.2 家目錄與讀寫責任**
 
@@ -59,7 +59,7 @@ L/
 {"ticks":0,"running":0,"endpoints":{}}
 ```
 
-其中 `endpoints` 的 value 是**各 endpoint 正在 running 的件數**，不是 endpoint 設定物件。真正佇列／執行狀態由各資料夾中的檔案決定。[建家:43](../../../proto4-5/llm_cpu_home.py)、[snapshot:242](../../../proto4-5/llm_cpu_tick.py)
+其中 `endpoints` 的 value 是**各 endpoint 正在 running 的件數**，不是 endpoint 設定物件。真正佇列／執行狀態由各資料夾中的檔案決定。[建家:43](../../../../proto4-5/llm_cpu_home.py)、[snapshot:242](../../../../proto4-5/llm_cpu_tick.py)
 
 init 只產生一個 local endpoint：`http://localhost:1234/v1`、model=`loaded-model-id`、容量 1、timeout 300000。DIR 已存在就退 1，不覆寫，也不修補缺少的子目錄。
 
@@ -109,7 +109,7 @@ init 只產生一個 local endpoint：`http://localhost:1234/v1`、model=`loaded
 | `_aos` | scheduler metadata；物件以外的值在 dispatch 時被替換 |
 | 其他欄位 | 沒有拒絕未知 key；仍可能影響 request hash |
 
-排程 ID 來自 `--name`／module ticket 的 `id`／未指定時的 `time.time_ns()`。限制是 `[A-Za-z0-9._-]+`，但額外禁止 `"."`、`".."`、以及以 `.tmp` 結尾。[ID 驗證:7](../../../proto4-5/llm_cpu_request.py)、[request 驗證:110](../../../proto4-5/llm_cpu_tick.py)
+排程 ID 來自 `--name`／module ticket 的 `id`／未指定時的 `time.time_ns()`。限制是 `[A-Za-z0-9._-]+`，但額外禁止 `"."`、`".."`、以及以 `.tmp` 結尾。[ID 驗證:7](../../../../proto4-5/llm_cpu_request.py)、[request 驗證:110](../../../../proto4-5/llm_cpu_tick.py)
 
 進入 running 後，request 多出：
 
@@ -134,7 +134,7 @@ init 只產生一個 local endpoint：`http://localhost:1234/v1`、model=`loaded
 | `started` | float，epoch 秒 | dispatch，啟動 worker 前 |
 | 其他 `_aos` key | 未統一定義 | 若原來是物件，dispatch 保留其餘 key |
 
-獨立模式 CLI `submit` 是**複製原始 bytes**，此時不解析、不驗 JSON，因此可以成功投入壞 JSON；下一 tick 才退件。module 使用 `submit_object()`，先驗 request，才序列化投遞。[兩種 submit:74](../../../proto4-5/llm_cpu_home.py)
+獨立模式 CLI `submit` 是**複製原始 bytes**，此時不解析、不驗 JSON，因此可以成功投入壞 JSON；下一 tick 才退件。module 使用 `submit_object()`，先驗 request，才序列化投遞。[兩種 submit:74](../../../../proto4-5/llm_cpu_home.py)
 
 **2.4 回應檔格式與 usage**
 
@@ -155,7 +155,7 @@ worker 正常寫出的 `results/<id>.json`＝第一層完整 result，另加：
 | scheduler 自產 result 的 `notes` | **沒有這個欄位**，與第一層 envelope 不完全一致 |
 | scheduler 自產錯誤的 retryable | 現有呼叫都使用預設 false；包含 watchdog 的 timeout |
 
-來源：[worker 寫結果:37](../../../proto4-5/llm_cpu_worker.py)、[scheduler 錯誤 result:15](../../../proto4-5/llm_cpu_tick.py)。
+來源：[worker 寫結果:37](../../../../proto4-5/llm_cpu_worker.py)、[scheduler 錯誤 result:15](../../../../proto4-5/llm_cpu_tick.py)。
 
 `usage.jsonl` 每行：
 
@@ -177,7 +177,7 @@ worker 正常寫出的 `results/<id>.json`＝第一層完整 result，另加：
 
 `at` 是寫 usage 時的 UTC 時間。以 `O_APPEND` 開檔，序列化後一次 `os.write()`；若序列化長度達 4096 bytes，將 model 改 null 後重組。沒有記 API key、prompt、response 本文。
 
-不是每個終局都會有 usage：**只有 worker 的 `_write_usage()` 會寫**；tick 自行退件、`worker_died`、spawn 失敗或 watchdog timeout 不會補 usage。[usage 實作:16](../../../proto4-5/llm_cpu_worker.py)
+不是每個終局都會有 usage：**只有 worker 的 `_write_usage()` 會寫**；tick 自行退件、`worker_died`、spawn 失敗或 watchdog timeout 不會補 usage。[usage 實作:16](../../../../proto4-5/llm_cpu_worker.py)
 
 **2.5 一格 tick 的固定順序**
 
@@ -191,7 +191,7 @@ worker 正常寫出的 `results/<id>.json`＝第一層完整 result，另加：
 | 6 | 寫 snapshot | ticks 加一，寫 running 總數及各 endpoint 件數 |
 | 7 | append log | timestamp、tick、queued、running、事件；沒事件記 idle |
 
-來源：[tick 主流程:231](../../../proto4-5/llm_cpu_tick.py)。
+來源：[tick 主流程:231](../../../../proto4-5/llm_cpu_tick.py)。
 
 | 排隊／容量性質 | 事實 |
 |---|---|

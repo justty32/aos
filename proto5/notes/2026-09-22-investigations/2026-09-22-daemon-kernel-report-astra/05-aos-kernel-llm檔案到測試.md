@@ -18,7 +18,7 @@
 
 LLM `atomic_json()` 會 fsync **檔案**後 replace，但沒有 fsync 父目錄。其 syscall 發佈包了兩層暫存，會先經 `<ticket>.json.tmp.tmp`，再到 `.tmp`，最後正式 `.json`。
 
-來源：[llm_cpu_home.py:15](../../../proto4-5/llm_cpu_home.py)、[llm_cpu_home.py:43](../../../proto4-5/llm_cpu_home.py)、[llm_cpu_module.py:218](../../../proto4-5/llm_cpu_module.py)。
+來源：[llm_cpu_home.py:15](../../../../proto4-5/llm_cpu_home.py)、[llm_cpu_home.py:43](../../../../proto4-5/llm_cpu_home.py)、[llm_cpu_module.py:218](../../../../proto4-5/llm_cpu_module.py)。
 
 `endpoints.json`：
 
@@ -66,7 +66,7 @@ LLM request：
 
 同名查找順序：requests → running → results → done。內容同指紋視為既有同單；不同則拒絕。CLI 命中同單可直接成功或等既有 result，無須 kernel 活著。
 
-來源：[llm_cpu_home.py:115](../../../proto4-5/llm_cpu_home.py)、[llm_cpu_request.py:21](../../../proto4-5/llm_cpu_request.py)、[llm_cpu_tick.py:110](../../../proto4-5/llm_cpu_tick.py)、[aos_llm.py:89](../../../proto4-5/aos_llm.py)。
+來源：[llm_cpu_home.py:115](../../../../proto4-5/llm_cpu_home.py)、[llm_cpu_request.py:21](../../../../proto4-5/llm_cpu_request.py)、[llm_cpu_tick.py:110](../../../../proto4-5/llm_cpu_tick.py)、[aos_llm.py:89](../../../../proto4-5/aos_llm.py)。
 
 result 全欄位：
 
@@ -100,7 +100,7 @@ result 全欄位：
 
 `raw` 的供應商資料不是 kernel 定義的固定 schema；agent 用到其中的 `choices[0].message`，包含可能的 `tool_calls`。
 
-來源：[aos_llm.py:24](../../../proto4-5/aos_llm.py)、[aos_llm.py:186](../../../proto4-5/aos_llm.py)、[llm_cpu_tick.py:15](../../../proto4-5/llm_cpu_tick.py)、[llm_cpu_worker.py:37](../../../proto4-5/llm_cpu_worker.py)。
+來源：[aos_llm.py:24](../../../../proto4-5/aos_llm.py)、[aos_llm.py:186](../../../../proto4-5/aos_llm.py)、[llm_cpu_tick.py:15](../../../../proto4-5/llm_cpu_tick.py)、[llm_cpu_worker.py:37](../../../../proto4-5/llm_cpu_worker.py)。
 
 其他 JSON：
 
@@ -140,7 +140,7 @@ usage 由 worker 寫結果後 append；scheduler 自己退的壞單、spawn 失�
 
 worker 不透過 daemon add，也不占用 `K/cpus/n.json` 的一個普通行程槽。kernel tick 結束後它仍可繼續。沒有通用「daemon stop 就收掉所有 LLM worker」的路徑。
 
-來源：[llm_cpu_tick.py:72](../../../proto4-5/llm_cpu_tick.py)、[llm_cpu_tick.py:192](../../../proto4-5/llm_cpu_tick.py)、[llm_cpu_tick.py:231](../../../proto4-5/llm_cpu_tick.py)。
+來源：[llm_cpu_tick.py:72](../../../../proto4-5/llm_cpu_tick.py)、[llm_cpu_tick.py:192](../../../../proto4-5/llm_cpu_tick.py)、[llm_cpu_tick.py:231](../../../../proto4-5/llm_cpu_tick.py)。
 
 **3.18 kernel 必須支撑的既有使用事實**
 
@@ -161,7 +161,7 @@ worker 不透過 daemon add，也不占用 `K/cpus/n.json` 的一個普通行程
 
 這些是現有程式的依賴；**沒有要求 kernel 知道 agent 的四格、信箱、工具或 messages 格式**。
 
-來源：[proto4-5/README.md:101](../../../proto4-5/README.md)、[proto4-7/README.md:57](../../../proto4-7/README.md)、[state_machine.py:94](../../../proto4-7/state_machine.py)、[state_machine.py:172](../../../proto4-7/state_machine.py)、[aos_py.py:150](../../../proto4-6/aos_py.py)。
+來源：[proto4-5/README.md:101](../../../../proto4-5/README.md)、[proto4-7/README.md:57](../../../../proto4-7/README.md)、[state_machine.py:94](../../../../proto4-7/state_machine.py)、[state_machine.py:172](../../../../proto4-7/state_machine.py)、[aos_py.py:150](../../../../proto4-6/aos_py.py)。
 
 **3.19 錯誤代號**
 
@@ -190,7 +190,7 @@ kernel 核心自己的 CLI／syscall **沒有統一具名 error code**，多為�
 | `ReferencePointerInvalid` | pointer 語法／位置不合法 |
 | `ReferenceCycle` | 同一解析鏈重遇相同文件及位置 |
 
-來源：[aos_inst.py:76](../../../proto4-3/aos_inst.py)、[aos_inst_resolve.py:27](../../../proto4-3/aos_inst_resolve.py)。
+來源：[aos_inst.py:76](../../../../proto4-3/aos_inst.py)、[aos_inst_resolve.py:27](../../../../proto4-3/aos_inst_resolve.py)。
 
 LLM result 的 `error.kind`：
 
@@ -215,12 +215,12 @@ HTTP 429／5xx、一般連線與 HTTP timeout 可標 retryable=true；這個欄�
 
 | 測試 | 已有斷言 |
 |---|---|
-| [test_kernel_init.py:19](../../../proto4-3/test/test_kernel_init.py) | init 檔案／預設、拒絕重灌、add 正規化／配名、queue 退件、syscall 回音 |
-| [test_kernel_exit.py:18](../../../proto4-3/test/test_kernel_exit.py) | waiting 保留／讓位、bad_after、runs 倒退清計數、特殊碼清連敗 |
-| [test_kernel_daemon.py:14](../../../proto4-3/test/test_kernel_daemon.py) | boot flags、done、125 退件、FIFO 輪替、CPU 補回、換檔不留空窗 |
-| [test_kernel_fix_r6.py:50](../../../proto4-3/test/test_kernel_fix_r6.py) | 清 done/bad、同名重排、daemon 狀態文案、欄寬 |
-| [test_module.py:51](../../../proto4-3/test/test_module.py) | module 路徑、tick/status/cli/syscall、缺 module 不打死 tick |
-| [proto4-5/test/test_module.py:198](../../../proto4-5/test/test_module.py) | LLM 等回單撤單、結果超時、同名同指紋、既有 result 等待 |
+| [test_kernel_init.py:19](../../../../proto4-3/test/test_kernel_init.py) | init 檔案／預設、拒絕重灌、add 正規化／配名、queue 退件、syscall 回音 |
+| [test_kernel_exit.py:18](../../../../proto4-3/test/test_kernel_exit.py) | waiting 保留／讓位、bad_after、runs 倒退清計數、特殊碼清連敗 |
+| [test_kernel_daemon.py:14](../../../../proto4-3/test/test_kernel_daemon.py) | boot flags、done、125 退件、FIFO 輪替、CPU 補回、換檔不留空窗 |
+| [test_kernel_fix_r6.py:50](../../../../proto4-3/test/test_kernel_fix_r6.py) | 清 done/bad、同名重排、daemon 狀態文案、欄寬 |
+| [test_module.py:51](../../../../proto4-3/test/test_module.py) | module 路徑、tick/status/cli/syscall、缺 module 不打死 tick |
+| [proto4-5/test/test_module.py:198](../../../../proto4-5/test/test_module.py) | LLM 等回單撤單、結果超時、同名同指紋、既有 result 等待 |
 
 測試沒有把「最新快照推算」變成完整事件歷史，也沒有提供跨 swap 連敗保存、單行程不重疊執行或 crash transaction 的保證。
 

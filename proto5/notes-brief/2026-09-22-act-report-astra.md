@@ -1,5 +1,5 @@
 # act 工具執行方式調查報告（精簡版）
-完整版：[../notes/2026-09-22-act-report-astra.md](../notes/2026-09-22-act-report-astra.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-act-report-astra.md](../notes/2026-09-22-investigations/2026-09-22-act-report-astra.md)
 
 ## 結論
 

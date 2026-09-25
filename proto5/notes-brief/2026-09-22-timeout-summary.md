@@ -1,5 +1,5 @@
 # 逾時：精簡總結與待拍板（2026-09-22）（精簡版）
-完整版：[../notes/2026-09-22-timeout-summary.md](../notes/2026-09-22-timeout-summary.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-timeout-summary.md](../notes/2026-09-22-investigations/2026-09-22-timeout-summary.md)
 
 ## 結論
 
