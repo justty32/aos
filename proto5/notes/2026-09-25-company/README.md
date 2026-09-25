@@ -157,3 +157,7 @@
 測試：test_market 34 → 43 條、test_company 35 → 38 條；全套 101 檔 2853 → 2865 條全綠。
 
 簡報 brief/2026-09-25.md §1 的「公式還不能真發額度」在本輪修完後應改為：「排名公式真跑後修好了：做壞的單拿 0、沒打分不准撥、快改看董事等多久，經理人可以照公式發額度（打分後看一眼說明與註記再撥）」。
+
+## 9. 五家真跑
+
+經理人辦公室的執行員 15:19～16:35 照 [market-run](market-run/README.md) 的方法放大到五家（只差製造部寫手：deepseek-chat、gpt-5.5、gpt-6-astra、gpt-5.6-sol、claude-haiku-4.5），跑滿 3 輪、每輪 3 張「補人物」。deepseek 那家第 1 輪、haiku 那家第 3 輪花光倒閉；astra（第 1 名）、sol、gpt-5.5 營業中，沒到合併。途中修了一行：總裁寫「結論為：合格」被算成失敗（賞罰顛倒），`aos_market.py` 改認正則＋測試。建議製造部寫手預設換 gpt-6-astra。全紀錄與給董事的建議答案見 [market-run-5](market-run-5/README.md)；經驗見 [lessons](../../playbook/lessons.md) 33～35。
