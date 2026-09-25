@@ -65,7 +65,13 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_check.py`](aos_agent_check.py) | `aos-agent check`：找 K、跑 kernel 檢查、再查 agent 家、工具與權限牆 |
 | [`aos_agent_tools.py`](aos_agent_tools.py) | `aos-agent tools add`：裝工具包或原地引用工具檔／資料夾 |
 | [`aos_agent_tools_edit.py`](aos_agent_tools_edit.py) | `aos-agent tools ls／rm／alias／unalias` 與共用的 info 編輯（管理鎖、試算後整份重寫） |
-| [`aos_agent_tools_dev.py`](aos_agent_tools_dev.py) | （第二波 A 隊，spec/aos-agent/tools-dev.md）造工具：`tools new`（骨架）、`tools test`（照工具檔描述自動跑正例／型別錯／缺參數＋`cases.json`，預設用 aos-jail 關牢）、`tools wrap-py`（`ast` 靜態讀 Python 檔、有註解的函式包成工具包、拒收表）；不需要 agent 家、不叫模型（wrap-py 的 `--describe-with-llm` 例外：第三波 W3-2，只寫提案檔、人看過用 `--describe` 才產包） |
+| [`aos_agent_tools_dev.py`](aos_agent_tools_dev.py) | （第二波 A 隊，spec/aos-agent/tools-dev.md）造工具：`tools new`（骨架）、`tools test`（照工具檔描述自動跑正例／型別錯／缺參數＋`cases.json`，預設用 aos-jail 關牢）、`tools wrap-py`（`ast` 靜態讀 Python 檔、有註解的函式包成工具包、拒收表）；不需要 agent 家、不叫模型（wrap-py 的 `--describe-with-llm` 例外：第三波 W3-2，只寫提案檔、人看過用 `--describe` 才產包）。入口＋匯出層：只留 `wrap_py`、`test` 兩個主流程 |
+| [`aos_agent_tools_dev_pack.py`](aos_agent_tools_dev_pack.py) | 造工具共用：整包寫暫存資料夾再 rename 就位（`--force` 備份、殘渣回收）與 `tools new` 骨架 |
+| [`aos_agent_tools_dev_pyread.py`](aos_agent_tools_dev_pyread.py) | `wrap-py` 的讀：ast 靜態讀 Python 檔，型別註解→型別記號／JSON Schema、docstring 參數說明、拒收表 |
+| [`aos_agent_tools_dev_wrappy.py`](aos_agent_tools_dev_wrappy.py) | `wrap-py` 的產包零件：run 樣板、README、印表、讀原檔與包名檢查 |
+| [`aos_agent_tools_dev_describe.py`](aos_agent_tools_dev_describe.py) | `wrap-py --describe-with-llm／--describe`：模型補描述只寫提案、提案的機械檢查、照提案補描述 |
+| [`aos_agent_tools_dev_run.py`](aos_agent_tools_dev_run.py) | `tools test` 跑一次：關牢探測、起工具行程、收輸出（封頂、逾時、殺整組） |
+| [`aos_agent_tools_dev_test.py`](aos_agent_tools_dev_test.py) | `tools test` 的案例與判定：自動案例、`cases.json`、判過不過、整套跑與印表 |
 | [`aos_agent_tools_wrapcli.py`](aos_agent_tools_wrapcli.py) | （第三波 W3-2，spec/aos-agent/tools-wrapcli.md）`tools wrap-cli CMD`：argparse 靜態讀／`--help` 文字規則解 → 工具包；`--describe-with-llm` 只寫提案、`--spec` 照人看過的表產包 |
 | [`aos_agent_access.py`](aos_agent_access.py) | 權限牆（access.json）讀驗、信任資料、重疊檢查、快照 |
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
