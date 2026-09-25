@@ -432,17 +432,27 @@ def _member_spawn(value, where):
 
 
 def _cmd_whitelist(value, where):
-    """team.json 的 cmd_ok：人寫的白名單 [{"run": [...], "timeout_s": 秒}]；單子上的 cmd_ok 要對得上其中一條。"""
+    """team.json 的 cmd_ok：人寫的白名單 [{"run": [...], "timeout_s": 秒, "mounts"?: {名: 路徑}}]；單子上的 cmd_ok 要對得上其中一條。"""
     if not isinstance(value, list):
         bad(where, '要是陣列 [{"run": [...], "timeout_s": 秒}]')
     out = []
     for i, e in enumerate(value):
         w = '%s[%d]' % (where, i)
         _obj(e, w)
-        _unknown(e, ('run', 'timeout_s'), w)
+        _unknown(e, ('run', 'timeout_s', 'mounts'), w)
         run = validate_cmd(e.get('run'), w + '.run')
         t = _int(e.get('timeout_s', CMD_TIMEOUT_DEFAULT), w + '.timeout_s', 1, CMD_TIMEOUT_MAX)
-        out.append({'run': run, 'timeout_s': t})
+        entry = {'run': run, 'timeout_s': t}
+        # 09-25 arknights 隊加：指令要讀專案外的資料（例：原文庫）時，人在白名單寫要多掛哪幾個資料夾；一律唯讀
+        mounts = _obj(e.get('mounts', {}), w + '.mounts')
+        for mk, mv in mounts.items():
+            if not re.match(r'[a-z0-9_-]+\Z', mk) or mk == 'ws':
+                bad('%s.mounts.%s' % (w, mk), '名字要是小寫英數與 _ -，不能是 ws')
+            if not isinstance(mv, str) or not (mv.startswith('/') or mv.startswith('~')):
+                bad('%s.mounts.%s' % (w, mk), '要是絕對路徑或 ~ 開頭的路徑（一律唯讀掛到 /work/%s）' % mk)
+        if mounts:
+            entry['mounts'] = {mk: os.path.expanduser(mv) for mk, mv in mounts.items()}
+        out.append(entry)
     return out
 
 
