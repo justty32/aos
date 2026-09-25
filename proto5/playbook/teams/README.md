@@ -12,4 +12,4 @@
 
 | 名字 | 一句話 | 來源報告 |
 |---|---|---|
-| （arknights 隊補） | 強模型版團隊設定（`arknights-strong.json`、`lore-entry.md`） | 另一隊放，2026-09-25 |
+| （arknights 隊補） | 強模型版團隊設定（`arknights-strong.json`、`lore-entry.md`）。`arknights-strong.json` 含 `<佔位>`，是樣板，填完換專案的欄位才會過 `aos_team_format.py` | 另一隊放，2026-09-25 |
