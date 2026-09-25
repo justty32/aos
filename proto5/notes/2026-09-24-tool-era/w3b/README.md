@@ -223,8 +223,9 @@
 | 什麼時候 | 檔 | 條 | 秒 | 結果 |
 |---|---|---|---|---|
 | 開工前（main `60e4b81`，昨天 astra 修完的版本） | 94 | 2605 | 243 | 全綠 |
-| S4 修完（`3195d6b`） | 94 | 2626 | 245 | 全綠 |
-| 複審修完（`6f82ebb`，最終） | 94 | 2633 | 249 | 全綠 |
+| S4 修完（rebase 前 `3195d6b`） | 94 | 2626 | 245 | 全綠 |
+| 複審修完（rebase 前 `6f82ebb`） | 94 | 2633 | 249 | 全綠 |
+| rebase 到 main `8b86e03`（含 P2 收尾）之後，最終 | 96 | 2644 | 247 | 全綠 |
 
 - 三次都沒看到不穩（flaky）的測試，所以沒改測試。
 - astra 提的 S1（help 上限那條測試靠真的 sleep 計時，機器很忙時可能誤紅）還沒出過事，留下一輪。
@@ -269,7 +270,7 @@
 
 ### 12.5 數字
 
-- **commit**：3 個——`3195d6b` S4、`6f82ebb` 複審修法、加上這份報告。
+- **commit**：3 個，rebase 到 main `8b86e03` 上：`4b8adfd` S4、`3ced78d` 複審修法、加上這份報告。
 - **測試**：+28 條（S4 21 條、複審 7 條），都在 `test_llm_ask.py`、`test_compact_summarize.py`、`test_agent_tools_wrapcli.py`、`test_team_crystal.py`。
 - **真跑**：0 次（LiteLLM 沒開；沒碰 LM Studio／ollama）。
 - **astra**：1 次（`gpt-6-astra`，唯讀）。
@@ -281,14 +282,15 @@
 3. **M4 只在 crystal 接住**：更好的修法是在 `aos_team_format.validate_routes` 把 OverflowError／RecursionError 轉成 TeamError，這樣人手寫的 `route save` 也不會炸。但那個檔 W3-1 隊今天可能也在改，為了不撞檔先不動，留下一輪（一行）。
 4. **`_clean` 的客套話句型寫死在程式裡**：只有幾種中英文說法，沒列到的就原樣交給檢查。寧可多退回幾次機械版，也不要刪錯話。
 5. **複審修完沒再請 astra 看第三輪**：五條都有對應的測試，時間也到了。
-6. **WAIT_USER 38 已拍：先不加**。`wrap-py` 沒 docstring 時照舊只印警告，不多印 `--describe-with-llm` 那句提示；這個旗標只寫在說明文件裡。四項模型版全部預設關，照舊。
+6. **DeepSeek 雲端直連：准了，但這輪沒用**。協調者後來通知：LiteLLM 沒開時可以直接打 DeepSeek 雲端的 `deepseek-chat`（金鑰從環境變數 `DEEPSEEK_API_KEY` 讀、絕不寫進檔，一樣不碰 LM Studio／GPU）。收到時撈出來的 3 次 M6 資料已經夠下結論，也已過了 40 分鐘的收線時間，所以沒補真跑。要補的話照 12.7 第 4 條，llm.json 改成那個端點，金鑰用 `api_key_env`。
+7. **WAIT_USER 38 已拍：先不加**。`wrap-py` 沒 docstring 時照舊只印警告，不多印 `--describe-with-llm` 那句提示；這個旗標只寫在說明文件裡。四項模型版全部預設關，照舊。
 
 ### 12.7 留下一輪
 
 1. `aos_team_format.validate_routes` 把 OverflowError／RecursionError 轉成 TeamError（見 12.6 第 3 條）。
 2. astra 複審 S1：help 上限那條測試改成可控制的時鐘，並清理子行程。
-3. proto5 README（第 137 行）和 lib README（第 104、503、506 行）的測試總數還寫著「90 檔 2490 條」，main 上本來就過時了。今天三隊都在加測試，所以留給事後統一改交接書的那隊：三隊都合併之後跑一次全套，填實數（這隊合併後是 94 檔 2633 條，另兩隊的另外加）。
-4. compact 真要再量的話，等 LiteLLM 開了，跑 `live.py 2 ~/tmp/w3b-compact/m6b mech,sum -m6b`，補同一次的端點實測對照（最多 2 次）。結論大概不會變。
+3. proto5 README（第 137 行）和 lib README（第 104、503、506 行）的測試總數還寫著「90 檔 2490 條」，main 上本來就過時了。今天三隊都在加測試，所以留給事後統一改交接書的那隊：三隊都合併之後跑一次全套，填實數（這隊 rebase 到 `8b86e03` 後是 96 檔 2644 條，W3-1 隊的另外加）。
+4. compact 真要再量的話（LiteLLM 開了，或照 12.6 第 6 條直連 DeepSeek），跑 `live.py 2 ~/tmp/w3b-compact/m6b mech,sum -m6b`，補同一次的端點實測對照（最多 2 次）。結論大概不會變。
 
 ### 12.8 要使用者拍的（新題，一題）
 
