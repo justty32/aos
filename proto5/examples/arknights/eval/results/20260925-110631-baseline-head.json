@@ -1,0 +1,1086 @@
+{
+ "at": "2026-09-25T11:06:31",
+ "label": "baseline-head",
+ "copy_root": "/home/lorkhan/tmp/arknights-eval",
+ "batches": [
+  "30",
+  "60",
+  "79",
+  "100",
+  "143"
+ ],
+ "judge_model": "claude-opus-5",
+ "people": [
+  {
+   "batch": "30",
+   "name": "米莎",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 6,
+    "total": 7,
+    "failed": [
+     {
+      "check": "evidence_size",
+      "pass": false,
+      "msg": "米莎.md 12552B"
+     }
+    ]
+   },
+   "evidence": {
+    "checked_rows": 27,
+    "ok": 24,
+    "ok_loose": 25,
+    "by_status": {
+     "skip": 7,
+     "ok": 24,
+     "引文找不到": 1,
+     "引文近似": 1,
+     "引文在範圍外": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/米莎.md",
+      "line": 17,
+      "status": "引文找不到",
+      "detail": "「安全優先」"
+     },
+     {
+      "file": "evidence/characters/米莎.md",
+      "line": 28,
+      "status": "引文近似",
+      "detail": "「一定會讓碎骨活過來」"
+     },
+     {
+      "file": "evidence/characters/米莎.md",
+      "line": 41,
+      "status": "引文在範圍外",
+      "detail": "「你確實是我的」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "30",
+    "name": "米莎",
+    "model": "claude-opus-5",
+    "prompt_chars": 64904,
+    "sec": 17.0,
+    "usage": {
+     "completion_tokens": 874,
+     "prompt_tokens": 60890,
+     "total_tokens": 61764,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 874
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 60890,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "待評與標準答案內容實質一致：身分、碎骨姊弟關係、W劫走、電話告白、密鑰與死訊追認皆齊備；死亡場景未寫、密鑰機制等邊界均誠實標注，抽查行號與原文摘錄相符。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "30",
+   "name": "安東尼",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 5,
+    "total": 7,
+    "failed": [
+     {
+      "check": "simplified",
+      "pass": false,
+      "msg": "掃描 2 檔；lore/evidence/characters/安東尼_山.md:26  克→剋  …| 噩夢纏身，決意返鄉復仇 | story_f12yin_set_2_赴罪.md L1-71 | （時序推斷在set_1…"
+     },
+     {
+      "check": "evidence_size",
+      "pass": false,
+      "msg": "安東尼_山.md 11454B"
+     }
+    ]
+   },
+   "evidence": {
+    "checked_rows": 21,
+    "ok": 13,
+    "ok_loose": 14,
+    "by_status": {
+     "skip": 7,
+     "ok": 13,
+     "引文在範圍外": 1,
+     "引文找不到": 6,
+     "引文近似": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 17,
+      "status": "引文在範圍外",
+      "detail": "「非法走私源石製品罪」"
+     },
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 19,
+      "status": "引文找不到",
+      "detail": "「毫無風險」"
+     },
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 21,
+      "status": "引文找不到",
+      "detail": "「必須自己做出選擇並為之負責，否則無法主宰自己的命運」"
+     },
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 23,
+      "status": "引文找不到",
+      "detail": "「是人而非籌碼」"
+     },
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 25,
+      "status": "引文找不到",
+      "detail": "「曾出於一些原因被迫離開家庭相當一段時間」"
+     },
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 26,
+      "status": "引文近似",
+      "detail": "「足以東山再起」"
+     },
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 33,
+      "status": "引文找不到",
+      "detail": "「安東尼是人而非籌碼」"
+     },
+     {
+      "file": "evidence/characters/安東尼_山.md",
+      "line": 35,
+      "status": "引文找不到",
+      "detail": "「必須自己做出選擇並為之負責」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "30",
+    "name": "安東尼",
+    "model": "claude-opus-5",
+    "prompt_chars": 74273,
+    "sec": 11.0,
+    "usage": {
+     "completion_tokens": 630,
+     "prompt_tokens": 72712,
+     "total_tokens": 73342,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 630
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 72712,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "內容與標準答案一致，關鍵事實齊全、無編造，開放式結局與未交代處均誠實標註，抽查行號多能對上原文。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "30",
+   "name": "埃芒加德",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 5,
+    "total": 7,
+    "failed": [
+     {
+      "check": "simplified",
+      "pass": false,
+      "msg": "掃描 2 檔；lore/evidence/characters/埃芒加德.md:16  炉→爐  …| act17mini開場，協助老師主持安撫儀式 | act17mini_熔炉\"还魂\"记.md L75-76 | 卡茲戴…；lore/evidence/characters/埃芒加德.md:16  还→還  …| act17mini開場，協助老師主持安撫儀式 | act17mini_熔炉\"还魂\"记.md L75-76 | 卡茲戴…；lore/evidence/characters/埃芒加德.md:33  炉→爐  …| 弗萊蒙特（老師，\"諸思之解答\"／lore_fremont） | 巫妖長者，\"知識聖殿的看守"
+     },
+     {
+      "check": "evidence_size",
+      "pass": false,
+      "msg": "埃芒加德.md 10226B"
+     }
+    ]
+   },
+   "evidence": {
+    "checked_rows": 20,
+    "ok": 18,
+    "ok_loose": 20,
+    "by_status": {
+     "skip": 7,
+     "引文近似": 2,
+     "ok": 18
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/埃芒加德.md",
+      "line": 16,
+      "status": "引文近似",
+      "detail": "「您那邊還好嗎？儀器監測到熔爐能量不太穩定......是儀式出了什麼問題嗎？」"
+     },
+     {
+      "file": "evidence/characters/埃芒加德.md",
+      "line": 27,
+      "status": "引文近似",
+      "detail": "「巫妖沒法把自己變成萊塔尼亞人......我們向來是薩卡茲中的流浪者」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "30",
+    "name": "埃芒加德",
+    "model": "claude-opus-5",
+    "prompt_chars": 58298,
+    "sec": 7.3,
+    "usage": {
+     "completion_tokens": 421,
+     "prompt_tokens": 57414,
+     "total_tokens": 57835,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 421
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 57414,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "內容與標準答案實質一致，關鍵事實齊備、無編造，未決點（錫人身分、儀式結局、姊弟關係性質、非幹員）均誠實標註，抽查行號均與原文摘錄吻合。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "60",
+   "name": "瑪麗·班納",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 12,
+    "ok": 12,
+    "ok_loose": 12,
+    "by_status": {
+     "skip": 11,
+     "ok": 12
+    },
+    "bad_rows": []
+   },
+   "judge": {
+    "batch": "60",
+    "name": "瑪麗·班納",
+    "model": "claude-opus-5",
+    "prompt_chars": 31741,
+    "sec": 2.4,
+    "usage": {
+     "completion_tokens": 99,
+     "prompt_tokens": 29303,
+     "total_tokens": 29402,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 99
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 29303,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "待評詞條與證據檔與標準答案內容一致，關鍵事實齊全，無編造，行號抽查皆與原文摘錄相符。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "60",
+   "name": "愷撒",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 11,
+    "ok": 9,
+    "ok_loose": 10,
+    "by_status": {
+     "skip": 9,
+     "ok": 9,
+     "引文近似": 1,
+     "引文找不到": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/愷撒.md",
+      "line": 21,
+      "status": "引文近似",
+      "detail": "「母獸不會遺棄孩子」"
+     },
+     {
+      "file": "evidence/characters/愷撒.md",
+      "line": 23,
+      "status": "引文找不到",
+      "detail": "「頭狼賜福」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "60",
+    "name": "愷撒",
+    "model": "claude-opus-5",
+    "prompt_chars": 25605,
+    "sec": 6.0,
+    "usage": {
+     "completion_tokens": 146,
+     "prompt_tokens": 23868,
+     "total_tokens": 24014,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 146
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 23868,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "待評與標準答案內容一致，關鍵事實齊備，未見編造，邊界註記完整，抽查行號皆能對應原文。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "60",
+   "name": "魯斯",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 6,
+    "total": 7,
+    "failed": [
+     {
+      "check": "evidence_size",
+      "pass": false,
+      "msg": "魯斯.md 5531B"
+     }
+    ]
+   },
+   "evidence": {
+    "checked_rows": 14,
+    "ok": 12,
+    "ok_loose": 12,
+    "by_status": {
+     "skip": 10,
+     "ok": 12,
+     "引文找不到": 2
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/魯斯.md",
+      "line": 20,
+      "status": "引文找不到",
+      "detail": "「她與海嗣交易、舊船員相繼死亡」"
+     },
+     {
+      "file": "evidence/characters/魯斯.md",
+      "line": 23,
+      "status": "引文找不到",
+      "detail": "「偷竊者」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "60",
+    "name": "魯斯",
+    "model": "claude-opus-5",
+    "prompt_chars": 45795,
+    "sec": 10.2,
+    "usage": {
+     "completion_tokens": 363,
+     "prompt_tokens": 42343,
+     "total_tokens": 42706,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 363
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 42343,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "詞條與證據檔與標準答案實質一致，關鍵事實齊全，無編造，邊界註記完整，抽查行號皆能對上原文。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "79",
+   "name": "奧克里·珀森斯",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 10,
+    "ok": 10,
+    "ok_loose": 10,
+    "by_status": {
+     "skip": 3,
+     "ok": 10
+    },
+    "bad_rows": []
+   },
+   "judge": {
+    "batch": "79",
+    "name": "奧克里·珀森斯",
+    "model": "claude-opus-5",
+    "prompt_chars": 35344,
+    "sec": 11.4,
+    "usage": {
+     "completion_tokens": 296,
+     "prompt_tokens": 30779,
+     "total_tokens": 31075,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 296
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 30779,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "待評與標準答案內容一致，事實完整、邊界（冒名者與本尊切分、生死未定）交代清楚，抽查行號均與原文摘錄相符。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "79",
+   "name": "莫不服",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 12,
+    "ok": 12,
+    "ok_loose": 12,
+    "by_status": {
+     "skip": 2,
+     "ok": 12
+    },
+    "bad_rows": []
+   },
+   "judge": {
+    "batch": "79",
+    "name": "莫不服",
+    "model": "claude-opus-5",
+    "prompt_chars": 26271,
+    "sec": 7.7,
+    "usage": {
+     "completion_tokens": 235,
+     "prompt_tokens": 23731,
+     "total_tokens": 23966,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 235
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 23731,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "內容與標準答案一致，關鍵事實齊備，邊界（結局去向、余身分、觀感非定罪）皆明示，抽查行號均與摘錄相符。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "79",
+   "name": "雅斯彭",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 9,
+    "ok": 9,
+    "ok_loose": 9,
+    "by_status": {
+     "skip": 4,
+     "ok": 9
+    },
+    "bad_rows": []
+   },
+   "judge": {
+    "batch": "79",
+    "name": "雅斯彭",
+    "model": "claude-opus-5",
+    "prompt_chars": 27341,
+    "sec": 7.8,
+    "usage": {
+     "completion_tokens": 430,
+     "prompt_tokens": 24869,
+     "total_tokens": 25299,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 430
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 24869,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "內容與標準答案一致，關鍵事實齊備，生死、婚姻、債務等未決事項均註明原文未交代，引用行號與摘錄相符。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "100",
+   "name": "伊萬",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 9,
+    "ok": 9,
+    "ok_loose": 9,
+    "by_status": {
+     "skip": 3,
+     "ok": 9
+    },
+    "bad_rows": []
+   },
+   "judge": {
+    "batch": "100",
+    "name": "伊萬",
+    "model": "claude-opus-5",
+    "prompt_chars": 66719,
+    "sec": 4.6,
+    "usage": {
+     "completion_tokens": 91,
+     "prompt_tokens": 45333,
+     "total_tokens": 45424,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 91
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 45333,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "待評與標準答案內容幾近一致，事實、邊界交代與出處行號均可對上原文摘錄，無編造。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "100",
+   "name": "伯德",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 9,
+    "ok": 8,
+    "ok_loose": 8,
+    "by_status": {
+     "skip": 3,
+     "ok": 8,
+     "引文找不到": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/伯德.md",
+      "line": 20,
+      "status": "引文找不到",
+      "detail": "「因迷路而吃路牌」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "100",
+    "name": "伯德",
+    "model": "claude-opus-5",
+    "prompt_chars": 29013,
+    "sec": 6.8,
+    "usage": {
+     "completion_tokens": 446,
+     "prompt_tokens": 23657,
+     "total_tokens": 24103,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 446
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 23657,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "內容與標準答案一致，事實齊全、無編造，邊界（大概語氣、未知項）標註清楚，抽查行號皆能對上原文。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "100",
+   "name": "佐拉",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 11,
+    "ok": 10,
+    "ok_loose": 10,
+    "by_status": {
+     "skip": 3,
+     "ok": 10,
+     "引文在範圍外": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/佐拉.md",
+      "line": 12,
+      "status": "引文在範圍外",
+      "detail": "「生病」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "100",
+    "name": "佐拉",
+    "model": "claude-opus-5",
+    "prompt_chars": 33471,
+    "sec": 6.6,
+    "usage": {
+     "completion_tokens": 424,
+     "prompt_tokens": 23308,
+     "total_tokens": 23732,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 424
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 23308,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "內容與標準答案一致：身分、轉移背景、麗塔友誼、折返扭傷、獲救存活皆齊全；未知項（毀村原因、道別禮、去向）均誠實標註，同名／立繪切分清楚，抽查行號皆能對上原文。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "143",
+   "name": "羅伯遜",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 11,
+    "ok": 10,
+    "ok_loose": 10,
+    "by_status": {
+     "skip": 3,
+     "引文找不到": 1,
+     "ok": 10
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/羅伯遜.md",
+      "line": 7,
+      "status": "引文找不到",
+      "detail": "「羅伯遜叔叔」「羅伯遜先生」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "143",
+    "name": "羅伯遜",
+    "model": "claude-opus-5",
+    "prompt_chars": 21980,
+    "sec": 4.8,
+    "usage": {
+     "completion_tokens": 207,
+     "prompt_tokens": 18149,
+     "total_tokens": 18356,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 207
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 18149,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "待評與標準答案內容實質一致，事實完整、推論標註清楚、行號與原文摘錄相符，四項皆無問題。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "143",
+   "name": "羅塞菈",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 11,
+    "ok": 11,
+    "ok_loose": 11,
+    "by_status": {
+     "skip": 2,
+     "ok": 11
+    },
+    "bad_rows": []
+   },
+   "judge": {
+    "batch": "143",
+    "name": "羅塞菈",
+    "model": "claude-opus-5",
+    "prompt_chars": 28689,
+    "sec": 10.5,
+    "usage": {
+     "completion_tokens": 342,
+     "prompt_tokens": 23744,
+     "total_tokens": 24086,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 342
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 23744,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "內容與標準答案一致，事實齊全、無編造，本名／助產士同一性與生死等邊界皆已聲明，抽查行號均能對上原文。",
+     "total": 8
+    }
+   }
+  },
+  {
+   "batch": "143",
+   "name": "羅索",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 17,
+    "ok": 16,
+    "ok_loose": 16,
+    "by_status": {
+     "skip": 4,
+     "ok": 16,
+     "引文找不到": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/羅索/身分、姓名與同稱切割.md",
+      "line": 9,
+      "status": "引文找不到",
+      "detail": "「嫉惡如仇」「老師也沒有」"
+     }
+    ]
+   },
+   "judge": {
+    "batch": "143",
+    "name": "羅索",
+    "model": "claude-opus-5",
+    "prompt_chars": 67973,
+    "sec": 9.4,
+    "usage": {
+     "completion_tokens": 259,
+     "prompt_tokens": 46872,
+     "total_tokens": 47131,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "text_tokens": 259
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "text_tokens": 46872,
+      "cache_creation_tokens": 0,
+      "cache_creation_token_details": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      }
+     },
+     "cache_creation_input_tokens": 0,
+     "cache_read_input_tokens": 0,
+     "inference_geo": "not_available"
+    },
+    "scores": {
+     "coverage": 2,
+     "no_invention": 2,
+     "boundary": 2,
+     "citation": 2,
+     "problems": [],
+     "reason": "詞條與證據檔內容與標準答案一致，關鍵事實齊備，死因、重審結果等邊界皆標為未公開，抽查行號均能對應原文摘錄。",
+     "total": 8
+    }
+   }
+  }
+ ],
+ "repo": [
+  {
+   "check": "repo_links",
+   "pass": false,
+   "msg": "檢查 8273 條本地連結，缺失 7 條"
+  },
+  {
+   "check": "repo_diff_check",
+   "pass": true,
+   "msg": ""
+  }
+ ],
+ "metrics": null,
+ "lowest3": [
+  {
+   "batch": "30",
+   "name": "安東尼",
+   "total": 8,
+   "reason": "內容與標準答案一致，關鍵事實齊全、無編造，開放式結局與未交代處均誠實標註，抽查行號多能對上原文。"
+  },
+  {
+   "batch": "30",
+   "name": "米莎",
+   "total": 8,
+   "reason": "待評與標準答案內容實質一致：身分、碎骨姊弟關係、W劫走、電話告白、密鑰與死訊追認皆齊備；死亡場景未寫、密鑰機制等邊界均誠實標注，抽查行號與原文摘錄相符。"
+  },
+  {
+   "batch": "30",
+   "name": "埃芒加德",
+   "total": 8,
+   "reason": "內容與標準答案實質一致，關鍵事實齊備、無編造，未決點（錫人身分、儀式結局、姊弟關係性質、非幹員）均誠實標註，抽查行號均與原文摘錄吻合。"
+  }
+ ]
+}

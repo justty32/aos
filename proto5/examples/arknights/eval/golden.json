@@ -1,0 +1,38 @@
+{
+ "note": "arknights 評分基準集：5 批 15 人。標準答案＝來源 commit 裡的版本，已用 build_golden.py 抽到 golden/<批號>/ 底下（路徑保留 repo 相對路徑）。15 人在各自那批之後詞條與證據都沒再被改（2026-09-25 查 arknights main 5d9bedd）。",
+ "source_repo": "~/repo/narratives/arknights",
+ "batches": [
+  {"batch": 30, "commit": "48894d6", "subject": "次要角色第三十批：米莎（整合運動）、安東尼/山（哥倫比亞）、埃芒加德（萊塔尼亞）",
+   "why": "早期基準；舊式單檔長證據（10～12.5KB，那時還沒有 <5KB 規矩），含唯一一個合併檔（安東尼_山）",
+   "characters": [
+    {"name": "米莎", "entry_path": "lore/characters/米莎.md", "evidence_paths": ["lore/evidence/characters/米莎.md"], "why": "主線知名 NPC，早期單檔證據的典型"},
+    {"name": "安東尼", "entry_path": "lore/characters/安東尼.md", "evidence_paths": ["lore/evidence/characters/安東尼_山.md"], "why": "本名＋代號合併證據檔（安東尼＝山），測名與代號對應"},
+    {"name": "埃芒加德", "entry_path": "lore/characters/埃芒加德.md", "evidence_paths": ["lore/evidence/characters/埃芒加德.md"], "why": "萊塔尼亞線早期角色，單檔"}]},
+  {"batch": 60, "commit": "514f393", "subject": "次要角色第六十批：瑪麗·班納、愷撒、傑里、魯斯",
+   "why": "中期基準；單檔證據約 4.5～5.5KB，結構單純（傑里在第 135 批被改過，不取）",
+   "characters": [
+    {"name": "瑪麗·班納", "entry_path": "lore/characters/瑪麗·班納.md", "evidence_paths": ["lore/evidence/characters/瑪麗·班納.md"], "why": "中期單檔、大小適中"},
+    {"name": "愷撒", "entry_path": "lore/characters/愷撒.md", "evidence_paths": ["lore/evidence/characters/愷撒.md"], "why": "中期單檔、之後未改"},
+    {"name": "魯斯", "entry_path": "lore/characters/魯斯.md", "evidence_paths": ["lore/evidence/characters/魯斯.md"], "why": "中期單檔、之後未改"}]},
+  {"batch": 79, "commit": "c9ba499", "subject": "次要角色第七十九批：雅斯彭、莫不服、奧克里·珀森斯、路易斯·凱利",
+   "why": "難題批（冒名）：奧克里·珀森斯的身分被費爾南冒用，抽取時冒名者台詞錯掛到本人名下，SESSION-LOG 已裁決隔離；另含拆資料夾結構（路易斯·凱利第 120 批被改過，不取）",
+   "hard_case": true,
+   "characters": [
+    {"name": "奧克里·珀森斯", "entry_path": "lore/characters/奧克里·珀森斯.md", "evidence_paths": ["lore/evidence/characters/奧克里·珀森斯.md", "lore/evidence/characters/奧克里·珀森斯/INDEX.md", "lore/evidence/characters/奧克里·珀森斯/speaker 邊界與待決.md", "lore/evidence/characters/奧克里·珀森斯/基本資訊與身分裁決.md", "lore/evidence/characters/奧克里·珀森斯/經歷與結局.md"], "why": "冒名：本尊與冒名者費爾南（響石）必須切開"},
+    {"name": "莫不服", "entry_path": "lore/characters/莫不服.md", "evidence_paths": ["lore/evidence/characters/莫不服.md", "lore/evidence/characters/莫不服/INDEX.md", "lore/evidence/characters/莫不服/基本資訊與可證經歷.md", "lore/evidence/characters/莫不服/關係、分層與待決.md"], "why": "本名莫小六＋別名，原文確證與推測分層"},
+    {"name": "雅斯彭", "entry_path": "lore/characters/雅斯彭.md", "evidence_paths": ["lore/evidence/characters/雅斯彭.md"], "why": "同批單檔對照組"}]},
+  {"batch": 100, "commit": "dc3d188", "subject": "次要角色第一百批：伊萬、伯德、佐拉",
+   "why": "中後期基準；三人都是單檔，各約 3.7～4.5KB",
+   "characters": [
+    {"name": "伊萬", "entry_path": "lore/characters/伊萬.md", "evidence_paths": ["lore/evidence/characters/伊萬.md"], "why": "小故事配角，資料量適中"},
+    {"name": "伯德", "entry_path": "lore/characters/伯德.md", "evidence_paths": ["lore/evidence/characters/伯德.md"], "why": "單檔、之後未改"},
+    {"name": "佐拉", "entry_path": "lore/characters/佐拉.md", "evidence_paths": ["lore/evidence/characters/佐拉.md"], "why": "單檔、之後未改"}]},
+  {"batch": 143, "commit": "a5eb027", "subject": "次要角色第一百四十三批：羅伯遜、羅塞菈與羅索",
+   "why": "後期基準＋第二個邊界題：羅索的同稱切割（「老法官」要解回羅索）、原文沒寫全名、死因未公開",
+   "hard_case": true,
+   "characters": [
+    {"name": "羅伯遜", "entry_path": "lore/characters/羅伯遜.md", "evidence_paths": ["lore/evidence/characters/羅伯遜.md"], "why": "後期單檔，約 4.9KB"},
+    {"name": "羅塞菈", "entry_path": "lore/characters/羅塞菈.md", "evidence_paths": ["lore/evidence/characters/羅塞菈.md"], "why": "曾偽裝成「愉快的小販」，測偽裝身分要不要併成同一人"},
+    {"name": "羅索", "entry_path": "lore/characters/羅索.md", "evidence_paths": ["lore/evidence/characters/羅索.md", "lore/evidence/characters/羅索/INDEX.md", "lore/evidence/characters/羅索/庭審、私刑與死亡邊界.md", "lore/evidence/characters/羅索/身分、姓名與同稱切割.md"], "why": "同稱切割、死亡邊界、原文沒有全名"}]}
+ ]
+}
