@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- 09-25（晚上，整理鏈收尾）：**main**（WAIT_USER 拆檔→wf 六區拆檔→sandbox 封存→brief 補篇→wf／proto5 兩輪 tidy→proto5/lib 19 支拆母模組＋子模組共 145 支）；astra 唯讀審 lib 拆檔必修 0、建議 4 全採納；lint 前後：wf oversize 61→39、proto5 broken 299→0；全套測試 **2874 條全綠**。待董事：評分 [brief/2026-09-25.md](../brief/2026-09-25.md)、WAIT_USER 40～75（74、75 是新題）。下一輪：`lessons.md`／`catalog.md` 先改 lib 再拆、`agent_access`／`agent_talk`／`kernel_check`／`kernel_ledger` 沒拆、wf 還有超標檔、09-24 notes 三份一組的收攏。[→](session_logs/2026-09/2026-09-25.md#2026-09-25)
+- 09-25（晚上，整理鏈收尾）：**main**（WAIT_USER 拆檔→wf 六區拆檔→sandbox 封存→brief 補篇→wf／proto5 兩輪 tidy→proto5/lib 19 支拆母模組＋子模組共 145 支）；astra 唯讀審 lib 拆檔必修 0、建議 4 全採納；lint 前後：wf oversize 61→39、proto5 broken 299→0；全套測試 **2874 條全綠**；研發部接著做第 74、75 題（經理人裁決：品質×成功率×審查係數、快只比成功張數相同的；重算五家三輪名次與撥款不變），全套 **2881 條綠**。待董事：評分 [brief/2026-09-25.md](../brief/2026-09-25.md)、WAIT_USER 40～73（74、75 已由經理人裁決）。下一輪：`lessons.md`／`catalog.md` 先改 lib 再拆、`agent_access`／`agent_talk`／`kernel_check`／`kernel_ledger` 沒拆、wf 還有超標檔、09-24 notes 三份一組的收攏。[→](session_logs/2026-09/2026-09-25.md#2026-09-25)
 - 09-24：**已推 main**：重架構收線→tool-era 三波（第一波 T1/T3/L2/S/T4/T2/K2、P 隊 one-boot、T5 收尾、第二波 A/B/C 造工具＋牆接線＋申請類）全落地，試玩多輪過；A.21～A.39 逐條裁決／代裁。測試 94 檔 2605 條全綠。[→](session_logs/2026-09/2026-09-24.md#2026-09-24)
 - 09-22：09-21 ④⑤ 仍在（① backlog 已於 09-24 清光） [→](session_logs/2026-09/2026-09-22.md#2026-09-22)
 - 09-21：④ aos-inst 兩題 ⑤ thinking/ 草案 ④ WSL 沒 lms／jq [→](session_logs/2026-09/2026-09-21.md#2026-09-21)
