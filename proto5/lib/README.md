@@ -72,7 +72,12 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_tools_dev_describe.py`](aos_agent_tools_dev_describe.py) | `wrap-py --describe-with-llm／--describe`：模型補描述只寫提案、提案的機械檢查、照提案補描述 |
 | [`aos_agent_tools_dev_run.py`](aos_agent_tools_dev_run.py) | `tools test` 跑一次：關牢探測、起工具行程、收輸出（封頂、逾時、殺整組） |
 | [`aos_agent_tools_dev_test.py`](aos_agent_tools_dev_test.py) | `tools test` 的案例與判定：自動案例、`cases.json`、判過不過、整套跑與印表 |
-| [`aos_agent_tools_wrapcli.py`](aos_agent_tools_wrapcli.py) | （第三波 W3-2，spec/aos-agent/tools-wrapcli.md）`tools wrap-cli CMD`：argparse 靜態讀／`--help` 文字規則解 → 工具包；`--describe-with-llm` 只寫提案、`--spec` 照人看過的表產包 |
+| [`aos_agent_tools_wrapcli.py`](aos_agent_tools_wrapcli.py) | （第三波 W3-2，spec/aos-agent/tools-wrapcli.md）`tools wrap-cli CMD`：argparse 靜態讀／`--help` 文字規則解 → 工具包；`--describe-with-llm` 只寫提案、`--spec` 照人看過的表產包。入口：拿 help 文字、主流程 `wrap_cli`、對照用 `score` |
+| [`aos_agent_tools_wrapcli_const.py`](aos_agent_tools_wrapcli_const.py) | `wrap-cli` 共用常數：參數表的種類、型別、名字與旗標規則、各種上限 |
+| [`aos_agent_tools_wrapcli_argparse.py`](aos_agent_tools_wrapcli_argparse.py) | `wrap-cli` 機械版之一：ast 靜態讀 argparse 的 `add_argument` → 參數表 |
+| [`aos_agent_tools_wrapcli_helptext.py`](aos_agent_tools_wrapcli_helptext.py) | `wrap-cli` 機械版之二：規則解 help 文字的 usage 行與選項行 → 參數表 |
+| [`aos_agent_tools_wrapcli_check.py`](aos_agent_tools_wrapcli_check.py) | `wrap-cli` 參數表的機械檢查（模型回的、人改過的都走這條）與 `--describe-with-llm` 叫模型 |
+| [`aos_agent_tools_wrapcli_pack.py`](aos_agent_tools_wrapcli_pack.py) | `wrap-cli` 產包：run 樣板、工具描述、README、包內檔案與參數表印表 |
 | [`aos_agent_access.py`](aos_agent_access.py) | 權限牆（access.json）讀驗、信任資料、重疊檢查、快照 |
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
 | [`aos_agent_events.py`](aos_agent_events.py) | 事件紀錄（tool-era T4，spec/agent/events.md）：agent 家 `log/events.jsonl` 一行一事件（收件、每批起訖、壓縮），`aos-llm call` 的 `log/usage.jsonl` token 用量；只有持 `.tick.lock` 的一方寫，至少一次＋去重，滿了自動輪換 |
