@@ -1,0 +1,26 @@
+{
+  "_comment": "樣板：『讀草稿→回原文核對→寫詞條＋證據→機械驗收＋模型審查』這種有原文可查的資料整理隊。從 proto5/examples/arknights/team.json 抽出（2026-09-25）。換專案要改的地方都標了 <…>；模板路徑、掛載一律寫絕對或 ~ 開頭（相對路徑是照跑指令當下的資料夾解的）。自訂模板資料夾要叫 lead／reviewer，郵差才認得誰是領隊、審查員。",
+  "_metainfo": {"_type": "aos_team", "_version": 1},
+  "project": "<專案副本，例 ~/tmp/arknights-try；別直接指本尊>",
+  "tz": "Asia/Taipei",
+  "members": {
+    "lead":     {"template": "<proto5>/examples/arknights/templates/lead", "model": "gpt-6-astra",
+                 "mail_to": ["writer-1", "writer-2", "reviewer", "human"]},
+    "writer-1": {"template": "<proto5>/examples/arknights/templates/writer", "model": "gpt-6-astra",
+                 "mail_to": ["lead", "human"],
+                 "mounts": {"<原文庫名>": {"$opt": "ro", "$val": "<原文庫絕對路徑>"}}},
+    "writer-2": {"template": "<proto5>/examples/arknights/templates/writer", "model": "gpt-6-astra",
+                 "mail_to": ["lead", "human"],
+                 "mounts": {"<原文庫名>": {"$opt": "ro", "$val": "<原文庫絕對路徑>"}}},
+    "reviewer": {"template": "<proto5>/examples/arknights/templates/reviewer", "model": "gpt-6-astra",
+                 "mail_to": ["lead", "human"],
+                 "mounts": {"<原文庫名>": {"$opt": "ro", "$val": "<原文庫絕對路徑>"}}}
+  },
+  "limits": {"stale_minutes": 30, "max_members": 4},
+  "spawn": {"templates": []},
+  "cmd_ok": [
+    {"run": ["python3", "scripts/<全庫連結檢查>.py", "<資料夾>"], "timeout_s": 180,
+     "mounts": {"<原文庫名>": "<原文庫絕對路徑>"}},
+    {"run": ["python3", "scripts/<單檔檢查>.py", "<這次要做的檔 1>", "<檔 2>"], "timeout_s": 180}
+  ]
+}

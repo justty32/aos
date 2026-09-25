@@ -31,6 +31,6 @@
 |---|---|---|
 | [company.md](company.md) | 當作開公司看：董事會／總裁／業務部／製造部／品管部／研發部／HR／圖書館／財務等單位對照表 | 使用者拍板的組織骨架，2026-09-25 |
 | [lessons.md](lessons.md) | 11 條今天先填的經驗，照部門分組（評分器規則、模型造工具的取捨、排程瓶頸會轉移…） | 見各條內的來源連結 |
-| [teams/](teams/README.md) | 團隊組織架構索引（目前空，等隊伍收尾回填） | — |
-| [workflows/](workflows/README.md) | 工作流架構索引（目前空，等隊伍收尾回填） | — |
+| [teams/](teams/README.md) | 團隊組織架構索引（arknights 隊已放強模型版團隊設定 `teams/arknights-strong.json`：有原文可查的資料整理隊，領隊 1、寫手 2、審查員 1，全用強模型） | arknights 第 2 段收尾，2026-09-25 |
+| [workflows/](workflows/README.md) | 工作流架構索引（arknights 隊已放 `workflows/lore-entry.md`：一個條目一張單的產線降級路線筆記） | arknights 第 2 段收尾，2026-09-25 |
 | [`proto5/tools/`](../tools/README.md) | 可複用工具包（`base`／`files`／`wf`／`notes`／`team`／`task` 六包，已有自己的 README） | 各工具包 README |
