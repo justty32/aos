@@ -111,3 +111,11 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 （控制協議孩子、輪詢、孤兒隔離 driver、`read_json`／`wait_for`）、[\_kernel_util.py](../test/_kernel_util.py)
 （真 daemon／kernel 測試家，`aos-kernel init --config` 建、`pools=` 傳池表）、[\_kernel_fake.py](../test/_kernel_fake.py)
 （假 daemon：只處理 `D/requests/` 的 scale 與 ack、手寫 summary.json，不拉任何 cpu）。
+
+## 09-25 lib 拆檔後的 patch 眉角
+
+母模組把子模組的名字再匯出（`from aos_xxx_yyy import thing`）只是複製一份名字，**不會**轉接子模組自己的
+global。以前 `unittest.mock.patch('aos_xxx.thing', ...)` patch 得到的東西，拆檔後如果 `thing` 其實定義在
+子模組 `aos_xxx_yyy` 裡，要改成 `patch('aos_xxx_yyy.thing', ...)` 才會生效；patch 母模組那個名字只換了母模組
+自己那份引用，子模組內部呼叫 `thing` 還是用它自己那份。目前 repo 沒有測試這樣踩雷（astra 09-25 review 用 grep
+確認過一輪），但日後要 patch 再匯出的名字時先想一下它實際定義在哪支模組。

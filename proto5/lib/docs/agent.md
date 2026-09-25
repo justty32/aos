@@ -66,7 +66,7 @@
 
 `tick(agent_dir, env=None)` 先拿 `.tick.lock`（被佔退 101、不動檔）、看手動暫停（有就退 0），再讀驗、恢復消費與清理，看門、收批次或走 idle／think／act；模型與工具都透過 kernel once 工作執行。
 `start(agent_dir, env=None)` 建立／核對 tick.json，向 `AOS_KERNEL_HOME` 的 kernel 登記反覆工作；`stop(agent_dir, env=None)` 撤銷登記，兩者等回音並 ack。
-`main(argv=None)`（在 aos_agent_cli）提供九個子命令、家一律 `--target`；回傳 0（完成）、101（tick 等待或鎖被佔、say／listen --wait 逾時、沒登記或暫停）、1（執行／讀驗錯）、2（用法錯）。tick／start 的 `AOS_KERNEL_HOME` 必須是 kernel 家的絕對路徑；stop 沒設就用 tick.json 記的。
+`main(argv=None)`（在 aos_agent_cli）提供十九個子命令、家一律 `--target`；回傳 0（完成）、101（tick 等待或鎖被佔、say／listen --wait 逾時、沒登記或暫停）、1（執行／讀驗錯）、2（用法錯）。tick／start 的 `AOS_KERNEL_HOME` 必須是 kernel 家的絕對路徑；stop 沒設就用 tick.json 記的。
 
 日常 CLI（09-24 試玩 r2 補；fix-r4 改）：`aos_agent_init.init(dir)` 寫單一內建預設家；`aos_agent_say.say(dir, text, *, wait, timeout_ms)` 原子投遞並可等回話；`aos_agent_status.collect(dir, env)` 回診斷 dict、`status()` 印文字或 JSON；`aos_agent_pause.pause(dir)`／`resume(dir)` 是 `pause`／`continue`；`aos_agent_listen.listen(dir, mode, *, count, calls)` 是 listen（calls＝None／'short'／'full'，印法在 `aos_agent_listen_render`），`wait_reply()`／`print_message()` 給 listen 與 say 共用；（09-24 talk）`aos_agent_talk.talk(dir, *, timeout_ms, show_calls)` 是 talk（stdin 讀行，tty 才載 readline、印提示符）。
 
