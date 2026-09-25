@@ -1,0 +1,89 @@
+{
+  "_metainfo": {"_type": "aos_company", "_version": 1},
+  "name": "startup",
+  "prefix": "",
+  "stage": "startup",
+  "limits": {"regular": 10, "cpu": 20, "llm_cpu": 5},
+  "limits_max": {"regular": 100, "cpu": 200, "llm_cpu": 20},
+  "pools": {"default": 12, "llm": 5},
+  "front": "hq",
+  "project": "~/tmp/company-run/proj",
+  "llm": "llm.json",
+  "daemon": "../D",
+  "relay": {"interval_s": 5},
+  "departments": {
+    "hq": {
+      "title": "總裁辦", "team": "teams/hq", "aliases": ["總裁", "總裁辦公室"],
+      "state": "有：總裁一人，兼業務與 HR 決策",
+      "serves": "董事的單（company.py order → 門房 → 總裁）",
+      "delivers": "給各部門的〔給 部門〕單；給董事的結案信",
+      "kpi": "董事的單從下單到結案信的秒數；總機單結案率",
+      "lib": "spec/team/route.md、ask.md、lib/aos_company.py"
+    },
+    "sales": {
+      "title": "業務部", "part_of": "hq", "aliases": ["業務"],
+      "state": "併在總裁辦：接單＝hq 的門房 routes.json（機械），判斷＝總裁兼",
+      "serves": "董事一句話",
+      "delivers": "命中門房規則直接處理；沒命中交總裁",
+      "kpi": "門房命中率（route.log 裡 handoff／tool 的佔比）",
+      "lib": "spec/team/route.md、crystal.md"
+    },
+    "mfg": {
+      "title": "製造部", "team": "teams/mfg", "aliases": ["製造"], "desk": "mfg-lead",
+      "state": "有：經理＋寫手＋審查（arknights 補人物隊形縮小）",
+      "serves": "〔給 mfg〕補人物 X／補人物 X（只寫詞條）",
+      "delivers": "lore/characters/X.md＋證據檔（過驗收＋審查）",
+      "kpi": "單子一次過率（attempt=1 的 done 佔比）、每張單 token、秒數",
+      "lib": "examples/arknights、spec/team/tasks.md、verify.md"
+    },
+    "qa": {
+      "title": "品管部", "team": "teams/qa", "aliases": ["品管"], "desk": "qa-inspector",
+      "state": "有：檢驗員一人；eval.sh（機械＋證據＋評審）是品管的工具，評審是一次性模型呼叫（臨時工）",
+      "serves": "〔給 qa〕驗貨 X",
+      "delivers": "qa-reports/X.md（結論：合格／不合格＋抽查列）；eval 分數",
+      "kpi": "驗貨單合格率；eval 機械層全過率、證據列 ok 率",
+      "lib": "examples/arknights/eval（eval.sh、mech_check、evidence_check、judge）、spec/team/verify.md"
+    },
+    "rd": {
+      "title": "研發部", "team": "teams/rd", "aliases": ["研發"], "desk": "rd-smith",
+      "state": "有：工具匠一人（tool_draft 造工具，人批才裝）",
+      "serves": "〔給 rd〕要一支工具／改一條流程",
+      "delivers": "工具草稿（aos-team tool approve 後裝進申請人的家）",
+      "kpi": "工具草稿牢裡測試通過率；被批准數",
+      "lib": "spec/team/toolsmith.md、crystal.md、tools/"
+    },
+    "hr": {
+      "title": "HR", "part_of": "hq", "aliases": ["人事"],
+      "state": "機械＋總裁兼：人頭與 cpu 名額由 company.py status 算、spawn 生臨時工、score 考核；等 HR 部 aos-team hr 併進來接薪資表",
+      "serves": "〔給 hr〕要加人／換模型",
+      "delivers": "名冊改動（人批）、臨時工",
+      "kpi": "正式 N/10、cpu N/20、llm cpu N/5 不超；臨時工收掉率",
+      "lib": "spec/team/spawn.md、score.md、（施工中）hr.md"
+    },
+    "lib": {
+      "title": "圖書館", "team": "teams/lib", "open": false, "aliases": ["圖書館員"],
+      "state": "尚未成立：等 commons（spec/team/commons.md、librarian 模板）併進 main 才開；現在由調度層的 playbook 代管",
+      "serves": "各部門 commons_submit 的投稿",
+      "delivers": "commons 條目（機械審，像舊條目時才叫館員判）",
+      "kpi": "投稿機械審通過率、叫模型判的比例",
+      "lib": "（施工中）spec/team/commons.md、playbook/"
+    },
+    "fin": {
+      "title": "財務部", "open": false, "aliases": ["財務"],
+      "state": "純機械（沒有模型員工）：帳本 aos-team cost＋公司帳戶（cost.md §6）；設了 AOS_COST_HOME，up 會傳進兩個池，帳就記得到這家",
+      "serves": "—",
+      "delivers": "每部門／每張單的 token 與美元；超預算時郵差停開新單",
+      "kpi": "帳本覆蓋率（usage_missing 比例）、預算用了幾成",
+      "lib": "spec/team/cost.md、lib/aos_team_cost.py"
+    }
+  },
+  "staff": {
+    "hq-lead": {"dept": "hq", "employment": "regular", "roles": ["總裁", "業務（兼）", "HR 決策（兼）"]},
+    "mfg-lead": {"dept": "mfg", "employment": "regular", "roles": ["製造部經理"]},
+    "mfg-writer1": {"dept": "mfg", "employment": "regular", "roles": ["寫手"]},
+    "mfg-reviewer": {"dept": "mfg", "employment": "regular", "roles": ["審查"]},
+    "qa-inspector": {"dept": "qa", "employment": "regular", "roles": ["檢驗員"]},
+    "rd-smith": {"dept": "rd", "employment": "regular", "roles": ["工具匠"]},
+    "lib-librarian": {"dept": "lib", "employment": "regular", "roles": ["館員（未到職）"]}
+  }
+}

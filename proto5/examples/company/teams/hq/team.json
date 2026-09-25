@@ -1,0 +1,24 @@
+{
+  "_metainfo": {
+    "_type": "aos_team",
+    "_version": 1
+  },
+  "project": "~/tmp/company-run/proj",
+  "tz": "Asia/Taipei",
+  "members": {
+    "hq-lead": {
+      "template": "lead",
+      "model": "gpt-5.5",
+      "mail_to": [
+        "human"
+      ]
+    }
+  },
+  "limits": {
+    "stale_minutes": 30,
+    "max_members": 3
+  },
+  "spawn": {
+    "templates": []
+  }
+}
