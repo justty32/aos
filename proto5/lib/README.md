@@ -119,7 +119,9 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_post_jobs.py`](aos_team_post_jobs.py) | 郵差的驗收工作：混入類別 `_PostJobs`（交驗收、起 kernel 工作、收結果）、結果檔格式檢查、申請 `reverify` |
 | [`aos_team_post_watch.py`](aos_team_post_watch.py) | 郵差的停滯與書記：混入類別 `_PostWatch`（停滯與期限、成員健康、通知、書記同步） |
 | [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡。第二波 B 隊：`wf_lint_strict` 與新條目 `cmd_ok`（team.json 白名單裡的專案指令）經 aos-jail 關牢、專案唯讀 |
-| [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
+| [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm`。這支留心跳本體 `Beat` 與指令 |
+| [`aos_team_beat_schedule.py`](aos_team_beat_schedule.py) | 心跳的時間表：欄位與單位、崩潰測試點、時區、every／daily／once 解析、`Schedule` 算下一次到期 |
+| [`aos_team_beat_routines.py`](aos_team_beat_routines.py) | 心跳的例行表 `team/routines.json`：讀、申請 routine 的驗與處理（`on_routine`）、批准了沒 |
 | [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
 | [`aos_company.py`](aos_company.py) | 公司（09-25 組織設計，spec/team/company.md）：`company.json` 讀驗、照樣板生一家（成員名加前綴）、數正式員工與 cpu（`aos-kernel ls --json`）、`up`／`down`、機械總機 `Switchboard`（〔給 部門〕→ 對方門房開單或窗口信，回覆照 reply_to／任務單 request 抄回，先記帳再動作）；指令包裝 `examples/company/company.py`。這支留開機、關機與命令列 |
 | [`aos_company_config.py`](aos_company_config.py) | 公司設定：路徑與型別常數、收件部門標記、`CompanyError`、`company.json` 讀驗、部門與團隊資料夾、窗口成員 |
