@@ -114,6 +114,22 @@ class Formula(Base):
         b = mk.board_from_company(self.tmp / 'c1')
         self.assertEqual((b['done'], b['timeout'], b['reviews']), (1, 1, [2]))
 
+    def test_review_records_out_of_order_sorted_by_time(self):
+        """astra 審查必修 2：review 陣列亂序（第二次過排在第一次沒過前面）→ 照 at 排，算第二次過（0.7）。
+        不看 attempt（機械驗收沒過也會加）；有一筆沒 at 就照原順序。"""
+        self.company('c1')
+        self.one('c1', 10)
+        task = self.tmp / 'c1' / 'teams' / 'mfg' / 'team' / 'tasks' / 't-0010.json'
+        fmt.write_json(task, {'id': 't-0010', 'status': 'done', 'review': [
+            {'rev': 1, 'attempt': 3, 'pass': True, 'at': '2026-09-25T10:04:00+08:00'},
+            {'rev': 1, 'attempt': 1, 'pass': False, 'at': '2026-09-25T10:02:00+08:00'}]})
+        s = mk.record_score(self.mdir, 'c1', quality=100)
+        self.assertEqual((s['review_rounds'], s['review_factor']), ([2], 0.7))
+        fmt.write_json(task, {'id': 't-0010', 'status': 'done', 'review': [
+            {'rev': 1, 'attempt': 3, 'pass': True, 'at': '2026-09-25T10:04:00+08:00'},
+            {'rev': 1, 'attempt': 1, 'pass': False}]})                                  # 缺時間：照原順序
+        self.assertEqual(mk.record_score(self.mdir, 'c1', quality=100)['review_rounds'], [1])
+
     def test_failed_ticket_is_zero(self):
         self.company('c1')
         self.one('c1', 10, status='failed', review=(False, False, False))      # 總裁照樣結案、品管也過
