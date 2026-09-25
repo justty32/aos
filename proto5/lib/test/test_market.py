@@ -595,6 +595,18 @@ class FormulaFix(Base):
         fmt.write_json(p, letter)
         self.assertEqual(mk.board_from_company(self.tmp / 'c1')['done'], 0)
 
+    def test_success_verdict_wording(self):
+        """五家真跑 09-25：c2 總裁三封結案信都寫「結論為：合格」（品管報告本身是「結論：合格」），以前全算失敗。"""
+        self.real('c1')
+        inbox = self.tmp / 'c1' / 'teams' / 'hq' / 'team' / 'human'
+        p = next(q for q in inbox.glob('*.json') if fmt.read_json(q)['status'] == 'DONE')
+        letter = fmt.read_json(p)
+        for text, done in (('`qa-reports/老木頭.md` 結論為：合格。', 1), ('結論是: 合格', 1), ('結論： 合格', 1),
+                           ('結論為：不合格', 0), ('結論：不合格', 0), ('合格', 0)):
+            letter['text'] = text
+            fmt.write_json(p, letter)
+            self.assertEqual(mk.board_from_company(self.tmp / 'c1')['done'], done, text)
+
     # 1：沒有成功結案的，品質、快、省、總分都 0，撥 0
     def test_failed_company_scores_zero(self):
         self.two_real()
