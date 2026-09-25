@@ -153,7 +153,7 @@ aos-team hr trial --member worker-1 --model deepseek-chat --taskset 任務集.js
 | 記憶 | 見下 | 不裝 notes、不 recall；單子結束就 `aos-team rm --purge` 收掉家。**原型還沒做**：建家仍照模板裝 notes，收家也還沒自動（留下一輪） |
 | 轉換 | — | 轉正要人：`aos-team hr set NAME --employment regular`，受 `regular_max` 限 |
 
-**正式員工的記憶不另起一套**，用現有三樣（都在它自己的家或團隊資料夾，[notes.md](../agent/notes.md)、[compact](../agent/compact.md)、[persona.md](../agent/persona.md)）：
+**正式員工的記憶不另起一套**，用現有三樣（都在它自己的家或團隊資料夾，[notes](../aos-agent/cli-memory.md)、[compact](../agent/compact.md)、[persona.md](../agent/persona.md)）：
 
 | 記什麼 | 放哪 | 誰寫 | 怎麼讀 |
 |---|---|---|---|
