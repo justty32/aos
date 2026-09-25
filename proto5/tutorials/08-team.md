@@ -225,6 +225,53 @@ aos-team mail --last 2
 
 要讓驗收員跑專案自己的測試：在名冊 `$W/myteam/team.json` 頂層加白名單（人寫；領隊只能從裡面挑，挑錯了郵差退信會列出能用的），例如 `"cmd_ok": [{"run": ["python3", "-m", "unittest"], "timeout_s": 300}]`。驗收員在牢裡跑、專案唯讀、退 0 才算過。**寫壞了名冊，所有 `aos-team` 指令（含郵差）都會停**，改完跑一次 `aos-team ls` 確認。細節見 [wall.md](../spec/team/wall.md)。
 
+## 10. 讓領隊自己生工人、讓工人自己造工具
+
+**預設就開、不用你點頭**：領隊本來就能生內建模板的新成員（`spawn_member`），工人本來就能寫工具草稿（`tool_draft`）。這篇教程的名冊什麼都沒設，就是這個預設狀態。
+
+### 領隊生成員
+
+跟領隊說「人手不夠，多生一個 worker-2」，它會叫 `spawn_member`；郵差檢查過（模板對、人數沒超、新成員的 `mail_to` 沒超權）就直接生：改名冊、`aos-team init` 生家、`aos-agent start` 開機、回信給領隊，另外寄一封信讓你知道。看紀錄：
+
+```sh
+aos-team spawn ls
+```
+
+### 想關掉，或想改成要你點頭
+
+在 `team.json` 頂層加一段 `spawn`（管全隊），或在某個成員自己底下加 `"spawn": ...`（只管這個人、蓋過全隊那段）：
+
+```json
+"spawn": {"templates": [], "approve": false}
+```
+
+- `"templates": []`：這隊誰都不准生（不寫這欄＝內建模板都能生）。
+- `"approve": true`：改成要你先點頭——郵差開一題「[成員] …」，你 `aos-team spawn approve q-NNNN` 才真的生。
+- 只想管一個人：寫在那個成員底下，蓋過全隊那段。例：領隊生人要點頭 `"lead": {"template": "lead", "mail_to": [...], "spawn": {"approve": true}}`；不准領隊生 `"spawn": false`；讓某個工人也能生 `"spawn": true`。
+- 關掉、改成要點頭：存檔後郵差下一份申請就照新的辦。**打開**一個原本不能生的成員：它手上還沒有 `spawn_member` 工具，要 `aos-team rm 名字` 再 `aos-team init` 重生它的家。
+
+### 工人造工具
+
+工人遇到「這件事一直機械地重複做、又沒現成工具」，可以叫 `tool_draft` 寫一支小工具（附幾條例子）。郵差自動在牢裡跑那幾條例子，過了才開一題「[工具] …」問你——**這條一定要你點頭，沒有「預設開」**：
+
+```sh
+aos-team tool ls
+aos-team tool approve q-NNNN
+```
+
+批准後郵差把工具裝進寫的那個人的家；沒過會退一封信說哪條沒過，工人改了可以再交（同名）。
+
+### 收掉生出來的成員
+
+跟收掉手寫的成員一樣：
+
+```sh
+aos-agent stop --target $W/myteam/members/worker-2
+aos-team rm worker-2
+```
+
+細節：[spawn.md](../spec/team/spawn.md)、[toolsmith.md](../spec/team/toolsmith.md)。
+
 ## 底下在幹嘛
 
 - `init` 照模板替每個成員生一個 agent 家（`$W/myteam/members/<名>/`），人格裡的 `{name}`、`{mail_to}` 換成實際值，工具包照模板裝；每個家都有 `access.json`，工具關在牢裡跑：專案掛成 `/work/ws`（工人可寫，領隊、審查唯讀）、自己的寄件格 `/work/outbox`、任務表 `/work/board`（唯讀）。
