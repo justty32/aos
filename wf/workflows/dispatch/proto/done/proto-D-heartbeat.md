@@ -17,7 +17,7 @@
 
 ## 資料格式（調度者代裁，Fable 可細化、不可推翻）
 
-- 清單住 `<folder>/.aos/heartbeat/`：`routines.json`、`schedule.json`（**`wf-table/1` 契約**，見 `wf/workflows/common/data-files.md`，`wf/tools/tabledb.py` 要讀得到）、`log.md`（append-only，一次心跳一行）。
+- 清單住 `<folder>/.aos/heartbeat/`：`routines.json`、`schedule.json`（**`wf-table/1` 契約**，見 `wf/workflows/common/data-files.md`，要能照契約讀回）、`log.md`（append-only，一次心跳一行）。
 - routines 一列：`id`、`kind`（`interval`｜`slot`）、`every`（interval 用，如 `7d`／`30m`）、`slot`（slot 用：`HH:MM` 起點＋星期遮罩，最小可行即可）、`last_run`（ISO8601 或空）、`run`（`{"argv":[...]}` 或 `{"ask":"一句給 agent 的話"}`）、`note`。
 - schedule 一列：`id`、`at`（絕對時刻含日期，時區 Asia/Taipei）、`run`（同上）、`note`。
 - `every/*.json` 新增可選欄 `every_ms`（整數）：loop 只在「距該檔上次被投遞 ≥ every_ms」時才投；上次投遞時間記在 `state.json` 或 `.aos/every/.last/<stem>`（你裁，記進隊長裁決）。沒有此欄＝每回合投（維持隊 C 行為）。
@@ -57,7 +57,7 @@
 ## 驗收（就這 7 條）
 
 1. 根目錄 build＋ctest 全綠。
-2. 空資料夾 `W`：`aos heartbeat init --interval 1s` → `.aos/every/tick.json` 含 `every_ms: 1000`、`.aos/heartbeat/{routines,schedule}.json` 存在且 `wf/tools/tabledb.py` 讀得到。
+2. 空資料夾 `W`：`aos heartbeat init --interval 1s` → `.aos/every/tick.json` 含 `every_ms: 1000`、`.aos/heartbeat/{routines,schedule}.json` 存在且照 `wf-table/1` 契約讀得回來。
 3. `W` 內 `aos routine add --every 2s -- sh -c 'date +%s >> /tmp/hb-r'`，`aos run --step 40 --interval 100`（4 秒）：`/tmp/hb-r` 有 **2 行**（±1），`routines.json` 的 `last_run` 被更新，`log.md` 有對應行。
 4. `aos schedule add --at "<現在+2秒>" -- touch /tmp/hb-s` → 跑 3 秒 → `/tmp/hb-s` 存在且 `schedule.json` 該列已刪。
 5. `W` 內 `aos agent init` 後 `aos routine add --every 2s --ask "報一次時間"` → 跑 3 秒 → `.aos/agents/<name>/say/` 或 log.md 出現那句話（LLM 有沒有回不驗）。
