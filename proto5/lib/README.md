@@ -82,7 +82,10 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_agent_access_cli.py`](aos_agent_access_cli.py) | `aos-agent access ls／set／rm／cwd／net` |
 | [`aos_agent_events.py`](aos_agent_events.py) | 事件紀錄（tool-era T4，spec/agent/events.md）：agent 家 `log/events.jsonl` 一行一事件（收件、每批起訖、壓縮），`aos-llm call` 的 `log/usage.jsonl` token 用量；只有持 `.tick.lock` 的一方寫，至少一次＋去重，滿了自動輪換 |
 | [`aos_agent_context.py`](aos_agent_context.py) | `aos-agent context`（tool-era T4，cli-memory.md）：送給模型的東西多大，人格＋記憶＋工具的字數／token 粗估；跟 `talk` 的 `/context` 共用同一份算法 |
-| [`aos_agent_compact.py`](aos_agent_compact.py) | `aos-agent compact`（tool-era T4，spec/agent/compact.md）：機械壓縮記憶（封存＝8 KB 機械摘要），tick idle 時的自動壓縮、`compact` 申請、`history --archive`；不叫模型，每步可重跑。`--summarize`（第三波 W3-2，spec/agent/compact-summarize.md）：人用的旗標，模型濃縮封存摘要、機械檢查不過退回 |
+| [`aos_agent_compact.py`](aos_agent_compact.py) | `aos-agent compact`（tool-era T4，spec/agent/compact.md）：機械壓縮記憶（封存＝8 KB 機械摘要），tick idle 時的自動壓縮、`compact` 申請、`history --archive`；不叫模型，每步可重跑。`--summarize`（第三波 W3-2，spec/agent/compact-summarize.md）：人用的旗標，模型濃縮封存摘要、機械檢查不過退回。這支留 `apply` 與三個入口（`compact`、`auto`、`on_request`）和測試掛鉤 `_hook` |
+| [`aos_agent_compact_plan.py`](aos_agent_compact_plan.py) | 壓縮記憶的算法：常數與設定、沒做完的任務、成對檢查、每級每輪留多少、機械摘要、算新記憶 `plan` |
+| [`aos_agent_compact_archive.py`](aos_agent_compact_archive.py) | 壓縮記憶的封存檔：sha、原子寫檔、封存資料夾、`history --archive` |
+| [`aos_agent_compact_summarize.py`](aos_agent_compact_summarize.py) | `compact --summarize`：封存摘要叫模型濃縮，機械檢查不過退回機械摘要 |
 | [`aos_agent_notes.py`](aos_agent_notes.py) | `aos-agent notes ls／show`（tool-era T4）：讀 `tools/notes/` 那支 `note` 工具寫的 `wf-table/1` 長期筆記檔，不叫模型 |
 | [`aos_agent_persona.py`](aos_agent_persona.py) | `aos-agent persona show／set／append`（第二波 C 隊，spec/agent/persona.md）：人格是信任資料，模型只能用 `persona_propose` 提案，人批了才用這支寫進 `prompts/system.json`；不叫模型、不進牢 |
 | [`aos_jail.py`](aos_jail.py) | `aos-jail`：組 bwrap 參數並 exec（工具關進牢裡跑） |
