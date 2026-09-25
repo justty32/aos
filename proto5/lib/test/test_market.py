@@ -176,7 +176,7 @@ class Pool(Base):
     def test_pool_money_and_slots(self):
         p = self.pool()
         self.assertEqual(p['money'], {'tokens': 10000 - 3000})          # 總量 − 已花 − 手上沒花的＝總量 − 撥出去的
-        self.assertEqual(p['slots'], {'regular': 100 - 30, 'cpu': 200 - 60, 'llm_cpu': 20 - 15})
+        self.assertEqual(p['slots'], {'regular': 100 - 30, 'cpu': 200 - 60, 'llm_cpu': 25 - 15})
 
     def test_bankrupt_returns_slots_and_leftover_other_kind(self):
         self.spend('c3', 1000)                                         # token 花超（1400／1000）＝倒閉
@@ -187,7 +187,7 @@ class Pool(Base):
         self.assertEqual(row['slots'], {'regular': 10, 'cpu': 20, 'llm_cpu': 5})
         p = self.pool()
         self.assertEqual(p['money']['tokens'], 10000 - (200 + 100 + 1400) - (800 + 900))
-        self.assertEqual(p['slots']['llm_cpu'], 20 - 10)
+        self.assertEqual(p['slots']['llm_cpu'], 25 - 10)
         bal = cost.balances(str(self.ledger))['c3']
         self.assertLessEqual(bal['balance']['usd'], 0)
         ev = mk.load(self.mdir)['events'][-1]
@@ -211,18 +211,18 @@ class Pool(Base):
         self.assertIn('tokens', mk.load(self.mdir)['history'][-1]['capped'])
 
     def test_slots_grant_and_open_needs_slots(self):
-        lim = mk.grant_slots(self.mdir, 'c1', llm_cpu=1)
-        self.assertEqual((lim['llm_cpu'], lim['cpu']), (6, 20))
+        lim = mk.grant_slots(self.mdir, 'c1', llm_cpu=6)
+        self.assertEqual((lim['llm_cpu'], lim['cpu']), (11, 20))
         cfg = co.load(self.tmp / 'c1')
-        self.assertEqual(cfg['pools']['llm'], 6)
-        # 機器 llm cpu 20：c1 6＋c2 5＋c3 5＝16，第四家要 5 顆就不夠
+        self.assertEqual(cfg['pools']['llm'], 11)
+        # 機器 llm cpu 25（董事 09-25 14:20：原 20 提高）：c1 11＋c2 5＋c3 5＝21，第四家要 5 顆就不夠
         with self.assertRaises(mk.MarketError) as e:
             self.company('c4')
         self.assertEqual(e.exception.code, 'NoSlots')
         d = co.new(self.tmp / 'c5', EXAMPLE, 'c5-', self.proj, llm_cpu=4)
         mk.open_company(self.mdir, 'c5', d, usd=0.5, tokens=500)      # 縮到 4 顆就開得了
         with self.assertRaises(mk.MarketError):
-            mk.grant_slots(self.mdir, 'c1', llm_cpu=1)                  # 20 用完了
+            mk.grant_slots(self.mdir, 'c1', llm_cpu=1)                  # 25 用完了
 
 
 class Merge(Base):

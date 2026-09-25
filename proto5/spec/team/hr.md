@@ -116,7 +116,7 @@ aos-team hr trial --member worker-1 --model deepseek-chat --taskset 任務集.js
 | stage | `regular_max` 正式員工 | `cpu_max` | `llm_cpu_max` |
 |---|---|---|---|
 | `startup`（預設） | 10 | 20 | 5 |
-| `grown` | 100 | 200 | 20 |
+| `grown` | 100 | 200 | 25 |
 
 例：`{"stage": "grown", "cpu_max": 50}`＝擴張後的人頭，但 cpu 先開 50。名額只放在 HR 的 `policy.json`，**不放名冊**（名冊的 `limits.max_members` 是一支團隊的人數，財務的 `budget` 是錢，三個不同的東西）。
 

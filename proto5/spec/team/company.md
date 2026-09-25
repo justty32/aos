@@ -38,7 +38,7 @@ mfg 郵差開單 t-0001 → 寫手做 → 驗收員 → 審查員 → 郵差寄�
 |---|---|
 | `prefix` | 成員名前綴（`c1-`）；`new --prefix` 會把樣板每個成員名、`mail_to`、門房的 `assignee`、`staff`、`desk` 都加上。同一台機器開幾家就不撞名 |
 | `limits` | 這家的上限 `{"regular", "cpu", "llm_cpu"}`，新創預設 10／20／5 |
-| `limits_max` | 擴張到頂的上限，預設 100／200／20；`limits` 不能超過它 |
+| `limits_max` | 擴張到頂的上限，預設 100／200／25（董事 09-25 14:20：llm cpu 20→25）；`limits` 不能超過它 |
 | `pools` | kernel 兩池的顆數 `{"default", "llm"}`；`default ≤ limits.cpu`、`llm ≤ limits.llm_cpu`（**cpu 不含 llm 池**，跟 HR 部 hr.md §5 同一個算法），超了整份不收（`OverLimit`） |
 | `front` | 前台部門：董事 `order` 不帶 `--to` 時交給它的門房 |
 | `departments.<代號>` | 一個部門：`title`、`team`（自己一支團隊的資料夾）或 `part_of`（併在別的部門的團隊裡，新創期的兼任）、`desk`（跨部門的信沒命中門房時交給誰；沒寫＝第一個 lead，再沒有＝第一個成員）、`aliases`（〔給 …〕認的別名）、`open`（false＝尚未成立，up 不開、總機退信）、`state`／`serves`／`delivers`／`kpi`／`lib`（給人看的說明） |

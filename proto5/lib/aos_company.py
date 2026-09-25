@@ -44,7 +44,7 @@ MARK = re.compile(r'\A[ \t]*[〔\[【][ \t]*給[ \t]*([^\s〕\]】]{1,24})[ \t]*
 PREFIX = re.compile(r'([a-z][a-z0-9]{0,7}-)?\Z')
 LIMIT_KEYS = ('regular', 'cpu', 'llm_cpu')
 STARTUP = {'regular': 10, 'cpu': 20, 'llm_cpu': 5}
-CEILING = {'regular': 100, 'cpu': 200, 'llm_cpu': 20}
+CEILING = {'regular': 100, 'cpu': 200, 'llm_cpu': 25}   # 董事 09-25 14:20：llm cpu 總額 20→25（五家各 5 剛好）
 TOP_KEYS = ('_metainfo', 'name', 'prefix', 'stage', 'limits', 'limits_max', 'pools', 'front', 'project', 'llm',
             'daemon', 'departments', 'staff', 'relay', 'account')
 DEPT_KEYS = ('title', 'team', 'part_of', 'desk', 'aliases', 'state', 'open', 'kpi', 'serves', 'delivers', 'lib')
