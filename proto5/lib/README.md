@@ -92,6 +92,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
 | [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
 | [`aos_team_cost.py`](aos_team_cost.py) | 財務部（09-25，spec/team/cost.md）：`record()` 掛在 `aos_llm_call.call` 與 `aos_llm_ask.ask`，每次呼叫追加一筆到 `$AOS_COST_HOME/ledger.jsonl`（沒設不記、寫失敗吞掉）；`aos-team cost`（分組表、`budget`、`import` 回填 usage.jsonl）；公司帳戶（`account_open`／`account_grant`／`balances`／`account_of`，花到 0＝倒閉）；郵差 `budget_hold` 與 `ls` 第一行問它超了沒 |
+| [`aos_team_hr.py`](aos_team_hr.py) | （HR 部 09-25，spec/team/hr.md）`aos-team hr`：薪資表／政策讀寫、`hr trial`（複製團隊換模型→跑任務集→`score --json`＋可插評分指令→記 `trials.jsonl`→調薪）、`hr set`（改名冊與家的 `llm.model`、重啟）、正式員工人頭與全公司 cpu 計數（init／start／spawn 的擋點）；HR 自己不叫模型 |
 | [`aos_team_lock.py`](aos_team_lock.py) | `lock` 工具與 `aos-team lock`（第二波 C 隊，spec/team/lock.md）：短期獨佔一個檔或資料夾的名字，申請 `kind: lock`（acquire／release／ls，全部非同步）記在 `team/locks/<名>.json`，逾時自動放 |
 | [`aos_team_spawn.py`](aos_team_spawn.py) | `spawn_member` 工具與 `aos-team spawn`（第三波 W3-1，spec/team/spawn.md）：成員申請生新成員，`kind: spawn`；預設不用人批（郵差查過名冊直接生），名冊可設成要開題問人；`spawn ls／approve` |
 | [`aos_team_toolsmith.py`](aos_team_toolsmith.py) | `tool_draft` 工具與 `aos-team tool`（第三波 W3-1，spec/team/toolsmith.md）：成員寫工具草稿，`kind: tool_draft`；郵差在牢裡跑附的例子，過了開題，人 `tool approve` 才裝（核 sha256） |
@@ -587,6 +588,7 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_beat.py](test/test_team_beat.py) | 第 2 隊心跳（`aos_team_beat`；beat.md）：到期派出、在途不重派、DONE 才更新、漏跑只補一次並報告、模型提的要人批 |
 | [test_team_rulings.py](test/test_team_rulings.py) | 第 2 隊追加：使用者五題裁決（郵差間隔可設定、心跳用自己的身分派工、一次性例行叫 `once`、檢查器壞≠沒過、例行完成不寄 DONE 擾人） |
 | [test_team_score.py](test/test_team_score.py) | T5 收尾 `aos-team score`（score.md）：手造一支小團隊的紀錄，驗六軸計數、門檻、範圍、去重、輪換、`--runs`、`--json`、壞行 |
+| [test_team_hr.py](test/test_team_hr.py) | HR 部 09-25 `aos-team hr`（hr.md）：薪資表／政策讀寫與壞檔、`employment` 驗證、試用不動原團隊與紀錄欄位齊（kernel 那段換成假的）、調薪四種判定、`hr set` 改名冊與家、正式員工人頭與 cpu 計數、擋點 |
 | [test_team_t5.py](test/test_team_t5.py) | T5 收尾的小改動：審查單帶事實、`aos-team ls` 列郵差與心跳、模板人格的變數與關鍵句 |
 | [test_team_w2a.py](test/test_team_w2a.py) | 第二波 A 隊團隊這邊：`route try` 不留痕跡、`mail` 列題目與落穿信、`start` 那兩行標郵差／心跳、`importer` 模板的工具與工具表大小 |
 | [test_tools_wf_fill.py](test/test_tools_wf_fill.py) | 第二波 A 隊 `wf_fill`：真的 wf_init 導入後填到 wf_lint PASS、dry_run 不寫、再跑不動、名字對應規則（同義詞、包含、不只一條不填、範本列）、今天日期照時區、範例只刪認得出的 |

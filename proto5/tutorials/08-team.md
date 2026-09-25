@@ -319,6 +319,25 @@ aos-team commons import ~/repo/…/proto5/playbook   # 把 playbook 的經驗一
 ```
 
 不想讓某個團隊或成員看到：名冊頂層寫 `"commons": false`，或成員那列寫 `"commons": false`，再 `aos-team init`。細節：[commons.md](../spec/team/commons.md)。
+## 12. HR：這個位子用笨一點的模型行不行
+
+公司路線是「強模型先做 → 換笨模型 → 換程式」。每換一步之前先**試用**：抄一份團隊、只換一個成員的模型、跑同一份任務集、用同一支評分指令打分，分數沒掉太多就記進薪資表。原團隊一個檔都不動。
+
+```sh
+aos-team hr ls                       # 每個成員：位子、正式／臨時、模型、等級、薪資表的「最低通過」
+aos-team stop                        # 試用副本的成員名跟你的一樣，同一個 kernel 上會撞名：先停（或用另一個 kernel）
+aos-team hr trial --member worker-1 --model chatgpt-gpt-6-astra --taskset proto5/examples/hr/ex1/taskset-worker.json
+aos-team hr trial --member worker-1 --model deepseek-chat       --taskset proto5/examples/hr/ex1/taskset-worker.json
+aos-team hr salary
+```
+
+- `--model` 是 `llm.json` 的**代號**，要先在 `llm.json` 加好（例如代號 `chatgpt-gpt-6-astra` 指到 LiteLLM 同名模型）。
+- 每次試用印一行：分數、機械檢查過沒、token、秒、六軸、判定。強模型那次是「基準」；便宜的那次分數 ≥ 基準 − 5 而且機械全過＝「通過」，薪資表 `worker` 的「最低通過」就填它（附兩次的編號當證據）。
+- **薪資表不會自動改你的名冊**。看過紀錄（`aos-team hr trials`）覺得可以，再 `aos-team hr set worker-1 --model deepseek-chat`：改名冊、改那個成員家裡的模型、登記著就重啟它。
+- HR 的檔在 `$AOS_KERNEL_HOME/hr/`：`salary.json`、`policy.json`（人頭與 cpu 上限、容差）、`trials.jsonl`，都能用文字編輯器看、改。`aos-team hr cap` 看全公司正式員工幾人、cpu 開了幾顆。
+- 名冊每個成員可以寫 `"employment": "regular"`（正式員工，預設）或 `"temp"`（臨時工，領隊 `spawn_member` 生的就是這種）。
+
+細節：[hr.md](../spec/team/hr.md)。
 
 ## 底下在幹嘛
 

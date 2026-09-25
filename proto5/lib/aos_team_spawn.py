@@ -146,6 +146,11 @@ def check(lay, roster, sender, template, name, mail_to, *, ignore=None):
     if extra:
         raise TeamError('MayExceeds', '模板 %s 能寄 %s，%s 自己不能；新成員的權限不能比申請者大'
                         % (template, '、'.join(extra), sender))
+    import aos_team
+    hr = aos_team._hr_home()                          # HR 09-25：生之前數全公司 cpu（spec/team/hr.md〈名額〉）
+    if hr is not None:
+        import aos_team_hr
+        aos_team_hr.check_cpus(hr)
     return mail_to, policy
 
 
@@ -173,7 +178,7 @@ def realize(lay, rec, env, out=print):
         if name not in roster['members']:
             mail_to, policy = check(lay, roster, rec['from'], rec['template'], name, rec['mail_to'], ignore=rec['id'])
             raw = read_json(lay.roster)
-            row = {'template': rec['template'], 'mail_to': mail_to}
+            row = {'template': rec['template'], 'mail_to': mail_to, 'employment': 'temp'}   # HR：生出來的預設臨時工
             inherit = inherit_spawn(roster, rec['template'], policy)
             if inherit is not None:
                 row['spawn'] = inherit

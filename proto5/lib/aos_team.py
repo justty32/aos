@@ -94,6 +94,7 @@ def cmd_init(team_dir, argv):
             raise TeamError('BadCommons', 'commons %s 不能在專案 %s 或團隊資料夾裡（工人改得到專案；團隊資料夾是控制資料）；'
                             '名冊 commons.dir 改到外面' % (cdir, project))
         aos_team_commons.Commons(cdir).ensure()
+    _hr_gate(lay, roster)
     for d in lay.skeleton(roster['members']):
         d.mkdir(parents=True, exist_ok=True)
     failed = 0
@@ -140,11 +141,36 @@ def _hooks(action, lay):
     return code
 
 
+def _hr_home():
+    """HR 家（spec/team/hr.md）；找不到或在試用副本裡（AOS_HR_TRIAL）回 None＝不擋、不登記。"""
+    if os.environ.get('AOS_HR_TRIAL'):
+        return None
+    import aos_team_hr
+    try:
+        return aos_team_hr.hr_home()
+    except TeamError:
+        return None
+
+
+def _hr_gate(lay, roster, cpus=False):
+    """HR 擋點：init 數全公司正式員工（regular_max）並登記這隊；start 另數全公司 cpu（cpu_max／llm_cpu_max）。"""
+    hr = _hr_home()
+    if hr is None:
+        return
+    import aos_team_hr
+    aos_team_hr.check_regular(hr, lay.root, roster)
+    if cpus:
+        aos_team_hr.check_cpus(hr)
+    aos_team_hr.register_team(hr, lay.root)
+
+
 def _each(team_dir, argv, action):
     ap = _parser(action, '全部成員向 kernel %s' % ('登記' if action == 'start' else '撤銷登記'))
     ap.parse_args(argv)
     lay = Layout(team_dir)
     roster = load_roster(lay.root)
+    if action == 'start':
+        _hr_gate(lay, roster, cpus=True)
     code = 0
     for name in roster['members']:
         home = lay.member(name)

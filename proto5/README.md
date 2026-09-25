@@ -100,6 +100,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-team tool ls`／`approve Q` | 工人寫的工具草稿（`tool_draft`）：郵差先在牢裡跑過例子，過了才開題，這條一定要人批 | [spec/team/toolsmith.md](spec/team/toolsmith.md) |
 | `aos-team crystal [--min N] [--out F] [--suggest-with-llm]` | 固化建議：從 `route.log` 找常落穿給領隊、領隊每次都開同一種單的句型，產候選門房規則（只寫提案檔；人 `route test --file F` → `route save F` 才生效） | [spec/team/crystal.md](spec/team/crystal.md) |
 | `aos-team score` | 把六軸表（`axes.md` 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型、不寫檔 | [spec/team/score.md](spec/team/score.md) |
+| `aos-team hr ls／set／trial／trials／salary／cap` | HR：薪資表（每個位子最低用得起哪顆模型，有試用證據才填）、換模型試用＋調薪、正式員工／臨時工、名額（新創：正式 10 人、cpu 20／llm cpu 5；擴張後 100／200／20） | [spec/team/hr.md](spec/team/hr.md) |
 | `aos-kernel tick`、`aos-agent tick` | 走一格；kernel 自己會叫，人不用打 | — |
 | `aos-cpu` | cpu 的主人程式：顧一個 cpu 家、照單跑程式；daemon 拉起來的每個孩子就是它，平常不用自己叫 | [01](tutorials/01-daemon-kernel.md) |
 | `aos-llm call`、`aos-exec`、`aos-jail` | 問一次模型／照 inst 跑一次程式／把一支程式關進沙盒跑；都是別的指令在叫，`aos-jail` 是 `aos-agent` 送件時自動用，平常不用自己叫 | — |
