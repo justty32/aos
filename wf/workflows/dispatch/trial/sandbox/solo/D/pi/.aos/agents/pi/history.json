@@ -1,8 +1,0 @@
-{
-  "messages": [
-    {
-      "content": "在這個資料夾建一個 hello.txt 內容是 hi",
-      "role": "user"
-    }
-  ]
-}
