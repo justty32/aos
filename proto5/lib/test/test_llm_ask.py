@@ -33,6 +33,54 @@ class ParseJsonTest(unittest.TestCase):
             ask.parse_json(None)
 
 
+class ParseJsonGuardTest(unittest.TestCase):
+    """09-25 收尾 S4：模型回的 JSON 壞掉（多字、code fence、重複 key、NaN、純量）要乾淨地報 BadModelOutput 或抽對。"""
+
+    def bad(self, text):
+        with self.assertRaises(AgentError) as cm:
+            ask.parse_json(text)
+        self.assertEqual(cm.exception.code, 'BadModelOutput')
+        return cm.exception.msg
+
+    def test_words_before_and_after(self):
+        self.assertEqual(ask.parse_json('好的，結果如下：{"a": 1}\n希望有幫助！'), {'a': 1})
+
+    def test_fence_variants(self):
+        self.assertEqual(ask.parse_json('```JSON\n{"a": 1}```'), {'a': 1})
+        self.assertEqual(ask.parse_json('```json \r\n[1]\r\n```'), [1])
+        self.assertEqual(ask.parse_json('```\n{"a": 1}\n```'), {'a': 1})
+
+    def test_unclosed_fence(self):
+        self.assertEqual(ask.parse_json('```json\n{"a": 1}'), {'a': 1})
+
+    def test_bom(self):
+        self.assertEqual(ask.parse_json('﻿{"a": 1}'), {'a': 1})
+
+    def test_duplicate_key_rejected(self):
+        self.assertIn("'a' 出現兩次", self.bad('{"a": 1, "a": 2}'))
+
+    def test_duplicate_key_does_not_fall_back_to_inner(self):
+        # 外層有重複 key：不能撿裡面那個陣列當答案
+        self.bad('說明：{"routes": [{"x": 1}], "routes": []}')
+        self.bad('```json\n{"k": {"a": 1, "a": 2}}\n```')
+
+    def test_nan_infinity_rejected(self):
+        self.assertIn('NaN', self.bad('{"a": NaN}'))
+        self.assertIn('Infinity', self.bad('[-Infinity]'))
+
+    def test_scalar_rejected(self):
+        self.bad('42')
+        self.bad('"只是一句話"')
+        self.bad('true')
+        self.bad('```json\nnull\n```')
+
+    def test_scalar_then_object(self):
+        self.assertEqual(ask.parse_json('答案 42，詳細：{"x": 1}'), {'x': 1})
+
+    def test_truncated_object(self):
+        self.bad('{"params": [{"name": "a"')
+
+
 class PickTest(unittest.TestCase):
     def test_default_first(self):
         cfg = {'models': {'a': {'m': 1}, 'default': {'m': 2}}}

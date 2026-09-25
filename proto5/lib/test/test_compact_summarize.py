@@ -87,6 +87,19 @@ class KeywordTests(unittest.TestCase):
         self.assertEqual(compact_api._clean('```text\n一句話\n```'), '一句話')
         self.assertEqual(compact_api._clean('  一句話 \n'), '一句話')
 
+    def test_clean_polite_words_around_fence(self):
+        # 09-25 收尾 S4：前後一兩句客套話＋一個圍欄＝只取圍欄裡的
+        self.assertEqual(compact_api._clean('好的，以下是濃縮後的摘要：\n```\n一句話\n```\n希望有幫助'), '一句話')
+        self.assertEqual(compact_api._clean('```markdown\n一句話'), '一句話')        # 沒收尾
+        self.assertEqual(compact_api._clean('```'), '')
+
+    def test_clean_keeps_summary_with_code_inside(self):
+        # 圍欄外字多（摘要裡夾一段程式）或兩個圍欄：不猜，原樣
+        text = '第一段摘要說了很多事情。\n第二段也是。\n```\nprint(1)\n```\n結尾'
+        self.assertEqual(compact_api._clean(text), text)
+        two = '```\na\n```\n```\nb\n```'
+        self.assertEqual(compact_api._clean(two), two)
+
 
 class SummarizeTests(MemoryBase):
     LIMIT = '2300'
