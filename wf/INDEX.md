@@ -50,7 +50,7 @@
 | [WORKFLOWS.md](WORKFLOWS.md) | 派發器：意圖 → 工作流入口 |
 | [STRUCTURE.md](STRUCTURE.md) | 結構整理參考（被動）|
 | [SESSION-LOG.md](SESSION-LOG.md) | 我的 open 進度（hub）|
-| [session_logs/](session_logs/README.md) | SESSION-LOG 搬出的舊條目（按月份全文＋索引）|
+| [session_logs/](session_logs/README.md) | SESSION-LOG 搬出的舊條目（按月份全文＋索引；月份檔膨脹再按日拆進 `<月>/`，如 `2026-09/`）|
 | [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的事（hub，A 區導航表）|
 | [wait-user/](wait-user/README.md) | WAIT_USER A 區搬出的舊條目（按類別分檔＋索引）|
 
