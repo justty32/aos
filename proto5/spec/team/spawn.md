@@ -29,7 +29,7 @@
 
 1. **出廠值**：模板 `may` 有 `spawn` 的能生（內建只有 `lead`）；能生哪些＝內建模板都可以；不用人批。
 2. **團隊層** `team.json` 的 `spawn`：`{"templates": [...], "approve": false}`。
-   - `templates` 沒寫＝內建模板都可以；**寫 `[]`＝這隊誰都不准生**；寫幾個名字＝只能生這幾種。
+   - `templates` 沒寫＝內建模板都可以；**寫 `[]`＝沒在成員層另寫 `templates` 的都不准生**；寫幾個名字＝只能生這幾種。
    - `approve` 沒寫＝`false`（郵差直接生）；`true`＝每個都要人批。
 3. **成員層** `members.<名>.spawn`：
    - `false`＝這個成員不能生（就算模板有 `spawn`）；`true`＝能生（就算模板沒有），其他照團隊層。
@@ -48,6 +48,7 @@
 - 程式裡算這個的是 `aos_team_format.spawn_policy(名冊, 名字)`（`None`＝不能；否則 `{"templates", "approve"}`）；郵差查「能不能寄 spawn 申請」也看它（`member_may`），不再只看模板。
 - **改了成員層開關要重生工具**：`spawn_member` 這支工具只裝給能生的成員（`aos-team init` 生家時決定）。已經生好的家，改了開關要 `aos-team rm 名字` 再 `init` 才換；但能生哪些、要不要批的快照每次 `init` 都會更新，郵差也每次重驗，所以**關掉**不必重生家就生效。
 - 名冊只收內建模板名：自訂模板的資料夾可能在模型改得到的地方。
+- 改 `team.json` 的三條程式路（郵差不用人批生、人 `spawn approve`、`aos-team rm`）共用一把鎖 `team/.roster.lock`（讀→檢查→改→寫一口氣做完，不會互相蓋掉）；郵差生完馬上重讀名冊，同一輪後面寄給新成員的信不會被當成寄錯人。人用文字編輯器改名冊不受這把鎖管，別在團隊跑的時候改。
 
 ## 申請（`kind: spawn`）
 
@@ -79,16 +80,19 @@
 
 ## 紀錄 `team/spawns/s-NNNN.json`（只有郵差寫）
 
-`{"_metainfo": {"_type": "aos_team_spawn", "_version": 1}, "id", "request", "from", "template", "name", "mail_to", "reason", "q", "at", "effects", "log"?}`。
+`{"_metainfo": {"_type": "aos_team_spawn", "_version": 1}, "id", "request", "from", "template", "name", "mail_to", "reason", "q", "at", "effects", "status", "log"?, "recovered"?}`。
 - `q`：要人批的是題號；不用人批的是 `null`。
-- 狀態不另存：名冊有這個名字＝已生；`q` 是 `null` 而名冊沒有＝郵差生到一半（`aos-team spawn approve s-NNNN` 補做）；題目開著＝等人批；答了批准但名冊還沒有＝還沒跑 `approve`；答別的＝人不要。
-- 冪等：同一份申請（看 `request`）再來＝回同一份動作。不用人批的先記紀錄（`effects: null`）再生，崩了重來會補生、補回信。
+- `status`：`done`＝生完（名冊寫了、init 過了）；`failed`＝郵差生到一半失敗；`null`＝還在辦。**已生看 `status`，不看名冊有沒有這個名字**（astra 09-25）：生完又被 `rm` 掉的不會變回「還沒生」再佔名額；名冊寫了但 init 沒過的也不算已生。
+- 其他狀態：`q` 是 `null` 而沒 `done`＝該生還沒生完（`aos-team spawn approve s-NNNN` 補做）；題目開著＝等人批；答了批准但沒 `done`＝還沒跑 `approve`；答別的＝人不要。
+- 人數上限算「名冊人數＋還沒辦完、名字也還不在名冊的」。
+- 冪等：同一份申請（看 `request`）再來＝回同一份動作。一律先記紀錄（`effects: null`）再辦，崩了重來會補辦；**補辦前重看一次要不要人批**——崩的那段時間人把申請者改成要批，就改成開題，不直接生。
+- `recovered`：郵差那次失敗、人 `approve s-NNNN` 補做成功時，另從 `team/post/outbox/` 補寄一封 DONE 給申請者，這格記信的 id（只寄一次）。
 - `log`：不用人批時郵差生家那段的輸出（init 印的字），出事時看。
 
 ## 人的指令
 
 - `aos-team spawn ls [--json]`：一份申請一行（`s-0001  -  lead 想生 importer-a（importer）  已生（不用人批）  理由：…`）。
-- `aos-team spawn approve q-NNNN|s-NNNN`：批准要人批的；或補做郵差生到一半的。**重跑安全**：名冊已有就跳過、init 本來就能重跑、`start` 撞已登記＝沒事、回覆前先看 `outbox/human/`（含 `done/`）有沒有同一題的回覆。
+- `aos-team spawn approve q-NNNN|s-NNNN`：批准要人批的；或補做郵差生到一半的（補好會補寄 DONE 給申請者）。**重跑安全**：名冊已有就跳過、init 本來就能重跑、`start` 撞已登記＝沒事、回覆前先看 `outbox/human/`（含 `done/`）有沒有同一題的回覆。
   人先用 `aos-team answer q-NNNN 批准` 答了也行：再跑 `approve` 會照做，回覆改成另寄一封信（題目已經關了）。
 - 停掉、收掉：跟其他成員一樣，`aos-agent stop --target <家>`（或 `aos-team stop` 全停）→ `aos-team rm 名字`（家搬進 `members/.removed/`、名冊與別人的 `mail_to` 拿掉）。這版**沒有**給模型「收掉成員」的申請。
 

@@ -245,7 +245,7 @@ aos-team spawn ls
 "spawn": {"templates": [], "approve": false}
 ```
 
-- `"templates": []`：這隊誰都不准生（不寫這欄＝內建模板都能生）。
+- `"templates": []`：這隊不准生（不寫這欄＝內建模板都能生；成員自己底下另寫 `templates` 的例外）。
 - `"approve": true`：改成要你先點頭——郵差開一題「[成員] …」，你 `aos-team spawn approve q-NNNN` 才真的生。
 - 只想管一個人：寫在那個成員底下，蓋過全隊那段。例：領隊生人要點頭 `"lead": {"template": "lead", "mail_to": [...], "spawn": {"approve": true}}`；不准領隊生 `"spawn": false`；讓某個工人也能生 `"spawn": true`。
 - 關掉、改成要點頭：存檔後郵差下一份申請就照新的辦。**打開**一個原本不能生的成員：它手上還沒有 `spawn_member` 工具，要 `aos-team rm 名字` 再 `aos-team init` 重生它的家。

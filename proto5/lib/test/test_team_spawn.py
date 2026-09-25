@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock
+from unittest import mock
 
 import aos_team
 import aos_team_ask as ask
@@ -369,15 +370,82 @@ class DefaultOnTests(Base):
         self.assertEqual(a, b)
         self.assertEqual(len(spawn.records(self.lay)), 1)
 
+    def crash_before_realize(self, r=None):
+        """郵差記好紀錄（effects: null）就崩：_auto_finish 還沒開始。"""
+        with mock.patch.object(spawn, '_auto_finish', side_effect=RuntimeError('崩')):
+            with self.assertRaises(RuntimeError):
+                spawn.on_spawn(self.lay, self.roster, r or req())
+        rec = spawn.records(self.lay)[0]
+        self.assertIsNone(rec['effects'])
+        return rec
+
     def test_crash_half_way_finishes_on_retry(self):
-        # 郵差記了紀錄（effects: null）就崩：同一份申請再來＝補生、回信，不再檢查名字撞到自己
-        spawn.on_spawn(self.lay, self.roster, req())
-        p = spawn.folder(self.lay) / 's-0001.json'
-        rec = fmt.read_json(p)
-        rec['effects'] = None
-        fmt.write_json(p, rec)
+        self.crash_before_realize()
+        self.assertNotIn('worker-2', self.roster['members'])
+        eff = spawn.on_spawn(self.lay, self.roster, req())         # 同一份申請再來＝補生、回信
+        self.assertEqual(eff[0]['status'], 'DONE', eff)
+        self.assertIn('worker-2', self.roster['members'])
+        self.assertEqual(spawn.records(self.lay)[0]['status'], 'done')
+
+    def test_crash_then_approval_turned_on_asks_human(self):
+        # astra 09-25 必修：崩一次之後人剛把申請者設成要人批——重來不能直接生
+        self.crash_before_realize()
+        self.set_roster(with_member(ROSTER_DEFAULT, 'lead', {'approve': True}))
         eff = spawn.on_spawn(self.lay, self.roster, req())
-        self.assertEqual(eff[0]['status'], 'DONE')
+        self.assertEqual(eff, [])
+        self.assertEqual([q['tag'] for q in self.open_questions()], ['member'])
+        self.assertNotIn('worker-2', self.roster['members'])
+
+    def test_init_fails_then_human_redo_sends_done_once(self):
+        # astra 09-25 必修：郵差生到一半失敗（寄了 FAILED）→ 人修好補做 → 要補一封 DONE，而且只一封
+        with mock.patch.object(aos_team, 'cmd_init', return_value=1):
+            eff = spawn.on_spawn(self.lay, self.roster, req())
+        self.assertEqual([(e['to'], e['status']) for e in eff], [('lead', 'FAILED'), ('human', 'FAILED')])
+        rec = spawn.records(self.lay)[0]
+        self.assertEqual(rec['status'], 'failed')
+        self.assertEqual(spawn.state(self.lay, rec)[0], 'approved')     # 名冊寫了、init 沒過：不算已生
+        rc, out = quiet(spawn.approve, str(self.team), 's-0001', env=self.env)
+        self.assertEqual(rc, 0, out)
+        box = self.lay.team / 'post' / 'outbox'
+        letters = [fmt.read_json(p) for p in fmt.json_files(box)]
+        self.assertEqual([(x['to'], x['status']) for x in letters], [('lead', 'DONE')])
+        quiet(spawn.approve, str(self.team), 's-0001', env=self.env)   # 再跑一次不重寄
+        self.assertEqual(len(fmt.json_files(box)), 1)
+        self.assertEqual(spawn.state(self.lay, spawn.records(self.lay)[0])[0], 'done')
+
+    def test_removed_member_frees_its_slot(self):
+        # astra 09-25 必修：生了又 rm 掉的，舊紀錄不能變回「還沒生」再佔名額（上限 4、原有 2 人）
+        requests.handle(self.lay, self.roster, req('lead', 'r1', name='worker-2'))
+        quiet(aos_team.cmd_rm, str(self.team), ['worker-2'])
+        requests.handle(self.lay, self.roster, req('lead', 'r2', name='worker-3'))
+        requests.handle(self.lay, self.roster, req('lead', 'r3', name='worker-4'))
+        self.assertEqual(sorted(self.roster['members']), ['lead', 'worker-1', 'worker-3', 'worker-4'])
+
+    def test_post_sees_new_member_in_same_round(self):
+        # astra 09-25 必修：同一輪先處理 spawn、再處理寄給新成員的信——信不能因為郵差手上的舊名冊被退
+        lead_box = self.lay.outbox('lead')
+        rid = fmt.new_id('lead')
+        (lead_box / (rid + '.json')).write_text(json.dumps(req('lead', rid)), encoding='utf-8')
+        lid = fmt.new_id('lead')
+        (lead_box / (lid + '.json')).write_text(json.dumps(
+            {'id': lid, 'from': 'lead', 'to': 'worker-2', 'status': 'PROGRESS', 'reply_to': None, 'rev': None,
+             'text': '歡迎', 'at': '2026-09-25T09:00:00+08:00'}), encoding='utf-8')
+        p = post.Post(self.team, out=lambda s: None, submit=lambda job, argv: {'mode': 'test'},
+                      health=lambda n: ('ok', 'ok'), watch_every=0)
+        order = []
+        real_take = post.Post.take
+
+        def take_in_order(this, sender, path, r):     # 不靠檔名排序：這裡明定先 spawn 後信
+            order.append(path.name)
+            return real_take(this, sender, path, r)
+        with mock.patch.object(post.Post, 'take', take_in_order):
+            p.base.mkdir(parents=True, exist_ok=True)
+            p.roster = fmt.load_roster(self.team)
+            for d in (p.sent, p.open_dir, p.jobs, p.jobs_done, p.sys_outbox):
+                d.mkdir(parents=True, exist_ok=True)
+            p.take('lead', lead_box / (rid + '.json'), 'p-a')
+            got = p.take('lead', lead_box / (lid + '.json'), 'p-b')
+        self.assertNotEqual(got['kind'], 'rejected', got)
 
     def test_member_off(self):
         self.set_roster(with_member(ROSTER_DEFAULT, 'lead', False))

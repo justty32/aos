@@ -9,6 +9,7 @@
 import datetime
 import hashlib
 import json
+import contextlib
 import os
 from pathlib import Path
 import re
@@ -313,6 +314,20 @@ def validate_roster(obj, where='team.json'):
             'mounts': dict(mounts), 'tools': list(tools),
             'spawn': _member_spawn(m.get('spawn'), w + '.spawn')}
     return out
+
+
+@contextlib.contextmanager
+def roster_lock(lay):
+    """改 team.json（讀→檢查→改→寫）時拿的一把鎖：郵差不用人批生成員、人 spawn approve、aos-team rm 共用，
+    免得兩邊同時讀到舊名冊、後寫的蓋掉先寫的（astra 09-25）。人用文字編輯器改不受這把鎖管。"""
+    import fcntl
+    lay.team.mkdir(parents=True, exist_ok=True)
+    with open(lay.team / '.roster.lock', 'a') as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
 
 
 def load_roster(team_dir):
