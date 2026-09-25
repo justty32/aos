@@ -44,10 +44,13 @@ params 形狀或 pool 不合回 `-32602`。kernel 不解指示詞、不驗 inst�
 | 鍵 | 必填 | 意思 |
 |---|---|---|
 | `dir` | 是 | 絕對路徑，信放這裡（人的收件匣、某個 agent 家的 `input/`…）。kernel 不建這個資料夾 |
-| `body` | 否 | 信的內容，任意 JSON（序列化後 ≤ 64 KB）。字串、或物件第一層的字串值裡的 `{id}` `{proc}` `{fails}` `{at}` `{look}` 換成這次的值（檔名去掉 `.json`、行程名、連錯次數、本機時間 ISO 8601、要看的 stderr 檔——同 `ls` 的 look）。沒給＝一句白話字串（agent 的 `input/` 也吃） |
+| `body` | 否 | 信的內容，任意 JSON（序列化成 UTF-8 後 ≤ 64 KB，09-25 起算位元組）。字串、或物件第一層的字串值裡的 `{id}` `{proc}` `{fails}` `{at}` `{look}` 換成這次的值（檔名去掉 `.json`、行程名、連錯次數、本機時間 ISO 8601、要看的 stderr 檔——同 `ls` 的 look）。沒給＝一句白話字串（agent 的 `input/` 也吃） |
 | `wake` | 否 | 放好信之後叫醒這個反覆行程（收件的 agent），同「叫醒一個行程」 |
 
 - 帶在 `once` 的 add 上＝退件（`FieldTypeMismatch`，once 不會被判 bad）；形狀不對同樣退件。
 - 檔名 `bad-<行程名>-<chain>-<序號>.json`。判 `bad` 的那格把這封排進帳本的 `letters` 出貨箱（跟判定同一次存，提交點 B），出貨時放（`link`，EEXIST 當已放）、再叫醒。
+  （09-25 astra 審查代裁）**崩潰時可能多一封、不會少**：放好信、還沒把它從出貨箱拿掉就被 kill -9，而收件人又剛好在恢復前把信搬走，下一格會再放一封同名、同 `{id}` 的信。檔案和帳本沒辦法同一刻寫好，只能選「可能多寄」或「可能漏寄」；通知選前者。收件人要去重就認檔名／`{id}`。
+- 填 `{look}` 時要讀 target 的 inst 找 stderr：只讀普通檔、最多 1 MB、不阻塞；target 被換成 FIFO 之類的就直接指 target 本身（09-25 astra 必修 M4）。
+- 信任邊界（09-25 代裁）：`dir` 只驗是絕對路徑，不擋 `..` 和 symlink。會登記 `add` 的人本來就能在自己的權限內寫檔，kernel 跟他同一個使用者，沒多給權限；kernel 不建資料夾、不覆蓋既有檔（`link`）。
 - **寄不出去不擋 kernel**：資料夾不在、沒權限，記一行 `kernel.log`（`bad_letter_failed`）、丟掉這封，這格照常退 0。寄出去了也記一行（`bad_letter`）。
 - 命令列：`aos-kernel add … --on-bad DIR [--on-bad-wake NAME]`（body 用預設那句）。團隊的 `aos-team start` 登記郵差、心跳時預設帶 `on_bad`，寄給人（`team/human/`，一封團隊信的形狀、`from: kernel`、`status: FAILED`）。

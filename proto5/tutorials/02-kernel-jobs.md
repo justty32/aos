@@ -101,6 +101,34 @@ aos-kernel ls | grep boom
   boom 壞了，看 /home/you/aos-try/jobs/boom.err
 ```
 
+`bad` 的工作不會自己好，所以 `aos-kernel ls` 的**第一行**也會變（不再是 `health ok`）：
+
+```text
+health 反覆工作 1 個 bad：boom（kernel 不再派它；看 aos-kernel ls 的 look 欄，修好後 rm 再 add 或重跑登記它的指令）
+```
+
+`aos up` 的最後一行也印這句，但不會因此退 1（kernel 本身沒壞）。`rm` 掉它，第一行就回到 `health ok`。
+
+**壞了寄一封信給你**：登記時加 `--on-bad 資料夾`，判 `bad` 那一刻 kernel 往那個資料夾放一封信（資料夾要先建好）：
+
+```sh
+mkdir -p $W/inbox
+aos-kernel rm boom
+aos-kernel add $W/jobs/boom.json --name boom --interval-ms 200 --on-bad $W/inbox
+sleep 20
+cat $W/inbox/bad-boom-*.json
+```
+
+你會看到一封信（一段 JSON 字串），只寄一次：
+
+```text
+"反覆工作 boom 連錯 10 次，kernel 判它 bad、不再派它（2026-09-25T09:13:18+0800）。看 /home/you/aos-try/jobs/boom.err；修好後 aos-kernel rm boom 再 add（或重跑登記它的指令）。"
+```
+
+要寄給某個 agent，就把資料夾指到它家的 `input/`，再加 `--on-bad-wake 行程名` 叫醒它。
+[教程 08](08-team.md) 的團隊不用自己加：`aos-team start` 登記郵差、心跳時已經帶了，壞了信直接放進你的收件匣 `team/human/`。
+寄不出去（資料夾不在、沒權限）只在 `K/kernel.log` 記一行 `bad_letter_failed`，kernel 照常走。
+
 ## 6. 撤掉
 
 ```sh
@@ -116,7 +144,8 @@ aos-kernel rm count
 - 每一格，kernel 從佇列挑輪得到的工作，找一顆**同池**又閒著的 cpu（沒寫 `--pool` 就是 `default`），把單放進那顆 cpu 的 `requests/`（`K/pools/<池>/cpus/<號>/requests/`）；
   cpu 照 inst 跑一次程式、回音寫進自己的 `responses/`；下一格 kernel 收回音、判定、簽收。（[一格做什麼](../spec/kernel/tick.md)）
 - **判定**（[回音怎麼判](../spec/kernel/echo.md)）：once 的回音原樣轉給當初 `add` 的人（放在 `K/responses/`）；反覆的退出碼 100＝完成，
-  0 或 101（「還在等，不算錯」）算成功、失敗計數歸零；102＝「停車」，也不算錯，但下次要等 `park_ms`（預設 5 分鐘）或被叫醒（`aos-kernel wake NAME`，agent 的回音到了或有人 `say` 會自動叫）；其他非 0、逾時、跑不起來都算一次失敗，連續 10 次＝`bad`。`100` 和 `10` 在 `K/info.json` 的 `done_exit`、`bad_after` 改。
+  0 或 101（「還在等，不算錯」）算成功、失敗計數歸零，下次等 `interval_ms` 再跑；103＝「還有事，馬上再來」，也算成功，但不等 `interval_ms`，下一次派工就排它（agent 做完一步、下一步已經能做時就退 103）；102＝「停車」，也不算錯，但下次要等 `park_ms`（預設 5 分鐘）或被叫醒（`aos-kernel wake NAME`，agent 的回音到了或有人 `say` 會自動叫）；其他非 0、逾時、跑不起來都算一次失敗，連續 10 次＝`bad`（失敗的不管有沒有被叫醒，都照 `interval_ms` 等，不會連環重試）。
+  跑著的時候被叫醒過（`wake`），退 0、101、102 也都馬上再排：叫醒就是「有東西到了」。`100` 和 `10` 在 `K/info.json` 的 `done_exit`、`bad_after` 改。
 - 所以 once 通常不到 1 秒就有回音；沒有新單時，daemon 每 `tick_ms`（預設 1 秒）開一格，反覆的工作就照這個節奏排。工作之間彼此不等，同池有幾顆閒 cpu 就能同時跑幾件。
 - inst.json 還能寫 `cwd`、`envs`、`stdin`、`exit`、逾時等，見 [inst-posix 規範](../spec/inst-posix/README.md)；`add` 的全部旗標見 [kernel 命令列](../spec/kernel/cli.md)。
 

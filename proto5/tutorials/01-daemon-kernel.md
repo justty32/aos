@@ -108,6 +108,7 @@ queue   -
 ```
 
 **第一行 `health` 最要緊**：`ok` 就是正常；不是 `ok` 就照括號裡的指令做（多半是 `aos up`）。
+有一種例外不是 kernel 壞：`health 反覆工作 N 個 bad：…` 是**你登記的某件反覆工作**連錯 10 次停了，kernel 自己好好的（`aos up` 也不會因此退 1）；怎麼處理、怎麼讓它壞了寄信給你，見 [02 第 5 節](02-kernel-jobs.md#5-一直失敗會怎樣)。
 下面依序是 kernel（`seq` 是走到第幾格）、每池一行、登記的工作（行程）、排隊的名單。
 
 - `tick 由 daemon 開：上一格 0 秒前`：daemon 每秒替 kernel 走一格。這個數字一直變大（超過 10 秒）就是卡住了，`health` 也會說。
@@ -175,6 +176,7 @@ aos up
 | `aos up` 第二行 `health` 不是 `ok`、退 1 | 照那行括號做；池出錯（如 `NameTaken`）見 [06](06-appendix-manual-home.md) 第 4 節 |
 | `aos up` 印 `DaemonFailed` 或 `Timeout` | daemon 開不起來，看 `$W/D/daemon.log` 最後幾行 |
 | 要把 `llm.json` 搬到別處 | 手改 `K/info.json` 裡 `llm` 池 `envs` 的路徑，下一格生效；已經活著的 cpu 不會變，要現在就全換：`aos-daemon kill --pool llm --all`（[池模板](../spec/kernel/home.md)） |
+| `ls` 第一行 `health 反覆工作 N 個 bad：…` | 那幾件工作連錯停了，不是 kernel 壞。看 `aos-kernel ls` 表下「壞了，看 …」那行，修好後 `aos-kernel rm` 再 `add`（[02 第 5 節](02-kernel-jobs.md#5-一直失敗會怎樣)） |
 | `ls` 的 health 不是 `ok` | 照括號做；各種說法見 [health](../spec/kernel/health.md) |
 
 ## 收工

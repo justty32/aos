@@ -18,13 +18,32 @@ QUEUE_SHOW = 8    # queue 行最多列幾個名字
 SETTINGS = ("tick_ms", "interval_ms", "timeout_ms", "done_exit", "bad_after")  # v1 固定這五個
 
 
+HINT_MAX = 1 << 20
+
+
+def _read_small_json(path):
+    """09-25 astra 必修 M4：kernel 判 bad 那格會叫 stderr_hint，不能被工作檔卡住。
+    不阻塞地開、只讀普通檔、最多 1 MB；FIFO、裝置、太大的檔都當讀不到（呼叫者就指 target 本身）。"""
+    import json
+    import stat
+    fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NONBLOCK)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > HINT_MAX:
+            raise ValueError("不是普通小檔")
+        data = os.read(fd, HINT_MAX + 1)
+    finally:
+        os.close(fd)
+    return json.loads(data.decode("utf-8"))
+
+
 def stderr_hint(target):
     """bad 行程要人去看的檔：target 的 inst 有字面 stderr 就指它，否則指 target 本身。"""
     from pathlib import Path
     path = Path(target)
     try:
-        raw = aos_home.read_json(path) if path.suffix == ".json" else None
-    except (aos_home.HomeError, OSError, ValueError):
+        raw = _read_small_json(path) if path.suffix == ".json" else None
+    except (OSError, ValueError, UnicodeError):
         return str(path)
     value = raw.get("stderr") if isinstance(raw, dict) else None
     if isinstance(value, dict) and "$opt" in value:
