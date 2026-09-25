@@ -96,6 +96,8 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 | `aos-team post`（kernel 反覆叫）／`beat`（kernel 反覆叫，同上） | 郵差兼書記走一輪：投信、收驗收結果、看停滯、同步 SESSION-LOG／WAIT_USER；心跳走一輪：照 `routines.json` 算誰到期、以開單派出 | [spec/team/post.md](spec/team/post.md)、[beat.md](spec/team/beat.md) |
 | `aos-team verify t-0001 [--again]` | 照任務單 `done_when` 跑固定檢查器，回過／不過／檢查器壞三種；`--again` 給檢查器壞、人修好之後重交。`cmd_ok`（跑 `team.json` 白名單裡的專案指令）與 wf-lint 關在牢裡、專案唯讀 | [spec/team/verify.md](spec/team/verify.md)、[wall.md](spec/team/wall.md) |
 | `aos-team routine ls／add／rm` | 心跳的例行事務：新增、看、刪一條到期就派工的例行 | [spec/team/beat.md](spec/team/beat.md) |
+| `aos-team spawn ls`／`approve Q` | 領隊申請生新成員（`spawn_member`）：預設開、預設不用人批（名冊可各自改成要批）；`ls` 看等你批的、`approve` 批准生 | [spec/team/spawn.md](spec/team/spawn.md) |
+| `aos-team tool ls`／`approve Q` | 工人寫的工具草稿（`tool_draft`）：郵差先在牢裡跑過例子，過了才開題，這條一定要人批 | [spec/team/toolsmith.md](spec/team/toolsmith.md) |
 | `aos-team crystal [--min N] [--out F] [--suggest-with-llm]` | 固化建議：從 `route.log` 找常落穿給領隊、領隊每次都開同一種單的句型，產候選門房規則（只寫提案檔；人 `route test --file F` → `route save F` 才生效） | [spec/team/crystal.md](spec/team/crystal.md) |
 | `aos-team score` | 把六軸表（`axes.md` 團隊欄）能自動量的部分讀紀錄填好，只讀、不叫模型、不寫檔 | [spec/team/score.md](spec/team/score.md) |
 | `aos-kernel tick`、`aos-agent tick` | 走一格；kernel 自己會叫，人不用打 | — |

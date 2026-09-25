@@ -92,6 +92,8 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
 | [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
 | [`aos_team_lock.py`](aos_team_lock.py) | `lock` 工具與 `aos-team lock`（第二波 C 隊，spec/team/lock.md）：短期獨佔一個檔或資料夾的名字，申請 `kind: lock`（acquire／release／ls，全部非同步）記在 `team/locks/<名>.json`，逾時自動放 |
+| [`aos_team_spawn.py`](aos_team_spawn.py) | `spawn_member` 工具與 `aos-team spawn`（第三波 W3-1，spec/team/spawn.md）：成員申請生新成員，`kind: spawn`；預設不用人批（郵差查過名冊直接生），名冊可設成要開題問人；`spawn ls／approve` |
+| [`aos_team_toolsmith.py`](aos_team_toolsmith.py) | `tool_draft` 工具與 `aos-team tool`（第三波 W3-1，spec/team/toolsmith.md）：成員寫工具草稿，`kind: tool_draft`；郵差在牢裡跑附的例子，過了開題，人 `tool approve` 才裝（核 sha256） |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
 `aos`→`aos_up.main`、`aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、
@@ -592,6 +594,8 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_escape.py](test/test_team_escape.py) | 第二波 B 隊驗收③逃逸測試：`aos-team init` 生真團隊，工具走 `tool_inst` 真送件路徑進 bwrap；讀別人的家、寫 access.json／工具包、寫別人的 outbox、硬連結、冒名、假信頭、越權申請、符號連結、主機 /tmp、環境與網路、wf_doc 讀快照、wf_init staging 在牢裡 |
 | [test_notes_recall_context.py](test/test_notes_recall_context.py) | 第二波 B 隊：notes 包的 `recall`、`context` 兩支工具（token 粗估跟 aos_agent_context 同一套）、`mem` 唯讀掛點（新家、舊家補掛、保留名）、真牢裡寫不進 `/work/mem` |
 | [test_team_lock.py](test/test_team_lock.py) | 第二波 C 隊 `aos_team_lock`（lock.md）：acquire／release／ls、Busy 拒絕、同持有者續租、過期可被搶／可被別人放、冪等、`may_send`、`cmd_lock` |
+| [test_team_spawn.py](test/test_team_spawn.py) | 第三波 W3-1 `aos_team_spawn`（spawn.md）：郵差端 `on_spawn` 每條檢查（模板、人數、`mail_to`、`may` 超權）、冪等；人端 `spawn approve` 生家、改名冊、回覆；工具 `spawn_member` 經真郵差（`may` 擋工人） |
+| [test_team_toolsmith.py](test/test_team_toolsmith.py) | 第三波 W3-1 `aos_team_toolsmith`（toolsmith.md）：郵差端驗草稿、生包、牢裡 `tools test`、開題／退信；人端 `tool approve`（核 sha256、`tools add`）；逃逸測試（讀別人的家、改 staging 換裝的程式、撞既有工具名等），沒有 bwrap 就跳過要真跑的那幾類 |
 | [test_llm_ask.py](test/test_llm_ask.py) | 第三波 W3-2 `aos_llm_ask`：假端點、temperature 0、`parse_json` 各種包法、沒設定／端點掛；`context` 的「上一次問模型」略過 compact 濃縮那一問 |
 | [test_agent_tools_wrapcli.py](test/test_agent_tools_wrapcli.py) | 第三波 W3-2 `tools wrap-cli` 與 wrap-py 描述：fixture（[fixtures/wrapcli/](test/fixtures/wrapcli/)）argparse 靜態讀與拒收、GNU／怪 help 解析、標準答案比分、`run` 組 argv 不經 shell、提案檔只寫不產包、`--spec`／`--describe` 核 sha（假 ask，不打真模型） |
 | [test_compact_summarize.py](test/test_compact_summarize.py) | 第三波 W3-2 `compact --summarize`：假 ask 回好的／太長／丟關鍵詞／含 `[aos`／丟例外 → 退回機械版照樣縮、dry-run 不叫不寫、tick 自動與申請絕不叫模型、usage 有記、崩在 archive 後重跑 |
