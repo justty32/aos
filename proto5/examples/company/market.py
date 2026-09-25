@@ -3,7 +3,7 @@
 
 要先設 AOS_COST_HOME（財務部帳本，帳戶在裡面）與 AOS_MARKET_HOME（或 --market）。
   python3 market.py open c1 ~/tmp/company-run/c1            # 開戶＋開辦費
-  python3 market.py score c1 --eval <eval 結果.json>         # 記這輪的品質（秒數、跳數從總機單算）
+  python3 market.py score c1 --eval <eval 結果.json>         # 記這輪的品質（成功張數、董事等的秒數自動算）
   python3 market.py rank                                    # 排名
   python3 market.py grant [--dry-run] [--usd c3=0]           # 照排名撥額度（從總池出）
   python3 market.py bankrupt | close c3                     # 倒閉／經理人裁撤：剩的配額與名額回總池
