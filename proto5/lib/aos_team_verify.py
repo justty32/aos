@@ -43,6 +43,8 @@ CHECKS = {
     'not_contains': 'aos_team_verify:check_not_contains',
     'wf_residue': 'aos_team_verify:check_wf_residue',
     'wf_lint_strict': 'aos_team_verify:check_wf_lint_strict',
+    'last_line_contains': 'aos_team_verify:check_last_line_contains',
+    'max_bytes': 'aos_team_verify:check_max_bytes',
 }
 
 
@@ -233,6 +235,56 @@ def check_contains(project, args):
 def check_not_contains(project, args):
     ok, _ = check_contains(project, args)
     return (not ok), '%s %s「%s」' % (args['path'], '還有' if ok else '沒有', args['text'])
+
+
+def check_last_line_contains(project, args):
+    """最後一個非空行有這段字（09-25 arknights 隊加：詞條最後一行要是「詳見：…」）。"""
+    want = args.get('text')
+    if not isinstance(want, str) or not want:
+        raise CheckError('last_line_contains 要 args.text（非空字串）')
+    if not isinstance(args.get('path'), str) or not args['path']:
+        raise CheckError('last_line_contains 要 args.path（非空字串）')
+    lines = [line for line in read_text(project, args['path']).splitlines() if line.strip()]
+    if not lines:
+        raise NotMet('%s 是空的' % args['path'])
+    last = lines[-1].strip()
+    short = last if len(last) <= 60 else last[:60] + '…'
+    return (want in last), '%s 最後一行%s「%s」（是：%s）' % (args['path'], '有' if want in last else '沒有', want, short)
+
+
+def check_max_bytes(project, args):
+    """path 是檔：它不超過 bytes 位元組；是資料夾：底下每個檔（往下找、不跟符號連結）都不超過。
+    missing_ok＝true 時 path 不在也算過（「超了才拆的子資料夾」這種可有可無的）。09-25 arknights 隊加（證據檔 <5KB）。"""
+    limit = args.get('bytes')
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+        raise CheckError('max_bytes 要 args.bytes（正整數）')
+    if not isinstance(args.get('path'), str) or not args['path']:
+        raise CheckError('max_bytes 要 args.path（非空字串）')
+    missing_ok = args.get('missing_ok', False)
+    if not isinstance(missing_ok, bool):
+        raise CheckError('max_bytes 的 args.missing_ok 要是 true／false')
+    rel = args['path']
+    path = inside(project, rel)
+    if not path.exists():
+        if missing_ok:
+            return True, '%s 不在（可有可無）' % rel
+        raise NotMet('%s 不存在' % rel)
+    if path.is_dir():
+        files = []
+        for dirpath, dirnames, filenames in os.walk(path):     # os.walk 預設不跟符號連結進資料夾
+            files.extend(Path(dirpath) / name for name in filenames)
+    else:
+        files = [path]
+    over = []
+    for f in sorted(files):
+        if f.is_symlink():
+            continue
+        size = f.stat().st_size
+        if size > limit:
+            over.append('%s %d' % (os.path.relpath(f, os.path.realpath(project)), size))
+    if over:
+        return False, '%s 有 %d 個檔超過 %d 位元組：%s' % (rel, len(over), limit, '、'.join(over[:5]))
+    return True, '%s 共 %d 個檔都不超過 %d 位元組' % (rel, len(files), limit)
 
 
 def _wf():

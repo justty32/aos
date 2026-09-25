@@ -37,6 +37,8 @@
 | `not_contains` | `path`、`text` | 檔裡沒有 |
 | `wf_residue` | — | 專案所有 `.md` 的 `{{`、〔導入判斷〕、〔模板說明〕都是 0；有讀不到的 `.md`＝不過（不當成 0） |
 | `wf_lint_strict` | — | wf 工具包**自帶快照**的 `wf-lint.sh --strict` 退 0（牢裡跑，`tools/wf/_jail_lint`）；檢查器本身壞了（退出碼不是 0／1、沒印 TOTAL、逾時、沒 bwrap）＝檢查器壞 |
+| `last_line_contains` | `path`、`text` | 最後一個非空行有這段字（09-25 arknights 隊加：詞條最後一行要是「詳見：…」）；檔空＝不過 |
+| `max_bytes` | `path`、`bytes`、`missing_ok`?（預設 false） | `path` 是檔：不超過 `bytes` 位元組；是資料夾：底下每個檔都不超過（往下找、不跟符號連結）；不在＝不過，`missing_ok: true` 時算過（09-25 arknights 隊加：證據檔 <5KB） |
 
 後兩支叫第 3 隊的 `tools/wf/_wf.py`（`residue`、`lint`），跑的是工具包裡的快照，不是專案裡那份。
 別隊加檢查器：`CHECKS` 加一行；函式 `fn(專案資料夾: Path, args: dict) → (過了沒, 一句白話)`，隊員的東西不合丟 `NotMet`（＝不過），沒辦法判丟 `CheckError`（＝檢查器壞）；函式自己的例外也算那一條檢查器壞。

@@ -39,7 +39,7 @@ templates/worker/
 | `project` | 專案掛進牢的方式：`rw`／`ro`；不在團隊裡＝家裡的 `workspace/`（可寫） |
 | `notes` | true＝多掛 `notes` → `team/notes/<名>/`（可寫，只有自己那格；init 建資料夾），給 `notes` 包的 `note` 工具（牢裡預設寫 `/work/notes/notes.json`）。只給團隊模板；內建的領隊、工人有，審查沒有 |
 | `may` | 這種成員能寄哪幾種申請（mail.md）；郵差照這個擋。領隊、工人有 `compact`（`compact_me` 工具縮自己的記憶） |
-| `llm` | 寫進 `info.json` 的 `llm`（`model` 會被名冊的 `model` 蓋掉）；池固定 `llm` |
+| `llm` | 寫進 `info.json` 的 `llm`：`model`（會被名冊的 `model` 蓋掉）、`timeout_ms`、`params`（物件，原樣當模型參數，例 `{"max_tokens": 32000}`；09-25 arknights 隊加）；池固定 `llm` |
 | `tick` | `info.json` 的 `tick.interval_ms` |
 | `tools` | 依序裝的工具包：`pack`（`proto5/tools/<名>/`）、`only`（只裝這幾支）、`team`（true＝裝完寫團隊設定，下面）、`optional`（true＝那個包還不在就跳過、印一行） |
 | `mounts` | 多掛的資料夾：名字 → 路徑或 `{"$opt": "ro", "$val": 路徑}`，相對**模板資料夾**；名冊的 `mounts` 再疊上去 |
@@ -77,6 +77,7 @@ members/worker-1/
 - 不在團隊裡（`coder`）：`{"mounts": {"ws": "workspace"}, "cwd": "ws", "net": false}`。
 - **一定有 `access.json`**：工具一律關牢，不靠「沒 access.json 也能跑」。
 - 名冊或模板**多掛的可寫資料夾**不准碰團隊控制資料：`team.json`、`team/`（別人的 outbox、任務表、問題）、`members/`（所有人的家）、proto5 本身——一個包著另一個也算，`AccessUnsafe`；要看就掛唯讀。
+- 自訂模板當領隊、審查員：郵差、門房、心跳找「名冊裡 `template: lead`／`reviewer` 的成員」時，自訂模板看**資料夾名**——資料夾叫 `lead`、`reviewer` 就算（09-25 arknights 隊修；之前認不出來，門房說沒有領隊、審查單開不出去）。自訂模板路徑是照**跑指令當下的資料夾**解的（不是照 team.json），名冊裡請寫絕對路徑或 `~/…`。
 - 自訂模板（名冊寫資料夾路徑）不准放在專案裡（工人改得到它的 `may` 與人格）：`BadTemplate`。換模板要先 `aos-team rm`（`.aos-template.json` 記了是哪個模板，不一樣＝`AlreadyExists`）。
 - 生到一半崩了：`.aos-template.json` 的 `complete: false` 在就接著做；工具包算裝好要「工具檔在＋`info.tools` 有那一條」都成立。
 

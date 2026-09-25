@@ -85,6 +85,15 @@ class RosterTests(Base):
         self.assertEqual(fmt.project_dir(self.team, r), (self.root / 'p').resolve())
         self.assertEqual(fmt.members_by_template(r, 'worker'), ['worker-1', 'worker-2'])
 
+    def test_members_by_template_custom_folder_name(self):
+        """09-25 arknights 隊：自訂模板（路徑）看資料夾名，叫 lead／reviewer 的就是領隊／審查員。"""
+        r = {'members': {'boss': {'template': '/x/ex/templates/lead'}, 'rv': {'template': '~/ex/reviewer/'},
+                         'w': {'template': '/x/ex/templates/writer'}, 'lead2': {'template': 'lead'},
+                         'odd': {'template': '/x/leader'}}}
+        self.assertEqual(fmt.members_by_template(r, 'lead'), ['boss', 'lead2'])
+        self.assertEqual(fmt.members_by_template(r, 'reviewer'), ['rv'])
+        self.assertEqual(fmt.members_by_template(r, 'worker'), [])
+
     def bad_roster(self, change, text):
         obj = copy.deepcopy(ROSTER)
         change(obj)

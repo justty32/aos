@@ -47,6 +47,29 @@ class InitTests(unittest.TestCase):
         self.assertEqual(r.returncode, code, r.stdout + r.stderr)
         return r
 
+    def _custom_template(self, llm):
+        folder = self.root / 'tpl' / 'thinker'
+        folder.mkdir(parents=True)
+        (folder / 'system.md').write_text('我是 {name}', encoding='utf-8')
+        (folder / 'template.json').write_text(json.dumps({
+            '_metainfo': {'_type': 'aos_team_template', '_version': 1}, 'description': '會想很久的',
+            'system': 'system.md', 'team': True, 'project': 'ro', 'llm': llm,
+            'tools': [{'pack': 'base', 'only': ['read']}]}), encoding='utf-8')
+        self.src.write_text(json.dumps({'_metainfo': {'_type': 'aos_team', '_version': 1}, 'project': '../p',
+                                        'members': {'t1': {'template': str(folder), 'model': 'm2'}}}), encoding='utf-8')
+
+    def test_template_llm_params_copied_into_info(self):
+        """09-25 arknights 隊：模板 llm 收 params（推理型模型要開大 max_tokens），原樣進 info.json。"""
+        self._custom_template({'model': 'm1', 'timeout_ms': 600000, 'params': {'max_tokens': 32000}})
+        self.init('--config', self.src)
+        llm = read_json(fmt.Layout(self.team).member('t1') / 'info.json')['llm']
+        self.assertEqual(llm, {'model': 'm2', 'timeout_ms': 600000, 'params': {'max_tokens': 32000}, 'pool': 'llm'})
+
+    def test_template_llm_params_must_be_object(self):
+        self._custom_template({'params': [1]})
+        r = self.init('--config', self.src, code=1)
+        self.assertIn('llm.params', r.stdout + r.stderr)
+
     def test_init_four_members(self):
         r = self.init('--config', self.src)
         self.assertIn('4 個成員', r.stdout)
