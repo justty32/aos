@@ -14,3 +14,4 @@
 |---|---|---|
 | （arknights 隊補） | 產線降級路線筆記 | 另一隊放，2026-09-25 |
 | [finance-ledger.md](finance-ledger.md) | 記帳 → 查帳 → 擋預算：三步全機械，照抄時的四個判斷（漏斗口、一本還是多本、擋在哪、預設開關） | [財務部 09-25](../../notes/2026-09-25-finance/README.md) |
+| [commons-flow.md](commons-flow.md) | 投稿→審→入庫→查閱：只有「寫」和「判重複」兩處用模型（寫的用強模型、判的用笨模型），其他全程式 | [notes/2026-09-25-commons](../../notes/2026-09-25-commons/README.md) |

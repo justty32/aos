@@ -1,0 +1,8 @@
+{
+  "_metainfo": {"_type": "aos_team", "_version": 1},
+  "project": "../p-lib",
+  "tz": "Asia/Taipei",
+  "members": {
+    "librarian": {"template": "librarian", "model": "default", "mail_to": ["human"]}
+  }
+}

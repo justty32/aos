@@ -292,6 +292,34 @@ aos-team rm worker-2
 
 細節：[spawn.md](../spec/team/spawn.md)、[toolsmith.md](../spec/team/toolsmith.md)。
 
+## 11. 跨團隊公共資料夾（commons）與圖書館員
+
+每個成員預設都多看得到一格 `/work/commons`（唯讀）：同一台機器上所有團隊共用的經驗、名冊樣板、工作流、工具包。資料夾在團隊資料夾的上一層，這裡就是 `$W/commons/`（`aos-team init` 建好）。
+
+成員自己會用兩支工具：`commons_search` 找（純程式，不花模型），`commons_submit` 投一條（例：做完一張單覺得「這個坑別隊也會踩」）。**投稿只有圖書館員隊收得進去**，所以要開一支只有一個人的圖書館員隊，跟你的團隊放同一個上層：
+
+```sh
+mkdir -p $W/lib $W/lib-proj
+cat > $W/lib/team.json <<'EOF'
+{"project": "../lib-proj", "members": {"librarian": {"template": "librarian", "mail_to": ["human"]}}}
+EOF
+aos-team init --target $W/lib && aos-team start --target $W/lib
+```
+
+它的郵差每輪自己檢查投稿（缺欄位、路徑、大小、執行位、完全重複都直接退），乾淨的直接入庫，**只有跟舊條目很像的才叫圖書館員（模型）判「收或不收」**，所以用最便宜的模型就夠。結果會寄回投稿的成員。
+
+你自己看、加、刪：
+
+```sh
+aos-team commons ls                     # 一條一行；人看的總表是 $W/commons/INDEX.md
+aos-team commons show lesson-0001
+aos-team commons add lesson --title "…" --fits "適合什麼活" --tags a,b --body-file note.md
+aos-team commons rm lesson-0001
+aos-team commons import ~/repo/…/proto5/playbook   # 把 playbook 的經驗一次匯進來
+```
+
+不想讓某個團隊或成員看到：名冊頂層寫 `"commons": false`，或成員那列寫 `"commons": false`，再 `aos-team init`。細節：[commons.md](../spec/team/commons.md)。
+
 ## 底下在幹嘛
 
 - `init` 照模板替每個成員生一個 agent 家（`$W/myteam/members/<名>/`），人格裡的 `{name}`、`{mail_to}` 換成實際值，工具包照模板裝；每個家都有 `access.json`，工具關在牢裡跑：專案掛成 `/work/ws`（工人可寫，領隊、審查唯讀）、自己的寄件格 `/work/outbox`、任務表 `/work/board`（唯讀）。

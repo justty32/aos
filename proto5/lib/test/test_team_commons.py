@@ -260,6 +260,17 @@ class DeskCheckTests(Base):
         self.assertFalse((f / 'result.json').exists())
         self.assertEqual([r for r, _ in self.desk()], [rid])      # 每輪都給同一個 id（郵差 notice 去重）
 
+    def test_similar_by_keywords_real_pair(self):
+        # 09-25 真跑 r2：種子與 astra 寫的是同一件事，標題重疊只有 0.21，舊判法漏掉、直接入庫
+        idx = {'entries': {'seed': {'type': 'lesson', 'title': 'done_when paths must be relative to the project',
+                                    'tags': ['handoff', 'done_when', 'paths'], 'fits': 'leads writing handoff tickets'}}}
+        new = cm.check_fields(lesson(title='Use project-relative paths in task acceptance checks',
+                                     tags=['delegation', 'validation', 'paths'],
+                                     fits='適合用 handoff 派工、以 done_when 的檔案檢查驗收交付物的工作。'))
+        self.assertEqual(cm.similar(idx, new, 'x'), (None, ['seed']))
+        other = cm.check_fields(lesson(title='Keep jail mounts read-only', tags=['wall'], fits='anyone mounting'))
+        self.assertEqual(cm.similar(idx, other, 'x'), (None, []))
+
     def test_no_librarian_no_desk(self):
         team = self.make_team('ta', TEAM_A, init=False)
         self.drop(lesson())
@@ -478,6 +489,33 @@ class CliTests(Base):
         quiet(cm.cmd_commons, str(team), ['rm', 'by-hand'])
         self.assertEqual(self.commons.load_index()['entries'], {})
         self.assertFalse((self.commons.root / 'lessons' / 'by-hand.md').exists())
+
+
+class ImportTests(Base):
+    def test_import_real_playbook_twice(self):
+        team = self.make_team('ta', TEAM_A, init=False)
+        rc, out = quiet(cm.cmd_commons, str(team), ['import', str(PROTO / 'playbook')])
+        self.assertEqual(rc, 0, out)
+        idx = self.commons.load_index()['entries']
+        lessons = [e for e in idx if e.startswith('playbook-lesson-')]
+        self.assertGreaterEqual(len(lessons), 1, idx)
+        self.assertIn('playbook', idx[lessons[0]]['tags'])
+        rc, out = quiet(cm.cmd_commons, str(team), ['import', str(PROTO / 'playbook')])
+        self.assertIn('新加 0、換新 0', out)
+
+    def test_import_replaces_changed(self):
+        pb = self.root / 'pb'
+        (pb / 'teams').mkdir(parents=True)
+        (pb / 'lessons.md').write_text('# x\n\n## 條目\n\n### 1（研發部）first lesson\n\nbody one\n', encoding='utf-8')
+        (pb / 'teams' / 'crew.md').write_text('# Crew roster\n\nthree workers\n', encoding='utf-8')
+        (pb / 'teams' / 'README.md').write_text('# index\n', encoding='utf-8')
+        added, replaced, same = cm.import_dir(self.commons, pb)
+        self.assertEqual(sorted(added), ['playbook-lesson-1', 'playbook-team-crew'])
+        (pb / 'lessons.md').write_text('# x\n\n## 條目\n\n### 1（研發部）first lesson\n\nbody two\n', encoding='utf-8')
+        added, replaced, same = cm.import_dir(self.commons, pb)
+        self.assertEqual((added, replaced, same), ([], ['playbook-lesson-1'], ['playbook-team-crew']))
+        text = (self.commons.root / 'lessons' / 'playbook-lesson-1.md').read_text(encoding='utf-8')
+        self.assertIn('body two', text)
 
 
 if __name__ == '__main__':

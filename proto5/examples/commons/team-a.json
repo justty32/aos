@@ -1,0 +1,8 @@
+{
+  "_metainfo": {"_type": "aos_team", "_version": 1},
+  "project": "../p-a",
+  "tz": "Asia/Taipei",
+  "members": {
+    "lead-a": {"template": "lead", "model": "astra", "mail_to": ["human"]}
+  }
+}

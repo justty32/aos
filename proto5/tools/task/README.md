@@ -18,6 +18,9 @@
 | `routine_propose` | 領隊 | 提議加（或拿掉）一條心跳例行；寄 `kind: routine` 申請，**開一題問人**，人 `answer` 批准心跳才會排進去（[beat.md](../../spec/team/beat.md)） | `name`*、`every`／`daily`／`once`（add 要恰好一個）、`to`、`goal`、`done_when`、`workflow`、`tz`、`timeout_minutes`、`retries`、`op`（`add`／`rm`，預設 `add`） |
 | `spawn_member` | 領隊 | 申請生一個新成員；郵差檢查名冊照准（[spawn.md](../../spec/team/spawn.md)）——**預設不用人批**，名冊可設成要開題問人 | `template`*、`name`*、`reason`*、`mail_to` |
 | `tool_draft` | 工人 | 寫一支小工具草稿；郵差在牢裡跑附的例子，過了開題**一定要人批**才裝（[toolsmith.md](../../spec/team/toolsmith.md)） | `name`*、`description`*、`parameters`*、`code`*、`cases`*、`lang` |
+| `commons_search` | 開了 commons 的全部（09-25 預設開） | 純程式查跨團隊公共資料夾 `/work/commons/index.json`（關鍵字＋標籤），回前 N 條與路徑；`show` 印一條全文（[commons.md](../../spec/team/commons.md)） | `query`、`tags`、`type`、`limit`、`show` |
+| `commons_submit` | 開了 commons 的全部 | 寫一份 `kind: contribute` 投稿；附件先放在自己 outbox 底下；自己隊的郵差送去圖書館，結果是一封新信 | `type`*、`title`*、`tags`*、`fits`*、`body`*、`files`、`task`、`slug` |
+| `commons_verdict` | 圖書館員 | 判一份被叫去判的投稿：`accept`／`reject`＋一句理由（`kind: commons_write`）；入庫是郵差做 | `submission`*、`verdict`*、`reason`* |
 
 - 寫完就回一句「queued … end this turn」：沒有「等回信」的工具，回信到了是新的一輪。`lock` 也一樣——catalog 草案設想的「acquire 立即回」在這套模型端沒有同步等待機制，所以照這裡的規矩走非同步。
 - 擋手誤（名冊外的負責人、派給自己、`done_when` 種類不對、審查漏條）回 `BadArguments`；名冊的快照在 `config.json`，真正的把關在郵差。

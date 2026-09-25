@@ -28,6 +28,7 @@
 | [spawn.md](spawn.md) | 生新成員（第三波 W3-1）：`spawn_member` 申請 → 郵差照名冊檢查（`spawn.templates` 白名單、人數、mail_to 與權限不超過申請者）→ 「[成員]」題 → 人 `aos-team spawn approve` 才生家、登記、改名冊；一律平的 |
 | [toolsmith.md](toolsmith.md) | 模型造工具（第三波 W3-1）：`tool_draft` → 郵差用申請內容生包、牢裡 `tools test` → 沒過退信、過了「[工具]」題 → 人 `aos-team tool approve` 才 `tools add` |
 | [templates.md](templates.md) | 成員模板 `proto5/templates/<名>/`：人格、工具包、`access.json`、工具包的 `config.json` |
+| [commons.md](commons.md) | （09-25）跨團隊公共資料夾：一台機器一份、成員唯讀掛 `/work/commons`（名冊預設開、團隊／成員可關）；`commons_submit` 投稿 → 投稿隊郵差抄進 `inbox/` → 圖書館員隊郵差機械審、乾淨的直接入庫、像舊條目才叫圖書館員（模型，模板 `librarian`、`may` 有 `commons_write`）判；`commons_search` 純程式查；`aos-team commons ls／show／search／add／rm／reindex／import／desk`；跟 playbook 的關係 |
 | [route.md](route.md) | 門房 `team/routes.json`：整句句型、命中兩條或有否定詞就落穿給領隊、例句全過才准存 |
 | [cli.md](cli.md) | `aos-team` 子命令一覽、哪一隊做、共同慣例（`--target`、退出碼） |
 | [post.md](post.md) | 郵差兼書記 `aos-team post`：kernel 反覆叫，每次走一輪（投信、收驗收結果、看停滯與期限、書記同步 SESSION-LOG／WAIT_USER），不叫模型 |
