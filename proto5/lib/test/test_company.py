@@ -204,6 +204,25 @@ class NewCompanies(Tmp):
             co.main(['new', str(self.tmp / 'c7'), '--prefix', 'c7-', '--project', str(self.proj)])
         self.assertIn('cpu 12/20、llm cpu 5/5', buf.getvalue())      # 跟 status、HR 同一個算法
 
+    def test_hr_cap_gets_kernel_home(self):
+        """真跑 09-25：aos-team hr cap 不帶 AOS_KERNEL_HOME 說找不到 HR 家。status 印出要帶的環境；company.py hr 自動帶。"""
+        d, cfg = self.make('c1-')
+        s = co.status_data(d, cfg, use_kernel=False)
+        self.assertEqual(s['hr_env'], {'AOS_KERNEL_HOME': str(d / 'K'), 'AOS_HR_HOME': str(d / 'K' / 'hr')})
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            co.print_status(s)
+        self.assertIn('AOS_KERNEL_HOME=%s' % (d / 'K'), buf.getvalue())
+        seen = {}
+
+        def fake_run(argv, env, check=True, timeout=300):
+            seen.update(argv=[str(x) for x in argv], env=env)
+            return mock.Mock(returncode=0, stdout='cpu 12／20\n', stderr='')
+        with mock.patch.object(co, '_run', fake_run), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(co.main(['hr', 'cap', '-C', str(d)]), 0)
+        self.assertEqual(seen['argv'][1:3], ['hr', 'cap'])
+        self.assertEqual(seen['env']['AOS_KERNEL_HOME'], str(d / 'K'))
+
     def test_status_says_stopped_after_down(self):
         d, cfg = self.make('c1-')
         ls = {'health': {'code': 'stopped', 'message': '停機中'}, 'pools': {'default': {'want': 12}, 'llm': {'want': 5}}}

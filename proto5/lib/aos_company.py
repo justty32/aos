@@ -734,7 +734,8 @@ def status_data(cdir, cfg=None, ls=None, use_kernel=True):
             'caps': caps_line(counts, cfg['limits']), 'departments': depts, 'staff': rows,
             'orders': [{k: o[k] for k in ('id', 'status', 'via', 'task', 'text')} | {'to': o['to']['dept'],
                         'from': sb._who(o)} for o in orders],
-            'board_letters': len(sb.board_letters())}
+            'board_letters': len(sb.board_letters()),
+            'hr_env': {'AOS_KERNEL_HOME': str(cdir / 'K'), 'AOS_HR_HOME': str(cdir / 'K' / 'hr')}}
 
 
 def print_status(s):
@@ -749,6 +750,9 @@ def print_status(s):
         print('  總機 %s  %s → %s  %s  %s  %s' % (o['id'], o['from'], o['to'], o['status'], o['task'] or '-',
                                               o['text'][:40].replace('\n', ' ')))
     print('董事收件匣：%d 封（company.py mail 看）' % s['board_letters'])
+    if s.get('hr_env'):     # 真跑 09-25：aos-team hr cap 不帶這兩個就找不到 HR 家
+        print('HR 自己查：%s aos-team hr cap（或 company.py hr cap 自動帶）' % ' '.join(
+            '%s=%s' % kv for kv in sorted(s['hr_env'].items())))
 
 
 # ------------------------------------------------------------------ 開機、關機 ----
@@ -973,6 +977,9 @@ def main(argv=None, default_src=EXAMPLE):
     p.add_argument('text', nargs='+')
     p.add_argument('--to')
     p.add_argument('--company', '-C', default=os.environ.get('AOS_COMPANY_HOME', '.'))
+    p = sub.add_parser('hr', help='跑 aos-team hr（cap、ls…），自動帶這家的 AOS_KERNEL_HOME／AOS_HR_HOME')
+    p.add_argument('args', nargs=argparse.REMAINDER)
+    p.add_argument('--company', '-C', default=os.environ.get('AOS_COMPANY_HOME', '.'))
     p = sub.add_parser('answer', help='回某部門的題')
     p.add_argument('dept')
     p.add_argument('q')
@@ -1008,6 +1015,18 @@ def main(argv=None, default_src=EXAMPLE):
             return mail(a.company)
         if a.cmd == 'order':
             return order(a.company, ' '.join(a.text), a.to)
+        if a.cmd == 'hr':
+            args, comp = list(a.args or []), a.company
+            for flag in ('-C', '--company'):                 # 寫在子命令後面的 -C 也認（REMAINDER 會吞掉）
+                while flag in args[:-1]:
+                    i = args.index(flag)
+                    comp = args[i + 1]
+                    del args[i:i + 2]
+            comp = os.path.abspath(comp)
+            cfg = load(comp)
+            r = _run([CLI / 'aos-team', 'hr'] + (args or ['cap']), env_for(comp, cfg), check=False)
+            print((r.stdout + r.stderr).strip())
+            return r.returncode
         if a.cmd == 'answer':
             cfg = load(a.company)
             tdir = team_dirs(a.company, cfg).get(host_dept(cfg, a.dept) or '')
