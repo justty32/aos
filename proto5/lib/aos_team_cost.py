@@ -16,15 +16,17 @@ import glob
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 
 ENV = 'AOS_COST_HOME'
-LEDGER, PRICES, BUDGET = 'ledger.jsonl', 'prices.json', 'budget.json'
+LEDGER, PRICES, BUDGET, ACCOUNTS = 'ledger.jsonl', 'prices.json', 'budget.json', 'accounts.json'
 HOLD_KINDS = ('handoff', 'spawn')          # 超預算時郵差先不處理的申請（開新單、生新成員）
 BY = ('family', 'model', 'team', 'member', 'task', 'source')
 LIMIT_KEYS = ('usd', 'tokens', 'since')
 
+CPU_LIMITS = {'max': 20, 'llm_max': 5}   # 新創規模（董事 09-25）；擴張到 200／20 就在 budget.json 寫 "cpus"（名額歸 HR 管，這裡只印）
 DEFAULT_FAMILIES = {'claude': ['claude-'], 'gpt': ['chatgpt-', 'gpt-'], 'deepseek': ['deepseek-'],
                     'local': ['ollama-', 'lm-']}
 
@@ -294,6 +296,12 @@ def check_budget(obj, where):
     for fam, lim in obj.items():
         if fam in ('since', '_metainfo', '_note'):
             continue
+        if fam == 'cpus':                  # 只給 cost 表的 cpu 行當上限顯示，不是花費預算
+            if not isinstance(lim, dict) or set(lim) - set(CPU_LIMITS) or not all(
+                    type(v) is int and v > 0 for v in lim.values()):
+                raise ValueError('%s.cpus 要是 {"max": 正整數, "llm_max": 正整數}' % where)
+            out['cpus'] = dict(lim)
+            continue
         if not isinstance(lim, dict) or not (set(lim) - {'since'}) or set(lim) - set(LIMIT_KEYS):
             raise ValueError('%s.%s 要是 {"usd": 數字} 或 {"tokens": 整數}（可兩個都寫，可另加 since）' % (where, fam))
         if 'since' in lim:
@@ -344,7 +352,7 @@ def usage_against(budget, rows, prices, scope, now=None):
         return []
     out = []
     for fam, lim in budget.items():
-        if fam == 'since':
+        if fam in ('since', 'cpus'):
             continue
         start = lim.get('since', budget['since'])
         mine = [r for r in select(rows, since_time(start, now))
@@ -374,6 +382,14 @@ def budget_status(env, team_dir=None, now=None):
         team = os.path.realpath(team_dir)
         lines += usage_against(load_team_budget(team), [r for r in rows if r.get('team') == team], prices,
                                'team', now)
+        acct = account_of(base, team)
+        if acct:
+            b = balances(base, prices, rows)[acct]
+            for kind in ('usd', 'tokens'):
+                if b['quota'][kind] is not None:
+                    lines.append({'scope': 'account', 'family': acct, 'kind': kind, 'used': b['spent'][kind],
+                                  'limit': b['quota'][kind], 'since': '開戶',
+                                  'ratio': (b['spent'][kind] / b['quota'][kind]) if b['quota'][kind] else 1.0})
     return lines, [x for x in lines if x['used'] >= x['limit']]
 
 
@@ -381,9 +397,12 @@ def _fmt_amount(kind, v):
     return ('$%.4f' % v) if kind == 'usd' else ('%s token' % format(int(v), ','))
 
 
+SCOPE_NAMES = {'company': '全公司', 'team': '本團隊', 'account': '帳戶'}
+
+
 def over_text(over):
     return '、'.join('%s %s %s 用了 %s／上限 %s（%s 起）' % (
-        '全公司' if o['scope'] == 'company' else '本團隊', o['family'], '金額' if o['kind'] == 'usd' else 'token',
+        SCOPE_NAMES[o['scope']], o['family'], '金額' if o['kind'] == 'usd' else 'token',
         _fmt_amount(o['kind'], o['used']), _fmt_amount(o['kind'], o['limit']), o['since']) for o in over)
 
 
@@ -410,6 +429,116 @@ def hold_reason(env, team_dir):
         return None
     sig = ';'.join(sorted('%s/%s/%s' % (o['scope'], o['family'], o['kind']) for o in over))
     return over_text(over), sig
+
+
+# ------------------------------------------------------------------ 帳戶（一家公司一個） ----
+# accounts.json：{"accounts": {名: {"root": 公司資料夾絕對路徑, "grants": [{"at", "usd", "tokens", "note"}…]}}}
+# 已花＝帳本 team 欄落在 root 底下（或 team 欄就等於帳戶名，給 AOS_COST_TEAM 帶名字的呼叫）的全部紀錄，不分時段；
+# 配額＝grants 加總；餘額＝配額 − 已花；有設的那一種（usd 或 tokens）餘額 ≤ 0＝倒閉（broke）。
+
+ACCOUNT_NAME = re.compile(r'[a-z][a-z0-9_-]{0,31}\Z')
+
+
+def load_accounts(base):
+    path = os.path.join(base, ACCOUNTS)
+    try:
+        with open(path, encoding='utf-8') as f:
+            obj = json.load(f)
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        raise CostError('AccountsInvalid', '%s 讀不了：%s' % (path, e))
+    acc = obj.get('accounts') if isinstance(obj, dict) else None
+    if not isinstance(acc, dict):
+        raise CostError('AccountsInvalid', '%s 要是 {"accounts": {…}}' % path)
+    return acc
+
+
+def _save_accounts(base, acc):
+    path = os.path.join(base, ACCOUNTS)
+    tmp = os.path.join(base, '.accounts.%d.tmp' % os.getpid())
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump({'accounts': acc}, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def _edit_accounts(base, fn):
+    """在 flock 裡讀、改、寫 accounts.json（經理人和程式可能同時撥款）。"""
+    import fcntl
+    os.makedirs(base, exist_ok=True)
+    with open(os.path.join(base, '.accounts.lock'), 'a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        acc = load_accounts(base)
+        out = fn(acc)
+        _save_accounts(base, acc)
+        return out
+
+
+def account_open(base, name, root):
+    """開帳戶（已開就回原樣，root 不同＝錯）。root＝那家公司的資料夾，它的團隊都放在底下。"""
+    if not ACCOUNT_NAME.match(name or ''):
+        raise CostError('Usage', '帳戶名 %r 不合規（小寫英文開頭，a-z0-9_-，最長 32）' % name)
+    root = os.path.realpath(os.path.expanduser(root))
+
+    def fn(acc):
+        if name in acc and acc[name].get('root') != root:
+            raise CostError('Conflict', '帳戶 %s 已經綁 %s，不是 %s' % (name, acc[name].get('root'), root))
+        acc.setdefault(name, {'root': root, 'grants': []})
+        return acc[name]
+    return _edit_accounts(base, fn)
+
+
+def account_grant(base, name, usd=None, tokens=None, note=''):
+    """加配額（撥款）。usd／tokens 至少一個；可以是負的（收回）。回撥款後的那筆。"""
+    if usd is None and tokens is None:
+        raise CostError('Usage', '撥款要給 usd 或 tokens')
+    grant = {'at': _now().isoformat(timespec='seconds'), 'usd': usd, 'tokens': tokens, 'note': note or ''}
+
+    def fn(acc):
+        if name not in acc:
+            raise CostError('NotFound', '沒有帳戶 %s（先 aos-team cost account open）' % name)
+        acc[name].setdefault('grants', []).append(grant)
+        return grant
+    return _edit_accounts(base, fn)
+
+
+def _in_account(row, name, root):
+    team = row.get('team')
+    return isinstance(team, str) and (team == name or team == root or team.startswith(root.rstrip('/') + '/'))
+
+
+def balances(base, prices=None, rows=None):
+    """{帳戶名: {"root", "quota": {"usd", "tokens"}, "spent": {...}, "balance": {...}, "broke": bool}}。
+    quota 的某一種從沒撥過＝None（那一種不管，也不會因它倒閉）。"""
+    prices = prices or load_prices(base)
+    rows = read_ledger(base)[0] if rows is None else rows
+    out = {}
+    for name, a in load_accounts(base).items():
+        root = a.get('root') or ''
+        q = {'usd': None, 'tokens': None}
+        for g in a.get('grants') or []:
+            for k in q:
+                if isinstance(g.get(k), (int, float)) and not isinstance(g.get(k), bool):
+                    q[k] = (q[k] or 0) + g[k]
+        mine = [r for r in rows if _in_account(r, name, root)]
+        spent = {'tokens': sum(int(r.get('prompt_tokens') or 0) + int(r.get('completion_tokens') or 0) for r in mine),
+                 'usd': round(sum(usd(r.get('model') or '', int(r.get('prompt_tokens') or 0),
+                                      int(r.get('completion_tokens') or 0), prices) or 0 for r in mine), 6)}
+        bal = {k: (None if q[k] is None else round(q[k] - spent[k], 6)) for k in q}
+        out[name] = {'root': root, 'quota': q, 'spent': spent, 'balance': bal, 'calls': len(mine),
+                     'broke': any(v is not None and v <= 0 for v in bal.values())}
+    return out
+
+
+def account_of(base, team_dir):
+    """這個團隊資料夾歸哪個帳戶（root 最長的那個）；沒有＝None。"""
+    team = os.path.realpath(team_dir)
+    best = None
+    for name, a in load_accounts(base).items():
+        root = a.get('root') or ''
+        if root and (team == root or team.startswith(root.rstrip('/') + '/')) and (best is None or len(root) > len(best[1])):
+            best = (name, root)
+    return best[0] if best else None
 
 
 # ------------------------------------------------------------------ 回填 ----
@@ -459,11 +588,25 @@ def import_usage(base, dirs, prices, dry_run=False):
 
 # ------------------------------------------------------------------ kernel 的 cpu 數 ----
 
+def cpu_limits(env):
+    """cpu 行印的上限：預設新創規模 20／5；budget.json 的 "cpus" 可改（例：擴張 {"max": 200, "llm_max": 20}）。"""
+    out = dict(CPU_LIMITS)
+    base = home(env)
+    try:
+        b = load_company_budget(base) if base else None
+    except CostError:
+        b = None
+    out.update((b or {}).get('cpus') or {})
+    return out
+
+
 def cpu_line(env):
-    """現在開著幾個 cpu／幾個 llm cpu（上限由 HR 管，這裡只印）。拿不到回白話原因。"""
+    """現在開著幾個 cpu／幾個 llm cpu（上限由 HR 管，這裡只印、超了標出來）。拿不到回白話原因。"""
+    lim = cpu_limits(env)
+    cap = '上限 %d／llm %d，由 HR 管' % (lim['max'], lim['llm_max'])
     k = env.get('AOS_KERNEL_HOME')
     if not k or not os.path.isabs(k):
-        return 'cpu：沒設 AOS_KERNEL_HOME，看不到（上限 200／llm 20，由 HR 管）'
+        return 'cpu：沒設 AOS_KERNEL_HOME，看不到（%s）' % cap
     exe = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'cli', 'aos-kernel')
     try:
         p = subprocess.run([exe, 'ls', '--json', '--target', k], capture_output=True, text=True, timeout=15)
@@ -473,7 +616,8 @@ def cpu_line(env):
         busy = data['counts']['pools'].get('busy')
     except Exception as e:                       # noqa: BLE001 — 只少一行，不擋查帳
         return 'cpu：aos-kernel ls 讀不到（%s）' % (' '.join(str(e).split())[:120])
-    return 'cpu：開著 %s 個（忙 %s）、其中 llm cpu %s 個（上限 200／20，由 HR 管）' % (total, busy, llm)
+    over = '  ← 超過上限' if (total or 0) > lim['max'] or (llm or 0) > lim['llm_max'] else ''
+    return 'cpu：開著 %s 個（忙 %s）、其中 llm cpu %s 個（%s）%s' % (total, busy, llm, cap, over)
 
 
 # ------------------------------------------------------------------ 命令列 ----
@@ -491,12 +635,46 @@ def _table(groups, by):
     return lines
 
 
+def _cmd_account(base, prices, args):
+    from aos_team_format import TeamError
+    act = args.dirs[0] if args.dirs else 'ls'
+    if act == 'open' and len(args.dirs) == 3:
+        a = account_open(base, args.dirs[1], args.dirs[2])
+        print('帳戶 %s 綁 %s' % (args.dirs[1], a['root']))
+        return 0
+    if act == 'grant' and len(args.dirs) == 2:
+        g = account_grant(base, args.dirs[1], usd=args.usd, tokens=args.tokens, note=args.note)
+        print('撥給 %s：%s' % (args.dirs[1], json.dumps(g, ensure_ascii=False)))
+        return 0
+    if act != 'ls' or len(args.dirs) > 1:
+        raise TeamError('Usage', 'aos-team cost account ls｜open 名 公司資料夾｜grant 名 [--usd X] [--tokens N] [--note …]')
+    b = balances(base, prices)
+    broke = 1 if any(x['broke'] for x in b.values()) else 0
+    if args.json:
+        print(json.dumps(b, ensure_ascii=False, indent=1))
+        return broke
+    if not b:
+        print('還沒有帳戶（aos-team cost account open 名 公司資料夾）')
+    for name, x in sorted(b.items()):
+        def one(k):
+            if x['quota'][k] is None:
+                return '%s 已花 %s（沒配額）' % (k, _fmt_amount(k, x['spent'][k]))
+            return '%s 餘 %s／配 %s' % (k, _fmt_amount(k, x['balance'][k]), _fmt_amount(k, x['quota'][k]))
+        print('%-12s %s  %s；%s  %d 次%s' % (name, '倒閉' if x['broke'] else '營業', one('usd'), one('tokens'),
+                                          x['calls'], '' if not x['broke'] else '  ← 餘額歸零，郵差不派新單'))
+    return broke
+
+
 def cmd_cost(team_dir, argv):
     from aos_team_format import TeamError
     ap = argparse.ArgumentParser(prog='aos-team cost', description='財務：模型用量與估算花費（帳本 $AOS_COST_HOME）')
-    ap.add_argument('what', nargs='?', default='report', choices=('report', 'budget', 'import'),
-                    help='report（預設）＝一張表；budget＝預算用了幾成；import 資料夾…＝回填舊的 usage.jsonl')
-    ap.add_argument('dirs', nargs='*', help='import 要掃的資料夾')
+    ap.add_argument('what', nargs='?', default='report', choices=('report', 'budget', 'import', 'account'),
+                    help='report（預設）＝一張表；budget＝預算用了幾成；import 資料夾…＝回填舊的 usage.jsonl；'
+                         'account ls／open 名 公司資料夾／grant 名 --usd X --tokens N＝一家公司一個帳戶')
+    ap.add_argument('dirs', nargs='*', help='import 要掃的資料夾；account 的動作與參數')
+    ap.add_argument('--usd', type=float)
+    ap.add_argument('--tokens', type=int)
+    ap.add_argument('--note', default='')
     ap.add_argument('--by', choices=BY, default='family')
     ap.add_argument('--since', default='今天', help='今天（預設）、本週、全部、YYYY-MM-DD')
     ap.add_argument('--team', action='store_true', help='只看這個團隊（--target 那個）的帳')
@@ -521,6 +699,8 @@ def cmd_cost(team_dir, argv):
                 print('%s %d 筆、略過 %d 筆（已記過／壞行），來自 %d 個 usage 檔' % (
                     '會記' if args.dry_run else '記了', len(new), skipped, len(files)))
             return 0
+        if args.what == 'account':
+            return _cmd_account(base, prices, args)
         team = os.path.realpath(team_dir) if args.team else None
         if args.what == 'budget':
             lines, over = budget_status(env, team_dir)
@@ -531,7 +711,7 @@ def cmd_cost(team_dir, argv):
                 print('沒設預算（%s/%s，或 team.json 的 budget）' % (base, BUDGET))
             for x in lines:
                 print('%-4s %-9s %-6s %5.0f%%  %s／%s（%s 起）%s' % (
-                    '全公司' if x['scope'] == 'company' else '本團隊', x['family'], x['kind'], x['ratio'] * 100,
+                    SCOPE_NAMES[x['scope']], x['family'], x['kind'], x['ratio'] * 100,
                     _fmt_amount(x['kind'], x['used']), _fmt_amount(x['kind'], x['limit']), x['since'],
                     '  ← 超了' if x['used'] >= x['limit'] else ''))
             return 1 if over else 0

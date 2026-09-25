@@ -66,6 +66,12 @@
 | [2026-09-24-one-boot/](2026-09-24-one-boot/README.md) | **實作**（使用者 09-24 拍板）：開機合一、家不合一——一條 `aos up`／`aos down`；kernel cpu、tick 鏈、開機交接拿掉，daemon 定時或有新單時替 kernel 開一格 tick（同時一格＋`K/.tick.lock`）；kernel 帳本換 `K/ledger.sqlite`（只寫變了的列、一筆交易）；`aos-kernel proc --json`；`ls --json` 第 3 版；投單到回音 0.5→0.04 秒；astra 必修 5 條全修；測試 2068→2106 |
 | [2026-09-24-tick-gap/](2026-09-24-tick-gap/README.md) | **實作**（P2 隊）：先量每一跳（`AOS_HOPS`＋`aos_hops.py report`），再改四條：kernel 叫醒後同一格就派（提交點 D）、agent 退 103「馬上再來」、cpu 等子行程用 pidfd、kernel 派完按 cpu 門鈴；單 agent 一題 11.8→2.1 秒；反覆工作 bad 時 `ls` 第一行不印 ok、`add --on-bad` 寄信（團隊郵差／心跳預設寄給人）；`poll_ms` 量過維持 200；astra 沒審、團隊改後沒真跑（提早收） |
 
+## 2026-09-25：財務部
+
+| 檔 | 一句 |
+|---|---|
+| [2026-09-25-finance/](2026-09-25-finance/README.md) | 財務部成立：一本帳＋`aos-team cost`＋郵差超預算不派新單；真跑 2 次；今天各家族用量估算；公司帳戶（五家競爭） |
+
 ## 為什麼散檔沒收進子資料夾（2026-09-24 tidy 判斷）
 
 - 09-22 那四份 astra 報告帶了約 700 條指向 `spec/`、`lib/` 與舊 proto 的連結；搬一層資料夾就得全部改相對路徑，而 `spec/` 正在拆檔、那些連結另一隊也要改，兩邊一定撞。
