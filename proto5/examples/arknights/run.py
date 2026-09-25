@@ -54,7 +54,7 @@ def team(*argv, **kw):
 
 
 def git(*argv, check=True):
-    return sh(['git', '-C', PROJECT, *argv], check=check)
+    return sh(['git', '-c', 'core.quotepath=false', '-C', PROJECT, *argv], check=check)   # 中文路徑不跳脫，快照才抓得到新檔
 
 
 def base_commit():
