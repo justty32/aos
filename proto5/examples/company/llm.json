@@ -1,0 +1,63 @@
+{
+  "_metainfo": {
+    "_type": "llm_config",
+    "_version": 1
+  },
+  "models": {
+    "gpt-6-astra": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "chatgpt-gpt-6-astra",
+      "timeout_ms": 600000
+    },
+    "gpt-6-astra-low": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "chatgpt-gpt-6-astra-low",
+      "timeout_ms": 600000
+    },
+    "gpt-6-astra-medium": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "chatgpt-gpt-6-astra-medium",
+      "timeout_ms": 600000
+    },
+    "gpt-6-astra-high": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "chatgpt-gpt-6-astra-high",
+      "timeout_ms": 600000
+    },
+    "gpt-5.5": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "chatgpt-gpt-5.5",
+      "timeout_ms": 600000
+    },
+    "gpt-5.5-low": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "chatgpt-gpt-5.5-low",
+      "timeout_ms": 600000
+    },
+    "claude-opus-5": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "claude-opus-5",
+      "timeout_ms": 600000
+    },
+    "claude-sonnet-5": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "claude-sonnet-5",
+      "timeout_ms": 600000
+    },
+    "claude-haiku-4.5": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "claude-haiku-4.5",
+      "timeout_ms": 600000
+    },
+    "deepseek-chat": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "deepseek-chat",
+      "timeout_ms": 600000
+    },
+    "default": {
+      "endpoint": "http://localhost:4000/v1",
+      "model": "deepseek-chat",
+      "timeout_ms": 600000
+    }
+  }
+}

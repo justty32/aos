@@ -1,0 +1,51 @@
+{
+  "_metainfo": {
+    "_type": "aos_team_routes",
+    "_version": 1
+  },
+  "negations": [
+    "不要",
+    "別",
+    "取消",
+    "不用",
+    "勿",
+    "不准"
+  ],
+  "routes": [
+    {
+      "name": "tasks",
+      "pattern": "(列|看)(一下)?(任務|單子)",
+      "do": "tool",
+      "run": [
+        "task",
+        "ls"
+      ],
+      "tests": {
+        "hit": [
+          "列任務",
+          "看一下單子"
+        ],
+        "miss": [
+          "列任務給 bob 看"
+        ]
+      }
+    },
+    {
+      "name": "waiting",
+      "pattern": "(有什麼|哪些)(在)?等我(回答|決定)的?",
+      "do": "tool",
+      "run": [
+        "wait",
+        "ls"
+      ],
+      "tests": {
+        "hit": [
+          "有什麼等我回答的"
+        ],
+        "miss": [
+          "等我回來再說"
+        ]
+      }
+    }
+  ]
+}

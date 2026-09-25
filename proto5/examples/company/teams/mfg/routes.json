@@ -1,0 +1,185 @@
+{
+  "_metainfo": {
+    "_type": "aos_team_routes",
+    "_version": 1
+  },
+  "negations": [
+    "不要",
+    "別",
+    "取消",
+    "不用",
+    "勿",
+    "不准"
+  ],
+  "routes": [
+    {
+      "name": "tasks",
+      "pattern": "(列|看)(一下)?(任務|單子)",
+      "do": "tool",
+      "run": [
+        "task",
+        "ls"
+      ],
+      "tests": {
+        "hit": [
+          "列任務",
+          "看一下單子"
+        ],
+        "miss": [
+          "列任務給 bob 看"
+        ]
+      }
+    },
+    {
+      "name": "waiting",
+      "pattern": "(有什麼|哪些)(在)?等我(回答|決定)的?",
+      "do": "tool",
+      "run": [
+        "wait",
+        "ls"
+      ],
+      "tests": {
+        "hit": [
+          "有什麼等我回答的"
+        ],
+        "miss": [
+          "等我回來再說"
+        ]
+      }
+    },
+    {
+      "name": "one-character",
+      "pattern": "補人物 ?(?P<name>[^\\s，,、：:；;（）()]+)",
+      "do": "handoff",
+      "handoff": {
+        "assignee": "mfg-writer1",
+        "workflow": "workflows/lore-extraction/README.md",
+        "goal": "補人物「{name}」：讀 aos-drafts/{name}/ 的詞條草稿與證據草稿，逐句回原文核對改正後，寫成 lore/characters/{name}.md 與 lore/evidence/characters/{name}.md（超過 5120 位元組就拆檔），回填 character_map、lore/characters/INDEX.md 與五處計數。這張單只有你在改索引，不用拿鎖。",
+        "facts": "aos-drafts/{name}/",
+        "done_when": [
+          {
+            "kind": "file_exists",
+            "path": "lore/characters/{name}.md"
+          },
+          {
+            "kind": "file_exists",
+            "path": "lore/evidence/characters/{name}.md"
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "lore/characters/{name}.md",
+              "text": "詳見："
+            }
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "lore/characters/{name}.md",
+              "text": "evidence/characters/{name}.md"
+            }
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "lore/characters/INDEX.md",
+              "text": "[{name}]({name}.md)"
+            }
+          },
+          {
+            "kind": "cmd_ok",
+            "run": [
+              "python3",
+              "scripts/check_simplified.py",
+              "lore/characters/{name}.md",
+              "lore/evidence/characters/{name}.md"
+            ]
+          },
+          {
+            "kind": "judge",
+            "text": "證據檔每一列：寫的原文檔名＋行號打開後確實說了那件事、行號沒超過檔長；推論與原文明寫分開、原文沒說的有明講未知"
+          },
+          {
+            "kind": "judge",
+            "text": "character_map 對應敘事線分片有 {name} 的一列且連結對；lore/characters.md、lore/characters/INDEX.md、lore/INDEX.md、lore/evidence/README.md、lore/evidence/character_map.md 的計數是重新點算、彼此一致"
+          }
+        ]
+      },
+      "tests": {
+        "hit": [
+          "補人物 老何塞",
+          "補人物老成的杜林人"
+        ],
+        "miss": [
+          "補人物 老財（只寫詞條）",
+          "補一批人物：老木頭、老薑",
+          "不要補人物 老何塞"
+        ]
+      }
+    },
+    {
+      "name": "one-character-light",
+      "pattern": "補人物 ?(?P<name>[^\\s，,、：:；;（）()]+)（只寫詞條）",
+      "do": "handoff",
+      "handoff": {
+        "assignee": "mfg-writer1",
+        "workflow": "workflows/lore-extraction/README.md",
+        "goal": "補人物「{name}」（只寫詞條，不動索引與計數）：讀 aos-drafts/{name}/ 的詞條草稿與證據草稿，逐句回原文核對改正後，寫成 lore/characters/{name}.md 與 lore/evidence/characters/{name}.md（證據檔要小於 5120 位元組，超過就刪次要列、不拆檔）。不要改任何 INDEX、character_map 或計數。",
+        "facts": "aos-drafts/{name}/",
+        "done_when": [
+          {
+            "kind": "file_exists",
+            "path": "lore/characters/{name}.md"
+          },
+          {
+            "kind": "file_exists",
+            "path": "lore/evidence/characters/{name}.md"
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "lore/characters/{name}.md",
+              "text": "詳見："
+            }
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "lore/characters/{name}.md",
+              "text": "evidence/characters/{name}.md"
+            }
+          },
+          {
+            "kind": "cmd_ok",
+            "run": [
+              "python3",
+              "scripts/check_simplified.py",
+              "lore/characters/{name}.md",
+              "lore/evidence/characters/{name}.md"
+            ]
+          },
+          {
+            "kind": "judge",
+            "text": "證據檔每一列：寫的原文檔名＋行號打開後確實說了那件事、行號沒超過檔長；推論與原文明寫分開、原文沒說的有明講未知"
+          }
+        ],
+        "max_attempts": 2,
+        "deadline_minutes": 40
+      },
+      "tests": {
+        "hit": [
+          "補人物 老財（只寫詞條）"
+        ],
+        "miss": [
+          "補人物 老財",
+          "不要補人物 老財（只寫詞條）"
+        ]
+      }
+    }
+  ]
+}

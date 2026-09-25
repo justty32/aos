@@ -1,0 +1,97 @@
+{
+  "_metainfo": {
+    "_type": "aos_team_routes",
+    "_version": 1
+  },
+  "negations": [
+    "不要",
+    "別",
+    "取消",
+    "不用",
+    "勿",
+    "不准"
+  ],
+  "routes": [
+    {
+      "name": "tasks",
+      "pattern": "(列|看)(一下)?(任務|單子)",
+      "do": "tool",
+      "run": [
+        "task",
+        "ls"
+      ],
+      "tests": {
+        "hit": [
+          "列任務",
+          "看一下單子"
+        ],
+        "miss": [
+          "列任務給 bob 看"
+        ]
+      }
+    },
+    {
+      "name": "waiting",
+      "pattern": "(有什麼|哪些)(在)?等我(回答|決定)的?",
+      "do": "tool",
+      "run": [
+        "wait",
+        "ls"
+      ],
+      "tests": {
+        "hit": [
+          "有什麼等我回答的"
+        ],
+        "miss": [
+          "等我回來再說"
+        ]
+      }
+    },
+    {
+      "name": "inspect",
+      "pattern": "驗貨 ?(?P<name>[^\\s，,、：:；;（）()]+)",
+      "do": "handoff",
+      "handoff": {
+        "assignee": "qa-inspector",
+        "workflow": "無",
+        "goal": "驗貨「{name}」：讀 lore/characters/{name}.md 與 lore/evidence/characters/{name}.md（有拆檔就連子檔），從證據表挑 3 列，打開那一列寫的原文檔（corpus/…）到那幾行，看是不是真的說了那件事。寫 qa-reports/{name}.md：第一行「結論：合格」或「結論：不合格」，下面一列一條寫你抽了哪列、原文怎麼說、對不對。不要改 lore/ 底下任何檔。",
+        "facts": "品管抽查；簡體殘留由驗收員機械跑，不用你跑",
+        "done_when": [
+          {
+            "kind": "file_exists",
+            "path": "qa-reports/{name}.md"
+          },
+          {
+            "kind": "check",
+            "name": "contains",
+            "args": {
+              "path": "qa-reports/{name}.md",
+              "text": "結論："
+            }
+          },
+          {
+            "kind": "cmd_ok",
+            "run": [
+              "python3",
+              "scripts/check_simplified.py",
+              "lore/characters/{name}.md",
+              "lore/evidence/characters/{name}.md"
+            ]
+          }
+        ],
+        "max_attempts": 2,
+        "deadline_minutes": 30
+      },
+      "tests": {
+        "hit": [
+          "驗貨 老財",
+          "驗貨老木頭"
+        ],
+        "miss": [
+          "驗貨 老財、老薑",
+          "不要驗貨 老財"
+        ]
+      }
+    }
+  ]
+}

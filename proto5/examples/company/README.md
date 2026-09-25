@@ -1,0 +1,92 @@
+← [proto5 README](../../README.md)｜規格：[spec/team/company.md](../../spec/team/company.md)｜比喻版：[playbook/company.md](../../playbook/company.md)｜報告：[notes/2026-09-25-company](../../notes/2026-09-25-company/README.md)
+
+# 公司樣板：用 aos 團隊蓋一間新創公司
+
+董事（使用者）說：「就當做是開公司，業務就是產出 narratives……我要的是用我們現有的 aos 體系去建立這個公司架構。」
+這裡就是那間公司：**每個部門是一支真的 aos 團隊**（`team.json` 名冊＋成員的家），部門之間的信由一支**不叫模型的總機**搬，董事就是 `human`。
+
+| aos 的東西 | 在公司裡是 |
+|---|---|
+| `human`（`aos-team ask`／`answer`／收件匣 `team/human/`） | **董事**：出資、下單、拍板。永遠是人 |
+| hq 團隊的領隊 `hq-lead` | **總裁**：把董事的話翻成給部門的單、追到結案、回報 |
+| 一支團隊（`teams/<部門>/`） | 一個部門；名冊的成員＝員工 |
+| 成員有家、`notes: true`、記憶留著 | **正式員工**（算人頭） |
+| `spawn_member` 生的成員、一次性模型呼叫（評審）、機械程式（郵差、驗收員、門房、心跳、總機） | **臨時工**／「當工具看待」，不算人頭 |
+| 信（`team_say`）、任務單（`handoff`）、郵差 | 部門內的往來 |
+| 總機（`company.py relay`，§3 of [company.md](../../spec/team/company.md)） | 部門之間的往來：信第一行寫 `〔給 mfg〕…` |
+| 心跳 routines | 季度節奏（例行單） |
+| `aos-team verify`／審查員 | 驗貨 |
+| `aos-team score`、HR 試用 | 考核 |
+| kernel 的池（`pools.default`／`pools.llm`） | cpu／llm cpu 名額（硬上限） |
+
+## 組織圖（新創期：正式 ≤10、cpu ≤20、llm cpu ≤5）
+
+現在的編制：**正式 6 人**（館員 1 個名額保留、還沒到職），cpu 17 顆（default 12＋llm 5）。十個名額不夠每部門都放人，所以兼任與「純機械部門」是常態，兼任寫在 `company.json` 的 `staff.*.roles`。
+
+| 部門 | 團隊資料夾 | 成員（名／模板／模型／類型） | 多掛 | 收什麼單 | 交什麼貨 | 對應的 lib／spec | KPI（機械量得到） | 狀態 |
+|---|---|---|---|---|---|---|---|---|
+| **董事會** | —（`human`） | 使用者本人 | — | — | 方向、拍板、抽查 | [ask.md](../../spec/team/ask.md)、`company.py order／mail／answer` | — | 有 |
+| **總裁辦** hq | [teams/hq](teams/hq/team.json) | `hq-lead`／lead／gpt-5.5／正式（**總裁，兼業務、兼 HR 決策**） | — | 董事的一句話（`company.py order` → hq 門房 → 總裁） | 給部門的〔給 …〕單；給董事的結案信 | [route.md](../../spec/team/route.md)、[company.md](../../spec/team/company.md) | 董事下單到結案信的秒數；總機單結案率 | 有 |
+| 業務部 sales | 併在 hq | 門房（機械，hq 的 [routes.json](teams/hq/routes.json)）＋總裁兼判斷 | — | 董事一句話 | 命中門房就直接做，沒命中交總裁 | route.md、[crystal.md](../../spec/team/crystal.md) | 門房命中率（`route.log`） | 兼任 |
+| **製造部** mfg | [teams/mfg](teams/mfg/team.json) | `mfg-lead`／lead／gpt-5.5／正式（窗口，拆批次）；`mfg-writer1`／worker／gpt-5.5／正式；`mfg-reviewer`／reviewer／gpt-5.5／正式；忙時 `mfg-lead` 可 spawn worker（臨時工，不用批） | corpus 唯讀（寫手、審查） | `〔給 mfg〕補人物 X`（全套，動索引）／`補人物 X（只寫詞條）`（門房直接開單給寫手） | `lore/characters/X.md`＋證據檔，過驗收（機械 5～6 條）＋審查（judge） | [examples/arknights](../arknights/README.md)、[tasks.md](../../spec/team/tasks.md)、[verify.md](../../spec/team/verify.md) | 一次過率（attempt=1 的 done）、每單 token、每單秒數 | 有 |
+| **品管部** qa | [teams/qa](teams/qa/team.json) | `qa-inspector`／worker／deepseek-chat／正式；**評審**＝`eval.sh` 裡一次性的 claude-opus-5 呼叫（臨時工） | corpus 唯讀 | `〔給 qa〕驗貨 X`（門房直接開單） | `qa-reports/X.md`（`結論：合格／不合格`＋抽查 3 列）；批次時 `eval.sh` 分數 | [examples/arknights/eval](../arknights/eval/)、verify.md | 驗貨合格率；eval 機械層全過率、證據列 ok 率 | 有 |
+| **研發部** rd | [teams/rd](teams/rd/team.json) | `rd-smith`／worker／gpt-5.5／正式（工具匠） | — | `〔給 rd〕要一支工具…`（沒門房規則，信給窗口） | 工具草稿（人 `aos-team tool approve` 才裝） | [toolsmith.md](../../spec/team/toolsmith.md)、[tools/](../../tools/README.md) | 草稿牢裡測試通過率；被批准數 | 有 |
+| HR hr | 併在 hq | 機械：`company.py status` 數人頭與 cpu、`up` 前擋超額；`spawn`／`score`；決策＝總裁兼、改名冊＝董事 | — | `〔給 hr〕…`（落到總裁） | 名冊改動（人批）、臨時工 | [spawn.md](../../spec/team/spawn.md)、[score.md](../../spec/team/score.md)、HR 部 `hr.md`（施工中） | 正式 N/10、cpu N/20、llm cpu N/5 不超 | 兼任＋機械 |
+| 圖書館 lib | [teams/lib](teams/lib/team.json)（`open: false`） | `lib-librarian`／librarian／deepseek-chat／正式（**名額保留，未到職**） | commons 唯讀 | 各部門 `commons_submit` 投稿 | commons 條目 | commons.md（施工中）、[playbook/](../../playbook/README.md) | 機械審通過率、叫模型判的比例 | 尚未成立（等 commons 併進 main） |
+| 財務部 fin | —（純機械） | 沒有模型員工：帳本 `aos-team cost`＋公司帳戶 | — | — | 每部門／每單 token 與美元；超預算郵差停開新單 | [cost.md](../../spec/team/cost.md)、`lib/aos_team_cost.py` | 帳本覆蓋率、預算用了幾成 | 機械（設 `AOS_COST_HOME` 就記得到） |
+| 總務／資安 | — | 機械：`aos up／down`、kernel 池、牆（bwrap）、郵差再驗 | — | — | — | [wall.md](../../spec/team/wall.md) | kernel health | 有 |
+
+## 檔案
+
+| 檔 | 是什麼 |
+|---|---|
+| [company.json](company.json) | 部門、兼任、上限（新創 10／20／5、擴張頂 100／200／20）、池、前台部門；格式見 [company.md §2](../../spec/team/company.md) |
+| `teams/<部門>/team.json`、`routes.json` | 每個部門的名冊與門房規則（樣板：成員名不帶公司前綴，`new --prefix` 才加） |
+| `persona/*.md` | 公司層人格，`up` 時接在內建模板人格後面：`_company.md`（每人都有：怎麼寫〔給 部門〕）、`hq-lead.md`（總裁的 SOP）、`mfg-writer1.md`／`mfg-reviewer.md`（抄自 arknights 的專案規矩）… |
+| `llm.json` | LiteLLM `localhost:4000` 的模型代號（只走這個端點） |
+| [company.py](company.py) | `new／up／down／status／order／mail／answer／relay`（本體 `lib/aos_company.py`） |
+
+成員一律用**內建模板**（`lead`／`worker`／`reviewer`）＋公司人格：門房落穿找的是 `template: lead` 的成員，自訂模板的領隊接不到落穿（arknights 樣板踩到的坑，見報告）。
+
+## 跑一家
+
+```sh
+# 專案副本（絕不在本尊上跑；這裡不帶 .git）
+mkdir -p ~/tmp/company-run/c1
+rsync -a --exclude=.git --exclude=aos-runs ~/tmp/arknights-try/ ~/tmp/company-run/c1/proj/
+ln -sfn ~/tmp/arknights-corpus ~/tmp/company-run/c1/arknights-corpus   # proj/corpus/raw 的相對連結要解得開
+
+cd proto5/examples/company
+python3 company.py new ~/tmp/company-run/c1 --prefix c1- --project ~/tmp/company-run/c1/proj
+export AOS_COST_HOME=~/tmp/company-run/cost          # 可省；設了帳就記得到這家
+python3 company.py up     -C ~/tmp/company-run/c1
+python3 company.py order  -C ~/tmp/company-run/c1 "補人物 老財"
+python3 company.py status -C ~/tmp/company-run/c1     # 正式 6/10、cpu 17/20、llm cpu 5/5＋各部門單子＋總機單
+python3 company.py mail   -C ~/tmp/company-run/c1     # 董事收件匣
+python3 company.py down   -C ~/tmp/company-run/c1
+```
+
+看某一個部門細節就用一般的 aos-team：`aos-team mail --target ~/tmp/company-run/c1/teams/mfg`、`task ls --all`、`score`。
+
+## 擴張到 100 人時長什麼樣
+
+上限 `limits_max`：正式 100、cpu 200、llm cpu 20。擴張的規則沿用 HR 部的兩條（積壓 ≥ 3 張、品管分 < 80 才加人），加法都是「名冊加一列」或「多開一支團隊」，不用新機制：
+
+| 部門 | 新創（現在） | 擴張到頂 |
+|---|---|---|
+| 總裁辦 | 總裁 1（兼業務、HR） | 總裁 1＋幕僚 2（一個專管董事的題目彙整、一個管季度例行單）；業務、HR 各自獨立 |
+| 業務部 | 門房規則 | 自己一支團隊：門房＋業務經理 1＋接單員 2～3（一條產品線一個，負責把客戶的話翻成製造部認得的句型）；`crystal` 把常落穿的句型固化成規則 |
+| 製造部 | 經理 1、寫手 1、審查 1 | **一條產線一支團隊**（arknights、下一個 narratives…），每支：經理 1、寫手 4～6（其中一半降級成笨模型）、審查 2；總共約 40 人。寫手不夠用 spawn 臨時工補，不佔人頭 |
+| 品管部 | 檢驗員 1＋eval 評審（臨時） | 每條產線檢驗員 2、校準員 1（造壞版本測評分器）；評審仍是臨時工；約 10 人 |
+| 研發部 | 工具匠 1 | 工具坊 4、流程組 3（門房規則、`done_when` 樣板）、內核組 3；約 10 人 |
+| HR | 機械＋總裁兼 | 自己一支團隊 3～4 人：試用（`hr trial`）、薪資表、名額；大半還是程式 |
+| 圖書館 | 保留 1 名額 | 館員 2～3（笨模型；只判「像不像舊條目」） |
+| 財務部 | 純機械 | 仍是純機械＋會計 1（看帳、寫週報給董事） |
+| 其他 | — | 一條產線滿 40 人時拆成兩家公司（走 market 層），不在一家裡無限長 |
+
+cpu 的算法不變：一家一個 kernel，`pools` 開多少顆就是多少（多的工作排隊，不會超）。llm cpu 20 是整台機器的頂，**幾家同跑時要分**（見 market）。
+
+## 開幾家（市場層）
+
+`new` 帶不同前綴就能在同一台機器開好幾家（`c1-hq-lead`…`c5-hq-lead` 不撞名），每家有自己的 kernel、自己的上限。**五家同跑時每家 llm cpu 最多 4**（5×4＝20 是機器的頂）：`new --llm-cpu 4`。
+誰做得好、做得快就多撥額度、花光就倒閉、剩兩家合併：見 [market.py](market.py) 與 [spec/team/market.md](../../spec/team/market.md)。

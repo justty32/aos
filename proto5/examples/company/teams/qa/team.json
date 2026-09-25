@@ -1,0 +1,86 @@
+{
+  "_metainfo": {
+    "_type": "aos_team",
+    "_version": 1
+  },
+  "project": "~/tmp/company-run/proj",
+  "tz": "Asia/Taipei",
+  "members": {
+    "qa-inspector": {
+      "template": "worker",
+      "model": "deepseek-chat",
+      "mail_to": [
+        "human"
+      ],
+      "mounts": {
+        "arknights-corpus": {
+          "$opt": "ro",
+          "$val": "~/tmp/arknights-corpus"
+        }
+      }
+    }
+  },
+  "limits": {
+    "stale_minutes": 30,
+    "max_members": 3
+  },
+  "spawn": {
+    "templates": []
+  },
+  "cmd_ok": [
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老何塞.md",
+        "lore/evidence/characters/老何塞.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老天師.md",
+        "lore/evidence/characters/老天師.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老成的杜林人（雙月密錄）.md",
+        "lore/evidence/characters/老成的杜林人（雙月密錄）.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老木頭.md",
+        "lore/evidence/characters/老木頭.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老薑.md",
+        "lore/evidence/characters/老薑.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老財.md",
+        "lore/evidence/characters/老財.md"
+      ],
+      "timeout_s": 180
+    }
+  ]
+}
