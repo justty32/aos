@@ -21,7 +21,7 @@
 
 ## 組織圖（新創期：正式 ≤10、cpu ≤20、llm cpu ≤5）
 
-現在的編制：**正式 6 人**（館員 1 個名額保留、還沒到職），cpu 17 顆（default 12＋llm 5）。十個名額不夠每部門都放人，所以兼任與「純機械部門」是常態，兼任寫在 `company.json` 的 `staff.*.roles`。
+現在的編制：**正式 7 人**、還有 3 個名額可以擴編；cpu 17 顆（default 12＋llm 5）。十個名額不夠每部門都放人，所以兼任與「純機械部門」是常態，兼任寫在 `company.json` 的 `staff.*.roles`。
 
 | 部門 | 團隊資料夾 | 成員（名／模板／模型／類型） | 多掛 | 收什麼單 | 交什麼貨 | 對應的 lib／spec | KPI（機械量得到） | 狀態 |
 |---|---|---|---|---|---|---|---|---|
@@ -32,7 +32,7 @@
 | **品管部** qa | [teams/qa](teams/qa/team.json) | `qa-inspector`／worker／deepseek-chat／正式；**評審**＝`eval.sh` 裡一次性的 claude-opus-5 呼叫（臨時工） | corpus 唯讀 | `〔給 qa〕驗貨 X`（門房直接開單） | `qa-reports/X.md`（`結論：合格／不合格`＋抽查 3 列）；批次時 `eval.sh` 分數 | [examples/arknights/eval](../arknights/eval/)、verify.md | 驗貨合格率；eval 機械層全過率、證據列 ok 率 | 有 |
 | **研發部** rd | [teams/rd](teams/rd/team.json) | `rd-smith`／worker／gpt-5.5／正式（工具匠） | — | `〔給 rd〕要一支工具…`（沒門房規則，信給窗口） | 工具草稿（人 `aos-team tool approve` 才裝） | [toolsmith.md](../../spec/team/toolsmith.md)、[tools/](../../tools/README.md) | 草稿牢裡測試通過率；被批准數 | 有 |
 | HR hr | 併在 hq | 機械：`company.py status` 數人頭與 cpu、`up` 前擋超額；`spawn`／`score`；決策＝總裁兼、改名冊＝董事 | — | `〔給 hr〕…`（落到總裁） | 名冊改動（人批）、臨時工 | [spawn.md](../../spec/team/spawn.md)、[score.md](../../spec/team/score.md)、HR 部 `hr.md`（施工中） | 正式 N/10、cpu N/20、llm cpu N/5 不超 | 兼任＋機械 |
-| 圖書館 lib | [teams/lib](teams/lib/team.json)（`open: false`） | `lib-librarian`／librarian／deepseek-chat／正式（**名額保留，未到職**） | commons 唯讀 | 各部門 `commons_submit` 投稿 | commons 條目 | commons.md（施工中）、[playbook/](../../playbook/README.md) | 機械審通過率、叫模型判的比例 | 尚未成立（等 commons 併進 main） |
+| 圖書館 lib | [teams/lib](teams/lib/team.json) | `lib-librarian`／librarian／deepseek-chat／正式（只判「像不像舊條目」，其餘郵差機械做） | commons 唯讀 | 各部門成員 `commons_submit` 的投稿（每個成員都自動有 `commons_search`／`commons_submit`） | 這家的 commons 條目（`teams/commons/`：各部門團隊的上一層，全公司共用一份；五家各一份，不互通） | [commons.md](../../spec/team/commons.md)、[examples/commons](../commons/README.md) | 機械審通過率、叫模型判的比例 | 有 |
 | 財務部 fin | —（純機械） | 沒有模型員工：帳本 `aos-team cost`＋公司帳戶 | — | — | 每部門／每單 token 與美元；超預算郵差停開新單 | [cost.md](../../spec/team/cost.md)、`lib/aos_team_cost.py` | 帳本覆蓋率、預算用了幾成 | 機械（設 `AOS_COST_HOME` 就記得到） |
 | 總務／資安 | — | 機械：`aos up／down`、kernel 池、牆（bwrap）、郵差再驗 | — | — | — | [wall.md](../../spec/team/wall.md) | kernel health | 有 |
 
@@ -88,5 +88,18 @@ cpu 的算法不變：一家一個 kernel，`pools` 開多少顆就是多少（�
 
 ## 開幾家（市場層）
 
-`new` 帶不同前綴就能在同一台機器開好幾家（`c1-hq-lead`…`c5-hq-lead` 不撞名），每家有自己的 kernel、自己的上限。**五家同跑時每家 llm cpu 最多 4**（5×4＝20 是機器的頂）：`new --llm-cpu 4`。
-誰做得好、做得快就多撥額度、花光就倒閉、剩兩家合併：見 [market.py](market.py) 與 [spec/team/market.md](../../spec/team/market.md)。
+`new` 帶不同前綴就能在同一台機器開好幾家（`c1-hq-lead`…`c5-hq-lead` 不撞名），每家自己一個資料夾、自己的 kernel、自己的上限、自己的 commons（`<公司>/teams/commons/`，**各家不互通**——競爭對手不共用經驗；要共用就在名冊寫 `"commons": {"dir": "~/tmp/company-run/commons"}`，這題留給董事）。
+
+- **五家同跑時每家 llm cpu 最多 4**（5×4＝20 是整台機器的頂）：`new --llm-cpu 4`。上限可調，市場層開戶時會擋總數。
+- 經理人（Fable，aos 外）用 [market.py](market.py)：`open`（開戶＋開辦費）→ 每輪 `score`（品質）→ `rank`（品質 0.6、快 0.25、省 0.15 加權）→ `grant`（照名次分這一輪的總額，可覆寫）→ `bankrupt`（花光倒閉）→ 剩兩家 `merge`。
+- **總池**：錢＝董事給的總量 − 各家已花 − 各家手上沒花的配額；名額＝機器上限 − 各家上限。倒閉／裁撤時沒花完的配額與它的名額全部回總池，經理人再撥（`grant`／`slots`）。只是歸零倒閉的，收回的通常只有名額。
+- 規則與參數：[spec/team/market.md](../../spec/team/market.md)。
+
+```sh
+export AOS_COST_HOME=~/tmp/company-run/cost AOS_MARKET_HOME=~/tmp/company-run
+for i in 1 2 3 4 5; do
+  python3 company.py new ~/tmp/company-run/c$i --prefix c$i- --project ~/tmp/company-run/c$i/proj --llm-cpu 4
+  python3 market.py open c$i ~/tmp/company-run/c$i
+done
+python3 market.py pool          # 錢還剩多少、名額還剩多少
+```

@@ -218,7 +218,7 @@ class Merge(Base):
 
     def test_plan_room_then_temp(self):
         raw = fmt.read_json(self.a / 'company.json')
-        raw['limits']['regular'] = 8                          # c1 有 6 個正式，只剩 2 個名額
+        raw['limits']['regular'] = 9                          # c1 有 7 個正式，只剩 2 個名額
         fmt.write_json(self.a / 'company.json', raw, indent=2)
         plan = mk.plan_merge(self.a, self.b, 'c2')
         by = {mv['from']: mv for mv in plan['moves']}
@@ -235,7 +235,7 @@ class Merge(Base):
         self.spend('c2', 300)
         plan = mk.plan_merge(self.a, self.b, 'c2')
         res = mk.apply_merge(self.mdir, 'c1', 'c2', plan)
-        self.assertEqual(len(res['moved']), 4)
+        self.assertEqual(len(res['moved']), 5)
         self.assertEqual(len(res['laid_off']), 2)
         roster = fmt.load_roster(self.a / 'teams' / 'mfg')
         self.assertIn('c1-mfg-writer1-c2', roster['members'])
@@ -243,7 +243,7 @@ class Merge(Base):
         self.assertEqual(roster['members']['c1-mfg-writer1-c2']['mail_to'], ['c1-mfg-lead', 'human'])
         cfg = co.load(self.a)
         regular, temp, _ = co.headcount(self.a, cfg)
-        self.assertEqual((len(regular), len(temp)), (10, 0))
+        self.assertEqual((len(regular), len(temp)), (10, 2))
         names = co.all_member_names(self.a, cfg)
         self.assertEqual(len(names), len(set(names)))
         got = fmt.read_json(fmt.Layout(self.a / 'teams' / 'mfg').notes('c1-mfg-writer1-c2') / 'notes.json')
