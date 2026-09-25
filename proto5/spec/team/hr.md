@@ -53,15 +53,15 @@ HR 是全公司一份，放在 **HR 家**：`--hr DIR`，沒給看 `AOS_HR_HOME`
 aos-team hr trial --member worker-1 --model deepseek-chat --taskset 任務集.json [--score-cmd "…"] [--out DIR] [--timeout 秒] [--note "…"] [--target 原團隊]
 ```
 
-1. 讀原團隊的名冊（**原團隊一個檔都不動**），抄一份：`project` 改成 `../proj`、那個成員的 `model` 換成新的，寫到 `K/hr/trials/tr-NNNN/roster.json`。
+1. 讀原團隊的名冊（**原團隊一個檔都不動**），抄一份：`project` 改成 `../proj`、那個成員的 `model` 換成新的、**每個成員的 `mounts` 拿掉**（可能指到原專案、可寫），寫到 `K/hr/trials/tr-NNNN/roster.json`。
 2. 把任務集的 `project` 資料夾整份複製成 `proj/`（每次從同一個初始狀態開始）。
 3. 在 `team/` `aos-team init`、有 `routes` 就 `route save`、`start`，照順序 `ask` 每一句。
 4. 每 3 秒看一次 `task ls`：頂層單到了 `expect_tasks` 張、全部結束就停；有題目而任務集給了 `answer` 就用那句回。超過時限＝`timeout`。
-5. `stop`，跑 `aos-team score --json` 拿六軸、token、think 次數；再跑**評分指令**。
+5. `stop`（中途出例外也一定停），跑 `aos-team score --json` 拿六軸、token、think 次數；再跑**評分指令**。
 6. 照 §4 判定，記一行到 `trials.jsonl`，印一張表。
 
 **要用自己的 kernel**：kernel 用 `agent-<成員名>` 登記，試用副本的成員名跟原團隊一樣，**原團隊在同一個 kernel 上開著就會撞名**（`AlreadyExists`）。試用前停原團隊，或用另一個 kernel 家（建議：HR 自己一個試用 kernel）。
-試用副本帶 `AOS_HR_TRIAL`：不登記進 `teams.json`、不算人頭、不過 init 的名額擋點；cpu 擋點照樣過。
+試用副本帶 `AOS_HR_TRIAL`：不登記進 `teams.json`、不算人頭、不過 init 的名額擋點；cpu 擋點（start、生成員）照樣過。`--out` 不能跟原團隊或原專案重疊。
 
 ### 任務集
 
@@ -77,7 +77,7 @@ aos-team hr trial --member worker-1 --model deepseek-chat --taskset 任務集.js
 ### 評分指令（可插）
 
 任何指令都行，在任務集的資料夾跑，環境多四個變數：`AOS_HR_PROJECT`（專案副本）、`AOS_HR_TEAM`（團隊副本）、`AOS_HR_TRIAL`（編號）、`AOS_HR_STATUS`（done／failed／timeout）。
-**stdout 最後一個非空行要是 JSON 物件**，至少 `score`（0～100）與 `mech_ok`（機械檢查全過＝`true`）；其他鍵原樣存進 `score_detail`。跑不起來、最後一行不是 JSON＝分數 `null`、`mech_ok: false`、原因記在 `score_detail.error`。
+**stdout 最後一個非空行要是 JSON 物件**，至少 `score`（0～100）與 `mech_ok`（機械檢查全過＝`true`）；其他鍵原樣存進 `score_detail`。**退非 0**、`score` 不是 0～100 的有限數字、跑不起來、最後一行不是 JSON＝分數 `null`、`mech_ok: false`、原因記在 `score_detail.error`。
 
 - 例子 1：[`examples/hr/ex1/score.py`](../../examples/hr/ex1/score.py) 在專案副本逐條跑 11 條機械檢查，分數＝過幾條／11×100。
 - arknights 產線：評分指令指 `examples/arknights/eval/eval.sh`，外面包一層把它的總分換成 0～100、機械層全過換成 `mech_ok`（留下一輪，見報告）。
@@ -124,8 +124,8 @@ aos-team hr trial --member worker-1 --model deepseek-chat --taskset 任務集.js
 
 | 數什麼 | 上限 | 怎麼數 | 在哪擋 |
 |---|---|---|---|
-| **正式員工人頭** | `regular_max`（新創 10） | `teams.json` 登記的每支團隊，名冊裡 `employment: regular` 的成員加總（讀不到的團隊不算） | `aos-team init`（名冊加了人）、`hr set --employment regular`（轉正） |
-| **同時開著的 cpu** | `cpu_max`、`llm_cpu_max`（新創 20、5） | `AOS_DAEMON_HOME` 登記的每個 kernel（沒設就只看 `AOS_KERNEL_HOME`）的池表 `count − skip` 加總；池名 `llm` 或 envs 有 `AOS_LLM_CONFIG` 的算 llm cpu | `aos-team start`、生新成員（`spawn_member` 的檢查）、`hr trial` 開跑前 |
+| **正式員工人頭** | `regular_max`（新創 10） | `teams.json` 登記的每支團隊，名冊裡 `employment: regular` 的成員加總（讀不到的團隊不算）；數與寫在同一把 HR 鎖裡 | `aos-team init`／`start`（名冊加了人）、`hr set --employment regular`（轉正） |
+| **同時開著的 cpu** | `cpu_max`（不含 llm 池）、`llm_cpu_max`（新創 20、5） | `AOS_DAEMON_HOME` 登記的每個 kernel（沒設就只看 `AOS_KERNEL_HOME`）的池表 `count − skip` 加總；池名 `llm` 或 envs 有 `AOS_LLM_CONFIG` 的算 llm cpu | `aos-team start`、生新成員（`spawn_member` 的檢查）、`hr trial` 開跑前 |
 
 臨時工不算人頭（像工具一樣，要多少生多少），但它跑起來要用 cpu，所以 cpu 上限照樣管得到它。
 超了＝`TooMany`，白話說數到幾、上限幾、怎麼辦；找不到 HR 家（沒設 `AOS_KERNEL_HOME` 也沒 `AOS_HR_HOME`）＝不擋。
@@ -150,7 +150,7 @@ aos-team hr trial --member worker-1 --model deepseek-chat --taskset 任務集.js
 | 意思 | 工具齊全、**有跨任務的長期記憶**、家一直留著 | **像工具一樣被呼叫**：按單生、做完收、沒記憶 |
 | 預設 | 人手寫進名冊的成員（沒寫 `employment`＝`regular`）：人寫進去的是打算長期用的，舊名冊行為不變 | `spawn_member` 生出來的一律寫 `temp`（生的人是模型，按單生，不該自己長出長期員工） |
 | 人頭 | 算 `regular_max` | 不算 |
-| 記憶 | 見下 | 不裝 notes、不 recall；單子結束就 `aos-team rm --purge` 收掉家（留下一輪：郵差收單時自動做） |
+| 記憶 | 見下 | 不裝 notes、不 recall；單子結束就 `aos-team rm --purge` 收掉家。**原型還沒做**：建家仍照模板裝 notes，收家也還沒自動（留下一輪） |
 | 轉換 | — | 轉正要人：`aos-team hr set NAME --employment regular`，受 `regular_max` 限 |
 
 **正式員工的記憶不另起一套**，用現有三樣（都在它自己的家或團隊資料夾，[notes.md](../agent/notes.md)、[compact](../agent/compact.md)、[persona.md](../agent/persona.md)）：
@@ -169,7 +169,7 @@ aos-team hr trial --member worker-1 --model deepseek-chat --taskset 任務集.js
 | 指令 | 做什麼 |
 |---|---|
 | `aos-team hr ls [--json]` | 每個成員一行：位子（模板）、類型、模型（名冊 → 模板 `llm.model` → `default`）、等級、薪資表的最低通過與證據 |
-| `aos-team hr set NAME --model X [--no-restart]` | 改名冊那一列的 `model`；家已在就改它 `info.json` 的 `llm.model`（init 不會改已生好的家）；登記著就 `aos-agent stop`＋`start` 重啟 |
+| `aos-team hr set NAME --model X [--no-restart]` | 改名冊那一列的 `model`；家已在就：登記著先 `aos-agent stop` → 拿家的 info 鎖（跟 `tools add` 同一把）改 `info.json` 的 `llm.model`（init 不會改已生好的家）→ `start` |
 | `aos-team hr set NAME --employment regular\|temp` | 改員工類型；轉正先數人頭 |
 | `aos-team hr trials [--position P] [--json]` | 試用紀錄表 |
 | `aos-team hr salary [--json]` | 薪資表 |

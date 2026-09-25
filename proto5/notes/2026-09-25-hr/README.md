@@ -17,7 +17,7 @@
 | 名冊每個成員多 `employment: regular｜temp`（沒寫＝regular）；`spawn_member` 生出來的寫 `temp` | `lib/aos_team_format.py`、`lib/aos_team_spawn.py` |
 | 擋點：`init` 數全公司正式員工（`regular_max`）並登記這隊；`start`、生成員、`hr trial` 前數全公司 cpu／llm cpu | `lib/aos_team.py` 的 `_hr_gate`、`aos_team_spawn.check()` 結尾 |
 | 例子 1 任務集（試工人：門房直接派；試領隊：落穿給領隊）、評分指令（11 條機械檢查） | [examples/hr/ex1/](../../examples/hr/ex1/) |
-| 測試 33 條 | [lib/test/test_team_hr.py](../../lib/test/test_team_hr.py) |
+| 測試 38 條 | [lib/test/test_team_hr.py](../../lib/test/test_team_hr.py) |
 | 教程 08 第 11 節、spec/team README、cli.md、lib README、proto5 README 各一列 | |
 | playbook：經驗 21～23、流程樣板 | [lessons.md](../../playbook/lessons.md)、[workflows/hr-trial.md](../../playbook/workflows/hr-trial.md) |
 
@@ -110,8 +110,24 @@ aos-team hr cap --target $W/mfg                     # 階段 startup；正式員
 
 ## 7. 數字
 
-- 測試：新檔 `test_team_hr.py` 33 條；全套結果見下方「收尾」一行。
+- 測試：新檔 `test_team_hr.py` 38 條（含審查後補的 5 條）；全套結果見 §7.5 後的收尾那行。
 - 真跑：4 個配置 × 1 次，共約 21 分鐘，token 合計約 63 萬（deepseek 49 萬、astra 14 萬）。
+
+## 7.5 astra 唯讀審查
+
+[任務書](review-task.md)／[回報](review-astra.md)。必修 7 條，修了 6 條、1 條改寫成「還沒做」：
+
+| # | 問題 | 怎麼處理 |
+|---|---|---|
+| 1 | 試用副本保留原名冊的 `mounts`（可能可寫指原專案）；`--out` 可放進原團隊／原專案 | 副本拿掉所有 `mounts`；`--out` 重疊就 `BadProject`（有測） |
+| 2 | `hr set` 改 `info.json` 沒拿鎖、先改才停 | 改成先停 → 拿 `info_lock`（跟 `tools add` 同一把）改 → 再開 |
+| 3 | 評分指令退非 0 仍留分數、NaN／超範圍分數被收 | 退非 0、非有限、不在 0～100 一律 `score: null`、`mech_ok: false`（有測） |
+| 4 | 試用副本連 cpu 擋點都跳過 | `_hr_home(cpu_only=True)`：試用只跳人頭與登記，start 與生成員的 cpu 照擋（有測） |
+| 5 | 人頭檢查與寫名冊不在同一把鎖，兩隊同時轉正會一起過 | `hr set` 與 init／start 的擋點：數與寫都包在 HR 鎖裡（順序一律 HR → 名冊） |
+| 6 | 臨時工建家仍裝 notes，跟規格「沒記憶」矛盾 | **沒做**，規格改寫成「原型還沒做」，列留下一輪 2 |
+| 7 | 啟動後出例外，試用團隊不會停 | `try/finally` 一定 `stop` |
+
+建議（同名任務集改了題目會混用舊基準、要記版本）列進留下一輪 8。
 
 ## 8. 留下一輪
 
@@ -119,12 +135,13 @@ aos-team hr cap --target $W/mfg                     # 階段 startup；正式員
    - 寫一份任務集 `examples/hr/arknights/taskset-*.json`：`project` 指基準集的初始狀態（15 人的空補檔資料夾），`asks` 是產線的那句開工話，`expect_tasks` 照產線開幾張單。
    - 評分指令包一層 `examples/arknights/eval/eval.sh`：把它的總分換成 0～100，機械層（格式、引文比對）全過換成 `mech_ok`。它的評審層會叫 claude，要算進品管額度。
    - `aos-team hr trial --target <產線團隊> --member <位子> --model deepseek-chat --taskset …`，先跑強模型當基準。
-2. **臨時工做完自動收家**：規格寫了（單子結束 → `aos-team rm --purge`），郵差還沒接。
+2. **臨時工沒記憶、做完自動收家**：規格寫了（不裝 notes、單子結束 → `aos-team rm --purge`），建家與郵差都還沒接（astra 必修 6）。
 3. **擴編理由真的擋**：等題 3 拍板。
 4. **試用副本自動改名**，免得同 kernel 撞名：要連帶改 routes 的 `assignee` 與 `mail_to`。
 5. **finance 的 cpu 上限跟 HR 的 `policy.json` 合一**：現在兩邊各一份（財務 `budget.json` 的 `cpus` 只拿來顯示），數字相同但會分岔（要拍的題 5）。
 6. S 軸：每格跑滿 10 次才正式給分。
 7. `luna-nothink` 這次沒試（限 4 個配置，先把 lead 位子試完）。
+8. 任務集要記版本（評分指令、題目的雜湊）：同名任務集改了內容，舊基準不能再拿來比（astra 建議）。
 
 ## 9. 要董事拍的題
 
