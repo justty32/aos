@@ -1,0 +1,45 @@
+{
+ "at": "2026-09-25T12:00:49",
+ "label": "qa-laojiang-expanded",
+ "copy_root": "/home/lorkhan/tmp/arknights-try",
+ "batches": [
+  "145"
+ ],
+ "judge_model": null,
+ "judge_reference": "aos-drafts 草稿（非 golden）",
+ "people": [
+  {
+   "batch": "145",
+   "name": "老薑",
+   "cand_root": "/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/f594f460-c0a3-4df1-b41f-e70375230e84/scratchpad/snapy",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 10,
+    "ok": 10,
+    "ok_loose": 10,
+    "by_status": {
+     "skip": 1,
+     "ok": 10
+    },
+    "bad_rows": []
+   },
+   "draft_evidence": {
+    "checked_rows": 9,
+    "ok": 8,
+    "ok_loose": 8,
+    "by_status": {
+     "skip": 5,
+     "檔不存在": 1,
+     "ok": 8
+    }
+   }
+  }
+ ],
+ "repo": [],
+ "metrics": null,
+ "lowest3": []
+}
