@@ -3,7 +3,7 @@ set -u
 
 AOS=${AOS:-/home/lorkhan/repo/simple_tools/aos/build/bin/aos}
 ROOT=${ROOT:-/home/lorkhan/repo/simple_tools/aos}
-SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+SOLO=$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo
 TEMPLATE=$SOLO/_template
 CASE_DIR=$(mktemp -d "$SOLO/C/repro-tmp.C-06.XXXXXX")
 WORLD=$CASE_DIR/world

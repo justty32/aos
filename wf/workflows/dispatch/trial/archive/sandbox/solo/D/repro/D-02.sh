@@ -3,7 +3,7 @@ set -uo pipefail
 
 AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
 ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
-BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/D/repro"
+BASE="$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo/D/repro"
 WORK=$(mktemp -d "$BASE/D-02.XXXXXX")
 trap 'rm -rf -- "$WORK"' EXIT
 export PATH="$ROOT/build/bin:$PATH"

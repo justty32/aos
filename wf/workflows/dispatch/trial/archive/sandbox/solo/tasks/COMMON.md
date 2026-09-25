@@ -13,8 +13,8 @@
 
 ## 你可以寫的地方（只有這些）
 
-- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
-- `wf/workflows/dispatch/trial/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
+- `wf/workflows/dispatch/trial/archive/sandbox/solo/<你的代號>/**` — 你的世界、log、暫存
+- `wf/workflows/dispatch/trial/archive/sandbox/solo/<你的代號>/repro/*.sh` — 重現腳本
 - `-o` 指定的報告檔
 
 ## 執行環境（寫死，不要自己找）
@@ -22,7 +22,7 @@
 ```sh
 AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
 ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
-SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+SOLO=$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo
 TEMPLATE=$SOLO/_template          # 3 檔 C++ 小專案＋測試＋Makefile
 ```
 

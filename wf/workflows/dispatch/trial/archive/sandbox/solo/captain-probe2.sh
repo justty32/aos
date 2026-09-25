@@ -2,7 +2,7 @@
 set -u
 ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
 AOS="$ROOT/build/bin/aos"
-W="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/cap"
+W="$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo/cap"
 cd "$W"
 
 echo "=== A. --help 的真 exit code（有 agent 的世界） ==="

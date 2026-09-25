@@ -3,8 +3,8 @@ set -eu
 
 AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
 ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
-BASE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/A"
-TEMPLATE="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/_template"
+BASE="$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo/A"
+TEMPLATE="$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo/_template"
 WORLD=$(mktemp -d "$BASE/repro-A-01.XXXXXX")
 
 mkdir -p "$WORLD/.aos"

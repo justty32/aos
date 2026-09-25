@@ -3,9 +3,9 @@
 set -u
 ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
 AOS="$ROOT/build/bin/aos"
-W="$ROOT/wf/workflows/dispatch/trial/sandbox/solo/cap"
+W="$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo/cap"
 rm -rf "$W"; mkdir -p "$W/.aos"; cd "$W"
-cp -r "$ROOT/wf/workflows/dispatch/trial/sandbox/solo/_template/." .
+cp -r "$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo/_template/." .
 
 echo "=== 1. 各子命令的 --help ==="
 for c in run deliver say listen talk state tool llm; do
