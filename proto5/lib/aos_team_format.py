@@ -259,8 +259,8 @@ def _unknown(obj, allowed, where):
 
 # ------------------------------------------------------------------ 名冊 ----
 
-MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools', 'spawn')
-ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok', 'spawn', 'budget')
+MEMBER_KEYS = ('template', 'model', 'mail_to', 'mounts', 'tools', 'spawn', 'commons')
+ROSTER_KEYS = ('_metainfo', 'project', 'tz', 'members', 'limits', 'post', 'cmd_ok', 'spawn', 'budget', 'commons')
 
 
 def validate_roster(obj, where='team.json'):
@@ -273,6 +273,10 @@ def validate_roster(obj, where='team.json'):
            'members': {}, 'limits': dict(LIMIT_DEFAULTS), 'post': dict(POST_DEFAULTS),
            'cmd_ok': _cmd_whitelist(obj.get('cmd_ok', []), where + '.cmd_ok'),
            'spawn': _spawn_cfg(obj.get('spawn', {}), where + '.spawn')}
+    import aos_team_commons                    # 09-25 commons：頂層與成員層的 commons 開關（commons.md）
+    aos_team_commons.validate_roster_keys(obj, where)
+    if 'commons' in obj:
+        out['commons'] = obj['commons']
     post = _obj(obj.get('post', {}), where + '.post')
     _unknown(post, tuple(POST_DEFAULTS), where + '.post')
     import aos_team_cost                      # 財務部（spec/team/cost.md）：預算形狀在那邊驗
@@ -318,6 +322,8 @@ def validate_roster(obj, where='team.json'):
             'mail_to': list(dict.fromkeys(mail_to)),
             'mounts': dict(mounts), 'tools': list(tools),
             'spawn': _member_spawn(m.get('spawn'), w + '.spawn')}
+        if 'commons' in m:
+            out['members'][name]['commons'] = m['commons']
     return out
 
 
@@ -803,6 +809,9 @@ def member_may(roster, name):
     may = [k for k in template_may(m['template']) if k != 'spawn']
     if spawn_policy(roster, name) is not None:
         may.append('spawn')
+    import aos_team_commons                    # 09-25：開了 commons 的成員都能投稿（commons.md）
+    if aos_team_commons.member_on(roster, name) and 'contribute' not in may:
+        may.append('contribute')
     return tuple(may)
 
 
@@ -820,7 +829,7 @@ def may_send(roster, sender, kind):
 TEMPLATE_KEYS = ('_metainfo', 'description', 'system', 'team', 'project', 'notes', 'may', 'llm', 'tick', 'tools',
                  'mounts')
 TOOL_ENTRY_KEYS = ('pack', 'only', 'team', 'optional')
-RESERVED_MOUNTS = ('ws', 'outbox', 'board', 'notes', 'mem')   # notes、mem：模板 notes: true 時 init 內建掛
+RESERVED_MOUNTS = ('ws', 'outbox', 'board', 'notes', 'mem', 'commons')   # notes、mem：模板 notes: true 時 init 內建掛；commons：09-25
 
 
 def _mounts(mounts, where):

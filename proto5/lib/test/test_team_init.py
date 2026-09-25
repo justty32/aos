@@ -81,7 +81,8 @@ class InitTests(unittest.TestCase):
             self.assertTrue((home / 'input').is_dir())
             access = read_json(home / 'access.json')
             self.assertEqual(set(access['mounts']),
-                             {'ws', 'outbox', 'board'} | ({'notes', 'mem'} if tpl in ('lead', 'worker') else set()))
+                             {'ws', 'outbox', 'board', 'commons'}     # commons：09-25 預設開
+                             | ({'notes', 'mem'} if tpl in ('lead', 'worker') else set()))
             self.assertEqual(access['cwd'], 'ws')
             self.assertFalse(access['net'])
             table = aos_agent_access.load(str(home))              # 解得開、沒蓋到信任資料
@@ -96,7 +97,8 @@ class InitTests(unittest.TestCase):
             self.assertTrue(lay.outbox(name).is_dir())
         lead = read_json(lay.member('lead') / 'info.json')
         names = [e['$opt']['only'] if isinstance(e, dict) else e for e in lead['tools']]
-        self.assertEqual(names, [['handoff', 'board', 'ask_human', 'compact_me', 'routine_propose', 'spawn_member'], ['team_say'],
+        self.assertEqual(names, [['handoff', 'board', 'ask_human', 'compact_me', 'routine_propose', 'spawn_member',
+                                  'commons_search', 'commons_submit'], ['team_say'],   # commons：09-25 預設開
                                  'tools/notes.json', ['read', 'grep', 'find', 'ls']])   # team 包（第 2 隊）已在
         self.assertTrue(lay.outbox('human').is_dir())
         self.assertEqual(read_json(self.team / 'team.json'), ROSTER)
@@ -419,11 +421,13 @@ class ToolUnitTests(unittest.TestCase):
         sizes = {t['function']['name']: len(json.dumps(t['function'], ensure_ascii=False)) for t in tools}
         self.assertEqual(set(sizes), {'handoff', 'board', 'review_result', 'ask_human', 'compact_me',
                                       'lock', 'access_request', 'persona_propose', 'routine_propose',
-                                      'spawn_member', 'tool_draft'})
+                                      'spawn_member', 'tool_draft',
+                                      'commons_search', 'commons_submit', 'commons_verdict'})   # 09-25 commons
         # 09-24 W2C 加 4 支申請類工具：整包（9 支全裝）比第一波大，但沒有哪個成員一次全裝——
         # lead／worker 的 template.json 各自只 only 挑幾支（見 templates/*/template.json）。
         # 第三波 W3-1 再加 spawn_member（領隊）、tool_draft（工人）兩支：整包約 6500 字元，一樣沒人全裝。
-        self.assertLess(sum(sizes.values()), 7000, sizes)            # 約 1750 token；單支都 < 300 token 起跳
+        # 09-25 commons 再加三支（commons_search／commons_submit 人人有、commons_verdict 只給圖書館員）：整包約 8600 字元。
+        self.assertLess(sum(sizes.values()), 9000, sizes)            # 約 2250 token；單支都 < 300 token 起跳
         self.assertTrue(all(v < 1200 for v in sizes.values()), sizes)
 
 
@@ -624,8 +628,10 @@ class TeamIntegrationTests(KernelCase):
             who = next(k for k in SCRIPTS if k in body['messages'][0]['content'])
             tools[who] = {t['function']['name'] for t in body['tools']}
         self.assertEqual(tools['領隊 lead'], {'handoff', 'board', 'ask_human', 'compact_me', 'routine_propose', 'spawn_member',
-                                             'team_say', 'note', 'recall', 'context', 'read', 'grep', 'find', 'ls'})
-        self.assertEqual(tools['審查員 reviewer'], {'board', 'review_result', 'read', 'grep', 'find', 'ls'})
+                                             'team_say', 'note', 'recall', 'context', 'read', 'grep', 'find', 'ls',
+                                             'commons_search', 'commons_submit'})   # 09-25 commons 預設開
+        self.assertEqual(tools['審查員 reviewer'], {'board', 'review_result', 'read', 'grep', 'find', 'ls',
+                                                  'commons_search', 'commons_submit'})
         self.assertTrue({'write', 'bash', 'board', 'ask_human', 'compact_me', 'team_say', 'note', 'recall', 'context'} <= tools['工人 worker-1'])
         self.assertNotIn('handoff', tools['工人 worker-1'])
         self.team('stop')

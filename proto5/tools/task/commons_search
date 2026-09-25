@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""commons_search：查跨團隊公共資料夾（spec/team/commons.md）。純程式，不叫模型、不寫任何東西。
+
+讀 /work/commons/index.json（唯讀掛），關鍵字＋標籤找，回前 N 條：id、種類、標題、適合、摘要、路徑。
+全文用 read 看 /work/commons/<路徑>（或這支加 show: id 直接印那一條）。
+查法跟 lib/aos_team_commons.search 一樣（這支在牢裡看不到 lib，抄一份；test_team_commons 比對兩邊結果）。
+"""
+import json
+import os
+import re
+import sys
+
+from _team import arg, fail, only_keys, run
+
+TYPES = ('lesson', 'team', 'workflow', 'tool')
+
+
+def words(text):
+    text = text.lower()
+    return set(re.findall(r'[a-z0-9]+', text)) | set(ch for ch in text if '一' <= ch <= '鿿')
+
+
+def search(entries, query='', tags=(), type_=None, limit=5):
+    want_words = words(query or '')
+    want = {t.lower() for t in tags}
+    out = []
+    for eid, e in entries.items():
+        if not isinstance(e, dict) or (type_ and e.get('type') != type_):
+            continue
+        etags = set(e.get('tags', []))
+        if want and not want <= etags:
+            continue
+        hay = words(' '.join([eid, e.get('title', ''), e.get('fits', ''), e.get('summary', ''), ' '.join(etags)]))
+        score = len(want_words & hay) + 2 * len(want_words & etags) if want_words else 1
+        if want_words and not score:
+            continue
+        out.append((score, eid, e))
+    out.sort(key=lambda x: (-x[0], x[1]))
+    return out[:limit]
+
+
+def main(args, cfg):
+    only_keys(args, ('query', 'tags', 'type', 'limit', 'show'))
+    root = cfg.get('commons')
+    if not isinstance(root, str) or not os.path.isfile(os.path.join(root, 'index.json')):
+        fail('NoCommons', 'the commons folder is not mounted for you (team.json commons: false?)')
+    try:
+        with open(os.path.join(root, 'index.json'), encoding='utf-8') as f:
+            entries = json.load(f).get('entries', {})
+    except (OSError, ValueError, AttributeError) as e:
+        fail('ReadFailed', 'cannot read commons index: %s' % e)
+    show = arg(args, 'show', str)
+    if show is not None:
+        e = entries.get(show)
+        if not isinstance(e, dict):
+            fail('NotFound', 'no entry %r in commons' % show)
+        p = os.path.join(root, e['path'].rstrip('/'))
+        p = os.path.join(p, 'README.md') if os.path.isdir(p) else p
+        with open(p, encoding='utf-8') as f:
+            text = f.read()
+        return text[:12000] + ('\n…(cut; read %s for the rest)' % p if len(text) > 12000 else '')
+    query = arg(args, 'query', str, default='') if (args.get('query') or '').strip() else ''
+    tags = arg(args, 'tags', list, default=[])
+    if not all(isinstance(t, str) for t in tags):
+        fail('BadArguments', 'tags must be strings')
+    type_ = arg(args, 'type', str)
+    if type_ is not None and type_ not in TYPES:
+        fail('BadArguments', 'type must be one of %s' % ', '.join(TYPES))
+    limit = arg(args, 'limit', int, default=5)
+    if not 1 <= limit <= 20:
+        fail('BadArguments', 'limit must be 1..20')
+    hits = search(entries, query, tags, type_, limit)
+    if not hits:
+        return 'no match in commons (%d entries). Try fewer words or no tags.' % len(entries)
+    lines = []
+    for score, eid, e in hits:
+        lines.append('%s [%s] %s\n  fits: %s\n  tags: %s\n  %s\n  full text: /work/commons/%s'
+                     % (eid, e.get('type'), e.get('title'), e.get('fits'), ', '.join(e.get('tags', [])),
+                        e.get('summary', ''), e.get('path')))
+    return '\n'.join(lines)
+
+
+if __name__ == '__main__':
+    sys.exit(run(main))

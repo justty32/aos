@@ -208,5 +208,62 @@
       }
     },
     "_meta": {"argv": ["tools/task/tool_draft"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "commons_search",
+      "description": "Search the shared commons (lessons, team rosters, workflows, tools from all teams). Returns top matches with path; read /work/commons/<path> or pass show=id for full text.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string", "description": "Keywords"},
+          "tags": {"type": "array", "items": {"type": "string"}, "description": "All must match"},
+          "type": {"type": "string", "enum": ["lesson", "team", "workflow", "tool"]},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+          "show": {"type": "string", "description": "Entry id: print its full text instead of searching"}
+        }
+      }
+    },
+    "_meta": {"argv": ["tools/task/commons_search"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "commons_submit",
+      "description": "Share a lesson (or roster/workflow/tool) with all teams via the librarian. Result arrives as mail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": {"type": "string", "enum": ["lesson", "team", "workflow", "tool"]},
+          "title": {"type": "string", "description": "One line"},
+          "tags": {"type": "array", "items": {"type": "string"}, "description": "1-8 short words"},
+          "fits": {"type": "string", "description": "What kind of work this helps with, one line"},
+          "body": {"type": "string", "description": "The content (markdown)"},
+          "files": {"type": "array", "items": {"type": "string"}, "description": "Not for lesson: paths relative to /work/outbox"},
+          "task": {"type": "string", "description": "Source task id, e.g. t-0001"},
+          "slug": {"type": "string", "description": "Short id [a-z0-9-]"}
+        },
+        "required": ["type", "title", "tags", "fits", "body"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/commons_submit"]}
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "commons_verdict",
+      "description": "Librarian only: accept or reject a commons submission the postman asked you to judge.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "submission": {"type": "string", "description": "c-... id from the mail"},
+          "verdict": {"type": "string", "enum": ["accept", "reject"]},
+          "reason": {"type": "string", "description": "One sentence"}
+        },
+        "required": ["submission", "verdict", "reason"]
+      }
+    },
+    "_meta": {"argv": ["tools/task/commons_verdict"]}
   }
 ]

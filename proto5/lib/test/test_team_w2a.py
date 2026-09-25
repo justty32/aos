@@ -215,11 +215,12 @@ class ImporterTemplateTests(unittest.TestCase):
             sizes[name] = m['tools']
         self.assertEqual(sorted(sizes['importer-1']['names']),
                          sorted(['read', 'edit', 'ls', 'wf_doc', 'wf_init', 'wf_fill', 'wf_residue', 'wf_lint',
-                                 'ask_human', 'team_say']))
+                                 'ask_human', 'team_say',
+                                 'commons_search', 'commons_submit']))   # 09-25 commons 預設開：每人多這兩支
         self.assertIn('wf_fill', sizes['worker-1']['names'])          # 一般工人也拿得到 wf_fill
         self.assertLess(sizes['importer-1']['tokens'], sizes['worker-1']['tokens'] * 0.55)
         access = json.loads((lay.member('importer-1') / 'access.json').read_text(encoding='utf-8'))
-        self.assertEqual(set(access['mounts']), {'ws', 'outbox', 'board'})   # 沒 notes：模板沒開
+        self.assertEqual(set(access['mounts']), {'ws', 'outbox', 'board', 'commons'})   # 沒 notes：模板沒開；commons 09-25 預設開
 
 
 if __name__ == '__main__':

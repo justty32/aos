@@ -1,0 +1,15 @@
+{
+  "_metainfo": {"_type": "aos_team_template", "_version": 1},
+  "description": "圖書館員：只判「跟既有條目很像」的 commons 投稿，用 commons_verdict 回入庫／退回＋一句理由；其他全是郵差機械做",
+  "system": "system.md",
+  "team": true,
+  "project": "ro",
+  "may": ["commons_write"],
+  "llm": {"model": "default", "timeout_ms": 125000},
+  "tick": {"interval_ms": 1000},
+  "tools": [
+    {"pack": "task", "only": ["commons_verdict", "commons_search"], "team": true},
+    {"pack": "base", "only": ["read", "ls"]}
+  ],
+  "mounts": {}
+}

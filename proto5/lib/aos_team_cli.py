@@ -29,6 +29,7 @@ COMMANDS = {
     'lock': ('aos_team_lock', 'cmd_lock', 3, 'lock ls／acquire／release：短期獨佔鎖（第二波 C 隊）'),
     'spawn': ('aos_team_spawn', 'cmd_spawn', 3, 'spawn ls／approve q-…：成員申請生的新成員（第三波 W3-1）'),
     'tool': ('aos_team_toolsmith', 'cmd_tool', 3, 'tool ls／approve q-…：成員寫的工具草稿、測試結果、批准安裝（第三波 W3-1）'),
+    'commons': ('aos_team_commons', 'cmd_commons', 3, 'commons ls／show／search／add／rm／reindex／desk：跨團隊公共資料夾（09-25）'),
     'beat': ('aos_team_beat', 'cmd_beat', 2, '心跳走一次（kernel 反覆叫它）'),
     'score': ('aos_team_score', 'cmd_score', 5, '六軸能量的部分自動彙整'),
     'crystal': ('aos_team_crystal', 'cmd_crystal', 3, '固化建議：從 route.log 找常落穿的句型，產候選規則提案給人批（不自動生效）'),
