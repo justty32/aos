@@ -94,6 +94,22 @@ def _print_tests(results):
     return bad
 
 
+def apply_if_missing(rule, groups, req, project):
+    """規則的 if_missing（真跑 09-25）：`path`（專案裡的相對路徑，可用 {群組}）不在或是空資料夾＝
+    單子的 goal／facts 換成 if_missing 寫的（沒寫 facts＝「無草稿、從原文起（<path> 不在或是空的）」）。回有沒有換。"""
+    im = rule.get('if_missing')
+    if not im:
+        return False
+    rel = fill(im['path'], groups)
+    p = Path(project) / rel
+    if p.is_dir() and any(p.iterdir()) or p.is_file():
+        return False
+    if 'goal' in im:
+        req['goal'] = fill(im['goal'], groups)
+    req['facts'] = fill(im['facts'], groups) if 'facts' in im else '無草稿、從原文起（%s 不在或是空的）' % rel
+    return True
+
+
 def fill(value, groups):
     """把字串裡的 {群組名} 換成值（遞迴；名字對不上的原樣留著）。"""
     if isinstance(value, str):
@@ -199,6 +215,7 @@ def ask(team_dir, text):
         return run_pack_tool(lay.root, roster, rule['tool'], rule.get('args'), rule.get('project') == 'rw')
     if result == 'handoff':
         req = dict(fill(rule['handoff'], groups))
+        apply_if_missing(rule, groups, req, project_dir(lay.root, roster))
         req.update(id=new_id(HUMAN), kind='handoff', at=now_iso(roster.get('tz')))
         req['from'] = HUMAN
         validate_request(req, 'routes.json 規則 %s 的 handoff' % rule['name'])

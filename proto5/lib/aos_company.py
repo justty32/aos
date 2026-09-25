@@ -377,6 +377,7 @@ class Switchboard:
                 result, rule, groups, _why = route.decide(first.strip(), neg, routes)
         if result == 'handoff':
             req = dict(route.fill(rule['handoff'], groups))
+            route.apply_if_missing(rule, groups, req, fmt.project_dir(tdir, roster))   # 草稿不在＝單子寫從原文起
             req.update(id=o['out_id'], kind='handoff', at=fmt.now_iso(roster.get('tz')))
             req['from'] = HUMAN
             req['goal'] = '〔總機 %s，%s 交辦〕%s' % (o['id'], self._who(o), req['goal'])
