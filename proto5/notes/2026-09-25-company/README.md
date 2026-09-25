@@ -1,0 +1,90 @@
+← [notes](../README.md)｜樣板：[examples/company](../../examples/company/README.md)｜規格：[company.md](../../spec/team/company.md)、[market.md](../../spec/team/market.md)｜比喻版：[playbook/company.md](../../playbook/company.md)
+
+# 2026-09-25 組織設計：用 aos 團隊蓋一間公司（＋市場層）
+
+董事的話：「就當做是開公司……我要的是**用我們現有的 aos 體系**去建立這個公司架構。」後來追加：公司要能開 N 家互相競爭，經理人照表現撥額度，花光倒閉、剩兩家合併；倒閉的剩餘額度與名額回總池。
+
+## 1. 做了什麼
+
+| 東西 | 在哪 | 一句話 |
+|---|---|---|
+| 公司樣板 | [examples/company/](../../examples/company/README.md) | `company.json`（八個部門、兼任、新創上限 10／20／5、擴張頂 100／200／20）、五個部門的真團隊資料夾（hq、mfg、qa、rd、lib 各一份 `team.json`＋門房）、公司層人格 |
+| 公司程式 | [lib/aos_company.py](../../lib/aos_company.py)、[company.py](../../examples/company/company.py) | `new`（照樣板生一家、成員名加前綴）／`up`／`down`／`status`（正式 N/10、cpu N/20、llm cpu N/5）／`order`／`mail`／`answer`／`relay` |
+| **總機** | 同上 `Switchboard` | 部門之間的往來：成員寄給 human 的信第一行寫 `〔給 mfg〕…` → 開總機單 → 照對方門房開單或寫信給窗口（寄件人 human）→ 回覆照 reply_to／任務單的 request 抄回下單的人。**不叫模型、不改任何團隊規格** |
+| 市場層 | [lib/aos_market.py](../../lib/aos_market.py)、[market.py](../../examples/company/market.py) | `open`／`score`／`rank`／`grant`／`bankrupt`／`close`／`pool`／`slots`／`merge`；帳戶直接用財務部的 `aos_team_cost`（cost.md §6） |
+| 規格 | [spec/team/company.md](../../spec/team/company.md)、[spec/team/market.md](../../spec/team/market.md) | 新檔，既有規格一個字沒改 |
+| 測試 | `lib/test/test_company.py`（22 條）、`test_market.py`（14 條） | 樣板全過驗、開五家不撞名、上限計算、總機行為、假帳本跑排名／撥款／總池／倒閉／合併 |
+| 比喻落地 | [playbook/company.md](../../playbook/company.md) | 每一列補「aos 裡是哪個團隊資料夾／哪個成員」 |
+
+### 設計的幾個決定（我代裁的，攤在這）
+
+1. **跨團隊不開新通道**：現有規格一支團隊只認自己的 outbox，但「寄給 human」（落在 `team/human/`）與「human 寄出」（`outbox/human/`，能寄給任何成員、能開單）兩個口本來就有。總機只是在兩個口之間搬，所以郵差、牆、驗收一行都不用改；從對方部門看，總機交辦的事就是「公司（human）」交辦的。
+2. **一家一個 kernel**：kernel 的池寫死叫 `default`／`llm`，一個 kernel 裡沒辦法按公司分池；一家一個 kernel（共用一個 daemon），池的大小就是這家的 cpu／llm cpu 上限，是**硬上限**（多的工作排隊）。成員名照樣加公司前綴，萬一共用 kernel 也不撞名。
+3. **一律用內建模板＋公司人格**：門房落穿找的是 `template: lead` 的成員；arknights 樣板用自訂模板資料夾 `./templates/lead`，**落穿時找不到領隊**（`NoLead`）。所以公司的經理都用內建 `lead`，專案規矩用 `up` 時 `aos-agent persona append` 接上去（每個家只接一次）。
+4. **正式／臨時記在 `company.json` 的 `staff`**：HR 部的 `employment` 名冊鍵還沒併進 main；沒列的成員照 HR 的預設（spawn 生的＝臨時，其他＝正式）。
+5. **總裁的 SOP**：補人物先派「只寫詞條」（不動索引、計數），製造 DONE 才派品管，品管 DONE 才回報董事；任一步 FAILED 直接報董事、不自己重派。
+6. **開單類的單，負責人自己說的 DONE 不轉**：要等郵差驗收＋審查完寄的那封，總裁才不會在還沒驗過時就叫品管。
+7. **commons 一家一份**（`<公司>/teams/commons/`，各部門團隊的上一層＝圖書館部的預設位置）：競爭的公司不共用經驗。
+
+## 2. 新創編制（正式 7／10、cpu 17／20、llm cpu 5／5）
+
+| 部門 | 團隊 | 正式員工（模型） | 兼任／機械 |
+|---|---|---|---|
+| 總裁辦 hq | `teams/hq` | hq-lead 總裁（gpt-5.5） | 兼業務（門房）、兼 HR 決策 |
+| 製造 mfg | `teams/mfg` | mfg-lead 經理、mfg-writer1 寫手、mfg-reviewer 審查（都 gpt-5.5） | 經理可 spawn worker（臨時工，不用批） |
+| 品管 qa | `teams/qa` | qa-inspector 檢驗員（deepseek-chat） | eval 的評審＝一次性 claude-opus-5（臨時工） |
+| 研發 rd | `teams/rd` | rd-smith 工具匠（gpt-5.5） | — |
+| 圖書館 lib | `teams/lib` | lib-librarian 館員（deepseek-chat） | commons 機械審 |
+| 業務、HR | 併在 hq | — | 門房規則；`status` 數名額 |
+| 財務 | 沒有團隊 | — | 帳本＋帳戶（`AOS_COST_HOME`） |
+
+組織圖全表（掛什麼、收什麼單、交什麼貨、KPI、擴張到 100 長怎樣）在 [examples/company/README.md](../../examples/company/README.md)。
+
+## 3. 真跑（2 次，共約 9 分鐘牆上時間）
+
+環境：`~/tmp/company-run/c1/`（前綴 `c1-`），專案是 `~/tmp/arknights-try` 的 rsync 副本（不帶 `.git`；製造隊同時在 arknights-try 上跑、會 reset，不能共用），帳本 `~/tmp/company-run/cost`。模型全走 LiteLLM `localhost:4000`：gpt-5.5（總裁、製造三人）、deepseek-chat（檢驗員）；沒用到 claude。紀錄：`~/tmp/company-run/c1/runs/run1/`、`run2/`（各部門 score、任務、信、總機單、帳本分組、hops）。
+
+| | 第 1 次：「補人物 老財」 | 第 2 次：「補人物 老木頭」 |
+|---|---|---|
+| 結果 | **FAILED**：製造部兩次審查都沒過（證據列「礦工與司機仍拉著他」原文只有司機），總裁照 SOP 回報董事失敗、沒派品管 | **DONE**：製造一次過（驗收＋審查），品管抽 3 列「結論：合格」，總裁回報董事 |
+| 牆上 | 5 分 12 秒（11:55:41 → 12:00:53） | **3 分 26 秒**（12:02:23 → 12:05:49） |
+| 模型 | 37 次、760,104 token（製造 33 次 740,520；總裁 4 次 19,584） | 34 次、890,254 token（製造 19 次 777,183；品管 8 次 74,163；總裁 7 次 38,908） |
+| 跳數 | 董事→總裁→〔總機〕→製造（寫手 2 輪、審查 2 輪）→〔總機〕→總裁→董事；跨部門 4 封 | 董事→總裁→〔總機〕→製造→〔總機〕→總裁→〔總機〕→品管→〔總機〕→總裁→董事；跨部門 6 封 |
+| 總機單 | o-0001（handoff，failed） | o-0002 製造（2 分 21 秒）、o-0003 品管（21 秒），都 done |
+
+- 總機延遲：每跳 ≤ 5 秒（輪詢間隔）；hops 報告裡時間幾乎都在「等模型」。
+- 第 2 次交件事後用品管的機械工具複查：證據 11／11 列原文對得上，機械 6／7（**詞條有兩處行尾空白，驗收與檢驗員都沒抓**）→ 市場層品質分（無評審）＝92.9。
+- **真跑抓到的 bug**（已修、已加測試）：郵差放進 `team/human/` 的信多一格 `header`，拿 `validate_letter` 驗會整封被當壞信略過——總機第一輪一封都沒處理。修法：驗之前拿掉 `header`。第 1 次跑的第一封是我手動補跑一輪總機才走下去的（o-0001 比信晚 1 分鐘開）。
+
+## 4. 給董事的問題（一題一題）
+
+1. **五家同跑，llm cpu 加總超過機器上限（5×5＝25 ＞ 20）怎麼辦？** 樣板做法：每家 4（`new --llm-cpu 4`，市場層開戶時會擋總數）。另兩個選項：按排名動態分（第一名 6、最後一名 2）；或允許超賣、大家排隊。
+2. **額度換算成每家多少？** 現在的參數：開辦費每家 1 美元＋200 萬 token、每輪總額 2 美元＋400 萬 token。gpt 走訂閱、帳本沒價錢（只記 token），建議 gpt／deepseek 用 token 管、claude 用美元管；總量 `total` 要填多少（claude ≤ 一週額度 10%、gpt 本週剩的、deepseek 約 5 美元）請給數字。
+3. **每輪多長？** 選項：一次 `order`（一個詞條）一輪；固定一批（例如 5 個詞條）一輪；或按時間（每天一輪）。
+4. **排名公式的權重？** 現在品質 0.6、快 0.25、省 0.15；品質門檻 `min_quality` 0（不設）。
+5. **品質分要不要叫評審（claude-opus-5）？** 評審每人約 6 萬 token 的 claude 額度；不叫就只用機械＋證據（本次 92.9）。
+6. **合併規則可以嗎？** 同部門的經理只留併入方的（被併方經理裁掉）；其餘人改名併進同部門，正式名額滿了改臨時工；筆記帶過去、對話紀錄留在封存。另一種：名額滿了直接裁掉，不留臨時工。
+7. **公司之間要不要共用 commons（經驗庫）？** 現在一家一份、不互通（競爭）。
+8. **新創期還剩 3 個正式名額給誰？** 候選：第二個寫手、業務專員（把董事的話翻成製造部句型）、HR 專員（跑 `hr trial` 試降級）。
+9. **總裁遇到 FAILED 要不要自己重派一次？** 現在：直接報董事、不重派（第 1 次就是這樣停的）。
+10. **董事的「補人物 X」預設要不要動索引與計數？** 現在總裁預設派「只寫詞條」（快、不和別的單搶索引）；要動索引得明說。
+11. **跨部門要不要開「直接指定負責人與驗收條件」的開單路？** 現在只能走對方門房的規則（命中才開單，沒命中寫信給窗口），想多一種單就在對方門房加規則。
+12. **倒閉的公司名額回總池後，經理人要自動撥給第一名，還是一律手動？** 現在手動（`market.py slots`）。
+
+## 5. 留下一輪
+
+- **五家真的同跑**：這次只真跑一家；市場層全用假帳本測。要跑就照 [examples/company/README.md〈開幾家〉](../../examples/company/README.md#開幾家市場層)；每家要自己的專案副本。
+- 驗收加行尾空白檢查（製造部的單、品管的驗貨單都漏了）；品管驗貨單改跑整套 `mech_check`。
+- HR 部併進來後：`staff.employment` 改讀名冊的 `employment`；`status` 接 `aos-team hr cap`；擴編規則（積壓 ≥3、品管分 <80）接到總裁的 SOP。
+- `market.py slots` 只改 `company.json`，kernel 開著時不會自己 `aos-kernel cpu add`。
+- `quality_from_eval` 只認 arknights 評分器的格式。
+- 帳本價格表沒有 gpt-5.5、deepseek-chat 的價（只記 token）：財務部的 `prices.json` 要補，美元配額才有意義。
+- 總機只認第一行的〔給 …〕與 reply_to：寫錯格式的信留給董事（`company.py mail` 看得到）。
+- 部門門房「落穿找 `template: lead`」這條，用自訂模板資料夾的領隊會找不到——建議核心改成「模板名或資料夾名是 lead」（要改 route.md，沒動，攤給董事／研發部）。
+
+## 6. 沉澱
+
+- 經驗 → [playbook/lessons.md](../../playbook/lessons.md) 24～27（總裁辦／研發部／HR）。
+- 團隊架構 → [playbook/teams/company-startup.md](../../playbook/teams/company-startup.md)（新創公司：八部門、七個正式員工的編法）。
+- 工作流 → [playbook/workflows/company-order.md](../../playbook/workflows/company-order.md)（董事一句話 → 總裁 → 製造 → 品管 → 回報）、[market-round.md](../../playbook/workflows/market-round.md)（一輪市場：打分 → 排名 → 撥款 → 倒閉 → 合併）。
+- 可複用工具 → [playbook/README.md](../../playbook/README.md) 索引加 `company.py`、`market.py`。
