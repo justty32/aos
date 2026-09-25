@@ -49,7 +49,7 @@
 
 ## 4. 所以呢
 
-這輪直接對到 [OPEN-QUESTIONS 第 2 題](../../../../workshop/OPEN-QUESTIONS.md#2-近期-core-要回撤到哪裡)「近期 core 要回撤到哪裡」。現在仍是三個選項：
+這輪直接對到 [OPEN-QUESTIONS 第 2 題](../../../../workshop/OPEN-QUESTIONS/direction.md#2-近期-core-要回撤到哪裡)「近期 core 要回撤到哪裡」。現在仍是三個選項：
 
 - **只留最小 Deliver**：得到最小的 core；賠掉的是這輪已實際出現的多處通用安全寫檔仍要由各人自備，外部到底做了沒也繼續交給上層或人處理。
 - **先做 Publish、Deliver、Effect 三項**：得到一套共用的寫檔、投遞與外部結果記錄邊界；賠掉的是必須現在就定義命名、碰撞、收據、重開與耐久範圍，而無法查詢的外部服務仍只能留給人判斷。
