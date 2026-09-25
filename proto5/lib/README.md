@@ -91,6 +91,8 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡。第二波 B 隊：`wf_lint_strict` 與新條目 `cmd_ok`（team.json 白名單裡的專案指令）經 aos-jail 關牢、專案唯讀 |
 | [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
 | [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
+| [`aos_company.py`](aos_company.py) | 公司（09-25 組織設計，spec/team/company.md）：`company.json` 讀驗、照樣板生一家（成員名加前綴）、數正式員工與 cpu（`aos-kernel ls --json`）、`up`／`down`、機械總機 `Switchboard`（〔給 部門〕→ 對方門房開單或窗口信，回覆照 reply_to／任務單 request 抄回，先記帳再動作）；指令包裝 `examples/company/company.py` |
+| [`aos_market.py`](aos_market.py) | 市場層（09-25，spec/team/market.md）：幾家公司的排名（品質／快／省加權）、照名次撥額度（`aos_team_cost` 帳戶）、總池（錢與名額）、倒閉／裁撤回收、`slots` 撥名額、兩家合併（經理只留一個、名額滿了改臨時工、notes 帶過去）；指令包裝 `examples/company/market.py` |
 | [`aos_team_cost.py`](aos_team_cost.py) | 財務部（09-25，spec/team/cost.md）：`record()` 掛在 `aos_llm_call.call` 與 `aos_llm_ask.ask`，每次呼叫追加一筆到 `$AOS_COST_HOME/ledger.jsonl`（沒設不記、寫失敗吞掉）；`aos-team cost`（分組表、`budget`、`import` 回填 usage.jsonl）；公司帳戶（`account_open`／`account_grant`／`balances`／`account_of`，花到 0＝倒閉）；郵差 `budget_hold` 與 `ls` 第一行問它超了沒 |
 | [`aos_team_hr.py`](aos_team_hr.py) | （HR 部 09-25，spec/team/hr.md）`aos-team hr`：薪資表／政策讀寫、`hr trial`（複製團隊換模型→跑任務集→`score --json`＋可插評分指令→記 `trials.jsonl`→調薪）、`hr set`（改名冊與家的 `llm.model`、重啟）、正式員工人頭與全公司 cpu 計數（init／start／spawn 的擋點）；HR 自己不叫模型 |
 | [`aos_team_lock.py`](aos_team_lock.py) | `lock` 工具與 `aos-team lock`（第二波 C 隊，spec/team/lock.md）：短期獨佔一個檔或資料夾的名字，申請 `kind: lock`（acquire／release／ls，全部非同步）記在 `team/locks/<名>.json`，逾時自動放 |
@@ -599,6 +601,8 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_lock.py](test/test_team_lock.py) | 第二波 C 隊 `aos_team_lock`（lock.md）：acquire／release／ls、Busy 拒絕、同持有者續租、過期可被搶／可被別人放、冪等、`may_send`、`cmd_lock` |
 | [test_team_spawn.py](test/test_team_spawn.py) | 第三波 W3-1 `aos_team_spawn`（spawn.md）：郵差端 `on_spawn` 每條檢查（模板、人數、`mail_to`、`may` 超權）、冪等；人端 `spawn approve` 生家、改名冊、回覆；工具 `spawn_member` 經真郵差（`may` 擋工人） |
 | [test_team_toolsmith.py](test/test_team_toolsmith.py) | 第三波 W3-1 `aos_team_toolsmith`（toolsmith.md）：郵差端驗草稿、生包、牢裡 `tools test`、開題／退信；人端 `tool approve`（核 sha256、`tools add`）；逃逸測試（讀別人的家、改 staging 換裝的程式、撞既有工具名等），沒有 bwrap 就跳過要真跑的那幾類 |
+| [test_company.py](test/test_company.py) | 公司 `aos_company`：樣板名冊與門房全過驗、開五家不撞名（`--llm-cpu 4` 五家剛好 20）、上限一行與超額、臨時工不算人頭、總機（命中開單、寫手自己的 DONE 不轉、郵差的 DONE 轉回下單人、落穿給窗口、沒寫 reply_to 的配對、退信四種、郵差信裡的〔給〕不理、tool 規則當場回、董事直接下單、崩在記帳與動作之間不重派） |
+| [test_market.py](test/test_market.py) | 市場層 `aos_market`（假帳本）：品質分、總機單算秒數與跳數、排名公式與權重、名次分成與覆寫、只算這輪花的、品質門檻、總池（錢＝總量−已花−手上沒花、名額）、倒閉只收剩的那一種、裁撤全收、撥款被總池縮、撥名額與開戶擋名額、合併計畫與實做 |
 | [test_team_cost.py](test/test_team_cost.py) | 財務部 `aos_team_cost`（cost.md）：記一筆（沒設不記、agent 家推團隊／成員／單號、環境標籤、寫失敗不擋、`ask` 經真 HTTP 假端點）、五種分組、缺價只記 token、改價重算、預算形狀、各家族 since、郵差超預算不派＋寄信一次＋調高後放行、全公司預算照投普通信、`ls` 第一行、回填不重記 |
 | [test_llm_ask.py](test/test_llm_ask.py) | 第三波 W3-2 `aos_llm_ask`：假端點、temperature 0、`parse_json` 各種包法、沒設定／端點掛；`context` 的「上一次問模型」略過 compact 濃縮那一問 |
 | [test_agent_tools_wrapcli.py](test/test_agent_tools_wrapcli.py) | 第三波 W3-2 `tools wrap-cli` 與 wrap-py 描述：fixture（[fixtures/wrapcli/](test/fixtures/wrapcli/)）argparse 靜態讀與拒收、GNU／怪 help 解析、標準答案比分、`run` 組 argv 不經 shell、提案檔只寫不產包、`--spec`／`--describe` 核 sha（假 ask，不打真模型） |

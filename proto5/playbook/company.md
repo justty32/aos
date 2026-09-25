@@ -1,49 +1,39 @@
-# 當作開公司：組織圖
+# 當作開公司：組織圖（已落成 aos 裡跑得起來的東西）
 
-← [playbook README](README.md)
+← [playbook README](README.md)｜真東西：[examples/company/](../examples/company/README.md)｜規格：[company.md](../spec/team/company.md)、[market.md](../spec/team/market.md)｜報告：[2026-09-25-company](../notes/2026-09-25-company/README.md)
 
-使用者的說法：整件事就當做是開公司，業務是產出 narratives（劇透設定集這類東西）。組織設計由總裁（使用者）拍板，這份是**定稿骨架**。現在是「施工期」——公司還在蓋，蓋公司的是 Fable 派的 Claude 隊；蓋好以後是「運轉期」——公司自己開工，開工的是 aos 裡的 agent 團隊、笨模型、確定性程式。**這是打比方幫忙理解分工，不是要另外造一套公司管理程式。**
+董事（使用者）：「就當做是開公司，業務就是產出 narratives……我要的是**用我們現有的 aos 體系去建立這個公司架構**。」
+09-25 起這份不再只是比喻：公司是 [examples/company/](../examples/company/README.md) 這個樣板，`company.py new` 生一家、`up` 開工，每個部門是一支真的 aos 團隊，董事就是 `human`。
+公司分兩層在看：
+
+- **運轉層**（aos 裡）：部門＝團隊資料夾、員工＝名冊成員、部門之間的信＝機械總機。下表「aos 裡是誰」那欄。
+- **施工層**（調度層，aos 外）：蓋這間公司的是 Fable 派的 Claude 隊；經理人（Fable）在市場層照表現撥額度。下表「施工期誰在做」那欄。
 
 ## 總表
 
-| 單位 | 做什麼 | 現在誰在做（施工期） | 目標誰在做（運轉期） | 對應的現有東西 |
-|---|---|---|---|---|
-| 董事會 | 出資、給方向、拍板、抽查 | 使用者本人 | 使用者本人（永遠是人，不會被自動化掉） | `proto5/advice.md`（使用者的方向日記，不在此次改動範圍）、[wf/WAIT_USER.md](../../wf/WAIT_USER.md) |
-| 總裁 | 把董事的話翻成任務書、派隊、合併、匯報 | Fable（調度者）親自做 | aos 裡的團隊自己讀 advice.md 派工，Fable 只監督 | — |
-| 總裁辦公室 | 交接、進度追蹤、雜務清理 | Fable 派的 Sonnet 文件隊 | aos 團隊裡類似郵差兼書記的角色 | [wf/SESSION-LOG.md](../../wf/SESSION-LOG.md)、[wf/WAIT_USER.md](../../wf/WAIT_USER.md)、`brief/` |
-| 業務部 | 接單、交貨、彙整客戶問題 | Fable 派的 Claude 隊依單分派 | `aos-team` 的門房＋領隊 | [spec/team/route.md](../spec/team/route.md)、[spec/team/verify.md](../spec/team/verify.md) |
-| 製造部 | 真正把貨做出來 | Fable 派的強模型 Claude 隊（手工線） | aos 團隊裡笨模型／程式接手（半自動→自動） | [proto5/examples/arknights/](../examples/arknights/) |
-| 品管部 | 檢查貨做得好不好 | Fable 派的 Claude 隊寫評分器、做審查 | `aos-team verify` 驗收員＋評分器自動跑，人只抽查 | 評分器程式 `proto5/examples/arknights/eval/`（[說明](../notes/2026-09-25-arknights/eval/README.md)）、[spec/team/verify.md](../spec/team/verify.md) |
-| 研發部 | 造工具、改流程、改內核 | Fable 派的 Claude 隊 | aos 團隊裡的工人角色（toolsmith） | [proto5/tools/](../tools/README.md)、`aos-agent tools new／wrap-py／wrap-cli`、`spec/kernel/`、`spec/daemon/` |
-| HR | 決定團隊編制、人格、模板、薪資（模型選型） | Fable（調度者）人工決定 | `aos-team spawn`＋`aos-team score` 自動決定 | [spec/team/roster.md](../spec/team/roster.md)、[spec/team/spawn.md](../spec/team/spawn.md)、[templates/](../templates/) |
-| 圖書館 | 全公司共用的知識，不屬於單一產線 | Fable 派的文件隊（像本隊） | aos 層圖書館員團隊自動維護 | 這個 [playbook/](README.md)、`spec/team/commons.md`（施工中，另一隊，還沒併進來） |
-| 財務 | 算 token 花多少錢、每張單成本、額度 | **尚未成立** | 待建 | 無 |
-| 支援單位（資安／總務） | 守牢、擋越權；開機關機、health、壞掉通知人 | Fable 派的審查隊（astra 唯讀審查）＋內建牆機制 | `aos-team` 門房牆與心跳自動運作 | [spec/team/wall.md](../spec/team/wall.md)、`aos up`／`aos down` |
+| 單位 | aos 裡是誰（樣板名；開幾家時加前綴 `c1-`…） | 做什麼 | 施工期誰在做 | 對應的東西 | 狀態 |
+|---|---|---|---|---|---|
+| 董事會 | `human`：`company.py order／mail／answer`；各部門的 `team/human/` 收件匣 | 出資、下單、拍板、抽查 | 使用者本人 | [ask.md](../spec/team/ask.md)、`proto5/advice.md`（方向日記，不動） | 有（永遠是人） |
+| 總裁 | 總裁辦 `teams/hq` 的領隊 `hq-lead`（lead 模板＋[總裁人格](../examples/company/persona/hq-lead.md)，gpt-5.5） | 董事的一句話翻成〔給 部門〕單、追到結案、回報董事 | Fable（調度者） | [company.md §3 總機](../spec/team/company.md) | 有（09-25 真跑 2 次） |
+| 總裁辦 | `teams/hq`（只有總裁一人） | 接董事的單（門房 `routes.json`）、兼業務、兼 HR 決策 | Sonnet 文件隊（SESSION-LOG／WAIT_USER） | [route.md](../spec/team/route.md) | 有 |
+| 業務部 | 併在 hq：hq 的門房（機械）＋總裁兼判斷 | 接單、把客戶的話翻成製造部認得的句型 | Fable 派隊 | route.md、[crystal.md](../spec/team/crystal.md) | 兼任 |
+| 製造部 | `teams/mfg`：`mfg-lead`（經理，拆批次）、`mfg-writer1`（寫手）、`mfg-reviewer`（審查）；忙時經理 spawn 臨時工 | 補人物詞條：門房「補人物 X（只寫詞條）」直接開單給寫手，驗收＋審查過才交件 | 強模型 Claude 隊（手工線） | [examples/arknights](../examples/arknights/README.md)、[tasks.md](../spec/team/tasks.md)、[verify.md](../spec/team/verify.md) | 有 |
+| 品管部 | `teams/qa`：`qa-inspector`（deepseek-chat）；評審＝`eval.sh` 裡一次性的 claude-opus-5 呼叫（臨時工） | 門房「驗貨 X」→ 抽 3 列證據回原文核對、寫 `qa-reports/X.md`；批次跑 eval 給市場排名 | Claude 隊寫評分器 | `examples/arknights/eval/`、[score-new-entries](workflows/score-new-entries.md) | 有 |
+| 研發部 | `teams/rd`：`rd-smith`（工具匠，`tool_draft`） | 造工具、改流程；人批才裝 | Claude 隊 | [toolsmith.md](../spec/team/toolsmith.md)、[tools/](../tools/README.md) | 有 |
+| HR | 併在 hq：`company.py status` 數人頭與 cpu、`up` 前擋；`spawn`／`score`；決策總裁兼、名冊董事改 | 編制、名額、考核、薪資（模型選型） | Fable 人工 | [spawn.md](../spec/team/spawn.md)、[score.md](../spec/team/score.md)、HR 部 `hr.md`（施工中） | 兼任＋機械 |
+| 圖書館 | `teams/lib`：`lib-librarian`（librarian 模板，deepseek-chat）；這家的 commons 在 `teams/commons/` | 收各部門投稿，機械審，像舊條目才叫館員判 | 文件隊（本 playbook） | [commons.md](../spec/team/commons.md)、[examples/commons](../examples/commons/README.md) | 有 |
+| 財務部 | 沒有模型員工：帳本 `$AOS_COST_HOME`（`up` 傳進兩個池）＋公司帳戶 | 每部門／每單 token 與美元、預算、帳戶餘額 | 財務隊寫程式 | [cost.md](../spec/team/cost.md) | 純機械 |
+| 總機（跨部門往來） | `company.py relay`（kernel 每 5 秒叫一次） | 〔給 部門〕的信 → 對方門房開單或窗口信；回覆照 reply_to 抄回 | — | [company.md §3](../spec/team/company.md) | 有 |
+| 總務／資安 | 一家一個 kernel（池＝cpu 上限）、牆（bwrap）、郵差再驗 | 開機關機、名額硬上限、擋越權 | 審查隊＋內建機制 | [wall.md](../spec/team/wall.md) | 有 |
+| 經理人（市場層） | aos 外：Fable 用 `market.py` | 幾家公司競爭：排名、撥額度、倒閉、合併 | Fable | [market.md](../spec/team/market.md) | 有（假帳本測過，沒五家真跑） |
 
-## 各單位
-
-**董事會**——使用者一人，出資人。給方向（`proto5/advice.md`，使用者自己維護的方向日記，這次不動它）、拍板（[wf/WAIT_USER.md](../../wf/WAIT_USER.md)）、抽查（每段挑 3 個詞條看，不用每條都看）、出錢（token 額度）。日常只看 `brief/` 日記，這就是**董事會簡報**——不用讀完整交接書。
-
-**總裁**——Fable（調度者）。把董事的話翻成任務書、派隊給 Opus／Sonnet／gpt-6-astra、合併分支、跟董事匯報，**不親手做事**（頂層不要做太多事）。目標是總裁自己也變成 aos 裡的一個團隊：讀 `advice.md` 自己派工，Fable 到那時候只剩監督。
-
-**總裁辦公室**——交接書 [wf/SESSION-LOG.md](../../wf/SESSION-LOG.md)、[wf/WAIT_USER.md](../../wf/WAIT_USER.md)、`brief/` 日記、worktree 清理，這些瑣事現在派 Sonnet 文件隊做（像本隊）。
-
-**業務部**——面對客戶（使用者本人，只有一個）接單、交貨。接單＝`aos-team ask "一句話"`（門房整句句型比對，命中直接做，沒命中落穿給領隊）；交貨＝通過 `aos-team verify` 驗收的產出；客戶的問題彙整成一批一起問（而不是零星打斷），對應到用 AskUserQuestion 這類方式一次收斂。
-
-**製造部**——一條產品線配一個 aos 團隊（領隊／寫手／審查員／驗收員）。第一條產線是 arknights（[proto5/examples/arknights/](../examples/arknights/)）。產線分三級：**手工**（強模型，現在這級）→**半自動**（笨模型）→**自動**（確定性程式），往下一級走不走，看品管部打的分數決定，不是憑感覺。
-
-**品管部**——獨立於製造部，不能球員兼裁判。現有：評分器程式 `proto5/examples/arknights/eval/`（[說明](../notes/2026-09-25-arknights/eval/README.md)，機械檢查、證據行號檢查、評審、量測四道關）、驗收規則 [spec/team/verify.md](../spec/team/verify.md)、使用者自己的抽查制度。**鐵律：評審一律用別家模型**（不能自己評自己的作業），且評審要校準過（造壞版本測試抓不抓得到）。
-
-**研發部**——三組：工具坊（`aos-agent tools new／wrap-py／wrap-cli`、toolsmith 造工具草稿）、流程組（單子與 `done_when` 樣板、門房路由規則）、內核組（daemon／kernel／tick-gap 這些排程底層）。造出來的工具、改完的流程都是研發部的產出。
-
-**HR**——名冊 `team.json`（[spec/team/roster.md](../spec/team/roster.md)）、人格模板（[templates/](../templates/) 的 `lead`／`worker`／`reviewer`／`coder`／`importer`）、生工人 `aos-team spawn`、六軸考核（`aos-team score`）。**薪資表**＝「哪個位置最低能用哪顆模型」（`llm.json` 代號），**降級實驗**（強模型換笨模型看分數會不會掉）就是 HR 在幫每個職缺調薪。
-
-**圖書館**——全公司共用、不屬於單一產線的知識放這裡。兩塊：aos 層的 commons（另一隊正在做 `spec/team/commons.md`，還沒併進 main，等它進來再補連結）＋ 這個 [playbook/](README.md)。每隊收尾的「沉澱」四樣（經驗、團隊架構、工作流架構、可複用工具）都交這裡。
-
-**財務**——**尚未成立**。算 token 花多少錢、每張單成本、額度控管，目前完全沒有對應程式，列為下一段要建的部門。
-
-**支援單位**——資安：門房、牆（[spec/team/wall.md](../spec/team/wall.md)）、`cmd_ok` 白名單、逃逸測試，擋越權操作。總務：`aos up`／`aos down` 開機關機、`health` 狀態、`--on-bad` 壞掉通知人。
+**員工兩種**：正式員工＝名冊裡有家、`notes: true`、記憶留著（算人頭，新創 ≤10）；臨時工＝spawn 生的、一次性模型呼叫、機械程式（不算人頭，但跑起來佔 cpu）。`company.json` 的 `staff` 寫誰是哪種、兼哪些角色。
 
 ## 公司節奏
 
-一段＝一季：**接單 → 製造 → 品管打分 → 沉澱進圖書館 → HR 調薪（試降級）→ 董事會簡報**。董事每季只看 3 個詞條抽查、拍幾個要他決定的題目，不用逐條盯著看。
+一段＝一季：董事 `order` → 總裁派〔給 mfg〕→ 製造 → 總裁派〔給 qa〕→ 品管 → 總裁回報董事；季末經理人 `market.py score／rank／grant`（品質、快、省），花光的倒閉、剩兩家合併；每隊收尾沉澱進 playbook（施工層）與 commons（運轉層）。
+例行的（每週數一次積壓、每季跑一次 eval）用心跳 routines 派給對應部門，不用人記得。
+
+## 新創 → 擴張
+
+新創：正式 7 人（總裁、製造 3、品管 1、研發 1、館員 1）、cpu 17（default 12＋llm 5）。擴張到頂（正式 100、cpu 200、llm cpu 20）每部門長成什麼樣，見 [examples/company/README.md〈擴張到 100 時〉](../examples/company/README.md#擴張到-100-人時長什麼樣)。

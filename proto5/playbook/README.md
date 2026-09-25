@@ -9,7 +9,8 @@
 | 經驗 | [lessons.md](lessons.md) | 一條一段的教訓：做過才知道的規則、踩過的坑、下次怎麼做 |
 | 團隊組織架構 | [teams/](teams/README.md) | 可重複套用的團隊編制（名冊模板、角色分工、誰管誰） |
 | 工作流架構 | [workflows/](workflows/README.md) | 可重複套用的做事流程（強模型→找重複→換笨模型→換程式 這種降級路線、階段拆法） |
-| 可複用工具 | [`proto5/tools/`](../tools/README.md) | 這裡不重放工具本體，工具包已經有自己的家；本檔只負責在下面索引表提一句「這個工具從哪隊長出來、適合什麼活」 |
+| 可複用工具 | [`company.py`](../examples/company/company.py)、[`market.py`](../examples/company/market.py) | 可複用工具：幾支團隊合成一間公司（機械總機搬跨團隊的信、數名額）；幾家公司競爭（排名撥額度、總池、倒閉、合併）。適合「多支團隊要協作」「同一種活比幾組誰好」 | [notes/2026-09-25-company](../notes/2026-09-25-company/README.md) |
+| [`proto5/tools/`](../tools/README.md) | 這裡不重放工具本體，工具包已經有自己的家；本檔只負責在下面索引表提一句「這個工具從哪隊長出來、適合什麼活」 |
 
 整件事也可以當做開一間公司在看：業務、製造、品管、研發、HR、圖書館、財務……各部門做什麼、現在對應 proto5 哪些東西、缺什麼，見 [company.md](company.md)。`lessons.md` 每條標的「部門」就是照這份的部門名。
 
@@ -29,7 +30,7 @@
 
 | 名字 | 一句話 | 來源報告 |
 |---|---|---|
-| [company.md](company.md) | 當作開公司看：董事會／總裁／業務部／製造部／品管部／研發部／HR／圖書館／財務等單位對照表 | 使用者拍板的組織骨架，2026-09-25 |
+| [company.md](company.md) | 當作開公司看：每個單位對到 aos 裡哪個團隊資料夾、哪個成員（真東西在 [examples/company/](../examples/company/README.md)） | 使用者拍板的組織骨架；09-25 組織設計落成 aos 團隊 |
 | [lessons.md](lessons.md) | 11 條今天先填的經驗，照部門分組（評分器規則、模型造工具的取捨、排程瓶頸會轉移…） | 見各條內的來源連結 |
 | [teams/](teams/README.md) | 團隊組織架構索引（arknights 隊已放強模型版團隊設定 `teams/arknights-strong.json`：有原文可查的資料整理隊，領隊 1、寫手 2、審查員 1，全用強模型） | arknights 第 2 段收尾，2026-09-25 |
 | [workflows/](workflows/README.md) | 工作流架構索引（arknights 隊已放 `workflows/lore-entry.md`：一個條目一張單的產線降級路線筆記） | arknights 第 2 段收尾，2026-09-25 |
