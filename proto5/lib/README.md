@@ -98,7 +98,9 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_format_letter.py`](aos_team_format_letter.py) | 信、申請、任務單與問題的讀驗：信、`done_when`、各 kind 申請欄位、outbox 檔、信頭與投遞去重、下一個編號 |
 | [`aos_team_format_template.py`](aos_team_format_template.py) | 模板與門房規則：內建模板、模板 may 與 spawn 政策、誰能寄給誰、`template.json` 與 `routes.json` 讀驗 |
 | [`aos_team_requests.py`](aos_team_requests.py) | 申請登記表：`kind → 處理函式`，郵差讀到 outbox 裡帶 `kind` 的檔就叫 `handle()`；別隊新增 kind 在這裡加一行 |
-| [`aos_team_task.py`](aos_team_task.py) | 任務單（交接書）與狀態機：只有郵差寫，處理函式改單子並回「後續動作」清單；同一 `src` 重跑冪等 |
+| [`aos_team_task.py`](aos_team_task.py) | 任務單（交接書）與狀態機：只有郵差寫，處理函式改單子並回「後續動作」清單；同一 `src` 重跑冪等。這支留各 kind 的處理函式（開單、取消／改派、審查、信件對單子、期限） |
+| [`aos_team_task_base.py`](aos_team_task_base.py) | 任務單的底：常數、讀寫與列單、單子的文字（派工信、審查信、驗收結果）與信件效果 |
+| [`aos_team_task_machine.py`](aos_team_task_machine.py) | 任務單的狀態機：`apply` 照事件改單子並回後續動作、重試、`step` 讀單→apply→寫回 |
 | [`aos_team_ask.py`](aos_team_ask.py) | 問人：成員 `ask_human` 寄 `kind=ask` 建問題檔，人用 `aos-team answer` 把答案投回發問者 |
 | [`aos_team_cli.py`](aos_team_cli.py) | `aos-team` 的分派表：子命令 →（模組、函式、哪一隊做、一句話），還沒做的印「還沒做（第 N 隊）」退 1 |
 | [`aos_team.py`](aos_team.py) | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
