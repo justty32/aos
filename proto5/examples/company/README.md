@@ -44,7 +44,7 @@
 | `teams/<部門>/team.json`、`routes.json` | 每個部門的名冊與門房規則（樣板：成員名不帶公司前綴，`new --prefix` 才加） |
 | `persona/*.md` | 公司層人格，`up` 時接在內建模板人格後面：`_company.md`（每人都有：怎麼寫〔給 部門〕）、`hq-lead.md`（總裁的 SOP）、`mfg-writer1.md`／`mfg-reviewer.md`（抄自 arknights 的專案規矩）… |
 | `llm.json` | LiteLLM `localhost:4000` 的模型代號（只走這個端點） |
-| [company.py](company.py) | `new／up／down／status／order／mail／answer／relay`（本體 `lib/aos_company.py`） |
+| [company.py](company.py) | `new／up／down／status／order／mail／answer／relay／hr`（本體 `lib/aos_company.py`） |
 
 成員一律用**內建模板**（`lead`／`worker`／`reviewer`）＋公司人格：門房落穿找的是 `template: lead` 的成員，自訂模板的領隊接不到落穿（arknights 樣板踩到的坑，見報告）。
 
@@ -62,6 +62,7 @@ export AOS_COST_HOME=~/tmp/company-run/cost          # 可省；設了帳就記�
 python3 company.py up     -C ~/tmp/company-run/c1
 python3 company.py order  -C ~/tmp/company-run/c1 "補人物 老財"
 python3 company.py status -C ~/tmp/company-run/c1     # 正式 7/10、cpu 12/20、llm cpu 5/5＋各部門單子＋總機單
+python3 company.py hr cap -C ~/tmp/company-run/c1     # HR 的名額（自動帶這家的 AOS_KERNEL_HOME／AOS_HR_HOME）
 python3 company.py mail   -C ~/tmp/company-run/c1     # 董事收件匣
 python3 company.py down   -C ~/tmp/company-run/c1
 ```
@@ -75,6 +76,10 @@ python3 company.py down   -C ~/tmp/company-run/c1
 **怎麼知道單做完了**：董事收件匣（`mail`）出現**總裁**（`c1-hq-lead`）寄的 DONE／FAILED 才算結案。中途可能短暫看到某個部門寄給 human 的內部回覆（總機每 5 秒一輪，還沒搬走），幾秒後就不見了，不是總機壞了。`status` 的總機單全部 `done` 也是一個訊號。
 
 **成本**：試玩 09-25 全用 deepseek-chat 跑一張「補人物 老財」＝126 次模型呼叫、**451 萬 token**、約 6 分鐘（gpt-5.5 是 34 次、89 萬 token）。開幾家同跑前先估一下帳；市場層的開辦費預設是 2500 萬 token（約 5 張單）。
+
+**直接跑 `aos-team hr cap` 要帶這家的 kernel**：`AOS_KERNEL_HOME=~/tmp/company-run/c1/K AOS_HR_HOME=~/tmp/company-run/c1/K/hr aos-team hr cap`，不帶會說找不到 HR 家（真跑 09-25）。`status` 最後一行會印出這兩個值；`company.py hr cap` 自動帶。
+
+**草稿不在也能下「補人物」**：製造部門房看 `aos-drafts/X/`，不在或是空的，單子就寫「無草稿、從原文起」，總裁的結案信不會說「依草稿」（規則的 `if_missing`，[route.md](../../spec/team/route.md)）。
 
 **daemon 在哪**：`<公司>/D/`（company.json 的 `daemon`，預設 `D`；董事 09-25：一家一個 daemon＋kernel）。`down` 會把自家的 kernel 與 daemon 一起關，印「總機撤了」和 daemon 停了沒；之後 `status` 印 `kernel stopped（…）`。
 
@@ -101,7 +106,8 @@ cpu 的算法不變：一家一個 kernel，`pools` 開多少顆就是多少（�
 `new` 帶不同前綴就能在同一台機器開好幾家（`c1-hq-lead`…`c5-hq-lead` 不撞名），每家自己一個資料夾、自己的 kernel、自己的上限、自己的 commons（`<公司>/teams/commons/`，**各家不互通**——競爭對手不共用經驗；要共用就在名冊寫 `"commons": {"dir": "~/tmp/company-run/commons"}`，這題留給董事）。
 
 - **五家同跑時每家 llm cpu 最多 4**（5×4＝20 是整台機器的頂）：`new --llm-cpu 4`。上限可調，市場層開戶時會擋總數。
-- 經理人（Fable，aos 外）用 [market.py](market.py)：`open`（開戶＋開辦費）→ 每輪 `score`（品質）→ `rank`（品質 0.6、快 0.25、省 0.15 加權）→ `grant`（照名次分這一輪的總額，可覆寫）→ `bankrupt`（花光倒閉）→ 剩兩家 `merge`。
+- 經理人（Fable，aos 外）用 [market.py](market.py)：`open`（開戶＋開辦費）→ 每輪 `score`（品質）→ `rank`（品質 0.6、快 0.25、省 0.15 加權）→ `bankrupt`（花光倒閉）→ `grant`（照名次分這一輪的總額，可覆寫）→ 剩兩家 `merge`。
+- **這輪沒有成功結案的拿 0**：成功＝品管判合格、總裁寄了結案信（`score` 自己從董事的單與結案信數；「快」就是董事等了幾秒）。這輪一家都沒 `score`，`grant` 拒絕（「本輪無分數」），不會多發一輪；同分的均分。
 - **總池**：錢＝董事給的總量 − 各家已花 − 各家手上沒花的配額；名額＝機器上限 − 各家上限。倒閉／裁撤時沒花完的配額與它的名額全部回總池，經理人再撥（`grant`／`slots`）。只是歸零倒閉的，收回的通常只有名額。
 - 規則與參數：[spec/team/market.md](../../spec/team/market.md)。
 
@@ -122,10 +128,10 @@ for i in 1 2 3; do
   python3 company.py new ~/tmp/market-demo/m$i --prefix m$i- --llm-cpu 4
   python3 market.py open m$i ~/tmp/market-demo/m$i
 done
-python3 market.py score m1 --quality 85 --seconds 300     # 這一輪的表現（grant 之後要重記）
-python3 market.py score m2 --quality 70 --seconds 200
-python3 market.py score m3 --quality 40 --seconds 600
-python3 market.py rank                                    # 品質 0.6、快 0.25、省 0.15
+python3 market.py score m1 --quality 85 --seconds 300     # 這一輪的表現（grant 之後要重記）；假資料沒有真的單，
+python3 market.py score m2 --quality 70 --seconds 200     #   給 --seconds＝經理人認定這家成功結案一張
+python3 market.py score m3 --quality 40 --done 0          # 做壞的：品質、快、省都算 0，撥 0
+python3 market.py rank                                    # 品質 0.6、快 0.25、省 0.15（只在成功的幾家之間比）
 python3 market.py bankrupt --dry-run                      # 先看有沒有花光的（有就先 bankrupt，再 grant）
 python3 market.py grant --dry-run && python3 market.py grant
 python3 market.py close m3 --dry-run && python3 market.py close m3    # 經理人裁撤一家：剩的收回總池
