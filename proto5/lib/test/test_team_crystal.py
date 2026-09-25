@@ -575,6 +575,35 @@ class LlmTests(Base):
         self.assertIn('不是 JSON', res['llm']['error'])
         self.assertIn('讀不懂', crystal.render(res))
 
+    def test_words_and_fence_ok(self):
+        # 09-25 收尾 S4：前後多字＋``` 圍欄照樣讀得懂
+        self.three_renames()
+        text = '好的，我歸納出一條：\n```json\n%s\n```\n以上。' % json.dumps({'routes': [GOOD]}, ensure_ascii=False)
+        res, _ = self.run_llm(None, text=text)
+        self.assertEqual([c['rule']['name'] for c in res['candidates']], ['llm-rename'])
+
+    def test_duplicate_key_reported(self):
+        # 外層 routes 出現兩次：整份不收（不撿裡面那一條），印讀不懂、退 0
+        self.three_renames()
+        text = '{"routes": [%s], "routes": []}' % json.dumps(GOOD, ensure_ascii=False)
+        res, _ = self.run_llm(None, text=text)
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('出現兩次', res['llm']['error'])
+        self.assertIn('讀不懂', crystal.render(res))
+
+    def test_rules_missing_fields_dropped(self):
+        # 少 pattern、少 handoff、handoff 不是物件、routes 不是陣列：逐條丟，不炸
+        self.three_renames()
+        no_pattern = {k: v for k, v in GOOD.items() if k != 'pattern'}
+        no_handoff = {k: v for k, v in GOOD.items() if k != 'handoff'}
+        str_handoff = dict(GOOD, name='strh', handoff='worker-1')
+        res, _ = self.run_llm([no_pattern, no_handoff, str_handoff, {}])
+        self.assertEqual(res['candidates'], [])
+        self.assertEqual(len(res['dropped']), 4)
+        res, _ = self.run_llm(None, text='{"routes": {"name": "x"}}')
+        self.assertEqual(res['candidates'], [])
+        self.assertIn('routes 陣列', res['llm']['error'])
+
 
 if __name__ == '__main__':
     unittest.main()

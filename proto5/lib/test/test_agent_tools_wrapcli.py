@@ -725,6 +725,85 @@ class DescribeTests(Temp):
         self.assertIn('提案裡的 proc2 這次沒包', r.stdout)
 
 
+# ------------------------------------------------------------------ 09-25 收尾 S4：模型原文走一遍 parse_json ----
+
+def text_ask(text, calls=None):
+    """跟 fake_ask 一樣，但回的是模型的「原文」，照正式路徑交給 aos_llm_ask.parse_json。"""
+    import aos_llm_ask
+
+    def ask(system, user, alias=None):
+        if calls is not None:
+            calls.append(user)
+        got = {'text': text, 'usage': {'prompt_tokens': 10, 'completion_tokens': 5, 'total_tokens': 15}, 'ms': 7,
+               'alias': 'default', 'model': 'fake'}
+        return aos_llm_ask.parse_json(text), got
+    return ask
+
+
+class BrokenReplyTests(Temp):
+    def wrapcli(self, text):
+        return self.quiet(w.wrap_cli, str(FIX / 'echoargs.py'), name='dd', help_file=str(FIX / 'weird_free.txt'),
+                          describe_with_llm=True, ask=text_ask(text))
+
+    def describe(self, text):
+        return self.quiet(dev.describe_with_llm, str(OPAQUE), name='opq', ask=text_ask(text))
+
+    def assert_bad(self, fn, text, left):
+        with self.assertRaises(AgentError) as cm:
+            fn(text)
+        self.assertEqual(cm.exception.code, 'BadModelOutput')
+        self.assertFalse((self.d / left).exists())
+
+    def test_wrapcli_words_and_fence_ok(self):
+        text = '好的，這是參數表：\n```json\n%s\n```\n有問題再說。' % json.dumps(FREE_REPLY)
+        code, _ = self.wrapcli(text)
+        self.assertEqual(code, 0)
+        prop = json.loads((self.d / 'dd.wrapcli.json').read_text())
+        self.assertEqual([p['name'] for p in prop['params']], ['file', 'keep', 'zero'])
+
+    def test_wrapcli_broken_replies(self):
+        for text in ['我看不懂這份 help', '{"params": [{"name": "a"', '{"description": "x"}', '"params"',
+                     '{"params": [], "params": [{"name": "zero"}]}', '{"params": NaN}']:
+            with self.subTest(text=text):
+                self.assert_bad(self.wrapcli, text, 'dd.wrapcli.json')
+
+    def test_wrapcli_params_not_list(self):
+        # params 不是陣列、格子不是物件、格子少欄位：一格一格丟，不炸
+        code, out = self.wrapcli('{"params": {"name": "zero"}}')
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads((self.d / 'dd.wrapcli.json').read_text())['params'], [])
+        self.assertIn('params 要是陣列', out)
+        (self.d / 'dd.wrapcli.json').unlink()
+        code, out = self.wrapcli('{"params": ["zero", {}, {"name": "zero"}, {"flags": ["--zero"]}]}')
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads((self.d / 'dd.wrapcli.json').read_text())['params'], [])
+        self.assertIn('第 1 格（不是物件）', out)
+
+    def test_describe_words_and_fence_ok(self):
+        code, out = self.describe('以下是描述：\n```json\n%s\n```' % json.dumps(OPAQUE_REPLY))
+        self.assertEqual(code, 0)
+        self.assertEqual(sorted(json.loads((self.d / 'opq.describe.json').read_text())['functions']),
+                         ['proc', 'proc2'])
+
+    def test_describe_broken_replies(self):
+        for text in ['沒辦法', '{"proc": {"description": "a"}, "proc": {}}', '{"proc": {"description": "a"',
+                     '3.14']:
+            with self.subTest(text=text):
+                self.assert_bad(self.describe, text, 'opq.describe.json')
+
+    def test_describe_missing_fields(self):
+        # 形狀不對的：整份或逐條丟，提案檔照寫（空的也寫，人看得到為什麼）
+        cases = {'[1, 2]': '（整份）', '{"proc": "count lines"}': 'proc',
+                 '{"proc": {"params": ["path"]}}': 'proc', '{"proc": {"description": 7}}': 'proc'}
+        for text, item in cases.items():
+            with self.subTest(text=text):
+                code, out = self.describe(text)
+                self.assertEqual(code, 0)
+                prop = json.loads((self.d / 'opq.describe.json').read_text())
+                self.assertIn(item, [d['item'] for d in prop['dropped']])
+                (self.d / 'opq.describe.json').unlink()
+
+
 # ------------------------------------------------------------------ astra 審查（M1、M7、M8、M9、S1、S5） ----
 
 ITEMS_SRC = ('import argparse, json\np = argparse.ArgumentParser()\n'

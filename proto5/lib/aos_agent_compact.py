@@ -501,10 +501,20 @@ def check_summary(body, text):
 
 
 def _clean(text):
-    """去掉模型常加的 ``` 圍欄與前後空行。"""
+    """去掉模型常加的 ``` 圍欄與前後空行。
+    整段只有一個圍欄、圍欄外只剩一兩句客套話（「好的，以下是摘要：」，各 ≤ 1 行、合計 ≤ 80 字）＝只取圍欄裡的；
+    開了 ``` 沒收尾＝去掉第一行（S4）。圍欄外字多（摘要裡夾一段程式碼）或兩個以上圍欄不猜，原樣交給 check_summary。"""
     text = (text or '').strip()
-    fence = re.fullmatch(r'```[A-Za-z]*\n(.*?)\n?```', text, re.S)
-    return (fence.group(1) if fence else text).strip()
+    rx = re.compile(r'```[A-Za-z]*[ \t]*\r?\n(.*?)\r?\n?[ \t]*```', re.S)
+    fences = list(rx.finditer(text))
+    if len(fences) == 1:
+        before, after = text[:fences[0].start()].strip(), text[fences[0].end():].strip()
+        if '\n' not in before and '\n' not in after and len(before) + len(after) <= 80:
+            return fences[0].group(1).strip()
+        return text
+    if not fences and text.startswith('```'):
+        return (text.split('\n', 1)[1] if '\n' in text else '').strip()
+    return text
 
 
 def check_model(env, alias):

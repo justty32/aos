@@ -17,6 +17,7 @@ aos-agent tools wrap-py  FILE.py [既有選項] [--describe-with-llm [--model AL
 - 人看過（可以改）→ 用 `--spec`／`--describe` 產包，這一步**不叫模型**。提案檔記原文的 sha256，對不上就拒。人給的提案要整份過機械檢查，有一條不過就整個拒（不像模型那次只丟那格）。
 - `--model` 只跟 `--describe-with-llm`；`--describe-with-llm` 不跟 `--spec`／`--describe` 一起給（都是用法錯）。
 - 模型那一步的錯：沒設 `AOS_LLM_CONFIG`＝`ConfigInvalid`，端點錯＝`EngineFailed`／`Timeout`，回的不是 JSON 或沒 `params`＝`BadModelOutput`；這些都不寫提案檔。
+- 怎麼從回話抽 JSON（`aos_llm_ask.parse_json`，09-25 收尾 S4）：前後多的話、``` 圍欄（大小寫、沒收尾的也行）都容忍；只收物件或陣列，純量（數字、一句字串）、同一物件重複 key、`NaN`／`Infinity` 一律 `BadModelOutput`——重複 key 與 NaN 是整份不收，不往裡面找別段。欄位少了、型別錯了不算這一步的錯，照下面的機械檢查逐格或逐條丟。
 
 ## `tools wrap-py FILE.py --describe-with-llm`／`--describe FILE`
 
