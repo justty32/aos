@@ -134,7 +134,10 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_cost_ledger.py`](aos_team_cost_ledger.py) | 財務部的帳本：帳本家、價格表與模型家族、`record` 記一筆、讀帳與篩選、分組加總、`import` 回填 |
 | [`aos_team_cost_account.py`](aos_team_cost_account.py) | 財務部的公司帳戶：開戶、撥款、轉帳、餘額（花到 0＝倒閉）、團隊資料夾屬於哪個帳戶 |
 | [`aos_team_cost_budget.py`](aos_team_cost_budget.py) | 財務部的預算與名額：`budget.json` 讀驗、用量對預算、超了沒（退件理由、`ls` 第一行）、cpu 名額那行 |
-| [`aos_team_hr.py`](aos_team_hr.py) | （HR 部 09-25，spec/team/hr.md）`aos-team hr`：薪資表／政策讀寫、`hr trial`（複製團隊換模型→跑任務集→`score --json`＋可插評分指令→記 `trials.jsonl`→調薪）、`hr set`（改名冊與家的 `llm.model`、重啟）、正式員工人頭與全公司 cpu 計數（init／start／spawn 的擋點）；HR 自己不叫模型 |
+| [`aos_team_hr.py`](aos_team_hr.py) | （HR 部 09-25，spec/team/hr.md）`aos-team hr`：薪資表／政策讀寫、`hr trial`（複製團隊換模型→跑任務集→`score --json`＋可插評分指令→記 `trials.jsonl`→調薪）、`hr set`（改名冊與家的 `llm.model`、重啟）、正式員工人頭與全公司 cpu 計數（init／start／spawn 的擋點）；HR 自己不叫模型。這支留 `trial`、列試用紀錄與命令列 |
+| [`aos_team_hr_book.py`](aos_team_hr_book.py) | HR 家：等級與規模常數、預設政策、家與鎖、`policy.json`、薪資表、試用紀錄 `trials.jsonl` |
+| [`aos_team_hr_count.py`](aos_team_hr_count.py) | HR 的人頭與名額：成員用哪個模型、登記團隊、正式員工人頭與上限、全公司 cpu 計數與上限、擴張理由 |
+| [`aos_team_hr_members.py`](aos_team_hr_members.py) | `aos-team hr ls／set`：列成員的模型、等級與薪資；改名冊與家的 `llm.model`／正式與否並重啟 |
 | [`aos_team_commons.py`](aos_team_commons.py) | 跨團隊公共資料夾 commons（09-25，spec/team/commons.md）：成員投稿經自己團隊的郵差送進 `commons/inbox/`，圖書館員團隊的郵差機械審、像既有條目才叫模型判，入庫寫條目與索引；不叫模型。這支留匯入 playbook（`playbook_items`）與人的指令 `cmd_commons` |
 | [`aos_team_commons_base.py`](aos_team_commons_base.py) | commons 的底：常數與上限、在哪與誰開（名冊設定、圖書館員）、資料夾 `Commons` 與索引印法 |
 | [`aos_team_commons_ingest.py`](aos_team_commons_ingest.py) | commons 的投稿檢查、入庫與查閱：欄位與附檔、內容 sha、像不像、slug、入庫與移除、搜尋 |
