@@ -899,7 +899,7 @@ def validate_routes(obj, where='routes.json'):
         names.add(name)
         try:
             rx = re.compile(_str(r.get('pattern'), w + '.pattern'))
-        except re.error as e:
+        except (re.error, OverflowError, RecursionError) as e:   # 例 a{99999999999999999999}（W3-2 留的一行，09-25）
             bad(w + '.pattern', '正規式編不過：%s' % e)
         do = r.get('do')
         if do == 'tool':

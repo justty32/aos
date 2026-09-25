@@ -96,6 +96,12 @@ class DecideTests(Base):
         self.assertEqual(route.decide('看', neg, routes)[0], 'lead')
         self.assertEqual(route.decide('看信', neg, routes)[0], 'tool')
 
+    def test_huge_repeat_is_format_error_not_crash(self):
+        # W3-2 留下一輪的一行（09-25）：re.compile 丟 OverflowError 也要變成白話的 FormatInvalid
+        with self.assertRaises(fmt.TeamError) as cm:
+            fmt.validate_routes(self.routes([rule('a', 'a{99999999999999999999}', ['a'], ['b'])]))
+        self.assertIn('正規式編不過', cm.exception.msg)
+
     def test_fill(self):
         self.assertEqual(route.fill({'a': ['{x} 與 {y}', {'b': '{x}'}], 'n': 3}, {'x': '1'}),
                          {'a': ['1 與 {y}', {'b': '1'}], 'n': 3})
