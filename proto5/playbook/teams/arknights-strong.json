@@ -1,6 +1,6 @@
 {
-  "_comment": "樣板：『讀草稿→回原文核對→寫詞條＋證據→機械驗收＋模型審查』這種有原文可查的資料整理隊。從 proto5/examples/arknights/team.json 抽出（2026-09-25）。換專案要改的地方都標了 <…>；模板路徑、掛載一律寫絕對或 ~ 開頭（相對路徑是照跑指令當下的資料夾解的）。自訂模板資料夾要叫 lead／reviewer，郵差才認得誰是領隊、審查員。",
-  "_metainfo": {"_type": "aos_team", "_version": 1},
+  "_metainfo": {"_type": "aos_team", "_version": 1,
+                "note": "樣板：『讀草稿→回原文核對→寫詞條＋證據→機械驗收＋模型審查』這種有原文可查的資料整理隊。從 proto5/examples/arknights/team.json 抽出（2026-09-25）。換專案要改的地方都標了 <…>；模板路徑、掛載一律寫絕對或 ~ 開頭（相對路徑是照跑指令當下的資料夾解的）。自訂模板資料夾要叫 lead／reviewer，郵差才認得誰是領隊、審查員。"},
   "project": "<專案副本，例 ~/tmp/arknights-try；別直接指本尊>",
   "tz": "Asia/Taipei",
   "members": {
