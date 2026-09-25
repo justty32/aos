@@ -118,7 +118,9 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_post_text.py`](aos_team_post_text.py) | 郵差的字：信的摘要與截斷、一行印法、書記改寫 SESSION-LOG／WAIT_USER 的受管區塊 |
 | [`aos_team_post_jobs.py`](aos_team_post_jobs.py) | 郵差的驗收工作：混入類別 `_PostJobs`（交驗收、起 kernel 工作、收結果）、結果檔格式檢查、申請 `reverify` |
 | [`aos_team_post_watch.py`](aos_team_post_watch.py) | 郵差的停滯與書記：混入類別 `_PostWatch`（停滯與期限、成員健康、通知、書記同步） |
-| [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡。第二波 B 隊：`wf_lint_strict` 與新條目 `cmd_ok`（team.json 白名單裡的專案指令）經 aos-jail 關牢、專案唯讀 |
+| [`aos_team_verify.py`](aos_team_verify.py) | 驗收員（tool-era T2，spec/team/verify.md）：`aos-team verify` 照任務單 `done_when` 跑固定檢查器，每條回過／不過／檢查器壞三種；`judge` 條目不歸這裡。第二波 B 隊：`wf_lint_strict` 與新條目 `cmd_ok`（team.json 白名單裡的專案指令）經 aos-jail 關牢、專案唯讀。這支留檢查器登記表 `CHECKS`（字串指回這支）、逐條跑、`verify` 與命令列 |
+| [`aos_team_verify_checks.py`](aos_team_verify_checks.py) | 驗收員的固定檢查器（直接讀專案檔）：三態與錯誤、路徑關在專案裡、file_exists、table_filled、contains 類、max_bytes、wf_residue |
+| [`aos_team_verify_jail.py`](aos_team_verify_jail.py) | 驗收員關牢跑的檢查器：組 aos-jail 參數、牢裡跑收輸出尾巴、`wf_lint_strict`、`cmd_ok` |
 | [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm`。這支留心跳本體 `Beat` 與指令 |
 | [`aos_team_beat_schedule.py`](aos_team_beat_schedule.py) | 心跳的時間表：欄位與單位、崩潰測試點、時區、every／daily／once 解析、`Schedule` 算下一次到期 |
 | [`aos_team_beat_routines.py`](aos_team_beat_routines.py) | 心跳的例行表 `team/routines.json`：讀、申請 routine 的驗與處理（`on_routine`）、批准了沒 |
