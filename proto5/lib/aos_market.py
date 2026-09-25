@@ -43,9 +43,9 @@ from aos_team_format import TeamError                                      # noq
 TYPE = 'aos_market'
 DEFAULT_PARAMS = {
     'weights': {'quality': 0.6, 'speed': 0.25, 'cost': 0.15},   # 排名分＝加權和（三項各 0～100）
-    'round_pool': {'usd': 2.0, 'tokens': 4000000},              # 每輪撥出去的總額
+    'round_pool': {'usd': 2.0, 'tokens': 50000000},             # 每輪撥出去的總額（約 10 張單）
     'shares': [0.35, 0.25, 0.2, 0.12, 0.08],                     # 第 1 名、第 2 名…拿總額的幾成（家數少就取前幾個再按比例放大）
-    'seed': {'usd': 1.0, 'tokens': 2000000},                      # 開辦費
+    'seed': {'usd': 1.0, 'tokens': 25000000},                     # 開辦費：約 5 張單（試玩 09-25：deepseek 一張單 451 萬 token）
     'min_quality': 0,                                            # 品質分低於這個＝這輪不撥（0＝不設門檻）
     'merge_at': 2,                                               # 營業中的剩幾家就合併
     'dept_order': ['mfg', 'qa', 'rd', 'lib', 'hq'],               # 合併時先收哪個部門的人
@@ -307,7 +307,7 @@ def rank(m, bal):
 
     - 品質：記下的分數（沒記＝0）。
     - 快：這一輪有結單的，最快那家的平均秒數 ÷ 自己的 ×100；沒結單＝0。
-    - 省：這一輪花的 token（這輪已花 − 上輪記下的已花），最省那家 ÷ 自己 ×100；沒花也沒結單＝0。
+    - 省：這一輪花的 token（這輪已花 − 上輪記下的已花），最省那家 ÷ 自己 ×100；有結單沒花＝100；沒結單＝0。
     """
     w = m['params']['weights']
     last_spent = (m['history'][-1].get('spent') if m['history'] else None) or {}
@@ -327,7 +327,12 @@ def rank(m, bal):
     cheap = [r['spent_tokens'] for r in rows if r['spent_tokens'] and r['done']]
     for r in rows:
         r['speed'] = round(100 * min(fast) / r['seconds'], 2) if fast and r['seconds'] and r['done'] else 0.0
-        r['cost'] = round(100 * min(cheap) / r['spent_tokens'], 2) if cheap and r['spent_tokens'] and r['done'] else 0.0
+        if not r['done']:
+            r['cost'] = 0.0
+        elif not r['spent_tokens']:
+            r['cost'] = 100.0                  # 有結單、這輪沒花 token＝最省（試玩 09-25：三家都 0 不該全拿 0）
+        else:
+            r['cost'] = round(100 * min(cheap) / r['spent_tokens'], 2)
         r['score'] = round(w['quality'] * r['quality'] + w['speed'] * r['speed'] + w['cost'] * r['cost'], 2)
     rows.sort(key=lambda r: (-r['score'], -r['quality'], r['name']))
     for i, r in enumerate(rows, 1):
@@ -761,44 +766,45 @@ def _print_rank(rows):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog='market.py', description='市場層：排名、撥額度、倒閉、合併（spec/team/market.md）')
-    ap.add_argument('--market', '-M')
+    ap.add_argument('--market', '-M', help='市場資料夾（market.json、archive/）；沒給看 AOS_MARKET_HOME')
     sub = ap.add_subparsers(dest='cmd', required=True)
-    p = sub.add_parser('open')
-    p.add_argument('name')
-    p.add_argument('dir')
-    p.add_argument('--usd', type=float)
-    p.add_argument('--tokens', type=int)
-    p = sub.add_parser('score')
-    p.add_argument('name')
-    p.add_argument('--quality', type=float)
-    p.add_argument('--eval', dest='eval_path')
-    p.add_argument('--seconds', type=float)
-    p.add_argument('--hops', type=float)
-    p = sub.add_parser('rank')
-    p.add_argument('--json', action='store_true')
-    p = sub.add_parser('grant')
-    p.add_argument('--dry-run', action='store_true')
-    p.add_argument('--usd', action='append', help='名=美元（覆寫這一家這輪撥多少）')
-    p.add_argument('--tokens', action='append', help='名=token')
-    p = sub.add_parser('bankrupt')
-    p.add_argument('--dry-run', action='store_true')
+    DRY = '只算給你看，不寫帳、不動檔'
+    p = sub.add_parser('open', help='開戶＋撥開辦費、登記進市場（從總池出）')
+    p.add_argument('name', help='帳戶名（例 c1；收掉的名字不能再用）')
+    p.add_argument('dir', help='公司資料夾（company.py new 生的）；不能跟別家的重疊')
+    p.add_argument('--usd', type=float, help='開辦費美元（預設 params.seed.usd）')
+    p.add_argument('--tokens', type=int, help='開辦費 token（預設 params.seed.tokens）')
+    p = sub.add_parser('score', help='記這一輪的表現（grant 之後就換下一輪、要重記）')
+    p.add_argument('name', help='公司')
+    p.add_argument('--quality', type=float, help='品質分 0～100（經理人直接給）')
+    p.add_argument('--eval', dest='eval_path', help='arknights 評分器的結果檔（算品質分，取代 --quality）')
+    p.add_argument('--seconds', type=float, help='平均秒數（不給＝從公司這輪結案的總機單算）')
+    p.add_argument('--hops', type=float, help='平均跳數（只記、不算分；不給＝從總機單算）')
+    p = sub.add_parser('rank', help='算這一輪的排名（品質、快、省加權；不寫帳）')
+    p.add_argument('--json', action='store_true', help='印 JSON')
+    p = sub.add_parser('grant', help='照排名撥這一輪的額度（花光的不撥，先跑 bankrupt）')
+    p.add_argument('--dry-run', action='store_true', help=DRY)
+    p.add_argument('--usd', action='append', help='名=美元：覆寫這一家這輪撥多少（≥ 0；要收回用 close）')
+    p.add_argument('--tokens', action='append', help='名=token：同上')
+    p = sub.add_parser('bankrupt', help='花光的（某一種餘額 ≤ 0）倒閉：停、剩的收回總池、封存')
+    p.add_argument('--dry-run', action='store_true', help=DRY)
     p = sub.add_parser('close', help='經理人裁撤一家：沒花完的配額收回總池')
-    p.add_argument('name')
-    p.add_argument('--dry-run', action='store_true')
+    p.add_argument('name', help='公司')
+    p.add_argument('--dry-run', action='store_true', help=DRY)
     p = sub.add_parser('pool', help='總池：錢還剩多少、名額還剩多少')
-    p.add_argument('--json', action='store_true')
-    p = sub.add_parser('slots', help='從總池撥名額給一家')
-    p.add_argument('name')
-    p.add_argument('--regular', type=int, default=0)
-    p.add_argument('--cpu', type=int, default=0)
-    p.add_argument('--llm-cpu', type=int, default=0)
-    p = sub.add_parser('merge')
-    p.add_argument('names', nargs='*')
-    p.add_argument('--into')
-    p.add_argument('--dry-run', action='store_true')
-    p.add_argument('--force', action='store_true')
-    p = sub.add_parser('ls')
-    p.add_argument('--json', action='store_true')
+    p.add_argument('--json', action='store_true', help='印 JSON')
+    p = sub.add_parser('slots', help='從總池撥名額給一家（只加不減；下次 company.py up 生效）')
+    p.add_argument('name', help='公司')
+    p.add_argument('--regular', type=int, default=0, help='正式員工名額 +N')
+    p.add_argument('--cpu', type=int, default=0, help='cpu（default 池）+N')
+    p.add_argument('--llm-cpu', type=int, default=0, help='llm cpu（llm 池）+N')
+    p = sub.add_parser('merge', help='剩 merge_at 家時合併：排名高的併掉低的；上次合到一半＝接著做')
+    p.add_argument('names', nargs='*', help='兩家（不給＝營業中那兩家）')
+    p.add_argument('--into', help='指定併入方（不給＝排名高的）')
+    p.add_argument('--dry-run', action='store_true', help='只印計畫（誰轉入、誰裁掉、正式或臨時）')
+    p.add_argument('--force', action='store_true', help='營業中還多於 merge_at 家也硬合')
+    p = sub.add_parser('ls', help='每家：狀態、餘額、已花、這輪品質')
+    p.add_argument('--json', action='store_true', help='印 JSON')
     a = ap.parse_args(argv)
     try:
         mdir = market_dir(a.market)
@@ -833,8 +839,8 @@ def main(argv=None):
             rnd, rows, grants = do_grant(mdir, _pairs(a.usd, float), _pairs(a.tokens, int), a.dry_run)
             _print_rank(rows)
             for n, g in grants.items():
-                print('第 %d 輪撥給 %s：usd %s、tokens %s（%s%s）' % (rnd, n, g['usd'], g['tokens'],
-                                                             '%.0f%%' % (100 * g['share']), '，覆寫' if g['override'] else ''))
+                print('第 %d 輪撥給 %s：usd %s、tokens %s（%s）' % (rnd, n, g['usd'], g['tokens'],
+                                                           '經理人覆寫' if g['override'] else '%.0f%%' % (100 * g['share'])))
             print('（只是試算，沒寫帳）' if a.dry_run else '已記帳')
             return 0
         if a.cmd in ('bankrupt', 'close'):
