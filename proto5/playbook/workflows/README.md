@@ -18,4 +18,4 @@
 | [score-new-entries.md](score-new-entries.md) | 評「不在基準集裡的新交件」：先保住交件→機械＋證據（不叫模型）→每人一次評審（參照＝草稿）→人工抽最低 3 個 | [品管 09-25](../../notes/2026-09-25-arknights/qa/README.md) |
 | [hr-trial.md](hr-trial.md) | 試用 → 評分 → 調薪：一個位子能不能換便宜模型（複製團隊只換一人、同一份任務集與評分指令、分數 ≥ 強模型基準 − 5 且機械全過才降薪） | [HR 部 09-25](../../notes/2026-09-25-hr/README.md) |
 | [company-order.md](company-order.md) | 董事一句話 → 總裁 →〔給 mfg〕→ 製造 →〔給 qa〕→ 品管 → 回報；跨部門全靠機械總機 | [notes/2026-09-25-company](../../notes/2026-09-25-company/README.md) |
-| [market-round.md](market-round.md) | 一輪市場：打分 → 排名 → 撥款 → 倒閉 → 合併；參數可調、經理人可覆寫 | [notes/2026-09-25-company](../../notes/2026-09-25-company/README.md) |
+| [market-round.md](market-round.md) | 一輪市場：打分 → 排名 → 倒閉 → 撥款 → 合併；參數可調、經理人可覆寫 | [notes/2026-09-25-company](../../notes/2026-09-25-company/README.md) |
