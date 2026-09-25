@@ -51,7 +51,8 @@
 | [STRUCTURE.md](STRUCTURE.md) | 結構整理參考（被動）|
 | [SESSION-LOG.md](SESSION-LOG.md) | 我的 open 進度（hub）|
 | [session_logs/](session_logs/README.md) | SESSION-LOG 搬出的舊條目（按月份全文＋索引）|
-| [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的事 |
+| [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的事（hub，A 區導航表）|
+| [wait-user/](wait-user/README.md) | WAIT_USER A 區搬出的舊條目（按類別分檔＋索引）|
 
 ## 通用（跨工作流共享）
 
@@ -73,5 +74,5 @@
 | 檔案 | 用途 |
 |------|------|
 | [SESSION-LOG](SESSION-LOG.md) | 進度 hub → 各工作流 session-log（open-only）|
-| [WAIT_USER](WAIT_USER.md) | 待**使用者**親自做/驗證的入口（膨脹後拆 `wait-user/` 分類檔）|
+| [WAIT_USER](WAIT_USER.md) | 待**使用者**親自做/驗證的入口（09-25 膨脹已拆 [`wait-user/`](wait-user/README.md) 分類檔）|
 | [`inbox/`](inbox/)（放信處）+ [workflows/inbox/](workflows/inbox/README.md)（使用方式）| agent 之間的**信件**（像 email，狀態靠位置：`inbox/` 頂層＝未處理、`inbox/done/`＝已處理）|
