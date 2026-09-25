@@ -488,17 +488,51 @@ def account_open(base, name, root):
     return _edit_accounts(base, fn)
 
 
-def account_grant(base, name, usd=None, tokens=None, note=''):
-    """加配額（撥款）。usd／tokens 至少一個；可以是負的（收回）。回撥款後的那筆。"""
+def account_grant(base, name, usd=None, tokens=None, note='', op=None):
+    """加配額（撥款）。usd／tokens 至少一個；可以是負的（收回）。回撥款後的那筆。
+    op＝操作 ID（市場層用）：這個帳戶已經有同一個 op 的撥款＝不再撥、回原來那筆（崩了重跑不重撥）。"""
     if usd is None and tokens is None:
         raise CostError('Usage', '撥款要給 usd 或 tokens')
     grant = {'at': _now().isoformat(timespec='seconds'), 'usd': usd, 'tokens': tokens, 'note': note or ''}
+    if op:
+        grant['op'] = op
 
     def fn(acc):
         if name not in acc:
             raise CostError('NotFound', '沒有帳戶 %s（先 aos-team cost account open）' % name)
-        acc[name].setdefault('grants', []).append(grant)
+        grants = acc[name].setdefault('grants', [])
+        if op:
+            for g in grants:
+                if g.get('op') == op:
+                    return g
+        grants.append(grant)
         return grant
+    return _edit_accounts(base, fn)
+
+
+def account_transfer(base, src, dst, usd=None, tokens=None, note='', op=None):
+    """從 src 轉配額給 dst：同一次讀寫 accounts.json 裡 src 撥負的、dst 撥正的（不會只做一半）。
+    op 必填：兩邊都已有這個 op＝已轉過，不再轉。回 (src 那筆, dst 那筆)。"""
+    if usd is None and tokens is None:
+        raise CostError('Usage', '轉帳要給 usd 或 tokens')
+    if not op:
+        raise CostError('Usage', '轉帳要給 op（去重用）')
+    at = _now().isoformat(timespec='seconds')
+
+    def fn(acc):
+        for n in (src, dst):
+            if n not in acc:
+                raise CostError('NotFound', '沒有帳戶 %s' % n)
+        out = []
+        for n, sign in ((src, -1), (dst, 1)):
+            grants = acc[n].setdefault('grants', [])
+            hit = next((g for g in grants if g.get('op') == op), None)
+            if hit is None:
+                hit = {'at': at, 'usd': None if usd is None else sign * usd,
+                       'tokens': None if tokens is None else sign * tokens, 'note': note or '', 'op': op}
+                grants.append(hit)
+            out.append(hit)
+        return tuple(out)
     return _edit_accounts(base, fn)
 
 

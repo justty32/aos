@@ -1,4 +1,6 @@
 """市場層（aos_market，spec/team/market.md）：用假帳本跑排名、撥額度、倒閉、合併；不開 kernel、不叫模型。"""
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -255,6 +257,251 @@ class Merge(Base):
         m = mk.load(self.mdir)
         self.assertEqual((m['companies']['c2']['status'], m['companies']['c2']['merged_into']), ('merged', 'c1'))
         self.assertFalse(self.b.exists())
+
+
+class AstraMust(Base):
+    """astra 唯讀審查（09-25）必修：每條一個重現→修好的測試。"""
+
+    def grants_of(self, name):
+        return cost.load_accounts(str(self.ledger))[name]['grants']
+
+    def quotas(self):
+        return {n: b['quota'] for n, b in cost.balances(str(self.ledger)).items()}
+
+    # 必修 1：撥款崩在逐家撥款途中，重跑不重撥
+    def test_grant_crash_midway_resumes_without_double_grant(self):
+        for n in ('c1', 'c2', 'c3'):
+            self.company(n)
+            mk.record_score(self.mdir, n, quality=50)
+        real = cost.account_grant
+        calls = []
+
+        def flaky(*a, **kw):
+            calls.append(a[1])
+            if len(calls) == 2:
+                raise RuntimeError('崩在第二家')
+            return real(*a, **kw)
+        with mock.patch.object(cost, 'account_grant', flaky):
+            with self.assertRaises(RuntimeError):
+                mk.do_grant(self.mdir)
+        m = mk.load(self.mdir)
+        self.assertEqual(m['pending']['kind'], 'grant')
+        self.assertEqual(m['history'], [])
+        mk.do_grant(self.mdir)                                   # 接著做
+        m = mk.load(self.mdir)
+        self.assertNotIn('pending', m)
+        self.assertEqual(len(m['history']), 1)
+        for n in ('c1', 'c2', 'c3'):
+            ops = [g['op'] for g in self.grants_of(n) if g.get('op', '').startswith('grant-')]
+            self.assertEqual(len(ops), 1, n)                     # 每家這輪只撥一次
+
+    def test_transfer_is_one_step_and_dedups(self):
+        self.company('c1')
+        self.company('c2')
+        base = str(self.ledger)
+        before = sum(q['tokens'] for q in self.quotas().values())
+        cost.account_transfer(base, 'c2', 'c1', tokens=300, op='t1')
+        cost.account_transfer(base, 'c2', 'c1', tokens=300, op='t1')      # 重跑：不再轉
+        q = self.quotas()
+        self.assertEqual((q['c1']['tokens'], q['c2']['tokens']), (1300, 700))
+        self.assertEqual(sum(x['tokens'] for x in q.values()), before)   # 守恆
+
+    # 必修 2：封存視窗崩潰
+    def test_close_crash_during_archive_move_recovers(self):
+        self.company('c1')
+        self.company('c2')
+        with mock.patch.object(mk.shutil, 'move', side_effect=RuntimeError('崩在搬家')):
+            with self.assertRaises(RuntimeError):
+                mk.close(self.mdir, 'c2')
+        m = mk.load(self.mdir)
+        self.assertEqual(m['companies']['c2']['status'], 'closing')
+        self.assertTrue((self.tmp / 'c2').is_dir())
+        self.assertEqual(mk.pool_status(m, cost.balances(str(self.ledger)))['slots_used']['llm_cpu'], 10)  # 名額還占著
+        row = mk.close(self.mdir, 'c2')                           # 重跑接著做
+        self.assertEqual(row['recycled'], {'usd': 1.0, 'tokens': 1000})
+        self.assertFalse((self.tmp / 'c2').exists())
+        self.assertEqual(mk.load(self.mdir)['companies']['c2']['status'], 'closed')
+        recycles = [g for g in self.grants_of('c2') if (g.get('op') or '').endswith(':recycle')]
+        self.assertEqual(len(recycles), 1)
+        self.assertEqual(cost.balances(str(self.ledger))['c2']['balance'], {'usd': 0.0, 'tokens': 0})
+
+    def test_merge_crash_after_transfer_resumes(self):
+        self.company('c1')
+        self.company('c2')
+        total = sum(q['tokens'] for q in self.quotas().values())
+        with mock.patch.object(mk.shutil, 'move', side_effect=RuntimeError('崩在搬家')):
+            with self.assertRaises(RuntimeError):
+                mk.apply_merge(self.mdir, 'c1', 'c2')
+        m = mk.load(self.mdir)
+        self.assertEqual((m['pending']['kind'], m['companies']['c2']['status']), ('merge', 'merging'))
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(mk.main(['--market', str(self.mdir), 'merge']), 0)     # merge 不帶名字＝接著做
+        m = mk.load(self.mdir)
+        self.assertNotIn('pending', m)
+        self.assertEqual(m['companies']['c2']['status'], 'merged')
+        q = self.quotas()
+        self.assertEqual(sum(x['tokens'] for x in q.values()), total)         # 沒憑空多出額度
+        self.assertEqual(q['c1']['tokens'], 2000)
+        names = co.all_member_names(self.tmp / 'c1')
+        self.assertEqual(len(names), len(set(names)))
+
+    # 必修 3：市場鎖
+    def test_market_lock_serializes_writers(self):
+        import threading
+        self.company('c1')
+        done = []
+        with mk.market_lock(self.mdir):
+            t = threading.Thread(target=lambda: done.append(mk.grant_slots(self.mdir, 'c1', regular=1)))
+            t.start()
+            t.join(0.3)
+            self.assertEqual(done, [])                            # 鎖在別人手上：等
+        t.join(5)
+        self.assertEqual(len(done), 1)
+
+    # 必修 4：停機失敗不封存、不收回、不放名額；停好後才算餘額
+    def test_stop_failure_keeps_company_and_slots(self):
+        self.company('c1')
+        self.company('c2')
+        (self.tmp / 'c2' / 'K').mkdir()
+        with mock.patch.object(co, 'down', return_value=1):
+            with self.assertRaises(mk.MarketError) as e:
+                mk.close(self.mdir, 'c2')
+        self.assertEqual(e.exception.code, 'StopFailed')
+        self.assertTrue((self.tmp / 'c2').is_dir())
+        self.assertEqual(cost.balances(str(self.ledger))['c2']['quota']['tokens'], 1000)   # 沒收回
+        m = mk.load(self.mdir)
+        self.assertEqual(mk.pool_status(m, cost.balances(str(self.ledger)))['slots_used']['llm_cpu'], 10)
+
+        def down_and_spend(*a, **kw):                             # 停的途中還在跑的單記了 300
+            self.spend('c2', 300)
+            return 0
+        with mock.patch.object(co, 'down', side_effect=down_and_spend):
+            row = mk.close(self.mdir, 'c2')
+        self.assertEqual(row['recycled']['tokens'], 700)          # 停好後才算：不會把 300 再發出去
+        self.assertEqual(cost.balances(str(self.ledger))['c2']['balance']['tokens'], 0)
+
+    # 必修 5：開戶路徑重疊、重用
+    def test_open_rejects_overlapping_or_reused_dirs(self):
+        d1 = self.company('c1')
+        inner = co.new(d1 / 'inner', EXAMPLE, 'c9-', self.proj)
+        with self.assertRaises(mk.MarketError) as e:
+            mk.open_company(self.mdir, 'c9', inner)
+        self.assertEqual(e.exception.code, 'Conflict')
+        self.assertNotIn('c9', cost.load_accounts(str(self.ledger)))           # 被擋的沒開戶
+        mk.close(self.mdir, 'c1')
+        again = co.new(self.tmp / 'c1', EXAMPLE, 'c1-', self.proj)             # 舊公司的原路徑
+        with self.assertRaises(mk.MarketError) as e:
+            mk.open_company(self.mdir, 'c1b', again)
+        self.assertEqual(e.exception.code, 'Conflict')
+        with self.assertRaises(mk.MarketError) as e:
+            mk.open_company(self.mdir, 'c1', co.new(self.tmp / 'c1new', EXAMPLE, 'c1-', self.proj))
+        self.assertEqual(e.exception.code, 'AlreadyExists')                   # 收掉的名字不再用
+
+    # 必修 9：分數綁輪次
+    def test_scores_do_not_carry_over_after_grant(self):
+        self.company('c1')
+        self.company('c2')
+        mk.record_score(self.mdir, 'c1', quality=90, seconds=100)
+        mk.do_grant(self.mdir)
+        rows = mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))
+        self.assertEqual([(r['quality'], r['speed'], r['done']) for r in rows], [(0.0, 0.0, 0), (0.0, 0.0, 0)])
+
+    # 必修 10：按結案時間算這一輪
+    def test_speed_counts_orders_closed_this_round(self):
+        self.company('c1')
+        since = '2026-09-25T12:30:00+08:00'
+        self.order('c1', 'o-0001', '2026-09-25T12:00:00+08:00', '2026-09-25T13:00:00+08:00')   # 上輪下單、這輪結
+        self.order('c1', 'o-0002', '2026-09-25T12:00:00+08:00', '2026-09-25T12:10:00+08:00')   # 上輪就結了
+        self.order('c1', 'o-0003', '2026-09-25T04:40:00+00:00', '2026-09-25T04:50:00+00:00')   # 別的時區，這輪
+        sp = mk.speed_from_company(self.tmp / 'c1', since)
+        self.assertEqual((sp['done'], sp['seconds']), (2, (3600 + 600) / 2))
+        o = fmt.read_json(self.tmp / 'c1' / 'switchboard' / 'orders' / 'o-0002.json')
+        o['closed_at'] = '2026-09-25T12:45:00+08:00'                                           # 有 closed_at 看它
+        fmt.write_json(self.tmp / 'c1' / 'switchboard' / 'orders' / 'o-0002.json', o)
+        self.assertEqual(mk.speed_from_company(self.tmp / 'c1', since)['done'], 3)
+
+    # 必修 11：花光的不撥、不准覆寫救活
+    def test_broke_company_gets_nothing(self):
+        for n in ('c1', 'c2'):
+            self.company(n)
+            mk.record_score(self.mdir, n, quality=90)
+        self.spend('c2', 1000)
+        _r, _rows, grants = mk.do_grant(self.mdir, dry_run=True)
+        self.assertEqual((grants['c2']['usd'], grants['c2']['tokens']), (0.0, 0))
+        self.assertEqual(grants['c1']['tokens'], 4000000)
+        with self.assertRaises(mk.MarketError) as e:
+            mk.do_grant(self.mdir, tok_over={'c2': 5000})
+        self.assertEqual(e.exception.code, 'Broke')
+        mk.do_grant(self.mdir)
+        self.assertEqual([o['name'] for o in mk.bankrupt(self.mdir)], ['c2'])
+
+    # 必修 12：slots 不收負數
+    def test_slots_rejects_negative(self):
+        self.company('c1')
+        with self.assertRaises(mk.MarketError) as e:
+            mk.grant_slots(self.mdir, 'c1', llm_cpu=-3)
+        self.assertEqual(e.exception.code, 'Usage')
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(mk.main(['--market', str(self.mdir), 'slots', 'c1', '--cpu', '-1']), 1)
+        self.assertEqual(co.load(self.tmp / 'c1')['limits']['cpu'], 20)
+
+    # 必修 14：合併改名撞名
+    def test_merge_rename_collision_gets_suffix(self):
+        a = self.company('c1')
+        self.company('c2')
+        tdir = a / 'teams' / 'mfg'
+        roster = fmt.read_json(tdir / 'team.json')
+        roster['members']['c1-mfg-writer1-c2'] = {'template': 'worker', 'mail_to': ['human'], 'employment': 'temp'}
+        fmt.write_json(tdir / 'team.json', roster, indent=2)
+        plan = mk.plan_merge(a, self.tmp / 'c2', 'c2')
+        to = {mv['from']: mv.get('to') for mv in plan['moves']}
+        self.assertEqual(to['c2-mfg-writer1'], 'c1-mfg-writer1-c2-2')
+        mk.apply_merge(self.mdir, 'c1', 'c2', plan)
+        got = fmt.load_roster(tdir)['members']
+        self.assertEqual(got['c1-mfg-writer1-c2']['employment'], 'temp')           # 原員工沒被蓋掉
+        self.assertIn('c1-mfg-writer1-c2-2', got)
+
+    def test_merge_stale_plan_refused(self):
+        a = self.company('c1')
+        self.company('c2')
+        plan = mk.plan_merge(a, self.tmp / 'c2', 'c2')
+        raw = fmt.read_json(a / 'company.json')
+        raw['limits']['regular'] = 8                                              # 計畫之後名額變了
+        fmt.write_json(a / 'company.json', raw, indent=2)
+        with self.assertRaises(mk.MarketError) as e:
+            mk.apply_merge(self.mdir, 'c1', 'c2', plan)
+        self.assertEqual(e.exception.code, 'Stale')
+
+    # 必修 15：美元縮額不超發
+    def test_usd_capping_never_overshoots(self):
+        m = mk.load(self.mdir)
+        m['params']['total'] = {'usd': 2.0001}
+        m['params']['shares'] = [0.5, 0.5]                      # 兩家各要一半：縮完各 0.00005，四捨五入會變 0.0001×2
+        mk.save(self.mdir, m)
+        self.company('c1')
+        self.company('c2')
+        mk.record_score(self.mdir, 'c1', quality=90)
+        mk.record_score(self.mdir, 'c2', quality=80)
+        p = mk.pool_status(mk.load(self.mdir), cost.balances(str(self.ledger)))
+        self.assertAlmostEqual(p['money']['usd'], 0.0001)
+        _r, _rows, grants = mk.do_grant(self.mdir)
+        self.assertLessEqual(sum(g['usd'] for g in grants.values()), 0.0001 + 1e-12)
+        p = mk.pool_status(mk.load(self.mdir), cost.balances(str(self.ledger)))
+        self.assertGreaterEqual(p['money']['usd'], -1e-9)
+
+    # 建議 1：分數驗證
+    def test_score_rejects_bad_numbers(self):
+        self.company('c1')
+        for kw in ({'quality': 120}, {'quality': float('nan')}, {'seconds': -5}, {'hops': float('inf')}):
+            with self.assertRaises(mk.MarketError, msg=kw):
+                mk.record_score(self.mdir, 'c1', **kw)
+
+    # 可不拍 1：freed 寫進事件
+    def test_close_event_has_freed(self):
+        self.company('c1')
+        mk.close(self.mdir, 'c1')
+        ev = mk.load(self.mdir)['events'][-1]
+        self.assertIn('c1-hq-lead', ev['freed'])
 
 
 if __name__ == '__main__':

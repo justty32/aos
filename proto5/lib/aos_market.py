@@ -12,17 +12,25 @@
   bankrupt [--dry-run]                          餘額 ≤ 0 的：停公司、封存資料夾；剩的配額與名額回總池
   close 名 [--dry-run]                          經理人裁撤：沒花完的配額全部收回總池
   pool [--json]                                 總池：錢＝總量 − 已花 − 各家手上沒花的；名額＝機器 − 各家 limits
-  slots 名 [--regular N] [--cpu N] [--llm-cpu N]    從總池撥名額
-  merge [A B] [--into A] [--dry-run] [--force]  剩兩家時合併（§5 of market.md）
+  slots 名 [--regular N] [--cpu N] [--llm-cpu N]    從總池撥名額（只收 ≥ 0）
+  merge [A B] [--into A] [--dry-run] [--force]  剩兩家時合併（§5 of market.md）；上次合到一半＝接著做
+
+改東西的子命令都拿 `<市場>/.market.lock`；grant／bankrupt／close／merge 先把要做的記進 market.json 再動手，
+崩了重跑同一個指令接著做（帳戶照操作 ID 去重，不會重撥）。
   ls [--json]                                   每家：狀態、配額、已花、餘額、最近分數
 """
 import argparse
+import contextlib
+import datetime
+import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import shutil
 import sys
 import time
+import uuid
 
 LIB = Path(__file__).resolve().parent
 sys.path.insert(0, str(LIB))
@@ -52,7 +60,36 @@ class MarketError(TeamError):
 
 
 def now():
-    return time.strftime('%Y-%m-%dT%H:%M:%S%z')
+    return datetime.datetime.now().astimezone().isoformat(timespec='seconds')
+
+
+USD_UNIT = 10000          # 美元的最小單位 0.0001：撥款一律往下取到這一位，不會四捨五入超發（astra 必修 15）
+
+
+def usd_floor(v):
+    return math.floor(v * USD_UNIT + 1e-9) / USD_UNIT
+
+
+def _finite(v, where, lo=None, hi=None):
+    if v is None:
+        return None
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+        raise MarketError('Usage', '%s 要是有限的數字：%r' % (where, v))
+    if (lo is not None and v < lo) or (hi is not None and v > hi):
+        raise MarketError('Usage', '%s 要在 %s～%s：%r' % (where, lo, '' if hi is None else hi, v))
+    return v
+
+
+@contextlib.contextmanager
+def market_lock(mdir):
+    """市場的交易鎖（astra 必修 3）：讀 market.json → 算 → 撥款／改名冊 → 寫，整段拿著；兩個經理人指令不會同時撥款或合併。"""
+    Path(mdir).mkdir(parents=True, exist_ok=True)
+    with open(Path(mdir) / '.market.lock', 'a') as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
 
 
 def market_dir(arg=None):
@@ -94,6 +131,11 @@ def operating(m):
     return [n for n, c in m['companies'].items() if c['status'] == 'operating']
 
 
+def holding(m):
+    """還占著錢與名額的：營業中＋收到一半的（closing／merging：還沒確定停好，不能放名額，astra 必修 4）。"""
+    return [n for n, c in m['companies'].items() if c['status'] in ('operating', 'closing', 'merging')]
+
+
 # ------------------------------------------------------------------ 總池 ----
 
 def pool_status(m, bal):
@@ -104,14 +146,15 @@ def pool_status(m, bal):
         if total is None:
             continue
         spent = sum(((b.get('spent') or {}).get(k) or 0) for n, b in bal.items() if n in m['companies'])
-        held = sum(max(0, ((bal.get(n) or {}).get('balance') or {}).get(k) or 0) for n in operating(m))
+        held = sum(max(0, ((bal.get(n) or {}).get('balance') or {}).get(k) or 0) for n in holding(m))
         money[k] = round(total - spent - held, 6)
     used = {k: 0 for k in m['params']['machine']}
-    for n in operating(m):
+    for n in holding(m):
+        c = m['companies'][n]
         try:
-            lim = co.load(m['companies'][n]['dir'])['limits']
+            lim = co.load(c['dir'])['limits']
         except TeamError:
-            continue
+            lim = (c.get('closing') or {}).get('slots') or {}    # 資料夾已經搬走、還沒結案：用記下的
         for k in used:
             used[k] += lim.get(k, 0)
     slots = {k: m['params']['machine'][k] - used[k] for k in used}
@@ -124,19 +167,40 @@ def _event(m, **kw):
     return kw
 
 
+def _overlap(a, b):
+    a, b = a.rstrip('/'), b.rstrip('/')
+    return a == b or a.startswith(b + '/') or b.startswith(a + '/')
+
+
 # ------------------------------------------------------------------ 開戶 ----
 
 def open_company(mdir, name, cdir, usd=None, tokens=None, env=None):
+    with market_lock(mdir):
+        return _open_company(mdir, name, cdir, usd, tokens, env)
+
+
+def _open_company(mdir, name, cdir, usd, tokens, env):
     base = cost_base(env)
     m = load(mdir)
     cdir = Path(os.path.abspath(os.path.expanduser(str(cdir))))
     co.load(cdir)                                    # 要是一家公司（company.json 驗得過）
-    if name in m['companies'] and m['companies'][name]['status'] == 'operating':
-        raise MarketError('AlreadyExists', '%s 已經在營業' % name)
-    cost.account_open(base, name, str(cdir))
+    if name in m['companies']:
+        # 收掉的名字不再用：舊帳戶還帶著它的撥款與花費，重用會把舊帳算進新公司（astra 必修 5）
+        raise MarketError('AlreadyExists', '%s 已經在市場裡（%s）；換一個名字' % (name, m['companies'][name]['status']))
+    real = os.path.realpath(str(cdir))
+    for other, a in cost.load_accounts(base).items():
+        root = a.get('root') or ''
+        if other != name and root and _overlap(real, root):
+            raise MarketError('Conflict', '%s 跟帳戶 %s 的資料夾 %s 重疊（同一個、或包著／被包著）：帳會重複算；換一個資料夾'
+                              % (cdir, other, root))
+    for other, c in m['companies'].items():
+        if _overlap(real, os.path.realpath(c['dir'])):
+            raise MarketError('Conflict', '%s 跟 %s（%s）用過的資料夾 %s 重疊' % (cdir, other, c['status'], c['dir']))
     seed = m['params']['seed']
     usd = seed.get('usd') if usd is None else usd
     tokens = seed.get('tokens') if tokens is None else tokens
+    _finite(usd, 'usd', 0)
+    _finite(tokens, 'tokens', 0)
     pool = pool_status(m, cost.balances(base))
     for k, v in (('usd', usd), ('tokens', tokens)):
         if k in pool['money'] and (v or 0) > pool['money'][k]:
@@ -146,7 +210,8 @@ def open_company(mdir, name, cdir, usd=None, tokens=None, env=None):
     if short:
         raise MarketError('NoSlots', '機器名額不夠：%s（剩 %s，這家要 %s）' % (
             '、'.join(short), json.dumps(pool['slots']), json.dumps(lim)))
-    cost.account_grant(base, name, usd=usd, tokens=tokens, note='開辦費')
+    cost.account_open(base, name, str(cdir))
+    cost.account_grant(base, name, usd=usd, tokens=tokens, note='開辦費', op='open-%s' % name)
     m['companies'][name] = {'dir': str(cdir), 'status': 'operating', 'opened_at': now(), 'closed_at': None,
                             'note': ''}
     _event(m, kind='open', company=name, grant={'usd': usd, 'tokens': tokens}, slots=lim)
@@ -177,20 +242,28 @@ def quality_from_eval(result):
     return round(total / len(people), 2)
 
 
+def _aware(t):
+    return t if t is None or t.tzinfo is not None else t.astimezone()
+
+
 def speed_from_company(cdir, since=None):
-    """公司總機單：這一輪結的（done）張數、平均秒數（下單 → 最後一封回覆）、平均跳數（回覆信數＋1）。"""
+    """公司總機單：這一輪**結案**的（done）張數、平均秒數（下單 → 最後一封回覆）、平均跳數（回覆信數＋1）。
+    「這一輪」看結案時間（單子的 closed_at；舊單沒有就用最後一封回覆的時間），解析成帶時區的時間再比
+    ——跨輪完成的單算在結案那一輪（astra 必修 10）。"""
     cdir = Path(cdir)
     folder = cdir / 'switchboard' / 'orders'
+    t_since = _aware(fmt.parse_iso(since)) if since else None
     secs, hops = [], []
     for p in fmt.json_files(folder) if folder.is_dir() else []:
         o = fmt.read_json(p)
         if o.get('status') != 'done' or not o.get('replies'):
             continue
-        if since and (o.get('at') or '') < since:
-            continue
-        t0 = fmt.parse_iso(o['at'])
-        t1 = fmt.parse_iso(o['replies'][-1].get('at') or '')
+        t0 = _aware(fmt.parse_iso(o.get('at') or ''))
+        t1 = _aware(fmt.parse_iso(o['replies'][-1].get('at') or ''))
+        tc = _aware(fmt.parse_iso(o.get('closed_at') or '')) or t1
         if t0 is None or t1 is None:
+            continue
+        if t_since is not None and (tc is None or tc < t_since):
             continue
         secs.append(max(0.0, (t1 - t0).total_seconds()))
         hops.append(len(o['replies']) + 1)
@@ -200,6 +273,11 @@ def speed_from_company(cdir, since=None):
 
 
 def record_score(mdir, name, quality=None, eval_path=None, seconds=None, hops=None, done=None):
+    with market_lock(mdir):
+        return _record_score(mdir, name, quality, eval_path, seconds, hops, done)
+
+
+def _record_score(mdir, name, quality, eval_path, seconds, hops, done):
     m = load(mdir)
     if name not in m['companies']:
         raise MarketError('NotFound', '市場裡沒有 %s' % name)
@@ -207,12 +285,16 @@ def record_score(mdir, name, quality=None, eval_path=None, seconds=None, hops=No
     if eval_path is not None:
         quality = quality_from_eval(fmt.read_json(eval_path))
         src = 'eval:%s' % eval_path
+    _finite(quality, 'quality', 0, 100)
+    _finite(seconds, 'seconds', 0)
+    _finite(hops, 'hops', 0)
+    _finite(done, 'done', 0)
     since = m['history'][-1]['at'] if m['history'] else None
     sp = speed_from_company(m['companies'][name]['dir'], since) if seconds is None else None
     s = {'quality': quality, 'seconds': seconds if seconds is not None else (sp or {}).get('seconds'),
          'hops': hops if hops is not None else (sp or {}).get('hops'),
          'done': done if done is not None else (sp or {}).get('done', 1 if seconds is not None else 0),
-         'at': now(), 'source': src}
+         'at': now(), 'source': src, 'round': len(m['history']) + 1}     # 分數綁輪次：grant 之後就不算了
     m['scores'][name] = s
     save(mdir, m)
     return s
@@ -229,9 +311,12 @@ def rank(m, bal):
     """
     w = m['params']['weights']
     last_spent = (m['history'][-1].get('spent') if m['history'] else None) or {}
+    cur = len(m['history']) + 1
     rows = []
     for name in operating(m):
         s = m['scores'].get(name) or {}
+        if s.get('round') != cur:           # 上一輪（或沒記輪次）的分數不算：這輪沒做事就沒分（astra 必修 9）
+            s = {}
         b = bal.get(name) or {}
         spent_now = (b.get('spent') or {}).get('tokens') or 0
         spent = max(0, spent_now - (last_spent.get(name) or 0))
@@ -251,17 +336,26 @@ def rank(m, bal):
 
 
 def plan_grants(m, rows, usd_over=None, tok_over=None):
-    """照排名分這一輪的總額：shares 取前 n 個按比例放大到 1；品質低於 min_quality 的拿 0；覆寫的照覆寫。"""
+    """照排名分這一輪的總額：shares 取前 n 個按比例放大到 1；品質低於 min_quality 的、已經花光（broke）的拿 0；
+    覆寫的照覆寫（花光的不准覆寫：先 bankrupt，astra 必修 11）。美元往下取到 0.0001。"""
     usd_over, tok_over = usd_over or {}, tok_over or {}
+    for over in (usd_over, tok_over):
+        for n, v in over.items():
+            _finite(v, '%s 的覆寫' % n, 0)
+            r = next((r for r in rows if r['name'] == n), None)
+            if r is None:
+                raise MarketError('NotFound', '%s 不在營業，不能覆寫' % n)
+            if r['broke']:
+                raise MarketError('Broke', '%s 已經花光，要先 bankrupt，不能撥款救活' % n)
     pool = m['params']['round_pool']
     shares = list(m['params']['shares'])[:len(rows)]
     shares += [0.0] * (len(rows) - len(shares))
-    eligible = [r['quality'] >= m['params']['min_quality'] for r in rows]
+    eligible = [r['quality'] >= m['params']['min_quality'] and not r['broke'] for r in rows]
     tot = sum(s for s, ok in zip(shares, eligible) if ok) or 1.0
     out = {}
     for r, s, ok in zip(rows, shares, eligible):
         frac = s / tot if ok else 0.0
-        g = {'usd': round(pool.get('usd', 0) * frac, 4) if pool.get('usd') is not None else None,
+        g = {'usd': usd_floor(pool.get('usd', 0) * frac) if pool.get('usd') is not None else None,
              'tokens': int(pool.get('tokens', 0) * frac) if pool.get('tokens') is not None else None,
              'share': round(frac, 4), 'override': False}
         if r['name'] in usd_over:
@@ -273,45 +367,74 @@ def plan_grants(m, rows, usd_over=None, tok_over=None):
 
 
 def do_grant(mdir, usd_over=None, tok_over=None, dry_run=False, env=None):
-    base = cost_base(env)
-    m = load(mdir)
-    bal = cost.balances(base)
+    """一輪撥款。順序（astra 必修 1、11）：先確定這輪要撥什麼（排名、縮額）→ 存進 market.json 的 pending
+    （含操作 ID）→ 逐家撥（帳戶照操作 ID 去重）→ 記 history、清 pending。崩在中間重跑＝接著同一份計畫撥，不重撥。
+    花光的公司不撥：先跑 bankrupt 再 grant。"""
+    if dry_run:
+        return _plan_grant(mdir, load(mdir), cost.balances(cost_base(env)), usd_over, tok_over)[:3]
+    with market_lock(mdir):
+        base = cost_base(env)
+        m = load(mdir)
+        pend = m.get('pending')
+        if pend and pend.get('kind') == 'grant':
+            rnd, rows, grants, capped, op = pend['round'], pend['ranking'], pend['grants'], pend['capped'], pend['op']
+        else:
+            if pend:
+                raise MarketError('Pending', '還有沒做完的 %s（再跑一次那個指令接著做）' % pend.get('kind'))
+            rnd, rows, grants, capped = _plan_grant(mdir, m, cost.balances(base), usd_over, tok_over)
+            op = 'grant-r%d-%s' % (rnd, uuid.uuid4().hex[:8])
+            m['pending'] = {'kind': 'grant', 'round': rnd, 'op': op, 'ranking': rows, 'grants': grants, 'capped': capped}
+            save(mdir, m)
+        for name, g in grants.items():
+            if (g['usd'] or 0) == 0 and (g['tokens'] or 0) == 0:
+                continue
+            cost.account_grant(base, name, usd=g['usd'], tokens=g['tokens'], op='%s:%s' % (op, name),
+                               note='第 %d 輪 第 %d 名%s' % (rnd, next(r['rank'] for r in rows if r['name'] == name),
+                                                          '（經理人覆寫）' if g['override'] else ''))
+        m['history'].append({'round': rnd, 'at': now(), 'ranking': rows, 'grants': grants, 'capped': capped,
+                             'spent': {r['name']: r['spent_total'] for r in rows}, 'op': op})
+        _event(m, kind='grant', round=rnd, grants={n: {'usd': g['usd'], 'tokens': g['tokens']} for n, g in grants.items()},
+               capped=capped)
+        m.pop('pending', None)
+        save(mdir, m)
+        return rnd, rows, grants
+
+
+def _plan_grant(mdir, m, bal, usd_over, tok_over):
     rows = rank(m, bal)
     grants = plan_grants(m, rows, usd_over, tok_over)
     pool = pool_status(m, bal)
     capped = {}
     for k, left in pool['money'].items():
         want = sum((g[k] or 0) for g in grants.values() if (g[k] or 0) > 0)
-        if want > left:                                  # 總池不夠：照比例縮到剛好發完
+        if want > left:                                  # 總池不夠：照比例往下縮（不會超過剩的）
             f = max(0.0, left) / want if want else 0.0
             for g in grants.values():
                 if (g[k] or 0) > 0:
-                    g[k] = round(g[k] * f, 4) if k == 'usd' else int(g[k] * f)
+                    g[k] = usd_floor(g[k] * f) if k == 'usd' else int(g[k] * f)
+            got = sum((g[k] or 0) for g in grants.values() if (g[k] or 0) > 0)
+            assert got <= max(0.0, left) + 1e-9, (k, got, left)
             capped[k] = {'want': want, 'pool': left}
-    rnd = len(m['history']) + 1
-    if not dry_run:
-        for name, g in grants.items():
-            if (g['usd'] or 0) == 0 and (g['tokens'] or 0) == 0:
-                continue
-            cost.account_grant(base, name, usd=g['usd'], tokens=g['tokens'],
-                               note='第 %d 輪 第 %d 名%s' % (rnd, next(r['rank'] for r in rows if r['name'] == name),
-                                                          '（經理人覆寫）' if g['override'] else ''))
-        m['history'].append({'round': rnd, 'at': now(), 'ranking': rows, 'grants': grants, 'capped': capped,
-                             'spent': {r['name']: r['spent_total'] for r in rows}})
-        _event(m, kind='grant', round=rnd, grants={n: {'usd': g['usd'], 'tokens': g['tokens']} for n, g in grants.items()},
-               capped=capped)
-        save(mdir, m)
-    return rnd, rows, grants
+    return len(m['history']) + 1, rows, grants, capped
 
 
 def grant_slots(mdir, name, regular=0, cpu=0, llm_cpu=0, env=None):
     """從總池撥名額給一家：llm cpu＝limits.llm_cpu、pools.llm +1；cpu（不含 llm，同 HR 的算法）＝limits.cpu、
     pools.default +1；人頭＝limits.regular +1。不能超過那家的 limits_max 與總池。
-    kernel 開著的話池要 aos-kernel cpu add 才真的多開（這裡只改 company.json；下次 up 生效）。"""
+    kernel 開著的話池要 aos-kernel cpu add 才真的多開（這裡只改 company.json；下次 up 對齊 K 的池）。
+    只收 ≥ 0：收回名額不走這裡（名額只在公司收掉、確定停好時回總池，astra 必修 12）。"""
+    with market_lock(mdir):
+        return _grant_slots(mdir, name, regular, cpu, llm_cpu, env)
+
+
+def _grant_slots(mdir, name, regular, cpu, llm_cpu, env):
     m = load(mdir)
     if name not in operating(m):
         raise MarketError('NotFound', '%s 不在營業' % name)
     want = {'regular': regular, 'cpu': cpu, 'llm_cpu': llm_cpu}
+    for k, v in want.items():
+        if isinstance(v, bool) or not isinstance(v, int) or v < 0:
+            raise MarketError('Usage', 'slots 的 %s 要是 ≥ 0 的整數（收回名額不走這裡）：%r' % (k, v))
     pool = pool_status(m, cost.balances(cost_base(env)))
     short = [k for k, v in want.items() if v > pool['slots'][k]]
     if short:
@@ -335,60 +458,113 @@ def grant_slots(mdir, name, regular=0, cpu=0, llm_cpu=0, env=None):
 
 # ------------------------------------------------------------------ 倒閉 ----
 
-def _shutdown(mdir, m, base, bal, name, reason, dry_run=False, stop=True):
-    """收掉一家：手上沒花完的配額（任一種 > 0 的）撥負的收回總池、名額（它的 limits）回總池、停、封存。"""
+def _close_row(mdir, m, bal, name, reason):
+    """收掉一家要記的東西（試算也用）：餘額、要收回的、名額、放出的名字、封存到哪。"""
     c = m['companies'][name]
     cdir = Path(c['dir'])
-    b = bal.get(name) or {}
-    left = b.get('balance') or {}
-    recycled = {k: v for k, v in left.items() if v is not None and v > 0}
+    left = (bal.get(name) or {}).get('balance') or {}
     try:
         cfg = co.load(cdir)
         freed = co.all_member_names(cdir, cfg)
         slots = dict(cfg['limits'])
     except TeamError:
-        cfg, freed, slots = None, [], {}
+        freed, slots = [], {}
     dest = Path(mdir) / 'archive' / ('%s-%s-%s' % (name, reason, time.strftime('%Y%m%d-%H%M%S')))
-    row = {'name': name, 'reason': reason, 'balance': left, 'recycled': recycled, 'slots': slots, 'freed': freed,
-           'archive': str(dest)}
-    if dry_run:
-        return row
-    if recycled:
-        cost.account_grant(base, name, usd=-recycled['usd'] if 'usd' in recycled else None,
-                           tokens=-recycled['tokens'] if 'tokens' in recycled else None,
-                           note='%s：沒花完的配額收回總池' % ('倒閉' if reason == 'bankrupt' else '裁撤'))
-    if stop and cfg is not None and (cdir / 'K').is_dir():
-        co.down(cdir, out=lambda *_: None)
-    dest.parent.mkdir(parents=True, exist_ok=True)
+    return {'name': name, 'reason': reason, 'balance': left,
+            'recycled': {k: v for k, v in left.items() if v is not None and v > 0}, 'slots': slots, 'freed': freed,
+            'archive': str(dest)}
+
+
+def _stop(cdir, stop):
+    """停一家；停不乾淨＝StopFailed（不封存、不收回、不放名額，astra 必修 4）。"""
+    cdir = Path(cdir)
+    if stop and (cdir / 'company.json').is_file() and (cdir / 'K').is_dir():
+        if co.down(cdir, out=lambda *_: None) != 0:
+            raise MarketError('StopFailed', '%s 沒停乾淨（company.py down -C %s 看哪裡），先不封存、名額不放；'
+                              '停好再跑一次同一個指令' % (cdir, cdir))
+
+
+def _shutdown(mdir, m, base, name, reason, stop=True):
+    """收掉一家，分兩段、每段先記再做（astra 必修 2、4）：
+    1. 標 closing（記下封存目的地、操作 ID、名額）並存檔——這時還占著名額與錢；
+    2. 停（失敗＝停在 closing，重跑同一個指令接著做）→ 停好後才讀餘額、收回（操作 ID 去重）→ 搬進 archive → 標結案。"""
+    c = m['companies'][name]
+    if c['status'] != 'closing':
+        row = _close_row(mdir, m, cost.balances(base), name, reason)
+        c['closing'] = {'reason': reason, 'archive': row['archive'], 'slots': row['slots'], 'freed': row['freed'],
+                        'op': '%s-%s-%s' % (reason, name, uuid.uuid4().hex[:8]), 'recycled': None}
+        c['status'] = 'closing'
+        save(mdir, m)
+    return _finish_close(mdir, m, base, name, stop)
+
+
+def _finish_close(mdir, m, base, name, stop=True):
+    c = m['companies'][name]
+    cl = c['closing']
+    cdir, dest = Path(c['dir']), Path(cl['archive'])
     if cdir.is_dir():
+        _stop(cdir, stop)
+    b = cost.balances(base).get(name) or {}
+    left = b.get('balance') or {}
+    if cl.get('recycled') is None:                   # 停好後才算：還在跑的單記的帳都進來了
+        cl['recycled'] = {k: v for k, v in left.items() if v is not None and v > 0}
+        cl['balance'] = left
+        save(mdir, m)
+    rec = cl['recycled']
+    if rec:
+        cost.account_grant(base, name, usd=-rec['usd'] if 'usd' in rec else None,
+                           tokens=-rec['tokens'] if 'tokens' in rec else None, op=cl['op'] + ':recycle',
+                           note='%s：沒花完的配額收回總池' % ('倒閉' if cl['reason'] == 'bankrupt' else '裁撤'))
+    if cdir.is_dir() and not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(cdir), str(dest))
-    c.update(status='bankrupt' if reason == 'bankrupt' else 'closed', closed_at=now(), archive=str(dest), freed=freed)
-    _event(m, kind=reason, company=name, recycled=recycled, slots=slots)
-    return row
+    reason = cl['reason']
+    c.update(status='bankrupt' if reason == 'bankrupt' else 'closed', closed_at=now(), archive=str(dest),
+             freed=cl['freed'])
+    c.pop('closing', None)
+    _event(m, kind=reason, company=name, recycled=rec, slots=cl['slots'], freed=cl['freed'])
+    save(mdir, m)
+    return {'name': name, 'reason': reason, 'balance': cl.get('balance', left), 'recycled': rec,
+            'slots': cl['slots'], 'freed': cl['freed'], 'archive': str(dest)}
+
+
+def _recover_closing(mdir, m, base, stop=True):
+    """上次收到一半（closing）的先收完。"""
+    return [_finish_close(mdir, m, base, n, stop) for n, c in list(m['companies'].items()) if c['status'] == 'closing']
 
 
 def bankrupt(mdir, dry_run=False, env=None, stop=True):
-    """餘額 ≤ 0（有撥過的那一種）的營業中公司倒閉：另一種還有剩的收回總池；名額回總池；停、封存（前綴可以再用）。"""
+    """餘額 ≤ 0（有撥過的那一種）的營業中公司倒閉：另一種還有剩的收回總池；名額回總池；停、封存（前綴可以再用）。
+    上次收到一半的（closing）先收完。"""
     base = cost_base(env)
-    m = load(mdir)
-    bal = cost.balances(base)
-    out = [_shutdown(mdir, m, base, bal, n, 'bankrupt', dry_run, stop) for n in operating(m)
-           if (bal.get(n) or {}).get('broke')]
-    if not dry_run and out:
-        save(mdir, m)
-    return out
+    if dry_run:
+        m, bal = load(mdir), cost.balances(base)
+        return [_close_row(mdir, m, bal, n, 'bankrupt') for n in operating(m) if (bal.get(n) or {}).get('broke')]
+    with market_lock(mdir):
+        m = load(mdir)
+        out = [r for r in _recover_closing(mdir, m, base, stop) if r['reason'] == 'bankrupt']
+        bal = cost.balances(base)
+        for n in [n for n in operating(m) if (bal.get(n) or {}).get('broke')]:
+            out.append(_shutdown(mdir, m, base, n, 'bankrupt', stop))
+        return out
 
 
 def close(mdir, name, dry_run=False, env=None, stop=True):
     """經理人裁撤一家（還沒花光）：沒花完的配額全部收回總池，其餘同倒閉。"""
     base = cost_base(env)
-    m = load(mdir)
-    if name not in operating(m):
-        raise MarketError('NotFound', '%s 不在營業' % name)
-    row = _shutdown(mdir, m, base, cost.balances(base), name, 'closed', dry_run, stop)
-    if not dry_run:
-        save(mdir, m)
-    return row
+    if dry_run:
+        m = load(mdir)
+        if name not in operating(m):
+            raise MarketError('NotFound', '%s 不在營業' % name)
+        return _close_row(mdir, m, cost.balances(base), name, 'closed')
+    with market_lock(mdir):
+        m = load(mdir)
+        c = m['companies'].get(name)
+        if c is not None and c['status'] == 'closing':
+            return _finish_close(mdir, m, base, name, stop)
+        if name not in operating(m):
+            raise MarketError('NotFound', '%s 不在營業' % name)
+        return _shutdown(mdir, m, base, name, 'closed', stop)
 
 
 # ------------------------------------------------------------------ 合併 ----
@@ -398,12 +574,25 @@ def _bare(cfg, name):
     return name[len(p):] if p and name.startswith(p) else name
 
 
+def _unique(cand, taken):
+    """改名撞到既有或這次已經排好的名字＝後面加 -2、-3…（截短到 32 字內），astra 必修 14。"""
+    if fmt.NAME.match(cand) and cand not in taken:
+        return cand
+    for i in range(2, 1000):
+        suffix = '-%d' % i
+        c = cand[:32 - len(suffix)] + suffix
+        if fmt.NAME.match(c) and c not in taken:
+            return c
+    raise MarketError('NameTaken', '%s 找不到不撞的名字' % cand)
+
+
 def plan_merge(a_dir, b_dir, b_name, order=None):
     """B 併進 A 的計畫（不動任何檔）：
 
     1. 同部門的經理（template lead）只留 A 的，B 的經理**裁掉**（家跟著 B 封存；筆記抄一份進 A 的 team/notes/_merged/）。
     2. 其餘 B 的成員照部門優先序併進 A 同一個部門的團隊，改名 `<A 前綴><原職位>-<B 名>`（例 c1-mfg-writer1-c2）；
-       A 的正式員工還有名額＝**正式**，滿了＝**臨時工**（company.json staff 寫 temp，不算人頭）。
+       撞到 A 既有的名字（或這次排好的）就再加 -2、-3。
+       A 的正式員工還有名額＝**正式**，滿了＝**臨時工**（名冊寫 employment: temp，不算人頭）。
     3. A 沒有那個部門的團隊（或那部門沒開）＝那些人**裁掉**。
     4. 新成員的 mail_to：A 那個部門的經理（有的話）＋human；A 那個部門的經理 mail_to 加上新成員。
     """
@@ -413,6 +602,7 @@ def plan_merge(a_dir, b_dir, b_name, order=None):
     regular, _t, _r = co.headcount(a_dir, a_cfg)
     room = a_cfg['limits']['regular'] - len(regular)
     b_regular, _bt, b_rows = co.headcount(b_dir, b_cfg)
+    taken = set(co.all_member_names(a_dir, a_cfg)) | {fmt.HUMAN, fmt.BEAT, fmt.POST}
     depts = sorted(b_teams, key=lambda d: (order.index(d) if d in order else len(order), d))
     moves = []
     for dept in depts:
@@ -429,6 +619,8 @@ def plan_merge(a_dir, b_dir, b_name, order=None):
                 new = '%s%s-%s' % (a_cfg['prefix'], _bare(b_cfg, name), b_name)
                 if not fmt.NAME.match(new):
                     new = ('%s%s' % (a_cfg['prefix'], _bare(b_cfg, name)))[:28] + '-' + b_name[:3]
+                new = _unique(new, taken)
+                taken.add(new)
                 was_regular = name in b_regular
                 if was_regular and room > 0:
                     emp, room = 'regular', room - 1
@@ -440,13 +632,49 @@ def plan_merge(a_dir, b_dir, b_name, order=None):
     return {'into': a_cfg['name'], 'from': b_name, 'moves': moves, 'room_left': room}
 
 
-def apply_merge(mdir, a, b, plan, env=None, start=True):
-    base = cost_base(env)
-    m = load(mdir)
+def apply_merge(mdir, a, b, plan=None, env=None, start=True):
+    """B 併進 A。整段拿市場鎖；先在鎖裡**重算**計畫（人頭、名字是最新的；跟傳進來的不一樣＝Stale，重新 --dry-run），
+    存成 market.json 的 pending（B 標 merging）再動手；每一步都能重做，崩了重跑 `merge` 接著做（astra 必修 1～3、14）。
+    順序：停 B（失敗＝停在 merging）→ 搬人（拿名冊鎖）→ A 動到的部門開工 → 停好後才讀 B 的餘額、一筆轉帳給 A → 封存 B → 結案。"""
+    with market_lock(mdir):
+        base = cost_base(env)
+        m = load(mdir)
+        pend = m.get('pending')
+        if pend and pend.get('kind') == 'merge':
+            if (pend['into'], pend['from']) != (a, b):
+                raise MarketError('Pending', '上次 %s 併進 %s 還沒做完；先跑完那個' % (pend['from'], pend['into']))
+        else:
+            if pend:
+                raise MarketError('Pending', '還有沒做完的 %s（再跑一次那個指令接著做）' % pend.get('kind'))
+            for n in (a, b):
+                if n not in operating(m):
+                    raise MarketError('NotFound', '%s 不在營業' % n)
+            fresh = plan_merge(m['companies'][a]['dir'], m['companies'][b]['dir'], b, m['params']['dept_order'])
+            if plan is not None and plan['moves'] != fresh['moves']:
+                raise MarketError('Stale', '合併計畫跟現在的名冊對不上（有人改了名冊或名額）；重新 merge --dry-run 看過再合')
+            a_names = set(co.all_member_names(m['companies'][a]['dir']))
+            hit = [mv['to'] for mv in fresh['moves'] if mv['action'] == 'join' and mv['to'] in a_names]
+            if hit:
+                raise MarketError('NameTaken', '改名撞到 %s 既有成員：%s' % (a, '、'.join(hit)))
+            pend = {'kind': 'merge', 'into': a, 'from': b, 'plan': fresh,
+                    'op': 'merge-%s-%s-%s' % (b, a, uuid.uuid4().hex[:8]),
+                    'archive': str(Path(mdir) / 'archive' / ('%s-merged-%s' % (b, time.strftime('%Y%m%d-%H%M%S')))),
+                    'moved': None}
+            m['pending'] = pend
+            m['companies'][b]['status'] = 'merging'
+            save(mdir, m)
+        return _merge_steps(mdir, m, base, pend, start)
+
+
+def _merge_steps(mdir, m, base, pend, start):
+    a, b, plan = pend['into'], pend['from'], pend['plan']
     a_dir, b_dir = Path(m['companies'][a]['dir']), Path(m['companies'][b]['dir'])
-    a_cfg_raw = fmt.read_json(a_dir / 'company.json')
+    dest = Path(pend['archive'])
+    src_root = b_dir if b_dir.is_dir() else dest            # 崩在搬家之後：從封存讀
+    if b_dir.is_dir():
+        _stop(b_dir, start)
     a_cfg = co.load(a_dir)
-    a_teams, b_teams = co.team_dirs(a_dir, a_cfg), co.team_dirs(b_dir, co.load(b_dir))
+    a_teams, b_teams = co.team_dirs(a_dir, a_cfg), co.team_dirs(src_root, co.load(src_root))
     touched = set()
     for mv in plan['moves']:
         src_notes = fmt.Layout(b_teams[mv['dept']]).notes(mv['from']) / 'notes.json'
@@ -457,26 +685,31 @@ def apply_merge(mdir, a, b, plan, env=None, start=True):
                 shutil.copy(src_notes, keep / 'notes.json')
             continue
         tdir = a_teams[mv['dept']]
-        roster = fmt.read_json(tdir / 'team.json')
-        b_mem = fmt.read_json(b_teams[mv['dept']] / 'team.json')['members'][mv['from']]
-        mem = {'template': b_mem['template'], 'mail_to': [x for x in [mv['lead'], 'human'] if x],
-               'employment': mv['employment']}
-        for k in ('model', 'mounts', 'tools'):
-            if k in b_mem:
-                mem[k] = b_mem[k]
-        roster['members'][mv['to']] = mem
-        if mv['lead'] and mv['to'] not in roster['members'][mv['lead']].setdefault('mail_to', []):
-            roster['members'][mv['lead']]['mail_to'].append(mv['to'])
-        lim = roster.setdefault('limits', {})
-        lim['max_members'] = max(lim.get('max_members', fmt.LIMIT_DEFAULTS['max_members']), len(roster['members']))
-        fmt.validate_roster(roster, str(tdir / 'team.json'))
-        fmt.write_json(tdir / 'team.json', roster, indent=2)
-        a_cfg_raw.setdefault('staff', {})[mv['to']] = {'dept': mv['dept'], 'roles': ['併自 %s 的 %s' % (b, mv['from'])]}
+        with fmt.roster_lock(fmt.Layout(tdir)):
+            roster = fmt.read_json(tdir / 'team.json')
+            if mv['to'] not in roster['members']:          # 已經在＝上次做到一半（計畫時已驗過不撞名）
+                b_mem = fmt.read_json(b_teams[mv['dept']] / 'team.json')['members'][mv['from']]
+                mem = {'template': b_mem['template'], 'mail_to': [x for x in [mv['lead'], 'human'] if x],
+                       'employment': mv['employment']}
+                for k in ('model', 'mounts', 'tools'):
+                    if k in b_mem:
+                        mem[k] = b_mem[k]
+                roster['members'][mv['to']] = mem
+            if mv['lead'] and mv['to'] not in roster['members'][mv['lead']].setdefault('mail_to', []):
+                roster['members'][mv['lead']]['mail_to'].append(mv['to'])
+            lim = roster.setdefault('limits', {})
+            lim['max_members'] = max(lim.get('max_members', fmt.LIMIT_DEFAULTS['max_members']), len(roster['members']))
+            fmt.validate_roster(roster, str(tdir / 'team.json'))
+            fmt.write_json(tdir / 'team.json', roster, indent=2)
         if src_notes.is_file():
             dst = fmt.Layout(tdir).notes(mv['to'])
             dst.mkdir(parents=True, exist_ok=True)
             shutil.copy(src_notes, dst / 'notes.json')            # 跨任務記憶帶過去（對話紀錄留在 B 的封存）
         touched.add(mv['dept'])
+    a_cfg_raw = fmt.read_json(a_dir / 'company.json')
+    for mv in plan['moves']:
+        if mv['action'] == 'join':
+            a_cfg_raw.setdefault('staff', {})[mv['to']] = {'dept': mv['dept'], 'roles': ['併自 %s 的 %s' % (b, mv['from'])]}
     co.validate(a_cfg_raw, str(a_dir / 'company.json'))
     fmt.write_json(a_dir / 'company.json', a_cfg_raw, indent=2)
     if start and (a_dir / 'K').is_dir():
@@ -484,23 +717,22 @@ def apply_merge(mdir, a, b, plan, env=None, start=True):
         for dept in sorted(touched):
             co._run([co.CLI / 'aos-team', 'init', '--target', a_teams[dept]], e)
             co._run([co.CLI / 'aos-team', 'start', '--target', a_teams[dept]], e, check=False)
-    # 帳：B 的餘額撥給 A（B 收回同額），B 標 merged、停、封存
-    bal = cost.balances(base).get(b) or {}
-    left = bal.get('balance') or {}
-    usd = left.get('usd') if (left.get('usd') or 0) > 0 else None
-    tok = left.get('tokens') if (left.get('tokens') or 0) > 0 else None
+    # 帳：B 停好後才讀餘額（還在跑的單記的帳都進來了），一筆轉帳給 A（操作 ID 去重，不會只做一半）
+    if pend.get('moved') is None:
+        left = (cost.balances(base).get(b) or {}).get('balance') or {}
+        pend['moved'] = {'usd': left.get('usd') if (left.get('usd') or 0) > 0 else None,
+                         'tokens': left.get('tokens') if (left.get('tokens') or 0) > 0 else None}
+        save(mdir, m)
+    usd, tok = pend['moved']['usd'], pend['moved']['tokens']
     if usd is not None or tok is not None:
-        cost.account_grant(base, a, usd=usd, tokens=tok, note='併入 %s 的餘額' % b)
-        cost.account_grant(base, b, usd=-usd if usd else None, tokens=-tok if tok else None, note='併入 %s' % a)
-    if start and (b_dir / 'K').is_dir():
-        co.down(b_dir, out=lambda *_: None)
-    dest = Path(mdir) / 'archive' / ('%s-merged-%s' % (b, time.strftime('%Y%m%d-%H%M%S')))
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(b_dir), str(dest))
-    m = load(mdir)
+        cost.account_transfer(base, b, a, usd=usd, tokens=tok, note='%s 併入 %s 的餘額' % (b, a), op=pend['op'])
+    if b_dir.is_dir() and not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(b_dir), str(dest))
     m['companies'][b].update(status='merged', closed_at=now(), archive=str(dest), merged_into=a)
     m['companies'][a]['note'] = (m['companies'][a].get('note') or '') + '併了 %s；' % b
     _event(m, kind='merge', company=b, into=a, moved_balance={'usd': usd, 'tokens': tok})
+    m.pop('pending', None)
     save(mdir, m)
     return {'moved': [x for x in plan['moves'] if x['action'] == 'join'],
             'laid_off': [x for x in plan['moves'] if x['action'] == 'layoff'], 'balance_moved': {'usd': usd, 'tokens': tok}}
@@ -631,6 +863,11 @@ def main(argv=None):
             return 0
         if a.cmd == 'merge':
             m = load(mdir)
+            pend = m.get('pending') or {}
+            if pend.get('kind') == 'merge' and not a.dry_run:          # 上次合到一半：接著做
+                res = apply_merge(mdir, pend['into'], pend['from'])
+                print('接著做完：%s 併進 %s；餘額轉 %s' % (pend['from'], pend['into'], json.dumps(res['balance_moved'])))
+                return 0
             ops = operating(m)
             names = a.names or ops
             if len(names) != 2:
