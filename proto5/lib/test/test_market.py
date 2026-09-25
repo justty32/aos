@@ -428,7 +428,7 @@ class AstraMust(Base):
         self.spend('c2', 1000)
         _r, _rows, grants = mk.do_grant(self.mdir, dry_run=True)
         self.assertEqual((grants['c2']['usd'], grants['c2']['tokens']), (0.0, 0))
-        self.assertEqual(grants['c1']['tokens'], 4000000)
+        self.assertEqual(grants['c1']['tokens'], mk.DEFAULT_PARAMS['round_pool']['tokens'])
         with self.assertRaises(mk.MarketError) as e:
             mk.do_grant(self.mdir, tok_over={'c2': 5000})
         self.assertEqual(e.exception.code, 'Broke')
@@ -502,6 +502,39 @@ class AstraMust(Base):
         mk.close(self.mdir, 'c1')
         ev = mk.load(self.mdir)['events'][-1]
         self.assertIn('c1-hq-lead', ev['freed'])
+
+
+class PlaytestFixes(Base):
+    """試玩員（09-25）給研發部的市場層三件事。"""
+
+    def test_negative_override_refused(self):
+        self.company('c1')
+        with self.assertRaises(mk.MarketError) as e:
+            mk.do_grant(self.mdir, usd_over={'c1': -1.0})
+        self.assertEqual(e.exception.code, 'Usage')
+        self.assertEqual(cost.balances(str(self.ledger))['c1']['quota']['usd'], 1.0)
+
+    def test_zero_spend_with_done_is_cheapest(self):
+        for n, q, sec in (('c1', 85, 300), ('c2', 70, 200), ('c3', 40, 600)):
+            self.company(n)
+            mk.record_score(self.mdir, n, quality=q, seconds=sec)
+        rows = mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))
+        self.assertEqual({r['cost'] for r in rows}, {100.0})             # 三家都沒花：並列最省
+        self.spend('c1', 100)
+        by = {r['name']: r for r in mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))}
+        self.assertEqual((by['c1']['cost'], by['c2']['cost']), (100.0, 100.0))
+
+    def test_every_subcommand_has_help(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), self.assertRaises(SystemExit):
+            mk.main(['--help'])
+        text = buf.getvalue()
+        for cmd in ('open', 'score', 'rank', 'grant', 'bankrupt', 'close', 'pool', 'slots', 'merge', 'ls'):
+            line = next((ln for ln in text.splitlines() if ln.strip().startswith(cmd + ' ')), '')
+            self.assertTrue(line.strip()[len(cmd):].strip(), cmd)
+
+    def test_seed_covers_several_orders(self):
+        self.assertGreaterEqual(mk.DEFAULT_PARAMS['seed']['tokens'], 5 * 4513016)   # 試玩一張單 451 萬 token
 
 
 if __name__ == '__main__':
