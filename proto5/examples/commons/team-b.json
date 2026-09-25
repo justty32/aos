@@ -1,0 +1,9 @@
+{
+  "_metainfo": {"_type": "aos_team", "_version": 1},
+  "project": "../p-b",
+  "tz": "Asia/Taipei",
+  "members": {
+    "lead-b": {"template": "lead", "model": "astra", "mail_to": ["worker-b", "human"]},
+    "worker-b": {"template": "worker", "model": "astra", "mail_to": ["lead-b", "human"]}
+  }
+}

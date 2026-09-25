@@ -237,10 +237,24 @@ def _words(text):
     return set(re.findall(r'[a-z0-9]+', text)) | set(ch for ch in text if '一' <= ch <= '鿿')
 
 
+STOP = {'the', 'and', 'for', 'with', 'must', 'use', 'into', 'from', 'that', 'this', 'are', 'not', 'your', 'when', 'what'}
+
+
+def _keys(title, tags, fits):
+    """「像不像」用的關鍵字：英數字詞（≥ 3 字、去虛詞）＋中文兩字詞，從標題、標籤、適合三格取。"""
+    text = ' '.join([title or '', ' '.join(tags or []), fits or '']).lower()
+    out = {w for w in re.findall(r'[a-z0-9]+', text) if len(w) >= 3 and w not in STOP}
+    for run in re.findall(r'[一-鿿]+', text):
+        out |= {run[i:i + 2] for i in range(len(run) - 1)}
+    return out
+
+
 def similar(idx, sub, sha):
-    """回 (完全一樣的 id 或 None, 像的 id 陣列)。像＝同 slug，或同種類且標題字重疊 ≥ SIMILAR。"""
+    """回 (完全一樣的 id 或 None, 像的 id 陣列)。像＝同 slug；或同種類，且標題字重疊（Jaccard）≥ SIMILAR，
+    或「標題＋標籤＋適合」關鍵字交集／較小那邊 ≥ SIMILAR（09-25 真跑 r2：同一件事換說法，標題重疊只有 0.21，漏掉了）。"""
     same, like = None, []
     mine = _words(sub['title'])
+    mine_keys = _keys(sub['title'], sub['tags'], sub['fits'])
     for eid, e in idx['entries'].items():
         if e.get('sha256') == sha:
             same = eid
@@ -250,7 +264,9 @@ def similar(idx, sub, sha):
             continue
         if e.get('type') == sub['type']:
             theirs = _words(e.get('title', ''))
-            if mine and theirs and len(mine & theirs) / len(mine | theirs) >= SIMILAR:
+            keys = _keys(e.get('title'), e.get('tags'), e.get('fits'))
+            if (mine and theirs and len(mine & theirs) / len(mine | theirs) >= SIMILAR) or \
+                    (mine_keys and keys and len(mine_keys & keys) / min(len(mine_keys), len(keys)) >= SIMILAR):
                 like.append(eid)
     return same, sorted(like)
 
@@ -562,6 +578,68 @@ def post_round(post):
         post.warn('commons 這輪做不下去：%s（下一輪再試）' % e)
 
 
+# ------------------------------------------------------------ 匯入 playbook ----
+
+LESSON_HEAD = re.compile(r'^### (\d+)[（(]([^）)]+)[）)]\s*(.+?)\s*$')
+
+
+def playbook_items(folder):
+    """proto5/playbook 形狀的資料夾 → 投稿清單（每條帶 slug）：lessons.md 每個「### N（部門）標題」一條 lesson；
+    teams/、workflows/ 底下除 README.md 以外的 .md 各一條 team／workflow（內容當 body，不附檔）。"""
+    folder = Path(folder)
+    items = []
+    lessons = folder / 'lessons.md'
+    if lessons.is_file():
+        cur = None
+        for line in lessons.read_text(encoding='utf-8').splitlines():
+            m = LESSON_HEAD.match(line)
+            if m:
+                cur = {'type': 'lesson', 'slug': 'playbook-lesson-%s' % m.group(1), 'title': m.group(3)[:LIMITS['title']],
+                       'tags': ['playbook', m.group(2)[:24]], 'fits': '%s（playbook 經驗）' % m.group(2), 'lines': []}
+                items.append(cur)
+            elif line.startswith('## ') and cur is not None:
+                cur = None
+            elif cur is not None:
+                cur['lines'].append(line)
+    for kind, sub in (('team', 'teams'), ('workflow', 'workflows')):
+        d = folder / sub
+        for p in sorted(d.glob('*.md')) if d.is_dir() else []:
+            if p.name == 'README.md':
+                continue
+            text = p.read_text(encoding='utf-8')
+            first = next((l.lstrip('# ').strip() for l in text.splitlines() if l.strip()), p.stem)
+            slug = re.sub(r'[^a-z0-9-]', '-', ('playbook-%s-%s' % (kind, p.stem)).lower())[:48].strip('-')
+            items.append({'type': kind, 'slug': slug, 'title': first[:LIMITS['title']], 'tags': ['playbook', kind],
+                          'fits': '見內文（playbook %s）' % sub, 'body': text})
+    for it in items:
+        if 'lines' in it:
+            it['body'] = '\n'.join(it.pop('lines')).strip() or it['title']
+        it['body'] = it['body'][:LIMITS['body']]
+    return items
+
+
+def import_dir(c, folder):
+    """匯入 playbook 形狀的資料夾；回 (新加, 換新, 跳過) 三個 id 清單。同 slug 內容一樣＝跳過；不一樣＝換新（以來源為準）。"""
+    added, replaced, same = [], [], []
+    src = {'team': 'playbook', 'member': HUMAN, 'task': None}
+    with c.lock():
+        c.ensure()
+        for it in playbook_items(folder):
+            sub = check_fields(it, 'import.%s' % it['slug'])
+            sha = content_sha(sub, {})
+            old = c.load_index()['entries'].get(sub['slug'])
+            if old is not None and old.get('sha256') == sha:
+                same.append(sub['slug'])
+                continue
+            if old is not None:
+                remove(c, sub['slug'])
+                replaced.append(sub['slug'])
+            else:
+                added.append(sub['slug'])
+            ingest(c, sub, src, sha=sha)
+    return added, replaced, same
+
+
 # ------------------------------------------------------------ 人的指令 ----
 
 def _commons_for(team_dir, args):
@@ -573,7 +651,7 @@ def _commons_for(team_dir, args):
 
 def cmd_commons(team_dir, argv):
     from aos_team import Parser
-    ap = Parser(prog='aos-team commons', description='跨團隊公共資料夾：ls／show／search／add／rm／reindex／desk')
+    ap = Parser(prog='aos-team commons', description='跨團隊公共資料夾：ls／show／search／add／rm／reindex／import／desk')
     ap.add_argument('--dir', help='commons 資料夾（沒給＝照這支團隊名冊的 commons）')
     sp = ap.add_subparsers(dest='op', required=True)
     p = sp.add_parser('ls', help='一條一行')
@@ -595,6 +673,8 @@ def cmd_commons(team_dir, argv):
     p = sp.add_parser('rm', help='拿掉一條')
     p.add_argument('id')
     sp.add_parser('reindex', help='index.json 用文字編輯器改過後，重生 INDEX.md（順便驗格式）')
+    p = sp.add_parser('import', help='匯入 proto5/playbook 形狀的資料夾（lessons.md 一段一條、teams／workflows 一檔一條）')
+    p.add_argument('folder')
     sp.add_parser('desk', help='圖書館員的機械檢查手動走一輪（平常郵差每輪會走）')
     args = ap.parse_args(argv)
     c = _commons_for(team_dir, args)
@@ -652,6 +732,10 @@ def cmd_commons(team_dir, argv):
                                     % (eid, '／'.join(TYPES)))
             c.save_index(idx)
         print('INDEX.md 重生了（%d 條）' % len(idx['entries']))
+        return 0
+    if args.op == 'import':
+        added, replaced, same = import_dir(c, os.path.abspath(os.path.expanduser(args.folder)))
+        print('匯入 %s：新加 %d、換新 %d、一樣跳過 %d' % (args.folder, len(added), len(replaced), len(same)))
         return 0
     if args.op == 'desk':
         lay = Layout(team_dir)
