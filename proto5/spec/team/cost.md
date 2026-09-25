@@ -122,7 +122,8 @@ aos-team cost account ls [--json]       # 每家：營業／倒閉、配額、�
 |---|---|
 | `home(env)` | 帳本資料夾（`AOS_COST_HOME`），沒設＝None |
 | `account_open(base, 名, 公司資料夾)` | 開戶；已開同 root＝不變，root 不同＝`CostError('Conflict')` |
-| `account_grant(base, 名, usd=None, tokens=None, note='')` | 撥款（加配額），回那一筆 |
+| `account_grant(base, 名, usd=None, tokens=None, note='', op=None)` | 撥款（加配額），回那一筆；給 `op`（操作 ID）＝這個帳戶已有同一個 `op` 就不再撥（崩了重跑不重撥） |
+| `account_transfer(base, 甲, 乙, usd=None, tokens=None, note='', op=…)` | 甲轉給乙：同一次讀寫裡甲撥負的、乙撥正的，不會只做一半；`op` 必填、去重同上 |
 | `balances(base)` | `{名: {"root", "quota": {"usd", "tokens"}, "spent": {…}, "balance": {…}, "calls", "broke"}}` |
 | `account_of(base, 團隊資料夾)` | 這支團隊歸哪個帳戶（root 最長的）；沒有＝None |
 | `record(env, model=…, usage=…, source=…, agent_dir=None)` | 記一筆（通常不用自己叫，兩個模型入口已經掛了） |
