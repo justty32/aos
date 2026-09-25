@@ -1,4 +1,4 @@
-# 一輪市場：打分 → 排名 → 撥款 → 倒閉 → 合併
+# 一輪市場：打分 → 排名 → 倒閉 → 撥款 → 合併
 
 ← [workflows](README.md)｜規則：[spec/team/market.md](../../spec/team/market.md)｜來源：[notes/2026-09-25-company](../../notes/2026-09-25-company/README.md)
 
@@ -7,8 +7,8 @@
 1. 各家做同一批單（每家自己的專案副本）。
 2. `market.py score 名 --eval 結果.json`：品質（機械 40％＋證據 40％＋評審 20％）；秒數、跳數從總機單自動算。
 3. `market.py rank`：品質 0.6、快 0.25、省 0.15（都是參數）。省＝這一輪花的 token，不是累計。
-4. `market.py grant [--dry-run]`：照名次分這一輪的總額；總池不夠就照比例縮。
-5. `market.py bankrupt`：花光的停、封存；剩的配額與名額回總池；`close 名` 是經理人主動裁撤（剩多少收多少）。
+4. `market.py bankrupt [--dry-run]`：**先倒閉再撥款**（market.md §3，astra 09-25）——花光的停、封存；剩的配額與名額回總池；`close 名` 是經理人主動裁撤（剩多少收多少）。順序反過來，撥款會把該倒的公司救活（花光的現在一律拿 0、覆寫也擋 `Broke`）。
+5. `market.py grant [--dry-run]`：照名次分這一輪的總額；總池不夠就照比例縮。撥完這一輪就結束，下一輪的 `score` 要重記（分數綁輪次）。
 6. 剩兩家：`market.py merge --dry-run` 看計畫（經理只留一個、名額滿了改臨時工）→ `merge`。
 
 - **在哪停下來看**：先 `--dry-run`；排名第一但品質低於門檻的（快又省但做壞了）要設 `min_quality`。
