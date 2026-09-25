@@ -1,5 +1,5 @@
 # daemon／kernel：精簡總結與 proto5 該怎麼寫規範（2026-09-22）（精簡版）
-完整版：[../notes/2026-09-22-daemon-kernel-summary.md](../notes/2026-09-22-daemon-kernel-summary.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-summary.md](../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-summary.md)
 
 astra 調查了 proto4-3 的 aos-run、daemon、kernel，以及 module、syscall、LLM module。這份保留 Claude 對 proto5 規範的整理與建議；六項取捨仍由使用者拍板。
 

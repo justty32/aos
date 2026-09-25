@@ -2,17 +2,17 @@
 
 | 檔名連結 | 這份是什麼 | 對應完整版 |
 |---|---|---|
-| [2026-09-22-act-report-astra.md](2026-09-22-act-report-astra.md) | 調查歷代工具在哪裡執行、等候時是否占用 cpu，以及模型收到真結果或收據的差別。比較五種方案，保留崩潰、副作用、排程重疊風險與原報告的 12 題選擇。 | [完整版](../notes/2026-09-22-act-report-astra.md) |
-| [2026-09-22-act-summary.md](2026-09-22-act-summary.md) | Claude 把工具方案收斂成短工具同步、慢工具交 tool cpu，結果仍接成 tool 訊息的建議。列出共用工作協議、waits、串行與未知結果處理的 6 題待拍板。 | [完整版](../notes/2026-09-22-act-summary.md) |
+| [2026-09-22-act-report-astra.md](2026-09-22-act-report-astra.md) | 調查歷代工具在哪裡執行、等候時是否占用 cpu，以及模型收到真結果或收據的差別。比較五種方案，保留崩潰、副作用、排程重疊風險與原報告的 12 題選擇。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-act-report-astra.md) |
+| [2026-09-22-act-summary.md](2026-09-22-act-summary.md) | Claude 把工具方案收斂成短工具同步、慢工具交 tool cpu，結果仍接成 tool 訊息的建議。列出共用工作協議、waits、串行與未知結果處理的 6 題待拍板。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-act-summary.md) |
 | [2026-09-22-agent-task.md](2026-09-22-agent-task.md) | 記錄 aos-agent 實作任務：先檢查 waits，再走 idle、think、act 一格。保留新增入口、產出檔、讀驗、寫檔順序、自癒、測試與實跑要求。 | [完整版](../notes/2026-09-22-agent-task.md) |
-| [2026-09-22-daemon-kernel-report-astra.md](2026-09-22-daemon-kernel-report-astra.md) | 調查 aos-run、daemon、kernel 如何啟動、交件、換行程與處理退出碼。整理控制檔協議、文件與程式落差，以及 proto5 移植時不能直接照搬的限制。 | [完整版](../notes/2026-09-22-daemon-kernel-report-astra.md) |
-| [2026-09-22-daemon-kernel-spec-task.md](2026-09-22-daemon-kernel-spec-task.md) | 交代如何把 proto4-3 真實行為整理成可供審閱的 proto5 規範草稿。保留格式與程式分檔、產出範圍、待定標記、禁區和回報規則。 | [完整版](../notes/2026-09-22-daemon-kernel-spec-task.md) |
-| [2026-09-22-daemon-kernel-summary.md](2026-09-22-daemon-kernel-summary.md) | Claude 建議保留 daemon 與 kernel 分工，列出規範分檔與應修正的舊版問題。集中 6 題決策，包括 module、第一版命令、避免重疊執行、終止子程式與錯誤代號。 | [完整版](../notes/2026-09-22-daemon-kernel-summary.md) |
-| [2026-09-22-llm-cpu-plan-task.md](2026-09-22-llm-cpu-plan-task.md) | 交代 llm cpu 的預先規劃任務，只寫規劃筆記，交使用者審閱後才決定規範。要求說清楚舊版交件流程、新版檔案協議，以及 think 如何送出、等待、收回與自癒。 | [完整版](../notes/2026-09-22-llm-cpu-plan-task.md) |
-| [2026-09-22-llm-cpu-report-astra.md](2026-09-22-llm-cpu-report-astra.md) | 調查 proto4 的同步 LLM、排隊與 worker、kernel module，以及 agent 等待結果的完整流程。保留檔案與結果格式、容量及逾時邊界、取消與崩潰窗口、重要文件落差。 | [完整版](../notes/2026-09-22-llm-cpu-report-astra.md) |
-| [2026-09-22-llm-cpu-summary.md](2026-09-22-llm-cpu-summary.md) | Claude 提議 llm cpu 每次同步做一件工作，以請求檔交件、結果檔回覆、waits 等待。列出 engine、結果位置、交件方式、容量、同步切換與送收辨識的 6 題決策。 | [完整版](../notes/2026-09-22-llm-cpu-summary.md) |
-| [2026-09-22-timeout-report-astra.md](2026-09-22-timeout-report-astra.md) | 調查各代有哪些時間限制，區分工作逾時、等待、連敗與整格卡死。保留責任分層、建議預算、終止與恢復風險，以及原報告全部 11 題待拍板。 | [完整版](../notes/2026-09-22-timeout-report-astra.md) |
-| [2026-09-22-timeout-summary.md](2026-09-22-timeout-summary.md) | Claude 建議先加工具限時與引擎連敗暫停，整格硬上限留給外層執行者。用 5 題選擇確認預算位置、預設秒數、恢復方式，以及 waits 這輪要不要期限。 | [完整版](../notes/2026-09-22-timeout-summary.md) |
+| [2026-09-22-daemon-kernel-report-astra.md](2026-09-22-daemon-kernel-report-astra.md) | 調查 aos-run、daemon、kernel 如何啟動、交件、換行程與處理退出碼。整理控制檔協議、文件與程式落差，以及 proto5 移植時不能直接照搬的限制。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-report-astra.md) |
+| [2026-09-22-daemon-kernel-spec-task.md](2026-09-22-daemon-kernel-spec-task.md) | 交代如何把 proto4-3 真實行為整理成可供審閱的 proto5 規範草稿。保留格式與程式分檔、產出範圍、待定標記、禁區和回報規則。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-spec-task.md) |
+| [2026-09-22-daemon-kernel-summary.md](2026-09-22-daemon-kernel-summary.md) | Claude 建議保留 daemon 與 kernel 分工，列出規範分檔與應修正的舊版問題。集中 6 題決策，包括 module、第一版命令、避免重疊執行、終止子程式與錯誤代號。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-summary.md) |
+| [2026-09-22-llm-cpu-plan-task.md](2026-09-22-llm-cpu-plan-task.md) | 交代 llm cpu 的預先規劃任務，只寫規劃筆記，交使用者審閱後才決定規範。要求說清楚舊版交件流程、新版檔案協議，以及 think 如何送出、等待、收回與自癒。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-llm-cpu-plan-task.md) |
+| [2026-09-22-llm-cpu-report-astra.md](2026-09-22-llm-cpu-report-astra.md) | 調查 proto4 的同步 LLM、排隊與 worker、kernel module，以及 agent 等待結果的完整流程。保留檔案與結果格式、容量及逾時邊界、取消與崩潰窗口、重要文件落差。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-llm-cpu-report-astra.md) |
+| [2026-09-22-llm-cpu-summary.md](2026-09-22-llm-cpu-summary.md) | Claude 提議 llm cpu 每次同步做一件工作，以請求檔交件、結果檔回覆、waits 等待。列出 engine、結果位置、交件方式、容量、同步切換與送收辨識的 6 題決策。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-llm-cpu-summary.md) |
+| [2026-09-22-timeout-report-astra.md](2026-09-22-timeout-report-astra.md) | 調查各代有哪些時間限制，區分工作逾時、等待、連敗與整格卡死。保留責任分層、建議預算、終止與恢復風險，以及原報告全部 11 題待拍板。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-timeout-report-astra.md) |
+| [2026-09-22-timeout-summary.md](2026-09-22-timeout-summary.md) | Claude 建議先加工具限時與引擎連敗暫停，整格硬上限留給外層執行者。用 5 題選擇確認預算位置、預設秒數、恢復方式，以及 waits 這輪要不要期限。 | [完整版](../notes/2026-09-22-investigations/2026-09-22-timeout-summary.md) |
 
 ## 今天要使用者拍板的題目總表
 

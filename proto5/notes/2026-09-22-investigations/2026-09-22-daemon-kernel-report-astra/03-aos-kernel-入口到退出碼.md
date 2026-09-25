@@ -27,7 +27,7 @@
 - 未知 module 命令若連 K 都不是有效家，先回 1，而不是最後的未知命令 2。
 - tick/init 等仍有未捕捉的 filesystem／資料形狀例外；不能把表中的正常處理分支理解成完整防炸保證。
 
-來源：[aos_kernel.py:151](../../../proto4-3/aos_kernel.py)、[aos_kernel.py:198](../../../proto4-3/aos_kernel.py)、[aos_kernel_init.py:24](../../../proto4-3/aos_kernel_init.py)、[aos_kernel_tick.py:140](../../../proto4-3/aos_kernel_tick.py)。
+來源：[aos_kernel.py:151](../../../../proto4-3/aos_kernel.py)、[aos_kernel.py:198](../../../../proto4-3/aos_kernel.py)、[aos_kernel_init.py:24](../../../../proto4-3/aos_kernel_init.py)、[aos_kernel_tick.py:140](../../../../proto4-3/aos_kernel_tick.py)。
 
 **3.2 家目錄逐檔**
 
@@ -54,7 +54,7 @@
 
 核心 JSON writer 是同一支 `aos_home.write_json()`，因此只有 rename 發佈，沒有 fsync 交易。
 
-來源：[aos_kernel.py:61](../../../proto4-3/aos_kernel.py)、[aos_kernel_init.py:43](../../../proto4-3/aos_kernel_init.py)、[aos_kernel_schedule.py:94](../../../proto4-3/aos_kernel_schedule.py)。
+來源：[aos_kernel.py:61](../../../../proto4-3/aos_kernel.py)、[aos_kernel_init.py:43](../../../../proto4-3/aos_kernel_init.py)、[aos_kernel_schedule.py:94](../../../../proto4-3/aos_kernel_schedule.py)。
 
 **3.3 `config.json` 全欄位**
 
@@ -79,7 +79,7 @@
 - 每次 tick 重新讀 config；已存在 daemon CPU 不會因此更新 aos-run 的 flags。
 - 修改 `ncpu` 沒有完整熱拔除流程：縮小時不主動刪除額外 CPU 或 daemon entries。
 
-來源：[aos_kernel.py:86](../../../proto4-3/aos_kernel.py)、[aos_kernel_init.py:27](../../../proto4-3/aos_kernel_init.py)、[aos_kernel_boot.py:37](../../../proto4-3/aos_kernel_boot.py)。
+來源：[aos_kernel.py:86](../../../../proto4-3/aos_kernel.py)、[aos_kernel_init.py:27](../../../../proto4-3/aos_kernel_init.py)、[aos_kernel_boot.py:37](../../../../proto4-3/aos_kernel_boot.py)。
 
 **3.4 inst 檔的欄位與 kernel 額外限制**
 
@@ -99,7 +99,7 @@
 
 相對 stream／exit／`$ref` 路徑由 aos-exec 以解析後 cwd 為中心處理。kernel 沒有替它們全部轉成絕對路徑。
 
-來源：[aos_inst.py:92](../../../proto4-3/aos_inst.py)、[aos_kernel_add.py:86](../../../proto4-3/aos_kernel_add.py)、[aos_kernel_tick.py:104](../../../proto4-3/aos_kernel_tick.py)。
+來源：[aos_inst.py:92](../../../../proto4-3/aos_inst.py)、[aos_kernel_add.py:86](../../../../proto4-3/aos_kernel_add.py)、[aos_kernel_tick.py:104](../../../../proto4-3/aos_kernel_tick.py)。
 
 **3.5 `state.json` 與一個行程的完整欄位**
 
@@ -129,7 +129,7 @@
 
 狀態讀取只清理頂層容器，**不驗 `cpus` 每個 cur 的完整形狀**。壞 cur 可能讓 scheduler 或 status 丟例外。未知頂層欄位不由 `KHome.state()` 保留。
 
-來源：[aos_kernel.py:102](../../../proto4-3/aos_kernel.py)、[aos_kernel_schedule.py:26](../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:94](../../../proto4-3/aos_kernel_schedule.py)。
+來源：[aos_kernel.py:102](../../../../proto4-3/aos_kernel.py)、[aos_kernel_schedule.py:26](../../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:94](../../../../proto4-3/aos_kernel_schedule.py)。
 
 **3.6 行程狀態與檔案轉換**
 
@@ -167,7 +167,7 @@
 | add 最後驗證 | 寫 `procs/.<name>.json.tmp` → `aos_inst.load()` → 清舊紀錄 → replace 正式 procs 檔 |
 | add 的 state | 不直接修改 queue/state；下一 tick 才收進表 |
 
-来源：[aos_kernel_init.py:24](../../../proto4-3/aos_kernel_init.py)、[aos_kernel_boot.py:11](../../../proto4-3/aos_kernel_boot.py)、[aos_kernel_add.py:46](../../../proto4-3/aos_kernel_add.py)。
+来源：[aos_kernel_init.py:24](../../../../proto4-3/aos_kernel_init.py)、[aos_kernel_boot.py:11](../../../../proto4-3/aos_kernel_boot.py)、[aos_kernel_add.py:46](../../../../proto4-3/aos_kernel_add.py)。
 
 **3.8 一格 tick 的完整順序**
 
@@ -188,7 +188,7 @@
 
 queue 基本檢查：可讀 JSON 物件、raw 有 argv、raw 有 cwd、cwd 是字串，再呼叫完整 inst validator。**沒有要求 cwd 必須為絕對路徑，也沒有在這階段執行 aos-exec 的所有 filesystem 前置檢查。**
 
-來源：[aos_kernel_tick.py:41](../../../proto4-3/aos_kernel_tick.py)、[aos_kernel_tick.py:69](../../../proto4-3/aos_kernel_tick.py)、[aos_kernel_tick.py:104](../../../proto4-3/aos_kernel_tick.py)。
+來源：[aos_kernel_tick.py:41](../../../../proto4-3/aos_kernel_tick.py)、[aos_kernel_tick.py:69](../../../../proto4-3/aos_kernel_tick.py)、[aos_kernel_tick.py:104](../../../../proto4-3/aos_kernel_tick.py)。
 
 **3.9 FIFO 與選下一個行程**
 
@@ -208,7 +208,7 @@ queue 基本檢查：可讀 JSON 物件、raw 有 argv、raw 有 cwd、cwd 是�
 | 換人失敗 | 保留原排程或嘗試撤銷 hard-link，寫 note |
 | 計數保存 | waiting 計數跨 swap 保存；bad_runs/bad_exit/aos_ticks **不跨 swap 保存** |
 
-來源：[aos_kernel.py:56](../../../proto4-3/aos_kernel.py)、[aos_kernel_schedule.py:9](../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:111](../../../proto4-3/aos_kernel_schedule.py)。
+來源：[aos_kernel.py:56](../../../../proto4-3/aos_kernel.py)、[aos_kernel_schedule.py:9](../../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:111](../../../../proto4-3/aos_kernel_schedule.py)。
 
 **3.10 退出碼判定的精確順序**
 
@@ -257,5 +257,5 @@ new_runs = max(0, daemon.runs - cur.seen_runs)
 | runner 重啟辨識 | 只看 runs 是否倒退，沒有比對 daemon entry PID 或 generation |
 | 退件原因 | 寫在 kernel.log；bad 指令檔沒有追加 error 欄位 |
 
-來源：[aos_kernel_schedule.py:26](../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:75](../../../proto4-3/aos_kernel_schedule.py)。
+來源：[aos_kernel_schedule.py:26](../../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:75](../../../../proto4-3/aos_kernel_schedule.py)。
 

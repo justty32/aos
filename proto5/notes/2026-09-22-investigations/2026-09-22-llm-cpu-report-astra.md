@@ -2,7 +2,7 @@
 
 最核心的事實是：**proto4-7 把模型請求交給 kernel 的 `llm` module；module 排入檔案佇列，再啟動獨立 OS worker 做同步 HTTP。agent 留下結果檔路徑，日後重新被執行時查檔。kernel 收到 101 後只處理排程，不知道 agent 在等哪個檔。**
 
-這裡稱為「LLM cpu」的 worker，**沒有登記成 `K/cpus/` 裡的一顆普通 cpu**。module 的排程函式在 kernel tick 行程內執行；模型呼叫則在它啟動的背景 worker 行程中執行。[派工實作:192](../../proto4-5/llm_cpu_tick.py)、[kernel 呼叫順序:41](../../proto4-3/aos_kernel_tick.py)
+這裡稱為「LLM cpu」的 worker，**沒有登記成 `K/cpus/` 裡的一顆普通 cpu**。module 的排程函式在 kernel tick 行程內執行；模型呼叫則在它啟動的背景 worker 行程中執行。[派工實作:192](../../../proto4-5/llm_cpu_tick.py)、[kernel 呼叫順序:41](../../../proto4-3/aos_kernel_tick.py)
 
 ## 分檔目錄
 

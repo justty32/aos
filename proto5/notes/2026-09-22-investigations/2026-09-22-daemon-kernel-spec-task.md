@@ -42,7 +42,7 @@ proto4-3 現況寫、跟 proto5 已定的東西對齊、差異標出來。
    推翻的」清單；真的沒依據的就在該處標「（待使用者定）」。
 4. 只動上表列的新規範檔。**不要碰** `proto5/README.md`、
    `proto5/lib/`、`proto5/cli/`、`proto5/spec/agent.md`／`aos-agent.md`／`aos-llm-ask.md`（另一個 agent 正在那邊寫程式）。
-5. 連結用相對路徑（參考 exec.md 開頭那行 `← [proto5 README](../README.md)｜…`）。
+5. 連結用相對路徑（參考 exec.md 開頭那行 `← [proto5 README](../../README.md)｜…`）。
 6. 不 commit。
 7. 回報用中文、條列：寫了哪幾份、各幾行；「跟 proto4-3 差在哪」那些條；「我自己選的」那些條；proto4-3 文件跟程式
    碼對不上的地方（如果有）；你覺得使用者最該先看的三個問題。

@@ -1,5 +1,5 @@
 # 任務書：daemon／kernel 規範草稿（2026-09-22）（精簡版）
-完整版：[../notes/2026-09-22-daemon-kernel-spec-task.md](../notes/2026-09-22-daemon-kernel-spec-task.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-spec-task.md](../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-spec-task.md)
 
 ## 目的與範圍
 

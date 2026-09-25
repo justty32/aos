@@ -1,5 +1,5 @@
 # daemon／kernel 調查報告（2026-09-22）（精簡版）
-完整版：[../notes/2026-09-22-daemon-kernel-report-astra.md](../notes/2026-09-22-daemon-kernel-report-astra.md)
+完整版：[../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-report-astra.md](../notes/2026-09-22-investigations/2026-09-22-daemon-kernel-report-astra.md)
 
 本報告記錄 2026-09-22 工作樹中的實作。astra 逐支讀程式與測試，另用記憶體 JSON、mock 讀檔核對部分解析差異；沒有啟動 daemon、worker 或執行會建立檔案的測試。下述重疊執行與子孫清理風險是程式流程推導，未動態重現。
 

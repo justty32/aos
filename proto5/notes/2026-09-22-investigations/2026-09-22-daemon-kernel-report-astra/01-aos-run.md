@@ -43,7 +43,7 @@ aos-run xxx
 
 資料夾存在但裡面沒有指令檔，**沒有在 loop 外拒絕**；每次 `run_target()` 會回 `(2,"usage")`，預設仍一直重試。
 
-來源：[aos_run.py:155](../../../proto4-3/aos_run.py)、[aos_exec.py:62](../../../proto4-3/aos_exec.py)。
+來源：[aos_run.py:155](../../../../proto4-3/aos_run.py)、[aos_exec.py:62](../../../../proto4-3/aos_exec.py)。
 
 **1.2 每一格實際做什麼**
 
@@ -66,7 +66,7 @@ aos-run xxx
 
 「整體時限」實作是縮短本次 subprocess timeout，**不是涵蓋所有讀檔、解析、開串流與清理的絕對截止保證**；TERM 後還可能等 2 秒才 KILL。
 
-來源：[aos_run.py:65](../../../proto4-3/aos_run.py)、[aos_run.py:126](../../../proto4-3/aos_run.py)、[aos_exec.py:181](../../../proto4-3/aos_exec.py)。
+來源：[aos_run.py:65](../../../../proto4-3/aos_run.py)、[aos_run.py:126](../../../../proto4-3/aos_run.py)、[aos_exec.py:181](../../../../proto4-3/aos_exec.py)。
 
 **1.3 退出碼：本次執行與 aos-run 本身分開**
 
@@ -91,7 +91,7 @@ aos-run xxx
 - 同次命中多個停止條件，以前表所列順序決定 reason。
 - 未捕捉的 Python 例外不屬於上述正常退出協議。
 
-來源：[aos_run.py:88](../../../proto4-3/aos_run.py)、[aos_run.py:113](../../../proto4-3/aos_run.py)、[aos_exec.py:226](../../../proto4-3/aos_exec.py)。
+來源：[aos_run.py:88](../../../../proto4-3/aos_run.py)、[aos_run.py:113](../../../../proto4-3/aos_run.py)、[aos_exec.py:226](../../../../proto4-3/aos_exec.py)。
 
 **1.4 訊號**
 
@@ -106,7 +106,7 @@ aos-run xxx
 
 嚴格說，強制退出使用的是 `_State.signum`，而它會被**每一次後續訊號**更新；不是另外保存「首次觸發 forced 的訊號」。
 
-來源：[aos_run_status.py:8](../../../proto4-3/aos_run_status.py)、[aos_run_status.py:59](../../../proto4-3/aos_run_status.py)。
+來源：[aos_run_status.py:8](../../../../proto4-3/aos_run_status.py)、[aos_run_status.py:59](../../../../proto4-3/aos_run_status.py)。
 
 **1.5 狀態檔與事件格式**
 
@@ -129,9 +129,9 @@ aos-run xxx
 
 事件用 `os.write()`，OSError 被忽略；没有非阻塞設定、重送、回執或落盤。結束時會關掉該 fd。
 
-來源：[aos_run_status.py:32](../../../proto4-3/aos_run_status.py)、[aos_exec.py:242](../../../proto4-3/aos_exec.py)。
+來源：[aos_run_status.py:32](../../../../proto4-3/aos_run_status.py)、[aos_exec.py:242](../../../../proto4-3/aos_exec.py)。
 
-既有測試覆蓋：執行次數、間隔兩算法、timeout、整體時限、訊號、argv 分隔符、事件順序與 `stop-on-error`。見 [test_run.py:58](../../../proto4-3/test/test_run.py)、[test_run_status.py:36](../../../proto4-3/test/test_run_status.py)。
+既有測試覆蓋：執行次數、間隔兩算法、timeout、整體時限、訊號、argv 分隔符、事件順序與 `stop-on-error`。見 [test_run.py:58](../../../../proto4-3/test/test_run.py)、[test_run_status.py:36](../../../../proto4-3/test/test_run_status.py)。
 
 ---
 

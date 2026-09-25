@@ -15,7 +15,7 @@
 | PID 身分 | 不確認該 PID 是不是同一支 daemon，不核對開始時間 |
 | 鎖 | 沒有家目錄鎖或原子 PID 排他建立 |
 
-來源：[aos_home.py:20](../../../proto4-3/aos_home.py)、[aos-daemon:36](../../../proto4-3/aos-daemon)。
+來源：[aos_home.py:20](../../../../proto4-3/aos_home.py)、[aos-daemon:36](../../../../proto4-3/aos-daemon)。
 
 **2.2 家目錄完整清單**
 
@@ -43,7 +43,7 @@ ctl 請求檔名為：
 
 同一 PID 在同一毫秒投多張可能同名；不是 UUID 或排他建立。
 
-來源：[aos_home.py:28](../../../proto4-3/aos_home.py)、[aos_home.py:59](../../../proto4-3/aos_home.py)、[aos_daemon_req.py:56](../../../proto4-3/aos_daemon_req.py)、[aos_daemon_lifecycle.py:19](../../../proto4-3/aos_daemon_lifecycle.py)。
+來源：[aos_home.py:28](../../../../proto4-3/aos_home.py)、[aos_home.py:59](../../../../proto4-3/aos_home.py)、[aos_daemon_req.py:56](../../../../proto4-3/aos_daemon_req.py)、[aos_daemon_lifecycle.py:19](../../../../proto4-3/aos_daemon_lifecycle.py)。
 
 **2.3 `H/state.json` 全欄位**
 
@@ -86,7 +86,7 @@ ctl 請求檔名為：
 | `thread`、`sthread` | stderr／status 讀取 thread |
 | `key` | table key |
 
-來源：[aos_daemon_entry.py:67](../../../proto4-3/aos_daemon_entry.py)、[aos_daemon_entry.py:94](../../../proto4-3/aos_daemon_entry.py)、[aos_daemon_lifecycle.py:15](../../../proto4-3/aos_daemon_lifecycle.py)。
+來源：[aos_daemon_entry.py:67](../../../../proto4-3/aos_daemon_entry.py)、[aos_daemon_entry.py:94](../../../../proto4-3/aos_daemon_entry.py)、[aos_daemon_lifecycle.py:15](../../../../proto4-3/aos_daemon_lifecycle.py)。
 
 **2.4 key 與接受的目標**
 
@@ -101,7 +101,7 @@ ctl 請求檔名為：
 | 指令檔更新 | aos-run 下一次重新讀取 |
 | symlink 改指向 | entry 的既有 key 不會自動跟著變；aos-run 仍沿 target 路徑讀。之後用該 symlink 查表會重新算 realpath |
 
-來源：[aos_daemon_entry.py:40](../../../proto4-3/aos_daemon_entry.py)、[aos_daemon.py:51](../../../proto4-3/aos_daemon.py)。
+來源：[aos_daemon_entry.py:40](../../../../proto4-3/aos_daemon_entry.py)、[aos_daemon.py:51](../../../../proto4-3/aos_daemon.py)。
 
 **2.5 請求檔協議**
 
@@ -151,7 +151,7 @@ ctl 請求檔名為：
 
 **done 代表該請求已處理／受理，不表示非同步狀態轉換已完成。** 沒有 `done:true`、完成時間、請求 ID 欄位或重試次數欄位；檔名就是關聯依據。
 
-來源：[aos_daemon_req.py:28](../../../proto4-3/aos_daemon_req.py)、[aos_daemon_req.py:56](../../../proto4-3/aos_daemon_req.py)。
+來源：[aos_daemon_req.py:28](../../../../proto4-3/aos_daemon_req.py)、[aos_daemon_req.py:56](../../../../proto4-3/aos_daemon_req.py)。
 
 **2.6 五態與停止／重啟**
 
@@ -177,7 +177,7 @@ ctl 請求檔名為：
 
 pause 只停 aos-run，沒有停 inst 子程式的 process group。若 SIGSTOP 剛好落在新一次開始後，子程式仍可繼續跑，但 aos-run 暫時不能收結果或執行 timeout 邏輯。
 
-來源：[aos_daemon.py:84](../../../proto4-3/aos_daemon.py)、[aos_daemon_entry.py:118](../../../proto4-3/aos_daemon_entry.py)。
+來源：[aos_daemon.py:84](../../../../proto4-3/aos_daemon.py)、[aos_daemon_entry.py:118](../../../../proto4-3/aos_daemon_entry.py)。
 
 **2.7 啟動、每輪、正常停止、崩潰**
 
@@ -208,7 +208,7 @@ daemon
 
 因此 daemon 五秒後的 `killpg(aos-run)` **不保證殺到 inst 子程式群組**。`rm --force` 的第二發 TERM 若被 aos-run handler 收到，則是 aos-run 主動 KILL 它記住的 child group；兩者不是同一條清理路徑。
 
-來源：[aos_daemon_lifecycle.py:19](../../../proto4-3/aos_daemon_lifecycle.py)、[aos_daemon.py:185](../../../proto4-3/aos_daemon.py)、[aos_daemon_entry.py:166](../../../proto4-3/aos_daemon_entry.py)、[aos_exec.py:190](../../../proto4-3/aos_exec.py)。
+來源：[aos_daemon_lifecycle.py:19](../../../../proto4-3/aos_daemon_lifecycle.py)、[aos_daemon.py:185](../../../../proto4-3/aos_daemon.py)、[aos_daemon_entry.py:166](../../../../proto4-3/aos_daemon_entry.py)、[aos_exec.py:190](../../../../proto4-3/aos_exec.py)。
 
 | 崩潰後項目 | 現況 |
 |---|---|
@@ -271,7 +271,7 @@ ctl 可在任何位置抽出第一個 `--home H` 或 `--home=H`。
 | 超時 | 不撤 daemon request，不取消已受理動作 |
 | `--stderr REL` 經 ctl 傳入 | 相對於 daemon／aos-run 繼承的 cwd；不是 ctl 的 cwd，也不是 H 或 inst cwd |
 
-來源：[aos_daemon_ctl.py:44](../../../proto4-3/aos_daemon_ctl.py)、[aos_daemon_ctl.py:118](../../../proto4-3/aos_daemon_ctl.py)、[aos_daemon_ctl.py:167](../../../proto4-3/aos_daemon_ctl.py)。
+來源：[aos_daemon_ctl.py:44](../../../../proto4-3/aos_daemon_ctl.py)、[aos_daemon_ctl.py:118](../../../../proto4-3/aos_daemon_ctl.py)、[aos_daemon_ctl.py:167](../../../../proto4-3/aos_daemon_ctl.py)。
 
 **2.9 錯誤代號**
 
@@ -291,7 +291,7 @@ daemon／ctl **沒有自訂、穩定的具名錯誤代號欄位**。有的是 CL
 | ctl daemon 不活／等不到 | stderr 訊息，退出 1 |
 | inst 解析失敗 | 不變成 daemon request 錯誤；透過 aos-run 的 `last_kind=aos,last_exit=125` 與 log 觀察 |
 
-既有測試確認 key、十二個 entry 欄位、五態、force、restart、CLI 生命周期與正常停止清理。**沒有建立崩潰復原、請求交易、PID 重用或跨 session 子孫清理保證。** 見 [test_daemon.py:74](../../../proto4-3/test/test_daemon.py)、[test_daemon_ops.py:14](../../../proto4-3/test/test_daemon_ops.py)、[test_daemon_cli.py:98](../../../proto4-3/test/test_daemon_cli.py)。
+既有測試確認 key、十二個 entry 欄位、五態、force、restart、CLI 生命周期與正常停止清理。**沒有建立崩潰復原、請求交易、PID 重用或跨 session 子孫清理保證。** 見 [test_daemon.py:74](../../../../proto4-3/test/test_daemon.py)、[test_daemon_ops.py:14](../../../../proto4-3/test/test_daemon_ops.py)、[test_daemon_cli.py:98](../../../../proto4-3/test/test_daemon_cli.py)。
 
 ---
 

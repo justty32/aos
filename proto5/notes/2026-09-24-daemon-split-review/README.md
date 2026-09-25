@@ -11,7 +11,7 @@
 1. **這個理由站不住。** 四份意見都同意。原因有三：
    - 不用 root 也切得成真的不同 uid（實驗 3：系統原本就配給你的 subuid），bwrap 牢根本不用切 uid。
    - **daemon 如果真的用 root 跑，反而更危險**：誰能往 `D/requests/` 丟一個檔，誰就等於能叫 root 跑任何程式。
-   - 現在的 daemon 從來沒切過使用者。09-22 決定兩支時的理由是「kernel 崩了要有人管」，**沒寫權限**（[09-22 總結 §4 第 3 題](../2026-09-22-daemon-kernel-summary.md)）。你記得的其實更早：[proto2 身份筆記](../../../proto2/notes/tools/identity-and-env.md)寫「切身份靠 `runuser`，kernel 得用 root 跑」，proto4-1 也有要 root 的 `user` 欄位（沒測過）；proto5 沒帶過來。
+   - 現在的 daemon 從來沒切過使用者。09-22 決定兩支時的理由是「kernel 崩了要有人管」，**沒寫權限**（[09-22 總結 §4 第 3 題](../2026-09-22-investigations/2026-09-22-daemon-kernel-summary.md)）。你記得的其實更早：[proto2 身份筆記](../../../proto2/notes/tools/identity-and-env.md)寫「切身份靠 `runuser`，kernel 得用 root 跑」，proto4-1 也有要 root 的 `user` 欄位（沒測過）；proto5 沒帶過來。
 2. **分開還剩別的理由，但加起來只撐得住「兩個角色、兩種行程」**。撐不住「一定要兩支執行檔」，也撐不住「兩個家、兩步開機、中間還夾一顆 kernel cpu」這個現狀。
 3. **現在不用動。** 兩派吵完收斂到同一個折衷，astra 的方向也相容：**等 proto5-2 重寫 kernel 時，順路改成「開機合一、家不合一」**（見 §3）。
 4. **權限：預設只走 bwrap 牢，daemon 永遠不用 root。** 真要切使用者，等出現「牢外也互不信任」的需求再做；做的話走 subuid，照信任群體分 uid，不照 cpu 分。

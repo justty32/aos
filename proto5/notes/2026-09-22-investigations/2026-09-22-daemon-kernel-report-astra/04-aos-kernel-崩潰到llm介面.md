@@ -17,7 +17,7 @@
 | 多個 tick 同時跑 | 沒有鎖 |
 | 檔案與 state | hard-link／replace／save state 是不同步驟，沒有跨檔交易或通用 crash recovery |
 
-來源：[aos_kernel_schedule.py:111](../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:158](../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_syscall.py:136](../../../proto4-3/aos_kernel_syscall.py)。
+來源：[aos_kernel_schedule.py:111](../../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_schedule.py:158](../../../../proto4-3/aos_kernel_schedule.py)、[aos_kernel_syscall.py:136](../../../../proto4-3/aos_kernel_syscall.py)。
 
 **3.12 內建 syscall：rm**
 
@@ -61,7 +61,7 @@ rm 查找順序：
 
 壞 JSON、非物件、缺 op、未知 op、rm 缺 pid，都會嘗試寫負回音再刪原單。**沒有把原單搬到 done；done 是另造的回應。**
 
-來源：[aos_kernel_syscall.py:18](../../../proto4-3/aos_kernel_syscall.py)、[aos_kernel_syscall.py:72](../../../proto4-3/aos_kernel_syscall.py)、[aos_kernel_syscall.py:136](../../../proto4-3/aos_kernel_syscall.py)。
+來源：[aos_kernel_syscall.py:18](../../../../proto4-3/aos_kernel_syscall.py)、[aos_kernel_syscall.py:72](../../../../proto4-3/aos_kernel_syscall.py)、[aos_kernel_syscall.py:136](../../../../proto4-3/aos_kernel_syscall.py)。
 
 **3.13 module 機制**
 
@@ -89,7 +89,7 @@ rm 查找順序：
 
 module 可以改動傳入的 state；核心不對 module 的副作用做回滾。
 
-來源：[aos_kernel_module.py:16](../../../proto4-3/aos_kernel_module.py)、[aos_kernel.py:171](../../../proto4-3/aos_kernel.py)、[aos_kernel_status.py:92](../../../proto4-3/aos_kernel_status.py)。
+來源：[aos_kernel_module.py:16](../../../../proto4-3/aos_kernel_module.py)、[aos_kernel.py:171](../../../../proto4-3/aos_kernel.py)、[aos_kernel_status.py:92](../../../../proto4-3/aos_kernel_status.py)。
 
 **3.14 `ls` 的輸出來源**
 
@@ -113,7 +113,7 @@ module 可以改動傳入的 state；核心不對 module 的副作用做回滾�
 
 `ls` 不推 tick、不修 queue、不補 CPU；daemon dead 或 module status 出錯，正常仍可退出 0。
 
-來源：[aos_kernel_status.py:9](../../../proto4-3/aos_kernel_status.py)。
+來源：[aos_kernel_status.py:9](../../../../proto4-3/aos_kernel_status.py)。
 
 **3.15 LLM module：kernel 實際接到的介面**
 
@@ -151,7 +151,7 @@ ID 通過 submit 時須符合 `[A-Za-z0-9._-]+`，不能為 `.`、`..` 或 `.tmp
 
 module handle 先讀 endpoints、驗請求，再做同名檢查與 submit。**handle 不先 ensure LLM 家；kernel 順序又是 syscall 在 module.tick 前，因此首個 tick 尚未建家時，預先放入的 llm syscall 可先失敗，之後才建家。**
 
-來源：[llm_cpu_module.py:13](../../../proto4-5/llm_cpu_module.py)、[llm_cpu_module.py:37](../../../proto4-5/llm_cpu_module.py)、[llm_cpu_request.py:15](../../../proto4-5/llm_cpu_request.py)。
+來源：[llm_cpu_module.py:13](../../../../proto4-5/llm_cpu_module.py)、[llm_cpu_module.py:37](../../../../proto4-5/llm_cpu_module.py)、[llm_cpu_request.py:15](../../../../proto4-5/llm_cpu_request.py)。
 
 **LLM CLI 與 `--wait`**
 
@@ -184,5 +184,5 @@ aos-kernel llm rm K NAME
 
 第一期撤單不是交易式取消：kernel 可能已讀 request 但尚未刪原檔；CLI 判斷只是檔案是否還存在。
 
-來源：[llm_cpu_module.py:98](../../../proto4-5/llm_cpu_module.py)、[llm_cpu_module.py:174](../../../proto4-5/llm_cpu_module.py)、[llm_cpu_module.py:233](../../../proto4-5/llm_cpu_module.py)、[llm_cpu_manage.py:85](../../../proto4-5/llm_cpu_manage.py)。
+來源：[llm_cpu_module.py:98](../../../../proto4-5/llm_cpu_module.py)、[llm_cpu_module.py:174](../../../../proto4-5/llm_cpu_module.py)、[llm_cpu_module.py:233](../../../../proto4-5/llm_cpu_module.py)、[llm_cpu_manage.py:85](../../../../proto4-5/llm_cpu_manage.py)。
 

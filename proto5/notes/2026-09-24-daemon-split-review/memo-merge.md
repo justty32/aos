@@ -4,7 +4,7 @@
 
 ## 結論
 
-1. **「daemon 要 root 才能切使用者」站不住（重）。** 真要不同 uid，不用 root 也做得到（[實驗 3](exp/README.md)）；隔離我們已經用 bwrap 牢在做（[agent-access](../2026-09-24-agent-access/README.md)）；daemon 從來沒切過使用者（[aos_daemon.py](../../lib/aos_daemon.py)），proto5 決定兩支時也沒寫這條（[09-22 總結第 4 節](../2026-09-22-daemon-kernel-summary.md)）。
+1. **「daemon 要 root 才能切使用者」站不住（重）。** 真要不同 uid，不用 root 也做得到（[實驗 3](exp/README.md)）；隔離我們已經用 bwrap 牢在做（[agent-access](../2026-09-24-agent-access/README.md)）；daemon 從來沒切過使用者（[aos_daemon.py](../../lib/aos_daemon.py)），proto5 決定兩支時也沒寫這條（[09-22 總結第 4 節](../2026-09-22-investigations/2026-09-22-daemon-kernel-summary.md)）。
 2. **拿掉之後，分開剩下的理由都是輕到中**，加起來撐得住「現在先別動」，撐不住「以後也該兩支」。
 3. **建議「縮」而不是「全合」**：proto5-2 重寫 kernel 時，把 daemon 和 kernel 的**家與開機**合成一個，kernel 每一格**仍是單獨開一次的程式**。一個家、一條開機指令，崩潰隔離照舊。
 4. 權限：**預設只走 bwrap 牢，daemon 永遠不 root**，寫進規範。
