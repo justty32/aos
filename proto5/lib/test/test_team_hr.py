@@ -443,5 +443,53 @@ class HrGateTests(HrCase):
         self.assertFalse((self.hr / 'teams.json').exists())
 
 
+# ------------------------------------------------------- astra 09-25 必修補測 ----
+
+class ReviewFixTests(HrCase):
+    def score(self, body):
+        f = self.tmp / 'sc.py'
+        f.write_text(body, encoding='utf-8')
+        return hr_mod.run_score_cmd([sys.executable, str(f)], self.tmp, dict(os.environ))
+
+    def test_nonzero_exit_voids_score(self):
+        r = self.score('import json,sys\nprint(json.dumps({"score": 100, "mech_ok": True}))\nsys.exit(3)\n')
+        self.assertEqual((r['score'], r['mech_ok']), (None, False))
+        self.assertIn('退 3', r['error'])
+
+    def test_nan_and_out_of_range_score_voided(self):
+        for bad in ('NaN', '150', '-1', 'true'):
+            r = self.score('print(\'{"score": %s, "mech_ok": true}\')\n' % bad)
+            self.assertEqual((r['score'], r['mech_ok']), (None, False), bad)
+
+    def test_trial_roster_drops_mounts(self):
+        raw = roster_obj({'worker-1': {'template': 'worker', 'mail_to': [], 'mounts': {'orig': '/abs/orig'}}})
+        out = hr_mod.trial_roster(raw, 'worker-1', 'm')
+        self.assertNotIn('mounts', out['members']['worker-1'])
+        self.assertIn('mounts', raw['members']['worker-1'])
+
+    def test_trial_copy_still_checks_cpus(self):
+        kdir = self.tmp / 'kernel'
+        kdir.mkdir()
+        (kdir / 'info.json').write_text(json.dumps({'pools': {'default': {'count': 30}}}), encoding='utf-8')
+        roster = fmt.validate_roster(roster_obj({'lead': {'template': 'lead'}}))
+        with mock.patch.dict(os.environ, {'AOS_HR_HOME': str(self.hr), 'AOS_HR_TRIAL': 'tr-0001',
+                                          'AOS_KERNEL_HOME': str(kdir)}, clear=False):
+            self.err('TooMany', aos_team._hr_gate, fmt.Layout(self.tmp / 'team'), roster, cpus=True)
+        self.assertFalse((self.hr / 'teams.json').exists())
+
+    def test_trial_out_inside_original_refused(self):
+        team = self.tmp / 'team'
+        (self.tmp / 'p').mkdir()
+        team.mkdir()
+        (team / 'team.json').write_text(json.dumps(roster_obj({'lead': {'template': 'lead'}})), encoding='utf-8')
+        ts = self.tmp / 'ts'
+        (ts / 'project').mkdir(parents=True)
+        (ts / 't.json').write_text(json.dumps({'name': 'X', 'project': 'project', 'asks': ['a'],
+                                               'score_cmd': ['true']}), encoding='utf-8')
+        with mock.patch.object(hr_mod, 'check_cpus', lambda *a, **kw: None):
+            self.err('BadProject', hr_mod.trial, team, self.hr, 'lead', 'm', ts / 't.json',
+                     out_dir=str(self.tmp / 'p' / 'x'), out=lambda *a: None)
+
+
 if __name__ == '__main__':
     unittest.main()

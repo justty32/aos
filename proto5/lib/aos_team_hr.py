@@ -13,6 +13,7 @@ import contextlib
 import datetime
 import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import shlex
@@ -188,15 +189,20 @@ def member_model(roster, name):
 
 def register_team(hr, team_dir):
     """把團隊資料夾記進 HR 的 teams.json（數全公司正式員工用）。"""
-    p = Path(hr) / 'teams.json'
     with hr_lock(Path(hr)):
-        teams = read_json(p) if p.exists() else []
-        if not isinstance(teams, list):
-            teams = []
-        team_dir = str(Path(team_dir).resolve())
-        if team_dir not in teams:
-            teams.append(team_dir)
-            write_json(p, teams, indent=2)
+        register_team_locked(hr, team_dir)
+
+
+def register_team_locked(hr, team_dir):
+    """同上，呼叫者已經拿著 hr_lock。"""
+    p = Path(hr) / 'teams.json'
+    teams = read_json(p) if p.exists() else []
+    if not isinstance(teams, list):
+        teams = []
+    team_dir = str(Path(team_dir).resolve())
+    if team_dir not in teams:
+        teams.append(team_dir)
+        write_json(p, teams, indent=2)
 
 
 def count_regular(hr, extra_team=None):
@@ -219,7 +225,7 @@ def count_regular(hr, extra_team=None):
 def check_regular(hr, team_dir, roster_after, policy=None):
     """team_dir 的名冊換成 roster_after 之後，全公司正式員工會不會超過 regular_max；超了丟 TooMany。"""
     policy = policy or load_policy(hr)
-    _, by = count_regular(hr, team_dir)
+    _, by = count_regular(hr, team_dir)   # 呼叫者要拿著 hr_lock 才算數（set_member、aos_team._hr_gate）
     key = str(Path(team_dir).resolve())
     by[key] = sum(1 for m in roster_after['members'].values() if m['employment'] == 'regular')
     total = sum(by.values())
@@ -342,7 +348,7 @@ def set_member(team_dir, hr, name, model=None, employment=None, restart=True, en
     """改名冊一個成員的 model／employment；model 改了也改它家的 info.json、登記著就重啟。"""
     env = os.environ if env is None else env
     lay = Layout(team_dir)
-    with roster_lock(lay):
+    with hr_lock(Path(hr)), roster_lock(lay):   # astra 09-25：數人頭到寫名冊一口氣（鎖順序一律 HR → 名冊）
         raw = read_json(lay.roster)
         if name not in raw.get('members', {}):
             raise TeamError('NotFound', '%s 不在名冊裡（有：%s）' % (name, '、'.join(raw.get('members', {}))))
@@ -355,7 +361,7 @@ def set_member(team_dir, hr, name, model=None, employment=None, restart=True, en
         if employment == 'regular':
             check_regular(hr, team_dir, after)
         write_json(lay.roster, raw, indent=2)
-    register_team(hr, team_dir)
+        register_team_locked(hr, team_dir)
     out('team.json 的 %s 改好了%s%s' % (name, '：model=%s' % model if model else '',
                                         '：employment=%s' % employment if employment else ''))
     if model is None:
@@ -365,20 +371,23 @@ def set_member(team_dir, hr, name, model=None, employment=None, restart=True, en
     if not info_p.exists():
         out('%s 還沒有家；aos-team init 生家時就會用新模型' % name)
         return 0
-    info = read_json(info_p)
-    info.setdefault('llm', {})['model'] = model
-    write_json(info_p, info, indent=2)
-    out('%s 的家 info.json 的 llm.model 改成 %s' % (name, model))
-    if not restart:
-        return 0
     import aos_agent
     import aos_agent_status
-    k = aos_agent_status.kernel_status(str(home), env)
-    if aos_agent_status.unregistered(k):
-        out('%s 沒登記在 kernel，不用重啟' % name)
+    from aos_agent_tools_edit import info_lock
+    running = False
+    if restart:
+        running = not aos_agent_status.unregistered(aos_agent_status.kernel_status(str(home), env))
+        if running and aos_agent.stop(str(home), env=env):      # astra 09-25：先停、再改、再開
+            raise TeamError('StillRunning', '%s 停不下來；aos-agent status --target %s 看' % (name, home))
+    with info_lock(home):                    # 跟 tools add／access set 共用同一把鎖
+        info = read_json(info_p)
+        info.setdefault('llm', {})['model'] = model
+        write_json(info_p, info, indent=2)
+    out('%s 的家 info.json 的 llm.model 改成 %s' % (name, model))
+    if not running:
+        out('%s 沒登記在 kernel（或 --no-restart），不用重啟' % name)
         return 0
-    rc = aos_agent.stop(str(home), env=env)
-    rc = rc or aos_agent.start(str(home), env=env)
+    rc = aos_agent.start(str(home), env=env)
     out('%s 重啟%s' % (name, '好了' if rc == 0 else '失敗（aos-agent status --target %s 看）' % home))
     return 1 if rc else 0
 
@@ -400,11 +409,18 @@ def load_taskset(path):
     return ts
 
 
+def _overlap(a, b):
+    a, b = os.path.realpath(a), os.path.realpath(b)
+    return a == b or a.startswith(b.rstrip(os.sep) + os.sep) or b.startswith(a.rstrip(os.sep) + os.sep)
+
+
 def trial_roster(raw, member, model):
     """原名冊的副本：project 指 ../proj、那個成員換模型。原物件不動。"""
     out = json.loads(json.dumps(raw))
     out['project'] = '../proj'
     out['members'][member]['model'] = model
+    for m in out['members'].values():       # astra 09-25：多掛的資料夾可能指原專案（可寫），副本一律拿掉
+        m.pop('mounts', None)
     return out
 
 
@@ -428,11 +444,15 @@ def run_score_cmd(cmd, cwd, env, timeout=900):
     except (ValueError, IndexError):
         return {'score': None, 'mech_ok': False,
                 'error': '評分指令退 %d，最後一行不是 JSON 物件：%s' % (r.returncode, (r.stdout + r.stderr)[-300:])}
-    if r.returncode != 0:
-        res.setdefault('error', '評分指令退 %d' % r.returncode)
     s = res.get('score')
-    res['score'] = s if isinstance(s, (int, float)) and not isinstance(s, bool) else None
-    res['mech_ok'] = res.get('mech_ok') is True
+    ok_num = isinstance(s, (int, float)) and not isinstance(s, bool) and math.isfinite(s) and 0 <= s <= 100
+    res['score'] = s if ok_num else None
+    res['mech_ok'] = res.get('mech_ok') is True and ok_num
+    if not ok_num and s is not None:
+        res.setdefault('error', 'score 要是 0～100 的數字，拿到 %r' % (s,))
+    if r.returncode != 0:                   # astra 09-25：退非 0＝這次評分不算數，不能拿來調薪
+        res.setdefault('error', '評分指令退 %d' % r.returncode)
+        res['score'], res['mech_ok'] = None, False
     return res
 
 
@@ -469,6 +489,34 @@ def verdict(hr, rec, policy, sal):
     return '通過', why + '；薪資表原本的最低通過（%s）更便宜，不動' % cur
 
 
+def _drive(cli_env, team, ts, timeout, t0):
+    """丟每一句、輪詢到頂層單全結束或逾時；有題目而任務集給了 answer 就回。回 done／failed／timeout。"""
+    for a in ts['asks']:
+        _team(cli_env, team, 'ask', a)
+    limit = timeout or ts.get('timeout_s', 900)
+    expect = ts.get('expect_tasks', len(ts['asks']))
+    answered = set()
+    while time.time() - t0 < limit:
+        time.sleep(3)
+        if ts.get('answer'):
+            r = _team(cli_env, team, 'wait', 'ls', '--json')
+            try:
+                for q in json.loads(r.stdout or '[]'):
+                    if q['id'] not in answered:
+                        answered.add(q['id'])
+                        _team(cli_env, team, 'answer', q['id'], ts['answer'])
+            except (ValueError, KeyError, TypeError):
+                pass
+        r = _team(cli_env, team, 'task', 'ls', '--all', '--json')
+        try:
+            top = [t for t in json.loads(r.stdout or '[]') if not t.get('parent')]
+        except ValueError:
+            continue
+        if len(top) >= expect and all(t['status'] in TERMINAL for t in top):
+            return 'done' if all(t['status'] == 'done' for t in top) else 'failed'
+    return 'timeout'
+
+
 def trial(team_dir, hr, member, model, taskset, score_cmd=None, out_dir=None, timeout=None, env=None,
           note='', out=print):
     env = dict(os.environ if env is None else env)
@@ -483,9 +531,14 @@ def trial(team_dir, hr, member, model, taskset, score_cmd=None, out_dir=None, ti
         raise TeamError('Usage', '要有評分指令：--score-cmd "…" 或任務集的 score_cmd')
     policy = load_policy(hr)
     check_cpus(hr, env, policy)
+    import aos_team_format
+    orig_proj = aos_team_format.project_dir(lay.root, roster)
     with hr_lock(hr):
         tid = next_trial_id(hr)
-        base = Path(out_dir) if out_dir else hr / 'trials' / tid
+        base = Path(os.path.abspath(out_dir)) if out_dir else hr / 'trials' / tid
+        for inside in (lay.root, orig_proj):
+            if _overlap(base, inside):
+                raise TeamError('BadProject', '試用資料夾 %s 跟原團隊／原專案 %s 重疊；換一個 --out' % (base, inside))
         base.mkdir(parents=True, exist_ok=False)
     team, proj = base / 'team', base / 'proj'
     src = Path(ts['_dir']) / ts['project']
@@ -511,32 +564,12 @@ def trial(team_dir, hr, member, model, taskset, score_cmd=None, out_dir=None, ti
             _team(cli_env, team, 'stop')
             raise TeamError('TrialSetup', 'aos-team %s 失敗：%s' % (st[0], (r.stdout + r.stderr)[-500:]))
     t0 = time.time()
-    for a in ts['asks']:
-        _team(cli_env, team, 'ask', a)
-    limit = timeout or ts.get('timeout_s', 900)
-    expect = ts.get('expect_tasks', len(ts['asks']))
-    status, answered = 'timeout', set()
-    while time.time() - t0 < limit:
-        time.sleep(3)
-        if ts.get('answer'):
-            r = _team(cli_env, team, 'wait', 'ls', '--json')
-            try:
-                for q in json.loads(r.stdout or '[]'):
-                    if q['id'] not in answered:
-                        answered.add(q['id'])
-                        _team(cli_env, team, 'answer', q['id'], ts['answer'])
-            except (ValueError, KeyError, TypeError):
-                pass
-        r = _team(cli_env, team, 'task', 'ls', '--all', '--json')
-        try:
-            top = [t for t in json.loads(r.stdout or '[]') if not t.get('parent')]
-        except ValueError:
-            continue
-        if len(top) >= expect and all(t['status'] in TERMINAL for t in top):
-            status = 'done' if all(t['status'] == 'done' for t in top) else 'failed'
-            break
-    wall = round(time.time() - t0, 1)
-    _team(cli_env, team, 'stop')
+    status = 'error'
+    try:
+        status = _drive(cli_env, team, ts, timeout, t0)
+    finally:                                # astra 09-25：出了例外也要把試用團隊停掉
+        wall = round(time.time() - t0, 1)
+        _team(cli_env, team, 'stop')
     sc = _team(cli_env, team, 'score', '--json')
     try:
         six = json.loads(sc.stdout)

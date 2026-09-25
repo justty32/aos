@@ -147,7 +147,7 @@ def check(lay, roster, sender, template, name, mail_to, *, ignore=None):
         raise TeamError('MayExceeds', '模板 %s 能寄 %s，%s 自己不能；新成員的權限不能比申請者大'
                         % (template, '、'.join(extra), sender))
     import aos_team
-    hr = aos_team._hr_home()                          # HR 09-25：生之前數全公司 cpu（spec/team/hr.md〈名額〉）
+    hr = aos_team._hr_home(cpu_only=True)             # HR 09-25：生之前數全公司 cpu（試用副本也管）
     if hr is not None:
         import aos_team_hr
         aos_team_hr.check_cpus(hr)
