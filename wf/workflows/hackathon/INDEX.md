@@ -31,3 +31,6 @@
 | 場次 | 題目 | 狀態 |
 |---|---|---|
 | [core-scope/](records/core-scope/README.md) | 用現有 aos 跑三回合 agent loop、逐段砍掉，答三個數字定 core scope（OPEN-QUESTIONS 第 2 題） | **三輪已跑完**（2026-08-26），待使用者拍板 |
+| [agent-loop.md](records/agent-loop.md) | 在 `aos exec` 上做一條會動的 agent loop | 第 1 輪紀錄；2026-09-25 按標題拆進 `records/agent-loop/`（24 份），入口留原路徑 |
+| [argv-split.md](records/argv-split.md) | 把「exec 只當純 CPU、其餘全外放成 argv」真的做出來，去打研討會的三個主張 | 第 1 輪紀錄；2026-09-25 拆進 `records/argv-split/`（29 份） |
+| [deliver-contract.md](records/deliver-contract.md) | Deliver 的介面與契約 | 兩輪紀錄；2026-09-25 拆進 `records/deliver-contract/`（15 份） |
