@@ -1,0 +1,33 @@
+{
+ "_metainfo": {
+  "_type": "aos_company_order",
+  "_version": 1
+ },
+ "id": "o-0002",
+ "at": "2026-09-25T13:55:13+08:00",
+ "from": {
+  "dept": "hq",
+  "member": "c1-hq-lead",
+  "letter": "1790315705250906510-2-c1-hq-lead"
+ },
+ "to": {
+  "dept": "qa",
+  "team": "qa",
+  "member": "c1-qa-inspector"
+ },
+ "text": "驗貨 老木頭",
+ "via": "handoff",
+ "route": "inspect",
+ "out_id": "1790315713365222158-655704-human",
+ "task": "t-0001",
+ "status": "done",
+ "replies": [
+  {
+   "letter": "v-t-0001-r1-a1.e0",
+   "status": "DONE",
+   "at": "2026-09-25T13:55:34+08:00"
+  }
+ ],
+ "result": null,
+ "closed_at": "2026-09-25T13:55:40+08:00"
+}

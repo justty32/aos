@@ -1,0 +1,33 @@
+{
+ "_metainfo": {
+  "_type": "aos_company_order",
+  "_version": 1
+ },
+ "id": "o-0001",
+ "at": "2026-09-25T13:49:17+08:00",
+ "from": {
+  "dept": "hq",
+  "member": "c2-hq-lead",
+  "letter": "1790315353283856475-2-c2-hq-lead"
+ },
+ "to": {
+  "dept": "mfg",
+  "team": "mfg",
+  "member": "c2-mfg-writer1"
+ },
+ "text": "補人物 老木頭（只寫詞條）",
+ "via": "handoff",
+ "route": "one-character-light",
+ "out_id": "1790315357470091767-637738-human",
+ "task": "t-0001",
+ "status": "failed",
+ "replies": [
+  {
+   "letter": "1790315630930016842-2-c2-mfg-reviewer.e1",
+   "status": "FAILED",
+   "at": "2026-09-25T13:53:54+08:00"
+  }
+ ],
+ "result": null,
+ "closed_at": "2026-09-25T13:54:00+08:00"
+}

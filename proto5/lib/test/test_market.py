@@ -42,11 +42,26 @@ class Base(unittest.TestCase):
         cost.append(str(self.ledger), [cost.make_row(model='deepseek-chat', source='think', team=str(d.resolve()),
                                                      member=member, usage={'prompt_tokens': tokens, 'completion_tokens': 0})])
 
-    def order(self, name, oid, t0, t1, status='done', replies=1):
+    def board(self, name, t0, t1, status='DONE', verdict='結論：合格', qa='done'):
+        """董事下一張單（前台 human 寄件格）＋總裁的結案信（前台 human 收件格）＋中間一張品管總機單。"""
+        hq = self.tmp / name / 'teams' / 'hq' / 'team'
+        self.n = getattr(self, 'n', 0) + 1
+        ask = {'id': '%d-1-human' % self.n, 'from': 'human', 'to': name + '-hq-lead', 'status': 'REQUEST',
+               'reply_to': None, 'rev': None, 'text': '補人物 某人', 'at': t0}
+        for d in (hq / 'outbox' / 'human' / 'done', hq / 'human'):
+            d.mkdir(parents=True, exist_ok=True)
+        fmt.write_json(hq / 'outbox' / 'human' / 'done' / (ask['id'] + '.json'), ask)
+        close = {'id': '%d-2-%s-hq-lead' % (self.n, name), 'from': name + '-hq-lead', 'to': 'human', 'status': status,
+                 'reply_to': 'x', 'rev': None, 'text': '做完了。qa-reports/某人.md %s' % verdict, 'at': t1}
+        fmt.write_json(hq / 'human' / (close['id'] + '.json'), close)
+        if qa:
+            self.order(name, 'o-%04d' % (100 + self.n), t0, t1, status=qa, dept='qa')
+
+    def order(self, name, oid, t0, t1, status='done', replies=1, dept='mfg'):
         folder = self.tmp / name / 'switchboard' / 'orders'
         folder.mkdir(parents=True, exist_ok=True)
         fmt.write_json(folder / (oid + '.json'), {
-            'id': oid, 'at': t0, 'status': status, 'from': {'dept': 'hq'}, 'to': {'dept': 'mfg', 'team': 'mfg'},
+            'id': oid, 'at': t0, 'status': status, 'from': {'dept': 'hq'}, 'to': {'dept': dept, 'team': dept},
             'replies': [{'letter': 'x%d' % i, 'status': 'DONE', 'at': t1} for i in range(replies)]})
 
 
@@ -58,15 +73,19 @@ class Scores(Base):
         self.assertEqual(mk.quality_from_eval(res), round((100 + 25) / 2, 2))
         self.assertIsNone(mk.quality_from_eval({'people': []}))
 
-    def test_speed_from_company_orders(self):
+    def test_speed_from_board_orders(self):
         self.company('c1')
+        # 只有部門間的總機單、沒有董事的單＝這輪沒有成功結案（以前會算成 2 張、平均 900 秒）
         self.order('c1', 'o-0001', '2026-09-25T12:00:00+08:00', '2026-09-25T12:10:00+08:00', replies=2)
         self.order('c1', 'o-0002', '2026-09-25T12:00:00+08:00', '2026-09-25T12:20:00+08:00')
-        self.order('c1', 'o-0003', '2026-09-25T12:00:00+08:00', '2026-09-25T13:00:00+08:00', status='open')
-        sp = mk.speed_from_company(self.tmp / 'c1')
-        self.assertEqual(sp, {'done': 2, 'seconds': 900.0, 'hops': 2.5})
+        self.assertEqual(mk.board_from_company(self.tmp / 'c1'), {'done': 0, 'failed': 0, 'seconds': None, 'hops': None})
+        self.board('c1', '2026-09-25T12:00:00+08:00', '2026-09-25T12:30:00+08:00')
+        self.board('c1', '2026-09-25T13:00:00+08:00', '2026-09-25T13:10:00+08:00')
+        self.board('c1', '2026-09-25T14:00:00+08:00', '2026-09-25T14:05:00+08:00', status='FAILED', qa=None)
+        sp = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual((sp['done'], sp['failed'], sp['seconds']), (2, 1, 1200.0))
         s = mk.record_score(self.mdir, 'c1', quality=70)
-        self.assertEqual((s['quality'], s['seconds'], s['done']), (70, 900.0, 2))
+        self.assertEqual((s['quality'], s['seconds'], s['done'], s['failed']), (70, 1200.0, 2, 1))
 
 
 class RankGrant(Base):
@@ -272,7 +291,7 @@ class AstraMust(Base):
     def test_grant_crash_midway_resumes_without_double_grant(self):
         for n in ('c1', 'c2', 'c3'):
             self.company(n)
-            mk.record_score(self.mdir, n, quality=50)
+            mk.record_score(self.mdir, n, quality=50, done=1)
         real = cost.account_grant
         calls = []
 
@@ -410,21 +429,17 @@ class AstraMust(Base):
     def test_speed_counts_orders_closed_this_round(self):
         self.company('c1')
         since = '2026-09-25T12:30:00+08:00'
-        self.order('c1', 'o-0001', '2026-09-25T12:00:00+08:00', '2026-09-25T13:00:00+08:00')   # 上輪下單、這輪結
-        self.order('c1', 'o-0002', '2026-09-25T12:00:00+08:00', '2026-09-25T12:10:00+08:00')   # 上輪就結了
-        self.order('c1', 'o-0003', '2026-09-25T04:40:00+00:00', '2026-09-25T04:50:00+00:00')   # 別的時區，這輪
-        sp = mk.speed_from_company(self.tmp / 'c1', since)
+        self.board('c1', '2026-09-25T12:00:00+08:00', '2026-09-25T12:10:00+08:00')   # 上輪就結了
+        self.board('c1', '2026-09-25T12:20:00+08:00', '2026-09-25T13:20:00+08:00')   # 上輪下單、這輪結
+        self.board('c1', '2026-09-25T04:40:00+00:00', '2026-09-25T04:50:00+00:00')   # 別的時區，這輪
+        sp = mk.board_from_company(self.tmp / 'c1', since)
         self.assertEqual((sp['done'], sp['seconds']), (2, (3600 + 600) / 2))
-        o = fmt.read_json(self.tmp / 'c1' / 'switchboard' / 'orders' / 'o-0002.json')
-        o['closed_at'] = '2026-09-25T12:45:00+08:00'                                           # 有 closed_at 看它
-        fmt.write_json(self.tmp / 'c1' / 'switchboard' / 'orders' / 'o-0002.json', o)
-        self.assertEqual(mk.speed_from_company(self.tmp / 'c1', since)['done'], 3)
 
     # 必修 11：花光的不撥、不准覆寫救活
     def test_broke_company_gets_nothing(self):
         for n in ('c1', 'c2'):
             self.company(n)
-            mk.record_score(self.mdir, n, quality=90)
+            mk.record_score(self.mdir, n, quality=90, done=1)
         self.spend('c2', 1000)
         _r, _rows, grants = mk.do_grant(self.mdir, dry_run=True)
         self.assertEqual((grants['c2']['usd'], grants['c2']['tokens']), (0.0, 0))
@@ -480,8 +495,8 @@ class AstraMust(Base):
         mk.save(self.mdir, m)
         self.company('c1')
         self.company('c2')
-        mk.record_score(self.mdir, 'c1', quality=90)
-        mk.record_score(self.mdir, 'c2', quality=80)
+        mk.record_score(self.mdir, 'c1', quality=90, done=1)
+        mk.record_score(self.mdir, 'c2', quality=80, done=1)
         p = mk.pool_status(mk.load(self.mdir), cost.balances(str(self.ledger)))
         self.assertAlmostEqual(p['money']['usd'], 0.0001)
         _r, _rows, grants = mk.do_grant(self.mdir)
@@ -535,6 +550,150 @@ class PlaytestFixes(Base):
 
     def test_seed_covers_several_orders(self):
         self.assertGreaterEqual(mk.DEFAULT_PARAMS['seed']['tokens'], 5 * 4513016)   # 試玩一張單 451 萬 token
+
+
+FIX = Path(__file__).resolve().parent / 'fixtures' / 'market_run'
+
+
+class FormulaFix(Base):
+    """市場真跑一輪（09-25，notes/2026-09-25-company/market-run）暴露的公式問題；fixture 是那次的原始紀錄（唯讀複製）。"""
+
+    def real(self, name):
+        shutil.copytree(FIX / name, self.tmp / name)
+        mk.open_company(self.mdir, name, self.tmp / name, usd=1.0, tokens=25000000)
+
+    def two_real(self):
+        self.real('c1')
+        self.real('c2')
+        self.spend('c1', 5954228)
+        self.spend('c2', 900020)
+
+    def rows(self):
+        return {r['name']: r for r in mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))}
+
+    # 3：快＝董事從下單到收到結案信的秒數
+    def test_speed_is_board_wait(self):
+        self.real('c1')
+        self.real('c2')
+        b1 = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual((b1['done'], b1['failed'], b1['seconds']), (1, 0, 401.0))    # 13:49:06 → 13:55:47
+        b2 = mk.board_from_company(self.tmp / 'c2')
+        self.assertEqual((b2['done'], b2['failed'], b2['seconds']), (0, 1, None))      # FAILED 結案＝不算成功
+        # 這一輪之後才結案的才算
+        self.assertEqual(mk.board_from_company(self.tmp / 'c1', '2026-09-25T13:56:00+08:00')['done'], 0)
+
+    def test_success_needs_qa_pass(self):
+        self.real('c1')
+        inbox = self.tmp / 'c1' / 'teams' / 'hq' / 'team' / 'human'
+        p = next(q for q in inbox.glob('*.json') if fmt.read_json(q)['status'] == 'DONE')
+        letter = fmt.read_json(p)
+        letter['text'] = letter['text'].replace('結論：合格', '結論：不合格')
+        fmt.write_json(p, letter)
+        b = mk.board_from_company(self.tmp / 'c1')
+        self.assertEqual((b['done'], b['failed']), (0, 1))
+        letter['text'] = '老木頭做完了'                                                # 沒寫品管結論＝不算
+        fmt.write_json(p, letter)
+        self.assertEqual(mk.board_from_company(self.tmp / 'c1')['done'], 0)
+
+    # 1：沒有成功結案的，品質、快、省、總分都 0，撥 0
+    def test_failed_company_scores_zero(self):
+        self.two_real()
+        s2 = mk.record_score(self.mdir, 'c2', eval_path=str(FIX / 'c2-quality.json'))
+        self.assertEqual((s2['quality'], s2['done'], s2['failed']), (100.0, 0, 1))
+        mk.record_score(self.mdir, 'c1', quality=93.75)
+        by = self.rows()
+        self.assertEqual((by['c2']['quality'], by['c2']['speed'], by['c2']['cost'], by['c2']['score']), (0.0, 0.0, 0.0, 0.0))
+        self.assertEqual(by['c1']['score'], 96.25)
+        _r, _rows, grants = mk.do_grant(self.mdir, dry_run=True)
+        self.assertEqual((grants['c2']['usd'], grants['c2']['tokens']), (0.0, 0))
+        self.assertEqual((grants['c1']['usd'], grants['c1']['tokens']), (2.0, 50000000))
+
+    # 4：省只在成功者之間比；只剩一家成功＝滿分、註明無對照
+    def test_cost_only_among_successful(self):
+        self.two_real()
+        mk.record_score(self.mdir, 'c1', quality=93.75)
+        mk.record_score(self.mdir, 'c2', quality=100)
+        by = self.rows()
+        self.assertEqual(by['c1']['cost'], 100.0)
+        self.assertEqual(by['c1'].get('note'), '省、快：無對照（這輪只有它成功）')
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            mk._print_rank(mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger))))
+        self.assertIn('無對照', buf.getvalue())
+        # 三家、兩家成功：失敗那家花得少也不拉低別人
+        self.company('c3')
+        mk.record_score(self.mdir, 'c3', quality=80, seconds=300)
+        self.spend('c3', 5954228 * 2)
+        by = self.rows()
+        self.assertEqual((by['c1']['cost'], by['c3']['cost']), (100.0, 50.0))
+        self.assertIsNone(by['c1'].get('note'))
+
+    # 2：沒人有分＝grant 拒絕（dry-run 也說）；同分均分
+    def test_grant_refuses_without_scores(self):
+        self.company('c1')
+        self.company('c2')
+        for dry in (True, False):
+            with self.assertRaises(mk.MarketError) as e:
+                mk.do_grant(self.mdir, dry_run=dry)
+            self.assertEqual(e.exception.code, 'NoScores')
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            code = mk.main(['--market', str(self.mdir), 'grant', '--dry-run'])
+        self.assertEqual(code, 1)
+        self.assertIn('本輪無分數', err.getvalue())
+        self.assertEqual(cost.balances(str(self.ledger))['c1']['quota'], {'usd': 1.0, 'tokens': 1000})
+        mk.record_score(self.mdir, 'c1', quality=90, done=1)
+        mk.do_grant(self.mdir)
+        with self.assertRaises(mk.MarketError):                      # 撥完再跑一次：新的一輪沒分數，不多發
+            mk.do_grant(self.mdir)
+        self.assertEqual(len(mk.load(self.mdir)['history']), 1)
+
+    def test_ties_split_evenly(self):
+        for n in ('c2', 'c1', 'c3'):
+            self.company(n)
+        for n in ('c1', 'c2'):
+            mk.record_score(self.mdir, n, quality=80, seconds=300)
+        mk.record_score(self.mdir, 'c3', quality=40, seconds=300)
+        _r, rows, grants = mk.do_grant(self.mdir, dry_run=True)
+        self.assertEqual(grants['c1']['tokens'], grants['c2']['tokens'])
+        self.assertEqual(grants['c1']['share'], round((0.35 + 0.25) / 2 / 0.8, 4))
+        self.assertEqual({r['name']: r['rank'] for r in rows}, {'c1': 1, 'c2': 1, 'c3': 3})
+
+    # 5：證據檔用「A L30」代號也算得出品質
+    def fake_project(self, evidence):
+        proj = self.tmp / 'evproj'
+        src = proj / 'corpus' / 'extracted' / 'story' / 'story_ju_set_1_奇石.md'
+        src.parent.mkdir(parents=True)
+        src.write_text(''.join('第 %d 行\n' % i for i in range(1, 51)), encoding='utf-8')
+        ev = proj / 'lore' / 'evidence' / 'characters' / '老木頭.md'
+        ev.parent.mkdir(parents=True)
+        ev.write_text(evidence, encoding='utf-8')
+        return proj
+
+    def test_eval_expands_file_codes(self):
+        proj = self.fake_project('行號依據 A 檔 `corpus/extracted/story/story_ju_set_1_奇石.md`（全 50 行）。\n\n'
+                                 '| 節點 | 原文檔名＋行號 | 內容 |\n|---|---|---|\n'
+                                 '| 一 | A L3-L5 | 甲 |\n| 二 | A L10、L12 | 乙 |\n| 三 | A L60 | 超界 |\n')
+        res = fmt.read_json(FIX / 'c1-quality.json')                  # 真跑：機械 7/7、證據 0/8 全「無檔名」
+        self.assertEqual(mk.quality_from_eval(res), 50.0)
+        q, notes = mk.quality_from_eval(res, project=proj, notes=True)
+        self.assertEqual(q, round(50 + 50 * 2 / 3, 2))                # 展開後 3 列：2 ok、1 超界
+        self.assertTrue(any('展開' in n for n in notes), notes)
+
+    def test_eval_unexpandable_reports_zero_with_reason(self):
+        proj = self.fake_project('| 節點 | 原文檔名＋行號 | 內容 |\n|---|---|---|\n| 一 | A L3-L5 | 甲 |\n')
+        q, notes = mk.quality_from_eval(fmt.read_json(FIX / 'c1-quality.json'), project=proj, notes=True)
+        self.assertEqual(q, 50.0)                                     # 證據那半 0
+        self.assertTrue(any('無檔名' in n and '展開不了' in n for n in notes), notes)
+
+    def test_real_run_recomputed(self):
+        """修完後照那一輪重算：c1 排名分 96.25、撥全額；c2 0 分、撥 0。"""
+        self.two_real()
+        mk.record_score(self.mdir, 'c1', quality=93.75)             # 展開代號後的真值（報告 §3）
+        mk.record_score(self.mdir, 'c2', eval_path=str(FIX / 'c2-quality.json'))
+        rows = mk.rank(mk.load(self.mdir), cost.balances(str(self.ledger)))
+        self.assertEqual([(r['name'], r['rank'], r['score']) for r in rows], [('c1', 1, 96.25), ('c2', 2, 0.0)])
+        self.assertEqual(rows[0]['seconds'], 401.0)
 
 
 if __name__ == '__main__':

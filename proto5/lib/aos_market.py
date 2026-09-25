@@ -6,7 +6,7 @@
 
 子命令（`python3 aos_market.py <子命令> [--market 資料夾]`；沒給看 AOS_MARKET_HOME）：
   open 名 公司資料夾 [--usd X] [--tokens N]    開戶＋撥開辦費、登記進 market.json
-  score 名 [--quality Q] [--eval 結果.json] [--seconds S] [--hops H]   記這一輪的表現（沒給的從公司的總機單算）
+  score 名 [--quality Q] [--eval 結果.json] [--seconds S] [--hops H] [--done N]   記這一輪的表現（沒給的從董事的單與總機單算）
   rank [--json]                                 算排名（不寫帳）
   grant [--dry-run] [--usd 名=X]… [--tokens 名=N]…   照排名撥這一輪的額度；--usd／--tokens 覆寫單一家
   bankrupt [--dry-run]                          餘額 ≤ 0 的：停公司、封存資料夾；剩的配額與名額回總池
@@ -26,6 +26,7 @@ import fcntl
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import sys
@@ -221,15 +222,71 @@ def _open_company(mdir, name, cdir, usd, tokens, env):
 
 # ------------------------------------------------------------------ 表現 ----
 
-def quality_from_eval(result):
-    """arknights eval 的結果檔 → 0～100：每人 機械 40％＋證據列 40％＋評審 20％（沒評審就前兩項放大成 100）。"""
-    people = result.get('people') or []
-    if not people:
+ALIAS_DEF = re.compile(r'(?<![A-Za-z0-9])([A-Z])\s*檔\s*`([^`\s]+)`')
+
+
+def expand_codes(text):
+    """證據檔的「代號 L30」寫法展開成檔名（真跑 09-25：「行號依據 A 檔 `…奇石.md`」再寫「A L30-L37」，
+    證據檢查器認不出檔名，整份算壞）。回 (展開後的文字, {代號: 檔名})；沒有代號定義＝原樣、空 dict。"""
+    codes = dict(ALIAS_DEF.findall(text))
+    if not codes:
+        return text, {}
+    rx = re.compile(r'(?<![A-Za-z0-9_./`-])(%s)(?=\s*L\d)' % '|'.join(map(re.escape, codes)))
+    out = [rx.sub(lambda m: codes[m.group(1)], ln) if ln.lstrip().startswith('|') else ln
+           for ln in text.split('\n')]
+    return '\n'.join(out), codes
+
+
+def _recheck_evidence(project, name, notes):
+    """證據列有「無檔名」的：展開代號後用同一支 evidence_check 重跑（展開的是暫存副本，不動原檔）。
+    回新的 summary；展開不了回 None（notes 寫原因）。"""
+    import tempfile
+    sys.path.insert(0, str(LIB.parent / 'examples' / 'arknights' / 'eval'))
+    try:
+        import evidence_check as evc
+    except ImportError as e:
+        notes.append('%s：證據列有「無檔名」，展開不了（載不到 evidence_check：%s），證據那一項算 0' % (name, e))
         return None
+    files = evc.evidence_files_for(Path(project), name) if project else []
+    if not files:
+        notes.append('%s：證據列有「無檔名」，展開不了（在 %s 找不到證據檔），證據那一項算 0' % (name, project))
+        return None
+    with tempfile.TemporaryDirectory(prefix='market-ev-') as td:
+        tmp, found = [], {}
+        for i, f in enumerate(files):
+            text, codes = expand_codes(f.read_text(encoding='utf-8'))
+            found.update(codes)
+            t = Path(td) / ('%d-%s' % (i, f.name))
+            t.write_text(text, encoding='utf-8')
+            tmp.append(t)
+        if not found:
+            notes.append('%s：證據列有「無檔名」，展開不了（證據檔裡沒有「X 檔 `檔名`」這種代號定義），證據那一項算 0' % name)
+            return None
+        summary = evc.run(Path(project), files=tmp, corpus=evc.Corpus(Path(project)))['summary']
+    notes.append('%s：證據檔的代號 %s 展開成檔名後重跑證據檢查：%d/%d 列 ok（原本全算「無檔名」）' % (
+        name, '、'.join('%s＝%s' % kv for kv in sorted(found.items())), summary['ok'], summary['checked_rows']))
+    return summary
+
+
+def quality_from_eval(result, project=None, notes=False):
+    """arknights eval 的結果檔 → 0～100：每人 機械 40％＋證據列 40％＋評審 20％（沒評審就前兩項放大成 100）。
+    證據列有「無檔名」的：先把證據檔（這人的 cand_root，沒有就用 project）裡的代號展開成檔名重跑證據檢查；
+    展開不了＝證據那一項照原樣（通常是 0），notes 寫原因。notes=True 回 (分數, [說明…])。"""
+    people = result.get('people') or []
+    msgs = []
+    if not people:
+        return (None, msgs) if notes else None
     total = 0.0
     for p in people:
         mech = p.get('mech') or {}
         ev = p.get('evidence') or {}
+        if (ev.get('by_status') or {}).get('無檔名'):
+            root = p.get('cand_root') or project
+            fixed = _recheck_evidence(root, p.get('name', '?'), msgs) if root else None
+            if root is None:
+                msgs.append('%s：證據列有 %d 列「無檔名」，展開不了（不知道證據檔在哪；給公司的專案），證據那一項算 0'
+                            % (p.get('name', '?'), ev['by_status']['無檔名']))
+            ev = fixed or {'checked_rows': ev.get('checked_rows'), 'ok': 0}
         m = (mech.get('passed', 0) / mech['total']) if mech.get('total') else 0.0
         e = (ev.get('ok', 0) / ev['checked_rows']) if ev.get('checked_rows') else 0.0
         j = None
@@ -239,37 +296,82 @@ def quality_from_eval(result):
             vals = [v for v in scores.values() if isinstance(v, (int, float))]
             j = sum(vals) / len(vals) / 5.0 if vals else None
         total += (40 * m + 40 * e + 20 * j) if j is not None else (50 * m + 50 * e)
-    return round(total / len(people), 2)
+    q = round(total / len(people), 2)
+    return (q, msgs) if notes else q
 
 
 def _aware(t):
     return t if t is None or t.tzinfo is not None else t.astimezone()
 
 
-def speed_from_company(cdir, since=None):
-    """公司總機單：這一輪**結案**的（done）張數、平均秒數（下單 → 最後一封回覆）、平均跳數（回覆信數＋1）。
-    「這一輪」看結案時間（單子的 closed_at；舊單沒有就用最後一封回覆的時間），解析成帶時區的時間再比
-    ——跨輪完成的單算在結案那一輪（astra 必修 10）。"""
-    cdir = Path(cdir)
-    folder = cdir / 'switchboard' / 'orders'
-    t_since = _aware(fmt.parse_iso(since)) if since else None
-    secs, hops = [], []
+def _read_letters(folder):
+    out = []
     for p in fmt.json_files(folder) if folder.is_dir() else []:
-        o = fmt.read_json(p)
-        if o.get('status') != 'done' or not o.get('replies'):
+        try:
+            out.append(fmt.read_json(p))
+        except TeamError:
             continue
-        t0 = _aware(fmt.parse_iso(o.get('at') or ''))
-        t1 = _aware(fmt.parse_iso(o['replies'][-1].get('at') or ''))
-        tc = _aware(fmt.parse_iso(o.get('closed_at') or '')) or t1
-        if t0 is None or t1 is None:
+    return out
+
+
+def board_from_company(cdir, since=None):
+    """董事的單（company.py order → 前台部門）這一輪的結果（真跑 09-25 修正：快＝董事等的時間，不是部門間跳的平均）。
+
+    - 董事的單：前台部門 human 寄件格（含郵差收走的 done/）裡 human 寄出的 REQUEST、沒有 reply_to、不是總機寫的。
+    - 結案信：前台部門 human 收件格裡狀態 DONE／FAILED、第一行不是〔給 …〕的信（總裁寫給董事的）。
+      照時間先後配：每張單配它之後第一封還沒配走的結案信；還沒結案的單不算。
+    - **成功**＝結案信是 DONE、信裡寫了品管的「結論：合格」、且這段時間裡有結案（done）的品管總機單。其他結案＝失敗。
+    - 「這一輪」看結案信的時間（上一輪 grant 之後）；跨輪完成的單算在結案那一輪。
+    回 {'done': 成功張數, 'failed': 失敗張數, 'seconds': 成功那幾張董事平均等幾秒（沒有＝None）,
+        'hops': 成功那幾張平均經過幾張總機單＋1（只記、不算分）}。"""
+    cdir = Path(cdir)
+    cfg = co.load(cdir)
+    front = co.host_dept(cfg, cfg['front'])
+    tdir = co.team_dirs(cdir, cfg).get(front)
+    t_since = _aware(fmt.parse_iso(since)) if since else None
+    folder = cdir / 'switchboard' / 'orders'
+    orders = [fmt.read_json(p) for p in fmt.json_files(folder)] if folder.is_dir() else []
+    out_ids = {o.get('out_id') for o in orders}
+    res = {'done': 0, 'failed': 0, 'seconds': None, 'hops': None}
+    if tdir is None:
+        return res
+    lay = fmt.Layout(tdir)
+    box = lay.outbox(fmt.HUMAN)
+    asks = [x for x in _read_letters(box) + _read_letters(box / 'done')
+            if x.get('from') == fmt.HUMAN and x.get('status') == 'REQUEST' and not x.get('reply_to')
+            and 'kind' not in x and x.get('id') not in out_ids]
+    closes = [x for x in _read_letters(lay.human_inbox)
+              if x.get('status') in co.TERMINAL_STATUS and not co.MARK.match(x.get('text') or '')
+              and x.get('from') not in (fmt.HUMAN, fmt.POST, fmt.BEAT)]
+
+    def t(x):
+        return _aware(fmt.parse_iso(x.get('at') or ''))
+    asks = sorted((a for a in asks if t(a)), key=t)
+    closes = sorted((c for c in closes if t(c)), key=t)
+    secs, hops, used = [], [], set()
+    for a in asks:
+        t0 = t(a)
+        c = next((c for c in closes if c['id'] not in used and t(c) >= t0), None)
+        if c is None:
             continue
-        if t_since is not None and (tc is None or tc < t_since):
+        used.add(c['id'])
+        t1 = t(c)
+        if t_since is not None and t1 < t_since:
             continue
-        secs.append(max(0.0, (t1 - t0).total_seconds()))
-        hops.append(len(o['replies']) + 1)
-    if not secs:
-        return None
-    return {'done': len(secs), 'seconds': round(sum(secs) / len(secs), 1), 'hops': round(sum(hops) / len(hops), 2)}
+        inside = [o for o in orders if _aware(fmt.parse_iso(o.get('at') or '')) and
+                  t0 <= _aware(fmt.parse_iso(o['at'])) <= t1]
+        qa_ok = any(o['to'].get('dept') == 'qa' and o.get('status') == 'done' for o in inside)
+        text = c.get('text') or ''
+        if c['status'] == 'DONE' and '結論：合格' in text and qa_ok:
+            res['done'] += 1
+            secs.append(max(0.0, (t1 - t0).total_seconds()))
+            hops.append(len(inside) + 1)
+        else:
+            res['failed'] += 1
+    if secs:
+        res['seconds'] = round(sum(secs) / len(secs), 1)
+        res['hops'] = round(sum(hops) / len(hops), 2)
+    return res
 
 
 def record_score(mdir, name, quality=None, eval_path=None, seconds=None, hops=None, done=None):
@@ -281,20 +383,31 @@ def _record_score(mdir, name, quality, eval_path, seconds, hops, done):
     m = load(mdir)
     if name not in m['companies']:
         raise MarketError('NotFound', '市場裡沒有 %s' % name)
-    src = 'manual'
+    src, notes = 'manual', []
+    cdir = m['companies'][name]['dir']
     if eval_path is not None:
-        quality = quality_from_eval(fmt.read_json(eval_path))
+        try:
+            project = co.load(cdir).get('project')
+        except TeamError:
+            project = None
+        quality, notes = quality_from_eval(fmt.read_json(eval_path), project=project, notes=True)
         src = 'eval:%s' % eval_path
     _finite(quality, 'quality', 0, 100)
     _finite(seconds, 'seconds', 0)
     _finite(hops, 'hops', 0)
     _finite(done, 'done', 0)
     since = m['history'][-1]['at'] if m['history'] else None
-    sp = speed_from_company(m['companies'][name]['dir'], since) if seconds is None else None
-    s = {'quality': quality, 'seconds': seconds if seconds is not None else (sp or {}).get('seconds'),
-         'hops': hops if hops is not None else (sp or {}).get('hops'),
-         'done': done if done is not None else (sp or {}).get('done', 1 if seconds is not None else 0),
+    try:
+        bd = board_from_company(cdir, since)
+    except TeamError:
+        bd = {'done': 0, 'failed': 0, 'seconds': None, 'hops': None}
+    if done is None:
+        done = 1 if seconds is not None else bd['done']        # 經理人手給秒數＝他認定有一張成功
+    s = {'quality': quality, 'seconds': seconds if seconds is not None else bd['seconds'],
+         'hops': hops if hops is not None else bd['hops'], 'done': done, 'failed': bd['failed'],
          'at': now(), 'source': src, 'round': len(m['history']) + 1}     # 分數綁輪次：grant 之後就不算了
+    if notes:
+        s['notes'] = notes
     m['scores'][name] = s
     save(mdir, m)
     return s
@@ -305,9 +418,12 @@ def _record_score(mdir, name, quality, eval_path, seconds, hops, done):
 def rank(m, bal):
     """回一列一家（照排名分高到低）：quality、speed、cost 三項各 0～100，再加權。
 
+    - **這輪沒有成功結案（done＝0）的：品質、快、省、排名分全 0**（真跑 09-25：做壞的單照樣拿滿分品質）。
     - 品質：記下的分數（沒記＝0）。
-    - 快：這一輪有結單的，最快那家的平均秒數 ÷ 自己的 ×100；沒結單＝0。
-    - 省：這一輪花的 token（這輪已花 − 上輪記下的已花），最省那家 ÷ 自己 ×100；有結單沒花＝100；沒結單＝0。
+    - 快：成功的幾家比董事等的秒數，最快那家 ÷ 自己 ×100。
+    - 省：這一輪花的 token（這輪已花 − 上輪記下的已花），**只在成功的幾家之間比**，最省那家 ÷ 自己 ×100；成功但沒花＝100。
+    - 只有一家成功：快、省都是滿分，那一列 note 寫「無對照」。
+    - 同分同名次（名次跳號，例 1、1、3）；列的順序同分再照品質、名字排，只為了印得穩定。
     """
     w = m['params']['weights']
     last_spent = (m['history'][-1].get('spent') if m['history'] else None) or {}
@@ -320,28 +436,35 @@ def rank(m, bal):
         b = bal.get(name) or {}
         spent_now = (b.get('spent') or {}).get('tokens') or 0
         spent = max(0, spent_now - (last_spent.get(name) or 0))
-        rows.append({'name': name, 'quality': float(s.get('quality') or 0), 'seconds': s.get('seconds'),
-                     'hops': s.get('hops'), 'done': s.get('done') or 0, 'spent_tokens': spent,
-                     'spent_total': spent_now, 'balance': b.get('balance'), 'broke': b.get('broke', False)})
-    fast = [r['seconds'] for r in rows if r['seconds'] and r['done']]
-    cheap = [r['spent_tokens'] for r in rows if r['spent_tokens'] and r['done']]
+        done = s.get('done') or 0
+        rows.append({'name': name, 'quality': float(s.get('quality') or 0) if done else 0.0,
+                     'raw_quality': s.get('quality'), 'seconds': s.get('seconds'),
+                     'hops': s.get('hops'), 'done': done, 'failed': s.get('failed') or 0, 'spent_tokens': spent,
+                     'spent_total': spent_now, 'balance': b.get('balance'), 'broke': b.get('broke', False),
+                     'scored': bool(s), 'note': None})
+    ok = [r for r in rows if r['done']]
+    fast = [r['seconds'] for r in ok if r['seconds']]
+    cheap = [r['spent_tokens'] for r in ok if r['spent_tokens']]
     for r in rows:
-        r['speed'] = round(100 * min(fast) / r['seconds'], 2) if fast and r['seconds'] and r['done'] else 0.0
+        r['speed'] = round(100 * min(fast) / r['seconds'], 2) if r['done'] and fast and r['seconds'] else 0.0
         if not r['done']:
             r['cost'] = 0.0
         elif not r['spent_tokens']:
-            r['cost'] = 100.0                  # 有結單、這輪沒花 token＝最省（試玩 09-25：三家都 0 不該全拿 0）
+            r['cost'] = 100.0                  # 成功、這輪沒花 token＝最省（試玩 09-25：三家都 0 不該全拿 0）
         else:
             r['cost'] = round(100 * min(cheap) / r['spent_tokens'], 2)
+        if r['done'] and len(ok) == 1:
+            r['note'] = '省、快：無對照（這輪只有它成功）'
         r['score'] = round(w['quality'] * r['quality'] + w['speed'] * r['speed'] + w['cost'] * r['cost'], 2)
     rows.sort(key=lambda r: (-r['score'], -r['quality'], r['name']))
     for i, r in enumerate(rows, 1):
-        r['rank'] = i
+        r['rank'] = i if i == 1 or r['score'] != rows[i - 2]['score'] else rows[i - 2]['rank']
     return rows
 
 
 def plan_grants(m, rows, usd_over=None, tok_over=None):
-    """照排名分這一輪的總額：shares 取前 n 個按比例放大到 1；品質低於 min_quality 的、已經花光（broke）的拿 0；
+    """照排名分這一輪的總額：shares 取前 n 個按比例放大到 1；**同分的把那幾個名次的 shares 平均分**（不照名字破平）；
+    這輪沒成功結案的、品質低於 min_quality 的、已經花光（broke）的拿 0；
     覆寫的照覆寫（花光的不准覆寫：先 bankrupt，astra 必修 11）。美元往下取到 0.0001。"""
     usd_over, tok_over = usd_over or {}, tok_over or {}
     for over in (usd_over, tok_over):
@@ -355,7 +478,12 @@ def plan_grants(m, rows, usd_over=None, tok_over=None):
     pool = m['params']['round_pool']
     shares = list(m['params']['shares'])[:len(rows)]
     shares += [0.0] * (len(rows) - len(shares))
-    eligible = [r['quality'] >= m['params']['min_quality'] and not r['broke'] for r in rows]
+    for sc in {r['score'] for r in rows}:                   # 同分均分
+        idx = [i for i, r in enumerate(rows) if r['score'] == sc]
+        avg = sum(shares[i] for i in idx) / len(idx)
+        for i in idx:
+            shares[i] = avg
+    eligible = [r['done'] > 0 and r['quality'] >= m['params']['min_quality'] and not r['broke'] for r in rows]
     tot = sum(s for s, ok in zip(shares, eligible) if ok) or 1.0
     out = {}
     for r, s, ok in zip(rows, shares, eligible):
@@ -408,6 +536,10 @@ def do_grant(mdir, usd_over=None, tok_over=None, dry_run=False, env=None):
 def _plan_grant(mdir, m, bal, usd_over, tok_over):
     rows = rank(m, bal)
     grants = plan_grants(m, rows, usd_over, tok_over)
+    if not any(r['scored'] for r in rows):
+        # 真跑 09-25：撥完一輪什麼都沒做再 grant，第 2 輪照樣整份發出去。這輪一家都沒 score＝拒絕、什麼都不發
+        raise MarketError('NoScores', '本輪無分數（第 %d 輪還沒有任何一家 score）：什麼都沒發；先 score 再 grant'
+                          % (len(m['history']) + 1))
     pool = pool_status(m, bal)
     capped = {}
     for k, left in pool['money'].items():
@@ -756,12 +888,20 @@ def _pairs(items, cast):
 
 
 def _print_rank(rows):
-    print('名次  公司    排名分   品質   快    省    結單  平均秒   跳數  這輪花 token   餘額')
+    print('名次  公司    排名分   品質   快    省    成功 失敗  董事等秒  跳數  這輪花 token   餘額')
     for r in rows:
-        print('%-4d  %-6s  %6.2f  %5.1f  %5.1f  %5.1f  %3d  %7s  %5s  %11d   %s' % (
-            r['rank'], r['name'], r['score'], r['quality'], r['speed'], r['cost'], r['done'],
+        extra = []
+        if r.get('scored') is False:
+            extra.append('這輪沒 score')
+        elif not r['done']:
+            extra.append('這輪沒有成功結案：全項 0（原品質 %s）' % r.get('raw_quality'))
+        if r.get('note'):
+            extra.append(r['note'])
+        print('%-4d  %-6s  %6.2f  %5.1f  %5.1f  %5.1f  %3d  %3d  %8s  %5s  %11d   %s%s' % (
+            r['rank'], r['name'], r['score'], r['quality'], r['speed'], r['cost'], r['done'], r.get('failed') or 0,
             r['seconds'] if r['seconds'] is not None else '-', r['hops'] if r['hops'] is not None else '-',
-            r['spent_tokens'], json.dumps(r['balance'], ensure_ascii=False)))
+            r['spent_tokens'], json.dumps(r['balance'], ensure_ascii=False),
+            '  ← ' + '；'.join(extra) if extra else ''))
 
 
 def main(argv=None):
@@ -778,8 +918,9 @@ def main(argv=None):
     p.add_argument('name', help='公司')
     p.add_argument('--quality', type=float, help='品質分 0～100（經理人直接給）')
     p.add_argument('--eval', dest='eval_path', help='arknights 評分器的結果檔（算品質分，取代 --quality）')
-    p.add_argument('--seconds', type=float, help='平均秒數（不給＝從公司這輪結案的總機單算）')
+    p.add_argument('--seconds', type=float, help='董事平均等幾秒（不給＝從董事的單到總裁結案信算；給了＝算一張成功）')
     p.add_argument('--hops', type=float, help='平均跳數（只記、不算分；不給＝從總機單算）')
+    p.add_argument('--done', type=int, help='這輪成功結案幾張（經理人覆寫；不給＝品管合格＋總裁結案信的張數）')
     p = sub.add_parser('rank', help='算這一輪的排名（品質、快、省加權；不寫帳）')
     p.add_argument('--json', action='store_true', help='印 JSON')
     p = sub.add_parser('grant', help='照排名撥這一輪的額度（花光的不撥，先跑 bankrupt）')
@@ -813,8 +954,12 @@ def main(argv=None):
             print('開了 %s：%s' % (a.name, c['dir']))
             return 0
         if a.cmd == 'score':
-            s = record_score(mdir, a.name, a.quality, a.eval_path, a.seconds, a.hops)
+            s = record_score(mdir, a.name, a.quality, a.eval_path, a.seconds, a.hops, a.done)
             print(json.dumps(s, ensure_ascii=False))
+            for n in s.get('notes') or []:
+                print('說明：' + n)
+            if not s['done']:
+                print('注意：%s 這輪沒有成功結案（失敗 %d 張），排名時品質、快、省都算 0' % (a.name, s['failed']))
             return 0
         if a.cmd in ('rank', 'ls'):
             m = load(mdir)
@@ -838,6 +983,8 @@ def main(argv=None):
         if a.cmd == 'grant':
             rnd, rows, grants = do_grant(mdir, _pairs(a.usd, float), _pairs(a.tokens, int), a.dry_run)
             _print_rank(rows)
+            if not any(r['done'] for r in rows):
+                print('這輪沒有公司成功結案：照公式全部撥 0')
             for n, g in grants.items():
                 print('第 %d 輪撥給 %s：usd %s、tokens %s（%s）' % (rnd, n, g['usd'], g['tokens'],
                                                            '經理人覆寫' if g['override'] else '%.0f%%' % (100 * g['share'])))
