@@ -12,16 +12,16 @@
 
 - **市場資料夾**（`--market`／`AOS_MARKET_HOME`，建議 `~/tmp/company-run/`）：`market.json`（參數、各家、每輪紀錄、事件）＋`archive/`（收掉的公司整個資料夾搬進來）。
 - **帳戶**：財務部的 `$AOS_COST_HOME/accounts.json`（[cost.md §6](cost.md)）。一家公司一個帳戶，`root`＝公司資料夾；**配額**＝撥款加總，**已花**＝帳本裡落在公司資料夾底下的呼叫（kernel 兩池帶 `AOS_COST_HOME`，`company.py up` 會傳）。撥款、收回都是 `account_grant`（收回＝撥負的），所以 `accounts.json` 本身就是流水帳。
-- 一家一個 kernel（company.md §6）：五家同跑＝五個 kernel、一個 daemon。
+- 一家一個 kernel、一個 daemon（company.md §1、§6；董事 09-25）：五家同跑＝五個 kernel、五個 daemon，各在自己的公司資料夾裡（`K/`、`D/`），HR 只數得到自家。
 
 ## 2. 參數（`market.json` 的 `params`，人用文字編輯器改）
 
 | 鍵 | 預設 | 意思 |
 |---|---|---|
 | `weights` | 品質 0.6、快 0.25、省 0.15 | 排名分＝三項（各 0～100）的加權和 |
-| `round_pool` | 2 美元、400 萬 token | 每輪撥出去的總額 |
+| `round_pool` | 2 美元、5000 萬 token | 每輪撥出去的總額（約 10 張單） |
 | `shares` | 35／25／20／12／8 ％ | 第 1、2…名拿幾成；家數少就取前幾個、按比例放大到 100％ |
-| `seed` | 1 美元、200 萬 token | 開辦費 |
+| `seed` | 1 美元、2500 萬 token | 開辦費：約 5 張單（試玩 09-25：deepseek-chat 真跑一張「補人物」126 次呼叫、451 萬 token；舊預設 200 萬＝一張單就倒閉）。要多少請董事拍（報告問題 14） |
 | `min_quality` | 0 | 品質分低於它＝這輪不撥（0＝不設） |
 | `merge_at` | 2 | 營業中剩幾家才准合併 |
 | `dept_order` | mfg、qa、rd、lib、hq | 合併時先收哪個部門的人 |
@@ -33,16 +33,19 @@
 ```text
 經理人：market.py score c1 --eval <eval 結果.json>   （或 --quality 78；秒數、跳數從公司的總機單算）
         market.py rank                              看排名（不寫帳）
-        market.py grant [--usd c3=0]                照排名撥這一輪；--usd／--tokens 覆寫單一家
-        market.py bankrupt                          花光的倒閉
+        market.py bankrupt                          花光的先倒閉（倒閉名單要在撥款之前定）
+        market.py grant [--usd c3=0]                照排名撥這一輪；--usd／--tokens 覆寫單一家（≥ 0）
         （剩兩家）market.py merge                    合併
 ```
 
-- **品質**（0～100）：`score --eval` 讀 arknights 評分器的結果檔，每人 機械 40％＋證據列 40％＋評審 20％（沒評審就前兩項各 50％）取平均；或經理人直接 `--quality`。
-- **快**：這一輪（上一輪 `grant` 之後）結的總機單的平均秒數（下單→最後一封回覆），最快的一家 100，其他＝最快 ÷ 自己 ×100；沒結單＝0。跳數（回覆信數＋1）只記、不算分。
-- **省**：這一輪花的 token（這輪已花 − 上輪 `grant` 時記下的已花），最省的一家 100，其他＝最省 ÷ 自己 ×100；沒結單＝0。
+**順序是先 `bankrupt` 再 `grant`**（astra 09-25）：花光的公司這輪一律不撥（排名照列、撥款 0），覆寫也不准給它（`Broke`）——否則撥款會把本來該倒的公司救活。
+
+- **分數綁輪次**：`score` 記下的分數帶 `round`（＝下一次 `grant` 的輪次）；`grant` 之後上一輪的品質、秒數、結單數都不算，這輪沒 `score` 就是 0。
+- **品質**（0～100）：`score --eval` 讀 arknights 評分器的結果檔，每人 機械 40％＋證據列 40％＋評審 20％（沒評審就前兩項各 50％）取平均；或經理人直接 `--quality`。手給的數要有限：品質 0～100、秒數與跳數 ≥ 0。
+- **快**：這一輪（上一輪 `grant` 之後）**結案**的總機單（看單子的 `closed_at`，舊單沒有就看最後一封回覆的時間；解析成帶時區的時間再比）的平均秒數（下單→最後一封回覆），最快的一家 100，其他＝最快 ÷ 自己 ×100；沒結單＝0。跨輪完成的單算在結案那一輪。跳數（回覆信數＋1）只記、不算分。
+- **省**：這一輪花的 token（這輪已花 − 上輪 `grant` 時記下的已花），最省的一家 100，其他＝最省 ÷ 自己 ×100；有結單、這輪沒花 token＝100（最省）；沒結單＝0。
   注意（品管部 09-25）：並行的單 `aos-team score --task` 報的是整隊的數；市場用的是**整家公司這一輪**的 token，不照單切，所以不受影響；要照單比就得照成員切。
-- **撥**：`shares` 照名次分 `round_pool`；`min_quality` 沒過的拿 0，其他人按比例放大；`--usd 名=X`／`--tokens 名=N` 覆寫。撥款記進帳戶（note「第 N 輪 第 k 名」），這一輪的排名、撥款、各家已花記進 `history`。
+- **撥**：`shares` 照名次分 `round_pool`；`min_quality` 沒過的、花光的拿 0，其他人按比例放大；`--usd 名=X`／`--tokens 名=N` 覆寫（≥ 0；收回走 `close`）。美元一律**往下**取到 0.0001（不四捨五入，縮額後合計不會超過總池）。撥款記進帳戶（note「第 N 輪 第 k 名」，帶操作 ID），這一輪的排名、撥款、各家已花記進 `history`。
 
 ## 4. 總池（董事 09-25 追加）
 
@@ -53,29 +56,37 @@
   - **倒閉**（`bankrupt`，某一種餘額 ≤ 0）：歸零的那一種沒得收；另一種還有剩就收回。**只是歸零倒閉的，回收的通常只有名額。**
   - **裁撤**（`close 名`，經理人決定收掉一家還沒花光的）：兩種剩多少收多少。
   - `bankrupt`／`close` 都回傳並記進 `events`：`recycled`（收回多少錢）、`slots`（放出幾個名額）、`freed`（放出的成員名，前綴可以再用）。
-- 名額撥給別家：`slots 名 --llm-cpu 1`（`limits.llm_cpu`、`pools.llm` +1）、`--cpu 1`（`limits.cpu`、`pools.default` +1）、`--regular 1`；不能超過那家的 `limits_max`。只改 `company.json`，kernel 開著要 `aos-kernel cpu add` 或下次 `up` 才真的多開。
+- 名額撥給別家：`slots 名 --llm-cpu 1`（`limits.llm_cpu`、`pools.llm` +1）、`--cpu 1`（`limits.cpu`、`pools.default` +1）、`--regular 1`；**只收 ≥ 0**（名額只在公司收掉、確定停好時回總池，不能先降帳面上限把名額虛增回來）；不能超過那家的 `limits_max`。只改 `company.json`，kernel 開著要 `aos-kernel cpu add`，或下次 `up`（`up` 會把 K 的池對到 `company.json`）。
 - `pool` 印總池兩行。
 
 **五家同跑的 llm cpu**：機器頂 20，每家新創預設 5 → 五家要 25，第五家 `open` 會 `NoSlots`。樣板的做法是 `company.py new --llm-cpu 4`（五家各 4），這題留給董事拍（報告的問題清單）。
 
 ## 5. 倒閉、合併的細節
 
-**倒閉**：停（`company.py down`：撤總機、各部門 `aos-team stop`、`aos down`）→ 公司資料夾整個搬進 `archive/<名>-bankrupt-<時間>/` → 市場標 `bankrupt`。帳本、帳戶不刪（財務要查）。
+**倒閉／裁撤**：先標 `closing`（記下封存目的地、操作 ID、名額，存檔；這時**還占著名額與錢**）→ 停（`company.py down`：撤總機、各部門 `aos-team stop`、`aos down`；**沒停好＝`StopFailed`，停在 `closing`**，不收回、不封存、不放名額）→ 停好後才讀餘額、收回沒花完的（還在跑的單記的帳都進來了）→ 公司資料夾整個搬進 `archive/<名>-bankrupt-<時間>/` → 市場標 `bankrupt`／`closed`。帳本、帳戶不刪（財務要查）。收掉的名字不能再開（舊帳戶帶著它的撥款與花費）；新公司的資料夾也不能跟任何帳戶的資料夾重疊（同一個、包著、被包著，連收掉的公司的原路徑都算），不然帳會重複算。
 財務部那邊：帳戶倒閉後郵差本來就不再派新單（cost.md §4），就算經理人還沒跑 `bankrupt`，那家也不會繼續花大錢；已在跑的單做完為止。
 
 **合併**（營業中剩 `merge_at` 家；`--force` 硬來）：排名高的併掉排名低的（`--into` 可指定），`--dry-run` 先看計畫：
 
 1. 同部門的**經理（`template: lead`）只留併入方的**：被併方的經理裁掉（家跟著封存；筆記 `notes.json` 抄一份到併入方 `team/notes/_merged/<舊名>/` 備查）。
-2. 其餘成員照 `dept_order` 併進併入方**同一個部門的團隊**，改名 `<併入方前綴><原職位>-<被併方名>`（`c2-mfg-writer1` → `c1-mfg-writer1-c2`）；`mail_to` 是那部門的經理＋human，經理的 `mail_to` 也加上他。
+2. 其餘成員照 `dept_order` 併進併入方**同一個部門的團隊**，改名 `<併入方前綴><原職位>-<被併方名>`（`c2-mfg-writer1` → `c1-mfg-writer1-c2`；撞到併入方既有的名字或這次排好的就加 `-2`、`-3`，不蓋掉原成員）；`mail_to` 是那部門的經理＋human，經理的 `mail_to` 也加上他。
 3. 併入方的正式名額（`limits.regular` − 現有正式）還有＝**正式**；滿了＝**臨時工**（名冊那一列寫 `employment: temp`，不算人頭）。被併方本來就是臨時工的仍是臨時工。
 4. 併入方沒有那個部門的團隊＝那些人裁掉。
 5. **跨任務記憶帶過去**：`team/notes/<舊名>/notes.json` 抄到新名底下；對話紀錄（家的 `prompts/`）留在被併方的封存，不搬（家裡有絕對路徑）。
-6. 帳：被併方的餘額撥給併入方（併入方 +、被併方 −），被併方標 `merged`、停、封存；它的名額回總池。
+6. 帳：被併方**停好之後**才讀它的餘額，一筆轉帳給併入方（`account_transfer`：同一次讀寫兩邊一起記，不會只做一半），被併方標 `merged`、封存；它的名額回總池。
 7. 併入方 kernel 開著：動到的部門 `aos-team init`＋`start`，新成員開工。
+
+實際順序：在市場鎖裡**重算**計畫（跟 `--dry-run` 看到的不一樣＝`Stale`，重看再合）→ 記進 `market.json` 的 `pending`、被併方標 `merging` → 停被併方 → 搬人（拿名冊鎖）→ 開工 → 轉帳 → 封存 → 結案。
+
+## 5a. 鎖與崩了怎麼辦（astra 09-25）
+
+- 改東西的子命令（`open`、`score`、`grant`、`slots`、`bankrupt`、`close`、`merge`）都拿 `<市場>/.market.lock`：兩個經理人指令不會同時讀到舊的總池各撥各的。
+- `grant`／`close`／`bankrupt`／`merge` 都是「先把要做的記進 `market.json`（`pending`，或公司的 `closing`），再動手」；帳戶的每一筆撥款、收回、轉帳都帶**操作 ID**，同一個 ID 只記一次。崩在中間＝**重跑同一個指令接著做**（`merge` 不帶名字就接上次那筆），不重撥、不憑空多出額度。
+- `pending` 沒清掉之前，別的 `grant`／`merge` 會拒絕（`Pending`），先把那筆做完。
 
 ## 6. 沒做的
 
 - 真的五家同跑（只做過一家真跑；市場層用假帳本測）。
 - 品質分只接 arknights 評分器；別的產品線要自己的 `quality_from_eval`。
-- `slots` 不會自己 `aos-kernel cpu add`；倒閉不會自己把名額撥給誰（經理人撥）。
+- `slots` 不會自己 `aos-kernel cpu add`（下次 `up` 才對齊）；倒閉不會自己把名額撥給誰（經理人撥）。
 - 合併只合兩家；三家以上一次併要跑兩次。

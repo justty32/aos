@@ -68,6 +68,16 @@ python3 company.py down   -C ~/tmp/company-run/c1
 
 看某一個部門細節就用一般的 aos-team：`aos-team mail --target ~/tmp/company-run/c1/teams/mfg`、`task ls --all`、`score`。
 
+**`aos-team` 在哪**：`proto5/cli/aos-team`（不在 PATH 上）。在這個資料夾就是 `python3 ../../cli/aos-team task ls --all --target ~/tmp/company-run/c1/teams/mfg`，或先 `export PATH=$PWD/../../cli:$PATH`。
+
+**換模型**：成員用的模型寫在**實例**的 `teams/<部門>/team.json` 每個成員的 `"model"`（例 `~/tmp/company-run/c1/teams/mfg/team.json` 的 `c1-mfg-writer1`）；`new` 之後、`up` 之前改，`up` 不會蓋回去。`llm.json` 只放「模型代號 → LiteLLM 端點」的對照，不決定誰用哪個。改樣板（這個資料夾的 `teams/*/team.json`）＝以後 `new` 的每一家都換。
+
+**怎麼知道單做完了**：董事收件匣（`mail`）出現**總裁**（`c1-hq-lead`）寄的 DONE／FAILED 才算結案。中途可能短暫看到某個部門寄給 human 的內部回覆（總機每 5 秒一輪，還沒搬走），幾秒後就不見了，不是總機壞了。`status` 的總機單全部 `done` 也是一個訊號。
+
+**成本**：試玩 09-25 全用 deepseek-chat 跑一張「補人物 老財」＝126 次模型呼叫、**451 萬 token**、約 6 分鐘（gpt-5.5 是 34 次、89 萬 token）。開幾家同跑前先估一下帳；市場層的開辦費預設是 2500 萬 token（約 5 張單）。
+
+**daemon 在哪**：`<公司>/D/`（company.json 的 `daemon`，預設 `D`；董事 09-25：一家一個 daemon＋kernel）。`down` 會把自家的 kernel 與 daemon 一起關，印「總機撤了」和 daemon 停了沒；之後 `status` 印 `kernel stopped（…）`。
+
 ## 擴張到 100 人時長什麼樣
 
 上限 `limits_max`：正式 100、cpu 200、llm cpu 20。擴張的規則沿用 HR 部的兩條（積壓 ≥ 3 張、品管分 < 80 才加人），加法都是「名冊加一列」或「多開一支團隊」，不用新機制：
@@ -103,3 +113,24 @@ for i in 1 2 3 4 5; do
 done
 python3 market.py pool          # 錢還剩多少、名額還剩多少
 ```
+
+**用假資料走完一輪**（不 `up`、不叫模型；帳本、市場各開一個新資料夾，免得混到真的帳）：
+
+```sh
+export AOS_COST_HOME=~/tmp/market-demo/cost AOS_MARKET_HOME=~/tmp/market-demo
+for i in 1 2 3; do
+  python3 company.py new ~/tmp/market-demo/m$i --prefix m$i- --llm-cpu 4
+  python3 market.py open m$i ~/tmp/market-demo/m$i
+done
+python3 market.py score m1 --quality 85 --seconds 300     # 這一輪的表現（grant 之後要重記）
+python3 market.py score m2 --quality 70 --seconds 200
+python3 market.py score m3 --quality 40 --seconds 600
+python3 market.py rank                                    # 品質 0.6、快 0.25、省 0.15
+python3 market.py bankrupt --dry-run                      # 先看有沒有花光的（有就先 bankrupt，再 grant）
+python3 market.py grant --dry-run && python3 market.py grant
+python3 market.py close m3 --dry-run && python3 market.py close m3    # 經理人裁撤一家：剩的收回總池
+python3 market.py merge --dry-run && python3 market.py merge          # 剩兩家：排名高的併掉低的
+python3 market.py ls
+```
+
+每個子命令都有 `--help`；中途崩了（或 `StopFailed`）就重跑同一個指令，會接著做、不會重撥（[market.md §5a](../../spec/team/market.md#5a-鎖與崩了怎麼辦astra-09-25)）。
