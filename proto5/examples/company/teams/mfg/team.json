@@ -24,7 +24,7 @@
     },
     "mfg-writer1": {
       "template": "worker",
-      "model": "gpt-5.5",
+      "model": "gpt-6-astra",
       "mail_to": [
         "mfg-lead",
         "human"
@@ -74,115 +74,22 @@
       "run": [
         "python3",
         "scripts/check_simplified.py",
-        "lore/characters/老何塞.md",
-        "lore/evidence/characters/老何塞.md"
+        "lore/characters/{name}.md",
+        "lore/evidence/characters/{name}.md"
       ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老天師.md",
-        "lore/evidence/characters/老天師.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老成的杜林人（雙月密錄）.md",
-        "lore/evidence/characters/老成的杜林人（雙月密錄）.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老木頭.md",
-        "lore/evidence/characters/老木頭.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老薑.md",
-        "lore/evidence/characters/老薑.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老財.md",
-        "lore/evidence/characters/老財.md"
-      ],
-      "timeout_s": 180
+      "timeout_s": 180,
+      "pattern": true
     },
     {
       "run": [
         "python3",
         "scripts/verify_split.py",
-        "aos-drafts/老何塞/證據草稿.md",
-        "lore/evidence/characters/老何塞.md",
-        "lore/evidence/characters/老何塞"
+        "aos-drafts/{name}/證據草稿.md",
+        "lore/evidence/characters/{name}.md",
+        "lore/evidence/characters/{name}"
       ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/verify_split.py",
-        "aos-drafts/老天師/證據草稿.md",
-        "lore/evidence/characters/老天師.md",
-        "lore/evidence/characters/老天師"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/verify_split.py",
-        "aos-drafts/老成的杜林人（雙月密錄）/證據草稿.md",
-        "lore/evidence/characters/老成的杜林人（雙月密錄）.md",
-        "lore/evidence/characters/老成的杜林人（雙月密錄）"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/verify_split.py",
-        "aos-drafts/老木頭/證據草稿.md",
-        "lore/evidence/characters/老木頭.md",
-        "lore/evidence/characters/老木頭"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/verify_split.py",
-        "aos-drafts/老薑/證據草稿.md",
-        "lore/evidence/characters/老薑.md",
-        "lore/evidence/characters/老薑"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/verify_split.py",
-        "aos-drafts/老財/證據草稿.md",
-        "lore/evidence/characters/老財.md",
-        "lore/evidence/characters/老財"
-      ],
-      "timeout_s": 180
+      "timeout_s": 180,
+      "pattern": true
     }
   ]
 }

@@ -453,10 +453,17 @@ def _cmd_whitelist(value, where):
     for i, e in enumerate(value):
         w = '%s[%d]' % (where, i)
         _obj(e, w)
-        _unknown(e, ('run', 'timeout_s', 'mounts'), w)
+        _unknown(e, ('run', 'timeout_s', 'mounts', 'pattern'), w)
         run = validate_cmd(e.get('run'), w + '.run')
         t = _int(e.get('timeout_s', CMD_TIMEOUT_DEFAULT), w + '.timeout_s', 1, CMD_TIMEOUT_MAX)
         entry = {'run': run, 'timeout_s': t}
+        # 09-25 市場真跑 §7 第 4 條：白名單照人名寫死，換個人就退件。pattern: true＝run 裡的 {名字} 可換成一格路徑段
+        if 'pattern' in e:
+            if not isinstance(e['pattern'], bool):
+                bad(w + '.pattern', '要是 true 或 false')
+            if e['pattern']:
+                _cmd_pattern(run, w + '.run')
+                entry['pattern'] = True
         # 09-25 arknights 隊加：指令要讀專案外的資料（例：原文庫）時，人在白名單寫要多掛哪幾個資料夾；一律唯讀
         mounts = _obj(e.get('mounts', {}), w + '.mounts')
         for mk, mv in mounts.items():
@@ -470,11 +477,50 @@ def _cmd_whitelist(value, where):
     return out
 
 
+CMD_VAR = re.compile(r'\{([a-z_][a-z0-9_]*)\}')
+
+
+def _cmd_pattern(run, where):
+    """pattern 白名單：{名字} 只能出現在第 2 格以後（指令名不能換）；至少要有一個，不然寫 pattern 沒意義。"""
+    if '{' in run[0]:
+        bad(where + '[0]', '指令名不能用 {名字}')
+    if not any(CMD_VAR.search(a) for a in run[1:]):
+        bad(where, 'pattern: true 的白名單要有 {名字}，例 "lore/characters/{name}.md"')
+
+
+def _cmd_pattern_match(pattern, run):
+    """整串比：每格照白名單那格，{名字} 換成一格路徑段（不含 /、不是 . 或 ..、不以 - 開頭）；
+    同一個名字在各格要是同一個值。其他字一個都不能差。"""
+    if not isinstance(run, list) or len(run) != len(pattern) or run[0] != pattern[0]:
+        return False
+    seen = {}
+    for pat, arg in zip(pattern, run):
+        if not isinstance(arg, str):
+            return False
+        parts, pos, names = [], 0, []
+        for m in CMD_VAR.finditer(pat):
+            parts.append(re.escape(pat[pos:m.start()]))
+            parts.append('([^/\0]+)')
+            names.append(m.group(1))
+            pos = m.end()
+        parts.append(re.escape(pat[pos:]))
+        m = re.fullmatch(''.join(parts), arg, re.S)
+        if m is None:
+            return False
+        for name, val in zip(names, m.groups()):
+            if val in ('.', '..') or val.startswith('-') or seen.setdefault(name, val) != val:
+                return False
+    return True
+
+
 def cmd_allowed(roster, item):
     """單子上的 cmd_ok 條目對得上名冊白名單的哪一條：回那一條；對不上＝None。
-    run 要整串一樣；單子上的 timeout_s（沒寫＝白名單那條的）不能超過白名單的。"""
+    run 要整串一樣（pattern 白名單：{名字} 那段可以換，見 _cmd_pattern_match）；
+    單子上的 timeout_s（沒寫＝白名單那條的）不能超過白名單的。"""
+    run = item.get('run')
     for e in roster.get('cmd_ok', []):
-        if e['run'] == item.get('run') and item.get('timeout_s', e['timeout_s']) <= e['timeout_s']:
+        same = _cmd_pattern_match(e['run'], run) if e.get('pattern') else e['run'] == run
+        if same and item.get('timeout_s', e['timeout_s']) <= e['timeout_s']:
             return e
     return None
 

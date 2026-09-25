@@ -27,7 +27,7 @@
 | `{"kind": "file_exists", "path"}` | — | 路徑在（檔或資料夾） |
 | `{"kind": "table_filled", "path", "column"?, "columns"?, "heading"?}` | `column`（一欄）或 `columns`（陣列），都沒給＝全部欄；`heading`：Markdown 挑哪個標題底下的第一張表 | 每一列那幾欄都非空；0 列＝不過。`.json` 要是 `wf-table/1`（`contract`、`columns`、`rows`）或物件陣列；`.csv` 第一列是欄名；其他當 Markdown。表壞了、找不到表或欄、欄名空的或重名＝不過；`column` 寫法不對＝檢查器壞 |
 | `{"kind": "check", "name", "args"?}` | 看檢查器 | 看檢查器 |
-| `{"kind": "cmd_ok", "run", "timeout_s"?}` | `run` 要整串等於 `team.json` 的 `cmd_ok` 白名單一條，`timeout_s` 不超過它的 | 牢裡退 0；其他或逾時＝不過；不在白名單、跑不起來＝檢查器壞（wall.md §4） |
+| `{"kind": "cmd_ok", "run", "timeout_s"?}` | `run` 要整串等於 `team.json` 的 `cmd_ok` 白名單一條（`pattern` 條的 `{名字}` 認一格路徑段，wall.md §4），`timeout_s` 不超過它的 | 牢裡退 0；其他或逾時＝不過；不在白名單、跑不起來＝檢查器壞（wall.md §4） |
 
 檢查器（`CHECKS` 登記表，`名字 → 模組:函式`）：
 

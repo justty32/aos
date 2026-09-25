@@ -32,55 +32,11 @@
       "run": [
         "python3",
         "scripts/check_simplified.py",
-        "lore/characters/老何塞.md",
-        "lore/evidence/characters/老何塞.md"
+        "lore/characters/{name}.md",
+        "lore/evidence/characters/{name}.md"
       ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老天師.md",
-        "lore/evidence/characters/老天師.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老成的杜林人（雙月密錄）.md",
-        "lore/evidence/characters/老成的杜林人（雙月密錄）.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老木頭.md",
-        "lore/evidence/characters/老木頭.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老薑.md",
-        "lore/evidence/characters/老薑.md"
-      ],
-      "timeout_s": 180
-    },
-    {
-      "run": [
-        "python3",
-        "scripts/check_simplified.py",
-        "lore/characters/老財.md",
-        "lore/evidence/characters/老財.md"
-      ],
-      "timeout_s": 180
+      "timeout_s": 180,
+      "pattern": true
     }
   ]
 }

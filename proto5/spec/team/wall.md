@@ -43,7 +43,7 @@
 | 收件人 | 在寄件人的 `mail_to` | `BadRecipient` |
 | 角色 | 申請種類在寄件人模板的 `may`；替別人壓縮、別人的審查單 | `NotAllowed` |
 | 路徑 | `handoff` 的 `done_when` 路徑（`path`、`args.path`）：相對專案、沒有 `..` 段、不以 `/`、`~` 開頭、沒有換行等控制字元與前後空白；`workflow`：去掉前後空白後再驗（派工信用的是這個值），不准 `..`、控制字元，絕對路徑只准 `/work/…` | `BadPath` |
-| 操作 | `cmd_ok` 的 `run` 要**整串**等於 `team.json` 白名單的一條，`timeout_s` 不能超過那條的 | `NotAllowed`（退信列出可用的） |
+| 操作 | `cmd_ok` 的 `run` 要**整串**等於 `team.json` 白名單的一條（`pattern` 條只有 `{名字}` 那段可換），`timeout_s` 不能超過那條的 | `NotAllowed`（退信列出可用的） |
 | 假信頭 | 成員寫的**每一段字**（信文；申請裡的 goal、facts、judge 的 text、審查的 why、取消的 reason…，會被郵差抄進別人的信），有一行以 `【來信` 或 `【人 →` 開頭 | `ForgedHeader`（信頭只有郵差能寫；人寫的不擋） |
 
 不合一律照 post.md 退件：原檔進 `rejected/`、`FAILED` 退給寄件人。
@@ -52,6 +52,7 @@
 
 - 白名單在 `team.json` 頂層（人寫，[roster.md](roster.md)）：`"cmd_ok": [{"run": ["python3", "-m", "unittest"], "timeout_s": 300}]`。`run[0]` 是指令名（不含 `/`，牢裡照 `PATH` 找）；`timeout_s` 1～3600，省略＝300。
 - 白名單一條可多寫 `"mounts": {"名字": "/絕對路徑或~/…"}`（09-25 arknights 隊加）：指令要讀專案外的資料（例：專案裡的相對連結指到原文庫）時用，一律**唯讀**掛 `/work/<名字>`；名字不能是 `ws`；資料夾不在＝檢查器壞。只有人寫的白名單能加，單子上不能寫。
+- 白名單一條可寫 `"pattern": true`（09-25 市場真跑 §7 第 4 條：照人名寫死，換個人就退件）：`run` 第 2 格以後的 `{名字}`（小寫英數底線）各認**一格路徑段**——不含 `/`、不是 `.`／`..`、不以 `-` 開頭；同一個 `{名字}` 在各格要是同一個值；其他字一個都不能差，指令名（`run[0]`）不能用 `{}`。例 `["python3", "scripts/check_simplified.py", "lore/characters/{name}.md", "lore/evidence/characters/{name}.md"]`。沒寫 `pattern`＝`{name}` 就是字面。
 - 單子上的條目：`{"kind": "cmd_ok", "run": [...], "timeout_s"?: 秒}`。開單時郵差比對白名單；驗收時再比一次（人事後拿掉了＝檢查器壞，不扣次數）。
 - 結果：退 0＝過；其他退出碼、逾時＝不過（修正信附輸出最後 600 字，逾時也附）；指令找不到、牢開不起來、沒 bwrap＝檢查器壞。
 - 「跑不起來」怎麼判：真的跑之前，先在同一種牢裡跑 `sh -c 'command -v -- 指令名'`。之後只看退出碼，**不解析專案程式自己印的字**（程式能在 stderr 假造一行 `bwrap: …`）。

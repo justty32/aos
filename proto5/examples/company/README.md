@@ -28,7 +28,7 @@
 | **董事會** | —（`human`） | 使用者本人 | — | — | 方向、拍板、抽查 | [ask.md](../../spec/team/ask.md)、`company.py order／mail／answer` | — | 有 |
 | **總裁辦** hq | [teams/hq](teams/hq/team.json) | `hq-lead`／lead／gpt-5.5／正式（**總裁，兼業務、兼 HR 決策**） | — | 董事的一句話（`company.py order` → hq 門房 → 總裁） | 給部門的〔給 …〕單；給董事的結案信 | [route.md](../../spec/team/route.md)、[company.md](../../spec/team/company.md) | 董事下單到結案信的秒數；總機單結案率 | 有 |
 | 業務部 sales | 併在 hq | 門房（機械，hq 的 [routes.json](teams/hq/routes.json)）＋總裁兼判斷 | — | 董事一句話 | 命中門房就直接做，沒命中交總裁 | route.md、[crystal.md](../../spec/team/crystal.md) | 門房命中率（`route.log`） | 兼任 |
-| **製造部** mfg | [teams/mfg](teams/mfg/team.json) | `mfg-lead`／lead／gpt-5.5／正式（窗口，拆批次）；`mfg-writer1`／worker／gpt-5.5／正式；`mfg-reviewer`／reviewer／gpt-5.5／正式；忙時 `mfg-lead` 可 spawn worker（臨時工，不用批） | corpus 唯讀（寫手、審查） | `〔給 mfg〕補人物 X`（全套，動索引）／`補人物 X（只寫詞條）`（門房直接開單給寫手） | `lore/characters/X.md`＋證據檔，過驗收（機械 5～6 條）＋審查（judge） | [examples/arknights](../arknights/README.md)、[tasks.md](../../spec/team/tasks.md)、[verify.md](../../spec/team/verify.md) | 一次過率（attempt=1 的 done）、每單 token、每單秒數 | 有 |
+| **製造部** mfg | [teams/mfg](teams/mfg/team.json) | `mfg-lead`／lead／gpt-5.5／正式（窗口，拆批次）；`mfg-writer1`／worker／**gpt-6-astra**／正式（09-25 五家真跑：astra 八張一次過、每張 132 萬 token，見[報告](../../notes/2026-09-25-company/market-run-5/README.md)）；`mfg-reviewer`／reviewer／gpt-5.5／正式；忙時 `mfg-lead` 可 spawn worker（臨時工，不用批） | corpus 唯讀（寫手、審查） | `〔給 mfg〕補人物 X`（全套，動索引）／`補人物 X（只寫詞條）`（門房直接開單給寫手） | `lore/characters/X.md`＋證據檔，過驗收（機械 5～6 條）＋審查（judge） | [examples/arknights](../arknights/README.md)、[tasks.md](../../spec/team/tasks.md)、[verify.md](../../spec/team/verify.md) | 一次過率（attempt=1 的 done）、每單 token、每單秒數 | 有 |
 | **品管部** qa | [teams/qa](teams/qa/team.json) | `qa-inspector`／worker／deepseek-chat／正式；**評審**＝`eval.sh` 裡一次性的 claude-opus-5 呼叫（臨時工） | corpus 唯讀 | `〔給 qa〕驗貨 X`（門房直接開單） | `qa-reports/X.md`（`結論：合格／不合格`＋抽查 3 列）；批次時 `eval.sh` 分數 | [examples/arknights/eval](../arknights/eval/)、verify.md | 驗貨合格率；eval 機械層全過率、證據列 ok 率 | 有 |
 | **研發部** rd | [teams/rd](teams/rd/team.json) | `rd-smith`／worker／gpt-5.5／正式（工具匠） | — | `〔給 rd〕要一支工具…`（沒門房規則，信給窗口） | 工具草稿（人 `aos-team tool approve` 才裝） | [toolsmith.md](../../spec/team/toolsmith.md)、[tools/](../../tools/README.md) | 草稿牢裡測試通過率；被批准數 | 有 |
 | HR hr | 併在 hq | 機械：名額由 HR 擋（`up` 把 `company.json` 的上限寫進這家的 `K/hr/policy.json`，`init`／`start`／生成員超了就擋）、`aos-team hr` 薪資表與試用、spawn 生臨時工；決策＝總裁兼、改名冊＝董事 | — | `〔給 hr〕…`（落到總裁） | 名冊改動（人批）、臨時工 | [hr.md](../../spec/team/hr.md)、[spawn.md](../../spec/team/spawn.md)、[score.md](../../spec/team/score.md) | 正式 N/10、cpu N/20、llm cpu N/5 不超（`company.py status` 與 `aos-team hr cap` 同一組數） | 兼任＋機械 |
@@ -80,6 +80,10 @@ python3 company.py down   -C ~/tmp/company-run/c1
 **直接跑 `aos-team hr cap` 要帶這家的 kernel**：`AOS_KERNEL_HOME=~/tmp/company-run/c1/K AOS_HR_HOME=~/tmp/company-run/c1/K/hr aos-team hr cap`，不帶會說找不到 HR 家（真跑 09-25）。`status` 最後一行會印出這兩個值；`company.py hr cap` 自動帶。
 
 **草稿不在也能下「補人物」**：製造部門房看 `aos-drafts/X/`，不在或是空的，單子就寫「無草稿、從原文起」，總裁的結案信不會說「依草稿」（規則的 `if_missing`，[route.md](../../spec/team/route.md)）。
+
+**「補人物 X」換誰都能開單**：製造部、品管部的 `cmd_ok` 白名單用 `"pattern": true`，`lore/characters/{name}.md` 的 `{name}` 認任何一格檔名（不含 `/`、不是 `..`、不以 `-` 開頭），同一條裡的 `{name}` 要是同一個人（[roster.md](../../spec/team/roster.md)）。09-25 五家真跑前是照人名寫死六列，換第七個人就被郵差 `NotAllowed` 退件。
+
+**帳戶花光了會怎樣**：部門郵差看到帳戶超支，新的開單直接退件（FAILED，信裡寫「財務擋單：超支」），總機把 FAILED 轉回總裁，總裁照 SOP 回董事——董事的單會結案（算失敗），不會永遠卡著（[cost.md](../../spec/team/cost.md) §4）。
 
 **daemon 在哪**：`<公司>/D/`（company.json 的 `daemon`，預設 `D`；董事 09-25：一家一個 daemon＋kernel）。`down` 會把自家的 kernel 與 daemon 一起關，印「總機撤了」和 daemon 停了沒；之後 `status` 印 `kernel stopped（…）`。
 
