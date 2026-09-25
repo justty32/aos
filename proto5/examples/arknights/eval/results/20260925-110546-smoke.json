@@ -1,0 +1,214 @@
+{
+ "at": "2026-09-25T11:05:46",
+ "label": "smoke",
+ "copy_root": "/home/lorkhan/tmp/arknights-eval",
+ "batches": [
+  "100",
+  "143"
+ ],
+ "judge_model": null,
+ "people": [
+  {
+   "batch": "100",
+   "name": "伊萬",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 9,
+    "ok": 9,
+    "ok_loose": 9,
+    "by_status": {
+     "skip": 3,
+     "ok": 9
+    },
+    "bad_rows": []
+   }
+  },
+  {
+   "batch": "100",
+   "name": "伯德",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 9,
+    "ok": 8,
+    "ok_loose": 8,
+    "by_status": {
+     "skip": 3,
+     "ok": 8,
+     "引文找不到": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/伯德.md",
+      "line": 20,
+      "status": "引文找不到",
+      "detail": "「因迷路而吃路牌」"
+     }
+    ]
+   }
+  },
+  {
+   "batch": "100",
+   "name": "佐拉",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 11,
+    "ok": 10,
+    "ok_loose": 10,
+    "by_status": {
+     "skip": 3,
+     "ok": 10,
+     "引文在範圍外": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/佐拉.md",
+      "line": 12,
+      "status": "引文在範圍外",
+      "detail": "「生病」"
+     }
+    ]
+   }
+  },
+  {
+   "batch": "143",
+   "name": "羅伯遜",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 11,
+    "ok": 10,
+    "ok_loose": 10,
+    "by_status": {
+     "skip": 3,
+     "引文找不到": 1,
+     "ok": 10
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/羅伯遜.md",
+      "line": 7,
+      "status": "引文找不到",
+      "detail": "「羅伯遜叔叔」「羅伯遜先生」"
+     }
+    ]
+   }
+  },
+  {
+   "batch": "143",
+   "name": "羅塞菈",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 11,
+    "ok": 11,
+    "ok_loose": 11,
+    "by_status": {
+     "skip": 2,
+     "ok": 11
+    },
+    "bad_rows": []
+   }
+  },
+  {
+   "batch": "143",
+   "name": "羅索",
+   "cand_root": "/home/lorkhan/tmp/arknights-eval",
+   "mech": {
+    "passed": 7,
+    "total": 7,
+    "failed": []
+   },
+   "evidence": {
+    "checked_rows": 17,
+    "ok": 16,
+    "ok_loose": 16,
+    "by_status": {
+     "skip": 4,
+     "ok": 16,
+     "引文找不到": 1
+    },
+    "bad_rows": [
+     {
+      "file": "evidence/characters/羅索/身分、姓名與同稱切割.md",
+      "line": 9,
+      "status": "引文找不到",
+      "detail": "「嫉惡如仇」「老師也沒有」"
+     }
+    ]
+   }
+  }
+ ],
+ "repo": [
+  {
+   "check": "repo_links",
+   "pass": false,
+   "msg": "檢查 8273 條本地連結，缺失 7 條"
+  },
+  {
+   "check": "repo_diff_check",
+   "pass": true,
+   "msg": ""
+  }
+ ],
+ "metrics": {
+  "label": "tool-model-r1",
+  "root": "/home/lorkhan/tmp/w3a-try/tool-model-r1",
+  "teams": [
+   "team"
+  ],
+  "calls": 8,
+  "calls_by_model": {
+   "deepseek-chat": 8
+  },
+  "prompt_tokens": 48235,
+  "completion_tokens": 938,
+  "total_tokens": 49173,
+  "calls_without_usage": 0,
+  "model_ms": 8667,
+  "think_ms": 9069,
+  "act_ms": 0,
+  "tasks": 1,
+  "tasks_by_status": {
+   "done": 1
+  },
+  "mails": 8,
+  "wall_s": 32.0,
+  "start": "2026-09-25T09:49:30+08:00",
+  "end": "2026-09-25T09:50:02+08:00",
+  "by_member": {
+   "lead": {
+    "calls": 0,
+    "tokens": 0
+   },
+   "worker-1": {
+    "calls": 8,
+    "tokens": 49173
+   }
+  },
+  "hops": null
+ },
+ "lowest3": []
+}
