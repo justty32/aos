@@ -14,3 +14,4 @@
 |---|---|---|
 | （arknights 隊補） | 強模型版團隊設定（`arknights-strong.json`、`lore-entry.md`）。`arknights-strong.json` 含 `<佔位>`，是樣板，填完換專案的欄位才會過 `aos_team_format.py` | 另一隊放，2026-09-25 |
 | [examples/commons/](../../examples/commons/README.md) | 兩支做事的隊（投稿：一個領隊；查閱＋用：領隊＋工人，都 astra）＋圖書館員隊（一個 `librarian`、便宜模型、正式員工） | [notes/2026-09-25-commons](../../notes/2026-09-25-commons/README.md) |
+| [company-startup.md](company-startup.md) | 新創公司八部門、七個正式員工：總裁兼業務與 HR、製造 3、品管 1（笨模型）、研發 1、館員 1；財務不放人。真東西在 [examples/company/](../../examples/company/README.md) | [notes/2026-09-25-company](../../notes/2026-09-25-company/README.md) |
