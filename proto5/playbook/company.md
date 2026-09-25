@@ -25,13 +25,13 @@
 | 財務部 | 沒有模型員工：帳本 `$AOS_COST_HOME`（`up` 傳進兩個池）＋公司帳戶 | 每部門／每單 token 與美元、預算、帳戶餘額 | 財務隊寫程式 | [cost.md](../spec/team/cost.md) | 純機械 |
 | 總機（跨部門往來） | `company.py relay`（kernel 每 5 秒叫一次） | 〔給 部門〕的信 → 對方門房開單或窗口信；回覆照 reply_to 抄回 | — | [company.md §3](../spec/team/company.md) | 有 |
 | 總務／資安 | 一家一個 kernel（池＝cpu 上限）、牆（bwrap）、郵差再驗 | 開機關機、名額硬上限、擋越權 | 審查隊＋內建機制 | [wall.md](../spec/team/wall.md) | 有 |
-| 經理人（市場層） | aos 外：Fable 用 `market.py` | 幾家公司競爭：排名、撥額度、倒閉、合併 | Fable | [market.md](../spec/team/market.md) | 有（假帳本測過，沒五家真跑） |
+| 經理人（市場層） | aos 外：Fable 用 `market.py` | 幾家公司競爭：排名、撥額度、倒閉、合併 | Fable | [market.md](../spec/team/market.md) | 有（兩家真跑一輪，見 [market-run](../notes/2026-09-25-company/market-run/README.md)；沒五家真跑） |
 
 **員工兩種**：正式員工＝名冊裡有家、`notes: true`、記憶留著（算人頭，新創 ≤10）；臨時工＝spawn 生的、一次性模型呼叫、機械程式（不算人頭，但跑起來佔 cpu）。名冊每個成員的 `employment` 寫是哪種（HR 部），`company.json` 的 `staff` 寫兼哪些角色。
 
 ## 公司節奏
 
-一段＝一季：董事 `order` → 總裁派〔給 mfg〕→ 製造 → 總裁派〔給 qa〕→ 品管 → 總裁回報董事；季末經理人 `market.py score／rank／grant`（品質、快、省），花光的倒閉、剩兩家合併；每隊收尾沉澱進 playbook（施工層）與 commons（運轉層）。
+一段＝一季：董事 `order` → 總裁派〔給 mfg〕→ 製造 → 總裁派〔給 qa〕→ 品管 → 總裁回報董事；季末經理人 `market.py score／rank`（品質、快、省）→ 花光的先倒閉 → `grant`、剩兩家合併；每隊收尾沉澱進 playbook（施工層）與 commons（運轉層）。
 例行的（每週數一次積壓、每季跑一次 eval）用心跳 routines 派給對應部門，不用人記得。
 
 ## 新創 → 擴張
