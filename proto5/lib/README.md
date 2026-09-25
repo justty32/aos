@@ -129,6 +129,10 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_market_merge.py`](aos_market_merge.py) | 市場的合併：合併計畫（經理只留一個、名額滿了改臨時工、notes 帶過去）與逐步照做 |
 | [`aos_team_cost.py`](aos_team_cost.py) | 財務部（09-25，spec/team/cost.md）：`record()` 掛在 `aos_llm_call.call` 與 `aos_llm_ask.ask`，每次呼叫追加一筆到 `$AOS_COST_HOME/ledger.jsonl`（沒設不記、寫失敗吞掉）；`aos-team cost`（分組表、`budget`、`import` 回填 usage.jsonl）；公司帳戶（`account_open`／`account_grant`／`balances`／`account_of`，花到 0＝倒閉）；郵差 `budget_hold` 與 `ls` 第一行問它超了沒 |
 | [`aos_team_hr.py`](aos_team_hr.py) | （HR 部 09-25，spec/team/hr.md）`aos-team hr`：薪資表／政策讀寫、`hr trial`（複製團隊換模型→跑任務集→`score --json`＋可插評分指令→記 `trials.jsonl`→調薪）、`hr set`（改名冊與家的 `llm.model`、重啟）、正式員工人頭與全公司 cpu 計數（init／start／spawn 的擋點）；HR 自己不叫模型 |
+| [`aos_team_commons.py`](aos_team_commons.py) | 跨團隊公共資料夾 commons（09-25，spec/team/commons.md）：成員投稿經自己團隊的郵差送進 `commons/inbox/`，圖書館員團隊的郵差機械審、像既有條目才叫模型判，入庫寫條目與索引；不叫模型。這支留匯入 playbook（`playbook_items`）與人的指令 `cmd_commons` |
+| [`aos_team_commons_base.py`](aos_team_commons_base.py) | commons 的底：常數與上限、在哪與誰開（名冊設定、圖書館員）、資料夾 `Commons` 與索引印法 |
+| [`aos_team_commons_ingest.py`](aos_team_commons_ingest.py) | commons 的投稿檢查、入庫與查閱：欄位與附檔、內容 sha、像不像、slug、入庫與移除、搜尋 |
+| [`aos_team_commons_post.py`](aos_team_commons_post.py) | commons 的郵差兩端：投稿端（`on_contribute`、收結果）與圖書館員端（`desk`、`on_commons_write`、`post_round`） |
 | [`aos_team_lock.py`](aos_team_lock.py) | `lock` 工具與 `aos-team lock`（第二波 C 隊，spec/team/lock.md）：短期獨佔一個檔或資料夾的名字，申請 `kind: lock`（acquire／release／ls，全部非同步）記在 `team/locks/<名>.json`，逾時自動放 |
 | [`aos_team_spawn.py`](aos_team_spawn.py) | `spawn_member` 工具與 `aos-team spawn`（第三波 W3-1，spec/team/spawn.md）：成員申請生新成員，`kind: spawn`；預設不用人批（郵差查過名冊直接生），名冊可設成要開題問人；`spawn ls／approve` |
 | [`aos_team_toolsmith.py`](aos_team_toolsmith.py) | `tool_draft` 工具與 `aos-team tool`（第三波 W3-1，spec/team/toolsmith.md）：成員寫工具草稿，`kind: tool_draft`；郵差在牢裡跑附的例子，過了開題，人 `tool approve` 才裝（核 sha256） |
