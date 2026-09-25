@@ -1,0 +1,38 @@
+{
+  "_metainfo": {
+    "_type": "aos_hr_salary",
+    "_version": 1
+  },
+  "tiers": {
+    "chatgpt-gpt-6-astra": "強",
+    "claude-opus-5": "強",
+    "claude-fable-5-1": "強",
+    "chatgpt-gpt-5.6-sol": "中",
+    "claude-sonnet-5": "中",
+    "deepseek-chat": "笨",
+    "chatgpt-gpt-5.6-luna-nothink": "笨"
+  },
+  "positions": {
+    "worker": {
+      "model": "chatgpt-gpt-6-astra",
+      "tier": "強",
+      "employment": "regular",
+      "min_pass": {
+        "model": "deepseek-chat",
+        "tier": "笨",
+        "trial": "tr-0002",
+        "baseline": "tr-0001",
+        "at": "2026-09-25T11:39:40+08:00"
+      },
+      "evidence": [
+        "tr-0001",
+        "tr-0002"
+      ]
+    },
+    "lead": {
+      "model": "chatgpt-gpt-6-astra",
+      "tier": "強",
+      "employment": "regular"
+    }
+  }
+}

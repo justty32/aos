@@ -141,9 +141,10 @@ def _hooks(action, lay):
     return code
 
 
-def _hr_home():
-    """HR 家（spec/team/hr.md）；找不到或在試用副本裡（AOS_HR_TRIAL）回 None＝不擋、不登記。"""
-    if os.environ.get('AOS_HR_TRIAL'):
+def _hr_home(cpu_only=False):
+    """HR 家（spec/team/hr.md）；找不到回 None＝不擋、不登記。試用副本（AOS_HR_TRIAL）不算人頭、不登記，
+    但 cpu 照樣管（cpu_only=True 時不管試用與否都回 HR 家；astra 09-25）。"""
+    if os.environ.get('AOS_HR_TRIAL') and not cpu_only:
         return None
     import aos_team_hr
     try:
@@ -153,15 +154,18 @@ def _hr_home():
 
 
 def _hr_gate(lay, roster, cpus=False):
-    """HR 擋點：init 數全公司正式員工（regular_max）並登記這隊；start 另數全公司 cpu（cpu_max／llm_cpu_max）。"""
+    """HR 擋點：init／start 數全公司正式員工（regular_max）並登記這隊；start 另數全公司 cpu（cpu_max／llm_cpu_max）。"""
+    import aos_team_hr
+    if cpus:
+        hr = _hr_home(cpu_only=True)
+        if hr is not None:
+            aos_team_hr.check_cpus(hr)
     hr = _hr_home()
     if hr is None:
         return
-    import aos_team_hr
-    aos_team_hr.check_regular(hr, lay.root, roster)
-    if cpus:
-        aos_team_hr.check_cpus(hr)
-    aos_team_hr.register_team(hr, lay.root)
+    with aos_team_hr.hr_lock(hr):          # 數人頭到登記一口氣，兩隊同時 init 不會各自過關
+        aos_team_hr.check_regular(hr, lay.root, roster)
+        aos_team_hr.register_team_locked(hr, lay.root)
 
 
 def _each(team_dir, argv, action):

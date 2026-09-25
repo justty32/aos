@@ -16,3 +16,4 @@
 | [finance-ledger.md](finance-ledger.md) | 記帳 → 查帳 → 擋預算：三步全機械，照抄時的四個判斷（漏斗口、一本還是多本、擋在哪、預設開關） | [財務部 09-25](../../notes/2026-09-25-finance/README.md) |
 | [commons-flow.md](commons-flow.md) | 投稿→審→入庫→查閱：只有「寫」和「判重複」兩處用模型（寫的用強模型、判的用笨模型），其他全程式 | [notes/2026-09-25-commons](../../notes/2026-09-25-commons/README.md) |
 | [score-new-entries.md](score-new-entries.md) | 評「不在基準集裡的新交件」：先保住交件→機械＋證據（不叫模型）→每人一次評審（參照＝草稿）→人工抽最低 3 個 | [品管 09-25](../../notes/2026-09-25-arknights/qa/README.md) |
+| [hr-trial.md](hr-trial.md) | 試用 → 評分 → 調薪：一個位子能不能換便宜模型（複製團隊只換一人、同一份任務集與評分指令、分數 ≥ 強模型基準 − 5 且機械全過才降薪） | [HR 部 09-25](../../notes/2026-09-25-hr/README.md) |
