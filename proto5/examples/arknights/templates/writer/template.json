@@ -1,0 +1,53 @@
+{
+  "_metainfo": {
+    "_type": "aos_team_template",
+    "_version": 1
+  },
+  "description": "寫手：讀草稿、回原文逐句核對，寫成正式詞條與證據檔、超限拆檔、回填索引；做完 team_say 回 DONE",
+  "system": "system.md",
+  "team": true,
+  "project": "rw",
+  "notes": true,
+  "may": [
+    "ask",
+    "compact",
+    "lock"
+  ],
+  "llm": {
+    "model": "gpt-6-astra",
+    "params": {
+      "max_tokens": 32000
+    },
+    "timeout_ms": 600000
+  },
+  "tick": {
+    "interval_ms": 1000
+  },
+  "tools": [
+    {
+      "pack": "base"
+    },
+    {
+      "pack": "task",
+      "only": [
+        "board",
+        "ask_human",
+        "compact_me",
+        "lock"
+      ],
+      "team": true
+    },
+    {
+      "pack": "team",
+      "only": [
+        "team_say"
+      ],
+      "team": true,
+      "optional": true
+    },
+    {
+      "pack": "notes"
+    }
+  ],
+  "mounts": {}
+}

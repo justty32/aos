@@ -1,0 +1,193 @@
+{
+  "_metainfo": {
+    "_type": "aos_team",
+    "_version": 1
+  },
+  "project": "~/tmp/arknights-try",
+  "tz": "Asia/Taipei",
+  "members": {
+    "lead": {
+      "template": "./templates/lead",
+      "model": "gpt-6-astra",
+      "mail_to": [
+        "writer-1",
+        "writer-2",
+        "reviewer",
+        "human"
+      ]
+    },
+    "writer-1": {
+      "template": "./templates/writer",
+      "model": "gpt-6-astra",
+      "mail_to": [
+        "lead",
+        "human"
+      ],
+      "mounts": {
+        "arknights-corpus": {
+          "$opt": "ro",
+          "$val": "~/tmp/arknights-corpus"
+        }
+      }
+    },
+    "writer-2": {
+      "template": "./templates/writer",
+      "model": "gpt-6-astra",
+      "mail_to": [
+        "lead",
+        "human"
+      ],
+      "mounts": {
+        "arknights-corpus": {
+          "$opt": "ro",
+          "$val": "~/tmp/arknights-corpus"
+        }
+      }
+    },
+    "reviewer": {
+      "template": "./templates/reviewer",
+      "model": "gpt-6-astra",
+      "mail_to": [
+        "lead",
+        "human"
+      ],
+      "mounts": {
+        "arknights-corpus": {
+          "$opt": "ro",
+          "$val": "~/tmp/arknights-corpus"
+        }
+      }
+    }
+  },
+  "limits": {
+    "stale_minutes": 30,
+    "max_members": 4
+  },
+  "spawn": {
+    "templates": []
+  },
+  "cmd_ok": [
+    {
+      "run": [
+        "python3",
+        "scripts/check_links.py",
+        "lore"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老何塞.md",
+        "lore/evidence/characters/老何塞.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老木頭.md",
+        "lore/evidence/characters/老木頭.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老薑.md",
+        "lore/evidence/characters/老薑.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老財.md",
+        "lore/evidence/characters/老財.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老天師.md",
+        "lore/evidence/characters/老天師.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/check_simplified.py",
+        "lore/characters/老成的杜林人（雙月密錄）.md",
+        "lore/evidence/characters/老成的杜林人（雙月密錄）.md"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/verify_split.py",
+        "aos-drafts/老何塞/證據草稿.md",
+        "lore/evidence/characters/老何塞.md",
+        "lore/evidence/characters/老何塞"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/verify_split.py",
+        "aos-drafts/老木頭/證據草稿.md",
+        "lore/evidence/characters/老木頭.md",
+        "lore/evidence/characters/老木頭"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/verify_split.py",
+        "aos-drafts/老薑/證據草稿.md",
+        "lore/evidence/characters/老薑.md",
+        "lore/evidence/characters/老薑"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/verify_split.py",
+        "aos-drafts/老財/證據草稿.md",
+        "lore/evidence/characters/老財.md",
+        "lore/evidence/characters/老財"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/verify_split.py",
+        "aos-drafts/老天師/證據草稿.md",
+        "lore/evidence/characters/老天師.md",
+        "lore/evidence/characters/老天師"
+      ],
+      "timeout_s": 180
+    },
+    {
+      "run": [
+        "python3",
+        "scripts/verify_split.py",
+        "aos-drafts/老成的杜林人（雙月密錄）/證據草稿.md",
+        "lore/evidence/characters/老成的杜林人（雙月密錄）.md",
+        "lore/evidence/characters/老成的杜林人（雙月密錄）"
+      ],
+      "timeout_s": 180
+    }
+  ]
+}

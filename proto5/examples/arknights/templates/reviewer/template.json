@@ -1,0 +1,43 @@
+{
+  "_metainfo": {
+    "_type": "aos_team_template",
+    "_version": 1
+  },
+  "description": "審查員：逐列對原文行號，不信寫手自報；用 review_result 逐條回",
+  "system": "system.md",
+  "team": true,
+  "project": "ro",
+  "may": [
+    "review_result"
+  ],
+  "llm": {
+    "model": "gpt-6-astra",
+    "params": {
+      "max_tokens": 32000
+    },
+    "timeout_ms": 600000
+  },
+  "tick": {
+    "interval_ms": 1000
+  },
+  "tools": [
+    {
+      "pack": "task",
+      "only": [
+        "board",
+        "review_result"
+      ],
+      "team": true
+    },
+    {
+      "pack": "base",
+      "only": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    }
+  ],
+  "mounts": {}
+}

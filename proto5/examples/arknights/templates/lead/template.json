@@ -1,0 +1,61 @@
+{
+  "_metainfo": {
+    "_type": "aos_team_template",
+    "_version": 1
+  },
+  "description": "領隊：把「補一批人物」拆成一人一張單派給寫手；收 BLOCKED 決定怎麼辦。不動手做事",
+  "system": "system.md",
+  "team": true,
+  "project": "ro",
+  "notes": true,
+  "may": [
+    "handoff",
+    "cancel",
+    "reassign",
+    "ask",
+    "compact"
+  ],
+  "llm": {
+    "model": "gpt-6-astra",
+    "params": {
+      "max_tokens": 32000
+    },
+    "timeout_ms": 600000
+  },
+  "tick": {
+    "interval_ms": 1000
+  },
+  "tools": [
+    {
+      "pack": "task",
+      "only": [
+        "handoff",
+        "board",
+        "ask_human",
+        "compact_me"
+      ],
+      "team": true
+    },
+    {
+      "pack": "team",
+      "only": [
+        "team_say"
+      ],
+      "team": true,
+      "optional": true
+    },
+    {
+      "pack": "notes"
+    },
+    {
+      "pack": "base",
+      "only": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    }
+  ],
+  "mounts": {}
+}
