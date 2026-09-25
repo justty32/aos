@@ -154,7 +154,8 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_commons_post.py`](aos_team_commons_post.py) | commons 的郵差兩端：投稿端（`on_contribute`、收結果）與圖書館員端（`desk`、`on_commons_write`、`post_round`） |
 | [`aos_team_lock.py`](aos_team_lock.py) | `lock` 工具與 `aos-team lock`（第二波 C 隊，spec/team/lock.md）：短期獨佔一個檔或資料夾的名字，申請 `kind: lock`（acquire／release／ls，全部非同步）記在 `team/locks/<名>.json`，逾時自動放 |
 | [`aos_team_spawn.py`](aos_team_spawn.py) | `spawn_member` 工具與 `aos-team spawn`（第三波 W3-1，spec/team/spawn.md）：成員申請生新成員，`kind: spawn`；預設不用人批（郵差查過名冊直接生），名冊可設成要開題問人；`spawn ls／approve` |
-| [`aos_team_toolsmith.py`](aos_team_toolsmith.py) | `tool_draft` 工具與 `aos-team tool`（第三波 W3-1，spec/team/toolsmith.md）：成員寫工具草稿，`kind: tool_draft`；郵差在牢裡跑附的例子，過了開題，人 `tool approve` 才裝（核 sha256） |
+| [`aos_team_toolsmith.py`](aos_team_toolsmith.py) | `tool_draft` 工具與 `aos-team tool`（第三波 W3-1，spec/team/toolsmith.md）：成員寫工具草稿，`kind: tool_draft`；郵差在牢裡跑附的例子，過了開題，人 `tool approve` 才裝（核 sha256）。這支留生工具包與牢裡試跑、郵差端與人端 |
+| [`aos_team_toolsmith_check.py`](aos_team_toolsmith_check.py) | 工具草稿 `tool_draft` 的欄位驗：名字、參數表（JSON Schema 子集）、程式碼、附的例子、整份申請 |
 
 命令列入口在 [`../cli/`](../cli/)，每支都是薄殼：`aos-exec`→`aos_exec.main`、`aos-cpu`→`aos_exec_cpu.main`、
 `aos`→`aos_up.main`、`aos-daemon`→`aos_daemon.main`、`aos-kernel`→`aos_kernel.main`、`aos-agent`→`aos_agent.main`、
