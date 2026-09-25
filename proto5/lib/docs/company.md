@@ -1,4 +1,4 @@
-# proto5/lib — 公司與市場（11 支）
+# proto5/lib — 公司與市場（12 支）
 
 ← [proto5/lib README](../README.md)｜上一份：[team](team.md)｜下一份：[測試](tests.md)
 
@@ -13,6 +13,7 @@
 | [`aos_company_count.py`](../aos_company_count.py) | 數人頭、數 cpu 與狀態：正式員工人頭、kernel 的 cpu、上限檢查、daemon 家與環境、狀態資料與印法 |
 | [`aos_market.py`](../aos_market.py) | 市場層（09-25，spec/team/market.md）：幾家公司的排名（品質／快／省加權）、照名次撥額度（`aos_team_cost` 帳戶）、總池（錢與名額）、倒閉／裁撤回收、`slots` 撥名額、兩家合併（經理只留一個、名額滿了改臨時工、notes 帶過去）；指令包裝 `examples/company/market.py`。這支留命令列 `main` 與印表 |
 | [`aos_market_book.py`](../aos_market_book.py) | 市場的帳本：常數與預設參數、`MarketError`、資料夾與鎖、`market.json` 讀寫、營業中判定、總池 |
+| [`aos_market_review.py`](../aos_market_review.py) | 市場的審查係數（09-25 晚第 75 題）：製造部單子第幾次審查才過（讀單子的 `review`）→ 品質要乘的係數（`review_factors`，起始 1.0／0.7／0.4、FAILED＝0） |
 | [`aos_market_score.py`](../aos_market_score.py) | 市場的表現：評估結果與品管判決算品質、一家的成績板、記一筆成績 |
 | [`aos_market_grant.py`](../aos_market_grant.py) | 市場的開戶與撥款：開帳戶、加權排名、照名次撥額度、撥名額 |
 | [`aos_market_close.py`](../aos_market_close.py) | 市場的倒閉與裁撤：停機、回收額度與名額、崩在半路的收尾重跑 |

@@ -18,7 +18,7 @@
 改東西的子命令都拿 `<市場>/.market.lock`；grant／bankrupt／close／merge 先把要做的記進 market.json 再動手，
 崩了重跑同一個指令接著做（帳戶照操作 ID 去重，不會重撥）。
   ls [--json]                                   每家：狀態、配額、已花、餘額、最近分數
-這個檔留命令列（main 與印表）；實作分在 aos_market_book／score／grant／close／merge，這裡匯出外部用到的名字。
+這個檔留命令列（main 與印表）；實作分在 aos_market_book／review／score／grant／close／merge，這裡匯出外部用到的名字。
 """
 import argparse
 import json
@@ -36,6 +36,7 @@ from aos_market_book import (
     cost_base, DEFAULT_PARAMS, load, market_dir, market_lock, MarketError, now, operating,
     pool_status, save
 )
+from aos_market_review import review_factor
 from aos_market_score import board_from_company, quality_from_eval, record_score
 from aos_market_grant import do_grant, grant_slots, open_company, rank
 from aos_market_close import bankrupt, close
@@ -68,7 +69,7 @@ def _pool_kinds(recycled, total):
 
 
 def _print_rank(rows):
-    print('名次  公司    排名分   品質   快    省    成功 失敗  董事等秒  跳數  這輪花 token   餘額')
+    print('名次  公司    排名分   品質   原品質 成功率 審查  快    省    成功 失敗  董事等秒  跳數  這輪花 token   餘額')
     for r in rows:
         extra = []
         if r.get('scored') is False:
@@ -77,8 +78,11 @@ def _print_rank(rows):
             extra.append('這輪沒有成功結案：全項 0（原品質 %s）' % r.get('raw_quality'))
         if r.get('note'):
             extra.append(r['note'])
-        print('%-4d  %-6s  %6.2f  %5.1f  %5.1f  %5.1f  %3d  %3d  %8s  %5s  %11d   %s%s' % (
-            r['rank'], r['name'], r['score'], r['quality'], r['speed'], r['cost'], r['done'], r.get('failed') or 0,
+        rf = r.get('review_factor')
+        print('%-4d  %-6s  %6.2f  %5.1f  %6s  %5.2f  %4s  %5.1f  %5.1f  %3d  %3d  %8s  %5s  %11d   %s%s' % (
+            r['rank'], r['name'], r['score'], r['quality'],
+            '-' if r.get('raw_quality') is None else '%.1f' % r['raw_quality'], r.get('success_rate') or 0.0,
+            '-' if rf is None else '%.2f' % rf, r['speed'], r['cost'], r['done'], r.get('failed') or 0,
             r['seconds'] if r['seconds'] is not None else '-', r['hops'] if r['hops'] is not None else '-',
             r['spent_tokens'], json.dumps(r['balance'], ensure_ascii=False),
             '  ← ' + '；'.join(extra) if extra else ''))
@@ -138,6 +142,10 @@ def main(argv=None):
             print(json.dumps(s, ensure_ascii=False))
             for n in s.get('notes') or []:
                 print('說明：' + n)
+            asked = s['done'] + (s['failed'] or 0)
+            print('成功率 %d/%d、審查輪數 %s → 審查係數 %s（排名時品質＝原始品質 %s × 成功率 × 審查係數）' % (
+                s['done'], asked, json.dumps(s.get('review_rounds'), ensure_ascii=False),
+                s['review_factor'] if s.get('review_factor') is not None else '沒紀錄當 1.0', s['quality']))
             if s.get('timeout'):
                 print('注意：%s 這輪有 %d 張董事的單還沒結案，算逾時失敗（之後才來的結案信不再算）' % (a.name, s['timeout']))
             if not s['done']:

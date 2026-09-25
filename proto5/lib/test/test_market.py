@@ -79,7 +79,7 @@ class Scores(Base):
         self.order('c1', 'o-0001', '2026-09-25T12:00:00+08:00', '2026-09-25T12:10:00+08:00', replies=2)
         self.order('c1', 'o-0002', '2026-09-25T12:00:00+08:00', '2026-09-25T12:20:00+08:00')
         self.assertEqual(mk.board_from_company(self.tmp / 'c1'), {'done': 0, 'failed': 0, 'timeout': 0, 'timeout_ids': [],
-                                                             'seconds': None, 'hops': None})
+                                                             'seconds': None, 'hops': None, 'reviews': []})
         self.board('c1', '2026-09-25T12:00:00+08:00', '2026-09-25T12:30:00+08:00')
         self.board('c1', '2026-09-25T13:00:00+08:00', '2026-09-25T13:10:00+08:00')
         self.board('c1', '2026-09-25T14:00:00+08:00', '2026-09-25T14:05:00+08:00', status='FAILED', qa=None)
