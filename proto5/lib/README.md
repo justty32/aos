@@ -107,7 +107,7 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 超過約 400 行但刻意不拆：`aos_agent_access.py`、`aos_agent_talk.py`（agent 線別隊正在改，拆了難合併）。
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2822 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2853 條；repo 根目錄
 ```
 
 ## aos_directives — 指示詞機制的純函式庫
@@ -506,7 +506,7 @@ JSON-RPC error 退 1；exec result 即使工作失敗仍退 0、由內容判成�
 ## 測試
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2822 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2853 條；repo 根目錄
 ```
 
 共 101 個測試檔、2822 條（09-25 下午五包＋組織設計公司樣板收尾後，main f353297→7cfe5f5 之上實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
@@ -601,8 +601,8 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_lock.py](test/test_team_lock.py) | 第二波 C 隊 `aos_team_lock`（lock.md）：acquire／release／ls、Busy 拒絕、同持有者續租、過期可被搶／可被別人放、冪等、`may_send`、`cmd_lock` |
 | [test_team_spawn.py](test/test_team_spawn.py) | 第三波 W3-1 `aos_team_spawn`（spawn.md）：郵差端 `on_spawn` 每條檢查（模板、人數、`mail_to`、`may` 超權）、冪等；人端 `spawn approve` 生家、改名冊、回覆；工具 `spawn_member` 經真郵差（`may` 擋工人） |
 | [test_team_toolsmith.py](test/test_team_toolsmith.py) | 第三波 W3-1 `aos_team_toolsmith`（toolsmith.md）：郵差端驗草稿、生包、牢裡 `tools test`、開題／退信；人端 `tool approve`（核 sha256、`tools add`）；逃逸測試（讀別人的家、改 staging 換裝的程式、撞既有工具名等），沒有 bwrap 就跳過要真跑的那幾類 |
-| [test_company.py](test/test_company.py) | 公司 `aos_company`：樣板名冊與門房全過驗、開五家不撞名（`--llm-cpu 4` 五家剛好 20）、上限一行與超額、臨時工不算人頭、總機（命中開單、寫手自己的 DONE 不轉、郵差的 DONE 轉回下單人、落穿給窗口、沒寫 reply_to 的配對、退信四種、郵差信裡的〔給〕不理、tool 規則當場回、董事直接下單、崩在記帳與動作之間不重派） |
-| [test_market.py](test/test_market.py) | 市場層 `aos_market`（假帳本）：品質分、總機單算秒數與跳數、排名公式與權重、名次分成與覆寫、只算這輪花的、品質門檻、總池（錢＝總量−已花−手上沒花、名額）、倒閉只收剩的那一種、裁撤全收、撥款被總池縮、撥名額與開戶擋名額、合併計畫與實做 |
+| [test_company.py](test/test_company.py) | 公司 `aos_company`：樣板名冊與門房全過驗、開五家不撞名（`--llm-cpu 4` 五家剛好 20）、上限一行與超額、臨時工不算人頭、總機（命中開單、寫手自己的 DONE 不轉、郵差的 DONE 轉回下單人、落穿給窗口、沒寫 reply_to 的配對、退信四種、郵差信裡的〔給〕不理、tool 規則當場回、董事直接下單、崩在記帳與動作之間不重派）；astra 09-25：配不到的 reply_to 不猜、desk 單只有窗口能結、崩了不留孤兒單、董事單接著派、工具中斷不重跑、宿主關了退信、〔給〕只認第一行、up 對齊 K 的池、down 沒停好退 1、自家 daemon 的環境、new 與 status 同一個 cpu 算法 |
+| [test_market.py](test/test_market.py) | 市場層 `aos_market`（假帳本）：品質分、總機單算秒數與跳數、排名公式與權重、名次分成與覆寫、只算這輪花的、品質門檻、總池（錢＝總量−已花−手上沒花、名額）、倒閉只收剩的那一種、裁撤全收、撥款被總池縮、撥名額與開戶擋名額、合併計畫與實做；astra 09-25：撥款崩在途中重跑不重撥、轉帳去重與守恆、封存／合併中斷接著做、市場鎖、停機失敗不封存與停好才收回、開戶擋重疊與重用、分數綁輪次、按結案時間算、花光不撥、slots 不收負數、改名撞名、美元不超發、分數驗證；試玩：覆寫負數擋、沒花 token＝最省、每個子命令有說明 |
 | [test_team_cost.py](test/test_team_cost.py) | 財務部 `aos_team_cost`（cost.md）：記一筆（沒設不記、agent 家推團隊／成員／單號、環境標籤、寫失敗不擋、`ask` 經真 HTTP 假端點）、五種分組、缺價只記 token、改價重算、預算形狀、各家族 since、郵差超預算不派＋寄信一次＋調高後放行、全公司預算照投普通信、`ls` 第一行、回填不重記 |
 | [test_llm_ask.py](test/test_llm_ask.py) | 第三波 W3-2 `aos_llm_ask`：假端點、temperature 0、`parse_json` 各種包法、沒設定／端點掛；`context` 的「上一次問模型」略過 compact 濃縮那一問 |
 | [test_agent_tools_wrapcli.py](test/test_agent_tools_wrapcli.py) | 第三波 W3-2 `tools wrap-cli` 與 wrap-py 描述：fixture（[fixtures/wrapcli/](test/fixtures/wrapcli/)）argparse 靜態讀與拒收、GNU／怪 help 解析、標準答案比分、`run` 組 argv 不經 shell、提案檔只寫不產包、`--spec`／`--describe` 核 sha（假 ask，不打真模型） |

@@ -62,7 +62,7 @@
 ## 4. 給董事的問題（一題一題）
 
 1. **五家同跑，llm cpu 加總超過機器上限（5×5＝25 ＞ 20）怎麼辦？** 樣板做法：每家 4（`new --llm-cpu 4`，市場層開戶時會擋總數）。另兩個選項：按排名動態分（第一名 6、最後一名 2）；或允許超賣、大家排隊。
-2. **額度換算成每家多少？** 現在的參數：開辦費每家 1 美元＋200 萬 token、每輪總額 2 美元＋400 萬 token。gpt 走訂閱、帳本沒價錢（只記 token），建議 gpt／deepseek 用 token 管、claude 用美元管；總量 `total` 要填多少（claude ≤ 一週額度 10%、gpt 本週剩的、deepseek 約 5 美元）請給數字。
+2. **額度換算成每家多少？** 現在的參數：開辦費每家 1 美元＋2500 萬 token、每輪總額 2 美元＋5000 萬 token（原本 200 萬／400 萬，試玩後調高，見第 14 題）。gpt 走訂閱、帳本沒價錢（只記 token），建議 gpt／deepseek 用 token 管、claude 用美元管；總量 `total` 要填多少（claude ≤ 一週額度 10%、gpt 本週剩的、deepseek 約 5 美元）請給數字。
 3. **每輪多長？** 選項：一次 `order`（一個詞條）一輪；固定一批（例如 5 個詞條）一輪；或按時間（每天一輪）。
 4. **排名公式的權重？** 現在品質 0.6、快 0.25、省 0.15；品質門檻 `min_quality` 0（不設）。
 5. **品質分要不要叫評審（claude-opus-5）？** 評審每人約 6 萬 token 的 claude 額度；不叫就只用機械＋證據（本次 92.9）。
@@ -73,14 +73,15 @@
 10. **董事的「補人物 X」預設要不要動索引與計數？** 現在總裁預設派「只寫詞條」（快、不和別的單搶索引）；要動索引得明說。
 11. **跨部門要不要開「直接指定負責人與驗收條件」的開單路？** 現在只能走對方門房的規則（命中才開單，沒命中寫信給窗口），想多一種單就在對方門房加規則。
 12. **倒閉的公司名額回總池後，經理人要自動撥給第一名，還是一律手動？** 現在手動（`market.py slots`）。
-13. **「cpu ≤ 20」算不算 llm 的 5 顆？** HR 部的擋點不算（default 池 20＋llm 池 5，最多 25 顆），財務部的 cost 表把兩池加起來印（「開著 17 個、其中 llm 5」）。公司樣板照 HR 的算法（它是真正擋的那一個），`status` 印 `cpu 12/20、llm cpu 5/5`。請拍一個，兩邊統一。
+13. **「cpu ≤ 20」算不算 llm 的 5 顆？** HR 部的擋點不算（default 池 20＋llm 池 5，最多 25 顆），財務部的 cost 表把兩池加起來印（「開著 17 個、其中 llm 5」）。公司樣板照 HR 的算法（它是真正擋的那一個），`status` 印 `cpu 12/20、llm cpu 5/5`（`new` 原本印 17/20，已改成同一個算法）。請拍一個，兩邊統一。
+14. **開辦費給多少 token？** 試玩真跑一張「補人物 老財」（deepseek-chat）＝126 次呼叫、451 萬 token；舊預設開辦費 200 萬＝一家公司一張單就倒閉。研發部先改成 **2500 萬（約 5 張單）**、每輪總額 5000 萬（約 10 張單）。選項：照 5 張單的平均花費（現在）；照 10 張；或按模型分（gpt-5.5 一張約 89 萬，deepseek 約 451 萬）。總量 `total` 也要跟著給。
 
 ## 5. 留下一輪
 
 - **五家真的同跑**：這次只真跑一家；市場層全用假帳本測。要跑就照 [examples/company/README.md〈開幾家〉](../../examples/company/README.md#開幾家市場層)；每家要自己的專案副本。
 - 驗收加行尾空白檢查（製造部的單、品管的驗貨單都漏了）；品管驗貨單改跑整套 `mech_check`。
 - HR 部的擴編規則（積壓 ≥3、品管分 <80）接到總裁的 SOP；`status` 順便印 `aos-team hr cap` 的擴編理由；薪資表（worker 最低通過 deepseek-chat、lead 換 deepseek 不通過）拿來定各部門的模型——現在寫手還是 gpt-5.5，可以試降。
-- `market.py slots` 只改 `company.json`，kernel 開著時不會自己 `aos-kernel cpu add`。
+- `market.py slots` 只改 `company.json`，kernel 開著時不會自己 `aos-kernel cpu add`（下次 `up` 會對齊 K 的池，見 §7）。
 - `quality_from_eval` 只認 arknights 評分器的格式。
 - 帳本價格表沒有 gpt-5.5、deepseek-chat 的價（只記 token）：財務部的 `prices.json` 要補，美元配額才有意義。
 - 總機只認第一行的〔給 …〕與 reply_to：寫錯格式的信留給董事（`company.py mail` 看得到）。
@@ -92,3 +93,38 @@
 - 團隊架構 → [playbook/teams/company-startup.md](../../playbook/teams/company-startup.md)（新創公司：八部門、七個正式員工的編法）。
 - 工作流 → [playbook/workflows/company-order.md](../../playbook/workflows/company-order.md)（董事一句話 → 總裁 → 製造 → 品管 → 回報）、[market-round.md](../../playbook/workflows/market-round.md)（一輪市場：打分 → 排名 → 撥款 → 倒閉 → 合併）。
 - 可複用工具 → [playbook/README.md](../../playbook/README.md) 索引加 `company.py`、`market.py`。
+
+## 7. astra 必修處理（研發部內核組）
+
+[review-astra.md](review-astra.md) 必修 15 條、建議 6 條、可不拍 2 條，加上試玩員的三件事與董事 09-25「每公司一個 daemon 和 kernel」。每條都有一個「舊程式會紅、修好變綠」的測試（test_market `AstraMust`、`PlaytestFixes`，test_company `RelayAstra`、`KernelPoolSync` 等）；只改程式與規格，不真跑模型。
+
+**必修**（照審查的順序）：
+
+| # | 問題 | 狀態 |
+|---|---|---|
+| 1 | 撥款崩在逐家途中會重撥；合併崩在 A 加、B 扣之間憑空加款 | 修了：grant／merge 先把計畫記進 `market.json` 的 `pending` 再撥；帳戶的撥款帶操作 ID、同 ID 只記一次；合併改用 `account_transfer`（同一次讀寫兩邊一起記） |
+| 2 | 搬進 archive 後才存狀態，崩了變「營業中但目錄不見」 | 修了：先標 `closing`／`merging`（記下目的地）再搬；重跑 `close`／`bankrupt`／`merge` 接著做，原目錄或 archive 都認 |
+| 3 | 市場沒有鎖，並行撥款突破總池、並行合併共用名額 | 修了：改東西的子命令都拿 `.market.lock`；合併在鎖裡重算計畫（跟 dry-run 不同＝`Stale`），寫名冊拿 `roster_lock` |
+| 4 | 回收取停機前的快照、停機失敗照樣封存放名額 | 修了：`company.py down` 沒停乾淨退 1；市場層 `StopFailed` 停在 `closing`（還占名額與錢）；停好後才讀餘額收回 |
+| 5 | 開戶不擋路徑重疊／重用，帳重複算、污染舊帳戶 | 修了（市場層）：開戶擋跟任何帳戶或市場用過的資料夾重疊（含收掉公司的原路徑）、擋重用收掉的名字。財務部 `account_open` 本身沒擋（`account_of` 設計成取最長前綴），要擋全部入口得改 cost.md，留下一輪 |
+| 6 | 配不到的 reply_to 仍套 fallback；非窗口能結 desk 單 | 修了：fallback 只給沒寫 reply_to 的；desk 單只有窗口本人的 DONE／FAILED 結案（別人的照抄、不結） |
+| 7 | 總機單寫好、單號未記回就崩留孤兒；董事單派送前崩沒入口 | 修了：照來信找回同一張；每輪最後接續 `via` 還空著的單 |
+| 8 | 門房工具先跑後存，重跑再執行一次 | 修了一半：先標 `running` 再跑，重跑看到就**不自動重跑**、標 failed 回報（回信已寄就照回信補記）。「工具接受操作 ID 自己去重」要改 aos-team 工具介面（核心），本輪不動 |
+| 9 | grant 後沿用上一輪分數 | 修了：分數帶 `round`，rank 只認這一輪的 |
+| 10 | 用下單時間篩、字串比時間 | 修了：看 `closed_at`（總機結案時記；舊單用最後一封回覆），解析成帶時區時間再比 |
+| 11 | 先 grant 再 bankrupt，歸零公司被救活 | 修了：花光的不撥、覆寫也擋（`Broke`）；規格順序改成先 bankrupt 再 grant |
+| 12 | slots 收負數，虛增總池 | 修了：只收 ≥ 0 |
+| 13 | up 已有 K 時不同步池 | 修了：`up` 把 `K/info.json` 兩池顆數對到 `company.json`（`cpu add／rm`），對不上不開。池的 envs 不同步（cpu add 不改既有池的 envs），留下一輪 |
+| 14 | 合併改名碰撞覆蓋原員工 | 修了：撞名加 `-2`、`-3`；apply 前再驗一次 |
+| 15 | 美元四捨五入超發 | 修了：一律往下取到 0.0001，縮額後斷言合計 ≤ 總池 |
+
+**建議**：1 分數與覆寫、開辦費驗有限值與範圍（做了；`market.json` 的 `params` 本身沒驗，留下一輪）｜2 宿主部門關了＝退信（做了）｜3 董事直接下單命中 tool 的結果 `mail` 看不到（留下一輪）｜4 合併保留 `spawn`／`commons` 覆寫、新名字接公司人格（留下一輪）｜5、6 補故障注入測試（做了：孤兒單、工具中斷、錯 reply_to、非窗口結案、縮額、跨輪、鎖、停機失敗、合併中斷、額度守恆；「真郵差消費寄件檔後的恢復」與真 kernel 的 slots→down→up 留下一輪）。
+**可不拍**：關閉事件記 `freed`、〔給 …〕只認第一行，都順手做了。
+
+**試玩員三件事**：①樣板 README 補換模型、`aos-team` 在哪、怎麼看結案、成本提醒、daemon 位置；②`new` 的 cpu 改成不含 llm（12/20）、`down` 後 `status` 印 `stopped`、`down` 印總機撤了沒與 daemon 停了沒；③`market.py` 每個子命令與參數都有 `--help`、覆寫負數擋、有結單沒花 token＝省 100、README 加假資料走完一輪的範例（在 scratchpad 照著跑過一次）。開辦費改 2500 萬 token（§4 第 14 題）。
+
+**董事 09-25「每公司一個 daemon 和 kernel」**：做了。`company.json` 的 `daemon` 預設改 `D`（`<公司>/D/`，原本 `../D` 幾家共用）；daemon 在公司資料夾裡時給 aos-team 的環境照帶 `AOS_DAEMON_HOME`（HR 只數得到自家），寫回 `../D` 共用就照舊不帶；`down` 的 `aos down` 會把自家 daemon 一起關。沒真開機驗（本輪不真跑）：下次真跑請看 `<公司>/D/` 有建起來、`down` 後 `ps` 乾淨。
+
+**留給別的部門**：`playbook/workflows/market-round.md` 的步驟還是先 grant 再 bankrupt，要照 market.md §3 改成先 bankrupt（本隊不碰 playbook，交圖書館）。
+
+測試：test_market 14 → 34 條、test_company 24 → 35 條；全套 101 檔 2822 → 2853 條全綠。
