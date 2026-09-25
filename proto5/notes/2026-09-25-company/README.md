@@ -15,6 +15,7 @@
 | 規格 | [spec/team/company.md](../../spec/team/company.md)、[spec/team/market.md](../../spec/team/market.md) | 新檔，既有規格一個字沒改 |
 | 測試 | `lib/test/test_company.py`（22 條）、`test_market.py`（14 條） | 樣板全過驗、開五家不撞名、上限計算、總機行為、假帳本跑排名／撥款／總池／倒閉／合併 |
 | 比喻落地 | [playbook/company.md](../../playbook/company.md) | 每一列補「aos 裡是哪個團隊資料夾／哪個成員」 |
+| 試玩 | [play/](play/README.md) | 新使用者只拿樣板 README：開一家、下一單（deepseek-chat，343 秒、126 次呼叫、451 萬 token，成功）、關機；市場層假資料走完 open→merge；五條標準 4／3／4／4／4 |
 | 審查 | [review-astra.md](review-astra.md) | codex（gpt-6-astra，唯讀）審公司樣板＋市場層：必修 15 條（撥款／合併非交易、封存與回收無鎖、CPU 名額可虛增等）、建議 6 條、可不拍 2 條 |
 
 ### 設計的幾個決定（我代裁的，攤在這）
