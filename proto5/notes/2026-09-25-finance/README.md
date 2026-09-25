@@ -117,6 +117,7 @@ aos-team cost account ls
 - **正式帳本位置**：試用帳本在 `~/tmp/finance-try/cost/`，還沒搬到 `~/.aos/cost`，各隊的 kernel 也還沒接線（等你拍題 1）。
 - `playbook/company.md` 的「財務」列還寫「尚未成立」：我沒動（不在我能改的範圍），請 playbook 的維護者改成「已成立：一本帳＋`aos-team cost`＋郵差一條規則」。
 - codex 唯讀審查：時間不夠，沒做。
+- 舊原型的記帳設計 [proto2/notes/tools/cost-metering.md](../../../proto2/notes/tools/cost-metering.md) 沒逐條對過採不採（收尾才看到）。
 
 ## 8. 要你拍的題
 
