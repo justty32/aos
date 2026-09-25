@@ -4,7 +4,7 @@
 
 硬規則：
 - 不 commit、不 push、不 git add。
-- 只准碰：wf/workflows/spec/01～13 各章（含 b 檔）、wf/workflows/spec/schemas/、wf/workflows/spec/notes/rulings-2026-09-05.md、wf/workflows/spec/data/conformance.json（若要加驗收列，用 wf/tools/tabledb.py，先看 notes/README.md 怎麼用）。**不准碰** proto/（另一輪 codex 正在改）、ideas/、notes/README.md。
+- 只准碰：wf/workflows/spec/01～13 各章（含 b 檔）、wf/workflows/spec/schemas/、wf/workflows/spec/notes/rulings-2026-09-05.md、wf/workflows/spec/data/conformance.json（若要加驗收列，照 `wf-table/1` 契約加列，契約在 wf/workflows/common/data-files.md）。**不准碰** proto/（另一輪 codex 正在改）、ideas/、notes/README.md。
 - 每個 md ≤ 12 KB；條款不可改號不可刪號（作廢就在原號註明）；標籤〔裁決 2026-09-05〕／〔主編補〕。
 - 改完 `bash wf/tools/wf-lint.sh` broken=0。全部大白話中文。
 
