@@ -104,7 +104,10 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team.py`](aos_team.py) | `aos-team init／start／stop／ls／rm`：照 team.json 建團隊與成員的家（模板）、列隊、拆隊 |
 | [`aos_team_ask_cli.py`](aos_team_ask_cli.py) | `aos-team wait ls／answer`：人看等他回答的問題、回答一題（往 outbox 放申請） |
 | [`aos_team_route.py`](aos_team_route.py) | 門房：`aos-team ask` 的前濾網，整句句型比對，命中就不叫模型；`route try` 只印判決、什麼都不做（第二波 A 隊）；`tool` 規則經 aos-jail 關牢（專案預設唯讀，第二波 B 隊）；落穿那行記 `letter`（第三波 W3-2） |
-| [`aos_team_crystal.py`](aos_team_crystal.py) | （第三波 W3-2，spec/team/crystal.md）`aos-team crystal` 固化建議：落穿句型統計、機械候選規則＋回測，只寫提案檔；`--suggest-with-llm` 預設關 |
+| [`aos_team_crystal.py`](aos_team_crystal.py) | （第三波 W3-2，spec/team/crystal.md）`aos-team crystal` 固化建議：落穿句型統計、機械候選規則＋回測，只寫提案檔；`--suggest-with-llm` 預設關。這支留主體 `crystal`、印法與命令列 |
+| [`aos_team_crystal_stats.py`](aos_team_crystal_stats.py) | crystal 的句型與統計：句子→骨架與正規式、讀門房 log 與信、對上任務單、落穿句型歸類 |
+| [`aos_team_crystal_rules.py`](aos_team_crystal_rules.py) | crystal 的機械候選規則：生規則與開單內容、候選檢查、內建反例篩範圍、組回規則檔並回測 |
+| [`aos_team_crystal_llm.py`](aos_team_crystal_llm.py) | crystal 的 `--suggest-with-llm`：叫模型提候選（預設關），回來照機械規則再篩 |
 | [`aos_team_mail.py`](aos_team_mail.py) | `aos-team mail`（第二波 A 隊從 `aos_team_post.cmd_mail` 接手，讀法與一行印法仍用郵差那份）：多列等人回答的題目（`ASK q-0001`，答完先顯示答案）；`--task` 連落穿給領隊的那封一起列 |
 | [`aos_team_task_cli.py`](aos_team_task_cli.py) | `aos-team task ls／show／cancel／reassign`：看任務單，取消／改派走申請 |
 | [`aos_team_post.py`](aos_team_post.py) | 郵差兼書記（tool-era T2，spec/team/post.md）：`aos-team post` 每輪投信、收驗收工作結果、看停滯與期限、同步 SESSION-LOG／WAIT_USER；崩在任何一步重跑同一行都收得回來，不叫模型。這支留 `Post` 本體（一輪、投遞紀錄、投遞、outbox）、指令與 kernel 登記 |
