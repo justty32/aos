@@ -347,7 +347,11 @@ def project_dir(team_dir, roster):
 
 
 def members_by_template(roster, template):
-    return [n for n, m in roster['members'].items() if m['template'] == template]
+    """名冊裡用這個模板的成員。自訂模板（含 / 的資料夾路徑）看資料夾名：叫 lead、reviewer 的就算領隊、審查員
+    （09-25 arknights 隊修：之前自訂模板的領隊、審查員認不出來，門房說沒有領隊、審查單開不出去）。"""
+    def same(name):
+        return name == template or ('/' in name and Path(name.rstrip('/')).name == template)
+    return [n for n, m in roster['members'].items() if same(m['template'])]
 
 
 # ------------------------------------------------------------ 信與申請 ----
@@ -839,7 +843,9 @@ def validate_template(obj, where='template.json'):
     if not isinstance(may, list) or not all(isinstance(x, str) for x in may):
         bad(where + '.may', '要是申請種類名字的陣列')
     llm = _obj(obj.get('llm', {}), where + '.llm')
-    _unknown(llm, ('model', 'timeout_ms'), where + '.llm')
+    _unknown(llm, ('model', 'timeout_ms', 'params'), where + '.llm')
+    if 'params' in llm:                  # 09-25 arknights 隊加：推理型模型要開大 max_tokens，原樣抄進 info.json 的 llm.params
+        _obj(llm['params'], where + '.llm.params')
     if 'model' in llm:
         _str(llm['model'], where + '.llm.model')
     if 'timeout_ms' in llm:

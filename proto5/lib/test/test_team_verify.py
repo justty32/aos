@@ -202,6 +202,75 @@ class ContainsTests(Base):
 
 # --------------------------------------------------------------- check: wf_residue ----
 
+class LastLineAndMaxBytesTests(Base):
+    """09-25 arknights 隊加的兩支：詞條最後一行「詳見」、證據檔 <5KB。"""
+
+    def test_last_line_contains_skips_trailing_blank_lines(self):
+        self.write('a.md', '### 甲\n\n內文\n\n詳見：[證據](e.md)\n\n\n')
+        ok, why = verify.check_last_line_contains(self.project, {'path': 'a.md', 'text': '詳見：'})
+        self.assertTrue(ok, why)
+
+    def test_last_line_contains_fails_when_only_earlier_line_has_it(self):
+        self.write('a.md', '詳見：[證據](e.md)\n後面又多一行\n')
+        ok, why = verify.check_last_line_contains(self.project, {'path': 'a.md', 'text': '詳見：'})
+        self.assertFalse(ok)
+        self.assertIn('後面又多一行', why)
+
+    def test_last_line_contains_empty_or_missing_file_is_fail(self):
+        self.write('empty.md', '\n  \n')
+        with self.assertRaises(verify.NotMet):
+            verify.check_last_line_contains(self.project, {'path': 'empty.md', 'text': 'x'})
+        with self.assertRaises(verify.NotMet):
+            verify.check_last_line_contains(self.project, {'path': 'nope.md', 'text': 'x'})
+
+    def test_last_line_contains_bad_args_is_error(self):
+        with self.assertRaises(verify.CheckError):
+            verify.check_last_line_contains(self.project, {'path': 'a.md'})
+
+    def test_max_bytes_file(self):
+        self.write('e.md', 'x' * 100)
+        self.assertTrue(verify.check_max_bytes(self.project, {'path': 'e.md', 'bytes': 100})[0])
+        ok, why = verify.check_max_bytes(self.project, {'path': 'e.md', 'bytes': 99})
+        self.assertFalse(ok)
+        self.assertIn('e.md 100', why)
+
+    def test_max_bytes_dir_checks_every_file_recursively(self):
+        self.write('d/a.md', 'x' * 10)
+        self.write('d/sub/b.md', 'x' * 50)
+        ok, why = verify.check_max_bytes(self.project, {'path': 'd', 'bytes': 20})
+        self.assertFalse(ok)
+        self.assertIn(os.path.join('d', 'sub', 'b.md'), why)
+        self.assertTrue(verify.check_max_bytes(self.project, {'path': 'd', 'bytes': 50})[0])
+
+    def test_max_bytes_missing(self):
+        with self.assertRaises(verify.NotMet):
+            verify.check_max_bytes(self.project, {'path': 'nope', 'bytes': 5})
+        ok, why = verify.check_max_bytes(self.project, {'path': 'nope', 'bytes': 5, 'missing_ok': True})
+        self.assertTrue(ok)
+        self.assertIn('可有可無', why)
+
+    def test_max_bytes_bad_args_is_error(self):
+        self.write('e.md', 'x')
+        for args in ({'path': 'e.md'}, {'path': 'e.md', 'bytes': 0}, {'path': 'e.md', 'bytes': True},
+                     {'path': 'e.md', 'bytes': 5, 'missing_ok': 'yes'}, {'bytes': 5}):
+            with self.assertRaises(verify.CheckError, msg=args):
+                verify.check_max_bytes(self.project, args)
+
+    def test_max_bytes_symlink_out_of_project_is_fail(self):
+        outside = self.root / 'outside'
+        outside.mkdir()
+        os.symlink(outside, self.project / 'link')
+        with self.assertRaises(verify.NotMet):
+            verify.check_max_bytes(self.project, {'path': 'link', 'bytes': 5})
+
+    def test_registered_and_run_through_run_items(self):
+        self.write('a.md', '內文\n詳見：x\n')
+        out = verify.run_items(self.project, [
+            {'kind': 'check', 'name': 'last_line_contains', 'args': {'path': 'a.md', 'text': '詳見'}},
+            {'kind': 'check', 'name': 'max_bytes', 'args': {'path': 'a.md', 'bytes': 4}}])
+        self.assertEqual([r['result'] for r in out], ['pass', 'fail'])
+
+
 class WfResidueTests(Base):
     def test_pass_when_clean(self):
         self.write('clean.md', '# 標題\n\n這是正常內容，沒有殘留記號。\n')
