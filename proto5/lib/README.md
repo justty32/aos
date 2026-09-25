@@ -108,7 +108,12 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | [`aos_team_beat.py`](aos_team_beat.py) | 心跳（tool-era T2，spec/team/beat.md）：`aos-team beat` 照 `team/routines.json` 算誰到期、以開單方式派出，寄件身分是保留名 `beat`；`aos-team routine ls／add／rm` |
 | [`aos_team_score.py`](aos_team_score.py) | `aos-team score`（tool-era T5，spec/team/score.md）：把六軸表（axes.md §4 團隊欄）能自動量的部分讀 `log/events.jsonl`／`usage.jsonl`／郵差投遞紀錄／任務單填好；只讀、不叫模型、不寫檔 |
 | [`aos_company.py`](aos_company.py) | 公司（09-25 組織設計，spec/team/company.md）：`company.json` 讀驗、照樣板生一家（成員名加前綴）、數正式員工與 cpu（`aos-kernel ls --json`）、`up`／`down`、機械總機 `Switchboard`（〔給 部門〕→ 對方門房開單或窗口信，回覆照 reply_to／任務單 request 抄回，先記帳再動作）；指令包裝 `examples/company/company.py` |
-| [`aos_market.py`](aos_market.py) | 市場層（09-25，spec/team/market.md）：幾家公司的排名（品質／快／省加權）、照名次撥額度（`aos_team_cost` 帳戶）、總池（錢與名額）、倒閉／裁撤回收、`slots` 撥名額、兩家合併（經理只留一個、名額滿了改臨時工、notes 帶過去）；指令包裝 `examples/company/market.py` |
+| [`aos_market.py`](aos_market.py) | 市場層（09-25，spec/team/market.md）：幾家公司的排名（品質／快／省加權）、照名次撥額度（`aos_team_cost` 帳戶）、總池（錢與名額）、倒閉／裁撤回收、`slots` 撥名額、兩家合併（經理只留一個、名額滿了改臨時工、notes 帶過去）；指令包裝 `examples/company/market.py`。這支留命令列 `main` 與印表 |
+| [`aos_market_book.py`](aos_market_book.py) | 市場的帳本：常數與預設參數、`MarketError`、資料夾與鎖、`market.json` 讀寫、營業中判定、總池 |
+| [`aos_market_score.py`](aos_market_score.py) | 市場的表現：評估結果與品管判決算品質、一家的成績板、記一筆成績 |
+| [`aos_market_grant.py`](aos_market_grant.py) | 市場的開戶與撥款：開帳戶、加權排名、照名次撥額度、撥名額 |
+| [`aos_market_close.py`](aos_market_close.py) | 市場的倒閉與裁撤：停機、回收額度與名額、崩在半路的收尾重跑 |
+| [`aos_market_merge.py`](aos_market_merge.py) | 市場的合併：合併計畫（經理只留一個、名額滿了改臨時工、notes 帶過去）與逐步照做 |
 | [`aos_team_cost.py`](aos_team_cost.py) | 財務部（09-25，spec/team/cost.md）：`record()` 掛在 `aos_llm_call.call` 與 `aos_llm_ask.ask`，每次呼叫追加一筆到 `$AOS_COST_HOME/ledger.jsonl`（沒設不記、寫失敗吞掉）；`aos-team cost`（分組表、`budget`、`import` 回填 usage.jsonl）；公司帳戶（`account_open`／`account_grant`／`balances`／`account_of`，花到 0＝倒閉）；郵差 `budget_hold` 與 `ls` 第一行問它超了沒 |
 | [`aos_team_hr.py`](aos_team_hr.py) | （HR 部 09-25，spec/team/hr.md）`aos-team hr`：薪資表／政策讀寫、`hr trial`（複製團隊換模型→跑任務集→`score --json`＋可插評分指令→記 `trials.jsonl`→調薪）、`hr set`（改名冊與家的 `llm.model`、重啟）、正式員工人頭與全公司 cpu 計數（init／start／spawn 的擋點）；HR 自己不叫模型 |
 | [`aos_team_lock.py`](aos_team_lock.py) | `lock` 工具與 `aos-team lock`（第二波 C 隊，spec/team/lock.md）：短期獨佔一個檔或資料夾的名字，申請 `kind: lock`（acquire／release／ls，全部非同步）記在 `team/locks/<名>.json`，逾時自動放 |
