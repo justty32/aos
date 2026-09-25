@@ -910,7 +910,7 @@ def load_template(name):
     return folder, validate_template(read_json(path), str(path))
 
 
-ROUTE_KEYS = ('name', 'pattern', 'do', 'run', 'tool', 'args', 'project', 'handoff', 'tests')
+ROUTE_KEYS = ('name', 'pattern', 'do', 'run', 'tool', 'args', 'project', 'handoff', 'if_missing', 'tests')
 DEFAULT_NEGATIONS = ('不要', '別', '取消', '不用', '勿', '不准')
 ROUTE_RUN_FORBIDDEN = ('ask', 'init', 'rm', 'start', 'stop')   # 門房的 run 不能跑這幾個子命令
 
@@ -940,6 +940,8 @@ def validate_routes(obj, where='routes.json'):
         except (re.error, OverflowError, RecursionError) as e:   # 例 a{99999999999999999999}（W3-2 留的一行，09-25）
             bad(w + '.pattern', '正規式編不過：%s' % e)
         do = r.get('do')
+        if 'if_missing' in r and do != 'handoff':
+            bad(w + '.if_missing', '只給 do=handoff 的規則用')
         if do == 'tool':
             if ('run' in r) == ('tool' in r):
                 bad(w, 'do=tool 要恰好給 run（aos-team 子命令）或 tool（"包/工具"）其中一個')
@@ -962,6 +964,15 @@ def validate_routes(obj, where='routes.json'):
             who = h.get('assignee')
             if isinstance(who, str) and '{' not in who:    # 寫死的負責人：保留名（human、post、beat）不能收單
                 check_name(who, w + '.handoff.assignee')
+            if 'if_missing' in r:                          # 真跑 09-25：草稿不在時單子要換說法
+                im = _obj(r['if_missing'], w + '.if_missing')
+                _unknown(im, ('path', 'goal', 'facts'), w + '.if_missing')
+                ip = _str(im.get('path'), w + '.if_missing.path')
+                if ip.startswith(('/', '~')) or '..' in ip.split('/'):
+                    bad(w + '.if_missing.path', '要是專案裡的相對路徑（不能 / 或 ~ 開頭、不能有 ..）：%r' % ip)
+                for k in ('goal', 'facts'):
+                    if k in im:
+                        _str(im[k], '%s.if_missing.%s' % (w, k))
         else:
             bad(w + '.do', '要是 tool 或 handoff')
         tests = _obj(r.get('tests'), w + '.tests')

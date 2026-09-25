@@ -16,6 +16,7 @@ from unittest import mock
 import aos_company as co
 import aos_team_format as fmt
 import aos_team_route as route
+from aos_team_format import TeamError
 
 PROTO = Path(__file__).resolve().parents[2]
 EXAMPLE = PROTO / 'examples' / 'company'
@@ -243,6 +244,42 @@ class RelayBase(Tmp):
 
 
 class Relay(RelayBase):
+    def test_character_route_without_drafts_says_from_source(self):
+        """真跑 09-25：草稿不在，單子還寫「讀 aos-drafts/X/」，總裁結案信就說「依草稿寫成」。草稿不在＝單子寫明從原文起。"""
+        self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老財（只寫詞條）')
+        self.relay()
+        _k, req = self.outbox('mfg')[0]
+        self.assertTrue(req['facts'].startswith('無草稿、從原文起'), req['facts'])
+        self.assertNotIn('讀 aos-drafts', req['goal'])
+        self.assertIn('無草稿', req['goal'])
+        # 草稿在（資料夾有東西）＝照舊
+        (self.proj / 'aos-drafts' / '老何塞').mkdir(parents=True)
+        (self.proj / 'aos-drafts' / '老何塞' / '詞條草稿.md').write_text('草稿', encoding='utf-8')
+        self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老何塞（只寫詞條）')
+        self.relay()
+        req2 = next(r for _k, r in self.outbox('mfg') if '老何塞' in r['goal'])
+        self.assertEqual(req2['facts'], 'aos-drafts/老何塞/')
+        self.assertIn('讀 aos-drafts/老何塞/', req2['goal'])
+        # 空資料夾也算沒有
+        (self.proj / 'aos-drafts' / '老薑').mkdir(parents=True)
+        self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老薑')
+        self.relay()
+        req3 = next(r for _k, r in self.outbox('mfg') if '老薑' in r['goal'])
+        self.assertTrue(req3['facts'].startswith('無草稿、從原文起'))
+
+    def test_if_missing_only_for_handoff(self):
+        bad = {'_metainfo': {'_type': 'aos_team_routes', '_version': 1}, 'routes': [
+            {'name': 't', 'pattern': 'x', 'do': 'tool', 'run': ['task', 'ls'], 'if_missing': {'path': 'a/'},
+             'tests': {'hit': ['x'], 'miss': ['y']}}]}
+        with self.assertRaises(TeamError):
+            fmt.validate_routes(bad)
+        bad['routes'][0].update(do='handoff', handoff={'assignee': 'w', 'goal': 'g'}, if_missing={'path': '/abs'})
+        bad['routes'][0].pop('run')
+        with self.assertRaises(TeamError):
+            fmt.validate_routes(bad)
+        bad['routes'][0]['if_missing'] = {'path': 'd/{name}/', 'facts': '無草稿'}
+        fmt.validate_routes(bad)
+
     def test_order_hits_route_then_reply_comes_back(self):
         src = self.inbox('hq', 'c1-hq-lead', '〔給 mfg〕補人物 老財（只寫詞條）\n先看草稿')
         self.relay()

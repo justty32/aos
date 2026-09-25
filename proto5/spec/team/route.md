@@ -34,6 +34,8 @@
 | `tool` | `tool`：`"<包>/<工具>"`（`proto5/tools/<包>/<包>.json` 裡的一支）、`args`：物件、`project`?：`ro`（預設）／`rw` | 照工具檔的 `_meta.argv` 跑那支程式，**關在牢裡**（第二波 B 隊，[wall.md](wall.md)）：只看得到專案（`/work/ws`，起點；預設唯讀，寫 `"project": "rw"` 才可寫）、不上網、清環境；stdin 給 `args`、60 秒逾時；輸出原樣印。只跑 `proto5/tools/` 裡的包。沒有 bwrap＝退 1（`NoBwrap`），不退回不關牢 |
 | `handoff` | `handoff`：同 handoff 申請的欄位（mail.md） | 往 `team/outbox/human/` 放一份 handoff 申請（開單人是 human）；郵差開單、派出 |
 
+`handoff` 規則可以多一格 `if_missing`（真跑 09-25 加）：`{"path": "aos-drafts/{name}/", "goal"?: "…", "facts"?: "…"}`。`path` 是專案裡的相對路徑（可用 `{群組}`；不准 `/`、`~` 開頭或 `..`）；**不在或是空資料夾**時，單子的 `goal`／`facts` 換成這裡寫的（沒寫 `facts`＝「無草稿、從原文起（<path> 不在或是空的）」）。門房（`aos-team ask`）與公司總機都照這條。用途：「補人物 X」寫死「讀 aos-drafts/X/ 的草稿」，草稿不在時寫手照樣從原文寫、總裁卻在結案信說「依草稿寫成」。
+
 ## 例句：全過才准存
 
 每條規則要有 `tests.hit`（至少一句）與 `tests.miss`（至少一句）：

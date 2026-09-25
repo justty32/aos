@@ -133,6 +133,11 @@
           }
         ]
       },
+      "if_missing": {
+        "path": "aos-drafts/{name}/",
+        "goal": "補人物「{name}」：無草稿（aos-drafts/{name}/ 不在或是空的），從原文起——在 corpus 找 {name} 出場的原文，逐句核對後寫成 lore/characters/{name}.md 與 lore/evidence/characters/{name}.md（超過 5120 位元組就拆檔；證據檔每一列寫完整原文檔名＋行號，不用代號），回填 character_map、lore/characters/INDEX.md 與五處計數。這張單只有你在改索引，不用拿鎖。",
+        "facts": "無草稿、從原文起（aos-drafts/{name}/ 不在或是空的）"
+      },
       "tests": {
         "hit": [
           "補人物 老何塞",
@@ -203,6 +208,11 @@
         ],
         "max_attempts": 3,
         "deadline_minutes": 40
+      },
+      "if_missing": {
+        "path": "aos-drafts/{name}/",
+        "goal": "補人物「{name}」（只寫詞條，不動索引與計數）：無草稿（aos-drafts/{name}/ 不在或是空的），從原文起——在 corpus 找 {name} 出場的原文，逐句核對後寫成 lore/characters/{name}.md 與 lore/evidence/characters/{name}.md（證據檔要小於 5120 位元組，超過就刪次要列、不拆檔；每一列寫完整原文檔名＋行號，不用代號）。不要改任何 INDEX、character_map 或計數。",
+        "facts": "無草稿、從原文起（aos-drafts/{name}/ 不在或是空的）"
       },
       "tests": {
         "hit": [
