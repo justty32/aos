@@ -3,10 +3,10 @@
 ← [proto5/lib README](../README.md)｜上一份：[公司與市場](company.md)
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2874 條；repo 根目錄
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=proto5/lib python3 -m unittest discover -s proto5/lib/test  # 2881 條；repo 根目錄
 ```
 
-共 101 個測試檔、2874 條（09-25 市場真跑後研發修正，main 90d5c7c 之上實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
+共 102 個測試檔、2881 條（09-25 晚研發部第 74、75 題之後實跑，全綠）；涵蓋底層執行、daemon／kernel 按池行為、
 agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真子行程測試使用 tempdir、輪詢上限與清理回呼；
 崩潰接手的隔離 driver 代替不收孤兒的容器 init 收屍。一檔一行：
 
@@ -100,6 +100,7 @@ agent 讀驗與走格、工具與權限牆、HTTP、崩潰恢復及整合。真�
 | [test_team_toolsmith.py](../test/test_team_toolsmith.py) | 第三波 W3-1 `aos_team_toolsmith`（toolsmith.md）：郵差端驗草稿、生包、牢裡 `tools test`、開題／退信；人端 `tool approve`（核 sha256、`tools add`）；逃逸測試（讀別人的家、改 staging 換裝的程式、撞既有工具名等），沒有 bwrap 就跳過要真跑的那幾類 |
 | [test_company.py](../test/test_company.py) | 公司 `aos_company`：樣板名冊與門房全過驗、開五家不撞名（`--llm-cpu 4` 五家剛好 20）、上限一行與超額、臨時工不算人頭、總機（命中開單、寫手自己的 DONE 不轉、郵差的 DONE 轉回下單人、落穿給窗口、沒寫 reply_to 的配對、退信四種、郵差信裡的〔給〕不理、tool 規則當場回、董事直接下單、崩在記帳與動作之間不重派）；astra 09-25：配不到的 reply_to 不猜、desk 單只有窗口能結、崩了不留孤兒單、董事單接著派、工具中斷不重跑、宿主關了退信、〔給〕只認第一行、up 對齊 K 的池、down 沒停好退 1、自家 daemon 的環境、new 與 status 同一個 cpu 算法；真跑 09-25：草稿不在時補人物的單子寫「無草稿、從原文起」（`if_missing`）、`company.py hr` 自動帶 AOS_KERNEL_HOME |
 | [test_market.py](../test/test_market.py) | 市場層 `aos_market`（假帳本）：品質分、總機單算秒數與跳數、排名公式與權重、名次分成與覆寫、只算這輪花的、品質門檻、總池（錢＝總量−已花−手上沒花、名額）、倒閉只收剩的那一種、裁撤全收、撥款被總池縮、撥名額與開戶擋名額、合併計畫與實做；astra 09-25：撥款崩在途中重跑不重撥、轉帳去重與守恆、封存／合併中斷接著做、市場鎖、停機失敗不封存與停好才收回、開戶擋重疊與重用、分數綁輪次、按結案時間算、花光不撥、slots 不收負數、改名撞名、美元不超發、分數驗證；試玩：覆寫負數擋、沒花 token＝最省、每個子命令有說明；真跑 09-25（fixture 是那一輪的原始紀錄）：沒成功結案＝全項 0、快＝董事等的秒數、省只比成功的＋無對照、本輪無分數拒絕、同分均分、證據代號展開、重算 c1 96.25／c2 0 |
+| [test_market_review.py](../test/test_market_review.py) | 市場公式第 74、75 題（09-25 晚）：審查係數三檔＋超過用最後一個＋FAILED＝0、製造部單子的 `review` 讀出第幾次過、品質乘成功率（逾時進分母）、快只在成功張數最多的幾家之間比（少的 0＋註記）、沒審查紀錄當 1.0 並寫警告（舊資料沒這欄也是）、`score`／`rank` 印成功率與審查係數 |
 | [test_team_cost.py](../test/test_team_cost.py) | 財務部 `aos_team_cost`（cost.md）：記一筆（沒設不記、agent 家推團隊／成員／單號、環境標籤、寫失敗不擋、`ask` 經真 HTTP 假端點）、五種分組、缺價只記 token、改價重算、預算形狀、各家族 since、郵差超預算不派＋寄信一次＋調高後放行、全公司預算照投普通信、`ls` 第一行、回填不重記 |
 | [test_llm_ask.py](../test/test_llm_ask.py) | 第三波 W3-2 `aos_llm_ask`：假端點、temperature 0、`parse_json` 各種包法、沒設定／端點掛；`context` 的「上一次問模型」略過 compact 濃縮那一問 |
 | [test_agent_tools_wrapcli.py](../test/test_agent_tools_wrapcli.py) | 第三波 W3-2 `tools wrap-cli` 與 wrap-py 描述：fixture（[fixtures/wrapcli/](../test/fixtures/wrapcli/)）argparse 靜態讀與拒收、GNU／怪 help 解析、標準答案比分、`run` 組 argv 不經 shell、提案檔只寫不產包、`--spec`／`--describe` 核 sha（假 ask，不打真模型） |
