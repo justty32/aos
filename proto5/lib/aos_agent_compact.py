@@ -500,16 +500,22 @@ def check_summary(body, text):
     return None
 
 
+_POLITE_BEFORE = re.compile(r'(?:好的?[，,。！!]?\s*)?(?:以下|下面|這)是[^\n，,；;。!！?？0-9]{0,16}[：:]?'
+                            r'|好的?[。！!]?|(?:OK|Sure)[.!,]?|Here(?: is|\'s) the [A-Za-z ]{0,30}:?', re.I)
+_POLITE_AFTER = re.compile(r'(?:希望(?:有|對你有|能)?幫助|以上|如有需要再告訴我)[。！!]?|Hope (?:this|it) helps[.!]?', re.I)
+
+
 def _clean(text):
     """去掉模型常加的 ``` 圍欄與前後空行。
-    整段只有一個圍欄、圍欄外只剩一兩句客套話（「好的，以下是摘要：」，各 ≤ 1 行、合計 ≤ 80 字）＝只取圍欄裡的；
-    開了 ``` 沒收尾＝去掉第一行（S4）。圍欄外字多（摘要裡夾一段程式碼）或兩個以上圍欄不猜，原樣交給 check_summary。"""
+    整段只有一個圍欄、圍欄外是空的或只有固定幾種客套話（「好的，以下是摘要：」「希望有幫助」）＝只取圍欄裡的；
+    開了 ``` 沒收尾＝去掉第一行（S4）。圍欄外有別的話（例如「修改失敗…」）、或兩個以上圍欄不猜，
+    原樣交給 check_summary（09-25 複審 M2：不能用字數判斷「沒有實質內容」）。"""
     text = (text or '').strip()
     rx = re.compile(r'```[A-Za-z]*[ \t]*\r?\n(.*?)\r?\n?[ \t]*```', re.S)
     fences = list(rx.finditer(text))
     if len(fences) == 1:
         before, after = text[:fences[0].start()].strip(), text[fences[0].end():].strip()
-        if '\n' not in before and '\n' not in after and len(before) + len(after) <= 80:
+        if (not before or _POLITE_BEFORE.fullmatch(before)) and (not after or _POLITE_AFTER.fullmatch(after)):
             return fences[0].group(1).strip()
         return text
     if not fences and text.startswith('```'):

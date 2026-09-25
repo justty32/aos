@@ -13,6 +13,7 @@ import ast
 import datetime
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -916,6 +917,8 @@ def _check_one(p, evidence, names, flags_seen):
     if CONTROL.search(str(p.get('help') or '')) or any(isinstance(c, str) and CONTROL.search(c)
                                                        for c in (choices or [])):
         return 'help 或 choices 含控制字元（ESC、NUL…）'
+    if any(isinstance(v, float) and not math.isfinite(v) for v in list(choices or []) + [p.get('default')]):
+        return 'choices 或 default 有 NaN／無限大（寫不成標準 JSON）'        # 09-25 複審 M3
     nargs = p.get('nargs')
     if nargs is not None:
         if nargs in ('+', '*') or (isinstance(nargs, int) and not isinstance(nargs, bool) and 1 <= nargs <= MAX_NARGS):
@@ -1036,12 +1039,13 @@ def bind(p, value, mode):
 
 def build(info, args):
     """arguments → argv（不含指令本身）：開關、帶值選項照參數表順序，位置參數最後；
-    位置參數有 - 開頭的值就先放一個 --；帶值選項的 - 開頭值見 bind()。"""
+    位置參數有 - 開頭的值、或前面有「一個旗標接好幾個值」的選項（會把位置參數吃掉），就先放一個 --；
+    nargs=* 明確給空陣列＝只給旗標（原程式拿到 []）；帶值選項的 - 開頭值見 bind()。"""
     known = {p['name'] for p in info['params']}
     extra = sorted(k for k in args if k not in known)
     if extra:
         fail('BadArguments', 'unknown argument(s): %s' % ', '.join(extra))
-    argv, pos = [], []
+    argv, pos, greedy = [], [], False
     for p in info['params']:
         name = p['name']
         where = 'argument "%s"' % name
@@ -1081,10 +1085,14 @@ def build(info, args):
                     fail('BadArguments', UNSAFE % (v, name))
             if values:
                 argv += [flag(p)] + values
+                greedy = True                         # 後面接位置參數的話要先放 --，免得被這個旗標吃掉（複審 M5）
+            elif p.get('nargs') == '*':               # 明確給空陣列：旗標照給，原程式才拿到 []、不是 default
+                argv.append(flag(p))
+                greedy = True
         else:
             for v in values:
                 argv += bind(p, v, info.get('mode'))
-    if any(v.startswith('-') for v in pos):
+    if any(v.startswith("-") for v in pos) or (greedy and pos):
         argv.append('--')
     return argv + pos
 

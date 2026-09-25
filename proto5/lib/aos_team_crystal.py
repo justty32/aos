@@ -532,6 +532,9 @@ def screen_llm(rules, falls, cls, min_count, taken):
         except TeamError as e:
             dropped.append({'name': r['name'], 'why': '形狀不對或編不過：%s' % e.msg})
             continue
+        except (OverflowError, RecursionError, ValueError) as e:   # 例：a{99999999999999999999}（09-25 複審 M4）
+            dropped.append({'name': r['name'], 'why': '正規式編不過：%s' % ' '.join(str(e).split())[:120]})
+            continue
         rx = compiled[0][1]
         mine = [f for f in pool if route._match(rx, f['text'].strip()) is not None]
         distinct = set(f['text'].strip() for f in mine)
