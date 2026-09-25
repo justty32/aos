@@ -16,7 +16,9 @@ kernel 手上是「池 P 要 N 顆」，都不再逐顆 spawn／kill。三支指
 | 檔 | 職責 |
 |---|---|
 | [`aos_directives.py`](aos_directives.py) | 指示詞（`$env`／`$fmt`／`$ref`／`$opt`）解析的純函式庫，不知道 inst |
-| [`aos_directives_edit.py`](aos_directives_edit.py) | `aos-directives`（tool-era T3）：人格（system prompt）按 Markdown 標題分節 ls／show／set／add／rm／export／import／versions／revert，並解／驗一份 aos JSON 檔的指示詞（resolve／check） |
+| [`aos_directives_edit.py`](aos_directives_edit.py) | `aos-directives`（tool-era T3）：人格（system prompt）按 Markdown 標題分節 ls／show／set／add／rm／export／import／versions／revert，並解／驗一份 aos JSON 檔的指示詞（resolve／check）。這支留人格各指令與命令列 |
+| [`aos_directives_edit_persona.py`](aos_directives_edit_persona.py) | aos-directives 的人格檔與分節：`prompts/system.json` 讀寫與版本、Markdown 標題分節、挑節、換節內容 |
+| [`aos_directives_edit_resolve.py`](aos_directives_edit_resolve.py) | `aos-directives resolve／check`：一份 aos JSON 檔的指示詞整份解開（可指定中心與 JSON Pointer）或只驗 |
 | [`aos_inst.py`](aos_inst.py) | inst.json 的讀、驗、解，回執行用的 dict |
 | [`aos_exec.py`](aos_exec.py) | 執行一次的上層：三種目標的解讀（`run_target`／`run_target_full`／`run_inst`）與 `aos-exec` 命令列 |
 | [`aos_exec_run.py`](aos_exec_run.py) | 執行一次的底層：前置檢查、開串流、起子行程、等待／逾時／強停整組、寫 exit 檔 |
