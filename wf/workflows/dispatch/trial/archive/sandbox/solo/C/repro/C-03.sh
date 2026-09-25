@@ -3,7 +3,7 @@ set -u
 
 AOS=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254/build/bin/aos
 ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
-SOLO=$ROOT/wf/workflows/dispatch/trial/sandbox/solo
+SOLO=$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo
 TEMPLATE=$SOLO/_template
 CASE_DIR=$(mktemp -d "$SOLO/C/repro-tmp.C-03.XXXXXX")
 WORLD=$CASE_DIR/world

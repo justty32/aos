@@ -2,7 +2,7 @@
 set -u
 ROOT=/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4b6627dc8a8b1254
 AOS="$ROOT/build/bin/aos"
-cd "$ROOT/wf/workflows/dispatch/trial/sandbox/solo/A/mini"
+cd "$ROOT/wf/workflows/dispatch/trial/archive/sandbox/solo/A/mini"
 echo "=== log.md 大小 ==="; wc -c .aos/agents/mini/log.md
 echo "=== listen --once 的輸出行數 ==="; timeout 20 "$AOS" listen --once | wc -l
 echo "=== listen --once 前 12 行 ==="; timeout 20 "$AOS" listen --once | head -12
@@ -13,4 +13,4 @@ head -4 /tmp/aos-listen-probe.txt
 rm -f /tmp/aos-listen-probe.txt
 echo "=== 頂層 listen 吃不吃資料夾參數 ==="
 cd "$ROOT"
-timeout 20 "$AOS" listen --once wf/workflows/dispatch/trial/sandbox/solo/A/mini; echo "exit=$?"
+timeout 20 "$AOS" listen --once wf/workflows/dispatch/trial/archive/sandbox/solo/A/mini; echo "exit=$?"
