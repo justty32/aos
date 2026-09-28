@@ -3,6 +3,8 @@
 ← [proto5 README](../README.md)｜精簡版：[notes-brief/](../notes-brief/README.md)（09-22 那批的 ≤5000 字版＋23 題總表）
 
 任務書副本、astra（codex gpt-6-astra）的調查／審查報告、我的精簡總結、試玩紀錄。按日期排，**新的在下面**。
+
+2026-09-28 本輪 Linux 身分、資源與萬 agent 方向已完整交接至 [proto6 notes](../../proto6/notes/README.md)，後續從該入口接續；這裡保留原始歷史。
 散檔一律 `日期-主題.md`；同一件事超過三四份就收成 `日期-主題/` 子資料夾，裡面自己有 README。
 
 ## 2026-09-21：proto5 開場
@@ -82,6 +84,25 @@
 | 檔 | 一句 |
 |---|---|
 | [2026-09-25-lib-split/](2026-09-25-lib-split/README.md) | `proto5/lib/` 19 支母模組拆母模組＋子模組（共 145 支）、`lib/README.md` 拆入口＋`lib/docs/` 八份；astra 審查必修 0、建議 4 條全採納 |
+
+## 2026-09-27：基本流程實跑
+
+| 檔 | 一句 |
+|---|---|
+| [2026-09-27-try/](2026-09-27-try/README.md) | 獨立家實跑：開關機、kernel once 成功與失敗、反覆完成、真模型 date 工具回合、暫停恢復；全部通過，附原始輸出 |
+
+## 2026-09-28：從人的角度理解架構
+
+| 檔 | 一句 |
+|---|---|
+| [2026-09-28-human-architecture.md](2026-09-28-human-architecture.md) | 可理解與可修改性、五大概念、執行底座再拆五塊；深入程序管理與交接恢復 |
+| [2026-09-28-employee-identity.md](2026-09-28-employee-identity.md) | 使用者新方向（未實作）：正式員工有 Linux 身分與專屬 tick worker，其餘為工具／外包；root daemon 的 VM 或宿主機部署仍在討論 |
+| [2026-09-28-host-root-design.md](2026-09-28-host-root-design.md) | 設計草案：root 程序管理與員工執行分界、專屬 tick worker、外包 UID 候選與宿主第二道牆 |
+| [2026-09-28-linux-employee-implementation.md](2026-09-28-linux-employee-implementation.md) | Linux 實作調查：降權入口、跨 UID 投件與結果、專屬 worker、帳號生命週期及維護成本 |
+| [Linux 外牆可行性](../../wf/workflows/investigations/proto5-linux-wall-feasibility.md) | 宿主 root、Landlock 啟動器與 namespace root 的成本比較，以及局部實測 |
+| [2026-09-28-linux-isolation-probes.md](2026-09-28-linux-isolation-probes.md) | 無特權 Landlock 實測：自有 canary 讀寫限制、子程序繼承與可重跑探針 |
+| [2026-09-28-linux-resources-and-task-scheduling.md](2026-09-28-linux-resources-and-task-scheduling.md) | 後續方向：一 agent 一 Linux 使用者、cgroup／quota、取消 worker 的構想、任務層排程、即時通知與檔案 JSON-RPC；區分已定與候選 |
+| [2026-09-28-ten-thousand-agents/](2026-09-28-ten-thousand-agents/README.md) | 萬 agent 改動計畫（未實作）：idle／索引、Linux 執行與容量、LLM 配額、分階段驗收及遷移 |
 
 ## 收攏與超標的判斷（2026-09-25 整理）
 

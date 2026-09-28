@@ -1,0 +1,59 @@
++zsh:4> aos-agent listen --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob --last --show-calls-full
+aos-agent: time: 09-27 15:37:11
+── 第 1 輪 · 收話 09-27 15:37:10 ──
+[呼叫 date id=call_00_zt6pIeTos1qW8yEBP4US8598]
+  {}
+[結果 date id=call_00_zt6pIeTos1qW8yEBP4US8598 1 行 20 字]
+  2026-09-27 15:37:10
+現在是 2026 年 9 月 27 日下午 3 點 37 分。
++zsh:5> aos-kernel ls --procs
+health ok
+kernel  running  seq 31  daemon alive  tick 1000ms
+  tick 由 daemon 開：上一格 0 秒前
+pool    2 個工作池：要 3 顆、忙 0、閒 3
+  default  want 2  sent 2  busy 0  idle 2  draining 0   daemon default: running 2 pending 0 dead 0 failed 0
+  llm      want 1  sent 1  busy 0  idle 1  draining 0   daemon llm: running 1 pending 0 dead 0 failed 0
+proc    2 個（反覆 2、once 0）：done 1、queued 1；停車 1
+  行程       種類  狀態    runs  fails  回音  備註
+  count      反覆  done       3      0  -
+  agent-bob  反覆  queued     9      0  -
+queue   1：agent-bob
++zsh:6> cat /tmp/aos-proto5-try-20260927-5klrm6cy/jobs/count.txt
+tick
+tick
+tick
++zsh:7> aos-agent pause --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+paused /tmp/aos-proto5-try-20260927-5klrm6cy/bob（aos-agent continue --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob 解除）
++zsh:8> aos-agent say 請只回答：暫停測試恢復成功 --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob --wait 5
+aos-agent: paused: 已手動暫停，continue 後才會處理：aos-agent continue --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+已投入 /tmp/aos-proto5-try-20260927-5klrm6cy/bob/input/say-1790494642809139677-254315.json，不要再說一次（照上面的原因修好後會處理）
+health 手動暫停（aos-agent continue --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob）
+agent  /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+state  idle  errors 0  手動暫停中（09-27 15:37:22）
+batch  -
+input  1 個檔還沒收：/tmp/aos-proto5-try-20260927-5klrm6cy/bob/input/say-1790494642809139677-254315.json
+error  （無）
+kernel agent-bob  queued（停車：等回音或輸入，最晚 park_ms 自己醒）  runs 9  fails 0  
++zsh:9> pause_say_rc=101 
++zsh:10> echo 'paused say rc=101'
+paused say rc=101
++zsh:11> aos-agent status --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+health 手動暫停（aos-agent continue --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob）
+agent  /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+state  idle  errors 0  手動暫停中（09-27 15:37:22）
+batch  -
+input  1 個檔還沒收：/tmp/aos-proto5-try-20260927-5klrm6cy/bob/input/say-1790494642809139677-254315.json
+error  （無）
+kernel agent-bob  queued（停車：等回音或輸入，最晚 park_ms 自己醒）  runs 9  fails 0  
++zsh:12> aos-agent continue --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+continued: 解除手動暫停
++zsh:13> aos-agent listen --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob --wait 60
+暫停測試恢復成功
++zsh:14> aos-agent status --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+health ok
+agent  /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+state  idle  errors 0
+batch  -
+input  -
+error  （無）
+kernel agent-bob  running  runs 13  fails 0  
