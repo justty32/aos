@@ -1,0 +1,60 @@
++zsh:4> aos-kernel init --config /tmp/aos-proto5-try-20260927-5klrm6cy/kernel.json
+initialized /tmp/aos-proto5-try-20260927-5klrm6cy/K
++zsh:5> aos-kernel check --probe
+ok   info: kernel 設定讀驗通過
+ok   dirs: requests/、responses/、pools/ 都在
+warn daemon: daemon 沒在跑：/tmp/aos-proto5-try-20260927-5klrm6cy/D（池 default、llm）；aos up 會開它（只開 daemon：aos-daemon boot --target /tmp/aos-proto5-try-20260927-5klrm6cy/D）
+ok   path: 五支 CLI 都找得到（目前 shell 的 PATH；daemon 以開它那一刻的 PATH 為準）
+ok   pools: 池：default 2、llm 1
+ok   llm/llm: 模型代號：default
+ok   probe/default: endpoint 通，模型清單裡有 deepseek-chat（endpoint http://localhost:4000/v1，模型 deepseek-chat）
+設定檢查通過；模型連線也測過
++zsh:6> aos up
+up K=/tmp/aos-proto5-try-20260927-5klrm6cy/K  daemon /tmp/aos-proto5-try-20260927-5klrm6cy/D（新開）  2 個池、3 顆 cpu
+health ok
++zsh:7> aos-kernel ls
+health ok
+kernel  running  seq 2  daemon alive  tick 1000ms
+  tick 由 daemon 開：上一格 0 秒前
+pool    2 個工作池：要 3 顆、忙 0、閒 3
+  default  want 2  sent 2  busy 0  idle 2  draining 0   daemon default: running 2 pending 0 dead 0 failed 0
+  llm      want 1  sent 1  busy 0  idle 1  draining 0   daemon llm: running 1 pending 0 dead 0 failed 0
+proc    0 個
+queue   -
++zsh:8> aos-kernel add /tmp/aos-proto5-try-20260927-5klrm6cy/jobs/hello.json --once --wait-ms 10000
+{"code": 0, "kind": "child", "timed_out": false, "stopped": false, "ms": 0}
++zsh:9> cat /tmp/aos-proto5-try-20260927-5klrm6cy/jobs/hello.out
+2026-09-27T15:37:09+0800
++zsh:10> aos-kernel add /tmp/aos-proto5-try-20260927-5klrm6cy/jobs/missing.json --once --wait-ms 10000
+{"code": 127, "kind": "child", "timed_out": false, "stopped": false, "ms": 0}
++zsh:11> aos-kernel add /tmp/aos-proto5-try-20260927-5klrm6cy/jobs/count.json --name count --interval-ms 500
+count
++zsh:12> aos-agent init --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+initialized /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+access.json：工具關在牢裡，只看得到 /work/ws（＝workspace，可寫）、不能上網；改：aos-agent access ls／set
+llm.model 是代號 "default"：llm.json（kernel 的 llm 池用 AOS_LLM_CONFIG 指的那份，見 proto5/tutorials/01-daemon-kernel.md）要有 default 這個代號
++zsh:13> aos-agent check --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob --probe
+ok   kernel: K＝/tmp/aos-proto5-try-20260927-5klrm6cy/K（取自 AOS_KERNEL_HOME）
+ok   info: kernel 設定讀驗通過
+ok   dirs: requests/、responses/、pools/ 都在
+ok   daemon: daemon 活著：/tmp/aos-proto5-try-20260927-5klrm6cy/D（kernel 設定的池：default、llm；daemon 目前有：default、llm）
+ok   tick: daemon /tmp/aos-proto5-try-20260927-5klrm6cy/D 每 1000 ms 開一格 tick
+ok   cpus: 各池都在 daemon 那邊（default 2、llm 1）
+ok   path: 五支 CLI 都找得到（daemon 的 PATH）
+ok   pools: 池：default 2、llm 1
+ok   agent: agent 設定讀驗通過
+ok   agent/tick.pool: 池 default 存在（count 2）
+ok   agent/llm.pool: 池 llm 存在（count 1）
+ok   agent/tool_pool: 池 default 存在（count 2）
+ok   llm/llm: 模型代號：default
+ok   agent/llm.model: 模型 default 存在
+ok   agent/tool/date: 可執行 date
+ok   access: /tmp/aos-proto5-try-20260927-5klrm6cy/bob/access.json 讀驗通過：1 個 mount、起點 /work/ws、net off
+ok   access/bwrap: /usr/bin/bwrap 開得起來
+ok   access/aos-jail: 送件用 /home/lorkhan/repo/simple_tools/aos/proto5/cli/aos-jail（絕對路徑，不看 PATH）
+ok   probe/default: endpoint 通，模型清單裡有 deepseek-chat（endpoint http://localhost:4000/v1，模型 deepseek-chat）
+設定檢查通過；模型連線也測過
++zsh:14> aos-agent start --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+started agent-bob
++zsh:15> aos-agent say '現在幾點？請用 date 工具查，再用一句繁體中文回答。' --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob --wait 90
+現在是 2026 年 9 月 27 日下午 3 點 37 分。

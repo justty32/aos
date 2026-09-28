@@ -1,0 +1,10 @@
++zsh:4> aos-agent stop --target /tmp/aos-proto5-try-20260927-5klrm6cy/bob
+stopped agent-bob
++zsh:5> aos down
+kernel /tmp/aos-proto5-try-20260927-5klrm6cy/K 剛停
+daemon /tmp/aos-proto5-try-20260927-5klrm6cy/D 剛停
++zsh:6> aos-daemon ls
+daemon not running（以下是最後的摘要）  pools 0  children 0  kernels 0
++zsh:7> aos down
+kernel /tmp/aos-proto5-try-20260927-5klrm6cy/K 本來就停了
+daemon /tmp/aos-proto5-try-20260927-5klrm6cy/D 本來就沒在跑

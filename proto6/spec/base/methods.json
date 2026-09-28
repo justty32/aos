@@ -1,0 +1,73 @@
+{
+ "contract": "wf-table/1",
+ "source": "transport.md#b-502最小操作集合建議預設未拍板",
+ "extracted": "2026-09-28",
+ "link_columns": [],
+ "columns": [
+  "method",
+  "params",
+  "authorization_and_output"
+ ],
+ "rows": [
+  {
+   "method": "agent.submit",
+   "params": "`agent_id` ID、`input_ref` BlobRef",
+   "authorization_and_output": "可投該 agent 者；accepted＋新／既有 run_id＋`input_seq`（每 agent 單調遞增正整數），輸入只導入一次"
+  },
+  {
+   "method": "run.get",
+   "params": "`run_id` ID",
+   "authorization_and_output": "owner／管理者；result 依 [S-402](../scheduling/operations.md)，含 run、等待及 snapshot 欄位"
+  },
+  {
+   "method": "run.pause",
+   "params": "`run_id` ID",
+   "authorization_and_output": "owner／管理者；accepted，停止新增派工，已在途工作按 agent 規格收尾"
+  },
+  {
+   "method": "run.resume",
+   "params": "`run_id` ID",
+   "authorization_and_output": "owner／管理者；accepted，從已提交 checkpoint 恢復准入"
+  },
+  {
+   "method": "agent.get",
+   "params": "`agent_id` ID",
+   "authorization_and_output": "owner／管理者；result 依 [A-505](../agent/tick.md) 的 agent 狀態查詢契約"
+  },
+  {
+   "method": "run.resolve",
+   "params": "`run_id,job_id` ID、`decision`（`retry|fail|cancel_with_unknown`）；retry 時必填 `allow_duplicate_effects:true,new_max_attempts` 正整數；取消要求尚在時 retry 另必填 clear_cancel_requested:true",
+   "authorization_and_output": "管理者；accepted，依排程規格處理 unknown，不能偽造成功結果"
+  },
+  {
+   "method": "run.cancel",
+   "params": "`run_id` ID",
+   "authorization_and_output": "owner／管理者；accepted，控制層取消所有未終局 jobs"
+  },
+  {
+   "method": "attempt.get",
+   "params": "`attempt_id` ID",
+   "authorization_and_output": "owner／管理者；result 依 [S-402](../scheduling/operations.md)，含 attempt 與取消／cleanup 狀態"
+  },
+  {
+   "method": "attempt.cancel",
+   "params": "`attempt_id` ID",
+   "authorization_and_output": "owner／管理者；accepted，走 B-203"
+  },
+  {
+   "method": "checkpoint.commit",
+   "params": "`proposal` C-05 Proposal",
+   "authorization_and_output": "認證 tick 接口＋live claim；result `{committed:true,revision:整數>=1}`"
+  },
+  {
+   "method": "result.ack",
+   "params": "`attempt_id` ID、`sha256` 64 小寫 hex",
+   "authorization_and_output": "控制消費端；accepted；摘要須等於已發布 Outcome 的規範化摘要"
+  },
+  {
+   "method": "run.outputs",
+   "params": "run_id ID；可省 after_seq 非負整數預設0、limit正整數預設100上限1000",
+   "authorization_and_output": "owner／管理者；result 為 {outputs:Output陣列,next_seq:非負整數,has_more:bool}，Output依A203，僅列已提交可見輸出"
+  }
+ ]
+}

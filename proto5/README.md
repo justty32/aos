@@ -113,7 +113,7 @@ aos-agent say "現在幾點？請用工具查。" --target $W/bob --wait
 - **[spec/](spec/README.md)**：每個指令、每種檔案的規範（下表）；給使用者的精簡版是 [agent 家](spec/agent/essentials.md)、[aos-agent 指令](spec/aos-agent/essentials.md) 兩份「使用者只需要懂的」。
 - **[lib/](lib/README.md)**：程式模組與測試（下面「程式」）。
 - **[notes/](notes/README.md)**：任務書、審查、試玩紀錄（下面「筆記」）。
-- **[examples/](examples/)**：真的拿來用的樣板——[arknights](examples/arknights/README.md)（補人物隊）、[commons](examples/commons/README.md)（圖書館員隊）、[company](examples/company/README.md)（**用 aos 團隊蓋一間公司**：部門＝團隊、董事＝human、機械總機搬跨部門的信；`company.py`、市場層 `market.py`）。
+- **[examples/](examples/)**：真的拿來用的樣板——[parent-child-demo](examples/parent-child-demo/README.md)（接既有 agent，固定生一個 child 並雙向傳話）、[arknights](examples/arknights/README.md)（補人物隊）、[commons](examples/commons/README.md)（圖書館員隊）、[company](examples/company/README.md)（**用 aos 團隊蓋一間公司**：部門＝團隊、董事＝human、機械總機搬跨部門的信；`company.py`、市場層 `market.py`）。
 - **[playbook/](playbook/README.md)**：跨隊沉澱——經驗（`lessons.md`）、團隊組織架構（`teams/`）、工作流架構（`workflows/`）、可複用工具索引；每隊收尾都回來加一條。
 
 ## 規範
