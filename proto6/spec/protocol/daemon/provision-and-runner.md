@@ -18,7 +18,7 @@
 
 路徑操作必須在被授 `provision.paths` 內（按元件判定，不用字串前綴）；helper 固定目錄 handle、拒絕 symlink 穿越及替換競態，逐步核對實體路徑。OS 現況已符合所要求設定就核對後成功，不同回 `conflict`，不覆蓋。quota 不搶走其他 node 的 project 歸屬。帳號不自動刪除或回收。
 
-cgroup 的 node 分支承接父限制，執行 leaf 容納本 node 程序，子 node 分支留在同一父資源樹；module 決定哪些限制有值，daemon 不排資源。helper／收尾程序留在成員限額之外。〔使用者方向 2026-09-29 晚〕**上限設在 node 那層**：寫在 node 分支一次，之後每格沿用，不在每格重設。每個 tick 程序（含孫程序）都放進該 node 的框，once 放進其 parent 的框（[B-603](../../daemon.md)）；〔使用者方向 2026-09-29 晚〕node 還沒經 cgroup_create 建框時，daemon 開格前自己建（不寫上限）。**daemon 在交給它的 cgroup 子樹內（[B-605](../../daemon.md)）自己建框、寫限制及讀實際值，不經 systemd；無 helper 時用通用 user 做**，授權和父限制照舊。controller 不可用回 unsupported。只有建帳號、chown、quota 需要 helper，無 helper 回 helper_unavailable。
+cgroup 的 node 分支承接父限制，執行 leaf 容納本 node 程序，子 node 分支留在同一父資源樹；框名（`daemon`、`n-<hash>`、其下 `tick`、`once-<hash>`）依 [B-605](../../daemon.md)〔第十六批〕；module 決定哪些限制有值，daemon 不排資源。helper／收尾程序留在成員限額之外。〔使用者方向 2026-09-29 晚〕**上限設在 node 那層**：寫在 node 分支一次，之後每格沿用，不在每格重設。每個 tick 程序（含孫程序）都放進該 node 的框，once 放進其 parent 的框（[B-603](../../daemon.md)）；〔使用者方向 2026-09-29 晚〕node 還沒經 cgroup_create 建框時，daemon 開格前自己建（不寫上限）。**daemon 在交給它的 cgroup 子樹內（[B-605](../../daemon.md)）自己建框、寫限制及讀實際值，不經 systemd；無 helper 時用通用 user 做**，授權和父限制照舊。controller 不可用回 unsupported。只有建帳號、chown、quota 需要 helper，無 helper 回 helper_unavailable。
 
 cgroup_limits 改值時，daemon 先關受影響子樹的啟動閘門，與 pending start／wake／週期派出互斥；執行端核對整個框及後代全空才套用，否則 busy。已是相同值可核對後成功，不重寫。helper 的 start／limits 也須按同一資源子樹串行；不能只靠呼叫者先查 node.show。kernel 先逐筆暫停受影響子樹、等全空再要求更新；node.pause 本身不遞迴，更新後也不代替呼叫者 resume。
 

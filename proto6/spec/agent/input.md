@@ -8,7 +8,7 @@
 
 消費、提交及還原依[通用 tick 的 Q1](../tick.md)；訊息與工具／LLM 結果適用同一規則。收件成功只代表內容已存妥，不代表 agent 已閱讀或完成。
 
-〔使用者方向 2026-09-29〕一般訊息與回覆都用 `agent.say`，一律收進 history；回覆 payload 加可省的 `in_reply_to` 指原句 ID。格式與大小依[訊息協議](../protocol/messages.md)，錯誤或存不下不假稱成功。
+〔使用者方向 2026-09-29〕一般訊息與回覆都用 `agent.say`，一律收進 history；回覆 payload 加可省的 `in_reply_to` 指原句 ID。〔使用者方向 2026-09-29，第十六批〕帶 `in_reply_to` 的回覆只記進 history，不觸發 LLM、不再回話，免得互回無限循環（[P-705](../protocol/agent-tasks.md)）。格式與大小依[訊息協議](../protocol/messages.md)，錯誤或存不下不假稱成功。
 
 驗收：收件中斷場景見 [V-03](../conformance.md)。
 

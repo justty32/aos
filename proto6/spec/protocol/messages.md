@@ -33,7 +33,7 @@ responses/<id>.json  # RpcResponse
 
 ## P-303．回應路由與來源〔建議預設，未拍板〕
 
-接件前核對 `reply_to` 是可使用的 node 回件位置，且目前執行身分能投進其 `responses/`。無法回件便不接納會產生副作用的請求，保留原件及本地錯誤供修正；不能先執行再假裝已回覆。接納後固定原請求的 `reply_to`，先將回應隨狀態 commit，再依 P-003 發布；中途失敗留已提交回應，後續只補送該回應，不重做請求。
+接件前核對 `reply_to` 是可使用的 node 回件位置，且目前執行身分能投進其 `responses/`。無法回件便不接納會產生副作用的請求，保留原件及本地錯誤供修正；不能先執行再假裝已回覆。接納後固定原請求的 `reply_to`，先將回應隨狀態 commit，再依 P-003 發布；中途遇到暫時性失敗才留已提交回應、後續只補送該回應，不重做請求。〔使用者方向 2026-09-29，第十六批〕投回應時回址不是 node 或沒有寫入權限，跟請求一樣照 [node P-206](node.md)：報一次錯（`target_not_node`／`target_not_writable`）、丟掉待送回應，不每格補送。
 
 `reply_to` 只是地址，**不是來源或授權證明**。依 [B-501](../base/transport.md) 核對 OS 權限與可信投遞資料；需要辨識成員時，將經核對的檔案擁有 UID 等來源證據對上可信登記及授權設定，不信正文自稱的 node。回件也須核對原請求目標及可信來源，不能只因 ID 相同就當作成功證據。可讀附件路徑同樣不證明來源，開檔只用收件 node 的身分。
 
@@ -66,7 +66,7 @@ responses/<id>.json  # RpcResponse
 
 | method／完整命令 | stdin JSON／本地動作與 stdout |
 |---|---|
-| `agent.say`／`aos agent say` | `{text,attachments?,in_reply_to?}`；text 非空、attachments 為絕對檔案路徑陣列。一律收進 history，stdout `{"accepted":true}`；回話也是新 ID 的 agent.say，以 in_reply_to 指原句 id。 |
+| `agent.say`／`aos agent say` | `{text,attachments?,in_reply_to?}`；text 非空、attachments 為絕對檔案路徑陣列。一律收進 history，stdout `{"accepted":true}`；回話也是新 ID 的 agent.say，以 in_reply_to 指原句 id。〔使用者方向 2026-09-29，第十六批〕帶 in_reply_to 的只記錄，不觸發 LLM、不再回話（[P-705](agent-tasks.md)）。 |
 | `kernel.schedule.recheck`／`aos kernel schedule recheck` | 無；核對 reply_to 指向的可信直接成員收件與摘要，重新判斷排程，stdout `{"accepted":true}`。不保證叫醒，也不改額度。 |
 | `kernel.quota.set`／`aos kernel quota set` | [res-quota](schemas/res-quota.schema.json)；投 quota.node_id 的可信父 kernel，只准父配置權 owner／祖先，核對 seq 與父額度、提交後 stdout `{"accepted":true}`。不代表 OS 已套用。 |
 | `kernel.usage.measure`／`aos kernel usage measure` | 無；由 owner／可信直接父要求重測，stdout 為 [res-usage](schemas/res-usage.schema.json)，不啟用缺席 module。 |

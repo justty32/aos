@@ -28,6 +28,8 @@ kernel 接納時固定 inst 與必要輸入。需要固定 stdin bytes 就保存
 
 once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [daemon P-104／110](daemon.md) 的第十一批裁定。
 
+〔使用者方向 2026-09-29，第十六批〕**工作目錄名要加發件者前綴**：不同成員都可能用 `attempt-1`，同一個 kernel 裡會撞名。目錄名一律是 `<前綴>-<attempt_id>`，前綴是「配出這個 attempt_id 的 node」（工作材料的 `node_id`；自己配的就是自己）絕對路徑 UTF-8 bytes 的 sha256 前 16 個小寫 hex。node 路徑不能直接當目錄名，雜湊長度固定、只有 `[0-9a-f]`；碰撞機率可忽略，讀目錄時仍核對裡面 request 的 node_id。例：`/srv/aos/top/a` 的 `attempt-1` → `94a18415f07a8c0d-attempt-1`。全篇及 kernel／agent 篇路徑裡的 `state/work/<attempt_id>/`、`.aos/jobs/<attempt_id>/`，`<attempt_id>` 都指這個目錄名；檔案內容與 RPC 裡的 attempt_id 欄位不加前綴。
+
 〔建議預設，未拍板〕本篇為保存請求與結果，在安排工作的 node 建 ignored `.aos/jobs/<attempt_id>/`，以其中的 `inst.json` 單檔登記；資料夾只是材料布局。每次實際嘗試使用不同資料夾，內含：
 
 ```text

@@ -8,7 +8,7 @@
 
 **代發服務和管池的 kernel node 同帳號，所以該 kernel 讀得到 key；只有其他帳號的成員才有隔離。**key 不進 prompt、工作請求、結果、inst、argv 或給成員的環境。**沒 helper 時全樹同帳號，key 不受保護**（第八批）；要隔離須用 helper 配合不同帳號，或另用不同帳號跑代發並限制憑證檔權限。這是 OS 讀取權限的界線，不是 JSON 能保證的事。
 
-〔使用者方向 2026-09-29 晚〕池就是一個 node：請求投進它的 `requests/`，池照請求的 `reply_to` 回覆、照業務 JSON 的 `stream_path` 寫串流檔；回覆到了之後誰叫醒 agent、各檔權限怎麼開，aos 不管，沒權限就報錯（[S-301](../scheduling/llm.md)）。
+〔使用者方向 2026-09-29 晚〕池就是一個 node：請求投進它的 `requests/`，池照請求的 `reply_to` 回覆、照業務 JSON 的 `stream_path` 寫串流檔；回覆就是投進 agent 收件區，照一般收件叫醒（第十六批）；各檔權限怎麼開 aos 不管，沒權限就在投件時報錯（[S-301](../scheduling/llm.md)）。
 
 〔建議預設，未拍板〕池管理 node 的任務表加入 `aos-llm --config <絕對設定路徑>`，再依 daemon 篇註冊、叫醒該 node。aos-llm 是短任務：收件、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 P-402 的 once 資料夾，inst 改跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <絕對設定路徑>`，使用池管理 node 的帳號。HTTP 等待由這支受 daemon 管的程序承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 發回；LLM 工作沿用 once 的清理與恢復界線。
 

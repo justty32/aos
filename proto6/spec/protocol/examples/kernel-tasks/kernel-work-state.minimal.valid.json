@@ -4,6 +4,6 @@
   "seq": 1,
   "phase": "prepared",
   "boot_id": "boot-1",
-  "work_dir": "/srv/aos/top/.aos/jobs/attempt-1",
+  "work_dir": "/srv/aos/top/.aos/jobs/94a18415f07a8c0d-attempt-1",
   "finished_at_ms": null
 }

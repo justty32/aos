@@ -24,7 +24,7 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel �
 | `tools.target_node` | node id＝交該 kernel；null＝agent 自己登記 once |
 | `daemon_socket` | daemon IPC socket 絕對路徑，登記 once 用 |
 
-設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
+設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。〔使用者方向 2026-09-29，第十六批〕**對 LLM 池（`llm.target_node`）有沒有投件權，設定檢查不先擋**：沒權限就在投件那一步照 [P-206](node.md) 報 `target_not_writable`、丟掉待送檔，跟 [S-301](../scheduling/llm.md) 一致。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
 
 改設定在 tick 外用持同把鎖的指令；重要手改先 pause、等全空，驗證並提交後 resume。任務不改 `config/` 是軟性原則，不檢查、不阻擋；自行改的人承擔同格新舊設定混用。
 
@@ -78,7 +78,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-705．收話與收結果〔A-201、A-403、P-303～305；工程預設〕
 
-`agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON。接件後保存回址、原文與附件引用，建 queued input 及 user history；可省的 `in_reply_to` 原樣存 history，回話也照此處理。指令結果沿 work-result，收件確認放指令 stdout。附件先只保存引用，要內容就用普通讀檔工具。
+`agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON。接件後保存回址、原文與附件引用，建 queued input 及 user history。〔使用者方向 2026-09-29，第十六批〕**帶 `in_reply_to` 的是回話：只記進 history（`in_reply_to` 原樣保存），不建 queued input、不觸發 LLM、不再回話**，避免兩邊（或自己對自己）互回無限循環。指令結果沿 work-result，收件確認放指令 stdout。附件先只保存引用，要內容就用普通讀檔工具。
 
 結果先核對 RPC id、可信來源及原請求，再保存與套入 history／決定；同 bytes 不重吃。工作結果在指令 stdout 裡按 [work](work.md)／[llm-work](llm-work.md) 解讀，不能把外層指令成功當成工具／LLM 成功。套用後才記 response_consumed、移除 pending；一批工具全齊才處理。
 
@@ -109,7 +109,7 @@ RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身�
 
 reply.input_id 是原 `agent.say` id；progress.outcome=null，final 為 succeeded／failed／canceled／unknown。unknown 回話只說結果不明，原工作仍保持 unknown；取消須完成本機收尾。
 
-同組保存本地 reply、input 與新 ID 的 `agent.say` 請求；stdin JSON 為 `{text,in_reply_to:原 input_id}`，reply_to=N，目標是原 input.reply_to。本地 progress／final 不另變成線上欄位。tick 提交後投件；自己回自己也下格收。原 `agent.say` 回應不改。
+同組保存本地 reply、input 與新 ID 的 `agent.say` 請求；stdin JSON 為 `{text,in_reply_to:原 input_id}`，reply_to=N，目標是原 input.reply_to。本地 progress／final 不另變成線上欄位。tick 提交後投件；自己回自己也下格收，因為帶 `in_reply_to`，收到只記錄（P-705）。原 `agent.say` 回應不改。
 
 有終局回話才把 input 記 done、填 completed_at_ms。模型原話不重存 history；程式產生的進度／失敗另建 assistant 事件，source_path 指 reply。pending_requests 只記 LLM／工具結果，回話交付另記 meta；本地已提交 final 可查，不表示對方已接納。
 
@@ -146,7 +146,7 @@ aos-agent-check [--node N] --recheck
 # 人手：aos agent config check N [--draft F]／recheck N
 ```
 
-直接開檔驗 inst／tasks／agent／tools、引用與權限，不試 provider。draft 是任意可讀替代 agent.json；validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫。0 有效、1 無效、2 用法錯、125 讀取／前置失敗；stdout 印 valid 或 invalid 與檔案欄位，stderr 診斷。
+直接開檔驗 inst／tasks／agent／tools、引用與權限（對 LLM 池的投件權除外，見 P-701），不試 provider。draft 是任意可讀替代 agent.json；validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫。0 有效、1 無效、2 用法錯、125 讀取／前置失敗；stdout 印 valid 或 invalid 與檔案欄位，stderr 診斷。
 
 recheck 取同把鎖、驗目前值並提交 config-state，不派工。確認修好後，人或 agent 用 `aos attend done N ID` 標完成。鎖忙 75、保存失敗 1、提交／還原故障 3。
 
