@@ -26,8 +26,8 @@
   },
   {
    "method": "run.resume",
-   "params": "`run_id` ID",
-   "authorization_and_output": "owner／管理者；accepted，從已提交 checkpoint 恢復准入"
+   "params": "`run_id` ID；可省 `budget` object（僅管理者，只增不減，依 [S-306](../scheduling/llm.md)）",
+   "authorization_and_output": "owner／管理者；accepted，paused 從已提交 checkpoint 恢復准入；非 unknown 的 needs_attention 走 [S-102](../scheduling/runs.md) 可選重新驗證出口，未提供或驗證未過回 conflict"
   },
   {
    "method": "agent.get",

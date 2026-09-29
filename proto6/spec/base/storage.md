@@ -4,7 +4,7 @@
 
 ## B-401：權威與存放位置〔建議預設，未拍板〕
 
-Owner：控制層唯一 SQLite writer。SQLite 保存 owner、ready、due、jobs、attempts、run、claim、generation、checkpoint pointer、消費 cursor 及派工意圖。agent home 保存輸入、歷史及 checkpoint 本體；受管不可變內容庫按 agent 分區，與該 home 在同 filesystem 並指派同 project quota，兩者共用容量額度。內容庫由管理者持有，agent 只經唯讀 fd 取得已提交 blob；可編的配置與 source 草稿仍在 home。這是為完整性及容量閉合新增的可替換預設，不將所有資料複製進無上限 global control。控制庫只保存有界 metadata、登記及小型錯誤；pending jobs 採 [S-203](../scheduling/admission.md) 的部署必填 max_pending_jobs；部署可另設 per-agent pending 額度（正整數），未設不增加第二個隱含預設，達任何適用上限拒絕新提交。agent 不得直接修改 SQLite 或權威 pointer。控制根預設目錄 0700、檔案 0600；跨 UID 讀取只經受控導出，不將整個 DB 給 agent。
+Owner：控制層唯一 SQLite writer。SQLite 保存 owner、ready、due、jobs、attempts、run、claim、generation、checkpoint pointer、消費 cursor 及派工意圖。agent home 保存輸入、歷史及 checkpoint 本體；受管不可變內容庫按 agent 分區，與該 home 在同 filesystem，啟用磁碟額度時指派同 project quota、兩者共用記帳額度（B-304）。內容庫由管理者持有，agent 只經唯讀 fd 取得已提交 blob；可編的配置與 source 草稿仍在 home。這是為完整性及容量閉合新增的可替換預設，不將所有資料複製進無上限 global control。控制庫只保存有界 metadata、登記及小型錯誤；pending jobs 採 [S-203](../scheduling/admission.md) 的部署必填 max_pending_jobs；部署可另設 per-agent pending 額度（正整數），未設不增加第二個隱含預設，達任何適用上限拒絕新提交。agent 不得直接修改 SQLite 或權威 pointer。控制根預設目錄 0700、檔案 0600；跨 UID 讀取只經受控導出，不將整個 DB 給 agent。
 
 BlobRef 依 C-03 以受管 key 定址並保存 SHA-256，禁止把 ID／摘要解讀為任意路徑；所有根由登記取得。尚未導入的 home 候選可被 agent UID 改寫，控制層不能相信名稱：可信導入者以 agent 權限開 fd，限制大小、拒絕 symlink／非普通檔，取快照重算摘要後交控制層。控制層只引用受管庫的已驗證快照；需恢復而受管 blob 已毀損時報完整性錯誤，不執行其內容或改指較舊狀態掩蓋損毀。
 

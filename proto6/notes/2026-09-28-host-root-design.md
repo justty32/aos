@@ -1,6 +1,8 @@
 # 宿主機 root daemon：員工身分與執行分工草案
 
 > 2026-09-28 交接快照；[原始來源](../../proto5/notes/2026-09-28-host-root-design.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+>
+> 後續註記（2026-09-29，依 [notes 審查](notes-review.md) 必修 2）：本文「正式員工」分類與「固定負責其 tick 的 CPU worker」已被[資源與任務排程](2026-09-28-linux-resources-and-task-scheduling.md)取代——分類已放下，CPU worker 改為取消方向；下文相關段落只是演進脈絡，不是現行要求。
 
 ← [筆記索引](README.md)｜[使用者已定方向](2026-09-28-employee-identity.md)｜[第二道牆調查](investigations/proto5-host-root-second-wall.md)
 

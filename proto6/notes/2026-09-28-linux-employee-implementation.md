@@ -1,6 +1,8 @@
 # Linux 正式員工制度：實作可行性與複雜度
 
 > 2026-09-28 交接快照；[原始來源](../../proto5/notes/2026-09-28-linux-employee-implementation.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+>
+> 後續註記（2026-09-29，依 [notes 審查](notes-review.md) 必修 2、14）：本文「正式員工」分類與專屬 tick worker（含「專屬 tick worker 可以復用多少 cpu」整節）已被[資源與任務排程](2026-09-28-linux-resources-and-task-scheduling.md)取代——分類已放下，CPU worker 改為取消方向，只是演進脈絡。另外「`_execute_inst` 先建 cwd、開 stdin／stdout／stderr」一句混寫了一般 exec 與 daemon 池式路徑：daemon 池式啟動時 `spawn_target` 會拒絕 inst 寫 stdin／stdout（由控制 pipe 接管），帶 launcher 時 `_execute_inst` 也不開這兩個檔；前面仍有讀 target、解析指示詞、條件式建目錄與開 stderr，所以「必須先降權」的結論不變。
 
 ← [設計草案](2026-09-28-host-root-design.md)｜[第二道牆](investigations/proto5-host-root-second-wall.md)
 

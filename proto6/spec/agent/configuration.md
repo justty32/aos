@@ -14,11 +14,11 @@
 
 ## A-102 每輪版本固定與更新〔建議預設，未拍板〕
 
-run 建立為 queued 時，控制層必填並固定 `config_revision`、`context_revision`、`tools_revision` 三個版本引用。更新設定須先完整保存及校驗新內容，再由控制層原子切換 agent 的「後續 run 預設版本」。合法更新是有效版本 → 另一有效版本，無法原地修改已發布版本。已有 queued 或 active run 不跟著換；修正必須取消舊 run 再建立新 run，不偷換其輸入。
+run 建立為 queued 時，控制層必填並固定 `config_revision`、`context_revision`、`tools_revision` 三個版本引用。更新設定須先完整保存及校驗新內容，再由控制層原子切換 agent 的「後續 run 預設版本」。合法更新是有效版本 → 另一有效版本，無法原地修改已發布版本。建議已有 queued 或 active run 不跟著換，修正時取消舊 run 再建立新 run，不偷換其輸入。依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 2 這不是硬規定：實作可選擇讓非終態 run 在下一次 tick 開始前改用新版本，但須在 run 紀錄保存換版時點與新舊 revision，不得在 tick 執行中途換版；設計上盡量遵循[兩次 tick 之間的環境穩定性](../../notes/between-ticks-configuration.md)。
 
-控制層負責版本引用的存活性：非終態 run 所引用內容禁止回收；重啟載入原引用，不自動用最新版替代。若原版本遺失或摘要不符，run 轉 needs_attention，agent 轉 error，記 `config_unavailable`；修復原內容並經人工 resume 後重新驗證，再回 active／think。版本錯誤不得觸發 LLM 或工具。
+控制層負責版本引用的存活性：非終態 run 所引用內容禁止回收；重啟載入原引用，不自動用最新版替代。若原版本遺失或摘要不符，run 轉 needs_attention，agent 轉 error，記 `config_unavailable`；修復原內容後可經 [S-102](../scheduling/runs.md) 的可選 resume 重新驗證出口回 active／think；實作未提供該出口時只能取消，另建新 run。版本錯誤不得觸發 LLM 或工具。
 
-驗收：Given run R 固定工具版本 V1；When 管理者發布 V2 並重啟；Then R 仍只見 V1，新建立 run 才使用 V2。
+驗收：Given run R 固定工具版本 V1；When 管理者發布 V2 並重啟；Then 採建議預設時 R 仍只見 V1、新建立 run 才使用 V2；實作選擇換版時，R 的紀錄可查換版時點與 V2 revision，且進行中的 tick 看到的仍是 V1。
 
 ## A-103 人格與權限分界〔使用者方向 2026-09-28，連 notes〕
 
