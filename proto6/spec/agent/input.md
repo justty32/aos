@@ -12,7 +12,7 @@
 
 ## A-202 普通訊息的輪次邊界〔建議預設，未拍板〕
 
-同一 agent 最多一個 active/paused/needs_attention 的當前 run；尚未開始而被暫停的後續 run 不占此位置，queued 的後續 run 也不算當前 run。沒有當前 run 時，每則已接受普通訊息建立一個 queued run，以 seq FIFO。run 必填 `input_seq:int>=1` 且只綁定該訊息，C-02 的 input_ids 僅含這則 request_id；啟動時 queued → active。run 進行中到來的普通訊息同樣排後續 run，不插入本輪 context，不隱含取消。每 run 固定版本依 [A-102](configuration.md)。
+同一 agent 最多一個 active/paused/needs_attention 的當前 run；尚未開始而被暫停的後續 run 不占此位置，queued 的後續 run 也不算當前 run。沒有當前 run 時，每則已接受普通訊息建立一個 queued run，以 seq FIFO。run 必填 `input_seq:int>=1` 且只綁定該訊息，C-02 的 input_ids 僅含這則 request_id；啟動時 queued → active。run 進行中到來的普通訊息同樣排後續 run，不插入本輪 context，不隱含取消。依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 1，「一輪任務」是軟性設計原則，任務途中新訊息的歸屬暫不定案；本段是可替換的建議預設。每 run 版本依 [A-102](configuration.md)。
 
 工具結果是原 job 的證據，依 run_id/job_id/attempt_id 路由，不建立新 run；已完成 run 的遲到結果保存供查核，不冒充新的使用者訊息。停止、暫停及恢復使用控制入口，與普通 text 分開。收件進度與語意處理進度分開顯示；input 消費 cursor 只能隨有效 tick proposal 原子提交。
 
@@ -20,7 +20,7 @@
 
 ## A-203 暫停、取消與輸出〔建議預設，未拍板〕
 
-控制請求使用 RPC `run.pause`、`run.resume`、`run.cancel`；外層 id 為 request_id，params 必填 `run_id:ID`，target agent_id 由受權限檢查的 run 解析，不另收 action 或 UID。控制層依 A-201 的同一去重 scope 去重並檢查權限。pause 使 queued/active → paused 並持久保存 `paused_from:queued|active`，停止新派工，不殺已在途工作；結果仍可持久收回。resume 使尚未開始的 paused → queued、已開始的 paused → active；後者依 checkpoint 選 think/act/wait。重複同 action 回目前狀態，終態 run 的 pause/resume 回 `run_terminal`。普通 resume 不解除 unknown 或 cancel_requested。依 [S-401](../scheduling/operations.md)，取消要求尚在而要 retry，必須由 run.resolve 額外明填 clear_cancel_requested:true；控制層在同一 resolve 交易驗證、清除取消要求並授權重試。
+控制請求使用 RPC `run.pause`、`run.resume`、`run.cancel`；外層 id 為 request_id，params 必填 `run_id:ID`（run.resume 另可省管理者用的 `budget`，見 [methods](../base/methods.json)），target agent_id 由受權限檢查的 run 解析，不另收 action 或 UID。控制層依 A-201 的同一去重 scope 去重並檢查權限。pause 使 queued/active → paused 並持久保存 `paused_from:queued|active`，停止新派工，不殺已在途工作；結果仍可持久收回。resume 使尚未開始的 paused → queued、已開始的 paused → active；後者依 checkpoint 選 think/act/wait。對非 unknown 原因的 needs_attention，resume 是 [S-102](../scheduling/runs.md) 的可選重新驗證出口，實作可不提供。重複同 action 回目前狀態，終態 run 的 pause/resume 回 `run_terminal`。普通 resume 不解除 unknown 或 cancel_requested。依 [S-401](../scheduling/operations.md)，取消要求尚在而要 retry，必須由 run.resolve 額外明填 clear_cancel_requested:true；控制層在同一 resolve 交易驗證、清除取消要求並授權重試。
 
 cancel 對 queued/paused/active/needs_attention 關閉新派工，向既有工作提出取消；在途停止未確認前不宣告 run canceled。全部工作有確定終局後才轉 canceled；任何副作用未知依 [A-404](tools.md) 進 needs_attention，不自動重試。這些控制狀態持久化，重啟後繼續回收或核對，不能因重啟解除暫停／取消要求。
 

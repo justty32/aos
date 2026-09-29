@@ -17,9 +17,19 @@
 
 來源標記依 [T-01](terms.md)。每節標记覆蓋該節條款；使用者方向與為閉合契約提出的預設分開。共同欄位以 contracts 為準，領域新增欄位在所屬篇定義；狀態轉移由對應葉條款定義，範例不創造另一套schema。[RPC 操作資料](base/methods.json) 是 B-502 的欄位表，使用 `wf-table/1` 保存。
 
-這版採用單一控制寫入者、不可變blob＋checkpoint提交、claim／generation、有限run預算、普通新訊息排下一run等**建議預設**，並非聲稱每項都是唯一或最簡設計。兩份獨立審查是後續裁定材料：[冗餘審查](../notes/spec-redundancy-review.md)、[遺漏審查](../notes/spec-gaps-review.md)。其中提出的架構精簡選項不因被記錄就自動採納；明確契約衝突則在本稿修正並留審查狀態。
+這版採用單一控制寫入者、不可變blob＋checkpoint提交、claim／generation、有限run預算、普通新訊息排下一run等**建議預設**，並非聲稱每項都是唯一或最簡設計。依 [2026-09-29 裁定](../notes/2026-09-29-verdicts.md) 1，「一輪任務（run）」是後續設計的**軟性原則**：run 相關條文（一則訊息一 run、[A-202](agent/input.md)／[S-101](scheduling/runs.md) 普通新訊息排後續 run）是建議預設，不當硬規定；任務途中新訊息的歸屬暫不定案。兩份獨立審查是後續裁定材料：[冗餘審查](../notes/spec-redundancy-review.md)、[遺漏審查](../notes/spec-gaps-review.md)。其中提出的架構精簡選項不因被記錄就自動採納；明確契約衝突則在本稿修正並留審查狀態。
 
-宿主root或namespace內管理、外牆profile、LLM憑證是否集中代理仍未選定。profile缺少所需保護時拒絕啟動工作，不以較弱方式假裝合規。FUSE、分散式kernel、父子demo與串流產品介面延後；stream相關條款僅防止部分輸出被誤當完成。
+依 09-29 裁定：日常特權點是極小 root helper、主 daemon 非 root（[B-303](base/identity-resources.md)）；LLM 採 runner 持 key 直連、只管遵循入口的呼叫（[S-301](scheduling/llm.md)）；磁碟額度可選且只記帳（[B-304](base/identity-resources.md)）。外牆profile仍未選定。profile缺少所需保護時拒絕啟動工作，不以較弱方式假裝合規。FUSE、分散式kernel、父子demo與串流產品介面延後；stream相關條款僅防止部分輸出被誤當完成。
+
+## 平台：原生 Linux 與 WSL
+
+〔使用者方向 2026-09-29，[裁定](../notes/2026-09-29-verdicts.md)附題〕原生 Linux 與 WSL2 都要能跑同一套條款；背景見 [WSL 機器查證](../notes/2026-09-29-wsl-machine-check.md)。
+
+**WSL 接受的限制，不防：**Windows interop（任何 UID 可經 interop 以 Windows 使用者身分執行程式）、`/mnt/c` 等 Windows 掛載沒有 Linux 權限與 quota、Windows 磁碟水位（vhdx 所在磁碟先滿時 distro 可能變唯讀）這類 Windows 造成的權限與資源管理問題，是使用 WSL 必須接受的；B-302 probe 不檢查、驗收不以此判不合格。部署可自行關 interop 或收緊 automount，但不是本規格要求。
+
+**照一般恢復規則處理：**牆鐘跳動與 VM 突然關機不算例外。逾時一律用經過時間（[C-01](contracts.md)）；排序以持久序號當次鍵、不靠牆鐘判先後（[S-204](scheduling/admission.md)）；VM 關機等同控制端被殺，在途工作依 [B-603](base/lifecycle.md) 全部變 unknown，停機寬限依 [B-604](base/lifecycle.md) 可設定。
+
+**外牆 profile：**若用 Landlock，profile 必須記錄所需最低 ABI，實際 ABI 不足即依 B-302 拒絕啟動；WSL（6.6 kernel）只有 ABI 3，沒有 ABI 4 以上的網路、ioctl、scope 規則。
 
 ## 這轮交付的邊界
 

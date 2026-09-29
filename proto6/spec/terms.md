@@ -34,8 +34,8 @@ job 的 `waiting` 表示尚未入場、等 due／quota 等條件；進行中的�
 
 ## T-05．一萬份本體與少量活動
 
-〔使用者方向 2026-09-28，見[負載](../notes/2026-09-28-linux-resources-and-task-scheduling.md)〕目標為 10,000 個 agent、每小時活躍不到 100 個、雲端推論。一 agent 一 Linux 使用者、工具繼承權限與資源；cgroup 控執行用量，project quota 控自有資料。取消 CPU worker 是方向，准入控制仍保留。FUSE、分散式 kernel、父子 demo 延後。
+〔使用者方向 2026-09-28，見[負載](../notes/2026-09-28-linux-resources-and-task-scheduling.md)〕目標為 10,000 個 agent、每小時活躍不到 100 個、雲端推論。一 agent 一 Linux 使用者、工具繼承權限與資源；cgroup 控執行用量，project quota 記帳自有資料（09-29 裁定 6、8：可選、只記帳，見 [B-304](base/identity-resources.md)）。取消 CPU worker 是方向，准入控制仍保留。FUSE、分散式 kernel、父子 demo 延後。
 
-〔建議預設，未拍板〕冷 agent 保留 metadata／資料而無常駐程序；資源域由可信登記解析，不靠每次投件宣告。部署 profile 尚未選定，不把宿主 root 視為必需，也不把探針成功當成整體隔離驗收。
+〔建議預設，未拍板〕冷 agent 保留 metadata／資料而無常駐程序；資源域由可信登記解析，不靠每次投件宣告。部署 profile 尚未選定；日常特權點依 09-29 裁定 5 為極小 root helper（[B-303](base/identity-resources.md)），主 daemon 不以 root 執行；不把探針成功當成整體隔離驗收。
 
 驗收：Given 10,000 筆冷登記無待辦或到期維護，When 穩態觀察，Then 沒有 10,000 個程序與固定逐 agent tick；增加少數 ready 工作者才產生執行成本。

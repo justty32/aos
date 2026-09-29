@@ -6,6 +6,8 @@
 
 ## S-401．人工解決 unknown
 
+本條只處理 unknown；非 unknown 原因的 needs_attention 走 [S-102](runs.md) 的可選 resume 重新驗證出口或 run.cancel。
+
 `run.resolve` 必填run_id、job_id、`decision:retry|fail|cancel_with_unknown`，由已授權操作者發出且先核對job屬該run。retry另必填allow_duplicate_effects=true及new_max_attempts，按S-104核對本機程序清空再放行。fail或cancel_with_unknown先持久記 `pending_resolution:{decision,request_id}`、停止新派工並取消該run其餘未終局工作；全部本機受管程序清空後才分別run→failed或canceled。在途未清空時保持needs_attention，不先回終局。二者均記錄接受未知副作用，不改舊attempt的unknown為已證明失敗；pending_resolution決定終局，優先於一般cancel_requested的canceled結算。
 
 補回原attempt的真實結果走可信result導入，不提供任意寫成功文字的管理捷徑。每次resolve記操作者、request_id、時間及選擇，重送去重。取消要求尚在時retry另須 `clear_cancel_requested:true`；省略或false回conflict。只有這個有風險確認的resolve交易可同時清取消要求、准許重試；普通resume不能解除unknown或暗中重做。
@@ -28,10 +30,10 @@ pending數達max_pending_jobs或控制metadata空間保護門檻時，拒絕新�
 
 驗收：Given 佇列滿且某agent磁碟quota也滿，When 新請求與舊run取消同時到達，Then 新請求明確拒絕，取消仍可持久登記與回收，不靜默吞掉已接件工作。
 
-## S-404．留存與遷移
+## S-404．留存
 
 結果、checkpoint與去重依C-06保留至少run終局後30日的可查證據；未完成或unknown資料不得單靠時間刪除。管理者可調整政策但必須顯示其生效時間，不能使已承諾的收據立即失去去重能力。刪大blob需保留result摘要、run終局及ID tombstone；孤立未接納blob可較早回收，但不誤刪已引用blob。
 
-切換舊worker後端與direct exec前停止新的派出、核對在途attempt；任何一件工作只有一個選定執行後端。舊版不能讀新帳本時，回退需要已驗證的資料轉換或一致快照，不能只切旗標。遷移後保留版本與對帳證據。
+原本的舊 worker 後端遷移段依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 3（proto6 新寫、不在 proto5 上就地演進）移至[執行後端切換附註](../../notes/plan/backend-switch.md)。
 
-驗收：Given 同一job已由新後端starting，When 要切回舊後端，Then 先收斂或明確標unknown，不向舊worker再投同一attempt；恢復後仍可查原owner與結果。
+驗收：Given 終局 run 的去重摘要仍在保留期內，When 管理者縮短保留政策後同 request 重送，Then 回原終局摘要並可查新政策生效時間；未終局或unknown資料不因到期被刪。

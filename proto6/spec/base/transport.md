@@ -40,7 +40,7 @@ canonicalization 機制依據：[RFC 8785](https://www.rfc-editor.org/rfc/rfc878
 
 ## B-505：Blob 導入、讀出與對話輸出〔建議預設，未拍板〕
 
-責任為認證入口的可信本機 adapter，不要求新增獨立 daemon。`import_blob(principal,agent_id,read_fd,expected_sha256,length)` 接收呼叫者以自身權限打開的普通檔案 fd；length非負整數、預設單blob上限16MiB。adapter驗證principal可向該owner導入、限長快照並重算摘要，保存至該agent受管內容庫且計projectquota後，才回C-03 BlobRef。它不接受任意host路徑由root代開；未讀完、摘要不同、額度不足分別回invalid_record／conflict／quota_exceeded，不發成功引用。import只保存材料，不建立run，沒有接件承諾。
+責任為認證入口的可信本機 adapter，不要求新增獨立 daemon。`import_blob(principal,agent_id,read_fd,expected_sha256,length)` 接收呼叫者以自身權限打開的普通檔案 fd；length非負整數、預設單blob上限16MiB。adapter驗證principal可向該owner導入、限長快照並重算摘要，保存至該agent受管內容庫且（啟用時）計projectquota後，才回C-03 BlobRef。它不接受任意host路徑由root代開；未讀完、摘要不同、額度不足分別回invalid_record／conflict／quota_exceeded，不發成功引用。import只保存材料，不建立run，沒有接件承諾。
 
 `export_blob(principal,agent_id,ref,write_fd)` 驗證owner讀權及ref歸屬，再向呼叫者已打開的輸出fd傳送已驗證內容；缺失／回收回gone、毀損回integrity_error，不以ref.key拼任意檔案路徑。大資料用fd有界串流，JSON-RPC 256KiB上限不因此放大。對話輸出由run.outputs按output_seq增量列取已提交Output，再用此adapter讀其引用；未提交進度不可偽裝final。
 

@@ -1,6 +1,8 @@
 # 家用機上的一萬個 agent：改動計畫
 
 > 2026-09-28 交接快照；[原始來源](../../../proto5/notes/2026-09-28-ten-thousand-agents/README.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+>
+> 後續註記（2026-09-29，依[裁定](../2026-09-29-verdicts.md) 3、5、6、7、8，對應 [notes 審查](../notes-review.md)必修 7、8、10、11、12）：proto6 新寫，不從 proto5 worker 後端就地遷移，原 spec S-404 遷移段見[執行後端切換附註](backend-switch.md)。日常路徑一定有一個特權點，定為極小 root helper（主 daemon 非 root，見 spec B-303），「特權只在佈建」與「不承諾部署 root daemon」應照此讀。project quota 只記帳、不是硬上限，且是可選項（檔案系統支援才啟用）。控制端重啟或 WSL 關機時在途工作全殺、全部變 unknown，屬已知行為。**外牆與 quota 不再是第 2 階段完成門檻：quota 可選、外牆另段**；因此「誰提供 VM／專用卷」也不再是門檻。
 
 ← [筆記索引](../README.md)｜[使用者方向與工作負載](../2026-09-28-linux-resources-and-task-scheduling.md)
 
