@@ -1,6 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "req_ack_bad_1",
-  "method": "result.ack",
-  "params": {}
-}

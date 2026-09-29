@@ -1,0 +1,20 @@
+{
+  "jsonrpc": "2.0",
+  "id": "resource-1",
+  "method": "resources.set",
+  "params": {
+    "version": 1,
+    "node_id": "/srv/aos/team/member",
+    "seq": 1,
+    "resources": {
+      "memory": {
+        "bytes": 1048576
+      },
+      "cpu": {
+        "quota_us": 50000,
+        "period_us": 100000
+      }
+    }
+  },
+  "reply_to": "/srv/aos/team"
+}

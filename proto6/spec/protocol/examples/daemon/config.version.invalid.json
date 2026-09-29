@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "socket_path": "/run/user/1000/aos/daemon.sock",
+  "attention_dir": "/srv/aos/attention",
+  "roots": [
+    {
+      "node_id": "/srv/aos/team",
+      "identity_grant": [
+        1000
+      ]
+    }
+  ]
+}

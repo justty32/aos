@@ -1,5 +1,0 @@
-{
-  "version": 1,
-  "input_token_limit": 8192,
-  "output_token_reserve": 1024
-}

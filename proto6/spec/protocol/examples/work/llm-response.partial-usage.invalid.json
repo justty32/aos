@@ -1,0 +1,24 @@
+{
+  "jsonrpc": "2.0",
+  "id": "llm-1",
+  "result": {
+    "node_id": "/srv/aos/member",
+    "job_id": "think-1",
+    "attempts": [
+      {
+        "attempt_id": "http-1",
+        "status": "succeeded",
+        "reason": "completed",
+        "message": {
+          "role": "assistant",
+          "content": "你好"
+        },
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 1
+        },
+        "http_status": 200
+      }
+    ]
+  }
+}

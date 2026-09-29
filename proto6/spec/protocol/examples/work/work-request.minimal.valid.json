@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "method": "work.submit",
+  "reply_to": "/srv/aos/member",
+  "params": {
+    "node_id": "/srv/aos/member",
+    "job_id": "job-1",
+    "attempt_id": "attempt-1",
+    "inst": {
+      "argv": [
+        "true"
+      ]
+    },
+    "base": "/srv/aos/member"
+  }
+}

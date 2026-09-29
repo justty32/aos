@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "hello",
+      "argv": [
+        "printf",
+        "hello\\n"
+      ],
+      "kind": "custom"
+    }
+  ]
+}

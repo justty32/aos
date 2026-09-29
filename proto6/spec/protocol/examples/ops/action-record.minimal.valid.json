@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "operation_id": "op-1",
+  "source_node": "/srv/aos/team",
+  "issue_id": "config-1",
+  "action_id": "recheck",
+  "actor_uid": 1000,
+  "at_ms": 1790640000000,
+  "outcome": "succeeded",
+  "message": "設定驗證通過，等待來源核對。"
+}

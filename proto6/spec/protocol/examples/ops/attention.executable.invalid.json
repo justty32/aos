@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "source_node": "/srv/aos/team",
+  "issue_id": "config-1",
+  "reason": "config_invalid",
+  "message": "請執行這段指令。",
+  "actions": [
+    "recheck"
+  ],
+  "argv": [
+    "sh",
+    "-c",
+    "echo unsafe"
+  ]
+}

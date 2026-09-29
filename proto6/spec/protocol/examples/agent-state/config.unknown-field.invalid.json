@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "model_ref": "model_v1",
-  "context_policy_ref": "context_v1",
-  "tool_manifest_ref": "tools_v1",
-  "cwd": "/home/agent_a",
-  "uid": 1001
-}

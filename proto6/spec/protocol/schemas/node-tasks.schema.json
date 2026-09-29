@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "node-tasks.schema.json",
+  "title": "node 任務註冊表",
+  "description": "tasks.json：version 1 外殼，陣列位置決定執行順序；語意檢查依 node P-202。",
+  "type": "object",
+  "required": [
+    "version",
+    "tasks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Task"
+      }
+    }
+  },
+  "$defs": {
+    "Task": {
+      "type": "object",
+      "required": [
+        "id",
+        "argv",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "argv": {
+          "$ref": "node-inst.schema.json#/$defs/LiteralArgv"
+        },
+        "kind": {
+          "enum": [
+            "system",
+            "kernel",
+            "agent",
+            "custom"
+          ]
+        },
+        "group": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

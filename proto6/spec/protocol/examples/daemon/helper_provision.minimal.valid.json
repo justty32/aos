@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "method": "helper.provision",
+  "params": {
+    "node_id": "/srv/aos/member",
+    "action": "cgroup_create"
+  }
+}

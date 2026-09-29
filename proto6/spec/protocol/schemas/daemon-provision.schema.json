@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "daemon 固定佈建動作參數（P-107）",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "account_create"
+        },
+        "user": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "user"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "chown"
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "user": {
+          "$ref": "daemon-registration.schema.json#/$defs/User"
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "path",
+        "user"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "cgroup_create"
+        }
+      },
+      "required": [
+        "node_id",
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "cgroup_limits"
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "cpu_max": {
+              "type": "object",
+              "properties": {
+                "quota_us": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "period_us": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "quota_us",
+                "period_us"
+              ],
+              "additionalProperties": false
+            },
+            "memory_max_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "pids_max": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [],
+          "additionalProperties": false,
+          "minProperties": 1
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "limits"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "quota"
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "project_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "path",
+        "project_id"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "mount"
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "path",
+        "size_bytes"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

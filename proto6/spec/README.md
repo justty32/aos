@@ -13,7 +13,7 @@
 5. [agent 任務](agent/README.md)：設定、內容、context、工具選擇與完成證據。
 6. [共用契約](contracts.md)與[驗收入口](conformance.md)：跨篇最少定義及整合故障場景。
 
-[協議篇](protocol/README.md)仍是**舊架構材料，下一輪重做**；其中 JSON、schema 與範例不限制新主規格。目錄名 `agent/`、`scheduling/` 依領域保留，不代表兩種 node。
+[協議篇](protocol/README.md)定義新 node 架構的指令、JSON、schema 與範例；行為仍以主規格和最新裁定為準。目錄名 `agent/`、`scheduling/` 依領域保留，不代表兩種 node。
 
 ## 來源與正本
 

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "resources.measure 完成回應",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/RpcResponse"
+    },
+    {
+      "required": [
+        "result"
+      ],
+      "properties": {
+        "result": {
+          "$ref": "res-usage.schema.json"
+        }
+      }
+    }
+  ]
+}

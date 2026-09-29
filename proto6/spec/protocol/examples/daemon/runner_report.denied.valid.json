@@ -1,0 +1,8 @@
+{
+  "started": false,
+  "exit_code": 125,
+  "error": {
+    "code": "UserNotGranted",
+    "message": "身分不在額度內"
+  }
+}

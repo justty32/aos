@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "runner 完成或前置失敗回報（P-110）",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "started": {
+          "const": false
+        },
+        "exit_code": {
+          "enum": [
+            2,
+            125
+          ]
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Za-z0-9]*$(?![\\s\\S])"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "started",
+        "exit_code",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "started": {
+          "const": true
+        },
+        "exit_code": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "signal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 127
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "const": "FinalizeFailed"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "started",
+        "exit_code"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "error"
+            ]
+          },
+          "then": {
+            "properties": {
+              "exit_code": {
+                "const": 125
+              }
+            },
+            "not": {
+              "required": [
+                "signal"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

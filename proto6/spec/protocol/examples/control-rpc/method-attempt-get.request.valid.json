@@ -1,8 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "req_attempt_get_1",
-  "method": "attempt.get",
-  "params": {
-    "attempt_id": "attempt_1"
-  }
-}

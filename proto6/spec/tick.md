@@ -16,7 +16,7 @@
 
 〔使用者方向 2026-09-29〕`aos-tick` 依序跑**系統性任務 → kernel／agent 任務 → 自訂任務**。一格 tick 裡的所有任務（含系統性任務）都用該 node inst 的 `user` 跑，不另設服務帳號（第九批）；沒有 helper 時整棵樹都是通用 user。自己帳號做不到的事：要 root 的固定步驟交 helper，管成員的事（例如成員收件區權限）由上層 kernel 在自己的 tick 用自己的帳號做。固定特權步驟只在 [root helper](base/identity-resources.md)。任務類別不授予身分或權限，身分須受 inst 與 daemon 的身分額度約束，不能在表裡填個 UID 就借權限。
 
-〔建議預設，未拍板〕最小格式是一個 JSON 陣列；陣列位置就是順序，不再加另一個排序欄。每項只有下列資料，欄位拼法留待協議篇落實：
+〔建議預設，未拍板〕最小格式是 `{"version":1,"tasks":[...]}`；tasks 陣列位置就是順序。每項欄位依 [協議 P-202](protocol/node.md)：
 
 | 欄位 | 意思 |
 |---|---|
@@ -29,12 +29,12 @@
 例如一份含 agent 任務的 node 表的片段（程式名稱只作示意）：
 
 ```json
-[
+{"version":1,"tasks":[
   {"id":"receive", "argv":["receive-input"], "kind":"agent", "group":"prepare"},
   {"id":"prepare", "argv":["prepare-request"], "kind":"agent", "group":"prepare", "needs":["receive"]},
   {"id":"send", "argv":["send-request"], "kind":"agent", "needs":["prepare"]},
   {"id":"clean", "argv":["aos-clean"], "kind":"custom"}
-]
+]}
 ```
 
 〔使用者方向 2026-09-29〕資源 module 也是 node 任務表上的普通項目；啟用與父層限制政策見 [scheduling/admission](scheduling/admission.md)。`aos-clean`、收信程式也用同一張表，不再分 pre／post 掛勾；有權限者同樣能直接跑這些程式。

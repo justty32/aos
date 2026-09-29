@@ -1,0 +1,7 @@
+{
+  "jsonrpc": "2.0",
+  "id": "m1",
+  "result": {
+    "accepted": true
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "version",
+    "node_id",
+    "observed_at_ms",
+    "ready",
+    "due_ms",
+    "status"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "node_id": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "observed_at_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs"
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "due_ms": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/TimeMs"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "idle",
+        "queued",
+        "waiting_resources",
+        "waiting_result",
+        "running",
+        "paused",
+        "canceling",
+        "unknown",
+        "needs_attention"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "usage": {
+      "$ref": "res-usage.schema.json"
+    }
+  },
+  "additionalProperties": false
+}

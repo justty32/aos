@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "node_id": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "outcome": {
+      "enum": [
+        "staged",
+        "committed",
+        "unchanged",
+        "failed"
+      ]
+    },
+    "archived_items": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "deleted_items": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "history_space_reclaimed": {
+      "const": false
+    },
+    "error": {
+      "$ref": "common.schema.json#/$defs/Error"
+    }
+  },
+  "required": [
+    "version",
+    "node_id",
+    "outcome",
+    "archived_items",
+    "deleted_items",
+    "history_space_reclaimed"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "failed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "unchanged"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "archived_items": {
+            "const": 0
+          },
+          "deleted_items": {
+            "const": 0
+          }
+        }
+      }
+    }
+  ]
+}

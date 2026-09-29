@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "daemon 登記與佈建授權（P-101、P-104）",
+  "$defs": {
+    "User": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      ]
+    },
+    "ProvisionGrant": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "account_create",
+              "chown",
+              "cgroup_create",
+              "cgroup_limits",
+              "quota",
+              "mount"
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/NodeId"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "actions",
+        "paths"
+      ],
+      "additionalProperties": false
+    },
+    "TopRegistration": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "identity_grant": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "daemon-registration.schema.json#/$defs/User"
+              },
+              {
+                "not": {
+                  "enum": [
+                    0,
+                    "root"
+                  ]
+                }
+              }
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "interval_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "provision": {
+          "$ref": "daemon-registration.schema.json#/$defs/ProvisionGrant"
+        }
+      },
+      "required": [
+        "node_id",
+        "identity_grant"
+      ],
+      "additionalProperties": false
+    },
+    "Registration": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "identity_grant": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "daemon-registration.schema.json#/$defs/User"
+              },
+              {
+                "not": {
+                  "enum": [
+                    0,
+                    "root"
+                  ]
+                }
+              }
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "interval_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "provision": {
+          "$ref": "daemon-registration.schema.json#/$defs/ProvisionGrant"
+        },
+        "parent_id": {
+          "$ref": "common.schema.json#/$defs/NodeId",
+          "description": "已登記父 node；once 時兼作可信發起 node 與資源歸屬，由 daemon 核對授權（P-008 未拍板提案）。"
+        },
+        "once": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node_id",
+        "parent_id",
+        "identity_grant"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "once": {
+                "const": true
+              }
+            },
+            "required": [
+              "once"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "interval_ms"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$ref": "#/$defs/Registration"
+}

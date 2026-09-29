@@ -1,9 +1,0 @@
-{
-  "status": "failed",
-  "result_ref": null,
-  "error": {
-    "code": "internal_error",
-    "message": "工作確定失敗。",
-    "retryable": false
-  }
-}

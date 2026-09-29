@@ -1,366 +1,281 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "llm-result",
-  "description": "proto6 協議篇 llm.md：建議預設，未拍板；授權、引用與狀態轉移另作語意驗證。",
-  "$ref": "#/$defs/Result",
   "$defs": {
-    "Result": {
+    "outcome": {
       "type": "object",
       "properties": {
-        "version": {
-          "const": 1
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
         },
-        "attempt_id": {
-          "$ref": "control-common.schema.json#/$defs/ID"
+        "job_id": {
+          "$ref": "common.schema.json#/$defs/ID"
         },
-        "endpoint_id": {
-          "$ref": "control-common.schema.json#/$defs/ID"
-        },
-        "model": {
-          "type": "string",
-          "minLength": 1
-        },
-        "adapter_revision": {
-          "$ref": "control-common.schema.json#/$defs/ID"
-        },
-        "request_digest": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
-        },
-        "http_status": {
-          "anyOf": [
-            {
-              "type": "integer",
-              "minimum": 100,
-              "maximum": 599
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "response_ref": {
-          "anyOf": [
-            {
-              "$ref": "control-common.schema.json#/$defs/BlobRef"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "response_complete": {
-          "type": "boolean"
-        },
-        "truncated": {
-          "type": "boolean"
-        },
-        "assistant": {
-          "anyOf": [
-            {
-              "$ref": "llm-messages.schema.json#/$defs/AssistantMessage"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "usage_ref": {
-          "anyOf": [
-            {
-              "$ref": "control-common.schema.json#/$defs/BlobRef"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "retry_after": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RetryAfter"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "error": {
-          "anyOf": [
-            {
-              "$ref": "control-common.schema.json#/$defs/Error"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "received_at_ms": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "extensions": {
-          "type": "object",
-          "default": {}
-        }
-      },
-      "required": [
-        "version",
-        "attempt_id",
-        "endpoint_id",
-        "model",
-        "adapter_revision",
-        "request_digest",
-        "http_status",
-        "response_ref",
-        "response_complete",
-        "truncated",
-        "assistant",
-        "usage_ref",
-        "retry_after",
-        "error",
-        "received_at_ms"
-      ],
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "truncated": {
-                "const": true
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "response_complete": {
-                "const": false
-              },
-              "assistant": {
-                "type": "null"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "response_complete": {
-                "const": false
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "assistant": {
-                "type": "null"
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "assistant": {
-                "type": "object"
-              }
-            },
-            "required": [
-              "assistant"
-            ]
-          },
-          "then": {
-            "properties": {
-              "response_complete": {
-                "const": true
-              },
-              "truncated": {
-                "const": false
-              },
-              "http_status": {
-                "type": "integer",
-                "minimum": 200,
-                "maximum": 299
-              },
-              "error": {
-                "type": "null"
-              }
-            }
-          }
-        }
-      ]
-    },
-    "Report": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "const": 1
-        },
-        "message_id": {
-          "$ref": "control-common.schema.json#/$defs/ID"
-        },
-        "attempt_id": {
-          "$ref": "control-common.schema.json#/$defs/ID"
-        },
-        "service_instance_id": {
-          "$ref": "control-common.schema.json#/$defs/ID"
-        },
-        "control_epoch": {
-          "$ref": "control-common.schema.json#/$defs/ID"
-        },
-        "type": {
-          "const": "result"
-        },
-        "generation": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "outcome": {
-          "$ref": "control-common.schema.json#/$defs/Outcome"
-        },
-        "usage_ref": {
-          "anyOf": [
-            {
-              "$ref": "control-common.schema.json#/$defs/BlobRef"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "transmission": {
-          "enum": [
-            "not_sent",
-            "response_received",
-            "possibly_sent"
-          ]
-        },
-        "local_connection_closed": {
-          "const": true
-        },
-        "completed_at_ms": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "extensions": {
-          "type": "object",
-          "default": {}
-        }
-      },
-      "required": [
-        "version",
-        "message_id",
-        "attempt_id",
-        "service_instance_id",
-        "control_epoch",
-        "type",
-        "generation",
-        "outcome",
-        "usage_ref",
-        "transmission",
-        "local_connection_closed",
-        "completed_at_ms"
-      ],
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "outcome": {
-                "properties": {
-                  "status": {
-                    "const": "succeeded"
-                  }
-                },
-                "required": [
-                  "status"
-                ]
-              }
-            },
-            "required": [
-              "outcome"
-            ]
-          },
-          "then": {
-            "properties": {
-              "transmission": {
-                "const": "response_received"
-              },
-              "outcome": {
-                "properties": {
-                  "result_ref": {
-                    "$ref": "control-common.schema.json#/$defs/BlobRef"
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    "RetryAfter": {
-      "type": "object",
-      "properties": {
-        "raw": {
-          "type": "string",
-          "maxLength": 1024
-        },
-        "received_at_ms": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "due_at_ms": {
-          "anyOf": [
-            {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 9007199254740991
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "raw",
-        "received_at_ms",
-        "due_at_ms"
-      ],
-      "additionalProperties": false
-    },
-    "ProviderSuccessBody": {
-      "type": "object",
-      "description": "外部 provider 成功本文的抽取前檢查；vendor 欄位原樣保存在 raw blob，此處不是 C-01 的 aos envelope，標準 assistant 與 usage 仍另驗。",
-      "properties": {
-        "choices": {
+        "attempts": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "type": "object",
             "properties": {
+              "attempt_id": {
+                "$ref": "common.schema.json#/$defs/ID"
+              },
+              "status": {
+                "enum": [
+                  "succeeded",
+                  "failed",
+                  "canceled",
+                  "unknown"
+                ]
+              },
+              "reason": {
+                "enum": [
+                  "completed",
+                  "rate_limited",
+                  "rejected",
+                  "not_sent",
+                  "response_invalid",
+                  "canceled",
+                  "unknown"
+                ]
+              },
               "message": {
-                "type": "object"
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "llm-messages.schema.json#/$defs/assistant"
+                  }
+                ]
+              },
+              "finish_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "usage": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "prompt_tokens": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "completion_tokens": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "total_tokens": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "prompt_tokens",
+                      "completion_tokens",
+                      "total_tokens"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "http_status": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 599
+                  }
+                ]
+              },
+              "retry_at_ms": {
+                "$ref": "common.schema.json#/$defs/TimeMs"
               }
             },
             "required": [
-              "message"
+              "attempt_id",
+              "status",
+              "reason",
+              "message",
+              "finish_reason",
+              "usage",
+              "http_status"
             ],
-            "additionalProperties": true
-          }
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "succeeded"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "const": "completed"
+                    },
+                    "message": {
+                      "$ref": "llm-messages.schema.json#/$defs/assistant"
+                    },
+                    "finish_reason": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "http_status": {
+                      "type": "integer",
+                      "minimum": 200,
+                      "maximum": 299
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "unknown"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "const": "unknown"
+                    },
+                    "message": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "canceled"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "const": "canceled"
+                    },
+                    "message": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "failed"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "enum": [
+                        "rate_limited",
+                        "rejected",
+                        "not_sent",
+                        "response_invalid"
+                      ]
+                    },
+                    "message": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "retry_at_ms"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "const": "rate_limited"
+                    },
+                    "status": {
+                      "const": "failed"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "minItems": 1
         },
-        "usage": {
-          "type": "object"
+        "version": {
+          "const": 1
         }
       },
       "required": [
-        "choices"
+        "node_id",
+        "job_id",
+        "attempts"
       ],
-      "additionalProperties": true
+      "additionalProperties": false
     }
-  }
+  },
+  "oneOf": [
+    {
+      "allOf": [
+        {
+          "$ref": "#/$defs/outcome"
+        }
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        }
+      },
+      "required": [
+        "version"
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/outcome"
+                },
+                {
+                  "not": {
+                    "required": [
+                      "version"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
 }

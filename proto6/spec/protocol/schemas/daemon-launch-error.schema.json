@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "once 未啟動旁檔（P-110；P-008 未拍板）",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "node_id": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "error": {
+      "$ref": "common.schema.json#/$defs/Error"
+    }
+  },
+  "required": [
+    "version",
+    "node_id",
+    "error"
+  ],
+  "additionalProperties": false
+}

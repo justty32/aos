@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "method": "node.provision",
+  "params": {
+    "node_id": "/srv/aos/team/member",
+    "action": "quota",
+    "path": "/srv/aos/team/member",
+    "project_id": 100,
+    "extra": true
+  }
+}

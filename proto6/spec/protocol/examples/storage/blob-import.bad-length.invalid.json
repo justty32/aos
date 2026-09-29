@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "kind": "blob_import",
-  "request_id": "import_1",
-  "agent_id": "agent_a",
-  "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "length": -1
-}

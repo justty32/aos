@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "method": "node.provision",
+  "params": {
+    "node_id": "/srv/aos/team/member",
+    "action": "cgroup_limits",
+    "limits": {
+      "pids_max": 16,
+      "cpu_max": {
+        "quota_us": 50000,
+        "period_us": 100000
+      }
+    }
+  }
+}

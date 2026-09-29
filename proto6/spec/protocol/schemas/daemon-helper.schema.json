@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "daemon／helper 私有訊息（P-108；fd 數量另作運行時核對）",
+  "oneOf": [
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "helper.bind"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "registration": {
+                  "oneOf": [
+                    {
+                      "$ref": "daemon-registration.schema.json#/$defs/Registration"
+                    },
+                    {
+                      "$ref": "daemon-registration.schema.json#/$defs/TopRegistration"
+                    }
+                  ]
+                },
+                "owner_uid": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "registration",
+                "owner_uid"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "helper.unbind"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "node_id": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                }
+              },
+              "required": [
+                "node_id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "helper.start"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "node_id": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                },
+                "target_uid": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "node_id",
+                "target_uid"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "helper.stop"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "node_id": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                }
+              },
+              "required": [
+                "node_id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "helper.provision"
+            },
+            "params": {
+              "$ref": "daemon-provision.schema.json"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcResponse"
+        },
+        {
+          "required": [
+            "result"
+          ],
+          "properties": {
+            "result": {
+              "$ref": "daemon-rpc.schema.json#/$defs/AckResult"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcResponse"
+        },
+        {
+          "required": [
+            "error"
+          ]
+        }
+      ]
+    }
+  ]
+}
