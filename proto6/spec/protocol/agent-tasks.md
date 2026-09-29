@@ -15,7 +15,7 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel �
 | 欄位 | 意思 |
 |---|---|
 | `version:1` | 格式版本 |
-| `llm.target_node` | 接收 LLM 請求的 node id |
+| `llm.target_node` | 接收 LLM 請求的 node id；null＝「不管」檔，agent 自己打 HTTP（[S-301](../scheduling/llm.md)，之後再做） |
 | `llm.pool`、`llm.model` | 對方解讀的池與模型 |
 | `llm.context_tokens` | 模型 context 上限，須大於輸出預留 |
 | `llm.max_completion_tokens`、`llm.timeout_ms` | 輸出預留與呼叫逾時，正整數 |
@@ -90,7 +90,7 @@ RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身�
 
 工具預覽合計最多 64 KiB，標原引用與截短／缺失。`utf8_bytes_upper_bound` 是 messages／tools JSON UTF-8 bytes＋每 message 32 的估算，不保證 tokenizer 上界。加輸出預留超 context_tokens、或 RPC 超 256 KiB，就報 context_over_budget、不送。
 
-固定請求 ID、context、meta、usage；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 target_node。tick 提交後投，後格收結果。
+固定請求 ID、context、meta、usage；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 target_node。tick 提交後投，後格收結果。〔使用者方向 2026-09-29 晚〕要串流就在業務 JSON 帶 `stream_path`（[work P-406](work.md)）；檔案放哪、權限怎麼開、要不要自己盯著它，由 agent 決定，aos 不叫醒。target_node 不存在時投件那一步報錯（[node P-206](node.md)）。
 
 ## P-707．模型決定與兩種工具路線〔A-401～403、A-503、P-407；工程預設〕
 

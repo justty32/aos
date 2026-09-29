@@ -28,6 +28,13 @@
           "quota_scope": {
             "$ref": "common.schema.json#/$defs/ID"
           },
+          "schedule": {
+            "enum": [
+              "aos",
+              "endpoint"
+            ],
+            "default": "aos"
+          },
           "max_attempts": {
             "type": "integer",
             "minimum": 1,

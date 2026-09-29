@@ -100,7 +100,7 @@ schedule 按 ready_seq，60 秒補查。
 | 全部都管 | agent 的 llm.target_node=本 K；裝 forward，路由到本池／上層／別隊 | tools.target_node=本 K；裝 work，代登 once | 代辦 module 記；agent 記錄只供核對 |
 | 不管派送 | llm.target_node=管池的 node，直接開雙向投件權 | tools.target_node=null；agent 自登 parent_id=自己的 once | 裝 usage-collect，讀 agent 已提交用量；另授 repo 讀權 |
 
-兩類可各選路，once 歸可信 parent_id。
+兩類可各選路，once 歸可信 parent_id。池 node 是「自己排」或「交給 endpoint」看池設定的 schedule；llm.target_node=null 是 agent 自己打 HTTP 的「不管」檔（之後再做），見 [S-301](scheduling/llm.md)。
 
 ### agent：說話、看回話、管理工具
 
@@ -129,8 +129,8 @@ listen 看本地 assistant／工具及帶 in_reply_to 的回話：本地依 inpu
 
 | # | argv／做什麼 | 成功時 stdout | 底層與失敗 |
 |---|---|---|---|
-| 45 | `aos llm chat K --from-node R --file F [--json]`：送一份 LLM 材料 | `submitted ID` | F 是 llm-payload，檔案 llm.chat；投件。完成命令 stdout 是 llm-result，各 HTTP attempt 的 usage 獨立保存。 |
-| 46 | `aos llm pool ls K [--config config/F] [--json]`：看池設定 | id、endpoint、model、quota_scope；JSON llm-config | 讀同 commit，預設 config/llm-pools.json；查詢，不讀 key。 |
+| 45 | `aos llm chat K --from-node R --file F [--json]`：送一份 LLM 材料 | `submitted ID` | F 是 llm-payload，檔案 llm.chat；投件，K 不存在回 1（投遞失敗）。F 帶 stream_path 時呼叫途中邊寫該檔。完成命令 stdout 是 llm-result，各 HTTP attempt 的 usage 獨立保存。 |
+| 46 | `aos llm pool ls K [--config config/F] [--json]`：看池設定 | id、endpoint、model、quota_scope、schedule；JSON llm-config | 讀同 commit，預設 config/llm-pools.json；查詢，不讀 key。 |
 | 47 | `aos llm pool usage K`：看池窗口／占用 | 一行 kernel-pool-status JSON | `aos-kernel-pool-usage --node K`；0 成功、2 用法、1 缺檔／不可讀；年齡及過時診斷走 stderr。 |
 | 48 | `aos llm pool step K [--config F]`：推進池 module 一步 | 空 | `aos-llm --node K --config F`，F 預設 K/config/llm-pools.json；依 P-408，0 本步、2 設定、125 前置、1 執行失敗；供持鎖 tick 使用。 |
 | 49 | `aos attend ls --socket S [--source N] [--json]`：沿登記樹彙整 open 待辦 | store、來源、ID、原因；JSON 每筆事項含 status | IPC node.ls＋daemon.attention.ls、各 node 的 .aos/attention/；IPC／查詢。 |
