@@ -1,10 +1,9 @@
 {
   "jsonrpc": "2.0",
   "id": "attention-1",
-  "method": "daemon.attention.resolve",
+  "method": "daemon.attention.done",
   "params": {
     "source_node": "/srv/aos/team",
-    "issue_id": "helper-1",
-    "extra": true
+    "issue_id": "helper-1"
   }
 }
