@@ -32,8 +32,18 @@ pending數達max_pending_jobs或控制metadata空間保護門檻時，拒絕新�
 
 ## S-404．留存
 
-結果、checkpoint與去重依C-06保留至少run終局後30日的可查證據；未完成或unknown資料不得單靠時間刪除。管理者可調整政策但必須顯示其生效時間，不能使已承諾的收據立即失去去重能力。刪大blob需保留result摘要、run終局及ID tombstone；孤立未接納blob可較早回收，但不誤刪已引用blob。
+結果、checkpoint與去重依C-06保留至少run終局後30日的可查證據；未完成或unknown資料不得單靠時間刪除。到期後的刪除或封存跟著該 agent 的 tick 做，規則依 [B-404](../base/storage.md)。管理者可調整政策但必須顯示其生效時間，不能使已承諾的收據立即失去去重能力。刪大blob需保留result摘要、run終局及ID tombstone；孤立未接納blob可較早回收，但不誤刪已引用blob。
 
 原本的舊 worker 後端遷移段依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 3（proto6 新寫、不在 proto5 上就地演進）移至[執行後端切換附註](../../notes/plan/backend-switch.md)。
 
 驗收：Given 終局 run 的去重摘要仍在保留期內，When 管理者縮短保留政策後同 request 重送，Then 回原終局摘要並可查新政策生效時間；未終局或unknown資料不因到期被刪。
+
+## S-405．待處理資料夾〔使用者方向 2026-09-29〕
+
+所有需要使用者處理的事項，控制層都寫成檔案放進管理者指定的資料夾 `attention_dir`，人打開資料夾就能看到全部待辦，不必逐個查詢。包括：run 轉 needs_attention（任何原因，含 unknown、budget_exceeded、context_over_budget、config_unavailable、storage_blocked、blob 缺失、連兩次無效回覆），以及控制端自身的 deployment_unavailable、控制區滿碟等停止新准入的狀況。
+
+每件事一個 JSON 檔，路徑 `<attention_dir>/open/<agent_id>/<item_id>.json`；控制端自身的事項放 `<attention_dir>/open/_control/`。必填 `version:1`、`item_id`、`agent_id`（控制端事項為 null）、`run_id`（可 null）、`code`（沿 [S-402](#s-402查詢回應與拒絕理由建議預設未拍板09-29-精簡依冗餘審查-b2b4) wait_reason code 與 run 的 Error code）、`message`（給人看的一句話）、`since_at_ms`（牆鐘，只供顯示）、`actions`（目前可用的處置，例如 `run.resume`、`run.cancel`、`run.resolve`，實作不支援 resume 時不列）。可省 `job_id`、`attempt_id`、`evidence`（相關 BlobRef 或查詢指令提示）。
+
+檔案用暫存檔寫完再改名，讀者不會看到寫一半的內容；資料夾與檔案只有管理者與控制端可讀寫，agent 與工具 UID 不可讀寫。這些檔案是帳本的**通知副本**，不是權威：處置一律走 run.resume／run.cancel／run.resolve 等 RPC，刪改檔案不會解除屏障。事項解除後，控制層把檔案搬到 `<attention_dir>/done/`（附解除時間與處置方式），之後依 [S-404](#s-404留存) 的保留期清理。控制端重啟時依帳本重建 open 內容：帳本仍有屏障卻缺檔就補寫，屏障已解除卻還在 open 就搬走。
+
+驗收：Given run 因 context_over_budget 轉 needs_attention；When 查看 attention_dir；Then open 下有一個對應檔，code 與 run.get 一致；人刪掉該檔後重啟控制端，檔案被補回且 run 仍被擋；經 run.cancel 處置後檔案移到 done。

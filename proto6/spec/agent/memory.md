@@ -18,7 +18,7 @@ context policy 必填 `input_token_limit:int>0`、`output_token_reserve:int>0`�
 
 每次請求保存實際 context 的不可變 blob、採用版本、source refs、估算方法及估算 token 數。排序預設 system → 本輪以前選中的歷史 → 本輪訊息／呼叫／結果，保持模型要求的 tool call 配對順序。摘要不得捏造原始來源；被省略的材料須留下可追查引用。摘要產生若使用模型，仍是普通受預算管理的 job，不得藏在本地 tick 裡繞過准入。
 
-必要材料已超預算時，不截斷 JSON 結構、原始要求或配對結果封套，回 `context_over_budget`，run → needs_attention、phase 顯示 error；處置走 [S-102](../scheduling/runs.md) 的可選 resume 重新驗證出口：實作若允許同 run 調高預算（S-306）或依 A-102 可選換版換上較大的 context policy，調整後 resume 並重新驗證必要材料已可容納才回 active；否則只能取消，另以較小輸入建新 run。禁止無界自動壓縮重試。缺乏 provider tokenizer 時必須註記估算；provider 拒絕過長請求同樣回顯錯誤及材料清單。
+必要材料已超預算時，不截斷 JSON 結構、原始要求或配對結果封套，回 `context_over_budget`，run → needs_attention、phase 顯示 error；處置走 [S-102](../scheduling/runs.md) 的可選 resume 重新驗證出口：實作若允許同 run 調高預算（S-306）或發布 context policy 較大的新設定（依 A-102 在下一次 tick 換上），調整後 resume 並重新驗證必要材料已可容納才回 active；否則只能取消，另以較小輸入建新 run。禁止無界自動壓縮重試。缺乏 provider tokenizer 時必須註記估算；provider 拒絕過長請求同樣回顯錯誤及材料清單。
 
 驗收：Given 必要材料已超限；When 準備 LLM job；Then 沒有 API 請求，查詢可見超限值與被保留的來源引用。
 

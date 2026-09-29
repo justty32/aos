@@ -10,7 +10,7 @@
 
 每則普通已接納訊息建立一個 queued run，run 必填 `input_seq:int>=1` 且只綁定該訊息，[C-02](../contracts.md) 的 input_ids 僅含這則 request_id，按該 agent 的 input_seq FIFO；同 agent 最多一個「當前 run」，包括 active、已開始的 paused、needs_attention，queued 與未開始的 paused 不占此位置。未開始的 paused 留在 FIFO 原位置，預設阻擋後來的 run，直到恢復或取消。普通新訊息只建後續 run，不插入當前 context，也不隱含取消。
 
-控制交易一併保存輸入索引與 run，才回 accepted。該 run 接納時的版本欄位只保存 `config_revision`，指向引用工具、context policy 與模型設定的不可變 bundle；建議整輪固定，若實作選擇 tick 邊界換版，須依 [A-102](../agent/configuration.md) 留下換版紀錄，不得在 tick 中途或因 queued 切 active 而悄悄換版。維護 tick 不建立人可見任務，其 job.run_id=null；它不得生成工具／LLM 工作或 final。需要語意工作的維護，由可信系統 principal 經 agent.submit 投普通輸入建立可見 run，沿用相同 input_ids 契約。
+控制交易一併保存輸入索引與 run，才回 accepted。該 run 接納時的版本欄位只保存 `config_revision`，指向引用工具、context policy 與模型設定的不可變 bundle；新設定依 [A-102](../agent/configuration.md) 在下一次 tick 開始時換上並留下換版紀錄，不得在 tick 中途換版。維護 tick 不建立人可見任務，其 job.run_id=null；它不得生成工具／LLM 工作或 final。需要語意工作的維護，由可信系統 principal 經 agent.submit 投普通輸入建立可見 run，沿用相同 input_ids 契約。
 
 驗收：Given R1 active 且再投兩則訊息，When 成功收件，Then R2／R3 queued，各保留原輸入；R1 看不到自動插入的新要求，R2 不越過 R1。
 

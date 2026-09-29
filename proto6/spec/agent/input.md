@@ -12,7 +12,7 @@
 
 ## A-202 普通訊息的輪次邊界〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 A1 輪次部分〕
 
-agent 依控制層交付的 run 與輸入組 context；輪次建立、輸入綁定及先後順序以 [S-101](../scheduling/runs.md) 為唯一規範來源，每 run 設定版本依 [A-102](configuration.md)。依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 1，「一輪任務」是軟性設計原則，任務途中新訊息的歸屬暫不定案。
+agent 依控制層交付的 run 與輸入組 context；輪次建立、輸入綁定及先後順序以 [S-101](../scheduling/runs.md) 為唯一規範來源，設定版本與換版時點依 [A-102](configuration.md)。依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 1，「一輪任務」是軟性設計原則，任務途中新訊息的歸屬暫不定案。
 
 工具結果是原 job 的證據，依 run_id/job_id/attempt_id 路由，不建立新 run；已完成 run 的遲到結果保存供查核，不冒充新的使用者訊息。停止、暫停及恢復使用控制入口，與普通 text 分開。收件進度與語意處理進度分開顯示；input 消費 cursor 只能隨有效 tick proposal 原子提交。
 
