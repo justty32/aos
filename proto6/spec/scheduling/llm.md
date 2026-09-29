@@ -4,6 +4,8 @@
 
 ## S-301．請求與 quota scope
 
+〔使用者方向 2026-09-29 晚〕實作 agent 端的 LLM 呼叫時，預設且首先做的是「自己排」：請求交給 aos 自己實現的 LLM 呼叫池排程（即下文「kernel 全管」路線）。「交給 endpoint」與「不管」兩檔是可選項，之後再做。LiteLLM 不在標準內，只能當「交給 endpoint」那一檔所指的 endpoint。
+
 〔使用者方向 2026-09-29〕kernel 的 LLM module 分配成員份額與執行機會；**每個 endpoint 池的代發服務保管該池 key，處理真正共享的 provider 限制**。頂層或下層 kernel 都可以有自己的池，不要求全機只有一個池。下層沒裝 LLM module，只是不再細分份額，上層分配與池端限制仍有效。
 
 〔使用者方向 2026-09-29〕agent 用 `llm.target_node` 指定請求位址，`llm.chat` 的 params 是 `aos llm chat` 的 inst。kernel 全管時位址設為自己的 kernel，由 LLM 轉交 module 扣額度、排隊並交池或另一 kernel；不管時直接投管池的 node，agent 自記用量，上層裝用量收集 module 讀。請求／結果格式相同，結果下次 tick 收；key 不放進請求或 prompt。**沒有 root helper、代發與 agent 共用帳號時，key 不受保護；使用者接受這個界線。要保護 key，就需 helper 配合身分隔離，或另用不同帳號跑代發並限制 key 的讀取權限。**身分權限依 [身分與 OS 資源](../base/identity-resources.md)。自備其他憑證的直連不在本層管理範圍。
