@@ -18,6 +18,11 @@
     "cgroup_root": {
       "$ref": "common.schema.json#/$defs/NodeId"
     },
+    "create_cgroup": {
+      "type": "boolean",
+      "default": false,
+      "description": "true＝cgroup 子樹不在時 daemon 自己建（同 --create-cgroup）；此時 cgroup_root 必填（B-605）"
+    },
     "disable": {
       "type": "array",
       "items": {
@@ -50,5 +55,20 @@
     "state_dir",
     "roots"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "create_cgroup": {
+        "const": true
+      }
+    },
+    "required": [
+      "create_cgroup"
+    ]
+  },
+  "then": {
+    "required": [
+      "cgroup_root"
+    ]
+  }
 }

@@ -8,7 +8,7 @@ node 的狀態就是裡面的檔案；git repo、group 提交與恢復，以 [�
 
 布局以[協議 node](../protocol/node.md)為正本：
 
-- `.aos/` 是系統區：追蹤 `.aos/inst.json`、`.aos/tasks.json`、給上層讀的 `.aos/summary/` 及待送 `.aos/outbox/`；kernel 替成員跑工具／LLM 的 once 放 ignored `.aos/jobs/<id>/`；node 事項放 ignored `.aos/attention/`，不隨 group 還原。
+- `.aos/` 是系統區：追蹤 `.aos/inst.json`、`.aos/tasks.json`、給上層讀的 `.aos/summary/` 及待送 `.aos/outbox/`；kernel 替成員跑工具／LLM 的 once 放 ignored `.aos/jobs/<id>/`；node 事項放 ignored `.aos/attention/`，不隨 group 還原；投件鬧鐘的待查紀錄放 ignored `.aos/alarms/`（[P-206](../protocol/node.md)）。
 - `requests/`、`responses/` 是 ignored 收件，group 還原不碰；已消費內容與工作狀態移入追蹤區。
 - `work/` 是 ignored 任務暫存進度；`public/` 是可供其他 node 存取的共用空間；設定在追蹤的 `config/`。
 

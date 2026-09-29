@@ -42,7 +42,7 @@ daemon 設定檔只列頂層 node 及其啟動設定、身分額度。正常退�
 
 pause 有變動才批次寫 `state.json`；`pause_save_interval_ms` 建議 1000。正常退出存完整最新狀態；意外退出最多丟最後一個間隔內的 pause 變動，過期登記與未保存 wake 由頂層補查恢復。
 
-〔使用者方向 2026-09-29 晚〕daemon 開的每個 tick 程序（含孫程序）都在該 node 的 cgroup 裡（once 在其 parent 的框裡），daemon 當掉時這些 cgroup 還在。下次啟動、開任何新格之前，daemon 對每個仍有程序的 node cgroup 先送 SIGTERM，等一段寬限時間讓它們優雅收尾，再用 `cgroup.kill` 殺掉剩下的，確認全空才往下。開 tick 時設 `PR_SET_PDEATHSIG` 只當加分（它只作用於直接子程序），不是必要。〔建議預設，未拍板〕寬限時間沿用 `shutdown_grace_ms`；不要求跨重啟保存程序表。〔使用者方向 2026-09-29 晚〕逃生口（讓 daemon 系譜的程序脫離管理）以後再設計，技術上可行（例如由 daemon 或 root helper 把程序搬出 node cgroup）。
+〔使用者方向 2026-09-29 晚〕daemon 開的每個 tick 程序（含孫程序）都在該 node 的 cgroup 裡（once 在其 parent 的框裡），daemon 當掉時這些 cgroup 還在。下次啟動、開任何新格之前，daemon 對每個仍有程序的 node cgroup 先送 SIGTERM，等一段寬限時間讓它們優雅收尾，再用 `cgroup.kill` 殺掉剩下的，確認全空才往下。開 tick 時設 `PR_SET_PDEATHSIG` 只當加分（它只作用於直接子程序），不是必要。〔使用者方向 2026-09-29 晚〕寬限時間沿用 `shutdown_grace_ms`；不要求跨重啟保存程序表。〔使用者方向 2026-09-29 晚〕逃生口（讓 daemon 系譜的程序脫離管理）以後再設計，技術上可行（例如由 daemon 或 root helper 把程序搬出 node cgroup）。
 
 〔使用者方向 2026-09-29〕清空後由 node 按 [tick](tick.md) 恢復檔案，執行器／所屬 kernel 核對工作結果；daemon 不代讀結果或判業務終局。
 
@@ -60,15 +60,17 @@ pause 有變動才批次寫 `state.json`；`pause_save_interval_ms` 建議 1000�
 
 ## B-605：依賴、啟動自檢與 cgroup 子樹
 
-〔使用者方向 2026-09-29 晚〕**cgroup v2 是必要依賴；初版不使用 systemd。** systemd 只當開機自動啟動的方式，以及劃 cgroup 子樹給 daemon 的來源（下述），不是執行期依賴。daemon 啟動時自檢最低版本：Linux kernel 5.14（`cgroup.kill` 從這版起有）、Python 3.9，並確認 cgroup v2 可用；不合就報錯退出。
+〔使用者方向 2026-09-29 晚〕**cgroup v2 是必要依賴；初版不使用 systemd。** systemd 只當開機自動啟動的方式，以及準備 cgroup 子樹的一種做法（下述），不是執行期依賴。daemon 啟動時自檢最低版本：Linux kernel 5.14（`cgroup.kill` 從這版起有）、Python 3.9、git 2.35，並確認 cgroup v2 可用；不合就報錯退出。
 
-**cgroup 子樹從哪來**〔使用者方向 2026-09-29 晚〕：
+**cgroup 子樹：一條通用規則**〔使用者方向 2026-09-29 晚，第十五批；取代先前依 sudo／systemd 分情況的寫法〕：daemon 啟動時一定要有一棵**已經準備好的** cgroup v2 子樹，沒有就報錯退出。
 
-- 由 systemd service 開機啟動：unit 寫 `Delegate=yes`（範例見文末附錄），daemon 使用 systemd 劃給它的子樹。
-- 手動用 sudo 開：daemon 先偵測。機器有 systemd 管 cgroup、但 systemd 沒有劃子樹給 daemon，就報錯退出，不自己在 cgroup 根下建。想在這種機器上手動開，用 `systemd-run --scope -p Delegate=yes sudo aos daemon --config …` 這類寫法讓 systemd 先劃好子樹。機器完全沒有 systemd，daemon 自己建子樹。
-- 不用 sudo 開：使用者事先建好子樹並交給 daemon 的帳號（寫進設定的 `cgroup_root`，見 [P-101](protocol/daemon.md)），或由 systemd `Delegate=yes` 劃給；都沒有就報錯退出。
+- 子樹在哪：設定的 `cgroup_root`（見 [P-101](protocol/daemon.md)）；省略時就用 daemon 程序自己目前所在的 cgroup。
+- 「準備好」是指：這棵子樹存在；它的資料夾和根上的委派檔（`cgroup.procs`、`cgroup.subtree_control`、`cgroup.threads`）交給了 daemon 跑的帳號（sudo 開時是降權後的帳號）。不用 sudo 開時，daemon 自己也要已經在這棵子樹裡，因為 cgroup v2 搬程序要對共同上層有寫權；sudo 開時 daemon 趁還有 root 自己搬進去。
+- **開關 `--create-cgroup`**（設定檔對應 `create_cgroup: true`，預設關）：子樹不在時由 daemon 自己建。開了就必須寫 `cgroup_root`，daemon 在那個位置建；建不了（例如沒 root、上層不給寫）就報錯退出。子樹已經在就直接用，不重建。
+- 怎麼準備（只是做法範例）：開機由 systemd service 啟動時，unit 寫 `Delegate=yes`（範例見文末附錄），systemd 會把 daemon 所在的 cgroup 劃給它，`cgroup_root` 可省；手動開時可以用 `systemd-run --scope -p Delegate=yes sudo aos daemon --config …` 這類寫法；沒有 systemd 的機器，由 root 事先 mkdir 並 chown 上述檔案。
+- **提醒**：在有 systemd 的機器上用 `--create-cgroup` 讓 daemon 自己建，會違反 systemd「cgroup 只有一個寫入者」的約定。通常能用，但不保證，aos 也不擋。
 
-〔建議預設，未拍板〕daemon 自己建子樹時，要在降權前（還是 root 時）建好，只把子樹資料夾及其根的委派檔（`cgroup.procs`、`cgroup.subtree_control`、`cgroup.threads`）交給降權後的帳號，父層不動；以 root 開而拿到 systemd 劃的子樹時，同樣在降權前交給降權後的帳號。daemon 自己搬進子樹下的一個葉框，各 node 的框與它並列，遵守 cgroup v2「程序只放在葉端」的規則；搬程序跨過子樹邊界要 root，所以只在降權前做。
+〔使用者方向 2026-09-29 晚〕daemon 自己建子樹時，要在降權前（還是 root 時）建好，只把子樹資料夾及其根的委派檔交給降權後的帳號，父層不動；以 root 開而用現成子樹時，同樣在降權前交給降權後的帳號。daemon 自己搬進子樹下的一個葉框，各 node 的框與它並列，遵守 cgroup v2「程序只放在葉端」的規則；搬程序跨過子樹邊界要 root，所以只在降權前做。
 
 **有就用的可選功能**〔使用者方向 2026-09-29 晚〕：project quota 等功能在啟動時自動偵測，設定檔可強制關（P-101 的 `disable`）。沒有 quota 時，磁碟用量改用定期掃資料夾計算，見 [B-304](base/identity-resources.md)。檔案系統不限定：node 放在不支援某些功能的地方，那些功能就不支援，不列白名單或拒絕清單。
 
@@ -76,7 +78,7 @@ pause 有變動才批次寫 `state.json`；`pause_save_interval_ms` 建議 1000�
 
 **初版不做**〔使用者方向 2026-09-29 晚〕：systemd 的沙盒防護（`CapabilityBoundingSet` 等）以後再考慮；helper 掛 tmpfs 拿掉；原本打算交給 systemd 的開程序、定時叫醒、資源框等做法，留到以後當有 systemd 時的可選增強，初版全由 daemon 自己用 cgroup 做。
 
-**驗收：**kernel 或 Python 低於最低版本、沒有 cgroup v2 時啟動報錯退出；有 systemd 卻沒劃子樹的 sudo 啟動報錯退出、不在 cgroup 根下建；不用 sudo 又沒有交給自己的子樹時報錯退出；偵測得到 quota 但設定強制關時不使用；daemon 被 SIGKILL 後重開，仍有程序的 node cgroup 先收到 SIGTERM、寬限後被清空，才開新格。
+**驗收：**kernel、Python 或 git 低於最低版本、沒有 cgroup v2 時啟動報錯退出；沒有準備好的子樹、也沒開 `--create-cgroup` 時報錯退出，不自己建；開了 `--create-cgroup` 卻沒寫 `cgroup_root`，或建不了時報錯退出；偵測得到 quota 但設定強制關時不使用；daemon 被 SIGKILL 後重開，仍有程序的 node cgroup 先收到 SIGTERM、寬限後被清空，才開新格。
 
 ## 附錄：開機自動啟動的 systemd service 範例
 
@@ -91,9 +93,9 @@ After=local-fs.target
 [Service]
 # 以 root 開＝sudo 模式（有 helper）；要單帳號模式就加 User=，並在設定寫 common_user
 ExecStart=/usr/local/bin/aos daemon --config /etc/aos/daemon.json
-# 把一棵 cgroup 子樹劃給 daemon（B-605）
+# 讓 systemd 把 daemon 所在的 cgroup 劃給它，當成準備好的子樹（B-605）
 Delegate=yes
-# 〔建議預設，未拍板〕停服務時先只對 daemon 送 SIGTERM，讓它自己通知在途 tick 優雅結束
+# 停服務時先只對 daemon 送 SIGTERM，讓它自己通知在途 tick 優雅結束
 KillMode=mixed
 
 [Install]

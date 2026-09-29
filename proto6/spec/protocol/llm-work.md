@@ -17,7 +17,7 @@
 〔使用者方向 2026-09-29 晚〕`schedule` 選這個池是哪一檔（三檔的意思以 [S-301](../scheduling/llm.md) 為正本），只有兩個值：
 
 - `aos`（省略即此值）＝「自己排」：aos-llm 照 [kernel P-811](kernel-tasks.md) 讀 `llm-limits.json`，做並行、窗口、冷卻與排隊。
-- `endpoint`＝「交給 endpoint」：這個池的 aos-llm 只當**轉發任務**，把收到的請求逐件交 aos-llm-call 轉給外部 endpoint；不讀 `llm-limits.json`、不做窗口與並行上限，只藏 key、記用量。〔建議預設，未拍板〕429 仍照 S-303 有限重試，遵守 `Retry-After`。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
+- `endpoint`＝「交給 endpoint」：這個池的 aos-llm **只轉發**，把收到的請求逐件交 aos-llm-call 轉給外部 endpoint；不讀 `llm-limits.json`、不做窗口與並行上限，只藏 key、記用量。〔使用者方向 2026-09-29 晚，第十五批〕429、限流與重試全交給 endpoint，aos 不重試：每件請求只打一次 HTTP，`max_attempts` 對這種池不起作用。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
 
 一個池只對一個 endpoint，見 [S-301](../scheduling/llm.md)。
 
@@ -25,7 +25,7 @@
 
 ## P-406．LLM 請求與 messages〔建議預設，未拍板〕
 
-[`llm-request`](schemas/llm-request.schema.json) 的 stdin 材料除工作識別，必填 `pool`、`model`、`messages`、`max_completion_tokens` 與正整數 `timeout_ms`；pool／model 是目標 node 所公布的路由名；轉交 kernel 可映到下一個 node 的 pool，model 原值沿路核對，終點核對實際池設定。轉交仍用 llm.chat，不增加另一種 wrapper；保留原 node_id、job_id、attempt_id，另配轉交 RPC id 與 reply_to，由轉交者保存上下游關係。收結果後沿用 stdout 的業務結果，以本 node 及原 RPC id 組成自己的指令結果回覆，不照抄下游指令識別。agent 配對的可信回件來源始終是設定目標。可帶 `tools`；可帶 `stream_path`（絕對檔案路徑）要求串流，省略就不串流，見 [S-305](../scheduling/llm.md)。轉交沿路原樣保留 stream_path，由最後實際打 HTTP 的 aos-llm-call 寫。請求不能覆寫 endpoint、key 或加入任意 HTTP header。
+[`llm-request`](schemas/llm-request.schema.json) 的 stdin 材料除工作識別，必填 `pool`、`model`、`messages`、`max_completion_tokens` 與正整數 `timeout_ms`；pool／model 是目標 node 所公布的路由名；轉交 kernel 可映到下一個 node 的 pool，model 原值沿路核對，終點核對實際池設定。轉交仍用 llm.chat，不增加另一種 wrapper；保留原 node_id、job_id、attempt_id，另配轉交 RPC id 與 reply_to，由轉交者保存上下游關係。收結果後沿用 stdout 的業務結果，以本 node 及原 RPC id 組成自己的指令結果回覆，不照抄下游指令識別。agent 配對的可信回件來源始終是設定目標。可帶 `tools`；〔使用者方向 2026-09-29 晚〕可帶 `stream_path`（絕對檔案路徑）要求串流，省略就不串流，見 [S-305](../scheduling/llm.md)。轉交沿路原樣保留 stream_path，由最後實際打 HTTP 的 aos-llm-call 寫。請求不能覆寫 endpoint、key 或加入任意 HTTP header。
 
 messages 沿 [proto5 格式](../../../proto5/spec/aos-llm/request.md)，採 [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create) 的**文字與 function tool calls 子集合**，不是所有多模態欄位都支援：
 
@@ -35,7 +35,7 @@ messages 沿 [proto5 格式](../../../proto5/spec/aos-llm/request.md)，採 [Ope
 - tool 結果：`role:"tool"`、`tool_call_id`、字串 `content`。呼叫 ID 在一份 assistant 回覆內唯一；工具結果必須對到前面的呼叫，不能重複或孤立。
 - `tools` 每項為 `{type:"function",function:{name,parameters,description?}}`。parameters 是工具的 JSON Schema；工具名唯一，adapter 不支援的規則要拒絕，不能忽略。
 
-[`llm-messages`](schemas/llm-messages.schema.json) 驗形狀；順序、ID 唯一性、arguments 能否解析及工具參數驗證由接件／agent 任務另驗。HTTP body 只送 model、messages、tools（有才送）、max_completion_tokens 與 stream；沒有 stream_path 送 `stream:false`，有則送 `stream:true`，〔建議預設，未拍板〕並加 `stream_options:{include_usage:true}` 以便最後拿到 usage。供應商不支援就明確拒絕，不把輸出上限默默去掉。agent 發起端的設定、context 定位及用量格式見 [agent 任務 P-701／706／710](agent-tasks.md)。發起 node 先由原始檔整理有界 context；RPC 封包受 P-004 的 256 KiB 限制；messages 在 stdin JSON 材料內，仍受 agent 的 context 上限。
+[`llm-messages`](schemas/llm-messages.schema.json) 驗形狀；順序、ID 唯一性、arguments 能否解析及工具參數驗證由接件／agent 任務另驗。HTTP body 只送 model、messages、tools（有才送）、max_completion_tokens 與 stream；沒有 stream_path 送 `stream:false`，有則送 `stream:true`，〔使用者方向 2026-09-29 晚〕並加 `stream_options:{include_usage:true}`，要求 provider 最後附上 usage。供應商不支援就明確拒絕，不把輸出上限默默去掉。agent 發起端的設定、context 定位及用量格式見 [agent 任務 P-701／706／710](agent-tasks.md)。發起 node 先由原始檔整理有界 context；RPC 封包受 P-004 的 256 KiB 限制；messages 在 stdin JSON 材料內，仍受 agent 的 context 上限。
 
 ## P-407．LLM 結果、usage 與有限重試〔建議預設，未拍板〕
 
@@ -45,4 +45,4 @@ messages 沿 [proto5 格式](../../../proto5/spec/aos-llm/request.md)，採 [Ope
 
 reason：`completed`（成功）、`rate_limited`（確定限流拒絕）、`rejected`（明確拒絕）、`not_sent`（可證明沒送）、`response_invalid`（收到完整但格式不合的回應）、`canceled`（確定未送且取消）、`unknown`（可能已處理）。缺失的 HTTP 狀態、finish_reason 都填 null。收到完整但無法驗證的 provider 回應不自動再問；傳輸中斷或遠端結果不明則 unknown。
 
-有限重試與 unknown 占用完全依 [S-303／304](../scheduling/llm.md)：池 tick 保存 retry_at_ms，後續到期才派，SDK 自動重試關掉。每次用新 attempt_id，同 quota_scope 一起冷卻；達有限次數回 failed/rate_limited，unknown 不再派。usage 按 attempt 去重；缺失不補零，本機連線關閉不證明遠端停算。
+有限重試與 unknown 占用完全依 [S-303／304](../scheduling/llm.md)；「交給 endpoint」的池不重試（P-405）。池 tick 保存 retry_at_ms，後續到期才派，SDK 自動重試關掉。每次用新 attempt_id，同 quota_scope 一起冷卻；達有限次數回 failed/rate_limited，unknown 不再派。usage 按 attempt 去重；缺失不補零，本機連線關閉不證明遠端停算。
