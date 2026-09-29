@@ -16,7 +16,7 @@
 | `state_dir` | 必填，daemon 可寫的絕對目錄；存 `state.json`、自身 `attention/` 及 PID 提示檔 |
 | `pause_save_interval_ms` | 可省，正整數，預設 1000；pause 有變動時批次存檔間隔 |
 | `shutdown_grace_ms` | 可省，預設 2000，非負毫秒；到期後依執行器收尾 |
-| `cgroup_root` | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑。省略就用 daemon 自己目前所在的 cgroup（例如 systemd `Delegate=yes` 劃給的）。「準備好」的意思依 [B-605](../../daemon.md)，沒有就不啟動 |
+| `cgroup_root` | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑。省略就用 daemon 自己目前所在的 cgroup（例如 systemd `Delegate=yes` 劃給的），daemon 啟動先在那層開 `daemon` 子層、把那層的程序全搬進去，那層只當分支〔第十六批〕。「準備好」的意思依 [B-605](../../daemon.md)，沒有就不啟動 |
 | `create_cgroup` | 可省，布林，預設 false；true＝子樹不在時 daemon 自己建（同 `--create-cgroup`），此時 `cgroup_root` 必填。有 systemd 的機器上這樣做違反 systemd 單一寫入者約定，不保證、不擋（B-605） |
 | `disable` | 可省，不重複字串陣列，目前只認 `quota`；強制關掉啟動時偵測到的可選功能（B-605） |
 | `roots` | 必填，頂層登記陣列；每項如下，`node_id` 不可重複 |

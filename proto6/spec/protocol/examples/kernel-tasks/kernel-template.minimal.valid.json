@@ -97,9 +97,7 @@
           ],
           "id": "members",
           "kind": "kernel",
-          "needs": [
-            "check"
-          ],
+          "needs": [],
           "stderr": {
             "$opt": "inherit"
           }
@@ -184,9 +182,7 @@
           ],
           "id": "usage",
           "kind": "kernel",
-          "needs": [
-            "check"
-          ],
+          "needs": [],
           "stderr": {
             "$opt": "inherit"
           }

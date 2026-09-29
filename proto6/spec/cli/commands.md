@@ -64,7 +64,7 @@ pause/resume 是開關，wake 是現在跑一格；直接 tick 仍可跑。last_
 | 28 | `aos kernel usage show N [--json]`：讀用量 | 用量、觀測時間；JSON res-usage | 讀 node summary 的 usage；查詢。 |
 | 29 | `aos kernel usage measure N --from-node R [--json]`：要求 N 重測 | `submitted ID` | 檔案 `kernel.usage.measure`，無 stdin 資料；投件。結果 stdout 是 res-usage，不啟用缺席 module。 |
 | 30 | `aos kernel usage collect K`：收直屬成員自記用量 | 空 | `aos-kernel-usage-collect`；module。依 node/request/attempt 替換觀測，不每格累加。 |
-| 31 | `aos kernel config check K`：驗目前設定、更新問題狀態 | 空 | `aos-kernel-check`；module，不合法回 2。提交設定檢查結果，不派工；事項另用 attend done。 |
+| 31 | `aos kernel config check K`：驗目前設定、更新問題狀態 | 空 | `aos-kernel-check`；module，不合法回 2。提交設定檢查結果，不派工；別的任務不依賴它，失敗也照收已派結果（P-805）；事項另用 attend done。 |
 | 32 | `aos kernel work K`：收工具請求／結果、安排 once | 空 | `aos-kernel-work`；module。先提交材料，後格 register/wake，後格收結果。 |
 | 33 | `aos kernel work submit K --from-node R --file F [--json]`：送工具工作 | `submitted ID` | F 是 work-payload，檔案 `kernel.work.submit`；投件。命令完成後 stdout 才是內層 work-result。 |
 | 34 | `aos kernel llm forward K`：核對路由／份額並轉交 LLM | 空 | `aos-kernel-llm-forward`；module；寫 forward-state，檔案 method 仍 llm.chat。 |
@@ -95,7 +95,7 @@ schedule 按 ready_seq，60 秒補查。
 | 43 | `aos agent config recheck N`：修好後驗證設定 | `valid` | `aos-agent-check --recheck`；改檔，仍無效回 1；更新設定狀態，不 resume；事項另用 attend done。 |
 | 44 | `aos agent task run N`：跑 agent module 一步，供任務表使用 | 空 | `aos-agent-step`；必須繼承 tick 鎖；0 本步完成、1 處理失敗、2 用法、125 前置。人手完整一格用 node tick。 |
 
-say 持 R 鎖提交原件／outbox 後投 N，不 wake；accepted 只是接件。回話用新 ID 的 agent.say，payload 多帶可省的 in_reply_to 指原 ID，一律收進 history。say --wait 讀 target 本地已提交 replies，以 input_id/final 判完成；只有投件權仍可 say，不能保證能等 final。failed final 也回 0，表示已收到。
+say 持 R 鎖提交原件／outbox 後投 N，不 wake；accepted 只是接件。回話用新 ID 的 agent.say，payload 多帶可省的 in_reply_to 指原 ID，一律收進 history；帶 in_reply_to 的只記錄、不觸發 LLM（P-705）。say --wait 讀 target 本地已提交 replies，以 input_id/final 判完成；只有投件權仍可 say，不能保證能等 final。failed final 也回 0，表示已收到。
 
 listen 看本地 assistant／工具及帶 in_reply_to 的回話：本地依 input_id、收到的回話依 in_reply_to 分組；每 200 ms 看新 commit，follow flush，工具顯示沿 [proto5](../../../proto5/spec/aos-agent/cli-listen.md)。top 沒裝 agent 任務，收話只存 history。
 
