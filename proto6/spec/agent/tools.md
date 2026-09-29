@@ -12,7 +12,7 @@ ExecTemplate 必填 version:1、argv:非空字串陣列；可省 cwd（預設本
 
 ## A-402 委託執行邊界〔使用者方向 2026-09-28，連 notes〕
 
-來源：[工具繼承委託員工權限](../../notes/2026-09-28-employee-identity.md)。工具代表 caller 行事，沿用 agent 的 Linux 身分及資源歸屬，包含工具內再次呼叫工具／LLM。登記工具不授予檔案權限；執行與降權由基底處理。agent 只提出以 agent_id/run_id 為 owner 的 job，不能傳任意 UID 代替 owner。模型選多工具不代表可以繞過排程准入；工具任意本地執行仍受 OS 資源邊界，透過 aos 發送的後續 job 必須延續同一 owner。
+來源：[工具繼承委託員工權限](../../notes/2026-09-28-employee-identity.md)。工具代表 caller 行事，沿用 agent 的 Linux 身分及資源歸屬，包含工具內再次呼叫工具／LLM；工具要用 LLM 同樣只投請求，由控制側代發服務持 key 送出（[S-301](../scheduling/llm.md)）。登記工具不授予檔案權限；執行與降權由基底處理。agent 只提出以 agent_id/run_id 為 owner 的 job，不能傳任意 UID 代替 owner。模型選多工具不代表可以繞過排程准入；工具任意本地執行仍受 OS 資源邊界，透過 aos 發送的後續 job 必須延續同一 owner。
 
 驗收：Given A 呼叫會派出後續工作的工具；When 底座接受工作；Then 所有後續 job 的 owner 仍是 A，無法藉參數換成 B 的資源額度。
 
