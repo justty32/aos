@@ -1,6 +1,6 @@
 # 協議篇：共用約定與分工
 
-← [規格入口](../README.md)｜[名詞](../terms.md)｜[daemon](../daemon.md)｜[通用 tick](../tick.md)｜[inst](../base/inst.md)｜[使用者裁定](../../notes/2026-09-29-verdicts.md)
+← [規格入口](../README.md)｜[名詞](../terms.md)｜[daemon](../daemon.md)｜[通用 tick](../tick.md)｜[inst](../base/inst.md)｜[使用者裁定](../../notes/2026-09-29-verdicts.md)｜[條號索引](#p-index)
 
 2026-09-29 依 node 架構整合。本篇把主規格落成**程式之間**的指令形狀、JSON 與資料夾交接。人手操作見 [CLI](../cli.md)；本篇定機器用的形狀，同一批程式人也能直接跑（[通則](../README.md#原則能下指令能管檔案就能交給-agent)）。
 
@@ -93,3 +93,122 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | 資料夾 | 先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json` | `xxx` 自己 |
 
 〔使用者方向 2026-09-29〕首版**不提供**改尋找路徑的選項（環境變數或旗標都沒有），只照上表。資料夾裡兩個位置都沒有＝用法錯（2）。先看是不是資料夾，再當檔案。node 是資料夾；`once` 工作通常是單檔。登記的 id 就是這個目標路徑。
+
+<a id="p-index"></a>
+
+## 條號索引（P-xxx → 檔案）
+
+協議篇各條所在的檔案；別篇多用條號引用，照這張表找。檔案拆分或搬位置時條號不變，只改這張表。
+
+| 條號 | 標題 | 檔案 |
+|---|---|---|
+| P-001 | 範圍與原則 | [README.md](README.md)（本篇） |
+| P-002 | JSON | [README.md](README.md)（本篇） |
+| P-003 | 檔案發布與收件 | [README.md](README.md)（本篇） |
+| P-004 | JSON-RPC 的兩種載體 | [README.md](README.md)（本篇） |
+| P-005 | 錯誤 | [README.md](README.md)（本篇） |
+| P-006 | 程式：argv、環境、結束碼 | [README.md](README.md)（本篇） |
+| P-007 | schema 與範例 | [README.md](README.md)（本篇） |
+| P-008 | 暫定與待決 | [README.md](README.md)（本篇） |
+| P-009 | 分工表 | [README.md](README.md)（本篇） |
+| P-010 | inst 目標：檔案或資料夾 | [README.md](README.md)（本篇） |
+| P-100 | 範圍 | [daemon/README.md](daemon/README.md) |
+| P-101 | 啟動、設定與 socket | [daemon/startup-and-ipc.md](daemon/startup-and-ipc.md) |
+| P-102 | sudo 與 helper 生死 | [daemon/startup-and-ipc.md](daemon/startup-and-ipc.md) |
+| P-103 | IPC 封包與授權 | [daemon/startup-and-ipc.md](daemon/startup-and-ipc.md) |
+| P-104 | 註冊 | [daemon/registration.md](daemon/registration.md) |
+| P-105 | 解除、叫醒、暫停與恢復 | [daemon/registration.md](daemon/registration.md) |
+| P-106 | 查登記與最近一格 | [daemon/registration.md](daemon/registration.md) |
+| P-107 | 佈建固定動作 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
+| P-108 | daemon 與 helper 的私有通道 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
+| P-109 | runner argv 與解析 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
+| P-110 | runner 結束與 125 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
+| P-111 | 錯誤 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
+| P-112 | schema 與最小範例 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
+| P-113 | 待決與跨篇 | [daemon/README.md](daemon/README.md) |
+| P-114 | 前景 Ctrl-C 停機 | [daemon/shutdown.md](daemon/shutdown.md) |
+| P-115 | 啟動 ID 與按需重建 | [daemon/registration.md](daemon/registration.md) |
+| P-116 | 存檔與重開 | [daemon/shutdown.md](daemon/shutdown.md) |
+| P-200 | 資料夾布局 | [node.md](node.md) |
+| P-201 | inst 的格式與展開驗證 | [node.md](node.md) |
+| P-202 | 任務註冊表 | [node.md](node.md) |
+| P-203 | aos-tick 與任意任務程式 | [node.md](node.md) |
+| P-204 | 成敗、group 與 needs | [node.md](node.md) |
+| P-205 | git 提交與恢復 | [node.md](node.md) |
+| P-206 | 收件與派送的提交邊界 | [node.md](node.md) |
+| P-207 | 加入普通設定與重要設定手改 | [node.md](node.md) |
+| P-208 | 收件區權限 | [node.md](node.md) |
+| P-209 | 待決與跨篇 | [node.md](node.md) |
+| P-210 | 預設範本與恢復前驗證 | [node.md](node.md) |
+| P-300 | 兩條路各做什麼 | [messages.md](messages.md) |
+| P-301 | 收件區分請求與回應 | [messages.md](messages.md) |
+| P-302 | 完整封包 | [messages.md](messages.md) |
+| P-303 | 回應路由與來源 | [messages.md](messages.md) |
+| P-304 | 同 ID、衝突與重送 | [messages.md](messages.md) |
+| P-305 | 送出、消費與門鈴順序 | [messages.md](messages.md) |
+| P-306 | method 就是指令 | [messages.md](messages.md) |
+| P-307 | 上層直接讀成員摘要 | [messages.md](messages.md) |
+| P-308 | schema 與最小範例 | [messages.md](messages.md) |
+| P-309 | 待決與跨篇 | [messages.md](messages.md) |
+| P-400 | 兩個入口 | [work.md](work.md) |
+| P-401 | 工作材料 | [work.md](work.md) |
+| P-402 | once 與工作材料 | [work.md](work.md) |
+| P-403 | 結果與串流 | [work.md](work.md) |
+| P-404 | unknown 與拒收 | [work.md](work.md) |
+| P-405 | 代發啟動與池設定 | [llm-work.md](llm-work.md) |
+| P-406 | LLM 請求與 messages | [llm-work.md](llm-work.md) |
+| P-407 | LLM 結果、usage 與有限重試 | [llm-work.md](llm-work.md) |
+| P-408 | 程式契約 | [work.md](work.md) |
+| P-409 | schema 與最小範例 | [work.md](work.md) |
+| P-410 | 待決與跨篇 | [work.md](work.md) |
+| P-500 | module 就是任務 | [resources.md](resources.md) |
+| P-501 | 配額檔 | [resources.md](resources.md) |
+| P-502 | 用量摘要與檔案交接 | [resources.md](resources.md) |
+| P-503 | CPU、記憶體與 pids | [resources.md](resources.md) |
+| P-504 | 套用不是 git 回滾 | [resources.md](resources.md) |
+| P-505 | 路線與 LLM 份額 | [resources.md](resources.md) |
+| P-506 | 磁碟與網路 | [resources.md](resources.md) |
+| P-507 | 沒裝、失敗與驗證 | [resources.md](resources.md) |
+| P-508 | 待決與跨篇 | [resources.md](resources.md) |
+| P-600 | 範圍 | [ops.md](ops.md) |
+| P-601 | 兩處事項 | [ops.md](ops.md) |
+| P-603 | aos-attend：列出、查看、標完成 | [ops.md](ops.md) |
+| P-605 | aos-clean 的 argv 與設定 | [ops.md](ops.md) |
+| P-606 | 清理、封存與回報 | [ops.md](ops.md) |
+| P-607 | schema 與最小範例 | [ops.md](ops.md) |
+| P-608 | 待決與跨篇 | [ops.md](ops.md) |
+| P-609 | 最小設定錯誤與修好後重驗 | [ops.md](ops.md) |
+| P-700 | 範圍 | [agent-tasks.md](agent-tasks.md) |
+| P-701 | 設定檔 | [agent-tasks.md](agent-tasks.md) |
+| P-702 | 工具清單與參數 adapter | [agent-tasks.md](agent-tasks.md) |
+| P-703 | 檔案落點 | [agent-tasks.md](agent-tasks.md) |
+| P-704 | 一項 module、一項任務 | [agent-tasks.md](agent-tasks.md) |
+| P-705 | 收話與收結果 | [agent-tasks.md](agent-tasks.md) |
+| P-706 | 組 context 與發 LLM | [agent-tasks.md](agent-tasks.md) |
+| P-707 | 模型決定與兩種工具路線 | [agent-tasks.md](agent-tasks.md) |
+| P-708 | 正式回覆 | [agent-tasks.md](agent-tasks.md) |
+| P-709 | 投件故障與恢復 | [agent-tasks.md](agent-tasks.md) |
+| P-710 | agent 自記用量 | [agent-tasks.md](agent-tasks.md) |
+| P-711 | 工具清單 CLI | [agent-tasks.md](agent-tasks.md) |
+| P-712 | 設定檢查與重驗 | [agent-tasks.md](agent-tasks.md) |
+| P-713 | say／listen | [agent-tasks.md](agent-tasks.md) |
+| P-714 | replies／context | [agent-tasks.md](agent-tasks.md) |
+| P-715 | new 的完整產物 | [agent-tasks.md](agent-tasks.md) |
+| P-716 | 最小清理遍歷 | [agent-tasks.md](agent-tasks.md) |
+| P-717 | 格式驗收 | [agent-tasks.md](agent-tasks.md) |
+| P-800 | 共同契約 | [kernel-tasks.md](kernel-tasks.md) |
+| P-801 | 設定與持久成員 | [kernel-tasks.md](kernel-tasks.md) |
+| P-802 | 增刪成員與按需同步 | [kernel-tasks.md](kernel-tasks.md) |
+| P-803 | 何時叫醒 | [kernel-tasks.md](kernel-tasks.md) |
+| P-804 | 分配與量測 | [kernel-tasks.md](kernel-tasks.md) |
+| P-805 | 壞設定與重驗 | [kernel-tasks.md](kernel-tasks.md) |
+| P-806 | 工具 once module | [kernel-tasks.md](kernel-tasks.md) |
+| P-807 | 中斷與恢復 | [kernel-tasks.md](kernel-tasks.md) |
+| P-808 | LLM 路由表 | [kernel-tasks.md](kernel-tasks.md) |
+| P-809 | LLM 轉交 module | [kernel-tasks.md](kernel-tasks.md) |
+| P-810 | 用量收集 module | [kernel-tasks.md](kernel-tasks.md) |
+| P-811 | 池與共享窗口 | [kernel-tasks.md](kernel-tasks.md) |
+| P-812 | 唯讀查詢 | [kernel-tasks.md](kernel-tasks.md) |
+| P-813 | 建立 agent 的兩條路 | [kernel-tasks.md](kernel-tasks.md) |
+| P-814 | 完整範本與走查 | [kernel-tasks.md](kernel-tasks.md) |
+| P-815 | 格式驗收 | [kernel-tasks.md](kernel-tasks.md) |
