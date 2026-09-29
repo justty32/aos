@@ -14,6 +14,8 @@
 
 LLM 排程：09-29 晚使用者裁定 LiteLLM 不進標準、只當可選 endpoint，aos 自己的排程器分檔可選；自製要做哪些事、估時與利弊見 [LLM 排程器選項](2026-09-29-llm-scheduler-options.md)。
 
+daemon 站上 systemd：spec 裡 daemon 與 root helper 的每件事逐條標「交給 systemd／自己留著／不確定」，連同幾種部署形態的安全比較與待拍板題，見 [systemd 拆分](2026-09-29-systemd-split.md)。
+
 軟性設計原則：[兩次 tick 之間的環境穩定性](between-ticks-configuration.md)。由原先硬保證改為設計指導，不屬於 spec，也不設強制驗收。
 
 最新討論先放下正式員工／工具的組織分類，以一 agent 一 Linux 使用者、cgroup v2 管執行資源、project quota 管自有容量（09-29 裁定：可選、只記帳）。工具沿用委託 agent 的權限與資源，不需要逐工具 bwrap；保護宿主的整套 aos 外牆仍保留，具體部署未定。CPU worker 取消是後續方向，尚未實作；前文的固定 worker 構想保留為演進脈絡，不能同時當成最新要求。
