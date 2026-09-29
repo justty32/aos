@@ -32,7 +32,7 @@ pending數達max_pending_jobs或控制metadata空間保護門檻時，拒絕新�
 
 ## S-404．留存
 
-結果、checkpoint與去重依C-06保留至少run終局後30日的可查證據；未完成或unknown資料不得單靠時間刪除。到期後的刪除或封存跟著該 agent 的 tick 做，規則依 [B-404](../base/storage.md)。管理者可調整政策但必須顯示其生效時間，不能使已承諾的收據立即失去去重能力。刪大blob需保留result摘要、run終局及ID tombstone；孤立未接納blob可較早回收，但不誤刪已引用blob。
+結果、checkpoint與去重依C-06保留至少run終局後30日的可查證據；未完成或unknown資料不得單靠時間刪除。到期後的刪除或封存由 `aos-clean` 做（掛在 tick 後或手動），規則依 [B-404](../base/storage.md)。管理者可調整政策但必須顯示其生效時間，不能使已承諾的收據立即失去去重能力。刪大blob需保留result摘要、run終局及ID tombstone；孤立未接納blob可較早回收，但不誤刪已引用blob。
 
 原本的舊 worker 後端遷移段依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 3（proto6 新寫、不在 proto5 上就地演進）移至[執行後端切換附註](../../notes/plan/backend-switch.md)。
 
@@ -46,4 +46,14 @@ pending數達max_pending_jobs或控制metadata空間保護門檻時，拒絕新�
 
 檔案用暫存檔寫完再改名，讀者不會看到寫一半的內容；資料夾與檔案只有管理者與控制端可讀寫，agent 與工具 UID 不可讀寫。這些檔案是帳本的**通知副本**，不是權威：處置一律走 run.resume／run.cancel／run.resolve 等 RPC，刪改檔案不會解除屏障。事項解除後，控制層把檔案搬到 `<attention_dir>/done/`（附解除時間與處置方式），之後依 [S-404](#s-404留存) 的保留期清理。控制端重啟時依帳本重建 open 內容：帳本仍有屏障卻缺檔就補寫，屏障已解除卻還在 open 就搬走。
 
-驗收：Given run 因 context_over_budget 轉 needs_attention；When 查看 attention_dir；Then open 下有一個對應檔，code 與 run.get 一致；人刪掉該檔後重啟控制端，檔案被補回且 run 仍被擋；經 run.cancel 處置後檔案移到 done。
+**處理小工具 `aos-attend`**〔使用者方向 2026-09-29；細節為建議預設，未拍板〕：讀 `open/` 裡的事項，一件一件替人把「該做的事」做掉。它只是人的代理：用執行它的人的身分呼叫同一組 RPC（run.resume／run.cancel／run.resolve 等）和其他小程式（例如 `aos-clean`），不直接改帳本或檔案，權限不比人多。
+
+每種 code 對應一個處理方式與風險等級，寫在一份可編輯的處理表裡：
+
+- **安全**：只重新檢查、不會重複做事也不會丟東西，例如修好設定後 resume 重新驗證、磁碟滿時先跑 `aos-clean` 再重新驗證。可自動執行。
+- **危險**：可能重複外部副作用、丟掉工作或多花錢，例如 unknown 的 retry（allow_duplicate_effects）、fail、cancel_with_unknown、run.cancel、調高預算。執行前一定先顯示要做什麼、影響哪個 agent／run，**問 y/n**，答 y 才做。
+- **只能人看**：沒有可自動做的事（例如需要人補回原始結果），只列出來。
+
+沒有終端可問時（例如排程自動跑），危險動作一律跳過並留在 `open/`，不得用任何「全部答 yes」的參數跳過 retry 這種會重複外部副作用的確認。每次動作都記下誰、何時、對哪件事、做了什麼、結果；做完由控制層照常把事項移到 `done/`，`aos-attend` 自己不搬檔。
+
+驗收：Given run 因 context_over_budget 轉 needs_attention；When 查看 attention_dir；Then open 下有一個對應檔，code 與 run.get 一致；人刪掉該檔後重啟控制端，檔案被補回且 run 仍被擋；經 run.cancel 處置後檔案移到 done。Given 一件 config_unavailable 與一件 unknown；When 在無終端模式跑 aos-attend；Then 前者自動 resume 重新驗證，後者不做任何處置、仍在 open，且紀錄可查。
