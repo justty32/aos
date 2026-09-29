@@ -3,7 +3,7 @@
 - `bin/aos`、`bin/aos-runner`、`bin/aos-tick`：三支可執行入口及指定 alias。
 - `aosproto/`：設定驗證、自檢、真假 cgroup、IPC 授權、登記與排程、runner、tick group／needs、git 提交與還原。
 - `tests/`：單元測試及真假 cgroup 端到端驗收。
-- [README.md](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4df97cfbb8f29bc4/proto6/proto/README.md)：繁體中文操作說明、實作範圍、檔案導航。
+- [README.md](../README.md)：繁體中文操作說明、實作範圍、檔案導航。
 - 變更限於 `proto6/proto/`；未對外層 repo 執行 add、commit、push。
 
 ## 測試
@@ -17,7 +17,7 @@ cd proto6/proto && python3 -m unittest discover -s tests -v
 
 ## spec-gaps
 
-[spec-gaps.md](/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-a4df97cfbb8f29bc4/proto6/proto/notes/spec-gaps.md) 共 **14 條**，每條均有指定三行說明：
+[spec-gaps.md](spec-gaps.md) 共 **14 條**，每條均有指定三行說明：
 
 1. create-cgroup 缺少 root 的結束碼
 2. cgroup 命名及樹形

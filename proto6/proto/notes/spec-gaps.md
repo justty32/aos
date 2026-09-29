@@ -7,12 +7,14 @@
 原型暫時怎麼做：設定或 CLI 任一開 create，缺 cgroup_root 都在初始化前回 2。
 建議問使用者什麼：正式版是否固定把缺少 root 歸為用法／設定錯 2？
 
-## G-2．B-605／P-107 cgroup 命名及樹形
+## G-2．B-605／P-107 cgroup 命名及樹形（已定，第十六批）
+**已定（第十六批）**：照原型這套命名，寫進 spec B-605／P-107；首版不做碰撞偵測。見[裁定 07](../../notes/verdicts/07-review-fixes-and-proto-gaps.md) 第 8 條。
 卡在哪：node id 是任意長絕對路徑，spec 沒定框名；不能直接當 cgroup 名稱。
 原型暫時怎麼做：daemon 放 `<root>/daemon`；node 放 parent 框下的 `n-<sha256(node_id) 前16 hex>`，本格放其 `tick`；once 放 parent 框下的 `once-<同法 hash>`。
 建議問使用者什麼：是否採用這套名稱？正式版是否需要完整 hash 或碰撞偵測？
 
-## G-3．B-605 省略 root 時父框可能仍有其他程序
+## G-3．B-605 省略 root 時父框可能仍有其他程序（已定，第十六批）
+**已定（第十六批）**：省略 cgroup_root 時，daemon 啟動先在自己所在那層開 `daemon` 子層，把自己和那層其他程序都搬進去，那層只當分支。原型已補（`evacuate`）並加測。見[裁定 07](../../notes/verdicts/07-review-fixes-and-proto-gaps.md) 第 9 條。
 卡在哪：daemon 以自身原 cgroup 為子樹，再搬進 daemon 葉框，原框可能仍有 scope shell；開 controller 時會碰 no-internal-process。
 原型暫時怎麼做：本輪完全不啟用 controller、不寫 subtree_control、不寫資源上限；真 cgroup 測試使用直接 scope 啟動 daemon。
 建議問使用者什麼：正式啟用 controller 前，是否要求委派根只能有 daemon，或由部署方另準備空分支？
@@ -52,7 +54,8 @@
 原型暫時怎麼做：CLI resume 要確認（--yes 可跳過）後只送 node.resume；daemon 只開閘，pending 或到期才跑。
 建議問使用者什麼：下一輪先補通用 inst/tasks 驗證，還是與 kernel/agent validator 一起落地？
 
-## G-11．P-104 once 不存在帳號與指定驗收互相矛盾
+## G-11．P-104 once 不存在帳號與指定驗收互相矛盾（已定，第十六批）
+**已定（第十六批）**：照 P-104，登記 once 時帳號就要存在，否則回 `user_invalid` 拒絕。原型已拿掉 once 的放寬，測試改成登記就被拒；wake 時仍重新解析。見[裁定 07](../../notes/verdicts/07-review-fixes-and-proto-gaps.md) 第 10 條。
 卡在哪：P-104 要求登記時 inst user 已存在，但任務書測試6要求不存在帳號仍可 register，wake 才產 .err。
 原型暫時怎麼做：只對 once 的不存在帳號名稱延後解析，暫存父 owner 作查詢 owner；wake 必定重新解析／核額度，失敗回 launch_failed/125、user_invalid .err、解除。普通 node 仍拒絕。
 建議問使用者什麼：正式版要登記時拒絕，還是把「授權可登記」和「執行帳號可解析」分成兩階段？

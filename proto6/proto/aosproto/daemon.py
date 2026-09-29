@@ -61,6 +61,8 @@ class Daemon:
         leaf = self.root / 'daemon'
         self.backend.create(leaf)
         self.backend.move(leaf, os.getpid())
+        if self.config.get('cgroup_root') is None:
+            self.backend.evacuate(self.root, leaf)
         if not drain(self.backend, old_frames(self.root), self.config.get('shutdown_grace_ms', 2000)):
             raise Fault('cleanup_failed', '舊 cgroup 無法清空')
         if path.exists() or path.is_symlink():

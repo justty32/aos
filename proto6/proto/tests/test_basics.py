@@ -76,6 +76,15 @@ class Cgroups(Case):
         self.assertTrue((root / 'cgroup.threads').exists())
         self.assertEqual(cg.own, root)
 
+    def test_evacuate_moves_leftovers(self):
+        cg = FakeCgroup(self.path)
+        leaf = self.path / 'daemon'
+        cg.create(leaf)
+        (self.path / 'cgroup.procs').write_text('%d\n' % os.getpid())
+        cg.evacuate(self.path, leaf)
+        self.assertEqual(cg.direct_pids(self.path), set())
+        self.assertIn(os.getpid(), cg.direct_pids(leaf))
+
     def test_existing_outside_uses_components(self):
         cg = FakeCgroup(self.path, self.path / 'foobar')
         cg.create(self.path / 'foo')
