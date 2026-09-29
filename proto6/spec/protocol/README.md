@@ -52,6 +52,8 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 - 範例放 `examples/<篇名>/`，命名 `<主題>.<情境>.valid.json`／`.invalid.json`；每個 invalid 在正文說明為什麼錯。**只做真的需要的範例**：每種訊息一個最小正例、一個主要錯誤；不求量。
 - schema 通過不代表授權或狀態正確；那些由主規格的驗收管。
 
+**怎麼驗範例**：從 repo 根目錄跑 `python3 proto6/spec/protocol/examples/messages/validate.py`，驗全部 schema 與 valid／invalid 範例；需要 `jsonschema`（`pip install jsonschema`，會一併帶 `referencing`）。另有 `python3 proto6/spec/check_ids.py`，檢查 spec 與 notes（不含 archive）裡每個 P-／B-／S-／A-／H-／C-／T- 條號引用都有定義處，找不到就列出並以非 0 結束。
+
 <a id="p-008"></a>
 
 ## P-008．暫定與待決〔建議預設，未拍板〕

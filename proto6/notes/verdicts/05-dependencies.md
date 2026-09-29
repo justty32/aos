@@ -6,7 +6,7 @@
 
 ## 第十四批：依賴（同日晚，已落進 spec）
 
-〔使用者方向 2026-09-29 晚〕題目見 [依賴盤點第五節](../archive/2026-09-29-dependency-review.md)、[systemd 拆分第四節](../archive/2026-09-29-systemd-split.md)。第一輪只裁定一部分，其餘於同日晚追加裁定（見「追加（同日晚）」）。
+〔使用者方向 2026-09-29 晚〕題目見 依賴盤點第五節（已封存檔 2026-09-29-dependency-review.md，索引見 [archive/README.md](../archive/README.md)）、systemd 拆分第四節（已封存檔 2026-09-29-systemd-split.md）。第一輪只裁定一部分，其餘於同日晚追加裁定（見「追加（同日晚）」）。
 
 **總原則**〔使用者方向 2026-09-29 晚〕：
 
@@ -41,7 +41,7 @@
   - 選項：開機時 root 一次性 mkdir＋chown；或用 sudo 開 daemon 時 daemon 自己建（helper 本來就是 root）；沒 sudo 的單帳號模式怎麼辦（要不要求使用者事先準備好）。
   - 相關：cgroup v2「內部程序」規則（成員程序要在葉端、上層開 controller）daemon 自己開框時要遵守。
 - **（已裁定，見追加第 5 條）** 上一條 cgroup 子樹誰建：sudo 開時 daemon 自己建；不用 sudo 時使用者事先建好交給 daemon 帳號，沒有就報錯。
-- **daemon 自己的土法行程管理其實可以靠 cgroup，不必靠 systemd。** 對照 [systemd 拆分表](../archive/2026-09-29-systemd-split.md)，大概分法（還沒逐條驗證，待釐清）：
+- **daemon 自己的土法行程管理其實可以靠 cgroup，不必靠 systemd。** 對照 systemd 拆分表（已封存檔 2026-09-29-systemd-split.md，索引見 [archive/README.md](../archive/README.md)），大概分法（還沒逐條驗證，待釐清）：
   - **沒 systemd 仍做得到**（用 `cgroup.kill`、`cgroup.procs`、`cgroup.events`、`memory.events`、直接寫 `cpu.max`／`memory.max`／`pids.max`，加上 daemon 自己 fork）：
     - D6 互斥（node 鎖＋登記表）、D7 開程序、D9 fd 交接（沒 systemd 只給三個 fd 的限制，反而更好做）、D10 建資源框、D11 寫上限、D12 讀實際值、D13 殺乾淨樹（`cgroup.kill`）、D15 逾時（daemon 計時）、D16 取消、D17 OOM 證據、D18 收尾程序在成員框外（自己排版）、D19 重啟全殺（掃 aos 子樹殺光）、D22／D23 停機與 unregister、D28 乾淨環境（fork 時自己清）、D29 收集 stderr。
     - H4～H6 helper 的切帳號、放進框、殺樹：本來就是原設計，helper 自己 fork＋setresuid＋寫 `cgroup.procs`。
@@ -55,16 +55,16 @@
 - **「有就用」要靠設定檔開關，還是啟動時自動偵測？（已裁定：啟動時自動偵測，設定檔可強制關，見追加第 6 條）**
   - 問題：quota、systemd 各自要不要設定檔明寫「用／不用」？自動偵測到了但使用者不想用怎麼辦？偵測結果要不要記錄／顯示（`daemon` 啟動訊息、`node.show`）？降級時要不要警告？
 - **依賴盤點提到、仍在的實作坑（只列指標，不展開）**：
-  - 「不覆蓋發布用 hard link」：見[依賴盤點第四節](../archive/2026-09-29-dependency-review.md)。
+  - 「不覆蓋發布用 hard link」：見依賴盤點第四節（已封存檔 2026-09-29-dependency-review.md，索引見 [archive/README.md](../archive/README.md)）。
   - 「helper 新帳號沒 git 設定」：同上。
   - 「safe.directory」：同上。
-  - 舊 kernel 沒有 `cgroup.kill`（5.14 前）時，退路是反覆讀 `cgroup.procs` 逐個殺，見[依賴盤點 2.1](../archive/2026-09-29-dependency-review.md)。
+  - 舊 kernel 沒有 `cgroup.kill`（5.14 前）時，退路是反覆讀 `cgroup.procs` 逐個殺，見依賴盤點 2.1（已封存檔 2026-09-29-dependency-review.md，索引見 [archive/README.md](../archive/README.md)）。
 
 ### 追加（同日晚）
 
 以下皆為〔使用者方向 2026-09-29 晚〕。
 
-1. **初版不使用 systemd**〔使用者方向 2026-09-29 晚〕：整套首版不靠 systemd 跑。[systemd 拆分筆記](../archive/2026-09-29-systemd-split.md)那 20 條「交給 systemd」留到以後當可選增強。
+1. **初版不使用 systemd**〔使用者方向 2026-09-29 晚〕：整套首版不靠 systemd 跑。systemd 拆分筆記（已封存檔 2026-09-29-systemd-split.md，索引見 [archive/README.md](../archive/README.md)）那 20 條「交給 systemd」留到以後當可選增強。
 2. **開機自動啟動**〔使用者方向 2026-09-29 晚〕：把 daemon 寫成一個 systemd service 即可，附範例 unit 檔，不算執行期依賴。
 3. **沙盒防護**〔使用者方向 2026-09-29 晚〕：systemd 的 `CapabilityBoundingSet` 等沒有就是沒有，以後再考慮支援。
 4. **daemon 死了**〔使用者方向 2026-09-29 晚〕：對正在跑的 tick 送信號，讓它們優雅結束。

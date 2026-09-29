@@ -34,5 +34,5 @@
 
 過時或已被取代的筆記都在 [archive/](archive/README.md)，不刪、不維護，每檔第一行寫了為什麼封存、現行看哪：
 
-- 09-28 從 proto5 收錄的快照（六份筆記、萬 agent 計畫、兩份外牆調查），連同 15 份來源對照表：[import-2026-09-28](archive/import-2026-09-28/README.md)。探針沒搬，仍在 [probes/](probes/README.md)。
+- 09-28 從 proto5 收錄的快照（六份筆記、萬 agent 計畫、兩份外牆調查），連同 15 份來源對照表：import-2026-09-28（已封存檔 README.md，索引見 [archive/README.md](archive/README.md)）。探針沒搬，仍在 [probes/](probes/README.md)。
 - 09-28 的三份審查（notes 審查、spec 遺漏、spec 冗餘，都針對重寫前的舊 spec）、spec 重寫處置表、systemd 拆分、兩份比較材料的完整原檔：見 [封存索引](archive/README.md)。

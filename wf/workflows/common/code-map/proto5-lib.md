@@ -95,4 +95,4 @@
 
 [`proto5/notes/2026-09-28-linux-probes/`](../../../../proto5/notes/2026-09-28-linux-probes/README.md)：`run.py` 建自有 scratch 並編譯執行 `landlock-canary.c`，驗證無特權 Landlock 檔案讀寫限制與 fork 繼承；不是產品啟動器。
 
-proto6 規劃交接保留相同探針於 [`proto6/notes/probes/`](../../../../proto6/notes/probes/README.md)；這是調查程式快照，不是新增產品 lib。完整來源對照見 [proto6 notes](../../../../proto6/notes/README.md)。
+proto6 規劃交接保留相同探針於 [`proto6/notes/probes/`](../../../../proto6/notes/probes/README.md)；這是調查程式快照，不是新增產品 lib。完整來源對照見 [proto6 notes 封存索引](../../../../proto6/notes/archive/README.md)。
