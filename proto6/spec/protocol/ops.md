@@ -10,19 +10,19 @@
 
 node 的事項放 `.aos/attention/open/<issue_id>.json`，解除移到 `done/`；整個 `.aos/attention/` ignore，不隨 group 還原。node 自己寫自己的問題；runner 未啟動、tick 自動停格、後代清不空則由 daemon 寫。once 單檔未啟動仍沿 [P-110](daemon.md) 的 `.err`。建 node 時須授 daemon 寫權；寫不進去就不管，daemon 在 stdout 印一行警告。
 
-daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC；`state_dir/attention/` 只供重開接續，內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
+〔使用者方向 2026-09-29〕daemon 產生的事項（自身的、要寫進 node `.aos/attention/` 的）先暫放記憶體，**每 1000 ms 批次寫出，寫完就從記憶體清掉**；重開後不讀回記憶體。daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC 查：ls／show 直接讀 `state_dir/attention/` 的檔案，加上記憶體裡還沒寫出的那幾筆；內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
 
 兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、message、actions；actions 是處理表 ID，沒有就 []。job_id／attempt_id／request_id 按需附，結果不明用 reason:unknown；不帶程式、憑證或完整工作。
 
 | method（對應 `aos daemon attention <動作>`） | params → result |
 |---|---|
-| `daemon.attention.resolve` | `{source_node,issue_id}` → 同形狀 |
+| `daemon.attention.done` | `{source_node,issue_id}` → 同形狀；人已處理完，把檔搬到 `done/` |
 | `daemon.attention.show` | `{source_node,issue_id}` → 事項加 `status:"open"` 或 `"done"` |
 | `daemon.attention.ls` | 可省 source_node、status（預設 open）、limit（1～64、預設 64）、after → `{issues:[show結果],next_after}` |
 
-IPC 只查／解除 daemon 自身事項。依可信登記 owner／祖先 owner 授權；ls 先篩選再按 `source_key/issue_id` bytes 分頁，after 用上頁 next_after，列完為 null。daemon 內部新增事項，不接受 node 代交。
+IPC 只查／標完成 daemon 自身事項。依可信登記 owner／祖先 owner 授權；ls 先篩選再按 `source_key/issue_id` bytes 分頁，after 用上頁 next_after，列完為 null。daemon 內部新增事項，不接受 node 代交。
 
-同一問題沿用 ID，異內容不覆蓋；解除後再發生用新 ID。只有確認解除才移 done／resolve，未提交的處置不算解除。寫檔依 P-003，done 留 30 日、被引用就留；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見登記樹讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
+同一問題沿用 ID，異內容不覆蓋；解除後再發生用新 ID。只有確認處理完才移到 done，未提交的處置不算完成。寫檔依 P-003，done 留 30 日、被引用就留；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見登記樹讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
 
 ## P-602．人與 agent 都能編輯的處理表〔建議預設，未拍板〕
 

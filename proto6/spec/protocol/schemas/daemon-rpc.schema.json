@@ -803,7 +803,7 @@
             {
               "properties": {
                 "method": {
-                  "const": "daemon.attention.resolve"
+                  "const": "daemon.attention.done"
                 },
                 "params": {
                   "type": "object",

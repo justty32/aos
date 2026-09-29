@@ -52,7 +52,7 @@ Unix stream，UTF-8 JSON 每行加 LF，含 LF 最多 262144 bytes；不用 batc
 | `node.show` | 目標 owner 或祖先 owner；含 P-106 保留的 once 結果，不開 tick |
 | `node.provision` | 目標 owner 或祖先 owner，且目標登記有相符的 `provision` 授權；需 helper 的動作再由 helper 核對 |
 | `daemon.attention.ls`、`daemon.attention.show` | 只回 peer 是來源 owner／祖先 owner 的事項，見 P-601 |
-| `daemon.attention.resolve` | 來源 owner 或祖先 owner；只解除 daemon 自身事項，見 P-601 |
+| `daemon.attention.done` | 來源 owner 或祖先 owner；只把 daemon 自身事項標成完成，見 P-601 |
 
 root／通用 user 不因名稱自帶全樹 RPC 特權；它若是 owner／祖先才符合表格。既有成員可重登自己，但不能擴大目前額度或佈建權；新授額度及佈建權限只能由父層 owner／祖先 owner 在自身授權內下授。首次由父層登記，本版不提供首次自登記。
 
