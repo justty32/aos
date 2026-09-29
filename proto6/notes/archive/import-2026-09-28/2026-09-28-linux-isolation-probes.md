@@ -1,8 +1,10 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../spec/README.md) 與 [kernel 樹](../../../notes/2026-09-29-kernel-tree.md)。
+
 # Linux 隔離：無特權 canary 實測
 
-> 2026-09-28 交接快照；[原始來源](../../proto5/notes/2026-09-28-linux-isolation-probes.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../proto5/notes/2026-09-28-linux-isolation-probes.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
-← [筆記索引](README.md)｜[重跑腳本](probes/README.md)｜[員工方向](2026-09-28-employee-identity.md)
+← [筆記索引](../../README.md)｜[重跑腳本](../../probes/README.md)｜[員工方向](2026-09-28-employee-identity.md)
 
 ## 問題與方法
 

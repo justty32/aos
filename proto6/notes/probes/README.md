@@ -2,7 +2,7 @@
 
 > 2026-09-28 交接快照；[原始來源](../../../proto5/notes/2026-09-28-linux-probes/README.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
-← [實測報告](../2026-09-28-linux-isolation-probes.md)
+← [實測報告](../archive/import-2026-09-28/2026-09-28-linux-isolation-probes.md)
 
 從 repo 根目錄以普通使用者執行：
 

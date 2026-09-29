@@ -1,6 +1,6 @@
 # WSL 機器查證（公司 WSL2）
 
-← [筆記索引](README.md)｜對照 [notes 審查「機器查證結果（B 隊）」](notes-review.md#機器查證結果b-隊)
+← [筆記索引](README.md)｜對照 [notes 審查「機器查證結果（B 隊）」](archive/reviews-2026-09-28/notes-review.md#機器查證結果b-隊)
 
 日期：2026-09-29。使用者要求 proto6 **同時能在原生 Linux 與 WSL 上跑**；Opus agent 在公司 WSL2 做了與 B 隊（Manjaro）同一套唯讀查證，另外在自己的 systemd 委派子樹實測 cgroup 上限（事後清乾淨）。沒用 sudo、沒改系統設定。**這是查證紀錄，不代表建議已採納。**
 
@@ -31,7 +31,7 @@
 
 ## 二、在 WSL 上不成立或要改的假設
 
-1. **外牆與 UID 隔離破洞**（[linux-and-storage](plan/linux-and-storage.md)〈要引入的能力〉、[B-302](../spec/base/identity-resources.md)）：`/mnt/c` 無 metadata，全部顯示 UID 1000、777；實測讀得到 ext4.vhdx 檔頭，推論其他 UID 也讀得到＝繞過 Linux 權限讀別的 agent 資料（未用第二個 UID 驗證，需 root）。interop socket 為 `srwxrwxrwx`，任何 UID 都能以 Windows 使用者身分跑 `cmd.exe`／`powershell.exe`。→ WSL 部署必須在 wsl.conf 關 interop、關或收緊 automount（`umask=077,metadata`），B-302 啟動 probe 加這三項檢查。Landlock ABI 3 擋不了 socket。
+1. **外牆與 UID 隔離破洞**（[linux-and-storage](archive/import-2026-09-28/plan/linux-and-storage.md)〈要引入的能力〉、[B-302](../spec/base/identity-resources.md)）：`/mnt/c` 無 metadata，全部顯示 UID 1000、777；實測讀得到 ext4.vhdx 檔頭，推論其他 UID 也讀得到＝繞過 Linux 權限讀別的 agent 資料（未用第二個 UID 驗證，需 root）。interop socket 為 `srwxrwxrwx`，任何 UID 都能以 Windows 使用者身分跑 `cmd.exe`／`powershell.exe`。→ WSL 部署必須在 wsl.conf 關 interop、關或收緊 automount（`umask=077,metadata`），B-302 啟動 probe 加這三項檢查。Landlock ABI 3 擋不了 socket。
 2. **/tmp 不是 tmpfs**（linux-and-storage 本機觀測段；B-304）：WSL 的 /tmp 和控制區同一顆根磁碟，吃的是磁碟。
 3. **磁碟水位**（linux-and-storage 全局容量政策）：Linux 以為還有 940 GB，Windows C: 實際剩 734 GiB，vhdx 會長大。Windows 先滿時 vhdx 寫不進去，`errors=remount-ro` 可能讓整個 distro 變唯讀、控制端跟著停。水位要看 Windows 那顆磁碟。
 4. **daemon 由誰啟動**：WSL 上只能用 systemd unit；Windows 排程只負責叫醒 WSL，不要用 `wsl.exe -e aos` 直接起。
@@ -39,7 +39,7 @@
 6. **時間**（[contracts](../spec/contracts.md)、[S-204](../spec/scheduling/admission.md)、B-602 lease）：monotonic 比 Windows 牆鐘慢約 4%（45.27 對 47.14 秒）；timesyncd 每 32 秒把牆鐘推 +1.4 秒（本次開機 96 次）；Windows 睡眠時 VM 暫停，醒來牆鐘大跳而 monotonic 不算睡掉的時間。「逾時用經過時間」方向對，但「最老先派」要加序號當次鍵；睡醒大批同時到期要靠准入名額攤開。
 7. **儲存 backend**（linux-and-storage〈Project quota 的部署門檻〉、B-302 `quota_backend`）：WSL 根 ext4 不能當 backend，要另做專用卷。
 8. **外部 workspace**（linux-and-storage 外部 workspace 段；待裁定 10）：放 /mnt/c 就沒有 UID 隔離、沒有 quota、沒有 inotify（#4739）；9p 上 stat 每檔約 0.35 ms（ext4 近 0），Defender 即時掃描開著。
-9. **Landlock 當外牆候選**（[隔離實測](2026-09-28-linux-isolation-probes.md)）：WSL 只有 ABI 3，ABI 4 以上的網路、ioctl、scope 規則用不了；profile 要記最低 ABI，不夠就拒絕啟動。
+9. **Landlock 當外牆候選**（[隔離實測](archive/import-2026-09-28/2026-09-28-linux-isolation-probes.md)）：WSL 只有 ABI 3，ABI 4 以上的網路、ioctl、scope 規則用不了；profile 要記最低 ABI，不夠就拒絕啟動。
 10. **本機觀測描述**只寫了 Manjaro，應依平台分列。
 
 **照樣可行**：一 agent 一 UID；cgroup v2 委派與所有上限；clone3 CLONE_INTO_CGROUP 與 pidfd（6.6 有）；B-303 整條順序；seccomp（待裁定 6）；loop 映像上的 XFS pquota；Linux 側 inotify 當門鈴＋補查；idle 不常駐、SQLite 索引、LLM 門票。

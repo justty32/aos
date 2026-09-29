@@ -1,8 +1,10 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../spec/README.md) 與 [kernel 樹](../../../notes/2026-09-29-kernel-tree.md)。
+
 # 正式員工、Linux 身分與固定 tick worker
 
-> 2026-09-28 交接快照；[原始來源](../../proto5/notes/2026-09-28-employee-identity.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../proto5/notes/2026-09-28-employee-identity.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
-← [筆記索引](README.md)｜前文：[從人的角度理解架構](2026-09-28-human-architecture.md)｜[使用建議](../../proto5/advice.md)
+← [筆記索引](../../README.md)｜前文：[從人的角度理解架構](2026-09-28-human-architecture.md)｜[使用建議](../../../../proto5/advice.md)
 
 這是 2026-09-28 使用者提出的架構方向紀錄，尚未實作，也不是現行規範。目的在於沿用 Linux 的使用者與權限體系，避免在 access 裡重新建造一套相同的東西。
 
@@ -34,7 +36,7 @@
 
 access 最後保留哪些設定、Linux group／ACL 如何接入、帳號與 worker 如何建立及回收，也未在本輪訂成規格。這些留作後續設計背景，不在此補成使用者未選定的方案。
 
-先前 [daemon 拆分審查](../../proto5/notes/2026-09-24-daemon-split-review/README.md) 中「daemon 永不 root」的建議屬於當時的審查脈絡；本輪使用者提出 root daemon 的方向，閱讀時應區分歷史建議與新的使用者意圖。
+先前 [daemon 拆分審查](../../../../proto5/notes/2026-09-24-daemon-split-review/README.md) 中「daemon 永不 root」的建議屬於當時的審查脈絡；本輪使用者提出 root daemon 的方向，閱讀時應區分歷史建議與新的使用者意圖。
 
 ## 同日追加決定：工具代表委託員工行事
 

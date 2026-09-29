@@ -1,6 +1,8 @@
+> 封存 2026-09-29：09-28 四隊審查 notes，其「待裁定」已由裁定第一批回答、「必修」多已由 spec 重寫解決。現行看 [裁定紀錄](../../verdicts/README.md) 與 [spec](../../../spec/README.md)。
+
 # proto6 notes 審查
 
-← [筆記索引](README.md)
+← [筆記索引](../../README.md)
 
 日期：2026-09-28。審查者：Fable 派出四隊獨立審查——A 隊（Opus，概念與草案內在一致性）、B 隊（Opus，計畫與 Linux 技術可行性）、C 隊（Sonnet，收錄忠實度與連結機械檢查）、codex gpt-6-astra（唯讀，獨立意見）。四隊互不看彼此的報告，本檔由 Fable 彙整。
 

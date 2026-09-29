@@ -6,8 +6,8 @@
 
 ## 下班前的方向（同日；systemd 那條已被第十四批取代，LiteLLM 那條已落進 spec）
 
-- **daemon 站在 systemd 上面**〔使用者方向 2026-09-29〕：登記、定時叫醒、暫停、切帳號、cgroup 資源框、殺乾淨程序樹，盡量交給 systemd（如 `systemd-run --uid … -p MemoryMax=…`、timer），不重造輪子；安全性這塊要小心設計。逐條拆分見 [2026-09-29-systemd-split.md](../2026-09-29-systemd-split.md)。（已被第十四批「初版不用 systemd」取代；取代後的做法已落進 spec，見 [B-605](../../spec/daemon.md)。）
-- **LiteLLM 不進標準，只是可選的 endpoint**〔使用者方向 2026-09-29 晚，取代同日稍早「LLM 池基礎功能接 LiteLLM proxy」〕：它是額外依賴，違反以 Linux 為中心、少外部依賴的原則。aos 自己的 LLM 排程器做成**分檔可選**：不管（直接打 endpoint）／自己排（aos 自己藏 key、限流、記帳、排隊）／交給 endpoint（endpoint 可以是 LiteLLM、原廠 API 或本機模型伺服器）。工作量與利弊調查見 [LLM 排程器選項](../2026-09-29-llm-scheduler-options.md)。（已落進 spec，見 [S-301](../../spec/scheduling/llm.md)。）
+- **daemon 站在 systemd 上面**〔使用者方向 2026-09-29〕：登記、定時叫醒、暫停、切帳號、cgroup 資源框、殺乾淨程序樹，盡量交給 systemd（如 `systemd-run --uid … -p MemoryMax=…`、timer），不重造輪子；安全性這塊要小心設計。逐條拆分見 [2026-09-29-systemd-split.md](../archive/2026-09-29-systemd-split.md)。（已被第十四批「初版不用 systemd」取代；取代後的做法已落進 spec，見 [B-605](../../spec/daemon.md)。）
+- **LiteLLM 不進標準，只是可選的 endpoint**〔使用者方向 2026-09-29 晚，取代同日稍早「LLM 池基礎功能接 LiteLLM proxy」〕：它是額外依賴，違反以 Linux 為中心、少外部依賴的原則。aos 自己的 LLM 排程器做成**分檔可選**：不管（直接打 endpoint）／自己排（aos 自己藏 key、限流、記帳、排隊）／交給 endpoint（endpoint 可以是 LiteLLM、原廠 API 或本機模型伺服器）。工作量與利弊調查見 [LLM 排程器選項](../archive/2026-09-29-llm-scheduler-options.md)。（已落進 spec，見 [S-301](../../spec/scheduling/llm.md)。）
 - **可參考**：Maildir（收件做法）、Erlang/OTP supervisor 樹、Kubernetes controller 對帳；後續慢慢調查。AIOS 不參考（使用者評價：垃圾）。
 - **待辦**：跑不跑得動之後實測，最擔心的是工具呼叫延遲；搬家／備份做一個輔助工具；aos 自身升級（格式 v2、既有 node 遷移）要考慮；log 先不管，daemon 之後慢慢改進。
 - **降低工具呼叫延遲的三條路**〔使用者認可 2026-09-29，之後實測再定〕：
@@ -18,7 +18,7 @@
 
 ## 第十三批：LLM 排程器（同日晚，已落進 spec）
 
-針對[LLM 排程器選項](../2026-09-29-llm-scheduler-options.md)最後八題的裁定。
+針對[LLM 排程器選項](../archive/2026-09-29-llm-scheduler-options.md)最後八題的裁定。
 
 1. **三檔**〔使用者方向 2026-09-29 晚〕：不管（agent 直接打 endpoint）／交給 endpoint（池 node 代發，限流交給 endpoint）／自己排（aos 自己藏 key、限流、記帳、排隊）。照建議。
 2. **預設「自己排」**〔使用者方向 2026-09-29 晚，不照建議〕：建議原是預設「不管」。理由：LiteLLM 一開始預設跟 aos 無關，所以預設走 aos 自己的排程。

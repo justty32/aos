@@ -1,6 +1,8 @@
+> 封存 2026-09-29：針對重寫前的舊 spec（22 篇、S/A/B 條號體系），自己結論缺口已關閉。現行看 [spec](../../../spec/README.md)。
+
 # proto6 規格遺漏獨立審查
 
-← [筆記](README.md)｜[規格](../spec/README.md)
+← [筆記](../../README.md)｜[規格](../../../spec/README.md)
 
 **結論：本次確認的六項首版契約缺口已由主線補齊，最終回讀未留下這六項的阻擋問題。** 普通收發已接通；完整部署／CLI 可後補。以下保留審查場景與修法，不表示產品已驗證。
 
@@ -12,7 +14,7 @@
 
 ### G-01．final tick 可能等待自己完成
 
-定位：[C-03/C-05](../spec/contracts.md)、[A-502/A-503](../spec/agent/tick.md)、[B-202](../spec/base/execution.md)、[B-603](../spec/base/lifecycle.md)、[S-102](../spec/scheduling/runs.md)。
+定位：[C-03/C-05](../../../spec/contracts.md)、[A-502/A-503](../../../spec/agent/tick.md)、[B-202](../../../spec/base/execution.md)、[B-603](../../../spec/base/lifecycle.md)、[S-102](../../../spec/scheduling/runs.md)。
 
 觸發與後果：最後一個 tick 正提交 final，但 tick 自己也是帶 run_id 的在途 job。原 pending／完成屏障涵蓋全部工作，按字面會拒絕 final；另開 tick 消費前一 tick，又多出新的未完成 tick。提交後、程序退出前崩潰，也可能被通用 unknown 恢復規則誤轉 needs_attention。
 
@@ -22,7 +24,7 @@
 
 ### G-02．後續訊息可能喚醒等待中的當前 run 空轉
 
-定位：[A-202](../spec/agent/input.md)、[C-05](../spec/contracts.md)、[B-602](../spec/base/lifecycle.md)、[S-201](../spec/scheduling/admission.md)。
+定位：[A-202](../../../spec/agent/input.md)、[C-05](../../../spec/contracts.md)、[B-602](../../../spec/base/lifecycle.md)、[S-201](../../../spec/scheduling/admission.md)。
 
 觸發與後果：R1 等工具，R2 訊息入 FIFO。原規則增加 pending_seq／ready，R1 卻不能消費 R2；若 served_seq 是語意消費進度，ready 永遠留著。直接清 ready 又缺乏 R1 結束時喚起 R2 的保證。
 
@@ -32,7 +34,7 @@
 
 ### G-03．人工 fail 曾越過整輪收尾屏障
 
-定位：[S-401](../spec/scheduling/operations.md)、[A-503](../spec/agent/tick.md)、[S-102](../spec/scheduling/runs.md)。
+定位：[S-401](../../../spec/scheduling/operations.md)、[A-503](../../../spec/agent/tick.md)、[S-102](../../../spec/scheduling/runs.md)。
 
 觸發與後果：J1 unknown、同 run 的 J2 仍有活程序，操作者對 J1 選 fail。原 S-401 直接 run→failed，可能讓下一輪開始，但 J2 還在改檔；與 failed 不得遺留未收回工作的條款相撞。
 
@@ -42,7 +44,7 @@
 
 ### G-04．滿 quota 後恢復完整結果的保證缺少儲存前提
 
-定位：[A-303](../spec/agent/memory.md)、[B-304](../spec/base/identity-resources.md)、[B-401/B-404](../spec/base/storage.md)。
+定位：[A-303](../../../spec/agent/memory.md)、[B-304](../../../spec/base/identity-resources.md)、[B-401/B-404](../../../spec/base/storage.md)。
 
 觸發與後果：輸出尚未耐久保存就耗盡 block/inode quota，再停機。所有大 blob 與 home 共用 quota，控制庫只留有界摘要；摘要不能重建未落盤結果。原「容量恢復後核對同一結果」缺少資料未保存時的出口。
 
@@ -52,7 +54,7 @@
 
 ### G-05．run 剩餘預算原本只有引用，沒有累計帳
 
-定位：[A-302](../spec/agent/memory.md)、[A-403](../spec/agent/tools.md)、[S-302/S-306](../spec/scheduling/llm.md)。
+定位：[A-302](../../../spec/agent/memory.md)、[A-403](../../../spec/agent/tools.md)、[S-302/S-306](../../../spec/scheduling/llm.md)。
 
 觸發與後果：模型持續回合法工具要求，每次建立新 job。單 job max_attempts=1 與 scope 窗口仍合規，卻可無限累計；A-302 要讀的 run 剩餘預算及 A-403 的限制無法實作。
 
@@ -62,7 +64,7 @@
 
 ### G-06．unknown 補證據與同 ID 異內容拒絕曾相撞
 
-定位：[C-03](../spec/contracts.md)、[S-104](../spec/scheduling/runs.md)、[S-302](../spec/scheduling/llm.md)。
+定位：[C-03](../../../spec/contracts.md)、[S-104](../../../spec/scheduling/runs.md)、[S-302](../../../spec/scheduling/llm.md)。
 
 觸發與後果：attempt 已記 unknown，稍後可信成功結果到達。S-104 允許補全，原 C-03 卻要求同 ID 不同 Outcome 一律 conflict；導入器可能永久拒收唯一真實結果。
 
@@ -74,7 +76,7 @@
 
 ### G-07．普通收發已接通，完整人端操作仍待定
 
-定位：[B-505](../spec/base/transport.md)、RPC 操作（methods.json，09-29 重寫已撤）、[A-101](../spec/agent/configuration.md)、[B-604](../spec/base/lifecycle.md)。
+定位：[B-505](../../../spec/base/transport.md)、RPC 操作（methods.json，09-29 重寫已撤）、[A-101](../../../spec/agent/configuration.md)、[B-604](../../../spec/base/lifecycle.md)。
 
 原場景：人只有文字，RPC 卻要求 input_ref；取得 final_ref 後也缺讀出入口。這會迫使實作者自行發明 BlobRef 導入／導出，甚至直接操作內部資料。
 
