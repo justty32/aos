@@ -16,6 +16,14 @@
 
 kernel 和 agent 都是「資料夾＋`aos-tick`＋註冊表」，差別只在註冊表裡放了什麼。
 
+## 一之一、daemon 怎麼運作（使用者方向 09-29）
+
+- daemon 記憶體裡有一張表，放被註冊的資料夾；**資料夾路徑就是它的 id**（kernel id）。**agent 資料夾也一樣註冊**：對 daemon 來說兩者都是「有 inst 的資料夾」（使用者已確認）。
+- daemon 依每個資料夾的設定定期跑它的 inst（也就是 tick）；同一資料夾同時只跑一格。agent 通常不設定期，只在被叫醒時跑；什麼時候叫醒誰、同時跑幾個，由它所屬的 kernel 決定。daemon 是所有 tick 程序的爸爸，kernel 的 tick 跑完就退出，不用等 agent。
+- 其他程式可用 IPC（本機 socket）找 daemon：**註冊／解除註冊資料夾**、**叫醒**（某資料夾有要緊事，把它的 tick 提前到現在）。
+- 誰能對哪個資料夾做這些事，看 socket 對面的 Linux 帳號：擁有該資料夾的帳號，或它上層 kernel 的帳號（建議預設）。
+- daemon 不讀資料夾內容、不做排程決定、不存狀態。**重啟後**：設定檔只列最頂層 kernel；開機先跑它一格，每個 kernel 的 tick 會把自己底下的成員（kernel 與 agent）重新註冊一次（重複註冊無害），整棵樹一層層長回來（使用者已確認）。
+
 ## 二、kernel 樹
 
 - 每個 kernel 管一群成員：agent，或下一層 kernel。下一層 kernel 在上一層眼中就是一件工作。
