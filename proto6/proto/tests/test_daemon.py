@@ -251,6 +251,19 @@ class DaemonTests(Case):
         leaf = {int(p) for p in (cg / 'daemon/cgroup.procs').read_text().split()}
         self.assertLessEqual({other.pid, self.daemon_pid}, leaf)
 
+    def test_given_root_with_processes_leaves_only_branch(self):
+        # 第十七批：有寫 cgroup_root、但那層有程序時，比照省略時搬進 daemon 葉框。
+        root = self.new_node()
+        cg = self.path / 'cg'
+        FakeCgroup(cg).create(cg)
+        other = subprocess.Popen(['sleep', '60'])
+        self.addCleanup(lambda: other.poll() is None and (other.kill(), other.wait()))
+        (cg / 'cgroup.procs').write_text('%d\n' % other.pid)
+        self.start_daemon(root, fake=cg, extra={'cgroup_root': str(cg)})
+        self.assertEqual((cg / 'cgroup.procs').read_text(), '')
+        leaf = {int(p) for p in (cg / 'daemon/cgroup.procs').read_text().split()}
+        self.assertLessEqual({other.pid, self.daemon_pid}, leaf)
+
     def test_registration_constraints(self):
         root = self.new_node()
         child = self.new_node('C')

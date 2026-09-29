@@ -70,7 +70,7 @@ class Case(unittest.TestCase):
         result = self.cli(*argv, code=code)
         return json.loads(result.stdout)
 
-    def start_daemon(self, root, real=False, fake=None, grace=100):
+    def start_daemon(self, root, real=False, fake=None, grace=100, extra=None):
         from aosproto.cgroup import FakeCgroup
         # Unix sockaddr_un is only 108 bytes; fixture prefix here is intentionally long.
         # Use Linux /proc/self/fd path through inherited directory fd to shorten bind/connect.
@@ -82,7 +82,7 @@ class Case(unittest.TestCase):
         self.config = self.path / 'daemon.json'
         write_json(self.config, {'version': 1, 'socket_path': self.socket_path, 'state_dir': str(self.state),
                                 'shutdown_grace_ms': grace,
-                                'roots': [{'node_id': str(root), 'identity_grant': [os.getuid()]}]})
+                                'roots': [{'node_id': str(root), 'identity_grant': [os.getuid()]}], **(extra or {})})
         argv = [str(BIN / 'aos'), 'daemon', 'start', '--config', str(self.config)]
         if real:
             argv = ['systemd-run', '--user', '--scope', '-p', 'Delegate=yes', '--quiet', '--'] + argv

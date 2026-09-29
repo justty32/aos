@@ -61,8 +61,8 @@ class Daemon:
         leaf = self.root / 'daemon'
         self.backend.create(leaf)
         self.backend.move(leaf, os.getpid())
-        if self.config.get('cgroup_root') is None:
-            self.backend.evacuate(self.root, leaf)
+        # G-3（第十六批）＋第十七批：不管有沒有寫 cgroup_root，原層剩下的程序都搬進 daemon 葉框。
+        self.backend.evacuate(self.root, leaf)
         if not drain(self.backend, old_frames(self.root), self.config.get('shutdown_grace_ms', 2000)):
             raise Fault('cleanup_failed', '舊 cgroup 無法清空')
         if path.exists() or path.is_symlink():
@@ -140,7 +140,7 @@ class Daemon:
         if entry['once']:
             if report and not report['started']:
                 code = {'UserInvalid': 'user_invalid', 'UserNotGranted': 'user_not_granted',
-                        'UserMismatch': 'user_mismatch'}.get(report['error']['code'], 'start_failed')
+                        'UserMismatch': 'user_mismatch', 'SourceChanged': 'source_changed'}.get(report['error']['code'], 'start_failed')
                 error = {'code': -32000, 'message': report['error']['message'],
                          'data': {'code': code, 'retryable': False}}
                 try:

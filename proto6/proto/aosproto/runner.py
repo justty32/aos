@@ -9,7 +9,7 @@ def run_snapshot(raw, target, authorized_uid, stderr=None, timeout_ms=None):
     try:
         current, _, base = read_inst(target)
         if current != raw:
-            raise Fault('UserMismatch', '授權後原來源 bytes 改變')
+            raise Fault('SourceChanged', '授權後原來源內容與快照不同')  # G-8（第十七批）
         try:
             inst = loads(raw)
         except (ValueError, UnicodeError) as exc:
