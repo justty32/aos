@@ -12,6 +12,8 @@
 
 繼續細拆到欄位、合法狀態、提交與失敗恢復，見 [spec 規格草案](../spec/README.md)。兩份獨立的[冗餘審查](spec-redundancy-review.md)與[遺漏審查](spec-gaps-review.md)區分編輯修正、可選精簡與尚需裁定的政策；不代表其中建議都已採納。四隊獨立審查本篇 notes 全部內容與收錄忠實度的結果見[notes 審查](notes-review.md)，同樣不代表建議已採納。使用者要求原生 Linux 與 WSL 都要能跑；公司 WSL 的對照查證見 [WSL 機器查證](2026-09-29-wsl-machine-check.md)。**09-29 使用者對待裁定 1～10 的裁定見[裁定紀錄](2026-09-29-verdicts.md)，以它為準。****同日架構方向改回 kernel 樹＋註冊式 tick，見[kernel 樹與註冊式 tick](2026-09-29-kernel-tree.md)；spec 裡「單一控制寫入者、總帳本」的寫法待依此重寫。**
 
+LLM 排程：09-29 晚使用者裁定 LiteLLM 不進標準、只當可選 endpoint，aos 自己的排程器分檔可選；自製要做哪些事、估時與利弊見 [LLM 排程器選項](2026-09-29-llm-scheduler-options.md)。
+
 軟性設計原則：[兩次 tick 之間的環境穩定性](between-ticks-configuration.md)。由原先硬保證改為設計指導，不屬於 spec，也不設強制驗收。
 
 最新討論先放下正式員工／工具的組織分類，以一 agent 一 Linux 使用者、cgroup v2 管執行資源、project quota 管自有容量（09-29 裁定：可選、只記帳）。工具沿用委託 agent 的權限與資源，不需要逐工具 bwrap；保護宿主的整套 aos 外牆仍保留，具體部署未定。CPU worker 取消是後續方向，尚未實作；前文的固定 worker 構想保留為演進脈絡，不能同時當成最新要求。
