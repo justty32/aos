@@ -58,7 +58,7 @@
 
 〔使用者方向 2026-09-29〕任務把帶固定 ID 的請求或回應放進追蹤的 `.aos/outbox/`，**tick 在所屬 group commit 成功後才投出**；失敗組的待送檔一起還原。LLM／工具結果留待後續 tick 收，不在原地等遠端工作結束。交接資料與格式見 [P-206](protocol/node.md)。
 
-tick 可重投同 ID、同 bytes 的已提交封套，接收方去重；這不授權重做不明的工具／LLM 執行。once 由 module 後續讀已提交材料，再向 daemon 登記及 wake。無可信結果且不能證明未執行的工作記 unknown，不自動再執行；處置見 [S-401](scheduling/operations.md)。
+tick 可重投同 ID、同 bytes 的已提交封套，接收方去重；這不授權重做不明的工具／LLM 執行。once 由 module 後續讀已提交材料，再向 daemon 登記及 wake。無可信結果且不能證明未執行的工作記 unknown，不自動再執行；見 [S-401](scheduling/operations.md)。
 
 ## 當機恢復、設定與清理
 
@@ -66,7 +66,7 @@ tick 可重投同 ID、同 bytes 的已提交封套，接收方去重；這不�
 
 設定修改、重要設定暫停手改、普通設定匯入，以 [A-102](agent/configuration.md) 為正本。恢復 tick 前須完成該流程，不能把合法手改當作未提交任務還原。
 
-〔使用者方向 2026-09-29〕**別濫用 git**：沒變動不 commit；實作可定期合併提交，也可用 git submodule 分開高頻與不常變動的部分。清理與 git 歷史空間的邊界見 [B-404](base/storage.md)。
+〔使用者方向 2026-09-29〕**別濫用 git**：沒變動不 commit；實作可定期合併提交，也可用 git submodule 分開高頻與不常變動的部分。清理見 [B-404](base/storage.md)。
 
 〔建議預設，未拍板〕沒變動的成功組視為完成，不製造空 commit。合併提交的維護須與 tick 互斥，保留可恢復的目前版本及仍需的請求證據；不能為省 commit 把「先提交再送出」延到送出之後。使用 submodule 時各 repo 有自己的提交邊界，父 repo 的 commit 不代表子 repo 工作區也已提交／還原，不承諾跨 repo 的 group 原子性。
 

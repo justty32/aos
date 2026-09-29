@@ -28,6 +28,12 @@
       "type": "string",
       "minLength": 1,
       "pattern": "^[^\u0000]+$"
+    },
+    "interval_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991,
+      "default": 86400
     }
   },
   "required": [

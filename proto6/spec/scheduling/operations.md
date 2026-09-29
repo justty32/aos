@@ -4,15 +4,9 @@
 
 讀狀態、處理問題與改設定沿用[入口通則](../README.md)。
 
-## S-401．人工解決 unknown
+## S-401．結果不明就放著
 
-〔使用者方向 2026-09-29〕unknown 表示結果不明，不自動重做。原嘗試的可信結果可以補清結果；若要人工重試，須明白接受可能重複外部副作用的風險，且先清空舊本機程序。停止本機程序不表示遠端副作用已撤回。
-
-〔建議預設，未拍板〕有權限的人或 agent 經同一指令／檔案入口，選擇重試、以失敗結束，或接受結果不明並取消。處置由所屬 kernel 保存最小紀錄：哪件事、誰處理、何時、選了什麼及結果，隨 group commit；不偽造原嘗試成功或確定失敗。重試須明確解除仍存在的取消要求，用新嘗試 ID；選擇結束也須先收尾其餘工作、清空本機程序，才宣稱已結束。
-
-這些選擇都是危險處置，依 [S-405](#s-405待處理資料夾) 確認；普通 resume 不能代替這次確認。非 unknown 問題修好後的可選 resume 見 [S-102](runs.md)。
-
-驗收：舊本機程序仍活時不能完成處置；清空後經確認才處理，保留 unknown 證據。
+〔使用者方向 2026-09-29〕結果不明的工作保持 unknown，沒人處理就隨定期清理清掉；不自動重做。
 
 <a id="s-402查詢回應與拒絕理由建議預設未拍板09-29-精簡依冗餘審查-b2b4"></a>
 
@@ -36,18 +30,14 @@
 
 <a id="s-405待處理資料夾使用者方向-2026-09-29"></a>
 
-## S-405．待處理資料夾
+## S-405．待辦清單
 
-〔使用者方向 2026-09-29〕node 事項放自己的 `.aos/attention/`（ignore、不隨 group 還原）。runner 沒開始、tick 壞掉自動停格、程序清不乾淨，也由 daemon 寫到該 node；once 單檔沿用 `.err`。寫不進去就不管，daemon 在 stdout 警告一行。helper 不見、state 存不下等 daemon 自己的事，才走 `daemon.attention.ls/show/resolve`；`state_dir/attention/` 只供重開接續。
+〔使用者方向 2026-09-29〕attention 是 aos 自己不該或不能處理、交給人或 agent 手動處理的待辦清單。node 事項放自己的 `.aos/attention/`（ignore、不隨 group 還原）。runner 沒開始、tick 壞掉自動停格、程序清不乾淨，也由 daemon 寫到該 node；once 單檔沿用 `.err`。寫不進去就不管，daemon 在 stdout 警告一行。helper 不見、state 存不下等 daemon 自己的事，走 `daemon.attention.ls/show/done`；`state_dir/attention/` 供重開接續。
 
-每件事項留來源、ID、原因及處置，由來源重驗後解除；刪檔不代表問題已解決。格式與 open／done 位置見 [ops](../protocol/ops.md)。
+每件事項有白話 `message`，可附 `suggestion`（建議處理文字，可含建議指令，不會自動執行）；格式見 [ops](../protocol/ops.md)。`aos-attend` 只做三件事：
 
-**`aos attend ls`** 沿登記樹讀 node 事項，合併 daemon IPC 的事項成一張清單；`aos-attend` 用執行者權限處理。處理表分三類：
+- `aos attend ls`：沿登記樹彙整 node 與 daemon 的待辦。
+- `aos attend show N ID`：顯示出了什麼事與建議處理。
+- `aos attend done N ID`：人或 agent 處理完後標完成；node 事項由 `.aos/attention/open/` 搬到 `done/`，daemon 事項走 `daemon.attention.done`。
 
-- 安全：只重新檢查、不重複副作用也不丟東西，例如修好設定後重新驗證；可自動執行。
-- 危險：可能重複副作用、丟工作或多花錢，例如 unknown 重試、放棄工作、取消或調高額度。先顯示動作及影響的來源／工作，**問 y/n，答 y 才做**。
-- 只能人看：沒有可自動完成的處置，只列出問題。
-
-無終端可問時，危險動作跳過，事項保持待處理；不能用「全部答 yes」跳過重複副作用的確認。每次動作留下操作者、時間、事項、動作與結果，由來源核對問題是否解除，再更新通知。設定修改引用 [A-102](../agent/configuration.md)，清理與實際空間回收的界線引用 [B-404](../base/storage.md)。
-
-驗收：兩個 node 同名事項不覆蓋，group 還原不碰事項；daemon 寫不進 node 只警告、不接管。在無終端模式下，安全重驗可執行，unknown 重試跳過。
+驗收：兩個 node 同名事項不覆蓋，group 還原不碰事項；daemon 寫不進 node 只警告、不接管。show 只顯示文字，done 只標完成。

@@ -68,7 +68,7 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 
 ## P-404．unknown 與拒收〔使用者方向 2026-09-29〕
 
-unknown、重試及晚到結果依 [C-03](../contracts.md)／[S-401](../scheduling/operations.md)；執行者合成 unknown 結果時缺失欄位填 null。已發布 RPC 回應不覆寫；可信晚到結果留在原 attempt 的證據旁，由來源核對補清本地狀態，不改舊回件。
+結果不明的工作保持 unknown，沒人處理就隨定期清理清掉，不自動重做。合成 unknown 結果時缺失欄位填 null；已發布 RPC 回應不覆寫。
 
 拒收沿 P-005：參數錯 -32602；業務錯 -32000，data.code 可為 work_not_authorized、input_unreadable、capacity_unavailable、pool_not_found、model_not_found、key_unavailable。只在能確認尚未接納的暫時容量／讀取問題才可 retryable:true；接納後的失敗回結果。配對錯或衝突留原件及事項，不夾 key／認證標頭。
 

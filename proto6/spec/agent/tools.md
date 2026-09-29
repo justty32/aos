@@ -26,10 +26,10 @@
 
 `exit 0` 只表示程序正常結束。文字模式檢查能否解讀成 UTF-8；JSON 模式只有原始 stdout 完整保存時才解析並驗 schema。格式不合就記 `tool_result_invalid`，不改寫原本的程序結果。stderr 是診斷；缺失的輸出不能當成空字串，非零退出、逾時、取消及截斷也要如實呈現。
 
-語意格式錯誤不自動重跑工具；若 agent 決定再呼叫，就建立新工作並引用前次證據。未知結果的處置依[共通操作](../scheduling/operations.md)。
+語意格式錯誤不自動重跑工具；若 agent 決定再呼叫，就建立新工作並引用前次證據。未知結果依[共通操作](../scheduling/operations.md)。
 
 驗收：工具 exit 0 但 JSON 不合 schema，保留原始結果與語意錯誤，不自動重跑；同一結果重送也只消費一次。
 
 ## A-404 LLM 與未知結果
 
-（09-29 重寫：已刪；LLM 行為併入 [LLM 池](../scheduling/llm.md)，unknown 處置併入[共通操作](../scheduling/operations.md)，重啟處理見 [daemon](../daemon.md)。）
+（09-29 重寫：已刪；LLM 行為併入 [LLM 池](../scheduling/llm.md)，unknown 併入[共通操作](../scheduling/operations.md)，重啟處理見 [daemon](../daemon.md)。）

@@ -27,6 +27,9 @@
         },
         ".aos/tasks.json": {
           "$ref": "agent-tasks.schema.json"
+        },
+        "config/clean.json": {
+          "$ref": "ops-clean-config.schema.json"
         }
       },
       "required": [
@@ -34,7 +37,8 @@
         ".aos/tasks.json",
         "config/agent.json",
         "config/tools.json",
-        ".gitignore"
+        ".gitignore",
+        "config/clean.json"
       ],
       "additionalProperties": false
     }
