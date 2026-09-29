@@ -42,7 +42,7 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 
 外層 inst 的 argv 是 `aos-work --work-dir <絕對工作資料夾>`，`user` 明寫工作所屬 node 已授權的有效身分。內層 `request.json` 的 inst 省略 `user` 時繼承這個身分；寫了或整份指示詞展開後帶了 `user`，必須仍解析成同一 UID。kernel 不可讓工具繼承自己的較高權限；runner 也不能在內層再次切身分。
 
-安排工作的 module 先保存接納請求及材料，tick 提交後，後續一格才建工作資料夾並經 daemon `node.register` 登記 `node_id=W/inst.json,parent_id=材料.node_id,identity_grant=[有效身分],once=true`，再 `node.wake`。agent 自跑工具時 parent_id 固定自己。parent_id 是可信資源歸屬，與 W 的位置無關，核對規則只依 daemon 篇。工作結果及捕獲檔保留，下格核對並保存；有回件便放待送區，由 tick commit 後投回呼叫者。結果引用必須對接收者可讀；需要搬運就先複製完整輸出到可讀位置，再發布引用它的回應。
+安排工作的 module 先保存接納請求及材料，tick 提交後，後續一格才建工作資料夾並經 daemon `node.register` 登記 `node_id=W/inst.json,parent_id=材料.node_id,identity_grant=[有效身分],once=true`，再 `node.wake`。agent 自跑工具時 parent_id 固定自己。parent_id 是可信資源歸屬，與 W 的位置無關，核對規則只依 daemon 篇。工作結果及捕獲檔保留，下格核對並保存；有回件便放待送區，由 tick commit 後投回呼叫者。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
 
 首次登記前依 [kernel P-807](kernel-tasks.md) 排他建立並同步 launch-started；已有 marker 就先查證，不重新派出。執行器／已裝 module 在移除 leaf 前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到不寫 usage.json、用量記 null，不採信工具自報。
 
@@ -60,7 +60,7 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 | `started` | `true` 已進入 inst 的執行階段；`false` 根本沒跑；`null` 證據不足 |
 | `exit_code`、`signal` | 可得的原退出碼或訊號；無資料填 `null`，兩者不同時有值 |
 | `diagnostic`（可省） | 無 key 的有界診斷（最多 4096 字元）；可得時保留原始 errno 代號，例如 EAGAIN、ENOMEM |
-| `stdout`、`stderr` | `{path,bytes,truncated}` 或 `null`；path 是可讀的絕對路徑，bytes 是實際保存量 |
+| `stdout`、`stderr` | `{path,bytes,truncated}` 或 `null`；path 是絕對路徑，bytes 是實際保存量 |
 
 `null` 表示沒有這份輸出證據；有檔且 `bytes:0` 才是確知空輸出。若 inst 使用 `inherit`，外層將對應 fd 接捕獲 pipe，才由 aos-work 保存為 `.bin`；inst 的一般檔案、append、merge、`/dev/null` 規則照正本，不偷偷改成捕獲。直接寫檔若不能證明這次保存的完整 bytes，結果該串流填 `null`；merge 不虛構獨立 stderr。捕獲上限、OOM 證據與收尾沿 [B-103](../base/work.md)、[B-202／204](../base/execution.md)。
 
@@ -76,7 +76,7 @@ unknown、重試及晚到結果依 [C-03](../contracts.md)／[S-401](../scheduli
 
 **代發服務和管池的 kernel node 同帳號，所以該 kernel 讀得到 key；只有其他帳號的成員才有隔離。**key 不進 prompt、工作請求、結果、inst、argv 或給成員的環境。**沒 helper 時全樹同帳號，key 不受保護**（第八批）；要隔離須用 helper 配合不同帳號，或另用不同帳號跑代發並限制憑證檔權限。這是 OS 讀取權限的界線，不是 JSON 能保證的事。
 
-〔建議預設，未拍板〕池管理 node 的任務表加入 `aos-llm --node <絕對 node 路徑> --config <絕對設定路徑>`，再依 daemon 篇註冊、叫醒該 node。aos-llm 是短任務：收件、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 P-402 的 once 資料夾，inst 改跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <絕對設定路徑>`，使用池管理 node 的帳號。HTTP 等待由這支受 daemon 管的程序承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 發回；LLM 工作沿用 once 的清理與恢復界線。
+〔建議預設，未拍板〕池管理 node 的任務表加入 `aos-llm --config <絕對設定路徑>`，再依 daemon 篇註冊、叫醒該 node。aos-llm 是短任務：收件、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 P-402 的 once 資料夾，inst 改跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <絕對設定路徑>`，使用池管理 node 的帳號。HTTP 等待由這支受 daemon 管的程序承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 發回；LLM 工作沿用 once 的清理與恢復界線。
 
 [`llm-config`](schemas/llm-config.schema.json) 是 `version:1` 與 `pools` 陣列，每項只有 `id`、`endpoint`、`model`、`quota_scope`，可加 `key_ref` 及有限正整數 `max_attempts`（預設 3）。endpoint 是無認證資訊、query、fragment 的 HTTP(S) base URL，末尾補 `/chat/completions`。model 是 provider 真名；同一份表不允許重複 pool id。共享 provider 帳戶／模型限制的項目必須使用相同 `quota_scope`，由同一池管理 node 的 tick 統一分配序號、在途占用及冷卻，不能各開一份計數繞過限制。
 
@@ -111,7 +111,7 @@ reason：`completed`（成功）、`rate_limited`（確定限流拒絕）、`rej
 | 完整 argv | 讀寫、身分與輸出 |
 |---|---|
 | `aos-work --work-dir W` | 讀 W/request.json 及目標身分可讀的材料，以 `base` 跑內層 inst；寫捕獲檔、W/result.json。用工作 node 身分，無切身分權限 |
-| `aos-llm --node N --config C` | 一項 module 任務；直接讀 C、收件、池狀態及既有結果，保存狀態／待送封套。只對已提交的工作材料登記、叫醒 once；tick 負責 commit 後投件、清收件原件，用 N 的 user |
+| `aos-llm [--node N] --config C` | 一項 module 任務，node 省略用 cwd（tick 設為 node 根）；直接讀 C、收件、池狀態及既有結果，保存狀態／待送封套。只對已提交的工作材料登記、叫醒 once；tick 負責 commit 後投件、清收件原件，用 N 的 user |
 | `aos-llm-call --work-dir W --config C` | C 含本次派出時固定的必要設定；讀 C、私有 key_ref 與 W/request.json，只送一次 HTTP，寫 W/result.json；用池管理 node 的 user |
 
 三支程式 stdin 都是 `/dev/null`，stdout 保留為空（業務輸出走檔案），stderr 只放無 key 的 `代號: 白話` 診斷；內層 inst 的 stdin／stdout／stderr 另依 P-403。不新增必需 `AOS_*` 環境變數，PATH／目標帳號環境及 inst.envs 依 inst 正本，不從呼叫者環境取得池 key。

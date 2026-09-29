@@ -8,7 +8,7 @@
 
 消費、提交及還原依[通用 tick 的 Q1](../tick.md)；訊息與工具／LLM 結果適用同一規則。收件成功只代表內容已存妥，不代表 agent 已閱讀或完成。
 
-〔建議預設，未拍板〕訊息包含非空 UTF-8 文字及可選的附件檔案引用。入口檢查格式、大小及附件是否可讀；格式錯誤、無權投件或存不下時明確回報，不假稱收件成功。詳細欄位留協議篇下一輪定義。
+〔使用者方向 2026-09-29〕一般訊息與回覆都用 `agent.say`，一律收進 history；回覆 payload 加可省的 `in_reply_to` 指原句 ID。格式與大小依[訊息協議](../protocol/messages.md)，錯誤或存不下不假稱成功。
 
 驗收：收件中斷場景見 [V-03](../conformance.md)。
 
@@ -18,7 +18,7 @@
 
 ## A-203 暫停、取消與輸出
 
-〔建議預設，未拍板〕回覆是 node 追蹤區裡的普通檔案，帶可辨識的輸出 ID、對應輸入或工作，以及 `progress`／`final` 區別。正式讀端讀已 commit 的版本；尚未提交的回答或模型串流片段不算正式回覆。`final` 的任務收尾條件見 [agent 任務](README.md)。
+〔建議預設，未拍板〕本地回覆檔保留輸出 ID、`input_id` 與 `progress`／`final`；正式讀端只讀已 commit 的版本，`final` 條件見 [agent 任務](README.md)。〔使用者方向 2026-09-29〕回傳給傳訊者也用 `agent.say`；`aos agent listen` 依 `in_reply_to` 分組讀 history 中的回覆。
 
 暫停、取消及恢復用[共通操作](../scheduling/operations.md)，不另設 agent 控制入口。操作已受理不等於工作已停止，也不等於任務已完成。
 

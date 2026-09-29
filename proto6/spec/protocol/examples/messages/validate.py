@@ -44,7 +44,6 @@ def schema_name(path):
         return 'work-result' if topic.endswith('-response') else topic
     if group == 'messages':
         names = {'agent-say-payload': 'msg-say-payload',
-                 'agent-reply-receive-payload': 'agent-reply',
                  'kernel-quota-set-payload': 'res-quota',
                  'kernel-usage-output': 'msg-usage-output',
                  'kernel-usage-result': 'msg-command-result',
@@ -98,7 +97,7 @@ def main():
                 assert set(task.get('needs', [])) <= seen, path
                 seen.add(task['id'])
                 argv = task['argv']
-                assert argv[argv.index('--node') + 1] == value['node_id'], path
+                assert '--node' not in argv, path
         if 'reply_to' not in value or 'method' not in value:
             continue
         argv = value['params'].get('argv')

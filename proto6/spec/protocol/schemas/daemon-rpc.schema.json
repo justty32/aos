@@ -803,29 +803,6 @@
             {
               "properties": {
                 "method": {
-                  "const": "daemon.attention.put"
-                },
-                "params": {
-                  "type": "object",
-                  "properties": {
-                    "issue": {
-                      "$ref": "ops-attention.schema.json"
-                    }
-                  },
-                  "required": [
-                    "issue"
-                  ],
-                  "additionalProperties": false
-                }
-              },
-              "required": [
-                "method",
-                "params"
-              ]
-            },
-            {
-              "properties": {
-                "method": {
                   "const": "daemon.attention.resolve"
                 },
                 "params": {

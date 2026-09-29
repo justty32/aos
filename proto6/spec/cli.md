@@ -8,7 +8,7 @@
 
 形狀 `aos <用途> <動作> [更深]`，第一層 daemon/node/kernel/agent/llm/attend/clean/inst；短形見 alias。N 是 node、K 是 kernel、R 是發件／回件 node、T 是 inst 目標、F 是檔案、S 是 socket；[] 可省，| 擇一。
 
-路徑按 cwd，--to 相對 N。IPC 用 --socket S 或 --daemon-config F。通常 stdout 放結果，stderr 放診斷／確認；daemon 例外見下。表中 --json：IPC 印原 RpcResponse，投件印 FileRpcRequest，其餘依該列；每筆加換行。沒列 --json 的命令傳它回 2。
+路徑按 cwd，--to 相對 N；底層 --node 省略用 cwd，tick 跑任務時 cwd 是 node 根。IPC 用 --socket S 或 --daemon-config F。通常 stdout 放結果，stderr 放診斷／確認；daemon 例外見下。表中 --json：IPC 印原 RpcResponse，投件印 FileRpcRequest，其餘依該列；每筆加換行。沒列 --json 的命令傳它回 2。
 
 設定指令持 tick 鎖提交，下格採用；草稿放樹外，work/ 放暫存。手改先 pause、排空、持鎖改，resume 驗證提交。unregister、特權佈建、提高額度、採用手改、delete 清理先問 y/n；有 --yes 的列可明示略過，未確認回 125。attend 危險動作逐件問；Ctrl-C 本身就是停機指令。
 
@@ -42,7 +42,7 @@
 | 4 | `aos daemon attention show N ID --socket S [--json]`：看 daemon 事項 | 內容、actions、open／done | IPC `daemon.attention.show`；IPC。 |
 | 5 | `aos daemon attention resolve N ID --socket S [--json]`：解除 daemon 自己的事項 | `resolved N ID` | IPC `daemon.attention.resolve`；IPC。只管 daemon 來源。 |
 
-啟動另寫 state_dir/helper.pid（PID 或 none）及 daemon.pid；正常退出刪兩檔，舊檔只供提示、不據此殺程序。
+daemon stdout 印 helper_pid 與 node 問題警告；stderr 只印自身原因的錯誤。啟動另寫 state_dir/helper.pid（一行 PID 或 none）及 daemon.pid；正常退出刪兩檔，舊檔只供提示、不據此殺程序。
 
 sudo 啟動後降為 common_user（預設 SUDO_UID）；helper 不重拉，隨 daemon 退出。state_dir/state.json 存登記／pause／pending；pause 每秒存，意外退出最多丟一秒。重開自動 tick 頂層，保留 pause。
 
@@ -67,13 +67,13 @@ sudo 啟動後降為 common_user（預設 SUDO_UID）；helper 不重拉，隨 d
 | 18 | `aos node log N [--all] [--limit M]`：看提交歷史 | OID、時間、主旨 | 唯讀 git log；查詢。預設 20 筆 aos-tick group，--all 含維護提交；一格可零筆或多筆。 |
 | 19 | `aos node receipt R ID [--json]`：查已提交的 RPC 回應 | method、status／exit；JSON RpcResponse | 固定 commit 讀 `state/messages/responses/ID.json` 並核對原請求；查詢。待回、RPC error 或指令失敗回 1；僅在 responses/ 則說尚未消費。 |
 
-目標是資料夾：找 `.aos/inst.json`，再找 inst.json；檔案直接讀。布局有 `.aos/{inst.json,tasks.json,jobs/,summary/,outbox/}`、requests/、responses/、work/、public/、config/、state/。tasks 外層 _metainfo，每項 inst 加 id/kind/group/needs、無 user。
+目標是資料夾：找 `.aos/inst.json`，再找 inst.json；檔案直接讀。布局有 `.aos/{inst.json,tasks.json,jobs/,summary/,outbox/,attention/}`、requests/、responses/、work/、public/、config/、state/。tasks 外層 _metainfo，每項 inst 加 id/kind/group/needs、無 user。
 
-pause/resume 是開關，wake 是現在跑一格；直接 tick 仍可跑。last_tick.completed 不等於業務成功，launch_failed 未啟動、unknown 證據不足。once 未啟動寫 `<inst檔名>.err`。runner 未啟動、tick 故障、程序清不乾淨，由 daemon 寫 node 的 `.aos/attention/`（ignore、不隨 group 還原）；建 node 時給寫權，寫不進就不管，daemon stdout 印警告。daemon 的 stderr 只報自身錯誤，如 helper 不見、state 存不下。
+pause/resume 是開關，wake 是現在跑一格；直接 tick 仍可跑。last_tick.completed 不等於業務成功，launch_failed 未啟動、unknown 證據不足。once 單檔未啟動寫 `<inst檔名>.err`。runner 未啟動、tick 故障、程序清不乾淨，由 daemon 寫 node 的 `.aos/attention/`（ignore、不隨 group 還原）；建 node 時給寫權，寫不進就不管、stdout 印一行警告。helper 不見、state 存不下才是 daemon 事項。
 
 ### kernel：保存成員、安排工作與資源
 
-[kernel 任務](protocol/kernel-tasks.md)：底層加 --node K；直接跑持鎖提交，tick 用 --in-tick。
+[kernel 任務](protocol/kernel-tasks.md)：底層加 --node K；直接跑持鎖提交，tick 內由繼承的鎖 fd 判斷、交 tick 提交。
 
 | # | argv／做什麼 | 成功時 stdout | 底層與失敗 |
 |---|---|---|---|
@@ -119,9 +119,9 @@ schedule 按 ready_seq，60 秒補查。
 | 43 | `aos agent config recheck N`：修好後驗證並解除設定事項 | `valid` | `aos-agent-check --recheck`；改檔，仍無效回 1；解除本地事項，不解 unknown、不 resume。 |
 | 44 | `aos agent task run N`：跑 agent module 一步，供任務表使用 | 空 | `aos-agent-step`；必須繼承 tick 鎖；0 本步完成、1 處理失敗、2 用法、125 前置。人手完整一格用 node tick。 |
 
-say 持 R 鎖提交原件／outbox 後投 N，不 wake；accepted 只是接件。**最新裁定：回話用新 ID 的 agent.say，payload.in_reply_to 指原 ID，收進 history；listen 依此分回話。**say --wait 須讀 target 本地已提交 replies，以 input_id/final 判完成；只有投件權仍可 say，不能保證能等 final。failed final 也回 0，表示已收到。
+say 持 R 鎖提交原件／outbox 後投 N，不 wake；accepted 只是接件。回話用新 ID 的 agent.say，payload 多帶可省的 in_reply_to 指原 ID，一律收進 history。say --wait 讀 target 本地已提交 replies，以 input_id/final 判完成；只有投件權仍可 say，不能保證能等 final。failed final 也回 0，表示已收到。
 
-listen 看本地 assistant／工具及 in_reply_to 回話；每 200 ms 看新 commit，follow flush，工具顯示沿 [proto5](../../proto5/spec/aos-agent/cli-listen.md)。top 收回話不叫 LLM；wire 待同步見文末。
+listen 看本地 assistant／工具及帶 in_reply_to 的回話：本地依 input_id、收到的回話依 in_reply_to 分組；每 200 ms 看新 commit，follow flush，工具顯示沿 [proto5](../../proto5/spec/aos-agent/cli-listen.md)。top 沒裝 agent 任務，收話只存 history。
 
 ### llm、attend、clean、inst
 
@@ -135,13 +135,13 @@ listen 看本地 assistant／工具及 in_reply_to 回話；每 200 ms 看新 co
 | 48 | `aos llm pool step K [--config F]`：推進池 module 一步 | 空 | `aos-llm --node K --config F`，F 預設 K/config/llm-pools.json；依 P-408，0 本步、2 設定、125 前置、1 執行失敗；供持鎖 tick 使用。 |
 | 49 | `aos attend ls --socket S [--source N] [--json]`：沿登記樹彙整 open 待辦 | store、來源、ID、原因；JSON 每筆事項含 status | IPC node.ls＋daemon.attention.ls、各 node 的 .aos/attention/；IPC／查詢。 |
 | 50 | `aos attend show N ID --socket S [--store daemon\|node] [--json]`：只看一件待辦 | 事項內容；JSON 事項含 status | daemon 走 attention.show；node 讀本地事項；IPC／查詢。 |
-| 51 | `aos attend resolve --node R --socket S --handlers F [--source N --issue ID] [--store daemon\|node] [--action ID] [--json]`：執行處理表動作 | 每項動作與結果；JSON 每筆 ops-action-record | `aos-attend`，CLI 依 store 取來源（消化 --json）；0 已回應／排入待送／無項、3 跳過／human、1 失敗／不明、2 用法／表錯、125 前置。 |
+| 51 | `aos attend resolve [--node R] --socket S --handlers F [--source N --issue ID] [--store daemon\|node] [--action ID] [--json]`：執行處理表動作 | 每項動作與結果；JSON 每筆 ops-action-record | `aos-attend`，CLI 依 store 取來源（消化 --json）；0 已回應／排入待送／無項、3 跳過／human、1 失敗／不明、2 用法／表錯、125 前置。 |
 | 52 | `aos clean run N --config F [--yes] [--json]`：清一批已可清的資料 | outcome、封存／刪除數、歷史未回收；JSON ops-clean-report | `aos-clean --node N --config F`；0 成功／無變動、2 設定、125 前置／未確認、1 開始後失敗。delete 先確認。 |
 | 53 | `aos inst run [T] [--timeout-ms M] [--stderr F] [--json]`：直接跑 inst | 串流依 inst；JSON daemon-runner-report | 固定 bytes／status fd 交 aos-runner，P-109／110；2 用法、125 前置／收尾、126/127 exec 失敗，其餘子程式碼。T 預設 .、只用目前 UID；--json 會和繼承 stdout 混流則執行前回 2。 |
 
 同 node 同 scope 共算限制；同 UID 不隔離 key。
 
---store 預設 node，daemon 事項明給 daemon；JSON 沿 ops，不靠目錄猜來源。attend 自動做唯一 safe；危險逐件問 /dev/tty，只收 y/Y，無終端跳過，不收 --yes。來源確認 done 才解除。clean 預設 30 日、64 件、封存，未結／unknown／有引用保留。
+--store 預設 node，daemon 事項明給 daemon；JSON 沿 ops。node 事項在 .aos/attention/{open,done}/，來源修復後移到 done；daemon 事項經 IPC resolve。attend 自動做唯一 safe；危險逐件問 /dev/tty，只收 y/Y，無終端跳過，不收 --yes。clean 預設 30 日、64 件、封存，未結／unknown／有引用保留。
 
 ## H-030．CLI 怎麼變成 method〔第十二批裁定〕
 
@@ -151,7 +151,7 @@ alias 先展開；method 是指令去掉 aos、以點連接。IPC params 沿 sch
 {"jsonrpc":"2.0","id":"m1","method":"agent.say","reply_to":"/srv/aos/top","params":{"argv":["aos","agent","say"],"stdin":"/srv/aos/top/public/m1.json","stdout":{"$opt":"inherit"},"stderr":{"$opt":"inherit"}}}
 ```
 
-m1.json 內容是 `{"text":"你好"}`；回話用 `{"text":"收到","in_reply_to":"m1"}`。argv 保留 aos，method 對應命令；跨 node inst 可帶 envs／指示詞／任意 stdin 路徑，借權或換程式風險由使用者承擔。tick 提交後投 outbox、刪原件；result 用 work-result，stdout 只給路徑；讀不到報錯，不內嵌或搬運。schedule recheck/quota set 的本地 stdout 為 accepted:true，usage measure 為 res-usage。work submit/llm chat 跨格等業務結果才回，stdout 分別是 work-result/llm-result。
+m1.json 內容是 `{"text":"你好"}`；回話用 `{"text":"收到","in_reply_to":"m1"}`。argv 保留 aos，method 對應收件 node 開放的命令，否則 -32601；跨 node inst 的 envs／指示詞／stdin 風險由使用者承擔。tick 提交後投 outbox、刪原件；result 用 work-result，stdout 只給路徑。schedule recheck/quota set 的本地 stdout 為 accepted:true，usage measure 為 res-usage。work submit/llm chat 跨格等業務結果才回，stdout 分別是 work-result/llm-result。
 
 ## H-035．常用 alias〔工程預設〕
 
@@ -387,14 +387,13 @@ aos attend ls --socket "$S" --source "$DEMO/a"
 |---|---|
 | D1 登記／tick 證據 | P-106／115 已有 node.ls/show、boot_id、last_tick、once 診斷。 |
 | D2 成員／範本 | P-701～715 定 agent 設定／工具；P-801～814 定成員、同步、範本。 |
-| D3 回話／context | P-703／708／713／714 定 input_id、reply、history、context；最新回覆 wire 同步見下表。 |
+| D3 回話／context | P-703／708／713／714 定本地 input_id、reply、history、context；回話統一 agent.say＋in_reply_to。 |
 | D4 驗證／待辦／清理 | P-210／712／805／609 定驗證／recheck；P-716／814 定清理遍歷。 |
 | D5 池狀態 | P-808～812 定路由、共享窗口及 pool-status，pool usage 有實際落點。 |
 | D6 停機／JSON | P-114／116 定 Ctrl-C、存檔重開；stop 已裁定不做。JSON 沿原 schema。 |
 
 | 剩餘缺口 | 為什麼現在不補 |
 |---|---|
-| 最新協議同步 | 回覆、跨 node inst、兩處待辦須同步 messages/agent/ops/daemon、schema、範例與驗證器，超出小修；node 事項持久格式暫沿 ops，新分支未驗。 |
 | unknown／可選 run | 外部副作用由部署 dangerous adapter 判定，CLI 不能代定安全重跑。 |
 | 自訂清理、git 歷史回收 | 自訂格式無通用終局／引用證據，報 clean_blocked；歷史回收留後續。 |
 | 執行期驗收 | 實作後依 [驗收入口](conformance.md)測權限、中斷、真實 provider。 |

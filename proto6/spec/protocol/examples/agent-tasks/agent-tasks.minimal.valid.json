@@ -10,9 +10,7 @@
         "_version": 1
       },
       "argv": [
-        "aos-agent-step",
-        "--node",
-        "/srv/aos/a"
+        "aos-agent-step"
       ],
       "id": "agent",
       "kind": "agent",

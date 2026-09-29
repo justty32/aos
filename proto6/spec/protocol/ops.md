@@ -6,22 +6,23 @@
 
 本篇定 attention、aos-attend 與 aos-clean；權限與兩條請求路線只依 [共用約定](README.md)。
 
-## P-601．attention IPC 與恢復檔〔建議預設，未拍板〕
+## P-601．兩處事項〔使用者方向 2026-09-29〕
 
-平常經 daemon IPC 查詢／回報事項；`state_dir/attention/` 只供關掉重開接續，不是查詢入口。磁碟保留 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`；source_key 是正規化 source_node UTF-8 的 SHA-256 小寫十六進位。
+node 的事項放 `.aos/attention/open/<issue_id>.json`，解除移到 `done/`；整個 `.aos/attention/` ignore，不隨 group 還原。node 自己寫自己的問題；runner 未啟動、tick 自動停格、後代清不空則由 daemon 寫。once 單檔未啟動仍沿 [P-110](daemon.md) 的 `.err`。建 node 時須授 daemon 寫權；寫不進去就不管，daemon 在 stdout 印一行警告。
 
-[ops-attention](schemas/ops-attention.schema.json) 必填 version、source_node、issue_id、reason、message、actions；actions 是處理表 ID，無可用項就 []。job_id／attempt_id／request_id 按需附，結果不明用 reason:unknown。通知不帶程式、憑證或完整工作。
+daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC；`state_dir/attention/` 只供重開接續，內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
+
+兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、message、actions；actions 是處理表 ID，沒有就 []。job_id／attempt_id／request_id 按需附，結果不明用 reason:unknown；不帶程式、憑證或完整工作。
 
 | method（對應 `aos daemon attention <動作>`） | params → result |
 |---|---|
-| `daemon.attention.put` | `{issue:<事項>}` → `{source_node,issue_id}` |
 | `daemon.attention.resolve` | `{source_node,issue_id}` → 同形狀 |
 | `daemon.attention.show` | `{source_node,issue_id}` → 事項加 `status:"open"` 或 `"done"` |
 | `daemon.attention.ls` | 可省 source_node、status（預設 open）、limit（1～64、預設 64）、after → `{issues:[show結果],next_after}` |
 
-ls 依 `source_key/issue_id` bytes 排序，after 為上頁 next_after；列完 next_after 為 null。先依可信登記 owner／祖先 owner 授權篩選再分頁；show 無權拒絕，put／resolve 同樣只允許來源 owner／祖先 owner。daemon 自己的啟動事項由內部更新，source_node 使用受影響的 root。
+IPC 只查／解除 daemon 自身事項。依可信登記 owner／祖先 owner 授權；ls 先篩選再按 `source_key/issue_id` bytes 分頁，after 用上頁 next_after，列完為 null。daemon 內部新增事項，不接受 node 代交。
 
-同一問題沿用 ID，相同內容可補送，異內容不覆蓋；解除後再發生用新 ID。來源保留實際問題並補遺失通知，只有確認解除才 resolve；尚未提交的處置不能宣稱解除。daemon 在記憶體更新並依 P-003 同步恢復檔；done 保留 30 日，被引用就留。IPC／存檔失敗報 stderr，不宣稱已保存或解除 unknown。
+同一問題沿用 ID，異內容不覆蓋；解除後再發生用新 ID。只有確認解除才移 done／resolve，未提交的處置不算解除。寫檔依 P-003，done 留 30 日、被引用就留；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見登記樹讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
 
 ## P-602．人與 agent 都能編輯的處理表〔建議預設，未拍板〕
 
@@ -42,14 +43,14 @@ RPC id 用 operation_id、jsonrpc 固定 2.0。bindings 只供 daemon_ipc，將 
 完整 argv：
 
 ```text
-aos-attend --node <操作者_node> --socket <daemon_socket> --handlers <檔案> [--source <來源_node> --issue <ID>] [--action <ID>]
+aos-attend [--node <操作者_node>] --socket <daemon_socket> --handlers <檔案> [--source <來源_node> --issue <ID>] [--store daemon|node] [--action <ID>]
 ```
 
-source／issue 一起給，省略經 IPC 列全部有權看見的 open。未選 action 只自動做唯一匹配的 safe；沒有／多個就列出，human 只顯示。不提供 --yes／--yes-all，傳入回 2。安全／危險界線依 [S-405](../scheduling/operations.md)，unknown 處置依 S-401，不在本工具重判。
+`--node` 省略用 cwd。source／issue 一起給，以 store 選事項位置（預設 node）；不指定 source／issue 時沿 P-601 合併列出兩處可見的 open。未選 action 只自動做唯一匹配的 safe；沒有／多個就列出，human 只顯示。不提供 --yes／--yes-all，傳入回 2。安全／危險界線依 [S-405](../scheduling/operations.md)，unknown 處置依 S-401，不在本工具重判。
 
 stdin 不讀資料；只從 /dev/tty 問逐件 y/n，stderr 顯示來源、工作與影響。只接受去空白的 y／Y；其他字、EOF、無終端都跳過並保持 open。stdout 每項一行 [ops-action-record](schemas/ops-action-record.schema.json)＋LF，診斷及子程式輸出走 stderr。
 
-讀 IPC 事項、處理表與操作者紀錄；寫 P-604 紀錄／待送請求，不自行移通知或改原工作結果。使用執行者身分、記實際有效 UID；--node 不授權。其他相對參數依呼叫 cwd，PATH 沿環境；exec adapter 收 AOS_ATTEND_NODE／AOS_ATTEND_OPERATION_ID 供定位，皆非憑證。
+讀兩處事項、處理表與操作者紀錄；寫 P-604 紀錄／待送請求，不自行移通知或改原工作結果。使用執行者身分、記實際有效 UID；--node 不授權。其他相對參數依呼叫 cwd，PATH 沿環境；exec adapter 收 AOS_ATTEND_NODE／AOS_ATTEND_OPERATION_ID 供定位，皆非憑證。
 
 退出：0 全有回應／已排入待送或無 open；3 有跳過／human；1 有失敗或不明（優先於 3）；2 用法／表錯，尚未開始；125 工具前置失敗、尚未寫入。開始後的執行／紀錄／commit 失敗回 1，不能據此重做；子程式碼不直接當工具碼，訊號看 wait。
 
@@ -68,14 +69,14 @@ prepared 的外部動作無結果不自動再做；已提交待送檔由 tick �
 ## P-605．aos-clean 的 argv 與設定〔建議預設，未拍板〕
 
 ```text
-aos-clean --node <node> --config <設定檔> [--in-tick]
+aos-clean [--node <node>] --config <設定檔>
 ```
 
-`--node` 是 node id，設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用該 node inst 的 `user`。無自訂必填環境或身分切換。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
+`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用該 node inst 的 `user`。無自訂必填環境或身分切換。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
 
 [ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；`retention_ms` 預設 2592000000（30 日）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
-直接跑取得 B-602 同一把鎖，確認工作區乾淨後自己提交清理；不把別人的未提交修改順手 commit／還原。`--in-tick` 只供持鎖的 tick 呼叫，按 [node P-203](node.md) 核對繼承的 AOS_TICK_LOCK_FD，不能把旗標當成已持鎖或授權證據；它不另取鎖、不自行 commit，由所在 group 決定。〔使用者方向 2026-09-29〕無事不 commit；不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
+直接跑取得 B-602 同一把鎖，確認工作區乾淨後自己提交清理；不把別人的未提交修改順手 commit／還原。偵測到 tick 傳下的 AOS_TICK_LOCK_FD 時，按 [node P-203](node.md) 核對同一把鎖，不另取鎖、不自行 commit，由所在 group 決定。〔使用者方向 2026-09-29〕無事不 commit；不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
 
 〔建議預設，未拍板〕結束碼 `0`＝本批成功或無可清項，`2`＝用法／設定錯且未開始，`125`＝自身前置失敗且尚未開始改動；`1`＝已開始後的執行、保存或提交失敗。候選不符合保留條件屬正常保留；若缺失資料使安全性無法判斷，保留並回報 `clean_blocked`，不能猜著清。訊號依 wait 狀態判定。
 
@@ -91,7 +92,7 @@ archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存，
 
 ## P-607．schema 與最小範例〔建議預設，未拍板〕
 
-JSON Schema 2020-12；共用型別只引用 [common.schema.json](schemas/common.schema.json)。每列一正一誤；解析層另驗 P-002 的 UTF-8、重複 key、非有限數與尾隨資料，schema 不替代它。授權、鎖、引用、確認與 commit 的驗收仍要實作後測。
+Schema 與解析沿 [共用約定](README.md)，正反例見下；授權、鎖、引用、確認與 commit 留待實作驗收。
 
 | 格式 | 最小正例 | 主要錯誤例及原因 |
 |---|---|---|
@@ -109,7 +110,7 @@ JSON Schema 2020-12；共用型別只引用 [common.schema.json](schemas/common.
 
 設定檢查由使用設定的來源程式負責：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。任務直接讀設定，驗格式、引用與必要權限；錯誤就停依賴它的新工作，仍可收結果與處理取消。inst 身分及 tasks 錯誤按 node／daemon 契約拒絕啟動。
 
-來源沿 P-601 發 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；`actions:["recheck"]`。同一未解問題沿用同一 issue_id，通知是不可變副本，最新細節留來源狀態；不是每格另生一件。連 daemon socket 都無法使用時就 stderr 明報，不宣稱已報事項。任務表壞到檢查任務跑不了時，由拒載任務表的 tick／觀察失敗的 daemon 留診斷及其可寫的事項，不能等壞表裡的任務救自己。
+來源沿 P-601 寫自己的 `.aos/attention/`，用 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；`actions:["recheck"]`。同一未解問題沿用同一 issue_id，通知是不可變副本，最新細節留來源狀態；不是每格另生一件。任務表壞到檢查任務跑不了時，由 tick／daemon 寫 node 事項；daemon 寫失敗依 P-601 警告。
 
 修好普通設定並提交後，可等下一格檢查，或由有權限者透過 safe handler 執行：
 
@@ -118,9 +119,9 @@ aos-kernel-check --node /srv/aos/top
 aos-agent-check --node /srv/aos/a --recheck
 ```
 
-一份 handler 明選一個來源及其程式，argv 寫死來源路徑，不從通知文字拼命令。程式核對 P-601 的 source_node、issue_id 與自己保存的問題；可讀的通知不是授權。kernel handler [正例](examples/ops/handlers.minimal.valid.json) 沿既有 [ops-handlers schema](schemas/ops-handlers.schema.json)，[反例](examples/ops/handlers.unknown_safe.invalid.json) 仍拒絕把 unknown 處置標成 safe。agent 對應形狀只把 argv 換成上列第二行，不新增處理表格式。
+handler 依 P-602 明選來源與程式，核對 source_node、issue_id 與自己的問題。kernel 用上表處理表正例；agent 只將 argv 換成上列第二行。
 
-重驗只核對目前設定與解除設定問題，不送 LLM、不派 once、不 resume node、不解除 unknown。直接執行先持 node 鎖、驗乾淨基線，修復證據提交成功後才經 IPC resolve；tick 內同一 module 下一格核對已提交證據再 resolve。commit 失敗或問題仍在就保持 open；IPC 失敗按 P-601 補做。aos-attend 的 exec 0 仍只表示本次命令成功，經 IPC 查 open／done 才能看到來源確認的解除結果。
+重驗只核對目前設定與解除設定問題，不送 LLM、不派 once、不 resume node、不解除 unknown。直接執行先持 node 鎖、驗乾淨基線，修復證據提交成功後才移自身事項到 done；tick 內同一 module 下一格核對已提交證據再移。commit 失敗或問題仍在就保持 open；移檔失敗可補做。aos-attend 的 exec 0 只表示本次命令成功，沿 P-601 查 open／done 才能確認解除。
 
 重要設定手改與恢復前的候選驗證依 [node P-210](node.md)；一般 check 成功不替代該程序。全流程不加新的 RPC method；kernel.schedule.recheck 仍只管排程，不能拿來冒充設定重驗。
 

@@ -24,7 +24,7 @@ UTC 用於跨重啟時間點；運行中逾時用經過時間，不因牆鐘倒�
 
 ## C-03．工作、嘗試與結果
 
-結果必須對回 [T-03](terms.md) 的 node、job 與 attempt。檔案引用用一般權限下可讀的路徑或該篇定址方式。
+結果必須對回 [T-03](terms.md) 的 node、job 與 attempt。結果的 stdout 只給路徑，發件者未必讀得到，風險自負。
 
 共用結果意思是 `succeeded`（成功）、`failed`（確定失敗）、`canceled`（已完成取消）與 `unknown`（沒有足夠證據判定）。不另加結果封套或平行狀態表。程序結果見 [B-103](base/work.md)，agent 任務成功另看 [A-503](agent/README.md)。
 
