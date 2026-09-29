@@ -59,24 +59,24 @@ CPU 是 [P-002](README.md) 時間單位的明示例外，不轉毫秒。limits �
 
 ## P-505．路線與 LLM 份額〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕
 
-agent 只按設定的一個 node 位址投 `llm.chat`，結果回 agent 的收件區；請求與結果始終用 [work P-406／407](work.md) 的同一格式。agent 不判斷對面是自己的 kernel、上層 kernel 或管池的另一個 kernel。開 agent 的 kernel 負責選路線、寫設定與配權限，具體範本及程式見 [kernel 任務篇](kernel-tasks.md)。
+agent 只按設定的一個 node 位址投 `llm.chat`，結果回 agent 的收件區；請求與結果始終用 [llm-work P-406／407](llm-work.md) 的同一格式。agent 不判斷對面是自己的 kernel、上層 kernel 或管池的另一個 kernel。開 agent 的 kernel 負責選路線、寫設定與配權限，具體範本及程式見 [kernel 任務篇](kernel-tasks.md)。
 
 | kernel 選的路線 | 裝的任務與責任 |
 |---|---|
 | 全部都管 | agent 位址指向自己的 kernel，裝 `aos-kernel-llm-forward`：核對來源、預留成員份額、排隊，再交本地池、上層或另一個 kernel；轉交及回件也遵守先提交、後送出。 |
 | 不管 LLM 派送 | agent 位址指向管池的 LLM kernel，直接投它的 requests/；自己的 kernel 裝 `aos-kernel-usage-collect`，只收成員自記用量。LLM kernel 的授權、池共享限制仍須檢查。 |
 
-〔使用者方向 2026-09-29 晚〕上表兩條路線只管份額怎麼走；池 node 是「自己排」還是「交給 endpoint」看該池的 `schedule`（[work P-405](work.md)），`llm.target_node=null` 則是不經池的「不管」檔，aos 不限流也不扣份額，三檔見 [S-301](../scheduling/llm.md)。
+〔使用者方向 2026-09-29 晚〕上表兩條路線只管份額怎麼走；池 node 是「自己排」還是「交給 endpoint」看該池的 `schedule`（[llm-work P-405](llm-work.md)），`llm.target_node=null` 則是不經池的「不管」檔，aos 不限流也不扣份額，三檔見 [S-301](../scheduling/llm.md)。
 
 工具也用一個 `tools.target_node` 選路：node id 交該 kernel 全管，null 由 agent 自己登記 parent_id=自己的 once、自己記用量，所屬 kernel 只收集。兩條路都沿 [work P-402](work.md)，不靠工作資料夾位置決定資源歸屬。
 
-〔建議預設，未拍板〕配額 `llm` 是陣列，每項只有 `pool_id`（共用 `ID`）與 `concurrent_requests`（非負整數）；零表示不放行新請求。同檔不可重複 pool_id。這個 ID 是**配置該份額之 kernel 的路由名**，由 `config/llm-routes.json` 唯一對到下一個 node 與下一個 pool；本地終點才對到 [work P-405](work.md) 的 pools[].id。不把兩個 node 的同名池當同池，也不讓 agent 指定 endpoint 或 key。路由、授權及回件對照的格式只在 kernel 任務篇定。
+〔建議預設，未拍板〕配額 `llm` 是陣列，每項只有 `pool_id`（共用 `ID`）與 `concurrent_requests`（非負整數）；零表示不放行新請求。同檔不可重複 pool_id。這個 ID 是**配置該份額之 kernel 的路由名**，由 `config/llm-routes.json` 唯一對到下一個 node 與下一個 pool；本地終點才對到 [llm-work P-405](llm-work.md) 的 pools[].id。不把兩個 node 的同名池當同池，也不讓 agent 指定 endpoint 或 key。路由、授權及回件對照的格式只在 kernel 任務篇定。
 
 用量 `llm` 每項是 `pool_id`、`active_requests`、`unknown_requests`；後兩者非負且**分開計數**。前者是已知仍占用的請求；後者是遠端執行／占用不明的請求，兩者合計占用份額；unknown 的估計占用隨 [P-606](ops.md) 定期清理移除，不表示遠端已停止。
 
-本篇只編碼並行份額；provider usage、429 與 unknown 沿 [S-301～S-304](../scheduling/llm.md)及 work 篇。共享 quota_scope 的最小窗口設定及 `state/llm/pool-status.json` 由 [kernel 任務篇 P-811](kernel-tasks.md) 定；`aos llm pool usage` 讀同一已提交版本，顯示並行占用、unknown、最近 429 及冷卻時間。狀態是該池 node 的觀測，讀不到或過時就明說；不同 node 的同名 quota_scope 不會自動共享計數，共用 provider 限制必須匯到同一管池 node。
+本篇只編碼並行份額；provider usage、429 與 unknown 沿 [S-301～S-304](../scheduling/llm.md)及 [llm-work P-407](llm-work.md)。共享 quota_scope 的最小窗口設定及 `state/llm/pool-status.json` 由 [kernel 任務篇 P-811](kernel-tasks.md) 定；`aos llm pool usage` 讀同一已提交版本，顯示並行占用、unknown、最近 429 及冷卻時間。狀態是該池 node 的觀測，讀不到或過時就明說；不同 node 的同名 quota_scope 不會自動共享計數，共用 provider 限制必須匯到同一管池 node。
 
-〔使用者方向 2026-09-29〕下層未裝不再細分，父額度及池限制仍有效；key 不進本篇檔案、argv 或給 node 的環境，帳號與 key 保護只見 [work P-405](work.md)。
+〔使用者方向 2026-09-29〕下層未裝不再細分，父額度及池限制仍有效；key 不進本篇檔案、argv 或給 node 的環境，帳號與 key 保護只見 [llm-work P-405](llm-work.md)。
 
 **驗收：**同一份 agent 請求可經自己的 kernel 轉交或直接交 LLM kernel，wire 格式不變；轉交不能靠改 pool 名跳過份額；兩個共用 scope 的池在 429 後一起冷卻。
 

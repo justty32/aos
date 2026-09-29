@@ -14,12 +14,12 @@
 
 [`llm-config`](schemas/llm-config.schema.json) 是 `version:1` 與 `pools` 陣列，每項只有 `id`、`endpoint`、`model`、`quota_scope`，可加 `key_ref`、有限正整數 `max_attempts`（預設 3）及 `schedule`。endpoint 是無認證資訊、query、fragment 的 HTTP(S) base URL，末尾補 `/chat/completions`。model 是 provider 真名；同一份表不允許重複 pool id。共享 provider 帳戶／模型限制的項目必須使用相同 `quota_scope`，由同一池管理 node 的 tick 統一分配序號、在途占用及冷卻，不能各開一份計數繞過限制。
 
-〔使用者方向 2026-09-29 晚〕`schedule` 選這個池是哪一檔，只有兩個值：
+〔使用者方向 2026-09-29 晚〕`schedule` 選這個池是哪一檔（三檔的意思以 [S-301](../scheduling/llm.md) 為正本），只有兩個值：
 
 - `aos`（省略即此值）＝「自己排」：aos-llm 照 [kernel P-811](kernel-tasks.md) 讀 `llm-limits.json`，做並行、窗口、冷卻與排隊。
-- `endpoint`＝「交給 endpoint」：這個池的 aos-llm 只當**轉發任務**，把收到的請求逐件交 aos-llm-call 轉給外部 endpoint（LiteLLM、原廠 API、本機模型伺服器等）；不讀 `llm-limits.json`、不做窗口與並行上限，只藏 key、記用量。〔建議預設，未拍板〕429 仍照 S-303 有限重試，遵守 `Retry-After`。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
+- `endpoint`＝「交給 endpoint」：這個池的 aos-llm 只當**轉發任務**，把收到的請求逐件交 aos-llm-call 轉給外部 endpoint；不讀 `llm-limits.json`、不做窗口與並行上限，只藏 key、記用量。〔建議預設，未拍板〕429 仍照 S-303 有限重試，遵守 `Retry-After`。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
 
-一個池只對一個 endpoint；多 endpoint 自動切換首版不做。
+一個池只對一個 endpoint，見 [S-301](../scheduling/llm.md)。
 
 `key_ref` **只准出現在代發服務設定**，值是私有憑證檔絕對路徑；缺省＝不帶 Authorization。代發程序讀 key 建 HTTP header，禁止把原文存進 node 資料、git、交付檔或日誌；這是輸出約定，不是假裝同帳號的 kernel 無讀取權。私有憑證檔放在 node 樹外，只有部署授權的代發帳號可讀；同 UID 成員仍能讀到，不能宣稱靠放在樹外就隔離。任務直接開設定檔；派出時只固定該次工作需要的設定值及憑證引用，不複製 key。
 

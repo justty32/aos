@@ -80,7 +80,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 `agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON。接件後保存回址、原文與附件引用，建 queued input 及 user history；可省的 `in_reply_to` 原樣存 history，回話也照此處理。指令結果沿 work-result，收件確認放指令 stdout。附件先只保存引用，要內容就用普通讀檔工具。
 
-結果先核對 RPC id、可信來源及原請求，再保存與套入 history／決定；同 bytes 不重吃。工作結果在指令 stdout 裡按 [work](work.md) 解讀，不能把外層指令成功當成工具／LLM 成功。套用後才記 response_consumed、移除 pending；一批工具全齊才處理。
+結果先核對 RPC id、可信來源及原請求，再保存與套入 history／決定；同 bytes 不重吃。工作結果在指令 stdout 裡按 [work](work.md)／[llm-work](llm-work.md) 解讀，不能把外層指令成功當成工具／LLM 成功。套用後才記 response_consumed、移除 pending；一批工具全齊才處理。
 
 RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身仍是普通 agent.say。
 
@@ -90,7 +90,7 @@ RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身�
 
 工具預覽合計最多 64 KiB，標原引用與截短／缺失。`utf8_bytes_upper_bound` 是 messages／tools JSON UTF-8 bytes＋每 message 32 的估算，不保證 tokenizer 上界。加輸出預留超 context_tokens、或 RPC 超 256 KiB，就報 context_over_budget、不送。
 
-固定請求 ID、context、meta、usage；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 target_node。tick 提交後投，後格收結果。〔使用者方向 2026-09-29 晚〕要串流就在業務 JSON 帶 `stream_path`（[work P-406](work.md)）；檔案放哪、權限怎麼開、要不要自己盯著它，由 agent 決定，aos 不叫醒。target_node 不存在時投件那一步報錯（[node P-206](node.md)）。
+固定請求 ID、context、meta、usage；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 target_node。tick 提交後投，後格收結果。〔使用者方向 2026-09-29 晚〕要串流就在業務 JSON 帶 `stream_path`（[llm-work P-406](llm-work.md)）；檔案放哪、權限怎麼開、要不要自己盯著它，由 agent 決定，aos 不叫醒。target_node 不存在時投件那一步報錯（[node P-206](node.md)）。
 
 ## P-707．模型決定與兩種工具路線〔A-401～403、A-503、P-407；工程預設〕
 

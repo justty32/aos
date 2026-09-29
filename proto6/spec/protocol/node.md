@@ -123,7 +123,7 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
 
 建 node 時須開 daemon 對 `.aos/attention/` 的寫權。node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄 traverse 與 requests／responses 及 .tmp/ 的寫入／遍歷權。〔使用者方向 2026-09-29 晚〕首版只用共享群組（可配 setgid 目錄）、不用 ACL，保證 node 可讀、消費提交後可 unlink，不依賴投件者 umask，不一律 world-writable。
 
-投件權不含 repo／config／key 讀權，也不保證投件者間不能改檔；不覆蓋與內容核對見 P-003，可信來源及同 UID 界線見 [messages P-303](messages.md)。權限配置由上層 kernel 用自己的帳號做，固定特權步驟經 daemon；key 隔離見 [work P-405](work.md)。
+投件權不含 repo／config／key 讀權，也不保證投件者間不能改檔；不覆蓋與內容核對見 P-003，可信來源及同 UID 界線見 [messages P-303](messages.md)。權限配置由上層 kernel 用自己的帳號做，固定特權步驟經 daemon；key 隔離見 [llm-work P-405](llm-work.md)。
 
 〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕建立 agent 時，LLM 路線與權限一起核對：經自己的 kernel 轉交，須能從 agent 投進該 kernel 的 requests，kernel 能回投 agent 的 responses；轉交下一站時再配 kernel 到下一站、下一站回 kernel 的兩個方向。agent 直接投 LLM kernel，則開 agent→LLM kernel requests、LLM kernel→agent responses，不要求自己的 kernel 代投。工具路線同樣由 `tools.target_node` 決定：有位址就開往該 kernel 的請求／回件權；null 則准 agent 以自己為 parent_id 登記 once、自己記用量。每個寫入方向都含該區的 `.tmp/`；正式副本由接件帳號可讀、提交後可清除。回址不是授權證明，仍依 P-303 核對。
 

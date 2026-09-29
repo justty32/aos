@@ -77,7 +77,8 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | [daemon](daemon.md)／P-100～ | 設定、IPC／helper、註冊與資源框、runner 及故障證據 |
 | [node](node.md)／P-200～ | 布局、inst／tasks、tick、鎖、git 與設定匯入 |
 | [messages](messages.md)／P-300～ | 檔案路由、去重、method 目錄、摘要讀取／發布 |
-| [work](work.md)／P-400～ | once 工作、結果、LLM 池與程式契約 |
+| [work](work.md)／P-400～404、408～410 | once 工作、結果與程式契約 |
+| [llm-work](llm-work.md)／P-405～407 | LLM 代發：池設定、LLM 請求、LLM 結果與重試 |
 | [resources](resources.md)／P-500～ | module、配額／用量與各類資源 |
 | [ops](ops.md)／P-600～ | 待辦、aos-attend、aos-clean |
 | [agent 任務](agent-tasks.md)／P-700～ | agent 設定、工具、對話、context、用量及建立範本 |
