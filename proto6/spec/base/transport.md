@@ -1,55 +1,41 @@
-# 通訊與交接
+# 投件與交接
 
-← [基底](README.md)｜[共用契約](../contracts.md)
+← [基底](README.md)｜[共用契約](../contracts.md)｜[檔案與清理](storage.md)
 
-## B-501：認證入口與 envelope〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
+## B-501：投件入口與授權〔使用者方向 2026-09-29〕
 
-Owner：控制接入口。JSON-RPC 2.0 欄位及 Error 遵守 C-04；不接受 batch、notification、浮點或 null request ID。單封 UTF-8 JSON 最大 256 KiB；拒絕重複 key、未知欄位及版本。可信 sender 取自受控 socket peer 身分或每 UID 獨立受管提交通道，不能取 payload 的 sender／owner。管理者操作與 agent 操作分權；同 UID 的 tick 與工具不是相互隔離的安全主體，工具可使用 owner 所允許的普通操作，但不能提交缺乏 live claim 授權的 checkpoint。
+人、agent、工具共用有權限即可使用的檔案或指令入口。可依一般 Linux 權限，把訊息或工具／LLM 結果完整發布到指定的 ignored 收件區，不必先換成 blob 引用，也不必全經一個 RPC gateway。檔案發布依 [B-402](storage.md)，消費依 [tick](../tick.md)；有權限也能直接讀取檔案，正式輸出以已提交版本為準，見 [agent 輸入與輸出](../agent/input.md)。
 
-同一程序內的模組呼叫不必包 JSON-RPC／outbox；只有跨故障邊界、需要持久交接時才用這套交接機制。
+不能拿內容自稱的 sender 當授權依據。IPC 看 socket 對面的帳號；檔案投件靠 OS 權限及可信投遞資料辨認來源，無法驗證的名稱只當自述。收件只解析受大小限制的純資料，不因收到檔案就執行它或取得更多權限；root 不替投件者開任意路徑，身分切換與 runner 的解析邊界見 [身分與資源](identity-resources.md)。具體大小限制與 wire 格式留待協議篇。
 
-檔案傳送可用管理者持有的共用 spool：非特權入口先以 sender 身分讀取候選、限長並導入唯讀快照，再由控制端解析純資料。禁止 root 跟隨 sender 指定 symlink、開 redirect 或執行 inst。只往 agent home 隨意放檔不算正式接件，不承諾喚醒；正式入口須保存 durable spool，給定消息由控制層投遞到 home。
+node 登記與喚醒的 IPC 以 [daemon](../daemon.md) 為正本；執行身分依 [inst](inst.md)，不靠資料夾位置推定。
 
-**Given** A 把 params.agent_id 改 B 或造 sender 欄位；**When** 投件；**Then** 未授權時拒絕，沒有 B 的 run／ready 更新。損壞 JSON 得解析錯誤，沒有部分接件。
+〔建議預設，未拍板〕**跨隊 node 投件也用相同收件格式、請求／結果識別與喚醒規則**。建議有權限就直投對方收件區，不必上層轉送；直投或轉送的預設仍沿 [kernel 樹第七節第 5 題](../../notes/2026-09-29-kernel-tree.md#七待定附建議)，不在此另拍板。不為跨隊或 agent 身分另造一套入口。
 
-## B-502：最小操作集合〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
+**驗收**：有投件權限的人與 agent 都能交件；正文冒稱另一身分不取得權限，沒有寫入權限的投件被拒絕，半份檔案不算正式收件。
 
-params 欄位未註可省均必填，型別 ID／BlobRef 依共用契約；所有操作先認證授權，查詢亦同。標準接納回覆為 C-04 accepted，不表示完成。
+## B-502：最小操作集合
 
-操作與欄位正本見 [methods.json](methods.json)。首版包含 agent.submit／get、run.get／pause／resume／cancel／resolve／outputs、attempt.get／cancel 與 checkpoint.commit；各method的params、授權與result只在該資料檔定義。result.ack 首版不公開，資料檔僅保留延後註記；等確定有第二種消費者，再為它制定專用的提交／確認契約。
+（09-29 重寫：已刪，連同 methods.json 方法全集；查詢、暫停與取消等語意併入[操作](../scheduling/operations.md)。）
 
-run.cancel 的取消意圖、屏障與完成條件依 [S-102](../scheduling/runs.md)；本層將有程序工作的取消交 B-203。工具結果不是可由工具自行 RPC 宣告的成功：supervisor 以可信內部通道提交 B-103 及 Outcome。tick 的結果消費 ack 是內部持久事實，必須依 [C-05](../contracts.md) 與 checkpoint 交易一起提交，不能提前確認消費。
+## B-503：檔案去重與確認〔使用者方向 2026-09-29〕
 
-**Given** 接納 agent.submit 後立刻查 run；**When** 工具尚未完成；**Then** run.get 顯示 queued／active 等當前狀態，不能把 accepted 當 final。首版呼叫 result.ack 依 C-04 回未知 method，不能因此記錄消費或回收結果。
+請求 ID 在所屬目標的收件區／已接納區定址。檔案還在，同 ID 同內容就不重收；同 ID 不同內容報衝突，不覆蓋原件。不同 ID 的相同文字仍是不同請求；結果須配對原工作與實際嘗試，不能冒認新嘗試，見 [共用契約](../contracts.md)。〔建議預設，未拍板〕ID 可帶發件 node 識別以避免撞名，但名稱本身不證明身分。
 
-## B-503：去重與三種確認〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
+三種確認各有證據：**收件**是完整發布並按約定保存，**完成**是有可信結果，**已消費**是接收端把內容及相應變動 commit。收件不等於工作成功，讀過不等於已消費；不另做三張確認表。收件原件的移除依 [tick Q1](../tick.md)。
 
-去重鍵固定 `(authenticated sender,target agent_id,method,request_id)`；target agent_id 由已授權目標解析（run／attempt 查帳本歸屬）；canonical digest 使用 RFC 8785 JSON canonicalization 的 method＋params（包含 agent_id、payload version 與 BlobRef），不得含傳輸檔名或重送時間。首接成功保存鍵、digest 與原回覆，同交易建立 run／操作意圖。相同鍵同 digest 回原回覆；不同 digest 回 conflict。不把相同文字、不同 request ID 自動去重。保留期限依 C-06。
+去重證據沿 [B-404](storage.md) 留存：未結、`unknown` 及保留期內的必要檔案不清；證據仍在就不重收。保留期後清掉證據，不承諾無限期去重，也不另留永久 tombstone。查詢已清掉的材料明說不可取得；有封存位置則告知位置，不假裝內容仍在。不能自動換新 ID 重送來繞過 `unknown` 不自動重做的規則；去重也不保證外部副作用只發生一次。
 
-收件確認表示材料與操作意圖已持久；完成結果表示一個 attempt 終局；消費 ack 表示接收端已持久記錄消費。三種事實分開保存，不因首版沒有公開 result.ack 而合併。結果重送依 [C-03](../contracts.md) 只結算一次；消費與 checkpoint 重放依 [C-05](../contracts.md)，不得重複結算。未消費結果不得刪除，消費後的回收仍依 [B-404](storage.md)。網路／檔案傳送可重複但不遺漏；不承諾外部副作用 exactly-once。
+**驗收**：同 ID 同內容重投不造成重複處理，異內容報衝突；commit 後遺留的收件原件只補清，不再次消費。結果還沒消費不能清理，已過保留期且證據已清的請求不宣稱仍有去重保證。
 
-**Given** 收件提交後回覆前中斷；**When** 重送同 ID；**Then** 返回同 run_id，不建第二 run；改正文重送同 ID 則 conflict。
+## B-504：通知、重放與遺失
 
-## B-504：通知、重放與遺失〔建議預設，未拍板〕
+（09-29 重寫：已併入 [daemon](../daemon.md)；通知與補查不在此另立一套規則。）
 
-事件先保存 spool／DB 意圖再通知；通知可合併或遺失。控制層維持持久巡檢游標，補查週期、批次與覆蓋時間語意以 [S-202](../scheduling/admission.md) 為唯一預設，不另承諾完整巡回時限。正常路徑只處理受影響 agent，不掃全部 home。inotify overflow／重啟設定需修復，按游標重新對帳，仍須接新件；冷 agent 不為巡檢而起程序。
+## B-505：Blob 導入、讀出與對話輸出
 
-接入口不可用時 caller 得明確錯誤或未確認結果，使用原 request ID 重試；不能當成已接件。查詢已回收內容回 gone，保留 tombstone 防重建。準確逐字串流不屬首版，輸出完整性仍按 B-103。
+（09-29 重寫：已刪；普通檔案權限併入 B-501，正式輸出併入 [agent 輸入與輸出](../agent/input.md)。）
 
-**Given** 故意丟通知並重啟控制端；**When** 執行補查；**Then** 所有持久未交接請求在預算內恢復，重複通知不多開 tick，沒有啟動一萬個 idle 程序。
+## 待定與現況
 
-canonicalization 機制依據：[RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)。數字須符合契約整數範圍，拒絕非有限數；canonical JSON 只規定 digest 材料，不授予欄位權限。
-
-## B-505：Blob 導入、讀出與對話輸出〔建議預設，未拍板〕
-
-責任為認證入口的可信本機 adapter，不要求新增獨立 daemon。`import_blob(principal,agent_id,read_fd,expected_sha256,length)` 接收呼叫者以自身權限打開的普通檔案 fd；length非負整數、預設單blob上限16MiB。adapter驗證principal可向該owner導入、限長快照並重算摘要，保存至該agent受管內容庫且（啟用時）計projectquota後，才回C-03 BlobRef。它不接受任意host路徑由root代開；未讀完、摘要不同、額度不足分別回invalid_record／conflict／quota_exceeded，不發成功引用。import只保存材料，不建立run，沒有接件承諾。
-
-`export_blob(principal,agent_id,ref,write_fd)` 驗證owner讀權及ref歸屬，再向呼叫者已打開的輸出fd傳送已驗證內容；缺失／回收回gone、毀損回integrity_error，不以ref.key拼任意檔案路徑。大資料用fd有界串流，JSON-RPC 256KiB上限不因此放大。對話輸出由run.outputs按output_seq增量列取已提交Output，再用此adapter讀其引用；未提交進度不可偽裝final。
-
-人的普通投件路徑因此是：客戶端產生A-201輸入JSON→import_blob取得ref→agent.submit→run.outputs/run.get→按需export_blob。CLI語法與網路遠端upload後續再定，本地adapter的認證和錯誤契約已足以實作。tick的proposal內容同樣先導入再commit，adapter授權本身不授予live claim。
-
-**Given** 使用者僅有文字而沒有BlobRef；**When** 經adapter導入、提交、查輸出；**Then** 可完成完整往返。另一agent拿到ref.key仍不能讀出；quota滿不回引用也不建立幽靈run。
-
-## 待使用者拍板與現況
-
-操作名稱、傳輸上限與修復門檻為建議預設；介面供程式使用，不直接等同人用 CLI argv。尚未實作。
+跨隊直投的預設仍待裁；RPC 方法、CLI 與具體 JSON 由下一輪協議篇處理，不沿用舊方法全集作限制。本篇尚未實作。

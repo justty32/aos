@@ -1,51 +1,53 @@
 # 身分與資源
 
-← [基底](README.md)｜[Linux 規劃來源](../../notes/plan/linux-and-storage.md)
+← [基底](README.md)｜[kernel 樹](../scheduling/README.md)｜[架構與裁定](../../notes/2026-09-29-kernel-tree.md)
 
-## B-301：權限與額度歸屬〔使用者方向 2026-09-28，[來源](../../notes/2026-09-28-linux-resources-and-task-scheduling.md)〕
+## B-301：權限與額度歸屬〔使用者方向 2026-09-29〕
 
-一 agent 一 Linux 使用者；工具沿用委託 agent 的權限及資源域。UID／GID 管存取，cgroup v2 管執行資源，project quota（可選、只記帳，見 B-304）記自有容量，三者不可互相冒充。控制程序留在獨立控制域。取消逐工具 bwrap 必須與身分及整套 aos 外牆一起遷移；日常特權點依 09-29 裁定 5 為極小 root helper（B-303）；外牆採 VM、宿主機制或 user namespace 仍不在本條選定。
+通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。需要隔離的 agent node 採一 node 一 Linux 帳號；下層 kernel 是否另用服務帳號仍見[架構待定](../../notes/2026-09-29-kernel-tree.md#七待定附建議)。工具沿用呼叫 node 的身分、權限及資源範圍。key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
 
-**Given** 同一 agent 同時有 tick 與兩個工具；**When** 執行；**Then** 三者使用同一登記身分並受同一 agent 合計上限，不能各取得一整份配額；另一 agent 不可讀其私有檔。
+身分宣告、繼承與授權失敗的執行結果，以 [inst 的 `user`](inst.md) 為正本；**不由 node 資料夾位置決定**。
 
-## B-302：部署與登記契約〔建議預設，未拍板〕
+上層向 daemon 註冊成員時一併給「身分額度」，只能給自己已有的身分；最頂層額度在 daemon 設定檔，沒 helper 時只含通用 user。額度只在 daemon 記憶體，重啟隨各 kernel 重新註冊恢復。宣告或繼承所得身分都要在額度內；不能改用 daemon 帳號偷偷執行。
 
-Owner：管理者佈建、控制層唯讀使用。deployment profile 必填 `profile_id`（ID）、`wall_backend`（非空字串）、`launcher_backend`（非空字串）、`uid_mapping`（身分映射設定物件）、`cgroup_root`（絕對路徑）、`quota_backend`（`xfs|ext4|none`；none 表示不啟用磁碟額度，見 B-304）、`data_root`、`control_root`（絕對路徑）、`writable_scope`（非空路徑及容量政策陣列）、`probe_revision`（正整數）。沒有隱式預設 backend；未安裝對應實作或驗證失敗禁止准入。profile 必須說清宿主可見／可寫範圍、映射後 UID 權限與控制程序特權，不能只標「已隔離」。
+身分額度管「准用誰」，資源 module 管「能用多少」。資源分配與 cgroup 層級以[資源 module](../scheduling/admission.md) 為正本；多個工具共用呼叫 node 的合計上限。
 
-登記以共用契約 C-02 為正本，另必填 `registry_revision`（正整數）、`profile_id`（ID）。本部署有效 UID／GID 必須在 profile 明示分配範圍內；額外禁止 UID／GID 0 及 daemon／kernel／管理身分，不能讓 agent 與控制端共用 UID；`groups` 由管理者批准，禁止 sudo／管理群組。控制層解析可信 principal 後查登記，拒絕 payload 覆寫。registry_revision 不等於 tick generation；前者改權限配置，後者防舊 tick 提交。建議登記版本改動先停止該 agent 准入並排空，才啟用新版；依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 2 這不是硬規定，實作可選擇在 attempt 邊界切換：已放行的 attempt 維持原登記身分與資源域直到結束，之後新建的 attempt 才用新版，並記錄生效的 registry_revision。無論哪種做法，同一 attempt 都不得中途換 UID、群組或 cgroup；設計上盡量遵循[兩次 tick 之間的環境穩定性](../../notes/between-ticks-configuration.md)。
+**驗收：**通用 user、身分額度與路徑無關的情境見 [V-03](../conformance.md)。
 
-啟動 probe 要實際驗證兩身分不能互讀私有檔、可在域內 fork、不能搬離 cgroup、quota 實際拒寫（quota_backend 非 none 時）、外牆可寫範圍符合宣告。WSL 上 Windows 側造成的權限破口不在 probe 範圍（見[平台](../README.md#平台原生-linux-與-wsl)）。只見到核心支援不算成功。數字 UID 不立即重用，登記 retirement 後按生命週期退役。
+## B-302：可信註冊與部署
 
-**Given** 少一項 probe、映射重複或 profile 未指定；**When** 申請啟動；**Then** fail closed，狀態保留 queued/waiting 並可查部署錯誤，不以當前 daemon UID 降級執行。
+註冊關係、node 路徑 ID、IPC 授權及重啟重建以 [daemon](../daemon.md) 為正本。
 
-## B-303：先限制、再降權、再工作〔建議預設，未拍板〕
+〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應權限；沒裝 module 不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。
 
-〔使用者方向 2026-09-29，[裁定](../../notes/2026-09-29-verdicts.md) 5〕日常特權點是**極小 root helper**：主 daemon（控制寫入者、排程）不以 root 執行；helper 是日常路徑上唯一的特權程序，只做「查登記→建 attempt leaf 並設限→降權→exec 固定 runner」。helper 經本機 Unix socket 收請求，以 SO_PEERCRED 確認對方是登記的控制 daemon UID，其他呼叫者一律拒絕；請求只帶 attempt_id 等 B-102 的可信輸入，helper 不解析工作描述、不開 agent 指定路徑、不寫帳本。建帳號、設 project ID 等佈建另需 root，與 helper 分開。
+〔建議預設，未拍板〕另設通用 user 時，部署須安排 daemon 的直接啟動路徑實際用該身分；非 root 程序不能只改一個設定就冒稱已切 UID。做不到就報部署錯誤。
 
-Owner：可信 launcher（即上述 helper＋其啟動的固定 runner）。次序是查登記→建立 attempt leaf／設限→固定可信 child 進域→清附加群組、設 GID、設 UID→清 capabilities、禁止提權、關閉非核准 fd→核對有效身分與 cgroup→放行降權 runner。不同 profile 可改機制而不能改先後保證；降權與資源安置任一步失敗，child 不可讀工作描述並退出。工具不可寫 registry、SQLite、cgroup 控制檔與管理 mailbox。
+〔使用者方向 2026-09-29〕擔任頂層 kernel 的 node 沒有天生特權，權限由設定授予。
 
-必填上限：全局 work 域與 agent 域各有 `memory_max_bytes,pids_max`（正整數）、`cpu_quota_us,cpu_period_us`（正整數，period 預設 100000，範圍 1000..1000000）。記憶體、程序上限無無限值或硬體猜測預設；管理者須給值才准入。設定 memory.oom.group=1 於 attempt leaf；控制域配置獨立保留預算。空 agent cgroup 可按需建立，合計上限在建葉前生效。swap 預設 memory.swap.max=0，backend 不支援則 profile 不合格。CPU 配額是頻寬而非獨占核心。
+〔建議預設，未拍板〕已開始的 attempt 不中途換身分與資源範圍；設定更新見 [A-102](../agent/configuration.md)。
 
-**Given** 移入 cgroup 或 setuid 失敗；**When** 放行程序；**Then** 不執行 agent argv。**Given** 非控制 daemon UID 的程序連 helper socket 要求啟動；**When** 送出請求；**Then** SO_PEERCRED 不符即拒絕，不建 leaf、不降權 exec。兩工具合計超 memory.max 時按共同域限制而非倍增。
+**驗收：**偽造 payload 帳號不能註冊別人的資料夾；未啟用磁碟 module 不必驗 quota。重啟註冊遇一個壞成員，其餘仍長回來。
 
-## B-304：容量與可寫路徑〔建議預設，未拍板〕〔09-29 精簡，依 WSL 查證二・2、7 與裁定 6、8〕
+## B-303：可選 root helper 與解析分界〔使用者方向 2026-09-29〕
 
-〔使用者方向 2026-09-29，[裁定](../../notes/2026-09-29-verdicts.md) 6、8〕磁碟額度是**可選項、只記帳**：檔案系統支援 project quota 就可啟用，不支援就設 `quota_backend=none`，不綁 XFS。啟用時 quota 是記帳與提早拒寫的額度，**不是硬上限或安全邊界**——檔案擁有者可改自己檔案的 project ID 或清掉繼承旗標而跳出額度，本規格不防；後續帳本可能改為分散式或其他記帳方式。
+root helper 本質上是 daemon 的一部分，切成小程序是為了安全，緊急時可以 kill；不需 UID 隔離的部署可不裝。主 daemon 非 root，目標就是通用 user 時由 daemon 自己開；需要其他身分才交 helper。任務表裡的系統性任務也不是 root，要 root 的固定步驟留在 helper。
 
-WSL 根 ext4 不作可用的 quota backend；需要啟用記帳時另用支援 project quota 的專用卷或 loop 映像，仍須通過本條 probe；不支援就設 `quota_backend=none`，不要求改根 ext4，也不綁特定檔案系統（見 [WSL 查證](../../notes/2026-09-29-wsl-machine-check.md)）。
+〔使用者方向 2026-09-29〕**一支指令、看啟動方式決定模式**：不用 sudo 開 daemon＝沒 helper 模式，整樹用通用 user，要求其他身分一律拒絕。用 sudo（root）開時，daemon 在接 IPC、讀任何 node 之前先 fork 出 helper，主程式隨即永久降權（清掉 root 身分、群組、capabilities 與特權 fd），啟動時印出 helper 的 PID 讓使用者可以直接 kill。daemon 死掉時 helper 必須跟著結束（例如 `PR_SET_PDEATHSIG`，並以與 daemon 間的管道斷線為準），不留沒人管的 root 程序。
 
-Owner：quota backend 管理者。啟用時每 agent 必填 `quota_bytes,quota_inodes`（正整數記帳額度，無預設），project ID 與 filesystem ID 一起識別；home、history、checkpoint blobs、輸出與 scratch 設繼承 project。啟用時 probe 須實測拒寫，不回退到 du 統計冒充；none 時容量只受全局容量政策與檔案系統水位保護，查詢不得顯示成有每 agent 額度。外部 workspace 的容量由其管理者負責，profile 必須逐項聲明；多 agent 共寫同一外部 workspace 時由工具自行協調（裁定 10），aos 不提供鎖或合併，**不保證跨 agent 寫入一致性**。`TMPDIR` 只是預設位置，不能當成阻止寫 `/tmp` 的機制。所有其他可寫路徑必須受全局容量政策控制。
+〔建議預設，未拍板〕用 sudo 開時通用 user 不能預設成 root：取叫 sudo 的原帳號（`SUDO_UID`），直接用 root 或由服務啟動時必須在設定檔明寫一個非 root 帳號，否則拒絕啟動。kill helper＝切斷**新的**特權操作：已開的 tick 照跑到結束，之後需要其他身分的 tick 一律不跑並寫待處理事項；helper 不自動重啟，要恢復得重開 daemon。已做的 chown、掛載不回滾。另可用 systemd 的 `CapabilityBoundingSet`、`SystemCallFilter` 當額外防護，不取代 helper。
 
-不能假設 `/tmp` 是 tmpfs：WSL 的 `/tmp` 是根 ext4 上的一般目錄，會占磁碟；原生 Linux 也依實際掛載判定。profile 須說明各暫存位置的容量歸屬：寫在 agent project 內的磁碟暫存與該 agent 共用記帳額度（啟用時），其他磁碟暫存計入所在檔案系統的全局容量政策，不假稱有每 agent 額度；tmpfs 暫存則計入寫入工作的 cgroup 記憶體用量及該掛載的容量限制，不算磁碟 project quota。磁碟額度仍可選且只記帳，不新增 Windows 磁碟水位檢查。
+helper 只查可信註冊、安置已配置資源框、切目標帳號、exec 固定 runner；不接任意程式當 root 跑。先授權、切身分後解析與開檔的順序，以 [inst](inst.md) 為正本；失敗不能借高權限補救。
 
-寫 checkpoint 遇 EDQUOT 不更新 pointer，控制帳本記錄 quota、暫停該 agent 新准入並通知上層；現有工作按取消流程排空。只有清理後 probe 有可寫空間且管理者恢復，才解除暫停。不以刪歷史或加額度自動補救。工具私自寫檔的 EDQUOT 未必可被 supervisor 觀察；只有受控 I/O errno 或明確診斷才標 quota，否則保存 exit 原因，不猜測。
+〔建議預設，未拍板〕helper 請求綁定 daemon 已授權的註冊項與本次目標 UID，不能以呼叫者自填的 UID 或路徑當授權。切換前清除繼承憑證、非核准 fd 與多餘特權；不把管理 socket 或 LLM key 傳給 runner。runner 環境按目標帳號及部署建立，inst 的 envs 再依其規則疊加；不另禁止工具用一般權限改設定。
 
-**Given** 已啟用 quota 且 block／inode quota 各滿一次；**When** 提交 checkpoint；**Then** 舊 pointer 可讀、控制區仍保存原因、取消可完成。工具忽略 EDQUOT 後 exit 0 不被宣稱已驗證其業務資料完整。**Given** agent 把自己檔案改到未設額度的 project ID；**When** 驗收報告；**Then** 只能說額度記帳可被擁有者繞過，不宣稱容量已被強制。
+**驗收：**授權及切身分後開檔見 [V-03](../conformance.md)；另測切帳號失敗回 125、無 `exit`，kill helper 後不得偷改用通用 user。
 
-**Given** 暫存分別落在磁碟目錄與 tmpfs；**When** 核對 profile 與用量；**Then** 各按實際落點計入磁碟容量或記憶體，不因路徑叫 `/tmp` 就漏算。**Given** WSL 只有不支援 quota 的根 ext4；**When** 選擇儲存 backend；**Then** 可用 `quota_backend=none`，不因缺少可選記帳功能而拒絕整體部署；另用專用卷或 loop 映像啟用者仍須通過 probe。
+## B-304：磁碟與可寫位置〔使用者方向 2026-09-29〕
 
-機制依據：[Linux cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html) 的 cpu.max period、memory.oom.group、memory.swap.max、cgroup.kill 定義；profile 必須實測可用性，文件支援不等於部署已有權限。
+磁碟是可選 module，額度只記帳，不是硬上限或安全邊界；不綁 XFS 或其他檔案系統，也不強迫沒裝 module 的部署提供 quota。只報實際能計量的位置，不能把觀測不到的外部路徑說成已限額。多 node 共寫外部 workspace 由工具自行協調，aos 不保證跨 node 寫入一致。
 
-## 待使用者拍板與現況
+〔建議預設，未拍板〕暫存按實際掛載歸屬：普通磁碟目錄仍占磁碟，tmpfs 按其掛載限制與適用的記憶體計量處理；不能因路徑叫 `/tmp` 就算成 tmpfs。`TMPDIR` 只是預設路徑，不能當成限制寫入位置的機制。只有可信 I/O errno 或診斷才標 EDQUOT／ENOSPC，不從任意退出碼猜磁碟已滿。
 
-三軸及共享歸屬為既有方向；具體 profile、數值與恢復操作均待拍板。先驗兩 agent，再驗萬級登記；metadata 測試不能替代真 UID／quota 驗收。
+〔使用者方向 2026-09-29〕滿碟、commit 失敗與清理見[儲存](storage.md)。避免大量 commit 與 submodule 的邊界見 [tick](../tick.md)。
+
+**驗收：**磁碟 module 缺席可啟動；啟用時用量與實際落點相符。不把移出工作樹當成已釋放 git 歷史空間；commit 失敗不宣告新狀態已生效。

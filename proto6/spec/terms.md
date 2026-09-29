@@ -1,41 +1,44 @@
-# 名詞、責任與狀態
+# 名詞與責任
 
-← [規格入口](README.md)｜[共用資料契約](contracts.md)
+← [規格入口](README.md)｜[共用契約](contracts.md)
 
 ## T-01．來源與適用範圍
 
-〔主編補〕本疊是可實作的**規格草案**，不是現行行為。每節來源及驗收涵蓋該節全部條件；「必須／禁止」表示遵循本草案的條件，不代表使用者已逐條拍板。〔使用者方向〕只引用已有決定；〔建議預設，未拍板〕可被後續裁決替換；〔主編補〕補足跨篇編輯規則。使用者新決定優先於建議預設，替換時需同步受影響驗收。
+〔主編補〕來源標記：〔使用者方向 YYYY-MM-DD〕表示已有裁定；〔建議預設，未拍板〕可替換；〔主編補〕只補編輯規則。每節標記涵蓋該節條件，遇不同來源另標。「必須／禁止」不表示未裁預設已獲批准。
 
-驗收：Given 尚未批准的 timeout 預設，When 展示配置說明，Then 標為建議預設，不能說成使用者要求或已運行功能。
+依據是 [09-29 架構](../notes/2026-09-29-kernel-tree.md)及[裁定紀錄](../notes/2026-09-29-verdicts.md)，後續使用者裁定優先、同日後批蓋過前批。舊協議與改寫計畫不能反過來限制新規格。
 
-## T-02．三層 owner
+驗收：未裁定的工程預設標明來源；文件查核通過不能寫成運行時功能已完成。
 
-〔使用者方向 2026-09-28，見[概念](../notes/concepts.md)〕**基底**負責執行與持久交接，**agent**負責理解內容、選 context／工具與推進狀態，**任務與排程**負責機會、預算與任務完成契約。每篇的「責任」是邏輯 owner，不要求每個 owner 各開一個 daemon。
+## T-02．node 與角色
 
-〔建議預設，未拍板〕控制帳本只有一個邏輯寫入者；可信 launcher 和回報導入器可為該寫入者的模組。供工作程序讀寫的檔案不能作為 root 自由開檔指令。agent 身分可修改自己的資料，不可因此修改帳本、別人的歸屬或部署設定。
+〔使用者方向 2026-09-29〕**node 是資料夾那個實體**，具有 inst、任務註冊表及自己的檔案；它的資料夾路徑就是 node id。以下兩者都是概念／角色，由任務註冊表裝了什麼決定：
 
-驗收：Given 工具聲稱自己優先且屬另一 agent，When 投件，Then agent 語意不授予該權限，控制層拒絕冒名，原 agent 的合法工作仍可排程。
+- **kernel**：管理資源分配與任務排程的 node，**不以有沒有成員判定**。
+- **agent**：會自主行動、基本上牽涉 LLM 的 node。
 
-## T-03．四種工作識別與一次 RPC
+一個 node 可以同時是兩者，也可以都不是，例如只跑收信任務。頂層 node 不因此成為特殊種類；權限由設定授予。「上層 kernel」指註冊關係中負責管理的 node，不是檔案系統的上層目錄。樹與摘要邊界見 [scheduling](scheduling/README.md)。
 
-〔建議預設，未拍板〕`agent_id` 穩定代表一個 agent；`run_id` 代表一次已接納的任務輪次；`job_id` 代表一次邏輯委託，例如一個工具呼叫；`attempt_id` 代表實際嘗試。重送同一次結果保持 attempt_id，再執行才產生新 attempt_id。`request_id` 只代表 RPC 對應與去重，不當成以上全部層級的通用識別。
+**兩張註冊表不要混用：**[daemon](daemon.md)的表只在記憶體，記 node 登記、啟動及喚醒所需資料；[tick](tick.md)的表在 node 裡，記順序執行的任務、group 與 needs。資源 module 是後者的普通項目，不另有外掛總表。
 
-`generation` 是每 agent 單寫者的遞增世代，和 attempt 次數不同。刪除再建立一個 agent 使用新 agent_id；數字 UID 可經管理程序回收，但不得把舊結果接到新身分。全體 ID 型別依 [contracts](contracts.md)。
+daemon 負責程序啟停，不判業務排程；可選 root helper 是 daemon 切出的固定特權步驟，見[身分篇](base/identity-resources.md)。每個 LLM 池的代發服務負責實際請求，見 [LLM](scheduling/llm.md)。身分依 [inst](base/inst.md) 及[額度](base/identity-resources.md)，不由路徑或角色推定。
 
-驗收：Given 同 job 的第一次嘗試結果未知，When 使用者明確允許重試，Then job_id 不變而 attempt_id 更新；第一個 attempt 的遲到結果不能覆寫第二個已選定的結果。
+驗收：同一 node 裝排程及 LLM 自主任務，可以兼任 kernel／agent；空成員表不取消 kernel 角色，只有收信任務也不被強制當 agent。
+
+## T-03．工作識別
+
+〔建議預設，未拍板〕`node_id` 指上述路徑；`request_id` 辨識一次投件，`job_id` 辨識邏輯工作，`attempt_id` 辨識一次實際嘗試。重送同一次結果沿用 attempt ID，真的重新執行才換 ID。`run_id` 只在採用 [run](scheduling/runs.md) 分組時需要，不要求所有 node 都有一輪任務。
+
+路徑識別 node，不代表 UID 或舊工作歸屬。移動、退役或重用同一路徑／UID 時，仍須避免把舊請求、晚到結果接到新工作；工作識別與結果核對依 [C-03](contracts.md)，退役依 [daemon](daemon.md)。不另加一套角色 ID 或世代號。
 
 ## T-04．控制狀態與觀測 phase 不混用
 
-〔建議預設，未拍板；09-29 精簡，依冗餘審查 B4〕`agent.phase` 僅為 `idle|think|act|wait|paused|error`，是從 run／job／attempt 的控制事實與已保存的語意 continuation 推導出的唯讀觀測值，不是另一張可寫的控制狀態圖。`run.state` 為 `queued|active|paused|succeeded|failed|canceled|needs_attention`，描述任務生命週期。`job.state` 為 `queued|waiting|admitted|running|succeeded|failed|canceled|unknown`；`attempt.state` 為 `reserved|starting|running|canceling|succeeded|failed|canceled|unknown`。暫停、取消與錯誤屏障以 run 及工作狀態為權威，phase 不得解除或掩蓋它們。
-
-job 的 `waiting` 表示尚未入場、等 due／quota 等條件；進行中的遠端 HTTP 即使本機在等回覆仍為 `running`。agent 的 `wait` 不等於某個 job 一定仍 running，也可能等工具／LLM 結果或額度；仍阻擋目前 run 的未解決 `unknown` 顯示 `error`。`unknown` 不是成功、不是可自動重試的普通錯誤。run `needs_attention` 是保留可解決的暫停狀態，不是終局；終局為 succeeded／failed／canceled。
-
-驗收：Given 工具成功而 agent 還未回答，When 更新工具結果，Then job 可 succeeded，但 run 不能因此直接 succeeded；查詢可依 continuation 顯示 think。Given run 已 paused，When continuation 原先位於 act，Then phase 顯示 paused 且不得派新工作。
+（09-29 重寫：已刪；結果定義併入 [C-03](contracts.md)，完成證據見 [agent](agent/README.md)，顯示見 [S-402](scheduling/operations.md)。）
 
 ## T-05．一萬份本體與少量活動
 
-〔使用者方向 2026-09-28，見[負載](../notes/2026-09-28-linux-resources-and-task-scheduling.md)〕目標為 10,000 個 agent、每小時活躍不到 100 個、雲端推論。一 agent 一 Linux 使用者、工具繼承權限與資源；cgroup 控執行用量，project quota 記帳自有資料（09-29 裁定 6、8：可選、只記帳，見 [B-304](base/identity-resources.md)）。取消 CPU worker 是方向，准入控制仍保留。FUSE、分散式 kernel、父子 demo 延後。
+〔使用者方向 2026-09-28〕目標是 10,000 個扮演 agent 的 node、每小時活躍不到 100 個、雲端推論，見[負載方向](../notes/2026-09-28-linux-resources-and-task-scheduling.md)。這不是固定併發上限。
 
-〔建議預設，未拍板〕冷 agent 保留 metadata／資料而無常駐程序；資源域由可信登記解析，不靠每次投件宣告。部署 profile 尚未選定；日常特權點依 09-29 裁定 5 為極小 root helper（[B-303](base/identity-resources.md)），主 daemon 不以 root 執行；不把探針成功當成整體隔離驗收。
+〔建議預設，未拍板〕冷 node 保留檔案與登記，不各養常駐程序或空轉 tick；活動量依各 kernel 的資源 module，身分配置依[身分篇](base/identity-resources.md)。
 
-驗收：Given 10,000 筆冷登記無待辦或到期維護，When 穩態觀察，Then 沒有 10,000 個程序與固定逐 agent tick；增加少數 ready 工作者才產生執行成本。
+驗收：增加冷 node 不增加逐 node 常駐程序或 history 讀取；啟動時重建樹的成本與平時少量活動成本分開量，見 [V-04](conformance.md)。

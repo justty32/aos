@@ -1,43 +1,38 @@
 # proto6 規格草案
 
-← [proto6](../README.md)｜[概念入口](../notes/concepts.md)
+← [proto6](../README.md)｜[架構方向](../notes/2026-09-29-kernel-tree.md)｜[使用者裁定](../notes/2026-09-29-verdicts.md)
 
-2026-09-28，將三大概念繼續拆至可實作、可寫驗收的契約。**這是完成一輪編寫與一致性查核的草案，不是產品已完成，也不是所有預設已獲使用者拍板。** 規格內有資料型別、合法轉移、提交時點、錯誤與恢復；停止在這個粒度，不繼續拆成 syscall 教程。
+2026-09-29 重寫。**node 是資料夾；kernel 與 agent 是它可兼任的角色。** daemon 管登記與程序，node 透過註冊式 tick 推進；狀態留在各 node 的檔案，以 git 提交及恢復。這是設計草案，不是已完成的產品。
 
 ## 閱讀順序
 
-1. [名詞與責任](terms.md)：哪一層負責什麼，ID 與狀態各代表什麼。
-2. [共用資料契約](contracts.md)：Owner、Run、Job、Attempt、BlobRef、Proposal 的唯一共用定義。
-3. [基底](base/README.md)：描述與執行、身分資源、持久交接、程序恢復。
-4. [agent](agent/README.md)：設定、輸入、記憶、工具、tick。
-5. [任務與排程](scheduling/README.md)：輪次與單寫者、ready／due、入場與額度、人工處置。
-6. [驗收入口](conformance.md)：主概念到葉條款的對照及整合故障場景；各節另有 Given／When／Then。
-7. [協議篇](protocol/README.md)：程式間指令與 JSON／資料夾交接的共用約定、待決事項及五份平行分工；人用 CLI 後續再定。
+1. [名詞與責任](terms.md)：node、角色、兩張註冊表與工作識別。
+2. [daemon](daemon.md) → [通用 tick](tick.md)：登記、喚醒、重啟，再看任務、group 與 git 邊界。
+3. [kernel 與資源](scheduling/README.md)：樹上分配、資源 module、LLM 池及待處理事項。
+4. [基底](base/README.md) → [inst 第 1 版](base/inst.md)：執行身分、工作材料、runner 與檔案交接。
+5. [agent 任務](agent/README.md)：設定、內容、context、工具選擇與完成證據。
+6. [共用契約](contracts.md)與[驗收入口](conformance.md)：跨篇最少定義及整合故障場景。
 
-## 來源、正本與可替換預設
+[協議篇](protocol/README.md)仍是**舊架構材料，下一輪重做**；其中 JSON、schema 與範例不限制新主規格。目錄名 `agent/`、`scheduling/` 依領域保留，不代表兩種 node。
 
-來源標記依 [T-01](terms.md)。每節標记覆蓋該節條款；使用者方向與為閉合契約提出的預設分開。共同欄位以 contracts 為準，領域新增欄位在所屬篇定義；狀態轉移由對應葉條款定義，範例不創造另一套schema。[RPC 操作資料](base/methods.json) 是 B-502 的欄位表，使用 `wf-table/1` 保存。
+## 來源與正本
 
-這版採用單一控制寫入者、不可變blob＋checkpoint提交、claim／generation、有限run預算、普通新訊息排下一run等**建議預設**，並非聲稱每項都是唯一或最簡設計。依 [2026-09-29 裁定](../notes/2026-09-29-verdicts.md) 1，「一輪任務（run）」是後續設計的**軟性原則**：run 相關條文（一則訊息一 run、[A-202](agent/input.md)／[S-101](scheduling/runs.md) 普通新訊息排後續 run）是建議預設，不當硬規定；任務途中新訊息的歸屬暫不定案。兩份獨立審查是後續裁定材料：[冗餘審查](../notes/spec-redundancy-review.md)、[遺漏審查](../notes/spec-gaps-review.md)。其中提出的架構精簡選項不因被記錄就自動採納；明確契約衝突則在本稿修正並留審查狀態。
+來源與裁定優先序依 [T-01](terms.md)。
 
-依 09-29 裁定：日常特權點是極小 root helper、主 daemon 非 root（[B-303](base/identity-resources.md)）；LLM 由控制側代發服務集中持 key、agent 與工具只投請求（延續 proto5）（[S-301](scheduling/llm.md)）；磁碟額度可選且只記帳（[B-304](base/identity-resources.md)）。外牆profile仍未選定。profile缺少所需保護時拒絕啟動工作，不以較弱方式假裝合規。FUSE、分散式kernel、父子demo與串流產品介面延後；stream相關條款僅防止部分輸出被誤當完成。
+名詞放 terms，跨篇共用資料放 contracts，各領域規則放所屬篇，其餘只引用。**inst 欄位與解析以 [base/inst](base/inst.md) 為正本**；run 的軟性分組見 [runs](scheduling/runs.md)。
 
 ## 原則：能下指令、能管檔案，就能交給 agent
 
-〔使用者方向 2026-09-29〕凡是「下指令」或「管檔案」就能做到的事（改設定、處理待處理事項、跑清理、投件給別的 agent 等），不為 agent 另做一套機制：人能做的，開放對應的檔案或指令權限後 agent 就能做，頂多另外包成工具。權限一律照 Linux 帳號與檔案權限、以及控制入口對呼叫者身分的授權（[B-501](base/transport.md)）判定；agent 做的事不因為是 agent 做的而多出權限，也不因此繞過排隊、預算或 y/n 確認。
+〔使用者方向 2026-09-29〕凡是下指令或管檔案能做到的事，開放權限後 agent 就能做，頂多包成工具，不另造一套機制。人與 agent 共用檔案、指令入口及授權；開放權限仍須遵守已配置的資源限制與既有危險處置確認。
 
-〔使用者方向 2026-09-29〕**工具就是工具，不另外管它做什麼**：工具是 agent 用自己的帳號、在自己的資源限制內跑的程式，權限與 agent 相同，aos 不區分「工具做的」與「agent 做的」，也不替工具另設行為限制或專用通道。工具造成的風險由使用該工具的人（設定它、開放它的人）承擔。這是精簡原則：凡是只為了分開工具與 agent 而存在的規則，都可以拿掉。
+〔使用者方向 2026-09-29〕**工具就是工具，不另外管它做什麼。** 工具用所屬 node 的身分與資源，aos 不另分「工具做的」與「agent 做的」；風險由設定、開放及使用工具的人承擔。只為區分兩者而存在的規則應刪掉。
 
 ## 平台：原生 Linux 與 WSL
 
-〔使用者方向 2026-09-29，[裁定](../notes/2026-09-29-verdicts.md)附題〕原生 Linux 與 WSL2 都要能跑同一套條款；背景見 [WSL 機器查證](../notes/2026-09-29-wsl-machine-check.md)。
+〔使用者方向 2026-09-29〕原生 Linux 與 WSL2 都要能跑。Windows interop、Windows 掛載的權限與資源管理限制、Windows 磁碟水位等不在保護承諾內，背景見 [WSL 查證](../notes/2026-09-29-wsl-machine-check.md)。VM 關機照 [daemon 重啟](daemon.md)處理；運行中逾時與排隊先後分別依 [C-01](contracts.md)及 [S-204](scheduling/admission.md)。
 
-**WSL 接受的限制，不防：**Windows interop（任何 UID 可經 interop 以 Windows 使用者身分執行程式）、`/mnt/c` 等 Windows 掛載沒有 Linux 權限與 quota、Windows 磁碟水位（vhdx 所在磁碟先滿時 distro 可能變唯讀）這類 Windows 造成的權限與資源管理問題，是使用 WSL 必須接受的；B-302 probe 不檢查、驗收不以此判不合格。部署可自行關 interop 或收緊 automount，但不是本規格要求。
+UID 隔離與可選 helper 見[身分篇](base/identity-resources.md)，同帳號部署的 key 保護限制見 [LLM 池](scheduling/llm.md)。同機 node 樹是本輪架構；跨機分散式、FUSE、外牆方案與串流產品介面仍不在本輪交付範圍。
 
-**照一般恢復規則處理：**牆鐘跳動與 VM 突然關機不算例外。逾時一律用經過時間（[C-01](contracts.md)）；排隊先後一律以持久遞增序號判定、不靠牆鐘（[S-204](scheduling/admission.md)）；VM 關機等同控制端被殺，在途工作依 [B-603](base/lifecycle.md) 全部變 unknown，停機寬限依 [B-604](base/lifecycle.md) 可設定。
+## 交付邊界
 
-**外牆 profile：**若用 Landlock，profile 必須記錄所需最低 ABI，實際 ABI 不足即依 B-302 拒絕啟動；WSL（6.6 kernel）只有 ABI 3，沒有 ABI 4 以上的網路、ioctl、scope 規則。
-
-## 這轮交付的邊界
-
-只建立設計文件與RPC欄位資料，沒有產品程式、測試實作、付費API呼叫或系統設定更動。原有交接快照保留。完成的是概念映射、跨篇欄位與狀態對照、來源／驗收例及本地鏈結查核；所有運行時驗收仍待實作後執行。
+本輪只改規格。運行時保證須依[驗收入口](conformance.md)在實作後驗證。

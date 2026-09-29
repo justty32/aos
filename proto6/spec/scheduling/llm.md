@@ -1,55 +1,49 @@
-# LLM 入場、用量與未知結果
+# LLM module 與 endpoint 池
 
-← [排程](README.md)｜[attempt 狀態](runs.md)
-
-以下均為〔建議預設，未拍板〕。責任為控制端額度管理；agent決定context，client只執行一次請求。這是受管呼叫契約，不聲稱可攔住持有其他金鑰自行出網的程序。
+← [node 樹與資源](README.md)｜[工作與 unknown](runs.md)
 
 ## S-301．請求與 quota scope
 
-LLM payload 必填 `endpoint_id:ID`、`model:string`、`messages_ref:BlobRef`、`input_tokens_estimate:int>=0`、`max_output_tokens:int>=1`、`request_timeout_ms:int>=1`；可省 `stream:bool=false`。endpoint設定由管理者持有，含URL、憑證引用及適用scope ID陣列；job不得傳任意URL或金鑰。〔使用者方向 2026-09-29，[裁定](../../notes/2026-09-29-verdicts.md) 9〕**中央代發，延續 proto5 現況**：agent 與工具要用 LLM，一律把請求投進指定收件處（經 B-501 可信入口，owner 由控制層補上），不直接連 provider。憑證只由控制側的 LLM 代發服務持有；該服務以專用服務 UID 執行（非 root、非任何 agent UID、不與控制寫入者共用 UID），依 S-302 入場後代為送出，結果與 usage 以原 attempt 回交。憑證不寫入 job payload、prompt、agent home 或任何 agent 可讀路徑，agent 與工具的 UID 讀不到憑證。代發服務的 CPU／記憶體歸控制域，另設全局上限；雲端用量依 request 記到所屬 agent 與 run。agent 或工具若自備其他憑證直連，不計入本層也不保證攔住，但 aos 管理的憑證不會外流給它們。scope以帳戶／模型等真實共享限制建立，不把不同URL當成必定獨立。
+〔使用者方向 2026-09-29〕kernel 的 LLM module 分配成員份額與執行機會；**每個 endpoint 池的代發服務保管該池 key，處理真正共享的 provider 限制**。頂層或下層 kernel 都可以有自己的池，不要求全機只有一個池。下層沒裝 LLM module，只是不再細分份額，上層分配與池端限制仍有效。
 
-Scope必填 `scope_id`、`max_concurrent:int>=1`、`window_ms:int>=1`；可省 `request_limit:int>=1|null`、`token_limit:int>=1|null` 預設null表示未配置該維度。token模式首版保守計估計input+要求max_output；adapter可改為供應商語意，但必須版本化。缺tokenizer仍可用標明estimated的上界估法，不宣稱精準硬保供應商額度。
+〔使用者方向 2026-09-29〕node 的任務與工具都以一般投件方式把請求交給池代發，結果下次 tick 收；key 不放進請求或 prompt。**沒有 root helper、代發與 agent 共用帳號時，key 不受保護；使用者接受這個界線。要保護 key，就需 helper 配合身分隔離，或另用不同帳號跑代發並限制 key 的讀取權限。**身分權限依 [身分與 OS 資源](../base/identity-resources.md)。自備其他憑證的直連不在本層管理範圍。
 
-驗收：Given 兩endpoint共scope且只餘一席，When 同時ready，Then 只一請求入場，另一顯示相同scope等待；工具不能改scope逃避限制。
+〔建議預設，未拍板〕需要 key 隔離的部署使用專用服務帳號；下層自有池的具體帳號尚未裁定。請求只需帶可辨識的一次工作 ID、池／模型、內容與必要輸出上限、逾時；詳細 JSON 留後續協議。共享限制按 provider 的實際帳戶／模型關係判定，不把不同 URL 當作必定獨立。首版只支援非串流（`stream=false` 或省略）。
+
+驗收：共用同一限制的 endpoint 由池端一起限流，不能換個 URL 就繞過；有身分隔離的部署中，成員讀不到池 key；同帳號部署不得宣稱保護了 key。
 
 ## S-302．預留與結算
 
-Reservation 必填 `attempt_id`、`scope_ids:ID[]`、`state:held|sent|settled|uncertain|released`、`reserved_requests:int=1`、`reserved_tokens:int>=0`、`created_at_ms`、`expires_at_ms`。可省 `sent_at_ms`、`usage_ref:BlobRef` 預設null。一次交易檢查全部scope的window內消耗與held預留及concurrency，同時檢查S-306的run剩餘預算；全足夠才hold，否則零占用。已hold但尚未送出超過30秒預留租期須核對launcher；確定未送才release，不能僅看時間釋票。
+〔使用者方向 2026-09-29〕kernel 只在已分到的份額內安排工作；池服務在真正送出前核對自己的共享限制。兩者不承諾跨 repo 一次同時占齊額度。請求提交與收件流程依 [tick](../tick.md)，git 還原不會撤銷已送出的 LLM 呼叫。
 
-client送出前持久標sent，再允許HTTP；這個窗口即使實際沒送也可能保守判uncertain。可信結果攜帶usage與attempt_id後只結算一次。成本帳記實際已知用量，速率帳按adapter規則保留window消耗；不能因輸出短就一律退還供應商已算過的token估額。重複usage同digest忽略，不同digest報conflict。
+〔建議預設，未拍板〕以請求 ID、必要的送出狀態及結果／usage 檔核對一次工作；同 ID 重收依[傳遞](../base/transport.md)，結果重複處理依 [C-03](../contracts.md)；去重承諾只涵蓋[儲存](../base/storage.md) 規定的保留期。只保存分配摘要及限流真正需要的窗口／用量。估算 token 要標明是估算；實際 usage 可得時照實記，不能因輸出短就假設 provider 已退還先前算過的速率額度。
 
-驗收：Given hold已落盤而client尚未獲go就崩潰，When 證明未送出，Then release且無成本；若sent已落盤但結果缺失，Then uncertain而非直接零成本重試。
+無結果又不能證明未送出，就標 unknown，不自動補送或把用量歸零。可證明未送出的工作才可撤掉本次占用，後續是否重試仍依工作政策。
+
+驗收：請求提交後、取得結果前當機，能證明未送才可釋放本次占用；可能已送則留 unknown，不發第二次。重複結果只計一次。
 
 ## S-303．限流與可重試失敗
 
-429，以及adapter判定為明確表示請求未被處理的限流回應，視為**確定未執行**：保留該次attempt失敗證據，不受retry_class限制（never也可），未達max_attempts即經failed→waiting重試，否則job→failed；這是[C-04](../contracts.md)「retryable不越過retry_class」的唯一例外。其他5xx、逾時或回應不明確者不適用，依原規則。重試時`next_due_at_ms` 至少為有效Retry-After時間。無有效提示則預設退避 `min(60000,1000*2^(ordinal-1))` ms，再加0至250ms持久記錄的jitter；每次attempt均計入max_attempts，達上限job→failed。同scope下一次派送不得早於其cooldown；其他獨立scope不被一起停住。
+〔使用者方向 2026-09-29〕限流允許少數幾次重試。〔建議預設，未拍板〕LLM 每件工作預設最多 3 次嘗試，可設定其他有限值。429 或 adapter 明確判定請求未被處理的限流回應，保留本次失敗證據後可重試；即使一般政策不重試，也適用此例外，所有嘗試仍計入上限，達上限即失敗。其他不明確的 5xx、逾時或送出後斷線不適用；可能已執行者依 S-304，不自動重送。
 
-授權、帳務與不可執行輸入錯誤不作無限重試。SDK內建重試必須停用或納入同一attempt預算，不能暗中放大次數。明確未送出的連線建立失敗可依safe政策重試；可能已送出後的斷線依S-304。工具初值max_attempts=1；LLM job初值max_attempts=3，讓限流可重試少數幾次；管理政策可明設其他有限值。重試仍計入S-306的max_llm_attempts。
+重試不得早於有效 `Retry-After`；沒有提示則退避 `min(60000, 1000*2^(n-1))` 毫秒（n 是本工作剛完成的第幾次嘗試），加 0～250 毫秒 jitter，保存下次到期時間。同一共享限制的請求遵守冷卻，獨立池／限制不連帶停住。SDK 內建重試須停用或納入同一嘗試上限，不能暗中增加次數。
 
-驗收：Given LLM job 用預設retry_class=never、max_attempts=3且mock三次回429，When 到期重試，Then 共三次實際嘗試、每次next_due不早於Retry-After或退避，第三次失敗後job→failed；另一獨立scope仍能前進。Given 同一job改回500或送出後斷線，When 處理，Then 不適用限流例外，retry_class=never時不重試。
+授權、帳務與無法執行的輸入錯誤不無限重試；明確未送出的連線建立失敗可按原工作政策重試，不混成 429 例外。
+
+驗收：預設工作連續收到 3 次 429，共送 3 次且每次符合到期時間，之後失敗；獨立限制的其他工作仍可前進。改成不明確 500 或送出後斷線，不套用限流例外。
 
 ## S-304．取消與不確定性
 
-已排隊而未sent的取消可釋放預留；sent後取消只停止本機等待／連線，不保證遠端停算。未知attempt保持unknown，run→needs_attention，不能由一般timeout自動再問。普通stream片段不是完整結果的證據。
+〔使用者方向 2026-09-29〕取消未送出的工作可停止派送；已送出後關掉本機連線，不代表遠端停算。重啟的程序收尾依 [daemon](../daemon.md)，不明結果依 [工作恢復](runs.md) 與 [操作](operations.md) 處置。完整結果才可成功，部分輸出不是完成證據。
 
-本機HTTP名額在本機連線確定關閉後可回收；遠端不確定名額另記。管理設定必填 `uncertain_hold_ms:int>=1`，期限自本次request deadline起算，過期可釋放本地估計的remote佔額但保留uncertain記錄與估算成本；這只防止永久停擺，不宣稱遠端已停止或實際concurrency硬保證。若部署要求無法超出遠端concurrency，profile必須提供可查終止證據，否則停scope等待人工，不能使用估計釋放。
+〔建議預設，未拍板〕本機 HTTP 已確定關閉，可回收本機並行名額；未知的遠端執行與用量仍留在所屬池／module 的必要狀態中。池可以明訂估算占用的等待期限，到期釋放估計名額，但必須保留 unknown 與不明用量，明示這不能保證遠端已停；沒有這項政策就等待處理，不要求所有部署填同一個期限。
 
-驗收：Given 遠端可能已完成但網路中斷，When timeout與重啟，Then 無第二attempt；查詢保留unknown與估額。人工同意重試按S-104另建attempt，費用可能重複的風險不被隱藏。
+驗收：遠端可能已完成而斷線，本機取消或重啟都不自動再問；可查 unknown 與不明用量，不能偽裝成零成本失敗。
 
 ## S-305．串流與 final〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
 
-首版不支援串流，只接受 stream=false（省略時同值）；要求 stream=true 回 invalid_record。串流片段 schema 與片段交付機制延後，見未來設計；目前不作片段展示或去重的驗收承諾。
-
-部分片段不是 final，不能據此把 job 設為 succeeded。只有通過完整回應驗證、usage 處理及 result 持久提交的終局才是 Outcome；未取得完整結果仍可能是 unknown，依 S-304 處理。
-
-驗收：Given 請求 stream=true，When 首版驗證請求，Then 回 invalid_record；Given 只收到部分內容而完整結果前中斷，When 判定結果，Then 不能回成功終局；沒有串流功能時立即喚醒照常可用。
+（09-29 重寫：已刪；非串流首版併入 S-301，完整結果邊界併入 S-304。）
 
 ## S-306．有限的 run 預算
 
-Run接納時固定 `budget` object：可省 `max_jobs:int>=1=32`、`max_llm_attempts:int>=1=16`、`max_tokens_estimate:int>=1=100000`、`max_elapsed_ms:int>=1=600000`。這些是可替換起始預設，不是使用者指定額度。可信政策可調整，普通tool不得自行提高。max_jobs計tool／llm邏輯job，排除控制tick；max_llm_attempts計實際建成的LLM attempt，包括未知／失敗。active經過時間包含遠端等待，paused／needs_attention停表；控制層保存累計與最近計時起點。
-
-控制帳本保存jobs_created、llm_attempts_created、tokens_known、tokens_uncertain、tokens_reserved非負整數。新job提交先查job餘量，LLM入場以完整payload由可信估算器重算token需求，不只相信agent估值；和scope一起交易hold run token。成功usage移入known並釋放對應reserved；未送可撤reserved，未知移入uncertain，不自動歸零。真usage超估仍照實記，餘量可耗盡但不得寫負用量。
-
-任一預算不足時停止新的job／attempt，run→needs_attention、Error.code=budget_exceeded，已在途先保存結果，不偷偷丟失或無限自我tick；時間到期另外取消在途本機工作，清空／unknown按原規則處理。後續run不越過此當前run。首版可以沒有同run加額API：操作者可按run.cancel收尾，或run.resolve fail/cancel_with_unknown處置未知，再以新輸入建run。實作若提供[S-102](runs.md)的可選resume重新驗證出口，管理者可隨run.resume附上調高後的budget（只增不減、記錄操作者），驗證餘量足夠才回active；沒有unknown時才適用。context只讀餘量快照，不先占scope門票等tick組context。
-
-驗收：Given 模型反覆要求工具且每次都成功，When 建立第33個非tick job或耗盡其他預算，Then 不再派新job，run可查budget_exceeded，無合法無限循環。Given token估額不足而quota scope尚有額度，When 入場，Then 兩邊都不hold，run進needs_attention。
+（09-29 重寫：已刪；可選額度併入 [S-203](admission.md)，不足時的取消／可選 resume 見 [S-102](runs.md)。）

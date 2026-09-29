@@ -4,51 +4,69 @@
 
 ## V-01．何時算拆到可實作
 
-〔主編補〕每個末端條款有明確責任、輸入輸出或引用共用型別、前置條件、合法狀態、持久交接、失敗處理與 Given／When／Then。不要求每節重複所有共用字段；引用正本即可。新增實作時，按節ID命名驗收，不能只測happy path就宣稱整篇完成。這份文件不代表測試已執行。
+〔主編補〕有效規則須能找到責任、輸入輸出、失敗處理及驗收；共用定義用連結，未裁選擇保持標記。以下**不是已執行的產品測試**。
 
-驗收：Given 待實作功能，When 找到其所屬葉條款，Then 可由資料與轉移寫出測試；遇未命名資料或互相衝突的狀態先修規格，不自行猜測兩套行為。
+## 概念與正本
 
-## 概念到末端規格
+| 概念 | 規格正本 |
+|---|---|
+| node 與兼任角色、兩張註冊表 | [T-02](terms.md) |
+| node 登記、喚醒、全殺重啟、逐層重建 | [daemon](daemon.md) |
+| 任務順序、group／needs、互斥、git、Q1／Q2 | [tick](tick.md) |
+| 身分額度、可選 helper；inst 欄位與解析 | [身分](base/identity-resources.md)、[inst](base/inst.md) |
+| 工作材料、可信結果、後代收尾 | [work](base/work.md)、[execution](base/execution.md) |
+| 追蹤／ignored 區、完整發布、去重與清理 | [storage](base/storage.md)、[transport](base/transport.md) |
+| kernel 樹、資源 module 與 LLM 池 | [scheduling](scheduling/README.md) |
+| 可選 run、unknown 處置與集中待辦 | [runs](scheduling/runs.md)、[operations](scheduling/operations.md) |
+| agent 任務、設定、context、工具、完成證據 | [agent](agent/README.md) |
+| 跨篇 ID、時間、結果與錯誤 | [contracts](contracts.md) |
 
-**基底六塊：** 工作描述對應 [B-101～103](base/work.md)，執行器對應 [B-201～204](base/execution.md)，身分與資源對應 [B-301～304](base/identity-resources.md)，儲存對應 [B-401～404](base/storage.md)，通訊交接對應 [B-501～505](base/transport.md)，生命週期對應 [B-601～604](base/lifecycle.md)。
+## V-02．先測行為，再測規模
 
-**Agent 五塊：** 設定人格對應 [A-101～103](agent/configuration.md)，輸入對話對應 [A-201～203](agent/input.md)，記憶context對應 [A-301～303](agent/memory.md)，能力工具對應 [A-401～404](agent/tools.md)，tick推進對應 [A-501～505](agent/tick.md)。
+〔建議預設，未拍板〕先用假工具／mock LLM 驗檔案交接、git、授權及結果。再在可丟棄的 Linux／WSL 環境，驗無 helper 通用 user、有 helper 兩個真 UID、已裝 module 與後代清理；最後測萬級冷 node。
 
-**任務與排程六塊：** 任務輪次對應 [S-101～104](scheduling/runs.md)，ready／wait與准入對應 [S-201～203](scheduling/admission.md)，公平對應同篇 S-204，LLM額度對應 [S-301～306](scheduling/llm.md)，粗預算對應 S-203與基底 B-303，觀測人工控制對應 [S-401～404](scheduling/operations.md)。共用資料由 [C-01～06](contracts.md) 定義，名詞與責任由 [T-01～05](terms.md) 定義。
+保存版本、配置、環境與結果；mock 不代表 OS 隔離已驗證，磁碟記帳不算硬限制。範圍依[平台邊界](README.md)，須涵蓋同機 node 樹。
 
-## V-02．先測閉合，再測規模
+## V-03．跨篇故障場景
 
-〔建議預設，未拍板〕第一層只用假工具／mock LLM檢查所有條款的JSON、狀態、去重、提交與unknown；不啟動真實模型。第二層在可丟棄Linux環境以兩個真UID驗證身份、資源、quota（若啟用）與工具後代取消；外牆profile選定後另段驗收，不是這層的完成門檻。第三層才以一萬筆metadata、少量活躍工作測索引與恢復；這不等於一萬真帳號部署已驗證。
+〔建議預設，未拍板〕以下測試交叉覆蓋已裁規則與各篇工程預設；具體預設仍依正本來源。
 
-三層均記錄版本、配置、測試環境及原始結果。GPU／本機模型不是此驗收前提；FUSE、分散式kernel、父子demo不在首版完成條件。
+### node、登記與身分
 
-驗收：Given mock的UID標籤測試通過，When 發布驗收結論，Then 只能說協定測試通過，不能說Linux DAC／cgroup強制或可選quota記帳已通過；quota不宣稱是安全邊界。
+驗兼任 kernel／agent、只有收信任務及空成員表，角色須依任務判定。重啟從頂層長回樹，壞成員留待辦、不擋其餘成員；漏通知可補查，重複叫醒不並行同 node 的兩格。
 
-## V-03．跨層必要故障場景
+測 socket 冒名、超額授予／宣告 user、不懂 user 語意、無 helper 繼承與切 UID 後開檔。超額須 125、不啟動、不寫 `exit` 並留待辦；整份 `$ref` 可用但不能偷換身分，搬資料夾也不能取得新身分。
 
-〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B4、B5；依 [WSL 查證](../notes/2026-09-29-wsl-machine-check.md)二・5、6 與[裁定](../notes/2026-09-29-verdicts.md) 7、附 WSL、附排隊先後〕以下是一條整合測試鏈，不替代各節局部驗收。先讓agent A接件、排tool job、啟動attempt；在「blob發布／帳本提交／回收結果／提案commit」各窗口分別中斷，另測新訊息與最後一次tick提交競爭，依 [S-201](scheduling/admission.md) 重算ready，不要求提交後一律觀測為idle。重啟後只允許一個狀態寫入者，輸入不消失，未知attempt不自動再執行，已提交的工具意圖不重複。另測暫停與提案競爭：屏障持久化後不得派新工，查詢仍顯示未解決的unknown；phase觀測值不授權派工或宣告run成功，省略僅供顯示的think／act持久轉移也不遺失可恢復的決策。
+### group、收件與派出
 
-在同鏈加入B冒名A、舊generation提交、同request不同內容、主程序退出但孫程序存活、已啟用的agent quota滿、control磁碟滿、OOM、LLM429、送出後斷線、拒絕公開result.ack、拒絕stream=true、部分內容不得當final及重複usage（串流邊界依 [S-305](scheduling/llm.md)）。應產生各篇明定錯誤／等待狀態，不以無限重試掩蓋問題。清空程序只證明本機已停，不證明遠端副作用撤銷。
+前組成功、後組失敗：前組保留，後組修改／新增檔還原，ignored 收件不丟；改 `.gitignore` 不能躲還原。失敗組不能滿足跨組 needs，獨立組可繼續；壞表整格不跑，無變動不 commit。
 
-〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B2、A1 claim 部分〕另測 tick 無定期 heartbeat 時，程序退出與 deadline 仍觸發 [B-602](base/lifecycle.md) 收尾；舊受管範圍或 home 鎖未釋放時，即使新通知到達也不重派。確認清空並核對結果後才釋放 claim，排程依 [S-103](scheduling/runs.md) 重查條件；未提交過的遲來舊 generation 或過期 checkpoint revision 提案不得推進 checkpoint、消費輸入或發新工作；已提交提案的相同重送依 [C-05](contracts.md) 回原收據，不重做增量。控制端重啟仍按 B-603 全殺，無可信已發布結果的在途工作變 unknown，不自動重做未知工具／LLM。
+在複製收件、commit、刪原件各窗口中斷，不遺失或重吃；同 ID 異內容報衝突。請求未 commit 不送，送出不明則 unknown、不補送；還原不撤銷外部效果，跨 repo／submodule 無共同交易。
 
-另加兩個整合故障場景：
+### 程序與結果
 
-- **Given** 工具／LLM 有在途 attempt；**When** 控制端或 VM 在 10 秒內整個消失，來不及完成停機寬限；**Then** 下次啟動依 [B-603](base/lifecycle.md) 對帳，無可信已發布結果且不能證明從未放行者變 unknown，不自動重做；已持久結果與已提交 checkpoint 保留，清空舊受管範圍後才重派，不把寬限未滿當成成功或安全重試證據。
-- **Given** 睡眠期間 VM 暫停，monotonic 沒算睡掉的時間；**When** 睡醒牆鐘大跳，大批工作同時到期；**Then** 運行中逾時仍按 [C-01](contracts.md) 的經過時間判斷，不因牆鐘跳動就全部判逾時；到期工作依 [S-201](scheduling/admission.md) 進入 ready，先後照 S-204 的持久序號，依 S-203 全局與每 agent 准入名額分批放行，其餘保留等待，不一次全放，也不因到期而重做 unknown 工作。
+daemon 或 VM 突然消失後，全殺舊 tick 與受管後代才重開；主程序已退、孫程序仍活也不能報清空。已 commit 狀態與完整結果保留，未 commit 還原；無可信結果的在途工作不能自動再跑。取消與完成競爭只發布一次結果，晚到舊結果不覆寫新嘗試，同一結果與用量不重複採計；沒有 OOM 證據不能只憑 SIGKILL 猜原因。
 
-驗收：Given 任一故障注入點，When 系統恢復並查詢，Then 可從agent/run/job/attempt追溯原因，沒有跨owner工作、無證據成功、雙重usage結算或遺失已接納請求。
+### 分層資源與 LLM
+
+父層分給子層的範圍不能被子層加大；子層未裝某 module 不另記或另限，但父層限制仍有效。兩個 kernel 可各有 endpoint 池，各池核對真正共享的 provider 限制。測 429 退避、送出後斷線及部分內容；部分回覆不能冒充完成，unknown 不因一般 retryable 標記而重試。
+
+分開驗證 key 部署：無 helper 且代發／agent 同帳號時，文件須明說 key 不受保護；採獨立服務帳號保護時，node 與工具不可讀 key。上層查詢只取下層摘要，未授權者不能因猜 ID 讀內容。
+
+### 設定、清理與待辦
+
+驗重要設定暫停手改、確認提交再恢復；普通設定由 ignored 工作資料夾經工具匯入，下格生效。滿碟或 commit／還原失敗不得假成功、刪原件或開新格。
+
+清理依 [B-404](base/storage.md) 驗保留與去重證據，不把移出日常 context 當成已釋放 git 歷史。集中待辦被刪不代表問題解決；來源後續核對須補回，無終端的危險處置須跳過。牆鐘大跳時到期工作仍依本 kernel 序號及額度分批放行，不重做 unknown。
 
 ## V-04．萬級穩態與冷啟動分開
 
-〔使用者方向 2026-09-28，見[工作負載](../notes/2026-09-28-linux-resources-and-task-scheduling.md)〕目標10,000 agent、一小時活躍不到100、雲端LLM；這不是固定併發上限。
+〔建議預設，未拍板〕負載目標依 [T-05](terms.md)。同一台有配置紀錄的測試機，以 1,000→10,000 筆冷 node、相同少量活動量比較 daemon／kernel CPU、RSS、程序數、檔案與 history 讀取量、佇列等待、喚醒到啟動時間。
 
-〔建議預設，未拍板〕用同一台記錄配置的家用測試機，依1,000→10,000筆冷登記且相同少量active比較：控制層穩態CPU／RSS、每輪查詢列數、history讀取、程序數、ready到啟動時間、佇列年齡、恢復掃描量。以無排隊下wake-to-start p95約0.5秒作起始參考，不把滿載或雲端等待算作同一延遲指標；其他數值先做基線，不虛構已達標。
-
-驗收：Given cold資料增加十倍但active不變，When 量測穩態，Then 無逐冷agent程序或history讀取，SQL熱路徑不全量解碼所有登記；冷啟動可分批全量核對，成本另列，不能每輪重新付出。
+穩態不應每格掃全樹、讀全部 history 或替冷 node 開程序。冷啟動重建登記可以走完整棵樹，但成本另列；再分開量多層 kernel 的端到端喚醒延遲。無排隊時 p95 約 0.5 秒僅作起始參考，不當已裁門檻，也不混入雲端等待。
 
 ## V-05．規格自身查核
 
-〔主編補〕交付前檢查所有本地鏈結存在、主概念有葉規格、ID／狀態／BlobRef使用單一正本、每個規範節有來源和驗收。跨篇再敘述只解釋，不得另定相同欄位；機械式長記錄表用資料檔。文件通過不等於產品通過。
+〔主編補〕檢查路徑／錨點、正本、來源及故障場景；舊條款只留殘根，protocol 舊材料不當新主規格。
 
-驗收：Given 其中一篇把started_at_ms改成未定義started_at，When 自審，Then 視為跨篇不一致修正，不能以兩者意思差不多放行。
+從 repo 根目錄跑 `bash wf/tools/wf-lint.sh proto6`，其中 spec 的 broken 須為 0。文件通過與產品運行時驗收分開回報。
