@@ -2,7 +2,7 @@
 
 ← [規格入口](../README.md)｜[名詞](../terms.md)｜[daemon](../daemon.md)｜[通用 tick](../tick.md)｜[inst](../base/inst.md)｜[使用者裁定](../../notes/2026-09-29-verdicts.md)
 
-2026-09-29 依 node 架構整合。本篇把主規格落成**程式之間**的指令形狀、JSON 與資料夾交接。人手打的操作 CLI 之後再做；本篇只定機器用的形狀，但同一批程式人也能直接跑（[通則](../README.md#原則能下指令能管檔案就能交給-agent)）。
+2026-09-29 依 node 架構整合。本篇把主規格落成**程式之間**的指令形狀、JSON 與資料夾交接。人手操作見 [CLI](../cli.md)；本篇定機器用的形狀，同一批程式人也能直接跑（[通則](../README.md#原則能下指令能管檔案就能交給-agent)）。
 
 ## P-001．範圍與原則〔主編補〕
 
@@ -66,8 +66,9 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 第九批已准工程數字先照建議、實作量過再調；各篇「建議預設」可替換，不逐條再問使用者。
 
 - 首次由父 kernel 登記、既有項可重登；IPC、bytes 去重、摘要發布、資源 method、鎖 fd 與故障停格，依 [daemon](daemon.md)、[messages](messages.md)、[node](node.md)。
-- **LLM 共享窗口尚缺格式**：token／request 上限、窗口、估算與 unknown 到期政策，由池 module／provider adapter 補。相同 provider 限制交同一池管理 node，不能靠同名 scope 跨 node 同步；只有並行份額不代表 S-301／302 的共享限流已完成（[resources P-505](resources.md)）。
-- **領域接口尚缺格式**：模型／人格／工具清單及參數 adapter、unknown 處置及可選 run method、清理所需終局／消費／引用遍歷。先由明示部署 adapter 接主規格；不認得的 method 回 -32601，clean 缺可信證據就保留（[ops](ops.md)）。
+- **LLM 共享窗口與池狀態**：最小格式及估算由 [kernel P-811～812](kernel-tasks.md) 定義；unknown 保留占用，不自動到期釋放。相同 provider 限制交同一池管理 node，不能靠同名 scope 跨 node 同步（[resources P-505](resources.md)）。
+- **領域接口**：模型／人格／工具 adapter、正式回話、context 與預設清理遍歷已由 [agent 任務篇](agent-tasks.md) 及 [kernel 任務篇](kernel-tasks.md) 定義。尚未統一的是 unknown 人工處置、可選 run method 與自訂任務的清理 adapter；依 [ops](ops.md) 使用明示部署 adapter，不認得的 method 回 -32601，clean 缺可信證據就保留。
+- 最新裁定的 `agent.say` 回話及 daemon／node 待辦分流，尚須同步下列協議與 schema；人手接法及差異見 [CLI 缺口表](../cli.md)。
 - done 留存、磁碟 hardlink 計量與池路由照各篇工程預設；git 歷史回收留後續，不把本次格式驗證當產品實作。
 
 ## P-009．分工表〔主編補〕
@@ -80,6 +81,8 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | [work](work.md)／P-400～ | once 工作、結果、LLM 池與程式契約 |
 | [resources](resources.md)／P-500～ | module、配額／用量與各類資源 |
 | [ops](ops.md)／P-600～ | attention、處理表、aos-attend、aos-clean |
+| [agent 任務](agent-tasks.md)／P-700～ | agent 設定、工具、對話、context、用量及建立範本 |
+| [kernel 任務](kernel-tasks.md)／P-800～ | 持久成員、排程、工作轉交、LLM 路由／池及建立範本 |
 
 ## P-010．inst 目標：檔案或資料夾〔使用者方向 2026-09-29〕
 
