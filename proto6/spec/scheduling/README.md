@@ -1,10 +1,16 @@
-# 任務與排程
+# node 樹與資源
 
-← [規格入口](../README.md)｜[共用契約](../contracts.md)
+← [規格入口](../README.md)｜[術語](../terms.md)
 
-本層決定執行機會與額度，不替 agent 選工具，也不取代基底的 UID／cgroup 強制限制。所有具體政策為建議預設，尚未拍板。
+## 一棵逐層管理的樹
 
-- [任務、claim 與恢復](runs.md)：輪次、單寫者、取消、遲到結果。
-- [ready／due 與准入](admission.md)：增量取件、名額、公平、冷資料。
-- [LLM 共享額度](llm.md)：預留、限流、未知結果、用量結算。
-- [觀測與操作](operations.md)：查詢、人工解決、保留（跟著 tick 清）、待處理資料夾與驗收。
+〔使用者方向 2026-09-29〕node 與角色定義見[術語](../terms.md)。kernel 管直接成員的排程與資源；成員也是 node。下層在父層眼中是一件工作，上層只看它提供的摘要，不讀下層成員內容。
+
+node 的登記、路徑 id、叫醒與重啟重建由 [daemon](../daemon.md) 定義；身分額度見[身分與 OS 資源](../base/identity-resources.md)。各 node 自己推進狀態，提交與恢復依 [tick](../tick.md)，不承諾跨 node 一起提交。
+
+## 本篇地圖
+
+- [排程與資源 module](admission.md)：成員摘要、通知補查、逐層分配與序號。
+- [LLM module 與池](llm.md)：份額、代發、key 保護邊界與限流。
+- [工作與可選 run](runs.md)：輪次、取消、恢復、重試與遲到結果。
+- [查詢與待處理事項](operations.md)：摘要、unknown 處置與 `aos-attend`。

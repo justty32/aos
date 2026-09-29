@@ -1,33 +1,35 @@
-# 工具與單次 LLM client
+# 工具選擇與結果解讀
 
-← [Agent](README.md)｜[共用契約](../contracts.md)
+← [Agent](README.md)｜[兩條通則](../README.md)
 
-## A-401 能力清單與參數〔建議預設，未拍板〕
+## A-401 工具清單與參數
 
-manifest 是不可變工具清單。每項必填 `name:ID`（清單內唯一）、`description:string`、`input_schema:object`（JSON Schema 2020-12 的受支援子集）、`exec_ref:BlobRef`（下述不可變 ExecTemplate）、可省 `result_mode:text|json`（預設 text）、可省 `result_schema:object|null`（預設 null；json 時必填）。不支援的 schema keyword 於登記時拒絕，禁止忽略後假裝驗證。首版 keyword 白名單精確為 `type,properties,required,additionalProperties,items,enum,minLength,maxLength,minItems,maxItems,minimum,maximum,description`，其他 keyword 一律拒絕，包含 $ref、組合條件與 default。type 必填且為 object/array/string/number/integer/boolean/null 其中一個字串，不接受型別陣列；input_schema 根必須 object。properties 值及 items 遞迴使用同一子集，additionalProperties 只收 boolean（省略 true）；required 為不重複字串陣列；enum 為非空不重複 JSON 值陣列。四個長度上下限為非負整數，數值上下限為有限 number，所有 min 不大於 max；description 為字串。keyword 適用型別、字串字元長度及 enum 相等比較按 JSON Schema 2020-12，bool 不算 integer。
+〔建議預設，未拍板〕工具清單是設定檔，描述工具名稱、用途、參數 schema、要跑的程式與參數，以及回傳文字或 JSON 的解讀方式。名稱在清單內唯一；宣告 JSON 回傳時提供結果 schema。實作只接納它能驗證的 schema，不默默忽略不支援的規則。增刪工具沿[設定更新](configuration.md) 的做法。
 
-ExecTemplate 必填 version:1、argv:非空字串陣列；可省 cwd（預設本次 tick 採用的設定 bundle 的 cwd）、env、timeout_ms、output_limit_bytes，其型別與預設沿 [B-101](../base/work.md)。Template 不接受 agent_id/run_id/job_id/stdin_blob 或其他欄位。adapter 從可信 claim 補 owner／run／job，複製固定 argv，將驗證後 arguments 以 RFC 8785 UTF-8 JSON 保存為單一 stdin_blob，再形成完整 B-101 工作描述；stdin 只含 arguments 物件，無附加換行，不把參數放到 argv、不拼 shell，大小不得超 B-101 stdin 上限。工具需自行讀 stdin JSON；既有 CLI 由明示固定 argv 的 wrapper 轉接。模型 tool call 必填 `call_id:ID`、`name:ID`、`arguments:object`，同一回覆內 call_id 唯一。不存在工具、重複 call_id、無效參數或清單缺失一律不派工；產生具欄位路徑的 `tool_request_invalid` 結果供下一次思考。連續兩次 LLM 回覆整體格式無效，run → needs_attention、phase 顯示 error（處置見 [S-102](../scheduling/runs.md) 可選 resume 出口或取消），避免無界修補迴圈；合法回覆將此計數歸零。
+模型呼叫帶呼叫 ID、工具名稱與參數。同一回覆中的呼叫 ID 不重複；未知工具、參數不合 schema 或回覆格式錯誤時不派工，留下具體錯誤供下一次思考。清單的程式設定負責把合法參數轉成普通工作材料，詳細 JSON 與 adapter 格式留協議篇下一輪定義，不另訂工具專用權限。
 
-驗收：Given 工具要求 integer 而模型傳字串；When agent 處理 call；Then 沒有工具程序，歷史留下參數路徑與結構錯誤。
+格式修補必須有限：預設連續兩次模型回覆格式無效就停止自動修補，不再派修補請求，並寫[待處理事項](../scheduling/operations.md)；合法回覆把計數歸零。計數只是 node 的普通狀態檔。
 
-## A-402 委託執行邊界〔使用者方向 2026-09-28，連 notes〕
+〔使用者方向 2026-09-29〕工具請求的提交、派出與收結果依[通用 tick](../tick.md)。
 
-來源：[工具繼承委託員工權限](../../notes/2026-09-28-employee-identity.md)。工具代表 caller 行事，沿用 agent 的 Linux 身分及資源歸屬，包含工具內再次呼叫工具／LLM；工具要用 LLM 同樣只投請求，由控制側代發服務持 key 送出（[S-301](../scheduling/llm.md)）。登記工具不授予檔案權限；執行與降權由基底處理。agent 只提出以 agent_id/run_id 為 owner 的 job，不能傳任意 UID 代替 owner。模型選多工具不代表可以繞過排程准入；工具任意本地執行仍受 OS 資源邊界，透過 aos 發送的後續 job 必須延續同一 owner。
+驗收：schema 要求整數而模型傳字串時，不開工具程序，可查到參數路徑與格式錯誤。
 
-驗收：Given A 呼叫會派出後續工作的工具；When 底座接受工作；Then 所有後續 job 的 owner 仍是 A，無法藉參數換成 B 的資源額度。
+## A-402 委託執行邊界
 
-## A-403 結果封套與解讀〔建議預設，未拍板〕
+（09-29 重寫：已刪；併入[兩條通則](../README.md)與[共通身分規則](../base/identity-resources.md)，LLM key 規則見 [LLM 池](../scheduling/llm.md)。）
 
-結果只採用 [B-103](../base/work.md) 的 ExecResult：C-03 Outcome.result_ref 指向它，stdout／stderr 引用名稱固定為 stdout_blob／stderr_blob；不另造 agent 專用權威結果。OutcomeAdapter 是純讀取轉換：用 job_id 找回 call_id，讀取 Outcome.status/error 及 ExecResult 的 exit_code、reason、stdout_blob、stderr_blob、truncated，按 [A-303](memory.md) 形成有來源的模型可見結果封套。text 模式以 UTF-8 解碼 stdout，無效位元組記 tool_result_invalid，原始 blob 保留；json 模式只有 stdout 已完整保存且未截斷才驗證回傳值；可驗證時解析完整 stdout，拒絕重複 key、非有限數值及尾隨資料，再驗 result_schema。stderr 是診斷，不冒充回傳值；null 串流引用不冒充已保存空字串。模型可見結果封套必填 version:1、call_id:ID、outcome:Outcome、exec_result_ref:BlobRef|null、stdout_preview:string、stderr_preview:string、preview_truncated:bool、output_truncated:bool、semantic_error:Error|null；兩個預覽預設空字串但仍必填，preview_truncated 表示 A-303 的展示裁切，output_truncated 沿 ExecResult.truncated 表示底座資料已截斷，兩者不可混用。控制層確認 attempt 所屬及終局後，agent 才將結果配回原 call。重送相同 attempt 結果僅消費一次；相矛盾結果進 needs_attention，不任取最後一份。
+## A-403 結果配對與解讀
 
-exit 0 只代表程序正常結束；json 模式解析／schema 失敗記 `tool_result_invalid`，底座 attempt 的成功事實不改寫，語意錯誤交給 agent。非零退出、timeout、取消與部分輸出均保留並明確標示，不只留「失敗」文字。預設不因語意錯誤自動重跑工具；agent 如決定再次呼叫，建立新的 job 並引用前次證據，仍受 run 預算限制。
+〔建議預設，未拍板〕agent 讀收件區的結果檔，以原請求、工作／嘗試 ID 配回模型呼叫 ID。工具結果是原呼叫的證據，不當成新的使用者訊息；晚到結果依 [C-03](../contracts.md)。找不到配對或結果互相矛盾時，留下證據供[處理](../scheduling/operations.md)，不任取最後一份。
 
-驗收：Given exit 0 的工具輸出不符合 result_schema；When agent 收到結果；Then 可見語意格式錯誤與原始結果，沒有自動重跑。
+結果的保存與去重沿[投件規則](../base/transport.md)，消費沿[通用 tick 的 Q1](../tick.md)。供模型看的內容只需呼叫識別、執行結果、原始引用，以及 [A-303](memory.md) 的預覽與截斷標記，不再包另一份權威結果。
 
-## A-404 LLM 與未知結果〔建議預設，未拍板〕
+`exit 0` 只表示程序正常結束。文字模式檢查能否解讀成 UTF-8；JSON 模式只有原始 stdout 完整保存時才解析並驗 schema。格式不合就記 `tool_result_invalid`，不改寫原本的程序結果。stderr 是診斷；缺失的輸出不能當成空字串，非零退出、逾時、取消及截斷也要如實呈現。
 
-cloud LLM client 一次只做一個已准入請求，輸出原始回覆及用量；它不執行工具、不修改 history、不自行重試、不自行換 endpoint。agent 解讀回覆並提出下一步。請求／回覆 schema 無效按 A-401 處理；提供者拒絕等明確失敗保留結構化錯誤，重試政策交排程。
+語意格式錯誤不自動重跑工具；若 agent 決定再呼叫，就建立新工作並引用前次證據。未知結果的處置依[共通操作](../scheduling/operations.md)。
 
-工具或 LLM 在外部效果可能已發生但缺乏可靠結果時，job/attempt 為 unknown，run → needs_attention、phase 顯示 error。保留 request、attempt、時間及已有輸出，禁止 agent 自動把 unknown 當 failed 重試。補回原 attempt 的結果只能走可信結果導入；操作者不得以文字偽造成功。人工處置依 [S-401](../scheduling/operations.md) 的 run.resolve：retry 必填 allow_duplicate_effects=true、new_max_attempts 且大於既有 attempt 數；若 cancel_requested 尚在，另必填 clear_cancel_requested:true，僅由合法 resolve 交易清除取消要求並重試，依 [S-104](../scheduling/runs.md) 確認舊本機程序清空後才建新 attempt；fail／cancel_with_unknown 保留原 unknown 證據。控制層持久記錄決議，禁止普通 resume 隱含重試；單純重啟或解除取消要求也不消除 unknown。
+驗收：工具 exit 0 但 JSON 不合 schema，保留原始結果與語意錯誤，不自動重跑；同一結果重送也只消費一次。
 
-驗收：Given API 已送出而回覆前失聯；When daemon 重啟；Then 此 attempt 顯示 unknown，沒有第二次 API 呼叫，須有持久人工決議才續行。
+## A-404 LLM 與未知結果
+
+（09-29 重寫：已刪；LLM 行為併入 [LLM 池](../scheduling/llm.md)，unknown 處置併入[共通操作](../scheduling/operations.md)，重啟處理見 [daemon](../daemon.md)。）

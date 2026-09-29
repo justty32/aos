@@ -71,7 +71,7 @@ JSON 使用 UTF-8、無 BOM；一份材料恰好一個 JSON 值，協議 envelop
 
 ## P-005．檔案與 socket 上的 JSON-RPC〔建議預設，未拍板〕
 
-JSON-RPC request／response 形狀沿 C-04／B-501；禁止 batch 與 notification。request id 必為 request_id 字串，錯誤回覆無可用 id 時才用 null。結果與 error 二選一，不能把子程式 stdout 嵌進 RPC 當成可信成功。method、params、授權及 result 的正本是 [methods.json](../base/methods.json)，不是本篇範例。
+JSON-RPC request／response 形狀沿 C-04／B-501；禁止 batch 與 notification。request id 必為 request_id 字串，錯誤回覆無可用 id 時才用 null。結果與 error 二選一，不能把子程式 stdout 嵌進 RPC 當成可信成功。method、params、授權及 result 的正本是 methods.json（09-29 已撤除，協議篇待重做），不是本篇範例。
 
 檔案保存一份持久包裝 `{"version":1,"message":<JSON-RPC object>}`；只有這兩個欄位，request／response 各一檔，sender 身分另由可信通道記錄，不接受包裝宣告。整個檔案（含包裝）不得超過 B-501 的 256 KiB，內層訊息也不得超過該上限；因此貼近上限的 socket 訊息要改走 blob 引用，不能因換傳輸而放寬入口。持久包裝不是 params，不改 method digest。
 

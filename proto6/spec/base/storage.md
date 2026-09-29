@@ -1,41 +1,43 @@
-# 儲存與持久交接
+# 檔案、收件與清理
 
-← [基底](README.md)｜[共用契約](../contracts.md)
+← [基底](README.md)｜[共用契約](../contracts.md)｜[通用 tick](../tick.md)
 
-## B-401：權威與存放位置〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B1〕
+## B-401：資料夾就是狀態〔使用者方向 2026-09-29〕
 
-Owner：控制層唯一 SQLite writer。SQLite 保存 owner、ready、due、jobs、attempts、run、claim、generation、checkpoint pointer、消費 cursor 及派工意圖。agent home 保存輸入、歷史及語意 checkpoint 本體；受管不可變內容庫按 agent 分區，與該 home 在同 filesystem，啟用磁碟額度時指派同 project quota、兩者共用記帳額度（B-304）。內容庫由管理者持有，agent 只經唯讀 fd 取得已提交 blob；可編的配置與 source 草稿仍在 home。這是為完整性及容量閉合新增的可替換預設，不將所有資料複製進無上限 global control。控制庫只保存有界 metadata、登記及小型錯誤；pending jobs 採 [S-203](../scheduling/admission.md) 的部署必填 max_pending_jobs；部署可另設 per-agent pending 額度（正整數），未設不增加第二個隱含預設，達任何適用上限拒絕新提交。agent 不得直接修改 SQLite 或權威 pointer。控制根預設目錄 0700、檔案 0600；跨 UID 讀取只經受控導出，不將整個 DB 給 agent。
+node 的狀態就是裡面的檔案；每個 node 的 git repo、group 提交與恢復，以 [通用 tick](../tick.md) 為正本。舊的中央帳本、SQLite、受管 blob 庫與 checkpoint pointer 全部撤除。
 
-tick 讀取控制帳本按同一快照產生的唯讀視圖，包含目前 checkpoint pointer／revision、依 [A-503](../agent/tick.md) 推導的 agent phase、pending jobs、輸入／結果消費進度、已登記歷史尾端及等待／到期依據；只導出該 owner 有權讀取的部分。pending 的集合定義依 [C-05](../contracts.md)，等待原因沿 [S-402](../scheduling/operations.md)，ready／due 沿 [S-201](../scheduling/admission.md)。這些控制資料不再存進 checkpoint，也不接受 tick 回寫整份視圖；後續變動在 C-05 提交時以當前帳本重新驗證。收件序號、語意消費 cursor 與排程通知水位各有用途，仍分開保存。小型控制增量直接納入帳本交易，大段內容仍引用受管 blob，不把全文搬入控制庫。
+資料分三處，實際目錄名稱留給協議篇：
 
-BlobRef 依 C-03 以受管 key 定址並保存 SHA-256，禁止把 ID／摘要解讀為任意路徑；所有根由登記取得。尚未導入的 home 候選可被 agent UID 改寫，控制層不能相信名稱：可信導入者以 agent 權限開 fd，限制大小、拒絕 symlink／非普通檔，取快照重算摘要後交控制層。控制層只引用受管庫的已驗證快照；需恢復而受管 blob 已毀損時報完整性錯誤，不執行其內容或改指較舊狀態掩蓋損毀。
+- **追蹤區**：已吃進來的訊息、狀態、歷史、請求與結果，以及設定。請求 ID 用作檔名；先後用所屬 kernel 的序號，到期只留必要時間欄位。查詢讀檔案或摘要，不另存一套狀態副本。
+- **收件區**：列入 `.gitignore`，接外部訊息與工具／LLM 結果；group 還原不得碰它。
+- **工作資料夾**：每個 node 另提供一個列入 `.gitignore` 的地方，讓使用者先寫普通設定的材料（例如增刪工具），再用工具加進追蹤區。這裡的草稿不等於已套用設定。
 
-**Given** agent 篡改 blob 或放 symlink 指向控制檔；**When** 導入與恢復；**Then** 摘要不符／檔型不符被拒，沒有特權代讀與 pointer 更新。
+設定手改、匯入與生效時機見 [A-102](../agent/configuration.md)；追蹤區寫者協調、避免大量 commit 與 submodule 的邊界見 [通用 tick](../tick.md)。
 
-## B-402：發布與崩潰耐受〔建議預設，未拍板〕
+## B-402：完整發布與收件消費〔使用者方向 2026-09-29〕
 
-檔案發布流程：同 filesystem 暫存檔→完整寫入→fsync 檔→rename 至唯一正式名→fsync 父目錄。SQLite 使用 WAL、foreign_keys=ON、synchronous=FULL；單一 writer 的交易不得包含等待網路或執行工具。只有檔案與必要 DB/outbox 均完成耐久提交後才向客戶端確認收件。檔案先發布再寫 DB，裂縫以原收件 spool 的持久索引修復；不能只相信另寫一次的 outbox。
+收件者只讀完整發布的檔案。〔建議預設，未拍板〕發布採同一檔案系統的暫存檔→完整寫入→rename 成正式名，不覆蓋既有同 ID 檔；需要確認已耐久收件時，先同步檔案與父目錄，成功後才回覆。臨時檔不算收件成功；發布失敗就報錯，不能留下半份正式檔。
 
-控制層對每次出站交接先同交易保存意圖，再嘗試交付；接收後記 ack。啟動／低頻巡檢重放未確認意圖，穩定 ID 保證本機去重。缺 blob 的 DB 引用標完整性錯誤並停相關工作；無引用 blob 僅是待回收候選，不能立即視作完成工作。
+收件消費與對外派送的提交順序以 [tick 的 Q1／Q2](../tick.md) 為正本；同 ID 衝突見 [B-503](transport.md)。發布完整收件不等於已消費，也不代表外部工作完成。
 
-**Given** 在 fsync、rename、DB commit、通知之間逐點斷電模擬；**When** 重啟；**Then** 已確認請求可恢復，未確認請求可安全重送；沒有半 JSON、缺檔卻成功或重複派工。
+**驗收**：半份檔不成為正式收件；發布失敗不回成功，也不覆蓋既有同 ID 原件。消費與派送中斷場景見 tick。
 
-## B-403：checkpoint 提案交易〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 A1 proposal 部分、B1〕
+## B-403：checkpoint 提案交易
 
-輸入為 [C-05](../contracts.md) Proposal 與引用的候選內容；提案 JSON 最大 256 KiB；語意 checkpoint 與本次 history_append／outputs 的 JSON 合計預設最大 16 MiB（內嵌或經 append_ref 引用皆計入，引用增量含其 version 包裝，外部 content_ref 的正文仍沿既有 blob 額度）。這保留原 checkpoint 容納語意狀態及新增內容的容量，不因搬到 Proposal 而把大段回覆縮到 256 KiB。可信導入者依 B-401 取快照、驗摘要並保存，超限、引用缺失或完整性失敗不得進入提交。資料驗證、原子提交與重送結果只依 C-05；本層輸出已持久的提案收據，claim／名額釋放仍須等受管程序清空，不能拿收據代替停止證據。儲存失敗沿 B-404 處理。
+（09-29 重寫：已刪；由[通用 tick 的 group／git](../tick.md)取代。）
 
-**Given** 結果消費後、交易前 tick 被殺；**When** 新 tick 恢復；**Then** 從帳本唯讀視圖讀舊消費進度再處理，沒有重複已提交工作；交易後回覆前被殺，重送依 C-05 取得原收據。
+## B-404：滿碟、保留與清理〔使用者方向 2026-09-29〕
 
-## B-404：滿碟、保留與回收〔建議預設，未拍板〕
+寫檔或 git commit 遇到滿碟、I/O 錯誤時，不宣稱已收件、已消費或已提交；保留舊 commit 與尚未消費的收件原件。該 node 先處理失敗並完成必要恢復，不能直接開下一格覆寫現場；可行的取消與程序收尾仍要做。缺可信結果就標 `unknown`，不自動重跑找結果。結果只保存一部分時須明說不完整，不能冒充完整結果；resume 也不會讓遺失的內容長回來。磁碟記帳是否啟用見 [身分與資源](identity-resources.md)。
 
-管理者必填 control 容量保留政策；僅換目錄不算保留。控制區 ENOSPC／EIO 時停止新准入，禁止確認尚未持久的請求；既有 supervisor 仍應取消與收尾，恢復後無可信結果則 unknown。agent quota 滿依 B-304；控制側每 attempt stdout／stderr 上限依 B-101，其他診斷限 64 KiB，不能用 log 繞過 quota。
+**`aos-clean` 是普通小程式**，可登記成 `aos-tick` 的任務，也可由有權限的人或 agent 直接跑。只清已終局、已消費、超過保留期且無引用的內容；未結工作、`unknown`、未結清外部副作用、在途工作與目前狀態／歷史仍引用的材料都保留。node 退役不自動刪資料；沒有 tick 的 node可手動清，不為清理另開全域定時程序或喚醒冷 node。
 
-終態結果在消費 ack 前不得回收；ack 後仍至少保留至所屬 run 終局後 30 日，審計 metadata／去重 tombstone 同期保留；無 run 的維護結果自終態日起留 30 日；pending／unknown／未結清外部副作用引用一律保留。〔使用者方向 2026-09-29〕**清理由專門的小程式 `aos-clean` 做**，可以兩種方式叫它：登記成系統 post 掛勾（[A-506](../agent/tick.md)），每次某 agent 的 tick 結束後順便清該 agent；或由管理者直接執行（指定 agent，或全部）。兩種方式規則相同：只清已終局、已消費、超過保留期（預設 30 日），而且沒被非終態 run、pending／unknown 工作、目前 checkpoint 或在途工作引用的結果、blob、歷史片段與診斷紀錄；每次有數量上限，清不完留給下次。過期項目依設定 `retention_mode:delete|archive`（預設 archive）刪除或搬進封存區；封存區位置由管理者設定，封存後原引用查詢回 gone 並附封存位置，不再計入 agent 的日常 context。候選由控制層在交易中取得，`aos-clean` 刪檔或搬檔後再提交完成；中斷後重跑只會補做缺的刪除或搬移。不另開全域定時清理；長期沒有 tick 的 agent 不產生新資料，不為清理而喚醒它，要清就由管理者手動跑。agent 退役不自動刪資料。Blob 導入暫存遇中斷可於確認無活導入者後回收。
+保留期預設 30 日。〔建議預設，未拍板〕採用 run 時從所屬 run 終局起算，沒有 run 時從工作終局起算；期滿仍未消費或仍有引用就不清。每次有數量上限，清不完下次再做；預設封存，也可設定刪除。仍在 [B-503](transport.md) 去重承諾期內的請求證據不能先清；若已消費的收件原件仍在，先補清相符原件，再清追蹤證據，免得再次吃入。原件未清或同 ID 衝突時保留證據，不另建永久墓碑。清理追蹤區也須遵守同一 node 互斥與 group 提交規則；封存須先確認內容已保存，才移除日常副本，中斷後可補做。
 
-**Given** 控制磁碟滿或 GC 中途重啟；**When** 新收件／恢復；**Then** 不虛報 durable success，不刪未 ack 結果，重複清理不影響引用中的 blob。
+**清理先只承諾移出日常檔案與 context**。Git 歷史仍占磁碟，封存也可能仍占同一顆磁碟；不能把移除工作樹檔案或一般 `git gc` 當成已回收空間。真正回收歷史空間以後另定。
 
-機制依據：[SQLite synchronous](https://www.sqlite.org/pragma.html#pragma_synchronous)、[fsync 與目錄耐久性](https://man7.org/linux/man-pages/man2/fsync.2.html)。FULL／fsync 的保證以底層檔案系統與裝置遵守同步為前提，不能修復硬體謊報成功。
+**驗收**：滿碟時不回假成功、不刪收件原件；清理中斷後可繼續，未結、`unknown`、有引用及保留期內的內容不被清走。commit 後遺留原件，即使先手動清理再開 tick，也不會因證據先被刪而重吃。過期內容移出日常 context 後，仍明示 Git 歷史可能占空間。
 
-## 待使用者拍板與現況
+## 待定與現況
 
-所有容量上限、保留天數及 layout 為預設；共用契約決定具體 DB 邏輯欄位，實體 schema 可後定但不得破壞原子提交要求。尚未實作。
+實際目錄名、檔案大小限制、清理批次上限與歷史回收方式尚未定；本篇不預定 RPC 或 JSON 全集。以上是新規格，尚未實作。

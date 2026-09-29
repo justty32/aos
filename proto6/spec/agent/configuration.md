@@ -1,27 +1,28 @@
-# 設定與版本
+# 設定與生效時點
 
-← [Agent](README.md)｜[共用契約](../contracts.md)
+← [Agent](README.md)｜[身分與資源](../base/identity-resources.md)
 
-## A-101 設定資料與責任〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B3〕
+## A-101 設定檔〔使用者方向 2026-09-29〕
 
-控制層持有 agent 登記及設定版本指標；設定管理入口可申請更新，tick 只能讀取。`agent_id` 使用共用 ID 型別且建立後不變，不以目錄名稱推導身分。Linux 身分引用由底座提供，設定內容不得改 UID、群組或排程優先權。
+設定就是 node 裡可按權限修改的檔案。人與有權限的 agent 使用同一套檔案及工具；具體權限依[兩條通則](../README.md)。
 
-每份不可變設定（bundle）必填 `version:1`、`model_ref:string`（非空，無預設）、可省 `system_prompt:string`（預設空字串）、`context_policy_ref:string`（非空，無預設）、`tool_manifest_ref:string`（非空，無預設；可指向空清單）、`cwd:string`（無預設，絕對路徑）。各 ref 指向存在且驗證過的不可變內容，版本 revision 使用共用 ID，每個 revision 指向一份 BlobRef。工具、context policy 與模型設定可分檔編輯，發布時以這些引用組成一份不可變 bundle，不要求複製各部分正文。秘密憑證不寫進 prompt 或版本內容；模型引用由 client 的受控設定解析。
+〔建議預設，未拍板〕設定保留模型、人格文字、工具清單、context 選擇規則、工作目錄及所需檔案引用。載入時驗證必需內容、引用及格式，錯誤指出檔案與欄位；不採用缺一半的設定。模型與工具清單可分檔，具體 JSON 格式留協議篇下一輪定義。
 
-前置條件是已登記 agent、身分與 home 有效。建立時缺模型、cwd 不存在或依該身分不可進入、引用缺失、schema 不支援，一律拒絕建立，不發布半成品。未知設定欄位拒絕並回欄位路徑。工具路徑的執行可行性另外由底座於每次啟動確認。
+〔使用者方向 2026-09-29〕執行身分依 [inst 的 `user`](../base/inst.md)，額度與可選 helper 依[身分與資源](../base/identity-resources.md)，不在 agent 設定另加一套授權。
 
-驗收：Given 有效 agent 與缺少的模型引用；When 提交設定；Then 回結構化 `config_invalid`，舊有效版本與 run 不變。
+## A-102 改設定與下一 tick 生效〔使用者方向 2026-09-29〕
 
-## A-102 設定版本引用與更新〔使用者方向 2026-09-29：改設定在下一次 tick 生效〕〔09-29 精簡，依冗餘審查 B3〕
+本條適用所有 node 的設定與任務註冊表；操作手冊須寫清楚兩種做法：
 
-run 建立為 queued 時，控制層保存一個 `config_revision`，由該 bundle 引用工具、context policy 與模型設定；查詢可展開顯示子版本，但展開值不是另一份權威。更新設定須先完整保存及校驗新 bundle 與其引用內容，再由控制層原子切換 agent 的「目前設定版本」。合法更新是有效版本 → 另一有效版本，無法原地修改已發布版本。〔使用者方向 2026-09-29〕設定的來源就是設定檔：管理者手打指令或直接改檔都算更新；agent 若被開放該檔寫權限，也能自己改，不另設更新機制。控制端在下一次 tick 開始時讀來源、驗證，通過才固化成新 bundle；不過就沿用舊 bundle 並寫一件 [S-405](../scheduling/operations.md) 待處理事項。依 [09-29 使用者裁定](../../notes/2026-09-29-verdicts.md) 1，**新設定在下一次 tick 開始時生效**，不等整輪結束：控制層取得 tick claim 時，若 agent 目前設定版本不同於 run 的 config_revision，在同一交易把 run 的 config_revision 換成新版本，並在 run 紀錄追加換版紀錄（換版時點、舊與新 config_revision、生效的 tick attempt）。tick 執行中途一律不換版；已派出、執行中的工具／LLM 工作沿用派出時的版本跑完。queued 的 run 同樣在它的第一次 tick 才取用當時的目前版本。想要舊 run 完全不受新設定影響，要取消舊 run 再建新 run。設計上盡量遵循[兩次 tick 之間的環境穩定性](../../notes/between-ticks-configuration.md)。
+- **重要設定**：先暫停該 node 的 tick，等正在跑的那格及其後代清空，再手改。恢復 tick 時，先把確認採用的手改變動 commit 進去，或用專門確認指令完成這一步；不能先跑下一格，讓未提交的修改被恢復流程抹掉。node 啟停依 [daemon](../daemon.md)；暫停 run 不等於暫停 tick。
+- **普通設定（如增刪工具）**：每個 node 提供一個 `.gitignore` 的工作資料夾，使用者先把檔案寫在那裡，再用工具加入正式設定。有權限的 agent 也可如此操作。工具寫入追蹤區時，照[通用 tick](../tick.md)協調寫入與提交；工作區草稿不會自行生效。
 
-控制層負責版本引用的存活性：非終態 run 或在途工作所引用的 bundle 及其引用內容禁止回收；重啟載入 run 紀錄中的引用，不自動用最新版替代。若 bundle 或其引用內容遺失、摘要不符，run 轉 needs_attention，phase 顯示 error，記 `config_unavailable`；修復原內容後可經 [S-102](../scheduling/runs.md) 的可選 resume 重新驗證出口回 active，phase 依 [A-503](tick.md) 推導；實作未提供該出口時只能取消，另建新 run。版本錯誤不得觸發 LLM 或工具。
+正式修改在**下一次 tick 開始**時讀取、驗證並採用；同一格中途不換，已派出的工具／LLM 沿用派出時採用的設定。不等整輪任務結束。
 
-驗收：Given run R 引用 bundle V1 且有一個 tick 正在執行；When 管理者發布 bundle V2；Then 進行中的 tick 看到的仍是 V1，已派出的工具照 V1 跑完；下一次 tick 開始時 R 改用 V2，run 紀錄可查換版時點與新舊 config_revision，查詢展開值與 V2 相符。仍被非終態 run 或在途工作引用的 bundle 及子版本不被回收；任一引用遺失或摘要不符時不派工，轉 needs_attention。
+〔建議預設，未拍板〕用採用的檔案版本或必要快照，保留本格用哪份設定、已派工作需要哪份內容的查詢依據。一般設定的無效更新沿用上次有效值並寫[待處理事項](../scheduling/operations.md)；連上次有效內容也不可用時，停止依賴它的新工作，不能猜一份繼續跑。仍被工作使用的內容依[儲存與保留](../base/storage.md)保存。任務註冊表錯誤照 [tick](../tick.md) 整格不跑；身分錯誤照 [inst](../base/inst.md) 拒絕啟動，兩者都不適用沿用舊值。
 
-## A-103 人格與權限分界〔使用者方向 2026-09-28，連 notes〕
+驗收：重要設定手改後，確認提交才恢復 tick，變動不被還原；普通設定只放工作區時不生效，用工具加入後於下一格採用。換版不影響正在跑的 tick 與已派工作；無效設定保留舊有效值並有可查原因。
 
-來源：[工具繼承委託身分](../../notes/2026-09-28-employee-identity.md)。prompt、工具描述與模型回覆均無權新增 Linux 權限；工具通常沿用呼叫 agent 的身分。cwd 只表示起點，不表示存取邊界。具體身分準備及外層隔離由基底契約承接，agent 不另造逐工具授權系統。
+## A-103 人格與權限分界
 
-驗收：Given prompt 寫著「使用 root」但 agent 為普通 UID；When 提交工具工作；Then 底座接到的 owner 仍為該 agent，模型文字不改變身分。
+（09-29 重寫：已刪／併入[兩條通則](../README.md)與[身分與資源](../base/identity-resources.md)。）

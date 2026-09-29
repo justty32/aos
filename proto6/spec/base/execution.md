@@ -1,39 +1,39 @@
 # 執行器
 
-← [基底](README.md)｜[共用契約](../contracts.md)
+← [基底](README.md)｜[inst](inst.md)｜[結果檔](work.md)
 
-## B-201：啟動與狀態交接〔建議預設，未拍板〕
+## B-201：啟動與交接
 
-Owner：控制層負責 attempt 狀態與准入名額，supervisor 負責實際程序。輸入為已准入 job、唯一 attempt ID、可信登記版本；輸出為 [B-103 結果](work.md)。控制交易先寫 `reserved` 與派出意圖，啟動器以 attempt ID 去重，建立受控 cgroup 後記 `starting`。啟動閘門尚未放行前，child 只能執行固定可信啟動碼，不能讀 agent 描述或 fork 工作。
+〔使用者方向 2026-09-29〕kernel 派工，daemon 開 tick、管程序。身分切換及解析順序依 [B-303](identity-resources.md) 與 [inst](inst.md)。
 
-完成資源、群組、UID、fd 設定，持久保存程序識別與「準備放行」記錄後才可放行；控制層記 running。實際放行與 DB 並非原子交易，重啟遇不確定窗口按生命週期對帳，不再放第二個相同 attempt。exec 失敗由 close-on-exec 錯誤通道回報 spawn_error；啟動失敗須清空 cgroup 才歸還名額。禁止 worker 常駐等待下一份工作。
+〔建議預設，未拍板〕一次嘗試只用一個固定 attempt ID。材料與結果用普通檔案；不確定是否已放行，不得再開同一嘗試。啟動失敗也要清空已開程序才歸還名額；根本沒跑與執行後失敗分開記，不能只看退出碼猜，見 [inst](inst.md)。
 
-**Given** 在 reserved／starting／放行後分別殺控制程序；**When** 重啟；**Then** 每個 attempt 至多一個受管執行範圍，不能因 DB 尚未 running 再次啟動。
+〔使用者方向 2026-09-29〕程序重啟見 [daemon](../daemon.md)，檔案恢復見 [tick](../tick.md)。
 
-## B-202：程序樹與完成〔建議預設，未拍板〕
+**驗收：**在建立程序前、切身分後與實際放行後各中斷一次；恢復不重開不明 attempt，舊程序未清空前不開同一 node 下一格。
 
-每 attempt 使用唯一 leaf cgroup；supervisor 保持在控制域，持有 pidfd 與 exec 錯誤通道。程序識別保存 boot ID、PID、starttime、cgroup 相對路徑；PID 不單獨作授權或殺程序依據。主程序退出後若後代仍存活，進收尾；先向可識別後代送 SIGTERM，預設等 5000 ms，再 `cgroup.kill`。無法送訊號、無法確認 populated=0，不得宣告 succeeded 或釋放程序名額。捕獲主程序退出結果並不等於所有子孫結束。
+## B-202：後代清空才算結束〔建議預設，未拍板〕
 
-正常退出須等待 pipes 排空、結果持久發布、cgroup 無程序；才提交終態並回收程序名額。若後代被強制清理，結果 reason=signal、state=failed，另附受限診斷；不能將主程序 exit 0 包裝為完整成功。歷史資源計量先存控制帳本再刪空 cgroup。
+執行器保存安全程序識別（例如 pidfd；跨重啟再核對 boot ID、PID、starttime），不拿可能重用的裸 PID 殺程序。cgroup 放在所屬 node 子樹；限制與計量只用已裝 module。
 
-**Given** 工具 fork＋setsid 後主程序退出；**When** 收尾；**Then** 後代也被停止，名額僅在確認清空後釋放。
+主程序退出後仍須清空後代、排空捕獲串流、完整發布結果，才能宣告正常完成。後代另開 session 也不能漏掉；需要清理時先 TERM，再按 [inst](inst.md) 的 2 秒寬限 KILL。cgroup 或其他後代追蹤須能驗證受管範圍全空，不能只查主 PID 或 process group；沒 helper 也不能略過。
 
-## B-203：取消與逾時競態〔建議預設，未拍板〕
+強制清理後代時記失敗，不以主程序 exit 0 冒稱成功。未確認清空就交待處理、不還名額；已裝 module 在移除空框前取必要計量。
 
-取消輸入為已認證 attempt ID 與 reason；授權者限 owner 或管理者。尚未放行可直接阻止放行並清理；running 先記 canceling、SIGTERM、5000 ms 後 kill，再保存結果。取消僅在已確認無活程序後成 canceled；無法確認為 unknown 並保留受占資源，交管理者處理。timeout 使用執行期間 monotonic clock，排隊時間不算；重啟無法恢復單調基準時立即對帳並保守取消，不給全新 timeout。
+**驗收：**工具 fork＋setsid 後主程序退出，後代仍被清掉；確認全空才釋放名額。清理權限不足時不能回報已完成。
 
-終態提交是競態裁決點：成功結果已提交則取消回已終止；取消意圖先提交則之後取得 exit 0 也按 canceled。timeout 先提交則結果 failed／timeout。取消的 RPC 成功只代表已接收意圖，客戶端需查終態；不能保證撤銷外部副作用。
+## B-203：取消與逾時〔建議預設，未拍板〕
 
-**Given** exit 0 與取消同時到達；**When** 交錯兩種交易順序；**Then** 終態依提交先後唯一決定，重送取消不重複釋放名額。
+有權限者可要求取消指定 attempt，人與 agent 走同一入口。未放行的阻止放行；已執行的按 B-202 收尾。接下取消要求不等於已取消，只有確認程序全空才可報 canceled。不能確認時標 unknown 並保留實際占用；取消不承諾撤銷外部效果。
 
-## B-204：OOM 與啟動資源耗盡〔建議預設，未拍板〕
+逾時用 monotonic 經過時間，從放行起算，不含排隊；重啟照全殺與 unknown 規則，不重新給一次 timeout。取消／完成競態由負責該工作的執行器串行處理，只發布一次最終結果：已有完整結果檔就回已結束；尚無結果而先處理取消／逾時，收尾後即使取得 exit 0 也分別記 canceled／timeout。結果檔一旦完整發布就不被後來的取消覆寫；發布前崩潰且結果不明則按 unknown。kernel 下格收結果，不以全域交易排序。
 
-啟動前記 leaf `memory.events` 基線；收尾讀差值。有 oom_kill 增量且工作失敗記 failed／oom；不能只把 SIGKILL 當 OOM。agent 父域 OOM 導致多工作死亡時記受影響 attempts 並附父域證據，無法歸因則 reason=signal 而診斷註明壓力。pids／fork／exec 的 EAGAIN 或 ENOMEM 記 spawn_error，保留原 errno。控制域不可受 agent memory.max 約束。
+**驗收：**交錯取消、逾時、exit 0 與結果發布，每個 attempt 只有一個結果；重送取消不重複釋放名額。
 
-**Given** OOM、pids.max、exec 不存在各一例；**When** 啟動或執行失敗；**Then** 控制端仍可持久回報區別原因並收回已清空名額，沒有自動重試。
+## B-204：資源造成的失敗〔建議預設，未拍板〕
 
-機制依據：[pidfd_open](https://man7.org/linux/man-pages/man2/pidfd_open.2.html)、[cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)。pidfd 追蹤程序實體；cgroup.kill／populated 管受控子樹，兩者不能互相替代。
+記憶體 module 啟用時才讀相應 cgroup 的 OOM 證據；有可信 oom_kill 增量且工作失敗才能標 OOM，不能只看 SIGKILL 猜。父域 OOM 波及多件工作時附父域證據，不能歸因就保留訊號與診斷。pids／fork／exec 失敗保留 EAGAIN、ENOMEM 等原 errno；module 沒裝就不假裝量過或施加過限制。
 
-## 待使用者拍板與現況
+收尾程序不能困在成員自己的 memory.max 內；成員耗盡資源仍要能收尾。容量與結果保存失敗見[儲存](storage.md)。
 
-閘門實作可用受控 child 或 clone3，但驗收一致。5000 ms 等數值未拍板；無實作或故障注入結果。
+**驗收：**已裝 memory／pids module 分別耗盡一次，另測程式不存在；失敗原因可分辨，收尾仍能完成，不自動重試。未裝 module 的部署不要求通過該資源 probe。

@@ -116,7 +116,7 @@ unknown 是 attempt 的暫定證據，合法 Outcome：
 
 ## P-105．十個 method 的共用規則〔建議預設，未拍板〕
 
-方法名稱／授權正本是 [methods.json](../base/methods.json)。下列十種 params 都關閉未知欄位；request id 只收 C-01 ID 字串。control-methods 的各 `*Request`／`*Response` 用於整份 envelope；對 response 必須按原請求選對應定義，因為 response 不帶 method，不能只靠聯集猜屬哪種查詢。成功收據中的 request_id 必須等於 envelope id，run_id 必須等於授權目標（非 run 操作可 null）；這些跨欄位關係另做語意驗證。
+方法名稱／授權正本是 methods.json（09-29 已撤除，協議篇待重做）。下列十種 params 都關閉未知欄位；request id 只收 C-01 ID 字串。control-methods 的各 `*Request`／`*Response` 用於整份 envelope；對 response 必須按原請求選對應定義，因為 response 不帶 method，不能只靠聯集猜屬哪種查詢。成功收據中的 request_id 必須等於 envelope id，run_id 必須等於授權目標（非 run 操作可 null）；這些跨欄位關係另做語意驗證。
 
 普通方法不能指定 UID、priority、claim 或任意路徑。checkpoint.commit envelope 用 control-rpc，payload 引 agent-commit，完全由 agent-state 篇持有；不納入本篇十方法聚合。`result.ack`、`job.submit`、`llm.submit` 不在公開集合，未知 method 回 -32601。工具投 LLM 依 P-011 暫定走每 UID 內部收件處，以工具 attempt 推 owner/run/預算，不授權非 LLM 後續工作；格式只由 llm 篇定。
 

@@ -1,27 +1,25 @@
-# 輸入、回覆與控制
+# 輸入與回覆
 
-← [Agent](README.md)｜[共用契約](../contracts.md)
+← [Agent](README.md)｜[投件](../base/transport.md)｜[儲存](../base/storage.md)
 
-## A-201 收件格式與確認〔建議預設，未拍板〕
+## A-201 收件與消費
 
-輸入入口由控制層驗證及發布。RPC `agent.submit` 的外層 id 為 request_id，params 只有 `agent_id:ID` 與 `input_ref:BlobRef`，依基底通訊契約。input_ref 的內容必填 `version:1`、`text:string`（非空 UTF-8）；可省 `attachments:array<BlobRef>`（預設 `[]`）。認證後的 `sender:string` 由入口存入內部收件紀錄，不接受內容自稱。控制層給每名 agent 的訊息分配嚴格遞增 `input_seq:int>=1`；輸入原文不可變，保存於 home。單則 text 上限預設 1 MiB；超限、附件不存在、無效 UTF-8 或無權投遞在收件前拒絕。
+〔使用者方向 2026-09-29〕有投件權限就能把訊息放進 node 的收件區；人與 agent 使用相同入口。請求 ID 用來定址及去重，完整發布、同 ID 衝突、授權與保留期限依[投件規則](../base/transport.md)。
 
-先持久化內容，再原子登記收件與 ready，成功回覆 C-04 的 `result:{accepted:true,request_id,run_id}`，另必回 `input_seq:int>=1` 帶回 seq；`accepted` 不表示已閱讀。以 `(authenticated principal, target agent_id, method, request_id)` 去重；canonical digest 依基底通訊契約計算，agent_id 也納入內容摘要，同鍵同內容回原收據，不同內容回 `conflict`。資料已寫但尚未登記而崩潰只留下孤立 blob，重送可完成登記；禁止把未登記檔案當成新輸入。無法持久化時不回成功，caller 使用相同 request_id 重送。
+消費、提交及還原依[通用 tick 的 Q1](../tick.md)；訊息與工具／LLM 結果適用同一規則。收件成功只代表內容已存妥，不代表 agent 已閱讀或完成。
 
-驗收：Given 發送者在取得收據前斷線；When 重送相同 request_id 及內容；Then 只產生一個 seq，只有一次可消費輸入。
+〔建議預設，未拍板〕訊息包含非空 UTF-8 文字及可選的附件檔案引用。入口檢查格式、大小及附件是否可讀；格式錯誤、無權投件或存不下時明確回報，不假稱收件成功。詳細欄位留協議篇下一輪定義。
 
-## A-202 普通訊息的輪次邊界〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 A1 輪次部分〕
+驗收：收件中斷場景見 [V-03](../conformance.md)。
 
-agent 依控制層交付的 run 與輸入組 context；輪次建立、輸入綁定及先後順序以 [S-101](../scheduling/runs.md) 為唯一規範來源，設定版本與換版時點依 [A-102](configuration.md)。依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 1，「一輪任務」是軟性設計原則，任務途中新訊息的歸屬暫不定案。
+## A-202 普通訊息的輪次邊界
 
-工具結果是原 job 的證據，依 run_id/job_id/attempt_id 路由，不建立新 run；已完成 run 的遲到結果保存供查核，不冒充新的使用者訊息。停止、暫停及恢復使用控制入口，與普通 text 分開。收件進度與語意處理進度分開顯示；input 消費 cursor 只能隨有效 tick proposal 原子提交。
+（09-29 重寫：已刪；輪次併入[工作分組](../scheduling/runs.md)，結果配對併入 [A-403](tools.md)，消費提交併入[通用 tick](../tick.md)。）
 
-驗收：Given 採用 S-101 的建議輪次預設，R1 正等工具且收到「改算另一檔」；When 收件成功；Then agent 可區分已收件與本輪已消費，R1 的工作與 context 不被暗中改寫。
+## A-203 暫停、取消與輸出
 
-## A-203 暫停、取消與輸出〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 A1 輪次部分〕
+〔建議預設，未拍板〕回覆是 node 追蹤區裡的普通檔案，帶可辨識的輸出 ID、對應輸入或工作，以及 `progress`／`final` 區別。正式讀端讀已 commit 的版本；尚未提交的回答或模型串流片段不算正式回覆。`final` 的任務收尾條件見 [agent 任務](README.md)。
 
-agent 將暫停、恢復及取消交給控制入口 `run.pause`、`run.resume`、`run.cancel`；請求、權限、去重、轉移及重啟屏障以 [S-102](../scheduling/runs.md) 為唯一規範來源。agent 依控制狀態推進語意，不能把控制收據當成工作已停止或任務已完成的證據；needs_attention 的 resume 是 S-102 所列的可選出口。
+暫停、取消及恢復用[共通操作](../scheduling/operations.md)，不另設 agent 控制入口。操作已受理不等於工作已停止，也不等於任務已完成。
 
-回覆是包含 `run_id`、遞增 `output_seq:int>=1`、`kind:progress|final`、`text:string` 的不可變輸出；另必填 version:1。final_ref 引用包含這筆 final 輸出的 BlobRef，必須與提交的 outputs 對應。控制層隨 proposal 提交一次，讀端以 `(run_id, output_seq)` 去重；final 是否完成由 [A-503](tick.md) 判定。持久化前的模型串流片段不算 final，也不作唯一恢復證據。
-
-驗收：Given 一個工具執行中；When pause 後工具完成再重啟；Then 結果仍存在，run 保持 paused，直到 resume 才推進。
+驗收：回答寫入後、commit 前中斷，讀端不顯示這份未提交回答；只有已提交輸出可當正式回覆。

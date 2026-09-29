@@ -74,7 +74,7 @@
 
 ### G-07．普通收發已接通，完整人端操作仍待定
 
-定位：[B-505](../spec/base/transport.md)、[RPC 操作](../spec/base/methods.json)、[A-101](../spec/agent/configuration.md)、[B-604](../spec/base/lifecycle.md)。
+定位：[B-505](../spec/base/transport.md)、RPC 操作（methods.json，09-29 重寫已撤）、[A-101](../spec/agent/configuration.md)、[B-604](../spec/base/lifecycle.md)。
 
 原場景：人只有文字，RPC 卻要求 input_ref；取得 final_ref 後也缺讀出入口。這會迫使實作者自行發明 BlobRef 導入／導出，甚至直接操作內部資料。
 

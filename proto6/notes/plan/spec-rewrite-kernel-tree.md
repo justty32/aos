@@ -8,7 +8,7 @@
 
 ## 1. 依據與刪減原則
 
-最高依據是 [kernel-tree](/home/guanyu/projs/aos/proto6/notes/2026-09-29-kernel-tree.md) 的第五批方向，再對照全部 [使用者裁定](/home/guanyu/projs/aos/proto6/notes/2026-09-29-verdicts.md) 與 [兩條通則](/home/guanyu/projs/aos/proto6/spec/README.md)。kernel-tree 目前的「待定」在第七節，第六節是「照舊的」；本計畫不把那六個既有問題再算成新問題。
+最高依據是 [kernel-tree](../2026-09-29-kernel-tree.md) 的第五批方向，再對照全部 [使用者裁定](../2026-09-29-verdicts.md) 與 [兩條通則](../../spec/README.md)。kernel-tree 目前的「待定」在第七節，第六節是「照舊的」；本計畫不把那六個既有問題再算成新問題。
 
 - daemon 管程序；kernel 是被 tick 推進的資料夾，負責自己成員的排程；agent 和 kernel 共用同一個 `aos-tick`。
 - 不保留單一控制寫入者、帳本、SQLite、Proposal／checkpoint.commit、全樹一次准入交易。每個資料夾自己的 git 提交就是它的恢復基線，沒有跨 repo 原子交易。
@@ -17,7 +17,7 @@
 - 「刪除」是刪掉舊條款身分或重複制度，不是刪掉其中仍有效的使用者裁定；需保留的短句在去向欄點明。run 仍是軟性原則，不趁重寫決定任務中途新訊息歸屬。
 - **不把帳本換皮成檔案**：去重只看該請求檔／已處理檔是否存在；先後用所屬 kernel 的序號；到期留一個必要時間欄；查詢讀狀態／摘要。不要重新要求每個請求都有 ledger、cursor、投影版本、reservation 收據、tombstone、outbox、全域索引六七份副本。必要的派出／unknown 證據仍要留，但只留足以辨識一次工作的資料。
 
-proto5 的 kernel/ 與 daemon/ 兩組 README 及各節皆作為前例盤點。可沿用的是：daemon 定時或新單開 kernel tick、不讀家的內容、daemon 不重開同家一格且 tick 自己取鎖、通知只是提示、上層看摘要、正常路徑只處理有事成員。**不能照搬** `ledger.sqlite`、帳本 A/B/C/D 提交與出貨箱、CPU 常駐 worker 池、重啟保留孤兒 tick、未知工作反覆重排。前例以 [kernel/tick.md](/home/guanyu/projs/aos/proto5/spec/kernel/tick.md)、[kernel/no-overlap.md](/home/guanyu/projs/aos/proto5/spec/kernel/no-overlap.md)、[kernel/daemon-link.md](/home/guanyu/projs/aos/proto5/spec/kernel/daemon-link.md)、[daemon/ticks.md](/home/guanyu/projs/aos/proto5/spec/daemon/ticks.md)、[daemon/loop.md](/home/guanyu/projs/aos/proto5/spec/daemon/loop.md) 最有用；proto6 第五批與重啟全殺裁定優先。
+proto5 的 kernel/ 與 daemon/ 兩組 README 及各節皆作為前例盤點。可沿用的是：daemon 定時或新單開 kernel tick、不讀家的內容、daemon 不重開同家一格且 tick 自己取鎖、通知只是提示、上層看摘要、正常路徑只處理有事成員。**不能照搬** `ledger.sqlite`、帳本 A/B/C/D 提交與出貨箱、CPU 常駐 worker 池、重啟保留孤兒 tick、未知工作反覆重排。前例以 [kernel/tick.md](../../../proto5/spec/kernel/tick.md)、[kernel/no-overlap.md](../../../proto5/spec/kernel/no-overlap.md)、[kernel/daemon-link.md](../../../proto5/spec/kernel/daemon-link.md)、[daemon/ticks.md](../../../proto5/spec/daemon/ticks.md)、[daemon/loop.md](../../../proto5/spec/daemon/loop.md) 最有用；proto6 第五批與重啟全殺裁定優先。
 
 ## 2. 新 spec 地圖
 
