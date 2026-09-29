@@ -2,29 +2,31 @@
 
 ← [基底](README.md)｜[共用契約](../contracts.md)
 
-## B-501：認證入口與 envelope〔建議預設，未拍板〕
+## B-501：認證入口與 envelope〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
 
 Owner：控制接入口。JSON-RPC 2.0 欄位及 Error 遵守 C-04；不接受 batch、notification、浮點或 null request ID。單封 UTF-8 JSON 最大 256 KiB；拒絕重複 key、未知欄位及版本。可信 sender 取自受控 socket peer 身分或每 UID 獨立受管提交通道，不能取 payload 的 sender／owner。管理者操作與 agent 操作分權；同 UID 的 tick 與工具不是相互隔離的安全主體，工具可使用 owner 所允許的普通操作，但不能提交缺乏 live claim 授權的 checkpoint。
+
+同一程序內的模組呼叫不必包 JSON-RPC／outbox；只有跨故障邊界、需要持久交接時才用這套交接機制。
 
 檔案傳送可用管理者持有的共用 spool：非特權入口先以 sender 身分讀取候選、限長並導入唯讀快照，再由控制端解析純資料。禁止 root 跟隨 sender 指定 symlink、開 redirect 或執行 inst。只往 agent home 隨意放檔不算正式接件，不承諾喚醒；正式入口須保存 durable spool，給定消息由控制層投遞到 home。
 
 **Given** A 把 params.agent_id 改 B 或造 sender 欄位；**When** 投件；**Then** 未授權時拒絕，沒有 B 的 run／ready 更新。損壞 JSON 得解析錯誤，沒有部分接件。
 
-## B-502：最小操作集合〔建議預設，未拍板〕
+## B-502：最小操作集合〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
 
 params 欄位未註可省均必填，型別 ID／BlobRef 依共用契約；所有操作先認證授權，查詢亦同。標準接納回覆為 C-04 accepted，不表示完成。
 
-操作與欄位正本見 [methods.json](methods.json)。包含 agent.submit／get、run.get／pause／resume／cancel／resolve／outputs、attempt.get／cancel、checkpoint.commit 與 result.ack；各method的params、授權與result只在該資料檔定義。
+操作與欄位正本見 [methods.json](methods.json)。首版包含 agent.submit／get、run.get／pause／resume／cancel／resolve／outputs、attempt.get／cancel 與 checkpoint.commit；各method的params、授權與result只在該資料檔定義。result.ack 首版不公開，資料檔僅保留延後註記；等確定有第二種消費者，再為它制定專用的提交／確認契約。
 
-run.cancel 的接納交易先寫取消意圖；取消未啟動 job 可直接終態 canceled，有程序者交 B-203。run 何時成 canceled 由排程規格判斷，仍存活不明不得冒充停止。工具結果不是可由工具自行 RPC 宣告的成功：supervisor 以可信內部通道提交 B-103 及 Outcome。tick 消費結果時 ack 與 checkpoint 交易共同提交，不能提前 result.ack；此 method 供已保存持久消費證據的其他可信接收端使用。
+run.cancel 的取消意圖、屏障與完成條件依 [S-102](../scheduling/runs.md)；本層將有程序工作的取消交 B-203。工具結果不是可由工具自行 RPC 宣告的成功：supervisor 以可信內部通道提交 B-103 及 Outcome。tick 的結果消費 ack 是內部持久事實，必須依 [C-05](../contracts.md) 與 checkpoint 交易一起提交，不能提前確認消費。
 
-**Given** 接納 agent.submit 後立刻查 run；**When** 工具尚未完成；**Then** run.get 顯示 queued／active 等當前狀態，不能把 accepted 當 final。未授權的 result.ack 被拒且結果仍保留。
+**Given** 接納 agent.submit 後立刻查 run；**When** 工具尚未完成；**Then** run.get 顯示 queued／active 等當前狀態，不能把 accepted 當 final。首版呼叫 result.ack 依 C-04 回未知 method，不能因此記錄消費或回收結果。
 
-## B-503：去重與三種確認〔建議預設，未拍板〕
+## B-503：去重與三種確認〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
 
 去重鍵固定 `(authenticated sender,target agent_id,method,request_id)`；target agent_id 由已授權目標解析（run／attempt 查帳本歸屬）；canonical digest 使用 RFC 8785 JSON canonicalization 的 method＋params（包含 agent_id、payload version 與 BlobRef），不得含傳輸檔名或重送時間。首接成功保存鍵、digest 與原回覆，同交易建立 run／操作意圖。相同鍵同 digest 回原回覆；不同 digest 回 conflict。不把相同文字、不同 request ID 自動去重。保留期限依 C-06。
 
-收件確認表示材料與操作意圖已持久；完成結果表示一個 attempt 終局；消費 ack 表示接收端已持久記錄消費。三者不同。result.ack 摘要亦用同 canonicalization；重複 ack 不重複結算，摘要不符回 conflict。網路／檔案傳送可重複但不遺漏；不承諾外部副作用 exactly-once。
+收件確認表示材料與操作意圖已持久；完成結果表示一個 attempt 終局；消費 ack 表示接收端已持久記錄消費。三種事實分開保存，不因首版沒有公開 result.ack 而合併。結果重送依 [C-03](../contracts.md) 只結算一次；消費與 checkpoint 重放依 [C-05](../contracts.md)，不得重複結算。未消費結果不得刪除，消費後的回收仍依 [B-404](storage.md)。網路／檔案傳送可重複但不遺漏；不承諾外部副作用 exactly-once。
 
 **Given** 收件提交後回覆前中斷；**When** 重送同 ID；**Then** 返回同 run_id，不建第二 run；改正文重送同 ID 則 conflict。
 

@@ -24,6 +24,10 @@
 
 保留的不變量是原子消費與派工、舊寫者不能提交、停止與完成必須有證據。少掉的是改一條規則必改三處、讀者猜誰為準與規格漂移的成本。**無需另做產品裁決；去重時不可刪掉各層獨有條件。**
 
+09-29 已落實：A1 的 proposal 部分以 C-05 統一定義資料、驗證與原子提交；B-403、A-501／A-502 改寫各層交界及引用。claim 活性與任務轉移的其餘去重不在本次主題。
+09-29 已落實：A1 的 claim 部分以 B-602 為程序互斥與活性的唯一規範來源，claim 欄位集中於該條，S-103 只保留排程視角與引用；其餘 A1 主題由別隊處理。
+09-29 已落實：輪次部分以 S-101／S-102 為唯一規範來源，A-202／A-203 改為 agent 視角與引用，保留結果路由、原子消費及輸出證據；輪次仍是軟性原則、新訊息歸屬未定案，needs_attention 的 resume 仍為可選出口，停止與完成的證據及重啟屏障不變。
+
 ## B．實作機制精簡建議
 
 ### B1．checkpoint 應保存 agent 尚未完成的思路，不必再抄控制帳本
@@ -38,6 +42,8 @@
 
 保留：一次交易提交消費與派工、可重放、owner 驗證、fencing、quota、完整性與「尚有未知工作不能完成」。少掉：同一欄位的雙寫、交叉驗證、schema 遷移及人工排查兩份狀態的負擔。**主要是 B 類實作選擇；只要人仍可匯出閱讀、編輯來源並受控導入，不需改任務語意。**
 
+09-29 已落實：Proposal 分為受限控制增量與 agent 語意 continuation；checkpoint 移除 pending、phase、等待與控制進度副本，input_seq／history_tail 明定為帳本進度而刪除；歷史／回覆增量移至 Proposal，唯讀視圖與提交安全檢查仍由控制帳本負責。
+
 ### B2．單機短 tick 的 lease/heartbeat 可先延後
 
 證據：[B-602](../spec/base/lifecycle.md)、[S-103](../spec/scheduling/runs.md) 同時有 live claim、generation、checkpoint revision、home lock、30 秒 lease、10 秒 heartbeat；[B-201～B-203](../spec/base/execution.md) 已另有程序監看、執行逾時與清空程序樹的條件。lease 過期仍必須先核對舊程序，不能直接接手。
@@ -48,6 +54,8 @@
 
 保留：每 agent 至多一個有效 tick、確認舊受管範圍清空才重派、舊提交無效、卡住工作仍會逾時及對帳。少掉：定時續租寫入、時鐘與續租失敗分支、heartbeat owner 爭議及其測試矩陣。**B 類建議；若使用者另要求獨立控制端的失聯偵測 SLA，則需先保留該要求。**
 
+09-29 已落實：B-602 改由程序退出事件／tick deadline 觸發回收，首版移除 lease、heartbeat、suspect 與續租，保留 claim、generation、checkpoint revision、home lock、提交 fence、受管程序觀測及重啟對帳；同步 S-103、S-402 與 V-03，維持裁定 7 的重啟全殺／在途 unknown，獨立長期失聯部署才另加活性協議。
+
 ### B3．一個設定 bundle revision 已可固定工具與 context 版本
 
 證據：[A-101](../spec/agent/configuration.md) 的不可變 config 已指向不可變 context_policy_ref 和 tool_manifest_ref；[A-102](../spec/agent/configuration.md)、[C-02](../spec/contracts.md)、[S-101](../spec/scheduling/runs.md) 又要求每 run 保存 config_revision、context_revision、tools_revision 三項。
@@ -56,6 +64,8 @@
 
 保留：已接納 run 不因來源修改而悄悄換版、引用可追溯、非終態版本不得回收、秘密不進快照。少掉：三引用的合法組合驗證、三指標更新及缺一版本時的分支。**B 類建議；只有要讓 run 額外覆寫 config 的工具／context 組合時才需要更多欄位，而該功能目前沒有明確需求。**
 
+09-29 已落實：A-101／A-102、C-02 與 S-101 改為單一 config_revision 引用不可變 bundle，工具、context policy 與模型設定由 bundle 解析，查詢展開值不另作權威；保留引用追溯、非終態引用不得回收及秘密不進快照，依裁定 2(b) 保留整輪固定為建議與可記錄的 tick 邊界換版。
+
 ### B4．agent phase 可少當一張獨立控制狀態機
 
 證據：[T-04](../spec/terms.md) 保存 agent.phase、run.state、job.state、attempt.state；[A-503](../spec/agent/tick.md) 要控制層檢查完整 phase 轉移表；[S-102](../spec/scheduling/runs.md) 另管理 paused、needs_attention、cancel_requested 等屏障。agent 的 paused/error 同時反映當前 run 的控制狀態；wait_reason 又與 [S-402](../spec/scheduling/operations.md) 的查詢理由交疊。
@@ -63,6 +73,8 @@
 不建議把 run/job/attempt 合成一種狀態。較小的改法是：run 暫停、取消、錯誤屏障保留權威；agent 顯示的 paused/error 與「等待工具／額度」由控制事實推導。think/act 若沒有必須單獨恢復的中間決策，就不用為顯示一次 act 而新增一次持久轉移；有 continuation 才保存真正的語意位置。
 
 保留：agent 語意步驟仍可觀察、idle 不代表 run 成功、暫停後不得派工、未知結果不被掩蓋。少掉：phase × run × job 的非法組合驗證與恢復同步，控制端也不必理解不影響授權或耐久性的每個思考步驟。**B 類建議；若 phase 本身是外部可寫契約而非觀測值，才會涉及 C 類改動。**
+
+09-29 已落實：phase 六值改為由控制事實與語意 continuation 推導的唯讀觀測值，wait_reason 統一由 S-402 定義；run 屏障、完成證據與 unknown 保護維持不變。
 
 ### B5．保留必要 RPC，但先不把每個內部交接做成通用介面
 
@@ -73,6 +85,8 @@
 同一程序內的 owner 模組不必為每個函式呼叫再包 JSON-RPC／outbox；只有跨故障邊界、需要持久交接的地方才使用該機制。這是實作提醒：現稿沒有明文強迫每個模組都走 RPC，不能說它已經做了這種浪費。
 
 保留：接件、執行終局、已消費三種事實仍分開，未消費結果不能刪、重送不能重複結算。少掉：暫無呼叫者的 API、權限矩陣及未實作串流的驗收承諾。**B 類首版範圍建議；若已有未列出的外部消費者，先保留它的需求。**
+
+09-29 已落實：B-501～B-503 與 methods.json 已將 result.ack 標為首版不公開，保留內部持久消費、checkpoint 原子提交、回收條件與重送不重複結算，並補上同程序模組不必包 JSON-RPC／outbox；S-305 移除未來片段 schema 與展示驗收承諾，首版拒絕 stream=true，保留部分內容不算 final。
 
 ## C．不能當作純去重的產品政策
 

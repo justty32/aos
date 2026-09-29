@@ -16,7 +16,7 @@
 
 Agent registry 必填 `agent_id`、`uid`、`gid`（整數 >=0）、`groups`（整數陣列，去重）、`home`（絕對路徑）、`resource_domain`（ID）、`project`（object，含 `filesystem_id` ID 與 `project_id` 整數 >=1；profile 的 `quota_backend=none` 時為 null，見 [B-304](base/identity-resources.md)）、`status`（`enabled|disabled|retired`）。這些由管理者登記；普通 request 不得更改。registry另必填 `registry_revision:int>=1`、`profile_id:ID`。UID/GID須在profile允許範圍，拒絕UID0與daemon/kernel/管理者UID；不同 live agent 不得共用 UID；`generation` 初始 1，僅控制層遞增。
 
-Run 必填 `run_id`、`agent_id`、`state`、`created_at_ms`、`config_revision`、`tools_revision`、`context_revision`（ID）、`input_ids`（非空 request_id 陣列）。`finished_at_ms`、`final_ref`、`error` 可省，預設 null；終局必須填 finished_at_ms，成功必填 final_ref，失敗必填 error。revision 對應不可變快照，不是正在編輯的路徑。
+〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B3〕Run 必填 `run_id`、`agent_id`、`state`、`created_at_ms`、`config_revision`（ID）、`input_ids`（非空 request_id 陣列）。`finished_at_ms`、`final_ref`、`error` 可省，預設 null；終局必須填 finished_at_ms，成功必填 final_ref，失敗必填 error。config_revision 對應不可變設定 bundle，由它引用工具、context policy 與模型設定，不是正在編輯的路徑；子版本可供查詢展開，不另存為 run 的權威版本欄位。整輪固定為建議，更新及可選的 tick 邊界換版依 [A-102](agent/configuration.md)。
 
 驗收：Given A 的普通投件包含 B 的 uid，When 接口驗證，Then 拒絕無此欄位／冒名，不能以該值開程序；run 之後改配置仍引用原 revision（實作依 [A-102](agent/configuration.md) 選擇在 tick 邊界換版者，須留下換版紀錄）。
 
@@ -42,15 +42,26 @@ JSON-RPC 固定 `jsonrpc:"2.0"`、`id:request_id`、`method` 字串、`params` o
 
 ## C-05．Checkpoint proposal 與 fencing
 
-責任：tick 產生提案，控制寫入者驗證並提交。Proposal 必填 `agent_id`、`run_id`（ID；maintenance tick可null）、`attempt_id`、`generation`、`expected_revision`（整數 >=0）、`checkpoint_ref`（BlobRef）、`consumed_input_ids`（ID 陣列，可空）、`consumed_attempt_ids`（ID 陣列，可空）、`new_jobs`（JobDraft 陣列，可空）、`phase`（agent.phase）、`finish`（`none|succeeded|failed`）。可省 `final_ref`、`error` 預設 null。成功 finish 必填 final_ref；失敗 finish 必填 error。
+〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B1、A1 proposal 部分〕責任：tick 產生提案，控制寫入者驗證並提交。本節是 Proposal 資料、驗證與提交原子性的唯一規範來源；[B-403](base/storage.md) 定容量與導入，[A-502](agent/tick.md) 定 agent 語意 checkpoint。
 
-Blob的受管副本與home同計入agent project quota（啟用時）；global控制庫只存有界metadata及最小錯誤。可直接編輯的來源草稿不改已提交的checkpoint／revision，詳見[儲存](base/storage.md)。
+Proposal 必填 `agent_id`、`run_id`（ID；maintenance tick 可 null）、`attempt_id`、`generation`、`expected_revision`（整數 >=0），另有下列兩部分。這是欄位責任的區分，序列化仍放同一個 Proposal object，不另加包裝層：
 
-JobDraft 必填 `job_id`、`kind`（`tool|llm`）、`payload_ref`；可省 `retry_class` 預設 never、`max_attempts` 預設1（kind=llm 預設3）。Job ID 可由 tick 提案產生，但控制端驗證唯一與 owner／run 绑定；owner、優先級和 resource_domain 從可信 claim 派生。不能用 new_jobs 提交另一個 tick。
+- **受限控制增量**：必填 `consumed_input_ids`（ID 陣列，可空）、`consumed_attempt_ids`（ID 陣列，可空）、`new_jobs`（JobDraft 陣列，可空）、`finish`（`none|succeeded|failed|needs_attention`）。可省 `history_append:array<HistoryEvent>`、`outputs:array<Output>`，預設 `[]`；各紀錄含 version:1，格式分別沿 [A-301](agent/memory.md)、[A-203](agent/input.md)。可省 `final_ref`、`error` 預設 null；成功 finish 必填 final_ref 且對應本次 outputs 的 final，失敗 finish 必填 error。`finish=needs_attention` 是 tick 自己發現、需要人處理時的提交路徑，只用於 agent 層能判定的原因（[A-401](agent/tools.md) 連兩次無效回覆、[A-302](agent/memory.md) `context_over_budget`），必填 error；控制層驗證通過後在同一交易把 run 轉 needs_attention，本次消費與歷史照常提交，不另派新工作（new_jobs 須為空）。unknown、blob 缺失、設定不可用等其他 needs_attention 由控制層依控制事實設定，不經提案。〔09-29 補，B4 拿掉 Proposal.phase 後的接縫〕這些是本次新增或消費，不是整份控制狀態的副本；agent.phase 是觀測值（[A-503](agent/tick.md)），不由提案寫入。
+- **agent 語意 continuation**：必填 `checkpoint_ref`（BlobRef），引用 A-502 定義、帳本無法重建的 agent 決策與必要計數。history_append／outputs 不再放進 checkpoint；大段語意內容使用已驗證 blob 引用。
 
-先把 blob 導入可信內容庫，再以單一 SQLite 交易檢查 live claim、generation、expected_revision；成功才一起更新 checkpoint pointer、revision+1、消費 cursor、job 意圖和 phase／run 狀態。失敗不做部分提交。run 尚有在途或未消費的 tool／llm 結果時禁止 finish=succeeded（不含控制tick）。重放相同 attempt／revision／digest 回同一提交結果；相同鍵不同內容報 conflict。一個tick attempt最多提交一份proposal；maintenance run_id=null只可phase=idle、finish=none及new_jobs空。未引用 blob 可在留存期後回收，不可因發現 blob 就推斷已提交。
+若歷史／回覆增量較大，可省 `append_ref:BlobRef|null`（預設 null）引用 `{version:1,history_append:array<HistoryEvent>,outputs:array<Output>}`，三欄必填；使用 append_ref 時，Proposal 內嵌的兩個陣列必須為空。導入並驗證後得到同一份邏輯增量，下文的 history_append／outputs、final_ref 對應及 maintenance 判空皆以展開後的內容為準。完整提案摘要包含 append_ref 的內容摘要；重送須保持原提案形式，不得換成另一種編碼冒充同份提案。大小依 B-403，不能藉 blob 引用繞過上限。
 
-驗收：Given blob 已發布而交易前崩潰，When 重啟，Then checkpoint 未前進，重放同提案只提交一次；舊 generation 提案回 stale_generation，不能產生新工作。
+JobDraft 必填 `job_id`、`kind`（`tool|llm`）、`payload_ref`；可省 `retry_class` 預設 never、`max_attempts` 預設 1（kind=llm 預設 3）。Job ID 可由 tick 提案產生，但控制端驗證唯一與 owner／run 綁定；owner、優先級和 resource_domain 從可信 claim 派生。不能用 new_jobs 提交另一個 tick。
+
+先把引用的 blob 導入可信內容庫，核對大小、摘要與可讀性，再以單一 SQLite 交易驗證目前 live claim 所屬 attempt、generation 及 expected_revision。普通推進須 run active 且無暫停／取消／錯誤屏障；屏障與提案競爭時，後提交的提案回 conflict，不丟棄已登記結果。消費 IDs 不得重複，須已交付、尚未消費且屬同 owner／run；結果須已登記，kind=tick 不得列入語意消費。控制層驗證 history／output 序號連續、引用存在及 run 歸屬，並依 [B-401](base/storage.md) 檢查 pending 額度；執行准入與 LLM 額度仍由排程檢查，提案不授予占票或啟動權。
+
+驗證成功才同交易更新 checkpoint pointer、revision+1、輸入／結果消費事實及 cursor、歷史／回覆可見引用、job 意圖、run 狀態與提案收據，並依 [S-201](scheduling/admission.md) 重算 ready，保留併發新事件。失敗全部不生效，不得提前 ack 消費結果或派工；派工只由已提交意圖驅動。run 完成條件沿 [A-503](agent/tick.md)；控制層以套用本次增量後的帳本檢查 pending／未消費結果／unknown，不接受 tick 自報清空。pending 集合為本輪 kind=tool|llm 中「尚未確定終局，或結果尚未消費」的工作，不含當前控制 tick。
+
+每個 tick attempt 最多提交一份 Proposal。相同 attempt／expected_revision／完整提案摘要重送回原收據，即使原交易已推進 revision 也不重新消費或派工；同鍵異內容回 conflict。未提交提案的舊 generation 回 stale_generation，過期 revision 回 conflict。run_id=null 的維護或空探查只可更新 agent 維護 checkpoint，finish=none，new_jobs、兩種消費陣列、history_append、outputs 均空，不建立未登記任務。
+
+Blob 的受管副本與 home 同計入 agent project quota（啟用時，記帳政策依 [B-304](base/identity-resources.md)）；global 控制庫只存有界 metadata 及最小錯誤。可編輯的來源草稿不改已提交 checkpoint／revision；受控導入與唯讀匯出沿 [B-401](base/storage.md)、[B-505](base/transport.md)。重啟只採已提交 pointer；未引用 blob 依留存政策回收，不因發現 blob 或檔案時間較新就推斷已提交。
+
+驗收：Given 提案同時消費工具結果、新增 LLM job、歷史與回覆，When 在 blob 發布至交易提交之間逐點中斷，Then 所有增量及 checkpoint 全不生效或共同生效，重送只回同一收據；舊 generation、跨 owner 消費、損毀 blob 或 pending 額度不足皆不得部分提交；大段回覆用 append_ref 後仍接受相同驗證與重送規則。Given 帳本仍有 unknown，When tick 只提交精簡 checkpoint 並宣告成功，Then 仍拒絕完成，不靠 checkpoint 的 pending 副本判定。
 
 ## C-06．最小例子與保留
 

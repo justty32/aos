@@ -2,9 +2,11 @@
 
 ← [基底](README.md)｜[共用契約](../contracts.md)
 
-## B-401：權威與存放位置〔建議預設，未拍板〕
+## B-401：權威與存放位置〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B1〕
 
-Owner：控制層唯一 SQLite writer。SQLite 保存 owner、ready、due、jobs、attempts、run、claim、generation、checkpoint pointer、消費 cursor 及派工意圖。agent home 保存輸入、歷史及 checkpoint 本體；受管不可變內容庫按 agent 分區，與該 home 在同 filesystem，啟用磁碟額度時指派同 project quota、兩者共用記帳額度（B-304）。內容庫由管理者持有，agent 只經唯讀 fd 取得已提交 blob；可編的配置與 source 草稿仍在 home。這是為完整性及容量閉合新增的可替換預設，不將所有資料複製進無上限 global control。控制庫只保存有界 metadata、登記及小型錯誤；pending jobs 採 [S-203](../scheduling/admission.md) 的部署必填 max_pending_jobs；部署可另設 per-agent pending 額度（正整數），未設不增加第二個隱含預設，達任何適用上限拒絕新提交。agent 不得直接修改 SQLite 或權威 pointer。控制根預設目錄 0700、檔案 0600；跨 UID 讀取只經受控導出，不將整個 DB 給 agent。
+Owner：控制層唯一 SQLite writer。SQLite 保存 owner、ready、due、jobs、attempts、run、claim、generation、checkpoint pointer、消費 cursor 及派工意圖。agent home 保存輸入、歷史及語意 checkpoint 本體；受管不可變內容庫按 agent 分區，與該 home 在同 filesystem，啟用磁碟額度時指派同 project quota、兩者共用記帳額度（B-304）。內容庫由管理者持有，agent 只經唯讀 fd 取得已提交 blob；可編的配置與 source 草稿仍在 home。這是為完整性及容量閉合新增的可替換預設，不將所有資料複製進無上限 global control。控制庫只保存有界 metadata、登記及小型錯誤；pending jobs 採 [S-203](../scheduling/admission.md) 的部署必填 max_pending_jobs；部署可另設 per-agent pending 額度（正整數），未設不增加第二個隱含預設，達任何適用上限拒絕新提交。agent 不得直接修改 SQLite 或權威 pointer。控制根預設目錄 0700、檔案 0600；跨 UID 讀取只經受控導出，不將整個 DB 給 agent。
+
+tick 讀取控制帳本按同一快照產生的唯讀視圖，包含目前 checkpoint pointer／revision、依 [A-503](../agent/tick.md) 推導的 agent phase、pending jobs、輸入／結果消費進度、已登記歷史尾端及等待／到期依據；只導出該 owner 有權讀取的部分。pending 的集合定義依 [C-05](../contracts.md)，等待原因沿 [S-402](../scheduling/operations.md)，ready／due 沿 [S-201](../scheduling/admission.md)。這些控制資料不再存進 checkpoint，也不接受 tick 回寫整份視圖；後續變動在 C-05 提交時以當前帳本重新驗證。收件序號、語意消費 cursor 與排程通知水位各有用途，仍分開保存。小型控制增量直接納入帳本交易，大段內容仍引用受管 blob，不把全文搬入控制庫。
 
 BlobRef 依 C-03 以受管 key 定址並保存 SHA-256，禁止把 ID／摘要解讀為任意路徑；所有根由登記取得。尚未導入的 home 候選可被 agent UID 改寫，控制層不能相信名稱：可信導入者以 agent 權限開 fd，限制大小、拒絕 symlink／非普通檔，取快照重算摘要後交控制層。控制層只引用受管庫的已驗證快照；需恢復而受管 blob 已毀損時報完整性錯誤，不執行其內容或改指較舊狀態掩蓋損毀。
 
@@ -18,13 +20,11 @@ BlobRef 依 C-03 以受管 key 定址並保存 SHA-256，禁止把 ID／摘要�
 
 **Given** 在 fsync、rename、DB commit、通知之間逐點斷電模擬；**When** 重啟；**Then** 已確認請求可恢復，未確認請求可安全重送；沒有半 JSON、缺檔卻成功或重複派工。
 
-## B-403：checkpoint 提案交易〔建議預設，未拍板〕
+## B-403：checkpoint 提案交易〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 A1 proposal 部分、B1〕
 
-tick 輸出共用契約 C-05 的 Proposal，欄位與 JobDraft 不在本篇另定。checkpoint blob 預設最大 16 MiB，提案 JSON 最大 256 KiB。可信導入者快照驗摘要後，控制層確認 generation 等於 current claim、expected_revision 等於目前 revision、消費 IDs 均已交付且未跨 owner／run、job IDs 未衝突。
+輸入為 [C-05](../contracts.md) Proposal 與引用的候選內容；提案 JSON 最大 256 KiB；語意 checkpoint 與本次 history_append／outputs 的 JSON 合計預設最大 16 MiB（內嵌或經 append_ref 引用皆計入，引用增量含其 version 包裝，外部 content_ref 的正文仍沿既有 blob 額度）。這保留原 checkpoint 容納語意狀態及新增內容的容量，不因搬到 Proposal 而把大段回覆縮到 256 KiB。可信導入者依 B-401 取快照、驗摘要並保存，超限、引用缺失或完整性失敗不得進入提交。資料驗證、原子提交與重送結果只依 C-05；本層輸出已持久的提案收據，claim／名額釋放仍須等受管程序清空，不能拿收據代替停止證據。儲存失敗沿 B-404 處理。
 
-驗證成功，在同一 SQLite 交易提交 checkpoint_ref、revision+1、消費 cursor、派工意圖及提案收據（claim／名額釋放仍待程序清空）；新到事件保留 ready。交易失敗全部不生效，不得提前 ack 消費結果或派工具。相同 attempt／revision／提案摘要重送回原結果；同鍵不同摘要拒絕；舊 generation 拒絕且不發布副作用。派工由已提交意圖驅動，不能由 tick 提交前直接啟動。
-
-**Given** 結果消費後、交易前 tick 被殺；**When** 新 tick 恢復；**Then** 讀舊 cursor 再處理但不重複已提交工作。交易後回覆前被殺則重送回同一提交結果。
+**Given** 結果消費後、交易前 tick 被殺；**When** 新 tick 恢復；**Then** 從帳本唯讀視圖讀舊消費進度再處理，沒有重複已提交工作；交易後回覆前被殺，重送依 C-05 取得原收據。
 
 ## B-404：滿碟、保留與回收〔建議預設，未拍板〕
 
