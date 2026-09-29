@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_attempt_cancel_1",
+  "method": "attempt.cancel",
+  "params": {
+    "attempt_id": "attempt_1"
+  }
+}

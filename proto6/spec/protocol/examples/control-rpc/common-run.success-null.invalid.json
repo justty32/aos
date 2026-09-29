@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "run_id": "run_1",
+  "agent_id": "agent_a",
+  "state": "succeeded",
+  "created_at_ms": 0,
+  "config_revision": "config_1",
+  "input_ids": [
+    "req_submit_1"
+  ],
+  "input_seq": 1,
+  "finished_at_ms": 1,
+  "final_ref": null,
+  "budget": {}
+}

@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "storage-clean-result",
+  "description": "proto6 storage 協議；建議預設，未拍板。授權、引用及持久化另依 storage.md。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Report"
+    },
+    {
+      "$ref": "#/$defs/Receipt"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    }
+  ],
+  "$defs": {
+    "Report": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "clean_report"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "batch_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "candidate_id": {
+                "$ref": "control-common.schema.json#/$defs/ID"
+              },
+              "fence": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "enum": [
+                  "archived",
+                  "deleted",
+                  "already_done",
+                  "skipped",
+                  "failed",
+                  "unknown"
+                ]
+              },
+              "manifest_ref": {
+                "anyOf": [
+                  {
+                    "$ref": "control-common.schema.json#/$defs/ID"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "$ref": "control-common.schema.json#/$defs/Error"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "candidate_id",
+              "fence",
+              "status",
+              "manifest_ref",
+              "error"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "failed",
+                        "unknown",
+                        "skipped"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "error": {
+                      "$ref": "control-common.schema.json#/$defs/Error"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "error": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "archived"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "manifest_ref": {
+                      "$ref": "control-common.schema.json#/$defs/ID"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "deleted"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "manifest_ref": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "maxItems": 256
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "batch_id",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "Receipt": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "clean_receipt"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "batch_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "recorded_candidate_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          },
+          "maxItems": 256
+        },
+        "pending_candidate_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          },
+          "maxItems": 256
+        },
+        "recorded_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "batch_id",
+        "recorded_candidate_ids",
+        "pending_candidate_ids",
+        "recorded_at_ms"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "clean_report_error"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "batch_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "error": {
+          "$ref": "control-common.schema.json#/$defs/Error"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "batch_id",
+        "error"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "kind": "clean_hook_acquire",
+  "request_id": "hook_1",
+  "hook_run_id": "hook_1",
+  "agent_id": "agent_a"
+}

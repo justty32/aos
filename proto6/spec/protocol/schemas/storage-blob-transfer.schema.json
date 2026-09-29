@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "storage-blob-transfer",
+  "description": "proto6 storage 協議；建議預設，未拍板。授權、引用及持久化另依 storage.md。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ImportRequest"
+    },
+    {
+      "$ref": "#/$defs/ExportRequest"
+    },
+    {
+      "$ref": "#/$defs/ReadRequest"
+    },
+    {
+      "$ref": "#/$defs/ImportResult"
+    },
+    {
+      "$ref": "#/$defs/ExportResult"
+    },
+    {
+      "$ref": "#/$defs/ReadResult"
+    },
+    {
+      "$ref": "#/$defs/ReadClose"
+    },
+    {
+      "$ref": "#/$defs/ErrorResult"
+    }
+  ],
+  "$defs": {
+    "ImportRequest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_import"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "expected_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "expected_sha256",
+        "length"
+      ],
+      "additionalProperties": false
+    },
+    "ExportRequest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_export"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "ReadRequest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_read"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "ImportResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_imported"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "ExportResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_exported"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "bytes_written": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "ref",
+        "bytes_written"
+      ],
+      "additionalProperties": false
+    },
+    "ReadResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_readable"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "read_handle_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "ref",
+        "read_handle_id"
+      ],
+      "additionalProperties": false
+    },
+    "ReadClose": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_read_closed"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "read_handle_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "read_handle_id"
+      ],
+      "additionalProperties": false
+    },
+    "ErrorResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "blob_error"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "operation": {
+          "enum": [
+            "import",
+            "export",
+            "read",
+            "close"
+          ]
+        },
+        "error": {
+          "$ref": "control-common.schema.json#/$defs/Error"
+        },
+        "bytes_written": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "operation",
+        "error",
+        "bytes_written"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": [
+                  "import",
+                  "read",
+                  "close"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "bytes_written": {
+                "const": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

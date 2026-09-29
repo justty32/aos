@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "action_id": "attend_action_1",
+  "batch_id": "attend_batch_1",
+  "item_id": "attention_config_1",
+  "agent_id": "agent_a",
+  "run_id": "run_1",
+  "actor": {
+    "principal_id": "admin_local",
+    "uid": 1000
+  },
+  "request_id": "resume_config_1",
+  "at_ms": 1790640000000,
+  "policy_id": "attend_policy_1",
+  "code": "config_unavailable",
+  "action": "run.resume",
+  "risk": "safe",
+  "status": "planned",
+  "reason": "先保存原 request_id 與完整動作內容；尚未確認送出或接納。",
+  "query_request_id": "query_run_1",
+  "rpc": {
+    "jsonrpc": "2.0",
+    "id": "resume_config_1",
+    "method": "run.resume",
+    "params": {
+      "run_id": "run_1"
+    }
+  },
+  "error": null
+}

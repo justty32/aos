@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "attempt_id": "attempt_1",
+  "service_instance_id": "service_1",
+  "control_epoch": "boot_session_1",
+  "type": "result",
+  "message_id": "unsent_1",
+  "generation": 1,
+  "outcome": {
+    "status": "canceled",
+    "result_ref": null,
+    "error": {
+      "code": "canceled",
+      "message": "尚未放行，已取消",
+      "retryable": false
+    }
+  },
+  "usage_ref": null,
+  "transmission": "not_sent",
+  "local_connection_closed": true,
+  "completed_at_ms": 1790000000100
+}

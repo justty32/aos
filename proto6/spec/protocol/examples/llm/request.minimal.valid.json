@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "endpoint_id": "ep_1",
+  "model": "small",
+  "messages_ref": {
+    "key": "messages_minimal",
+    "sha256": "f96cee55c637efce96168e34fc783ebd3047ccc6522501fd0b947dad389ec0e7",
+    "bytes": 103
+  },
+  "input_tokens_estimate": 8,
+  "max_output_tokens": 16,
+  "request_timeout_ms": 10000
+}

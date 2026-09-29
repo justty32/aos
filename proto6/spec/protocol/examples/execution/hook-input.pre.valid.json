@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "hook_run_id": "hook_pre_a",
+  "agent_id": "agent_a",
+  "run_id": "run_a",
+  "when": "pre",
+  "attempt_id": "tick_a",
+  "tick_outcome": null
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "clean_report",
+  "request_id": "clean_report_failed",
+  "batch_id": "batch_1",
+  "items": [
+    {
+      "candidate_id": "candidate_1",
+      "fence": 1,
+      "status": "failed",
+      "manifest_ref": null,
+      "error": {
+        "code": "resource_exhausted",
+        "message": "封存目的空間不足，來源保留",
+        "retryable": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_resume_budget_1",
+  "method": "run.resume",
+  "params": {
+    "run_id": "run_1",
+    "budget": {
+      "max_jobs": 64
+    }
+  }
+}

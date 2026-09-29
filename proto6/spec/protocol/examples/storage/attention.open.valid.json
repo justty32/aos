@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "attention_open",
+  "item_id": "attention_1",
+  "agent_id": "agent_a",
+  "run_id": "run_1",
+  "code": "storage_blocked",
+  "message": "結果保存空間不足，需清理後重新核對",
+  "since_at_ms": 1790640000000,
+  "actions": [
+    "aos-clean"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "status": "succeeded",
+  "result_ref": {
+    "key": "blob_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 0
+  },
+  "error": null
+}

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "agent_id": "agent_a",
+  "uid": 0,
+  "gid": 20000,
+  "groups": [],
+  "home": "/var/lib/aos/data/agent_a",
+  "resource_domain": "agent_a",
+  "project": null,
+  "status": "enabled",
+  "registry_revision": 1,
+  "profile_id": "profile_local",
+  "resource_limits": {
+    "memory_max_bytes": 268435456,
+    "pids_max": 64,
+    "cpu_quota_us": 100000
+  }
+}

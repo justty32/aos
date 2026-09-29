@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "agent-commit",
+  "$comment": "〔建議預設，未拍板〕依 agent-state.md；schema 僅驗形狀，owner、摘要、權限與提交原子性另驗。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Message"
+    },
+    {
+      "$ref": "#/$defs/File"
+    }
+  ],
+  "$defs": {
+    "Params": {
+      "type": "object",
+      "properties": {
+        "proposal": {
+          "$ref": "agent-proposal.schema.json#/$defs/Proposal"
+        }
+      },
+      "required": [
+        "proposal"
+      ],
+      "additionalProperties": false
+    },
+    "Result": {
+      "type": "object",
+      "properties": {
+        "committed": {
+          "const": true
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "committed",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "Request": {
+      "allOf": [
+        {
+          "$ref": "control-rpc.schema.json"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "jsonrpc": {
+              "const": "2.0"
+            },
+            "id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            "method": {
+              "const": "checkpoint.commit"
+            },
+            "params": {
+              "$ref": "#/$defs/Params"
+            }
+          },
+          "required": [
+            "jsonrpc",
+            "id",
+            "method",
+            "params"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Success": {
+      "allOf": [
+        {
+          "$ref": "control-rpc.schema.json"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "jsonrpc": {
+              "const": "2.0"
+            },
+            "id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            "result": {
+              "$ref": "#/$defs/Result"
+            }
+          },
+          "required": [
+            "jsonrpc",
+            "id",
+            "result"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Failure": {
+      "allOf": [
+        {
+          "$ref": "control-rpc.schema.json"
+        },
+        {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "method"
+                ]
+              },
+              {
+                "required": [
+                  "result"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Message": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Request"
+        },
+        {
+          "$ref": "#/$defs/Success"
+        },
+        {
+          "$ref": "#/$defs/Failure"
+        }
+      ]
+    },
+    "File": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message": {
+          "$ref": "#/$defs/Message"
+        }
+      },
+      "required": [
+        "version",
+        "message"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

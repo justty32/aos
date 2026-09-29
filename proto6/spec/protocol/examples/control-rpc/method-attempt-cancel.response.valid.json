@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_attempt_cancel_1",
+  "result": {
+    "accepted": true,
+    "request_id": "req_attempt_cancel_1",
+    "run_id": "run_1"
+  }
+}

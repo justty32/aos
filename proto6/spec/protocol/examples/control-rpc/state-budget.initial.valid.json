@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "agent_id": "agent_a",
+  "run_id": "run_1",
+  "budget": {},
+  "counters": {
+    "jobs_created": 0,
+    "llm_attempts_created": 0,
+    "tokens_known": 0,
+    "tokens_uncertain": 0,
+    "tokens_reserved": 0,
+    "active_elapsed_ms": 0,
+    "active_started_at_ms": null
+  }
+}

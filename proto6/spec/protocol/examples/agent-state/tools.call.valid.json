@@ -1,0 +1,7 @@
+{
+  "call_id": "call_1",
+  "name": "echo",
+  "arguments": {
+    "text": "你好"
+  }
+}

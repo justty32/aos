@@ -1,0 +1,11 @@
+{
+  "model": "provider-small",
+  "messages": [
+    {
+      "role": "user",
+      "content": "回覆 OK"
+    }
+  ],
+  "max_tokens": 16,
+  "stream": false
+}

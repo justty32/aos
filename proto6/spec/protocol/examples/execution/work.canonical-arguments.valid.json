@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "agent_id": "agent_a",
+  "run_id": "run_a",
+  "job_id": "job_a",
+  "argv": [
+    "/usr/bin/true"
+  ],
+  "cwd": "/srv/aos/agents/agent_a",
+  "env": {},
+  "stdin_blob": {
+    "key": "args_a",
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "bytes": 2
+  },
+  "timeout_ms": 60000,
+  "output_limit_bytes": 1048576
+}

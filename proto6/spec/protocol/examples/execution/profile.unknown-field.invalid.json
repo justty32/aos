@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "profile_id": "profile_local",
+  "wall_backend": "site_managed_wall",
+  "launcher_backend": "root_helper",
+  "uid_mapping": {
+    "uid_ranges": [
+      {
+        "first": 20000,
+        "last": 29999
+      }
+    ],
+    "gid_ranges": [
+      {
+        "first": 20000,
+        "last": 29999
+      }
+    ],
+    "reserved_uids": [
+      0,
+      991,
+      992
+    ],
+    "reserved_gids": [
+      0,
+      991,
+      992
+    ],
+    "approved_groups": []
+  },
+  "cgroup_root": "/sys/fs/cgroup/aos",
+  "quota_backend": "none",
+  "data_root": "/var/lib/aos/data",
+  "control_root": "/var/lib/aos/control",
+  "writable_scope": [
+    {
+      "path": "/var/lib/aos/data",
+      "accounting": "filesystem_global",
+      "capacity_policy": "managed_data_watermark"
+    },
+    {
+      "path": "/tmp",
+      "accounting": "filesystem_global",
+      "capacity_policy": "host_tmp_watermark"
+    }
+  ],
+  "probe_revision": 1,
+  "global_work_limits": {
+    "memory_max_bytes": 268435456,
+    "pids_max": 64,
+    "cpu_quota_us": 100000
+  },
+  "control_reserve_limits": {
+    "memory_max_bytes": 268435456,
+    "pids_max": 64,
+    "cpu_quota_us": 100000
+  },
+  "root": true
+}

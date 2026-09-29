@@ -1,0 +1,730 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "P-200～P-212 機器協議；新增編碼均為建議預設，未拍板。語意／權限／持久性須另驗。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ProcessRecord"
+    },
+    {
+      "$ref": "#/$defs/Cancellation"
+    },
+    {
+      "$ref": "#/$defs/Cleanup"
+    },
+    {
+      "$ref": "#/$defs/Recovery"
+    },
+    {
+      "$ref": "#/$defs/Retirement"
+    },
+    {
+      "$ref": "#/$defs/StopRecord"
+    }
+  ],
+  "$defs": {
+    "ProcessIdentity": {
+      "type": "object",
+      "properties": {
+        "boot_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "pid": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "starttime_ticks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "cgroup_relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000]+$"
+        }
+      },
+      "required": [
+        "boot_id",
+        "pid",
+        "starttime_ticks",
+        "cgroup_relative_path"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessRecord": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "process"
+        },
+        "observation_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "hook_run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "identity": {
+          "type": "object",
+          "properties": {
+            "boot_id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "pid": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "starttime_ticks": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "cgroup_relative_path": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000]+$"
+            }
+          },
+          "required": [
+            "boot_id",
+            "pid",
+            "starttime_ticks",
+            "cgroup_relative_path"
+          ],
+          "additionalProperties": false
+        },
+        "registry_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "snapshot_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "memory_events_baseline": {
+          "type": "object",
+          "properties": {
+            "oom": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "oom_kill": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "oom",
+            "oom_kill"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "observation_id",
+        "attempt_id",
+        "hook_run_id",
+        "observed_at_ms",
+        "identity",
+        "registry_revision",
+        "snapshot_revision",
+        "memory_events_baseline"
+      ],
+      "additionalProperties": false
+    },
+    "Cancellation": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "cancel"
+        },
+        "observation_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "hook_run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "committed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "cause": {
+          "enum": [
+            "canceled",
+            "timeout",
+            "output_limit",
+            "quota",
+            "shutdown",
+            "restart",
+            "descendants"
+          ]
+        },
+        "term_grace_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "observation_id",
+        "attempt_id",
+        "hook_run_id",
+        "intent_id",
+        "committed_at_ms",
+        "cause",
+        "term_grace_ms"
+      ],
+      "additionalProperties": false
+    },
+    "Cleanup": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "cleanup"
+        },
+        "observation_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "hook_run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "boot_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "pid": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "starttime_ticks": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "cgroup_relative_path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000]+$"
+                }
+              },
+              "required": [
+                "boot_id",
+                "pid",
+                "starttime_ticks",
+                "cgroup_relative_path"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "term_sent": {
+          "type": "boolean"
+        },
+        "kill_sent": {
+          "type": "boolean"
+        },
+        "descendants_forced": {
+          "type": "boolean"
+        },
+        "populated": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "pipes_drained": {
+          "type": "boolean"
+        },
+        "home_lock_available": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "resource_usage_saved": {
+          "type": "boolean"
+        },
+        "memory_events_delta": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "oom": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "oom_kill": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "oom",
+                "oom_kill"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_oom_evidence_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "controlled_io_errno": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "observation_id",
+        "attempt_id",
+        "hook_run_id",
+        "observed_at_ms",
+        "identity",
+        "term_sent",
+        "kill_sent",
+        "descendants_forced",
+        "populated",
+        "pipes_drained",
+        "home_lock_available",
+        "resource_usage_saved",
+        "memory_events_delta",
+        "parent_oom_evidence_ref",
+        "controlled_io_errno",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "Recovery": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recovery"
+        },
+        "observation_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "hook_run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "old_identity": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "boot_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "pid": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "starttime_ticks": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "cgroup_relative_path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\u0000]+$"
+                }
+              },
+              "required": [
+                "boot_id",
+                "pid",
+                "starttime_ticks",
+                "cgroup_relative_path"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_boot_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "gate_evidence": {
+          "enum": [
+            "never_released",
+            "release_uncertain",
+            "released"
+          ]
+        },
+        "published_result_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cleanup_ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "proposal_receipt_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decision": {
+          "enum": [
+            "import_result",
+            "spawn_error",
+            "unknown",
+            "await_cleanup"
+          ]
+        },
+        "side_effects_unknown": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "observation_id",
+        "attempt_id",
+        "hook_run_id",
+        "observed_at_ms",
+        "old_identity",
+        "current_boot_id",
+        "gate_evidence",
+        "published_result_ref",
+        "cleanup_ref",
+        "proposal_receipt_ref",
+        "decision",
+        "side_effects_unknown"
+      ],
+      "additionalProperties": false
+    },
+    "Retirement": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "retirement"
+        },
+        "observation_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "registry_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "authorization_request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "status": {
+          "enum": [
+            "disabled",
+            "retired"
+          ]
+        },
+        "unresolved_attempt_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          }
+        },
+        "held_claim_attempt_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          }
+        },
+        "unsettled_result_attempt_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          }
+        },
+        "ownership_inventory_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quota_inventory_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "all_domains_empty": {
+          "type": "boolean"
+        },
+        "retain_uid_gid_project": {
+          "const": true
+        },
+        "retain_home": {
+          "const": true
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "observation_id",
+        "agent_id",
+        "registry_revision",
+        "observed_at_ms",
+        "authorization_request_id",
+        "status",
+        "unresolved_attempt_ids",
+        "held_claim_attempt_ids",
+        "unsettled_result_attempt_ids",
+        "ownership_inventory_ref",
+        "quota_inventory_ref",
+        "all_domains_empty",
+        "retain_uid_gid_project",
+        "retain_home"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "retired"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "unresolved_attempt_ids": {
+                "maxItems": 0
+              },
+              "held_claim_attempt_ids": {
+                "maxItems": 0
+              },
+              "unsettled_result_attempt_ids": {
+                "maxItems": 0
+              },
+              "all_domains_empty": {
+                "const": true
+              },
+              "ownership_inventory_ref": {
+                "$ref": "control-common.schema.json#/$defs/BlobRef"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "StopRecord": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "stop"
+        },
+        "observation_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "stop_grace_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "unreaped_attempt_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          }
+        },
+        "unreaped_hook_run_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          }
+        },
+        "results_persisted": {
+          "type": "boolean"
+        },
+        "resource_usage_saved": {
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "observation_id",
+        "observed_at_ms",
+        "stop_grace_ms",
+        "unreaped_attempt_ids",
+        "unreaped_hook_run_ids",
+        "results_persisted",
+        "resource_usage_saved",
+        "error"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "kind": "prepare_output",
+  "content_ref": {
+    "key": "final_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 2
+  },
+  "source_refs": [
+    {
+      "key": "input_1",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 2
+    }
+  ]
+}

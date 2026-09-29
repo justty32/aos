@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "blob_error",
+  "request_id": "import_quota",
+  "agent_id": "agent_a",
+  "operation": "import",
+  "error": {
+    "code": "quota_exceeded",
+    "message": "已啟用的 agent 額度不足",
+    "retryable": false
+  },
+  "bytes_written": 0
+}

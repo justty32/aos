@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "call_id": "call_1",
+  "outcome": {
+    "status": "succeeded",
+    "result_ref": {
+      "key": "exec_1",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 120
+    },
+    "error": null
+  },
+  "exec_result_ref": {
+    "key": "exec_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 120
+  },
+  "stdout_preview": "{\"answer\":7}",
+  "stderr_preview": "",
+  "preview_truncated": false,
+  "output_truncated": false,
+  "semantic_error": {
+    "code": "tool_result_invalid",
+    "message": "stdout JSON 不符合 result_schema。",
+    "retryable": false,
+    "details": {
+      "path": "/answer"
+    }
+  }
+}

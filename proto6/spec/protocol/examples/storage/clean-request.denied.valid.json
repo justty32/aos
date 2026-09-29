@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "kind": "clean_acquire_error",
+  "request_id": "clean_denied",
+  "error": {
+    "code": "unauthorized",
+    "message": "此通道沒有指定清理範圍的授權",
+    "retryable": false
+  }
+}

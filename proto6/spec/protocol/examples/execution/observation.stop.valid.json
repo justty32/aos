@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "kind": "stop",
+  "observation_id": "obs_stop",
+  "observed_at_ms": 1005,
+  "stop_grace_ms": 8000,
+  "unreaped_attempt_ids": [],
+  "unreaped_hook_run_ids": [],
+  "results_persisted": true,
+  "resource_usage_saved": true,
+  "error": null
+}

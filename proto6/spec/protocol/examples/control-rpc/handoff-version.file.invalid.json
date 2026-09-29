@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "message": {
+    "jsonrpc": "2.0",
+    "id": "req_1",
+    "method": "agent.get",
+    "params": {
+      "agent_id": "agent_a"
+    }
+  }
+}

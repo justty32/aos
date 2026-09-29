@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "llm-request",
+  "description": "proto6 協議篇 llm.md：建議預設，未拍板；授權、引用與狀態轉移另作語意驗證。",
+  "$ref": "#/$defs/Payload",
+  "$defs": {
+    "Payload": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "endpoint_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "messages_ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "input_tokens_estimate": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "request_timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "stream": {
+          "const": false,
+          "default": false
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "endpoint_id",
+        "model",
+        "messages_ref",
+        "input_tokens_estimate",
+        "max_output_tokens",
+        "request_timeout_ms"
+      ],
+      "additionalProperties": false
+    },
+    "ToolSubmission": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "payload": {
+          "$ref": "#/$defs/Payload"
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "request_id",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "ToolReceipt": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "request_id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            "accepted": {
+              "const": true
+            },
+            "run_id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            "job_id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            "extensions": {
+              "type": "object",
+              "default": {}
+            }
+          },
+          "required": [
+            "version",
+            "request_id",
+            "accepted",
+            "run_id",
+            "job_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "request_id": {
+              "anyOf": [
+                {
+                  "$ref": "control-common.schema.json#/$defs/ID"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "accepted": {
+              "const": false
+            },
+            "error": {
+              "$ref": "control-common.schema.json#/$defs/Error"
+            },
+            "extensions": {
+              "type": "object",
+              "default": {}
+            }
+          },
+          "required": [
+            "version",
+            "request_id",
+            "accepted",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ToolResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "job": {
+          "$ref": "control-common.schema.json#/$defs/Job"
+        },
+        "attempt": {
+          "$ref": "control-common.schema.json#/$defs/Attempt"
+        },
+        "snapshot_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        },
+        "notification_seq": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "request_id",
+        "job",
+        "attempt",
+        "snapshot_at_ms",
+        "notification_seq"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "messages": [
+    {
+      "role": "tool",
+      "tool_call_id": "missing_call",
+      "content": "OK"
+    }
+  ]
+}

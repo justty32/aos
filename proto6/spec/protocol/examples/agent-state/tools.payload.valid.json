@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "call": {
+    "call_id": "call_1",
+    "name": "echo",
+    "arguments": {
+      "text": "你好"
+    }
+  },
+  "config_revision": "config_v1",
+  "tool_manifest_ref": "tools_v1",
+  "exec_template_ref": {
+    "key": "template_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 120
+  },
+  "work_ref": {
+    "key": "work_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 120
+  }
+}

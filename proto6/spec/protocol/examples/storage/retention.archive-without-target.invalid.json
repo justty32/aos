@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "kind": "retention_policy",
+  "policy_id": "retention_1",
+  "effective_at_ms": 1790640000000,
+  "retention_days": 30,
+  "retention_mode": "archive",
+  "max_items": 32,
+  "max_bytes": 16777216,
+  "max_elapsed_ms": 30000,
+  "archive_id": null
+}

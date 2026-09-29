@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "message": {
+    "jsonrpc": "2.0",
+    "id": "req_1",
+    "error": {
+      "code": -32002,
+      "message": "同一 request_id 的內容不同。",
+      "data": {
+        "code": "conflict",
+        "message": "同一 request_id 的內容不同。",
+        "retryable": false
+      }
+    }
+  }
+}

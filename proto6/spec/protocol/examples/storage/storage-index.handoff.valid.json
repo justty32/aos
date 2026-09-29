@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "kind": "handoff",
+  "handoff_id": "handoff_1",
+  "channel_id": "channel_a",
+  "delivery_id": "delivery_2",
+  "record_type": "proposal",
+  "record_ref": {
+    "key": "proposal_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 500
+  },
+  "stage": "spooled",
+  "updated_at_ms": 1790640000000
+}

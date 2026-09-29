@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "kind": "archive_manifest",
+  "manifest_id": "manifest_1",
+  "batch_id": "batch_1",
+  "candidate_id": "candidate_1",
+  "scope": {
+    "kind": "agent",
+    "agent_id": "agent_a"
+  },
+  "archive": {
+    "archive_id": "archive_main",
+    "entry_id": "entry_1"
+  },
+  "archived_at_ms": 1790640000000,
+  "summary": {
+    "record_type": "blob",
+    "record_id": "blob_empty",
+    "run_id": "run_old",
+    "outcome_status": "succeeded",
+    "finished_at_ms": 1780000000000,
+    "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "content_bytes": 0
+  },
+  "blob_ref": {
+    "key": "blob_empty",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  }
+}

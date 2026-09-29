@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": "commit_1",
+  "error": {
+    "code": -32000,
+    "message": "claim 已失效。",
+    "data": {
+      "code": "stale_generation",
+      "message": "claim 已失效。",
+      "retryable": false
+    }
+  }
+}

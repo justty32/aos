@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "kind": "config_publish_error",
+  "request_id": "publish_1",
+  "agent_id": "agent_a",
+  "error": {
+    "code": "config_invalid",
+    "message": "context policy 引用不存在。",
+    "retryable": false,
+    "details": {
+      "path": "/bindings/1/blob_ref"
+    }
+  }
+}

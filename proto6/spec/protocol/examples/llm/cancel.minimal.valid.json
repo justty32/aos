@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "attempt_id": "attempt_1",
+  "service_instance_id": "service_1",
+  "control_epoch": "boot_session_1",
+  "type": "cancel",
+  "message_id": "cancel_msg_1",
+  "cancel_id": "cancel_1",
+  "requested_at_ms": 1790000000050
+}

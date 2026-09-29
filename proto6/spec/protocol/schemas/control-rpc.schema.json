@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "通用 JSON-RPC envelope",
+  "description": "〔建議預設，未拍板〕C-04、P-005／P-006。單一 request 或 response；不接受 batch、notification 或 envelope.version。原始 token、byte 上限、可用 id 判斷由接入口另外驗證。",
+  "$defs": {
+    "Request": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "additionalProperties": false,
+      "description": "只驗 envelope。是否公開、method 的 params、owner 與權限另驗；checkpoint.commit payload 由 agent-commit 定義，result.ack 不可呼叫。"
+    },
+    "SuccessResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "result": {}
+      },
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "additionalProperties": false,
+      "description": "result 由該 method 的 schema 驗證；此處不重定方法 payload。"
+    },
+    "RpcError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "allOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/Integer"
+            }
+          ],
+          "enum": [
+            -32700,
+            -32601,
+            -32602,
+            -32001,
+            -32002,
+            -32000
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "control-common.schema.json#/$defs/Error"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "data"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": -32602
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "code": {
+                    "const": "invalid_record"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": -32001
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "code": {
+                    "const": "unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": -32002
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "code": {
+                    "const": "conflict"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": -32000
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "properties": {
+                  "code": {
+                    "not": {
+                      "enum": [
+                        "invalid_record",
+                        "unauthorized",
+                        "conflict"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "$ref": "#/$defs/RpcError"
+        }
+      },
+      "required": [
+        "jsonrpc",
+        "id",
+        "error"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "error": {
+                "properties": {
+                  "code": {
+                    "const": -32700
+                  }
+                },
+                "required": [
+                  "code"
+                ]
+              }
+            },
+            "required": [
+              "error"
+            ]
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Response": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SuccessResponse"
+        },
+        {
+          "$ref": "#/$defs/ErrorResponse"
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Response"
+    }
+  ]
+}

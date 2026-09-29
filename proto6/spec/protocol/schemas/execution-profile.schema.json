@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeploymentProfile",
+  "$ref": "#/$defs/Profile",
+  "$defs": {
+    "Profile": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "profile_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "wall_backend": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000]+$"
+        },
+        "launcher_backend": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000]+$"
+        },
+        "uid_mapping": {
+          "$ref": "#/$defs/UidMapping"
+        },
+        "cgroup_root": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        },
+        "quota_backend": {
+          "enum": [
+            "xfs",
+            "ext4",
+            "none"
+          ]
+        },
+        "data_root": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        },
+        "control_root": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        },
+        "writable_scope": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WritableScope"
+          },
+          "minItems": 1
+        },
+        "probe_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "global_work_limits": {
+          "$ref": "#/$defs/ResourceLimits"
+        },
+        "control_reserve_limits": {
+          "$ref": "#/$defs/ResourceLimits"
+        },
+        "extensions": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "version",
+        "profile_id",
+        "wall_backend",
+        "launcher_backend",
+        "uid_mapping",
+        "cgroup_root",
+        "quota_backend",
+        "data_root",
+        "control_root",
+        "writable_scope",
+        "probe_revision",
+        "global_work_limits",
+        "control_reserve_limits"
+      ],
+      "additionalProperties": false,
+      "description": "B-302/B-303/B-304；〔建議預設，未拍板〕部署設定編碼。管理者持有，控制層唯讀；實際 backend、probe 與外牆方案不得因 schema 合法而視為已核准。probe_revision 指已通過的完整 probe；profile 變更須重新核驗。quota_backend=none 不表示失去部署資格。extensions 不影響授權或資源政策。"
+    },
+    "ResourceLimits": {
+      "type": "object",
+      "properties": {
+        "memory_max_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "pids_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "cpu_quota_us": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "cpu_period_us": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 1000000,
+          "default": 100000
+        }
+      },
+      "required": [
+        "memory_max_bytes",
+        "pids_max",
+        "cpu_quota_us"
+      ],
+      "additionalProperties": false,
+      "description": "B-303：三種額度不可省略；cpu_period_us 省略時使用 100000。swap 固定為 0，attempt leaf memory.oom.group 固定為 1；不是可由工作要求覆寫的欄位。"
+    },
+    "IdentityRange": {
+      "type": "object",
+      "properties": {
+        "first": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "last": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "first",
+        "last"
+      ],
+      "additionalProperties": false,
+      "description": "封閉區間；語意檢查 first <= last。0 不得成為有效 agent UID/GID。"
+    },
+    "UidMapping": {
+      "type": "object",
+      "properties": {
+        "uid_ranges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/IdentityRange"
+          },
+          "minItems": 1
+        },
+        "gid_ranges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/IdentityRange"
+          },
+          "minItems": 1
+        },
+        "reserved_uids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "uniqueItems": true
+        },
+        "reserved_gids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "uniqueItems": true
+        },
+        "approved_groups": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "uid_ranges",
+        "gid_ranges",
+        "reserved_uids",
+        "reserved_gids",
+        "approved_groups"
+      ],
+      "additionalProperties": false,
+      "description": "〔建議預設，未拍板〕以部署有效 Linux ID 表示映射結果；backend 在准入前驗證 host/guest 映射。reserved 集合必須涵蓋 daemon、kernel、管理身分及控制服務；即使未列 0 也一律禁用。跨陣列重疊、保留身分與群組授權另做語意驗證。"
+    },
+    "WritableScope": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        },
+        "accounting": {
+          "enum": [
+            "agent_project",
+            "filesystem_global",
+            "external_manager",
+            "tmpfs_memory"
+          ]
+        },
+        "capacity_policy": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\u0000]+$"
+        }
+      },
+      "required": [
+        "path",
+        "accounting",
+        "capacity_policy"
+      ],
+      "additionalProperties": false,
+      "description": "每項明示可寫路徑、容量歸屬及管理容量政策識別或說明；不是授權外來路徑代開。所有可寫路徑均須被涵蓋；tmpfs 算工作 cgroup 記憶體與掛載容量，external_manager 由外部管理者負責且不保證共寫一致。"
+    }
+  }
+}

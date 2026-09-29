@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "kind": "clean_candidates",
+  "request_id": "clean_1",
+  "batch_id": "batch_1",
+  "scope": {
+    "kind": "agent",
+    "agent_id": "agent_a"
+  },
+  "policy_id": "retention_1",
+  "issued_at_ms": 1790640000000,
+  "candidates": [
+    {
+      "candidate_id": "candidate_1",
+      "record_type": "blob",
+      "record_id": "blob_empty",
+      "agent_id": "agent_a",
+      "run_id": "run_old",
+      "action": "archive",
+      "source_slot": 0,
+      "archive_slot": 1,
+      "eligible_at_ms": 1782592000000,
+      "expected_bytes": 0,
+      "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "fence": 0,
+      "source_name": "blob_empty",
+      "archive": {
+        "archive_id": "archive_main",
+        "entry_id": "entry_1",
+        "manifest_id": "manifest_1"
+      },
+      "summary": {
+        "record_type": "blob",
+        "record_id": "blob_empty",
+        "run_id": "run_old",
+        "outcome_status": "succeeded",
+        "finished_at_ms": 1780000000000,
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "content_bytes": 0
+      },
+      "source_device": "2050",
+      "source_inode": "1234"
+    }
+  ],
+  "more": false,
+  "limits": {
+    "max_items": 32,
+    "max_bytes": 16777216,
+    "max_elapsed_ms": 30000
+  }
+}

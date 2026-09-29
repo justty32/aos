@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "kind": "launch",
+  "attempt_id": "tick_a",
+  "registry_revision": 1,
+  "snapshot_revision": "snap_a",
+  "execution_kind": "system_hook",
+  "hook_run_id": "hook_post_a",
+  "fd_roles": [
+    "work",
+    "stdin",
+    "clean_channel"
+  ]
+}

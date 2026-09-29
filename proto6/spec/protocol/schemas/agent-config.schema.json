@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent 不可變設定 bundle、context policy 與換版紀錄",
+  "$comment": "〔建議預設，未拍板〕欄位與語意依 agent-state.md；schema 通過不代表引用存在、授權成立或控制交易已提交。",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "model_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "system_prompt": {
+      "type": "string",
+      "default": ""
+    },
+    "context_policy_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tool_manifest_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cwd": {
+      "type": "string",
+      "pattern": "^/",
+      "not": {
+        "pattern": "\u0000"
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "items": {
+        "$ref": "agent-hook-registration.schema.json"
+      },
+      "default": []
+    },
+    "extensions": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "version",
+    "model_ref",
+    "context_policy_ref",
+    "tool_manifest_ref",
+    "cwd"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "ContextPolicy": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "input_token_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "output_token_reserve": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "summary_mode": {
+          "enum": [
+            "off",
+            "referenced"
+          ],
+          "default": "off"
+        },
+        "extensions": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "version",
+        "input_token_limit",
+        "output_token_reserve"
+      ],
+      "additionalProperties": false
+    },
+    "ConfigChange": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "changed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "old_config_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "new_config_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "extensions": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "version",
+        "changed_at_ms",
+        "old_config_revision",
+        "new_config_revision",
+        "attempt_id"
+      ],
+      "additionalProperties": false
+    },
+    "RevisionBinding": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "model",
+            "context_policy",
+            "tool_manifest"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blob_ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        }
+      },
+      "required": [
+        "kind",
+        "ref",
+        "blob_ref"
+      ],
+      "additionalProperties": false,
+      "$comment": "P-011 暫定 2；ref 是 bundle 相同 role 的不可變引用。model blob 只含 agent 可讀模型投影，不包含金鑰；由 llm 受信設定解析 endpoint。控制 writer 核對 role/ref/內容，同 ref 不可改指不同 bytes。"
+    },
+    "PublishRequest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "kind": {
+          "const": "config_publish"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "config_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "bundle_ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/RevisionBinding"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "kind": {
+                    "const": "model"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "kind": {
+                    "const": "context_policy"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "kind": {
+                    "const": "tool_manifest"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "config_revision",
+        "bundle_ref",
+        "bindings"
+      ],
+      "additionalProperties": false,
+      "$comment": "僅管理者本機發布 adapter 的可信內部請求，不是公開 RPC；引用全部驗證、原子切換指標後才回 PublishResult。bindings 恰好三個 role 各一筆，完整遞迴引用存在性另驗。"
+    },
+    "PublishResult": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "kind": {
+          "const": "config_published"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "config_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "previous_revision": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "published_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "config_revision",
+        "previous_revision",
+        "published_at_ms"
+      ],
+      "additionalProperties": false
+    },
+    "PublishError": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "kind": {
+          "const": "config_publish_error"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "error": {
+          "$ref": "control-common.schema.json#/$defs/Error"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "agent_id",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "ModelSelection": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "endpoint_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "version",
+        "endpoint_id",
+        "model"
+      ],
+      "additionalProperties": false,
+      "$comment": "P-011 暫定 2 的 agent 可讀模型選擇；model 是 S-301/llm-config Model.model 的邏輯名稱。可信 LLM 服務設定解析 provider_model、limits 與 credential；此內容不得含憑證或複製 LLM 私有設定。endpoint/model 的存在與配對另驗。"
+    }
+  }
+}

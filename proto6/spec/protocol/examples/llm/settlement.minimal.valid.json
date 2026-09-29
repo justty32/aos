@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "attempt_id": "attempt_1",
+  "agent_id": "agent_a",
+  "run_id": "run_1",
+  "usage_ref": {
+    "key": "usage_minimal",
+    "sha256": "5d9297735de0ac8793e84eb8e74890ea43cecd619e7e6424a97831803aef0a60",
+    "bytes": 305
+  },
+  "usage_digest": "7d1fb7ab458a2e6a0f907c315fc69739cfef7925306c907c23e608388dbb39ef",
+  "tokens_known": 9,
+  "tokens_uncertain": 0,
+  "tokens_reserved": 0,
+  "rate_tokens": 24,
+  "rate_accounting_revision": "reserved-window-v1",
+  "settled_at_ms": 1790000000100
+}

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "attempt_id": "attempt_1",
+  "job_id": "job_17",
+  "agent_id": "agent_a",
+  "state": "succeeded",
+  "reason": "exit",
+  "exit_code": 0,
+  "signal": null,
+  "started_at_ms": 1790000000000,
+  "finished_at_ms": 1790000000010,
+  "stdout_blob": null,
+  "stderr_blob": null,
+  "stdout_bytes": 0,
+  "stderr_bytes": 0,
+  "truncated": false
+}

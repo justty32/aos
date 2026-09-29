@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "attempt_id": "attempt_1",
+  "reason": "canceled_before_sent",
+  "gate_closed": true,
+  "local_connection_closed": true,
+  "evidence_ref": {
+    "key": "unsent_gate_evidence",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 128
+  },
+  "released_at_ms": 1790000000100
+}

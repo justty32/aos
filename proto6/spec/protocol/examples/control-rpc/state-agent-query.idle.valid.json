@@ -1,0 +1,12 @@
+{
+  "agent_id": "agent_a",
+  "phase": "idle",
+  "generation": 1,
+  "checkpoint_revision": 0,
+  "run_id": null,
+  "wait_reason": null,
+  "pending_jobs": 0,
+  "error": null,
+  "can_resume": false,
+  "snapshot_at_ms": 1790000000000
+}
