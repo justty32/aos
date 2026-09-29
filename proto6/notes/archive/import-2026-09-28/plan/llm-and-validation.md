@@ -1,8 +1,10 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../../spec/README.md) 與 [kernel 樹](../../../../notes/2026-09-29-kernel-tree.md)。
+
 # 雲端 LLM 入場控制與一萬 agent 的驗收
 
-> 2026-09-28 交接快照；[原始來源](../../../proto5/notes/2026-09-28-ten-thousand-agents/llm-and-validation.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../../proto5/notes/2026-09-28-ten-thousand-agents/llm-and-validation.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
-> 後續註記（2026-09-29，依[裁定](../2026-09-29-verdicts.md) 9）：下文「兩種接法」已選第二種——中央代發服務保管 key、agent 與工具只投請求，延續 proto5 現況（見 spec S-301）。
+> 後續註記（2026-09-29，依[裁定](../../../2026-09-29-verdicts.md) 9）：下文「兩種接法」已選第二種——中央代發服務保管 key、agent 與工具只投請求，延續 proto5 現況（見 spec S-301）。
 
 2026-09-28。這是本輪架構規劃的一部分，所有數值門檻均為建議，未修改產品、未呼叫收費 API、未建立宿主帳號或資源限制。現版尚沒有這份規劃需要的整合式 limits／resources 管理。
 
@@ -18,7 +20,7 @@
 
 目前規模沒有足夠理由先引入 Redis、Kafka、分散式鎖或多機排程。先用索引查詢到期和就緒項目；不要為等待 quota 保留一個睡眠 worker，也不要每次挑一個 request 就重讀一萬個 agent 目錄。選擇資料庫不是對吞吐的保證，真正要測的是短交易、鎖等待、checkpoint、結果恢復與就緒查詢成本。
 
-這是設計建議，現有 SQLite 帳本的存在不代表已具備下述入場控制。現行可見來源包括 [kernel store](../../../proto5/lib/aos_kernel_store.py)、[LLM 呼叫](../../../proto5/lib/aos_llm_call.py) 與 [LLM ask](../../../proto5/lib/aos_llm_ask.py)；本篇沒有修改它們。
+這是設計建議，現有 SQLite 帳本的存在不代表已具備下述入場控制。現行可見來源包括 [kernel store](../../../../../proto5/lib/aos_kernel_store.py)、[LLM 呼叫](../../../../../proto5/lib/aos_llm_call.py) 與 [LLM ask](../../../../../proto5/lib/aos_llm_ask.py)；本篇沒有修改它們。
 
 ## LLM 請求入場：同時檢查共享上限
 

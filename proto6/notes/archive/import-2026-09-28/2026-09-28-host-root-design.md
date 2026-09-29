@@ -1,10 +1,12 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../spec/README.md) 與 [kernel 樹](../../../notes/2026-09-29-kernel-tree.md)。
+
 # 宿主機 root daemon：員工身分與執行分工草案
 
-> 2026-09-28 交接快照；[原始來源](../../proto5/notes/2026-09-28-host-root-design.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../proto5/notes/2026-09-28-host-root-design.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 >
-> 後續註記（2026-09-29，依 [notes 審查](notes-review.md) 必修 2）：本文「正式員工」分類與「固定負責其 tick 的 CPU worker」已被[資源與任務排程](2026-09-28-linux-resources-and-task-scheduling.md)取代——分類已放下，CPU worker 改為取消方向；下文相關段落只是演進脈絡，不是現行要求。
+> 後續註記（2026-09-29，依 [notes 審查](../reviews-2026-09-28/notes-review.md) 必修 2）：本文「正式員工」分類與「固定負責其 tick 的 CPU worker」已被[資源與任務排程](2026-09-28-linux-resources-and-task-scheduling.md)取代——分類已放下，CPU worker 改為取消方向；下文相關段落只是演進脈絡，不是現行要求。
 
-← [筆記索引](README.md)｜[使用者已定方向](2026-09-28-employee-identity.md)｜[第二道牆調查](investigations/proto5-host-root-second-wall.md)
+← [筆記索引](../../README.md)｜[使用者已定方向](2026-09-28-employee-identity.md)｜[第二道牆調查](investigations/proto5-host-root-second-wall.md)
 
 > 同日後續決定：工具通常繼承委託員工的 UID／群組權限，包含內部 LLM 與再次呼叫工具；不需逐工具 bwrap，保留整套 aos／daemon 的外牆。見[已定方向](2026-09-28-employee-identity.md)。下文「同 UID 候選未定」、逐工具隔離與工具權限 group 是決定前的歷史比較，不再是必要設計；其餘接法仍為候選，現行程式未變更。
 
@@ -35,7 +37,7 @@
 
 目前 agent tick 已經是短步驟：產生 LLM／工具工作、交件、返回，後續由回音叫醒；工具工作可由 `_pool` 選池，未指定時使用 `tool_pool`。現有 access 把工具包進 bwrap，未提供 Linux 員工身分與專屬 worker 的安全绑定。
 
-程式依据：[daemon 啟動](../../proto5/lib/aos_exec_spawn.py)、[執行與重導向](../../proto5/lib/aos_exec_run.py)、[kernel tick 登記](../../proto5/lib/aos_daemon_ticks.py)、[指示詞](../../proto5/lib/aos_directives.py)、[agent 派工](../../proto5/lib/aos_agent_batch.py)、[jail](../../proto5/lib/aos_jail.py)。這裡沒有宣稱現行版本可安全用 sudo 上線。
+程式依据：[daemon 啟動](../../../../proto5/lib/aos_exec_spawn.py)、[執行與重導向](../../../../proto5/lib/aos_exec_run.py)、[kernel tick 登記](../../../../proto5/lib/aos_daemon_ticks.py)、[指示詞](../../../../proto5/lib/aos_directives.py)、[agent 派工](../../../../proto5/lib/aos_agent_batch.py)、[jail](../../../../proto5/lib/aos_jail.py)。這裡沒有宣稱現行版本可安全用 sudo 上線。
 
 ## 第一個邊界：人事名冊不是員工自己填
 

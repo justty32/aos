@@ -1,5 +1,7 @@
 # agent：從收到事情到決定下一步
 
+> 狀態：歷史（09-28 概念稿），現行以 [spec](../spec/README.md) 為準。09-29 起架構改為 node／kernel 樹，見 [kernel 樹](2026-09-29-kernel-tree.md)。
+
 ← [三大概念](concepts.md)｜前篇：[基底](base.md)｜下一篇：[任務與排程](scheduling.md)
 
 **規劃草案，待逐塊討論。** 這篇拆解 agent 的語意責任，不指定目錄、CLI 或程序拓撲。agent 的資料夾是持久本體，tick 短暫推進狀態；冷 agent 不必常駐，也不應為了確認沒事反覆載入整份 history。

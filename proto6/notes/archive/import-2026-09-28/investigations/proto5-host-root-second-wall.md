@@ -1,6 +1,8 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../../spec/README.md) 與 [kernel 樹](../../../../notes/2026-09-29-kernel-tree.md)。
+
 # proto5：宿主機 root daemon 的第二道牆
 
-> 2026-09-28 交接快照；[原始來源](../../../wf/workflows/investigations/proto5-host-root-second-wall.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../../wf/workflows/investigations/proto5-host-root-second-wall.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
 後續：[Linux 實作可行性、三條路線成本與無特權小實驗](proto5-linux-wall-feasibility.md)。
 

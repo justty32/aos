@@ -1,8 +1,10 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../spec/README.md) 與 [kernel 樹](../../../notes/2026-09-29-kernel-tree.md)。
+
 # 從人類理解與修改的角度看 proto5
 
-> 2026-09-28 交接快照；[原始來源](../../proto5/notes/2026-09-28-human-architecture.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../proto5/notes/2026-09-28-human-architecture.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
-← [筆記索引](README.md)｜[proto5](../../proto5/README.md)｜[程式導航](../../proto5/lib/README.md)
+← [筆記索引](../../README.md)｜[proto5](../../../../proto5/README.md)｜[程式導航](../../../../proto5/lib/README.md)
 
 2026-09-28 與使用者討論的閱讀筆記，收錄整體架構、概念拆分，以及程序管理、交接與恢復的進一步說明。這是理解現行系統的導讀，不是新的實作規格或搬檔方案；具體行為仍以程式為準。
 
@@ -26,7 +28,7 @@
 
 ### 3. 能力：有哪些事可以做
 
-工具及其製作、測試、安裝、移除登記、別名與篩選。人的操作意圖是「給它算表格的能力」「拿掉 bash」「把函式變工具」。目前是 `tools/` 與 `info.json` 的工具登記。能力分組與 `--without` 等新建議尚未實作，見 [advice](../../proto5/advice.md)。
+工具及其製作、測試、安裝、移除登記、別名與篩選。人的操作意圖是「給它算表格的能力」「拿掉 bash」「把函式變工具」。目前是 `tools/` 與 `info.json` 的工具登記。能力分組與 `--without` 等新建議尚未實作，見 [advice](../../../../proto5/advice.md)。
 
 ### 4. 工作環境與權限：在哪裡做，能碰什麼
 
@@ -144,9 +146,9 @@ agent 也採這個思路：intake 記收訊做到哪、batch 記送出的模型�
 
 ## 深入閱讀入口
 
-- 程序管理：[daemon 模組](../../proto5/lib/docs/daemon.md)、[池資料](../../proto5/spec/daemon/pools.md)、[生命週期](../../proto5/spec/daemon/lifecycle.md)。
-- 工作交接：[cpu 規範入口](../../proto5/spec/cpu/README.md)、[kernel 一格](../../proto5/spec/kernel/tick.md)、[kernel 帳本](../../proto5/spec/kernel/ledger.md)。
-- agent 接續：[agent 模組](../../proto5/lib/docs/agent.md)、[state.json](../../proto5/spec/agent/state.md)。
+- 程序管理：[daemon 模組](../../../../proto5/lib/docs/daemon.md)、[池資料](../../../../proto5/spec/daemon/pools.md)、[生命週期](../../../../proto5/spec/daemon/lifecycle.md)。
+- 工作交接：[cpu 規範入口](../../../../proto5/spec/cpu/README.md)、[kernel 一格](../../../../proto5/spec/kernel/tick.md)、[kernel 帳本](../../../../proto5/spec/kernel/ledger.md)。
+- agent 接續：[agent 模組](../../../../proto5/lib/docs/agent.md)、[state.json](../../../../proto5/spec/agent/state.md)。
 
 這份筆記不要求使用者現在裁決架構；先建立可閱讀的概念，再從實際修改的阻力找需要改善的地方。
 

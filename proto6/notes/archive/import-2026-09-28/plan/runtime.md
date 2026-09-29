@@ -1,10 +1,12 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../../spec/README.md) 與 [kernel 樹](../../../../notes/2026-09-29-kernel-tree.md)。
+
 # 一萬個 agent：執行與排程改造提案
 
-> 2026-09-28 交接快照；[原始來源](../../../proto5/notes/2026-09-28-ten-thousand-agents/runtime.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../../proto5/notes/2026-09-28-ten-thousand-agents/runtime.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 >
-> 後續註記（2026-09-29，依 [notes 審查](../notes-review.md) 必修 9、13）：階段編號以[計畫入口](README.md)的 0–4 為準。本文「第一階段」「第二階段」（idle、持久排程索引、收件）都屬入口的第 1 階段；「第三階段」的 direct exec 屬入口的第 2 階段；「貫穿第二、三階段」即入口第 1–2 階段。§1「預設最晚五分鐘重訪」應讀作「預設五分鐘後重新具備派工資格」：程式只設 `not_before`，到期後接到 ready 隊尾、還要等空 worker，池滿或 kernel 延遲時可以超過五分鐘；「每秒約 33 次」也只是理想均攤估算。
+> 後續註記（2026-09-29，依 [notes 審查](../../reviews-2026-09-28/notes-review.md) 必修 9、13）：階段編號以[計畫入口](README.md)的 0–4 為準。本文「第一階段」「第二階段」（idle、持久排程索引、收件）都屬入口的第 1 階段；「第三階段」的 direct exec 屬入口的第 2 階段；「貫穿第二、三階段」即入口第 1–2 階段。§1「預設最晚五分鐘重訪」應讀作「預設五分鐘後重新具備派工資格」：程式只設 `not_before`，到期後接到 ready 隊尾、還要等空 worker，池滿或 kernel 延遲時可以超過五分鐘；「每秒約 33 次」也只是理想均攤估算。
 >
-> 後續註記（2026-09-29，依[裁定](../2026-09-29-verdicts.md) 3、7）：proto6 新寫，不從 worker 後端就地遷移（見[執行後端切換附註](backend-switch.md)）。「daemon 重啟需依執行 ID 清理」「tick 執行中殺 daemon」等恢復情境，應讀作控制端重啟時在途工作全被殺、恢復後全部 unknown（spec B-603）。
+> 後續註記（2026-09-29，依[裁定](../../../2026-09-29-verdicts.md) 3、7）：proto6 新寫，不從 worker 後端就地遷移（見[執行後端切換附註](backend-switch.md)）。「daemon 重啟需依執行 ID 清理」「tick 執行中殺 daemon」等恢復情境，應讀作控制端重啟時在途工作全被殺、恢復後全部 unknown（spec B-603）。
 
 範圍：Linux 單機、10,000 個已註冊 agent、每小時少於 100 個活躍 agent、雲端 LLM。這不是 10,000 個同時執行的程序；每小時活躍人數也不保證瞬間併發小於 100，故仍須入口限流。
 
@@ -12,9 +14,9 @@
 
 ## 1. 先讓沒有工作的 agent 不花執行成本
 
-現行已不是所有 agent 每秒 tick：idle 無輸入會停車，預設最晚五分鐘重訪。來源：[agent idle 分支](../../../proto5/lib/aos_agent.py) 第 79–94 行；[park 預設與分類](../../../proto5/lib/aos_kernel_info.py) 第 18、317–331 行。一萬個 park 均勻分散仍約每秒 33 次重訪，整批同時啟動還可能形成波峰。
+現行已不是所有 agent 每秒 tick：idle 無輸入會停車，預設最晚五分鐘重訪。來源：[agent idle 分支](../../../../../proto5/lib/aos_agent.py) 第 79–94 行；[park 預設與分類](../../../../../proto5/lib/aos_kernel_info.py) 第 18、317–331 行。一萬個 park 均勻分散仍約每秒 33 次重訪，整批同時啟動還可能形成波峰。
 
-目前每次 tick 在判斷 idle 前，已讀 system、完整 history 及工具表；來源：[設定載入](../../../proto5/lib/aos_agent_info.py) 第 19–22 行、[模型視圖](../../../proto5/lib/aos_agent_home.py) 第 346–364 行。閒置重訪成本會隨歷史與工具增加。
+目前每次 tick 在判斷 idle 前，已讀 system、完整 history 及工具表；來源：[設定載入](../../../../../proto5/lib/aos_agent_info.py) 第 19–22 行、[模型視圖](../../../../../proto5/lib/aos_agent_home.py) 第 346–364 行。閒置重訪成本會隨歷史與工具增加。
 
 **必要改造，第一階段：** 無事件、無到期工作時不開 agent 程序。已被開出的 tick 先拿現有家目錄鎖，只讀小型進度與待辦摘要；無事立即退出，真正進入 think／act 才載入模型內容。既有自動 compact、wait 條件不能被短路遺漏：有到期維護或待觀察條件時，摘要必須指出下一個到期時間；對不會主動通知的外部檔案條件，仍保留有界補查。
 
@@ -24,7 +26,7 @@
 
 ## 2. SQLite 留著，但每次只處理有事的列
 
-現行 SQLite `load()` 全讀並解碼所有 procs／pools／busy；`save()` 仍序列化全部 procs 比對，只將異動列寫回。來源：[store](../../../proto5/lib/aos_kernel_store.py) 第 75–95、135–142 行。因而「換 SQLite」不等於已經是增量排程。
+現行 SQLite `load()` 全讀並解碼所有 procs／pools／busy；`save()` 仍序列化全部 procs 比對，只將異動列寫回。來源：[store](../../../../../proto5/lib/aos_kernel_store.py) 第 75–95、135–142 行。因而「換 SQLite」不等於已經是增量排程。
 
 **必要改造，第二階段：** 持久排程索引只保存 agent 身分、ready 標記、next_due、任務狀態與執行世代等小欄位；history 留在 agent 家。用 SQL 索引找 ready／到期列，採有限批次 claim、更新、完成，不每 tick 重建全量 Python 字典。SQLite 交易仍保存派出意圖與結果接收狀態，不能改成只有記憶體 heap。
 
@@ -32,11 +34,11 @@
 
 **驗證：** 100、1,000、10,000 註冊量下只啟動同樣少量工作，記錄每輪查詢列數、JSON 解碼量、CPU 時間；idle metadata 不應整表進入 Python。重啟後 ready／due 工作不遺失；多次重放不重建同一派工。
 
-**延後：** 多寫入者、分片 DB、遠端排程節點。現有歷史量測只有一名 idle agent，不能拿來宣稱萬人已過；見[one-boot 量測](../../../proto5/notes/2026-09-24-one-boot/README.md) 第 44–58 行。
+**延後：** 多寫入者、分片 DB、遠端排程節點。現有歷史量測只有一名 idle agent，不能拿來宣稱萬人已過；見[one-boot 量測](../../../../../proto5/notes/2026-09-24-one-boot/README.md) 第 44–58 行。
 
 ## 3. 事件先可靠保存，再按門鈴
 
-現行 daemon 每圈監看的是 **kernel 家**，不是每個 agent：來源：[daemon ticks](../../../proto5/lib/aos_daemon_ticks.py) 第 194–209 行。不要在精簡 worker 時，反而改成每 20 ms 掃一萬個 agent input 目錄。
+現行 daemon 每圈監看的是 **kernel 家**，不是每個 agent：來源：[daemon ticks](../../../../../proto5/lib/aos_daemon_ticks.py) 第 194–209 行。不要在精簡 worker 時，反而改成每 20 ms 掃一萬個 agent input 目錄。
 
 **必要改造，第二階段一併做：** 收件入口先保存請求，再更新 ready 索引／待交接記錄，最後通知排程端；接收者對穩定 request ID 去重。通知只降低延遲，可靠性由持久請求與重放負責。若要承諾斷電後仍收件成功，必須定義 fsync 與確認時點；單純 rename 只解決半檔可見性。
 
@@ -52,7 +54,7 @@
 
 ## 4. 拿掉常駐 cpu worker，但保留入口名額
 
-現行 `while queue and free` 以池中的空 worker 限制派工，來源：[kernel dispatch](../../../proto5/lib/aos_kernel_engine.py) 第 184–205 行。直接啟動工作後，這個全局限制仍必要：每 agent 的 cgroup 上限相加可以遠超過整機。
+現行 `while queue and free` 以池中的空 worker 限制派工，來源：[kernel dispatch](../../../../../proto5/lib/aos_kernel_engine.py) 第 184–205 行。直接啟動工作後，這個全局限制仍必要：每 agent 的 cgroup 上限相加可以遠超過整機。
 
 **必要改造，第三階段：** 持久全局佇列先取得名額，再經可信啟動入口建立工作。分開限制活躍 tick、非 LLM 工具程序與 LLM 請求；另有 aos 父 cgroup 的總 CPU／記憶體／task 上限，為控制程序保留餘裕。名額數根據實際工具負載調整，不由「每小時少於 100 人」推導固定併發 100。
 
@@ -66,7 +68,7 @@
 
 ## 5. 新訊息與恢復不能造成同一 agent 雙寫
 
-目前家目錄有 tick 檔案鎖，來源：[agent tick](../../../proto5/lib/aos_agent.py) 第 64–75 行。這個保護應保留；新排程索引不能取代家目錄的實際互斥。
+目前家目錄有 tick 檔案鎖，來源：[agent tick](../../../../../proto5/lib/aos_agent.py) 第 64–75 行。這個保護應保留；新排程索引不能取代家目錄的實際互斥。
 
 **必要改造，貫穿第二、三階段：** claim 一個 agent 時產生執行 ID／世代。執行途中來新訊息只記 pending／ready，不開第二個 tick；完成提交時，原子檢查本輪之後是否仍有新待辦，再決定保持 ready 或休眠，避免喚醒被完成流程覆蓋。世代標記也用於辨識重啟前的遲到結果。
 

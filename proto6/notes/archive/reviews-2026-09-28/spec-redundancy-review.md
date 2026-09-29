@@ -1,6 +1,8 @@
+> 封存 2026-09-29：針對重寫前的舊 spec。現行看 [spec](../../../spec/README.md)。
+
 # proto6 規格冗餘審查
 
-← [概念入口](concepts.md)｜[規格草案](../spec/README.md)
+← [概念入口](../../concepts.md)｜[規格草案](../../../spec/README.md)
 
 審查日期：2026-09-28（Asia/Taipei）；關鍵來源最後重讀於 22:24。這是使用者要求的 Astra 唯讀架構審查，只新增本報告，不更動規格或產品。規格在審查期間仍由其他 agent 修訂，以下以交付前重讀的章節為準；不把草案預設當成使用者已批准的決定。尚無實作，所以「可省成本」是設計判斷，不是效能量測。
 
@@ -18,7 +20,7 @@
 
 ### A1．同一契約有數個完整的規範來源
 
-證據：[C-05](../spec/contracts.md)、[B-403](../spec/base/storage.md)、[A-501／A-502](../spec/agent/tick.md) 都敘述 proposal 的 fencing、原子提交與重送；[B-602](../spec/base/lifecycle.md) 與 [S-103](../spec/scheduling/runs.md) 都定義 claim 活性與重派；[A-202／A-203](../spec/agent/input.md) 與 [S-101／S-102](../spec/scheduling/runs.md) 都定義輪次、暫停及取消。
+證據：[C-05](../../../spec/contracts.md)、[B-403](../../../spec/base/storage.md)、[A-501／A-502](../../../spec/agent/tick.md) 都敘述 proposal 的 fencing、原子提交與重送；[B-602](../../../spec/base/lifecycle.md) 與 [S-103](../../../spec/scheduling/runs.md) 都定義 claim 活性與重派；[A-202／A-203](../../../spec/agent/input.md) 與 [S-101／S-102](../../../spec/scheduling/runs.md) 都定義輪次、暫停及取消。
 
 這些篇章需要解釋自己的交界，但不需要各自保存一份完整規則。可指定 C-05 管資料與提交原子性、B-602 管程序互斥與活性、S-101／S-102 管任務轉移；其他篇只寫本層輸入、輸出、特有失敗及引用。驗收可以保留不同層的觀察視角，不必抄完整轉移或相同數字。
 
@@ -32,7 +34,7 @@
 
 ### B1．checkpoint 應保存 agent 尚未完成的思路，不必再抄控制帳本
 
-證據：[B-401](../spec/base/storage.md) 把 jobs、attempts、run、cursor 與 checkpoint pointer 放 SQLite；[C-05](../spec/contracts.md) 的 Proposal 又帶 phase、消費 IDs、新 jobs；[A-502](../spec/agent/tick.md) 的 checkpoint 另存 phase、pending_job_ids、history_tail、input_seq、wait_reason、due_at_ms，並要求 pending_job_ids 等於帳本的未完成／未消費集合。
+證據：[B-401](../../../spec/base/storage.md) 把 jobs、attempts、run、cursor 與 checkpoint pointer 放 SQLite；[C-05](../../../spec/contracts.md) 的 Proposal 又帶 phase、消費 IDs、新 jobs；[A-502](../../../spec/agent/tick.md) 的 checkpoint 另存 phase、pending_job_ids、history_tail、input_seq、wait_reason、due_at_ms，並要求 pending_job_ids 等於帳本的未完成／未消費集合。
 
 最確定的重複是 **pending_job_ids 與帳本 jobs＋消費狀態**，以及 **checkpoint.phase 與 Proposal.phase／提交後 phase**。input_seq/history_tail 與控制 cursor 也需明確說是獨有語意位置，還是同一進度的副本；目前讀者必須理解兩邊如何一致。不能將所有 cursor 都合併：收件、語意消費與通知水位可能指不同事件。
 
@@ -46,7 +48,7 @@
 
 ### B2．單機短 tick 的 lease/heartbeat 可先延後
 
-證據：[B-602](../spec/base/lifecycle.md)、[S-103](../spec/scheduling/runs.md) 同時有 live claim、generation、checkpoint revision、home lock、30 秒 lease、10 秒 heartbeat；[B-201～B-203](../spec/base/execution.md) 已另有程序監看、執行逾時與清空程序樹的條件。lease 過期仍必須先核對舊程序，不能直接接手。
+證據：[B-602](../../../spec/base/lifecycle.md)、[S-103](../../../spec/scheduling/runs.md) 同時有 live claim、generation、checkpoint revision、home lock、30 秒 lease、10 秒 heartbeat；[B-201～B-203](../../../spec/base/execution.md) 已另有程序監看、執行逾時與清空程序樹的條件。lease 過期仍必須先核對舊程序，不能直接接手。
 
 因此 lease 在這個版本主要是「提醒去對帳」，不是提供接手的安全證據。首版可保留 claim、提交 fence、受管程序觀測、tick deadline 及重啟對帳，用退出事件／deadline 觸發回收，暫不做第二套定期 heartbeat、suspect 狀態及租期續寫。若將來出現 supervisor 與控制端可獨立長期失聯、需要特定故障偵測時間的部署，再加入活性協議。
 
@@ -58,7 +60,7 @@
 
 ### B3．一個設定 bundle revision 已可固定工具與 context 版本
 
-證據：[A-101](../spec/agent/configuration.md) 的不可變 config 已指向不可變 context_policy_ref 和 tool_manifest_ref；[A-102](../spec/agent/configuration.md)、[C-02](../spec/contracts.md)、[S-101](../spec/scheduling/runs.md) 又要求每 run 保存 config_revision、context_revision、tools_revision 三項。
+證據：[A-101](../../../spec/agent/configuration.md) 的不可變 config 已指向不可變 context_policy_ref 和 tool_manifest_ref；[A-102](../../../spec/agent/configuration.md)、[C-02](../../../spec/contracts.md)、[S-101](../../../spec/scheduling/runs.md) 又要求每 run 保存 config_revision、context_revision、tools_revision 三項。
 
 如果後兩項就是該 config 指定的內容，三個引用形成必須額外檢查一致性的組合。首版讓 run 只固定一個 config/bundle revision，由它引用工具、context、模型設定即可。人仍可分檔編輯各部分；發布時組成一份不可變 bundle，並不要求把所有工具正文複製進同一檔。查詢可展開顯示各子版本，無須把展開值當另一份權威。
 
@@ -68,7 +70,7 @@
 
 ### B4．agent phase 可少當一張獨立控制狀態機
 
-證據：[T-04](../spec/terms.md) 保存 agent.phase、run.state、job.state、attempt.state；[A-503](../spec/agent/tick.md) 要控制層檢查完整 phase 轉移表；[S-102](../spec/scheduling/runs.md) 另管理 paused、needs_attention、cancel_requested 等屏障。agent 的 paused/error 同時反映當前 run 的控制狀態；wait_reason 又與 [S-402](../spec/scheduling/operations.md) 的查詢理由交疊。
+證據：[T-04](../../../spec/terms.md) 保存 agent.phase、run.state、job.state、attempt.state；[A-503](../../../spec/agent/tick.md) 要控制層檢查完整 phase 轉移表；[S-102](../../../spec/scheduling/runs.md) 另管理 paused、needs_attention、cancel_requested 等屏障。agent 的 paused/error 同時反映當前 run 的控制狀態；wait_reason 又與 [S-402](../../../spec/scheduling/operations.md) 的查詢理由交疊。
 
 不建議把 run/job/attempt 合成一種狀態。較小的改法是：run 暫停、取消、錯誤屏障保留權威；agent 顯示的 paused/error 與「等待工具／額度」由控制事實推導。think/act 若沒有必須單獨恢復的中間決策，就不用為顯示一次 act 而新增一次持久轉移；有 continuation 才保存真正的語意位置。
 
@@ -78,7 +80,7 @@
 
 ### B5．保留必要 RPC，但先不把每個內部交接做成通用介面
 
-證據：[B-502](../spec/base/transport.md) 提供 result.ack，但同段已要求 tick 的結果消費 ack 與 checkpoint 交易一起提交，獨立 method 留給「其他可信接收端」；[S-305](../spec/scheduling/llm.md) 宣告首版 stream=false，卻先規定未來 chunk_seq／ephemeral／片段去重。
+證據：[B-502](../../../spec/base/transport.md) 提供 result.ack，但同段已要求 tick 的結果消費 ack 與 checkpoint 交易一起提交，獨立 method 留給「其他可信接收端」；[S-305](../../../spec/scheduling/llm.md) 宣告首版 stream=false，卻先規定未來 chunk_seq／ephemeral／片段去重。
 
 首版若只有目前列出的消費者，可先不公開 result.ack 操作；保留內部的持久消費事實與回收條件。等出現確定的第二種消費者，再給它專用的提交／確認契約。串流只保留「目前不支援；部分片段不是 final」的不變量，片段 schema 移到未來設計材料。這不改已接受的 JSON-RPC 檔案交接，也不要求改成其他協議。
 
@@ -92,7 +94,7 @@
 
 ### C1．「可修改」與完整版本／內容庫制度之間仍需有人用的接點
 
-證據：[B-401](../spec/base/storage.md)、[C-05](../spec/contracts.md) 明定受管不可變 blob 與控制 pointer；[A-301](../spec/agent/memory.md) 禁止覆寫已提交 history／notes 版本；[A-102](../spec/agent/configuration.md) 要修改現有 queued/active run 的設定時取消再建。這是比概念稿「資料夾是本體」更具體的新預設，現稿已正確標為可替換，不能宣稱使用者早已接受整套制度。
+證據：[B-401](../../../spec/base/storage.md)、[C-05](../../../spec/contracts.md) 明定受管不可變 blob 與控制 pointer；[A-301](../../../spec/agent/memory.md) 禁止覆寫已提交 history／notes 版本；[A-102](../../../spec/agent/configuration.md) 要修改現有 queued/active run 的設定時取消再建。這是比概念稿「資料夾是本體」更具體的新預設，現稿已正確標為可替換，不能宣稱使用者早已接受整套制度。
 
 可信快照有必要性：不應把可由同 UID 工具改寫的檔案直接信任為控制結果。但「人修改一份 notes／人格」不必因此理解 blob key、revision、匯入器與 GC。建議人用入口維持可讀來源與一次 apply；runtime 只保留必要的已提交快照。相同內容可共用引用，候選檔與正式快照不必永久各留一份；實際送給模型的 context 可與 LLM messages_ref 引用同一 blob，不另複製一份「記憶層 context」。只有調查需要且未被其他權威引用涵蓋的內容才增加快照。
 
@@ -100,7 +102,7 @@
 
 ### C2．人工處置與輪次政策不是安全機制的唯一推論
 
-證據：[A-202](../spec/agent/input.md)、[S-101](../spec/scheduling/runs.md) 規定一則訊息一 run、普通新訊息永遠排後輪；[A-401／A-404](../spec/agent/tools.md) 規定兩次無效模型回覆或未知 LLM 結果後人工處置；[A-302／A-303](../spec/agent/memory.md) 將超預算、容量恢復交人工；[C-06](../spec/contracts.md)、[B-404](../spec/base/storage.md)、[S-404](../spec/scheduling/operations.md) 規定 30 日留存。
+證據：[A-202](../../../spec/agent/input.md)、[S-101](../../../spec/scheduling/runs.md) 規定一則訊息一 run、普通新訊息永遠排後輪；[A-401／A-404](../../../spec/agent/tools.md) 規定兩次無效模型回覆或未知 LLM 結果後人工處置；[A-302／A-303](../../../spec/agent/memory.md) 將超預算、容量恢復交人工；[C-06](../../../spec/contracts.md)、[B-404](../../../spec/base/storage.md)、[S-404](../../../spec/scheduling/operations.md) 規定 30 日留存。
 
 這些可能是合理預設，但會直接決定「一句改算另一檔為何沒生效」、「偶發雲端斷線為何整輪等人」、「改錯設定是否必須重開任務」。安全要求是不能偷偷重複副作用、不能越過持久屏障，不是所有 LLM 呼叫都永遠只能人工確認後重試。使用者若願意對無工具執行的純模型呼叫接受有限重複費用，可另定有上限且先授權的政策；有外部副作用的工具仍維持 unknown 保守處理。
 

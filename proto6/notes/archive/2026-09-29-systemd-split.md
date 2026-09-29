@@ -1,6 +1,8 @@
+> 封存 2026-09-29：主要結論「交給 systemd」已被裁定第十四批「初版不用 systemd」推翻。現行看 [裁定第十四批](../verdicts/05-dependencies.md) 與 [spec](../../spec/README.md)；systemd-run 實測見 [探針](../probes/systemd-run-latency.md)。
+
 # daemon 與 root helper：哪些交給 systemd
 
-← [筆記索引](README.md)｜方向來源：[裁定紀錄「下班前的方向」第一條](2026-09-29-verdicts.md#下班前的方向同日尚未落進-spec)｜延遲實測：[systemd-run 延遲](probes/systemd-run-latency.md)
+← [筆記索引](../README.md)｜方向來源：[裁定紀錄「下班前的方向」第一條](../verdicts/04-late-day-directions.md#下班前的方向同日systemd-那條已被第十四批取代litellm-那條已落進-spec)｜延遲實測：[systemd-run 延遲](../probes/systemd-run-latency.md)
 
 2026-09-29 晚。使用者定了方向：daemon 站在 systemd 上面，能交給 systemd 的就交，不重造輪子，安全要小心。本篇把 spec 裡 daemon 和 root helper **現在負責的每一件事**逐條列出，標「交給 systemd／自己留著／不確定」。**這輪只列清單，沒改 spec**；每條最後一欄是 spec 條號，之後改 spec 時照著找。
 
@@ -54,7 +56,7 @@
 | D18 | 收尾程序不被成員上限困住 | 交給 systemd | 收尾是 systemd 本身在做，本來就在成員框外 | B-204 |
 | D19 | 重啟先把舊程序全殺 | 交給 systemd | 全部 aos unit 放在一個 `aos.slice` 底下，啟動時 `stop aos.slice`；systemd 按框記，不會殺錯重用 PID | B-603、P-116 |
 | D20 | `state.json`、boot id、pause 批次存檔 | 自己留著 | aos 自己的狀態；transient unit 重開機就消失，不能拿來存 | B-603、P-115、P-116 |
-| D21 | daemon 自己開機自啟、崩潰重啟 | 交給 systemd | 把 daemon 寫成 service unit（`Restart=on-failure`）。WSL 本來就只能這樣起 | B-603、[WSL 查證](2026-09-29-wsl-machine-check.md) |
+| D21 | daemon 自己開機自啟、崩潰重啟 | 交給 systemd | 把 daemon 寫成 service unit（`Restart=on-failure`）。WSL 本來就只能這樣起 | B-603、[WSL 查證](../2026-09-29-wsl-machine-check.md) |
 | D22 | Ctrl-C 停機：停新格、等寬限、清空 | 交給 systemd | 清空用 `stop aos.slice`；「先停新格、清完才存檔回 0」的順序照留 | B-604、P-114 |
 | D23 | unregister：排空目標與子樹 | 交給 systemd | 停掉該 node 的 slice 就連子樹一起停（實測） | B-604、P-105 |
 | D24 | 新檔通知就叫醒 | 不確定 | `.path` unit 能盯資料夾，但觸發後直接開 unit 會繞過 pending／pause；要嘛讓它只去叫 `aos node wake`，要嘛 daemon 自己用 inotify | B-504 |
@@ -89,7 +91,7 @@
 - **system 層**（PID 1）：能用 `User=` 切成任何帳號、能開 root 程序、能停任何人的 unit。一般帳號去叫會被 polkit 擋（實測）；root 叫則什麼都准。
 - **user 層**（`systemd-run --user`，每個帳號自己一個）：不能切帳號（實測 216）。整棵 user 樹的 cgroup 檔都歸該帳號，所以**同帳號的任何程式都能改自己的上限、在框外開程序**（實測）。
 
-一條要記住的規則：**誰能叫 system 層開 unit，誰就等於 root**。`CapabilityBoundingSet`、`NoNewPrivileges` 只限制程序自己，限制不了它請 PID 1 代辦（舊調查〈[宿主 root 第二道牆](investigations/proto5-host-root-second-wall.md)〉也講過「不得留下請牆外服務代辦的通道」）。
+一條要記住的規則：**誰能叫 system 層開 unit，誰就等於 root**。`CapabilityBoundingSet`、`NoNewPrivileges` 只限制程序自己，限制不了它請 PID 1 代辦（舊調查〈[宿主 root 第二道牆](import-2026-09-28/investigations/proto5-host-root-second-wall.md)〉也講過「不得留下請牆外服務代辦的通道」）。
 
 ### 幾種部署形態
 
@@ -127,7 +129,7 @@
 
 ## 四、需要使用者拍板的問題
 
-> 已裁定，見 [verdicts 第十四批](2026-09-29-verdicts.md#第十四批依賴同日晚尚未落進-spec)。
+> 已裁定，見 [verdicts 第十四批](../verdicts/05-dependencies.md#第十四批依賴同日晚已落進-spec)。
 
 | # | 問題 | 建議 |
 |---|---|---|

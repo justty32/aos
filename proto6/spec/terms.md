@@ -37,7 +37,7 @@ daemon 負責程序啟停，不判業務排程；可選 root helper 是 daemon �
 
 ## T-05．一萬份本體與少量活動
 
-〔使用者方向 2026-09-28〕目標是 10,000 個扮演 agent 的 node、每小時活躍不到 100 個、雲端推論，見[負載方向](../notes/2026-09-28-linux-resources-and-task-scheduling.md)。這不是固定併發上限。
+〔使用者方向 2026-09-28〕目標是 10,000 個扮演 agent 的 node、每小時活躍不到 100 個、雲端推論，見[負載方向](../notes/archive/import-2026-09-28/2026-09-28-linux-resources-and-task-scheduling.md)。這不是固定併發上限。
 
 〔建議預設，未拍板〕冷 node 保留檔案與登記，不各養常駐程序或空轉 tick；活動量依各 kernel 的資源 module，身分配置依[身分篇](base/identity-resources.md)。
 

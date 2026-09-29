@@ -6,7 +6,7 @@
 
 ## 第一批：notes 審查待裁定 1～10＋兩題附帶
 
-題目見 [notes 審查「待裁定」](../notes-review.md#待裁定10-條)、WSL 背景見 [WSL 機器查證](../2026-09-29-wsl-machine-check.md)
+題目見 [notes 審查「待裁定」](../archive/reviews-2026-09-28/notes-review.md#待裁定10-條)、WSL 背景見 [WSL 機器查證](../2026-09-29-wsl-machine-check.md)
 
 2026-09-29 在公司 WSL，使用者逐條裁定。**以裁定紀錄為準**；審查檔與 WSL 查證保留原樣當背景。
 

@@ -1,6 +1,8 @@
+> 封存 2026-09-29：一次性的 spec 重寫處置表，spec 已依它重寫完。現行看 [spec](../../spec/README.md) 與 [裁定紀錄](../verdicts/README.md)。
+
 # proto6 spec 重寫逐條處置表
 
-← [計畫入口](README.md)｜架構依據：[kernel 樹](../2026-09-29-kernel-tree.md)
+← [計畫入口](import-2026-09-28/plan/README.md)｜架構依據：[kernel 樹](../2026-09-29-kernel-tree.md)
 
 > 09-29 規劃產出。規劃完成後使用者又定了第六批（身分額度、inst user 欄位、daemon 細節、Q1～Q4 照建議），以[裁定紀錄](../2026-09-29-verdicts.md)為準。
 

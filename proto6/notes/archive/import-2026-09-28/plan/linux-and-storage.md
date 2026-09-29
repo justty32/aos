@@ -1,10 +1,12 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../../spec/README.md) 與 [kernel 樹](../../../../notes/2026-09-29-kernel-tree.md)。
+
 # Linux 接入與持久儲存
 
-> 2026-09-28 交接快照；[原始來源](../../../proto5/notes/2026-09-28-ten-thousand-agents/linux-and-storage.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../../proto5/notes/2026-09-28-ten-thousand-agents/linux-and-storage.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 >
-> 後續註記（2026-09-29，依 [notes 審查](../notes-review.md) 必修 9）：階段編號以[計畫入口](README.md)的 0–4 為準。本文驗證段的「第一階段」（少量帳號、quota、委派 cgroup）相當於入口的第 2 階段；「第二階段」「第三階段」大致對應入口的第 3、4 階段。
+> 後續註記（2026-09-29，依 [notes 審查](../../reviews-2026-09-28/notes-review.md) 必修 9）：階段編號以[計畫入口](README.md)的 0–4 為準。本文驗證段的「第一階段」（少量帳號、quota、委派 cgroup）相當於入口的第 2 階段；「第二階段」「第三階段」大致對應入口的第 3、4 階段。
 >
-> 後續註記（2026-09-29，依[裁定](../2026-09-29-verdicts.md) 5～8、10）：「特權佈建與日常運行分開」須補上日常特權點＝極小 root helper（spec B-303）。project quota 可選、只記帳，擁有者改 project ID 可跳出，不再是「待測」而是已知限制；backend 不綁 XFS，不支援就不用。control 與 work 同一 unit 時重啟全殺、在途工作全部 unknown，屬已知行為。共寫外部 workspace 由工具自行協調，不保證跨 agent 寫入一致。
+> 後續註記（2026-09-29，依[裁定](../../../2026-09-29-verdicts.md) 5～8、10）：「特權佈建與日常運行分開」須補上日常特權點＝極小 root helper（spec B-303）。project quota 可選、只記帳，擁有者改 project ID 可跳出，不再是「待測」而是已知限制；backend 不綁 XFS，不支援就不用。control 與 work 同一 unit 時重啟全殺、在途工作全部 unknown，屬已知行為。共寫外部 workspace 由工具自行協調，不保證跨 agent 寫入一致。
 
 ← [本輪規劃](README.md)｜[資源與任務方向](../2026-09-28-linux-resources-and-task-scheduling.md)
 

@@ -1,8 +1,10 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../spec/README.md) 與 [kernel 樹](../../../notes/2026-09-29-kernel-tree.md)。
+
 # Linux 資源、任務排程與通訊：後續討論紀錄
 
-> 2026-09-28 交接快照；[原始來源](../../proto5/notes/2026-09-28-linux-resources-and-task-scheduling.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../proto5/notes/2026-09-28-linux-resources-and-task-scheduling.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
-← [筆記索引](README.md)｜前文：[身分與工具繼承權限](2026-09-28-employee-identity.md)｜[使用建議](../../proto5/advice.md)
+← [筆記索引](../../README.md)｜前文：[身分與工具繼承權限](2026-09-28-employee-identity.md)｜[使用建議](../../../../proto5/advice.md)
 
 2026-09-28。記錄工具繼承權限決定之後的討論，未修改產品。本篇以「使用者已接受」「構想」「助理提出的邊界」「現行事實」區分狀態；不是已完成的規範或實作。
 
@@ -38,7 +40,7 @@
 
 ## 資源域必須跟著可信派工走
 
-**現行事實：** agent tick 把 LLM／工具工作交給 kernel，再由 kernel 派給 worker 執行；工具通常不是該次 tick 直接 fork 出來的子程序。因此不能只把 tick 放進某個 cgroup，就宣稱它委託的所有工作會自然繼承該資源域。現行接線可見 [`aos_agent_batch.py`](../../proto5/lib/aos_agent_batch.py) 與 [`aos_kernel_engine.py`](../../proto5/lib/aos_kernel_engine.py)。
+**現行事實：** agent tick 把 LLM／工具工作交給 kernel，再由 kernel 派給 worker 執行；工具通常不是該次 tick 直接 fork 出來的子程序。因此不能只把 tick 放進某個 cgroup，就宣稱它委託的所有工作會自然繼承該資源域。現行接線可見 [`aos_agent_batch.py`](../../../../proto5/lib/aos_agent_batch.py) 與 [`aos_kernel_engine.py`](../../../../proto5/lib/aos_kernel_engine.py)。
 
 **後續設計需要：** 可信派工資料攜帶委託 agent 的身分與資源歸屬，在工作開始執行之前就讓它進入正確 cgroup；不能讓工具自行填寫任意別人的資源域。這套接法適用於一般 exec 工作，不只 Python 或某一個工具包。具體採何種啟動方式尚未選定；daemon／kernel 自己維持控制層的資源歸屬。
 
@@ -48,7 +50,7 @@
 
 使用者曾考慮每個 agent 各有一個 tick-daemon，隨即自行撤回，**不列為待辦**。未來若與 FUSE 整合，讓 agent／tick 在同一個常駐程序中運行，並與 daemon 鬆耦合，仍只是後續構想，不是現在的部署前提。
 
-**現行喚醒鏈：** `say` 先存輸入，再往 kernel 的 requests 放 `wake`；daemon 查看 kernel requests，可提前開一格 kernel tick；kernel 派工作時按 worker 的門鈴。daemon 的 `poll_ms` 預設是 20 ms，這不是端到端延遲保證，也不是每個 agent 每 20 ms 必定推進。排隊、正在執行的 tick、啟動及其他負載都會影響體感。參考 [`aos_agent_say.py`](../../proto5/lib/aos_agent_say.py)、[`aos_agent_wake.py`](../../proto5/lib/aos_agent_wake.py)、[`aos_daemon.py`](../../proto5/lib/aos_daemon.py) 與 [`aos_kernel_engine.py`](../../proto5/lib/aos_kernel_engine.py)。
+**現行喚醒鏈：** `say` 先存輸入，再往 kernel 的 requests 放 `wake`；daemon 查看 kernel requests，可提前開一格 kernel tick；kernel 派工作時按 worker 的門鈴。daemon 的 `poll_ms` 預設是 20 ms，這不是端到端延遲保證，也不是每個 agent 每 20 ms 必定推進。排隊、正在執行的 tick、啟動及其他負載都會影響體感。參考 [`aos_agent_say.py`](../../../../proto5/lib/aos_agent_say.py)、[`aos_agent_wake.py`](../../../../proto5/lib/aos_agent_wake.py)、[`aos_daemon.py`](../../../../proto5/lib/aos_daemon.py) 與 [`aos_kernel_engine.py`](../../../../proto5/lib/aos_kernel_engine.py)。
 
 串流是另一件事：提早喚醒與開始執行，不等於模型輸出會逐字送到使用者。先前 `say`／`listen` 的串流需求仍未實作，不能用新的即時通知構想宣稱已解決。
 

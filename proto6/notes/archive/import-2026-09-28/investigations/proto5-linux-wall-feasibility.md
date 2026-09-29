@@ -1,6 +1,8 @@
+> 封存 2026-09-29：09-28 從 proto5 收錄的交接快照，是 proto6 的起點；09-29 起架構改為 node／kernel 樹，spec 已重寫。現行看 [spec](../../../../spec/README.md) 與 [kernel 樹](../../../../notes/2026-09-29-kernel-tree.md)。
+
 # proto5：Linux 外牆的實作可行性與複雜度
 
-> 2026-09-28 交接快照；[原始來源](../../../wf/workflows/investigations/proto5-linux-wall-feasibility.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
+> 2026-09-28 交接快照；[原始來源](../../../../../wf/workflows/investigations/proto5-linux-wall-feasibility.md)保留於原位置。本文的現行行為與實測均指當時 proto5／環境，非 proto6 已實作；僅調整導航與探針重跑路徑。
 
 ## 問題
 
@@ -60,7 +62,7 @@ Landlock 的檔案規則、TCP port 規則、signal 與 abstract Unix socket sco
 
 **降權組合：** 在上述 namespace 內以 root 開 NNP、清補充群組、逐一 drop capability bounding、清 ambient，再 setresgid/setresuid 到 1。結果 UID/GID 四欄均 1、Groups 空、Inh/Prm/Eff/Bnd/Amb 全 0、NNP 為 1；嘗試 setuid(0) 得 EPERM。這證明次序可組合，但不是宿主 root／完整 launcher 的驗證。這些 exploratory probes 以一次性 Python 執行，沒有留作產品測試。
 
-同輪另有可重跑的[Landlock canary 原始碼](../probes/landlock-canary.c)與[runner](../probes/run.py)，由另一條調查保留；本報告不修改那些檔案。
+同輪另有可重跑的[Landlock canary 原始碼](../../../probes/landlock-canary.c)與[runner](../../../probes/run.py)，由另一條調查保留；本報告不修改那些檔案。
 
 以下保留本次兩段實驗的 Python 核心，方便核對方法；不是 daemon 啟動器，也不是生產 sandbox。Landlock syscall 編號限本次 x86_64，scope 測試只對自己產生的程序發訊號。
 
