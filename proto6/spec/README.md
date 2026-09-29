@@ -12,6 +12,7 @@
 4. [agent](agent/README.md)：設定、輸入、記憶、工具、tick。
 5. [任務與排程](scheduling/README.md)：輪次與單寫者、ready／due、入場與額度、人工處置。
 6. [驗收入口](conformance.md)：主概念到葉條款的對照及整合故障場景；各節另有 Given／When／Then。
+7. [協議篇](protocol/README.md)：程式間指令與 JSON／資料夾交接的共用約定、待決事項及五份平行分工；人用 CLI 後續再定。
 
 ## 來源、正本與可替換預設
 
