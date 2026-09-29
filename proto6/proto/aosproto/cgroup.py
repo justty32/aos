@@ -64,6 +64,27 @@ class RealCgroup:
                 continue
         return result
 
+    def direct_pids(self, path):
+        try:
+            return {int(p) for p in (Path(path) / 'cgroup.procs').read_text().split()}
+        except FileNotFoundError:
+            return set()
+
+    def evacuate(self, root, leaf):
+        """G-3（第十六批）：省略 cgroup_root 時，原層剩下的程序也搬進 daemon 葉框，原層只當分支。"""
+        for _ in range(5):
+            left = self.direct_pids(root)
+            if not left:
+                return
+            for pid in left:
+                try:
+                    self.move(leaf, pid)
+                except ProcessLookupError:
+                    pass
+                except OSError as exc:
+                    raise Fault('cgroup_unavailable', '無法把原層程序搬進 daemon 葉框: ' + str(exc))
+        raise Fault('cgroup_unavailable', '原 cgroup 層一直有新程序，無法只當分支')
+
     def empty(self, path):
         events = Path(path) / 'cgroup.events'
         if not Path(path).exists():
@@ -126,6 +147,15 @@ class FakeCgroup(RealCgroup):
             stream.write(str(pid) + '\n')
         if pid == os.getpid():
             self.own = Path(path)
+
+    def direct_pids(self, path):
+        return {pid for pid in super().direct_pids(path) if live(pid)}
+
+    def evacuate(self, root, leaf):
+        # 假後端沒有核心的「一個程序只在一個框」語意：搬完手動從原層清掉。
+        for pid in self.direct_pids(root):
+            self.move(leaf, pid)
+        (Path(root) / 'cgroup.procs').write_text('')
 
     def pids(self, path):
         roots = super().pids(path)

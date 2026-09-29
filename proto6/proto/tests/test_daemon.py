@@ -52,10 +52,19 @@ class DaemonTests(Case):
         root = self.new_node()
         self.start_daemon(root)
         self.completed(root)
+        missing = self.path / 'missing.json'
+        write_json(missing, {'argv': ['true'], 'user': 'aos-no-such-user'})
+        # P-104（第十六批 G-11）：登記時帳號就要存在，once 也不放寬。
+        response = self.rpc('node.register', dict(node_id=str(missing), parent_id=str(root),
+                                                  identity_grant=[os.getuid()], once=True))
+        self.assertEqual(response['error']['data']['code'], 'user_invalid')
+        self.assertEqual(self.rpc('node.show', {'node_id': str(missing)})['error']['data']['code'], 'not_registered')
+        # wake 時仍重新解析：登記後帳號才消失（這裡改寫 inst 模擬），照舊產 .err 並解除。
         inst = self.path / 'once.json'
-        write_json(inst, {'argv': ['true'], 'user': 'aos-no-such-user'})
+        write_json(inst, {'argv': ['true']})
         self.register(inst, root, once=True)
         self.assertIsNone(self.show(inst)['last_tick'])
+        write_json(inst, {'argv': ['true'], 'user': 'aos-no-such-user'})
         self.rpc('node.wake', {'node_id': str(inst)})
         result = self.completed(inst)
         self.assertFalse(result['registered'])
@@ -202,10 +211,11 @@ class DaemonTests(Case):
         root = self.new_node()
         self.start_daemon(root)
         inst = self.path / 'once.json'
-        write_json(inst, {'argv': ['true'], 'user': 'aos-no-such-user'})
+        write_json(inst, {'argv': ['true']})
         error = Path(str(inst) + '.err')
         error.write_text('existing evidence')
         self.register(inst, root, once=True)
+        write_json(inst, {'argv': ['true'], 'user': 'aos-no-such-user'})
         self.rpc('node.wake', {'node_id': str(inst)})
         self.assertFalse(self.completed(inst)['registered'])
         self.assertEqual(error.read_text(), 'existing evidence')
@@ -227,6 +237,19 @@ class DaemonTests(Case):
         self.start_daemon(root, fake=cg, grace=20)
         self.assertEqual(child.wait(timeout=3), -signal.SIGKILL)
         self.assertEqual((cg / 'n-old/cgroup.kill').read_text(), '1\n')
+
+    def test_omitted_root_leaves_only_branch(self):
+        # G-3（第十六批）：省略 cgroup_root 時，原層的其他程序也搬進 daemon 葉框。
+        root = self.new_node()
+        cg = self.path / 'cg'
+        FakeCgroup(cg).create(cg)
+        other = subprocess.Popen(['sleep', '60'])
+        self.addCleanup(lambda: other.poll() is None and (other.kill(), other.wait()))
+        (cg / 'cgroup.procs').write_text('%d\n' % other.pid)
+        self.start_daemon(root, fake=cg)
+        self.assertEqual((cg / 'cgroup.procs').read_text(), '')
+        leaf = {int(p) for p in (cg / 'daemon/cgroup.procs').read_text().split()}
+        self.assertLessEqual({other.pid, self.daemon_pid}, leaf)
 
     def test_registration_constraints(self):
         root = self.new_node()

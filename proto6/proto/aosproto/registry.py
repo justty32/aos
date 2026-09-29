@@ -52,10 +52,10 @@ def new_entry(params, common_uid, registry, top=False):
         try:
             owner = uid(obj.get('user'), inherited)
         except Fault:
-            if not once or not isinstance(obj.get('user'), str):
+            if not isinstance(obj.get('user'), str):
                 raise
-            # Task brief's explicit once missing-account test overrides P-104.
-            owner = inherited
+            # P-104（第十六批 G-11）：登記時帳號就要存在，once 也一樣。
+            raise Fault('user_invalid', '帳號不存在: ' + obj['user'])
         if owner not in allowed:
             raise Fault('user_not_granted', 'inst user 不在額度內')
         entry = dict(params)
@@ -67,7 +67,7 @@ def new_entry(params, common_uid, registry, top=False):
         return entry
     except (OSError, ValueError, Fault) as exc:
         if isinstance(exc, Fault) and exc.code in ('not_registered', 'registration_conflict',
-                                                  'user_not_granted', 'path_not_granted'):
+                                                  'user_not_granted', 'path_not_granted', 'user_invalid'):
             raise
         raise Fault('invalid_params', str(exc), 2, -32602)
 

@@ -105,7 +105,7 @@ node 的上述短形（new/register/unregister/wake/pause/resume/show/ls/tick）
 
 取值指示詞、root helper／切 UID、provision 動作、controller／資源上限、state.json 保存恢復、ops 正式事項、outbox／收件／summary／published.json、kernel／agent 業務命令都不在本輪。
 
-resume **只開 IPC 閘門**，尚未做 P-210 的驗證與採用手改提交。不同內容重登一律衝突；limits 暫回 `{}`；尚不存在帳號的 identity_grant 預授未做。CLI 分頁中遇到 boot_id 改變回1要求重列。完整規格缺口與一次性例外見 [spec-gaps](notes/spec-gaps.md)。
+resume **只開 IPC 閘門**，尚未做 P-210 的驗證與採用手改提交。不同內容重登一律衝突；limits 暫回 `{}`；尚不存在帳號的 identity_grant 預授未做。CLI 分頁中遇到 boot_id 改變回1要求重列。登記時 inst user 必須已存在（once 也一樣）；省略 cgroup_root 時 daemon 把原層程序都搬進 `daemon` 葉框。完整規格缺口與一次性例外見 [spec-gaps](notes/spec-gaps.md)。
 
 假 cgroup 無法模擬核心的原子繼承與 PID 重用安全；同 UID 的惡意任務也不是本原型的隔離目標。正式驗收程序清空請以真 cgroup 為準。
 
