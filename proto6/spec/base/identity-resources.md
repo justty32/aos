@@ -28,15 +28,21 @@ Owner：可信 launcher（即上述 helper＋其啟動的固定 runner）。次�
 
 **Given** 移入 cgroup 或 setuid 失敗；**When** 放行程序；**Then** 不執行 agent argv。**Given** 非控制 daemon UID 的程序連 helper socket 要求啟動；**When** 送出請求；**Then** SO_PEERCRED 不符即拒絕，不建 leaf、不降權 exec。兩工具合計超 memory.max 時按共同域限制而非倍增。
 
-## B-304：容量與可寫路徑〔建議預設，未拍板〕
+## B-304：容量與可寫路徑〔建議預設，未拍板〕〔09-29 精簡，依 WSL 查證二・2、7 與裁定 6、8〕
 
 〔使用者方向 2026-09-29，[裁定](../../notes/2026-09-29-verdicts.md) 6、8〕磁碟額度是**可選項、只記帳**：檔案系統支援 project quota 就可啟用，不支援就設 `quota_backend=none`，不綁 XFS。啟用時 quota 是記帳與提早拒寫的額度，**不是硬上限或安全邊界**——檔案擁有者可改自己檔案的 project ID 或清掉繼承旗標而跳出額度，本規格不防；後續帳本可能改為分散式或其他記帳方式。
 
+WSL 根 ext4 不作可用的 quota backend；需要啟用記帳時另用支援 project quota 的專用卷或 loop 映像，仍須通過本條 probe；不支援就設 `quota_backend=none`，不要求改根 ext4，也不綁特定檔案系統（見 [WSL 查證](../../notes/2026-09-29-wsl-machine-check.md)）。
+
 Owner：quota backend 管理者。啟用時每 agent 必填 `quota_bytes,quota_inodes`（正整數記帳額度，無預設），project ID 與 filesystem ID 一起識別；home、history、checkpoint blobs、輸出與 scratch 設繼承 project。啟用時 probe 須實測拒寫，不回退到 du 統計冒充；none 時容量只受全局容量政策與檔案系統水位保護，查詢不得顯示成有每 agent 額度。外部 workspace 的容量由其管理者負責，profile 必須逐項聲明；多 agent 共寫同一外部 workspace 時由工具自行協調（裁定 10），aos 不提供鎖或合併，**不保證跨 agent 寫入一致性**。`TMPDIR` 只是預設位置，不能當成阻止寫 `/tmp` 的機制。所有其他可寫路徑必須受全局容量政策控制。
+
+不能假設 `/tmp` 是 tmpfs：WSL 的 `/tmp` 是根 ext4 上的一般目錄，會占磁碟；原生 Linux 也依實際掛載判定。profile 須說明各暫存位置的容量歸屬：寫在 agent project 內的磁碟暫存與該 agent 共用記帳額度（啟用時），其他磁碟暫存計入所在檔案系統的全局容量政策，不假稱有每 agent 額度；tmpfs 暫存則計入寫入工作的 cgroup 記憶體用量及該掛載的容量限制，不算磁碟 project quota。磁碟額度仍可選且只記帳，不新增 Windows 磁碟水位檢查。
 
 寫 checkpoint 遇 EDQUOT 不更新 pointer，控制帳本記錄 quota、暫停該 agent 新准入並通知上層；現有工作按取消流程排空。只有清理後 probe 有可寫空間且管理者恢復，才解除暫停。不以刪歷史或加額度自動補救。工具私自寫檔的 EDQUOT 未必可被 supervisor 觀察；只有受控 I/O errno 或明確診斷才標 quota，否則保存 exit 原因，不猜測。
 
 **Given** 已啟用 quota 且 block／inode quota 各滿一次；**When** 提交 checkpoint；**Then** 舊 pointer 可讀、控制區仍保存原因、取消可完成。工具忽略 EDQUOT 後 exit 0 不被宣稱已驗證其業務資料完整。**Given** agent 把自己檔案改到未設額度的 project ID；**When** 驗收報告；**Then** 只能說額度記帳可被擁有者繞過，不宣稱容量已被強制。
+
+**Given** 暫存分別落在磁碟目錄與 tmpfs；**When** 核對 profile 與用量；**Then** 各按實際落點計入磁碟容量或記憶體，不因路徑叫 `/tmp` 就漏算。**Given** WSL 只有不支援 quota 的根 ext4；**When** 選擇儲存 backend；**Then** 可用 `quota_backend=none`，不因缺少可選記帳功能而拒絕整體部署；另用專用卷或 loop 映像啟用者仍須通過 probe。
 
 機制依據：[Linux cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html) 的 cpu.max period、memory.oom.group、memory.swap.max、cgroup.kill 定義；profile 必須實測可用性，文件支援不等於部署已有權限。
 

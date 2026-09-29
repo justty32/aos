@@ -22,13 +22,20 @@
 
 三層均記錄版本、配置、測試環境及原始結果。GPU／本機模型不是此驗收前提；FUSE、分散式kernel、父子demo不在首版完成條件。
 
-驗收：Given mock的UID標籤測試通過，When 發布驗收結論，Then 只能說協定測試通過，不能說Linux DAC／cgroup／quota強制已通過。
+驗收：Given mock的UID標籤測試通過，When 發布驗收結論，Then 只能說協定測試通過，不能說Linux DAC／cgroup強制或可選quota記帳已通過；quota不宣稱是安全邊界。
 
 ## V-03．跨層必要故障場景
 
-〔建議預設，未拍板〕以下是一條整合測試鏈，不替代各節局部驗收。先讓agent A接件、排tool job、啟動attempt；在「blob發布／帳本提交／回收結果／提案commit」各窗口分別中斷，另測新訊息與最後idle提交競爭。重啟後只允許一個狀態寫入者，輸入不消失，未知attempt不自動再執行，已提交的工具意圖不重複。
+〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B4、B5；依 [WSL 查證](../notes/2026-09-29-wsl-machine-check.md)二・5、6 與[裁定](../notes/2026-09-29-verdicts.md) 7、附 WSL、附排隊先後〕以下是一條整合測試鏈，不替代各節局部驗收。先讓agent A接件、排tool job、啟動attempt；在「blob發布／帳本提交／回收結果／提案commit」各窗口分別中斷，另測新訊息與最後一次tick提交競爭，依 [S-201](scheduling/admission.md) 重算ready，不要求提交後一律觀測為idle。重啟後只允許一個狀態寫入者，輸入不消失，未知attempt不自動再執行，已提交的工具意圖不重複。另測暫停與提案競爭：屏障持久化後不得派新工，查詢仍顯示未解決的unknown；phase觀測值不授權派工或宣告run成功，省略僅供顯示的think／act持久轉移也不遺失可恢復的決策。
 
-在同鏈加入B冒名A、舊generation提交、同request不同內容、主程序退出但孫程序存活、agent quota滿、control磁碟滿、OOM、LLM429、送出後斷線、串流未final及重複usage。應產生各篇明定錯誤／等待狀態，不以無限重試掩蓋問題。清空程序只證明本機已停，不證明遠端副作用撤銷。
+在同鏈加入B冒名A、舊generation提交、同request不同內容、主程序退出但孫程序存活、已啟用的agent quota滿、control磁碟滿、OOM、LLM429、送出後斷線、拒絕公開result.ack、拒絕stream=true、部分內容不得當final及重複usage（串流邊界依 [S-305](scheduling/llm.md)）。應產生各篇明定錯誤／等待狀態，不以無限重試掩蓋問題。清空程序只證明本機已停，不證明遠端副作用撤銷。
+
+〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B2、A1 claim 部分〕另測 tick 無定期 heartbeat 時，程序退出與 deadline 仍觸發 [B-602](base/lifecycle.md) 收尾；舊受管範圍或 home 鎖未釋放時，即使新通知到達也不重派。確認清空並核對結果後才釋放 claim，排程依 [S-103](scheduling/runs.md) 重查條件；未提交過的遲來舊 generation 或過期 checkpoint revision 提案不得推進 checkpoint、消費輸入或發新工作；已提交提案的相同重送依 [C-05](contracts.md) 回原收據，不重做增量。控制端重啟仍按 B-603 全殺，無可信已發布結果的在途工作變 unknown，不自動重做未知工具／LLM。
+
+另加兩個整合故障場景：
+
+- **Given** 工具／LLM 有在途 attempt；**When** 控制端或 VM 在 10 秒內整個消失，來不及完成停機寬限；**Then** 下次啟動依 [B-603](base/lifecycle.md) 對帳，無可信已發布結果且不能證明從未放行者變 unknown，不自動重做；已持久結果與已提交 checkpoint 保留，清空舊受管範圍後才重派，不把寬限未滿當成成功或安全重試證據。
+- **Given** 睡眠期間 VM 暫停，monotonic 沒算睡掉的時間；**When** 睡醒牆鐘大跳，大批工作同時到期；**Then** 運行中逾時仍按 [C-01](contracts.md) 的經過時間判斷，不因牆鐘跳動就全部判逾時；到期工作依 [S-201](scheduling/admission.md) 進入 ready，先後照 S-204 的持久序號，依 S-203 全局與每 agent 准入名額分批放行，其餘保留等待，不一次全放，也不因到期而重做 unknown 工作。
 
 驗收：Given 任一故障注入點，When 系統恢復並查詢，Then 可從agent/run/job/attempt追溯原因，沒有跨owner工作、無證據成功、雙重usage結算或遺失已接納請求。
 

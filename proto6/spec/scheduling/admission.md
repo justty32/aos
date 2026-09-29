@@ -8,7 +8,7 @@
 
 每agent的排程摘要含 `ready:bool=false`、`next_due_at_ms:int|null=null`、`ready_since_at_ms:int|null=null`、`pending_seq:int>=0=0`、`served_seq:int>=0=0`。請求／結果／到期事件更新對應摘要，不載入其他agent history。SQLite索引至少支援ready選取及非空next_due按時間排序；每輪先搬到期列，再claim有限批次，預設最多64列，可配置正整數。
 
-pending_seq／served_seq只表示排程事件已出現／已被投影，不是agent輸入消費cursor。事件交易增加pending_seq並重算ready：當前run有可消費結果、可推進continuation或due才ready；只有後續queued run的新訊息而當前run仍wait時，不使當前run ready。無當前run才檢查FIFO隊首；隊首paused則不ready、不跳過它，否則投影ready。重算後served_seq更新至該交易已看見的事件序號；語意消費仍由C-05另記。
+pending_seq／served_seq只表示排程事件已出現／已被投影，不是agent輸入消費cursor。事件交易增加pending_seq並重算ready：當前run有可消費結果、可推進continuation或due才ready；只有後續queued run的新訊息而當前run仍等待既有工作時，不使當前run ready。無當前run才檢查FIFO隊首；隊首paused則不ready、不跳過它，否則投影ready。重算後served_seq更新至該交易已看見的事件序號；語意消費仍由C-05另記。
 
 claim與提案提交也在交易內重算這個投影，不以tick看到的舊ready值覆蓋新事件。當前run終局時同交易檢查FIFO下一run並設ready。無新事件、到期維護或待核對條件的冷agent不排定期tick。
 

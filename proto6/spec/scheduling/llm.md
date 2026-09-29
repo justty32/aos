@@ -36,13 +36,13 @@ client送出前持久標sent，再允許HTTP；這個窗口即使實際沒送也
 
 驗收：Given 遠端可能已完成但網路中斷，When timeout與重啟，Then 無第二attempt；查詢保留unknown與估額。人工同意重試按S-104另建attempt，費用可能重複的風險不被隱藏。
 
-## S-305．串流與 final
+## S-305．串流與 final〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B5〕
 
-首版stream=false；要求true而adapter不支援回invalid_record。未來支援時，每片段必填attempt_id、`chunk_seq:int>=1`、`text:string`、`ephemeral:bool`；片段按序去重，缺片不推斷後續內容。它們可展示但不能把job設succeeded。只有通過完整回應驗證、usage處理及result持久提交的終局才是Outcome。
+首版不支援串流，只接受 stream=false（省略時同值）；要求 stream=true 回 invalid_record。串流片段 schema 與片段交付機制延後，見未來設計；目前不作片段展示或去重的驗收承諾。
 
-沒有final而已展示部分文字的工作仍可能unknown。回覆串流、輸出檔追蹤與wake通知各自獨立，不用同一個JSON-RPC id重複發終局回應冒充串流。
+部分片段不是 final，不能據此把 job 設為 succeeded。只有通過完整回應驗證、usage 處理及 result 持久提交的終局才是 Outcome；未取得完整結果仍可能是 unknown，依 S-304 處理。
 
-驗收：Given 已顯示兩片段但final前中斷，When 使用者查run，Then 顯示部分內容加unknown／未完成，不回成功答案；沒有stream功能時立即喚醒照常可用。
+驗收：Given 請求 stream=true，When 首版驗證請求，Then 回 invalid_record；Given 只收到部分內容而完整結果前中斷，When 判定結果，Then 不能回成功終局；沒有串流功能時立即喚醒照常可用。
 
 ## S-306．有限的 run 預算
 

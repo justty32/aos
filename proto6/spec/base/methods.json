@@ -1,6 +1,6 @@
 {
  "contract": "wf-table/1",
- "source": "transport.md#b-502最小操作集合建議預設未拍板",
+ "source": "transport.md#b-502最小操作集合建議預設未拍板09-29-精簡依冗餘審查-b5",
  "extracted": "2026-09-28",
  "link_columns": [],
  "columns": [
@@ -22,12 +22,12 @@
   {
    "method": "run.pause",
    "params": "`run_id` ID",
-   "authorization_and_output": "owner／管理者；accepted，停止新增派工，已在途工作按 agent 規格收尾"
+   "authorization_and_output": "owner／管理者；accepted，暫停與在途工作處理依 [S-102](../scheduling/runs.md)"
   },
   {
    "method": "run.resume",
    "params": "`run_id` ID；可省 `budget` object（僅管理者，只增不減，依 [S-306](../scheduling/llm.md)）",
-   "authorization_and_output": "owner／管理者；accepted，paused 從已提交 checkpoint 恢復准入；非 unknown 的 needs_attention 走 [S-102](../scheduling/runs.md) 可選重新驗證出口，未提供或驗證未過回 conflict"
+   "authorization_and_output": "owner／管理者；accepted，paused 的恢復與非 unknown 的 needs_attention 可選重新驗證出口依 [S-102](../scheduling/runs.md)，未提供出口或驗證未過回 conflict"
   },
   {
    "method": "agent.get",
@@ -57,17 +57,17 @@
   {
    "method": "checkpoint.commit",
    "params": "`proposal` C-05 Proposal",
-   "authorization_and_output": "認證 tick 接口＋live claim；result `{committed:true,revision:整數>=1}`"
+   "authorization_and_output": "認證 tick 接口；提交／重送驗證依 [C-05](../contracts.md)；result `{committed:true,revision:整數>=1}`"
   },
   {
    "method": "result.ack",
-   "params": "`attempt_id` ID、`sha256` 64 小寫 hex",
-   "authorization_and_output": "控制消費端；accepted；摘要須等於已發布 Outcome 的規範化摘要"
+   "params": "首版不公開；專用欄位契約延後。",
+   "authorization_and_output": "首版依 C-04 回未知 method；確定有第二種消費者後再制定專用提交／確認契約。〔09-29 精簡，依冗餘審查 B5〕"
   },
   {
    "method": "run.outputs",
    "params": "run_id ID；可省 after_seq 非負整數預設0、limit正整數預設100上限1000",
-   "authorization_and_output": "owner／管理者；result 為 {outputs:Output陣列,next_seq:非負整數,has_more:bool}，Output依A203，僅列已提交可見輸出"
+   "authorization_and_output": "owner／管理者；result 為 {outputs:Output陣列,next_seq:非負整數,has_more:bool}，Output 依 [A-203](../agent/input.md)，僅列已提交可見輸出"
   }
  ]
 }

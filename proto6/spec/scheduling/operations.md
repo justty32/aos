@@ -14,13 +14,13 @@
 
 驗收：Given unknown job且本機孫程序仍活，When retry或cancel_with_unknown，Then 拒絕完成處置並顯示未清空；清空後合法處置保留原unknown證據。
 
-## S-402．查詢回應與拒絕理由
+## S-402．查詢回應與拒絕理由〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B2、B4〕
 
-run.get回run欄位、`agent_phase`、`pending_jobs:int>=0`、`inflight_jobs:int>=0`、`wait_reason`（null或object）。wait_reason必含 `code`（`not_due|quota_wait|local_limit|tool_result|llm_result|paused|canceling|result_unknown|claim_suspect|deployment_unavailable|budget_exceeded`）、`since_at_ms`；可省scope_id、next_due_at_ms。attempt.get回attempt與取消／cleanup狀態；缺權限回unauthorized，不泄漏其他owner結果。過期結果依C-06回gone。
+run.get回run欄位、`agent_phase`、`pending_jobs:int>=0`、`inflight_jobs:int>=0`、`wait_reason`（null或object）。`agent_phase` 與 `wait_reason` 都由查詢當下的 run／job／attempt 控制事實及已保存的語意 continuation 推導，不是另一份可寫狀態；本條是 wait_reason 的唯一契約。wait_reason必含 `code`（`not_due|quota_wait|local_limit|tool_result|llm_result|paused|canceling|result_unknown|deployment_unavailable|budget_exceeded|needs_attention`）、`since_at_ms`；可省scope_id、next_due_at_ms。`needs_attention` 只涵蓋資料／設定損壞等沒有專屬 code 的非 unknown 人工處置屏障，具體原因仍由 run 的 Error 提供；`result_unknown`、`budget_exceeded` 等專屬理由不得折疊成這個一般理由。wait_reason 只選一個主阻擋原因，不得刪去 run 欄位或各 job／attempt 可查的其他屏障與 unknown 證據。attempt.get回attempt與取消／cleanup狀態；缺權限回unauthorized，不泄漏其他owner結果。過期結果依C-06回gone。
 
-即時quota數可能在回覆後改變，查詢必帶`snapshot_at_ms`，不能把估算等待時間說成保證。操作者能區分ready未入場和已running，不能只顯示busy。profile不能滿足quota／cgroup／外牆時顯示deployment_unavailable且不派新工作。
+即時quota數可能在回覆後改變，查詢必帶`snapshot_at_ms`，不能把估算等待時間說成保證。操作者能區分ready未入場和已running，不能只顯示busy。profile 不能滿足 cgroup／外牆要求，或已啟用的 quota backend 未通過 probe 時，顯示 deployment_unavailable 且不派新工作；依 [B-304](../base/identity-resources.md) 選用 quota_backend=none 本身不構成部署錯誤。
 
-驗收：Given 同時有quota不足與被pause的工作，When 查詢，Then 主阻擋原因以pause優先，附帶仍可查quota資訊；無需載入history，也不為查詢觸發tick。
+驗收：Given 同時有quota不足與被pause的工作，When 查詢，Then 主阻擋原因以pause優先，phase 顯示 paused，附帶仍可查quota資訊；無需載入history，也不為查詢觸發tick。Given run 因資料損壞進 needs_attention，When 查詢，Then phase 顯示 error、wait_reason 為 needs_attention 並保留具體 Error。
 
 ## S-403．最小量測與過載
 

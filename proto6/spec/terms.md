@@ -24,13 +24,13 @@
 
 驗收：Given 同 job 的第一次嘗試結果未知，When 使用者明確允許重試，Then job_id 不變而 attempt_id 更新；第一個 attempt 的遲到結果不能覆寫第二個已選定的結果。
 
-## T-04．三張狀態圖不混用
+## T-04．控制狀態與觀測 phase 不混用
 
-〔建議預設，未拍板〕`agent.phase` 僅為 `idle|think|act|wait|paused|error`，描述語意步驟。`run.state` 為 `queued|active|paused|succeeded|failed|canceled|needs_attention`，描述任務生命週期。`job.state` 為 `queued|waiting|admitted|running|succeeded|failed|canceled|unknown`；`attempt.state` 為 `reserved|starting|running|canceling|succeeded|failed|canceled|unknown`。
+〔建議預設，未拍板；09-29 精簡，依冗餘審查 B4〕`agent.phase` 僅為 `idle|think|act|wait|paused|error`，是從 run／job／attempt 的控制事實與已保存的語意 continuation 推導出的唯讀觀測值，不是另一張可寫的控制狀態圖。`run.state` 為 `queued|active|paused|succeeded|failed|canceled|needs_attention`，描述任務生命週期。`job.state` 為 `queued|waiting|admitted|running|succeeded|failed|canceled|unknown`；`attempt.state` 為 `reserved|starting|running|canceling|succeeded|failed|canceled|unknown`。暫停、取消與錯誤屏障以 run 及工作狀態為權威，phase 不得解除或掩蓋它們。
 
-job 的 `waiting` 表示尚未入場、等 due／quota 等條件；進行中的遠端 HTTP 即使本機在等回覆仍為 `running`。agent 的 `wait` 不等於某個 job 一定仍 running，可能等人處置未知結果。`unknown` 不是成功、不是可自動重試的普通錯誤。run `needs_attention` 是保留可解決的暫停狀態，不是終局；終局為 succeeded／failed／canceled。
+job 的 `waiting` 表示尚未入場、等 due／quota 等條件；進行中的遠端 HTTP 即使本機在等回覆仍為 `running`。agent 的 `wait` 不等於某個 job 一定仍 running，也可能等工具／LLM 結果或額度；仍阻擋目前 run 的未解決 `unknown` 顯示 `error`。`unknown` 不是成功、不是可自動重試的普通錯誤。run `needs_attention` 是保留可解決的暫停狀態，不是終局；終局為 succeeded／failed／canceled。
 
-驗收：Given 工具成功而 agent 還未回答，When 更新工具結果，Then job 可 succeeded，但 run 不能因此直接 succeeded；agent 可能轉 think。
+驗收：Given 工具成功而 agent 還未回答，When 更新工具結果，Then job 可 succeeded，但 run 不能因此直接 succeeded；查詢可依 continuation 顯示 think。Given run 已 paused，When continuation 原先位於 act，Then phase 顯示 paused 且不得派新工作。
 
 ## T-05．一萬份本體與少量活動
 
