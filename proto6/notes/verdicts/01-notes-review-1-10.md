@@ -6,7 +6,7 @@
 
 ## 第一批：notes 審查待裁定 1～10＋兩題附帶
 
-題目見 [notes 審查「待裁定」](../archive/reviews-2026-09-28/notes-review.md#待裁定10-條)、WSL 背景見 [WSL 機器查證](../2026-09-29-wsl-machine-check.md)
+題目見 notes 審查「待裁定」（已封存檔 notes-review.md，索引見 [archive/README.md](../archive/README.md)）、WSL 背景見 [WSL 機器查證](../2026-09-29-wsl-machine-check.md)
 
 2026-09-29 在公司 WSL，使用者逐條裁定。**以裁定紀錄為準**；審查檔與 WSL 查證保留原樣當背景。
 
@@ -38,7 +38,7 @@
 | 下一步 | 更進一步的 spec：規定指令形狀與 JSON 協議格式 | 進行中 |
 
 補充（同日）：
-- 清理做成專門小程式 `aos-clean`，可掛在 tick 上跑，也可人直接跑；由此形成「往 tick 註冊程式、在每次 tick 前後執行」的掛勾機制 → [A-506](../../spec/agent/tick.md)、[B-404](../../spec/base/storage.md)。
+- 清理做成專門小程式 `aos-clean`，可掛在 tick 上跑，也可人直接跑；由此形成「往 tick 註冊程式、在每次 tick 前後執行」的掛勾機制 → [A-506](../../spec/tick.md)、[B-404](../../spec/base/storage.md)。
 - 待處理資料夾配一支小工具 `aos-attend` 自動處理，危險動作前問 y/n → [S-405](../../spec/scheduling/operations.md)。
 - 手打的操作指令也在這次協議篇範圍內，排在後面做。
 - 改 agent 設定＝管理者手打指令或直接改檔案；agent 要改就開放它對設定檔的寫權限，不另做更新機制，後續頂多包成工具 → [協議篇 P-011](../../spec/protocol/README.md) 暫定 2。
