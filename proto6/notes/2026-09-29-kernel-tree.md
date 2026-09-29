@@ -70,20 +70,20 @@ kernel 和 agent 都是「資料夾＋`aos-tick`＋註冊表」，差別只在�
 - **身分額度**：上層 kernel 向 daemon 註冊成員時，一併給它准用的身分；只能給自己手上有的。最頂層的額度寫在 daemon 設定檔（沒 helper 時只有通用 user）。額度只在 daemon 記憶體裡，重啟時隨重新註冊長回來。
 - 開 tick 時 inst 宣告的身分必須落在額度內，否則不跑並寫一件待處理事項。身分就是通用 user 時 daemon 自己開；不是時交給 root helper 切帳號。
 
-### inst 格式變動草案（posix 第 2 版）
+### inst 格式（proto6 第 1 版，使用者已確認）
 
-在 proto5 [inst-posix 第 1 版](../../proto5/spec/inst-posix/README.md)上加一個頂層欄位 `user`，其他六欄與指示詞規則不變：
+proto6 的 inst 以 proto5 [inst-posix](../../proto5/spec/inst-posix/README.md) 為底，多一個頂層欄位 `user`，其他六欄與指示詞規則不變。**不管 proto5 舊版相容**，這就是 proto6 的第 1 版：
 
 ```json
 {
-  "_metainfo": {"_type": "posix", "_version": 2},
+  "_metainfo": {"_type": "posix", "_version": 1},
   "user": "aos-a0042",
   "argv": ["aos-tick"],
   "cwd": "."
 }
 ```
 
-1. **要升版到 `_version: 2`**：第 1 版規則是「不認得的頂層鍵一律忽略」。如果只是加欄位不升版，舊的執行者會默默忽略 `user`，用自己的身分（通常是權限較大的通用 user）去跑——本來想隔離的變成不隔離。升版後舊執行者會直接拒絕（第 1 版規則 4）。第 1 版的 inst 照舊可用，意思是「繼承」。
+1. 執行者必須認得 `user`；不認得就不能執行這份 inst（不能默默忽略後用自己的身分跑）。
 2. **`user` 型別**：Linux 帳號名稱字串，或非負整數 UID。沒寫或空字串＝繼承。補充群組照該帳號在系統裡的設定（等同 `initgroups`），inst 不另寫群組。
 3. **`user` 不吃指示詞**（`$env`／`$fmt`／`$ref` 都不行，寫了就是錯）：身分要讓人一眼看檔案就知道，也讓 daemon 不必解析其他內容就能先做授權檢查。
 4. **授權先於一切**：daemon 只讀 `user` 這一欄做額度檢查；不過就是「根本沒跑」（沿用執行者自己失敗的 125，錯誤代號例如 `UserNotGranted`），不寫 `exit`。
