@@ -37,7 +37,7 @@ module 是 [node P-202～204](node.md) 的普通任務；CPU、memory、pids、L
 
 ## P-503．CPU、記憶體與 pids〔使用者方向 2026-09-29〕
 
-已裝 OS module 採 cgroup v2；資源層級跟可信 node 登記，不由 inst 或工作檔路徑決定。透過 [daemon P-107](daemon.md) 的 node.provision 先 cgroup_create，再 cgroup_limits；**無 helper 時由 daemon 在 systemd 委派子樹內執行相同動作**。父限制、權限及失敗判斷不變。
+已裝 OS module 採 cgroup v2；資源層級跟可信 node 登記，不由 inst 或工作檔路徑決定。透過 [daemon P-107](daemon.md) 的 node.provision 先 cgroup_create，再 cgroup_limits；**daemon 在交給它的 cgroup 子樹內（[B-605](../daemon.md)）執行這些動作，無 helper 時用通用 user**；上限寫在 node 那層一次，不每格重設。父限制、權限及失敗判斷不變。
 
 | resources 欄位 | 配額 | 用量摘要 | cgroup 對應 |
 |---|---|---|---|
@@ -82,7 +82,7 @@ agent 只按設定的一個 node 位址投 `llm.chat`，結果回 agent 的收�
 
 ## P-506．磁碟與網路〔使用者方向 2026-09-29〕
 
-磁碟額度只記帳，不是硬限制或隔離承諾；不綁檔案系統。網路 module 可不裝；**首版只記用量、不做硬限速**，要求硬限速的部署明確報不支援（第十一批）；只承諾已裝且實際可用的能力，沿 [S-203](../scheduling/admission.md)。
+磁碟額度只記帳，不是硬限制或隔離承諾；不綁檔案系統。〔使用者方向 2026-09-29 晚〕project quota 有就用；沒有（或設定強制關）就定期掃資料夾量用量，見 [B-304](../base/identity-resources.md)。網路 module 可不裝；**首版只記用量、不做硬限速**，要求硬限速的部署明確報不支援（第十一批）；只承諾已裝且實際可用的能力，沿 [S-203](../scheduling/admission.md)。
 
 〔建議預設，未拍板〕配額 `disk.bytes` 是非負的記帳額度。用量 `disk` 是 `{path, bytes}` 陣列，列出實際盤點的絕對路徑與磁碟配置 bytes；`path` 含其可觀測子樹，列入的範圍不得重疊或重複計同一資料。是否含 git 歷史、封存或外部 workspace，依列出的範圍與實際讀取權限判定，不聲稱涵蓋全機。同一份摘要依 `(st_dev,st_ino)` 去重 hardlink、以配置區塊量計 bytes；reflink／跨 node 共用實體區塊不承諾精確去重。量不到完整範圍就不報完整值、另留診斷，沿 [B-304](../base/identity-resources.md)。
 

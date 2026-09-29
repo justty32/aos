@@ -30,7 +30,7 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel �
 
 ## P-702．工具清單與參數 adapter〔A-401～403；工程預設〕
 
-[agent-tools](schemas/agent-tools.schema.json) 是 `{version:1,tools:[...]}`，空清單可用。每項含 `name,description,parameters,argv,cwd,result,timeout_ms,output_limit_bytes`；名稱唯一。parameters 是 JSON Schema 2020-12，根資料是 object，不用外部引用；`result.kind` 為 text 或 json，後者必填 `result.schema`。
+[agent-tools](schemas/agent-tools.schema.json) 是 `{version:1,tools:[...]}`，空清單可用。每項含 `name,description,parameters,argv,cwd,result,timeout_ms,output_limit_bytes`；名稱唯一。parameters 是 JSON Schema 2020-12，根資料是 object，不用外部引用；〔使用者方向 2026-09-29 晚〕執行期驗參數可用第三方 `jsonschema`，這是「Python 只用標準庫」的唯一例外；`result.kind` 為 text 或 json，後者必填 `result.schema`。
 
 arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.stdin；argv 直接 exec、不插值，cwd 沿工具設定、base 是發起 node。工具 inst 不填 user，stdout／stderr 由 runner 捕獲；不吃 JSON stdin 的程式另接普通 adapter。模型只看到 name、description、parameters。
 

@@ -18,7 +18,7 @@
 
 註冊關係、node 路徑 ID、IPC 授權及重啟重建以 [daemon](../daemon.md) 為正本。
 
-〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應權限；沒裝 module 不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。
+〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應 controller；CPU、記憶體等 module 沒裝不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。〔使用者方向 2026-09-29 晚〕cgroup v2 子樹本身是必要的，拿不到就不啟動，見 [B-605](../daemon.md)。
 
 〔建議預設，未拍板〕另設通用 user 時，部署須安排 daemon 的直接啟動路徑實際用該身分；非 root 程序不能只改一個設定就冒稱已切 UID。做不到就報部署錯誤。
 
@@ -34,7 +34,7 @@ root helper 本質上是 daemon 的一部分，切成小程序是為了安全，
 
 〔使用者方向 2026-09-29〕**一支指令、看啟動方式決定模式**：不用 sudo 開 daemon＝沒 helper 模式，整樹用通用 user，要求其他身分一律拒絕。用 sudo（root）開時，daemon 在接 IPC、讀任何 node 之前先 fork 出 helper，主程式隨即永久降權（清掉 root 身分、群組、capabilities 與特權 fd），啟動時在 stdout 印 `helper_pid=...`，並存兩份 pid 檔，細節見 [daemon](../daemon.md)。daemon 死掉時 helper 必須跟著結束（例如 `PR_SET_PDEATHSIG`，並以與 daemon 間的管道斷線為準），不留沒人管的 root 程序。
 
-〔使用者方向 2026-09-29〕用 sudo 開時通用 user 不能預設成 root：取叫 sudo 的原帳號（`SUDO_UID`），直接用 root 或由服務啟動時必須在設定檔明寫一個非 root 帳號，否則拒絕啟動。kill helper＝切斷**新的**特權操作：已開的 tick 照跑到結束，之後需要其他身分的 tick 一律不跑並寫待處理事項；helper 不自動重啟，要恢復得重開 daemon。已做的 chown、掛載不回滾。另可用 systemd 的 `CapabilityBoundingSet`、`SystemCallFilter` 當額外防護，不取代 helper。
+〔使用者方向 2026-09-29〕用 sudo 開時通用 user 不能預設成 root：取叫 sudo 的原帳號（`SUDO_UID`），直接用 root 或由服務啟動時必須在設定檔明寫一個非 root 帳號，否則拒絕啟動。kill helper＝切斷**新的**特權操作：已開的 tick 照跑到結束，之後需要其他身分的 tick 一律不跑並寫待處理事項；helper 不自動重啟，要恢復得重開 daemon。已做的 chown 不回滾。〔使用者方向 2026-09-29 晚〕systemd 的 `CapabilityBoundingSet`、`SystemCallFilter` 這類沙盒防護初版不用，以後再考慮。
 
 helper 只查可信註冊、安置已配置資源框、切目標帳號、exec 固定 runner；不接任意程式當 root 跑。先授權、切身分後解析與開檔的順序，以 [inst](inst.md) 為正本；失敗不能借高權限補救。
 
@@ -44,7 +44,7 @@ helper 只查可信註冊、安置已配置資源框、切目標帳號、exec �
 
 ## B-304：磁碟與可寫位置〔使用者方向 2026-09-29〕
 
-磁碟是可選 module，額度只記帳，不是硬上限或安全邊界；不綁 XFS 或其他檔案系統，也不強迫沒裝 module 的部署提供 quota。只報實際能計量的位置，不能把觀測不到的外部路徑說成已限額。多 node 共寫外部 workspace 由工具自行協調，aos 不保證跨 node 寫入一致。
+磁碟是可選 module，額度只記帳，不是硬上限或安全邊界；不綁 XFS 或其他檔案系統，也不強迫沒裝 module 的部署提供 quota。〔使用者方向 2026-09-29 晚〕project quota 有就用、沒有就定期掃資料夾計算用量；是否可用在 daemon 啟動時自動偵測，設定檔可強制關（[B-605](../daemon.md)）。node 放在不支援某功能的檔案系統上，那個功能就不支援，不做白名單。只報實際能計量的位置，不能把觀測不到的外部路徑說成已限額。多 node 共寫外部 workspace 由工具自行協調，aos 不保證跨 node 寫入一致。
 
 〔建議預設，未拍板〕暫存按實際掛載歸屬：普通磁碟目錄仍占磁碟，tmpfs 按其掛載限制與適用的記憶體計量處理；不能因路徑叫 `/tmp` 就算成 tmpfs。`TMPDIR` 只是預設路徑，不能當成限制寫入位置的機制。只有可信 I/O errno 或診斷才標 EDQUOT／ENOSPC，不從任意退出碼猜磁碟已滿。
 

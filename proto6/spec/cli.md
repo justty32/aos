@@ -36,7 +36,7 @@
 
 | # | argv／做什麼 | 成功時 stdout | 底層與失敗 |
 |---|---|---|---|
-| 1 | `aos daemon start --config F`：在前景開 daemon | `helper_pid=none`，sudo 模式為 `helper_pid=1234` | 同 `aos daemon --config F`；2 設定錯、125 初始化／收尾失敗。正常 Ctrl-C 清空程序、存 state.json 後回 0。 |
+| 1 | `aos daemon start --config F`：在前景開 daemon | `helper_pid=none`，sudo 模式為 `helper_pid=1234` | 同 `aos daemon --config F`；2 設定錯、125 初始化／收尾失敗（含版本自檢不過、拿不到 cgroup 子樹）。正常 Ctrl-C 清空程序、存 state.json 後回 0。 |
 | 2 | `aos daemon info --socket S [--json]`：查本次啟動 ID | `boot_id=…` | IPC `daemon.info`；IPC。每次重開換 ID。 |
 | 3 | `aos daemon attention ls --socket S [--source N] [--status open\|done] [--json]`：列 daemon 自己的事項 | 來源、ID、原因、說明；JSON 每頁 RpcResponse | IPC `daemon.attention.ls` 分頁；IPC。 |
 | 4 | `aos daemon attention show N ID --socket S [--json]`：看 daemon 事項 | 內容、建議處理、open／done | IPC `daemon.attention.show`；IPC。 |
@@ -172,7 +172,7 @@ m1.json 內容是 `{"text":"你好"}`；回話用 `{"text":"收到","in_reply_to
 
 ## H-036．七步走到底〔使用者方向；驗收腳本為工程預設〕
 
-前置：非 root、proto6／git／Python 3、git 作者已設，DEMO 尚不存在。A 跑 daemon，B 操作，C 跑 HTTP；都設 DEMO、S。註解為預期輸出。
+前置：非 root、proto6／git、Python 3.9 以上、Linux kernel 5.14 以上、git 作者已設，DEMO 尚不存在；已有一棵事先建好並交給目前帳號的 cgroup v2 子樹，絕對路徑放在 CG（[B-605](daemon.md)；沒有它 daemon 啟動即報錯退出）。A 跑 daemon，B 操作，C 跑 HTTP；都設 DEMO、S、CG。註解為預期輸出。
 
 ### 1. 寫 daemon 設定，先開一次空服務
 
@@ -183,7 +183,7 @@ DEMO="$HOME/aos-cli-demo"
 S="$DEMO/run/aos.sock"
 mkdir -p "$DEMO/run" "$DEMO/daemon-state" "$DEMO/drafts"
 cat > "$DEMO/daemon.json" <<EOFJSON
-{"version":1,"socket_path":"$S","state_dir":"$DEMO/daemon-state","roots":[]}
+{"version":1,"socket_path":"$S","state_dir":"$DEMO/daemon-state","cgroup_root":"$CG","roots":[]}
 EOFJSON
 ```
 
@@ -239,10 +239,10 @@ EOFJSON
 aos node config add "$DEMO/top" --from "$DEMO/drafts/pools.json" --to config/llm-pools.json
 # 各印安裝的 config/... 路徑
 cat > "$DEMO/daemon.json" <<EOFJSON
-{"version":1,"socket_path":"$S","state_dir":"$DEMO/daemon-state","roots":[{"node_id":"$DEMO/top","identity_grant":[$(id -u)],"interval_ms":1000}]}
+{"version":1,"socket_path":"$S","state_dir":"$DEMO/daemon-state","cgroup_root":"$CG","roots":[{"node_id":"$DEMO/top","identity_grant":[$(id -u)],"interval_ms":1000}]}
 EOFJSON
 aos llm pool ls "$DEMO/top"
-# local http://127.0.0.1:18406/v1 demo-model local-account
+# local http://127.0.0.1:18406/v1 demo-model local-account aos
 ```
 
 C 打 `python3 "$DEMO/mock.py"`；A 打 `aos daemon --config "$DEMO/daemon.json"` → helper_pid=none，自動 tick top。B 打 `aos node show "$DEMO/top" --socket "$S"` → 稍後 last_tick.completed、exit_code=0。mock 不驗真實 provider／UID 隔離。
