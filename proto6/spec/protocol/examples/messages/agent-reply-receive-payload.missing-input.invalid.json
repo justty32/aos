@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "id": "reply-1",
-  "seq": 1,
-  "at_ms": 1790000001000,
-  "kind": "final",
-  "text": "你好！",
-  "outcome": "succeeded"
-}

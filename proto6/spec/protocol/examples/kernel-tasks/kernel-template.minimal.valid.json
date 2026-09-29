@@ -63,7 +63,7 @@
       "retention_ms": 2592000000,
       "batch_limit": 64
     },
-    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/summary/published.json\n/archive/\n",
+    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/attention/\n/.aos/summary/published.json\n/archive/\n",
     ".aos/tasks.json": {
       "_metainfo": {
         "_type": "aos-tasks",
@@ -76,10 +76,7 @@
             "_version": 1
           },
           "argv": [
-            "aos-kernel-check",
-            "--node",
-            "/srv/aos/top",
-            "--in-tick"
+            "aos-kernel-check"
           ],
           "id": "check",
           "kind": "system",
@@ -95,10 +92,7 @@
           },
           "argv": [
             "aos-kernel-members",
-            "--node",
-            "/srv/aos/top",
-            "sync",
-            "--in-tick"
+            "sync"
           ],
           "id": "members",
           "kind": "kernel",
@@ -115,10 +109,7 @@
             "_version": 1
           },
           "argv": [
-            "aos-kernel-resources",
-            "--node",
-            "/srv/aos/top",
-            "--in-tick"
+            "aos-kernel-resources"
           ],
           "id": "resources",
           "kind": "kernel",
@@ -135,10 +126,7 @@
             "_version": 1
           },
           "argv": [
-            "aos-kernel-work",
-            "--node",
-            "/srv/aos/top",
-            "--in-tick"
+            "aos-kernel-work"
           ],
           "id": "work",
           "kind": "kernel",
@@ -155,10 +143,7 @@
             "_version": 1
           },
           "argv": [
-            "aos-kernel-llm-forward",
-            "--node",
-            "/srv/aos/top",
-            "--in-tick"
+            "aos-kernel-llm-forward"
           ],
           "id": "forward",
           "kind": "kernel",
@@ -176,10 +161,8 @@
           },
           "argv": [
             "aos-llm",
-            "--node",
-            "/srv/aos/top",
             "--config",
-            "/srv/aos/top/config/llm-pools.json"
+            "config/llm-pools.json"
           ],
           "id": "pool",
           "kind": "kernel",
@@ -196,10 +179,7 @@
             "_version": 1
           },
           "argv": [
-            "aos-kernel-usage-collect",
-            "--node",
-            "/srv/aos/top",
-            "--in-tick"
+            "aos-kernel-usage-collect"
           ],
           "id": "usage",
           "kind": "kernel",
@@ -216,10 +196,7 @@
             "_version": 1
           },
           "argv": [
-            "aos-kernel-schedule",
-            "--node",
-            "/srv/aos/top",
-            "--in-tick"
+            "aos-kernel-schedule"
           ],
           "id": "schedule",
           "kind": "kernel",
@@ -238,11 +215,8 @@
           },
           "argv": [
             "aos-clean",
-            "--node",
-            "/srv/aos/top",
             "--config",
-            "/srv/aos/top/config/clean.json",
-            "--in-tick"
+            "config/clean.json"
           ],
           "id": "clean",
           "kind": "custom",

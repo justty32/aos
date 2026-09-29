@@ -32,6 +32,6 @@
       "version": 1,
       "tools": []
     },
-    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/summary/published.json\n"
+    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/summary/published.json\n/.aos/attention/\n"
   }
 }

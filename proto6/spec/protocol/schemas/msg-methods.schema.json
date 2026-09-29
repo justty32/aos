@@ -11,8 +11,7 @@
             "agent.say",
             "kernel.schedule.recheck",
             "kernel.quota.set",
-            "kernel.usage.measure",
-            "agent.reply.receive"
+            "kernel.usage.measure"
           ]
         }
       }
@@ -60,73 +59,6 @@
                       "anyOf": [
                         {
                           "const": "say"
-                        },
-                        {
-                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "method": {
-            "const": "agent.reply.receive"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "params": {
-            "properties": {
-              "argv": {
-                "if": {
-                  "type": "array"
-                },
-                "then": {
-                  "minItems": 4,
-                  "prefixItems": [
-                    {
-                      "anyOf": [
-                        {
-                          "const": "aos"
-                        },
-                        {
-                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
-                        }
-                      ]
-                    },
-                    {
-                      "anyOf": [
-                        {
-                          "const": "agent"
-                        },
-                        {
-                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
-                        }
-                      ]
-                    },
-                    {
-                      "anyOf": [
-                        {
-                          "const": "reply"
-                        },
-                        {
-                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
-                        }
-                      ]
-                    },
-                    {
-                      "anyOf": [
-                        {
-                          "const": "receive"
                         },
                         {
                           "$ref": "node-inst.schema.json#/$defs/ValueDirective"

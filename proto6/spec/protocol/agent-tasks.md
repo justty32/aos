@@ -4,7 +4,7 @@
 
 ## P-700．範圍〔第十二批裁定；工程預設〕
 
-`aos-agent-step` 一次推進 agent module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](node.md) 使用 node 的 user 與鎖；任務直接開檔讀設定。
+`aos-agent-step` 推進 module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](node.md) 使用 node 的 user 與鎖；--node 省略用 cwd，任務直接讀設定。
 
 LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel 或自己登記 once。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
 
@@ -22,9 +22,9 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel �
 | `system_prompt` | system 文字，可空 |
 | `tools_file` | 固定 `config/tools.json` |
 | `tools.target_node` | node id＝交該 kernel；null＝agent 自己登記 once |
-| `daemon_socket` | daemon IPC socket 絕對路徑，登記 once、查報事項用 |
+| `daemon_socket` | daemon IPC socket 絕對路徑，登記 once 用 |
 
-設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。設定無效就記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
+設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
 
 改設定在 tick 外用持同把鎖的指令；重要手改先 pause、等全空，驗證並提交後 resume。任務不改 `config/` 是軟性原則，不檢查、不阻擋；自行改的人承擔同格新舊設定混用。
 
@@ -54,7 +54,7 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 |---|---|
 | `state/work/<attempt_id>/request.json`、`response.json`、`meta.json`、`input.json` | 工作請求、結果、配對及參數 |
 | `state/agent/contexts/<request_id>.json` | [agent-context](schemas/agent-context.schema.json)，來源與估算；messages／tools 沿 request_path 讀 |
-| `state/agent/replies/<reply_id>.json` | [agent-reply](schemas/agent-reply.schema.json)，正式 progress／final |
+| `state/agent/replies/<reply_id>.json` | [agent-reply](schemas/agent-reply.schema.json)，本地 progress／final |
 | `state/agent/usage/<request_id>.json` | [agent-usage](schemas/agent-usage.schema.json)，LLM 或自跑工具用量 |
 | `state/agent/sequence.json`、`config-state.json` | 序號與設定診斷 |
 | `.aos/summary/summary.json` | P-307 摘要；tick 提交後發布 ignored `published.json` 供上層讀 |
@@ -63,7 +63,7 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 
 ## P-704．一項 module、一項任務〔第十二批裁定；工程預設〕
 
-完整 argv 是 `aos-agent-step --node N`；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`；手動跑完整一格用 `aos node tick N`。
+完整 argv 是 `aos-agent-step [--node N]`，省略 node 就用 cwd（tick 設為 node 根）；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`；手動跑完整一格用 `aos node tick N`。
 
 | 任務 id | kind／group／needs | 內容 |
 |---|---|---|
@@ -77,11 +77,11 @@ module 只把請求／回應放 `.aos/outbox/`，把已消費原件複製到 P-7
 
 ## P-705．收話與收結果〔A-201、A-403、P-303～305；工程預設〕
 
-`agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON。接件後保存回址、原文與附件引用，建 queued input 及 user history；指令結果沿 work-result，收件確認放指令 stdout。附件先只保存引用，要內容就用普通讀檔工具。
+`agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON。接件後保存回址、原文與附件引用，建 queued input 及 user history；可省的 `in_reply_to` 原樣存 history，回話也照此處理。指令結果沿 work-result，收件確認放指令 stdout。附件先只保存引用，要內容就用普通讀檔工具。
 
 結果先核對 RPC id、可信來源及原請求，再保存與套入 history／決定；同 bytes 不重吃。工作結果在指令 stdout 裡按 [work](work.md) 解讀，不能把外層指令成功當成工具／LLM 成功。套用後才記 response_consumed、移除 pending；一批工具全齊才處理。
 
-`agent.reply.receive` 核對原 `agent.say` 與 input_id，保存回話並回指令結果；無配對留事項，不再產生 user 輸入。回話的接收確認只更新發件 meta，不觸發另一則回話。
+RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身仍是普通 agent.say。
 
 ## P-706．組 context 與發 LLM〔A-302～303、P-406；工程預設〕
 
@@ -108,7 +108,7 @@ module 只把請求／回應放 `.aos/outbox/`，把已消費原件複製到 P-7
 
 reply.input_id 是原 `agent.say` id；progress.outcome=null，final 為 succeeded／failed／canceled／unknown。取消與 unknown 結束須符合授權及本機收尾，不自動釋放 unknown。
 
-同組保存 reply、input 與 `agent.reply.receive` 請求；params 是對應指令 inst，stdin 引用完整 agent-reply JSON，reply_to=N，目標是原 input.reply_to。tick 提交後投件；自己回自己也下格收。原 `agent.say` 回應不改。
+同組保存本地 reply、input 與新 ID 的 `agent.say` 請求；stdin JSON 為 `{text,in_reply_to:原 input_id}`，reply_to=N，目標是原 input.reply_to。本地 progress／final 不另變成線上欄位。tick 提交後投件；自己回自己也下格收。原 `agent.say` 回應不改。
 
 有終局回話才把 input 記 done、填 completed_at_ms。模型原話不重存 history；程式產生的進度／失敗另建 assistant 事件，source_path 指 reply。pending_requests 只記 LLM／工具結果，回話交付另記 meta；本地已提交 final 可查，不表示對方已接納。
 
@@ -127,9 +127,9 @@ kernel 讀 agent 已提交用量，以 node／request／attempt 去重，逐筆�
 ## P-711．工具清單 CLI〔Q3、H-001；工程預設〕
 
 ```text
-aos-agent-tools add --node N --from F
-aos-agent-tools rm --node N NAME
-aos-agent-tools ls --node N [--json]
+aos-agent-tools add [--node N] --from F
+aos-agent-tools rm [--node N] NAME
+aos-agent-tools ls [--node N] [--json]
 # 人手：aos agent tools add N --from F／rm N NAME／ls N [--json]
 ```
 
@@ -140,14 +140,14 @@ stdin 不讀；add/rm stdout 印設定路徑，ls 印名稱／用途或完整 JS
 ## P-712．設定檢查與重驗〔A-102、P-601～604；工程預設〕
 
 ```text
-aos-agent-check --node N [--draft F | --validate-only]
-aos-agent-check --node N --recheck
+aos-agent-check [--node N] [--draft F | --validate-only]
+aos-agent-check [--node N] --recheck
 # 人手：aos agent config check N [--draft F]／recheck N
 ```
 
 直接開檔驗 inst／tasks／agent／tools、引用與權限，不試 provider。draft 是任意可讀替代 agent.json；validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫。0 有效、1 無效、2 用法錯、125 讀取／前置失敗；stdout 印 valid 或 invalid 與檔案欄位，stderr 診斷。
 
-recheck 取同把鎖、驗目前值，提交 config-state 後透過 daemon attention IPC 解除自己來源的 config_invalid；不解 unknown、不派工。IPC 失敗可在下次依已提交證據補報。safe handler 沿 ops，由來源核對 issue_id。鎖忙 75、保存失敗 1、提交／還原故障 3。
+recheck 取同把鎖、驗目前值，提交 config-state 後將自己的 config_invalid 從 `.aos/attention/open/` 移到 `done/`；不解 unknown、不派工。移檔失敗可依已提交證據補做。safe handler 沿 ops，由來源核對 issue_id。鎖忙 75、保存失敗 1、提交／還原故障 3。
 
 ## P-713．say／listen〔對話裁定、proto5；工程預設〕
 
@@ -160,7 +160,7 @@ aos-agent-talk listen [--target N] (--last [N] | --wait [秒] | --follow)
 
 target 預設 cwd、R 預設 N；TEXT 非空，wait 預設 300 秒。listen 三種看法互斥，show-calls 亦互斥。顯示與截字沿 [proto5 say](../../../proto5/spec/aos-agent/cli-talk.md)／[listen](../../../proto5/spec/aos-agent/cli-listen.md)，以下差異優先。
 
-say 取 R 鎖、提交 `agent.say` 原件與待送封套，再沿 tick 的交付規則投 N；只有投件權者明給 R。未登記／暫停也能投，印投件位置，不自行 wake。listen 從同一 commit 的 history 按 seq 查，JSON 每筆 message 一行；last 預設 1。wait／follow 每 200 ms 看新 commit，say wait 只認本次 input_id 的正式 final，progress 不結束等待；follow 印新 assistant 並 flush，Ctrl-C 回 0。
+say 取 R 鎖、提交 `agent.say` 原件與待送封套，再沿 tick 的交付規則投 N；只有投件權者明給 R。未登記／暫停也能投，印投件位置，不自行 wake。listen 從同一 commit 的 history 按 seq 查，本地依 input_id、收到的回話依 `in_reply_to` 對原句 id 分組，JSON 每筆 message 一行；last 預設 1。wait／follow 每 200 ms 看新 commit，follow 印新回話並 flush，Ctrl-C 回 0。say wait 讀 target 本地 replies，只認本次 input_id 的 final；只有投件權不保證能等到。
 
 用呼叫者權限，stdin 不讀、stderr 診斷。0 成功（final/failed 也表示收到回話）；2 用法；125 前置；1 讀／投失敗；75 鎖忙；3 提交／還原故障。等待逾時或確知卡住回 101，保留已提交訊息、提醒不要重說。
 
@@ -178,16 +178,16 @@ aos-agent-talk context show N --request ID [--json]
 
 `aos node new N --template agent --agent-config F [--user U]` 讀 F、填 N／已授權 U，建 repo 與初始 commit；無效回 2，不猜地址或授額外權限。持久登記由 kernel 做。
 
-[完整產物](examples/agent-tasks/agent-template.minimal.valid.json) 的 files 列 `.aos/inst.json`、`.aos/tasks.json`（**1 項**）、agent.json、空 tools.json、gitignore；不把 template 容器存進 node。另建 requests、responses、work、public 與 `.aos/jobs/`；state／summary 按需建立。[cat 工具清單](examples/agent-tasks/agent-tools.minimal.valid.json) 可從任意可讀路徑 add。
+[完整產物](examples/agent-tasks/agent-template.minimal.valid.json) 的 files 列 `.aos/inst.json`、`.aos/tasks.json`（**1 項**）、agent.json、空 tools.json、gitignore；不把 template 容器存進 node。另建 requests、responses、work、public、`.aos/jobs/` 與 ignored `.aos/attention/{open,done}/`；state／summary 按需建立。[cat 工具清單](examples/agent-tasks/agent-tools.minimal.valid.json) 可從任意可讀路徑 add。
 
 ## P-716．最小清理遍歷〔B-404、P-605～606；工程預設〕
 
-agent adapter 以 input_id 追原 `agent.say`、history、context、work、reply、`agent.reply.receive` 與 usage。只有 done 超過保留期、有終局時間、工作結果全消費、回話全確認、收件已清、沒有 unknown／組外引用，才整組封存；組內互引不阻止封存。
+agent adapter 以 input_id 追原 `agent.say`、history、context、work、本地 reply、送回的 agent.say 與 usage。只有 done 超過保留期、有終局時間、工作結果全消費、回話全確認、收件已清、沒有 unknown／組外引用，才整組封存；組內互引不阻止封存。
 
 未知格式或沒有可信用量收集證據則保留、報 clean_blocked。序號、未解問題與在用材料不清；input_id=null 的工具自用請求首版保留。不回收 git 歷史。
 
 ## P-717．格式驗收〔P-007〕
 
-[範例](examples/agent-tasks/) 依同名前綴驗 schema；template 另核對 node、argv、路徑。反例涵蓋相對地址、工具結果缺 schema、done 缺時間、history 越界、final 缺 outcome、負估算、缺 attempt、用量狀態矛盾、錯 commit、負序號、task 自設 user、template 缺任務表。線上 `agent.reply.receive` 例子見 messages。
+[範例](examples/agent-tasks/) 依同名前綴驗 schema；template 另核對 node、argv、路徑。反例涵蓋相對地址、工具結果缺 schema、done 缺時間、history 越界、final 缺 outcome、負估算、缺 attempt、用量狀態矛盾、錯 commit、負序號、task 自設 user、template 缺任務表。線上 agent.say 回話例子見 messages。
 
 正例全過、反例全拒；`bash wf/tools/wf-lint.sh proto6` broken=0。格式驗證不代替權限、狀態配對與端到端循環驗收。

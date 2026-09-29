@@ -8,9 +8,9 @@
 
 〔使用者方向 2026-09-29〕daemon 在記憶體使用一張登記表，**node 資料夾路徑就是 id**。所有 node 都按需啟動。daemon 不讀訊息、工作狀態或任務註冊表，不排業務工作、不分資源；只用登記與喚醒資料，讀 inst 僅為 `user` 授權。
 
-本機 socket 提供登記、解除、pause／resume、wake 及查詢。pause／resume 是「不再開新格／准許開新格」的開關，不殺正在跑的；wake 是「現在跑一格」，不改 pause。pause 時保留 wake，resume 後才可執行。daemon 也按登記間隔跑 inst；同一 node 的互斥依 [B-602](tick.md)。agent 通常不設定期，由所屬 kernel 判斷何時叫醒、同時准許多少成員執行。kernel 自己那格結束就退出，不等成員完成；LLM／工具先送請求、後續 tick 收結果，見 [tick](tick.md)。
+本機 socket 提供登記、解除、pause／resume、wake 及查詢，開關與叫醒規則見 [P-104～106](protocol/daemon.md)。daemon 按登記間隔或 wake 跑 inst；互斥依 [B-602](tick.md)。agent 通常不設定期，由 kernel 決定何時叫醒及同時執行數；kernel 本格結束就退出，不等成員，LLM／工具由後續 tick 收結果。
 
-〔建議預設，未拍板〕記憶體登記只保留啟動所需資料：資料夾路徑、父 node 路徑、inst 位置、可選定期間隔、繼承身分及身分額度；另有執行中程序與待喚醒標記。登記可標 `once`，跑一格後自動解除；可信 `parent_id` 記下發起 node，資源歸它。工作可用單一 inst 檔，欄位見[daemon 協議](protocol/daemon.md)。相同授權者重複登記相同資料無害，不重啟正在跑的程序。登記鏈不得成環，也不能藉重複登記搶走別隊的成員；核對由可信父子登記完成，不靠目錄名稱猜測。
+〔建議預設，未拍板〕登記只留啟動所需資料、執行程序與待喚醒標記，欄位依 [daemon 協議](protocol/daemon.md)。`once` 可用單一 inst 檔，跑一格自動解除；可信 parent_id 固定資源歸屬。重複登記、父子鏈與額度核對依 P-104。
 
 ### IPC 授權與身分額度
 
@@ -18,9 +18,9 @@
 
 ### 執行身分與 helper
 
-〔使用者方向 2026-09-29〕daemon 開 tick 前只讀 [inst 的 `user`](base/inst.md) 授權，不解析其他工作內容；不合額度就不跑並寫[待處理事項](scheduling/operations.md)。欄位型別、繼承、125／`exit`、指示詞及切身分後開檔的規則均以 inst 篇為正本。
+〔使用者方向 2026-09-29〕daemon 開 tick 前只讀 [inst 的 `user`](base/inst.md) 授權，不解析其他工作內容；不合額度就不跑並寫該 node 的[待處理事項](scheduling/operations.md)。其餘解析與執行規則依 inst 篇。
 
-啟動路徑與可選 helper 依 [B-303](base/identity-resources.md)。
+啟動路徑與可選 helper 依 [B-303](base/identity-resources.md)。node 問題寫該 node 的 `.aos/attention/`（ignore）；寫不出就 stdout 警告。daemon 自身問題才留 daemon attention／stderr；stdout 另印 helper PID，兩個 PID 提示檔依 [P-102](protocol/daemon.md)。
 
 **驗收：**無事 node 不開 tick；重複叫醒不重疊。身分拒絕及無 helper 情境見 [V-03](conformance.md)。
 

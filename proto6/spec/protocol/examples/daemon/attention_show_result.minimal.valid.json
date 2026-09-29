@@ -4,11 +4,11 @@
   "result": {
     "version": 1,
     "source_node": "/srv/aos/team",
-    "issue_id": "config-1",
-    "reason": "config_invalid",
-    "message": "設定已修好，等待重新驗證。",
+    "issue_id": "helper-1",
+    "reason": "helper_unavailable",
+    "message": "helper 已消失。",
     "actions": [
-      "recheck"
+      "inspect_helper"
     ],
     "status": "open"
   }

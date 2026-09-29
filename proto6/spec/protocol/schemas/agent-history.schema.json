@@ -30,6 +30,9 @@
     },
     "message": {
       "$ref": "llm-messages.schema.json#/$defs/message"
+    },
+    "in_reply_to": {
+      "$ref": "common.schema.json#/$defs/ID"
     }
   },
   "required": [

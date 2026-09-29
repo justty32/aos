@@ -60,14 +60,13 @@ responses/<id>.json  # RpcResponse
 
 ## P-306．method 就是指令〔使用者方向 2026-09-29〕
 
-檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，表示「在你那裡跑這條指令」。指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致，而且是收件 node 開放的命令；否則 -32601。`user`、`cwd`、stdin 路徑不能增加授權。接件執行該命令的本地動作，不再投同一份 RPC。
+檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，表示「在你那裡跑這條指令」。指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致，而且是收件 node 開放的命令；否則 -32601。envs、指示詞與 stdin 路徑照 inst，借權讀檔或換程式的風險由使用者承擔。接件執行該命令的本地動作，不再投同一份 RPC。
 
 有業務資料的命令從 stdin 讀一份 JSON；inst.stdin 是收件者可讀的絕對檔案路徑，不是 JSON 內容。發件者將資料隨請求固定並保留至消費完成；收件者用自己的權限開檔。無資料的命令省略 stdin。需要結果的串流用 `{"$opt":"inherit"}`，由接件執行器捕獲；其餘串流規則沿 inst。輸入形狀與 argv 的一致性須在展開及讀檔後另驗，schema 不代替開放命令檢查。
 
 | method／完整命令 | stdin JSON／本地動作與 stdout |
 |---|---|
-| `agent.say`／`aos agent say` | `{text,attachments?}`；text 非空、attachments 為可讀絕對檔案路徑陣列。保存輸入，stdout `{"accepted":true}`；正式 progress／final 另以新 ID 的 `agent.reply.receive` 送回。 |
-| `agent.reply.receive`／`aos agent reply receive` | [agent-reply](schemas/agent-reply.schema.json)；id 對 RPC id、input_id 對原 agent.say。核對來源、保存後 stdout `{"accepted":true}`；不當新輸入、不啟 LLM。 |
+| `agent.say`／`aos agent say` | `{text,attachments?,in_reply_to?}`；text 非空、attachments 為絕對檔案路徑陣列。一律收進 history，stdout `{"accepted":true}`；回話也是新 ID 的 agent.say，以 in_reply_to 指原句 id。 |
 | `kernel.schedule.recheck`／`aos kernel schedule recheck` | 無；核對 reply_to 指向的可信直接成員收件與摘要，重新判斷排程，stdout `{"accepted":true}`。不保證叫醒，也不改額度。 |
 | `kernel.quota.set`／`aos kernel quota set` | [res-quota](schemas/res-quota.schema.json)；投 quota.node_id 的可信父 kernel，只准父配置權 owner／祖先，核對 seq 與父額度、提交後 stdout `{"accepted":true}`。不代表 OS 已套用。 |
 | `kernel.usage.measure`／`aos kernel usage measure` | 無；由 owner／可信直接父要求重測，stdout 為 [res-usage](schemas/res-usage.schema.json)，不啟用缺席 module。 |
@@ -78,7 +77,7 @@ responses/<id>.json  # RpcResponse
 
 授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：不開放／命令不符 -32601，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict` 或 `resource_observation_failed`。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址只留本地診斷。
 
-**驗收：**argv 少了 aos、和 method 不符或未開放都回 -32601；看正式回話不會開模型，也不產生無限確認往返。
+**驗收：**argv 少了 aos、和 method 不符或未開放都回 -32601；listen 只讀 history，不開模型；RPC 收件確認不再引發回話。
 
 ## P-307．上層直接讀成員摘要〔建議預設，未拍板〕
 
@@ -90,7 +89,7 @@ responses/<id>.json  # RpcResponse
 
 ## P-308．schema 與最小範例〔建議預設，未拍板〕
 
-[範例](examples/messages/)涵蓋完整 inst、命令結果、各命令的輸入與摘要。缺回址、雙 result/error、命令不符、空文字、漏 input_id、負配額／用量及布林 due 都拒絕；重送與同 ID 異 bytes 另依 P-304 驗行為。
+[範例](examples/messages/)涵蓋完整 inst、命令結果、各命令的輸入與摘要。缺回址、雙 result/error、命令不符、空文字、無效 in_reply_to、負配額／用量及布林 due 都拒絕；重送與同 ID 異 bytes 另依 P-304 驗行為。
 
 ## P-309．待決與跨篇
 

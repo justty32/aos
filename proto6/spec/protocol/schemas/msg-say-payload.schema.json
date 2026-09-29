@@ -17,6 +17,9 @@
         "minLength": 1,
         "pattern": "^/[^\\u0000]*$"
       }
+    },
+    "in_reply_to": {
+      "$ref": "common.schema.json#/$defs/ID"
     }
   },
   "additionalProperties": false

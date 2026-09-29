@@ -32,7 +32,7 @@
 
 root helper 本質上是 daemon 的一部分，切成小程序是為了安全，緊急時可以 kill；不需 UID 隔離的部署可不裝。主 daemon 非 root，目標就是通用 user 時由 daemon 自己開；需要其他身分才交 helper。任務表裡的系統性任務也不是 root，要 root 的固定步驟留在 helper。
 
-〔使用者方向 2026-09-29〕**一支指令、看啟動方式決定模式**：不用 sudo 開 daemon＝沒 helper 模式，整樹用通用 user，要求其他身分一律拒絕。用 sudo（root）開時，daemon 在接 IPC、讀任何 node 之前先 fork 出 helper，主程式隨即永久降權（清掉 root 身分、群組、capabilities 與特權 fd），啟動時印出 helper 的 PID 讓使用者可以直接 kill。daemon 死掉時 helper 必須跟著結束（例如 `PR_SET_PDEATHSIG`，並以與 daemon 間的管道斷線為準），不留沒人管的 root 程序。
+〔使用者方向 2026-09-29〕**一支指令、看啟動方式決定模式**：不用 sudo 開 daemon＝沒 helper 模式，整樹用通用 user，要求其他身分一律拒絕。用 sudo（root）開時，daemon 在接 IPC、讀任何 node 之前先 fork 出 helper，主程式隨即永久降權（清掉 root 身分、群組、capabilities 與特權 fd），啟動時在 stdout 印 `helper_pid=...`，並存兩份 pid 檔，細節見 [daemon](../daemon.md)。daemon 死掉時 helper 必須跟著結束（例如 `PR_SET_PDEATHSIG`，並以與 daemon 間的管道斷線為準），不留沒人管的 root 程序。
 
 〔使用者方向 2026-09-29〕用 sudo 開時通用 user 不能預設成 root：取叫 sudo 的原帳號（`SUDO_UID`），直接用 root 或由服務啟動時必須在設定檔明寫一個非 root 帳號，否則拒絕啟動。kill helper＝切斷**新的**特權操作：已開的 tick 照跑到結束，之後需要其他身分的 tick 一律不跑並寫待處理事項；helper 不自動重啟，要恢復得重開 daemon。已做的 chown、掛載不回滾。另可用 systemd 的 `CapabilityBoundingSet`、`SystemCallFilter` 當額外防護，不取代 helper。
 

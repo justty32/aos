@@ -15,12 +15,13 @@
 | `requests/`、`responses/` | node 根目錄的外部 JSON-RPC 請求／回應收件區；兩格都 ignore，各含發布用 `.tmp/`；細節由 messages 篇定義 |
 | `work/` | 任務的暫存工作進度；ignore |
 | `.aos/jobs/<id>/` | 替成員跑工具、打 LLM 的 once 工作；ignore |
+| `.aos/attention/` | 本 node 的待處理事項，含 daemon 發現的 node 問題；ignore |
 | `.aos/summary/` | 給上層讀的摘要；summary.json 追蹤、published.json ignore，見 P-307 |
 | `.aos/outbox/` | 待 tick 投出的請求／回應；追蹤，見 P-206 |
 | `public/` | 可供其他 node 存取的共用空間；是否追蹤由內容決定 |
-| `.gitignore` | 至少含 `/requests/`、`/responses/`、`/work/`、`/.aos/jobs/`、`/.aos/summary/published.json`；追蹤 |
+| `.gitignore` | 至少含 `/requests/`、`/responses/`、`/work/`、`/.aos/jobs/`、`/.aos/attention/`、`/.aos/summary/published.json`；追蹤 |
 
-git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git` 一定是資料夾。其內 `aos/tick.lock` 是 P-203 的鎖；一般清理不得移除或替換這個鎖檔。待處理事項經 daemon IPC 查詢／回報，見 [ops](ops.md)。
+git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git` 一定是資料夾。其內 `aos/tick.lock` 是 P-203 的鎖；一般清理不得移除或替換這個鎖檔。待處理事項放 `.aos/attention/`，不隨 group 還原，見 [ops](ops.md)。
 
 〔使用者方向 2026-09-29，裁定「收件分兩格」〕請求在被問者的 `requests/<id>.json`，回應在發問者的 `responses/<id>.json`。回應仍投回發問者家，不改成由發問者去對方家取。
 
@@ -69,7 +70,7 @@ git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git`
 
 無設定需求的程式沒有必讀的環境變數或必寫的回應封套；`true`、腳本與既有程式都能直接當任務。key 不由 tick 放入 argv 或任務環境；daemon／runner 的環境來源照 [身分篇](../base/identity-resources.md)，inst 的 `envs` 沿正本。
 
-tick 先對 P-200 鎖檔取非阻塞獨占 flock，全格持有。任務另繼承同一 open-file-description 的鎖 fd，號碼放 `AOS_TICK_LOCK_FD`；`--in-tick` 工具須 fstat 對上鎖檔並以該 fd 核對獨占鎖，不能只信環境或旗標。任務不得解鎖，退出前關閉自身副本，後代全空後 tick 才釋鎖。這只是同帳號合作約定，不是授權。每項跑完、確認其後代清空後才往下；清不空就停止，不提早還原仍有人在寫的檔案。收尾沿 [B-202](../base/execution.md)。
+tick 先對 P-200 鎖檔取非阻塞獨占 flock，全格持有。任務另繼承同一 open-file-description 的鎖 fd，號碼放 `AOS_TICK_LOCK_FD`；工具以 fstat 對上鎖檔並核對獨占鎖，判斷是否在 tick 內；無繼承鎖就自行持鎖，不能只信環境。任務不得解鎖，退出前關閉自身副本，後代全空後 tick 才釋鎖。這只是同帳號合作約定，不是授權。每項跑完、確認其後代清空後才往下；清不空就停止，不提早還原仍有人在寫的檔案。收尾沿 [B-202](../base/execution.md)。
 
 | tick 結束碼 | 意思 |
 |---|---|
@@ -92,7 +93,7 @@ git 基線、範圍及還原語意依 [tick 正本](../tick.md)。實作以基�
 
 commit 訊息為 `aos-tick group <first_task_id>..<last_task_id>`，單項兩端相同；作者用 repo 設定，不互動、不執行 git hooks。無 diff 不 commit。任務自行換 HEAD／分支、後代未清空時保留現場，不盲目還原。
 
-commit／還原／清理故障保存基線與收件，停後續組，在 git 管理目錄 `aos/tick-blocked` 寫 UTF-8 原因。格首看到就回 125、不碰工作樹；本格故障回 3。即使擋板寫不出，仍由 [daemon P-105](daemon.md) 依可信退出證據停格並報 attention／stderr。直接呼叫者同樣須修復後才能再跑；修復者暫停、持鎖、核對 repo 後移除擋板。
+commit／還原／清理故障保存基線與收件，停後續組，在 git 管理目錄 `aos/tick-blocked` 寫 UTF-8 原因。格首看到就回 125、不碰工作樹；本格故障回 3。即使擋板寫不出，仍由 [daemon P-105](daemon.md) 依可信退出證據停格，寫 node 的 `.aos/attention/`；寫不進去只在 daemon stdout 警告。直接呼叫者同樣須修復後才能再跑；修復者暫停、持鎖、核對 repo 後移除擋板。
 
 合併 commit 須暫停、持鎖，保留現版本及仍被請求／設定引用的 commit 或內容；不得延後對外派送前的提交。submodule 各自提交、父只管 gitlink，無跨 repo 原子保證；歷史空間依 [B-404](../base/storage.md)。
 
@@ -108,7 +109,7 @@ commit／還原／清理故障保存基線與收件，停後續組，在 git 管
 
 ## P-207．加入普通設定與重要設定手改〔建議預設，未拍板〕
 
-argv：`aos-config-add --node <node_dir> --from <source> --to <target>`。source 是任意可讀路徑，相對呼叫 cwd；target 是 node/config/ 內檔案，相對 node、不准 ..／symlink 逃出。安裝整份設定、保留來源。
+argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省略 node 用 cwd。source 是任意可讀路徑，相對呼叫 cwd；target 是 node/config/ 內檔案，相對 node、不准 ..／symlink 逃出。安裝整份設定、保留來源。
 
 用呼叫者帳號，無自訂環境；stdin 不讀，stdout 成功印 target＋LF，stderr 印 code: 說明。讀來源及 repo，寫目標與 git。取同一非阻塞鎖、拒 dirty 或故障擋板；JSON 草稿先驗 P-002，領域設定下一格依 [A-102](../agent/configuration.md) 驗證。
 
@@ -120,7 +121,7 @@ argv：`aos-config-add --node <node_dir> --from <source> --to <target>`。source
 
 ## P-208．收件區權限〔建議預設，未拍板〕
 
-node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄 traverse 與 requests／responses 及 .tmp/ 的寫入／遍歷權。用共享群組或 ACL 保證 node 可讀、消費提交後可 unlink，不依賴投件者 umask，不一律 world-writable。
+建 node 時須開 daemon 對 `.aos/attention/` 的寫權。node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄 traverse 與 requests／responses 及 .tmp/ 的寫入／遍歷權。用共享群組或 ACL 保證 node 可讀、消費提交後可 unlink，不依賴投件者 umask，不一律 world-writable。
 
 投件權不含 repo／config／key 讀權，也不保證投件者間不能改檔；不覆蓋與內容核對見 P-003，可信來源及同 UID 界線見 [messages P-303](messages.md)。權限配置由上層 kernel 用自己的帳號做，固定特權步驟經 daemon；key 隔離見 [work P-405](work.md)。
 

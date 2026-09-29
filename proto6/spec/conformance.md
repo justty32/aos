@@ -17,7 +17,7 @@
 | 工作材料、可信結果、後代收尾 | [work](base/work.md)、[execution](base/execution.md) |
 | 追蹤／ignored 區、完整發布、去重與清理 | [storage](base/storage.md)、[transport](base/transport.md) |
 | kernel 樹、資源 module 與 LLM 池 | [scheduling](scheduling/README.md) |
-| 可選 run、unknown 處置與集中待辦 | [runs](scheduling/runs.md)、[operations](scheduling/operations.md) |
+| 可選 run、unknown 處置與待辦彙整 | [runs](scheduling/runs.md)、[operations](scheduling/operations.md) |
 | agent 任務、設定、context、工具、完成證據 | [agent](agent/README.md) |
 | 跨篇 ID、時間、結果與錯誤 | [contracts](contracts.md) |
 
@@ -57,7 +57,7 @@ daemon 或 VM 突然消失後，全殺舊 tick 與受管後代才重開；主程
 
 驗重要設定暫停手改、確認提交再恢復；普通設定由任意可讀路徑經持同一把鎖的工具匯入，下格可讀；tick 內改設定不檢查或阻擋。滿碟或 commit／還原失敗不得假成功、刪原件或開新格。
 
-清理依 [B-404](base/storage.md) 驗保留與去重證據，不把移出日常 context 當成已釋放 git 歷史。待辦日常透過 IPC 查，磁碟副本只供重開接續；刪副本不代表問題解決；來源後續核對須補回，無終端的危險處置須跳過。牆鐘大跳時到期工作仍依本 kernel 序號及額度分批放行，不重做 unknown。
+清理依 [B-404](base/storage.md) 驗保留與去重證據，不把移出日常 context 當成已釋放 git 歷史。node 事項存 ignored `.aos/attention/`，daemon 自己事項才走 IPC；沿樹彙整清單。寫不進 node 只警告到 stdout，daemon 自己錯誤才到 stderr；啟停核對兩份 pid 檔，舊檔不拿來殺程序。無終端的危險處置須跳過。牆鐘大跳時到期工作仍依本 kernel 序號及額度分批放行，不重做 unknown。
 
 ## V-04．萬級穩態與冷啟動分開
 

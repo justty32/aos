@@ -68,7 +68,6 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 - 首次由父 kernel 登記、既有項可重登；IPC、bytes 去重、摘要發布、資源 method、鎖 fd 與故障停格，依 [daemon](daemon.md)、[messages](messages.md)、[node](node.md)。
 - **LLM 共享窗口與池狀態**：最小格式及估算由 [kernel P-811～812](kernel-tasks.md) 定義；unknown 保留占用，不自動到期釋放。相同 provider 限制交同一池管理 node，不能靠同名 scope 跨 node 同步（[resources P-505](resources.md)）。
 - **領域接口**：模型／人格／工具 adapter、正式回話、context 與預設清理遍歷已由 [agent 任務篇](agent-tasks.md) 及 [kernel 任務篇](kernel-tasks.md) 定義。尚未統一的是 unknown 人工處置、可選 run method 與自訂任務的清理 adapter；依 [ops](ops.md) 使用明示部署 adapter，不認得的 method 回 -32601，clean 缺可信證據就保留。
-- 最新裁定的 `agent.say` 回話及 daemon／node 待辦分流，尚須同步下列協議與 schema；人手接法及差異見 [CLI 缺口表](../cli.md)。
 - done 留存、磁碟 hardlink 計量與池路由照各篇工程預設；git 歷史回收留後續，不把本次格式驗證當產品實作。
 
 ## P-009．分工表〔主編補〕
