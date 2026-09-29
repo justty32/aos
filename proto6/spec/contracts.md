@@ -16,9 +16,9 @@
 
 Agent registry 必填 `agent_id`、`uid`、`gid`（整數 >=0）、`groups`（整數陣列，去重）、`home`（絕對路徑）、`resource_domain`（ID）、`project`（object，含 `filesystem_id` ID 與 `project_id` 整數 >=1；profile 的 `quota_backend=none` 時為 null，見 [B-304](base/identity-resources.md)）、`status`（`enabled|disabled|retired`）。這些由管理者登記；普通 request 不得更改。registry另必填 `registry_revision:int>=1`、`profile_id:ID`。UID/GID須在profile允許範圍，拒絕UID0與daemon/kernel/管理者UID；不同 live agent 不得共用 UID；`generation` 初始 1，僅控制層遞增。
 
-〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B3〕Run 必填 `run_id`、`agent_id`、`state`、`created_at_ms`、`config_revision`（ID）、`input_ids`（非空 request_id 陣列）。`finished_at_ms`、`final_ref`、`error` 可省，預設 null；終局必須填 finished_at_ms，成功必填 final_ref，失敗必填 error。config_revision 對應不可變設定 bundle，由它引用工具、context policy 與模型設定，不是正在編輯的路徑；子版本可供查詢展開，不另存為 run 的權威版本欄位。整輪固定為建議，更新及可選的 tick 邊界換版依 [A-102](agent/configuration.md)。
+〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B3〕Run 必填 `run_id`、`agent_id`、`state`、`created_at_ms`、`config_revision`（ID）、`input_ids`（非空 request_id 陣列）。`finished_at_ms`、`final_ref`、`error` 可省，預設 null；終局必須填 finished_at_ms，成功必填 final_ref，失敗必填 error。config_revision 對應不可變設定 bundle，由它引用工具、context policy 與模型設定，不是正在編輯的路徑；子版本可供查詢展開，不另存為 run 的權威版本欄位。可省 `config_changes`（換版紀錄陣列，預設 []）；設定更新在下一次 tick 開始時換上，依 [A-102](agent/configuration.md)。
 
-驗收：Given A 的普通投件包含 B 的 uid，When 接口驗證，Then 拒絕無此欄位／冒名，不能以該值開程序；run 之後改配置仍引用原 revision（實作依 [A-102](agent/configuration.md) 選擇在 tick 邊界換版者，須留下換版紀錄）。
+驗收：Given A 的普通投件包含 B 的 uid，When 接口驗證，Then 拒絕無此欄位／冒名，不能以該值開程序；run 之後改配置，進行中的 tick 仍用原 revision，下一次 tick 依 [A-102](agent/configuration.md) 換版並留下換版紀錄。
 
 ## C-03．Job 與 attempt
 
@@ -69,6 +69,6 @@ Blob 的受管副本與 home 同計入 agent project quota（啟用時，記帳�
 {"version":1,"job_id":"job_17","agent_id":"agent_a","run_id":"run_3","kind":"tool","state":"queued","payload_ref":{"key":"blob_9","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bytes":120},"created_at_ms":1790000000000,"seq":42,"retry_class":"never"}
 ```
 
-範例摘要僅示意。ID tombstone／去重摘要至少保留至run終局後30日（可配置正整數天）；期間不重用ID。未終局／unknown不自動到期清除；清理後保留摘要，過期查詢回gone。
+範例摘要僅示意。ID tombstone／去重摘要至少保留至run終局後30日（可配置正整數天）；期間不重用ID。未終局／unknown不自動到期清除；清理後保留摘要，過期查詢回gone。清理怎麼做、誰來做依 [B-404](base/storage.md)：跟著該 agent 的 tick 一起處理，過期的刪除或封存。
 
 驗收：Given 終局結果已依保留政策回收但 ID tombstone 還在，When 重送同 request，Then 回原終局摘要或 gone，不建立新 run；未終局結果不被這個清理規則刪掉。

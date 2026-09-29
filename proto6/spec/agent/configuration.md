@@ -12,13 +12,13 @@
 
 驗收：Given 有效 agent 與缺少的模型引用；When 提交設定；Then 回結構化 `config_invalid`，舊有效版本與 run 不變。
 
-## A-102 每輪版本引用與更新〔建議預設，未拍板〕〔09-29 精簡，依冗餘審查 B3〕
+## A-102 設定版本引用與更新〔使用者方向 2026-09-29：改設定在下一次 tick 生效〕〔09-29 精簡，依冗餘審查 B3〕
 
-run 建立為 queued 時，控制層只保存一個 `config_revision`，由該 bundle 引用工具、context policy 與模型設定；查詢可展開顯示子版本，但展開值不是另一份權威。更新設定須先完整保存及校驗新 bundle 與其引用內容，再由控制層原子切換 agent 的「後續 run 預設版本」。合法更新是有效版本 → 另一有效版本，無法原地修改已發布版本。建議整輪維持同一 config_revision，已有 queued 或 active run 不跟著換，修正時取消舊 run 再建立新 run，不偷換其輸入。依 [09-29 裁定](../../notes/2026-09-29-verdicts.md) 2(b) 這不是硬規定：實作可選擇讓非終態 run 在下一次 tick 開始前改用新 bundle，但須在 run 紀錄保存換版時點與新舊 config_revision，不得在 tick 執行中途換版；設計上盡量遵循[兩次 tick 之間的環境穩定性](../../notes/between-ticks-configuration.md)。
+run 建立為 queued 時，控制層保存一個 `config_revision`，由該 bundle 引用工具、context policy 與模型設定；查詢可展開顯示子版本，但展開值不是另一份權威。更新設定須先完整保存及校驗新 bundle 與其引用內容，再由控制層原子切換 agent 的「目前設定版本」。合法更新是有效版本 → 另一有效版本，無法原地修改已發布版本。依 [09-29 使用者裁定](../../notes/2026-09-29-verdicts.md) 1，**新設定在下一次 tick 開始時生效**，不等整輪結束：控制層取得 tick claim 時，若 agent 目前設定版本不同於 run 的 config_revision，在同一交易把 run 的 config_revision 換成新版本，並在 run 紀錄追加換版紀錄（換版時點、舊與新 config_revision、生效的 tick attempt）。tick 執行中途一律不換版；已派出、執行中的工具／LLM 工作沿用派出時的版本跑完。queued 的 run 同樣在它的第一次 tick 才取用當時的目前版本。想要舊 run 完全不受新設定影響，要取消舊 run 再建新 run。設計上盡量遵循[兩次 tick 之間的環境穩定性](../../notes/between-ticks-configuration.md)。
 
-控制層負責版本引用的存活性：非終態 run 所引用的 bundle 及其引用內容禁止回收；重啟載入 run 紀錄中的引用，不自動用最新版替代。若 bundle 或其引用內容遺失、摘要不符，run 轉 needs_attention，phase 顯示 error，記 `config_unavailable`；修復原內容後可經 [S-102](../scheduling/runs.md) 的可選 resume 重新驗證出口回 active，phase 依 [A-503](tick.md) 推導；實作未提供該出口時只能取消，另建新 run。版本錯誤不得觸發 LLM 或工具。
+控制層負責版本引用的存活性：非終態 run 或在途工作所引用的 bundle 及其引用內容禁止回收；重啟載入 run 紀錄中的引用，不自動用最新版替代。若 bundle 或其引用內容遺失、摘要不符，run 轉 needs_attention，phase 顯示 error，記 `config_unavailable`；修復原內容後可經 [S-102](../scheduling/runs.md) 的可選 resume 重新驗證出口回 active，phase 依 [A-503](tick.md) 推導；實作未提供該出口時只能取消，另建新 run。版本錯誤不得觸發 LLM 或工具。
 
-驗收：Given run R 引用 bundle V1；When 管理者修改工具或 context policy 的來源、發布 bundle V2 並重啟；Then 採建議預設時 R 仍由 V1 解析各部分、新建立 run 才使用 V2，查詢展開值與該 bundle 相符；實作選擇換版時，R 的紀錄可查換版時點與新舊 config_revision，且進行中的 tick 看到的仍是 V1。非終態 R 引用的 bundle 及子版本不被回收；任一引用遺失或摘要不符時不派工，轉 needs_attention。
+驗收：Given run R 引用 bundle V1 且有一個 tick 正在執行；When 管理者發布 bundle V2；Then 進行中的 tick 看到的仍是 V1，已派出的工具照 V1 跑完；下一次 tick 開始時 R 改用 V2，run 紀錄可查換版時點與新舊 config_revision，查詢展開值與 V2 相符。仍被非終態 run 或在途工作引用的 bundle 及子版本不被回收；任一引用遺失或摘要不符時不派工，轉 needs_attention。
 
 ## A-103 人格與權限分界〔使用者方向 2026-09-28，連 notes〕
 
