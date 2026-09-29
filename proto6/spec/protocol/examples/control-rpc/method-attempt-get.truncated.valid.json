@@ -1,0 +1,45 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_attempt_truncated_1",
+  "result": {
+    "attempt": {
+      "version": 1,
+      "attempt_id": "attempt_1",
+      "job_id": "job_1",
+      "agent_id": "agent_a",
+      "ordinal": 1,
+      "generation": 1,
+      "state": "failed",
+      "created_at_ms": 1790000000000,
+      "started_at_ms": 1790000000000,
+      "finished_at_ms": 1790000001000,
+      "outcome": {
+        "status": "failed",
+        "result_ref": {
+          "key": "exec_result_truncated_1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "bytes": 512
+        },
+        "error": {
+          "code": "resource_exhausted",
+          "message": "工具輸出超過上限；已截斷並完成本機清空。",
+          "retryable": false,
+          "details": {
+            "reason": "output_limit"
+          }
+        }
+      }
+    },
+    "cancellation": {
+      "cancel_requested": false,
+      "requested_at_ms": null,
+      "cleanup_state": "cleared",
+      "cleanup_evidence_ref": {
+        "key": "cleanup_truncated_1",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "bytes": 128
+      }
+    },
+    "snapshot_at_ms": 1790000001000
+  }
+}

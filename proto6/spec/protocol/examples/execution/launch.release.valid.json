@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "kind": "release",
+  "attempt_id": "attempt_a",
+  "hook_run_id": null,
+  "snapshot_revision": "snap_a",
+  "gate_record_id": "gate_a"
+}

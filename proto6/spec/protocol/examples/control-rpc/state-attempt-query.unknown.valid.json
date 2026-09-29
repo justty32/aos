@@ -1,0 +1,28 @@
+{
+  "attempt": {
+    "version": 1,
+    "attempt_id": "attempt_1",
+    "job_id": "job_1",
+    "agent_id": "agent_a",
+    "ordinal": 1,
+    "generation": 1,
+    "state": "unknown",
+    "created_at_ms": 1790000000000,
+    "outcome": {
+      "status": "unknown",
+      "result_ref": null,
+      "error": {
+        "code": "result_unknown",
+        "message": "原 attempt 的結果尚未確認。",
+        "retryable": false
+      }
+    }
+  },
+  "cancellation": {
+    "cancel_requested": true,
+    "requested_at_ms": 1790000000000,
+    "cleanup_state": "unknown",
+    "cleanup_evidence_ref": null
+  },
+  "snapshot_at_ms": 1790000000000
+}

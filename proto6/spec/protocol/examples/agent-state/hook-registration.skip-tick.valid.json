@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "prepare",
+  "when": "pre",
+  "argv": [
+    "/usr/local/libexec/prepare"
+  ],
+  "on_failure": "skip_tick"
+}

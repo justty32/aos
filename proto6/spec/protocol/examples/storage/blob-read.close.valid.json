@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "kind": "blob_read_closed",
+  "request_id": "close_1",
+  "agent_id": "agent_a",
+  "read_handle_id": "read_handle_1"
+}

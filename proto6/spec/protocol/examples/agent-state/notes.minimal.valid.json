@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "content_ref": {
+    "key": "notes_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 2
+  },
+  "source_refs": [
+    {
+      "key": "input_1",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 2
+    }
+  ]
+}

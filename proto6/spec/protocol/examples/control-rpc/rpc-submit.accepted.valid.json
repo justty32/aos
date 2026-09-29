@@ -1,0 +1,10 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_submit_1",
+  "result": {
+    "accepted": true,
+    "request_id": "req_submit_1",
+    "run_id": "run_1",
+    "input_seq": 1
+  }
+}

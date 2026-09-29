@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "storage-attention",
+  "description": "proto6 storage 協議；建議預設，未拍板。授權、引用及持久化另依 storage.md。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Open"
+    },
+    {
+      "$ref": "#/$defs/Done"
+    }
+  ],
+  "$defs": {
+    "Open": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "attention_open"
+        },
+        "item_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "code": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "since_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "run.resume",
+              "run.cancel",
+              "run.resolve",
+              "aos-clean"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 4
+        },
+        "job_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/BlobRef"
+          },
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "item_id",
+        "agent_id",
+        "run_id",
+        "code",
+        "message",
+        "since_at_ms",
+        "actions"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "agent_id": {
+                "type": "null"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "run_id": {
+                "type": "null"
+              },
+              "actions": {
+                "items": {
+                  "const": "aos-clean"
+                }
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "job_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "attempt_id"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "Done": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "attention_done"
+        },
+        "item_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "code": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "since_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "run.resume",
+              "run.cancel",
+              "run.resolve",
+              "aos-clean"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 0
+        },
+        "job_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/BlobRef"
+          },
+          "maxItems": 32
+        },
+        "resolved_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "resolution": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "actor": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "request_id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            }
+          },
+          "required": [
+            "action",
+            "actor",
+            "request_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "item_id",
+        "agent_id",
+        "run_id",
+        "code",
+        "message",
+        "since_at_ms",
+        "actions",
+        "resolved_at_ms",
+        "resolution"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "agent_id": {
+                "type": "null"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "run_id": {
+                "type": "null"
+              },
+              "actions": {
+                "items": {
+                  "const": "aos-clean"
+                }
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "job_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "attempt_id"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

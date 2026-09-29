@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "agent_id": "agent_a",
+  "ready": false,
+  "next_due_at_ms": null,
+  "ready_since_at_ms": null,
+  "pending_seq": 0,
+  "served_seq": 0
+}

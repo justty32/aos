@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "event_seq": 1,
+  "run_id": "run_1",
+  "kind": "input",
+  "content_ref": {
+    "key": "input_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 2
+  }
+}

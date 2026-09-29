@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "request_id": "req_tool_1",
+  "job": {
+    "version": 1,
+    "job_id": "job_1",
+    "agent_id": "agent_a",
+    "run_id": "run_1",
+    "kind": "llm",
+    "state": "succeeded",
+    "payload_ref": {
+      "key": "request_minimal",
+      "sha256": "fe739f935366f4f65f0c27c0217c1733bdaad808b91657457401c2ef44a13ded",
+      "bytes": 307
+    },
+    "created_at_ms": 1789999999900,
+    "seq": 1,
+    "retry_class": "never",
+    "selected_attempt_id": "attempt_1",
+    "outcome": {
+      "status": "succeeded",
+      "result_ref": {
+        "key": "result_minimal",
+        "sha256": "08892e7eb4d7ffe7b652f4d45ac7613d1b64a1ce995adc4c249371b1fa41c393",
+        "bytes": 743
+      },
+      "error": null
+    }
+  },
+  "attempt": {
+    "version": 1,
+    "attempt_id": "attempt_1",
+    "job_id": "job_1",
+    "agent_id": "agent_a",
+    "ordinal": 1,
+    "generation": 1,
+    "state": "succeeded",
+    "created_at_ms": 1789999999900,
+    "started_at_ms": 1790000000000,
+    "finished_at_ms": 1790000000100,
+    "outcome": {
+      "status": "succeeded",
+      "result_ref": {
+        "key": "result_minimal",
+        "sha256": "08892e7eb4d7ffe7b652f4d45ac7613d1b64a1ce995adc4c249371b1fa41c393",
+        "bytes": 743
+      },
+      "error": null
+    }
+  },
+  "snapshot_at_ms": 1790000000100,
+  "notification_seq": 1
+}

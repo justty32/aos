@@ -1,0 +1,456 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "llm-dispatch",
+  "description": "proto6 協議篇 llm.md：建議預設，未拍板；授權、引用與狀態轉移另作語意驗證。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Dispatch"
+    },
+    {
+      "$ref": "#/$defs/SentRequest"
+    },
+    {
+      "$ref": "#/$defs/SentGrant"
+    },
+    {
+      "$ref": "#/$defs/Cancel"
+    },
+    {
+      "$ref": "#/$defs/CancelAck"
+    },
+    {
+      "$ref": "#/$defs/Ack"
+    },
+    {
+      "$ref": "#/$defs/Reject"
+    },
+    {
+      "$ref": "llm-result.schema.json#/$defs/Report"
+    }
+  ],
+  "$defs": {
+    "Dispatch": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "service_instance_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "control_epoch": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "type": {
+          "const": "dispatch"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "run_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "job_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "config_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "payload": {
+          "$ref": "llm-request.schema.json"
+        },
+        "scope_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "input_tokens_estimate_verified": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "reserved_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "estimator_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "request_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "message_id",
+        "attempt_id",
+        "service_instance_id",
+        "control_epoch",
+        "type",
+        "agent_id",
+        "run_id",
+        "job_id",
+        "generation",
+        "ordinal",
+        "config_revision",
+        "payload",
+        "scope_ids",
+        "input_tokens_estimate_verified",
+        "reserved_tokens",
+        "estimator_revision",
+        "request_digest"
+      ],
+      "additionalProperties": false
+    },
+    "SentRequest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "service_instance_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "control_epoch": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "type": {
+          "const": "sent_request"
+        },
+        "dispatch_message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "request_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "message_id",
+        "attempt_id",
+        "service_instance_id",
+        "control_epoch",
+        "type",
+        "dispatch_message_id",
+        "request_digest"
+      ],
+      "additionalProperties": false
+    },
+    "SentGrant": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "service_instance_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "control_epoch": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "type": {
+          "const": "sent_grant"
+        },
+        "sent_request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "gate_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "sent_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "deadline_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "message_id",
+        "attempt_id",
+        "service_instance_id",
+        "control_epoch",
+        "type",
+        "sent_request_id",
+        "gate_id",
+        "sent_at_ms",
+        "deadline_at_ms"
+      ],
+      "additionalProperties": false
+    },
+    "Cancel": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "service_instance_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "control_epoch": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "type": {
+          "const": "cancel"
+        },
+        "cancel_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "requested_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "message_id",
+        "attempt_id",
+        "service_instance_id",
+        "control_epoch",
+        "type",
+        "cancel_id",
+        "requested_at_ms"
+      ],
+      "additionalProperties": false
+    },
+    "CancelAck": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "service_instance_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "control_epoch": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "type": {
+          "const": "cancel_ack"
+        },
+        "cancel_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "gate_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gate_closed": {
+          "const": true
+        },
+        "local_connection_closed": {
+          "type": "boolean"
+        },
+        "remote_state": {
+          "enum": [
+            "not_sent",
+            "unknown",
+            "completed"
+          ]
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "message_id",
+        "attempt_id",
+        "service_instance_id",
+        "control_epoch",
+        "type",
+        "cancel_id",
+        "gate_id",
+        "gate_closed",
+        "local_connection_closed",
+        "remote_state",
+        "observed_at_ms"
+      ],
+      "additionalProperties": false
+    },
+    "Ack": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "service_instance_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "control_epoch": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "type": {
+          "const": "ack"
+        },
+        "ack_for": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "stage": {
+          "enum": [
+            "dispatch",
+            "cancel",
+            "result"
+          ]
+        },
+        "persisted_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "message_id",
+        "attempt_id",
+        "service_instance_id",
+        "control_epoch",
+        "type",
+        "ack_for",
+        "stage",
+        "persisted_at_ms"
+      ],
+      "additionalProperties": false
+    },
+    "Reject": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "message_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "service_instance_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "control_epoch": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "type": {
+          "const": "reject"
+        },
+        "rejected_message_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "$ref": "control-common.schema.json#/$defs/Error"
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "message_id",
+        "attempt_id",
+        "service_instance_id",
+        "control_epoch",
+        "type",
+        "rejected_message_id",
+        "error"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

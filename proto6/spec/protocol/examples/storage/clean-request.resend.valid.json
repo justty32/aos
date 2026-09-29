@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "kind": "clean_acquire",
+  "request_id": "clean_1",
+  "scope": {
+    "kind": "agent",
+    "agent_id": "agent_a"
+  },
+  "trigger": "administrator",
+  "policy_id": "retention_1",
+  "max_items": 32,
+  "max_bytes": 16777216,
+  "max_elapsed_ms": 30000
+}

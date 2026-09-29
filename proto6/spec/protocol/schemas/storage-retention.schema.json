@@ -1,0 +1,411 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "storage-retention",
+  "description": "proto6 storage 協議；建議預設，未拍板。授權、引用及持久化另依 storage.md。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Policy"
+    },
+    {
+      "$ref": "#/$defs/Manifest"
+    },
+    {
+      "$ref": "#/$defs/Tombstone"
+    }
+  ],
+  "$defs": {
+    "Policy": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "retention_policy"
+        },
+        "policy_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "effective_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "retention_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "default": 30
+        },
+        "retention_mode": {
+          "enum": [
+            "archive",
+            "delete"
+          ],
+          "default": "archive"
+        },
+        "max_items": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "max_elapsed_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "archive_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "policy_id",
+        "effective_at_ms",
+        "max_items",
+        "max_bytes",
+        "max_elapsed_ms",
+        "archive_id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "retention_mode": {
+                "const": "delete"
+              }
+            },
+            "required": [
+              "retention_mode"
+            ]
+          },
+          "then": {},
+          "else": {
+            "properties": {
+              "archive_id": {
+                "$ref": "control-common.schema.json#/$defs/ID"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Manifest": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "archive_manifest"
+        },
+        "manifest_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "batch_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "candidate_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "scope": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "agent"
+                },
+                "agent_id": {
+                  "$ref": "control-common.schema.json#/$defs/ID"
+                }
+              },
+              "required": [
+                "kind",
+                "agent_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "all_agents",
+                    "control"
+                  ]
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "archive": {
+          "type": "object",
+          "properties": {
+            "archive_id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            "entry_id": {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            }
+          },
+          "required": [
+            "archive_id",
+            "entry_id"
+          ],
+          "additionalProperties": false
+        },
+        "archived_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "summary": {
+          "$ref": "#/$defs/Summary"
+        },
+        "blob_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "manifest_id",
+        "batch_id",
+        "candidate_id",
+        "scope",
+        "archive",
+        "archived_at_ms",
+        "summary",
+        "blob_ref"
+      ],
+      "additionalProperties": false
+    },
+    "Tombstone": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "tombstone"
+        },
+        "tombstone_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "scope": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "agent"
+                },
+                "agent_id": {
+                  "$ref": "control-common.schema.json#/$defs/ID"
+                }
+              },
+              "required": [
+                "kind",
+                "agent_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "all_agents",
+                    "control"
+                  ]
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "summary": {
+          "$ref": "#/$defs/Summary"
+        },
+        "removed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "dedup_until_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "dedup_key_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archive": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "archive_id": {
+                  "$ref": "control-common.schema.json#/$defs/ID"
+                },
+                "entry_id": {
+                  "$ref": "control-common.schema.json#/$defs/ID"
+                }
+              },
+              "required": [
+                "archive_id",
+                "entry_id"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "$ref": "control-common.schema.json#/$defs/Error"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "tombstone_id",
+        "scope",
+        "summary",
+        "removed_at_ms",
+        "dedup_until_at_ms",
+        "dedup_key_ref",
+        "archive",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "Summary": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "enum": [
+            "result",
+            "blob",
+            "history",
+            "diagnostic",
+            "attention_done",
+            "import_temp"
+          ]
+        },
+        "record_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outcome_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "succeeded",
+                "failed",
+                "canceled",
+                "unknown"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finished_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+              "minLength": 64,
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_bytes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "record_type",
+        "record_id",
+        "run_id",
+        "outcome_status",
+        "finished_at_ms",
+        "content_sha256",
+        "content_bytes"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

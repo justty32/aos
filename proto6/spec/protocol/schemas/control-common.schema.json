@@ -1,0 +1,657 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "控制共用型別",
+  "description": "〔建議預設，未拍板〕C-01～C-04、S-101～S-104。Run／Job／Attempt 是持久紀錄；BlobRef／Error／Outcome 是嵌入片段，不另加 version。root 接受主要資料型別，精確用途請引用 $defs。",
+  "$defs": {
+    "ID": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$",
+      "minLength": 1,
+      "maxLength": 128,
+      "not": {
+        "pattern": "[^A-Za-z0-9_-]"
+      }
+    },
+    "Integer": {
+      "type": "integer",
+      "maximum": 9007199254740991,
+      "description": "C-01 整數上界；原始 JSON token 須另拒絕浮點寫法及 bool。C-01 未另定負整數下界。"
+    },
+    "NonNegativeInteger": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Integer"
+        }
+      ],
+      "minimum": 0
+    },
+    "PositiveInteger": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Integer"
+        }
+      ],
+      "minimum": 1
+    },
+    "EpochMs": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/NonNegativeInteger"
+        }
+      ],
+      "description": "UTC epoch 毫秒；只作時間事實，不作排隊次序。"
+    },
+    "DurationMs": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/NonNegativeInteger"
+        }
+      ],
+      "description": "毫秒持續時間；運行逾時由經過時間判斷。"
+    },
+    "BlobRef": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/ID"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "bytes": {
+          "$ref": "#/$defs/NonNegativeInteger"
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "key",
+        "sha256",
+        "bytes"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ID"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "object",
+          "default": {}
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "additionalProperties": false,
+      "description": "C-04 的 code 是共用 ID。已登記領域 code 與 RPC 整數映射須另驗；retryable 不授權重派。"
+    },
+    "Outcome": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "succeeded",
+            "failed",
+            "canceled",
+            "unknown"
+          ]
+        },
+        "result_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "status",
+        "result_ref",
+        "error"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "succeeded"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "error": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Run": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "run_id": {
+          "$ref": "#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/ID"
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "active",
+            "paused",
+            "needs_attention",
+            "succeeded",
+            "failed",
+            "canceled"
+          ]
+        },
+        "created_at_ms": {
+          "$ref": "#/$defs/EpochMs"
+        },
+        "config_revision": {
+          "$ref": "#/$defs/ID"
+        },
+        "input_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ID"
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "S-101 建議預設：每個普通 run 只綁一則已接納輸入；不是新訊息歸屬的最終產品裁定。"
+        },
+        "input_seq": {
+          "$ref": "#/$defs/PositiveInteger"
+        },
+        "finished_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "final_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "config_changes": {
+          "type": "array",
+          "items": {
+            "$ref": "agent-config.schema.json#/$defs/ConfigChange"
+          },
+          "default": []
+        },
+        "cancel_requested": {
+          "type": "boolean",
+          "default": false
+        },
+        "paused_from": {
+          "enum": [
+            "queued",
+            "active",
+            null
+          ],
+          "default": null
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        },
+        "budget": {
+          "$ref": "control-state.schema.json#/$defs/Budget"
+        },
+        "pending_resolution": {
+          "anyOf": [
+            {
+              "$ref": "control-state.schema.json#/$defs/PendingResolution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "version",
+        "run_id",
+        "agent_id",
+        "state",
+        "created_at_ms",
+        "config_revision",
+        "input_ids",
+        "input_seq",
+        "budget"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "succeeded",
+                  "failed",
+                  "canceled"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "required": [
+              "finished_at_ms"
+            ],
+            "properties": {
+              "finished_at_ms": {
+                "$ref": "#/$defs/EpochMs"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "succeeded"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "required": [
+              "final_ref"
+            ],
+            "properties": {
+              "final_ref": {
+                "$ref": "#/$defs/BlobRef"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "failed"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "required": [
+              "error"
+            ],
+            "properties": {
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Job": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "job_id": {
+          "$ref": "#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/ID"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "enum": [
+            "tool",
+            "llm",
+            "tick"
+          ]
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "waiting",
+            "admitted",
+            "running",
+            "succeeded",
+            "failed",
+            "canceled",
+            "unknown"
+          ]
+        },
+        "payload_ref": {
+          "$ref": "#/$defs/BlobRef"
+        },
+        "created_at_ms": {
+          "$ref": "#/$defs/EpochMs"
+        },
+        "seq": {
+          "$ref": "#/$defs/PositiveInteger"
+        },
+        "retry_class": {
+          "enum": [
+            "never",
+            "safe"
+          ]
+        },
+        "ready_seq": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositiveInteger"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "next_due_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "selected_attempt_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Outcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "priority": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Integer"
+            }
+          ],
+          "default": 0
+        },
+        "max_attempts": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/PositiveInteger"
+            }
+          ],
+          "description": "省略時 kind=llm 取 3，其他 kind 取 1；schema 不代填預設。"
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "job_id",
+        "agent_id",
+        "run_id",
+        "kind",
+        "state",
+        "payload_ref",
+        "created_at_ms",
+        "seq",
+        "retry_class"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "tool",
+                  "llm"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "run_id": {
+                "$ref": "#/$defs/ID"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Attempt": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/ID"
+        },
+        "job_id": {
+          "$ref": "#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "#/$defs/ID"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/PositiveInteger"
+        },
+        "generation": {
+          "$ref": "#/$defs/PositiveInteger"
+        },
+        "state": {
+          "enum": [
+            "reserved",
+            "starting",
+            "running",
+            "canceling",
+            "succeeded",
+            "failed",
+            "canceled",
+            "unknown"
+          ]
+        },
+        "created_at_ms": {
+          "$ref": "#/$defs/EpochMs"
+        },
+        "started_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "finished_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "execution_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Outcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      },
+      "required": [
+        "version",
+        "attempt_id",
+        "job_id",
+        "agent_id",
+        "ordinal",
+        "generation",
+        "state",
+        "created_at_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/BlobRef"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    },
+    {
+      "$ref": "#/$defs/Outcome"
+    },
+    {
+      "$ref": "#/$defs/Run"
+    },
+    {
+      "$ref": "#/$defs/Job"
+    },
+    {
+      "$ref": "#/$defs/Attempt"
+    }
+  ]
+}

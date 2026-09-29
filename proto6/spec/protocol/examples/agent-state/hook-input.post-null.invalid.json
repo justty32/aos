@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "hook_run_id": "hook_1",
+  "agent_id": "agent_a",
+  "run_id": "run_1",
+  "when": "post",
+  "attempt_id": "tick_1",
+  "tick_outcome": null
+}

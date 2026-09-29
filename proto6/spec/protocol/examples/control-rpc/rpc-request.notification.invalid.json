@@ -1,0 +1,7 @@
+{
+  "jsonrpc": "2.0",
+  "method": "agent.get",
+  "params": {
+    "agent_id": "agent_a"
+  }
+}

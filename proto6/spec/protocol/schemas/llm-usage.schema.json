@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "llm-usage",
+  "description": "proto6 協議篇 llm.md：建議預設，未拍板；授權、引用與狀態轉移另作語意驗證。",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "attempt_id": {
+      "$ref": "control-common.schema.json#/$defs/ID"
+    },
+    "adapter_revision": {
+      "$ref": "control-common.schema.json#/$defs/ID"
+    },
+    "estimator_revision": {
+      "$ref": "control-common.schema.json#/$defs/ID"
+    },
+    "source": {
+      "enum": [
+        "provider",
+        "estimated"
+      ]
+    },
+    "prompt_tokens": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "completion_tokens": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "total_tokens": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tokens_estimate": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "raw_usage_ref": {
+      "anyOf": [
+        {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "extensions": {
+      "type": "object",
+      "default": {}
+    }
+  },
+  "required": [
+    "version",
+    "attempt_id",
+    "adapter_revision",
+    "estimator_revision",
+    "source",
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
+    "tokens_estimate",
+    "raw_usage_ref",
+    "observed_at_ms"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "provider"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "total_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "kind": "result_receipt",
+  "report_id": "report_a",
+  "attempt_id": "attempt_a",
+  "disposition": "duplicate",
+  "error": null
+}

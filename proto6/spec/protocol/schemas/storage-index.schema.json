@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "storage-index",
+  "description": "proto6 storage 協議；建議預設，未拍板。授權、引用及持久化另依 storage.md。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Publication"
+    },
+    {
+      "$ref": "#/$defs/Handoff"
+    },
+    {
+      "$ref": "#/$defs/Repair"
+    },
+    {
+      "$ref": "#/$defs/ExportPin"
+    }
+  ],
+  "$defs": {
+    "Publication": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "publication"
+        },
+        "publication_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "channel_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "delivery_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "request_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "operation": {
+          "const": "blob_import"
+        },
+        "expected_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "stage": {
+          "enum": [
+            "staged",
+            "published",
+            "indexed"
+          ]
+        },
+        "updated_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "publication_id",
+        "channel_id",
+        "delivery_id",
+        "agent_id",
+        "request_id",
+        "operation",
+        "expected_sha256",
+        "length",
+        "ref",
+        "stage",
+        "updated_at_ms"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "enum": [
+                  "published",
+                  "indexed"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "ref": {
+                "$ref": "control-common.schema.json#/$defs/BlobRef"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Handoff": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "handoff"
+        },
+        "handoff_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "channel_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "delivery_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "record_type": {
+          "enum": [
+            "rpc",
+            "proposal",
+            "execution_result",
+            "llm_result",
+            "clean_report"
+          ]
+        },
+        "record_ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "stage": {
+          "enum": [
+            "spooled",
+            "indexed",
+            "replied"
+          ]
+        },
+        "updated_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "handoff_id",
+        "channel_id",
+        "delivery_id",
+        "record_type",
+        "record_ref",
+        "stage",
+        "updated_at_ms"
+      ],
+      "additionalProperties": false
+    },
+    "Repair": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "repair"
+        },
+        "repair_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "source_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "finding": {
+          "enum": [
+            "file_without_index",
+            "index_without_file",
+            "digest_mismatch",
+            "reply_missing"
+          ]
+        },
+        "action": {
+          "enum": [
+            "reconcile_original",
+            "block",
+            "replay_receipt"
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "repair_id",
+        "source_id",
+        "agent_id",
+        "observed_at_ms",
+        "finding",
+        "action",
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "ExportPin": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "export_pin"
+        },
+        "read_handle_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "ref": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        },
+        "recipient_channel_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "state": {
+          "enum": [
+            "open",
+            "closed"
+          ]
+        },
+        "created_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "closed_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "read_handle_id",
+        "agent_id",
+        "ref",
+        "recipient_channel_id",
+        "state",
+        "created_at_ms",
+        "closed_at_ms"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "closed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "closed_at_ms": {
+                "type": "integer"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "closed_at_ms": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

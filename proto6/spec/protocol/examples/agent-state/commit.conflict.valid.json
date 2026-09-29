@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": "commit_1",
+  "error": {
+    "code": -32002,
+    "message": "提案版本已過期。",
+    "data": {
+      "code": "conflict",
+      "message": "提案版本已過期。",
+      "retryable": false
+    }
+  }
+}

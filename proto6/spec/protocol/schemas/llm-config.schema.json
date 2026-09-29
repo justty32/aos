@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "llm-config",
+  "description": "proto6 協議篇 llm.md：建議預設，未拍板；授權、引用與狀態轉移另作語意驗證。",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "config_revision": {
+      "$ref": "control-common.schema.json#/$defs/ID"
+    },
+    "control_uid": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "service_uid": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "service_gid": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "state_root": {
+      "type": "string",
+      "pattern": "^/"
+    },
+    "max_concurrent_http": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "memory_max_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "cpu_quota_us": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "cpu_period_us": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "uncertain_hold_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "remote_concurrency_policy": {
+      "const": "estimated_release"
+    },
+    "response_limit_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "stop_grace_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Scope"
+      },
+      "minItems": 1
+    },
+    "credentials": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CredentialReference"
+      }
+    },
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Endpoint"
+      },
+      "minItems": 1
+    },
+    "extensions": {
+      "type": "object",
+      "default": {}
+    }
+  },
+  "required": [
+    "version",
+    "config_revision",
+    "control_uid",
+    "service_uid",
+    "service_gid",
+    "state_root",
+    "max_concurrent_http",
+    "memory_max_bytes",
+    "cpu_quota_us",
+    "cpu_period_us",
+    "uncertain_hold_ms",
+    "remote_concurrency_policy",
+    "response_limit_bytes",
+    "stop_grace_ms",
+    "scopes",
+    "credentials",
+    "endpoints"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "Scope": {
+      "type": "object",
+      "properties": {
+        "scope_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "max_concurrent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "window_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "request_limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "token_limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "scope_id",
+        "max_concurrent",
+        "window_ms"
+      ],
+      "additionalProperties": false
+    },
+    "CredentialReference": {
+      "type": "object",
+      "properties": {
+        "credential_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "source": {
+          "const": "service_file"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/"
+        }
+      },
+      "required": [
+        "credential_id",
+        "source",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "Model": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input_token_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "output_token_reserve": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "output_token_field": {
+          "enum": [
+            "max_tokens",
+            "max_completion_tokens"
+          ]
+        }
+      },
+      "required": [
+        "model",
+        "provider_model",
+        "input_token_limit",
+        "output_token_reserve",
+        "output_token_field"
+      ],
+      "additionalProperties": false
+    },
+    "Endpoint": {
+      "type": "object",
+      "properties": {
+        "endpoint_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://[^\\s]+$"
+        },
+        "credential_ref": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scope_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "control-common.schema.json#/$defs/ID"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "adapter_revision": {
+          "const": "openai-chat-v1"
+        },
+        "estimator_revision": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "rate_accounting_revision": {
+          "const": "reserved-window-v1"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Model"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "endpoint_id",
+        "base_url",
+        "credential_ref",
+        "scope_ids",
+        "adapter_revision",
+        "estimator_revision",
+        "rate_accounting_revision",
+        "models"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

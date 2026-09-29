@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "kind": "clean_report_error",
+  "request_id": "clean_report_conflict",
+  "batch_id": "batch_1",
+  "error": {
+    "code": "conflict",
+    "message": "候選 fence 已失效",
+    "retryable": false
+  }
+}

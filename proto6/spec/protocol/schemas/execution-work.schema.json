@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "B-101 固定工作描述",
+  "description": "〔建議預設，未拍板〕固定工作材料；256 KiB 原始描述、16 MiB stdin、摘要、owner 及 env 安全檢查由解析／語意層落實。",
+  "$ref": "#/$defs/FixedWork",
+  "$defs": {
+    "FixedWork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "agent_id",
+        "run_id",
+        "job_id",
+        "argv",
+        "cwd"
+      ],
+      "properties": {
+        "version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "agent_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "$ref": "control-common.schema.json#/$defs/ID"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "null 僅用於維護／空收件探查 tick，須以可信 job.kind 與 claim 另驗。"
+        },
+        "job_id": {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "prefixItems": [
+            {
+              "type": "string",
+              "pattern": "^[^\\u0000]*$",
+              "minLength": 1
+            }
+          ],
+          "items": {
+            "type": "string",
+            "pattern": "^[^\\u0000]*$"
+          }
+        },
+        "cwd": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        },
+        "env": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+            "not": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "HOME",
+                    "TMPDIR"
+                  ]
+                },
+                {
+                  "pattern": "[^A-Za-z0-9_]"
+                }
+              ]
+            }
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[^\\u0000]*$"
+          },
+          "default": {},
+          "description": "僅套用於降權後工作；HOME/TMPDIR 不可覆寫。loader env、憑證與控制通道排除仍須語意驗證。"
+        },
+        "stdin_blob": {
+          "anyOf": [
+            {
+              "allOf": [
+                {
+                  "$ref": "control-common.schema.json#/$defs/BlobRef"
+                },
+                {
+                  "properties": {
+                    "bytes": {
+                      "maximum": 16777216
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000,
+          "default": 60000
+        },
+        "output_limit_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216,
+          "default": 1048576
+        }
+      }
+    },
+    "HookWork": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "hook_work"
+        },
+        "template": {
+          "allOf": [
+            {
+              "$ref": "execution-template.schema.json"
+            },
+            {
+              "required": [
+                "cwd",
+                "timeout_ms",
+                "output_limit_bytes"
+              ]
+            }
+          ]
+        },
+        "stdin_blob": {
+          "$ref": "control-common.schema.json#/$defs/BlobRef"
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "template",
+        "stdin_blob"
+      ],
+      "additionalProperties": false,
+      "description": "掛勾的固定 fd3 材料；無 Job。template 的 cwd、timeout_ms、output_limit_bytes 由控制端明確填齊；stdin_blob 引用 agent-hook-input。owner/claim/scope 僅取可信 LaunchSnapshot。"
+    }
+  }
+}

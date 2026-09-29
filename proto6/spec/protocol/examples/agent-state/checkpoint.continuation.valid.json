@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "invalid_response_count": 1,
+  "continuation_ref": {
+    "key": "continuation_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 2
+  }
+}

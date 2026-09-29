@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "call_id": "call_1",
+  "outcome": {
+    "status": "unknown",
+    "result_ref": null,
+    "error": {
+      "code": "result_unknown",
+      "message": "重啟前未持久確認結果。",
+      "retryable": false
+    }
+  },
+  "exec_result_ref": null,
+  "stdout_preview": "",
+  "stderr_preview": "",
+  "preview_truncated": false,
+  "output_truncated": false,
+  "semantic_error": null
+}

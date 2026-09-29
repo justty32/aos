@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "kind": "wait_status",
+  "attempt_id": "attempt_a",
+  "hook_run_id": null,
+  "snapshot_revision": "snap_a",
+  "identity": {
+    "boot_id": "00000000-0000-0000-0000-000000000001",
+    "pid": 3001,
+    "starttime_ticks": 12000,
+    "cgroup_relative_path": "agents/agent_a/attempt_a"
+  },
+  "exit_code": 7,
+  "signal": null
+}

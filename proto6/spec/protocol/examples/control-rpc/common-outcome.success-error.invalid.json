@@ -1,0 +1,13 @@
+{
+  "status": "succeeded",
+  "result_ref": {
+    "key": "blob_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 0
+  },
+  "error": {
+    "code": "result_unknown",
+    "message": "送出後斷線，結果尚未確認。",
+    "retryable": false
+  }
+}

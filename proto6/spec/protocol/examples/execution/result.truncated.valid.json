@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "attempt_id": "attempt_1",
+  "job_id": "job_17",
+  "agent_id": "agent_a",
+  "state": "failed",
+  "reason": "output_limit",
+  "exit_code": null,
+  "signal": 15,
+  "started_at_ms": 1790000000000,
+  "finished_at_ms": 1790000000010,
+  "stdout_blob": {
+    "key": "stdout_prefix",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 1048576
+  },
+  "stderr_blob": null,
+  "stdout_bytes": 1048576,
+  "stderr_bytes": 0,
+  "truncated": true
+}

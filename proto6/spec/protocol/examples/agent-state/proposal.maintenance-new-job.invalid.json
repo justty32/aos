@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "agent_id": "agent_a",
+  "run_id": null,
+  "attempt_id": "tick_1",
+  "generation": 1,
+  "expected_revision": 0,
+  "consumed_input_ids": [],
+  "consumed_attempt_ids": [],
+  "new_jobs": [
+    {
+      "job_id": "job_1",
+      "kind": "llm",
+      "payload_ref": {
+        "key": "llm_1",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bytes": 2
+      }
+    }
+  ],
+  "finish": "none",
+  "checkpoint_ref": {
+    "key": "checkpoint_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 2
+  }
+}

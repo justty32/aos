@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "attempt_id": "attempt_1",
+  "service_instance_id": "service_1",
+  "control_epoch": "boot_session_1",
+  "type": "sent_grant",
+  "message_id": "grant_1",
+  "sent_request_id": "sent_req_1",
+  "gate_id": "gate_1",
+  "sent_at_ms": 1790000000000,
+  "deadline_at_ms": 1790000010000
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "selected_context_ref": null,
+  "decision_ref": null,
+  "source_refs": [
+    {
+      "key": "input_1",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 2
+    }
+  ]
+}

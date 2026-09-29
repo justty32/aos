@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "持久 RPC 交接包裝",
+  "description": "〔建議預設，未拍板〕P-005：只有 version 與 message；身分由可信通道給定。整檔含包裝上限 256 KiB，schema 不執行 byte 計數。",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "message": {
+      "$ref": "control-rpc.schema.json"
+    }
+  },
+  "required": [
+    "version",
+    "message"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "Request": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "message": {
+          "$ref": "control-rpc.schema.json#/$defs/Request"
+        }
+      },
+      "required": [
+        "version",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "Response": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "message": {
+          "$ref": "control-rpc.schema.json#/$defs/Response"
+        }
+      },
+      "required": [
+        "version",
+        "message"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

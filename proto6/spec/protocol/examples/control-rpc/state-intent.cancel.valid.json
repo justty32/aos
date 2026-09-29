@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "agent_id": "agent_a",
+  "actor": "uid:1000",
+  "accepted_at_ms": 1790000000000,
+  "request": {
+    "jsonrpc": "2.0",
+    "id": "req_cancel_1",
+    "method": "run.cancel",
+    "params": {
+      "run_id": "run_1"
+    }
+  }
+}

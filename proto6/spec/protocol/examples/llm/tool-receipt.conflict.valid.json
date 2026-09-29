@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "request_id": "req_tool_1",
+  "accepted": false,
+  "error": {
+    "code": "conflict",
+    "message": "同一 request_id 的內容已改變",
+    "retryable": false
+  }
+}

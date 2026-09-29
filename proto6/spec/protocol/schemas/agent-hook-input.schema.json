@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "控制端送往單次掛勾 stdin 的 JSON",
+  "$comment": "〔建議預設，未拍板〕欄位與語意依 agent-state.md；schema 通過不代表引用存在、授權成立或控制交易已提交。",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "hook_run_id": {
+      "$ref": "control-common.schema.json#/$defs/ID"
+    },
+    "agent_id": {
+      "$ref": "control-common.schema.json#/$defs/ID"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "when": {
+      "enum": [
+        "pre",
+        "post"
+      ]
+    },
+    "attempt_id": {
+      "anyOf": [
+        {
+          "$ref": "control-common.schema.json#/$defs/ID"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tick_outcome": {
+      "anyOf": [
+        {
+          "enum": [
+            "committed",
+            "rejected",
+            "no_proposal",
+            "timeout",
+            "killed"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "version",
+    "hook_run_id",
+    "agent_id",
+    "run_id",
+    "when",
+    "attempt_id",
+    "tick_outcome"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "when": {
+            "const": "pre"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tick_outcome": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "tick_outcome": {
+            "enum": [
+              "committed",
+              "rejected",
+              "no_proposal",
+              "timeout",
+              "killed"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

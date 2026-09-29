@@ -1,0 +1,10 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_resolve_fail_1",
+  "method": "run.resolve",
+  "params": {
+    "run_id": "run_1",
+    "job_id": "job_1",
+    "decision": "fail"
+  }
+}

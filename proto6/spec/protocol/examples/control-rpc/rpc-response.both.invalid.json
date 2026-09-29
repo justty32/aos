@@ -1,0 +1,19 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_submit_1",
+  "result": {
+    "accepted": true,
+    "request_id": "req_submit_1",
+    "run_id": "run_1",
+    "input_seq": 1
+  },
+  "error": {
+    "code": -32002,
+    "message": "同一 request_id 的內容不同。",
+    "data": {
+      "code": "conflict",
+      "message": "同一 request_id 的內容不同。",
+      "retryable": false
+    }
+  }
+}

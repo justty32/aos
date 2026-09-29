@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "call_id": "call_1",
+  "outcome": {
+    "status": "succeeded",
+    "result_ref": {
+      "key": "exec_1",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 120
+    },
+    "error": null
+  },
+  "exec_result_ref": {
+    "key": "exec_1",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "bytes": 120
+  },
+  "stdout_preview": "你好",
+  "stderr_preview": "",
+  "preview_truncated": false,
+  "output_truncated": false,
+  "semantic_error": null
+}

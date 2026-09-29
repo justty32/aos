@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req_outputs_bad_1",
+  "method": "run.outputs",
+  "params": {
+    "run_id": "run_1",
+    "limit": 1001
+  }
+}
