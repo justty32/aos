@@ -14,7 +14,7 @@
 
 ## 任務註冊表
 
-〔使用者方向 2026-09-29〕`aos-tick` 依序跑**系統性任務 → kernel／agent 任務 → 自訂任務**。有 UID 隔離時，系統性任務沿用控制側專用的非 root 服務身分；沒有 helper 時，依最新裁定整棵樹都用通用 user。固定特權步驟只在 [root helper](base/identity-resources.md)。任務類別不授予身分或權限，身分須受 inst 與 daemon 的身分額度約束，不能在表裡填個 UID 就借權限。
+〔使用者方向 2026-09-29〕`aos-tick` 依序跑**系統性任務 → kernel／agent 任務 → 自訂任務**。一格 tick 裡的所有任務（含系統性任務）都用該 node inst 的 `user` 跑，不另設服務帳號（第九批）；沒有 helper 時整棵樹都是通用 user。自己帳號做不到的事：要 root 的固定步驟交 helper，管成員的事（例如成員收件區權限）由上層 kernel 在自己的 tick 用自己的帳號做。固定特權步驟只在 [root helper](base/identity-resources.md)。任務類別不授予身分或權限，身分須受 inst 與 daemon 的身分額度約束，不能在表裡填個 UID 就借權限。
 
 〔建議預設，未拍板〕最小格式是一個 JSON 陣列；陣列位置就是順序，不再加另一個排序欄。每項只有下列資料，欄位拼法留待協議篇落實：
 
@@ -86,4 +86,4 @@
 
 group、Q1／Q2、還原範圍、設定與空 commit 的故障驗收，統一見 [V-03](conformance.md)。
 
-註冊表欄位拼法、順序式 group／needs 的工程細節仍是建議預設；Q1～Q4 已裁定，不再列待裁。有 UID 隔離時，系統任務的非 root 服務身分如何透過可信登記接到共用表與 runner，仍須配合身分篇；不能由 `kind` 自動提權，也不能默默全改成 node 的 UID。
+註冊表欄位拼法、順序式 group／needs 的工程細節仍是建議預設；Q1～Q4 已裁定，不再列待裁。`kind` 不帶任何權限，不能用來提權。
