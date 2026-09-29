@@ -69,6 +69,6 @@ Blob 的受管副本與 home 同計入 agent project quota（啟用時，記帳�
 {"version":1,"job_id":"job_17","agent_id":"agent_a","run_id":"run_3","kind":"tool","state":"queued","payload_ref":{"key":"blob_9","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bytes":120},"created_at_ms":1790000000000,"seq":42,"retry_class":"never"}
 ```
 
-範例摘要僅示意。ID tombstone／去重摘要至少保留至run終局後30日（可配置正整數天）；期間不重用ID。未終局／unknown不自動到期清除；清理後保留摘要，過期查詢回gone。清理怎麼做、誰來做依 [B-404](base/storage.md)：跟著該 agent 的 tick 一起處理，過期的刪除或封存。
+範例摘要僅示意。ID tombstone／去重摘要至少保留至run終局後30日（可配置正整數天）；期間不重用ID。未終局／unknown不自動到期清除；清理後保留摘要，過期查詢回gone。清理怎麼做、誰來做依 [B-404](base/storage.md)：由 `aos-clean` 刪除或封存，可掛在 tick 後自動跑，也可手動跑。
 
 驗收：Given 終局結果已依保留政策回收但 ID tombstone 還在，When 重送同 request，Then 回原終局摘要或 gone，不建立新 run；未終局結果不被這個清理規則刪掉。

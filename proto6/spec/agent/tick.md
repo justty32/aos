@@ -41,3 +41,25 @@ think／act 的語意步驟仍須可由事件或查詢觀察；若沒有需要�
 查詢由控制層提供 agent_id、phase、generation、checkpoint revision、當前 run_id 或 null、等待原因、pending jobs、最新 Error 與是否可 resume。事件記錄包括 stale_generation、拒絕的 proposal 與 blob 缺失，但 log 不取代權威帳本。無法取得權威資料時回不可用，不從舊 log 猜測成功。每次轉 needs_attention 必須保存原因與可採取的修復類型；純 resume 不解除尚未解決的 unknown 或資料損壞。
 
 驗收：Given unknown 工具令 run 受阻；When 查詢並只送 resume；Then 查詢顯示原 attempt 與 result_unknown，未滿足恢復前置條件時仍保持受阻，不觸發重試，unknown 及取消要求均不因普通 resume 而清除。
+
+## A-506 tick 前後掛勾〔使用者方向 2026-09-29；細節為建議預設，未拍板〕
+
+可以往 tick 註冊一些程式，讓它們在每次 tick **啟動前（pre）或結束後（post）**執行。清理（[B-404](../base/storage.md) 的 `aos-clean`）是第一個用這個機制的程式；同一支程式也能由人直接呼叫，不一定要經過 tick。
+
+掛勾分兩種，差別在用誰的身分跑：
+
+- **系統掛勾**：管理者在控制端設定裡登記，對所有 agent（或指定的一批）生效，以控制側的專用服務身分執行（不是 root、不是 agent 的 UID），可以做 agent 自己不該做的事，例如清理控制帳本裡的過期紀錄。
+- **agent 掛勾**：寫在該 agent 的設定 bundle 裡（隨 [A-102](configuration.md) 在下一次 tick 生效），以該 agent 的 UID、在該 agent 的 cgroup 與 quota 內執行，權限與工具相同，不能寫權威 checkpoint 或提交提案。
+
+每個掛勾登記必填 `name`（登記內唯一）、`when:pre|post`、`argv`（非空字串陣列，形狀同 [A-401](tools.md) ExecTemplate）；可省 `timeout_ms`（預設 30000）、`on_failure:continue|skip_tick`（預設 continue；只對 pre 有意義）、`order:int`（預設 0，小的先跑，同值依 name）。執行時由控制層在 stdin 給一份 JSON：`{version:1,agent_id,run_id|null,when,attempt_id|null,tick_outcome|null}`，其中 `tick_outcome` 只在 post 時有值（`committed|rejected|no_proposal|timeout|killed`）。格式正本在協議篇。
+
+規則：
+
+- pre 掛勾在取得 claim 之後、tick 程序啟動之前依序跑；post 掛勾在提案交易結束（或 tick 程序被收尾）之後、釋放 claim 之前依序跑。agent 掛勾的時間算進該次 tick 的 deadline；系統掛勾另計，不佔 agent 的 tick 時間。
+- pre 掛勾失敗且 `on_failure=skip_tick` 時，本次不啟動 tick、釋放 claim、在 run 紀錄留下原因，工作留待下次；不能因此把 run 判失敗。其他失敗只記錄，不影響 tick 結果。
+- 掛勾的輸出不是 tick 結果，不進 history，也不能被當成工具結果或 LLM 結果；需要讓 agent 知道的事，要走正常輸入。
+- 掛勾不得延長 claim 或讓 agent 在沒有工作時被喚醒；沒有 tick 就沒有掛勾執行。控制端重啟時，執行到一半的掛勾依 [B-603](../base/lifecycle.md) 一起被殺，不補跑也不當成功。
+- 系統掛勾是控制側程式，出錯可能影響所有 agent；登記與修改只限管理者。
+
+驗收：Given 系統 post 掛勾 aos-clean 與一個 agent pre 掛勾；When 該 agent 的一次 tick 正常提交；Then 依序看到 pre→tick→post 的執行紀錄，post 收到 `tick_outcome=committed`；agent pre 掛勾設 skip_tick 且失敗時，本次沒有 tick 程序、run 不變、原因可查；控制端在 post 掛勾執行中重啟，掛勾被殺且不被記成成功。
+

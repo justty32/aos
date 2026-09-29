@@ -30,7 +30,7 @@ BlobRef 依 C-03 以受管 key 定址並保存 SHA-256，禁止把 ID／摘要�
 
 管理者必填 control 容量保留政策；僅換目錄不算保留。控制區 ENOSPC／EIO 時停止新准入，禁止確認尚未持久的請求；既有 supervisor 仍應取消與收尾，恢復後無可信結果則 unknown。agent quota 滿依 B-304；控制側每 attempt stdout／stderr 上限依 B-101，其他診斷限 64 KiB，不能用 log 繞過 quota。
 
-終態結果在消費 ack 前不得回收；ack 後仍至少保留至所屬 run 終局後 30 日，審計 metadata／去重 tombstone 同期保留；無 run 的維護結果自終態日起留 30 日；pending／unknown／未結清外部副作用引用一律保留。〔使用者方向 2026-09-29〕**清理跟著 tick 一起做**：不另開全域定時清理。控制層每次為某 agent 處理 tick（取得 claim 或提交提案）時，順便檢查這個 agent 名下的過期項目：已終局、已消費、超過保留期（預設 30 日），而且沒被非終態 run、pending／unknown 工作、目前 checkpoint 或在途工作引用的結果、blob、歷史片段與診斷紀錄。每次檢查有數量上限，做不完留給下一次 tick，不拖慢 tick 本身。過期項目依設定 `retention_mode:delete|archive`（預設 archive）刪除或搬進封存區；封存區位置由管理者設定，封存後原引用查詢回 gone 並附封存位置，不再計入 agent 的日常 context。候選由控制層在交易中取得，刪檔或搬檔後提交完成；重啟可重做缺檔的刪除或搬移。長期沒有 tick 的 agent 不產生新資料，不為清理而喚醒它。agent 退役不自動刪資料。Blob 導入暫存遇中斷可於確認無活導入者後回收。
+終態結果在消費 ack 前不得回收；ack 後仍至少保留至所屬 run 終局後 30 日，審計 metadata／去重 tombstone 同期保留；無 run 的維護結果自終態日起留 30 日；pending／unknown／未結清外部副作用引用一律保留。〔使用者方向 2026-09-29〕**清理由專門的小程式 `aos-clean` 做**，可以兩種方式叫它：登記成系統 post 掛勾（[A-506](../agent/tick.md)），每次某 agent 的 tick 結束後順便清該 agent；或由管理者直接執行（指定 agent，或全部）。兩種方式規則相同：只清已終局、已消費、超過保留期（預設 30 日），而且沒被非終態 run、pending／unknown 工作、目前 checkpoint 或在途工作引用的結果、blob、歷史片段與診斷紀錄；每次有數量上限，清不完留給下次。過期項目依設定 `retention_mode:delete|archive`（預設 archive）刪除或搬進封存區；封存區位置由管理者設定，封存後原引用查詢回 gone 並附封存位置，不再計入 agent 的日常 context。候選由控制層在交易中取得，`aos-clean` 刪檔或搬檔後再提交完成；中斷後重跑只會補做缺的刪除或搬移。不另開全域定時清理；長期沒有 tick 的 agent 不產生新資料，不為清理而喚醒它，要清就由管理者手動跑。agent 退役不自動刪資料。Blob 導入暫存遇中斷可於確認無活導入者後回收。
 
 **Given** 控制磁碟滿或 GC 中途重啟；**When** 新收件／恢復；**Then** 不虛報 durable success，不刪未 ack 結果，重複清理不影響引用中的 blob。
 
