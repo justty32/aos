@@ -6,7 +6,7 @@
 
 ## S-301．請求與 quota scope
 
-LLM payload 必填 `endpoint_id:ID`、`model:string`、`messages_ref:BlobRef`、`input_tokens_estimate:int>=0`、`max_output_tokens:int>=1`、`request_timeout_ms:int>=1`；可省 `stream:bool=false`。endpoint設定由管理者持有，含URL、憑證引用及適用scope ID陣列；job不得傳任意URL或金鑰。〔使用者方向 2026-09-29，[裁定](../../notes/2026-09-29-verdicts.md) 9〕runner持key直連：已入場的LLM attempt由其runner取得該endpoint憑證、直接連provider，不經代發broker；憑證不寫入job payload、prompt或agent home，但runner與agent同UID，不宣稱對同UID程序保密。本層只管理遵循入口（經S-302預留）的呼叫，工具自行持key直連不計入、也不保證攔住。scope以帳戶／模型等真實共享限制建立，不把不同URL當成必定獨立。
+LLM payload 必填 `endpoint_id:ID`、`model:string`、`messages_ref:BlobRef`、`input_tokens_estimate:int>=0`、`max_output_tokens:int>=1`、`request_timeout_ms:int>=1`；可省 `stream:bool=false`。endpoint設定由管理者持有，含URL、憑證引用及適用scope ID陣列；job不得傳任意URL或金鑰。〔使用者方向 2026-09-29，[裁定](../../notes/2026-09-29-verdicts.md) 9〕**中央代發，延續 proto5 現況**：agent 與工具要用 LLM，一律把請求投進指定收件處（經 B-501 可信入口，owner 由控制層補上），不直接連 provider。憑證只由控制側的 LLM 代發服務持有；該服務以專用服務 UID 執行（非 root、非任何 agent UID、不與控制寫入者共用 UID），依 S-302 入場後代為送出，結果與 usage 以原 attempt 回交。憑證不寫入 job payload、prompt、agent home 或任何 agent 可讀路徑，agent 與工具的 UID 讀不到憑證。代發服務的 CPU／記憶體歸控制域，另設全局上限；雲端用量依 request 記到所屬 agent 與 run。agent 或工具若自備其他憑證直連，不計入本層也不保證攔住，但 aos 管理的憑證不會外流給它們。scope以帳戶／模型等真實共享限制建立，不把不同URL當成必定獨立。
 
 Scope必填 `scope_id`、`max_concurrent:int>=1`、`window_ms:int>=1`；可省 `request_limit:int>=1|null`、`token_limit:int>=1|null` 預設null表示未配置該維度。token模式首版保守計估計input+要求max_output；adapter可改為供應商語意，但必須版本化。缺tokenizer仍可用標明estimated的上界估法，不宣稱精準硬保供應商額度。
 

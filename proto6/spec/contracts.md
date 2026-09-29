@@ -22,7 +22,7 @@ Run 必填 `run_id`、`agent_id`、`state`、`created_at_ms`、`config_revision`
 
 ## C-03．Job 與 attempt
 
-Job 必填 `job_id`、`agent_id`、`run_id`（ID；僅maintenance tick可null）、`kind`（`tool|llm|tick`）、`state`、`payload_ref`（BlobRef）、`created_at_ms`、`retry_class`（`never|safe`）。可省 `next_due_at_ms`、`selected_attempt_id`、`outcome` 預設 null；`priority` 整數預設 0，只有控制政策可填；`max_attempts` 正整數預設 1（kind=llm 預設 3，見 [S-303](scheduling/llm.md)）。新 job state=queued；每 job 同時最多一個非終局 attempt。
+Job 必填 `job_id`、`agent_id`、`run_id`（ID；僅maintenance tick可null）、`kind`（`tool|llm|tick`）、`state`、`payload_ref`（BlobRef）、`created_at_ms`、`seq`（正整數，控制帳本配發的持久遞增建立序號，排隊先後以它為準，見 [S-204](scheduling/admission.md)）、`retry_class`（`never|safe`）。可省 `ready_seq`（每次進入 ready 時配發）、`next_due_at_ms`、`selected_attempt_id`、`outcome` 預設 null；`priority` 整數預設 0，只有控制政策可填；`max_attempts` 正整數預設 1（kind=llm 預設 3，見 [S-303](scheduling/llm.md)）。新 job state=queued；每 job 同時最多一個非終局 attempt。
 
 Attempt 必填 `attempt_id`、`job_id`、`agent_id`、`ordinal`（正整數，該 job 依次增加）、`generation`、`state`、`created_at_ms`。可省 `started_at_ms`、`finished_at_ms`、`execution_ref`（ID）、`outcome` 預設 null。reserved 只表示入場預留，不表示子程序／HTTP 已啟動。tick attempt 的 generation 決定其提案能否提交；工具結果先歸原 attempt，不能直接拿舊 generation 改現 checkpoint。
 
@@ -55,7 +55,7 @@ JobDraft 必填 `job_id`、`kind`（`tool|llm`）、`payload_ref`；可省 `retr
 ## C-06．最小例子與保留
 
 ```json
-{"version":1,"job_id":"job_17","agent_id":"agent_a","run_id":"run_3","kind":"tool","state":"queued","payload_ref":{"key":"blob_9","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bytes":120},"created_at_ms":1790000000000,"retry_class":"never"}
+{"version":1,"job_id":"job_17","agent_id":"agent_a","run_id":"run_3","kind":"tool","state":"queued","payload_ref":{"key":"blob_9","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bytes":120},"created_at_ms":1790000000000,"seq":42,"retry_class":"never"}
 ```
 
 範例摘要僅示意。ID tombstone／去重摘要至少保留至run終局後30日（可配置正整數天）；期間不重用ID。未終局／unknown不自動到期清除；清理後保留摘要，過期查詢回gone。
