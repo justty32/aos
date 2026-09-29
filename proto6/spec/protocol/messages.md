@@ -71,7 +71,7 @@ responses/<id>.json  # RpcResponse
 | `kernel.quota.set`／`aos kernel quota set` | [res-quota](schemas/res-quota.schema.json)；投 quota.node_id 的可信父 kernel，只准父配置權 owner／祖先，核對 seq 與父額度、提交後 stdout `{"accepted":true}`。不代表 OS 已套用。 |
 | `kernel.usage.measure`／`aos kernel usage measure` | 無；由 owner／可信直接父要求重測，stdout 為 [res-usage](schemas/res-usage.schema.json)，不啟用缺席 module。 |
 | `kernel.work.submit`／`aos kernel work submit` | [work P-401](work.md) 工作材料；完成後 stdout 為內層工作的本地 work-result。 |
-| `llm.chat`／`aos llm chat` | [work P-406](work.md) LLM 材料；完成後 stdout 為本地 llm-result。 |
+| `llm.chat`／`aos llm chat` | [llm-work P-406](llm-work.md) LLM 材料；完成後 stdout 為本地 llm-result。 |
 
 全部回應用 [work-result](schemas/work-result.schema.json)；最後兩條由 module 跨格接續，業務結果回來才完成命令；tick 不等待工具或 HTTP，也不先用 ACK 占住 RPC id。摘要查詢直接讀 P-307，不開 tick。kernel 範本也保存自己送出命令的回應及收到的正式回覆，由 tick 投確認、清原件，不必裝 LLM。
 

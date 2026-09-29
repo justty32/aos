@@ -117,7 +117,7 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者及明授投件�
 
 `config/llm-pools.json` 沿 [llm-config](schemas/llm-config.schema.json)，含 endpoint/model/quota_scope/key_ref/max_attempts/schedule。池就是這個 node，代發是 tick 任務，沒有常駐池 daemon；key_ref 只指樹外私有檔，不進 git／argv／成員環境，同帳號不隔離 key。
 
-以下窗口、並行與冷卻只套 `schedule:aos`（自己排，預設）的池；`schedule:endpoint` 的池只轉發，不讀本檔，見 [work P-405](work.md)。
+以下窗口、並行與冷卻只套 `schedule:aos`（自己排，預設）的池；`schedule:endpoint` 的池只轉發，不讀本檔，見 [llm-work P-405](llm-work.md)。
 
 `config/llm-limits.json`（[schema](schemas/kernel-llm-limits.schema.json)）每 scope 一項 concurrent_requests/window_ms/requests_per_window/tokens_per_window，皆正整數。共享 provider 限制須同 node 同 scope；改名字不代表獨立。
 

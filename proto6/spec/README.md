@@ -32,7 +32,7 @@
 
 〔使用者方向 2026-09-29〕原生 Linux 與 WSL2 都要能跑。Windows interop、Windows 掛載的權限與資源管理限制、Windows 磁碟水位等不在保護承諾內，背景見 [WSL 查證](../notes/2026-09-29-wsl-machine-check.md)。VM 關機照 [daemon 重啟](daemon.md)處理；運行中逾時與排隊先後分別依 [C-01](contracts.md)及 [S-204](scheduling/admission.md)。
 
-〔使用者方向 2026-09-29 晚〕**依賴**：以 Linux 為中心、少外部依賴。cgroup v2 是必要依賴；最低 Linux kernel 5.14、Python 3.9，daemon 啟動時自檢。初版不使用 systemd，它只當開機自動啟動與劃 cgroup 子樹的方式；quota 等「有就用」的功能啟動時自動偵測、設定可強制關，沒有就用 aos 自帶的土方法（例如定期掃資料夾）。Python 盡量只用標準庫，唯一例外是執行期驗工具參數用的 `jsonschema`。檔案系統不限定，不支援的功能就不支援；多帳號交接首版只用群組、不用 ACL；仍可用 sudo 開 daemon。細節見 [B-605](daemon.md)。
+〔使用者方向 2026-09-29 晚〕**依賴**：以 Linux 為中心、少外部依賴。cgroup v2 必要、初版不使用 systemd；最低版本、啟動自檢、cgroup 子樹來源與「有就用」的可選功能以 [B-605](daemon.md) 為正本。Python 只用標準庫的唯一例外是 `jsonschema`（[P-702](protocol/agent-tasks.md)）；多帳號交接首版只用群組、不用 ACL（[P-208](protocol/node.md)）。
 
 UID 隔離與可選 helper 見[身分篇](base/identity-resources.md)，同帳號部署的 key 保護限制見 [LLM 池](scheduling/llm.md)。同機 node 樹是本輪架構；跨機分散式、FUSE 與外牆方案仍不在本輪交付範圍。LLM 串流只是「呼叫任務邊跑邊寫指定檔案」，見 [S-305](scheduling/llm.md)，不另做產品介面。
 

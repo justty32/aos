@@ -16,7 +16,7 @@
 | `state_dir` | 必填，daemon 可寫的絕對目錄；存 `state.json`、自身 `attention/` 及 PID 提示檔 |
 | `pause_save_interval_ms` | 可省，正整數，預設 1000；pause 有變動時批次存檔間隔 |
 | `shutdown_grace_ms` | 可省，預設 2000，非負毫秒；到期後依執行器收尾 |
-| `cgroup_root` | 可省；不用 sudo 開時，使用者事先建好並交給 daemon 帳號的 cgroup v2 子樹絕對路徑。省略時用 systemd `Delegate=yes` 劃給 daemon 的子樹；各種啟動方式的子樹來源依 [B-605](../../daemon.md)，拿不到就不啟動 |
+| `cgroup_root` | 可省；不用 sudo 開時，使用者事先建好並交給 daemon 帳號的 cgroup v2 子樹絕對路徑。省略時（例如由 systemd `Delegate=yes` 劃給）及各種啟動方式的子樹來源依 [B-605](../../daemon.md)，拿不到就不啟動 |
 | `disable` | 可省，不重複字串陣列，目前只認 `quota`；強制關掉啟動時偵測到的可選功能（B-605） |
 | `roots` | 必填，頂層登記陣列；每項如下，`node_id` 不可重複 |
 

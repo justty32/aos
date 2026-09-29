@@ -34,7 +34,7 @@ root helper 本質上是 daemon 的一部分，切成小程序是為了安全，
 
 〔使用者方向 2026-09-29〕**一支指令、看啟動方式決定模式**：不用 sudo 開 daemon＝沒 helper 模式，整樹用通用 user，要求其他身分一律拒絕。用 sudo（root）開時，daemon 在接 IPC、讀任何 node 之前先 fork 出 helper，主程式隨即永久降權（清掉 root 身分、群組、capabilities 與特權 fd），啟動時在 stdout 印 `helper_pid=...`，並存兩份 pid 檔，細節見 [daemon](../daemon.md)。daemon 死掉時 helper 必須跟著結束（例如 `PR_SET_PDEATHSIG`，並以與 daemon 間的管道斷線為準），不留沒人管的 root 程序。
 
-〔使用者方向 2026-09-29〕用 sudo 開時通用 user 不能預設成 root：取叫 sudo 的原帳號（`SUDO_UID`），直接用 root 或由服務啟動時必須在設定檔明寫一個非 root 帳號，否則拒絕啟動。kill helper＝切斷**新的**特權操作：已開的 tick 照跑到結束，之後需要其他身分的 tick 一律不跑並寫待處理事項；helper 不自動重啟，要恢復得重開 daemon。已做的 chown 不回滾。〔使用者方向 2026-09-29 晚〕systemd 的 `CapabilityBoundingSet`、`SystemCallFilter` 這類沙盒防護初版不用，以後再考慮。
+〔使用者方向 2026-09-29〕用 sudo 開時通用 user 不能預設成 root：取叫 sudo 的原帳號（`SUDO_UID`），直接用 root 或由服務啟動時必須在設定檔明寫一個非 root 帳號，否則拒絕啟動。kill helper＝切斷**新的**特權操作：已開的 tick 照跑到結束，之後需要其他身分的 tick 一律不跑並寫待處理事項；helper 不自動重啟，要恢復得重開 daemon。已做的 chown 不回滾。〔使用者方向 2026-09-29 晚〕systemd 沙盒防護初版不用，見 [B-605](../daemon.md)。
 
 helper 只查可信註冊、安置已配置資源框、切目標帳號、exec 固定 runner；不接任意程式當 root 跑。先授權、切身分後解析與開檔的順序，以 [inst](inst.md) 為正本；失敗不能借高權限補救。
 
