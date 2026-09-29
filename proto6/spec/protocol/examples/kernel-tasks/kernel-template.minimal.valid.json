@@ -63,7 +63,7 @@
       "retention_ms": 2592000000,
       "batch_limit": 64
     },
-    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/summary/published.json\n",
+    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/summary/published.json\n/archive/\n",
     ".aos/tasks.json": {
       "_metainfo": {
         "_type": "aos-tasks",
