@@ -16,7 +16,7 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel �
 |---|---|
 | `version:1` | 格式版本 |
 | `llm.target_node` | 接收 LLM 請求的 node id；null＝「直連」檔，agent 自己打 endpoint，endpoint 與 key 放哪由 agent 自己定（[S-301](../scheduling/llm.md)，之後再做） |
-| `llm.pool`、`llm.model` | 對方解讀的池與模型 |
+| `llm.pool`、`llm.model` | 對方解讀的池與模型；`llm.pool` 只在 `target_node` 是 node id 時必填，直連（null）時不需要填（[正例](examples/agent-tasks/agent-config.direct.valid.json)、[反例：有目標卻缺 pool](examples/agent-tasks/agent-config.no-pool.invalid.json)） |
 | `llm.context_tokens` | 模型 context 上限，須大於輸出預留 |
 | `llm.max_completion_tokens`、`llm.timeout_ms` | 輸出預留與呼叫逾時，正整數 |
 | `system_prompt` | system 文字，可空 |

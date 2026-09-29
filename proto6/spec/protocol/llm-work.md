@@ -12,12 +12,12 @@
 
 〔建議預設，未拍板〕池管理 node 的任務表加入 `aos-llm --config <絕對設定路徑>`，再依 daemon 篇註冊、叫醒該 node。aos-llm 是短任務：收件、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 P-402 的 once 資料夾，inst 改跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <絕對設定路徑>`，使用池管理 node 的帳號。HTTP 等待由這支受 daemon 管的程序承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 發回；LLM 工作沿用 once 的清理與恢復界線。
 
-[`llm-config`](schemas/llm-config.schema.json) 是 `version:1` 與 `pools` 陣列，每項只有 `id`、`endpoint`、`model`、`quota_scope`，可加 `key_ref`、有限正整數 `max_attempts`（預設 3）及 `schedule`。endpoint 是無認證資訊、query、fragment 的 HTTP(S) base URL，末尾補 `/chat/completions`。model 是 provider 真名；同一份表不允許重複 pool id。共享 provider 帳戶／模型限制的項目必須使用相同 `quota_scope`，由同一池管理 node 的 tick 統一分配序號、在途占用及冷卻，不能各開一份計數繞過限制。
+[`llm-config`](schemas/llm-config.schema.json) 是 `version:1` 與 `pools` 陣列，每項只有 `id`、`endpoint`、`model`、`quota_scope`，可加 `key_ref`、有限正整數 `max_attempts`（預設 3，只給 `schedule` 為 `aos` 的池）及 `schedule`。endpoint 是無認證資訊、query、fragment 的 HTTP(S) base URL，末尾補 `/chat/completions`。model 是 provider 真名；同一份表不允許重複 pool id。共享 provider 帳戶／模型限制的項目必須使用相同 `quota_scope`，由同一池管理 node 的 tick 統一分配序號、在途占用及冷卻，不能各開一份計數繞過限制。
 
 〔使用者方向 2026-09-29 晚〕`schedule` 選這個池是哪一檔（三檔的意思以 [S-301](../scheduling/llm.md) 為正本），只有兩個值：
 
 - `aos`（省略即此值）＝「自己排」：aos-llm 照 [kernel P-811](kernel-tasks.md) 讀 `llm-limits.json`，做並行、窗口、冷卻與排隊。
-- `endpoint`＝「交給 endpoint」：這個池的 aos-llm **只轉發**，把收到的請求逐件交 aos-llm-call 轉給外部 endpoint；不讀 `llm-limits.json`、不做窗口與並行上限，只藏 key、記用量。〔使用者方向 2026-09-29 晚，第十五批〕429、限流與重試全交給 endpoint，aos 不重試：每件請求只打一次 HTTP，`max_attempts` 對這種池不起作用。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
+- `endpoint`＝「交給 endpoint」：這個池的 aos-llm **只轉發**，把收到的請求逐件交 aos-llm-call 轉給外部 endpoint；不讀 `llm-limits.json`、不做窗口與並行上限，只藏 key、記用量。〔使用者方向 2026-09-29 晚，第十五批〕429、限流與重試全交給 endpoint，aos 不重試：每件請求只打一次 HTTP，schema 擋掉 `max_attempts`：`schedule` 為 `endpoint` 的池不允許有這欄，寫了就是設定錯誤（[正例](examples/work/llm-config.endpoint.valid.json)、[反例](examples/work/llm-config.endpoint-max-attempts.invalid.json)）。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
 
 一個池只對一個 endpoint，見 [S-301](../scheduling/llm.md)。
 

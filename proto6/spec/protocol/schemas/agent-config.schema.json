@@ -22,7 +22,8 @@
           ]
         },
         "pool": {
-          "$ref": "common.schema.json#/$defs/ID"
+          "$ref": "common.schema.json#/$defs/ID",
+          "description": "對方解讀的池；target_node 為 node id 時必填，直連（target_node 為 null）時不需要填"
         },
         "model": {
           "type": "string",
@@ -43,13 +44,27 @@
       },
       "required": [
         "target_node",
-        "pool",
         "model",
         "max_completion_tokens",
         "timeout_ms",
         "context_tokens"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "target_node": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_node"
+        ]
+      },
+      "then": {
+        "required": [
+          "pool"
+        ]
+      }
     },
     "system_prompt": {
       "type": "string"

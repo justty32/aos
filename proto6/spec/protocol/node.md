@@ -102,9 +102,9 @@ commit／還原／清理故障保存基線與收件，停後續組，在 git 管
 
 每個 module 只需一項任務：收件原件逐 byte 複製到追蹤的 `state/messages/{requests,responses}/<id>.json`；待送檔放 `.aos/outbox/{requests,responses}/<id>.json`，內容為 `{"version":1,"target_node":"/目標","message":{...}}`，可加鬧鐘 `alarm_ms`（見下），message 是完整 JSON-RPC，ID 須與檔名相同。領域狀態引用這份原件，不另做通用收據。
 
-每組成功 commit 後，tick 才從該 commit 發布 `.aos/summary/published.json`、投出待送 message、刪除與已提交消費副本 bytes 相同的收件原件。組歸屬由 commit 邊界決定，無須另寫 task／group 欄位。原件不同就報衝突並保留；送出失敗留待送檔。新格恢復後也補做發布與投件，只使用已提交內容。
+每組成功 commit 後，tick 才從該 commit 發布 `.aos/summary/published.json`、投出待送 message、刪除與已提交消費副本 bytes 相同的收件原件。組歸屬由 commit 邊界決定，無須另寫 task／group 欄位。原件不同就報衝突並保留；送出遇到暫時性錯誤時留待送檔，「目標不是 node」與「沒有寫入權限」兩種依下文報一次錯就丟掉。新格恢復後也補做發布與投件，只使用已提交內容。
 
-〔使用者方向 2026-09-29 晚，第十五批〕**投件只查一件事：目標是不是一個 node**。「是 node」照找 inst 的規則（[P-010](README.md)）：`target_node` 是資料夾，且有 `.aos/inst.json` 或 `inst.json`。不是就在投件那一步報錯：tick 在 stderr 印 `target_not_node: <node> <id>`，這封不投、不重試，待送檔跟成功投件一樣移除（原檔仍在 git 歷史裡），不寫待辦、不改投別處。是 node 就投進去，之後 aos 都不管：對方有沒有裝任務、有沒有被 tick、多久才處理，都不過問。沒有寫入權限同樣只報錯。
+〔使用者方向 2026-09-29 晚，第十五批〕**投件只查一件事：目標是不是一個 node**。「是 node」照找 inst 的規則（[P-010](README.md)）：`target_node` 是資料夾，且有 `.aos/inst.json` 或 `inst.json`。不是就在投件那一步報錯：tick 在 stderr 印 `target_not_node: <node> <id>`，這封不投、不重試，待送檔跟成功投件一樣移除（原檔仍在 git 歷史裡），不寫待辦、不改投別處。是 node 就投進去，之後 aos 都不管：對方有沒有裝任務、有沒有被 tick、多久才處理，都不過問。投件時沒有寫入權限，跟「目標不是 node」一樣處理：tick 在 stderr 印一行 `target_not_writable: <node> <id>`，就把待送檔丟掉，不每格重試、不寫待辦；權限補上之後要再送，由投件者重新產生待送檔。
 
 〔使用者方向 2026-09-29 晚，第十五批〕**鬧鐘（可選）**：投件者可在待送封套加 `alarm_ms`（正整數毫秒，從投出那一刻算）。投出成功後，tick 在自己的 `.aos/alarms/<id>.json`（ignore，不隨 group 還原）記下目標、投出的檔案路徑與到期時間。到期後本 node 的下一格去看：那封原件還在對方收件區（`requests/<id>.json` 或 `responses/<id>.json`），就算沒被處理，tick 在 stderr 印 `request_not_handled: <node> <id>`；不寫待辦、不重投、不取消。原件已被取走就算處理了，不印。看完不管結果都刪掉這筆鬧鐘。aos 不為鬧鐘另外叫醒 node，要準時就讓這個 node 有定期 tick。沒設 `alarm_ms` 就完全不等、不逾時。範例：[設了鬧鐘的封套](examples/messages/outbox.alarm.valid.json)、[反例：`alarm_ms` 為 0](examples/messages/outbox.alarm-zero.invalid.json)。
 
