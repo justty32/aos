@@ -113,7 +113,7 @@ class Runner(Case):
         raw, _, _ = read_inst(file)
         file.write_text('{"argv":["false"]}')
         result = run_snapshot(raw, file, os.getuid())
-        self.assertEqual(result['error']['code'], 'UserMismatch')
+        self.assertEqual(result['error']['code'], 'SourceChanged')
         self.assertFalse(result['started'])
 
     def test_directory_base_and_fallback(self):
