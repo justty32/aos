@@ -16,7 +16,7 @@
 
 執行器保存安全程序識別（例如 pidfd；跨重啟再核對 boot ID、PID、starttime），不拿可能重用的裸 PID 殺程序。cgroup 放在所屬 node 子樹；限制與計量只用已裝 module。
 
-主程序退出後仍須清空後代、排空捕獲串流、完整發布結果，才能宣告正常完成。後代另開 session 也不能漏掉；需要清理時先 TERM，再按 [inst](inst.md) 的 2 秒寬限 KILL。cgroup 或其他後代追蹤須能驗證受管範圍全空，不能只查主 PID 或 process group；沒 helper 也不能略過。
+主程序退出後仍須清空後代、排空捕獲串流、完整發布結果，才能宣告正常完成。後代另開 session 也不能漏掉；需要清理時先 TERM，再按 [inst](inst.md) 的 2 秒寬限 KILL。用 cgroup（必要依賴，[B-605](../daemon.md)）驗證受管範圍全空（例如 `cgroup.events` 的 populated），強制清理用 `cgroup.kill`；不能只查主 PID 或 process group；沒 helper 也不能略過。
 
 強制清理後代時記失敗，不以主程序 exit 0 冒稱成功。未確認清空就交待處理、不還名額；已裝 module 在移除空框前取必要計量。
 

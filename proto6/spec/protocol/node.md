@@ -121,7 +121,7 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
 
 ## P-208．收件區權限〔建議預設，未拍板〕
 
-建 node 時須開 daemon 對 `.aos/attention/` 的寫權。node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄 traverse 與 requests／responses 及 .tmp/ 的寫入／遍歷權。用共享群組或 ACL 保證 node 可讀、消費提交後可 unlink，不依賴投件者 umask，不一律 world-writable。
+建 node 時須開 daemon 對 `.aos/attention/` 的寫權。node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄 traverse 與 requests／responses 及 .tmp/ 的寫入／遍歷權。〔使用者方向 2026-09-29 晚〕首版只用共享群組（可配 setgid 目錄）、不用 ACL，保證 node 可讀、消費提交後可 unlink，不依賴投件者 umask，不一律 world-writable。
 
 投件權不含 repo／config／key 讀權，也不保證投件者間不能改檔；不覆蓋與內容核對見 P-003，可信來源及同 UID 界線見 [messages P-303](messages.md)。權限配置由上層 kernel 用自己的帳號做，固定特權步驟經 daemon；key 隔離見 [work P-405](work.md)。
 

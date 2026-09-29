@@ -145,7 +145,7 @@ LLM 另有 `llm.target_node=null` 的「不管」檔：agent 自己打 HTTP，�
 
 兩種工作可分別選路線。父須能列成員收件與讀摘要；僅開摘要權時讀 `.aos/summary/published.json`，用量另授讀權。轉交要開相應 requests／responses 權限，下一站明授 origin/via。自跑工具需 daemon 授權與 jobs 路徑權限；所有 once 資源都算可信 parent_id，工具不自選。
 
-OS 帳號與 chown 特權走 daemon helper；其他群組／ACL 由有權建立者配置。父配額只讓該子讀，不給子寫。
+OS 帳號與 chown 特權走 daemon helper；其他群組由有權建立者配置（首版不用 ACL）。父配額只讓該子讀，不給子寫。
 
 ## P-814．完整範本與走查〔B-603、P-010；工程預設〕
 

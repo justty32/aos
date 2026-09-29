@@ -8,7 +8,7 @@
 
 ## P-101．啟動、設定與 socket〔建議預設，未拍板〕
 
-完整 argv：`aos daemon --config /absolute/daemon.json`。前景執行；stdin 不讀，stdout 啟動時印 `helper_pid=<PID>`（無 helper 為 `none`）及 node 問題的警告；stderr 只印 daemon 自身原因造成的錯誤。讀設定、登記 inst 的原始 bytes（部署須授通用 user 必要讀取及目錄穿越權；讀不到就拒絕，不交 root 代讀），寫 socket、state_dir 恢復檔、node 的 `.aos/attention/` 及 P-110 的 once 失敗旁檔。環境不作授權，不定義 `AOS_*` 變數。正常停機回 0；用法／設定尚未開始做事前失敗回 2；初始化、清空或運行中的 daemon 自己失敗回 125。SIGINT／SIGTERM 走 P-114 的正常停機；其他訊號由父程序看 wait 狀態。
+完整 argv：`aos daemon --config /absolute/daemon.json`。前景執行；stdin 不讀，stdout 啟動時印 `helper_pid=<PID>`（無 helper 為 `none`）及 node 問題的警告；stderr 只印 daemon 自身原因造成的錯誤。讀設定、登記 inst 的原始 bytes（部署須授通用 user 必要讀取及目錄穿越權；讀不到就拒絕，不交 root 代讀），寫 socket、state_dir 恢復檔、node 的 `.aos/attention/` 及 P-110 的 once 失敗旁檔。環境不作授權，不定義 `AOS_*` 變數。正常停機回 0；用法／設定尚未開始做事前失敗回 2；初始化、清空或運行中的 daemon 自己失敗回 125。啟動先照 [B-605](../daemon.md) 自檢：版本低於下限、沒有 cgroup v2、拿不到交給 daemon 的 cgroup 子樹，都回 125 並在 stderr 說明。SIGINT／SIGTERM 走 P-114 的正常停機；其他訊號由父程序看 wait 狀態。
 
 [設定 schema](schemas/daemon-config.schema.json)：
 
@@ -20,14 +20,15 @@
 | `state_dir` | 必填，daemon 可寫的絕對目錄；存 `state.json`、自身 `attention/` 及 PID 提示檔 |
 | `pause_save_interval_ms` | 可省，正整數，預設 1000；pause 有變動時批次存檔間隔 |
 | `shutdown_grace_ms` | 可省，預設 2000，非負毫秒；到期後依執行器收尾 |
-| `cgroup_root` | 可省，部署已準備且授權的 cgroup v2 子樹絕對路徑；要用 cgroup 動作才需要 |
+| `cgroup_root` | 可省；不用 sudo 開時，使用者事先建好並交給 daemon 帳號的 cgroup v2 子樹絕對路徑。省略時用 systemd `Delegate=yes` 劃給 daemon 的子樹；各種啟動方式的子樹來源依 [B-605](../daemon.md)，拿不到就不啟動 |
+| `disable` | 可省，不重複字串陣列，目前只認 `quota`；強制關掉啟動時偵測到的可選功能（B-605） |
 | `roots` | 必填，頂層登記陣列；每項如下，`node_id` 不可重複 |
 
 頂層項必填 `node_id`、`identity_grant`，可帶正整數 `interval_ms` 與 `provision`；無 parent_id／once。身分額度是非空、不重複的帳號／UID 陣列。inst 尋找及 base 只依 [P-010](README.md)；頂層與普通 node 必須是資料夾，once 可為單檔。找不到 inst 是用法錯 2；IPC 註冊回 -32602／invalid_params，不使 daemon 退出。
 
-`provision` 是可省的固定動作授權：`{"actions":[…],"paths":[…]}`，兩欄必填、各自不得重複；省略等於無佈建權。`actions` 只認 P-107 六種；`paths` 是可佈建的絕對目錄範圍，空陣列不授任何路徑。`cgroup_root` 不是一般可寫路徑授權。
+`provision` 是可省的固定動作授權：`{"actions":[…],"paths":[…]}`，兩欄必填、各自不得重複；省略等於無佈建權。`actions` 只認 P-107 五種；`paths` 是可佈建的絕對目錄範圍，空陣列不授任何路徑。`cgroup_root` 不是一般可寫路徑授權。
 
-設定於啟動讀定，修改後重開 daemon。部署者先配置 socket 父目錄的穿越權及 socket 的連接權；預設父目錄 0750、socket 0660，群組／ACL 由部署配置，不在封包給任意人改。無法 bind、位置過長或權限不足就明確失敗。每個 socket_path 對應一把同目錄的 `daemon.lock` 獨占鎖；持鎖後才能清理屬於這個實例的殘留 socket，不能刪活著的 socket。可連 socket 不等於通過 method 授權。
+設定於啟動讀定，修改後重開 daemon。部署者先配置 socket 父目錄的穿越權及 socket 的連接權；預設父目錄 0750、socket 0660，群組由部署配置（首版不用 ACL），不在封包給任意人改。無法 bind、位置過長或權限不足就明確失敗。每個 socket_path 對應一把同目錄的 `daemon.lock` 獨占鎖；持鎖後才能清理屬於這個實例的殘留 socket，不能刪活著的 socket。可連 socket 不等於通過 method 授權。
 
 ## P-102．sudo 與 helper 生死〔使用者方向 2026-09-29〕
 
@@ -122,16 +123,17 @@ running 時 ended_at_ms／exit_code 必須 null；其他 outcome 必須有 ended
 | `chown` | `path`、`user` | 單一路徑改為額度內既存帳號與其主 GID；不遞迴、不收任意 GID、不跟隨 symlink |
 | `cgroup_create` | 無 | 在可信父資源子樹內建立本 node 的分支及執行 leaf；路徑由 daemon／helper 從登記推導，呼叫者不能給 cgroup 路徑 |
 | `cgroup_limits` | `limits` | 非空 object，可有 `cpu_max:{quota_us,period_us}`、`memory_max_bytes`、`pids_max`，皆正整數；CPU 直接使用 cgroup 微秒，是 P-002 的明示例外，檢查 controller 範圍後原值寫入；只寫這些 controller，作用於 node 分支並含後代；不設該欄就不新增該項限制 |
-| `quota` | `path`、`project_id`：正整數 | 只配置該路徑的 project **計量歸屬**；不設定磁碟硬上限或 soft limit。不支援就報 `unsupported`，沒裝磁碟 module 不呼叫 |
-| `mount` | `path`、`size_bytes`：正整數 | 首版只支援在已授權的空目錄掛 tmpfs，固定 `nodev,nosuid,noexec`；不用 caller 提供的來源、類型或 options；容量可見，不保證 `/tmp` 都是 tmpfs |
+| `quota` | `path`、`project_id`：正整數 | 只配置該路徑的 project **計量歸屬**；不設定磁碟硬上限或 soft limit。不支援或被設定 `disable` 關掉就報 `unsupported`，沒裝磁碟 module 不呼叫 |
 
-路徑操作必須在被授 `provision.paths` 內（按元件判定，不用字串前綴）；helper 固定目錄 handle、拒絕 symlink 穿越及替換競態，逐步核對實體路徑。已經掛著相同設定核對後成功，不同設定回 `conflict`，不卸載／覆蓋。quota 不搶走其他 node 的 project 歸屬。帳號不自動刪除或回收。
+〔使用者方向 2026-09-29 晚〕原有的 `mount`（helper 掛 tmpfs）首版拿掉，暫存就在磁碟。
 
-cgroup 的 node 分支承接父限制，執行 leaf 容納本 node 程序，子 node 分支留在同一父資源樹；module 決定哪些限制有值，daemon 不排資源。helper／收尾程序留在成員限額之外。**無 helper 時，daemon 以通用 user 在 systemd 委派的 cgroup_root 子樹內自己建框、寫限制及讀實際值**；授權和父限制照舊。未委派或 controller 不可用回 unsupported。只有建帳號、chown、quota、掛載需要 helper，無 helper 回 helper_unavailable。
+路徑操作必須在被授 `provision.paths` 內（按元件判定，不用字串前綴）；helper 固定目錄 handle、拒絕 symlink 穿越及替換競態，逐步核對實體路徑。OS 現況已符合所要求設定就核對後成功，不同回 `conflict`，不覆蓋。quota 不搶走其他 node 的 project 歸屬。帳號不自動刪除或回收。
+
+cgroup 的 node 分支承接父限制，執行 leaf 容納本 node 程序，子 node 分支留在同一父資源樹；module 決定哪些限制有值，daemon 不排資源。helper／收尾程序留在成員限額之外。〔使用者方向 2026-09-29 晚〕**上限設在 node 那層**：寫在 node 分支一次，之後每格沿用，不在每格重設。每個 tick 程序（含孫程序）都放進該 node 的框，once 放進其 parent 的框（[B-603](../daemon.md)）；〔建議預設，未拍板〕node 還沒經 cgroup_create 建框時，daemon 開格前自己建（不寫上限）。**daemon 在交給它的 cgroup 子樹內（[B-605](../daemon.md)）自己建框、寫限制及讀實際值，不經 systemd；無 helper 時用通用 user 做**，授權和父限制照舊。controller 不可用回 unsupported。只有建帳號、chown、quota 需要 helper，無 helper 回 helper_unavailable。
 
 cgroup_limits 改值時，daemon 先關受影響子樹的啟動閘門，與 pending start／wake／週期派出互斥；執行端核對整個框及後代全空才套用，否則 busy。已是相同值可核對後成功，不重寫。helper 的 start／limits 也須按同一資源子樹串行；不能只靠呼叫者先查 node.show。kernel 先逐筆暫停受影響子樹、等全空再要求更新；node.pause 本身不遞迴，更新後也不代替呼叫者 resume。
 
-首次建 node 前，可先用父 node 的佈建權在授權 path 建立必要權限／帳號，再登記成員。建立帳號不擴大額度。所有動作只保證單步完成後回覆，沒有跨步回滾；斷線或中途失敗須先核對 OS 事實，不能盲重送或自動「撤回」chown／mount。
+首次建 node 前，可先用父 node 的佈建權在授權 path 建立必要權限／帳號，再登記成員。建立帳號不擴大額度。所有動作只保證單步完成後回覆，沒有跨步回滾；斷線或中途失敗須先核對 OS 事實，不能盲重送或自動「撤回」chown。
 
 ## P-108．daemon 與 helper 的私有通道〔建議預設，未拍板〕
 
@@ -151,7 +153,7 @@ helper 用安全程序 handle 追蹤、wait 自己的孩子並跨 UID 收尾；d
 
 快照是 daemon 取原始 user 的同份不可變 bytes。helper 不以 root 展開引用；runner 切身分後重新確認原來源可讀且 bytes 相同，才解析快照，base 仍依 P-010，不以快照位置計算。helper 以 OS handle 核對實體路徑，不能只信正規化字串。
 
-鏡像只在記憶體。helper 存活時 bind／更新先通過它才公開；無 helper 時通用 user、無佈建權的登記可本地核對，不要求 cgroup；只授 cgroup 動作時另核對委派子樹。其他 UID／四種特權動作的新登記回 helper_unavailable。既有通用 user 仍可執行。
+鏡像只在記憶體。helper 存活時 bind／更新先通過它才公開；無 helper 時通用 user、無佈建權的登記可本地核對；只授 cgroup 動作時另核對它落在交給 daemon 的子樹內。其他 UID／三種特權動作（建帳號、chown、quota）的新登記回 helper_unavailable。既有通用 user 仍可執行。
 
 ## P-109．runner argv 與解析〔建議預設，未拍板〕
 
@@ -213,7 +215,7 @@ RPC error 沿 P-005；`data` 必填 `code`、`retryable`。解析／請求／met
 
 ## P-114．前景 Ctrl-C 停機〔使用者方向 2026-09-29，裁定「軟性標準」／CLI H-036 第 1、7 步〕
 
-`aos daemon --config F` 收到 SIGINT（Ctrl-C）或 SIGTERM，依 [B-604](../daemon.md) 停止新登記／叫醒／開格並收尾；shutdown_grace_ms 到期依執行器清空，再次收訊號也不略過驗證。清空後存 P-116 狀態、讓 helper 退出，清 socket 與 PID 檔，回 0。失敗回 125：node 問題寫 node 事項／stdout 警告，自身錯誤寫 daemon 事項／stderr。只 kill helper 不是停止 daemon。
+`aos daemon --config F` 收到 SIGINT（Ctrl-C）或 SIGTERM，依 [B-604](../daemon.md) 停止新登記／叫醒／開格，對在途 tick 送 SIGTERM 讓它們優雅結束；shutdown_grace_ms 到期以 `cgroup.kill` 依執行器清空，再次收訊號也不略過驗證。清空後存 P-116 狀態、讓 helper 退出，清 socket 與 PID 檔，回 0。失敗回 125：node 問題寫 node 事項／stdout 警告，自身錯誤寫 daemon 事項／stderr。只 kill helper 不是停止 daemon。
 
 首版沒有跨終端 `aos daemon stop` 或 shutdown IPC。非正常死亡後仍由下次啟動的 B-603 檢查舊程序，不因 socket 不見就推論已全空。
 
@@ -233,6 +235,6 @@ kernel 在自己的 repo 記成功同步的 boot_id 與成員版本；每格只�
 
 正常 Ctrl-C／SIGTERM 收尾後寫完整登記表、pause 與未處理 wake，clean_shutdown 為 true。pause 有變動時最多每 pause_save_interval_ms 原子寫一次，標 false；意外退出最多遺失最後這段時間的 pause 變動。寫入採 P-003 的完整暫檔與原子替換，失敗寫 daemon 自身事項並報 stderr。
 
-啟動先讀回，依目前 roots、inst 與父鏈重新核對登記、身分和授權；缺檔／壞檔便從 roots 重建，壞檔留診斷。讀回後先將 clean_shutdown 原子改 false，再接受工作；清空舊程序後自動對每個 root 留一個 wake，paused 者保持關閘，resume 才跑。
+啟動先讀回，依目前 roots、inst 與父鏈重新核對登記、身分和授權；缺檔／壞檔便從 roots 重建，壞檔留診斷。讀回後先將 clean_shutdown 原子改 false，再接受工作；依 [B-603](../daemon.md) 清空舊程序（仍有程序的 node cgroup 先 SIGTERM、寬限後 `cgroup.kill`）後自動對每個 root 留一個 wake，paused 者保持關閘，resume 才跑。
 
 乾淨停機可接回尚未啟動的 once；意外退出的舊 once 不恢復為可啟動登記，不能把舊 pending 或空 last_tick 當作從未啟動；交原發起者按工作結果／unknown 核對。其他未處理 wake 照常接回。boot_id 每次重生；頂層發現改變後逐層核對、補回成員，不必每格全量重登。daemon 自身 attention 依 P-601 接回、透過 IPC 查；node 事項留在各自目錄。

@@ -143,32 +143,6 @@
         "project_id"
       ],
       "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "properties": {
-        "node_id": {
-          "$ref": "common.schema.json#/$defs/NodeId"
-        },
-        "action": {
-          "const": "mount"
-        },
-        "path": {
-          "$ref": "common.schema.json#/$defs/NodeId"
-        },
-        "size_bytes": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        }
-      },
-      "required": [
-        "node_id",
-        "action",
-        "path",
-        "size_bytes"
-      ],
-      "additionalProperties": false
     }
   ]
 }

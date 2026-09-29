@@ -23,7 +23,7 @@
 
 ## V-02．先測行為，再測規模
 
-〔建議預設，未拍板〕先用假工具／mock LLM 驗檔案交接、git、授權及結果。再在可丟棄的 Linux／WSL 環境，驗無 helper 通用 user、有 helper 兩個真 UID、已裝 module 與後代清理；最後測萬級冷 node。
+〔建議預設，未拍板〕先用假工具／mock LLM 驗檔案交接、git、授權及結果。再在可丟棄的 Linux／WSL 環境，驗無 helper 通用 user、有 helper 兩個真 UID、已裝 module 與後代清理，cgroup 子樹分別來自 systemd `Delegate=yes`、無 systemd 時 sudo 自建、使用者事先建好三種情形；最後測萬級冷 node。
 
 保存版本、配置、環境與結果；mock 不代表 OS 隔離已驗證，磁碟記帳不算硬限制。範圍依[平台邊界](README.md)，須涵蓋同機 node 樹。
 
@@ -35,6 +35,8 @@
 
 驗兼任 kernel／agent、只有收信任務及空成員表，角色須依任務判定。正常重開讀回登記、pause 與 wake，意外重開最多丟最後一個存檔間隔的 pause；無快照也自動 tick 頂層，boot id 變更後逐層補登記，壞成員留待辦、不擋其餘成員；漏通知可補查，重複叫醒不並行同 node 的兩格。
 
+啟動自檢依 [B-605](daemon.md)：版本不足、沒有 cgroup v2、拿不到子樹都報錯退出；quota 偵測到但設定強制關時不用。
+
 測 socket 冒名、超額授予／宣告 user、不懂 user 語意、無 helper 繼承與切 UID 後開檔。超額須 125、不啟動、不寫 `exit` 並留待辦；整份 `$ref` 可用但不能偷換身分，搬資料夾也不能取得新身分。
 
 ### group、收件與派出
@@ -45,7 +47,7 @@
 
 ### 程序與結果
 
-daemon 或 VM 突然消失後，全殺舊 tick 與受管後代才重開；主程序已退、孫程序仍活也不能報清空。已 commit 狀態與完整結果保留，未 commit 還原；無可信結果的在途工作不能自動再跑。取消與完成競爭只發布一次結果，晚到舊結果不覆寫新嘗試，同一結果與用量不重複採計；沒有 OOM 證據不能只憑 SIGKILL 猜原因。
+daemon 或 VM 突然消失後，全殺舊 tick 與受管後代才重開；主程序已退、孫程序仍活也不能報清空。daemon 被 SIGKILL 後重開，仍有程序的 node cgroup 先收到 SIGTERM、寬限後才 `cgroup.kill`；正常 Ctrl-C 時在途 tick 也先收到信號。已 commit 狀態與完整結果保留，未 commit 還原；無可信結果的在途工作不能自動再跑。取消與完成競爭只發布一次結果，晚到舊結果不覆寫新嘗試，同一結果與用量不重複採計；沒有 OOM 證據不能只憑 SIGKILL 猜原因。
 
 ### 分層資源與 LLM
 

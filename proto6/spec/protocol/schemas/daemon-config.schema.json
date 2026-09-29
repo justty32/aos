@@ -18,6 +18,15 @@
     "cgroup_root": {
       "$ref": "common.schema.json#/$defs/NodeId"
     },
+    "disable": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "quota"
+        ]
+      },
+      "uniqueItems": true
+    },
     "roots": {
       "type": "array",
       "items": {
