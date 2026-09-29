@@ -150,7 +150,7 @@ runner 用法錯（含資料夾兩處皆無 inst）回 2；前置解析、開檔
 
 後代清空、捕獲排空及取消競態依 [B-202／203](../base/execution.md)。最終成功需要該範圍全空；收尾失敗可回 FinalizeFailed，但不能因此釋放尚在用的名額或開下一格。所有失敗不自動重跑 unknown。
 
-〔建議預設，未拍板；P-008〕**once 未啟動的最小旁檔**：當 daemon／helper 拒絕啟動 runner，或可信 runner 回報 `started:false`，daemon 在本次選定的 inst 旁發布 `<inst 檔名>.launch-error.json`，格式為 `{version:1,node_id,error}`，見 [schema](schemas/daemon-launch-error.schema.json)。error 使用 P-005；私有 PascalCase 必須映成 `user_not_granted`、`user_mismatch` 或 `start_failed` 等小寫代碼，不直接抄 runner error。每個 attempt 用新 inst 路徑；不覆蓋既有旁檔。
+〔使用者方向 2026-09-29，第十一批〕**once 未啟動的最小旁檔**：當 daemon／helper 拒絕啟動 runner，或可信 runner 回報 `started:false`，daemon 在本次選定的 inst 旁發布 `<inst 檔名>.launch-error.json`，格式為 `{version:1,node_id,error}`，見 [schema](schemas/daemon-launch-error.schema.json)。error 使用 P-005；私有 PascalCase 必須映成 `user_not_granted`、`user_mismatch` 或 `start_failed` 等小寫代碼，不直接抄 runner error。每個 attempt 用新 inst 路徑；不覆蓋既有旁檔。
 
 註冊時由 daemon 核對目標父目錄、可寫旁檔及 kernel 可讀的權限；單檔不存在但父路徑可信時仍可寫失敗旁檔。資料夾兩處皆缺 inst 時以 `.aos/` 已存在者的 inst.json 為旁檔基準，否則用根 inst.json；只決定診斷位置，不是覆寫尋找規則。不可信／無權的註冊不能藉此任意寫檔。固定目錄 handle、防 symlink、依 P-003 原子發布；同名異內容或寫不出時回錯誤並留 attention／stderr，kernel 沒證據就保留 unknown，不能聲稱一定看得到。
 
