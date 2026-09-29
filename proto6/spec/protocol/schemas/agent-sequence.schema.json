@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-sequence.schema.json",
+  "title": "proto6 agent-sequence",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "last_seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "version",
+    "last_seq"
+  ],
+  "additionalProperties": false
+}

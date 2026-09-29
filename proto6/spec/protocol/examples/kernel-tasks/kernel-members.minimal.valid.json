@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "revision": 1,
+  "members": [
+    {
+      "id": "a",
+      "node_id": "/srv/aos/a",
+      "identity_grant": [
+        1000
+      ],
+      "quota": {
+        "version": 1,
+        "node_id": "/srv/aos/a",
+        "seq": 1,
+        "resources": {
+          "llm": [
+            {
+              "pool_id": "local",
+              "concurrent_requests": 1
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -8,7 +8,7 @@
 
 ## P-101．啟動、設定與 socket〔建議預設，未拍板〕
 
-完整 argv：`aos daemon --config /absolute/daemon.json`。前景執行；stdin 不讀，stdout 啟動成功時只印一行 `helper_pid=<PID>`，無 helper 印 `helper_pid=none`；stderr 放啟停及錯誤診斷。讀設定、登記 inst 的原始 bytes（部署須授通用 user 必要讀取及目錄穿越權；讀不到就拒絕，不交 root 代讀），寫 socket、attention 通知及 P-110 的 once 失敗旁檔；不替 node 讀其他檔案。環境不作授權，不定義 `AOS_*` 變數。正常停機回 0；用法／設定尚未開始做事前失敗回 2；初始化、清空或運行中的 daemon 自己失敗回 125。被訊號終止由父程序看 wait 狀態。
+完整 argv：`aos daemon --config /absolute/daemon.json`。前景執行；stdin 不讀，stdout 啟動成功時只印一行 `helper_pid=<PID>`，無 helper 印 `helper_pid=none`；stderr 放啟停及錯誤診斷。讀設定、登記 inst 的原始 bytes（部署須授通用 user 必要讀取及目錄穿越權；讀不到就拒絕，不交 root 代讀），寫 socket、attention 通知及 P-110 的 once 失敗旁檔；不替 node 讀其他檔案。環境不作授權，不定義 `AOS_*` 變數。正常停機回 0；用法／設定尚未開始做事前失敗回 2；初始化、清空或運行中的 daemon 自己失敗回 125。SIGINT／SIGTERM 走 P-114 的正常停機；其他訊號由父程序看 wait 狀態。
 
 [設定 schema](schemas/daemon-config.schema.json)：
 
@@ -46,7 +46,9 @@ Unix stream，UTF-8 JSON 每行加 LF，含 LF 最多 262144 bytes；不用 batc
 | `node.unregister` | 目標 owner 或祖先 owner；效果包含目標已登記子樹 |
 | `node.wake` | 目標 owner 或祖先 owner |
 | `node.pause`、`node.resume` | 目標 owner 或祖先 owner |
-| `node.get` | 目標 owner 或祖先 owner；不開 tick |
+| `daemon.info` | 有 socket 連接權；只回本次啟動 ID，不暴露登記 |
+| `node.list` | 有 socket 連接權；逐筆只列 peer 是 owner／祖先 owner 的登記及保留的 once 結果，無可見項回空陣列 |
+| `node.get` | 目標 owner 或祖先 owner；含 P-106 保留的 once 結果，不開 tick |
 | `node.provision` | 目標 owner 或祖先 owner，且目標登記有相符的 `provision` 授權；需 helper 的動作再由 helper 核對 |
 
 root／通用 user 不因名稱自帶全樹 RPC 特權；它若是 owner／祖先才符合表格。既有成員可重登自己，但不能擴大目前額度或佈建權；新授額度及佈建權限只能由父層 owner／祖先 owner 在自身授權內下授。首次由父層登記，本版不提供首次自登記。
@@ -80,11 +82,32 @@ result 統一為 `{"node_id":"…"}`。新登記不自動啟動；父 kernel 在
 
 **故障停格接法**：非 once 登記把可信子程式退出 `3`／`125` 保留為停格碼；runner 前置失敗、缺可信回報或後代清不空也停格。daemon 先設 `paused:true` 再處理 pending／到期，寫 [ops 事項](ops.md)，不解析 stderr、不靠 tick 再發 IPC。這是所有非 once 目標的調度約定；普通程式回這兩碼也暫停，但不因此推論它沒執行。tick 的 commit／還原故障回 3、格首擋板回 125，見 [node P-203／205](node.md)。手動 node.pause 與自動停格使用同一閘門；resume 前修復者須清後代、持鎖核對基線並移除擋板。擋板寫不出時仍可在本次 daemon 存續期間停格；重啟前須由部署者完成修復，不能把記憶體 pause 當耐久故障紀錄。
 
-## P-106．查登記〔建議預設，未拍板〕
+## P-106．查登記與最近一格〔使用者方向 2026-09-29，CLI H-034 D1；欄位為工程預設〕
 
-`node.get` params 只有 `node_id`。result 必填 `node_id`、`parent_id`（頂層為 null）、`identity_grant`、`owner_uid`、`once`、`paused`、`running`、`pending`、`stopping`，有設定才附 `interval_ms`、`provision`；另必填 `cgroup`：沒配置為 null，否則回實際讀到的 `{path,limits}`，不是上次請求的快取。limits 的 CPU 用 `{quota_us,period_us}`、memory／pids 沿 P-107，無上限值回字串 `"max"`，未啟用 controller 省略。讀取失敗回 `resource_observation_failed`，不能回 null 冒充沒配置。登記欄位只回目前記憶體資料；沒有整棵樹列舉、history 或工作狀態查詢，呼叫者按自己的成員表逐個核對。root 記錄的 `once` 固定 false。
+`node.get` params 只有 `node_id`。result 必填 `boot_id`（P-115）、`node_id`、`parent_id`（頂層為 null）、`identity_grant`、`owner_uid`、`once`、`registered`、`paused`、`running`、`pending`、`stopping`、`last_tick`；有設定才附 `interval_ms`、`provision`。root 的 once 固定 false。`registered:true` 表示還在調度表；false 只供已解除的 once 診斷記錄，此時 paused／running／pending／stopping 都是 false。
 
-`running:false` 只在該 node 受管程序與後代都清空後成立；`stopping:true` 表示正在解除或清理失敗、不可再開。查詢不是業務結果或未知工作重跑許可。
+`cgroup` 也必填：沒有活的配置為 null（含已解除 once），否則回實際讀到的 `{path,limits}`，不是上次請求快取。limits 的 CPU 用 `{quota_us,period_us}`，memory／pids 沿 P-107，無上限回字串 `"max"`，未啟用 controller 省略。應存在卻讀取失敗回 `resource_observation_failed`，不能回 null 冒充沒配置。
+
+`last_tick:null` 表示本次登記還沒派出過；否則只保存最近一格，必填下表六欄。新格派出時取代前格，不是完整歷史。
+
+| 欄位 | 意思 |
+|---|---|
+| `started_at_ms` | daemon 接受這次開格並進入啟動流程的 UTC 毫秒；包含啟動前檢查，**不是程式已開始的證據** |
+| `ended_at_ms` | 完成收尾的 UTC 毫秒；還在啟動／執行／清後代時為 null |
+| `exit_code` | 可信 runner 回報的 0～255 整數；執行中或結果不明為 null |
+| `started` | 可信 runner 的 started；completed 為 true、launch_failed 為 false，running 為 null；unknown 只在已有可信 started:true 時填 true，否則 null |
+| `signal` | completed 時可信回報明列的子程式訊號（1～64），其餘或沒有則 null；不能從 exit_code 的 128+N 倒猜 |
+| `outcome` | `running`＝啟動／執行／收尾中；`completed`＝可信 started:true 且完成收尾；`launch_failed`＝可信 started:false；`unknown`＝沒可信回報或 FinalizeFailed。completed 可是非零，絕不等於業務成功 |
+
+running 時 ended_at_ms／exit_code 必須 null；其他 outcome 必須有 ended_at_ms。launch_failed 的 exit_code 只准 2／125；unknown 必須 null，保留診斷但不從 runner wait 碼猜業務退出碼。running:false 只在受管程序及後代已全空時成立；後代清不空時仍 running:true、outcome:running，另以 stopping:true 及 attention 暴露故障，不能先記成已完。時間可能受牆鐘校正影響，不據此排序格數或推算 timeout。
+
+`node.list` params 是 object，可省 `limit`（1～64，預設 64）與 `after_node_id`（NodeId）。result 是 `{boot_id,nodes,next_after_node_id}`：nodes 每項與 node.get 同形狀，按 node_id 的 UTF-8 bytes 升序；先按 peer 權限篩選，再取嚴格大於 after_node_id 的項。未列完時 next_after_node_id 是本頁末項 ID，列完為 null；不得回空頁卻還給下一頁。每頁亦受 P-103 封包上限約束，裝不下一項就縮頁，單項仍過大回 `response_too_large`。只列有權看者，不泄漏總數或無權項。不同頁不是同一瞬間快照；每次接續必須使用剛收到且嚴格前進的 next_after_node_id，boot_id 變了就重列，需要核對單項用 node.get。持續變動時本輪不追補游標前新插入的項，避免無限追列。
+
+**once 留存**：一次收尾解除後，在本 daemon 記憶體留一筆 registered:false 的最近結果，保留原 owner_uid 與 parent_id，查詢時以**目前仍在的可信父鏈**重驗；祖先權限撤銷即生效，不能靠舊祖先快照繼續讀。父額度撤掉該 owner 身分時一併清除此 once 診斷；父被解除也清除。只供 get/list，wake／pause／resume 等仍回 not_registered。留到 daemon 結束、同 node_id 通過新登記，或其父子樹被明示 unregister；不寫檔、不把它算正在占用的登記。不設計時淘汰，避免人手來不及看；長期大量 once 的診斷記憶體成本可由部署安排重啟清掉。普通 node 被解除不留此記錄。新 once attempt 應用新 inst 路徑，見 work 篇。
+
+人手 `aos node ls --socket S` 使用 node.list，`aos node show N --socket S` 使用 node.get；多個 `--node` 可逐個 get。畫面須把「已解除 once」「未啟動」「還在跑」「結果不明」分開。IPC 只回記憶體診斷，不讀工作結果／git，也不是業務完成或 unknown 重跑許可。
+
+**驗收：**不同 UID 只能列自己的授權子樹；未跑顯示 last_tick:null；已放行後程式回 125 是 completed，身分拒絕 125 是 launch_failed（仍可能已有開檔副作用）；once 結束仍列得到且 registered:false；重啟後舊結果消失。分頁跨重啟須能靠 boot_id 發現。
 
 ## P-107．佈建固定動作〔建議預設，未拍板〕
 
@@ -150,7 +173,7 @@ runner 用法錯（含資料夾兩處皆無 inst）回 2；前置解析、開檔
 
 後代清空、捕獲排空及取消競態依 [B-202／203](../base/execution.md)。最終成功需要該範圍全空；收尾失敗可回 FinalizeFailed，但不能因此釋放尚在用的名額或開下一格。所有失敗不自動重跑 unknown。
 
-〔使用者方向 2026-09-29，第十一批〕**once 未啟動的最小旁檔**：當 daemon／helper 拒絕啟動 runner，或可信 runner 回報 `started:false`，daemon 在本次選定的 inst 旁發布 `<inst 檔名>.launch-error.json`，格式為 `{version:1,node_id,error}`，見 [schema](schemas/daemon-launch-error.schema.json)。error 使用 P-005；私有 PascalCase 必須映成 `user_not_granted`、`user_mismatch` 或 `start_failed` 等小寫代碼，不直接抄 runner error。每個 attempt 用新 inst 路徑；不覆蓋既有旁檔。
+〔使用者方向 2026-09-29，第十一批與後續旁檔改名裁定〕**once 未啟動的最小旁檔**：當 daemon／helper 拒絕啟動 runner，或可信 runner 回報 `started:false`，daemon 在本次選定的 inst 旁發布 `<inst 檔名>.err`（例如 `job.json.err`），格式為 `{version:1,node_id,error}`，見 [schema](schemas/daemon-launch-error.schema.json)。error 使用 P-005；私有 PascalCase 必須映成 `user_not_granted`、`user_mismatch` 或 `start_failed` 等小寫代碼，不直接抄 runner error。每個 attempt 用新 inst 路徑；不覆蓋既有旁檔。
 
 註冊時由 daemon 核對目標父目錄、可寫旁檔及 kernel 可讀的權限；單檔不存在但父路徑可信時仍可寫失敗旁檔。資料夾兩處皆缺 inst 時以 `.aos/` 已存在者的 inst.json 為旁檔基準，否則用根 inst.json；只決定診斷位置，不是覆寫尋找規則。不可信／無權的註冊不能藉此任意寫檔。固定目錄 handle、防 symlink、依 P-003 原子發布；同名異內容或寫不出時回錯誤並留 attention／stderr，kernel 沒證據就保留 unknown，不能聲稱一定看得到。
 
@@ -170,6 +193,7 @@ RPC error 沿 P-005；`data` 必填 `code`、`retryable`。解析／請求／met
 | `helper_unavailable`、`unsupported` | helper 不在／部署不支援所選固定動作；false |
 | `path_not_granted`、`conflict` | 超路徑範圍／OS 現況不符所要求設定；false |
 | `resource_observation_failed` | cgroup 實際配置無法讀取；false |
+| `response_too_large` | 一筆查詢結果就超過封包上限；false |
 | `provision_failed`、`start_failed` | 固定動作或啟動失敗；false，先核對是否已有副作用 |
 
 標準碼的 data.code 依序為 parse_error、invalid_request、method_not_found、invalid_params、internal_error，retryable=false。取不到合法 ID 的解析／請求錯誤依 P-004 回 `id:null`；超長行回一次 invalid_request 後關連線，避免無界讀取。可辨識合法 ID 就沿用，不造新 ID。
@@ -178,8 +202,24 @@ RPC error 沿 P-005；`data` 必填 `code`、`retryable`。解析／請求／met
 
 [common](schemas/common.schema.json) 只放共用型別；[daemon-rpc](schemas/daemon-rpc.schema.json) 驗公開 IPC，[registration](schemas/daemon-registration.schema.json) 與 [provision](schemas/daemon-provision.schema.json) 驗其參數，[helper](schemas/daemon-helper.schema.json) 驗私有通道。
 
-[examples/daemon/](examples/daemon/) 以檔名首段對應 schema：config、runner_report、launch-error 各驗同名 schema；helper_* 驗 helper，其餘驗 rpc。每種訊息一正一反。反例 once_interval＝once 帶週期；version＝錯版本；missing_running／missing_retryable＝缺必填；false_success＝未啟動卻成功；launch-error 的 private-code＝錯把私有字串當 P-005 數字碼；parse-error 的 success＝null ID 冒充成功；其他 extra＝未知欄位或 result/error 雙分支。解析、授權與 OS 事實仍依正文檢查。
+[examples/daemon/](examples/daemon/) 以檔名首段對應 schema：config、runner_report、launch-error 各驗同名 schema；helper_* 驗 helper，其餘驗 rpc。每種訊息一正一反。反例 once_interval＝once 帶週期；version＝錯版本；missing_running／missing_retryable＝缺必填；false_success＝未啟動卻成功；launch-error 的 private-code＝錯把私有字串當 P-005 數字碼；parse-error 的 success＝null ID 冒充成功；其他 extra＝未知欄位或 result/error 雙分支。查詢新增 info／list 正反例；info_result.empty_boot 的 boot_id 不可空、list.zero_limit 的 limit 不可零、list_result.running_exit 的執行中結果不得帶結束碼、get_result.launch_success 的未啟動結果不得帶成功碼。解析、授權與 OS 事實仍依正文檢查。
 
 ## P-113．待決與跨篇
 
 見 [README P-008](README.md#p-008)。
+
+## P-114．前景 Ctrl-C 停機〔使用者方向 2026-09-29，裁定「軟性標準」／CLI H-036 第 1、7 步〕
+
+`aos daemon --config F` 收到 SIGINT（前景 Ctrl-C）或 SIGTERM，先停止接受新登記／叫醒／開格，再按 [B-604](../daemon.md) 對所有受管程序及後代收尾。shutdown_grace_ms 到期依執行器 TERM／KILL 與安全程序 handle 規則完成清空；再次收到 SIGINT／SIGTERM 不跳過清空驗證。正常清空、helper 退出及 socket 清理後回 0；清不空／自身收尾失敗回 125 並留 stderr／可寫的 attention，不聲稱安全停止。root helper 也須跟著退出；只 kill helper 不是停止 daemon。
+
+首版沒有跨終端 `aos daemon stop` 或 shutdown IPC。非正常死亡後仍由下次啟動的 B-603 檢查舊程序，不因 socket 不見就推論已全空。
+
+**驗收：**有執行中 node 時 Ctrl-C／SIGTERM 都不開新格，等全部受管後代與 helper 全空才回 0；清不空不得回 0。
+
+## P-115．啟動 ID 與按需重建〔使用者方向 2026-09-29，裁定「kernel 別每格都重新註冊」；欄位為工程預設〕
+
+`daemon.info` params 為 `{}`，result 只有 `boot_id`（共用 ID，建議隨機 UUID）。每次 daemon 啟動新生一個，整次存續不變，重開不得沿用；只放記憶體，socket 路徑相同也不能沿用。node.get／node.list 的 boot_id 跟它一致。這是 daemon 的啟動識別，不是 node 世代號；node 路徑的 symlink 別名、同路徑換 node 或跨機同名不另做識別檢查（最新唯一性裁定）。
+
+kernel 將上次成功同步的 boot_id 與已提交成員清單版本記在自己的 repo；每格可用這個小查詢比對，兩者沒變且沒有待修復差異就不重送 register。daemon 重開、清單改了、或已知成員被解除才核對差異並重登；父 kernel 明確叫醒新重建的子 kernel，讓樹逐層長回來。部分成員失敗不得把它標成已成功同步，壞成員不妨礙其他成員；重查／修復細節由 kernel 任務篇定。重建不包含重送 unknown once 工作。
+
+**驗收：**連續十格無變動只查 boot_id、不重登十次；daemon 重開後 boot_id 改變，各 kernel 逐層補回成員；改一筆成員只同步差異，失敗筆下次仍能重查。

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "members": [
+    {
+      "member_id": "a",
+      "quota_seq": 1,
+      "applied": true,
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-usage-state",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "source_commit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observed_at_ms": {
+            "$ref": "common.schema.json#/$defs/TimeMs"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "missing",
+              "stale",
+              "invalid"
+            ]
+          }
+        },
+        "required": [
+          "member_id",
+          "source_commit",
+          "observed_at_ms",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "members"
+  ],
+  "additionalProperties": false
+}

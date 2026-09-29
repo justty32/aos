@@ -29,7 +29,7 @@ daemon 負責程序啟停，不判業務排程；可選 root helper 是 daemon �
 
 〔建議預設，未拍板〕`node_id` 指上述路徑；`request_id` 辨識一次投件，`job_id` 辨識邏輯工作，`attempt_id` 辨識一次實際嘗試。重送同一次結果沿用 attempt ID，真的重新執行才換 ID。`run_id` 只在採用 [run](scheduling/runs.md) 分組時需要，不要求所有 node 都有一輪任務。
 
-路徑識別 node，不代表 UID 或舊工作歸屬。移動、退役或重用同一路徑／UID 時，仍須避免把舊請求、晚到結果接到新工作；工作識別與結果核對依 [C-03](contracts.md)，退役依 [daemon](daemon.md)。不另加一套角色 ID 或世代號。
+路徑識別 node，不代表 UID 或舊工作歸屬。〔使用者方向 2026-09-29〕node id 的唯一性不另防：同一資料夾經 symlink 有兩個路徑、同一路徑先後給不同 node、跨機器重名，都不在考慮範圍，風險由使用者自行承擔；不展開 symlink、不加世代號或跨機檢查。
 
 ## T-04．控制狀態與觀測 phase 不混用
 

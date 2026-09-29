@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "boot_id": 123,
+  "members_revision": 1,
+  "synced": [
+    {
+      "member_id": "a",
+      "registration": {
+        "node_id": "/srv/aos/a",
+        "parent_id": "/srv/aos/top",
+        "identity_grant": [
+          1000
+        ]
+      },
+      "bootstrap_pending": true
+    }
+  ],
+  "pending_remove": [],
+  "retry": []
+}

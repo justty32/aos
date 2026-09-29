@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-config.schema.json",
+  "title": "proto6 agent-config",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "llm": {
+      "type": "object",
+      "properties": {
+        "target_node": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "pool": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "max_completion_tokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "context_tokens": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "target_node",
+        "pool",
+        "model",
+        "max_completion_tokens",
+        "timeout_ms",
+        "context_tokens"
+      ],
+      "additionalProperties": false
+    },
+    "system_prompt": {
+      "type": "string"
+    },
+    "tools_file": {
+      "const": "config/tools.json"
+    },
+    "work_target": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "attention_dir": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    }
+  },
+  "required": [
+    "version",
+    "llm",
+    "system_prompt",
+    "tools_file",
+    "work_target",
+    "attention_dir"
+  ],
+  "additionalProperties": false
+}

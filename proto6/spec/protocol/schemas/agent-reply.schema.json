@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-reply.schema.json",
+  "title": "proto6 agent-reply",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "input_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "at_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs"
+    },
+    "kind": {
+      "enum": [
+        "progress",
+        "final"
+      ]
+    },
+    "text": {
+      "type": "string"
+    },
+    "outcome": {}
+  },
+  "required": [
+    "version",
+    "id",
+    "input_id",
+    "seq",
+    "at_ms",
+    "kind",
+    "text",
+    "outcome"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "progress"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "canceled",
+              "unknown"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

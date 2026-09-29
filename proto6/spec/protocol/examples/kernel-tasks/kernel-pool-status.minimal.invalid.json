@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/top",
+  "observed_at_ms": 1000,
+  "scopes": [
+    {
+      "quota_scope": "local-account",
+      "active_requests": 0,
+      "unknown_requests": -1,
+      "window_started_at_ms": 1000,
+      "window_requests": 0,
+      "window_estimated_tokens": 0,
+      "last_429_at_ms": null,
+      "cooldown_until_ms": null
+    }
+  ],
+  "pools": [
+    {
+      "pool_id": "local",
+      "quota_scope": "local-account",
+      "active_requests": 0,
+      "unknown_requests": 0
+    }
+  ]
+}

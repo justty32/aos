@@ -369,7 +369,7 @@ aos node provision "$DEMO/top" --from "$DEMO/account.json" --socket "$S"
 # 顯示影響，答 y；帳號建好
 ```
 
-新 node 用 `new --user aos-demo-agent`；既有 a 暫停／提交／全空重登。逐路徑 chown、ACL 配 repo/inst/inbox/socket，chown 不遞迴。
+新 node 用 `new --user aos-demo-agent`；既有 a 暫停／提交／全空重登。逐路徑 chown、ACL 配 repo/inst/requests/responses/socket，chown 不遞迴。
 
 **缺 D2：**agent 範本／LLM 設定／持久成員 adapter。a 仍是空 node；補好才可裝範本、設定 LLM、父保存成員／配額，重啟才長回。
 

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-members",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "node_id": {
+            "$ref": "common.schema.json#/$defs/NodeId"
+          },
+          "identity_grant": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "daemon-registration.schema.json#/$defs/User"
+                },
+                {
+                  "not": {
+                    "enum": [
+                      0,
+                      "root"
+                    ]
+                  }
+                }
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "interval_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "provision": {
+            "$ref": "daemon-registration.schema.json#/$defs/ProvisionGrant"
+          },
+          "quota": {
+            "$ref": "res-quota.schema.json"
+          }
+        },
+        "required": [
+          "id",
+          "node_id",
+          "identity_grant",
+          "quota"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "revision",
+    "members"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-config-state.schema.json",
+  "title": "proto6 agent-config-state",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "valid_commit": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$(?![\\s\\S])"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "issue": {
+      "anyOf": [
+        {
+          "$ref": "ops-attention.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "version",
+    "valid_commit",
+    "issue"
+  ],
+  "additionalProperties": false
+}

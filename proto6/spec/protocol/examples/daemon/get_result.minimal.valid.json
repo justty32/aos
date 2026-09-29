@@ -23,6 +23,9 @@
         "memory_max_bytes": "max",
         "pids_max": 64
       }
-    }
+    },
+    "boot_id": "boot-20260929-a",
+    "registered": true,
+    "last_tick": null
   }
 }

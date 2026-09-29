@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "members": [
+    {
+      "member_id": "a",
+      "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observed_at_ms": 1000,
+      "status": "ok"
+    }
+  ]
+}

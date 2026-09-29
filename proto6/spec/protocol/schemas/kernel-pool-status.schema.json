@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-pool-status",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "node_id": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "observed_at_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs"
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quota_scope": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "active_requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unknown_requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "window_started_at_ms": {
+            "$ref": "common.schema.json#/$defs/TimeMs"
+          },
+          "window_requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "window_estimated_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_429_at_ms": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/TimeMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cooldown_until_ms": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/TimeMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "quota_scope",
+          "active_requests",
+          "unknown_requests",
+          "window_started_at_ms",
+          "window_requests",
+          "window_estimated_tokens",
+          "last_429_at_ms",
+          "cooldown_until_ms"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "pools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pool_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "quota_scope": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "active_requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unknown_requests": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "pool_id",
+          "quota_scope",
+          "active_requests",
+          "unknown_requests"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "node_id",
+    "observed_at_ms",
+    "scopes",
+    "pools"
+  ],
+  "additionalProperties": false
+}

@@ -68,6 +68,16 @@
               "additionalProperties": false
             }
           }
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "agent.reply"
+            },
+            "params": {
+              "$ref": "agent-reply.schema.json"
+            }
+          }
         }
       ]
     }

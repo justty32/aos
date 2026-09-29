@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-usage.schema.json",
+  "title": "proto6 agent-usage",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "node_id": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "target_node": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "pool": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "completed",
+        "unknown",
+        "rejected"
+      ]
+    },
+    "attempts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "attempt_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "status": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "canceled",
+              "unknown"
+            ]
+          },
+          "usage": {
+            "$ref": "llm-result.schema.json#/$defs/outcome/properties/attempts/items/properties/usage"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "status",
+          "usage"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "node_id",
+    "request_id",
+    "target_node",
+    "pool",
+    "model",
+    "status",
+    "attempts"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "completed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attempts": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "rejected"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attempts": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

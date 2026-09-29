@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "next_seq": 2,
+  "scan_after": null,
+  "next_scan_ms": 60000,
+  "members": [
+    {
+      "member_id": "a",
+      "ready_seq": 1,
+      "due_ms": null,
+      "summary_commit": null,
+      "wake_after_end_ms": null
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-tasks.schema.json",
+  "title": "proto6 agent-tasks",
+  "$ref": "node-tasks.schema.json"
+}

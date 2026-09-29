@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-config",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "daemon_socket": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "attention_dir": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "scan_interval_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "scan_batch_limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "usage_max_age_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_active_members": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "quota_file": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    }
+  },
+  "required": [
+    "version",
+    "daemon_socket",
+    "attention_dir"
+  ],
+  "additionalProperties": false
+}

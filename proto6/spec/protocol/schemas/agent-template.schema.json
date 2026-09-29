@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-template.schema.json",
+  "title": "proto6 agent-template",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "node_id": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "files": {
+      "type": "object",
+      "properties": {
+        ".aos/inst.json": {
+          "$ref": "node-inst.schema.json"
+        },
+        "tasks.json": {
+          "$ref": "agent-tasks.schema.json"
+        },
+        "config/agent.json": {
+          "$ref": "agent-config.schema.json"
+        },
+        "config/tools.json": {
+          "$ref": "agent-tools.schema.json"
+        },
+        ".gitignore": {
+          "type": "string"
+        }
+      },
+      "required": [
+        ".aos/inst.json",
+        "tasks.json",
+        "config/agent.json",
+        "config/tools.json",
+        ".gitignore"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "node_id",
+    "files"
+  ],
+  "additionalProperties": false
+}

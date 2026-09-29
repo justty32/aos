@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-input.schema.json",
+  "title": "proto6 agent-input",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "input_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "reply_to": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "received_at_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs"
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "waiting_result",
+        "needs_attention",
+        "done"
+      ]
+    },
+    "invalid_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "pending_requests": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/ID"
+      },
+      "uniqueItems": true
+    },
+    "completed_at_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs"
+    }
+  },
+  "required": [
+    "version",
+    "input_id",
+    "reply_to",
+    "seq",
+    "received_at_ms",
+    "status",
+    "invalid_count",
+    "pending_requests"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "done"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "completed_at_ms"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "completed_at_ms"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

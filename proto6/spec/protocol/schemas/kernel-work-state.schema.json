@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-work-state",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "phase": {
+      "enum": [
+        "queued",
+        "prepared",
+        "dispatched",
+        "completed",
+        "unknown"
+      ]
+    },
+    "boot_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "config_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "work_dir": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "finished_at_ms": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/TimeMs"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "llm": {
+      "type": "object",
+      "properties": {
+        "pool_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "quota_scope": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "reserved_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reserved_at_ms": {
+          "$ref": "common.schema.json#/$defs/TimeMs"
+        },
+        "retry_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/TimeMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "pool_id",
+        "quota_scope",
+        "reserved_tokens",
+        "reserved_at_ms",
+        "retry_at_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "request_id",
+    "seq",
+    "phase",
+    "boot_id",
+    "config_commit",
+    "work_dir",
+    "finished_at_ms"
+  ],
+  "additionalProperties": false
+}

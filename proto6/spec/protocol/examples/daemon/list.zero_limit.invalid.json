@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": "query-1",
+  "method": "node.list",
+  "params": {
+    "limit": 0
+  }
+}

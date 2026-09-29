@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "once 未啟動旁檔（P-110；P-008 未拍板）",
+  "title": "once 未啟動旁檔 <inst 檔名>.err（P-110）",
   "type": "object",
   "properties": {
     "version": {

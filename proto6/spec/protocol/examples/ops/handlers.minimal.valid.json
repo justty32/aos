@@ -5,11 +5,13 @@
       "id": "recheck",
       "reason": "config_invalid",
       "safety": "safe",
-      "effect": "只驗證設定，不恢復工作。",
+      "effect": "重驗 top 的設定；來源確認修好才解除事項，不派工作。",
       "action": {
         "kind": "exec",
         "argv": [
-          "site-check-config"
+          "aos-kernel-check",
+          "--node",
+          "/srv/aos/top"
         ]
       }
     }

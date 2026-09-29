@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/a",
+  "request_id": "llm-1",
+  "target_node": "/srv/aos/top",
+  "pool": "local",
+  "model": "example-model",
+  "status": "rejected",
+  "attempts": [
+    {
+      "attempt_id": "attempt-1",
+      "status": "succeeded",
+      "usage": {
+        "prompt_tokens": 100,
+        "completion_tokens": 10,
+        "total_tokens": 110
+      }
+    }
+  ]
+}

@@ -22,7 +22,7 @@
 ## P-003．檔案發布與收件〔建議預設，未拍板〕
 
 - **發布**：在目標資料夾的 `.tmp/` 寫完、fsync、rename 成正式名，再 fsync 目錄。名字以 `.` 開頭的一律不處理。rename 不覆蓋已有檔；撞名須比對內容，見 [messages P-304](messages.md)。
-- **收件區**：每個 node 的 `inbox/`，在 `.gitignore` 裡。投件者要對它有寫權限（權限怎麼開見 node.md）。收件只看檔案，不看 inotify；inotify／IPC 叫醒只是門鈴，可遺失。
+- **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。投件者要對目標那格有寫權限（權限怎麼開見 node.md）。收件只看檔案，不看 inotify；inotify／IPC 叫醒只是門鈴，可遺失。
 - **去重**：檔名就是請求 ID；同 ID 同內容已有檔／已提交紀錄＝收過。內容不同的同 ID 當衝突，寫一件待處理事項，不猜。
 - **消費**（[Q1](../tick.md)）：tick 把收件複製進追蹤區、group commit 成功後才刪收件原件。
 - **送出**（[Q2](../tick.md)）：請求檔先在自己的追蹤區 commit，再投進對方收件區。
@@ -58,7 +58,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 ### 已裁定（第十一批）
 
-- **once 資源歸屬與啟動失敗證據**〔使用者方向 2026-09-29〕：照 [daemon P-104／110](daemon.md)；以可信 parent_id 固定算在發起 node 的資源框內，runner 根本沒啟動時由 daemon 寫 `<inst 檔名>.launch-error.json`。
+- **once 資源歸屬與啟動失敗證據**〔使用者方向 2026-09-29〕：照 [daemon P-104／110](daemon.md)；以可信 parent_id 固定算在發起 node 的資源框內，runner 根本沒啟動時由 daemon 在 inst 檔名後加 `.err` 寫旁檔（例如 `job.json.err`）。
 - **首版網路**〔使用者方向 2026-09-29〕：只記用量摘要，不做硬限速；要求硬限速的部署明確報不支援（[resources P-506](resources.md)）。
 
 ### 工程預設與待補接口

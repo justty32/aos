@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "reply-progress-1",
+  "input_id": "input-1",
+  "seq": 1,
+  "at_ms": 1790000001000,
+  "kind": "progress",
+  "text": "我正在查看工具結果。",
+  "outcome": null
+}
