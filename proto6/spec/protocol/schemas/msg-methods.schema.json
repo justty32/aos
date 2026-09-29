@@ -5,81 +5,342 @@
       "$ref": "common.schema.json#/$defs/FileRpcRequest"
     },
     {
-      "oneOf": [
-        {
-          "properties": {
-            "method": {
-              "const": "agent.send"
-            },
-            "params": {
-              "type": "object",
-              "required": [
-                "text"
-              ],
-              "properties": {
-                "text": {
-                  "type": "string",
-                  "minLength": 1
+      "properties": {
+        "method": {
+          "enum": [
+            "agent.say",
+            "kernel.schedule.recheck",
+            "kernel.quota.set",
+            "kernel.usage.measure",
+            "agent.reply.receive"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "agent.say"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "properties": {
+              "argv": {
+                "if": {
+                  "type": "array"
                 },
-                "attachments": {
-                  "type": "array",
-                  "minItems": 1,
-                  "items": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "^/[^\\u0000]*$"
-                  }
+                "then": {
+                  "minItems": 3,
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "aos"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "agent"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "say"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    }
+                  ]
                 }
-              },
-              "additionalProperties": false
-            }
-          }
-        },
-        {
-          "properties": {
-            "method": {
-              "const": "kernel.recheck"
-            },
-            "params": {
-              "type": "object",
-              "maxProperties": 0
-            }
-          }
-        },
-        {
-          "properties": {
-            "method": {
-              "const": "resources.set"
-            },
-            "params": {
-              "$ref": "res-quota.schema.json"
-            }
-          }
-        },
-        {
-          "properties": {
-            "method": {
-              "const": "resources.measure"
-            },
-            "params": {
-              "type": "object",
-              "properties": {},
-              "required": [],
-              "additionalProperties": false
-            }
-          }
-        },
-        {
-          "properties": {
-            "method": {
-              "const": "agent.reply"
-            },
-            "params": {
-              "$ref": "agent-reply.schema.json"
+              }
             }
           }
         }
-      ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "agent.reply.receive"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "properties": {
+              "argv": {
+                "if": {
+                  "type": "array"
+                },
+                "then": {
+                  "minItems": 4,
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "aos"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "agent"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "reply"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "receive"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "kernel.schedule.recheck"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "properties": {
+              "argv": {
+                "if": {
+                  "type": "array"
+                },
+                "then": {
+                  "minItems": 4,
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "aos"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "kernel"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "schedule"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "recheck"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "kernel.quota.set"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "properties": {
+              "argv": {
+                "if": {
+                  "type": "array"
+                },
+                "then": {
+                  "minItems": 4,
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "aos"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "kernel"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "quota"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "set"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "kernel.usage.measure"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "properties": {
+              "argv": {
+                "if": {
+                  "type": "array"
+                },
+                "then": {
+                  "minItems": 4,
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "aos"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "kernel"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "usage"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "measure"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

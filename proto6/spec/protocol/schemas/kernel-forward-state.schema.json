@@ -36,10 +36,6 @@
       "type": "integer",
       "minimum": 1
     },
-    "config_commit": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
-    },
     "phase": {
       "enum": [
         "queued",
@@ -67,7 +63,6 @@
     "route_pool",
     "target_node",
     "seq",
-    "config_commit",
     "phase",
     "finished_at_ms"
   ],

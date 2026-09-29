@@ -16,9 +16,6 @@
         ".aos/inst.json": {
           "$ref": "node-inst.schema.json"
         },
-        "tasks.json": {
-          "$ref": "agent-tasks.schema.json"
-        },
         "config/agent.json": {
           "$ref": "agent-config.schema.json"
         },
@@ -27,11 +24,14 @@
         },
         ".gitignore": {
           "type": "string"
+        },
+        ".aos/tasks.json": {
+          "$ref": "agent-tasks.schema.json"
         }
       },
       "required": [
         ".aos/inst.json",
-        "tasks.json",
+        ".aos/tasks.json",
         "config/agent.json",
         "config/tools.json",
         ".gitignore"

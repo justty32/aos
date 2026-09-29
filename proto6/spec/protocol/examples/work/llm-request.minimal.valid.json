@@ -1,21 +1,24 @@
 {
   "jsonrpc": "2.0",
   "id": "llm-1",
-  "method": "llm.complete",
+  "method": "llm.chat",
   "reply_to": "/srv/aos/member",
   "params": {
-    "node_id": "/srv/aos/member",
-    "job_id": "think-1",
-    "attempt_id": "http-1",
-    "pool": "local",
-    "model": "example-model",
-    "messages": [
-      {
-        "role": "user",
-        "content": "你好"
-      }
+    "_metainfo": {
+      "_type": "posix",
+      "_version": 1
+    },
+    "argv": [
+      "aos",
+      "llm",
+      "chat"
     ],
-    "max_completion_tokens": 128,
-    "timeout_ms": 120000
+    "stdin": "/srv/aos/shared/llm-payload.minimal.valid.json",
+    "stdout": {
+      "$opt": "inherit"
+    },
+    "stderr": {
+      "$opt": "inherit"
+    }
   }
 }

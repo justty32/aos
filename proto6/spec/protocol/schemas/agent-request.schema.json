@@ -31,10 +31,6 @@
         "reply"
       ]
     },
-    "config_commit": {
-      "type": "string",
-      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$(?![\\s\\S])"
-    },
     "delivery": {
       "enum": [
         "prepared",
@@ -66,7 +62,6 @@
     "input_id",
     "target_node",
     "kind",
-    "config_commit",
     "delivery",
     "response_consumed"
   ],

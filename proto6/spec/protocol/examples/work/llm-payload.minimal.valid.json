@@ -1,0 +1,15 @@
+{
+  "node_id": "/srv/aos/member",
+  "job_id": "think-1",
+  "attempt_id": "http-1",
+  "pool": "local",
+  "model": "example-model",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    }
+  ],
+  "max_completion_tokens": 128,
+  "timeout_ms": 120000
+}

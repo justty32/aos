@@ -49,10 +49,26 @@
     "tools_file": {
       "const": "config/tools.json"
     },
-    "work_target": {
-      "$ref": "common.schema.json#/$defs/NodeId"
+    "tools": {
+      "type": "object",
+      "properties": {
+        "target_node": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/NodeId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "target_node"
+      ],
+      "additionalProperties": false
     },
-    "attention_dir": {
+    "daemon_socket": {
       "$ref": "common.schema.json#/$defs/NodeId"
     }
   },
@@ -61,8 +77,8 @@
     "llm",
     "system_prompt",
     "tools_file",
-    "work_target",
-    "attention_dir"
+    "tools",
+    "daemon_socket"
   ],
   "additionalProperties": false
 }

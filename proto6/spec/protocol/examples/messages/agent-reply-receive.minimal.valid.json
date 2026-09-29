@@ -1,0 +1,25 @@
+{
+  "jsonrpc": "2.0",
+  "id": "reply-1",
+  "method": "agent.reply.receive",
+  "params": {
+    "_metainfo": {
+      "_type": "posix",
+      "_version": 1
+    },
+    "argv": [
+      "aos",
+      "agent",
+      "reply",
+      "receive"
+    ],
+    "stdin": "/srv/aos/shared/agent-reply-receive-payload.minimal.valid.json",
+    "stdout": {
+      "$opt": "inherit"
+    },
+    "stderr": {
+      "$opt": "inherit"
+    }
+  },
+  "reply_to": "/srv/aos/a"
+}

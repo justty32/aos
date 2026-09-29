@@ -511,6 +511,99 @@
         "next_after_node_id"
       ],
       "additionalProperties": false
+    },
+    "AttentionShow": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "source_node": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "issue_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "uniqueItems": true
+        },
+        "job_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "attempt_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "request_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "status": {
+          "enum": [
+            "open",
+            "done"
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "source_node",
+        "issue_id",
+        "reason",
+        "message",
+        "actions",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "AttentionKey": {
+      "type": "object",
+      "properties": {
+        "source_node": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "issue_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        }
+      },
+      "required": [
+        "source_node",
+        "issue_id"
+      ],
+      "additionalProperties": false
+    },
+    "AttentionList": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AttentionShow"
+          },
+          "maxItems": 64
+        },
+        "next_after": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "issues",
+        "next_after"
+      ],
+      "additionalProperties": false
     }
   },
   "oneOf": [
@@ -630,7 +723,7 @@
             {
               "properties": {
                 "method": {
-                  "const": "node.get"
+                  "const": "node.show"
                 },
                 "params": {
                   "type": "object",
@@ -684,7 +777,7 @@
             {
               "properties": {
                 "method": {
-                  "const": "node.list"
+                  "const": "node.ls"
                 },
                 "params": {
                   "type": "object",
@@ -696,6 +789,118 @@
                     },
                     "after_node_id": {
                       "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "daemon.attention.put"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "issue": {
+                      "$ref": "ops-attention.schema.json"
+                    }
+                  },
+                  "required": [
+                    "issue"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "daemon.attention.resolve"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "source_node": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "issue_id": {
+                      "$ref": "common.schema.json#/$defs/ID"
+                    }
+                  },
+                  "required": [
+                    "source_node",
+                    "issue_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "daemon.attention.show"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "source_node": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "issue_id": {
+                      "$ref": "common.schema.json#/$defs/ID"
+                    }
+                  },
+                  "required": [
+                    "source_node",
+                    "issue_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "daemon.attention.ls"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "source_node": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "status": {
+                      "enum": [
+                        "open",
+                        "done"
+                      ]
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64
+                    },
+                    "after": {
+                      "type": "string"
                     }
                   },
                   "required": [],
@@ -731,6 +936,15 @@
                 },
                 {
                   "$ref": "#/$defs/ListResult"
+                },
+                {
+                  "$ref": "#/$defs/AttentionKey"
+                },
+                {
+                  "$ref": "#/$defs/AttentionShow"
+                },
+                {
+                  "$ref": "#/$defs/AttentionList"
                 }
               ]
             }

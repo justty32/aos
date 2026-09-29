@@ -1,17 +1,25 @@
 {
   "jsonrpc": "2.0",
   "id": "req-1",
-  "method": "work.submit",
+  "method": "kernel.work.submit",
   "reply_to": "/srv/aos/member",
   "params": {
-    "node_id": "/srv/aos/member",
-    "job_id": "job-1",
-    "attempt_id": "attempt-1",
-    "inst": {
-      "argv": [
-        "true"
-      ]
+    "_metainfo": {
+      "_type": "posix",
+      "_version": 1
     },
-    "base": "/srv/aos/member"
+    "argv": [
+      "aos",
+      "kernel",
+      "work",
+      "submit"
+    ],
+    "stdin": "/srv/aos/shared/work-payload.minimal.valid.json",
+    "stdout": {
+      "$opt": "inherit"
+    },
+    "stderr": {
+      "$opt": "inherit"
+    }
   }
 }

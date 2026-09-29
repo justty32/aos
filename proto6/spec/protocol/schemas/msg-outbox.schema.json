@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "target_node": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "message": {
+      "$ref": "msg-file-rpc.schema.json"
+    }
+  },
+  "required": [
+    "version",
+    "target_node",
+    "message"
+  ],
+  "additionalProperties": false
+}

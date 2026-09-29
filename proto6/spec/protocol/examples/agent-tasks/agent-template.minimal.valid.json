@@ -6,67 +6,10 @@
       "user": 1000,
       "argv": [
         "aos-tick"
-      ]
-    },
-    "tasks.json": {
-      "version": 1,
-      "tasks": [
-        {
-          "id": "agent-collect",
-          "argv": [
-            "aos-agent-step",
-            "--node",
-            "/srv/aos/a",
-            "--phase",
-            "collect"
-          ],
-          "kind": "agent",
-          "group": "agent-prepare"
-        },
-        {
-          "id": "agent-prepare",
-          "argv": [
-            "aos-agent-step",
-            "--node",
-            "/srv/aos/a",
-            "--phase",
-            "prepare"
-          ],
-          "kind": "agent",
-          "group": "agent-prepare",
-          "needs": [
-            "agent-collect"
-          ]
-        },
-        {
-          "id": "agent-dispatch",
-          "argv": [
-            "aos-agent-step",
-            "--node",
-            "/srv/aos/a",
-            "--phase",
-            "dispatch"
-          ],
-          "kind": "agent",
-          "needs": [
-            "agent-prepare"
-          ]
-        },
-        {
-          "id": "agent-cleanup",
-          "argv": [
-            "aos-agent-step",
-            "--node",
-            "/srv/aos/a",
-            "--phase",
-            "cleanup"
-          ],
-          "kind": "agent",
-          "needs": [
-            "agent-prepare"
-          ]
-        }
-      ]
+      ],
+      "stderr": {
+        "$opt": "inherit"
+      }
     },
     "config/agent.json": {
       "version": 1,
@@ -80,13 +23,39 @@
       },
       "system_prompt": "請用繁體中文清楚回答；需要工具時先呼叫工具。",
       "tools_file": "config/tools.json",
-      "work_target": "/srv/aos/top",
-      "attention_dir": "/srv/aos/attention"
+      "tools": {
+        "target_node": "/srv/aos/top"
+      },
+      "daemon_socket": "/run/user/1000/aos.sock"
     },
     "config/tools.json": {
       "version": 1,
       "tools": []
     },
-    ".gitignore": "/requests/\n/responses/\n/work/\n/public/\n"
+    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/summary/published.json\n",
+    ".aos/tasks.json": {
+      "_metainfo": {
+        "_type": "aos-tasks",
+        "_version": 1
+      },
+      "tasks": [
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-agent-step",
+            "--node",
+            "/srv/aos/a"
+          ],
+          "id": "agent",
+          "kind": "agent",
+          "stderr": {
+            "$opt": "inherit"
+          }
+        }
+      ]
+    }
   }
 }

@@ -1,7 +1,7 @@
 {
   "jsonrpc": "2.0",
   "id": "req-1",
-  "method": "node.get",
+  "method": "node.show",
   "params": {
     "node_id": "/srv/aos/team/member",
     "extra": true

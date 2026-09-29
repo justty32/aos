@@ -4,7 +4,6 @@
   "seq": 1,
   "phase": "retry_unknown",
   "boot_id": "boot-1",
-  "config_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "work_dir": "/srv/aos/top/work/once/attempt-1",
+  "work_dir": "/srv/aos/top/.aos/jobs/attempt-1",
   "finished_at_ms": null
 }

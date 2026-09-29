@@ -4,13 +4,13 @@
 
 ## B-401：資料夾就是狀態〔使用者方向 2026-09-29〕
 
-node 的狀態就是裡面的檔案；每個 node 的 git repo、group 提交與恢復，以 [通用 tick](../tick.md) 為正本。舊的中央帳本、SQLite、受管 blob 庫與 checkpoint pointer 全部撤除。
+node 的狀態就是裡面的檔案；git repo、group 提交與恢復，以 [通用 tick](../tick.md) 為正本。
 
-資料分三處，實際目錄名稱留給協議篇：
+布局以[協議 node](../protocol/node.md)為正本：
 
-- **追蹤區**：已吃進來的訊息、狀態、歷史、請求與結果，以及設定。請求 ID 用作檔名；先後用所屬 kernel 的序號，到期只留必要時間欄位。查詢讀檔案或摘要，不另存一套狀態副本。
-- **收件區**：列入 `.gitignore`，接外部訊息與工具／LLM 結果；group 還原不得碰它。
-- **工作資料夾**：每個 node 另提供一個列入 `.gitignore` 的地方，讓使用者先寫普通設定的材料（例如增刪工具），再用工具加進追蹤區。這裡的草稿不等於已套用設定。
+- `.aos/` 是系統區：追蹤 `.aos/inst.json`、`.aos/tasks.json`、給上層讀的 `.aos/summary/` 及待送 `.aos/outbox/`；kernel 替成員跑工具／LLM 的 once 放 ignored `.aos/jobs/<id>/`。
+- `requests/`、`responses/` 是 ignored 收件，group 還原不碰；已消費內容與工作狀態移入追蹤區。
+- `work/` 是 ignored 任務暫存進度；`public/` 是可供其他 node 存取的共用空間；設定在追蹤的 `config/`。
 
 設定手改、匯入與生效時機見 [A-102](../agent/configuration.md)；追蹤區寫者協調、避免大量 commit 與 submodule 的邊界見 [通用 tick](../tick.md)。
 
@@ -40,4 +40,4 @@ node 的狀態就是裡面的檔案；每個 node 的 git repo、group 提交與
 
 ## 待定與現況
 
-實際目錄名、檔案大小限制、清理批次上限與歷史回收方式尚未定；本篇不預定 RPC 或 JSON 全集。以上是新規格，尚未實作。
+歷史回收方式尚未定，目錄與工程預設見[協議篇](../protocol/node.md)；本篇不預定 RPC 或 JSON 全集。以上是新規格，尚未實作。

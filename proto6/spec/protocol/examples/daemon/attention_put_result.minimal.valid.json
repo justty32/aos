@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": "attention-1",
+  "result": {
+    "source_node": "/srv/aos/team",
+    "issue_id": "config-1"
+  }
+}

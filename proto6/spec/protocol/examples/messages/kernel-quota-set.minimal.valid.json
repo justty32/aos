@@ -1,0 +1,25 @@
+{
+  "jsonrpc": "2.0",
+  "id": "resource-1",
+  "method": "kernel.quota.set",
+  "params": {
+    "_metainfo": {
+      "_type": "posix",
+      "_version": 1
+    },
+    "argv": [
+      "aos",
+      "kernel",
+      "quota",
+      "set"
+    ],
+    "stdin": "/srv/aos/shared/kernel-quota-set-payload.minimal.valid.json",
+    "stdout": {
+      "$opt": "inherit"
+    },
+    "stderr": {
+      "$opt": "inherit"
+    }
+  },
+  "reply_to": "/srv/aos/team"
+}

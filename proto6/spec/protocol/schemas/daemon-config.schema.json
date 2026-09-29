@@ -12,9 +12,6 @@
     "socket_path": {
       "$ref": "common.schema.json#/$defs/NodeId"
     },
-    "attention_dir": {
-      "$ref": "common.schema.json#/$defs/NodeId"
-    },
     "shutdown_grace_ms": {
       "$ref": "common.schema.json#/$defs/TimeMs"
     },
@@ -28,12 +25,20 @@
       },
       "minItems": 0,
       "uniqueItems": true
+    },
+    "state_dir": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "pause_save_interval_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1000
     }
   },
   "required": [
     "version",
     "socket_path",
-    "attention_dir",
+    "state_dir",
     "roots"
   ],
   "additionalProperties": false

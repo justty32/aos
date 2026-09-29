@@ -7,17 +7,6 @@
     "version": {
       "const": 1
     },
-    "valid_commit": {
-      "anyOf": [
-        {
-          "type": "string",
-          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$(?![\\s\\S])"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
     "issue": {
       "anyOf": [
         {
@@ -31,7 +20,6 @@
   },
   "required": [
     "version",
-    "valid_commit",
     "issue"
   ],
   "additionalProperties": false

@@ -1,6 +1,6 @@
 # node：資料夾、任務與一格 tick
 
-← [共用約定](README.md)｜行為正本：[inst](../base/inst.md)、[tick](../tick.md)、[設定](../agent/configuration.md)｜[裁定第一～十批](../../notes/2026-09-29-verdicts.md)
+← [共用約定](README.md)｜行為正本：[inst](../base/inst.md)、[tick](../tick.md)、[設定](../agent/configuration.md)｜[使用者裁定](../../notes/2026-09-29-verdicts.md)
 
 ## P-200．資料夾布局〔建議預設，未拍板〕
 
@@ -9,17 +9,20 @@
 | 路徑 | 用途／git |
 |---|---|
 | `.aos/inst.json`（或 `inst.json`） | 跑本 node 的 inst；追蹤；選檔順序依 P-010 |
-| `tasks.json` | P-202 的任務註冊表；追蹤 |
+| `.aos/tasks.json` | P-202 的任務註冊表；追蹤 |
 | `config/` | 任務使用的正式設定；追蹤，領域格式由使用它的任務定義 |
 | `state/` | 已消費收件、請求、結果與必要進度；追蹤，子結構由各協議篇定義 |
 | `requests/`、`responses/` | node 根目錄的外部 JSON-RPC 請求／回應收件區；兩格都 ignore，各含發布用 `.tmp/`；細節由 messages 篇定義 |
-| `work/` | 設定草稿、暫存與可丟工作材料；ignore，草稿不會自行生效 |
-| `public/`（選用） | 已提交摘要的唯讀發布副本；ignore，見 messages P-307 |
-| `.gitignore` | 至少含 `/requests/`、`/responses/`、`/work/`；使用 public 時也含 `/public/`；追蹤 |
+| `work/` | 任務的暫存工作進度；ignore |
+| `.aos/jobs/<id>/` | 替成員跑工具、打 LLM 的 once 工作；ignore |
+| `.aos/summary/` | 給上層讀的摘要；summary.json 追蹤、published.json ignore，見 P-307 |
+| `.aos/outbox/` | 待 tick 投出的請求／回應；追蹤，見 P-206 |
+| `public/` | 可供其他 node 存取的共用空間；是否追蹤由內容決定 |
+| `.gitignore` | 至少含 `/requests/`、`/responses/`、`/work/`、`/.aos/jobs/`、`/.aos/summary/published.json`；追蹤 |
 
-git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git` 一定是資料夾。其內 `aos/tick.lock` 是 P-203 的鎖；一般清理不得移除或替換這個鎖檔。待處理事項依使用者指定的 `attention_dir` 發布，不放進會被本組還原的範圍。
+git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git` 一定是資料夾。其內 `aos/tick.lock` 是 P-203 的鎖；一般清理不得移除或替換這個鎖檔。待處理事項經 daemon IPC 查詢／回報，見 [ops](ops.md)。
 
-〔使用者方向 2026-09-29，裁定「收件分兩格」〕請求在被問者的 `requests/<id>.json`，回應在發問者的 `responses/<id>.json`；不再有包住兩格的 inbox 目錄。回應仍投回發問者家，不改成由發問者去對方家取。
+〔使用者方向 2026-09-29，裁定「收件分兩格」〕請求在被問者的 `requests/<id>.json`，回應在發問者的 `responses/<id>.json`。回應仍投回發問者家，不改成由發問者去對方家取。
 
 〔使用者方向 2026-09-29〕依 [P-010](README.md)，登記資料夾時先找 `.aos/inst.json`，沒有再找 `inst.json`。資料夾目標的 base 仍是 node 根，不是 `.aos/`。`once` 可直接登記一份 inst 檔，檔案目標的 base 才是該檔所在資料夾；不跑 `aos-tick` 就不必有本節完整布局。
 
@@ -33,17 +36,16 @@ git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git`
 
 ## P-202．任務註冊表〔建議預設，未拍板〕
 
-檔案為 `tasks.json`，schema：[node-tasks.schema.json](schemas/node-tasks.schema.json)。形狀為 `{"version":1,"tasks":[...]}`，順序只看 tasks 陣列位置。
+檔案只用 `.aos/tasks.json`，schema：[node-tasks.schema.json](schemas/node-tasks.schema.json)。形狀為 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`，順序只看 tasks 陣列位置。每項是 inst 加以下排程欄位，也可用整份 `$ref`；指示詞、串流、cwd、envs 依 inst 展開，base 是 node 根。展開前後皆不准 `user`。
 
 | 欄位 | 約束 |
 |---|---|
 | `id` | 共用 `ID`；本表唯一 |
-| `argv` | 非空字串陣列，首項非空；直接 exec，不做指示詞展開 |
 | `kind` | `system`、`kernel`、`agent`、`custom`；先 system，中段 kernel／agent 可交錯，最後 custom |
 | `group` | 可省，共用 `ID`；相同名稱必須連續；省略是這一項自成一組，與任何具名組不同 |
 | `needs` | 可省，預設空陣列；不重複的任務 ID，只能指向本表前項 |
 
-`tasks` 可以是空陣列。未知欄位拒絕，沒有 `user`、UID、優先序或獨立 module 表。schema 檢查型別；tick 另外檢查重名、前置存在與順序、連續 group、類別順序。任一錯誤整表不載入，一項也不跑，不退回舊表。任務表及設定每格讀定一次，中途改檔下一格才採用。
+`tasks` 可以是空陣列。tick 展開後檢查 inst、重名、前置存在與順序、連續 group、類別順序；錯誤整表拒載、不跑任何項，不退回舊表。任務表在開格時載入；各任務直接開檔讀自己的設定。
 
 最小 [正例](examples/node/tasks.minimal.valid.json) 登記普通程式；[錯例](examples/node/tasks.user_override.invalid.json) 想在任務上加 `user`，不接受。
 
@@ -56,14 +58,14 @@ git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git`
 | tick 的 stdin | 不讀；inst 預設 `/dev/null` |
 | tick 的 stdout | 原樣轉送任務 stdout，不另混入成功 JSON |
 | tick 的 stderr | 任務 stderr 原樣轉送；tick 自己另印 `code: 說明`，有需要附 task id、退出碼或 signal |
-| 讀寫 | 讀 inst 之外已選定的 node、`tasks.json`、本格設定及 git；任務自行讀寫一般檔案；tick 負責提交、還原與鎖 |
+| 讀寫 | 讀 `.aos/tasks.json` 與 git；任務直接讀寫檔案；tick 負責提交、還原、投件、消費原件清理與鎖 |
 | 身分 | 全部任務沿用 tick 的有效 UID、群組與資源範圍；tick 不切 UID，直接呼叫也不會替你取得 inst 的身分 |
-| 任務 cwd／argv | cwd 固定 node 根；依表中 argv 直接 exec；用 PATH 找程式，PATH 未設採系統預設路徑 |
-| 任務 stdin | `/dev/null`，不塞協議 JSON；需要輸入檔、改 cwd 或重導向者可在 argv 明列普通 adapter／`sh -c` |
-| 任務 stdout／stderr | 繼承 tick 對應串流；tick 不解析輸出、不把文字當成完成證據 |
-| 任務環境 | 繼承 tick 環境，再設定 `AOS_NODE_DIR`（node id）、`AOS_TASK_ID`（本項 id）、`AOS_CONFIG_COMMIT`（格首恢復完成後的完整 commit OID）；皆不是授權、鎖或成功證據 |
+| 任務 cwd／argv | 依本項 inst 展開後執行；cwd 未給時為 node 根 |
+| 任務 stdin | 預設 `/dev/null`；可用本項 inst 的 stdin 重導向 |
+| 任務 stdout／stderr | 依 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不解析文字當完成證據 |
+| 任務環境 | 繼承 tick 環境，加 `AOS_NODE_DIR`（node id），再依 inst 套用 envs；不是授權證據 |
 
-有正式設定需求的任務或 adapter 從 `AOS_CONFIG_COMMIT` 讀取本格設定（例如 `git show <oid>:config/...`），不重新讀被前項任務改過的工作檔。各領域按 A-102 驗證，無效更新回退其保存的上一有效 commit／內容；格首 HEAD 不保證設定有效，缺舊有效值就停止依賴它的新工作。這是合作介面，不承諾把任意程式直接 open 工作檔變成快照讀取。
+任務直接開檔讀設定；「tick 裡不改 config/」是軟性原則，不檢查、不阻擋，違反者自行承擔同格新舊設定混用。設定指令在 tick 外持同一把鎖更新；設定驗證依 [A-102](../agent/configuration.md)。
 
 無設定需求的程式沒有必讀的環境變數或必寫的回應封套；`true`、腳本與既有程式都能直接當任務。key 不由 tick 放入 argv 或任務環境；daemon／runner 的環境來源照 [身分篇](../base/identity-resources.md)，inst 的 `envs` 沿正本。
 
@@ -96,17 +98,21 @@ commit／還原／清理故障保存基線與收件，停後續組，在 git 管
 
 ## P-206．收件與派送的提交邊界〔使用者方向 2026-09-29〕
 
-依 [Q1／Q2](../tick.md)，收件任務先複製原件到追蹤區，後組清理任務 `needs` 收件組，確認提交後才刪相符原件。派送也拆成產生／提交與後組送出，不新增 commit callback。
+每個 module 只需一項任務：收件原件逐 byte 複製到追蹤的 `state/messages/{requests,responses}/<id>.json`；待送檔放 `.aos/outbox/{requests,responses}/<id>.json`，內容為 `{"version":1,"target_node":"/目標","message":{...}}`，message 是完整 JSON-RPC，ID 須與檔名相同。領域狀態引用這份原件，不另做通用收據。
 
-通用訊息以 `state/messages/requests/<id>.json`、`responses/<id>.json` 保存原件；工作與 LLM 以 `state/work/<attempt_id>/` 保存請求、結果與固定材料依據；資源、ops 路徑各見所屬篇。只在需要時建。原件與原請求目標留在同一領域狀態供配對，不再複製通用帳本。分流／去重／unknown 重投界線只見 [messages P-301～305](messages.md)。
+每組成功 commit 後，tick 才從該 commit 發布 `.aos/summary/published.json`、投出待送 message、刪除與已提交消費副本 bytes 相同的收件原件。組歸屬由 commit 邊界決定，無須另寫 task／group 欄位。原件不同就報衝突並保留；送出失敗留待送檔。新格恢復後也補做這兩件事，只使用已提交內容。
+
+成功投件後移除待送檔，於下一組或格末提交這些刪除；刪除本身就是變動，不造空 commit。提交前當機可再投相同 bytes，接收方依 [P-304](messages.md) 去重。這只是補投同一封檔案，不是重做 unknown 外部工作。once 的 register／wake 仍由該 module 在後續格核對已提交材料後執行，不往待送區塞 IPC。
+
+工作與 LLM 的固定材料依據留 `state/work/<attempt_id>/`；其餘領域路徑見所屬篇。tick 不等遠端結果，也不替領域決定 unknown 能否重試。
 
 ## P-207．加入普通設定與重要設定手改〔建議預設，未拍板〕
 
-argv：`aos-config-add --node <node_dir> --from <source> --to <target>`。source 是 node/work/ 內檔案，target 是 node/config/ 內檔案；相對 node，不准 ..／symlink 逃出。安裝整份設定、保留來源；刪清單項目也是先改草稿再匯入。
+argv：`aos-config-add --node <node_dir> --from <source> --to <target>`。source 是任意可讀路徑，相對呼叫 cwd；target 是 node/config/ 內檔案，相對 node、不准 ..／symlink 逃出。安裝整份設定、保留來源。
 
 用呼叫者帳號，無自訂環境；stdin 不讀，stdout 成功印 target＋LF，stderr 印 code: 說明。讀來源及 repo，寫目標與 git。取同一非阻塞鎖、拒 dirty 或故障擋板；JSON 草稿先驗 P-002，領域設定下一格依 [A-102](../agent/configuration.md) 驗證。
 
-目標旁 .tmp/ 完整寫入、fsync、rename 替換、fsync 目錄；只 stage 目標，訊息 `aos-config-add <target>`，無變動不 commit。它自行持鎖／提交，不能在同 node tick 內呼叫；一般任務改 config 隨 group 提交、下一格採用。
+目標旁 .tmp/ 完整寫入、fsync、rename 替換、fsync 目錄；只 stage 目標，訊息 `aos-config-add <target>`，無變動不 commit。它自行持鎖／提交，不能在同 node tick 內呼叫；任務直接讀目前設定。
 
 退出：0 已提交／無變動；2 參數／路徑／JSON 不合；75 busy；125 前置失敗（上述皆未寫目標）；1 寫入失敗且已還原；3 commit／還原故障，依 P-205 擋新格。
 
@@ -118,9 +124,9 @@ node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授�
 
 投件權不含 repo／config／key 讀權，也不保證投件者間不能改檔；不覆蓋與內容核對見 P-003，可信來源及同 UID 界線見 [messages P-303](messages.md)。權限配置由上層 kernel 用自己的帳號做，固定特權步驟經 daemon；key 隔離見 [work P-405](work.md)。
 
-〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕建立 agent 時，LLM 路線與權限一起核對：經自己的 kernel 轉交，須能從 agent 投進該 kernel 的 requests，kernel 能回投 agent 的 responses；轉交下一站時再配 kernel 到下一站、下一站回 kernel 的兩個方向。agent 直接投 LLM kernel，則開 agent→LLM kernel requests、LLM kernel→agent responses，不要求自己的 kernel 代投。每個寫入方向都含該區的 `.tmp/`；正式副本由接件帳號可讀、提交後可清除。回址不是授權證明，仍依 P-303 核對。
+〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕建立 agent 時，LLM 路線與權限一起核對：經自己的 kernel 轉交，須能從 agent 投進該 kernel 的 requests，kernel 能回投 agent 的 responses；轉交下一站時再配 kernel 到下一站、下一站回 kernel 的兩個方向。agent 直接投 LLM kernel，則開 agent→LLM kernel requests、LLM kernel→agent responses，不要求自己的 kernel 代投。工具路線同樣由 `tools.target_node` 決定：有位址就開往該 kernel 的請求／回件權；null 則准 agent 以自己為 parent_id 登記 once、自己記用量。每個寫入方向都含該區的 `.tmp/`；正式副本由接件帳號可讀、提交後可清除。回址不是授權證明，仍依 P-303 核對。
 
-〔建議預設，未拍板〕自己的 kernel 另外取得成員 `requests/`、`responses/` 的必要列目錄權及摘要讀權，供收件／到期喚醒；只做這項觀察時可以用 [messages P-307](messages.md) 的唯讀摘要。最小用量收集路線另需 repo 讀權，固定 commit 讀 [agent P-703](agent-tasks.md) 的 `state/agent/usage/<request_id>.json`；尚未定逐次用量的獨立 public 副本，只有 summary 讀權不夠。若部署不願開 repo 讀權，就不能宣稱已啟用這條收集路線；仍不授寫設定或讀池 key 的額外權限。持久成員、路由及完整建立範本見 [kernel 任務篇](kernel-tasks.md)。
+〔建議預設，未拍板〕自己的 kernel 另外取得成員 `requests/`、`responses/` 的必要列目錄權及摘要讀權，供收件／到期喚醒；只做這項觀察時可以用 [messages P-307](messages.md) 的唯讀摘要。用量收集路線另需 repo 讀權，固定 commit 讀 [agent P-703](agent-tasks.md) 的 `state/agent/usage/<request_id>.json`；只有摘要讀權不夠。若部署不願開 repo 讀權，就不能宣稱已啟用這條收集路線；仍不授寫設定或讀池 key 的額外權限。持久成員、路由及完整建立範本見 [kernel 任務篇](kernel-tasks.md)。
 
 **驗收：**兩種路線都能送請求並收結果；刻意拿掉回件寫權時拒絕接納新副作用；只有摘要讀權的父層不能讀成員其他追蹤檔。
 
@@ -130,15 +136,15 @@ node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授�
 
 ## P-210．預設範本與恢復前驗證〔主編補；依 A-102、CLI H-036 第 2、3、5、6 步〕
 
-`aos node new N --template kernel` 的完整 `tasks.json`、設定與頂層建立順序由 [kernel 任務篇](kernel-tasks.md) 定；agent 範本由 [agent P-715](agent-tasks.md) 定。範本只安裝普通任務，不寫角色旗標。先驗證產物、有初始 commit，才報建好；建立本身不授身分、不登記、不叫醒。頂層額度仍須放 daemon roots，成員保存及同步沿 kernel 篇。
+`aos node new N --template kernel` 的完整 `.aos/tasks.json`、設定與頂層建立順序由 [kernel 任務篇](kernel-tasks.md) 定；agent 範本由 [agent P-715](agent-tasks.md) 定。範本只安裝普通任務，不寫角色旗標。先驗證產物、有初始 commit，才報建好；建立本身不授身分、不登記、不叫醒。頂層額度仍須放 daemon roots，成員保存及同步沿 kernel 篇。
 
 `aos node resume N` 在 daemon 已暫停且程序全空後，持 P-203 同把鎖，依序檢查目前手改的內容：
 
 1. 按 P-010 選 inst，驗 P-201 原始結構與身分宣告；daemon 在 resume／開格時仍須另驗可信額度、身分與展開，不以本地檢查代替授權。
 2. 驗 tasks 的 schema，以及 P-202 的重名、needs、group 連續與 kind 順序。
-3. 有 kernel 預設任務就執行 `aos-kernel-check --node N --validate-only`；有 agent 預設任務則復用 [agent P-712](agent-tasks.md) 的檢查規則，對**目前候選工作樹**的 agent 設定、工具及引用驗證，不能直接用只讀 HEAD 的 `aos-agent-check` 來驗未提交手改。兩種都有便都驗。自訂普通程式沒有 aos 領域設定契約，不因其未提供 validator 就拒收合法任務表；其執行失敗仍由 group 管。
-4. 任何檢查失敗保持暫停、保留手改、stderr 指出檔案與欄位；通過後才照 CLI 的確認流程提交手改，再送 daemon node.resume。正式採用設定仍在下一格開始，不重做已派工作。
+3. 有 kernel 預設任務就執行 `aos-kernel-check --node N --validate-only`；有 agent 預設任務則復用 [agent P-712](agent-tasks.md) 的檢查規則，對**目前候選工作樹**的 agent 設定、工具及引用驗證，檢查程式直接讀檔。兩種都有便都驗。自訂普通程式沒有 aos 領域設定契約，不因其未提供 validator 就拒收合法任務表；其執行失敗仍由 group 管。
+4. 任何檢查失敗保持暫停、保留手改、stderr 指出檔案與欄位；通過後才照 CLI 的確認流程提交手改，再送 daemon node.resume。後續任務直接讀設定，不重做已派工作。
 
-唯讀驗證檢查目前工作樹，不用舊有效設定遮掉壞草稿；由外層持鎖，不另取鎖，不寫追蹤／ignored 檔、不發事項、不自行 commit。它只證明設定可採用，不證明外部 endpoint 可達或未知工作可以重試。日常檢查、沿用舊有效內容與事項解除由 [ops P-609](ops.md) 及領域任務處理。
+唯讀驗證檢查目前工作樹；由外層持鎖，不另取鎖，不寫追蹤／ignored 檔、不發事項、不自行 commit。它只證明設定可採用，不證明外部 endpoint 可達或未知工作可以重試。日常檢查與事項解除由 [ops P-609](ops.md) 及領域任務處理。
 
 **驗收：**把 tasks 的 needs 指到不存在項目或寫壞 kernel 路由，resume 都不開閘、不抹手改；修好後先提交再恢復；新增 `true` custom 任務不需要虛構領域 validator。

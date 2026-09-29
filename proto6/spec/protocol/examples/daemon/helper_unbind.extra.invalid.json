@@ -1,7 +1,7 @@
 {
   "jsonrpc": "2.0",
   "id": "h1",
-  "method": "helper.unbind",
+  "method": "daemon.helper.unbind",
   "params": {
     "node_id": "/srv/aos/member",
     "unexpected": true

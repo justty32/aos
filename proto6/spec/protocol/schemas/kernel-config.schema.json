@@ -9,9 +9,6 @@
     "daemon_socket": {
       "$ref": "common.schema.json#/$defs/NodeId"
     },
-    "attention_dir": {
-      "$ref": "common.schema.json#/$defs/NodeId"
-    },
     "scan_interval_ms": {
       "type": "integer",
       "minimum": 1
@@ -34,8 +31,7 @@
   },
   "required": [
     "version",
-    "daemon_socket",
-    "attention_dir"
+    "daemon_socket"
   ],
   "additionalProperties": false
 }

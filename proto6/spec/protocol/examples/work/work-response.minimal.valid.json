@@ -2,15 +2,19 @@
   "jsonrpc": "2.0",
   "id": "req-1",
   "result": {
-    "node_id": "/srv/aos/member",
-    "job_id": "job-1",
-    "attempt_id": "attempt-1",
+    "node_id": "/srv/aos/top",
+    "job_id": "req-1",
+    "attempt_id": "req-1",
     "status": "succeeded",
     "reason": "exited",
     "started": true,
     "exit_code": 0,
     "signal": null,
-    "stdout": null,
+    "stdout": {
+      "path": "/srv/aos/shared/work-result.minimal.valid.json",
+      "bytes": 239,
+      "truncated": false
+    },
     "stderr": null
   }
 }

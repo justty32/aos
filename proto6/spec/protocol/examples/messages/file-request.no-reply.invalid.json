@@ -1,8 +1,23 @@
 {
   "jsonrpc": "2.0",
   "id": "m1",
-  "method": "agent.send",
+  "method": "agent.say",
   "params": {
-    "text": "請看這則訊息。"
+    "_metainfo": {
+      "_type": "posix",
+      "_version": 1
+    },
+    "argv": [
+      "aos",
+      "agent",
+      "say"
+    ],
+    "stdin": "/srv/aos/shared/agent-say-payload.minimal.valid.json",
+    "stdout": {
+      "$opt": "inherit"
+    },
+    "stderr": {
+      "$opt": "inherit"
+    }
   }
 }

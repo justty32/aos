@@ -1,31 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "proto6 kernel-config-state",
   "type": "object",
   "properties": {
     "version": {
       "const": 1
-    },
-    "accepted": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "minLength": 1
-          },
-          "commit": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
-          }
-        },
-        "required": [
-          "path",
-          "commit"
-        ],
-        "additionalProperties": false
-      }
     },
     "issues": {
       "type": "array",
@@ -39,27 +17,14 @@
           "issue_id": {
             "$ref": "common.schema.json#/$defs/ID"
           },
-          "bad_commit": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
-          },
-          "resolved_commit": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "resolved": {
+            "type": "boolean"
           }
         },
         "required": [
           "path",
           "issue_id",
-          "bad_commit",
-          "resolved_commit"
+          "resolved"
         ],
         "additionalProperties": false
       }
@@ -67,7 +32,6 @@
   },
   "required": [
     "version",
-    "accepted",
     "issues"
   ],
   "additionalProperties": false

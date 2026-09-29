@@ -13,10 +13,6 @@
     "input_id": {
       "$ref": "common.schema.json#/$defs/ID"
     },
-    "config_commit": {
-      "type": "string",
-      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$(?![\\s\\S])"
-    },
     "request_path": {
       "type": "string",
       "minLength": 1,
@@ -43,7 +39,6 @@
     "version",
     "request_id",
     "input_id",
-    "config_commit",
     "request_path",
     "history_ids",
     "estimated_input_tokens",

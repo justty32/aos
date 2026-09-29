@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "accepted": [
+  "issues": [
     {
       "path": "config/kernel.json",
-      "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      "issue_id": "config-1",
+      "resolved": false
     }
-  ],
-  "issues": []
+  ]
 }

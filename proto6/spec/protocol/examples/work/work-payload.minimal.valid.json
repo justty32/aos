@@ -1,0 +1,11 @@
+{
+  "node_id": "/srv/aos/member",
+  "job_id": "job-1",
+  "attempt_id": "attempt-1",
+  "inst": {
+    "argv": [
+      "true"
+    ]
+  },
+  "base": "/srv/aos/member"
+}

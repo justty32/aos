@@ -1,7 +1,7 @@
 {
   "jsonrpc": "2.0",
   "id": "query-1",
-  "method": "node.list",
+  "method": "node.ls",
   "params": {
     "limit": 0
   }

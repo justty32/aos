@@ -1,9 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "k1",
-  "method": "kernel.recheck",
-  "params": {
-    "sender": "/srv/aos/other"
-  },
-  "reply_to": "/srv/aos/a"
-}
