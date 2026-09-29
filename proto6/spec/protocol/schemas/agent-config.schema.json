@@ -11,7 +11,14 @@
       "type": "object",
       "properties": {
         "target_node": {
-          "$ref": "common.schema.json#/$defs/NodeId"
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/NodeId"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "pool": {
           "$ref": "common.schema.json#/$defs/ID"

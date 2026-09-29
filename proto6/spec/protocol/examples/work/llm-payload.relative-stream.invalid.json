@@ -12,5 +12,5 @@
   ],
   "max_completion_tokens": 128,
   "timeout_ms": 120000,
-  "stream": true
+  "stream_path": "work/think-1.stream.txt"
 }

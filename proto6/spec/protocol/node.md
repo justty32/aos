@@ -101,7 +101,7 @@ commit／還原／清理故障保存基線與收件，停後續組，在 git 管
 
 每個 module 只需一項任務：收件原件逐 byte 複製到追蹤的 `state/messages/{requests,responses}/<id>.json`；待送檔放 `.aos/outbox/{requests,responses}/<id>.json`，內容為 `{"version":1,"target_node":"/目標","message":{...}}`，message 是完整 JSON-RPC，ID 須與檔名相同。領域狀態引用這份原件，不另做通用收據。
 
-每組成功 commit 後，tick 才從該 commit 發布 `.aos/summary/published.json`、投出待送 message、刪除與已提交消費副本 bytes 相同的收件原件。組歸屬由 commit 邊界決定，無須另寫 task／group 欄位。原件不同就報衝突並保留；送出失敗留待送檔。新格恢復後也補做這兩件事，只使用已提交內容。
+每組成功 commit 後，tick 才從該 commit 發布 `.aos/summary/published.json`、投出待送 message、刪除與已提交消費副本 bytes 相同的收件原件。組歸屬由 commit 邊界決定，無須另寫 task／group 欄位。原件不同就報衝突並保留；送出失敗留待送檔。〔使用者方向 2026-09-29 晚〕`target_node` 不存在（資料夾不在）就在投件那一步直接報錯：tick 在 stderr 印 `target_not_found: <node>`，待送檔照留，不寫待辦、不改投別處；目標存在但沒人處理，請求就堆在對方收件區，aos 不等也不逾時。沒有寫入權限同樣只報錯。新格恢復後也補做這兩件事，只使用已提交內容。
 
 成功投件後移除待送檔，於下一組或格末提交這些刪除；刪除本身就是變動，不造空 commit。提交前當機可再投相同 bytes，接收方依 [P-304](messages.md) 去重。這只是補投同一封檔案，不是重做 unknown 外部工作。once 的 register／wake 仍由該 module 在後續格核對已提交材料後執行，不往待送區塞 IPC。
 

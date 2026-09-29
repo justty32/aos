@@ -115,7 +115,9 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者及明授投件�
 
 ## P-811．池與共享窗口〔P-405～408、S-301～304；工程預設〕
 
-`config/llm-pools.json` 沿 [llm-config](schemas/llm-config.schema.json)，含 endpoint/model/quota_scope/key_ref/max_attempts。池是 tick 任務，沒有常駐池 daemon；key_ref 只指樹外私有檔，不進 git／argv／成員環境，同帳號不隔離 key。
+`config/llm-pools.json` 沿 [llm-config](schemas/llm-config.schema.json)，含 endpoint/model/quota_scope/key_ref/max_attempts/schedule。池就是這個 node，代發是 tick 任務，沒有常駐池 daemon；key_ref 只指樹外私有檔，不進 git／argv／成員環境，同帳號不隔離 key。
+
+以下窗口、並行與冷卻只套 `schedule:aos`（自己排，預設）的池；`schedule:endpoint` 的池只轉發，不讀本檔，見 [work P-405](work.md)。
 
 `config/llm-limits.json`（[schema](schemas/kernel-llm-limits.schema.json)）每 scope 一項 concurrent_requests/window_ms/requests_per_window/tokens_per_window，皆正整數。共享 provider 限制須同 node 同 scope；改名字不代表獨立。
 
@@ -138,6 +140,8 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者及明授投件�
 | LLM | llm.target_node=本 kernel，裝 forward，配本層 route／份額 | llm.target_node=管池的 node，直接授雙向投件權 |
 | 工具 | tools.target_node=本 kernel，裝 work，代登 once | tools.target_node=null，agent 自己登 once，parent_id 是 agent |
 | 用量 | 由代辦 module 記，agent 記錄供核對 | agent 自記，父 kernel 裝 usage-collect 讀 |
+
+LLM 另有 `llm.target_node=null` 的「不管」檔：agent 自己打 HTTP，不經池、不扣份額，key 必然讓 agent 讀得到（[S-301](../scheduling/llm.md)，之後再做）。
 
 兩種工作可分別選路線。父須能列成員收件與讀摘要；僅開摘要權時讀 `.aos/summary/published.json`，用量另授讀權。轉交要開相應 requests／responses 權限，下一站明授 origin/via。自跑工具需 daemon 授權與 jobs 路徑權限；所有 once 資源都算可信 parent_id，工具不自選。
 

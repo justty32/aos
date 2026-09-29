@@ -21,7 +21,7 @@
 
 **兩張註冊表不要混用：**[daemon](daemon.md)的表在記憶體使用，停機存入 `state.json`，記登記、pause 與未處理 wake；[tick](tick.md)的表在 node 裡，記順序執行的任務、group 與 needs。資源 module 是後者的普通項目，不另有外掛總表。
 
-daemon 負責程序啟停，不判業務排程；可選 root helper 是 daemon 切出的固定特權步驟，見[身分篇](base/identity-resources.md)。每個 LLM 池的代發服務負責實際請求，見 [LLM](scheduling/llm.md)。身分依 [inst](base/inst.md) 及[額度](base/identity-resources.md)，不由路徑或角色推定。
+daemon 負責程序啟停，不判業務排程；可選 root helper 是 daemon 切出的固定特權步驟，見[身分篇](base/identity-resources.md)。每個 LLM 池就是一個 node，由它的代發任務負責實際請求，見 [LLM](scheduling/llm.md)。身分依 [inst](base/inst.md) 及[額度](base/identity-resources.md)，不由路徑或角色推定。
 
 驗收：同一 node 裝排程及 LLM 自主任務，可以兼任 kernel／agent；空成員表不取消 kernel 角色，只有收信任務也不被強制當 agent。
 
