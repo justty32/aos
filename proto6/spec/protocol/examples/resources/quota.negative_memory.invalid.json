@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/team/member",
+  "seq": 1,
+  "resources": {
+    "memory": {
+      "bytes": -1
+    }
+  }
+}

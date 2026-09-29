@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "kind": "clean_receipt",
-  "request_id": "clean_request_1",
-  "batch_id": "clean_batch_1",
-  "recorded_candidate_ids": [],
-  "pending_candidate_ids": [],
-  "recorded_at_ms": 1790640000000
-}

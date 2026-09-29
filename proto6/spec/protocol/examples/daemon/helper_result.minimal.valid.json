@@ -1,0 +1,7 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "result": {
+    "node_id": "/srv/aos/member"
+  }
+}

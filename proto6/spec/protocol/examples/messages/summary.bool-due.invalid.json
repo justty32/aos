@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/a",
+  "observed_at_ms": 1790611200000,
+  "ready": false,
+  "due_ms": false,
+  "status": "idle"
+}

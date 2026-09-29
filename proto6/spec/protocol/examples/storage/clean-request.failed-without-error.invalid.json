@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "kind": "clean_hook_result",
-  "hook_run_id": "hook_1",
-  "request_id": "clean_1",
-  "batch_id": "batch_1",
-  "status": "failed",
-  "error": null
-}

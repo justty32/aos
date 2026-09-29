@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": "resource-1",
+  "result": {
+    "version": 1,
+    "node_id": "/srv/aos/team/member",
+    "observed_at_ms": 1790683200000,
+    "resources": {
+      "cpu": {
+        "usage_us": 0
+      }
+    }
+  }
+}

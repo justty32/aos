@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "operation_id": "op-1",
+  "source_node": "/srv/aos/team",
+  "issue_id": "config-1",
+  "action_id": "recheck",
+  "actor_uid": 1000,
+  "at_ms": 1790640000000,
+  "outcome": "resolved",
+  "message": "程式 exit 0，因此問題已解除。"
+}

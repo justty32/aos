@@ -1,0 +1,20 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "result": {
+    "node_id": "/srv/aos/member",
+    "job_id": "job-1",
+    "attempt_id": "attempt-1",
+    "status": "succeeded",
+    "reason": "exited",
+    "started": true,
+    "exit_code": 0,
+    "signal": null,
+    "stdout": null,
+    "stderr": null
+  },
+  "error": {
+    "code": -32603,
+    "message": "失敗"
+  }
+}

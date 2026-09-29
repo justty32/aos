@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "error": {
+    "code": -32000,
+    "message": "此帳號沒有操作這個 node 的權限",
+    "data": {
+      "code": "forbidden"
+    }
+  }
+}

@@ -1,9 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "req_run_outputs_1",
-  "result": {
-    "outputs": [],
-    "next_seq": 0,
-    "has_more": false
-  }
-}

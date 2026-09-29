@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "method": "node.provision",
+  "params": {
+    "node_id": "/srv/aos/team/member",
+    "action": "mount",
+    "path": "/srv/aos/team/member/tmp",
+    "size_bytes": 1048576
+  }
+}

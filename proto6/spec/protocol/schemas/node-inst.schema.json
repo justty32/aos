@@ -1,0 +1,457 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "node-inst.schema.json",
+  "title": "proto6 inst 第 1 版：原始輸入",
+  "description": "以 base/inst.md 為正本。普通 inst 與指示詞的未知鍵依主規格忽略；$opt > $ref > $fmt > $env。只驗原始語法，取值後的宿主型別、引用循環、帳號解析及授權另由 runner 驗證。",
+  "type": "object",
+  "properties": {
+    "user": {
+      "$ref": "#/$defs/User"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/Inst"
+    },
+    {
+      "$ref": "#/$defs/ValueDirective"
+    }
+  ],
+  "$defs": {
+    "User": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer",
+          "minimum": 0
+        }
+      ]
+    },
+    "Metainfo": {
+      "type": "object",
+      "required": [
+        "_type",
+        "_version"
+      ],
+      "properties": {
+        "_type": {
+          "const": "posix"
+        },
+        "_version": {
+          "type": "integer",
+          "const": 1
+        }
+      }
+    },
+    "ValueDirective": {
+      "type": "object",
+      "not": {
+        "required": [
+          "$opt"
+        ]
+      },
+      "oneOf": [
+        {
+          "required": [
+            "$ref"
+          ],
+          "properties": {
+            "$ref": {
+              "type": "string"
+            },
+            "$at": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "required": [
+            "$fmt"
+          ],
+          "not": {
+            "required": [
+              "$ref"
+            ]
+          },
+          "properties": {
+            "$fmt": {
+              "$ref": "#/$defs/Format"
+            }
+          }
+        },
+        {
+          "required": [
+            "$env"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "$ref"
+                ]
+              },
+              {
+                "required": [
+                  "$fmt"
+                ]
+              }
+            ]
+          },
+          "properties": {
+            "$env": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "StringValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/ValueDirective"
+        }
+      ]
+    },
+    "NonemptyStringValue": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "$ref": "#/$defs/ValueDirective"
+        }
+      ]
+    },
+    "Format": {
+      "type": "object",
+      "required": [
+        "$val"
+      ],
+      "propertyNames": {
+        "anyOf": [
+          {
+            "const": "$val"
+          },
+          {
+            "pattern": "^[^${}][^{}]*$"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/StringValue"
+      }
+    },
+    "LiteralArgv": {
+      "type": "array",
+      "minItems": 1,
+      "prefixItems": [
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "Argv": {
+      "type": "array",
+      "minItems": 1,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/NonemptyStringValue"
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/StringValue"
+      }
+    },
+    "EnvMap": {
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1,
+        "pattern": "^[^$=][^=]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/StringValue"
+      }
+    },
+    "Inherit": {
+      "type": "object",
+      "required": [
+        "$opt"
+      ],
+      "properties": {
+        "$opt": {
+          "anyOf": [
+            {
+              "enum": [
+                "inherit"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "inherit"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 1,
+              "uniqueItems": true
+            }
+          ]
+        }
+      },
+      "not": {
+        "required": [
+          "$val"
+        ]
+      }
+    },
+    "Merge": {
+      "type": "object",
+      "required": [
+        "$opt"
+      ],
+      "properties": {
+        "$opt": {
+          "anyOf": [
+            {
+              "enum": [
+                "merge"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "merge"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 1,
+              "uniqueItems": true
+            }
+          ]
+        }
+      },
+      "not": {
+        "required": [
+          "$val"
+        ]
+      }
+    },
+    "WritePath": {
+      "type": "object",
+      "required": [
+        "$opt",
+        "$val"
+      ],
+      "properties": {
+        "$opt": {
+          "anyOf": [
+            {
+              "enum": [
+                "append",
+                "mkdir"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "append",
+                  "mkdir"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true
+            }
+          ]
+        },
+        "$val": {
+          "$ref": "#/$defs/NonemptyStringValue"
+        }
+      }
+    },
+    "MakeCwd": {
+      "type": "object",
+      "required": [
+        "$opt",
+        "$val"
+      ],
+      "properties": {
+        "$opt": {
+          "anyOf": [
+            {
+              "enum": [
+                "mkdir"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "mkdir"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 1,
+              "uniqueItems": true
+            }
+          ]
+        },
+        "$val": {
+          "$ref": "#/$defs/NonemptyStringValue"
+        }
+      }
+    },
+    "ClearEnv": {
+      "type": "object",
+      "required": [
+        "$opt"
+      ],
+      "properties": {
+        "$opt": {
+          "anyOf": [
+            {
+              "enum": [
+                "clear"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "clear"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 1,
+              "uniqueItems": true
+            }
+          ]
+        },
+        "$val": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnvMap"
+            },
+            {
+              "$ref": "#/$defs/ValueDirective"
+            }
+          ]
+        }
+      }
+    },
+    "Inst": {
+      "type": "object",
+      "required": [
+        "argv"
+      ],
+      "propertyNames": {
+        "not": {
+          "pattern": "^\\$"
+        }
+      },
+      "properties": {
+        "_metainfo": {
+          "$ref": "#/$defs/Metainfo"
+        },
+        "user": {
+          "$ref": "#/$defs/User"
+        },
+        "argv": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Argv"
+            },
+            {
+              "$ref": "#/$defs/ValueDirective"
+            }
+          ]
+        },
+        "stdin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/Inherit"
+            }
+          ]
+        },
+        "stdout": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/Inherit"
+            },
+            {
+              "$ref": "#/$defs/WritePath"
+            }
+          ]
+        },
+        "stderr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/Inherit"
+            },
+            {
+              "$ref": "#/$defs/Merge"
+            },
+            {
+              "$ref": "#/$defs/WritePath"
+            }
+          ]
+        },
+        "exit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/WritePath"
+            }
+          ]
+        },
+        "cwd": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StringValue"
+            },
+            {
+              "$ref": "#/$defs/MakeCwd"
+            }
+          ]
+        },
+        "envs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnvMap"
+            },
+            {
+              "$ref": "#/$defs/ValueDirective"
+            },
+            {
+              "$ref": "#/$defs/ClearEnv"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

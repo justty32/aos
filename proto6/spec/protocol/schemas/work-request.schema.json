@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/FileRpcRequest"
+    },
+    {
+      "properties": {
+        "method": {
+          "const": "work.submit"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "node_id": {
+              "$ref": "common.schema.json#/$defs/NodeId"
+            },
+            "job_id": {
+              "$ref": "common.schema.json#/$defs/ID"
+            },
+            "attempt_id": {
+              "$ref": "common.schema.json#/$defs/ID"
+            },
+            "inst": {
+              "$ref": "node-inst.schema.json"
+            },
+            "base": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "output_limit_bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "node_id",
+            "job_id",
+            "attempt_id",
+            "inst",
+            "base"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "$ref": "common.schema.json#/$defs/FileRpcRequest"
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcResponse"
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "common.schema.json#/$defs/ID"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

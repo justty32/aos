@@ -1,8 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "req_run_get_1",
-  "method": "run.get",
-  "params": {
-    "run_id": "run_1"
-  }
-}

@@ -1,0 +1,28 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "result": {
+    "node_id": "/srv/aos/team/member",
+    "parent_id": "/srv/aos/team",
+    "identity_grant": [
+      1000
+    ],
+    "owner_uid": 1000,
+    "once": false,
+    "paused": false,
+    "running": false,
+    "pending": false,
+    "stopping": false,
+    "cgroup": {
+      "path": "/sys/fs/cgroup/aos/team",
+      "limits": {
+        "cpu_max": {
+          "quota_us": 50000,
+          "period_us": 100000
+        },
+        "memory_max_bytes": "max",
+        "pids_max": 64
+      }
+    }
+  }
+}

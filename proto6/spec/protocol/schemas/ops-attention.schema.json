@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "source_node": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "issue_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/ID"
+      },
+      "uniqueItems": true
+    },
+    "job_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "attempt_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    }
+  },
+  "required": [
+    "version",
+    "source_node",
+    "issue_id",
+    "reason",
+    "message",
+    "actions"
+  ],
+  "additionalProperties": false
+}

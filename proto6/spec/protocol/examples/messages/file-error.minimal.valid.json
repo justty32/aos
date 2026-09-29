@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": "m1",
+  "error": {
+    "code": -32000,
+    "message": "不是可辨認的直接成員。",
+    "data": {
+      "code": "member_not_authorized",
+      "retryable": false
+    }
+  }
+}

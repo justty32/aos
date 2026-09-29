@@ -1,9 +1,0 @@
-{
-  "status": "unknown",
-  "result_ref": null,
-  "error": {
-    "code": "result_unknown",
-    "message": "送出後斷線，結果尚未確認。",
-    "retryable": false
-  }
-}

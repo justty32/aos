@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "m1",
+  "method": "agent.send",
+  "params": {
+    "text": ""
+  },
+  "reply_to": "/srv/aos/a"
+}

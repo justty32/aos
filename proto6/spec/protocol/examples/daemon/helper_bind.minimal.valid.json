@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "method": "helper.bind",
+  "params": {
+    "registration": {
+      "node_id": "/srv/aos/member",
+      "parent_id": "/srv/aos/team",
+      "identity_grant": [
+        "aos_member"
+      ]
+    },
+    "owner_uid": 1001
+  }
+}

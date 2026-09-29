@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/member",
+  "job_id": "think-1",
+  "attempts": [
+    {
+      "attempt_id": "http-1",
+      "status": "succeeded",
+      "reason": "completed",
+      "message": null,
+      "finish_reason": "stop",
+      "usage": null,
+      "http_status": 200
+    }
+  ]
+}

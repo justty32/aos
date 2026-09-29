@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": "m1",
+  "method": "agent.send",
+  "params": {
+    "text": "請看這則訊息。"
+  }
+}

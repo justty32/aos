@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "result": {
+    "node_id": "/srv/aos/team/member",
+    "parent_id": "/srv/aos/team",
+    "identity_grant": [
+      1000
+    ],
+    "owner_uid": 1000,
+    "once": false,
+    "paused": false,
+    "pending": false,
+    "stopping": false,
+    "cgroup": null
+  }
+}

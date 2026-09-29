@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "method": "node.register",
+  "params": {
+    "node_id": "/srv/aos/work/inst.json",
+    "parent_id": "/srv/aos/team",
+    "identity_grant": [
+      1000
+    ],
+    "once": true
+  }
+}

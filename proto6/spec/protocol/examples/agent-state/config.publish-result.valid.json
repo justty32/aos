@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "kind": "config_published",
-  "request_id": "publish_1",
-  "agent_id": "agent_a",
-  "config_revision": "config_v2",
-  "previous_revision": "config_v1",
-  "published_at_ms": 1790000000000
-}

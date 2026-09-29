@@ -1,0 +1,521 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "daemon 公開 IPC 請求與回應（P-103～107、P-111）",
+  "$defs": {
+    "AckResult": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        }
+      },
+      "required": [
+        "node_id"
+      ],
+      "additionalProperties": false
+    },
+    "GetResult": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "identity_grant": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "daemon-registration.schema.json#/$defs/User"
+              },
+              {
+                "not": {
+                  "enum": [
+                    0,
+                    "root"
+                  ]
+                }
+              }
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "interval_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "provision": {
+          "$ref": "daemon-registration.schema.json#/$defs/ProvisionGrant"
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/NodeId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "owner_uid": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "once": {
+          "type": "boolean"
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "pending": {
+          "type": "boolean"
+        },
+        "stopping": {
+          "type": "boolean"
+        },
+        "cgroup": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                },
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "cpu_max": {
+                      "type": "object",
+                      "properties": {
+                        "quota_us": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "const": "max"
+                            }
+                          ]
+                        },
+                        "period_us": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "quota_us",
+                        "period_us"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "memory_max_bytes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "const": "max"
+                        }
+                      ]
+                    },
+                    "pids_max": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "const": "max"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "path",
+                "limits"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "node_id",
+        "parent_id",
+        "identity_grant",
+        "owner_uid",
+        "once",
+        "paused",
+        "running",
+        "pending",
+        "stopping",
+        "cgroup"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "once": {
+                "const": true
+              }
+            },
+            "required": [
+              "once"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "interval_ms"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "parent_id": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "parent_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "once": {
+                "const": false
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "method": {
+                  "const": "node.register"
+                },
+                "params": {
+                  "$ref": "daemon-registration.schema.json#/$defs/Registration"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.unregister"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.wake"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.pause"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.resume"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.get"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.provision"
+                },
+                "params": {
+                  "$ref": "daemon-provision.schema.json"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcResponse"
+        },
+        {
+          "properties": {
+            "result": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/AckResult"
+                },
+                {
+                  "$ref": "#/$defs/GetResult"
+                }
+              ]
+            }
+          },
+          "required": [
+            "result"
+          ]
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcResponse"
+        },
+        {
+          "properties": {
+            "error": {
+              "allOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/Error"
+                },
+                {
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "code": {
+                          "const": -32000
+                        },
+                        "data": {
+                          "properties": {
+                            "code": {
+                              "enum": [
+                                "forbidden",
+                                "user_not_granted",
+                                "user_invalid",
+                                "user_mismatch",
+                                "not_registered",
+                                "registration_conflict",
+                                "busy",
+                                "stopping",
+                                "cleanup_failed",
+                                "helper_unavailable",
+                                "unsupported",
+                                "path_not_granted",
+                                "conflict",
+                                "provision_failed",
+                                "start_failed",
+                                "resource_observation_failed"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "code": {
+                          "const": -32700
+                        },
+                        "data": {
+                          "properties": {
+                            "code": {
+                              "const": "parse_error"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "code": {
+                          "const": -32600
+                        },
+                        "data": {
+                          "properties": {
+                            "code": {
+                              "const": "invalid_request"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "code": {
+                          "const": -32601
+                        },
+                        "data": {
+                          "properties": {
+                            "code": {
+                              "const": "method_not_found"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "code": {
+                          "const": -32602
+                        },
+                        "data": {
+                          "properties": {
+                            "code": {
+                              "const": "invalid_params"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "code": {
+                          "const": -32603
+                        },
+                        "data": {
+                          "properties": {
+                            "code": {
+                              "const": "internal_error"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      ]
+    }
+  ]
+}

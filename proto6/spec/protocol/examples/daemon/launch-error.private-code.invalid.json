@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/kernel/work/try-1/inst.json",
+  "error": {
+    "code": "UserNotGranted",
+    "message": "身分不在額度內",
+    "data": {
+      "code": "user_not_granted",
+      "retryable": false
+    }
+  }
+}

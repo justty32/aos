@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": null,
+  "error": {
+    "code": -32700,
+    "message": "JSON 無法解析",
+    "data": {
+      "code": "parse_error",
+      "retryable": false
+    }
+  }
+}

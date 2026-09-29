@@ -1,0 +1,10 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "method": "helper.start",
+  "params": {
+    "node_id": "/srv/aos/member",
+    "target_uid": 1001,
+    "unexpected": true
+  }
+}

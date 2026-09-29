@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "daemon 啟動設定（P-101）",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "common_user": {
+      "$ref": "daemon-registration.schema.json#/$defs/User"
+    },
+    "socket_path": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "attention_dir": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "shutdown_grace_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs"
+    },
+    "cgroup_root": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "roots": {
+      "type": "array",
+      "items": {
+        "$ref": "daemon-registration.schema.json#/$defs/TopRegistration"
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "version",
+    "socket_path",
+    "attention_dir",
+    "roots"
+  ],
+  "additionalProperties": false
+}

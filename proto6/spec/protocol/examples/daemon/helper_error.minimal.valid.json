@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "error": {
+    "code": -32000,
+    "message": "身分不在額度內",
+    "data": {
+      "code": "user_not_granted",
+      "retryable": false
+    }
+  }
+}

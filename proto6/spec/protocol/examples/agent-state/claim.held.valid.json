@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "agent_id": "agent_a",
-  "attempt_id": "tick_1",
-  "generation": 1,
-  "checkpoint_revision": 0,
-  "claimed_at_ms": 1790000000000,
-  "state": "held"
-}

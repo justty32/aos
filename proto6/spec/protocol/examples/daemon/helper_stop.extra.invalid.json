@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "method": "helper.stop",
+  "params": {
+    "node_id": "/srv/aos/member",
+    "unexpected": true
+  }
+}
