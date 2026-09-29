@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/team/member",
+  "seq": 1,
+  "resources": {
+    "memory": {
+      "bytes": -1
+    },
+    "cpu": {
+      "quota_us": 50000,
+      "period_us": 100000
+    }
+  }
+}

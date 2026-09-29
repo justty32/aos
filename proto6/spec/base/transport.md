@@ -6,7 +6,7 @@
 
 人、agent、工具共用有權限即可使用的檔案或指令入口。可依一般 Linux 權限，把訊息或工具／LLM 結果完整發布到指定的 ignored 收件區，不必先換成 blob 引用，也不必全經一個 RPC gateway。檔案發布依 [B-402](storage.md)，消費依 [tick](../tick.md)；有權限也能直接讀取檔案，正式輸出以已提交版本為準，見 [agent 輸入與輸出](../agent/input.md)。
 
-不能拿內容自稱的 sender 當授權依據。IPC 看 socket 對面的帳號；檔案投件靠 OS 權限及可信投遞資料辨認來源，無法驗證的名稱只當自述。收件只解析受大小限制的純資料，不因收到檔案就執行它或取得更多權限；root 不替投件者開任意路徑，身分切換與 runner 的解析邊界見 [身分與資源](identity-resources.md)。具體大小限制與 wire 格式留待協議篇。
+不能拿內容自稱的 sender 當授權依據。IPC 看 socket 對面的帳號；檔案投件靠 OS 權限及可信投遞資料辨認來源，無法驗證的名稱只當自述。收件按[訊息協議](../protocol/messages.md)解析；method 是去掉 `aos`、以 `.` 連接的指令，params 是完整 inst，argv 保留 `aos`。argv 與 method 不符或指令未對發件者開放就回 -32601；通過後按 inst 身分授權規則執行，回應沿工作結果格式。root 不替投件者開任意路徑，身分切換與 runner 的解析邊界見 [身分與資源](identity-resources.md)。大小限制與 wire 格式見[協議篇](../protocol/messages.md)。
 
 node 登記與喚醒的 IPC 以 [daemon](../daemon.md) 為正本；執行身分依 [inst](inst.md)，不靠資料夾位置推定。
 

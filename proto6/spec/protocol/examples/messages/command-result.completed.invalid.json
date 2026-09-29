@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": "m1",
+  "result": {
+    "node_id": "/srv/aos/top",
+    "job_id": "m1",
+    "attempt_id": "m1",
+    "status": "succeeded",
+    "reason": "exited",
+    "started": true,
+    "exit_code": 7,
+    "signal": null,
+    "stdout": null,
+    "stderr": null
+  }
+}

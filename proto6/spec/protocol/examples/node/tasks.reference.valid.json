@@ -1,0 +1,11 @@
+{
+  "_metainfo": {
+    "_type": "aos-tasks",
+    "_version": 1
+  },
+  "tasks": [
+    {
+      "$ref": "task.json"
+    }
+  ]
+}

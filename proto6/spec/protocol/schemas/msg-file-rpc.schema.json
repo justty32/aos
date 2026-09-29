@@ -7,9 +7,12 @@
     {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/RpcResponse"
+          "$ref": "work-result.schema.json"
         },
         {
+          "required": [
+            "jsonrpc"
+          ],
           "properties": {
             "id": {
               "$ref": "common.schema.json#/$defs/ID"

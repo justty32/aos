@@ -1,0 +1,22 @@
+{
+  "_metainfo": {
+    "_type": "aos-tasks",
+    "_version": 1
+  },
+  "tasks": [
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        {
+          "$env": "PROGRAM"
+        },
+        "hello"
+      ],
+      "id": "hello",
+      "kind": "custom"
+    }
+  ]
+}

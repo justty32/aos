@@ -8,7 +8,7 @@
 
 身分宣告、繼承與授權失敗的執行結果，以 [inst 的 `user`](inst.md) 為正本；**不由 node 資料夾位置決定**。
 
-上層向 daemon 註冊成員時一併給「身分額度」，只能給自己已有的身分；最頂層額度在 daemon 設定檔，沒 helper 時只含通用 user。額度只在 daemon 記憶體，重啟隨各 kernel 重新註冊恢復。宣告或繼承所得身分都要在額度內；不能改用 daemon 帳號偷偷執行。
+上層向 daemon 註冊成員時一併給「身分額度」，只能給自己已有的身分；最頂層額度在 daemon 設定檔，沒 helper 時只含通用 user。額度隨 daemon 登記保存；重啟讀回狀態，缺失時由各 kernel 重新註冊恢復。宣告或繼承所得身分都要在額度內；不能改用 daemon 帳號偷偷執行。
 
 身分額度管「准用誰」，資源 module 管「能用多少」。資源分配與 cgroup 層級以[資源 module](../scheduling/admission.md) 為正本；多個工具共用呼叫 node 的合計上限。
 

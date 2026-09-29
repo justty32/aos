@@ -16,7 +16,7 @@
 - UTF-8、無 BOM；一份檔案或一行訊息恰好一個 JSON object。拒絕重複 key、非有限數、尾隨資料。
 - ID 是字串：`[A-Za-z0-9][A-Za-z0-9._-]{0,127}`，可直接當檔名。node id 是 node 資料夾的絕對路徑（正規化、無 `..`、無結尾 `/`）。
 - 時間點用 UTC 毫秒整數、時長用毫秒，欄位名以 `_ms` 結尾；**cgroup CPU 是明示例外**：`quota_us`、`period_us`、`usage_us` 直接用微秒，不換算或捨去精度；逾時用經過時間，排先後用序號，不靠牆鐘、mtime 或檔名排序。
-- 自己的持久 JSON 檔帶 `"version": 1`，未知版本拒絕；inst 用自己的 `_metainfo`，JSON-RPC 用 `"jsonrpc": "2.0"`，不另加 `version`。
+- 自己的持久 JSON 檔帶 `"version": 1`，未知版本拒絕；inst 與 tasks 用自己的 `_metainfo`，JSON-RPC 用 `"jsonrpc": "2.0"`，不另加 `version`。
 - 未知欄位：協議物件預設拒絕；要擴充的地方明列 `ext` object。
 
 ## P-003．檔案發布與收件〔建議預設，未拍板〕
@@ -24,15 +24,15 @@
 - **發布**：在目標資料夾的 `.tmp/` 寫完、fsync、rename 成正式名，再 fsync 目錄。名字以 `.` 開頭的一律不處理。rename 不覆蓋已有檔；撞名須比對內容，見 [messages P-304](messages.md)。
 - **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。投件者要對目標那格有寫權限（權限怎麼開見 node.md）。收件只看檔案，不看 inotify；inotify／IPC 叫醒只是門鈴，可遺失。
 - **去重**：檔名就是請求 ID；同 ID 同內容已有檔／已提交紀錄＝收過。內容不同的同 ID 當衝突，寫一件待處理事項，不猜。
-- **消費**（[Q1](../tick.md)）：tick 把收件複製進追蹤區、group commit 成功後才刪收件原件。
-- **送出**（[Q2](../tick.md)）：請求檔先在自己的追蹤區 commit，再投進對方收件區。
+- **消費**（[Q1](../tick.md)）：任務保存原件，tick 在 group commit 後才刪相同收件原件（P-206）。
+- **送出**（[Q2](../tick.md)）：任務寫 `.aos/outbox/`，tick 在 group commit 後才投出請求／回應（P-206）。
 
 ## P-004．JSON-RPC 的兩種載體〔建議預設，未拍板〕
 
-物件形狀照 JSON-RPC 2.0：請求 `{"jsonrpc":"2.0","id":"<ID>","method":"...","params":{...}}`，回應 `{"jsonrpc":"2.0","id":"<ID>","result":{...}}` 或 `"error":{...}`。`id` 必填且是 P-002 的 ID；唯解析／請求錯誤（-32700／-32600）取不到合法 ID 時，回應用 `id:null`，成功回應與請求仍不准 null；不用 batch、不用 notification。method 名 `名詞.動詞`，小寫、底線分字。
+物件形狀照 JSON-RPC 2.0：請求 `{"jsonrpc":"2.0","id":"<ID>","method":"...","params":{...}}`，回應 `{"jsonrpc":"2.0","id":"<ID>","result":{...}}` 或 `"error":{...}`。`id` 必填且是 P-002 的 ID；唯解析／請求錯誤（-32700／-32600）取不到合法 ID 時，回應用 `id:null`，成功回應與請求仍不准 null；不用 batch、不用 notification。公開 method 就是對應指令去掉 `aos`、以 `.` 連接，例如 `agent.say` 對 `aos agent say`；內部 helper 用 `daemon.helper.*` 對 `aos daemon helper ...`，仍只走私有通道。
 
 1. **socket（daemon IPC）**：Unix stream socket，一行一個 object、以 LF 結尾，單行上限 256 KiB。呼叫者身分只看 `SO_PEERCRED`，封包裡自稱的身分不算。
-2. **檔案（node 之間）**：請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄及回件規則見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，壞件沒有可信 ID／回址就只留本地診斷及事項，不產生 `null.json`。檔案上限 256 KiB，大內容放檔案、用路徑引用。對方不常駐，回應可能要好幾格 tick 後才來；沒回應不代表沒做，查詢或重送一律用同一個 `id`。
+2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`，展開後必須和 method 對上同一條已開放指令，否則 -32601；回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄及回件規則見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，壞件沒有可信 ID／回址就只留本地診斷及事項，不產生 `null.json`。檔案上限 256 KiB，大內容放檔案、用路徑引用。對方不常駐，回應可能要好幾格 tick 後才來；沒回應不代表沒做，查詢或重送一律用同一個 `id`。
 
 ## P-005．錯誤〔建議預設，未拍板〕
 
@@ -44,7 +44,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 - argv 直接 exec，不經 shell。大資料走 stdin 或檔案，不塞 argv；key 永遠不進 argv 或環境給 node。
 - aos 自己的環境變數用 `AOS_` 開頭；環境不是授權依據。
 - 結束碼共同意思：`0` 成功；`2` 用法或設定錯，還沒開始做事；`125` 自己無法開始（如身分不准）；runner 收尾失敗也是 125，須以 P-110 的 started／error 區分，不能只看碼。其他碼由各篇自己定；被訊號殺掉由父程序看 wait 狀態，不猜 `128+n`。
-- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。新程式各篇自己取名，以 `aos-` 開頭。
+- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。新公開指令用 `aos <用途> <動作> [更深]`。
 
 ## P-007．schema 與範例〔主編補〕
 

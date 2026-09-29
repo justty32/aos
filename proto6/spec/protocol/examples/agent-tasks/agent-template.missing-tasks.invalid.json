@@ -6,7 +6,10 @@
       "user": 1000,
       "argv": [
         "aos-tick"
-      ]
+      ],
+      "stderr": {
+        "$opt": "inherit"
+      }
     },
     "config/agent.json": {
       "version": 1,
@@ -20,13 +23,15 @@
       },
       "system_prompt": "請用繁體中文清楚回答；需要工具時先呼叫工具。",
       "tools_file": "config/tools.json",
-      "work_target": "/srv/aos/top",
-      "attention_dir": "/srv/aos/attention"
+      "tools": {
+        "target_node": "/srv/aos/top"
+      },
+      "daemon_socket": "/run/user/1000/aos.sock"
     },
     "config/tools.json": {
       "version": 1,
       "tools": []
     },
-    ".gitignore": "/requests/\n/responses/\n/work/\n/public/\n"
+    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/summary/published.json\n"
   }
 }

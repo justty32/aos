@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": "attention-1",
+  "method": "daemon.attention.ls",
+  "params": {
+    "extra": true
+  }
+}

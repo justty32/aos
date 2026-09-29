@@ -10,7 +10,7 @@
         {
           "properties": {
             "method": {
-              "const": "helper.bind"
+              "const": "daemon.helper.bind"
             },
             "params": {
               "type": "object",
@@ -49,7 +49,7 @@
         {
           "properties": {
             "method": {
-              "const": "helper.unbind"
+              "const": "daemon.helper.unbind"
             },
             "params": {
               "type": "object",
@@ -75,7 +75,7 @@
         {
           "properties": {
             "method": {
-              "const": "helper.start"
+              "const": "daemon.helper.start"
             },
             "params": {
               "type": "object",
@@ -107,7 +107,7 @@
         {
           "properties": {
             "method": {
-              "const": "helper.stop"
+              "const": "daemon.helper.stop"
             },
             "params": {
               "type": "object",
@@ -133,7 +133,7 @@
         {
           "properties": {
             "method": {
-              "const": "helper.provision"
+              "const": "daemon.helper.provision"
             },
             "params": {
               "$ref": "daemon-provision.schema.json"

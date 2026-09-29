@@ -8,7 +8,7 @@
 
 node id 是資料夾路徑，依 [T-02](terms.md)。其餘用作檔名的 request／job／attempt／run ID 建議採大小寫敏感字串 `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`（與[協議 P-002](protocol/README.md)一致），不含路徑分隔或空白；它們不是任意檔案路徑，也不證明發件身分。
 
-有版本的共用紀錄以 `version:1` 起步，未知版本拒絕猜讀；各領域的實際欄位與未知欄位政策由各篇定義，尚未定的留給協議篇。時間點 `*_at_ms` 為非負 UTC epoch 毫秒，持續時間為非負毫秒；序號為正整數。共用紀錄的整數上限為 9007199254740991，不接受 bool 代替數字，不把空字串與 null 混用。
+一般共用紀錄以 `version:1` 起步；inst 及 tasks 用各自的 `_metainfo`，未知版本拒絕猜讀；各領域的實際欄位與未知欄位政策由各篇定義，尚未定的留給協議篇。時間點 `*_at_ms` 為非負 UTC epoch 毫秒，持續時間為非負毫秒；序號為正整數。共用紀錄的整數上限為 9007199254740991，不接受 bool 代替數字，不把空字串與 null 混用。
 
 UTC 用於跨重啟時間點；運行中逾時用經過時間，不因牆鐘倒退無限延長。〔使用者方向 2026-09-29〕排隊先後看所屬 kernel 的持久序號，不靠牆鐘，正本見 [S-204](scheduling/admission.md)。
 
@@ -18,7 +18,7 @@ UTC 用於跨重啟時間點；運行中逾時用經過時間，不因牆鐘倒�
 
 涉及父子管理時依可信登記關係核對，不信正文自報身分。node 登記與 IPC 授權以 [daemon](daemon.md) 為正本，執行身分與額度以[身分篇](base/identity-resources.md)為正本。
 
-採用 run 時才留下 run ID、所屬 node 與必要進度／結果，輪次語意見 [S-101／102](scheduling/runs.md)。設定採用與換版紀錄見 [A-102](agent/configuration.md)；不要求另一套不可變設定庫或全域 owner 表。
+採用 run 時才留下 run ID、所屬 node 與必要進度／結果，輪次語意見 [S-101／102](scheduling/runs.md)。設定修改與已派材料見 [A-102](agent/configuration.md)；不要求另一套不可變設定庫或全域 owner 表。
 
 驗收：未採用 run 的 node 仍可送工作並核對結果；投件者填另一個 node／UID 不能因此取得其權限。
 

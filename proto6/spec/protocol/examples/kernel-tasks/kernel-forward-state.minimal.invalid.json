@@ -5,7 +5,6 @@
   "route_pool": "upstream",
   "target_node": "/srv/aos/llm",
   "seq": 1,
-  "config_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "phase": "auto_retry",
   "finished_at_ms": null
 }

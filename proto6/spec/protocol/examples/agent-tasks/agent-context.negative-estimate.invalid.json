@@ -2,7 +2,6 @@
   "version": 1,
   "request_id": "llm-1",
   "input_id": "input-1",
-  "config_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "request_path": "state/work/attempt-1/request.json",
   "history_ids": [
     "history-1"

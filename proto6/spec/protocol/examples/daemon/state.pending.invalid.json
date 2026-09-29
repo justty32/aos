@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "clean_shutdown": true,
+  "registrations": [
+    {
+      "node_id": "/srv/aos/top",
+      "parent_id": null,
+      "identity_grant": [
+        1000
+      ],
+      "paused": false,
+      "pending": "yes",
+      "once": false
+    }
+  ]
+}

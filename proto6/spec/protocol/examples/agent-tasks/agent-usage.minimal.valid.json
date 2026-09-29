@@ -16,5 +16,6 @@
         "total_tokens": 110
       }
     }
-  ]
+  ],
+  "kind": "llm"
 }

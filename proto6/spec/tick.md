@@ -2,7 +2,7 @@
 
 ← [規格入口](README.md)｜[daemon](daemon.md)｜[kernel 樹](scheduling/README.md)｜[agent 任務](agent/README.md)
 
-依據：[09-29 新架構](../notes/2026-09-29-kernel-tree.md)、[使用者裁定](../notes/2026-09-29-verdicts.md)第三～七批。所有 node 共用這套引擎。下文指 node 內的任務註冊表；與 daemon 登記表的區別見[名詞](terms.md)。
+依據：[09-29 新架構](../notes/2026-09-29-kernel-tree.md)、[使用者裁定](../notes/2026-09-29-verdicts.md)第三～十二批。所有 node 共用這套引擎。下文指 node 內的任務註冊表；與 daemon 登記表的區別見[名詞](terms.md)。
 
 ## B-602：同一 node 一次一格
 
@@ -10,32 +10,20 @@
 
 〔建議預設，未拍板〕`aos-tick` 在可取得 node 獨占鎖後才執行，全格自己持鎖，直接呼叫也須遵守。鎖放在不受 git 還原或一般清理替換的位置。其他人、agent、工具要改受這格管理的檔案，也須協調這把鎖或先暫停 tick；否則它們的改動可能一起被 commit 或還原。這是所有寫入者共用的規則，不另外禁止工具改檔。
 
-（09-29 重寫：已刪 claim／generation／checkpoint revision／提案交易；互斥由本條接手。）
-
 ## 任務註冊表
 
-〔使用者方向 2026-09-29〕`aos-tick` 依序跑**系統性任務 → kernel／agent 任務 → 自訂任務**。一格 tick 裡的所有任務（含系統性任務）都用該 node inst 的 `user` 跑，不另設服務帳號（第九批）；沒有 helper 時整棵樹都是通用 user。自己帳號做不到的事：要 root 的固定步驟交 helper，管成員的事（例如成員收件區權限）由上層 kernel 在自己的 tick 用自己的帳號做。固定特權步驟只在 [root helper](base/identity-resources.md)。任務類別不授予身分或權限，身分須受 inst 與 daemon 的身分額度約束，不能在表裡填個 UID 就借權限。
+〔使用者方向 2026-09-29〕`aos-tick` 依序跑**系統性任務 → kernel／agent 任務 → 自訂任務**。一格 tick 裡的所有任務（含系統性任務）都用該 node inst 的 `user` 跑，不另設服務帳號（第九批）；沒有 helper 時整棵樹都是通用 user。自己帳號做不到的事：要 root 的固定步驟交 helper，管成員的事（例如成員收件區權限）由上層 kernel 在自己的 tick 用自己的帳號做。固定特權步驟只在 [root helper](base/identity-resources.md)。任務類別不授予身分或權限。
 
-〔建議預設，未拍板〕最小格式是 `{"version":1,"tasks":[...]}`；tasks 陣列位置就是順序。每項欄位依 [協議 P-202](protocol/node.md)：
+〔使用者方向 2026-09-29〕註冊表只放 `.aos/tasks.json`，格式為 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`。陣列位置就是順序；每項是一份 [inst](base/inst.md)，不准 `user`，另加：
 
 | 欄位 | 意思 |
 |---|---|
 | `id` | 本表內唯一的任務名 |
-| `argv` | 非空字串陣列：普通程式及參數 |
 | `kind` | `system`、`kernel`／`agent`、`custom`；依上述類別順序排列 |
 | `group`（可省） | 要一起提交的一組；省略就是單任務一組 |
 | `needs`（可省） | 需先成功的任務 ID 陣列；省略就是沒有前置 |
 
-例如一份含 agent 任務的 node 表的片段（程式名稱只作示意）：
-
-```json
-{"version":1,"tasks":[
-  {"id":"receive", "argv":["receive-input"], "kind":"agent", "group":"prepare"},
-  {"id":"prepare", "argv":["prepare-request"], "kind":"agent", "group":"prepare", "needs":["receive"]},
-  {"id":"send", "argv":["send-request"], "kind":"agent", "needs":["prepare"]},
-  {"id":"clean", "argv":["aos-clean"], "kind":"custom"}
-]}
-```
+指示詞照 inst 規則，也可整份 `$ref`；展開後仍不得有 `user`。詳細格式以 [P-202](protocol/node.md) 為正本。每個 module 只需一項任務，收件、產生請求及處理結果都在該項內做，投件與清收件原件交 tick。
 
 〔使用者方向 2026-09-29〕資源 module 也是 node 任務表上的普通項目；啟用與父層限制政策見 [scheduling/admission](scheduling/admission.md)。`aos-clean`、收信程式也用同一張表，不再分 pre／post 掛勾；有權限者同樣能直接跑這些程式。
 
@@ -54,7 +42,7 @@
 
 〔使用者方向 2026-09-29〕每個 node 資料夾是一個 git repo。一格開始前，受管理的工作區回到最近一次 commit；每組成功便 commit 它的變動，失敗便還原到該組開始時的 commit。外部收件與不想管理的內容放 `.gitignore`。不用帳本或 SQLite，也不另存一套提交提案與收據。
 
-〔建議預設，未拍板〕第一格前先有初始 commit。每組開始固定這組的管理範圍；還原包含修改、刪除、已暫存及尚未 `add` 的本組新增檔，卻不能清掉 ignored 收件與工作資料夾。不能只還原既有追蹤檔，也不能讓失敗任務臨時改 `.gitignore` 就逃出還原範圍。
+〔建議預設，未拍板〕第一格前先有初始 commit。每組開始固定這組的管理範圍；還原包含修改、刪除、已暫存及尚未 `add` 的本組新增檔，卻不能清掉 ignored 收件與工作資料夾。任務改 `.gitignore` 不能逃出還原範圍。
 
 〔建議預設，未拍板〕commit 或還原失敗時停止這個 node 的後續任務與新一格，保留既有 commit 並報出原因，修復後才恢復；不把未提交工作當成功。錯誤摘要走[待處理事項](scheduling/operations.md)，不能只寫在即將還原的檔案裡。
 
@@ -62,21 +50,21 @@
 
 ## 收件：commit 後才刪原件（Q1）
 
-〔使用者方向 2026-09-29〕訊息及工具／LLM 結果先落在 ignored 收件區。吃訊息是邏輯搬移：**先複製到追蹤區，與這組的狀態一起 commit 成功後，才刪收件原件**。失敗或 commit 前當機，原件仍在，下格可重收；commit 後、刪原件前當機，已提交的同 ID 檔就是消費證據，恢復時只清多留的原件，不重吃。
+〔使用者方向 2026-09-29〕訊息及工具／LLM 結果落在 ignored `requests/`、`responses/`。任務先複製到追蹤區，留下消費證據；**tick 在這組 commit 成功後才刪相符的收件原件**。commit 前當機，原件仍在，下格可重收；commit 後當機，tick 依已提交證據補清原件，不重吃。任務不另登記清收件工作。
 
 請求 ID、同 ID 衝突及保留期內的去重見 [base/transport](base/transport.md)，完整檔案發布與儲存位置見 [base/storage](base/storage.md)。
 
 ## 派出：先 commit 請求，再送出（Q2）
 
-〔使用者方向 2026-09-29〕任務要用 LLM 或工具，先產生帶固定 ID 的最小請求檔，**提交成功才對外送出，下一格收結果**。tick 不在原地等遠端工作結束。上例 `prepare` 組先提交請求，後面的 `send` 才交接；送出失敗不會抹掉已提交的請求。
+〔使用者方向 2026-09-29〕任務把帶固定 ID 的請求或回應放進追蹤的 `.aos/outbox/`，**tick 在所屬 group commit 成功後才投出**；失敗組的待送檔一起還原。LLM／工具結果留待後續 tick 收，不在原地等遠端工作結束。交接資料與格式見 [P-206](protocol/node.md)。
 
-〔建議預設，未拍板〕請求的最少資料沿 [共用契約](contracts.md)，不另做通用 outbox。本地 commit 不能證明外部有沒有執行；送出中斷、組失敗或重啟後，能確認仍在途就等結果，**無可信結果且不能確認仍在途或從未送出／執行，就記 unknown，不自動補送**。即使實際當機在 commit 後、送出前，也不能憑猜測重做。接收方的同 ID 去重不等於外部只執行一次；unknown 處置見 [S-401](scheduling/operations.md)。
+tick 可重投同 ID、同 bytes 的已提交封套，接收方去重；這不授權重做不明的工具／LLM 執行。once 由 module 後續讀已提交材料，再向 daemon 登記及 wake。無可信結果且不能證明未執行的工作記 unknown，不自動再執行；處置見 [S-401](scheduling/operations.md)。
 
 ## 當機恢復、設定與清理
 
 〔使用者方向 2026-09-29〕daemon／VM 重啟先按 [B-603](daemon.md) 清空舊程序。各 node 下一格在鎖內還原未 commit 的變動，已提交組與完整結果檔保留；收件重複按 Q1 處理，未明的工具／LLM 請求按 Q2 處理。能恢復本地 tick 不等於能重做 unknown 外部工作。
 
-設定與註冊表的讀定、重要設定暫停手改、普通設定匯入，以 [A-102](agent/configuration.md) 為正本。恢復 tick 前須完成該流程，不能把合法手改當作未提交任務還原。
+設定修改、重要設定暫停手改、普通設定匯入，以 [A-102](agent/configuration.md) 為正本。恢復 tick 前須完成該流程，不能把合法手改當作未提交任務還原。
 
 〔使用者方向 2026-09-29〕**別濫用 git**：沒變動不 commit；實作可定期合併提交，也可用 git submodule 分開高頻與不常變動的部分。清理與 git 歷史空間的邊界見 [B-404](base/storage.md)。
 
@@ -86,4 +74,4 @@
 
 group、Q1／Q2、還原範圍、設定與空 commit 的故障驗收，統一見 [V-03](conformance.md)。
 
-註冊表欄位拼法、順序式 group／needs 的工程細節仍是建議預設；Q1～Q4 已裁定，不再列待裁。`kind` 不帶任何權限，不能用來提權。
+註冊表格式以協議篇為準；順序式 group／needs 是工程預設。

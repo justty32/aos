@@ -1,9 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "resource-1",
-  "method": "resources.measure",
-  "params": {
-    "sender": "forged"
-  },
-  "reply_to": "/srv/aos/team"
-}

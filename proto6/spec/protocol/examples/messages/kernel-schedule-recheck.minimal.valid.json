@@ -1,0 +1,24 @@
+{
+  "jsonrpc": "2.0",
+  "id": "k1",
+  "method": "kernel.schedule.recheck",
+  "params": {
+    "_metainfo": {
+      "_type": "posix",
+      "_version": 1
+    },
+    "argv": [
+      "aos",
+      "kernel",
+      "schedule",
+      "recheck"
+    ],
+    "stdout": {
+      "$opt": "inherit"
+    },
+    "stderr": {
+      "$opt": "inherit"
+    }
+  },
+  "reply_to": "/srv/aos/a"
+}

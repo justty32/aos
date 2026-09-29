@@ -236,46 +236,12 @@
       "additionalProperties": false
     }
   },
-  "oneOf": [
+  "allOf": [
     {
-      "allOf": [
-        {
-          "$ref": "#/$defs/outcome"
-        }
-      ],
-      "properties": {
-        "version": {
-          "const": 1
-        }
-      },
-      "required": [
-        "version"
-      ]
-    },
-    {
-      "allOf": [
-        {
-          "$ref": "common.schema.json#/$defs/RpcResponse"
-        },
-        {
-          "properties": {
-            "result": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/outcome"
-                },
-                {
-                  "not": {
-                    "required": [
-                      "version"
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        }
-      ]
+      "$ref": "#/$defs/outcome"
     }
+  ],
+  "required": [
+    "version"
   ]
 }

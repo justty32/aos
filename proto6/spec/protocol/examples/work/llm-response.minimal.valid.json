@@ -2,21 +2,19 @@
   "jsonrpc": "2.0",
   "id": "llm-1",
   "result": {
-    "node_id": "/srv/aos/member",
-    "job_id": "think-1",
-    "attempts": [
-      {
-        "attempt_id": "http-1",
-        "status": "succeeded",
-        "reason": "completed",
-        "message": {
-          "role": "assistant",
-          "content": "你好"
-        },
-        "finish_reason": "stop",
-        "usage": null,
-        "http_status": 200
-      }
-    ]
+    "node_id": "/srv/aos/top",
+    "job_id": "llm-1",
+    "attempt_id": "llm-1",
+    "status": "succeeded",
+    "reason": "exited",
+    "started": true,
+    "exit_code": 0,
+    "signal": null,
+    "stdout": {
+      "path": "/srv/aos/shared/llm-result.minimal.valid.json",
+      "bytes": 357,
+      "truncated": false
+    },
+    "stderr": null
   }
 }

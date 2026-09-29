@@ -6,15 +6,22 @@
 
 本篇定 attention、aos-attend 與 aos-clean；權限與兩條請求路線只依 [共用約定](README.md)。
 
-## P-601．attention_dir 與事項檔〔建議預設，未拍板〕
+## P-601．attention IPC 與恢復檔〔建議預設，未拍板〕
 
-使用者指定絕對 attention_dir；布局為 `open/<source_key>/<issue_id>.json` 與 `done/<source_key>/<issue_id>.json`。source_key 是正規化 source_node UTF-8 的 SHA-256 小寫十六進位。
+平常經 daemon IPC 查詢／回報事項；`state_dir/attention/` 只供關掉重開接續，不是查詢入口。磁碟保留 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`；source_key 是正規化 source_node UTF-8 的 SHA-256 小寫十六進位。
 
-[ops-attention](schemas/ops-attention.schema.json) 必填 version、source_node、issue_id、reason、message、actions；actions 是處理表 ID，無可用項就 []。job_id／attempt_id／request_id 按需附，結果不明用 reason:unknown。通知不帶程式、憑證或完整工作；核對路徑與正文來源／ID，權限只開給可看摘要／處置者。
+[ops-attention](schemas/ops-attention.schema.json) 必填 version、source_node、issue_id、reason、message、actions；actions 是處理表 ID，無可用項就 []。job_id／attempt_id／request_id 按需附，結果不明用 reason:unknown。通知不帶程式、憑證或完整工作。
 
-每檔最多 256 KiB，發布依 P-002／003。同一問題沿用 ID，異內容不覆蓋；解除後再發生用新 ID。來源保留實際問題並補遺失通知；daemon 的啟動問題由 daemon 核對。
+| method（對應 `aos daemon attention <動作>`） | params → result |
+|---|---|
+| `daemon.attention.put` | `{issue:<事項>}` → `{source_node,issue_id}` |
+| `daemon.attention.resolve` | `{source_node,issue_id}` → 同形狀 |
+| `daemon.attention.show` | `{source_node,issue_id}` → 事項加 `status:"open"` 或 `"done"` |
+| `daemon.attention.ls` | 可省 source_node、status（預設 open）、limit（1～64、預設 64）、after → `{issues:[show結果],next_after}` |
 
-只有來源確認解除才 rename 到同鍵 done，不覆蓋並 fsync 兩端；相符 done 可補完搬移、異內容報衝突。寫不出報 stderr，不宣稱已保存或解除 unknown。done 由來源保存搬入時間，預設留 30 日、仍被引用就留；來源退役交有權限者手動處理，不讓 clean 掃別的來源。
+ls 依 `source_key/issue_id` bytes 排序，after 為上頁 next_after；列完 next_after 為 null。先依可信登記 owner／祖先 owner 授權篩選再分頁；show 無權拒絕，put／resolve 同樣只允許來源 owner／祖先 owner。daemon 自己的啟動事項由內部更新，source_node 使用受影響的 root。
+
+同一問題沿用 ID，相同內容可補送，異內容不覆蓋；解除後再發生用新 ID。來源保留實際問題並補遺失通知，只有確認解除才 resolve；尚未提交的處置不能宣稱解除。daemon 在記憶體更新並依 P-003 同步恢復檔；done 保留 30 日，被引用就留。IPC／存檔失敗報 stderr，不宣稱已保存或解除 unknown。
 
 ## P-602．人與 agent 都能編輯的處理表〔建議預設，未拍板〕
 
@@ -24,9 +31,9 @@
 |---|---|
 | exec | argv 非空陣列直接 exec，stdin 給事項 JSON，cwd 為操作者 --node；不展開通知文字或自動套 shell |
 | daemon_ipc | socket、method、params，可帶 bindings，組 RpcRequest 送 daemon |
-| node_rpc | target_node、method、params，可帶 bindings，組 FileRpcRequest，reply_to 為操作者 node |
+| node_rpc | target_node、method、params（inst），組 FileRpcRequest，reply_to 為操作者 node |
 
-RPC id 用 operation_id、jsonrpc 固定 2.0。bindings 只將 source_node、issue_id、job_id、attempt_id、request_id、operation_id 搬到指定頂層參數；前五取事項、末項取本次動作。缺來源或與 params 撞鍵就拒，無插值、遞迴或指示詞；完成後照目標 schema／授權驗。
+RPC id 用 operation_id、jsonrpc 固定 2.0。bindings 只供 daemon_ipc，將 source_node、issue_id、job_id、attempt_id、request_id、operation_id 搬到指定頂層參數；缺來源或撞鍵就拒。node_rpc 的 params 是完整 inst，指示詞沿 inst，領域 JSON 由 stdin 引用檔案；不從通知拼 argv。完成後照目標 schema／授權驗。
 
 表由操作者明選，一次讀定，不能從通知目錄載入；追蹤設定的修改依 [A-102](../agent/configuration.md)。unknown 可執行列強制 dangerous，不能改標籤跳過確認。method 只用 [messages P-306](messages.md)／[daemon P-103](daemon.md)；尚缺的 unknown／run 接口用明選的部署 adapter，沒有就 action_not_available，不虛構 method。
 
@@ -35,26 +42,26 @@ RPC id 用 operation_id、jsonrpc 固定 2.0。bindings 只將 source_node、iss
 完整 argv：
 
 ```text
-aos-attend --node <操作者_node> --attention-dir <絕對路徑> --handlers <檔案> [--source <來源_node> --issue <ID>] [--action <ID>]
+aos-attend --node <操作者_node> --socket <daemon_socket> --handlers <檔案> [--source <來源_node> --issue <ID>] [--action <ID>]
 ```
 
-source／issue 一起給，省略看全部可讀 open。未選 action 只自動做唯一匹配的 safe；沒有／多個就列出，human 只顯示。不提供 --yes／--yes-all，傳入回 2。安全／危險界線依 [S-405](../scheduling/operations.md)，unknown 處置依 S-401，不在本工具重判。
+source／issue 一起給，省略經 IPC 列全部有權看見的 open。未選 action 只自動做唯一匹配的 safe；沒有／多個就列出，human 只顯示。不提供 --yes／--yes-all，傳入回 2。安全／危險界線依 [S-405](../scheduling/operations.md)，unknown 處置依 S-401，不在本工具重判。
 
 stdin 不讀資料；只從 /dev/tty 問逐件 y/n，stderr 顯示來源、工作與影響。只接受去空白的 y／Y；其他字、EOF、無終端都跳過並保持 open。stdout 每項一行 [ops-action-record](schemas/ops-action-record.schema.json)＋LF，診斷及子程式輸出走 stderr。
 
-讀 open、處理表與操作者紀錄；寫 P-604 紀錄／請求及目標 requests/，不自行移通知或改原工作結果。使用執行者身分、記實際有效 UID；--node 不授權。其他相對參數依呼叫 cwd，PATH 沿環境；exec adapter 收 AOS_ATTEND_NODE／AOS_ATTEND_OPERATION_ID 供定位，皆非憑證。
+讀 IPC 事項、處理表與操作者紀錄；寫 P-604 紀錄／待送請求，不自行移通知或改原工作結果。使用執行者身分、記實際有效 UID；--node 不授權。其他相對參數依呼叫 cwd，PATH 沿環境；exec adapter 收 AOS_ATTEND_NODE／AOS_ATTEND_OPERATION_ID 供定位，皆非憑證。
 
-退出：0 全有回應／已送出或無 open；3 有跳過／human；1 有失敗或不明（優先於 3）；2 用法／表錯，尚未開始；125 工具前置失敗、尚未寫入。開始後的執行／紀錄／commit 失敗回 1，不能據此重做；子程式碼不直接當工具碼，訊號看 wait。
+退出：0 全有回應／已排入待送或無 open；3 有跳過／human；1 有失敗或不明（優先於 3）；2 用法／表錯，尚未開始；125 工具前置失敗、尚未寫入。開始後的執行／紀錄／commit 失敗回 1，不能據此重做；子程式碼不直接當工具碼，訊號看 wait。
 
 ## P-604．動作紀錄、路由與失敗〔建議預設，未拍板〕
 
 每次明示新動作配 operation_id，追蹤在 `state/ops/actions/<operation_id>/`。[ops-action-record](schemas/ops-action-record.schema.json) 記來源／事項、action、actor_uid、at_ms、outcome、message。執行前 prepared.json，之後另寫 result.json；跳過只寫 result，尚未選 action 的 skipped 可省 action_id。RPC 原請求存 request.json，不套新封套。
 
-直接呼叫先取 node 鎖、確認乾淨、提交 prepared／請求，再釋鎖執行；完成後取鎖提交 result。不要把本體掛進已持鎖 tick；tick 使用 adapter／收件任務。無變動不 commit。
+直接呼叫先取 node 鎖、確認乾淨、提交 prepared／請求，再釋鎖執行；檔案請求寫 P-206 待送區交 tick，完成後取鎖提交 result。不要把本體掛進已持鎖 tick；tick 使用 adapter／收件任務。無變動不 commit。
 
-exec 正常 0 記 succeeded，非零／訊號記 failed，只表示本步。IPC 最多等 30000 ms，斷線／逾時無可信回應記 unknown；檔案 RPC 依 [messages](messages.md) 發布，成功只記 submitted，由後續收件任務接回應，不原地等 tick。
+exec 正常 0 記 succeeded，非零／訊號記 failed，只表示本步。IPC 最多等 30000 ms，斷線／逾時無可信回應記 unknown；檔案 RPC 寫入 [P-206](node.md) 待送區只記 prepared；tick 投件後才可記 submitted，由後續任務接回應，不原地等遠端。
 
-prepared 無結果不自動再做；允許的重送沿用原請求，unknown 的新動作須逐次確認、配新 operation ID（不是 attempt ID）。來源仍核對授權與原工作，不信紀錄自報 UID，也不把 submitted／exec 0 當解除問題。
+prepared 的外部動作無結果不自動再做；已提交待送檔由 tick 按 P-206 補投同一封，不能產生新工作。允許的重送沿用原請求，unknown 的新動作須逐次確認、配新 operation ID（不是 attempt ID）。來源仍核對授權與原工作，不信紀錄自報 UID，也不把 submitted／exec 0 當解除問題。
 
 錯誤沿 P-005，data.code：handler_invalid、action_not_available、confirmation_required、action_unknown、attention_conflict、clean_blocked、archive_failed、commit_failed；預設 retryable:false，目標 RPC 錯誤原樣保留。
 
@@ -100,9 +107,9 @@ JSON Schema 2020-12；共用型別只引用 [common.schema.json](schemas/common.
 
 ## P-609．最小設定錯誤與修好後重驗〔主編補；依 A-102、CLI H-036 第 5、6 步〕
 
-設定檢查由使用設定的來源程式負責：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。一般設定取本格讀定版本驗格式、引用與必要權限；錯誤沿用上一有效內容，沒有可用舊版就擋依賴它的新工作，仍可收結果與處理取消。不把壞設定覆寫成舊檔，使用者仍看得到要修的版本。inst 身分及 tasks 不適用退回舊版，按 node／daemon 契約拒絕啟動。
+設定檢查由使用設定的來源程式負責：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。任務直接讀設定，驗格式、引用與必要權限；錯誤就停依賴它的新工作，仍可收結果與處理取消。inst 身分及 tasks 錯誤按 node／daemon 契約拒絕啟動。
 
-來源沿 P-601 發 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；`actions:["recheck"]`。同一未解問題沿用同一 issue_id，通知是不可變副本，最新細節留來源狀態；不是每格另生一件。來源連 attention_dir 設定也讀不到時，沿舊有效通知位置；從未有過合法位置就 stderr 明報，不宣稱已寫通知。任務表壞到檢查任務跑不了時，由拒載任務表的 tick／觀察失敗的 daemon 留診斷及其可寫的事項，不能等壞表裡的任務救自己。
+來源沿 P-601 發 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；`actions:["recheck"]`。同一未解問題沿用同一 issue_id，通知是不可變副本，最新細節留來源狀態；不是每格另生一件。連 daemon socket 都無法使用時就 stderr 明報，不宣稱已報事項。任務表壞到檢查任務跑不了時，由拒載任務表的 tick／觀察失敗的 daemon 留診斷及其可寫的事項，不能等壞表裡的任務救自己。
 
 修好普通設定並提交後，可等下一格檢查，或由有權限者透過 safe handler 執行：
 
@@ -113,8 +120,8 @@ aos-agent-check --node /srv/aos/a --recheck
 
 一份 handler 明選一個來源及其程式，argv 寫死來源路徑，不從通知文字拼命令。程式核對 P-601 的 source_node、issue_id 與自己保存的問題；可讀的通知不是授權。kernel handler [正例](examples/ops/handlers.minimal.valid.json) 沿既有 [ops-handlers schema](schemas/ops-handlers.schema.json)，[反例](examples/ops/handlers.unknown_safe.invalid.json) 仍拒絕把 unknown 處置標成 safe。agent 對應形狀只把 argv 換成上列第二行，不新增處理表格式。
 
-重驗只核對目前設定與解除設定問題，不送 LLM、不派 once、不 resume node、不解除 unknown。直接執行先持 node 鎖、驗乾淨基線，來源有效採用狀態提交成功後才把對應通知移 done；tick 內由檢查組保存依據，**後組**核對已提交有效證據才移 done。commit 失敗或問題仍在就保持 open；搬移失敗按 P-601 補做。aos-attend 的 exec 0 仍只表示本次命令成功，讀 open／done 才能看到來源確認的解除結果。
+重驗只核對目前設定與解除設定問題，不送 LLM、不派 once、不 resume node、不解除 unknown。直接執行先持 node 鎖、驗乾淨基線，修復證據提交成功後才經 IPC resolve；tick 內同一 module 下一格核對已提交證據再 resolve。commit 失敗或問題仍在就保持 open；IPC 失敗按 P-601 補做。aos-attend 的 exec 0 仍只表示本次命令成功，經 IPC 查 open／done 才能看到來源確認的解除結果。
 
-重要設定手改與恢復前的候選驗證依 [node P-210](node.md)；一般 check 成功不替代該程序。全流程不加新的 RPC method；kernel.recheck 仍只管排程，不能拿來冒充設定重驗。
+重要設定手改與恢復前的候選驗證依 [node P-210](node.md)；一般 check 成功不替代該程序。全流程不加新的 RPC method；kernel.schedule.recheck 仍只管排程，不能拿來冒充設定重驗。
 
 **驗收：**合法 JSON 的壞領域設定能產生可查事項；修好並重驗後由來源移 done；在採用組 commit 前故障，事項保持 open；整個安全重驗不多送一次 LLM 或工具。

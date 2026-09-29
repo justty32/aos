@@ -4,7 +4,7 @@
 
 ## B-201：啟動與交接
 
-〔使用者方向 2026-09-29〕kernel 派工，daemon 開 tick、管程序。身分切換及解析順序依 [B-303](identity-resources.md) 與 [inst](inst.md)。
+〔使用者方向 2026-09-29〕kernel 或 agent 派工，daemon 開 tick／once、管程序。身分切換及解析順序依 [B-303](identity-resources.md) 與 [inst](inst.md)。
 
 〔建議預設，未拍板〕一次嘗試只用一個固定 attempt ID。材料與結果用普通檔案；不確定是否已放行，不得再開同一嘗試。啟動失敗也要清空已開程序才歸還名額；根本沒跑與執行後失敗分開記，不能只看退出碼猜，見 [inst](inst.md)。
 

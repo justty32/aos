@@ -72,7 +72,7 @@
             },
             "method": {
               "type": "string",
-              "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
+              "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:_[a-z0-9]+)*)+$(?![\\s\\S])"
             },
             "params": {
               "type": "object"
@@ -169,6 +169,9 @@
           "properties": {
             "reply_to": {
               "$ref": "#/$defs/NodeId"
+            },
+            "params": {
+              "$ref": "node-inst.schema.json"
             }
           },
           "required": [

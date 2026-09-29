@@ -2,7 +2,7 @@
 
 ← [共用約定](README.md)｜[投件正本](../base/transport.md)｜[tick 的 Q1／Q2](../tick.md)｜[第九批裁定](../../notes/2026-09-29-verdicts.md)
 
-本篇只定 node 之間的檔案格式；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；本篇不新增程式、argv 或環境變數；發布與接收由 node 已登記的普通任務執行，全部用該 node 的 `user`。
+本篇只定 node 之間的檔案格式；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；檔案命令由收件 node 的普通任務處理，投件與收件清理由 tick 做，全部沿 node 的身分授權。
 
 ## P-300．兩條路各做什麼〔使用者方向 2026-09-29〕
 
@@ -23,13 +23,13 @@ responses/<id>.json  # RpcResponse
 
 只讀兩個目錄的直接普通檔案，不跟隨 symlink、不遞迴，不處理點開頭名稱。檔名去掉 `.json` 必須等於正文 `id`。發布依 P-003，在正式目錄下依共用流程操作；發布後不再修改正式檔。收件端只處理發布完成的檔案。
 
-追蹤區的檔案仍放所屬訊息／工作狀態旁；只要求能以「請求或回應＋ID」找回已提交原件及原請求目標，不另建通用 outbox、確認表或永久墓碑。追蹤位置見 [node P-206](node.md)。
+待送封套放追蹤的 `.aos/outbox/{requests,responses}/<id>.json`；消費原件逐 byte 複製到 `state/messages/{requests,responses}/<id>.json`。封套與 tick 交接見 [node P-206](node.md)。
 
 ## P-302．完整封包〔建議預設，未拍板〕
 
 請求、成功與錯誤的形狀直接沿 [P-002～005](README.md)，由 [msg-file-rpc.schema.json](schemas/msg-file-rpc.schema.json) 引用共用型別，不另包 envelope。請求帶 `jsonrpc`、`id`、`method`、`params`、`reply_to`；回應帶 `jsonrpc`、`id` 及二選一的 `result`／`error`。不加 `version`、sender、notification 或 batch。解析層限制依 P-002／004。
 
-`reply_to` **是回件 node 的絕對路徑，不是 `requests/`／`responses/` 或任意檔名**。例如請求投 `/srv/aos/b/requests/m1.json`，`reply_to` 為 `/srv/aos/a`，回件便投 `/srv/aos/a/responses/m1.json`。回應的 ID 沿用原請求；不另加 reply ID 或 `reply_to`。JSON 成功只表示該 method 定義的成功，不一律表示產品工作完成。
+`reply_to` **是回件 node 的絕對路徑，不是 `requests/`／`responses/` 或任意檔名**。例如請求投 `/srv/aos/b/requests/m1.json`，`reply_to` 為 `/srv/aos/a`，回件便投 `/srv/aos/a/responses/m1.json`。回應的 ID 沿用原請求；不另加 reply ID 或 `reply_to`。`result` 一律是 [work P-403](work.md) 的指令執行結果；業務 JSON 是該指令的 stdout，不另塞進 RPC result。程序成功不代表產品工作完成。
 
 ## P-303．回應路由與來源〔建議預設，未拍板〕
 
@@ -50,52 +50,47 @@ responses/<id>.json  # RpcResponse
 
 「查詢或重送沿用 ID」指**重投完全相同原請求以取得已保存回應**，不是用同 ID 改成另一個查詢 method。一般查詢直接讀有權限的已提交檔案或摘要（P-307），不叫醒 node。
 
-重投也受 [Q2](../tick.md) 與 [C-03](../contracts.md) 約束：有可信在途／已接件證據，可等候或以原 ID 取回已保存回應；能證明從未送出才可正常送出。無法判定曾否執行時留 unknown，**不靠定時重送重做工具或 LLM**。去重只在 [B-404](../base/storage.md) 的證據保留期內承諾；證據已清不能宣稱仍可安全重投。
+重投也受 [Q2](../tick.md) 與 [C-03](../contracts.md) 約束：有可信在途／已接件證據，可等候或以原 ID 取回已保存回應；能證明從未送出才可正常送出。補投原 bytes 只交付同一請求，不是開新嘗試；收件端仍須查已提交去重證據。無法判定曾否執行且無可信去重依據時留 unknown，**不靠定時重送重做工具或 LLM**。去重只在 [B-404](../base/storage.md) 的證據保留期內承諾；證據已清不能宣稱仍可安全重投。
 
 ## P-305．送出、消費與門鈴順序〔使用者方向 2026-09-29〕
 
-順序固定：**提交原請求 → 發布目標收件檔 → 可用的通知／叫醒**。成功發布才算收件；接收任務按 Q1 複製原件、與狀態一起 commit，成功才刪 收件區原件。收件、消費、完成各看其證據，不能把叫醒成功或刪檔當成工作完成。
+順序固定：**任務備好待送封套／消費副本 → tick 提交該組 → tick 投件及刪相符收件原件 → 可用的通知／叫醒**。成功發布才算收件；未提交的待送檔不投，未提交的消費紀錄不刪。收件、消費、完成各看其證據，不能把叫醒成功或刪檔當成工作完成。
 
 投件權限不等於 daemon IPC 叫醒權限。所屬 kernel 依 [S-201／202](../scheduling/admission.md) 觀察收件及摘要、核對資源後決定叫醒；跨隊投件者無權直接 wake 對方時，已發布的檔案照樣有效，靠對方所屬 kernel 的通知或低頻補查接手。不為叫醒而轉送原請求，不讓 daemon 讀正文或替 kernel 決定排程。
 
-## P-306．通用傳訊與成員找上層〔建議預設，未拍板〕
+## P-306．method 就是指令〔使用者方向 2026-09-29〕
 
-以下通用 method 用 [msg-methods.schema.json](schemas/msg-methods.schema.json)。`agent.send` 的 `params.text` 必填非空文字，`attachments` 可省，是普通絕對檔案路徑陣列；收件 node 須能讀，附件不因此取得執行權。大內容放附件，不加 MIME、角色或任意 metadata。`kernel.recheck` 的 `params` 固定空物件，不需要文字解讀或 LLM。
+檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，表示「在你那裡跑這條指令」。指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致，而且是收件 node 開放的命令；否則 -32601。`user`、`cwd`、stdin 路徑不能增加授權。接件執行該命令的本地動作，不再投同一份 RPC。
 
-| method | 送去哪裡／成功意思 |
+有業務資料的命令從 stdin 讀一份 JSON；inst.stdin 是收件者可讀的絕對檔案路徑，不是 JSON 內容。發件者將資料隨請求固定並保留至消費完成；收件者用自己的權限開檔。無資料的命令省略 stdin。需要結果的串流用 `{"$opt":"inherit"}`，由接件執行器捕獲；其餘串流規則沿 inst。輸入形狀與 argv 的一致性須在展開及讀檔後另驗，schema 不代替開放命令檢查。
+
+| method／完整命令 | stdin JSON／本地動作與 stdout |
 |---|---|
-| `agent.send` | 投給提供收訊任務的 node；文字與附件引用已按 Q1 提交，回 `{"accepted":true}`，不表示 agent 已完成文字要求。後續正式 progress／final 依 [agent 任務 P-708](agent-tasks.md) 保存並以新 ID 的 agent.reply 投回，不覆寫本 RPC 回應。 |
-| `agent.reply` | params 是 [agent-reply](schemas/agent-reply.schema.json) 完整物件，id 必須等於 params.id，input_id 對原 agent.send。接件者核對原請求與可信來源、提交後回 accepted；只保存回覆，不當新的使用者輸入，也不啟 LLM。 |
-| `kernel.recheck` | 成員請可信登記的上層 kernel 核對自己的收件區／已提交摘要，重新判斷排程（依 S-201／202）；消費與本地排程判斷提交後回 `{"accepted":true}`。資源不足仍可等待，不保證這次一定叫醒，也不直接改額度。 |
+| `agent.say`／`aos agent say` | `{text,attachments?}`；text 非空、attachments 為可讀絕對檔案路徑陣列。保存輸入，stdout `{"accepted":true}`；正式 progress／final 另以新 ID 的 `agent.reply.receive` 送回。 |
+| `agent.reply.receive`／`aos agent reply receive` | [agent-reply](schemas/agent-reply.schema.json)；id 對 RPC id、input_id 對原 agent.say。核對來源、保存後 stdout `{"accepted":true}`；不當新輸入、不啟 LLM。 |
+| `kernel.schedule.recheck`／`aos kernel schedule recheck` | 無；核對 reply_to 指向的可信直接成員收件與摘要，重新判斷排程，stdout `{"accepted":true}`。不保證叫醒，也不改額度。 |
+| `kernel.quota.set`／`aos kernel quota set` | [res-quota](schemas/res-quota.schema.json)；投 quota.node_id 的可信父 kernel，只准父配置權 owner／祖先，核對 seq 與父額度、提交後 stdout `{"accepted":true}`。不代表 OS 已套用。 |
+| `kernel.usage.measure`／`aos kernel usage measure` | 無；由 owner／可信直接父要求重測，stdout 為 [res-usage](schemas/res-usage.schema.json)，不啟用缺席 module。 |
+| `kernel.work.submit`／`aos kernel work submit` | [work P-401](work.md) 工作材料；完成後 stdout 為內層工作的本地 work-result。 |
+| `llm.chat`／`aos llm chat` | [work P-406](work.md) LLM 材料；完成後 stdout 為本地 llm-result。 |
 
-| method | params／回應與授權 |
-|---|---|
-| `resources.set` | `params` 為 [res-quota](schemas/res-quota.schema.json) 整份配額；投給 quota.node_id 的可信父 kernel，只允許具有該父配置權的 owner／祖先來源。核對 seq 與父額度、提交配額後回 `{"accepted":true}`；不代表 OS 已套用。普通成員不得自行擴額。 |
-| `resources.measure` | `params:{}`，投給要量測的 node，由其 owner／可信直接父要求；資源任務重測並提交後，回 `result` 為 [res-usage](schemas/res-usage.schema.json) 完整摘要（含資料版本 1）。不啟用缺席的 module。 |
-| `work.submit` | 請求／結果與授權見 [work P-400～404](work.md)；只有最終結果或拒收 error，不先回 accepted。 |
-| `llm.complete` | 請求／結果與授權見 [work P-405～408](work.md)，由 agent 設定 llm.target_node 選目的 node；可能轉交、也可能在當地代發，wire 格式不變，同樣只回最終結果或拒收。 |
+全部回應用 [work-result](schemas/work-result.schema.json)；最後兩條由 module 跨格接續，業務結果回來才完成命令；tick 不等待工具或 HTTP，也不先用 ACK 占住 RPC id。摘要查詢直接讀 P-307，不開 tick。kernel 範本也保存自己送出命令的回應及收到的正式回覆，由 tick 投確認、清原件，不必裝 LLM。
 
-摘要**讀取不是 method**：依 P-307 直接讀已提交摘要，不為查詢啟 tick；重測才使用 resources.measure。set／measure 沒有對應任務回 -32601；越權回 member_not_authorized，seq 衝突回 resource_conflict，量測失敗回 resource_observation_failed，均不授權自動重做。
+授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：不開放／命令不符 -32601，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict` 或 `resource_observation_failed`。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址只留本地診斷。
 
-`kernel.recheck` 的 `reply_to` 選出要核對及收回應的直接成員；按 P-303 將已核對投件 UID 對上可信登記裡該成員的 user／授權。同 UID 時這是同帳號授權，不證明是哪個 node 發件；不符就拒絕。不能把檔案系統父目錄當上層。工作／LLM 參數只在 work 篇定義；全部檔案 method 見上表。上層沒有處理本 method 的任務就回 -32601；不是直接成員或來源不足就回 `member_not_authorized`。要 helper 做固定特權步驟仍由獲授權者走 daemon IPC。
-
-〔主編補；接 H-025／026／036〕只傳話的 kernel 也要收回件：kernel 範本的 `aos-kernel-schedule` 同時接本 node 已送出 agent.send／agent.reply 的 accepted/error，按原請求及可信來源保存到 `state/messages/responses/<id>.json`；接 agent.reply 按上列規則保存原件並備 accepted，不啟模型。新保存材料隨所在 group 提交；**只補投／清理格首已提交的回件及相符原件**，本格新備 accepted 等下一格送。agent 範本由 P-704 四階段做同樣交接。這是現有收件任務的分流，不新增 RPC 或常駐程序。
-
-**驗收：**kernel 用 H-025 傳話後，H-026 能讀已提交 accepted，正式 reply 也得到接件確認；看回話不會開 kernel 的 LLM。
-
-agent.send、agent.reply、kernel.recheck、resources.set 成功用 [msg-accepted](schemas/msg-accepted.schema.json)；resources.measure 用 [msg-resource-result](schemas/msg-resource-result.schema.json)。錯誤沿共用 Error：-32600 封包、-32601 method、-32602 參數；業務錯誤均 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable` 或 `attachment_unavailable`，帶 `retryable`。前兩者固定 false；後兩者只在可證明未接納時可標 true，仍不授權重做 unknown。無合法 ID／安全回件地址的壞檔只留本地診斷及事項；共用 schema 雖允許 null 解析錯誤，檔案載體仍需 ID 才能定址。
+**驗收：**argv 少了 aos、和 method 不符或未開放都回 -32601；看正式回話不會開模型，也不產生無限確認往返。
 
 ## P-307．上層直接讀成員摘要〔建議預設，未拍板〕
 
-成員的追蹤檔 `summary.json` 用 [msg-summary](schemas/msg-summary.schema.json)：必填 version:1、node_id、observed_at_ms、ready、due_ms、status；due_ms 沒到期事件用 null，ready 可同時成立。status 為 idle、queued、waiting_resources、waiting_result、running、paused、canceling、unknown、needs_attention；reason 可省。可選 `usage` 引用 [res-usage](schemas/res-usage.schema.json)，必須與摘要在同一 commit、同一 node，缺量測不補零。不放成員清單、history 或 key。
+成員的追蹤檔 `.aos/summary/summary.json` 用 [msg-summary](schemas/msg-summary.schema.json)：必填 version:1、node_id、observed_at_ms、ready、due_ms、status；due_ms 沒到期事件用 null，ready 可同時成立。status 為 idle、queued、waiting_resources、waiting_result、running、paused、canceling、unknown、needs_attention；reason 可省。可選 `usage` 引用 [res-usage](schemas/res-usage.schema.json)，必須與摘要在同一 commit、同一 node，缺量測不補零。不放成員清單、history 或 key。
 
-有 repo 讀權的上層，先固定一個 commit 再讀摘要，核對 node_id 等於可信直接成員；不讀未提交工作檔。**只開摘要權限時**，成員在後組任務把已提交 summary.json 的原 bytes 發布成 ignored 的 `public/summary.json`，父目錄只授 traverse、檔案只授 read；此固定副本以暫存→fsync→原子替換→fsync 目錄更新，是 P-003 不覆蓋規則的明示例外，不是請求。讀者一次 open 取完整版本，usage 與摘要不拆檔，避免混版；副本失敗留舊值並報錯，過時／缺失不等於 idle。
+有 repo 讀權的上層固定一個 commit 讀摘要，核對 node_id 等於可信直接成員。只開摘要讀權時，tick 在提交後把同一版原 bytes 原子發布到 ignored 的 `.aos/summary/published.json`；父目錄只授 traverse、檔案只授 read。這是 P-003 不覆蓋規則的明示例外。讀者一次 open 取完整版本，usage 不拆檔；發布失敗留舊值並報錯，過時／缺失不等於 idle。
 
 摘要是觀測，不能蓋掉新的收件區 事件；上層不為查詢啟成員 tick，也不因要讀摘要就取得其 repo 或下層內容權限。
 
 ## P-308．schema 與最小範例〔建議預設，未拍板〕
 
-[範例](examples/messages/)各一正一反：file-request 缺 reply_to、file-error 同時 result/error、agent-send 空文字、kernel-recheck 自報 sender、accepted 冒稱 completed、summary 用布林 due，均拒絕。resources-set 反例為負配額；resources-measure 反例夾帶未定參數；resources-measured 反例用負用量。[agent.reply 正例](examples/messages/agent-reply.minimal.valid.json) 可配回輸入；[反例](examples/messages/agent-reply.missing-input.invalid.json) 漏 input_id，拒絕。重送／同 ID 異 bytes 是執行語意，沿 P-304，不另複製範例。
+[範例](examples/messages/)涵蓋完整 inst、命令結果、各命令的輸入與摘要。缺回址、雙 result/error、命令不符、空文字、漏 input_id、負配額／用量及布林 due 都拒絕；重送與同 ID 異 bytes 另依 P-304 驗行為。
 
 ## P-309．待決與跨篇
 

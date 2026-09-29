@@ -1,7 +1,6 @@
 {
   "version": 2,
   "socket_path": "/run/user/1000/aos/daemon.sock",
-  "attention_dir": "/srv/aos/attention",
   "roots": [
     {
       "node_id": "/srv/aos/team",
@@ -9,5 +8,6 @@
         1000
       ]
     }
-  ]
+  ],
+  "state_dir": "/srv/aos/daemon-state"
 }

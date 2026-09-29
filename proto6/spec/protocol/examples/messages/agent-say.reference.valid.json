@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "m1",
+  "method": "agent.say",
+  "params": {
+    "$ref": "/srv/aos/shared/command.json"
+  },
+  "reply_to": "/srv/aos/a"
+}

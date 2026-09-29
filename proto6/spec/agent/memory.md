@@ -16,9 +16,9 @@
 
 〔建議預設，未拍板〕依模型輸入上限與預留輸出空間組 context。必要材料包括 system 指示、正在處理的原始輸入、當前 tool call 及其配對結果；工具結果可採 A-303 的有標記預覽。剩餘空間才放近期歷史及有來源的摘要，保留模型要求的 tool call／結果順序。
 
-每次請求保存實際送出的 context、採用的設定版本、來源引用及 token 估算；沒有對應 tokenizer 時標明是估算。必要材料已超限，就回報 `context_over_budget` 與超限原因，不截成壞 JSON、不無限壓縮重試，也不發出明知放不下的請求；處置走[共通操作](../scheduling/operations.md)。
+每次請求保存實際送出的 context、所需設定材料、來源引用及 token 估算；沒有對應 tokenizer 時標明是估算。必要材料已超限，就回報 `context_over_budget` 與超限原因，不截成壞 JSON、不無限壓縮重試，也不發出明知放不下的請求；處置走[共通操作](../scheduling/operations.md)。
 
-〔使用者方向 2026-09-29〕模型請求交[所屬 kernel 與 endpoint 池](../scheduling/llm.md) 處理，資源額度依已裝的 module；context 不另建一套資源管理。摘要若要用模型，也照[通用 tick](../tick.md)派出及收結果。
+〔使用者方向 2026-09-29〕模型請求交 `llm.target_node` 指定的 [node 與 endpoint 池](../scheduling/llm.md) 處理，資源額度依已裝的 module；context 不另建一套資源管理。摘要若要用模型，也照[通用 tick](../tick.md)派出及收結果。
 
 驗收：必要材料超過模型上限時，不呼叫 API，可查到超限原因與材料來源；需要模型產生的摘要不在本地 tick 裡同步等待。
 

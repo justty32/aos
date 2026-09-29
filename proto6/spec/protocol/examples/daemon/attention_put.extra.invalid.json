@@ -1,0 +1,18 @@
+{
+  "jsonrpc": "2.0",
+  "id": "attention-1",
+  "method": "daemon.attention.put",
+  "params": {
+    "issue": {
+      "version": 1,
+      "source_node": "/srv/aos/team",
+      "issue_id": "config-1",
+      "reason": "config_invalid",
+      "message": "設定已修好，等待重新驗證。",
+      "actions": [
+        "recheck"
+      ]
+    },
+    "extra": true
+  }
+}

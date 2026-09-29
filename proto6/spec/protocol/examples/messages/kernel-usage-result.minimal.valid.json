@@ -1,0 +1,20 @@
+{
+  "jsonrpc": "2.0",
+  "id": "resource-1",
+  "result": {
+    "node_id": "/srv/aos/top",
+    "job_id": "resource-1",
+    "attempt_id": "resource-1",
+    "status": "succeeded",
+    "reason": "exited",
+    "started": true,
+    "exit_code": 0,
+    "signal": null,
+    "stdout": {
+      "path": "/srv/aos/shared/kernel-usage-output.minimal.valid.json",
+      "bytes": 152,
+      "truncated": false
+    },
+    "stderr": null
+  }
+}

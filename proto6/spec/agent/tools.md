@@ -10,7 +10,7 @@
 
 格式修補必須有限：預設連續兩次模型回覆格式無效就停止自動修補，不再派修補請求，並寫[待處理事項](../scheduling/operations.md)；合法回覆把計數歸零。計數只是 node 的普通狀態檔。
 
-〔使用者方向 2026-09-29〕工具請求的提交、派出與收結果依[通用 tick](../tick.md)。
+〔使用者方向 2026-09-29〕`tools.target_node` 決定路線：填 node id 時，把 `kernel.work.submit` 請求交該 kernel，由它管額度、排程及 once；填 `null` 時，agent 自己向 daemon 登記 once，`parent_id` 是自己，並記用量供上層用量收集 module 讀。兩條路線共用工作結果格式，once 用量都歸發起 agent。提交及收結果依[通用 tick](../tick.md)。
 
 驗收：schema 要求整數而模型傳字串時，不開工具程序，可查到參數路徑與格式錯誤。
 

@@ -6,5 +6,6 @@
   "pool": "local",
   "model": "example-model",
   "status": "rejected",
-  "attempts": []
+  "attempts": [],
+  "kind": "llm"
 }

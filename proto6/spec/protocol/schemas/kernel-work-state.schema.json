@@ -25,10 +25,6 @@
     "boot_id": {
       "$ref": "common.schema.json#/$defs/ID"
     },
-    "config_commit": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
-    },
     "work_dir": {
       "$ref": "common.schema.json#/$defs/NodeId"
     },
@@ -85,7 +81,6 @@
     "seq",
     "phase",
     "boot_id",
-    "config_commit",
     "work_dir",
     "finished_at_ms"
   ],
