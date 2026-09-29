@@ -6,7 +6,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 ## P-400．兩個入口〔使用者方向 2026-09-29〕
 
-工具由 `tools.target_node` 選路：是 node id 就以 `kernel.work.submit` 交該 kernel；是 null 就由 agent 自己登記 once（可信 parent_id 是自己）、保存用量，kernel 用收集 module 讀。LLM 以 `llm.chat` 投 `llm.target_node`；填 null 是「不管」檔，agent 自己打 HTTP、不經本篇的池（[S-301](../scheduling/llm.md)）。開 agent 的 kernel 決定地址與權限。
+工具由 `tools.target_node` 選路：是 node id 就以 `kernel.work.submit` 交該 kernel；是 null 就由 agent 自己登記 once（可信 parent_id 是自己）、保存用量，kernel 用收集 module 讀。LLM 以 `llm.chat` 投 `llm.target_node`；填 null 是「直連」檔，agent 自己打 endpoint、不經本篇的池（[S-301](../scheduling/llm.md)）。開 agent 的 kernel 決定地址與權限。
 
 兩種檔案請求的 params 都是完整 inst，argv 分別以 `aos kernel work submit`、`aos llm chat` 開頭；業務材料是 inst.stdin 指向的 JSON 檔，命令核對見 [messages P-306](messages.md)。材料的 node_id 是最初發起 node，job_id 是邏輯工作，attempt_id 是嘗試；仍須核對可信來源。命令完成才回執行結果，不先回 ACK；內層工作／LLM 結果是命令的 stdout JSON。
 
@@ -84,7 +84,7 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 
 三支程式 stdin 都是 `/dev/null`，stdout 保留為空（業務輸出走檔案），stderr 只放無 key 的 `代號: 白話` 診斷；內層 inst 的 stdin／stdout／stderr 另依 P-403。不新增必需 `AOS_*` 環境變數，PATH／目標帳號環境及 inst.envs 依 inst 正本，不從呼叫者環境取得池 key。
 
-結束碼：0＝這次處理完成且必要結果已完整發布（工作本身仍可能 failed／unknown）；2＝用法／設定錯，未開始；125＝自身無法開始；1＝已開始處理後自身失敗（包括結果寫不出），不能把未發布結果算成功。aos-llm 的 0 只表示本格步驟完成，不代表 HTTP 工作成功。〔使用者方向 2026-09-29 晚〕串流中途斷線照 [S-305](../scheduling/llm.md)：aos-llm-call 可以非 0 結束，不必另補結果；沒有結果就照下句處理。〔建議預設，未拍板〕stream_path 在送出 HTTP 前就開不了（沒權限、父目錄不在）時不送，結果記 failed／not_sent。每次 HTTP 嘗試開始時從頭寫這個檔，不接續前一次嘗試的內容。工作 inst 的內層退出碼只記在工作結果，不能拿 wrapper 的 0 代替。訊號由父程序看 wait 狀態；wrapper 沒寫結果時只按 P-402 的旁檔／unknown 規則處理。
+結束碼：0＝這次處理完成且必要結果已完整發布（工作本身仍可能 failed／unknown）；2＝用法／設定錯，未開始；125＝自身無法開始；1＝已開始處理後自身失敗（包括結果寫不出），不能把未發布結果算成功。aos-llm 的 0 只表示本格步驟完成，不代表 HTTP 工作成功。〔使用者方向 2026-09-29 晚〕串流中途斷線照 [S-305](../scheduling/llm.md)：aos-llm-call 可以非 0 結束，不必另補結果；沒有結果就照下句處理。〔使用者方向 2026-09-29 晚〕stream_path 在送出 HTTP 前就開不了（沒權限、父目錄不在）時不送，結果記 failed／not_sent。重試時這個檔怎麼寫不另規定，由任務自然處理。工作 inst 的內層退出碼只記在工作結果，不能拿 wrapper 的 0 代替。訊號由父程序看 wait 狀態；wrapper 沒寫結果時只按 P-402 的旁檔／unknown 規則處理。
 
 ## P-409．schema 與最小範例〔建議預設，未拍板〕
 

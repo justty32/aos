@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "socket_path": "/run/user/1000/aos/daemon.sock",
+  "roots": [
+    {
+      "node_id": "/srv/aos/team",
+      "identity_grant": [
+        1000
+      ]
+    }
+  ],
+  "state_dir": "/srv/aos/daemon-state",
+  "create_cgroup": true
+}

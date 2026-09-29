@@ -12,7 +12,7 @@
 
 | # | argv／做什麼 | 成功時 stdout | 底層與失敗 |
 |---|---|---|---|
-| 1 | `aos daemon start --config F`：在前景開 daemon | `helper_pid=none`，sudo 模式為 `helper_pid=1234` | 同 `aos daemon --config F`；2 設定錯、125 初始化／收尾失敗（含版本自檢不過、拿不到 cgroup 子樹）。正常 Ctrl-C 清空程序、存 state.json 後回 0。 |
+| 1 | `aos daemon start --config F [--create-cgroup]`：在前景開 daemon | `helper_pid=none`，sudo 模式為 `helper_pid=1234` | 同 `aos daemon --config F`；2 設定錯、125 初始化／收尾失敗（含版本自檢不過、沒有準備好的 cgroup 子樹）。`--create-cgroup`：子樹不在時 daemon 自己建，見 [B-605](../daemon.md)。正常 Ctrl-C 清空程序、存 state.json 後回 0。 |
 | 2 | `aos daemon info --socket S [--json]`：查本次啟動 ID | `boot_id=…` | IPC `daemon.info`；IPC。每次重開換 ID。 |
 | 3 | `aos daemon attention ls --socket S [--source N] [--status open\|done] [--json]`：列 daemon 自己的事項 | 來源、ID、原因、說明；JSON 每頁 RpcResponse | IPC `daemon.attention.ls` 分頁；IPC。 |
 | 4 | `aos daemon attention show N ID --socket S [--json]`：看 daemon 事項 | 內容、建議處理、open／done | IPC `daemon.attention.show`；IPC。 |

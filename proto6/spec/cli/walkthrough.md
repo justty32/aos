@@ -4,7 +4,7 @@
 
 ## H-036．七步走到底〔使用者方向；驗收腳本為工程預設〕
 
-前置：非 root、proto6／git、Python 3.9 以上、Linux kernel 5.14 以上、git 作者已設，DEMO 尚不存在；已有一棵事先建好並交給目前帳號的 cgroup v2 子樹，絕對路徑放在 CG（[B-605](../daemon.md)；沒有它 daemon 啟動即報錯退出）。A 跑 daemon，B 操作，C 跑 HTTP；都設 DEMO、S、CG。註解為預期輸出。
+前置：非 root、proto6、git 2.35 以上、Python 3.9 以上、Linux kernel 5.14 以上、git 作者已設，DEMO 尚不存在；已有一棵準備好並交給目前帳號的 cgroup v2 子樹，絕對路徑放在 CG，終端 A 的 shell 也已在這棵子樹底下的一個葉框裡（例如 root 先建 `$CG/shell`，把 A 的 shell PID 寫進 `$CG/shell/cgroup.procs`；不放子樹根，免得擋住 daemon 開 controller；[B-605](../daemon.md)；沒有它 daemon 啟動即報錯退出，本走查不用 `--create-cgroup`）。A 跑 daemon，B 操作，C 跑 HTTP；都設 DEMO、S、CG。註解為預期輸出。
 
 ### 1. 寫 daemon 設定，先開一次空服務
 

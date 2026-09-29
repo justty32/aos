@@ -141,7 +141,7 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者及明授投件�
 | 工具 | tools.target_node=本 kernel，裝 work，代登 once | tools.target_node=null，agent 自己登 once，parent_id 是 agent |
 | 用量 | 由代辦 module 記，agent 記錄供核對 | agent 自記，父 kernel 裝 usage-collect 讀 |
 
-LLM 另有 `llm.target_node=null` 的「不管」檔：agent 自己打 HTTP，不經池、不扣份額，key 必然讓 agent 讀得到（[S-301](../scheduling/llm.md)，之後再做）。
+LLM 另有 `llm.target_node=null` 的「直連」檔：agent 自己打 endpoint，不經池、不扣份額，key 必然讓 agent 讀得到（[S-301](../scheduling/llm.md)，之後再做）。
 
 兩種工作可分別選路線。父須能列成員收件與讀摘要；僅開摘要權時讀 `.aos/summary/published.json`，用量另授讀權。轉交要開相應 requests／responses 權限，下一站明授 origin/via。自跑工具需 daemon 授權與 jobs 路徑權限；所有 once 資源都算可信 parent_id，工具不自選。
 

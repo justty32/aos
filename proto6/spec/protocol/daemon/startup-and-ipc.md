@@ -4,7 +4,7 @@
 
 ## P-101．啟動、設定與 socket〔建議預設，未拍板〕
 
-完整 argv：`aos daemon --config /absolute/daemon.json`。前景執行；stdin 不讀，stdout 啟動時印 `helper_pid=<PID>`（無 helper 為 `none`）及 node 問題的警告；stderr 只印 daemon 自身原因造成的錯誤。讀設定、登記 inst 的原始 bytes（部署須授通用 user 必要讀取及目錄穿越權；讀不到就拒絕，不交 root 代讀），寫 socket、state_dir 恢復檔、node 的 `.aos/attention/` 及 P-110 的 once 失敗旁檔。環境不作授權，不定義 `AOS_*` 變數。正常停機回 0；用法／設定尚未開始做事前失敗回 2；初始化、清空或運行中的 daemon 自己失敗回 125。啟動先照 [B-605](../../daemon.md) 自檢：版本低於下限、沒有 cgroup v2、拿不到交給 daemon 的 cgroup 子樹，都回 125 並在 stderr 說明。SIGINT／SIGTERM 走 P-114 的正常停機；其他訊號由父程序看 wait 狀態。
+完整 argv：`aos daemon --config /absolute/daemon.json [--create-cgroup]`；`--create-cgroup` 等於設定的 `create_cgroup: true`，兩處任一開著就算開。前景執行；stdin 不讀，stdout 啟動時印 `helper_pid=<PID>`（無 helper 為 `none`）及 node 問題的警告；stderr 只印 daemon 自身原因造成的錯誤。讀設定、登記 inst 的原始 bytes（部署須授通用 user 必要讀取及目錄穿越權；讀不到就拒絕，不交 root 代讀），寫 socket、state_dir 恢復檔、node 的 `.aos/attention/` 及 P-110 的 once 失敗旁檔。環境不作授權，不定義 `AOS_*` 變數。正常停機回 0；用法／設定尚未開始做事前失敗回 2；初始化、清空或運行中的 daemon 自己失敗回 125。啟動先照 [B-605](../../daemon.md) 自檢：版本低於下限（kernel、Python、git）、沒有 cgroup v2、沒有準備好的 cgroup 子樹又沒開 `--create-cgroup`、開了卻建不了，都回 125 並在 stderr 說明。SIGINT／SIGTERM 走 P-114 的正常停機；其他訊號由父程序看 wait 狀態。
 
 [設定 schema](../schemas/daemon-config.schema.json)：
 
@@ -16,9 +16,12 @@
 | `state_dir` | 必填，daemon 可寫的絕對目錄；存 `state.json`、自身 `attention/` 及 PID 提示檔 |
 | `pause_save_interval_ms` | 可省，正整數，預設 1000；pause 有變動時批次存檔間隔 |
 | `shutdown_grace_ms` | 可省，預設 2000，非負毫秒；到期後依執行器收尾 |
-| `cgroup_root` | 可省；不用 sudo 開時，使用者事先建好並交給 daemon 帳號的 cgroup v2 子樹絕對路徑。省略時（例如由 systemd `Delegate=yes` 劃給）及各種啟動方式的子樹來源依 [B-605](../../daemon.md)，拿不到就不啟動 |
+| `cgroup_root` | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑。省略就用 daemon 自己目前所在的 cgroup（例如 systemd `Delegate=yes` 劃給的）。「準備好」的意思依 [B-605](../../daemon.md)，沒有就不啟動 |
+| `create_cgroup` | 可省，布林，預設 false；true＝子樹不在時 daemon 自己建（同 `--create-cgroup`），此時 `cgroup_root` 必填。有 systemd 的機器上這樣做違反 systemd 單一寫入者約定，不保證、不擋（B-605） |
 | `disable` | 可省，不重複字串陣列，目前只認 `quota`；強制關掉啟動時偵測到的可選功能（B-605） |
 | `roots` | 必填，頂層登記陣列；每項如下，`node_id` 不可重複 |
+
+範例：[開了 create_cgroup 的設定](../examples/daemon/config.create-cgroup.valid.json)、[反例：開了卻沒寫 cgroup_root](../examples/daemon/config.create-cgroup-no-root.invalid.json)。
 
 頂層項必填 `node_id`、`identity_grant`，可帶正整數 `interval_ms` 與 `provision`；無 parent_id／once。身分額度是非空、不重複的帳號／UID 陣列。inst 尋找及 base 只依 [P-010](../README.md)；頂層與普通 node 必須是資料夾，once 可為單檔。找不到 inst 是用法錯 2；IPC 註冊回 -32602／invalid_params，不使 daemon 退出。
 

@@ -11,6 +11,7 @@
       "type": "object",
       "properties": {
         "target_node": {
+          "description": "node id＝把 llm.chat 投給這個 node（池或 kernel）；null＝直連：agent 自己打 endpoint，endpoint 與 key 放哪由 agent 自己定（S-301）",
           "anyOf": [
             {
               "$ref": "common.schema.json#/$defs/NodeId"

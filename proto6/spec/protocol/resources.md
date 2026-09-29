@@ -66,7 +66,7 @@ agent 只按設定的一個 node 位址投 `llm.chat`，結果回 agent 的收�
 | 全部都管 | agent 位址指向自己的 kernel，裝 `aos-kernel-llm-forward`：核對來源、預留成員份額、排隊，再交本地池、上層或另一個 kernel；轉交及回件也遵守先提交、後送出。 |
 | 不管 LLM 派送 | agent 位址指向管池的 LLM kernel，直接投它的 requests/；自己的 kernel 裝 `aos-kernel-usage-collect`，只收成員自記用量。LLM kernel 的授權、池共享限制仍須檢查。 |
 
-〔使用者方向 2026-09-29 晚〕上表兩條路線只管份額怎麼走；池 node 是「自己排」還是「交給 endpoint」看該池的 `schedule`（[llm-work P-405](llm-work.md)），`llm.target_node=null` 則是不經池的「不管」檔，aos 不限流也不扣份額，三檔見 [S-301](../scheduling/llm.md)。
+〔使用者方向 2026-09-29 晚〕上表兩條路線只管份額怎麼走；池 node 是「自己排」還是「交給 endpoint」看該池的 `schedule`（[llm-work P-405](llm-work.md)），`llm.target_node=null` 則是不經池的「直連」檔，aos 不限流也不扣份額，三檔見 [S-301](../scheduling/llm.md)。
 
 工具也用一個 `tools.target_node` 選路：node id 交該 kernel 全管，null 由 agent 自己登記 parent_id=自己的 once、自己記用量，所屬 kernel 只收集。兩條路都沿 [work P-402](work.md)，不靠工作資料夾位置決定資源歸屬。
 
