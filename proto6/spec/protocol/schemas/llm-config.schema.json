@@ -38,7 +38,8 @@
           "max_attempts": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "只給 schedule=aos（省略即此值）的池；schedule=endpoint 時不允許這欄（P-405）"
           }
         },
         "required": [
@@ -47,7 +48,24 @@
           "model",
           "quota_scope"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "if": {
+          "properties": {
+            "schedule": {
+              "const": "endpoint"
+            }
+          },
+          "required": [
+            "schedule"
+          ]
+        },
+        "then": {
+          "not": {
+            "required": [
+              "max_attempts"
+            ]
+          }
+        }
       },
       "minItems": 1
     }

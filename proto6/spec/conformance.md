@@ -53,7 +53,7 @@ daemon 或 VM 突然消失後，全殺舊 tick 與受管後代才重開；主程
 
 父層分給子層的範圍不能被子層加大；子層未裝某 module 不另記或另限，但父層限制仍有效。兩個 kernel 可各有 endpoint 池，各池核對真正共享的 provider 限制。測 429 退避、送出後斷線及部分內容；部分回覆不能冒充完成，unknown 不因一般 retryable 標記而重試。
 
-LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗口與冷卻，`schedule:endpoint` 的池只轉發、不讀窗口設定，遇 429 也不重試；投給不是 node 的路徑當場報錯、不寫待辦、不重試，投給沒人處理的 node 就堆著，設了 `alarm_ms` 的到期後原件還在就報 `request_not_handled`。指定 stream_path 時呼叫途中檔案持續變長，中途斷線任務非 0 結束、結果不算成功。
+LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗口與冷卻，`schedule:endpoint` 的池只轉發、不讀窗口設定，遇 429 也不重試；投給不是 node 的路徑、或沒有寫入權限，當場報一次錯、丟掉待送檔、不寫待辦、不重試，投給沒人處理的 node 就堆著，設了 `alarm_ms` 的到期後原件還在就報 `request_not_handled`。指定 stream_path 時呼叫途中檔案持續變長，中途斷線任務非 0 結束、結果不算成功。
 
 分開驗證 key 部署：無 helper 且代發／agent 同帳號時，或 agent 自己打 endpoint 的直連檔，文件須明說 key 不受保護；採獨立服務帳號保護時，node 與工具不可讀 key。上層查詢只取下層摘要，未授權者不能因猜 ID 讀內容。
 
