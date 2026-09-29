@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-template",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "node_id": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "files": {
+      "type": "object",
+      "properties": {
+        ".aos/inst.json": {
+          "$ref": "node-inst.schema.json"
+        },
+        "tasks.json": {
+          "$ref": "node-tasks.schema.json"
+        },
+        "config/kernel.json": {
+          "$ref": "kernel-config.schema.json"
+        },
+        "config/members.json": {
+          "$ref": "kernel-members.schema.json"
+        },
+        "config/llm-routes.json": {
+          "$ref": "kernel-llm-routes.schema.json"
+        },
+        "config/llm-pools.json": {
+          "$ref": "llm-config.schema.json"
+        },
+        "config/llm-limits.json": {
+          "$ref": "kernel-llm-limits.schema.json"
+        },
+        "config/clean.json": {
+          "$ref": "ops-clean-config.schema.json"
+        },
+        ".gitignore": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        ".aos/inst.json",
+        "tasks.json",
+        "config/kernel.json",
+        "config/members.json",
+        "config/llm-routes.json",
+        "config/llm-pools.json",
+        "config/llm-limits.json",
+        "config/clean.json",
+        ".gitignore"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "node_id",
+    "files"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "scopes": [
+    {
+      "quota_scope": "local-account",
+      "concurrent_requests": 1,
+      "window_ms": 60000,
+      "requests_per_window": 60,
+      "tokens_per_window": 60000
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-schedule-state",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "next_seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "scan_after": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "next_scan_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs"
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "ready_seq": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "due_ms": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/TimeMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary_commit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "wake_after_end_ms": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/TimeMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "member_id",
+          "ready_seq",
+          "due_ms",
+          "summary_commit",
+          "wake_after_end_ms"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "next_seq",
+    "scan_after",
+    "next_scan_ms",
+    "members"
+  ],
+  "additionalProperties": false
+}

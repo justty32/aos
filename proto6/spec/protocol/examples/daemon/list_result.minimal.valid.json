@@ -1,0 +1,34 @@
+{
+  "jsonrpc": "2.0",
+  "id": "query-1",
+  "result": {
+    "boot_id": "boot-20260929-a",
+    "nodes": [
+      {
+        "node_id": "/srv/aos/team/member/work/job-1.inst.json",
+        "parent_id": "/srv/aos/team",
+        "identity_grant": [
+          1000
+        ],
+        "owner_uid": 1000,
+        "once": true,
+        "paused": false,
+        "running": false,
+        "pending": false,
+        "stopping": false,
+        "cgroup": null,
+        "boot_id": "boot-20260929-a",
+        "registered": false,
+        "last_tick": {
+          "outcome": "completed",
+          "started_at_ms": 1000,
+          "ended_at_ms": 2000,
+          "exit_code": 0,
+          "started": true,
+          "signal": null
+        }
+      }
+    ],
+    "next_after_node_id": null
+  }
+}

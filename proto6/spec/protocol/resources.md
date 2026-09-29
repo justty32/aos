@@ -29,6 +29,10 @@ module 是 [node P-202～204](node.md) 的普通任務；CPU、memory、pids、L
 
 摘要的同 commit 讀取與只開摘要權限的發布完全依 [messages P-307](messages.md)。改配額用 `resources.set`、要求重測用 `resources.measure`，參數、回應與授權只在 [messages P-306](messages.md) 定義；kernel.recheck 只重判排程。
 
+〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕成員直接向另一個 LLM kernel 投件時，由成員保存自己的 LLM 用量，所屬 kernel 裝 [用量收集任務](kernel-tasks.md)。最小版須授 kernel 必要 repo 讀權，固定同一 commit 讀 [agent P-703](agent-tasks.md) 的 `state/agent/usage/<request_id>.json`；public/summary.json 只有資源摘要，不能拿並行數冒充逐次 provider usage。收集只記觀測，不假裝攔住請求或替遠端池釋放占用。同一 attempt 在成員、轉交 kernel、池都可能有紀錄；彙總須按原發起 node 與 attempt 去重，不能把同一筆 HTTP 用量加三次。本篇的資源摘要不取代逐次 usage 證據。
+
+**驗收：**成員直投另一個 kernel 後，上層能在下一次收集看見用量；重讀相同 commit 不重加，缺讀權或 usage:null 不顯示成零。
+
 [正例](examples/resources/usage.minimal.valid.json)；[反例](examples/resources/usage.negative_cpu.invalid.json) 的 CPU 累積用量為負。
 
 ## P-503．CPU、記憶體與 pids〔使用者方向 2026-09-29〕
@@ -53,15 +57,24 @@ CPU 是 [P-002](README.md) 時間單位的明示例外，不轉毫秒。limits �
 
 調低額度不取消已有工作、已開始 attempt 不中途換資源範圍，沿 [S-204](../scheduling/admission.md)與 [B-302](../base/identity-resources.md)。有在途工作時先停止新增占用、保留舊框，逐筆暫停受影響子樹，清空後由 [daemon P-107](daemon.md) 在開格互斥下核對並套新值；不能直接寫較低 `memory.max` 逼出 OOM。採用新版配額表示後續派工政策更新，不表示既有程序已被改限。
 
-## P-505．LLM 份額〔建議預設，未拍板〕
+## P-505．LLM 位址、轉交與份額〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕
 
-配額 `llm` 是陣列，每項只有 `pool_id`（共用 `ID`）與 `concurrent_requests`（非負整數）；零表示不放行新請求。同檔不可重複 pool；ID 對應目標代發 node 的 pools[].id（[work P-405](work.md)）；路由以「代發 node 路徑＋pool_id」識別，不把別的 node 同名池當同池。
+agent 只按設定的一個 node 位址投 `llm.complete`，結果回 agent 的收件區；請求與結果始終用 [work P-406／407](work.md) 的同一格式。agent 不判斷對面是自己的 kernel、上層 kernel 或管池的另一個 kernel。開 agent 的 kernel 負責選路線、寫設定與配權限，具體範本及程式見 [kernel 任務篇](kernel-tasks.md)。
+
+| kernel 選的路線 | 裝的任務與責任 |
+|---|---|
+| 全部都管 | agent 位址指向自己的 kernel，裝 `aos-kernel-llm-forward`：核對來源、預留成員份額、排隊，再交本地池、上層或另一個 kernel；轉交及回件也遵守先提交、後送出。 |
+| 不管 LLM 派送 | agent 位址指向管池的 LLM kernel，直接投它的 requests/；自己的 kernel 裝 `aos-kernel-usage-collect`，只收成員自記用量。LLM kernel 的授權、池共享限制仍須檢查。 |
+
+〔建議預設，未拍板〕配額 `llm` 是陣列，每項只有 `pool_id`（共用 `ID`）與 `concurrent_requests`（非負整數）；零表示不放行新請求。同檔不可重複 pool_id。這個 ID 是**配置該份額之 kernel 的路由名**，由 `config/llm-routes.json` 唯一對到下一個 node 與下一個 pool；本地終點才對到 [work P-405](work.md) 的 pools[].id。不把兩個 node 的同名池當同池，也不讓 agent 指定 endpoint 或 key。路由、授權及回件對照的格式只在 kernel 任務篇定。
 
 用量 `llm` 每項是 `pool_id`、`active_requests`、`unknown_requests`；後兩者非負且**分開計數**。前者是已知仍占用的請求；後者是遠端執行／占用不明的請求，不能自動歸零。沒有明訂到期釋放估計占用的政策時，兩者合計占用份額；有此政策仍須保留 unknown 計數與證據，沿 [S-304](../scheduling/llm.md)。
 
-只編碼並行份額；provider usage、429 與 unknown 沿 [S-301～S-304](../scheduling/llm.md)及 work 篇。共享 quota_scope 的實際 token／request 窗口格式仍是 [P-008](README.md#p-008) 的待補工程接口；實作補齊前不得聲稱池端共享限流已完成。
+本篇只編碼並行份額；provider usage、429 與 unknown 沿 [S-301～S-304](../scheduling/llm.md)及 work 篇。共享 quota_scope 的最小窗口設定及 `state/llm/pool-status.json` 由 [kernel 任務篇 P-811](kernel-tasks.md) 定；`aos llm pool usage` 讀同一已提交版本，顯示並行占用、unknown、最近 429 及冷卻時間。狀態是該池 node 的觀測，讀不到或過時就明說；不同 node 的同名 quota_scope 不會自動共享計數，共用 provider 限制必須匯到同一管池 node。
 
 〔使用者方向 2026-09-29〕下層未裝不再細分，父額度及池限制仍有效；key 不進本篇檔案、argv 或給 node 的環境，帳號與 key 保護只見 [work P-405](work.md)。
+
+**驗收：**同一份 agent 請求可經自己的 kernel 轉交或直接交 LLM kernel，wire 格式不變；轉交不能靠改 pool 名跳過份額；unknown 不自動釋放，兩個共用 scope 的池在 429 後一起冷卻。
 
 ## P-506．磁碟與網路〔使用者方向 2026-09-29〕
 

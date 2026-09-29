@@ -1,0 +1,7 @@
+{
+  "jsonrpc": "2.0",
+  "id": "query-1",
+  "result": {
+    "boot_id": ""
+  }
+}

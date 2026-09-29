@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-request.schema.json",
+  "title": "proto6 agent-request",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "input_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "target_node": {
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "kind": {
+      "enum": [
+        "llm",
+        "tool",
+        "message",
+        "reply"
+      ]
+    },
+    "config_commit": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$(?![\\s\\S])"
+    },
+    "delivery": {
+      "enum": [
+        "prepared",
+        "published",
+        "unknown"
+      ]
+    },
+    "response_consumed": {
+      "type": "boolean"
+    },
+    "attempt_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "tool_call_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tool_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "llm_request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    }
+  },
+  "required": [
+    "version",
+    "request_id",
+    "input_id",
+    "target_node",
+    "kind",
+    "config_commit",
+    "delivery",
+    "response_consumed"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "llm",
+              "tool"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "attempt_id"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "attempt_id"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "tool"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "tool_call_id",
+          "tool_name",
+          "llm_request_id"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "tool_call_id"
+              ]
+            },
+            {
+              "required": [
+                "tool_name"
+              ]
+            },
+            {
+              "required": [
+                "llm_request_id"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

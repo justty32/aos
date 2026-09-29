@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "daemon 公開 IPC 請求與回應（P-103～107、P-111）",
+  "title": "daemon 公開 IPC 請求與回應（P-103～107、P-111、P-115）",
   "$defs": {
     "AckResult": {
       "type": "object",
@@ -155,6 +155,22 @@
               "type": "null"
             }
           ]
+        },
+        "boot_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "registered": {
+          "type": "boolean"
+        },
+        "last_tick": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LastTick"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -167,7 +183,10 @@
         "running",
         "pending",
         "stopping",
-        "cgroup"
+        "cgroup",
+        "boot_id",
+        "registered",
+        "last_tick"
       ],
       "additionalProperties": false,
       "allOf": [
@@ -208,8 +227,290 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "registered": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "once": {
+                "const": true
+              },
+              "paused": {
+                "const": false
+              },
+              "running": {
+                "const": false
+              },
+              "pending": {
+                "const": false
+              },
+              "stopping": {
+                "const": false
+              },
+              "cgroup": {
+                "type": "null"
+              },
+              "last_tick": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/LastTick"
+                  },
+                  {
+                    "properties": {
+                      "outcome": {
+                        "not": {
+                          "const": "running"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "running": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "last_tick": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/LastTick"
+                  },
+                  {
+                    "properties": {
+                      "outcome": {
+                        "const": "running"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "last_tick": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/$defs/LastTick"
+                      },
+                      {
+                        "properties": {
+                          "outcome": {
+                            "not": {
+                              "const": "running"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
         }
       ]
+    },
+    "LastTick": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "enum": [
+            "running",
+            "completed",
+            "launch_failed",
+            "unknown"
+          ]
+        },
+        "started_at_ms": {
+          "$ref": "common.schema.json#/$defs/TimeMs"
+        },
+        "ended_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/TimeMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 255
+        },
+        "started": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "signal": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 64
+        }
+      },
+      "required": [
+        "outcome",
+        "started_at_ms",
+        "ended_at_ms",
+        "exit_code",
+        "started",
+        "signal"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "outcome": {
+              "const": "running"
+            },
+            "ended_at_ms": {
+              "type": "null"
+            },
+            "exit_code": {
+              "type": "null"
+            },
+            "started": {
+              "type": "null"
+            },
+            "signal": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "properties": {
+            "outcome": {
+              "const": "completed"
+            },
+            "ended_at_ms": {
+              "type": "integer"
+            },
+            "exit_code": {
+              "type": "integer"
+            },
+            "started": {
+              "const": true
+            }
+          }
+        },
+        {
+          "properties": {
+            "outcome": {
+              "const": "launch_failed"
+            },
+            "ended_at_ms": {
+              "type": "integer"
+            },
+            "exit_code": {
+              "enum": [
+                2,
+                125
+              ]
+            },
+            "started": {
+              "const": false
+            },
+            "signal": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "properties": {
+            "outcome": {
+              "const": "unknown"
+            },
+            "ended_at_ms": {
+              "type": "integer"
+            },
+            "exit_code": {
+              "type": "null"
+            },
+            "started": {
+              "enum": [
+                true,
+                null
+              ]
+            },
+            "signal": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "InfoResult": {
+      "type": "object",
+      "properties": {
+        "boot_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        }
+      },
+      "required": [
+        "boot_id"
+      ],
+      "additionalProperties": false
+    },
+    "ListResult": {
+      "type": "object",
+      "properties": {
+        "boot_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GetResult"
+          },
+          "maxItems": 64
+        },
+        "next_after_node_id": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/NodeId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "boot_id",
+        "nodes",
+        "next_after_node_id"
+      ],
+      "additionalProperties": false
     }
   },
   "oneOf": [
@@ -362,6 +663,49 @@
                 "method",
                 "params"
               ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "daemon.info"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {},
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.list"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64
+                    },
+                    "after_node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
             }
           ]
         }
@@ -381,6 +725,12 @@
                 },
                 {
                   "$ref": "#/$defs/GetResult"
+                },
+                {
+                  "$ref": "#/$defs/InfoResult"
+                },
+                {
+                  "$ref": "#/$defs/ListResult"
                 }
               ]
             }
@@ -429,7 +779,8 @@
                                 "conflict",
                                 "provision_failed",
                                 "start_failed",
-                                "resource_observation_failed"
+                                "resource_observation_failed",
+                                "response_too_large"
                               ]
                             }
                           }

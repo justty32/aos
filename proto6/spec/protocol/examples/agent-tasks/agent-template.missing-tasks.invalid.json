@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/a",
+  "files": {
+    ".aos/inst.json": {
+      "user": 1000,
+      "argv": [
+        "aos-tick"
+      ]
+    },
+    "config/agent.json": {
+      "version": 1,
+      "llm": {
+        "target_node": "/srv/aos/top",
+        "pool": "local",
+        "model": "example-model",
+        "max_completion_tokens": 1024,
+        "timeout_ms": 60000,
+        "context_tokens": 16384
+      },
+      "system_prompt": "請用繁體中文清楚回答；需要工具時先呼叫工具。",
+      "tools_file": "config/tools.json",
+      "work_target": "/srv/aos/top",
+      "attention_dir": "/srv/aos/attention"
+    },
+    "config/tools.json": {
+      "version": 1,
+      "tools": []
+    },
+    ".gitignore": "/requests/\n/responses/\n/work/\n/public/\n"
+  }
+}

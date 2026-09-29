@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-llm-routes",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pool_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "next_node": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/NodeId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_pool": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "allowed_origins": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "node_id": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                },
+                "via_node": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                },
+                "via_uid": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "node_id",
+                "via_node",
+                "via_uid"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "pool_id",
+          "model",
+          "next_node",
+          "next_pool",
+          "allowed_origins"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "routes"
+  ],
+  "additionalProperties": false
+}

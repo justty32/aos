@@ -39,7 +39,7 @@ def main():
     count = 0
     for path in sorted(EXAMPLES.glob('*.json')):
         topic = path.name.split('.')[0]
-        name = ('msg-methods' if topic in ('agent-send', 'kernel-recheck', 'resources-set', 'resources-measure') else
+        name = ('msg-methods' if topic in ('agent-send', 'agent-reply', 'kernel-recheck', 'resources-set', 'resources-measure') else
                 'msg-resource-result' if topic == 'resources-measured' else
                 'msg-accepted' if topic == 'accepted' else
                 'msg-summary' if topic == 'summary' else 'msg-file-rpc')
@@ -59,8 +59,8 @@ def main():
     assert load(first) != conflict
     assert validators['msg-methods'].is_valid(conflict)
     assert load(first)['id'] == conflict['id'] == load(EXAMPLES / 'accepted.minimal.valid.json')['id']
-    destination = Path(load(first)['reply_to']) / 'inbox/responses' / (load(first)['id'] + '.json')
-    assert str(destination) == '/srv/aos/a/inbox/responses/m1.json'
+    destination = Path(load(first)['reply_to']) / 'responses' / (load(first)['id'] + '.json')
+    assert str(destination) == '/srv/aos/a/responses/m1.json'
     links = re.findall(r'\[[^\]]*\]\(([^)]+)\)', (PROTOCOL / 'messages.md').read_text())
     checked = 0
     for link in links:

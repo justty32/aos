@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "history-1",
+  "seq": 1,
+  "input_id": "input-1",
+  "at_ms": 1790000000000,
+  "source_path": "../inbox/input-1.json",
+  "message": {
+    "role": "user",
+    "content": "你好"
+  }
+}

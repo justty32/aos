@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "request_id": "llm-1",
+  "input_id": "input-1",
+  "target_node": "/srv/aos/top",
+  "kind": "llm",
+  "config_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "delivery": "prepared",
+  "response_consumed": false
+}

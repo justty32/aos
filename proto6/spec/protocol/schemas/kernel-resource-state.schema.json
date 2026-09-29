@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-resource-state",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "quota_seq": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "applied": {
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/Error"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "member_id",
+          "quota_seq",
+          "applied",
+          "error"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "members"
+  ],
+  "additionalProperties": false
+}

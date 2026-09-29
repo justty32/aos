@@ -42,7 +42,7 @@ source／issue 一起給，省略看全部可讀 open。未選 action 只自動�
 
 stdin 不讀資料；只從 /dev/tty 問逐件 y/n，stderr 顯示來源、工作與影響。只接受去空白的 y／Y；其他字、EOF、無終端都跳過並保持 open。stdout 每項一行 [ops-action-record](schemas/ops-action-record.schema.json)＋LF，診斷及子程式輸出走 stderr。
 
-讀 open、處理表與操作者紀錄；寫 P-604 紀錄／請求及目標 inbox，不自行移通知或改原工作結果。使用執行者身分、記實際有效 UID；--node 不授權。其他相對參數依呼叫 cwd，PATH 沿環境；exec adapter 收 AOS_ATTEND_NODE／AOS_ATTEND_OPERATION_ID 供定位，皆非憑證。
+讀 open、處理表與操作者紀錄；寫 P-604 紀錄／請求及目標 requests/，不自行移通知或改原工作結果。使用執行者身分、記實際有效 UID；--node 不授權。其他相對參數依呼叫 cwd，PATH 沿環境；exec adapter 收 AOS_ATTEND_NODE／AOS_ATTEND_OPERATION_ID 供定位，皆非憑證。
 
 退出：0 全有回應／已送出或無 open；3 有跳過／human；1 有失敗或不明（優先於 3）；2 用法／表錯，尚未開始；125 工具前置失敗、尚未寫入。開始後的執行／紀錄／commit 失敗回 1，不能據此重做；子程式碼不直接當工具碼，訊號看 wait。
 
@@ -64,9 +64,9 @@ prepared 無結果不自動再做；允許的重送沿用原請求，unknown 的
 aos-clean --node <node> --config <設定檔> [--in-tick]
 ```
 
-`--node` 是 node id，設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用該 node inst 的 `user`。無自訂必填環境或身分切換。讀 node 的已提交工作／結果、消費與引用證據、必要 inbox 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
+`--node` 是 node id，設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用該 node inst 的 `user`。無自訂必填環境或身分切換。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
 
-[ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；`retention_ms` 預設 2592000000（30 日）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 inbox；無效設定回 2。
+[ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；`retention_ms` 預設 2592000000（30 日）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
 直接跑取得 B-602 同一把鎖，確認工作區乾淨後自己提交清理；不把別人的未提交修改順手 commit／還原。`--in-tick` 只供持鎖的 tick 呼叫，按 [node P-203](node.md) 核對繼承的 AOS_TICK_LOCK_FD，不能把旗標當成已持鎖或授權證據；它不另取鎖、不自行 commit，由所在 group 決定。〔使用者方向 2026-09-29〕無事不 commit；不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
 
@@ -74,11 +74,11 @@ aos-clean --node <node> --config <設定檔> [--in-tick]
 
 ## P-606．清理、封存與回報〔使用者方向 2026-09-29〕
 
-候選資格完全依 [B-404](../base/storage.md)／[B-503](../base/transport.md)，不重述終局、消費、引用與去重規則。每批最多 batch_limit 項；每次重新核對，通知 done 不免驗資格。〔建議預設，未拍板〕採用 run 從 run 終局起算，否則從工作終局起算，不用 mtime 猜。領域尚無可信遍歷契約時保留並報 clean_blocked，缺口收在 [P-008](README.md#p-008)，不能靠檔名推定可清。
+候選資格完全依 [B-404](../base/storage.md)／[B-503](../base/transport.md)，不重述終局、消費、引用與去重規則。每批最多 batch_limit 項；每次重新核對，通知 done 不免驗資格。〔建議預設，未拍板〕採用 run 從 run 終局起算，否則從工作終局起算，不用 mtime 猜。預設 agent 的遍歷沿 [agent P-716](agent-tasks.md)，kernel 工作證據沿 [kernel 任務篇](kernel-tasks.md)；未知自訂領域仍保留並報 clean_blocked，不能靠檔名推定可清。
 
 archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存，先以 P-003 寫完整副本並核對內容，再移除日常副本；已存在且相同可補做，不同則 `archive_failed`。保留原目錄關係及查找所需的既有識別／引用，不追隨 symlink 去清 node 外內容。歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。delete 只省略封存步驟，其餘資格與提交規則相同。
 
-追蹤區移除與引用更新一起隨本 repo 的 group 提交；封存區本身不受該 group 還原。中斷時可能留下多餘封存副本，補做先核對，不因已有封存檔就直接刪日常材料。滿碟、I/O 或 commit 失敗保留舊 commit 及未消費 inbox 原件，停止後續變動並照 B-404 恢復，不回成功。
+追蹤區移除與引用更新一起隨本 repo 的 group 提交；封存區本身不受該 group 還原。中斷時可能留下多餘封存副本，補做先核對，不因已有封存檔就直接刪日常材料。滿碟、I/O 或 commit 失敗保留舊 commit 及未消費 requests／responses 原件，停止後續變動並照 B-404 恢復，不回成功。
 
 回報 `outcome`：`staged`＝本次在 tick 內備好、尚待 group commit；`committed`＝直接執行已提交；`unchanged`＝無變動；`failed`＝失敗並帶共用 Error。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。`history_space_reclaimed` 固定 false：只承諾移出日常檔案與 context，封存可能仍在同碟，git 歷史仍占空間，不能把刪工作樹或普通 `git gc` 報成回收磁碟。
 
@@ -97,3 +97,24 @@ JSON Schema 2020-12；共用型別只引用 [common.schema.json](schemas/common.
 ## P-608．待決與跨篇
 
 見 [README P-008](README.md#p-008)。
+
+## P-609．最小設定錯誤與修好後重驗〔主編補；依 A-102、CLI H-036 第 5、6 步〕
+
+設定檢查由使用設定的來源程式負責：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。一般設定取本格讀定版本驗格式、引用與必要權限；錯誤沿用上一有效內容，沒有可用舊版就擋依賴它的新工作，仍可收結果與處理取消。不把壞設定覆寫成舊檔，使用者仍看得到要修的版本。inst 身分及 tasks 不適用退回舊版，按 node／daemon 契約拒絕啟動。
+
+來源沿 P-601 發 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；`actions:["recheck"]`。同一未解問題沿用同一 issue_id，通知是不可變副本，最新細節留來源狀態；不是每格另生一件。來源連 attention_dir 設定也讀不到時，沿舊有效通知位置；從未有過合法位置就 stderr 明報，不宣稱已寫通知。任務表壞到檢查任務跑不了時，由拒載任務表的 tick／觀察失敗的 daemon 留診斷及其可寫的事項，不能等壞表裡的任務救自己。
+
+修好普通設定並提交後，可等下一格檢查，或由有權限者透過 safe handler 執行：
+
+```text
+aos-kernel-check --node /srv/aos/top
+aos-agent-check --node /srv/aos/a --recheck
+```
+
+一份 handler 明選一個來源及其程式，argv 寫死來源路徑，不從通知文字拼命令。程式核對 P-601 的 source_node、issue_id 與自己保存的問題；可讀的通知不是授權。kernel handler [正例](examples/ops/handlers.minimal.valid.json) 沿既有 [ops-handlers schema](schemas/ops-handlers.schema.json)，[反例](examples/ops/handlers.unknown_safe.invalid.json) 仍拒絕把 unknown 處置標成 safe。agent 對應形狀只把 argv 換成上列第二行，不新增處理表格式。
+
+重驗只核對目前設定與解除設定問題，不送 LLM、不派 once、不 resume node、不解除 unknown。直接執行先持 node 鎖、驗乾淨基線，來源有效採用狀態提交成功後才把對應通知移 done；tick 內由檢查組保存依據，**後組**核對已提交有效證據才移 done。commit 失敗或問題仍在就保持 open；搬移失敗按 P-601 補做。aos-attend 的 exec 0 仍只表示本次命令成功，讀 open／done 才能看到來源確認的解除結果。
+
+重要設定手改與恢復前的候選驗證依 [node P-210](node.md)；一般 check 成功不替代該程序。全流程不加新的 RPC method；kernel.recheck 仍只管排程，不能拿來冒充設定重驗。
+
+**驗收：**合法 JSON 的壞領域設定能產生可查事項；修好並重驗後由來源移 done；在採用組 commit 前故障，事項保持 open；整個安全重驗不多送一次 LLM 或工具。

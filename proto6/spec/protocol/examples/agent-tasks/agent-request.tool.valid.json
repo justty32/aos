@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "request_id": "tool-1",
+  "input_id": "input-1",
+  "target_node": "/srv/aos/top",
+  "kind": "tool",
+  "config_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "delivery": "prepared",
+  "response_consumed": false,
+  "attempt_id": "tool-attempt-1",
+  "tool_call_id": "call_1",
+  "tool_name": "echo_json",
+  "llm_request_id": "llm-1"
+}

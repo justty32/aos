@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-context.schema.json",
+  "title": "proto6 agent-context",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "input_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "config_commit": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$(?![\\s\\S])"
+    },
+    "request_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/\\u0000]+(?:/[^/\\u0000]+)*$(?![\\s\\S])",
+      "not": {
+        "pattern": "(?:^|/)\\.{1,2}(?:/|$)"
+      }
+    },
+    "history_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/ID"
+      }
+    },
+    "estimated_input_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "estimate_kind": {
+      "const": "utf8_bytes_upper_bound"
+    }
+  },
+  "required": [
+    "version",
+    "request_id",
+    "input_id",
+    "config_commit",
+    "request_path",
+    "history_ids",
+    "estimated_input_tokens",
+    "estimate_kind"
+  ],
+  "additionalProperties": false
+}

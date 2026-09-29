@@ -12,6 +12,9 @@
     "paused": false,
     "pending": false,
     "stopping": false,
-    "cgroup": null
+    "cgroup": null,
+    "boot_id": "boot-20260929-a",
+    "registered": true,
+    "last_tick": null
   }
 }

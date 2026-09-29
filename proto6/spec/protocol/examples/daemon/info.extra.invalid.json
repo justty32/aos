@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": "query-1",
+  "method": "daemon.info",
+  "params": {
+    "user": 1000
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-forward-state",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "forward_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "route_pool": {
+      "$ref": "common.schema.json#/$defs/ID"
+    },
+    "target_node": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "config_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "phase": {
+      "enum": [
+        "queued",
+        "prepared",
+        "sent",
+        "completed",
+        "unknown"
+      ]
+    },
+    "finished_at_ms": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/TimeMs"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "version",
+    "request_id",
+    "forward_id",
+    "route_pool",
+    "target_node",
+    "seq",
+    "config_commit",
+    "phase",
+    "finished_at_ms"
+  ],
+  "additionalProperties": false
+}

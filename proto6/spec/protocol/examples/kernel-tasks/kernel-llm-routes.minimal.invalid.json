@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "pool_id": "local",
+      "model": "example-model",
+      "next_node": "relative",
+      "next_pool": "local",
+      "allowed_origins": [
+        {
+          "node_id": "/srv/aos/a",
+          "via_node": "/srv/aos/a",
+          "via_uid": 1000
+        }
+      ]
+    }
+  ]
+}

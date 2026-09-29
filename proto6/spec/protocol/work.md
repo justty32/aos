@@ -4,7 +4,7 @@
 
 ## P-400．兩個入口〔使用者方向 2026-09-29〕
 
-工具／job 用 `work.submit` 投所屬 kernel，LLM 用 `llm.complete` 投池管理 node。路由、提交與去重完全依 [messages](messages.md)。params.node_id 是歸屬 node，job_id 是邏輯工作，attempt_id 是本次嘗試；接件端核對可信來源，不信自報 node／reply_to。兩種 method 只回最終 result 或拒收 error，不先回 ACK 占用同 ID 回應。
+工具／job 用 `work.submit` 投所屬 kernel，LLM 用 `llm.complete` 投 agent 設定的 `llm.target_node`（node id）。agent／工具只照地址送，不辨識對方是所屬 kernel、上層或另一個管池 kernel；格式只有這一種。kernel 建立 agent 時決定路線及權限，轉交／用量收集由 kernel 任務負責。路由、提交與去重完全依 [messages](messages.md)。params.node_id 是最初發起的歸屬 node，job_id 是邏輯工作，attempt_id 是本次嘗試；接件端核對可信來源，不信自報 node／reply_to。兩種 method 只回最終 result 或拒收 error，不先回 ACK 占用同 ID 回應。
 
 ## P-401．工作材料〔建議預設，未拍板〕
 
@@ -22,7 +22,7 @@ kernel 接納時固定 inst 與必要輸入。需要固定 stdin bytes 就保存
 
 ## P-402．once 與工作材料〔使用者方向 2026-09-29〕
 
-once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [daemon P-104／110](daemon.md) 的未拍板提案。
+once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [daemon P-104／110](daemon.md) 的第十一批裁定。
 
 〔建議預設，未拍板〕本篇為保存請求與結果，在 kernel 的 ignored 工作區建 `<attempt_id>/`，以其中的 `inst.json` 單檔登記；資料夾只是材料布局。每次實際嘗試使用不同資料夾，內含：
 
@@ -40,7 +40,7 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 
 kernel 先 commit 接納的請求及固定材料依據，再建工作資料夾，以 daemon `node.register` 登記 `node_id=W/inst.json,parent_id=params.node_id,identity_grant=[有效身分],once=true`，再 `node.wake`。parent_id 是可信資源歸屬，與 W 的位置無關，核對規則只依 daemon 篇。工作結果及捕獲檔保留，kernel 下格核對、保存、commit 後才投回呼叫者。結果引用必須對接收者可讀；需要搬運就先複製完整輸出到可讀位置，再發布引用它的回應。
 
-kernel 下格若讀到 `W/inst.json.launch-error.json`，先核對本次目標與可信 daemon 寫入來源，再合成 started:false／failed／start_failed 的工作結果；不把自報旁檔當證據。LLM wrapper 未啟動可合成 failed／not_sent。其他情況只看 result.json；wrapper exec 126／127、崩潰或自身回 125 卻無結果，均不能只靠登記消失推定內層沒跑，缺可保存的可信證據就 unknown。兩份證據矛盾時保留並報事項，不任取最後一份。重啟與重投依 [messages P-304](messages.md)。
+kernel 下格若讀到 `W/inst.json.err`，先核對本次目標與可信 daemon 寫入來源，再合成 started:false／failed／start_failed 的工作結果；不把自報旁檔當證據。LLM wrapper 未啟動可合成 failed／not_sent。其他情況只看 result.json；wrapper exec 126／127、崩潰或自身回 125 卻無結果，均不能只靠登記消失推定內層沒跑，缺可保存的可信證據就 unknown。兩份證據矛盾時保留並報事項，不任取最後一份。重啟與重投依 [messages P-304](messages.md)。
 
 ## P-403．結果與串流〔建議預設，未拍板〕
 
@@ -78,7 +78,7 @@ unknown、重試及晚到結果依 [C-03](../contracts.md)／[S-401](../scheduli
 
 ## P-406．LLM 請求與 messages〔建議預設，未拍板〕
 
-[`llm-request`](schemas/llm-request.schema.json) 的 params 除工作識別，必填 `pool`、`model`、`messages`、`max_completion_tokens` 與正整數 `timeout_ms`；model 須符合該 pool 設定。可帶 `tools`，`stream` 只准 false 或省略。請求不能覆寫 endpoint、key 或加入任意 HTTP header。
+[`llm-request`](schemas/llm-request.schema.json) 的 params 除工作識別，必填 `pool`、`model`、`messages`、`max_completion_tokens` 與正整數 `timeout_ms`；pool／model 是目標 node 所公布的路由名；轉交 kernel 可映到下一個 node 的 pool，model 原值沿路核對，終點核對實際池設定。轉交仍用 llm.complete，不增加另一種 wrapper；保留原 node_id、job_id、attempt_id，另配轉交 RPC id 與 reply_to，由轉交者保存上下游關係、收結果後用原 id 回覆。agent 配對的可信回件來源始終是設定目標。可帶 `tools`，`stream` 只准 false 或省略。請求不能覆寫 endpoint、key 或加入任意 HTTP header。
 
 messages 沿 [proto5 格式](../../../proto5/spec/aos-llm/request.md)，採 [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create) 的**文字與 function tool calls 子集合**，不是所有多模態欄位都支援：
 
@@ -88,11 +88,11 @@ messages 沿 [proto5 格式](../../../proto5/spec/aos-llm/request.md)，採 [Ope
 - tool 結果：`role:"tool"`、`tool_call_id`、字串 `content`。呼叫 ID 在一份 assistant 回覆內唯一；工具結果必須對到前面的呼叫，不能重複或孤立。
 - `tools` 每項為 `{type:"function",function:{name,parameters,description?}}`。parameters 是工具的 JSON Schema；工具名唯一，adapter 不支援的規則要拒絕，不能忽略。
 
-[`llm-messages`](schemas/llm-messages.schema.json) 驗形狀；順序、ID 唯一性、arguments 能否解析及工具參數驗證由接件／agent 任務另驗。HTTP body 只送 model、messages、tools（有才送）、max_completion_tokens 與 stream:false；供應商不支援就明確拒絕，不把輸出上限默默去掉。發起 node 先由原始檔整理有界 context；超過 P-004 的 256 KiB 就拒收，本版 messages 只收內嵌陣列。
+[`llm-messages`](schemas/llm-messages.schema.json) 驗形狀；順序、ID 唯一性、arguments 能否解析及工具參數驗證由接件／agent 任務另驗。HTTP body 只送 model、messages、tools（有才送）、max_completion_tokens 與 stream:false；供應商不支援就明確拒絕，不把輸出上限默默去掉。agent 發起端的設定、context 定位及用量格式見 [agent 任務 P-701／706／710](agent-tasks.md)。發起 node 先由原始檔整理有界 context；超過 P-004 的 256 KiB 就拒收，本版 messages 只收內嵌陣列。
 
 ## P-407．LLM 結果、usage 與有限重試〔建議預設，未拍板〕
 
-[`llm-result`](schemas/llm-result.schema.json) 的本地結果檔是 `version:1,node_id,job_id,attempts`；RPC result 去掉 version。`attempts` 依真正 HTTP 嘗試順序排列，每項帶 `attempt_id,status,reason,message,finish_reason,usage,http_status`。第一項 ID 對應請求；重試前由池 tick 固定新 attempt ID 與前次結果、提交後才派出。後續 ID 由這條已提交關係核對，不必假裝仍是第一個 attempt。
+[`llm-result`](schemas/llm-result.schema.json) 的本地結果檔是 `version:1,node_id,job_id,attempts`；RPC result 去掉 version。`attempts` 依真正 HTTP 嘗試順序排列，每項帶 `attempt_id,status,reason,message,finish_reason,usage,http_status`。第一項 ID 對應請求；轉交中間層只轉送／保存同一組結果，不重新計一次 HTTP、不自行再做 provider 重試。重試前由池 tick 固定新 attempt ID 與前次結果、提交後才派出。後續 ID 由這條已提交關係核對，不必假裝仍是第一個 attempt。
 
 每支 aos-llm-call 只做一次 HTTP，結果 attempts 只有一項；池 tick 收齊後按序組成 RPC 回應。最後一項就是這次請求結果，不另放重複的總狀態或總 usage。provider 回應先只取 choices[0].message 的 role/content/tool_calls；tool_calls 是 null 或空陣列就省略，content 為 null 且沒有 calls 就正規化為空字串（沿 proto5），其餘驗 P-406。官方附帶的 annotations 等非本版欄位不抄入結果；非空 refusal 明確記 response_invalid 並保留無 key 的拒絕證據，不假裝空白成功、不自動重試。成功的 message 是 P-406 的 assistant，finish_reason 原樣保存；`length` 表示模型輸出達上限，不能當產品任務完成。只接完整非串流結果；無可用 message 填 null。usage 只取三個計量欄；有完整的 `prompt_tokens,completion_tokens,total_tokens` 才記物件；不可得填 null，不補 0，也不把估算寫成 provider 實際 usage。部分 usage 的原始證據可以保留在私有診斷材料，不能冒充完整計量。
 

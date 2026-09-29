@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "echo_json",
+      "description": "把收到的 JSON 物件原樣回傳。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "argv": [
+        "/usr/bin/cat"
+      ],
+      "cwd": "/srv/aos/a",
+      "result": {
+        "kind": "json"
+      },
+      "timeout_ms": 1000,
+      "output_limit_bytes": 4096
+    }
+  ]
+}

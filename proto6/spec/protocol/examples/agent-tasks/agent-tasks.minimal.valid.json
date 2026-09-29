@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "agent-collect",
+      "argv": [
+        "aos-agent-step",
+        "--node",
+        "/srv/aos/a",
+        "--phase",
+        "collect"
+      ],
+      "kind": "agent",
+      "group": "agent-prepare"
+    },
+    {
+      "id": "agent-prepare",
+      "argv": [
+        "aos-agent-step",
+        "--node",
+        "/srv/aos/a",
+        "--phase",
+        "prepare"
+      ],
+      "kind": "agent",
+      "group": "agent-prepare",
+      "needs": [
+        "agent-collect"
+      ]
+    },
+    {
+      "id": "agent-dispatch",
+      "argv": [
+        "aos-agent-step",
+        "--node",
+        "/srv/aos/a",
+        "--phase",
+        "dispatch"
+      ],
+      "kind": "agent",
+      "needs": [
+        "agent-prepare"
+      ]
+    },
+    {
+      "id": "agent-cleanup",
+      "argv": [
+        "aos-agent-step",
+        "--node",
+        "/srv/aos/a",
+        "--phase",
+        "cleanup"
+      ],
+      "kind": "agent",
+      "needs": [
+        "agent-prepare"
+      ]
+    }
+  ]
+}

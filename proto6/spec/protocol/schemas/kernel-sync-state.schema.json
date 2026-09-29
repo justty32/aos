@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proto6 kernel-sync-state",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "boot_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "members_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "synced": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "registration": {
+            "$ref": "daemon-registration.schema.json"
+          },
+          "bootstrap_pending": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "member_id",
+          "registration",
+          "bootstrap_pending"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "pending_remove": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/NodeId"
+      }
+    },
+    "retry": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "$ref": "common.schema.json#/$defs/ID"
+          },
+          "retry_at_ms": {
+            "$ref": "common.schema.json#/$defs/TimeMs"
+          }
+        },
+        "required": [
+          "member_id",
+          "retry_at_ms"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "boot_id",
+    "members_revision",
+    "synced",
+    "pending_remove",
+    "retry"
+  ],
+  "additionalProperties": false
+}
