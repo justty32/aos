@@ -22,6 +22,10 @@
 
 依 09-29 裁定：日常特權點是極小 root helper、主 daemon 非 root（[B-303](base/identity-resources.md)）；LLM 由控制側代發服務集中持 key、agent 與工具只投請求（延續 proto5）（[S-301](scheduling/llm.md)）；磁碟額度可選且只記帳（[B-304](base/identity-resources.md)）。外牆profile仍未選定。profile缺少所需保護時拒絕啟動工作，不以較弱方式假裝合規。FUSE、分散式kernel、父子demo與串流產品介面延後；stream相關條款僅防止部分輸出被誤當完成。
 
+## 原則：能下指令、能管檔案，就能交給 agent
+
+〔使用者方向 2026-09-29〕凡是「下指令」或「管檔案」就能做到的事（改設定、處理待處理事項、跑清理、投件給別的 agent 等），不為 agent 另做一套機制：人能做的，開放對應的檔案或指令權限後 agent 就能做，頂多另外包成工具。權限一律照 Linux 帳號與檔案權限、以及控制入口對呼叫者身分的授權（[B-501](base/transport.md)）判定；agent 做的事不因為是 agent 做的而多出權限，也不因此繞過排隊、預算或 y/n 確認。
+
 ## 平台：原生 Linux 與 WSL
 
 〔使用者方向 2026-09-29，[裁定](../notes/2026-09-29-verdicts.md)附題〕原生 Linux 與 WSL2 都要能跑同一套條款；背景見 [WSL 機器查證](../notes/2026-09-29-wsl-machine-check.md)。
