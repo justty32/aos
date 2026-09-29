@@ -4,6 +4,8 @@
 
 2026-09-29 使用者指出：proto6 前面的 spec 把 proto5 的 kernel／daemon 拆法改成「一支常駐控制端＋一本總帳本」，偏離原意。原意是 **kernel 本身也是一個靠 tick 推進的資料夾**，因為將來會有多個 kernel 混在 agent 團隊裡：某個團隊有自己的 kernel，只管自己成員的排程與資源，而這個 kernel 又只是上一層 kernel 的一件工作。本篇把這個方向和同日定下的「註冊式 tick」合起來寫清楚，作為重寫 spec 的依據。**以本篇為準；前面 spec 裡「單一控制寫入者、總帳本」的寫法要改掉。**
 
+> **第七批更新**：kernel 與 agent 合併成一種東西 **node**。「kernel」「agent」改當概念／角色：管資源分配與排程的叫 kernel，會自主行動（牽涉 LLM）的叫 agent，都由 node 的註冊表內容決定；一個 node 可以兩者皆是或皆非。下文的 kernel／agent 都讀成「扮演該角色的 node」。
+
 ## 一、角色
 
 | 角色 | 是什麼 | 常駐 |
