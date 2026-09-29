@@ -7,7 +7,7 @@
 ## 現行方向
 
 - [spec 規格草案](../spec/README.md)：欄位、合法狀態、提交與失敗恢復、驗收，現行以它為準。
-- [裁定紀錄](2026-09-29-verdicts.md)：09-29 使用者分十六批逐條裁定，**以它為準、後批優先**；分冊與每批摘要見 [verdicts/](verdicts/README.md)。
+- [裁定紀錄](2026-09-29-verdicts.md)：09-29 使用者分十七批逐條裁定，**以它為準、後批優先**；分冊與每批摘要見 [verdicts/](verdicts/README.md)。
 - [kernel 樹與註冊式 tick](2026-09-29-kernel-tree.md)：09-29 架構方向改回 kernel 樹＋註冊式 tick；spec 已依此重寫，原先「單一控制寫入者、總帳本」的寫法已拿掉。
 - LLM 排程：09-29 晚使用者裁定 LiteLLM 不進標準、只當可選 endpoint；aos 自己的排程分三檔（直連／交給 endpoint／自己排，預設自己排；直連原叫「不管」），見裁定第十三、十五批與 [spec S-301](../spec/scheduling/llm.md)。
 - systemd：第十四批裁定**初版不用 systemd**；cgroup v2 是必要依賴，quota 可選。第十五批：cgroup 一律要事先準備好，另有開關讓 daemon 自建。
