@@ -149,7 +149,7 @@ aos 自有環境變數統一使用 `AOS_` 前綴，各篇必列名字、型別�
 
 **09-29 整合者暫定（照上列建議採用，均為建議預設、未拍板，使用者可推翻）：**
 1. 工具要用 LLM 時，照 proto5 現況把請求丟進 LLM 收件處（每 UID 獨立 spool），owner／run 由可信通道從該工具的 attempt 推出，算進該 run 預算、走同一准入；這是內部交接，不算公開 RPC method。工具不能藉此建立非 LLM 的後續 job。格式由 llm.md 定，control-rpc.md 只列交界。
-2. 設定發布首版只有管理者用的本機發布 adapter（驗完整引用後原子切指標，下一次 tick 生效）；owner 自行更新延後。
+2. 〔使用者方向 2026-09-29〕改 agent 設定就是**手打指令或直接改設定檔**，沒有另外的「更新設定」機制。誰能改只看檔案權限：管理者能改；要讓 agent 自己改，就開放它對該設定檔的寫權限，之後頂多包成工具。控制端在下一次 tick 開始時讀設定來源、驗證完整引用，通過才固化成新 bundle 換上（A-102）；驗證不過就沿用舊 bundle 並寫一件 attention。
 3. LLM 內容以 proto5 的 messages 與一次呼叫結果格式為起點，首版 provider 為 OpenAI 相容 chat completions；差異在 llm.md 列明。
 4. continuation 由 agent-state.md 定一份最小、有版本的格式，只存帳本推不回的語意位置與決策；phase 查詢仍是推導。
 5. attention 目錄分 `open/agents/<agent_id>/`、`open/control/`，done 同構；解除時附 `resolved_at_ms` 與結構化 `resolution`（動作、操作者、request_id）。不動 C-01 的 ID 規則。

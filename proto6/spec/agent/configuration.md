@@ -14,7 +14,7 @@
 
 ## A-102 設定版本引用與更新〔使用者方向 2026-09-29：改設定在下一次 tick 生效〕〔09-29 精簡，依冗餘審查 B3〕
 
-run 建立為 queued 時，控制層保存一個 `config_revision`，由該 bundle 引用工具、context policy 與模型設定；查詢可展開顯示子版本，但展開值不是另一份權威。更新設定須先完整保存及校驗新 bundle 與其引用內容，再由控制層原子切換 agent 的「目前設定版本」。合法更新是有效版本 → 另一有效版本，無法原地修改已發布版本。依 [09-29 使用者裁定](../../notes/2026-09-29-verdicts.md) 1，**新設定在下一次 tick 開始時生效**，不等整輪結束：控制層取得 tick claim 時，若 agent 目前設定版本不同於 run 的 config_revision，在同一交易把 run 的 config_revision 換成新版本，並在 run 紀錄追加換版紀錄（換版時點、舊與新 config_revision、生效的 tick attempt）。tick 執行中途一律不換版；已派出、執行中的工具／LLM 工作沿用派出時的版本跑完。queued 的 run 同樣在它的第一次 tick 才取用當時的目前版本。想要舊 run 完全不受新設定影響，要取消舊 run 再建新 run。設計上盡量遵循[兩次 tick 之間的環境穩定性](../../notes/between-ticks-configuration.md)。
+run 建立為 queued 時，控制層保存一個 `config_revision`，由該 bundle 引用工具、context policy 與模型設定；查詢可展開顯示子版本，但展開值不是另一份權威。更新設定須先完整保存及校驗新 bundle 與其引用內容，再由控制層原子切換 agent 的「目前設定版本」。合法更新是有效版本 → 另一有效版本，無法原地修改已發布版本。〔使用者方向 2026-09-29〕設定的來源就是設定檔：管理者手打指令或直接改檔都算更新；agent 若被開放該檔寫權限，也能自己改，不另設更新機制。控制端在下一次 tick 開始時讀來源、驗證，通過才固化成新 bundle；不過就沿用舊 bundle 並寫一件 [S-405](../scheduling/operations.md) 待處理事項。依 [09-29 使用者裁定](../../notes/2026-09-29-verdicts.md) 1，**新設定在下一次 tick 開始時生效**，不等整輪結束：控制層取得 tick claim 時，若 agent 目前設定版本不同於 run 的 config_revision，在同一交易把 run 的 config_revision 換成新版本，並在 run 紀錄追加換版紀錄（換版時點、舊與新 config_revision、生效的 tick attempt）。tick 執行中途一律不換版；已派出、執行中的工具／LLM 工作沿用派出時的版本跑完。queued 的 run 同樣在它的第一次 tick 才取用當時的目前版本。想要舊 run 完全不受新設定影響，要取消舊 run 再建新 run。設計上盡量遵循[兩次 tick 之間的環境穩定性](../../notes/between-ticks-configuration.md)。
 
 控制層負責版本引用的存活性：非終態 run 或在途工作所引用的 bundle 及其引用內容禁止回收；重啟載入 run 紀錄中的引用，不自動用最新版替代。若 bundle 或其引用內容遺失、摘要不符，run 轉 needs_attention，phase 顯示 error，記 `config_unavailable`；修復原內容後可經 [S-102](../scheduling/runs.md) 的可選 resume 重新驗證出口回 active，phase 依 [A-503](tick.md) 推導；實作未提供該出口時只能取消，另建新 run。版本錯誤不得觸發 LLM 或工具。
 
