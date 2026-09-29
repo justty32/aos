@@ -4,7 +4,7 @@
 
 ## B-301：權限與額度歸屬〔使用者方向 2026-09-29〕
 
-通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。需要隔離的 agent node 採一 node 一 Linux 帳號；下層 kernel 是否另用服務帳號仍見[架構待定](../../notes/2026-09-29-kernel-tree.md#七待定附建議)。工具沿用呼叫 node 的身分、權限及資源範圍。key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
+通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己 inst 的 `user`，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
 
 身分宣告、繼承與授權失敗的執行結果，以 [inst 的 `user`](inst.md) 為正本；**不由 node 資料夾位置決定**。
 
