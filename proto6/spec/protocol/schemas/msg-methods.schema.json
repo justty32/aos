@@ -11,7 +11,8 @@
             "agent.say",
             "kernel.schedule.recheck",
             "kernel.quota.set",
-            "kernel.usage.measure"
+            "kernel.usage.measure",
+            "work.cancel"
           ]
         }
       }
@@ -260,6 +261,63 @@
                       "anyOf": [
                         {
                           "const": "measure"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "work.cancel"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "params": {
+            "properties": {
+              "argv": {
+                "if": {
+                  "type": "array"
+                },
+                "then": {
+                  "minItems": 3,
+                  "prefixItems": [
+                    {
+                      "anyOf": [
+                        {
+                          "const": "aos"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "work"
+                        },
+                        {
+                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                        }
+                      ]
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "const": "cancel"
                         },
                         {
                           "$ref": "node-inst.schema.json#/$defs/ValueDirective"

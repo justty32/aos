@@ -16,7 +16,10 @@
       "kind": "agent",
       "stderr": {
         "$opt": "inherit"
-      }
+      },
+      "methods": [
+        "agent.say"
+      ]
     },
     {
       "_metainfo": {

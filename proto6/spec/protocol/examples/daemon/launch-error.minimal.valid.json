@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "node_id": "/srv/aos/kernel/.aos/jobs/try-1/inst.json",
+  "node_id": "/srv/aos/kernel/.aos/jobs/910ff19802dbbc63-attempt-1/inst.json",
   "error": {
     "code": -32000,
     "message": "身分不在額度內",

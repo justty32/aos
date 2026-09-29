@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": "cancel-1",
+  "error": {
+    "code": -32000,
+    "message": "取消請求的擁有者不是原請求的擁有者，也不是本 node 的擁有者。",
+    "data": {
+      "code": "cancel_not_authorized",
+      "retryable": false
+    }
+  }
+}

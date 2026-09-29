@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": "cancel-1",
+  "error": {
+    "code": -32000,
+    "message": "沒有權限取消。",
+    "data": {
+      "code": "cancel_not_authorized",
+      "retryable": false
+    }
+  },
+  "result": {
+    "accepted": true
+  }
+}

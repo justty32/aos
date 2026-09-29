@@ -18,7 +18,7 @@
 
 路徑操作必須在被授 `provision.paths` 內（按元件判定，不用字串前綴）；helper 固定目錄 handle、拒絕 symlink 穿越及替換競態，逐步核對實體路徑。OS 現況已符合所要求設定就核對後成功，不同回 `conflict`，不覆蓋。quota 不搶走其他 node 的 project 歸屬。帳號不自動刪除或回收。
 
-cgroup 的 node 分支承接父限制，執行 leaf 容納本 node 程序，子 node 分支留在同一父資源樹；框名（`daemon`、`n-<hash>`、其下 `tick`、`once-<hash>`）依 [B-605](../../daemon.md)〔第十六批〕；module 決定哪些限制有值，daemon 不排資源。helper／收尾程序留在成員限額之外。〔使用者方向 2026-09-29 晚〕**上限設在 node 那層**：寫在 node 分支一次，之後每格沿用，不在每格重設。每個 tick 程序（含孫程序）都放進該 node 的框，once 放進其 parent 的框（[B-603](../../daemon.md)）；〔使用者方向 2026-09-29 晚〕node 還沒經 cgroup_create 建框時，daemon 開格前自己建（不寫上限）。**daemon 在交給它的 cgroup 子樹內（[B-605](../../daemon.md)）自己建框、寫限制及讀實際值，不經 systemd；無 helper 時用通用 user 做**，授權和父限制照舊。controller 不可用回 unsupported。只有建帳號、chown、quota 需要 helper，無 helper 回 helper_unavailable。
+cgroup 的 node 分支承接父限制，執行 leaf 容納本 node 程序，子 node 分支留在同一父資源樹；框名（`daemon`、`n-<hash>`、其下 `tick`、`once-<hash>`）依 [B-605](../../daemon.md)〔第十六批〕；〔第十七批〕tick 的每個任務另在 node 框下開與 `tick` 並列的 `task-<序號>`，由 tick 用 node 帳號自建自清，所以 node 框的委派檔交給 node 的執行帳號、上限檔不交；module 決定哪些限制有值，daemon 不排資源。helper／收尾程序留在成員限額之外。〔使用者方向 2026-09-29 晚〕**上限設在 node 那層**：寫在 node 分支一次，之後每格沿用，不在每格重設。每個 tick 程序（含孫程序）都放進該 node 的框，once 放進其 parent 的框（[B-603](../../daemon.md)）；〔使用者方向 2026-09-29 晚〕node 還沒經 cgroup_create 建框時，daemon 開格前自己建（不寫上限）。**daemon 在交給它的 cgroup 子樹內（[B-605](../../daemon.md)）自己建框、寫限制及讀實際值，不經 systemd；無 helper 時用通用 user 做**，授權和父限制照舊。controller 不可用回 unsupported。只有建帳號、chown、quota 需要 helper，無 helper 回 helper_unavailable。
 
 cgroup_limits 改值時，daemon 先關受影響子樹的啟動閘門，與 pending start／wake／週期派出互斥；執行端核對整個框及後代全空才套用，否則 busy。已是相同值可核對後成功，不重寫。helper 的 start／limits 也須按同一資源子樹串行；不能只靠呼叫者先查 node.show。kernel 先逐筆暫停受影響子樹、等全空再要求更新；node.pause 本身不遞迴，更新後也不代替呼叫者 resume。
 
@@ -50,7 +50,7 @@ helper 用安全程序 handle 追蹤、wait 自己的孩子並跨 UID 收尾；d
 
 啟動時已降權、設好群組與資源；依 P-108 驗 UID／來源，再按 [inst 正本](../../base/inst.md) 的順序展開與開檔。整份引用不得換已授權身分。
 
-runner 初始 stdin／stdout 為 /dev/null，stderr 由 daemon 收集為 node 診斷，不直通 daemon stderr；inst 可重導向子程序串流。--stderr 由目標身分以覆寫方式開檔、不自建父目錄，蓋過 inst 的 stderr 選項；runner 診斷仍走自身 stderr。status-fd 只供 runner，子程序 exec 前關閉。
+runner 初始 stdin／stdout 為 /dev/null，stderr 由 daemon 收集為 node 診斷，不直通 daemon stderr；〔使用者方向 2026-09-29，第十七批〕資料夾 node 暫定寫 `.aos/runner-stderr.log`（覆寫、ignored，[node P-200](../node.md)），輪替與留存以後再定；inst 可重導向子程序串流。--stderr 由目標身分以覆寫方式開檔、不自建父目錄，蓋過 inst 的 stderr 選項；runner 診斷仍走自身 stderr。status-fd 只供 runner，子程序 exec 前關閉。
 
 環境依 [B-303](../../base/identity-resources.md)，不注入 AOS_* 或帶管理 fd／key；$env 先讀該環境，再套 inst.envs。所有檔案、mkdir、exit 皆用目標帳號。
 
@@ -67,7 +67,7 @@ runner 用法錯（含資料夾兩處皆無 inst）回 2；前置解析、開檔
 
 後代清空、捕獲排空及取消競態依 [B-202／203](../../base/execution.md)。最終成功需要該範圍全空；收尾失敗可回 FinalizeFailed，但不能因此釋放尚在用的名額或開下一格。所有失敗不自動重跑 unknown。
 
-〔使用者方向 2026-09-29，第十一批與後續旁檔改名裁定〕**once 單檔未啟動的最小旁檔**：當 daemon／helper 拒絕啟動 runner，或可信 runner 回報 `started:false`，daemon 在本次選定的 inst 旁發布 `<inst 檔名>.err`（例如 `job.json.err`），格式為 `{version:1,node_id,error}`，見 [schema](../schemas/daemon-launch-error.schema.json)。error 使用 P-005；私有 PascalCase 必須映成 `user_not_granted`、`user_mismatch` 或 `start_failed` 等小寫代碼，不直接抄 runner error。每個 attempt 用新 inst 路徑；不覆蓋既有旁檔。
+〔使用者方向 2026-09-29，第十一批與後續旁檔改名裁定〕**once 單檔未啟動的最小旁檔**：當 daemon／helper 拒絕啟動 runner，或可信 runner 回報 `started:false`，daemon 在本次選定的 inst 旁發布 `<inst 檔名>.err`（例如 `job.json.err`），格式為 `{version:1,node_id,error}`，見 [schema](../schemas/daemon-launch-error.schema.json)。error 使用 P-005；私有 PascalCase 必須映成 `user_not_granted`、`user_mismatch`、`source_changed` 或 `start_failed` 等小寫代碼，不直接抄 runner error。每個 attempt 用新 inst 路徑；不覆蓋既有旁檔。
 
 daemon 以已授權目標的目錄 handle 按 P-003 發布；不可信／無權註冊不能藉此任意寫檔。旁檔衝突或寫不出就 stdout 印一行警告，不另存 daemon 事項；發起者沒證據仍保留 unknown。資料夾 node 的啟動失敗寫自己的 `.aos/attention/`，不寫 inst 旁檔。
 
@@ -81,6 +81,7 @@ RPC error 沿 P-005；`data` 必填 `code`、`retryable`。解析／請求／met
 |---|---|
 | `forbidden`、`user_not_granted` | peer 無權／超出身分額度；false |
 | `user_invalid`、`user_mismatch` | 帳號不能解析／前後身分不合；false |
+| `source_changed` | 〔第十七批〕授權後 inst 原來源的內容與快照不同（不一定是身分改了）；false |
 | `not_registered`、`registration_conflict` | 目標或父不存在／搶登記、換父、成環；false |
 | `busy` | 活程序、維護狀態不合；true，等全空後先查狀態 |
 | `stopping`、`cleanup_failed` | 正在停／無法確認後代清空；false |

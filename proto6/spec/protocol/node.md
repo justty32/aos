@@ -19,8 +19,9 @@
 | `.aos/summary/` | 給上層讀的摘要；summary.json 追蹤、published.json ignore，見 P-307 |
 | `.aos/outbox/` | 待 tick 投出的請求／回應；追蹤，見 P-206 |
 | `.aos/alarms/` | 已投出、設了鬧鐘的待查紀錄；ignore，見 P-206 |
+| `.aos/runner-stderr.log` | 〔第十七批，暫定〕runner 診斷，daemon 每格覆寫；ignore，輪替以後再定（[P-109](daemon.md)） |
 | `public/` | 可供其他 node 存取的共用空間；是否追蹤由內容決定 |
-| `.gitignore` | 至少含 `/requests/`、`/responses/`、`/work/`、`/.aos/jobs/`、`/.aos/attention/`、`/.aos/alarms/`、`/.aos/summary/published.json`；追蹤 |
+| `.gitignore` | 至少含 `/requests/`、`/responses/`、`/work/`、`/.aos/jobs/`、`/.aos/attention/`、`/.aos/alarms/`、`/.aos/runner-stderr.log`、`/.aos/summary/published.json`；追蹤 |
 
 git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git` 一定是資料夾。其內 `aos/tick.lock` 是 P-203 的鎖；一般清理不得移除或替換這個鎖檔。待處理事項放 `.aos/attention/`，不隨 group 還原，見 [ops](ops.md)。
 
@@ -46,8 +47,11 @@ git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git`
 | `kind` | `system`、`kernel`、`agent`、`custom`；先 system，中段 kernel／agent 可交錯，最後 custom |
 | `group` | 可省，共用 `ID`；相同名稱必須連續；省略是這一項自成一組，與任何具名組不同 |
 | `needs` | 可省，預設空陣列；不重複的任務 ID，只能指向本表前項 |
+| `methods` | 可省，預設空陣列；〔第十七批〕本任務處理的檔案請求 method（如 `agent.say`）。同一 method 只能由一項任務宣告 |
 
-`tasks` 可以是空陣列。tick 展開後檢查 inst、重名、前置存在與順序、連續 group、類別順序；錯誤整表拒載、不跑任何項，不退回舊表。任務表在開格時載入；各任務直接開檔讀自己的設定。
+〔使用者方向 2026-09-29，第十七批〕**node 接受哪些請求由任務表決定**：tick 開格載入任務表後、跑第一組前，列一次 `requests/` 的已發布請求；method 沒有任何任務宣告的，tick 自己照 [messages P-306](messages.md) 回 -32601（`method_not_found`、retryable:false）：原件複製到 `state/messages/requests/<id>.json`、錯誤回應放 `.aos/outbox/responses/<id>.json`，以 `aos-tick unclaimed` 提交後照 P-206 投件、清原件；沒有合法 ID 或回址的只留本地診斷（P-302／303）。有宣告的留給那項任務自己讀。兩項任務宣告同一 method 算任務表錯。
+
+`tasks` 可以是空陣列。tick 展開後檢查 inst、重名、前置存在與順序、連續 group、類別順序、methods 不重複；錯誤整表拒載、不跑任何項，不退回舊表。任務表在開格時載入；各任務直接開檔讀自己的設定。
 
 最小 [正例](examples/node/tasks.minimal.valid.json) 登記普通程式；[錯例](examples/node/tasks.user_override.invalid.json) 想在任務上加 `user`，不接受。
 
@@ -71,7 +75,7 @@ git 管理目錄以 `git rev-parse --absolute-git-dir` 找，不能假設 `.git`
 
 無設定需求的程式沒有必讀的環境變數或必寫的回應封套；`true`、腳本與既有程式都能直接當任務。key 不由 tick 放入 argv 或任務環境；daemon／runner 的環境來源照 [身分篇](../base/identity-resources.md)，inst 的 `envs` 沿正本。
 
-tick 先對 P-200 鎖檔取非阻塞獨占 flock，全格持有。任務另繼承同一 open-file-description 的鎖 fd，號碼放 `AOS_TICK_LOCK_FD`；工具以 fstat 對上鎖檔並核對獨占鎖，判斷是否在 tick 內；無繼承鎖就自行持鎖，不能只信環境。任務不得解鎖，退出前關閉自身副本，後代全空後 tick 才釋鎖。這只是同帳號合作約定，不是授權。每項跑完、確認其後代清空後才往下；清不空就停止，不提早還原仍有人在寫的檔案。收尾沿 [B-202](../base/execution.md)。
+tick 先對 P-200 鎖檔取非阻塞獨占 flock，全格持有。任務另繼承同一 open-file-description 的鎖 fd，號碼放 `AOS_TICK_LOCK_FD`；工具以 fstat 對上鎖檔並核對獨占鎖，判斷是否在 tick 內；無繼承鎖就自行持鎖，不能只信環境。任務不得解鎖，退出前關閉自身副本，後代全空後 tick 才釋鎖。這只是同帳號合作約定，不是授權。每項跑完、確認其後代清空後才往下；清不空就停止，不提早還原仍有人在寫的檔案。收尾沿 [B-202](../base/execution.md)。〔使用者方向 2026-09-29，第十七批〕**每個任務一層 cgroup**：tick 本身在 node 框的 `tick` 葉；每個任務開一層與 `tick` **並列**的 `task-<序號>`（序號是本格第幾項，從 1 起），子程序先進那層再 exec。任務結束後看那層 `cgroup.events` 的 populated，還有程序就寫 `cgroup.kill`，等 populated 變 0 再 rmdir。不放在 `tick` 底下，因為 cgroup v2 規定開了 controller 的那層不能同時放程序和子層，`tick` 有 tick 程序就不能再當分支。格首看到上一格留下的 `task-*` 先照同法清掉。細節與權限見 [B-605](../daemon.md)，成本見[實測](../../notes/probes/per-task-cgroup-cost.md)（每任務多約 0.1 毫秒）。
 
 | tick 結束碼 | 意思 |
 |---|---|

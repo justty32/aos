@@ -81,7 +81,7 @@
 | `EmptyArgv` | 缺 argv、空陣列或 argv 首項為空字串 |
 | `FieldTypeMismatch`／`EnvKeyInvalid` | 執行欄位型別錯／環境變數名為空或含 `=` |
 
-指示詞錯誤代號沿用 [directives/errors](../../../proto5/spec/directives/errors.md)。〔建議預設，未拍板〕身分錯誤用 `UserInvalid`（型別錯、含指示詞、帳號無法解析）、`UserNotGranted`（不在額度）與 `UserMismatch`（授權後描述改了身分）；代號可再定；125、不啟動、不寫 `exit` 已定。
+指示詞錯誤代號沿用 [directives/errors](../../../proto5/spec/directives/errors.md)。〔建議預設，未拍板〕身分錯誤用 `UserInvalid`（型別錯、含指示詞、帳號無法解析）、`UserNotGranted`（不在額度）與 `UserMismatch`（授權後描述改了身分）；〔使用者方向 2026-09-29，第十七批〕另有 `SourceChanged`：授權後原來源的內容與快照不同（不管改的是不是 user），跟 UserMismatch 分開；代號可再定；125、不啟動、不寫 `exit` 已定。
 
 ## 頂層整份指示詞
 

@@ -29,7 +29,7 @@ sudo 啟動後降為 common_user（預設 SUDO_UID）；helper 不重拉，隨 d
 | # | argv／做什麼 | 成功時 stdout | 底層與失敗 |
 |---|---|---|---|
 | 6 | `aos node new N [--user U] [--tasks F \| --template kernel\|agent] [--socket S] [--agent-config F]`：建立 git node | `created N; initial_commit=…; tasks=<項數>` | 建檔、git init／初始 commit，P-210／715／814；2 產物無效或目標已存在、125 前置、1 建立／提交失敗。kernel 必給 socket；agent 必給 agent-config。 |
-| 7 | `aos node ls [--node T ...] --socket S [--json]`：列登記與 once 結果 | 路徑、registered、paused、running、pending、last_tick；JSON 每頁 RpcResponse | 裸命令用 IPC `node.ls` 分頁；指定目標逐筆 `node.show`。IPC；部分失敗 1，換 boot 重列。 |
+| 7 | `aos node ls [--node T ...] --socket S [--json]`：列登記與 once 結果 | 路徑、registered、paused、running、pending、last_tick；JSON 每頁 RpcResponse | 裸命令用 IPC `node.ls` 分頁；指定目標逐筆 `node.show`。IPC；部分失敗 1。〔第十七批〕分頁中 daemon 重開（boot_id 變了）回 1、stderr 提示重查，不自動重列、不撤回已印的頁。 |
 | 8 | `aos node show T --socket S [--json]`：看登記及最近一格 | owner、父、開關、實際 cgroup、last_tick | IPC `node.show`；IPC。另看業務摘要用下一條。 |
 | 9 | `aos node summary N [--json]`：看 node 自報進度 | status、ready、due、觀測時間；JSON msg-summary | 讀 `.aos/summary/summary.json`，僅摘要權讀同 commit 的 published.json；查詢。 |
 | 10 | `aos node register T --parent N --identity-grant F [--interval-ms M \| --once] [--provision F] [--yes] --socket S [--json]`：登記 | `registered T (not woken)` | 身分 F 為陣列，provision F 為授權物件；IPC `node.register`；IPC。擴額須確認。 |
@@ -64,7 +64,7 @@ pause/resume 是開關，wake 是現在跑一格；直接 tick 仍可跑。last_
 | 28 | `aos kernel usage show N [--json]`：讀用量 | 用量、觀測時間；JSON res-usage | 讀 node summary 的 usage；查詢。 |
 | 29 | `aos kernel usage measure N --from-node R [--json]`：要求 N 重測 | `submitted ID` | 檔案 `kernel.usage.measure`，無 stdin 資料；投件。結果 stdout 是 res-usage，不啟用缺席 module。 |
 | 30 | `aos kernel usage collect K`：收直屬成員自記用量 | 空 | `aos-kernel-usage-collect`；module。依 node/request/attempt 替換觀測，不每格累加。 |
-| 31 | `aos kernel config check K`：驗目前設定、更新問題狀態 | 空 | `aos-kernel-check`；module，不合法回 2。提交設定檢查結果，不派工；別的任務不依賴它，失敗也照收已派結果（P-805）；事項另用 attend done。 |
+| 31 | `aos kernel config check K`：驗目前設定、更新問題狀態 | 空 | `aos-kernel-check`；module。〔第十七批〕跑完並寫好問題紀錄就回 0（設定有問題也是 0，看 config-state 的 issues）；只有檢查自己跑不起來才非 0（P-805）。提交設定檢查結果，不派工；別的任務不依賴它，失敗也照收已派結果（P-805）；事項另用 attend done。 |
 | 32 | `aos kernel work K`：收工具請求／結果、安排 once | 空 | `aos-kernel-work`；module。先提交材料，後格 register/wake，後格收結果。 |
 | 33 | `aos kernel work submit K --from-node R --file F [--json]`：送工具工作 | `submitted ID` | F 是 work-payload，檔案 `kernel.work.submit`；投件。命令完成後 stdout 才是內層 work-result。 |
 | 34 | `aos kernel llm forward K`：核對路由／份額並轉交 LLM | 空 | `aos-kernel-llm-forward`；module；寫 forward-state，檔案 method 仍 llm.chat。 |

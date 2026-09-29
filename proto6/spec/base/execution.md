@@ -16,7 +16,7 @@
 
 執行器保存安全程序識別（例如 pidfd；跨重啟再核對 boot ID、PID、starttime），不拿可能重用的裸 PID 殺程序。cgroup 放在所屬 node 子樹；限制與計量只用已裝 module。
 
-主程序退出後仍須清空後代、排空捕獲串流、完整發布結果，才能宣告正常完成。後代另開 session 也不能漏掉；需要清理時先 TERM，再按 [inst](inst.md) 的 2 秒寬限 KILL。用 cgroup（必要依賴，[B-605](../daemon.md)）驗證受管範圍全空（例如 `cgroup.events` 的 populated），強制清理用 `cgroup.kill`；不能只查主 PID 或 process group；沒 helper 也不能略過。
+主程序退出後仍須清空後代、排空捕獲串流、完整發布結果，才能宣告正常完成。後代另開 session 也不能漏掉；需要清理時先 TERM，再按 [inst](inst.md) 的 2 秒寬限 KILL。用 cgroup（必要依賴，[B-605](../daemon.md)）驗證受管範圍全空（例如 `cgroup.events` 的 populated），強制清理用 `cgroup.kill`；不能只查主 PID 或 process group；沒 helper 也不能略過。〔使用者方向 2026-09-29，第十七批〕tick 的每個任務各有一層 `task-<序號>`，與 `tick` 葉並列；任務結束有剩就對那層寫 `cgroup.kill`、等空再 rmdir，誰留下的程序一目了然（[node P-203](../protocol/node.md)）。
 
 強制清理後代時記失敗，不以主程序 exit 0 冒稱成功。未確認清空就交待處理、不還名額；已裝 module 在移除空框前取必要計量。
 
@@ -24,7 +24,7 @@
 
 ## B-203：取消與逾時〔建議預設，未拍板〕
 
-有權限者可要求取消指定 attempt，人與 agent 走同一入口。未放行的阻止放行；已執行的按 B-202 收尾。接下取消要求不等於已取消，只有確認程序全空才可報 canceled。不能確認時標 unknown 並保留實際占用；取消不承諾撤銷外部效果。
+有權限者可要求取消指定 attempt，人與 agent 走同一入口。〔使用者方向 2026-09-29，第十七批〕入口是檔案請求 `work.cancel`，投到持有那件工作的 node；取消請求檔的擁有 UID 要等於原請求檔的擁有 UID 或該 node 的擁有者，否則回沒權限並丟掉。排隊中的直接拿掉，在跑的由 node 請 daemon 殺掉（[work P-411](../protocol/work.md)）。未放行的阻止放行；已執行的按 B-202 收尾。接下取消要求不等於已取消，只有確認程序全空才可報 canceled。不能確認時標 unknown 並保留實際占用；取消不承諾撤銷外部效果。
 
 逾時用 monotonic 經過時間，從放行起算，不含排隊；重啟照全殺與 unknown 規則，不重新給一次 timeout。取消／完成競態由負責該工作的執行器串行處理，只發布一次最終結果：已有完整結果檔就回已結束；尚無結果而先處理取消／逾時，收尾後即使取得 exit 0 也分別記 canceled／timeout。結果檔一旦完整發布就不被後來的取消覆寫；發布前崩潰且結果不明則按 unknown。kernel 下格收結果，不以全域交易排序。
 

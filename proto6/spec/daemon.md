@@ -64,7 +64,7 @@ pause 有變動才批次寫 `state.json`；`pause_save_interval_ms` 建議 1000�
 
 **cgroup 子樹：一條通用規則**〔使用者方向 2026-09-29 晚，第十五批；取代先前依 sudo／systemd 分情況的寫法〕：daemon 啟動時一定要有一棵**已經準備好的** cgroup v2 子樹，沒有就報錯退出。
 
-- 子樹在哪：設定的 `cgroup_root`（見 [P-101](protocol/daemon.md)）；省略時就用 daemon 程序自己目前所在的 cgroup。〔使用者方向 2026-09-29，第十六批〕**省略時 daemon 啟動先在自己所在那層開 `daemon` 子層，把自己和那層裡其他程序都搬進去**，讓那層只當分支、不放程序；cgroup v2 規定已有子層（又要開 controller）的那層不能放程序，這樣才避得開。搬不動（或一直有新程序進來）就報錯退出。
+- 子樹在哪：設定的 `cgroup_root`（見 [P-101](protocol/daemon.md)）；省略時就用 daemon 程序自己目前所在的 cgroup。〔使用者方向 2026-09-29，第十七批〕有寫 `cgroup_root` 但 daemon（或其他程序）就在那層時，比照省略：同樣開 `daemon` 子層、把那層程序全搬進去，搬不動就報錯退出。〔使用者方向 2026-09-29，第十六批〕**省略時 daemon 啟動先在自己所在那層開 `daemon` 子層，把自己和那層裡其他程序都搬進去**，讓那層只當分支、不放程序；cgroup v2 規定已有子層（又要開 controller）的那層不能放程序，這樣才避得開。搬不動（或一直有新程序進來）就報錯退出。
 - 「準備好」是指：這棵子樹存在；它的資料夾和根上的委派檔（`cgroup.procs`、`cgroup.subtree_control`、`cgroup.threads`）交給了 daemon 跑的帳號（sudo 開時是降權後的帳號）。不用 sudo 開時，daemon 自己也要已經在這棵子樹裡，因為 cgroup v2 搬程序要對共同上層有寫權；sudo 開時 daemon 趁還有 root 自己搬進去。
 - **開關 `--create-cgroup`**（設定檔對應 `create_cgroup: true`，預設關）：子樹不在時由 daemon 自己建。開了就必須寫 `cgroup_root`，daemon 在那個位置建；建不了（例如沒 root、上層不給寫）就報錯退出。子樹已經在就直接用，不重建。
 - 怎麼準備（只是做法範例）：開機由 systemd service 啟動時，unit 寫 `Delegate=yes`（範例見文末附錄），systemd 會把 daemon 所在的 cgroup 劃給它，`cgroup_root` 可省；手動開時可以用 `systemd-run --scope -p Delegate=yes sudo aos daemon --config …` 這類寫法；沒有 systemd 的機器，由 root 事先 mkdir 並 chown 上述檔案。
@@ -77,6 +77,7 @@ pause 有變動才批次寫 `state.json`；`pause_save_interval_ms` 建議 1000�
 - daemon 自己：`<子樹>/daemon`。
 - node：框放在父 node 的框下（頂層放子樹根下），名字 `n-<h>`，`<h>` 是 node_id 的 UTF-8 bytes 做 sha256 取前 16 個小寫 hex；這格的程序放在它底下的 `tick` 葉框，子 node 的框與 `tick` 並列，所以 node 框只當分支。
 - once：框放在父 node 的框下，名字 `once-<h>`（同法），本身就是葉框。
+- 任務層〔使用者方向 2026-09-29，第十七批〕：tick 跑的每個任務在 node 框下開 `task-<序號>`，與 `tick` 並列（不放在 `tick` 底下：已有程序的 `tick` 開了 controller 就不能再有子層）；任務結束有剩就 `cgroup.kill`、等空再 rmdir（[node P-203](protocol/node.md)，成本約每任務 0.1 毫秒，見[實測](../notes/probes/per-task-cgroup-cost.md)）。tick 以 node 的帳號自己建這層並把子程序搬進去，所以 daemon 建 node 框時要把 `n-<h>` 資料夾及其 `cgroup.procs`、`cgroup.subtree_control`、`cgroup.threads` 交給 node 的執行帳號（cgroup v2 的委派）；上限檔仍歸 daemon，node 改不了。daemon 收尾 tick 時看的範圍是 `tick` 加所有 `task-*`。
 
 16 hex 碰撞機率可忽略，首版不另做碰撞偵測。資源上限寫在 `n-<h>` 那層（P-107）。
 
@@ -86,7 +87,7 @@ pause 有變動才批次寫 `state.json`；`pause_save_interval_ms` 建議 1000�
 
 **初版不做**〔使用者方向 2026-09-29 晚〕：systemd 的沙盒防護（`CapabilityBoundingSet` 等）以後再考慮；helper 掛 tmpfs 拿掉；原本打算交給 systemd 的開程序、定時叫醒、資源框等做法，留到以後當有 systemd 時的可選增強，初版全由 daemon 自己用 cgroup 做。
 
-**驗收：**kernel、Python 或 git 低於最低版本、沒有 cgroup v2 時啟動報錯退出；沒有準備好的子樹、也沒開 `--create-cgroup` 時報錯退出，不自己建；省略 `cgroup_root` 時原層只剩子層、沒有程序；開了 `--create-cgroup` 卻沒寫 `cgroup_root`，或建不了時報錯退出；偵測得到 quota 但設定強制關時不使用；daemon 被 SIGKILL 後重開，仍有程序的 node cgroup 先收到 SIGTERM、寬限後被清空，才開新格。
+**驗收：**kernel、Python 或 git 低於最低版本、沒有 cgroup v2 時啟動報錯退出；沒有準備好的子樹、也沒開 `--create-cgroup` 時報錯退出，不自己建；省略 `cgroup_root` 時原層只剩子層、沒有程序；開了 `--create-cgroup` 卻沒寫 `cgroup_root` 時以用法／設定錯退出（結束碼 2，第十七批），建不了時報錯退出；偵測得到 quota 但設定強制關時不使用；daemon 被 SIGKILL 後重開，仍有程序的 node cgroup 先收到 SIGTERM、寬限後被清空，才開新格。
 
 ## 附錄：開機自動啟動的 systemd service 範例
 

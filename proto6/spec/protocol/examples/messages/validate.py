@@ -51,7 +51,9 @@ def schema_name(path):
                  'kernel-usage-result': 'msg-command-result',
                  'command-result': 'msg-command-result', 'summary': 'msg-summary',
                  'file-request': 'msg-file-rpc', 'file-error': 'msg-file-rpc',
-                 'outbox': 'msg-outbox'}
+                 'outbox': 'msg-outbox',
+                 'work-cancel-payload': 'msg-cancel-payload',
+                 'work-cancel-error': 'msg-file-rpc'}
         return names.get(topic, 'msg-methods')
     raise AssertionError(f'unknown example directory: {group}')
 
@@ -95,9 +97,12 @@ def main():
         if '.aos/tasks.json' in files:
             tasks = files['.aos/tasks.json']['tasks']
             assert len(tasks) == (2 if 'config/agent.json' in files else 9), path
-            seen = set()
+            seen, claimed = set(), set()
             for task in tasks:
                 assert task['id'] not in seen, path
+                # P-202：同一 method 只能由一項任務宣告。
+                assert not claimed & set(task.get('methods', [])), path
+                claimed.update(task.get('methods', []))
                 assert set(task.get('needs', [])) <= seen, path
                 seen.add(task['id'])
                 argv = task['argv']

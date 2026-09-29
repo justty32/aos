@@ -1,0 +1,24 @@
+{
+  "jsonrpc": "2.0",
+  "id": "cancel-1",
+  "method": "work.cancel",
+  "params": {
+    "_metainfo": {
+      "_type": "posix",
+      "_version": 1
+    },
+    "argv": [
+      "aos",
+      "work",
+      "stop"
+    ],
+    "stdin": "/srv/aos/shared/work-cancel-payload.minimal.valid.json",
+    "stdout": {
+      "$opt": "inherit"
+    },
+    "stderr": {
+      "$opt": "inherit"
+    }
+  },
+  "reply_to": "/srv/aos/top/a"
+}
