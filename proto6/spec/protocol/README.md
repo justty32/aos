@@ -56,10 +56,10 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 ## P-008．暫定與待決〔建議預設，未拍板〕
 
-### 要使用者決定
+### 已裁定（第十一批）
 
-- **once 資源歸屬與啟動失敗證據**：建議採 [daemon P-104／110](daemon.md)；以可信 parent_id 固定發起 node 的資源歸屬，未啟動由 daemon 寫 `<inst 檔名>.launch-error.json`。這組交接仍未拍板。
-- **首版網路做到哪裡**：建議先只定用量摘要，要求硬限速的部署明確報不支援；配額與 backend 後續再定（[resources P-506](resources.md)）。
+- **once 資源歸屬與啟動失敗證據**〔使用者方向 2026-09-29〕：照 [daemon P-104／110](daemon.md)；以可信 parent_id 固定算在發起 node 的資源框內，runner 根本沒啟動時由 daemon 寫 `<inst 檔名>.launch-error.json`。
+- **首版網路**〔使用者方向 2026-09-29〕：只記用量摘要，不做硬限速；要求硬限速的部署明確報不支援（[resources P-506](resources.md)）。
 
 ### 工程預設與待補接口
 
