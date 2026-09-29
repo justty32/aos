@@ -68,7 +68,7 @@
 2. **開機自動啟動**〔使用者方向 2026-09-29 晚〕：把 daemon 寫成一個 systemd service 即可，附範例 unit 檔，不算執行期依賴。
 3. **沙盒防護**〔使用者方向 2026-09-29 晚〕：systemd 的 `CapabilityBoundingSet` 等沒有就是沒有，以後再考慮支援。
 4. **daemon 死了**〔使用者方向 2026-09-29 晚〕：對正在跑的 tick 送信號，讓它們優雅結束。
-5. **cgroup 子樹誰建**〔使用者方向 2026-09-29 晚〕：用 sudo 開 daemon 時由 daemon 自己建；不用 sudo 開時，要使用者事先建好並交給 daemon 帳號，沒有就報錯。
+5. **cgroup 子樹誰建**〔使用者方向 2026-09-29 晚〕：用 sudo 開 daemon 時由 daemon 自己建；不用 sudo 開時，要使用者事先建好並交給 daemon 帳號，沒有就報錯。（已被第十五批第 2 條取代：一律要事先準備好，另有開關讓 daemon 自己建，見 [06](06-cgroup-direct-delivery.md)。）
 6. **「有就用」的功能（quota 等）**〔使用者方向 2026-09-29 晚〕：啟動時自動偵測，設定檔可強制關。
 7. **部署形態（systemd 拆分第 3 題）**〔使用者方向 2026-09-29 晚〕：先不使用 systemd。
 8. **資源上限設在 node 那層**〔使用者方向 2026-09-29 晚〕：不是每格設一次。
@@ -90,9 +90,9 @@
 
 ### B1／B2（同日晚）
 
-回答上面「追加帶出的待釐清處」。以下皆為〔使用者方向 2026-09-29 晚〕，已落進 spec（[B-603／B-605](../../spec/daemon.md)）。
+回答上面「追加帶出的待釐清處」。以下皆為〔使用者方向 2026-09-29 晚〕，已落進 spec（[B-603／B-605](../../spec/daemon.md)）。B1 整套已被第十五批第 2 條的 cgroup 通用規則取代（見 [06](06-cgroup-direct-delivery.md)），B2 仍有效。
 
-- **B1 cgroup 子樹建在哪**〔使用者方向 2026-09-29 晚〕：
+- **B1 cgroup 子樹建在哪**〔使用者方向 2026-09-29 晚〕（已被第十五批取代）：
   - daemon 由 systemd service 開機啟動時，範例 unit 檔寫 `Delegate=yes`，daemon 使用 systemd 劃給它的子樹。
   - 手動用 sudo 啟動時，daemon 先偵測：機器有 systemd 管 cgroup、但 systemd 沒有劃子樹給 daemon，就報錯退出，不自己在 cgroup 根下建。
   - 機器完全沒有 systemd 時，sudo 開的 daemon 自己建子樹（照追加第 5 條）。
