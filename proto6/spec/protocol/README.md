@@ -15,7 +15,7 @@
 
 - UTF-8、無 BOM；一份檔案或一行訊息恰好一個 JSON object。拒絕重複 key、非有限數、尾隨資料。
 - ID 是字串：`[A-Za-z0-9][A-Za-z0-9._-]{0,127}`，可直接當檔名。node id 是 node 資料夾的絕對路徑（正規化、無 `..`、無結尾 `/`）。
-- 時間點用 UTC 毫秒整數、時長用毫秒，欄位名以 `_ms` 結尾；**cgroup CPU 是明示例外**：`quota_us`、`period_us`、`usage_us` 直接用微秒，不換算或捨去精度；逾時用經過時間，排先後用序號，不靠牆鐘、mtime 或檔名排序。
+- 時間點用 UTC 毫秒整數、時長用毫秒，欄位名以 `_ms` 結尾；明示例外：清理設定 `interval_seconds` 用秒；cgroup CPU 的`quota_us`、`period_us`、`usage_us` 直接用微秒，不換算或捨去精度；逾時用經過時間，排先後用序號，不靠牆鐘、mtime 或檔名排序。
 - 自己的持久 JSON 檔帶 `"version": 1`，未知版本拒絕；inst 與 tasks 用自己的 `_metainfo`，JSON-RPC 用 `"jsonrpc": "2.0"`，不另加 `version`。
 - 未知欄位：協議物件預設拒絕；要擴充的地方明列 `ext` object。
 
@@ -66,9 +66,9 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 第九批已准工程數字先照建議、實作量過再調；各篇「建議預設」可替換，不逐條再問使用者。
 
 - 首次由父 kernel 登記、既有項可重登；IPC、bytes 去重、摘要發布、資源 method、鎖 fd 與故障停格，依 [daemon](daemon.md)、[messages](messages.md)、[node](node.md)。
-- **LLM 共享窗口與池狀態**：最小格式及估算由 [kernel P-811～812](kernel-tasks.md) 定義；unknown 保留占用，不自動到期釋放。相同 provider 限制交同一池管理 node，不能靠同名 scope 跨 node 同步（[resources P-505](resources.md)）。
-- **領域接口**：模型／人格／工具 adapter、正式回話、context 與預設清理遍歷已由 [agent 任務篇](agent-tasks.md) 及 [kernel 任務篇](kernel-tasks.md) 定義。尚未統一的是 unknown 人工處置、可選 run method 與自訂任務的清理 adapter；依 [ops](ops.md) 使用明示部署 adapter，不認得的 method 回 -32601，clean 缺可信證據就保留。
-- done 留存、磁碟 hardlink 計量與池路由照各篇工程預設；git 歷史回收留後續，不把本次格式驗證當產品實作。
+- **LLM 共享窗口與池狀態**：最小格式及估算由 [kernel P-811～812](kernel-tasks.md) 定義；unknown 的估計占用隨定期清理移除，不當作遠端已停止的證據。相同 provider 限制交同一池管理 node，不能靠同名 scope 跨 node 同步（[resources P-505](resources.md)）。
+- **領域接口**：模型／人格／工具 adapter、正式回話、context 與預設清理遍歷已由 [agent 任務篇](agent-tasks.md) 及 [kernel 任務篇](kernel-tasks.md) 定義。unknown 放著隨定期清理，不自動重做；不做自訂清理接口。
+- done 留存、磁碟 hardlink 計量與池路由照各篇工程預設；格式驗證不等於產品實作。
 
 ## P-009．分工表〔主編補〕
 
@@ -79,7 +79,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | [messages](messages.md)／P-300～ | 檔案路由、去重、method 目錄、摘要讀取／發布 |
 | [work](work.md)／P-400～ | once 工作、結果、LLM 池與程式契約 |
 | [resources](resources.md)／P-500～ | module、配額／用量與各類資源 |
-| [ops](ops.md)／P-600～ | attention、處理表、aos-attend、aos-clean |
+| [ops](ops.md)／P-600～ | 待辦、aos-attend、aos-clean |
 | [agent 任務](agent-tasks.md)／P-700～ | agent 設定、工具、對話、context、用量及建立範本 |
 | [kernel 任務](kernel-tasks.md)／P-800～ | 持久成員、排程、工作轉交、LLM 路由／池及建立範本 |
 

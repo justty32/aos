@@ -95,7 +95,7 @@ commit 訊息為 `aos-tick group <first_task_id>..<last_task_id>`，單項兩端
 
 commit／還原／清理故障保存基線與收件，停後續組，在 git 管理目錄 `aos/tick-blocked` 寫 UTF-8 原因。格首看到就回 125、不碰工作樹；本格故障回 3。即使擋板寫不出，仍由 [daemon P-105](daemon.md) 依可信退出證據停格，寫 node 的 `.aos/attention/`；寫不進去只在 daemon stdout 警告。直接呼叫者同樣須修復後才能再跑；修復者暫停、持鎖、核對 repo 後移除擋板。
 
-合併 commit 須暫停、持鎖，保留現版本及仍被請求／設定引用的 commit 或內容；不得延後對外派送前的提交。submodule 各自提交、父只管 gitlink，無跨 repo 原子保證；歷史空間依 [B-404](../base/storage.md)。
+合併 commit 須暫停、持鎖，保留現版本及仍被請求／設定引用的 commit 或內容；不得延後對外派送前的提交。submodule 各自提交、父只管 gitlink，無跨 repo 原子保證。
 
 ## P-206．收件與派送的提交邊界〔使用者方向 2026-09-29〕
 
@@ -105,7 +105,7 @@ commit／還原／清理故障保存基線與收件，停後續組，在 git 管
 
 成功投件後移除待送檔，於下一組或格末提交這些刪除；刪除本身就是變動，不造空 commit。提交前當機可再投相同 bytes，接收方依 [P-304](messages.md) 去重。這只是補投同一封檔案，不是重做 unknown 外部工作。once 的 register／wake 仍由該 module 在後續格核對已提交材料後執行，不往待送區塞 IPC。
 
-工作與 LLM 的固定材料依據留 `state/work/<attempt_id>/`；其餘領域路徑見所屬篇。tick 不等遠端結果，也不替領域決定 unknown 能否重試。
+工作與 LLM 的固定材料依據留 `state/work/<attempt_id>/`；其餘領域路徑見所屬篇。tick 不等遠端結果，不重做 unknown。
 
 ## P-207．加入普通設定與重要設定手改〔建議預設，未拍板〕
 
@@ -146,6 +146,6 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
 3. 有 kernel 預設任務就執行 `aos-kernel-check --node N --validate-only`；有 agent 預設任務則復用 [agent P-712](agent-tasks.md) 的檢查規則，對**目前候選工作樹**的 agent 設定、工具及引用驗證，檢查程式直接讀檔。兩種都有便都驗。自訂普通程式沒有 aos 領域設定契約，不因其未提供 validator 就拒收合法任務表；其執行失敗仍由 group 管。
 4. 任何檢查失敗保持暫停、保留手改、stderr 指出檔案與欄位；通過後才照 CLI 的確認流程提交手改，再送 daemon node.resume。後續任務直接讀設定，不重做已派工作。
 
-唯讀驗證檢查目前工作樹；由外層持鎖，不另取鎖，不寫追蹤／ignored 檔、不發事項、不自行 commit。它只證明設定可採用，不證明外部 endpoint 可達或未知工作可以重試。日常檢查與事項解除由 [ops P-609](ops.md) 及領域任務處理。
+唯讀驗證檢查目前工作樹；由外層持鎖，不另取鎖，不寫追蹤／ignored 檔、不發事項、不自行 commit。它只證明設定可採用，不證明外部 endpoint 可達。日常檢查與待辦標完成依 [ops P-609](ops.md)。
 
 **驗收：**把 tasks 的 needs 指到不存在項目或寫壞 kernel 路由，resume 都不開閘、不抹手改；修好後先提交再恢復；新增 `true` custom 任務不需要虛構領域 validator。

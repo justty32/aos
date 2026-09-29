@@ -19,13 +19,6 @@
       "type": "string",
       "minLength": 1
     },
-    "actions": {
-      "type": "array",
-      "items": {
-        "$ref": "common.schema.json#/$defs/ID"
-      },
-      "uniqueItems": true
-    },
     "job_id": {
       "$ref": "common.schema.json#/$defs/ID"
     },
@@ -34,6 +27,11 @@
     },
     "request_id": {
       "$ref": "common.schema.json#/$defs/ID"
+    },
+    "suggestion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "白話的建議處理，可含建議指令的文字；不會自動執行。"
     }
   },
   "required": [
@@ -41,8 +39,7 @@
     "source_node",
     "issue_id",
     "reason",
-    "message",
-    "actions"
+    "message"
   ],
   "additionalProperties": false
 }

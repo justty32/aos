@@ -68,12 +68,13 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 | 任務 id | kind／group／needs | 內容 |
 |---|---|---|
 | agent | agent／省略／省略 | 收話與結果、推進輸入、準備工作及回覆、記用量與摘要 |
+| clean | custom／省略／省略 | `aos-clean --config config/clean.json`，到期才清理 |
 
-[任務表](examples/agent-tasks/agent-tasks.minimal.valid.json) 最外層是 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`；這一項是帶 `_metainfo` 的 inst，加 `id`、`kind`，不填 user。一般任務的 group、needs、指示詞及整份 `$ref` 沿 P-202。
+[任務表](examples/agent-tasks/agent-tasks.minimal.valid.json) 最外層是 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`；每項是帶 `_metainfo` 的 inst，加 `id`、`kind`，不填 user。一般任務的 group、needs、指示詞及整份 `$ref` 沿 P-202。
 
 module 只把請求／回應放 `.aos/outbox/`，把已消費原件複製到 P-703；tick 在組提交成功後投件、刪相符原件。每格只列一次收件清單，最多處理 64 件；同格回件等下格。還有可推進輸入則 summary.ready=true；只等結果則 false，無到期事務時 due_ms=null。
 
-範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、stdout 空、stderr 診斷。0 成功或沒事；2 用法錯；125 鎖或前置不符；1 處理／保存失敗，交 tick 還原組。可保存的 failed／unknown／設定問題是業務狀態；commit／還原故障由 tick 回 3 並停格。
+aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、stdout 空、stderr 診斷。0 成功或沒事；2 用法錯；125 鎖或前置不符；1 處理／保存失敗，交 tick 還原組。可保存的 failed／unknown／設定問題是業務狀態；commit／還原故障由 tick 回 3 並停格。clean 的輸出與結束碼依 [P-605](ops.md)。
 
 ## P-705．收話與收結果〔A-201、A-403、P-303～305；工程預設〕
 
@@ -106,7 +107,7 @@ RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身�
 
 ## P-708．正式回覆〔A-203；工程預設〕
 
-reply.input_id 是原 `agent.say` id；progress.outcome=null，final 為 succeeded／failed／canceled／unknown。取消與 unknown 結束須符合授權及本機收尾，不自動釋放 unknown。
+reply.input_id 是原 `agent.say` id；progress.outcome=null，final 為 succeeded／failed／canceled／unknown。unknown 回話只說結果不明，原工作仍保持 unknown；取消須完成本機收尾。
 
 同組保存本地 reply、input 與新 ID 的 `agent.say` 請求；stdin JSON 為 `{text,in_reply_to:原 input_id}`，reply_to=N，目標是原 input.reply_to。本地 progress／final 不另變成線上欄位。tick 提交後投件；自己回自己也下格收。原 `agent.say` 回應不改。
 
@@ -137,7 +138,7 @@ F 是任意可讀路徑的 agent-tools JSON。add 合併新名，同值無變動
 
 stdin 不讀；add/rm stdout 印設定路徑，ls 印名稱／用途或完整 JSON；stderr 診斷。0 成功；2 用法／格式／名稱衝突；75 鎖忙；125 無法開始；1 寫入失敗已還原；3 提交／還原故障。ls 不寫檔，空清單回 0，讀失敗回 1。
 
-## P-712．設定檢查與重驗〔A-102、P-601～604；工程預設〕
+## P-712．設定檢查與重驗〔A-102、P-601／603；工程預設〕
 
 ```text
 aos-agent-check [--node N] [--draft F | --validate-only]
@@ -147,7 +148,7 @@ aos-agent-check [--node N] --recheck
 
 直接開檔驗 inst／tasks／agent／tools、引用與權限，不試 provider。draft 是任意可讀替代 agent.json；validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫。0 有效、1 無效、2 用法錯、125 讀取／前置失敗；stdout 印 valid 或 invalid 與檔案欄位，stderr 診斷。
 
-recheck 取同把鎖、驗目前值，提交 config-state 後將自己的 config_invalid 從 `.aos/attention/open/` 移到 `done/`；不解 unknown、不派工。移檔失敗可依已提交證據補做。safe handler 沿 ops，由來源核對 issue_id。鎖忙 75、保存失敗 1、提交／還原故障 3。
+recheck 取同把鎖、驗目前值並提交 config-state，不派工。確認修好後，人或 agent 用 `aos attend done N ID` 標完成。鎖忙 75、保存失敗 1、提交／還原故障 3。
 
 ## P-713．say／listen〔對話裁定、proto5；工程預設〕
 
@@ -178,13 +179,13 @@ aos-agent-talk context show N --request ID [--json]
 
 `aos node new N --template agent --agent-config F [--user U]` 讀 F、填 N／已授權 U，建 repo 與初始 commit；無效回 2，不猜地址或授額外權限。持久登記由 kernel 做。
 
-[完整產物](examples/agent-tasks/agent-template.minimal.valid.json) 的 files 列 `.aos/inst.json`、`.aos/tasks.json`（**1 項**）、agent.json、空 tools.json、gitignore；不把 template 容器存進 node。另建 requests、responses、work、public、`.aos/jobs/` 與 ignored `.aos/attention/{open,done}/`；state／summary 按需建立。[cat 工具清單](examples/agent-tasks/agent-tools.minimal.valid.json) 可從任意可讀路徑 add。
+[完整產物](examples/agent-tasks/agent-template.minimal.valid.json) 的 files 列 `.aos/inst.json`、`.aos/tasks.json`（**2 項**）、agent.json、空 tools.json、clean.json、gitignore；不把 template 容器存進 node。另建 requests、responses、work、public、`.aos/jobs/` 與 ignored `.aos/attention/{open,done}/`；state／summary 按需建立。[cat 工具清單](examples/agent-tasks/agent-tools.minimal.valid.json) 可從任意可讀路徑 add。
 
 ## P-716．最小清理遍歷〔B-404、P-605～606；工程預設〕
 
-agent adapter 以 input_id 追原 `agent.say`、history、context、work、本地 reply、送回的 agent.say 與 usage。只有 done 超過保留期、有終局時間、工作結果全消費、回話全確認、收件已清、沒有 unknown／組外引用，才整組封存；組內互引不阻止封存。
+aos-clean 以 input_id 追原 `agent.say`、history、context、work、本地 reply、送回的 agent.say 與 usage。一般 input 要 done、超過保留期、結果全消費、回話全確認、收件已清且無組外引用才整組封存。
 
-未知格式或沒有可信用量收集證據則保留、報 clean_blocked。序號、未解問題與在用材料不清；input_id=null 的工具自用請求首版保留。不回收 git 歷史。
+unknown 依 P-606 到期連同卡住的 input、pending 與內部引用整組清，不等 input 變 done。序號及在用設定保留；不認得的資料不碰、不回報。
 
 ## P-717．格式驗收〔P-007〕
 

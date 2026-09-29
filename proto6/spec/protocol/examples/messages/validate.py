@@ -90,7 +90,7 @@ def main():
         files = value.get('files', {})
         if '.aos/tasks.json' in files:
             tasks = files['.aos/tasks.json']['tasks']
-            assert len(tasks) == (1 if 'config/agent.json' in files else 9), path
+            assert len(tasks) == (2 if 'config/agent.json' in files else 9), path
             seen = set()
             for task in tasks:
                 assert task['id'] not in seen, path

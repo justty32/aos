@@ -61,7 +61,8 @@
       "mode": "archive",
       "archive_dir": "archive",
       "retention_ms": 2592000000,
-      "batch_limit": 64
+      "batch_limit": 64,
+      "interval_seconds": 86400
     },
     ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/attention/\n/.aos/summary/published.json\n/archive/\n",
     ".aos/tasks.json": {

@@ -6,7 +6,7 @@ kernel 是裝了下列 module 的 node；本篇是待實作的最小預設。
 
 ## P-800．共同契約〔第十二批裁定；工程預設〕
 
-每個 module 一項任務：check、members、resources、work、LLM forward、LLM pool、usage、schedule，另有 custom clean。各用 node user、直接開檔讀設定；stdin 不讀、stdout 空、stderr 診斷。`--node N` 可省，預設 cwd；tick 在 node 根跑任務。核對繼承鎖 fd 判斷是否由 tick 提交，直接模式自行持鎖、提交後交付。
+每個 module 一項任務：check、members、resources、work、LLM forward、LLM pool、usage、schedule，另有 custom 的 aos-clean；它的輸出及到期間隔依 [P-605](ops.md)。各用 node user、直接開檔讀設定；stdin 不讀、stderr 診斷，除 clean 外的任務 stdout 空。`--node N` 可省，預設 cwd；tick 在 node 根跑任務。核對繼承鎖 fd 判斷是否由 tick 提交，直接模式自行持鎖、提交後交付。
 
 任務把完整請求／回應放追蹤的 `.aos/outbox/{requests,responses}/<id>.json`，把已消費原件逐 byte 複製到 `state/messages/{requests,responses}/<id>.json`。**tick 在組提交後才投件、才刪相符收件原件**，封套沿 P-206。once 的 IPC 登記另由 module 做：當格新材料先提交，下一格才能啟動；不在任務中等工具／HTTP。
 
@@ -71,7 +71,7 @@ aos-kernel-check [--node N] --validate-only
 
 人手 `aos kernel config check N`。直接讀 inst／tasks 及已裝 module 的 config，驗 schema、引用、重名、父額度、路由與池；不發 HTTP、不起 once、不 resume。validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫；0 合法、2 不合法、125 讀不到。
 
-一般 check 寫 `state/kernel/config-state.json`（[schema](schemas/kernel-config-state.schema.json)）的 issues：path、issue_id、resolved。設定無效就停依賴它的新工作，仍收已派結果；成員單項錯只隔離那項。修好後重驗、提交解決紀錄，把自己的 config_invalid 移到 `.aos/attention/done/`；中斷下次補做，不解除 unknown。
+一般 check 寫 `state/kernel/config-state.json`（[schema](schemas/kernel-config-state.schema.json)）的 issues：path、issue_id、resolved。設定無效就停依賴它的新工作，仍收已派結果；成員單項錯只隔離那項。修好後重驗、提交設定狀態；人或 agent 確認修好後用 `aos attend done N ID` 標完成。
 
 改設定在 tick 外持同把鎖；任務不改 config 是軟性原則，不檢查或阻擋，自行修改承擔同格新舊混用。
 
@@ -87,7 +87,7 @@ kernel.json 記 request_id、seq、phase、boot_id、work_dir、完成時間，�
 
 已提交材料且 ignored `.aos/jobs/<attempt_id>/launch-started` 不存在，才可首次啟動：先原子排他建立 marker、同步檔案與父目錄，再 register／wake。marker 保留到整件工作可清理；它存在時先核對同 boot 登記、last_tick、完整結果與 `<inst>.err`。可信登記證明從未開始才可第一次 wake；已開始就等／收。沒有可信結果、在途或從未執行證據就是 unknown，不因登記消失、換 boot 或逾時重登歷史 once。
 
-原請求與回件可補投同 ID、同 bytes，只補交付，不重做外部工作。unknown 保留材料及必要占用；新嘗試須走 ops 授權。此規則也管 LLM 與跨 kernel 轉交。
+原請求與回件可補投同 ID、同 bytes，只補交付，不重做外部工作。unknown 保持原樣，沒人處理就隨定期清理清掉，不自動重做。此規則也管 LLM 與跨 kernel 轉交。
 
 ## P-808．LLM 路由表〔P-303、S-301；工程預設〕
 
@@ -105,7 +105,7 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者及明授投件�
 
 本池不投自己的收件區：本 module 保存已接納材料，pool 任務在後組讀已提交材料。池提交結果後，forward 下一格生成原請求回件。
 
-直接成員扣自己份額；代理成員扣 via 的本層份額；明授外部池客戶只受池共享限制。未終局／unknown 各占一次，429 重試不多占一份；額度不足 queued，unknown 不自動釋放或重送。
+直接成員扣自己份額；代理成員扣 via 的本層份額；明授外部池客戶只受池共享限制。未終局／unknown 各占一次，429 重試不多占一份；額度不足 queued，unknown 不重送，估計占用隨 P-606 清理。
 
 ## P-810．用量收集 module〔LLM 與工具兩條路線；工程預設〕
 
@@ -121,7 +121,7 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者及明授投件�
 
 首筆預留開固定窗口，到期重設；時鐘倒退不提早釋放。重啟依證據重建，不能證明過期就再等完整窗口。每次 HTTP 預留一個 request，token 估算為 messages/tools JSON UTF-8 bytes＋max_completion_tokens，不保證 tokenizer 上界。單筆超限拒收 capacity_unavailable，窗口滿／並行滿／冷卻就等。
 
-預留存 `state/work/<attempt>/kernel.json.llm`，每次 HTTP 有不同 attempt。`aos-llm [--node N] --config F` 一項任務收結果、更新窗口並準備材料；只對先前已提交的 HTTP 材料啟動 `.aos/jobs/<attempt>/` once。429 依 P-407 有限重試；unknown 不重試、不自動釋放並行占用。provider usage 原樣保存，不因少用 token 退窗口預留。
+預留存 `state/work/<attempt>/kernel.json.llm`，每次 HTTP 有不同 attempt。`aos-llm [--node N] --config F` 一項任務收結果、更新窗口並準備材料；只對先前已提交的 HTTP 材料啟動 `.aos/jobs/<attempt>/` once。429 依 P-407 有限重試；unknown 不重試，估計並行占用隨 P-606 清理。provider usage 原樣保存，不因少用 token 退窗口預留。
 
 `state/llm/pool-status.json`（[schema](schemas/kernel-pool-status.schema.json)）記 scope 窗口、冷卻及已知／unknown 占用；同 attempt 只算一次，待啟動的預留也算 active，無變化不刷 observed_at_ms。
 
@@ -165,14 +165,14 @@ aos node new /srv/aos/top --template kernel --user 1000 --socket /run/user/1000/
 | schedule | kernel | aos-kernel-schedule | members、resources |
 | clean | custom | aos-clean --config config/clean.json | 無 |
 
-範本 task 用 `stderr:{"$opt":"inherit"}` 讓診斷交 tick。沒有本地池可刪 pool／池設定；全體轉交可移除 usage，連帶維護 needs。agent 範本只有一項 module。
+範本 task 用 `stderr:{"$opt":"inherit"}` 讓診斷交 tick。沒有本地池可刪 pool／池設定；全體轉交可移除 usage，連帶維護 needs。agent 範本有 agent 與 clean 兩項。清理間隔在 config/clean.json，預設一天，由 aos-clean 自己記時間。
 
 daemon roots 填頂層 node、身分額度與 interval_ms=1000，**啟動即 tick 頂層**。正常退出存 state.json；意外退出照 roots 啟動，各 kernel 見 boot_id 換了才逐層重登。成員、routes、endpoint/model 按實際部署補齊，空清單不授權 agent。正式回話與查 context 由 [agent 篇](agent-tasks.md) 接。
 
-清理保留所有 queued／prepared／在途／unknown、未消費收件、未確認回件及仍被引用材料；其餘依 P-606。缺可信證據就 clean_blocked。
+清理依 P-606：一般 queued／prepared／在途、未消費收件、未確認回件及在用引用仍保留；unknown 到期後連同內部關聯與估計占用一起清，不等人工結案。不認得的資料不碰、不回報。
 
 ## P-815．格式驗收〔P-007〕
 
-[範例](examples/kernel-tasks/) 依同名前綴驗 schema。反例涵蓋 members 夾 once、批次／窗口為零、相對路由、設定狀態錯型、boot 非字串、零序號、applied 非布林、虛構自動重試狀態、把缺量當零、unknown 負數、task 自設 user。
+[範例](examples/kernel-tasks/) 依同名前綴驗 schema。反例涵蓋 members 夾 once、批次／窗口為零、相對路由、設定狀態錯型、boot 非字串、零序號、applied 非布林、未知工作階段、把缺量當零、unknown 負數、task 自設 user。
 
 正例全過、反例全拒；`bash wf/tools/wf-lint.sh proto6` broken=0。格式不代替授權、跨檔配對、重啟與實際 HTTP 驗收。

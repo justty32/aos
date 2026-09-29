@@ -9,10 +9,8 @@
         "issue_id": "helper-1",
         "reason": "helper_unavailable",
         "message": "helper 已消失。",
-        "actions": [
-          "inspect_helper"
-        ],
-        "status": "open"
+        "status": "open",
+        "suggestion": "檢查 helper 消失的原因，處理完後標記 done。"
       }
     ],
     "next_after": null

@@ -2,7 +2,7 @@
   "version": 1,
   "request_id": "w1",
   "seq": 1,
-  "phase": "retry_unknown",
+  "phase": "invalid",
   "boot_id": "boot-1",
   "work_dir": "/srv/aos/top/.aos/jobs/attempt-1",
   "finished_at_ms": null

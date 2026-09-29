@@ -4,12 +4,10 @@
   "issue_id": "config-1",
   "reason": "config_invalid",
   "message": "請執行這段指令。",
-  "actions": [
-    "recheck"
-  ],
   "argv": [
     "sh",
     "-c",
     "echo unsafe"
-  ]
+  ],
+  "suggestion": "修好設定後執行 aos kernel config check /srv/aos/team；確認正常再標記 done。"
 }

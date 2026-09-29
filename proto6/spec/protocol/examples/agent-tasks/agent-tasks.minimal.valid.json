@@ -17,6 +17,23 @@
       "stderr": {
         "$opt": "inherit"
       }
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-clean",
+        "--config",
+        "config/clean.json"
+      ],
+      "id": "clean",
+      "kind": "custom",
+      "needs": [],
+      "stderr": {
+        "$opt": "inherit"
+      }
     }
   ]
 }

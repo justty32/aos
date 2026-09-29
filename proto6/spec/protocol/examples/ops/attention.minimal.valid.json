@@ -4,7 +4,5 @@
   "issue_id": "config-1",
   "reason": "config_invalid",
   "message": "設定已修好，等待重新驗證。",
-  "actions": [
-    "recheck"
-  ]
+  "suggestion": "修好設定後執行 aos kernel config check /srv/aos/team；確認正常再標記 done。"
 }

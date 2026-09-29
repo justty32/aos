@@ -70,19 +70,19 @@ agent 只按設定的一個 node 位址投 `llm.chat`，結果回 agent 的收�
 
 〔建議預設，未拍板〕配額 `llm` 是陣列，每項只有 `pool_id`（共用 `ID`）與 `concurrent_requests`（非負整數）；零表示不放行新請求。同檔不可重複 pool_id。這個 ID 是**配置該份額之 kernel 的路由名**，由 `config/llm-routes.json` 唯一對到下一個 node 與下一個 pool；本地終點才對到 [work P-405](work.md) 的 pools[].id。不把兩個 node 的同名池當同池，也不讓 agent 指定 endpoint 或 key。路由、授權及回件對照的格式只在 kernel 任務篇定。
 
-用量 `llm` 每項是 `pool_id`、`active_requests`、`unknown_requests`；後兩者非負且**分開計數**。前者是已知仍占用的請求；後者是遠端執行／占用不明的請求，不能自動歸零。沒有明訂到期釋放估計占用的政策時，兩者合計占用份額；有此政策仍須保留 unknown 計數與證據，沿 [S-304](../scheduling/llm.md)。
+用量 `llm` 每項是 `pool_id`、`active_requests`、`unknown_requests`；後兩者非負且**分開計數**。前者是已知仍占用的請求；後者是遠端執行／占用不明的請求，兩者合計占用份額；unknown 的估計占用隨 [P-606](ops.md) 定期清理移除，不表示遠端已停止。
 
 本篇只編碼並行份額；provider usage、429 與 unknown 沿 [S-301～S-304](../scheduling/llm.md)及 work 篇。共享 quota_scope 的最小窗口設定及 `state/llm/pool-status.json` 由 [kernel 任務篇 P-811](kernel-tasks.md) 定；`aos llm pool usage` 讀同一已提交版本，顯示並行占用、unknown、最近 429 及冷卻時間。狀態是該池 node 的觀測，讀不到或過時就明說；不同 node 的同名 quota_scope 不會自動共享計數，共用 provider 限制必須匯到同一管池 node。
 
 〔使用者方向 2026-09-29〕下層未裝不再細分，父額度及池限制仍有效；key 不進本篇檔案、argv 或給 node 的環境，帳號與 key 保護只見 [work P-405](work.md)。
 
-**驗收：**同一份 agent 請求可經自己的 kernel 轉交或直接交 LLM kernel，wire 格式不變；轉交不能靠改 pool 名跳過份額；unknown 不自動釋放，兩個共用 scope 的池在 429 後一起冷卻。
+**驗收：**同一份 agent 請求可經自己的 kernel 轉交或直接交 LLM kernel，wire 格式不變；轉交不能靠改 pool 名跳過份額；兩個共用 scope 的池在 429 後一起冷卻。
 
 ## P-506．磁碟與網路〔使用者方向 2026-09-29〕
 
 磁碟額度只記帳，不是硬限制或隔離承諾；不綁檔案系統。網路 module 可不裝；**首版只記用量、不做硬限速**，要求硬限速的部署明確報不支援（第十一批）；只承諾已裝且實際可用的能力，沿 [S-203](../scheduling/admission.md)。
 
-〔建議預設，未拍板〕配額 `disk.bytes` 是非負的記帳額度。用量 `disk` 是 `{path, bytes}` 陣列，列出實際盤點的絕對路徑與磁碟配置 bytes；`path` 含其可觀測子樹，列入的範圍不得重疊或重複計同一資料。是否含 git 歷史、封存或外部 workspace，依列出的範圍與實際讀取權限判定，不聲稱涵蓋全機。同一份摘要依 `(st_dev,st_ino)` 去重 hardlink、以配置區塊量計 bytes；reflink／跨 node 共用實體區塊不承諾精確去重。量不到完整範圍就不報完整值、另留診斷；移出工作樹不等於釋放 git 歷史，沿 [B-304](../base/identity-resources.md)及 [B-404](../base/storage.md)。
+〔建議預設，未拍板〕配額 `disk.bytes` 是非負的記帳額度。用量 `disk` 是 `{path, bytes}` 陣列，列出實際盤點的絕對路徑與磁碟配置 bytes；`path` 含其可觀測子樹，列入的範圍不得重疊或重複計同一資料。是否含 git 歷史、封存或外部 workspace，依列出的範圍與實際讀取權限判定，不聲稱涵蓋全機。同一份摘要依 `(st_dev,st_ino)` 去重 hardlink、以配置區塊量計 bytes；reflink／跨 node 共用實體區塊不承諾精確去重。量不到完整範圍就不報完整值、另留診斷，沿 [B-304](../base/identity-resources.md)。
 
 〔建議預設，未拍板〕用量 `network` 是 `{scope, rx_bytes, tx_bytes}` 陣列；`scope` 明寫量測邊界與計數起點（例如介面／namespace／本次計數器期間），bytes 是該 scope 的累積觀測值。計數器重置就換 scope，不能把負差值當用量；範圍重疊不相加，不能把 host 介面總量冒認為某 node 用量。首版只定可觀測摘要，**不定網路配額欄位與限速 backend**；需要硬限制的部署，在 backend 與授權尚未定義／不可用時應停止相關新工作並報出缺口，不假裝已限制。
 
