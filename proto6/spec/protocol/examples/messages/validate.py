@@ -4,7 +4,9 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from jsonschema import Draft202012Validator, RefResolver
+from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 EXAMPLES = Path(__file__).resolve().parent.parent
 SCHEMAS = EXAMPLES.parent / 'schemas'
@@ -56,12 +58,14 @@ def schema_name(path):
 
 def main():
     schemas = {p.stem.removesuffix('.schema'): load(p) for p in SCHEMAS.glob('*.json')}
+    # schema 沒有 $id，$ref 是相對檔名（如 ops-attention.schema.json）；以檔名登記。
+    registry = Registry().with_resources(
+        (n + '.schema.json', Resource.from_contents(b, DRAFT202012))
+        for n, b in schemas.items())
     validators = {}
     for name, body in schemas.items():
         Draft202012Validator.check_schema(body)
-        validators[name] = Draft202012Validator(
-            body, resolver=RefResolver(
-                base_uri=(SCHEMAS / (name + '.schema.json')).as_uri(), referrer=body))
+        validators[name] = Draft202012Validator(body, registry=registry)
     counts, failures = Counter(), []
     for path in sorted(EXAMPLES.rglob('*.json')):
         validator = validators[schema_name(path)]
