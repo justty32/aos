@@ -101,7 +101,7 @@ RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身�
 合法工具按 calls 順序建材料：
 
 - `tools.target_node` 是 node id：用 `kernel.work.submit`，params.argv 對應 `aos kernel work submit`，業務 JSON 經 stdin，交 tick 投到該 kernel。
-- `tools.target_node=null`：agent 先提交工作材料，下一格以自己的可信 parent_id 向 daemon 登記 `.aos/jobs/<attempt_id>/` 裡的 once、wake，自己記用量；kernel 用用量收集 module 讀。
+- `tools.target_node=null`：agent 先提交工作材料，下一格以自己的可信 parent_id 向 daemon 登記 `.aos/jobs/<attempt_id>/` 裡的 once、wake，自己記用量；kernel 用用量收集 module 讀。〔使用者方向 2026-09-29，第十七批〕這種 agent 自己開的 once 做完，**aos 不主動叫醒 agent**；由 agent 自己（下次被叫醒或定期 tick 時）去看 result.json／`.err`。
 
 兩路都沿 P-402／P-404，結果下格收，不讓工具自選資源歸屬。模型文字可作 progress，無字則寫正在用哪些工具。工具全回後按 calls 順序寫結果、預覽及引用，再問 LLM；確定失敗可交模型判斷，unknown 停新副作用並記事項，不因改設定重跑。
 

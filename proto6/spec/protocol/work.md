@@ -2,7 +2,7 @@
 
 ← [共用約定與分工](README.md)｜[工作材料](../base/work.md)｜[LLM 代發](llm-work.md)｜[LLM 池](../scheduling/llm.md)
 
-LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 [llm-work](llm-work.md)；本篇其餘條號不變。
+LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 [llm-work](llm-work.md)；本篇其餘條號不變。取消工作是 P-411（第十七批新增）。
 
 ## P-400．兩個入口〔使用者方向 2026-09-29〕
 
@@ -75,6 +75,22 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 結果不明的工作保持 unknown，沒人處理就隨定期清理清掉，不自動重做。合成 unknown 結果時缺失欄位填 null；已發布 RPC 回應不覆寫。
 
 拒收沿 P-005：參數錯 -32602；業務錯 -32000，data.code 可為 work_not_authorized、input_unreadable、capacity_unavailable、pool_not_found、model_not_found、key_unavailable。只在能確認尚未接納的暫時容量／讀取問題才可 retryable:true；接納後的失敗回結果。配對錯或衝突留原件及事項，不夾 key／認證標頭。
+
+## P-411．取消工作〔使用者方向 2026-09-29，第十七批〕
+
+取消用檔案請求 `work.cancel`（`aos work cancel`），投到**持有那件工作的 node** 的 `requests/`；例如 kernel 代跑的工具就投那個 kernel，範本裡由 work 任務宣告處理（[node P-202](node.md)）。stdin 是 [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) 的 `{request_id}`，指原請求（例如 `kernel.work.submit`）的 RPC id。
+
+**權限**：取消請求檔（`requests/<id>.json`）的擁有 UID，必須等於原請求檔的擁有 UID，或等於該 node 的擁有者（node 根目錄的擁有 UID）；否則回 -32000、`data.code` 為 `cancel_not_authorized`，丟掉這份取消請求，原工作不受影響。原請求檔消費後會被刪，所以接件時就把它的擁有 UID 記進工作狀態（kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`）。檔案擁有者只是 OS 事實，不證明是哪個 node，同 UID 的界線照 [messages P-303](messages.md)。找不到這個 request_id 的工作回 `work_not_found`。
+
+**怎麼取消**：
+
+- 還在排隊（還沒建 launch-started）：直接拿掉，原請求回 `canceled`／reason `canceled`、`started:false` 的結果，不開 once。
+- 在跑（已建 launch-started）：node 把工作記成 `canceling`，請 daemon 對那個 once 做 `node.unregister`（[daemon P-105](daemon.md)：TERM、寬限、`cgroup.kill`、確認全空）；全空後原請求回 canceled。收尾競態照 [B-203](../base/execution.md)：已有完整結果檔就照原結果回，不改成 canceled；確認不了全空就 unknown。
+- 已經結束或已回過結果：不動。
+
+三種情況 work.cancel 本身都回 `{"accepted":true}`，只表示收下，不等於已取消；終局看原請求的回應。取消不撤銷工作已造成的外部效果。LLM 請求與 agent 自跑的 once 由持有它的 node 照同一規則處理；範本目前只有 kernel 的 work 任務宣告 work.cancel。
+
+**驗收：**UID 不同、也不是 node 擁有者送的取消回 cancel_not_authorized，原工作照跑；排隊中的被拿掉、不會開 once；在跑的被殺、全空後原請求回 canceled；結果已發布後才到的取消不改結果。
 
 ## P-408．程式契約〔建議預設，未拍板〕
 

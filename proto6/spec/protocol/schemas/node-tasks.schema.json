@@ -80,6 +80,14 @@
             "$ref": "common.schema.json#/$defs/ID"
           },
           "uniqueItems": true
+        },
+        "methods": {
+          "description": "本任務處理的檔案請求 method（P-202）；同一 method 不能由兩項任務宣告，跨項唯一性由 tick 驗。",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Method"
+          }
         }
       },
       "allOf": [
@@ -92,6 +100,10 @@
           "user"
         ]
       }
+    },
+    "Method": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*(?:\\.[a-z][a-z0-9_-]*)+$(?![\\s\\S])"
     }
   }
 }

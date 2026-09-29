@@ -2,7 +2,7 @@
   "jsonrpc": "2.0",
   "id": "query-1",
   "result": {
-    "node_id": "/srv/aos/team/member/.aos/jobs/job-1/inst.json",
+    "node_id": "/srv/aos/team/member/.aos/jobs/640b231841e0290f-attempt-1/inst.json",
     "parent_id": "/srv/aos/team",
     "identity_grant": [
       1000

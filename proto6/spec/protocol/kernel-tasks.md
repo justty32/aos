@@ -50,6 +50,8 @@ sync 讀清單、`state/kernel/sync.json`（[schema](schemas/kernel-sync-state.s
 
 首格分批掃，平常處理到期、bootstrap 與 `kernel.schedule.recheck`；每 scan_interval_ms 補查最多 scan_batch_limit 個，按短名、scan_after 游標輪流，不讀 history。recheck 的 argv 對應 `aos kernel schedule recheck`，執行結果放待送區交 tick。缺摘要不當 idle，依收件／bootstrap 判斷並記事項。
 
+〔使用者方向 2026-09-29，第十七批〕**給 kernel 的一般回話（`agent.say`）也由這個任務收**：原件照 P-800 複製到 `state/messages/requests/<id>.json`，另寫一筆 `state/kernel/history/<id>.json`（形狀沿 [agent-history](schemas/agent-history.schema.json)，input_id 是這則 agent.say 的 id，seq 在鎖內遞增），指令 stdout `{"accepted":true}` 當確認回件，交 tick 投出、清原件。不裝 LLM、不建待處理輸入；帶 `in_reply_to` 的也只記錄、不再回話（[P-705](agent-tasks.md)）。
+
 有收件、summary.ready、due 到期或 bootstrap 才 ready；新 ready 配遞增 ready_seq，按序選不超 max_active_members 者。paused／stopping 不 wake，running／pending 不重複叫。記 wake 當時的 last_tick，等新格完成再用摘要，避免舊 ready 反覆叫醒；IPC 成功但提交失敗，下格查 daemon 合併判斷。
 
 同組寫 `.aos/summary/summary.json`；ready 表示本地可推進，due_ms 取最近重試／掃描／冷卻，只有等待結果則 false。tick 提交後發布 `.aos/summary/published.json`，上層只開摘要權時讀此檔；沒有另列發布任務。
@@ -69,7 +71,7 @@ aos-kernel-check [--node N]
 aos-kernel-check [--node N] --validate-only
 ```
 
-人手 `aos kernel config check N`。直接讀 inst／tasks 及已裝 module 的 config，驗 schema、引用、重名、父額度、路由與池；不發 HTTP、不起 once、不 resume。validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫；0 合法、2 不合法、125 讀不到。
+人手 `aos kernel config check N`。直接讀 inst／tasks 及已裝 module 的 config，驗 schema、引用、重名、父額度、路由與池；不發 HTTP、不起 once、不 resume。validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫；0 合法、2 不合法、125 讀不到。〔使用者方向 2026-09-29，第十七批〕**一般 check 只要跑完、把問題寫進下述 config-state 就回 0**，設定有問題也是 0（問題看 issues）；只有檢查自己跑不起來才非 0：用法錯 2、鎖忙 75、讀不到或前置不符 125、問題紀錄寫不出 1。validate-only 不寫紀錄，照舊用 0／2 告訴持鎖的 caller（例如 [P-210](node.md) 的 resume）能不能採用。
 
 一般 check 寫 `state/kernel/config-state.json`（[schema](schemas/kernel-config-state.schema.json)）的 issues：path、issue_id、resolved。設定無效就停依賴它的新工作，仍收已派結果；成員單項錯只隔離那項。〔使用者方向 2026-09-29，第十六批〕**check 失敗不擋收結果**：任務表裡沒有任務以 `needs` 依賴 check（見 P-814），收已派結果的 work／forward／pool 照跑；要不要派新工作由各任務自己驗所用設定決定。修好後重驗、提交設定狀態；人或 agent 確認修好後用 `aos attend done N ID` 標完成。
 
@@ -81,7 +83,7 @@ aos-kernel-check [--node N] --validate-only
 
 額度不足 queued；可派者 prepared。**本格新建的材料只提交；下一格才讀已提交 prepared**，在 `.aos/jobs/<attempt_id>/` 建 once inst，以可信 parent_id=發起成員登記再 wake。結果或 `<inst>.err` 後格讀，核對 request／node／job／attempt，生成 work-result 放指令 stdout，外層 RPC 指令結果交 tick 投回。
 
-kernel.json 記 request_id、seq、phase、boot_id、work_dir、完成時間，不重存請求。phase 是工作進度，不是任務拆分。輸出只給路徑；投遞失敗不重開工具，額度歸發起成員。
+kernel.json 記 request_id、submitter_uid、seq、phase、boot_id、work_dir、完成時間，不重存請求。〔使用者方向 2026-09-29，第十七批〕同一 module 也接 `work.cancel`（[work P-411](work.md)）：`submitter_uid` 是接件時原請求檔的擁有 UID，供取消核權；排隊中的直接記完成並回 canceled，在跑的記 `canceling`、以 `node.unregister` 請 daemon 殺掉那個 once，全空後回 canceled。phase 是工作進度，不是任務拆分。輸出只給路徑；投遞失敗不重開工具，額度歸發起成員。
 
 ## P-807．中斷與恢復〔B-603、P-104／110、C-03；工程預設〕
 
@@ -155,19 +157,19 @@ aos node new /srv/aos/top --template kernel --user 1000 --socket /run/user/1000/
 
 建立普通 git node、初始 commit、requests／responses／work／public／`.aos/jobs/`／`.aos/attention/`，不覆蓋既有目標、不試 HTTP。[完整 JSON](examples/kernel-tasks/kernel-template.minimal.valid.json) 與 [schema](schemas/kernel-template.schema.json) 的 files 是實際產物，不另存 template 容器；包括 `.aos/inst.json`、`.aos/tasks.json`、設定與 gitignore。
 
-任務表共 **9 項**，每項是 inst（含 `_metainfo`，不填 user）加 id／kind／needs；group 省略、各自一組。外層 `_metainfo` 是 aos-tasks 第 1 版。
+任務表共 **9 項**，每項是 inst（含 `_metainfo`，不填 user）加 id／kind／needs／methods；group 省略、各自一組。外層 `_metainfo` 是 aos-tasks 第 1 版。〔使用者方向 2026-09-29，第十七批〕`methods` 是該任務處理的檔案請求（[node P-202](node.md)）；下表沒列 method 的任務不收請求，別人投來沒人宣告的 method 由 tick 回 -32601。
 
-| id | kind | 程式（cwd 為 node 根） | needs |
-|---|---|---|---|
-| check | system | aos-kernel-check | 無 |
-| members | kernel | aos-kernel-members sync | 無 |
-| resources | kernel | aos-kernel-resources | members |
-| work | kernel | aos-kernel-work | resources |
-| forward | kernel | aos-kernel-llm-forward | resources |
-| pool | kernel | aos-llm --config config/llm-pools.json | forward |
-| usage | kernel | aos-kernel-usage-collect | 無 |
-| schedule | kernel | aos-kernel-schedule | members、resources |
-| clean | custom | aos-clean --config config/clean.json | 無 |
+| id | kind | 程式（cwd 為 node 根） | needs | methods |
+|---|---|---|---|---|
+| check | system | aos-kernel-check | 無 | 無 |
+| members | kernel | aos-kernel-members sync | 無 | 無 |
+| resources | kernel | aos-kernel-resources | members | kernel.quota.set、kernel.usage.measure |
+| work | kernel | aos-kernel-work | resources | kernel.work.submit、work.cancel |
+| forward | kernel | aos-kernel-llm-forward | resources | llm.chat |
+| pool | kernel | aos-llm --config config/llm-pools.json | forward | 無（讀 forward 已接納的材料） |
+| usage | kernel | aos-kernel-usage-collect | 無 | 無 |
+| schedule | kernel | aos-kernel-schedule | members、resources | kernel.schedule.recheck、agent.say |
+| clean | custom | aos-clean --config config/clean.json | 無 | 無 |
 
 〔使用者方向 2026-09-29，第十六批〕check 不當任何任務的前置：設定檢查失敗時，收已派結果的任務仍要跑（P-805）。範本 task 用 `stderr:{"$opt":"inherit"}` 讓診斷交 tick。沒有本地池可刪 pool／池設定；全體轉交可移除 usage，連帶維護 needs。agent 範本有 agent 與 clean 兩項。清理間隔在 config/clean.json，預設一天，由 aos-clean 自己記時間。
 

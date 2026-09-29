@@ -60,24 +60,25 @@ responses/<id>.json  # RpcResponse
 
 ## P-306．method 就是指令〔使用者方向 2026-09-29〕
 
-檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，表示「在你那裡跑這條指令」。指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致，而且是收件 node 開放的命令；否則 -32601。envs、指示詞與 stdin 路徑照 inst，借權讀檔或換程式的風險由使用者承擔。接件執行該命令的本地動作，不再投同一份 RPC。
+檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，表示「在你那裡跑這條指令」。指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致，而且是收件 node 開放的命令；否則 -32601。〔使用者方向 2026-09-29，第十七批〕**「開放」由任務表決定**：收件 node 的 `.aos/tasks.json` 裡，各任務用 `methods` 宣告自己處理哪些 method（[node P-202](node.md)）；沒有任何任務宣告的 method，由 tick 開格時直接回 -32601、丟掉原件，不交給任何任務。有宣告的由那項任務讀件，argv 不符同樣回 -32601。envs、指示詞與 stdin 路徑照 inst，借權讀檔或換程式的風險由使用者承擔。接件執行該命令的本地動作，不再投同一份 RPC。
 
 有業務資料的命令從 stdin 讀一份 JSON；inst.stdin 是收件者可讀的絕對檔案路徑，不是 JSON 內容。發件者將資料隨請求固定並保留至消費完成；收件者用自己的權限開檔。無資料的命令省略 stdin。需要結果的串流用 `{"$opt":"inherit"}`，由接件執行器捕獲；其餘串流規則沿 inst。輸入形狀與 argv 的一致性須在展開及讀檔後另驗，schema 不代替開放命令檢查。
 
 | method／完整命令 | stdin JSON／本地動作與 stdout |
 |---|---|
-| `agent.say`／`aos agent say` | `{text,attachments?,in_reply_to?}`；text 非空、attachments 為絕對檔案路徑陣列。一律收進 history，stdout `{"accepted":true}`；回話也是新 ID 的 agent.say，以 in_reply_to 指原句 id。〔使用者方向 2026-09-29，第十六批〕帶 in_reply_to 的只記錄，不觸發 LLM、不再回話（[P-705](agent-tasks.md)）。 |
+| `agent.say`／`aos agent say` | `{text,attachments?,in_reply_to?}`；text 非空、attachments 為絕對檔案路徑陣列。一律收進 history，stdout `{"accepted":true}`；回話也是新 ID 的 agent.say，以 in_reply_to 指原句 id。〔使用者方向 2026-09-29，第十六批〕帶 in_reply_to 的只記錄，不觸發 LLM、不再回話（[P-705](agent-tasks.md)）。〔第十七批〕投給 kernel 的 agent.say 由 kernel 範本現有的 schedule 任務處理：寫 kernel 的 history、回確認，不裝 LLM（[kernel P-803](kernel-tasks.md)）。 |
 | `kernel.schedule.recheck`／`aos kernel schedule recheck` | 無；核對 reply_to 指向的可信直接成員收件與摘要，重新判斷排程，stdout `{"accepted":true}`。不保證叫醒，也不改額度。 |
 | `kernel.quota.set`／`aos kernel quota set` | [res-quota](schemas/res-quota.schema.json)；投 quota.node_id 的可信父 kernel，只准父配置權 owner／祖先，核對 seq 與父額度、提交後 stdout `{"accepted":true}`。不代表 OS 已套用。 |
 | `kernel.usage.measure`／`aos kernel usage measure` | 無；由 owner／可信直接父要求重測，stdout 為 [res-usage](schemas/res-usage.schema.json)，不啟用缺席 module。 |
 | `kernel.work.submit`／`aos kernel work submit` | [work P-401](work.md) 工作材料；完成後 stdout 為內層工作的本地 work-result。 |
 | `llm.chat`／`aos llm chat` | [llm-work P-406](llm-work.md) LLM 材料；完成後 stdout 為本地 llm-result。 |
+| `work.cancel`／`aos work cancel` | [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) `{request_id}`，指要取消的原請求 RPC id；投給持有那件工作的 node。〔第十七批〕核權後排隊的直接拿掉、在跑的請 daemon 殺掉，stdout `{"accepted":true}`；原工作的結果照舊由原請求的回應帶回（[work P-411](work.md)）。 |
 
-全部回應用 [work-result](schemas/work-result.schema.json)；最後兩條由 module 跨格接續，業務結果回來才完成命令；tick 不等待工具或 HTTP，也不先用 ACK 占住 RPC id。摘要查詢直接讀 P-307，不開 tick。kernel 範本也保存自己送出命令的回應及收到的正式回覆，由 tick 投確認、清原件，不必裝 LLM。
+全部回應用 [work-result](schemas/work-result.schema.json)；`kernel.work.submit`、`llm.chat` 由 module 跨格接續，業務結果回來才完成命令；tick 不等待工具或 HTTP，也不先用 ACK 占住 RPC id。摘要查詢直接讀 P-307，不開 tick。kernel 範本也保存自己送出命令的回應；〔使用者方向 2026-09-29，第十七批〕收到的一般回話（`agent.say`）交給 kernel 現有的收件任務（範本裡是 schedule）處理：寫進 kernel 的 history、回 `{"accepted":true}` 確認，由 tick 投確認、清原件，不必裝 LLM；帶 in_reply_to 的同樣只記錄、不再回話。
 
-授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：不開放／命令不符 -32601，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict` 或 `resource_observation_failed`。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址只留本地診斷。
+授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：不開放／命令不符 -32601，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict`、`resource_observation_failed`，或 work.cancel 的 `cancel_not_authorized`、`work_not_found`（[work P-411](work.md)）。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址只留本地診斷。
 
-**驗收：**argv 少了 aos、和 method 不符或未開放都回 -32601；listen 只讀 history，不開模型；RPC 收件確認不再引發回話。
+**驗收：**argv 少了 aos、和 method 不符或未開放都回 -32601；任務表沒有任務宣告的 method 由 tick 回 -32601，任何任務都沒讀到它；listen 只讀 history，不開模型；RPC 收件確認不再引發回話。
 
 ## P-307．上層直接讀成員摘要〔建議預設，未拍板〕
 
@@ -89,7 +90,7 @@ responses/<id>.json  # RpcResponse
 
 ## P-308．schema 與最小範例〔建議預設，未拍板〕
 
-[範例](examples/messages/)涵蓋完整 inst、命令結果、各命令的輸入與摘要。缺回址、雙 result/error、命令不符、空文字、無效 in_reply_to、負配額／用量及布林 due 都拒絕；重送與同 ID 異 bytes 另依 P-304 驗行為。
+[範例](examples/messages/)涵蓋完整 inst、命令結果、各命令的輸入與摘要。缺回址、雙 result/error、命令不符、空文字、無效 in_reply_to、負配額／用量及布林 due 都拒絕；〔第十七批〕work.cancel 有[正例](examples/messages/work-cancel.minimal.valid.json)、[命令不符反例](examples/messages/work-cancel.mismatch.invalid.json)、[材料正例](examples/messages/work-cancel-payload.minimal.valid.json)／[空材料反例](examples/messages/work-cancel-payload.empty.invalid.json)與[沒權限的錯誤回應](examples/messages/work-cancel-error.denied.valid.json)；重送與同 ID 異 bytes 另依 P-304 驗行為。
 
 ## P-309．待決與跨篇
 

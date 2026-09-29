@@ -64,7 +64,7 @@
       "batch_limit": 64,
       "interval_seconds": 86400
     },
-    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/attention/\n/.aos/alarms/\n/.aos/summary/published.json\n/archive/\n",
+    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/runner-stderr.log\n/.aos/attention/\n/.aos/alarms/\n/.aos/summary/published.json\n/archive/\n",
     ".aos/tasks.json": {
       "_metainfo": {
         "_type": "aos-tasks",
@@ -117,7 +117,11 @@
           ],
           "stderr": {
             "$opt": "inherit"
-          }
+          },
+          "methods": [
+            "kernel.quota.set",
+            "kernel.usage.measure"
+          ]
         },
         {
           "_metainfo": {
@@ -134,7 +138,11 @@
           ],
           "stderr": {
             "$opt": "inherit"
-          }
+          },
+          "methods": [
+            "kernel.work.submit",
+            "work.cancel"
+          ]
         },
         {
           "_metainfo": {
@@ -151,7 +159,10 @@
           ],
           "stderr": {
             "$opt": "inherit"
-          }
+          },
+          "methods": [
+            "llm.chat"
+          ]
         },
         {
           "_metainfo": {
@@ -203,7 +214,11 @@
           ],
           "stderr": {
             "$opt": "inherit"
-          }
+          },
+          "methods": [
+            "kernel.schedule.recheck",
+            "agent.say"
+          ]
         },
         {
           "_metainfo": {

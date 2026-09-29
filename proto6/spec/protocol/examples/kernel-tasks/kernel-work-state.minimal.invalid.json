@@ -1,6 +1,7 @@
 {
   "version": 1,
   "request_id": "w1",
+  "submitter_uid": 1000,
   "seq": 1,
   "phase": "invalid",
   "boot_id": "boot-1",

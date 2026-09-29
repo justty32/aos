@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "work.cancel 的 stdin JSON（P-411）",
+  "description": "request_id 是要取消的原請求 RPC id（例如 kernel.work.submit），收件 node 以它找自己持有的工作。",
+  "type": "object",
+  "required": [
+    "request_id"
+  ],
+  "properties": {
+    "request_id": {
+      "$ref": "common.schema.json#/$defs/ID"
+    }
+  },
+  "additionalProperties": false
+}
