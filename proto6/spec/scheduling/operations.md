@@ -60,7 +60,8 @@ unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用�
 
 - **兩處**：node 事項放自己的 `.aos/attention/`（ignore、不隨 group 還原）。node 自己寫自己的問題；runner 沒開始、tick 壞掉自動停格（[B-607](../daemon.md)）、程序清不乾淨、任務表壞（[B-620](../tick.md)），由 daemon 或標準配備寫到該 node；〔第十九批〕標準配備本身不能跑、又沒有終端機可問時（沒全掛，[B-630](../tick.md)），標準配備寫 `reason:"standard_incomplete"`、`issue_id:"standard-incomplete"`，已有就不再寫；單檔掛載行程沿用 `.err`（[B-613](../daemon.md)）。寫不進去就不管，daemon 在 stdout 警告一行。helper 不見、state 存不下等 daemon 自己的事，走 `daemon.attention.ls/show/done`；`state_dir/attention/` 供重開接續。daemon 要寫的事項先放記憶體、批次寫出，寫完就清掉，重開不讀回（間隔見 [B-607](../daemon.md)）。
 - **內容**：每件事項有白話 `message`，可附 `suggestion`（建議處理文字，可含建議指令，不會自動執行）。事項永遠不帶 `argv`（禁止鍵，[C-07](../contracts.md)），也不夾憑證、key 或完整工作。
-- **ID**：同一個還沒解決的問題沿用同一個 `issue_id`，最新細節留在來源自己的狀態檔，不是每格另生一件；不同內容不覆蓋。標完成後再發生，用新 ID。設定檢查的問題照這條寫（`reason:"config_invalid"`，[P-609](../protocol/ops.md)）。
+- **ID**：同一個還沒解決的問題沿用同一個 `issue_id`，最新細節留在來源自己的狀態檔，不是每格另生一件；不同內容不覆蓋。標完成後再發生，用新 ID。設定檢查的問題照這條寫（`reason:"config_invalid"`，格式見 [P-609](../protocol/ops.md)）。
+- **設定錯了**〔第十九批依方案 A 由 P-609 搬來〕：設定檢查由用那份設定的來源程式負責（kernel 的 [P-805](../protocol/kernel-tasks.md)、agent 的 [A-102](../agent/configuration.md)），由它寫自己 node 的 `config_invalid` 事項，message 說檔案、欄位與原因，不夾設定全文或 key。設定錯只停依賴它的新工作，已派工作的結果照收、取消照處理（範本做法見 [S-205](admission.md)）。inst 身分或任務表錯則照 node／daemon 契約拒絕啟動：任務表壞到檢查任務跑不了時由標準配備寫事項（[B-620](../tick.md)），tick 自己停格時由 daemon 寫（[B-607](../daemon.md)）。
 - **保留**：標完成的留一段時間（預設 30 日），還被引用就留，清理依 [B-404](../base/storage.md)。
 
 `aos-attend` 只做三件事，用呼叫者自己的權限，不取得 N 的身分，不改工作結果、不提交 git；實際修理由人或 agent 自己下指令：

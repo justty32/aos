@@ -31,7 +31,7 @@ module 是 [node P-202～204](node.md) 的普通任務；範本的六類可各�
 
 [res-usage](schemas/res-usage.schema.json) 是子層的 `state/resources/` 用量：version:1、node_id、observed_at_ms、resources 必填，涵蓋 node 與受管子樹合計，含工具。只寫能量到的值，resources 可空，可含 kernel 自訂資源；上層不再重加子孫。缺項／讀不到／過時不是零（[S-207](../scheduling/admission.md)），過時門檻由 kernel 政策定。〔第十九批〕cgroup 走備援時，CPU、記憶體、pids 量不到總量，照缺項寫（[S-205](../scheduling/admission.md)）。
 
-摘要的同 commit 讀取與只開摘要權限的發布完全依 [messages P-307](messages.md)。改配額用 `kernel.quota.set`、要求重測用 `kernel.usage.measure`，參數、回應與授權只在 [messages P-306](messages.md) 定義；kernel.schedule.recheck 只重判排程。
+摘要的同 commit 讀取與只開摘要權限的發布依 [B-624](../tick.md) 與 [messages P-307](messages.md)。改配額用 `kernel.quota.set`、要求重測用 `kernel.usage.measure`，參數、回應與授權只在 [messages P-306](messages.md) 定義；kernel.schedule.recheck 只重判排程。
 
 〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕成員自記用量、kernel 只收集時，逐次用量檔是成員 [agent P-703](agent-tasks.md) 的 `state/agent/usage/<request_id>.json`，收集任務見 [P-810](kernel-tasks.md)；讀法、缺值與按原發起 node＋attempt 去重依 [S-207](../scheduling/admission.md)。本篇的資源摘要不取代逐次 usage 證據。
 
