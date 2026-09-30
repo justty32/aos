@@ -47,9 +47,21 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 | 名稱 | 用途 | 怎麼取得 / 設定 |
 |------|------|----------------|
 | vcpkg（`~/dev/vcpkg`）| C++ 相依（nlohmann、curl…）| 見上面流程第 1 步；`VCPKG_ROOT` 可選 |
-| codex CLI（`/usr/bin/codex`）| 隊員模型 `gpt-5.6-sol`；呼叫方式見 [dispatch](dispatch/README.md) | 已裝；需要的登入由使用者做 |
-| LM Studio（`localhost:1234`）| 本機真模型實測（OpenAI 相容端點）| 使用者開著才在；換模型前先 unload 舊的；並行實測取鎖見 [resources](resources.md) |
+| codex CLI（`/usr/bin/codex`）| 只剩 `gpt-6-astra` 能用（09-24 起）；呼叫與沙箱見 [aos-teams](dispatch/aos-teams.md) | 已裝；需要的登入由使用者做 |
+| LiteLLM 代理（`localhost:4000/v1`）| 真模型實測的預設端點，見下方「模型端點」| 使用者自己開；不用 api_key |
+| LM Studio（`localhost:1234`）| 本機真模型（吃 GPU）| 使用者開著才在；換模型前先 unload 舊的；並行實測取鎖見 [resources](resources.md) |
 | 外部 LLM 帳號（Claude OAuth 等）| T5 agent loop 真模型實測 | 要使用者登入 → [WAIT_USER](../WAIT_USER.md)；金鑰不進 repo |
+
+## 模型端點（2026-09-25 現況）
+
+
+**只走 LiteLLM `http://localhost:4000/v1`**。使用者 09-25 原話：「只許使用這個，想要啥模型都可以用，額度無上限，可以的話盡量用 codex／gpt 系；就是不能碰 LM Studio」。用之前先 `curl localhost:4000/v1/models` 看當下有哪些名字，強模型優先挑 gpt／codex 系。LiteLLM 沒開時才直連 `https://api.deepseek.com/v1`，金鑰只從環境變數 `DEEPSEEK_API_KEY` 讀，不印、不寫進檔。
+
+**GPU 是他的**：他常在打遊戲，不准碰 LM Studio、不准用 LiteLLM 上的 `ollama-*`（本機、吃 GPU）、不准 `lms load`。`deepseek-*`、gpt、claude 這些雲端的不吃 GPU。
+
+`deepseek-chat` 是別名，回應的 `model` 欄寫 `deepseek-flash`；任何「回應 model 要等於設定」的檢查都要對它放行。
+
+他明講可以用 LM Studio 時：一次只能載一顆，**換模型前先 `lms unload --all`**（VRAM 不夠會回看起來像端點壞掉的錯）；`lms ps` 看載了什麼（`/v1/models` 只代表下載了）；模型 id 用問的、不要猜。gemma 這類會先「想」的模型，想的字數算在 `max_tokens` 裡——冒煙測試不要設 `max_tokens`，要設就 1500 以上。
 
 需要帳號、付費、授權才能取得的：守鐵律 2（授權來源），並在 [WAIT_USER](../WAIT_USER.md) 記一行。
 

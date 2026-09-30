@@ -38,7 +38,7 @@
 
 ### 工人
 
-依任務難度／內容，加上**使用者給的 headcount**，開不同聰明程度的 agent。gpt-sol、gpt-terra、gpt-luna 這類便宜 AI **通常在這層大量使用**；本專案的隊員是 **codex CLI 的 `gpt-5.6-sol`**（2026-08-28 改制，不再開 Opus／Sonnet 隊員），工人**不 commit**。gpt-sol 自己再開 terra／luna **我們管不著**——它在那一層就是領導，這不算「領導不建議 gpt-sol」的例外；我們只告訴它**那邊能用多少資源**，頂多建議它開兩三個當助手。
+依任務難度／內容，加上**使用者給的 headcount**，開不同聰明程度的 agent。gpt-sol、gpt-terra、gpt-luna 這類便宜 AI **通常在這層大量使用**；本專案現況（09-24 起 codex 只剩 `gpt-6-astra`、09-30 起碰程式碼一律 Opus）見 [dispatch/aos-teams](dispatch/aos-teams.md)，工人**不 commit**。gpt-sol 自己再開 terra／luna **我們管不著**——它在那一層就是領導，這不算「領導不建議 gpt-sol」的例外；我們只告訴它**那邊能用多少資源**，頂多建議它開兩三個當助手。
 
 ## 二、聰明度分級（總分）
 

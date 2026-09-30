@@ -12,6 +12,7 @@ aos = **一個 monorepo：只有一支執行檔 `aos`，靠子命令把陸續長
 - **碰原始碼前** → 慣例與 code map：[conventions](wf/workflows/common/conventions.md)、[code-map](wf/workflows/common/code-map.md)（哪個檔負責什麼，改東西之前先看這張圖）；環境與指令 → [dev-env](wf/workflows/dev-env.md)。
 - **要開 agent 團隊、決定各層派哪級模型** → [team-model](wf/workflows/team-model.md)。
 - 使用者偏好與確認邊界 → [common/user.md](wf/workflows/common/user.md)。
+- **不寫 Claude Code 自動記憶**（使用者 2026-09-30 定）：值得留下的東西一律寫進 `wf/` 對應的檔，記憶資料夾只留一句指回這裡。
 
 > **本專案採「非侵入式」佈局**：頂層只留 `AGENTS.md` 與 `CLAUDE.md` 兩個入口，工作流的其餘檔案（含 `wf/inbox/` 放信處與 `wf/tools/` 檢查／inbox 腳本）全部收在 [`wf/`](wf/) 裡，不去弄亂原本的 C++ 專案結構。唯一的例外是 `.claude/commands/`——slash 指令（[`/wf-tick`](.claude/commands/wf-tick.md)、[`/wf-lint`](.claude/commands/wf-lint.md)）只有放在那裡才會被讀到，但它是隱藏資料夾，不影響觀感。
 
