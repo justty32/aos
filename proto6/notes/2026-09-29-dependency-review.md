@@ -9,7 +9,7 @@
 ## 決定（第十四批與追加，已落進 spec）
 
 - **Python 盡量只用標準庫**；唯一例外是執行期驗工具參數用第三方 `jsonschema`（不自寫子集）。
-- **cgroup v2 是必要依賴。** 殺乾淨整個程序樹、重啟先全殺都靠它。
+- **cgroup v2 是必要依賴。** 殺乾淨整個程序樹、重啟先全殺都靠它。（第十九批起屬標準配備的一部分、不屬 tick 核心，見[第十九批](verdicts/10-tick-minimal-core.md)。）
 - **quota、systemd 都是可選**：有就用，沒有就用 aos 自帶的土方法（磁碟用量定期掃資料夾；程序由 daemon 自己管）。**初版不用 systemd**；以前「交給 systemd」的做法都改讀成「有 systemd 時的做法」。
 - **沒有 systemd 的 Linux 也要能跑**，降級執行，不在啟動時拒絕。
 - **多帳號交接首版只用群組＋setgid**，不用 ACL；**tmpfs 首版拿掉**。
