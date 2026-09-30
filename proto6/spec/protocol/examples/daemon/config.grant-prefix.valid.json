@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "socket_path": "/run/aos/daemon.sock",
+  "state_dir": "/srv/aos/daemon-state",
+  "common_user": "aos-daemon",
+  "stop_mode": "drain",
+  "drain_timeout_ms": 900000,
+  "kill_escape_cgroups": false,
+  "once_diag_max": 2048,
+  "once_diag_ttl_ms": 43200000,
+  "roots": [
+    {
+      "node_id": "/srv/aos/team",
+      "identity_grant": [
+        "aos-daemon",
+        {
+          "prefix": "aos-"
+        },
+        {
+          "uid_min": 20000,
+          "uid_max": 29999
+        }
+      ],
+      "provision": {
+        "actions": [
+          "account_create",
+          "cgroup_create",
+          "cgroup_limits",
+          "cgroup_delegate",
+          "group_create",
+          "group_add_member",
+          "chgrp"
+        ],
+        "paths": [
+          "/srv/aos/team"
+        ],
+        "groups": [
+          {
+            "prefix": "aos-"
+          }
+        ]
+      }
+    }
+  ],
+  "x_note": "不認得的欄位忽略，啟動與熱重載時印出名字（C-07）"
+}

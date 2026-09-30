@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "method": "node.register",
+  "params": {
+    "node_id": "/srv/aos/team/member",
+    "parent_id": "/srv/aos/team",
+    "identity_grant": [
+      {
+        "prefix": "aos-team-"
+      }
+    ],
+    "interval_ms": 60000
+  }
+}

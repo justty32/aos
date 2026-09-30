@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/team/member",
+  "seq": 2,
+  "resources": {
+    "memory": {
+      "bytes": 1073741824
+    },
+    "review.hours": {
+      "per_day": 2
+    }
+  }
+}

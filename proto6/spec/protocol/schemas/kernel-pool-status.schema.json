@@ -69,8 +69,7 @@
           "window_estimated_tokens",
           "last_429_at_ms",
           "cooldown_until_ms"
-        ],
-        "additionalProperties": false
+        ]
       }
     },
     "pools": {
@@ -98,8 +97,7 @@
           "quota_scope",
           "active_requests",
           "unknown_requests"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },
@@ -109,6 +107,5 @@
     "observed_at_ms",
     "scopes",
     "pools"
-  ],
-  "additionalProperties": false
+  ]
 }

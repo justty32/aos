@@ -51,8 +51,7 @@
                 "node_id",
                 "via_node",
                 "via_uid"
-              ],
-              "additionalProperties": false
+              ]
             }
           }
         },
@@ -62,14 +61,12 @@
           "next_node",
           "next_pool",
           "allowed_origins"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },
   "required": [
     "version",
     "routes"
-  ],
-  "additionalProperties": false
+  ]
 }

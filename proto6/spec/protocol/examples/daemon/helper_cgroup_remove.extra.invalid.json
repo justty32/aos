@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "method": "daemon.helper.cgroup_remove",
+  "params": {
+    "path": "/sys/fs/cgroup/aos/n-d20539a311399b5e/n-640b231841e0290f",
+    "recursive": true
+  }
+}

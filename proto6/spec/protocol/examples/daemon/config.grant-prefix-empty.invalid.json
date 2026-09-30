@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "socket_path": "/run/aos/daemon.sock",
+  "state_dir": "/srv/aos/daemon-state",
+  "common_user": "aos-daemon",
+  "roots": [
+    {
+      "node_id": "/srv/aos/team",
+      "identity_grant": [
+        {
+          "prefix": ""
+        }
+      ]
+    }
+  ]
+}

@@ -27,7 +27,7 @@
       "maximum": 9007199254740991
     },
     "error": {
-      "$ref": "common.schema.json#/$defs/Error"
+      "$ref": "common.schema.json#/$defs/ErrorOpen"
     }
   },
   "required": [
@@ -37,7 +37,6 @@
     "archived_items",
     "deleted_items"
   ],
-  "additionalProperties": false,
   "allOf": [
     {
       "if": {

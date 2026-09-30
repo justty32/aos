@@ -22,6 +22,5 @@
     "version",
     "target_node",
     "message"
-  ],
-  "additionalProperties": false
+  ]
 }

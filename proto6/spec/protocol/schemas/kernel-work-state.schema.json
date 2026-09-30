@@ -14,6 +14,15 @@
       "type": "integer",
       "minimum": 0
     },
+    "attempt_allocator": {
+      "description": "配出這個 attempt_id 的 node（工作目錄前綴的來源，P-402）；LLM 池限流重試由池配 ID 時是池 node。省略表示就是工作材料的 node_id。",
+      "$ref": "common.schema.json#/$defs/NodeId"
+    },
+    "owner_exec_uid": {
+      "description": "接件時記下的本 node inst 執行帳號 UID；取消核權的第二種主人（B-203）。once 自己 inst 的 user 不算。",
+      "type": "integer",
+      "minimum": 0
+    },
     "seq": {
       "type": "integer",
       "minimum": 1
@@ -78,7 +87,7 @@
         "reserved_at_ms",
         "retry_at_ms"
       ],
-      "additionalProperties": false
+      "description": "LLM 工作才有，由 pool 任務維護的預留（P-811）。"
     }
   },
   "required": [
@@ -90,6 +99,5 @@
     "boot_id",
     "work_dir",
     "finished_at_ms"
-  ],
-  "additionalProperties": false
+  ]
 }

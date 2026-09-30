@@ -1,0 +1,233 @@
+{
+  "version": 1,
+  "node_id": "/srv/aos/top",
+  "files": {
+    ".aos/inst.json": {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "user": 1000,
+      "argv": [
+        "aos-tick"
+      ],
+      "stderr": {
+        "$opt": "inherit"
+      }
+    },
+    "config/kernel.json": {
+      "version": 1,
+      "daemon_socket": "/run/user/1000/aos.sock",
+      "scan_interval_ms": 60000,
+      "scan_batch_limit": 64,
+      "usage_max_age_ms": 60000,
+      "max_active_members": 64
+    },
+    "config/members.json": {
+      "version": 1,
+      "revision": 1,
+      "members": []
+    },
+    "config/llm-routes.json": {
+      "version": 1,
+      "routes": []
+    },
+    "config/llm-pools.json": {
+      "version": 1,
+      "pools": [
+        {
+          "id": "local",
+          "endpoint": "http://127.0.0.1:1234/v1",
+          "model": "example-model",
+          "quota_scope": "local-account",
+          "max_attempts": 3
+        }
+      ]
+    },
+    "config/llm-limits.json": {
+      "version": 1,
+      "scopes": [
+        {
+          "quota_scope": "local-account",
+          "concurrent_requests": 1,
+          "window_ms": 60000,
+          "requests_per_window": 60,
+          "tokens_per_window": 60000
+        }
+      ]
+    },
+    "config/clean.json": {
+      "version": 1,
+      "mode": "archive",
+      "archive_dir": "archive",
+      "retention_ms": 2592000000,
+      "batch_limit": 64,
+      "interval_seconds": 86400
+    },
+    ".gitignore": "/requests/\n/responses/\n/work/\n/.aos/jobs/\n/.aos/runner-stderr.log\n/.aos/attention/\n/.aos/alarms/\n/.aos/summary/published.json\n/archive/\n",
+    ".aos/tasks.json": {
+      "_metainfo": {
+        "_type": "aos-tasks",
+        "_version": 1
+      },
+      "tasks": [
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-kernel-check"
+          ],
+          "id": "check",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          },
+          "user": 1000
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-kernel-members",
+            "sync"
+          ],
+          "id": "members",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          }
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-kernel-resources"
+          ],
+          "id": "resources",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          },
+          "methods": [
+            "kernel.quota.set",
+            "kernel.usage.measure"
+          ]
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-kernel-work"
+          ],
+          "id": "work",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          },
+          "methods": [
+            "kernel.work.submit",
+            "work.cancel"
+          ]
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-kernel-llm-forward"
+          ],
+          "id": "forward",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          },
+          "methods": [
+            "llm.chat"
+          ]
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-llm",
+            "--config",
+            "config/llm-pools.json"
+          ],
+          "id": "pool",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          }
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-kernel-usage-collect"
+          ],
+          "id": "usage",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          }
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-kernel-schedule"
+          ],
+          "id": "schedule",
+          "kind": "kernel",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          },
+          "methods": [
+            "kernel.schedule.recheck",
+            "agent.say"
+          ]
+        },
+        {
+          "_metainfo": {
+            "_type": "posix",
+            "_version": 1
+          },
+          "argv": [
+            "aos-clean",
+            "--config",
+            "config/clean.json"
+          ],
+          "id": "clean",
+          "kind": "custom",
+          "needs": [],
+          "stderr": {
+            "$opt": "inherit"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -24,7 +24,43 @@
           "error": {
             "anyOf": [
               {
-                "$ref": "common.schema.json#/$defs/Error"
+                "$ref": "common.schema.json#/$defs/ErrorOpen"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "over_limit": {
+            "description": "調低 cgroup 上限時現用量已超過新上限的一筆紀錄（S-205、Q17）；超用交 Linux 處理，aos 只記。沒有就省略或 null。",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "resource": {
+                    "enum": [
+                      "memory",
+                      "pids"
+                    ]
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "current": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "observed_at_ms": {
+                    "$ref": "common.schema.json#/$defs/TimeMs"
+                  }
+                },
+                "required": [
+                  "resource",
+                  "limit",
+                  "current",
+                  "observed_at_ms"
+                ]
               },
               {
                 "type": "null"
@@ -37,14 +73,21 @@
           "quota_seq",
           "applied",
           "error"
-        ],
-        "additionalProperties": false
+        ]
       }
+    },
+    "over_allocated": {
+      "description": "本層分到的額度小於已分給成員的合計時，列出超分的資源名（S-205、Q8）；空陣列或省略表示沒有。",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
     }
   },
   "required": [
     "version",
     "members"
-  ],
-  "additionalProperties": false
+  ]
 }

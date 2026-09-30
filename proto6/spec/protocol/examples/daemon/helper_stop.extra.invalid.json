@@ -4,6 +4,7 @@
   "method": "daemon.helper.stop",
   "params": {
     "node_id": "/srv/aos/member",
+    "grace_ms": 2000,
     "unexpected": true
   }
 }

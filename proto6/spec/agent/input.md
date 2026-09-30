@@ -6,9 +6,11 @@
 
 〔使用者方向 2026-09-29〕有投件權限就能把訊息放進 node 的收件區；人與 agent 使用相同入口。請求 ID 用來定址及去重，完整發布、同 ID 衝突、授權與保留期限依[投件規則](../base/transport.md)。
 
-消費、提交及還原依[通用 tick 的 Q1](../tick.md)；訊息與工具／LLM 結果適用同一規則。收件成功只代表內容已存妥，不代表 agent 已閱讀或完成。
+消費、提交及還原依 [B-623](../tick.md)（Q1），派出與投件依 [B-624](../tick.md)（Q2）；訊息與工具／LLM 結果適用同一規則。收件成功只代表內容已存妥，不代表 agent 已閱讀或完成。
 
-〔使用者方向 2026-09-29〕一般訊息與回覆都用 `agent.say`，一律收進 history；回覆 payload 加可省的 `in_reply_to` 指原句 ID。〔使用者方向 2026-09-29，第十六批〕帶 `in_reply_to` 的回覆只記進 history，不觸發 LLM、不再回話，免得互回無限循環（[P-705](../protocol/agent-tasks.md)）。格式與大小依[訊息協議](../protocol/messages.md)，錯誤或存不下不假稱成功。
+〔使用者方向 2026-09-29〕一般訊息與回覆都用 `agent.say`，一律收進 history；回覆 payload 加可省的 `in_reply_to` 指原句 ID。〔使用者方向 2026-09-29，第十六批〕**帶 `in_reply_to` 的是回話：只記進 history（`in_reply_to` 原樣保存），不建待處理的 input、不觸發 LLM、不再回話**，免得兩邊（或自己對自己）互回無限循環。kernel 收到的 `agent.say` 同樣只記進它自己的 history。〔第十八批，本條為 `in_reply_to` 配對的正本〕這種只記錄的訊息怎麼清，見 [P-716](../protocol/agent-tasks.md)。格式與大小依[訊息協議](../protocol/messages.md)（欄位見 [P-705](../protocol/agent-tasks.md)），錯誤或存不下不假稱成功。
+
+〔使用者方向 2026-09-30，第十八批〕agent 之間的問答機制、agent 的請求被對方拒收、卡在 unknown 的使用者輸入怎麼收，都延後（[P-008](../protocol/README.md#p-008)）；現行照上面的規則。
 
 驗收：收件中斷場景見 [V-03](../conformance.md)。
 

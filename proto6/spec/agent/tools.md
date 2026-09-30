@@ -6,11 +6,13 @@
 
 〔建議預設，未拍板〕工具清單是設定檔，描述工具名稱、用途、參數 schema、要跑的程式與參數，以及回傳文字或 JSON 的解讀方式。名稱在清單內唯一；宣告 JSON 回傳時提供結果 schema。實作只接納它能驗證的 schema，不默默忽略不支援的規則。增刪工具沿[設定更新](configuration.md) 的做法。
 
-模型呼叫帶呼叫 ID、工具名稱與參數。同一回覆中的呼叫 ID 不重複；未知工具、參數不合 schema 或回覆格式錯誤時不派工，留下具體錯誤供下一次思考。清單的程式設定負責把合法參數轉成普通工作材料，詳細 JSON 與 adapter 格式留協議篇下一輪定義，不另訂工具專用權限。
+模型呼叫帶呼叫 ID、工具名稱與參數。同一回覆中的呼叫 ID 不重複；未知工具、參數不合 schema 或回覆格式錯誤時不派工，留下具體錯誤供下一次思考。清單的程式設定負責把合法參數轉成普通工作材料，JSON 與 adapter 格式見 [P-702](../protocol/agent-tasks.md)，不另訂工具專用權限。
 
 格式修補必須有限：預設連續兩次模型回覆格式無效就停止自動修補，不再派修補請求，並寫[待處理事項](../scheduling/operations.md)；合法回覆把計數歸零。計數只是 node 的普通狀態檔。
 
 〔使用者方向 2026-09-29〕`tools.target_node` 決定路線：填 node id 時，把 `kernel.work.submit` 請求交該 kernel，由它管額度、排程及 once；填 `null` 時，agent 自己向 daemon 登記 once，`parent_id` 是自己，並記用量供上層用量收集 module 讀。兩條路線共用工作結果格式，once 用量都歸發起 agent。提交及收結果依[通用 tick](../tick.md)。
+
+〔使用者方向 2026-09-30，第十八批，維持第十七批〕`tools.target_node=null` 時 agent 自己開的 once 做完，**aos 不叫醒 agent**；結果由 agent 自己想辦法收，例如把摘要的 `due_ms` 設成下次查看的時間，讓上層到時叫醒它，醒來再去看 `result.json`／`.err`。查看間隔放在哪（例如 agent 設定的一欄）、自開 once 的取消與收尾，延後（[P-008](../protocol/README.md#p-008)）。
 
 驗收：schema 要求整數而模型傳字串時，不開工具程序，可查到參數路徑與格式錯誤。
 

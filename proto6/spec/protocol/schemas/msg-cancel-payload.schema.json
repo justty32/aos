@@ -10,6 +10,5 @@
     "request_id": {
       "$ref": "common.schema.json#/$defs/ID"
     }
-  },
-  "additionalProperties": false
+  }
 }

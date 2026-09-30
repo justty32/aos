@@ -42,14 +42,12 @@
           "source_commit",
           "observed_at_ms",
           "status"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },
   "required": [
     "version",
     "members"
-  ],
-  "additionalProperties": false
+  ]
 }

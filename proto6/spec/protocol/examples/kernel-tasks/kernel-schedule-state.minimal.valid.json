@@ -9,7 +9,18 @@
       "ready_seq": 1,
       "due_ms": null,
       "summary_commit": null,
-      "wake_after_end_ms": null
+      "wake_mark": {
+        "registration_id": "reg-7",
+        "tick_seq": 0,
+        "woken_at_ms": 1000
+      }
+    },
+    {
+      "member_id": "b",
+      "ready_seq": null,
+      "due_ms": null,
+      "summary_commit": null,
+      "wake_mark": null
     }
   ]
 }

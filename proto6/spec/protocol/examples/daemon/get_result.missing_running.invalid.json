@@ -14,6 +14,7 @@
     "stopping": false,
     "cgroup": null,
     "boot_id": "boot-20260929-a",
+    "registration_id": "reg-7f3a",
     "registered": true,
     "last_tick": null
   }

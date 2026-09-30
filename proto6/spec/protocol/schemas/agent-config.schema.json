@@ -49,7 +49,6 @@
         "timeout_ms",
         "context_tokens"
       ],
-      "additionalProperties": false,
       "if": {
         "properties": {
           "target_node": {
@@ -88,8 +87,7 @@
       },
       "required": [
         "target_node"
-      ],
-      "additionalProperties": false
+      ]
     },
     "daemon_socket": {
       "$ref": "common.schema.json#/$defs/NodeId"
@@ -102,6 +100,5 @@
     "tools_file",
     "tools",
     "daemon_socket"
-  ],
-  "additionalProperties": false
+  ]
 }

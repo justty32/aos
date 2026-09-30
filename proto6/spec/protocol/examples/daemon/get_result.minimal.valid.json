@@ -14,7 +14,7 @@
     "pending": false,
     "stopping": false,
     "cgroup": {
-      "path": "/sys/fs/cgroup/aos/team",
+      "path": "/sys/fs/cgroup/aos/n-d20539a311399b5e/n-640b231841e0290f",
       "limits": {
         "cpu_max": {
           "quota_us": 50000,
@@ -25,7 +25,16 @@
       }
     },
     "boot_id": "boot-20260929-a",
+    "registration_id": "reg-7f3a",
     "registered": true,
-    "last_tick": null
+    "last_tick": {
+      "tick_seq": 3,
+      "outcome": "completed",
+      "started_at_ms": 1000,
+      "ended_at_ms": 2000,
+      "exit_code": 0,
+      "started": true,
+      "signal": null
+    }
   }
 }

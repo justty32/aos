@@ -2,7 +2,7 @@
 
 ← [共用約定](README.md)｜[投件正本](../base/transport.md)｜[tick 的 Q1／Q2](../tick.md)｜[第九批裁定](../../notes/2026-09-29-verdicts.md)
 
-本篇只定 node 之間的檔案格式；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；檔案命令由收件 node 的普通任務處理，投件與收件清理由 tick 做，全部沿 node 的身分授權。
+本篇只定 node 之間的檔案格式，行為以主規格為正本（[P-009](README.md)）；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；檔案命令由收件 node 的普通任務處理，投件與收件清理由 tick 做，全部沿 node 的身分授權。
 
 ## P-300．兩條路各做什麼〔使用者方向 2026-09-29〕
 
@@ -33,7 +33,7 @@ responses/<id>.json  # RpcResponse
 
 ## P-303．回應路由與來源〔建議預設，未拍板〕
 
-接件前核對 `reply_to` 是可使用的 node 回件位置，且目前執行身分能投進其 `responses/`。無法回件便不接納會產生副作用的請求，保留原件及本地錯誤供修正；不能先執行再假裝已回覆。接納後固定原請求的 `reply_to`，先將回應隨狀態 commit，再依 P-003 發布；中途遇到暫時性失敗才留已提交回應、後續只補送該回應，不重做請求。〔使用者方向 2026-09-29，第十六批〕投回應時回址不是 node 或沒有寫入權限，跟請求一樣照 [node P-206](node.md)：報一次錯（`target_not_node`／`target_not_writable`）、丟掉待送回應，不每格補送。
+接件前核對 `reply_to` 是可使用的 node 回件位置，且目前執行身分能投進其 `responses/`。無法回件便不接納會產生副作用的請求，保留原件及本地錯誤供修正；不能先執行再假裝已回覆。接納後固定原請求的 `reply_to`，先將回應隨狀態 commit，再依 P-003 發布；中途遇到暫時性失敗才留已提交回應、後續只補送該回應，不重做請求。投回應時回址不是 node 或沒有寫入權限，跟請求一樣照 [B-624](../tick.md)。〔使用者方向 2026-09-30，第十八批〕回不了錯誤回應的壞件只報一次，照 [B-623](../tick.md)。
 
 `reply_to` 只是地址，**不是來源或授權證明**。依 [B-501](../base/transport.md) 核對 OS 權限與可信投遞資料；需要辨識成員時，將經核對的檔案擁有 UID 等來源證據對上可信登記及授權設定，不信正文自稱的 node。回件也須核對原請求目標及可信來源，不能只因 ID 相同就當作成功證據。可讀附件路徑同樣不證明來源，開檔只用收件 node 的身分。
 
@@ -41,28 +41,24 @@ responses/<id>.json  # RpcResponse
 
 ## P-304．同 ID、衝突與重送〔建議預設，未拍板〕
 
-「同內容」以已發布 JSON 的 **UTF-8 bytes 完全一致**為準，連空白與 key 順序也算；發件者重送已提交原檔，不重新序列化。同 ID 範圍由 P-301 定義；收件區 或追蹤區的已提交原件都是去重依據。
+行為正本是 [B-503](../base/transport.md)（重送、補投原回應、衝突處理）；本條只定比對格式。
 
-- 請求同 ID 同 bytes：不重新接納或執行。已有已提交回應就補投原回應；仍在處理就繼續等，不另送第二種「處理中」回應。commit 後遺留的收件區原件依 Q1 補清，不重吃。
-- 回應同 ID 同 bytes：只消費一次，commit 後的遺留原件只補清；不再回覆這份回應，避免來回無限投件。
-- 同 ID 異 bytes：不覆蓋、不執行新內容，留下 `id_conflict` 待處理事項；包括改 method、params 或 reply_to。無覆蓋發布的 EEXIST 只證明撞名；投件者有讀權並比對原件才可判同／異 bytes。只有寫入及穿越權、無法比對時，保留本地原請求並報投遞未確認，不猜已收同內容、不覆蓋；接收端再用自己可讀的原件及已提交證據判斷。只有新投件者有經核對、且不同於原請求的回件 node 時，才能向新地址送衝突錯誤；同一回件地址只留本地診斷及事項，避免錯誤搶佔原請求尚未發布的回應。任何情況都不取代原請求的成功／失敗回應。
-- 同 ID 回應異內容也算衝突，不採最後寫入者；同文字但新 ID 則是新請求，不能用換 ID 繞過 unknown。
-
-「查詢或重送沿用 ID」指**重投完全相同原請求以取得已保存回應**，不是用同 ID 改成另一個查詢 method。一般查詢直接讀有權限的已提交檔案或摘要（P-307），不叫醒 node。
-
-重投也受 [Q2](../tick.md) 與 [C-03](../contracts.md) 約束：有可信在途／已接件證據，可等候或以原 ID 取回已保存回應；能證明從未送出才可正常送出。補投原 bytes 只交付同一請求，不是開新嘗試；收件端仍須查已提交去重證據。無法判定曾否執行且無可信去重依據時留 unknown，**不靠定時重送重做工具或 LLM**。去重只在 [B-404](../base/storage.md) 的證據保留期內承諾；證據已清不能宣稱仍可安全重投。
+- 「同內容」以已發布 JSON 的 **UTF-8 bytes 完全一致**為準，連空白與 key 順序也算；發件者重送已提交原檔，不重新序列化。
+- 同 ID 範圍由 P-301 定義：同一收件 node 的 `requests/` 一個命名空間，`responses/` 另一個。
+- 衝突用 -32000 加 `data.code:"id_conflict"`；事項 `reason` 也用 `id_conflict`（[ops P-601](ops.md)）。
+- 補投的原回應取自 git 歷史裡 `.aos/outbox/responses/<id>.json` 最後一次存在的版本，原 bytes 照投。
 
 ## P-305．送出、消費與門鈴順序〔使用者方向 2026-09-29〕
 
-順序固定：**任務備好待送封套／消費副本 → tick 提交該組 → tick 投件及刪相符收件原件 → 可用的通知／叫醒**。成功發布才算收件；未提交的待送檔不投，未提交的消費紀錄不刪。收件、消費、完成各看其證據，不能把叫醒成功或刪檔當成工作完成。
-
-投件權限不等於 daemon IPC 叫醒權限。所屬 kernel 依 [S-201／202](../scheduling/admission.md) 觀察收件及摘要、核對資源後決定叫醒；跨隊投件者無權直接 wake 對方時，已發布的檔案照樣有效，靠對方所屬 kernel 的通知或低頻補查接手。不為叫醒而轉送原請求，不讓 daemon 讀正文或替 kernel 決定排程。
+順序固定：**任務備好待送封套／消費副本 → tick 提交該組 → tick 投件及刪相符收件原件 → 可用的通知／叫醒**；行為見 [B-623／B-624](../tick.md)。投件權限不等於 daemon IPC 叫醒權限，誰來叫醒見 [S-201／202](../scheduling/admission.md)。
 
 ## P-306．method 就是指令〔使用者方向 2026-09-29〕
 
-檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，表示「在你那裡跑這條指令」。指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致，而且是收件 node 開放的命令；否則 -32601。〔使用者方向 2026-09-29，第十七批〕**「開放」由任務表決定**：收件 node 的 `.aos/tasks.json` 裡，各任務用 `methods` 宣告自己處理哪些 method（[node P-202](node.md)）；沒有任何任務宣告的 method，由 tick 開格時直接回 -32601、丟掉原件，不交給任何任務。有宣告的由那項任務讀件，argv 不符同樣回 -32601。envs、指示詞與 stdin 路徑照 inst，借權讀檔或換程式的風險由使用者承擔。接件執行該命令的本地動作，不再投同一份 RPC。
+檔案 method 是指令去掉 `aos`、以 `.` 連接；`params` 是完整 [inst](../base/inst.md)，指示詞及身分授權沿 inst，base 為收件 node。展開後 argv 必須保留 `aos`、命令段必須和 method 一致。收件 node 接哪些 method、什麼時候回 -32601、什麼時候回 -32000 業務碼，以 [B-501](../base/transport.md) 與 [B-620](../tick.md) 為正本；宣告格式是任務表的 `methods`（[node P-202](node.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權，而且會傳遞（[B-501](../base/transport.md)）。
 
 有業務資料的命令從 stdin 讀一份 JSON；inst.stdin 是收件者可讀的絕對檔案路徑，不是 JSON 內容。發件者將資料隨請求固定並保留至消費完成；收件者用自己的權限開檔。無資料的命令省略 stdin。需要結果的串流用 `{"$opt":"inherit"}`，由接件執行器捕獲；其餘串流規則沿 inst。輸入形狀與 argv 的一致性須在展開及讀檔後另驗，schema 不代替開放命令檢查。
+
+〔使用者方向 2026-09-30，第十八批〕**本地動作的 stdout 落點**：當格就做完的命令（下表除 `kernel.work.submit`、`llm.chat` 以外的各列），執行的任務把 stdout 存成追蹤的 `state/messages/requests/<id>.stdout`，跟消費副本放一起、同一組提交；回應 result 的 `stdout.path` 指這個檔的絕對路徑，不填 null，這樣結果可以被引用（[B-103](../base/work.md)）。清理跟那份請求副本一起（[B-404](../base/storage.md)）。
 
 | method／完整命令 | stdin JSON／本地動作與 stdout |
 |---|---|
@@ -72,13 +68,13 @@ responses/<id>.json  # RpcResponse
 | `kernel.usage.measure`／`aos kernel usage measure` | 無；由 owner／可信直接父要求重測，stdout 為 [res-usage](schemas/res-usage.schema.json)，不啟用缺席 module。 |
 | `kernel.work.submit`／`aos kernel work submit` | [work P-401](work.md) 工作材料；完成後 stdout 為內層工作的本地 work-result。 |
 | `llm.chat`／`aos llm chat` | [llm-work P-406](llm-work.md) LLM 材料；完成後 stdout 為本地 llm-result。 |
-| `work.cancel`／`aos work cancel` | [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) `{request_id}`，指要取消的原請求 RPC id；投給持有那件工作的 node。〔第十七批〕核權後排隊的直接拿掉、在跑的請 daemon 殺掉，stdout `{"accepted":true}`；原工作的結果照舊由原請求的回應帶回（[work P-411](work.md)）。 |
+| `work.cancel`／`aos work cancel` | [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) `{request_id}`，指要取消的原請求 RPC id；投給持有那件工作的 node。〔第十七批〕stdout `{"accepted":true}`；核權、排隊中與在跑的怎麼處理見 [B-203](../base/execution.md)，原工作的結果照舊由原請求的回應帶回（[work P-411](work.md)）。 |
 
-全部回應用 [work-result](schemas/work-result.schema.json)；`kernel.work.submit`、`llm.chat` 由 module 跨格接續，業務結果回來才完成命令；tick 不等待工具或 HTTP，也不先用 ACK 占住 RPC id。摘要查詢直接讀 P-307，不開 tick。kernel 範本也保存自己送出命令的回應；〔使用者方向 2026-09-29，第十七批〕收到的一般回話（`agent.say`）交給 kernel 現有的收件任務（範本裡是 schedule）處理：寫進 kernel 的 history、回 `{"accepted":true}` 確認，由 tick 投確認、清原件，不必裝 LLM；帶 in_reply_to 的同樣只記錄、不再回話。
+全部回應用 [work-result](schemas/work-result.schema.json)；`kernel.work.submit`、`llm.chat` 由 module 跨格接續，業務結果回來才完成命令；tick 不等待工具或 HTTP，也不先用 ACK 占住 RPC id。摘要查詢直接讀 P-307，不開 tick。kernel 範本也保存自己送出命令的回應；〔使用者方向 2026-09-29，第十七批〕收到的一般回話（`agent.say`）交給 kernel 現有的收件任務（範本裡是 schedule）處理：寫進 kernel 的 history、回 `{"accepted":true}` 確認，由 tick 投確認、清原件，不必裝 LLM；帶 in_reply_to 的同樣只記錄、不再回話。agent 之間的問答機制延後（[P-008](README.md#p-008)）。
 
-授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：不開放／命令不符 -32601，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict`、`resource_observation_failed`，或 work.cancel 的 `cancel_not_authorized`、`work_not_found`（[work P-411](work.md)）。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址只留本地診斷。
+授權核對沿 P-303；同 UID 是同帳號授權，不證明是哪個唯一 node 發件。錯誤沿 P-005：-32601 與 -32000 怎麼分依 [B-501](../base/transport.md)，輸入不合 -32602；業務拒收 -32000，`data.code` 用 `id_conflict`、`member_not_authorized`、`reply_unavailable`、`attachment_unavailable`、`resource_conflict`、`resource_observation_failed`，或 work.cancel 的 `cancel_not_authorized`、`work_not_found`（[work P-411](work.md)）。只有能證明未接納的暫時讀取／回件問題可 retryable:true；不能重做 unknown。無合法 ID／安全回件地址的回不了錯誤回應，照 [B-623](../tick.md) 只報一次事項。
 
-**驗收：**argv 少了 aos、和 method 不符或未開放都回 -32601；任務表沒有任務宣告的 method 由 tick 回 -32601，任何任務都沒讀到它；listen 只讀 history，不開模型；RPC 收件確認不再引發回話。
+**驗收：**argv 少了 aos、和 method 不符或沒有任務宣告都回 -32601；任務表沒有任務宣告的 method 由 tick 回 -32601，任何任務都沒讀到它；本地動作的回應 `stdout.path` 指到存在的 `.stdout` 檔；listen 只讀 history，不開模型；RPC 收件確認不再引發回話。
 
 ## P-307．上層直接讀成員摘要〔建議預設，未拍板〕
 
@@ -87,6 +83,8 @@ responses/<id>.json  # RpcResponse
 有 repo 讀權的上層固定一個 commit 讀摘要，核對 node_id 等於可信直接成員。只開摘要讀權時，tick 在提交後把同一版原 bytes 原子發布到 ignored 的 `.aos/summary/published.json`；父目錄只授 traverse、檔案只授 read。這是 P-003 不覆蓋規則的明示例外。讀者一次 open 取完整版本，usage 不拆檔；發布失敗留舊值並報錯，過時／缺失不等於 idle。
 
 摘要是觀測，不能蓋掉新的收件區 事件；上層不為查詢啟成員 tick，也不因要讀摘要就取得其 repo 或下層內容權限。
+
+〔使用者方向 2026-09-30，第十八批〕aos 只提供 `observed_at_ms` 與 daemon `node.show` 的 `last_tick` 這類訊號；多久沒更新算失聯、失聯時做什麼，由父 kernel 自己定（預設寫一件事項），不跨層代管孫輩，見 [S-202](../scheduling/admission.md)。
 
 ## P-308．schema 與最小範例〔建議預設，未拍板〕
 

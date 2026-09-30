@@ -81,8 +81,7 @@
                       "prompt_tokens",
                       "completion_tokens",
                       "total_tokens"
-                    ],
-                    "additionalProperties": false
+                    ]
                   }
                 ]
               },
@@ -111,7 +110,6 @@
               "usage",
               "http_status"
             ],
-            "additionalProperties": false,
             "allOf": [
               {
                 "if": {
@@ -232,8 +230,7 @@
         "node_id",
         "job_id",
         "attempts"
-      ],
-      "additionalProperties": false
+      ]
     }
   },
   "allOf": [

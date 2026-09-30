@@ -41,7 +41,6 @@
     "text",
     "outcome"
   ],
-  "additionalProperties": false,
   "allOf": [
     {
       "if": {

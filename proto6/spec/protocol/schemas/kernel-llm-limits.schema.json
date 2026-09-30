@@ -29,6 +29,11 @@
           "tokens_per_window": {
             "type": "integer",
             "minimum": 1
+          },
+          "unknown_hold_ms": {
+            "description": "unknown 請求占用本 scope 份額多久後釋放（S-304）；省略＝該請求的 timeout_ms，0＝unknown 不占份額。本機連線名額另算。",
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
@@ -37,14 +42,12 @@
           "window_ms",
           "requests_per_window",
           "tokens_per_window"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },
   "required": [
     "version",
     "scopes"
-  ],
-  "additionalProperties": false
+  ]
 }

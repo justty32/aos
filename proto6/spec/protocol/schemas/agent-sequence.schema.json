@@ -16,6 +16,5 @@
   "required": [
     "version",
     "last_seq"
-  ],
-  "additionalProperties": false
+  ]
 }

@@ -6,7 +6,7 @@
 
 設定就是 node 裡可按權限修改的檔案。人與有權限的 agent 使用同一套檔案及工具；具體權限依[兩條通則](../README.md)。
 
-〔建議預設，未拍板〕設定保留模型、人格文字、工具清單、context 選擇規則、工作目錄及所需檔案引用。載入時驗證必需內容、引用及格式，錯誤指出檔案與欄位；不採用缺一半的設定。模型與工具清單可分檔，格式見[協議 node](../protocol/node.md)。LLM 位址用 `llm.target_node`；工具位址用 `tools.target_node`，兩條路線見[LLM](../scheduling/llm.md)及[工具](tools.md)。〔使用者方向 2026-09-29 晚〕`llm.target_node` 預設先實作「自己排」，見 [S-301](../scheduling/llm.md)。
+〔建議預設，未拍板〕設定保留模型、人格文字、工具清單、context 選擇規則、工作目錄及所需檔案引用。載入時驗證必需內容、引用及格式，錯誤指出檔案與欄位；不採用缺一半的設定。模型與工具清單可分檔，格式見 [P-701](../protocol/agent-tasks.md)。LLM 位址用 `llm.target_node`、工具位址用 `tools.target_node`；兩條路線、預設先實作哪一檔，以 [S-301](../scheduling/llm.md) 為準，工具那側見 [A-401](tools.md)。
 
 〔使用者方向 2026-09-29〕執行身分依 [inst 的 `user`](../base/inst.md)，額度與可選 helper 依[身分與資源](../base/identity-resources.md)，不在 agent 設定另加一套授權。
 

@@ -6,7 +6,8 @@
       "concurrent_requests": 1,
       "window_ms": 60000,
       "requests_per_window": 60,
-      "tokens_per_window": 60000
+      "tokens_per_window": 60000,
+      "unknown_hold_ms": 300000
     }
   ]
 }

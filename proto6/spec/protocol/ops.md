@@ -8,11 +8,13 @@
 
 ## P-601．兩處事項〔使用者方向 2026-09-29〕
 
-attention 是交給人或 agent 手動處理的待辦清單。node 的事項放 `.aos/attention/open/<issue_id>.json`，標完成時搬到 `done/`；整個 `.aos/attention/` ignore，不隨 group 還原。node 自己寫自己的問題；runner 未啟動、tick 自動停格、後代清不空則由 daemon 寫。once 單檔未啟動仍沿 [P-110](daemon.md) 的 `.err`。建 node 時須授 daemon 寫權；寫不進去就不管，daemon 在 stdout 印一行警告。
+attention 是交給人或 agent 手動處理的待辦清單，誰寫、何時寫以 [S-405](../scheduling/operations.md) 為正本，daemon 那側的停格事項見 [B-607](../daemon.md)。node 的事項放 `.aos/attention/open/<issue_id>.json`，標完成時搬到 `done/`；整個 `.aos/attention/` ignore，不隨 group 還原。once 單檔未啟動仍沿 [P-110](daemon.md) 的 `.err`。建 node 時須授 daemon 寫權。
 
-〔使用者方向 2026-09-29〕daemon 產生的事項（自身的、要寫進 node `.aos/attention/` 的）先暫放記憶體，**每 1000 ms 批次寫出，寫完就從記憶體清掉**；重開後不讀回記憶體。daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC 查：ls／show 直接讀 `state_dir/attention/` 的檔案，加上記憶體裡還沒寫出的那幾筆；內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
+daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../daemon.md)。daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC 查：ls／show 直接讀 `state_dir/attention/` 的檔案，加上記憶體裡還沒寫出的那幾筆；內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
 
-兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、白話 `message`；可選 `suggestion` 是「建議處理」文字，可以附建議指令，但不會被自動執行。job_id／attempt_id／request_id 按需附；不帶憑證或完整工作。
+兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、白話 `message`；可選 `suggestion` 是「建議處理」文字，可以附建議指令，但不會被自動執行。job_id／attempt_id／request_id 按需附；〔第十八批〕可選 `reported_at_ms` 是首次回報時間，壞收件原件的保留期從這裡算（[B-404](../base/storage.md)）。不帶憑證或完整工作。〔使用者方向 2026-09-30，第十八批〕`argv` 是永遠禁止的鍵（[C-07](../contracts.md)），schema 寫 `"argv": false`，出現就整份拒收。
+
+〔暫定，第十八批〕壞掉的收件（[B-623](../tick.md)）用 `reason:"bad_request"`，`issue_id` 是 `bad-request-` 加檔名 UTF-8 bytes 的 sha256 前 16 個小寫 hex，`request_id` 在檔名合法時附上。
 
 | method（對應 `aos daemon attention <動作>`） | params → result |
 |---|---|
@@ -22,7 +24,7 @@ attention 是交給人或 agent 手動處理的待辦清單。node 的事項放 
 
 IPC 只查／標完成 daemon 自身事項。依可信登記 owner／祖先 owner 授權；ls 先篩選再按 `source_key/issue_id` bytes 分頁，after 用上頁 next_after，列完為 null。daemon 內部新增事項，不接受 node 代交。
 
-同一問題沿用 ID，異內容不覆蓋；標完成後再發生用新 ID。done 只標記人或 agent 已處理完，不替它修理問題。寫檔依 P-003，done 留 30 日、被引用就留；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見登記樹讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
+同一問題沿用 ID，異內容不覆蓋；標完成後再發生用新 ID（壞收件例外：同一個檔 open 或 done 已有就不再寫，[B-623](../tick.md)）。done 只標記人或 agent 已處理完，不替它修理問題。寫檔依 P-003，done 留 30 日、被引用就留；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見登記樹讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
 
 ## P-603．aos-attend：列出、查看、標完成〔使用者方向 2026-09-29〕
 
@@ -32,9 +34,9 @@ aos-attend show N ID --socket S [--store node|daemon] [--json]
 aos-attend done N ID --socket S [--store node|daemon] [--json]
 ```
 
-人手入口把 `aos-attend` 換成 `aos attend`；N 是來源 node，ID 是事項 ID，store 預設 node。ls 沿可見登記樹讀 node 事項、合併 daemon IPC，列出來源、ID、位置與 message。show 顯示 message 與有填才顯示的「建議處理」；done 把 node 事項從 `.aos/attention/open/` 搬到 `done/`，daemon 事項則呼叫 `daemon.attention.done`。show／done 查 daemon 時走相應 IPC；已在 done 再標一次不變。ls 可用 --source 篩來源；--json 時 ls／show 每筆輸出事項加 status，done 輸出 `{source_node,issue_id}`，沿 IPC done 的 result。
+人手入口把 `aos-attend` 換成 `aos attend`；N 是來源 node，ID 是事項 ID，store 預設 node。三個動作做什麼以 [S-405](../scheduling/operations.md) 為正本。ls 列出來源、ID、位置與 message；show 顯示 message 與有填才顯示的「建議處理」；show／done 查 daemon 時走相應 IPC；已在 done 再標一次不變。ls 可用 --source 篩來源；--json 時 ls／show 每筆輸出事項加 status，done 輸出 `{source_node,issue_id}`，沿 IPC done 的 result。
 
-程式只做這三件事；實際修理由人或 agent 自己下指令。用呼叫者權限，不取得 N 的身分；stdin 不讀，stdout 是查詢內容或完成的來源／ID，stderr 是白話錯誤。0 成功或清單為空；2 用法錯；125 無法開始；1 讀取、移檔或 IPC 失敗。done 不改工作結果，也不提交 git。
+實際修理由人或 agent 自己下指令。用呼叫者權限，不取得 N 的身分；stdin 不讀，stdout 是查詢內容或完成的來源／ID，stderr 是白話錯誤。0 成功或清單為空；2 用法錯；125 無法開始；1 讀取、移檔或 IPC 失敗。done 不改工作結果，也不提交 git。agent 設定檢查的結束碼要不要跟 kernel 統一，延後（[P-008](README.md#p-008)）。
 
 ## P-605．aos-clean 的 argv 與設定〔建議預設，未拍板〕
 
@@ -42,7 +44,7 @@ aos-attend done N ID --socket S [--store node|daemon] [--json]
 aos-clean [--node <node>] --config <設定檔>
 ```
 
-`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用該 node inst 的 `user`。無自訂必填環境或身分切換。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
+〔使用者方向 2026-09-30，第十八批〕`aos-clean` 屬 tick 基底（[B-626](../tick.md)）；清理資格與保留期以 [B-404](../base/storage.md) 為正本。`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用該 node inst 的 `user`。無自訂必填環境或身分切換。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
 
 [ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；`interval_seconds` 預設 86400（一天）、`retention_ms` 預設 2592000000（30 日）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
@@ -54,21 +56,21 @@ aos-clean [--node <node>] --config <設定檔>
 
 ## P-606．清理、封存與回報〔使用者方向 2026-09-29〕
 
-候選資格完全依 [B-404](../base/storage.md)／[B-503](../base/transport.md)，不重述終局、消費、引用與去重規則。每批最多 batch_limit 項；每次重新核對，通知 done 不免驗資格。〔建議預設，未拍板〕採用 run 從 run 終局起算，否則從工作終局起算；unknown 從首次把該狀態提交到 git 的 commit 時間起算，不用 mtime 猜。unknown 到期連同內部關聯、待收結果與估計占用一起清，不等人工結案；其他內容仍依一般保護條件。預設 agent 遍歷沿 [agent P-716](agent-tasks.md)，kernel 沿 [P-814](kernel-tasks.md)。
+候選資格與保留期起算點完全依 [B-404](../base/storage.md)／[B-503](../base/transport.md)，不重述終局、消費、引用與去重規則；〔第十八批〕候選含過了保留期的壞收件原件與本地動作的 `.stdout` 檔。每批最多 batch_limit 項；每次重新核對，通知 done 不免驗資格。〔建議預設，未拍板〕unknown 到期連同內部關聯與待收結果一起清，不等人工結案；估計占用何時釋放依 [S-304](../scheduling/llm.md)，資料保留依本條；其他內容仍依一般保護條件。預設 agent 遍歷沿 [agent P-716](agent-tasks.md)，kernel 沿 [P-814](kernel-tasks.md)。
 
 archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存，先以 P-003 寫完整副本並核對內容，再移除日常副本；已存在且相同可補做，不同則 `archive_failed`。保留原目錄關係及查找所需的既有識別／引用，不追隨 symlink 去清 node 外內容。歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。delete 只省略封存步驟，其餘資格與提交規則相同。
 
 追蹤區移除與引用更新一起隨本 repo 的 group 提交；封存區本身不受該 group 還原。中斷時可能留下多餘封存副本，補做先核對，不因已有封存檔就直接刪日常材料。滿碟、I/O 或 commit 失敗保留舊 commit 及未消費 requests／responses 原件，停止後續變動並照 B-404 恢復，不回成功。
 
-回報 `outcome`：`staged`＝本次在 tick 內備好、尚待 group commit；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用 Error。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收先不管。
+回報 `outcome`：`staged`＝本次在 tick 內備好、尚待 group commit；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](README.md#p-008)）。
 
 ## P-607．schema 與最小範例〔建議預設，未拍板〕
 
-Schema 與解析沿 [共用約定](README.md)，正反例見下；授權、鎖、引用與 commit 留待實作驗收。
+Schema 與解析沿 [共用約定](README.md)，三份都放寬、不認得的欄位忽略（[P-007](README.md)）；正反例見下；授權、鎖、引用與 commit 留待實作驗收。
 
 | 格式 | 最小正例 | 主要錯誤例及原因 |
 |---|---|---|
-| 事項 | [valid](examples/ops/attention.minimal.valid.json) | [invalid](examples/ops/attention.executable.invalid.json)：通知夾帶 argv |
+| 事項 | [valid](examples/ops/attention.minimal.valid.json) | [invalid](examples/ops/attention.executable.invalid.json)：夾帶永遠禁止的 `argv` |
 | 清理設定 | [valid](examples/ops/clean-config.minimal.valid.json) | [invalid](examples/ops/clean-config.unbounded.invalid.json)：batch_limit 為 0 |
 | 清理回報 | [valid](examples/ops/clean-report.minimal.valid.json) | [invalid](examples/ops/clean-report.failed-without-error.invalid.json)：失敗缺錯誤 |
 
@@ -78,9 +80,9 @@ Schema 與解析沿 [共用約定](README.md)，正反例見下；授權、鎖�
 
 ## P-609．最小設定錯誤與修好後重驗〔主編補；依 A-102、CLI H-036 第 5、6 步〕
 
-設定檢查由使用設定的來源程式負責：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。任務直接讀設定，驗格式、引用與必要權限；錯誤就停依賴它的新工作，仍可收結果與處理取消。inst 身分及 tasks 錯誤按 node／daemon 契約拒絕啟動。
+設定檢查由使用設定的來源程式負責（agent 設定檢查的結束碼要不要跟 kernel 統一延後，[P-008](README.md#p-008)）：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。任務直接讀設定，驗格式、引用與必要權限；錯誤就停依賴它的新工作，仍可收結果與處理取消。inst 身分及 tasks 錯誤按 node／daemon 契約拒絕啟動。
 
-來源沿 P-601 寫自己的 `.aos/attention/`，用 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；suggestion 可寫建議的檢查指令。同一未解問題沿用同一 issue_id，最新細節留來源狀態，不是每格另生一件。任務表壞到檢查任務跑不了時，由 tick／daemon 寫 node 事項。
+來源沿 P-601 寫自己的 `.aos/attention/`，用 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；suggestion 可寫建議的檢查指令。同一未解問題沿用同一 issue_id，最新細節留來源狀態，不是每格另生一件。任務表壞到檢查任務跑不了時由 tick 寫事項（[B-620](../tick.md)），tick 自己停格時由 daemon 寫（[B-607](../daemon.md)）。
 
 修好普通設定並提交後，可等下一格檢查，或由有權限者自己執行：
 

@@ -38,7 +38,23 @@
           "minLength": 1
         },
         ".aos/tasks.json": {
-          "$ref": "node-tasks.schema.json"
+          "allOf": [
+            {
+              "$ref": "node-tasks.schema.json"
+            },
+            {
+              "properties": {
+                "tasks": {
+                  "items": {
+                    "properties": {
+                      "user": false
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "description": "範本任務表；每項禁止 user 鍵（C-07），$ref 展開後也算。"
         }
       },
       "required": [
@@ -51,14 +67,12 @@
         "config/llm-limits.json",
         "config/clean.json",
         ".gitignore"
-      ],
-      "additionalProperties": false
+      ]
     }
   },
   "required": [
     "version",
     "node_id",
     "files"
-  ],
-  "additionalProperties": false
+  ]
 }
