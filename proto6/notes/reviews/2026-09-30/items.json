@@ -21,7 +21,7 @@
    "title": "多 UID 部署下，「node 框委派給 node 帳號」做不到，而且委派後 daemon 自己也開不了子框、刪不了殘框",
    "astra_verdict": "成立",
    "astra_reason": "多 UID 的 cgroup 委派流程確實缺一段：`proto6/spec/daemon.md:80` 要交給 node 帳號，`proto6/spec/base/identity-resources.md:35` 要 daemon 永久降權，`proto6/spec/protocol/daemon/provision-and-runner.md:21` 又規定由 daemon 自己建框、寫限制。沒有定如何跨 UID 委派並保留管理權；但不能進一步斷言所有群組權限配置都做不到。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 3 條",
    "batch18": "要使用者裁定",
    "plan": "【題3，併設-13、設-17】多 UID 部署下 cgroup 委派、檔案寫權、共享群組都缺一條合法路徑。請選：(a) helper 加固定動作（cgroup_delegate、建群組／加成員／chgrp），目錄留 daemon 擁有＋群組可寫；(b) 需要跨帳號的動作改由 daemon 代做（tick 經 IPC 要 task 框、runner 以目標身分開檔）；(c) 首版多 UID 只做最小集合：每任務 cgroup、跨分支投件只在單帳號部署支援，多帳號退回 tick 葉、群組由管理員手配。"
   },
@@ -32,7 +32,7 @@
    "title": "人手 `aos node tick N`、或任何不在 daemon 框裡跑的 tick，「每任務開 `task-<序號>`」開不出來時怎麼辦沒寫",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/cli/commands.md:42` 支援直接執行 tick；`proto6/spec/protocol/node.md:78` 卻以已有 node 框及委派權為前提。人手呼叫如何進框、核對既有框，或在哪個條件下拒跑，沒有接上。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 16 條",
    "batch18": "要使用者裁定",
    "plan": "【題17】人手跑 aos node tick 時不在 node 框裡、開不出 task 框。請選：(a) 拒跑（回 2 或 125，要求經 daemon wake）；(b) 略過任務層照跑，收尾退回 B-202 的 session／pgid 清法並在 stderr 註明一行。"
   },
@@ -120,7 +120,7 @@
    "title": "投件被丟掉只在 stderr 印一行，而那個檔每格覆寫；tick 因任務表壞掉回 2 也沒人寫待辦——agent 會無聲卡死",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/node.md:111` 的丟件診斷與 `proto6/spec/protocol/daemon/provision-and-runner.md:53` 的覆寫確有證據流失風險；但 `proto6/spec/protocol/ops.md:83` 已要求壞任務表由 tick／daemon 記事項，並非一概沒人報。`proto6/spec/protocol/node.md:113` 的鬧鐘也不能補救未成功投出的件。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 13 條",
    "batch18": "要使用者裁定",
    "plan": "【題14，併設-9】投件被丟、壞件留在收件區都沒有持久痕跡或清理路徑。請選（可複選）：(a) 丟件寫一件 node attention（要推翻第十五批「不寫待辦」）；(b) runner-stderr.log 改追加＋輪替，不每格覆寫；(c) agent 範本對 LLM 請求預設 alarm_ms；壞件：(d) tick 診斷後改名成點開頭檔留現場；(e) 過保留期由 aos-clean 刪；(f) 永遠留著、事項只寫一次。"
   },
@@ -131,7 +131,7 @@
    "title": "每條裁定落在三～四處重寫，不是正本＋引用，已經開始互相漂移",
    "astra_verdict": "成立",
    "astra_reason": "任務 cgroup 規則在 `proto6/spec/daemon.md:80`、`proto6/spec/protocol/node.md:78`、`proto6/spec/base/execution.md:19`、`proto6/spec/protocol/daemon/provision-and-runner.md:21` 多次重述，確實增加裁定同步成本。但其中「丟原件」和「先存副本再清原件」不是有效的矛盾例子。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 15 條",
    "batch18": "要使用者裁定",
    "plan": "【題16】同一條裁定在主規格與協議篇各寫一次、已開始漂移。請選：(a) 照 P-001 主規格是行為正本，協議篇只留編碼＋條號連結；(b) 反過來協議篇是正本，主規格只留方向；(c) 等第十八批改寫 spec（框架／各 kernel 自定分開）時一併重排。"
   },
@@ -142,7 +142,7 @@
    "title": "node 帳號拿到 `n-<h>` 的委派後，可以自建 `tick`／`task-*` 以外的子框藏程序；daemon 收尾只看 `tick`＋`task-*`",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/daemon.md:80` 委派整個 node 分支，正常 tick 收尾卻只看 tick 與 task-*。同 UID 任務若把後代搬到自建的其他葉端，`proto6/spec/protocol/node.md:78` 的 task 框可能已空，卻未滿足 `proto6/spec/tick.md:9` 的後代清空保證。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 5 條",
    "batch18": "要使用者裁定",
    "plan": "【題5】node 帳號拿到 n-<h> 委派後可自建 tick／task-* 以外的子框把程序藏著，daemon 收尾看不到。請選：(a)「全空」改看整個 n-<h> 扣掉 n-*、once-*；(b) 只委派 n-<h>/tasks/ 一個分支給 node；(c) 接受，明寫這是逃生口。（第十八批第 5 條的「可以更寬」只講 kernel 自訂、Linux 管不到的部分，cgroup 這層不適用。）"
   },
@@ -164,7 +164,7 @@
    "title": "沒有版本演進規則：`version` 只會拒絕，不能升級、不能新舊共存",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/README.md:19`、`:20` 沒有完整的資料遷移、回退及混版部署契約，這是缺口；但拒絕「未知版本」不代表新程式不能同時認得舊版與新版，不能推出必然無法升級或共存。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 9 條",
    "batch18": "要使用者裁定",
    "plan": "【題9】沒有格式版本演進規則（誰轉檔、能否新舊並存、版本不一致誰拒絕）；第十八批後各 kernel 自訂的檔案也會有自己的版本。請選：(a) 新程式讀舊版、寫新版，升級責任放在某支指令（例如 aos node migrate）；(b) 放寬 schema 允許可選新欄位或 ext 區塊，靠相容新增避免升版；(c) 首版不處理，只明寫「升版＝全停手動轉檔」。"
   },
@@ -175,7 +175,7 @@
    "title": "同一份 LLM／工具結果在 agent repo 存兩份、池端再一份、git 歷史再一份，而 git 歷史回收「先不管」",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/agent-tasks.md:45`、`:55` 有多層保存，`proto6/spec/base/storage.md:39` 又暫不回收 git 歷史，長期成長值得處理；但外層 RPC 與內層結果未必相同，Git 也會共用相同內容的物件，不能按檔案位置直接算成四倍輸出。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 14 條",
    "batch18": "要使用者裁定",
    "plan": "【題15，併建-17、建-18】回應／結果要不要多存副本。現況：response 在 agent repo 存兩份、git 歷史不回收；補投原回應只能從 git 歷史找；本地動作類的 accepted stdout 沒有落點。請選：(a) 靠 git 歷史當存檔，不另存副本（補投從 git 歷史撈、本地動作 stdout 允許 null 只看 status），另寫 repo 維護步驟；(b) 另存追蹤副本（state/messages/sent、stdout 檔），隨保留期清，state/work 改引用避免雙份；(c) 維持「git 歷史先不管」，只寫明 repo 大小預期。"
   },
@@ -186,7 +186,7 @@
    "title": "git 2.35 預設不 fsync 鬆散物件，「commit 成功後才刪原件」在斷電時不成立",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/tick.md:53`、`proto6/spec/protocol/node.md:109` 把 commit 成功當成刪原件的邊界，卻未定斷電耐久條件。Git 的檔案同步另有設定，不能把 commit 成功直接視為資料已安全落盤；修正也不能只加一個物件同步選項就宣稱全部解決。參見 [Git 2.35 官方文件](https://git-scm.com/docs/git-config/2.35.0)。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 17 條",
    "batch18": "要使用者裁定",
    "plan": "【題18】commit 成功就刪原件，但 git 2.35 預設不 fsync 物件與 ref，斷電可能掉件。請選：(a) 維持 2.35，建 node 時設 core.fsyncObjectFiles=true，接受 ref 未 fsync 的缺口；(b) 最低版本升到 2.36，設 core.fsync（committed 或 all）；(c) aos 自己在 commit 後對 .git 做 fsync／syncfs 再刪原件。三者都加一條斷電模擬驗收。"
   },
@@ -197,7 +197,7 @@
    "title": "「哪裡出了事」散在六個地方，跨 node 追一件工作要對三套 ID",
    "astra_verdict": "部分成立",
    "astra_reason": "診斷確實分散，但 `proto6/spec/protocol/kernel-tasks.md:106` 已要求保存轉交前後的 ID 對照；`proto6/spec/protocol/ops.md:11` 的待辦和 `proto6/spec/protocol/daemon/provision-and-runner.md:70` 的啟動失敗證據也不是同一用途。較準確的缺口是缺少統一串查入口，不能直接把這些檔案當冗餘合併。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 18 條",
    "batch18": "要使用者裁定",
    "plan": "【題19，併新設-1】診斷資訊散在多處、完成的 once 診斷在 daemon 記憶體無限累積只能靠重啟清。請選：(a) 加唯讀 aos work trace ID 串起 request_id→forward_id→attempt；(b) 只補一頁「除錯看哪裡」說明；once 診斷另選：(c) 容量上限或保留期自動淘汰；(d) 提供手動清除 IPC；(e) 維持不淘汰並寫明可接受規模。"
   },
@@ -208,7 +208,7 @@
    "title": "壞掉或投不回去的收件原件永遠留在 `requests/`，每格重掃、重報，沒有清理路徑",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/messages.md:36`、`proto6/spec/base/storage.md:35` 會保留未接納原件，缺自動隔離壞件的流程；但不代表人不能修理或清除，也未要求每格重新報一次。`proto6/spec/protocol/ops.md:83` 還要求同一問題沿用事項 ID。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 13 條",
    "batch18": "要使用者裁定",
    "plan": "【題14】與設-1 併題，見設-1 選項（壞件留在收件區：改名留現場／過期由 aos-clean 刪／永遠留但事項只寫一次）。"
   },
@@ -252,7 +252,7 @@
    "title": "多 UID 部署下三個檔案寫權沒交代：daemon 寫 `.aos/runner-stderr.log`、成員身分寫 kernel 的 `.aos/jobs/`、once 單檔的 runner 診斷落點",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/protocol/node.md:133` 只明授 daemon 寫 attention，未完整接上 `proto6/spec/protocol/daemon/provision-and-runner.md:53` 的診斷檔；`proto6/spec/protocol/work.md:33`、`:47` 的跨 UID jobs 輸出權限與 once 診斷落點也不完整。但寫結果失敗可能是 unknown，不能一概當 start_failed。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 3 條",
    "batch18": "要使用者裁定",
    "plan": "【題3】與必-1 併題：daemon 寫 runner-stderr.log、成員身分寫 kernel 的 .aos/jobs、once 診斷落點，都是多 UID 權限佈建的一部分，見必-1 選項。"
   },
@@ -263,7 +263,7 @@
    "title": "spec 沒有一個統一的「可排程計算」定義：五種被排程／被限制的東西各自一套啟動、逾時、取消、暫停、限制與結果",
    "astra_verdict": "部分成立",
    "astra_reason": "對照使用者的「表達式」視角，確實缺一份共同計算契約；但已有 inst、node 資源框及工作結果等共用部分。卡住也不只剩重啟：`proto6/spec/protocol/daemon/registration.md:23` 可 unregister，`proto6/spec/daemon.md:53` 有收尾規則。不能把五條路線描述成完全沒有共同控制。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 1 條",
    "batch18": "要使用者裁定",
    "plan": "【題1】第十八批要 aos 只提供一個「可排程計算」外殼，但外殼含哪些欄位沒定，現有 tick 格、tick 任務、once、LLM attempt、agent 一輪各一套（tick 任務連逾時、取消都沒有）。請選：(a) 在 terms／contracts 定最小外殼（啟動、逾時、取消、暫停、限制框、結果形狀、成本估計、以及第 6 條的隨機性要不要是欄位），五種單位對上去補缺；(b) 把 tick 任務也做成 once 形狀，兩者合成一種單位；(c) 維持各自一套，只補 tick 任務的逾時與取消。"
   },
@@ -296,7 +296,7 @@
    "title": "跨分支（兄弟子樹）投件在多 UID 部署下沒有可佈建的路：helper 只會建帳號與同名主群組，沒有任何「共享群組」動作",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/daemon/provision-and-runner.md:11` 沒有共享群組管理動作，但 `proto6/spec/protocol/kernel-tasks.md:150` 明定其他群組由有權建立者配置。因此不是沒有可佈建的路，也不必每對 node 建一組；缺的是自動建立隔離 node 時的完整配置流程。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 3 條",
    "batch18": "要使用者裁定",
    "plan": "【題3】與必-1 併題：跨分支（兄弟子樹）投件需要共享群組，helper 沒有建群組動作，見必-1 選項（astra：管理員可手配，缺的是自動佈建流程）。"
   },
@@ -494,7 +494,7 @@
    "title": "本地動作類指令（agent.say／recheck／quota.set／work.cancel）的 stdout `{\"accepted\":true}` 要變成檔案給 work-result 的 `stdout.path` 引用，落點沒定；範例乾脆填 null",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/messages.md:69`、`:75` 與 `proto6/spec/protocol/work.md:67` 間可補清 accepted 輸出的落點及留存；但 `proto6/spec/protocol/examples/messages/command-result.minimal.valid.json:13` 是通用範例，未宣稱它是 agent.say 回件，stdout:null 不能據此判錯。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 14 條",
    "batch18": "要使用者裁定",
    "plan": "【題15】與設-6 併題：本地動作類 accepted stdout 落點，見設-6 選項。"
   },
@@ -505,7 +505,7 @@
    "title": "P-304 說同 ID 重送要「補投原回應」，但待送回應投出後即刪、只留在 git 歷史，沒說去哪拿",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/messages.md:46` 要补投原回應，`proto6/spec/protocol/node.md:115` 會刪已送 outbox，確需明定查找與保留方式；但 `:111` 已指出原檔仍在 git 歷史，不能說沒有保存來源，也不必然要再存一份。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 14 條",
    "batch18": "要使用者裁定",
    "plan": "【題15】與設-6 併題：補投原回應要從哪拿，見設-6 選項。"
   },
@@ -725,7 +725,7 @@
    "title": "「檔案請求的 params 是完整 inst」＝有投件權就能以對方身分跑任意程式，UID 隔離、key 保護、取消核權都被這一條架空",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/protocol/messages.md:63` 明准完整 inst 並承認借權執行風險，`proto6/spec/base/inst.md:48` 又用覆蓋後 PATH 找 aos，因此換程式讀池憑證的情境成立；與 `proto6/spec/scheduling/llm.md:29` 的 key 隔離驗收需協調。但完整 inst 是已接受方向，應裁清保護承諾，不能擅自加白名單推翻它。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 2 條",
    "batch18": "要使用者裁定",
    "plan": "【題2】檔案請求的 params 是完整 inst，有投件權就能借收件 node 身分跑任意程式，跟「有 helper 就能保護 key」衝突（astra：最嚴重）。請選：(a) 接受，改掉 key 保護承諾為「只對沒有投件權的人有效」；(b) 執行時固定用絕對路徑的 aos、envs 白名單、不展開指示詞；(c) 只有同帳號關係收完整 inst，跨帳號只收 stdin 材料；(d) 照第十八批讓收件 kernel 按 method 宣告接受 inst 的哪些欄位，aos 只給框架與預設。"
   },
@@ -736,7 +736,7 @@
    "title": "agent 自己開的 once 做完不叫醒，但等結果時 ready=false、due=null，逐次放行的 agent 又沒有 interval——結果永遠沒人來收",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/protocol/agent-tasks.md:104` 不主動叫醒，`:75` 等結果可 ready=false、due=null，`proto6/spec/protocol/kernel-tasks.md:26` 又建議 agent 不設週期。這個組合確實可一直等不到收結果的下一格；是最新裁定與預設組合的代價，不是裁定漏落。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 10 條",
    "batch18": "要使用者裁定",
    "plan": "【題10】agent 自開的 once 做完不叫醒（第十七批），等結果時 ready=false、due=null、agent 又沒設 interval，結果可能沒人收。請選：(a) agent 等自跑 once 時把 due_ms 設成輪詢時間，靠到期叫醒；(b) 這類 agent 必須設 interval_ms；(c) daemon 在 once 收尾後 wake 父 node（推翻第十七批第 3 條）；(d) 維持，P-707 明寫這是接受的行為。"
   },
@@ -747,7 +747,7 @@
    "title": "agent 的設定檢查要不要跟 kernel 一樣「跑完就回 0」（同時決定必-8 的 validate-only 用哪組碼）",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/kernel-tasks.md:74` 與 `proto6/spec/protocol/agent-tasks.md:149` 的一般 check 行為確實不同，可討論統一；但第十七批只指定 kernel，兩套已明定介面不構成違反裁定，也不使 resume 無法實作。統一是設計選擇，並非必修。",
-   "status": "已分類",
+   "status": "延後（agent 機制）",
    "batch18": "要使用者裁定",
    "plan": "【題20】agent 設定檢查「設定壞」回 1，kernel 第十七批改成跑完就回 0。請選：(a) agent 也改成跑完寫紀錄就回 0；(b) 維持，P-609／P-712 寫明「agent check 不是 tick 任務，所以無效回 1」。"
   },
@@ -791,7 +791,7 @@
    "title": "「node 的擁有者」取根目錄 owner UID，可能跟 node 實際執行身分（inst user）不是同一人",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/protocol/work.md:83` 用 node 根目錄 UID 核權；`proto6/spec/protocol/daemon/startup-and-ipc.md:42` 的 IPC owner 卻依授權執行身分更新，`proto6/spec/protocol/node.md:133` 也只要求可讀寫、未要求擁有目錄。两種 owner 確實可能不同，應確認權限後果。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 4 條",
    "batch18": "要使用者裁定",
    "plan": "【題4】取消核權的「node 擁有者」取根目錄 owner UID，可能跟 node 實際執行身分不同（kernel 建資料夾沒 chown 時）。請選：(a) 維持根目錄 owner；(b) 改成該 node inst 的 user；(c) 兩者皆算擁有者。"
   },
@@ -802,7 +802,7 @@
    "title": "新增一個隔離帳號＝改 daemon 設定＋重開 daemon＝全殺在途工作",
    "astra_verdict": "部分成立",
    "astra_reason": "未预授身分的擴容確需改啟動設定；但 `proto6/spec/protocol/daemon/registration.md:9`、`proto6/spec/protocol/daemon/provision-and-runner.md:25` 允許先授予尚不存在的確切帳號，日後建帳號不用重開。不是每新增隔離帳號都必須全殺。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 6 條",
    "batch18": "要使用者裁定",
    "plan": "【題6，併裁-14、裁-15 的 roots 部分】改頂層設定（加沒預授的帳號、增刪頂層樹）都要重開 daemon＝全殺在途工作；搬 node 要走 unregister 再重登。請選：(a) 接受，寫部署與搬 node 的操作步驟（先預授帳號）；(b) 設定熱重載，只擴大 roots／額度、不動程序；(c) roots 允許經 IPC 增刪；(d) 頂層額度允許帳號前綴或 UID 範圍（與第十一批「不支援萬用名稱」相衝）；搬 node 另可選 (e) 允許 unregister 後帶新 parent 重登、spec 定順序。"
   },
@@ -813,7 +813,7 @@
    "title": "daemon 重開（升級、當掉）的寬限只有 2 秒，所有在途 LLM／工具全變 unknown 且永不自動重做，沒有「先排空再停」的模式",
    "astra_verdict": "部分成立",
    "astra_reason": "缺整機「停新派工、等待自然完成」模式的代價成立；但 `proto6/spec/protocol/daemon/startup-and-ipc.md:18` 的兩秒是可配置預設，`proto6/spec/protocol/work.md:53`、`proto6/spec/daemon.md:47` 也保留可信完整結果，不是所有在途工作都必然 unknown。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 7 條",
    "batch18": "要使用者裁定",
    "plan": "【題7】daemon 停機寬限預設 2 秒，升級時在途 LLM／工具多半變 unknown 且不自動重做，沒有「停新、等在途做完」的模式。請選：(a) 加 drain 模式：停新格、等在途 once 跑到自己的 timeout 再收尾；(b) shutdown_grace_ms 預設拉到與 LLM timeout 同量級；(c) 接受。"
   },
@@ -824,7 +824,7 @@
    "title": "人工介入只有 `attend done`；卡在 unknown 的使用者輸入沒有「當作失敗、繼續」的出口",
    "astra_verdict": "部分成立",
    "astra_reason": "標準人工修復流程不足，但 `proto6/spec/protocol/agent-tasks.md:110` 允許 unknown 的 final，`:114` 允許有終局回話後把 input 記 done，並非必然永久卡住。`proto6/spec/protocol/ops.md:37` 也允許人手修理；不能直接把工作 unknown 改寫成 failed 再重做。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 12 條",
    "batch18": "要使用者裁定",
    "plan": "【題13】卡在 unknown 的使用者輸入沒有標準的人工出口（astra：不是必然永久卡住，但缺流程）。請選：(a) attend done 對 unknown 事項＝把那次嘗試記 failed、input 繼續（不重做工作）；(b) 新增 aos agent input cancel N ID，把 input 標 canceled 並回一句 final；(c) 接受「重講一次」為唯一出口並寫明。"
   },
@@ -835,7 +835,7 @@
    "title": "改一個 kernel 的 cgroup 上限要整棵子樹全空，頂層 kernel 幾乎永遠改不了",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/daemon/provision-and-runner.md:23` 確要求整個子樹全空，修改上層限制需要維護窗口；但該條與 `proto6/spec/protocol/resources.md:58` 已給暫停、等空、更新、恢復的路，不是沒有可行方式。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 8 條",
    "batch18": "要使用者裁定",
    "plan": "【題8，併新裁-1】cgroup 上限怎麼套、怎麼改：改上限要整棵子樹全空，頂層幾乎改不了；頂層第一次的上限沒人套。改的部分請選：(a) 維持全空才改；(b) 調高可熱改、調低才要全空；(c) 都可熱改，OOM 風險由設定者承擔。第一次套用見新裁-1 選項。"
   },
@@ -846,7 +846,7 @@
    "title": "agent 對 agent 的問答只能問一次：帶 `in_reply_to` 的回話只記 history，問的那方永遠不會因為收到答案而思考",
    "astra_verdict": "成立",
    "astra_reason": "`proto6/spec/protocol/agent-tasks.md:81` 明定回話只記錄、不觸發 LLM，`:89` 又不混其他 input，答案不會自動推進提問者。這是已接受防循環規則的協作代價；標題宜縮成「回話不自動推進既有委託」，不是只能問一次。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 11 條",
    "batch18": "要使用者裁定",
    "plan": "【題11】帶 in_reply_to 的回話只記 history，發問的 agent 不會因收到答案而繼續，委託鏈斷掉（第十六批防循環的代價）。請選：(a) 維持，協作靠人或工具讀 history；(b) 回話「記錄且標 ready」，只叫醒不自動再 say；(c) 只有雙方都是回話時才靜音；(d) 照第十八批做成 agent 設定，由 kernel／agent 決定，預設沿用第十六批。"
   },
@@ -868,7 +868,7 @@
    "title": "樹形寫死在 daemon 登記與 cgroup 路徑裡：不能換父、頂層只能從 daemon 設定改；重組樹＝重開 daemon＋全殺",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/daemon/registration.md:7` 的 roots 變更需重開，但一般 node 不能原地換父，不等於重組必須重開：`:23` 可解除，`proto6/spec/protocol/kernel-tasks.md:41`、`:45` 可調成員後由新父註冊。成立的是重掛流程與維護成本，不是全面強制重啟。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 6 條",
    "batch18": "要使用者裁定",
    "plan": "【題6】與裁-8 併題（樹形改動與 roots 要重開），見裁-8 選項。"
   },
@@ -879,7 +879,7 @@
    "title": "幾處其實還是偷偷假設「一台機器一個 daemon、一個瓶頸點」",
    "astra_verdict": "部分成立",
    "astra_reason": "`proto6/spec/protocol/README.md:71` 的同 provider scope 集中同池確有單點成本；但 `proto6/spec/protocol/daemon/startup-and-ipc.md:15`、`:16`、`:19` 是每實例設定，未限定一機一 daemon。`proto6/spec/protocol/messages.md:59` 也有通知，不只定期補查；跨 daemon 邊界仍值得明定。",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 6 條",
    "batch18": "改成各kernel自定",
    "plan": "第十八批後資源由各 kernel 定義：兄弟借用、跨層優先、同 provider 是否只能經一個池（池分片）都變成各 kernel 的資源政策，aos 不統一規定；aos 只寫清 daemon 邊界（可多個 daemon，受管範圍不得重疊，見新必-3），roots 經 IPC 增刪併入題6（裁-8）。"
   },
@@ -934,7 +934,7 @@
    "title": "完成的 once 診斷可以無限累積，規定的清除方式卻會中斷其他工作",
    "astra_verdict": "",
    "astra_reason": "",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 18 條",
    "batch18": "要使用者裁定",
    "plan": "【題19】與設-8 併題：完成的 once 診斷無限累積，見設-8 選項 (c)(d)(e)。"
   },
@@ -956,7 +956,7 @@
    "title": "頂層 kernel 的本地額度，第一次由誰套成 Linux 限制沒有定義",
    "astra_verdict": "",
    "astra_reason": "",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 8 條",
    "batch18": "要使用者裁定",
    "plan": "【題8】與裁-11 併題：頂層 kernel 的本地額度第一次由誰套成 Linux 上限沒定。請選：(a) 部署者在首格前自己建框、套上限並驗證，spec 列為必要前置；(b) daemon 啟動階段依設定套頂層上限，在首次 tick 前完成（要守住 daemon 不管分配政策的界線）；(c) 本地 quota_file 只是分配政策、不承諾硬上限，另寫明真正的 Linux 上限由哪一層提供。"
   },
@@ -967,7 +967,7 @@
    "title": "agent 收到 RPC 拒收時，等待中的工作與使用者輸入要如何收尾未定",
    "astra_verdict": "",
    "astra_reason": "",
-   "status": "已分類",
+   "status": "已裁定：第十八批審稿裁定第 12 條",
    "batch18": "要使用者裁定",
    "plan": "【題12】agent 收到外層 RPC 拒收（例如 work_not_authorized、pool_not_found）時，pending 怎麼解除、input 轉去哪沒定。請選：(a) 拒收記成「未派出」的工具結果、解除 pending，整批齊後交模型判斷；(b) 拒收立即擋住該 input 進 needs_attention，等人修；(c) 分類：某些拒收直接 failed 終局，其他留人工，並列清單。"
   }
