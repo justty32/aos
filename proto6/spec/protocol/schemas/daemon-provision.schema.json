@@ -232,7 +232,7 @@
       "additionalProperties": false
     },
     {
-      "description": "〔第十九批疑點裁定 10〕以指定帳號開程序：只收帶憑證的通道請求；同一個 sendmsg 以 SCM_RIGHTS 附鎖 fd 與回報 pipe 寫端共 2 個 fd（運行時核對）",
+      "description": "〔第十九批疑點裁定 10；第二十批呼叫者改 aos-as〕以指定帳號開程序：只收帶憑證的通道請求；同一個 sendmsg 以 SCM_RIGHTS 附鎖 fd、回報 pipe 寫端、stdin、stdout、stderr 共 5 個 fd（運行時核對）；frame 下一步納入 cgroup，本輪帶了回 unsupported",
       "type": "object",
       "properties": {
         "node_id": {
@@ -249,7 +249,7 @@
         },
         "frame": {
           "type": "string",
-          "pattern": "^task-[1-9][0-9]*$"
+          "pattern": "^task-(0|[1-9][0-9]*)-[1-9][0-9]*$"
         },
         "token": {
           "$ref": "daemon-registration.schema.json#/$defs/Token"

@@ -25,20 +25,20 @@ result 為 `{node_id, parent_id, registration_id}`：正規化後的 id、有效
 - `mount.clear` 的 `cleared` 是實際清掉的筆數（非負整數），沒有可清的回 0，不算錯誤。範例：[請求](../examples/daemon/mount_clear.minimal.valid.json)、[回應](../examples/daemon/mount_clear_result.minimal.valid.json)、[反例：多一個欄位](../examples/daemon/mount_clear.extra.invalid.json)。
 - 錯誤：不存在的目標回 `not_registered`（包括重送已完成的解除）；解除時無法確認全空回 `cleanup_failed`；停機中的 wake 回 `stopping`；對掛載行程送這幾個 method 回 `kind_mismatch`。
 
-故障停格的接法以 [B-607](../../daemon.md) 為正本；tick 的停格碼 3 與格首擋板 125 見 [node P-203](../node.md)。
+故障停格的接法以 [B-607](../../daemon.md) 為正本：〔使用者方向 2026-09-30，第二十批〕daemon 不看結束碼，看停格檔 `.aos/tick/stop`（暫停）與擋板檔 `.aos/tick-blocked`（不開格），檔案位置見 [node P-200](../node.md)、[P-213](../node.md)。
 
 ## P-106．查登記與最近一格〔使用者方向 2026-09-29，CLI H-034 D1；欄位為工程預設〕
 
 `node.show` params 只有 `node_id`。result 必填 `boot_id`（P-115）、`node_id`、`parent_id`（頂層為 null）、`owner_uid`、`registered`、`paused`、`running`、`pending`、`stopping`、`cgroup`、`last_tick`，〔第十八批〕`registration_id`（登記識別，共用 ID；已結束的掛載行程保留它最後一次的值），〔第十九批〕`parent_override`（上層來自登記覆蓋為 true）與 `mount`（掛載行程為 true，取代原 `once`）；登記的 node 必附 `identity_grant`，有設定才附 `interval_ms`、`provision`，掛載行程三者都沒有、`parent_override` 固定 false。頂層的 `mount` 固定 false。`registered:true` 表示還在調度表；false 只供已結束的掛載行程診斷（[B-610](../../daemon.md)），此時 paused／running／pending／stopping 都是 false、`cgroup` 為 null。掛載行程只有一格，`tick_seq` 為 1。
 
-`cgroup`：沒有活的配置（含走備援）為 null，否則回實際讀到的 `{path,limits}`。`path` 是 node 分支 `n-<h>`（掛載行程是 `mount-<h>`），不是 `tick` 葉（命名見 [B-605](../../daemon.md)）。limits 的 CPU 用 `{quota_us,period_us}`，memory／pids 沿 P-107，無上限回字串 `"max"`，未啟用 controller 省略。讀取失敗的處理見 [B-607](../../daemon.md)。
+`cgroup`：〔第二十批進行順序〕本輪沒有 cgroup，一律為 null（[B-605](../../daemon.md)）。下一步納入 cgroup 後：沒有活的配置（含沒有 cgroup）為 null，否則回實際讀到的 `{path,limits}`。`path` 是 node 分支 `n-<h>`（掛載行程是 `mount-<h>`），不是 `tick` 葉（命名見 [B-605](../../daemon.md)）。limits 的 CPU 用 `{quota_us,period_us}`，memory／pids 沿 P-107，無上限回字串 `"max"`，未啟用 controller 省略。讀取失敗的處理見 [B-607](../../daemon.md)。
 
 `last_tick:null` 表示本次登記還沒派出過；否則是最近一格，必填下表七欄。
 
 | 欄位 | 意思 |
 |---|---|
 | `tick_seq`〔第十八批〕 | 格次序號：本次登記內從 1 遞增的整數（[B-607](../../daemon.md)） |
-| `started_at_ms` | daemon 接受這次開格並進入啟動流程的 UTC 毫秒 |
+| `started_at_ms` | daemon 接受這次開格並進入啟動流程的 UTC 毫秒；〔第二十批〕daemon 在格外，這是給人看的紀錄，保留毫秒（[C-01](../../contracts.md)） |
 | `ended_at_ms` | 完成收尾的 UTC 毫秒；還在啟動／執行／清後代時為 null |
 | `exit_code` | 可信 runner 回報的 0～255 整數；執行中或結果不明為 null |
 | `started` | 可信 runner 的 started；completed 為 true、launch_failed 為 false，running 為 null；unknown 只在已有可信 started:true 時填 true，否則 null |

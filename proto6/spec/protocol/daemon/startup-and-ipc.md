@@ -4,12 +4,12 @@
 
 ## P-101．啟動、設定與 socket〔建議預設，未拍板〕
 
-完整 argv：`aos daemon --config /absolute/daemon.json [--create-cgroup]`；`--create-cgroup` 等於設定的 `create_cgroup: true`，兩處任一開著就算開。前景執行；stdin 不讀。
+完整 argv：`aos daemon --config /absolute/daemon.json [--create-cgroup]`；`--create-cgroup` 等於設定的 `create_cgroup: true`，兩處任一開著就算開〔第二十批進行順序：本輪只驗形狀、不生效，下一步納入 cgroup，[B-605](../../daemon.md)〕。前景執行；stdin 不讀。
 
-- stdout：啟動時印 `helper_pid=<PID>`（無 helper 為 `none`）；〔使用者方向 2026-09-30，第十九批〕啟動偵測一行 `standard: cgroup=full` 或 `standard: cgroup=fallback`（[B-605](../../daemon.md)）；node 問題的警告；〔第十八批〕熱重載每次一行 `reload applied=<欄位,…> restart_required=<欄位,…>`（沒有就留空），設定有不認得的欄位時一行 `config_unknown_fields=<欄位,…>`（[C-07](../../contracts.md)）。
-- stderr：只印 daemon 自身原因造成的錯誤；走備援時另印一次警告。
+- stdout：啟動時印 `helper_pid=<PID>`（無 helper 為 `none`）；〔使用者方向 2026-09-30，第二十批〕第十九批的啟動偵測行 `standard: cgroup=full|fallback` 撤，本輪不印 cgroup 或 git 的偵測行（[B-605](../../daemon.md)）；node 問題的警告；〔第十八批〕熱重載每次一行 `reload applied=<欄位,…> restart_required=<欄位,…>`（沒有就留空），設定有不認得的欄位時一行 `config_unknown_fields=<欄位,…>`（[C-07](../../contracts.md)）。
+- stderr：只印 daemon 自身原因造成的錯誤。
 - 讀：設定檔、登記 inst 的原始 bytes（部署須授通用 user 必要讀取及目錄穿越權；讀不到就拒絕，不交 root 代讀）。寫：socket、`state_dir` 下的恢復檔與鎖、node 的 `.aos/attention/`、P-110 的掛載行程未啟動旁檔。環境不作授權；〔使用者方向 2026-09-30，第十九批〕daemon 只替它開的程序放兩個通道變數（[P-117](channel.md)），自己不讀 `AOS_*`。
-- 結束碼：正常停機 0；用法／設定在開始做事前就錯回 2（〔第十七批〕開了 create_cgroup——設定或 `--create-cgroup` 任一處——卻缺 `cgroup_root` 一律算這種）；自己的最低需求不合（〔第十九批〕缺 cgroup 不算，改走備援）、明寫的 `cgroup_root` 準備不好、取不到排他鎖、初始化、清空或運行中 daemon 自己失敗回 125，stderr 說明。啟動偵測見 [B-605](../../daemon.md)，排他鎖見 [B-611](../../daemon.md)。
+- 結束碼：正常停機 0；用法／設定在開始做事前就錯回 2（〔第十七批〕開了 create_cgroup——設定或 `--create-cgroup` 任一處——卻缺 `cgroup_root` 一律算這種，本輪照樣驗）；自己的最低需求不合（〔第十九批〕缺 cgroup 不算）、取不到排他鎖、初始化、清空或運行中 daemon 自己失敗回 125，stderr 說明；〔下一步納入 cgroup〕明寫的 `cgroup_root` 準備不好也回 125。啟動自檢見 [B-605](../../daemon.md)，排他鎖見 [B-611](../../daemon.md)。
 - 訊號：SIGINT／SIGTERM 停機（P-114、[B-604](../../daemon.md)）；〔第十八批〕SIGHUP 熱重載（[B-608](../../daemon.md)）；其他訊號由父程序看 wait 狀態。
 
 [設定 schema](../schemas/daemon-config.schema.json)（持久檔，不認得的欄位忽略，[C-07](../../contracts.md)）。哪些欄位能熱重載、哪些要重開，見 [B-608](../../daemon.md) 的表。
@@ -20,21 +20,21 @@
 | `common_user` | 可省，非空帳號名稱或非負 UID；預設見 P-102 |
 | `socket_path` | 必填，正規化絕對檔案路徑，例如 `/run/user/1000/aos/daemon.sock`；多 UID 部署可用 `/run/aos/daemon.sock` |
 | `state_dir` | 必填，daemon 可寫的絕對目錄；存 `state.json`、自身 `attention/` 及 PID 提示檔 |
-| `pause_save_interval_ms` | 可省，正整數，預設 1000；pause 批次存檔間隔（[B-603](../../daemon.md)） |
-| `shutdown_grace_ms` | 可省，非負毫秒，預設 2000；收尾時 SIGTERM 到 `cgroup.kill` 的寬限（[B-604](../../daemon.md)） |
+| `pause_save_interval_ms` | 可省，正整數，預設 1000；pause 批次存檔間隔（[B-603](../../daemon.md)）。〔第二十批〕以下各 `_ms` 都是 daemon 本身的計時，保留毫秒（[C-01](../../contracts.md)） |
+| `shutdown_grace_ms` | 可省，非負毫秒，預設 2000；收尾時 SIGTERM 到 SIGKILL（下一步納入 cgroup 後是 `cgroup.kill`）的寬限（[B-604](../../daemon.md)） |
 | `stop_mode`〔第十八批〕 | 可省，`"immediate"`（預設）或 `"drain"`；SIGINT／SIGTERM 走哪種停機（B-604） |
 | `drain_timeout_ms`〔第十八批〕 | 可省，正整數毫秒，預設 600000；排空停機最多等多久，跟 `shutdown_grace_ms` 是兩個值 |
-| `kill_escape_cgroups`〔第十八批〕 | 可省，布林，預設 false；重啟與解除登記時要不要一併收尾 node 自開的子框（[B-605](../../daemon.md) 逃生口） |
+| `kill_escape_cgroups`〔第十八批；〔暫定，第二十批疑-13〕撤〕 | 逃生口不再提供（[B-605](../../daemon.md)），這欄撤出 schema；舊設定寫了照 [C-07](../../contracts.md) 忽略 |
 | `mount_diag_max`〔第十八批；第十九批改名，原 `once_diag_max`〕 | 可省，非負整數，預設 1024；掛載行程的診斷最多留幾筆，0＝不留（[B-610](../../daemon.md)） |
 | `mount_diag_ttl_ms`〔第十八批；第十九批改名，原 `once_diag_ttl_ms`〕 | 可省，正整數毫秒，預設 86400000；掛載行程的診斷結束後留多久 |
-| `cgroup_root` | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑；省略就用 daemon 自己目前所在的 cgroup，用不了就走備援。「準備好」、子層搬移與備援見 [B-605](../../daemon.md) |
-| `create_cgroup` | 可省，布林，預設 false；true＝子樹不在時 daemon 自己建（同 `--create-cgroup`），此時 `cgroup_root` 必填（B-605） |
+| `cgroup_root`〔下一步納入 cgroup；本輪只驗形狀、不生效〕 | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑；省略就用 daemon 自己目前所在的 cgroup，用不了就照沒有 cgroup 做。「準備好」與子層搬移見 [daemon 篇末](../../daemon.md) |
+| `create_cgroup`〔下一步納入 cgroup；本輪只驗形狀、不生效〕 | 可省，布林，預設 false；true＝子樹不在時 daemon 自己建（同 `--create-cgroup`），此時 `cgroup_root` 必填（B-605） |
 | `disable` | 可省，不重複字串陣列，目前只認 `quota`；強制關掉啟動時偵測到的可選功能（B-605） |
 | `roots` | 必填，頂層登記陣列；每項如下，`node_id` 不可重複 |
 
 範例：[最小設定](../examples/daemon/config.minimal.valid.json)、[開了 create_cgroup 的設定](../examples/daemon/config.create-cgroup.valid.json)、[反例：開了卻沒寫 cgroup_root](../examples/daemon/config.create-cgroup-no-root.invalid.json)、[反例：版本 2](../examples/daemon/config.version.invalid.json)、〔第十八批〕[前綴與範圍額度、排空與新欄位，另帶一個不認得的欄位仍收](../examples/daemon/config.grant-prefix.valid.json)、[反例：範圍涵蓋系統帳號](../examples/daemon/config.grant-range-system.invalid.json)、[反例：空前綴](../examples/daemon/config.grant-prefix-empty.invalid.json)。
 
-頂層項必填 `node_id`、`identity_grant`，可帶正整數 `interval_ms` 與 `provision`；無 `parent_id`（上層固定 null，[B-606](../../daemon.md)）。inst 尋找及 base 依 [inst](../../base/inst.md)。找不到 inst 是用法錯 2；IPC 註冊回 -32602／invalid_params，不使 daemon 退出。
+頂層項必填 `node_id`、`identity_grant`，可帶正整數 `interval_ms`（一格的標準長度，外部規定、保留毫秒，[B-607](../../daemon.md)）與 `provision`；無 `parent_id`（上層固定 null，[B-606](../../daemon.md)）。inst 尋找及 base 依 [inst](../../base/inst.md)。找不到 inst 是用法錯 2；IPC 註冊回 -32602／invalid_params，不使 daemon 退出。
 
 **身分額度**（`identity_grant`）是非空、不重複的陣列，每項是下列之一；意思、排除規則與包含判定見 [B-606](../../daemon.md)：
 
@@ -49,7 +49,7 @@
 
 **佈建權**（`provision`）可省，省略等於無佈建權：`{"actions":[…],"paths":[…],"groups":[…]}`。`actions`、`paths` 必填，各自不得重複；`actions` 只認 [P-107](provision-and-runner.md) 的九種；`paths` 是可佈建的絕對目錄範圍，空陣列不授任何路徑；〔第十八批〕`groups` 可省，是可建立、可加成員、可 chgrp 的群組，每項是確切名稱字串或 `{"prefix":…}`，省略＝不授群組。`cgroup_root` 不是一般可寫路徑授權。子登記的佈建權只能是父的子集（B-606）。
 
-socket 權限預設：父目錄 0750、socket 0660，群組由部署配置（首版不用 ACL）。每個 socket_path 對應一把同目錄的 `daemon.lock` 獨占鎖。socket 的準備、殘留 socket 的清理與 `state_dir`、cgroup 子樹的排他鎖見 [B-611](../../daemon.md)；可連 socket 不等於通過授權（[B-601](../../daemon.md)）。
+socket 權限預設：父目錄 0750、socket 0660，群組由部署配置（首版不用 ACL）。每個 socket_path 對應一把同目錄的 `daemon.lock` 獨占鎖。socket 的準備、殘留 socket 的清理與 `state_dir`（下一步納入 cgroup 後另加 cgroup 子樹）的排他鎖見 [B-611](../../daemon.md)；可連 socket 不等於通過授權（[B-601](../../daemon.md)）。
 
 ## P-102．sudo 與 helper 生死〔使用者方向 2026-09-29〕
 

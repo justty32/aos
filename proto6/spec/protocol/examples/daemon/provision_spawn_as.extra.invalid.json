@@ -6,7 +6,7 @@
     "node_id": "/srv/aos/team/member",
     "action": "spawn_as",
     "user": "aos-tool",
-    "path": "/srv/aos/team/member/.aos/jobs/task-1790000000000-2.json",
+    "path": "/srv/aos/team/member/.aos/jobs/as-12-4242.json",
     "token": "3f9c0a1b2d4e5f60718293a4b5c6d7e8",
     "argv": [
       "sh"

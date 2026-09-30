@@ -62,11 +62,6 @@
       "maximum": 9007199254740991,
       "default": 600000
     },
-    "kill_escape_cgroups": {
-      "type": "boolean",
-      "default": false,
-      "description": "重啟與解除登記時要不要一併收尾 node 自開的子框（B-605）"
-    },
     "mount_diag_max": {
       "type": "integer",
       "minimum": 0,

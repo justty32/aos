@@ -19,9 +19,9 @@
 | `group_create`〔第十八批〕 | `group`：確切群組名稱 |
 | `group_add_member`〔第十八批〕 | `group`、`user` |
 | `chgrp`〔第十八批〕 | `path`、`group` |
-| `spawn_as`〔第十九批〕 | `user`（帳號名稱或 UID）、`path`（本 node `.aos/jobs/` 下那一項 inst 的絕對路徑）、`token`（必帶）；`frame` 可省（`task-<序號>`，走完整路線時必帶）。請求那一行要以同一個 sendmsg 用 SCM_RIGHTS 附 2 個 fd：鎖 fd、回報 pipe 寫端，順序固定，數量不符回 `invalid_params` |
+| `spawn_as`〔第十九批；第二十批呼叫者改 `aos-as`〕 | `user`（帳號名稱或 UID）、`path`（本 node `.aos/jobs/` 下 `aos-as` 寫好的那份 inst 的絕對路徑，檔名見 [P-212](../node.md)）、`token`（必帶）；`frame` 可省（`task-<seq>-<pid>`，下一步納入 cgroup；本輪帶了回 `unsupported`）。請求那一行要以同一個 sendmsg 用 SCM_RIGHTS 附 5 個 fd〔第二十批，從 2 個加 stdio〕：鎖 fd、回報 pipe 寫端、stdin、stdout、stderr，順序固定，數量不符回 `invalid_params` |
 
-`path` 是絕對路徑；`user` 是帳號名稱或 UID（`account_create` 只收名稱）；`group` 是非空名稱字串。〔第十九批〕`spawn_as` 誰能叫、帳號限制、放在哪個框、怎麼回傳見 [B-609](../../daemon.md)；它不列在登記的 `provision.actions` 授權裡（看身分額度），成功 result 同樣是 `{node_id}`，runner 開起來就回，結束碼走回報 pipe（一行 [runner 回報](../schemas/daemon-runner-report.schema.json)，同 P-110）。除了它，daemon IPC 的請求都不附 fd，附了就關掉並回 `invalid_params`。範例：每個動作一個[正例](../examples/daemon/provision_cgroup_delegate.minimal.valid.json)與一個多欄位的反例，檔名 `provision_<動作>.minimal.valid.json`／`.extra.invalid.json`；`spawn_as` 另有[沒帶憑證的反例](../examples/daemon/provision_spawn_as.no-token.invalid.json)。
+`path` 是絕對路徑；`user` 是帳號名稱或 UID（`account_create` 只收名稱）；`group` 是非空名稱字串。〔第十九批〕`spawn_as` 誰能叫、帳號限制、放在哪、怎麼回傳見 [B-609](../../daemon.md)；它不列在登記的 `provision.actions` 授權裡（看身分額度），成功 result 同樣是 `{node_id}`，runner 開起來就回，結束碼走回報 pipe（一行 [runner 回報](../schemas/daemon-runner-report.schema.json)，同 P-110）。除了它，daemon IPC 的請求都不附 fd，附了就關掉並回 `invalid_params`。範例：每個動作一個[正例](../examples/daemon/provision_cgroup_delegate.minimal.valid.json)與一個多欄位的反例，檔名 `provision_<動作>.minimal.valid.json`／`.extra.invalid.json`；`spawn_as` 另有[沒帶憑證的反例](../examples/daemon/provision_spawn_as.no-token.invalid.json)。
 
 ## P-108．daemon 與 helper 的私有通道〔建議預設，未拍板〕
 
@@ -32,18 +32,18 @@ fork 前建 Unix SOCK_SEQPACKET socketpair，只供 daemon／helper；每包一�
 | daemon.helper.bind | registration、owner_uid；1 個密封 inst 快照 fd | 以啟動根額度、可信上層鏈、原始 user 及路徑重驗。registration 三種形狀：非頂層登記（`BoundRegistration`，有效上層已解出）、頂層（P-101 形狀，只能是啟動時設定已有的 roots；熱重載新加、只用通用 user 又沒佈建權的頂層不經 helper，[B-608](../../daemon.md)）、〔第十九批〕掛載行程（`MountRecord`） |
 | daemon.helper.unbind | node_id；無 fd | 全空且無已登記子節點才移除鏡像，子到父依序解除 |
 | daemon.helper.start | node_id、target_uid、〔第十九批〕token；inst 快照與回報 pipe 共 2 fd | 開一格或一個掛載行程：固定 aos-runner，runner 環境帶兩個通道變數（[P-117](channel.md)）；不收自訂 argv／env／輸出路徑 |
-| daemon.helper.spawn〔第十九批〕 | node_id、target_uid、token，`frame` 可省；inst 快照、鎖 fd、tick 的回報 pipe 共 3 fd | 公開 `spawn_as`（P-107）的私有那一段：固定 aos-runner 帶 `--lock-fd`；不收自訂 argv／env／輸出路徑 |
-| daemon.helper.stop | node_id、grace_ms；無 fd | 只停登記範圍，照 [B-604](../../daemon.md) 收尾：TERM、等 daemon 帶入的 `grace_ms`（取 `shutdown_grace_ms`）、`cgroup.kill`、確認後代全空；不收任意 PID／訊號 |
+| daemon.helper.spawn〔第十九批；第二十批加 stdio〕 | node_id、target_uid、token，`frame` 可省（下一步納入 cgroup）；inst 快照、鎖 fd、`aos-as` 的回報 pipe、stdin、stdout、stderr 共 6 fd，順序固定 | 公開 `spawn_as`（P-107）的私有那一段：固定 aos-runner 帶 `--lock-fd`，以交來的三個 stdio fd 當 runner 的 stdin／stdout／stderr；不收自訂 argv／env／輸出路徑 |
+| daemon.helper.stop | node_id、grace_ms；無 fd | 只停登記範圍，照 [B-604](../../daemon.md) 收尾：對程序群組 TERM、等 daemon 帶入的 `grace_ms`（取 `shutdown_grace_ms`）、SIGKILL（下一步納入 cgroup 後是 `cgroup.kill`）、確認全空；不收任意 PID／訊號 |
 | daemon.helper.provision | P-107 params（`spawn_as` 除外，它走 daemon.helper.spawn）；無 fd | 重驗授權與固定動作後執行 |
-| daemon.helper.cgroup_remove〔第十八批〕 | path；無 fd | 刪殘留框：只刪 cgroup 子樹內、名字是 `n-<16hex>`／`mount-<16hex>`／`task-<序號>`、沒有程序也沒有子框的框；不是 `node.provision` 的動作（[B-609](../../daemon.md)） |
+| daemon.helper.cgroup_remove〔第十八批；下一步納入 cgroup，本輪不用〕 | path；無 fd | 刪殘留框：只刪 cgroup 子樹內、名字是 `n-<16hex>`／`mount-<16hex>`／`task-<seq>-<pid>`、沒有程序也沒有子框的框；不是 `node.provision` 的動作（[B-609](../../daemon.md)） |
 
 成功 result 都為 `{node_id}`；start 與 spawn 何時回、快照與 base、鏡像、失聯與重驗的行為都以 [B-601](../../daemon.md)、[B-609](../../daemon.md) 為正本。範例：[spawn](../examples/daemon/helper_spawn.minimal.valid.json)、[反例：provision 夾 spawn_as](../examples/daemon/helper_provision.spawn_as.invalid.json)。
 
 ## P-109．runner argv 與解析〔建議預設，未拍板〕
 
-固定 argv：`aos-runner --inst-fd N --target /absolute/target --authorized-uid UID --status-fd N [--stderr /absolute/path] [--timeout-ms N] [--lock-fd N]`。〔第十九批〕`--lock-fd` 只由 `daemon.helper.spawn` 帶：runner 不關這個 fd、讓子程序繼承，並把 `AOS_TICK_LOCK_FD` 設成這個號碼（[B-609](../../daemon.md)）。fd 已由父層打開；target 按 [inst 目標](../../base/inst.md#inst-目標檔案或資料夾)定原來源與 base，不改尋找規則。timeout 為正整數，省略不另加；authorized-uid 只是核對，不授予直接呼叫者切 UID 的能力。
+固定 argv：`aos-runner --inst-fd N --target /absolute/target --authorized-uid UID --status-fd N [--stderr /absolute/path] [--timeout-ms N] [--lock-fd N]`。〔暫定，第二十批疑-11〕`--timeout-ms` 保留毫秒：runner 是格外的程序，用 monotonic 量。〔第十九批〕`--lock-fd` 只由 `daemon.helper.spawn` 帶：runner 不關這個 fd、讓子程序繼承，並把 `AOS_TICK_LOCK_FD` 設成這個號碼（[B-609](../../daemon.md)）。fd 已由父層打開；target 按 [inst 目標](../../base/inst.md#inst-目標檔案或資料夾)定原來源與 base，不改尋找規則。timeout 為正整數，省略不另加；authorized-uid 只是核對，不授予直接呼叫者切 UID 的能力。
 
-開格的順序、串流落點與環境見 [B-601](../../daemon.md) 的「開格：runner 與回報」；展開、開檔與身分規則以 [inst](../../base/inst.md) 為正本。`--stderr` 由目標身分以覆寫方式開檔、不自建父目錄，蓋過 inst 的 stderr 選項；status-fd 只供 runner，子程序 exec 前關閉。〔使用者方向 2026-09-30，第十九批〕runner 的環境帶兩個通道變數（[P-117](channel.md)），其餘不帶管理 fd 或 key。
+開格的順序、串流落點與環境見 [B-601](../../daemon.md) 的「開格：runner 與回報」；展開、開檔與身分規則以 [inst](../../base/inst.md) 為正本。`--stderr` 由目標身分以覆寫方式開檔、不自建父目錄，蓋過 inst 的 stderr 選項；〔第二十批〕由 `daemon.helper.spawn` 開時不帶 `--stderr`，runner 的 stdin／stdout／stderr 就是 `aos-as` 交來的三個 fd（[B-609](../../daemon.md)）；status-fd 只供 runner，子程序 exec 前關閉。〔使用者方向 2026-09-30，第十九批〕runner 的環境帶兩個通道變數（[P-117](channel.md)），其餘不帶管理 fd 或 key。
 
 ## P-110．runner 結束與 125〔建議預設，未拍板〕
 
@@ -68,7 +68,7 @@ RPC error 沿 P-005，daemon IPC 與 helper 通道維持嚴格（不認得的欄
 | `not_registered`、`registration_conflict` | 目標或上層不存在／搶登記、成環、同一個 id 已是登記或掛載行程；false |
 | `busy` | 活程序、維護狀態不合（例如換父時子樹沒停）；true，等全空後先查狀態 |
 | `stopping`、`cleanup_failed` | 正在停或排空中不收新的掛行程／新成員（[B-604](../../daemon.md)）／無法確認後代清空；false |
-| `helper_unavailable`、`unsupported` | helper 不在／部署不支援所選固定動作（含走備援時的 `cgroup_*`）；false |
+| `helper_unavailable`、`unsupported` | helper 不在／部署不支援所選固定動作（含沒有 cgroup 時的 `cgroup_*` 與 `spawn_as` 帶 `frame`；本輪沒有 cgroup）；false |
 | `path_not_granted`、`conflict` | 超路徑範圍／OS 現況不符所要求設定；false |
 | `group_not_granted`〔第十八批〕 | 群組不在登記的 `groups` 授權裡；false |
 | `resource_observation_failed` | cgroup 實際配置無法讀取；false |
