@@ -2,7 +2,7 @@
 
 ← [筆記索引](README.md)｜裁定見[裁定紀錄](2026-09-29-verdicts.md)第三、四批
 
-2026-09-29 使用者指出：proto6 前面的 spec 把 proto5 的 kernel／daemon 拆法改成「一支常駐控制端＋一本總帳本」，偏離原意。原意是 **kernel 本身也是一個靠 tick 推進的資料夾**，因為將來會有多個 kernel 混在 agent 團隊裡：某個團隊有自己的 kernel，只管自己成員的排程與資源，而這個 kernel 又只是上一層 kernel 的一件工作。本篇把這個方向和同日定下的「註冊式 tick」合起來寫清楚，作為重寫 spec 的依據。**以本篇為準；前面 spec 裡「單一控制寫入者、總帳本」的寫法要改掉。**
+2026-09-29 使用者指出：proto6 前面的 spec 把 proto5 的 kernel／daemon 拆法改成「一支常駐控制端＋一本總帳本」，偏離原意。原意是 **kernel 本身也是一個靠 tick 推進的資料夾**，因為將來會有多個 kernel 混在 agent 團隊裡：某個團隊有自己的 kernel，只管自己成員的排程與資源，而這個 kernel 又只是上一層 kernel 的一件工作。本篇把這個方向和同日定下的「註冊式 tick」合起來寫清楚，作為重寫 spec 的依據。**以本篇為準；前面 spec 裡「單一控制寫入者、總帳本」的寫法要改掉。**（標註：09-29 晚起 spec 已依此重寫，現行以 [spec](../spec/README.md) 為準，本篇改為架構背景；下列已被後批推翻或已定的處所另有標註；09-30 第十八批方向見 [09](verdicts/09-special-computing-os.md)，最新為準。）
 
 > **第七批更新**：kernel 與 agent 合併成一種東西 **node**。「kernel」「agent」改當概念／角色：管資源分配與排程的叫 kernel，會自主行動（牽涉 LLM）的叫 agent，都由 node 的註冊表內容決定；一個 node 可以兩者皆是或皆非。下文的 kernel／agent 都讀成「扮演該角色的 node」。
 
@@ -24,7 +24,7 @@ kernel 和 agent 都是「資料夾＋`aos-tick`＋註冊表」，差別只在�
 - daemon 依每個資料夾的設定定期跑它的 inst（也就是 tick）；同一資料夾同時只跑一格。agent 通常不設定期，只在被叫醒時跑；什麼時候叫醒誰、同時跑幾個，由它所屬的 kernel 決定。daemon 是所有 tick 程序的爸爸，kernel 的 tick 跑完就退出，不用等 agent。
 - 其他程式可用 IPC（本機 socket）找 daemon：**註冊／解除註冊資料夾**、**叫醒**（某資料夾有要緊事，把它的 tick 提前到現在）。
 - 誰能對哪個資料夾做這些事，看 socket 對面的 Linux 帳號：擁有該資料夾的帳號，或它上層 kernel 的帳號（建議預設）。
-- daemon 不讀資料夾內容、不做排程決定、不存狀態。**重啟後**：設定檔只列最頂層 kernel；開機先跑它一格，每個 kernel 的 tick 會把自己底下的成員（kernel 與 agent）重新註冊一次（重複註冊無害），整棵樹一層層長回來（使用者已確認）。
+- daemon 不讀資料夾內容、不做排程決定、不存狀態。〔標註：後續 spec 的 daemon 有 `state.json`，見 [daemon.md](../spec/daemon.md)；以 spec 為準。〕**重啟後**：設定檔只列最頂層 kernel；開機先跑它一格，每個 kernel 的 tick 會把自己底下的成員（kernel 與 agent）重新註冊一次（重複註冊無害），整棵樹一層層長回來（使用者已確認）。
 
 ## 二、kernel 樹
 
@@ -39,13 +39,13 @@ kernel 和 agent 都是「資料夾＋`aos-tick`＋註冊表」，差別只在�
 
 - **最頂層 kernel 和其他 kernel 沒有不同**，只是被設定了一些高級的系統面權限，例如可以使用 root helper。
 - 權限是設定出來的，不是寫死在某個角色上；照[通則](../spec/README.md#原則能下指令能管檔案就能交給-agent)，能下指令、能管檔案的事，開放權限就能做。
-- **LLM endpoint 池**：通常由最頂層掌管，但其他 kernel 也可以有自己的 endpoint 池。key 只在該池的代發服務手上，agent 與工具讀不到（延續裁定 9）。
+- **LLM endpoint 池**：通常由最頂層掌管，但其他 kernel 也可以有自己的 endpoint 池。key 只在該池的代發服務手上，agent 與工具讀不到（延續裁定 9）。〔標註：已被第八批改：沒經 helper 的不受保護、直連 key 必須 agent 讀得到，現見 [llm.md](../spec/scheduling/llm.md)。〕
 
 ## 四、註冊式 tick（第三批裁定）
 
 - loop 只做「跑一次 inst」，inst 的程式就是 `aos-tick`。
 - `aos-tick` 依註冊表順序跑任務：系統性任務 → agent（或 kernel）任務 → 自訂任務。
-- **group**：組內全部成功，才把這組交給帳本的結果一起寫進去；任一失敗整組不算。任務自己直接改的檔案不回滾。
+- **group**：組內全部成功，才把這組交給帳本的結果一起寫進去〔標註：「帳本」已不存在，現見 [tick.md](../spec/tick.md)〕；任一失敗整組不算。任務自己直接改的檔案不回滾。
 - **needs**：前置任務成功才執行。
 - 要 root 的步驟固定在 root helper，不進註冊表；註冊表的系統任務不是 root。
 - 用 LLM、跑工具一律先送出去，下次 tick 收結果。
@@ -99,8 +99,8 @@ proto6 的 inst 以 proto5 [inst-posix](../../proto5/spec/inst-posix/README.md) 
 ## 七、待定（附建議）
 
 1. ~~下層 kernel 用不用自己的 Linux 帳號~~：已解（第九批），kernel node 用自己 inst 的 `user`。
-2. **下層 kernel 怎麼啟動成員**：成員要切 UID，得經 root helper。建議把「可用 helper」當成可授予的權限，並限定在被授權 kernel 的子樹內：helper（或替它把關的 daemon）核對「這個成員確實登記在發出請求的 kernel 底下，且這個 kernel 有 helper 權限」。另一種作法是一律往上交給最頂層代開，但每層多一趟轉手。
-3. **登記鏈**：誰屬於哪個 kernel，要從最頂層一路接下來，防止下層 kernel 冒名開別隊的成員。
+2. **下層 kernel 怎麼啟動成員**：成員要切 UID，得經 root helper。建議把「可用 helper」當成可授予的權限，並限定在被授權 kernel 的子樹內：helper（或替它把關的 daemon）核對「這個成員確實登記在發出請求的 kernel 底下，且這個 kernel 有 helper 權限」。另一種作法是一律往上交給最頂層代開，但每層多一趟轉手。〔標註：已定，見 [P-104](../spec/protocol/daemon/registration.md)。〕
+3. **登記鏈**：誰屬於哪個 kernel，要從最頂層一路接下來，防止下層 kernel 冒名開別隊的成員。〔標註：已定，見 [registration.md](../spec/protocol/daemon/registration.md)。〕
 4. ~~下層自有 endpoint 池的代發服務用誰的帳號跑~~：已解（第九批），用該 kernel node 的帳號。
 5. ~~跨隊傳訊~~：已定（第九批），有權限就直投對方收件處。
 6. **延遲**：每多一層 kernel，一件工作多轉一手；proto5 量 tick 間隔時吃過虧，要在設計時控制層數與喚醒路徑。

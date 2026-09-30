@@ -2,7 +2,7 @@
 
 ← [筆記索引](README.md)｜對照 notes 審查「機器查證結果（B 隊）」（已封存檔 notes-review.md，索引見 [archive/README.md](archive/README.md)）
 
-日期：2026-09-29。使用者要求 proto6 **同時能在原生 Linux 與 WSL 上跑**；Opus agent 在公司 WSL2 做了與 B 隊（Manjaro）同一套唯讀查證，另外在自己的 systemd 委派子樹實測 cgroup 上限（事後清乾淨）。沒用 sudo、沒改系統設定。**這是查證紀錄，不代表建議已採納。**
+日期：2026-09-29。使用者要求 proto6 **同時能在原生 Linux 與 WSL 上跑**；Opus agent 在公司 WSL2 做了與 B 隊（Manjaro）同一套唯讀查證，另外在自己的 systemd 委派子樹實測 cgroup 上限（事後清乾淨）。沒用 sudo、沒改系統設定。**這是查證紀錄，不代表建議已採納。** 〔標註：本篇條號引用為 09-29 重寫前的 spec；swap 上限、啟動 probe、`quota_backend`、SQLite 索引現行 spec 未規定，B-604 寬限現為 `shutdown_grace_ms`（預設 2000）。〕
 
 總結：cgroup、UID、Landlock、systemd 在 WSL 都能用。卡的是四件 WSL 才有的事：**Windows 側開出隔離破口、WSL 常整台關掉、根目錄開不了 project quota、時鐘很不穩**。
 
