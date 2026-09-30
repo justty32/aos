@@ -1,26 +1,32 @@
-"""指示詞（directive）機制：讓 JSON 的值「從別處來」。
+"""aos 指示詞（directive）機制：讓 JSON 的值「從別處來」。
 
-對應 spec：proto5/spec/directives/（proto6/spec/base/inst.md〈路徑、環境與指示詞〉說完整沿用）。
-搬自 proto5/lib/aos_directives.py，改動只有三處：
-- 錯誤一律是 `errors.InstError`（`DirectiveError` 是它的別名），呼叫方只接一種。
-- `Context` 多帶一個讀檔快取（同一次解析裡同一個檔只讀一次；可預先放入 inst 本身的快照，
-  讓「用檔名 $ref 自己」也讀快照而不是重讀磁碟）。
-- `Context.env` 預設仍是 `os.environ`；inst 要求 `$env` 讀「切身分後 runner 自己的環境」，由呼叫方傳入。
-
-這個檔不知道 inst 長什麼樣：它只管一個值是不是指示詞、怎麼解成別的值。
+規範在 ../spec/directives/。這個檔是**純函式庫**、只用標準庫、沒有命令列，也不知道
+inst.json 或任何宿主文件長什麼樣：它只管「一個值是不是指示詞、怎麼解成別的值」。
+哪些位置要解、解完該是什麼型別、`$opt` 認得哪些選項名——都是宿主的事。
 
 四種指示詞 key，同一個物件裡出現多個時只跑優先順序最高的那個（其餘 key 一律忽略）：
 
     $opt  >  $ref  >  $fmt  >  $env
 
-「位置」一律是原始 JSON 的實體路徑（含 `$fmt`／`$val`／`$opt` 這些 key）。
+- `$env`：讀解析者自己的環境變數（`Context.env`）。
+- `$fmt`：模板＋本地變數表，`${name}` 只查表、展開一次。
+- `$ref`（可帶 `#位置`）＋`$at`：讀另一份 JSON（或目前這份）的某個位置；檔名空＝目前文件，
+  位置的 `./`／`../` 相對於「目前位置」（目前文件＝這個指示詞物件所在的實體路徑；
+  別的檔＝那份檔的根）。
+- `$opt`：選項物件。`resolve()` **原樣回傳**不碰；宿主用 `split_option()`／`option_names()`
+  拆開，要的話再對 `$val` 呼叫 `resolve()`。
+
+「位置」一律是原始 JSON 的實體路徑（含 `$fmt`／`$val`／`$opt` 這些 key）：`$fmt` 的變數 `p`
+在 `<這格>/$fmt/p`、模板在 `<這格>/$fmt/$val`、選項物件的值在 `<這格>/$val`。
+
+解析器一路帶著 `Context`（目前文件、中心路徑、環境、循環鏈）和「目前位置」（token 串）；
+經過 `$ref` 之後文件與位置會換成被引用的那邊，所以 `resolve_located()` 把它們一起回傳，
+宿主要往容器裡面繼續解時才有正確的文件／位置可用。
 """
 import collections
 import json
 import os
 import re
-
-from .errors import InstError
 
 __all__ = [
     "DirectiveError", "Document", "Context", "Located", "Option",
@@ -36,8 +42,17 @@ _FMT = re.compile(r"\$\{([^{}]*)\}")
 _VAL_RULES = ("required", "forbidden", "optional")
 
 
-# 指示詞錯誤就是 InstError（代號照 directives/errors.md §6）
-DirectiveError = InstError
+class DirectiveError(Exception):
+    """指示詞被拒。不是程式炸了，是這份 JSON 有問題。
+
+    `code` 是規範裡的錯誤代號（例如 `"ReferenceCycle"`），`msg` 是白話；
+    `str(e)` 是「代號: 白話」。
+    """
+
+    def __init__(self, code, msg):
+        super().__init__("%s: %s" % (code, msg))
+        self.code = code
+        self.msg = msg
 
 
 class Document:
@@ -60,12 +75,12 @@ def load_document(path):
     """讀一個 JSON 檔成 `Document`。讀不到＝`ReferenceReadFailed`，不是合法 JSON＝`ReferenceJsonInvalid`。"""
     real = os.path.realpath(path)
     try:
-        with open(real, "rb") as f:
+        with open(real, encoding="utf-8") as f:
             raw = f.read()
     except OSError as e:
         raise DirectiveError("ReferenceReadFailed", "讀不到 %s：%s" % (real, e))
     try:
-        root = json.loads(raw.decode("utf-8"))
+        root = json.loads(raw)
     except ValueError as e:
         raise DirectiveError("ReferenceJsonInvalid", "%s 不是合法 JSON：%s" % (real, e))
     return Document(real, root)
@@ -83,18 +98,14 @@ class Context:
     `Context` 本身不可變；要換文件／中心路徑用 `child()` 派生一個新的（鏈照帶）。
     """
 
-    __slots__ = ("doc", "base_dir", "env", "cache", "_chain")
+    __slots__ = ("doc", "base_dir", "env", "_chain")
 
-    def __init__(self, doc, base_dir=None, env=None, cache=None, _chain=()):
+    def __init__(self, doc, base_dir=None, env=None, _chain=()):
         if base_dir is None:
             base_dir = os.path.dirname(doc.path) if doc.path is not None else os.getcwd()
         self.doc = doc
         self.base_dir = base_dir
         self.env = os.environ if env is None else env
-        # 讀檔快取 {realpath: Document}，派生的 Context 共用同一份
-        self.cache = {} if cache is None else cache
-        if doc.path is not None:
-            self.cache.setdefault(doc.path, doc)
         self._chain = tuple(_chain)
 
     def child(self, doc=None, base_dir=None, env=None):
@@ -102,15 +113,11 @@ class Context:
         return Context(self.doc if doc is None else doc,
                        self.base_dir if base_dir is None else base_dir,
                        self.env if env is None else env,
-                       self.cache, self._chain)
-
-    def fresh(self, base_dir):
-        """同文件、同環境、同快取，換中心路徑、循環鏈清空——inst 每個欄位從這裡開始。"""
-        return Context(self.doc, base_dir, self.env, self.cache)
+                       self._chain)
 
     def _visited(self, ident):
         """鏈上再加一個身分。"""
-        return Context(self.doc, self.base_dir, self.env, self.cache, self._chain + (ident,))
+        return Context(self.doc, self.base_dir, self.env, self._chain + (ident,))
 
     def __repr__(self):
         return "Context(doc=%r, base_dir=%r)" % (self.doc, self.base_dir)
@@ -255,9 +262,7 @@ def _ref(spec, at, ctx, position):
         walked = " → ".join("%s:%s" % (c[0], _show(c[1])) for c in ctx._chain + ((ident, target),))
         raise DirectiveError("ReferenceCycle", "%s 的 $ref 繞回自己了：%s" % (where, walked))
     if doc is None:
-        doc = ctx.cache.get(ident)
-        if doc is None:
-            doc = ctx.cache[ident] = load_document(ident)
+        doc = load_document(ident)
     value = _walk(doc, target, where)
     return value, ctx.child(doc=doc)._visited((ident, target)), target
 
