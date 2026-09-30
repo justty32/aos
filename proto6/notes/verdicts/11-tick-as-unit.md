@@ -73,3 +73,4 @@
 - **一般檔案收件不歸 aos 管**（同日，選 a）：收件（檔案收件區 `requests/`、`responses/` 的讀取、回 -32601、刪原件等）**就是一個程式、掛在任務表上的一個普通任務，就這樣而已**；不是系統級任務，aos 不規定它怎麼做。系統級任務裡管「收」的只剩 `aos-sysinbox`（通道取件）。
 - **系統級收送改名為系統訊息佇列 `aos-mq`**（同日）：使用者說系統級的收件寄件不該用寄信收信描述，比較像 aos 的系統級 IPC、更像消息處理系統。定名 **`aos-mq`**（中文「系統訊息佇列」），一支程式兩個子指令：每格開頭 `aos-mq get`（id `mq-get`，從通道取出本格訊息，取代 aos-sysinbox）、每格收尾 `aos-mq post`（id `mq-post`，取代 aos-outbox）。取出後怎麼分派 aos 不管。
 - **`aos-mq post` 只走通道**（同日，選 a）：送出只經 tick–daemon 通道送進對方的佇列，**不再寫對方的 `requests/`**。檔案收件區（`requests/`、`responses/`）的收與寫都只是普通程式，aos 不管。
+- **aos-git 的分工**（同日，使用者原話整理）：`aos-git open`／`close` 處理的都是 tick、daemon 相關，以及 `kind:"system"` 任務相關的東西。`kind:"system"` 那一串任務之間**夾雜 `aos-git mark` 做存檔**（範本自帶）；**其他 kind 的任務要自己呼叫、摻入 `aos-git` 做存檔**，範本不替它們插存檔點。〔記錄者待問：open／close 提交與還原的範圍，是只限 aos 自己的檔，還是整棵 node 資料夾〕
