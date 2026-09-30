@@ -25,7 +25,7 @@ result 為 `{node_id, parent_id, registration_id}`：正規化後的 id、有效
 - `mount.clear` 的 `cleared` 是實際清掉的筆數（非負整數），沒有可清的回 0，不算錯誤。範例：[請求](../examples/daemon/mount_clear.minimal.valid.json)、[回應](../examples/daemon/mount_clear_result.minimal.valid.json)、[反例：多一個欄位](../examples/daemon/mount_clear.extra.invalid.json)。
 - 錯誤：不存在的目標回 `not_registered`（包括重送已完成的解除）；解除時無法確認全空回 `cleanup_failed`；停機中的 wake 回 `stopping`；對掛載行程送這幾個 method 回 `kind_mismatch`。
 
-故障停格的接法以 [B-607](../../daemon.md) 為正本：〔使用者方向 2026-09-30，第二十批〕daemon 不看結束碼，看停格檔 `.aos/tick/stop`（暫停）與擋板檔 `.aos/tick-blocked`（不開格），檔案位置見 [node P-200](../node.md)、[P-213](../node.md)。
+故障停格的接法以 [B-607](../../daemon.md) 為正本：〔使用者方向 2026-09-30，第二十批〕daemon 不看結束碼，也不看停格檔；只看擋板檔 `.aos/tick-blocked`（在就不開格），檔案位置見 [node P-200](../node.md)。
 
 ## P-106．查登記與最近一格〔使用者方向 2026-09-29，CLI H-034 D1；欄位為工程預設〕
 
