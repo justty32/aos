@@ -25,8 +25,10 @@
 | 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-629、B-632、B-633](settled/tick.md)；普通程式 [B-303](settled/helper.md)、[B-621](settled/tick.md)、[B-634](settled/tick.md)（`aos-cg`）；git [B-630、B-622](settled/tick.md)；node 框 [B-605](settled/daemon/cgroup.md) |
 | node 與兼任角色、兩張註冊表 | [T-02](terms.md) |
 | 上下層判定（預設看資料夾、登記覆蓋） | [B-628](settled/tick.md)、[B-606](settled/daemon/registration.md) |
-| node 登記、喚醒、全殺重啟、逐層重建、停機、熱重載 | [daemon](settled/daemon/README.md) |
-| tick–daemon 通道、憑證、掛行程、暫存訊息與急件 | [B-612～614](settled/daemon/README.md) |
+| node 登記、喚醒、重啟、逐層重建與核心收尾 | [B-601](settled/daemon/runtime.md)、[B-603、B-604、B-611](settled/daemon/lifecycle.md)、[B-606、B-607](settled/daemon/registration.md) |
+| daemon 部件與核心開關、同機多實例界線 | [B-615](settled/daemon/components.md)、[B-611](settled/daemon/lifecycle.md)；熱重載 [B-608](settled/daemon/reload.md)、helper 動作 [B-609](settled/daemon/helper-actions.md) |
+| cgroup 框、上限與清框、子樹鎖 | [B-605 與核心條文的 cgroup 部分](settled/daemon/cgroup.md) |
+| 核心通道、憑證、掛行程與診斷；可掛訊息與急件 | [B-612、B-613、B-610](settled/daemon/channel.md)；[B-614](settled/daemon/messaging.md) |
 | 任務順序、停格檔與擋板檔、結束碼紀錄、`aos-needs`、互斥、Q1／Q2、git 開格／存檔點／收尾 | [tick](settled/tick.md) |
 | 身分額度、可選 helper；inst 欄位與解析 | [身分](base/identity-resources.md)、[inst](base/inst.md) |
 | 工作材料、可信結果、後代收尾、取消 | [work](base/work.md)、[execution](base/execution.md) |
@@ -76,7 +78,7 @@
 
 ### 新條號
 
-〔主編補，第十八批；第十九、二十批加列〕第十八～二十批新開的條號如下（先預留；`check_ids --strict` 會核對每一列都有正文）。B-6xx 由 daemon.md 與 tick.md 共用，所以 daemon.md 從 606 起、tick.md 從 620 起，tick.md 現有沒編號的各節照下表補號（補號不算重編）。〔主編補，第二十批整理區〕這兩篇連同 node 與 daemon 協議已搬進 `settled/`（[整理區](settled/README.md)），條號不變；T-07、T-09、T-10 搬到 settled/terms.md，B-303 搬到 settled/helper.md。第十九、二十批沿用的舊號只換主題、不重編。
+〔主編補，第十八批；第十九、二十批加列〕第十八～二十批新開的條號如下（先預留；`check_ids --strict` 會核對每一列都有正文）。B-6xx 由 daemon/ 與 tick.md 共用；原 daemon.md 從 606 起、tick.md 從 620 起，tick.md 現有沒編號的各節照下表補號（補號不算重編）。〔主編補，第二十批整理區〕這兩篇連同 node 與 daemon 協議已搬進 `settled/`（[整理區](settled/README.md)），條號不變；T-07、T-09、T-10 搬到 settled/terms.md，B-303 搬到 settled/helper.md。第十九、二十批沿用的舊號只換主題、不重編。
 
 <!-- check_ids:reserved -->
 | 條號 | 檔 | 主題 | 落筆 |
@@ -90,7 +92,8 @@
 | B-611 | settled/daemon/lifecycle.md | 一棵資源樹只准一個 daemon | T2 |
 | B-612 | settled/daemon/channel.md | 〔第十九批〕tick–daemon 通道 | T2 |
 | B-613 | settled/daemon/channel.md | 〔第十九批〕掛行程與砍掉（原 once 的 daemon 端） | T2 |
-| B-614 | settled/daemon/messaging.md | 〔第十九批〕暫存訊息與急件 | T2 |
+| B-614 | settled/daemon/messaging.md | 暫存訊息與急件；09-30 晚拆為可掛訊息部件 | T2 |
+| B-615 | settled/daemon/components.md | 09-30 晚：部件形式、核心功能開關與未拍板預設 | 本輪 |
 | B-602 | settled/tick.md | 〔第十九批換標題〕同一資料夾一次一格：互斥鎖（原「同一 node 一次一格」） | T3 |
 | B-620 | settled/tick.md | 任務註冊表：照表依序跑（〔第十九批〕換標題） | T3 |
 | B-621 | settled/tick.md | 〔第二十批換主題〕aos-needs：前置沒成功就不跑（原節補號） | T3 |
@@ -126,7 +129,7 @@
 
 | 篇 | 下一號 |
 |---|---|
-| settled/daemon/ | B 615 起（到 619 為止） |
+| settled/daemon/ | B 616 起（到 619 為止） |
 | settled/tick.md | B 635 起 |
 | base/work.md、execution.md、identity-resources.md、storage.md、transport.md | B 104、205、306、405、507 起（305 是已刪的舊號，不要再用） |
 | scheduling/runs.md、admission.md、llm.md、operations.md | S 105、208、308、407 起 |
@@ -134,6 +137,8 @@
 | cli/ | H 038 起 |
 | terms.md、contracts.md、conformance.md | T 11、C 08、V 06 起 |
 | 協議篇 | 接各檔現有最後一號（daemon 協議 P 120 起、node 協議 P 214 起；這兩份在 settled/protocol/） |
+
+B-605 的共通自檢在 [runtime](settled/daemon/runtime.md#啟動自檢b-605-的共通部分)，框規則在 [cgroup](settled/daemon/cgroup.md)；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分也集中在該檔，沿用原條號。
 
 ## V-02．先測行為，再測規模
 
@@ -147,11 +152,30 @@ cgroup 子樹依 [B-605](settled/daemon/cgroup.md) 至少驗三種：首推的 s
 
 〔建議預設，未拍板〕以下測試交叉覆蓋已裁規則與各篇工程預設；具體預設仍依正本來源。〔納入 cgroup 與 git〕git 與 cgroup 有就用：各小節的句子在兩者都沒有時也要成立；要靠兩者的驗收句集中在文末「git（有就用）」「cgroup（有就用）」兩小節。
 
+### daemon 部件開關與同機多實例
+
+正本：[B-615](settled/daemon/components.md) 與表中各條。〔使用者方向 2026-09-30 晚〕分工與多 daemon 界線已裁；以下開關細節皆為〔建議預設，未拍板〕，是未來驗收清單，本輪未執行。單獨關閉一鍵的案例，其餘鍵保持 true；全部關閉另有一列。
+
+| 組合／操作 | 預期 |
+|---|---|
+| 五鍵省略 | 保留既有行為；環境不可用時仍照原有 no-helper／cgroup=off 路線 |
+| 五鍵全部 false；同一支程式、同一張任務表 | 通用 user 的登記、開格、wake／pause、runner 清名下程序、重啟與憑證核對仍成立；mount／kill 不靠 cgroup |
+| `enable_messaging:false`；有合法待送件 | `node.send` 回 `not_available`；mq-post 回 1、移至 failed 並記 code、不自動重試；tick 後續項照跑，daemon 不停格 |
+| 同上，get／無待送件／急件 | 合法 take 回空且 more=false、mq-get 回 0；post 沒件回 0；不產生急件 wake；不需改任務表 |
+| 訊息部件關閉，壞憑證或掛載行程取件 | 原核權／kind_mismatch 仍成立，不能用開關略過 |
+| `enable_cgroup:false`；環境本來有委派子樹 | cgroup=off、show.cgroup=null；不建框、不取 cgroup 鎖、不碰新舊框；limits 或 spawn_as 帶 frame 回 unsupported，runner 收尾照常 |
+| `enable_reload:false`；修改設定再送 SIGHUP | 只警告、不讀取、不套用、不退出 |
+| `enable_drain:false` 且 stop_mode=drain | SIGINT／SIGTERM 採立即停，正常收尾／存檔仍做 |
+| `enable_helper_actions:false`；helper 存在 | 非 cgroup 的 provision 與 spawn_as 回 not_available、無動作副作用；aos-as 回 125；核心 helper 開格／收尾保留，cgroup 動作仍看自己的開關 |
+| 熱重載開著時修改任一開關 | restart_required；其他可熱重載欄位照套，開關只在重開後生效 |
+
+〔使用者方向 2026-09-30 晚〕另驗既有界線：各實例各管自己的 node 樹；B-611 的 state／socket 鎖（有 cgroup 時另含子樹鎖）衝突仍回 125，不待命；兩 daemon 誤管同 node 只沿用 B-602／B-607 的鎖與 75 普通結束。訊息部件開著時，收件方只在另一 daemon 登記，送件回既有 not_registered、不轉送。巢狀內層經 mount 掛上，外層重啟依既有收尾界線處理，不另接回內層；沒有 cgroup 時仍不保證重啟清空。不開 daemon 的 node 間溝通不列基底驗收。
+
 ### node、登記與身分
 
 驗兼任 kernel／agent、只有收信任務及空成員表，角色須依任務判定。正常重開讀回登記、pause 與 wake，意外重開最多丟最後一個存檔間隔的 pause；無快照也自動 tick 頂層，boot id 變更後逐層補登記，壞成員留待辦、不擋其餘成員；漏叫醒可補查，重複叫醒不並行同 node 的兩格。
 
-啟動自檢依 [B-605](settled/daemon/cgroup.md)：〔使用者方向 2026-09-30，第二十批〕沒有 cgroup v2 時 daemon 照常啟動、照常開格，stdout 沒有 `standard:` 行；daemon 不查 cgroup、不查 git；只有 Python 版本不足才報錯退出。quota 偵測到但設定強制關時不用。
+啟動自檢依 [B-605](settled/daemon/cgroup.md)：〔使用者方向 2026-09-30，第二十批〕沒有 cgroup v2 時 daemon 照常啟動、照常開格，stdout 沒有 `standard:` 行；cgroup 部件關掉時不查 cgroup，daemon 一律不查 git；只有 Python 版本不足才報錯退出。quota 偵測到但設定強制關時不用。
 
 測 socket 冒名、超額授予／宣告 user、不懂 user 語意、無 helper 繼承與切 UID 後開檔。超額須 125、不啟動、不寫 `exit` 並留待辦；整份 `$ref` 可用但不能偷換身分，搬資料夾也不能取得新身分。
 

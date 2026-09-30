@@ -4,6 +4,10 @@
 
 ## B-601：記憶體登記與按需執行
 
+〔使用者方向 2026-09-30 晚〕登記與開格、runner 清自己名下程序（含收屍）屬核心，不受訊息或 cgroup 部件開關影響。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
 daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登記的 node 按登記間隔或叫醒開格。
 
 - **怎麼辨識一個 tick**：看資料夾路徑或 inst.json 路徑。登記時給的是 `<資料夾>/.aos/inst.json` 或 `<資料夾>/inst.json`，一律正規化成所在資料夾。掛載行程（B-613）照給的路徑，可以是單檔。
@@ -92,7 +96,7 @@ daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登�
 
 〔建議預設；第十九批從 P-109、P-110 搬上〕daemon（或 helper）以固定的 [runner](../terms.md#t-09收尾排空停機熱重載逃生口)（`aos-runner`）開每一格與每個掛載行程：
 
-1. fork 後先 `setsid`（runner 自成一個 session，不跟 daemon 的終端同組），降權；有 cgroup 時，runner 開在那個 node 的 `n-<h>/tick` 框裡（掛載行程在 `mount-<h>`，B-605），用 `CLONE_INTO_CGROUP` 或 exec 前寫 `cgroup.procs`；
+1. fork 後先 `setsid`（runner 自成一個 session，不跟 daemon 的終端同組），降權；有 cgroup 時另照 [B-601 的放框規則](cgroup.md#格後清框b-601)；
 2. runner 核對 UID，並核對 inst 原來源的 bytes 跟授權時的快照相同；
 3. 才照 [inst](../../base/inst.md) 解析、開檔與執行。
 
@@ -134,20 +138,7 @@ argv 與回報形狀見 [P-109、P-110](../protocol/daemon/provision-and-runner.
 - **runner 自己意外死掉**（被 SIGKILL、OOM）：它名下的程序掛回 daemon（或 helper）。daemon 分不出它們原本屬於哪一格，一律 SIGKILL 並回收；那一次開格沒有可信回報，照 B-607 記 `unknown`、停格，要人確認後才 resume。
 - 後代串流收完與取消競態依 [B-203](../../base/execution.md)。範圍沒清空前不釋放名額、不開下一格；所有失敗都不自動重跑結果不明的工作。
 
-### 有 cgroup 時：runner 照做，框再兜一次
-
-有 cgroup 時上面的做法**照舊**，另外加一層框（框的樹見 B-605）：
-
-| 步驟 | 做法 |
-|---|---|
-| 開格 | runner 開在 `n-<h>/tick` 框（上面開格第 1 步） |
-| 格後收尾 | runner 回報、被回收之後，daemon 對 `tick` 框與本格的 `task-*` 框寫 `cgroup.kill`，看 `cgroup.events` 的 populated 變 0，再 rmdir `task-*`（框已交給別的帳號時經 helper 刪）。不另外對程序群組送 SIGKILL |
-| 範圍 | 只收 `tick` 與 `task-*`；子 node 的 `n-*`、本 node 掛的 `mount-*`、node 自己開的其他子框（逃生口，B-605）都不碰 |
-| 等不到歸零 | 例如 D 狀態程序：算後代清不空，照 B-607 停格 |
-
-- 框兜得住 runner 清不到的：跳出程序群組又自設 subreaper 的、換成別的帳號的（經 `aos-as` 開、放進本 node 框的）。經外部服務開的仍在框外，不歸 aos 管。
-- 包了 `aos-cg` 的項，自己在 `task-*` 框裡當場收（[B-634](../tick.md)）；daemon 的格後收尾只是兜底。
-- 某個 node 建不了框時，那個 node 照沒有 cgroup 的做法跑（B-605「中途失效」）。
+有 cgroup 時的格後清框見 [B-601 的 cgroup 部分](cgroup.md#格後清框b-601)；runner 上述規則照做。
 
 依據：第十九批（程序群組）；第二十批追答 8（一格結束後殺殘留歸 daemon）；astra 審整理區必-1（受管範圍改成 runner 名下的整棵樹），使用者確認定案；納入 cgroup 與 git 疑-7（node 自開子框不收）。
 
@@ -166,3 +157,21 @@ argv 與回報形狀見 [P-109、P-110](../protocol/daemon/provision-and-runner.
 
 **驗收：**往收件區放新檔不會讓 daemon 開格，收件 tick 在自己的下一格（或被叫醒時）才處理；漏掉一次叫醒，完整投件仍能在所屬 kernel 的後續補查被發現；同一 node 連續收到多次叫醒不會同時跑兩格。內容發布與去重見 [投件](../../base/transport.md)，互斥見 [B-602](../tick.md)。
 
+## 啟動自檢（B-605 的共通部分）
+
+- **daemon 自己的最低需求**：Python 3.9；不合就報錯退出（125）。
+- **不查 git**：git 只有任務表上的 `aos-git` 會用（[B-630](../tick.md)），daemon 不查。
+
+### 有就用的其他功能
+
+- project quota 等功能在啟動時自動偵測，設定檔可強制關（P-101 的 `disable`，可熱重載，B-608）。
+- 沒有 quota 時，磁碟用量由磁碟資源任務定期量（[B-304](../../base/identity-resources.md)、[S-203](../../scheduling/admission.md)）。
+- 檔案系統不限定：node 放在不支援某些功能的地方，那些功能就不支援；不列白名單或拒絕清單。
+
+依據：使用者方向 2026-09-29 晚。
+
+### 初版不做
+
+systemd 的沙盒防護（`CapabilityBoundingSet` 等）以後再考慮；helper 掛 tmpfs 拿掉；原本打算交給 systemd 的開程序、定時叫醒等做法，初版全由 daemon 自己做（使用者方向 2026-09-29 晚）。
+
+**驗收：**Python 低於 3.9 時回 125；不查 git；quota 的強制關設定照舊。

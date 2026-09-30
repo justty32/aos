@@ -17,7 +17,7 @@
 
 1. [名詞](terms.md)（T-07 tick 核心、T-09 daemon 用語、T-10 四類程式）：先知道「核心、系統級任務、普通程式、停格檔、擋板檔、通道」這些詞。
 2. [通用 tick](tick.md)：核心四件事、結束碼紀錄、標準任務表範本、系統訊息佇列的取與送；git（`aos-git`，B-630、B-622）與每項一框（`aos-cg`，B-634）。
-3. [daemon](daemon/README.md)：登記、叫醒、重啟、收尾、熱重載、佈建、tick–daemon 通道；cgroup 子樹、node 框與上限（B-605）。runner 是什麼見[名詞 T-09](terms.md#t-09收尾排空停機熱重載逃生口)。
+3. [daemon](daemon/README.md)：先讀 [B-615 部件／核心開關](daemon/components.md)，再看登記、叫醒、重啟、收尾、熱重載、佈建、tick–daemon 通道；cgroup 子樹、node 框與上限（B-605）。runner 是什麼見[名詞 T-09](terms.md#t-09收尾排空停機熱重載逃生口)。
 4. [helper 與 aos-as](helper.md)：root helper 的界線、怎麼用別的帳號跑任務。
 5. 要看格式時：[node 協議](protocol/node.md)（P-200～213：資料夾、任務表、`aos-tick` 與各系統級任務、普通程式的 argv 與結束碼）→ [daemon 協議](protocol/daemon/README.md)（P-100～119：設定、IPC、通道、helper 私有通道、runner）。
 
@@ -28,12 +28,28 @@
 | [README.md](README.md) | — | 新建 |
 | [terms.md](terms.md) | T-07、T-09、T-10 | 從 [名詞與責任](../terms.md) 拆出，原處留一行指向這裡 |
 | [tick.md](tick.md) | B-602、B-620～634 | 整篇從 `spec/tick.md` 搬來；B-634（`aos-cg`）是納入 cgroup 時從 [B-202](../base/execution.md) 的草稿搬進來的新條 |
-| [daemon/](daemon/README.md) | B-504、B-601、B-603～614 | 從 `spec/daemon.md` 搬來，依職責拆檔；落點見 [daemon 目錄](daemon/README.md) |
+| [daemon/](daemon/README.md) | B-504、B-601、B-603～615 | 從 `spec/daemon.md` 搬來，依職責拆檔；落點見 [daemon 目錄](daemon/README.md) |
 | [helper.md](helper.md) | B-303 | 從 [身分與資源](../base/identity-resources.md) 拆出，原處留一行指向這裡 |
 | [protocol/node.md](protocol/node.md) | P-200～213 | 整篇從 `spec/protocol/node.md` 搬來 |
 | [protocol/daemon/](protocol/daemon/README.md) | P-100～119 | 整個資料夾從 `spec/protocol/daemon/` 搬來 |
 
 `spec/protocol/daemon.md` 是舊的單檔入口，留在原處，只改成指向這裡的 daemon 協議。
+
+### daemon 分檔落點
+
+〔使用者方向 2026-09-30 晚〕核心、可掛部件與可關維運分開；條號不改。細分目錄見 [daemon/](daemon/README.md)。
+
+| 落點 | 內容 |
+|---|---|
+| [components](daemon/components.md) | B-615：分工、開關及未拍板預設 |
+| [runtime](daemon/runtime.md) | B-601、B-504；B-605 共通自檢，runner 清程序留核心 |
+| [registration](daemon/registration.md) | B-606、B-607：登記、叫醒／暫停 |
+| [lifecycle](daemon/lifecycle.md) | B-603、B-604、B-611：重啟、收尾、停機、核心鎖 |
+| [channel](daemon/channel.md) | B-610、B-612、B-613：診斷、憑證、掛行程 |
+| [reload](daemon/reload.md)、[helper-actions](daemon/helper-actions.md) | B-608、B-609：留核心，各自可關 |
+| [messaging](daemon/messaging.md) | B-614：可掛訊息與急件 |
+| [cgroup](daemon/cgroup.md) | B-605；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分 |
+| [service](daemon/service.md) | 既有部署範例 |
 
 ## 怎麼判斷哪些放進來
 
@@ -95,6 +111,10 @@
 - **待處理的舊格式**〔astra 審整理區同日定案後〕：待送封套 schema [msg-outbox](../protocol/schemas/msg-outbox.schema.json) 與範例 `examples/messages/outbox.*`（`validate.py` 還用 `outbox` 這個檔名對它）是檔案投件的格式，已不適用；`.aos/mq/post/` 與 `.aos/mq/failed/` 的新格式（P-206）還沒有 schema。先不刪，下一輪換掉。
 
 ## 疑點
+
+### 09-30 晚拆分：開關細節未拍板
+
+本輪的名稱、預設值、重開時機、關閉行為與 helper 動作界線集中在 [B-615 待拍板](daemon/components.md#這輪待拍板)。本輪只改 Markdown，P-101 的五個設定鍵尚未同步到 schema／範例；不影響這輪拆檔完成，落實前須補。
 
 整理時發現、沒有自己改的；以及這輪修正裡先寫成「暫定」的。每條附條號。
 

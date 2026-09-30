@@ -70,6 +70,8 @@
 - `messages` 照送到的先後排；一次最多 `limit` 件，整個回應不超過 256 KiB；有訊息就至少給一件。
 - `more:true`＝還有沒取完的。
 
+〔建議預設，未拍板〕訊息部件關閉時，登記 node 的合法 `node.take` 回應格式為 `{"messages":[],"more":false}`（[B-614](../../daemon/messaging.md)）。
+
 **上限**：每個收件 tick 最多 256 件、合計 16 MiB（照 `message` 序列化後的 bytes 算）。寫死，不開放設定（[B-608](../../daemon/reload.md)）。
 
 範例：[送急件](../../../protocol/examples/daemon/send.minimal.valid.json)、[送回應](../../../protocol/examples/daemon/send.response.valid.json)、[反例：沒帶憑證](../../../protocol/examples/daemon/send.no-token.invalid.json)、[取](../../../protocol/examples/daemon/take.minimal.valid.json)、[回應](../../../protocol/examples/daemon/take_result.minimal.valid.json)、[反例：憑證格式不對](../../../protocol/examples/daemon/take.bad-token.invalid.json)、[憑證不認得](../../../protocol/examples/daemon/error.token_invalid.valid.json)。
@@ -80,6 +82,7 @@
 
 | code | 意思 | 預設 retryable |
 |---|---|---|
+| `not_available`〔建議預設，未拍板〕 | daemon 訊息部件關閉時的 `node.send`（[B-614](../../daemon/messaging.md)）；B-609 關閉動作同 P-111 | false |
 | `token_invalid` | 憑證不認得、已作廢、跟 node 對不上，或 socket 對面的帳號不合 | false |
 | `kind_mismatch` | 目標種類不符：對掛載行程送 unregister／wake／pause／resume；對登記的 node 送 kill；send 的收件方是掛載行程；take 的呼叫者是掛載行程 | false |
 | `mailbox_full` | 收件 tick 的佇列已達上限 | true，稍後再送 |

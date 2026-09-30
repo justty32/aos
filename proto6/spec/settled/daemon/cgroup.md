@@ -4,17 +4,23 @@
 
 ## B-605：依賴與啟動自檢
 
+〔使用者方向 2026-09-30 晚〕node 框、上限、有框時的清框與 cgroup 子樹鎖都屬可掛的 cgroup 部件；helper 的 cgroup 動作也歸本部件。共通最低需求仍屬核心。
+
+〔建議預設，未拍板〕`enable_cgroup:false` 時不偵測、不建框、不取 cgroup 子樹鎖，也不依 `cgroup_root_last` 清舊框；即使機器可用 cgroup 也走現成 `cgroup=off` 路線：`node.show.cgroup:null`、`cgroup_limits` 與帶 `frame` 的 `spawn_as` 回 `unsupported`，runner 照常開格及收尾。`cgroup_root`、`create_cgroup`（含旗標）仍做既有格式／必填相依驗證，但不執行 cgroup 動作。`spawn_as` 若同時被 helper 動作開關關掉，先照 B-609 回 `not_available`；上述帶 `frame` 回 `unsupported` 指 helper 動作仍開著的情形。以下「有就用」皆以本部件開著為前提。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
 **tick 核心不需要 cgroup；daemon 有 cgroup 就用、沒有就退回 runner 那一套**（B-601、B-604）。cgroup 給 daemon／helper（node 框與資源上限）與普通程式 `aos-cg`（每項一框，[B-634](../tick.md)）用。
 
 - 撤掉的：第十四、十五批「沒 cgroup v2 就拒絕啟動」；第十九批的「沒 cgroup 走備援、降到備援級」「完整路／備援路」與啟動時印 `standard: cgroup=…`。
-- 初版不使用 systemd 當執行期依賴；systemd 只當取得委派子樹、開機自動啟動的方式（下面與文末附錄）。
+- 初版不使用 systemd 當執行期依賴；systemd 只當取得委派子樹、開機自動啟動的方式（下面與 [service 範例](service.md)）。
 
 依據：第十九批（推翻第十四、十五批）；第二十批追答 8；納入 cgroup 與 git 的疑點裁定。
 
 ### 啟動自檢
 
-- **daemon 自己的最低需求**：Python 3.9；不合就報錯退出（125）。
-- **不查 git**：git 只有任務表上的 `aos-git` 會用（[B-630](../tick.md)），daemon 不查。
+daemon 共通的最低需求與不查 git 見 [B-605 的共通自檢](runtime.md#啟動自檢b-605-的共通部分)。
+
 - **偵測 cgroup**：照下面「什麼算有 cgroup」。stdout 印一行 `cgroup=on` 或 `cgroup=off`，只報 daemon 自己的；`off` 時 stderr 另印一次警告，不寫事項、不問 y／n。〔建議預設〕
 - **沒有 cgroup 時**：B-609 的 `cgroup_limits` 回 `unsupported`，`node.show` 的 `cgroup` 為 null，B-611 只取 `state_dir` 那把鎖，程序照 B-601 由 runner 管。
 
@@ -42,8 +48,8 @@
 | # | 做法 | 用不用 sudo | 說明 |
 |---|---|---|---|
 | 1 | `systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/daemon.json` | 不用（首推） | 省略 `cgroup_root`，就用這個 scope 當子樹。實測這台 WSL 拿得到 `cpu memory pids` |
-| 2 | 使用者層 service：固定單位名、`Delegate=yes`，對該帳號 `loginctl enable-linger` | 不用 | 開機自動啟動用這個；框路徑固定，重啟時 systemd 也會先殺舊程序（文末附錄） |
-| 3 | 系統層 service：root 開、`Delegate=yes` | 要 | 有 helper（文末附錄） |
+| 2 | 使用者層 service：固定單位名、`Delegate=yes`，對該帳號 `loginctl enable-linger` | 不用 | 開機自動啟動用這個；框路徑固定，重啟時 systemd 也會先殺舊程序（[service 範例](service.md)） |
+| 3 | 系統層 service：root 開、`Delegate=yes` | 要 | 有 helper（[service 範例](service.md)） |
 | 4 | 沒有 systemd：root 事先 mkdir 並 chown 下面的委派檔，或 sudo 開加 `--create-cgroup` | 要 | 明寫 `cgroup_root` |
 | 5 | 都沒有 | — | `cgroup=off`，照 B-601 跑 |
 
@@ -104,17 +110,84 @@
 
 〔建議預設〕daemon 啟動時 `cgroup=on`，之後某個 node 建框或交框失敗（上層關了 controller、權限被改、`cgroup.max.descendants` 滿了）：那個 node 照沒有 cgroup 的做法跑（B-601），寫一件該 node 的事項；別的 node 照常。不整個 daemon 降級，也不停那個 node。之後建得起來就改回用框。
 
-### 有就用的其他功能
-
-- project quota 等功能在啟動時自動偵測，設定檔可強制關（P-101 的 `disable`，可熱重載，B-608）。
-- 沒有 quota 時，磁碟用量由磁碟資源任務定期量（[B-304](../../base/identity-resources.md)、[S-203](../../scheduling/admission.md)）。
-- 檔案系統不限定：node 放在不支援某些功能的地方，那些功能就不支援；不列白名單或拒絕清單。
-
-依據：使用者方向 2026-09-29 晚。
-
-### 初版不做
-
-systemd 的沙盒防護（`CapabilityBoundingSet` 等）以後再考慮；helper 掛 tmpfs 拿掉；原本打算交給 systemd 的開程序、定時叫醒等做法，初版全由 daemon 自己做（使用者方向 2026-09-29 晚）。
+quota 與初版共通界線見 [B-605 的共通自檢](runtime.md#啟動自檢b-605-的共通部分)。
 
 **驗收：**Python 低於 3.9 時啟動報錯退出。Linux 低於 5.14、沒有純 cgroup v2、WSL 在 `/init.scope` 直接跑、或用沒加 `Delegate=yes` 的 scope 開時，daemon 照常啟動、印 `cgroup=off`、照常開格，stdout 沒有 `standard:` 行；照首推用 `systemd-run --user --scope -p Delegate=yes` 開、不寫 `cgroup_root` 時印 `cgroup=on`；省略 `cgroup_root`、或有寫但該層有程序時，原層只剩子層、沒有程序；明寫 `cgroup_root` 卻沒準備好、也沒開 `--create-cgroup` 時報錯退出（125），不自己建；開了 `--create-cgroup` 卻沒寫 `cgroup_root` 時用法錯（2），建不了時報錯退出；某個 node 建框失敗時只有它照沒有 cgroup 跑、有一件事項；node 自己開的子框裡的程序，格後與重啟時都不被收（`kill_escape_cgroups` 省略時）；偵測得到 quota 但設定強制關時不使用。
 
+## 核心條文的 cgroup 部分
+
+以下各段沿用來源條號，不另編號；核心的 runner、登記、收尾及掛行程仍見各條正本。
+
+### 格後清框（B-601）
+
+有 cgroup 時 [B-601 的 runner 做法](runtime.md)**照舊**，另外加一層框（框的樹見 B-605）：
+
+| 步驟 | 做法 |
+|---|---|
+| 開格 | runner 開在那個 node 的 `n-<h>/tick` 框裡（掛載行程在 `mount-<h>`，B-605），用 `CLONE_INTO_CGROUP` 或 exec 前寫 `cgroup.procs`（[B-601 開格第 1 步](runtime.md#開格runner-與回報)） |
+| 格後收尾 | runner 回報、被回收之後，daemon 對 `tick` 框與本格的 `task-*` 框寫 `cgroup.kill`，看 `cgroup.events` 的 populated 變 0，再 rmdir `task-*`（框已交給別的帳號時經 helper 刪）。不另外對程序群組送 SIGKILL |
+| 範圍 | 只收 `tick` 與 `task-*`；子 node 的 `n-*`、本 node 掛的 `mount-*`、node 自己開的其他子框（逃生口，B-605）都不碰 |
+| 等不到歸零 | 例如 D 狀態程序：算後代清不空，照 B-607 停格 |
+
+- 框兜得住 runner 清不到的：跳出程序群組又自設 subreaper 的、換成別的帳號的（經 `aos-as` 開、放進本 node 框的）。經外部服務開的仍在框外，不歸 aos 管。
+- 包了 `aos-cg` 的項，自己在 `task-*` 框裡當場收（[B-634](../tick.md)）；daemon 的格後收尾只是兜底。
+- 某個 node 建不了框時，那個 node 照沒有 cgroup 的做法跑（B-605「中途失效」）。
+
+### 重啟清框（B-603）
+
+**有 cgroup 時**〔使用者方向 2026-09-29 晚；納入 cgroup 與 git 疑-8〕：daemon 開的每一格（含孫程序）都在該 node 的框裡，daemon 當掉時框還在。
+
+1. **找舊框**：`state.json` 記著上次用的子樹根（`cgroup_root_last`，[P-116](../protocol/daemon/shutdown.md)）。這次的子樹根不同（例如首推的 `systemd-run --user --scope` 每次開出的 scope 名字都不一樣）、而舊根還在時，先對舊根取 B-611 的鎖；取不到表示另一個 daemon 在用，不碰。
+2. **清**：開任何新格之前，對新舊子樹裡每個仍有程序的受管框走一次 B-604 的收尾（寬限沿用 `shutdown_grace_ms`），確認全空才往下。受管框是 `tick`、`task-*`、`mount-*` 與子 node 的 `n-*`；node 自己開的其他子框是逃生口，照 `kill_escape_cgroups` 決定殺不殺（B-605）。
+3. 舊 scope 清空後沒有程序，systemd 會自己回收。
+
+### 重建後刪空框（B-603）
+
+- **空框清理**（有 cgroup 時；〔使用者方向 2026-09-30，第十八批〕）：重啟清空後，沒有登記對應的 `mount-*` 框直接刪（掛載行程不會接回）；沒有登記對應的 `n-*` 框先留著，等逐層重建完、仍沒人登記才由下往上刪，免得先刪掉稍後又要重建的框（重建會讓上限要重寫、用量歸零）。〔建議預設〕「重建完」＝所有已登記、沒暫停的 node 自這次啟動以來都至少跑完一格。框裡還有逃生口的程序就不刪。框已交給別的帳號時由 helper 刪（B-609）。
+
+### 資源上限（B-609）
+
+沿用 [B-609 通則與授權](helper-actions.md#通則)。
+
+| 動作 | 做什麼 | 要 helper |
+|---|---|---|
+| `cgroup_limits` | 寫 `n-<h>` 的 CPU、記憶體、程序數上限，作用於整個分支含後代；只寫這些 controller，不設就不新增該項限制。沒有 cgroup（或這個 node 退回沒有框）回 `unsupported` | 不要 |
+
+〔使用者方向 2026-09-30，第十八批；拿掉「整棵子樹全空才改」〕
+
+- **隨時改**：`cgroup_limits` 調高、調低都隨時寫，不關閘門、不等全空；同一框的寫入依序做。已是相同值就核對後成功，不重寫。改限制值不算中途換資源範圍（[B-302](../../base/identity-resources.md)）。
+- **調低超過現用量**：由 Linux 自己處理（例如記憶體回收或 OOM、新 fork 失敗），aos 不擋；要記一筆的是下指令的 kernel，記在它自己的資源狀態檔（[S-203](../../scheduling/admission.md)）。
+- **controller 往下開**：要在子 node 上寫上限，上一層的 `cgroup.subtree_control` 要開 `+cpu +memory +pids`；daemon 建框時就開。某個 controller 不在（例如使用者層 systemd 沒委派 `cpu`），那一項回 `unsupported`，其餘照用。
+- 上層 node 帳號關掉自己框的 controller，等於撤了自己子 node 的上限；這在它的權限內，不是逃脫，祖先對整棵分支的上限照樣有效（B-605）。
+
+### spawn_as 的框（B-609）
+
+- **帶 `frame`**（有 cgroup 時）：`aos-as` 在 `aos-cg` 開的 `task-<seq>-<pid>` 框裡時（寫成 `aos-cg -- aos-as <帳號> -- 原指令`，[B-634](../tick.md)），請求帶 `frame`＝那個框。helper 核對它是本 node `n-<h>` 的直接子框、存在且沒有程序，把 runner 放進去再 exec。框仍歸 node 的帳號，`aos-cg` 照 B-634 等它清空、必要時 `cgroup.kill`。
+- 沒帶 `frame`、daemon 有 cgroup 時，runner 放進本 node 的 `tick` 框，格後收尾一起收（B-601）。
+- 沒有 cgroup 時帶了 `frame` 回 `unsupported`。
+
+### 建框、交框與刪框（B-609）
+
+- **有 cgroup 時**：daemon 在交給它的子樹內自己建框、寫限制、讀實際值，不經 systemd。框要交給別的帳號、或上層框已交給別的帳號時，建框、交框、刪框才經 helper。helper 另有兩個只給 daemon 用、不開放給 `node.provision` 的內部動作（[P-108](../protocol/daemon/provision-and-runner.md)）：
+  - **建框並交框**：在可信上層框下建本 node 的 `n-<h>` 與 `tick`，交給這個 node 目前的執行帳號（B-605）；路徑由登記推導，不收呼叫者給的 cgroup 路徑。
+  - **刪殘留框**：只刪子樹內、名字是 `n-*`／`mount-*`／`task-*`、已經沒有程序也沒有子框的框（B-603、B-606）。
+
+### 掛載行程的框（B-613）
+
+有 cgroup 時它的框放在掛它的 node 框下，名字 `mount-<h>`，本身就是葉框（B-605）。那個 node 的格後收尾不碰它；砍掉或結束時由收尾清空、刪框（B-604、B-603）。
+
+### cgroup 子樹鎖（B-611）
+
+- **有 cgroup 時另取一把**：以解析後的真實路徑，對實際使用的 cgroup 子樹根（含省略 `cgroup_root` 時自己所在那層）取排他鎖。明寫 `cgroup_root` 時取不到就拒絕啟動（125）；自動偵測時取不到（巢狀 daemon：祖先被外層 daemon 鎖住），就當成沒有 cgroup，`cgroup=off` 照跑（B-605；納入 cgroup 與 git 疑-11）。沒有 cgroup 時只取 `state_dir` 那把。
+
+cgroup 子樹那把同樣直接對目錄取（cgroup 目錄裡不能另建一般檔；實測開目錄後 flock 可行，第二個 fd 會被擋），祖先往上試鎖到 cgroup 掛載點、子孫往下掃一遍。用首推做法開的兩個 daemon 各在自己的 scope，彼此是兄弟、不重疊，只有 `state_dir` 那把會擋。
+
+### 收尾最後清框（B-604）
+
+[B-604 的 runner 收尾](lifecycle.md#收尾)第 6 步，**有 cgroup 時**：對範圍內仍有程序的框寫 `cgroup.kill`，以 `cgroup.events` 的 populated 確認全空。
+
+依據：第十八批；納入 cgroup 與 git 改寫計畫（`cgroup.kill` 兜底）；[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)（拆成部件）。
+
+**驗收（開關／多實例）：**〔建議預設，未拍板〕部件關掉但機器有 cgroup 時，印 `cgroup=off`、不碰新舊框、只取核心鎖；`node.show.cgroup` 為 null，runner 的格後收尾仍成立。
+
+搬來各段的原依據與驗收沿用 [B-601](runtime.md)、[B-603、B-604、B-611](lifecycle.md)、[B-609](helper-actions.md)、[B-613](channel.md)；只有本條開關段新增未拍板行為。

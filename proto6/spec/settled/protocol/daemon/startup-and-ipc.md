@@ -58,6 +58,20 @@
 
 範例：[最小設定](../../../protocol/examples/daemon/config.minimal.valid.json)、[開了 create_cgroup 的設定](../../../protocol/examples/daemon/config.create-cgroup.valid.json)、[使用者委派（省略 cgroup_root）](../../../protocol/examples/daemon/config.user-delegate.valid.json)、[反例：開了卻沒寫 cgroup_root](../../../protocol/examples/daemon/config.create-cgroup-no-root.invalid.json)、[反例：版本 2](../../../protocol/examples/daemon/config.version.invalid.json)、〔第十八批〕[前綴與範圍額度、排空與新欄位，另帶一個不認得的欄位仍收](../../../protocol/examples/daemon/config.grant-prefix.valid.json)、[反例：範圍涵蓋系統帳號](../../../protocol/examples/daemon/config.grant-range-system.invalid.json)、[反例：空前綴](../../../protocol/examples/daemon/config.grant-prefix-empty.invalid.json)。
 
+### 部件與核心開關欄位
+
+〔建議預設，未拍板〕下列都是設定檔頂層的可省布林值，省略為 true；型別錯回 2。行為與重開規則以 [B-615](../../daemon/components.md) 為正本。
+
+| 欄位 | 對應行為 |
+|---|---|
+| `enable_messaging` | [B-614 訊息部件](../../daemon/messaging.md) |
+| `enable_cgroup` | [B-605 cgroup 部件](../../daemon/cgroup.md) |
+| `enable_reload` | [B-608 熱重載](../../daemon/reload.md) |
+| `enable_drain` | [B-604 排空停機](../../daemon/lifecycle.md) |
+| `enable_helper_actions` | [B-609 helper 動作](../../daemon/helper-actions.md) |
+
+依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)（同程式、設定檔開關）；欄位細節未拍板。本輪只改 Markdown；現有設定 schema 與範例尚未加入這五鍵的型別定義，不能拿它們通過當成已驗過新開關。
+
 ### 頂層項
 
 | 欄位 | 意思 |

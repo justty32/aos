@@ -4,6 +4,10 @@
 
 ## B-606：登記、解除、換父與身分額度
 
+〔使用者方向 2026-09-30 晚〕aos 不處理兩個 daemon 管同一個 node；現行同資料夾鎖與回 75 當普通結束（[B-602](../tick.md)、B-607）照舊，不加跨 daemon 協調。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
 method 形狀見 [P-104～105](../protocol/daemon/registration.md)，誰可呼叫見 B-601。
 
 ### 登記是什麼

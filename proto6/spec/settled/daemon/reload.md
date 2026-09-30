@@ -4,9 +4,15 @@
 
 ## B-608：熱重載與「免重開／要重開」
 
+〔使用者方向 2026-09-30 晚〕熱重載留核心，可單獨關掉。〔建議預設，未拍板〕`enable_reload:false` 時，SIGHUP 只印一行警告、不重讀設定、不套用任何欄位，也不因此退出；更改設定須重開。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
 **改設定、改樹不必重開 daemon**：除了重大或危險的操作要重開，其餘都盡量免重開（第十八批）。原本叫「即時改」，第二十批改叫「免重開」，免得跟「反應速度就是一格」（[T-07](../terms.md)）的「立刻處理」混；行為不變。
 
 ### 熱重載怎麼做
+
+以下重讀與套用規則以熱重載開著為前提。
 
 daemon 只在收到 **SIGHUP** 時重讀啟動時的同一份設定檔。能送訊號的只有同帳號或 root；不開 IPC、沒有 CLI 子命令（人手用 `kill -HUP`）。
 
@@ -29,6 +35,7 @@ daemon 只在收到 **SIGHUP** 時重讀啟動時的同一份設定檔。能送�
 
 | 設定 | 改了怎麼辦 | 說明 |
 |---|---|---|
+| `enable_messaging`、`enable_cgroup`、`enable_reload`、`enable_drain`、`enable_helper_actions` | **要重開**〔建議預設，未拍板〕 | 同程式的部件／核心功能開關，見 [B-615](components.md) |
 | `version` | 重載時照樣檢查 | 版本不同整份不收（`config_invalid`） |
 | `common_user` | **要重開** | daemon 已永久變成這個帳號，換帳號等於換一個 daemon |
 | `socket_path` | **要重開** | 連線全斷、各 kernel 記的位置與已開 tick 的通道變數都會失效；防雙開的鎖在 socket 目錄 |
@@ -75,3 +82,4 @@ daemon 只在收到 **SIGHUP** 時重讀啟動時的同一份設定檔。能送�
 
 **驗收：**SIGHUP 後改 `interval_ms`、加一棵只用通用 user 的 root 免重開就生效；改 `socket_path` 或 root 的其他帳號額度時其餘照套、這些欄位回報要重開且不生效；壞設定整份不套用、舊設定照跑；非同帳號送不了 SIGHUP。
 
+**驗收（開關／多實例）：**〔建議預設，未拍板〕關熱重載後送 SIGHUP，程序仍在、設定與登記不變。
