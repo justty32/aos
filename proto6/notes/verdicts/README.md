@@ -22,5 +22,5 @@
 | [07](07-review-fixes-and-proto-gaps.md) | 第十六批 | spec 審稿修正：check 不擋收結果、回應沒權限也丟、LLM 池權限投件時才報、LLM 結果照一般收件叫醒、回話只記錄不再觸發、attempt 目錄加發件者前綴、鬧鐘檔分 req／resp；原型缺口：cgroup 框命名、省略 root 時原層只當分支、once 登記時帳號要存在 |
 | [08](08-cancel-task-cgroup-and-gaps.md) | 第十七批 | 取消工作 work.cancel、每任務一層 cgroup、自開 once 不叫醒、kernel 收回話、任務表宣告 methods；原型缺口逐條定狀態（SourceChanged 等）；設定檢查跑完回 0、有寫 cgroup_root 也搬程序 |
 | [09](09-special-computing-os.md) | 第十八批（09-30） | 特殊計算的 OS：分配單位是一次計算；多層多 kernel，各 kernel 自訂抽象、資源、隔離，以 Linux 為底；上下層不必對齊；管理目標之一是降低隨機性（尚未落 spec） |
-| [10](10-tick-minimal-core.md) | 第十九批（09-30） | tick 是定期執行的程式，cwd 就是管轄區，管轄區可包含不可重疊、被包含者從屬；任務隨意掛載；三層架構：tick 核心（互斥鎖、照表跑、上下層）、標準配備（git 提交、needs、收件、切換使用者、cgroup 框、once 等，跟核心同一支 aos-tick、必須全掛）、其他掛載；tick 與 daemon 之間有通道傳訊；人手跑 tick 風險自負（spec 正依它改寫中，與第十八批衝突處後批優先） |
-| [11](11-tick-as-unit.md) | 第二十批（09-30） | tick 是 aos 的衡量基準：排程以 tick 為單位、排程行為在任務表上做、整個體系基於 tick，daemon IPC 是唯一逃生口（尚未落 spec） |
+| [10](10-tick-minimal-core.md) | 第十九批（09-30） | tick 是定期執行的程式，cwd 就是管轄區，管轄區可包含不可重疊、被包含者從屬；任務隨意掛載；三層架構：tick 核心（互斥鎖、照表跑、上下層）、標準配備（git 提交、needs、收件、切換使用者、cgroup 框、once 等，跟核心同一支 aos-tick、必須全掛）、其他掛載；tick 與 daemon 之間有通道傳訊；人手跑 tick 風險自負（spec 已依它改寫；其中標準配備、全掛、兩級等已被第二十批改寫，見 11） |
+| [11](11-tick-as-unit.md) | 第二十批（09-30） | tick 是 aos 的衡量基準：排程以 tick 為單位、排程行為在任務表上做、整個體系基於 tick，daemon IPC 是唯一逃生口；核心四樣、系統級任務、普通程式（spec 正依它改寫中，後批優先，推翻第十九批標準配備結構） |
