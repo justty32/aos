@@ -56,7 +56,7 @@
 - 七個執行欄位、`argv` 元素、`envs` 值與選項的 `$val` 可放取值指示詞，展開後驗型別；key、`user`、`_metainfo` 不展開。整份頂層也可用指示詞，但身分接法見篇末。
 - base＝輸入資料夾，或輸入 `.json` 的所在資料夾。切身分後依序解整份頂層 → `cwd` → `argv` → `envs` → 四個路徑欄；`_metainfo` 取自頂層展開結果。整份及 `cwd` 以 base 解相對路徑／`$ref`，其餘以解出的 `cwd` 為中心，絕對路徑照字面用。`cwd` 的 `mkdir` 先建目錄再解其他欄位；四個路徑欄空字串等於省略，但 append／mkdir 不接受空路徑。
 - 各執行欄位從獨立循環鏈開始，進入引用得來的 `argv`／`envs` 容器時把鏈帶下去；跨欄位引用同一檔不算循環。
-- `envs` 的 key 不可空或含 `=`，值解完須為字串；`$` 開頭的 key 會讓整包變成指示詞，不能當環境變數。無 `clear` 就複製 runner 環境再疊上，有則從空環境開始；runner 不注入 `AOS_*`，唯一例外〔使用者方向 2026-09-30，第十九批第 9 條〕是 daemon 開 tick 時給的通道變數（[B-612](../daemon.md)），任務照一般繼承拿到，`clear` 會把它們一起清掉。`argv[0]` 用最後的 PATH 找，未設 PATH 時用系統預設路徑（proto5 的 `os.defpath`，通常 `/bin:/usr/bin`）。
+- `envs` 的 key 不可空或含 `=`，值解完須為字串；`$` 開頭的 key 會讓整包變成指示詞，不能當環境變數。無 `clear` 就複製 runner 環境再疊上，有則從空環境開始；runner 不注入 `AOS_*`，唯一例外〔使用者方向 2026-09-30，第十九批第 9 條〕是 daemon 開 tick 時給的通道變數（[B-612](../daemon.md)），任務照一般繼承拿到，`clear` 會把它們一起清掉；另外 helper 以指定帳號開任務時，runner 把繼承來的鎖 fd 號碼放進 `AOS_TICK_LOCK_FD`（[B-609](../daemon.md)、[B-602](../tick.md)），它不受 `clear` 影響。`argv[0]` 用最後的 PATH 找，未設 PATH 時用系統預設路徑（proto5 的 `os.defpath`，通常 `/bin:/usr/bin`）。
 - 不自動呼叫 shell，不拆參數、展開萬用字元或解重導向；需要就明寫 `["sh","-c","…"]`。
 
 ## 選項

@@ -10,7 +10,7 @@
 
 result 為 `{node_id, parent_id, registration_id}`：正規化後的 id、有效上層與登記識別。schema 見 [daemon-registration](../schemas/daemon-registration.schema.json) 的 `RegisterParams`；範例：[看資料夾推上層](../examples/daemon/register.minimal.valid.json)、[帶憑證覆蓋上層](../examples/daemon/register.override-token.valid.json)、[回應](../examples/daemon/register_result.minimal.valid.json)、[反例：帶已拿掉的 once](../examples/daemon/register.once.invalid.json)、〔第十八批〕[前綴額度](../examples/daemon/register.grant-prefix.valid.json)。
 
-常見錯誤（碼表見 P-111、[P-119](channel.md)）：上層或目標不存在、推得的上層沒登記 `not_registered`；搶登記、成環、id 已是掛載行程 `registration_conflict`；只有一方上層同意 `forbidden`；超出上層額度 `user_not_granted`；inst user 不存在 `user_invalid`；換父時被搬的子樹沒停或沒全空 `busy`；排空或停機中的新成員 `stopping`；憑證不對 `token_invalid`。
+常見錯誤（碼表見 P-111、[P-119](channel.md)）：上層或目標不存在、推得的上層沒登記 `not_registered`；搶登記、成環、id 已是掛載行程 `registration_conflict`；要兩方上層同意卻只有一方同意（舊上層沒在這個 daemon 登記時只看新上層，[B-606](../../daemon.md)）`forbidden`；超出上層額度 `user_not_granted`；inst user 不存在 `user_invalid`；換父時被搬的子樹沒停或沒全空 `busy`；排空或停機中的新成員 `stopping`；憑證不對 `token_invalid`。
 
 ## P-105．解除、叫醒、暫停、恢復與清除掛載診斷〔建議預設，未拍板〕
 

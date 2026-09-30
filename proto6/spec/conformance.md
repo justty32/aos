@@ -66,7 +66,7 @@
 | 19 | agent 設定原則、`in_reply_to` | A-102（原則；〔第十九批〕接住 P-207 的鎖與提交、P-210 的建立與恢復流程）＋A-201（`in_reply_to` 配對，從 P-705 搬上） | P-705 欄位；P-207、P-210 只留 argv 與檔名 | P-203、P-207、P-210、P-701、P-805 的原則句；H-036；其餘 `in_reply_to` 各處 | T6、T3（P-203）、T5（P-805） |
 | 20 | 清理、保留期、待辦 | B-404（清理資格、保留期；`aos-clean` 屬標準配備）＋S-405（`aos attend` 三個動作）＋A-304（agent 的清理遍歷，〔第十九批〕從 P-716 搬上） | P-605／606 清理設定與報告；P-603 argv 與輸出；P-716 只留殘根 | P-601、P-716、P-814、H-004、P-603 行為句 | T3、T5、T6 |
 | 21 | 錯誤碼與結束碼 | C-04（原則）；碼值屬格式，正本 P-005／P-006 與各篇碼表 | 各篇自己的碼表；集中碼表在 P-006 | H-002 連集中碼表；設定檢查 kernel 2、agent 1 的不一致延後 | T1、各隊 |
-| 22 | helper（標準配備的切換使用者） | B-303（角色與界線）＋B-609（新：固定動作清單與各動作做什麼，含新加的動作，從 P-107 搬上） | P-107 參數；P-108 私有通道 | B-601、P-102、H-004、B-605 | T3（B-303）、T2、T6 |
+| 22 | helper（標準配備的切換使用者） | B-303（角色與界線）＋B-609（新：固定動作清單與各動作做什麼，含新加的動作，從 P-107 搬上；〔第十九批〕`spawn_as` 以指定帳號開程序、任務繼承鎖）＋B-620（跨帳號任務怎麼開）＋B-601（helper 開格何時回，從 P-108 搬上） | P-107 參數；P-108 私有通道 | B-601、P-102、H-004、B-605 | T3（B-303）、T2、T6 |
 | 23 | inst | [inst](base/inst.md)（新增「inst 目標：檔案或資料夾」節，從 P-010 搬上） | node-inst schema | P-010（inst 篇寫好後由 T1 縮成殘根）、P-200、P-201、P-109 | T3、T1、T2（P-109） |
 | 24 | 結構問題 | — | — | B-504：transport 的標題改成非標題的一行殘根；P-100～119 條號表只留 daemon/README，protocol/daemon.md 縮成一句連結；P-001 改寫 | T3、T2、T1 |
 | 25 | 三層、tick 核心、標準配備、全掛與保證兩級 | T-07（核心三件事）、T-10（三層與管轄區）、T-01（前提與兩級）；B-626（三層的界線）、B-602（互斥）、B-620（照表跑）、B-629（標準配備清單、同一支 `aos-tick`）、B-630（全掛檢查：走完整還是備援；`aos-tick --check`）、B-631（cgroup 框的備援）、B-632（git 提交的備援：檔案日誌） | P-203 結束碼（核心碼與標準配備碼分開列）與 `--check`；P-202 任務表；`node-journal` 日誌格式 | README 定位與依賴段、T-06、B-605 自檢句、B-302、P-101、P-203、H-004、H-036、V-03 | T1、T3、T2（B-605、P-101）、T6（H-004、H-036） |
@@ -80,6 +80,7 @@
 <!-- check_ids:reserved -->
 | 條號 | 檔 | 主題 | 落筆 |
 |---|---|---|---|
+| B-506 | base/transport.md | 〔第十九批〕收件區權限與建立時的路線核對（P-208 搬上） | 修正輪 A |
 | B-606 | daemon.md | 登記、解除（收尾）、覆蓋上層、換父兩條路、前綴／範圍額度（〔第十九批〕once 登記搬到 B-613） | T2 |
 | B-607 | daemon.md | 叫醒、暫停與故障停格 | T2 |
 | B-608 | daemon.md | 熱重載與「即時改／要重開」表 | T2 |
@@ -121,7 +122,7 @@
 |---|---|
 | daemon.md | B 615 起（到 619 為止） |
 | tick.md | B 633 起 |
-| base/work.md、execution.md、identity-resources.md、storage.md、transport.md | B 104、205、306、405、506 起（305 是已刪的舊號，不要再用） |
+| base/work.md、execution.md、identity-resources.md、storage.md、transport.md | B 104、205、306、405、507 起（305 是已刪的舊號，不要再用） |
 | scheduling/runs.md、admission.md、llm.md、operations.md | S 105、208、308、407 起 |
 | agent/configuration.md、input.md、memory.md、tools.md、README.md | A 104、204、305、405、507 起 |
 | cli/ | H 038 起 |
@@ -177,7 +178,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 **登記、換父、額度與格次**
 
-- 換父：子樹沒停、或新父在被搬的子樹裡，被拒；只有一方父的 owner 同意，被拒；搬好後框在新父下，`registration_id` 換新（B-606）。
+- 換父：子樹沒停、或新父在被搬的子樹裡，被拒；只有一方父的 owner 同意，被拒；搬好後框在新父下，`registration_id` 換新（B-606）。已覆蓋成 B 再換 C，要 B 與 C 同意，資料夾推得的上層不必（B-606、B-628）。
 - 前綴規則比不中 UID 小於 1000 的帳號；子額度寫了父沒有的前綴或更大的範圍，被拒（B-606）。上層收小身分額度後，重登被拒的成員只隔離那一項並記事項，其他成員照常（B-607、S-205）。
 - 成員跑完一格、摘要沒變且牆鐘倒退，kernel 仍靠 `tick_seq` 認出新格；daemon 重啟後 `registration_id` 換了，kernel 重新核對、不空等（B-607、B-627）。
 - 〔第十九批〕掛載行程不存檔；daemon 重啟或停機時被收尾的，由掛它的 tick 照 unknown 規則核對，重啟後不接回（B-603、B-613）。
@@ -233,16 +234,20 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - `aos-tick --check`／`aos node check`：只查不跑，每塊印 `full` 或 `fallback`；全掛（含走備援）回 0、沒全掛回 1、用法錯回 2（B-630、P-203、H-004 第 58 列）。
 - 沒全掛（標準配備本身不能跑）：有終端機時先列出缺什麼再問 y／n，答 n 回 2；沒終端機照跑，只寫一件 `standard_incomplete` 事項，不每格重報（B-630）。
 - 沒 cgroup：daemon 照常啟動、開格，`cgroup_*` 佈建動作回 `unsupported`（B-605、B-609、B-631）；kernel 的資源任務不報套用失敗，成員記 `fallback:true`，新派工照額度放行（S-205）。
-- 沒 git：寫完成紀錄前當機，原件還在、下格重收；寫完後當機，下格補刪原件、不重吃；同 ID 重送從 `.aos/journal/sent/` 補投原 bytes（B-632、B-503）。
+- 沒 git：寫完成紀錄前當機，原件還在、下格重收；寫完後當機，下格補刪原件、不重吃；同 ID 重送從 `.aos/journal/sent/` 補投原 bytes（B-632、B-503）。發布摘要從完成紀錄落盤後的目前檔案發布（B-624）；unknown 的保留期從 `aos-clean` 第一次看到時起算，不會提早清，`sent/` 裡去重期內的副本不先清（B-404）。
 
 **任務帶 `user`**
 
-- 任務表項目（含 agent、kernel 範本）帶 `user` 照收、schema 通過；有 helper 時用那個帳號跑，額度照 inst 核；沒 helper 時帶了跟 tick 不同帳號的那一項回 125，其餘照表處理（B-620、C-07、P-814、P-717）。
+- 任務表項目（含 agent、kernel 範本）帶 `user` 照收、schema 通過；有 helper 時用那個帳號跑，額度照 inst 核；沒 helper 或沒通道（cron、人手跑）時帶了跟 tick 不同帳號的那一項回 125，其餘照表處理（B-620、C-07、P-814、P-717）。
+- 〔第十九批疑點裁定 10〕帶別的帳號的任務經 `node.provision` 的 `spawn_as` 開：tick 全程握鎖，任務（含 kernel、agent 的工具）用 `AOS_TICK_LOCK_FD` 核對得到同一把獨占鎖，不回 125；它在跑時同資料夾另一格回 75、下一項不開；結束碼經回報 pipe 回到 tick；完整路線下它在這一項的 `task-*` 框、留下的後代被清掉（B-620、B-609、B-602、B-202）。
+- `spawn_as` 的帳號在身分額度外回 `user_not_granted`；不帶憑證、由掛載行程叫、或交來的鎖 fd 不是本 node 的 `.aos/tick.lock`，都被拒；沒 helper 回 `helper_unavailable`（B-609、P-107）。
 
 **上下層與登記覆蓋**
 
 - 成員在 kernel 資料夾內登記不帶 `parent_id`，上層由資料夾推得；在外面的帶 `parent_id` 覆蓋（B-628、B-606、S-202）。
-- 覆蓋只有一方上層同意，回 `forbidden`；資料夾上層不同意時只隔離那一項成員、其他照常（B-606、S-202）。覆蓋後資料夾上層仍保有檔案上的管轄權（B-628）。
+- 資料夾上層在同一個 daemon 登記時，覆蓋只有一方上層同意，回 `forbidden`；資料夾上層不同意時只隔離那一項成員、其他照常（B-606、S-202）。覆蓋後資料夾上層仍保有檔案上的管轄權（B-628）。
+- 〔使用者方向，第十九批疑點裁定 11〕資料夾上層由 cron 或人手跑、沒在 daemon 登記時，只要新上層同意，覆蓋照收（B-606、B-628、C-02）。
+- 設定只列 `/a/b` 為頂層、`/a` 由 cron 跑：`/a/b` 照常載入成頂層，直接跑的核心仍算出 `/a`；`/a` 已是這個 daemon 另一棵 root 底下的 node 時，整份設定不收（B-606、B-628）。
 - 換父兩條路：搬資料夾後新位置最近的包含 tick 成為上層、舊回址失效；改登記覆蓋時子樹沒停被拒（B-606、B-628）。
 
 **tick–daemon 通道**
@@ -252,7 +257,8 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - 寄件 tick 的帳號對收件 tick 的 `requests/` 沒寫權，`node.send` 回 `forbidden`（B-614）。
 - 急件送到就叫醒收件 tick；一般件不叫醒，收件 tick 下一格用 `node.take` 取得到；daemon 重啟後暫存訊息丟失（B-614）。agent 每格收件（檔案加通道）不超過 64 件（A-201）。
 - 第一格掛一個常駐行程、第四格用 `node.kill` 砍得掉而且收尾完成；別隊的 tick 砍不掉；對登記的 node 送 `node.kill`（或 `aos mount kill`）回 `kind_mismatch`（B-613、H-004 第 60 列）。
-- `aos mount run` 不帶 `--parent` 被拒：人手沒有憑證（H-004 第 59 列、P-118）。
+- `aos mount run` 不帶 `--parent` 被拒：人手沒有憑證（H-004 第 59 列、P-118）；`node.mount` 既沒帶 `token` 也沒帶 `parent_id`，schema 就擋下（P-118）。
+- 通道客戶端只對收憑證的 method 附 `token`；對 `daemon.info`、`node.show` 附了回 `invalid_params`（B-612、P-117）。
 
 **掛載行程與派工**
 

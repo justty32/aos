@@ -819,7 +819,19 @@
                   "required": [
                     "node_id"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "token"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "parent_id"
+                      ]
+                    }
+                  ]
                 }
               },
               "required": [

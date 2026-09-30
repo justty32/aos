@@ -333,7 +333,7 @@
         },
         "parent_id": {
           "$ref": "common.schema.json#/$defs/NodeId",
-          "description": "有效上層（B-606）。可省：省略＝看資料夾包含推得的上層；帶了就是覆蓋，新舊兩個上層都要同意。"
+          "description": "有效上層（B-606）。可省：省略＝看資料夾包含推得的上層；帶了就是覆蓋，新舊兩個上層都要同意；舊上層沒在這個 daemon 登記時只要新上層同意。"
         }
       },
       "required": [
@@ -361,7 +361,7 @@
         },
         "parent_id": {
           "$ref": "common.schema.json#/$defs/NodeId",
-          "description": "有效上層（B-606）。可省：省略＝看資料夾包含推得的上層；帶了就是覆蓋，新舊兩個上層都要同意。"
+          "description": "有效上層（B-606）。可省：省略＝看資料夾包含推得的上層；帶了就是覆蓋，新舊兩個上層都要同意；舊上層沒在這個 daemon 登記時只要新上層同意。"
         }
       },
       "required": [
@@ -426,5 +426,5 @@
       "unevaluatedProperties": false
     }
   },
-  "$ref": "#/$defs/Registration"
+  "$ref": "#/$defs/RegisterParams"
 }

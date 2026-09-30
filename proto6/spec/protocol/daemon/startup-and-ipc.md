@@ -59,13 +59,13 @@ helper 的設定副本、父死監看與失聯時怎麼辦見 [B-601](../../daem
 
 ## P-103．IPC 封包與授權〔建議預設，未拍板〕
 
-Unix stream，UTF-8 JSON 每行加 LF，含 LF 最多 262144 bytes；不用 batch／notification。請求與回應沿 [common](../schemas/common.schema.json) 的 `RpcRequest`／`RpcResponse`；`params` 必填 object。每條連線逐筆處理，回應沿用請求 ID。授權的順序與呼叫者怎麼認見 [B-601](../../daemon.md)：不帶憑證看 `SO_PEERCRED.uid`，〔使用者方向 2026-09-30，第十九批〕帶憑證時表中「X 的 owner 或祖先 owner」讀成「憑證所屬的 tick 就是 X 或在 X 的有效上層鏈上」（[B-612](../../daemon.md)）。
+Unix stream，UTF-8 JSON 每行加 LF，含 LF 最多 262144 bytes；〔第十九批〕只有 `node.provision` 的 `spawn_as` 在請求那一行附 SCM_RIGHTS fd（[P-107](provision-and-runner.md)），其他請求附了 fd 就關掉並回 `invalid_params`；不用 batch／notification。請求與回應沿 [common](../schemas/common.schema.json) 的 `RpcRequest`／`RpcResponse`；`params` 必填 object。每條連線逐筆處理，回應沿用請求 ID。授權的順序與呼叫者怎麼認見 [B-601](../../daemon.md)：不帶憑證看 `SO_PEERCRED.uid`，〔使用者方向 2026-09-30，第十九批〕帶憑證時表中「X 的 owner 或祖先 owner」讀成「憑證所屬的 tick 就是 X 或在 X 的有效上層鏈上」（[B-612](../../daemon.md)）。
 
 表中的 owner 是登記保存的 `owner_uid`，何時更新見 [B-606](../../daemon.md)；上層指有效上層鏈（預設看資料夾包含，登記可覆蓋，B-606）。
 
 | method | 誰可呼叫 |
 |---|---|
-| `node.register` | 新成員：有效上層的 owner 或祖先 owner；首次必須有上層同意，不能自行接到別人的鏈。既有項：原 owner 或祖先 owner，不能搶別隊。〔第十九批〕覆蓋上層與換父：同時是新舊兩個上層的 owner 或祖先 owner（[B-606](../../daemon.md)） |
+| `node.register` | 新成員：有效上層的 owner 或祖先 owner；首次必須有上層同意，不能自行接到別人的鏈。既有項：原 owner 或祖先 owner，不能搶別隊。〔第十九批〕覆蓋上層與換父：同時是新舊兩個上層的 owner 或祖先 owner；舊上層沒在這個 daemon 登記時只看新上層（[B-606](../../daemon.md)） |
 | `node.unregister` | 目標 owner 或祖先 owner；效果包含目標已登記子樹 |
 | `node.wake` | 目標 owner 或祖先 owner |
 | `node.mount`〔第十九批〕 | 掛載的上層（`parent_id`，帶憑證時省略＝憑證所屬的 tick）的 owner 或祖先 owner（[B-613](../../daemon.md)） |
@@ -77,7 +77,7 @@ Unix stream，UTF-8 JSON 每行加 LF，含 LF 最多 262144 bytes；不用 batc
 | `node.ls` | 有 socket 連接權；逐筆只列 peer 是 owner／祖先 owner 的登記及保留的掛載行程結果，無可見項回空陣列 |
 | `node.show` | 目標 owner 或祖先 owner；含 P-106 保留的掛載行程結果 |
 | `mount.clear`〔第十八批；第十九批改名，原 `once.clear`〕 | 有 socket 連接權；只清 peer 是 owner／祖先 owner 的已結束掛載行程紀錄（[B-610](../../daemon.md)） |
-| `node.provision` | 目標 owner 或祖先 owner，且目標登記有相符的 `provision` 授權；需 helper 的動作再由 helper 核對 |
+| `node.provision` | 目標 owner 或祖先 owner，且目標登記有相符的 `provision` 授權；需 helper 的動作再由 helper 核對。〔第十九批〕`spawn_as` 例外：必帶憑證、憑證所屬的 tick 就是目標，帳號看身分額度，不看 `provision` 授權（[B-609](../../daemon.md)） |
 | `daemon.attention.ls`、`daemon.attention.show` | 只回 peer 是來源 owner／祖先 owner 的事項，見 P-601 |
 | `daemon.attention.done` | 來源 owner 或祖先 owner；只把 daemon 自身事項標成完成，見 P-601 |
 

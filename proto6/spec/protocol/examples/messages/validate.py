@@ -68,6 +68,20 @@ def main():
     for name, body in schemas.items():
         Draft202012Validator.check_schema(body)
         validators[name] = Draft202012Validator(body, registry=registry)
+    # 每個 $ref（含根入口）都要解得開；既有範例只走部分入口，壞引用會漏掉。
+    def refs(node):
+        if isinstance(node, dict):
+            if isinstance(node.get('$ref'), str):
+                yield node['$ref']
+            for child in node.values():
+                yield from refs(child)
+        elif isinstance(node, list):
+            for child in node:
+                yield from refs(child)
+    for name, body in schemas.items():
+        resolver = registry.resolver(base_uri=name + '.schema.json')
+        for ref in refs(body):
+            resolver.lookup(ref)
     counts, failures = Counter(), []
     for path in sorted(EXAMPLES.rglob('*.json')):
         validator = validators[schema_name(path)]
