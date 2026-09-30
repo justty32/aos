@@ -48,3 +48,4 @@
 - 同日另有第十九批（[tick 的最小核心](../../verdicts/10-tick-minimal-core.md)），會再改動 tick、收件與 cgroup 相關條文。
 - 第十九批落 spec：[改寫計畫](batch19-plan.md)、[落點表](batch19-map.json)、[各隊交接](batch19-handoffs.md)（含標「暫定」的疑點）。
 - astra 核對第十九批：[astra-b19-verify-report.md](astra-b19-verify-report.md)（14 項）。
+- 第二十批：[改寫計畫](batch20-plan.md)、[落點表](batch20-map.json)。
