@@ -40,3 +40,9 @@
 ## 下一步
 
 已依第十八批分類（見 `batch18` 欄）：直接修 42、要使用者裁定 28（合併成 20 題）、改成各 kernel 自定 6、已不成問題 1。接著逐題問使用者。
+
+## 落 spec 之後
+
+- 六隊改寫的交接紀錄：[team-handoffs.md](team-handoffs.md)（含各隊標「暫定」的疑點）。
+- astra 唯讀核對：[astra-verify-report.md](astra-verify-report.md)。大部分已落，15 項問題：沒落乾淨 4、方案 A 殘留 9 組（協議篇仍有大量行為規則）、新矛盾 2。
+- 同日另有第十九批（[tick 的最小核心](../../verdicts/10-tick-minimal-core.md)），會再改動 tick、收件與 cgroup 相關條文。
