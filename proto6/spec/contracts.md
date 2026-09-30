@@ -8,11 +8,11 @@
 
 node id 是資料夾路徑，依 [T-02](terms.md)。其餘用作檔名的 request／job／attempt／run ID 建議採大小寫敏感字串 `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`（與[協議 P-002](protocol/README.md)一致），不含路徑分隔或空白；它們不是任意檔案路徑，也不證明發件身分。
 
-一般共用紀錄以 `version:1` 起步；inst 及 tasks 用各自的 `_metainfo`，未知版本拒絕猜讀；各領域的實際欄位與未知欄位政策由各篇定義，尚未定的留給協議篇。時間點 `*_at_ms` 為非負 UTC epoch 毫秒，持續時間為非負毫秒；序號為正整數。共用紀錄的整數上限為 9007199254740991，不接受 bool 代替數字，不把空字串與 null 混用。
+一般共用紀錄以 `version:1` 起步；inst 及 tasks 用各自的 `_metainfo`。版本怎麼升、不認得的欄位怎麼處理，一律依 [C-07](#c-07版本演進與永遠禁止的鍵)。時間點 `*_at_ms` 為非負 UTC epoch 毫秒，持續時間為非負毫秒；序號為正整數。共用紀錄的整數上限為 9007199254740991，不接受 bool 代替數字，不把空字串與 null 混用。
 
 UTC 用於跨重啟時間點；運行中逾時用經過時間，不因牆鐘倒退無限延長。〔使用者方向 2026-09-29〕排隊先後看所屬 kernel 的持久序號，不靠牆鐘，正本見 [S-204](scheduling/admission.md)。
 
-驗收：共用紀錄的 `seq:true` 或未知版本被拒絕；node 路徑不被誤套短 ID 限制，inst 也不被加上本篇的 `version` 欄位。
+驗收：共用紀錄的 `seq:true` 或比自己新的版本被拒絕；node 路徑不被誤套短 ID 限制，inst 也不被加上本篇的 `version` 欄位。
 
 ## C-02．歸屬與可選 run
 
@@ -34,7 +34,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 ## C-04．錯誤與接件
 
-跨篇需要錯誤資料時，最少有穩定 `code` 與人看得懂的 `message`；需要時附 `retryable` 或有界 `details`。不在本篇定 RPC 數字碼、method 全集或通用封套；inst 的錯誤碼另見[正本](base/inst.md)。
+跨篇需要錯誤資料時，最少有穩定 `code` 與人看得懂的 `message`；需要時附 `retryable` 或有界 `details`。不在本篇定 RPC 數字碼、method 全集或通用封套；各處的錯誤碼與結束碼在哪裡定，見[集中碼表](protocol/README.md#集中碼表)，inst 的錯誤碼另見[正本](base/inst.md)。
 
 `retryable` 只提示可再試的條件，不授權重做 unknown，也不能越過取消或重試上限。確定的 LLM 限流例外只依 [S-303](scheduling/llm.md)。收件、完成、已消費是三種不同確認，正本見 [B-503](base/transport.md)；收到請求不表示工作成功。
 
@@ -47,3 +47,33 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 ## C-06．最小例子與保留
 
 （09-29 重寫：已刪／併入[儲存 B-404](base/storage.md)；去重見[投件 B-503](base/transport.md)。）
+
+## C-07．版本演進與永遠禁止的鍵
+
+〔使用者方向 2026-09-30，第十八批〕格式版本演進**兩層並用**：
+
+1. **小改不升版**：加可選欄位、放寬值域，以及在寫明「開放」的列舉加值（例如 kernel 自訂的任務種類與資源名稱，見 [T-06](terms.md)）。讀的一方遇到不認得的欄位直接忽略。
+2. **不相容的大改才升版**：刪欄位、改意思、改成必填、收窄值域、在沒寫明開放的列舉加值，都要升 `version`（inst 與 tasks 升 `_metainfo._version`）。新程式讀目前版與前一版、寫目前版；遇到比自己新的版本仍拒絕，不猜讀。
+3. **批次轉檔指令 `aos migrate`**：把舊版檔一次轉成目前版，範圍含 node 裡的持久檔，以及 daemon 的 `state.json` 與設定檔。指令形狀見 [H-004](cli/commands.md)。〔建議預設，未拍板〕node 裡的檔在 node 鎖內轉，以一個 group 提交；daemon 的 `state.json` 只在 daemon 停著時轉。
+
+〔使用者方向 2026-09-30，第十八批〕**哪裡放寬**：
+
+| 範圍 | 不認得的欄位 |
+|---|---|
+| 持久檔：node 裡的設定、狀態、事項、清理報告、`.err` 旁檔；daemon 的設定檔與 `state.json` | 忽略 |
+| 檔案 RPC：node 之間的請求、回應與其 payload | 忽略 |
+| daemon IPC（socket 上的請求與回應）、helper 私有通道、runner 回報 | 拒絕（維持嚴格） |
+
+〔建議預設，未拍板〕程式改寫整份持久檔時，原樣保留不認得的欄位，不因為不認得就刪掉。daemon 設定檔出現不認得的欄位，啟動與熱重載時照樣忽略，但在 stdout 印一行列出這些欄位名，免得拼錯被默默吃掉。
+
+〔使用者方向 2026-09-30，第十八批〕**永遠禁止的鍵**：放寬以後，下列鍵只要出現，整份仍然拒收，不能當成「不認得就忽略」：
+
+| 鍵 | 出現在 | 為什麼 |
+|---|---|---|
+| `api_key` | LLM 池設定 | key 只能用 `key_ref` 指到檔案，不寫進設定（[S-301](scheduling/llm.md)） |
+| `user` | 任務註冊表的每一項（含預設範本裡的任務表，`$ref` 展開後也算） | 任務一律用 node inst 的 `user`，不能自己設身分（[tick](tick.md)） |
+| `argv` | 事項（attention） | 事項只給人或 agent 看的建議，不會被自動執行（[S-405](scheduling/operations.md)） |
+
+這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。schema 的寫法見 [P-007](protocol/README.md)。
+
+驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。

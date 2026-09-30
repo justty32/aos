@@ -2,11 +2,11 @@
 
 ← [規格入口](../README.md)｜[名詞](../terms.md)｜[daemon](../daemon.md)｜[通用 tick](../tick.md)｜[inst](../base/inst.md)｜[使用者裁定](../../notes/2026-09-29-verdicts.md)｜[條號索引](#p-index)
 
-2026-09-29 依 node 架構整合。本篇把主規格落成**程式之間**的指令形狀、JSON 與資料夾交接。人手操作見 [CLI](../cli.md)；本篇定機器用的形狀，同一批程式人也能直接跑（[通則](../README.md#原則能下指令能管檔案就能交給-agent)）。
+2026-09-29 依 node 架構整合，2026-09-30 依第十八批改成純格式篇。本篇把主規格落成**程式之間**的欄位、JSON、schema、範例、argv 與結束碼。人手操作見 [CLI](../cli.md)；本篇定機器用的形狀，同一批程式人也能直接跑（[通則](../README.md#原則能下指令能管檔案就能交給-agent)）。
 
 ## P-001．範圍與原則〔主編補〕
 
-- 主規格是行為正本，本篇只定編碼與傳送方式；兩邊衝突以主規格和裁定為準，發現缺口寫進 P-008，不在格式裡偷定新行為。
+- 〔使用者方向 2026-09-30，第十八批〕**主規格是行為正本**：本篇只留欄位、JSON、schema、範例、method／argv 形狀、結束碼與錯誤碼；寫到行為時只留一句加主規格條號。各協議檔對應的行為正本見 P-009，分散兩處的主題照 [V-01 正本表](../conformance.md)。兩邊衝突以主規格和裁定為準；發現缺口補進主規格，不在格式裡偷定新行為。
 - **兩條請求路線**〔使用者方向 2026-09-29〕：要 daemon／helper 做事＝**IPC 找 daemon**（本機 socket 上的 JSON-RPC）；要別的 node（上層 kernel、LLM 代發服務、別隊 agent）做事＝**檔案承載的 JSON-RPC**，投進對方收件區。沒有第三種。
 - 精簡：一個格式能用就不做兩個；欄位只放主規格真的需要的；不為 agent、工具另開入口。
 - 原生 Linux 與 WSL2 同一套格式。
@@ -16,27 +16,26 @@
 - UTF-8、無 BOM；一份檔案或一行訊息恰好一個 JSON object。拒絕重複 key、非有限數、尾隨資料。
 - ID 是字串：`[A-Za-z0-9][A-Za-z0-9._-]{0,127}`，可直接當檔名。node id 是 node 資料夾的絕對路徑（正規化、無 `..`、無結尾 `/`）。
 - 時間點用 UTC 毫秒整數、時長用毫秒，欄位名以 `_ms` 結尾；明示例外：清理設定 `interval_seconds` 用秒；cgroup CPU 的`quota_us`、`period_us`、`usage_us` 直接用微秒，不換算或捨去精度；逾時用經過時間，排先後用序號，不靠牆鐘、mtime 或檔名排序。
-- 自己的持久 JSON 檔帶 `"version": 1`，未知版本拒絕；inst 與 tasks 用自己的 `_metainfo`，JSON-RPC 用 `"jsonrpc": "2.0"`，不另加 `version`。
-- 未知欄位：協議物件預設拒絕；要擴充的地方明列 `ext` object。
+- 自己的持久 JSON 檔帶 `"version": 1`；inst 與 tasks 用自己的 `_metainfo`，JSON-RPC 用 `"jsonrpc": "2.0"`，不另加 `version`。
+- 版本與未知欄位依 [C-07](../contracts.md)〔使用者方向 2026-09-30，第十八批〕：持久檔與檔案 RPC 不認得的欄位忽略，daemon IPC、helper 私有通道與 runner 回報拒絕；永遠禁止的鍵出現就整份拒收。schema 寫法見 P-007。
 
 ## P-003．檔案發布與收件〔建議預設，未拍板〕
 
-- **發布**：在目標資料夾的 `.tmp/` 寫完、fsync、rename 成正式名，再 fsync 目錄。名字以 `.` 開頭的一律不處理。rename 不覆蓋已有檔；撞名須比對內容，見 [messages P-304](messages.md)。
-- **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。投件者要對目標那格有寫權限（權限怎麼開見 node.md）。收件只看檔案，不看 inotify；inotify／IPC 叫醒只是門鈴，可遺失。
-- **去重**：檔名就是請求 ID；同 ID 同內容已有檔／已提交紀錄＝收過。內容不同的同 ID 當衝突，寫一件待處理事項，不猜。
-- **消費**（[Q1](../tick.md)）：任務保存原件，tick 在 group commit 後才刪相同收件原件（P-206）。
-- **送出**（[Q2](../tick.md)）：任務寫 `.aos/outbox/`，tick 在 group commit 後才投出請求／回應（P-206）。
+- **發布**：在目標資料夾的 `.tmp/` 寫完、fsync、rename 成正式名，再 fsync 目錄。名字以 `.` 開頭的一律不處理。rename 不覆蓋已有檔；撞名怎麼處理見 [B-503](../base/transport.md)。完整發布的規則見 [B-402](../base/storage.md)。
+- **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。投件者要對目標那格有寫權限（權限怎麼開見 node.md）。收件只看檔案；通知只是門鈴，見 [B-504](../daemon.md)。
+- **去重**：檔名就是請求 ID；同 ID 怎麼算收過、怎麼算衝突見 [B-503](../base/transport.md)。
+- **消費與送出**：收件原件在 group commit 後才刪（Q1），待送檔放 `.aos/outbox/`、commit 後才投出（Q2），行為見 [tick](../tick.md)，檔案格式見 P-206。
 
 ## P-004．JSON-RPC 的兩種載體〔建議預設，未拍板〕
 
 物件形狀照 JSON-RPC 2.0：請求 `{"jsonrpc":"2.0","id":"<ID>","method":"...","params":{...}}`，回應 `{"jsonrpc":"2.0","id":"<ID>","result":{...}}` 或 `"error":{...}`。`id` 必填且是 P-002 的 ID；唯解析／請求錯誤（-32700／-32600）取不到合法 ID 時，回應用 `id:null`，成功回應與請求仍不准 null；不用 batch、不用 notification。公開 method 就是對應指令去掉 `aos`、以 `.` 連接，例如 `agent.say` 對 `aos agent say`；內部 helper 用 `daemon.helper.*` 對 `aos daemon helper ...`，仍只走私有通道。
 
 1. **socket（daemon IPC）**：Unix stream socket，一行一個 object、以 LF 結尾，單行上限 256 KiB。呼叫者身分只看 `SO_PEERCRED`，封包裡自稱的身分不算。
-2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`，展開後必須和 method 對上同一條已開放指令，否則 -32601；回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄及回件規則見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，壞件沒有可信 ID／回址就只留本地診斷及事項，不產生 `null.json`。檔案上限 256 KiB，大內容放檔案、用路徑引用。對方不常駐，回應可能要好幾格 tick 後才來；沒回應不代表沒做，查詢或重送一律用同一個 `id`。
+2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`；argv 要和 method 對上，對不上或沒有任務宣告這個 method 時回 -32601，規則見 [B-501](../base/transport.md)。回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄格式見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，不產生 `null.json`；壞件怎麼處理見 [tick](../tick.md)。檔案上限 256 KiB，大內容放檔案、用路徑引用。回應可能要好幾格 tick 後才來，查詢或重送一律用同一個 `id`（[B-503](../base/transport.md)）。
 
 ## P-005．錯誤〔建議預設，未拍板〕
 
-JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不合法、-32601 沒這個 method、-32602 參數不合法、-32603 內部）；其他一律 -32000，真正的意思放 `error.data.code`（小寫底線字串，例如 `user_not_granted`、`not_registered`、`busy`），另帶 `error.data.retryable`（bool）。各篇列自己的 `data.code`，不另編數字碼。錯誤訊息不夾帶別的 node 的內容或 key。
+JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不合法、-32601 沒這個 method、-32602 參數不合法、-32603 內部）；其他一律 -32000，真正的意思放 `error.data.code`（小寫底線字串，例如 `user_not_granted`、`not_registered`、`busy`），另帶 `error.data.retryable`（bool）。各篇列自己的 `data.code`，不另編數字碼；各篇的碼表在哪見下面的[集中碼表](#集中碼表)。錯誤訊息不夾帶別的 node 的內容或 key。
 
 ## P-006．程式：argv、環境、結束碼〔建議預設，未拍板〕
 
@@ -46,17 +45,66 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 - 結束碼共同意思：`0` 成功；`2` 用法或設定錯，還沒開始做事；`125` 自己無法開始（如身分不准）；runner 收尾失敗也是 125，須以 P-110 的 started／error 區分，不能只看碼。其他碼由各篇自己定；被訊號殺掉由父程序看 wait 狀態，不猜 `128+n`。
 - 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。新公開指令用 `aos <用途> <動作> [更深]`。
 
+### 集中碼表
+
+〔主編補，第十八批〕錯誤碼與結束碼的共同意思只在 P-005／P-006；各處自己的碼表在下列位置，本表只列連結，不重抄碼值。
+
+| 哪一類 | 碼表在哪 |
+|---|---|
+| JSON-RPC 保留碼、-32000 與 `data.code` 通則 | P-005 |
+| daemon IPC 與 helper 私有通道的 `data.code` | [P-111](daemon/provision-and-runner.md) |
+| runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](daemon/provision-and-runner.md) |
+| inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
+| `aos-tick` 結束碼（含停格碼 3 與格首擋板 125） | [P-203](node.md) |
+| 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
+| 工作拒收 | [P-404](work.md) |
+| work／LLM 程式結束碼 | [P-408](work.md) |
+| 資源 module | [P-507](resources.md) |
+| `aos-clean`、`aos-attend` | [P-605](ops.md)、[P-603](ops.md) |
+| agent 任務程式、設定檢查 | [P-704](agent-tasks.md)、[P-712](agent-tasks.md) |
+| kernel 設定檢查 | [P-805](kernel-tasks.md) |
+| CLI 的失敗代稱 | [H-002](../cli/README.md) |
+
+設定檢查的結束碼 kernel 回 2、agent 回 1，兩邊不一致；要不要統一屬 agent 內部機制，延後（P-008）。
+
 ## P-007．schema 與範例〔主編補〕
 
 - schema 用 JSON Schema 2020-12，放 `schemas/`，檔名以該篇前綴開頭（例如 `daemon-register.schema.json`）。共用型別（ID、NodeId、TimeMs、Error、JSON-RPC）只在 `schemas/common.schema.json` 的 `$defs`，各篇以相對 `$ref` 引用。
 - 範例放 `examples/<篇名>/`，命名 `<主題>.<情境>.valid.json`／`.invalid.json`；每個 invalid 在正文說明為什麼錯。**只做真的需要的範例**：每種訊息一個最小正例、一個主要錯誤；不求量。
 - schema 通過不代表授權或狀態正確；那些由主規格的驗收管。
 
-**怎麼驗範例**：從 repo 根目錄跑 `python3 proto6/spec/protocol/examples/messages/validate.py`，驗全部 schema 與 valid／invalid 範例；需要 `jsonschema`（`pip install jsonschema`，會一併帶 `referencing`）。另有 `python3 proto6/spec/check_ids.py`，檢查 spec 與 notes（不含 archive）裡每個 P-／B-／S-／A-／H-／C-／T- 條號引用都有定義處，找不到就列出並以非 0 結束。
+**放寬通則**〔使用者方向 2026-09-30，第十八批；寫法為主編補〕：哪裡放寬、哪些鍵永遠禁止，以 [C-07](../contracts.md) 為正本。schema 照下表寫：
+
+| schema | 不認得的欄位 |
+|---|---|
+| `daemon-rpc`、`daemon-helper`、`daemon-provision`、`daemon-runner-report`（daemon IPC、helper 私有通道、runner 回報） | 維持 `additionalProperties:false` |
+| 其餘全部（持久檔與檔案 RPC，含 `daemon-config`、`daemon-state`、`daemon-launch-error`） | 不寫 `additionalProperties:false`，也不寫 `unevaluatedProperties:false` |
+
+- **禁止鍵**：放寬的 schema 用 `"properties": {"<鍵>": false}` 明列，出現就不合法。
+- **兩邊共用的 `$defs`**：嚴格與開放的地方都要用同一個物件時，分成兩個名字，開放版加 `Open` 字尾（檔案 RPC 的沿用 `File` 字首），不靠引用處封口。`common` 裡：`Error`、`RpcRequest`、`RpcResponse` 是嚴格版，給 daemon IPC 與 helper；`ErrorOpen`、`FileRpcRequest`、`FileRpcResponse` 是開放版，給持久檔與檔案 RPC。
+- **範例**：放寬的 schema，原本「多一個欄位」的 `.invalid` 範例刪掉，或改成正例示範多一個欄位仍收；嚴格的照留。每個禁止鍵各留一個反例。
+- 版本號：小改不動 schema 的 `version` 常數；升版時 schema 同時接受目前版與前一版。
+
+**怎麼驗範例**：從 repo 根目錄跑 `python3 proto6/spec/protocol/examples/messages/validate.py`，驗全部 schema 與 valid／invalid 範例；需要 `jsonschema`（`pip install jsonschema`，會一併帶 `referencing`）。另有 `python3 proto6/spec/check_ids.py`，檢查 spec 與 notes（不含 archive）裡每個 P-／B-／S-／A-／H-／C-／T-／V- 條號引用都有定義處，並抓同一條號兩個標題、只剩索引列沒有正文；[V-01](../conformance.md) 預留而還沒寫正文的新條號只提醒，加 `--strict` 才算錯。有錯就列出並以非 0 結束。
 
 <a id="p-008"></a>
 
-## P-008．暫定與待決〔建議預設，未拍板〕
+## P-008．延後與待決
+
+### 延後清單
+
+〔使用者方向 2026-09-30，第十八批〕以下這輪只標「延後」，不展開設計；各處只寫一句延後並連到這裡。依據見[第十八批](../../notes/verdicts/09-special-computing-os.md)。
+
+| 延後的東西 | 依據 | 標在哪 |
+|---|---|---|
+| tick 以外其餘計算單位的外殼（設-14），「隨機性」要不要成為外殼的一欄；隨機性怎麼量、怎麼跟完成度與消耗權衡 | 裁定 1、方向 6 | [T-06](../terms.md)、[T-07](../terms.md) |
+| kernel／agent／custom 類任務的逾時與取消 | 裁定 1 補充 | [P-202](node.md)、[P-203](node.md)；[B-203](../base/execution.md) 只適用 once |
+| agent 內部機制：agent 請求被拒收（新裁-2）、卡在 unknown 的使用者輸入（裁-10）、agent 設定檢查的結束碼要不要跟 kernel 統一（第 20 題，記錄者歸類） | 裁定 12 | [P-705](agent-tasks.md)、[P-707](agent-tasks.md)、[P-708](agent-tasks.md)、[P-712](agent-tasks.md)、[P-716](agent-tasks.md)、[P-404](work.md)、[P-603](ops.md)、[P-609](ops.md)、[P-805](kernel-tasks.md) |
+| agent 之間的問答 | 裁定 11 | [P-705](agent-tasks.md)、[P-306](messages.md)、[P-803](kernel-tasks.md) |
+| agent 自己開的 once：做完照第十七批不叫醒、結果由 agent 自己收；回查間隔放哪（Q29）；LLM 請求與 agent 自開 once 的取消（裁-5） | 裁定 10、12 | [P-704](agent-tasks.md)、[P-707](agent-tasks.md)、[P-411](work.md) |
+| 預設鬧鐘和「投件被丟掉」對不上（Q26） | 裁定 12、13 | [P-706](agent-tasks.md)、[P-206](node.md) |
+| 通用外部資源池（設-15）：LLM 池是外部計算的第一個實例，其他外部計算由各 kernel 以資源任務自訂；通用介面隨第一列一起延後 | 裁定 1、Q4 | [S-301](../scheduling/llm.md) |
+| git 歷史回收 | 裁定 14 | [B-404](../base/storage.md)、[P-606](ops.md)、[H-034](../cli/gaps.md) |
 
 ### 已裁定（第十一批）
 
@@ -68,23 +116,25 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 第九批已准工程數字先照建議、實作量過再調；各篇「建議預設」可替換，不逐條再問使用者。
 
 - 首次由父 kernel 登記、既有項可重登；IPC、bytes 去重、摘要發布、資源 method、鎖 fd 與故障停格，依 [daemon](daemon.md)、[messages](messages.md)、[node](node.md)。
-- **LLM 共享窗口與池狀態**：最小格式及估算由 [kernel P-811～812](kernel-tasks.md) 定義；unknown 的估計占用隨定期清理移除，不當作遠端已停止的證據。相同 provider 限制交同一池管理 node，不能靠同名 scope 跨 node 同步（[resources P-505](resources.md)）。
-- **領域接口**：模型／人格／工具 adapter、正式回話、context 與預設清理遍歷已由 [agent 任務篇](agent-tasks.md) 及 [kernel 任務篇](kernel-tasks.md) 定義。unknown 放著隨定期清理，不自動重做；不做自訂清理接口。
+- **LLM 共享窗口與池狀態**：最小格式由 [kernel P-811～812](kernel-tasks.md) 定義。本機連線名額與池的 unknown 份額是兩個計數，unknown 占多久由池所屬 kernel 設定，見 [S-304](../scheduling/llm.md)；資料保留另依 [P-606](ops.md)。〔使用者方向 2026-09-30，第十八批〕同一 provider 限制要不要交同一池、要不要分片、兄弟借用或跨層優先，都是各 kernel 自己的資源政策（[T-06](../terms.md)）；不能靠同名 scope 跨 node 同步（[resources P-505](resources.md)）。
+- **領域接口**：模型／人格／工具 adapter、正式回話、context 與預設清理遍歷已由 [agent 任務篇](agent-tasks.md) 及 [kernel 任務篇](kernel-tasks.md) 定義。unknown 放著不自動重做（[S-401](../scheduling/operations.md)）；不做自訂清理接口。
 - done 留存、磁碟 hardlink 計量與池路由照各篇工程預設；格式驗證不等於產品實作。
 
-## P-009．分工表〔主編補〕
+## P-009．各協議檔對應的行為正本〔主編補，第十八批〕
 
-| 篇章／條款 | 唯一正本責任 |
-|---|---|
-| [daemon](daemon.md)／P-100～ | 設定、IPC／helper、註冊與資源框、runner 及故障證據 |
-| [node](node.md)／P-200～ | 布局、inst／tasks、tick、鎖、git 與設定匯入 |
-| [messages](messages.md)／P-300～ | 檔案路由、去重、method 目錄、摘要讀取／發布 |
-| [work](work.md)／P-400～404、408～411 | once 工作、結果、取消與程式契約 |
-| [llm-work](llm-work.md)／P-405～407 | LLM 代發：池設定、LLM 請求、LLM 結果與重試 |
-| [resources](resources.md)／P-500～ | module、配額／用量與各類資源 |
-| [ops](ops.md)／P-600～ | 待辦、aos-attend、aos-clean |
-| [agent 任務](agent-tasks.md)／P-700～ | agent 設定、工具、對話、context、用量及建立範本 |
-| [kernel 任務](kernel-tasks.md)／P-800～ | 持久成員、排程、工作轉交、LLM 路由／池及建立範本 |
+協議篇各檔只留左欄的格式；行為寫在右欄的主規格。寫到行為時留一句加右欄條號。還只寫在協議篇的行為句，改到時搬到右欄對應處，原處留一句加條號。
+
+| 協議檔／條款 | 本篇只留 | 行為正本（主規格） |
+|---|---|---|
+| [daemon](daemon/README.md)／P-100～116 | 設定欄位、IPC method 與 params／result、helper 通道、runner 回報、錯誤碼 | [daemon](../daemon.md)；[身分](../base/identity-resources.md)；[inst](../base/inst.md) |
+| [node](node.md)／P-200～210 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、鬧鐘與待送檔格式 | [tick](../tick.md)；[儲存](../base/storage.md)；[投件](../base/transport.md) |
+| [messages](messages.md)／P-300～309 | 請求／回應檔、method 目錄、摘要檔 | [投件](../base/transport.md)；[tick](../tick.md)；[S-201](../scheduling/admission.md) |
+| [work](work.md)／P-400～404、408～411 | 工作 payload、結果 JSON、`work.cancel` 形狀、程式 argv | [工作材料](../base/work.md)；[執行器](../base/execution.md) |
+| [llm-work](llm-work.md)／P-405～407 | 池設定、LLM 請求與結果 | [LLM](../scheduling/llm.md) |
+| [resources](resources.md)／P-500～ | 配額與用量檔、cgroup 檔對照 | [S-203](../scheduling/admission.md)；[身分與 OS 資源](../base/identity-resources.md) |
+| [ops](ops.md)／P-600～ | 事項檔、`aos-attend`／`aos-clean` 的 argv、設定與報告 | [S-405](../scheduling/operations.md)；[B-404](../base/storage.md) |
+| [agent 任務](agent-tasks.md)／P-700～ | agent 設定、工具清單、對話、context 與用量檔、範本 | [agent](../agent/README.md) |
+| [kernel 任務](kernel-tasks.md)／P-800～ | kernel 設定、成員、各狀態檔、範本 | [scheduling](../scheduling/README.md) 各篇 |
 
 ## P-010．inst 目標：檔案或資料夾〔使用者方向 2026-09-29〕
 
@@ -101,7 +151,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 ## 條號索引（P-xxx → 檔案）
 
-協議篇各條所在的檔案；別篇多用條號引用，照這張表找。檔案拆分或搬位置時條號不變，只改這張表。
+協議篇各條所在的檔案；別篇多用條號引用，照這張表找。檔案拆分或搬位置時條號不變，只改這張表。daemon 協議的條號表只留在 [daemon/README.md](daemon/README.md) 一份。
 
 | 條號 | 標題 | 檔案 |
 |---|---|---|
@@ -112,26 +162,10 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-005 | 錯誤 | [README.md](README.md)（本篇） |
 | P-006 | 程式：argv、環境、結束碼 | [README.md](README.md)（本篇） |
 | P-007 | schema 與範例 | [README.md](README.md)（本篇） |
-| P-008 | 暫定與待決 | [README.md](README.md)（本篇） |
-| P-009 | 分工表 | [README.md](README.md)（本篇） |
+| P-008 | 延後與待決 | [README.md](README.md)（本篇） |
+| P-009 | 各協議檔對應的行為正本 | [README.md](README.md)（本篇） |
 | P-010 | inst 目標：檔案或資料夾 | [README.md](README.md)（本篇） |
-| P-100 | 範圍 | [daemon/README.md](daemon/README.md) |
-| P-101 | 啟動、設定與 socket | [daemon/startup-and-ipc.md](daemon/startup-and-ipc.md) |
-| P-102 | sudo 與 helper 生死 | [daemon/startup-and-ipc.md](daemon/startup-and-ipc.md) |
-| P-103 | IPC 封包與授權 | [daemon/startup-and-ipc.md](daemon/startup-and-ipc.md) |
-| P-104 | 註冊 | [daemon/registration.md](daemon/registration.md) |
-| P-105 | 解除、叫醒、暫停與恢復 | [daemon/registration.md](daemon/registration.md) |
-| P-106 | 查登記與最近一格 | [daemon/registration.md](daemon/registration.md) |
-| P-107 | 佈建固定動作 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
-| P-108 | daemon 與 helper 的私有通道 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
-| P-109 | runner argv 與解析 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
-| P-110 | runner 結束與 125 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
-| P-111 | 錯誤 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
-| P-112 | schema 與最小範例 | [daemon/provision-and-runner.md](daemon/provision-and-runner.md) |
-| P-113 | 待決與跨篇 | [daemon/README.md](daemon/README.md) |
-| P-114 | 前景 Ctrl-C 停機 | [daemon/shutdown.md](daemon/shutdown.md) |
-| P-115 | 啟動 ID 與按需重建 | [daemon/registration.md](daemon/registration.md) |
-| P-116 | 存檔與重開 | [daemon/shutdown.md](daemon/shutdown.md) |
+| P-100～116 | daemon 協議 | 各條所在檔見 [daemon/README.md](daemon/README.md) 的條號表 |
 | P-200 | 資料夾布局 | [node.md](node.md) |
 | P-201 | inst 的格式與展開驗證 | [node.md](node.md) |
 | P-202 | 任務註冊表 | [node.md](node.md) |
