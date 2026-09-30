@@ -26,7 +26,7 @@
 - **kernel**：管理資源分配與任務排程的 node，**不以有沒有成員判定**。
 - **agent**：會自主行動、基本上牽涉 LLM 的 node。
 
-一個 node 可以同時是兩者，也可以都不是，例如只跑收信任務。頂層 node 不因此成為特殊種類；權限由設定授予。〔使用者方向 2026-09-30，第十九批〕「上層」（含上層 kernel）**預設看資料夾包含**：最近一個包含本資料夾、也有 tick 的資料夾；在 daemon 底下可以另外登記覆蓋，覆蓋只改管理關係，管轄權仍跟著資料夾（[T-10](#t-10三層tick-核心標準配備其他掛載)，判定規則以 [B-628](tick.md) 為正本）。樹與摘要邊界見 [scheduling](scheduling/README.md)。
+一個 node 可以同時是兩者，也可以都不是，例如只跑收信任務。頂層 node 不因此成為特殊種類；權限由設定授予。〔使用者方向 2026-09-30，第十九批〕「上層」（含上層 kernel）**預設看資料夾包含**：最近一個包含本資料夾、也有 tick 的資料夾；在 daemon 底下可以另外登記覆蓋，覆蓋要新舊兩個上層都同意（〔第十九批疑點裁定 11〕舊上層沒在 daemon 登記時只要新上層同意），覆蓋只改管理關係，管轄權仍跟著資料夾（[T-10](#t-10三層tick-核心標準配備其他掛載)，判定規則以 [B-628](tick.md) 為正本）。樹與摘要邊界見 [scheduling](scheduling/README.md)。
 
 **兩張註冊表不要混用：**[daemon](daemon.md)的表在記憶體使用，停機存入 `state.json`，記登記（含覆蓋上層）、pause 與未處理 wake；[tick](tick.md)的表在 node 裡，是 `.aos/tasks.json` 這張照順序跑的任務表，其中 group 與 needs 由標準配備讀。資源 module 是後者的普通項目，不另有外掛總表。
 
@@ -111,7 +111,7 @@
 | 其他掛載 | kernel、agent、clock、自訂任務 | 各自的任務 | [scheduling](scheduling/README.md)、[agent](agent/README.md) |
 
 - **標準配備必須全掛、不能拆**：只有「全掛」與「沒全掛」兩種狀態，不支援只掛其中幾樣。後續設計主要照標準配備做，spec 的保證以全掛為前提（T-01）。
-- **全掛怎麼算**：標準配備內建 cgroup 與 git 的備援，所以**缺 cgroup v2 或 git 仍算全掛**，只是降到備援級（T-01）。沒 helper（只能用通用 user）、沒通道（不是 daemon 開的 tick）只算功能受限：要 helper 或通道的那幾樣用不了，其他保證照常。什麼情況才算沒全掛，以 [B-630](tick.md) 為正本。
+- **全掛怎麼算**：標準配備內建 cgroup 與 git 的備援，所以**缺 cgroup v2 或 git 仍算全掛**，只是降到備援級（T-01）。沒 helper（只能用通用 user）、沒通道（不是 daemon 開的 tick）只算功能受限：要 helper 或通道的那幾樣用不了，其他保證照常；〔第十九批疑點裁定 11 記錄者歸類〕不在 daemon 底下的 tick 需要通道的事一律這樣算，不另設替代路。什麼情況才算沒全掛，以 [B-630](tick.md) 為正本。
 - **沒全掛時**：檢查、印警告；有終端機就問 y／n，沒終端機（daemon、cron 叫起的）預設照跑、只記警告。規則以 [B-630](tick.md) 為正本。
 
 **幾個詞**：
@@ -123,5 +123,6 @@
 | 通道 | daemon 開的 tick 跟 daemon 之間的 IPC；不是 daemon 開的 tick 沒有通道 | [B-612](daemon.md) |
 | 憑證 | daemon 開 tick 時發的一次性憑證，tick 在通道上出示它證明自己是誰；每格一張、這格內有效 | [B-612](daemon.md) |
 | 急件 | 走通道送到時要叫醒收件 tick 的訊息 | [B-614](daemon.md) |
+| 以指定帳號開程序 | 任務帶的帳號跟 tick 不同時，標準配備的切換使用者經通道請 helper 用那個帳號開這一項（`spawn_as`）；tick 全程握鎖，任務繼承同一份鎖 fd | [B-620](tick.md)、[B-609](daemon.md) |
 
 驗收：拿掉 daemon、cgroup、helper，直接在資料夾裡跑 `aos-tick`，互斥、照表跑與預設上下層仍成立；缺 git 或 cgroup v2 時照常跑一格、走備援，並讓人看得出現在是備援級。

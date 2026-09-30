@@ -35,8 +35,9 @@
 〔建議預設，未拍板；第十九批從 P-109、P-110 搬上〕daemon（或 helper）以固定的 `aos-runner` 開每一格與每個掛載行程：先降權、設好群組與資源，runner 再核對 UID 與 inst 原來源的 bytes 跟授權時的快照相同，才照 [inst](base/inst.md) 解析、開檔與執行。argv 與回報形狀見 [P-109、P-110](protocol/daemon/provision-and-runner.md)。
 
 - **串流**：runner 的 stdin／stdout 是 `/dev/null`；stderr 由 daemon 收集成 node 診斷，不直通 daemon 的 stderr，資料夾 node 暫定寫 `.aos/runner-stderr.log`（覆寫、ignore），輪替與留存以後再定。
-- **環境**：〔使用者方向 2026-09-30，第十九批〕除了 [B-303](base/identity-resources.md) 與 inst 的規則，daemon 開的每一格、每個掛載行程都多放兩個通道變數（B-612）；不帶管理 fd 或 key。
+- **環境**：〔使用者方向 2026-09-30，第十九批〕除了 [B-303](base/identity-resources.md) 與 inst 的規則，daemon 開的每一格、每個掛載行程都多放兩個通道變數（B-612）；不帶管理 fd 或 key。〔第十九批疑點裁定 10〕`spawn_as` 開的任務另外繼承 tick 交來的鎖 fd 與 `AOS_TICK_LOCK_FD`（B-609）。
 - **回報**：每次完整收尾只回報一次。前置失敗（身分不在額度內、來源變了等）回 `started:false`；已放行後子程式自己的結束碼照實回報，被訊號結束另帶訊號編號。runner 在已放行後自己收尾失敗，回報 `FinalizeFailed`，不能當成子程式退出 125；沒有完整可信回報就是結果不明，不能推定從未執行。前置檢查可能已建目錄或截斷輸出，125 不代表沒有檔案副作用。
+- **helper 開格什麼時候回**〔建議預設，未拍板；第十九批依方案 A 從 P-108 搬上〕：helper 替 daemon 開的格與掛載行程，要等 runner 結束、wait 回收、後代全空才回覆 daemon；全空但業務失敗仍算開格完成，無法確認全空回 `cleanup_failed`。私有通道按 RPC ID 配對，可同時有多筆在途。helper 拿到的快照是 daemon 取原始 `user` 時的同一份不可變 bytes；inst 的 base 仍照 [inst 目標](base/inst.md#inst-目標檔案或資料夾)算，不看快照放在哪。`spawn_as` 例外：runner 開起來就回，結束碼走 tick 交來的 pipe（B-609）。
 - 後代清空、串流收完與取消競態依 [B-202、B-203](base/execution.md)；範圍沒清空前不釋放名額、不開下一格，所有失敗都不自動重跑結果不明的工作。
 
 **驗收：**無事 node 不開 tick；重複叫醒不重疊。身分拒絕及無 helper 情境見 [V-03](conformance.md)。給 `.aos/inst.json` 或 `inst.json` 路徑登記，得到的 node id 是所在資料夾。
@@ -173,10 +174,10 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 **上層怎麼定**〔使用者方向 2026-09-30，第十九批〕：
 
 - **預設看資料夾**：從本 node 的資料夾往上，最近一個有 tick 的資料夾就是上層（判準與路徑比對見 [B-628](tick.md)）。〔建議預設〕不論預設或覆蓋，**有效上層都必須已在同一個 daemon 登記**，否則回 `not_registered`；所以沒有覆蓋時，資料夾推得的上層沒登記就登記不了。
-- **覆蓋**：登記時帶 `parent_id` 指定別的上層，就蓋過預設。覆蓋存在 daemon 的登記裡，不在 daemon 底下的 tick 沒有覆蓋。**新舊兩個上層都要同意**：舊上層是目前的有效上層（新登記時就是資料夾推得的那個），新上層是 `parent_id`；呼叫者必須同時是兩者的 owner 或祖先 owner（帶憑證時，憑證所屬的 tick 必須同時是兩者或兩者的上層鏈上的一個）。〔暫定〕資料夾推不出上層，或推得的上層不在這個 daemon 登記時，它沒辦法經 daemon 表態，只要新上層同意。
+- **覆蓋**：登記時帶 `parent_id` 指定別的上層，就蓋過預設。覆蓋存在 daemon 的登記裡，不在 daemon 底下的 tick 沒有覆蓋。**新舊兩個上層都要同意**：〔建議預設〕舊上層是**目前的有效上層**——新登記或第一次覆蓋時就是資料夾推得的那個，已覆蓋過再換時是目前覆蓋的那個（資料夾推得的那個不必再同意，它第一次覆蓋時已同意過）；新上層是 `parent_id`（拿掉 `parent_id` 回到資料夾時就是資料夾推得的那個）。呼叫者必須同時是兩者的 owner 或祖先 owner（帶憑證時，憑證所屬的 tick 必須同時是兩者或兩者的上層鏈上的一個）。〔使用者方向 2026-09-30，第十九批疑點裁定 11〕舊上層推不出來，或沒在這個 daemon 登記（例如 cron、人手跑的）時，aos 管不著它，**只要新上層同意**。
 - **覆蓋只改管理關係**：覆蓋後的上層負責分資源（框放在它的框下）、叫醒、解除與佈建授權；**管轄權仍跟著資料夾**，資料夾上層對那個資料夾的檔案仍有最高裁量。
 - 〔暫定〕daemon 在登記時解析一次有效上層並記下；之後有人在中間的資料夾新開、登記 tick，daemon 不自動改這筆的上層，要改就照下面的換父。同一筆重送時解析結果不同，當成換父處理。
-- 頂層只從設定載入，上層固定是 null。〔暫定〕設定裡兩棵 root 的資料夾互相包含時，整份設定不收（`config_invalid`）。
+- 頂層只從設定載入，有效上層是 null。〔建議預設〕這算部署者在設定裡做的覆蓋，不是取消資料夾上層：資料夾上層沒在這個 daemon 登記（例如 `/a` 由 cron 跑、設定只列 `/a/b`）時，照上面的疑點裁定 11 直接成立，daemon 底下 `/a/b` 是頂層，管轄權仍跟著資料夾（`/a` 對 `/a/b` 的檔案仍有最高裁量），直接跑的核心照資料夾仍算出 `/a`（[B-628](tick.md)）。資料夾上層已是這個 daemon 裡的登記（另一棵 root 或它底下的 node）時，部署者沒辦法替它同意，整份設定不收（`config_invalid`；熱重載照 [B-608](#b-608熱重載與即時改要重開) 不套用）；〔暫定〕設定裡兩棵 root 的資料夾互相包含，就是這一種。
 - 身分繼承（inst 的 `user` 省略時繼承上層）跟**有效上層**，見 [inst](base/inst.md)。
 
 **新登記**：頂層只從設定載入（增刪走熱重載，B-608）；其餘 node 由有效上層的 owner 或祖先 owner 經 `node.register` 登記（帶憑證時，由有效上層那個 tick 或它的上層鏈上的 tick 登記），首次必須有上層同意，本版不提供首次自登記。新登記不自動啟動，上層 kernel 重建子 kernel 時明確再送 wake；頂層由 daemon 自動各排第一格。每筆登記保存授權時解析出的 `owner_uid`；改 inst 不立即改掉 owner，有效的下一格身分採用或經原 owner／上層授權的重新登記才更新。inst 尋找依 [inst](base/inst.md)；登記的 node 必須是資料夾（單檔 inst 要用掛載行程，B-613）。同一個 id 不能同時是登記又是掛載行程，衝突回 `registration_conflict`。
@@ -215,7 +216,7 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 
 **once**：〔使用者方向 2026-09-30，第十九批〕once 屬標準配備，不再是登記的一種；daemon 那一側改成通道上的掛行程與砍掉，見 [B-613](#b-613掛行程與砍掉)。
 
-**驗收：**偽造 payload 帳號不能登記別人的資料夾；子額度寫成上層沒有的前綴或更大的範圍被拒；前綴規則比不中 UID < 1000 的帳號；不帶 `parent_id` 登記時，上層是 [B-628](tick.md) 推得的預設上層；它不在這個 daemon 登記時回 `not_registered`；帶 `parent_id` 覆蓋時只有一方上層同意被拒，覆蓋後框在新上層下、資料夾上層的檔案權限不變；換父時子樹沒停或新上層在子樹裡被拒，搬好後框在新上層下、`registration_id` 換新；搬資料夾後舊 id 解除、新 id 由新位置的上層登記；解除在跑的 node 時寬限後被殺、框被刪；縮小中間 node 的額度後，超出的子孫下一格停格並有事項。
+**驗收：**偽造 payload 帳號不能登記別人的資料夾；子額度寫成上層沒有的前綴或更大的範圍被拒；前綴規則比不中 UID < 1000 的帳號；不帶 `parent_id` 登記時，上層是 [B-628](tick.md) 推得的預設上層；它不在這個 daemon 登記時回 `not_registered`；帶 `parent_id` 覆蓋、資料夾上層在這個 daemon 登記時只有一方上層同意被拒，資料夾上層由 cron 跑、沒登記時只要新上層同意就收；覆蓋成 B 再換 C 時要 B、C 同意，資料夾上層不必；設定只列 `/a/b` 而 `/a` 是 cron 跑的時 `/a/b` 照常當頂層載入，`/a` 已是另一棵 root 的成員時整份設定不收；覆蓋後框在新上層下、資料夾上層的檔案權限不變；換父時子樹沒停或新上層在子樹裡被拒，搬好後框在新上層下、`registration_id` 換新；搬資料夾後舊 id 解除、新 id 由新位置的上層登記；解除在跑的 node 時寬限後被殺、框被刪；縮小中間 node 的額度後，超出的子孫下一格停格並有事項。
 
 ## B-607：叫醒、暫停、故障停格與格次序號
 
@@ -319,6 +320,17 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 | `group_create`〔第十八批〕 | 建一個系統群組；名稱要是確切名稱，且落在登記 `groups` 授權的名稱或前綴裡 | 要 |
 | `group_add_member`〔第十八批〕 | 把額度內的一個帳號加進授權的群組；只對之後新開的程序生效 | 要 |
 | `chgrp`〔第十八批〕 | 把單一路徑改成授權的群組；不遞迴、不跟隨 symlink，路徑要在 `paths` 內 | 要 |
+| `spawn_as`〔第十九批疑點裁定 10〕 | 以指定帳號開程序：替 tick 用任務帶的帳號開一項任務，任務繼承 tick 的鎖 fd；限制與放法見下面 | 要 |
+
+**以指定帳號開程序（`spawn_as`）**〔使用者方向 2026-09-30，第十九批疑點裁定 10：tick 自己握著鎖、經 helper 以別的帳號開、任務只需知道開它的那一格仍握著鎖；以下做法為建議預設，未拍板〕這是標準配備切換使用者的一部分（[B-620](tick.md)），參數見 [P-107](protocol/daemon/provision-and-runner.md)。
+
+- **誰能叫**：只收通道上帶憑證的請求，`node_id` 必須就是憑證所屬、登記中的 node；掛載行程叫回 `kind_mismatch`，不帶憑證回 `forbidden`。不看登記的 `provision` 授權，看的是身分額度。
+- **帳號的限制**：`user` 必須落在這個 node 的身分額度內（B-606 的規則，排除 UID 0 與 root 別名），不合回 `user_not_granted`，不存在回 `user_invalid`；不能用它建帳號。沒有 helper 回 `helper_unavailable`；排空或停機中回 `stopping`。
+- **開什麼**：`path` 必須是這個 node 資料夾裡 `.aos/jobs/` 下的一般檔（tick 寫好的那一項 inst，已去掉 aos 的欄位），逐段核對、不跟隨 symlink；daemon 取它的不可變快照交給 helper，跟開格同一套（`source_changed` 等照 B-601）。helper fork、降成該帳號、exec 固定 aos-runner，runner 照 [inst](base/inst.md) 跑；不收 argv、env 或輸出路徑。
+- **鎖**：請求同包交來鎖 fd 與回報 pipe 的寫端。helper 以 fstat 核對鎖 fd 就是這個 node 的 `.aos/tick.lock`，不符回 `invalid_params`；runner 與它開的任務繼承這份鎖 fd（同一個 open file description），`AOS_TICK_LOCK_FD` 放這個號碼，任務照 [B-602](tick.md) 核對。任務另外帶這一格的兩個通道變數（B-612）。
+- **放在哪**：完整路線下，tick 先照 [B-202](base/execution.md) 建好這一項的 `task-<序號>` 框，請求帶 `frame`；helper 核對它是本 node `n-<h>` 的直接子框、存在且沒有程序，把 runner 放進去再 exec。框仍歸 tick 的帳號，tick 照 B-202 等它清空、必要時 `cgroup.kill`。走 cgroup 備援時不帶 `frame`，runner 自開 session／process group；它是 helper 的子程序，不掛回 tick，runner 結束後 helper 對那個 process group 送 SIGKILL 並 wait，其餘後代清不到，還握著鎖 fd 的會讓下一格回 75（B-631、B-602）。
+- **回傳**：runner 開起來就回 `{node_id}`，不等它結束；前置失敗回錯、不開程序。結束碼不經回應：runner 把 [P-110](protocol/daemon/provision-and-runner.md) 的那一行回報寫進 tick 交來的 pipe，tick 讀到 EOF 為止。回應說成功、pipe 卻沒有回報就關了，這一項算失敗、結果不明，tick 不重跑。
+- daemon 不記這個程序：不進登記表、不留 B-610 的診斷、不發新憑證，也不能對它送 `node.kill`；取消與逾時照 inst 與 B-202 由 tick 管。
 
 〔使用者方向 2026-09-29 晚〕原有的 `mount`（helper 掛 tmpfs）首版拿掉，暫存就在磁碟。〔第十八批 Q21〕不加遞迴改群組與 chmod／setgid。多帳號交接首版只用群組，不用 ACL。
 
@@ -326,7 +338,7 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 
 **daemon 自己做的與 helper 做的**：daemon 在交給它的子樹內自己建框、寫限制、讀實際值，不經 systemd；無 helper 時用通用 user 做，授權和上層限制照舊。凡是要動到不屬於 daemon 帳號的檔或框（其他帳號、群組、quota，或上層框已委派給別的帳號時建框、刪框），才經 helper；無 helper 回 `helper_unavailable`。helper 另有一個只給 daemon 用、不開放給 `node.provision` 的動作：**刪殘留框**，只刪 cgroup 子樹內、名字是 `n-*`／`mount-*`／`task-*`、已經沒有程序也沒有子框的框（B-603、B-606）。daemon 與 helper 自己留在成員限額之外。
 
-**驗收：**每個動作超出授權路徑、群組或額度都被拒，OS 現況不符回 `conflict`；多帳號部署下能靠這些動作讓兩個 node 帳號經共享群組交接檔案；有程序在跑時也能調低記憶體上限並立即生效；沒 helper 時要 helper 的動作回 `helper_unavailable`；走備援時 `cgroup_*` 動作回 `unsupported`。
+**驗收：**每個動作超出授權路徑、群組或額度都被拒，OS 現況不符回 `conflict`；多帳號部署下能靠這些動作讓兩個 node 帳號經共享群組交接檔案；有程序在跑時也能調低記憶體上限並立即生效；沒 helper 時要 helper 的動作回 `helper_unavailable`；走備援時 `cgroup_*` 動作回 `unsupported`；`spawn_as` 帶額度外的帳號被拒，額度內的帳號開起來的任務在 `task-*` 框裡、以 `AOS_TICK_LOCK_FD` 核對得到獨占鎖，結束碼經回報 pipe 回到 tick，不帶憑證或由掛載行程叫都被拒。
 
 ## B-610：掛載行程的診斷：留存、淘汰與清除
 
@@ -372,7 +384,7 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 - **作廢**：該格的主程序結束（daemon 收到 runner 回報）即作廢，之後後代還拿著也沒用；登記被解除或換父（`registration_id` 改變）時作廢；daemon 重啟時全部作廢。
 - **用憑證時怎麼授權**：[P-103](protocol/daemon/startup-and-ipc.md) 表中「X 的 owner 或祖先 owner」，帶憑證時讀成「憑證所屬的 tick 就是 X，或在 X 的有效上層鏈上」。不帶憑證的請求照舊看 socket 對面的帳號，給人手與 CLI 用；兩條路授權的是同一張表。
 
-**哪些 method 收憑證**：`node.register`、`node.unregister`、`node.wake`、`node.mount`、`node.kill` 可帶可不帶；`node.send`、`node.take` 一定要帶。其餘 method 只看 socket 對面的帳號。
+**哪些 method 收憑證**：`node.register`、`node.unregister`、`node.wake`、`node.mount`、`node.kill` 可帶可不帶；`node.send`、`node.take` 與 `node.provision` 的 `spawn_as`（B-609）一定要帶。其餘 method（含 `daemon.info`、`node.show`、`node.provision` 的其他動作）不收憑證、只看 socket 對面的帳號；客戶端只對上面這幾個附憑證，其他照舊用自己的帳號送（[P-117](protocol/daemon/channel.md)）。
 
 **格式**：通道上的請求屬 daemon IPC，照 [C-07](contracts.md) 維持嚴格，不認得的欄位拒收；封包上限同 IPC 的 256 KiB。
 
@@ -384,7 +396,7 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 
 - **掛上**：`node.mount` 帶目標 inst 路徑（資料夾或單檔），daemon 立刻開一個 runner 跑它，不需要事先登記、不接受週期、不能有成員，也不要求 tasks 或 git。回應帶這次的 `registration_id`，之後用 `node.show` 查結果。
 - **資源與核權歸掛的那個 tick**：帶憑證時，上層就是憑證所屬的 tick；也可以帶 `parent_id` 指定成它有效上層鏈之下的某個 node（例如 kernel 替成員掛工作，歸成員），但不能指定成自己以上或別隊的 node。不帶憑證時（人手、CLI）必須帶 `parent_id`，呼叫者要是它的 owner 或祖先 owner。不另收可自報的 cgroup 路徑：框放在上層框下（`mount-<h>`，B-605），inst 的 `user` 要落在上層的身分額度內，不合回 `user_not_granted`，不存在回 `user_invalid`。kernel 不能把成員工作掛在自己的較大額度。各參數怎麼填（含 agent 自跑工具、LLM 池代發）見 [P-402](protocol/work.md)。
-- **結束**：行程跑完或被砍，daemon 收尾、自動移出登記表，留下 B-610 的診斷。〔使用者方向 2026-09-30，第十九批〕掛它的 tick 用 `node.show` 看 `last_tick` 拿結果：`outcome`、`exit_code`、`signal` 就是這個行程的（例如任務帶別的 `user` 時，tick 用 `node.mount` 開它，再用 `node.show` 等結束碼，[B-620](tick.md)）；這筆診斷會被淘汰（B-610），要留存的結果由掛的一方自己記。同一個 id 在跑時再掛回 `registration_conflict`；掛載行程沒有第二次、也沒有 pending。
+- **結束**：行程跑完或被砍，daemon 收尾、自動移出登記表，留下 B-610 的診斷。〔使用者方向 2026-09-30，第十九批〕掛它的 tick 用 `node.show` 看 `last_tick` 拿結果：`outcome`、`exit_code`、`signal` 就是這個行程的；這筆診斷會被淘汰（B-610），要留存的結果由掛的一方自己記。同一個 id 在跑時再掛回 `registration_conflict`；掛載行程沒有第二次、也沒有 pending。
 - **砍掉**：`node.kill` 對它做 B-604 的收尾。核權看掛它的那個 tick 的**路徑**（上層與上層鏈），不看當時那張憑證，所以上一格掛的、這一格也能砍。已經結束的回 `not_registered`；對登記的 node 送 `node.kill` 回 `kind_mismatch`。取消在跑的工作就用它（[B-203](base/execution.md)）。
 - **失敗證據**：前置失敗也算用掉這次掛行程；沒確認後代清空就保留阻擋。`not_registered`、重啟或沒收到回應都不是重跑許可，判讀見 [S-401](scheduling/operations.md)。
 - **單檔的未啟動旁檔**〔使用者方向 2026-09-29，第十一批與後續旁檔改名裁定；第十九批從 P-110 搬上〕：目標是單檔、而 daemon／helper 拒絕啟動 runner 或可信 runner 回報 `started:false` 時，daemon 在這個 inst 旁發布 `<inst 檔名>.err`（例如 `job.json.err`，格式見 [P-110](protocol/daemon/provision-and-runner.md)）。私有的 PascalCase 錯誤要映成 `user_not_granted`、`user_mismatch`、`source_changed` 或 `start_failed` 等小寫代碼，不直接抄 runner 的錯誤。每次掛行程用新的 inst 路徑，不覆蓋既有旁檔；以已授權目標的目錄 handle 發布，不能藉此任意寫檔。旁檔衝突或寫不出就 stdout 印一行警告，不另存 daemon 事項，掛的一方沒證據仍保留 unknown。目標是資料夾時，啟動失敗寫它自己的 `.aos/attention/`，不寫旁檔。runner 已放行後不寫這份旁檔；之後的 125、126／127 或結果遺失依 [work](base/work.md) 處理。
@@ -397,7 +409,7 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 
 〔使用者方向 2026-09-30，第十九批第 9 條與疑點裁定 6、7〕同一個 daemon 底下的 tick 可以經 daemon 互傳訊息。
 
-- **格式**：訊息跟檔案收件相同，是一份放進 `requests/` 的請求物件（[P-301](protocol/messages.md)）；daemon 只驗外形，不解析正文。回應仍照回址走檔案投件。照 [C-07](contracts.md)：通道請求的外層（`node.send` 的 params）照 daemon IPC 嚴格；夾帶的 `message` 照檔案 RPC 放寬，不認得的欄位忽略。
+- **格式**：訊息跟檔案收件相同，是一份放進 `requests/` 的請求物件（[P-301](protocol/messages.md)）；daemon 只驗外形，不解析正文。〔暫定，交接疑點「通道能否也傳回應」照 a〕回應仍照回址走檔案投件。〔暫定，交接疑點「通道訊息放寬」照 a〕照 [C-07](contracts.md)：通道請求的外層（`node.send` 的 params）照 daemon IPC 嚴格；夾帶的 `message` 照檔案 RPC 放寬，不認得的欄位忽略。
 - **送**：`node.send` 帶收件 tick 的 id、訊息與是否急件。收件 tick 要在這個 daemon 登記，否則回 `not_registered`；掛載行程沒有收件匣（`kind_mismatch`）。
 - **誰能送**：看寄件 tick 的執行帳號對收件 tick 的 `requests/` 有沒有寫權——能不能在那裡建檔（`requests/` 的寫與穿越權，以及上層各段的穿越權），跟檔案投件同一個判準；沒有就回 `forbidden`。首版不用 ACL，所以 daemon 以那個帳號的 UID 與群組，對權限位計算即可。「投件權就是執行權」同樣適用（[T-08](terms.md)）。
 - **存**：放 daemon 記憶體，按收件 tick 分開、先進先出。**不保證送達**：daemon 當掉、重啟、立即停機，或收件 tick 被解除，暫存的都丟掉。〔建議預設〕每個收件 tick 最多 256 件、合計 16 MiB，滿了回 `mailbox_full`；單件訊息序列化後最多 196608 bytes（192 KiB），超過回 `message_too_large`，這樣一件一定裝得進一個 `node.take` 回應。

@@ -230,6 +230,39 @@
         "group"
       ],
       "additionalProperties": false
+    },
+    {
+      "description": "〔第十九批疑點裁定 10〕以指定帳號開程序：只收帶憑證的通道請求；同一個 sendmsg 以 SCM_RIGHTS 附鎖 fd 與回報 pipe 寫端共 2 個 fd（運行時核對）",
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "spawn_as"
+        },
+        "user": {
+          "$ref": "daemon-registration.schema.json#/$defs/User"
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "frame": {
+          "type": "string",
+          "pattern": "^task-[1-9][0-9]*$"
+        },
+        "token": {
+          "$ref": "daemon-registration.schema.json#/$defs/Token"
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "user",
+        "path",
+        "token"
+      ],
+      "additionalProperties": false
     }
   ]
 }

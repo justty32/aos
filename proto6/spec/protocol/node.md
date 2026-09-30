@@ -30,7 +30,7 @@
 
 〔使用者方向 2026-09-29，裁定「收件分兩格」〕請求在被問者的 `requests/<id>.json`，回應在發問者的 `responses/<id>.json`。回應仍投回發問者家，不改成由發問者去對方家取。
 
-登記資料夾時先找 `.aos/inst.json`、沒有再找 `inst.json`，base 是 node 根；`once` 可直接登記一份 inst 檔，base 是該檔所在資料夾。正本見[inst 目標](../base/inst.md#inst-目標檔案或資料夾)。不跑 `aos-tick` 就不必有本節完整布局。
+登記資料夾時先找 `.aos/inst.json`、沒有再找 `inst.json`，base 是 node 根；〔第十九批〕掛載行程的目標可以指定單檔 inst（[B-613](../daemon.md)、[P-118](daemon/channel.md)），base 是該檔所在資料夾。正本見[inst 目標](../base/inst.md#inst-目標檔案或資料夾)。不跑 `aos-tick` 就不必有本節完整布局。
 
 ## P-201．inst 的格式與展開驗證〔使用者方向 2026-09-29〕
 
@@ -67,11 +67,11 @@
 
 | 介面 | 約定 |
 |---|---|
-| tick 的 stdin | 不讀；inst 預設 `/dev/null` |
+| tick 的 stdin | 一般不讀；inst 預設 `/dev/null`。〔第十九批〕例外是沒全掛時的 y／n 確認：stdin 與 stderr 都是終端機才讀一行（[B-630](../tick.md)） |
 | tick 的 stdout | 原樣轉送任務 stdout，不另混入成功 JSON |
 | tick 的 stderr | 任務 stderr 原樣轉送；tick 自己另印 `code: 說明`，有需要附 task id、退出碼或 signal |
 | 讀寫 | 核心讀 `.aos/tasks.json`、持鎖；標準配備負責提交（或檔案日誌）、還原、投件、消費原件清理；任務直接讀寫檔案 |
-| 身分 | 任務預設沿用 tick 的有效 UID、群組與資源範圍；〔第十九批〕帶了別的 `user` 的任務由標準配備的切換使用者開（[B-629](../tick.md)）。tick 自己不切 UID，直接呼叫也不會替你取得 inst 的身分 |
+| 身分 | 任務預設沿用 tick 的有效 UID、群組與資源範圍；〔第十九批〕帶了別的 `user` 的任務由標準配備的切換使用者經 helper 以那個帳號開，同樣繼承鎖 fd（[B-620](../tick.md)、[B-609](../daemon.md)）。tick 自己不切 UID，直接呼叫也不會替你取得 inst 的身分 |
 | 任務 cwd／argv | 依本項 inst 展開後執行；cwd 未給時為 node 根 |
 | 任務 stdin | 預設 `/dev/null`；可用本項 inst 的 stdin 重導向 |
 | 任務 stdout／stderr | 依 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不解析文字當完成證據 |
@@ -131,15 +131,16 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
 
 ## P-208．收件區權限〔建議預設，未拍板〕
 
-建 node 時須開 daemon 對 `.aos/attention/` 的寫權。node 帳號須可遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄 traverse 與 requests／responses 及 .tmp/ 的寫入／遍歷權。〔使用者方向 2026-09-29 晚〕首版只用共享群組（可配 setgid 目錄）、不用 ACL，保證 node 可讀、消費提交後可 unlink，不依賴投件者 umask，不一律 world-writable。
+〔第十九批依方案 A 縮短〕誰要開哪些權限、建立 node 時怎麼核對 LLM 與工具路線、kernel 對成員的觀察權，以 [B-506](../base/transport.md) 為正本；本條只列權限落點。
 
-〔使用者方向 2026-09-30，第十八批〕**投件權就是執行權，而且會傳遞**（[B-501](../base/transport.md)）：能投件就能用收件 node 的身分跑任意程式，自然也讀得到它讀得到的 repo、設定與 key，所以開投件權就是把那個身分交出去。投件者之間也不保證不能改檔；不覆蓋與內容核對見 P-003，可信來源及同 UID 界線見 [messages P-303](messages.md)。權限配置由上層 kernel 用自己的帳號做，共享群組與要 root 的步驟經 helper 的固定動作 `group_create`、`group_add_member`、`chgrp`（交出框另有 `cgroup_delegate`），見 [B-609](../daemon.md)；key 保護的範圍見 [llm-work P-405](llm-work.md)。
+| 對象 | 落點 |
+|---|---|
+| daemon | `.aos/attention/` 的寫權 |
+| node 帳號 | 根路徑可遍歷；repo 讀寫；`requests/`、`responses/` 可清理 |
+| 投件者 | 必要父目錄的 traverse；`requests/` 或 `responses/` 及其 `.tmp/` 的寫與遍歷 |
+| 只讀摘要的上層 | `.aos/summary/` 只授 traverse、`published.json` 只授 read（[P-307](messages.md)） |
 
-〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕建立 agent 時，LLM 路線與權限一起核對：經自己的 kernel 轉交，須能從 agent 投進該 kernel 的 requests，kernel 能回投 agent 的 responses；轉交下一站時再配 kernel 到下一站、下一站回 kernel 的兩個方向。agent 直接投 LLM kernel，則開 agent→LLM kernel requests、LLM kernel→agent responses，不要求自己的 kernel 代投。工具路線同樣由 `tools.target_node` 決定：有位址就開往該 kernel 的請求／回件權；null 則准 agent 經通道自己掛 once（`node.mount`，[B-613](../daemon.md)）、自己記用量。每個寫入方向都含該區的 `.tmp/`；正式副本由接件帳號可讀、提交後可清除。回址不是授權證明，仍依 P-303 核對。
-
-〔建議預設，未拍板〕自己的 kernel 另外取得成員 `requests/`、`responses/` 的必要列目錄權及摘要讀權，供收件／到期喚醒；只做這項觀察時可以用 [messages P-307](messages.md) 的唯讀摘要。用量收集路線另需 repo 讀權，固定 commit 讀 [agent P-703](agent-tasks.md) 的 `state/agent/usage/<request_id>.json`；只有摘要讀權不夠。若部署不願開 repo 讀權，就不能宣稱已啟用這條收集路線；仍不授寫設定或讀池 key 的額外權限。持久成員、路由及完整建立範本見 [kernel 任務篇](kernel-tasks.md)。
-
-**驗收：**兩種路線都能送請求並收結果；刻意拿掉回件寫權時拒絕接納新副作用；只有摘要讀權的父層不能讀成員其他追蹤檔。
+共享群組、setgid 目錄與交出框用 helper 的固定動作 `group_create`、`group_add_member`、`chgrp`、`cgroup_delegate`（參數見 [P-107](daemon/provision-and-runner.md)）。
 
 ## P-209．待決與跨篇
 

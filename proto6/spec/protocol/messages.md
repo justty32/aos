@@ -73,13 +73,11 @@ responses/<id>.json  # RpcResponse
 
 ## P-307．上層直接讀成員摘要〔建議預設，未拍板〕
 
-成員的追蹤檔 `.aos/summary/summary.json` 用 [msg-summary](schemas/msg-summary.schema.json)：必填 version:1、node_id、observed_at_ms、ready、due_ms、status；due_ms 沒到期事件用 null，ready 可同時成立。status 為 idle、queued、waiting_resources、waiting_result、running、paused、canceling、unknown、needs_attention；reason 可省。可選 `usage` 引用 [res-usage](schemas/res-usage.schema.json)，必須與摘要在同一 commit、同一 node，缺量測不補零。不放成員清單、history 或 key。
+成員的追蹤檔 `.aos/summary/summary.json` 用 [msg-summary](schemas/msg-summary.schema.json)：必填 version:1、node_id、observed_at_ms、ready、due_ms、status；due_ms 沒到期事件用 null，ready 可同時成立。status 為 idle、queued、waiting_resources、waiting_result、running、paused、canceling、unknown、needs_attention；reason 可省。可選 `usage` 引用 [res-usage](schemas/res-usage.schema.json)，必須與摘要是同一版（有 git 時同一 commit；〔第十九批〕沒有 git 時同一次寫出，[B-632](../tick.md)）、同一 node，缺量測不補零。不放成員清單、history 或 key。
 
-有 repo 讀權的上層固定一個 commit 讀摘要，核對 node_id 等於自己的直接下層（[B-628](../tick.md)）。只開摘要讀權時，標準配備的發布摘要在提交後把同一版原 bytes 原子發布到 ignored 的 `.aos/summary/published.json`（[B-624](../tick.md)）；父目錄只授 traverse、檔案只授 read。這是 P-003 不覆蓋規則的明示例外。讀者一次 open 取完整版本，usage 不拆檔；發布失敗留舊值並報錯，過時／缺失不等於 idle。
+**發布檔**：ignored 的 `.aos/summary/published.json`，內容是已提交 `summary.json` 的同一版原 bytes，usage 不拆檔；父目錄只授 traverse、檔案只授 read。它會被整份替換，是 P-003 不覆蓋規則的明示例外。
 
-摘要是觀測，不能蓋掉新的收件區 事件；上層不為查詢啟成員 tick，也不因要讀摘要就取得其 repo 或下層內容權限。
-
-〔使用者方向 2026-09-30，第十八批〕aos 只提供 `observed_at_ms` 與 daemon `node.show` 的 `last_tick` 這類訊號；多久沒更新算失聯、失聯時做什麼，由父 kernel 自己定（預設寫一件事項），不跨層代管孫輩，見 [S-202](../scheduling/admission.md)。
+〔第十九批依方案 A 縮短〕誰何時發布、發布失敗怎麼辦、上層怎麼讀與核對、摘要跟收件事件誰優先，以 [B-624](../tick.md) 為正本；〔使用者方向 2026-09-30，第十八批〕多久沒更新算失聯、失聯時做什麼由父 kernel 自己定，見 [S-202](../scheduling/admission.md)。aos 提供的訊號是 `observed_at_ms` 與 daemon `node.show` 的 `last_tick`。
 
 ## P-308．schema 與最小範例〔建議預設，未拍板〕
 
