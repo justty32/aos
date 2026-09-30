@@ -65,7 +65,7 @@ agent 只按設定的一個 node 位址投 `llm.chat`，請求與結果始終用
 
 本篇只編碼並行份額；provider usage、429 與 unknown 沿 [S-301～S-304](../scheduling/llm.md)及 [llm-work P-407](llm-work.md)。共享 quota_scope 的最小窗口設定及 `state/llm/pool-status.json` 由 [kernel 任務篇 P-811](kernel-tasks.md) 定；`aos llm pool usage` 讀同一已提交版本，顯示並行占用、unknown、最近 429 及冷卻時間。狀態是該池 node 的觀測，讀不到或過時就明說；不同 node 的同名 quota_scope 不會自動共享計數。〔使用者方向 2026-09-30，第十八批〕共用 provider 限制要不要匯到同一個池、要不要分片或讓兄弟借用，是各 kernel 自己的資源政策（[S-301](../scheduling/llm.md)）。
 
-〔使用者方向 2026-09-30，第十八批〕上層的 LLM 份額只對經上層轉交的請求有效；下層自建的池不受上層份額約束（[S-301](../scheduling/llm.md)）。key 不進本篇檔案、argv 或給 node 的環境，帳號與 key 保護只見 [llm-work P-405](llm-work.md)。
+上下層份額的關係見 [S-301](../scheduling/llm.md)。key 不進本篇檔案、argv 或給 node 的環境，帳號與 key 保護只見 [llm-work P-405](llm-work.md)。
 
 **驗收：**同一份 agent 請求可經自己的 kernel 轉交或直接交 LLM kernel，wire 格式不變；轉交不能靠改 pool 名跳過份額；兩個共用 scope 的池在 429 後一起冷卻。
 

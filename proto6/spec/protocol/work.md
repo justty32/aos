@@ -28,7 +28,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 ## P-402．once 與工作材料〔使用者方向 2026-09-29〕
 
-once 目標依 [P-010](README.md)；once 的登記、資源歸屬依 [B-606](../daemon.md)，啟動失敗旁檔（`.err`）格式依 [daemon P-110](daemon.md)。
+once 目標依 [inst 的「inst 目標：檔案或資料夾」](../base/inst.md#inst-目標檔案或資料夾)；once 的登記、資源歸屬依 [B-606](../daemon.md)，啟動失敗旁檔（`.err`）格式依 [daemon P-110](daemon.md)。
 
 〔使用者方向 2026-09-29，第十六批〕**工作目錄名要加前綴**：不同成員都可能用 `attempt-1`，同一個 kernel 裡會撞名。目錄名一律是 `<前綴>-<attempt_id>`，前綴是「**配出這個 attempt_id 的 node**」絕對路徑 UTF-8 bytes 的 sha256 前 16 個小寫 hex。node 路徑不能直接當目錄名，雜湊長度固定、只有 `[0-9a-f]`。全篇及 kernel／agent 篇路徑裡的 `state/work/<attempt_id>/`、`.aos/jobs/<attempt_id>/`，`<attempt_id>` 都指這個目錄名；檔案內容與 RPC 裡的 attempt_id 欄位不加前綴。
 
