@@ -6,6 +6,13 @@
 這階段要先裁哪些問題、動手前讀哪些文件。**階段推進／新裁決落地就更新本檔**，並把裁決
 記回對應的 ideas 檔與 verdicts。
 
+## 現況（2026-09-30）：主線是 proto6
+
+程式在 `proto6/src/`、plan 在 `proto6/plan/`。**分工（09-30 晚使用者定）**：先用 **Python 把整條 POC 做通，POC 由 AI 團隊寫**，使用者看結果、做裁定；**C++11 改寫放到最後**，他想親手寫的部分留到那時。這取代 09-29「程式由他親手寫、我們只規劃」的分工（更早 09-05「spec 出一部分就做原型、不寫 plan」也不再適用：proto6 有 plan）。plan 還沒依新分工改，是下一件事。
+**成熟元件直接複製**：inst.json、aos-exec、`$ref` 從 proto5 原樣複製進 `proto6/src/py`，不重寫；它們的既有規則不列待問（見 [dispatch/lessons](dispatch/lessons.md) 第 8 條）。
+
+下面的 M0～M5 屬 `core/` 舊線：`roadmap-run` 分支做完 M2 後於 2026-08-29 凍結、M3／M4 作廢，教訓在 [salvage](../salvage/README.md)。只當歷史。
+
 **常備規則（任何階段都有效）**：
 1. 動任何設計之前先過 verdicts A 表（別重想已裁決）與
    call-format/keep（別打掉優點）。

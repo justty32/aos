@@ -33,4 +33,4 @@ C ABI 包裝層見 [capi.md](capi.md)、CLI 層見 [cli.md](cli.md)；跨層的�
 
 **改 exec 的行為要小心兩件事**：① `fork` 之後、`execve` 之前只能呼叫 async-signal-safe 的操作（細節與理由見 `core/inst/docs/architecture.md`「`fork` 兩側各自要做的工作」）；② 逾時後的 `SIGKILL` 一定要打整個行程群組（`-pid`），不是單一 `pid`。
 
-**這一層有幾處刻意的設計，不要「修」**：PATH 撞到同名目錄時回 exit 126 而不是 127；三處 `kill(-pid, ...)` 的回傳值刻意忽略；`wait_until()` 出錯時直接 return、不 kill 不 reap。外部審查工具會反覆把它們當成 bug 提出來。
+**這一層有幾處刻意的設計，不要「修」**：PATH 撞到同名目錄時回 exit 126 而不是 127；三處 `kill(-pid, ...)` 的回傳值刻意忽略；`wait_until()` 出錯時直接 return、不 kill 不 reap（可能留 zombie）；C API 失敗後 `errno` 會被解構子的 `close()` 蓋掉，儘管 `core/inst/docs/capi.md` 承諾會保留（文件與程式的落差是已知的）。使用者 2026-08-23 確認這些都是錯誤路徑上刻意保持極簡的取捨；外部審查工具（codex）會反覆把它們當成 bug 提出來，出現就標「已知、刻意」濾掉，不再問、不動手。

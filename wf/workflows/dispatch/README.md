@@ -7,7 +7,7 @@
 **何時用**：一件工作大到要同時開幾條線，或要派給別資料夾／別機器的 agent 做；workshop／hackathon 開隊也照這裡。
 **何時不用**：一兩個檔的小改（開線的交接成本大過收益）；需求還沒定、要跟使用者來回確認方向；只是要問一件事或送一則情報 → [inbox](../inbox/README.md)。
 
-**本專案的隊形**（Fable 調度、Opus 隊長、codex 隊員；開隊與 codex 的呼叫方式、幾條硬規則）→ [aos-teams](aos-teams.md)。
+**本專案的隊形**（Fable 調度、Opus 隊長、codex 審查；開隊與 codex 的呼叫方式、幾條硬規則）→ [aos-teams](aos-teams.md)。
 
 ## Done when
 
@@ -94,9 +94,9 @@
 
 | 檔案 | 內容 |
 |------|------|
-| [aos-teams.md](aos-teams.md) | 本專案的隊形：Fable 調度、Opus 隊長、codex 隊員；開隊指令、codex 呼叫、硬規則 |
+| [aos-teams.md](aos-teams.md) | 本專案的隊形：Fable 只調度、碰程式碼派 Opus、codex 只剩 astra；開隊指令、codex 沙箱、每段試玩 |
 | [driving-cli-agents.md](driving-cli-agents.md) | 怎麼啟動、驅動、監看一條外部 CLI agent 線，以及收線七步 |
-| [lessons.md](lessons.md) | 派線踩過的坑：預掃範圍、線推翻交接書、交接書自相矛盾、整檔改寫 |
+| [lessons.md](lessons.md) | 派線踩過的坑：預掃範圍、線推翻交接書、交接書自相矛盾、整檔改寫、合併後才刪分支、worktree 起點舊、任務書 checklist、舊東西怎麼用 |
 
 ## 交接
 
