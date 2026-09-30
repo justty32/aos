@@ -27,14 +27,14 @@
 
 收件區、回覆檔、串流檔、key 的讀寫權限 aos 不安排，沒給權限就在投件時報錯（設定檢查不先擋，見 [P-701](../protocol/agent-tasks.md)）。〔使用者方向 2026-09-29，第十六批〕**LLM 結果回來就是投進 agent 的 `responses/` 收件**，跟其他收件一樣由所屬 kernel 看到後叫醒 agent（[P-305](../protocol/messages.md)、[P-803](../protocol/kernel-tasks.md)），不另設機制；串流檔（S-305）則不叫醒。池 node 裡誰收 `llm.chat` 見本篇 S-307。
 
-〔使用者方向 2026-09-29〕kernel 的 LLM module 分配成員份額與執行機會；**每個池 node 的代發任務保管該池 key，處理真正共享的 provider 限制**。頂層或下層 kernel 都可以有自己的池，不要求全機只有一個池。共享 provider 帳戶／模型限制的池要用同一個 `quota_scope`、交同一個池 node 統一分配序號、在途占用及冷卻，不能各開一份計數繞過限制；不同 node 的同名 scope 不會自動共享計數。〔使用者方向 2026-09-30，第十八批〕**上層的 LLM 份額只對經上層轉交的請求有效**；下層自建的池、或 agent 直投別的池 node，不受上層份額約束（上層頂多用用量收集事後看到）。下層沒裝 LLM module 只是不再細分；池端的共享限制照樣有效。這是上下層不必對齊的一例（[T-06](../terms.md)）。
+〔使用者方向 2026-09-29〕kernel 的 LLM module 分配成員份額與執行機會；**每個池 node 的代發任務保管該池 key，處理真正共享的 provider 限制**。頂層或下層 kernel 都可以有自己的池，不要求全機只有一個池。〔使用者方向 2026-09-30，第十八批 方向 3、5；astra 核對第 1 項改正〕同一 provider 帳戶／模型的限制要**集中**在一處計數、還是**分片**由各池自管，由 kernel 決定，spec 不強制全機只有一個計數處。kernel 選擇把多個池當同一個共享限制時，才用同一個 `quota_scope`、交同一個池 node 統一分配序號、在途占用及冷卻，不能各開一份計數繞過它；不同 node 的同名 scope 不會自動共享計數（技術限制：計數存在各自的 node 裡）。〔使用者方向 2026-09-30，第十八批〕**上層的 LLM 份額只對經上層轉交的請求有效**；下層自建的池、或 agent 直投別的池 node，不受上層份額約束（上層頂多用用量收集事後看到）。下層沒裝 LLM module 只是不再細分；池端的共享限制照樣有效。這是上下層不必對齊的一例（[T-06](../terms.md)）。
 
 〔使用者方向 2026-09-29；第十八批由 P-813 搬來〕`llm.target_node` 是 node id 時，`llm.chat` 的 params 是 `aos llm chat` 的 inst。開 agent 的 kernel 選兩條路線之一；這兩條路線講的是份額怎麼走，和上面三檔是兩回事。請求／結果格式相同（[P-406／407](../protocol/llm-work.md)），結果下次 tick 收：
 
 | 工作 | kernel 全管 | kernel 不管 |
 |---|---|---|
 | LLM | `llm.target_node`＝本 kernel，裝 forward（[P-809](../protocol/kernel-tasks.md)），配本層 route／份額；由 forward 扣額度、排隊並交本地池或另一 kernel | `llm.target_node`＝管池的 node，直接授雙向投件權；池 node 自己收件（S-307） |
-| 工具 | `tools.target_node`＝本 kernel，裝 work，代登 once | `tools.target_node`＝null，agent 自己登 once，parent_id 是 agent |
+| 工具 | `tools.target_node`＝本 kernel，裝 work，代掛 once（經通道 `node.mount`，上層填成員，[P-402](../protocol/work.md)） | `tools.target_node`＝null，agent 自己掛 once，上層是 agent 自己 |
 | 用量 | 由代辦 module 記，agent 記錄供核對 | agent 自記，父 kernel 裝 usage-collect 讀（[P-810](../protocol/kernel-tasks.md)） |
 
 兩種工作可分別選路線。範本欄位怎麼填見 [kernel P-813](../protocol/kernel-tasks.md)。
@@ -48,7 +48,7 @@
 
 請求參數及輸入材料見 [LLM 代發 P-406](../protocol/llm-work.md)。共享限制按 provider 的實際帳戶／模型關係判定，不把不同 URL 當作必定獨立。
 
-驗收：共用同一限制的 endpoint 由池端一起限流，不能換個 URL 就繞過。有身分隔離的部署中，不在投件鏈上的帳號讀不到池 key；能投件給池（直接或經 kernel 轉交）的帳號不算在保護範圍；同帳號部署與直連不得宣稱保護了 key。投給不是 node 的路徑、或沒有寫入權限，當場報一次錯、丟掉待送檔、不重試。投給沒被 tick 的 node，請求留在對方收件區、不產生待辦，設了鬧鐘的到期後報錯；投給有 tick 但沒任務宣告 `llm.chat` 的 node，收到 -32601、原件被清、鬧鐘不響。下層自建池的請求不扣上層份額。
+驗收：同一份 agent 請求經自己的 kernel 轉交或直接交池 node，wire 格式不變（P-406／407）；轉交不能靠改 pool 名跳過份額（份額扣在 route 名上，S-302）；共用同一 `quota_scope` 的池遇 429 後一起冷卻（S-303）。路由成環回 `routing_loop`、來源未授權回 `work_not_authorized`、在途請求不改投別站（S-307）。kernel 把多個 endpoint 當同一共享限制（同一 `quota_scope`）時，由同一池 node 一起限流，不能換個 URL 就繞過；kernel 選分片時各池自管，不同 node 的同名 scope 不共享計數。有身分隔離的部署中，不在投件鏈上的帳號讀不到池 key；能投件給池（直接或經 kernel 轉交）的帳號不算在保護範圍；同帳號部署與直連不得宣稱保護了 key。投給不是 node 的路徑、或沒有寫入權限，當場報一次錯、丟掉待送檔、不重試。投給沒被 tick 的 node，請求留在對方收件區、不產生待辦，設了鬧鐘的到期後報錯；投給有 tick 但沒任務宣告 `llm.chat` 的 node，收到 -32601、原件被清、鬧鐘不響。下層自建池的請求不扣上層份額。
 
 ## S-302．預留與結算
 
@@ -60,7 +60,7 @@
 
 〔建議預設，未拍板；第十八批由 kernel P-811 搬來〕**池的共享窗口**（預設範本的規則，只套「自己排」`schedule:aos` 的池；「交給 endpoint」的池不做窗口與並行）：
 
-- 每個 quota scope 有並行上限、固定窗口長度、每窗口請求數與每窗口 token 數（欄位見 [kernel P-811](../protocol/kernel-tasks.md)）。共享同一 provider 限制的池須同 node、同 scope；改名不代表獨立。
+- 每個 quota scope 有並行上限、固定窗口長度、每窗口請求數與每窗口 token 數（欄位見 [kernel P-811](../protocol/kernel-tasks.md)）。kernel 選擇集中計數時，共享同一 provider 限制的池須同 node、同 scope，改名不代表獨立；選分片時各池各算（S-301）。
 - **窗口**：該 scope 第一筆預留時開一個固定窗口，到期重設。時鐘倒退不提早釋放；重啟依已保存的證據重建，不能證明窗口已過期，就再等一個完整窗口。
 - **預留**：每次 HTTP 嘗試（各有自己的 attempt）預留一個請求，同一 attempt 只算一次；已預留未啟動的也算在途。token 用估算：messages 與 tools 的 JSON UTF-8 bytes 加 `max_completion_tokens`，不保證是 tokenizer 的上界。
 - **放不放行**：單筆請求本身就超過 scope 上限，拒收（`capacity_unavailable`，[P-404](../protocol/work.md)）；窗口滿、並行滿或冷卻中就等。
@@ -84,14 +84,14 @@ HTTP 無結果又不能證明未送出，就標 unknown，不自動再呼叫或�
 
 ## S-304．取消與不確定性
 
-〔使用者方向 2026-09-29〕once 的取消規則以 [B-203](../base/execution.md) 為正本；〔使用者方向 2026-09-30，第十八批〕LLM 請求的取消延後（[P-008](../protocol/README.md#p-008)），目前範本只有 kernel 的 work 任務收 `work.cancel`。已送出後關掉本機連線，不代表遠端停算。重啟的程序收尾依 [daemon](../daemon.md)，不明結果依 [S-401](operations.md) 放著、不自動重做。完整結果才可成功，部分輸出不是完成證據；串流寫出的片段也只是過程（S-305）。
+〔使用者方向 2026-09-29〕once 的取消規則以 [B-203](../base/execution.md) 為正本（在跑的經通道砍掉，[B-613](../daemon.md)）；〔使用者方向 2026-09-30，第十八批〕LLM 請求的取消延後（[P-008](../protocol/README.md#p-008)），目前範本只有 kernel 的 work 任務收 `work.cancel`。已送出後關掉本機連線，不代表遠端停算。重啟的程序收尾依 [daemon](../daemon.md)，不明結果依 [S-401](operations.md) 放著、不自動重做。完整結果才可成功，部分輸出不是完成證據；串流寫出的片段也只是過程（S-305）。
 
 〔第十八批補，建議預設，未拍板〕**兩個計數分開算**：
 
 | 計數 | 是什麼 | 何時還 |
 |---|---|---|
 | 本機連線名額（池狀態的已知占用） | 這台機器上正在跑的 `aos-llm-call` HTTP 連線 | 本機 HTTP 確定關閉（程序結束、結果寫出或確認全空）就還 |
-| 池的 unknown 份額 | 遠端可能還在算、占著 provider 限制的請求 | 預設從送出起算到該請求的 `timeout_ms` 到期後還；池所屬 kernel 可在池的限制設定裡改（例如設成不占，或占更久） |
+| 池的 unknown 份額 | 遠端可能還在算、占著 provider 限制的請求 | 〔暫定，使用者未答；選項：a 到 `timeout_ms` 到期／b 固定時間／c 預設不占，照 a〕預設從送出起算到該請求的 `timeout_ms` 到期後還；池所屬 kernel 可用 `unknown_hold_ms` 改（`0`＝不占，欄位在 [kernel-llm-limits](../protocol/kernel-tasks.md)，暫定放在那裡） |
 
 兩者都算進 `concurrent_requests` 的占用，但分開記、分開還，不能互相抵。unknown 份額還了只表示不再占名額，結果仍是 unknown、不重送；資料保留另依 [P-606](../protocol/ops.md)，不再綁「隨定期清理才釋放」。kernel 轉交時扣的成員份額（[P-505](../protocol/resources.md)），unknown 的那份預設也照這個時間還。設定欄位的格式見 [kernel P-811](../protocol/kernel-tasks.md)。
 
@@ -122,7 +122,16 @@ HTTP 無結果又不能證明未送出，就標 unknown，不自動再呼叫或�
 
 同一支 `aos-llm` 兩種都跑：任務宣告了 `llm.chat` 就讀收件，否則讀 forward 的材料。agent 直投管池 node（S-301 的「kernel 不管」）與 kernel 轉交到別的池 node，收件的都是純池 node。兩者都沒有任務宣告 `llm.chat` 時，tick 回 -32601（S-301 第二種情況）。
 
-**aos-llm 怎麼派**〔使用者方向 2026-09-29 晚〕：aos-llm 是短任務：收件（或讀 forward 材料）、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 [P-402](../protocol/work.md) 的 once 資料夾，把本池那一項設定（只含 `key_ref`，不含 key）固定成 `W/llm-config.json`，inst 跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <W/llm-config.json 的絕對路徑>`，用池 node 的帳號。HTTP 等待由這支受 daemon 管的程序承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 發回；LLM 工作沿用 once 的清理與恢復界線。
+**aos-llm 怎麼派**〔使用者方向 2026-09-29 晚〕：aos-llm 是短任務：收件（或讀 forward 材料）、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 [P-402](../protocol/work.md) 的 once 資料夾，把本池那一項設定（只含 `key_ref`，不含 key）固定成 `W/llm-config.json`，inst 跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <W/llm-config.json 的絕對路徑>`，用池 node 的帳號。〔使用者方向 2026-09-30，第十九批〕提交後，由下一格 `aos-llm` 經通道用 `node.mount` 把這份 inst 掛到 daemon（用 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`，不帶 `parent_id`，資源歸池 node 自己，不帶 `identity_grant`；[B-613](../daemon.md)），所以池 node 要跑在 daemon 底下。HTTP 等待由這支掛載行程承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 發回；LLM 工作沿用 once 的清理與恢復界線。
+
+**轉交**〔第十八批由 P-406 搬來〕：轉交 kernel 可把請求映到下一個 node 的 pool；model 原值沿路核對，終點才核對實際池設定。轉交仍用 `llm.chat`，不增加另一種 wrapper；保留原 node_id、job_id、attempt_id，另配轉交 RPC id 與 `reply_to`，由轉交者保存上下游關係。收到結果後沿用 stdout 的業務結果，以本 node 及原 RPC id 組成自己的指令結果回覆，不照抄下游指令識別。`stream_path` 沿路原樣保留，由最後實際打 HTTP 的 `aos-llm-call` 寫。agent 配對的可信回件來源始終是設定目標。
+
+**轉交的路由與授權**〔第十九批依方案 A 從 kernel P-808 搬來；路由表格式見 [kernel P-808](../protocol/kernel-tasks.md)〕：
+- **授權**：請求的來源（原發起者、明授的投件者或代理）不在該路由允許的來源內，回 `work_not_authorized`；依部署權限驗來源，共 UID 不宣稱隔離。找不到路由回 `pool_not_found`。
+- **不成環**：路由配置不得成環；同一 origin／job／attempt 又回到本 node，報 `routing_loop`、不再轉交。
+- **在途不改投**：接納時保存必要的路由與請求材料，在途的請求不因路由表之後改動而改投別站。
+
+**重試的派出**〔第十八批由 P-407 搬來〕：轉交中間層只轉送、保存同一組結果，不重新計一次 HTTP、不自行再做 provider 重試。限流重試前，由池 tick 固定新 attempt ID 與前次結果、提交後才派出；後續 ID 由這條已提交關係核對，不必假裝仍是第一個 attempt。
 
 **設定路徑**：任務表裡 `aos-llm --config` 的相對路徑依呼叫時的 cwd 解（tick 裡就是 node 根），範本寫 `config/llm-pools.json`；aos-llm 每格直接開這份檔，改了下一格生效，已派出的嘗試照它的 `W/llm-config.json`。
 

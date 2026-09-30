@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-4",
+  "method": "node.kill",
+  "params": {
+    "node_id": "/srv/aos/work/inst.json",
+    "signal": 9
+  }
+}

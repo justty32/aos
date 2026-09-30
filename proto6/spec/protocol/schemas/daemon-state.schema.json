@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "daemon state.json（P-116）；持久檔，不認得的欄位忽略（C-07）",
+  "title": "daemon state.json（P-116）；持久檔，不認得的欄位忽略（C-07）；掛載行程不存檔（B-613）",
   "type": "object",
   "properties": {
     "version": {
@@ -38,14 +38,15 @@
               }
             ]
           },
-          "once": {
-            "type": "boolean"
-          },
           "paused": {
             "type": "boolean"
           },
           "pending": {
             "type": "boolean"
+          },
+          "parent_override": {
+            "type": "boolean",
+            "description": "true＝parent_id 是登記覆蓋的上層；省略或 false＝看資料夾推得（B-606）"
           }
         },
         "required": [
@@ -53,45 +54,7 @@
           "parent_id",
           "identity_grant",
           "paused",
-          "pending",
-          "once"
-        ],
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "once": {
-                  "const": true
-                }
-              },
-              "required": [
-                "once"
-              ]
-            },
-            "then": {
-              "not": {
-                "required": [
-                  "interval_ms"
-                ]
-              }
-            }
-          },
-          {
-            "if": {
-              "properties": {
-                "parent_id": {
-                  "type": "null"
-                }
-              }
-            },
-            "then": {
-              "properties": {
-                "once": {
-                  "const": false
-                }
-              }
-            }
-          }
+          "pending"
         ]
       }
     }

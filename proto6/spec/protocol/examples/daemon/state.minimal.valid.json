@@ -9,8 +9,7 @@
         1000
       ],
       "paused": false,
-      "pending": true,
-      "once": false
+      "pending": true
     }
   ]
 }

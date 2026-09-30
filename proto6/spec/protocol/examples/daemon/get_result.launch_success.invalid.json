@@ -3,12 +3,9 @@
   "id": "query-1",
   "result": {
     "node_id": "/srv/aos/team/member/.aos/jobs/640b231841e0290f-attempt-1/inst.json",
-    "parent_id": "/srv/aos/team",
-    "identity_grant": [
-      1000
-    ],
+    "parent_id": "/srv/aos/team/member",
+    "parent_override": false,
     "owner_uid": 1000,
-    "once": true,
     "paused": false,
     "running": false,
     "pending": false,
@@ -25,6 +22,7 @@
       "exit_code": 0,
       "started": false,
       "signal": null
-    }
+    },
+    "mount": true
   }
 }

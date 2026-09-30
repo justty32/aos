@@ -6,8 +6,7 @@
     {
       "member_id": "a",
       "registration": {
-        "node_id": "/srv/aos/a",
-        "parent_id": "/srv/aos/top",
+        "node_id": "/srv/aos/top/a",
         "identity_grant": [
           1000
         ]

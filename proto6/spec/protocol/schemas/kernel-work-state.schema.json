@@ -19,7 +19,7 @@
       "$ref": "common.schema.json#/$defs/NodeId"
     },
     "owner_exec_uid": {
-      "description": "接件時記下的本 node inst 執行帳號 UID；取消核權的第二種主人（B-203）。once 自己 inst 的 user 不算。",
+      "description": "接件時記下的本 node inst 執行帳號 UID；取消核權的第二種主人（B-203）。掛載行程（once）自己 inst 的 user 不算（B-613）。",
       "type": "integer",
       "minimum": 0
     },

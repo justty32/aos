@@ -3,11 +3,10 @@
   "id": "req-1",
   "method": "node.register",
   "params": {
-    "node_id": "/srv/aos/work/inst.json",
-    "parent_id": "/srv/aos/team",
+    "node_id": "/srv/aos/team/member/.aos/inst.json",
     "identity_grant": [
       1000
     ],
-    "once": true
+    "interval_ms": 60000
   }
 }

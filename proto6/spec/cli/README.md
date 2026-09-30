@@ -6,7 +6,7 @@
 
 ## H-001．共用讀法〔使用者方向；工程預設〕
 
-形狀 `aos <用途> <動作> [更深]`，第一層 daemon/node/kernel/agent/llm/attend/clean/inst/work/once/migrate；短形見 alias。N 是 node、K 是 kernel、R 是發件／回件 node、T 是 inst 目標、F 是檔案、S 是 socket；[] 可省，| 擇一。
+形狀 `aos <用途> <動作> [更深]`，第一層 daemon/node/kernel/agent/llm/attend/clean/inst/work/mount/migrate；短形見 alias。N 是 node、K 是 kernel、R 是發件／回件 node、T 是 inst 目標、F 是檔案、S 是 socket；[] 可省，| 擇一。
 
 路徑按 cwd，--to 相對 N；底層 --node 省略用 cwd，tick 跑任務時 cwd 是 node 根。IPC 用 --socket S 或 --daemon-config F。通常 stdout 放結果，stderr 放診斷／確認；daemon 例外見下。表中 --json：IPC 印原 RpcResponse，投件印 FileRpcRequest，其餘依該列；每筆加換行。沒列 --json 的命令傳它回 2。
 
@@ -28,7 +28,7 @@
 
 ## 章節導航
 
-- [H-004 指令總表](commands.md)：daemon、node、kernel、agent、llm／attend／clean／inst、work、once／migrate 七段。
+- [H-004 指令總表](commands.md)：daemon、node、kernel、agent、llm／attend／clean／inst、work、mount／migrate 七段。
 - [H-037 除錯指南：出事時看哪裡](debugging.md)
 - [H-030 CLI 怎麼變成 method、H-035 常用 alias](mapping-and-alias.md)
 - [H-036 七步走到底](walkthrough.md)

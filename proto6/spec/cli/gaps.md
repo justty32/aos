@@ -6,7 +6,7 @@
 
 | 舊編號 | 解法 |
 |---|---|
-| D1 登記／tick 證據 | P-106／115 已有 node.ls/show、boot_id、last_tick、once 診斷。 |
+| D1 登記／tick 證據 | P-106／115 已有 node.ls/show、boot_id、last_tick、掛載行程診斷。 |
 | D2 成員／範本 | P-701～715 定 agent 設定／工具；P-801～814 定成員、同步、範本。 |
 | D3 回話／context | P-703／708／713／714 定本地 input_id、reply、history、context；回話統一 agent.say＋in_reply_to。 |
 | D4 驗證／待辦／清理 | P-210／712／805／609 定驗證／recheck；P-716／814 定清理遍歷。 |

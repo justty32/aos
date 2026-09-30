@@ -1,0 +1,21 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-6",
+  "result": {
+    "messages": [
+      {
+        "jsonrpc": "2.0",
+        "id": "m1",
+        "method": "agent.say",
+        "params": {
+          "argv": [
+            "aos",
+            "agent.say"
+          ]
+        },
+        "reply_to": "/srv/aos/team"
+      }
+    ],
+    "more": false
+  }
+}

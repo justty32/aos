@@ -4,11 +4,11 @@
   "result": {
     "node_id": "/srv/aos/team/member",
     "parent_id": "/srv/aos/team",
+    "parent_override": false,
     "identity_grant": [
       1000
     ],
     "owner_uid": 1000,
-    "once": false,
     "paused": false,
     "running": false,
     "pending": false,
@@ -34,6 +34,7 @@
       "exit_code": 0,
       "started": true,
       "signal": null
-    }
+    },
+    "mount": false
   }
 }

@@ -7,7 +7,8 @@
       "const": 1
     },
     "daemon_socket": {
-      "$ref": "common.schema.json#/$defs/NodeId"
+      "$ref": "common.schema.json#/$defs/NodeId",
+      "description": "可省（P-801）：沒有通道時找 daemon 用的 socket 絕對路徑；省略時讀 AOS_DAEMON_SOCKET。本格有 AOS_TICK_TOKEN 時一律用環境變數的 socket。"
     },
     "scan_interval_ms": {
       "type": "integer",
@@ -35,7 +36,6 @@
     }
   },
   "required": [
-    "version",
-    "daemon_socket"
+    "version"
   ]
 }

@@ -6,9 +6,9 @@
 
 〔使用者方向 2026-09-29〕node 與角色定義見[術語](../terms.md)。kernel 管直接成員的排程與資源；成員也是 node。下層在父層眼中是一件工作，上層只看它提供的摘要，不讀下層成員內容。
 
-node 的登記、路徑 id、叫醒與重啟重建由 [daemon](../daemon.md) 定義；身分額度見[身分與 OS 資源](../base/identity-resources.md)。各 node 自己推進狀態，提交與恢復依 [tick](../tick.md)，不承諾跨 node 一起提交。
+〔使用者方向 2026-09-30，第十九批〕誰是誰的上層，預設看資料夾包含、可經 daemon 登記覆蓋（[B-628](../tick.md)）；覆蓋只改管理關係，管轄權仍跟著資料夾。node 的登記、路徑 id、叫醒與重啟重建由 [daemon](../daemon.md) 定義；身分額度見[身分與 OS 資源](../base/identity-resources.md)。各 node 自己推進狀態，提交與恢復依 [tick](../tick.md) 的標準配備，不承諾跨 node 一起提交。
 
-〔使用者方向 2026-09-30，第十八批〕**aos 只給框架**：tick 基底、Linux 隔離（帳號、cgroup）與登記框架；任務種類、資源與隔離政策由各 kernel 自己定，上下層不必對齊（[T-06](../terms.md)）。本篇寫的排程、資源六類、LLM 三檔、份額、窗口與重試，除了標明屬框架的部分，都是 aos 附的**預設 kernel 範本**的規則；範本的檔案、argv 與欄位見 [kernel 預設範本](../protocol/kernel-tasks.md)。只有 cgroup 上限與身分額度照 Linux 維持巢狀（[S-203](admission.md)）。
+〔使用者方向 2026-09-30，第十八批；第十九批改寫〕**aos 只給框架**：tick 核心與標準配備（含切換帳號與 cgroup 框，[B-626](../tick.md)、[B-629](../tick.md)）與登記框架；任務種類、資源與隔離政策由各 kernel 自己定，上下層不必對齊（[T-06](../terms.md)）。本篇寫的排程、資源六類、LLM 三檔、份額、窗口與重試，除了標明屬框架的部分，都是 aos 附的**預設 kernel 範本**的規則；範本的檔案、argv 與欄位見 [kernel 預設範本](../protocol/kernel-tasks.md)。只有 cgroup 上限與身分額度照 Linux 維持巢狀（[S-203](admission.md)；cgroup 走備援時上限不巢狀，見同條）。本篇的保證以標準配備全掛為前提（[T-01](../terms.md)）。
 
 ## 本篇地圖
 

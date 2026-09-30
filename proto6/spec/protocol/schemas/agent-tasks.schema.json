@@ -3,14 +3,5 @@
   "$id": "agent-tasks.schema.json",
   "title": "proto6 agent-tasks",
   "$ref": "node-tasks.schema.json",
-  "description": "agent 任務表：沿 node-tasks；每項的 user 是禁止鍵（C-07），$ref 展開後也算。",
-  "properties": {
-    "tasks": {
-      "items": {
-        "properties": {
-          "user": false
-        }
-      }
-    }
-  }
+  "description": "agent 任務表：沿 node-tasks。任務是 inst 的超集，可帶 user（第十九批，B-620）；不再有禁止鍵。"
 }

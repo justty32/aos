@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-6",
+  "error": {
+    "code": -32000,
+    "message": "憑證不認得或已作廢",
+    "data": {
+      "code": "token_invalid",
+      "retryable": false
+    }
+  }
+}

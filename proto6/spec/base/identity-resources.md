@@ -4,9 +4,9 @@
 
 ## B-301：權限與額度歸屬〔使用者方向 2026-09-29〕
 
-通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己 inst 的 `user`，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權而且會傳遞（[B-501](transport.md)、[T-08](../terms.md)），所以 UID 隔離與 key 保護**只對整條投件鏈以外的帳號**成立；key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
+通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。〔使用者方向 2026-09-30，第十九批〕UID 隔離由標準配備的切換使用者落實（[B-629](../tick.md)）；沒有 helper 只算功能受限，不算沒全掛。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己 inst 的 `user`，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。〔第十九批，疑點裁定 4〕任務表的任務也可以帶自己的 `user`，同樣要在該 node 的額度內（[B-620](../tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權而且會傳遞（[B-501](transport.md)、[T-08](../terms.md)），所以 UID 隔離與 key 保護**只對整條投件鏈以外的帳號**成立；key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
 
-身分宣告、繼承與授權失敗的執行結果，以 [inst 的 `user`](inst.md) 為正本；**不由 node 資料夾位置決定**。
+身分宣告、繼承與授權失敗的執行結果，以 [inst 的 `user`](inst.md) 為正本；**身分不由 node 資料夾位置決定**（省略時繼承的「上層」怎麼判見 [B-628](../tick.md)）。
 
 上層向 daemon 註冊成員時一併給「身分額度」，只能給自己已有的身分（〔使用者方向 2026-09-30，第十八批〕額度可以用前綴或 UID 範圍寫，子額度要被父額度包含，規則見 [B-606](../daemon.md)）；最頂層額度在 daemon 設定檔，沒 helper 時只含通用 user。額度隨 daemon 登記保存；重啟讀回狀態，缺失時由各 kernel 重新註冊恢復。宣告或繼承所得身分都要在額度內；不能改用 daemon 帳號偷偷執行。
 
@@ -18,7 +18,7 @@
 
 註冊關係、node 路徑 ID、IPC 授權及重啟重建以 [daemon](../daemon.md) 為正本。
 
-〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應 controller；CPU、記憶體等 module 沒裝不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。〔使用者方向 2026-09-29 晚〕cgroup v2 子樹本身是必要的，拿不到就不啟動，見 [B-605](../daemon.md)。
+〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應 controller；CPU、記憶體等 module 沒裝不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。〔使用者方向 2026-09-30，第十九批，改寫第十四、十五批「cgroup v2 必要」〕cgroup v2 子樹是標準配備 cgroup 框的完整路線要的；tick 核心不需要。拿不到時不拒絕啟動，走內建備援、保證較弱（[B-630](../tick.md)、[B-631](../tick.md)）；準備方式見 [B-605](../daemon.md)。
 
 〔建議預設，未拍板〕另設通用 user 時，部署須安排 daemon 的直接啟動路徑實際用該身分；非 root 程序不能只改一個設定就冒稱已切 UID。做不到就報部署錯誤。
 
@@ -30,7 +30,7 @@
 
 ## B-303：可選 root helper 與解析分界〔使用者方向 2026-09-29〕
 
-root helper 本質上是 daemon 的一部分，切成小程序是為了安全，緊急時可以 kill；不需 UID 隔離的部署可不裝。主 daemon 非 root，目標就是通用 user 時由 daemon 自己開；需要其他身分才交 helper。任務表裡的系統性任務也不是 root，要 root 的固定步驟留在 helper。
+root helper 本質上是 daemon 的一部分，切成小程序是為了安全，緊急時可以 kill；不需 UID 隔離的部署可不裝。〔第十九批〕它屬標準配備的切換使用者（[B-629](../tick.md)）。主 daemon 非 root，目標就是通用 user 時由 daemon 自己開；需要其他身分才交 helper。任務表裡的系統性任務也不是 root，要 root 的固定步驟留在 helper。
 
 〔使用者方向 2026-09-29〕**一支指令、看啟動方式決定模式**：不用 sudo 開 daemon＝沒 helper 模式，整樹用通用 user，要求其他身分一律拒絕。用 sudo（root）開時，daemon 在接 IPC、讀任何 node 之前先 fork 出 helper，主程式隨即永久降權（清掉 root 身分、群組、capabilities 與特權 fd），啟動時在 stdout 印 `helper_pid=...`，並存兩份 pid 檔，細節見 [daemon](../daemon.md)。daemon 死掉時 helper 必須跟著結束（例如 `PR_SET_PDEATHSIG`，並以與 daemon 間的管道斷線為準），不留沒人管的 root 程序。
 
@@ -38,7 +38,7 @@ root helper 本質上是 daemon 的一部分，切成小程序是為了安全，
 
 helper 只查可信註冊、安置已配置資源框、切目標帳號、exec 固定 runner，外加固定清單上的佈建動作（〔使用者方向 2026-09-30，第十八批〕動作清單、參數與各動作做什麼以 [B-609](../daemon.md) 為正本）；每次只做清單上的一件，不接任意程式當 root 跑。牽涉 helper 的設定（其他帳號的額度、佈建權）改了要重開 daemon（[B-608](../daemon.md)）。先授權、切身分後解析與開檔的順序，以 [inst](inst.md) 為正本；失敗不能借高權限補救。
 
-〔使用者方向 2026-09-29〕helper 請求綁定 daemon 已授權的註冊項與本次目標 UID，不能以呼叫者自填的 UID 或路徑當授權。切換前清除繼承憑證、非核准 fd 與多餘特權；不把管理 socket 或 LLM key 傳給 runner。runner 環境按目標帳號及部署建立，inst 的 envs 再依其規則疊加；不另禁止工具用一般權限改設定。
+〔使用者方向 2026-09-29〕helper 請求綁定 daemon 已授權的註冊項與本次目標 UID，不能以呼叫者自填的 UID 或路徑當授權。切換前清除繼承憑證、非核准 fd 與多餘特權；不把 LLM key 傳給 runner。管理 socket 只有一個明示例外〔使用者方向 2026-09-30，第十九批第 9 條〕：daemon 開 tick 時以環境變數給通道的 socket 位置與本格憑證（[B-612](../daemon.md)），通道上以憑證認 tick；人手與 CLI 的管理操作仍只看 socket 對面的帳號。runner 環境按目標帳號及部署建立，inst 的 envs 再依其規則疊加；不另禁止工具用一般權限改設定。
 
 **驗收：**授權及切身分後開檔見 [V-03](../conformance.md)；另測切帳號失敗回 125、無 `exit`，kill helper 後不得偷改用通用 user。
 
