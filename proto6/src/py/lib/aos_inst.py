@@ -26,6 +26,7 @@ aos_directives.py（規範 ../spec/directives/），這個檔只做 inst 這個�
 """
 import json
 import os
+import pwd                  # proto6 新增：頂層 user 的名稱→UID
 
 from aos_directives import Context, DirectiveError, Document, parse_options, resolve, resolve_located
 
@@ -106,6 +107,7 @@ def _load(obj, ctx, base):
     # 所以之後每個欄位都從 top 的文件／位置往下接。循環鏈是「每一格各自一條」（directives.md
     # 第 5 節）：每個欄位都用 _fresh() 從空鏈開始，只有走進容器（argv 的元素、envs 的值）時
     # 才把 resolve_located 回來的 ctx（鏈照帶）傳下去。
+    _check_user(obj)                            # proto6 新增：先看身分，再解任何指示詞
     top = resolve_located(obj, ctx, [])
     obj = _no_options(top.value, top.position)
     if not isinstance(obj, dict):
@@ -141,6 +143,36 @@ def _load(obj, ctx, base):
         if v:
             inst[name]["path"] = _abspath(cwd, v)
     return inst
+
+
+def _check_user(obj):
+    """proto6 新增：頂層 `user`（proto6/spec/base/inst.md「形狀與版本」「先決定身分，切完才解析」）。
+
+    只看原始 JSON 頂層的字面值，不展開指示詞。沒寫或空字串＝繼承，照跑。
+    **不切換身分**：解析成的 UID 跟目前行程（euid）相同才照跑，不同就 `UserNotGranted`
+    （呼叫端因此回 125、不跑、不寫 exit）。型別錯、放指示詞、帳號查不到＝`UserInvalid`。
+    整份 `$ref` 引進來的 `user` 不在這裡看（proto5 的解析照舊，那一格會被忽略）。
+    """
+    if not isinstance(obj, dict) or "user" not in obj:
+        return
+    user = obj["user"]
+    if user == "":
+        return
+    if isinstance(user, bool) or not isinstance(user, (str, int)):
+        raise InstError("UserInvalid", "user 要是帳號名稱字串或非負整數 UID（不吃指示詞），不是 %s"
+                        % type(user).__name__)
+    if isinstance(user, int):
+        if user < 0:
+            raise InstError("UserInvalid", "user 的 UID 不能是負數：%d" % user)
+        uid = user
+    else:
+        try:
+            uid = pwd.getpwnam(user).pw_uid
+        except KeyError:
+            raise InstError("UserInvalid", "查不到帳號 %r" % user)
+    if uid != os.geteuid():
+        raise InstError("UserNotGranted", "user %r（UID %d）不是目前的身分（UID %d），aos-exec 不切換身分"
+                        % (user, uid, os.geteuid()))
 
 
 def _fresh(ctx, base_dir):
