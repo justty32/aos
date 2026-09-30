@@ -51,11 +51,11 @@
 | `methods` | 可省，預設空陣列；〔第十七批〕本任務處理的檔案請求 method（如 `agent.say`）。同一 method 只能由一項任務宣告，跨項重複由收件任務驗（[B-623](../tick.md)） |
 | `user` | 〔第十九批，撤永遠禁止〕可省，照 [inst](../base/inst.md) 的 `user`；省略用 tick 的有效帳號。〔使用者方向 2026-09-30，第二十批疑點裁定 6〕帶了而且跟 tick 的帳號不同時那一項回 125、不切帳號；要切帳號在 argv 包 `aos-as`（P-212、[B-620](../tick.md)） |
 
-〔暫定，第二十批〕`group`、`needs` 兩欄撤：前置改用 `aos-needs`（P-204、[B-621](../tick.md)）；組只在有 git 還原時才有意思，下一步納入 git 時再定（草稿：組由存檔點界定，P-205）。舊表還寫著這兩欄時照 P-007 當不認得的欄位忽略，意思也就沒了；要照舊分組或擋前置，改放存檔點、包 `aos-needs`。kernel、agent、custom 類任務的逾時與取消延後（[P-008](README.md#p-008)）。
+〔使用者方向 2026-09-30，第二十批〕任務表先只定上表這些基本欄位；**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵：前置改用 `aos-needs`（P-204、[B-621](../tick.md)），組下一步納入 git 時再定（草稿 P-205）。kernel、agent、custom 類任務的逾時與取消延後（[P-008](README.md#p-008)）。
 
 沒人宣告的 method 由收件任務回 -32601（[B-623](../tick.md)），格式：原件複製到 `state/messages/requests/<id>.json`，錯誤回應用 -32601、`data.code:"method_not_found"`、`retryable:false`，放 `.aos/outbox/responses/<id>.json`，本格由投件任務投出、原件下一格刪（[B-623](../tick.md)）。`tasks` 可以是空陣列。
 
-範例：最小 [正例](examples/node/tasks.minimal.valid.json) 登記普通程式；[帶 `user` 的正例](examples/node/tasks.user.valid.json) 格式照收（跟 tick 帳號不同時那一項回 125）；[包 `aos-as` 的正例](examples/node/tasks.as.valid.json) 用別的帳號跑；[標準任務表範本正例](examples/node/tasks.template.valid.json) 照 [B-629](../tick.md) 本輪（沒有 git）的順序。[methods 正例](examples/node/tasks.methods.valid.json) 宣告一個 method；[反例](examples/node/tasks.methods-duplicate.invalid.json) 是同一任務內重複宣告，schema 擋得到；跨任務重複 schema 驗不到，由收件任務驗。[自訂種類正例](examples/node/tasks.custom-kind.valid.json) 用 `agent.review`；[反例](examples/node/tasks.custom-kind.invalid.json) 想自訂 `system.x`，不接受。
+範例：最小 [正例](examples/node/tasks.minimal.valid.json) 登記普通程式；[帶 `user` 的正例](examples/node/tasks.user.valid.json) 格式照收（跟 tick 帳號不同時那一項回 125）；[包 `aos-as` 的正例](examples/node/tasks.as.valid.json) 用別的帳號跑；[陌生鍵正例](examples/node/tasks.unknown-key.valid.json) 帶了 `group`、`needs` 照收；[標準任務表範本正例](examples/node/tasks.template.valid.json) 照 [B-629](../tick.md) 本輪（沒有 git）的順序。[methods 正例](examples/node/tasks.methods.valid.json) 宣告一個 method；[反例](examples/node/tasks.methods-duplicate.invalid.json) 是同一任務內重複宣告，schema 擋得到；跨任務重複 schema 驗不到，由收件任務驗。[自訂種類正例](examples/node/tasks.custom-kind.valid.json) 用 `agent.review`；[反例](examples/node/tasks.custom-kind.invalid.json) 想自訂 `system.x`，不接受。
 
 ## P-203．aos-tick 與任意任務程式〔建議預設，未拍板〕
 
