@@ -10,9 +10,10 @@
         "_version": 1
       },
       "argv": [
-        "aos-inbox"
+        "aos-mq",
+        "get"
       ],
-      "id": "inbox",
+      "id": "mq-get",
       "kind": "system"
     },
     {
@@ -49,9 +50,10 @@
         "_version": 1
       },
       "argv": [
-        "aos-outbox"
+        "aos-mq",
+        "post"
       ],
-      "id": "outbox",
+      "id": "mq-post",
       "kind": "system"
     },
     {

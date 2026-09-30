@@ -14,13 +14,13 @@
 
 ## B-202：後代清空才算結束〔建議預設，未拍板〕
 
-〔使用者方向 2026-09-30，第二十批追答 8；取代第十九批「本條是標準配備的 cgroup 框」〕cgroup 拆成兩塊：node 框、資源上限與一格結束後的收尾歸 daemon（[B-604](../settled/daemon.md)、[B-605](../settled/daemon.md)）；每項任務一框改成普通程式 `aos-cg`，要的任務才在 argv 包。**放棄「沒包裝的任務一結束就清殘留」。**〔使用者方向 2026-09-30，第二十批進行順序〕本輪假設沒有 cgroup：下面寫 cgroup 的部分（`cgroup.kill`、`task-*`、`aos-cg`）是**下一步納入**的草稿，不是現行規則；本輪後代怎麼收以 daemon 那側的 [B-604](../settled/daemon.md) 為準。
+〔使用者方向 2026-09-30，第二十批追答 8；取代第十九批「本條是標準配備的 cgroup 框」〕cgroup 拆成兩塊：node 框、資源上限與一格結束後的收尾歸 daemon（[B-604](../settled/daemon.md)、[B-605](../settled/daemon.md)）；每項任務一框改成普通程式 `aos-cg`，要的任務才在 argv 包。**放棄「沒包裝的任務一結束就清殘留」。**〔使用者方向 2026-09-30，第二十批進行順序〕本輪假設沒有 cgroup：下面寫 cgroup 的部分（`cgroup.kill`、`task-*`、`aos-cg`）是**下一步納入**的草稿，不是現行規則；本輪後代怎麼收以 daemon 那側的 [B-601](../settled/daemon.md)（runner 管名下整棵樹）、[B-604](../settled/daemon.md)（收尾）為完整正本；本條其餘只補串流收完與結果發布。
 
 執行器保存安全程序識別（例如 pidfd；跨重啟再核對 boot ID、PID、starttime），不拿可能重用的裸 PID 殺程序。cgroup 放在所屬 node 子樹；限制與計量只用已裝 module。
 
 主程序退出後仍須清空後代、排空捕獲串流、完整發布結果，才能宣告正常完成。後代另開 session 也不能漏掉；有 cgroup 的受管範圍（daemon 的框、`aos-cg` 的框）用 cgroup 驗證全空（例如 `cgroup.events` 的 populated），強制清理用 `cgroup.kill`；不能只查主 PID 或 process group。兩種清法各有適用範圍：
 
-- **一般 attempt、once 與整格 tick**（daemon 那側）：先 TERM、等寬限、再 KILL。寬限分兩種，不混用：runner 處理 inst 自己的逾時，照 [inst](inst.md) 的 2 秒；daemon 收尾整個框（一格結束後、重啟、停機、解除登記、砍掉在跑的 once）用 `shutdown_grace_ms`，流程是 [B-604](../settled/daemon.md) 的「收尾」。
+- **一般 attempt、once 與整格 tick**（daemon 那側）：先 TERM、等寬限、再 KILL。寬限分兩種，不混用：runner 處理 inst 自己的逾時，照 [inst](inst.md) 的 2 秒；daemon 收尾（停機、解除登記、砍掉在跑的 once）用 `shutdown_grace_ms`，流程是 [B-604](../settled/daemon.md) 的「收尾」；一格正常結束後的殘留由 runner 直接清，本輪 daemon 重開清不掉舊程序（[B-601](../settled/daemon.md)、[B-603](../settled/daemon.md)）。
 - **〔下一步納入〕`aos-cg` 的 `task-*` 框**〔草稿；依第二十批追答 8，argv 與結束碼見 [P-211](../settled/protocol/node.md)〕：`aos-cg -- 原指令` 看 `/proc/self/cgroup`，自己在本 node 的 `n-<h>/tick` 框裡時，在 `n-<h>` 下開 `task-<seq>-<pid>`（與 `tick` 葉並列），把自己搬進去，fork＋exec 原指令、wait 主程序。主程序結束後看那層 `cgroup.events` 的 populated，還有程序就**直接寫 `cgroup.kill`**（不先 TERM），等 populated 變 0 再 rmdir；清不空就建停格檔（[B-620](../settled/tick.md)）、回 1，不讓後面的項在還有人寫檔時開跑。開框前先照同法清掉同一 node 框下 `seq` 比本格小的 `task-*`（上一格留下、已沒有主人的）。結束碼照原指令；原指令被訊號結束時 aos-cg 用同一個訊號結束自己。不放在 `tick` 底下，因為 cgroup v2 規定開了 controller 的那層不能同時放程序和子層。命名、委派與權限見 [B-605](../settled/daemon.md)，成本見[實測](../../notes/probes/per-task-cgroup-cost.md)（每任務多約 0.1 毫秒）。
 - **〔下一步納入〕`aos-cg` 在沒 cgroup 時**〔草稿；第二十批疑-9 未答，照 a〕：不在 node 框、沒有 cgroup v2 或框寫不進時，stderr 印 `cgroup_unavailable`，改用不需要 root 的做法：aos-cg 設 `PR_SET_CHILD_SUBREAPER`，原指令另開程序群組；主程序結束後對那個程序群組送 SIGKILL，再反覆收掛回自己的孤兒、逐一 SIGKILL 並 wait，直到沒有。只清得到掛回 aos-cg 的程序：經外部服務（systemd、at 等）開的、換成別的帳號的清不到；也沒有上限、量測與 OOM 證據。
 - **〔下一步納入〕跟 `aos-as` 一起用**：寫成 `aos-cg -- aos-as <帳號> -- 原指令`；`aos-as` 把自己所在的 `task-*` 框帶給 helper，別的帳號的程序也放進這個框（[B-303](../settled/helper.md)）。反過來寫會因框不歸那個帳號而開不了框。

@@ -1,14 +1,9 @@
 {
   "version": 1,
-  "seq": 1234,
-  "started_at_ms": 1790000000000,
+  "seq": 1236,
   "tasks": [
     {
       "id": "mq-get",
-      "exit": 0
-    },
-    {
-      "id": "talk",
       "exit": 0
     },
     {
@@ -16,5 +11,6 @@
       "signal": 9
     }
   ],
-  "ended": false
+  "ended": true,
+  "exit": 0
 }

@@ -133,19 +133,12 @@ params 只有 `node_id`。result 欄位：
 
 人手指令：`aos node ls --socket S` 用 `node.ls`，`aos node show N --socket S` 用 `node.show`。
 
-範例：[查一個 node](../../../protocol/examples/daemon/get_result.minimal.valid.json)（`cgroup.path` 是 `/srv/aos/team` 為頂層、子樹根 `/sys/fs/cgroup/aos` 時 `/srv/aos/team/member` 的 `n-<h>`）、[已結束的掛載行程未啟動](../../../protocol/examples/daemon/get_result.launch_failed.valid.json)、[列表](../../../protocol/examples/daemon/list_result.minimal.valid.json)；反例：[launch_failed 卻 exit 0](../../../protocol/examples/daemon/get_result.launch_success.invalid.json)、[缺 running](../../../protocol/examples/daemon/get_result.missing_running.invalid.json)、[running 卻有 exit_code](../../../protocol/examples/daemon/list_result.running_exit.invalid.json)、〔第十八批〕[最近一格缺 tick_seq](../../../protocol/examples/daemon/get_result.missing_tick_seq.invalid.json)。
+範例：[查一個 node](../../../protocol/examples/daemon/get_result.minimal.valid.json)（本輪 `cgroup:null`）、〔下一步納入 cgroup 的草稿〕[有 cgroup 時查一個 node](../../../protocol/examples/daemon/get_result.cgroup-draft.valid.json)（`cgroup.path` 是 `/srv/aos/team` 為頂層、子樹根 `/sys/fs/cgroup/aos` 時 `/srv/aos/team/member` 的 `n-<h>`）、[已結束的掛載行程未啟動](../../../protocol/examples/daemon/get_result.launch_failed.valid.json)、[列表](../../../protocol/examples/daemon/list_result.minimal.valid.json)；反例：[launch_failed 卻 exit 0](../../../protocol/examples/daemon/get_result.launch_success.invalid.json)、[缺 running](../../../protocol/examples/daemon/get_result.missing_running.invalid.json)、[running 卻有 exit_code](../../../protocol/examples/daemon/list_result.running_exit.invalid.json)、〔第十八批〕[最近一格缺 tick_seq](../../../protocol/examples/daemon/get_result.missing_tick_seq.invalid.json)。
 
 驗收見 [B-607](../../daemon.md)、[B-610](../../daemon.md)。
 
 ## P-115．啟動 ID 與按需重建〔使用者方向 2026-09-29，裁定「kernel 別每格都重新註冊」；欄位為工程預設〕
 
-`daemon.info`（對應 `aos daemon info`）：params 為 `{}`，result 只有 `boot_id`（共用 ID，建議隨機 UUID）。
+`daemon.info`（對應 `aos daemon info`）：params 為 `{}`，result 只有 `boot_id`（共用 ID，建議隨機 UUID）。`node.show`、`node.ls` 回的 `boot_id` 跟它一致。
 
-- 每次 daemon 啟動新生一個，整次存續不變；重開不得沿用，socket 路徑相同也不行。
-- 只放記憶體。
-- `node.show`、`node.ls` 回的 `boot_id` 跟它一致。
-- node 路徑別名、重用或跨機重名的風險由使用者承擔。
-
-逐層重建與「別每格重登」的行為見 [B-603](../../daemon.md)、[B-606](../../daemon.md)；kernel 那側見 [kernel 任務篇](../../../protocol/kernel-tasks.md)。
-
-**驗收：**連續十格無變動只查 `boot_id`、不重登十次；daemon 重開後 `boot_id` 改變，各 kernel 逐層補回成員；改一筆成員只同步差異，失敗筆下次仍能重查。
+`boot_id` 的生命週期、逐層重建與「別每格重登」的行為見 [B-603](../../daemon.md)、[B-606](../../daemon.md)（astra 審整理區必-8 從本條搬上）；kernel 那側見 [kernel 任務篇](../../../protocol/kernel-tasks.md)。驗收見 B-603。

@@ -58,6 +58,22 @@ def schema_name(path):
     raise AssertionError(f'unknown example directory: {group}')
 
 
+def extra_errors(path, value):
+    """schema 表達不了的跨欄位關係；invalid 範例只要 schema 或這裡任一處報錯就算擋下。"""
+    errors = []
+    if path.parent.name == 'node' and path.name.startswith('tick-record.') and isinstance(value, dict):
+        # B-633、P-213：stopped_after 是最後一項；exit 0 時每項都成功；exit 1 時有失敗或被停下。
+        tasks = value.get('tasks') or []
+        ok = [isinstance(t, dict) and t.get('exit') == 0 and 'signal' not in t for t in tasks]
+        if 'stopped_after' in value and (not tasks or tasks[-1].get('id') != value['stopped_after']):
+            errors.append('stopped_after is not the last task')
+        if value.get('exit') == 0 and not all(ok):
+            errors.append('exit 0 but some task failed')
+        if value.get('exit') == 1 and 'stopped_after' not in value and all(ok):
+            errors.append('exit 1 without failure or stop')
+    return errors
+
+
 def main():
     schemas = {p.stem.removesuffix('.schema'): load(p) for p in SCHEMAS.glob('*.json')}
     # schema 沒有 $id，$ref 是相對檔名（如 ops-attention.schema.json）；以檔名登記。
@@ -85,12 +101,13 @@ def main():
     counts, failures = Counter(), []
     for path in sorted(EXAMPLES.rglob('*.json')):
         validator = validators[schema_name(path)]
-        errors = list(validator.iter_errors(load(path)))
+        value = load(path)
+        errors = [e.message for e in validator.iter_errors(value)] + extra_errors(path, value)
         expected = path.name.endswith('.valid.json')
         assert expected or path.name.endswith('.invalid.json'), path
         if bool(errors) == expected:
             failures.append(f'{path.relative_to(EXAMPLES)}: expected valid={expected}; '
-                            + '; '.join(error.message for error in errors[:2]))
+                            + '; '.join(errors[:2]))
         counts[path.parent.name] += 1
     if failures:
         raise AssertionError('\n'.join(failures))
@@ -110,7 +127,7 @@ def main():
         files = value.get('files', {})
         if '.aos/tasks.json' in files:
             tasks = files['.aos/tasks.json']['tasks']
-            # 第二十批：B-629 範本改成 inbox 開頭、outbox／summary／clean 收尾（kernel 12、agent 6）；
+            # 第二十批：B-629 範本改成 mq-get 開頭、mq-post／summary／clean 收尾（kernel 12、agent 6）；
             # kernel、agent 範本下一輪才改（T5、T6），過渡期兩種項數都收。
             agent = 'config/agent.json' in files
             assert len(tasks) in ((2, 6) if agent else (9, 12)), path

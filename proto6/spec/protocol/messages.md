@@ -2,7 +2,7 @@
 
 ← [共用約定](README.md)｜[投件正本](../base/transport.md)｜[Q1／Q2](../settled/tick.md)｜[第九批裁定](../../notes/2026-09-29-verdicts.md)
 
-本篇只定 node 之間的檔案格式，行為以主規格為正本（[P-009](README.md)）；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；檔案命令由收件 node 的普通任務處理，〔第二十批〕投件與收件清理由標準任務表範本裡的系統級任務做（`aos-outbox`、`aos-inbox`，[B-629](../settled/tick.md)），全部沿 node 的身分授權。
+本篇只定 node 之間的檔案格式，行為以主規格為正本（[P-009](README.md)）；工作與 LLM 的業務參數由分工表指定篇章定義。agent 預設接件、正式回覆及人手入口見 [agent 任務](agent-tasks.md)；檔案命令由收件 node 的普通任務處理，〔第二十批，astra 審整理區定案〕系統級任務只剩系統訊息佇列 `aos-mq`（[B-629](../settled/tick.md)）；檔案投件與收件清理改由普通程式做、aos 不管，本篇下一輪跟上。
 
 ## P-300．兩條路各做什麼〔使用者方向 2026-09-29〕
 

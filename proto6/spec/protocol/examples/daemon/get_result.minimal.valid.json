@@ -13,17 +13,7 @@
     "running": false,
     "pending": false,
     "stopping": false,
-    "cgroup": {
-      "path": "/sys/fs/cgroup/aos/n-d20539a311399b5e/n-640b231841e0290f",
-      "limits": {
-        "cpu_max": {
-          "quota_us": 50000,
-          "period_us": 100000
-        },
-        "memory_max_bytes": "max",
-        "pids_max": 64
-      }
-    },
+    "cgroup": null,
     "boot_id": "boot-20260929-a",
     "registration_id": "reg-7f3a",
     "registered": true,

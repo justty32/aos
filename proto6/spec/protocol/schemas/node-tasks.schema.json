@@ -78,7 +78,7 @@
           ]
         },
         "methods": {
-          "description": "本任務處理的檔案請求 method（P-202）；同一 method 不能由兩項任務宣告，跨項唯一性由收件任務 aos-inbox 驗（B-623）。",
+          "description": "給檔案收件程式讀的宣告：本任務處理的檔案請求 method（P-202）。同一項內不重複；跨項重複與意思由收件程式定，aos 不管（B-623）。",
           "type": "array",
           "uniqueItems": true,
           "items": {
