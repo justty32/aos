@@ -11,7 +11,7 @@
 | [儲存](storage.md) | 收件區、追蹤區、完整發布與清理 |
 | [通訊](transport.md) | 投件授權與簡單去重 |
 | [daemon](../daemon.md) | 定期跑 `aos-tick` 的標準程式：登記、喚醒、程序生命週期、重啟與通道 |
-| [通用 tick](../tick.md) | 核心（互斥鎖、任務表、上下層）與標準配備（git、收件、投件、備援等） |
+| [通用 tick](../tick.md) | 核心（互斥鎖、照表跑、上下層、每項結束碼紀錄）與標準任務表範本（收件、投件、發摘要、清理；git 與 cgroup 下一步納入） |
 | [kernel 樹](../scheduling/README.md) | node 成員關係、排程與資源 module |
 
 <a id="b-000責任與驗收建議預設未拍板"></a>

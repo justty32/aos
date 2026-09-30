@@ -4,7 +4,7 @@
 
 ## B-301：權限與額度歸屬〔使用者方向 2026-09-29〕
 
-通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。〔使用者方向 2026-09-30，第十九批〕UID 隔離由標準配備的切換使用者落實（[B-629](../tick.md)）；沒有 helper 只算功能受限，不算沒全掛。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己 inst 的 `user`，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。〔第十九批，疑點裁定 4〕任務表的任務也可以帶自己的 `user`，同樣要在該 node 的額度內（[B-620](../tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權而且會傳遞（[B-501](transport.md)、[T-08](../terms.md)），所以 UID 隔離與 key 保護**只對整條投件鏈以外的帳號**成立；key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
+通用 user 預設是啟動 daemon 的 user，可另設；沒 helper 時全樹共用它，不承諾成員間的 UID 隔離。〔使用者方向 2026-09-30，第二十批〕UID 隔離由普通程式 `aos-as` 經 helper 落實（B-303）；沒有 helper 只算功能受限。需要隔離時一 node 一 Linux 帳號；kernel node 也一樣用自己 inst 的 `user`，不另設服務帳號（第九批）。工具沿用呼叫 node 的身分、權限及資源範圍。〔第十九批，疑點裁定 4；第二十批疑點裁定 6〕任務表的任務也可以帶自己的 `user`，但核心不切帳號：跟 tick 的帳號不同時那一項回 125；要用別的帳號跑就包 `aos-as`，同樣要在該 node 的額度內（[B-620](../tick.md)）。〔使用者方向 2026-09-30，第十八批〕投件權就是執行權而且會傳遞（[B-501](transport.md)、[T-08](../terms.md)），所以 UID 隔離與 key 保護**只對整條投件鏈以外的帳號**成立；key 保護的部署邊界見 [LLM 池](../scheduling/llm.md)。
 
 身分宣告、繼承與授權失敗的執行結果，以 [inst 的 `user`](inst.md) 為正本；**身分不由 node 資料夾位置決定**（省略時繼承的「上層」怎麼判見 [B-628](../tick.md)）。
 
@@ -18,7 +18,7 @@
 
 註冊關係、node 路徑 ID、IPC 授權及重啟重建以 [daemon](../daemon.md) 為正本。
 
-〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應 controller；CPU、記憶體等 module 沒裝不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。〔使用者方向 2026-09-30，第十九批，改寫第十四、十五批「cgroup v2 必要」〕cgroup v2 子樹是標準配備 cgroup 框的完整路線要的；tick 核心不需要。拿不到時不拒絕啟動，走內建備援、保證較弱（[B-630](../tick.md)、[B-631](../tick.md)）；準備方式見 [B-605](../daemon.md)。
+〔建議預設，未拍板〕部署只驗證實際配置的能力：要切 UID 就驗 helper 與切換，要 cgroup 限制就驗相應 controller；CPU、記憶體等 module 沒裝不因此拒絕整套部署。已配置卻做不到時明確報錯，不能假裝已隔離。〔使用者方向 2026-09-30，第十九批，改寫第十四、十五批「cgroup v2 必要」；第二十批改主詞〕cgroup v2 子樹是 daemon 的 node 框與上限、以及 `aos-cg` 每項一框要的；tick 核心不需要。拿不到時不拒絕啟動。〔使用者方向 2026-09-30，第二十批進行順序〕本輪假設沒有 cgroup；daemon 那側與 `aos-cg` 怎麼用 cgroup，下一步納入（[B-605](../daemon.md)、[B-202](execution.md)）。
 
 〔建議預設，未拍板〕另設通用 user 時，部署須安排 daemon 的直接啟動路徑實際用該身分；非 root 程序不能只改一個設定就冒稱已切 UID。做不到就報部署錯誤。
 
@@ -30,7 +30,7 @@
 
 ## B-303：可選 root helper 與解析分界〔使用者方向 2026-09-29〕
 
-root helper 本質上是 daemon 的一部分，切成小程序是為了安全，緊急時可以 kill；不需 UID 隔離的部署可不裝。〔第十九批〕它屬標準配備的切換使用者（[B-629](../tick.md)）。主 daemon 非 root，目標就是通用 user 時由 daemon 自己開；需要其他身分才交 helper。任務表裡的系統性任務也不是 root，要 root 的固定步驟留在 helper。
+root helper 本質上是 daemon 的一部分，切成小程序是為了安全，緊急時可以 kill；不需 UID 隔離的部署可不裝。〔第二十批〕任務要換帳號，入口是普通程式 `aos-as`（下面），由它請 helper 開。主 daemon 非 root，目標就是通用 user 時由 daemon 自己開；需要其他身分才交 helper。任務表裡的系統級任務也不是 root，要 root 的固定步驟留在 helper。
 
 〔使用者方向 2026-09-29〕**一支指令、看啟動方式決定模式**：不用 sudo 開 daemon＝沒 helper 模式，整樹用通用 user，要求其他身分一律拒絕。用 sudo（root）開時，daemon 在接 IPC、讀任何 node 之前先 fork 出 helper，主程式隨即永久降權（清掉 root 身分、群組、capabilities 與特權 fd），啟動時在 stdout 印 `helper_pid=...`，並存兩份 pid 檔，細節見 [daemon](../daemon.md)。daemon 死掉時 helper 必須跟著結束（例如 `PR_SET_PDEATHSIG`，並以與 daemon 間的管道斷線為準），不留沒人管的 root 程序。
 
@@ -38,9 +38,19 @@ root helper 本質上是 daemon 的一部分，切成小程序是為了安全，
 
 helper 只查可信註冊、安置已配置資源框、切目標帳號、exec 固定 runner，外加固定清單上的佈建動作（〔使用者方向 2026-09-30，第十八批〕動作清單、參數與各動作做什麼以 [B-609](../daemon.md) 為正本）；每次只做清單上的一件，不接任意程式當 root 跑。牽涉 helper 的設定（其他帳號的額度、佈建權）改了要重開 daemon（[B-608](../daemon.md)）。先授權、切身分後解析與開檔的順序，以 [inst](inst.md) 為正本；失敗不能借高權限補救。
 
-〔使用者方向 2026-09-29〕helper 請求綁定 daemon 已授權的註冊項與本次目標 UID，不能以呼叫者自填的 UID 或路徑當授權。切換前清除繼承憑證、非核准 fd 與多餘特權（〔第十九批疑點裁定 10〕以指定帳號開任務時，tick 交來的鎖 fd 是核准的 fd，[B-609](../daemon.md)）；不把 LLM key 傳給 runner。管理 socket 只有一個明示例外〔使用者方向 2026-09-30，第十九批第 9 條〕：daemon 開 tick 時以環境變數給通道的 socket 位置與本格憑證（[B-612](../daemon.md)），通道上以憑證認 tick；人手與 CLI 的管理操作仍只看 socket 對面的帳號。runner 環境按目標帳號及部署建立，inst 的 envs 再依其規則疊加；不另禁止工具用一般權限改設定。
+〔使用者方向 2026-09-29〕helper 請求綁定 daemon 已授權的註冊項與本次目標 UID，不能以呼叫者自填的 UID 或路徑當授權。切換前清除繼承憑證、非核准 fd 與多餘特權（〔第十九批疑點裁定 10；第二十批改主詞〕以指定帳號開程序時，`aos-as` 交來的鎖 fd、回報 pipe 與 stdio 是核准的 fd，[B-609](../daemon.md)）；不把 LLM key 傳給 runner。管理 socket 只有一個明示例外〔使用者方向 2026-09-30，第十九批第 9 條〕：daemon 開 tick 時以環境變數給通道的 socket 位置與本格憑證（[B-612](../daemon.md)），通道上以憑證認 tick；人手與 CLI 的管理操作仍只看 socket 對面的帳號。runner 環境按目標帳號及部署建立，inst 的 envs 再依其規則疊加；不另禁止工具用一般權限改設定。
 
-**驗收：**授權及切身分後開檔見 [V-03](../conformance.md)；另測切帳號失敗回 125、無 `exit`，kill helper 後不得偷改用通用 user。
+〔使用者方向 2026-09-30，第二十批追答 8、疑點裁定 6〕**`aos-as`：切換帳號的包裝**。核心不切帳號；任務要用別的帳號跑，就在 argv 寫 `aos-as <帳號> -- 原指令`（argv、檔名與結束碼見 [P-212](../protocol/node.md)）。它是普通程式，不是系統級任務。〔建議預設，未拍板；步驟〕
+
+1. 把原指令寫成一份 inst（`argv`、目前 cwd、目前的環境），放到 ignored 的 `.aos/jobs/as-<seq>-<pid>.json`。
+2. 帶本格憑證經通道送 `node.provision` 的 `spawn_as`（[B-609](../daemon.md)，參數與限制不變：誰能叫、帳號要在身分額度內、放在哪），同包交出繼承到的鎖 fd（`AOS_TICK_LOCK_FD`）、一條回報 pipe 的寫端，另交自己的 stdin、stdout、stderr，讓那一項照任務表寫的 stdio 走；〔下一步納入 cgroup 時補〕自己在 `aos-cg` 的 `task-*` 框裡時一併帶那個框（[B-202](execution.md)）。
+3. 讀 pipe 到 EOF，拿到 runner 的回報（[P-110](../protocol/daemon/provision-and-runner.md)），照它結束：正常結束回同一碼，被訊號結束就用同一個訊號結束自己；刪掉那份 inst。
+
+- **鎖**：別的帳號的程序繼承同一份鎖 fd，照 [B-602](../tick.md) 核對得到；`aos-as` 等到 pipe EOF 才結束，所以它結束前核心不會開下一項。
+- **不行時**：沒有通道變數（不是 daemon 開的格）、daemon 回 `helper_unavailable`、`user_not_granted`、`user_invalid`、`stopping` 都回 125、不寫 `exit`，stderr 印代碼；回應成功但 pipe 沒回報就關了也回 125（`result_unknown`），呼叫它的一方不能重跑。不另設替代路。
+- **daemon 那側**：`spawn_as` 由「帶本格憑證的程序」呼叫，實際上就是 `aos-as`；tick 自己不呼叫。
+
+**驗收：**授權及切身分後開檔見 [V-03](../conformance.md)；另測切帳號失敗回 125、無 `exit`，kill helper 後不得偷改用通用 user。任務帶跟 tick 不同的 `user` 時那一項回 125；包了 `aos-as` 而且有 helper、有通道時以指定帳號跑，任務內用 `AOS_TICK_LOCK_FD` 核對得到獨占鎖、輸出照任務表寫的走；直接跑的格裡 `aos-as` 回 125（`no_channel`）。
 
 ## B-304：磁碟與可寫位置〔使用者方向 2026-09-29〕
 

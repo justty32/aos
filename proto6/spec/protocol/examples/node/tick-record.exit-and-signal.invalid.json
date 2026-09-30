@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "seq": 1234,
+  "tasks": [
+    {
+      "id": "agent",
+      "exit": 0,
+      "signal": 9
+    }
+  ],
+  "ended": false
+}

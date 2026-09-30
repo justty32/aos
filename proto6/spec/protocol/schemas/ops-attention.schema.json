@@ -33,9 +33,9 @@
       "minLength": 1,
       "description": "白話的建議處理，可含建議指令的文字；不會自動執行。"
     },
-    "reported_at_ms": {
-      "$ref": "common.schema.json#/$defs/TimeMs",
-      "description": "首次回報時間；壞收件原件的保留期從這裡算（B-404）。"
+    "reported_seq": {
+      "$ref": "common.schema.json#/$defs/TickSeq",
+      "description": "〔第二十批，取代 reported_at_ms〕首次回報時是寫的那個 node 的第幾格（B-633）；壞收件原件的保留期從這一格算（B-404）。daemon 寫的事項沒有格數，不帶。"
     },
     "argv": false
   },

@@ -4,9 +4,9 @@
   "required": [
     "version",
     "node_id",
-    "observed_at_ms",
+    "observed_seq",
     "ready",
-    "due_ms",
+    "due_after_ticks",
     "status"
   ],
   "properties": {
@@ -16,16 +16,18 @@
     "node_id": {
       "$ref": "common.schema.json#/$defs/NodeId"
     },
-    "observed_at_ms": {
-      "$ref": "common.schema.json#/$defs/TimeMs"
+    "observed_seq": {
+      "$ref": "common.schema.json#/$defs/TickSeq",
+      "description": "〔第二十批，取代 observed_at_ms〕寫這份摘要時是成員自己的第幾格（B-633）；上層只比有沒有前進，不跟自己的格數相減（P-307）"
     },
     "ready": {
       "type": "boolean"
     },
-    "due_ms": {
+    "due_after_ticks": {
+      "description": "〔第二十批，取代 due_ms；暫定，疑-10 照 a〕希望上層從讀到這一版摘要起再過幾格叫醒我，算上層的格；沒有到期事件用 null（P-307）",
       "anyOf": [
         {
-          "$ref": "common.schema.json#/$defs/TimeMs"
+          "$ref": "common.schema.json#/$defs/Ticks"
         },
         {
           "type": "null"
