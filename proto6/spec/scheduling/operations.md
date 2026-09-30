@@ -17,9 +17,16 @@
   - 讀到 `.err`：先核對它是本次目標的旁檔、由可信的 daemon 寫出，才合成 `started:false`、failed、`start_failed`；工具自己寫的旁檔不算證據。
   - LLM 的外層程序沒啟動，可以合成 failed、`not_sent`。
   - 其他情況只看 `result.json`：有完整結果就照結果收；已開始、還沒結果就等著收。外層程序 exec 失敗（126／127）、崩潰、自己回 125 卻沒結果，都不能只靠登記消失推定內層沒跑。
-  - 其餘（查不到掛載紀錄、換 boot、逾時、沒有可信結果）：unknown，不重掛。標記建好、`node.mount` 還沒送出就當掉的，下一格同樣查不到，也照 unknown 處理（寧可不做，不重做）。
+  - 其餘（查不到掛載紀錄、換 boot、逾時、沒有可信結果）：unknown，不重掛。〔暫定，交接疑點 a〕標記建好、`node.mount` 還沒送出就當掉的，下一格同樣查不到，也照 unknown 處理（寧可不做，不重做）。
 - 證據以啟動標記、`.err`、結果檔與 daemon 的掛載紀錄為主；掛載行程的診斷紀錄會被淘汰（[B-610](../daemon.md)），查不到不能證明「從未開始」。兩份證據互相矛盾時都保留，並寫一件事項（S-405）。
 - 原請求與回件可補投同 ID、同 bytes，只補交付、不重做外部工作（[B-503](../base/transport.md)）。
+
+〔使用者方向 2026-09-30，第十九批；步驟為建議預設，第十九批依方案 A 由 kernel P-806 搬來〕**預設 kernel 範本代掛工具的步驟**（格式見 [P-806](../protocol/kernel-tasks.md)、掛載參數見 [P-402](../protocol/work.md)）：
+
+1. 接件那一格只核對來源、回址與成員身分，保存原件、材料與序號；照 [S-205](admission.md) 判斷能不能派，不能派記 `queued`，可派記 `prepared`，不在接件那一格掛。
+2. 已提交的 `prepared` 工作由下一格掛：建 once inst、照上面建啟動標記，再經通道 `node.mount` 掛上，`parent_id` 填發起成員，資源與額度歸成員（[B-613](../daemon.md)）。daemon 排空停機中回 `stopping` 時，那件工作留在 `prepared`，下次再掛（[B-604](../daemon.md)）。找不到 daemon 時同樣留在 `prepared`（功能受限，[P-801](../protocol/kernel-tasks.md)）。
+3. 結果或 `.err` 由後面的格讀，照上面的證據規則判斷，核對 request／node／job／attempt 後生成 work-result 回件，交標準配備投回。
+4. 結果只給路徑；投遞失敗不重開工具，額度仍歸發起成員。
 
 unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用什麼時候釋放，由擁有該資源的 kernel 定，LLM 池見 [S-304](llm.md)。
 
@@ -29,7 +36,7 @@ unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用�
 
 ## S-402．查詢回應與拒絕理由
 
-〔使用者方向 2026-09-29〕查詢直接讀有權限的本地檔案或摘要，不為了查詢啟動 node 的 tick。跨層只取下層摘要；不能靠猜 ID 讀到無權存取的內容。一致查詢依 [儲存](../base/storage.md) 讀同一已提交版本，結果到期與清理也以該篇為準。
+〔使用者方向 2026-09-29〕查詢直接讀有權限的本地檔案或摘要，不為了查詢啟動 node 的 tick。跨層只取下層摘要；不能靠猜 ID 讀到無權存取的內容。一致查詢依 [儲存](../base/storage.md) 讀同一已提交版本，結果到期與清理也以該篇為準；〔第十九批〕node 走 git 備援時沒有版本可釘，讀目前的檔案，不保證一致快照（[B-632](../tick.md)）。
 
 〔建議預設，未拍板〕顯示至少能分清排隊、等待資源、等結果、執行中、暫停、取消中、unknown 與需要人處理；拒絕執行要能看出原因。摘要附來源與觀測時間，預估等待時間不能當保證，也不能把顯示狀態當成成功證據。
 
@@ -68,7 +75,7 @@ unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用�
 
 〔使用者方向 2026-09-29，第十七批〕別人投給 kernel 的一般回話（`agent.say`）由任務表中宣告 `agent.say` 的那項任務收（預設 kernel 範本是 schedule，[P-803](../protocol/kernel-tasks.md)）：**只記錄**，不裝 LLM、不建待處理輸入、不再回話；帶 `in_reply_to` 的也只記錄（[P-705](../protocol/agent-tasks.md)）。收下後回一個確認回件，交標準配備投出、清原件（[B-623](../tick.md)、[B-624](../tick.md)）。
 
-〔審稿必-4〕記錄照 agent history 的形狀寫進 kernel 自己的 history，序號放 kernel 自己的序號檔，在 node 鎖內遞增、跟 history 同組提交，重啟不倒退。人手 `aos agent listen` 讀的是**同一個 commit 裡任務表宣告 `agent.say` 的那項任務**對應的 history：宣告它的是 agent 任務就讀 agent 的，是 kernel 任務就讀 kernel 的（[P-713](../protocol/agent-tasks.md)）。
+〔審稿必-4〕記錄照 agent history 的形狀寫進 kernel 自己的 history，序號放 kernel 自己的序號檔，在 node 鎖內遞增、跟 history 同組提交，重啟不倒退。人手 `aos agent listen` 讀的是**同一個 commit 裡任務表宣告 `agent.say` 的那項任務**對應的 history（〔第十九批〕沒有 git 時讀目前的任務表與 history，不保證一致快照，[B-632](../tick.md)）：宣告它的是 agent 任務就讀 agent 的，是 kernel 任務就讀 kernel 的（[P-713](../protocol/agent-tasks.md)）。
 
 只記錄的訊息沒有待處理輸入可以結案，清理以接件確認提交的時間起算、套一般保留期，還被引用就留（[B-404](../base/storage.md)、[P-716](../protocol/agent-tasks.md)）；序號檔不清，清理不能讓序號倒退。agent 之間的問答機制延後（[P-008](../protocol/README.md#p-008)）。
 

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "members": [
+    {
+      "member_id": "a",
+      "source_commit": null,
+      "source_journal_seq": 42,
+      "observed_at_ms": 1000,
+      "status": "ok"
+    }
+  ]
+}
