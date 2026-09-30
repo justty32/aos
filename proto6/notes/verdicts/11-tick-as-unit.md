@@ -46,3 +46,4 @@
 
 **先把 tick 與 daemon 的 spec 基礎設計好，假設 cgroup 與 git 都不存在；下一步才把這兩個納入。** 本輪改寫只做 tick 核心、系統級任務（不含 git 任務）、daemon（不含 cgroup）與通道；git 開格／收尾任務、`aos-cg`、daemon 的 node 框與上限等，先移到明確標「下一步納入」的位置，不在本輪設計。kernel、agent、LLM 等其他篇等基礎定了再跟上。
 - **任務環境變數命名**（同日）：`AOS_TASK_ID` 是字串，照任務表該項 `id` 原樣；第幾項用 **`AOS_TASK_INDEX`**（從 0 起算，等於任務表陣列位置）。整格共用的用 `AOS_TICK_*`，這一項專屬的用 `AOS_TASK_*`。結束碼紀錄裡「在哪一項之後停」記 `id` 字串。
+- **daemon 何時暫停 node**（同日，a＋c）：一格結束時留下停格檔 `.aos/tick/stop`，daemon 就順帶暫停這個 node；另外，node 有擋板檔 `.aos/tick-blocked` 時 daemon 不開格。兩者並用；不看結束碼。
