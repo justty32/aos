@@ -78,19 +78,14 @@ Schema 與解析沿 [共用約定](README.md)，三份都放寬、不認得的�
 
 ## P-609．最小設定錯誤與修好後重驗〔主編補；依 A-102、CLI H-036 第 5、6 步〕
 
-設定檢查由使用設定的來源程式負責（agent 設定檢查的結束碼要不要跟 kernel 統一延後，[P-008](README.md#p-008)）：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。任務直接讀設定，驗格式、引用與必要權限；錯誤就停依賴它的新工作，仍可收結果與處理取消。inst 身分及 tasks 錯誤按 node／daemon 契約拒絕啟動。
+〔第十九批依方案 A 縮短〕誰檢查、錯了停什麼、事項誰寫與沿用同一 `issue_id`，以 [S-405](../scheduling/operations.md) 為正本；重驗持鎖、不送 LLM／不派 once／不 resume、修好後標完成，以 [A-102](../agent/configuration.md) 為正本。本條只留格式。
 
-來源沿 P-601 寫自己的 `.aos/attention/`，用 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；suggestion 可寫建議的檢查指令。同一未解問題沿用同一 issue_id，最新細節留來源狀態，不是每格另生一件。任務表壞到檢查任務跑不了時由標準配備寫事項（[B-620](../tick.md)），tick 自己停格時由 daemon 寫（[B-607](../daemon.md)）。
-
-修好普通設定並提交後，可等下一格檢查，或由有權限者自己執行：
+- **事項**：沿 P-601 寫在來源 node 的 `.aos/attention/`，`reason:"config_invalid"`；message 說檔案、欄位與原因，不夾設定全文或 key；suggestion 可寫建議的檢查指令。
+- **檢查指令**：kernel 用 [P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [P-712](agent-tasks.md) 的 `aos-agent-check`（兩者結束碼要不要統一延後，[P-008](README.md#p-008)）：
 
 ```text
 aos-kernel-check --node /srv/aos/top
 aos-agent-check --node /srv/aos/a --recheck
 ```
 
-重驗持 node 鎖，只核對目前設定、提交來源的設定狀態，不送 LLM、不派 once、不 resume node。確認修好後，人或 agent 用 `aos attend done N ID` 標完成；檢查程式不搬事項。
-
-重要設定手改與恢復前的候選驗證依 [node P-210](node.md)；一般 check 成功不替代該程序。全流程不加新的 RPC method；kernel.schedule.recheck 仍只管排程，不能拿來冒充設定重驗。
-
-**驗收：**合法 JSON 的壞領域設定能產生可查事項；修好並重驗後可手動 done；重驗失敗時仍看得到原因；重驗不多送一次 LLM 或工具。
+- 不加新的 RPC method；`kernel.schedule.recheck` 只管排程，不是設定重驗。
