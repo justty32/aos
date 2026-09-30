@@ -16,7 +16,7 @@
 ## 指令與沙箱
 
 - 開隊長：`Agent(subagent_type="general-purpose", model="opus")`，prompt 裡明講團隊規則、硬規則（不 push、不碰別隊的資料夾、只 `git add` 明確路徑）、回報格式。
-- **同一 working tree 只能有一隊在 commit**；純規劃隊只寫自己的項目夾且不 commit，由我收。用 worktree 的隊，**ff-merge 進 main 那步要我在主 repo 做**（隊長被隔離擋住）；worktree 在本 repo 的風險見 [dev-env](../dev-env.md)「git 佈局」。
+- **同一 working tree 只能有一隊在 commit**；純規劃隊只寫自己的項目夾且不 commit，由我收。worktree 隊的**ff-merge 進 main 那步要我在主 repo 做**，清 worktree／分支也歸我〔使用者方向 2026-09-30 晚〕，見 [dev-env](../dev-env.md)「git 佈局」。
 - **審查／報告類產出一定要求寫進 repo 內的路徑**，不要只留在 scratchpad 或靠最後一則訊息——agent 的回報只有最後一輪會回到我手上，主篇曾因此遺失一次。
 - 別用 `TaskOutput` 讀 agent 任務（會倒整份 transcript 進 context）；等通知即可。
 - 實作層級的裁決我可以代裁並寫進交接書（多隊共用的契約由我先定，才能真並行）；**方向性的留給使用者**（鐵律 5），記 [WAIT_USER](../../WAIT_USER.md)。
