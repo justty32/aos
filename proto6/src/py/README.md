@@ -81,7 +81,7 @@ plan 步驟對到哪：
 
 我自己做的判斷（spec 沒寫死、照「最小合理」做，都可以改）：
 
-- 沒有 `.aos/`：回 2、印 `config_invalid:`（使用者裁定「報錯」，碼是我選的）。
+- 沒有 `.aos/`：照 aos-exec 找檔（使用者裁定 09-30 晚）。有 `inst.json` 就用 `aos_exec.run_target` 跑一次（不取鎖、不寫紀錄、退出碼照 aos-exec）；兩個都沒有回 2、印 `config_invalid:`（碼是我選的）。見 `aos_tick.run_bare_inst`。
 - 新增的 stderr 代碼：`usage`（argv 錯）、`lock_unavailable`（鎖檔開不了，回 75）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127、跑到時重新展開失敗）、`stop_unremovable`。鎖被占時什麼都不印。
 - 某項沒跑成（mkdir、cwd、重導向失敗，或跑到時重新展開壞了）記 `exit:125`，跟 aos-exec 命令列一致。
 - `id` 要是非空字串，否則表壞；ID 的字元規則不驗（完整 schema 的事）。
