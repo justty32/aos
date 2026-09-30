@@ -8,12 +8,6 @@
 headful 瀏覽器自動化**即使不注入鍵鼠**，仍會開可見視窗佔住螢幕，**所以照樣要取桌面鎖**。
 **何時不用**：純運算、讀寫檔、編譯、跑測試、寫文件——一律不取鎖。CPU 這類不可鎖的共享資源改用限流（見下）。
 
-## 第一條規則：使用者優先
-
-**使用者在電腦前時，鍵盤滑鼠螢幕的控制權全歸他——連鎖都不要拿。** 最高優先，沒有例外。
-**沒有可靠的偵測方式，所以預設當他在**，除非他親口說「我不在」「你去跑」。不要拿「螢幕鎖了」「滑鼠沒動」推論——他去倒杯水就誤判。
-**例外**（使用者 2026-09-09 說的）：他在電腦前時，頂層仍**可以開遊戲、MO2、瀏覽器**（例如用 skyrim-qa／housecarl／claude-in-chrome 工具），只是不搶前景、不動他正在用的視窗。
-
 ## Done when
 
 - 收工時 `ls ~/shared_agent_locks/ .lock/ 2>/dev/null` 沒有鎖目錄（鎖都釋放了）。
@@ -58,7 +52,7 @@ CPU、網路頻寬鎖不了，改**限流**：重運算（含 `cmake --build`）
 
 | 資源 | 鎖路徑 | 取得順序 | 誰會搶 | 備註 |
 |------|--------|---------|--------|------|
-| 螢幕／鍵鼠 | `~/shared_agent_locks/desktop.lock` | 1（最外）| 所有線 + 使用者本人 | 使用者在就讓路，連鎖都別拿；跨 repo 共用同一把 |
+| 螢幕／鍵鼠 | `~/shared_agent_locks/desktop.lock` | 1（最外）| 所有線 + 使用者本人 | 跨 repo 共用同一把 |
 | 主工作樹的 commit 權（`~/repo/simple_tools/aos/`）| `.lock/worktree.lock`（repo 根，已 `.gitignore`）| 2 | 本專案各隊 | 同一時間只有一隊在主工作樹 commit；其他隊用 `git worktree`（見 [dispatch](dispatch/README.md)）|
 | 本機 LM Studio（`localhost:1234`）| `~/shared_agent_locks/lmstudio.lock` | 2 | 要真模型實測的線 | 一次只能載一個模型，換模型前先 unload 舊的；**他打遊戲時 GPU 歸他，連碰都不准**（見 [dev-env](dev-env.md)「模型端點」）|
 | CPU | （不鎖）| — | 全部 | 用 `nice -n 19` 限流；並行 build 別超過兩個 |

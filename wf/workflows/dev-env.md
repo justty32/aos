@@ -30,13 +30,20 @@
 
 驗證與測試指令不列這裡——連同「誰跑」一起在 [testing](testing.md)。
 
-## git 佈局：aos 是 submodule，別用 worktree 隔離
+## git 佈局：aos 是 submodule；worktree 隔離可以開
 
 aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdir 在 `../.git/modules/aos`。
-**不要在這個 repo 開 Claude Code 的 worktree 隔離（`isolation: worktree`／EnterWorktree）**——
-2026-09-02 一個 worktree session 收尾清理時把那個 gitdir 清空，四個未 push 的 commit 物件遺失，
-只能從 GitHub 重 clone、拿工作樹重建（重建後是 `9bd31c0`、`e292b83`）。要平行做事就用普通子 agent
-或另開 clone；做完的 commit 盡早 push，本機 gitdir 不可靠。
+
+**背景**：2026-09-02 一個 worktree session 收尾清理時把那個 gitdir 清空，四個未 push 的 commit 物件遺失，
+只能從 GitHub 重 clone、拿工作樹重建（重建後是 `9bd31c0`、`e292b83`）。之後一度禁止在本 repo 開 worktree 隔離。
+
+**現在的規則**〔使用者方向 2026-09-30 晚〕：派出去的隊**可以**開 worktree 隔離（`isolation: worktree`／EnterWorktree），但要照下面三條防範：
+
+- **開工**：worktree 起點可能很舊，第一步 `git reset --hard main`（見 [dispatch lessons](dispatch/lessons.md) 第 6 節）。
+- **收尾**：隊員 `git rebase main`，確保能 fast-forward；**不准自己刪 worktree 或分支**。
+- **清理**：由頂層在主 repo ff-merge 成功後才清：`git worktree remove <路徑>`＋`git branch -d <分支>`。
+
+做完的 commit 仍盡早 push，本機 gitdir 不算可靠。
 
 ## 跨機 / 離線差異
 
