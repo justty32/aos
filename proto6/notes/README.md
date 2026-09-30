@@ -8,12 +8,12 @@
 
 - [spec 規格草案](../spec/README.md)：欄位、合法狀態、提交與失敗恢復、驗收，現行以它為準。
 - [裁定紀錄](2026-09-29-verdicts.md)：09-29 使用者分十七批逐條裁定，**以它為準、後批優先**；分冊與每批摘要見 [verdicts/](verdicts/README.md)。
-- [第十八批方向](verdicts/09-special-computing-os.md)（09-30，**目前最新方向、後批優先**；spec 正依它改寫中，尚未全部落地）：aos 是給特殊計算用的 OS，多層多 kernel，各 kernel 自訂抽象、資源、隔離，以 Linux 為底。
-- [第十九批方向](verdicts/10-tick-minimal-core.md)（09-30，**最新方向、後批優先，推翻第十八批數條**；spec 正依它改寫中）：三層架構——tick 核心只有互斥鎖、照任務表跑、上下層（預設看資料夾包含、可登記覆蓋）；標準配備（git 提交、needs、收件、切換使用者、cgroup 框、once 等，跟核心同一支 aos-tick、必須全掛）；其他掛載（kernel、agent、clock、自訂任務）；tick 與 daemon 之間有通道傳訊；spec 的保證以標準配備全掛為前提。
+- [第十八批方向](verdicts/09-special-computing-os.md)（09-30，後批優先，數條已被第十九批推翻；spec 已依它改寫）：aos 是給特殊計算用的 OS，多層多 kernel，各 kernel 自訂抽象、資源、隔離，以 Linux 為底。
+- [第十九批方向](verdicts/10-tick-minimal-core.md)（09-30，**最新方向、後批優先，推翻第十八批數條**；spec 已依它改寫，落點見該份文末）：三層架構——tick 核心只有互斥鎖、照任務表跑、上下層（預設看資料夾包含、可登記覆蓋）；標準配備（git 提交、needs、收件、切換使用者、cgroup 框、once 等，跟核心同一支 aos-tick、必須全掛；cgroup v2 與 git 是完整保證的條件，沒有時走內建備援、仍算全掛）；其他掛載（kernel、agent、clock、自訂任務）；tick 與 daemon 之間有通道傳訊；spec 的保證以標準配備全掛為前提。
 - [09-30 審稿](reviews/2026-09-30/README.md)：Fable 與 astra 兩輪審 notes／spec，77 條待處理，要依第十八批重新分類。
 - [kernel 樹與註冊式 tick](2026-09-29-kernel-tree.md)：09-29 架構方向改回 kernel 樹＋註冊式 tick；spec 已依此重寫，原先「單一控制寫入者、總帳本」的寫法已拿掉。
 - LLM 排程：09-29 晚使用者裁定 LiteLLM 不進標準、只當可選 endpoint；aos 自己的排程分三檔（直連／交給 endpoint／自己排，預設自己排；直連原叫「不管」），見裁定第十三、十五批與 [spec S-301](../spec/scheduling/llm.md)。
-- systemd：第十四批裁定**初版不用 systemd**；cgroup v2 是必要依賴（第十九批起屬標準配備，不屬 tick 核心，見[第十九批](verdicts/10-tick-minimal-core.md)），quota 可選。第十五批：cgroup 一律要事先準備好，另有開關讓 daemon 自建。
+- systemd：第十四批裁定**初版不用 systemd**；cgroup v2 是完整資源保證的條件（第十九批起屬標準配備，不屬 tick 核心；沒有 cgroup 時標準配備內建備援、仍算全掛，見[第十九批](verdicts/10-tick-minimal-core.md)第 8 條），quota 可選。第十五批：cgroup 一律要事先準備好，另有開關讓 daemon 自建。
 
 軟性設計原則：[兩次 tick 之間的環境穩定性](between-ticks-configuration.md)。由原先硬保證改為設計指導，不屬於 spec，也不設強制驗收。
 
