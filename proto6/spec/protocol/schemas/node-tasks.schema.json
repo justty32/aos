@@ -2,13 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "node-tasks.schema.json",
   "title": "node 任務註冊表",
-  "description": ".aos/tasks.json；整份 $ref 展開後再驗證 Task，含唯一 id、前置依賴與禁止 user。",
+  "description": ".aos/tasks.json；整份 $ref 展開後再驗證 Task，含唯一 id、前置依賴與禁止 user（C-07 永遠禁止鍵）。不認得的欄位忽略（P-007）。",
   "type": "object",
   "required": [
     "_metainfo",
     "tasks"
   ],
-  "additionalProperties": false,
   "properties": {
     "tasks": {
       "type": "array",
@@ -25,12 +24,12 @@
               },
               "$at": {
                 "type": "string"
-              }
+              },
+              "user": false
             },
             "required": [
               "$ref"
-            ],
-            "additionalProperties": false
+            ]
           }
         ]
       }
@@ -48,8 +47,7 @@
       "required": [
         "_type",
         "_version"
-      ],
-      "additionalProperties": false
+      ]
     }
   },
   "$defs": {
@@ -64,11 +62,20 @@
           "$ref": "common.schema.json#/$defs/ID"
         },
         "kind": {
-          "enum": [
-            "system",
-            "kernel",
-            "agent",
-            "custom"
+          "description": "B-620：system／kernel／agent／custom，或〔暫定〕自訂的「類別.名稱」，類別限 kernel／agent／custom；system 不開放自訂。",
+          "anyOf": [
+            {
+              "enum": [
+                "system",
+                "kernel",
+                "agent",
+                "custom"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^(?:kernel|agent|custom)\\.[a-z][a-z0-9_-]*$(?![\\s\\S])"
+            }
           ]
         },
         "group": {
@@ -88,18 +95,14 @@
           "items": {
             "$ref": "#/$defs/Method"
           }
-        }
+        },
+        "user": false
       },
       "allOf": [
         {
           "$ref": "node-inst.schema.json#/$defs/Inst"
         }
-      ],
-      "not": {
-        "required": [
-          "user"
-        ]
-      }
+      ]
     },
     "Method": {
       "type": "string",

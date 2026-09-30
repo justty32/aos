@@ -52,6 +52,5 @@
     "messages",
     "max_completion_tokens",
     "timeout_ms"
-  ],
-  "additionalProperties": false
+  ]
 }

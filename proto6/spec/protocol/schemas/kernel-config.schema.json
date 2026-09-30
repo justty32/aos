@@ -25,6 +25,11 @@
       "type": "integer",
       "minimum": 1
     },
+    "member_stale_ms": {
+      "description": "叫醒後多久沒完成新的一格就寫一件失聯事項（S-206）；預設 600000。",
+      "type": "integer",
+      "minimum": 1
+    },
     "quota_file": {
       "$ref": "common.schema.json#/$defs/NodeId"
     }
@@ -32,6 +37,5 @@
   "required": [
     "version",
     "daemon_socket"
-  ],
-  "additionalProperties": false
+  ]
 }

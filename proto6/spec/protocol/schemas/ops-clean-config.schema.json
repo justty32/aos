@@ -39,7 +39,6 @@
   "required": [
     "version"
   ],
-  "additionalProperties": false,
   "allOf": [
     {
       "if": {

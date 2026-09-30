@@ -80,7 +80,7 @@
             "aos-kernel-check"
           ],
           "id": "check",
-          "kind": "system",
+          "kind": "kernel",
           "needs": [],
           "stderr": {
             "$opt": "inherit"
@@ -112,9 +112,7 @@
           ],
           "id": "resources",
           "kind": "kernel",
-          "needs": [
-            "members"
-          ],
+          "needs": [],
           "stderr": {
             "$opt": "inherit"
           },
@@ -133,9 +131,7 @@
           ],
           "id": "work",
           "kind": "kernel",
-          "needs": [
-            "resources"
-          ],
+          "needs": [],
           "stderr": {
             "$opt": "inherit"
           },
@@ -154,9 +150,7 @@
           ],
           "id": "forward",
           "kind": "kernel",
-          "needs": [
-            "resources"
-          ],
+          "needs": [],
           "stderr": {
             "$opt": "inherit"
           },
@@ -176,9 +170,7 @@
           ],
           "id": "pool",
           "kind": "kernel",
-          "needs": [
-            "forward"
-          ],
+          "needs": [],
           "stderr": {
             "$opt": "inherit"
           }
@@ -208,10 +200,7 @@
           ],
           "id": "schedule",
           "kind": "kernel",
-          "needs": [
-            "members",
-            "resources"
-          ],
+          "needs": [],
           "stderr": {
             "$opt": "inherit"
           },

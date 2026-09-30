@@ -35,6 +35,5 @@
     "attempt_id",
     "inst",
     "base"
-  ],
-  "additionalProperties": false
+  ]
 }

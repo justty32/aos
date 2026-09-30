@@ -43,6 +43,5 @@
     "at_ms",
     "source_path",
     "message"
-  ],
-  "additionalProperties": false
+  ]
 }

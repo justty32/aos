@@ -29,7 +29,7 @@
             "$ref": "common.schema.json#/$defs/ID"
           },
           "registration": {
-            "$ref": "daemon-registration.schema.json"
+            "$ref": "daemon-registration.schema.json#/$defs/RegistrationOpen"
           },
           "bootstrap_pending": {
             "type": "boolean"
@@ -39,8 +39,7 @@
           "member_id",
           "registration",
           "bootstrap_pending"
-        ],
-        "additionalProperties": false
+        ]
       }
     },
     "pending_remove": {
@@ -64,8 +63,7 @@
         "required": [
           "member_id",
           "retry_at_ms"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },
@@ -76,6 +74,5 @@
     "synced",
     "pending_remove",
     "retry"
-  ],
-  "additionalProperties": false
+  ]
 }

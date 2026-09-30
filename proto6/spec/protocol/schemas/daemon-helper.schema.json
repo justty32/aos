@@ -114,10 +114,14 @@
               "properties": {
                 "node_id": {
                   "$ref": "common.schema.json#/$defs/NodeId"
+                },
+                "grace_ms": {
+                  "$ref": "common.schema.json#/$defs/TimeMs"
                 }
               },
               "required": [
-                "node_id"
+                "node_id",
+                "grace_ms"
               ],
               "additionalProperties": false
             }
@@ -137,6 +141,32 @@
             },
             "params": {
               "$ref": "daemon-provision.schema.json"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "daemon.helper.cgroup_remove"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
             }
           }
         }

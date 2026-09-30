@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "once 未啟動旁檔 <inst 檔名>.err（P-110）",
+  "title": "once 未啟動旁檔 <inst 檔名>.err（P-110）；持久檔，不認得的欄位忽略（C-07）",
   "type": "object",
   "properties": {
     "version": {
@@ -10,13 +10,12 @@
       "$ref": "common.schema.json#/$defs/NodeId"
     },
     "error": {
-      "$ref": "common.schema.json#/$defs/Error"
+      "$ref": "common.schema.json#/$defs/ErrorOpen"
     }
   },
   "required": [
     "version",
     "node_id",
     "error"
-  ],
-  "additionalProperties": false
+  ]
 }

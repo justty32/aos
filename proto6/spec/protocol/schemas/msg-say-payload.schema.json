@@ -21,6 +21,5 @@
     "in_reply_to": {
       "$ref": "common.schema.json#/$defs/ID"
     }
-  },
-  "additionalProperties": false
+  }
 }

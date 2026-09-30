@@ -16,7 +16,9 @@
 
 〔使用者方向 2026-09-29〕LLM／工具的非同步派出與收結果依[通用 tick](../tick.md)，LLM 代發依 [LLM 資源](../scheduling/llm.md)。
 
-每個 module 一項任務：讀自己的收件與已回來的結果、整理 context、驗證工具呼叫，再保存進度或回覆。請求／回應放 `.aos/outbox/`，tick 在該組 commit 後投出並清已消費原件。最小範本見[agent 任務表](../protocol/agent-tasks.md)，分組及失敗處理由通用 tick 決定。
+每個 module 一項任務：讀自己的收件與已回來的結果、整理 context、驗證工具呼叫，再保存進度或回覆。請求／回應放 `.aos/outbox/`，何時投出、何時清原件依 [B-623](../tick.md)、[B-624](../tick.md)（Q1／Q2）。最小範本見[agent 任務表](../protocol/agent-tasks.md)，分組及失敗處理由通用 tick 決定。
+
+〔使用者方向 2026-09-30，第十八批〕**agent 範本對每個送出的請求預設設鬧鐘**（待送封套的 `alarm_ms`，[P-206](../protocol/node.md)），對方逾時沒處理，agent 自己會發現，不靠 aos 寫待辦。預設多久、鬧鐘和「投件當場被丟掉」對不上的地方（Q26）、鬧鐘響了之後 agent 怎麼收尾，都延後（[P-008](../protocol/README.md#p-008)）。
 
 〔建議預設，未拍板〕必要狀態直接放普通檔案，例如連續無效回覆次數、尚待結果的請求、已選 context 的來源；只保存接續工作真正需要的內容。檔案隨所屬 group 生效，不另存一套相同進度。
 
@@ -24,7 +26,7 @@
 
 回覆的完成證據必須和內容相符：仍在等相關工具／LLM 結果，或結果是 unknown，不能宣稱該工作成功。正式回覆依 [A-203](input.md)；模型說「完成」不能代替完成證據。沒有可推進的材料就結束本格，等所屬 kernel 再叫醒，不忙轉。
 
-輪次邊界只沿用 [run 的軟性原則](../scheduling/runs.md)，不在這裡決定途中新訊息屬於哪一輪。重啟清程序依 [daemon](../daemon.md)，unknown 與不自動重做依[共通操作](../scheduling/operations.md)。
+輪次邊界只沿用 [run 的軟性原則](../scheduling/runs.md)，不在這裡決定途中新訊息屬於哪一輪。重啟清程序依 [B-603](../daemon.md)，unknown 與不自動重做依 [S-401](../scheduling/operations.md)。
 
 驗收：模型回覆已完成，但相關工具還沒交回結果時，不把工作記成成功；等結果處理完且 final 提交後，才有正式完成回覆。
 

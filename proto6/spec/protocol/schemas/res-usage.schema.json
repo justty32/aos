@@ -27,8 +27,7 @@
           },
           "required": [
             "usage_us"
-          ],
-          "additionalProperties": false
+          ]
         },
         "memory": {
           "type": "object",
@@ -41,8 +40,7 @@
           },
           "required": [
             "current_bytes"
-          ],
-          "additionalProperties": false
+          ]
         },
         "pids": {
           "type": "object",
@@ -55,8 +53,7 @@
           },
           "required": [
             "current"
-          ],
-          "additionalProperties": false
+          ]
         },
         "llm": {
           "type": "array",
@@ -81,8 +78,7 @@
               "pool_id",
               "active_requests",
               "unknown_requests"
-            ],
-            "additionalProperties": false
+            ]
           },
           "minItems": 1
         },
@@ -105,8 +101,7 @@
             "required": [
               "path",
               "bytes"
-            ],
-            "additionalProperties": false
+            ]
           },
           "minItems": 1
         },
@@ -134,14 +129,13 @@
               "scope",
               "rx_bytes",
               "tx_bytes"
-            ],
-            "additionalProperties": false
+            ]
           },
           "minItems": 1
         }
       },
       "required": [],
-      "additionalProperties": false
+      "description": "範本六類的用量欄位形狀固定；其他鍵是 kernel 自訂資源，形狀由定義它的 kernel 定（P-501、T-06）。"
     }
   },
   "required": [
@@ -149,6 +143,5 @@
     "node_id",
     "observed_at_ms",
     "resources"
-  ],
-  "additionalProperties": false
+  ]
 }

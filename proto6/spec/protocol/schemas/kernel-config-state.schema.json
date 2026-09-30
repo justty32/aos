@@ -25,14 +25,12 @@
           "path",
           "issue_id",
           "resolved"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },
   "required": [
     "version",
     "issues"
-  ],
-  "additionalProperties": false
+  ]
 }

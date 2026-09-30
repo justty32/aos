@@ -63,10 +63,28 @@
               }
             ]
           },
-          "wake_after_end_ms": {
+          "wake_mark": {
+            "description": "wake 回應的 registration_id 與 tick_seq（還沒跑過是 0）及叫醒時間；新格判斷見 S-201，失聯見 S-206。沒叫醒過為 null。",
             "anyOf": [
               {
-                "$ref": "common.schema.json#/$defs/TimeMs"
+                "type": "object",
+                "properties": {
+                  "registration_id": {
+                    "$ref": "common.schema.json#/$defs/ID"
+                  },
+                  "tick_seq": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "woken_at_ms": {
+                    "$ref": "common.schema.json#/$defs/TimeMs"
+                  }
+                },
+                "required": [
+                  "registration_id",
+                  "tick_seq",
+                  "woken_at_ms"
+                ]
               },
               {
                 "type": "null"
@@ -79,9 +97,8 @@
           "ready_seq",
           "due_ms",
           "summary_commit",
-          "wake_after_end_ms"
-        ],
-        "additionalProperties": false
+          "wake_mark"
+        ]
       }
     }
   },
@@ -91,6 +108,5 @@
     "scan_after",
     "next_scan_ms",
     "members"
-  ],
-  "additionalProperties": false
+  ]
 }

@@ -4,11 +4,13 @@
 
 LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 [llm-work](llm-work.md)；本篇其餘條號不變。取消工作是 P-411（第十七批新增）。
 
+〔使用者方向 2026-09-30，第十八批〕本篇只留欄位、JSON、schema、範例與程式 argv；行為以主規格為正本：工作識別 [T-03](../terms.md)、固定材料與預設值 [B-101](../base/work.md)、結果 [B-103](../base/work.md)、取消 [B-203](../base/execution.md)、once 登記 [B-606](../daemon.md)、unknown 與從未啟動證據 [S-401](../scheduling/operations.md)。本篇的 schema 照 [P-007](README.md) 的放寬通則：不認得的欄位忽略（[C-07](../contracts.md)）。
+
 ## P-400．兩個入口〔使用者方向 2026-09-29〕
 
-工具由 `tools.target_node` 選路：是 node id 就以 `kernel.work.submit` 交該 kernel；是 null 就由 agent 自己登記 once（可信 parent_id 是自己）、保存用量，kernel 用收集 module 讀。LLM 以 `llm.chat` 投 `llm.target_node`；填 null 是「直連」檔，agent 自己打 endpoint、不經本篇的池（[S-301](../scheduling/llm.md)）。開 agent 的 kernel 決定地址與權限。
+工具由 `tools.target_node` 選路：是 node id 就以 `kernel.work.submit` 交該 kernel；是 null 就由 agent 自己登記 once（可信 parent_id 是自己）、保存用量，kernel 用收集 module 讀。LLM 以 `llm.chat` 投 `llm.target_node`；填 null 是「直連」檔，agent 自己打 endpoint、不經本篇的池。兩條路線與三檔以 [S-301](../scheduling/llm.md) 為正本；開 agent 的 kernel 決定地址與權限。
 
-兩種檔案請求的 params 都是完整 inst，argv 分別以 `aos kernel work submit`、`aos llm chat` 開頭；業務材料是 inst.stdin 指向的 JSON 檔，命令核對見 [messages P-306](messages.md)。材料的 node_id 是最初發起 node，job_id 是邏輯工作，attempt_id 是嘗試；仍須核對可信來源。命令完成才回執行結果，不先回 ACK；內層工作／LLM 結果是命令的 stdout JSON。
+兩種檔案請求的 params 都是完整 inst，argv 分別以 `aos kernel work submit`、`aos llm chat` 開頭；業務材料是 inst.stdin 指向的 JSON 檔，命令核對見 [messages P-306](messages.md)。材料的 node_id 是最初發起 node，job_id、attempt_id 的意思見 [T-03](../terms.md)；仍須核對可信來源。命令完成才回執行結果，不先回 ACK；內層工作／LLM 結果是命令的 stdout JSON。
 
 ## P-401．工作材料〔建議預設，未拍板〕
 
@@ -19,16 +21,27 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 | `node_id`、`job_id`、`attempt_id` | P-400 的配對識別 |
 | `inst` | [inst 第 1 版](../base/inst.md) 原始物件；引用 [node-inst schema](schemas/node-inst.schema.json)，仍須在目標身分展開後驗證 |
 | `base` | 原 inst 的絕對基準資料夾；複製材料不能偷偷換成工作資料夾 |
-| `timeout_ms`（可省） | 放行後逾時，預設 60000，正整數 |
-| `output_limit_bytes`（可省） | 每條捕獲串流上限，預設 1048576，正整數 |
+| `timeout_ms`（可省） | 放行後逾時，正整數；預設值見 [B-101](../base/work.md) |
+| `output_limit_bytes`（可省） | 每條捕獲串流上限，正整數；預設值見 B-101 |
 
-kernel 接納時固定 inst 與必要輸入。需要固定 stdin bytes 就保存副本並使用該副本路徑；外部 `$ref`、程式及 workspace 不因此凍結，見 [B-101](../base/work.md)。工具呼叫先依 [A-401](../agent/tools.md) 驗參數、轉 inst；run／tool_call 對照留在發起 node。
+接納時固定哪些材料、stdin 副本怎麼存，依 [B-101](../base/work.md)。工具呼叫先依 [A-401](../agent/tools.md) 驗參數、轉 inst；run／tool_call 對照留在發起 node。
 
 ## P-402．once 與工作材料〔使用者方向 2026-09-29〕
 
-once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [daemon P-104／110](daemon.md) 的第十一批裁定。
+once 目標依 [P-010](README.md)；once 的登記、資源歸屬依 [B-606](../daemon.md)，啟動失敗旁檔（`.err`）格式依 [daemon P-110](daemon.md)。
 
-〔使用者方向 2026-09-29，第十六批〕**工作目錄名要加發件者前綴**：不同成員都可能用 `attempt-1`，同一個 kernel 裡會撞名。目錄名一律是 `<前綴>-<attempt_id>`，前綴是「配出這個 attempt_id 的 node」（工作材料的 `node_id`；自己配的就是自己）絕對路徑 UTF-8 bytes 的 sha256 前 16 個小寫 hex。node 路徑不能直接當目錄名，雜湊長度固定、只有 `[0-9a-f]`；碰撞機率可忽略，讀目錄時仍核對裡面 request 的 node_id。例：`/srv/aos/top/a` 的 `attempt-1` → `94a18415f07a8c0d-attempt-1`。全篇及 kernel／agent 篇路徑裡的 `state/work/<attempt_id>/`、`.aos/jobs/<attempt_id>/`，`<attempt_id>` 都指這個目錄名；檔案內容與 RPC 裡的 attempt_id 欄位不加前綴。
+〔使用者方向 2026-09-29，第十六批〕**工作目錄名要加前綴**：不同成員都可能用 `attempt-1`，同一個 kernel 裡會撞名。目錄名一律是 `<前綴>-<attempt_id>`，前綴是「**配出這個 attempt_id 的 node**」絕對路徑 UTF-8 bytes 的 sha256 前 16 個小寫 hex。node 路徑不能直接當目錄名，雜湊長度固定、只有 `[0-9a-f]`。全篇及 kernel／agent 篇路徑裡的 `state/work/<attempt_id>/`、`.aos/jobs/<attempt_id>/`，`<attempt_id>` 都指這個目錄名；檔案內容與 RPC 裡的 attempt_id 欄位不加前綴。
+
+〔第十八批補，建議預設，未拍板〕配出者不一定是工作材料的 `node_id`：第一次嘗試的 ID 是發起 node 配的，前綴就是發起 node；LLM 池因限流重試時由池自己配新 attempt_id（[P-407](llm-work.md)），前綴就是池 node。材料的 `node_id` 始終保留最初發起 node，不跟著換。安排工作的 node 在工作狀態記下配出者（kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json)；省略就是材料的 `node_id`），讀目錄時核對「前綴＝配出者的雜湊」與 request.json 的 attempt_id，不拿材料 node_id 算前綴。碰撞機率可忽略，但仍照這樣核對。
+
+例：`/srv/aos/top/a` 發起 `llm.chat`，attempt_id 是 `attempt-1`，直投池 node `/srv/aos/pool`。
+
+| 嘗試 | 誰配的 ID | 池裡的目錄 |
+|---|---|---|
+| 第一次 `attempt-1` | 發起 node `/srv/aos/top/a` | `.aos/jobs/94a18415f07a8c0d-attempt-1/` |
+| 429 後第二次 `attempt-1.r2`（ID 由池自訂） | 池 node `/srv/aos/pool` | `.aos/jobs/073cf769a1854e5c-attempt-1.r2/` |
+
+兩個目錄裡 request.json 的 `node_id` 都是 `/srv/aos/top/a`。
 
 〔建議預設，未拍板〕本篇為保存請求與結果，在安排工作的 node 建 ignored `.aos/jobs/<attempt_id>/`，以其中的 `inst.json` 單檔登記；資料夾只是材料布局。每次實際嘗試使用不同資料夾，內含：
 
@@ -37,6 +50,7 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
   inst.json          # daemon 跑的外層 inst
   request.json       # 已接納請求的固定副本
   input/             # 只有需要固定輸入時才有
+  llm-config.json    # 只有 LLM 嘗試才有：派出時固定的本池設定（不含 key，見 S-307）
   stdout.bin         # 有捕獲才有
   stderr.bin         # 有獨立捕獲才有
   result.json        # 執行器完整發布的 B-103 結果
@@ -46,11 +60,9 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 
 外層 inst 的 argv 是 `aos-work --work-dir <絕對工作資料夾>`，`user` 明寫工作所屬 node 已授權的有效身分。內層 `request.json` 的 inst 省略 `user` 時繼承這個身分；寫了或整份指示詞展開後帶了 `user`，必須仍解析成同一 UID。kernel 不可讓工具繼承自己的較高權限；runner 也不能在內層再次切身分。
 
-安排工作的 module 先保存接納請求及材料，tick 提交後，後續一格才建工作資料夾並經 daemon `node.register` 登記 `node_id=W/inst.json,parent_id=材料.node_id,identity_grant=[有效身分],once=true`，再 `node.wake`。agent 自跑工具時 parent_id 固定自己。parent_id 是可信資源歸屬，與 W 的位置無關，核對規則只依 daemon 篇。工作結果及捕獲檔保留，下格核對並保存；有回件便放待送區，由 tick commit 後投回呼叫者。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
+登記參數是 `node_id=W/inst.json,parent_id=材料.node_id,identity_grant=[有效身分],once=true`，再 `node.wake`；agent 自跑工具時 parent_id 固定自己。parent_id 是可信資源歸屬，與 W 的位置無關。何時建目錄、何時登記（本格只保存材料，提交後下一格才登記）依 [B-624](../tick.md) 與 [B-606](../daemon.md)，kernel 代跑的步驟見 [kernel P-806](kernel-tasks.md)。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
 
-首次登記前依 [kernel P-807](kernel-tasks.md) 排他建立並同步 launch-started；已有 marker 就先查證，不重新派出。執行器／已裝 module 在移除 leaf 前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到不寫 usage.json、用量記 null，不採信工具自報。
-
-安排工作的 node 下格若讀到 `W/inst.json.err`，先核對本次目標與可信 daemon 寫入來源，再合成 started:false／failed／start_failed 的工作結果；不把自報旁檔當證據。LLM wrapper 未啟動可合成 failed／not_sent。其他情況只看 result.json；wrapper exec 126／127、崩潰或自身回 125 卻無結果，均不能只靠登記消失推定內層沒跑，缺可保存的可信證據就 unknown。兩份證據矛盾時保留並報事項，不任取最後一份。重啟與重投依 [messages P-304](messages.md)。
+`launch-started` 的建立、`.err` 旁檔與 result.json 怎麼當證據、缺證據何時記 unknown，依 [S-401](../scheduling/operations.md)。執行器／已裝 module 在移除 leaf 前保存 [res-usage](schemas/res-usage.schema.json) 到 usage.json，發起者下格收量；量不到不寫 usage.json、用量記 null，不採信工具自報。
 
 ## P-403．結果與串流〔建議預設，未拍板〕
 
@@ -62,57 +74,62 @@ once 目標依 [P-010](README.md)，資源歸屬與最小啟動失敗證據依 [
 | `status` | `succeeded`／`failed`／`canceled`／`unknown`，依 [C-03](../contracts.md) |
 | `reason` | `exited`、`signal`、`start_failed`、`timeout`、`canceled`、`oom`、`output_limit`、`descendants_remaining`、`output_incomplete`、`unknown` |
 | `started` | `true` 已進入 inst 的執行階段；`false` 根本沒跑；`null` 證據不足 |
-| `exit_code`、`signal` | 可得的原退出碼或訊號；無資料填 `null`，兩者不同時有值 |
+| `exit_code`、`signal` | 可得的原退出碼（0～255）或訊號（1～64，與 [daemon P-106](daemon.md) 一致）；無資料填 `null`，兩者不同時有值 |
 | `diagnostic`（可省） | 無 key 的有界診斷（最多 4096 字元）；可得時保留原始 errno 代號，例如 EAGAIN、ENOMEM |
 | `stdout`、`stderr` | `{path,bytes,truncated}` 或 `null`；path 是絕對路徑，bytes 是實際保存量 |
 
-`null` 表示沒有這份輸出證據；有檔且 `bytes:0` 才是確知空輸出。若 inst 使用 `inherit`，外層將對應 fd 接捕獲 pipe，才由 aos-work 保存為 `.bin`；inst 的一般檔案、append、merge、`/dev/null` 規則照正本，不偷偷改成捕獲。直接寫檔若不能證明這次保存的完整 bytes，結果該串流填 `null`；merge 不虛構獨立 stderr。捕獲上限、OOM 證據與收尾沿 [B-103](../base/work.md)、[B-202／204](../base/execution.md)。
+`null` 表示沒有這份輸出證據；有檔且 `bytes:0` 才是確知空輸出。〔使用者方向 2026-09-30，第十八批〕當格就做完的本地動作（[messages P-306](messages.md) 表裡 `kernel.work.submit`、`llm.chat` 以外的命令），RPC 結果的 `stdout` 指 `state/messages/requests/<id>.stdout` 的絕對路徑，不填 null；落點與清理見 P-306、[B-103](../base/work.md)。若 inst 使用 `inherit`，外層將對應 fd 接捕獲 pipe，才由 aos-work 保存為 `.bin`；inst 的一般檔案、append、merge、`/dev/null` 規則照正本，不偷偷改成捕獲。直接寫檔若不能證明這次保存的完整 bytes，結果該串流填 `null`；merge 不虛構獨立 stderr。捕獲上限、OOM 證據與收尾沿 [B-103](../base/work.md)、[B-202／204](../base/execution.md)。
 
-正常退出 0 且後代清空才可 `succeeded/exited`；退出 7 是 `failed/exited`。125 不足以判定是否執行；`started:false/start_failed` 和子程式已跑、自己退出 125 必須分清。訊號保留 `signal`，不把 inst 的 `128+n` 合成碼當作 wait 的退出碼。工具語意錯誤與產品成功依 [A-403](../agent/tools.md)、[A-503](../agent/README.md)，不改程序證據。
+欄位怎麼填：退出 7 是 `failed/exited`；訊號保留 `signal`，不把 inst 的 `128+n` 合成碼當作 wait 的退出碼；`started:false/start_failed` 和子程式已跑、自己退出 125 必須分清。何時算 `succeeded`（正常退出 0 且後代清空）依 [B-103](../base/work.md)、[B-202](../base/execution.md)；工具語意錯誤與產品成功依 [A-403](../agent/tools.md)、[A-503](../agent/README.md)，不改程序證據。
 
 ## P-404．unknown 與拒收〔使用者方向 2026-09-29〕
 
-結果不明的工作保持 unknown，沒人處理就隨定期清理清掉，不自動重做。合成 unknown 結果時缺失欄位填 null；已發布 RPC 回應不覆寫。
+unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown 結果時缺失欄位填 null；已發布 RPC 回應不覆寫。
 
-拒收沿 P-005：參數錯 -32602；業務錯 -32000，data.code 可為 work_not_authorized、input_unreadable、capacity_unavailable、pool_not_found、model_not_found、key_unavailable。只在能確認尚未接納的暫時容量／讀取問題才可 retryable:true；接納後的失敗回結果。配對錯或衝突留原件及事項，不夾 key／認證標頭。
+拒收沿 P-005：參數錯 -32602；業務錯 -32000，data.code 可為 work_not_authorized、input_unreadable、capacity_unavailable、pool_not_found、model_not_found、key_unavailable。只在能確認尚未接納的暫時容量／讀取問題才可 retryable:true；接納後的失敗回結果。配對錯或衝突留原件及事項，不夾 key／認證標頭。agent 的請求被拒收後 agent 怎麼收尾，延後（[P-008](README.md#p-008)）。
 
 ## P-411．取消工作〔使用者方向 2026-09-29，第十七批〕
 
-取消用檔案請求 `work.cancel`（`aos work cancel`），投到**持有那件工作的 node** 的 `requests/`；例如 kernel 代跑的工具就投那個 kernel，範本裡由 work 任務宣告處理（[node P-202](node.md)）。stdin 是 [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) 的 `{request_id}`，指原請求（例如 `kernel.work.submit`）的 RPC id。
+行為（誰有權取消、排隊中與在跑的怎麼處理、收尾競態、只適用 once）以 [B-203](../base/execution.md) 為正本〔使用者方向 2026-09-30，第十八批〕。本條只定格式。
 
-**權限**：取消請求檔（`requests/<id>.json`）的擁有 UID，必須等於原請求檔的擁有 UID，或等於該 node 的擁有者（node 根目錄的擁有 UID）；否則回 -32000、`data.code` 為 `cancel_not_authorized`，丟掉這份取消請求，原工作不受影響。原請求檔消費後會被刪，所以接件時就把它的擁有 UID 記進工作狀態（kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`）。檔案擁有者只是 OS 事實，不證明是哪個 node，同 UID 的界線照 [messages P-303](messages.md)。找不到這個 request_id 的工作回 `work_not_found`。
+**請求**：檔案請求 `work.cancel`（`aos work cancel`），投到**持有那件工作的 node** 的 `requests/`；例如 kernel 代跑的工具就投那個 kernel，範本裡由 work 任務宣告處理（[node P-202](node.md)）。stdin 是 [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) 的 `{request_id}`，指原請求（例如 `kernel.work.submit`）的 RPC id。
 
-**怎麼取消**：
+**回應**：收下就回 `{"accepted":true}`，只表示收下，不等於已取消；終局看原請求的回應（`canceled`／reason `canceled`，排隊中被拿掉的另帶 `started:false`）。
 
-- 還在排隊（還沒建 launch-started）：直接拿掉，原請求回 `canceled`／reason `canceled`、`started:false` 的結果，不開 once。
-- 在跑（已建 launch-started）：node 把工作記成 `canceling`，請 daemon 對那個 once 做 `node.unregister`（[daemon P-105](daemon.md)：TERM、寬限、`cgroup.kill`、確認全空）；全空後原請求回 canceled。收尾競態照 [B-203](../base/execution.md)：已有完整結果檔就照原結果回，不改成 canceled；確認不了全空就 unknown。
-- 已經結束或已回過結果：不動。
+**錯誤**：
 
-三種情況 work.cancel 本身都回 `{"accepted":true}`，只表示收下，不等於已取消；終局看原請求的回應。取消不撤銷工作已造成的外部效果。LLM 請求與 agent 自跑的 once 由持有它的 node 照同一規則處理；範本目前只有 kernel 的 work 任務宣告 work.cancel。
+| 情況 | 回應 |
+|---|---|
+| 沒有權限（B-203 的兩種主人與原投件者都不是） | -32000，`data.code` 為 `cancel_not_authorized`；這份取消請求丟掉，原工作不受影響 |
+| 找不到這個 request_id 的工作，或工作不在宣告 `work.cancel` 的任務手上（例如 LLM 轉交） | -32000，`work_not_found` |
+| 收件 node 沒有任務宣告 `work.cancel`（agent、純池 node） | tick 回 -32601（[B-501](../base/transport.md)） |
 
-**驗收：**UID 不同、也不是 node 擁有者送的取消回 cancel_not_authorized，原工作照跑；排隊中的被拿掉、不會開 once；在跑的被殺、全空後原請求回 canceled；結果已發布後才到的取消不改結果。
+**核權要存的欄位**：原請求檔消費後會被刪，B-203 要的兩個 UID 都在接件時記進工作狀態；kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`（原請求檔的擁有 UID）與 `owner_exec_uid`（接件那格 tick 的有效 UID，即 node inst 的執行帳號）。
+
+〔使用者方向 2026-09-30，第十八批〕目前只有 kernel 的 work 任務支援取消。LLM 請求與 agent 自跑 once 的取消延後（[P-008](README.md#p-008)）；到時要補的欄位（forward-state 與 agent 請求的 `submitter_uid`、`canceling` 階段）一併列在那裡。
 
 ## P-408．程式契約〔建議預設，未拍板〕
 
 | 完整 argv | 讀寫、身分與輸出 |
 |---|---|
 | `aos-work --work-dir W` | 讀 W/request.json 及目標身分可讀的材料，以 `base` 跑內層 inst；寫捕獲檔、W/result.json。用工作 node 身分，無切身分權限 |
-| `aos-llm [--node N] --config C` | 一項 module 任務，node 省略用 cwd（tick 設為 node 根）；直接讀 C、收件、池狀態及既有結果，保存狀態／待送封套。只對已提交的工作材料登記、叫醒 once；tick 負責 commit 後投件、清收件原件，用 N 的 user |
-| `aos-llm-call --work-dir W --config C` | C 含本次派出時固定的必要設定；讀 C、私有 key_ref 與 W/request.json，只送一次 HTTP，寫 W/result.json；請求有 stream_path 時邊收邊寫該檔；用池管理 node 的 user |
+| `aos-llm [--node N] --config C` | 一項 module 任務，node 省略用 cwd（tick 設為 node 根）；C 可相對，依 cwd 解。讀 C、池狀態、既有結果，及收件或 forward 已接納的材料（看任務有沒有宣告 `llm.chat`，[S-307](../scheduling/llm.md)）；保存狀態／待送封套。只對已提交的工作材料登記、叫醒 once；tick 負責 commit 後投件、清收件原件，用 N 的 user |
+| `aos-llm-call --work-dir W --config C` | C 是 aos-llm 派出時固定在 `W/llm-config.json` 的本池設定，argv 帶絕對路徑；讀 C、私有 key_ref 與 W/request.json，只送一次 HTTP，寫 W/result.json；請求有 stream_path 時邊收邊寫該檔；用池管理 node 的 user |
 
 三支程式 stdin 都是 `/dev/null`，stdout 保留為空（業務輸出走檔案），stderr 只放無 key 的 `代號: 白話` 診斷；內層 inst 的 stdin／stdout／stderr 另依 P-403。不新增必需 `AOS_*` 環境變數，PATH／目標帳號環境及 inst.envs 依 inst 正本，不從呼叫者環境取得池 key。
 
-結束碼：0＝這次處理完成且必要結果已完整發布（工作本身仍可能 failed／unknown）；2＝用法／設定錯，未開始；125＝自身無法開始；1＝已開始處理後自身失敗（包括結果寫不出），不能把未發布結果算成功。aos-llm 的 0 只表示本格步驟完成，不代表 HTTP 工作成功。〔使用者方向 2026-09-29 晚〕串流中途斷線照 [S-305](../scheduling/llm.md)：aos-llm-call 可以非 0 結束，不必另補結果；沒有結果就照下句處理。〔使用者方向 2026-09-29 晚〕stream_path 在送出 HTTP 前就開不了（沒權限、父目錄不在）時不送，結果記 failed／not_sent。重試時這個檔怎麼寫不另規定，由任務自然處理。工作 inst 的內層退出碼只記在工作結果，不能拿 wrapper 的 0 代替。訊號由父程序看 wait 狀態；wrapper 沒寫結果時只按 P-402 的旁檔／unknown 規則處理。
+結束碼：0＝這次處理完成且必要結果已完整發布（工作本身仍可能 failed／unknown）；2＝用法／設定錯，未開始；125＝自身無法開始；1＝已開始處理後自身失敗（包括結果寫不出），不能把未發布結果算成功。aos-llm 的 0 只表示本格步驟完成，不代表 HTTP 工作成功。串流中途斷線、stream_path 開不了時的結束碼與結果依 [S-305](../scheduling/llm.md)。工作 inst 的內層退出碼只記在工作結果，不能拿 wrapper 的 0 代替。訊號由父程序看 wait 狀態；wrapper 沒寫結果時照 [S-401](../scheduling/operations.md) 的證據規則處理。
 
 ## P-409．schema 與最小範例〔建議預設，未拍板〕
 
-每行範例都在 [examples/work/](examples/work/)。schema 只能驗 JSON 形狀，P-002 的重複 key、有限數、位元組上限與執行授權另驗。
+每行範例都在 [examples/work/](examples/work/)；`work.cancel` 的範例在 [examples/messages/](examples/messages/)。schema 只能驗 JSON 形狀，P-002 的重複 key、有限數、位元組上限與執行授權另驗。本篇 schema 都放寬（不認得的欄位忽略），只有 C-07 的禁止鍵出現就拒收。
 
 | schema | 正例 | 主要錯誤例與原因 |
 |---|---|---|
 | [work-request](schemas/work-request.schema.json) | 工作指令 inst 與 stdin 材料 | 零逾時或命令不符 |
-| [work-result](schemas/work-result.schema.json) | 本地結果與 RPC 命令結果 | 成功卻 exit 7、雙 result/error |
-| [llm-config](schemas/llm-config.schema.json) | 池設定 | 明文 api_key |
+| [work-result](schemas/work-result.schema.json) | 本地結果與 RPC 命令結果 | 成功卻 exit 7、雙 result/error、signal 超過 64 |
+| [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) | `work.cancel` 的 stdin 材料；取消請求與拒絕回應 | 空物件、argv 不是 `aos work cancel`、同時帶 result 與 error |
+| [llm-config](schemas/llm-config.schema.json) | 池設定；多一個不認得的欄位仍收 | 明文 `api_key`（[C-07](../contracts.md) 禁止鍵）；endpoint 池寫了 `max_attempts` |
 | [llm-request](schemas/llm-request.schema.json) | LLM 指令 inst 與 stdin 材料（另有串流正例） | 串流檔用相對路徑 |
 | [llm-result](schemas/llm-result.schema.json) | stdout 的 LLM 結果 | 成功漏 message、部分 usage |
 

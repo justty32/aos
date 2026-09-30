@@ -54,7 +54,6 @@
     "invalid_count",
     "pending_requests"
   ],
-  "additionalProperties": false,
   "allOf": [
     {
       "if": {

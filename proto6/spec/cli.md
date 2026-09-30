@@ -9,3 +9,4 @@
 | H-030 CLI 怎麼變成 method、H-035 常用 alias | [cli/mapping-and-alias.md](cli/mapping-and-alias.md) |
 | H-036 七步走到底 | [cli/walkthrough.md](cli/walkthrough.md) |
 | H-034 舊缺口 | [cli/gaps.md](cli/gaps.md) |
+| H-037 除錯指南：出事時看哪裡 | [cli/debugging.md](cli/debugging.md) |

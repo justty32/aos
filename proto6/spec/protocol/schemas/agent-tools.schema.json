@@ -52,7 +52,6 @@
             "required": [
               "kind"
             ],
-            "additionalProperties": false,
             "allOf": [
               {
                 "if": {
@@ -102,14 +101,12 @@
           "result",
           "timeout_ms",
           "output_limit_bytes"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },
   "required": [
     "version",
     "tools"
-  ],
-  "additionalProperties": false
+  ]
 }

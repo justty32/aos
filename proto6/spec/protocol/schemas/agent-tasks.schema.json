@@ -2,5 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agent-tasks.schema.json",
   "title": "proto6 agent-tasks",
-  "$ref": "node-tasks.schema.json"
+  "$ref": "node-tasks.schema.json",
+  "description": "agent 任務表：沿 node-tasks；每項的 user 是禁止鍵（C-07），$ref 展開後也算。",
+  "properties": {
+    "tasks": {
+      "items": {
+        "properties": {
+          "user": false
+        }
+      }
+    }
+  }
 }

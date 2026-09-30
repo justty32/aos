@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "method": "node.provision",
+  "params": {
+    "node_id": "/srv/aos/team/member",
+    "action": "group_create",
+    "group": "aos-team-share",
+    "gid": 2000
+  }
+}

@@ -20,8 +20,7 @@
           "required": [
             "role",
             "content"
-          ],
-          "additionalProperties": false
+          ]
         },
         {
           "$ref": "#/$defs/assistant"
@@ -44,8 +43,7 @@
             "role",
             "tool_call_id",
             "content"
-          ],
-          "additionalProperties": false
+          ]
         }
       ]
     },
@@ -87,16 +85,14 @@
                 "required": [
                   "name",
                   "arguments"
-                ],
-                "additionalProperties": false
+                ]
               }
             },
             "required": [
               "id",
               "type",
               "function"
-            ],
-            "additionalProperties": false
+            ]
           },
           "minItems": 1
         }
@@ -105,7 +101,6 @@
         "role",
         "content"
       ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -146,15 +141,13 @@
           "required": [
             "name",
             "parameters"
-          ],
-          "additionalProperties": false
+          ]
         }
       },
       "required": [
         "type",
         "function"
-      ],
-      "additionalProperties": false
+      ]
     }
   },
   "type": "array",

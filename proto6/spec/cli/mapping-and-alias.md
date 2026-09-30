@@ -10,7 +10,9 @@ alias 先展開；method 是指令去掉 aos、以點連接。IPC params 沿 sch
 {"jsonrpc":"2.0","id":"m1","method":"agent.say","reply_to":"/srv/aos/top","params":{"argv":["aos","agent","say"],"stdin":"/srv/aos/top/public/m1.json","stdout":{"$opt":"inherit"},"stderr":{"$opt":"inherit"}}}
 ```
 
-m1.json 內容是 `{"text":"你好"}`；回話用 `{"text":"收到","in_reply_to":"m1"}`。argv 保留 aos，method 對應收件 node 開放的命令，否則 -32601；跨 node inst 的 envs／指示詞／stdin 風險由使用者承擔。tick 提交後投 outbox、刪原件；result 用 work-result，stdout 只給路徑。schedule recheck/quota set 的本地 stdout 為 accepted:true，usage measure 為 res-usage。work submit/llm chat 跨格等業務結果才回，stdout 分別是 work-result/llm-result。
+m1.json 內容是 `{"text":"你好"}`；回話用 `{"text":"收到","in_reply_to":"m1"}`。argv 保留 aos；收件 node 開放哪些 method、什麼時候回 -32601，以 [B-501](../base/transport.md)、[B-620](../tick.md) 為準（能投件就能用收件 node 的身分跑，[T-08](../terms.md)）；跨 node inst 的 envs／指示詞／stdin 風險由使用者承擔。tick 提交後投 outbox、刪原件；result 用 work-result，stdout 只給路徑。schedule recheck/quota set 的本地 stdout 為 accepted:true，usage measure 為 res-usage。work submit/llm chat 跨格等業務結果才回，stdout 分別是 work-result/llm-result。
+
+〔第十八批〕例外：`aos node tick` 不對應 `node.tick`，而是送 `node.wake`，以 wake 回應的 `registration_id`、`tick_seq` 為起點，再輪詢 `node.show` 等新的一格做完（[B-607](../daemon.md)、[H-004](commands.md) 第 17 列）；`aos work trace`、`aos migrate` 只在本機讀寫，不對應 method；`aos once clear` 對應 IPC `once.clear`。熱重載沒有 CLI，用 `kill -HUP`。
 
 ## H-035．常用 alias〔工程預設〕
 
@@ -20,7 +22,7 @@ m1.json 內容是 `{"text":"你好"}`；回話用 `{"text":"收到","in_reply_to
 | `aos ls`／`aos show`／`aos new` | `aos node ls`／`show`／`new` |
 | `aos register`／`aos unregister` | `aos node register`／`unregister` |
 | `aos wake`／`aos pause`／`aos resume` | `aos node wake`／`pause`／`resume` |
-| `aos tick`／`aos log` | `aos node tick`／`log` |
+| `aos tick`／`aos log` | `aos node tick`／`log`（`aos tick` 也是送 `node.wake` 再等 `tick_seq` 前進，不直接跑 `aos-tick`，[B-627](../tick.md)） |
 | `aos say`／`aos listen` | `aos agent say`／`listen` |
 | `aos run` | `aos inst run` |
 | `aos clean N …` | `aos clean run N …` |

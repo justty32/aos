@@ -65,6 +65,5 @@
     "seq",
     "phase",
     "finished_at_ms"
-  ],
-  "additionalProperties": false
+  ]
 }

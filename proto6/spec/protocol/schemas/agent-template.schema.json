@@ -39,14 +39,12 @@
         "config/tools.json",
         ".gitignore",
         "config/clean.json"
-      ],
-      "additionalProperties": false
+      ]
     }
   },
   "required": [
     "version",
     "node_id",
     "files"
-  ],
-  "additionalProperties": false
+  ]
 }

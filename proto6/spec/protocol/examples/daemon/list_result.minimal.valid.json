@@ -18,8 +18,10 @@
         "stopping": false,
         "cgroup": null,
         "boot_id": "boot-20260929-a",
+        "registration_id": "reg-91c2",
         "registered": false,
         "last_tick": {
+          "tick_seq": 1,
           "outcome": "completed",
           "started_at_ms": 1000,
           "ended_at_ms": 2000,

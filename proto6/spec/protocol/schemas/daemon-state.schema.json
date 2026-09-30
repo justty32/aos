@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "daemon state.json（P-116）；持久檔，不認得的欄位忽略（C-07）",
   "type": "object",
   "properties": {
     "version": {
@@ -17,24 +18,7 @@
             "$ref": "common.schema.json#/$defs/NodeId"
           },
           "identity_grant": {
-            "type": "array",
-            "items": {
-              "allOf": [
-                {
-                  "$ref": "daemon-registration.schema.json#/$defs/User"
-                },
-                {
-                  "not": {
-                    "enum": [
-                      0,
-                      "root"
-                    ]
-                  }
-                }
-              ]
-            },
-            "minItems": 1,
-            "uniqueItems": true
+            "$ref": "daemon-registration.schema.json#/$defs/IdentityGrantOpen"
           },
           "interval_ms": {
             "type": "integer",
@@ -42,7 +26,7 @@
             "maximum": 9007199254740991
           },
           "provision": {
-            "$ref": "daemon-registration.schema.json#/$defs/ProvisionGrant"
+            "$ref": "daemon-registration.schema.json#/$defs/ProvisionGrantOpen"
           },
           "parent_id": {
             "anyOf": [
@@ -72,7 +56,6 @@
           "pending",
           "once"
         ],
-        "additionalProperties": false,
         "allOf": [
           {
             "if": {
@@ -117,6 +100,5 @@
     "version",
     "clean_shutdown",
     "registrations"
-  ],
-  "additionalProperties": false
+  ]
 }

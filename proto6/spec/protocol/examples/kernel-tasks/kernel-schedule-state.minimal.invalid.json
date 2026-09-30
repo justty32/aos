@@ -9,7 +9,7 @@
       "ready_seq": 1,
       "due_ms": null,
       "summary_commit": null,
-      "wake_after_end_ms": null
+      "wake_mark": null
     }
   ]
 }

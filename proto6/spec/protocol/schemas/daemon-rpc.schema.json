@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "daemon 公開 IPC 請求與回應（P-103～107、P-111、P-115）",
+  "title": "daemon 公開 IPC 請求與回應（P-103～107、P-111、P-115）；嚴格，不認得的欄位拒絕（C-07）",
   "$defs": {
     "AckResult": {
       "type": "object",
@@ -14,6 +14,46 @@
       ],
       "additionalProperties": false
     },
+    "WakeResult": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "registration_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        },
+        "tick_seq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "node_id",
+        "registration_id",
+        "tick_seq"
+      ],
+      "additionalProperties": false
+    },
+    "ClearResult": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "cleared": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "node_id",
+        "cleared"
+      ],
+      "additionalProperties": false
+    },
     "GetResult": {
       "type": "object",
       "properties": {
@@ -21,24 +61,7 @@
           "$ref": "common.schema.json#/$defs/NodeId"
         },
         "identity_grant": {
-          "type": "array",
-          "items": {
-            "allOf": [
-              {
-                "$ref": "daemon-registration.schema.json#/$defs/User"
-              },
-              {
-                "not": {
-                  "enum": [
-                    0,
-                    "root"
-                  ]
-                }
-              }
-            ]
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          "$ref": "daemon-registration.schema.json#/$defs/IdentityGrant"
         },
         "interval_ms": {
           "type": "integer",
@@ -171,6 +194,9 @@
               "type": "null"
             }
           ]
+        },
+        "registration_id": {
+          "$ref": "common.schema.json#/$defs/ID"
         }
       },
       "required": [
@@ -186,7 +212,8 @@
         "cgroup",
         "boot_id",
         "registered",
-        "last_tick"
+        "last_tick",
+        "registration_id"
       ],
       "additionalProperties": false,
       "allOf": [
@@ -334,6 +361,11 @@
     "LastTick": {
       "type": "object",
       "properties": {
+        "tick_seq": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
         "outcome": {
           "enum": [
             "running",
@@ -379,6 +411,7 @@
         }
       },
       "required": [
+        "tick_seq",
         "outcome",
         "started_at_ms",
         "ended_at_ms",
@@ -885,6 +918,29 @@
                 "method",
                 "params"
               ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "once.clear"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
             }
           ]
         }
@@ -901,6 +957,12 @@
               "oneOf": [
                 {
                   "$ref": "#/$defs/AckResult"
+                },
+                {
+                  "$ref": "#/$defs/WakeResult"
+                },
+                {
+                  "$ref": "#/$defs/ClearResult"
                 },
                 {
                   "$ref": "#/$defs/GetResult"
@@ -966,6 +1028,7 @@
                                 "unsupported",
                                 "path_not_granted",
                                 "conflict",
+                                "group_not_granted",
                                 "provision_failed",
                                 "start_failed",
                                 "resource_observation_failed",

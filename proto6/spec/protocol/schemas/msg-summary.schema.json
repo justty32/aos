@@ -52,6 +52,5 @@
     "usage": {
       "$ref": "res-usage.schema.json"
     }
-  },
-  "additionalProperties": false
+  }
 }

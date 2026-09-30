@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "daemon 固定佈建動作參數（P-107）",
+  "title": "daemon 固定佈建動作參數（P-107、B-609）",
   "oneOf": [
     {
       "type": "object",
@@ -141,6 +141,93 @@
         "action",
         "path",
         "project_id"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "cgroup_delegate"
+        }
+      },
+      "required": [
+        "node_id",
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "group_create"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "group"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "group_add_member"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "user": {
+          "$ref": "daemon-registration.schema.json#/$defs/User"
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "group",
+        "user"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "action": {
+          "const": "chgrp"
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "node_id",
+        "action",
+        "path",
+        "group"
       ],
       "additionalProperties": false
     }

@@ -3,6 +3,7 @@
   "id": "h1",
   "method": "daemon.helper.stop",
   "params": {
-    "node_id": "/srv/aos/member"
+    "node_id": "/srv/aos/member",
+    "grace_ms": 2000
   }
 }

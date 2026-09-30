@@ -35,8 +35,7 @@
           "required": [
             "quota_us",
             "period_us"
-          ],
-          "additionalProperties": false
+          ]
         },
         "memory": {
           "type": "object",
@@ -49,8 +48,7 @@
           },
           "required": [
             "bytes"
-          ],
-          "additionalProperties": false
+          ]
         },
         "pids": {
           "type": "object",
@@ -63,8 +61,7 @@
           },
           "required": [
             "max"
-          ],
-          "additionalProperties": false
+          ]
         },
         "llm": {
           "type": "array",
@@ -83,8 +80,7 @@
             "required": [
               "pool_id",
               "concurrent_requests"
-            ],
-            "additionalProperties": false
+            ]
           },
           "minItems": 1
         },
@@ -99,12 +95,11 @@
           },
           "required": [
             "bytes"
-          ],
-          "additionalProperties": false
+          ]
         }
       },
       "required": [],
-      "additionalProperties": false
+      "description": "範本六類的配額欄位形狀固定；其他鍵是 kernel 自訂資源，形狀由定義它的 kernel 定（P-501、T-06）。"
     }
   },
   "required": [
@@ -112,6 +107,5 @@
     "node_id",
     "seq",
     "resources"
-  ],
-  "additionalProperties": false
+  ]
 }

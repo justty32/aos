@@ -30,6 +30,17 @@
 | `cwd` | 路徑字串，或下表選項 | inst 的 base；執行前須為資料夾 |
 | `envs` | 鍵值都是字串的物件，或 `clear` 選項 | `{}`；疊到 runner 的環境上，只加不減 |
 
+## inst 目標：檔案或資料夾
+
+〔使用者方向 2026-09-29；第十八批從 [P-010](../protocol/README.md) 搬上〕沿 proto5 `aos-exec xxx` 的慣例，凡是「給一個目標去跑 inst」（daemon 登記、runner、人手直接跑）都照這張表找 inst：
+
+| 目標 `xxx` 是 | 用哪份 inst | base（相對路徑起點、`cwd` 沒寫時的預設） |
+|---|---|---|
+| 檔案 | 就是它，當 inst JSON 讀 | 檔案所在的資料夾 |
+| 資料夾 | 先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json` | `xxx` 自己（不是 `.aos/`） |
+
+〔使用者方向 2026-09-29〕首版**不提供**改尋找路徑的選項（環境變數或旗標都沒有），只照上表。先看是不是資料夾，再當檔案；資料夾裡兩個位置都沒有＝用法錯（2）。node 是資料夾；`once` 工作通常是單檔。登記的 id 就是這個目標路徑。投件時「目標是不是 node」也照這張表的資料夾那列判斷（[B-624](../tick.md)）。
+
 ## 先決定身分，切完才解析
 
 〔使用者方向 2026-09-29〕daemon 只取原始 `user` 做額度檢查，不展開其他欄位。身分按可信註冊關係繼承，不看資料夾位置。名稱與 UID 比對同一 Linux 身分，補充群組照系統帳號設定（等同 `initgroups`），inst 不另帶群組。
@@ -70,7 +81,7 @@
 
 開始執行後，找不到程式回 127，無執行權回 126；這兩種算跑完一次，有 `exit` 就照寫。正常退出用子程式結束碼，被訊號 N 結束則用 128+N。`exit` 寫十進位加換行，預設覆蓋、`append` 則追加，寫完 fsync 檔案與父目錄。runner 的用法錯誤回 2。子程式也可能退出 125，是否啟動須看結果證據。
 
-子程式另開 session／process group（`setsid`）；逾時先對整組 TERM，2 秒後仍在就 KILL，對應碼為 143／137。後代脫離 process group 也須清空、結果只發布一次，見 [工作執行](execution.md)。runner 明示的 stderr 覆寫蓋過 inst（含 merge／inherit／append）；CLI 另定。
+子程式另開 session／process group（`setsid`）；逾時先對整組 TERM，2 秒後仍在就 KILL，對應碼為 143／137。這 2 秒只指 inst 自己的逾時；daemon 收尾整個框用 `shutdown_grace_ms`（[B-604](../daemon.md)），兩者不混用。後代脫離 process group 也須清空、結果只發布一次，見 [工作執行](execution.md)。runner 明示的 stderr 覆寫蓋過 inst（含 merge／inherit／append）；CLI 另定。
 
 | 錯誤代號 | 意思 |
 |---|---|

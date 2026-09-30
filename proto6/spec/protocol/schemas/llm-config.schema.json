@@ -40,7 +40,8 @@
             "minimum": 1,
             "maximum": 9007199254740991,
             "description": "只給 schedule=aos（省略即此值）的池；schedule=endpoint 時不允許這欄（P-405）"
-          }
+          },
+          "api_key": false
         },
         "required": [
           "id",
@@ -48,7 +49,6 @@
           "model",
           "quota_scope"
         ],
-        "additionalProperties": false,
         "if": {
           "properties": {
             "schedule": {
@@ -74,5 +74,5 @@
     "version",
     "pools"
   ],
-  "additionalProperties": false
+  "description": "LLM 池設定（P-405）。不認得的欄位忽略；api_key 是永遠禁止的鍵（C-07），key 只能用 key_ref 指到檔案。"
 }

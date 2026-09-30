@@ -5,7 +5,14 @@
       "member_id": "a",
       "quota_seq": 1,
       "applied": true,
-      "error": null
+      "error": null,
+      "over_limit": {
+        "resource": "memory",
+        "limit": 1073741824,
+        "current": 1300000000,
+        "observed_at_ms": 1000
+      }
     }
-  ]
+  ],
+  "over_allocated": []
 }

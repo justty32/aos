@@ -43,6 +43,5 @@
     "history_ids",
     "estimated_input_tokens",
     "estimate_kind"
-  ],
-  "additionalProperties": false
+  ]
 }

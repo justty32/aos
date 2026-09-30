@@ -65,7 +65,6 @@
     "delivery",
     "response_consumed"
   ],
-  "additionalProperties": false,
   "allOf": [
     {
       "if": {
