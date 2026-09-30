@@ -22,7 +22,7 @@
 
 一個 agent 對應 Linux 使用者；cgroup 管執行資源，project quota 管自有容量（09-29 [裁定](2026-09-29-verdicts.md)：磁碟額度可選、只記帳，不是硬上限）。工具沿用委託 agent 的權限與資源，並行工具不能各獲一份倍增額度。外部 workspace 的容量歸屬另算，讀寫引起的記憶體消耗仍可能計入。
 
-排程決定額度，基底在工作開始前落實，不靠工具自律。控制程序不跟著進入 agent 的資源域。例如 agent 的工具記憶體超限，管理端仍須能回報原因。日常啟動一定要經過一個特權點（切換 UID、放進 root 擁有的 cgroup 都要權限），09-29 裁定為極小 root helper：主 daemon 不是 root（後續已改：第八批改為 sudo 模式開 daemon 再 fork helper，現見 B-303），helper 只做查登記→建 leaf→降權→exec 固定 runner（[B-303](../spec/base/identity-resources.md)）；整套 aos 的外牆仍待選定；取消逐工具 bwrap 必須和這些機制一起遷移。〔第十九批取代註：切換 UID、放進 cgroup 屬標準配備而非 tick 核心；helper 拿不到時功能受限，cgroup 拿不到時走內建備援，見[第十九批方向](verdicts/10-tick-minimal-core.md)。〕
+排程決定額度，基底在工作開始前落實，不靠工具自律。控制程序不跟著進入 agent 的資源域。例如 agent 的工具記憶體超限，管理端仍須能回報原因。日常啟動一定要經過一個特權點（切換 UID、放進 root 擁有的 cgroup 都要權限），09-29 裁定為極小 root helper：主 daemon 不是 root（後續已改：第八批改為 sudo 模式開 daemon 再 fork helper，現見 B-303），helper 只做查登記→建 leaf→降權→exec 固定 runner（[B-303](../spec/settled/helper.md)）；整套 aos 的外牆仍待選定；取消逐工具 bwrap 必須和這些機制一起遷移。〔第十九批取代註：切換 UID、放進 cgroup 屬標準配備而非 tick 核心；helper 拿不到時功能受限，cgroup 拿不到時走內建備援，見[第十九批方向](verdicts/10-tick-minimal-core.md)。〕
 
 ## 4．儲存與持久狀態：程序不在，事情還在
 
@@ -32,7 +32,7 @@ agent 資料夾長存，程序可以短暫；請求、結果與未完成交接�
 
 ## 5．通訊與交接：收到、做完、知道對方收到
 
-JSON-RPC 可以經檔案傳送；某次短命處理讀請求、寫回應，就能扮演 server 的角色，不必常駐。spec 目前把收件的 server 角色交給控制接入口（[B-501／B-502](../spec/base/transport.md)），tick 只是發出 checkpoint.commit 的一方（後續已改：B-502 已刪，現見 B-501／tick 與 [tick.md](../spec/tick.md)）；讓 tick 自己當 server 只是曾討論的做法，尚未採納（見[環境穩定性](between-ticks-configuration.md)）。投件與回應表達事情，通知只讓接收端早點處理；持久記錄與去重承擔不漏件的責任。
+JSON-RPC 可以經檔案傳送；某次短命處理讀請求、寫回應，就能扮演 server 的角色，不必常駐。spec 目前把收件的 server 角色交給控制接入口（[B-501／B-502](../spec/base/transport.md)），tick 只是發出 checkpoint.commit 的一方（後續已改：B-502 已刪，現見 B-501／tick 與 [tick.md](../spec/settled/tick.md)）；讓 tick 自己當 server 只是曾討論的做法，尚未採納（見[環境穩定性](between-ticks-configuration.md)）。投件與回應表達事情，通知只讓接收端早點處理；持久記錄與去重承擔不漏件的責任。
 
 例如同一結果重送，接收者不應重複結算。RPC id 只對應請求與回應，不能保證外部副作用只發生一次。接件確認、完成結果與結果已取走要如何區分，仍需逐項定義。立即喚醒與逐字串流也是兩個不同問題。
 

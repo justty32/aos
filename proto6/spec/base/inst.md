@@ -2,7 +2,7 @@
 
 # proto6 inst 第 1 版
 
-〔使用者方向 2026-09-29〕以 [proto5 inst-posix 第 1 版](../../../proto5/spec/inst-posix/README.md) 加頂層 `user` 為 proto6 第 1 版，不管 proto5 相容。inst 只描述一次 POSIX 執行；排程、資源框、tick 任務與 git 提交不在其中，100＝做完等產品退出碼約定也另定。〔使用者方向 2026-09-30，第十九批〕aos-exec 是跑一份 inst 的程式；`aos-tick` 的核心本質上是加了一些功能的 aos-exec，任務表的每項是 inst 的超集（[B-626](../tick.md)、[B-620](../tick.md)）。
+〔使用者方向 2026-09-29〕以 [proto5 inst-posix 第 1 版](../../../proto5/spec/inst-posix/README.md) 加頂層 `user` 為 proto6 第 1 版，不管 proto5 相容。inst 只描述一次 POSIX 執行；排程、資源框、tick 任務與 git 提交不在其中，100＝做完等產品退出碼約定也另定。〔使用者方向 2026-09-30，第十九批〕aos-exec 是跑一份 inst 的程式；`aos-tick` 的核心本質上是加了一些功能的 aos-exec，任務表的每項是 inst 的超集（[B-626](../settled/tick.md)、[B-620](../settled/tick.md)）。
 
 ## 形狀與版本
 
@@ -21,7 +21,7 @@
 
 | 欄位 | 解完的值 | 省略時與用途 |
 |---|---|---|
-| `user` | Linux 帳號名稱字串或非負整數 UID；布林不算 | 省略／空字串＝繼承上層（有效上層，[B-628](../tick.md)），頂層繼承通用 user；任務表的項目省略時用該 node 的執行帳號；禁指示詞 |
+| `user` | Linux 帳號名稱字串或非負整數 UID；布林不算 | 省略／空字串＝繼承上層（有效上層，[B-628](../settled/tick.md)），頂層繼承通用 user；任務表的項目省略時用該 node 的執行帳號；禁指示詞 |
 | `argv` | 非空字串陣列，首項不可空字串 | 必填；首項是程式，其餘是原樣參數 |
 | `stdin` | 路徑字串，或下表選項 | `/dev/null`；指定的是檔案，不是輸入內容 |
 | `stdout` | 路徑字串，或下表選項 | `/dev/null`；一般檔案預設建立並清空 |
@@ -39,11 +39,11 @@
 | 檔案 | 就是它，當 inst JSON 讀 | 檔案所在的資料夾 |
 | 資料夾 | 先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json` | `xxx` 自己（不是 `.aos/`） |
 
-〔使用者方向 2026-09-29〕首版**不提供**改尋找路徑的選項（環境變數或旗標都沒有），只照上表。先看是不是資料夾，再當檔案；資料夾裡兩個位置都沒有＝用法錯（2）。node 是資料夾；`once` 工作通常是單檔。登記的 id 就是這個目標路徑。〔使用者方向 2026-09-30，第十九批第 7 條〕辨識一個 tick 時，給的是 node 資料夾裡的 `.aos/inst.json` 或 `inst.json` 路徑，一律正規化成那個資料夾（`.aos/inst.json` 的是 `.aos` 的上一層）；once 的單檔目標不做這個正規化。投件時「目標是不是 node」也照這張表的資料夾那列判斷（[B-624](../tick.md)）。
+〔使用者方向 2026-09-29〕首版**不提供**改尋找路徑的選項（環境變數或旗標都沒有），只照上表。先看是不是資料夾，再當檔案；資料夾裡兩個位置都沒有＝用法錯（2）。node 是資料夾；`once` 工作通常是單檔。登記的 id 就是這個目標路徑。〔使用者方向 2026-09-30，第十九批第 7 條〕辨識一個 tick 時，給的是 node 資料夾裡的 `.aos/inst.json` 或 `inst.json` 路徑，一律正規化成那個資料夾（`.aos/inst.json` 的是 `.aos` 的上一層）；once 的單檔目標不做這個正規化。投件時「目標是不是 node」也照這張表的資料夾那列判斷（[B-624](../settled/tick.md)）。
 
 ## 先決定身分，切完才解析
 
-〔使用者方向 2026-09-29〕daemon 只取原始 `user` 做額度檢查，不展開其他欄位。〔第十九批改寫〕省略時繼承有效上層的身分：預設上層看資料夾包含、登記可以覆蓋（[B-628](../tick.md)）；身分本身不由資料夾位置決定。名稱與 UID 比對同一 Linux 身分，補充群組照系統帳號設定（等同 `initgroups`），inst 不另帶群組。
+〔使用者方向 2026-09-29〕daemon 只取原始 `user` 做額度檢查，不展開其他欄位。〔第十九批改寫〕省略時繼承有效上層的身分：預設上層看資料夾包含、登記可以覆蓋（[B-628](../settled/tick.md)）；身分本身不由資料夾位置決定。名稱與 UID 比對同一 Linux 身分，補充群組照系統帳號設定（等同 `initgroups`），inst 不另帶群組。
 
 額度由上層註冊時授予，詳見 [B-301／B-303](identity-resources.md)。授權不過就根本不跑，回 125、不寫 `exit`，並留下待處理事項。先安置已配置資源、切身分，再由 runner 解指示詞、驗欄位、建 `cwd`／父目錄與開串流、`exit` 檔；daemon／helper 不代開任意路徑。無 helper 時 runner 直接以通用 user 做相同工作。
 
@@ -56,7 +56,7 @@
 - 七個執行欄位、`argv` 元素、`envs` 值與選項的 `$val` 可放取值指示詞，展開後驗型別；key、`user`、`_metainfo` 不展開。整份頂層也可用指示詞，但身分接法見篇末。
 - base＝輸入資料夾，或輸入 `.json` 的所在資料夾。切身分後依序解整份頂層 → `cwd` → `argv` → `envs` → 四個路徑欄；`_metainfo` 取自頂層展開結果。整份及 `cwd` 以 base 解相對路徑／`$ref`，其餘以解出的 `cwd` 為中心，絕對路徑照字面用。`cwd` 的 `mkdir` 先建目錄再解其他欄位；四個路徑欄空字串等於省略，但 append／mkdir 不接受空路徑。
 - 各執行欄位從獨立循環鏈開始，進入引用得來的 `argv`／`envs` 容器時把鏈帶下去；跨欄位引用同一檔不算循環。
-- `envs` 的 key 不可空或含 `=`，值解完須為字串；`$` 開頭的 key 會讓整包變成指示詞，不能當環境變數。無 `clear` 就複製 runner 環境再疊上，有則從空環境開始；runner 不注入 `AOS_*`，唯一例外〔使用者方向 2026-09-30，第十九批第 9 條〕是 daemon 開 tick 時給的通道變數（[B-612](../daemon.md)），任務照一般繼承拿到，`clear` 會把它們一起清掉；另外 helper 以指定帳號開任務時，runner 把繼承來的鎖 fd 號碼放進 `AOS_TICK_LOCK_FD`（[B-609](../daemon.md)、[B-602](../tick.md)），它不受 `clear` 影響。`argv[0]` 用最後的 PATH 找，未設 PATH 時用系統預設路徑（proto5 的 `os.defpath`，通常 `/bin:/usr/bin`）。
+- `envs` 的 key 不可空或含 `=`，值解完須為字串；`$` 開頭的 key 會讓整包變成指示詞，不能當環境變數。無 `clear` 就複製 runner 環境再疊上，有則從空環境開始；runner 不注入 `AOS_*`，唯一例外〔使用者方向 2026-09-30，第十九批第 9 條〕是 daemon 開 tick 時給的通道變數（[B-612](../settled/daemon.md)），任務照一般繼承拿到，`clear` 會把它們一起清掉；另外 helper 以指定帳號開任務時，runner 把繼承來的鎖 fd 號碼放進 `AOS_TICK_LOCK_FD`（[B-609](../settled/daemon.md)、[B-602](../settled/tick.md)），它不受 `clear` 影響。`argv[0]` 用最後的 PATH 找，未設 PATH 時用系統預設路徑（proto5 的 `os.defpath`，通常 `/bin:/usr/bin`）。
 - 不自動呼叫 shell，不拆參數、展開萬用字元或解重導向；需要就明寫 `["sh","-c","…"]`。
 
 ## 選項
@@ -77,11 +77,11 @@
 
 ## 執行與錯誤
 
-〔使用者方向 2026-09-29〕驗完才跑。授權、解析驗證與執行前讀寫／建目錄失敗，自己的 stderr 印「代號: 白話」，回 125，**不寫 `exit`**。無 mkdir 時 `exit` 父目錄須已存在。前置檢查可能已建目錄或清空輸出檔；撤回範圍〔下一步納入 git 時補〕照 git 收尾任務的組（草稿 [B-630](../tick.md)）；本輪沒有還原。
+〔使用者方向 2026-09-29〕驗完才跑。授權、解析驗證與執行前讀寫／建目錄失敗，自己的 stderr 印「代號: 白話」，回 125，**不寫 `exit`**。無 mkdir 時 `exit` 父目錄須已存在。前置檢查可能已建目錄或清空輸出檔；撤回範圍〔下一步納入 git 時補〕照 git 收尾任務的組（草稿 [B-630](../settled/tick.md)）；本輪沒有還原。
 
 開始執行後，找不到程式回 127，無執行權回 126；這兩種算跑完一次，有 `exit` 就照寫。正常退出用子程式結束碼，被訊號 N 結束則用 128+N。`exit` 寫十進位加換行，預設覆蓋、`append` 則追加，寫完 fsync 檔案與父目錄。runner 的用法錯誤回 2。子程式也可能退出 125，是否啟動須看結果證據。
 
-子程式另開 session／process group（`setsid`）；逾時先對整組 TERM，2 秒後仍在就 KILL，對應碼為 143／137。這 2 秒只指 inst 自己的逾時；daemon 收尾整個框用 `shutdown_grace_ms`（[B-604](../daemon.md)），兩者不混用。後代脫離 process group 也須清空、結果只發布一次，見 [工作執行](execution.md)。runner 明示的 stderr 覆寫蓋過 inst（含 merge／inherit／append）；CLI 另定。
+子程式另開 session／process group（`setsid`）；逾時先對整組 TERM，2 秒後仍在就 KILL，對應碼為 143／137。這 2 秒只指 inst 自己的逾時；daemon 收尾整個框用 `shutdown_grace_ms`（[B-604](../settled/daemon.md)），兩者不混用。後代脫離 process group 也須清空、結果只發布一次，見 [工作執行](execution.md)。runner 明示的 stderr 覆寫蓋過 inst（含 merge／inherit／append）；CLI 另定。
 
 | 錯誤代號 | 意思 |
 |---|---|

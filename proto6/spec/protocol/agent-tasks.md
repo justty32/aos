@@ -4,9 +4,9 @@
 
 ## P-700．範圍〔第十二批裁定；工程預設〕
 
-`aos-agent-step` 推進 module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](node.md) 使用 node 的 user 與鎖；--node 省略用 cwd，任務直接讀設定。
+`aos-agent-step` 推進 module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](../settled/protocol/node.md) 使用 node 的 user 與鎖；--node 省略用 cwd，任務直接讀設定。
 
-LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，或自己經通道掛 once（`node.mount`，[B-613](../daemon.md)）。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
+LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，或自己經通道掛 once（`node.mount`，[B-613](../settled/daemon.md)）。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
 
 ## P-701．設定檔〔A-101～102；工程預設〕
 
@@ -22,9 +22,9 @@ LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，
 | `system_prompt` | system 文字，可空 |
 | `tools_file` | 固定 `config/tools.json` |
 | `tools.target_node` | node id＝交該 kernel；null＝agent 自己經通道掛 once |
-| `daemon_socket` | 可省；daemon IPC socket 絕對路徑，省略就讀環境變數 `AOS_DAEMON_SOCKET`（[P-117](daemon/channel.md)）。只有 agent 由人手或 cron 跑、又想連 daemon 時才需要寫 |
+| `daemon_socket` | 可省；daemon IPC socket 絕對路徑，省略就讀環境變數 `AOS_DAEMON_SOCKET`（[P-117](../settled/protocol/daemon/channel.md)）。只有 agent 由人手或 cron 跑、又想連 daemon 時才需要寫 |
 
-設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。〔使用者方向 2026-09-29，第十六批〕**對 LLM 池（`llm.target_node`）有沒有投件權，設定檢查不先擋**：沒權限就在投件那一步報 `target_not_writable`、丟掉待送檔（[B-624](../tick.md)、[S-301](../scheduling/llm.md)）。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
+設定不含 key／endpoint／user。驗地址、回件權限及工具；模型由目標驗，不探測 HTTP。〔使用者方向 2026-09-29，第十六批〕**對 LLM 池（`llm.target_node`）有沒有投件權，設定檢查不先擋**：沒權限就在投件那一步報 `target_not_writable`、丟掉待送檔（[B-624](../settled/tick.md)、[S-301](../scheduling/llm.md)）。設定無效就在 `.aos/attention/open/` 記事項、停相關新工作，仍收已派工作的結果；修好後讀目前檔案重驗。`state/agent/config-state.json`（[schema](schemas/agent-config-state.schema.json)）的 `issue` 記未解問題，不保存設定快照。
 
 改設定的方式與「任務不改 `config/`」這條軟性原則，以 [A-102](../agent/configuration.md) 為準。
 
@@ -43,7 +43,7 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 | 路徑 | 用途 |
 |---|---|
 | `state/messages/requests/<id>.json`、`state/messages/responses/<id>.json` | 已消費的完整 RPC 原 bytes，供 tick 核對後刪原件 |
-| `.aos/outbox/requests/<id>.json`、`.aos/outbox/responses/<id>.json` | [P-206](node.md) 待送封套，tick 提交後投件 |
+| `.aos/outbox/requests/<id>.json`、`.aos/outbox/responses/<id>.json` | [P-206](../settled/protocol/node.md) 待送封套，tick 提交後投件 |
 | `state/messages/meta/<id>.json` | [agent-request](schemas/agent-request.schema.json)，目標與配對 |
 | `state/agent/inputs/<input_id>.json` | [agent-input](schemas/agent-input.schema.json)，回址／seq／狀態／待收 ID |
 | `state/agent/history/<event_id>.json` | [agent-history](schemas/agent-history.schema.json)，每事件一檔 |
@@ -63,14 +63,14 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 
 ## P-704．一項 module、一項任務〔第十二批裁定；工程預設〕
 
-行為（每格做什麼、一格處理幾件）以 [agent 預設任務](../agent/README.md)、[A-201](../agent/input.md) 為準，本條只留介面。完整 argv 是 `aos-agent-step [--node N]`，省略 node 就用 cwd（tick 設為 node 根）；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`。〔第十九批，使用者方向 10〕任務帶別的 `user` 時，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」動作開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`，沒有 helper 時該項依 [B-620](../tick.md) 回 125（功能受限）。〔第十九批〕手動跑完整一格：`aos node tick N` 經 daemon 跑並等格次，或直接跑 `aos-tick`（風險自負，沒有通道，[B-627](../tick.md)）。
+行為（每格做什麼、一格處理幾件）以 [agent 預設任務](../agent/README.md)、[A-201](../agent/input.md) 為準，本條只留介面。完整 argv 是 `aos-agent-step [--node N]`，省略 node 就用 cwd（tick 設為 node 根）；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`。〔第十九批，使用者方向 10〕任務帶別的 `user` 時，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」動作開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`，沒有 helper 時該項依 [B-620](../settled/tick.md) 回 125（功能受限）。〔第十九批〕手動跑完整一格：`aos node tick N` 經 daemon 跑並等格次，或直接跑 `aos-tick`（風險自負，沒有通道，[B-627](../settled/tick.md)）。
 
 | 任務 id | kind／group／needs | 內容 |
 |---|---|---|
 | agent | agent／省略／省略 | 收話與結果、推進輸入、準備工作及回覆、記用量與摘要 |
 | clean | custom／省略／省略 | `aos-clean --config config/clean.json`，到期才清理 |
 
-[任務表](examples/agent-tasks/agent-tasks.minimal.valid.json) 最外層是 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`；每項是帶 `_metainfo` 的 inst，加 `id`、`kind`。〔使用者方向 2026-09-30，第十九批，撤 C-07 永遠禁止鍵〕任務可帶 `user`（[正例](examples/agent-tasks/agent-tasks.task-user.valid.json)，[B-620](../tick.md)），[schema](schemas/agent-tasks.schema.json) 不再擋；一般任務的 group、needs、指示詞及整份 `$ref` 沿 P-202。
+[任務表](examples/agent-tasks/agent-tasks.minimal.valid.json) 最外層是 `{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[...]}`；每項是帶 `_metainfo` 的 inst，加 `id`、`kind`。〔使用者方向 2026-09-30，第十九批，撤 C-07 永遠禁止鍵〕任務可帶 `user`（[正例](examples/agent-tasks/agent-tasks.task-user.valid.json)，[B-620](../settled/tick.md)），[schema](schemas/agent-tasks.schema.json) 不再擋；一般任務的 group、needs、指示詞及整份 `$ref` 沿 P-202。
 
 aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、stdout 空、stderr 診斷。0 成功或沒事；2 用法錯；125 鎖或前置不符；1 處理／保存失敗，交標準配備還原組。可保存的 failed／unknown／設定問題是業務狀態；commit／還原故障由標準配備回 3 並停格。clean 的輸出與結束碼依 [P-605](ops.md)。
 
@@ -80,11 +80,11 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-706．組 context 與發 LLM〔A-302～303、P-406；工程預設〕
 
-行為（選 input、context 順序、估算與 `context_over_budget`、串流、鬧鐘）以 [A-302](../agent/memory.md) 為準。格式：固定的請求 ID、context、meta、usage 存放見 P-703；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；要串流就在業務 JSON 帶 `stream_path`（[llm-work P-406](llm-work.md)）。範本預設在封套設鬧鐘 `alarm_ms`（格式見 [node P-206](node.md)，預設值延後，[P-008](README.md#p-008)），所以 [agent-config](schemas/agent-config.schema.json) 這輪不加欄。
+行為（選 input、context 順序、估算與 `context_over_budget`、串流、鬧鐘）以 [A-302](../agent/memory.md) 為準。格式：固定的請求 ID、context、meta、usage 存放見 P-703；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；要串流就在業務 JSON 帶 `stream_path`（[llm-work P-406](llm-work.md)）。範本預設在封套設鬧鐘 `alarm_ms`（格式見 [node P-206](../settled/protocol/node.md)，預設值延後，[P-008](README.md#p-008)），所以 [agent-config](schemas/agent-config.schema.json) 這輪不加欄。
 
 ## P-707．模型決定與兩種工具路線〔A-401～403、A-503、P-407；工程預設〕
 
-行為以 [A-401](../agent/tools.md)、[A-503](../agent/README.md) 為準。格式：`tools.target_node` 是 node id 時用 `kernel.work.submit`，params.argv 對應 `aos kernel work submit`，業務 JSON 經 stdin；`null` 時下一格由 agent 經通道用 `node.mount` 掛 `.aos/jobs/<attempt_id>/` 裡的 inst，帶 `token`、省略 `parent_id`（上層就是憑證所屬的 tick）、不帶 `identity_grant`、不另 wake（[P-118](daemon/channel.md)）。兩路都沿 [P-402](work.md)、[P-404](work.md)，結果下格收。
+行為以 [A-401](../agent/tools.md)、[A-503](../agent/README.md) 為準。格式：`tools.target_node` 是 node id 時用 `kernel.work.submit`，params.argv 對應 `aos kernel work submit`，業務 JSON 經 stdin；`null` 時下一格由 agent 經通道用 `node.mount` 掛 `.aos/jobs/<attempt_id>/` 裡的 inst，帶 `token`、省略 `parent_id`（上層就是憑證所屬的 tick）、不帶 `identity_grant`、不另 wake（[P-118](../settled/protocol/daemon/channel.md)）。兩路都沿 [P-402](work.md)、[P-404](work.md)，結果下格收。
 
 ## P-708．正式回覆〔A-203；工程預設〕
 
@@ -92,7 +92,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-709．投件故障與恢復〔Q1／Q2、P-304；工程預設〕
 
-行為以 [A-403](../agent/tools.md) 為準（補投只補交付、不授權重跑；自跑 once 的掛行程照 [B-613](../daemon.md)，`launch-started` 與 unknown 照 [S-401](../scheduling/operations.md)、[kernel P-807](kernel-tasks.md)）。
+行為以 [A-403](../agent/tools.md) 為準（補投只補交付、不授權重跑；自跑 once 的掛行程照 [B-613](../settled/daemon.md)，`launch-started` 與 unknown 照 [S-401](../scheduling/operations.md)、[kernel P-807](kernel-tasks.md)）。
 
 ## P-710．agent 自記用量〔工具與 LLM 兩路裁定；工程預設〕
 
@@ -144,7 +144,7 @@ aos-agent-talk context show N --request ID [--json]
 # 人手：aos agent replies N …／aos agent context show N …
 ```
 
-不寫檔、不開 tick。有 git 時只讀同一 commit；〔第十九批，[B-632](../tick.md)〕沒有 git 時讀目前檔案與已完成的紀錄（reply、context 檔各自是完整寫入後才 rename，不會讀到半份），**不保證是一致快照**，同一次查詢內 replies 與 context 可能來自相鄰兩格。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
+不寫檔、不開 tick。有 git 時只讀同一 commit；〔第十九批，[B-632](../settled/tick.md)〕沒有 git 時讀目前檔案與已完成的紀錄（reply、context 檔各自是完整寫入後才 rename，不會讀到半份），**不保證是一致快照**，同一次查詢內 replies 與 context 可能來自相鄰兩格。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
 
 ## P-715．new 的完整產物〔[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 
@@ -158,6 +158,6 @@ aos-agent-talk context show N --request ID [--json]
 
 ## P-717．格式驗收〔P-007〕
 
-[範例](examples/agent-tasks/) 依同名前綴驗 schema；template 另核對 node、argv、路徑。〔第十八批〕agent 的 schema 都已放寬：不認得的欄位照收，不再有「多一個欄位」的反例，改由[正例](examples/agent-tasks/agent-config.extra-field.valid.json)示範多一個欄位仍收（[C-07](../contracts.md)、[P-007](README.md)）。〔第十九批〕任務表的 `user` 不再是禁止鍵：原本的反例改成[正例](examples/agent-tasks/agent-tasks.task-user.valid.json)（任務可帶自己的 `user`，[B-620](../tick.md)）；`daemon_socket` 可省，最小設定範例就不寫。反例涵蓋相對地址、工具結果缺 schema、done 缺時間、history 越界、final 缺 outcome、負估算、缺 attempt、用量狀態矛盾、錯 commit、負序號、template 缺任務表。線上 agent.say 回話例子見 messages。
+[範例](examples/agent-tasks/) 依同名前綴驗 schema；template 另核對 node、argv、路徑。〔第十八批〕agent 的 schema 都已放寬：不認得的欄位照收，不再有「多一個欄位」的反例，改由[正例](examples/agent-tasks/agent-config.extra-field.valid.json)示範多一個欄位仍收（[C-07](../contracts.md)、[P-007](README.md)）。〔第十九批〕任務表的 `user` 不再是禁止鍵：原本的反例改成[正例](examples/agent-tasks/agent-tasks.task-user.valid.json)（任務可帶自己的 `user`，[B-620](../settled/tick.md)）；`daemon_socket` 可省，最小設定範例就不寫。反例涵蓋相對地址、工具結果缺 schema、done 缺時間、history 越界、final 缺 outcome、負估算、缺 attempt、用量狀態矛盾、錯 commit、負序號、template 缺任務表。線上 agent.say 回話例子見 messages。
 
 正例全過、反例全拒；`bash wf/tools/wf-lint.sh proto6` broken=0。格式驗證不代替權限、狀態配對與端到端循環驗收。

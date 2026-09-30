@@ -14,7 +14,7 @@
 
 依據：10 號疑點裁定 5。已有資料夾上層時，覆蓋應取得新舊兩個上層同意。
 
-現在 [proto6/spec/daemon.md:176](../../../spec/daemon.md) 寫：資料夾推得的上層不在這個 daemon 登記時，「只要新上層同意」。但 [proto6/spec/tick.md:80](../../../spec/tick.md) 的驗收又要求只有新上層同意時拒絕。
+現在 [proto6/spec/daemon.md:176](../../../spec/settled/daemon.md) 寫：資料夾推得的上層不在這個 daemon 登記時，「只要新上層同意」。但 [proto6/spec/tick.md:80](../../../spec/settled/tick.md) 的驗收又要求只有新上層同意時拒絕。
 
 這個例外雖標「暫定」，仍直接放寬了已裁定的必要條件。**建議：無法取得既有舊父同意時，不應直接准許覆蓋；暫定只能補機制，不能取消兩父同意。**
 
@@ -24,7 +24,7 @@
 
 | 暫定內容 | 現在的正文 |
 |---|---|
-| 通道外層嚴格、內層放寬；通道只傳請求，回應走檔案 | [proto6/spec/daemon.md:400](../../../spec/daemon.md) 直接當成 B-614 規則；[proto6/spec/tick.md:228](../../../spec/tick.md) 也在使用者方向句內規定回應一律走檔案 |
+| 通道外層嚴格、內層放寬；通道只傳請求，回應走檔案 | [proto6/spec/daemon.md:400](../../../spec/settled/daemon.md) 直接當成 B-614 規則；[proto6/spec/tick.md:228](../../../spec/settled/tick.md) 也在使用者方向句內規定回應一律走檔案 |
 | 池 node 必須跑在 daemon 底下 | [proto6/spec/scheduling/llm.md:125](../../../spec/scheduling/llm.md) 在第十九批使用者方向句內直接定下這個前提 |
 
 **建議：補回局部「暫定」標記，分清使用者裁定與工程選擇，不必重新討論選哪個方案。**
@@ -60,7 +60,7 @@
 
 依據：疑點裁定 9；[proto6/spec/terms.md:18](../../../spec/terms.md) 明定，沒有另寫備援限制的保證，兩級都成立。
 
-[proto6/spec/tick.md:171](../../../spec/tick.md) 已明說備援沒有歷史、回溯與同版本讀取，只能讀目前檔案。但下列功能仍硬性要求 commit：
+[proto6/spec/tick.md:171](../../../spec/settled/tick.md) 已明說備援沒有歷史、回溯與同版本讀取，只能讀目前檔案。但下列功能仍硬性要求 commit：
 
 | 功能 | 尚未接上備援的位置 |
 |---|---|
@@ -76,7 +76,7 @@
 
 依據：疑點裁定 4，任務現在就可帶 `user`。
 
-- [proto6/spec/tick.md:106](../../../spec/tick.md)：跨帳號任務經 `node.mount` 開，**不繼承鎖 fd**，原 tick 等它結束。
+- [proto6/spec/tick.md:106](../../../spec/settled/tick.md)：跨帳號任務經 `node.mount` 開，**不繼承鎖 fd**，原 tick 等它結束。
 - [proto6/spec/protocol/agent-tasks.md:66](../../../spec/protocol/agent-tasks.md)：`aos-agent-step` **必須繼承並核對 `AOS_TICK_LOCK_FD`**；第 75 行規定鎖不符回 125。
 - [proto6/spec/protocol/kernel-tasks.md:9](../../../spec/protocol/kernel-tasks.md)：kernel 任務同樣核對繼承鎖；若改自行取鎖，又會被仍持鎖的原 tick 擋住。
 
@@ -90,8 +90,8 @@
 
 **7. 再次換父時，「舊上層」有兩個答案**
 
-- [proto6/spec/tick.md:71](../../../spec/tick.md)，B-628：資料夾推得的上層。
-- [proto6/spec/daemon.md:176](../../../spec/daemon.md)，B-606：目前有效上層。
+- [proto6/spec/tick.md:71](../../../spec/settled/tick.md)，B-628：資料夾推得的上層。
+- [proto6/spec/daemon.md:176](../../../spec/settled/daemon.md)，B-606：目前有效上層。
 - [proto6/spec/scheduling/admission.md:29](../../../spec/scheduling/admission.md)，S-202：又要求資料夾推得的上層同意。
 
 例如資料夾父 A 已覆蓋成 B，再改成 C，前者要求 A＋C，後者要求 B＋C。
@@ -100,7 +100,7 @@
 
 **8. 設定裡的 root 可以直接清掉資料夾上層**
 
-[proto6/spec/daemon.md:179](../../../spec/daemon.md) 說設定載入的頂層「上層固定是 null」；B-628、T-02 卻規定最近包含且有 tick 的資料夾就是上層。
+[proto6/spec/daemon.md:179](../../../spec/settled/daemon.md) 說設定載入的頂層「上層固定是 null」；B-628、T-02 卻規定最近包含且有 tick 的資料夾就是上層。
 
 例如設定只列 `/a/b` 為 root，而 `/a` 已有 cron 跑的 tick：daemon 判 null，核心判 `/a`。禁止「設定內兩棵 root 相互包含」擋不住此例。
 
@@ -110,7 +110,7 @@
 
 [proto6/spec/protocol/kernel-tasks.md:21](../../../spec/protocol/kernel-tasks.md) 要 daemon 開的格「請求帶 token」。
 
-但 [proto6/spec/protocol/daemon/channel.md:14](../../../spec/protocol/daemon/channel.md) 只允許 register／unregister／wake／mount／kill／send／take 帶 token，其他 method 帶了回 `invalid_params`。kernel 自己又必須呼叫 `daemon.info`、`node.show`、`node.provision`。
+但 [proto6/spec/protocol/daemon/channel.md:14](../../../spec/settled/protocol/daemon/channel.md) 只允許 register／unregister／wake／mount／kill／send／take 帶 token，其他 method 帶了回 `invalid_params`。kernel 自己又必須呼叫 `daemon.info`、`node.show`、`node.provision`。
 
 **建議：P-801 明寫只對允許清單附 token，其他 method 沿既有 socket 帳號授權。**
 
@@ -130,13 +130,13 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 
 **11. 要問 y／n，stdin 卻寫「不讀」**
 
-[proto6/spec/tick.md:121](../../../spec/tick.md) 要在 stdin、stderr 都是終端機時問 y／n；[proto6/spec/protocol/node.md:70](../../../spec/protocol/node.md) 卻仍規定 tick stdin 不讀。
+[proto6/spec/tick.md:121](../../../spec/settled/tick.md) 要在 stdin、stderr 都是終端機時問 y／n；[proto6/spec/protocol/node.md:70](../../../spec/settled/protocol/node.md) 卻仍規定 tick stdin 不讀。
 
 **建議：介面表補「一般不讀，B-630 的互動確認除外」。**
 
 **12. once 舊登記說法仍殘留**
 
-[proto6/spec/protocol/node.md:33](../../../spec/protocol/node.md) 還說「once 可直接登記一份 inst 檔」；[proto6/spec/daemon.md:383](../../../spec/daemon.md) 已明定改成 `node.mount`，不是登記種類。
+[proto6/spec/protocol/node.md:33](../../../spec/settled/protocol/node.md) 還說「once 可直接登記一份 inst 檔」；[proto6/spec/daemon.md:383](../../../spec/settled/daemon.md) 已明定改成 `node.mount`，不是登記種類。
 
 **建議：改成掛載目標可指定單檔 inst，引用 B-613／P-118。**其他查到的 `once:true`、`once.clear`、`once-*` 多屬歷史改名說明或刻意無效的範例，沒有算成問題。
 
@@ -150,7 +150,7 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 
 **14. node.mount schema 少了「無 token 必填 parent_id」條件**
 
-[proto6/spec/protocol/daemon/channel.md:22](../../../spec/protocol/daemon/channel.md) 明定：沒有 token 時，`parent_id` 必填。
+[proto6/spec/protocol/daemon/channel.md:22](../../../spec/settled/protocol/daemon/channel.md) 明定：沒有 token 時，`parent_id` 必填。
 
 但 [proto6/spec/protocol/schemas/daemon-rpc.schema.json:819](../../../spec/protocol/schemas/daemon-rpc.schema.json) 只要求 `node_id`。記憶體驗證確認，只給 `node_id`、兩者都不帶的請求仍通過 schema。
 
@@ -165,19 +165,19 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 | 項次 | 狀態 | 說明 |
 |---|---|---|
 | 1 LLM 必須集中同一池 | 已處理 | [scheduling/llm.md:30](../../../spec/scheduling/llm.md) 已交 kernel 決定集中或分片；P-405 一致。 |
-| 2 第二次 SIGTERM 來源 | 已處理 | [daemon.md:98](../../../spec/daemon.md) 與 CLI 已另標工程補充。 |
+| 2 第二次 SIGTERM 來源 | 已處理 | [daemon.md:98](../../../spec/settled/daemon.md) 與 CLI 已另標工程補充。 |
 | 3 Q3 仍標未拍板 | 已處理 | [scheduling/admission.md:48](../../../spec/scheduling/admission.md) 已分開裁定與工程細節。 |
 | 4 notes 設定不變保證 | 已處理 | [between-ticks-configuration.md:11](../../../notes/between-ticks-configuration.md) 已改軟性原則。 |
 | 5 共用協議入口行為 | 已處理 | P-003～006、P-008 主要流程已縮成介面或主規格引用。 |
-| 6 daemon 協議流程 | 部分 | [provision-and-runner.md:33](../../../spec/protocol/daemon/provision-and-runner.md) 起仍有 helper 啟動、收尾、回收後才回覆等流程。 |
-| 7 node 協議流程 | 部分 | [protocol/node.md:134](../../../spec/protocol/node.md) 起仍有完整配權與建立核對步驟。 |
+| 6 daemon 協議流程 | 部分 | [provision-and-runner.md:33](../../../spec/settled/protocol/daemon/provision-and-runner.md) 起仍有 helper 啟動、收尾、回收後才回覆等流程。 |
+| 7 node 協議流程 | 部分 | [protocol/node.md:134](../../../spec/settled/protocol/node.md) 起仍有完整配權與建立核對步驟。 |
 | 8 messages 投件／補投流程 | 部分 | [protocol/messages.md:78](../../../spec/protocol/messages.md) 仍有取 commit、原子發布、失敗留舊值的流程。 |
 | 9 work／LLM 流程 | 部分 | [protocol/llm-work.md:46](../../../spec/protocol/llm-work.md) 起仍有收齊回應、失敗／unknown 判定等行為。 |
 | 10 resources 政策 | 部分 | [protocol/resources.md:72](../../../spec/protocol/resources.md) 起仍有 hardlink 去重、量不到時的處置、計數器重置政策。 |
 | 11 ops 清理／事項流程 | 部分 | [protocol/ops.md:81](../../../spec/protocol/ops.md) 起仍有修復、重驗、取鎖、提交與標完成流程。 |
 | 12 agent 狀態機 | 部分 | [protocol/agent-tasks.md:110](../../../spec/protocol/agent-tasks.md)、第 124 行仍有工具設定與 recheck 操作流程。 |
 | 13 kernel 同步／排程流程 | 部分 | [protocol/kernel-tasks.md:109](../../../spec/protocol/kernel-tasks.md) 仍完整規定跨格掛載與收結果流程。 |
-| 14 排空卻要求全停格 | 已處理 | [protocol/daemon/shutdown.md:13](../../../spec/protocol/daemon/shutdown.md) 已改引用 B-604。 |
+| 14 排空卻要求全停格 | 已處理 | [protocol/daemon/shutdown.md:13](../../../spec/settled/protocol/daemon/shutdown.md) 已改引用 B-604。 |
 | 15 取消兩套判定 | 已處理 | [base/execution.md:52](../../../spec/base/execution.md) 已統一；TERM 後正常退出且完整發布，照原結果，逾時另外處理。 |
 
 **五、檢查結果**

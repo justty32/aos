@@ -30,7 +30,7 @@
 
 09 裁定的是：排空超過上限，或途中再按 Ctrl-C，轉立即停。
 
-現在 [proto6/spec/daemon.md:75](../../../spec/daemon.md) 擴成第二次 **SIGINT／SIGTERM** 都立即停；[proto6/spec/cli/commands.md:25](../../../spec/cli/commands.md) 也跟著擴寫。
+現在 [proto6/spec/daemon.md:75](../../../spec/settled/daemon.md) 擴成第二次 **SIGINT／SIGTERM** 都立即停；[proto6/spec/cli/commands.md:25](../../../spec/cli/commands.md) 也跟著擴寫。
 
 **建議：**照正本收窄成第二次 SIGINT／Ctrl-C；若保留 SIGTERM，應明標為工程補充，不能整段都掛使用者裁定。這項是來源與範圍問題，不是漏掉排空功能。
 
@@ -72,16 +72,16 @@ V-01 和 P-009 已宣告主規格為正本，但「主規格有了、協議加�
 
 主要位置：
 
-- [proto6/spec/protocol/daemon/startup-and-ipc.md:52](../../../spec/protocol/daemon/startup-and-ipc.md)：啟動、socket、helper 生死與授權流程，後續 56～82 行亦有。
-- [proto6/spec/protocol/daemon/registration.md:48](../../../spec/protocol/daemon/registration.md)：查詢排序、過濾、分頁與重啟後处理。
-- [proto6/spec/protocol/daemon/provision-and-runner.md:29](../../../spec/protocol/daemon/provision-and-runner.md)：helper bind/start/stop、失聯恢復；50～73 行另有 runner 解析、開檔、清後代及產生 `.err`。
-- [proto6/spec/protocol/daemon/shutdown.md:19](../../../spec/protocol/daemon/shutdown.md)：狀態寫入與讀回操作。
+- [proto6/spec/protocol/daemon/startup-and-ipc.md:52](../../../spec/settled/protocol/daemon/startup-and-ipc.md)：啟動、socket、helper 生死與授權流程，後續 56～82 行亦有。
+- [proto6/spec/protocol/daemon/registration.md:48](../../../spec/settled/protocol/daemon/registration.md)：查詢排序、過濾、分頁與重啟後处理。
+- [proto6/spec/protocol/daemon/provision-and-runner.md:29](../../../spec/settled/protocol/daemon/provision-and-runner.md)：helper bind/start/stop、失聯恢復；50～73 行另有 runner 解析、開檔、清後代及產生 `.err`。
+- [proto6/spec/protocol/daemon/shutdown.md:19](../../../spec/settled/protocol/daemon/shutdown.md)：狀態寫入與讀回操作。
 
 **建議搬向：**B-303、B-603～611、B-202、inst、S-401。協議只留 method、參數、fd／回報形狀及碼值。主要涉及 `重複-02～07、22、23`。
 
 ### 7. node 協議仍保留 tick、git、設定修改及建立流程
 
-位置：[proto6/spec/protocol/node.md:55](../../../spec/protocol/node.md)，另見同檔 61、75～79、94～104、121～141、149～158 行。
+位置：[proto6/spec/protocol/node.md:55](../../../spec/settled/protocol/node.md)，另見同檔 61、75～79、94～104、121～141、149～158 行。
 
 仍包含：
 
@@ -150,8 +150,8 @@ V-01 和 P-009 已宣告主規格為正本，但「主規格有了、協議加�
 
 **依據：09 裁定 7、Q15；map `裁定7、重複-03`。**
 
-- 新規則：[proto6/spec/daemon.md:72](../../../spec/daemon.md)——排空時，已登記 node 照常開格，只拒新 once／新成員。
-- 舊驗收：[proto6/spec/protocol/daemon/shutdown.md:13](../../../spec/protocol/daemon/shutdown.md)——Ctrl-C／SIGTERM 後「都不開新格」。
+- 新規則：[proto6/spec/daemon.md:72](../../../spec/settled/daemon.md)——排空時，已登記 node 照常開格，只拒新 once／新成員。
+- 舊驗收：[proto6/spec/protocol/daemon/shutdown.md:13](../../../spec/settled/protocol/daemon/shutdown.md)——Ctrl-C／SIGTERM 後「都不開新格」。
 
 這會讓排空實作無法同時符合兩處文字。
 
