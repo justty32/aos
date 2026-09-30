@@ -203,7 +203,7 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
   - `stopped_after`：被停格檔停下時，是哪一項跑完後停的，記那一項的 `id` 字串；只在 `ended:true` 時可有。
   - `started_at_ms`：只給人看，不參與計算。
 - **寫法**：每次整份重寫（暫存檔→rename），不 fsync；只有核心寫。
-- **停格檔**：`.aos/tick/stop`，ignored；任何內容都算（建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面）。核心取鎖後、開第一項前刪掉殘留的；每項結束後檢查，存在就不開後面的項。跟擋板檔不同，它只管本格；daemon 看到這格留下它就暫停 node（[B-607](../daemon.md)），下一格核心開頭刪。
+- **停格檔**：`.aos/tick/stop`，ignored；任何內容都算（建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面）。核心取鎖後、開第一項前刪掉殘留的；每項結束後檢查，存在就不開後面的項。跟擋板檔不同，它只影響本格；daemon 不看它，下一格核心開頭刪。
 - **擋板檔**：`.aos/tick-blocked`，ignored；內容一行 UTF-8 原因（核心印在 `blocked:` 後面）。任務或人手建、人手刪；核心取鎖後看到就不跑、不寫紀錄、回 1；daemon 看到就不開格。
 
 範例：[跑到一半](examples/node/tick-record.minimal.valid.json)、[被停格檔停下](examples/node/tick-record.ended.valid.json)；反例：[同一項同時有 exit 與 signal](examples/node/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](examples/node/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 stopped_after](examples/node/tick-record.stopped-not-ended.invalid.json)。
