@@ -47,3 +47,5 @@
 **先把 tick 與 daemon 的 spec 基礎設計好，假設 cgroup 與 git 都不存在；下一步才把這兩個納入。** 本輪改寫只做 tick 核心、系統級任務（不含 git 任務）、daemon（不含 cgroup）與通道；git 開格／收尾任務、`aos-cg`、daemon 的 node 框與上限等，先移到明確標「下一步納入」的位置，不在本輪設計。kernel、agent、LLM 等其他篇等基礎定了再跟上。
 - **任務環境變數命名**（同日）：`AOS_TASK_ID` 是字串，照任務表該項 `id` 原樣；第幾項用 **`AOS_TASK_INDEX`**（從 0 起算，等於任務表陣列位置）。整格共用的用 `AOS_TICK_*`，這一項專屬的用 `AOS_TASK_*`。結束碼紀錄裡「在哪一項之後停」記 `id` 字串。
 - **daemon 何時暫停 node**（同日，先答 a＋c，隨即修正）：**停格檔 `.aos/tick/stop` 只在任務層面**，只阻擋本格剩餘任務，daemon 不因它暫停 node；**擋板檔 `.aos/tick-blocked` 才阻擋之後的格**，有它時 daemon 不開格。不看結束碼。
+- **tick／daemon 基礎輪的疑點**（同日）：以下四題接受暫定、改為定案——沒有 cgroup 時 daemon 重啟清不掉舊程序（接受）；daemon 自己的開格故障仍自動暫停 node（保留當安全閘）；沒有 git 時當機留下的消費副本當成已收；清理預設 `retention_ticks` 100000、`interval_ticks` 1000。
+- **任務表欄位**：先只定基本欄位；`group`、`needs` 不列入，**當成陌生 key**（任務是 inst 超集，不認得的鍵照收、核心忽略）。
