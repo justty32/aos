@@ -14,6 +14,7 @@ import fcntl
 import os
 import sys
 
+import aos_exec
 import aos_inst
 import aos_tick_run
 import aos_tick_table
@@ -80,10 +81,8 @@ def node_dir_from_arg(arg):
 
 def run_tick(node, fsync=False):
     """B-620「一格怎麼走」：整格照這個順序，回整格結束碼。"""
-    # 〔使用者方向 2026-09-30 晚〕沒有 .aos/ 直接報錯、不自建（plan 待問 6）
     if not os.path.isdir(os.path.join(node, ".aos")):
-        say("config_invalid", "%s 沒有 .aos/，不是能跑 tick 的 node（不自建）" % node)
-        return EXIT_INVALID
+        return run_bare_inst(node)
     os.chdir(node)
 
     lock_fd = take_lock()
@@ -121,6 +120,16 @@ def run_tick(node, fsync=False):
     code = EXIT_FAILED if failed or stopped_after is not None else EXIT_OK
     record.finish(code, stopped_after)
     return code
+
+
+def run_bare_inst(node):
+    """plan 待問 5／6〔使用者方向 2026-09-30 晚〕：沒有 .aos/ 照 aos-exec 找檔。有 inst.json 就像
+    aos-exec 把它跑一次（不取鎖、不寫紀錄，退出碼照 aos-exec）；兩個都沒有回 2、不自建 .aos/。"""
+    if not os.path.isfile(os.path.join(node, "inst.json")):
+        say("config_invalid", "%s 沒有 .aos/ 也沒有 inst.json（不自建）" % node)
+        return EXIT_INVALID
+    code, kind = aos_exec.run_target(node)
+    return aos_exec.EXIT_AOS if kind == aos_exec.AOS else code
 
 
 def take_lock():

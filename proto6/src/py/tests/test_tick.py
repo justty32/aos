@@ -77,6 +77,14 @@ class Step1Lock(TickCase):
         self.assertIn("config_invalid", r.stderr)
         self.assertEqual(os.listdir(self.d), [])
 
+    def test_no_aos_dir_runs_inst_json_like_aos_exec(self):
+        os.rmdir(os.path.join(self.d, ".aos"))
+        self.write("inst.json", json.dumps({"argv": ["sh", "-c", "echo ran > out; exit 3"]}))
+        r = self.tick()
+        self.assertEqual(r.returncode, 3)
+        self.assertEqual(self.read("out"), "ran\n")
+        self.assertFalse(self.exists(".aos"))
+
     def test_usage_errors(self):
         self.assertEqual(self.tick("--node", "relative/path").returncode, 2)
         self.assertEqual(self.tick("--bogus").returncode, 2)
