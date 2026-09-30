@@ -227,6 +227,8 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 
 ### 失效：寫不進時
 
+〔使用者方向 2026-09-30 晚〕**本小節作廢**：結束碼紀錄寫不寫得進去不管，默認一定寫得進去；`record_unwritable` 與下面的失效處理都不再要求（「舊紀錄讀不懂」若另有規定仍照原文）。
+
 **本格紀錄失效**＝這一格有任何一次寫紀錄失敗（唯讀資料夾、滿碟、rename 失敗）。
 
 | 什麼時候失敗 | 核心怎麼做 | 下一格看到的 |
@@ -250,7 +252,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - **被擋板檔擋住的格**不寫紀錄、不加 `seq`（B-620），跟鎖被占一樣當成沒開過格。
 - **別刪它**：`.aos/tick/` 不被 `aos-clean` 清；`aos-git` 固定排除它，不靠 `.gitignore`，提交與還原都不碰（B-622）。人手刪掉兩份檔，`seq` 從 1 重數，以格數算的保留期會算錯，風險自負。
 
-**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 1、stderr 有 `blocked`、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；任務第二項讀得到第一項的結束碼；第三項被 SIGKILL 時紀錄是 `signal:9`；tick 在第二項中途被殺，下一格的 `last.json` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；帶 `--firstdo-fsync`（或 daemon 帶了旗標）時，第一項開跑後模擬斷電（丟掉沒 fsync 的寫入），重開後下一格的 `seq` 仍比斷電那格大；沒帶時不要求；資料夾唯讀時仍照表跑完、stderr 有 `record_unwritable`、沒有任務拿到 `AOS_TICK_RECORD`；開格時滿碟，下一格的 `last.json` 不存在、`seq` 接著數；第二項後滿碟，第三項沒有 `AOS_TICK_RECORD`，下一格的 `last.json` 是 `ended:false` 且只有前兩項；鎖被占回 75 時兩份紀錄都不變。
+**驗收：**有 `.aos/tick-blocked` 時直接跑 `aos-tick` 回 1、stderr 有 `blocked`、沒有任務跑、兩份紀錄與 `seq` 都不變，刪掉擋板後下一格照常；任務第二項讀得到第一項的結束碼；第三項被 SIGKILL 時紀錄是 `signal:9`；tick 在第二項中途被殺，下一格的 `last.json` 是 `ended:false`；同一資料夾連跑十格，`seq` 從 1 到 10，換成 cron 跑仍接著數；帶 `--firstdo-fsync`（或 daemon 帶了旗標）時，第一項開跑後模擬斷電（丟掉沒 fsync 的寫入），重開後下一格的 `seq` 仍比斷電那格大；沒帶時不要求；~~資料夾唯讀時仍照表跑完、stderr 有 `record_unwritable`、沒有任務拿到 `AOS_TICK_RECORD`~~（作廢，2026-09-30 晚）；~~開格時滿碟，下一格的 `last.json` 不存在、`seq` 接著數~~（作廢，2026-09-30 晚）；~~第二項後滿碟，第三項沒有 `AOS_TICK_RECORD`，下一格的 `last.json` 是 `ended:false` 且只有前兩項~~（作廢，2026-09-30 晚）；鎖被占回 75 時兩份紀錄都不變。
 
 ## B-628：上下層判定：預設看資料夾包含、可登記覆蓋
 
