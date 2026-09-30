@@ -80,9 +80,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 `agent.say` 的 params 是 inst，argv 對應 `aos agent say`，stdin 指向可讀的輸入 JSON。接件後保存回址、原文與附件引用，建 queued input 及 user history。帶 `in_reply_to` 的回話只記進 history、不建 input，規則以 [A-201](../agent/input.md) 為準。agent 之間的問答、請求被拒收，延後（[P-008](README.md#p-008)）。指令結果沿 work-result，收件確認放指令 stdout。附件先只保存引用，要內容就用普通讀檔工具。
 
-結果先核對 RPC id、可信來源及原請求，再保存與套入 history／決定；同 bytes 不重吃。工作結果在指令 stdout 裡按 [work](work.md)／[llm-work](llm-work.md) 解讀，不能把外層指令成功當成工具／LLM 成功。套用後才記 response_consumed、移除 pending；一批工具全齊才處理。
-
-RPC 收件確認只更新發件 meta，不觸發另一則回話；回話本身仍是普通 agent.say。
+收結果的行為（核對、去重、何時記 `response_consumed` 與移除 pending、收件確認不觸發回話）以 [A-403](../agent/tools.md) 為準；工作結果在指令 stdout 裡的格式見 [work](work.md)／[llm-work](llm-work.md)，已消費的回應存 P-703 的 `state/messages/responses/<id>.json`，配對記在 `state/messages/meta/<id>.json` 與 input 的 `pending_requests`。
 
 ## P-706．組 context 與發 LLM〔A-302～303、P-406；工程預設〕
 
@@ -175,7 +173,7 @@ aos-agent-talk context show N --request ID [--json]
 
 只讀同一 commit，不寫檔、不開 tick。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
 
-## P-715．new 的完整產物〔P-010；工程預設〕
+## P-715．new 的完整產物〔[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 
 `aos node new N --template agent --agent-config F [--user U]` 讀 F、填 N／已授權 U，建 repo 與初始 commit；無效回 2，不猜地址或授額外權限。持久登記由 kernel 做。
 

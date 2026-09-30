@@ -23,7 +23,7 @@
 | `max_active_members` | 同時叫醒的成員上限 |
 | `member_stale_ms` | 叫醒後多久沒完成新格就寫失聯事項（[S-206](../scheduling/admission.md)） |
 
-〔建議預設，未拍板；審稿設-4、設-18〕**成員多時怎麼調**：補查掃完一輪約要「成員數 ÷ `scan_batch_limit` × `scan_interval_ms`」；預設 64 個／60 秒，一萬個成員約 2.6 小時才掃完一輪。補查只救漏掉的通知，平常靠通知與到期，所以一輪慢一點通常可以接受；要縮短就加大 `scan_batch_limit` 或縮短 `scan_interval_ms`，代價是每格讀更多摘要。成員上千時優先改分層：把成員分給幾個子 kernel、每個管幾百個，頂層只管子 kernel。`max_active_members` 只限同時叫醒的數量，不影響補查。子 kernel 的 `interval_ms` 建議 1000 只是建議值；每一跳轉交至少差一個間隔，有收件通知或 wake 時不必靠週期。實際延遲與空轉負載照 [V-04](../conformance.md) 量。
+成員多時這些欄位怎麼調，見 [S-202](../scheduling/admission.md)。
 
 `config/members.json`（[schema](schemas/kernel-members.schema.json)）為 `version:1,revision,members`；revision 正整數，內容改就加一。每項：
 
@@ -69,7 +69,7 @@ sync.json 只保存已確認登記、bootstrap_pending、待解除與重試時�
 
 `aos-kernel-resources [--node N]`，人手 `aos kernel resources N`。讀 members／父額度／成員摘要，按 P-801 選較新配額並核對 IPC 實際值。只對先前已提交的期望配置做 provision；本格配額變更提交後，下格才套用（[S-205](../scheduling/admission.md)）。
 
-〔審稿建-15〕**父配額公開檔**：`public/quotas/<id>.json` 是 `state/resources/<id>.quota.json` 的發布副本（格式 [P-501](resources.md)），由父的資源任務發布；它只發布**已提交**的期望配額（本格改的，提交後下一格才發布，道理同 [P-307](messages.md) 的 published.json），子層不會讀到還沒提交的值。子的 quota_file 指此檔；只讓該子讀、只有父能寫。
+〔審稿建-15〕**父配額公開檔**：`public/quotas/<id>.json` 是 `state/resources/<id>.quota.json` 的發布副本（格式 [P-501](resources.md)），由父的資源任務發布，發布時點依 [S-203](../scheduling/admission.md)。子的 quota_file 指此檔；只讓該子讀、只有父能寫。
 
 按期望配額的固定份額，只套用已啟用 module 的 CPU／memory／pids 限制；調高、調低都直接寫，不等全空（S-205，佈建動作見 [B-609](../daemon.md)）。boot 換了重新核對，不 resume 人手 pause。
 
@@ -178,7 +178,7 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者及明授投件�
 
 OS 帳號、chown 與多帳號交接用的群組（建群組、加成員、改檔案群組）走 daemon 佈建的固定動作（[B-609](../daemon.md)），首版不用 ACL。父配額只讓該子讀，不給子寫。
 
-## P-814．完整範本與走查〔B-603、P-010；工程預設〕
+## P-814．完整範本與走查〔B-603、[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 
 ```text
 aos node new /srv/aos/top --template kernel --user 1000 --socket /run/user/1000/aos.sock
