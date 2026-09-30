@@ -76,7 +76,7 @@ class FullTargetTests(Base):
         self.assert_result(self.run_full(os.path.join(self.d, "missing.json")), 1, "aos")
 
     def test_usage_unchanged(self):
-        inst = self.job("pass")
+        inst = self.job("pass", rel="sub/job.json")     # proto6 改：放 self.d/inst.json 會被資料夾目標找到
         for target, kw in ((os.path.join(self.d, "missing"), {}), (self.d, {}),
                            (inst, {"args": []})):
             with self.subTest(target=target, kw=kw):

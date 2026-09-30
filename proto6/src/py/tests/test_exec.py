@@ -98,11 +98,25 @@ class TestTargets(ExecCase):
         r = self.aos("--timeout-ms", "1000", cwd=self.d)          # 只有旗標、沒有 xxx 也一樣
         self.assertEqual(r.returncode, 0, r.stderr)
 
-    def test_dir_target_flag(self):
-        self.inst({"argv": ["sh", "-c", "echo other"], "stdout": "out.txt"}, "other/place.json")
-        r = self.aos(self.d, "--dir-target", "other/place.json")
-        self.assertEqual(r.returncode, 0)
-        self.assertEqual(self.read("out.txt"), "other\n")     # base 還是 xxx，不是 other/
+    def test_dir_falls_back_to_inst_json(self):
+        """proto6 新增：沒有 .aos/inst.json 就找 xxx/inst.json，base 還是 xxx 自己。"""
+        self.inst({"argv": ["sh", "-c", "pwd"], "stdout": "out.txt"}, "inst.json")
+        r = self.aos(self.d)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("out.txt"), self.d + "\n")
+
+    def test_dir_prefers_dot_aos_inst_json(self):
+        """proto6 新增：兩個都有時跑 .aos/inst.json。"""
+        self.inst({"argv": ["sh", "-c", "echo aos"], "stdout": "out.txt"})
+        self.inst({"argv": ["sh", "-c", "echo plain"], "stdout": "out.txt"}, "inst.json")
+        r = self.aos(self.d)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.read("out.txt"), "aos\n")
+
+    def test_dir_target_flag_is_gone(self):
+        """proto6 改：不提供改尋找路徑的旗標，--dir-target 是用法錯。"""
+        self.inst({"argv": ["true"]}, "other/place.json")
+        self.assertEqual(self.aos(self.d, "--dir-target", "other/place.json").returncode, 2)
 
     def test_dir_named_dot_json_is_still_a_dir(self):
         self.write("weird.json/inside.txt", "")
@@ -116,9 +130,11 @@ class TestTargets(ExecCase):
         self.assertIn("找不到", r.stderr)
 
     def test_missing_dir_target_is_2(self):
+        """proto6 改：.aos/inst.json 跟 inst.json 都沒有才是用法錯，訊息兩個都提。"""
         r = self.aos(self.d)
         self.assertEqual(r.returncode, 2)
         self.assertIn(".aos/inst.json", r.stderr)
+        self.assertIn("也沒有 inst.json", r.stderr)
 
     def test_bad_flag_is_2(self):
         self.assertEqual(self.aos(self.d, "--no-such-flag").returncode, 2)
@@ -234,8 +250,8 @@ class TestFieldsRun(ExecCase):
 
     def test_cwd_itself_is_relative_to_xxx_not_to_the_json(self):
         self.write("sub/.keep", "")
-        self.inst({"argv": ["sh", "-c", "pwd"], "cwd": "sub", "stdout": "out.txt"}, "deep/inst.json")
-        r = self.aos(self.d, "--dir-target", "deep/inst.json")
+        self.inst({"argv": ["sh", "-c", "pwd"], "cwd": "sub", "stdout": "out.txt"})
+        r = self.aos(self.d)          # proto6 改：原本用 --dir-target；inst 在 .aos/，cwd 仍從 xxx 起算
         self.assertEqual(r.returncode, 0)
         self.assertEqual(self.read("sub/out.txt"), os.path.join(self.d, "sub") + "\n")
 
@@ -554,9 +570,10 @@ class TestApi(ExecCase):
             self.assertEqual(self.call(self.d)[:2], (0, "child"))
         self.assertEqual(self.read("tally.txt"), "x\nx\nx\n")
 
-    def test_takes_dir_target_and_timeout(self):
-        self.inst({"argv": ["sleep", "30"]}, "other.json")
-        self.assertEqual(self.call(self.d, dir_target="other.json", timeout_ms=200)[:2], (143, "child"))
+    def test_takes_timeout(self):
+        """proto6 改：拿掉 dir_target 參數；資料夾只有 inst.json 也照找。"""
+        self.inst({"argv": ["sleep", "30"]}, "inst.json")
+        self.assertEqual(self.call(self.d, timeout_ms=200)[:2], (143, "child"))
 
     def test_reports_the_reason_on_stderr(self):
         self.inst({"argv": "true"})
