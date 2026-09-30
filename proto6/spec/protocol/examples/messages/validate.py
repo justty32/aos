@@ -110,13 +110,18 @@ def main():
         files = value.get('files', {})
         if '.aos/tasks.json' in files:
             tasks = files['.aos/tasks.json']['tasks']
-            assert len(tasks) == (2 if 'config/agent.json' in files else 9), path
+            # 第二十批：B-629 範本改成 inbox 開頭、outbox／summary／clean 收尾（kernel 12、agent 6）；
+            # kernel、agent 範本下一輪才改（T5、T6），過渡期兩種項數都收。
+            agent = 'config/agent.json' in files
+            assert len(tasks) in ((2, 6) if agent else (9, 12)), path
             seen, claimed = set(), set()
             for task in tasks:
                 assert task['id'] not in seen, path
                 # P-202：同一 method 只能由一項任務宣告。
                 assert not claimed & set(task.get('methods', [])), path
                 claimed.update(task.get('methods', []))
+                # 第二十批撤 needs 欄（改用 aos-needs，B-621）；舊範例還帶的只當不認得的欄位，
+                # 有寫時仍只准指向前面的項，免得過渡期範例自相矛盾。
                 assert set(task.get('needs', [])) <= seen, path
                 seen.add(task['id'])
                 argv = task['argv']
