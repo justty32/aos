@@ -14,7 +14,7 @@ daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../daemon.md)。dae
 
 兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、白話 `message`；可選 `suggestion` 是「建議處理」文字，可以附建議指令，但不會被自動執行。job_id／attempt_id／request_id 按需附；〔第十八批〕可選 `reported_at_ms` 是首次回報時間，壞收件原件的保留期從這裡算（[B-404](../base/storage.md)）。不帶憑證或完整工作。〔使用者方向 2026-09-30，第十八批〕`argv` 是永遠禁止的鍵（[C-07](../contracts.md)），schema 寫 `"argv": false`，出現就整份拒收。
 
-〔暫定，第十八批〕壞掉的收件（[B-623](../tick.md)）用 `reason:"bad_request"`，`issue_id` 是 `bad-request-` 加檔名 UTF-8 bytes 的 sha256 前 16 個小寫 hex，`request_id` 在檔名合法時附上。
+〔暫定，第十八批〕壞掉的收件（[B-623](../tick.md)）用 `reason:"bad_request"`，`issue_id` 是 `bad-request-` 加檔名 UTF-8 bytes 的 sha256 前 16 個小寫 hex，`request_id` 在檔名合法時附上。〔建議預設，第十九批〕全掛檢查查出沒全掛、又沒有終端機可問時（[B-630](../tick.md)），用 `reason:"standard_incomplete"`、`issue_id:"standard-incomplete"`。
 
 | method（對應 `aos daemon attention <動作>`） | params → result |
 |---|---|
@@ -24,7 +24,7 @@ daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../daemon.md)。dae
 
 IPC 只查／標完成 daemon 自身事項。依可信登記 owner／祖先 owner 授權；ls 先篩選再按 `source_key/issue_id` bytes 分頁，after 用上頁 next_after，列完為 null。daemon 內部新增事項，不接受 node 代交。
 
-同一問題沿用 ID，異內容不覆蓋；標完成後再發生用新 ID（壞收件例外：同一個檔 open 或 done 已有就不再寫，[B-623](../tick.md)）。done 只標記人或 agent 已處理完，不替它修理問題。寫檔依 P-003，done 留 30 日、被引用就留；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見登記樹讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
+〔第十九批依方案 A 縮短〕同一問題沿用 ID、標完成與保留期以 [S-405](../scheduling/operations.md) 為正本（壞收件與 `standard-incomplete` 例外：open 或 done 已有就不再寫，[B-623](../tick.md)、[B-630](../tick.md)）。寫檔依 P-003；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見的上下層樹（[B-628](../tick.md)）讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
 
 ## P-603．aos-attend：列出、查看、標完成〔使用者方向 2026-09-29〕
 
@@ -44,23 +44,21 @@ aos-attend done N ID --socket S [--store node|daemon] [--json]
 aos-clean [--node <node>] --config <設定檔>
 ```
 
-〔使用者方向 2026-09-30，第十八批〕`aos-clean` 屬 tick 基底（[B-626](../tick.md)）；清理資格與保留期以 [B-404](../base/storage.md) 為正本。`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用該 node inst 的 `user`。無自訂必填環境或身分切換。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
+〔使用者方向 2026-09-30，第十九批〕`aos-clean` 屬標準配備（[B-629](../tick.md)）；清理資格、保留期、鎖與提交以 [B-404](../base/storage.md) 為正本。`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用這一項任務的有效帳號（沒帶 `user` 就是該 node inst 的 `user`）。沒有自訂的必填環境；aos-clean 自己不切換身分。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
 
 [ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；`interval_seconds` 預設 86400（一天）、`retention_ms` 預設 2592000000（30 日）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
-預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_at_ms}`；首次即到期，未到設定間隔就不改檔、直接回 0。成功完成本批（含沒有候選）才更新時間，和清理變動一起提交；失敗不更新。
+預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_at_ms}`；沒有這個檔就算已到期。何時更新見 [B-404](../base/storage.md)。
 
-直接跑取得 B-602 同一把鎖，確認工作區乾淨後自己提交清理；不把別人的未提交修改順手 commit／還原。偵測到 tick 傳下的 AOS_TICK_LOCK_FD 時，按 [node P-203](node.md) 核對同一把鎖，不另取鎖、不自行 commit，由所在 group 決定。〔使用者方向 2026-09-29〕未到期不 commit；不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
+直接跑與在 tick 內跑時怎麼持鎖、誰提交，以 [B-404](../base/storage.md) 與 [B-602](../tick.md) 為正本。〔使用者方向 2026-09-29〕不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
 
-〔建議預設，未拍板〕結束碼 `0`＝未到期、本批成功或無可清項，`2`＝用法／設定錯且未開始，`125`＝自身前置失敗且尚未開始改動；`1`＝已開始後的執行、保存或提交失敗。只清預設 agent／kernel 任務產生且自己認得的資料；不認得的不碰、不回報，自訂任務的資料自己清。認得的資料若缺安全清理證據就保留。訊號依 wait 狀態判定。
+〔建議預設，未拍板〕結束碼 `0`＝未到期、本批成功或無可清項，`2`＝用法／設定錯且未開始，`125`＝自身前置失敗且尚未開始改動；`1`＝已開始後的執行、保存或提交失敗。訊號依 wait 狀態判定。清哪些資料見 B-404。
 
 ## P-606．清理、封存與回報〔使用者方向 2026-09-29〕
 
 候選資格與保留期起算點完全依 [B-404](../base/storage.md)／[B-503](../base/transport.md)，不重述終局、消費、引用與去重規則；〔第十八批〕候選含過了保留期的壞收件原件與本地動作的 `.stdout` 檔。每批最多 batch_limit 項；每次重新核對，通知 done 不免驗資格。〔建議預設，未拍板〕unknown 到期連同內部關聯與待收結果一起清，不等人工結案；估計占用何時釋放依 [S-304](../scheduling/llm.md)，資料保留依本條；其他內容仍依一般保護條件。預設 agent 遍歷沿 [agent P-716](agent-tasks.md)，kernel 沿 [P-814](kernel-tasks.md)。
 
-archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存，先以 P-003 寫完整副本並核對內容，再移除日常副本；已存在且相同可補做，不同則 `archive_failed`。保留原目錄關係及查找所需的既有識別／引用，不追隨 symlink 去清 node 外內容。歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。delete 只省略封存步驟，其餘資格與提交規則相同。
-
-追蹤區移除與引用更新一起隨本 repo 的 group 提交；封存區本身不受該 group 還原。中斷時可能留下多餘封存副本，補做先核對，不因已有封存檔就直接刪日常材料。滿碟、I/O 或 commit 失敗保留舊 commit 及未消費 requests／responses 原件，停止後續變動並照 B-404 恢復，不回成功。
+archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存（〔第十九批〕沒有 git 時 `<清理前_commit>` 換成清理前最後一筆完成紀錄的 `seq`，[B-632](../tick.md)），以 P-003 寫副本，保留原目錄關係；歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。封存、刪除、提交與故障恢復的行為以 [B-404](../base/storage.md) 為正本。
 
 回報 `outcome`：`staged`＝本次在 tick 內備好、尚待 group commit；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](README.md#p-008)）。
 
@@ -82,7 +80,7 @@ Schema 與解析沿 [共用約定](README.md)，三份都放寬、不認得的�
 
 設定檢查由使用設定的來源程式負責（agent 設定檢查的結束碼要不要跟 kernel 統一延後，[P-008](README.md#p-008)）：kernel 用 [kernel P-805](kernel-tasks.md) 的 `aos-kernel-check`，agent 用 [agent P-712](agent-tasks.md) 的檢查規則。任務直接讀設定，驗格式、引用與必要權限；錯誤就停依賴它的新工作，仍可收結果與處理取消。inst 身分及 tasks 錯誤按 node／daemon 契約拒絕啟動。
 
-來源沿 P-601 寫自己的 `.aos/attention/`，用 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；suggestion 可寫建議的檢查指令。同一未解問題沿用同一 issue_id，最新細節留來源狀態，不是每格另生一件。任務表壞到檢查任務跑不了時由 tick 寫事項（[B-620](../tick.md)），tick 自己停格時由 daemon 寫（[B-607](../daemon.md)）。
+來源沿 P-601 寫自己的 `.aos/attention/`，用 `reason:"config_invalid"`，message 說檔案、欄位與原因，不夾設定全文或 key；suggestion 可寫建議的檢查指令。同一未解問題沿用同一 issue_id，最新細節留來源狀態，不是每格另生一件。任務表壞到檢查任務跑不了時由標準配備寫事項（[B-620](../tick.md)），tick 自己停格時由 daemon 寫（[B-607](../daemon.md)）。
 
 修好普通設定並提交後，可等下一格檢查，或由有權限者自己執行：
 

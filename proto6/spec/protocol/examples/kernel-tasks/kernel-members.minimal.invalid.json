@@ -4,13 +4,13 @@
   "members": [
     {
       "id": "a",
-      "node_id": "/srv/aos/a",
+      "node_id": "/srv/aos/top/a",
       "identity_grant": [
         0
       ],
       "quota": {
         "version": 1,
-        "node_id": "/srv/aos/a",
+        "node_id": "/srv/aos/top/a",
         "seq": 1,
         "resources": {
           "llm": [

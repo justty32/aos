@@ -18,10 +18,13 @@
                 "registration": {
                   "oneOf": [
                     {
-                      "$ref": "daemon-registration.schema.json#/$defs/Registration"
+                      "$ref": "daemon-registration.schema.json#/$defs/BoundRegistration"
                     },
                     {
                       "$ref": "daemon-registration.schema.json#/$defs/TopRegistration"
+                    },
+                    {
+                      "$ref": "daemon-registration.schema.json#/$defs/MountRecord"
                     }
                   ]
                 },
@@ -87,11 +90,15 @@
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 9007199254740991
+                },
+                "token": {
+                  "$ref": "daemon-registration.schema.json#/$defs/Token"
                 }
               },
               "required": [
                 "node_id",
-                "target_uid"
+                "target_uid",
+                "token"
               ],
               "additionalProperties": false
             }

@@ -8,7 +8,6 @@
     "identity_grant": [
       1000
     ],
-    "once": true,
-    "interval_ms": 1000
+    "once": true
   }
 }

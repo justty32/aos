@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-1",
+  "result": {
+    "node_id": "/srv/aos/team/member",
+    "parent_id": "/srv/aos/team",
+    "registration_id": "reg-7f3a"
+  }
+}

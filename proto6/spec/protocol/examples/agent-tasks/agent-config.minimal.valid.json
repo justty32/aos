@@ -12,6 +12,5 @@
   "tools_file": "config/tools.json",
   "tools": {
     "target_node": "/srv/aos/top"
-  },
-  "daemon_socket": "/run/user/1000/aos.sock"
+  }
 }

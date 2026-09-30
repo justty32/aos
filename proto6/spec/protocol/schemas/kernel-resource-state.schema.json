@@ -31,6 +31,10 @@
               }
             ]
           },
+          "fallback": {
+            "description": "第十九批暫定：daemon 走 cgroup 備援、佈建回 unsupported 時為 true，這版配額已採用、只記帳，沒寫進 cgroup（S-205）。省略＝false。",
+            "type": "boolean"
+          },
           "over_limit": {
             "description": "調低 cgroup 上限時現用量已超過新上限的一筆紀錄（S-205、Q17）；超用交 Linux 處理，aos 只記。沒有就省略或 null。",
             "anyOf": [

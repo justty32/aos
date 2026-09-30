@@ -38,23 +38,8 @@
           "minLength": 1
         },
         ".aos/tasks.json": {
-          "allOf": [
-            {
-              "$ref": "node-tasks.schema.json"
-            },
-            {
-              "properties": {
-                "tasks": {
-                  "items": {
-                    "properties": {
-                      "user": false
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "description": "範本任務表；每項禁止 user 鍵（C-07），$ref 展開後也算。"
+          "$ref": "node-tasks.schema.json",
+          "description": "範本任務表；範本任務不填 user，但任務可以帶 user（B-620，第十九批）。"
         }
       },
       "required": [

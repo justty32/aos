@@ -6,23 +6,24 @@
 
 ## S-401．結果不明就放著
 
-〔使用者方向 2026-09-29〕結果不明的工作保持 unknown，沒人處理就隨定期清理清掉；不自動重做。重啟、逾時、換 boot、登記消失都不是重做的理由；已送出而沒有可靠結果、也不能證明尚未送出的，就是 unknown。這條管 kernel 代登的 once、agent 自登的 once、LLM 嘗試與跨 kernel 轉交。
+〔使用者方向 2026-09-29〕結果不明的工作保持 unknown，沒人處理就隨定期清理清掉；不自動重做。重啟、逾時、換 boot、登記消失都不是重做的理由；已送出而沒有可靠結果、也不能證明尚未送出的，就是 unknown。這條管 kernel 代掛的 once、agent 自掛的 once、LLM 嘗試與跨 kernel 轉交。〔使用者方向 2026-09-30，第十九批〕once 屬標準配備，經通道掛到 daemon 跑（[B-613](../daemon.md)）；下面的證據判斷是標準配備（git 提交加 once）的保證。
 
-〔工程預設；第十八批自 P-807、P-402 搬上〕**once 有沒有開始，照下面的證據判斷**（檔案位置見 [P-402](../protocol/work.md)、[P-807](../protocol/kernel-tasks.md)）：
+〔工程預設；第十八批自 P-807、P-402 搬上；第十九批改成掛行程〕**once 有沒有開始，照下面的證據判斷**（檔案位置見 [P-402](../protocol/work.md)、[P-807](../protocol/kernel-tasks.md)）：
 
-- 第一次啟動前：材料已提交，而且 ignored 的啟動標記 `launch-started` 還不存在，才可以啟動；先原子排他建立標記、同步檔案與父目錄，再登記、叫醒。標記已存在就先查證，不重派。
-- 標記已存在：依序核對 daemon 目前的登記、`last_tick`、完整結果與 `.err` 旁檔（[P-110](../protocol/daemon.md)）。
-  - daemon 目前仍登記這個 once、`last_tick` 為 null：從未開始，可以第一次叫醒。daemon 乾淨停機後接回的登記也算（[B-603](../daemon.md)）。
+- 第一次掛之前：材料已提交（沒 git 時是有完成紀錄，[B-632](../tick.md)），而且 ignored 的啟動標記 `launch-started` 還不存在，才可以掛；先原子排他建立標記、同步檔案與父目錄，再經通道 `node.mount` 掛上。標記已存在就先查證，不重掛。
+- 〔第十九批〕`node.mount` 一步就開跑，沒有「已登記、還沒開始」這個中間狀態；掛載行程不存檔，daemon 重啟後不接回（[B-613](../daemon.md)）。
+- 標記已存在：依序核對 daemon 的掛載紀錄（`node.show`：還在跑，或結束後留下的診斷，[B-610](../daemon.md)）、完整結果與 `.err` 旁檔（[B-613](../daemon.md)，格式見 [P-110](../protocol/daemon.md)）。
+  - 還在跑：等著收，不重掛。
   - 讀到 `.err`：先核對它是本次目標的旁檔、由可信的 daemon 寫出，才合成 `started:false`、failed、`start_failed`；工具自己寫的旁檔不算證據。
   - LLM 的外層程序沒啟動，可以合成 failed、`not_sent`。
   - 其他情況只看 `result.json`：有完整結果就照結果收；已開始、還沒結果就等著收。外層程序 exec 失敗（126／127）、崩潰、自己回 125 卻沒結果，都不能只靠登記消失推定內層沒跑。
-  - 其餘（登記消失、換 boot、逾時、沒有可信結果）：unknown，不重登歷史 once。
-- 證據以啟動標記、`.err`、結果檔與 daemon **現行**登記為主；已解除 once 的診斷紀錄會被淘汰（[B-610](../daemon.md)），不能拿來證明「從未開始」。兩份證據互相矛盾時都保留，並寫一件事項（S-405）。
+  - 其餘（查不到掛載紀錄、換 boot、逾時、沒有可信結果）：unknown，不重掛。標記建好、`node.mount` 還沒送出就當掉的，下一格同樣查不到，也照 unknown 處理（寧可不做，不重做）。
+- 證據以啟動標記、`.err`、結果檔與 daemon 的掛載紀錄為主；掛載行程的診斷紀錄會被淘汰（[B-610](../daemon.md)），查不到不能證明「從未開始」。兩份證據互相矛盾時都保留，並寫一件事項（S-405）。
 - 原請求與回件可補投同 ID、同 bytes，只補交付、不重做外部工作（[B-503](../base/transport.md)）。
 
 unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用什麼時候釋放，由擁有該資源的 kernel 定，LLM 池見 [S-304](llm.md)。
 
-驗收：啟動標記已建、daemon 乾淨停機後重開，once 仍登記且 `last_tick:null`，可以第一次叫醒；意外重開後登記消失、沒有結果也沒有 `.err`，記 unknown，不再啟動。
+驗收：啟動標記已建、掛載紀錄還在跑時，不重掛、等結果；daemon 重開後掛載紀錄消失、沒有結果也沒有 `.err`，記 unknown，不再掛。
 
 <a id="s-402查詢回應與拒絕理由建議預設未拍板09-29-精簡依冗餘審查-b2b4"></a>
 
@@ -50,14 +51,14 @@ unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用�
 
 〔使用者方向 2026-09-29〕attention 是 aos 自己不該或不能處理、交給人或 agent 手動處理的待辦清單。行為以本條為正本，檔案位置、欄位與 IPC 形狀見 [ops P-601](../protocol/ops.md)。
 
-- **兩處**：node 事項放自己的 `.aos/attention/`（ignore、不隨 group 還原）。node 自己寫自己的問題；runner 沒開始、tick 壞掉自動停格（[B-607](../daemon.md)）、程序清不乾淨、任務表壞到檢查任務跑不了，由 daemon 或 tick 寫到該 node；once 單檔沿用 `.err`。寫不進去就不管，daemon 在 stdout 警告一行。helper 不見、state 存不下等 daemon 自己的事，走 `daemon.attention.ls/show/done`；`state_dir/attention/` 供重開接續。daemon 要寫的事項先放記憶體、批次寫出，寫完就清掉，重開不讀回（間隔見 [B-607](../daemon.md)）。
+- **兩處**：node 事項放自己的 `.aos/attention/`（ignore、不隨 group 還原）。node 自己寫自己的問題；runner 沒開始、tick 壞掉自動停格（[B-607](../daemon.md)）、程序清不乾淨、任務表壞（[B-620](../tick.md)），由 daemon 或標準配備寫到該 node；〔第十九批〕標準配備本身不能跑、又沒有終端機可問時（沒全掛，[B-630](../tick.md)），標準配備寫 `reason:"standard_incomplete"`、`issue_id:"standard-incomplete"`，已有就不再寫；單檔掛載行程沿用 `.err`（[B-613](../daemon.md)）。寫不進去就不管，daemon 在 stdout 警告一行。helper 不見、state 存不下等 daemon 自己的事，走 `daemon.attention.ls/show/done`；`state_dir/attention/` 供重開接續。daemon 要寫的事項先放記憶體、批次寫出，寫完就清掉，重開不讀回（間隔見 [B-607](../daemon.md)）。
 - **內容**：每件事項有白話 `message`，可附 `suggestion`（建議處理文字，可含建議指令，不會自動執行）。事項永遠不帶 `argv`（禁止鍵，[C-07](../contracts.md)），也不夾憑證、key 或完整工作。
 - **ID**：同一個還沒解決的問題沿用同一個 `issue_id`，最新細節留在來源自己的狀態檔，不是每格另生一件；不同內容不覆蓋。標完成後再發生，用新 ID。設定檢查的問題照這條寫（`reason:"config_invalid"`，[P-609](../protocol/ops.md)）。
 - **保留**：標完成的留一段時間（預設 30 日），還被引用就留，清理依 [B-404](../base/storage.md)。
 
 `aos-attend` 只做三件事，用呼叫者自己的權限，不取得 N 的身分，不改工作結果、不提交 git；實際修理由人或 agent 自己下指令：
 
-- `aos attend ls`：沿登記樹彙整 node 與 daemon 的待辦。
+- `aos attend ls`：〔第十九批〕沿上下層樹（有效上層，[B-628](../tick.md)）彙整 node 與 daemon 的待辦。
 - `aos attend show N ID`：顯示出了什麼事與建議處理。
 - `aos attend done N ID`：人或 agent 處理完後標完成；node 事項由 `.aos/attention/open/` 搬到 `done/`，daemon 事項走 `daemon.attention.done`；已完成的再標一次不變。
 
@@ -65,7 +66,7 @@ unknown 的資料保留期依 [B-404](../base/storage.md)；它的估計占用�
 
 ## S-406．給 kernel 的一般回話
 
-〔使用者方向 2026-09-29，第十七批〕別人投給 kernel 的一般回話（`agent.say`）由任務表中宣告 `agent.say` 的那項任務收（預設 kernel 範本是 schedule，[P-803](../protocol/kernel-tasks.md)）：**只記錄**，不裝 LLM、不建待處理輸入、不再回話；帶 `in_reply_to` 的也只記錄（[P-705](../protocol/agent-tasks.md)）。收下後回一個確認回件，交 tick 投出、清原件。
+〔使用者方向 2026-09-29，第十七批〕別人投給 kernel 的一般回話（`agent.say`）由任務表中宣告 `agent.say` 的那項任務收（預設 kernel 範本是 schedule，[P-803](../protocol/kernel-tasks.md)）：**只記錄**，不裝 LLM、不建待處理輸入、不再回話；帶 `in_reply_to` 的也只記錄（[P-705](../protocol/agent-tasks.md)）。收下後回一個確認回件，交標準配備投出、清原件（[B-623](../tick.md)、[B-624](../tick.md)）。
 
 〔審稿必-4〕記錄照 agent history 的形狀寫進 kernel 自己的 history，序號放 kernel 自己的序號檔，在 node 鎖內遞增、跟 history 同組提交，重啟不倒退。人手 `aos agent listen` 讀的是**同一個 commit 裡任務表宣告 `agent.say` 的那項任務**對應的 history：宣告它的是 agent 任務就讀 agent 的，是 kernel 任務就讀 kernel 的（[P-713](../protocol/agent-tasks.md)）。
 

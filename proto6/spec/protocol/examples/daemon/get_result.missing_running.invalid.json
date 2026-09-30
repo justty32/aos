@@ -4,11 +4,11 @@
   "result": {
     "node_id": "/srv/aos/team/member",
     "parent_id": "/srv/aos/team",
+    "parent_override": false,
     "identity_grant": [
       1000
     ],
     "owner_uid": 1000,
-    "once": false,
     "paused": false,
     "pending": false,
     "stopping": false,
@@ -16,6 +16,7 @@
     "boot_id": "boot-20260929-a",
     "registration_id": "reg-7f3a",
     "registered": true,
-    "last_tick": null
+    "last_tick": null,
+    "mount": false
   }
 }

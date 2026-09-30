@@ -16,11 +16,39 @@
       "minimum": 1,
       "maximum": 9007199254740991,
       "description": "可選鬧鐘：投出後這麼多毫秒，原件仍在對方收件區就報 request_not_handled（P-206）"
+    },
+    "channel": {
+      "type": "boolean",
+      "description": "〔第十九批〕true：本格有通道時改經 daemon 送（B-624）；預設 false"
+    },
+    "urgent": {
+      "type": "boolean",
+      "description": "〔第十九批〕急件：送到時 daemon 叫醒收件 tick；只在 channel:true 時可寫 true（P-206）"
     }
   },
   "required": [
     "version",
     "target_node",
     "message"
-  ]
+  ],
+  "if": {
+    "properties": {
+      "urgent": {
+        "const": true
+      }
+    },
+    "required": [
+      "urgent"
+    ]
+  },
+  "then": {
+    "properties": {
+      "channel": {
+        "const": true
+      }
+    },
+    "required": [
+      "channel"
+    ]
+  }
 }

@@ -90,6 +90,7 @@
       ]
     },
     "daemon_socket": {
+      "description": "P-701：可省；省略時讀環境變數 AOS_DAEMON_SOCKET（P-117）。",
       "$ref": "common.schema.json#/$defs/NodeId"
     }
   },
@@ -98,7 +99,6 @@
     "llm",
     "system_prompt",
     "tools_file",
-    "tools",
-    "daemon_socket"
+    "tools"
   ]
 }

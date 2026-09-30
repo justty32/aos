@@ -19,7 +19,8 @@
             "$ref": "common.schema.json#/$defs/ID"
           },
           "node_id": {
-            "$ref": "common.schema.json#/$defs/NodeId"
+            "$ref": "common.schema.json#/$defs/NodeId",
+            "description": "成員資料夾的絕對路徑；建議在本 kernel 資料夾之內（預設上層就是本 kernel，B-628），在外面時 sync 以覆蓋登記（S-202）。"
           },
           "identity_grant": {
             "$ref": "daemon-registration.schema.json#/$defs/IdentityGrantOpen"

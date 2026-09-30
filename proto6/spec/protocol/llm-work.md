@@ -2,7 +2,7 @@
 
 ← [共用約定與分工](README.md)｜[工作與結果](work.md)｜[LLM 池](../scheduling/llm.md)
 
-本篇原屬 [work](work.md)，2026-09-29 拆出；條號不變。once 資料夾（P-402）、結果形狀（P-403）、程式契約（P-408）與 schema 範例（P-409）仍在 work。
+本篇原屬 [work](work.md)，2026-09-29 拆出；條號不變。once 資料夾與掛載參數（P-402）、結果形狀（P-403）、程式契約（P-408）與 schema 範例（P-409）仍在 work。
 
 〔使用者方向 2026-09-30，第十八批〕本篇只留池設定、LLM 請求與結果的欄位與 JSON；行為以 [LLM 池 S-301～S-307](../scheduling/llm.md) 為正本（三檔、兩條路線、份額、key、重試、unknown 占用、池 node 誰收件）。LLM 池是預設 kernel 範本的一種資源，不是 aos 寫死的特例（[T-06](../terms.md)）。本篇 schema 照 [P-007](README.md) 放寬：不認得的欄位忽略，只有 [C-07](../contracts.md) 的禁止鍵出現就拒收。
 
@@ -12,12 +12,12 @@ key 保護到哪裡、同帳號部署為什麼不受保護，以 [S-301](../sche
 
 池就是一個 node，收件、回覆與串流檔照 [S-301](../scheduling/llm.md)；池 node 的任務表怎麼裝、誰收 `llm.chat`、`aos-llm` 怎麼派 `aos-llm-call`，照 [S-307](../scheduling/llm.md)。任務表項的 argv 是 `aos-llm --config <設定路徑>`，路徑可相對（依呼叫時的 cwd，tick 裡就是 node 根；範本寫 `config/llm-pools.json`）。
 
-[`llm-config`](schemas/llm-config.schema.json) 是 `version:1` 與 `pools` 陣列，每項必有 `id`、`endpoint`、`model`、`quota_scope`，可加 `key_ref`、有限正整數 `max_attempts`（預設 3，只給 `schedule` 為 `aos` 的池）及 `schedule`。〔使用者方向 2026-09-30，第十八批〕不認得的欄位忽略；`api_key` 是永遠禁止的鍵，出現就整份拒收（[C-07](../contracts.md)，[反例](examples/work/llm-config.inline-key.invalid.json)）。endpoint 是無認證資訊、query、fragment 的 HTTP(S) base URL，末尾補 `/chat/completions`。model 是 provider 真名；同一份表不允許重複 pool id。共享 provider 帳戶／模型限制的項目必須使用相同 `quota_scope`，由同一池管理 node 統一計數（[S-301](../scheduling/llm.md)）。
+[`llm-config`](schemas/llm-config.schema.json) 是 `version:1` 與 `pools` 陣列，每項必有 `id`、`endpoint`、`model`、`quota_scope`，可加 `key_ref`、有限正整數 `max_attempts`（預設 3，只給 `schedule` 為 `aos` 的池）及 `schedule`。〔使用者方向 2026-09-30，第十八批〕不認得的欄位忽略；`api_key` 是永遠禁止的鍵，出現就整份拒收（[C-07](../contracts.md)，[反例](examples/work/llm-config.inline-key.invalid.json)）。endpoint 是無認證資訊、query、fragment 的 HTTP(S) base URL，末尾補 `/chat/completions`。model 是 provider 真名；同一份表不允許重複 pool id。`quota_scope` 是共享限制的名字，格式是非空字串；哪些池共用同一個 scope、集中或分片由 kernel 決定，計數規則見 [S-301](../scheduling/llm.md)。
 
 〔使用者方向 2026-09-29 晚〕`schedule` 選這個池是哪一檔（三檔的意思以 [S-301](../scheduling/llm.md) 為正本），只有兩個值：
 
-- `aos`（省略即此值）＝「自己排」：aos-llm 照 [kernel P-811](kernel-tasks.md) 讀 `llm-limits.json`，做並行、窗口、冷卻與排隊。
-- `endpoint`＝「交給 endpoint」：這個池的 aos-llm **只轉發**，把收到的請求逐件交 aos-llm-call 轉給外部 endpoint；不讀 `llm-limits.json`、不做窗口與並行上限，只藏 key、記用量。〔使用者方向 2026-09-29 晚，第十五批〕429、限流與重試全交給 endpoint，aos 不重試：每件請求只打一次 HTTP，schema 擋掉 `max_attempts`：`schedule` 為 `endpoint` 的池不允許有這欄，寫了就是設定錯誤（[正例](examples/work/llm-config.endpoint.valid.json)、[反例](examples/work/llm-config.endpoint-max-attempts.invalid.json)）。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
+- `aos`（省略即此值）＝「自己排」：並行、窗口、冷卻與排隊的規則見 [S-302、S-303](../scheduling/llm.md)，限制檔格式見 [kernel P-811](kernel-tasks.md)。
+- `endpoint`＝「交給 endpoint」：這個池只轉發（行為見 [S-301](../scheduling/llm.md)，不讀 `llm-limits.json`、不做窗口與並行上限）。〔使用者方向 2026-09-29 晚，第十五批〕429、限流與重試全交給 endpoint，aos 不重試：每件請求只打一次 HTTP，schema 擋掉 `max_attempts`：`schedule` 為 `endpoint` 的池不允許有這欄，寫了就是設定錯誤（[正例](examples/work/llm-config.endpoint.valid.json)、[反例](examples/work/llm-config.endpoint-max-attempts.invalid.json)）。這和 [kernel P-809](kernel-tasks.md) 轉給另一個 kernel 的轉交是兩件事。
 
 一個池只對一個 endpoint，見 [S-301](../scheduling/llm.md)。
 
@@ -25,7 +25,7 @@ key 保護到哪裡、同帳號部署為什麼不受保護，以 [S-301](../sche
 
 ## P-406．LLM 請求與 messages〔建議預設，未拍板〕
 
-[`llm-request`](schemas/llm-request.schema.json) 的 stdin 材料除工作識別，必填 `pool`、`model`、`messages`、`max_completion_tokens` 與正整數 `timeout_ms`；pool／model 是目標 node 所公布的路由名；轉交 kernel 可映到下一個 node 的 pool，model 原值沿路核對，終點核對實際池設定。轉交仍用 llm.chat，不增加另一種 wrapper；保留原 node_id、job_id、attempt_id，另配轉交 RPC id 與 reply_to，由轉交者保存上下游關係。收結果後沿用 stdout 的業務結果，以本 node 及原 RPC id 組成自己的指令結果回覆，不照抄下游指令識別。agent 配對的可信回件來源始終是設定目標。可帶 `tools`；〔使用者方向 2026-09-29 晚〕可帶 `stream_path`（絕對檔案路徑）要求串流，省略就不串流，見 [S-305](../scheduling/llm.md)。轉交沿路原樣保留 stream_path，由最後實際打 HTTP 的 aos-llm-call 寫。請求不能覆寫 endpoint、key 或加入任意 HTTP header。
+[`llm-request`](schemas/llm-request.schema.json) 的 stdin 材料除工作識別，必填 `pool`、`model`、`messages`、`max_completion_tokens` 與正整數 `timeout_ms`；pool／model 是目標 node 所公布的路由名；轉交時 pool 可映到下一個 node 的 pool、原 node_id／job_id／attempt_id 保留，規則見 [S-307](../scheduling/llm.md)。可帶 `tools`；〔使用者方向 2026-09-29 晚〕可帶 `stream_path`（絕對檔案路徑）要求串流，省略就不串流，見 [S-305](../scheduling/llm.md)。請求不能覆寫 endpoint、key 或加入任意 HTTP header。
 
 messages 沿 [proto5 格式](../../../proto5/spec/aos-llm/request.md)，採 [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create) 的**文字與 function tool calls 子集合**，不是所有多模態欄位都支援：
 
@@ -35,11 +35,11 @@ messages 沿 [proto5 格式](../../../proto5/spec/aos-llm/request.md)，採 [Ope
 - tool 結果：`role:"tool"`、`tool_call_id`、字串 `content`。呼叫 ID 在一份 assistant 回覆內唯一；工具結果必須對到前面的呼叫，不能重複或孤立。
 - `tools` 每項為 `{type:"function",function:{name,parameters,description?}}`。parameters 是工具的 JSON Schema；工具名唯一，adapter 不支援的規則要拒絕，不能忽略。
 
-[`llm-messages`](schemas/llm-messages.schema.json) 驗形狀；順序、ID 唯一性、arguments 能否解析及工具參數驗證由接件／agent 任務另驗。〔第十八批補，建議預設，未拍板〕messages 與 tools 裡不認得的欄位照 C-07 忽略，也不送進 HTTP body；HTTP body 只帶本版認得的欄位。HTTP body 只送 model、messages、tools（有才送）、max_completion_tokens 與 stream；沒有 stream_path 送 `stream:false`，有則送 `stream:true`，〔使用者方向 2026-09-29 晚〕並加 `stream_options:{include_usage:true}`，要求 provider 最後附上 usage。供應商不支援就明確拒絕，不把輸出上限默默去掉。agent 發起端的設定、context 定位及用量格式見 [agent 任務 P-701／706／710](agent-tasks.md)。發起 node 先由原始檔整理有界 context；RPC 封包受 P-004 的 256 KiB 限制；messages 在 stdin JSON 材料內，仍受 agent 的 context 上限。
+[`llm-messages`](schemas/llm-messages.schema.json) 驗形狀；順序、ID 唯一性、arguments 能否解析及工具參數驗證由接件／agent 任務另驗。〔第十八批補，建議預設，未拍板〕〔暫定 a，照舊疑點預設：忽略、不送進 HTTP〕messages 與 tools 裡不認得的欄位照 C-07 忽略，也不送進 HTTP body；HTTP body 只帶本版認得的欄位。HTTP body 只送 model、messages、tools（有才送）、max_completion_tokens 與 stream；沒有 stream_path 送 `stream:false`，有則送 `stream:true`，〔使用者方向 2026-09-29 晚〕並加 `stream_options:{include_usage:true}`，要求 provider 最後附上 usage。供應商不支援就明確拒絕，不把輸出上限默默去掉。agent 發起端的設定、context 定位及用量格式見 [agent 任務 P-701／706／710](agent-tasks.md)。發起 node 先由原始檔整理有界 context；RPC 封包受 P-004 的 256 KiB 限制；messages 在 stdin JSON 材料內，仍受 agent 的 context 上限。
 
 ## P-407．LLM 結果、usage 與有限重試〔建議預設，未拍板〕
 
-[`llm-result`](schemas/llm-result.schema.json) 的本地結果檔及 llm.chat stdout JSON 是 `version:1,node_id,job_id,attempts`；RPC result 仍是 P-403 的指令結果。`attempts` 依真正 HTTP 嘗試順序排列，每項帶 `attempt_id,status,reason,message,finish_reason,usage,http_status`，限流失敗的那項可另帶 `retry_at_ms`。第一項 ID 對應請求，是發起 node 配的；後續項的 ID 是池配的，工作目錄前綴也跟著換成池（[P-402](work.md) 的例子）。轉交中間層只轉送／保存同一組結果，不重新計一次 HTTP、不自行再做 provider 重試。重試前由池 tick 固定新 attempt ID 與前次結果、提交後才派出；後續 ID 由這條已提交關係核對，不必假裝仍是第一個 attempt。
+[`llm-result`](schemas/llm-result.schema.json) 的本地結果檔及 llm.chat stdout JSON 是 `version:1,node_id,job_id,attempts`；RPC result 仍是 P-403 的指令結果。`attempts` 依真正 HTTP 嘗試順序排列，每項帶 `attempt_id,status,reason,message,finish_reason,usage,http_status`，限流失敗的那項可另帶 `retry_at_ms`。第一項 ID 對應請求，是發起 node 配的；後續項的 ID 是池配的，工作目錄前綴也跟著換成池（[P-402](work.md) 的例子）。轉交與重試時 attempt ID 與結果怎麼保存，見 [S-307](../scheduling/llm.md)。
 
 〔第十八批補〕`retry_at_ms` 只出現在 `status:failed`、`reason:rate_limited` 的項，記這次限流後算出的「最早可重試時間」，是這次嘗試的歷史證據；[kernel-work-state](schemas/kernel-work-state.schema.json) 的 `llm.retry_at_ms` 是池排程用的下次派出時間。兩者值可能相同，意思不同，都留。
 

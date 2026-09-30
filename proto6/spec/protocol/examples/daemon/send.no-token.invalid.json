@@ -1,0 +1,20 @@
+{
+  "jsonrpc": "2.0",
+  "id": "req-5",
+  "method": "node.send",
+  "params": {
+    "to": "/srv/aos/team/member",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": "m1",
+      "method": "agent.say",
+      "params": {
+        "argv": [
+          "aos",
+          "agent.say"
+        ]
+      },
+      "reply_to": "/srv/aos/team"
+    }
+  }
+}

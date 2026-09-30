@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "daemon 公開 IPC 請求與回應（P-103～107、P-111、P-115）；嚴格，不認得的欄位拒絕（C-07）",
+  "title": "daemon 公開 IPC 請求與回應（P-103～107、P-111、P-115、P-117～119）；嚴格，不認得的欄位拒絕（C-07）",
   "$defs": {
     "AckResult": {
       "type": "object",
@@ -81,13 +81,18 @@
             }
           ]
         },
+        "parent_override": {
+          "type": "boolean",
+          "description": "true＝上層來自登記覆蓋；頂層與看資料夾推得的為 false（B-606）"
+        },
         "owner_uid": {
           "type": "integer",
           "minimum": 0,
           "maximum": 9007199254740991
         },
-        "once": {
-          "type": "boolean"
+        "mount": {
+          "type": "boolean",
+          "description": "true＝掛載行程（B-613）"
         },
         "paused": {
           "type": "boolean"
@@ -202,9 +207,9 @@
       "required": [
         "node_id",
         "parent_id",
-        "identity_grant",
         "owner_uid",
-        "once",
+        "parent_override",
+        "mount",
         "paused",
         "running",
         "pending",
@@ -220,20 +225,44 @@
         {
           "if": {
             "properties": {
-              "once": {
+              "mount": {
                 "const": true
               }
             },
             "required": [
-              "once"
+              "mount"
             ]
           },
           "then": {
             "not": {
-              "required": [
-                "interval_ms"
+              "anyOf": [
+                {
+                  "required": [
+                    "interval_ms"
+                  ]
+                },
+                {
+                  "required": [
+                    "identity_grant"
+                  ]
+                },
+                {
+                  "required": [
+                    "provision"
+                  ]
+                }
               ]
+            },
+            "properties": {
+              "parent_override": {
+                "const": false
+              }
             }
+          },
+          "else": {
+            "required": [
+              "identity_grant"
+            ]
           }
         },
         {
@@ -249,7 +278,7 @@
           },
           "then": {
             "properties": {
-              "once": {
+              "mount": {
                 "const": false
               }
             }
@@ -265,7 +294,7 @@
           },
           "then": {
             "properties": {
-              "once": {
+              "mount": {
                 "const": true
               },
               "paused": {
@@ -634,6 +663,65 @@
         "next_after"
       ],
       "additionalProperties": false
+    },
+    "RegisterResult": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "parent_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "registration_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        }
+      },
+      "required": [
+        "node_id",
+        "parent_id",
+        "registration_id"
+      ],
+      "additionalProperties": false,
+      "description": "node.register：正規化後的 node id、有效上層與登記識別（P-104）"
+    },
+    "MountResult": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "$ref": "common.schema.json#/$defs/NodeId"
+        },
+        "registration_id": {
+          "$ref": "common.schema.json#/$defs/ID"
+        }
+      },
+      "required": [
+        "node_id",
+        "registration_id"
+      ],
+      "additionalProperties": false,
+      "description": "node.mount（P-118）"
+    },
+    "TakeResult": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/FileRpcRequest"
+          },
+          "maxItems": 256
+        },
+        "more": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "messages",
+        "more"
+      ],
+      "additionalProperties": false,
+      "description": "node.take：先進先出取走的訊息；more＝還有沒取完的（P-119）"
     }
   },
   "oneOf": [
@@ -650,7 +738,7 @@
                   "const": "node.register"
                 },
                 "params": {
-                  "$ref": "daemon-registration.schema.json#/$defs/Registration"
+                  "$ref": "daemon-registration.schema.json#/$defs/RegisterParams"
                 }
               },
               "required": [
@@ -668,6 +756,9 @@
                   "properties": {
                     "node_id": {
                       "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "token": {
+                      "$ref": "daemon-registration.schema.json#/$defs/Token"
                     }
                   },
                   "required": [
@@ -691,10 +782,132 @@
                   "properties": {
                     "node_id": {
                       "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "token": {
+                      "$ref": "daemon-registration.schema.json#/$defs/Token"
                     }
                   },
                   "required": [
                     "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.mount"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "parent_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "token": {
+                      "$ref": "daemon-registration.schema.json#/$defs/Token"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.kill"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "token": {
+                      "$ref": "daemon-registration.schema.json#/$defs/Token"
+                    }
+                  },
+                  "required": [
+                    "node_id"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.send"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "$ref": "daemon-registration.schema.json#/$defs/Token"
+                    },
+                    "to": {
+                      "$ref": "common.schema.json#/$defs/NodeId"
+                    },
+                    "message": {
+                      "$ref": "common.schema.json#/$defs/FileRpcRequest"
+                    },
+                    "urgent": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "to",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ]
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "node.take"
+                },
+                "params": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "$ref": "daemon-registration.schema.json#/$defs/Token"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 256,
+                      "default": 256
+                    }
+                  },
+                  "required": [
+                    "token"
                   ],
                   "additionalProperties": false
                 }
@@ -922,7 +1135,7 @@
             {
               "properties": {
                 "method": {
-                  "const": "once.clear"
+                  "const": "mount.clear"
                 },
                 "params": {
                   "type": "object",
@@ -981,6 +1194,15 @@
                 },
                 {
                   "$ref": "#/$defs/AttentionList"
+                },
+                {
+                  "$ref": "#/$defs/RegisterResult"
+                },
+                {
+                  "$ref": "#/$defs/MountResult"
+                },
+                {
+                  "$ref": "#/$defs/TakeResult"
                 }
               ]
             }
@@ -1032,7 +1254,11 @@
                                 "provision_failed",
                                 "start_failed",
                                 "resource_observation_failed",
-                                "response_too_large"
+                                "response_too_large",
+                                "token_invalid",
+                                "kind_mismatch",
+                                "mailbox_full",
+                                "message_too_large"
                               ]
                             }
                           }

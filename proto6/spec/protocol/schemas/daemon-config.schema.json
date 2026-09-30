@@ -67,17 +67,19 @@
       "default": false,
       "description": "重啟與解除登記時要不要一併收尾 node 自開的子框（B-605）"
     },
-    "once_diag_max": {
+    "mount_diag_max": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991,
-      "default": 1024
+      "default": 1024,
+      "description": "掛載行程的診斷最多留幾筆，0＝不留（B-610）"
     },
-    "once_diag_ttl_ms": {
+    "mount_diag_ttl_ms": {
       "type": "integer",
       "minimum": 1,
       "maximum": 9007199254740991,
-      "default": 86400000
+      "default": 86400000,
+      "description": "掛載行程的診斷結束後留多久（B-610）"
     }
   },
   "required": [

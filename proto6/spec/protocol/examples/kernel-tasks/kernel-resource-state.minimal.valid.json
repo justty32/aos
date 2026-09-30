@@ -12,6 +12,13 @@
         "current": 1300000000,
         "observed_at_ms": 1000
       }
+    },
+    {
+      "member_id": "b",
+      "quota_seq": 2,
+      "applied": true,
+      "error": null,
+      "fallback": true
     }
   ],
   "over_allocated": []

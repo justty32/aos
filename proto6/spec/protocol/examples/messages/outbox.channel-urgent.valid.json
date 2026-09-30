@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "target_node": "/srv/aos/top",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": "m1",
+    "method": "agent.say",
+    "params": {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos",
+        "agent",
+        "say"
+      ],
+      "stdin": "/srv/aos/shared/agent-say-payload.minimal.valid.json",
+      "stdout": {
+        "$opt": "inherit"
+      },
+      "stderr": {
+        "$opt": "inherit"
+      }
+    },
+    "reply_to": "/srv/aos/a"
+  },
+  "channel": true,
+  "urgent": true
+}

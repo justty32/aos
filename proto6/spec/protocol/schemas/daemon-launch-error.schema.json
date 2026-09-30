@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "once 未啟動旁檔 <inst 檔名>.err（P-110）；持久檔，不認得的欄位忽略（C-07）",
+  "title": "掛載行程（單檔）未啟動旁檔 <inst 檔名>.err（P-110）；持久檔，不認得的欄位忽略（C-07）",
   "type": "object",
   "properties": {
     "version": {

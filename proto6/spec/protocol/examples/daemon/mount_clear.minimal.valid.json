@@ -1,7 +1,7 @@
 {
   "jsonrpc": "2.0",
   "id": "req-1",
-  "method": "once.clear",
+  "method": "mount.clear",
   "params": {
     "node_id": "/srv/aos/team/member"
   }
