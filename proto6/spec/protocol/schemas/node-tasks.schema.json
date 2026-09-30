@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "node-tasks.schema.json",
   "title": "node 任務註冊表",
-  "description": ".aos/tasks.json；整份 $ref 展開後再驗證 Task，含唯一 id。任務是 inst 的超集，可帶 user（第十九批；第二十批：跟 tick 帳號不同時那一項回 125，要切帳號包 aos-as，B-620）。核心只看 id、inst 部分與 user，kind 與 methods 由系統級任務讀。第二十批撤 group、needs（組由存檔點界定、前置改用 aos-needs，B-621）；舊表寫了照不認得的欄位忽略（P-007）。",
+  "description": ".aos/tasks.json；整份 $ref 展開後再驗證 Task，含唯一 id。任務是 inst 的超集，可帶 user（第十九批；第二十批：跟 tick 帳號不同時那一項回 125，要切帳號包 aos-as，B-620）。第二十批先只定基本欄位（id、kind、methods 加 inst）；不認得的鍵照收、核心忽略（P-007），group、needs 也當陌生鍵。",
   "type": "object",
   "required": [
     "_metainfo",
