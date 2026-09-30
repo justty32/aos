@@ -6,6 +6,6 @@
     "node_id": "/srv/aos/team/member",
     "action": "spawn_as",
     "user": "aos-tool",
-    "path": "/srv/aos/team/member/.aos/jobs/task-1790000000000-2.json"
+    "path": "/srv/aos/team/member/.aos/jobs/as-12-4242.json"
   }
 }

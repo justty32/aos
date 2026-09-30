@@ -12,7 +12,7 @@
 | `AOS_TICK_TOKEN` | 本格憑證：32 個小寫 hex（128 位元），schema 見 [daemon-registration](../schemas/daemon-registration.schema.json) 的 `Token` |
 
 - 收憑證的 method：`node.register`、`node.unregister`、`node.wake`、`node.mount`、`node.kill` 的 params 可多帶 `token`；`node.send`、`node.take` 與 `node.provision` 的 `spawn_as`（[P-107](provision-and-runner.md)）必帶。其餘 method 與 `node.provision` 的其他動作不收 `token`，帶了就是 `invalid_params`；所以客戶端（含 kernel、agent 的工具）只對上面這幾個附憑證，`daemon.info`、`node.show`、其他佈建動作照舊不帶，以 socket 對面的帳號授權（[B-612](../../daemon.md)）。
-- 客戶端（標準配備的傳訊任務、aos 指令）要走通道卻缺任一個變數時，自己擋下、報代碼 `no_channel`，不連 socket；這個代碼不會出現在 daemon 的回應裡。
+- 客戶端（投件任務 `aos-outbox`、取件的任務、`aos-as`、aos 指令）要走通道卻缺任一個變數時，自己擋下、報代碼 `no_channel`，不連 socket；這個代碼不會出現在 daemon 的回應裡。
 - helper 私有通道的 `daemon.helper.start` 另帶 `token`，由 helper 放進 runner 的環境（[P-108](provision-and-runner.md)）。
 
 ## P-118．掛行程與砍掉〔使用者方向 2026-09-30，第十九批；參數為建議預設〕

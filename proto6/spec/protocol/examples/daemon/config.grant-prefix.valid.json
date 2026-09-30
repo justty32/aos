@@ -5,7 +5,6 @@
   "common_user": "aos-daemon",
   "stop_mode": "drain",
   "drain_timeout_ms": 900000,
-  "kill_escape_cgroups": false,
   "mount_diag_max": 2048,
   "mount_diag_ttl_ms": 43200000,
   "roots": [

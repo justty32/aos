@@ -195,7 +195,7 @@
                 },
                 "frame": {
                   "type": "string",
-                  "pattern": "^task-[1-9][0-9]*$"
+                  "pattern": "^task-(0|[1-9][0-9]*)-[1-9][0-9]*$"
                 }
               },
               "required": [
