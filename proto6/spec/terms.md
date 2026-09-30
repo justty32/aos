@@ -27,7 +27,7 @@ daemon 負責程序啟停，不判業務排程；可選 root helper 是 daemon �
 
 ## T-03．工作識別
 
-〔建議預設，未拍板〕`node_id` 指上述路徑；`request_id` 辨識一次投件，`job_id` 辨識邏輯工作，`attempt_id` 辨識一次實際嘗試。重送同一次結果沿用 attempt ID，真的重新執行才換 ID。〔使用者方向 2026-09-29，第十六批〕attempt ID 由發起 node 自己配，不同 node 可能重複；存成工作目錄時名字要加發件者前綴，格式見 [P-402](protocol/work.md)。`run_id` 只在採用 [run](scheduling/runs.md) 分組時需要，不要求所有 node 都有一輪任務。
+〔建議預設，未拍板〕`node_id` 指上述路徑；`request_id` 辨識一次投件，`job_id` 辨識邏輯工作，`attempt_id` 辨識一次實際嘗試。重送同一次結果沿用 attempt ID，真的重新執行才換 ID。〔使用者方向 2026-09-29，第十六批〕attempt ID 由發起 node 自己配，不同 node 可能重複；存成工作目錄時名字要加發件者前綴，格式見 [P-402](protocol/work.md)。〔使用者方向 2026-09-30，第十八批〕更精確地說，attempt ID 由**配出它的 node** 配：一般是發起 node；LLM 池限流重試時由池配（P-402）。`run_id` 只在採用 [run](scheduling/runs.md) 分組時需要，不要求所有 node 都有一輪任務。
 
 路徑識別 node，不代表 UID 或舊工作歸屬。〔使用者方向 2026-09-29〕node id 的唯一性不另防：同一資料夾經 symlink 有兩個路徑、同一路徑先後給不同 node、跨機器重名，都不在考慮範圍，風險由使用者自行承擔；不展開 symlink、不加世代號或跨機檢查。
 

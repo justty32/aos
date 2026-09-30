@@ -24,14 +24,14 @@
 - **發布**：在目標資料夾的 `.tmp/` 寫完、fsync、rename 成正式名，再 fsync 目錄。名字以 `.` 開頭的一律不處理。rename 不覆蓋已有檔；撞名怎麼處理見 [B-503](../base/transport.md)。完整發布的規則見 [B-402](../base/storage.md)。
 - **收件區**〔使用者方向 2026-09-29〕：每個 node 根下的 `requests/`（別人問我）與 `responses/`（我問別人、別人回我），都在 `.gitignore` 裡；`inbox` 這名字保留給日後的工具，不當資料夾名。投件者要對目標那格有寫權限（權限怎麼開見 node.md）。收件只看檔案；通知只是門鈴，見 [B-504](../daemon.md)。
 - **去重**：檔名就是請求 ID；同 ID 怎麼算收過、怎麼算衝突見 [B-503](../base/transport.md)。
-- **消費與送出**：收件原件在 group commit 後才刪（Q1），待送檔放 `.aos/outbox/`、commit 後才投出（Q2），行為見 [tick](../tick.md)，檔案格式見 P-206。
+- **消費與送出**：收件原件在 group commit 後才刪（Q1，[B-623](../tick.md)），待送檔放 `.aos/outbox/`、commit 後才投出（Q2，[B-624](../tick.md)），檔案格式見 P-206。
 
 ## P-004．JSON-RPC 的兩種載體〔建議預設，未拍板〕
 
 物件形狀照 JSON-RPC 2.0：請求 `{"jsonrpc":"2.0","id":"<ID>","method":"...","params":{...}}`，回應 `{"jsonrpc":"2.0","id":"<ID>","result":{...}}` 或 `"error":{...}`。`id` 必填且是 P-002 的 ID；唯解析／請求錯誤（-32700／-32600）取不到合法 ID 時，回應用 `id:null`，成功回應與請求仍不准 null；不用 batch、不用 notification。公開 method 就是對應指令去掉 `aos`、以 `.` 連接，例如 `agent.say` 對 `aos agent say`；內部 helper 用 `daemon.helper.*` 對 `aos daemon helper ...`，仍只走私有通道。
 
 1. **socket（daemon IPC）**：Unix stream socket，一行一個 object、以 LF 結尾，單行上限 256 KiB。呼叫者身分只看 `SO_PEERCRED`，封包裡自稱的身分不算。
-2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`；argv 要和 method 對上，對不上或沒有任務宣告這個 method 時回 -32601，規則見 [B-501](../base/transport.md)。回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄格式見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，不產生 `null.json`；壞件怎麼處理見 [tick](../tick.md)。檔案上限 256 KiB，大內容放檔案、用路徑引用。回應可能要好幾格 tick 後才來，查詢或重送一律用同一個 `id`（[B-503](../base/transport.md)）。
+2. **檔案（node 之間）**：params 是一份 inst，argv 保留 `aos`；argv 要和 method 對上，對不上或沒有任務宣告這個 method 時回 -32601，規則見 [B-501](../base/transport.md)。回應 result 用 [work-result](work.md) 的指令執行結果。請求檔名 `<id>.json`，內容就是上面的請求物件，外加頂層 `"reply_to"`：回應要投去的收件區（node id）。子目錄格式見 [messages P-301～303](messages.md)；檔案回應必須有合法 ID，不產生 `null.json`；壞件只報一次、原件留到保留期，見 [B-623](../tick.md)。檔案上限 256 KiB，大內容放檔案、用路徑引用。回應可能要好幾格 tick 後才來，查詢或重送一律用同一個 `id`（[B-503](../base/transport.md)）。
 
 ## P-005．錯誤〔建議預設，未拍板〕
 
@@ -100,15 +100,15 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | tick 以外其餘計算單位的外殼（設-14），「隨機性」要不要成為外殼的一欄；隨機性怎麼量、怎麼跟完成度與消耗權衡 | 裁定 1、方向 6 | [T-06](../terms.md)、[T-07](../terms.md) |
 | kernel／agent／custom 類任務的逾時與取消 | 裁定 1 補充 | [P-202](node.md)、[P-203](node.md)；[B-203](../base/execution.md) 只適用 once |
 | agent 內部機制：agent 請求被拒收（新裁-2）、卡在 unknown 的使用者輸入（裁-10）、agent 設定檢查的結束碼要不要跟 kernel 統一（第 20 題，記錄者歸類） | 裁定 12 | [P-705](agent-tasks.md)、[P-707](agent-tasks.md)、[P-708](agent-tasks.md)、[P-712](agent-tasks.md)、[P-716](agent-tasks.md)、[P-404](work.md)、[P-603](ops.md)、[P-609](ops.md)、[P-805](kernel-tasks.md) |
-| agent 之間的問答 | 裁定 11 | [P-705](agent-tasks.md)、[P-306](messages.md)、[P-803](kernel-tasks.md) |
-| agent 自己開的 once：做完照第十七批不叫醒、結果由 agent 自己收；回查間隔放哪（Q29）；LLM 請求與 agent 自開 once 的取消（裁-5） | 裁定 10、12 | [P-704](agent-tasks.md)、[P-707](agent-tasks.md)、[P-411](work.md) |
-| 預設鬧鐘和「投件被丟掉」對不上（Q26） | 裁定 12、13 | [P-706](agent-tasks.md)、[P-206](node.md) |
+| agent 之間的問答 | 裁定 11 | [P-705](agent-tasks.md)、[P-306](messages.md)、[P-803](kernel-tasks.md)、[S-406](../scheduling/operations.md) |
+| agent 自己開的 once：做完照第十七批不叫醒、結果由 agent 自己收；回查間隔放哪（Q29）；LLM 請求與 agent 自開 once 的取消（裁-5：下一輪要在 forward-state 與 agent 請求加 `submitter_uid`、`canceling` 階段） | 裁定 10、12 | [P-704](agent-tasks.md)、[P-707](agent-tasks.md)、[P-411](work.md) |
+| 預設鬧鐘和「投件被丟掉」對不上（Q26） | 裁定 12、13 | [P-706](agent-tasks.md)、[P-206](node.md)、[B-624](../tick.md) |
 | 通用外部資源池（設-15）：LLM 池是外部計算的第一個實例，其他外部計算由各 kernel 以資源任務自訂；通用介面隨第一列一起延後 | 裁定 1、Q4 | [S-301](../scheduling/llm.md) |
 | git 歷史回收 | 裁定 14 | [B-404](../base/storage.md)、[P-606](ops.md)、[H-034](../cli/gaps.md) |
 
 ### 已裁定（第十一批）
 
-- **once 資源歸屬與啟動失敗證據**〔使用者方向 2026-09-29〕：照 [daemon P-104／110](daemon.md)；以可信 parent_id 固定算在發起 node 的資源框內，runner 根本沒啟動時由 daemon 在 inst 檔名後加 `.err` 寫旁檔（例如 `job.json.err`）。
+- **once 資源歸屬與啟動失敗證據**〔使用者方向 2026-09-29〕：照 [B-606](../daemon.md)、[P-110](daemon/provision-and-runner.md)；以可信 parent_id 固定算在發起 node 的資源框內，runner 根本沒啟動時由 daemon 在 inst 檔名後加 `.err` 寫旁檔（例如 `job.json.err`）。
 - **首版網路**〔使用者方向 2026-09-29〕：只記用量摘要，不做硬限速；要求硬限速的部署明確報不支援（[resources P-506](resources.md)）。
 
 ### 工程預設與待補接口
@@ -126,26 +126,19 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 | 協議檔／條款 | 本篇只留 | 行為正本（主規格） |
 |---|---|---|
-| [daemon](daemon/README.md)／P-100～116 | 設定欄位、IPC method 與 params／result、helper 通道、runner 回報、錯誤碼 | [daemon](../daemon.md)；[身分](../base/identity-resources.md)；[inst](../base/inst.md) |
-| [node](node.md)／P-200～210 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、鬧鐘與待送檔格式 | [tick](../tick.md)；[儲存](../base/storage.md)；[投件](../base/transport.md) |
+| [daemon](daemon/README.md)／P-100～116 | 設定欄位、IPC method 與 params／result、helper 通道、runner 回報、錯誤碼 | [daemon](../daemon.md)（B-601～611）；[身分](../base/identity-resources.md)；[inst](../base/inst.md) |
+| [node](node.md)／P-200～210 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、鬧鐘與待送檔格式 | [tick](../tick.md)（B-602、B-620～627）；[儲存](../base/storage.md)；[投件](../base/transport.md)；[執行器 B-202](../base/execution.md) |
 | [messages](messages.md)／P-300～309 | 請求／回應檔、method 目錄、摘要檔 | [投件](../base/transport.md)；[tick](../tick.md)；[S-201](../scheduling/admission.md) |
 | [work](work.md)／P-400～404、408～411 | 工作 payload、結果 JSON、`work.cancel` 形狀、程式 argv | [工作材料](../base/work.md)；[執行器](../base/execution.md) |
-| [llm-work](llm-work.md)／P-405～407 | 池設定、LLM 請求與結果 | [LLM](../scheduling/llm.md) |
-| [resources](resources.md)／P-500～ | 配額與用量檔、cgroup 檔對照 | [S-203](../scheduling/admission.md)；[身分與 OS 資源](../base/identity-resources.md) |
+| [llm-work](llm-work.md)／P-405～407 | 池設定、LLM 請求與結果 | [LLM S-301～307](../scheduling/llm.md) |
+| [resources](resources.md)／P-500～ | 配額與用量檔、cgroup 檔對照 | [S-203、S-205～207](../scheduling/admission.md)；[身分與 OS 資源](../base/identity-resources.md) |
 | [ops](ops.md)／P-600～ | 事項檔、`aos-attend`／`aos-clean` 的 argv、設定與報告 | [S-405](../scheduling/operations.md)；[B-404](../base/storage.md) |
 | [agent 任務](agent-tasks.md)／P-700～ | agent 設定、工具清單、對話、context 與用量檔、範本 | [agent](../agent/README.md) |
-| [kernel 任務](kernel-tasks.md)／P-800～ | kernel 設定、成員、各狀態檔、範本 | [scheduling](../scheduling/README.md) 各篇 |
+| [kernel 任務](kernel-tasks.md)／P-800～ | kernel 設定、成員、各狀態檔、範本 | [scheduling](../scheduling/README.md) 各篇（S-201～207、[S-301～307](../scheduling/llm.md)、[S-401、S-405、S-406](../scheduling/operations.md)） |
 
-## P-010．inst 目標：檔案或資料夾〔使用者方向 2026-09-29〕
+## P-010．inst 目標：檔案或資料夾
 
-沿 proto5 `aos-exec xxx` 的慣例，凡是「給一個目標去跑 inst」（daemon 註冊、runner、人手直接跑）都照這條找 inst：
-
-| 目標 `xxx` 是 | 用哪份 inst | base（相對路徑起點、`cwd` 沒寫時的預設） |
-|---|---|---|
-| 檔案 | 就是它，當 inst JSON 讀 | 檔案所在的資料夾 |
-| 資料夾 | 先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json` | `xxx` 自己 |
-
-〔使用者方向 2026-09-29〕首版**不提供**改尋找路徑的選項（環境變數或旗標都沒有），只照上表。資料夾裡兩個位置都沒有＝用法錯（2）。先看是不是資料夾，再當檔案。node 是資料夾；`once` 工作通常是單檔。登記的 id 就是這個目標路徑。
+（第十八批：行為已搬到 [inst「inst 目標：檔案或資料夾」](../base/inst.md#inst-目標檔案或資料夾)；條號保留。）
 
 <a id="p-index"></a>
 
