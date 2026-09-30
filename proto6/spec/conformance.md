@@ -221,7 +221,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 **任務表、method 與人手跑一格**
 
-- 任務表沒有任何 system 類也能正常跑；`kind:"agent.review"` 照收，`system.x` 整份拒收（B-620、B-626）。〔第二十批〕任務項帶 `user` 照收，跟 tick 帳號不同時那一項回 125（B-620、C-07）。
+- 任務表沒有任何 system 類也能正常跑；`kind:"agent.review"` 照收，`system.x` 核心照跑、不擋（只有恢復前驗證擋，B-620、B-625、B-626）。〔第二十批〕任務項帶 `user` 照收，跟 tick 帳號不同時那一項回 125（B-620、C-07）。
 - 〔第十九批〕不經 daemon 直接跑 `aos-tick` 照常跑完一格，只是沒有通道（B-627）。`aos node tick` 經 daemon：送 wake 後看到 `tick_seq` 變大才回 0，逾時回 101，paused 回 1 不等（B-607、H-004）。
 - 沒人宣告的 method 由收件任務回 -32601；有宣告但來源未授權回 -32000 加業務碼（B-501、B-623）。
 
