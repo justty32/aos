@@ -4,7 +4,7 @@
 
 **做完的樣子**：沒有 daemon、git、cgroup、helper 的機器上，`aos-tick --node /絕對路徑` 直接跑一格：同資料夾只能一格、照 `.aos/tasks.json` 依序跑、每項怎麼結束都寫進 `.aos/tick/current.json`、算得出預設上層。這就是 [B-626](../spec/settled/tick.md#b-626核心與系統級任務的界線) 的驗收。
 
-- Python 3.9、只用標準庫。inst 的解析、驗證、開程序用另一隊的 `aos_inst`。
+- Python 3.9、只用標準庫。inst 的解析、驗證、開程序用從 proto5 複製來的 [src/py/lib/](../src/py/README.md)：`aos_inst.load(path, base)`／`aos_inst.load_obj(obj, base)` 讀驗解一份 inst（壞就丟 `InstError`，`str(e)` 是「代號: 白話」），`aos_exec` 開程序。lib 沒有、tick 要自己接的東西寫在步驟 4 的「注意」與步驟 5 的「tick 要自己接」。
 - 建議（非定案）：程式放 `proto6/src/py/aos_tick/`，入口 `proto6/src/bin/aos-tick`；測試用 `unittest`。
 - 一格的順序（[B-620「一格怎麼走」](../spec/settled/tick.md#b-620任務註冊表照表依序跑)）：取鎖 → 看擋板 → 換紀錄 → 讀表驗表 → 照表跑（每項後寫紀錄、查停格檔）→ 回結束碼。下面的步驟大致照這個順序長出來。
 
@@ -56,8 +56,8 @@
   - 只驗這四件，其餘（缺 `kind`、`system.x`、`methods` 形狀）核心**不驗、照跑**。
   - 表壞時：stderr 印 `config_invalid: 哪裡錯`，紀錄寫 `ended:true`、`exit:2`、`tasks:[]`，回 2。紀錄在讀表之前就換好了，所以表壞的格也佔一個 `seq`。
   - 陌生鍵（包括舊的 `group`、`needs`）照收、忽略。
-- **可補全（AI 補）**：呼叫 `aos_inst` 驗每一項、把錯誤轉成一行說明。
-- **注意**：`id`、`kind`、`methods` 不是 inst 的欄位。整份 `$ref` 的項就照 `$ref` 的規則展開（已裁定，見待問 2）；`aos_inst` 已把不認得的鍵放在 `Plan.extra`、`raw_user` 另外提供，`id` 從那裡拿。
+- **可補全（AI 補）**：用 `aos_inst.load_obj(項, node 資料夾)` 驗每一項，`str(InstError)` 就是一行說明。
+- **注意**：`id`、`kind`、`methods` 不是 inst 的欄位。整份 `$ref` 的項就照 `$ref` 的規則展開（已裁定，見待問 2）。**tick 要自己接**：`load_obj` 只回七個執行欄位，不認得的鍵（`id`、`kind`、`methods`）直接丟掉，也不回原始 `user`；`id` 要 tick 自己拿（整份 `$ref` 的項先用 `aos_directives.resolve_located` 展開頂層再讀），原始 `user` 直接讀項目的字面值。另外 `load_obj` 看到跟目前身分不同的 `user` 會丟 `UserNotGranted`——開格驗表時別讓它把整表打成壞表，先自己判 `user`、再把拿掉 `user` 的項交給 `load_obj`。
 - **開格只驗、不留結果**：這一步的展開只為了驗合不合法；驗過的結果不留，跑到那一項時重新展開（步驟 5，已裁定，見待問 3）。
 - **找表**：資料夾沒有 `.aos/` 時去找 `inst.json`（跟 inst 目標找檔同一套：先 `.aos/`，沒有就 `inst.json`）；已裁定，見待問 5。
 - **驗收**：
@@ -75,7 +75,8 @@
   - 帳號：項目帶 `user` 而且解析成的 UID 跟 tick 自己不同 → 不跑、紀錄 `exit:125`、stderr `user_mismatch: <id>`，其餘照跑。核心**不切帳號**。
   - 五個變數：`AOS_NODE_DIR`、`AOS_TICK_LOCK_FD`、`AOS_TICK_RECORD`、`AOS_TASK_ID`、`AOS_TASK_INDEX`。
   - 整格結束碼：全成功 0，有失敗 1。
-- **可補全（AI 補）**：用 `aos_inst` 的開程序模組跑單項（cwd 預設 node 根、串流預設 `/dev/null`、`envs` 疊上去、子程序另開 session）；把 wait 結果轉成 `exit`／`signal`。
+- **可補全（AI 補）**：用複製來的 lib 跑單項（`load_obj` 解出的 inst：cwd 預設 base＝node 根、串流預設 `/dev/null`、`envs` 疊上去；`aos_exec_run` 開子程序另開 session）；把 wait 結果轉成 `exit`／`signal`。
+- **tick 要自己接**（lib 沒有，別去改 lib）：公開的 `aos_exec.run_inst()` 會接管 stdin／stdout，不合用；照 inst 開檔、開程序的是私有的 `aos_exec_run._execute_inst()`。它的 `Popen` 用預設 `close_fds`，鎖 fd 繼承不到；五個 `AOS_*` 要自己塞進 `envs`，而且 `clear` 時 `AOS_TICK_LOCK_FD` 仍要留；回的是單一結束碼（被訊號 N 殺是 128+N），紀錄要分 `exit`／`signal` 得自己等子程序。
 - **注意**：
   - 核心**不清後代**（B-602）。任務留下還握著鎖 fd 的程序，下一格會回 75；第一段沒人收，測完自己殺。探針原型在 tick 裡設了 subreaper 收後代，那是舊做法，別照抄。
   - 子程序另開 session，所以直接跑時按 Ctrl-C 只停得了 tick 本身。
@@ -141,7 +142,7 @@
 〔使用者方向 2026-09-30 晚〕前五條已裁定：
 
 1. **上下層判定怎麼給人看？已裁定：** 不另加指令或輸出，只在必要時才有影響；第一段照 spec 實作判定即可，驗收不用印結果。
-2. **整份 `$ref` 的項怎麼拿 `id`？已裁定：** 就照 `$ref` 的規則展開，不是問題（`aos_inst` 已把不認得的鍵放在 `Plan.extra`、`raw_user` 單獨提供）。
+2. **整份 `$ref` 的項怎麼拿 `id`？已裁定：** 就照 `$ref` 的規則展開，不是問題（`id` 與原始 `user` 由 tick 自己從項目拿，見步驟 4「注意」）。
 3. **開格驗過的展開結果要不要重用？已裁定：不重用。** 跑到那一項時重新展開。
 4. **`system.x` 擋不擋？已裁定：** 核心不擋、不管，自己承擔風險；以 B-620 為準。[V-03](../spec/conformance.md#第十八批新增場景) 原本寫「整份拒收」的那句已改成跟 B-620 一致（核心照跑、不擋）。
 5. **資料夾沒有 `.aos/` 時怎麼算？已裁定：** 去找 `inst.json`（跟 inst 目標找檔同一套：先 `.aos/`，沒有就 `inst.json`）。spec B-620「任務表」處已補一句同義的話。

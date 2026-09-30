@@ -6,7 +6,7 @@
 
 - 程式放 `proto6/src/`，跟探針原型 [proto/](../proto/README.md) 分開。
 - 語言：tick 核心、系統級任務、CLI、kernel 任務用 **Python 3.9**（只用標準庫）；daemon、runner 用 **C++11**。
-- inst 的解析與指示詞（`$ref` 等）**另一隊在寫**，放 `proto6/src/py/aos_inst/`：找 inst 檔、身分先行、指示詞展開、驗證、錯誤代號、一個可選用的開程序模組。各段把它當現成的東西用，不排成你的工作。
+- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。唯一改動是認得頂層 `user`（跟目前身分不同就 125，不切身分）。各段把它當現成的東西用，不排成你的工作。
 
 ## 怎麼用這份 plan
 
@@ -65,6 +65,6 @@
 
 ## 跨段待問
 
-1. **runner 用 C++11，但 inst 解析在 Python 的 `aos_inst`。** spec 說 runner 要「照 inst 執行一次」，包含解指示詞、驗欄位（[inst](../spec/base/inst.md)「先決定身分，切完才解析」）。C++ runner 要自己重寫一套 inst 解析、還是交給 Python 那一段解完再開程序？第三段開工前要定。
+1. **runner 用 C++11，但 inst 解析在 Python 的 `lib/aos_inst.py`。** spec 說 runner 要「照 inst 執行一次」，包含解指示詞、驗欄位（[inst](../spec/base/inst.md)「先決定身分，切完才解析」）。C++ runner 要自己重寫一套 inst 解析、還是交給 Python 那一段解完再開程序？第三段開工前要定。
 2. **清理的正本還在整理區外。** `aos-clean` 照 [B-404](../spec/base/storage.md)，但整理區 README 的疑點表把 B-401、B-402、B-404 列為「還寫著舊保證、下一輪要改」。第二段做 `aos-clean` 前，先確認照哪一版。
 3. **daemon 設定的五個開關還沒進 schema。** B-615 的五個鍵尚未同步到 P-101 的 schema 與範例（整理區 README「09-30 晚拆分」一節）。第三段寫設定解析前要補。
