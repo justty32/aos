@@ -24,5 +24,5 @@
 以下是落 spec 隊補的細節，不是使用者逐字裁定；有疑問以使用者後續裁定為準。
 
 - 第 6 條前綴的雜湊取法跟第 8 條 cgroup 框名同一套（sha256 前 16 hex），碰撞機率可忽略，讀目錄時仍核對裡面 request 的 node_id。
-- 第 9 條搬不動（或一直有新程序進來）就報錯退出；只在省略 `cgroup_root` 時做，有寫 `cgroup_root` 的情況照舊（daemon 自己已在子樹裡）。
+- 第 9 條搬不動（或一直有新程序進來）就報錯退出；只在省略 `cgroup_root` 時做，有寫 `cgroup_root` 的情況照舊（daemon 自己已在子樹裡）。（已被第十七批 C2 取代，見 [08](08-cancel-task-cgroup-and-gaps.md)。）
 - 原型 `bin/` 三支入口先前被 repo 根目錄的 `.gitignore`（`bin/`）吃掉、沒進 git，這次一併補進並在 `proto6/proto/.gitignore` 加 `!bin/`。

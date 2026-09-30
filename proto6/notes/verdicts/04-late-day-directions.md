@@ -38,13 +38,13 @@
 - **預設「自己排」要有池 node**：
   - 問題：沒有池 node 時，agent 的請求怎麼辦？
   - 裁定〔使用者方向 2026-09-29 晚〕：`aos node new` 不自動建池。~~agent 發 LLM 請求卻找不到池時，寫一筆待辦（attention）告訴人「先建池」，請求先擱著。~~
-  - 改寫〔使用者方向 2026-09-29 晚〕（改自前一版：原為寫待辦）：目標 node 不存在，丟請求那一步直接報錯，不寫待辦；跟「沒給權限就報錯」同一個態度。目標 node 存在但沒人處理，aos 不管，請求就堆著。（又改自前一版：原為池資料夾）
+  - 改寫〔使用者方向 2026-09-29 晚〕（改自前一版：原為寫待辦）：目標 node 不存在，丟請求那一步直接報錯，不寫待辦；跟「沒給權限就報錯」同一個態度。目標 node 存在但沒人處理，aos 不管，請求就堆著。（已被第十五批第 5 條取代，同檔後文有標。）（又改自前一版：原為池資料夾）
 - **串流怎麼跟「tick 一格一格跑」相容**：
   - 問題：串流要怎麼跟 tick 相容？
   - 裁定〔使用者方向 2026-09-29 晚〕：不為串流另做機制。一次 LLM 呼叫就是掛在 tick 上的一件任務，tick 執行時它直接跑；所謂串流，就是這件任務在跑的過程中不斷寫入一個指定的檔案。
   - 中途斷線不管；頂多這件任務以非 0 exit status 結束、在 stderr 噴錯。
   - 「不管」檔（agent 自己打 HTTP）aos 不管，串流也不管。
-- **spec 裡寫「只收完整結果」「不做串流」的條文之後要改**（只列、不改；串流改動方向是「任務邊跑邊寫指定檔案」，不加新機制）：
+- **spec 裡寫「只收完整結果」「不做串流」的條文之後要改**（已於第十五批落實，見 [llm.md](../../spec/scheduling/llm.md)；以下為當時清單。只列、不改；串流改動方向是「任務邊跑邊寫指定檔案」，不加新機制）：
   - `spec/scheduling/llm.md`：S-301（「首版只支援非串流」）、S-305（已刪的串流與 final，要恢復）、S-304 的完整結果邊界。
   - `spec/protocol/work.md`：P-406（`stream` 只准 false 或省略、HTTP body 送 stream:false）、P-405 附近及 llm.chat 結果那段（「只接完整非串流結果」、usage 規則）。
   - `spec/protocol/schemas/llm-payload.schema.json`、`llm-request.schema.json` 的 `stream` 欄，以及 `examples/work/llm-payload.streaming.invalid.json`（現在是反例）。
@@ -84,4 +84,4 @@
     - 目標 node 不存在：丟請求那一步直接報錯，不寫待辦。跟「沒給權限就報錯」同一個態度。
     - 目標 node 存在但沒人處理（例如沒裝任務、沒被 tick）：aos 不管，請求就堆著，也不等、不逾時。
   - 跟上面「`aos node new` 不自動建池」那條的關係：不自動建池仍保留，但沒池時的處理是報錯，不寫待辦。
-- **現有 spec 之後要改的部分**（只列、不改）：現有 spec 本來就把池寫成 node，大致相符。實際看過 P-505（agent 只按一個 node 位址投 `llm.chat`）、P-808～P-809（路由表與 `aos-kernel-llm-forward`，轉給下一個 kernel）、P-811（池是 tick 任務，沒有常駐池 daemon）、P-812（唯讀查詢），都是 node 模型，不用重寫。之後只需補：串流（見上面「串流」那條清單）、「交給 endpoint」的轉發任務（現在的 forward 只轉給下層／上層 kernel，沒有轉給外部 endpoint 的任務）、`llm.target_node` 可為 `null`（不管）與每池 `schedule` 兩欄位、目標 node 不存在時報錯的行為。
+- **現有 spec 之後要改的部分**（只列、不改）：現有 spec 本來就把池寫成 node，大致相符。實際看過 P-505（agent 只按一個 node 位址投 `llm.chat`）、P-808～P-809（路由表與 `aos-kernel-llm-forward`，轉給下一個 kernel）、P-811（池是 tick 任務，沒有常駐池 daemon）、P-812（唯讀查詢），都是 node 模型，不用重寫。（以下均已於第十五批落實）之後只需補：串流（見上面「串流」那條清單）、「交給 endpoint」的轉發任務（現在的 forward 只轉給下層／上層 kernel，沒有轉給外部 endpoint 的任務）、`llm.target_node` 可為 `null`（不管）與每池 `schedule` 兩欄位、目標 node 不存在時報錯的行為。

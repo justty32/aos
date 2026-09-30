@@ -1,8 +1,8 @@
 # systemd-run 開短命程序的延遲實測
 
-← [探針說明](README.md)　·　[三條降低延遲的路](../2026-09-29-verdicts.md)
+← [探針說明](README.md)　·　[三條降低延遲的路](../verdicts/04-late-day-directions.md)
 
-2026-09-29 實測。問題：daemon 若每次工具呼叫都用 `systemd-run --user` 開一個 once 工作，比直接開程序多花多少？
+2026-09-29 實測。問題：daemon 若每次工具呼叫都用 `systemd-run --user` 開一個 once 工作，比直接開程序多花多少？（標註：初版不用 systemd，此數字僅供日後可選增強參考。）
 
 ## 機器
 
