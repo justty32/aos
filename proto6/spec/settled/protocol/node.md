@@ -21,8 +21,8 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 | `.aos/jobs/<id>/` | 替成員跑工具、打 LLM 的 once 工作；`aos-as` 的暫存 inst（`as-<seq>-<pid>.json`，P-212）也放這裡 | ignore |
 | `.aos/attention/` | 本 node 的待處理事項，含 daemon 發現的 node 問題 | ignore |
 | `.aos/summary/` | 給上層讀的摘要，見 P-307 | `summary.json` 追蹤、`published.json` ignore |
-| `.aos/mq/post/` | 要經系統訊息佇列送出的訊息，見 P-206 | 追蹤 |
-| `.aos/mq/get/` | 〔暫定〕寄件帳號要能在這裡建檔，是 `node.send` 的授權判準（[B-614](../daemon.md)）；`aos-mq get` 要不要拿來放取出的訊息由它自己定 | 追蹤 |
+| `.aos/mq/post/` | 要經系統訊息佇列送出的訊息（`<id>.req.json`／`<id>.resp.json`），見 P-206 | 追蹤 |
+| `.aos/mq/get/` | 寄件帳號要能在這裡建檔，是 `node.send` 的授權判準（[B-614](../daemon.md)）；`aos-mq get` 要不要拿來放取出的訊息由它自己定 | 追蹤 |
 | `.aos/mq/failed/` | `mq-post` 送不出去的失敗紀錄；下一格 `mq-post` 開始送之前清掉（[B-624](../tick.md)），格式見 P-206 | ignore |
 | `.aos/tick.lock` | 核心的鎖檔（[B-602](../tick.md)） | ignore |
 | `.aos/tick/` | 核心的結束碼紀錄 `current.json`、`last.json` 與停格檔 `stop`（[B-633](../tick.md)、[B-620](../tick.md)、P-213）；不隨還原、不被清理 | ignore |
@@ -183,7 +183,7 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 | argv | 做什麼 |
 |---|---|
 | `aos-git open` | 上一格沒正常收尾就還原；清殘留；打本格第一個存檔點 |
-| `aos-git mark [<路徑…>]` | 打存檔點；剛結束那組有失敗就先還原。〔暫定〕帶路徑＝把使用者任務自己的檔加進 aos 範圍，從這點起到本格結束；路徑相對 node 根 |
+| `aos-git mark [<路徑…>]` | 打存檔點；剛結束那組有失敗就先還原。帶路徑＝把使用者任務自己的檔加進 aos 範圍，從這點起到本格結束；路徑相對 node 根〔使用者 2026-09-30 同意照暫定〕 |
 | `aos-git close` | 處理最後一組、提交、刪本格存檔點 |
 
 - **在 tick 內**：靠繼承的鎖（[B-602](../tick.md)）。不在 tick 內回 125、印 `not_in_tick`，不自己取鎖。
@@ -232,7 +232,7 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 
 ### 要送的訊息
 
-`.aos/mq/post/<id>.json`（追蹤），`<id>` 是訊息的請求 ID。〔暫定〕形狀是 `node.send` 的 params 去掉 `token`、加 `version`：
+`.aos/mq/post/<id>.req.json`（請求）或 `<id>.resp.json`（回應）（追蹤），`<id>` 是訊息的 ID；請求與回應各用一個後綴，同一個 node 同一格送出同 ID 的請求與回應不會撞檔名〔使用者 2026-09-30 同意照暫定〕。`message` 是請求物件就得用 `.req.json`、是回應物件就得用 `.resp.json`。〔暫定〕形狀是 `node.send` 的 params 去掉 `token`、加 `version`：
 
 ```json
 {"version":1,"to":"/目標 node","message":{...},"urgent"?:true}
@@ -242,14 +242,14 @@ tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專�
 |---|---|
 | `version` | 必填，1 |
 | `to` | 必填；收件 tick 的 node id |
-| `message` | 必填；一份請求或回應物件（[P-301](../../protocol/messages.md)），它的 `id` 要跟檔名相同；序列化後最多 196608 bytes（[P-119](daemon/channel.md)） |
+| `message` | 必填；一份請求或回應物件（[P-301](../../protocol/messages.md)），它的 `id` 要跟檔名去掉後綴的部分相同；序列化後最多 196608 bytes（[P-119](daemon/channel.md)） |
 | `urgent` | 可省，布林，預設 false；true＝急件 |
 
 schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-outbox.schema.json) 是檔案投件的格式（`target_node`、`alarm_ticks`、`channel`），已不適用，列在 [README 待放入](../README.md#待放入)。鬧鐘紀錄 `.aos/alarms/` 隨鬧鐘撤（[B-624](../tick.md)）。
 
-### 送不出去的失敗紀錄〔暫定〕
+### 送不出去的失敗紀錄
 
-`.aos/mq/failed/<id>.json`（ignore）：`mq-post` 把送不了的那份原檔搬過來，內容是原檔的欄位再加一個 `error:{"code":"<代碼>"}`。沒有 schema。下一格 `mq-post` 開始送之前整個清掉（[B-624](../tick.md)）。
+`.aos/mq/failed/<id>.req.json` 或 `<id>.resp.json`（ignore，檔名同原檔）〔使用者 2026-09-30 同意照暫定〕：`mq-post` 把送不了的那份原檔搬過來，內容是原檔的欄位再加一個 `error:{"code":"<代碼>"}`。沒有 schema。下一格 `mq-post` 開始送之前整個清掉（[B-624](../tick.md)）。
 
 ### stderr 診斷行
 
