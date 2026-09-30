@@ -2,7 +2,7 @@
 """檢查 proto6 的條號引用（P-/B-/S-/A-/H-/C-/T-）是否都有定義處。
 
 用法（從 repo 根目錄）：python3 proto6/spec/check_ids.py
-掃 proto6/spec 與 proto6/notes（不含 notes/archive）的 .md。
+掃 proto6/spec 與 proto6/notes（不含 notes/archive 與 notes/reviews：審稿紀錄會照原樣引用已刪條號）的 .md。
 定義處＝標題行開頭（如 `## P-101．...`）、或條列／表格列開頭的條號
 （如 `- A-501（已刪…）`、`| P-001 |`、`| H-036 |`）。
 引用範圍 `P-500～507`、`P-104／110`、`B-601、603` 會展開，逐一檢查。
@@ -21,7 +21,7 @@ DEF = re.compile(r"^(?:#+\s+|[-*]\s+|\|\s*)\**([PBSAHCT])-(\d{2,3})\b")
 def files():
     for base in SCAN:
         for p in sorted(base.rglob("*.md")):
-            if "archive" in p.relative_to(ROOT).parts:
+            if {"archive", "reviews"} & set(p.relative_to(ROOT).parts):
                 continue
             yield p
 
