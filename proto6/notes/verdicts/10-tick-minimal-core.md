@@ -44,7 +44,7 @@
    - **通道設計（同日追答）**：
      - 走這條通道的核心事務：登記與解除（含用登記覆蓋預設上層）、把行程掛到 daemon 上跑與砍掉（現在的 once；被掛的也可以是另一個 tick）、叫醒別的 tick、daemon 把暫存訊息交給正在跑的 tick。
      - tick 找通道：daemon 開 tick 時用**環境變數**告訴它 socket 在哪；不是 daemon 開的 tick 就沒有通道。
-     - 身分證明：daemon 開 tick 時發**一次性憑證**，tick 在通道上出示；不靠 cgroup 或程序編號反查。
+     - 身分證明：daemon 開 tick 時發**一次性憑證**，tick 在通道上出示；不靠 cgroup 或程序編號反查。**每格一張、這格內有效**，這格結束或 daemon 重啟即作廢。
 10. **once 算在之後的 tick 任務**，不屬 tick 核心。
 
 ## 跟已落 spec 的衝突（待使用者裁定）
