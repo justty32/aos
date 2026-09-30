@@ -1,8 +1,8 @@
 # daemon 協議
 
-← [整理區](../../README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon.md)、[helper](../../helper.md)、[身分](../../../base/identity-resources.md)、[inst](../../../base/inst.md)｜[裁定](../../../../notes/2026-09-29-verdicts.md)
+← [整理區](../../README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon/README.md)、[helper](../../helper.md)、[身分](../../../base/identity-resources.md)、[inst](../../../base/inst.md)｜[裁定](../../../../notes/2026-09-29-verdicts.md)
 
-daemon 協議只定格式：設定欄位、IPC method 的 params／result、通道、helper 私有通道、runner 回報與錯誤碼。行為寫在 [daemon 正本](../../daemon.md)。
+daemon 協議只定格式：設定欄位、IPC method 的 params／result、通道、helper 私有通道、runner 回報與錯誤碼。行為寫在 [daemon 正本](../../daemon/README.md)。
 
 這是 daemon 協議**唯一的條號表**。本篇原是單檔 `protocol/daemon.md`，2026-09-29 依主題拆成本資料夾，條號不變。
 
@@ -48,7 +48,7 @@ daemon 協議只定格式：設定欄位、IPC method 的 params／result、通�
 - tick–daemon 通道的變數與 method（P-117～119）；
 - helper 私有通道、runner 回報與錯誤碼。
 
-行為一律以 [daemon 正本](../../daemon.md)（B-601～614）為準；這裡寫到行為時只留一句加條號（[P-001](../../../protocol/README.md)）。JSON 與錯誤通則見 [共用約定](../../../protocol/README.md)。
+行為一律以 [daemon 正本](../../daemon/README.md)（B-601～614）為準；這裡寫到行為時只留一句加條號（[P-001](../../../protocol/README.md)）。JSON 與錯誤通則見 [共用約定](../../../protocol/README.md)。
 
 依據：使用者方向 2026-09-29；第十八批（協議篇只留格式）；第十九批（通道 P-117～119）。
 

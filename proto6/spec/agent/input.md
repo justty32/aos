@@ -10,9 +10,9 @@
 
 〔使用者方向 2026-09-29〕一般訊息與回覆都用 `agent.say`，一律收進 history；回覆 payload 加可省的 `in_reply_to` 指原句 ID。〔使用者方向 2026-09-29，第十六批〕**帶 `in_reply_to` 的是回話：只記進 history（`in_reply_to` 原樣保存），不建待處理的 input、不觸發 LLM、不再回話**，免得兩邊（或自己對自己）互回無限循環。kernel 收到的 `agent.say` 同樣只記進它自己的 history。〔第十八批，本條為 `in_reply_to` 配對的正本〕這種只記錄的訊息怎麼清，見 [P-716](../protocol/agent-tasks.md)。格式與大小依[訊息協議](../protocol/messages.md)（欄位見 [P-705](../protocol/agent-tasks.md)），錯誤或存不下不假稱成功。
 
-〔使用者方向 2026-09-30，第十九批，補通道收件；第十八批 P-705 的收件行為從協議篇搬上〕**agent 有兩條收件路**：檔案收件（`requests/`，[B-623](../settled/tick.md)）與 daemon 通道上的暫存訊息（[B-614](../settled/daemon.md)）。agent module 是 `agent.say`、工作結果的收件任務（任務表宣告，[B-620](../settled/tick.md)），標準配備的收件不代它取通道訊息，所以由 module 自己做：
+〔使用者方向 2026-09-30，第十九批，補通道收件；第十八批 P-705 的收件行為從協議篇搬上〕**agent 有兩條收件路**：檔案收件（`requests/`，[B-623](../settled/tick.md)）與 daemon 通道上的暫存訊息（[B-614](../settled/daemon/messaging.md)）。agent module 是 `agent.say`、工作結果的收件任務（任務表宣告，[B-620](../settled/tick.md)），標準配備的收件不代它取通道訊息，所以由 module 自己做：
 
-- **每格先收再推進**：開格後先列一次 `requests/`，最多處理 64 件；同格新回來的件等下格。有通道時（daemon 開的格，[B-612](../settled/daemon.md)）再用 `node.take` 取暫存訊息，`limit` 用「64 減去這格已列到的件數」，用完就不取，免得取走了又裝不下（取走的 daemon 就刪了）。取到 `more:true` 而額度沒滿就再取。
+- **每格先收再推進**：開格後先列一次 `requests/`，最多處理 64 件；同格新回來的件等下格。有通道時（daemon 開的格，[B-612](../settled/daemon/channel.md)）再用 `node.take` 取暫存訊息，`limit` 用「64 減去這格已列到的件數」，用完就不取，免得取走了又裝不下（取走的 daemon 就刪了）。取到 `more:true` 而額度沒滿就再取。
 - **取來的訊息跟檔案件同格式、同規則**：那是一份 `FileRpcRequest`（[P-301](../protocol/messages.md)），module 照請求 bytes 存成 `state/messages/requests/<id>.json` 當消費證據，之後的去重、同 ID 不同內容留事項不覆蓋、提交後才算數，都沿 B-503、B-623；回應仍照回址走檔案投件（B-614）。
 - **取走到提交之間當機，訊息就丟了**：通道不保證送達，寄件方要不要補寄自己決定；已提交的不會重吃。沒有通道的格（人手、cron 跑的）只收檔案。
 - 「投件權就是執行權」同樣適用：能經通道送進來的，是寄件帳號對本 node `requests/` 有寫權的人（B-614）。

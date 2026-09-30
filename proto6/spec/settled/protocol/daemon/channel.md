@@ -1,14 +1,14 @@
 # daemon 協議：tick–daemon 通道
 
-← [daemon 協議](README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon.md)｜[第十九批](../../../../notes/verdicts/10-tick-minimal-core.md)
+← [daemon 協議](README.md)｜[共用約定](../../../protocol/README.md)｜行為正本：[daemon](../../daemon/README.md)｜[第十九批](../../../../notes/verdicts/10-tick-minimal-core.md)
 
 本檔只留通道的環境變數、憑證格式、method 的 params／result 與錯誤碼（第十九批）。行為去這裡找：
 
 | 要找什麼 | 正本 |
 |---|---|
-| 誰有通道；憑證怎麼發放、核對、作廢 | [B-612](../../daemon.md) |
-| 掛行程與砍掉 | [B-613](../../daemon.md) |
-| 系統訊息佇列與急件 | [B-614](../../daemon.md)；tick 那一側 [B-623、B-624](../../tick.md) |
+| 誰有通道；憑證怎麼發放、核對、作廢 | [B-612](../../daemon/channel.md) |
+| 掛行程與砍掉 | [B-613](../../daemon/channel.md) |
+| 系統訊息佇列與急件 | [B-614](../../daemon/messaging.md)；tick 那一側 [B-623、B-624](../../tick.md) |
 
 封包、schema 與通用錯誤同 [P-103](startup-and-ipc.md)、[P-111](provision-and-runner.md)，一律嚴格（[C-07](../../../contracts.md)）。
 
@@ -27,7 +27,7 @@
 | `node.send`、`node.take`、`node.provision` 的 `spawn_as`（[P-107](provision-and-runner.md)） | 必帶 |
 | 其餘 method，以及 `node.provision` 的其他動作 | 不收；帶了就是 `invalid_params` |
 
-所以客戶端（含 kernel、agent 的工具）只對上表前兩列附憑證；`daemon.info`、`node.show`、其他佈建動作照舊不帶，以 socket 對面的帳號授權（[B-612](../../daemon.md)）。
+所以客戶端（含 kernel、agent 的工具）只對上表前兩列附憑證；`daemon.info`、`node.show`、其他佈建動作照舊不帶，以 socket 對面的帳號授權（[B-612](../../daemon/channel.md)）。
 
 **缺變數**：客戶端（`aos-mq`、`aos-as`、aos 指令）要走通道卻缺任一個變數時，自己擋下、報代碼 `no_channel`，不連 socket。這個代碼不會出現在 daemon 的回應裡。
 
@@ -70,7 +70,7 @@
 - `messages` 照送到的先後排；一次最多 `limit` 件，整個回應不超過 256 KiB；有訊息就至少給一件。
 - `more:true`＝還有沒取完的。
 
-**上限**：每個收件 tick 最多 256 件、合計 16 MiB（照 `message` 序列化後的 bytes 算）。寫死，不開放設定（[B-608](../../daemon.md)）。
+**上限**：每個收件 tick 最多 256 件、合計 16 MiB（照 `message` 序列化後的 bytes 算）。寫死，不開放設定（[B-608](../../daemon/reload.md)）。
 
 範例：[送急件](../../../protocol/examples/daemon/send.minimal.valid.json)、[送回應](../../../protocol/examples/daemon/send.response.valid.json)、[反例：沒帶憑證](../../../protocol/examples/daemon/send.no-token.invalid.json)、[取](../../../protocol/examples/daemon/take.minimal.valid.json)、[回應](../../../protocol/examples/daemon/take_result.minimal.valid.json)、[反例：憑證格式不對](../../../protocol/examples/daemon/take.bad-token.invalid.json)、[憑證不認得](../../../protocol/examples/daemon/error.token_invalid.valid.json)。
 
@@ -89,7 +89,7 @@
 
 | 情況 | code |
 |---|---|
-| 寄件帳號對收件 tick 的 `.aos/mq/get/` 沒寫權（[B-614](../../daemon.md)）；用憑證的 tick 不在目標的上層鏈上 | `forbidden` |
+| 寄件帳號對收件 tick 的 `.aos/mq/get/` 沒寫權（[B-614](../../daemon/messaging.md)）；用憑證的 tick 不在目標的上層鏈上 | `forbidden` |
 | 收件 tick 不在這個 daemon | `not_registered` |
 | 停機中 | `stopping` |
 | 活程序或維護狀態不合 | `busy` |

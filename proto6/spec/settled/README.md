@@ -6,18 +6,18 @@
 
 整理區（`settled/`）放**已經定案、整理好的 tick 與 daemon 基礎**，跟 kernel、agent、LLM、CLI 等其他篇分開。〔使用者方向 2026-09-30，第二十批「整理區」〕
 
-- **git 與 cgroup 已納入，是「有就用」，不是前提。** 沒有時照原來的做法跑；有時的做法寫在各條（git：[B-630、B-622](tick.md)；cgroup：[B-605](daemon.md)、[B-634](tick.md)）。提交與還原只限 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔），使用者任務改的檔 aos 不管。
+- **git 與 cgroup 已納入，是「有就用」，不是前提。** 沒有時照原來的做法跑；有時的做法寫在各條（git：[B-630、B-622](tick.md)；cgroup：[B-605](daemon/cgroup.md)、[B-634](tick.md)）。提交與還原只限 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔），使用者任務改的檔 aos 不管。
 - **要能自己讀懂。** 區內各篇互相連結；對區外的依賴盡量少，必要的列在下面「對外依賴」。
 - **條號不變。** 搬進來的條文條號一律不改，只換檔案位置；搬的時候只改寫法（短句、先講結論、表格、來源標記收到段末「依據：」）。之後的修正輪（[astra 審整理區](../../notes/reviews/2026-09-30/astra-settled-report.md)）照使用者裁定改了規則，改了什麼、哪些先寫成暫定，見下面「疑點」。「建議預設」「暫定」「記錄者理解」這些狀態標記仍留在對應規則旁。
 - **收送只管系統訊息佇列**：node 之間經 daemon 通道互送請求與回應，由系統級任務 `aos-mq get`／`aos-mq post` 處理；檔案收件區 `requests/`、`responses/` 的收與寫是普通程式，aos 不管（[B-623、B-624](tick.md)）。
-- **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon.md`、`helper.md` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
+- **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon/`、`helper.md` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
 - **其他篇之後才放進來**：kernel、LLM、agent、CLI、基底其餘各篇、協議篇其餘各檔，等它們整理好、跟上新基礎，再一起放入。
 
 ## 閱讀順序
 
 1. [名詞](terms.md)（T-07 tick 核心、T-09 daemon 用語、T-10 四類程式）：先知道「核心、系統級任務、普通程式、停格檔、擋板檔、通道」這些詞。
 2. [通用 tick](tick.md)：核心四件事、結束碼紀錄、標準任務表範本、系統訊息佇列的取與送；git（`aos-git`，B-630、B-622）與每項一框（`aos-cg`，B-634）。
-3. [daemon](daemon.md)：登記、叫醒、重啟、收尾、熱重載、佈建、tick–daemon 通道；cgroup 子樹、node 框與上限（B-605）。runner 是什麼見[名詞 T-09](terms.md#t-09收尾排空停機熱重載逃生口)。
+3. [daemon](daemon/README.md)：登記、叫醒、重啟、收尾、熱重載、佈建、tick–daemon 通道；cgroup 子樹、node 框與上限（B-605）。runner 是什麼見[名詞 T-09](terms.md#t-09收尾排空停機熱重載逃生口)。
 4. [helper 與 aos-as](helper.md)：root helper 的界線、怎麼用別的帳號跑任務。
 5. 要看格式時：[node 協議](protocol/node.md)（P-200～213：資料夾、任務表、`aos-tick` 與各系統級任務、普通程式的 argv 與結束碼）→ [daemon 協議](protocol/daemon/README.md)（P-100～119：設定、IPC、通道、helper 私有通道、runner）。
 
@@ -28,7 +28,7 @@
 | [README.md](README.md) | — | 新建 |
 | [terms.md](terms.md) | T-07、T-09、T-10 | 從 [名詞與責任](../terms.md) 拆出，原處留一行指向這裡 |
 | [tick.md](tick.md) | B-602、B-620～634 | 整篇從 `spec/tick.md` 搬來；B-634（`aos-cg`）是納入 cgroup 時從 [B-202](../base/execution.md) 的草稿搬進來的新條 |
-| [daemon.md](daemon.md) | B-504、B-601、B-603～614 | 整篇從 `spec/daemon.md` 搬來 |
+| [daemon/](daemon/README.md) | B-504、B-601、B-603～614 | 從 `spec/daemon.md` 搬來，依職責拆檔；落點見 [daemon 目錄](daemon/README.md) |
 | [helper.md](helper.md) | B-303 | 從 [身分與資源](../base/identity-resources.md) 拆出，原處留一行指向這裡 |
 | [protocol/node.md](protocol/node.md) | P-200～213 | 整篇從 `spec/protocol/node.md` 搬來 |
 | [protocol/daemon/](protocol/daemon/README.md) | P-100～119 | 整個資料夾從 `spec/protocol/daemon/` 搬來 |

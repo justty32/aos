@@ -22,11 +22,11 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 | `.aos/attention/` | 本 node 的待處理事項，含 daemon 發現的 node 問題 | ignore |
 | `.aos/summary/` | 給上層讀的摘要，見 P-307 | `summary.json` 追蹤、`published.json` ignore |
 | `.aos/mq/post/` | 要經系統訊息佇列送出的訊息（`<id>.req.json`／`<id>.resp.json`），見 P-206 | 追蹤 |
-| `.aos/mq/get/` | 寄件帳號要能在這裡建檔，是 `node.send` 的授權判準（[B-614](../daemon.md)）；`aos-mq get` 要不要拿來放取出的訊息由它自己定 | 追蹤 |
+| `.aos/mq/get/` | 寄件帳號要能在這裡建檔，是 `node.send` 的授權判準（[B-614](../daemon/messaging.md)）；`aos-mq get` 要不要拿來放取出的訊息由它自己定 | 追蹤 |
 | `.aos/mq/failed/` | `mq-post` 送不出去的失敗紀錄；下一格 `mq-post` 開始送之前清掉（[B-624](../tick.md)），格式見 P-206 | ignore |
 | `.aos/tick.lock` | 核心的鎖檔（[B-602](../tick.md)） | ignore |
 | `.aos/tick/` | 核心的結束碼紀錄 `current.json`、`last.json` 與停格檔 `stop`（[B-633](../tick.md)、[B-620](../tick.md)、P-213）；不隨還原、不被清理 | ignore |
-| `.aos/tick-blocked` | 擋板檔：有它時 daemon 不開格、核心也不跑（[B-607](../daemon.md)、[B-620](../tick.md)、P-213） | ignore |
+| `.aos/tick-blocked` | 擋板檔：有它時 daemon 不開格、核心也不跑（[B-607](../daemon/registration.md)、[B-620](../tick.md)、P-213） | ignore |
 | `.aos/runner-stderr.log` | 〔暫定〕runner 診斷，daemon 每格覆寫；輪替以後再定（[P-109](daemon/provision-and-runner.md)） | ignore |
 | `public/` | 可供其他 node 存取的共用空間 | 看內容 |
 | `.gitignore` | 至少列出上表所有 ignore 的路徑：`/requests/`、`/responses/`、`/work/`、`/.aos/jobs/`、`/.aos/attention/`、`/.aos/tick.lock`、`/.aos/tick/`、`/.aos/tick-blocked`、`/.aos/runner-stderr.log`、`/.aos/summary/published.json`、`/.aos/mq/failed/` | 追蹤 |
@@ -34,7 +34,7 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 補充：
 
 - **收件分兩處**〔慣例；第二十批起檔案收件與投件是普通程式，aos 不管，[B-623](../tick.md)〕：請求放在被問者的 `requests/<id>.json`，回應放在發問者的 `responses/<id>.json`。
-- **找 inst**：登記資料夾時先找 `.aos/inst.json`、沒有再找 `inst.json`，base 是 node 根。掛載行程的目標可以是單檔 inst（[B-613](../daemon.md)、[P-118](daemon/channel.md)），base 是該檔所在資料夾。正本見 [inst 目標](../../base/inst.md#inst-目標檔案或資料夾)。
+- **找 inst**：登記資料夾時先找 `.aos/inst.json`、沒有再找 `inst.json`，base 是 node 根。掛載行程的目標可以是單檔 inst（[B-613](../daemon/channel.md)、[P-118](daemon/channel.md)），base 是該檔所在資料夾。正本見 [inst 目標](../../base/inst.md#inst-目標檔案或資料夾)。
 - **鎖檔與 git 管理目錄**：鎖檔 `.aos/tick.lock` 不在 git 管理目錄（[B-602](../tick.md)）。git 管理目錄用 `git rev-parse --absolute-git-dir` 找，不能假設 `.git` 一定是資料夾。巢狀 tick 的排除寫在 git 管理目錄的 `info/exclude`、存檔點記在 `refs/aos/marks/<任務 id>`（P-205），都不在工作樹；不做救援 ref（[B-602](../tick.md)）。
 - **事項**：待處理事項放 `.aos/attention/`，不隨還原，見 [ops](../../protocol/ops.md)。
 - 不跑 `aos-tick` 的 node 不必有完整布局。
@@ -123,7 +123,7 @@ node 根目錄的正規化絕對路徑就是 node id。下表的名稱固定；�
 | cwd／argv | 照本項 inst 展開後執行；cwd 沒給時是 node 根 |
 | stdin | 預設 `/dev/null`；可用本項 inst 的 stdin 重導向 |
 | stdout／stderr | 照 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不把輸出文字當完成證據 |
-| 環境 | 繼承 tick 的環境（含 daemon 開的格才有的通道變數，[B-612](../daemon.md)），加上下表的變數，再照 inst 套用 `envs`。這些變數都不是授權證據 |
+| 環境 | 繼承 tick 的環境（含 daemon 開的格才有的通道變數，[B-612](../daemon/channel.md)），加上下表的變數，再照 inst 套用 `envs`。這些變數都不是授權證據 |
 
 tick 給任務的環境變數。整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`：
 
@@ -291,10 +291,10 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 | daemon | `.aos/attention/` 的寫權 |
 | node 帳號 | 根路徑可遍歷；repo 讀寫；`requests/`、`responses/` 可清理 |
 | 檔案投件的程式 | 必要父目錄的 traverse；`requests/` 或 `responses/` 及其 `.tmp/` 的寫與遍歷 |
-| 寄件 tick 的帳號 | 收件 tick 的 `.aos/mq/get/` 寫與遍歷，以及上層各段的 traverse（[B-614](../daemon.md)） |
+| 寄件 tick 的帳號 | 收件 tick 的 `.aos/mq/get/` 寫與遍歷，以及上層各段的 traverse（[B-614](../daemon/messaging.md)） |
 | 只讀摘要的上層 | `.aos/summary/` 只授 traverse、`published.json` 只授 read（[P-307](../../protocol/messages.md)） |
 
-共享群組與 setgid 目錄，用 helper 的固定動作 `group_create`、`group_add_member`、`chgrp`（參數見 [P-107](daemon/provision-and-runner.md)）。cgroup 框交給 node 帳號由 daemon 開格前自動做，不是佈建動作（[B-605](../daemon.md)）。
+共享群組與 setgid 目錄，用 helper 的固定動作 `group_create`、`group_add_member`、`chgrp`（參數見 [P-107](daemon/provision-and-runner.md)）。cgroup 框交給 node 帳號由 daemon 開格前自動做，不是佈建動作（[B-605](../daemon/cgroup.md)）。
 
 依據：第十九批依方案 A 縮短。
 
@@ -312,7 +312,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 
 ## P-211．aos-cg：每項一框〔使用者方向 2026-09-30，第二十批追答 8；格式為建議預設〕
 
-普通程式，不是系統級任務。行為正本：[B-634](../tick.md)；框的樹與命名見 [B-605](../daemon.md)。
+普通程式，不是系統級任務。行為正本：[B-634](../tick.md)；框的樹與命名見 [B-605](../daemon/cgroup.md)。
 
 - **argv**：`aos-cg [--] <原指令…>`。不收上限參數（上限歸 daemon 設在 node 框）。
 - **框名**：本 node 框 `n-<h>` 下的 `task-<seq>-<pid>`，`seq` 取結束碼紀錄的格數（沒有紀錄時用 `0`），`pid` 是 aos-cg 自己的 PID；跟 `tick` 葉並列。
@@ -328,10 +328,10 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 
 ## P-212．aos-as：切換帳號〔建議預設，未拍板〕
 
-普通程式，不是系統級任務。行為正本：[B-303](../helper.md)；`spawn_as` 的參數與限制見 [B-609](../daemon.md)、[P-107](daemon/provision-and-runner.md)；runner 回報見 [P-110](daemon/provision-and-runner.md)。
+普通程式，不是系統級任務。行為正本：[B-303](../helper.md)；`spawn_as` 的參數與限制見 [B-609](../daemon/helper-actions.md)、[P-107](daemon/provision-and-runner.md)；runner 回報見 [P-110](daemon/provision-and-runner.md)。
 
 - **argv**：`aos-as <帳號> [--] <原指令…>`；帳號是名稱或非負 UID。
-- **暫存 inst**：ignored 的 `.aos/jobs/as-<seq>-<pid>.json`，結束後刪掉。`seq` 取結束碼紀錄的格數（沒有紀錄時用 `0`），`pid` 是 aos-as 自己的 PID。內容是一份 inst：`argv`、目前 cwd、`envs`＝`{"$opt":"clear","$val":目前的環境}` 但不含 `AOS_TICK_TOKEN`、`AOS_DAEMON_SOCKET`、`AOS_TICK_LOCK_FD`（由 runner 補，[B-609](../daemon.md)）；stdin／stdout／stderr 都寫成繼承。
+- **暫存 inst**：ignored 的 `.aos/jobs/as-<seq>-<pid>.json`，結束後刪掉。`seq` 取結束碼紀錄的格數（沒有紀錄時用 `0`），`pid` 是 aos-as 自己的 PID。內容是一份 inst：`argv`、目前 cwd、`envs`＝`{"$opt":"clear","$val":目前的環境}` 但不含 `AOS_TICK_TOKEN`、`AOS_DAEMON_SOCKET`、`AOS_TICK_LOCK_FD`（由 runner 補，[B-609](../daemon/helper-actions.md)）；stdin／stdout／stderr 都寫成繼承。
 - **交給 helper 的 fd**，共 5 個（見 P-107）：
 
   | 順序 | fd |
@@ -340,7 +340,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
   | 2 | 回報 pipe 的寫端 |
   | 3～5 | 〔建議預設〕自己的 stdin、stdout、stderr，讓那一項照任務表寫的 stdio 走 |
 
-  自己在 `aos-cg` 的 `task-*` 框裡時（有 cgroup），另帶 `frame`＝那個框；沒 cgroup 時帶了 daemon 回 `unsupported`（[B-609](../daemon.md)）。
+  自己在 `aos-cg` 的 `task-*` 框裡時（有 cgroup），另帶 `frame`＝那個框；沒 cgroup 時帶了 daemon 回 `unsupported`（[B-609](../daemon/helper-actions.md)）。
 
 - **stderr 代碼**：`no_channel`、`helper_unavailable`、`user_not_granted`、`user_invalid`、`stopping`（daemon 的錯誤碼照轉）、`result_unknown`（回應成功但 pipe 沒回報就關了）。
 
@@ -354,7 +354,7 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 
 ## P-213．每項結束碼紀錄、停格檔與擋板檔〔建議預設，未拍板〕
 
-行為正本：紀錄 [B-633](../tick.md)；停格檔與擋板檔 [B-620](../tick.md)（擋板檔在 daemon 那側見 [B-607](../daemon.md)）。本條只定檔名與內容。
+行為正本：紀錄 [B-633](../tick.md)；停格檔與擋板檔 [B-620](../tick.md)（擋板檔在 daemon 那側見 [B-607](../daemon/registration.md)）。本條只定檔名與內容。
 
 ### 結束碼紀錄
 
@@ -384,6 +384,6 @@ schema 管得到的：`exit` 只收 0／1／2、有 `stopped_after` 時 `exit` �
 | 檔 | 內容 | 行為 |
 |---|---|---|
 | `.aos/tick/stop`（停格檔，ignored） | 任何內容都算；建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面 | 只停本格，見 [B-620](../tick.md) |
-| `.aos/tick-blocked`（擋板檔，ignored） | 一行 UTF-8 原因，核心印在 stderr 的 `blocked:` 後面 | 擋之後各格，見 [B-620](../tick.md)、[B-607](../daemon.md) |
+| `.aos/tick-blocked`（擋板檔，ignored） | 一行 UTF-8 原因，核心印在 stderr 的 `blocked:` 後面 | 擋之後各格，見 [B-620](../tick.md)、[B-607](../daemon/registration.md) |
 
 範例：正例 [跑到一半](../../protocol/examples/node/tick-record.minimal.valid.json)、[全部成功](../../protocol/examples/node/tick-record.done.valid.json)、[被停格檔停下](../../protocol/examples/node/tick-record.ended.valid.json)；反例 [同一項同時有 exit 與 signal](../../protocol/examples/node/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](../../protocol/examples/node/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 stopped_after](../../protocol/examples/node/tick-record.stopped-not-ended.invalid.json)、[整格回 3](../../protocol/examples/node/tick-record.exit-3.invalid.json)、[停下卻回 0](../../protocol/examples/node/tick-record.stopped-exit-0.invalid.json)、[表壞卻有任務](../../protocol/examples/node/tick-record.table-invalid-with-tasks.invalid.json)；補查反例 [停在不是最後一項](../../protocol/examples/node/tick-record.stopped-not-last.invalid.json)、[有任務失敗卻回 0](../../protocol/examples/node/tick-record.exit-0-with-failure.invalid.json)。

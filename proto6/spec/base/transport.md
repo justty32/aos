@@ -6,7 +6,7 @@
 
 人、agent、工具共用有權限即可使用的檔案或指令入口。可依一般 Linux 權限，把訊息或工具／LLM 結果完整發布到指定的 ignored 收件區，不必先換成 blob 引用，也不必全經一個 RPC gateway。檔案發布依 [B-402](storage.md)，消費依收件任務（[B-623](../settled/tick.md)）；有權限也能直接讀取檔案，正式輸出以已提交版本為準，見 [agent 輸入與輸出](../agent/input.md)。
 
-不能拿內容自稱的 sender 當授權依據。IPC 看 socket 對面的帳號，〔第十九批〕只有 tick–daemon 通道看本格憑證（[B-612](../settled/daemon.md)）；檔案投件靠 OS 權限及可信投遞資料辨認來源，無法驗證的名稱只當自述。收件按[訊息協議](../protocol/messages.md)解析，大小限制與 wire 格式見協議篇。
+不能拿內容自稱的 sender 當授權依據。IPC 看 socket 對面的帳號，〔第十九批〕只有 tick–daemon 通道看本格憑證（[B-612](../settled/daemon/channel.md)）；檔案投件靠 OS 權限及可信投遞資料辨認來源，無法驗證的名稱只當自述。收件按[訊息協議](../protocol/messages.md)解析，大小限制與 wire 格式見協議篇。
 
 **method 就是指令**〔使用者方向 2026-09-29，第十七批〕：method 是去掉 `aos`、以 `.` 連接的指令，params 是完整 inst，表示「在你那裡跑這條指令」，argv 保留 `aos`；base 是收件 node。收件 node 接哪些 method 由它的任務表決定（[B-620](../settled/tick.md)），跟發件者是誰無關。錯誤分兩種，不混用：
 
@@ -17,7 +17,7 @@
 
 **投件權就是執行權**〔使用者方向 2026-09-30，第十八批〕（[T-08](../terms.md)；由收件任務與宣告 method 的任務落實，〔第十九批〕經通道送的訊息同樣適用）：params 是完整 inst，envs、指示詞、stdin 路徑與程式都照 inst，所以**能投件給某 node，就等於能用它的身分跑任意程式**；aos 不替跨 node 的 inst 另設防。這件事**會傳遞**：A 能投給 K、K 能投給池，A 就等於也能用池的身分。UID 隔離與 key 保護只對整條投件鏈以外的帳號成立；鏈上的帳號互相信任，風險由開放投件權的人承擔。
 
-node 登記與喚醒的 IPC 以 [daemon](../settled/daemon.md) 為正本；執行身分依 [inst](inst.md)，不靠資料夾位置推定（上下層怎麼判是另一回事，見 [B-628](../settled/tick.md)）。
+node 登記與喚醒的 IPC 以 [daemon](../settled/daemon/README.md) 為正本；執行身分依 [inst](inst.md)，不靠資料夾位置推定（上下層怎麼判是另一回事，見 [B-628](../settled/tick.md)）。
 
 〔建議預設，未拍板；第十九批依方案 A 從 [P-303](../protocol/messages.md) 搬上〕**回址與來源**：`reply_to` 只是地址，不是來源或授權證明。需要辨識成員時，將經核對的檔案擁有 UID 等來源證據對上可信登記及授權設定，不信正文自稱的 node；回件也要核對原請求目標及可信來源，不能只因 ID 相同就當成功證據。可讀附件路徑同樣不證明來源，開檔只用收件 node 的身分。同 UID 的多個 node 無法只靠檔案 owner 分辨，這是共用帳號的信任界線：可以為同帳號直接成員提出核對請求，但不能宣稱已認證到某個唯一發件 node；部署要求更細的隔離時才須另配可信證據，沒有就拒絕那種額外授權，不要求無 helper 部署一律拒收。可信來源的核對結果隨既有接件／工作狀態保存，不新增全域身分帳本。
 
@@ -30,8 +30,8 @@ node 登記與喚醒的 IPC 以 [daemon](../settled/daemon.md) 為正本；執�
 權限落點的清單見 [P-208](../settled/protocol/node.md)。
 
 - **基本配置**：建 node 時開 daemon 對 `.aos/attention/` 的寫權。node 帳號要能遍歷根路徑、讀寫 repo、清理收件；投件者只授必要父目錄的 traverse，以及 `requests/`、`responses/` 與各自 `.tmp/` 的寫入與遍歷權。〔使用者方向 2026-09-29 晚〕首版只用共享群組（可配 setgid 目錄）、不用 ACL，保證 node 讀得到、消費提交後刪得掉，不依賴投件者的 umask，不一律 world-writable。
-- **開投件權就是交出身分**〔使用者方向 2026-09-30，第十八批〕：照 B-501，能投件就能用收件 node 的身分跑任意程式，也讀得到它讀得到的 repo、設定與 key；投件者之間也不保證不能改檔，不覆蓋與內容核對見 [P-003](../protocol/README.md)。權限由上層 kernel 用自己的帳號配，共享群組與要 root 的步驟經 helper 的固定動作（[B-609](../settled/daemon.md)）；key 保護的範圍見 [llm-work P-405](../protocol/llm-work.md)。
-- **建 agent 時核對路線**〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕：LLM 經自己的 kernel 轉交時，agent 要能投進該 kernel 的 `requests/`，kernel 要能回投 agent 的 `responses/`；轉交下一站時再配 kernel 與下一站之間的兩個方向。agent 直接投 LLM kernel 時，開 agent→LLM kernel 的 `requests/` 與 LLM kernel→agent 的 `responses/`，不要求自己的 kernel 代投。工具路線由 `tools.target_node` 決定：有位址就開往該 kernel 的請求與回件權；null 就准 agent 經通道自己掛 once（`node.mount`，[B-613](../settled/daemon.md)）、自己記用量。正式副本由接件帳號可讀、提交後可清。回址不是授權證明（B-501）。
+- **開投件權就是交出身分**〔使用者方向 2026-09-30，第十八批〕：照 B-501，能投件就能用收件 node 的身分跑任意程式，也讀得到它讀得到的 repo、設定與 key；投件者之間也不保證不能改檔，不覆蓋與內容核對見 [P-003](../protocol/README.md)。權限由上層 kernel 用自己的帳號配，共享群組與要 root 的步驟經 helper 的固定動作（[B-609](../settled/daemon/helper-actions.md)）；key 保護的範圍見 [llm-work P-405](../protocol/llm-work.md)。
+- **建 agent 時核對路線**〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕：LLM 經自己的 kernel 轉交時，agent 要能投進該 kernel 的 `requests/`，kernel 要能回投 agent 的 `responses/`；轉交下一站時再配 kernel 與下一站之間的兩個方向。agent 直接投 LLM kernel 時，開 agent→LLM kernel 的 `requests/` 與 LLM kernel→agent 的 `responses/`，不要求自己的 kernel 代投。工具路線由 `tools.target_node` 決定：有位址就開往該 kernel 的請求與回件權；null 就准 agent 經通道自己掛 once（`node.mount`，[B-613](../settled/daemon/channel.md)）、自己記用量。正式副本由接件帳號可讀、提交後可清。回址不是授權證明（B-501）。
 - **kernel 對成員的觀察權**：自己的 kernel 另外取得成員 `requests/`、`responses/` 的必要列目錄權與摘要讀權，供收件與到期喚醒；只做這項觀察時用唯讀摘要（[B-624](../settled/tick.md)）。用量收集另要 repo 讀權，讀法見 [S-207](../scheduling/admission.md)；只有摘要讀權不夠。部署不願開 repo 讀權，就不能宣稱已啟用這條收集路線；也不因此授寫設定或讀池 key 的權限。持久成員、路由與建立範本見 [kernel 任務篇](../protocol/kernel-tasks.md)。
 
 **驗收：**兩種 LLM 路線都能送請求並收結果；刻意拿掉回件寫權時拒絕接納新的副作用；只有摘要讀權的上層讀不到成員的其他追蹤檔。
@@ -61,7 +61,7 @@ node 登記與喚醒的 IPC 以 [daemon](../settled/daemon.md) 為正本；執�
 
 **驗收**：同 ID 同內容重投不造成重複處理，已有回應時補投的原 bytes 怎麼找由處理它的普通程式定（檔案收件 aos 不管，[B-623](../settled/tick.md)），異內容報衝突；已消費的收件原件在下一格被收件任務刪，不再次消費。結果還沒消費不能清理，已過保留期且證據已清的請求不宣稱仍有去重保證。
 
-- B-504：通知、重放與遺失（09-29 重寫：已併入 [daemon](../settled/daemon.md)；通知與補查不在此另立一套規則。）
+- B-504：通知、重放與遺失（09-29 重寫：已併入 [daemon](../settled/daemon/README.md)；通知與補查不在此另立一套規則。）
 
 ## B-505：Blob 導入、讀出與對話輸出
 

@@ -17,10 +17,10 @@
 〔建議預設，未拍板〕若採用 run，暫停、取消與恢復只需留下必要的本地狀態，隨 group commit：
 
 - 暫停：停止替該 run 派新工作；已送出的結果仍接收，不能把暫停當成已殺掉程序。
-- 取消：保存取消要求、停止派新工作並要求收尾。取消 once 的核權與做法以 [B-203](../base/execution.md) 為正本，〔第十九批〕在跑的經通道 `node.kill` 砍掉（[B-613](../settled/daemon.md)），收尾見 [B-604](../settled/daemon.md)；程序尚未清空，不能宣稱取消完成。結果不明依 [S-401](operations.md) 放著。
+- 取消：保存取消要求、停止派新工作並要求收尾。取消 once 的核權與做法以 [B-203](../base/execution.md) 為正本，〔第十九批〕在跑的經通道 `node.kill` 砍掉（[B-613](../settled/daemon/channel.md)），收尾見 [B-604](../settled/daemon/lifecycle.md)；程序尚未清空，不能宣稱取消完成。結果不明依 [S-401](operations.md) 放著。
 - 恢復：接著已保存的進度做，不重做已確認完成的副作用；不自動清除取消要求，也不把 unknown 當成可重試。
 
-已提交的暫停或取消要求不因重啟消失。程序是否清空依 [daemon](../settled/daemon.md) 與 runner 的事實判斷；agent 閒著或 tick 結束，都不是任務成功的證據。
+已提交的暫停或取消要求不因重啟消失。程序是否清空依 [daemon](../settled/daemon/README.md) 與 runner 的事實判斷；agent 閒著或 tick 結束，都不是任務成功的證據。
 
 〔使用者方向 2026-09-29〕設定錯誤、資料缺失、容量或已啟用額度不足等問題修好後，**resume 重新驗證是可選出口**。提供時，須先確認阻擋原因已消除，才接續保存的進度；未解除就保持待處理。也可只提供取消，明說不支援 resume。unknown 與未解除的取消要求不能走這個出口。重要設定的編輯與恢復依 [A-102](../agent/configuration.md)，不要把暫停 run 誤當成暫停該 node 的 tick。
 
@@ -30,7 +30,7 @@
 
 ## S-103．同 node 的 tick 互斥
 
-（09-29 重寫：已刪；互斥併入 [tick](../settled/tick.md)，舊程序清空併入 [daemon](../settled/daemon.md)。）
+（09-29 重寫：已刪；互斥併入 [tick](../settled/tick.md)，舊程序清空併入 [daemon](../settled/daemon/README.md)。）
 
 ## S-104．Job、attempt 與 retry
 

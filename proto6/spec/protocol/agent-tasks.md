@@ -6,7 +6,7 @@
 
 `aos-agent-step` 推進 module；`aos-agent-tools` 管工具、`aos-agent-check` 查設定、`aos-agent-talk` 說話與查詢。tick 不等 HTTP／工具。各程式沿 [P-203](../settled/protocol/node.md) 使用 node 的 user 與鎖；--node 省略用 cwd，任務直接讀設定。
 
-LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，或自己經通道掛 once（`node.mount`，[B-613](../settled/daemon.md)）。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
+LLM 送到 `llm.target_node`；工具由 `tools.target_node` 決定交 kernel，或自己經通道掛 once（`node.mount`，[B-613](../settled/daemon/channel.md)）。kernel 建立 agent 時決定地址、權限與資源路線，agent 不辨識對方角色。
 
 ## P-701．設定檔〔A-101～102；工程預設〕
 
@@ -92,7 +92,7 @@ aos-agent-step 的範本 inst 設 `stderr:{"$opt":"inherit"}`，stdin 不讀、s
 
 ## P-709．投件故障與恢復〔Q1／Q2、P-304；工程預設〕
 
-行為以 [A-403](../agent/tools.md) 為準（補投只補交付、不授權重跑；自跑 once 的掛行程照 [B-613](../settled/daemon.md)，`launch-started` 與 unknown 照 [S-401](../scheduling/operations.md)、[kernel P-807](kernel-tasks.md)）。
+行為以 [A-403](../agent/tools.md) 為準（補投只補交付、不授權重跑；自跑 once 的掛行程照 [B-613](../settled/daemon/channel.md)，`launch-started` 與 unknown 照 [S-401](../scheduling/operations.md)、[kernel P-807](kernel-tasks.md)）。
 
 ## P-710．agent 自記用量〔工具與 LLM 兩路裁定；工程預設〕
 
