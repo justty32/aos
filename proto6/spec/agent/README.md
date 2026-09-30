@@ -28,13 +28,13 @@
 
 回覆的完成證據必須和內容相符：仍在等相關工具／LLM 結果，或結果是 unknown，不能宣稱該工作成功。正式回覆依 [A-203](input.md)；模型說「完成」不能代替完成證據。沒有可推進的材料就結束本格，等所屬 kernel 再叫醒，不忙轉。
 
-輪次邊界只沿用 [run 的軟性原則](../scheduling/runs.md)，不在這裡決定途中新訊息屬於哪一輪。重啟清程序依 [B-603](../settled/daemon.md)（標準配備的 daemon 端），unknown 與不自動重做依 [S-401](../scheduling/operations.md)。
+輪次邊界只沿用 [run 的軟性原則](../scheduling/runs.md)，不在這裡決定途中新訊息屬於哪一輪。重啟清程序依 [B-603](../settled/daemon/lifecycle.md)（標準配備的 daemon 端），unknown 與不自動重做依 [S-401](../scheduling/operations.md)。
 
 驗收：模型回覆已完成，但相關工具還沒交回結果時，不把工作記成成功；等結果處理完且 final 提交後，才有正式完成回覆。
 
 ## A-504 按需啟動〔使用者方向 2026-09-29〕
 
-扮演 agent 的 node 通常不設定期，等所屬 kernel 叫醒；登記與排程依 [daemon](../settled/daemon.md)，daemon 是定期跑 `aos-tick` 的標準程式，不是 agent 存在的前提（[B-626](../settled/tick.md)）：agent 也可以由 cron 或人手跑，只是沒有通道。沒有每 node 常駐 worker，也不靠空轉讀 history 找事做。
+扮演 agent 的 node 通常不設定期，等所屬 kernel 叫醒；登記與排程依 [daemon](../settled/daemon/README.md)，daemon 是定期跑 `aos-tick` 的標準程式，不是 agent 存在的前提（[B-626](../settled/tick.md)）：agent 也可以由 cron 或人手跑，只是沒有通道。沒有每 node 常駐 worker，也不靠空轉讀 history 找事做。
 
 驗收：10,000 個閒置、沒有到期工作的 node，不因此產生 10,000 支 tick 程序或週期讀取整份 history。
 

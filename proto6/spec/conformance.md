@@ -14,7 +14,7 @@
 - 同一主題分散兩處的，照下面的正本表：正本那邊寫全，其他地方改成一句加條號。只寫在協議篇的行為，改到時搬到正本，原處留一句加條號。
 - 條號不重編；內容搬走的條留一句殘根加連結。新條號接在該篇現有號碼後面（見文末「新條號」）。
 - 被推翻的舊說法直接改掉，不留刪除線；需要交代來源的在條文後標〔使用者方向 2026-09-30，第十八批〕、〔使用者方向 2026-09-30，第十九批〕或〔使用者方向 2026-09-30，第二十批〕。使用者未答、照計畫預設寫的標〔暫定〕，不寫進使用者方向的段落。
-- 〔使用者方向 2026-09-30，第二十批〕保證跟著「掛了什麼」走（[T-01](terms.md)）：tick 核心四件事（[T-07](settled/terms.md)）要確認不靠任何系統級任務；其餘保證由各條寫明「掛了哪一項系統級任務、包了哪個普通程式時成立」。第十九批的全掛前提與兩級保證已撤。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 已納入，是「有就用」：現行規則在兩者都沒有時也要成立，有的時候多出的保證寫在各條（[B-630、B-622、B-634](settled/tick.md)、[B-605](settled/daemon.md)）。延後項只寫一句並連到 [P-008](protocol/README.md#p-008)。
+- 〔使用者方向 2026-09-30，第二十批〕保證跟著「掛了什麼」走（[T-01](terms.md)）：tick 核心四件事（[T-07](settled/terms.md)）要確認不靠任何系統級任務；其餘保證由各條寫明「掛了哪一項系統級任務、包了哪個普通程式時成立」。第十九批的全掛前提與兩級保證已撤。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 已納入，是「有就用」：現行規則在兩者都沒有時也要成立，有的時候多出的保證寫在各條（[B-630、B-622、B-634](settled/tick.md)、[B-605](settled/daemon/cgroup.md)）。延後項只寫一句並連到 [P-008](protocol/README.md#p-008)。
 
 ### 概念與正本
 
@@ -22,11 +22,11 @@
 |---|---|
 | 定位、多層多 kernel、各 kernel 自訂、上下層不必對齊 | [T-06](terms.md) |
 | tick 核心四件事、tick 是衡量基準、唯一逃生口；投件權就是執行權 | [T-07、T-08](terms.md) |
-| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-629、B-632、B-633](settled/tick.md)；普通程式 [B-303](settled/helper.md)、[B-621](settled/tick.md)、[B-634](settled/tick.md)（`aos-cg`）；git [B-630、B-622](settled/tick.md)；node 框 [B-605](settled/daemon.md) |
+| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-629、B-632、B-633](settled/tick.md)；普通程式 [B-303](settled/helper.md)、[B-621](settled/tick.md)、[B-634](settled/tick.md)（`aos-cg`）；git [B-630、B-622](settled/tick.md)；node 框 [B-605](settled/daemon/cgroup.md) |
 | node 與兼任角色、兩張註冊表 | [T-02](terms.md) |
-| 上下層判定（預設看資料夾、登記覆蓋） | [B-628](settled/tick.md)、[B-606](settled/daemon.md) |
-| node 登記、喚醒、全殺重啟、逐層重建、停機、熱重載 | [daemon](settled/daemon.md) |
-| tick–daemon 通道、憑證、掛行程、暫存訊息與急件 | [B-612～614](settled/daemon.md) |
+| 上下層判定（預設看資料夾、登記覆蓋） | [B-628](settled/tick.md)、[B-606](settled/daemon/registration.md) |
+| node 登記、喚醒、全殺重啟、逐層重建、停機、熱重載 | [daemon](settled/daemon/README.md) |
+| tick–daemon 通道、憑證、掛行程、暫存訊息與急件 | [B-612～614](settled/daemon/README.md) |
 | 任務順序、停格檔與擋板檔、結束碼紀錄、`aos-needs`、互斥、Q1／Q2、git 開格／存檔點／收尾 | [tick](settled/tick.md) |
 | 身分額度、可選 helper；inst 欄位與解析 | [身分](base/identity-resources.md)、[inst](base/inst.md) |
 | 工作材料、可信結果、後代收尾、取消 | [work](base/work.md)、[execution](base/execution.md) |
@@ -82,15 +82,15 @@
 | 條號 | 檔 | 主題 | 落筆 |
 |---|---|---|---|
 | B-506 | base/transport.md | 〔第十九批〕收件區權限與建立時的路線核對（P-208 搬上） | 修正輪 A |
-| B-606 | settled/daemon.md | 登記、解除（收尾）、覆蓋上層、換父兩條路、前綴／範圍額度（〔第十九批〕once 登記搬到 B-613） | T2 |
-| B-607 | settled/daemon.md | 叫醒、暫停、故障停格與格次序號（〔第二十批〕停格靠擋板檔、不看結束碼） | T2 |
-| B-608 | settled/daemon.md | 熱重載與「免重開／要重開」 | T2 |
-| B-609 | settled/daemon.md | 佈建固定動作與 helper 動作 | T2 |
-| B-610 | settled/daemon.md | 〔第十九批改名〕掛載行程的診斷：留存、淘汰與清除 | T2 |
-| B-611 | settled/daemon.md | 一棵資源樹只准一個 daemon | T2 |
-| B-612 | settled/daemon.md | 〔第十九批〕tick–daemon 通道 | T2 |
-| B-613 | settled/daemon.md | 〔第十九批〕掛行程與砍掉（原 once 的 daemon 端） | T2 |
-| B-614 | settled/daemon.md | 〔第十九批〕暫存訊息與急件 | T2 |
+| B-606 | settled/daemon/registration.md | 登記、解除（收尾）、覆蓋上層、換父兩條路、前綴／範圍額度（〔第十九批〕once 登記搬到 B-613） | T2 |
+| B-607 | settled/daemon/registration.md | 叫醒、暫停、故障停格與格次序號（〔第二十批〕停格靠擋板檔、不看結束碼） | T2 |
+| B-608 | settled/daemon/reload.md | 熱重載與「免重開／要重開」 | T2 |
+| B-609 | settled/daemon/helper-actions.md | 佈建固定動作與 helper 動作 | T2 |
+| B-610 | settled/daemon/channel.md | 〔第十九批改名〕掛載行程的診斷：留存、淘汰與清除 | T2 |
+| B-611 | settled/daemon/lifecycle.md | 一棵資源樹只准一個 daemon | T2 |
+| B-612 | settled/daemon/channel.md | 〔第十九批〕tick–daemon 通道 | T2 |
+| B-613 | settled/daemon/channel.md | 〔第十九批〕掛行程與砍掉（原 once 的 daemon 端） | T2 |
+| B-614 | settled/daemon/messaging.md | 〔第十九批〕暫存訊息與急件 | T2 |
 | B-602 | settled/tick.md | 〔第十九批換標題〕同一資料夾一次一格：互斥鎖（原「同一 node 一次一格」） | T3 |
 | B-620 | settled/tick.md | 任務註冊表：照表依序跑（〔第十九批〕換標題） | T3 |
 | B-621 | settled/tick.md | 〔第二十批換主題〕aos-needs：前置沒成功就不跑（原節補號） | T3 |
@@ -126,7 +126,7 @@
 
 | 篇 | 下一號 |
 |---|---|
-| settled/daemon.md | B 615 起（到 619 為止） |
+| settled/daemon/ | B 615 起（到 619 為止） |
 | settled/tick.md | B 635 起 |
 | base/work.md、execution.md、identity-resources.md、storage.md、transport.md | B 104、205、306、405、507 起（305 是已刪的舊號，不要再用） |
 | scheduling/runs.md、admission.md、llm.md、operations.md | S 105、208、308、407 起 |
@@ -139,7 +139,7 @@
 
 〔建議預設，未拍板〕先用假工具／mock LLM 驗檔案交接、授權及結果。再在可丟棄的 Linux／WSL 環境，驗無 helper 通用 user、有 helper 兩個真 UID、已裝 module 與程序群組的後代清理；最後測萬級冷 node。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 有就用：現行規則要在兩者都沒有的機器上也驗過。〔使用者方向 2026-09-30，第二十批〕保證跟著掛了什麼走（[T-01](terms.md)），所以系統級任務與普通程式分開驗：有沒有掛 `aos-mq get`／`aos-mq post`、發摘要、清理、`aos-git` 三項，任務有沒有包 `aos-needs`、`aos-as`、`aos-cg`，daemon 有沒有 cgroup（[B-629](settled/tick.md)、[B-621](settled/tick.md)、[B-303](settled/helper.md)）。
 
-cgroup 子樹依 [B-605](settled/daemon.md) 至少驗三種：首推的 systemd 使用者委派、不用 sudo（〔使用者方向 2026-09-30，第十九批〕）；root 事先準備好的子樹；開 `--create-cgroup` 由 daemon 自己建（〔使用者方向 2026-09-29 晚〕）。WSL 另驗三個坑：shell 在 `/init.scope`、scope 名每次不同、檔案歸自己不等於有委派（B-605）。git 依 [B-630、B-622](settled/tick.md) 驗三種：有 git、沒有 git、git 不能用（只印 `no_git` 警告、照 [B-632](settled/tick.md)）。
+cgroup 子樹依 [B-605](settled/daemon/cgroup.md) 至少驗三種：首推的 systemd 使用者委派、不用 sudo（〔使用者方向 2026-09-30，第十九批〕）；root 事先準備好的子樹；開 `--create-cgroup` 由 daemon 自己建（〔使用者方向 2026-09-29 晚〕）。WSL 另驗三個坑：shell 在 `/init.scope`、scope 名每次不同、檔案歸自己不等於有委派（B-605）。git 依 [B-630、B-622](settled/tick.md) 驗三種：有 git、沒有 git、git 不能用（只印 `no_git` 警告、照 [B-632](settled/tick.md)）。
 
 保存版本、配置、環境與結果；mock 不代表 OS 隔離已驗證，磁碟記帳不算硬限制。範圍依[平台邊界](README.md)，須涵蓋同機 node 樹。
 
@@ -151,7 +151,7 @@ cgroup 子樹依 [B-605](settled/daemon.md) 至少驗三種：首推的 systemd 
 
 驗兼任 kernel／agent、只有收信任務及空成員表，角色須依任務判定。正常重開讀回登記、pause 與 wake，意外重開最多丟最後一個存檔間隔的 pause；無快照也自動 tick 頂層，boot id 變更後逐層補登記，壞成員留待辦、不擋其餘成員；漏叫醒可補查，重複叫醒不並行同 node 的兩格。
 
-啟動自檢依 [B-605](settled/daemon.md)：〔使用者方向 2026-09-30，第二十批〕沒有 cgroup v2 時 daemon 照常啟動、照常開格，stdout 沒有 `standard:` 行；daemon 不查 cgroup、不查 git；只有 Python 版本不足才報錯退出。quota 偵測到但設定強制關時不用。
+啟動自檢依 [B-605](settled/daemon/cgroup.md)：〔使用者方向 2026-09-30，第二十批〕沒有 cgroup v2 時 daemon 照常啟動、照常開格，stdout 沒有 `standard:` 行；daemon 不查 cgroup、不查 git；只有 Python 版本不足才報錯退出。quota 偵測到但設定強制關時不用。
 
 測 socket 冒名、超額授予／宣告 user、不懂 user 語意、無 helper 繼承與切 UID 後開檔。超額須 125、不啟動、不寫 `exit` 並留待辦；整份 `$ref` 可用但不能偷換身分，搬資料夾也不能取得新身分。
 
@@ -326,7 +326,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 ### cgroup（有就用）
 
-〔納入 cgroup 與 git〕正本 [B-605](settled/daemon.md)、[B-634](settled/tick.md)，句末標條號。
+〔納入 cgroup 與 git〕正本 [B-605](settled/daemon/cgroup.md)、[B-634](settled/tick.md)，句末標條號。
 
 - WSL 的 shell 直接跑（在 `/init.scope`）與用沒加 `Delegate=yes` 的 scope 開：印 `cgroup=off`；用 `systemd-run --user --scope -p Delegate=yes` 開：印 `cgroup=on`；cgroup v1、混合模式自動偵測一律 `off`（B-605）。
 - 任務用 `setsid` 加 double fork 留下的殘留，格後被 `cgroup.kill`（B-601）。

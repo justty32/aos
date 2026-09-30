@@ -8,9 +8,9 @@
 
 ## P-601．兩處事項〔使用者方向 2026-09-29〕
 
-attention 是交給人或 agent 手動處理的待辦清單，誰寫、何時寫以 [S-405](../scheduling/operations.md) 為正本，daemon 那側的停格事項見 [B-607](../settled/daemon.md)。node 的事項放 `.aos/attention/open/<issue_id>.json`，標完成時搬到 `done/`；整個 `.aos/attention/` ignore，不隨 git 還原。once 單檔未啟動仍沿 [P-110](../settled/protocol/daemon/provision-and-runner.md) 的 `.err`。建 node 時須授 daemon 寫權。
+attention 是交給人或 agent 手動處理的待辦清單，誰寫、何時寫以 [S-405](../scheduling/operations.md) 為正本，daemon 那側的停格事項見 [B-607](../settled/daemon/registration.md)。node 的事項放 `.aos/attention/open/<issue_id>.json`，標完成時搬到 `done/`；整個 `.aos/attention/` ignore，不隨 git 還原。once 單檔未啟動仍沿 [P-110](../settled/protocol/daemon/provision-and-runner.md) 的 `.err`。建 node 時須授 daemon 寫權。
 
-daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../settled/daemon.md)。daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC 查：ls／show 直接讀 `state_dir/attention/` 的檔案，加上記憶體裡還沒寫出的那幾筆；內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
+daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../settled/daemon/registration.md)。daemon 只保管 helper 消失、state 存不下等自身事項，平常走 IPC 查：ls／show 直接讀 `state_dir/attention/` 的檔案，加上記憶體裡還沒寫出的那幾筆；內有 `open/<source_key>/<issue_id>.json`、`done/<source_key>/<issue_id>.json`。source_node 用受影響的 root，source_key 是其 UTF-8 的 SHA-256 小寫十六進位。
 
 兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、白話 `message`；可選 `suggestion` 是「建議處理」文字，可以附建議指令，但不會被自動執行。job_id／attempt_id／request_id 按需附；〔第十八批；第二十批疑點裁定 7 改成格數〕可選 `reported_seq` 是首次回報時寫的那個 node 的第幾格（[B-633](../settled/tick.md)），壞收件原件的保留期從這一格算（[B-404](../base/storage.md)）；取代 `reported_at_ms`。daemon 寫的事項沒有格數，不帶。不帶憑證或完整工作。〔使用者方向 2026-09-30，第十八批〕`argv` 是永遠禁止的鍵（[C-07](../contracts.md)），schema 寫 `"argv": false`，出現就整份拒收。
 

@@ -10,7 +10,7 @@
 | [身分與資源](identity-resources.md) | 身分額度、資源限制的落地；可選 helper 與 `aos-as`（B-303）已搬到[整理區](../settled/helper.md) |
 | [儲存](storage.md) | 收件區、追蹤區、完整發布與清理 |
 | [通訊](transport.md) | 投件授權與簡單去重 |
-| [daemon](../settled/daemon.md)（整理區） | 定期跑 `aos-tick` 的標準程式：登記、喚醒、程序生命週期、重啟與通道 |
+| [daemon](../settled/daemon/README.md)（整理區） | 定期跑 `aos-tick` 的標準程式：登記、喚醒、程序生命週期、重啟與通道 |
 | [通用 tick](../settled/tick.md)（整理區） | 核心（互斥鎖、照表跑、上下層、每項結束碼紀錄）與標準任務表範本（系統訊息佇列、發摘要、清理、`aos-git`；git 與 cgroup 有就用） |
 | [kernel 樹](../scheduling/README.md) | node 成員關係、排程與資源 module |
 

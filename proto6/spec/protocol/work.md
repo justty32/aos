@@ -4,7 +4,7 @@
 
 LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 [llm-work](llm-work.md)；本篇其餘條號不變。取消工作是 P-411（第十七批新增）。
 
-〔使用者方向 2026-09-30，第十八批〕本篇只留欄位、JSON、schema、範例與程式 argv；行為以主規格為正本：工作識別 [T-03](../terms.md)、固定材料與預設值 [B-101](../base/work.md)、結果 [B-103](../base/work.md)、取消 [B-203](../base/execution.md)、掛行程與砍掉 [B-613](../settled/daemon.md)、標準配備的 once [B-629](../settled/tick.md)、unknown 與從未啟動證據 [S-401](../scheduling/operations.md)。本篇的 schema 照 [P-007](README.md) 的放寬通則：不認得的欄位忽略（[C-07](../contracts.md)）。
+〔使用者方向 2026-09-30，第十八批〕本篇只留欄位、JSON、schema、範例與程式 argv；行為以主規格為正本：工作識別 [T-03](../terms.md)、固定材料與預設值 [B-101](../base/work.md)、結果 [B-103](../base/work.md)、取消 [B-203](../base/execution.md)、掛行程與砍掉 [B-613](../settled/daemon/channel.md)、標準配備的 once [B-629](../settled/tick.md)、unknown 與從未啟動證據 [S-401](../scheduling/operations.md)。本篇的 schema 照 [P-007](README.md) 的放寬通則：不認得的欄位忽略（[C-07](../contracts.md)）。
 
 ## P-400．兩個入口〔使用者方向 2026-09-29〕
 
@@ -28,7 +28,7 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 ## P-402．once 與工作材料〔使用者方向 2026-09-29；第十九批改寫〕
 
-〔使用者方向 2026-09-30，第十九批〕once 是標準配備的一項（[B-629](../settled/tick.md)），做法是經 tick–daemon 通道把行程掛到 daemon 上跑（`node.mount`，[B-613](../settled/daemon.md)），不再是登記的一種。掛載目標依 [inst 的「inst 目標：檔案或資料夾」](../base/inst.md#inst-目標檔案或資料夾)；資源歸屬與核權依 B-613，通道的環境變數與憑證依 [B-612](../settled/daemon.md)，啟動失敗旁檔（`.err`）格式依 [daemon P-110](../settled/protocol/daemon/provision-and-runner.md)。
+〔使用者方向 2026-09-30，第十九批〕once 是標準配備的一項（[B-629](../settled/tick.md)），做法是經 tick–daemon 通道把行程掛到 daemon 上跑（`node.mount`，[B-613](../settled/daemon/channel.md)），不再是登記的一種。掛載目標依 [inst 的「inst 目標：檔案或資料夾」](../base/inst.md#inst-目標檔案或資料夾)；資源歸屬與核權依 B-613，通道的環境變數與憑證依 [B-612](../settled/daemon/channel.md)，啟動失敗旁檔（`.err`）格式依 [daemon P-110](../settled/protocol/daemon/provision-and-runner.md)。
 
 〔使用者方向 2026-09-29，第十六批〕**工作目錄名要加前綴**：不同成員都可能用 `attempt-1`，同一個 kernel 裡會撞名。目錄名一律是 `<前綴>-<attempt_id>`，前綴是「**配出這個 attempt_id 的 node**」絕對路徑 UTF-8 bytes 的 sha256 前 16 個小寫 hex。node 路徑不能直接當目錄名，雜湊長度固定、只有 `[0-9a-f]`。全篇及 kernel／agent 篇路徑裡的 `state/work/<attempt_id>/`、`.aos/jobs/<attempt_id>/`，`<attempt_id>` 都指這個目錄名；檔案內容與 RPC 裡的 attempt_id 欄位不加前綴。
 
@@ -100,7 +100,7 @@ unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown
 
 ## P-411．取消工作〔使用者方向 2026-09-29，第十七批〕
 
-行為（誰有權取消、排隊中與在跑的怎麼處理、收尾競態、只適用 once）以 [B-203](../base/execution.md) 為正本〔使用者方向 2026-09-30，第十八批〕；〔第十九批〕在跑的那一格經通道用 `node.kill` 砍掉掛載行程（[B-613](../settled/daemon.md)）。本條只定格式。
+行為（誰有權取消、排隊中與在跑的怎麼處理、收尾競態、只適用 once）以 [B-203](../base/execution.md) 為正本〔使用者方向 2026-09-30，第十八批〕；〔第十九批〕在跑的那一格經通道用 `node.kill` 砍掉掛載行程（[B-613](../settled/daemon/channel.md)）。本條只定格式。
 
 **請求**：檔案請求 `work.cancel`（`aos work cancel`），投到**持有那件工作的 node** 的 `requests/`；例如 kernel 代跑的工具就投那個 kernel，範本裡由 work 任務宣告處理（[node P-202](../settled/protocol/node.md)）。stdin 是 [msg-cancel-payload](schemas/msg-cancel-payload.schema.json) 的 `{request_id}`，指原請求（例如 `kernel.work.submit`）的 RPC id。
 
@@ -126,7 +126,7 @@ unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown
 | `aos-llm [--node N] --config C` | 一項 module 任務，node 省略用 cwd（tick 設為 node 根）；C 可相對，依 cwd 解。讀 C、池狀態、既有結果，及收件或 forward 已接納的材料（看任務有沒有宣告 `llm.chat`，[S-307](../scheduling/llm.md)）；保存狀態／待送封套。只對已提交的工作材料經通道 `node.mount` 掛載 `aos-llm-call`；tick 負責 commit 後投件、清收件原件，用 N 的 user |
 | `aos-llm-call --work-dir W --config C` | C 是 aos-llm 派出時固定在 `W/llm-config.json` 的本池設定，argv 帶絕對路徑；讀 C、私有 key_ref 與 W/request.json，只送一次 HTTP，寫 W/result.json；請求有 stream_path 時邊收邊寫該檔；用池管理 node 的 user |
 
-三支程式 stdin 都是 `/dev/null`，stdout 保留為空（業務輸出走檔案），stderr 只放無 key 的 `代號: 白話` 診斷；內層 inst 的 stdin／stdout／stderr 另依 P-403。〔使用者方向 2026-09-30，第十九批〕要掛載的程式（`aos-llm`）從 daemon 放的兩個通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN` 找通道（[B-612](../settled/daemon.md)、[P-117](../settled/protocol/daemon/channel.md)），缺任一個就自己擋下、報 `no_channel`、〔暫定〕結束碼 125；`aos-work`、`aos-llm-call` 不用通道，本身不新增必需 `AOS_*` 變數（inst 的 `envs` 用 `clear` 會把通道變數一起清掉）。PATH／目標帳號環境及 inst.envs 依 inst 正本，不從呼叫者環境取得池 key。
+三支程式 stdin 都是 `/dev/null`，stdout 保留為空（業務輸出走檔案），stderr 只放無 key 的 `代號: 白話` 診斷；內層 inst 的 stdin／stdout／stderr 另依 P-403。〔使用者方向 2026-09-30，第十九批〕要掛載的程式（`aos-llm`）從 daemon 放的兩個通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN` 找通道（[B-612](../settled/daemon/channel.md)、[P-117](../settled/protocol/daemon/channel.md)），缺任一個就自己擋下、報 `no_channel`、〔暫定〕結束碼 125；`aos-work`、`aos-llm-call` 不用通道，本身不新增必需 `AOS_*` 變數（inst 的 `envs` 用 `clear` 會把通道變數一起清掉）。PATH／目標帳號環境及 inst.envs 依 inst 正本，不從呼叫者環境取得池 key。
 
 結束碼：0＝這次處理完成且必要結果已完整發布（工作本身仍可能 failed／unknown）；2＝用法／設定錯，未開始；125＝自身無法開始；1＝已開始處理後自身失敗（包括結果寫不出），不能把未發布結果算成功。aos-llm 的 0 只表示本格步驟完成，不代表 HTTP 工作成功。串流中途斷線、stream_path 開不了時的結束碼與結果依 [S-305](../scheduling/llm.md)。工作 inst 的內層退出碼只記在工作結果，不能拿 wrapper 的 0 代替。訊號由父程序看 wait 狀態；wrapper 沒寫結果時照 [S-401](../scheduling/operations.md) 的證據規則處理。
 
