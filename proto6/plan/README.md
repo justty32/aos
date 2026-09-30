@@ -1,0 +1,70 @@
+# proto6 實作規劃
+
+← [proto6](../README.md)｜[spec 入口](../spec/README.md)｜[整理區](../spec/settled/README.md)
+
+2026-09-30 起。spec 打磨夠了，開始實作。**程式由使用者親手寫**；這份 plan 只排順序、講清楚每段要做到什麼、怎麼算做完。
+
+- 程式放 `proto6/src/`，跟探針原型 [proto/](../proto/README.md) 分開。
+- 語言：tick 核心、系統級任務、CLI、kernel 任務用 **Python 3.9**（只用標準庫）；daemon、runner 用 **C++11**。
+- inst 的解析與指示詞（`$ref` 等）**另一隊在寫**，放 `proto6/src/py/aos_inst/`：找 inst 檔、身分先行、指示詞展開、驗證、錯誤代號、一個可選用的開程序模組。各段把它當現成的東西用，不排成你的工作。
+
+## 怎麼用這份 plan
+
+1. 一次只看一段。每段有自己的細部檔（目前只寫了[第一段](m1-tick-core.md)，後面的段開工前再寫）。
+2. 每段拆成幾步，每步都寫：要做到什麼、對哪幾條 spec、**關鍵邏輯（你寫）**、**可補全（AI 補）**、驗收。
+3. 你先寫骨架和關鍵邏輯，再叫 AI 補「可補全」那一欄；補完拿驗收那一欄手跑。
+4. 檔案怎麼切、函式叫什麼**由你決定**。plan 裡標「建議」的只是參考。
+5. 碰到 spec 講不清或互相打架的，看該段的「待問」；不在清單上的，記下來問，不要自己裁。
+
+## 五段總覽
+
+### 第一段：tick 核心
+
+- **目標**：`aos-tick` 直接跑得動一格，做好核心四件事——同資料夾互斥、照任務表依序跑、上下層判定、每項結束碼紀錄。
+- **主要 spec**：[B-626、B-602、B-620、B-633、B-628、B-627](../spec/settled/tick.md)；格式 [P-202、P-203、P-213](../spec/settled/protocol/node.md)。
+- **可單獨跑的樣子**：不要 daemon、git、cgroup、helper。手建一個資料夾、寫 `.aos/tasks.json`，`aos-tick --node /絕對路徑` 或 cron 直接跑，看結束碼與 `.aos/tick/current.json`。
+- **界線**：核心不認得任何系統級任務，也不清任務留下的後代。細部見 [m1-tick-core.md](m1-tick-core.md)。
+
+### 第二段：不靠 daemon 的系統級任務與普通程式
+
+- **目標**：掛在任務表上的 `aos-git open／mark／close`、`aos-publish`、`aos-clean`，普通程式 `aos-needs`，以及 tick 外的 `aos-config-add`、恢復前驗證；兩版標準任務表範本跑得起來。
+- **主要 spec**：[B-630、B-622、B-632、B-621、B-624（發摘要）、B-625、B-629](../spec/settled/tick.md)；[B-404](../spec/base/storage.md)；格式 [P-204、P-205、P-207、P-210](../spec/settled/protocol/node.md)。
+- **可單獨跑的樣子**：一樣直接跑 `aos-tick`。有 git 的機器上每格最多一個 commit；沒 git 時 `aos-git` 只印 `no_git`、回 0。
+- **界線**：全部是「讀寫檔案」就做得完的事，不碰通道。恢復前驗證只寫檢查本身，送 `node.resume` 等第三段。
+
+### 第三段：daemon 核心（C++11）
+
+- **目標**：`aos daemon` 能登記 node、照週期開格、叫醒／暫停、用 `aos-runner` 開每一格並在格後收屍、重啟與停機收尾、發通道憑證、掛行程與砍掉；沒 cgroup、沒 helper 也跑得起來。
+- **主要 spec**：[B-601、B-504](../spec/settled/daemon/runtime.md)、[B-606、B-607](../spec/settled/daemon/registration.md)、[B-603、B-604、B-611](../spec/settled/daemon/lifecycle.md)、[B-610、B-612、B-613](../spec/settled/daemon/channel.md)、[B-608](../spec/settled/daemon/reload.md)；格式 [daemon 協議](../spec/settled/protocol/daemon/README.md)（P-100～119，不含 helper 那幾條）。
+- **可單獨跑的樣子**：一般帳號開 `aos daemon --config F`，登記第一段做好的 node，看它照週期出格、`node.wake` 叫得醒、Ctrl-C 收得乾淨。
+- **界線**：訊息佇列、cgroup 是第四段的部件，這段先當「開關關著」；B-615 的開關鍵這段就要認得。helper 動作回 `helper_unavailable`。
+
+### 第四段：daemon 部件——訊息與 cgroup
+
+- **目標**：B-615 的兩個可掛部件。訊息：`node.send`／`node.take`、急件叫醒，加上 tick 那側的 `aos-mq get`／`post`。cgroup：node 框與上限、格後與重啟清框，加上普通程式 `aos-cg`。
+- **主要 spec**：[B-615](../spec/settled/daemon/components.md)、[B-614](../spec/settled/daemon/messaging.md)、[B-623、B-624（佇列）、B-634](../spec/settled/tick.md)、[B-605 與各條 cgroup 部分](../spec/settled/daemon/cgroup.md)；格式 P-119、[P-206、P-211](../spec/settled/protocol/node.md)。
+- **可單獨跑的樣子**：兩個 node 在同一個 daemon 底下互送訊息；`enable_messaging:false` 時 `mq-post` 回 1、檔搬到 `.aos/mq/failed/`。用 `systemd-run --user --scope -p Delegate=yes` 開 daemon 看框；`enable_cgroup:false` 時退回第三段的做法。
+- **界線**：每個部件各自可關，關掉時跑的就是第三段的樣子。
+
+### 第五段：helper 與跨帳號
+
+- **目標**：sudo 開 daemon 時 fork 出 root helper、主程式降權；佈建固定動作；普通程式 `aos-as <帳號> -- 原指令` 經 helper 用別的帳號開程序、交鎖 fd；多帳號之間用群組交接檔案。
+- **主要 spec**：[B-303](../spec/settled/helper.md)、[B-609](../spec/settled/daemon/helper-actions.md)、[B-301、B-302](../spec/base/identity-resources.md)；格式 P-102、P-107、P-108、[P-208、P-212](../spec/settled/protocol/node.md)。
+- **可單獨跑的樣子**：在可丟棄的機器上建兩個測試帳號，sudo 開 daemon，任務包 `aos-as` 以另一個帳號跑，任務裡核對得到同一把鎖。
+- **界線**：只做 tick／daemon 基礎用得到的帳號切換；kernel 分配身分額度那一側不在這裡。
+
+## 順序上的調整
+
+照原本排的 1→5，只挪了三樣，都是因為 spec 的相依關係：
+
+| 東西 | 原本 | 挪到 | 為什麼 |
+|---|---|---|---|
+| `aos-mq get`／`post` | 第二段 | 第四段 | 它只走通道；第二段沒有 daemon，寫出來只會「沒通道、回 0」，等於空殼。跟訊息部件一起做才驗得到 |
+| `aos-needs` | 沒排 | 第二段 | 只讀結束碼紀錄，不靠 daemon；也是第一段紀錄格式的第一個使用者 |
+| `aos-cg` | 沒排 | 第四段 | 有 cgroup 時要在 daemon 開的 node 框裡才有意義；沒 cgroup 的退回做法可以先寫，但驗不到主路線 |
+
+## 跨段待問
+
+1. **runner 用 C++11，但 inst 解析在 Python 的 `aos_inst`。** spec 說 runner 要「照 inst 執行一次」，包含解指示詞、驗欄位（[inst](../spec/base/inst.md)「先決定身分，切完才解析」）。C++ runner 要自己重寫一套 inst 解析、還是交給 Python 那一段解完再開程序？第三段開工前要定。
+2. **清理的正本還在整理區外。** `aos-clean` 照 [B-404](../spec/base/storage.md)，但整理區 README 的疑點表把 B-401、B-402、B-404 列為「還寫著舊保證、下一輪要改」。第二段做 `aos-clean` 前，先確認照哪一版。
+3. **daemon 設定的五個開關還沒進 schema。** B-615 的五個鍵尚未同步到 P-101 的 schema 與範例（整理區 README「09-30 晚拆分」一節）。第三段寫設定解析前要補。
