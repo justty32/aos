@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "proto6 共用型別（P-002、P-004、P-005、P-007）",
+  "title": "proto6 共用型別（P-002、P-004、P-005、P-007；時間單位見 C-01）",
   "$defs": {
     "ID": {
       "type": "string",
@@ -16,6 +16,19 @@
     "TimeMs": {
       "type": "integer",
       "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "外部規定的毫秒時長或 UTC epoch 毫秒時間點（欄位名 _ms／_at_ms 結尾，C-01）"
+    },
+    "Ticks": {
+      "description": "aos 內部決定的時長，以格數計（欄位名 _ticks 結尾；算安排它的那一層的格，C-01）",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "TickSeq": {
+      "description": "第幾格（欄位名 _seq 結尾；本 node 的格數見 B-633，C-01）",
+      "type": "integer",
+      "minimum": 1,
       "maximum": 9007199254740991
     },
     "Error": {
