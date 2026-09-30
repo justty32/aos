@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """aos-exec：單發執行器——把一個目標執行**一次**，回 `(結束狀態, 這是誰的碼)`。
 
-    aos-exec [xxx] [--dir-target REL] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
+    aos-exec [xxx] [--timeout-ms N] [--stderr PATH|-] [-- ARG...]
 
 `xxx` 是什麼決定怎麼跑（命令列說明在 ../spec/aos-exec/）：
 
     普通檔案（副檔名不是 .json）  直接執行它，stdin/stdout/stderr 繼承 aos-exec 的
     .json 檔                     讀進來當 inst.json 解析、執行（不存在＝125，見下）
-    資料夾                       執行 xxx/<--dir-target>（預設 .aos/inst.json）
+    資料夾                       執行 xxx/.aos/inst.json，沒有再找 xxx/inst.json（proto6 改）
 
 inst.json 怎麼讀、怎麼驗在 aos_inst.py；「照一份 inst 跑一次」是什麼意思照
 ../spec/inst-posix/ 第 6 節做：驗完才跑、mkdir／append／inherit／merge、環境清空或疊加、
@@ -39,10 +39,11 @@ import time
 
 import aos_inst
 from aos_exec_run import (
-    AOS, CHILD, DEFAULT_DIR_TARGET, GRACE, USAGE, _err, _execute_inst, _spawn,
+    AOS, CHILD, DIR_TARGETS, GRACE, USAGE, _err, _execute_inst, _find_dir_inst, _no_dir_inst_msg,
+    _spawn,
 )
 
-__all__ = ["run_target", "run_inst", "InstResult", "main", "DEFAULT_DIR_TARGET", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
+__all__ = ["run_target", "run_inst", "InstResult", "main", "DIR_TARGETS", "GRACE", "CHILD", "AOS", "USAGE", "EXIT_AOS"]
 __all__ += ["run_target_full", "TargetResult"]
 
 EXIT_AOS = 125          # kind=="aos" 時命令列的退出碼（不會跟子程式的碼撞號）
@@ -69,7 +70,7 @@ class TargetResult:
         self.timed_out, self.ms, self.stopped = timed_out, ms, stopped
 
 
-def run_target_full(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None,
+def run_target_full(xxx, timeout_ms=0, on_spawn=None,
                     stderr=None, args=None, on_target=None, *, on_poll=None, poll_ms=20):
     """`run_target` 的完整結果版本，舊入口的兩值 tuple 完全保留。
 
@@ -85,12 +86,13 @@ def run_target_full(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=N
         if args is not None:
             code, kind = _inst_args_error()
         else:
-            target = os.path.join(p, dir_target)
+            found = _find_dir_inst(p)               # proto6 改：.aos/inst.json 再 inst.json
+            target = found or os.path.join(p, DIR_TARGETS[0])
             if on_target:
                 target = os.path.realpath(target)
                 on_target(target)
-            if not os.path.isfile(target):
-                code, kind = _err(2, USAGE, "資料夾 %s 裡沒有 %s" % (p, dir_target))
+            if found is None:
+                code, kind = _err(2, USAGE, _no_dir_inst_msg(p))
             else:
                 code, kind = _run_inst(target, p, timeout_ms, on_spawn, stderr, details)
     else:
@@ -110,8 +112,7 @@ def run_target_full(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=N
                         int((time.monotonic() - started) * 1000), details["stopped"])
 
 
-def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, stderr=None,
-               args=None, on_target=None):
+def run_target(xxx, timeout_ms=0, on_spawn=None, stderr=None, args=None, on_target=None):
     """把 xxx 執行一次，回 `(code, kind)`。
 
     `kind` 說這個 code 是誰的：
@@ -122,7 +123,7 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, 
       算這種**，不是用法錯：之後的 daemon 收一個還沒出現的 inst.json 時靠的就是這條）／格式壞
       ／指示詞解不開／`mkdir` 建不起來／`exit` 檔的父目錄不存在／`cwd` 不是資料夾／重導向的
       檔開不起來。code 是 1（命令列會換成 125），不寫 exit 檔。
-    - `"usage"`：用法錯——`xxx` 是不存在的**非** `.json` 路徑、`--dir-target` 指的檔不存在、
+    - `"usage"`：用法錯——`xxx` 是不存在的**非** `.json` 路徑、資料夾裡 `.aos/inst.json` 與 `inst.json` 都沒有、
       inst 目標卻給了 `--`。code 是 2。
 
     所以 `kind == "child"` ⇔「跑完了一次」⇔ exit 檔有被寫，這條線兩邊都對得起來。
@@ -141,13 +142,13 @@ def run_target(xxx, dir_target=DEFAULT_DIR_TARGET, timeout_ms=0, on_spawn=None, 
     if os.path.isdir(p):
         if args is not None:
             return _inst_args_error()
-        target = os.path.join(p, dir_target)
+        found = _find_dir_inst(p)                   # proto6 改：.aos/inst.json 再 inst.json
+        target = found or os.path.join(p, DIR_TARGETS[0])
         if on_target:
             target = os.path.realpath(target)
-        if on_target:
             on_target(target)
-        if not os.path.isfile(target):
-            return _err(2, USAGE, "資料夾 %s 裡沒有 %s" % (p, dir_target))
+        if found is None:
+            return _err(2, USAGE, _no_dir_inst_msg(p))
         return _run_inst(target, p, timeout_ms, on_spawn, stderr)
     if on_target:
         on_target(p)
@@ -235,8 +236,7 @@ def main(argv=None):
         prog="aos-exec", description="把一個目標（檔案／.json／資料夾）執行一次")
     ap.add_argument("xxx", nargs="?", default=".",
                     help="要執行的東西：普通檔案、.json 檔，或資料夾；留空＝. （現在所在的資料夾）")
-    ap.add_argument("--dir-target", default=DEFAULT_DIR_TARGET,
-                    help="xxx 是資料夾時要跑的相對路徑（預設 .aos/inst.json）")
+    # proto6 改：拿掉 --dir-target，資料夾只照 .aos/inst.json → inst.json 找
     ap.add_argument("--timeout-ms", type=int, default=0,
                     help="這一次執行的上限（毫秒），0 或不給＝不限")
     ap.add_argument("--stderr", metavar="PATH",
@@ -244,7 +244,7 @@ def main(argv=None):
     a = ap.parse_args(raw)
     if a.timeout_ms < 0:
         ap.error("--timeout-ms 不能是負數")      # argparse 的用法錯＝退出碼 2
-    code, kind = run_target(a.xxx, a.dir_target, a.timeout_ms, stderr=a.stderr,
+    code, kind = run_target(a.xxx, a.timeout_ms, stderr=a.stderr,
                             args=child_args)
     return EXIT_AOS if kind == AOS else code
 

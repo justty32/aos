@@ -12,9 +12,23 @@ import subprocess
 import sys
 import time
 
-DEFAULT_DIR_TARGET = os.path.join(".aos", "inst.json")
+# proto6 改：資料夾目標依序找這兩個位置（proto6 spec/base/inst.md「inst 目標」），不再有 --dir-target
+DIR_TARGETS = (os.path.join(".aos", "inst.json"), "inst.json")
 GRACE = 2.0             # 逾時：SIGTERM 之後給整個 process group 這麼久，還在就 SIGKILL
 CHILD, AOS, USAGE = "child", "aos", "usage"      # run_target() 回的那個 kind
+
+
+def _find_dir_inst(folder):
+    """proto6 新增：資料夾目標先找 .aos/inst.json、沒有再找 inst.json；都沒有回 None（用法錯）。"""
+    for rel in DIR_TARGETS:
+        target = os.path.join(folder, rel)
+        if os.path.isfile(target):
+            return target
+    return None
+
+
+def _no_dir_inst_msg(folder):
+    return "資料夾 %s 裡沒有 %s" % (folder, " 也沒有 ".join(DIR_TARGETS))
 
 
 def _err(code, kind, msg):

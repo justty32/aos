@@ -12,7 +12,7 @@ import subprocess
 
 import aos_inst
 from aos_directives import Context, DirectiveError, Document, resolve_located
-from aos_exec_run import DEFAULT_DIR_TARGET, _execute_inst, _finish
+from aos_exec_run import _execute_inst, _find_dir_inst, _finish, _no_dir_inst_msg
 
 
 class SpawnError(Exception):
@@ -40,7 +40,7 @@ class Spawned:
         return _finish(code, self.exit_path, None, self.exit_append)
 
 
-def spawn_target(xxx, dir_target=DEFAULT_DIR_TARGET, launcher=None):
+def spawn_target(xxx, launcher=None):
     """daemon.md §2：讀目標、開控制 pipe，回孩子；登記與 go 由 daemon 做。
 
     與同步執行共用 inst 的前置檢查、環境、stderr 及 exit；孩子使用獨立 pgid、同一
@@ -50,9 +50,9 @@ def spawn_target(xxx, dir_target=DEFAULT_DIR_TARGET, launcher=None):
     launcher = launcher or _spawn_control
     p = os.path.abspath(xxx)
     if os.path.isdir(p):
-        target, base = os.path.join(p, dir_target), p
-        if not os.path.isfile(target):
-            raise SpawnError("SpawnFailed", "資料夾 %s 裡沒有 %s" % (p, dir_target))
+        target, base = _find_dir_inst(p), p     # proto6 改：.aos/inst.json 再 inst.json
+        if target is None:
+            raise SpawnError("SpawnFailed", _no_dir_inst_msg(p))
     elif p.endswith(".json"):
         target, base = p, os.path.dirname(p)
     else:
