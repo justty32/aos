@@ -16,11 +16,11 @@ UTC 用於跨重啟時間點；運行中逾時用經過時間，不因牆鐘倒�
 
 ## C-02．歸屬與可選 run
 
-涉及父子管理時依可信登記關係核對，不信正文自報身分。node 登記與 IPC 授權以 [daemon](daemon.md) 為正本，執行身分與額度以[身分篇](base/identity-resources.md)為正本。
+〔使用者方向 2026-09-30，第十九批〕涉及上下層管理時看**有效上層**：預設是資料夾包含推得的上層，在 daemon 底下可用登記覆蓋；覆蓋要新舊兩個上層都同意，覆蓋後檔案上的管轄權仍跟著資料夾，只改管理關係（[T-10](terms.md)；判定以 [B-628](tick.md)、登記以 [B-606](daemon.md) 為正本）。都不信正文自報身分。IPC 授權以 [daemon](daemon.md) 為正本（通道上以憑證認 tick，見 [B-612](daemon.md)），執行身分與額度以[身分篇](base/identity-resources.md)為正本。
 
 採用 run 時才留下 run ID、所屬 node 與必要進度／結果，輪次語意見 [S-101／102](scheduling/runs.md)。設定修改與已派材料見 [A-102](agent/configuration.md)；不要求另一套不可變設定庫或全域 owner 表。
 
-驗收：未採用 run 的 node 仍可送工作並核對結果；投件者填另一個 node／UID 不能因此取得其權限。
+驗收：未採用 run 的 node 仍可送工作並核對結果；投件者填另一個 node／UID 不能因此取得其權限；不在 daemon 底下的 tick 仍依資料夾包含算出上層。
 
 ## C-03．工作、嘗試與結果
 
@@ -54,7 +54,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 1. **小改不升版**：加可選欄位、放寬值域，以及在寫明「開放」的列舉加值（例如 kernel 自訂的任務種類與資源名稱，見 [T-06](terms.md)）。讀的一方遇到不認得的欄位直接忽略。
 2. **不相容的大改才升版**：刪欄位、改意思、改成必填、收窄值域、在沒寫明開放的列舉加值，都要升 `version`（inst 與 tasks 升 `_metainfo._version`）。新程式讀目前版與前一版、寫目前版；遇到比自己新的版本仍拒絕，不猜讀。
-3. **批次轉檔指令 `aos migrate`**：把舊版檔一次轉成目前版，範圍含 node 裡的持久檔，以及 daemon 的 `state.json` 與設定檔。指令形狀見 [H-004](cli/commands.md)。〔建議預設，未拍板〕node 裡的檔在 node 鎖內轉，以一個 group 提交；daemon 的 `state.json` 只在 daemon 停著時轉。
+3. **批次轉檔指令 `aos migrate`**：把舊版檔一次轉成目前版，範圍含 node 裡的持久檔，以及 daemon 的 `state.json` 與設定檔。指令形狀見 [H-004](cli/commands.md)。〔建議預設，未拍板〕node 裡的檔在 node 鎖內轉，由標準配備的 git 以一個 group 提交；daemon 的 `state.json` 只在 daemon 停著時轉。
 
 〔使用者方向 2026-09-30，第十八批〕**哪裡放寬**：
 
@@ -62,7 +62,9 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 |---|---|
 | 持久檔：node 裡的設定、狀態、事項、清理報告、`.err` 旁檔；daemon 的設定檔與 `state.json` | 忽略 |
 | 檔案 RPC：node 之間的請求、回應與其 payload | 忽略 |
-| daemon IPC（socket 上的請求與回應）、helper 私有通道、runner 回報 | 拒絕（維持嚴格） |
+| daemon IPC（socket 上的請求與回應，含 tick–daemon 通道）、helper 私有通道、runner 回報 | 拒絕（維持嚴格） |
+
+〔建議預設，未拍板〕通道上送訊息時，外層的通道請求照 daemon IPC 嚴格；夾帶的訊息本身跟檔案收件同一個格式（〔使用者方向 2026-09-30，第十九批〕），收件任務取走後照檔案 RPC 放寬（[B-614](daemon.md)）。
 
 〔建議預設，未拍板〕程式改寫整份持久檔時，原樣保留不認得的欄位，不因為不認得就刪掉。daemon 設定檔出現不認得的欄位，啟動與熱重載時照樣忽略，但在 stdout 印一行列出這些欄位名，免得拼錯被默默吃掉。
 
@@ -71,9 +73,8 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 | 鍵 | 出現在 | 為什麼 |
 |---|---|---|
 | `api_key` | LLM 池設定 | key 只能用 `key_ref` 指到檔案，不寫進設定（[S-301](scheduling/llm.md)） |
-| `user` | 任務註冊表的每一項（含預設範本裡的任務表，`$ref` 展開後也算） | 任務一律用 node inst 的 `user`，不能自己設身分（[tick](tick.md)） |
 | `argv` | 事項（attention） | 事項只給人或 agent 看的建議，不會被自動執行（[S-405](scheduling/operations.md)） |
 
-這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。schema 的寫法見 [P-007](protocol/README.md)。
+這張清單只收已經裁定的安全規則；要加新的鍵，須經使用者裁定。〔使用者方向 2026-09-30，第十九批〕任務表的 `user` **已從清單移除**：任務是 inst 的超集，可以帶自己的 `user`，由標準配備的切換使用者落實、額度照 inst 核（[B-620](tick.md)、[身分篇](base/identity-resources.md)）；省略時照舊用 node inst 的身分。schema 的寫法見 [P-007](protocol/README.md)。
 
-驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。
+驗收：持久檔與檔案 RPC 多一個不認得的欄位照樣讀得進來、改寫後欄位還在；daemon IPC 多一個欄位被拒；帶禁止鍵的檔整份拒收，任務表的項目帶 `user` 照收；舊版檔經 `aos migrate` 後新程式照讀，比自己新的版本被拒。
