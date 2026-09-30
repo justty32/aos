@@ -23,6 +23,8 @@
 - **恢復**（`aos node resume`）：daemon 已暫停且程序全空後，持同一把鎖依序檢查手改的內容：(1) 按 [inst 目標](../base/inst.md#inst-目標檔案或資料夾)選 inst，驗原始結構與身分宣告，daemon 在 resume 與開格時仍另驗可信額度，不以本地檢查代替授權；(2) 驗任務表的 schema，及重名、needs、group 連續、kind 順序（[B-620](../tick.md)）；(3) 有 kernel 預設任務就跑 kernel 設定檢查，有 agent 預設任務就用 [P-712](../protocol/agent-tasks.md) 的規則對**候選工作樹**驗 agent 設定、工具與引用，兩種都有便都驗；自訂普通程式沒有 aos 的領域設定契約，不因它沒提供 validator 就拒收合法任務表；(4) 任何檢查失敗保持暫停、保留手改、stderr 指出檔案與欄位，通過後才照 CLI 確認流程提交手改，再送 `node.resume`。
 - 唯讀驗證由外層持鎖、不另取鎖，不寫追蹤或 ignored 檔、不發事項、不自行提交；它只證明設定可採用，不證明外部 endpoint 可達。
 
+〔第十九批；P-711、P-712 從協議篇搬上〕**工具清單與設定重驗**：`aos agent tools add` 讀任意可讀路徑的 agent-tools JSON，合併新名；名稱已存在且內容相同視為無變動，內容不同則拒絕；`rm` 的名稱不存在算失敗。兩者都在 tick 外取與 `aos-config-add` 同一把鎖，驗 schema 與 adapter 後，沿上面的暫存檔＋替換＋提交流程寫 `config/tools.json`（沒有 git 時只做原子替換，B-632）；設定草稿不存在 work 目錄裡。`recheck` 是設定被手修好之後重新驗目前值：取同一把鎖、只更新設定狀態（`config-state`）、不派工也不 resume；確認修好後由人或 agent 用 `aos attend done` 標完成待處理事項。argv 與結束碼見 [P-711、P-712](../protocol/agent-tasks.md)。
+
 設定無效時報出檔案與欄位，停止依賴它的新工作並留[待處理事項](../scheduling/operations.md)。任務表錯誤依 [tick](../tick.md) 整格不跑，身分錯誤依 [inst](../base/inst.md) 拒絕啟動。〔第十九批〕任務可帶自己的 `user`（B-620），所以不再有「任務不准帶 user」這一項檢查。
 
 驗收：匯入任意可讀檔案時與 tick 互斥，提交後下一格可讀；任務改設定不被攔截，已派出的工作材料不被更新覆蓋。

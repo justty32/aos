@@ -63,7 +63,7 @@ arguments 存 `state/work/<attempt_id>/input.json`，以絕對路徑作 inst.std
 
 ## P-704．一項 module、一項任務〔第十二批裁定；工程預設〕
 
-行為（每格做什麼、一格處理幾件）以 [agent 預設任務](../agent/README.md)、[A-201](../agent/input.md) 為準，本條只留介面。完整 argv 是 `aos-agent-step [--node N]`，省略 node 就用 cwd（tick 設為 node 根）；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`。〔第十九批〕手動跑完整一格：`aos node tick N` 經 daemon 跑並等格次，或直接跑 `aos-tick`（風險自負，沒有通道，[B-627](../tick.md)）。
+行為（每格做什麼、一格處理幾件）以 [agent 預設任務](../agent/README.md)、[A-201](../agent/input.md) 為準，本條只留介面。完整 argv 是 `aos-agent-step [--node N]`，省略 node 就用 cwd（tick 設為 node 根）；人手入口為 `aos agent task run N`。必須繼承並核對 `AOS_TICK_LOCK_FD`。〔第十九批，使用者方向 10〕任務帶別的 `user` 時，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」動作開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`，沒有 helper 時該項依 [B-620](../tick.md) 回 125（功能受限）。〔第十九批〕手動跑完整一格：`aos node tick N` 經 daemon 跑並等格次，或直接跑 `aos-tick`（風險自負，沒有通道，[B-627](../tick.md)）。
 
 | 任務 id | kind／group／needs | 內容 |
 |---|---|---|
@@ -107,7 +107,7 @@ aos-agent-tools ls [--node N] [--json]
 # 人手：aos agent tools add N --from F／rm N NAME／ls N [--json]
 ```
 
-F 是任意可讀路徑的 agent-tools JSON。add 合併新名，同值無變動、異值拒絕；rm 不存在回 1。兩者在 tick 外取同把鎖，驗 schema／adapter，沿 P-207 安裝並提交 `config/tools.json`。不在 work 裡存設定草稿。
+F 是任意可讀路徑的 agent-tools JSON。合併、取鎖與安裝提交的行為以 [A-102](../agent/configuration.md) 為準；rm 的名稱不存在回 1。
 
 stdin 不讀；add/rm stdout 印設定路徑，ls 印名稱／用途或完整 JSON；stderr 診斷。0 成功；2 用法／格式／名稱衝突；75 鎖忙；125 無法開始；1 寫入失敗已還原；3 提交／還原故障。ls 不寫檔，空清單回 0，讀失敗回 1。
 
@@ -121,7 +121,7 @@ aos-agent-check [--node N] --recheck
 
 直接開檔驗 inst／tasks／agent／tools、引用與權限（對 LLM 池的投件權除外，見 P-701），不試 provider。draft 是任意可讀替代 agent.json；validate-only 供 caller 持鎖驗工作樹，不再取鎖、不寫。0 有效、1 無效、2 用法錯、125 讀取／前置失敗；stdout 印 valid 或 invalid 與檔案欄位，stderr 診斷。跟 kernel 設定檢查（P-805，無效也回 0）不一致，要不要統一延後（[P-008](README.md#p-008)）。
 
-recheck 取同把鎖、驗目前值並提交 config-state，不派工。確認修好後，人或 agent 用 `aos attend done N ID` 標完成。鎖忙 75、保存失敗 1、提交／還原故障 3。
+recheck 的行為（取鎖、驗目前值、記設定狀態、不派工、事項另用 `aos attend done N ID` 標完成）見 [A-102](../agent/configuration.md)。鎖忙 75、保存失敗 1、提交／還原故障 3。
 
 ## P-713．say／listen〔對話裁定、proto5；工程預設〕
 
@@ -144,7 +144,7 @@ aos-agent-talk context show N --request ID [--json]
 # 人手：aos agent replies N …／aos agent context show N …
 ```
 
-只讀同一 commit，不寫檔、不開 tick。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
+不寫檔、不開 tick。有 git 時只讀同一 commit；〔第十九批，[B-632](../tick.md)〕沒有 git 時讀目前檔案與已完成的紀錄（reply、context 檔各自是完整寫入後才 rename，不會讀到半份），**不保證是一致快照**，同一次查詢內 replies 與 context 可能來自相鄰兩格。replies 按 seq 篩 input_id，文字印 kind／outcome／text，JSON 每筆原 reply 一行；context 顯示來源、估算及真正 messages／tools，缺引用就報錯、不重組。0 查到；2 用法錯；125 前置失敗；1 無資料／損壞；診斷 stderr。
 
 ## P-715．new 的完整產物〔[inst 目標](../base/inst.md#inst-目標檔案或資料夾)；工程預設〕
 

@@ -97,7 +97,7 @@ schedule 按 ready_seq 選成員，補查間隔預設 60 秒、可調（[P-801](
 
 say 持 R 鎖提交原件／outbox 後投 N，不 wake；accepted 只是接件。回話用新 ID 的 agent.say，payload 多帶可省的 in_reply_to 指原 ID，一律收進 history；帶 in_reply_to 的只記錄、不觸發 LLM（[A-201](../agent/input.md)）。say --wait 讀 target 本地已提交 replies，以 input_id/final 判完成；只有投件權仍可 say，不能保證能等 final。failed final 也回 0，表示已收到。
 
-listen 看本地 assistant／工具及帶 in_reply_to 的回話：本地依 input_id、收到的回話依 in_reply_to 分組；每 200 ms 看新 commit，follow flush，工具顯示沿 [proto5](../../../proto5/spec/aos-agent/cli-listen.md)。讀哪一份 history 看同一 commit 的任務表由哪項任務宣告 `agent.say`：agent 任務讀 `state/agent/history/`，kernel 任務（例如 top 沒裝 agent 任務，收話只存 history）讀 `state/kernel/history/`（[P-713](../protocol/agent-tasks.md)）。
+listen 看本地 assistant／工具及帶 in_reply_to 的回話：本地依 input_id、收到的回話依 in_reply_to 分組；有 git 時每 200 ms 看新 commit；〔第十九批，[B-632](../tick.md)〕沒有 git 時改每 200 ms 看目前檔案與完成紀錄有沒有新增，不保證一致快照，follow flush，工具顯示沿 [proto5](../../../proto5/spec/aos-agent/cli-listen.md)。讀哪一份 history 看同一份（有 git 時同一 commit）的任務表由哪項任務宣告 `agent.say`：agent 任務讀 `state/agent/history/`，kernel 任務（例如 top 沒裝 agent 任務，收話只存 history）讀 `state/kernel/history/`（[P-713](../protocol/agent-tasks.md)）。
 
 ### llm、attend、clean、inst
 
