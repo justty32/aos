@@ -182,7 +182,8 @@
             {
               "type": "null"
             }
-          ]
+          ],
+          "description": "node.show（P-106）：沒有 cgroup、或這個 node 退回沒有框時為 null；否則是實際讀到的配置（B-605、B-607）"
         },
         "boot_id": {
           "$ref": "common.schema.json#/$defs/ID"
@@ -708,7 +709,14 @@
         "messages": {
           "type": "array",
           "items": {
-            "$ref": "common.schema.json#/$defs/FileRpcRequest"
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/FileRpcRequest"
+              },
+              {
+                "$ref": "common.schema.json#/$defs/FileRpcResponse"
+              }
+            ]
           },
           "maxItems": 256
         },
@@ -880,7 +888,14 @@
                       "$ref": "common.schema.json#/$defs/NodeId"
                     },
                     "message": {
-                      "$ref": "common.schema.json#/$defs/FileRpcRequest"
+                      "anyOf": [
+                        {
+                          "$ref": "common.schema.json#/$defs/FileRpcRequest"
+                        },
+                        {
+                          "$ref": "common.schema.json#/$defs/FileRpcResponse"
+                        }
+                      ]
                     },
                     "urgent": {
                       "type": "boolean",

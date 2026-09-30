@@ -26,16 +26,17 @@ tick 不跟其他計算單位（once、LLM 嘗試、agent 一輪等）放進同�
 
 | 詞 | 意思 | 正本 |
 |---|---|---|
-| 收尾 | daemon 清掉一個範圍的固定做法：先請停、等寬限、再強制，確認全空。停機、解除登記、砍掉掛載行程、取消在跑的工作都用它 | [B-604](daemon.md) |
+| 收尾 | daemon 清掉一個範圍的固定做法：先請停、等寬限、再強制，確認全空；有 cgroup 時最後用 `cgroup.kill` 兜底。重啟、停機、解除登記、砍掉掛載行程、取消在跑的工作都用它 | [B-604](daemon.md) |
 | 格後收尾 | 一格正常結束後，殺掉沒人收的殘留 | [B-601](daemon.md) |
 | 排空停機 | daemon 停收新工作，等在途的做完再停；可設上限時間 | [B-604](daemon.md) |
 | 熱重載 | 不重開 daemon，重讀設定並套用「免重開」的部分 | [B-608](daemon.md) |
-| 逃生口 | node 在自己框下另開子框、刻意留住的常駐程序。〔下一步納入 cgroup 時定〕本輪沒有框 | [B-605](daemon.md) |
+| 逃生口 | 有 cgroup 時，node 在自己框下另開子框、刻意留住的常駐程序。不在 aos 管轄範圍內，aos 不管；重啟與解除時殺不殺看 `kill_escape_cgroups` | [B-605](daemon.md) |
+| runner | daemon（或 helper）開每一格、每個掛載行程時用的固定程式 `aos-runner`：照 [inst](../base/inst.md) 執行一次（就是 proto5 aos-exec 的慣例），並當收屍人，清空它名下的所有程序 | [B-601](daemon.md) |
 
 - 「排空」只指停機；解除登記那套叫「收尾」。
-- 表中的「逃生口」指 node 自開的子框，跟 T-07「唯一逃生口是通道」不是同一件事。
+- 表中的「逃生口」指 node 自開的子框，跟 T-07「唯一逃生口是通道」不是同一件事；它不在 aos 管轄範圍內，所以不算衝突（納入 cgroup 與 git 疑-7）。
 
-依據：第十八批（詞義）；第二十批（歸 daemon，詞義不變）。
+依據：第十八批（詞義；Q19 逃生口可調、預設不管）；第二十批（歸 daemon，詞義不變）；納入 cgroup 與 git 疑-7（逃生口准、不管）。
 
 ## T-10．tick 核心、系統級任務、普通程式與其他任務
 
@@ -51,11 +52,11 @@ tick 不跟其他計算單位（once、LLM 嘗試、agent 一輪等）放進同�
 | 類 | 一句話 | 正本 |
 |---|---|---|
 | tick 核心 | `aos-tick` 本身（T-07） | [B-626](tick.md) |
-| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，`kind:"system"` 標記，寫在表上才跑：系統訊息佇列 `aos-mq get`／`aos-mq post`、發摘要、清理（下一步納入：git 開格與收尾） | [B-626](tick.md)、[B-629](tick.md) |
-| 普通程式 | 任務會用到的工具，要的任務自己在 argv 包：`aos-as`、`aos-needs`（下一步納入：`aos-cg`） | [B-303](helper.md)、[B-621](tick.md) |
+| 系統級任務 | 從核心拆出、掛在任務表上的獨立程式，`kind:"system"` 標記，寫在表上才跑：系統訊息佇列 `aos-mq get`／`aos-mq post`、發摘要、清理、git 開格／存檔點／收尾 `aos-git` | [B-626](tick.md)、[B-629](tick.md) |
+| 普通程式 | 任務會用到的工具，要的任務自己在 argv 包：`aos-as`、`aos-needs`、`aos-cg` | [B-303](helper.md)、[B-621](tick.md)、[B-634](tick.md) |
 | 其他任務 | kernel、agent、clock、檔案收件與投件程式、自訂任務 | [B-623](tick.md)、[scheduling](../scheduling/README.md)、[agent](../agent/README.md) |
 
-daemon 不在任務表上，跟 tick 之間只有通道這一條路（[B-601](daemon.md)、[B-607](daemon.md)）。範本只是預設，拿掉哪一項就沒有那一項的保證（[B-629](tick.md)、[T-01](../terms.md)）。
+daemon 不在任務表上，跟 tick 之間只有通道這一條路（[B-601](daemon.md)、[B-607](daemon.md)）；node 框與資源上限也歸 daemon（[B-605](daemon.md)）。範本只是預設，拿掉哪一項就沒有那一項的保證（[B-629](tick.md)、[T-01](../terms.md)）。
 
 ### 幾個詞
 
@@ -64,7 +65,9 @@ daemon 不在任務表上，跟 tick 之間只有通道這一條路（[B-601](da
 | 詞 | 意思 | 正本 |
 |---|---|---|
 | 掛載 | 把一個程式寫進任務表，讓 tick 每格跑它 | [B-620](tick.md) |
-| 標準任務表範本 | 預設的一組系統級任務加原本的 kernel／agent 任務 | [B-629](tick.md) |
+| 標準任務表範本 | 預設的一組系統級任務加原本的 kernel／agent 任務；分沒有 git、有 git 兩版 | [B-629](tick.md) |
+| aos 範圍 | 有 git 時 aos 提交與還原的東西：`.aos/`、任務表、系統級任務動到的檔；使用者任務改的檔不在內 | [B-630](tick.md) |
+| 存檔點 | 任務表上的 `aos-git mark` 項；相鄰兩個之間的項是一組，組裡有失敗就當場還原那組改的 aos 範圍 | [B-630](tick.md) |
 | 每項結束碼紀錄 | 核心每格寫的一份檔，記本格各項怎麼結束，後面的任務讀得到；取代第十九批的日誌 | [B-633](tick.md)、[B-632](tick.md) |
 | 格數 | 本 node 第幾格，記在結束碼紀錄裡；aos 內部的時長與起算點都用它數 | [B-633](tick.md)、[C-01](../contracts.md) |
 | 停格檔 | 任務建它，核心跑完那一項就不開本格後面的項；只管本格，daemon 不看它 | [B-620](tick.md) |
@@ -73,9 +76,9 @@ daemon 不在任務表上，跟 tick 之間只有通道這一條路（[B-601](da
 | 包裝 | 先做一件事、再跑原指令、照原指令的結果結束的普通程式，例如 `aos-needs a -- 原指令` | [B-621](tick.md)、[B-303](helper.md) |
 | 有效上層 | 有登記覆蓋就是覆蓋指定的那個，否則是資料夾推得的上層；覆蓋只改管理關係 | [B-628](tick.md)、[B-606](daemon.md) |
 | 通道 | daemon 開的 tick 跟 daemon 之間的 IPC，也是唯一逃生口；不是 daemon 開的 tick 沒有通道 | [B-612](daemon.md) |
-| 系統訊息佇列 | aos 的系統級 IPC：tick 之間經通道互送訊息，daemon 暫存；`aos-mq post` 送、`aos-mq get` 取 | [B-614](daemon.md)、[B-623](tick.md)、[B-624](tick.md) |
+| 系統訊息佇列 | aos 的系統級 IPC：tick 之間經通道互送請求與回應，daemon 暫存；`aos-mq post` 送、`aos-mq get` 取 | [B-614](daemon.md)、[B-623](tick.md)、[B-624](tick.md) |
 | 憑證 | daemon 開 tick 時發的一次性憑證，證明通道上的請求來自哪一格；每格一張 | [B-612](daemon.md) |
 | 急件 | 送進佇列時要叫醒收件 tick 的訊息 | [B-614](daemon.md) |
 | 以指定帳號開程序 | 任務在 argv 包 `aos-as <帳號> -- 原指令`，由 helper 用那個帳號開；核心不切帳號 | [B-303](helper.md)、[B-609](daemon.md) |
 
-依據：第十九批（管轄區）；第二十批（四類與詞義）；astra 審整理區建-2（名詞只留定義與連結）與同日定案（系統訊息佇列）。
+依據：第十九批（管轄區）；第二十批（四類與詞義）；astra 審整理區建-2（名詞只留定義與連結）與同日定案（系統訊息佇列）；aos-git 分工（aos 範圍、存檔點）。

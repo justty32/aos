@@ -189,10 +189,8 @@
             "enum": [
               "account_create",
               "chown",
-              "cgroup_create",
               "cgroup_limits",
               "quota",
-              "cgroup_delegate",
               "group_create",
               "group_add_member",
               "chgrp"
@@ -233,10 +231,8 @@
             "enum": [
               "account_create",
               "chown",
-              "cgroup_create",
               "cgroup_limits",
               "quota",
-              "cgroup_delegate",
               "group_create",
               "group_add_member",
               "chgrp"

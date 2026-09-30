@@ -43,7 +43,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 - argv 直接 exec，不經 shell。大資料走 stdin 或檔案，不塞 argv；key 不進 argv 或環境，見 [S-301](../scheduling/llm.md)。
 - aos 自己的環境變數用 `AOS_` 開頭；環境不是授權依據。〔使用者方向 2026-09-30，第二十批〕tick 給任務的變數，整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（`AOS_TASK_ID` 是該項 `id` 字串原樣、`AOS_TASK_INDEX` 從 0 起，清單見 [P-203](../settled/protocol/node.md)）。〔使用者方向 2026-09-30，第十九批〕唯一例外是 daemon 開 tick 與掛載行程時放的通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`（[B-612](../settled/daemon.md)，格式見 [P-117](../settled/protocol/daemon/channel.md)）：憑證由 daemon 發、在通道上核對，變數本身仍不授予任何權限。
 - 結束碼共同意思：`0` 成功；`2` 用法或設定錯，還沒開始做事；`125` 自己無法開始（如身分不准）；runner 收尾失敗也是 125，須以 P-110 的 started／error 區分，不能只看碼。其他碼由各篇自己定；被訊號殺掉由父程序看 wait 狀態，不猜 `128+n`。
-- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。〔第二十批〕系統級任務與普通程式的程式名、argv 與結束碼見 [P-203](../settled/protocol/node.md)、[P-204](../settled/protocol/node.md)（`aos-needs`）、P-212（`aos-as`）；下一步納入的 `aos-git`、`aos-cg` 見 [P-205](../settled/protocol/node.md)、P-211。新公開指令用 `aos <用途> <動作> [更深]`。
+- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。〔第二十批〕系統級任務與普通程式的程式名、argv 與結束碼見 [P-203](../settled/protocol/node.md)、[P-204](../settled/protocol/node.md)（`aos-needs`）、P-212（`aos-as`）、[P-205](../settled/protocol/node.md)（`aos-git`）、P-211（`aos-cg`）。新公開指令用 `aos <用途> <動作> [更深]`。
 
 ### 集中碼表
 
@@ -55,7 +55,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | daemon IPC 與 helper 私有通道的 `data.code` | [P-111](../settled/protocol/daemon/provision-and-runner.md) |
 | runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](../settled/protocol/daemon/provision-and-runner.md) |
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
-| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；普通程式 `aos-needs`、`aos-as` 的結束碼；〔下一步納入〕`aos-git`、`aos-cg` | [P-203](../settled/protocol/node.md)、[P-204](../settled/protocol/node.md)、P-212（[node](../settled/protocol/node.md)）；下一步納入的見 [P-205](../settled/protocol/node.md)、P-211 |
+| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；系統級任務 `aos-git`、普通程式 `aos-needs`、`aos-as`、`aos-cg` 的結束碼 | [P-203](../settled/protocol/node.md)、[P-204](../settled/protocol/node.md)、P-212、[P-205](../settled/protocol/node.md)、P-211（[node](../settled/protocol/node.md)） |
 | tick–daemon 通道的 `data.code`；客戶端的 `no_channel` | [P-119](../settled/protocol/daemon/channel.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
 | 工作拒收 | [P-404](work.md) |
@@ -165,13 +165,13 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-202 | 任務註冊表 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-203 | aos-tick 與任意任務程式 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-204 | 成敗與 aos-needs | [settled/protocol/node.md](../settled/protocol/node.md) |
-| P-205 | 〔下一步納入〕aos-git：開格、存檔點、收尾 | [settled/protocol/node.md](../settled/protocol/node.md) |
+| P-205 | aos-git：開格、存檔點、收尾 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-206 | 收件、派送與發摘要 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-207 | 加入普通設定與重要設定手改 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-208 | 收件區權限 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-209 | 待決與跨篇 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-210 | 預設範本與恢復前驗證 | [settled/protocol/node.md](../settled/protocol/node.md) |
-| P-211 | 〔下一步納入〕aos-cg：每項一框 | [settled/protocol/node.md](../settled/protocol/node.md) |
+| P-211 | aos-cg：每項一框 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-212 | aos-as：切換帳號 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-213 | 每項結束碼紀錄、停格檔與擋板檔 | [settled/protocol/node.md](../settled/protocol/node.md) |
 | P-300 | 兩條路各做什麼 | [messages.md](messages.md) |

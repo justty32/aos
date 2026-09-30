@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "socket_path": "/run/user/1000/aos/daemon.sock",
+  "state_dir": "/home/alice/.local/state/aos",
+  "roots": [
+    {
+      "node_id": "/home/alice/aos/team",
+      "identity_grant": [
+        1000
+      ]
+    }
+  ],
+  "kill_escape_cgroups": false,
+  "x_note": "省略 cgroup_root：用 systemd-run --user --scope -p Delegate=yes 開，daemon 以自己所在的委派 scope 當子樹（B-605）"
+}

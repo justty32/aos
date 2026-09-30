@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "clean_shutdown": false,
+  "cgroup_root_last": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/run-r3f2a.scope",
+  "registrations": [
+    {
+      "node_id": "/srv/aos/top",
+      "parent_id": null,
+      "identity_grant": [
+        1000
+      ],
+      "paused": false,
+      "pending": false
+    }
+  ]
+}

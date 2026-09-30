@@ -8,9 +8,9 @@
 
 依據是 [09-29 架構](../notes/2026-09-29-kernel-tree.md)及[裁定索引](../notes/verdicts/README.md)（至 09-30 [第二十批](../notes/verdicts/11-tick-as-unit.md)），後續使用者裁定優先、同日後批蓋過前批（第二十批與第十九、十八批衝突時以第二十批為準）。舊協議與改寫計畫不能反過來限制新規格。〔使用者方向 2026-09-30，第十八批〕行為規則以主規格為正本，協議篇只定格式，正本表見 [V-01](conformance.md)。
 
-〔使用者方向 2026-09-30，第二十批〕**保證跟著「掛了什麼」走**：tick 核心的四件事（[T-07](settled/terms.md#t-07tick-核心)）不靠任何系統級任務也成立；其餘保證來自任務表上掛的[系統級任務](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)、任務包的普通程式與 daemon。例如 tick 本身不保證整格原子，要等下一步納入 git、掛了 git 開格與收尾任務才有（[B-630](settled/tick.md)）。第十九批的「保證以標準配備全掛為前提」與「完整級／備援級兩級保證」都撤了。
+〔使用者方向 2026-09-30，第二十批〕**保證跟著「掛了什麼」走**：tick 核心的四件事（[T-07](settled/terms.md#t-07tick-核心)）不靠任何系統級任務也成立；其餘保證來自任務表上掛的[系統級任務](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)、任務包的普通程式與 daemon。例如 tick 本身不保證整格原子；掛了 `aos-git` 三項而且 git 能用，也只保證 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔）是原子的（[B-630](settled/tick.md)）。第十九批的「保證以標準配備全掛為前提」與「完整級／備援級兩級保證」都撤了。
 
-〔使用者方向 2026-09-30，第二十批進行順序〕**本輪先假設 cgroup 與 git 都不存在**，把 tick 與 daemon 的基礎設計好；git 開格與收尾任務、`aos-cg`、daemon 的 node 框與上限等，都放在各篇標「下一步納入」的位置，不是現行規則。現行規則不得依賴 cgroup 或 git。
+〔使用者方向 2026-09-30，納入 cgroup 與 git〕**git 與 cgroup 是「有就用」**：現行規則在兩者都沒有時也要成立；有的時候多出的保證寫在各條（git：[B-630、B-622](settled/tick.md)；cgroup：[B-605](settled/daemon.md)、[B-634](settled/tick.md)）。
 
 〔建議預設，未拍板〕各條的保證寫成「掛了哪一項系統級任務、包了哪個普通程式、daemon 有沒有 cgroup 時成立什麼」；沒掛的後果不逐條寫。
 
@@ -25,7 +25,7 @@
 
 一個 node 可以同時是兩者，也可以都不是，例如只跑收信任務。頂層 node 不因此成為特殊種類；權限由設定授予。〔使用者方向 2026-09-30，第十九批〕「上層」（含上層 kernel）**預設看資料夾包含**：最近一個包含本資料夾、也有 tick 的資料夾；在 daemon 底下可以另外登記覆蓋，覆蓋要新舊兩個上層都同意（〔第十九批疑點裁定 11〕舊上層沒在 daemon 登記時只要新上層同意），覆蓋只改管理關係，管轄權仍跟著資料夾（[T-10](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)，判定規則以 [B-628](settled/tick.md) 為正本）。樹與摘要邊界見 [scheduling](scheduling/README.md)。
 
-**兩張註冊表不要混用：**[daemon](settled/daemon.md)的表在記憶體使用，停機存入 `state.json`，記登記（含覆蓋上層）、pause 與未處理 wake；[tick](settled/tick.md)的表在 node 裡，是 `.aos/tasks.json` 這張照順序跑的任務表，核心只照順序跑；〔使用者方向 2026-09-30，第二十批疑點裁定 2〕needs 改由普通程式 `aos-needs` 表達（[B-621](settled/tick.md)）；〔暫定〕任務表的 `group`、`needs` 兩欄撤，組下一步納入 git 時再定（[B-620](settled/tick.md)）。資源 module 是後者的普通項目，不另有外掛總表。
+**兩張註冊表不要混用：**[daemon](settled/daemon.md)的表在記憶體使用，停機存入 `state.json`，記登記（含覆蓋上層）、pause 與未處理 wake；[tick](settled/tick.md)的表在 node 裡，是 `.aos/tasks.json` 這張照順序跑的任務表，核心只照順序跑；〔使用者方向 2026-09-30，第二十批疑點裁定 2〕needs 改由普通程式 `aos-needs` 表達（[B-621](settled/tick.md)）；〔暫定〕任務表的 `group`、`needs` 兩欄撤，組改由 `aos-git` 的存檔點劃分（[B-630](settled/tick.md)）。資源 module 是後者的普通項目，不另有外掛總表。
 
 〔使用者方向 2026-09-30，第十九批〕daemon 是定期跑 `aos-tick` 的標準程式，不是 tick 存在的前提（cron、人手跑也行）；它負責程序啟停，不判業務排程；可選 root helper 是 daemon 切出的固定特權步驟，見[身分篇](base/identity-resources.md)。每個 LLM 池就是一個 node，由它的代發任務負責實際請求，見 [LLM](scheduling/llm.md)。身分依 [inst](base/inst.md) 及[額度](base/identity-resources.md)，不由路徑或角色推定。
 
@@ -54,7 +54,7 @@
 〔使用者方向 2026-09-30，第十八批〕**aos 是給特殊計算用的 OS。** 一般 OS 分配資源的單位是 CPU 指令；aos 分配的單位是一次「計算」，例如一次 LLM 呼叫、agent 的一輪任務。計算必須符合規格，其中一條是能被 Linux 管制（啟動、限制、殺掉）；Linux 管不到的外部計算（例如量子計算）當外部函式庫來管。
 
 - **多層、多個 kernel**：一般 OS 只有一個 kernel；aos 的 kernel 可以有很多個、疊很多層，每個都是 [T-02](#t-02node-與角色) 的 kernel 角色。
-- **各 kernel 自訂抽象、資源與隔離**：抽象指任務種類（例如把某種 agent 任務設成需要排程的一種）；資源不限 CPU、記憶體；隔離也可以在不同地方不同。aos **正式開放** kernel 登記自己的任務種類與資源名稱，schema 的列舉跟著放寬；aos 本身只提供 [tick 核心](settled/terms.md#t-07tick-核心)、標準任務表範本裡的系統級任務、普通程式（例如切換帳號的 `aos-as`；每項一框的 `aos-cg` 下一步納入）、daemon（程序收尾；node 框與上限下一步納入）與登記框架（〔使用者方向 2026-09-30，第二十批〕[T-10](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)）。現有寫死的 LLM 三檔、份額、窗口、重試與六類資源，都是「預設 kernel 範本」的規則，不是 aos 對所有 kernel 的要求。
+- **各 kernel 自訂抽象、資源與隔離**：抽象指任務種類（例如把某種 agent 任務設成需要排程的一種）；資源不限 CPU、記憶體；隔離也可以在不同地方不同。aos **正式開放** kernel 登記自己的任務種類與資源名稱，schema 的列舉跟著放寬；aos 本身只提供 [tick 核心](settled/terms.md#t-07tick-核心)、標準任務表範本裡的系統級任務、普通程式（例如切換帳號的 `aos-as`；每項一框的 `aos-cg`）、daemon（程序收尾；有 cgroup 時 node 框與上限）與登記框架（〔使用者方向 2026-09-30，第二十批〕[T-10](settled/terms.md#t-10tick-核心系統級任務普通程式與其他任務)）。現有寫死的 LLM 三檔、份額、窗口、重試與六類資源，都是「預設 kernel 範本」的規則，不是 aos 對所有 kernel 的要求。
 - **上下層不必對齊**：上層只用自己認得的資源與規則管下層，管理要「潤物細無聲」，下層不必知道自己被怎麼管；上下層資源定義不同就不管。kernel 自己定義、Linux 管不到的隔離可以比上層寬；Linux 管的部分（cgroup、帳號）本來就是巢狀，子層只能在已分得範圍內再分。
 - **管理目標：隨機性**：用愈多 LLM，隨機性愈高。排程的管理目標之一是隨機性愈低愈好，但要跟任務完成度、資源消耗一起權衡。怎麼量、怎麼權衡，延後（[P-008](protocol/README.md#p-008)）。
 

@@ -9,6 +9,10 @@
     "clean_shutdown": {
       "type": "boolean"
     },
+    "cgroup_root_last": {
+      "$ref": "common.schema.json#/$defs/NodeId",
+      "description": "上次用的 cgroup 子樹根；重啟時找舊框先清空（B-603）；沒有 cgroup 時不寫"
+    },
     "registrations": {
       "type": "array",
       "items": {

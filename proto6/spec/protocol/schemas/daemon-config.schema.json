@@ -16,12 +16,18 @@
       "$ref": "common.schema.json#/$defs/TimeMs"
     },
     "cgroup_root": {
-      "$ref": "common.schema.json#/$defs/NodeId"
+      "$ref": "common.schema.json#/$defs/NodeId",
+      "description": "已準備好（或要 daemon 自己建）的 cgroup v2 子樹；明寫了卻準備不好就回 125。省略就自動偵測：systemd 確認 daemon 所在單位 Delegate=yes 才用（B-605）"
     },
     "create_cgroup": {
       "type": "boolean",
       "default": false,
       "description": "true＝cgroup 子樹不在時 daemon 自己建（同 --create-cgroup）；此時 cgroup_root 必填（B-605）"
+    },
+    "kill_escape_cgroups": {
+      "type": "boolean",
+      "default": false,
+      "description": "true＝daemon 重啟與解除登記時，連 node 自開的子框（逃生口）一起收尾；預設不管（B-605，第十八批 Q19、納入 cgroup 與 git 疑-7）"
     },
     "disable": {
       "type": "array",

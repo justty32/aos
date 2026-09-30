@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "h1",
+  "method": "daemon.helper.cgroup_setup",
+  "params": {
+    "node_id": "/srv/aos/member",
+    "path": "/sys/fs/cgroup/aos/n-640b231841e0290f"
+  }
+}

@@ -222,6 +222,33 @@
         {
           "properties": {
             "method": {
+              "const": "daemon.helper.cgroup_setup"
+            },
+            "params": {
+              "type": "object",
+              "description": "建本 node 的 n-<h> 與 tick 框並交給目前執行帳號；只給 daemon 用（B-605、B-609）",
+              "properties": {
+                "node_id": {
+                  "$ref": "common.schema.json#/$defs/NodeId"
+                }
+              },
+              "required": [
+                "node_id"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/RpcRequest"
+        },
+        {
+          "properties": {
+            "method": {
               "const": "daemon.helper.cgroup_remove"
             },
             "params": {

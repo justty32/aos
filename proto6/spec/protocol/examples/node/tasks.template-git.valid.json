@@ -1,0 +1,134 @@
+{
+  "_metainfo": {
+    "_type": "aos-tasks",
+    "_version": 1
+  },
+  "tasks": [
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-git",
+        "open"
+      ],
+      "id": "git-open",
+      "kind": "system"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-mq",
+        "get"
+      ],
+      "id": "mq-get",
+      "kind": "system"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-git",
+        "mark"
+      ],
+      "id": "mark-get",
+      "kind": "system"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "my-talk"
+      ],
+      "id": "talk",
+      "kind": "custom",
+      "methods": [
+        "agent.say"
+      ]
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-cg",
+        "--",
+        "aos-needs",
+        "talk",
+        "--",
+        "my-report"
+      ],
+      "id": "report",
+      "kind": "custom"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-git",
+        "mark"
+      ],
+      "id": "mark-user",
+      "kind": "system"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-clean",
+        "--config",
+        "config/clean.json"
+      ],
+      "id": "clean",
+      "kind": "system"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-git",
+        "close"
+      ],
+      "id": "git-close",
+      "kind": "system"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-mq",
+        "post"
+      ],
+      "id": "mq-post",
+      "kind": "system"
+    },
+    {
+      "_metainfo": {
+        "_type": "posix",
+        "_version": 1
+      },
+      "argv": [
+        "aos-publish"
+      ],
+      "id": "summary",
+      "kind": "system"
+    }
+  ]
+}
