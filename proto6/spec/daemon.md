@@ -32,7 +32,7 @@
 
 啟動路徑與可選 helper 的角色依 [B-303](base/identity-resources.md)，helper 做哪些固定動作見 B-609。node 問題寫該 node 的 `.aos/attention/`（ignore）；寫不出就 stdout 警告。〔建議預設，未拍板；第二十批改寫計畫記錄者建議〕daemon 在格外往 node 資料夾寫的東西——事項、`.aos/runner-stderr.log`、單檔掛載未啟動的 `.err` 旁檔（B-613）——都算開格與收尾的附帶產物，不違反「通道外一切在格內做」。daemon 自身問題才留 daemon attention／stderr；stdout 另印 helper PID，兩個 PID 提示檔依 [P-102](protocol/daemon/startup-and-ipc.md)。事項怎麼處理見 [S-405](scheduling/operations.md)。
 
-〔建議預設，未拍板；第十九批從 P-108 搬上〕**helper 的記憶體鏡像**：helper 存活時，登記與更新先經它重驗（啟動設定的頂層額度、可信上層鏈、原始 `user` 與路徑）才生效；鏡像只在記憶體。沒 helper 時，只用通用 user、沒佈建權的登記由 daemon 自己核對（只授 cgroup 動作的怎麼核，見篇末[下一步納入](#下一步納入cgroup非現行規則)）；其他帳號或要 helper 的動作的新登記回 `helper_unavailable`，既有的通用 user 登記照常跑。helper 用安全的程序 handle 追蹤、wait 自己的孩子並跨帳號收尾；daemon 不 wait helper 的孩子、不信裸 PID。helper 失聯時 daemon 只做自己權限做得到的收尾，其他帳號沒確認全空就阻擋，斷線不代表已退出，也不能重送不明的開格。〔建議預設，未拍板；第十九批從 P-102 搬上〕root 用的設定檔及其父目錄不得由不受信任的 node 改寫；helper 在 fork 前固定一份設定副本（B-608）；設定父死訊號時處理競態，父死訊號與私有通道斷線一起監看。額度不准 UID 0 或 root 別名。helper 消失而不能收尾時保留占用、阻止新格，不宣稱清空。
+〔建議預設，未拍板；第十九批從 P-108 搬上〕**helper 的記憶體鏡像**：helper 存活時，登記與更新先經它重驗（啟動設定的頂層額度、可信上層鏈、原始 `user` 與路徑）才生效；鏡像只在記憶體。沒 helper 時，只用通用 user、沒佈建權的登記由 daemon 自己核對；〔下一步納入 cgroup〕只授 cgroup 動作的登記怎麼核，見篇末[下一步納入](#下一步納入cgroup非現行規則)，本輪 `cgroup_*` 一律 `unsupported`；其他帳號或要 helper 的動作的新登記回 `helper_unavailable`，既有的通用 user 登記照常跑。helper 用安全的程序 handle 追蹤、wait 自己的孩子並跨帳號收尾；daemon 不 wait helper 的孩子、不信裸 PID。helper 失聯時 daemon 只做自己權限做得到的收尾，其他帳號沒確認全空就阻擋，斷線不代表已退出，也不能重送不明的開格。〔建議預設，未拍板；第十九批從 P-102 搬上〕root 用的設定檔及其父目錄不得由不受信任的 node 改寫；helper 在 fork 前固定一份設定副本（B-608）；設定父死訊號時處理競態，父死訊號與私有通道斷線一起監看。額度不准 UID 0 或 root 別名。helper 消失而不能收尾時保留占用、阻止新格，不宣稱清空。
 
 ### 開格：runner 與回報
 
@@ -334,7 +334,7 @@ daemon 只看擋板檔在不在（stat），不讀內容。〔建議預設，未
 
 〔主編補，第十八批；審稿新必-3〕兩個 daemon 用不同 socket 卻指向同一個（或互相重疊的）`state_dir` 或 cgroup 子樹時，會互相清殺對方的工作。所以 daemon 啟動時，在任何讀回、清殺、寫狀態之前，以解析後的真實路徑對實際使用的 `state_dir`（下一步納入 cgroup 後，另對 cgroup 子樹根）各取一把排他鎖，並檢查祖先與子孫：任何一個祖先或子孫已被別的 daemon 鎖住，也算重疊。取不到就拒絕啟動（回 125，stderr 說明）。鎖跟著 daemon 程序存活，程序死了鎖自動放掉。每個 `socket_path` 另有同目錄的 `daemon.lock`（[P-101](protocol/daemon/startup-and-ipc.md)）：〔建議預設，未拍板；第十九批從 P-101 搬上〕持鎖後才能清理屬於這個實例的殘留 socket，不能刪活著的 socket；無法 bind、路徑過長或權限不足就明確失敗。socket 父目錄的穿越權與 socket 的連接權由部署者先配置，不在封包裡給任意人改。〔使用者方向 2026-09-30，第十九批；第二十批進行順序〕`state_dir` 那把一律要取；cgroup 子樹那把本輪不取（沒有 cgroup，B-605），見篇末[下一步納入](#下一步納入cgroup非現行規則)。
 
-〔建議預設，未拍板〕做法：鎖直接對目錄本身取（開目錄再 `flock`；cgroup 目錄裡也不能另建一般檔）；`state_dir` 祖先往上試鎖到根目錄（cgroup 子樹試到 cgroup 掛載點），子孫往下掃一遍試鎖，試完就放。兩個同時啟動、互為祖孫時，可能雙方都拒絕，重試即可。
+〔建議預設，未拍板〕做法：鎖直接對目錄本身取（開目錄再 `flock`）；`state_dir` 祖先往上試鎖到根目錄，子孫往下掃一遍試鎖，試完就放。cgroup 子樹那把怎麼試鎖，下一步納入（篇末）。兩個同時啟動、互為祖孫時，可能雙方都拒絕，重試即可。
 
 **驗收：**兩份設定用不同 socket、同一個 `state_dir`（或一個是另一個的子目錄）時，後啟動的拒絕啟動，先啟動的工作不受影響；同一個 `cgroup_root` 的情形下一步納入。
 
@@ -480,7 +480,7 @@ systemd-run --user --scope -p Delegate=yes aos daemon --config ~/.config/aos/dae
 
 ### 一棵資源樹只准一個 daemon：cgroup 子樹那把鎖（B-611）
 
-有 cgroup 時，除了 `state_dir`，也以解析後的真實路徑對實際使用的 cgroup 子樹根（含省略 `cgroup_root` 時自己所在那層）取一把排他鎖，祖先往上試鎖到 cgroup 掛載點、子孫往下掃一遍；兩個 daemon 用不同 socket 卻指向同一個（或互相重疊的）cgroup 子樹時，後啟動的拒絕啟動。
+有 cgroup 時，除了 `state_dir`，也以解析後的真實路徑對實際使用的 cgroup 子樹根（含省略 `cgroup_root` 時自己所在那層）取一把排他鎖：鎖直接對目錄本身取（cgroup 目錄裡不能另建一般檔），祖先往上試鎖到 cgroup 掛載點、子孫往下掃一遍；兩個 daemon 用不同 socket 卻指向同一個（或互相重疊的）cgroup 子樹時，後啟動的拒絕啟動。
 
 ### 掛載行程的框（B-613）
 
