@@ -56,7 +56,8 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](../settled/protocol/daemon/provision-and-runner.md) |
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
 | `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；系統級任務 `aos-git`、普通程式 `aos-needs`、`aos-as`、`aos-cg` 的結束碼 | [P-203](../settled/protocol/node.md)、[P-204](../settled/protocol/node.md)、P-212、[P-205](../settled/protocol/node.md)、P-211（[node](../settled/protocol/node.md)） |
-| tick–daemon 通道的 `data.code`；客戶端的 `no_channel` | [P-119](../settled/protocol/daemon/channel.md) |
+| tick–daemon 通道的 `data.code`（含部件關閉的 `not_available`）；客戶端的 `no_channel` | [P-119](../settled/protocol/daemon/channel.md) |
+| `aos-mq get`／`post` 結束碼及 `not_available` 診斷 | [P-206](../settled/protocol/node.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
 | 工作拒收 | [P-404](work.md) |
 | work／LLM 程式結束碼 | [P-408](work.md) |

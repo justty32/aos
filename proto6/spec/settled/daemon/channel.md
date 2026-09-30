@@ -29,6 +29,10 @@
 
 ## B-612：tick–daemon 通道
 
+〔使用者方向 2026-09-30 晚〕通道與憑證留核心，訊息收送由 [B-614 訊息部件](messaging.md) 提供。不開 daemon 時 node 之間的溝通，基底不考慮。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
 **通道是 daemon 開的 tick 跟 daemon 之間的 IPC，也是唯一逃生口。** 通道上只有這幾件事：
 
 - 登記與解除（含覆蓋上層）；
@@ -95,7 +99,7 @@
 
 - 帶憑證時，上層就是憑證所屬的 tick。也可以帶 `parent_id` 指定成它有效上層鏈之下的某個 node（例如 kernel 替成員掛工作，歸成員），但不能指定成自己以上或別隊的 node。
 - 不帶憑證時（人手、CLI）必須帶 `parent_id`，呼叫者要是它的 owner 或祖先 owner。
-- 不另收可自報的 cgroup 路徑。掛載行程由自己的 runner 管（B-601），歸上層是核權、解除與收尾範圍的歸屬；有 cgroup 時它的框放在掛它的 node 框下，名字 `mount-<h>`，本身就是葉框（B-605）。那個 node 的格後收尾不碰它；砍掉或結束時由收尾清空、刪框（B-604、B-603）。
+- 不另收可自報的 cgroup 路徑。掛載行程由自己的 runner 管（B-601），歸上層是核權、解除與收尾範圍的歸屬；有 cgroup 時的框歸屬與清框見 [B-613 的 cgroup 部分](cgroup.md#掛載行程的框b-613)。
 - inst 的 `user` 要落在上層的身分額度內，不合回 `user_not_granted`，不存在回 `user_invalid`。kernel 不能把成員工作掛在自己的較大額度。
 - 各參數怎麼填（含 agent 自跑工具、LLM 池代發）見 [P-402](../../protocol/work.md)。
 

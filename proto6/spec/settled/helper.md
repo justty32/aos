@@ -24,6 +24,8 @@
 - **kill helper＝切斷新的特權操作**：已開的 tick 照跑到結束；之後需要其他身分的 tick 一律不跑，並寫待處理事項。helper 不自動重啟，要恢復得重開 daemon。已做的 chown 不回滾。
 - systemd 沙盒防護初版不用，見 [B-605](daemon/cgroup.md)。
 
+〔建議預設，未拍板〕`enable_helper_actions:false` 只關對外動作，不改本條 helper 的啟動模式及核心開格／收尾；cgroup 動作另依 cgroup 部件。界線見 [B-609](daemon/helper-actions.md)、[B-615](daemon/components.md)。
+
 ### helper 只做固定的事
 
 - helper 只查可信註冊、切目標帳號、exec 固定 [runner](terms.md#t-09收尾排空停機熱重載逃生口)（有 cgroup 時另外把它放進該放的框，並替 daemon 建框、交框、刪殘留框），外加固定清單上的佈建動作（清單、參數與各動作做什麼以 [B-609](daemon/helper-actions.md) 為正本）。每次只做清單上的一件，不接任意程式當 root 跑。
@@ -50,6 +52,7 @@
 - **鎖**：別的帳號的程序繼承同一份鎖 fd，照 [B-602](tick.md) 核對得到。
 - **有 git 時**：別的帳號的程序寫進 aos 範圍的檔，要讓 tick 帳號讀得到（例如用 [B-609](daemon/helper-actions.md) 的共享群組），否則 `aos-git` 讀不到、當故障（[B-630](tick.md)）。`aos-as` 等到 pipe EOF 才結束，所以它結束前核心不會開下一項。
 - **被取消**：呼叫方對 `aos-as` 送 SIGTERM／SIGINT，它就結束（不刪那份 inst，留給清理）；runner 發現回報 pipe 斷了就清空原指令、結束。中間可能有一小段跟下一項重疊，見 [B-609](daemon/helper-actions.md)「呼叫方不在了」〔暫定〕。
+- 〔建議預設，未拍板〕helper 動作被開關關掉時，`spawn_as` 回 `not_available`，`aos-as` 回 125、stderr 印代碼、不開原指令。
 - **不行時**：沒有通道變數（不是 daemon 開的格），或 daemon 回 `helper_unavailable`、`user_not_granted`、`user_invalid`、`stopping`，都回 125、不寫 `exit`，stderr 印代碼。回應成功但 pipe 沒回報就關了，也回 125（`result_unknown`），呼叫它的一方不能重跑。不另設替代路。
 - **daemon 那側**：`spawn_as` 由「帶本格憑證的程序」呼叫，實際上就是 `aos-as`；tick 自己不呼叫。
 

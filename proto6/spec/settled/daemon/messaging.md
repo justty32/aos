@@ -4,6 +4,14 @@
 
 ## B-614：暫存訊息與急件
 
+〔使用者方向 2026-09-30 晚〕訊息轉送與急件叫醒屬可掛的訊息部件。不同 daemon 之間不轉送訊息，不加跨 daemon 路由。
+
+〔建議預設，未拍板〕`enable_messaging:false` 時，合法且有權的 `node.send` 回 `not_available`，不暫存、不叫醒；登記 node 的合法 `node.take` 回 `{messages:[],more:false}`。method、參數、憑證與呼叫者核權仍照舊；掛載行程取件仍回 `kind_mismatch`。`mq-get` 因而取不到東西、回 0；`mq-post` 有待送件時回 1，stderr 與失敗檔記 `not_available`（[B-624](../tick.md)），沒有待送件仍回 0。任務表不必隨部件開關改動。沒通道時仍走既有 `no_channel` 路線，不混成部件關閉。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
+以下收送規則以訊息部件開著為前提。
+
 **同一個 daemon 底下的 tick 可以經 daemon 互傳訊息（系統訊息佇列）；不保證送達。** tick 那一側由系統級任務 `aos-mq` 送與取（[B-623](../tick.md)、[B-624](../tick.md)）。
 
 - **格式**：訊息是一份請求物件或回應物件（[P-301](../../protocol/messages.md)）；daemon 只驗外形，不解析正文。〔使用者方向 2026-09-30，修正輪暫定的裁定〕請求與回應放同一個佇列，`node.take` 一起取出。
@@ -19,3 +27,4 @@
 
 **驗收：**寄件帳號對收件 `.aos/mq/get/` 沒寫權被拒，對 `requests/` 有沒有寫權不影響；回應物件照樣送得進、取得到；一般件不叫醒、下一格取得到；急件送到後收件 tick 被叫醒；取過的再取不到；daemon 重啟後暫存的都不見；超過上限回 `mailbox_full`、`message_too_large`。
 
+**驗收（開關／多實例）：**〔建議預設，未拍板〕關訊息部件後，post 有件回 1 並留 `not_available` 失敗紀錄、get 回空且為 0、不出急件 wake；同張任務表仍跑後續項。〔使用者方向 2026-09-30 晚〕訊息部件開著時送另一 daemon 的 node 回既有 `not_registered`、不轉送。

@@ -134,6 +134,7 @@ RPC error 沿 P-005。daemon IPC 與 helper 通道維持嚴格：不認得的欄
 | `not_registered`、`registration_conflict` | 目標或上層不存在／搶登記、成環、同一個 id 已是登記或掛載行程 | false |
 | `busy` | 活程序、維護狀態不合（例如換父時子樹沒停） | true，等全空後先查狀態 |
 | `stopping`、`cleanup_failed` | 正在停或排空中，不收新的掛行程／新成員（[B-604](../../daemon/lifecycle.md)）／無法確認後代清空 | false |
+| `not_available`〔建議預設，未拍板〕 | 功能已由設定關閉：B-609 的非 cgroup 對外動作，或 P-119 的訊息送出；行為見 [B-615](../../daemon/components.md) | false |
 | `helper_unavailable`、`unsupported` | helper 不在／部署不支援所選固定動作（含沒有 cgroup 時的 `cgroup_limits` 與 `spawn_as` 帶 `frame`） | false |
 | `path_not_granted`、`conflict` | 超出路徑範圍／OS 現況不符所要求的設定 | false |
 | `group_not_granted`〔第十八批〕 | 群組不在登記的 `groups` 授權裡 | false |

@@ -4,6 +4,10 @@
 
 ## B-603：重啟先清空，再讓樹長回來
 
+〔使用者方向 2026-09-30 晚〕巢狀時，外層重開收掉內層 daemon 的風險由使用者承擔，aos 不另接管或補救；沒 cgroup 時仍照本條既有的清不掉舊程序界線。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
 **原則：重啟不接續孤兒工作，在途程序全殺，確認清空才開新格。** 重啟清空是 daemon 自己的職責。
 
 | 情況 | 有 cgroup | 沒有 cgroup |
@@ -25,11 +29,7 @@
 
 ### 清空舊程序
 
-**有 cgroup 時**〔使用者方向 2026-09-29 晚；納入 cgroup 與 git 疑-8〕：daemon 開的每一格（含孫程序）都在該 node 的框裡，daemon 當掉時框還在。
-
-1. **找舊框**：`state.json` 記著上次用的子樹根（`cgroup_root_last`，[P-116](../protocol/daemon/shutdown.md)）。這次的子樹根不同（例如首推的 `systemd-run --user --scope` 每次開出的 scope 名字都不一樣）、而舊根還在時，先對舊根取 B-611 的鎖；取不到表示另一個 daemon 在用，不碰。
-2. **清**：開任何新格之前，對新舊子樹裡每個仍有程序的受管框走一次 B-604 的收尾（寬限沿用 `shutdown_grace_ms`），確認全空才往下。受管框是 `tick`、`task-*`、`mount-*` 與子 node 的 `n-*`；node 自己開的其他子框是逃生口，照 `kill_escape_cgroups` 決定殺不殺（B-605）。
-3. 舊 scope 清空後沒有程序，systemd 會自己回收。
+有 cgroup 時清空舊程序，照 [B-603 的 cgroup 部分](cgroup.md#重啟清框b-603)。
 
 **沒有 cgroup 時**〔第二十批：重啟清不掉舊程序，接受〕：舊 daemon 的 runner 與它們名下的程序（B-601）跨不過 daemon 重啟，新 daemon 找不回來，**daemon 重開時的清空不成立**。
 
@@ -58,7 +58,7 @@
 - **daemon 開啟就自動開始 tick 頂層 node**；已恢復 pause 的頂層保留這次 wake，等 resume。
 - **boot id**〔astra 審整理區必-8 從 P-115 搬上〕：每次啟動新生一個，整次存續不變；只放記憶體，重開不得沿用，socket 路徑相同也不行。`daemon.info`、`node.show`、`node.ls` 回的都是它（格式見 [P-115](../protocol/daemon/registration.md)）。node 路徑別名、重用或跨機重名的風險由使用者承擔。
 - 〔使用例：kernel 那側〕頂層發現 boot id 改變後重新登記直接成員並叫醒子 kernel，逐層重建。平常只在 boot id 或成員清單變動時補登記，不每格重送（B-606）。壞成員留待辦、跳過，不擋其他子樹。
-- **空框清理**（有 cgroup 時；〔使用者方向 2026-09-30，第十八批〕）：重啟清空後，沒有登記對應的 `mount-*` 框直接刪（掛載行程不會接回）；沒有登記對應的 `n-*` 框先留著，等逐層重建完、仍沒人登記才由下往上刪，免得先刪掉稍後又要重建的框（重建會讓上限要重寫、用量歸零）。〔建議預設〕「重建完」＝所有已登記、沒暫停的 node 自這次啟動以來都至少跑完一格。框裡還有逃生口的程序就不刪。框已交給別的帳號時由 helper 刪（B-609）。
+- 有 cgroup 時的空框清理見 [B-603 的 cgroup 部分](cgroup.md#重建後刪空框b-603)。
 - 清空後由 node 按 [tick](../tick.md) 恢復檔案，執行器／所屬 kernel 核對工作結果；daemon 不代讀結果或判業務終局。
 
 依據：使用者方向 2026-09-29（全殺、存檔與讀回、pause 批次存檔、逐層重建）；第十八批（空框清理）；第十九批（掛載行程與暫存訊息不存檔）；第二十批（重啟清空是 daemon 職責；沒有 cgroup 時清不掉，接受）；納入 cgroup 與 git 疑-8（記上次的子樹根）。
@@ -78,7 +78,7 @@
 3. 等 `shutdown_grace_ms`（[P-101](../protocol/daemon/startup-and-ipc.md)，預設 2000）；
 4. 對還沒結束的 runner 再送一次 SIGTERM，runner 就清空自己名下、回報、結束（B-601）；
 5. wait 回收每個 runner。runner 在第二次 SIGTERM 之後還不結束，daemon 才對它送 SIGKILL，這一次開格記結果不明、算清不空；
-6. **有 cgroup 時**：對範圍內仍有程序的框寫 `cgroup.kill`，以 `cgroup.events` 的 populated 確認全空。
+6. 有 cgroup 時追加 [B-604 的框收尾](cgroup.md#收尾最後清框b-604)。
 
 - **誰用這一套**：重啟清空（有 cgroup 時，B-603）、停機、解除登記、砍掉掛載行程、helper 停程序；取消在跑的工作也用這套（[B-203](../../base/execution.md)）。
 - **範圍**：這個 node（或掛載行程）目前那一格的 runner、它掛上而還在跑的掛載行程，以及已登記子 node 的同樣範圍。有 cgroup 時換成框：`tick`、`task-*`、`mount-*` 與已登記子 node 的 `n-*`；node 自己開的其他子框是逃生口，照 `kill_escape_cgroups`（B-605）。
@@ -92,7 +92,11 @@
 
 ### 停機：立即與排空
 
-daemon 收到 SIGINT（前景 Ctrl-C）或 SIGTERM 時停機。走哪一種由設定 `stop_mode` 決定（`immediate`／`drain`，預設 `immediate`），不開停機用的 IPC。訊號、結束碼與設定欄位見 [P-114](../protocol/daemon/shutdown.md)。
+〔使用者方向 2026-09-30 晚〕排空停機留核心，可單獨關掉。〔建議預設，未拍板〕`enable_drain:false` 時，即使 `stop_mode:"drain"`，SIGINT／SIGTERM 也走下面的立即停；`drain_timeout_ms` 不使用。收尾與正常存檔仍照做。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
+daemon 收到 SIGINT（前景 Ctrl-C）或 SIGTERM 時停機。排空功能開著時，走哪一種由設定 `stop_mode` 決定（`immediate`／`drain`，預設 `immediate`），不開停機用的 IPC。訊號、結束碼與設定欄位見 [P-114](../protocol/daemon/shutdown.md)。
 
 **立即停**：
 
@@ -124,17 +128,22 @@ daemon 收到 SIGINT（前景 Ctrl-C）或 SIGTERM 時停機。走哪一種由�
 
 ## B-611：一棵資源樹只准一個 daemon
 
+〔使用者方向 2026-09-30 晚〕同一台機器可有多個 daemon 實例，各管自己的 node 樹，也可巢狀。備援由外部工具重開；取不到既有排他鎖仍回 125，不加等鎖待命模式。
+
+依據：[09-30 晚裁定](../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
+
 **daemon 啟動時，在任何讀回、清殺、寫狀態之前，先對實際使用的 `state_dir` 取一把排他鎖；取不到就拒絕啟動**（回 125，stderr 說明）。
 
 - **為什麼**：兩個 daemon 用不同 socket 卻指向同一個（或互相重疊的）`state_dir` 或 cgroup 子樹時，會互相搶恢復資料、清殺對方的工作。
 - **怎麼算重疊**：以解析後的真實路徑取鎖，並檢查祖先與子孫；任何一個祖先或子孫已被別的 daemon 鎖住，也算重疊。
 - 鎖跟著 daemon 程序存活，程序死了鎖自動放掉。
-- **有 cgroup 時另取一把**：以解析後的真實路徑，對實際使用的 cgroup 子樹根（含省略 `cgroup_root` 時自己所在那層）取排他鎖。明寫 `cgroup_root` 時取不到就拒絕啟動（125）；自動偵測時取不到（巢狀 daemon：祖先被外層 daemon 鎖住），就當成沒有 cgroup，`cgroup=off` 照跑（B-605；納入 cgroup 與 git 疑-11）。沒有 cgroup 時只取 `state_dir` 那把。
+- 有 cgroup 時另取 [B-611 的 cgroup 子樹鎖](cgroup.md#cgroup-子樹鎖b-611)；沒有 cgroup 時只取 `state_dir` 那把資源鎖，socket 鎖仍照下段。
 - **socket 的鎖**：每個 `socket_path` 另有同目錄的 `daemon.lock`（[P-101](../protocol/daemon/startup-and-ipc.md)）。〔建議預設；第十九批從 P-101 搬上〕持鎖後才能清理屬於這個實例的殘留 socket，不能刪活著的 socket；無法 bind、路徑過長或權限不足就明確失敗。socket 父目錄的穿越權與 socket 的連接權由部署者先配置，不在封包裡給任意人改。
 
-〔建議預設〕做法：鎖直接對目錄本身取（開目錄再 `flock`）；`state_dir` 祖先往上試鎖到根目錄，子孫往下掃一遍試鎖，試完就放。兩個同時啟動、互為祖孫時，可能雙方都拒絕，重試即可。cgroup 子樹那把同樣直接對目錄取（cgroup 目錄裡不能另建一般檔；實測開目錄後 flock 可行，第二個 fd 會被擋），祖先往上試鎖到 cgroup 掛載點、子孫往下掃一遍。用首推做法開的兩個 daemon 各在自己的 scope，彼此是兄弟、不重疊，只有 `state_dir` 那把會擋。
+〔建議預設〕做法：鎖直接對目錄本身取（開目錄再 `flock`）；`state_dir` 祖先往上試鎖到根目錄，子孫往下掃一遍試鎖，試完就放。兩個同時啟動、互為祖孫時，可能雙方都拒絕，重試即可。
 
 依據：主編補，第十八批（審稿新必-3）；第十九批；納入 cgroup 與 git 疑-11（巢狀 daemon 自動偵測時當成沒有 cgroup）。
 
 **驗收：**兩份設定用不同 socket、同一個 `state_dir`（或一個是另一個的子目錄）時，後啟動的拒絕啟動，先啟動的工作不受影響；同一個（或重疊的）明寫 `cgroup_root` 時後啟動的回 125；某個 tick 用 `node.mount` 掛了另一個 daemon（沒寫 `cgroup_root`），內層印 `cgroup=off` 照跑，仍受外層框的上限。
 
+**驗收（開關／多實例）：**〔建議預設，未拍板〕關排空而設定 drain 時，收到 SIGTERM 即停止新格並收尾。〔使用者方向 2026-09-30 晚〕不同實例的樹各自運作；鎖衝突仍回 125，不待命接手。

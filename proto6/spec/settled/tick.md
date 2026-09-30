@@ -380,6 +380,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 - daemon 的憑證一格一張，分不出是哪一項在取，所以「只有它取」是同一個 node 裡的約定，不是授權（跟 [B-602](#b-602同一資料夾一次一格互斥鎖) 的鎖同一種）。
 - 沒掛 `mq-get` 就沒人取：訊息留在 daemon，滿了寄件方收到 `mailbox_full`，daemon 重啟就丟（B-614）。
 - 不保證送達；沒人取的也不回任何錯誤。
+- 〔建議預設，未拍板〕daemon 訊息部件沒掛時，`node.take` 回空，`mq-get` 回 0；任務表不用改（[B-614](daemon/messaging.md)、[B-615](daemon/components.md)）。
 - 沒有通道（不是 daemon 開的格）時什麼都不取，回 0（argv 與結束碼見 [P-206](protocol/node.md)）。
 - 有 git 時〔使用者 2026-09-30 同意照暫定〕，這格作廢（停格檔、當機）的話，`mq-get` 這格取出、寫進 aos 範圍的訊息會被下一格 `aos-git open` 還原掉，等於丟了；daemon 那邊已經刪了，不會重取。佇列本來就不保證送達（B-630）。
 
@@ -413,6 +414,7 @@ CLI 或工具在 tick 之外自己取鎖改檔，當成外部世界，aos 不管
 |---|---|
 | 送成功 | 移除那個檔；不保證送達 |
 | `forbidden`、`not_registered`、`kind_mismatch`、`message_too_large`、`invalid_params` | 送不了：不保留、不重試、不改走檔案。stderr 印 `post_failed: <to> <id> <code>`，把那個檔搬到 ignored 的失敗紀錄 `.aos/mq/failed/`（檔名不變）並記下代碼（格式見 [P-206](protocol/node.md)） |
+| `not_available`〔建議預設，未拍板〕 | daemon 訊息部件關閉；同「送不了」搬到 `.aos/mq/failed/`、記代碼且不自動重試；本次有待送件就回 1，沒件照沒事做回 0（[B-614](daemon/messaging.md)）。任務表不用改 |
 | 其他錯誤（`mailbox_full`、`stopping`、連不上 socket 等） | 留著，下一格再送 |
 | 本格沒有通道（`no_channel`） | 一件都不送、檔都留著；stderr 印一次，回 0 |
 
