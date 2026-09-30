@@ -47,7 +47,7 @@
 
 〔使用者方向 2026-09-29〕原生 Linux 與 WSL2 都要能跑。以 Linux 為基底的定位見[上面](#定位給特殊計算用的-os)。Windows interop、Windows 掛載的權限與資源管理限制、Windows 磁碟水位等不在保護承諾內，背景見 [WSL 查證](../notes/2026-09-29-wsl-machine-check.md)。VM 關機照 [daemon 重啟](daemon.md)處理；運行中逾時與排隊先後分別依 [C-01](contracts.md)及 [S-204](scheduling/admission.md)。
 
-〔使用者方向 2026-09-29 晚〕**依賴**：少外部依賴；初版 aos 本身不依賴 systemd 服務。〔使用者方向 2026-09-30，第十九批〕tick 核心只要 Python 與 flock。**cgroup v2 與 git 是完整保證的條件，不是跑起來的條件**：缺了照樣跑，標準配備走備援、保證較弱（[B-629](tick.md)）。cgroup 子樹首推用 **systemd 使用者委派**準備（`systemd-run --user --scope -p Delegate=yes`，不用 sudo），檢查步驟、git 最低版本與檢查、其他子樹來源及「有就用」的可選功能以 [B-605](daemon.md)、[B-630](tick.md) 為正本。Python 只用標準庫的唯一例外是 `jsonschema`（[P-702](protocol/agent-tasks.md)）；多帳號交接首版只用群組、不用 ACL（[P-208](protocol/node.md)）。
+〔使用者方向 2026-09-29 晚〕**依賴**：少外部依賴；初版 aos 本身不依賴 systemd 服務。〔使用者方向 2026-09-30，第十九批〕tick 核心只要 Python 與 flock。**cgroup v2 與 git 是完整保證的條件，不是跑起來的條件**：缺了照樣跑，標準配備走備援、保證較弱（cgroup 見 [B-631](tick.md)，git 見 [B-632](tick.md)）。cgroup 子樹首推用 **systemd 使用者委派**準備（`systemd-run --user --scope -p Delegate=yes`，不用 sudo），檢查步驟、git 最低版本與檢查、其他子樹來源及「有就用」的可選功能以 [B-605](daemon.md)、[B-630](tick.md) 為正本。Python 只用標準庫的唯一例外是 `jsonschema`（[P-702](protocol/agent-tasks.md)）；多帳號交接首版只用群組、不用 ACL（[P-208](protocol/node.md)）。
 
 UID 隔離與可選 helper 見[身分篇](base/identity-resources.md)，同帳號部署的 key 保護限制見 [LLM 池](scheduling/llm.md)。〔使用者方向 2026-09-30，第十八批〕隔離與 key 保護只對整條投件鏈以外的帳號成立：能投件給持 key 的 node，就等於能用它的身分讀 key（[T-08](terms.md)）。同機 node 樹是本輪架構；跨機分散式、FUSE 與外牆方案仍不在本輪交付範圍。LLM 串流只是「呼叫任務邊跑邊寫指定檔案」，見 [S-305](scheduling/llm.md)，不另做產品介面。
 
