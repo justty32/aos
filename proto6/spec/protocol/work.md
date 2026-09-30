@@ -60,13 +60,15 @@ LLM 代發（P-405～P-407：池設定、LLM 請求、LLM 結果與重試）在 
 
 外層 inst 的 argv 是 `aos-work --work-dir <絕對工作資料夾>`，`user` 明寫工作所屬 node 已授權的有效身分；內層 `request.json` 的 inst 怎麼繼承、能不能改 `user`，依 [B-101](../base/work.md)。
 
-**掛載參數**〔使用者方向 2026-09-30，第十九批；method 與錯誤碼見 [daemon P-118](daemon/channel.md)〕：經通道送 `node.mount`，參數是 `node_id=<W 的絕對路徑>/inst.json`、`token=$AOS_TICK_TOKEN`（socket 位置在 `$AOS_DAEMON_SOCKET`，[P-117](daemon/channel.md)）、必要時 `parent_id`。**不帶 `identity_grant`、不帶週期，也不再另送 `node.wake`**：掛上就開始跑。誰掛、`parent_id` 怎麼填：
+**掛載參數**〔使用者方向 2026-09-30，第十九批；參數細節為建議預設，method 與錯誤碼見 [daemon P-118](daemon/channel.md)〕：經通道送 `node.mount`，參數是 `node_id=<W 的絕對路徑>/inst.json`、`token=$AOS_TICK_TOKEN`（socket 位置在 `$AOS_DAEMON_SOCKET`，[P-117](daemon/channel.md)）、必要時 `parent_id`。**不帶 `identity_grant`、不帶週期，也不再另送 `node.wake`**：掛上就開始跑。誰掛、`parent_id` 怎麼填：
 
 | 情況 | `parent_id` | 資源與核權歸誰 |
 |---|---|---|
 | kernel 的 work 任務替成員派工具 | 填材料的 `node_id`（成員，須在 kernel 有效上層鏈之下） | 成員 |
 | agent 自跑工具（`tools.target_node` 為 null） | 省略 | 憑證所屬的 tick，即 agent 自己 |
 | LLM 池的 `aos-llm` 派 `aos-llm-call` | 省略 | 憑證所屬的 tick，即池 node 自己 |
+
+省略 `parent_id` 的兩種只能帶本格 `token` 走通道；agent 或池 node 不在 daemon 底下（cron、人手跑）時沒有通道、掛不了，〔記錄者依追答 11 歸類〕算功能受限、不另設替代路（[B-629](../tick.md)）。
 
 `parent_id` 只給資源歸屬與核權（框放在它的框下、`user` 核對它的身分額度）；掛載的 W 不是要被 tick 的 node，沒有資料夾上下層的問題，其位置也不決定歸屬。〔使用者方向 2026-09-30，第十九批，撤「與目錄位置無關」的一般說法〕一般 node 的上層不是這樣：預設看資料夾包含，可用登記的 `parent_id` 覆蓋（[B-628](../tick.md)）。何時建目錄、何時掛載（本格只保存材料，提交後下一格才掛）依 [B-624](../tick.md) 與 B-613，kernel 代跑的步驟見 [kernel P-806](kernel-tasks.md)。結果只給路徑，發件者未必讀得到；風險由使用者承擔。
 
@@ -112,7 +114,7 @@ unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown
 | 找不到這個 request_id 的工作，或工作不在宣告 `work.cancel` 的任務手上（例如 LLM 轉交） | -32000，`work_not_found` |
 | 收件 node 沒有任務宣告 `work.cancel`（agent、純池 node） | tick 回 -32601（[B-501](../base/transport.md)） |
 
-**核權要存的欄位**：原請求檔消費後會被刪，B-203 要的兩個 UID 都在接件時記進工作狀態；kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`（原請求檔的擁有 UID）與 `owner_exec_uid`（接件那格 tick 的有效 UID，即 node inst 的執行帳號）。
+**核權要存的欄位**：原請求檔消費後會被刪，B-203 要的兩個 UID 都在接件時記進工作狀態；kernel 記在 [kernel-work-state](schemas/kernel-work-state.schema.json) 的 `submitter_uid`（原請求檔的擁有 UID）與 `owner_exec_uid`（接件那一項任務實際的有效 UID：任務不帶 `user` 時就是 tick 的有效 UID，即 node inst 的執行帳號；〔暫定〕任務帶了自己的 `user` 時記那個帳號，同 B-203）。
 
 〔使用者方向 2026-09-30，第十八批〕目前只有 kernel 的 work 任務支援取消。LLM 請求與 agent 自己掛的工具行程的取消延後（[P-008](README.md#p-008)）；到時要補的欄位（forward-state 與 agent 請求的 `submitter_uid`、`canceling` 階段）一併列在那裡。
 
@@ -124,7 +126,7 @@ unknown 放著不重做依 [S-401](../scheduling/operations.md)。合成 unknown
 | `aos-llm [--node N] --config C` | 一項 module 任務，node 省略用 cwd（tick 設為 node 根）；C 可相對，依 cwd 解。讀 C、池狀態、既有結果，及收件或 forward 已接納的材料（看任務有沒有宣告 `llm.chat`，[S-307](../scheduling/llm.md)）；保存狀態／待送封套。只對已提交的工作材料經通道 `node.mount` 掛載 `aos-llm-call`；tick 負責 commit 後投件、清收件原件，用 N 的 user |
 | `aos-llm-call --work-dir W --config C` | C 是 aos-llm 派出時固定在 `W/llm-config.json` 的本池設定，argv 帶絕對路徑；讀 C、私有 key_ref 與 W/request.json，只送一次 HTTP，寫 W/result.json；請求有 stream_path 時邊收邊寫該檔；用池管理 node 的 user |
 
-三支程式 stdin 都是 `/dev/null`，stdout 保留為空（業務輸出走檔案），stderr 只放無 key 的 `代號: 白話` 診斷；內層 inst 的 stdin／stdout／stderr 另依 P-403。〔使用者方向 2026-09-30，第十九批〕要掛載的程式（`aos-llm`）從 daemon 放的兩個通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN` 找通道（[B-612](../daemon.md)、[P-117](daemon/channel.md)），缺任一個就自己擋下、報 `no_channel`、結束碼 125；`aos-work`、`aos-llm-call` 不用通道，本身不新增必需 `AOS_*` 變數（inst 的 `envs` 用 `clear` 會把通道變數一起清掉）。PATH／目標帳號環境及 inst.envs 依 inst 正本，不從呼叫者環境取得池 key。
+三支程式 stdin 都是 `/dev/null`，stdout 保留為空（業務輸出走檔案），stderr 只放無 key 的 `代號: 白話` 診斷；內層 inst 的 stdin／stdout／stderr 另依 P-403。〔使用者方向 2026-09-30，第十九批〕要掛載的程式（`aos-llm`）從 daemon 放的兩個通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN` 找通道（[B-612](../daemon.md)、[P-117](daemon/channel.md)），缺任一個就自己擋下、報 `no_channel`、〔暫定〕結束碼 125；`aos-work`、`aos-llm-call` 不用通道，本身不新增必需 `AOS_*` 變數（inst 的 `envs` 用 `clear` 會把通道變數一起清掉）。PATH／目標帳號環境及 inst.envs 依 inst 正本，不從呼叫者環境取得池 key。
 
 結束碼：0＝這次處理完成且必要結果已完整發布（工作本身仍可能 failed／unknown）；2＝用法／設定錯，未開始；125＝自身無法開始；1＝已開始處理後自身失敗（包括結果寫不出），不能把未發布結果算成功。aos-llm 的 0 只表示本格步驟完成，不代表 HTTP 工作成功。串流中途斷線、stream_path 開不了時的結束碼與結果依 [S-305](../scheduling/llm.md)。工作 inst 的內層退出碼只記在工作結果，不能拿 wrapper 的 0 代替。訊號由父程序看 wait 狀態；wrapper 沒寫結果時照 [S-401](../scheduling/operations.md) 的證據規則處理。
 

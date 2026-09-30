@@ -69,9 +69,9 @@ agent 只按設定的一個 node 位址投 `llm.chat`，請求與結果始終用
 
 磁碟與網路擋什麼、不擋什麼見 [S-203](../scheduling/admission.md)；磁碟框架見 [B-304](../base/identity-resources.md)，沒有 project quota 時怎麼定期量見 [S-207](../scheduling/admission.md)。
 
-〔建議預設，未拍板〕配額 `disk.bytes` 是非負的記帳額度。用量 `disk` 是 `{path, bytes}` 陣列，列出實際盤點的絕對路徑與磁碟配置 bytes；`path` 含其可觀測子樹，列入的範圍不得重疊或重複計同一資料。是否含 git 歷史、封存或外部 workspace，依列出的範圍與實際讀取權限判定，不聲稱涵蓋全機。同一份摘要依 `(st_dev,st_ino)` 去重 hardlink、以配置區塊量計 bytes；reflink／跨 node 共用實體區塊不承諾精確去重。量不到完整範圍就不報完整值、另留診斷，沿 [B-304](../base/identity-resources.md)。
+〔建議預設，未拍板〕配額 `disk.bytes` 是非負的記帳額度。用量 `disk` 是 `{path, bytes}` 陣列，列出實際盤點的絕對路徑與磁碟配置 bytes；`path` 含其可觀測子樹。範圍怎麼劃、hardlink 怎麼去重、量不到完整範圍怎麼辦，以 [S-207](../scheduling/admission.md) 的「磁碟怎麼量」為正本。
 
-〔建議預設，未拍板〕用量 `network` 是 `{scope, rx_bytes, tx_bytes}` 陣列；`scope` 明寫量測邊界與計數起點（例如介面／namespace／本次計數器期間），bytes 是該 scope 的累積觀測值。計數器重置就換 scope，不能把負差值當用量；範圍重疊不相加，不能把 host 介面總量冒認為某 node 用量。首版只定可觀測摘要，**不定網路配額欄位與限速 backend**。
+〔建議預設，未拍板〕用量 `network` 是 `{scope, rx_bytes, tx_bytes}` 陣列；`scope` 是字串，寫明量測邊界與計數起點（例如介面／namespace／本次計數器期間），bytes 是該 scope 的累積觀測值。計數器重置與範圍重疊怎麼處理見 [S-207](../scheduling/admission.md) 的「網路怎麼量」。首版只定可觀測摘要，**不定網路配額欄位與限速 backend**。
 
 ## P-507．沒裝、失敗與驗證〔使用者方向 2026-09-29〕
 

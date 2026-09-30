@@ -23,6 +23,19 @@
               {
                 "type": "null"
               }
+            ],
+            "description": "成員有 git 時，這次讀用量所釘的 commit；成員走 git 備援時為 null（S-207）。"
+          },
+          "source_journal_seq": {
+            "description": "成員走 git 備援時，這次讀取時成員最新一筆完成紀錄的 seq（P-205），只當「有沒有新東西」的游標；有 git 或讀不到日誌時省略或 null（S-207）。",
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "observed_at_ms": {

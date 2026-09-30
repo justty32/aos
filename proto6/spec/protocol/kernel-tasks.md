@@ -6,7 +6,7 @@
 
 ## P-800．共同契約〔第十二批裁定；工程預設〕
 
-每個 module 一項任務（[B-620](../tick.md)）：check、members、resources、work、LLM forward、LLM pool、usage、schedule，另有 custom 的 aos-clean；它的輸出及到期間隔依 [P-605](ops.md)。各用 node inst 的帳號（範本任務不帶 `user`，[B-620](../tick.md)）、直接開檔讀設定；stdin 不讀、stderr 診斷，除 clean 外的任務 stdout 空。`--node N` 可省，預設 cwd；tick 在 node 根跑任務。核對繼承鎖 fd 判斷是否在 tick 內（[B-602](../tick.md)），直接模式自行持鎖、提交後交付。
+每個 module 一項任務（[B-620](../tick.md)）：check、members、resources、work、LLM forward、LLM pool、usage、schedule，另有 custom 的 aos-clean；它的輸出及到期間隔依 [P-605](ops.md)。各用 node inst 的帳號（範本任務不帶 `user`，[B-620](../tick.md)）、直接開檔讀設定；stdin 不讀、stderr 診斷，除 clean 外的任務 stdout 空。`--node N` 可省，預設 cwd；tick 在 node 根跑任務。在 tick 裡一律繼承並核對 `AOS_TICK_LOCK_FD`（[B-602](../tick.md)），提交交給 tick。〔使用者方向 2026-09-30，第十九批，追答 10〕任務帶別的 `user` 時，由 tick 一直握著鎖、經 helper 的「以指定帳號開程序」開它，任務照樣繼承同一個鎖 fd、照樣核對；不經 `node.mount`，沒有 helper 時那一項依 [B-620](../tick.md) 回 125（功能受限）。有 `AOS_TICK_LOCK_FD` 卻核對不過就回 125、不改檔，不改成自己取鎖（開它的 tick 還握著鎖）。
 
 任務把完整請求／回應放追蹤的 `.aos/outbox/{requests,responses}/<id>.json`，把已消費原件逐 byte 複製到 `state/messages/{requests,responses}/<id>.json`。收件與派出的先後（組提交後才投件、才刪原件）屬標準配備，以 [B-623、B-624](../tick.md) 為正本，封套見 [P-206](node.md)。〔使用者方向 2026-09-30，第十九批〕要找 daemon 的任務照 P-801 找 socket、走通道；once 由 module 經通道 `node.mount` 掛上、`node.kill` 砍掉（[B-613](../daemon.md)），當格新材料先提交、下一格才掛（[S-401](../scheduling/operations.md)）。不在任務中等工具／HTTP；取消時同步等 `node.kill` 收尾到全空是唯一例外，上限是 daemon 的 `shutdown_grace_ms`（[B-203](../base/execution.md)）。
 
@@ -16,9 +16,9 @@
 
 `config/kernel.json`（[schema](schemas/kernel-config.schema.json)）必填 `version:1`；可選 `daemon_socket`（絕對路徑）與 `scan_interval_ms=60000,scan_batch_limit=64,usage_max_age_ms=60000,max_active_members=64,member_stale_ms=600000`，數值皆正整數。`quota_file` 可指父層提供的 res-quota；頂層可指本地設定，這份只是分配政策（[S-205](../scheduling/admission.md)）。無父配置時可省，不虛構無限額度。node 事項寫自己的 `.aos/attention/`。
 
-〔使用者方向 2026-09-30，第十九批；取法為建議預設〕**要找 daemon 的任務怎麼找**（members、schedule、resources、work、pool）：
+〔使用者方向 2026-09-30，第十九批；取法為建議預設〕**要找 daemon 的任務怎麼找**（members、schedule、resources、work；pool 另照 [P-408](work.md)：它的掛載不帶 `parent_id`，只能走通道，沒有通道變數就報 `no_channel`、回 125，不走下面第二點的無憑證路）：
 
-- 本格有 `AOS_TICK_TOKEN`（daemon 開的格，[B-612](../daemon.md)）：一律用環境變數 `AOS_DAEMON_SOCKET` 那個 socket，請求帶 `token` 走通道（[P-117](daemon/channel.md)）。憑證只在開這一格的 daemon 有效，設定的 `daemon_socket` 這時不用。
+- 本格有 `AOS_TICK_TOKEN`（daemon 開的格，[B-612](../daemon.md)）：一律用環境變數 `AOS_DAEMON_SOCKET` 那個 socket，設定的 `daemon_socket` 這時不用。只有收憑證的 method（`node.register`、`node.unregister`、`node.wake`、`node.mount`、`node.kill`、`node.send`、`node.take`，[P-117](daemon/channel.md)）帶 `token`；`daemon.info`、`node.show`、`node.provision` 等其他 method 不帶（帶了回 `invalid_params`），照 socket 對面的帳號授權（[P-103](daemon/startup-and-ipc.md)）。憑證只在開這一格的 daemon 有效。
 - 沒有憑證（cron 或人手直接跑，[B-627](../tick.md)）：用設定的 `daemon_socket`，省略時讀 `AOS_DAEMON_SOCKET`；請求不帶 `token`，daemon 照 socket 對面的帳號授權（[P-103](daemon/startup-and-ipc.md)）。
 - 都沒有：沒有 daemon 可找。要 daemon 的那幾步（登記、叫醒、掛行程、佈建、查實際值）這格不做，狀態檔照留、stderr 印一行，下一格再試；讀收件、記帳、寫摘要等本地部分照做。這只是功能受限（[B-629](../tick.md)），不寫事項。
 
@@ -106,7 +106,7 @@ aos-kernel-check [--node N] --validate-only
 
 `aos-kernel-work [--node N]`，人手 `aos kernel work N`。接 `kernel.work.submit`，params.argv 對應 `aos kernel work submit`，stdin 指 work-request 業務 JSON。核對來源／回址／成員身分，保存原件、材料與序號，寫 `state/work/<attempt_id>/kernel.json`（[schema](schemas/kernel-work-state.schema.json)）；目錄名是 `<前綴>-<attempt_id>`，前綴取自**配出這個 attempt_id 的 node**（[P-402](work.md)）。
 
-可不可以派新工作看 [S-205](../scheduling/admission.md)：不能派的記 `queued`，可派的記 `prepared`。〔使用者方向 2026-09-30，第十九批〕prepared 的工作下一格才掛：在 `.aos/jobs/<attempt_id>/` 建 once inst、照 [S-401](../scheduling/operations.md) 建啟動標記，再經通道 `node.mount` 掛上——帶本格 `token`，`parent_id` 填發起成員（資源與額度歸成員），不帶 `identity_grant`（[B-613](../daemon.md)、[P-402](work.md)）。daemon 排空停機中回 `stopping` 時，那件工作留在 prepared，下次再掛（[B-604](../daemon.md)）。結果或 `<inst>.err` 後格讀，核對 request／node／job／attempt，生成 work-result 放指令 stdout，外層 RPC 指令結果交標準配備投回。
+`phase` 的 `queued`／`prepared`、何時掛、掛上後怎麼收結果與回件，以 [S-401](../scheduling/operations.md) 的「預設 kernel 範本代掛工具的步驟」為正本；掛載參數見 [P-402](work.md) 的表（`parent_id` 填發起成員）。收齊後的 work-result 放指令 stdout，外層 RPC 指令結果交標準配備投回。
 
 kernel.json 欄位：
 
@@ -114,11 +114,11 @@ kernel.json 欄位：
 |---|---|
 | `request_id`、`seq`、`phase`、`boot_id`、`work_dir`、`finished_at_ms` | 原請求 ID、本 kernel 序號、工作進度（不是任務拆分）、接件 boot、工作目錄、完成時間；不重存請求 |
 | `submitter_uid` | 接件時原請求檔的擁有 UID，取消核權用 |
-| `owner_exec_uid`（可省） | 接件時記下的本 node inst 執行帳號 UID，取消核權的第二種主人 |
+| `owner_exec_uid`（可省） | 接件時記下、接件那一項任務實際的有效 UID（範本任務不帶 `user`，就是 node inst 的執行帳號；〔暫定〕任務帶了自己的 `user` 時是那個帳號），取消核權的第二種主人（[B-203](../base/execution.md)） |
 | `attempt_allocator`（可省） | 配出 attempt_id 的 node；省略＝材料的 node_id。讀目錄時核對前綴＝它的雜湊（P-402） |
 | `llm`（可省） | 〔審稿必-9〕LLM 工作才有：pool 任務維護的預留（P-811） |
 
-〔使用者方向 2026-09-29，第十七批〕同一 module 也接 `work.cancel`（格式見 [work P-411](work.md)）。核權、排隊中拿掉、在跑的記 `canceling` 後下一格送 `node.kill`（[B-613](../daemon.md)），以 [B-203](../base/execution.md) 為正本。輸出只給路徑；投遞失敗不重開工具，額度歸發起成員。
+〔使用者方向 2026-09-29，第十七批〕同一 module 也接 `work.cancel`（格式見 [work P-411](work.md)）；核權、排隊中拿掉、在跑的經通道 `node.kill` 砍掉（[B-613](../daemon.md)）以 [B-203](../base/execution.md) 為正本，`phase` 用 `canceling` 記「已要求取消、還沒收尾」。
 
 ## P-807．中斷與恢復〔B-603、B-613、P-110、C-03；工程預設〕
 
@@ -142,7 +142,7 @@ allowed_origins 列 `{node_id,via_node,via_uid}`：原發起者、明授的投�
 
 ## P-810．用量收集 module〔LLM 與工具兩條路線；工程預設〕
 
-`aos-kernel-usage-collect [--node N]`，人手 `aos kernel usage collect N`。讀直接成員已提交的 `state/agent/usage/<request_id>.json`（[schema](schemas/agent-usage.schema.json)），原格式存 `state/resources/member-usage/<member_id>/<request_id>.json`，觀測記 `state/kernel/usage-collect.json`（[schema](schemas/kernel-usage-state.schema.json)，狀態值含 missing／stale／invalid）。收集、替換、缺值與去重的行為依 [S-207](../scheduling/admission.md)。
+`aos-kernel-usage-collect [--node N]`，人手 `aos kernel usage collect N`。讀直接成員已提交的 `state/agent/usage/<request_id>.json`（[schema](schemas/agent-usage.schema.json)），原格式存 `state/resources/member-usage/<member_id>/<request_id>.json`，觀測記 `state/kernel/usage-collect.json`（[schema](schemas/kernel-usage-state.schema.json)，狀態值含 missing／stale／invalid；成員有 git 時記 `source_commit`，〔第十九批〕走 git 備援時 `source_commit` 為 null、改記成員最新完成紀錄的 `source_journal_seq`）。收集、替換、缺值與去重的行為依 [S-207](../scheduling/admission.md)。
 
 ## P-811．池與共享窗口〔P-405～408、S-301～304；工程預設〕
 
