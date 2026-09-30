@@ -6,18 +6,18 @@
 
 整理區（`settled/`）放**已經定案、整理好的 tick 與 daemon 基礎**，跟 kernel、agent、LLM、CLI 等其他篇分開。〔使用者方向 2026-09-30，第二十批「整理區」〕
 
-- **本輪假設沒有 cgroup、沒有 git。** 各篇的「下一步納入（git 與 cgroup）」段照原樣保留，不是現行規則；那兩樣另一輪才納入。
+- **git 與 cgroup 已納入，是「有就用」，不是前提。** 沒有時照原來的做法跑；有時的做法寫在各條（git：[B-630、B-622](tick.md)；cgroup：[B-605](daemon.md)、[B-634](tick.md)）。提交與還原只限 aos 自己的東西（`.aos/`、任務表、系統級任務動到的檔），使用者任務改的檔 aos 不管。
 - **要能自己讀懂。** 區內各篇互相連結；對區外的依賴盡量少，必要的列在下面「對外依賴」。
 - **條號不變。** 搬進來的條文條號一律不改，只換檔案位置；搬的時候只改寫法（短句、先講結論、表格、來源標記收到段末「依據：」）。之後的修正輪（[astra 審整理區](../../notes/reviews/2026-09-30/astra-settled-report.md)）照使用者裁定改了規則，改了什麼、哪些先寫成暫定，見下面「疑點」。「建議預設」「暫定」「記錄者理解」這些狀態標記仍留在對應規則旁。
-- **收送只管系統訊息佇列**：node 之間經 daemon 通道互送，由系統級任務 `aos-mq get`／`aos-mq post` 處理；檔案收件區 `requests/`、`responses/` 的收與寫是普通程式，aos 不管（[B-623、B-624](tick.md)）。
+- **收送只管系統訊息佇列**：node 之間經 daemon 通道互送請求與回應，由系統級任務 `aos-mq get`／`aos-mq post` 處理；檔案收件區 `requests/`、`responses/` 的收與寫是普通程式，aos 不管（[B-623、B-624](tick.md)）。
 - **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon.md`、`helper.md` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
 - **其他篇之後才放進來**：kernel、LLM、agent、CLI、基底其餘各篇、協議篇其餘各檔，等它們整理好、跟上新基礎，再一起放入。
 
 ## 閱讀順序
 
 1. [名詞](terms.md)（T-07 tick 核心、T-09 daemon 用語、T-10 四類程式）：先知道「核心、系統級任務、普通程式、停格檔、擋板檔、通道」這些詞。
-2. [通用 tick](tick.md)：核心四件事、結束碼紀錄、標準任務表範本、系統訊息佇列的取與送。
-3. [daemon](daemon.md)：登記、叫醒、重啟、收尾、熱重載、佈建、tick–daemon 通道。
+2. [通用 tick](tick.md)：核心四件事、結束碼紀錄、標準任務表範本、系統訊息佇列的取與送；git（`aos-git`，B-630、B-622）與每項一框（`aos-cg`，B-634）。
+3. [daemon](daemon.md)：登記、叫醒、重啟、收尾、熱重載、佈建、tick–daemon 通道；cgroup 子樹、node 框與上限（B-605）。runner 是什麼見[名詞 T-09](terms.md#t-09收尾排空停機熱重載逃生口)。
 4. [helper 與 aos-as](helper.md)：root helper 的界線、怎麼用別的帳號跑任務。
 5. 要看格式時：[node 協議](protocol/node.md)（P-200～213：資料夾、任務表、`aos-tick` 與各系統級任務、普通程式的 argv 與結束碼）→ [daemon 協議](protocol/daemon/README.md)（P-100～119：設定、IPC、通道、helper 私有通道、runner）。
 
@@ -27,7 +27,7 @@
 |---|---|---|
 | [README.md](README.md) | — | 新建 |
 | [terms.md](terms.md) | T-07、T-09、T-10 | 從 [名詞與責任](../terms.md) 拆出，原處留一行指向這裡 |
-| [tick.md](tick.md) | B-602、B-620～633 | 整篇從 `spec/tick.md` 搬來 |
+| [tick.md](tick.md) | B-602、B-620～634 | 整篇從 `spec/tick.md` 搬來；B-634（`aos-cg`）是納入 cgroup 時從 [B-202](../base/execution.md) 的草稿搬進來的新條 |
 | [daemon.md](daemon.md) | B-504、B-601、B-603～614 | 整篇從 `spec/daemon.md` 搬來 |
 | [helper.md](helper.md) | B-303 | 從 [身分與資源](../base/identity-resources.md) 拆出，原處留一行指向這裡 |
 | [protocol/node.md](protocol/node.md) | P-200～213 | 整篇從 `spec/protocol/node.md` 搬來 |
@@ -60,7 +60,7 @@
 | 版本演進、不認得的欄位、永遠禁止的鍵 | [C-07](../contracts.md) | 設定、IPC、通道格式 |
 | inst 第 1 版（任務是 inst 的超集；runner 照 inst 跑；子程式另開 session） | [base/inst](../base/inst.md) | B-620、B-601、B-609、B-625、P-201 |
 | 身分額度的歸屬 | [B-301](../base/identity-resources.md) | B-620、B-606 |
-| 執行器：串流收完、取消競態；`aos-cg` 草稿 | [B-202、B-203](../base/execution.md) | B-601、B-604、B-613 |
+| 執行器：串流收完、取消競態；OOM 證據 | [B-202、B-203、B-204](../base/execution.md) | B-601、B-604、B-613 |
 | 工作材料與結果（掛載行程用新的 inst 路徑、已放行後的結果處理） | [base/work](../base/work.md) | B-610、B-613 |
 | 清理（`aos-clean` 這項系統級任務的規則） | [B-404](../base/storage.md) | B-625、B-626、B-629、B-632 |
 | 收件區權限（通道送件拿它當判準）；權限落點 | [B-506](../base/transport.md) | B-614、P-208 |
@@ -89,10 +89,10 @@
 
 - [名詞與責任](../terms.md) 的 T-01、T-02、T-03、T-06、T-08（上表）。
 - [共用契約](../contracts.md) C-01、C-02、C-07。
-- [base/inst](../base/inst.md) 整篇；[身分與資源](../base/identity-resources.md) 的 B-301、B-302；[執行器](../base/execution.md) 的 B-201～204（B-202 內含 `aos-cg` 的下一步納入草稿）；[儲存](../base/storage.md) 的 B-404；[投件](../base/transport.md) 的 B-506。
+- [base/inst](../base/inst.md) 整篇；[身分與資源](../base/identity-resources.md) 的 B-301、B-302；[執行器](../base/execution.md) 的 B-201～204（`aos-cg` 已搬成整理區的 B-634）；[儲存](../base/storage.md) 的 B-404；[投件](../base/transport.md) 的 B-506。
 - [驗收入口](../conformance.md)：V-01 的正本表與條號預留表（已改成指向整理區的檔名）、V-03 第十九批與第二十批的 tick／daemon 場景（跟各條文末的驗收句重複，正本以條文為準）。
 - 上面列的 schema 與範例。
-- **待處理的舊格式**〔astra 審整理區同日定案後〕：待送封套 schema [msg-outbox](../protocol/schemas/msg-outbox.schema.json) 與範例 `examples/messages/outbox.*`（`validate.py` 還用 `outbox` 這個檔名對它）是檔案投件的格式，已不適用；`.aos/mq/post/` 的新格式（P-206）還沒有 schema。先不刪，下一輪換掉。
+- **待處理的舊格式**〔astra 審整理區同日定案後〕：待送封套 schema [msg-outbox](../protocol/schemas/msg-outbox.schema.json) 與範例 `examples/messages/outbox.*`（`validate.py` 還用 `outbox` 這個檔名對它）是檔案投件的格式，已不適用；`.aos/mq/post/` 與 `.aos/mq/failed/` 的新格式（P-206）還沒有 schema。先不刪，下一輪換掉。
 
 ## 疑點
 
@@ -111,31 +111,76 @@
 | CLI | [H-004](../cli/commands.md)（布局還列 `outbox/`、`alarms/`）、[H-030](../cli/mapping-and-alias.md)、[H-037](../cli/debugging.md) |
 | 契約與驗收 | [T-08](../terms.md)；[V-01](../conformance.md) 正本表第 08～11、27、28 列；V-03 收件與派出、-32601、壞收件、鬧鐘、git 斷電等場景 |
 
-### 這輪修正先寫成「暫定」的（astra 審整理區修正輪）
+### 納入 git 與 cgroup 後，區外的狀況
 
-1. B-601：本輪沒有 cgroup，受管範圍改成「runner 名下整棵樹」：runner 設 subreaper、主程式結束就清空名下再回報；daemon 收尾對 runner 送兩次 SIGTERM（第一次轉送、第二次清空）。runner 自己意外死掉時，掛回 daemon 的程序一律殺掉，那一格記 `unknown`。
-2. B-609、B-303：`aos-as` 被殺後，runner 從回報 pipe 斷線發現、清空原指令；從 `aos-as` 結束到 runner 清完之間，本格下一項可能短暫重疊。沒有另設取消介面。
-3. B-609：`aos-as` 寫的暫存 inst 要讓目標帳號讀得到，才過得了 runner 的來源核對；怎麼給讀權（群組？）還沒定。
-4. B-633：開格那一次要 fsync（暫存檔與目錄），每項之後只 fsync 暫存檔；沒有紀錄的格不佔 `seq`；本格紀錄失效後不再寫、不設 `AOS_TICK_RECORD`；兩份舊紀錄都讀不懂時每格都沒有紀錄，要人手修。
-5. B-620「誰驗什麼」：核心看到缺 `kind`、`system.x` 照跑，只有恢復前驗證（B-625）擋。
-6. B-625、P-207：`aos-config-add` 有擋板時回 125；結束碼撤掉 3（改到下一步納入 git）。
-7. B-606：名稱綁 UID 只在本次 daemon 存續期內有效，不存檔。
-8. daemon「時間」、B-610、B-607（裁-2 落地）：`mount_diag_ttl_ticks` 數上層那筆登記的 `tick_seq`，是「時長一律數 `seq`」的唯一例外；pause 存檔間隔與事項批次寫出仍用毫秒（daemon 沒有上層的格可數）。runner 的 `--timeout-ms` 照第二十批疑-11 仍是毫秒。
-9. B-623（裁-1 落地）：只有 `aos-mq get` 取佇列是 node 內的約定，daemon 分不出是哪一項在取。沒有通道時 `aos-mq` 回 0。
-10. B-624：`aos-mq post` 送不了的（`forbidden`、`not_registered` 等）直接移除不重試；鬧鐘撤；佇列只收請求物件，**回應怎麼回還沒定**（原本回應走檔案投件，現在 aos 不管檔案投件）。`.aos/mq/post/` 的格式暫定，schema 未補。
-11. B-614：通道送件仍拿收件方 `requests/` 的寫權當授權判準，但 `requests/` 已不歸 aos 管。
-12. B-629：範本沒有另列「檔案收件程式」，只在使用者任務那一列註明檔案收送也是普通任務。kernel、agent 範本（P-814、P-715）與範本範例還沒改（`validate.py` 過渡期兩種項數都收）。
-13. B-605、T-09：逃生口本輪照第二十批疑-13 暫定撤；但納入 cgroup 輪的裁定疑-7 已改成「准、不管」，下一輪要對齊。
-14. B-630（下一步納入草稿，本輪沒動設計）：第 4 步「刪已提交的收件原件」與「取代本輪由收件任務照 `last.json` 刪」，跟「檔案收件 aos 不管」對不上；納入 git 那輪要對齊。
+**已改到不矛盾**（只換掉「本輪／下一步納入」這類句子，沒重寫）：terms T-01、T-06；spec 入口的定位與依賴段；contracts C-01（格數斷電不倒退只在開 `--firstdo-fsync` 時保證）、C-05 殘句、C-07 第 3 點；base [B-202、B-204](../base/execution.md)（`aos-cg` 改指 B-634）、[storage 篇首與 B-404](../base/storage.md)、[transport 篇首、B-502、B-503 驗收](../base/transport.md)、[inst 撤回範圍句](../base/inst.md)、[B-302](../base/identity-resources.md)、base/README；[P-603、P-606](../protocol/ops.md)；[P-305](../protocol/messages.md)；[A-102](../agent/configuration.md) 第 15 行；V-01～V-03。
+
+**仍跟新規則衝突、下一輪要改**：
+
+| 篇 | 條號 | 衝突在哪 |
+|---|---|---|
+| agent | [A-102](../agent/configuration.md)（第 17、21、24 行） | 「由標準配備的 git 提交」「node 是 dirty 就拒絕」；現在 `config/` 不在 aos 範圍、`aos-config-add` 不提交 |
+| agent | [A-403 等](../agent/tools.md) | 「標準配備」「cgroup 讀數；備援」字樣 |
+| base | [B-503](../base/transport.md) | 補投從 git 歷史撈 `.aos/outbox/`（檔案收件已不歸 aos） |
+| base | [storage](../base/storage.md) 第 12、31 行 | 「git 還原不碰」與提交語意是整格原子的舊說法 |
+| 範本 | [P-814](../protocol/kernel-tasks.md)、[P-715](../protocol/agent-tasks.md) | 還沒有有 git 版範本 |
+| scheduling | [S-203、S-205](../scheduling/admission.md) | kernel 資源任務經 `cgroup_limits` 寫上限、沒 cgroup 時只記帳，要核對 |
+| CLI | [H-004、H-036](../cli/commands.md) | `aos node new` 建初始 commit、建 `.aos/mq/get/` 並設權限、`--firstdo-fsync` 旗標 |
+| 原型程式 | `proto6/proto/aosproto/config.py` | 還把 `cgroup_create` 當合法佈建動作 |
+
+### 納入 git 與 cgroup：這輪先寫成「暫定」的
+
+使用者裁定見[第二十批](../../notes/verdicts/11-tick-as-unit.md)「納入 cgroup 與 git：疑點裁定」與其後各條；沒裁到、要取捨的，選了最少改動，列在這裡。
+
+1. **B-630「系統級任務動到的檔」怎麼認**：兩個相鄰存檔點之間的項**全是** `kind:"system"` 時，這一段的改動全算 aos 範圍；混了使用者任務的段只算 `.aos/` 底下的。`kind` 由 `aos-git` 照紀錄的 `id` 去任務表查，查不到算不是系統級任務。
+2. **B-630、P-205 使用者任務怎麼存自己的檔**：裁定說「其他 kind 的任務要存檔就自己呼叫 `aos-git`」，但提交範圍只限 aos 的東西。暫定成 `aos-git mark <路徑…>`：帶的路徑從那一點起到本格結束算進 aos 範圍。
+3. **B-630 失敗還原到「往前最近的存檔點」**，不分範本放的或任務自己打的（記錄者建議，使用者未另表示）。
+4. **B-629 第二個存檔點的位置**：使用者給的順序是「使用者任務 → 清理 → 存檔點 → git 收尾」；這裡改成「使用者任務 → 存檔點 → 清理 → git 收尾」。git 收尾本來就處理最後一段，放在清理前才能讓清理自成一段、被認成系統級任務動到的檔（第 1 條），清理失敗也不會連帶還原使用者任務寫的訊息。存檔點數量不變。範本 `id`（`git-open`、`mark-get`、`mark-user`、`git-close`）也是暫定。
+5. **B-623、B-624、B-630 作廢時的訊息**：這格作廢（停格檔、當機）時，`mq-get` 這格取出、寫進 aos 範圍的訊息被還原掉，等於丟了（daemon 已刪）；`mq-post` 移除已送檔這一步要到下一格 close 才提交，下一格作廢就會重送，靠 ID 去重。
+6. **B-622「不能用」與「故障」的界線**：只有開頭檢查（沒裝、低於 2.36、不是 repo、讀不了 HEAD）算不能用，照裁定只警告、照沒 git 做；檢查過了、做到一半才失敗的（還原、commit 失敗，HEAD 被換，任務 id 當不了 ref 名，沒有紀錄）算故障：寫擋板＋停格檔。任務 id 當不了 ref 名原計畫只建停格檔，這裡改成也寫擋板，免得每格都默默作廢。
+7. **B-625、P-207 `config/` 不在 aos 範圍**：照「只限 aos 自己的東西」推得；`aos-config-add` 也不自己提交（原計畫的結束碼 3 不恢復）。
+8. **B-605、B-601 某個 node 建框失敗**：只有那個 node 照沒有 cgroup 跑、寫一件事項，別的 node 照常（計畫建議預設）。
+9. **B-609 `cgroup_limits` 不收本格憑證**：計畫建議可帶可不帶；這裡沒採用，照舊只看 socket 對面的帳號（少改一個 schema）。
+
+### 修正輪追加裁定：還留暫定的
+
+10. **B-633、B-601 `--firstdo-fsync` 怎麼傳下去**：daemon 碰不到 inst 的 argv，所以在它開的每一格放環境變數 `AOS_TICK_FIRSTDO_FSYNC=1`，`aos-tick` 看到就等於帶了旗標。開了旗標時每項之後照舊 fsync 暫存檔。daemon 的指令是 `aos daemon`，使用者原話寫的是 `aos-daemon`。
+11. **B-614、P-200 佇列授權看的資料夾**：選收件 tick 的 `.aos/mq/get/`（要能在那裡建檔）。它只當判準，`aos-mq get` 要不要拿來放東西自己定。建 node 的工具要記得建它、設好權限（區外 H-004 還沒跟上）。
+12. **B-624、P-206 送不出去的失敗紀錄**：搬到 ignored 的 `.aos/mq/failed/<id>.json`、加上代碼；由 `mq-post` 每次開始送之前清掉舊的（所以寄件任務在下一格、`mq-post` 跑之前讀得到）。格式沒有 schema。
+13. **B-623、B-624 回應走佇列**：`.aos/mq/post/<id>.json` 的檔名用訊息的 `id`；同一個 node 同時要送出同 ID 的請求與回應時會撞名，沒處理。
+
+### 前一輪留下、仍是暫定的（astra 審整理區修正輪）
+
+14. B-609、B-303：`aos-as` 被殺後，runner 從回報 pipe 斷線發現、清空原指令；從 `aos-as` 結束到 runner 清完之間，本格下一項可能短暫重疊。沒有另設取消介面。
+15. B-609：`aos-as` 寫的暫存 inst 要讓目標帳號讀得到，才過得了 runner 的來源核對；怎麼給讀權（群組？）還沒定。
+16. B-633：沒有紀錄的格不佔 `seq`；本格紀錄失效後不再寫、不設 `AOS_TICK_RECORD`；兩份舊紀錄都讀不懂時每格都沒有紀錄，要人手修。
+17. B-620「誰驗什麼」：核心看到缺 `kind`、`system.x` 照跑，只有恢復前驗證（B-625）擋。
+18. B-625、P-207：`aos-config-add` 有擋板時回 125。
+19. B-606：名稱綁 UID 只在本次 daemon 存續期內有效，不存檔。
+20. B-610、B-607（裁-2 落地）：`mount_diag_ttl_ticks` 數上層那筆登記的 `tick_seq`，是「時長一律數 `seq`」的唯一例外。runner 的 `--timeout-ms` 照第二十批疑-11 仍是毫秒。
+21. B-623（裁-1 落地）：只有 `aos-mq get` 取佇列是 node 內的約定，daemon 分不出是哪一項在取。沒有通道時 `aos-mq` 回 0。
+22. B-624：鬧鐘撤；`.aos/mq/post/` 的格式暫定，schema 未補。
+23. B-629：範本沒有另列「檔案收件程式」。kernel、agent 範本（P-814、P-715）與範本範例還沒改，也還沒有有 git 版（`validate.py` 過渡期兩種項數都收）。
+
+### 這輪關掉的
+
+- 舊第 1 題（B-601 runner 當收屍人）：使用者確認定案，拿掉暫定。
+- 舊第 4 題的「開格一定 fsync」：改成預設不 fsync、格數不倒退不保證，除非開 `--firstdo-fsync`（B-633）；剩下的列在第 10、16 題。
+- 舊第 8 題的一半：pause 存檔間隔與事項批次保留毫秒，使用者裁定。
+- 舊第 10 題的「回應怎麼回」：回應也走 `aos-mq`（B-623、B-624、B-614、P-119）；送不出去的改成留一格失敗紀錄（第 12 題）。
+- 舊第 11 題（佇列授權看 `requests/`）：改看 `.aos/mq/get/`（第 11 題）。
+- 舊第 13 題（逃生口）：疑-7 准，照第十八批 Q19：aos 不管，`kill_escape_cgroups` 恢復、預設不殺（B-605、T-09）。
+- 舊第 14 題（草稿的「開格刪收件原件」）：疑-4 下游不認得 git，那一步拿掉（B-630）。
+- 納入 cgroup 與 git 計畫的疑-1～12：照使用者裁定落進 B-620、B-622～625、B-629、B-630、B-632、B-602（git）與 B-601、B-603～606、B-609、B-611、B-613、B-634（cgroup）；計畫裡的救援 ref（疑-3 b）、close 前景 gc、`cgroup_create`／`cgroup_delegate` 兩個佈建動作（疑-10 b）都沒採用。
 
 ### 基礎條文依賴 kernel／agent 規則（已在上面「使用例」標出，留待其他篇放進來時再定）
 
-15. B-601、B-607：事項怎麼處理、`issue_id` 沿用規則依賴 S-405；事項檔格式依賴 P-601。
-16. B-603、B-604（排空停）、B-613、B-624：被收尾或結果不明的工作怎麼判讀，依賴 S-401 的 unknown 規則。
-17. B-504、B-604（停用與退役）、B-606（別每格重登）：補查、成員登記依賴 S-202、P-802；條文已標「使用例：kernel 那側」。
-18. B-614：急件越過上層排程任務的 `max_active_members`（S-202）。
-19. B-605：沒有 quota 時磁碟用量由磁碟資源任務量（S-203）。
+24. B-601、B-607：事項怎麼處理、`issue_id` 沿用規則依賴 S-405；事項檔格式依賴 P-601。
+25. B-603、B-604（排空停）、B-613、B-624：被收尾或結果不明的工作怎麼判讀，依賴 S-401 的 unknown 規則。
+26. B-504、B-604（停用與退役）、B-606（別每格重登）：補查、成員登記依賴 S-202、P-802；條文已標「使用例：kernel 那側」。
+27. B-614：急件越過上層排程任務的 `max_active_members`（S-202）。
+28. B-605：沒有 quota 時磁碟用量由磁碟資源任務量（S-203）。
 
-### 已在這輪修掉的舊疑點
+### 更早幾輪修掉的舊疑點
 
 舊第 11、12（git 殘句）→ B-607、P-207 改寫；13、14、15（cgroup 沒標下一步）→ P-208、B-303、B-611 已標；16 → B-626 改成 B-601、B-603～605、B-609；17～25（行為只寫在協議篇）→ 已搬回 B-601、B-603、B-606、B-620、B-633，協議篇只留連結；26 → P-101 寫明九種不含 `spawn_as`；27 → P-119 改寫。舊第 1 題的 A-102 依賴改成 B-625 為通用正本、A-102 只管領域驗證。

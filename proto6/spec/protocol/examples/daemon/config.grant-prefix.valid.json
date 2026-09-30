@@ -23,9 +23,7 @@
       "provision": {
         "actions": [
           "account_create",
-          "cgroup_create",
           "cgroup_limits",
-          "cgroup_delegate",
           "group_create",
           "group_add_member",
           "chgrp"

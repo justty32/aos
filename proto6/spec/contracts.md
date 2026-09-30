@@ -20,7 +20,7 @@ node id 是資料夾路徑，依 [T-02](terms.md)。其餘用作檔名的 reques
 〔建議預設，未拍板〕寫法：
 
 - 欄位名：時長 `*_ticks`、第幾格 `*_seq`、毫秒時長 `*_ms`、毫秒時間點 `*_at_ms`；schema 型別見 [P-002](protocol/README.md)。
-- 本 node 的格數是核心結束碼紀錄的 `seq`（[B-633](settled/tick.md)），沒 daemon 也有、跨重啟不倒退；daemon 登記的 `tick_seq` 只用在「叫醒後等新格」，不拿來算時長。
+- 本 node 的格數是核心結束碼紀錄的 `seq`（[B-633](settled/tick.md)），沒 daemon 也有、跨重啟接著數；斷電不倒退只在開了 `--firstdo-fsync` 時保證，否則不保證；daemon 登記的 `tick_seq` 只用在「叫醒後等新格」，不拿來算時長。
 - 〔記錄者理解〕任務表上的任務由它那個 tick 安排，所以任務自己用的時長（保留期、清理間隔、鬧鐘）算本 node 的格；kernel 對成員的判斷（失聯、重試）算 kernel 的格。
 - 〔astra 審整理區裁定裁-2〕daemon 的計時：叫醒週期、收尾寬限、排空上限這類外部／作業系統層的保留毫秒；政策性保留期（掛載診斷保留期）改用所屬上層的格數；逐項見 [daemon 篇「時間」](settled/daemon.md)。作業系統與 cgroup 的時間、量測數字、只給人看的紀錄時間也保留原單位。
 - 〔暫定，第二十批疑-12〕預設值直接用格數訂，說明裡附「週期 1 秒時約等於…」，不從毫秒換算。
@@ -57,7 +57,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 ## C-05．舊提交交易
 
-（09-29 重寫：已刪；〔第二十批〕git 提交／還原與組下一步納入，草稿見 [tick](settled/tick.md) 篇末。）
+（09-29 重寫：已刪；git 提交／還原與組見 [B-630、B-622](settled/tick.md)。）
 
 ## C-06．最小例子與保留
 
@@ -69,7 +69,7 @@ unknown 依 [S-401](scheduling/operations.md) 放著。可信晚到結果保留�
 
 1. **小改不升版**：加可選欄位、放寬值域，以及在寫明「開放」的列舉加值（例如 kernel 自訂的任務種類與資源名稱，見 [T-06](terms.md)）。讀的一方遇到不認得的欄位直接忽略。
 2. **不相容的大改才升版**：刪欄位、改意思、改成必填、收窄值域、在沒寫明開放的列舉加值，都要升 `version`（inst 與 tasks 升 `_metainfo._version`）。新程式讀目前版與前一版、寫目前版；遇到比自己新的版本仍拒絕，不猜讀。
-3. **批次轉檔指令 `aos migrate`**：把舊版檔一次轉成目前版，範圍含 node 裡的持久檔，以及 daemon 的 `state.json` 與設定檔。指令形狀見 [H-004](cli/commands.md)。〔建議預設，未拍板〕node 裡的檔在 node 鎖內轉（〔下一步納入 git 時補〕有 git 時自己提交一次，同 `aos-config-add`）；daemon 的 `state.json` 只在 daemon 停著時轉。〔使用者方向 2026-09-30，第二十批疑點裁定 8〕這類在 tick 之外取鎖改檔的指令當成外部世界，aos 不管。
+3. **批次轉檔指令 `aos migrate`**：把舊版檔一次轉成目前版，範圍含 node 裡的持久檔，以及 daemon 的 `state.json` 與設定檔。指令形狀見 [H-004](cli/commands.md)。〔建議預設，未拍板〕node 裡的檔在 node 鎖內轉（不自己提交，同 `aos-config-add`；`.aos/` 底下的改動由下一格的 `aos-git close` 跟著提交，[B-602](settled/tick.md)）；daemon 的 `state.json` 只在 daemon 停著時轉。〔使用者方向 2026-09-30，第二十批疑點裁定 8〕這類在 tick 之外取鎖改檔的指令當成外部世界，aos 不管。
 
 〔使用者方向 2026-09-30，第十八批〕**哪裡放寬**：
 

@@ -4,6 +4,9 @@
   "method": "daemon.helper.provision",
   "params": {
     "node_id": "/srv/aos/member",
-    "action": "cgroup_create"
+    "action": "cgroup_limits",
+    "limits": {
+      "memory_max_bytes": 536870912
+    }
   }
 }

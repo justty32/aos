@@ -54,22 +54,6 @@
           "$ref": "common.schema.json#/$defs/NodeId"
         },
         "action": {
-          "const": "cgroup_create"
-        }
-      },
-      "required": [
-        "node_id",
-        "action"
-      ],
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "properties": {
-        "node_id": {
-          "$ref": "common.schema.json#/$defs/NodeId"
-        },
-        "action": {
           "const": "cgroup_limits"
         },
         "limits": {
@@ -151,22 +135,6 @@
           "$ref": "common.schema.json#/$defs/NodeId"
         },
         "action": {
-          "const": "cgroup_delegate"
-        }
-      },
-      "required": [
-        "node_id",
-        "action"
-      ],
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "properties": {
-        "node_id": {
-          "$ref": "common.schema.json#/$defs/NodeId"
-        },
-        "action": {
           "const": "group_create"
         },
         "group": {
@@ -232,7 +200,7 @@
       "additionalProperties": false
     },
     {
-      "description": "〔第十九批疑點裁定 10；第二十批呼叫者改 aos-as〕以指定帳號開程序：只收帶憑證的通道請求；同一個 sendmsg 以 SCM_RIGHTS 附鎖 fd、回報 pipe 寫端、stdin、stdout、stderr 共 5 個 fd（運行時核對）；frame 下一步納入 cgroup，本輪帶了回 unsupported",
+      "description": "〔第十九批疑點裁定 10；第二十批呼叫者改 aos-as〕以指定帳號開程序：只收帶憑證的通道請求；同一個 sendmsg 以 SCM_RIGHTS 附鎖 fd、回報 pipe 寫端、stdin、stdout、stderr 共 5 個 fd（運行時核對）；frame＝aos-as 所在的 aos-cg task-* 框，有 cgroup 時才收，沒有時帶了回 unsupported",
       "type": "object",
       "properties": {
         "node_id": {

@@ -98,7 +98,7 @@ params 只有 `node_id`。result 欄位：
 
 掛載行程只有一格，`tick_seq` 為 1。
 
-**`cgroup`**：本輪沒有 cgroup，一律為 null（[B-605](../../daemon.md)，第二十批進行順序）。〔下一步納入 cgroup 後〕沒有活的配置（含沒有 cgroup）為 null，否則回實際讀到的 `{path,limits}`。`path` 是 node 分支 `n-<h>`（掛載行程是 `mount-<h>`），不是 `tick` 葉（命名見 [B-605](../../daemon.md)）。limits 的 CPU 用 `{quota_us,period_us}`，memory／pids 沿 P-107，無上限回字串 `"max"`，未啟用的 controller 省略。讀取失敗怎麼處理見 [B-607](../../daemon.md)。
+**`cgroup`**：沒有 cgroup、或這個 node 退回沒有框時為 null（[B-605](../../daemon.md)）；否則回實際讀到的 `{path,limits}`。`path` 是 node 分支 `n-<h>`（掛載行程是 `mount-<h>`），不是 `tick` 葉（命名見 [B-605](../../daemon.md)）。limits 的 CPU 用 `{quota_us,period_us}`，memory／pids 沿 P-107，無上限回字串 `"max"`，未啟用的 controller 省略。讀取失敗怎麼處理見 [B-607](../../daemon.md)。
 
 ### 最近一格 `last_tick`
 
@@ -133,7 +133,7 @@ params 只有 `node_id`。result 欄位：
 
 人手指令：`aos node ls --socket S` 用 `node.ls`，`aos node show N --socket S` 用 `node.show`。
 
-範例：[查一個 node](../../../protocol/examples/daemon/get_result.minimal.valid.json)（本輪 `cgroup:null`）、〔下一步納入 cgroup 的草稿〕[有 cgroup 時查一個 node](../../../protocol/examples/daemon/get_result.cgroup-draft.valid.json)（`cgroup.path` 是 `/srv/aos/team` 為頂層、子樹根 `/sys/fs/cgroup/aos` 時 `/srv/aos/team/member` 的 `n-<h>`）、[已結束的掛載行程未啟動](../../../protocol/examples/daemon/get_result.launch_failed.valid.json)、[列表](../../../protocol/examples/daemon/list_result.minimal.valid.json)；反例：[launch_failed 卻 exit 0](../../../protocol/examples/daemon/get_result.launch_success.invalid.json)、[缺 running](../../../protocol/examples/daemon/get_result.missing_running.invalid.json)、[running 卻有 exit_code](../../../protocol/examples/daemon/list_result.running_exit.invalid.json)、〔第十八批〕[最近一格缺 tick_seq](../../../protocol/examples/daemon/get_result.missing_tick_seq.invalid.json)。
+範例：[查一個 node](../../../protocol/examples/daemon/get_result.minimal.valid.json)（沒有 cgroup，`cgroup:null`）、[有 cgroup 時查一個 node](../../../protocol/examples/daemon/get_result.cgroup.valid.json)（`cgroup.path` 是 `/srv/aos/team` 為頂層、子樹根 `/sys/fs/cgroup/aos` 時 `/srv/aos/team/member` 的 `n-<h>`）、[已結束的掛載行程未啟動](../../../protocol/examples/daemon/get_result.launch_failed.valid.json)、[列表](../../../protocol/examples/daemon/list_result.minimal.valid.json)；反例：[launch_failed 卻 exit 0](../../../protocol/examples/daemon/get_result.launch_success.invalid.json)、[缺 running](../../../protocol/examples/daemon/get_result.missing_running.invalid.json)、[running 卻有 exit_code](../../../protocol/examples/daemon/list_result.running_exit.invalid.json)、〔第十八批〕[最近一格缺 tick_seq](../../../protocol/examples/daemon/get_result.missing_tick_seq.invalid.json)。
 
 驗收見 [B-607](../../daemon.md)、[B-610](../../daemon.md)。
 

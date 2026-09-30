@@ -6,28 +6,29 @@
 
 ### 指令與輸入輸出
 
-完整 argv：`aos daemon --config /absolute/daemon.json [--create-cgroup]`。前景執行，stdin 不讀。
+完整 argv：`aos daemon --config /absolute/daemon.json [--create-cgroup] [--firstdo-fsync]`。前景執行，stdin 不讀。兩個旗標都只在啟動時讀，改了要重開（[B-608](../../daemon.md)）。
 
-`--create-cgroup` 等於設定的 `create_cgroup: true`，兩處任一開著就算開。〔下一步納入 cgroup〕本輪只驗形狀、不生效（[B-605](../../daemon.md)）。
+- `--create-cgroup` 等於設定的 `create_cgroup: true`，兩處任一開著就算開（[B-605](../../daemon.md)）。
+- `--firstdo-fsync`〔使用者方向 2026-09-30，修正輪暫定的裁定；使用者原話 `aos-daemon --firstdo-fsync`〕：開了就在它開的每一格環境放 `AOS_TICK_FIRSTDO_FSYNC=1`，讓那一格開格時 fsync（[B-633](../../tick.md)、[B-601](../../daemon.md)）。
 
 | 介面 | 內容 |
 |---|---|
-| stdout | 啟動時印 `helper_pid=<PID>`（沒 helper 印 `none`）；node 問題的警告；熱重載每次一行 `reload applied=<欄位,…> restart_required=<欄位,…>`（沒有就留空）；設定有不認得的欄位時一行 `config_unknown_fields=<欄位,…>`（[C-07](../../../contracts.md)）。本輪不印 cgroup 或 git 的偵測行（[B-605](../../daemon.md)） |
+| stdout | 啟動時印 `helper_pid=<PID>`（沒 helper 印 `none`）；node 問題的警告；熱重載每次一行 `reload applied=<欄位,…> restart_required=<欄位,…>`（沒有就留空）；設定有不認得的欄位時一行 `config_unknown_fields=<欄位,…>`（[C-07](../../../contracts.md)）；啟動時一行 `cgroup=on` 或 `cgroup=off`（`off` 時 stderr 另印一次警告），不印 git 的偵測行（[B-605](../../daemon.md)） |
 | stderr | 只印 daemon 自身原因造成的錯誤 |
 | 讀 | 設定檔；登記 inst 的原始 bytes（讀不到怎麼辦見 [B-601](../../daemon.md)） |
 | 寫 | socket；`state_dir` 下的恢復檔與鎖；node 的 `.aos/attention/`；P-110 的掛載行程未啟動旁檔 |
-| 環境 | 不作授權。daemon 只替它開的程序放兩個通道變數（[P-117](channel.md)），自己不讀 `AOS_*` |
+| 環境 | 不作授權。daemon 只替它開的程序放兩個通道變數（[P-117](channel.md)），帶了 `--firstdo-fsync` 時另放 `AOS_TICK_FIRSTDO_FSYNC=1`；自己不讀 `AOS_*` |
 | 訊號 | SIGINT／SIGTERM 停機（P-114、[B-604](../../daemon.md)）；SIGHUP 熱重載（[B-608](../../daemon.md)）；其他訊號由父程序看 wait 狀態 |
 
-依據：第十八批（熱重載輸出行、SIGHUP）；第十九批（通道變數）；第二十批（撤第十九批的 `standard: cgroup=full|fallback` 偵測行）。
+依據：第十八批（熱重載輸出行、SIGHUP）；第十九批（通道變數）；第二十批（撤第十九批的 `standard: cgroup=full|fallback` 偵測行）；納入 cgroup 與 git 改寫計畫（`cgroup=on|off`）。
 
 ### 結束碼
 
 | 碼 | 意思 |
 |---|---|
 | `0` | 正常停機 |
-| `2` | 用法或設定錯，還沒開始做事。開了 `create_cgroup`（設定或 `--create-cgroup` 任一處）卻缺 `cgroup_root` 也算這種，本輪照樣驗（第十七批） |
-| `125` | daemon 自己失敗：最低需求不合（缺 cgroup 不算，第十九批）、取不到排他鎖、初始化、清空或運行中失敗；stderr 說明。〔下一步納入 cgroup〕明寫的 `cgroup_root` 準備不好也回 125 |
+| `2` | 用法或設定錯，還沒開始做事。開了 `create_cgroup`（設定或 `--create-cgroup` 任一處）卻缺 `cgroup_root` 也算這種（第十七批） |
+| `125` | daemon 自己失敗：最低需求不合（缺 cgroup 不算，第十九批）、取不到排他鎖、初始化、清空或運行中失敗；明寫的 `cgroup_root`（或開了 `create_cgroup`）卻準備不好、或取不到它的 cgroup 子樹鎖（[B-605](../../daemon.md)、[B-611](../../daemon.md)）；stderr 說明 |
 
 啟動自檢見 [B-605](../../daemon.md)，排他鎖見 [B-611](../../daemon.md)。
 
@@ -44,18 +45,18 @@
 | `socket_path` | 必填；正規化絕對檔案路徑，例如 `/run/user/1000/aos/daemon.sock`，多 UID 部署可用 `/run/aos/daemon.sock` |
 | `state_dir` | 必填；daemon 可寫的絕對目錄，存 `state.json`、自身 `attention/` 與 PID 提示檔 |
 | `pause_save_interval_ms` | 可省，正整數，預設 1000；pause 批次存檔間隔（[B-603](../../daemon.md)） |
-| `shutdown_grace_ms` | 可省，非負毫秒，預設 2000；收尾時 SIGTERM 到 SIGKILL 的寬限（下一步納入 cgroup 後是到 `cgroup.kill`，[B-604](../../daemon.md)） |
+| `shutdown_grace_ms` | 可省，非負毫秒，預設 2000；收尾時第一次 SIGTERM 到第二次 SIGTERM（runner 清空）的寬限；有 cgroup 時之後再 `cgroup.kill` 兜底（[B-604](../../daemon.md)） |
 | `stop_mode`〔第十八批〕 | 可省，`"immediate"`（預設）或 `"drain"`；SIGINT／SIGTERM 走哪種停機（B-604） |
 | `drain_timeout_ms`〔第十八批〕 | 可省，正整數毫秒，預設 600000；排空停機最多等多久。跟 `shutdown_grace_ms` 是兩個值 |
-| `kill_escape_cgroups`〔第十八批；〔暫定，第二十批疑-13〕撤〕 | 逃生口不再提供（[B-605](../../daemon.md)），這欄撤出 schema；舊設定寫了照 [C-07](../../../contracts.md) 忽略 |
+| `kill_escape_cgroups`〔第十八批 Q19；納入 cgroup 與 git 疑-7〕 | 可省，布林，預設 false；true＝daemon 重啟與解除登記時，連 node 自開的子框（逃生口）一起收尾（[B-605](../../daemon.md)）。沒有 cgroup 時沒作用 |
 | `mount_diag_max`〔第十八批；第十九批改名，原 `once_diag_max`〕 | 可省，非負整數，預設 1024；掛載行程的診斷最多留幾筆，0＝不留（[B-610](../../daemon.md)） |
 | `mount_diag_ttl_ticks`〔第十八批；第十九批改名；astra 審整理區裁-2 改成格數，取代 `mount_diag_ttl_ms`〕 | 可省，正整數，預設 1000；掛載行程的診斷結束後，掛它的上層再開幾格就淘汰（[B-610](../../daemon.md)）。舊設定寫的 `mount_diag_ttl_ms` 照 [C-07](../../../contracts.md) 忽略 |
-| `cgroup_root`〔下一步納入 cgroup；本輪只驗形狀、不生效〕 | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑；省略就用 daemon 自己目前所在的 cgroup，用不了就照沒有 cgroup 做。「準備好」與子層搬移見 [daemon 篇末](../../daemon.md) |
-| `create_cgroup`〔下一步納入 cgroup；本輪只驗形狀、不生效〕 | 可省，布林，預設 false；true＝子樹不在時 daemon 自己建（同 `--create-cgroup`），此時 `cgroup_root` 必填（B-605） |
+| `cgroup_root` | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑。明寫了卻準備不好就回 125。省略就自動偵測：daemon 所在的單位經 systemd 確認 `Delegate=yes` 才用它，否則照沒有 cgroup 做。「準備好」、偵測與子層搬移見 [B-605](../../daemon.md) |
+| `create_cgroup` | 可省，布林，預設 false；true＝子樹不在時 daemon 自己建（同 `--create-cgroup`），此時 `cgroup_root` 必填（B-605） |
 | `disable` | 可省，不重複字串陣列，目前只認 `quota`；強制關掉啟動時偵測到的可選功能（B-605） |
 | `roots` | 必填，頂層登記陣列；每項見下面「頂層項」，`node_id` 不可重複 |
 
-範例：[最小設定](../../../protocol/examples/daemon/config.minimal.valid.json)、[開了 create_cgroup 的設定](../../../protocol/examples/daemon/config.create-cgroup.valid.json)、[反例：開了卻沒寫 cgroup_root](../../../protocol/examples/daemon/config.create-cgroup-no-root.invalid.json)、[反例：版本 2](../../../protocol/examples/daemon/config.version.invalid.json)、〔第十八批〕[前綴與範圍額度、排空與新欄位，另帶一個不認得的欄位仍收](../../../protocol/examples/daemon/config.grant-prefix.valid.json)、[反例：範圍涵蓋系統帳號](../../../protocol/examples/daemon/config.grant-range-system.invalid.json)、[反例：空前綴](../../../protocol/examples/daemon/config.grant-prefix-empty.invalid.json)。
+範例：[最小設定](../../../protocol/examples/daemon/config.minimal.valid.json)、[開了 create_cgroup 的設定](../../../protocol/examples/daemon/config.create-cgroup.valid.json)、[使用者委派（省略 cgroup_root）](../../../protocol/examples/daemon/config.user-delegate.valid.json)、[反例：開了卻沒寫 cgroup_root](../../../protocol/examples/daemon/config.create-cgroup-no-root.invalid.json)、[反例：版本 2](../../../protocol/examples/daemon/config.version.invalid.json)、〔第十八批〕[前綴與範圍額度、排空與新欄位，另帶一個不認得的欄位仍收](../../../protocol/examples/daemon/config.grant-prefix.valid.json)、[反例：範圍涵蓋系統帳號](../../../protocol/examples/daemon/config.grant-range-system.invalid.json)、[反例：空前綴](../../../protocol/examples/daemon/config.grant-prefix-empty.invalid.json)。
 
 ### 頂層項
 
@@ -97,7 +98,7 @@
 
 - 權限預設：父目錄 0750、socket 0660，群組由部署配置（首版不用 ACL）。
 - 每個 `socket_path` 對應一把同目錄的 `daemon.lock` 獨占鎖。
-- socket 的準備、殘留 socket 的清理、`state_dir` 的排他鎖（下一步納入 cgroup 後另加 cgroup 子樹）見 [B-611](../../daemon.md)。
+- socket 的準備、殘留 socket 的清理、`state_dir` 的排他鎖（有 cgroup 時另加 cgroup 子樹那把）見 [B-611](../../daemon.md)。
 - 可連 socket 不等於通過授權（[B-601](../../daemon.md)）。
 
 ## P-102．sudo 與 helper 生死〔使用者方向 2026-09-29〕

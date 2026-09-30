@@ -29,7 +29,9 @@
 
 `state_dir/state.json` 用 [daemon-state schema](../../../protocol/schemas/daemon-state.schema.json)。持久檔，不認得的欄位忽略（[C-07](../../../contracts.md)）。
 
-形狀：`{version:1, clean_shutdown, registrations:[...]}`。
+形狀：`{version:1, clean_shutdown, cgroup_root_last?, registrations:[...]}`。
+
+**`cgroup_root_last`**〔納入 cgroup 與 git 疑-8〕：可省；上次用的 cgroup 子樹根絕對路徑。重啟時用來找舊框、先清空（[B-603](../../daemon.md)）；沒有 cgroup 時不寫。
 
 **`registrations` 每項存**：
 
@@ -48,4 +50,4 @@
 
 daemon 自身 attention 依 [P-601](../../../protocol/ops.md)。
 
-範例：[最小](../../../protocol/examples/daemon/state.minimal.valid.json)、[反例：pending 不是布林](../../../protocol/examples/daemon/state.pending.invalid.json)。
+範例：[最小](../../../protocol/examples/daemon/state.minimal.valid.json)、[記了上次的子樹根](../../../protocol/examples/daemon/state.cgroup.valid.json)、[反例：pending 不是布林](../../../protocol/examples/daemon/state.pending.invalid.json)。

@@ -63,7 +63,7 @@
 | `node.send` | `token`、`to`（收件 tick 的 node id）、`message` 必填；`urgent` 可省，布林，預設 false | `{node_id}`（收件 tick 的 id） |
 | `node.take` | `token` 必填；`limit` 可省，1～256，預設 256 | `{messages, more}` |
 
-**`message`**：一份請求物件（common 的 `FileRpcRequest`，[P-301](../../../protocol/messages.md)）。它照檔案 RPC 放寬、不認得的欄位忽略；外層 params 仍嚴格（[C-07](../../../contracts.md)）。序列化後最多 196608 bytes。
+**`message`**：一份請求或回應物件（common 的 `FileRpcRequest` 或 `FileRpcResponse`，[P-301](../../../protocol/messages.md)；回應也走佇列〔使用者方向 2026-09-30，修正輪暫定的裁定〕）。`node.take` 回的 `messages` 也是兩種都有。它照檔案 RPC 放寬、不認得的欄位忽略；外層 params 仍嚴格（[C-07](../../../contracts.md)）。序列化後最多 196608 bytes。
 
 **`node.take` 的回應**：
 
@@ -72,7 +72,7 @@
 
 **上限**：每個收件 tick 最多 256 件、合計 16 MiB（照 `message` 序列化後的 bytes 算）。寫死，不開放設定（[B-608](../../daemon.md)）。
 
-範例：[送急件](../../../protocol/examples/daemon/send.minimal.valid.json)、[反例：沒帶憑證](../../../protocol/examples/daemon/send.no-token.invalid.json)、[取](../../../protocol/examples/daemon/take.minimal.valid.json)、[回應](../../../protocol/examples/daemon/take_result.minimal.valid.json)、[反例：憑證格式不對](../../../protocol/examples/daemon/take.bad-token.invalid.json)、[憑證不認得](../../../protocol/examples/daemon/error.token_invalid.valid.json)。
+範例：[送急件](../../../protocol/examples/daemon/send.minimal.valid.json)、[送回應](../../../protocol/examples/daemon/send.response.valid.json)、[反例：沒帶憑證](../../../protocol/examples/daemon/send.no-token.invalid.json)、[取](../../../protocol/examples/daemon/take.minimal.valid.json)、[回應](../../../protocol/examples/daemon/take_result.minimal.valid.json)、[反例：憑證格式不對](../../../protocol/examples/daemon/take.bad-token.invalid.json)、[憑證不認得](../../../protocol/examples/daemon/error.token_invalid.valid.json)。
 
 ### 通道的業務錯誤碼
 
@@ -89,7 +89,7 @@
 
 | 情況 | code |
 |---|---|
-| 寄件帳號對收件 `requests/` 沒寫權；用憑證的 tick 不在目標的上層鏈上 | `forbidden` |
+| 寄件帳號對收件 tick 的 `.aos/mq/get/` 沒寫權（[B-614](../../daemon.md)）；用憑證的 tick 不在目標的上層鏈上 | `forbidden` |
 | 收件 tick 不在這個 daemon | `not_registered` |
 | 停機中 | `stopping` |
 | 活程序或維護狀態不合 | `busy` |

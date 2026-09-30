@@ -14,7 +14,7 @@
 - 同一主題分散兩處的，照下面的正本表：正本那邊寫全，其他地方改成一句加條號。只寫在協議篇的行為，改到時搬到正本，原處留一句加條號。
 - 條號不重編；內容搬走的條留一句殘根加連結。新條號接在該篇現有號碼後面（見文末「新條號」）。
 - 被推翻的舊說法直接改掉，不留刪除線；需要交代來源的在條文後標〔使用者方向 2026-09-30，第十八批〕、〔使用者方向 2026-09-30，第十九批〕或〔使用者方向 2026-09-30，第二十批〕。使用者未答、照計畫預設寫的標〔暫定〕，不寫進使用者方向的段落。
-- 〔使用者方向 2026-09-30，第二十批〕保證跟著「掛了什麼」走（[T-01](terms.md)）：tick 核心四件事（[T-07](settled/terms.md)）要確認不靠任何系統級任務；其餘保證由各條寫明「掛了哪一項系統級任務、包了哪個普通程式時成立」。第十九批的全掛前提與兩級保證已撤。〔使用者方向 2026-09-30，第二十批進行順序〕本輪先假設沒有 cgroup、沒有 git：現行規則不得依賴它們，已寫好的 git 與 cgroup 條文放在各篇「下一步納入」段，驗收句放在 V-03「下一步納入」小節。延後項只寫一句並連到 [P-008](protocol/README.md#p-008)。
+- 〔使用者方向 2026-09-30，第二十批〕保證跟著「掛了什麼」走（[T-01](terms.md)）：tick 核心四件事（[T-07](settled/terms.md)）要確認不靠任何系統級任務；其餘保證由各條寫明「掛了哪一項系統級任務、包了哪個普通程式時成立」。第十九批的全掛前提與兩級保證已撤。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 已納入，是「有就用」：現行規則在兩者都沒有時也要成立，有的時候多出的保證寫在各條（[B-630、B-622、B-634](settled/tick.md)、[B-605](settled/daemon.md)）。延後項只寫一句並連到 [P-008](protocol/README.md#p-008)。
 
 ### 概念與正本
 
@@ -22,12 +22,12 @@
 |---|---|
 | 定位、多層多 kernel、各 kernel 自訂、上下層不必對齊 | [T-06](terms.md) |
 | tick 核心四件事、tick 是衡量基準、唯一逃生口；投件權就是執行權 | [T-07、T-08](terms.md) |
-| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-629、B-632、B-633](settled/tick.md)；普通程式 [B-303](settled/helper.md)、[B-621](settled/tick.md)；下一步納入 [B-630](settled/tick.md)（git）、[B-202](base/execution.md)（`aos-cg`） |
+| 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-629、B-632、B-633](settled/tick.md)；普通程式 [B-303](settled/helper.md)、[B-621](settled/tick.md)、[B-634](settled/tick.md)（`aos-cg`）；git [B-630、B-622](settled/tick.md)；node 框 [B-605](settled/daemon.md) |
 | node 與兼任角色、兩張註冊表 | [T-02](terms.md) |
 | 上下層判定（預設看資料夾、登記覆蓋） | [B-628](settled/tick.md)、[B-606](settled/daemon.md) |
 | node 登記、喚醒、全殺重啟、逐層重建、停機、熱重載 | [daemon](settled/daemon.md) |
 | tick–daemon 通道、憑證、掛行程、暫存訊息與急件 | [B-612～614](settled/daemon.md) |
-| 任務順序、停格檔與擋板檔、結束碼紀錄、`aos-needs`、互斥、Q1／Q2（git 開格與收尾下一步納入） | [tick](settled/tick.md) |
+| 任務順序、停格檔與擋板檔、結束碼紀錄、`aos-needs`、互斥、Q1／Q2、git 開格／存檔點／收尾 | [tick](settled/tick.md) |
 | 身分額度、可選 helper；inst 欄位與解析 | [身分](base/identity-resources.md)、[inst](base/inst.md) |
 | 工作材料、可信結果、後代收尾、取消 | [work](base/work.md)、[execution](base/execution.md) |
 | 追蹤／ignored 區、完整發布、去重與清理 | [storage](base/storage.md)、[transport](base/transport.md) |
@@ -45,15 +45,15 @@
 
 | # | 主題 | 行為正本（主規格） | 協議篇只留 | 改成一句加條號 | 落筆 |
 |---|---|---|---|---|---|
-| 01 | 〔下一步納入 cgroup〕cgroup 子樹、框命名、`task-*` 層（node 框歸 daemon；`task-*` 歸普通程式 `aos-cg`） | B-605 篇末「下一步納入：cgroup」（子樹、命名、委派、首推 systemd 使用者委派、node 框與上限）＋B-202（`aos-cg` 草稿）；本輪現行：daemon 不用 cgroup，`cgroup_root`／`create_cgroup` 只驗形狀（B-605） | P-101 `cgroup_root` 欄位（標下一步納入）；P-107 上限參數；P-211 `aos-cg` argv（下一步納入） | P-107、P-101 欄位說明、P-503、P-203 的框規則、H-036 | T2、T3（B-202、P-203）、T5（P-503）、T6（H-036） |
+| 01 | cgroup 子樹、框命名、`task-*` 層（node 框歸 daemon；`task-*` 歸普通程式 `aos-cg`） | B-605（子樹、偵測、命名、交框、逃生口、中途失效；首推 systemd 使用者委派）＋B-634（`aos-cg`）；沒有 cgroup 時照 B-601 由 runner 管 | P-101 `cgroup_root` 等欄位；P-107 `cgroup_limits` 參數；P-211 `aos-cg` argv | P-107、P-101 欄位說明、P-503、P-203 的框規則、H-036 | T2、T3（B-634、P-203）、T5（P-503）、T6（H-036） |
 | 02 | 重啟：全殺、收尾、boot id、逐層重建 | B-603 | P-116 `state.json` 格式；P-115 `boot_id` 欄位 | P-116、P-115 的行為句；P-814、P-812、H-004、V-03、B-605 驗收句 | T2、T5（P-812、P-814）、T6（H-004）、T1（V-03） |
 | 03 | 停機：短寬限與排空 | B-604 | P-114 只留訊號、結束碼與設定欄位 | P-114 行為段、H-004、V-03 | T2、T6、T1 |
 | 04 | 登記、解除、別每格重登、換父 | B-601（總則）＋B-606（登記規則、解除即收尾、前綴／範圍額度；〔第十九批〕登記可覆蓋預設上層、新舊兩上層都同意；換父兩條路：搬資料夾或改登記）＋B-628（預設上層） | P-103～106 只留 method、params、result、錯誤碼；P-104 `parent_id` 改可省 | P-104／105 的行為句、P-115、P-802（daemon 那側改引用；kernel 何時登記成員歸 S-202）、H-004 | T2、T5（P-802、S-202）、T6 |
-| 05 | 寬限與強殺（daemon 端） | B-604（「收尾」：本輪對程序群組 TERM→`shutdown_grace_ms`→SIGKILL→確認全空，下一步納入 cgroup 後改對框用 `cgroup.kill`；重啟、停機、解除、helper 停程序、砍掉掛載行程（B-613）都用它；跳出程序群組的後代不保證；〔第二十批〕逃生口與 `kill_escape_cgroups` 撤〔暫定〕）＋B-202（執行器：attempt 逾時照 inst 的寬限；`aos-cg` 對 `task-*` 殘留 `cgroup.kill` 下一步納入） | P-101 `shutdown_grace_ms`；P-108 helper 停程序帶設定值，不寫死 2 秒 | P-108、B-603 的寬限句；inst 的 2 秒只指 inst 自己的逾時 | T2、T3 |
+| 05 | 寬限與強殺（daemon 端） | B-604（「收尾」：對 runner 送 SIGTERM→`shutdown_grace_ms`→第二次 SIGTERM 由 runner 清空名下→確認全空，有 cgroup 時最後對框 `cgroup.kill` 兜底；重啟、停機、解除、helper 停程序、砍掉掛載行程（B-613）都用它；〔納入 cgroup 與 git 疑-7〕逃生口准，`kill_escape_cgroups` 恢復、預設不殺）＋B-202（執行器：attempt 逾時照 inst 的寬限）＋B-634（`aos-cg` 對 `task-*` 殘留 `cgroup.kill`） | P-101 `shutdown_grace_ms`；P-108 helper 停程序帶設定值，不寫死 2 秒 | P-108、B-603 的寬限句；inst 的 2 秒只指 inst 自己的逾時 | T2、T3 |
 | 06 | pause 批次存檔 | B-603 | P-116 存檔格式；P-101 `pause_save_interval_ms` | P-116 行為句、H-004（刪「每秒」） | T2、T6 |
 | 07 | 停格檔、擋板檔、故障停格與 node 事項 | 〔第二十批〕停格檔：B-620（任務建 `.aos/tick/stop`，核心不開本格後面的項、整格回 1；只管本格，daemon 不因它暫停）；擋板檔：B-620（核心取鎖後看到 `.aos/tick-blocked` 就一項不跑）＋B-607（有擋板時 daemon 不開格；daemon 不看結束碼；daemon 自己的開格故障仍停格）；事項：S-405 | P-213 停格檔與擋板檔；P-601 事項檔位置與 `daemon.attention.*` 表；P-203 結束碼表 | P-105、P-205、P-609、P-601 行為句、B-601 的事項句 | T2、T5（S-405）、T3（P-203、P-213、P-601、P-609） |
 | 08 | tick 任務表 | B-620（tick.md「任務註冊表」節：順序、類別與自訂種類、`methods` 欄的意思、一個 module 一項任務；〔第十九批〕核心只照陣列順序跑、只驗 inst 合法與 `id` 不重複；-32601 搬到 B-623；〔第二十批〕核心每項後查停格檔、開格先看擋板檔，任務的 `user` 跟 tick 不同時那一項回 125，給任務 `AOS_TASK_ID`、`AOS_TASK_INDEX`；`kind:"system"` 只是系統級任務的標記；〔暫定〕`group`、`needs` 欄撤，needs 改用 `aos-needs`（B-621）；`methods` 由收件任務讀（B-623）） | P-202 欄位表、JSON、schema；P-203 任務環境 | tick.md 欄位表刪、H-004 | T3、T6 |
-| 09 | Q1／Q2 | B-623（Q1）、B-624（Q2）（tick.md 兩節；〔第二十批〕屬收件、投件、發摘要這幾項系統級任務。本輪沒有 git：收件任務照上一格結束碼紀錄正常收尾才刪原件，投件排在使用者任務之後；下一步納入 git 時改成 git 開格刪已提交的原件、投件與發摘要排在 git 收尾之後；P-206 的交接行為搬上） | P-206 只留待送檔與鬧鐘檔格式 | P-003、P-206、P-305、B-402、B-503、A-201、agent/README、P-704、P-800 | T3、T1（P-003）、T6、T5（P-800） |
+| 09 | Q1／Q2 | B-623（Q1）、B-624（Q2）（tick.md 兩節；〔第二十批〕屬收件、投件、發摘要這幾項系統級任務。astra 審整理區定案後只剩系統訊息佇列 `aos-mq get`／`aos-mq post` 與發摘要，檔案收件與投件 aos 不管；有 git 時 `mq-post` 與發摘要排在 `aos-git close` 之後；P-206 的交接行為搬上） | P-206 只留待送檔與鬧鐘檔格式 | P-003、P-206、P-305、B-402、B-503、A-201、agent/README、P-704、P-800 | T3、T1（P-003）、T6、T5（P-800） |
 | 10 | 投件失敗、鬧鐘 | B-624 | P-206 鬧鐘與待送檔欄位 | S-301、P-303、P-701、P-706、V-03、H-004 | T3、T4（S-301）、T6、T1（V-03） |
 | 11 | method 開放、-32601 | B-501（method 就是指令；-32601 只表示沒任務宣告或 argv 不符，未授權走 -32000 業務碼；投件權即執行權）＋B-620（`methods` 欄）；〔第二十批〕沒人宣告的由收件任務回（B-623） | P-202 `methods` 格式；P-306 method 目錄 | P-004、P-306（兩處）、H-030 | T3、T1（P-004）、T6（H-030） |
 | 12 | 去重、同 ID 衝突、重送 | B-503（P-304 的重送與補投回應規則搬上） | P-304 只留檔名與比對格式 | P-003、P-304、C-03 | T3、T1（P-003、C-03） |
@@ -69,7 +69,7 @@
 | 22 | helper 與切換帳號（〔第二十批〕普通程式 `aos-as`） | B-303（角色與界線；〔第二十批〕`aos-as` 怎麼請 helper 開程序、交鎖）＋B-609（新：固定動作清單與各動作做什麼，含新加的動作，從 P-107 搬上；〔第十九批〕`spawn_as` 以指定帳號開程序、任務繼承鎖；〔第二十批〕呼叫者是帶本格憑證的程序，實際就是 `aos-as`）＋B-620（任務的 `user` 跟 tick 不同時回 125）＋B-601（helper 開格何時回，從 P-108 搬上） | P-107 參數；P-108 私有通道；P-212 `aos-as` argv | B-601、P-102、H-004、B-605 | T3（B-303）、T2、T6 |
 | 23 | inst | [inst](base/inst.md)（新增「inst 目標：檔案或資料夾」節，從 P-010 搬上） | node-inst schema | P-010（inst 篇寫好後由 T1 縮成殘根）、P-200、P-201、P-109 | T3、T1、T2（P-109） |
 | 24 | 結構問題 | — | — | B-504：transport 的標題改成非標題的一行殘根；P-100～119 條號表只留 daemon/README，protocol/daemon.md 縮成一句連結；P-001 改寫 | T3、T2、T1 |
-| 25 | 〔第二十批改〕tick 核心、系統級任務、普通程式、結束碼紀錄 | T-07（核心四件事、衡量基準、停格檔）、T-10（四類與管轄區）、T-01（保證跟著掛了什麼走、本輪不含 git 與 cgroup）；B-626（核心與系統級任務的界線）、B-602（互斥）、B-620（照表跑、停格檔、擋板檔、`user` 不同回 125、任務環境變數）、B-633（每項結束碼紀錄與格數）、B-629（標準任務表範本）、B-632（結束碼紀錄取代日誌：沒有 git 時怎麼做）、B-631（殘根）；普通程式 B-621（`aos-needs`）、B-303（`aos-as`）；下一步納入：B-630、B-622（git）、B-202（`aos-cg`） | P-203 結束碼與任務環境；P-202 任務表；P-204 `aos-needs`、P-212 `aos-as`；P-213 結束碼紀錄、停格檔與擋板檔；下一步納入 P-205 `aos-git`、P-211 `aos-cg` | README 定位與依賴段、T-06、B-605 啟動輸出、B-302、P-101、P-203、H-004、H-036、V-03 | T1、T3、T2（B-605、P-101）、T6（H-004、H-036） |
+| 25 | 〔第二十批改〕tick 核心、系統級任務、普通程式、結束碼紀錄 | T-07（核心四件事、衡量基準、停格檔）、T-10（四類與管轄區）、T-01（保證跟著掛了什麼走；git 與 cgroup 有就用）；B-626（核心與系統級任務的界線）、B-602（互斥）、B-620（照表跑、停格檔、擋板檔、`user` 不同回 125、任務環境變數）、B-633（每項結束碼紀錄與格數）、B-629（標準任務表範本）、B-632（結束碼紀錄取代日誌：沒有 git 時怎麼做）、B-631（殘根）；普通程式 B-621（`aos-needs`）、B-303（`aos-as`）、B-634（`aos-cg`）；git B-630、B-622 | P-203 結束碼與任務環境；P-202 任務表；P-204 `aos-needs`、P-212 `aos-as`；P-213 結束碼紀錄、停格檔與擋板檔；P-205 `aos-git`、P-211 `aos-cg` | README 定位與依賴段、T-06、B-605 啟動輸出、B-302、P-101、P-203、H-004、H-036、V-03 | T1、T3、T2（B-605、P-101）、T6（H-004、H-036） |
 | 26 | 上下層 | B-628（預設看資料夾包含、有效上層、身分繼承有效上層、巢狀 git）＋B-606（登記覆蓋、兩上層同意、管轄權跟資料夾、換父兩條路） | P-104 `parent_id`（可省） | T-02、C-02、P-103、P-402、P-801～806、P-813、S 篇首、S-202、S-405、P-601、inst 的「繼承上層」、H-004 | T3、T2、T1、T4（P-402）、T5、T6 |
 | 27 | tick–daemon 通道 | B-612（誰有通道、環境變數、憑證發放／核對／作廢、事務表）＋B-613（掛行程與砍掉）＋B-614（暫存訊息、急件叫醒、誰能送、收件任務自己取） | P-117～119（[channel.md](settled/protocol/daemon/channel.md)）變數、method、params、錯誤碼；P-108 `daemon.helper.start` 帶 `token`（runner 環境的行為在 B-601） | P-001、P-004、P-006、B-504、B-601、B-303、inst、P-101、P-408、P-701、P-801 的 `daemon_socket`、A-201、A-401 | T2、T1、T3（B-303、inst）、T4（P-408）、T5（P-801）、T6（P-701、A-201、A-401） |
 | 28 | 〔第二十批〕時間：格數與毫秒 | C-01（內部時長改格數、外部留毫秒、算安排者的格、起算點換成第幾格） | P-002 欄位命名；common `Ticks`、`TickSeq`、`TimeMs` | 各篇時間欄位的說明句：S 篇首、S-201～206、S-303、B-404、B-624 鬧鐘、A 篇鬧鐘、各 schema | T1、T2～T6 各改自己的欄位 |
@@ -94,7 +94,7 @@
 | B-602 | settled/tick.md | 〔第十九批換標題〕同一資料夾一次一格：互斥鎖（原「同一 node 一次一格」） | T3 |
 | B-620 | settled/tick.md | 任務註冊表：照表依序跑（〔第十九批〕換標題） | T3 |
 | B-621 | settled/tick.md | 〔第二十批換主題〕aos-needs：前置沒成功就不跑（原節補號） | T3 |
-| B-622 | settled/tick.md | 〔下一步納入〕git 提交與還原的共同規則（原節補號） | T3 |
+| B-622 | settled/tick.md | git 的共同規則（原節補號） | T3 |
 | B-623 | settled/tick.md | 系統訊息佇列：取件（mq-get）；檔案收件 aos 不管（〔第二十批〕原「收件：分派、-32601，下一格刪原件（Q1）」，astra 審整理區定案改寫） | T3 |
 | B-624 | settled/tick.md | 派出：系統訊息佇列送出（mq-post）與發摘要（Q2）（原節補號；〔第二十批〕原「投件、鬧鐘與發摘要」，astra 審整理區定案改寫：檔案投件與鬧鐘撤出 aos） | T3 |
 | B-625 | settled/tick.md | 當機恢復、設定與清理（原節補號） | T3 |
@@ -102,7 +102,8 @@
 | B-627 | settled/tick.md | 〔第十九批換主題〕人手或 cron 直接跑一格：風險自負 | T3 |
 | B-628 | settled/tick.md | 〔第十九批〕上下層判定：預設看資料夾包含、可登記覆蓋 | T3 |
 | B-629 | settled/tick.md | 〔第二十批換主題〕標準任務表範本 | T3 |
-| B-630 | settled/tick.md | 〔第二十批換主題，下一步納入〕git 開格與收尾任務 | T3 |
+| B-630 | settled/tick.md | 〔第二十批換主題〕git：開格、存檔點、收尾 | T3 |
+| B-634 | settled/tick.md | 〔納入 cgroup 與 git〕aos-cg：每項一框（從 B-202 的草稿搬進整理區） | T3 |
 | B-631 | settled/tick.md | 〔第二十批撤，留殘根〕cgroup 框的備援 | T3 |
 | B-632 | settled/tick.md | 〔第二十批換主題〕結束碼紀錄取代日誌：沒有 git 時怎麼做 | T3 |
 | B-633 | settled/tick.md | 〔第二十批〕每項結束碼紀錄與格數 | T3 |
@@ -117,7 +118,7 @@
 | P-117 | settled/protocol/daemon/channel.md | 〔第十九批〕通道變數與憑證 | T2 |
 | P-118 | settled/protocol/daemon/channel.md | 〔第十九批〕掛行程與砍掉 | T2 |
 | P-119 | settled/protocol/daemon/channel.md | 〔第十九批〕送訊息、取訊息與通道錯誤碼 | T2 |
-| P-211 | settled/protocol/node.md | 〔第二十批，下一步納入〕`aos-cg`：每項一框 | T3 |
+| P-211 | settled/protocol/node.md | 〔第二十批〕`aos-cg`：每項一框 | T3 |
 | P-212 | settled/protocol/node.md | 〔第二十批〕`aos-as`：切換帳號 | T3 |
 | P-213 | settled/protocol/node.md | 〔第二十批〕每項結束碼紀錄、停格檔與擋板檔 | T3 |
 
@@ -126,7 +127,7 @@
 | 篇 | 下一號 |
 |---|---|
 | settled/daemon.md | B 615 起（到 619 為止） |
-| settled/tick.md | B 634 起 |
+| settled/tick.md | B 635 起 |
 | base/work.md、execution.md、identity-resources.md、storage.md、transport.md | B 104、205、306、405、507 起（305 是已刪的舊號，不要再用） |
 | scheduling/runs.md、admission.md、llm.md、operations.md | S 105、208、308、407 起 |
 | agent/configuration.md、input.md、memory.md、tools.md、README.md | A 104、204、305、405、507 起 |
@@ -136,15 +137,15 @@
 
 ## V-02．先測行為，再測規模
 
-〔建議預設，未拍板〕先用假工具／mock LLM 驗檔案交接、授權及結果。再在可丟棄的 Linux／WSL 環境，驗無 helper 通用 user、有 helper 兩個真 UID、已裝 module 與程序群組的後代清理；最後測萬級冷 node。〔使用者方向 2026-09-30，第二十批進行順序〕本輪假設沒有 cgroup、沒有 git：現行規則都要在兩者都沒有的機器上驗過。〔使用者方向 2026-09-30，第二十批〕保證跟著掛了什麼走（[T-01](terms.md)），所以系統級任務與普通程式分開驗：有沒有掛收件、投件、發摘要、清理，任務有沒有包 `aos-needs`、`aos-as`（[B-629](settled/tick.md)、[B-621](settled/tick.md)、[B-303](settled/helper.md)）。
+〔建議預設，未拍板〕先用假工具／mock LLM 驗檔案交接、授權及結果。再在可丟棄的 Linux／WSL 環境，驗無 helper 通用 user、有 helper 兩個真 UID、已裝 module 與程序群組的後代清理；最後測萬級冷 node。〔使用者方向 2026-09-30，納入 cgroup 與 git〕git 與 cgroup 有就用：現行規則要在兩者都沒有的機器上也驗過。〔使用者方向 2026-09-30，第二十批〕保證跟著掛了什麼走（[T-01](terms.md)），所以系統級任務與普通程式分開驗：有沒有掛 `aos-mq get`／`aos-mq post`、發摘要、清理、`aos-git` 三項，任務有沒有包 `aos-needs`、`aos-as`、`aos-cg`，daemon 有沒有 cgroup（[B-629](settled/tick.md)、[B-621](settled/tick.md)、[B-303](settled/helper.md)）。
 
-〔下一步納入 cgroup 與 git 時補〕cgroup 子樹依 [B-605](settled/daemon.md) 篇末至少驗兩種：事先準備好的子樹，以及開 `--create-cgroup` 由 daemon 自己建（〔使用者方向 2026-09-29 晚〕）；前者要含首推的 systemd 使用者委派、不用 sudo（〔使用者方向 2026-09-30，第十九批〕）。另外分開驗有沒有掛 git 開格與收尾任務（以及有沒有 git）、任務有沒有包 `aos-cg`、daemon 有沒有 node 框（[B-630](settled/tick.md)、[B-202](base/execution.md)）。
+cgroup 子樹依 [B-605](settled/daemon.md) 至少驗三種：首推的 systemd 使用者委派、不用 sudo（〔使用者方向 2026-09-30，第十九批〕）；root 事先準備好的子樹；開 `--create-cgroup` 由 daemon 自己建（〔使用者方向 2026-09-29 晚〕）。WSL 另驗三個坑：shell 在 `/init.scope`、scope 名每次不同、檔案歸自己不等於有委派（B-605）。git 依 [B-630、B-622](settled/tick.md) 驗三種：有 git、沒有 git、git 不能用（只印 `no_git` 警告、照 [B-632](settled/tick.md)）。
 
 保存版本、配置、環境與結果；mock 不代表 OS 隔離已驗證，磁碟記帳不算硬限制。範圍依[平台邊界](README.md)，須涵蓋同機 node 樹。
 
 ## V-03．跨篇故障場景
 
-〔建議預設，未拍板〕以下測試交叉覆蓋已裁規則與各篇工程預設；具體預設仍依正本來源。〔第二十批〕本輪現行規則假設沒有 cgroup、沒有 git；要靠兩者的驗收句集中在文末「下一步納入：git 與 cgroup」小節，不刪。
+〔建議預設，未拍板〕以下測試交叉覆蓋已裁規則與各篇工程預設；具體預設仍依正本來源。〔納入 cgroup 與 git〕git 與 cgroup 有就用：各小節的句子在兩者都沒有時也要成立；要靠兩者的驗收句集中在文末「git（有就用）」「cgroup（有就用）」兩小節。
 
 ### node、登記與身分
 
@@ -156,7 +157,7 @@
 
 ### 收件與派出
 
-在複製收件、刪原件各窗口中斷，不遺失；上一格沒正常收尾（`ended:false`）時收件任務不刪原件，已留的消費副本照 [B-503](base/transport.md) 當成已收、不重吃；同 ID 異內容報衝突（B-623、B-632）。投件途中被殺，下一格再投相同 bytes，接收方去重；執行不明仍 unknown、不自動重做（B-624）。本輪沒有 git：失敗任務寫出的待送檔也會投出，前面有項建了停格檔時這格不投（B-624）。
+〔astra 審整理區定案〕檔案收件區 `requests/`、`responses/` 的收與寫是普通程式，aos 不管（B-623）；以下只驗系統訊息佇列。`mq-get` 取出請求與回應，同一件再取不到（B-623、B-614）。`mq-post` 途中被殺，下一格再送同一份，接收方靠 ID 去重；執行不明仍 unknown、不自動重做（B-624）。沒有 git 時：失敗任務寫出的待送訊息也會送，前面有項建了停格檔時這格不送（B-624）。送不出去的（`forbidden`、`not_registered` 等）不重試，搬到 `.aos/mq/failed/`，下一格 `mq-post` 開始前被清（B-624）。
 
 ### 程序與結果
 
@@ -191,7 +192,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 **框、收尾與佈建**
 
 - 砍掉在跑的掛載行程（取消在跑的 once 也走這條）：寬限後被殺、程序群組清空（B-203、B-613、B-604）。
-- 〔第二十批〕設定帶 `kill_escape_cgroups` 照收、不生效（逃生口〔暫定〕不再提供，B-605）。
+- 〔納入 cgroup 與 git 疑-7〕設定帶 `kill_escape_cgroups` 照收：省略或 false 時 node 自開的子框（逃生口）重啟與解除都不殺，true 時一併收尾；沒有 cgroup 時沒有作用（B-605）。
 - 多帳號部署下兩個 node 帳號靠 `group_create`、`group_add_member`、`chgrp` 交接檔案（B-609）。頂層額度改到小於已分出的合計：不自動收回，記 `over_allocated`、寫事項、停新派工，在跑的照跑（S-205）。
 
 **任務表、method 與人手跑一格**
@@ -203,7 +204,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 **收件、投件與取消**
 
 - 同一個壞收件連跑多格只有一件事項；過保留期由 `aos-clean` 刪，期內留著（B-623、B-404）。
-- 同 ID 重送時，本輪沒有 git 歷史可撈原回應，照 [B-503](base/transport.md)「歷史裡找不到」處理；本地動作回應的 `stdout.path` 指向存在的 `.stdout` 檔（B-503、B-624、B-632）。
+- 同 ID 重送時，照 [B-503](base/transport.md) 處理（檔案投件的補投由處理它的普通程式定，aos 不管）；本地動作回應的 `stdout.path` 指向存在的 `.stdout` 檔（B-503、B-624、B-632）。
 - 取消：node 根目錄擁有者與 inst 執行帳號不同時，兩者送的取消都收；其他人回 `cancel_not_authorized`，原工作照跑；once 自己 inst 的 user 被拒（B-203）。記了 canceling 的那格不送 `node.kill`；`not_registered` 又沒有可信證據時記 unknown；進 canceling 前已經有完整結果的照原結果（B-203、P-411）。
 - `aos work trace` 用請求 ID 或 attempt ID 都查得到同一件工作；讀不到的站標「看不到」、不回錯；全找不到回 1（H-037）。
 
@@ -227,15 +228,15 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 ### 第十九批新增場景
 
-〔第十九批〕總綱的主幹加上各隊交來的驗收句，依主題合併、去掉重複；正本仍在各條，句末標條號。〔第二十批〕第十九批的三層、全掛與保證兩級已撤，相關句子改寫或移到文末「下一步納入」。
+〔第十九批〕總綱的主幹加上各隊交來的驗收句，依主題合併、去掉重複；正本仍在各條，句末標條號。〔第二十批〕第十九批的三層、全掛與保證兩級已撤，相關句子改寫或移到文末「git（有就用）」「cgroup（有就用）」。
 
 **tick 核心**
 
 - 沒有 daemon、git、cgroup、helper 的機器上直接跑 `aos-tick`：同資料夾同時跑兩格，一格回 75、什麼都不做；照任務表陣列順序跑；預設上層照資料夾算得出（T-07、B-602、B-620、B-628）。
 - 鎖檔是 `.aos/tick.lock`、不在 git 管理目錄；任務留下的程序還握著鎖時，下一格拿不到鎖（B-602）。daemon 開的格回 75 當普通結束，不停格、pending 照留（B-607）。
 - 人手或 cron 不經 daemon 直接跑 `aos-tick`：照常做完一格，沒有通道，stderr 沒有 `standard:` 行（B-627）。
-- 沒 cgroup：daemon 照常啟動、開格，`cgroup_*` 佈建動作回 `unsupported`、`node.show` 的 `cgroup` 為 null（B-605、B-609）；kernel 的資源任務不報套用失敗，新派工照額度放行（S-205）。
-- 沒 git：範本任務表照常跑完、每格都有結束碼紀錄；上一格正常收尾時收件原件被刪，上一格被殺（`ended:false`）時不刪（B-632、B-623）。發布摘要從目前的 `summary.json` 發布（B-624）；unknown 的保留期從 `aos-clean` 記下的格數起算，不會提早清（B-404）。
+- 沒 cgroup：daemon 照常啟動、印 `cgroup=off`、開格，`cgroup_limits` 回 `unsupported`、`node.show` 的 `cgroup` 為 null（B-605、B-609）；kernel 的資源任務不報套用失敗，新派工照額度放行（S-205）。
+- 沒 git：兩版範本任務表都照常跑完、每格都有結束碼紀錄；掛了 `aos-git` 的只印 `no_git` 警告、回 0（B-632、B-622）。發布摘要從目前的 `summary.json` 發布（B-624）；unknown 的保留期從 `aos-clean` 記下的格數起算，不會提早清（B-404）。
 
 **任務帶 `user` 與 `aos-as`**
 
@@ -255,7 +256,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 - daemon 開的 tick 有 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN` 兩個變數；直接跑的沒有，要走通道的客戶端自己報 `no_channel`、不連 socket（B-612、P-119）。
 - 上一格的憑證拿到下一格用回 `token_invalid`；daemon 重啟後舊憑證全部失效（B-612）。
-- 寄件 tick 的帳號對收件 tick 的 `requests/` 沒寫權，`node.send` 回 `forbidden`（B-614）。
+- 寄件 tick 的帳號對收件 tick 的 `.aos/mq/get/` 沒寫權，`node.send` 回 `forbidden`；對 `requests/` 有沒有寫權不影響（B-614）。回應物件跟請求一樣送得進、取得到（B-614、B-623）。
 - 急件送到就叫醒收件 tick；一般件不叫醒，收件 tick 下一格用 `node.take` 取得到；daemon 重啟後暫存訊息丟失（B-614）。agent 每格收件（檔案加通道）不超過 64 件（A-201）。
 - 第一格掛一個常駐行程、第四格用 `node.kill` 砍得掉而且收尾完成；別隊的 tick 砍不掉；對登記的 node 送 `node.kill`（或 `aos mount kill`）回 `kind_mismatch`（B-613、H-004 第 60 列）。
 - `aos mount run` 不帶 `--parent` 被拒：人手沒有憑證（H-004 第 59 列、P-118）；`node.mount` 既沒帶 `token` 也沒帶 `parent_id`，schema 就擋下（P-118）。
@@ -270,11 +271,11 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 ### 第二十批新增場景
 
-〔第二十批〕T1、T2、T3 交來的驗收句，依主題合併；正本仍在各條，句末標條號。本輪假設沒有 cgroup、沒有 git。
+〔第二十批〕T1、T2、T3 交來的驗收句，依主題合併；正本仍在各條，句末標條號。這些句子在沒有 cgroup、沒有 git 的機器上都要成立。
 
 **tick 核心、停格檔與擋板檔**
 
-- 拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`：互斥、照表跑、預設上下層與每項結束碼紀錄都成立；沒有人回 -32601、不投件、不刪收件原件（T-07、B-626）。
+- 拿掉 daemon、git、cgroup、helper 與所有系統級任務，任務表只放一項 `true`：互斥、照表跑、預設上下層與每項結束碼紀錄都成立；佇列沒人取也沒人送、不發摘要（T-07、B-626）。
 - 某項建了 `.aos/tick/stop`：本格後面的項不跑，紀錄 `ended:true` 並有 `stopped_after`，整格回 1；daemon 不暫停 node，下一格照常開、核心開頭刪掉停格檔（B-620、B-633、B-607）。
 - 任務回 3、100、125 或任何碼都只是一般的失敗，後面的項照跑；tick 回任何結束碼 daemon 都不暫停 node（B-620、B-607）。
 - 有 `.aos/tick-blocked`：直接跑 `aos-tick` 回 1、stderr 有 `blocked`、一項都不跑、兩份紀錄與 `seq` 都不變；在 daemon 底下到期與叫醒都不開格、`paused` 不變、只寫一件事項；人手刪掉擋板後下一格照常（B-620、B-633、B-607）。
@@ -283,19 +284,19 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 **結束碼紀錄與格數**
 
 - 任務第二項讀得到第一項的結束碼；第三項被 SIGKILL 時紀錄是 `signal:9`；tick 在某項中途被殺，下一格的 `last.json` 是 `ended:false`（B-633）。
-- 同一資料夾連跑十格，`seq` 從 1 到 10，daemon 與 cron 交替跑仍連續；鎖被占回 75 時兩份紀錄都不變；資料夾唯讀時仍照表跑完、stderr 有 `record_unwritable`（B-633、B-627）。
+- 同一資料夾連跑十格，`seq` 從 1 到 10，daemon 與 cron 交替跑仍連續；斷電後 `seq` 不倒退只在帶 `--firstdo-fsync`（或 daemon 帶了旗標）時要求，沒帶時不要求（B-633）；鎖被占回 75 時兩份紀錄都不變；資料夾唯讀時仍照表跑完、stderr 有 `record_unwritable`（B-633、B-627）。
 - 牆鐘倒退時，以格數計的保留期不提早也不延後到期（C-01、B-404）。
 
 **系統級任務與普通程式**
 
-- 範本任務表在沒有 git、沒有 cgroup 的機器上照常跑完；拿掉 `mq-post` 後佇列訊息不送、其餘照常；拿掉 `mq-get` 後佇列訊息留在 daemon、其餘照常（B-629、B-623）。
+- 沒有 git 版範本任務表在沒有 git、沒有 cgroup 的機器上照常跑完；拿掉 `mq-post` 後佇列訊息不送、其餘照常；拿掉 `mq-get` 後佇列訊息留在 daemon、其餘照常（B-629、B-623）。
 - `aos-needs a -- …`：`a` 失敗或還沒跑時回 125、原指令沒跑；`a` 成功時照跑、結束碼是原指令的；`b` 被擋下後 `aos-needs b -- …` 也回 125（B-621）。
 
-**daemon（沒有 cgroup）**
+**daemon（沒有 cgroup 時）**
 
-- 任務在背景留下同一程序群組的 `sleep`，那格結束後被 daemon 殺掉；沒有 cgroup 也成立（B-601、B-604）。
+- 任務在背景留下同一程序群組的 `sleep`，那格結束後被 runner 清掉；沒有 cgroup 也成立。runner 當收屍人是定案：runner 自己被 SIGKILL 時，掛回 daemon 的程序一律被殺、那格記 `unknown`（B-601、B-604）。
 - 往收件區放新檔不會開格；daemon 只照登記週期或叫醒開格（B-504、B-607）。
-- 沒有 cgroup v2 時 daemon 照常啟動，沒有 `standard:` 行；設定寫了 `cgroup_root` 或開了 `--create-cgroup` 仍照常啟動、不建子樹（B-605）。
+- 沒有 cgroup v2 時 daemon 照常啟動、印 `cgroup=off`，沒有 `standard:` 行；設定明寫 `cgroup_root` 卻準備不好時報錯退出（125），不默默改成沒有（B-605）。
 - daemon 被 SIGKILL 後重開，舊格還握著鎖時同資料夾的新格回 75、不重疊（B-603）。
 
 ### 設定、清理與待辦
@@ -304,28 +305,41 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 清理依 [B-404](base/storage.md) 驗間隔、保留與去重證據；到期 unknown 可清，不認得的資料不碰也不回報。node 事項存 ignored `.aos/attention/`，daemon 自己事項才走 IPC；沿樹彙整清單。寫不進 node 只警告到 stdout，daemon 自己錯誤才到 stderr；啟停核對兩份 pid 檔，舊檔不拿來殺程序。show 只顯示建議，done 只將事項標完成。牆鐘大跳時到期工作仍依本 kernel 序號及額度分批放行，不重做 unknown。
 
-### 下一步納入：git 與 cgroup
+### git（有就用）
 
-〔使用者方向 2026-09-30，第二十批進行順序〕以下驗收句要靠 git 或 cgroup，**不是本輪的驗收**；下一步納入兩者時再照當時的條文核對、改寫。
+〔納入 cgroup 與 git〕以下都是掛了 `aos-git` 三項、git 能用時的驗收；正本 [B-630、B-622](settled/tick.md)，句末標條號。
 
-**git（[B-630](settled/tick.md)、[B-622](settled/tick.md)）**
+- 有 git 版範本：使用者任務那組有一項失敗，它寫進 `.aos/mq/post/` 的訊息在 `mark-user` 被還原、不送；它改的 `state/` 檔留著、不被提交；清理成功，那格一個 commit `aos-tick <seq>`，含清理的變動（B-630、B-629）。
+- 某項建停格檔：`aos-git close` 沒跑、沒有 commit；下一格 `aos-git open` 把 `.aos/` 還原到 HEAD，這格作廢；`mq-get` 那格取出的訊息一起被還原（B-620、B-630、B-623）。
+- 當機窗口：使用者任務中、close 提交前當機，下一格 `.aos/` 回 HEAD、使用者任務自己的檔不動；提交後、`mq-post` 途中當機，已提交的都在，已送的下一格重送、對方靠 ID 去重（B-625、B-624）。
+- 格間手改 aos 範圍：上一格正常收尾時被下一次 close 提交；上一格沒正常收尾時被 open 還原；不留救援 ref（B-602）。
+- `.gitignore` 拿掉 `/.aos/tick/` 後 `seq` 仍連續、紀錄不進 commit（B-622）。
+- git 沒裝、低於 2.36、不是 repo、HEAD 讀不到：`aos-git` 三項都印 `no_git` 警告、回 0、不寫擋板，這格照 B-632（B-622）。
+- 格中用 `aos node new` 建的子 node 不進上層的 commit（B-622）。
+- 格結束後沒有 git 程序握著鎖 fd，下一格不回 75（B-622）。
+- node 根擁有者跟 tick 帳號不同、使用者全域開了 commit 簽章時照常提交（B-622）。
+- `aos-as` 開的別帳號程序寫進 aos 範圍的 0600 檔：git 讀不到，當故障，擋板＋停格檔（B-630、B-303）。
+- 滿碟或 commit、還原失敗：擋板＋停格檔，不假成功；close 失敗時 `mq-post` 與發摘要不跑（B-622、B-624）。
+- 任務 id 以 `.lock` 結尾的存檔點：`mark_id_invalid`，擋板＋停格檔（B-622）。
+- `aos-config-add` 寫入 `config/` 不產生 commit（B-625）。
+- 還原不撤銷外部效果；跨 repo／submodule 沒有共同交易（B-622）。把任務表寫壞時 resume 不開閘、不抹手改（B-625、A-102）。
 
-- 前組成功、後組失敗：前組保留，後組修改／新增檔還原，ignored 收件不丟；改 `.gitignore` 不能躲還原。失敗組不能滿足跨組 needs，獨立組可繼續；壞表整格不跑，無變動不 commit。
-- 在複製收件、commit、刪原件各窗口中斷，不遺失或重吃；請求與回應未 commit 不送，只重投相同 ID／bytes；還原不撤銷外部效果，跨 repo／submodule 無共同交易。
-- 已 commit 狀態與完整結果保留，未 commit 還原。
-- git 低於 2.36 或沒有 repo 時，git 開格任務照 B-632 做。
-- 斷電模擬：commit 成功後才刪收件原件，重開後物件與 ref 都在（B-622、B-623）。
-- 同 ID 重送時補投的回應，是 git 歷史裡原待送回應的原 bytes（B-503、B-624）。
-- 滿碟或 commit／還原失敗不得假成功、刪原件或開新格；把組或前置寫壞時 resume 不開閘、不抹手改（A-102）。
+### cgroup（有就用）
 
-**cgroup（[B-605](settled/daemon.md) 篇末、[B-202](base/execution.md)）**
+〔納入 cgroup 與 git〕正本 [B-605](settled/daemon.md)、[B-634](settled/tick.md)，句末標條號。
 
-- daemon 或 VM 突然消失後，全殺舊 tick 與受管後代才重開；daemon 被 SIGKILL 後重開，仍有程序的 node cgroup 先收到 SIGTERM、寬限後才 `cgroup.kill`（B-603）。
-- 砍掉在跑的掛載行程後 `mount-*` 框被刪；重啟逐層重建完仍沒人登記的空框被刪，重建途中不先刪（B-603、B-613）。
+- WSL 的 shell 直接跑（在 `/init.scope`）與用沒加 `Delegate=yes` 的 scope 開：印 `cgroup=off`；用 `systemd-run --user --scope -p Delegate=yes` 開：印 `cgroup=on`；cgroup v1、混合模式自動偵測一律 `off`（B-605）。
+- 任務用 `setsid` 加 double fork 留下的殘留，格後被 `cgroup.kill`（B-601）。
+- daemon 被 SIGKILL 後以新的 scope 重開：舊 scope 裡仍有程序的受管框先收到 SIGTERM、寬限後被清空，才開新格（B-603）。
+- 某個 node 建框失敗：只有它照沒有 cgroup 跑、有一件事項，別的 node 照常（B-605）。
+- node 自己開的子框（逃生口）：格後與重啟都不收；`kill_escape_cgroups:true` 時重啟與解除會收（B-605）。
+- 某個 tick 用 `node.mount` 掛了另一個 daemon（沒寫 `cgroup_root`）：內層印 `cgroup=off` 照跑，仍受外層框的上限（B-611）。
+- 兩份設定明寫同一個（或重疊的）`cgroup_root`：後啟動的回 125（B-611）。
+- `aos-cg`：沒 cgroup 時退回 subreaper 加程序群組、stderr 有 `cgroup_unavailable`；`aos-cg -- aos-as <帳號> --` 時別帳號的程序在同一框；框清不空時 `frame_not_empty`、建停格檔（B-634）。
+- 有程序在跑時調低記憶體上限，直接寫入、立即生效、不等全空，kernel 的資源狀態檔留 `over_limit`；OOM 證據只從框裡讀，沒框的一律不標 OOM（B-609、S-205、B-204）。
 - 任務吃滿 node 記憶體、tick 被 OOM 殺掉後，daemon 仍能清空 `tick` 與 `task-*`（B-204、B-604）。
-- 有程序在跑時調低記憶體上限，直接寫入、立即生效、不等全空，kernel 的資源狀態檔留 `over_limit`（B-609、S-205）。
-- 包了 `aos-cg` 的項在自己的 `task-*` 框裡，留下的後代被清掉；`aos-cg -- aos-as …` 時別的帳號的程序也在同一框（B-202、B-609）。
-- 兩份設定指向同一或重疊的 `cgroup_root` 時後啟動的回 125（B-611）。
+- 砍掉在跑的掛載行程後 `mount-*` 框被刪；重啟逐層重建完仍沒人登記的空框被刪，重建途中不先刪（B-603、B-613）。
+- 換父搬好後框在新上層的框下；解除在跑的 node 時框被刪（B-606）。
 
 ## V-04．萬級穩態與冷啟動分開
 
