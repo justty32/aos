@@ -6,6 +6,6 @@ proto6 承接 2026-09-28 的 Linux 身分、資源管理與萬 agent 討論。**
 
 **前一輪（第十九批，已被第二十批取代標準配備結構，僅供對照）**：三層架構——tick 核心（互斥鎖、照任務表跑、上下層）、標準配備（git 提交、needs、收件、切換使用者、cgroup 框、once 等，跟核心同一支 aos-tick、必須全掛；cgroup v2 與 git 是「完整保證」的條件，沒有時走標準配備內建備援，仍算全掛、只是保證較弱）、其他掛載（kernel、agent、clock、自訂任務）；詳見[第十九批方向](notes/verdicts/10-tick-minimal-core.md)。
 
-**開始實作**（09-30 起，程式由使用者親手寫）：五段規劃與第一段細部見 [plan/](plan/README.md)，程式放 `src/`。
+**開始實作**（09-30 起，先由 AI 隊寫 Python POC，最後才換 C++11）：六段規劃與第一段細部見 [plan/](plan/README.md)，程式放 `src/`。
 
 先讀 [spec 入口](spec/README.md)：可實作的欄位、狀態、交接與驗收，現行以它為準。再從 [notes 入口](notes/README.md) 看最新方向、裁定紀錄與背景；要看歷史，再讀 09-28 的[三大概念](notes/concepts.md)（用語已被 node／kernel 樹取代）與封存的交接來源。現行程式仍在 [proto5](../proto5/README.md)。

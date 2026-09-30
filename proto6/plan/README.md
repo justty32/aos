@@ -2,21 +2,25 @@
 
 ← [proto6](../README.md)｜[spec 入口](../spec/README.md)｜[整理區](../spec/settled/README.md)
 
-2026-09-30 起。spec 打磨夠了，開始實作。**程式由使用者親手寫**；這份 plan 只排順序、講清楚每段要做到什麼、怎麼算做完。
+2026-09-30 起。spec 打磨夠了，開始實作。這份 plan 排順序、講清楚每段要做到什麼、怎麼算做完。
+
+**分工（09-30 晚改）**：先用 Python 把整條 POC 做通，**POC 由 AI 隊寫**，使用者看結果、做裁定；daemon、runner 在 POC 也用 Python。C++11 改寫放到最後一段，那時才由使用者親手寫。
 
 - 程式放 `proto6/src/`，跟探針原型 [proto/](../proto/README.md) 分開。
-- 語言：tick 核心、系統級任務、CLI、kernel 任務用 **Python 3.9**（只用標準庫）；daemon、runner 用 **C++11**。
-- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。唯一改動是認得頂層 `user`（跟目前身分不同就 125，不切身分）。各段把它當現成的東西用，不排成你的工作。
+- 語言：POC 全部用 **Python 3.9**（只用標準庫），daemon、runner 也是；換 C++11 見[第六段](#第六段c11-改寫)。
+- inst 的解析與指示詞（`$ref` 等）和 `aos-exec` **直接從 proto5 原樣複製**，放 [proto6/src/py/](../src/py/README.md)：`lib/aos_inst.py`（讀驗解 inst）、`lib/aos_directives.py`（指示詞）、`lib/aos_exec*.py`（開程序）、`bin/aos-exec`。唯一改動是認得頂層 `user`（跟目前身分不同就 125，不切身分）。各段把它當現成的東西用，不重寫。
 
 ## 怎麼用這份 plan
 
-1. 一次只看一段。每段有自己的細部檔（目前只寫了[第一段](m1-tick-core.md)，後面的段開工前再寫）。
-2. 每段拆成幾步，每步都寫：要做到什麼、對哪幾條 spec、**關鍵邏輯（你寫）**、**可補全（AI 補）**、驗收。
-3. 你先寫骨架和關鍵邏輯，再叫 AI 補「可補全」那一欄；補完拿驗收那一欄手跑。
-4. 檔案怎麼切、函式叫什麼**由你決定**。plan 裡標「建議」的只是參考。
-5. 碰到 spec 講不清或互相打架的，看該段的「待問」；不在清單上的，記下來問，不要自己裁。
+1. 一次做一段。每段有自己的細部檔（目前只寫了[第一段](m1-tick-core.md)，後面的段開工前再寫）。
+2. 每段拆成幾步，每步都寫：要做到什麼、對哪幾條 spec、**要使用者裁定的點**（沒有就寫無）、驗收。
+3. 每段由 AI 隊實作，照驗收那一欄試跑；做完交使用者看。
+4. 使用者看結果、裁定該段的待問；裁定後 AI 隊照改。檔案怎麼切、函式叫什麼 AI 隊自己定，標「建議」的只是參考。
+5. 碰到 spec 講不清或互相打架的，看該段的「待問」；不在清單上的，記下來問，AI 隊不自己裁。
 
-## 五段總覽
+## 六段總覽
+
+前五段是 Python POC，第六段才換 C++11。
 
 ### 第一段：tick 核心
 
@@ -32,7 +36,7 @@
 - **可單獨跑的樣子**：一樣直接跑 `aos-tick`。有 git 的機器上每格最多一個 commit；沒 git 時 `aos-git` 只印 `no_git`、回 0。
 - **界線**：全部是「讀寫檔案」就做得完的事，不碰通道。恢復前驗證只寫檢查本身，送 `node.resume` 等第三段。
 
-### 第三段：daemon 核心（C++11）
+### 第三段：daemon 核心
 
 - **目標**：`aos daemon` 能登記 node、照週期開格、叫醒／暫停、用 `aos-runner` 開每一格並在格後收屍、重啟與停機收尾、發通道憑證、掛行程與砍掉；沒 cgroup、沒 helper 也跑得起來。
 - **主要 spec**：[B-601、B-504](../spec/settled/daemon/runtime.md)、[B-606、B-607](../spec/settled/daemon/registration.md)、[B-603、B-604、B-611](../spec/settled/daemon/lifecycle.md)、[B-610、B-612、B-613](../spec/settled/daemon/channel.md)、[B-608](../spec/settled/daemon/reload.md)；格式 [daemon 協議](../spec/settled/protocol/daemon/README.md)（P-100～119，不含 helper 那幾條）。
@@ -53,6 +57,13 @@
 - **可單獨跑的樣子**：在可丟棄的機器上建兩個測試帳號，sudo 開 daemon，任務包 `aos-as` 以另一個帳號跑，任務裡核對得到同一把鎖。
 - **界線**：只做 tick／daemon 基礎用得到的帳號切換；kernel 分配身分額度那一側不在這裡。
 
+### 第六段：C++11 改寫
+
+- **目的**：照 spec 的依賴原則，把 POC 裡該換的換成 C++11——daemon、runner、helper 這類常駐或管程序的部分。spec 本來就寫 Python 3.9 的（tick 核心、系統級任務、CLI 等）留 Python。確切換哪些，開工前對著 spec 再列一次。
+- **前提**：前五段 POC 都做通、試跑過，待問都裁定了。
+- **分工**：程式由使用者親手寫；AI 隊只規劃、答疑，POC 當對照組。
+- 細部等前五段做完再寫。
+
 ## 順序上的調整
 
 照原本排的 1→5，只挪了三樣，都是因為 spec 的相依關係：
@@ -65,6 +76,6 @@
 
 ## 跨段待問
 
-1. **runner 用 C++11，但 inst 解析在 Python 的 `lib/aos_inst.py`。** spec 說 runner 要「照 inst 執行一次」，包含解指示詞、驗欄位（[inst](../spec/base/inst.md)「先決定身分，切完才解析」）。C++ runner 要自己重寫一套 inst 解析、還是交給 Python 那一段解完再開程序？第三段開工前要定。
+1. **C++ runner 的 inst 解析怎麼辦？** POC 的 runner 是 Python，直接用 `lib/aos_inst.py`，第三段不受影響。到第六段換 C++ 時：spec 說 runner 要「照 inst 執行一次」，包含解指示詞、驗欄位（[inst](../spec/base/inst.md)「先決定身分，切完才解析」）；C++ runner 要自己重寫一套，還是交給 Python 解完再開程序？第六段開工前要定。
 2. **清理的正本還在整理區外。** `aos-clean` 照 [B-404](../spec/base/storage.md)，但整理區 README 的疑點表把 B-401、B-402、B-404 列為「還寫著舊保證、下一輪要改」。第二段做 `aos-clean` 前，先確認照哪一版。
 3. **daemon 設定的五個開關還沒進 schema。** B-615 的五個鍵尚未同步到 P-101 的 schema 與範例（整理區 README「09-30 晚拆分」一節）。第三段寫設定解析前要補。
