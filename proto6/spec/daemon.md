@@ -195,12 +195,11 @@ cgroup 子樹怎麼準備、框的命名與委派、資源上限，見篇末[下
 
 **暫停與恢復**〔第十批〕：`node.pause` 只停**該 node** 的新格，不殺本格、不遞迴暫停子樹，回成功代表閘門已關；手改還須 `node.show` 看 `running:false`（包括後代清理期間），再持 node 鎖、修改（有 git 時再 commit）。`node.resume` 只開該 node 的閘門，呼叫者先完成 [A-102](agent/configuration.md) 的驗證與 commit；daemon 不讀 git、不替手改 commit，也不替 unknown 工作重試。pending 或到期才開格。pause／resume 同狀態重送無害，是關／開閘門，不等於 wake；保存依 B-603 的批次存檔。
 
-**故障停格**〔使用者方向 2026-09-30，第二十批疑點「daemon 何時暫停 node」裁定 a＋c；取代第十九批「可信子程式退出 `3`／`125` 保留為停格碼」〕：daemon **不看任何結束碼**，tick 回什麼碼都照普通結束處理。tick 那一側要 daemon 停下，靠兩個檔，兩者並用：
+**故障停格**〔使用者方向 2026-09-30，第二十批疑點「daemon 何時暫停 node」裁定；取代第十九批「可信子程式退出 `3`／`125` 保留為停格碼」〕：daemon **不看任何結束碼**，tick 回什麼碼都照普通結束處理。停格檔 `.aos/tick/stop` 只在任務層面（tick 核心停掉本格其餘各項，[B-620](tick.md)），daemon 不看它、不因它暫停 node。tick 那一側要擋住之後的格，只靠擋板檔：
 
-- **停格檔 `.aos/tick/stop` → 暫停**：任務建它，tick 核心就不跑本格其餘各項（[B-620](tick.md)、格式見 [P-213](protocol/node.md)）。daemon 在這一格收尾完成後看一次它在不在；在就**順帶暫停這個 node**（`paused:true`）並寫事項。暫停後要有人 `node.resume` 才再開格；停格檔本身不歸 daemon 刪，由下一格的 tick 核心開頭刪掉（B-620），所以 resume 後的那一格照常跑。
 - **擋板檔 `.aos/tick-blocked` → 不開格**：daemon 每次要開格（到期或有 pending）前先看它在不在；在就**不開這一格**：不設 `paused`，pending 照留，到期照下一個週期再看；同一個擋板只寫一次事項。擋板拿掉後，下一次到期或叫醒就照常開格。〔建議預設，未拍板〕擋板由任務或人手建（內容是 UTF-8 原因，daemon 不讀內容），**只由人手刪**：修復者核對好了才移除；daemon 與 tick 核心都不刪它。
 
-兩個檔 daemon 都只看在不在（stat），不讀內容。〔建議預設，未拍板〕daemon 看不到（例如權限不足）時當成不在，stdout 警告一行。
+daemon 只看擋板檔在不在（stat），不讀內容。〔建議預設，未拍板〕daemon 看不到（例如權限不足）時當成不在，stdout 警告一行。
 
 〔建議預設，未拍板；第二十批改寫計畫記錄者建議：當成 daemon 對自己開格的安全閘〕**daemon 自己看到的開格故障**也停格：runner 前置失敗（`launch_failed`，例如身分不在額度內、來源變了）、缺可信回報（`unknown`）、後代清不空。這些不是 tick 的結束碼，是 daemon 開不了或收不完這一格；不停的話每個週期都會再失敗一次。
 
@@ -215,7 +214,7 @@ cgroup 子樹怎麼準備、框的命名與委派、資源上限，見篇末[下
 
 **查詢**〔建議預設，未拍板；第十九批從 P-106 搬上〕：`node.show` 不開 tick；`cgroup` 本輪一律為 null（B-605），下一步納入 cgroup 後回實際讀到的配置，不是上次請求的快取，應存在卻讀不到回 `resource_observation_failed`，不能回 null 冒充沒配置。`node.ls` 先按呼叫者權限篩，再分頁；只列有權看的，不洩漏總數或無權項。不同頁不是同一瞬間的快照：每次接續用剛收到、嚴格前進的游標，`boot_id` 變了就從頭列，要核對單項用 `node.show`；持續變動時不追補游標之前新插入的項，免得無限追列。一頁裝不下就縮頁，單項就超過封包上限回 `response_too_large`。畫面要把「已結束的掛載行程」「未啟動」「還在跑」「結果不明」分開。
 
-**驗收：**定期 node 不補跑漏掉的格；運行中收到多次 wake 只多跑一格；pause 不遞迴；tick 回任何結束碼（包括 3、100、125）都不停格；某格的任務建了 `.aos/tick/stop`，那格收尾完 daemon 自動暫停、有事項，resume 前不開格，resume 後的那一格核心刪掉停格檔、照常跑；node 有 `.aos/tick-blocked` 時到期與叫醒都不開格、`paused` 不變、只有一件事項，人手刪掉擋板後下一次到期照常開；身分不在額度內的開格失敗後自動停格、有事項；wake 後等到 `tick_seq` 前進且不是 running 才算新格做完，daemon 重啟後 `registration_id` 改變。不同 UID 只能列自己的授權子樹；未跑顯示 `last_tick:null`；分頁跨重啟能靠 `boot_id` 發現。
+**驗收：**定期 node 不補跑漏掉的格；運行中收到多次 wake 只多跑一格；pause 不遞迴；tick 回任何結束碼（包括 3、100、125）都不停格；某格的任務建了 `.aos/tick/stop`，daemon 不暫停、下一格照常開；node 有 `.aos/tick-blocked` 時到期與叫醒都不開格、`paused` 不變、只有一件事項，人手刪掉擋板後下一次到期照常開；身分不在額度內的開格失敗後自動停格、有事項；wake 後等到 `tick_seq` 前進且不是 running 才算新格做完，daemon 重啟後 `registration_id` 改變。不同 UID 只能列自己的授權子樹；未跑顯示 `last_tick:null`；分頁跨重啟能靠 `boot_id` 發現。
 
 ## B-608：熱重載與「免重開／要重開」
 
