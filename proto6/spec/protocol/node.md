@@ -21,7 +21,7 @@
 | `.aos/alarms/` | 已投出、設了鬧鐘的待查紀錄；ignore，見 P-206 |
 | `.aos/tick.lock` | 〔第十九批〕核心的鎖檔（[B-602](../tick.md)）；ignore |
 | `.aos/tick/` | 〔第二十批〕核心的結束碼紀錄 `current.json`、`last.json` 與停格檔 `stop`（[B-633](../tick.md)、[B-620](../tick.md)），見 P-213；ignore，不隨還原、不被清理 |
-| `.aos/tick-blocked` | 〔第十九批〕擋板檔；〔使用者方向 2026-09-30，第二十批〕本輪就啟用：擋之後各格，核心看到就不跑、daemon 看到就不開格（[B-620](../tick.md)、P-213）；任務或人手建、人手刪；ignore |
+| `.aos/tick-blocked` | 〔第二十批裁定 a＋c〕擋板檔，有它時 daemon 不開格（[B-607](../daemon.md)），核心看到也不跑（[B-620](../tick.md)、P-213）；任務或人手建，只由人手刪；ignore |
 | `.aos/runner-stderr.log` | 〔第十七批，暫定〕runner 診斷，daemon 每格覆寫；ignore，輪替以後再定（[P-109](daemon.md)） |
 | `public/` | 可供其他 node 存取的共用空間；是否追蹤由內容決定 |
 | `.gitignore` | 至少含 `/requests/`、`/responses/`、`/work/`、`/.aos/jobs/`、`/.aos/attention/`、`/.aos/alarms/`、`/.aos/tick.lock`、`/.aos/tick/`、`/.aos/tick-blocked`、`/.aos/runner-stderr.log`、`/.aos/summary/published.json`；追蹤 |
@@ -162,7 +162,7 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
 
 ## P-211．〔下一步納入〕aos-cg：每項一框
 
-〔使用者方向 2026-09-30，第二十批進行順序〕本條是草稿，**不是現行規則**；下一步把 cgroup 納入時再定。行為草稿：[B-202](../base/execution.md)；框的命名與委派見 [B-605](../daemon.md)。〔使用者方向 2026-09-30，第二十批追答 8〕它是普通程式，不是系統級任務。
+〔使用者方向 2026-09-30，第二十批進行順序〕本條是草稿，**不是現行規則**；下一步把 cgroup 納入時再定。行為草稿：[B-202](../base/execution.md)；框的命名與委派見 daemon 篇末「[下一步納入：cgroup](../daemon.md#下一步納入cgroup非現行規則)」。〔使用者方向 2026-09-30，第二十批追答 8〕它是普通程式，不是系統級任務。
 
 - **argv**：`aos-cg [--] <原指令…>`。不收上限參數（上限歸 daemon 設在 node 框）。
 - **框名**：本 node 框 `n-<h>` 下的 `task-<seq>-<pid>`，`seq` 取結束碼紀錄的格數（沒有紀錄時用 `0`），`pid` 是 aos-cg 自己的 PID；跟 `tick` 葉並列。
@@ -181,7 +181,7 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
 行為正本：[B-303](../base/identity-resources.md)；`spawn_as` 的參數與限制見 [B-609](../daemon.md)、[P-107](daemon/provision-and-runner.md)；runner 回報見 [P-110](daemon/provision-and-runner.md)。〔使用者方向 2026-09-30，第二十批追答 8〕它是普通程式，不是系統級任務。
 
 - **argv**：`aos-as <帳號> [--] <原指令…>`；帳號是名稱或非負 UID。
-- **暫存 inst**：ignored 的 `.aos/jobs/as-<seq>-<pid>.json`（`seq` 取結束碼紀錄的格數、沒有時用 `0`，`pid` 是 aos-as 自己的 PID），內容是一份 inst：`argv`、目前 cwd、目前的環境；結束後刪掉。
+- **暫存 inst**：ignored 的 `.aos/jobs/as-<seq>-<pid>.json`（`seq` 取結束碼紀錄的格數、沒有時用 `0`，`pid` 是 aos-as 自己的 PID），內容是一份 inst：`argv`、目前 cwd、目前的環境，stdin／stdout／stderr 都寫成繼承（runner 已拿交來的三個 fd 當自己的 stdio，原指令照繼承就接上任務表寫的 stdio）；結束後刪掉。
 - **交給 helper 的 fd**：繼承到的鎖 fd（`AOS_TICK_LOCK_FD`）、一條回報 pipe 的寫端，〔建議預設〕另交自己的 stdin、stdout、stderr，讓那一項照任務表寫的 stdio 走（`spawn_as` 附的 fd 從 2 個變 5 個，P-107 與 daemon-provision schema 要跟著改）；〔下一步納入 cgroup 時補〕自己在 `aos-cg` 的 `task-*` 框裡時另帶 `frame`＝那個框。
 - **stderr 代碼**：`no_channel`、`helper_unavailable`、`user_not_granted`、`user_invalid`、`stopping`（daemon 的錯誤碼照轉）、`result_unknown`（回應成功但 pipe 沒回報就關了）。
 
@@ -203,7 +203,7 @@ argv：`aos-config-add [--node <node_dir>] --from <source> --to <target>`；省�
   - `stopped_after`：被停格檔停下時，是哪一項跑完後停的，記那一項的 `id` 字串；只在 `ended:true` 時可有。
   - `started_at_ms`：只給人看，不參與計算。
 - **寫法**：每次整份重寫（暫存檔→rename），不 fsync；只有核心寫。
-- **停格檔**：`.aos/tick/stop`，ignored；任何內容都算（建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面）。核心取鎖後、開第一項前刪掉殘留的；每項結束後檢查，存在就不開後面的項。跟擋板檔不同，它只管本格；格結束時還在，daemon 順帶暫停 node。
+- **停格檔**：`.aos/tick/stop`，ignored；任何內容都算（建議一行 UTF-8 原因，核心印在 stderr 的 `stopped:` 後面）。核心取鎖後、開第一項前刪掉殘留的；每項結束後檢查，存在就不開後面的項。跟擋板檔不同，它只管本格；daemon 看到這格留下它就暫停 node（[B-607](../daemon.md)），下一格核心開頭刪。
 - **擋板檔**：`.aos/tick-blocked`，ignored；內容一行 UTF-8 原因（核心印在 `blocked:` 後面）。任務或人手建、人手刪；核心取鎖後看到就不跑、不寫紀錄、回 1；daemon 看到就不開格。
 
 範例：[跑到一半](examples/node/tick-record.minimal.valid.json)、[被停格檔停下](examples/node/tick-record.ended.valid.json)；反例：[同一項同時有 exit 與 signal](examples/node/tick-record.exit-and-signal.invalid.json)、[ended 卻沒有 exit](examples/node/tick-record.ended-without-exit.invalid.json)、[沒收場卻記了 stopped_after](examples/node/tick-record.stopped-not-ended.invalid.json)。

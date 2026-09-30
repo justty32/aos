@@ -42,7 +42,7 @@ helper 只查可信註冊、安置已配置資源框、切目標帳號、exec �
 
 〔使用者方向 2026-09-30，第二十批追答 8、疑點裁定 6〕**`aos-as`：切換帳號的包裝**。核心不切帳號；任務要用別的帳號跑，就在 argv 寫 `aos-as <帳號> -- 原指令`（argv、檔名與結束碼見 [P-212](../protocol/node.md)）。它是普通程式，不是系統級任務。〔建議預設，未拍板；步驟〕
 
-1. 把原指令寫成一份 inst（`argv`、目前 cwd、目前的環境），放到 ignored 的 `.aos/jobs/as-<seq>-<pid>.json`。
+1. 把原指令寫成一份 inst（`argv`、目前 cwd、目前的環境；stdin／stdout／stderr 寫成繼承，runner 已拿交來的三個 fd 當自己的 stdio），放到 ignored 的 `.aos/jobs/as-<seq>-<pid>.json`。
 2. 帶本格憑證經通道送 `node.provision` 的 `spawn_as`（[B-609](../daemon.md)，參數與限制不變：誰能叫、帳號要在身分額度內、放在哪），同包交出繼承到的鎖 fd（`AOS_TICK_LOCK_FD`）、一條回報 pipe 的寫端，另交自己的 stdin、stdout、stderr，讓那一項照任務表寫的 stdio 走；〔下一步納入 cgroup 時補〕自己在 `aos-cg` 的 `task-*` 框裡時一併帶那個框（[B-202](execution.md)）。
 3. 讀 pipe 到 EOF，拿到 runner 的回報（[P-110](../protocol/daemon/provision-and-runner.md)），照它結束：正常結束回同一碼，被訊號結束就用同一個訊號結束自己；刪掉那份 inst。
 
