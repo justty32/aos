@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "seq": 1235,
+  "started_at_ms": 1790000060000,
+  "tasks": [
+    {
+      "id": "inbox",
+      "exit": 1
+    }
+  ],
+  "ended": true,
+  "exit": 1,
+  "stopped_after": "inbox"
+}

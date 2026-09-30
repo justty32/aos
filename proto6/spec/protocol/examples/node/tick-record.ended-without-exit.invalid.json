@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "seq": 1234,
+  "tasks": [
+    {
+      "id": "inbox",
+      "exit": 0
+    }
+  ],
+  "ended": true
+}

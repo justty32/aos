@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target_node": "/srv/aos/top",
-  "alarm_ms": 600000,
+  "alarm_ticks": 10,
   "message": {
     "jsonrpc": "2.0",
     "id": "m1",

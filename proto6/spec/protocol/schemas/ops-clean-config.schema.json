@@ -5,11 +5,10 @@
     "version": {
       "const": 1
     },
-    "retention_ms": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 9007199254740991,
-      "default": 2592000000
+    "retention_ticks": {
+      "$ref": "common.schema.json#/$defs/Ticks",
+      "default": 100000,
+      "description": "〔第二十批，取代 retention_ms〕保留期，本 node 的格數（P-605、B-404）；〔暫定〕預設 100000，週期 1 秒約 28 小時、週期 30 秒約 35 日"
     },
     "batch_limit": {
       "type": "integer",
@@ -29,11 +28,10 @@
       "minLength": 1,
       "pattern": "^[^\u0000]+$"
     },
-    "interval_seconds": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 9007199254740991,
-      "default": 86400
+    "interval_ticks": {
+      "$ref": "common.schema.json#/$defs/Ticks",
+      "default": 1000,
+      "description": "〔第二十批，取代 interval_seconds〕多久清一次，本 node 的格數（P-605、B-404）；〔暫定〕預設 1000，週期 1 秒約 17 分鐘、週期 30 秒約 8 小時"
     }
   },
   "required": [

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "node-tick-record.schema.json",
+  "title": "每項結束碼紀錄",
+  "description": ".aos/tick/current.json 與 last.json；核心每格寫，記本格各項怎麼結束、本 node 的格數與是否被停格檔停下（B-633、P-213）。取代第十九批的 node-journal。不認得的欄位忽略（P-007）。",
+  "type": "object",
+  "required": [
+    "version",
+    "seq",
+    "tasks",
+    "ended"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "seq": {
+      "$ref": "common.schema.json#/$defs/TickSeq",
+      "description": "本 node 的格數，從 1 起、跨重啟不倒退"
+    },
+    "started_at_ms": {
+      "$ref": "common.schema.json#/$defs/TimeMs",
+      "description": "只給人看，不參與計算"
+    },
+    "tasks": {
+      "type": "array",
+      "description": "已跑完的項，照順序；沒跑到的不列",
+      "items": {
+        "$ref": "#/$defs/TaskEnd"
+      }
+    },
+    "ended": {
+      "type": "boolean"
+    },
+    "exit": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "description": "這格 tick 的結束碼（P-203）；只在 ended 為 true 時有"
+    },
+    "stopped_after": {
+      "$ref": "common.schema.json#/$defs/ID",
+      "description": "被停格檔 .aos/tick/stop 停下時，是哪一項跑完後停的（任務表該項的 id 字串）；只在 ended 為 true 時有（B-620、P-213）"
+    }
+  },
+  "if": {
+    "properties": {
+      "ended": {
+        "const": true
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "exit"
+    ]
+  },
+  "else": {
+    "allOf": [
+      {
+        "not": {
+          "required": [
+            "exit"
+          ]
+        }
+      },
+      {
+        "not": {
+          "required": [
+            "stopped_after"
+          ]
+        }
+      }
+    ]
+  },
+  "$defs": {
+    "TaskEnd": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/ID",
+          "description": "任務表該項的 id 字串（同 AOS_TASK_ID）"
+        },
+        "exit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "signal": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "exit"
+          ]
+        },
+        {
+          "required": [
+            "signal"
+          ]
+        }
+      ]
+    }
+  }
+}

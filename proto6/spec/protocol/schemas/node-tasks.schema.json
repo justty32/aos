@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "node-tasks.schema.json",
   "title": "node 任務註冊表",
-  "description": ".aos/tasks.json；整份 $ref 展開後再驗證 Task，含唯一 id 與前置依賴。任務是 inst 的超集，可帶 user（第十九批，B-620）。核心只看 id 與 inst 部分，其餘欄位由標準配備讀。不認得的欄位忽略（P-007）。",
+  "description": ".aos/tasks.json；整份 $ref 展開後再驗證 Task，含唯一 id。任務是 inst 的超集，可帶 user（第十九批；第二十批：跟 tick 帳號不同時那一項回 125，要切帳號包 aos-as，B-620）。核心只看 id、inst 部分與 user，kind 與 methods 由系統級任務讀。第二十批撤 group、needs（組由存檔點界定、前置改用 aos-needs，B-621）；舊表寫了照不認得的欄位忽略（P-007）。",
   "type": "object",
   "required": [
     "_metainfo",
@@ -61,7 +61,7 @@
           "$ref": "common.schema.json#/$defs/ID"
         },
         "kind": {
-          "description": "B-620：system／kernel／agent／custom，或〔暫定〕自訂的「類別.名稱」，類別限 kernel／agent／custom；system 不開放自訂。核心不看，由標準配備驗分段。",
+          "description": "B-620、B-626：system／kernel／agent／custom，或〔暫定〕自訂的「類別.名稱」，類別限 kernel／agent／custom；system 標記系統級任務、不開放自訂。只是標記，核心不看，不驗順序。",
           "anyOf": [
             {
               "enum": [
@@ -77,18 +77,8 @@
             }
           ]
         },
-        "group": {
-          "$ref": "common.schema.json#/$defs/ID"
-        },
-        "needs": {
-          "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/ID"
-          },
-          "uniqueItems": true
-        },
         "methods": {
-          "description": "本任務處理的檔案請求 method（P-202）；同一 method 不能由兩項任務宣告，跨項唯一性由標準配備驗。",
+          "description": "本任務處理的檔案請求 method（P-202）；同一 method 不能由兩項任務宣告，跨項唯一性由收件任務 aos-inbox 驗（B-623）。",
           "type": "array",
           "uniqueItems": true,
           "items": {

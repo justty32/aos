@@ -1,4 +1,4 @@
 {
   "version": 1,
-  "interval_seconds": 86400
+  "interval_ticks": 1000
 }
