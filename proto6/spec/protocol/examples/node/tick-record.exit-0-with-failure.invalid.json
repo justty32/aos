@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "seq": 1236,
+  "tasks": [
+    {
+      "id": "mq-get",
+      "exit": 0
+    },
+    {
+      "id": "agent",
+      "signal": 9
+    }
+  ],
+  "ended": true,
+  "exit": 0
+}

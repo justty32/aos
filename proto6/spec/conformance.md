@@ -95,8 +95,8 @@
 | B-620 | settled/tick.md | 任務註冊表：照表依序跑（〔第十九批〕換標題） | T3 |
 | B-621 | settled/tick.md | 〔第二十批換主題〕aos-needs：前置沒成功就不跑（原節補號） | T3 |
 | B-622 | settled/tick.md | 〔下一步納入〕git 提交與還原的共同規則（原節補號） | T3 |
-| B-623 | settled/tick.md | 收件：分派、-32601，下一格刪原件（Q1）（〔第十九批〕-32601 從 B-620 搬來；〔第二十批〕收件是系統級任務） | T3 |
-| B-624 | settled/tick.md | 派出：投件、鬧鐘與發摘要（Q2）（原節補號；〔第二十批〕投件、發摘要是系統級任務） | T3 |
+| B-623 | settled/tick.md | 系統訊息佇列：取件（mq-get）；檔案收件 aos 不管（〔第二十批〕原「收件：分派、-32601，下一格刪原件（Q1）」，astra 審整理區定案改寫） | T3 |
+| B-624 | settled/tick.md | 派出：系統訊息佇列送出（mq-post）與發摘要（Q2）（原節補號；〔第二十批〕原「投件、鬧鐘與發摘要」，astra 審整理區定案改寫：檔案投件與鬧鐘撤出 aos） | T3 |
 | B-625 | settled/tick.md | 當機恢復、設定與清理（原節補號） | T3 |
 | B-626 | settled/tick.md | 〔第二十批換主題〕核心與系統級任務的界線 | T3 |
 | B-627 | settled/tick.md | 〔第十九批換主題〕人手或 cron 直接跑一格：風險自負 | T3 |
@@ -186,7 +186,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - 前綴規則比不中 UID 小於 1000 的帳號；子額度寫了父沒有的前綴或更大的範圍，被拒（B-606）。上層收小身分額度後，重登被拒的成員只隔離那一項並記事項，其他成員照常（B-607、S-205）。
 - 成員跑完一格、摘要沒變且牆鐘倒退，kernel 仍靠 `tick_seq` 認出新格；daemon 重啟後 `registration_id` 換了，kernel 重新核對、不空等（B-607、B-627）。
 - 〔第十九批〕掛載行程不存檔；daemon 重啟或停機時被收尾的，由掛它的 tick 照 unknown 規則核對，重啟後不接回（B-603、B-613）。
-- 已結束的掛載行程紀錄超過 `mount_diag_max` 或 `mount_diag_ttl_ms` 就消失；`mount.clear`（CLI `aos mount clear`）帶上層 node 只清整棵子樹下已結束、呼叫者有權清的紀錄，在跑的與別人的不動（B-610、H-004）。
+- 已結束的掛載行程紀錄超過 `mount_diag_max` 或 `mount_diag_ttl_ticks` 就消失；`mount.clear`（CLI `aos mount clear`）帶上層 node 只清整棵子樹下已結束、呼叫者有權清的紀錄，在跑的與別人的不動（B-610、H-004）。
 
 **框、收尾與佈建**
 
@@ -288,7 +288,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 
 **系統級任務與普通程式**
 
-- 範本任務表在沒有 git、沒有 cgroup 的機器上照常跑完；拿掉 `outbox` 後不投件、其餘照常；`inbox` 建了停格檔時後面各項不跑、整格回 1（B-629、B-623）。
+- 範本任務表在沒有 git、沒有 cgroup 的機器上照常跑完；拿掉 `mq-post` 後佇列訊息不送、其餘照常；拿掉 `mq-get` 後佇列訊息留在 daemon、其餘照常（B-629、B-623）。
 - `aos-needs a -- …`：`a` 失敗或還沒跑時回 125、原指令沒跑；`a` 成功時照跑、結束碼是原指令的；`b` 被擋下後 `aos-needs b -- …` 也回 125（B-621）。
 
 **daemon（沒有 cgroup）**

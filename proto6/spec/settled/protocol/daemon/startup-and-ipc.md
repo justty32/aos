@@ -14,7 +14,7 @@
 |---|---|
 | stdout | 啟動時印 `helper_pid=<PID>`（沒 helper 印 `none`）；node 問題的警告；熱重載每次一行 `reload applied=<欄位,…> restart_required=<欄位,…>`（沒有就留空）；設定有不認得的欄位時一行 `config_unknown_fields=<欄位,…>`（[C-07](../../../contracts.md)）。本輪不印 cgroup 或 git 的偵測行（[B-605](../../daemon.md)） |
 | stderr | 只印 daemon 自身原因造成的錯誤 |
-| 讀 | 設定檔；登記 inst 的原始 bytes。部署要先給通用 user 必要的讀權與目錄穿越權；讀不到就拒絕，不交 root 代讀 |
+| 讀 | 設定檔；登記 inst 的原始 bytes（讀不到怎麼辦見 [B-601](../../daemon.md)） |
 | 寫 | socket；`state_dir` 下的恢復檔與鎖；node 的 `.aos/attention/`；P-110 的掛載行程未啟動旁檔 |
 | 環境 | 不作授權。daemon 只替它開的程序放兩個通道變數（[P-117](channel.md)），自己不讀 `AOS_*` |
 | 訊號 | SIGINT／SIGTERM 停機（P-114、[B-604](../../daemon.md)）；SIGHUP 熱重載（[B-608](../../daemon.md)）；其他訊號由父程序看 wait 狀態 |
@@ -35,7 +35,7 @@
 
 [設定 schema](../../../protocol/schemas/daemon-config.schema.json)：持久檔，不認得的欄位忽略（[C-07](../../../contracts.md)）。哪些欄位能熱重載、哪些要重開，見 [B-608](../../daemon.md) 的表。
 
-各 `_ms` 欄位都是 daemon 本身的計時，保留毫秒（第二十批，[C-01](../../../contracts.md)）。
+哪些計時用毫秒、哪些用格數，見 [daemon 篇「時間」](../../daemon.md)（astra 審整理區裁定裁-2）。
 
 | 欄位 | 意思 |
 |---|---|
@@ -49,7 +49,7 @@
 | `drain_timeout_ms`〔第十八批〕 | 可省，正整數毫秒，預設 600000；排空停機最多等多久。跟 `shutdown_grace_ms` 是兩個值 |
 | `kill_escape_cgroups`〔第十八批；〔暫定，第二十批疑-13〕撤〕 | 逃生口不再提供（[B-605](../../daemon.md)），這欄撤出 schema；舊設定寫了照 [C-07](../../../contracts.md) 忽略 |
 | `mount_diag_max`〔第十八批；第十九批改名，原 `once_diag_max`〕 | 可省，非負整數，預設 1024；掛載行程的診斷最多留幾筆，0＝不留（[B-610](../../daemon.md)） |
-| `mount_diag_ttl_ms`〔第十八批；第十九批改名，原 `once_diag_ttl_ms`〕 | 可省，正整數毫秒，預設 86400000；掛載行程的診斷結束後留多久 |
+| `mount_diag_ttl_ticks`〔第十八批；第十九批改名；astra 審整理區裁-2 改成格數，取代 `mount_diag_ttl_ms`〕 | 可省，正整數，預設 1000；掛載行程的診斷結束後，掛它的上層再開幾格就淘汰（[B-610](../../daemon.md)）。舊設定寫的 `mount_diag_ttl_ms` 照 [C-07](../../../contracts.md) 忽略 |
 | `cgroup_root`〔下一步納入 cgroup；本輪只驗形狀、不生效〕 | 可省；已準備好（或要 daemon 自己建）的 cgroup v2 子樹絕對路徑；省略就用 daemon 自己目前所在的 cgroup，用不了就照沒有 cgroup 做。「準備好」與子層搬移見 [daemon 篇末](../../daemon.md) |
 | `create_cgroup`〔下一步納入 cgroup；本輪只驗形狀、不生效〕 | 可省，布林，預設 false；true＝子樹不在時 daemon 自己建（同 `--create-cgroup`），此時 `cgroup_root` 必填（B-605） |
 | `disable` | 可省，不重複字串陣列，目前只認 `quota`；強制關掉啟動時偵測到的可選功能（B-605） |
@@ -66,7 +66,7 @@
 | `interval_ms` | 可省，正整數；一格的標準長度，外部規定、保留毫秒（[B-607](../../daemon.md)） |
 | `provision` | 可省，佈建權（下面） |
 
-頂層項沒有 `parent_id`：上層固定 null（[B-606](../../daemon.md)）。inst 怎麼找、base 在哪，照 [inst](../../../base/inst.md)。找不到 inst：設定檔裡是用法錯 2；IPC 註冊回 -32602／`invalid_params`，daemon 不退出。
+頂層項沒有 `parent_id`：上層固定 null（[B-606](../../daemon.md)）。inst 怎麼找、base 在哪，照 [inst](../../../base/inst.md)；找不到時回什麼見 [B-606](../../daemon.md)。
 
 ### 身分額度 `identity_grant`
 
@@ -87,7 +87,7 @@
 
 | 欄位 | 意思 |
 |---|---|
-| `actions` | 必填、不重複；只認 [P-107](provision-and-runner.md) 的九種動作 |
+| `actions` | 必填、不重複；只認 [P-107](provision-and-runner.md) 表上除了 `spawn_as` 以外的九種動作（`spawn_as` 看身分額度，不進這裡） |
 | `paths` | 必填、不重複；可佈建的絕對目錄範圍，空陣列＝不授任何路徑。`cgroup_root` 不算一般可寫路徑授權 |
 | `groups`〔第十八批〕 | 可省；可建立、可加成員、可 chgrp 的群組，每項是確切名稱字串或 `{"prefix":…}`；省略＝不授群組 |
 
@@ -102,20 +102,16 @@
 
 ## P-102．sudo 與 helper 生死〔使用者方向 2026-09-29〕
 
-啟動模式、`SUDO_UID`、永久降權、kill helper 不重拉、daemon 死了 helper 跟著退出，全部照 [B-303](../../helper.md)。非 root 啟動只准通用 user，改設定不能冒充切 UID。
+啟動模式、`SUDO_UID`、永久降權、kill helper 不重拉、daemon 死了 helper 跟著退出，全部照 [B-303](../../helper.md)。
 
-**PID 提示檔**：
+**PID 提示檔**（什麼時候寫、刪，舊檔怎麼看，見 [B-603](../../daemon.md)）：
 
 | 檔 | 內容 |
 |---|---|
 | `state_dir/helper.pid` | 一行 PID；沒 helper 寫 `none` |
 | `state_dir/daemon.pid` | 一行 PID |
 
-- 啟動時寫，正常退出時刪。
-- 啟動時看到舊檔只當提示，不拿來殺程序。
-- helper PID 另照 P-101 印在 stdout。
-
-helper 的設定副本、父死監看與失聯怎麼辦見 [B-601](../../daemon.md)；熱重載的界線見 [B-608](../../daemon.md)。
+helper PID 另照 P-101 印在 stdout。helper 的設定副本、父死監看與失聯見 [B-601](../../daemon.md)；熱重載的界線見 [B-608](../../daemon.md)。
 
 ## P-103．IPC 封包與授權〔建議預設，未拍板〕
 
@@ -129,32 +125,4 @@ helper 的設定副本、父死監看與失聯怎麼辦見 [B-601](../../daemon.
 
 ### 誰可呼叫
 
-授權的順序與呼叫者怎麼認見 [B-601](../../daemon.md)。簡單說：
-
-- **不帶憑證**：看 `SO_PEERCRED.uid`。
-- **帶憑證**（第十九批）：下表的「X 的 owner 或祖先 owner」讀成「憑證所屬的 tick 就是 X，或在 X 的有效上層鏈上」（[B-612](../../daemon.md)）。
-
-表中的 owner 是登記保存的 `owner_uid`，何時更新見 [B-606](../../daemon.md)。上層指有效上層鏈：預設看資料夾包含，登記可覆蓋（B-606）。
-
-| method | 誰可呼叫 |
-|---|---|
-| `node.register` | 新成員：有效上層的 owner 或祖先 owner；首次必須有上層同意，不能自行接到別人的鏈。既有項：原 owner 或祖先 owner，不能搶別隊。〔第十九批〕覆蓋上層與換父：同時是新舊兩個上層的 owner 或祖先 owner；舊上層沒在這個 daemon 登記時只看新上層（[B-606](../../daemon.md)） |
-| `node.unregister` | 目標 owner 或祖先 owner；效果包含目標已登記子樹 |
-| `node.wake` | 目標 owner 或祖先 owner |
-| `node.pause`、`node.resume` | 目標 owner 或祖先 owner |
-| `node.mount`〔第十九批〕 | 掛載的上層（`parent_id`；帶憑證時省略＝憑證所屬的 tick）的 owner 或祖先 owner（[B-613](../../daemon.md)） |
-| `node.kill`〔第十九批〕 | 掛它的那個上層的 owner 或祖先 owner；看路徑，不看當時的憑證 |
-| `node.send`〔第十九批〕 | 必帶憑證；寄件 tick 的執行帳號對收件 tick 的 `requests/` 有寫權（[B-614](../../daemon.md)） |
-| `node.take`〔第十九批〕 | 必帶憑證；只取憑證所屬 tick 自己的 |
-| `node.show` | 目標 owner 或祖先 owner；含 P-106 保留的掛載行程結果 |
-| `node.ls` | 有 socket 連接權；逐筆只列 peer 是 owner／祖先 owner 的登記及保留的掛載行程結果，沒有可見項回空陣列 |
-| `daemon.info` | 有 socket 連接權；只回本次啟動 ID，不暴露登記 |
-| `mount.clear`〔第十八批；第十九批改名，原 `once.clear`〕 | 有 socket 連接權；只清 peer 是 owner／祖先 owner 的已結束掛載行程紀錄（[B-610](../../daemon.md)） |
-| `node.provision` | 目標 owner 或祖先 owner，且目標登記有相符的 `provision` 授權；需 helper 的動作再由 helper 核對。〔第十九批〕`spawn_as` 例外：必帶憑證、憑證所屬的 tick 就是目標，帳號看身分額度，不看 `provision` 授權（[B-609](../../daemon.md)） |
-| `daemon.attention.ls`、`daemon.attention.show` | 只回 peer 是來源 owner／祖先 owner 的事項，見 P-601 |
-| `daemon.attention.done` | 來源 owner 或祖先 owner；只把 daemon 自身事項標成完成，見 P-601 |
-
-其他：
-
-- 既有成員可重登自己，但不能擴大目前的額度或佈建權；擴大與下授的規則見 [B-606](../../daemon.md)。
-- root 與通用 user 沒有全樹特權、RPC ID 不是執行收據、斷線後不准盲重送，見 [B-601](../../daemon.md)。
+每個 method 誰可呼叫、帶憑證時怎麼讀、授權順序與斷線後不准盲重送，以 [B-601](../../daemon.md)「IPC 授權與身分額度」為正本（astra 審整理區必-8 從本條搬上）。

@@ -8,7 +8,7 @@
 |---|---|
 | 誰有通道；憑證怎麼發放、核對、作廢 | [B-612](../../daemon.md) |
 | 掛行程與砍掉 | [B-613](../../daemon.md) |
-| 暫存訊息與急件 | [B-614](../../daemon.md) |
+| 系統訊息佇列與急件 | [B-614](../../daemon.md)；tick 那一側 [B-623、B-624](../../tick.md) |
 
 封包、schema 與通用錯誤同 [P-103](startup-and-ipc.md)、[P-111](provision-and-runner.md)，一律嚴格（[C-07](../../../contracts.md)）。
 
@@ -29,7 +29,7 @@
 
 所以客戶端（含 kernel、agent 的工具）只對上表前兩列附憑證；`daemon.info`、`node.show`、其他佈建動作照舊不帶，以 socket 對面的帳號授權（[B-612](../../daemon.md)）。
 
-**缺變數**：客戶端（投件任務 `aos-outbox`、取件的任務、`aos-as`、aos 指令）要走通道卻缺任一個變數時，自己擋下、報代碼 `no_channel`，不連 socket。這個代碼不會出現在 daemon 的回應裡。
+**缺變數**：客戶端（`aos-mq`、`aos-as`、aos 指令）要走通道卻缺任一個變數時，自己擋下、報代碼 `no_channel`，不連 socket。這個代碼不會出現在 daemon 的回應裡。
 
 **helper 那一段**：私有通道的 `daemon.helper.start` 另帶 `token`，由 helper 放進 runner 的環境（[P-108](provision-and-runner.md)）。
 
@@ -63,7 +63,7 @@
 | `node.send` | `token`、`to`（收件 tick 的 node id）、`message` 必填；`urgent` 可省，布林，預設 false | `{node_id}`（收件 tick 的 id） |
 | `node.take` | `token` 必填；`limit` 可省，1～256，預設 256 | `{messages, more}` |
 
-**`message`**：一份檔案收件用的請求物件（common 的 `FileRpcRequest`，[P-301](../../../protocol/messages.md)）。它照檔案 RPC 放寬、不認得的欄位忽略；外層 params 仍嚴格（[C-07](../../../contracts.md)）。序列化後最多 196608 bytes。
+**`message`**：一份請求物件（common 的 `FileRpcRequest`，[P-301](../../../protocol/messages.md)）。它照檔案 RPC 放寬、不認得的欄位忽略；外層 params 仍嚴格（[C-07](../../../contracts.md)）。序列化後最多 196608 bytes。
 
 **`node.take` 的回應**：
 
@@ -81,8 +81,8 @@
 | code | 意思 | 預設 retryable |
 |---|---|---|
 | `token_invalid` | 憑證不認得、已作廢、跟 node 對不上，或 socket 對面的帳號不合 | false |
-| `kind_mismatch` | 目標種類不符：對掛載行程送 unregister／wake／pause／resume，對登記的 node 送 kill，對掛載行程送 send，或由掛載行程 take | false |
-| `mailbox_full` | 收件 tick 的暫存已達上限 | true，稍後再送或改走檔案收件 |
+| `kind_mismatch` | 目標種類不符：對掛載行程送 unregister／wake／pause／resume；對登記的 node 送 kill；send 的收件方是掛載行程；take 的呼叫者是掛載行程 | false |
+| `mailbox_full` | 收件 tick 的佇列已達上限 | true，稍後再送 |
 | `message_too_large` | 單件訊息超過上限 | false |
 
 通道上沿用 P-111 的：

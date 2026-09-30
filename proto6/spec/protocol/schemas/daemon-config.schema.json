@@ -69,12 +69,12 @@
       "default": 1024,
       "description": "掛載行程的診斷最多留幾筆，0＝不留（B-610）"
     },
-    "mount_diag_ttl_ms": {
+    "mount_diag_ttl_ticks": {
       "type": "integer",
       "minimum": 1,
       "maximum": 9007199254740991,
-      "default": 86400000,
-      "description": "掛載行程的診斷結束後留多久（B-610）"
+      "default": 1000,
+      "description": "掛載行程的診斷結束後，掛它的上層再開幾格就淘汰（B-610；astra 審整理區裁定裁-2，取代 mount_diag_ttl_ms）"
     }
   },
   "required": [

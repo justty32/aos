@@ -4,11 +4,11 @@
   "started_at_ms": 1790000060000,
   "tasks": [
     {
-      "id": "inbox",
+      "id": "mq-get",
       "exit": 1
     }
   ],
   "ended": true,
   "exit": 1,
-  "stopped_after": "inbox"
+  "stopped_after": "mq-get"
 }

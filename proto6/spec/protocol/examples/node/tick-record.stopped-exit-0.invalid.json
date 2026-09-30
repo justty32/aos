@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "seq": 1236,
+  "tasks": [
+    {
+      "id": "mq-get",
+      "exit": 0
+    }
+  ],
+  "ended": true,
+  "exit": 0,
+  "stopped_after": "mq-get"
+}

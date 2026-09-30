@@ -20,18 +20,24 @@ daemon 不是 tick 存在的前提：tick 怎麼被執行不管，cron、人手�
 
 **本篇先假設 cgroup 與 git 都不存在**，把 daemon 的基礎設計好；下一步才納入 cgroup。
 
-- 本輪 daemon 不用 cgroup：每一格、每個掛載行程開在自己的程序群組，收尾照程序群組做（B-604）。
+- 本輪 daemon 不用 cgroup：每一格、每個掛載行程由它自己的 runner 管名下的程序（B-601），收尾經 runner 做（B-604）。
 - node 框、資源上限、`cgroup_root`、框的命名與委派、B-611 對 cgroup 子樹的那把鎖、以 cgroup 收尾、systemd 委派等已寫好的條文，都在篇末「[下一步納入：cgroup](#下一步納入cgroup非現行規則)」，**不是現行規則**。
 - git 只有任務表上的 git 任務會用（也是下一步納入，[tick](tick.md) 篇末）；daemon 不讀 git。
 
 依據：第二十批進行順序。
 
-### 時間用毫秒
+### 時間：哪些用毫秒、哪些用格數
 
-- daemon 叫醒 tick 的週期 `interval_ms` 是外部規定的，保留毫秒；它也是那個 tick「一格」的標準長度（[C-01](../contracts.md)）。
-- daemon 本身不在任何一格裡，自己的計時也保留毫秒：寬限、排空上限、pause 存檔間隔、掛載診斷保留期、事項批次。
+〔使用者方向 2026-09-30，astra 審整理區裁定裁-2〕只有外部或作業系統層的時間保留毫秒；aos 自己決定的政策性保留期改用所屬上層的格數。
 
-依據：第二十批追答 4。
+| 計時 | 單位 | 為什麼 |
+|---|---|---|
+| 叫醒週期 `interval_ms` | 毫秒 | 外部規定；也是那個 tick「一格」的標準長度（[C-01](../contracts.md)） |
+| 收尾寬限 `shutdown_grace_ms`、排空上限 `drain_timeout_ms` | 毫秒 | 作業系統層的停程序；要跟 systemd 的停機逾時對得上（附錄） |
+| 掛載診斷保留期 `mount_diag_ttl_ticks` | 掛它的上層的格數 | 政策性保留期（B-610） |
+| 〔暫定〕pause 存檔間隔 `pause_save_interval_ms`、事項批次寫出（1000 ms） | 毫秒 | daemon 自己的寫檔批次，只決定當機時最多丟多少；daemon 本身沒有上層、不在任何一格裡，沒有「所屬上層的格」可數 |
+
+依據：第二十批追答 4；astra 審整理區裁定裁-2（撤「daemon 不在格內，所以自己的計時都保留毫秒」）。
 
 ## B-601：記憶體登記與按需執行
 
@@ -41,7 +47,7 @@ daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登�
 - **daemon 不做的事**：不讀工作狀態或任務註冊表，不排業務工作、不分資源。只用登記與喚醒資料；讀 inst 只為 `user` 授權。訊息在通道上只**暫存與轉交**，不解析正文（B-614）。
 - **不叫排程**：aos 的「排程」是任務表上每格跑一次的程式（[T-07](terms.md)、[scheduling](../scheduling/README.md)）；daemon 這邊只做「定期開格」與「叫醒開格」。
 - **一格一格來**：同一資料夾同時只跑一格，由 tick 核心的鎖保證（[B-602](tick.md)）。daemon 另外自己避免同時開同一 node 的兩格，但這不是互斥的來源。
-- agent 通常不設定期，由 kernel 決定何時叫醒及同時執行數；kernel 本格結束就退出，不等成員，LLM／工具由後續 tick 收結果。
+- 〔使用例，不是 daemon 的規則〕agent 通常不設定期，由 kernel 決定何時叫醒及同時執行數；kernel 本格結束就退出，不等成員，LLM／工具由後續 tick 收結果。
 
 依據：使用者方向 2026-09-29；第十九批（辨識 tick、改寫）；第二十批方向 2、追答 3（排程）。
 
@@ -61,37 +67,61 @@ daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登�
 
 **呼叫者看 socket 對面的 Linux 帳號**（`SO_PEERCRED`）：該 node 的帳號，或其上層的帳號。封包自稱的 sender／user 不算呼叫者身分。
 
-- **唯一例外是通道**：請求帶本格憑證時，呼叫者是憑證所屬的那個 tick（B-612）。
+- **唯一例外是通道**：請求帶本格憑證時，呼叫者是憑證所屬的那個 tick（B-612）。下表的「X 的 owner 或祖先 owner」，帶憑證時讀成「憑證所屬的 tick 就是 X，或在 X 的有效上層鏈上」。
 - **上層**指有效上層鏈（預設看資料夾包含，登記可覆蓋，B-606），不是 OS 父目錄本身。
+- **owner** 是登記保存的 `owner_uid`，何時更新見 B-606。
 - 身分額度與通用 user 以 [B-301](../base/identity-resources.md) 為正本；額度的寫法與包含判定見 B-606。獲准叫醒不代表獲准擴大額度。
 
-〔建議預設；第十九批從 P-103 搬上〕授權細節：
+**誰可呼叫**〔建議預設；astra 審整理區必-8 從 P-103 搬上〕：
+
+| method | 誰可呼叫 |
+|---|---|
+| `node.register` | 新成員：有效上層的 owner 或祖先 owner；首次必須有上層同意，不能自行接到別人的鏈。既有項：原 owner 或祖先 owner，不能搶別隊；可重登自己，但不能擴大目前的額度或佈建權。覆蓋上層與換父：同時是新舊兩個上層的 owner 或祖先 owner；舊上層沒在這個 daemon 登記時只看新上層（B-606） |
+| `node.unregister` | 目標 owner 或祖先 owner；效果包含目標已登記子樹 |
+| `node.wake`、`node.pause`、`node.resume` | 目標 owner 或祖先 owner |
+| `node.mount` | 掛載的上層（`parent_id`；帶憑證時省略＝憑證所屬的 tick）的 owner 或祖先 owner（B-613） |
+| `node.kill` | 掛它的那個上層的 owner 或祖先 owner；看路徑，不看當時的憑證 |
+| `node.send` | 必帶憑證；寄件 tick 的執行帳號對收件 tick 的 `requests/` 有寫權（B-614） |
+| `node.take` | 必帶憑證；只取憑證所屬 tick 自己的 |
+| `node.show` | 目標 owner 或祖先 owner；含保留的掛載行程結果（B-610） |
+| `node.ls` | 有 socket 連接權；逐筆只列 peer 是 owner／祖先 owner 的登記及保留的掛載行程結果，沒有可見項回空陣列 |
+| `daemon.info` | 有 socket 連接權；只回本次啟動 ID，不暴露登記 |
+| `mount.clear` | 有 socket 連接權；只清 peer 是 owner／祖先 owner 的已結束掛載行程紀錄（B-610） |
+| `node.provision` | 目標 owner 或祖先 owner，且目標登記有相符的 `provision` 授權；需 helper 的動作再由 helper 核對。`spawn_as` 例外：必帶憑證、憑證所屬的 tick 就是目標，帳號看身分額度，不看 `provision` 授權（B-609） |
+| `daemon.attention.ls`、`daemon.attention.show` | 只回 peer 是來源 owner／祖先 owner 的事項（[P-601](../protocol/ops.md)） |
+| `daemon.attention.done` | 來源 owner 或祖先 owner；只把 daemon 自身事項標成完成 |
+
+〔建議預設；第十九批從 P-103 搬上，astra 審整理區必-8 從 P-111 搬上〕授權與處理細節：
 
 - 先驗 JSON、method 與參數，再授權。
 - 不能用 PID、路徑前綴或封包的 `user` 當呼叫者。同 UID 共用同一 OS 權限，不帶憑證時分不出是哪個 node 或工具在呼叫。
 - root 或通用 user 不因名稱自帶全樹特權，是 owner 或祖先 owner 才符合。可連 socket 不等於通過 method 授權。
 - RPC ID 只配對回應，不是永久執行收據。斷線不代表沒做：登記、pause、resume 可以查目前值核對；wake 可合併但不是永久去重；掛行程與特權動作不准因沒回應就盲目重送。daemon 不加持久重播帳本。
+- 一行超過封包上限：回一次 `invalid_request` 就關連線，不無界讀下去。回錯時能辨識出合法的請求 ID 就沿用，不另造 ID。
 
 依據：使用者方向 2026-09-29；第十九批（憑證例外）。
 
 ### 執行身分與 helper
 
 - daemon 開 tick 前只讀 [inst 的 `user`](../base/inst.md) 授權，不解析其他工作內容；不合額度就不跑，照 B-607 停格。其餘解析與執行規則依 inst 篇。
+- 〔astra 審整理區必-8 從 P-101 搬上〕daemon 以通用 user 讀 inst；讀不到就拒絕，**不交給 root 代讀**。部署要先給通用 user 必要的讀權與目錄穿越權。
 - 啟動路徑與可選 helper 的角色依 [B-303](helper.md)；helper 做哪些固定動作見 B-609。
 
 **事項往哪寫**：
 
 - node 問題寫該 node 的 `.aos/attention/`（ignore）；寫不出就 stdout 警告。
-- daemon 自身問題才留 daemon attention／stderr。stdout 另印 helper PID，兩個 PID 提示檔依 [P-102](protocol/daemon/startup-and-ipc.md)。
+- daemon 自身問題才留 daemon attention／stderr。
 - 事項怎麼處理見 [S-405](../scheduling/operations.md)。
 - 〔建議預設；第二十批改寫計畫記錄者建議〕daemon 在格外往 node 資料夾寫的東西——事項、`.aos/runner-stderr.log`、單檔掛載未啟動的 `.err` 旁檔（B-613）——都算開格與收尾的附帶產物，不違反「通道外一切在格內做」。
 
 **helper 的記憶體鏡像**〔建議預設；第十九批從 P-108 搬上〕：
 
 - helper 存活時，登記與更新先經它重驗（啟動設定的頂層額度、可信上層鏈、原始 `user` 與路徑）才生效。鏡像只在記憶體。
-- 沒 helper 時：只用通用 user、沒佈建權的登記由 daemon 自己核對；其他帳號或要 helper 的動作的新登記回 `helper_unavailable`；既有的通用 user 登記照常跑。本輪 `cgroup_*` 一律 `unsupported`；只授 cgroup 動作的登記怎麼核，見篇末[下一步納入](#下一步納入cgroup非現行規則)。
+- 〔astra 審整理區必-8 從 P-108 搬上〕解除時，一筆登記的鏡像要等它的範圍全空、而且底下沒有已登記子節點才移除；整棵子樹由子到父依序解除。
+- 沒 helper 時：只用通用 user、沒佈建權的登記由 daemon 自己核對；其他帳號或要 helper 的動作的新登記回 `helper_unavailable`；既有的通用 user 登記照常跑。
 - helper 用安全的程序 handle 追蹤、wait 自己的孩子並跨帳號收尾；daemon 不 wait helper 的孩子、不信裸 PID。
 - helper 失聯時，daemon 只做自己權限做得到的收尾；其他帳號沒確認全空就阻擋。斷線不代表已退出，也不能重送不明的開格。helper 消失而不能收尾時保留占用、阻止新格，不宣稱清空。
+- 〔下一步納入 cgroup 時補〕本輪 `cgroup_*` 一律 `unsupported`；只授 cgroup 動作的登記怎麼核，見篇末[下一步納入](#下一步納入cgroup非現行規則)。
 
 **helper 的設定**〔建議預設；第十九批從 P-102 搬上〕：root 用的設定檔及其父目錄不得由不受信任的 node 改寫；helper 在 fork 前固定一份設定副本（B-608）；設定父死訊號時處理競態，父死訊號與私有通道斷線一起監看。額度不准 UID 0 或 root 別名。
 
@@ -99,34 +129,51 @@ daemon 在記憶體放一張登記表，**node 資料夾路徑就是 id**。登�
 
 〔建議預設；第十九批從 P-109、P-110 搬上〕daemon（或 helper）以固定的 `aos-runner` 開每一格與每個掛載行程：
 
-1. 先降權、設好群組與資源；
+1. fork 後先 `setsid`（runner 自成一個 session，不跟 daemon 的終端同組），降權；
 2. runner 核對 UID，並核對 inst 原來源的 bytes 跟授權時的快照相同；
 3. 才照 [inst](../base/inst.md) 解析、開檔與執行。
 
 argv 與回報形狀見 [P-109、P-110](protocol/daemon/provision-and-runner.md)。
 
 - **串流**：runner 的 stdin／stdout 是 `/dev/null`（`spawn_as` 例外：用 `aos-as` 交來的 stdio，B-609）。stderr 由 daemon 收集成 node 診斷，不直通 daemon 的 stderr；資料夾 node 暫定寫 `.aos/runner-stderr.log`（覆寫、ignore），輪替與留存以後再定。
-- **環境**：除了 [B-303](helper.md) 與 inst 的規則，daemon 開的每一格、每個掛載行程都多放兩個通道變數（B-612），不帶管理 fd 或 key。`spawn_as` 開的程序另外繼承 `aos-as` 交來的鎖 fd 與 `AOS_TICK_LOCK_FD`（B-609；第十九批疑點裁定 10，第二十批改主詞）。
-- **程序群組**（本輪現行做法）：daemon 自己是 child subreaper。每一格、每個掛載行程開在自己的程序群組（fork 後、exec runner 前先 `setsid`），daemon 記下這個群組，收尾照 B-604 對整個群組做。有 helper 時由 helper 同樣做（B-609）。
+- **環境**：除了 [B-303](helper.md) 與 inst 的規則，daemon 開的每一格、每個掛載行程都多放兩個通道變數（B-612），不帶管理 fd 或 key。`spawn_as` 開的程序怎麼補環境見 B-609。
 - **回報**：每次完整收尾只回報一次。
   - 前置失敗（身分不在額度內、來源變了等）回 `started:false`。
   - 已放行後，子程式自己的結束碼照實回報；被訊號結束另帶訊號編號。
   - runner 在已放行後自己收尾失敗，回報 `FinalizeFailed`，不能當成子程式退出 125。
   - 沒有完整可信回報就是結果不明，不能推定從未執行。前置檢查可能已建目錄或截斷輸出，125 不代表沒有檔案副作用。
-- **helper 開格什麼時候回**〔建議預設；第十九批依方案 A 從 P-108 搬上〕：helper 替 daemon 開的格與掛載行程，要等 runner 結束、wait 回收、後代全空才回覆 daemon。全空但業務失敗仍算開格完成；無法確認全空回 `cleanup_failed`。私有通道按 RPC ID 配對，可同時有多筆在途。helper 拿到的快照是 daemon 取原始 `user` 時的同一份不可變 bytes；inst 的 base 仍照 [inst 目標](../base/inst.md#inst-目標檔案或資料夾)算，不看快照放在哪。`spawn_as` 例外：runner 開起來就回，結束碼走 `aos-as` 交來的 pipe（B-609）。
+- **helper 開格什麼時候回**〔建議預設；第十九批依方案 A 從 P-108 搬上〕：helper 替 daemon 開的格與掛載行程，要等 runner 回報並結束、wait 回收之後才回覆 daemon。全空但業務失敗仍算開格完成；無法確認全空回 `cleanup_failed`。私有通道按 RPC ID 配對，可同時有多筆在途。helper 拿到的快照是 daemon 取原始 `user` 時的同一份不可變 bytes；inst 的 base 仍照 [inst 目標](../base/inst.md#inst-目標檔案或資料夾)算，不看快照放在哪。`spawn_as` 例外：runner 開起來就回，結束碼走 `aos-as` 交來的 pipe（B-609）。
 
-### 一格結束後：格後收尾
+### 誰管哪些程序〔暫定，astra 審整理區必-1〕
 
-一格結束後殺殘留歸 daemon（第二十批追答 8）：
+本輪沒有 cgroup，程序靠「runner 當收屍人」管。**每一次開格（或掛載）由那一個 runner 負責它底下的所有程序；daemon／helper 只跟 runner 打交道。**
 
-1. 主程序（tick 或掛載行程）結束、runner 回報之後，這個程序群組還有程序，就是沒人收的殘留；
-2. daemon 直接對整個群組送 SIGKILL（不先 TERM，主程序已經結束）；
-3. 回收掛到 daemon 名下的孤兒，確認群組已空，才算這格收完、才開下一格；清不空照 B-607 停格。
+| 誰 | 做什麼 |
+|---|---|
+| daemon、helper | 自己是 child subreaper。fork＋`setsid`＋exec runner；以 pidfd 追蹤 runner、對它送訊號 |
+| runner | 設 `PR_SET_CHILD_SUBREAPER`。照 inst 讓子程式另開 session（子程式群組，[inst](../base/inst.md)）。子程式的後代不論有沒有跳出群組，只要中間的父程序死了，就掛回 runner |
 
-- 跳出程序群組又還活著的後代不保證被殺；它們若還握著 tick 的鎖 fd，下一格回 75（[B-602](tick.md)）。
-- 後代清空、串流收完與取消競態依 [B-202、B-203](../base/execution.md)。範圍沒清空前不釋放名額、不開下一格；所有失敗都不自動重跑結果不明的工作。
+所以 inst 的「子程式另開 session」跟 daemon 的收尾不衝突：受管的不是某一個群組，而是 runner 名下的整棵樹。
 
-**驗收：**無事 node 不開 tick；重複叫醒不重疊；任務在背景留一個同程序群組的 `sleep`，tick 結束後它被 daemon 殺掉、下一格照常開，沒有 cgroup 的機器上也成立。身分拒絕及無 helper 情境見 [V-03](../conformance.md)。給 `.aos/inst.json` 或 `inst.json` 路徑登記，得到的 node id 是所在資料夾。
+**runner 怎麼清空自己名下**（清空步驟）：對子程式群組送 SIGKILL；之後反覆對每個掛回自己的程序，連同它所在的程序群組送 SIGKILL 並 wait 回收，直到 runner 名下沒有程序。
+
+**runner 什麼時候清空**：
+
+| 時機 | runner 怎麼做 |
+|---|---|
+| 主程式正常結束（格後收尾） | 直接做清空步驟（不先 TERM，主程式已經結束），做完才寫回報、結束 |
+| 第一次收到 SIGTERM（daemon 要收尾，B-604） | 把 SIGTERM 轉給子程式群組與每個掛回自己的程序，繼續等 |
+| 第二次收到 SIGTERM（寬限到了） | 做清空步驟，寫回報（被訊號結束）、結束 |
+| 回報 pipe 的讀端關了（`spawn_as` 的呼叫方不在了，B-609） | 做清空步驟、結束 |
+
+- runner 結束、被 daemon／helper wait 回收，這一次開格的範圍才算全空。
+- **清不到的**：經外部服務（systemd、at 等）開的、自己設成 subreaper 的後代、換成別的帳號的程序。它們若還握著 tick 的鎖 fd，同資料夾的下一格回 75（[B-602](tick.md)）。
+- **runner 自己意外死掉**（被 SIGKILL、OOM）：它名下的程序掛回 daemon（或 helper）。daemon 分不出它們原本屬於哪一格，一律 SIGKILL 並回收；那一次開格沒有可信回報，照 B-607 記 `unknown`、停格，要人確認後才 resume。
+- 後代串流收完與取消競態依 [B-203](../base/execution.md)。範圍沒清空前不釋放名額、不開下一格；所有失敗都不自動重跑結果不明的工作。
+
+依據：第十九批（程序群組）；第二十批追答 8（一格結束後殺殘留歸 daemon）、進行順序（沒有 cgroup）；astra 審整理區必-1（受管範圍改成 runner 名下的整棵樹）。
+
+**驗收：**無事 node 不開 tick；重複叫醒不重疊；任務在背景留一個 `sleep`，tick 結束後它被清掉、下一格照常開；任務在背景 `setsid` 另開 session 留一個 `sleep`、再讓中間的父程序結束，tick 結束後它也被清掉；兩個 node 同時跑，一邊的格後收尾不碰另一邊的程序。以上都在沒有 cgroup 的機器上成立。身分拒絕及無 helper 情境見 [V-03](../conformance.md)。給 `.aos/inst.json` 或 `inst.json` 路徑登記，得到的 node id 是所在資料夾。
 
 ## B-504：通知只是提示
 
@@ -143,23 +190,32 @@ argv 與回報形狀見 [P-109、P-110](protocol/daemon/provision-and-runner.md)
 
 ## B-603：重啟先清空，再讓樹長回來
 
-**daemon 重啟、整機或 WSL VM 關機，都採在途程序全殺**，不接續孤兒工作。先確認舊 tick 與受管後代清空，才開新 tick；清不掉的 node 不能重開，故障要可見。重啟清空是 daemon 自己的職責。
+**原則：重啟不接續孤兒工作，在途程序全殺，確認清空才開新格。** 重啟清空是 daemon 自己的職責。
 
-**本輪沒有 cgroup，做不到這一段**，見下面「清空舊程序」。安全程序識別及後代清空見[執行器](../base/execution.md)；不能拿一個可能重用的 PID 直接 kill。
+**本輪只做到一半**：
+
+| 情況 | 本輪 |
+|---|---|
+| 整機或 WSL VM 重開 | 舊程序本來就全沒了，照常開格 |
+| 只有 daemon 重開（例如被 SIGKILL） | 舊程序可能還在，daemon 清不掉（已接受，下面「清空舊程序」）；有 cgroup 時的做法下一步納入 |
+
+不能拿一個可能重用的 PID 直接 kill。
 
 ### 啟動順序
 
 1. 啟動自檢（B-605）。
 2. 取得排他鎖（[B-611](#b-611一棵資源樹只准一個-daemon)）；取不到就拒絕啟動。在這之前不讀回、不清殺、不寫狀態。
 3. 讀回 `state.json`。
-4. 清空舊程序。
-5. 開 socket、開始開格。
+4. 清空舊程序（本輪沒有這一步，見下面）。
+5. 寫 PID 提示檔、開 socket、開始開格。
+
+**PID 提示檔**〔astra 審整理區必-8 從 P-102 搬上〕：`state_dir/daemon.pid` 與 `state_dir/helper.pid`（沒 helper 寫 `none`），啟動時寫，正常退出時刪；helper 的 PID 另印在 stdout。啟動時看到舊檔只當提示，不拿來殺程序。格式見 [P-102](protocol/daemon/startup-and-ipc.md)。
 
 ### 清空舊程序（本輪，沒有 cgroup）
 
-〔第二十批：沒有 cgroup 時重啟清不掉舊程序，接受〕程序群組跨不過 daemon 重啟，舊 daemon 留下的程序找不回來，**重啟清空不成立**。
+〔第二十批：沒有 cgroup 時重啟清不掉舊程序，接受〕舊 daemon 的 runner 與它們名下的程序（B-601）跨不過 daemon 重啟，新 daemon 找不回來，**daemon 重開時的清空不成立**。
 
-- 開 tick 時設 `PR_SET_PDEATHSIG` 只當加分（它只作用於直接子程序），不是必要；不要求跨重啟保存程序表。
+- 開 runner 時設 `PR_SET_PDEATHSIG` 只當加分（它只作用於直接子程序），不是必要；不要求跨重啟保存程序表。
 - 後果：舊的一格還沒結束、還握著鎖 fd 時，同一資料夾的新格回 75（[B-602](tick.md)），等它自己結束。
 - 後果：舊的掛載行程可能跟掛它的 tick 重新掛上的那個同時在跑，掛的一方照 unknown 規則核對（[S-401](../scheduling/operations.md)）。
 - 有 cgroup 時的清空（對每個仍有程序的受管框走收尾）見篇末[下一步納入](#下一步納入cgroup非現行規則)。
@@ -182,14 +238,14 @@ argv 與回報形狀見 [P-109、P-110](protocol/daemon/provision-and-runner.md)
 ### 逐層重建
 
 - **daemon 開啟就自動開始 tick 頂層 node**；已恢復 pause 的頂層保留這次 wake，等 resume。
-- 每次啟動換 boot id（[P-115](protocol/daemon/registration.md)）。頂層發現改變後重新登記直接成員並叫醒子 kernel，逐層重建。
-- 平常只在 boot id 或成員清單變動時補登記，不每格重送（B-606）。壞成員留待辦、跳過，不擋其他子樹。
+- **boot id**〔astra 審整理區必-8 從 P-115 搬上〕：每次啟動新生一個，整次存續不變；只放記憶體，重開不得沿用，socket 路徑相同也不行。`daemon.info`、`node.show`、`node.ls` 回的都是它（格式見 [P-115](protocol/daemon/registration.md)）。node 路徑別名、重用或跨機重名的風險由使用者承擔。
+- 〔使用例：kernel 那側〕頂層發現 boot id 改變後重新登記直接成員並叫醒子 kernel，逐層重建。平常只在 boot id 或成員清單變動時補登記，不每格重送（B-606）。壞成員留待辦、跳過，不擋其他子樹。
 - **空框清理**只在有 cgroup 時有，見篇末[下一步納入](#下一步納入cgroup非現行規則)。
 - 清空後由 node 按 [tick](tick.md) 恢復檔案，執行器／所屬 kernel 核對工作結果；daemon 不代讀結果或判業務終局。
 
 依據：使用者方向 2026-09-29（全殺、存檔與讀回、pause 批次存檔、逐層重建）；第十八批（空框清理，第二十批移出）；第十九批（掛載行程與暫存訊息不存檔）；第二十批（重啟清空是 daemon 職責、本輪沒有 cgroup）。
 
-**驗收：**正常重開讀回 pause／wake，無快照時頂層仍自動跑；pause 批存與全殺、逐層補登記見 [V-03](../conformance.md)。本輪（沒有 cgroup）daemon 被 SIGKILL 後重開，舊格還握著鎖時同資料夾的新格回 75、不重疊。
+**驗收：**正常重開讀回 pause／wake，無快照時頂層仍自動跑；daemon 重開後 `boot_id` 改變；正常退出後 PID 提示檔被刪，啟動時看到舊檔不殺那個 PID；pause 批存與逐層補登記見 [V-03](../conformance.md)。本輪（沒有 cgroup）daemon 被 SIGKILL 後重開，舊格還握著鎖時同資料夾的新格回 75、不重疊。
 
 ## B-604：收尾、停機、停用與退役
 
@@ -197,24 +253,23 @@ argv 與回報形狀見 [P-109、P-110](protocol/daemon/provision-and-runner.md)
 
 ### 收尾
 
-**收尾是 daemon 清掉一個範圍的固定做法**（本輪現行做法；原本以 cgroup 做的那一版在篇末）：
+**收尾是 daemon 清掉一個範圍的固定做法**（本輪現行做法，靠 B-601 的 runner；原本以 cgroup 做的那一版在篇末）：
 
 1. 停止這個範圍開新格；
-2. 對範圍內每個程序群組（B-601）送 SIGTERM；
+2. 對範圍內每個 runner 送 SIGTERM（runner 轉給它名下的程序，B-601）；
 3. 等 `shutdown_grace_ms`（[P-101](protocol/daemon/startup-and-ipc.md)，預設 2000）；
-4. 對仍有程序的群組送 SIGKILL；
-5. 回收掛到 daemon 名下的孤兒；
-6. 確認每個群組都空了。
+4. 對還沒結束的 runner 再送一次 SIGTERM，runner 就清空自己名下、回報、結束（B-601）；
+5. wait 回收每個 runner，確認都結束了。runner 在第二次 SIGTERM 之後還不結束，daemon 才對它送 SIGKILL，這一次開格記結果不明、算清不空。
 
-- **誰用這一套**：重啟、停機、解除登記、砍掉掛載行程、helper 停程序；取消在跑的工作也用這套（[B-203](../base/execution.md)）。
-- **範圍**：這個 node（或掛載行程）目前那一格的程序群組、它掛上而還在跑的掛載行程，以及已登記子 node 的同樣範圍。
+- **誰用這一套**：停機、解除登記、砍掉掛載行程、helper 停程序；取消在跑的工作也用這套（[B-203](../base/execution.md)）。daemon 自己重開時本輪沒有收尾可做（B-603）。
+- **範圍**：這個 node（或掛載行程）目前那一格的 runner、它掛上而還在跑的掛載行程，以及已登記子 node 的同樣範圍。
 - 已經在收尾的照開始時的寬限值走完，之後改設定不影響它。
 - 確認不了全空就回報失敗、保留阻擋與占用，不能先宣稱完成或假裝名額已釋放。
-- **不是這裡的收尾**：執行器自己的逾時（照 inst 的寬限）屬 [B-202](../base/execution.md)；一格正常結束後的殘留直接 SIGKILL，見 B-601 的「格後收尾」。
-- **程序群組管不到的**：跳出程序群組（另開 session 或 process group）又還活著的後代，不保證被殺，也不算進「全空」；它們若還握著 tick 的鎖 fd，同資料夾的下一格回 75（[B-602](tick.md)）。要框住每項任務的後代，下一步納入 cgroup 時由 daemon 的 node 框與 `aos-cg` 做（篇末）。
+- **不是這裡的收尾**：runner 處理 inst 自己的逾時（照 inst 的 2 秒）屬 [inst](../base/inst.md)；一格正常結束後的殘留由 runner 直接清，見 B-601。
+- **清不到的**：見 B-601（經外部服務開的、自設 subreaper 的、換成別的帳號的）。它們若還握著 tick 的鎖 fd，同資料夾的下一格回 75（[B-602](tick.md)）。〔下一步納入 cgroup 時補〕要框住每項任務的後代，由 daemon 的 node 框與 `aos-cg` 做（篇末）。
 - 用詞：「排空」只指下面的排空停機；解除登記不叫排空。
 
-依據：第十八批（收尾、用詞）；第十九批（程序群組管不到的）；第二十批進行順序（改成本輪現行做法）。
+依據：第十八批（收尾、用詞）；第十九批（程序群組管不到的）；第二十批進行順序（改成本輪現行做法）；astra 審整理區必-1（改成經 runner 收尾）。
 
 ### 停機：立即與排空
 
@@ -246,11 +301,11 @@ daemon 收到 SIGINT（前景 Ctrl-C）或 SIGTERM 時停機。走哪一種由�
 
 依據：使用者方向 2026-09-29。
 
-**驗收：**停止一個子 kernel 不妨礙別隊運行；受管後代仍在時不回報收尾完成；解除登記不刪 home、不把舊 UID 自動發給新成員。`stop_mode:"immediate"` 時 Ctrl-C／SIGTERM 後不開新格，等受管後代與 helper 全空才回 0，清不空不回 0。`stop_mode:"drain"` 時 SIGTERM 後新的掛行程被拒、已登記 node 照常開格，已掛的行程做完才退出；超過 `drain_timeout_ms` 或再按一次 Ctrl-C 改立即停。
+**驗收：**停止一個子 kernel 不妨礙別隊運行；受管後代仍在時不回報收尾完成；任務忽略 SIGTERM 時，寬限到了仍被清掉；解除登記不刪 home、不把舊 UID 自動發給新成員。`stop_mode:"immediate"` 時 Ctrl-C／SIGTERM 後不開新格，等受管後代與 helper 全空才回 0，清不空不回 0。`stop_mode:"drain"` 時 SIGTERM 後新的掛行程被拒、已登記 node 照常開格，已掛的行程做完才退出；超過 `drain_timeout_ms` 或再按一次 Ctrl-C 改立即停。
 
 ## B-605：依賴與啟動自檢
 
-**tick 核心不需要 cgroup；本輪 daemon 也不偵測、不使用 cgroup**，程序照程序群組管（B-601、B-604）。cgroup 只給 daemon／helper（node 框與資源上限）與普通程式 `aos-cg`（每項一框）用，下一步納入。
+**tick 核心不需要 cgroup；本輪 daemon 也不偵測、不使用 cgroup**，程序由 runner 管（B-601、B-604）。cgroup 只給 daemon／helper（node 框與資源上限）與普通程式 `aos-cg`（每項一框）用，下一步納入。
 
 - 撤掉的：第十四、十五批「沒 cgroup v2 就拒絕啟動」；第十九批的「沒 cgroup 走備援、降到備援級」「完整路／備援路」與啟動時印 `standard: cgroup=…`。
 - 初版不使用 systemd 當執行期依賴；systemd 只當開機自動啟動的一種方式（文末附錄）。
@@ -270,7 +325,7 @@ daemon 收到 SIGINT（前景 Ctrl-C）或 SIGTERM 時停機。走哪一種由�
 
 - 要常駐就經通道用 `node.mount` 掛（B-613），daemon 追得到、`node.kill` 砍得掉（[T-09](terms.md)）。
 - 設定 `kill_escape_cgroups` 隨之撤，舊設定寫了照 [C-07](../contracts.md) 忽略。
-- 本輪沒有 cgroup，程序群組以外的常駐程序本來就不歸 daemon 管（B-604）。
+- 本輪沒有 cgroup，runner 清不到的常駐程序（例如經外部服務開的）本來就不歸 daemon 管（B-601）。
 
 ### 有就用的可選功能
 
@@ -290,7 +345,7 @@ cgroup 子樹怎麼準備、框的命名與委派、資源上限，見篇末[下
 
 ## B-606：登記、解除、換父與身分額度
 
-method 形狀見 [P-104～105](protocol/daemon/registration.md)，誰可呼叫見 [P-103](protocol/daemon/startup-and-ipc.md)。
+method 形狀見 [P-104～105](protocol/daemon/registration.md)，誰可呼叫見 B-601。
 
 ### 登記是什麼
 
@@ -321,12 +376,12 @@ method 形狀見 [P-104～105](protocol/daemon/registration.md)，誰可呼叫�
 - 頂層只從設定載入（增刪走熱重載，B-608）。其餘 node 由有效上層的 owner 或祖先 owner 經 `node.register` 登記（帶憑證時，由有效上層那個 tick 或它的上層鏈上的 tick 登記）。首次必須有上層同意，本版不提供首次自登記。
 - 新登記不自動啟動：上層 kernel 重建子 kernel 時明確再送 wake；頂層由 daemon 自動各排第一格。
 - 每筆登記保存授權時解析出的 `owner_uid`。改 inst 不立即改掉 owner；有效的下一格身分採用、或經原 owner／上層授權的重新登記才更新。
-- inst 尋找依 [inst](../base/inst.md)。登記的 node 必須是資料夾（單檔 inst 要用掛載行程，B-613）。同一個 id 不能同時是登記又是掛載行程，衝突回 `registration_conflict`。
+- inst 尋找依 [inst](../base/inst.md)。登記的 node 必須是資料夾（單檔 inst 要用掛載行程，B-613）。〔astra 審整理區必-8 從 P-101 搬上〕找不到 inst 時：設定檔裡的頂層算用法錯（daemon 回 2、不啟動）；IPC 登記回 `invalid_params`，daemon 照常跑。同一個 id 不能同時是登記又是掛載行程，衝突回 `registration_conflict`。
 
 ### 登記識別與別每格重登
 
 - 每次新登記（首次登記、解除後再登、換父、daemon 重啟後讀回或重建）daemon 配一個新的 `registration_id`；同一筆登記的重送與內容更新不換。
-- kernel 在自己的 repo 記下成功同步的 boot id 與成員版本，每格只比對小查詢；兩者沒變且無待修復差異就不重登。重開、清單改變或已知解除時才補差異，並叫醒子 kernel 逐層重建。失敗筆不標成功、不擋其他成員，也不重送結果不明的掛行程。kernel 那側何時登記成員見 [S-202](../scheduling/admission.md)。
+- 〔使用例：kernel 那側，正本在 [S-202](../scheduling/admission.md)〕kernel 在自己的 repo 記下成功同步的 boot id 與成員版本，每格只比對小查詢；兩者沒變且無待修復差異就不重登。重開、清單改變或已知解除時才補差異，並叫醒子 kernel 逐層重建。失敗筆不標成功、不擋其他成員，也不重送結果不明的掛行程。kernel 那側何時登記成員見 [S-202](../scheduling/admission.md)。
 
 ### 身分額度
 
@@ -341,6 +396,7 @@ method 形狀見 [P-104～105](protocol/daemon/registration.md)，誰可呼叫�
 
 - 一律排除 UID 0 與 root 別名；前綴與範圍規則也一律不涵蓋 UID < 1000 的系統帳號。
 - 名稱與 UID 別名不得重複。帳號第一次被建立（或第一次經前綴比中）後，daemon 綁住名稱與得到的 UID；之後同名卻是別的 UID 回 `user_mismatch`，不能接管同名帳號。
+- 〔暫定，astra 審整理區設-4〕**這個綁定只在本次 daemon 存續期內有效**：只放記憶體，不存進 `state.json`。daemon 停著的時候帳號被刪掉又用同名重建，重開後會照新的 UID 重新綁定、接受它。要防這種情形，就在 daemon 停著時不要刪建額度內的帳號，或在額度裡寫確切 UID。
 - **子額度必須被上層額度包含**（這裡的上層是有效上層）：
   - 確切名稱或 UID 要落在上層的某一項裡（解析成名稱比前綴、解析成 UID 比範圍）；
   - 前綴要以上層的某個前綴開頭；範圍要落在上層的某個範圍內；
@@ -386,7 +442,7 @@ once 不再是登記的一種，是任務自己經通道呼叫的事務。daemon
 
 依據：使用者方向 2026-09-29；第十八批改寫（行為從 P-104／105 搬上）；第十九批（登記可覆蓋上層、換父兩條路）；第二十批換詞。
 
-**驗收：**偽造 payload 帳號不能登記別人的資料夾；子額度寫成上層沒有的前綴或更大的範圍被拒；前綴規則比不中 UID < 1000 的帳號；不帶 `parent_id` 登記時，上層是 [B-628](tick.md) 推得的預設上層；它不在這個 daemon 登記時回 `not_registered`；帶 `parent_id` 覆蓋、資料夾上層在這個 daemon 登記時只有一方上層同意被拒，資料夾上層由 cron 跑、沒登記時只要新上層同意就收；覆蓋成 B 再換 C 時要 B、C 同意，資料夾上層不必；設定只列 `/a/b` 而 `/a` 是 cron 跑的時 `/a/b` 照常當頂層載入，`/a` 已是另一棵 root 的成員時整份設定不收；覆蓋後資料夾上層的檔案權限不變；換父時子樹沒停或新上層在子樹裡被拒，搬好後有效上層是新的、`registration_id` 換新；搬資料夾後舊 id 解除、新 id 由新位置的上層登記；解除在跑的 node 時寬限後整個程序群組被殺、登記被刪；縮小中間 node 的額度後，超出的子孫下一格停格並有事項。
+**驗收：**偽造 payload 帳號不能登記別人的資料夾；子額度寫成上層沒有的前綴或更大的範圍被拒；前綴規則比不中 UID < 1000 的帳號；不帶 `parent_id` 登記時，上層是 [B-628](tick.md) 推得的預設上層；它不在這個 daemon 登記時回 `not_registered`；帶 `parent_id` 覆蓋、資料夾上層在這個 daemon 登記時只有一方上層同意被拒，資料夾上層由 cron 跑、沒登記時只要新上層同意就收；覆蓋成 B 再換 C 時要 B、C 同意，資料夾上層不必；設定只列 `/a/b` 而 `/a` 是 cron 跑的時 `/a/b` 照常當頂層載入，`/a` 已是另一棵 root 的成員時整份設定不收；覆蓋後資料夾上層的檔案權限不變；換父時子樹沒停或新上層在子樹裡被拒，搬好後有效上層是新的、`registration_id` 換新；搬資料夾後舊 id 解除、新 id 由新位置的上層登記；解除在跑的 node 時寬限後它的程序全被清掉、登記被刪；縮小中間 node 的額度後，超出的子孫下一格停格並有事項。
 
 ## B-607：叫醒、暫停、故障停格與格次序號
 
@@ -407,11 +463,11 @@ method 形狀見 [P-105～106](protocol/daemon/registration.md)。
 ### 暫停與恢復
 
 - `node.pause` 只停**該 node** 的新格，不殺本格、不遞迴暫停子樹；回成功代表閘門已關。
-- 要手改：先 `node.pause`，再用 `node.show` 看 `running:false`（包括後代清理期間），再持 node 鎖、修改（有 git 時再 commit）。
-- `node.resume` 只開該 node 的閘門；呼叫者先完成 [A-102](../agent/configuration.md) 的驗證與 commit。daemon 不讀 git、不替手改 commit，也不替 unknown 工作重試。
+- 要手改：先 `node.pause`，再用 `node.show` 看 `running:false`（包括後代清理期間），再持 node 鎖、修改。
+- `node.resume` 只開該 node 的閘門；呼叫者先照 [B-625](tick.md) 做恢復前驗證。daemon 不替手改做驗證，也不替 unknown 工作重試。〔下一步納入 git 時補〕手改後提交（[tick](tick.md) 篇末）。
 - pending 或到期才開格。pause／resume 同狀態重送無害；它們是關／開閘門，不等於 wake。保存依 B-603 的批次存檔。
 
-依據：第十批。
+依據：第十批；第二十批進行順序（沒有 git）。
 
 ### 故障停格
 
@@ -448,7 +504,7 @@ method 形狀見 [P-105～106](protocol/daemon/registration.md)。
 
 - daemon 為每筆登記只保存最近一格（欄位見 [P-106](protocol/daemon/registration.md)）；新格派出時取代前格，不是完整歷史。
 - 每開一格，這筆登記的 `tick_seq` 加 1，從 1 起算。配上 B-606 的 `registration_id`，就是「第幾格」的依據，不用牆鐘排序或推算逾時。
-- `tick_seq` 只用在「叫醒後等新格」，跟 tick 核心結束碼紀錄裡的格數 `seq`（[B-633](tick.md)，跨重啟不倒退、沒 daemon 也有）是兩回事。aos 內部以格計的時長一律數 `seq`，不數 `tick_seq`（做法見 [C-01](../contracts.md)）。
+- `tick_seq` 只用在「叫醒後等新格」，跟 tick 核心結束碼紀錄裡的格數 `seq`（[B-633](tick.md)，跨重啟不倒退、沒 daemon 也有）是兩回事。aos 內部以格計的時長一律數 `seq`，不數 `tick_seq`（做法見 [C-01](../contracts.md)）。〔暫定〕唯一例外是 daemon 記憶體裡的掛載診斷保留期（B-610）：daemon 不讀 node 的檔，只數得到自己開的格，而且那筆診斷跟 `tick_seq` 一樣重啟就沒了。
 
 **怎麼等「wake 之後新的一格做完」**：
 
@@ -507,7 +563,7 @@ daemon 只在收到 **SIGHUP** 時重讀啟動時的同一份設定檔。能送�
 
 每次重載在 stdout 印一行，列出已套用與要重開的欄位。
 
-**helper 的界線**（第十八批）：helper 在 fork 前固定一份設定副本，用它核對頂層額度（[P-102](protocol/daemon/startup-and-ipc.md)）；重載不改 helper 那份。所以牽涉 helper 的欄位——**通用 user 以外帳號的身分額度、佈建權**——改了仍要重開。要少重開，就在啟動設定用前綴或範圍一次授出夠大的範圍（B-606）。
+**helper 的界線**（第十八批）：helper 在 fork 前固定一份設定副本，用它核對頂層額度（B-601）；重載不改 helper 那份。所以牽涉 helper 的欄位——**通用 user 以外帳號的身分額度、佈建權**——改了仍要重開。要少重開，就在啟動設定用前綴或範圍一次授出夠大的範圍（B-606）。
 
 ### 設定項
 
@@ -522,7 +578,7 @@ daemon 只在收到 **SIGHUP** 時重讀啟動時的同一份設定檔。能送�
 | `shutdown_grace_ms` | 免重開 | 只影響之後才開始的收尾 |
 | `stop_mode`、`drain_timeout_ms` | 免重開 | 下一次停機用新值 |
 | `kill_escape_cgroups` | 〔暫定，第二十批疑-13〕撤 | 逃生口不再提供（B-605），寫了照 C-07 忽略 |
-| `mount_diag_max`、`mount_diag_ttl_ms` | 免重開 | 下一輪淘汰用新值（B-610） |
+| `mount_diag_max`、`mount_diag_ttl_ticks` | 免重開 | 下一輪淘汰用新值（B-610） |
 | `disable` | 免重開 | 只影響之後的 quota 動作，已設好的歸屬不收回；重新打開時再偵測一次 |
 | roots：加一棵 | 免重開；額度含通用 user 以外帳號或帶 `provision` 的**要重開** | 等於一次沒有上層的登記加一次 wake |
 | roots：刪一棵 | 免重開 | 走 B-606 的解除；清不空就一直擋著並寫事項 |
@@ -598,15 +654,17 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 
 - **誰能叫**：只收通道上帶憑證的請求，`node_id` 必須就是憑證所屬、登記中的 node。掛載行程叫回 `kind_mismatch`，不帶憑證回 `forbidden`。不看登記的 `provision` 授權，看的是身分額度。
 - **帳號的限制**：`user` 必須落在這個 node 的身分額度內（B-606 的規則，排除 UID 0 與 root 別名），不合回 `user_not_granted`，不存在回 `user_invalid`；不能用它建帳號。沒有 helper 回 `helper_unavailable`；排空或停機中回 `stopping`。
-- **開什麼**：`path` 必須是這個 node 資料夾裡 `.aos/jobs/` 下的一般檔（`aos-as` 寫好的那份 inst，檔名由它定，見 [P-212](protocol/node.md)），逐段核對、不跟隨 symlink。daemon 取它的不可變快照交給 helper，跟開格同一套（`source_changed` 等照 B-601）。helper fork、降成該帳號、exec 固定 aos-runner，runner 照 [inst](../base/inst.md) 跑；不收 argv、env 或輸出路徑。
+- **開什麼**：`path` 必須是這個 node 資料夾裡 `.aos/jobs/` 下的一般檔（`aos-as` 寫好的那份 inst，檔名由它定，見 [P-212](protocol/node.md)），逐段核對、不跟隨 symlink。daemon 取它的不可變快照，連同這個已核准的路徑交給 helper（`daemon.helper.spawn` 的 `path`，[P-108](protocol/daemon/provision-and-runner.md)）。helper fork、降成該帳號、exec 固定 aos-runner，以這個路徑當 `--target`；runner 照 B-601 核對原來源的 bytes 跟快照相同（不同回 `source_changed`），再照 [inst](../base/inst.md) 跑。不收 argv、env 或輸出路徑。〔暫定〕這份暫存 inst 要讓目標帳號讀得到（例如用 B-609 的群組動作），讀不到就是前置失敗。
 - **鎖與 fd**：請求同包交來 5 個 fd：鎖 fd、回報 pipe 的寫端，以及 `aos-as` 自己的 stdin、stdout、stderr。
   - helper 以 fstat 核對鎖 fd 就是這個 node 的 `.aos/tick.lock`，不符回 `invalid_params`。
-  - runner 與它開的程序繼承這份鎖 fd（同一個 open file description），`AOS_TICK_LOCK_FD` 放這個號碼，照 [B-602](tick.md) 核對。
+  - runner 與它開的程序繼承這份鎖 fd（同一個 open file description），照 [B-602](tick.md) 核對。
   - 〔第二十批，建議預設〕runner 以交來的三個 stdio fd 當自己的 stdin／stdout／stderr（不收集成 `.aos/runner-stderr.log`），原指令照那份 inst 寫的 stdio 走，所以輸出照任務表寫的去處。
-  - 程序另外帶這一格的兩個通道變數（B-612）。
-- **放在哪**（本輪現行做法）：本輪沒有 cgroup，請求不帶 `frame`（帶了回 `unsupported`）。runner 自開 session／程序群組；它是 helper 的子程序，不掛回 tick。runner 結束後 helper 對那個程序群組送 SIGKILL 並 wait；其餘後代清不到，還握著鎖 fd 的會讓下一格回 75（[B-602](tick.md)）。帶 `frame`、放進 `aos-cg` 開的 `task-*` 框，見篇末[下一步納入](#下一步納入cgroup非現行規則)。
+  - **環境最後才補**〔暫定，astra 審整理區必-2〕：runner 照 inst 的 `envs` 建好子程式環境之後，最後才放進 `AOS_TICK_LOCK_FD`（runner 收到的鎖 fd 的新號碼；fd 經 SCM_RIGHTS 傳過來號碼可能變了）與這一格的兩個通道變數（B-612）；這三個不受 `clear` 影響，inst 裡寫了同名的也被蓋掉。所以 `aos-as` 寫的 inst 裡不放它們（[B-303](helper.md)），憑證不會落到磁碟上。
+- **放在哪**（本輪現行做法）：本輪沒有 cgroup，請求不帶 `frame`（帶了回 `unsupported`）。runner 是 helper 的子程序，不掛回 tick；它名下的程序照 B-601 由它自己清空：原指令結束後先清空、再寫回報。清不到的還握著鎖 fd 時，下一格回 75（[B-602](tick.md)）。〔下一步納入 cgroup 時補〕帶 `frame`、放進 `aos-cg` 開的 `task-*` 框，見篇末[下一步納入](#下一步納入cgroup非現行規則)。
 - **回傳**：runner 開起來就回 `{node_id}`，不等它結束；前置失敗回錯、不開程序。結束碼不經回應：runner 把 [P-110](protocol/daemon/provision-and-runner.md) 的那一行回報寫進 `aos-as` 交來的 pipe，`aos-as` 讀到 EOF 為止、照它結束。回應說成功、pipe 卻沒有回報就關了，這一項算失敗、結果不明，不重跑。
-- **daemon 不記這個程序**：不進登記表、不留 B-610 的診斷、不發新憑證，也不能對它送 `node.kill`。取消與逾時照 inst 與 B-202 由呼叫的一方管；daemon 收尾那一格時，helper 同樣對這個程序群組做 B-604 的收尾。
+- **daemon 不記這個程序**：不進登記表、不留 B-610 的診斷、不發新憑證，也不能對它送 `node.kill`。helper 記下這個 runner 屬於哪個 node；daemon 收尾那個 node 時，helper 對它做 B-604 的收尾。
+- **呼叫方不在了**〔暫定，astra 審整理區設-3〕：取消或逾時由呼叫的一方對 `aos-as` 做（它收到 SIGTERM／SIGINT 就結束）。`aos-as` 一結束，回報 pipe 的讀端就關了；runner 發現讀端關了（對寫端 poll 看到錯誤），照 B-601 立刻清空名下的程序、結束，不再寫回報。
+  - **這一項什麼時候算結束**：對核心來說是 `aos-as` 結束的時候，所以下一項可能在 runner 清空之前就開了；這段時間裡原指令還握著鎖 fd，同資料夾的下一格拿不到鎖（回 75），但本格的下一項可能跟它短暫重疊。要避免，呼叫方應等 `aos-as` 自己結束，不要中途殺它。
 
 依據：第十九批疑點裁定 10（握著鎖的一方經 helper 以別的帳號開、那個程序只需知道開它的那一格仍握著鎖）；第二十批追答 8、疑點裁定 6（呼叫者從 tick 改成普通程式 `aos-as`）。
 
@@ -617,7 +675,7 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 - daemon 與 helper 自己留在成員限額之外。
 - 有 cgroup 時的建框、寫限制與 helper 的「刪殘留框」見篇末[下一步納入](#下一步納入cgroup非現行規則)。
 
-**驗收：**每個動作超出授權路徑、群組或額度都被拒，OS 現況不符回 `conflict`；多帳號部署下能靠這些動作讓兩個 node 帳號經共享群組交接檔案；沒 helper 時要 helper 的動作回 `helper_unavailable`；本輪 `cgroup_*` 動作回 `unsupported`；`spawn_as` 帶額度外的帳號被拒；`aos-as` 帶本格憑證呼叫時，額度內的帳號開起來的程序以 `AOS_TICK_LOCK_FD` 核對得到獨占鎖，輸出走 `aos-as` 交來的 stdio，結束碼經回報 pipe 回到 `aos-as`；不帶憑證、由掛載行程叫、帶 `frame`、附的 fd 不是 5 個都被拒。
+**驗收：**每個動作超出授權路徑、群組或額度都被拒；`aos-as` 開的原指令印出的環境裡 `AOS_TICK_LOCK_FD` 是它實際拿到的 fd 號碼、有本格憑證，而 `.aos/jobs/` 那份 inst 裡沒有憑證；暫存 inst 在授權後被改掉時回 `source_changed`；`aos-as` 被 SIGTERM 後，原指令也很快被清掉，下一格拿得到鎖，OS 現況不符回 `conflict`；多帳號部署下能靠這些動作讓兩個 node 帳號經共享群組交接檔案；沒 helper 時要 helper 的動作回 `helper_unavailable`；本輪 `cgroup_*` 動作回 `unsupported`；`spawn_as` 帶額度外的帳號被拒；`aos-as` 帶本格憑證呼叫時，額度內的帳號開起來的程序以 `AOS_TICK_LOCK_FD` 核對得到獨占鎖，輸出走 `aos-as` 交來的 stdio，結束碼經回報 pipe 回到 `aos-as`；不帶憑證、由掛載行程叫、帶 `frame`、附的 fd 不是 5 個都被拒。
 
 ## B-610：掛載行程的診斷：留存、淘汰與清除
 
@@ -634,11 +692,13 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 
 ### 什麼時候消失
 
-- **自動淘汰**（第十八批）：同時設容量與保留期。筆數超過 `mount_diag_max`（預設 1024）時先淘汰最早結束的；結束超過 `mount_diag_ttl_ms`（預設 86400000，24 小時）的也淘汰。
+- **自動淘汰**（第十八批）：同時設容量與保留期。筆數超過 `mount_diag_max`（預設 1024）時先淘汰最早結束的；結束後，掛它的上層又開了 `mount_diag_ttl_ticks` 格（預設 1000）的也淘汰。
 - **手動清除**（第十八批）：`mount.clear`（[P-105](protocol/daemon/registration.md)）帶一個 `node_id`，清掉這個 id 本身的紀錄，以及上層鏈上有這個 node 的所有已結束掛載行程紀錄（整棵子樹）。只清呼叫者是 owner 或祖先 owner 的那些，看不到的不動、不回報；只清已結束的，還在跑的不動。
 - **其餘**：上層額度撤掉該 owner 身分、掛它的 node 被解除、同 node_id 又被掛上、daemon 結束時都清掉。
 
-依據：使用者方向 2026-09-29；第十八批加淘汰與清除（行為從 P-106 搬上）；第十九批改名（原「once 診斷」）。
+- 〔暫定，astra 審整理區裁定裁-2〕保留期算**掛它的上層**的格：daemon 數上層那筆登記的格次序號 `tick_seq`（B-607）前進了幾格，不讀 tick 的結束碼紀錄。上層沒有週期、一直沒開格時，只靠容量淘汰；上層本身是掛載行程時，它結束就一起清（同「掛它的 node 被解除」）。
+
+依據：使用者方向 2026-09-29；第十八批加淘汰與清除（行為從 P-106 搬上）；第十九批改名（原「once 診斷」）；astra 審整理區裁定裁-2（保留期改成上層的格數）。
 
 **驗收：**掛載行程結束仍列得到且 `registered:false`；超過容量或保留期的紀錄消失；`mount.clear` 帶上層 node 時整棵子樹的已結束紀錄都清掉、別人的不動；重啟後舊結果消失。
 
@@ -646,7 +706,7 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 
 **daemon 啟動時，在任何讀回、清殺、寫狀態之前，先對實際使用的 `state_dir` 取一把排他鎖；取不到就拒絕啟動**（回 125，stderr 說明）。
 
-- **為什麼**：兩個 daemon 用不同 socket 卻指向同一個（或互相重疊的）`state_dir` 或 cgroup 子樹時，會互相清殺對方的工作。
+- **為什麼**：兩個 daemon 用不同 socket 卻指向同一個（或互相重疊的）`state_dir` 時，會互相搶恢復資料、清殺對方的工作。〔下一步納入 cgroup 時補〕cgroup 子樹重疊也一樣（篇末）。
 - **怎麼算重疊**：以解析後的真實路徑取鎖，並檢查祖先與子孫；任何一個祖先或子孫已被別的 daemon 鎖住，也算重疊。
 - 鎖跟著 daemon 程序存活，程序死了鎖自動放掉。
 - **本輪只取 `state_dir` 那把**；cgroup 子樹那把本輪不取（沒有 cgroup，B-605），見篇末[下一步納入](#下一步納入cgroup非現行規則)。
@@ -669,7 +729,7 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 
 其他所有事都必須在某一格 tick 裡做，不准有別的背景程序或常駐服務繞過 tick；要常駐就用 `node.mount` 掛（B-613）。
 
-**通道事務由任務自己呼叫**，都不是 daemon 的事：投件任務 `aos-outbox` 經通道送件、要收的任務自己取件（[B-624](tick.md)、[B-623](tick.md)）；once 由任務掛行程；換帳號由普通程式 `aos-as` 呼叫 `spawn_as`（B-609）。method 形狀、參數與錯誤碼見 [P-117～119](protocol/daemon/channel.md)。
+**通道事務由任務自己呼叫**，都不是 daemon 的事：系統訊息佇列由系統級任務 `aos-mq post` 送、`aos-mq get` 取（[B-624](tick.md)、[B-623](tick.md)）；once 由任務掛行程；換帳號由普通程式 `aos-as` 呼叫 `spawn_as`（B-609）。method 形狀、參數與錯誤碼見 [P-117～119](protocol/daemon/channel.md)。
 
 依據：第十九批第 9 條；第二十批方向 4、追答 5。
 
@@ -684,7 +744,7 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 
 - 任務會繼承這兩個變數；在「投件權就是執行權」之下這是預期行為（[T-08](../terms.md)）。
 - inst 的 `envs` 用 `clear` 時兩個都會被清掉，等於不給那一項通道。怎麼放進子程序環境以 [inst](../base/inst.md) 為正本。
-- cron、人手直接跑的 tick 沒有這兩個變數，只能走檔案收件。缺變數時由客戶端自己擋下、報 `no_channel`，不送到 daemon（P-117）。沒通道只算功能受限：`aos-as`、once、通道傳訊用不了，其他照常（[T-10](terms.md)）。
+- cron、人手直接跑的 tick 沒有這兩個變數。缺變數時由客戶端自己擋下、報 `no_channel`，不送到 daemon（P-117）。沒通道只算功能受限：`aos-mq`、`aos-as`、once 用不了，其他照常（[T-10](terms.md)）。
 - 變數本身不授予權限：socket 的連接權照部署設定，授權看下面的憑證。
 
 ### 憑證
@@ -694,7 +754,7 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 - **發放**：daemon 每開一格（或一個掛載行程）就產生一張，至少 128 位元的密碼學隨機值，綁定「node id、`registration_id`、`tick_seq`」（掛載行程沒有 `tick_seq`）。只放 daemon 記憶體，不寫檔、不放 argv（別的帳號看得到 argv）。
 - **核對**：通道上的請求在 params 帶 `token`，daemon 以固定時間比對。對上了，還要看 socket 對面的帳號是這一格開起來時的執行帳號，或落在該 node 的身分額度內（任務可以帶自己的 `user`）；都成立才把呼叫者當成那個 tick。對不上一律回 `token_invalid`，不說是哪一項不合。
 - **作廢**：該格的主程序結束（daemon 收到 runner 回報）即作廢，之後後代還拿著也沒用；登記被解除或換父（`registration_id` 改變）時作廢；daemon 重啟時全部作廢。
-- **用憑證時怎麼授權**：[P-103](protocol/daemon/startup-and-ipc.md) 表中「X 的 owner 或祖先 owner」，帶憑證時讀成「憑證所屬的 tick 就是 X，或在 X 的有效上層鏈上」。不帶憑證的請求照舊看 socket 對面的帳號，給人手與 CLI 用；兩條路授權的是同一張表。
+- **用憑證時怎麼授權**：B-601「誰可呼叫」表中「X 的 owner 或祖先 owner」，帶憑證時讀成「憑證所屬的 tick 就是 X，或在 X 的有效上層鏈上」。不帶憑證的請求照舊看 socket 對面的帳號，給人手與 CLI 用；兩條路授權的是同一張表。
 
 ### 哪些 method 收憑證
 
@@ -726,7 +786,7 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 
 - 帶憑證時，上層就是憑證所屬的 tick。也可以帶 `parent_id` 指定成它有效上層鏈之下的某個 node（例如 kernel 替成員掛工作，歸成員），但不能指定成自己以上或別隊的 node。
 - 不帶憑證時（人手、CLI）必須帶 `parent_id`，呼叫者要是它的 owner 或祖先 owner。
-- 不另收可自報的 cgroup 路徑。本輪掛載行程開在自己的程序群組（B-601），歸上層只是核權、解除與收尾範圍的歸屬；有 cgroup 時框放在上層框下（`mount-<h>`），見篇末。
+- 不另收可自報的 cgroup 路徑。本輪掛載行程由自己的 runner 管（B-601），歸上層只是核權、解除與收尾範圍的歸屬；有 cgroup 時框放在上層框下（`mount-<h>`），見篇末。
 - inst 的 `user` 要落在上層的身分額度內，不合回 `user_not_granted`，不存在回 `user_invalid`。kernel 不能把成員工作掛在自己的較大額度。
 - 各參數怎麼填（含 agent 自跑工具、LLM 池代發）見 [P-402](../protocol/work.md)。
 
@@ -758,25 +818,25 @@ tick 核心不呼叫它；呼叫者是**帶本格憑證的程序**，實際上�
 
 ## B-614：暫存訊息與急件
 
-**同一個 daemon 底下的 tick 可以經 daemon 互傳訊息；不保證送達。**
+**同一個 daemon 底下的 tick 可以經 daemon 互傳訊息（系統訊息佇列）；不保證送達。** tick 那一側由系統級任務 `aos-mq` 送與取（[B-623](tick.md)、[B-624](tick.md)）。
 
-- **格式**：訊息跟檔案收件相同，是一份放進 `requests/` 的請求物件（[P-301](../protocol/messages.md)）；daemon 只驗外形，不解析正文。
-  - 〔暫定，交接疑點「通道能否也傳回應」照 a〕回應仍照回址走檔案投件。
+- **格式**：訊息是一份請求物件（[P-301](../protocol/messages.md)）；daemon 只驗外形，不解析正文。
+  - 〔暫定，交接疑點「通道能否也傳回應」照 a〕佇列只收請求；回應怎麼回待定（[README 疑點](README.md#疑點)）。
   - 〔暫定，交接疑點「通道訊息放寬」照 a〕照 [C-07](../contracts.md)：通道請求的外層（`node.send` 的 params）照 daemon IPC 嚴格；夾帶的 `message` 照檔案 RPC 放寬，不認得的欄位忽略。
 - **送**：`node.send` 帶收件 tick 的 id、訊息與是否急件。收件 tick 要在這個 daemon 登記，否則回 `not_registered`；掛載行程沒有收件匣（`kind_mismatch`）。
-- **誰能送**：看寄件 tick 的執行帳號對收件 tick 的 `requests/` 有沒有寫權——能不能在那裡建檔（`requests/` 的寫與穿越權，以及上層各段的穿越權），跟檔案投件同一個判準；沒有就回 `forbidden`。首版不用 ACL，所以 daemon 以那個帳號的 UID 與群組，對權限位計算即可。「投件權就是執行權」同樣適用（[T-08](../terms.md)）。
+- **誰能送**：看寄件 tick 的執行帳號對收件 tick 的 `requests/` 有沒有寫權——能不能在那裡建檔（`requests/` 的寫與穿越權，以及上層各段的穿越權），〔暫定〕檔案收件雖然不歸 aos 管了，仍拿這個寫權當判準；沒有就回 `forbidden`。首版不用 ACL，所以 daemon 以那個帳號的 UID 與群組，對權限位計算即可。「投件權就是執行權」同樣適用（[T-08](../terms.md)）。
 - **存**：放 daemon 記憶體，按收件 tick 分開、先進先出。daemon 當掉、重啟、立即停機，或收件 tick 被解除，暫存的都丟掉。〔建議預設〕每個收件 tick 最多 256 件、合計 16 MiB，滿了回 `mailbox_full`；單件訊息序列化後最多 196608 bytes（192 KiB），超過回 `message_too_large`，這樣一件一定裝得進一個 `node.take` 回應。
-- **取**：收件 tick 裡要收的那項任務，在它自己的那一格裡自己上通道用 `node.take` 取（收件任務 `aos-inbox` 不代取，第十九批疑點裁定 7）。取走的 daemon 同時刪掉，之後怎麼落地、去重歸取件的任務（[B-623](tick.md)）。一次回應裝不下就分幾次取，回應會說還有沒有。
+- **取**：收件 tick 裡只有系統級任務 `aos-mq get` 在它的那一格上通道用 `node.take` 取，其他任務不直接取（[B-623](tick.md)）。取走的 daemon 同時刪掉，之後怎麼分派、落地、去重 aos 不管。一次回應裝不下就分幾次取，回應會說還有沒有。daemon 分不出是哪一項在取，「只有它取」是 node 裡的約定。
 - **急件**：送到時 daemon 照 `node.wake` 叫醒收件 tick（合併、paused 只記 pending、停機中不叫，B-607）；一般件等它自己的下一格。〔暫定，改寫計畫疑-9 使用者未答〕急件直接叫醒，不問上層，不受上層 kernel 的節流：它會越過上層排程任務的同時叫醒上限（`max_active_members`，[S-202](../scheduling/admission.md)），這是「反應速度就是一格」唯一的例外（第二十批追答 7）。
 - 排空停機時通道照常收送（B-604）。
 
-依據：第十九批第 9 條與疑點裁定 6、7。
+依據：第十九批第 9 條與疑點裁定 6、7；astra 審整理區裁定裁-1 與同日定案（系統訊息佇列 `aos-mq`，只有 `aos-mq get` 取）。
 
 **驗收：**寄件帳號對收件 `requests/` 沒寫權被拒；一般件不叫醒、下一格取得到；急件送到後收件 tick 被叫醒；取過的再取不到；daemon 重啟後暫存的都不見；超過上限回 `mailbox_full`、`message_too_large`。
 
 ## 下一步納入：cgroup（非現行規則）
 
-〔使用者方向 2026-09-30，第二十批進行順序〕以下是已寫好的 cgroup 條文，**不是現行規則**；本輪假設沒有 cgroup（程序照程序群組管，B-601、B-604），下一步把 cgroup 納入時再定。內容依原條文保留，只把第十九批的「標準配備」「完整路／備援路」「備援級」字眼改成「有沒有 cgroup」，把每項一框的主詞改成普通程式 `aos-cg`（〔使用者方向 2026-09-30，第二十批追答 8〕，草稿見 [B-202](../base/execution.md)）。納入時，「沒有 cgroup」的情形就是本輪的現行做法。
+〔使用者方向 2026-09-30，第二十批進行順序〕以下是已寫好的 cgroup 條文，**不是現行規則**；本輪假設沒有 cgroup（程序由 runner 管，B-601、B-604），下一步把 cgroup 納入時再定。內容依原條文保留，只把第十九批的「標準配備」「完整路／備援路」「備援級」字眼改成「有沒有 cgroup」，把每項一框的主詞改成普通程式 `aos-cg`（〔使用者方向 2026-09-30，第二十批追答 8〕，草稿見 [B-202](../base/execution.md)）。納入時，「沒有 cgroup」的情形就是本輪的現行做法。
 
 ### 啟動偵測（B-605）
 

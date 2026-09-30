@@ -12,6 +12,8 @@
 
 ## A-102 改設定與下一 tick 生效〔使用者方向 2026-09-29〕
 
+〔第二十批，astra 審整理區必-5〕沒有 git 時改設定與恢復前驗證的通用正本是 [B-625](../settled/tick.md)；本條的提交、needs／group 連續與 kind 順序檢查屬下一步納入 git 或已撤的舊任務表，本輪不適用，只有 kernel／agent 的領域驗證仍照本條。
+
 改設定在 tick 外用 `aos-config-add`、`aos agent tools add` 等指令，持與 tick 相同的 node 鎖寫入並由標準配備的 git 提交；`--from` 可指定任意可讀路徑。重要設定仍先 pause、等正在跑的 tick 與後代清空再手改，確認提交後才 resume；暫停 run 不等於暫停 tick。
 
 任務直接開檔讀設定。**tick 裡的任務不改 `config/` 是軟性原則，不檢查也不阻擋；同一格新舊設定混用的風險由寫任務的人承擔。** 正常在 tick 外提交的修改，下次 tick 就可讀到；已派工作沿用派出時固定的材料。

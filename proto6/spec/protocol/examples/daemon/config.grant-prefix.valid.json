@@ -6,7 +6,7 @@
   "stop_mode": "drain",
   "drain_timeout_ms": 900000,
   "mount_diag_max": 2048,
-  "mount_diag_ttl_ms": 43200000,
+  "mount_diag_ttl_ticks": 500,
   "roots": [
     {
       "node_id": "/srv/aos/team",

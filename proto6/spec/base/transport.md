@@ -10,7 +10,7 @@
 
 **method 就是指令**〔使用者方向 2026-09-29，第十七批〕：method 是去掉 `aos`、以 `.` 連接的指令，params 是完整 inst，表示「在你那裡跑這條指令」，argv 保留 `aos`；base 是收件 node。收件 node 接哪些 method 由它的任務表決定（[B-620](../settled/tick.md)），跟發件者是誰無關。錯誤分兩種，不混用：
 
-- **-32601**：只表示收件 node 沒有任務宣告這個 method，或展開後 argv 跟 method 對不上（少了 `aos`、命令段不同）。沒人宣告的由收件任務 `aos-inbox` 回（[B-623](../settled/tick.md)）；有宣告但 argv 不符的由那項任務回。
+- **-32601**：只表示收件 node 沒有任務宣告這個 method，或展開後 argv 跟 method 對不上（少了 `aos`、命令段不同）。沒人宣告的由收件程式回（〔第二十批〕檔案收件已是普通程式、aos 不管，[B-623](../settled/tick.md)；本條下一輪跟上）；有宣告但 argv 不符的由那項任務回。
 - **-32000 加業務碼**：來源沒被授權做這件事（例如 `member_not_authorized`、`cancel_not_authorized`），由處理那個 method 的任務判斷，碼表見 [P-306](../protocol/messages.md)。
 
 通過後按 inst 身分授權規則執行，回應沿工作結果格式。接件執行該命令的本地動作，不再投同一份 RPC。

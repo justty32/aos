@@ -4,7 +4,7 @@
   "started_at_ms": 1790000000000,
   "tasks": [
     {
-      "id": "inbox",
+      "id": "mq-get",
       "exit": 0
     },
     {

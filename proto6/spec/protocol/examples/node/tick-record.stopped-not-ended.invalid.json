@@ -3,10 +3,10 @@
   "seq": 1234,
   "tasks": [
     {
-      "id": "inbox",
+      "id": "mq-get",
       "exit": 1
     }
   ],
   "ended": false,
-  "stopped_after": "inbox"
+  "stopped_after": "mq-get"
 }
