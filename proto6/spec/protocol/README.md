@@ -41,9 +41,9 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 
 - 每支程式的篇章要列：完整 argv、stdin／stdout／stderr 各放什麼、讀寫哪些檔、用誰的身分跑、環境變數、結束碼。
 - argv 直接 exec，不經 shell。大資料走 stdin 或檔案，不塞 argv；key 不進 argv 或環境，見 [S-301](../scheduling/llm.md)。
-- aos 自己的環境變數用 `AOS_` 開頭；環境不是授權依據。〔使用者方向 2026-09-30，第十九批〕唯一例外是 daemon 開 tick 與掛載行程時放的通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`（[B-612](../daemon.md)，格式見 [P-117](daemon/channel.md)）：憑證由 daemon 發、在通道上核對，變數本身仍不授予任何權限。
+- aos 自己的環境變數用 `AOS_` 開頭；環境不是授權依據。〔使用者方向 2026-09-30，第二十批〕tick 給任務的變數，整格共用的叫 `AOS_TICK_*`，這一項專屬的叫 `AOS_TASK_*`（`AOS_TASK_ID` 是該項 `id` 字串原樣、`AOS_TASK_INDEX` 從 0 起，清單見 [P-203](node.md)）。〔使用者方向 2026-09-30，第十九批〕唯一例外是 daemon 開 tick 與掛載行程時放的通道變數 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`（[B-612](../daemon.md)，格式見 [P-117](daemon/channel.md)）：憑證由 daemon 發、在通道上核對，變數本身仍不授予任何權限。
 - 結束碼共同意思：`0` 成功；`2` 用法或設定錯，還沒開始做事；`125` 自己無法開始（如身分不准）；runner 收尾失敗也是 125，須以 P-110 的 started／error 區分，不能只看碼。其他碼由各篇自己定；被訊號殺掉由父程序看 wait 狀態，不猜 `128+n`。
-- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。〔第二十批〕系統級任務與普通程式的程式名、argv 與結束碼見 [P-203](node.md)、P-211～213（[node](node.md)）。新公開指令用 `aos <用途> <動作> [更深]`。
+- 程式名：daemon 是 `aos daemon`；其他沿主規格已有名字（`aos-tick`、`aos-clean`、`aos-attend`）。〔第二十批〕系統級任務與普通程式的程式名、argv 與結束碼見 [P-203](node.md)、[P-204](node.md)（`aos-needs`）、P-212（`aos-as`）；下一步納入的 `aos-git`、`aos-cg` 見 [P-205](node.md)、P-211。新公開指令用 `aos <用途> <動作> [更深]`。
 
 ### 集中碼表
 
@@ -55,7 +55,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | daemon IPC 與 helper 私有通道的 `data.code` | [P-111](daemon/provision-and-runner.md) |
 | runner 回報、125、未啟動的 `.err` 旁檔 | [P-110](daemon/provision-and-runner.md) |
 | inst 的錯誤代號、126／127 | [inst「執行與錯誤」](../base/inst.md#執行與錯誤) |
-| `aos-tick` 結束碼（核心的碼與停格碼）；系統級任務與普通程式（`aos-git`、`aos-cg`、`aos-as`、`aos-needs` 等）的結束碼 | [P-203](node.md)、P-211～213（[node](node.md)） |
+| `aos-tick` 結束碼（0／1／2／75，沒有特別碼：停掉本格靠停格檔）；普通程式 `aos-needs`、`aos-as` 的結束碼；〔下一步納入〕`aos-git`、`aos-cg` | [P-203](node.md)、[P-204](node.md)、P-212（[node](node.md)）；下一步納入的見 [P-205](node.md)、P-211 |
 | tick–daemon 通道的 `data.code`；客戶端的 `no_channel` | [P-119](daemon/channel.md) |
 | 檔案 RPC 的業務拒收（method、訊息、取消） | [P-306](messages.md)、[P-411](work.md) |
 | 工作拒收 | [P-404](work.md) |
@@ -128,7 +128,7 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | 協議檔／條款 | 本篇只留 | 行為正本（主規格） |
 |---|---|---|
 | [daemon](daemon/README.md)／P-100～119 | 設定欄位、IPC method 與 params／result、tick–daemon 通道（P-117～119）、helper 通道、runner 回報、錯誤碼 | [daemon](../daemon.md)（B-601～614；通道 B-612～614）；[身分](../base/identity-resources.md)；[inst](../base/inst.md) |
-| [node](node.md)／P-200～213 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、結束碼紀錄、系統級任務與普通程式的 argv、鬧鐘與待送檔格式 | [tick](../tick.md)（B-602、B-620～633）；[儲存](../base/storage.md)；[投件](../base/transport.md)；[執行器 B-202](../base/execution.md) |
+| [node](node.md)／P-200～213 | 資料夾布局名稱、inst／tasks 的 JSON、`aos-tick` argv 與結束碼、結束碼紀錄、停格檔與擋板檔、系統級任務與普通程式的 argv、鬧鐘與待送檔格式 | [tick](../tick.md)（B-602、B-620～633）；[儲存](../base/storage.md)；[投件](../base/transport.md)；[執行器 B-202](../base/execution.md) |
 | [messages](messages.md)／P-300～309 | 請求／回應檔、method 目錄、摘要檔 | [投件](../base/transport.md)；[tick](../tick.md)；[S-201](../scheduling/admission.md) |
 | [work](work.md)／P-400～404、408～411 | 工作 payload、結果 JSON、`work.cancel` 形狀、程式 argv | [工作材料](../base/work.md)；[執行器](../base/execution.md) |
 | [llm-work](llm-work.md)／P-405～407 | 池設定、LLM 請求與結果 | [LLM S-301～307](../scheduling/llm.md) |
@@ -164,16 +164,16 @@ JSON-RPC `error` 的 `code` 照 2.0 保留碼（-32700 解析、-32600 請求不
 | P-201 | inst 的格式與展開驗證 | [node.md](node.md) |
 | P-202 | 任務註冊表 | [node.md](node.md) |
 | P-203 | aos-tick 與任意任務程式 | [node.md](node.md) |
-| P-204 | 成敗、group 與 needs | [node.md](node.md) |
-| P-205 | git 提交與恢復 | [node.md](node.md) |
-| P-206 | 收件與派送的提交邊界 | [node.md](node.md) |
+| P-204 | 成敗與 aos-needs | [node.md](node.md) |
+| P-205 | 〔下一步納入〕aos-git：開格、存檔點、收尾 | [node.md](node.md) |
+| P-206 | 收件、派送與發摘要 | [node.md](node.md) |
 | P-207 | 加入普通設定與重要設定手改 | [node.md](node.md) |
 | P-208 | 收件區權限 | [node.md](node.md) |
 | P-209 | 待決與跨篇 | [node.md](node.md) |
 | P-210 | 預設範本與恢復前驗證 | [node.md](node.md) |
-| P-211 | aos-cg：每項一框 | [node.md](node.md) |
+| P-211 | 〔下一步納入〕aos-cg：每項一框 | [node.md](node.md) |
 | P-212 | aos-as：切換帳號 | [node.md](node.md) |
-| P-213 | 每項結束碼紀錄 | [node.md](node.md) |
+| P-213 | 每項結束碼紀錄、停格檔與擋板檔 | [node.md](node.md) |
 | P-300 | 兩條路各做什麼 | [messages.md](messages.md) |
 | P-301 | 收件區分請求與回應 | [messages.md](messages.md) |
 | P-302 | 完整封包 | [messages.md](messages.md) |
