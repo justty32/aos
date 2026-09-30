@@ -24,7 +24,7 @@ kernel 和 agent 都是「資料夾＋`aos-tick`＋註冊表」，差別只在�
 - daemon 依每個資料夾的設定定期跑它的 inst（也就是 tick）；同一資料夾同時只跑一格。agent 通常不設定期，只在被叫醒時跑；什麼時候叫醒誰、同時跑幾個，由它所屬的 kernel 決定。daemon 是所有 tick 程序的爸爸，kernel 的 tick 跑完就退出，不用等 agent。
 - 其他程式可用 IPC（本機 socket）找 daemon：**註冊／解除註冊資料夾**、**叫醒**（某資料夾有要緊事，把它的 tick 提前到現在）。
 - 誰能對哪個資料夾做這些事，看 socket 對面的 Linux 帳號：擁有該資料夾的帳號，或它上層 kernel 的帳號（建議預設）。
-- daemon 不讀資料夾內容、不做排程決定、不存狀態。〔標註：後續 spec 的 daemon 有 `state.json`，見 [daemon.md](../spec/daemon.md)；以 spec 為準。〕**重啟後**：設定檔只列最頂層 kernel；開機先跑它一格，每個 kernel 的 tick 會把自己底下的成員（kernel 與 agent）重新註冊一次（重複註冊無害），整棵樹一層層長回來（使用者已確認）。
+- daemon 不讀資料夾內容、不做排程決定、不存狀態。〔標註：後續 spec 的 daemon 有 `state.json`，見 [daemon.md](../spec/settled/daemon.md)；以 spec 為準。〕**重啟後**：設定檔只列最頂層 kernel；開機先跑它一格，每個 kernel 的 tick 會把自己底下的成員（kernel 與 agent）重新註冊一次（重複註冊無害），整棵樹一層層長回來（使用者已確認）。
 
 ## 二、kernel 樹
 
@@ -45,7 +45,7 @@ kernel 和 agent 都是「資料夾＋`aos-tick`＋註冊表」，差別只在�
 
 - loop 只做「跑一次 inst」，inst 的程式就是 `aos-tick`。
 - `aos-tick` 依註冊表順序跑任務：系統性任務 → agent（或 kernel）任務 → 自訂任務。
-- **group**：組內全部成功，才把這組交給帳本的結果一起寫進去〔標註：「帳本」已不存在，現見 [tick.md](../spec/tick.md)〕；任一失敗整組不算。任務自己直接改的檔案不回滾。
+- **group**：組內全部成功，才把這組交給帳本的結果一起寫進去〔標註：「帳本」已不存在，現見 [tick.md](../spec/settled/tick.md)〕；任一失敗整組不算。任務自己直接改的檔案不回滾。
 - **needs**：前置任務成功才執行。
 - 要 root 的步驟固定在 root helper，不進註冊表；註冊表的系統任務不是 root。
 - 用 LLM、跑工具一律先送出去，下次 tick 收結果。
@@ -99,8 +99,8 @@ proto6 的 inst 以 proto5 [inst-posix](../../proto5/spec/inst-posix/README.md) 
 ## 七、待定（附建議）
 
 1. ~~下層 kernel 用不用自己的 Linux 帳號~~：已解（第九批），kernel node 用自己 inst 的 `user`。
-2. **下層 kernel 怎麼啟動成員**：成員要切 UID，得經 root helper。建議把「可用 helper」當成可授予的權限，並限定在被授權 kernel 的子樹內：helper（或替它把關的 daemon）核對「這個成員確實登記在發出請求的 kernel 底下，且這個 kernel 有 helper 權限」。另一種作法是一律往上交給最頂層代開，但每層多一趟轉手。〔標註：已定，見 [P-104](../spec/protocol/daemon/registration.md)。〕
-3. **登記鏈**：誰屬於哪個 kernel，要從最頂層一路接下來，防止下層 kernel 冒名開別隊的成員。〔標註：已定，見 [registration.md](../spec/protocol/daemon/registration.md)。〕
+2. **下層 kernel 怎麼啟動成員**：成員要切 UID，得經 root helper。建議把「可用 helper」當成可授予的權限，並限定在被授權 kernel 的子樹內：helper（或替它把關的 daemon）核對「這個成員確實登記在發出請求的 kernel 底下，且這個 kernel 有 helper 權限」。另一種作法是一律往上交給最頂層代開，但每層多一趟轉手。〔標註：已定，見 [P-104](../spec/settled/protocol/daemon/registration.md)。〕
+3. **登記鏈**：誰屬於哪個 kernel，要從最頂層一路接下來，防止下層 kernel 冒名開別隊的成員。〔標註：已定，見 [registration.md](../spec/settled/protocol/daemon/registration.md)。〕
 4. ~~下層自有 endpoint 池的代發服務用誰的帳號跑~~：已解（第九批），用該 kernel node 的帳號。
 5. ~~跨隊傳訊~~：已定（第九批），有權限就直投對方收件處。
 6. **延遲**：每多一層 kernel，一件工作多轉一手；proto5 量 tick 間隔時吃過虧，要在設計時控制層數與喚醒路徑。

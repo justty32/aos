@@ -10,7 +10,7 @@
 
 路徑按 cwd，--to 相對 N；底層 --node 省略用 cwd，tick 跑任務時 cwd 是 node 根。IPC 用 --socket S 或 --daemon-config F。通常 stdout 放結果，stderr 放診斷／確認；daemon 例外見下。表中 --json：IPC 印原 RpcResponse，投件印 FileRpcRequest，其餘依該列；每筆加換行。沒列 --json 的命令傳它回 2。
 
-設定指令持 tick 鎖提交，下格採用；草稿放樹外，work/ 放暫存。手改先 pause、等全空、持鎖改，resume 驗證提交。unregister、特權佈建、提高額度、採用手改、delete 清理先問 y/n；有 --yes 的列可明示略過，未確認回 125。Ctrl-C 本身就是停機指令；走排空還是立即停由 daemon 設定 `stop_mode` 決定（[B-604](../daemon.md)）。熱重載只收 SIGHUP，打 `kill -HUP`，沒有子命令（[B-608](../daemon.md)）。
+設定指令持 tick 鎖提交，下格採用；草稿放樹外，work/ 放暫存。手改先 pause、等全空、持鎖改，resume 驗證提交。unregister、特權佈建、提高額度、採用手改、delete 清理先問 y/n；有 --yes 的列可明示略過，未確認回 125。Ctrl-C 本身就是停機指令；走排空還是立即停由 daemon 設定 `stop_mode` 決定（[B-604](../settled/daemon.md)）。熱重載只收 SIGHUP，打 `kill -HUP`，沒有子命令（[B-608](../settled/daemon.md)）。
 
 ### H-002．失敗代稱
 

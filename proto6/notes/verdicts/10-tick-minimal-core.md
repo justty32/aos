@@ -80,16 +80,16 @@
 
 ## 跟已落 spec 的衝突（歷史；已依本份改寫，見「落點」）
 
-- **cgroup v2 必要**（第十四、十五批，[B-605](../../spec/daemon.md)）與**每任務一層 cgroup**（第十七批，[B-202](../../spec/base/execution.md)）：照第 4 條，cgroup 不屬 tick 核心；照第 12 條它是標準配備的一部分，跑標準配備的環境仍需要 cgroup v2。〔取代註：第 8 條追加後不再成立——cgroup v2 只是完整保證的條件，沒有時走內建備援仍算全掛，見 [B-631](../../spec/tick.md)。〕
-- **人手跑 tick 不在框就拒跑**（第十八批審稿裁定 16，[B-627](../../spec/tick.md)）：跟第 1 條「怎麼被執行不管」相衝。
+- **cgroup v2 必要**（第十四、十五批，[B-605](../../spec/settled/daemon.md)）與**每任務一層 cgroup**（第十七批，[B-202](../../spec/base/execution.md)）：照第 4 條，cgroup 不屬 tick 核心；照第 12 條它是標準配備的一部分，跑標準配備的環境仍需要 cgroup v2。〔取代註：第 8 條追加後不再成立——cgroup v2 只是完整保證的條件，沒有時走內建備援仍算全掛，見 [B-631](../../spec/settled/tick.md)。〕
+- **人手跑 tick 不在框就拒跑**（第十八批審稿裁定 16，[B-627](../../spec/settled/tick.md)）：跟第 1 條「怎麼被執行不管」相衝。
 - **從屬關係**：spec 現在的上下層由 daemon 登記的 `parent_id` 決定，而且明寫「與目錄位置無關」（[P-402](../../spec/protocol/work.md)）；第 2、8 條改成預設看資料夾包含、可另外登記覆蓋；`parent_id` 登記保留為覆蓋手段。「與目錄位置無關」的說法要改，第十八批審稿裁定 6 與 Q10 的換父要改寫成「搬資料夾或改登記」兩條路。
-- **任務表禁止 `user`**（第十八批 C-07 永遠禁止的鍵，[contracts](../../spec/contracts.md)、[B-620](../../spec/tick.md)）：跟第 8 條「任務是 inst 超集、以後可能每個任務有自己的使用者」相衝。
-- **tick 是基底的範圍**（第十八批 Q22，[B-626](../../spec/tick.md)）：`kind:system`＋tick 自己做的事＋aos-clean 都算基底；照第 3、4 條，其中多數可能應該是掛上去的任務。
+- **任務表禁止 `user`**（第十八批 C-07 永遠禁止的鍵，[contracts](../../spec/contracts.md)、[B-620](../../spec/settled/tick.md)）：跟第 8 條「任務是 inst 超集、以後可能每個任務有自己的使用者」相衝。
+- **tick 是基底的範圍**（第十八批 Q22，[B-626](../../spec/settled/tick.md)）：`kind:system`＋tick 自己做的事＋aos-clean 都算基底；照第 3、4 條，其中多數可能應該是掛上去的任務。
 
 ## 落點（第十九批落 spec 後補）
 
-- 核心三件事：互斥鎖 [B-602](../../spec/tick.md)、照表跑 B-620、上下層 B-628；tick 是基底的範圍 B-626。
-- 標準配備與備援：清單 [B-629](../../spec/tick.md)；cgroup 準備 [B-605](../../spec/daemon.md)、cgroup 備援與兩級保證表 B-631；git 最低版本與檔案日誌備援 B-630、B-632；人手跑風險自負 B-627。沒 git 時讀取端（replies／context、listen 等）改讀目前檔案，不保證一致快照。〔已被第二十批取代，見 [11](11-tick-as-unit.md)〕
-- tick 與 daemon 通道：B-612～614、[P-117～119](../../spec/protocol/daemon/channel.md)。
+- 核心三件事：互斥鎖 [B-602](../../spec/settled/tick.md)、照表跑 B-620、上下層 B-628；tick 是基底的範圍 B-626。
+- 標準配備與備援：清單 [B-629](../../spec/settled/tick.md)；cgroup 準備 [B-605](../../spec/settled/daemon.md)、cgroup 備援與兩級保證表 B-631；git 最低版本與檔案日誌備援 B-630、B-632；人手跑風險自負 B-627。沒 git 時讀取端（replies／context、listen 等）改讀目前檔案，不保證一致快照。〔已被第二十批取代，見 [11](11-tick-as-unit.md)〕
+- tick 與 daemon 通道：B-612～614、[P-117～119](../../spec/settled/protocol/daemon/channel.md)。
 - 追答第 10 條（跨帳號任務由 tick 握鎖、經 helper 以指定帳號開、任務繼承鎖 fd）：B-620、[P-704](../../spec/protocol/agent-tasks.md)。第 11 條（覆蓋上層時舊上層未登記則只要新上層同意）：B-606／B-628。
 - 完成狀況與各隊核對紀錄見 [第十九批審稿](../reviews/2026-09-30/README.md)。

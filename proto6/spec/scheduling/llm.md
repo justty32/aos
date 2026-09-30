@@ -20,10 +20,10 @@
 
 **池就是一個 node**〔使用者方向 2026-09-29 晚〕：不是另外的資料夾契約。agent 的某個任務遇到要呼叫 LLM，就把檔案承載的 JSON-RPC（`llm.chat`）投進目標 node 的 `requests/`，然後結束，tick 繼續跑下一個任務；這和「要別的 node 做事」的一般做法相同。對 agent 來說「自己排」和「交給 endpoint」完全一樣，差別只在池 node 裡裝的任務。回覆送到哪（請求的 `reply_to`）、串流寫到哪（業務 JSON 的 `stream_path`，見 S-305）都寫在請求裡，池照請求上寫的送。
 
-〔使用者方向 2026-09-29 晚，第十五批〕投件照一般規則（[B-624](../tick.md)）：只查目標是不是一個 node，不是就在投件那一步報錯（沒有寫入權限也一樣：報一次、丟掉待送檔），不寫待辦、不重試、不自動建池（`aos node new` 也不建池）。是 node 就投進去，之後分兩種情況〔第十八批補〕：
+〔使用者方向 2026-09-29 晚，第十五批〕投件照一般規則（[B-624](../settled/tick.md)）：只查目標是不是一個 node，不是就在投件那一步報錯（沒有寫入權限也一樣：報一次、丟掉待送檔），不寫待辦、不重試、不自動建池（`aos node new` 也不建池）。是 node 就投進去，之後分兩種情況〔第十八批補〕：
 
 - **對方沒被 tick**（沒登記、暫停或停格）：請求堆在對方收件區。投件者可以設鬧鐘（`alarm_ms`），時間到了原件還在就報錯。
-- **對方有 tick，但任務表裡沒有任務宣告 `llm.chat`**：tick 回 -32601 並清掉原件（[B-501](../base/transport.md)、[B-620](../tick.md)）；原件已被取走，鬧鐘不會響，投件者收到的是 -32601 回應。
+- **對方有 tick，但任務表裡沒有任務宣告 `llm.chat`**：tick 回 -32601 並清掉原件（[B-501](../base/transport.md)、[B-620](../settled/tick.md)）；原件已被取走，鬧鐘不會響，投件者收到的是 -32601 回應。
 
 收件區、回覆檔、串流檔、key 的讀寫權限 aos 不安排，沒給權限就在投件時報錯（設定檢查不先擋，見 [P-701](../protocol/agent-tasks.md)）。〔使用者方向 2026-09-29，第十六批〕**LLM 結果回來就是投進 agent 的 `responses/` 收件**，跟其他收件一樣由所屬 kernel 看到後叫醒 agent（[P-305](../protocol/messages.md)、[P-803](../protocol/kernel-tasks.md)），不另設機制；串流檔（S-305）則不叫醒。池 node 裡誰收 `llm.chat` 見本篇 S-307。
 
@@ -52,7 +52,7 @@
 
 ## S-302．預留與結算
 
-〔使用者方向 2026-09-29〕kernel 只在已分到的份額內安排工作；池服務在真正送出前核對自己的共享限制。兩者不承諾跨 repo 一次同時占齊額度。請求提交與收件流程依 [tick](../tick.md)，git 還原不會撤銷已送出的 LLM 呼叫。
+〔使用者方向 2026-09-29〕kernel 只在已分到的份額內安排工作；池服務在真正送出前核對自己的共享限制。兩者不承諾跨 repo 一次同時占齊額度。請求提交與收件流程依 [tick](../settled/tick.md)，git 還原不會撤銷已送出的 LLM 呼叫。
 
 〔建議預設，未拍板〕以請求 ID、必要的送出狀態及結果／usage 檔核對一次工作；同 ID 重收依[傳遞](../base/transport.md)，結果重複處理依 [C-03](../contracts.md)；去重承諾只涵蓋[儲存](../base/storage.md) 規定的保留期。只保存分配摘要及限流真正需要的窗口／用量。估算 token 要標明是估算；實際 usage 可得時照實記，不能因輸出短就假設 provider 已退還先前算過的速率額度。
 
@@ -84,7 +84,7 @@ HTTP 無結果又不能證明未送出，就標 unknown，不自動再呼叫或�
 
 ## S-304．取消與不確定性
 
-〔使用者方向 2026-09-29〕once 的取消規則以 [B-203](../base/execution.md) 為正本（在跑的經通道砍掉，[B-613](../daemon.md)）；〔使用者方向 2026-09-30，第十八批〕LLM 請求的取消延後（[P-008](../protocol/README.md#p-008)），目前範本只有 kernel 的 work 任務收 `work.cancel`。已送出後關掉本機連線，不代表遠端停算。重啟的程序收尾依 [daemon](../daemon.md)，不明結果依 [S-401](operations.md) 放著、不自動重做。完整結果才可成功，部分輸出不是完成證據；串流寫出的片段也只是過程（S-305）。〔建議預設，未拍板；第十九批依方案 A 由 llm-work P-407 搬來〕**結果怎麼判**（欄位見 [P-407](../protocol/llm-work.md)）：收到完整但格式不合或驗不過的回應（含非空 refusal）記 `response_invalid`，保留無 key 的證據，不自動再問、也不當空白成功；傳輸中斷或遠端結果不明記 `unknown`；串流中途斷掉不算完整回應。`finish_reason` 是 `length` 表示模型輸出達上限，不能當產品任務完成（[A-503](../agent/README.md)）。
+〔使用者方向 2026-09-29〕once 的取消規則以 [B-203](../base/execution.md) 為正本（在跑的經通道砍掉，[B-613](../settled/daemon.md)）；〔使用者方向 2026-09-30，第十八批〕LLM 請求的取消延後（[P-008](../protocol/README.md#p-008)），目前範本只有 kernel 的 work 任務收 `work.cancel`。已送出後關掉本機連線，不代表遠端停算。重啟的程序收尾依 [daemon](../settled/daemon.md)，不明結果依 [S-401](operations.md) 放著、不自動重做。完整結果才可成功，部分輸出不是完成證據；串流寫出的片段也只是過程（S-305）。〔建議預設，未拍板；第十九批依方案 A 由 llm-work P-407 搬來〕**結果怎麼判**（欄位見 [P-407](../protocol/llm-work.md)）：收到完整但格式不合或驗不過的回應（含非空 refusal）記 `response_invalid`，保留無 key 的證據，不自動再問、也不當空白成功；傳輸中斷或遠端結果不明記 `unknown`；串流中途斷掉不算完整回應。`finish_reason` 是 `length` 表示模型輸出達上限，不能當產品任務完成（[A-503](../agent/README.md)）。
 
 〔第十八批補，建議預設，未拍板〕**兩個計數分開算**：
 
@@ -113,7 +113,7 @@ HTTP 無結果又不能證明未送出，就標 unknown，不自動再呼叫或�
 
 ## S-307．池 node 的任務與收件〔建議預設，未拍板；第十八批補〕
 
-**誰收 `llm.chat`**：由任務表裡宣告 `llm.chat` 的那項任務收件（[B-620](../tick.md)，同一 method 只能一項任務宣告）。兩種部署：
+**誰收 `llm.chat`**：由任務表裡宣告 `llm.chat` 的那項任務收件（[B-620](../settled/tick.md)，同一 method 只能一項任務宣告）。兩種部署：
 
 | 部署 | 誰宣告 `llm.chat` | pool 任務（`aos-llm`）怎麼拿到請求 |
 |---|---|---|
@@ -122,7 +122,7 @@ HTTP 無結果又不能證明未送出，就標 unknown，不自動再呼叫或�
 
 同一支 `aos-llm` 兩種都跑：任務宣告了 `llm.chat` 就讀收件，否則讀 forward 的材料。agent 直投管池 node（S-301 的「kernel 不管」）與 kernel 轉交到別的池 node，收件的都是純池 node。兩者都沒有任務宣告 `llm.chat` 時，tick 回 -32601（S-301 第二種情況）。
 
-**aos-llm 怎麼派**〔使用者方向 2026-09-29 晚〕：aos-llm 是短任務：收件（或讀 forward 材料）、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 [P-402](../protocol/work.md) 的 once 資料夾，把本池那一項設定（只含 `key_ref`，不含 key）固定成 `W/llm-config.json`，inst 跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <W/llm-config.json 的絕對路徑>`，用池 node 的帳號。〔使用者方向 2026-09-30，第十九批〕提交後，由下一格 `aos-llm` 經通道用 `node.mount` 把這份 inst 掛到 daemon（用 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`，不帶 `parent_id`，資源歸池 node 自己，不帶 `identity_grant`；[B-613](../daemon.md)）。〔記錄者依追答 11 歸類：不在 daemon 底下的 tick，要通道的事一律算功能受限、不另設替代路〕池 node 不在 daemon 底下（cron 或人手跑）時沒有通道，`aos-llm` 掛不了 `aos-llm-call`，照 [P-408](../protocol/work.md) 報 `no_channel`、回 125（〔暫定〕），已提交的材料留著等下次有通道的格；不另設池自己直接跑 `aos-llm-call` 的路。HTTP 等待由這支掛載行程承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 收齊這件請求的所有嘗試、按序組成 llm.chat 的 stdout JSON 後回件（格式見 [P-407](../protocol/llm-work.md)）；LLM 工作沿用 once 的清理與恢復界線。
+**aos-llm 怎麼派**〔使用者方向 2026-09-29 晚〕：aos-llm 是短任務：收件（或讀 forward 材料）、核對共享限制、派送、收結果便退出。它為每個實際 HTTP 嘗試建 [P-402](../protocol/work.md) 的 once 資料夾，把本池那一項設定（只含 `key_ref`，不含 key）固定成 `W/llm-config.json`，inst 跑 `aos-llm-call --work-dir <絕對工作資料夾> --config <W/llm-config.json 的絕對路徑>`，用池 node 的帳號。〔使用者方向 2026-09-30，第十九批〕提交後，由下一格 `aos-llm` 經通道用 `node.mount` 把這份 inst 掛到 daemon（用 `AOS_DAEMON_SOCKET`、`AOS_TICK_TOKEN`，不帶 `parent_id`，資源歸池 node 自己，不帶 `identity_grant`；[B-613](../settled/daemon.md)）。〔記錄者依追答 11 歸類：不在 daemon 底下的 tick，要通道的事一律算功能受限、不另設替代路〕池 node 不在 daemon 底下（cron 或人手跑）時沒有通道，`aos-llm` 掛不了 `aos-llm-call`，照 [P-408](../protocol/work.md) 報 `no_channel`、回 125（〔暫定〕），已提交的材料留著等下次有通道的格；不另設池自己直接跑 `aos-llm-call` 的路。HTTP 等待由這支掛載行程承擔，不占 node 的 tick。結果放工作資料夾，由後續池 tick 收齊這件請求的所有嘗試、按序組成 llm.chat 的 stdout JSON 後回件（格式見 [P-407](../protocol/llm-work.md)）；LLM 工作沿用 once 的清理與恢復界線。
 
 **轉交**〔第十八批由 P-406 搬來〕：轉交 kernel 可把請求映到下一個 node 的 pool；model 原值沿路核對，終點才核對實際池設定。轉交仍用 `llm.chat`，不增加另一種 wrapper；保留原 node_id、job_id、attempt_id，另配轉交 RPC id 與 `reply_to`，由轉交者保存上下游關係。收到結果後沿用 stdout 的業務結果，以本 node 及原 RPC id 組成自己的指令結果回覆，不照抄下游指令識別。`stream_path` 沿路原樣保留，由最後實際打 HTTP 的 `aos-llm-call` 寫。agent 配對的可信回件來源始終是設定目標。
 

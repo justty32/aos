@@ -6,9 +6,9 @@
 
 ## P-500．module 就是任務〔使用者方向 2026-09-29〕
 
-module 是 [node P-202～204](node.md) 的普通任務；範本的六類可各自選裝，不另加 module 表或 ABI。argv 由任務設定，cwd／stdin／stdout／stderr／環境／鎖沿 [P-203](node.md)，不重取同 node 鎖。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕帳號照 [B-620](../tick.md)：預設用 node inst 的帳號；任務也可以帶 `user`，由標準配備的切換使用者開。
+module 是 [node P-202～204](../settled/protocol/node.md) 的普通任務；範本的六類可各自選裝，不另加 module 表或 ABI。argv 由任務設定，cwd／stdin／stdout／stderr／環境／鎖沿 [P-203](../settled/protocol/node.md)，不重取同 node 鎖。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕帳號照 [B-620](../settled/tick.md)：預設用 node inst 的帳號；任務也可以帶 `user`，由標準配備的切換使用者開。
 
-〔建議預設，未拍板〕直接開檔讀配額、已授權量測介面及必要本地證據；寫自己 node 的用量／分配狀態，由標準配備的 group 提交（[B-621](../tick.md)）。退出 0＝本步完成（額度不足而寫好摘要等待也是 0），2＝設定錯，125＝無法開始，1＝已開始但失敗。派工的任務怎麼讀資源狀態、擋什麼，見 [S-205](../scheduling/admission.md)。
+〔建議預設，未拍板〕直接開檔讀配額、已授權量測介面及必要本地證據；寫自己 node 的用量／分配狀態，由標準配備的 group 提交（[B-621](../settled/tick.md)）。退出 0＝本步完成（額度不足而寫好摘要等待也是 0），2＝設定錯，125＝無法開始，1＝已開始但失敗。派工的任務怎麼讀資源狀態、擋什麼，見 [S-205](../scheduling/admission.md)。
 
 ## P-501．配額檔〔建議預設，未拍板〕
 
@@ -31,7 +31,7 @@ module 是 [node P-202～204](node.md) 的普通任務；範本的六類可各�
 
 [res-usage](schemas/res-usage.schema.json) 是子層的 `state/resources/` 用量：version:1、node_id、observed_at_ms、resources 必填，涵蓋 node 與受管子樹合計，含工具。只寫能量到的值，resources 可空，可含 kernel 自訂資源；上層不再重加子孫。缺項／讀不到／過時不是零（[S-207](../scheduling/admission.md)），過時門檻由 kernel 政策定。〔第十九批〕cgroup 走備援時，CPU、記憶體、pids 量不到總量，照缺項寫（[S-205](../scheduling/admission.md)）。
 
-摘要的同 commit 讀取與只開摘要權限的發布依 [B-624](../tick.md) 與 [messages P-307](messages.md)。改配額用 `kernel.quota.set`、要求重測用 `kernel.usage.measure`，參數、回應與授權只在 [messages P-306](messages.md) 定義；kernel.schedule.recheck 只重判排程。
+摘要的同 commit 讀取與只開摘要權限的發布依 [B-624](../settled/tick.md) 與 [messages P-307](messages.md)。改配額用 `kernel.quota.set`、要求重測用 `kernel.usage.measure`，參數、回應與授權只在 [messages P-306](messages.md) 定義；kernel.schedule.recheck 只重判排程。
 
 〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕成員自記用量、kernel 只收集時，逐次用量檔是成員 [agent P-703](agent-tasks.md) 的 `state/agent/usage/<request_id>.json`，收集任務見 [P-810](kernel-tasks.md)；讀法、缺值與按原發起 node＋attempt 去重依 [S-207](../scheduling/admission.md)。本篇的資源摘要不取代逐次 usage 證據。
 
@@ -39,7 +39,7 @@ module 是 [node P-202～204](node.md) 的普通任務；範本的六類可各�
 
 ## P-503．CPU、記憶體與 pids〔使用者方向 2026-09-29〕
 
-〔使用者方向 2026-09-30，第十九批〕已裝 OS module 時，由標準配備的 cgroup 框寫進 cgroup v2（[B-629](../tick.md)）；cgroup 子樹、框命名與佈建以 [B-605](../daemon.md) 為正本，佈建參數見 [daemon P-107](daemon.md)；上限隨時可改，見 [S-205](../scheduling/admission.md)。下表只在 cgroup 走完整路時適用；走備援時 `cgroup_*` 回 `unsupported`，只剩每程序上限、沒有 pids 上限（[S-203](../scheduling/admission.md)、[B-631](../tick.md)）。
+〔使用者方向 2026-09-30，第十九批〕已裝 OS module 時，由標準配備的 cgroup 框寫進 cgroup v2（[B-629](../settled/tick.md)）；cgroup 子樹、框命名與佈建以 [B-605](../settled/daemon.md) 為正本，佈建參數見 [daemon P-107](../settled/protocol/daemon/provision-and-runner.md)；上限隨時可改，見 [S-205](../scheduling/admission.md)。下表只在 cgroup 走完整路時適用；走備援時 `cgroup_*` 回 `unsupported`，只剩每程序上限、沒有 pids 上限（[S-203](../scheduling/admission.md)、[B-631](../settled/tick.md)）。
 
 | resources 欄位 | 配額 | 用量摘要 | cgroup 對應 |
 |---|---|---|---|
@@ -49,15 +49,15 @@ module 是 [node P-202～204](node.md) 的普通任務；範本的六類可各�
 
 CPU 是 [P-002](README.md) 時間單位的明示例外，不轉毫秒。limits 映為 `cpu_max:{quota_us,period_us}`、memory_max_bytes、pids_max；未配置項不傳，全無限制則不呼叫。比較 CPU 份額用 quota_us / period_us；配額不提供字串 max，實際值查詢才可能讀到它。usage_us 是目前 cgroup 存續期間的累積值，重建後不可接著取差值。
 
-框的位置見 [B-605](../daemon.md)，掛載行程的資源歸屬見 [B-613](../daemon.md)，實際限制查詢見 [P-106](daemon/registration.md)；OOM 判定依 [B-204](../base/execution.md)。
+框的位置見 [B-605](../settled/daemon.md)，掛載行程的資源歸屬見 [B-613](../settled/daemon.md)，實際限制查詢見 [P-106](../settled/protocol/daemon/registration.md)；OOM 判定依 [B-204](../base/execution.md)。
 
 ## P-504．套用不是 git 回滾〔建議預設，未拍板〕
 
-（第十八批：行為併入 [S-205](../scheduling/admission.md)，佈建動作見 [B-609](../daemon.md)。）格式上只留一條：設定請求寫目標限制值，不能寫「再加一份」。
+（第十八批：行為併入 [S-205](../scheduling/admission.md)，佈建動作見 [B-609](../settled/daemon.md)。）格式上只留一條：設定請求寫目標限制值，不能寫「再加一份」。
 
 ## P-505．路線與 LLM 份額〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕
 
-agent 只按設定的一個 node 位址投 `llm.chat`，請求與結果始終用 [llm-work P-406／407](llm-work.md) 的同一格式。kernel 的兩條份額路線（全管、不管派送）與 LLM 三檔以 [S-301](../scheduling/llm.md) 為正本，範本欄位怎麼填見 [P-813](kernel-tasks.md)；工具的 `tools.target_node` 路線同樣見 P-813，兩條路都沿 [work P-402](work.md)。〔第十九批〕資源歸掛行程的那個 tick 或它指定的下層（[B-613](../daemon.md)），不靠工作資料夾位置決定。
+agent 只按設定的一個 node 位址投 `llm.chat`，請求與結果始終用 [llm-work P-406／407](llm-work.md) 的同一格式。kernel 的兩條份額路線（全管、不管派送）與 LLM 三檔以 [S-301](../scheduling/llm.md) 為正本，範本欄位怎麼填見 [P-813](kernel-tasks.md)；工具的 `tools.target_node` 路線同樣見 P-813，兩條路都沿 [work P-402](work.md)。〔第十九批〕資源歸掛行程的那個 tick 或它指定的下層（[B-613](../settled/daemon.md)），不靠工作資料夾位置決定。
 
 〔建議預設，未拍板〕以下是預設 kernel 範本的份額格式。配額 `llm` 是陣列，每項只有 `pool_id`（共用 `ID`）與 `concurrent_requests`（非負整數）；零表示不放行新請求。同檔不可重複 pool_id。這個 ID 是**配置該份額之 kernel 的路由名**，由 `config/llm-routes.json` 唯一對到下一個 node 與下一個 pool；本地終點才對到 [llm-work P-405](llm-work.md) 的 pools[].id。路由、授權及回件對照的格式只在 kernel 任務篇定。
 

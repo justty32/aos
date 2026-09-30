@@ -1,0 +1,840 @@
+{
+ "contract": "wf-table/1",
+ "source": "batch20-cg-git-plan.md",
+ "extracted": "2026-09-30",
+ "columns": [
+  "id",
+  "clause",
+  "doc",
+  "action",
+  "summary",
+  "depends"
+ ],
+ "note": "clause 用條號或段名，不寫路徑（tick／daemon 等篇正搬進整理區）；doc 只是篇名提示。depends 是計畫第五節的疑點題號。",
+ "rows": [
+  {
+   "id": "cg-001",
+   "clause": "T-01",
+   "doc": "terms",
+   "action": "改寫",
+   "summary": "保證條件句加「掛了 aos-git open／mark／close 且 git 能用」「daemon 有 cgroup」；拿掉「本輪先假設」段",
+   "depends": ""
+  },
+  {
+   "id": "cg-002",
+   "clause": "T-07",
+   "doc": "terms",
+   "action": "不改",
+   "summary": "核心四件事不變；只核對「下一步納入」字樣",
+   "depends": ""
+  },
+  {
+   "id": "cg-003",
+   "clause": "T-10",
+   "doc": "terms",
+   "action": "改寫",
+   "summary": "表：系統級任務加 aos-git（open／mark／close）；普通程式加 aos-cg；daemon 列加 node 框與上限",
+   "depends": ""
+  },
+  {
+   "id": "cg-004",
+   "clause": "T-10 詞條「收尾」",
+   "doc": "terms",
+   "action": "改寫",
+   "summary": "有 cgroup 時 TERM→寬限→cgroup.kill→populated 驗全空；沒有時照程序群組",
+   "depends": ""
+  },
+  {
+   "id": "cg-005",
+   "clause": "T-10 詞條「標準任務表範本」",
+   "doc": "terms",
+   "action": "改寫",
+   "summary": "新順序：open→inbox→使用者任務（每組後 mark）→clean→close→outbox→summary",
+   "depends": "疑-12"
+  },
+  {
+   "id": "cg-006",
+   "clause": "spec 入口 依賴段",
+   "doc": "README",
+   "action": "改寫",
+   "summary": "git 2.36＋core.fsync、cgroup v2＋委派都是「有就用」；首推 systemd 使用者委派；多帳號要 sudo",
+   "depends": "疑-6"
+  },
+  {
+   "id": "cg-007",
+   "clause": "tick 篇首段",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "「本篇先假設沒有 git」改成：沒掛 git 任務或 git 不能用時照 B-632",
+   "depends": ""
+  },
+  {
+   "id": "cg-008",
+   "clause": "B-626",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "第 2 點系統級任務加 aos-git open／mark／close；第 3 點普通程式加 aos-cg",
+   "depends": ""
+  },
+  {
+   "id": "cg-009",
+   "clause": "B-602",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "鎖檔「git 還原也不碰」改成 aos-git 固定排除核心檔；CLI 格外改檔段補：上一格正常時被下次 close 一起提交，不正常時進 rescue ref",
+   "depends": "疑-3"
+  },
+  {
+   "id": "cg-010",
+   "clause": "B-620",
+   "doc": "tick",
+   "action": "補一句",
+   "summary": "停格檔在有 git 時等於這格作廢（close 不跑，下一格還原）",
+   "depends": "疑-1"
+  },
+  {
+   "id": "cg-011",
+   "clause": "B-633",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "「別刪它」段：.aos/tick/ 由 aos-git 固定排除，不靠 .gitignore",
+   "depends": ""
+  },
+  {
+   "id": "cg-012",
+   "clause": "B-628",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "巢狀 git：下層 tick 資料夾寫進上層 info/exclude；open、mark、close 每次存工作樹前重掃",
+   "depends": ""
+  },
+  {
+   "id": "cg-013",
+   "clause": "B-629",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "範本表加 open、每組後的 mark、close；clean 移到 close 前；outbox、summary 在 close 後",
+   "depends": "疑-12"
+  },
+  {
+   "id": "cg-014",
+   "clause": "B-621",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "「組與還原下一步補」改成：被擋下的項記 125、所在組失敗，由存檔點還原",
+   "depends": "疑-2"
+  },
+  {
+   "id": "cg-015",
+   "clause": "B-623",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "刪原件規則不變（上一格正常收尾＝已提交）；拿掉「下一步改比 HEAD」句；當機時消費副本已被 open 還原",
+   "depends": "疑-4"
+  },
+  {
+   "id": "cg-016",
+   "clause": "B-624",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "投件、發摘要行為不變；「先提交再送」改寫成順序保證（close 在前、失敗建停格檔）",
+   "depends": "疑-4"
+  },
+  {
+   "id": "cg-017",
+   "clause": "B-625",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "當機恢復四窗口：使用者任務中、close commit 前、commit 後、投件中；各自結果",
+   "depends": "疑-1、疑-3"
+  },
+  {
+   "id": "cg-018",
+   "clause": "B-632",
+   "doc": "tick",
+   "action": "改寫",
+   "summary": "改成「沒掛 git 任務或 git 不能用時」；git 不能用分兩種：沒裝／太舊／非 repo 退回，repo 壞寫擋板",
+   "depends": "疑-5"
+  },
+  {
+   "id": "cg-019",
+   "clause": "B-630",
+   "doc": "tick",
+   "action": "定稿搬正文",
+   "summary": "open（git 可用→rescue→還原→清殘留 ref 與鎖檔→巢狀排除→打點）；mark；close（最後一組→提交 aos-tick <seq>→刪點→前景 gc）；拿掉擋板檢查與刪原件",
+   "depends": "疑-1～5"
+  },
+  {
+   "id": "cg-020",
+   "clause": "B-630 存檔點",
+   "doc": "tick",
+   "action": "定稿搬正文",
+   "summary": "refs/aos/marks/<任務 id>；組＝相鄰存檔點之間；只看紀錄與 ref 不重讀 tasks.json；失敗組當場還原；不 fsync；不合法 ref 名回 1 mark_id_invalid",
+   "depends": "疑-2、疑-12"
+  },
+  {
+   "id": "cg-021",
+   "clause": "B-622",
+   "doc": "tick",
+   "action": "定稿搬正文",
+   "summary": "2.36、core.fsync；另帶 hooksPath、gpgSign=false、gc.auto=0、safe.directory；清 GIT_* 環境；作者缺時用 aos 頂上；固定排除核心檔；故障寫擋板＋停格檔",
+   "depends": ""
+  },
+  {
+   "id": "cg-022",
+   "clause": "B-627",
+   "doc": "tick",
+   "action": "不改",
+   "summary": "人手跑不在框、aos-cg 退回；aos-git 在 tick 外回 125 寫在 P-205",
+   "depends": ""
+  },
+  {
+   "id": "cg-023",
+   "clause": "B-631",
+   "doc": "tick",
+   "action": "不改",
+   "summary": "維持撤",
+   "depends": ""
+  },
+  {
+   "id": "cg-024",
+   "clause": "tick 篇末「下一步納入」段",
+   "doc": "tick",
+   "action": "刪除",
+   "summary": "內容已搬進 B-630、B-622 正文",
+   "depends": ""
+  },
+  {
+   "id": "cg-025",
+   "clause": "daemon 篇首段",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "「本篇先假設沒有 cgroup」改成：有 cgroup 就用、沒有照程序群組；daemon 仍不讀 git",
+   "depends": ""
+  },
+  {
+   "id": "cg-026",
+   "clause": "B-601",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "開格放進 n-<h>/tick；格後收尾對 n-<h> 下除子 n-* 與本 node mount-* 以外全部 cgroup.kill、等 populated 0、rmdir task-*；沒 cgroup 照現行",
+   "depends": "疑-7"
+  },
+  {
+   "id": "cg-027",
+   "clause": "B-603",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "有 cgroup 時重啟清空受管框；state.json 記上次子樹根，舊根還在且沒被鎖就先清；空框清理照草稿",
+   "depends": "疑-8"
+  },
+  {
+   "id": "cg-028",
+   "clause": "B-604",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "收尾有 cgroup 時 TERM→shutdown_grace_ms→cgroup.kill→populated；範圍含子 node 與掛載行程",
+   "depends": "疑-7"
+  },
+  {
+   "id": "cg-029",
+   "clause": "B-605 偵測",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "≥5.14、純 cgroup2、委派給自己（明寫 cgroup_root／create_cgroup，或 systemctl show Delegate=yes）；v1 與混合模式算沒有；stdout cgroup=on|off",
+   "depends": "疑-6"
+  },
+  {
+   "id": "cg-030",
+   "clause": "B-605 子樹來源",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "首推 systemd-run --user --scope -p Delegate=yes；開機用使用者層 service＋linger；系統層 service；root 事先準備或 --create-cgroup；WSL 要 systemd=true，shell 在 init.scope 拿不到框；不用 sudo 只能單帳號",
+   "depends": "疑-8"
+  },
+  {
+   "id": "cg-031",
+   "clause": "B-605 明寫卻準備不好",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "明寫 cgroup_root 準備不好：報錯退出 125（或退回）",
+   "depends": "疑-9"
+  },
+  {
+   "id": "cg-032",
+   "clause": "B-605 命名與交框",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "daemon、n-<h>、tick、task-<seq>-<pid>、mount-<h>；交框給 node 帳號（要 aos-cg）；交框後 node 技術上能開子框",
+   "depends": "疑-7、疑-10"
+  },
+  {
+   "id": "cg-033",
+   "clause": "B-605 逃生口",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "照疑-7 定：建議不提供、撤 kill_escape_cgroups、不再列保留名",
+   "depends": "疑-7"
+  },
+  {
+   "id": "cg-034",
+   "clause": "B-605 中途失效",
+   "doc": "daemon",
+   "action": "新增",
+   "summary": "某 node 建框失敗：該 node 退回程序群組、寫事項，其他照常",
+   "depends": ""
+  },
+  {
+   "id": "cg-035",
+   "clause": "B-606",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "換父收舊框、新上層下重建（上限重寫）；解除由下往上刪框（別帳號的經 helper）",
+   "depends": ""
+  },
+  {
+   "id": "cg-036",
+   "clause": "B-607",
+   "doc": "daemon",
+   "action": "不改",
+   "summary": "後代清不空（含 D 狀態）照舊停格；node.show 的 cgroup 回實際值",
+   "depends": ""
+  },
+  {
+   "id": "cg-037",
+   "clause": "B-608",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "cgroup_root 要重開；create_cgroup 只在啟動時有用；拿掉「本輪不生效」",
+   "depends": ""
+  },
+  {
+   "id": "cg-038",
+   "clause": "B-609",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "cgroup_limits 有 cgroup 時照做、沒有 unsupported；cgroup_create／cgroup_delegate 依疑-10；spawn_as 帶 frame 有 cgroup 時收；helper 內部刪殘留框；cgroup_limits 可帶可不帶憑證",
+   "depends": "疑-10"
+  },
+  {
+   "id": "cg-039",
+   "clause": "B-609 controller",
+   "doc": "daemon",
+   "action": "補一句",
+   "summary": "子 node 上限要上層 subtree_control 開 +cpu +memory +pids；上層關掉等於撤子 node 上限，屬上層權限",
+   "depends": ""
+  },
+  {
+   "id": "cg-040",
+   "clause": "B-611",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "有 cgroup 時另取子樹根 flock（實測可行）、祖先到掛載點、子孫一遍；巢狀 daemon 依疑-11",
+   "depends": "疑-11"
+  },
+  {
+   "id": "cg-041",
+   "clause": "B-613",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "掛載行程框 mount-<h> 在掛它的 node 框下；格後收尾不碰",
+   "depends": ""
+  },
+  {
+   "id": "cg-042",
+   "clause": "daemon 附錄",
+   "doc": "daemon",
+   "action": "改寫",
+   "summary": "系統層範例保留；加使用者層 service 範例（Delegate=yes、固定單位名、linger）",
+   "depends": "疑-8"
+  },
+  {
+   "id": "cg-043",
+   "clause": "daemon 篇末「下一步納入」段",
+   "doc": "daemon",
+   "action": "刪除",
+   "summary": "內容已搬進 B-601～613 正文",
+   "depends": ""
+  },
+  {
+   "id": "cg-044",
+   "clause": "B-202",
+   "doc": "execution",
+   "action": "定稿搬正文",
+   "summary": "aos-cg：task-<seq>-<pid>、cgroup.kill、frame_not_empty 建停格檔；沒 cgroup 退回 subreaper＋程序群組；拿掉開框前清舊 task-*；寫明經外部服務開的不歸 aos 管",
+   "depends": ""
+  },
+  {
+   "id": "cg-045",
+   "clause": "B-204",
+   "doc": "execution",
+   "action": "改寫",
+   "summary": "OOM 證據要有框（node 框、mount 框、task 框）；拿掉「本輪一律不標」",
+   "depends": ""
+  },
+  {
+   "id": "cg-046",
+   "clause": "B-203",
+   "doc": "execution",
+   "action": "不改",
+   "summary": "收尾引 B-604，已含 cgroup.kill",
+   "depends": ""
+  },
+  {
+   "id": "cg-047",
+   "clause": "B-303",
+   "doc": "identity-resources",
+   "action": "改寫",
+   "summary": "aos-as 在 task-* 框裡時帶 frame；寫法 aos-cg -- aos-as；跨帳號寫進 node 的檔要讓 tick 帳號讀得到（git）",
+   "depends": ""
+  },
+  {
+   "id": "cg-048",
+   "clause": "B-404",
+   "doc": "storage",
+   "action": "改寫",
+   "summary": "在 tick 內不自己 commit，由本格 close 提交；保留期起點不改（首次看到那格）；直接跑時不提交",
+   "depends": "疑-4"
+  },
+  {
+   "id": "cg-049",
+   "clause": "storage 篇首段",
+   "doc": "storage",
+   "action": "改寫",
+   "summary": "「本輪假設沒有 git」改成：有 git 由 aos-git 管",
+   "depends": ""
+  },
+  {
+   "id": "cg-050",
+   "clause": "B-503",
+   "doc": "transport",
+   "action": "改寫",
+   "summary": "同 ID 補投原回應：處理該 method 的任務從 git log 撈原 bytes；沒 git 照「找不到」",
+   "depends": ""
+  },
+  {
+   "id": "cg-051",
+   "clause": "inst 撤回範圍句",
+   "doc": "inst",
+   "action": "改寫",
+   "summary": "「下一步納入 git 時」句改成現行",
+   "depends": ""
+  },
+  {
+   "id": "cg-052",
+   "clause": "C-05",
+   "doc": "contracts",
+   "action": "不改",
+   "summary": "佔位句改指 B-630",
+   "depends": ""
+  },
+  {
+   "id": "cg-053",
+   "clause": "C-07",
+   "doc": "contracts",
+   "action": "不改",
+   "summary": "kill_escape_cgroups 照忽略（若疑-7 取 b）",
+   "depends": "疑-7"
+  },
+  {
+   "id": "cg-054",
+   "clause": "P-200",
+   "doc": "protocol/node",
+   "action": "改寫",
+   "summary": "追蹤／ignore 轉正；.gitignore 最低清單；info/exclude、refs/aos/marks/、refs/aos/rescue/ 在 git 管理目錄",
+   "depends": "疑-3"
+  },
+  {
+   "id": "cg-055",
+   "clause": "P-203",
+   "doc": "protocol/node",
+   "action": "改寫",
+   "summary": "鎖段「每項一框下一步補」改指 P-211；介面表不變",
+   "depends": ""
+  },
+  {
+   "id": "cg-056",
+   "clause": "P-205",
+   "doc": "protocol/node",
+   "action": "定稿搬正文",
+   "summary": "argv 加 mark；stderr 拿掉 tick_blocked，加 not_in_tick、mark_id_invalid、record_missing；結束碼：0、1（建停格檔＋擋板）、2、125（不在 tick）；commit 訊息 aos-tick <seq> 加 aos-failed 行",
+   "depends": "疑-12"
+  },
+  {
+   "id": "cg-057",
+   "clause": "P-206",
+   "doc": "protocol/node",
+   "action": "改寫",
+   "summary": "消費副本句拿掉「下一步改比 HEAD」",
+   "depends": "疑-4"
+  },
+  {
+   "id": "cg-058",
+   "clause": "P-211",
+   "doc": "protocol/node",
+   "action": "定稿搬正文",
+   "summary": "aos-cg argv、框名、代碼、結束碼照草稿；拿掉清舊框",
+   "depends": ""
+  },
+  {
+   "id": "cg-059",
+   "clause": "P-212",
+   "doc": "protocol/node",
+   "action": "改寫",
+   "summary": "frame 從「下一步補」轉正",
+   "depends": ""
+  },
+  {
+   "id": "cg-060",
+   "clause": "P-213",
+   "doc": "protocol/node",
+   "action": "不改",
+   "summary": "紀錄格式夠用",
+   "depends": ""
+  },
+  {
+   "id": "cg-061",
+   "clause": "P-101",
+   "doc": "protocol/daemon",
+   "action": "改寫",
+   "summary": "cgroup_root、create_cgroup、--create-cgroup 生效；kill_escape_cgroups 撤出",
+   "depends": "疑-7、疑-9"
+  },
+  {
+   "id": "cg-062",
+   "clause": "P-102",
+   "doc": "protocol/daemon",
+   "action": "改寫",
+   "summary": "stdout 啟動行加 cgroup=on|off；off 時 stderr 警告一次",
+   "depends": ""
+  },
+  {
+   "id": "cg-063",
+   "clause": "P-106",
+   "doc": "protocol/daemon",
+   "action": "改寫",
+   "summary": "node.show 的 cgroup：有配置回 {path,limits}，讀不到 resource_observation_failed",
+   "depends": ""
+  },
+  {
+   "id": "cg-064",
+   "clause": "P-107",
+   "doc": "protocol/daemon",
+   "action": "改寫",
+   "summary": "cgroup_* 動作說明轉正（依疑-10 刪兩個）；spawn_as 的 frame 轉正；cgroup_limits 收 token",
+   "depends": "疑-10"
+  },
+  {
+   "id": "cg-065",
+   "clause": "P-108",
+   "doc": "protocol/daemon",
+   "action": "改寫",
+   "summary": "helper cgroup_remove、spawn 的 frame 轉正；helper.stop 用 cgroup.kill",
+   "depends": ""
+  },
+  {
+   "id": "cg-066",
+   "clause": "P-116",
+   "doc": "protocol/daemon",
+   "action": "改寫",
+   "summary": "state.json 加上次子樹根（例如 cgroup_root_last）",
+   "depends": "疑-8"
+  },
+  {
+   "id": "cg-067",
+   "clause": "daemon-state.schema",
+   "doc": "schema",
+   "action": "改寫",
+   "summary": "加上次子樹根欄",
+   "depends": "疑-8"
+  },
+  {
+   "id": "cg-068",
+   "clause": "daemon-config.schema",
+   "doc": "schema",
+   "action": "改寫",
+   "summary": "cgroup_root、create_cgroup 描述改成生效；撤 kill_escape_cgroups",
+   "depends": "疑-7"
+  },
+  {
+   "id": "cg-069",
+   "clause": "daemon-provision.schema",
+   "doc": "schema",
+   "action": "改寫",
+   "summary": "依疑-10 刪 cgroup_create、cgroup_delegate；cgroup_limits 收 token",
+   "depends": "疑-10"
+  },
+  {
+   "id": "cg-070",
+   "clause": "daemon-registration.schema",
+   "doc": "schema",
+   "action": "改寫",
+   "summary": "provision.actions 列舉同步疑-10",
+   "depends": "疑-10"
+  },
+  {
+   "id": "cg-071",
+   "clause": "daemon-rpc.schema",
+   "doc": "schema",
+   "action": "改寫",
+   "summary": "node.show 的 cgroup 描述轉正",
+   "depends": ""
+  },
+  {
+   "id": "cg-072",
+   "clause": "daemon-helper.schema",
+   "doc": "schema",
+   "action": "不改",
+   "summary": "frame、cgroup_remove 已有；只改描述",
+   "depends": ""
+  },
+  {
+   "id": "cg-073",
+   "clause": "node-tasks.schema",
+   "doc": "schema",
+   "action": "不改",
+   "summary": "group／needs 仍陌生鍵；kind system 已有",
+   "depends": ""
+  },
+  {
+   "id": "cg-074",
+   "clause": "node-tick-record.schema",
+   "doc": "schema",
+   "action": "不改",
+   "summary": "",
+   "depends": ""
+  },
+  {
+   "id": "cg-075",
+   "clause": "範例 tasks 掛 git",
+   "doc": "examples",
+   "action": "新增",
+   "summary": "node/tasks.template-git.valid.json：open、inbox、mark、使用者任務、mark、clean、close、outbox、summary",
+   "depends": "疑-12"
+  },
+  {
+   "id": "cg-076",
+   "clause": "範例 mark id",
+   "doc": "examples",
+   "action": "新增",
+   "summary": "若採報錯：id 以 .lock 結尾的任務表仍合法，但 mark 回 1（放 V-03，不放 schema 反例）",
+   "depends": ""
+  },
+  {
+   "id": "cg-077",
+   "clause": "範例 provision_cgroup_*",
+   "doc": "examples",
+   "action": "刪除",
+   "summary": "依疑-10 b 刪 create、delegate 兩組",
+   "depends": "疑-10"
+  },
+  {
+   "id": "cg-078",
+   "clause": "範例 config",
+   "doc": "examples",
+   "action": "改寫",
+   "summary": "config.create-cgroup 說明轉正；加使用者委派的最小設定（省略 cgroup_root）",
+   "depends": ""
+  },
+  {
+   "id": "cg-079",
+   "clause": "V-01 正本表",
+   "doc": "conformance",
+   "action": "改寫",
+   "summary": "B-630、B-622、P-205、P-211 拿掉「下一步納入」；主題列加 aos-git、aos-cg",
+   "depends": ""
+  },
+  {
+   "id": "cg-080",
+   "clause": "V-02",
+   "doc": "conformance",
+   "action": "改寫",
+   "summary": "「下一步納入時補」段轉正：cgroup 驗使用者委派（不用 sudo）、root 準備、--create-cgroup；git 驗有／沒有／壞掉",
+   "depends": ""
+  },
+  {
+   "id": "cg-081",
+   "clause": "V-03 下一步小節",
+   "doc": "conformance",
+   "action": "搬正文",
+   "summary": "既有 git、cgroup 句依本計畫改寫後併入正文各主題",
+   "depends": ""
+  },
+  {
+   "id": "cg-082",
+   "clause": "V-03 git：存檔點",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "組 2 失敗在它的存檔點被還原，組 3 讀不到組 2 的改動；close 一個 commit aos-tick <seq>",
+   "depends": "疑-2"
+  },
+  {
+   "id": "cg-083",
+   "clause": "V-03 git：停格",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "某項建停格檔：close 不跑、下一格 open 還原、原件未刪重收",
+   "depends": "疑-1"
+  },
+  {
+   "id": "cg-084",
+   "clause": "V-03 git：當機窗口",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "使用者任務中、close commit 前、commit 後、投件中四窗口各自結果；commit 後當機不丟、重投去重",
+   "depends": ""
+  },
+  {
+   "id": "cg-085",
+   "clause": "V-03 git：格間手改",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "上一格正常：手改被 close 提交；上一格當機：手改進 rescue ref、工作樹回 HEAD",
+   "depends": "疑-3"
+  },
+  {
+   "id": "cg-086",
+   "clause": "V-03 git：固定排除",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": ".gitignore 拿掉 /.aos/tick/ 仍不提交不還原紀錄，seq 連續",
+   "depends": ""
+  },
+  {
+   "id": "cg-087",
+   "clause": "V-03 git：不能用",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "沒裝、低於 2.36、非 repo：no_git、照 B-632；HEAD 壞：擋板＋停格",
+   "depends": "疑-5"
+  },
+  {
+   "id": "cg-088",
+   "clause": "V-03 git：巢狀",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "格中 aos node new 建子 node，上層本格 commit 不含子 node 的檔",
+   "depends": ""
+  },
+  {
+   "id": "cg-089",
+   "clause": "V-03 git：背景程序",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "格結束後沒有 git 程序握鎖 fd，下一格不回 75",
+   "depends": ""
+  },
+  {
+   "id": "cg-090",
+   "clause": "V-03 git：多帳號",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "node 根擁有者與 tick 帳號不同照常提交；別帳號 0600 檔 git_failed＋擋板",
+   "depends": ""
+  },
+  {
+   "id": "cg-091",
+   "clause": "V-03 git：失敗不送",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "close 失敗時投件、發摘要不跑；滿碟 commit 失敗不刪原件",
+   "depends": ""
+  },
+  {
+   "id": "cg-092",
+   "clause": "V-03 cgroup：偵測",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "WSL init.scope 與沒委派 scope 印 cgroup=off；委派 scope 印 on；v1／混合 off",
+   "depends": "疑-6"
+  },
+  {
+   "id": "cg-093",
+   "clause": "V-03 cgroup：格後收尾",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "setsid＋double fork 殘留被 cgroup.kill；程序群組版抓不到的也清",
+   "depends": ""
+  },
+  {
+   "id": "cg-094",
+   "clause": "V-03 cgroup：重啟舊框",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "以新 scope 重開 daemon，舊 scope 的舊程序先被清空才開新格",
+   "depends": "疑-8"
+  },
+  {
+   "id": "cg-095",
+   "clause": "V-03 cgroup：中途失效",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "某 node 建框失敗只有它退回程序群組、有事項",
+   "depends": ""
+  },
+  {
+   "id": "cg-096",
+   "clause": "V-03 cgroup：子框",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "node 自開子框的程序在格後被收（依疑-7）",
+   "depends": "疑-7"
+  },
+  {
+   "id": "cg-097",
+   "clause": "V-03 cgroup：巢狀 daemon",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "掛在外層 mount 框裡的 daemon 印 cgroup=off 照跑，仍受外層上限",
+   "depends": "疑-11"
+  },
+  {
+   "id": "cg-098",
+   "clause": "V-03 cgroup：aos-cg",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "沒 cgroup 時退回 subreaper 清掛回的後代；aos-cg -- aos-as 別帳號程序在同框；frame_not_empty 建停格檔",
+   "depends": ""
+  },
+  {
+   "id": "cg-099",
+   "clause": "V-03 cgroup：鎖與上限",
+   "doc": "conformance",
+   "action": "新增",
+   "summary": "同 cgroup_root 後啟動回 125；調低記憶體上限即時生效；OOM 證據在框裡",
+   "depends": ""
+  },
+  {
+   "id": "cg-100",
+   "clause": "A-102",
+   "doc": "agent/configuration",
+   "action": "其他篇跟上",
+   "summary": "aos-config-add 等格外工具不自己提交；手改要保住就自己 commit（或靠 rescue）",
+   "depends": "疑-3"
+  },
+  {
+   "id": "cg-101",
+   "clause": "P-814／P-715",
+   "doc": "protocol/kernel-tasks、agent-tasks",
+   "action": "其他篇跟上",
+   "summary": "預設範本改成新順序，clean 改 system",
+   "depends": "疑-12"
+  },
+  {
+   "id": "cg-102",
+   "clause": "S-203／S-205",
+   "doc": "scheduling/admission",
+   "action": "其他篇跟上",
+   "summary": "kernel 資源任務經 cgroup_limits 寫上限；沒 cgroup 時只記帳",
+   "depends": "疑-10"
+  },
+  {
+   "id": "cg-103",
+   "clause": "H-004、H-036、aos node new",
+   "doc": "cli",
+   "action": "其他篇跟上",
+   "summary": "node new 建初始 commit（有 git 時）；resume 流程的提交",
+   "depends": ""
+  }
+ ]
+}

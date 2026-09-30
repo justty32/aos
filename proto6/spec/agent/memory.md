@@ -6,7 +6,7 @@
 
 〔建議預設，未拍板〕history 保存對話與工具結果；notes 保存整理過的知識；context 是某次模型請求實際選用的材料。三者用途不同，直接放在 node 檔案中，用來源 ID 或檔案引用保留關聯。摘要要能追到原始材料；後來修改 notes，不應讓舊請求看起來像用了新內容。
 
-〔使用者方向 2026-09-29〕提交、還原及正式可見性依[通用 tick](../tick.md) 與[儲存](../base/storage.md)。人、agent、工具依相同權限讀寫；需要 group 保證的寫入也要遵守相同協調規則。
+〔使用者方向 2026-09-29〕提交、還原及正式可見性依[通用 tick](../settled/tick.md) 與[儲存](../base/storage.md)。人、agent、工具依相同權限讀寫；需要 group 保證的寫入也要遵守相同協調規則。
 
 〔建議預設，未拍板〕必要來源缺失或損壞時，保留現有證據並寫[待處理事項](../scheduling/operations.md)，不捏造內容或把缺資料當成功。已送出的工作不因本地來源損壞而重新執行。
 
@@ -22,10 +22,10 @@
 
 - 每次選一筆可推進的 input，略過等待或被擋的；每筆最多一個進行中的模型請求，同一批工具全回來才問下一次。context 依序是 system_prompt、原 user（含附件路徑）、本 input 的 assistant／tool／修補說明；依 seq 排、tool call 成對，不自動摘要、不混進別的 input。
 - 工具預覽合計最多 64 KiB（A-303）。token 估算是「messages／tools 的 JSON UTF-8 bytes 加每則訊息 32」，只是估算、不保證是 tokenizer 的上界；加上輸出預留超過 `context_tokens`，或整份 RPC 超過 256 KiB，就報 `context_over_budget`、不送。
-- 請求 ID、context、meta、usage 先固定；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；提交後由標準配備投出，後格收結果。要串流就在業務 JSON 帶 `stream_path`（[LLM 協議](../protocol/llm-work.md)）：檔案放哪、權限怎麼開、要不要盯著它，由 agent 決定，aos 不叫醒。目標不是 node 時，投件那一步報錯、不重試（[B-624](../tick.md)）。
+- 請求 ID、context、meta、usage 先固定；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；提交後由標準配備投出，後格收結果。要串流就在業務 JSON 帶 `stream_path`（[LLM 協議](../protocol/llm-work.md)）：檔案放哪、權限怎麼開、要不要盯著它，由 agent 決定，aos 不叫醒。目標不是 node 時，投件那一步報錯、不重試（[B-624](../settled/tick.md)）。
 - 〔第十八批〕範本對每個送出的請求預設在封套設鬧鐘（[預設任務](README.md)）；預設值延後（Q26）。
 
-〔使用者方向 2026-09-29〕模型請求交 `llm.target_node` 指定的 [node 與 endpoint 池](../scheduling/llm.md) 處理，資源額度依已裝的 module；context 不另建一套資源管理。摘要若要用模型，也照[通用 tick](../tick.md)派出及收結果。
+〔使用者方向 2026-09-29〕模型請求交 `llm.target_node` 指定的 [node 與 endpoint 池](../scheduling/llm.md) 處理，資源額度依已裝的 module；context 不另建一套資源管理。摘要若要用模型，也照[通用 tick](../settled/tick.md)派出及收結果。
 
 驗收：必要材料超過模型上限時，不呼叫 API，可查到超限原因與材料來源；需要模型產生的摘要不在本地 tick 裡同步等待。
 
