@@ -23,7 +23,7 @@
 | `state/` | 已消費收件、請求、結果與必要進度；子結構由各協議篇定義 | 追蹤 |
 | `requests/`、`responses/` | 檔案收件區，各含發布用 `.tmp/`；由普通程式收與寫，aos 不管（[B-623](../tick/mq.md)） | ignore |
 | `work/` | 任務的暫存工作進度 | ignore |
-| `.aos/jobs/<id>/` | 替成員跑工具、打 LLM 的 once 工作；`aos-as` 的暫存 inst（`as-<seq>-<pid>.json`，P-212）也放這裡 | ignore |
+| `.aos/jobs/<id>/` | 替成員跑工具、打 LLM 的 once 工作；〔暫緩〕`aos-as` 的暫存 inst（`as-<seq>-<pid>.json`，P-212）也放這裡 | ignore |
 | `.aos/attention/` | 本工作資料夾的待處理事項，含 daemon 發現的問題 | ignore |
 | `.aos/summary/` | 給上層讀的摘要，見 P-307；發布成 `published.json` 的 `aos-publish` 2026-10-01 搬暫緩區（[暫緩區](../deferred/protocol/tick.md#暫緩p-206-aos-publish-那列發摘要)） | `summary.json` 追蹤、`published.json` ignore |
 | `.aos/mq/post/` | 要經系統訊息佇列送出的訊息（`<id>.req.json`／`<id>.resp.json`），見 P-206 | 追蹤 |
@@ -96,13 +96,13 @@
 | `_metainfo` | 可省，照 inst 規則（沒寫＝posix 第 1 版）；跑到這一項才驗，驗不過＝跑到某項展開失敗〔使用者裁定 2026-10-01〕 |
 | `kind` | 可省。`system`、`kernel`、`agent`、`custom`；〔暫定〕或自訂的「類別.名稱」：類別限 `kernel`／`agent`／`custom`，名稱是小寫英數與 `_`、`-`（例如 `agent.review`）。`system` 標記系統級任務（[B-626](../tick.md)），只是標記，不驗順序；`system.x` 不接受（schema 擋，核心不擋） |
 
-**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號就在 argv 包 `aos-as`（P-212）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-tick-check-task`（P-204、[B-621](../tick/check-task.md)），組改由存檔點劃分（P-205、[B-630](../tick/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
+**不認得的鍵照收、核心忽略**（P-007；schema 不設 `additionalProperties:false`）。任務表先只定上表這些基本欄位；〔使用者方向 2026-10-01〕任務沒有 `user`（inst 頂層沒有，任務是 inst 的超集所以也沒有），寫了就是陌生鍵、照 tick 自己的帳號跑，要切帳號只能在 daemon 設定檔做（帳號模組；`aos-as` P-212 2026-10-01 第十三批搬暫緩區）。第十九批的 `group`、`needs` 不列入 schema，寫了就是陌生鍵。前置改用 `aos-tick-check-task`（P-204、[B-621](../tick/check-task.md)），組改由存檔點劃分（P-205、[B-630](../tick/git.md)）。第十七批的 `methods` 2026-10-01 從規範拿掉，寫了也是陌生鍵。kernel、agent、custom 類任務的逾時與取消延後（[P-008](../../protocol/README.md#p-008)）。
 
 誰驗哪些欄位見 [B-620](../tick.md)「誰驗什麼」：核心只做極簡檢查，其餘 schema 限制由工具或人工在 `aos-ctl resume` 前先驗（恢復前驗證，[B-625](../tick/recovery.md)；daemon 不代驗）〔astra 報告必修 2〕。
 
 範例：
 
-- 正例：[最小](../../protocol/examples/tick/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/tick/tasks.no-id.valid.json)（id 用位置字串）、[包 `aos-as`](../../protocol/examples/tick/tasks.as.valid.json)（用別的帳號跑）、[陌生鍵](../../protocol/examples/tick/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、[標準任務表範本](../../protocol/examples/tick/tasks.template.valid.json)（照 [B-629](../tick/template.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/tick/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/tick/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/tick/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/tick/tasks.custom-kind.valid.json)（`agent.review`）。
+- 正例：[最小](../../protocol/examples/tick/tasks.minimal.valid.json)（登記普通程式）、[沒寫 `id` 與 `kind`](../../protocol/examples/tick/tasks.no-id.valid.json)（id 用位置字串）、[包 `aos-as`](../../protocol/examples/tick/tasks.as.valid.json)（〔暫緩，P-212〕argv 包 `aos-as`；核心只當普通 argv）、[陌生鍵](../../protocol/examples/tick/tasks.unknown-key.valid.json)（帶 `group`、`needs` 照收）、[標準任務表範本](../../protocol/examples/tick/tasks.template.valid.json)（照 [B-629](../tick/template.md) 沒有 git 版）、[有 git 版範本](../../protocol/examples/tick/tasks.template-git.valid.json)（`aos-git` 開格、存檔點、收尾）、[`methods`](../../protocol/examples/tick/tasks.methods.valid.json) 與 [`methods` 裡重複](../../protocol/examples/tick/tasks.methods-duplicate.valid.json)（都當陌生鍵照收）、[自訂種類](../../protocol/examples/tick/tasks.custom-kind.valid.json)（`agent.review`）。
 - 指示詞的正例：[整項 `$ref`](../../protocol/examples/tick/tasks.reference.valid.json)（讀表時解一層）、[`argv` 帶指示詞](../../protocol/examples/tick/tasks.directive.valid.json)（跑到那一項才展開）。
 - 頂層 `hooks`〔使用者 2026-10-01 第六批〕：正例 [`after_all` 一串](../../protocol/examples/tick/tasks.hooks.valid.json)（吃頂層 `envs`、一項沒寫 id、一項自己蓋 `envs`）；反例 [`after_all` 某項沒 `argv`、頂層也沒有](../../protocol/examples/tick/tasks.hooks-no-argv.invalid.json)、[`after_all` 不是陣列](../../protocol/examples/tick/tasks.hooks-not-array.invalid.json)。
 - 頂層預設與 `modules` 的正例〔使用者 2026-10-01〕：[頂層預設](../../protocol/examples/tick/tasks.defaults.valid.json)（B-620 的例子：頂層 `cwd`、`envs`、`stdout`，一項自己寫 cwd、一項整項 `$ref`）、[頂層給 `argv`](../../protocol/examples/tick/tasks.defaults-argv.valid.json)（項只寫 `id`）、[頂層 `modules`](../../protocol/examples/tick/tasks.modules.valid.json)（照收不理）、[沒寫 `_metainfo`](../../protocol/examples/tick/tasks.no-metainfo.valid.json)（外層與某項都省）〔使用者裁定 2026-10-01〕。
@@ -155,7 +155,7 @@
 
 | 介面 | 約定 |
 |---|---|
-| 身分 | 沿用 tick 的有效 UID、群組與資源範圍；任務沒有 `user`（寫了照陌生鍵）。要換帳號包 `aos-as`（P-212） |
+| 身分 | 沿用 tick 的有效 UID、群組與資源範圍；任務沒有 `user`（寫了照陌生鍵）。tick 不切帳號；要換帳號在 daemon 設定檔拆成另一項（帳號模組；`aos-as` P-212 暫緩） |
 | cwd／argv | 頂層預設＋本項合併成 inst、展開後執行（P-202）；合併後還是沒有 cwd 時是工作資料夾 |
 | stdin | 預設 `/dev/null`；可用合併後 inst 的 stdin 重導向 |
 | stdout／stderr | 照 inst 預設 `/dev/null`，可明寫 inherit 或重導向；tick 不把輸出文字當完成證據 |
@@ -348,33 +348,9 @@ schema 還沒補：舊的待送封套 [msg-outbox](../../protocol/schemas/msg-ou
 | `1` | 用法錯（沒有原指令）；或框清不空（`frame_not_empty`）：另建停格檔（P-213），不讓後面的項在還有人寫檔時開跑 |
 | `125` | 原指令沒開起來（exec 前失敗），照 inst（特別指定的碼） |
 
-## P-212．aos-as：切換帳號〔建議預設，未拍板〕
+## P-212．aos-as：切換帳號
 
-> **依賴暫緩區**：這條整條靠 helper（[B-303](../deferred/helper.md)）、daemon 通道與「鎖 fd 傳給任務」（[tick 暫緩區](../deferred/tick.md#暫緩b-602-完整互斥的其餘細節)），三樣都在暫緩區，現行程式沒有 `aos-as`。格式先留在正式篇，等它們回來再對。
-
-普通程式，不是系統級任務。行為正本：[B-303](../deferred/helper.md)；`spawn_as` 的參數與限制見 [B-609](../deferred/daemon/helper-actions.md)、[P-107](../deferred/protocol/daemon/provision-and-runner.md)；runner 回報見 [P-110](../deferred/protocol/daemon/provision-and-runner.md)。
-
-- **argv**：`aos-as <帳號> [--] <原指令…>`；帳號是名稱或非負 UID。
-- **暫存 inst**：ignored 的 `.aos/jobs/as-<seq>-<pid>.json`，結束後刪掉。`seq` 取結束碼紀錄（`$AOS_TICK_CWD/.aos/tick/current/record.json`）的格數（沒有紀錄時用 `0`），`pid` 是 aos-as 自己的 PID。內容是一份 inst：`argv`、目前 cwd、`envs`＝`{"$opt":"clear","$val":目前的環境}` 但不含 `AOS_TICK_TOKEN`、`AOS_DAEMON_SOCKET`、`AOS_TICK_LOCK_FD`（由 runner 補，[B-609](../deferred/daemon/helper-actions.md)）；stdin／stdout／stderr 都寫成繼承。
-- **交給 helper 的 fd**，共 5 個（見 P-107）：
-
-  | 順序 | fd |
-  |---|---|
-  | 1 | 繼承到的鎖 fd（`AOS_TICK_LOCK_FD`） |
-  | 2 | 回報 pipe 的寫端 |
-  | 3～5 | 〔建議預設〕自己的 stdin、stdout、stderr，讓那一項照任務表寫的 stdio 走 |
-
-  自己在 `aos-cg` 的 `task-*` 框裡時（有 cgroup），另帶 `frame`＝那個框；沒 cgroup 時帶了 daemon 回 `unsupported`（[B-609](../deferred/daemon/helper-actions.md)）。
-
-- **stderr 代碼**：`not_available`（〔建議預設，未拍板〕helper 動作關閉，[B-609](../deferred/daemon/helper-actions.md)）、`no_channel`、`helper_unavailable`、`user_not_granted`、`user_invalid`、`stopping`（daemon 的錯誤碼照轉）、`result_unknown`（回應成功但 pipe 沒回報就關了）。
-
-| 結束碼 | 意思 |
-|---|---|
-| 原指令的碼 | 照 runner 回報：正常結束回同一碼；被訊號結束時用同一個訊號結束自己 |
-| `1` | 用法錯 |
-| `125` | 沒開起來或不知道結果（特別指定的碼）：沒有通道變數、daemon 回錯、`result_unknown`；不寫 `exit`。`result_unknown` 時呼叫它的一方不能重跑 |
-
-依據：〔使用者方向 2026-09-30〕第二十批追答 8。
+> **暫緩**（2026-10-01 第十三批）〔使用者 2026-10-01 第十三批：「aos-as弄成暫緩。」〕：整條搬到 [tick 協議暫緩區](../deferred/protocol/tick.md#p-212aos-as切換帳號建議預設未拍板)，條號保留、不重用。現行切帳號只在 daemon 設定檔做（帳號模組 `modules.account`，[plan m3m 模組五](../../../plan/m3m-daemon-modules.md#模組五帳號modulesaccount)）。
 
 ## P-213．每項結束碼紀錄、停格檔與擋板檔〔建議預設，未拍板〕
 

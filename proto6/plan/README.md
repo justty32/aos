@@ -59,6 +59,8 @@
 
 ### 第五段：helper 與跨帳號
 
+> 〔2026-10-01 第十三批〕這段的跨帳號改由 daemon 帳號模組做（[m3m 模組五](m3m-daemon-modules.md#模組五帳號modulesaccount)）；`aos-as`（P-212）搬暫緩區。下面是原本的規劃，照留。
+
 - **目標**：sudo 開 daemon 時 fork 出 root helper、主程式降權；佈建固定動作；普通程式 `aos-as <帳號> -- 原指令` 經 helper 用別的帳號開程序、交鎖 fd；多帳號之間用群組交接檔案。
 - **主要 spec**：[B-303](../spec/settled/deferred/helper.md)、[B-609](../spec/settled/deferred/daemon/helper-actions.md)、[B-301、B-302](../spec/base/identity-resources.md)；格式 P-102、P-107、P-108、[P-208、P-212](../spec/settled/protocol/tick.md)。
 - **可單獨跑的樣子**：在可丟棄的機器上建兩個測試帳號，sudo 開 daemon，任務包 `aos-as` 以另一個帳號跑，任務裡核對得到同一把鎖。

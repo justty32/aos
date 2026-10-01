@@ -22,7 +22,7 @@
 | # | `id` | `kind` | argv | 做什麼 | 正本 |
 |---|---|---|---|---|---|
 | 1 | `mq-get` | system | `aos-mq get` | 用 `node.take` 取出本工作資料夾佇列裡的訊息；取出後怎麼分派 aos 不管 | B-623 |
-| … | 使用者任務 | kernel／agent／custom | 各自的程式；要換帳號的包 `aos-as <帳號> --`，要前置的就在它前面加一項 `aos-tick-check-task <前置 id…>`（沒跑好就停格），要每項一框的包 `aos-cg --`。檔案收件、檔案投件也是這裡的普通任務，aos 不管 | 各自 | [B-303](../deferred/helper.md)、B-621、B-634、B-623、B-624 |
+| … | 使用者任務 | kernel／agent／custom | 各自的程式；要換帳號的拆成 daemon 的另一項（帳號模組；`aos-as` 暫緩），要前置的就在它前面加一項 `aos-tick-check-task <前置 id…>`（沒跑好就停格），要每項一框的包 `aos-cg --`。檔案收件、檔案投件也是這裡的普通任務，aos 不管 | 各自 | [B-303](../deferred/helper.md)、B-621、B-634、B-623、B-624 |
 | n-1 | `mq-post` | system | `aos-mq post` | 把 `.aos/mq/post/` 裡的訊息用 `node.send` 送出 | B-624 |
 | n | `clean` | system | `aos-clean --config config/clean.json` | 過了保留期的清理 | [B-404](../../base/storage.md) |
 

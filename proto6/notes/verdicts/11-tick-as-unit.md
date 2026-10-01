@@ -586,5 +586,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **追加**：使用者原話：「名單這塊OK，但如果allow不寫，然後deny裏面又出現預設賬號，那就報錯。」——`allow` 省略、`deny` 比得到預設帳號（含前綴、單獨 `*`，「出現」照比得到算，AI 隊解讀）＝設定錯、回 1。`allow` 有寫時同樣情況怎麼辦，AI 隊提了 A7（建議一樣報錯），待裁定。
 - 使用者問：帳號這功能目前用在哪、是不是只出現在 daemon 設定？——現行程式沒有任何地方切帳號（全部用開的人的帳號跑）；inst 與任務的 `user` 已撤回（寫了當陌生鍵）。spec 裡另外還提到帳號的，都是暫緩或舊設計：tick 任務包 `aos-as` 換帳號（B-303，暫緩）、身分額度（B-301）、工作接件記 UID（base/execution.md）。帳號模組做出來後，它是唯一現行的切帳號方式，只出現在 daemon 設定檔（`modules.account` 與每項的 `account`）。
 
-還沒動工，程式與 spec 都沒改。
+- **`aos-as` 暫緩**：使用者原話：「aos-as弄成暫緩。　目前切賬號這件事，都只在daemon config中做」——P-212 整條搬到 [tick 協議暫緩區](../../spec/settled/deferred/protocol/tick.md)；[tick 核心](../../spec/settled/tick.md)「任務的帳號」、[tick 協議](../../spec/settled/protocol/tick.md) P-202／P-203、[範本](../../spec/settled/tick/template.md)、[名詞](../../spec/settled/terms.md)、[aos-cg](../../spec/settled/tick/cg.md)、[git](../../spec/settled/tick/git.md)、[spec 入口](../../spec/README.md)、[plan 入口](../../plan/README.md)第五段改成「tick 不切帳號，要換帳號在 daemon 設定檔拆成另一項」；整理區 README 待問 1 結案。
+
+帳號模組還沒動工；spec 只動了 `aos-as` 搬家那些。
 
