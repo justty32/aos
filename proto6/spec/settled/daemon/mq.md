@@ -8,14 +8,14 @@
 
 ## B-645：訊息模組與 `aos-mq`〔使用者 2026-10-01 第十二批〕
 
-**daemon 的每一項一個信箱；任務用 `aos-mq send` 寄信給別項、用 `aos-mq take` 取自己的信；急件順便叫醒收件那一項。** 它是 daemon 的一個模組（[B-640](core.md)「模組」），設定檔寫了 `modules.mq` 才有。
+**daemon 的每一項一個信箱；任務用 `aos-mq send` 寄信給別項、用 `aos-mq take` 取自己的信、`aos-mq peek` 只看不取；急件順便叫醒收件那一項。** 它是 daemon 的一個模組（[B-640](core.md)「模組」），設定檔寫了 `modules.mq` 才有。
 
 **收件人是 daemon 的一項**（`insts` 的鍵，逐字比對），不是 node、不是資料夾；inst 是檔也收得到信。
 
 ### socket
 
 - daemon 另開一個 unix socket，**不走控制 socket**（使用者 m3n 裁定 5）；兩個模組各開各的、互不依賴。
-- 協議照控制模組：一連線一請求、一行 JSON 來、一行 JSON 回（[B-641](control.md)）。能連 socket 就能寄給任何一項、取任何一項的信，不另外檢查權限。
+- 協議照控制模組：一連線一請求、一行 JSON 來、一行 JSON 回（[B-641](control.md)）。能連 socket 就能寄給任何一項、取任何一項的信，不另外檢查權限（照 POC「能連就能做」，第十五批 1.a）。
 - 壞請求、對面先關、逾時只影響那一條連線。
 - 收到 SIGINT／SIGTERM 退出前刪 socket 檔（同控制模組）。
 
@@ -24,8 +24,9 @@
 - **每一項一個信箱，放 daemon 記憶體、先進先出。** daemon 重開就丟，不保證送達。
 - 一封信是 `{"from": <寄件 inst 或 null>, "msg": <任何 JSON 值>}`。daemon 不看 `msg` 是什麼；`from` 原樣存、不核對（使用者同意 M1：能連 socket 的人本來就能冒充）。
 - **只能取自己的信箱**〔使用者 2026-10-01 第十四批：「取信改成只能取自己的信箱。然後可以選擇要取來自誰的，不選就全部。」〕：`aos-mq take` 只用 `AOS_DAEMON_INST`，不收 `<inst>`。原本 M3「誰都可以取任何一項的信」被第十四批推翻。
-- **可以只取某個寄件人的**：`--from <寄件 inst>` 只取 `from` 是它的信，其他照原順序留在信箱；不給就全部取走、信箱清空。
-- 「只能取自己」只在 `aos-mq` 這一側做：**socket 不驗身分**，直接連 socket 送 `{"take":"<別項>"}` 照樣取得到別項的信。要不要在 daemon 端驗，待使用者決定。
+- **可以只取某些寄件人的**：`--from a c d` 只取 `from` 是這幾個的信，其他照原順序留在信箱；`--from` 後面什麼都不接＝取 `from` 是 `null` 的信；不給 `--from` 就全部取走、信箱清空〔使用者 2026-10-01 第十五批：「1.a,2.可以有aos-mq peek，但手打這塊我們不管。 3.--from可以多個，比如--from a c d...。不管shell手打，from是null的，那就是--from後面不接任何東西。 4.跨daemon寄信不管。」〕。
+- **`aos-mq peek`** 跟 `take` 一樣只對自己的信箱、一樣可以帶 `--from`、一樣的輸出，但信不取走（第十五批）。它是給任務用的；人在 shell 手打怎麼看信，aos 不管（使用者：「手打這塊我們不管」）。
+- 「只能取／看自己」只在 `aos-mq` 這一側做：**daemon 不驗身分**，直接連 socket 送 `{"take":"<別項>"}` 照樣取得到別項的信。使用者 2026-10-01 第十五批 1.a：照 POC「能連就能做」，daemon 不核對；之後設計各 socket 權限時再說。
 - 寄給不在 `insts` 的項：回 `unknown_inst`，信不收。
 - 不設上限（每箱幾封、單封多大）、不去重、不確認送達、不重送。
 
@@ -44,14 +45,15 @@
 
 ```text
 aos-mq send [--urgent] <收件 inst> <JSON|->
-aos-mq take [--from <寄件 inst>]
+aos-mq take [--from [<寄件 inst>…]]…
+aos-mq peek [--from [<寄件 inst>…]]…
 ```
 
 - socket 只從 `AOS_DAEMON_MQ_SOCKET` 拿。
 - `send`：`from` 自動填 `AOS_DAEMON_INST`（沒有就 `null`）；`<JSON>` 給 `-` 就從 stdin 讀。
-- `take`：只取 `AOS_DAEMON_INST` 那一項的信箱（沒有就回 1、`no_inst`；人在 shell 沒設這個變數就取不了信）；`--from` 只收一個寄件 inst。每封一行印到 stdout，沒信什麼都不印。
+- `take`、`peek`：只對 `AOS_DAEMON_INST` 那一項的信箱（沒有就回 1、`no_inst`）；`take` 取走、`peek` 不取。`--from` 後面接的參數（到下一個 `--` 開頭的參數為止）都是寄件 inst，一個都不接＝寄件人是 `null`；可以重複寫、疊加。每封一行印到 stdout，沒信什麼都不印。
 - 成功回 0；其他一律回 1（[C-08](../conventions.md)），stderr 一行代碼與說明。
-- 名字照使用者同意 M4：程式叫 `aos-mq`、子命令 `send`／`take`、模組鍵 `mq`。tick 側舊的 `aos-mq get`／`post`（[B-623、B-624](../tick/mq.md)）是「讀寫 `.aos/mq/` 檔」的系統級任務，意思不一樣，照舊待實作；任務裡要收發信直接叫 `aos-mq send`／`take`，tick 核心不用改。
+- 名字照使用者同意 M4：程式叫 `aos-mq`、子命令 `send`／`take`（第十五批加 `peek`）、模組鍵 `mq`。tick 側舊的 `aos-mq get`／`post`（[B-623、B-624](../tick/mq.md)）是「讀寫 `.aos/mq/` 檔」的系統級任務，意思不一樣，照舊待實作；任務裡要收發信直接叫 `aos-mq send`／`take`，tick 核心不用改。
 
 ### 跟其他模組
 
@@ -62,8 +64,10 @@ aos-mq take [--from <寄件 inst>]
 
 ### 先不做
 
-信箱上限、寄件權限、送達確認／去重／重送、跨 daemon 送信、訊息格式檢查、tick 側的 `.aos/mq/` 檔案流程。舊設計的 node 收件人、`node.send`／`node.take`、通道憑證、寫權授權、急件越過上層節流都在[暫緩區 B-614](../deferred/daemon/messaging.md)。
+信箱上限、寄件權限、送達確認／去重／重送、訊息格式檢查、tick 側的 `.aos/mq/` 檔案流程。
 
-依據：使用者 2026-10-01 第十二批：訊息要做、排在 cgroup 之後，M1～M4 照建議。
+**不在規劃中**：跨 daemon 送信〔使用者 2026-10-01 第十五批：「跨daemon寄信不管。」〕——`aos-mq send` 只連自己這個 daemon，收件人不在它的 `insts` 裡就回 `unknown_inst`；手動把 `AOS_DAEMON_MQ_SOCKET` 指到別的 daemon 硬寄過去，aos 不管、不保證，`from` 對方也不認得。舊設計的 node 收件人、`node.send`／`node.take`、通道憑證、寫權授權、急件越過上層節流都在[暫緩區 B-614](../deferred/daemon/messaging.md)。
 
-**驗收：**兩項 a、b；a 的任務 `aos-mq send b '{"hi":1}'` 回 0，b 的任務 `aos-mq take` 印出 `{"from":"a","msg":{"hi":1}}`，再取一次什麼都不印；先寄的先取到；`take` 給 `<inst>` 回 1、`usage:`；a、c 各寄給 b，b `take --from a` 只拿到 a 的、c 的照順序留著；`--urgent` 寄給週期 1 小時的 b：b 一秒內跑一次，普通信不叫醒；b 正在跑時連寄三封急件：只補跑一次、三封一次取到；急件寄給已停的項不跑、信照收；暫停的項跑一次、照樣暫停；寄給不存在的項：回 1、`unknown_inst:`；沒有 `AOS_DAEMON_MQ_SOCKET`：回 1、`no_daemon:`；壞請求只影響那一條連線；daemon 重開後信箱是空的；重讀設定時還在的項信照留、拿掉的項寄信回 `unknown_inst`、加回來信箱是空的；沒掛模組：原有測試全過。測試見 `proto6/src/py/tests/test_mq.py`。
+依據：使用者 2026-10-01 第十二批：訊息要做、排在 cgroup 之後，M1～M4 照建議；第十四批：只能取自己的信箱、`--from`；第十五批：不核對取信的人、`peek`、`--from` 多個與空＝null、跨 daemon 不管。
+
+**驗收：**兩項 a、b；a 的任務 `aos-mq send b '{"hi":1}'` 回 0，b 的任務 `aos-mq take` 印出 `{"from":"a","msg":{"hi":1}}`，再取一次什麼都不印；先寄的先取到；`take` 給 `<inst>` 回 1、`usage:`；a、c、d、手打（null）各寄給 b，b `take --from a c` 只拿到 a、c 的、其他照順序留著，`take --from` 只拿到 null 的，`--from --from d` 疊加；`peek` 看得到、再 `take` 照樣取到；`take`／`peek` 帶 `--urgent` 回 1、`usage:`；`--urgent` 寄給週期 1 小時的 b：b 一秒內跑一次，普通信不叫醒；b 正在跑時連寄三封急件：只補跑一次、三封一次取到；急件寄給已停的項不跑、信照收；暫停的項跑一次、照樣暫停；寄給不存在的項：回 1、`unknown_inst:`；沒有 `AOS_DAEMON_MQ_SOCKET`：回 1、`no_daemon:`；壞請求只影響那一條連線；daemon 重開後信箱是空的；重讀設定時還在的項信照留、拿掉的項寄信回 `unknown_inst`、加回來信箱是空的；沒掛模組：原有測試全過。測試見 `proto6/src/py/tests/test_mq.py`。

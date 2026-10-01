@@ -17,12 +17,15 @@
     },
     "Request": {
       "type": "object",
-      "description": "send 或 take 剛好出現一個；其他欄位照收不理。msg、urgent 只在 send 時看；from 兩邊意思不同：send 是寄件 inst（字串或 null），take 是只取這個寄件人的信（字串，第十四批）",
+      "description": "send、take、peek 剛好出現一個；其他欄位照收不理。msg、urgent 只在 send 時看；from 在 send 是寄件 inst（字串或 null），在 take／peek 是寄件人篩選（非空陣列，元素字串或 null）",
       "properties": {
         "send": {
           "$ref": "#/$defs/Inst"
         },
         "take": {
+          "$ref": "#/$defs/Inst"
+        },
+        "peek": {
           "$ref": "#/$defs/Inst"
         }
       },
@@ -36,48 +39,71 @@
           "required": [
             "take"
           ]
+        },
+        {
+          "required": [
+            "peek"
+          ]
         }
       ],
-      "if": {
-        "required": [
-          "send"
-        ]
-      },
-      "then": {
-        "required": [
-          "msg"
-        ],
-        "properties": {
-          "msg": {
-            "description": "信的內容，任何 JSON 值（含 null）；daemon 不看"
-          },
-          "from": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "default": null,
-            "description": "寄件 inst；原樣存、不核對"
-          },
-          "urgent": {
-            "type": "boolean",
-            "default": false,
-            "description": "放進信箱後叫醒收件那一項（照 wake 不帶選項）"
-          }
-        }
-      },
       "allOf": [
         {
           "if": {
             "required": [
-              "take"
+              "send"
+            ]
+          },
+          "then": {
+            "required": [
+              "msg"
+            ],
+            "properties": {
+              "msg": {
+                "description": "信的內容，任何 JSON 值（含 null）；daemon 不看"
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null,
+                "description": "寄件 inst；原樣存、不核對"
+              },
+              "urgent": {
+                "type": "boolean",
+                "default": false,
+                "description": "放進信箱後叫醒收件那一項（照 wake 不帶選項）"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "anyOf": [
+              {
+                "required": [
+                  "take"
+                ]
+              },
+              {
+                "required": [
+                  "peek"
+                ]
+              }
             ]
           },
           "then": {
             "properties": {
               "from": {
-                "type": "string",
-                "description": "只取 from 等於它的信，其他照順序留著；省略＝全部取走（第十四批）"
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": "只要寄件人在陣列裡的信（null＝寄件人是 null 的信）；省略＝全部（第十五批）"
               }
             }
           }
@@ -145,7 +171,7 @@
       }
     },
     "Taken": {
-      "description": "take 成功：信箱裡的信照先進先出，一次全部取走；沒信是空陣列",
+      "description": "take／peek 成功：信照先進先出；take 取走、peek 不取；沒信是空陣列",
       "type": "object",
       "required": [
         "ok",

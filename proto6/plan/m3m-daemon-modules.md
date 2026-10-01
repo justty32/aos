@@ -316,7 +316,7 @@ node id 當收件人；`node.send`／`node.take` 的 method 名、封包與通�
 - 寄件權限：能連 socket 就能寄給任何一項、也能取任何一項的信（跟控制模組「能連就能做」一樣）。
 - 送達確認、去重、重送。
 - tick 側的 `aos-mq get`／`post` 系統級任務與 `.aos/mq/` 檔案流程（等真的有任務要「先提交再送」再說）。
-- 跨 daemon 送信。
+- 跨 daemon 送信。〔第十五批：不在規劃中，「跨daemon寄信不管。」〕
 - 訊息格式檢查（舊規劃要求是 P-301 請求或回應物件；這版什麼 JSON 都收）。
 
 ### 要使用者裁定的點
@@ -481,7 +481,7 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 | M1 | 訊息 | `from` 誰填 | `aos-mq send` 自動填 `AOS_DAEMON_INST`，不核對 |
 | M2 | 訊息 | `AOS_DAEMON_INST` 誰放 | 掛了控制或訊息任一個就放 |
 | ~~M3~~ | 訊息 | 取信限不限自己 | **第十四批推翻**：只取自己、`--from` 篩寄件人 |
-| M4 | 訊息 | 名字 | `aos-mq send`／`take`，模組鍵 `mq` |
+| M4 | 訊息 | 名字 | `aos-mq send`／`take`（第十五批加 `peek`），模組鍵 `mq` |
 | ~~H1~~ | 帳號 | 主程式降權＋獨立 root 端 | **已定（第十二批）：拆** |
 | ~~H2~~ | 帳號 | 改用 `sudo -u` 包一層就好？ | **已定（第十三批）：不管，不在規劃中** |
 | ~~H3~~ | 帳號 | root 底下 cgroup 子樹 | 改成 A4 |
@@ -533,6 +533,8 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 模組四 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。
 
 〔2026-10-01 第十四批，[裁定](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十四批aos-mq-取信)〕取信改成只能取自己的信箱（`aos-mq take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`），`--from <寄件 inst>` 只取那個寄件人的、其他照順序留著；socket 的 `take` 多一個可省的 `from`。socket 不驗身分，「只取自己」只在 `aos-mq` 這一側擋。`tests/test_mq.py` 15 條，全部 558 條。
+
+〔2026-10-01 第十五批，[裁定](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十五批aos-mq-peek-與多個寄件人)〕daemon 不核對取信的人（能連就能做）；加 `aos-mq peek`（只看不取）；`--from a c d` 收多個、不接＝寄件人是 null 的信、可重複疊加，socket 的 `from` 改成陣列；跨 daemon 寄信不在規劃中。`tests/test_mq.py` 20 條，全部 584 條。
 
 **模組五做完了**（2026-10-01 晚，AI 隊，在家裡那台）：照重寫後的草稿與第十三批（A1～A7 照建議、白名單／黑名單）做。驗收寫進 `tests/test_account.py`（21 條，連跑 8 次都過）。全部測試 578 條（557＋21）。
 
