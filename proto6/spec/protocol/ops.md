@@ -14,7 +14,7 @@ daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../settled/deferred
 
 兩處沿用 [ops-attention](schemas/ops-attention.schema.json)：必填 version、source_node、issue_id、reason、白話 `message`；可選 `suggestion` 是「建議處理」文字，可以附建議指令，但不會被自動執行。job_id／attempt_id／request_id 按需附；〔第十八批；第二十批疑點裁定 7 改成格數〕可選 `reported_seq` 是首次回報時寫的那個 node 的第幾格（[B-633](../settled/tick.md)），壞收件原件的保留期從這一格算（[B-404](../base/storage.md)）；取代 `reported_at_ms`。daemon 寫的事項沒有格數，不帶。不帶憑證或完整工作。〔使用者方向 2026-09-30，第十八批〕`argv` 是永遠禁止的鍵（[C-07](../contracts.md)），schema 寫 `"argv": false`，出現就整份拒收。
 
-〔暫定，第十八批〕壞掉的收件（[B-623](../settled/tick.md)）用 `reason:"bad_request"`，`issue_id` 是 `bad-request-` 加檔名 UTF-8 bytes 的 sha256 前 16 個小寫 hex，`request_id` 在檔名合法時附上。〔第二十批〕第十九批的 `standard_incomplete` 事項隨全掛檢查一起撤。
+〔暫定，第十八批〕壞掉的收件（[B-623](../settled/tick/mq.md)）用 `reason:"bad_request"`，`issue_id` 是 `bad-request-` 加檔名 UTF-8 bytes 的 sha256 前 16 個小寫 hex，`request_id` 在檔名合法時附上。〔第二十批〕第十九批的 `standard_incomplete` 事項隨全掛檢查一起撤。
 
 | method（對應 `aos daemon attention <動作>`） | params → result |
 |---|---|
@@ -24,7 +24,7 @@ daemon 產生的事項怎麼暫存、批次寫出見 [B-607](../settled/deferred
 
 IPC 只查／標完成 daemon 自身事項。依可信登記 owner／祖先 owner 授權；ls 先篩選再按 `source_key/issue_id` bytes 分頁，after 用上頁 next_after，列完為 null。daemon 內部新增事項，不接受 node 代交。
 
-〔第十九批依方案 A 縮短〕同一問題沿用 ID、標完成與保留期以 [S-405](../scheduling/operations.md) 為正本（壞收件例外：open 或 done 已有就不再寫，[B-623](../settled/tick.md)）。寫檔依 P-003；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見的上下層樹（[B-628](../settled/tick.md)）讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
+〔第十九批依方案 A 縮短〕同一問題沿用 ID、標完成與保留期以 [S-405](../scheduling/operations.md) 為正本（壞收件例外：open 或 done 已有就不再寫，[B-623](../settled/tick/mq.md)）。寫檔依 P-003；daemon 自身 IPC／存檔錯誤走 stderr。`aos attend ls` 沿可見的上下層樹（[B-628](../settled/tick.md)）讀 node 目錄，合併 daemon IPC 成一張清單；檔案讀權仍由 OS 決定。
 
 ## P-603．aos-attend：列出、查看、標完成〔使用者方向 2026-09-29〕
 
@@ -44,11 +44,11 @@ aos-attend done N ID --socket S [--store node|daemon] [--json]
 aos-clean [--node <node>] --config <設定檔>
 ```
 
-〔使用者方向 2026-09-30，第二十批〕`aos-clean` 是系統級任務，在沒有 git 版範本裡排最後，有 git 版排在 `aos-git close` 之前（[B-629](../settled/tick.md)）；清理資格、保留期、鎖與提交以 [B-404](../base/storage.md) 為正本。`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用 tick 的有效帳號（任務沒有 `user`，2026-10-01；要換帳號包 `aos-as`，[B-620](../settled/tick.md)）。沒有自訂的必填環境；aos-clean 自己不切換身分。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
+〔使用者方向 2026-09-30，第二十批〕`aos-clean` 是系統級任務，在沒有 git 版範本裡排最後，有 git 版排在 `aos-git close` 之前（[B-629](../settled/tick/template.md)）；清理資格、保留期、鎖與提交以 [B-404](../base/storage.md) 為正本。`--node` 是 node id，省略用 cwd；設定檔相對路徑依呼叫 cwd。stdin 不讀（任務設定用 `/dev/null`）；stdout 一個 [ops-clean-report](schemas/ops-clean-report.schema.json) 加 LF，stderr 白話診斷。直接跑用執行者身分；tick 中用 tick 的有效帳號（任務沒有 `user`，2026-10-01；要換帳號包 `aos-as`，[B-620](../settled/tick.md)）。沒有自訂的必填環境；aos-clean 自己不切換身分。讀 node 的已提交工作／結果、消費與引用證據、必要 requests／responses 原件及設定；寫本 node 追蹤區的清理變動與設定的封存區，不清別的 node 或 submodule repo。
 
 [ops-clean-config](schemas/ops-clean-config.schema.json) 只要求 `version:1`；〔第二十批，時長改格數，算本 node 的格〕`interval_ticks` 預設 1000、`retention_ticks` 預設 100000（〔使用者方向 2026-09-30，第二十批〕直接用格數訂：週期 1 秒時約 17 分鐘與 28 小時，週期 30 秒時約 8 小時與 35 日；取代 `interval_seconds` 86400、`retention_ms` 2592000000）、`batch_limit` 預設 64、`mode` 預設 `archive`，亦可明選 `delete`。`archive_dir` 只適用 archive，預設 node 內 ignored 的 `.archive/`；相對路徑依 `--node`。不自動改 `.gitignore`，該落點需事先配置為 ignored，或放 node repo 外。封存區不能指回被清理的日常資料或 requests／responses；無效設定回 2。
 
-預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_seq}`（〔第二十批〕上次清理完成是本 node 第幾格，取代 `last_cleaned_at_ms`）；沒有這個檔就算已到期。現在第幾格：讀 `.aos/tick/current.json`——在 tick 內就是本格（`$AOS_TICK_CWD/.aos/tick/current.json`，[P-213](../settled/protocol/node.md)），tick 外直接跑就是最近一格；都讀不到（不知道 `seq`）時不清、回 0、stderr 印 `no_record`。何時更新見 [B-404](../base/storage.md)。
+預設 agent／kernel 任務表各有一項 `aos-clean --config config/clean.json`，每格呼叫；任務表不加間隔欄位。aos-clean 自己在追蹤的 `state/ops/clean.json` 記 `{version:1,last_cleaned_seq}`（〔第二十批〕上次清理完成是本 node 第幾格，取代 `last_cleaned_at_ms`）；沒有這個檔就算已到期。現在第幾格：讀 `.aos/tick/current.json`——在 tick 內就是本格（`$AOS_TICK_CWD/.aos/tick/current.json`，[P-213](../settled/protocol/tick.md)），tick 外直接跑就是最近一格；都讀不到（不知道 `seq`）時不清、回 0、stderr 印 `no_record`。何時更新見 [B-404](../base/storage.md)。
 
 直接跑與在 tick 內跑時怎麼持鎖、誰提交，以 [B-404](../base/storage.md) 與 [B-602](../settled/tick.md) 為正本。〔使用者方向 2026-09-29〕不為清理另開全域定時程序或叫醒冷 node，有權限者可直接清退役 node。
 
@@ -58,9 +58,9 @@ aos-clean [--node <node>] --config <設定檔>
 
 候選資格與保留期起算點完全依 [B-404](../base/storage.md)／[B-503](../base/transport.md)，不重述終局、消費、引用與去重規則；〔第十八批〕候選含過了保留期的壞收件原件與本地動作的 `.stdout` 檔。每批最多 batch_limit 項；每次重新核對，通知 done 不免驗資格。〔建議預設，未拍板〕unknown 到期連同內部關聯與待收結果一起清，不等人工結案；估計占用何時釋放依 [S-304](../scheduling/llm.md)，資料保留依本條；其他內容仍依一般保護條件。預設 agent 遍歷沿 [agent P-716](agent-tasks.md)，kernel 沿 [P-814](kernel-tasks.md)。
 
-archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存（〔第二十批〕沒有 git 時 `<清理前_commit>` 換成 `seq-<本格的 seq>`，[B-632](../settled/tick.md)），以 P-003 寫副本，保留原目錄關係；歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。封存、刪除、提交與故障恢復的行為以 [B-404](../base/storage.md) 為正本。
+archive 每項以 `archive_dir/<清理前_commit>/<node_相對路徑>` 保存（〔第二十批〕沒有 git 時 `<清理前_commit>` 換成 `seq-<本格的 seq>`，[B-632](../settled/tick/git.md)），以 P-003 寫副本，保留原目錄關係；歸檔索引可由原 commit 及相對路徑取得，不另造第二份工作狀態。封存、刪除、提交與故障恢復的行為以 [B-404](../base/storage.md) 為正本。
 
-回報 `outcome`：`staged`＝本次在 tick 內做完的變動（沒有 git 時變動即生效；有 git 時待本格 `aos-git close` 提交，[B-630](../settled/tick.md)）；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](README.md#p-008)）。
+回報 `outcome`：`staged`＝本次在 tick 內做完的變動（沒有 git 時變動即生效；有 git 時待本格 `aos-git close` 提交，[B-630](../settled/tick/git.md)）；`committed`＝直接執行已提交；`unchanged`＝未到期、無變動；`failed`＝失敗並帶共用錯誤（開放版 `ErrorOpen`）。`archived_items`／`deleted_items` 是本批備好或已提交的項數，依 outcome 解讀；failed 不得被當成移除已生效。git 歷史回收延後（[P-008](README.md#p-008)）。
 
 ## P-607．schema 與最小範例〔建議預設，未拍板〕
 

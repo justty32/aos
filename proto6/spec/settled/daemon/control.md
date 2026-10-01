@@ -15,7 +15,7 @@
 - 設定檔寫了 `modules.control.socket`，就開；沒寫，daemon 跟只有核心時一模一樣（不開 socket、不多傳環境變數）。
 - **一個 daemon 一個 socket**（Unix socket，就是本機上一個可以連進去講話的檔），路徑照設定，相對的以起點為準（[B-640](core.md)「起點」）。
 - daemon 開的時候，路徑上有舊的檔先刪掉再開；收到 SIGINT／SIGTERM 退出前把它刪掉。
-- **能連上 socket 就能做所有事，不另外驗身分。** 誰能連，由 socket 檔的檔案權限決定。舊設計的通道憑證 `AOS_TICK_TOKEN` 不做（[暫緩區 P-117](../deferred/protocol/daemon/channel.md)）。
+- **能連上 socket 就能做所有事，不另外驗身分。** 誰能連，由 socket 檔的檔案權限決定。通道憑證 `AOS_TICK_TOKEN`：現行控制不使用；舊通道憑證暫緩，未來另定（[暫緩區 P-117](../deferred/protocol/daemon/channel.md)）〔astra 報告必修 7〕。
 - 訊息模組（`aos-mq`）之後另做，不走這條 socket。
 
 ### 四個指令，每個只對一項
@@ -34,7 +34,7 @@
 - **正在跑時**：預設等這次跑完再補一次。**叫幾次都只補一次。**
 - 帶 `skip_while_running`：正在跑就算了，不補（還是回成功）。沒在跑時照樣馬上跑。
 - **跑完之後的週期**：預設從這次結束重新算，原本排好的那次不另外跑。帶 `keep_schedule`：不動原本的排程，原本那次照常跑；只有原本那次的時間已經過了，才從這次結束重新算（不補跑漏掉的）。
-- 補跑那次帶不帶 `keep_schedule`，照最後一次 wake。
+- 補跑那次帶不帶 `keep_schedule`，照最後一次**沒有被 skip 丟掉**的 wake（`resume` 算一次不帶選項的 wake）。正在跑時帶 `skip_while_running` 的 wake 什麼都不改：不取消已記下的補跑，也不改它的選項〔astra 報告必修 4；使用者 2026-10-01：照程式〕。
 
 ### 暫停、停掉時叫醒〔照建議先做，使用者可改〕
 

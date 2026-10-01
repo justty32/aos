@@ -13,7 +13,7 @@
       "type": "object",
       "properties": {
         ".aos/inst.json": {
-          "$ref": "node-inst.schema.json"
+          "$ref": "inst.schema.json"
         },
         "config/kernel.json": {
           "$ref": "kernel-config.schema.json"
@@ -38,7 +38,7 @@
           "minLength": 1
         },
         ".aos/tasks.json": {
-          "$ref": "node-tasks.schema.json",
+          "$ref": "tick-tasks.schema.json",
           "description": "範本任務表；任務沒有 user（2026-10-01 撤回），照 node inst 的帳號跑。"
         }
       },

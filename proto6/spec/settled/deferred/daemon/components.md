@@ -21,7 +21,7 @@
 
 | 設定開關 | false 時 | 行為正本 |
 |---|---|---|
-| `enable_messaging` | 不提供訊息佇列；合法 send 回 `not_available`，合法 take 回空；不產生急件 wake，任務表照用 | [B-614](messaging.md)；客戶端 [B-623、B-624](../../tick.md) |
+| `enable_messaging` | 不提供訊息佇列；合法 send 回 `not_available`，合法 take 回空；不產生急件 wake，任務表照用 | [B-614](messaging.md)；客戶端 [B-623、B-624](../../tick/mq.md) |
 | `enable_cgroup` | 等於沒有 cgroup，走現成 `cgroup=off` 路線；runner 照做 | [B-605](cgroup.md) |
 | `enable_reload` | SIGHUP 只警告、不重讀、不退出 | [B-608](reload.md) |
 | `enable_drain` | `stop_mode` 即使為 drain 也採立即停，照常收尾與存檔 | [B-604](lifecycle.md) |

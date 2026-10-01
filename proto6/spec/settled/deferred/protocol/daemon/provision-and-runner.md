@@ -21,7 +21,7 @@
 | `group_create`〔第十八批〕 | `group`：確切群組名稱 |
 | `group_add_member`〔第十八批〕 | `group`、`user` |
 | `chgrp`〔第十八批〕 | `path`、`group` |
-| `spawn_as`〔第十九批；第二十批呼叫者改 `aos-as`〕 | `user`（帳號名稱或 UID）、`path`（本 node `.aos/jobs/` 下 `aos-as` 寫好的那份 inst 的絕對路徑，檔名見 [P-212](../../../protocol/node.md)）、`token`（必帶）；`frame` 可省（`task-<seq>-<pid>`，`aos-as` 在 `aos-cg` 開的框裡時帶；沒有 cgroup 時帶了回 `unsupported`）。請求那一行要以同一個 sendmsg 用 SCM_RIGHTS 附 5 個 fd〔第二十批，從 2 個加 stdio〕：鎖 fd、回報 pipe 寫端、stdin、stdout、stderr，順序固定，數量不符回 `invalid_params` |
+| `spawn_as`〔第十九批；第二十批呼叫者改 `aos-as`〕 | `user`（帳號名稱或 UID）、`path`（本 node `.aos/jobs/` 下 `aos-as` 寫好的那份 inst 的絕對路徑，檔名見 [P-212](../../../protocol/tick.md)）、`token`（必帶）；`frame` 可省（`task-<seq>-<pid>`，`aos-as` 在 `aos-cg` 開的框裡時帶；沒有 cgroup 時帶了回 `unsupported`）。請求那一行要以同一個 sendmsg 用 SCM_RIGHTS 附 5 個 fd〔第二十批，從 2 個加 stdio〕：鎖 fd、回報 pipe 寫端、stdin、stdout、stderr，順序固定，數量不符回 `invalid_params` |
 
 原本的 `cgroup_create`、`cgroup_delegate` 撤：建框、交框改由 daemon 開格前自動做（[B-605](../../daemon/cgroup.md)、[B-609](../../daemon/helper-actions.md)；納入 cgroup 與 git 疑-10）。
 
@@ -140,7 +140,7 @@ RPC error 沿 P-005。daemon IPC 與 helper 通道維持嚴格：不認得的欄
 
 | code | 意思 | 預設 retryable |
 |---|---|---|
-| `forbidden`、`user_not_granted` | 呼叫者無權（含覆蓋上層只有一方同意、寄件帳號對收件 `requests/` 沒寫權）／超出身分額度 | false |
+| `forbidden`、`user_not_granted` | 呼叫者無權（含覆蓋上層只有一方同意、寄件不符 [B-614「誰能送」](../../daemon/messaging.md) 的判準〔astra 報告必修 6〕）／超出身分額度 | false |
 | `user_invalid`、`user_mismatch` | 帳號不能解析／前後身分不合 | false |
 | `source_changed`〔第十七批〕 | 授權後 inst 原來源的內容跟快照不同（不一定是身分改了） | false |
 | `not_registered`、`registration_conflict` | 目標或上層不存在／搶登記、成環、同一個 id 已是登記或掛載行程 | false |

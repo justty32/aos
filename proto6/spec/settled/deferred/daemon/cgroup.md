@@ -14,7 +14,7 @@
 
 依據：[09-30 晚裁定](../../../../notes/2026-09-30-daemon-split-and-multi-daemon.md)；開關細節見 [B-615](components.md)。
 
-**tick 核心不需要 cgroup；daemon 有 cgroup 就用、沒有就退回 runner 那一套**（B-601、B-604）。cgroup 給 daemon／helper（node 框與資源上限）與普通程式 `aos-cg`（每項一框，[B-634](../../tick.md)）用。
+**tick 核心不需要 cgroup；daemon 有 cgroup 就用、沒有就退回 runner 那一套**（B-601、B-604）。cgroup 給 daemon／helper（node 框與資源上限）與普通程式 `aos-cg`（每項一框，[B-634](../../tick/cg.md)）用。
 
 - 撤掉的：第十四、十五批「沒 cgroup v2 就拒絕啟動」；第十九批的「沒 cgroup 走備援、降到備援級」「完整路／備援路」與啟動時印 `standard: cgroup=…`。
 - 初版不使用 systemd 當執行期依賴；systemd 只當取得委派子樹、開機自動啟動的方式（下面與 [service 範例](service.md)）。
@@ -136,7 +136,7 @@ quota 與初版共通界線見 [B-605 的共通自檢](runtime.md#啟動自檢b-
 | 等不到歸零 | 例如 D 狀態程序：算後代清不空，照 B-607 停格 |
 
 - 框兜得住 runner 清不到的：跳出程序群組又自設 subreaper 的、換成別的帳號的（經 `aos-as` 開、放進本 node 框的）。經外部服務開的仍在框外，不歸 aos 管。
-- 包了 `aos-cg` 的項，自己在 `task-*` 框裡當場收（[B-634](../../tick.md)）；daemon 的格後收尾只是兜底。
+- 包了 `aos-cg` 的項，自己在 `task-*` 框裡當場收（[B-634](../../tick/cg.md)）；daemon 的格後收尾只是兜底。
 - 某個 node 建不了框時，那個 node 照沒有 cgroup 的做法跑（B-605「中途失效」）。
 
 ### 重啟清框（B-603）
@@ -168,9 +168,11 @@ quota 與初版共通界線見 [B-605 的共通自檢](runtime.md#啟動自檢b-
 
 ### spawn_as 的框（B-609）
 
-- **帶 `frame`**（有 cgroup 時）：`aos-as` 在 `aos-cg` 開的 `task-<seq>-<pid>` 框裡時（寫成 `aos-cg -- aos-as <帳號> -- 原指令`，[B-634](../../tick.md)），請求帶 `frame`＝那個框。helper 核對它是本 node `n-<h>` 的直接子框、存在且沒有程序，把 runner 放進去再 exec。框仍歸 node 的帳號，`aos-cg` 照 B-634 等它清空、必要時 `cgroup.kill`。
+- **帶 `frame`**（有 cgroup 時）：`aos-as` 在 `aos-cg` 開的 `task-<seq>-<pid>` 框裡時（寫成 `aos-cg -- aos-as <帳號> -- 原指令`，[B-634](../../tick/cg.md)），請求帶 `frame`＝那個框。helper 核對它是本 node `n-<h>` 的直接子框、存在且沒有程序，把 runner 放進去再 exec。框仍歸 node 的帳號，`aos-cg` 照 B-634 等它清空、必要時 `cgroup.kill`。
 - 沒帶 `frame`、daemon 有 cgroup 時，runner 放進本 node 的 `tick` 框，格後收尾一起收（B-601）。
 - 沒有 cgroup 時帶了 `frame` 回 `unsupported`。
+
+> **已知問題，未定**〔astra 報告設計 1，2026-10-01 記錄，不改設計，等這條回來時再定〕：照現在寫法，`aos-cg` 先把監督程式自己搬進任務框，再要求殺空、等待、刪框；自己還在框裡，收尾會連自己一起殺掉、做不完。推薦寫法 `aos-cg -- aos-as …` 也讓框裡已經有人（`aos-cg` 自己），上面 helper 卻要求框「沒有程序」，正常用法也過不了。astra 建議：監督程式留在框外，只讓子程序進框；helper 改成核對框的歸屬與允許的現有程序，不要求全空。`aos-cg` 那一側見 [B-634](../../tick/cg.md)。
 
 ### 建框、交框與刪框（B-609）
 

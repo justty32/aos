@@ -6,9 +6,9 @@
 
 ## P-500．module 就是任務〔使用者方向 2026-09-29〕
 
-module 是 [node P-202～204](../settled/protocol/node.md) 的普通任務；範本的六類可各自選裝，不另加 module 表或 ABI。argv 由任務設定，cwd／stdin／stdout／stderr／環境／鎖沿 [P-203](../settled/protocol/node.md)，不重取同 node 鎖。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕帳號照 [B-620](../settled/tick.md)：用 node inst 的帳號；任務沒有 `user`（2026-10-01 撤回），要換帳號就包 `aos-as`。
+module 是 [node P-202～204](../settled/protocol/tick.md) 的普通任務；範本的六類可各自選裝，不另加 module 表或 ABI。argv 由任務設定，cwd／stdin／stdout／stderr／環境／鎖沿 [P-203](../settled/protocol/tick.md)，不重取同 node 鎖。〔使用者方向 2026-09-30，第十九批，疑點裁定 4〕帳號照 [B-620](../settled/tick.md)：用 node inst 的帳號；任務沒有 `user`（2026-10-01 撤回），要換帳號就包 `aos-as`。
 
-〔建議預設，未拍板〕直接開檔讀配額、已授權量測介面及必要本地證據；寫自己 node 的用量／分配狀態，由標準配備的 group 提交（[B-621](../settled/tick.md)）。退出 0＝本步完成（額度不足而寫好摘要等待也是 0），2＝設定錯，125＝無法開始，1＝已開始但失敗。派工的任務怎麼讀資源狀態、擋什麼，見 [S-205](../scheduling/admission.md)。
+〔建議預設，未拍板〕直接開檔讀配額、已授權量測介面及必要本地證據；寫自己 node 的用量／分配狀態，由標準配備的 group 提交（[B-621](../settled/tick/needs.md)）。退出 0＝本步完成（額度不足而寫好摘要等待也是 0），2＝設定錯，125＝無法開始，1＝已開始但失敗。派工的任務怎麼讀資源狀態、擋什麼，見 [S-205](../scheduling/admission.md)。
 
 ## P-501．配額檔〔建議預設，未拍板〕
 
@@ -31,7 +31,7 @@ module 是 [node P-202～204](../settled/protocol/node.md) 的普通任務；範
 
 [res-usage](schemas/res-usage.schema.json) 是子層的 `state/resources/` 用量：version:1、node_id、observed_at_ms、resources 必填，涵蓋 node 與受管子樹合計，含工具。只寫能量到的值，resources 可空，可含 kernel 自訂資源；上層不再重加子孫。缺項／讀不到／過時不是零（[S-207](../scheduling/admission.md)），過時門檻由 kernel 政策定。〔第十九批〕cgroup 走備援時，CPU、記憶體、pids 量不到總量，照缺項寫（[S-205](../scheduling/admission.md)）。
 
-摘要的同 commit 讀取與只開摘要權限的發布依 [B-624](../settled/tick.md) 與 [messages P-307](messages.md)。改配額用 `kernel.quota.set`、要求重測用 `kernel.usage.measure`，參數、回應與授權只在 [messages P-306](messages.md) 定義；kernel.schedule.recheck 只重判排程。
+摘要的同 commit 讀取與只開摘要權限的發布依 [B-624](../settled/tick/mq.md) 與 [messages P-307](messages.md)。改配額用 `kernel.quota.set`、要求重測用 `kernel.usage.measure`，參數、回應與授權只在 [messages P-306](messages.md) 定義；kernel.schedule.recheck 只重判排程。
 
 〔使用者方向 2026-09-29，裁定「LLM 請求送去哪」〕成員自記用量、kernel 只收集時，逐次用量檔是成員 [agent P-703](agent-tasks.md) 的 `state/agent/usage/<request_id>.json`，收集任務見 [P-810](kernel-tasks.md)；讀法、缺值與按原發起 node＋attempt 去重依 [S-207](../scheduling/admission.md)。本篇的資源摘要不取代逐次 usage 證據。
 
@@ -39,7 +39,7 @@ module 是 [node P-202～204](../settled/protocol/node.md) 的普通任務；範
 
 ## P-503．CPU、記憶體與 pids〔使用者方向 2026-09-29〕
 
-〔使用者方向 2026-09-30，第十九批〕已裝 OS module 時，由標準配備的 cgroup 框寫進 cgroup v2（[B-629](../settled/tick.md)）；cgroup 子樹、框命名與佈建以 [B-605](../settled/deferred/daemon/cgroup.md) 為正本，佈建參數見 [daemon P-107](../settled/deferred/protocol/daemon/provision-and-runner.md)；上限隨時可改，見 [S-205](../scheduling/admission.md)。下表只在 cgroup 走完整路時適用；走備援時 `cgroup_*` 回 `unsupported`，只剩每程序上限、沒有 pids 上限（[S-203](../scheduling/admission.md)、[B-631](../settled/tick.md)）。
+〔使用者方向 2026-09-30，第十九批〕已裝 OS module 時，由標準配備的 cgroup 框寫進 cgroup v2（[B-629](../settled/tick/template.md)）；cgroup 子樹、框命名與佈建以 [B-605](../settled/deferred/daemon/cgroup.md) 為正本，佈建參數見 [daemon P-107](../settled/deferred/protocol/daemon/provision-and-runner.md)；上限隨時可改，見 [S-205](../scheduling/admission.md)。下表只在 cgroup 走完整路時適用；走備援時 `cgroup_*` 回 `unsupported`，只剩每程序上限、沒有 pids 上限（[S-203](../scheduling/admission.md)、[B-631](../settled/tick/cg.md)）。
 
 | resources 欄位 | 配額 | 用量摘要 | cgroup 對應 |
 |---|---|---|---|

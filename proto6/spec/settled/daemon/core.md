@@ -10,7 +10,7 @@
 
 **daemon 就是一個定期叫 `aos-exec` 的 cron。** 設定檔裡列一串 inst，每一項照自己的週期叫一次 `aos-exec <inst>`，等它結束，在 stdout 印一行結果。
 
-- daemon **不認得 node**，也不讀任務表、不碰鎖、不看擋板檔。那些全是 `aos-tick` 自己的事（[通用 tick](../tick.md)）。
+- daemon **不認得 tick 的工作資料夾**（舊稱 node；〔使用者 2026-10-01〕改名），也不讀任務表、不碰鎖、不看擋板檔。那些全是 `aos-tick` 自己的事（[通用 tick](../tick.md)）。
 - 要定期跑一個 `aos-tick`，就放一份 `argv` 開頭是 `aos-tick` 的 inst（例如 `["aos-tick", "<資料夾>"]`，或只寫 `["aos-tick"]`），再把這份 inst 加進 daemon 的清單。對 daemon 來說它跟別的 inst 沒有兩樣。
 - 「daemon 管 node」之後另做成可掛的模組，不在核心裡（[第二十批「node 模組方向」](../../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。
 - 舊設計的登記、socket／IPC、runner、收屍、重啟清理、`state.json`、通道與憑證，第一版都不做，搬到[暫緩區](../deferred/daemon/README.md)。
@@ -32,9 +32,11 @@ daemon 有一個「起點」資料夾，用在三處：
 
 起點怎麼定：設定檔頂層的 `cwd`；沒寫就是 daemon 啟動時的工作目錄。`cwd` 本身寫相對路徑時，也以 **daemon 啟動時的工作目錄**為準，**不是**設定檔所在的資料夾。
 
+〔使用者 2026-10-01〕頂層 `cwd` **不影響 daemon 自己**：daemon 不 chdir，自己的工作目錄一直是啟動時那個，`cwd` 只拿來設 `aos-exec` 子程序的工作目錄、當相對路徑的起點。tasks.json 的頂層 `cwd` 也是同一個意思（不改 tick 自己）；兩邊差在相對路徑起點與指示詞展開的時機，對照表見 [C-11](../conventions.md)。
+
 ### 設定檔先展開指示詞，再讀
 
-整份設定檔先用 aos 指示詞展開（跟 inst 同一套：`$ref`、`$fmt`、`$env`，見 [inst](../../base/inst.md)），展開完才讀裡面的鍵。這樣大設定檔可以拆成幾份檔互相引用，不會太肥。
+整份設定檔先用 aos 指示詞展開（跟 inst 同一套：`$ref`、`$fmt`、`$env`，見 [inst](../../base/inst.md)），展開完才讀裡面的鍵。這樣大設定檔可以拆成幾份檔互相引用，不會太肥。〔使用者 2026-10-01〕這點跟 tasks.json 不同：tasks.json 讀表時只展開到 `tasks` 那層，每一項內部跑到才展開（[C-11](../conventions.md)）；daemon 設定檔是**整份一次展開完**。
 
 - **`$ref` 的相對檔名，一律以設定檔所在的資料夾為準。** 被引進來的檔裡再寫 `$ref`，也照這個資料夾算，不換中心。
 - **展開完才套 `cwd`。** `cwd` 也可以是 `$ref` 引進來的值。
@@ -59,7 +61,7 @@ daemon 有一個「起點」資料夾，用在三處：
 
 ### 輸出
 
-- **daemon 自己的 stdout**：每次 `aos-exec` 結束印一行：印出那一刻的本地時間、inst 字面值、結束碼、花了幾毫秒。被訊號 N 殺掉的，碼印成 128+N。停掉時再印一行 `stopped`。
+- **daemon 自己的 stdout**：每次 `aos-exec` 結束印一行：印出那一刻的本地時間、inst 字面值、結束碼、花了幾毫秒。被訊號 N 殺掉的，碼印成 128+N。停掉時在那次的 exit 行之後另印一行 `stopped`；兩行分開印，中間可能穿插其他項的行〔astra 報告必修 8〕。
 - **`aos-exec` 的 stdout、stderr** 兩條各由頂層一個鍵決定寫到哪：`exec_out_path` 管 stdout、`exec_err_path` 管 stderr。〔使用者方向 2026-10-01〕**沒寫就丟掉**（等於 `/dev/null`），不再接到 daemon 自己的 stdout／stderr；想接回來就寫 `"/dev/stdout"`、`"/dev/stderr"`。
 - 兩個鍵規則一樣：接在檔尾、父資料夾不在就建；相對路徑以起點為準；裡面的 `<inst>` 會換成這一項的位置：inst 是資料夾就換成字面值本身，是檔就換成它字面上的資料夾部分（沒有資料夾部分就用 `.`）。兩個鍵可以指同一個檔。
 - 每次**收齊**（讀到底）再一次寫出，有內容才寫；前面一律加一行標頭，寫明時間、是 stdout 還是 stderr、第幾項、inst 字面值。寫出跟 daemon 自己那一行共用一把鎖，多項同時結束也不會交錯。

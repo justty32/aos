@@ -15,18 +15,18 @@
 
 - **條號不變、不重用。** 搬家只換檔案位置；新規定開新號。
 - **主規格是行為正本，協議篇只留格式**（方案 A，[V-01](../conformance.md)）：`tick.md`、`daemon/` 寫行為；`protocol/` 底下只寫欄位、JSON、argv、結束碼。
-- **git 與 cgroup 是「有就用」，不是前提**（git：[B-630、B-622](tick.md)；cgroup：`aos-cg` [B-634](tick.md)，daemon 那側在暫緩區）。提交與還原只限 aos 自己的東西，使用者任務改的檔 aos 不管。
-- **系統級任務與普通程式**（`aos-git`、`aos-mq`、`aos-publish`、`aos-clean`、`aos-needs`、`aos-cg`）留在正式篇：它們是之後幾段要做的獨立程式，規定沒被推翻；用到暫緩區東西的地方各條有註明。
+- **git 與 cgroup 是「有就用」，不是前提**（git：[B-630、B-622](tick/git.md)；cgroup：`aos-cg` [B-634](tick/cg.md)，daemon 那側在暫緩區）。提交與還原只限 aos 自己的東西，使用者任務改的檔 aos 不管。
+- **系統級任務與普通程式**（`aos-git`、`aos-mq`、`aos-publish`、`aos-clean`、`aos-needs`、`aos-cg`）放在正式篇的 [tick/ 子篇](tick/README.md)：它們是之後幾段要做的獨立程式，規定沒被推翻；每篇開頭一行標狀態（已實作／待實作／依賴暫緩），用到暫緩區東西的地方各條有註明。〔使用者 2026-10-01；astra 報告建議 1〕
 - **要能自己讀懂**：區內各篇互相連結；對區外的依賴列在下面「對外依賴」。
 - **其他篇之後才放進來**：kernel、LLM、agent、CLI、基底其餘各篇，等它們跟上新基礎再放入。
 
 ## 閱讀順序
 
-1. [通用慣例](conventions.md)（C-08 結束碼、C-09 `AOS_DIRNAME`、C-10 環境變數總表）：aos 每支程式都守的規矩，最短，先讀。
+1. [通用慣例](conventions.md)（C-08 結束碼、C-09 `AOS_DIRNAME`、C-10 環境變數總表、C-11 設定檔頂層 `cwd` 與指示詞展開範圍）：aos 每支程式都守的規矩，最短，先讀。
 2. [名詞](terms.md)（T-07 tick 核心、T-10 四類程式、T-11 daemon 核心與模組）：先知道「核心、系統級任務、普通程式、停格檔、擋板檔、模組」這些詞。
-3. [通用 tick](tick.md)：核心三件事（B-626、B-602、B-620、B-633），再看系統級任務：標準任務表範本、`aos-needs`、佇列的取與送、git、`aos-cg`。
+3. [通用 tick 核心](tick.md)：核心三件事（B-626、B-602、B-620、B-633）與直接跑（B-627）→ [tick/ 子篇](tick/README.md)：標準任務表範本、`aos-needs`、`aos-cg`、佇列的取與送、git、當機恢復，每篇開頭標狀態。〔使用者 2026-10-01 拆篇〕
 4. [daemon](daemon/README.md)：[B-640 最核心 daemon](daemon/core.md) → [B-641 控制模組與 `aos-ctl`](daemon/control.md)。
-5. 要看格式時：[node 協議](protocol/node.md)（P-200～213：資料夾、任務表、`aos-tick` 與各系統級任務的 argv 與結束碼）→ [daemon 協議](protocol/daemon/README.md)（P-120 設定檔與輸出、P-121 控制 socket 與 `aos-ctl`）。
+5. 要看格式時：[tick 協議](protocol/tick.md)（P-200～213：工作資料夾布局、任務表、`aos-tick` 與各系統級任務的 argv 與結束碼；原 `protocol/node.md`，2026-10-01 改名）→ [daemon 協議](protocol/daemon/README.md)（P-120 設定檔與輸出、P-121 控制 socket 與 `aos-ctl`）。
 6. 想知道「以後還會有什麼」：[暫緩區](deferred/README.md)。
 
 ## 檔案清單
@@ -34,12 +34,13 @@
 | 檔 | 條號 | 說明 |
 |---|---|---|
 | [README.md](README.md) | — | 本篇 |
-| [conventions.md](conventions.md) | C-08、C-09、C-10 | 2026-10-01 新開 |
+| [conventions.md](conventions.md) | C-08、C-09、C-10、C-11 | 2026-10-01 新開；C-11 是第二批新開 |
 | [terms.md](terms.md) | T-07、T-10、T-11 | 從 [名詞與責任](../terms.md) 拆出；T-11 是 2026-10-01 新開；T-09 搬到暫緩區 |
-| [tick.md](tick.md) | B-602、B-620～627、B-629～634 | 從 `spec/tick.md` 搬來；B-628 與 B-602、B-620、B-633 的部分內容搬到暫緩區 |
+| [tick.md](tick.md) | B-626、B-602、B-620、B-633、B-627 | tick 核心（已實作）。從 `spec/tick.md` 搬來；B-628 與 B-602、B-620、B-633 的部分內容搬到暫緩區；2026-10-01 其餘各條拆到 tick/〔使用者 2026-10-01〕 |
+| [tick/](tick/README.md) | B-629、B-621、B-634、B-631（撤）、B-623、B-624、B-630、B-622、B-632、B-625 | 2026-10-01 從 tick.md 拆出，條號不變：[template](tick/template.md)（B-629）、[needs](tick/needs.md)（B-621）、[cg](tick/cg.md)（B-634、B-631）、[mq](tick/mq.md)（B-623、B-624）、[git](tick/git.md)（B-630、B-622、B-632）、[recovery](tick/recovery.md)（B-625）；狀態見[子篇入口](tick/README.md) |
 | [daemon.md](daemon.md) | — | 舊的 daemon 入口，只指向 daemon 目錄 |
 | [daemon/](daemon/README.md) | B-640、B-641 | 2026-10-01 重寫：[core](daemon/core.md)（B-640）、[control](daemon/control.md)（B-641） |
-| [protocol/node.md](protocol/node.md) | P-200～213 | 從 `spec/protocol/node.md` 搬來 |
+| [protocol/tick.md](protocol/tick.md) | P-200～213 | tick 協議。從 `spec/protocol/node.md` 搬來；2026-10-01 由 `protocol/node.md` 改名〔使用者 2026-10-01〕 |
 | [protocol/daemon/](protocol/daemon/README.md) | P-100、P-120、P-121 | 2026-10-01 重寫：[core](protocol/daemon/core.md)（P-120）、[control](protocol/daemon/control.md)（P-121） |
 | [deferred/](deferred/README.md) | B-628、T-09、B-303、B-504、B-601、B-603～615、P-101～119 | 暫緩區；總表與每條狀態見它的 README |
 
@@ -47,40 +48,47 @@
 
 ## 怎麼判斷哪些放進來
 
-- **整篇只講 tick／daemon 基礎** → 整篇搬：`tick.md`、`daemon.md`、node 協議、daemon 協議。
+- **整篇只講 tick／daemon 基礎** → 整篇搬：`tick.md`（2026-10-01 再拆成核心與 tick/ 子篇）、`daemon.md`、tick 協議（原 node 協議）、daemon 協議。
 - **混合檔裡某一條整條只講 tick／daemon，拆出來不會斷上下文** → 把那一條搬出來，原處留一行：T-07、T-09、T-10（名詞）、B-303（helper 與 `aos-as`）。
 - **條目同時是其他篇的共用基礎，或跟 kernel／agent／LLM 規則纏在一起** → 先留原處，列在下面「待放入」。拆開反而更亂，例如 inst 整份格式、身分額度的歸屬、執行器的後代收尾、清理、跨篇驗收場景。
-- **schema 與範例暫留原處**（`spec/protocol/schemas/`、`spec/protocol/examples/node/`、`examples/daemon/`）。理由：schema 彼此以相對檔名 `$ref` 互引，而且是雙向交纏——`common.schema.json` 引用 `node-inst`，kernel、agent、work、llm、msg 各 schema 又引用 `node-inst`、`node-tasks`、`daemon-registration`，daemon 各 schema 則引用 `common`。搬開就得把兩邊的 `$ref` 都改成跨目錄路徑，驗證腳本也要改成兩處登記；等其他篇放進來時一起搬比較穩。整理區的協議篇直接連回原處的 schema 與範例，`validate.py` 不用改。
+- **schema 與範例暫留原處**（`spec/protocol/schemas/`、`spec/protocol/examples/tick/`（原 `examples/node/`）、`examples/daemon/`；schema 2026-10-01 改名：`node-inst`→`inst`、`node-tasks`→`tick-tasks`、`node-tick-record`→`tick-record`〔使用者 2026-10-01〕）。理由：schema 彼此以相對檔名 `$ref` 互引，而且是雙向交纏——`common.schema.json` 引用 `inst`，kernel、agent、work、llm、msg 各 schema 又引用 `inst`、`tick-tasks`、`daemon-registration`，daemon 各 schema 則引用 `common`。搬開就得把兩邊的 `$ref` 都改成跨目錄路徑，驗證腳本也要改成兩處登記；等其他篇放進來時一起搬比較穩。整理區的協議篇直接連回原處的 schema 與範例，`validate.py` 不用改。
 
 ## 對外依賴
 
-整理區內的文件會引用下面這些區外內容。分兩種：**基礎必需**是普通 tick／daemon 就要用的；**使用例**只是 kernel、agent、LLM 怎麼用這套基礎，不是普通 tick 的前提。
+整理區內的文件會引用下面這些區外內容。分三種：**基礎必需**是現行 tick 核心、tick/ 子篇的系統級任務與現行 daemon 就要用的；**只適用舊 daemon** 是暫緩區才用的〔astra 報告必修 1〕；**使用例**只是 kernel、agent、LLM 怎麼用這套基礎，不是普通 tick 的前提。
 
 ### 基礎必需
 
 | 依賴 | 在哪 | 用在哪 |
 |---|---|---|
 | 來源標記、裁定優先序、「保證跟著掛了什麼走」 | [T-01](../terms.md) | 全區 |
-| node 與角色、兩張註冊表 | [T-02](../terms.md) | tick、daemon |
-| 工作識別、辨識 tick 的路徑規則 | [T-03](../terms.md) | B-628、B-606 |
 | 自訂任務種類 `<類別>.<名稱>`、`system` 不開放子名 | [T-06](../terms.md) | B-626、B-620、P-202 |
 | 投件權就是執行權 | [T-08](../terms.md) | B-629、B-612、B-614 |
 | 時間以 tick 為基準（格數與毫秒） | [C-01](../contracts.md) | B-633、B-607、B-610、全區時間欄位 |
-| 有效上層（跨篇共用說法） | [C-02](../contracts.md) | B-628、B-606 |
 | 版本演進、不認得的欄位、永遠禁止的鍵 | [C-07](../contracts.md) | 設定、IPC、通道格式 |
 | inst 第 1 版（任務是 inst 的超集；runner 照 inst 跑；子程式另開 session） | [base/inst](../base/inst.md) | B-620、B-601、B-609、B-625、P-201 |
-| 身分額度的歸屬 | [B-301](../base/identity-resources.md) | B-620、B-606 |
-| 執行器：串流收完、取消競態；OOM 證據 | [B-202、B-203、B-204](../base/execution.md) | B-601、B-604、B-613 |
-| 工作材料與結果（掛載行程用新的 inst 路徑、已放行後的結果處理） | [base/work](../base/work.md) | B-610、B-613 |
 | 清理（`aos-clean` 這項系統級任務的規則） | [B-404](../base/storage.md) | B-625、B-626、B-629、B-632 |
 | 收件區權限（通道送件拿它當判準）；權限落點 | [B-506](../base/transport.md) | B-614、P-208 |
 | JSON、錯誤、argv 通則、集中碼表、延後清單 | [P-001～P-008](../protocol/README.md) | 協議篇全部 |
 | 請求物件、摘要檔 | [P-301、P-307](../protocol/messages.md) | B-614、B-624、P-206 |
 | 事項檔格式、`aos-clean` 的 argv | [P-601、P-605](../protocol/ops.md) | B-601、B-607、B-629 |
 | 共用型別 | [common.schema.json](../protocol/schemas/common.schema.json) | 全部 schema |
-| schema 與範例 | [schemas/](../protocol/schemas/)、[examples/node/](../protocol/examples/node/)、[examples/daemon/](../protocol/examples/daemon/) | 協議篇 |
-| 建立 node、恢復、經 daemon 跑一格的 CLI 入口 | [H-004](../cli/commands.md)、[H-036](../cli/walkthrough.md) | B-625、B-627、P-210 |
+| schema 與範例 | [schemas/](../protocol/schemas/)、[examples/tick/](../protocol/examples/tick/)、[examples/daemon/](../protocol/examples/daemon/) | 協議篇 |
 | 驗收入口、正本表、條號預留表 | [V-01～V-05](../conformance.md) | 全區 |
+
+### 只適用舊 daemon（暫緩區）
+
+〔astra 報告必修 1〕下面這些只有[暫緩區](deferred/README.md)的舊 daemon（登記、通道、格後清理與後代收尾、node 框、上下層、身分額度、經 daemon 跑一格）才用到，現行 tick 核心與 daemon 核心（[B-640](daemon/core.md)、[B-641](daemon/control.md)）都不靠它們，所以不列進「基礎必需」。
+
+| 依賴 | 在哪 | 用在哪 |
+|---|---|---|
+| node 與角色、兩張註冊表 | [T-02](../terms.md) | 舊 daemon 的登記（B-606、B-607） |
+| 工作識別、辨識 tick 的路徑規則 | [T-03](../terms.md) | B-628、B-606 |
+| 有效上層（跨篇共用說法） | [C-02](../contracts.md) | B-628、B-606 |
+| 身分額度的歸屬 | [B-301](../base/identity-resources.md) | B-606（B-620 任務的 `user` 已撤回） |
+| 執行器：串流收完、取消競態；OOM 證據 | [B-202、B-203、B-204](../base/execution.md) | B-601、B-604、B-613 |
+| 工作材料與結果（掛載行程用新的 inst 路徑、已放行後的結果處理） | [base/work](../base/work.md) | B-610、B-613 |
+| 建立 node、恢復、經 daemon 跑一格的舊 CLI 入口 | [H-004](../cli/commands.md)、[H-036](../cli/walkthrough.md) | B-625、B-627、P-210 |
 
 ### 使用例（不是普通 tick 的前提）
 
@@ -108,18 +116,40 @@
 
 ### 2026-10-01 統一更新：要使用者裁定的
 
-這輪照現行程式與裁定改 spec 時發現、先照下面寫法落筆的。每條附暫定寫法。
+這輪照現行程式與裁定改 spec 時發現、先照下面寫法落筆的。每條附暫定寫法。〔astra 報告建議 2，2026-10-01 第二批〕已有裁定的（第 3、7 題）與只是文件怎麼標的（第 10 題）改記成結案或編輯事項，真的還要問人的只剩第 1、2、4 題。
 
-1. **`aos-as`（P-212）留在正式篇還是搬暫緩區？** 它要靠 helper、通道和「鎖 fd 傳給任務」，三樣都在暫緩區。暫時：整條留在 [node 協議](protocol/node.md)，條頭加一句「依賴暫緩區」。B-303 本體已在暫緩區。
+1. **`aos-as`（P-212）留在正式篇還是搬暫緩區？** 它要靠 helper、通道和「鎖 fd 傳給任務」，三樣都在暫緩區。暫時：整條留在 [tick 協議](protocol/tick.md)，條頭加一句「依賴暫緩區」。B-303 本體已在暫緩區。
 2. **最簡鎖不傳給任務後，系統級任務沒辦法判斷「我在不在 tick 裡」。** `aos-git` 的 `not_in_tick`、`aos-mq`／`aos-publish` 原本都靠繼承的鎖核對。暫時：各條寫「要等暫緩區的『鎖 fd 傳給任務』回來才有判法」。
-3. **任務 `id` 重複沒人擋。** 核心只做極簡檢查；但 `aos-git` 的存檔點用 `id` 取名，重複會混。暫時：B-620「誰驗什麼」表寫明這個後果，交給恢復前驗證（B-625）。
+3. ~~**任務 `id` 重複沒人擋。**~~ **照既有裁定，不用再問**（[極簡檢查](../../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查已寫入-speccommit-前由我補號)：「默認不重複」）：核心不檢查；`aos-git` 存檔點用 `id` 取名、重複會混，這個後果寫在 B-620「誰驗什麼」表。〔astra 報告建議 2〕
 4. **上下層判定（B-628）暫緩後，兩處沒有正式判準**：`aos-git` 排除巢狀子資料夾（B-622）、發摘要核對「直接下層」（B-624）。暫時：寫「B-628 回來前沒有正式判準」。
-5. **「node」這個詞在 tick 層還剩不少。** 使用者 2026-10-01 說 node 留給之後的 node 模組；這輪 tick 核心的行文已改成「目標／工作資料夾」，但檔名 `protocol/node.md`、`node-*` schema 名、P-200 第一句「node 根目錄的絕對路徑就是 node id」、系統級任務各條的 node 字樣沒動。要不要全面改名？
+5. ~~**「node」這個詞在 tick 層還剩不少。**~~ **結案**（使用者 2026-10-01 定：tick 層一律叫「工作資料夾」，英文 `tick dir`）：`protocol/node.md` 改名 [protocol/tick.md](protocol/tick.md)（tick 協議）；schema `node-inst`→`inst`、`node-tasks`→`tick-tasks`、`node-tick-record`→`tick-record`；範例 `examples/node/`→`examples/tick/`；P-200 與系統級任務各條的 node 改成工作資料夾。暫緩區講上下層的「上層 node／下層 node」與 kernel、agent 各篇的 node 不動（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）。
 6. ~~**控制 socket 收到不認得的欄位照收不理**（照程式），跟 [C-07](../contracts.md)「daemon IPC 嚴格拒絕不認得的欄位」打架。~~ **結案**（使用者 2026-10-01：「socket收到看不懂的欄位就不理他」，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[C-07](../contracts.md) 的放寬表單列一行「現行控制 socket 忽略」，嚴格只剩舊設計的 daemon IPC；[P-121](protocol/daemon/control.md) 寫明。
-7. **`aos-daemon` 的設定錯誤處理有三處跟 schema 不一致**（照「默認一切正常」）：只有指示詞錯印 `aos-daemon: config: <代號>: …`，自己的檢查印 `aos-daemon: config: <說明>`；缺 `insts`、`control` 沒寫 `socket`、某項的值不是物件時程式直接丟 traceback 回 1；schema 要求 `interval_ms` 是非負整數，程式不查型別。暫時：[P-120](protocol/daemon/core.md) 照程式寫，schema 照嚴格寫。
+7. **照既有裁定，不用再問**（[POC 默認一切正常](../../notes/verdicts/11-tick-as-unit.md#2026-10-01poc-默認一切正常)）〔astra 報告建議 2〕：**`aos-daemon` 的設定錯誤處理有三處跟 schema 不一致**（照「默認一切正常」）：只有指示詞錯印 `aos-daemon: config: <代號>: …`，自己的檢查印 `aos-daemon: config: <說明>`；缺 `insts`、`control` 沒寫 `socket`、某項的值不是物件時程式直接丟 traceback 回 1；schema 要求 `interval_ms` 是非負整數，程式不查型別。暫時：[P-120](protocol/daemon/core.md) 照程式寫，schema 照嚴格寫。
 8. ~~**`aos-exec` 的 stdout 直接接到 daemon 的 stdout**，不經 daemon 那把鎖，可能跟 daemon 自己的行交錯。~~ **結案**（使用者 2026-10-01，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：頂層新鍵 `exec_out_path` 照 `exec_err_path` 規則收齊再寫；兩個鍵沒寫都丟到 `/dev/null`（[B-640](daemon/core.md)、[P-120](protocol/daemon/core.md)）。
 9. ~~**inst 第 1 版的頂層 `user` 要不要留？**~~ **結案**（使用者 2026-10-01：「inst頂層的user欄位不留」，[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01daemon-輸出socket-欄位inst-user)）：[inst](../base/inst.md) 拿掉 `user` 的定義與「先決定身分」整節（直接刪、不搬暫緩，記在[暫緩區撤回表](deferred/tick.md)）；任務表的 `user` 一併拿掉。
-10. **整理區以外還有「2＝用法錯」**（kernel 工具、ops、CLI 等）。照 [C-08](conventions.md) 字面是改 1，但那幾篇不在這輪範圍，沒動；整理那幾篇時逐條定改 1 或列為特別指定的碼。
+10. **編輯事項，不是待裁定**〔astra 報告建議 2〕：**整理區以外還有「2＝用法錯」**（kernel 工具、ops、CLI 等）。照 [C-08](conventions.md) 字面是改 1，但那幾篇不在這輪範圍，沒動；整理那幾篇時逐條定改 1 或列為特別指定的碼。
+
+### 2026-10-01 第二批：astra 審查與使用者裁定落實
+
+〔使用者 2026-10-01〕對 [astra 審查](../../notes/reviews/2026-10-01/astra-spec-sync-report.md) 的處理（[裁定](../../notes/verdicts/11-tick-as-unit.md#2026-10-01-第二批astra-審查修正tick-層改名拆篇tasksjson-頂層預設已寫入-speccommit-前由我補號)）：
+
+- **必修 1～9 已修。** 例如擋板改成「daemon 照常叫，由 tick 自己擋」、舊 daemon 才用的依賴移到上面「只適用舊 daemon」、`AOS_TICK_TOKEN` 改標「現行控制不使用；舊通道憑證暫緩」（[C-10](conventions.md)）、H-036 改連 walkthrough。
+- **設計 1（`aos-cg` 收尾會殺到自己）**：記在暫緩區，這輪不改（daemon 那側本來就暫緩）。
+- **設計 2（自訂任務表交不給 aos-git）**：結案。`aos-tick` 的目標只能是資料夾、任務表只有一個位置，`aos-git` 讀 `$AOS_TICK_CWD/<狀態資料夾>/tasks.json` 就好（[暫緩區撤回表](deferred/tick.md#已撤回被取代)）。
+- **設計 3（`interval_ms` 規則拆成 schema 與腳本兩套）**：改用 schema 的條件規則表達，範例腳本不再重複判定（[P-120](protocol/daemon/core.md)）。
+- **建議 1（核心與待做程式分篇）**：已拆成 [tick.md](tick.md) 核心＋[tick/ 子篇](tick/README.md)，各篇開頭標狀態。
+- **建議 2（疑點分清哪些要問人）**：上面「要使用者裁定的」已把有裁定的第 3、7 題改記結案、第 10 題改記編輯事項。
+- **要使用者裁定 1（`AOS_DIRNAME=""` 時 git 管什麼）**：使用者定「不用特別弄清單，就全部」（[C-09](conventions.md)、[B-630](tick/git.md)）。
+- **要使用者裁定 2（檔觸發入口與控制模組的關係）**：node 模組方向裡「用檔觸發、不開 socket」那句已被控制模組（B-641）取代。
+
+這輪落筆時發現、先照下面寫法、要使用者裁定的：
+
+1. **`aos-config-add` 的旗標**：tick 層改名時從 `--node <node_dir>` 改成 `--dir <工作資料夾>`（[P-207](protocol/tick.md)）。程式還沒寫，沒有相容問題；名字請確認。
+2. **`AOS_DIRNAME=""` 時的固定排除**：狀態資料夾就是工作資料夾，`aos-git` 固定排除的 `tick/`、`tick.lock` 等直接落在工作資料夾頂層；使用者自己的檔剛好同名就不提交也不還原。暫時：〔建議預設〕風險自負（[B-622](tick/git.md)）。
+3. **tasks.json 頂層 `_metainfo` 在 schema 是必填**，核心不查；新例子都照 schema 寫上了。要不要改成可省？暫時：維持必填。
+4. **`modules` 內部 tick 不展開，daemon 那邊整份展開**，兩邊不同（[C-11](conventions.md)）。理由：tick 核心不讀它，展開只會讓寫壞的模組設定害整格 `bad_table`。暫時照這樣。
+5. **頂層陌生鍵讀表時不解**：只有七個預設欄位、`tasks`、`modules` 解一層；其他頂層鍵（含 `_metainfo`）不解，寫壞了也不會 `bad_table`（[B-620](tick.md)）。
+6. **整項 `$ref` 引進來的項、或預設值從別的檔引進來時**，合併後裡面的 `$ref:""`／`#…` 指合併後的這一項，不再指原檔。暫時：照這樣，寫在 B-620。
 
 ### 系統訊息佇列改寫後，區外要跟上的（還沒改）
 
@@ -148,7 +178,7 @@
 | base | [storage](../base/storage.md) 第 12、31 行 | 「git 還原不碰」與提交語意是整格原子的舊說法 |
 | 範本 | [P-814](../protocol/kernel-tasks.md)、[P-715](../protocol/agent-tasks.md) | 還沒有有 git 版範本 |
 | scheduling | [S-203、S-205](../scheduling/admission.md) | kernel 資源任務經 `cgroup_limits` 寫上限、沒 cgroup 時只記帳，要核對 |
-| CLI | [H-004、H-036](../cli/commands.md) | `aos node new` 建初始 commit、建 `.aos/mq/get/` 並設權限、`--firstdo-fsync` 旗標 |
+| CLI | [H-004](../cli/commands.md)、[H-036](../cli/walkthrough.md)〔astra 報告必修 9〕 | `aos node new` 建初始 commit、建 `.aos/mq/get/` 並設權限、`--firstdo-fsync` 旗標 |
 | 原型程式 | `proto6/proto/aosproto/config.py` | 還把 `cgroup_create` 當合法佈建動作 |
 
 ### 納入 git 與 cgroup：原暫定 13 題，已定案

@@ -22,7 +22,7 @@
 
 - 每次選一筆可推進的 input，略過等待或被擋的；每筆最多一個進行中的模型請求，同一批工具全回來才問下一次。context 依序是 system_prompt、原 user（含附件路徑）、本 input 的 assistant／tool／修補說明；依 seq 排、tool call 成對，不自動摘要、不混進別的 input。
 - 工具預覽合計最多 64 KiB（A-303）。token 估算是「messages／tools 的 JSON UTF-8 bytes 加每則訊息 32」，只是估算、不保證是 tokenizer 的上界；加上輸出預留超過 `context_tokens`，或整份 RPC 超過 256 KiB，就報 `context_over_budget`、不送。
-- 請求 ID、context、meta、usage 先固定；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；提交後由標準配備投出，後格收結果。要串流就在業務 JSON 帶 `stream_path`（[LLM 協議](../protocol/llm-work.md)）：檔案放哪、權限怎麼開、要不要盯著它，由 agent 決定，aos 不叫醒。目標不是 node 時，投件那一步報錯、不重試（[B-624](../settled/tick.md)）。
+- 請求 ID、context、meta、usage 先固定；`llm.chat` 的 params 是 argv 以 `aos llm chat` 開頭的 inst，stdin 指業務 JSON，送設定的 `llm.target_node`；提交後由標準配備投出，後格收結果。要串流就在業務 JSON 帶 `stream_path`（[LLM 協議](../protocol/llm-work.md)）：檔案放哪、權限怎麼開、要不要盯著它，由 agent 決定，aos 不叫醒。目標不是 node 時，投件那一步報錯、不重試（[B-624](../settled/tick/mq.md)）。
 - 〔第十八批〕範本對每個送出的請求預設在封套設鬧鐘（[預設任務](README.md)）；預設值延後（Q26）。
 
 〔使用者方向 2026-09-29〕模型請求交 `llm.target_node` 指定的 [node 與 endpoint 池](../scheduling/llm.md) 處理，資源額度依已裝的 module；context 不另建一套資源管理。摘要若要用模型，也照[通用 tick](../settled/tick.md)派出及收結果。

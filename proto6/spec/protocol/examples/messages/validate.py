@@ -30,8 +30,8 @@ def schema_name(path):
     group, topic = path.parent.name, path.name.split('.')[0]
     if group in ('agent-tasks', 'kernel-tasks'):
         return topic
-    if group == 'node':
-        return 'node-' + topic
+    if group == 'tick':
+        return {'tasks': 'tick-tasks', 'tick-record': 'tick-record', 'inst': 'inst'}[topic]
     if group == 'ops':
         return 'ops-' + topic
     if group == 'resources':
@@ -39,8 +39,8 @@ def schema_name(path):
     if group == 'daemon':
         if topic.startswith('helper_'):
             return 'daemon-helper'
-        if topic.startswith('ctl_'):     # P-121 控制模組的請求與回應
-            return 'daemon-ctl'
+        if topic in ('ctl_request', 'ctl_reply'):     # P-121 控制模組：請求與回應分開驗
+            return 'daemon-ctl#/$defs/' + ('Request' if topic == 'ctl_request' else 'Reply')
         return {'core-config': 'daemon-core-config',     # P-120；config 是暫緩區的 P-101
                 'config': 'daemon-config', 'state': 'daemon-state',
                 'runner_report': 'daemon-runner-report',
@@ -64,17 +64,12 @@ def schema_name(path):
 def extra_errors(path, value):
     """schema 表達不了的跨欄位關係；invalid 範例只要 schema 或這裡任一處報錯就算擋下。"""
     errors = []
-    if path.parent.name == 'node' and path.name.startswith('tick-record.') and isinstance(value, dict):
+    if path.parent.name == 'tick' and path.name.startswith('tick-record.') and isinstance(value, dict):
         # B-633、P-213：stopped_after 是最後一項。（exit 只收 0 由 schema 管；任務成敗不影響整格碼。）
         tasks = value.get('tasks') or []
         if 'stopped_after' in value and (not tasks or tasks[-1].get('id') != value['stopped_after']):
             errors.append('stopped_after is not the last task')
-    if path.parent.name == 'daemon' and path.name.startswith('core-config.') and isinstance(value, dict):
-        # P-120：某一項自己沒寫、頂層也沒寫 interval_ms＝設定錯。
-        insts = value.get('insts')
-        if isinstance(insts, dict) and 'interval_ms' not in value and any(
-                isinstance(v, dict) and 'interval_ms' not in v for v in insts.values()):
-            errors.append('an inst has no interval_ms and there is no top-level default')
+    # P-120「頂層沒有 interval_ms 時每一項必填」已由 daemon-core-config 的 if／then 表達，不再另查。
     return errors
 
 
@@ -104,7 +99,11 @@ def main():
             resolver.lookup(ref)
     counts, failures = Counter(), []
     for path in sorted(EXAMPLES.rglob('*.json')):
-        validator = validators[schema_name(path)]
+        name = schema_name(path)
+        if name not in validators:     # 「schema#/指標」：只驗那份 schema 裡的某個 $defs
+            validators[name] = Draft202012Validator(
+                {'$ref': name.replace('#', '.schema.json#', 1)}, registry=registry)
+        validator = validators[name]
         value = load(path)
         errors = [e.message for e in validator.iter_errors(value)] + extra_errors(path, value)
         expected = path.name.endswith('.valid.json')

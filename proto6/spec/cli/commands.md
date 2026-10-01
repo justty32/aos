@@ -12,7 +12,7 @@
 
 | # | argv／做什麼 | 成功時 stdout | 底層與失敗 |
 |---|---|---|---|
-| 1 | `aos daemon start --config F [--create-cgroup]`：在前景開 daemon | `helper_pid=none`，sudo 模式為 `helper_pid=1234`；〔第十九批〕另印一行 `standard: cgroup=full` 或 `standard: cgroup=fallback` | 同 `aos daemon --config F`；2 設定錯、125 初始化／收尾失敗（含 Python 低於 3.9、明寫 `cgroup_root` 或 `--create-cgroup` 卻準備不好）。〔使用者方向 2026-09-30，第十九批，推翻「沒有 cgroup v2 就拒絕啟動」〕**拿不到 cgroup v2 子樹不再拒絕**：照常啟動、開格，印 `cgroup=fallback` 並在 stderr 警告，標準配備改走備援（[B-605](../settled/deferred/daemon/cgroup.md)、[B-631](../settled/tick.md)）；不問 y／n。想走完整路、又不能用 sudo，首推 `systemd-run --user --scope -p Delegate=yes aos daemon --config F`（檢查步驟見 B-605）。`--create-cgroup`：子樹不在時 daemon 自己建，見 B-605。Ctrl-C／SIGTERM 正常停機、存 state.json 後回 0；走排空還是立即停看設定 `stop_mode`（[B-604](../settled/deferred/daemon/lifecycle.md)）。 |
+| 1 | `aos daemon start --config F [--create-cgroup]`：在前景開 daemon | `helper_pid=none`，sudo 模式為 `helper_pid=1234`；〔第十九批〕另印一行 `standard: cgroup=full` 或 `standard: cgroup=fallback` | 同 `aos daemon --config F`；2 設定錯、125 初始化／收尾失敗（含 Python 低於 3.9、明寫 `cgroup_root` 或 `--create-cgroup` 卻準備不好）。〔使用者方向 2026-09-30，第十九批，推翻「沒有 cgroup v2 就拒絕啟動」〕**拿不到 cgroup v2 子樹不再拒絕**：照常啟動、開格，印 `cgroup=fallback` 並在 stderr 警告，標準配備改走備援（[B-605](../settled/deferred/daemon/cgroup.md)、[B-631](../settled/tick/cg.md)）；不問 y／n。想走完整路、又不能用 sudo，首推 `systemd-run --user --scope -p Delegate=yes aos daemon --config F`（檢查步驟見 B-605）。`--create-cgroup`：子樹不在時 daemon 自己建，見 B-605。Ctrl-C／SIGTERM 正常停機、存 state.json 後回 0；走排空還是立即停看設定 `stop_mode`（[B-604](../settled/deferred/daemon/lifecycle.md)）。 |
 | 2 | `aos daemon info --socket S [--json]`：查本次啟動 ID | `boot_id=…` | IPC `daemon.info`；IPC。每次重開換 ID。 |
 | 3 | `aos daemon attention ls --socket S [--source N] [--status open\|done] [--json]`：列 daemon 自己的事項 | 來源、ID、原因、說明；JSON 每頁 RpcResponse | IPC `daemon.attention.ls` 分頁；IPC。 |
 | 4 | `aos daemon attention show N ID --socket S [--json]`：看 daemon 事項 | 內容、建議處理、open／done | IPC `daemon.attention.show`；IPC。 |
@@ -28,11 +28,11 @@ sudo 啟動後降為 common_user（預設 SUDO_UID）；helper 的角色與動�
 
 ### node：建資料夾、管開格、讀證據
 
-[布局、設定與鎖](../settled/protocol/node.md)／[登記與查詢](../settled/protocol/daemon/README.md)。
+[布局、設定與鎖](../settled/protocol/tick.md)／[登記與查詢](../settled/protocol/daemon/README.md)。
 
 | # | argv／做什麼 | 成功時 stdout | 底層與失敗 |
 |---|---|---|---|
-| 6 | `aos node new N [--tasks F \| --template kernel\|agent] [--socket S] [--agent-config F]`：建立 git node | `created N; initial_commit=…; tasks=<項數>` | 建檔、git init／初始 commit，P-210／715／814；2 產物無效或目標已存在、125 前置、1 建立／提交失敗。建在哪就掛在哪一層下面：預設上層是資料夾往上最近一個有 tick 的資料夾（[B-628](../settled/tick.md)），所以建在別的 node 資料夾之下就是它的下層。kernel 的 `--socket` 可省，省略時 kernel 執行時讀環境變數 `AOS_DAEMON_SOCKET`（[P-801](../protocol/kernel-tasks.md)）；agent 必給 agent-config。沒有 git 時略過初始 commit（[B-632](../settled/tick.md)）；〔使用者方向 2026-10-01〕`--user` 拿掉（inst 與任務都沒有 `user`，[B-620](../settled/tick.md)）。 |
+| 6 | `aos node new N [--tasks F \| --template kernel\|agent] [--socket S] [--agent-config F]`：建立 git node | `created N; initial_commit=…; tasks=<項數>` | 建檔、git init／初始 commit，P-210／715／814；2 產物無效或目標已存在、125 前置、1 建立／提交失敗。建在哪就掛在哪一層下面：預設上層是資料夾往上最近一個有 tick 的資料夾（[B-628](../settled/tick.md)），所以建在別的 node 資料夾之下就是它的下層。kernel 的 `--socket` 可省，省略時 kernel 執行時讀環境變數 `AOS_DAEMON_SOCKET`（[P-801](../protocol/kernel-tasks.md)）；agent 必給 agent-config。沒有 git 時略過初始 commit（[B-632](../settled/tick/git.md)）；〔使用者方向 2026-10-01〕`--user` 拿掉（inst 與任務都沒有 `user`，[B-620](../settled/tick.md)）。 |
 | 7 | `aos node ls [--node T ...] --socket S [--json]`：列登記與掛載行程結果 | 路徑、registered、paused、running、pending、`registration_id`、`mount`、`parent_override`、last_tick（含 `tick_seq`）；JSON 每頁 RpcResponse | 裸命令用 IPC `node.ls` 分頁；指定目標逐筆 `node.show`。IPC；部分失敗 1。〔第十七批〕分頁中 daemon 重開（boot_id 變了）回 1、stderr 提示重查，不自動重列、不撤回已印的頁。 |
 | 8 | `aos node show T --socket S [--json]`：看登記及最近一格 | owner、父、開關、實際 cgroup、`registration_id`、〔第十九批〕`mount`（是不是掛載行程，取代原 `once`）、`parent_override`（上層是不是登記覆蓋出來的）、last_tick（含 `tick_seq`） | IPC `node.show`；IPC。有幾個欄位的意思見 [P-106](../settled/deferred/protocol/daemon/registration.md)；掛載行程沒有 `identity_grant`、`tick_seq` 固定 1。另看業務摘要用下一條。 |
 | 9 | `aos node summary N [--json]`：看 node 自報進度 | status、ready、due、觀測時間；JSON msg-summary | 讀 `.aos/summary/summary.json`，僅摘要權讀同 commit 的 published.json；查詢。 |
@@ -46,9 +46,9 @@ sudo 啟動後降為 common_user（預設 SUDO_UID）；helper 的角色與動�
 | 17 | `aos node tick N --socket S [--wait 秒] [--json]`：請 daemon 立刻跑一格，等它跑完（不想經 daemon 也可以直接跑 `aos-tick`） | `tick completed N; tick_seq=…; exit_code=…`；JSON 最後的 node.show 回應 | 〔使用者方向 2026-09-30，第十八批〕IPC 送 `node.wake`，以 wake 回應裡的 `registration_id` 與 `tick_seq` 為起點，再輪詢 `node.show`，直到 `registration_id`（在回應最上層）相同、`last_tick.tick_seq` 比起點大且 `last_tick.outcome` 不是 `running`，判定以 [B-607](../settled/deferred/daemon/registration.md) 為準；IPC。`registration_id` 變了表示舊登記已結束（解除、換父或 daemon 重啟），不再等、回 1 並提示重查。wait 預設 300 秒，逾時回 101（那格可能還在跑，別重下）。新的一格 exit_code 非 0、launch_failed 或 unknown 回 1。paused 時 wake 只記 pending，CLI 不等、回 1 並提示先 resume。〔使用者方向 2026-09-30，第十九批，撤第十八批「不在框就拒跑」〕**人手也可以直接打 `aos-tick --node N` 跑一格，風險自負**（[B-627](../settled/tick.md)）：照常做完，不看自己在哪個 cgroup，只是沒有通道（用不到 once 與通道傳訊），stderr 印一行 `standard: cgroup=… git=…`；同一資料夾 daemon 正在跑時拿不到鎖、回 75。要經 daemon 跑並等格次，才用本列。 |
 | 18 | `aos node log N [--all] [--limit M]`：看提交歷史 | OID、時間、主旨 | 唯讀 git log；查詢。預設 20 筆 tick 自己的提交（`aos-tick group …` 與回 -32601 的 `aos-tick unclaimed`），--all 另含維護提交（設定安裝、成員、resume 採用等）；一格可零筆或多筆。 |
 | 19 | `aos node receipt R ID [--json]`：查已提交的 RPC 回應 | method、status／exit；JSON RpcResponse | 固定 commit 讀 `state/messages/responses/ID.json` 並核對原請求；查詢。待回、RPC error 或指令失敗回 1；僅在 responses/ 則說尚未消費。 |
-| 58 | `aos node check [N] [--json]`：只查標準配備走哪條路，不取鎖、不跑任務 | 每塊一行 `<元件>=full\|fallback`，缺的另印 `missing=<項目>`；JSON 每塊一個物件 | `aos-tick --node N --check`（N 預設 cwd）；0 全掛（含走備援）、1 沒全掛、2 用法錯。〔使用者方向 2026-09-30，第十九批；指令名為建議預設〕檢查什麼見 [B-630](../settled/tick.md)，不需要 socket。 |
+| 58 | `aos node check [N] [--json]`：只查標準配備走哪條路，不取鎖、不跑任務 | 每塊一行 `<元件>=full\|fallback`，缺的另印 `missing=<項目>`；JSON 每塊一個物件 | `aos-tick --node N --check`（N 預設 cwd）；0 全掛（含走備援）、1 沒全掛、2 用法錯。〔使用者方向 2026-09-30，第十九批；指令名為建議預設〕檢查什麼見 [B-630](../settled/tick/git.md)，不需要 socket。 |
 
-目標是資料夾：找 `.aos/inst.json`，再找 inst.json；檔案直接讀。布局有 `.aos/{inst.json,tasks.json,jobs/,summary/,outbox/,attention/,alarms/,runner-stderr.log}`、requests/、responses/、work/、public/、config/、state/，完整清單以 [P-200](../settled/protocol/node.md) 為準。任務表格式（`methods`、`user` 都當陌生鍵）見 [P-202](../settled/protocol/node.md)，順序與任務種類見 [B-620](../settled/tick.md)。
+目標是資料夾：找 `.aos/inst.json`，再找 inst.json；檔案直接讀。布局有 `.aos/{inst.json,tasks.json,jobs/,summary/,outbox/,attention/,alarms/,runner-stderr.log}`、requests/、responses/、work/、public/、config/、state/，完整清單以 [P-200](../settled/protocol/tick.md) 為準。任務表格式（`methods`、`user` 都當陌生鍵）見 [P-202](../settled/protocol/tick.md)，順序與任務種類見 [B-620](../settled/tick.md)。
 
 pause/resume 是開關，wake 是現在跑一格；人手要跑一格，用第 17 列經 daemon 等格次，或直接跑 `aos-tick`（風險自負，沒有通道，[B-627](../settled/tick.md)）。last_tick.completed 不等於業務成功，launch_failed 未啟動、unknown 證據不足。哪些事寫進 node 的 `.aos/attention/`、哪些是 daemon 自己的事項、掛載行程單檔未啟動的 `<inst檔名>.err`，見 [S-405](../scheduling/operations.md)；出事時從哪裡查起見[除錯指南](debugging.md)。
 
@@ -97,7 +97,7 @@ schedule 按 ready_seq 選成員，補查間隔預設 60 秒、可調（[P-801](
 
 say 持 R 鎖提交原件／outbox 後投 N，不 wake；accepted 只是接件。回話用新 ID 的 agent.say，payload 多帶可省的 in_reply_to 指原 ID，一律收進 history；帶 in_reply_to 的只記錄、不觸發 LLM（[A-201](../agent/input.md)）。say --wait 讀 target 本地已提交 replies，以 input_id/final 判完成；只有投件權仍可 say，不能保證能等 final。failed final 也回 0，表示已收到。
 
-listen 看本地 assistant／工具及帶 in_reply_to 的回話：本地依 input_id、收到的回話依 in_reply_to 分組；有 git 時每 200 ms 看新 commit；〔第十九批，[B-632](../settled/tick.md)〕沒有 git 時改每 200 ms 看目前檔案與完成紀錄有沒有新增，不保證一致快照，follow flush，工具顯示沿 [proto5](../../../proto5/spec/aos-agent/cli-listen.md)。讀哪一份 history 看同一份（有 git 時同一 commit）的任務表由哪項任務宣告 `agent.say`：agent 任務讀 `state/agent/history/`，kernel 任務（例如 top 沒裝 agent 任務，收話只存 history）讀 `state/kernel/history/`（[P-713](../protocol/agent-tasks.md)）。
+listen 看本地 assistant／工具及帶 in_reply_to 的回話：本地依 input_id、收到的回話依 in_reply_to 分組；有 git 時每 200 ms 看新 commit；〔第十九批，[B-632](../settled/tick/git.md)〕沒有 git 時改每 200 ms 看目前檔案與完成紀錄有沒有新增，不保證一致快照，follow flush，工具顯示沿 [proto5](../../../proto5/spec/aos-agent/cli-listen.md)。讀哪一份 history 看同一份（有 git 時同一 commit）的任務表由哪項任務宣告 `agent.say`：agent 任務讀 `state/agent/history/`，kernel 任務（例如 top 沒裝 agent 任務，收話只存 history）讀 `state/kernel/history/`（[P-713](../protocol/agent-tasks.md)）。
 
 ### llm、attend、clean、inst
 

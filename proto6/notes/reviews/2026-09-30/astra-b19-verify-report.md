@@ -130,13 +130,13 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 
 **11. 要問 y／n，stdin 卻寫「不讀」**
 
-[proto6/spec/tick.md:121](../../../spec/settled/tick.md) 要在 stdin、stderr 都是終端機時問 y／n；[proto6/spec/protocol/node.md:70](../../../spec/settled/protocol/node.md) 卻仍規定 tick stdin 不讀。
+[proto6/spec/tick.md:121](../../../spec/settled/tick.md) 要在 stdin、stderr 都是終端機時問 y／n；[proto6/spec/protocol/node.md:70](../../../spec/settled/protocol/tick.md) 卻仍規定 tick stdin 不讀。
 
 **建議：介面表補「一般不讀，B-630 的互動確認除外」。**
 
 **12. once 舊登記說法仍殘留**
 
-[proto6/spec/protocol/node.md:33](../../../spec/settled/protocol/node.md) 還說「once 可直接登記一份 inst 檔」；[proto6/spec/daemon.md:383](../../../spec/settled/daemon.md) 已明定改成 `node.mount`，不是登記種類。
+[proto6/spec/protocol/node.md:33](../../../spec/settled/protocol/tick.md) 還說「once 可直接登記一份 inst 檔」；[proto6/spec/daemon.md:383](../../../spec/settled/daemon.md) 已明定改成 `node.mount`，不是登記種類。
 
 **建議：改成掛載目標可指定單檔 inst，引用 B-613／P-118。**其他查到的 `once:true`、`once.clear`、`once-*` 多屬歷史改名說明或刻意無效的範例，沒有算成問題。
 
@@ -170,7 +170,7 @@ tick 是帳號 A、接件任務是 B 時，兩套規則會讓 `work.cancel` 認�
 | 4 notes 設定不變保證 | 已處理 | [between-ticks-configuration.md:11](../../../notes/between-ticks-configuration.md) 已改軟性原則。 |
 | 5 共用協議入口行為 | 已處理 | P-003～006、P-008 主要流程已縮成介面或主規格引用。 |
 | 6 daemon 協議流程 | 部分 | [provision-and-runner.md:33](../../../spec/settled/deferred/protocol/daemon/provision-and-runner.md) 起仍有 helper 啟動、收尾、回收後才回覆等流程。 |
-| 7 node 協議流程 | 部分 | [protocol/node.md:134](../../../spec/settled/protocol/node.md) 起仍有完整配權與建立核對步驟。 |
+| 7 node 協議流程 | 部分 | [protocol/node.md:134](../../../spec/settled/protocol/tick.md) 起仍有完整配權與建立核對步驟。 |
 | 8 messages 投件／補投流程 | 部分 | [protocol/messages.md:78](../../../spec/protocol/messages.md) 仍有取 commit、原子發布、失敗留舊值的流程。 |
 | 9 work／LLM 流程 | 部分 | [protocol/llm-work.md:46](../../../spec/protocol/llm-work.md) 起仍有收齊回應、失敗／unknown 判定等行為。 |
 | 10 resources 政策 | 部分 | [protocol/resources.md:72](../../../spec/protocol/resources.md) 起仍有 hardlink 去重、量不到時的處置、計數器重置政策。 |

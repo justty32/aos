@@ -10,13 +10,13 @@
 |---|---|
 | 誰有通道；憑證怎麼發放、核對、作廢 | [B-612](../../daemon/channel.md) |
 | 掛行程與砍掉 | [B-613](../../daemon/channel.md) |
-| 系統訊息佇列與急件 | [B-614](../../daemon/messaging.md)；tick 那一側 [B-623、B-624](../../../tick.md) |
+| 系統訊息佇列與急件 | [B-614](../../daemon/messaging.md)；tick 那一側 [B-623、B-624](../../../tick/mq.md) |
 
 封包、schema 與通用錯誤同 [P-103](startup-and-ipc.md)、[P-111](provision-and-runner.md)，一律嚴格（[C-07](../../../../contracts.md)）。
 
 ## P-117．通道變數與憑證〔使用者方向 2026-09-30，第十九批；名字與格式為建議預設〕
 
-> **部分已被取代、其餘暫緩**（2026-10-01）：`AOS_DAEMON_SOCKET` 這個名字沿用到 [P-121](../../../protocol/daemon/control.md)，意思改成控制 socket，另加 `AOS_DAEMON_INST`；憑證 `AOS_TICK_TOKEN` 已被控制模組取代（連得上 socket 就能用，不驗身分）；其餘（哪些 method 收憑證、`no_channel`、helper 那一段）暫緩，最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
+> **部分已被取代、其餘暫緩**（2026-10-01）：`AOS_DAEMON_SOCKET` 這個名字沿用到 [P-121](../../../protocol/daemon/control.md)，意思改成控制 socket，另加 `AOS_DAEMON_INST`；憑證 `AOS_TICK_TOKEN`：現行控制不使用（連得上 socket 就能用，不驗身分）；舊通道憑證暫緩，未來另定，不是永久取消〔astra 報告必修 7〕；其餘（哪些 method 收憑證、`no_channel`、helper 那一段）暫緩，最核心 daemon 第一版不做（使用者 2026-10-01）。條號保留、不重用。
 
 | 環境變數 | 值 |
 |---|---|

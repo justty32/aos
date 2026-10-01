@@ -81,7 +81,7 @@ V-01 和 P-009 已宣告主規格為正本，但「主規格有了、協議加�
 
 ### 7. node 協議仍保留 tick、git、設定修改及建立流程
 
-位置：[proto6/spec/protocol/node.md:55](../../../spec/settled/protocol/node.md)，另見同檔 61、75～79、94～104、121～141、149～158 行。
+位置：[proto6/spec/protocol/node.md:55](../../../spec/settled/protocol/tick.md)，另見同檔 61、75～79、94～104、121～141、149～158 行。
 
 仍包含：
 

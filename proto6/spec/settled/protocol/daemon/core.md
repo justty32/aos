@@ -23,6 +23,8 @@ aos-daemon --config <設定檔>
 
 JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟 inst 同一套；`$ref` 的相對檔名以設定檔所在資料夾為準），展開完才照下表讀。所以原始檔裡任何位置都可以是指示詞；下表與 [schema](../../../protocol/schemas/daemon-core-config.schema.json) 描述的是**展開後**的樣子。兩種起點的差別見 [B-640](../../daemon/core.md)。
 
+〔使用者 2026-10-01〕跟 tasks.json 頂層預設的對照（對照表正本見 [C-11](../../conventions.md)）：頂層 `cwd` **不改 daemon 自己的工作目錄**（daemon 不 chdir，只把它當 `aos-exec` 子程序的工作目錄）；相對路徑（`cwd`、inst 字面值、`exec_out_path`、`exec_err_path`、`socket`）以 daemon 啟動時的工作目錄（或 `cwd`）為起點；指示詞是**整份先展開**，不像 tasks.json 只展開到 `tasks` 那層。
+
 ```json
 {
   "cwd": "/home/u/nodes",
@@ -43,7 +45,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | 欄位 | 型別 | 意思 |
 |---|---|---|
 | `insts` | 物件，必填 | 鍵＝inst 字面值（原樣交給 `aos-exec`）；值＝這一項的設定物件（下表），`{}`＝全用頂層預設。第幾項照鍵的順序從 0 數 |
-| `cwd` | 字串，可省 | 起點。省略＝daemon 啟動時的工作目錄；相對的也以那裡為準 |
+| `cwd` | 字串，可省 | 起點，只用作 `aos-exec` 子程序的工作目錄與相對路徑的起點，不改 daemon 自己的工作目錄。省略＝daemon 啟動時的工作目錄；相對的也以那裡為準 |
 | `interval_ms` | 非負整數毫秒，可省 | 各項的預設週期 |
 | `stop_on_nonzero` | 布林，可省 | 各項的預設；省略＝false |
 | `exec_out_path` | 字串，可省 | `aos-exec` 的 stdout 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 這幾個字換成這一項的位置（規則見 [B-640](../../daemon/core.md)「輸出」）。省略＝丟掉（`/dev/null`）；寫 `/dev/stdout` 接回 daemon 自己的 stdout |
@@ -58,11 +60,11 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | `stop_on_nonzero` | 布林，可省 | 蓋過頂層 |
 
 - 不認得的欄位（頂層、每一項、`modules` 裡）一律忽略（持久檔，[C-07](../../../contracts.md)）。daemon 不另外印出不認得的欄位。
-- **某一項自己沒寫、頂層也沒寫 `interval_ms`＝設定錯**。這條跨欄位規則 schema 表達不了，由程式檢查；範例驗證另在 `validate.py` 補查。
+- **某一項自己沒寫、頂層也沒寫 `interval_ms`＝設定錯**。〔astra 報告設計 3〕schema 用條件規則表達（頂層沒有 `interval_ms` 時，`insts` 每一項都必填），直接拿 schema 驗的工具也擋得到；程式自己的檢查照留（錯誤訊息見下面「daemon 自己的 stderr」）。
 - 其他型別錯（例如 `insts` 不是物件、某一項的值不是物件、`control` 缺 `socket`）照「POC 默認一切正常」不另外檢查，出事時程式自然丟錯、回 1。
 - 舊設計的設定檔（`version`、`socket_path`、`roots`……，`daemon-config.schema.json`）屬[暫緩區 P-101](../../deferred/protocol/daemon/startup-and-ipc.md)，跟這份不相容。
 
-範例：[最小](../../../protocol/examples/daemon/core-config.minimal.valid.json)、[每項蓋過頂層、掛控制模組、帶不認得的模組鍵](../../../protocol/examples/daemon/core-config.full.valid.json)；反例：[`insts` 寫成陣列（舊寫法）](../../../protocol/examples/daemon/core-config.insts-array.invalid.json)、[頂層與那一項都沒有 `interval_ms`](../../../protocol/examples/daemon/core-config.no-interval.invalid.json)、[`control` 缺 `socket`](../../../protocol/examples/daemon/core-config.control-no-socket.invalid.json)。
+範例：[最小](../../../protocol/examples/daemon/core-config.minimal.valid.json)、[每項蓋過頂層、掛控制模組、帶不認得的模組鍵](../../../protocol/examples/daemon/core-config.full.valid.json)；反例：[`insts` 寫成陣列（舊寫法）](../../../protocol/examples/daemon/core-config.insts-array.invalid.json)、[頂層與那一項都沒有 `interval_ms`](../../../protocol/examples/daemon/core-config.no-interval.invalid.json)、[只有一項且是 `{}`、頂層沒有 `interval_ms`](../../../protocol/examples/daemon/core-config.inst-no-interval.invalid.json)〔astra 報告設計 3〕、[`control` 缺 `socket`](../../../protocol/examples/daemon/core-config.control-no-socket.invalid.json)。
 
 ### stdout
 
@@ -71,7 +73,7 @@ JSON 檔。**整份先經 aos 指示詞展開**（`$ref`、`$fmt`、`$env`，跟
 | 什麼時候 | 內容 |
 |---|---|
 | 一次 `aos-exec` 結束 | `inst=<inst 字面值> exit=<碼> ms=<毫秒>`；被訊號 N 殺掉時 `<碼>` 是 128+N |
-| 這一項因 `stop_on_nonzero` 停掉 | `inst=<inst 字面值> stopped`（緊接在上一行後） |
+| 這一項因 `stop_on_nonzero` 停掉 | `inst=<inst 字面值> stopped`：在該次 `exit` 行之後另印一行，中間可能穿插其他項的行〔astra 報告必修 8〕 |
 | 控制模組收到 `pause`／`resume` | `inst=<inst 字面值> paused`、`inst=<inst 字面值> resumed`（[P-121](control.md)） |
 
 ```text

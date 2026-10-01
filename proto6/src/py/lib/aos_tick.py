@@ -2,7 +2,7 @@
 
 一格的順序（B-620「一格怎麼走」，POC 版）：
 
-    認工作資料夾與任務表（目標是資料夾要有 .aos/tasks.json；是檔就拿它當表）→ 取鎖 → 看擋板檔 → 讀表
+    認工作資料夾與任務表（目標要是資料夾、底下要有 .aos/tasks.json）→ 取鎖 → 看擋板檔 → 讀表
     → 換紀錄 → 刪停格檔 → 照表跑（每項後寫紀錄、查停格檔）→ 回結束碼
 
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
@@ -13,7 +13,7 @@ aos_tick_table.py、跑單項在 aos_tick_run.py。
 
 - 0：照表跑完（不管任務成敗、回幾）；看到停格檔、剩下不跑；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
   stderr `busy:`）；有擋板檔（stderr `blocked:`）。後兩種不開格（不寫紀錄、不加 seq）。
-- 1：tick 自己出錯——argv 用法錯、目標指的東西不存在、資料夾底下沒有 .aos/tasks.json、
+- 1：tick 自己出錯——argv 用法錯（含目標給的是檔）、目標指的東西不存在、資料夾底下沒有 .aos/tasks.json、
   任務表不合極簡檢查（aos_tick_table.check_table，stderr `bad_table:`；在換紀錄之前，不算開過一格）；tick 自用的檔讀不到／寫不進／
   格式壞就讓 Python 自然丟錯（traceback 進 stderr、回 1），不分發生時機、不補救。
 
@@ -27,8 +27,10 @@ stderr 只印 tick 自己的 `代碼: 說明` 行（或 traceback），任務的
 不回 75、鎖 fd 不傳給任務、沒有 `AOS_TICK_LOCK_FD`；任務逾時、tick 被殺時清孩子不做（留給 daemon 段）。
 
 〔使用者方向 2026-10-01，待統一更新 spec〕目標怎麼認（notes/verdicts/11 篇末）：
-省略用 `./`；相對路徑轉絕對；資料夾要有 `.aos/tasks.json`（跟 inst.json 無關）；
-是檔就拿這個檔當這一格的任務表、它所在的資料夾當工作資料夾（檔在 `.aos/` 裡時取 `.aos` 的上一層）。
+省略用 `./`；相對路徑轉絕對；資料夾要有 `.aos/tasks.json`（跟 inst.json 無關）。
+〔使用者 2026-10-01 撤回〕原本「目標是檔就拿這個檔當這一格的任務表、它所在的資料夾當工作資料夾
+（檔在 `.aos/` 裡時取 `.aos` 的上一層）」拿掉：目標只能是資料夾，任務表只有 `<目標>/<狀態資料夾>/tasks.json` 一個位置；
+給的是檔算用法錯（stderr `usage:`、回 1）。
 
 〔使用者方向 2026-10-01，待統一更新 spec〕狀態資料夾的名字照環境變數 `AOS_DIRNAME`（沒設＝`.aos`；
 空字串＝不用子資料夾，狀態檔直接在工作資料夾下；含 `/`、是 `.`、`..` 算用法錯回 1）。本檔與 aos_tick_record／aos_tick_table 說的 `.aos` 都是這個名字。
@@ -53,7 +55,7 @@ from aos_tick_record import Record
 
 __all__ = ["main", "run_tick", "resolve_target"]
 
-USAGE = "用法：aos-tick [<目標>]（目標＝資料夾或任務表檔；留空＝./）"
+USAGE = "用法：aos-tick [<目標>]（目標要是資料夾，任務表在 <目標>/.aos/tasks.json；留空＝./）"
 EXIT_OK, EXIT_ERROR = 0, 1     # aos 結束碼慣例：0＝預料之中（含正常中斷）、1＝通用錯誤
 EXIT_USAGE = EXIT_ERROR          # 慣例：argv 用法錯也算通用錯誤
 
@@ -69,7 +71,7 @@ def say(code, msg):
 
 
 def main(argv=None):
-    """P-203 argv：`aos-tick [<目標>]`，目標是位置參數（跟 aos-exec 一樣，使用者 2026-10-01）：資料夾或任務表檔，留空＝`./`。
+    """P-203 argv：`aos-tick [<目標>]`，目標是位置參數（跟 aos-exec 一樣，使用者 2026-10-01）：資料夾，留空＝`./`。
     用法錯回 1（aos 結束碼慣例）：任何 `-` 開頭的旗標（`-h`／`--help` 除外）、多於一個目標。
     `--firstdo-fsync` POC 先不做（使用者方向 2026-10-01），給了算用法錯。"""
     args = sys.argv[1:] if argv is None else list(argv)
@@ -97,12 +99,12 @@ def resolve_target(arg):
     回 (工作資料夾, 這一格的任務表)，都是絕對路徑；不合法回 None。
 
     - 省略目標：用 `./`。相對路徑一律轉成絕對（不往上層找）。
-    - 資料夾：要有 `.aos/tasks.json`，表就是它；不看 `.aos/inst.json`。
-    - 檔：這個檔就是這一格的表（跟資料夾模式同一套極簡檢查，見 aos_tick_table.check_table）；它所在的資料夾當工作資料夾，
-      但那個資料夾若叫 `.aos`，取它的上一層（`aos-tick yyy/.aos/tasks.json` 跟 `aos-tick yyy` 一樣）。
-    - 上面的 `.aos` 都是 aos_dirname.name()（環境變數 `AOS_DIRNAME`，預設 `.aos`）。
-      設成空字串時狀態檔直接在工作資料夾下（資料夾要有 `tasks.json`），檔案模式「往上取一層」的特判不適用。
-    - 都不是（不存在）：回 None。
+    - 資料夾：要有 `.aos/tasks.json`，表就是它（沒有＝stderr `no_tasks:`）；不看 `.aos/inst.json`。
+    - 上面的 `.aos` 是 aos_dirname.name()（環境變數 `AOS_DIRNAME`，預設 `.aos`）；
+      設成空字串時狀態檔直接在工作資料夾下（資料夾要有 `tasks.json`）。
+    - 檔：〔使用者 2026-10-01 撤回「是檔就拿它當表」〕用法錯，stderr `usage:`（說明目標要是資料夾）。
+    - 不存在：stderr `no_target:`。
+    - 後三種回 None，main 回 1；什麼都不建。
     """
     path = os.path.abspath(arg if arg is not None else ".")
     if os.path.isdir(path):
@@ -111,11 +113,9 @@ def resolve_target(arg):
             say("no_tasks", "%s 底下沒有 %s" % (path, os.path.join(aos_dirname.name(), aos_tick_table.TABLE_NAME)))
             return None
         return path, table
-    if os.path.isfile(path):
-        cwd = os.path.dirname(path)
-        if aos_dirname.name() and os.path.basename(cwd) == aos_dirname.name():
-            cwd = os.path.dirname(cwd)
-        return cwd, path
+    if os.path.exists(path):
+        say("usage", "目標要是資料夾，不是檔：%s；%s" % (arg, USAGE))
+        return None
     say("no_target", "目標指的東西不存在：%s" % arg)
     return None
 
@@ -142,7 +142,7 @@ def _run_locked(cwd, table):
         return EXIT_OK             # 使用者 2026-10-01 再改：正常中斷也是 0（原 2）
 
     try:
-        items, ids = aos_tick_table.read_table(table, cwd)
+        tbl = aos_tick_table.read_table(table, cwd)     # 只解到 tasks 這層；每項內部跑到時才解
     except aos_tick_table.TableInvalid as e:
         say("bad_table", str(e))          # 使用者 2026-10-01：表壞算 tick 自己的錯，不算開過一格（紀錄、seq 都不動）
         return EXIT_ERROR
@@ -151,8 +151,8 @@ def _run_locked(cwd, table):
     record.open()
     remove_stop_file()
     stopped_after = None
-    for index, (item, task_id) in enumerate(zip(items, ids)):
-        kind, value = run_one(cwd, item, task_id, index)
+    for index, (item, task_id) in enumerate(zip(tbl.items, tbl.ids)):
+        kind, value = run_one(cwd, tbl.defaults, item, task_id, index)
         record.add_task(task_id, kind, value)       # 任務怎麼結束只記下，不影響 tick 的結束碼
         reason = read_reason(state("tick", "stop"))
         if reason is not None:
@@ -195,10 +195,11 @@ def remove_stop_file():
         os.unlink(stop)
 
 
-def run_one(cwd, item, task_id, index):
-    """B-620「跑每一項」：跑到時才展開這一項（plan 待問 3）再跑。回 (kind, value)。
-    cwd 是工作資料夾（絕對路徑），原樣給任務當 `AOS_TICK_CWD`（使用者 2026-10-01；沒有 `AOS_TICK_RECORD`）。"""
-    inst = aos_tick_table.load_inst(item, cwd)
+def run_one(cwd, defaults, item, task_id, index):
+    """B-620「跑每一項」：跑到時才合併頂層預設、展開這一項（plan 待問 3；使用者 2026-10-01 頂層預設）再跑。回 (kind, value)。
+    cwd 是工作資料夾（絕對路徑），原樣給任務當 `AOS_TICK_CWD`（使用者 2026-10-01；沒有 `AOS_TICK_RECORD`）；
+    頂層 `cwd` 只是任務的預設 cwd，不改 tick 自己的 cwd。"""
+    inst = aos_tick_table.load_inst(defaults, item, cwd)
     # id 型別不查（極簡檢查），環境變數要字串就 str()
     task_vars = {"AOS_TICK_CWD": cwd, "AOS_TASK_ID": str(task_id), "AOS_TASK_INDEX": str(index)}
     kind, value, note = aos_tick_run.run_item(inst, task_vars)

@@ -10,7 +10,7 @@
           "const": "llm.chat"
         },
         "params": {
-          "$ref": "node-inst.schema.json"
+          "$ref": "inst.schema.json"
         }
       }
     },
@@ -39,7 +39,7 @@
                           "const": "aos"
                         },
                         {
-                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                          "$ref": "inst.schema.json#/$defs/ValueDirective"
                         }
                       ]
                     },
@@ -49,7 +49,7 @@
                           "const": "llm"
                         },
                         {
-                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                          "$ref": "inst.schema.json#/$defs/ValueDirective"
                         }
                       ]
                     },
@@ -59,7 +59,7 @@
                           "const": "chat"
                         },
                         {
-                          "$ref": "node-inst.schema.json#/$defs/ValueDirective"
+                          "$ref": "inst.schema.json#/$defs/ValueDirective"
                         }
                       ]
                     }

@@ -151,14 +151,14 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 **待改的 spec 處**（統一更新時照這節改，舊文不刪就劃線或註記〔使用者方向 2026-10-01〕指向新篇）
 
-- [P-203](../../spec/settled/protocol/node.md#p-203aos-tick-與任意任務程式建議預設未拍板) 的結束碼表（0／1／2／75）與 argv 用法錯的碼：改成 aos-tick 只回 0／1（busy、擋板都 0）。
+- [P-203](../../spec/settled/protocol/tick.md#p-203aos-tick-與任意任務程式建議預設未拍板) 的結束碼表（0／1／2／75）與 argv 用法錯的碼：改成 aos-tick 只回 0／1（busy、擋板都 0）。
 - [B-620](../../spec/settled/tick.md#b-620任務註冊表照表依序跑)：擋板檔回 1 → 0、停格檔回 1 → 0、「任務表」處「沒有 `.aos/` 照 aos-exec 跑」的退路。
 - 新增的通用慣例篇：寫改版後的「0＝預料之中、非 0＝要額外處理、1＝通用錯誤、特別指定的碼另列」，不要寫成 0／1／2。
 - [B-633](../../spec/settled/tick.md#b-633每項結束碼紀錄與格數)／P-213 與 `node-tick-record` schema 的描述：「`stopped_after` 時 `exit` 必須是 1」「exit 1 時有失敗或停下」這類跨欄位規則（schema 的 `exit` enum 本來就收 0／1／2，不用改）。
 - 其他寫「整格回 0／1」或把任務失敗算成整格失敗的地方（V-03 相關場景等）。
 - ~~從 proto5 複製的 `aos-exec` 這輪不改碼，跟慣例不合處：用法錯回 2（慣例要 1，且 2 會被讀成正常中斷）；自己失敗（inst 壞、`user` 不合）回 125；子程式的碼原樣傳出（126／127、128+N 都會冒出來）。~~（改版後已改程式：用法錯 2 → 1；125／126／127 與子程式碼屬特別指定的碼，保留，見上面「aos-exec 的碼」）spec 要改的：[inst.md](../../spec/base/inst.md)「inst 目標」的「資料夾裡兩個位置都沒有＝用法錯（2）」與執行一節「runner 的用法錯誤回 2」改 1，conformance 裡寫 aos-exec「用法錯 2」的地方同。
 - spec 其他命令列（`aos node check`、`aos work trace`、kernel 工具、ops、daemon 設定錯等）也多寫「2 用法錯」、有的用 2 表「不合法」：改版後的慣例照字面是「沒特別指定的錯都 1」，這些是不是一律改 1、還是當「特別指定」保留，統一更新時逐條定（本輪只改了 aos-tick 與 aos-exec 的程式）。
-- [P-203](../../spec/settled/protocol/node.md#p-203aos-tick-與任意任務程式建議預設未拍板) 的 argv 那段與 [B-602](../../spec/settled/tick.md#b-602同一資料夾一次一格互斥鎖)「認哪個資料夾」：`--node` 改照下一節（省略用 `./`、相對轉絕對、資料夾看 `.aos/tasks.json`、給檔當任務表）；拿掉「必須絕對路徑」與「`.aos/inst.json`／`inst.json` 正規化成資料夾」。上面碼表「`--node` 底下沒有 `.aos/inst.json`」也照下一節改成 `.aos/tasks.json`。
+- [P-203](../../spec/settled/protocol/tick.md#p-203aos-tick-與任意任務程式建議預設未拍板) 的 argv 那段與 [B-602](../../spec/settled/tick.md#b-602同一資料夾一次一格互斥鎖)「認哪個資料夾」：`--node` 改照下一節（省略用 `./`、相對轉絕對、資料夾看 `.aos/tasks.json`、給檔當任務表）；拿掉「必須絕對路徑」與「`.aos/inst.json`／`inst.json` 正規化成資料夾」。上面碼表「`--node` 底下沒有 `.aos/inst.json`」也照下一節改成 `.aos/tasks.json`。
 
 <a id="aos-tick---node-怎麼認待統一更新-spec"></a>
 
@@ -196,7 +196,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 **待改的 spec 處**（統一更新時照這節改）
 
-- [P-202](../../spec/settled/protocol/node.md#p-202任務註冊表建議預設未拍板) 的欄位表與 `node-tasks` schema 的 `required`：`kind` 改不必填；`id` 不再是核心必查（schema 是否仍列必填，統一更新時定）；`methods` 與其「同一項不重複」檢查刪掉。
+- [P-202](../../spec/settled/protocol/tick.md#p-202任務註冊表建議預設未拍板) 的欄位表與 `node-tasks` schema 的 `required`：`kind` 改不必填；`id` 不再是核心必查（schema 是否仍列必填，統一更新時定）；`methods` 與其「同一項不重複」檢查刪掉。
 - [B-620](../../spec/settled/tick.md#b-620任務註冊表照表依序跑)「讀表與誰驗什麼」：核心只做上面的極簡檢查，不過回 1。
 - [B-633](../../spec/settled/tick.md#b-633每項結束碼紀錄與格數)／P-213 與 `node-tick-record` schema：`id` 的說明補「任務表沒寫 `id` 時是位置字串」；上面「任務環境變數命名」那條的 `AOS_TASK_ID` 同。
 
@@ -247,7 +247,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 **待改的 spec 處**
 
 - [inst.md「inst 目標」](../../spec/base/inst.md)：資料夾目標找 `.aos/inst.json` 的 `.aos` 改照 `AOS_DIRNAME`。
-- [P-203](../../spec/settled/protocol/node.md#p-203aos-tick-與任意任務程式建議預設未拍板)、P-202、P-213、B-602、B-620、B-633 等寫死 `.aos/…` 的地方：註明 `.aos` 是 `AOS_DIRNAME` 的預設值；P-203 環境變數表加 `AOS_DIRNAME`（任務照常繼承）。
+- [P-203](../../spec/settled/protocol/tick.md#p-203aos-tick-與任意任務程式建議預設未拍板)、P-202、P-213、B-602、B-620、B-633 等寫死 `.aos/…` 的地方：註明 `.aos` 是 `AOS_DIRNAME` 的預設值；P-203 環境變數表加 `AOS_DIRNAME`（任務照常繼承）。
 - 新增一處通用規定（跟「aos 結束碼慣例」同篇或相鄰）：`AOS_DIRNAME` 的意思、三態（沒設＝`.aos`、空字串＝資料夾本身、其他＝名字）、不合法的值，以及「aos 所有程式都照它」。
 - [inst.md「inst 目標」](../../spec/base/inst.md) 另補：`AOS_DIRNAME` 空字串時只找 `<目標>/inst.json`。
 
@@ -341,7 +341,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 〔使用者方向 2026-10-01〕記錄用，還沒排進任何一段。
 
-- **叫醒、暫停、狀態一覽放進 daemon 核心，但不在第一版**；做的時候用檔觸發、不開 socket。
+- ~~**叫醒、暫停、狀態一覽放進 daemon 核心，但不在第一版**；做的時候用檔觸發、不開 socket。~~ 已被控制模組（[B-641](../../spec/settled/daemon/control.md)，socket 版）取代〔使用者 2026-10-01；astra 報告「要使用者裁定」第 2 點〕。
 - **node 由 daemon 掃根資料夾自動找**：有 `tasks.json` 的資料夾就是 node，不用一個個寫進清單。
 - **上下層只照資料夾包含關係算**（資料夾在誰裡面，誰就是上層）。
 - **node 模組第一版只做兩件事**：「找 node」與「上下層＋叫醒往上傳」。訊息、cgroup、常駐行程在它之上另成模組。
@@ -353,7 +353,7 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 改了哪些篇：
 
 - **新開**：[通用慣例](../../spec/settled/conventions.md)（C-08 結束碼慣例、C-09 `AOS_DIRNAME`、C-10 環境變數總表）；[daemon/core](../../spec/settled/daemon/core.md)（B-640 最核心 daemon）、[daemon/control](../../spec/settled/daemon/control.md)（B-641 控制模組與 `aos-ctl`）；[protocol/daemon/core](../../spec/settled/protocol/daemon/core.md)（P-120）、[protocol/daemon/control](../../spec/settled/protocol/daemon/control.md)（P-121）；[名詞](../../spec/settled/terms.md) T-11；[暫緩區](../../spec/settled/deferred/README.md) 入口與 `deferred/tick.md`、`deferred/terms.md`、`deferred/protocol/daemon/README.md`。
-- **改寫**：整理區 [README](../../spec/settled/README.md)、[tick](../../spec/settled/tick.md)（B-626、B-602、B-620、B-633 照新規定，其餘各條修打架的句子）、[node 協議](../../spec/settled/protocol/node.md)（P-200～213）、名詞 T-07、T-10、[daemon 入口](../../spec/settled/daemon/README.md)、daemon 協議 P-100。
+- **改寫**：整理區 [README](../../spec/settled/README.md)、[tick](../../spec/settled/tick.md)（B-626、B-602、B-620、B-633 照新規定，其餘各條修打架的句子）、[tick 協議](../../spec/settled/protocol/tick.md)（P-200～213）、名詞 T-07、T-10、[daemon 入口](../../spec/settled/daemon/README.md)、daemon 協議 P-100。
 - **搬到暫緩區**：B-628、T-09；B-602、B-620、B-633 的部分；整套舊 daemon（B-504、B-601、B-603～615）與舊 daemon 協議（P-101～119）；B-303（helper、`aos-as`）。被新設計取代的：B-615（被 `modules` 取代）、P-101（被 P-120、P-121 取代），B-601、B-607、P-103、P-105、P-106、P-117 部分取代。
 - **區外**：[inst](../../spec/base/inst.md)（`AOS_DIRNAME`、用法錯 1、aos-exec 不認得 `user`、daemon 核心沒有 id）、[驗收入口](../../spec/conformance.md)（V-01 正本表與條號表、V-03 標暫緩並加「2026-10-01 新增場景」）、[contracts](../../spec/contracts.md) C-01 一處連結、[名詞與責任](../../spec/terms.md)、[ops](../../spec/protocol/ops.md) 一處；搬家連帶的相對連結全 repo 重算。
 - **schema／範例**：`node-tasks`（`id`、`kind` 不必填、拿掉 `methods`）、`node-tick-record`（`exit` 只收 0）；新增 `daemon-core-config`、`daemon-ctl` 與範例；`validate.py` 跟著改。
@@ -371,3 +371,23 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 - **inst 頂層 `user` 不留**：inst.md 拿掉 `user` 的定義與「先決定身分，切完才解析」整節（直接刪、不搬暫緩，記在[暫緩區撤回表](../../spec/settled/deferred/tick.md#已撤回被取代)）；任務是 inst 超集，任務表的 `user` 一併拿掉；schema、範例、P-201／P-202 等照改。寫了 `user` 就是不認得的鍵、忽略。疑點 9 結案。程式 `aos_inst` 本來就忽略，不用改。
 
 改到的地方：[B-640](../../spec/settled/daemon/core.md)、[P-120](../../spec/settled/protocol/daemon/core.md)、[P-121](../../spec/settled/protocol/daemon/control.md)、[C-07](../../spec/contracts.md)、[inst](../../spec/base/inst.md) 等；程式 `lib/aos_daemon.py`、測試 `test_daemon.py`／`test_ctl.py`；[plan m3](../../plan/m3-daemon-core.md)、[src/py README](../../src/py/README.md#aos-daemon第三段最核心-daemon)。
+
+## 2026-10-01 第二批：astra 審查修正、tick 層改名、拆篇、tasks.json 頂層預設（已寫入 spec（commit 前由我補號））
+
+〔使用者方向 2026-10-01〕處理 [astra 審查](../reviews/2026-10-01/astra-spec-sync-report.md)，加上同日幾條新裁定。使用者原話：「不用特別弄清單，就全部」（`AOS_DIRNAME` 空字串時 git 管什麼）；「好，就這個。tick執行時後他自己有自己的cwd，這個頂層key cwd不會影響tick自己的cwd，但是其相對路徑由tick的cwd開始算。」「展開指示詞的時候不整份解好，而是只解到tasks。」「daemon config file也是，最頂層cwd不影響daemon自身，相對路徑也是基於daemon的cwd。但是指示詞這塊，daemon config file是全部產開」「tasks.json頂層也應該有modules。」
+
+**這節是正本，已寫入 spec（commit 前由我補號）。**
+
+- **A. astra 必修 1～9 全修**：擋板改成「daemon 照常叫，由 tick 自己擋」，舊 daemon 才有的通道、格後清理、node 框標明只適用暫緩區、移出現行核心依賴表；恢復前驗證的舊授權流程標暫緩；新 daemon 協議入口列明不適用的舊共用條文；wake 照最後一次「沒被 skip 丟掉」的；控制請求 schema 不多禁欄位；暫緩區訊息授權統一引用 B-614；`AOS_TICK_TOKEN` 標「現行控制不使用；舊通道憑證暫緩，未來另定」；`stopped` 行可能被別項穿插；`mq-get` 排序、H-036、T-09 連結修正。
+- **B. 設計問題**：設計 3 改用 schema 的條件規則表達「頂層沒給 `interval_ms` 時每項必填」，範例腳本不再重複判定；設計 1（`aos-cg` 收尾殺到自己）記在暫緩區已知問題，不改；設計 2 因 D 結案。
+- **C. tick 層的 node 改名**：中文「工作資料夾」，英文 `tick dir`。`settled/protocol/node.md`→`settled/protocol/tick.md`（tick 協議）；schema `node-inst`→`inst`、`node-tasks`→`tick-tasks`、`node-tick-record`→`tick-record`；範例 `examples/node/`→`examples/tick/`；P-200 與系統級任務各條的 node 改工作資料夾。暫緩區的「上層 node／下層 node」與 kernel、agent 各篇的 node 不動。
+- **D. 撤回「目標給檔就當任務表」**：`aos-tick [<目標>]` 的目標只能是資料夾（沒給＝`./`），任務表只有 `<目標>/<AOS_DIRNAME>/tasks.json`；給檔＝用法錯、回 1。記進暫緩區撤回表。表只有一個位置，所以 astra 設計 2 不成立。
+- **E. `AOS_DIRNAME` 空字串時 git 管整個工作資料夾**：不列清單，使用者自己的檔也會被提交、還原（B-630、C-09）。
+- **F. 拆篇**：`settled/tick.md` 只留核心（B-626、B-602、B-620、B-633、B-627）；其餘搬到 `settled/tick/`：template（B-629）、needs（B-621）、cg（B-634、B-631）、mq（B-623、B-624）、git（B-630、B-622、B-632）、recovery（B-625），每篇開頭標狀態。條號不變。
+- **G. tasks.json 頂層預設**：頂層可放 inst 的七個欄位（`argv`、`cwd`、`envs`、`stdin`、`stdout`、`stderr`、`exit`）當每一項的預設，淺層合併、項自己寫了就整個蓋過；`_metainfo`、`id`、`kind` 不是預設。頂層 `cwd` 不改 tick 自己的 cwd，相對路徑從工作資料夾算。讀表時只把頂層七個預設欄位與 `modules`、`tasks`、每一項解一層（頂層其他鍵不解），值的內部跑到那一項、合併完才照 inst 規則展開。極簡檢查多一點：合併後要有 `argv`。
+- **G 追加：tasks.json 頂層 `modules`**：可選，比照 daemon 設定檔一個模組一個鍵；目前 tick 沒有模組，核心照收不理；不是 inst 欄位、不當預設；讀表時只解一層，內部留給模組（tick 核心不讀它，整份展開只會讓壞的模組設定害整格 `bad_table`）。
+- **跟 daemon 設定檔的對照**：兩邊頂層 `cwd` 都不影響程式自己；相對路徑起點一個是 daemon 啟動時的 cwd、一個是工作資料夾；指示詞 daemon 整份先展開、tasks.json 只到 `tasks` 這層。對照表放 C-11。
+- **H. flaky 測試**：`test_ctl.py` 的 `test_keep_schedule` 約十次錯一次，改成等第一次真的跑完再叫醒、判準放寬到 1.5 秒。只動測試。
+- **astra「要使用者裁定」**：第 1 點由 E 定；第 2 點見上面「node 模組方向」，檔觸發那句已被控制模組取代。
+
+改到的地方：[整理區 README](../../spec/settled/README.md)（檔案清單、閱讀順序、對外依賴分出「只適用舊 daemon」、疑點）、[名詞](../../spec/settled/terms.md)、[通用慣例](../../spec/settled/conventions.md)（C-09、C-10，新開 C-11）、[tick 核心](../../spec/settled/tick.md)與 [tick/ 子篇](../../spec/settled/tick/README.md)、[tick 協議](../../spec/settled/protocol/tick.md)、[daemon](../../spec/settled/daemon/README.md) 與 [daemon 協議](../../spec/settled/protocol/daemon/README.md)、[暫緩區](../../spec/settled/deferred/README.md)（撤回表、已知設計問題、舊 daemon 各篇）、[inst](../../spec/base/inst.md)、[contracts](../../spec/contracts.md) C-01、[驗收入口](../../spec/conformance.md)（條號表、V-03 場景）；schema 與範例、`validate.py`；程式 `lib/aos_tick.py`、`lib/aos_tick_table.py` 與測試。

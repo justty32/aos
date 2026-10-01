@@ -16,11 +16,11 @@
 
 〔使用者方向 2026-09-29〕LLM／工具的非同步派出與收結果依[通用 tick](../settled/tick.md)，LLM 代發依 [LLM 資源](../scheduling/llm.md)。
 
-每個 module 一項任務：讀自己的收件與已回來的結果、整理 context、驗證工具呼叫，再保存進度或回覆。請求／回應放 `.aos/outbox/`，何時投出、何時清原件依 [B-623](../settled/tick.md)、[B-624](../settled/tick.md)（Q1／Q2）。最小範本見[agent 任務表](../protocol/agent-tasks.md)，分組及失敗處理由通用 tick 決定。
+每個 module 一項任務：讀自己的收件與已回來的結果、整理 context、驗證工具呼叫，再保存進度或回覆。請求／回應放 `.aos/outbox/`，何時投出、何時清原件依 [B-623](../settled/tick/mq.md)、[B-624](../settled/tick/mq.md)（Q1／Q2）。最小範本見[agent 任務表](../protocol/agent-tasks.md)，分組及失敗處理由通用 tick 決定。
 
 〔第十八批，P-704 從協議篇搬上；第十九批補通道〕**module 每格做的事**：一項 module 就是任務表上一項任務（`agent`，`aos-agent-step`），另一項是 `aos-clean`（標準配備，到期才清）。每格：先收件（檔案與通道兩條路，[A-201](input.md)，最多處理 64 件）→ 收工具與 LLM 的結果（[A-403](tools.md)）→ 推進輸入、準備請求或回覆（[A-302](memory.md)、[A-203](input.md)）→ 記用量與摘要。module 只把請求或回應放 `.aos/outbox/`，並把已消費的原件複製進追蹤區；何時投件、刪原件由標準配備依 B-623、B-624 做。還有可推進的輸入，摘要 `ready=true`；只在等結果則 `false`。〔第十八批〕在等自己開的 once 時，`due_ms` 設成下次查看的時間（[A-401](tools.md)），其餘沒有到期事務時為 null。〔第十九批〕任務可帶自己的 `user`（[B-620](../settled/tick.md)）；agent 的預設任務都不帶，沿 node 的身分。
 
-〔使用者方向 2026-09-30，第十八批〕**agent 範本對每個送出的請求預設設鬧鐘**（待送封套的 `alarm_ms`，[P-206](../settled/protocol/node.md)），對方逾時沒處理，agent 自己會發現，不靠 aos 寫待辦。預設多久、鬧鐘和「投件當場被丟掉」對不上的地方（Q26）、鬧鐘響了之後 agent 怎麼收尾，都延後（[P-008](../protocol/README.md#p-008)）。
+〔使用者方向 2026-09-30，第十八批〕**agent 範本對每個送出的請求預設設鬧鐘**（待送封套的 `alarm_ms`，[P-206](../settled/protocol/tick.md)），對方逾時沒處理，agent 自己會發現，不靠 aos 寫待辦。預設多久、鬧鐘和「投件當場被丟掉」對不上的地方（Q26）、鬧鐘響了之後 agent 怎麼收尾，都延後（[P-008](../protocol/README.md#p-008)）。
 
 〔建議預設，未拍板〕必要狀態直接放普通檔案，例如連續無效回覆次數、尚待結果的請求、已選 context 的來源；只保存接續工作真正需要的內容。檔案隨所屬 group 生效，不另存一套相同進度。
 

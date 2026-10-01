@@ -223,7 +223,7 @@
               "$ref": "#/$defs/NodeId"
             },
             "params": {
-              "$ref": "node-inst.schema.json"
+              "$ref": "inst.schema.json"
             }
           },
           "required": [

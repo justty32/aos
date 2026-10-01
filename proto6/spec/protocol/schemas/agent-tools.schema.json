@@ -31,7 +31,7 @@
             ]
           },
           "argv": {
-            "$ref": "node-inst.schema.json#/$defs/LiteralArgv"
+            "$ref": "inst.schema.json#/$defs/LiteralArgv"
           },
           "cwd": {
             "$ref": "common.schema.json#/$defs/NodeId"

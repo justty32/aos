@@ -29,7 +29,7 @@
 |---|---|---|---|---|
 | 帳號／UID、setresuid、setgroups、initgroups | 一 node 一帳號；helper 切身分；補充群組照系統設定（[inst](../../spec/base/inst.md)） | 無 helper 模式只用一個帳號；隔離時必要 | 幾十年沒變。坑：帳號查詢走 NSS，接 LDAP／sssd 的機器查詢可能慢或斷線〔推論〕 | 不要隔離就全樹一個帳號 |
 | 檔案權限、chown | 各 node 資料夾歸自己帳號；投件目錄開寫權 | 必要 | 極穩。坑：WSL 的 `/mnt/c` 沒有 metadata，全部 777、UID 1000〔查證〕 | node 樹不能放 `/mnt/c` |
-| 共享群組、setgid 目錄 | 投件者能寫別人的 `requests/`（[P-208](../../spec/settled/protocol/node.md)） | 多帳號時必要 | 極穩 | — |
+| 共享群組、setgid 目錄 | 投件者能寫別人的 `requests/`（[P-208](../../spec/settled/protocol/tick.md)） | 多帳號時必要 | 極穩 | — |
 | POSIX ACL | spec 寫「共享群組**或** ACL」，給部署者選 | 可選（初步清單列成必要，其實不是） | ext4／xfs／btrfs／tmpfs 預設都支援；本機 `setfacl` 實測可用〔查證〕。WSL `/mnt/c` 不支援〔推論〕 | 只用群組 |
 | 磁碟 project quota | 磁碟 module 的「計量歸屬」，只記帳不設上限（[P-107](../../spec/settled/deferred/protocol/daemon/provision-and-runner.md)） | 可選 | **最麻煩的一項**：ext4 要 `project` feature＋`prjquota` 掛載，根分割區開不了；兩台機器根目錄都是 `noquota`；WSL 要另做 loop 映像〔查證〕。擁有者可以用 `chattr -p` 自己改 project ID 逃掉記帳（notes-review 已提） | 改成掃目錄算用量（見第四節） |
 | mount（tmpfs） | helper 在授權空目錄掛 tmpfs | 可選 | 要 root。WSL 的 `/tmp` 本來就不是 tmpfs〔查證〕 | 拿掉，暫存就在磁碟 |
@@ -51,7 +51,7 @@
 
 | 項目 | 拿來做什麼 | 必要？ | 穩定度與坑 | 退路 |
 |---|---|---|---|---|
-| flock | 每個 node 一把 tick 鎖（[P-203](../../spec/settled/protocol/node.md)） | 必要 | 本機檔案系統上極穩。NFS、9p、drvfs 上語意不可靠〔推論〕 | node 樹只放本機檔案系統 |
+| flock | 每個 node 一把 tick 鎖（[P-203](../../spec/settled/protocol/tick.md)） | 必要 | 本機檔案系統上極穩。NFS、9p、drvfs 上語意不可靠〔推論〕 | node 樹只放本機檔案系統 |
 | rename＋fsync（含目錄） | 完整發布收件 | 必要 | 極穩。**坑：spec 要「不覆蓋已有檔」，普通 rename 會覆蓋**，見第四節 | 用 link 或 renameat2 |
 | inotify | 只當門鈴，可遺失 | 可選 | 穩。坑：每帳號 watch 上限（本機 524288、instance 1024〔查證〕，舊 kernel 預設 8192〔推論〕）；`/mnt/c` 沒有〔查證〕 | 不用，靠 IPC 叫醒＋定期補查 |
 | network namespace | 只當網路用量的量測範圍 | 可選 | 首版不限速 | 不裝網路 module |
@@ -130,7 +130,7 @@
 | 本機 POSIX 檔案系統 | flock、rename、inotify、UID、ACL 全部假設 | node 樹放 NFS、9p、`/mnt/c` 會一起出問題；spec 只說 Windows 掛載「不在保護承諾內」，沒說**不准放** |
 | 最低 kernel 版本 | pidfd 5.3、CLONE_INTO_CGROUP 5.7、cgroup.kill 5.14〔推論〕 | 實際下限約 5.14。RHEL 9、Ubuntu 22.04 以上、WSL 6.6 都過〔WSL 查證，其餘推論〕 |
 | 最低 Python 版本 | `pidfd_open`、`send_fds` 要 3.9〔推論〕 | spec 只寫「Python 3」 |
-| git 作者設定 | [P-205](../../spec/settled/protocol/node.md)「作者用 repo 設定」；CLI 走查要求「git 作者已設」 | helper 建的帳號「不建 home」，就沒有 `~/.gitconfig`，第一次 commit 就失敗。要在 repo 內設，或用環境變數帶 |
+| git 作者設定 | [P-205](../../spec/settled/protocol/tick.md)「作者用 repo 設定」；CLI 走查要求「git 作者已設」 | helper 建的帳號「不建 home」，就沒有 `~/.gitconfig`，第一次 commit 就失敗。要在 repo 內設，或用環境變數帶 |
 | git `safe.directory` | kernel 要「固定同一 commit 讀」成員的 repo | git 2.35.2 起，讀別的帳號擁有的 repo 會被拒（「dubious ownership」）〔推論〕。要替讀者帳號設例外 |
 | git hooks 與系統設定 | P-205「不執行 git hooks」 | `--no-verify` 擋不住所有 hook，要改 `core.hooksPath`；`/etc/gitconfig` 也能偷塞設定，可用 `GIT_CONFIG_NOSYSTEM=1` 關掉〔推論〕 |
 | 殘留的 `index.lock` | 當機時 git 正在寫 | 下一格 commit 直接失敗；恢復流程要能安全清掉 |

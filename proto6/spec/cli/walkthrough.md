@@ -4,7 +4,7 @@
 
 ## H-036．七步走到底〔使用者方向；驗收腳本為工程預設〕
 
-前置：非 root、proto6、git 2.36 以上、Python 3.9 以上、Linux kernel 5.14 以上、git 作者已設，DEMO 尚不存在；〔使用者方向 2026-09-30，第十九批，撤 sudo 或現成子樹的做法〕**不用 sudo**：用使用者層 systemd 的委派子樹開 daemon，也就是把 daemon 包在 `systemd-run --user --scope -p Delegate=yes` 裡（WSL 要先在 `/etc/wsl.conf` 設 `[boot]` 的 `systemd=true`；子樹規則與五步檢查以 [B-605](../settled/deferred/daemon/cgroup.md) 為準）。設定不寫 `cgroup_root`，daemon 就把這個 scope 當子樹，啟動會印 `standard: cgroup=full`；每個任務一層框的開、殺、刪見 [B-202](../base/execution.md)。沒有 systemd 的機器也能走完本走查，只是 daemon 印 `standard: cgroup=fallback`，標準配備改走備援（[B-631](../settled/tick.md)），走查裡看到 `cgroup=full` 的地方會是 `fallback`，也沒有框的總量上限。A 跑 daemon，B 操作，C 跑 HTTP；都設 DEMO、S。註解為預期輸出。
+前置：非 root、proto6、git 2.36 以上、Python 3.9 以上、Linux kernel 5.14 以上、git 作者已設，DEMO 尚不存在；〔使用者方向 2026-09-30，第十九批，撤 sudo 或現成子樹的做法〕**不用 sudo**：用使用者層 systemd 的委派子樹開 daemon，也就是把 daemon 包在 `systemd-run --user --scope -p Delegate=yes` 裡（WSL 要先在 `/etc/wsl.conf` 設 `[boot]` 的 `systemd=true`；子樹規則與五步檢查以 [B-605](../settled/deferred/daemon/cgroup.md) 為準）。設定不寫 `cgroup_root`，daemon 就把這個 scope 當子樹，啟動會印 `standard: cgroup=full`；每個任務一層框的開、殺、刪見 [B-202](../base/execution.md)。沒有 systemd 的機器也能走完本走查，只是 daemon 印 `standard: cgroup=fallback`，標準配備改走備援（[B-631](../settled/tick/cg.md)），走查裡看到 `cgroup=full` 的地方會是 `fallback`，也沒有框的總量上限。A 跑 daemon，B 操作，C 跑 HTTP；都設 DEMO、S。註解為預期輸出。
 
 ### 1. 寫 daemon 設定，先開一次空服務
 

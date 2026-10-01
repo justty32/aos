@@ -1,0 +1,14 @@
+{
+  "_metainfo": {
+    "_type": "aos-tasks",
+    "_version": 1
+  },
+  "cwd": "work",
+  "envs": {"LANG": "C.UTF-8"},
+  "stdout": {"$opt": "append", "$val": "logs/tasks.log"},
+  "tasks": [
+    {"id": "build", "argv": ["make"]},
+    {"id": "report", "argv": ["./report.sh"], "cwd": "reports"},
+    {"$ref": "tasks.d/clean.json"}
+  ]
+}
