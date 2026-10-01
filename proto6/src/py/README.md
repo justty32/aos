@@ -47,13 +47,25 @@ cat /tmp/n/.aos/tick/current.json                     # {"version":1,"seq":1,...
 | 檔 | 內容 |
 |---|---|
 | `bin/aos-tick` | 命令列薄殼（`.gitignore` 擋 `bin/`，`git add -f` 進來的） |
-| `lib/aos_tick.py` | argv、認資料夾、擋板、停格檔、整格順序 `run_tick()` |
+| `lib/aos_tick.py` | argv、認資料夾（要有 `.aos/inst.json`）、擋板、停格檔、整格順序 `run_tick()` |
 | `lib/aos_tick_record.py` | 結束碼紀錄 `current.json`／`last.json`：開格換檔、每項重寫 |
 | `lib/aos_tick_table.py` | 讀 `.aos/tasks.json`、每項的 `id`、跑到時展開成 inst（拿掉 `user`） |
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、四個 `AOS_*`、分 exit／signal |
-| `tests/test_tick.py` | plan 各步的驗收，一個類別一步 |
+| `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
 
-**POC 默認一切正常（使用者 2026-10-01，見 [plan 第一段待問 8](../../plan/m1-tick-core.md#待問)）**：不取鎖（不回 75、沒有 `AOS_TICK_LOCK_FD`）、不驗表（不回 2、沒有 `config_invalid`）、不看 `user`（不回 125、沒有 `user_mismatch`）、不判上下層、不做 `--firstdo-fsync`、不處理紀錄讀不懂或寫不進。出事就讓 Python 自然丟錯（traceback、回 1）。整格只回 0／1；argv 用法錯回 2。
+**POC 默認一切正常（使用者 2026-10-01，見 [plan 第一段待問 8](../../plan/m1-tick-core.md#待問)）**：不取鎖（不回 75、沒有 `AOS_TICK_LOCK_FD`）、不驗表（不回 2、沒有 `config_invalid`）、不看 `user`（不回 125、沒有 `user_mismatch`）、不判上下層、不做 `--firstdo-fsync`、不處理紀錄讀不懂或寫不進。出事就讓 Python 自然丟錯（traceback、回 1）。~~整格只回 0／1；argv 用法錯回 2。~~（10-01 再改，見下段）
+
+**結束碼照 aos 體系慣例（使用者 2026-10-01，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)、[plan 待問 9](../../plan/m1-tick-core.md#待問)，待統一更新 spec）**：0 正常結束、1 錯誤結束、2 正常中斷。`aos-tick` 的碼只講 tick 自己：
+
+| 狀況 | 回 |
+|---|---|
+| 照表跑完（不管任務回幾、成敗） | 0 |
+| 看到停格檔 `.aos/tick/stop`，剩下不跑（不算中斷，暫定） | 0 |
+| 有擋板檔 `.aos/tick-blocked`，不開格（不寫紀錄、不加 `seq`） | 2 |
+| argv 用法錯、`--node` 不是絕對路徑／不是資料夾、`--node` 底下沒有 `.aos/inst.json`（stderr `usage:`／`no_inst:`） | 1 |
+| tick 自用檔（`tick-blocked`、`stop`、`current.json`、`last.json`、`tasks.json`）讀不到／寫不進／格式壞 | 1（自然丟錯，traceback 進 stderr） |
+
+任務回 0、1、2、125～127、被訊號殺都照實記進紀錄、照常跑下一項。紀錄收尾的 `exit` 因此只會是 0。
 
 ### review 導讀
 
@@ -82,8 +94,8 @@ plan 步驟對到哪：
 
 我自己做的判斷（spec 沒寫死、照「最小合理」做，都可以改）：
 
-- 沒有 `.aos/`：整個交給 `aos_exec.run_target` 跑這個資料夾（不寫紀錄、退出碼照 aos-exec）；連 `inst.json` 也沒有時是 aos-exec 自己的用法錯 2。見 `aos_tick.run_tick` 開頭。
-- 新增的 stderr 代碼：`usage`（argv 錯）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127）。
+- ~~沒有 `.aos/`：整個交給 `aos_exec.run_target` 跑這個資料夾（不寫紀錄、退出碼照 aos-exec）；連 `inst.json` 也沒有時是 aos-exec 自己的用法錯 2。~~（2026-10-01 作廢：退路拿掉，沒有 `.aos/inst.json` 就 stderr `no_inst:`、回 1；只看在不在，不讀它的內容。）見 `aos_tick.run_tick` 開頭。
+- 新增的 stderr 代碼：`usage`（argv 錯）、`no_inst`（沒有 `.aos/inst.json`）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127）。
 - 某項沒跑成（mkdir、cwd、重導向失敗）記 `exit:125`，跟 aos-exec 命令列一致（inst 的規定，不是帳號判定）。
 - 項目是純記憶體文件（跟 `load_obj` 一樣），所以項目裡的 `$ref:""` 指這一項自己，不是整份 tasks.json。
 - 任務的 id 用開格讀表時拿到的；跑到時只展開 inst 部分。
