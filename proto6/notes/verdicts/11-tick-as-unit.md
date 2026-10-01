@@ -289,6 +289,18 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 
 **m3 待問裁定（使用者 2026-10-01，待統一更新 spec）**：所有項都停了 daemon 照樣開著、不退出；每次印的那一行前面加印出那刻的本地時間（ISO 8601 帶時區，例如 `2026-10-01T15:04:05+08:00 id=a exit=0 ms=812`）；aos-exec 子程序的 stderr 由設定檔頂層可選 `exec_err_path` 決定往哪寫（`<inst>` 換成 inst 字面值、指檔時換成所在資料夾，接在檔尾、純文字；沒寫＝daemon 自己的 stderr；共用出口每次先加一行標頭、收齊再寫、不交錯）。細節見 [m3 待問 3～5](../../plan/m3-daemon-core.md#待問)。
 
+**m3 實作後追加裁定（使用者 2026-10-01，待統一更新 spec）**
+
+使用者原話：「關於印出來的樣子，其實不用是id，應該是inst=j/r.json這樣。id這個概念其實可以不存在於daemon核心了。」「前面1,2,3都按照建議。」「daemon config json的頂層可以加上一個key: modules。然後整份daemon config都可以用aos dirictive去解析，所以這樣就不會太過膨大。」「控制模組這塊的細節我還要再想想」；追問後：「$ref 照建議，從設定檔所在資料夾算，算完之後才讓cwd那個key被應用。」細節見 [m3 步驟 1](../../plan/m3-daemon-core.md#步驟-1讀設定檔)。
+
+- **daemon 核心沒有 id**：撤回上面「以路徑當 id」「id 就是 `inst` 字面值」；一項就是它的 `inst` 字面值（加在 `insts` 的位置）。stdout 印 `<時間> inst=<inst 字面值> exit=… ms=…`、`<時間> inst=… stopped`；stderr 標頭照舊 `index=… inst=…`。
+- **實作回報三點照建議**：stderr 標頭一律加（含 `<inst>` 個別檔）；inst 沒有資料夾部分時 `<inst>` 換成 `.`；daemon 退出後 aos-exec 寫 stderr 吃 SIGPIPE 被殺，照默認一切正常不處理。
+- **整份設定檔先經 aos 指示詞展開再讀**（跟 inst 同一套）：`$ref` 相對檔名以設定檔所在資料夾為準；展開完才套頂層 `cwd`（可以是引進來的值；相對的照舊以 daemon 啟動時的工作目錄為準），`inst` 值再以起點為準。
+- **頂層 `modules`**：可選、是物件；之後一個模組一個鍵（例如 `"modules": {"control": {...}}`）。核心只認得、不解讀內容；目前沒有任何模組。
+- **控制模組細節使用者還在想**：[m3n](../../plan/m3n-control-module.md) 暫停、待重寫。
+
+**待改的 spec 處**（追加）：P-101 的設定檔長相補 `modules` 與「整份先展開指示詞、`$ref` 以設定檔資料夾為準、展開完才套 `cwd`」；[inst.md](../../spec/base/inst.md)「登記的 id」改成「daemon 核心沒有 id」。
+
 ## node 模組方向（2026-10-01，記錄用，未排程）
 
 〔使用者方向 2026-10-01〕記錄用，還沒排進任何一段。

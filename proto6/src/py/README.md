@@ -139,7 +139,7 @@ plan 步驟對到哪：
 
 ## aos-daemon（第三段最核心 daemon）
 
-照 [plan 第三段 m3](../../plan/m3-daemon-core.md) 寫的，新寫。就是「一個叫 `aos-exec` 的 cron」：讀設定檔裡的 inst 清單，每項照自己的週期叫一次同一個 `bin/` 裡的 `aos-exec <inst 字面值>`，等它結束、stdout 印一行。沒有 socket、登記、收屍；daemon 不認得 node（node 就是一份 `argv` 寫 `aos-tick` 的 inst）。
+照 [plan 第三段 m3](../../plan/m3-daemon-core.md) 寫的，新寫。就是「一個叫 `aos-exec` 的 cron」：讀設定檔裡的 inst 清單，每項照自己的週期叫一次同一個 `bin/` 裡的 `aos-exec <inst 字面值>`，等它結束、stdout 印一行。沒有 socket、登記、收屍；daemon 不認得 node（node 就是一份 `argv` 寫 `aos-tick` 的 inst）。核心也沒有「id」這個概念（使用者 2026-10-01）：一項就是它的 `inst` 字面值，印出來也是 `inst=…`。
 
 ```sh
 proto6/src/py/bin/aos-daemon --config daemon.json     # Ctrl-C／SIGTERM 直接退出、回 0，不殺正在跑的子程序
@@ -162,37 +162,51 @@ proto6/src/py/bin/aos-daemon --config daemon.json     # Ctrl-C／SIGTERM 直接�
 
 | 鍵 | 意思 |
 |---|---|
-| `insts[].inst` | 必填，**原樣**當 aos-exec 的參數（資料夾或檔都行），也是這一項的 id |
+| `insts[].inst` | 必填，**原樣**當 aos-exec 的參數（資料夾或檔都行），印出來也照字面 |
 | `cwd`（頂層） | 起點：aos-exec 子程序的工作目錄、相對路徑的基準。沒寫＝daemon 啟動時的工作目錄；相對的也以它為準 |
 | `interval_ms` | 上一次結束後隔多久再叫（剛開時每項先立刻跑一次）。頂層是預設、每項可蓋過；兩邊都沒有＝設定錯、回 1 |
 | `stop_on_nonzero` | 碼不是 0 時這一項就不再叫、多印一行 `stopped`。頂層是預設、每項可蓋過；都沒有＝`false`。所有項都停了 daemon 照樣開著 |
 | `exec_err_path`（頂層） | aos-exec 的 stderr 接到哪個檔（接在檔尾、父資料夾不在就建）。相對以起點為準；`<inst>` 換成 inst 字面值，inst 是檔時換成它字面上的 dirname（空的用 `.`）。沒寫＝daemon 自己的 stderr |
+| `modules`（頂層） | 可選，要是物件（不是＝設定錯、回 1）。之後一個模組一個鍵（例如 `"modules": {"control": {...}}`）；**目前沒有任何模組**，核心照收、不看裡面 |
+
+**整份設定檔先經 aos 指示詞展開再讀**（使用者 2026-10-01；跟 inst 同一套 `lib/aos_directives.py`，`$ref`／`$fmt`／`$env`）。順序與兩種起點：
+
+1. **先展開**：整份從根一路走進物件與陣列，每一格解到底。`$ref` 的相對檔名**一律以設定檔所在的資料夾**為準（`os.path.abspath`，不解符號連結；被引進來的檔裡再 `$ref` 也照這個資料夾，中心路徑不換）。`$opt` 物件原樣留著、不走進去（核心沒有吃選項的位置，留給模組）。引到自己的祖先＝`ReferenceCycle`。
+2. **展開完才讀鍵**：頂層 `cwd`（可以是 `$ref` 引進來的值）照上表的規則算起點——**相對的 `cwd` 以 daemon 啟動時的工作目錄為準，不是設定檔的資料夾**；`inst` 值、`exec_err_path` 再以起點為準。
+
+所以同一份設定檔裡，`$ref` 的檔名跟 `inst`／`cwd` 的值起點不同：前者看設定檔放哪，後者看 daemon 從哪開（或 `cwd`）。例：設定檔在 `conf/daemon.json`、daemon 從 `/w` 開：
+
+```json
+{"interval_ms": {"$ref": "defaults.json#/interval_ms"}, "insts": {"$ref": "list.json"}}
+```
+
+讀的是 `conf/defaults.json`、`conf/list.json`；`list.json` 裡寫 `{"inst": "x.json"}` 跑的是 `/w/x.json`。指示詞錯（讀不到、循環、位置找不到…）stderr 一行 `aos-daemon: config: <代號>: …`、回 1。
 
 stdout 每次一行（時間是印出那刻的本地時間，ISO 8601 帶時區）：
 
 ```text
-2026-10-01T15:04:05+08:00 id=a exit=0 ms=812
-2026-10-01T15:04:05+08:00 id=jobs/report.json exit=3 ms=23
-2026-10-01T15:04:05+08:00 id=jobs/report.json stopped
+2026-10-01T15:04:05+08:00 inst=a exit=0 ms=812
+2026-10-01T15:04:05+08:00 inst=jobs/report.json exit=3 ms=23
+2026-10-01T15:04:05+08:00 inst=jobs/report.json stopped
 ```
 
-aos-exec 的 stderr 每次收齊（讀到 pipe 底）再一次寫出，有內容才寫，前面一律加一行標頭（第幾項從 0 起、inst 字面值）；stdout 那一行跟它共用一把鎖，多項同時結束也不交錯：
+aos-exec 的 stderr 每次收齊（讀到 pipe 底）再一次寫出，有內容才寫，前面一律加一行標頭（第幾項從 0 起、inst 字面值；寫到 `<inst>` 個別檔也加，使用者 2026-10-01 同意）；stdout 那一行跟它共用一把鎖，多項同時結束也不交錯：
 
 ```text
 == 2026-10-01T15:04:05+08:00 index=1 inst=jobs/report.json ==
 boom
 ```
 
-inst 裡任務自己的 stderr 照 inst 規則（預設 `/dev/null`，寫 `"stderr": {"$opt": "inherit"}` 才會跟著 aos-exec 進來）。被訊號殺的碼印成 `128+N`。結束碼：用法錯（沒給 `--config`、多給參數）、設定錯、設定檔讀不到都 1；SIGINT／SIGTERM 0。
+inst 裡任務自己的 stderr 照 inst 規則（預設 `/dev/null`，寫 `"stderr": {"$opt": "inherit"}` 才會跟著 aos-exec 進來）。被訊號殺的碼印成 `128+N`。結束碼：用法錯（沒給 `--config`、多給參數）、設定錯、設定檔讀不到、指示詞錯都 1；SIGINT／SIGTERM 0。daemon 退出後還在跑的 aos-exec 再寫 stderr 會吃 SIGPIPE，照默認一切正常不處理（使用者 2026-10-01 同意）。
 
 | 函式（`lib/aos_daemon.py`） | plan 步驟 |
 |---|---|
-| `main()`、`_Parser`、`load_config()`、`err_path_for()` | 1 讀設定檔 |
+| `main()`、`_Parser`、`read_config()`、`expand()`、`load_config()`、`err_path_for()` | 1 讀設定檔（先展開指示詞） |
 | `run_once()`、`write_err()`、`say()`、`now()` | 2 叫一次、印一行 |
 | `loop()` | 3 週期、4 非 0 停不停 |
 | `_quit()` | 5 Ctrl-C 與 SIGTERM |
 
-測試 `tests/test_daemon.py`：`Step1Config`～`Step6Tick`，一個類別一步，整檔約 6 秒。
+測試 `tests/test_daemon.py`：`Step1Config`～`Step6Tick`，一個類別一步（步驟 1 另有 `Step1Directives`：指示詞與 `modules`），整檔約 6 秒。
 
 ## 跑測試
 

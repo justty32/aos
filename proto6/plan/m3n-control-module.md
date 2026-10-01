@@ -2,6 +2,8 @@
 
 ← [plan 入口](README.md)｜**接在 [m3-daemon-core](m3-daemon-core.md) 之後，m3 做完才開工。**｜依據：[最核心 aos-daemon（已裁定 10-01）](../notes/2026-10-01-daemon-core-sketch.md)、[verdicts 11 篇末 2026-10-01](../notes/verdicts/11-tick-as-unit.md#2026-10-01最核心-daemon待統一更新-spec)｜結束碼：[aos 結束碼慣例](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜舊 spec 參考（以本檔裁定為準）：[B-612 通道](../spec/settled/daemon/channel.md#b-612tickdaemon-通道)、[P-117 通道變數](../spec/settled/protocol/daemon/channel.md)、[B-607 叫醒暫停](../spec/settled/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)
 
+> **暫停、待重寫（使用者 2026-10-01）**：模組設定改放設定檔頂層 `modules` 底下（一個模組一個鍵，例如 `"modules": {"control": {...}}`），整份設定檔先經 aos 指示詞展開再讀；daemon 核心也拿掉了 id 這個概念（印 `inst=…`），見 [m3 開頭 10-01 追加裁定](m3-daemon-core.md)。控制模組的細節使用者原話「控制模組這塊的細節我還要再想想」，所以本檔下面的內容（含 `enable_control`、頂層 `socket`、用 id 指項目、`AOS_DAEMON_ID` 等寫法）**都先別照做**，等使用者想好再重寫。
+
 **做完的樣子**：m3 的 `aos-daemon` 設定檔頂層加 `"enable_control": true` 與 `"socket": "./aos.sock"`，daemon 開起來就多開一個 unix socket，收四種指令：**叫醒**（現在就跑一次）、**暫停**、**恢復**（也救回被 `stop_on_nonzero` 停掉的項）、**看狀態**。小工具 `aos-ctl <指令> [<id>]` 送指令。daemon 開 `aos-exec` 時把 socket 位置與該項 id 放進環境變數，一路傳到 tick 的每個任務、再傳到下層 `aos-tick --node 下層` 的任務，所以**任何一層的任務跑 `aos-ctl wake` 就叫醒頂層那一項**。沒開時 daemon 就是 m3 原樣。
 
 > **使用者裁定（2026-10-01，原話節錄）**：「不用另外設nodes這個key，就直接嵌入在insts中，額外添加所需的key。在沒掛載node相關模組的時候會忽略這些key。」「daemon只需要管理最頂層的node就好。」（下層 node 由上層任務表裡的 `aos-tick --node 下層` 帶起來，daemon 不知道有哪些下層。）「不要用檔案，必須用socket」「不要管上下層。」另同意：socket 路徑寫設定檔頂層、相對路徑起點同 `insts`、靠檔案權限不另驗身分；請求只帶 id、一行進一行出（例 `{"wake":"<id>"}` → `{"ok":true}`）；用環境變數 `AOS_DAEMON_SOCKET`、`AOS_DAEMON_ID` 往下傳。之前已定：正在跑時被叫醒就記「跑完再補一次」、多次只補一次；叫醒後週期從這次重新算。
