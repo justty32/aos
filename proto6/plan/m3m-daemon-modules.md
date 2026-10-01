@@ -323,7 +323,7 @@ node id 當收件人；`node.send`／`node.take` 的 method 名、封包與通�
 
 - **M1．`from` 誰填？** **建議：`aos-mq send` 自動填 `AOS_DAEMON_INST`，daemon 原樣存、不核對。** 能連 socket 的人本來就能冒充，POC 不管；不要的話就拿掉 `from`，寄件人寫在信的內容裡。
 - **M2．`AOS_DAEMON_INST` 誰放？** 現在只有掛了控制模組才放。**建議：掛了控制或訊息任何一個就放**（同一個值）；另一種是乾脆改成核心一律放（改 B-640），比較單純，但會讓「沒掛模組時跟 m3 一模一樣」不再成立。
-- **M3．取信要不要限「只取自己」？** **建議：不限**，`aos-mq take <inst>` 可以取別項的（跟 `aos-ctl` 能對任何一項下指令一樣），沒給才用自己。
+- **M3．取信要不要限「只取自己」？** **建議：不限**，`aos-mq take <inst>` 可以取別項的（跟 `aos-ctl` 能對任何一項下指令一樣），沒給才用自己。〔**第十四批推翻**：只能取自己的信箱，可用 `--from` 只取某個寄件人的，[裁定](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十四批aos-mq-取信)〕
 - **M4．名字：沿用 `aos-mq`、子命令改 `send`／`take`？** 舊名 `aos-mq get`／`post` 是「讀寫 `.aos/mq/` 檔」的系統級任務，意思不一樣。**建議：程式叫 `aos-mq`，子命令用 `send`／`take`**（跟 socket 上的請求名一致），舊的 `get`／`post` 留在 spec 當暫緩；模組鍵叫 `mq`。
 
 ### 驗收草稿
@@ -480,7 +480,7 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 | S3 | 記住狀態 | 何時寫檔 | 每次變動當場寫整份 |
 | M1 | 訊息 | `from` 誰填 | `aos-mq send` 自動填 `AOS_DAEMON_INST`，不核對 |
 | M2 | 訊息 | `AOS_DAEMON_INST` 誰放 | 掛了控制或訊息任一個就放 |
-| M3 | 訊息 | 取信限不限自己 | 不限，沒給才用自己 |
+| ~~M3~~ | 訊息 | 取信限不限自己 | **第十四批推翻**：只取自己、`--from` 篩寄件人 |
 | M4 | 訊息 | 名字 | `aos-mq send`／`take`，模組鍵 `mq` |
 | ~~H1~~ | 帳號 | 主程式降權＋獨立 root 端 | **已定（第十二批）：拆** |
 | ~~H2~~ | 帳號 | 改用 `sudo -u` 包一層就好？ | **已定（第十三批）：不管，不在規劃中** |
@@ -531,5 +531,7 @@ node 的身分額度（`identity_grant`）、登記綁 UID；`aos-as` 經通道�
 - spec：[B-645](../spec/settled/daemon/mq.md)、[P-125](../spec/settled/protocol/daemon/mq.md)；新 schema `daemon-mq`、`daemon-core-config` 加 `modules.mq`；範例 `examples/daemon/mq_request.*`、`mq_reply.*`、`core-config.mq*`；暫緩區 B-614、P-119 標部分取代；[C-10](../spec/settled/conventions.md) 加 `AOS_DAEMON_MQ_SOCKET`、`AOS_DAEMON_INST` 改成掛任一個就放。
 
 模組四 AI 隊定的細節（使用者可改）全文在 [verdicts 11 第十二批](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十二批cgroup-與帳號)。
+
+〔2026-10-01 第十四批，[裁定](../notes/verdicts/11-tick-as-unit.md#2026-10-01-第十四批aos-mq-取信)〕取信改成只能取自己的信箱（`aos-mq take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`），`--from <寄件 inst>` 只取那個寄件人的、其他照順序留著；socket 的 `take` 多一個可省的 `from`。socket 不驗身分，「只取自己」只在 `aos-mq` 這一側擋。`tests/test_mq.py` 15 條，全部 558 條。
 
 **下一個：模組五帳號 `account`**——草稿已照第十二批重寫、第十三批裁定 A1～A5 與名單（2026-10-01 晚），剩 A6（帳號不存在）、A7（`allow` 有寫時 `deny` 比到預設帳號）等使用者一句話就動工。

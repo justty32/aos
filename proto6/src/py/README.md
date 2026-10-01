@@ -417,7 +417,7 @@ AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell �
 
 ```text
 aos-mq send [--urgent] <收件 inst> <JSON|->     # from 自動填 AOS_DAEMON_INST（沒有＝null）
-aos-mq take [<inst>]                             # 每封一行 {"from":…,"msg":…}；沒給 inst 用 AOS_DAEMON_INST
+aos-mq take [--from <寄件 inst>]                 # 只取自己（AOS_DAEMON_INST）的信箱；每封一行 {"from":…,"msg":…}
 ```
 
 結束碼照 `aos-ctl`：成功 0；`usage:`（含 `<JSON>` 不是 JSON）、`no_inst:`、`no_daemon:`、`connect:`、`unknown_inst:`、`bad_request:` 一律 1，stderr 一行。
@@ -429,7 +429,9 @@ aos-mq take [<inst>]                             # 每封一行 {"from":…,"msg
 | `aos_daemon._quit()` | 退出前刪兩個 socket 檔 |
 | `aos_mq.main()`、`bin/aos-mq` | 小工具 |
 
-測試 `tests/test_mq.py`（14 條，約 4 秒）。
+- **取信只能取自己的信箱**（2026-10-01 第十四批）：`take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`；`--from` 只取那個寄件人的、其他照順序留著。socket 不驗身分，這是 `aos-mq` 那一側擋的。
+
+測試 `tests/test_mq.py`（15 條，約 4 秒）。
 
 ## 跑測試
 
