@@ -13,7 +13,9 @@
 寫了 `modules.state`（原始值必須是 `{"$ref": "<檔>"}`）就把暫停／已停記進那個檔、重開時讀回
 （plan m3m 模組三，`lib/aos_daemon_state.py`）；寫了 `modules.cgroup` 就每項一個 cgroup 框、
 `aos-exec` 結束後清掉框裡的殘留才算這次結束（plan m3m 模組二，`lib/aos_daemon_cgroup.py`）；
-寫了 `modules.mq` 就另開一個 unix socket 收寄信、取信，每項一個信箱（plan m3m 模組四，`lib/aos_daemon_mq.py`）。
+寫了 `modules.mq` 就另開一個 unix socket 收寄信、取信，每項一個信箱（plan m3m 模組四，`lib/aos_daemon_mq.py`）；
+寫了 `modules.account` 就要用 root 開：開出 root 端 `aos-daemon-root` 後主程式永久降成預設帳號，別的帳號的項
+經 root 端開（plan m3m 模組五，`lib/aos_daemon_account.py`、`lib/aos_daemon_root.py`）。
 """
 import argparse
 import datetime
@@ -38,6 +40,9 @@ _state = None
 
 # 收屍／cgroup 模組（aos_daemon_cgroup.Tree）；沒掛＝None
 _cg = None
+
+# 帳號模組（aos_daemon_account.Account）；沒掛＝None
+_acct = None
 
 # 目前的清單 {inst 字面值: Item}。控制模組、記住狀態、重讀設定共用同一個 dict 物件；
 # 重讀設定加減項時在 _items_lock 底下原地改（m3m 模組一）
@@ -69,7 +74,7 @@ def say(text):
 class Item:
     """清單的一項：`inst` 字面值＝`insts` 物件的鍵（原樣交給 aos-exec、也原樣印出）；index＝鍵的位置（從 0 起）。"""
 
-    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path, out_path=None, cgroup=None):
+    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path, out_path=None, cgroup=None, user=None):
         self.index = index
         self.inst = inst
         self.interval_ms = interval_ms
@@ -79,6 +84,7 @@ class Item:
         self.env = None                 # 開 aos-exec 的環境；None＝照 daemon 的（控制模組沒掛）
         self.cgroup = cgroup or {}      # 這一項的 cgroup 上限 {檔名: 值}（設定的 "cgroup" 鍵；模組沒掛時不看）
         self.frame = None               # 這一項的 cgroup 框（絕對路徑）；None＝cgroup 模組沒掛
+        self.user = user                # 帳號模組：這一項用哪個帳號跑（設定的 "account.user"）；None＝預設帳號
         # m3n 步驟 2：以下狀態都在 cond 的鎖底下改；控制模組沒掛時只有 loop() 自己動它們
         self.cond = threading.Condition()
         self.running = False
@@ -155,6 +161,10 @@ class Setup:
     def cgroup(self):
         return "cgroup" in self.modules
 
+    @property
+    def account(self):
+        return "account" in self.modules
+
 
 def _state_ref(raw, base_dir):
     """m3m 模組三：原始設定檔的 `modules.state` 必須是 `{"$ref": "<檔名>"}`（不帶 `#` 位置、不帶 `$at`），
@@ -191,6 +201,11 @@ def load_full(path, read_state=True):
     # 展開完才看 cwd（它也可以是 $ref 引進來的值）；相對的 cwd 以 daemon 啟動時的工作目錄為起點，不是設定檔的資料夾
     start = os.path.abspath(top.get("cwd", "."))
     items = []
+    if "account" in modules:                        # m3m 模組五：模組沒掛時 "account" 照不認得的鍵忽略
+        import aos_daemon_account
+        user_of = aos_daemon_account.item_user
+    else:
+        user_of = lambda entry: None
     # insts 是物件：鍵＝inst 字面值、值＝該項設定（可為 {}）；位置照鍵的順序（JSON 讀入保序）（使用者 2026-10-01）
     for i, (inst, entry) in enumerate(top["insts"].items()):
         interval = entry.get("interval_ms", top.get("interval_ms"))
@@ -200,7 +215,7 @@ def load_full(path, read_state=True):
         items.append(Item(i, inst, interval, stop,
                           err_path_for(top.get("exec_err_path"), inst, start),
                           err_path_for(top.get("exec_out_path"), inst, start),
-                          entry.get("cgroup")))
+                          entry.get("cgroup"), user_of(entry)))
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
@@ -251,6 +266,11 @@ def run_once(item, start):
     t0 = time.monotonic()
     pipe = lambda path: subprocess.DEVNULL if path is None else subprocess.PIPE
     argv = [EXEC, item.inst]
+    if _acct is not None and _acct.via_root(item):   # m3m 模組五：別的帳號的項經 root 端開（框也由它放）
+        import aos_daemon_account
+        code, ms, reaped, out, err = aos_daemon_account.run_via_root(_acct, item, start, argv)
+        write_outputs(item, out, err)
+        return code, ms, reaped
     if item.frame is not None:
         argv = _cg.argv(item.frame, argv)
     p = subprocess.Popen(argv, cwd=start, env=item.env, start_new_session=True,
@@ -375,12 +395,17 @@ def start_item(item, start):
 def _quit(signum, frame):
     """m3 步驟 5：SIGINT／SIGTERM 直接退出、回 0，不殺也不等子程序。
     控制模組、訊息模組掛著時先刪 socket 檔（m3n 步驟 6）。"""
+    _die(0)
+
+
+def _die(code):
+    """刪 socket 檔、直接退出（帳號模組的 root 端不見了也走這裡，回 1）。"""
     for path in _sock_paths:
         try:
             os.unlink(path)
         except FileNotFoundError:       # 訊號來在 bind 之前：還沒建
             pass
-    os._exit(0)
+    os._exit(code)
 
 
 class _Parser(argparse.ArgumentParser):
@@ -407,12 +432,23 @@ def main(argv=None):
     ap = _Parser(prog="aos-daemon", description="照設定檔的清單，定期叫 aos-exec")
     ap.add_argument("--config", required=True, metavar="F", help="設定檔（JSON）")
     a = ap.parse_args(argv)
-    global _state, _cg
+    global _state, _cg, _acct
     try:
         setup = load_full(a.config)
     except (ValueError, DirectiveError) as e:
         sys.stderr.write("aos-daemon: config: %s\n" % e)
         return 1
+    policy = None
+    if setup.account:                   # m3m 模組五：先核帳號（還是 root，A6：查不到就回 1）
+        import aos_daemon_account
+        try:
+            if os.geteuid() != 0:
+                raise aos_daemon_account.AccountError("掛了 modules.account 要用 root 開")
+            policy = aos_daemon_account.Policy(setup.modules["account"])
+            policy.check_items(setup.items)
+        except aos_daemon_account.AccountError as e:
+            sys.stderr.write("aos-daemon: account: %s\n" % e)
+            return 1
     start, items, sock = setup.start, setup.items, setup.sock
     signal.signal(signal.SIGINT, _quit)
     signal.signal(signal.SIGTERM, _quit)
@@ -422,6 +458,12 @@ def main(argv=None):
         for item in items:
             _cg.make(item, startup=True)
             _cg.announce(item, say)
+    if policy is not None:              # m3m 模組五：子樹交給預設帳號 → 開 root 端 → 主程式永久降權
+        if _cg is not None:
+            pw = aos_daemon_account.lookup(policy.default)
+            aos_daemon_account.chown_tree(_cg.root, pw.pw_uid, pw.pw_gid)
+        _acct = aos_daemon_account.Account(policy)
+        _acct.drop()
     with _items_lock:
         _items.update((item.inst, item) for item in items)
     if setup.state_path is not None:    # m3m 模組三：照檔恢復暫停、已停（不在清單上的鍵丟掉）
@@ -434,10 +476,14 @@ def main(argv=None):
         import aos_daemon_ctl
         _sock_paths.append(sock)        # 先記好再 bind：bind 完立刻來的訊號也刪得到
         aos_daemon_ctl.serve(sock, _items)
+        if _acct is not None:           # m3m 模組五：別的帳號的任務也連得上（第十二批：先 666）
+            os.chmod(sock, 0o666)
     if setup.mq_sock is not None:       # m3m 模組四：同上
         import aos_daemon_mq
         _sock_paths.append(setup.mq_sock)
         aos_daemon_mq.serve(setup.mq_sock, _items)
+        if _acct is not None:
+            os.chmod(setup.mq_sock, 0o666)
     hup = None
     if setup.reload:                    # m3m 模組一：沒掛時 SIGHUP 照 Python 預設（daemon 被殺）
         import aos_daemon_reload

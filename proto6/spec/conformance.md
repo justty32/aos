@@ -23,7 +23,7 @@
 | 定位、多層多 kernel、各 kernel 自訂、上下層不必對齊 | [T-06](terms.md) |
 | tick 核心三件事、tick 是衡量基準；投件權就是執行權 | [T-07](settled/terms.md)、[T-08](terms.md) |
 | aos 結束碼慣例、狀態資料夾名 `AOS_DIRNAME`、環境變數總表、設定檔頂層 `cwd` 與指示詞展開範圍 | [C-08、C-09、C-10、C-11](settled/conventions.md) |
-| 最核心 daemon（定期叫 `aos-exec`）、控制模組與 `aos-ctl`、重讀設定、記住狀態、收屍／cgroup、訊息與 `aos-mq` | [B-640](settled/daemon/core.md)、[B-641](settled/daemon/control.md)、[B-642](settled/daemon/reload.md)、[B-643](settled/daemon/state.md)、[B-644](settled/daemon/cgroup.md)、[B-645](settled/daemon/mq.md)；格式 [P-120](settled/protocol/daemon/core.md)、[P-121](settled/protocol/daemon/control.md)、[P-122](settled/protocol/daemon/reload.md)、[P-123](settled/protocol/daemon/state.md)、[P-124](settled/protocol/daemon/cgroup.md)、[P-125](settled/protocol/daemon/mq.md)；用語 [T-11](settled/terms.md) |
+| 最核心 daemon（定期叫 `aos-exec`）、控制模組與 `aos-ctl`、重讀設定、記住狀態、收屍／cgroup、訊息與 `aos-mq`、帳號 | [B-640](settled/daemon/core.md)、[B-641](settled/daemon/control.md)、[B-642](settled/daemon/reload.md)、[B-643](settled/daemon/state.md)、[B-644](settled/daemon/cgroup.md)、[B-645](settled/daemon/mq.md)、[B-646](settled/daemon/account.md)；格式 [P-120](settled/protocol/daemon/core.md)、[P-121](settled/protocol/daemon/control.md)、[P-122](settled/protocol/daemon/reload.md)、[P-123](settled/protocol/daemon/state.md)、[P-124](settled/protocol/daemon/cgroup.md)、[P-125](settled/protocol/daemon/mq.md)、[P-126](settled/protocol/daemon/account.md)；用語 [T-11](settled/terms.md) |
 | 核心、系統級任務、普通程式、其他任務；管轄區；保證跟著掛了什麼走 | [T-10、T-01](terms.md)；[B-626、B-633](settled/tick.md)、[B-629](settled/tick/template.md)、[B-632](settled/tick/git.md)；普通程式 [B-303](settled/deferred/helper.md)、[B-621](settled/tick/check-task.md)、[B-634](settled/tick/cg.md)（`aos-cg`）；git [B-630、B-622](settled/tick/git.md)；node 框 [B-605](settled/deferred/daemon/cgroup.md) |
 | node 與兼任角色、兩張註冊表 | [T-02](terms.md) |
 | 上下層判定（預設看資料夾、登記覆蓋）〔暫緩〕 | [B-628](settled/deferred/tick.md)、[B-606](settled/deferred/daemon/registration.md) |
@@ -142,25 +142,27 @@
 | B-643 | settled/daemon/state.md | 〔2026-10-01 第十一批〕記住狀態模組 | 第十一批 |
 | B-644 | settled/daemon/cgroup.md | 〔2026-10-01 第十二批〕收屍／cgroup 模組 | 第十二批 |
 | B-645 | settled/daemon/mq.md | 〔2026-10-01 第十二批〕訊息模組與 `aos-mq` | 第十二批 |
+| B-646 | settled/daemon/account.md | 〔2026-10-01 第十三批〕帳號模組 | 第十三批 |
 | P-120 | settled/protocol/daemon/core.md | 〔2026-10-01〕`aos-daemon` 的 argv、設定檔、輸出與結束碼 | 統一更新 |
 | P-121 | settled/protocol/daemon/control.md | 〔2026-10-01〕控制 socket 協議、環境變數與 `aos-ctl` | 統一更新 |
 | P-122 | settled/protocol/daemon/reload.md | 〔2026-10-01 第十一批〕重讀設定：設定、訊號與輸出 | 第十一批 |
 | P-123 | settled/protocol/daemon/state.md | 〔2026-10-01 第十一批〕記住狀態：設定與狀態檔 | 第十一批 |
 | P-124 | settled/protocol/daemon/cgroup.md | 〔2026-10-01 第十二批〕收屍／cgroup：設定、框名與輸出 | 第十二批 |
 | P-125 | settled/protocol/daemon/mq.md | 〔2026-10-01 第十二批〕訊息 socket、環境變數與 aos-mq | 第十二批 |
+| P-126 | settled/protocol/daemon/account.md | 〔2026-10-01 第十三批〕帳號模組：設定、root 端封包與輸出 | 第十三批 |
 
 之後要開新條，就接各篇下一號：
 
 | 篇 | 下一號 |
 |---|---|
-| settled/daemon/ | B 646 起（616～619 留給暫緩區的舊 daemon 補號；635～639 留給 tick.md） |
+| settled/daemon/ | B 647 起（616～619 留給暫緩區的舊 daemon 補號；635～639 留給 tick.md） |
 | settled/tick.md、settled/tick/ | B 635 起（兩處共用） |
 | base/work.md、execution.md、identity-resources.md、storage.md、transport.md | B 104、205、306、405、507 起（305 是已刪的舊號，不要再用） |
 | scheduling/runs.md、admission.md、llm.md、operations.md | S 105、208、308、407 起 |
 | agent/configuration.md、input.md、memory.md、tools.md、README.md | A 104、204、305、405、507 起 |
 | cli/ | H 038 起 |
 | terms.md、contracts.md、conformance.md | T 12、C 12、V 06 起（T、C 新條可放在 settled/terms.md、settled/conventions.md） |
-| 協議篇 | 接各檔現有最後一號（daemon 協議 P 126 起、tick 協議 P 214 起；這兩份在 settled/protocol/） |
+| 協議篇 | 接各檔現有最後一號（daemon 協議 P 127 起、tick 協議 P 214 起；這兩份在 settled/protocol/） |
 
 B-605 的共通自檢在 [runtime](settled/deferred/daemon/runtime.md#啟動自檢b-605-的共通部分)，框規則在 [cgroup](settled/deferred/daemon/cgroup.md)；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分也集中在該檔，沿用原條號。
 
@@ -396,6 +398,7 @@ LLM 三檔（[S-301](scheduling/llm.md)）：預設 `schedule:aos` 的池做窗�
 - 〔2026-10-01 第十一批〕寫了 `modules.state: {"$ref": "aos-state.json"}`：`pause` 後狀態檔有 `paused:true`，重開後那一項不先跑、stdout 有 `inst=<鍵> paused`；`stop_on_nonzero` 停掉的重開也不跑；檔不在＝全部正常、沒異常不建檔；`modules.state` 不是 `$ref`：回 1（B-643、P-123）。
 - 〔2026-10-01 第十二批〕寫了 `modules.cgroup`、用 `systemd-run --user --scope -p Delegate=yes` 開：stdout 每項一行 `inst=<鍵> cgroup=i-<h>`；任務留下背景程序（含 `setsid`）時 `exit=` 之後有 `inst=<鍵> reaped`、程序已不在、框是空的，下一次開始前上一次的殘留都已不在；那一項的 `cgroup` 上限原樣寫進框；直接在沒委派的 cgroup 開：回 1（B-644、P-124）。
 - 〔2026-10-01 第十二批〕寫了 `modules.mq`：任務拿得到 `AOS_DAEMON_MQ_SOCKET`、`AOS_DAEMON_INST`；`aos-mq send <收件> <JSON>` 回 0，收件那一項 `aos-mq take` 每封一行 `{"from":…,"msg":…}`、先寄的在前、取完就空；〔第十四批〕`take` 只取自己（`AOS_DAEMON_INST`）的信箱、給 `<inst>` 回 1，`--from <寄件>` 只取那個寄件人的、其他照順序留著；`--urgent` 叫醒收件那一項（正在跑只補一次、暫停跑一次、已停不跑）；寄給不存在的項回 1、`unknown_inst:`；壞請求只影響那一條連線；daemon 重開信箱是空的（B-645、P-125）。
+- 〔2026-10-01 第十三批〕寫了 `modules.account`、用 root 開：主程式降成預設帳號、root 端還是 root；不寫帳號的項用預設帳號跑，寫了名單准的別的帳號的項用那個帳號跑（`id -un`、補充群組、`HOME`／`USER`／`LOGNAME`）；控制、訊息 socket 是 666、歸預設帳號；名單不准、root、查不到的帳號、`deny` 比到預設帳號、沒用 root 開：回 1；重讀加名單不准的帳號：整份不套用；殺掉 root 端：daemon 回 1（B-646、P-126）。
 
 ### 設定、清理與待辦
 

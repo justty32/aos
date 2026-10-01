@@ -13,6 +13,7 @@ daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與�
 | P-123 | 記住狀態：設定與狀態檔 | [state.md](state.md) |
 | P-124 | 收屍／cgroup：設定、框名與輸出 | [cgroup.md](cgroup.md) |
 | P-125 | 訊息 socket、環境變數與 aos-mq | [mq.md](mq.md) |
+| P-126 | 帳號模組：設定、root 端封包與輸出 | [account.md](account.md) |
 
 2026-10-01 之前的舊協議（P-101～119：舊設定檔、IPC 封包、登記與查詢 method、runner、helper 私有通道、停機與 `state.json`、tick–daemon 通道）第一版都不做，在[暫緩區](../../deferred/protocol/daemon/README.md)，條號保留、不重用。
 
@@ -25,9 +26,10 @@ daemon 協議只定格式：`aos-daemon` 的 argv、設定檔欄位、輸出與�
 - 重讀設定模組：設定、SIGHUP、stdout／stderr 的行（P-122）；
 - 記住狀態模組：`modules.state` 的 `$ref` 寫法、狀態檔格式（P-123）；
 - 收屍／cgroup 模組：`modules.cgroup` 與每項 `cgroup` 上限的寫法、框名、stdout 的行（P-124）；
-- 訊息模組：socket 上一行 JSON 的請求與回應、錯誤代碼、往下傳的環境變數、`aos-mq` 的 argv、輸出與結束碼（P-125）。
+- 訊息模組：socket 上一行 JSON 的請求與回應、錯誤代碼、往下傳的環境變數、`aos-mq` 的 argv、輸出與結束碼（P-125）；
+- 帳號模組：`modules.account` 與每項 `account` 的寫法、root 端的封包、stderr 的行（P-126）。
 
-行為一律以 [daemon 正本](../../daemon/README.md)（[B-640](../../daemon/core.md)、[B-641](../../daemon/control.md)、[B-642](../../daemon/reload.md)、[B-643](../../daemon/state.md)、[B-644](../../daemon/cgroup.md)、[B-645](../../daemon/mq.md)）為準；這裡寫到行為時只留一句加條號（[P-001](../../../protocol/README.md)）。結束碼照 [C-08](../../conventions.md)，環境變數總表見 [C-10](../../conventions.md)。
+行為一律以 [daemon 正本](../../daemon/README.md)（[B-640](../../daemon/core.md)、[B-641](../../daemon/control.md)、[B-642](../../daemon/reload.md)、[B-643](../../daemon/state.md)、[B-644](../../daemon/cgroup.md)、[B-645](../../daemon/mq.md)、[B-646](../../daemon/account.md)）為準；這裡寫到行為時只留一句加條號（[P-001](../../../protocol/README.md)）。結束碼照 [C-08](../../conventions.md)，環境變數總表見 [C-10](../../conventions.md)。
 
 ### 共用約定哪些不適用 P-120／P-121〔astra 報告必修 3〕
 

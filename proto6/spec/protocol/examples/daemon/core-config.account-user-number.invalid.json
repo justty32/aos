@@ -1,0 +1,15 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "account": {
+      "user": "lorkhan"
+    }
+  },
+  "insts": {
+    "a.json": {
+      "account": {
+        "user": 1001
+      }
+    }
+  }
+}
