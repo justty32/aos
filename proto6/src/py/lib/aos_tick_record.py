@@ -24,10 +24,10 @@ def _read_seq(path):
 
 
 class Record:
-    """一格的結束碼紀錄。`current` 就是給任務的 `AOS_TICK_RECORD`。"""
+    """一格的結束碼紀錄。任務從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（即 `current`）找（使用者 2026-10-01 拿掉 `AOS_TICK_RECORD`）。"""
 
-    def __init__(self, node_dir, dirname=".aos"):
-        self.dir = os.path.join(node_dir, dirname, "tick")      # dirname：node 狀態資料夾名（AOS_DIRNAME）
+    def __init__(self, cwd, dirname=".aos"):
+        self.dir = os.path.join(cwd, dirname, "tick")      # cwd：工作資料夾；dirname：狀態資料夾名（AOS_DIRNAME）
         self.current = os.path.join(self.dir, "current.json")
         self.last = os.path.join(self.dir, "last.json")
         self.tmp = os.path.join(self.dir, ".current.json.tmp")
