@@ -1,8 +1,8 @@
 # 第三段之二：控制模組
 
-← [plan 入口](README.md)｜**接在 [m3-daemon-core](m3-daemon-core.md) 之後。**｜依據：[verdicts 11 篇末「`insts` 改成物件＋控制模組裁定」](../notes/verdicts/11-tick-as-unit.md#2026-10-01最核心-daemon待統一更新-spec)｜結束碼：[aos 結束碼慣例](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜舊 spec 參考（以本檔為準）：[B-612 通道](../spec/settled/deferred/daemon/channel.md#b-612tickdaemon-通道)、[P-117 通道變數](../spec/settled/deferred/protocol/daemon/channel.md)、[B-607 叫醒暫停](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)
+← [plan 入口](README.md)｜**接在 [m3-daemon-core](m3-daemon-core.md) 之後。**｜依據：[verdicts 11 篇末「`insts` 改成物件＋控制模組裁定」](../notes/verdicts/11-tick-as-unit.md#2026-10-01最核心-daemon待統一更新-spec)｜結束碼：[aos 結束碼慣例](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜spec 正本：[B-641](../spec/settled/daemon/control.md)、格式 [P-121](../spec/settled/protocol/daemon/control.md)｜舊 spec 參考（暫緩區）：[B-612 通道](../spec/settled/deferred/daemon/channel.md#b-612tickdaemon-通道)、[P-117 通道變數](../spec/settled/deferred/protocol/daemon/channel.md)、[B-607 叫醒暫停](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)
 
-**做完的樣子**：m3 的 `aos-daemon` 設定檔寫了 `"modules": {"control": {"socket": "./aos.sock"}}`，daemon 開起來就多開一個 unix socket，收四個指令，**每個都只對一項**（用 inst 字面值指名）：**叫醒**（現在跑一次，可帶兩個選項）、**暫停**、**恢復**、**看狀態**。小工具 `aos-ctl` 送指令。daemon 開 `aos-exec` 時把 socket 位置與該項 inst 放進環境變數，一路傳到 tick 的任務、再傳到下層 `aos-tick --target 下層` 的任務，所以**任何一層的任務跑 `aos-ctl wake` 就叫醒自己所在的頂層那一項**。沒寫 `modules.control` 時 daemon 就是 m3 原樣。
+**做完的樣子**：m3 的 `aos-daemon` 設定檔寫了 `"modules": {"control": {"socket": "./aos.sock"}}`，daemon 開起來就多開一個 unix socket，收四個指令，**每個都只對一項**（用 inst 字面值指名）：**叫醒**（現在跑一次，可帶兩個選項）、**暫停**、**恢復**、**看狀態**。小工具 `aos-ctl` 送指令。daemon 開 `aos-exec` 時把 socket 位置與該項 inst 放進環境變數，一路傳到 tick 的任務、再傳到下層 `aos-tick 下層` 的任務，所以**任何一層的任務跑 `aos-ctl wake` 就叫醒自己所在的頂層那一項**。沒寫 `modules.control` 時 daemon 就是 m3 原樣。
 
 > **使用者裁定（2026-10-01，原話）**：「daemon config中，其實可以是{"insts":{"jobs/report.json":{...},"haha.json":{...}}}。然後控制模組這塊，wake的功能改一下，改成可以調設定，比如正在跑的話是否就不跑了(但仍然叫幾次都只補一次)，或是這次跑完，原本後續週期性的那次就不跑了，或是弄成單獨指令也可以。aos-ctl status應該要只能看一個項的狀態，也就是自己所在的這項。1.夠了。2.可以。3.隨便放，就一個。4.算。5.訊息模組不算在此。」追補：「應該說wake/pause/resume/status都是指向某一項inst任務」。
 >
@@ -145,13 +145,13 @@
 
 - **要做到**：模組掛著時，daemon 開每一次 `aos-exec` 都在環境裡加 `AOS_DAEMON_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`（蓋過 daemon 自己環境裡同名的）。
 - **依據**：使用者定的兩個名字；`AOS_DAEMON_SOCKET` 沿用舊 spec [P-117](../spec/settled/deferred/protocol/daemon/channel.md)，`AOS_TICK_TOKEN`（憑證）不做。
-- **一路傳下去不用寫新程式**：`aos-exec` 照 inst 的 `envs` 規則用繼承的環境；`aos-tick` 開任務時也是繼承的環境加 `AOS_*`；下層 `aos-tick --target 下層` 本身就是上層的一個任務，它的任務又繼承下去。所以**每一層的任務看到的都是頂層那一項的 inst**，指到的永遠是頂層（使用者「不要管上下層」「daemon 只需要管理最頂層」）。inst 或任務寫了 `envs` 清空時，那一支往下就沒有這兩個變數，是 inst 自己的選擇。
+- **一路傳下去不用寫新程式**：`aos-exec` 照 inst 的 `envs` 規則用繼承的環境；`aos-tick` 開任務時也是繼承的環境加 `AOS_*`；下層 `aos-tick 下層` 本身就是上層的一個任務，它的任務又繼承下去。所以**每一層的任務看到的都是頂層那一項的 inst**，指到的永遠是頂層（使用者「不要管上下層」「daemon 只需要管理最頂層」）。inst 或任務寫了 `envs` 清空時，那一支往下就沒有這兩個變數，是 inst 自己的選擇。
 - **inst 字面值是相對路徑也沒關係**：傳下去的只是一個名字，`aos-ctl` 原樣送回，daemon 跟 `insts` 的鍵逐字比對，不在任務的工作目錄解析。
 - **模組沒掛時不動環境**：daemon 自己的環境若已有這兩個變數（例如它本身是別的 daemon 底下某個任務開的），照樣傳下去、不清。照默認一切正常，不為這種套疊另寫規則。
 - **要使用者裁定的點**：無。
 - **驗收**：
   - 假 inst 把兩個變數寫進檔：值是 socket 絕對路徑與 inst 字面值（例如 `jobs/report.json`，不是轉過的絕對路徑）。
-  - node 資料夾 `a`（inst 跑 `aos-tick`）的任務表有一項寫檔、另一項跑 `aos-tick --target b`，`b` 的任務也寫檔：三個檔裡的 `AOS_DAEMON_INST` 都是 `a`。
+  - node 資料夾 `a`（inst 跑 `aos-tick`）的任務表有一項寫檔、另一項跑 `aos-tick b`，`b` 的任務也寫檔：三個檔裡的 `AOS_DAEMON_INST` 都是 `a`。
 
 ## 步驟 5：`aos-ctl` 小工具
 

@@ -1,4 +1,4 @@
-"""aos-tick 的任務表（預設 `.aos/tasks.json`；`--target` 給檔時就是那個檔）：開格讀一次拿 `id`，跑到某項時才展開成 inst（B-620、P-202）。
+"""aos-tick 的任務表（預設 `.aos/tasks.json`；目標給檔時就是那個檔）：開格讀一次拿 `id`，跑到某項時才展開成 inst（B-620、P-202）。
 
 〔使用者方向 2026-10-01，待統一更新 spec〕開格只做極簡檢查（`check_table()`），不過就丟 `TableInvalid`，
 tick 印一行 `bad_table: …`、回 1（算 tick 自己的錯；在換紀錄之前，不佔 seq）：讀得到、合法 JSON、頂層是物件、有 `tasks` 陣列；

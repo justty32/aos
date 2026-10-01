@@ -33,7 +33,7 @@ inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -
 
 - 目標是資料夾：先找 `xxx/.aos/inst.json`，沒有再找 `xxx/inst.json`；兩個都有跑前者；都沒有＝用法錯（~~2~~ 1，見改動 4）。base 是 `xxx` 自己。
 - 拿掉 proto5 的 `--dir-target` 旗標、`run_target`／`run_target_full`／`spawn_target` 的 `dir_target` 參數與 `DEFAULT_DIR_TARGET` 常數（改成 `DIR_TARGETS` 兩個位置）。給 `--dir-target` 現在是用法錯。
-- 檔案目標照 proto5 不動。~~tick 那條「`.aos/inst.json`／`inst.json` 路徑正規化成資料夾」不在這裡做。~~（2026-10-01：tick 不再做這個正規化，`--target`（原 `--node`）怎麼認見下面 aos-tick 一節）
+- 檔案目標照 proto5 不動。~~tick 那條「`.aos/inst.json`／`inst.json` 路徑正規化成資料夾」不在這裡做。~~（2026-10-01：tick 不再做這個正規化，目標（原 `--node`、`--target`，現在是位置參數）怎麼認見下面 aos-tick 一節）
 
 ## 改動 3：`AOS_DIRNAME`（2026-10-01）
 
@@ -63,22 +63,22 @@ aos-exec 現在的碼：
 ```sh
 mkdir -p /tmp/n/.aos
 echo '{"_metainfo":{"_type":"aos-tasks","_version":1},"tasks":[{"id":"t","argv":["true"]}]}' > /tmp/n/.aos/tasks.json
-proto6/src/py/bin/aos-tick --target /tmp/n; echo $?   # 0
+proto6/src/py/bin/aos-tick /tmp/n; echo $?            # 0
 cat /tmp/n/.aos/tick/current.json                     # {"version":1,"seq":1,...,"ended":true,"exit":0}
-cd /tmp/n && proto6/src/py/bin/aos-tick               # 不給 --target 用目前目錄（相對路徑也行）
-proto6/src/py/bin/aos-tick --target /tmp/m/t.json     # 給檔：拿它當任務表，/tmp/m 當工作資料夾（紀錄在 /tmp/m/.aos/tick/）
+cd /tmp/n && proto6/src/py/bin/aos-tick               # 不給目標用目前目錄（相對路徑也行）
+proto6/src/py/bin/aos-tick /tmp/m/t.json              # 給檔：拿它當任務表，/tmp/m 當工作資料夾（紀錄在 /tmp/m/.aos/tick/）
 ```
 
-**`--target` 怎麼認（使用者 2026-10-01，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick---node-怎麼認待統一更新-spec)、[plan 待問 10、16](../../plan/m1-tick-core.md#待問)，待統一更新 spec；同日 `--node` 改名 `--target`，不留舊名）**：省略用 `./`，相對路徑轉成絕對。是資料夾：要有 `.aos/tasks.json`（不看 `.aos/inst.json`），沒有回 1、stderr `no_tasks:`。是檔：拿這個檔當這一格的任務表（跟資料夾模式同一套極簡檢查，不過回 1、stderr `bad_table:`），它所在的資料夾當工作資料夾，擋板檔、停格檔、紀錄都在那裡的 `.aos/`（不在就建資料夾）；檔在 `.aos/` 裡時取 `.aos` 的上一層。不存在回 1、stderr `no_target:`（原 `no_node:`）。
+**目標怎麼認（使用者 2026-10-01，見 [verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick---node-怎麼認待統一更新-spec)、[plan 待問 10、16、17](../../plan/m1-tick-core.md#待問)，待統一更新 spec；同日 `--node` 改名 `--target`，再改成位置參數 `aos-tick [<目標>]`（跟 aos-exec 一樣），`--target` 旗標不留，給了算用法錯；目標多於一個也是）**：省略用 `./`，相對路徑轉成絕對。是資料夾：要有 `.aos/tasks.json`（不看 `.aos/inst.json`），沒有回 1、stderr `no_tasks:`。是檔：拿這個檔當這一格的任務表（跟資料夾模式同一套極簡檢查，不過回 1、stderr `bad_table:`），它所在的資料夾當工作資料夾，擋板檔、停格檔、紀錄都在那裡的 `.aos/`（不在就建資料夾）；檔在 `.aos/` 裡時取 `.aos` 的上一層。不存在回 1、stderr `no_target:`（原 `no_node:`）。
 
-**工作資料夾與給任務的環境變數（使用者 2026-10-01，見 [plan 待問 16](../../plan/m1-tick-core.md#待問)，待統一更新 spec）**：「工作資料夾」＝這一格 aos-tick 的 cwd（`--target` 指的資料夾，給檔時是檔所在的資料夾）。每項任務的環境多三個變數：`AOS_TICK_CWD`（工作資料夾的絕對路徑，原 `AOS_NODE_DIR`）、`AOS_TASK_ID`、`AOS_TASK_INDEX`。~~`AOS_TICK_RECORD`~~ 拿掉：任務要看紀錄就讀 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（`AOS_DIRNAME` 空字串時是 `$AOS_TICK_CWD/tick/current.json`）。node 是之後 aos-tick 的 node 模組的事，tick 這層不談。
+**工作資料夾與給任務的環境變數（使用者 2026-10-01，見 [plan 待問 16](../../plan/m1-tick-core.md#待問)，待統一更新 spec）**：「工作資料夾」＝這一格 aos-tick 的 cwd（目標指的資料夾，給檔時是檔所在的資料夾）。每項任務的環境多三個變數：`AOS_TICK_CWD`（工作資料夾的絕對路徑，原 `AOS_NODE_DIR`）、`AOS_TASK_ID`、`AOS_TASK_INDEX`。~~`AOS_TICK_RECORD`~~ 拿掉：任務要看紀錄就讀 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json`（`AOS_DIRNAME` 空字串時是 `$AOS_TICK_CWD/tick/current.json`）。node 是之後 aos-tick 的 node 模組的事，tick 這層不談。
 
 | 檔 | 內容 |
 |---|---|
 | `bin/aos-tick` | 命令列薄殼（`.gitignore` 擋 `bin/`，`git add -f` 進來的） |
 | `lib/aos_tick.py` | argv、`AOS_DIRNAME` 檢查、認工作資料夾與任務表 `resolve_target()`、取鎖 `take_lock()`、擋板、停格檔、整格順序 `run_tick()` |
 | `lib/aos_tick_record.py` | 結束碼紀錄 `current.json`／`last.json`：開格換檔、每項重寫 |
-| `lib/aos_tick_table.py` | 讀任務表（預設 `.aos/tasks.json`，`--target` 給檔時讀那個檔）、極簡檢查 `check_table()`、每項的 `id`、跑到時展開成 inst |
+| `lib/aos_tick_table.py` | 讀任務表（預設 `.aos/tasks.json`，目標給檔時讀那個檔）、極簡檢查 `check_table()`、每項的 `id`、跑到時展開成 inst |
 | `lib/aos_tick_run.py` | 跑一項：照 inst 開串流、三個 `AOS_*`、分 exit／signal |
 | `tests/test_tick.py` | plan 各步的驗收，一個類別一步；結束碼慣例另成 `ExitCodes` |
 
@@ -96,7 +96,7 @@ proto6/src/py/bin/aos-tick --target /tmp/m/t.json     # 給檔：拿它當任務
 | 看到停格檔 `.aos/tick/stop`，剩下不跑（不算中斷，暫定） | 0 |
 | 同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，stderr `busy:`），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
 | 有擋板檔 `.aos/tick-blocked`（stderr `blocked:`），不開格（不寫紀錄、不加 `seq`） | 0（原 2） |
-| argv 用法錯、`AOS_DIRNAME` 不合法、`--target` 指的東西不存在、`--target` 資料夾底下沒有 `.aos/tasks.json`、任務表不合極簡檢查（stderr `usage:`／`no_target:`／`no_tasks:`／`bad_table:`；表壞不換紀錄、不加 `seq`） | 1 |
+| argv 用法錯、`AOS_DIRNAME` 不合法、目標指的東西不存在、目標資料夾底下沒有 `.aos/tasks.json`、任務表不合極簡檢查（stderr `usage:`／`no_target:`／`no_tasks:`／`bad_table:`；表壞不換紀錄、不加 `seq`） | 1 |
 | tick 自用檔（`tick-blocked`、`stop`、`current.json`、`last.json`）讀不到／寫不進／格式壞 | 1（自然丟錯，traceback 進 stderr） |
 
 任務回 0、1、2、125～127、被訊號殺都照實記進紀錄、照常跑下一項。紀錄收尾的 `exit` 因此只會是 0。
@@ -130,15 +130,15 @@ plan 步驟對到哪：
 我自己做的判斷（spec 沒寫死、照「最小合理」做，都可以改）：
 
 - ~~沒有 `.aos/`：整個交給 `aos_exec.run_target` 跑這個資料夾（不寫紀錄、退出碼照 aos-exec）；連 `inst.json` 也沒有時是 aos-exec 自己的用法錯 2。~~（2026-10-01 作廢：退路拿掉，沒有 `.aos/inst.json` 就 stderr `no_inst:`、回 1；只看在不在，不讀它的內容。）~~見 `aos_tick.run_tick` 開頭。~~（2026-10-01 再改：改看 `.aos/tasks.json`，見 `aos_tick.resolve_target`）
-- 新增的 stderr 代碼：`usage`（argv 錯、`AOS_DIRNAME` 不合法）、`busy`（拿不到鎖）、~~`no_inst`（沒有 `.aos/inst.json`）~~、`no_tasks`（資料夾沒有 `.aos/tasks.json`）、`no_target`（`--target` 指的東西不存在；原 `no_node`）、`bad_table`（任務表不合極簡檢查）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127）。
+- 新增的 stderr 代碼：`usage`（argv 錯、`AOS_DIRNAME` 不合法）、`busy`（拿不到鎖）、~~`no_inst`（沒有 `.aos/inst.json`）~~、`no_tasks`（資料夾沒有 `.aos/tasks.json`）、`no_target`（目標指的東西不存在；原 `no_node`）、`bad_table`（任務表不合極簡檢查）、`exec_failed`（某項沒跑成：mkdir／cwd／重導向失敗、126／127）。
 - 某項沒跑成（mkdir、cwd、重導向失敗）記 `exit:125`，跟 aos-exec 命令列一致（inst 的規定，不是帳號判定）。
 - 項目是純記憶體文件（跟 `load_obj` 一樣），所以項目裡的 `$ref:""` 指這一項自己，不是整份 tasks.json。
 - 任務的 id 用開格讀表時拿到的；跑到時只展開 inst 部分。
 - `envs` 清空時一個 `AOS_*` 都不放。
 - 任務表極簡檢查（使用者 2026-10-01，[verdicts 11 篇末](../../notes/verdicts/11-tick-as-unit.md#aos-tick-讀任務表的極簡檢查待統一更新-spec)）：合法 JSON、頂層物件有 `tasks` 陣列、每項（`$ref` 展開後）是物件且有 `argv`；不過 stderr 一行 `bad_table:`、回 1。~~檢查在換紀錄之後，表壞仍佔 `seq`、紀錄停在 `ended:false`。~~（使用者 2026-10-01 改：在換紀錄之前，表壞不換紀錄、不加 `seq`）每項沒寫 `_metainfo` 照跑（`aos_inst` 當 posix 第 1 版）；寫錯了跑到那項時 `aos_inst` 自然丟錯回 1。
 - 沒 `id` 的項（使用者 2026-10-01）：id＝它在 `tasks` 陣列的位置（從 0 起）轉字串，紀錄、`AOS_TASK_ID`、`stopped_after` 都用它；跟別項撞了不管。`id` 不是字串時 `AOS_TASK_ID` 用 `str()`（我自己定的）。
-- `--target` 給的檔在 `.aos/` 裡（例如 `yyy/.aos/tasks.json`）時工作資料夾取 `yyy`，不照字面當 `yyy/.aos`（否則紀錄會寫進 `yyy/.aos/.aos/tick/`）。所以舊用法 `--node yyy/.aos/inst.json`（現在是 `--target`）會「拿 inst.json 當任務表」，沒有 `tasks` 陣列、過不了極簡檢查回 1。
-- `--target` 給檔時，任務項目裡的相對檔名照舊以工作資料夾（檔所在的資料夾，或 `.aos` 的上一層）為中心，不是以那個檔為中心。
+- 目標給的檔在 `.aos/` 裡（例如 `yyy/.aos/tasks.json`）時工作資料夾取 `yyy`，不照字面當 `yyy/.aos`（否則紀錄會寫進 `yyy/.aos/.aos/tick/`）。所以舊用法 `--node yyy/.aos/inst.json`（現在是 `aos-tick yyy/.aos/inst.json`）會「拿 inst.json 當任務表」，沒有 `tasks` 陣列、過不了極簡檢查回 1。
+- 目標給檔時，任務項目裡的相對檔名照舊以工作資料夾（檔所在的資料夾，或 `.aos` 的上一層）為中心，不是以那個檔為中心。
 
 ## aos-daemon（第三段最核心 daemon）
 
@@ -220,7 +220,7 @@ inst 裡任務自己的 stderr 照 inst 規則（預設 `/dev/null`，寫 `"stde
 ```
 
 - `socket` 必填（沒寫＝設定錯、回 1），相對以起點（`cwd`）為準，算成絕對路徑。開的時候路徑上有舊檔先刪；SIGINT／SIGTERM 退出前刪掉。
-- daemon 開每一次 aos-exec 都在環境加 `AOS_DAEMON_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`。inst 的任務、`aos-tick` 的任務、下層 `aos-tick --node` 的任務都繼承得到，所以**任何一層跑 `aos-ctl wake` 叫醒的都是頂層那一項**。
+- daemon 開每一次 aos-exec 都在環境加 `AOS_DAEMON_SOCKET=<socket 絕對路徑>`、`AOS_DAEMON_INST=<這一項的 inst 字面值>`。inst 的任務、`aos-tick` 的任務、下層 `aos-tick <下層>` 的任務都繼承得到，所以**任何一層跑 `aos-ctl wake` 叫醒的都是頂層那一項**。
 - 協議：一連線一請求，一行 JSON 進、一行 JSON 出。指令名當鍵、inst 字面值當值：`{"wake":"a"}`、`{"wake":"a","skip_while_running":true,"keep_schedule":true}`、`{"pause":"a"}`、`{"resume":"a"}`、`{"status":"a"}`。回 `{"ok":true}`（status 多帶狀態）或 `{"ok":false,"error":"unknown_inst|stopped|bad_request","detail":…}`。收到就回，不等那一項跑完。每條連線 1 秒逾時；壞請求只影響那一條。
 
 | 指令 | 做什麼 |
