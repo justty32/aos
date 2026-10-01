@@ -3,6 +3,7 @@
   "messages": [
     {
       "from": null,
+      "from_socket": null,
       "msg": 1,
       "urgent": true
     }

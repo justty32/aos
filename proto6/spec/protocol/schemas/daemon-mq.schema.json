@@ -17,7 +17,7 @@
     },
     "Request": {
       "type": "object",
-      "description": "send、take、peek 剛好出現一個；其他欄位照收不理。msg、urgent 只在 send 時看；from 在 send 是寄件 inst（字串或 null），在 take／peek 是寄件人篩選（非空陣列，元素字串或 null）",
+      "description": "send、take、peek 剛好出現一個；其他欄位照收不理。msg、from_socket、urgent 只在 send 時看；from 在 send 是寄件 inst（字串或 null），在 take／peek 是寄件人篩選（非空陣列，元素字串或 null）",
       "properties": {
         "send": {
           "$ref": "#/$defs/Inst"
@@ -69,6 +69,14 @@
                 "default": null,
                 "description": "寄件 inst；原樣存、不核對"
               },
+              "from_socket": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null,
+                "description": "〔第二十一批〕寄件方 daemon 的訊息 socket 路徑（aos-mq send 填絕對路徑）；原樣存、不核對，收件方回信用（跨 daemon＝前綴是對方 socket 路徑）"
+              },
               "urgent": {
                 "type": "boolean",
                 "default": false,
@@ -114,6 +122,7 @@
       "type": "object",
       "required": [
         "from",
+        "from_socket",
         "msg"
       ],
       "additionalProperties": false,
@@ -123,6 +132,13 @@
             "string",
             "null"
           ]
+        },
+        "from_socket": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "寄件方的訊息 socket；寄的時候沒帶就是 null（第二十一批）"
         },
         "msg": {}
       }

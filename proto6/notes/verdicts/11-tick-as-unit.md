@@ -819,3 +819,28 @@ aos-tick 現在只回 0／1。busy、擋板仍各印一行 stderr（`busy:`、`b
 4. 整項 `$ref` 引進來的元素：先解那一層、再在被引用的檔的位置展開裡面的已知鍵，所以那裡的 `#…` 指被引用的那份檔（`resolve_located` 原本的行為）。
 
 改到的地方：程式 `lib/aos_tick_table.py`（檔頭說明改寫；`check_table()` 整份展開、`_items()` 展開已知鍵、`_full()`、`_expand()` 走進 `$val`、`BLOCKED_KEY`、`ITEM_KEYS`）、`lib/aos_tick.py`（標籤、說明）；測試 `tests/test_tick.py`（`Step4Defaults` 改成新語意：`#…` 指整份表、相對工作資料夾、開格展開失敗 bad_table、值是開格那一刻的、選項物件照用、陌生鍵與 `_metainfo` 不解；`TasksBlockedModule` 改鍵名、insts 開格展開、舊鍵名不掛）、`tests/test_tick_hooks.py`（hook 內部開格展開、`#…` 指整份表）；spec [B-620](../../spec/settled/tick.md)「指示詞什麼時候展開」「頂層 modules」「讀表：極簡檢查」、[P-202、P-214](../../spec/settled/protocol/tick.md)、[B-635](../../spec/settled/tick/hooks.md)、[B-636](../../spec/settled/tick/tasks-blocked.md)、[C-11](../../spec/settled/conventions.md)、[名詞](../../spec/settled/terms.md)、[整理區入口](../../spec/settled/README.md)、[tick 子篇入口](../../spec/settled/tick/README.md)、[驗收入口](../../spec/conformance.md)、[protocol README](../../spec/protocol/README.md)、schema `tick-tasks`、範例 `examples/tick/tasks.tasks-blocked*.json`；[src/py README](../../src/py/README.md)。
+
+<a id="2026-10-01-第二十一批跨-daemon-用-socket-路徑當前綴"></a>
+
+## 2026-10-01 第二十一批：跨 daemon 用 socket 路徑當前綴
+
+〔使用者裁定 2026-10-01 晚〕使用者原話依序：「啊對啦，跨daemon寄信，本質上就是把訊息傳到其他伺服器，就是收件地址加個前綴，就這樣」「我只是在想，目前aos-mq寄信時候，用的是daemon的socket，地址是同daemon下的inst.json路徑。所以前綴應該是socket路徑對吧」「1可以，peers先不做，aos-ctl也加--socket。」（第 1 點＝AI 隊提的「用 `--socket` 指定對方、信裡自動帶 `from_socket`」。）
+
+- **跨 daemon＝收件地址的前綴是對方 daemon 的 socket 路徑**。推翻第十五批「跨daemon寄信不管」。同一台機器上絕對路徑本身就是唯一的名字，所以回信不需要另外約定。
+- `aos-mq send [--urgent] [--socket <對方訊息 socket>] <收件 inst> <JSON|->`：給了 `--socket` 就直接連那個 socket；不給照舊用 `AOS_DAEMON_MQ_SOCKET`。
+- 寄出的信自動帶 **`from_socket`**＝寄件方自己的 `AOS_DAEMON_MQ_SOCKET`（絕對路徑；沒有就 null）；daemon 原樣存，`take`／`peek` 回的每封都有。收件方回信：`aos-mq send --socket <from_socket> <from> …`。`from` 照舊只填 inst 名字（使用者先前選 a）。
+- `aos-ctl [--socket <對方控制 socket>] <指令> …`：對別的 daemon 的項下指令。
+- daemon 不轉送、不知道信從哪個 daemon 來；跨 daemon 的信跟本地寄的一樣處理，只多存一欄。
+- **peers 模組先不做**：之後可能當「暱稱 → socket 路徑」的對照表。
+
+**AI 隊定的細節**（使用者可改）：
+
+1. `--socket` 的相對路徑以呼叫者的 cwd 為準，送出前不轉換；給了 `--socket` 時不需要 `AOS_DAEMON_MQ_SOCKET`／`AOS_DAEMON_SOCKET`（人在 shell 也能寄）。
+2. `from_socket` 用 `os.path.abspath` 把自己的 `AOS_DAEMON_MQ_SOCKET` 轉成絕對路徑（daemon 給的本來就是絕對路徑）；沒有或空字串就 null。socket 請求的 `from_socket` 可省（字串或 null），型別不對＝`bad_request`；直接連 socket 沒帶的信 `from_socket` 是 null。
+3. `take`／`peek` 不收 `--socket`（自己的信箱只在自己的 daemon），給了回 `usage`。
+4. `--from` 篩選照舊只比 `from`，不看 `from_socket`。
+5. `aos-ctl --socket` 時一定要明寫 `<inst>`，沒寫回 `usage`（`AOS_DAEMON_INST` 是自己 daemon 裡的名字，拿去別的 daemon 用會指錯）。`--socket <路徑>` 可以放在指令名前後任何位置。
+6. schema `daemon-mq` 的 `Message` 把 `from_socket` 列為必有（daemon 現在每封都放）。
+
+改到的地方：程式 `lib/aos_mq.py`、`lib/aos_daemon_mq.py`、`lib/aos_ctl.py`；測試 `tests/test_mq.py`（既有的信件比對加 `from_socket`；新 `CrossDaemon` 三條：A 寄給 B 並照 from_socket 回信、相對 `--socket` 與沒有自己 daemon 時 from_socket 為 null、`aos-ctl --socket` 對另一個 daemon 的 status／wake 與沒寫 inst 回 usage；`Errors` 加 `--socket` 的用法錯與連不上）；spec [B-645](../../spec/settled/daemon/mq.md)、[P-125](../../spec/settled/protocol/daemon/mq.md)、[B-641](../../spec/settled/daemon/control.md)、[P-121](../../spec/settled/protocol/daemon/control.md)、[名詞](../../spec/settled/terms.md)、[驗收入口](../../spec/conformance.md)；schema `daemon-mq`（`from_socket`）、`daemon-ctl`（說明一句）、範例 `examples/daemon/mq_request.send.valid.json`、`mq_reply.taken.valid.json`、`mq_reply.message-extra.invalid.json` 改寫，新 `mq_reply.message-no-from-socket.invalid.json`、`mq_request.send-from-socket-number.invalid.json`；[src/py README](../../src/py/README.md)；[plan m3m](../../plan/m3m-daemon-modules.md) 模組四。
+

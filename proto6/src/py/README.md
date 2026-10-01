@@ -324,7 +324,7 @@ inst 裡任務自己的 stdout／stderr 照 inst 規則（預設 `/dev/null`，�
 
 「暫停中 wake 跑一次」「停掉的 wake 回 `stopped`」「resume 一律跑一次」三條是 m3n 待問 1 照建議先做的，使用者可改。暫停只在記憶體，重開 daemon 就沒了（掛了[記住狀態](#重讀設定與記住狀態m3m)時例外）。
 
-`aos-ctl`（socket 只從 `AOS_DAEMON_SOCKET` 拿；沒給 `<inst>` 用 `AOS_DAEMON_INST`）：
+`aos-ctl`（socket 從 `AOS_DAEMON_SOCKET` 拿，`--socket <路徑>` 改連別的 daemon〔第二十一批，這時要明寫 `<inst>`〕；沒給 `<inst>` 用 `AOS_DAEMON_INST`）：
 
 ```sh
 aos-ctl wake [--skip-while-running] [--keep-schedule] [<inst>]
@@ -434,8 +434,9 @@ AOS_DAEMON_SOCKET=./aos.sock aos-ctl status jobs/report.json    # 人在 shell �
 - **急件**（`--urgent`）：信放進信箱後照控制模組 `wake`（不帶選項）叫醒收件那一項：正在跑就補一次、暫停中跑一次、已停不跑（信照收）。不用掛控制模組。
 
 ```text
-aos-mq send [--urgent] <收件 inst> <JSON|->     # from 自動填 AOS_DAEMON_INST（沒有＝null）
-aos-mq take [--from [<寄件 inst>…]]…            # 只取自己（AOS_DAEMON_INST）的信箱；每封一行 {"from":…,"msg":…}
+aos-mq send [--urgent] [--socket <對方訊息 socket>] <收件 inst> <JSON|->
+                                                # from 自動填 AOS_DAEMON_INST、from_socket 自動填自己的 socket（沒有＝null）
+aos-mq take [--from [<寄件 inst>…]]…            # 只取自己（AOS_DAEMON_INST）的信箱；每封一行 {"from":…,"from_socket":…,"msg":…}
 aos-mq peek [--from [<寄件 inst>…]]…            # 同上，但不取走
 ```
 
@@ -451,7 +452,9 @@ aos-mq peek [--from [<寄件 inst>…]]…            # 同上，但不取走
 - **取信只能取自己的信箱**（2026-10-01 第十四批）：`take` 不收 `<inst>`、只用 `AOS_DAEMON_INST`；`--from` 只取那個寄件人的、其他照順序留著。socket 不驗身分，這是 `aos-mq` 那一側擋的（第十五批：照「能連就能做」，daemon 不核對）。
 - **`peek` 與多個寄件人**（2026-10-01 第十五批）：`peek` 跟 `take` 一樣但不取走。`--from a c d` 收到下一個 `--` 開頭的參數為止；`--from` 不接＝寄件人是 null 的信；可以重複寫、疊加。socket 上 `from` 是非空陣列（元素字串或 null）。
 
-測試 `tests/test_mq.py`（20 條，約 5 秒）。
+- **跨 daemon**（2026-10-01 第二十一批）：收件地址的前綴是對方 daemon 的訊息 socket 路徑。`send --socket <路徑>` 直接連對方寄（相對路徑以呼叫者 cwd 為準，有 `--socket` 就不需要 `AOS_DAEMON_MQ_SOCKET`）；信裡自動帶 `from_socket`（自己的 `AOS_DAEMON_MQ_SOCKET` 的絕對路徑），收件方回信 `send --socket <from_socket> <from>`。daemon 不轉送、只是多存一欄。`take`／`peek` 不收 `--socket`；`--from` 只比 `from`。`aos-ctl --socket <控制 socket>` 同理，但要明寫 `<inst>`。peers（暱稱→socket 路徑）先不做。
+
+測試 `tests/test_mq.py`（23 條，約 6 秒；`CrossDaemon` 三條開兩個 daemon）。
 
 ## 帳號（m3m 模組五）
 
