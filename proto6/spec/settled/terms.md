@@ -41,7 +41,7 @@ tick 不跟其他計算單位（once、LLM 嘗試、agent 一輪等）放進同�
 | 普通程式 | 任務會用到的工具：要的任務自己在 argv 包的 `aos-as`、`aos-cg`；自己占一項的 `aos-tick-check-task` | [B-303](deferred/helper.md)、[B-621](tick/check-task.md)、[B-634](tick/cg.md) |
 | 其他任務 | kernel、agent、clock、檔案收件與投件程式、自訂任務 | [B-623](tick/mq.md)、[scheduling](../scheduling/README.md)、[agent](../agent/README.md) |
 
-daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11）；舊設計裡 daemon 跟 tick 之間的通道、node 框與資源上限（[B-601](deferred/daemon/runtime.md)、[B-607](deferred/daemon/registration.md)、[B-605](deferred/daemon/cgroup.md)）都在暫緩區。範本只是預設，拿掉哪一項就沒有那一項的保證（[B-629](tick/template.md)、[T-01](../terms.md)）。
+daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11）；舊設計裡 daemon 跟 tick 之間的通道、node 框與資源上限（[B-601](deferred/daemon/runtime.md)、[B-607](deferred/daemon/registration.md)、[B-605](deferred/daemon/cgroup.md)）都在暫緩區；現行的框與上限以 daemon 的一項為單位，是收屍／cgroup 模組（[B-644](daemon/cgroup.md)）。範本只是預設，拿掉哪一項就沒有那一項的保證（[B-629](tick/template.md)、[T-01](../terms.md)）。
 
 ### 幾個詞
 
@@ -80,8 +80,9 @@ daemon 不在任務表上。現行 daemon 核心只定期叫 `aos-exec`（T-11�
 | 跑 tick 的項 | 就是一份 `argv` 開頭是 `aos-tick` 的 inst；把它加進 `insts`，daemon 就會定期跑那個工作資料夾的 tick。daemon 不認得工作資料夾；node 這個詞留給之後的 node 模組〔使用者 2026-10-01 改名〕 | [B-640](daemon/core.md)、[B-620](tick.md) |
 | 模組 | 設定檔頂層 `modules` 底下，一個鍵一個模組；寫了才掛上。核心只認得 `modules` 這個鍵，不解讀別的模組的內容 | [B-640](daemon/core.md) |
 | 控制模組 | 模組 `control`：開一個 Unix socket，收 `wake`、`pause`、`resume`、`status` 四種指令，每個指令只對一項；送指令的小工具是 `aos-ctl` | [B-641](daemon/control.md) |
-| 重讀設定模組 | 模組 `reload`：收到 SIGHUP 重讀同一份設定檔，加減項、改週期免重開；`cwd`、`modules` 改了只印警告 | [B-642](daemon/reload.md) |
+| 重讀設定模組 | 模組 `reload`：收到 SIGHUP 重讀同一份設定檔，加減項、改週期免重開；`cwd`、`modules`、`exec_out_path`、`exec_err_path` 改了只印警告 | [B-642](daemon/reload.md) |
 | 記住狀態模組 | 模組 `state`：設定寫成 `{"$ref": "<狀態檔>"}`，把每項的暫停、已停記進那個檔，重開時讀回 | [B-643](daemon/state.md) |
+| 收屍／cgroup 模組 | 模組 `cgroup`：以 daemon 自己所在的 cgroup 當子樹根，每項一個框 `i-<h>`；每次 `aos-exec` 結束後把框裡留下的程序殺光、清空才算結束（收屍）；每項的 `cgroup` 鍵寫上限 | [B-644](daemon/cgroup.md) |
 
 - 「daemon 管 node」（自動找 node、上下層、叫醒往上傳）之後另做成 node 模組，還沒排程（[node 模組方向](../../notes/verdicts/11-tick-as-unit.md#node-模組方向2026-10-01記錄用未排程)）。
 - 舊 daemon 的登記、通道、收尾等用語在暫緩區（[T-09](deferred/terms.md)、[舊 daemon](deferred/daemon/README.md)）。

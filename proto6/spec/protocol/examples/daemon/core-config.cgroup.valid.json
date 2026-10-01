@@ -1,0 +1,16 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "cgroup": {}
+  },
+  "insts": {
+    "a": {
+      "cgroup": {
+        "memory.max": "512M",
+        "cpu.max": "50000 100000",
+        "pids.max": "200"
+      }
+    },
+    "jobs/report.json": {}
+  }
+}

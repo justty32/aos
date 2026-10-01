@@ -1,0 +1,13 @@
+{
+  "interval_ms": 60000,
+  "modules": {
+    "cgroup": {}
+  },
+  "insts": {
+    "a": {
+      "cgroup": {
+        "memory.max": 536870912
+      }
+    }
+  }
+}

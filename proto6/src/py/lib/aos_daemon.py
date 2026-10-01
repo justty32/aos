@@ -11,7 +11,8 @@
 放進每次 aos-exec 的環境。沒寫時跟 m3 一模一樣（沒人叫醒迴圈、不傳 env=）。
 寫了 `modules.reload` 就收 SIGHUP 重讀同一份設定檔（plan m3m 模組一，`lib/aos_daemon_reload.py`）；
 寫了 `modules.state`（原始值必須是 `{"$ref": "<檔>"}`）就把暫停／已停記進那個檔、重開時讀回
-（plan m3m 模組三，`lib/aos_daemon_state.py`）。
+（plan m3m 模組三，`lib/aos_daemon_state.py`）；寫了 `modules.cgroup` 就每項一個 cgroup 框、
+`aos-exec` 結束後清掉框裡的殘留才算這次結束（plan m3m 模組二，`lib/aos_daemon_cgroup.py`）。
 """
 import argparse
 import datetime
@@ -33,6 +34,9 @@ _sock_path = None
 
 # 記住狀態模組（aos_daemon_state.StateFile）；沒掛＝None
 _state = None
+
+# 收屍／cgroup 模組（aos_daemon_cgroup.Tree）；沒掛＝None
+_cg = None
 
 # 目前的清單 {inst 字面值: Item}。控制模組、記住狀態、重讀設定共用同一個 dict 物件；
 # 重讀設定加減項時在 _items_lock 底下原地改（m3m 模組一）
@@ -64,7 +68,7 @@ def say(text):
 class Item:
     """清單的一項：`inst` 字面值＝`insts` 物件的鍵（原樣交給 aos-exec、也原樣印出）；index＝鍵的位置（從 0 起）。"""
 
-    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path, out_path=None):
+    def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path, out_path=None, cgroup=None):
         self.index = index
         self.inst = inst
         self.interval_ms = interval_ms
@@ -72,6 +76,8 @@ class Item:
         self.err_path = err_path        # aos-exec 的 stderr 寫到哪（絕對路徑）；None＝丟掉（使用者 2026-10-01）
         self.out_path = out_path        # aos-exec 的 stdout 寫到哪；None＝丟掉
         self.env = None                 # 開 aos-exec 的環境；None＝照 daemon 的（控制模組沒掛）
+        self.cgroup = cgroup or {}      # 這一項的 cgroup 上限 {檔名: 值}（設定的 "cgroup" 鍵；模組沒掛時不看）
+        self.frame = None               # 這一項的 cgroup 框（絕對路徑）；None＝cgroup 模組沒掛
         # m3n 步驟 2：以下狀態都在 cond 的鎖底下改；控制模組沒掛時只有 loop() 自己動它們
         self.cond = threading.Condition()
         self.running = False
@@ -133,13 +139,18 @@ class Setup:
     """`load_full()` 的結果。`modules` 是展開後的 `modules`，但 `state` 換成狀態檔的絕對路徑
     （重讀設定比對「模組改了沒」用）；`state_data` 是狀態檔的內容（沒讀或不在＝`{"insts": {}}`）。"""
 
-    def __init__(self, start, items, sock, modules, state_path, state_data):
+    def __init__(self, start, items, sock, modules, state_path, state_data, out_tmpl=None, err_tmpl=None):
         self.start, self.items, self.sock = start, items, sock
         self.modules, self.state_path, self.state_data = modules, state_path, state_data
+        self.out_tmpl, self.err_tmpl = out_tmpl, err_tmpl     # 頂層 exec_out_path／exec_err_path 原字（重讀比對用）
 
     @property
     def reload(self):
         return "reload" in self.modules
+
+    @property
+    def cgroup(self):
+        return "cgroup" in self.modules
 
 
 def _state_ref(raw, base_dir):
@@ -185,7 +196,8 @@ def load_full(path, read_state=True):
         stop = entry.get("stop_on_nonzero", top.get("stop_on_nonzero", False))
         items.append(Item(i, inst, interval, stop,
                           err_path_for(top.get("exec_err_path"), inst, start),
-                          err_path_for(top.get("exec_out_path"), inst, start)))
+                          err_path_for(top.get("exec_out_path"), inst, start),
+                          entry.get("cgroup")))
     sock = None
     if "control" in modules:                        # m3n：有寫就開；socket 相對以起點為準
         sock = os.path.abspath(os.path.join(start, modules["control"]["socket"]))
@@ -194,7 +206,8 @@ def load_full(path, read_state=True):
         modules = dict(modules, state=state_path)
         if read_state and os.path.exists(state_path):
             state_data = expand(doc.root["modules"]["state"], ctx, ["modules", "state"])
-    return Setup(start, items, sock, modules, state_path, state_data)
+    return Setup(start, items, sock, modules, state_path, state_data,
+                 top.get("exec_out_path"), top.get("exec_err_path"))
 
 
 def _block(item, stream, data):
@@ -223,17 +236,36 @@ def write_outputs(item, out, err):
 
 
 def run_once(item, start):
-    """m3 步驟 2：叫一次 aos-exec，等它結束，回 (碼, 毫秒)。被訊號殺的碼換成 128+N。
-    stdout／stderr 沒設路徑就直接丟到 /dev/null；有設就收齊再一次寫出（共用出口才不交錯）。"""
+    """m3 步驟 2：叫一次 aos-exec，等它結束，回 (碼, 毫秒, 有沒有收屍)。被訊號殺的碼換成 128+N。
+    stdout／stderr 沒設路徑就直接丟到 /dev/null；有設就收齊再一次寫出（共用出口才不交錯）。
+
+    m3m 模組二（掛了 cgroup，`item.frame` 有值）：子程序先進那一項的框再 exec aos-exec；aos-exec 一結束
+    （毫秒算到這裡）就清框（框裡還有程序就 `cgroup.kill`、等清空），清完才收齊輸出、回來。
+    殘留的程序可能還拿著輸出的 pipe，所以 pipe 另開執行緒讀，清完框它才讀得到結尾。"""
     t0 = time.monotonic()
     pipe = lambda path: subprocess.DEVNULL if path is None else subprocess.PIPE
-    p = subprocess.Popen([EXEC, item.inst], cwd=start, env=item.env, start_new_session=True,
+    argv = [EXEC, item.inst]
+    if item.frame is not None:
+        argv = _cg.argv(item.frame, argv)
+    p = subprocess.Popen(argv, cwd=start, env=item.env, start_new_session=True,
                          stdin=subprocess.DEVNULL, stdout=pipe(item.out_path), stderr=pipe(item.err_path))
-    out, err = p.communicate()
+    reaped = False
+    if item.frame is None:
+        out, err = p.communicate()
+        ms = int((time.monotonic() - t0) * 1000)
+    else:
+        got = {}
+        reader = threading.Thread(target=lambda: got.update(r=p.communicate()), daemon=True)
+        reader.start()
+        p.wait()
+        ms = int((time.monotonic() - t0) * 1000)
+        import aos_daemon_cgroup
+        reaped = aos_daemon_cgroup.clear(item.frame)
+        reader.join()
+        out, err = got["r"]
     code = p.returncode
-    ms = int((time.monotonic() - t0) * 1000)
     write_outputs(item, out, err)
-    return (128 - code if code < 0 else code), ms
+    return (128 - code if code < 0 else code), ms, reaped
 
 
 def _next_run(item):
@@ -259,32 +291,51 @@ def loop(item, start):
     """m3 步驟 3、4：叫 → 等 → 印 → 睡 interval_ms；非 0 且 stop_on_nonzero 就印 stopped、不再叫。
     m3n 步驟 2：睡改成等 cond（叫得醒）；停掉時執行緒不結束、一直等（resume 救得回來）。
     控制模組沒掛時沒人碰狀態，行為跟 m3 一樣。
-    m3m：被重讀設定拿掉的項，正在跑的那次照樣跑完印完，之後執行緒結束。"""
+    m3m：被重讀設定拿掉的項，正在跑的那次照樣跑完印完，之後執行緒結束（掛了 cgroup 就刪框）。
+    掛了 cgroup：「這次結束」＝aos-exec 結束而且框清空；有清到東西時 `exit=` 之後多印一行 `reaped`。"""
     while True:
         with item.cond:
             keep = _next_run(item)
-            if keep is None:
-                return
-            item.running = True
-        code, ms = run_once(item, start)
+            if keep is not None:
+                item.running = True
+        if keep is None:
+            _gone(item)
+            return
+        code, ms, reaped = run_once(item, start)
         say("inst=%s exit=%d ms=%d" % (item.inst, code, ms))
+        if reaped:
+            say("inst=%s reaped" % item.inst)
         stopped = False
         with item.cond:
             t = time.monotonic()
             item.running = False
             item.last_exit, item.last_end, item.end_mono = code, now(), t
-            if item.removed:
-                return
-            # 照週期跑的、不帶 keep_schedule 的叫醒：週期從這次結束重新算；帶 keep_schedule 的
-            # 不碰 due，除非 due 已經被這次蓋過去（不補跑漏掉的）
-            if not keep or item.due <= t:
-                item.due = t + item.interval_ms / 1000.0
-            if code != 0 and item.stop_on_nonzero:
-                item.stopped = stopped = True
-                item.pending = False
-                say("inst=%s stopped" % item.inst)
+            removed = item.removed
+            if not removed:
+                # 照週期跑的、不帶 keep_schedule 的叫醒：週期從這次結束重新算；帶 keep_schedule 的
+                # 不碰 due，除非 due 已經被這次蓋過去（不補跑漏掉的）
+                if not keep or item.due <= t:
+                    item.due = t + item.interval_ms / 1000.0
+                if code != 0 and item.stop_on_nonzero:
+                    item.stopped = stopped = True
+                    item.pending = False
+                    say("inst=%s stopped" % item.inst)
+        if removed:
+            _gone(item)
+            return
         if stopped:
             state_changed()
+
+
+def _gone(item):
+    """被重讀設定拿掉的項，執行緒結束前：掛了 cgroup 就刪它的框（m3m 模組二）。
+    同一個 inst 已經又被加回來（新的一項用同一個框）就不刪。在 _items_lock 底下做，跟重讀設定建框排開。
+    呼叫時不能拿著 item.cond（鎖的順序是 _items_lock → item.cond）。"""
+    if item.frame is None:
+        return
+    with _items_lock:
+        if item.inst not in _items:
+            _cg.remove(item.frame)
 
 
 def state_changed():
@@ -344,7 +395,7 @@ def main(argv=None):
     ap = _Parser(prog="aos-daemon", description="照設定檔的清單，定期叫 aos-exec")
     ap.add_argument("--config", required=True, metavar="F", help="設定檔（JSON）")
     a = ap.parse_args(argv)
-    global _sock_path, _state
+    global _sock_path, _state, _cg
     try:
         setup = load_full(a.config)
     except (ValueError, DirectiveError) as e:
@@ -353,6 +404,12 @@ def main(argv=None):
     start, items, sock = setup.start, setup.items, setup.sock
     signal.signal(signal.SIGINT, _quit)
     signal.signal(signal.SIGTERM, _quit)
+    if setup.cgroup:                    # m3m 模組二：沒有委派好的 cgroup v2 就自然丟錯、回 1（C1）
+        import aos_daemon_cgroup
+        _cg = aos_daemon_cgroup.Tree()
+        for item in items:
+            _cg.make(item, startup=True)
+            _cg.announce(item, say)
     with _items_lock:
         _items.update((item.inst, item) for item in items)
     if setup.state_path is not None:    # m3m 模組三：照檔恢復暫停、已停（不在清單上的鍵丟掉）

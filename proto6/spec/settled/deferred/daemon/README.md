@@ -2,7 +2,7 @@
 
 ← [暫緩區](../README.md)｜[現行 daemon](../../daemon/README.md)｜[舊 daemon 協議](../protocol/daemon/README.md)｜[整理區](../../README.md)｜[kernel 樹](../../../scheduling/README.md)｜[通用 tick](../../tick.md)
 
-> **這個資料夾整個在暫緩區**（2026-10-01）。這裡是 2026-10-01 之前設計的完整 daemon：記憶體登記、runner 與收屍、重啟清理、收尾與排空停機、熱重載、通道與憑證、掛行程、佈建與 helper、cgroup、訊息、部件開關。使用者 2026-10-01 把 daemon 改成只定期叫 `aos-exec`、不認得 node，管 node 之後另做成模組；最核心 daemon 第一版不做這些。現行規定見 [daemon 目錄](../../daemon/README.md)：[B-640](../../daemon/core.md)（核心）、[B-641](../../daemon/control.md)（控制模組）。
+> **這個資料夾整個在暫緩區**（2026-10-01）。這裡是 2026-10-01 之前設計的完整 daemon：記憶體登記、runner 與收屍、重啟清理、收尾與排空停機、熱重載、通道與憑證、掛行程、佈建與 helper、cgroup、訊息、部件開關。使用者 2026-10-01 把 daemon 改成只定期叫 `aos-exec`、不認得 node，管 node 之後另做成模組；最核心 daemon 第一版不做這些。現行規定見 [daemon 目錄](../../daemon/README.md)：[B-640](../../daemon/core.md)（核心）、[B-641](../../daemon/control.md)（控制模組）；之後的模組（[B-642～644](../../daemon/README.md)）各自取代了這裡的一部分，見下表。
 >
 > 條號保留、不重用。每條標題下有一行狀態：「暫緩」、「已被 X 取代」或「部分已被取代、其餘暫緩」。下面原文照 2026-09-30 的樣子留著，文中的「本篇是正本」「daemon 是定期跑 `aos-tick` 的程式」等說法都是舊設計當時的話。
 
@@ -59,7 +59,7 @@ daemon 不是 tick 存在的前提：tick 怎麼被執行不管，cron、人手�
 | [核心：通道、掛行程與診斷](channel.md) | B-610、B-612、B-613 | 暫緩 |
 | [維運：熱重載](reload.md) | B-608 | 部分已被 [B-642](../../daemon/reload.md) 取代，其餘暫緩 |
 | [維運：佈建與 helper 動作](helper-actions.md) | B-609 | 暫緩 |
-| [cgroup：框、上限與啟動自檢](cgroup.md) | B-605；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分 | 暫緩 |
+| [cgroup：框、上限與啟動自檢](cgroup.md) | B-605；B-601、B-603、B-604、B-609、B-611、B-613 的 cgroup 部分 | B-605 部分被 [B-644](../../daemon/cgroup.md) 取代、其餘暫緩 |
 | [訊息：暫存與急件](messaging.md) | B-614 | 暫緩 |
 | [附錄：systemd service](service.md) | 啟動範例 | 暫緩 |
 
