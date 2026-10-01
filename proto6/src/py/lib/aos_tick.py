@@ -2,7 +2,7 @@
 
 一格的順序（B-620「一格怎麼走」，POC 版）：
 
-    認工作資料夾與任務表（--target 是資料夾要有 .aos/tasks.json；是檔就拿它當表）→ 取鎖 → 看擋板檔 → 讀表
+    認工作資料夾與任務表（目標是資料夾要有 .aos/tasks.json；是檔就拿它當表）→ 取鎖 → 看擋板檔 → 讀表
     → 換紀錄 → 刪停格檔 → 照表跑（每項後寫紀錄、查停格檔）→ 回結束碼
 
 `run_tick()` 就是照這個順序寫的，從它讀起。紀錄在 aos_tick_record.py、任務表在
@@ -13,7 +13,7 @@ aos_tick_table.py、跑單項在 aos_tick_run.py。
 
 - 0：照表跑完（不管任務成敗、回幾）；看到停格檔、剩下不跑；同資料夾上一格還沒跑完（拿不到 `.aos/tick.lock`，
   stderr `busy:`）；有擋板檔（stderr `blocked:`）。後兩種不開格（不寫紀錄、不加 seq）。
-- 1：tick 自己出錯——argv 用法錯、--target 指的東西不存在、資料夾底下沒有 .aos/tasks.json、
+- 1：tick 自己出錯——argv 用法錯、目標指的東西不存在、資料夾底下沒有 .aos/tasks.json、
   任務表不合極簡檢查（aos_tick_table.check_table，stderr `bad_table:`；在換紀錄之前，不算開過一格）；tick 自用的檔讀不到／寫不進／
   格式壞就讓 Python 自然丟錯（traceback 進 stderr、回 1），不分發生時機、不補救。
 
@@ -26,7 +26,7 @@ stderr 只印 tick 自己的 `代碼: 說明` 行（或 traceback），任務的
 同資料夾互斥同日加回最簡版（外層定期跑，上一格沒跑完下一格就來是正常使用）：拿不到鎖回 0，
 不回 75、鎖 fd 不傳給任務、沒有 `AOS_TICK_LOCK_FD`；任務逾時、tick 被殺時清孩子不做（留給 daemon 段）。
 
-〔使用者方向 2026-10-01，待統一更新 spec〕`--target` 怎麼認（notes/verdicts/11 篇末）：
+〔使用者方向 2026-10-01，待統一更新 spec〕目標怎麼認（notes/verdicts/11 篇末）：
 省略用 `./`；相對路徑轉絕對；資料夾要有 `.aos/tasks.json`（跟 inst.json 無關）；
 是檔就拿這個檔當這一格的任務表、它所在的資料夾當工作資料夾（檔在 `.aos/` 裡時取 `.aos` 的上一層）。
 
@@ -39,7 +39,8 @@ stderr 只印 tick 自己的 `代碼: 說明` 行（或 traceback），任務的
 任務要看紀錄就從 `$AOS_TICK_CWD/<狀態資料夾>/tick/current.json` 找。node 是之後 aos-tick 的 node 模組的事，
 tick 這層不談。同日再改：參數 `--node` 改名 `--target`（不留舊名，跟 aos-daemon、aos-exec 一樣叫「目標」；
 aos-exec 的目標是位置參數，這裡照使用者原話用 `--target`），`resolve_node()` 改 `resolve_target()`、
-stderr `no_node:` 改 `no_target:`。
+stderr `no_node:` 改 `no_target:`。同日三改：`--target` 旗標拿掉（不留），目標改成位置參數 `aos-tick [<目標>]`，
+跟 aos-exec 一樣；語意不變、`no_target:` 保留。
 """
 import fcntl
 import os
@@ -52,7 +53,7 @@ from aos_tick_record import Record
 
 __all__ = ["main", "run_tick", "resolve_target"]
 
-USAGE = "用法：aos-tick [--target <資料夾或任務表檔>]"
+USAGE = "用法：aos-tick [<目標>]（目標＝資料夾或任務表檔；留空＝./）"
 EXIT_OK, EXIT_ERROR = 0, 1     # aos 結束碼慣例：0＝預料之中（含正常中斷）、1＝通用錯誤
 EXIT_USAGE = EXIT_ERROR          # 慣例：argv 用法錯也算通用錯誤
 
@@ -68,22 +69,19 @@ def say(code, msg):
 
 
 def main(argv=None):
-    """P-203 argv：`aos-tick [--target <資料夾或任務表檔>]`；用法錯回 1（aos 結束碼慣例）。
+    """P-203 argv：`aos-tick [<目標>]`，目標是位置參數（跟 aos-exec 一樣，使用者 2026-10-01）：資料夾或任務表檔，留空＝`./`。
+    用法錯回 1（aos 結束碼慣例）：任何 `-` 開頭的旗標（`-h`／`--help` 除外）、多於一個目標。
     `--firstdo-fsync` POC 先不做（使用者方向 2026-10-01），給了算用法錯。"""
     args = sys.argv[1:] if argv is None else list(argv)
     target_arg = None
-    while args:
-        a = args.pop(0)
-        if a == "--target" and args:
-            target_arg = args.pop(0)
-        elif a.startswith("--target="):
-            target_arg = a[len("--target="):]
-        elif a in ("-h", "--help"):
+    for a in args:
+        if a in ("-h", "--help"):
             print(USAGE)
             return EXIT_OK
-        else:
+        if a.startswith("-") or target_arg is not None:
             say("usage", "看不懂的參數 %r；%s" % (a, USAGE))
             return EXIT_USAGE
+        target_arg = a
     bad = aos_dirname.error()
     if bad:
         say("usage", bad)
@@ -95,13 +93,13 @@ def main(argv=None):
 
 
 def resolve_target(arg):
-    """〔使用者方向 2026-10-01，待統一更新 spec；取代 B-602「認哪個資料夾」、P-203 的 `--node`〕
+    """〔使用者方向 2026-10-01，待統一更新 spec；取代 B-602「認哪個資料夾」、P-203 的 `--node`；目標是位置參數〕
     回 (工作資料夾, 這一格的任務表)，都是絕對路徑；不合法回 None。
 
-    - 省略 `--target`：用 `./`。相對路徑一律轉成絕對（不往上層找）。
+    - 省略目標：用 `./`。相對路徑一律轉成絕對（不往上層找）。
     - 資料夾：要有 `.aos/tasks.json`，表就是它；不看 `.aos/inst.json`。
     - 檔：這個檔就是這一格的表（跟資料夾模式同一套極簡檢查，見 aos_tick_table.check_table）；它所在的資料夾當工作資料夾，
-      但那個資料夾若叫 `.aos`，取它的上一層（`--target yyy/.aos/tasks.json` 跟 `--target yyy` 一樣）。
+      但那個資料夾若叫 `.aos`，取它的上一層（`aos-tick yyy/.aos/tasks.json` 跟 `aos-tick yyy` 一樣）。
     - 上面的 `.aos` 都是 aos_dirname.name()（環境變數 `AOS_DIRNAME`，預設 `.aos`）。
       設成空字串時狀態檔直接在工作資料夾下（資料夾要有 `tasks.json`），檔案模式「往上取一層」的特判不適用。
     - 都不是（不存在）：回 None。
@@ -118,7 +116,7 @@ def resolve_target(arg):
         if aos_dirname.name() and os.path.basename(cwd) == aos_dirname.name():
             cwd = os.path.dirname(cwd)
         return cwd, path
-    say("no_target", "--target 指的東西不存在：%s" % arg)
+    say("no_target", "目標指的東西不存在：%s" % arg)
     return None
 
 

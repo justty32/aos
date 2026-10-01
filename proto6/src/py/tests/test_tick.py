@@ -51,7 +51,7 @@ class TickCase(Base):
 
     def tick(self, *args, env=None):
         e = dict(CLEAN_ENV, **(env or {}))
-        args = args or ("--target", self.d)
+        args = args or (self.d,)
         return subprocess.run([PY, TICK] + list(args), capture_output=True, text=True, env=e, timeout=30)
 
     def rec(self, name="current", cwd=""):
@@ -59,7 +59,7 @@ class TickCase(Base):
 
 
 class Step1Target(TickCase):
-    """使用者 2026-10-01（待統一更新 spec）：--target 省略用 ./、相對轉絕對；資料夾要有 .aos/tasks.json
+    """使用者 2026-10-01（待統一更新 spec）：目標（位置參數）省略用 ./、相對轉絕對；資料夾要有 .aos/tasks.json
     （不看 inst.json）；是檔就拿它當表、所在資料夾當工作資料夾；不存在回 1。"""
 
     def test_cwd_default_and_not_git(self):
@@ -74,7 +74,7 @@ class Step1Target(TickCase):
         self.tasks(sh("t", 'echo "$AOS_TICK_CWD" > cwd.txt'))
         parent, name = os.path.split(self.d)
         for i, target in enumerate((name, os.path.join(".", name, "")), 1):
-            r = subprocess.run([PY, TICK, "--target", target], cwd=parent, env=CLEAN_ENV,
+            r = subprocess.run([PY, TICK, target], cwd=parent, env=CLEAN_ENV,
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(self.read("cwd.txt"), self.d + "\n")
@@ -109,7 +109,7 @@ class Step1Target(TickCase):
         self.tasks(sh("t", "touch wrong.ran"))
         tbl = self.write("sub/my.json", json.dumps(table(
             sh("a", 'echo "$AOS_TICK_CWD" > cwd.txt; touch a.ran'))))
-        r = self.tick("--target", tbl)
+        r = self.tick(tbl)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.exists("sub/a.ran"))          # cwd 是工作資料夾（sub）
         self.assertEqual(self.read("sub/cwd.txt"), os.path.join(self.d, "sub") + "\n")
@@ -124,23 +124,23 @@ class Step1Target(TickCase):
         tbl = self.write("n/t.json", json.dumps(table(task("t", ["true"]))))
         self.assertFalse(self.exists("n/.aos"))
         for i in (1, 2):
-            r = self.tick("--target", tbl)
+            r = self.tick(tbl)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(self.rec(cwd="n")["seq"], i)
         self.assertEqual(sorted(os.listdir(os.path.join(self.d, "n", ".aos"))), ["tick", "tick.lock"])
 
     def test_file_in_aos_dir_means_parent_cwd(self):
-        # 拿不準的點的決定：檔在 .aos/ 裡時工作資料夾取 .aos 的上一層（跟 --target 資料夾同一個）
+        # 拿不準的點的決定：檔在 .aos/ 裡時工作資料夾取 .aos 的上一層（跟目標給資料夾同一個）
         self.tasks(task("t", ["true"]))
         self.assertEqual(self.tick().returncode, 0)
-        r = self.tick("--target", os.path.join(self.d, ".aos", "tasks.json"))
+        r = self.tick(os.path.join(self.d, ".aos", "tasks.json"))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.rec()["seq"], 2)
         self.assertFalse(self.exists(".aos/.aos"))
 
     def test_bad_table_file_is_error(self):
         tbl = self.write("n/t.json", "{壞")
-        r = self.tick("--target", tbl)
+        r = self.tick(tbl)
         self.assertEqual(r.returncode, 1)
         self.assertIn("bad_table:", r.stderr)             # 檔案模式也做同一套極簡檢查
 
@@ -149,7 +149,7 @@ class Step1Target(TickCase):
         self.write("n/t.json", json.dumps(table({"$ref": "item.json"})))
         self.write("n/item.json", json.dumps(sh("r", "touch from-ref")))
         self.write("item.json", json.dumps(sh("wrong", "touch wrong.ran")))
-        r = subprocess.run([PY, TICK, "--target", os.path.join("n", "t.json")], cwd=self.d,
+        r = subprocess.run([PY, TICK, os.path.join("n", "t.json")], cwd=self.d,
                            env=CLEAN_ENV, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.exists("n/from-ref"))
@@ -161,20 +161,22 @@ class Step1Target(TickCase):
         # 跑到這一項展開成 inst 時 aos_inst 自然丟錯（traceback），回 1
         self.write("n/t.json", json.dumps(table(
             {"_metainfo": {"_type": "nope", "_version": 1}, "id": "x", "argv": ["true"]})))
-        r = self.tick("--target", os.path.join(self.d, "n", "t.json"))
+        r = self.tick(os.path.join(self.d, "n", "t.json"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("Error", r.stderr)
 
     def test_missing_path_and_usage_errors(self):
-        r = self.tick("--target", os.path.join(self.d, "nope"))
+        r = self.tick(os.path.join(self.d, "nope"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("no_target:", r.stderr)
-        r = subprocess.run([PY, TICK, "--target", "nope"], cwd=self.d, env=CLEAN_ENV,
+        r = subprocess.run([PY, TICK, "nope"], cwd=self.d, env=CLEAN_ENV,
                            capture_output=True, text=True)
         self.assertEqual(r.returncode, 1)
         self.assertFalse(self.exists("nope"))
         self.assertEqual(self.tick("--bogus").returncode, 1)      # aos 結束碼慣例：argv 用法錯算 1
-        self.assertEqual(self.tick("--target").returncode, 1)
+        # 使用者 2026-10-01：目標改位置參數，`--target` 旗標拿掉不留——給了算用法錯；目標多於一個也是
+        self.assertEqual(self.tick(self.d).returncode, 1)
+        self.assertEqual(self.tick(self.d, self.d).returncode, 1)
 
 
 class Step1Lock(TickCase):
@@ -192,7 +194,7 @@ class Step1Lock(TickCase):
         self.tasks(task("t", ["true"]))
         self.assertEqual(self.tick().returncode, 0)                  # seq 1
         self.tasks(sh("hold", "touch started; while [ ! -e go ]; do sleep 0.05; done"), sh("z", "touch z.ran"))
-        first = subprocess.Popen([PY, TICK, "--target", self.d], env=CLEAN_ENV,
+        first = subprocess.Popen([PY, TICK, self.d], env=CLEAN_ENV,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
             self.wait_for("started")
@@ -477,11 +479,11 @@ class DirName(TickCase):
 
     def test_file_mode_parent_rule_follows_name(self):
         tbl = self.write(".aos2/tasks.json", json.dumps(table(task("t", ["true"]))))
-        r = self.tick("--target", tbl, env=self.ENV)                    # 檔在 .aos2/ 裡：工作資料夾取上一層
+        r = self.tick(tbl, env=self.ENV)                    # 檔在 .aos2/ 裡：工作資料夾取上一層
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.exists(".aos2/tick/current.json"))
         tbl = self.write(".aos/t.json", json.dumps(table(task("t", ["true"]))))
-        r = self.tick("--target", tbl, env=self.ENV)                    # 名字不是 .aos2：照字面，工作資料夾是 .aos/
+        r = self.tick(tbl, env=self.ENV)                    # 名字不是 .aos2：照字面，工作資料夾是 .aos/
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.exists(".aos/.aos2/tick/current.json"))
         self.assertFalse(self.exists(".aos/tick"))
@@ -545,14 +547,14 @@ class EmptyDirName(TickCase):
 
     def test_file_mode_no_parent_rule(self):
         tbl = self.write(".aos/t.json", json.dumps(table(task("t", ["true"]))))
-        r = self.tick("--target", tbl, env=self.ENV)                    # 空字串：檔所在的資料夾照字面當工作資料夾
+        r = self.tick(tbl, env=self.ENV)                    # 空字串：檔所在的資料夾照字面當工作資料夾
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.exists(".aos/tick/current.json"))
         self.assertTrue(self.exists(".aos/tick.lock"))
         self.assertFalse(self.exists("tick"))
         os.makedirs(os.path.join(self.d, "sub"))
         tbl = self.write("sub/t.json", json.dumps(table(sh("t", "pwd > where"))))
-        r = self.tick("--target", tbl, env=self.ENV)
+        r = self.tick(tbl, env=self.ENV)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.read("sub/where"), os.path.join(self.d, "sub") + "\n")
         self.assertTrue(self.exists("sub/tick/current.json"))

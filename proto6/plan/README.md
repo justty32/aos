@@ -30,7 +30,7 @@
 
 - **目標**：`aos-tick` 直接跑得動一格：照任務表依序跑、每項結束碼紀錄（含 `seq`、停格檔、擋板檔），~~整格回 0／1~~ 照表跑完、擋板、busy 都回 0，tick 自己出錯 1（2026-10-01 結束碼慣例改版）。B-626 原本的核心四件事裡，同資料夾互斥與上下層判定〔使用者方向 2026-10-01：POC 先不做〕。
 - **主要 spec**：[B-626、B-602、B-620、B-633、B-628、B-627](../spec/settled/tick.md)；格式 [P-202、P-203、P-213](../spec/settled/protocol/node.md)。
-- **可單獨跑的樣子**：不要 daemon、git、cgroup、helper。手建一個資料夾、寫 `.aos/tasks.json`，`aos-tick --target <資料夾>`（2026-10-01：原 `--node`） 或 cron 直接跑，看結束碼與 `.aos/tick/current.json`。
+- **可單獨跑的樣子**：不要 daemon、git、cgroup、helper。手建一個資料夾、寫 `.aos/tasks.json`，`aos-tick <資料夾>`（2026-10-01：原 `--node`，再改 `--target`，再改成位置參數） 或 cron 直接跑，看結束碼與 `.aos/tick/current.json`。
 - **界線**：核心不認得任何系統級任務，也不清任務留下的後代。細部見 [m1-tick-core.md](m1-tick-core.md)。
 
 ### 第二段：不靠 daemon 的系統級任務與普通程式
@@ -42,10 +42,10 @@
 
 ### 第三段：daemon 核心
 
-> **範圍已砍到最核心**（使用者 2026-10-01）：這段實際只做「一個叫 `aos-exec` 的 cron」——設定檔一份 inst 清單、照週期叫 `aos-exec`、印一行、非 0 可停，不要 socket。下面原本列的登記、叫醒／暫停、runner 收屍、收尾、通道憑證等全部挪到之後。細部 plan 與完成狀態見 [m3-daemon-core.md](m3-daemon-core.md)。之後的**控制模組**（設定檔寫 `modules.control` 就多開一個 unix socket，收 wake／pause／resume／status，每個只對一項；小工具 `aos-ctl`）**已做**（2026-10-01），見 [m3n-control-module.md](m3n-control-module.md#做完了沒)。
+> **範圍已砍到最核心**（使用者 2026-10-01）：這段實際只做「一個叫 `aos-exec` 的 cron」——設定檔一份 inst 清單、照週期叫 `aos-exec`、印一行、非 0 可停，不要 socket。下面原本列的登記、叫醒／暫停、runner 收屍、收尾、通道憑證等全部挪到之後。細部 plan 與完成狀態見 [m3-daemon-core.md](m3-daemon-core.md)；spec 正本 [B-640](../spec/settled/daemon/core.md)、格式 [P-120](../spec/settled/protocol/daemon/core.md)。之後的**控制模組**（設定檔寫 `modules.control` 就多開一個 unix socket，收 wake／pause／resume／status，每個只對一項；小工具 `aos-ctl`）**已做**（2026-10-01），見 [m3n-control-module.md](m3n-control-module.md#做完了沒)；spec 正本 [B-641](../spec/settled/daemon/control.md)、格式 [P-121](../spec/settled/protocol/daemon/control.md)。
 
 - **目標**：`aos daemon` 能登記 node、照週期開格、叫醒／暫停、用 `aos-runner` 開每一格並在格後收屍、重啟與停機收尾、發通道憑證、掛行程與砍掉；沒 cgroup、沒 helper 也跑得起來。
-- **主要 spec**：[B-601、B-504](../spec/settled/deferred/daemon/runtime.md)、[B-606、B-607](../spec/settled/deferred/daemon/registration.md)、[B-603、B-604、B-611](../spec/settled/deferred/daemon/lifecycle.md)、[B-610、B-612、B-613](../spec/settled/deferred/daemon/channel.md)、[B-608](../spec/settled/deferred/daemon/reload.md)；格式 [daemon 協議](../spec/settled/protocol/daemon/README.md)（P-100～119，不含 helper 那幾條）。
+- **主要 spec**：[B-601、B-504](../spec/settled/deferred/daemon/runtime.md)、[B-606、B-607](../spec/settled/deferred/daemon/registration.md)、[B-603、B-604、B-611](../spec/settled/deferred/daemon/lifecycle.md)、[B-610、B-612、B-613](../spec/settled/deferred/daemon/channel.md)、[B-608](../spec/settled/deferred/daemon/reload.md)；格式 [舊 daemon 協議](../spec/settled/deferred/protocol/daemon/README.md)（P-101～119，不含 helper 那幾條）。以上 2026-10-01 都搬到暫緩區。
 - **可單獨跑的樣子**：一般帳號開 `aos daemon --config F`，登記第一段做好的 node，看它照週期出格、`node.wake` 叫得醒、Ctrl-C 收得乾淨。
 - **界線**：訊息佇列、cgroup 是第四段的部件，這段先當「開關關著」；B-615 的開關鍵這段就要認得。helper 動作回 `helper_unavailable`。
 

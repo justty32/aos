@@ -1,6 +1,6 @@
 # 第三段：daemon 核心（最核心版）
 
-← [plan 入口](README.md)｜依據：[最核心 aos-daemon（已裁定 10-01）](../notes/2026-10-01-daemon-core-sketch.md)｜結束碼：[verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜正本（大部分先不做）：[B-601](../spec/settled/deferred/daemon/runtime.md#b-601記憶體登記與按需執行)、[B-606](../spec/settled/deferred/daemon/registration.md#b-606登記解除換父與身分額度)、[B-607](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)、[P-101](../spec/settled/deferred/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板)
+← [plan 入口](README.md)｜依據：[最核心 aos-daemon（已裁定 10-01）](../notes/2026-10-01-daemon-core-sketch.md)｜結束碼：[verdicts 11 篇末「aos 結束碼慣例」](../notes/verdicts/11-tick-as-unit.md#aos-結束碼慣例待統一更新-spec)｜spec 正本：[B-640](../spec/settled/daemon/core.md)、格式 [P-120](../spec/settled/protocol/daemon/core.md)｜舊 spec（暫緩區，大部分先不做）：[B-601](../spec/settled/deferred/daemon/runtime.md#b-601記憶體登記與按需執行)、[B-606](../spec/settled/deferred/daemon/registration.md#b-606登記解除換父與身分額度)、[B-607](../spec/settled/deferred/daemon/registration.md#b-607叫醒暫停故障停格與格次序號)、[P-101](../spec/settled/deferred/protocol/daemon/startup-and-ipc.md#p-101啟動設定與-socket建議預設未拍板)
 
 **做完的樣子**：沒有 root、systemd、cgroup、helper 的機器上，一般帳號跑 `aos-daemon --config F`：讀設定檔裡的 inst 路徑清單，每一項照自己的週期叫一次 `bin/aos-exec <inst 路徑>`，每次結束在 stdout 印一行 `<當下時間> inst=… exit=… ms=…`；aos-exec 的 stderr 收齊後帶一行標頭寫到設定的檔或 daemon 的 stderr；非 0 時停不停照該項設定；Ctrl-C 直接退出、回 0。node 資料夾放一份 `argv` 寫 `aos-tick` 的 `inst.json`，把它加進清單，就是「daemon 定期跑一個 node」。
 
@@ -135,7 +135,7 @@
   /n/a/.aos/tasks.json   照第一段的任務表
   ```
 
-  inst 的 `cwd` 預設就是 `/n/a`，tick 不帶 `--target`（原 `--node`，2026-10-01 改名）用 `./`。測試裡 `argv[0]` 寫 `bin/aos-tick` 的絕對路徑，不靠 PATH。
+  inst 的 `cwd` 預設就是 `/n/a`，tick 不帶目標（原 `--node`，2026-10-01 改名 `--target`、再改成位置參數）用 `./`。測試裡 `argv[0]` 寫 `bin/aos-tick` 的絕對路徑，不靠 PATH。
 - **要使用者裁定的點**：無。
 - **驗收**：
   - 清單放 `/n/a/inst.json`、週期 100 ms，跑 1 秒：每次印 `inst=/n/a/inst.json exit=0`，`.aos/tick/current.json` 的 `seq` 一直往上加。
