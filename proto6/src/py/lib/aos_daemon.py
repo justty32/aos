@@ -2,13 +2,14 @@
 
 讀設定檔裡的 inst 清單，每一項一條執行緒，照自己的週期叫一次 `<bin>/aos-exec <inst 字面值>`，
 等它結束、stdout 印一行。沒有 socket、沒有登記、沒有收屍。核心沒有 id 這個概念：一項就是
-它的 `inst` 字面值與在 `insts` 的位置（使用者 2026-10-01）。
+它在 `insts` 物件裡的鍵（inst 字面值）與鍵的位置（使用者 2026-10-01）。
 整份設定檔先經 aos 指示詞展開再讀（`expand()`）；頂層 `modules` 核心認得、不解讀。
 〔使用者方向 2026-10-01〕POC 默認一切正常：設定檔讀得懂、路徑都對、aos-exec 叫得起來；
 不寫異常處理，出事讓 Python 自然丟錯（traceback、回 1）。
 """
 import argparse
 import datetime
+import json
 import os
 import signal
 import subprocess
@@ -38,7 +39,7 @@ def say(text):
 
 
 class Item:
-    """清單的一項：`inst` 字面值（原樣交給 aos-exec、也原樣印出）；index＝在 `insts` 的位置（從 0 起）。"""
+    """清單的一項：`inst` 字面值＝`insts` 物件的鍵（原樣交給 aos-exec、也原樣印出）；index＝鍵的位置（從 0 起）。"""
 
     def __init__(self, index, inst, interval_ms, stop_on_nonzero, err_path):
         self.index = index
@@ -89,13 +90,14 @@ def load_config(path):
     # 展開完才看 cwd（它也可以是 $ref 引進來的值）；相對的 cwd 以 daemon 啟動時的工作目錄為起點，不是設定檔的資料夾
     start = os.path.abspath(top.get("cwd", "."))
     items = []
-    for i, entry in enumerate(top["insts"]):
+    # insts 是物件：鍵＝inst 字面值、值＝該項設定（可為 {}）；位置照鍵的順序（JSON 讀入保序）（使用者 2026-10-01）
+    for i, (inst, entry) in enumerate(top["insts"].items()):
         interval = entry.get("interval_ms", top.get("interval_ms"))
         if interval is None:
-            raise ValueError("insts[%d]（%s）沒有 interval_ms，頂層也沒有" % (i, entry["inst"]))
+            raise ValueError("insts 的 %s 沒有 interval_ms，頂層也沒有" % json.dumps(inst, ensure_ascii=False))
         stop = entry.get("stop_on_nonzero", top.get("stop_on_nonzero", False))
-        items.append(Item(i, entry["inst"], interval, stop,
-                          err_path_for(top.get("exec_err_path"), entry["inst"], start)))
+        items.append(Item(i, inst, interval, stop,
+                          err_path_for(top.get("exec_err_path"), inst, start)))
     return start, items
 
 
